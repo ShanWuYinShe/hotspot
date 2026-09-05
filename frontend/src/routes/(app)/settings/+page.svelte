@@ -10,11 +10,13 @@
 	import SettingRow from '@/components/forms/SettingRow.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import { logout } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
-	import { theme, setTheme, toggleDark, THEME_OPTIONS } from '@/stores/theme.svelte';
+	import { theme, setTheme, setColorScheme, THEME_OPTIONS, COLOR_SCHEME_OPTIONS, type ColorSchemeMode } from '@/stores/theme.svelte';
 	import { getAccount, getSettings, updateSettings , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import pkg from '../../../../package.json';
@@ -129,6 +131,11 @@
 
 	let confirmLogoutOpen = $state(false);
 
+	// 明暗三档描述（跟随系统/浅色/深色，与 TabBar 选择同步）
+	const colorSchemeDesc = $derived(
+		theme.colorScheme === 'auto' ? '跟随系统外观' : theme.colorScheme === 'dark' ? '当前使用深色外观' : '当前使用浅色外观'
+	);
+
 	const handleLogout = async () => {
 		// auth store logout clears client auth state and keeps the user on the
 		// current route (anonymous browsing). No more redirect to a dead /login.
@@ -161,7 +168,7 @@
 				<Avatar class="border-2 border-surface-primary shadow-glow-md" src={accountAvatar} name={accountName} size={48}  />
 				<div class="flex-1 min-w-0">
 					{#if loading}
-						<p class="text-sm tracking-title text-text-secondary">加载中…</p>
+						<InlineLoading label="加载中…" class="items-start gap-2 py-0" />
 					{:else}
 						<p class="text-sm tracking-title text-text-primary">{accountName || '用户'}</p>
 						<p class="text-xs mt-0.5 text-text-secondary">{accountEmail || '未绑定邮箱'}</p>
@@ -205,7 +212,7 @@
 						</div>
 					{/snippet}
 			</SettingRow>
-			<SettingRow title="深色模式" description={theme.isDark ? '当前使用深色外观' : '当前使用浅色外观'} onRowClick={toggleDark}>
+			<SettingRow title="外观模式" description={colorSchemeDesc}>
 				{#snippet icon()}
 					{#if theme.isDark}
 						<Moon class="size-4 text-accent-default"   strokeWidth={1.5} />
@@ -213,7 +220,14 @@
 						<Sun class="size-4 text-accent-default"   strokeWidth={1.5} />
 					{/if}
 				{/snippet}
-				<Toggle on={theme.isDark} onToggle={toggleDark} label="深色模式" />
+				{#snippet extension()}
+					<!-- 明暗三档（跟随系统/浅色/深色）：复用 TabBar 分段样式，不自造新组件 -->
+					<TabBar
+						items={COLOR_SCHEME_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
+						value={theme.colorScheme}
+						onChange={(id) => setColorScheme(id as ColorSchemeMode)}
+					/>
+				{/snippet}
 			</SettingRow>
 	</ListContainer>
 	</div>

@@ -9,8 +9,11 @@ import {
   AppThemeShapeTokens,
   AppThemeShadow,
   AppThemeVisualTokens,
+  DEFAULT_DARK_MODE_PREFERENCE,
   DEFAULT_RESOLVED_THEME_ID,
   DEFAULT_THEME_MODE,
+  DarkModePreference,
+  KEY_DARK_MODE_PREFERENCE,
   KEY_RESOLVED_THEME_ID,
   KEY_THEME_MODE,
   ResolvedThemeId,
@@ -148,7 +151,8 @@ const DEFAULT_CLEAN_LIGHT_VISUALS = buildVisualTokens(
     previewShadow: new AppThemeShadow(24, '#29000000', 0, 8),
     insetShadow: NO_SHADOW,
     highlightShadow: NO_SHADOW,
-    tabActiveGlow: new AppThemeShadow(12, '#263D7A55', 0, 4)
+    // forest 扁平退化：tab 光晕近透明
+    tabActiveGlow: new AppThemeShadow(12, '#0A3D7A55', 0, 4)
   }
 );
 
@@ -162,71 +166,8 @@ const DEFAULT_CLEAN_DARK_VISUALS = buildVisualTokens(
     previewShadow: new AppThemeShadow(28, '#59000000', 0, 8),
     insetShadow: NO_SHADOW,
     highlightShadow: NO_SHADOW,
-    tabActiveGlow: new AppThemeShadow(12, '#2E52B878', 0, 4)
-  }
-);
-
-const FIGMA_NEU_THEME_SHAPE: AppThemeShapeTokens = {
-  surfaceCard: 22,
-  heroCard: 32,
-  compactCard: DesignConstants.RADIUS.XL,
-  input: 16,
-  button: 28,
-  chip: DesignConstants.SHAPE.CHIP,
-  tabBar: 28,
-  previewCard: 24,
-  listItem: 22,
-  iconTile: 18
-};
-
-const FIGMA_NEU_THEME_METRICS: AppThemeMetricTokens = {
-  cardPadding: 16,
-  heroPadding: DesignConstants.SPACING.XL,
-  metricCardPadding: DesignConstants.SPACING.LG,
-  profilePrimaryButtonHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
-  profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
-  secondaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
-  profileAvatarSize: 68,
-  profileTitleFontSize: DesignConstants.FONT.SIZE.XL,
-  profileSubtitleFontSize: DesignConstants.FONT.SIZE.LG,
-  profileMetricMinHeight: 164,
-  profileMetricValueFontSize: DesignConstants.FONT.SIZE.XL,
-  actionButtonHeight: 40,
-  listItemMinHeight: 72,
-  tabBarHeight: 60,
-  createButtonWidth: 48,
-  createButtonHeight: 48,
-  tabBarFloatingMargin: DesignConstants.SPACING.MD,
-  chatListRadius: DesignConstants.SHAPE.CARD,
-  chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT,
-  previewHeroAvatarSize: 32,
-  previewPrimaryButtonHeight: 18,
-  textureOpacity: 0
-};
-
-const FIGMA_NEU_LIGHT_VISUALS = buildVisualTokens(
-  FIGMA_NEU_THEME_SHAPE,
-  FIGMA_NEU_THEME_METRICS,
-  {
-    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.surface),
-    haloShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.control),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.elevated),
-    insetShadow: new AppThemeShadow(12, '#44BFB7AC', 4, 4),
-    highlightShadow: new AppThemeShadow(10, '#C8FFFFFF', -4, -4),
-    tabActiveGlow: new AppThemeShadow(22, '#59D4845A', 0, 6)
-  }
-);
-
-const FIGMA_NEU_DARK_VISUALS = buildVisualTokens(
-  FIGMA_NEU_THEME_SHAPE,
-  FIGMA_NEU_THEME_METRICS,
-  {
-    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.surface),
-    haloShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.control),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.elevated),
-    insetShadow: new AppThemeShadow(12, '#99282A31', 4, 4),
-    highlightShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.accent),
-    tabActiveGlow: new AppThemeShadow(22, '#59E8A87C', 0, 6)
+    // 深色 + forest 扁平退化：tab 光晕近透明
+    tabActiveGlow: new AppThemeShadow(12, '#0D52B878', 0, 4)
   }
 );
 
@@ -290,7 +231,8 @@ const VIBRANT_DARK_VISUALS = buildVisualTokens(
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.elevated),
     insetShadow: new AppThemeShadow(10, '#80000000', 3, 3),
     highlightShadow: new AppThemeShadow(8, '#1869A8FF', -3, -3),
-    tabActiveGlow: new AppThemeShadow(20, '#4269A8FF', 0, 6)
+    // 深色光晕退化：近透明
+    tabActiveGlow: new AppThemeShadow(20, '#1469A8FF', 0, 6)
   }
 );
 
@@ -311,26 +253,6 @@ const DEFAULT_CLEAN_DARK = buildPalette(
   ThemeConstants.DEFAULT_CLEAN_DARK_COLORS,
   ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK,
   DEFAULT_CLEAN_DARK_VISUALS,
-  false
-);
-
-const FIGMA_NEU_LIGHT = buildPalette(
-  'figma_neu_light',
-  '浮雕暖调',
-  '暖灰底、柔和阴影、轻浮雕边框',
-  ThemeConstants.FIGMA_NEU_LIGHT_COLORS,
-  ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT,
-  FIGMA_NEU_LIGHT_VISUALS,
-  true
-);
-
-const FIGMA_NEU_DARK = buildPalette(
-  'figma_neu_dark',
-  '浮雕暖调',
-  '暗色暖调、柔和立体层次',
-  ThemeConstants.FIGMA_NEU_DARK_COLORS,
-  ThemeConstants.SHADOWS.FIGMA_NEU_DARK,
-  FIGMA_NEU_DARK_VISUALS,
   false
 );
 
@@ -356,7 +278,6 @@ const VIBRANT_DARK = buildPalette(
 
 const THEME_OPTIONS: ThemeOptionItem[] = [
   { mode: 'follow_system', label: '跟随系统', description: '自动匹配系统明暗模式' } as ThemeOptionItem,
-  { mode: 'figma_neu', label: '浮雕暖调', description: '柔和压边、暖灰底与立体按钮感' } as ThemeOptionItem,
   { mode: 'vibrant', label: '星际', description: '冷色玻璃、蓝调强调' } as ThemeOptionItem,
   { mode: 'default_clean', label: '清野', description: '自然纸面、森林绿强调' } as ThemeOptionItem
 ];
@@ -366,6 +287,18 @@ export class AppThemeManager {
     const storedThemeMode = await PreferencesUtil.get<string>(StorageKeys.THEME_MODE, DEFAULT_THEME_MODE);
     const themeMode = AppThemeManager.normalizeThemeMode(storedThemeMode);
     AppStorage.setOrCreate<string>(KEY_THEME_MODE, themeMode);
+    // 明暗偏好迁移：旧 settings_dark_forced=true 的用户落到 dark，并清理旧键（单通道唯一来源）
+    let storedDarkPref = await PreferencesUtil.get<string>(StorageKeys.DARK_MODE_PREFERENCE, '');
+    if (!storedDarkPref) {
+      const forcedDark = await PreferencesUtil.get<boolean>('settings_dark_forced', false);
+      if (forcedDark) {
+        storedDarkPref = 'dark';
+        await PreferencesUtil.set(StorageKeys.DARK_MODE_PREFERENCE, 'dark');
+      }
+      await PreferencesUtil.remove('settings_dark_forced');
+    }
+    AppStorage.setOrCreate<string>(KEY_DARK_MODE_PREFERENCE,
+      AppThemeManager.normalizeDarkModePreference(storedDarkPref));
     AppThemeManager.refreshResolvedTheme();
   }
 
@@ -380,6 +313,31 @@ export class AppThemeManager {
     return AppThemeManager.normalizeThemeMode(AppStorage.get<string>(KEY_THEME_MODE) ?? DEFAULT_THEME_MODE);
   }
 
+  /** 明暗三档单通道写入口（主题族走 setThemeMode，明暗走这里，双通道旧键已迁移删除） */
+  static async setDarkModePreference(pref: DarkModePreference): Promise<void> {
+    const normalized = AppThemeManager.normalizeDarkModePreference(pref);
+    await PreferencesUtil.set(StorageKeys.DARK_MODE_PREFERENCE, normalized);
+    AppStorage.setOrCreate<string>(KEY_DARK_MODE_PREFERENCE, normalized);
+    AppThemeManager.refreshResolvedTheme();
+  }
+
+  static getDarkModePreference(): DarkModePreference {
+    return AppThemeManager.normalizeDarkModePreference(
+      AppStorage.get<string>(KEY_DARK_MODE_PREFERENCE) ?? DEFAULT_DARK_MODE_PREFERENCE);
+  }
+
+  /** 生效的深色状态：auto 看系统，manual 直接取偏好 */
+  static isEffectiveDarkMode(): boolean {
+    const pref = AppThemeManager.getDarkModePreference();
+    if (pref === 'dark') {
+      return true;
+    }
+    if (pref === 'light') {
+      return false;
+    }
+    return AppStorage.get<boolean>('isDarkMode') === true;
+  }
+
   private static getResolvedThemeId(): ResolvedThemeId {
     const resolvedThemeId = AppStorage.get<string>(KEY_RESOLVED_THEME_ID) ?? DEFAULT_RESOLVED_THEME_ID;
     return AppThemeManager.normalizeResolvedThemeId(resolvedThemeId);
@@ -387,6 +345,7 @@ export class AppThemeManager {
 
   static onSystemColorModeChange(isDarkMode: boolean): void {
     AppStorage.setOrCreate<boolean>('isDarkMode', isDarkMode);
+    // refresh 按偏好解析：auto 时结果跟随系统变化，manual 时结果不变
     AppThemeManager.refreshResolvedTheme();
   }
 
@@ -405,24 +364,19 @@ export class AppThemeManager {
     try {
       return AppThemeManager.getCurrentPalette();
     } catch (_) {
-      return FIGMA_NEU_LIGHT;
+      return VIBRANT_LIGHT;
     }
   }
 
-  static getPaletteForMode(themeMode: ThemeMode, isDarkMode?: boolean): AppThemePalette {
+  static getPaletteForMode(themeMode: ThemeMode): AppThemePalette {
     const resolvedThemeId = AppThemeManager.resolveThemeId(
-      AppThemeManager.normalizeThemeMode(themeMode),
-      isDarkMode ?? (AppStorage.get<boolean>('isDarkMode') === true)
+      AppThemeManager.normalizeThemeMode(themeMode)
     );
     return AppThemeManager.getPaletteById(resolvedThemeId);
   }
 
   static getPaletteById(resolvedThemeId: string): AppThemePalette {
     switch (AppThemeManager.normalizeResolvedThemeId(resolvedThemeId)) {
-      case 'figma_neu_dark':
-        return FIGMA_NEU_DARK;
-      case 'figma_neu_light':
-        return FIGMA_NEU_LIGHT;
       case 'vibrant_dark':
         return VIBRANT_DARK;
       case 'vibrant_light':
@@ -478,25 +432,22 @@ export class AppThemeManager {
   }
 
   private static refreshResolvedTheme(): void {
-    const resolvedThemeId = AppThemeManager.resolveThemeId(
-      AppThemeManager.getThemeMode(),
-      AppStorage.get<boolean>('isDarkMode') === true
-    );
+    const resolvedThemeId = AppThemeManager.resolveThemeId(AppThemeManager.getThemeMode());
     AppStorage.setOrCreate<string>(KEY_RESOLVED_THEME_ID, resolvedThemeId);
     AppThemeManager.syncSystemSurface();
   }
 
-  private static resolveThemeId(themeMode: ThemeMode, isDarkMode: boolean): ResolvedThemeId {
+  private static resolveThemeId(themeMode: ThemeMode): ResolvedThemeId {
+    // 明暗偏好三档：auto 看系统 isDarkMode，manual 直接取偏好（与主题族正交）
+    const effectiveDark = AppThemeManager.isEffectiveDarkMode();
     switch (themeMode) {
       case 'follow_system':
-        // 跟随系统 = 默认主题族（vibrant 星际，对齐前端默认）随系统明暗切换
-        return isDarkMode ? 'vibrant_dark' : 'vibrant_light';
+        // 跟随系统 = 默认主题族（vibrant 星际，对齐前端默认）随生效明暗切换
+        return effectiveDark ? 'vibrant_dark' : 'vibrant_light';
       case 'vibrant':
-        return isDarkMode ? 'vibrant_dark' : 'vibrant_light';
+        return effectiveDark ? 'vibrant_dark' : 'vibrant_light';
       case 'default_clean':
-        return isDarkMode ? 'default_clean_dark' : 'default_clean_light';
-      case 'figma_neu':
-        return isDarkMode ? 'figma_neu_dark' : 'figma_neu_light';
+        return effectiveDark ? 'default_clean_dark' : 'default_clean_light';
       default:
         return DEFAULT_RESOLVED_THEME_ID;
     }
@@ -506,11 +457,24 @@ export class AppThemeManager {
     switch (themeMode) {
       case 'default_clean':
       case 'follow_system':
-      case 'figma_neu':
       case 'vibrant':
         return themeMode;
+      case 'figma_neu':
+        // 已删除主题族迁移：存量偏好一律映射 vibrant（明暗由偏好/系统重解，与原明暗对应）
+        return 'vibrant';
       default:
         return DEFAULT_THEME_MODE;
+    }
+  }
+
+  static normalizeDarkModePreference(pref: string): DarkModePreference {
+    switch (pref) {
+      case 'light':
+      case 'dark':
+      case 'auto':
+        return pref;
+      default:
+        return DEFAULT_DARK_MODE_PREFERENCE;
     }
   }
 
@@ -518,11 +482,14 @@ export class AppThemeManager {
     switch (resolvedThemeId) {
       case 'default_clean_dark':
       case 'default_clean_light':
-      case 'figma_neu_dark':
-      case 'figma_neu_light':
       case 'vibrant_dark':
       case 'vibrant_light':
         return resolvedThemeId;
+      case 'figma_neu_dark':
+        // 已删除主题族迁移：resolved id 按明暗映射 vibrant 对应档
+        return 'vibrant_dark';
+      case 'figma_neu_light':
+        return 'vibrant_light';
       default:
         return DEFAULT_RESOLVED_THEME_ID;
     }

@@ -189,10 +189,11 @@
 </svelte:head>
 
 
-{#if gd.loadError}
-	<LoadError message={gd.loadError} onRetry={() => void gd.loadAll(params.groupId ?? '')} />
-{:else}
 <StandardPageLayout contentClassName="animate-fade-in pb-6">
+	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
+	{#if gd.loadError}
+		<LoadError message={gd.loadError} onRetry={() => void gd.loadAll(params.groupId ?? '')} />
+	{:else}
 	<!-- 全幅封面（负 margin 抵消 ContentColumn gutter） -->
 	<div class="relative h-[var(--cst-cover-height)] overflow-hidden -mx-[var(--cst-page-gutter)]">
 		{#if gd.detail.banner}
@@ -304,9 +305,10 @@
 		</main>
 
 		<aside class="flex h-fit flex-col gap-3 rounded-lg border border-border-default bg-surface-primary p-4">
+			<!-- 已加入态 hover 只变底（不换字色，单信号 feedback） -->
 			<button
 				type="button"
-				class="hover-btn w-full rounded-full border px-4 py-3 text-sm font-medium focus-ring {gd.joined ? 'border-accent-border text-accent-default hover:bg-interactive-hover hover:text-text-primary' : 'border-transparent bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md'}"
+				class="hover-btn w-full rounded-full border px-4 py-3 text-sm font-medium focus-ring {gd.joined ? 'border-accent-border text-accent-default hover:bg-interactive-hover' : 'border-transparent bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md'}"
 				onclick={() => (gd.joined ? (leaveConfirmOpen = true) : gd.toggleJoin())}
 			>
 				{#if gd.joined}
@@ -342,8 +344,8 @@
 			{/if}
 		</aside>
 	</div>
+	{/if}
 	</StandardPageLayout>
-{/if}
 
 <Dialog.Root open={deleteAnnounceId !== null} onOpenChange={(next) => (next ? undefined : (deleteAnnounceId = null))}>
 	<Dialog.Content side="center" class="max-w-sm p-5" aria-label="确认删除公告">

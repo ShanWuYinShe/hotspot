@@ -156,10 +156,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{#snippet below()}
 				<!-- 搜索框 + 排序：sticky header 内只保留搜索与排序；标签过滤放正文首行
 				     （对齐附近动态样板，压缩 header 高度、把空间还给内容） -->
-				<div class="mt-2.5">
+				<div class="mt-3">
 					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-4 py-2.5 rounded-md" />
 				</div>
-				<div class="mt-2 pb-2">
+				<div class="mt-3 pb-2">
 					<TabBar items={SORT_OPTIONS.map((o) => ({ id: o, label: o }))} value={sort} onChange={(id) => (sort = id)} />
 				</div>
 			{/snippet}

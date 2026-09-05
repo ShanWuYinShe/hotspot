@@ -1,19 +1,23 @@
 <script lang="ts">
-	import { Clock, ArrowUpRight } from '@lucide/svelte';
+	import { Clock, ArrowUpRight, Flame } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 
-	// 搜索页「无查询发现态」：最近搜索。
-	// 热门搜索/推荐话题无服务端数据源（search/suggest 需要非空 prefix），
-	// 不再渲染恒空区块；输入联想由 SearchResults 的 suggestions 承载。
+	// 搜索页「无查询发现态」：最近搜索 + 热门话题。
+	// 热门话题来自 moments/search 热门模式的 tags 聚合（页面传入）；无数据时
+	// 不渲染该区块（诚实空态原则，不留死区块）。
 	// 页面私有组件（colocate），由 search/+page.svelte 渲染。
 
 	let {
 		recent,
+		hotTopics = [],
 		onChoose,
 		onClear
 	}: {
 		recent: string[];
+		/** 热门话题（为空时不渲染区块） */
+		hotTopics?: string[];
 		onChoose: (value: string) => void;
 		onClear: () => void;
 	} = $props();
@@ -54,4 +58,19 @@
 			<p class="mt-3 text-sm text-text-secondary opacity-soft">输入关键词，搜索用户、动态与地点。</p>
 		{/if}
 	</section>
+
+	{#if hotTopics.length > 0}
+		<!-- 热门话题：热门动态 tags 聚合，点击即搜 -->
+		<section aria-label="热门话题" class="mt-6">
+			<div class="flex items-center gap-1.5">
+				<Flame class="size-3.5 text-accent-default" strokeWidth={1.75} />
+				<h2 class="eyebrow">热门话题</h2>
+			</div>
+			<div class="mt-3 flex flex-wrap gap-2">
+				{#each hotTopics as topic (topic)}
+					<TagPill onClick={() => onChoose(topic)}>#{topic}</TagPill>
+				{/each}
+			</div>
+		</section>
+	{/if}
 </div>

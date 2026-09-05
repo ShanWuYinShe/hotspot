@@ -36,9 +36,10 @@
 	class="aspect-[4/3] rounded-md"
 >
 	{#snippet placeholder()}
+		<!-- 占位图标容器：只留描边（border），不叠 glow 投影（单信号 feedback） -->
 		<div
 			class="flex items-center justify-center rounded-sm size-11.5 bg-accent-bg"
-			style="border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);box-shadow:var(--shadow-glow-lg);"
+			style="border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);"
 		>
 			<MapPin size={20} class="text-accent-default" strokeWidth={1.5} />
 		</div>

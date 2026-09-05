@@ -270,7 +270,7 @@
 				side="center"
 				class="overflow-hidden"
 				aria-label="发起新会话"
-				style="width:27.5rem;height:68vh;max-height:37.5rem;"
+				style="width:27.5rem;height:78vh;max-height:700px;"
 			>
 				<NewConversationSheet
 					defaultTab={newChatTab}

@@ -66,8 +66,8 @@ class ThemeShadowRegistry {
     surface: new AppThemeShadow(10, '#143D7A55', 0, 2),
     // 弹层抬升（对齐前端 --cst-elevation-modal 0 24px 80px 0.24）
     elevated: new AppThemeShadow(40, '#3D000000', 0, 12),
-    // 主操作光晕（对齐前端 --cst-elevation-fab 0 6px 18px glow）
-    accent: new AppThemeShadow(18, '#2E3D7A55', 0, 6),
+    // 主操作光晕（对齐前端 --cst-elevation-fab 0 6px 18px glow；forest 扁平退化：近透明）
+    accent: new AppThemeShadow(18, '#0A3D7A55', 0, 6),
     // 菜单浮层（对齐前端 --cst-elevation-menu 0 16px 40px 0.16）
     control: new AppThemeShadow(32, '#29000000', 0, 8),
     // 底部导航（对齐前端 --cst-elevation-nav，向上微光）
@@ -79,28 +79,12 @@ class ThemeShadowRegistry {
     surface: new AppThemeShadow(14, '#4D000000', 0, 4),
     // 弹层抬升（对齐前端 --cst-elevation-modal 0 28px 88px 0.42）
     elevated: new AppThemeShadow(44, '#6B000000', 0, 14),
-    // 主操作光晕（对齐前端 --cst-elevation-fab 0 6px 22px glow）
-    accent: new AppThemeShadow(22, '#3D52B878', 0, 6),
+    // 主操作光晕（对齐前端 --cst-elevation-fab 0 6px 22px glow；深色 + forest 扁平退化：近透明）
+    accent: new AppThemeShadow(22, '#0D52B878', 0, 6),
     // 菜单浮层
     control: new AppThemeShadow(40, '#59000000', 0, 8),
     // 底部导航（对齐前端 --cst-elevation-nav 0 -4px 24px 0.40）
     tabBar: new AppThemeShadow(28, '#66000000', 0, -4)
-  };
-
-  readonly FIGMA_NEU_LIGHT: ThemeShadows = {
-    surface: new AppThemeShadow(20, '#55BFB7AC', 8, 8),
-    elevated: new AppThemeShadow(28, '#55C3BAAE', 12, 12),
-    accent: new AppThemeShadow(22, '#40D4845A', 0, 8),
-    control: new AppThemeShadow(12, '#BBFFFFFF', -4, -4),
-    tabBar: new AppThemeShadow(18, '#55B4AB9E', 0, -6)
-  };
-
-  readonly FIGMA_NEU_DARK: ThemeShadows = {
-    surface: new AppThemeShadow(20, '#800C0D12', 8, 8),
-    elevated: new AppThemeShadow(28, '#900B0C10', 12, 12),
-    accent: new AppThemeShadow(22, '#3DE8A87C', 0, 8),
-    control: new AppThemeShadow(12, '#BB282A31', -4, -4),
-    tabBar: new AppThemeShadow(18, '#AA0B0C10', 0, -6)
   };
 
   readonly VIBRANT_LIGHT: ThemeShadows = {
@@ -114,7 +98,8 @@ class ThemeShadowRegistry {
   readonly VIBRANT_DARK: ThemeShadows = {
     surface: new AppThemeShadow(10, '#A6000000', 0, 3),
     elevated: new AppThemeShadow(16, '#80000000', 0, 5),
-    accent: new AppThemeShadow(22, '#4269A8FF', 0, 8),
+    // 深色 accent 光晕退化：近透明（深色下有色发光显脏，对齐扁平宣言）
+    accent: new AppThemeShadow(22, '#1469A8FF', 0, 8),
     control: new AppThemeShadow(4, '#0F69A8FF', 0, 0),
     tabBar: new AppThemeShadow(10, '#80000000', 0, -3)
   };
@@ -209,90 +194,6 @@ export class ThemeConstants {
     warningSoft: '#2E2E20',
   };
 
-  static readonly FIGMA_NEU_LIGHT_COLORS: ColorConfig = {
-    pageBackground: '#E2D6C5',
-    workspaceBackground: '#D8C9B5',
-    pageGlow: '#EFE7DA',
-    heroGlow: '#F4E9DE',
-    surfaceBackground: '#EFE7DA',
-    surfaceSubtle: '#E2D6C5',
-    surfaceElevated: '#F4E9DE',
-    borderColor: '#175D4834',
-    floatingBorderColor: '#2E5D4834',
-    sheetBackground: '#EFE7DA',
-    accentBackground: '#B86F4B',
-    accentText: '#FFF8F4',
-    accentMuted: '#1AB86F4B',
-    chatBackground: '#E2D6C5',
-    systemSurfaceBaseColor: '#E2D6C5',
-    overlayStrong: '#752B2119',
-    textPrimary: '#3F342A',
-    textSecondary: '#65594A',
-    textTertiary: '#8C7F6E',
-    iconMuted: '#65594A',
-    buttonSecondaryBackground: '#E2D6C5',
-    buttonSecondaryText: '#3F342A',
-    primaryButtonBorderColor: '#B86F4B',
-    inputBackgroundColor: '#E2D6C5',
-    quickActionBackgroundColor: '#EFE7DA',
-    tabBarBackground: '#EFE7DA',
-    tabBarInactive: '#65594A',
-    tabBarActiveBackground: '#F4E9DE',
-    isDarkTheme: false,
-    online: '#B86F4B',
-    warning: '#B8843F',
-    success: '#66835D',
-    error: '#C0392B',
-    info: '#66835D',
-    mapUser: '#A45B37',
-    mapGroup: '#52704B',
-    mapMoment: '#96682A',
-    dangerSoft: '#DEC3B3',
-    warningSoft: '#DDCCB5',
-  };
-
-  static readonly FIGMA_NEU_DARK_COLORS: ColorConfig = {
-    pageBackground: '#15110E',
-    workspaceBackground: '#0F0C0A',
-    pageGlow: '#211B17',
-    heroGlow: '#2A2017',
-    surfaceBackground: '#211B17',
-    surfaceSubtle: '#2A231C',
-    surfaceElevated: '#26201A',
-    borderColor: '#14FFDCB7',
-    floatingBorderColor: '#29FFDCB7',
-    sheetBackground: '#211B17',
-    accentBackground: '#D18A5D',
-    accentText: '#FFF8F4',
-    accentMuted: '#1FD18A5D',
-    chatBackground: '#1A1511',
-    systemSurfaceBaseColor: '#15110E',
-    overlayStrong: '#8F000000',
-    textPrimary: '#F1E4D2',
-    textSecondary: '#A99682',
-    textTertiary: '#8C7F6E',
-    iconMuted: '#A99682',
-    buttonSecondaryBackground: '#2A231C',
-    buttonSecondaryText: '#F1E4D2',
-    primaryButtonBorderColor: '#D18A5D',
-    inputBackgroundColor: '#2A231C',
-    quickActionBackgroundColor: '#1A1511',
-    tabBarBackground: '#211B17',
-    tabBarInactive: '#A99682',
-    tabBarActiveBackground: '#2A231C',
-    isDarkTheme: true,
-    online: '#D18A5D',
-    warning: '#D1A35D',
-    success: '#8CA877',
-    error: '#E06F6F',
-    info: '#8CA877',
-    mapUser: '#D18A5D',
-    mapGroup: '#8CA877',
-    mapMoment: '#D1A35D',
-    dangerSoft: '#2D1712',
-    warningSoft: '#2F2519',
-  };
-
   static readonly SHADOWS: ThemeShadowRegistry = new ThemeShadowRegistry();
 
   static readonly VIBRANT_LIGHT_COLORS: ColorConfig = {
@@ -329,7 +230,9 @@ export class ThemeConstants {
     online: '#14B8A6',
     warning: '#F59E0B',
     success: '#14B8A6',
-    error: '#F43F5E',
+    // danger 实底对比度：#F43F5E 配白字仅 3.67（配深字 4.28），均不达 4.5；加深至 #C81E4E
+    //（白字 5.60、红字 on 浅底 4.92、红字 on dangerSoft 4.54，对齐前端 danger 实底同类修复）
+    error: '#C81E4E',
     info: '#2E66C0',
     mapUser: '#2E66C0',
     mapGroup: '#0B7A56',

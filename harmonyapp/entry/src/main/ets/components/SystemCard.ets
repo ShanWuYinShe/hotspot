@@ -62,23 +62,9 @@ export struct SystemCard {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
-  private isNeuTheme(): boolean {
-    return this.resolvedThemeId.startsWith('figma_neu');
-  }
-
   private getThemeShadow(kind: 'default' | 'elevated'): ShadowConfig {
     const palette = this.getPalette();
     return kind === 'elevated' ? palette.elevatedShadow : palette.surfaceShadow;
-  }
-
-  private getNeuHighlightShadow(): ShadowConfig {
-    const effects = this.getPalette().visuals.effects;
-    return { radius: effects.highlightShadow.radius, color: effects.highlightShadow.color, offsetX: effects.highlightShadow.offsetX, offsetY: effects.highlightShadow.offsetY };
-  }
-
-  private getNeuInsetShadow(): ShadowConfig {
-    const effects = this.getPalette().visuals.effects;
-    return { radius: effects.insetShadow.radius, color: effects.insetShadow.color, offsetX: effects.insetShadow.offsetX, offsetY: effects.insetShadow.offsetY };
   }
 
   private getBackgroundColor(): ResourceColor {
@@ -168,60 +154,11 @@ export struct SystemCard {
     return { x: 1, y: 1 };
   }
 
-  private shouldUseNeuShadow(): boolean {
-    return this.isNeuTheme() && this.showShadow &&
-      (this.variant === CardVariant.DEFAULT || this.variant === CardVariant.ELEVATED ||
-        this.variant === CardVariant.OUTLINED);
-  }
-
   build() {
-    if (this.shouldUseNeuShadow()) {
-      Stack() {
-        Column()
-          .width('100%')
-          .backgroundColor(this.getBackgroundColor())
-          .borderRadius(this.getCardRadius())
-          .shadow(this.getNeuHighlightShadow())
-
-        Column() {
-          this.content();
-        }
-        .width('100%')
-        .backgroundColor(this.getBackgroundColor())
-        .borderRadius(this.getCardRadius())
-        .border(this.getBorder())
-        .padding(this.getCardPadding())
-        .shadow(this.getNeuInsetShadow())
-      }
-      .width('100%')
-      .alignContent(Alignment.TopStart)
-      .scale(this.getScale())
-      .animation({
-        curve: curves.springMotion(
-          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-        )
-      })
-      .onTouch((event: TouchEvent) => {
-        if (this.clickable) {
-          if (event.type === TouchType.Down) {
-            this.isPressed = true;
-          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-            this.isPressed = false;
-          }
-        }
-      })
-      .accessibilityGroup(this.clickable)
-      .accessibilityText(this.clickable ? '卡片' : '')
-      .onHover((isHover: boolean) => {
-        if (this.clickable) {
-          this.isHovered = isHover;
-        }
-      })
-    } else {
-      Column() {
-        this.content();
-      }
+    // 已删除主题族收敛：全主题统一走单栏普通卡片路径（vibrant/forest 同一样式）
+    Column() {
+      this.content();
+    }
       .width('100%')
       .backgroundColor(this.getBackgroundColor())
       .backgroundBlurStyle(this.getBlurStyle())
@@ -252,7 +189,6 @@ export struct SystemCard {
           this.isHovered = isHover;
         }
       })
-    }
   }
 }
 
@@ -278,49 +214,8 @@ export struct MasonryCard {
   }
 
   build() {
-    if (this.resolvedThemeId.startsWith('figma_neu')) {
-      Stack() {
-        Column()
-          .width('100%')
-          .backgroundColor(this.getPalette().surfaceBackground)
-          .borderRadius(this.cardRadius)
-          .shadow(this.getPalette().visuals.effects.highlightShadow)
-        Column() {
-          if (this.imageContent) {
-            this.imageContent!();
-          }
-          this.content();
-        }
-        .width('100%')
-        .backgroundColor(this.getPalette().surfaceBackground)
-        .borderRadius(this.cardRadius)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-        .shadow(this.getPalette().visuals.effects.insetShadow)
-      }
-      .width('100%')
-      .alignContent(Alignment.TopStart)
-      .scale(this.clickable && this.isPressed ?
-        { x: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY, y: DesignConstants.INTERACTION.SCALE_PRESSED_MASONRY } :
-        { x: 1, y: 1 })
-      .animation({
-        curve: curves.springMotion(
-          DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-          DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-        )
-      })
-      .onTouch((event: TouchEvent) => {
-        if (this.clickable) {
-          if (event.type === TouchType.Down) {
-            this.isPressed = true;
-          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-            this.isPressed = false;
-          }
-        }
-      })
-      .accessibilityGroup(this.clickable)
-      .accessibilityText(this.clickable ? '卡片' : '')
-    } else {
-      Column() {
+    // 已删除主题族收敛：瀑布流卡统一走普通单栏路径（vibrant/forest 同一样式，不自创第三种）
+    Column() {
         if (this.imageContent) {
           this.imageContent!();
         }
@@ -350,6 +245,5 @@ export struct MasonryCard {
       })
       .accessibilityGroup(this.clickable)
       .accessibilityText(this.clickable ? '卡片' : '')
-    }
   }
 }

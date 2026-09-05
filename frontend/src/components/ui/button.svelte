@@ -23,7 +23,11 @@
 		secondary: 'bg-surface-primary text-text-primary border border-border-default shadow-raised-sm hover:border-border-strong',
 		outline: 'bg-transparent text-text-primary border border-border-default hover:border-border-strong',
 		ghost: 'bg-transparent text-text-primary hover:bg-interactive-hover',
-		danger: 'bg-status-danger text-text-on-status shadow-danger-glow-sm hover:shadow-danger-glow-md'
+	// danger 实底文字走 text-text-on-accent（随明暗翻转：light 白 / dark 深），而非
+	// text-text-on-status——后者是 online/warning 实底的文字位（vibrant light 下为深字，
+	// 落在加深后的 danger 实底 #C81E4E 上对比度不足）。与各确认按钮
+	//（enabled:bg-status-danger + text-text-on-accent）保持一致，对齐鸿蒙 danger 实底统一白字。
+		danger: 'bg-status-danger text-text-on-accent shadow-danger-glow-sm hover:shadow-danger-glow-md'
 	};
 
 	const SIZES: Record<ButtonSize, string> = {

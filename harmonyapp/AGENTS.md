@@ -144,8 +144,14 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 - 语义：`palette.success` / `palette.warning` / `palette.error` / `palette.info`
 - 地图标记：`palette.mapUser / mapGroup / mapMoment`（对齐前端 `--cst-marker-user/group/moment`，随主题/明暗变）；状态淡底：`palette.dangerSoft / warningSoft`（对齐前端 `--cst-status-danger/warning-bg` 12~14% 预混档位；success/info 淡底用 `getSoftStatusBackground('success' | 'info')` 派生）
 - 主题解析：`AppThemeManager.getPaletteById(resolvedThemeId)` → `@StorageProp(KEY_RESOLVED_THEME_ID)`
-- 明暗差异：本端明暗始终跟随系统（`isDarkMode`），与 Web 端可手动切换
-  `isDark` 不同；主题族（vibrant/forest）双端可选集一致；鸿蒙端 figma_neu 为存量兼容项，不作为双端对齐目标
+- 明暗三档：`DarkModePreference`（`auto` 跟随系统 / `light` 手动浅色 / `dark` 手动深色，
+  缺省 `auto`，与 `ThemeMode` 主题族正交，持久化键 `dark_mode_preference`，单通道经
+  `AppThemeManager.setDarkModePreference` 读写）；`auto` 时解析看系统 `isDarkMode`，
+  `manual` 时直接取偏好（`onSystemColorModeChange` 仅 `auto` 时改变结果）；
+  `setColorMode` 对应关系：`dark`→`COLOR_MODE_DARK` / `light`→`COLOR_MODE_LIGHT` /
+  `auto`→`COLOR_MODE_NOT_SET`（`EntryAbility` 三处 + 设置页切换处统一按此三选一，
+  旧 `settings_dark_forced=true` 用户已迁移为 `dark`）
+- 主题族（vibrant/forest）双端可选集一致（本端 `default_clean`= forest 清野）；已删除主题族的存量偏好一律映射 vibrant 对应明暗
 
 字号（FONT.SIZE，禁用裸 `fontSize(N)`）：`XS_MINUS 9` / `XS2 10` / `XS 11` / `SM 12` / `MD 14` / `LG 16` / `LG_PLUS 18` / `XL 20` / `XXL 24` / `XXXL 30` / `HERO 36`（近邻档 13/15/22/28/32/48/56 与 XXXL_PLUS 36 已按前端口径归并/删除，不保留；`LG 16` 为 HarmonyOS 标准正文尺寸的平台适配档）。字重 `FONT.WEIGHT.{REGULAR,MEDIUM,SEMIBOLD,BOLD}`。行高 `FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}`；字距 `FONT.LETTER_SPACING.{EYEBROW 1.4, LABEL 1.2, FIELD 1.28, ICON_LABEL 0.6}`（对齐前端 tracking-eyebrow/label/field 刻度）。
 
@@ -228,7 +234,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 
 尺寸（COMPONENT / LAYOUT，禁止裸 `width(N)` / `height(N)`）：
 - 头像 `AVATAR_SIZE.{XS 32, SMALL 40, SMALL_PLUS 44, MEDIUM 48, LARGE 80, XLARGE 96}`；按钮高度 `BUTTON_HEIGHT 42` / `BUTTON_HEIGHT_LG 48` / `ACTION_BUTTON_HEIGHT 28` / `ACTION_BUTTON_HEIGHT_MD 40` / `ACTION_BUTTON_HEIGHT_LG 34` / `SHEET_ACTION_HEIGHT 44` / `FILTER_CHIP_HEIGHT 30` / `LOGOUT_BUTTON_HEIGHT 50` / `PASSWORD_INPUT_HEIGHT 46`
-- 图标 `ICON_SIZE_XS 16` / `ICON_SIZE_SM 20` / `ICON_SIZE_MD 24` / `STATUS_ICON_SIZE 28` / `LOADING_ICON_SIZE 20` / `LOADING_GLYPH_SIZE 46` / `BRAND_ICON_SIZE 38`；容器 `EMPTY_ICON_SIZE 64` / `LOADING_CONTAINER_SIZE 72` / `BANNER_HEIGHT 140` / `SKELETON_CARD_HEIGHT 100` / `PLACEHOLDER_AREA_HEIGHT 120` / `IMAGE_PLACEHOLDER_HEIGHT 110` / `SHARE_CARD_HEIGHT 130` / `LOG_AREA_HEIGHT 300` / `PROGRESS_STROKE_WIDTH 4`
+- 图标 `ICON_SIZE_2XS 14` / `ICON_SIZE_XS 16` / `ICON_SIZE_SM 20` / `ICON_SIZE_SM_PLUS 22` / `ICON_SIZE_MD 24` / `ICON_SIZE_LG 32` / `ICON_SIZE_EMPTY 48`（与 `FONT.SIZE` 解耦的独立 ICON 刻度，图标尺寸一律走此档，不用字号 token） / `STATUS_ICON_SIZE 28` / `LOADING_ICON_SIZE 20` / `LOADING_GLYPH_SIZE 46` / `BRAND_ICON_SIZE 38`；容器 `EMPTY_ICON_SIZE 64` / `LOADING_CONTAINER_SIZE 72` / `BANNER_HEIGHT 140` / `SKELETON_CARD_HEIGHT 100` / `PLACEHOLDER_AREA_HEIGHT 120` / `IMAGE_PLACEHOLDER_HEIGHT 110` / `SHARE_CARD_HEIGHT 130` / `LOG_AREA_HEIGHT 300` / `PROGRESS_STROKE_WIDTH 4`
 - 布局 `LAYOUT.{DESKTOP_HEADER_HEIGHT 52, DESKTOP_SIDEBAR_WIDTH 224, RIGHT_SIDEBAR_WIDTH 220, MOBILE_BOTTOM_NAV_HEIGHT 56, TABLET_NAV_MAX_WIDTH 520, FAB_SIZE 52, ICON_BUTTON_SIZE 36, LABEL_WIDTH 60, HOME_COLUMN_WIDTH 420, FILTER_PANEL_WIDTH 180, GLOW_BLOB_LARGE 180 / MEDIUM 160 / SMALL 120}`
 - 聊天 `CHAT.{BUBBLE_PADDING_H 16, BUBBLE_PADDING_V 10, IMAGE_BUBBLE_PADDING_H 14, IMAGE_BUBBLE_PADDING_V 6, IMAGE_MAX_WIDTH 200, ...}`
 

@@ -19,7 +19,7 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from '../components/LucideIcon';
 
-type NotificationFilterKey = 'all' | 'unread' | 'social' | 'interaction' | 'group' | 'report' | 'nearby' | 'system';
+type NotificationFilterKey = 'all' | 'unread' | 'interaction' | 'group' | 'report' | 'nearby' | 'system';
 
 interface GroupedNotification {
   label: string;
@@ -56,7 +56,6 @@ export struct NotificationCenter {
   private filterOptions: NotificationFilterOption[] = [
     new NotificationFilterOption('all', '全部'),
     new NotificationFilterOption('unread', '未读'),
-    new NotificationFilterOption('social', '社交'),
     new NotificationFilterOption('interaction', '互动'),
     new NotificationFilterOption('group', '群组'),
     new NotificationFilterOption('report', '举报'),
@@ -507,7 +506,7 @@ export struct NotificationCenter {
         Column({ space: DesignConstants.SPACING.LG }) {
           SystemIcon({
             icon: AppIcon.WARNING,
-            iconSize: 48,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_EMPTY,
             iconColor: this.getPalette().textSecondary
           })
           Text(this.errorMessage)
@@ -529,7 +528,7 @@ export struct NotificationCenter {
           Column({ space: DesignConstants.SPACING.MD }) {
             SystemIcon({
               icon: AppIcon.EMPTY,
-              iconSize: 48,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_EMPTY,
               iconColor: this.getPalette().textTertiary
             })
             Text('暂无通知')
@@ -757,8 +756,6 @@ export struct NotificationCenter {
     switch (filter) {
       case 'unread':
         return '未读';
-      case 'social':
-        return '社交';
       case 'interaction':
         return '互动';
       case 'group':
@@ -786,8 +783,6 @@ export struct NotificationCenter {
 
   private getTypeColor(type: string): string {
     switch (this.mapTypeToCategory(type as NotifyType)) {
-      case 'social':
-        return this.getPalette().accentBackground;
       case 'interaction':
         return this.getPalette().accentBackground;
       case 'group':
@@ -919,8 +914,6 @@ export struct NotificationCenter {
 
   private getNotificationIcon(type: NotifyType): AppIcon {
     switch (this.mapTypeToCategory(type)) {
-      case 'social':
-        return AppIcon.PERSON;
       case 'interaction':
         return AppIcon.MESSAGE;
       case 'group':
@@ -953,9 +946,9 @@ export struct NotificationCenter {
 
   private mapTypeToCategory(type: NotifyType): NotificationFilterKey {
     switch (type) {
+      // 社交（关注/互关）并入互动：单通道筛选，无独立 social 分类
       case 'new_follower':
       case 'mutual_follow':
-        return 'social';
       case 'moment_commented':
       case 'comment_reply':
       case 'mentioned':
@@ -975,7 +968,7 @@ export struct NotificationCenter {
       case 'system_announcement':
         return 'system';
       default:
-        return 'social';
+        return 'interaction';
     }
   }
 }

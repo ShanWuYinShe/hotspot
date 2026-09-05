@@ -19,7 +19,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { ThemeConstants } from '../../../core/theme/ThemeConstants';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
-import { KEY_RESOLVED_THEME_ID, KEY_THEME_MODE, ThemeOptionItem, ThemeMode } from '../../../core/theme/AppThemeTypes';
+import { KEY_RESOLVED_THEME_ID, KEY_THEME_MODE, KEY_DARK_MODE_PREFERENCE, ThemeOptionItem, ThemeMode, DarkModePreference } from '../../../core/theme/AppThemeTypes';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -36,6 +36,7 @@ import {
   SupportConfigCard
 } from './SettingsSupport';
 import { AppIcon } from '../../../components/SystemIcon';
+import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { common } from '@kit.AbilityKit';
@@ -58,6 +59,7 @@ export struct SettingsPage {
   @StorageLink(KEY_CLIENT_CONFIG) clientConfig: ClientConfig | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_THEME_MODE) themeMode: ThemeMode = 'follow_system';
+  @StorageLink(KEY_DARK_MODE_PREFERENCE) darkModePreference: DarkModePreference = 'auto';
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State systemMeta: ApiVersionMeta | null = null;
   @State systemMetaLoading: boolean = false;
@@ -76,9 +78,7 @@ export struct SettingsPage {
   @State pushNotifyEnabled: boolean = true;
   @State privacyPending: boolean = false;
   @State locationPending: boolean = false;
-  @State isDarkForced: boolean = false;
   private static readonly KEY_PUSH_NOTIFY: string = 'settings_push_notify_enabled';
-  private static readonly KEY_DARK_FORCED: string = 'settings_dark_forced';
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
   private isDestroyed: boolean = false;
@@ -145,7 +145,6 @@ export struct SettingsPage {
 
   private async loadLocalPreferences(): Promise<void> {
     this.pushNotifyEnabled = await PreferencesUtil.get(SettingsPage.KEY_PUSH_NOTIFY, true);
-    this.isDarkForced = await PreferencesUtil.get(SettingsPage.KEY_DARK_FORCED, false);
   }
 
   private async loadUserSettings(): Promise<void> {
@@ -211,18 +210,52 @@ export struct SettingsPage {
     await PreferencesUtil.set(SettingsPage.KEY_PUSH_NOTIFY, next);
   }
 
-  private async toggleDarkMode(next: boolean): Promise<void> {
-    // 强制深色=setColorMode(DARK)；关闭=NOT_SET 回到跟随系统（对齐前端 isDark 偏好语义）
-    this.isDarkForced = next;
-    await PreferencesUtil.set(SettingsPage.KEY_DARK_FORCED, next);
+  /** 明暗三档单通道：偏好经 AppThemeManager 持久化 + 重解主题，再按档位 setColorMode */
+  private getDarkModeIndex(): number {
+    if (this.darkModePreference === 'light') {
+      return 1;
+    }
+    if (this.darkModePreference === 'dark') {
+      return 2;
+    }
+    return 0;
+  }
+
+  private darkModeFromIndex(index: number): DarkModePreference {
+    if (index === 1) {
+      return 'light';
+    }
+    if (index === 2) {
+      return 'dark';
+    }
+    return 'auto';
+  }
+
+  private async handleDarkModeChange(pref: DarkModePreference): Promise<void> {
+    if (pref === this.darkModePreference) {
+      return;
+    }
+    await AppThemeManager.setDarkModePreference(pref);
+    SystemUiController.syncWithCurrentTheme();
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      context.getApplicationContext().setColorMode(next ?
-        ConfigurationConstant.ColorMode.COLOR_MODE_DARK :
-        ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+      if (pref === 'dark') {
+        context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
+      } else if (pref === 'light') {
+        context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
+      } else {
+        context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+      }
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, `切换颜色模式失败: ${JSON.stringify(error)}`);
     }
+    let label: string = '跟随系统';
+    if (pref === 'light') {
+      label = '浅色';
+    } else if (pref === 'dark') {
+      label = '深色';
+    }
+    SystemToast.show(`明暗模式：${label}`, this.getUIContext());
   }
 
   private async refreshAll(force: boolean): Promise<void> {
@@ -535,17 +568,62 @@ export struct SettingsPage {
                         bottom: DesignConstants.SPACING.SM
                       })
                       SettingsRowDivider()
-                      SettingsToggleRow({
-                        icon: AppIcon.MOON,
-                        title: '深色模式',
-                        subtitle: '关闭时跟随系统深浅设置',
-                        isOn: this.isDarkForced,
-                        onToggle: (next: boolean) => { this.toggleDarkMode(next); }
+                      // 明暗三档（跟随系统/浅色/深色 → setColorMode NOT_SET/LIGHT/DARK，走 TabsPillGroup 原语）
+                      Column({ space: DesignConstants.SPACING.SM }) {
+                        Row({ space: DesignConstants.SPACING.MD }) {
+                          Row() {
+                            LucideIcon({
+                              icon: AppIcon.MOON,
+                              iconSize: DesignConstants.FONT.SIZE.LG,
+                              color: this.getCurrentThemePalette().accentBackground
+                            })
+                          }
+                          .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+                          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+                          .borderRadius(DesignConstants.RADIUS.FULL)
+                          .backgroundColor(this.getCurrentThemePalette().accentMuted)
+                          .justifyContent(FlexAlign.Center)
+                          .alignItems(VerticalAlign.Center)
+
+                          Column({ space: DesignConstants.SPACING.XS }) {
+                            Text('明暗模式')
+                              .fontSize(DesignConstants.FONT.SIZE.MD)
+                              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                              .fontColor(this.getCurrentThemePalette().textPrimary)
+                            Text('浅色/深色手动锁定，或跟随系统')
+                              .fontSize(DesignConstants.FONT.SIZE.XS)
+                              .fontColor(this.getCurrentThemePalette().textSecondary)
+                              .maxLines(2)
+                              .textOverflow({ overflow: TextOverflow.Ellipsis })
+                          }
+                          .layoutWeight(1)
+                          .alignItems(HorizontalAlign.Start)
+                        }
+                        .width('100%')
+
+                        TabsPillGroup({
+                          tabs: [{ label: '跟随系统' }, { label: '浅色' }, { label: '深色' }],
+                          activeIndex: this.getDarkModeIndex(),
+                          actions: {
+                            onChange: (index: number) => {
+                              this.handleDarkModeChange(this.darkModeFromIndex(index)).catch(() => {
+                                SystemToast.showError('切换明暗模式失败', this.getUIContext());
+                              });
+                            }
+                          }
+                        })
+                      }
+                      .width('100%')
+                      .padding({
+                        left: DesignConstants.SPACING.LG,
+                        right: DesignConstants.SPACING.LG,
+                        top: DesignConstants.SPACING.MD,
+                        bottom: DesignConstants.SPACING.MD
                       })
                       SettingsEntryRow({ item: {
                         icon: AppIcon.STAR_FILL,
                         title: '更多外观模式',
-                        subtitle: '跟随系统 / 浮雕暖调（大图预览）',
+                        subtitle: '跟随系统 / 星际 / 清野（大图预览）',
                         action: () => { this.showThemeSheet = true; }
                       } })
                     }

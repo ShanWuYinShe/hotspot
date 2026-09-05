@@ -181,10 +181,10 @@
 	<div class="animate-fade-in flex flex-col gap-5">
 	<!-- Avatar section -->
 	<div class="relative rounded-xl overflow-hidden" style="height:var(--cst-cover-height-sm);">
-		<!-- 无封面数据时的占位底：accent 渐变 + 大圆形装饰，让占位可辨识而非空白；
+		<!-- 无封面数据时的占位底：主题 token 承载（vibrant 渐变 / forest 纸面纯色），页面只引用；
 		     上传能力开放前「更换横幅」收敛为图标按钮（禁用态） -->
-		<div class="absolute inset-0" style="background:linear-gradient(135deg, color-mix(in srgb, var(--cst-accent-default) 26%, var(--cst-surface-primary)) 0%, color-mix(in srgb, var(--cst-accent-default) 8%, var(--cst-surface-primary)) 55%, var(--cst-surface-primary) 100%);"></div>
-		<div class="pointer-events-none absolute -right-6 -bottom-10 size-36 rounded-full" style="background:radial-gradient(circle, color-mix(in srgb, var(--cst-accent-default) 18%, transparent) 0%, transparent 70%);"></div>
+		<div class="absolute inset-0" style="background:var(--cst-surface-cover-placeholder);"></div>
+		<div class="pointer-events-none absolute -right-6 -bottom-10 size-36 rounded-full" style="background:radial-gradient(circle, var(--cst-glow-accent) 0%, transparent 70%);"></div>
 		<button
 			type="button"
 			class="hover-btn absolute top-3 right-3 flex items-center justify-center rounded-full focus-ring bg-surface-overlay-strong text-content-inverse size-8 disabled:opacity-muted"

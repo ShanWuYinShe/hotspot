@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { Check, Moon, Palette, Sun, Database } from '@lucide/svelte';
+	import { Check, Palette, Database } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
-	import { theme, toggleDark, setTheme, THEME_OPTIONS } from '@/stores/theme.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
+	import { theme, setColorScheme, setTheme, THEME_OPTIONS, COLOR_SCHEME_OPTIONS, type ColorSchemeMode } from '@/stores/theme.svelte';
 	import * as Popover from '@/components/ui/popover';
 
 	// 唯一的外观/模式控制。选择面板保持打开，仅显式完成、外部点击或 Escape 关闭。
@@ -17,7 +18,9 @@
 	let rootEl = $state<HTMLElement | null>(null);
 
 	const currentTheme = $derived(THEME_OPTIONS.find((item) => item.id === theme.theme)?.label ?? '星际');
-	const modeLabel = $derived(theme.isDark ? '深色' : '浅色');
+	const modeLabel = $derived(
+		theme.colorScheme === 'auto' ? '跟随系统' : theme.colorScheme === 'dark' ? '深色' : '浅色'
+	);
 
 	// ── Dev API source toggle（仅 dev）───────────────────────────
 	let mockEnabled = $state(true);
@@ -124,33 +127,21 @@
 				</div>
 			</section>
 
-			<button
-				type="button"
-				onclick={toggleDark}
-				aria-pressed={theme.isDark}
-				class="hover-btn surface-ghost mt-2 flex w-full items-center justify-between rounded-sm px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent-default text-text-primary"
-				
+			<!-- 明暗三档（跟随系统/浅色/深色）：复用 TabBar 分段样式，不自造新组件 -->
+			<section
+				aria-labelledby="color-scheme-label"
+				class="rounded-md ring-1 ring-border-default surface-tinted p-2 mt-2"
 			>
-				<span class="flex items-center gap-2">
-					<span class="flex h-6.5 w-6.5 items-center justify-center rounded-full bg-accent-soft">
-						{#if theme.isDark}
-							<Sun size={13} color="var(--cst-accent-default)" />
-						{:else}
-							<Moon size={13} color="var(--cst-accent-default)" />
-						{/if}
-					</span>
-					<span>
-						<span class="block text-sm font-medium">{theme.isDark ? '深色模式' : '浅色模式'}</span>
-						<span class="block text-xxs text-text-secondary">点击切换</span>
-					</span>
-				</span>
-				<span class="relative h-5 w-8.5 overflow-hidden rounded-full" style="background:{theme.isDark ? 'var(--cst-accent-default)' : 'var(--cst-border-strong)'};">
-					<span
-						class="absolute top-0.75 h-3.5 w-3.5 rounded-full"
-						style="background:var(--cst-surface-control-thumb);box-shadow:var(--cst-elevation-control-thumb);left:{theme.isDark ? 17 : 3}px;transition:left var(--cst-motion-standard) var(--cst-ease-bounce);"
-					></span>
-				</span>
-			</button>
+				<div class="flex items-center justify-between px-2 pb-2 pt-1">
+					<p id="color-scheme-label" class="eyebrow">明暗</p>
+					<span class="text-xxs text-text-secondary">当前：{modeLabel}</span>
+				</div>
+				<TabBar
+					items={COLOR_SCHEME_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
+					value={theme.colorScheme}
+					onChange={(id) => setColorScheme(id as ColorSchemeMode)}
+				/>
+			</section>
 
 			{#if import.meta.env.DEV}
 				<button

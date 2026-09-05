@@ -7,7 +7,8 @@ vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
 const tabs = [
 	{ id: 'all', label: '全部' },
-	{ id: 'people', label: '用户' }
+	{ id: 'people', label: '用户' },
+	{ id: 'groups', label: '群组' }
 ] as const;
 
 const base = (over: Record<string, unknown> = {}) => ({
@@ -16,7 +17,7 @@ const base = (over: Record<string, unknown> = {}) => ({
 	tabs,
 	loading: false,
 	hasResults: false,
-	results: { users: [], moments: [], topics: [] },
+	results: { users: [], moments: [], topics: [], groups: [] },
 	onTabChange: () => {},
 	onChoose: () => {},
 	...over
@@ -43,12 +44,31 @@ describe('SearchResults', () => {
 				results: {
 					users: [{ user_id: 'u1', nickname: '鹿鸣' }],
 					moments: [],
-					topics: []
+					topics: [],
+					groups: []
 				}
 			})
 		);
 		expect(screen.getByText('鹿鸣')).toBeTruthy();
 		await fireEvent.click(screen.getByRole('button', { name: '用户' }));
 		expect(onTabChange).toHaveBeenCalledWith('people');
+	});
+
+	it('渲染群组结果组', () => {
+		render(
+			SearchResults,
+			base({
+				hasResults: true,
+				results: {
+					users: [],
+					moments: [],
+					topics: [],
+					groups: [{ group_id: 'g1', name: '晨跑团', avatar_url: '', members_count: 5 }]
+				}
+			})
+		);
+		expect(screen.getByText('晨跑团')).toBeTruthy();
+		expect(screen.getByText('5 位成员')).toBeTruthy();
+		expect(screen.getAllByText('群组').length).toBeGreaterThan(0);
 	});
 });

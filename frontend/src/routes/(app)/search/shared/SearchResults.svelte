@@ -13,7 +13,7 @@
 	// 搜索页「有查询结果态」：Tab 栏 + 用户/动态/话题结果组。
 	// 页面私有组件（colocate），由 search/+page.svelte 渲染。
 
-	export type TabType = 'all' | 'people' | 'posts' | 'topics';
+	export type TabType = 'all' | 'people' | 'posts' | 'groups' | 'topics';
 
 	export interface SearchResultUser {
 		user_id: string;
@@ -31,10 +31,19 @@
 		reactions?: { count: number }[];
 	}
 
+	export interface SearchResultGroup {
+		group_id: string;
+		name: string;
+		// spec GroupInfo.avatar_url：恒定 nullable
+		avatar_url: string | null;
+		members_count?: number;
+	}
+
 	export interface SearchResultsData {
 		users: SearchResultUser[];
 		moments: SearchResultMoment[];
 		topics: string[];
+		groups: SearchResultGroup[];
 	}
 
 	let {
@@ -150,6 +159,36 @@
 									<span class="block truncate text-sm text-text-primary">{moment.description ?? '无标题'}</span>
 									<span class="mt-0.5 block text-xs text-text-secondary">
 										{moment.user?.nickname ?? '匿名'}{#if (moment.reactions ?? []).reduce((sum, r) => sum + r.count, 0)} · {(moment.reactions ?? []).reduce((sum, r) => sum + r.count, 0)} 赞{/if}
+									</span>
+								</span>
+								<ArrowUpRight class="size-4 text-text-secondary" />
+							</ListItem>
+						{/each}
+					</ListContainer>
+				</section>
+			{/if}
+
+			{#if (tab === 'all' || tab === 'groups') && results.groups.length > 0}
+				<!-- 群组结果组（复用用户组同款行语言：Avatar 圆角区分群组 + ArrowUpRight） -->
+				<section
+					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
+				>
+					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
+						<Users class="size-4 text-accent-default" strokeWidth={1.75} />
+						<h2 class="text-sm font-medium text-text-primary">群组</h2>
+					</div>
+					<ListContainer>
+						{#each results.groups as group (group.group_id)}
+							<ListItem
+								onClick={() => void goto(ROUTES.group(group.group_id))}
+								ariaLabel={`查看群组 ${group.name}`}
+								class="flex items-center gap-3 px-4 py-3.5"
+							>
+								<Avatar src={group.avatar_url ?? ''} name={group.name} size={36} shape="rounded" />
+								<span class="min-w-0 flex-1">
+									<span class="block text-sm text-text-primary">{group.name}</span>
+									<span class="mt-0.5 block text-xs text-text-secondary">
+										{group.members_count ?? 0} 位成员
 									</span>
 								</span>
 								<ArrowUpRight class="size-4 text-text-secondary" />

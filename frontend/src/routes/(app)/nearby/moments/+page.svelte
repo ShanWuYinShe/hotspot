@@ -23,7 +23,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// + header 内 trailing 计数、below 搜索与分类 Tab —— 其他页面均以此为准。
 	// 对齐 Figma Make 附近动态页结构。
 
-	const TABS = ['热门', '附近', '活动', '关注'];
+	const TABS = ['热门', '附近', '关注'];
 
 	let apiFeedItems = $state<FeedItem[]>([]);
 	let tags = $state<string[]>([]);
@@ -176,9 +176,8 @@ locationName = loc?.location_name ?? '';
 				(!activeTag || i.tag === activeTag) &&
 				(!q || i.user.toLowerCase().includes(q) || i.content.toLowerCase().includes(q) || i.location.toLowerCase().includes(q))
 		);
-		// 分类 Tab 过滤：热门=按热度排序；活动=活动标签；关注=关注流（mock 无数据源，恒空）
+		// 分类 Tab 过滤：热门=按热度排序；关注=关注流（mock 无数据源，恒空）
 		if (activeTab === '热门') items = [...items].sort((a, b) => b.likes - a.likes);
-		else if (activeTab === '活动') items = items.filter((i) => i.tag === '活动');
 		else if (activeTab === '关注') items = [];
 		return items;
 	});

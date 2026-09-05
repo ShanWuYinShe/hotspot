@@ -390,7 +390,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 <SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
-		<PageHeader title="动态详情" titleSize="base" onBack={() => history.back()}>
+		<PageHeader title="动态详情" titleSize="xl" onBack={() => history.back()}>
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">

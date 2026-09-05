@@ -357,7 +357,7 @@ export class AppThemeVisuals {
         shadow: palette.elevatedShadow,
         borderRadius: DesignConstants.SHAPE.COMPACT_CARD,
         padding: DesignConstants.SPACING.MD,
-        iconSize: 22,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM_PLUS,
         iconWrapperSize: 56,
         labelFontSize: DesignConstants.FONT.SIZE.SM
       },

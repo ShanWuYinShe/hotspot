@@ -9,10 +9,19 @@
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<script>
 			// 首帧主题防闪烁：CSS 注入前先按持久化偏好设置 <html> 的 vibrant/forest + dark 类，
-			// 与 stores/theme.svelte.ts 的 IS_DARK_KEY/appTheme 键保持一致。
+			// 与 stores/theme.svelte.ts 的 colorScheme/appTheme 键保持一致。
+			// 三态：colorScheme=light/dark 直接取值；auto（或缺失）时读老 isDark
+			// 显式值做首帧兼容，否则跟随系统 matchMedia。
 			(function () {
 				try {
-					var dark = localStorage.getItem('isDark') === 'true';
+					var mode = localStorage.getItem('colorScheme');
+					var dark;
+					if (mode === 'dark') dark = true;
+					else if (mode === 'light') dark = false;
+					else if (localStorage.getItem('isDark') === 'true') dark = true;
+					else if (localStorage.getItem('isDark') === 'false') dark = false;
+					else if (window.matchMedia) dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+					else dark = false;
 					var t = localStorage.getItem('appTheme');
 					if (t !== 'forest' && t !== 'vibrant') t = 'vibrant';
 					var root = document.documentElement;

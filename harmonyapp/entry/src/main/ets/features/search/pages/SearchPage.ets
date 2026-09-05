@@ -226,10 +226,37 @@ export struct SearchPage {
 
   /** 空查询发现态：对齐前端 SearchDiscovery（空查询不调 suggest，前端以 prefix.length>=1 为阈值） */
   private async loadDiscovery(): Promise<void> {
-    // 空 prefix 调 search/suggest 会 10000（spec prefix 1-50），故空查询发现态基于本地 recentSearches 静态展示，
-    // 热门/话题由后续标签热门接口补充，当前保留空面板避免误调
-    this.discoveryHot = [];
-    this.discoveryTopics = [];
+    // 空 prefix 调 search/suggest 会 10000（spec prefix 1-50），故热门/话题取热门动态
+    //（moments/search sort_by=popular，已有热门模式）的 tags 派生；取不到则留空，
+    // 渲染层按空隐藏对应卡片（不留“暂无”死区块）
+    try {
+      const response = await ApiClient.searchMoments({ sort_by: 'popular', pagination: { limit: 20 } });
+      if (this.isDestroyed || response.code !== 0 || !response.data) {
+        return;
+      }
+      const tags: string[] = [];
+      for (const moment of response.data.items ?? []) {
+        for (const tag of moment.tags ?? []) {
+          const trimmed = tag.trim();
+          if (trimmed.length > 0 && trimmed.length <= 12 && tags.indexOf(trimmed) < 0) {
+            tags.push(trimmed);
+          }
+          if (tags.length >= 10) {
+            break;
+          }
+        }
+        if (tags.length >= 10) {
+          break;
+        }
+      }
+      if (this.isDestroyed) {
+        return;
+      }
+      this.discoveryHot = tags.slice(0, 5);
+      this.discoveryTopics = tags;
+    } catch (_) {
+      // 取不到则不填充，卡片按空隐藏
+    }
   }
 
   private async doSearch(): Promise<void> {
@@ -709,17 +736,10 @@ export struct SearchPage {
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
-        // 正在关注（热门搜索）
+        // 正在关注（热门搜索）：取不到热门 tags 时不渲染该卡（不留死区块）
+        if (this.discoveryHot.length > 0) {
         Column() {
           this.buildDiscoveryCard('正在关注')
-          if (this.discoveryHot.length === 0) {
-            Text('暂无热门搜索')
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .width('100%')
-              .textAlign(TextAlign.Center)
-              .padding(DesignConstants.SPACING.LG)
-          }
           ForEach(this.discoveryHot.slice(0, 5), (item: string, index: number) => {
             Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
               Row({ space: DesignConstants.SPACING.MD }) {
@@ -749,18 +769,12 @@ export struct SearchPage {
         .borderRadius(DesignConstants.SHAPE.CARD)
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+        }
 
-        // 推荐话题
+        // 推荐话题：取不到热门 tags 时不渲染该卡（不留死区块）
+        if (this.discoveryTopics.length > 0) {
         Column() {
           this.buildDiscoveryCard('推荐话题')
-          if (this.discoveryTopics.length === 0) {
-            Text('暂无推荐话题')
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .width('100%')
-              .textAlign(TextAlign.Center)
-              .padding(DesignConstants.SPACING.LG)
-          }
           Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
             ForEach(this.discoveryTopics, (topic: string) => {
               Text(`#${topic}`)
@@ -792,6 +806,7 @@ export struct SearchPage {
         .borderRadius(DesignConstants.SHAPE.CARD)
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+        }
       }
       .width('100%')
       .padding({

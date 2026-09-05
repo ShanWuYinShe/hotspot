@@ -338,22 +338,14 @@ const FILTER_TABS = [
 				<div class="flex flex-col gap-2">
 					{#each typeStats as { type, count }}
 						{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reaction}
-						<button
-							type="button"
-							aria-pressed={filter === type}
-							class="hover-btn flex items-center gap-2.5 rounded-sm border px-2 py-1.5 focus-ring text-left transition-colors duration-rapid ease-standard
-								{filter === type
-								? 'border-[var(--notify-active-border)] bg-[var(--notify-active-bg)] hover:bg-interactive-active'
-								: 'border-transparent hover:bg-interactive-hover'}"
-							style="--notify-active-bg:{cfg.bg};--notify-active-border:{cfg.border};"
-							onclick={() => (filter = type)}
-						>
+						<!-- 纯展示：类型概览数字（过滤只走标题下 TabBar，不在此写 filter） -->
+						<div class="flex items-center gap-2.5 px-2 py-1.5">
 							<div class="flex items-center justify-center rounded-full shrink-0 size-6" style="background:{cfg.bg};">
 								<cfg.icon class="size-3" style="color:{cfg.color};" strokeWidth={1.75} />
 							</div>
 							<span class="text-text-primary text-sm flex-1">{cfg.label}</span>
 							<span class="text-text-secondary text-xs">{count}</span>
-						</button>
+						</div>
 					{/each}
 				</div>
 			</RailSection>

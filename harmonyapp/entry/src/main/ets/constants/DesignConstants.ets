@@ -256,6 +256,14 @@ export interface ComponentConstants {
   ICON_SIZE_XS: number;
   ICON_SIZE_SM: number;
   ICON_SIZE_MD: number;
+  /** 紧凑图标（14，徽章/小关闭钮；与 FONT.SIZE 解耦的独立 ICON 刻度） */
+  ICON_SIZE_2XS: number;
+  /** 快捷操作图标（22，profile quickAction；独立 ICON 刻度） */
+  ICON_SIZE_SM_PLUS: number;
+  /** 大图标（32，性能概览/空态强调；独立 ICON 刻度） */
+  ICON_SIZE_LG: number;
+  /** 空态大图标（48，错误/空态插画级图标；独立 ICON 刻度） */
+  ICON_SIZE_EMPTY: number;
   /** 骨架屏卡片高度（100） */
   SKELETON_CARD_HEIGHT: number;
   /** 内容占位区高度（120，加载/空态占位） */
@@ -608,6 +616,10 @@ const COMPONENT: ComponentConstants = {
   ICON_SIZE_XS: 16,
   ICON_SIZE_SM: 20,
   ICON_SIZE_MD: 24,
+  ICON_SIZE_2XS: 14,
+  ICON_SIZE_SM_PLUS: 22,
+  ICON_SIZE_LG: 32,
+  ICON_SIZE_EMPTY: 48,
   SKELETON_CARD_HEIGHT: 100,
   PLACEHOLDER_AREA_HEIGHT: 120,
   IMAGE_PLACEHOLDER_HEIGHT: 110,

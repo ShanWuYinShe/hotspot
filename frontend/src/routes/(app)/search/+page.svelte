@@ -4,7 +4,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
-	import { searchUsers, searchMoments, searchSuggest , netError } from '@/api';
+	import { searchUsers, searchMoments, searchGroups, searchSuggest , netError } from '@/api';
 	import SearchDiscovery from './shared/SearchDiscovery.svelte';
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
 
@@ -29,10 +29,14 @@
 	let results = $state<SearchResultsData>({
 		users: [],
 		moments: [],
-		topics: []
+		topics: [],
+		groups: []
 	});
 	let loading = $state(false);
 	let searchError = $state<string | null>(null);
+	// 发现态热门话题：moments/search 热门模式取热门动态 tags 聚合（与 home-feed 同源）；
+	// 无数据时不渲染区块（诚实空态原则），失败静默。
+	let hotTopics = $state<string[]>([]);
 
 	const device = $derived(platform.platform);
 
@@ -67,24 +71,50 @@
 		};
 	});
 
+	// 发现态热门话题：只拉一次（无查询时展示，有查询时不打扰结果态）
+	$effect(() => {
+		let cancelled = false;
+		void searchMoments({ sort_by: 'popular', pagination: { limit: 12 } })
+			.then((res) => {
+				if (cancelled || res.code !== 0 || !res.data) return;
+				const seen = new Set<string>();
+				const list: string[] = [];
+				for (const m of res.data.items ?? []) {
+					for (const t of m.tags ?? []) {
+						if (t && !seen.has(t)) {
+							seen.add(t);
+							list.push(t);
+						}
+					}
+				}
+				hotTopics = list.slice(0, 10);
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	});
+
 	async function doSearch(term: string) {
 		const seq = ++searchSeq;
 		searchError = null;
 		if (!term) {
-			results = { users: [], moments: [], topics: [] };
+			results = { users: [], moments: [], topics: [], groups: [] };
 			return;
 		}
 		loading = true;
 		try {
-			const [usersRes, momentsRes] = await Promise.all([
+			const [usersRes, momentsRes, groupsRes] = await Promise.all([
 				searchUsers({ keyword: term }).catch(() => netError({ items: [] })),
-				searchMoments({ keyword: term }).catch(() => netError({ items: [] }))
+				searchMoments({ keyword: term }).catch(() => netError({ items: [] })),
+				searchGroups({ keyword: term }).catch(() => netError({ items: [] }))
 			]);
 			const rawUsers = usersRes.code === 0 ? usersRes.data?.items : undefined;
 			const rawMoments = momentsRes.code === 0 ? momentsRes.data?.items : undefined;
-			if (usersRes.code !== 0 || momentsRes.code !== 0) {
+			const rawGroups = groupsRes.code === 0 ? groupsRes.data?.items : undefined;
+			if (usersRes.code !== 0 || momentsRes.code !== 0 || groupsRes.code !== 0) {
 				if (seq === searchSeq) {
-					searchError = usersRes.message ?? momentsRes.message ?? '搜索失败，请稍后重试';
+					searchError = usersRes.message ?? momentsRes.message ?? groupsRes.message ?? '搜索失败，请稍后重试';
 					loading = false;
 				}
 				return;
@@ -100,17 +130,23 @@
 				};
 			});
 			const moments = rawMoments ?? [];
+			const groups = (rawGroups ?? []).map((g) => ({
+				group_id: g.group?.group_id ?? '',
+				name: g.group?.name ?? '',
+				avatar_url: g.group?.avatar_url ?? '',
+				members_count: g.group?.members_count ?? 0
+			}));
 			// 话题从结果动态聚合
 			const topicSet = new Set<string>();
 			for (const m of moments) {
 				m.tags?.forEach((t) => topicSet.add(t));
 			}
 			if (seq !== searchSeq) return; // 旧请求晚返回时丢弃，避免覆盖新关键词结果
-			results = { users, moments, topics: Array.from(topicSet) };
+			results = { users, moments, topics: Array.from(topicSet), groups };
 		} catch {
 			if (seq !== searchSeq) return;
 			searchError = '搜索失败，请稍后重试';
-			results = { users: [], moments: [], topics: [] };
+			results = { users: [], moments: [], topics: [], groups: [] };
 		} finally {
 			if (seq === searchSeq) loading = false;
 		}
@@ -132,12 +168,13 @@
 		tab = 'all';
 	};
 
-	const hasResults = $derived(results.users.length + results.moments.length + results.topics.length > 0);
+	const hasResults = $derived(results.users.length + results.moments.length + results.topics.length + results.groups.length > 0);
 
 	const tabs = $derived<{ id: TabType; label: string; count?: number }[]>([
 		{ id: 'all', label: '全部' },
 		{ id: 'people', label: '用户', count: results.users.length || undefined },
 		{ id: 'posts', label: '动态', count: results.moments.length || undefined },
+		{ id: 'groups', label: '群组', count: results.groups.length || undefined },
 		{ id: 'topics', label: '话题', count: results.topics.length || undefined }
 	]);
 </script>
@@ -168,8 +205,8 @@
 	{#if searchError}
 		<LoadError message={searchError} onRetry={() => void doSearch(keyword)} />
 	{:else if !keyword}
-		<!-- 无查询发现态：最近搜索（热搜/话题无服务端数据源，不渲染死区块） -->
-		<SearchDiscovery recent={recent} onChoose={choose} onClear={() => (recent = [])} />
+		<!-- 无查询发现态：最近搜索 + 热门话题（无数据时 SearchDiscovery 内部不渲染该区块） -->
+		<SearchDiscovery recent={recent} hotTopics={hotTopics} onChoose={choose} onClear={() => (recent = [])} />
 	{:else}
 		<!-- 有查询结果态（对齐 Figma）；输入联想（相关话题）作为顶部快速入口 -->
 		<SearchResults

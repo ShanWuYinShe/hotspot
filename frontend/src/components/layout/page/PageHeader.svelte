@@ -60,15 +60,15 @@
 	} = $props();
 
 	// 显式映射表：完整类名字面量可被 Tailwind 扫描器检测（动态拼接 text-{x} 不会）。
-	// 3xl+bold：顶级 tab 页大标题档（对齐 Figma Make 移动端 display 标题——28px 级
-	// 粗体是页面的视觉锚点，与正文拉开层级）。
+	// 3xl+semibold：顶级 tab 页大标题档（对齐 Figma Make 移动端 display 标题——28px 级
+	// 半粗是页面的视觉锚点，与正文拉开层级；字重统一 semibold，不用 bold）。
 	const TITLE_SIZE_CLASS: Record<'md' | 'base' | 'lg' | 'xl' | '2xl' | '3xl', string> = {
 		md: 'text-md',
 		base: 'text-base',
 		lg: 'text-lg',
 		xl: 'text-xl',
 		'2xl': 'text-2xl',
-		'3xl': 'text-3xl font-bold'
+		'3xl': 'text-3xl font-semibold'
 	};
 	const SUBTITLE_SIZE_CLASS: Record<'xxs' | 'xs' | 'sm' | 'md', string> = {
 		xxs: 'text-xxs',

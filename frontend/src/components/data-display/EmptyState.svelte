@@ -40,8 +40,8 @@
 	<div class={cn('flex flex-col items-center justify-center py-20 gap-3', className)}>
 		{#if icon}
 			<div
-				class="flex items-center justify-center rounded-full border border-border-default"
-				style="width:{iconSize}px;height:{iconSize}px;box-shadow:var(--shadow-raised-sm);"
+				class="flex items-center justify-center rounded-full border border-border-default shadow-raised-sm"
+				style="width:{iconSize}px;height:{iconSize}px;"
 			>
 				{@render icon()}
 			</div>

@@ -110,6 +110,8 @@
   --cst-surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
   --cst-surface-media-scrim-strong: rgba(0, 0, 0, 0.55);
   --cst-surface-cover-scrim: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 65%);
+  /* 无封面占位底（forest 纸面语言：纯色淡底，无渐变） */
+  --cst-surface-cover-placeholder: var(--cst-accent-soft-bg);
   --cst-surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
   --cst-surface-gallery-label: rgba(0, 0, 0, 0.46);
   --cst-surface-map-control: rgba(255, 255, 255, 0.20);
@@ -273,4 +275,6 @@
   /* ── card-menu dark ── */
   --cst-surface-card-menu: color-mix(in srgb, var(--cst-surface-primary) 82%, var(--cst-accent-default));
   --cst-border-card-menu: color-mix(in srgb, var(--cst-accent-default) 28%, var(--cst-border-default));
+  /* 无封面占位底（forest 纸面语言：纯色淡底，无渐变） */
+  --cst-surface-cover-placeholder: var(--cst-accent-soft-bg);
 }

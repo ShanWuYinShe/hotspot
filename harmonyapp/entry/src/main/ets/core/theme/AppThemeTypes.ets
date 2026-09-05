@@ -1,12 +1,13 @@
-export type ThemeMode = 'follow_system' | 'default_clean' | 'figma_neu' | 'vibrant';
+export type ThemeMode = 'follow_system' | 'default_clean' | 'vibrant';
 
 export type ResolvedThemeId =
   | 'default_clean_light'
   | 'default_clean_dark'
-  | 'figma_neu_light'
-  | 'figma_neu_dark'
   | 'vibrant_light'
   | 'vibrant_dark';
+
+/** 明暗偏好三档（与 ThemeMode 主题族正交）：auto 跟随系统，light/dark 手动锁定 */
+export type DarkModePreference = 'auto' | 'light' | 'dark';
 
 export class AppThemeShadow {
   radius: number;
@@ -140,7 +141,10 @@ export interface ThemeOptionItem {
 
 export const KEY_THEME_MODE: string = 'themeMode';
 export const KEY_RESOLVED_THEME_ID: string = 'resolvedThemeId';
+export const KEY_DARK_MODE_PREFERENCE: string = 'darkModePreference';
 
 // 默认主题对齐前端（前端默认 vibrant 星际；存量用户 AppStorage 已存偏好不受影响）
 export const DEFAULT_THEME_MODE: ThemeMode = 'vibrant';
 export const DEFAULT_RESOLVED_THEME_ID: ResolvedThemeId = 'vibrant_light';
+/** 明暗偏好缺省跟随系统 */
+export const DEFAULT_DARK_MODE_PREFERENCE: DarkModePreference = 'auto';

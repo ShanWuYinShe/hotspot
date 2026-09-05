@@ -27,6 +27,7 @@ import { PreferencesUtil } from '../core/storage/PreferencesUtil';
 import { StorageKeys } from '../constants/AppConstants';
 import { ApiClient } from '../core/api/ApiClient';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { DarkModePreference } from '../core/theme/AppThemeTypes';
 import { AppRouter, ShareResolutionRouteParam } from '../core/router/AppRouter';
 import { getBreakpointType, type BreakpointType } from '../core/responsive/Breakpoint';
 
@@ -162,13 +163,13 @@ export default class EntryAbility extends UIAbility {
   }
 
   /**
-   * 设置主题配置
+   * 设置主题配置（初始跟随系统；Preferences 就绪后由 restoreDarkModePreference 按三档偏好覆盖）
    */
   private setupThemeConfiguration(): void {
     try {
       const appContext = this.context.getApplicationContext();
 
-      // 设置颜色模式跟随系统（使用 ColorMode.COLOR_MODE_NOT_SET）
+      // 默认颜色模式跟随系统（使用 ColorMode.COLOR_MODE_NOT_SET）
       appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
 
       // 监听系统配置变化
@@ -180,12 +181,29 @@ export default class EntryAbility extends UIAbility {
     }
   }
 
-  private async restoreForcedDarkMode(): Promise<void> {
+  /**
+   * 按明暗三档偏好应用颜色模式：dark→DARK，light→LIGHT，auto→NOT_SET（跟随系统）。
+   * 与 AppThemeManager.isEffectiveDarkMode 同源，主题解析单通道。
+   */
+  private applyColorModePreference(pref: DarkModePreference): void {
     try {
-      const forced = await PreferencesUtil.get('settings_dark_forced', false);
-      if (forced) {
-        this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
+      const appContext = this.context.getApplicationContext();
+      if (pref === 'dark') {
+        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
+      } else if (pref === 'light') {
+        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
+      } else {
+        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
       }
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, '应用颜色模式偏好失败: %{public}s', JSON.stringify(error));
+    }
+  }
+
+  private async restoreDarkModePreference(): Promise<void> {
+    try {
+      // AppThemeManager.initialize 已完成 settings_dark_forced→dark 迁移；此处只按新偏好三选一应用
+      this.applyColorModePreference(AppThemeManager.getDarkModePreference());
     } catch (error) {
       // 偏好读取失败时保持跟随系统，不阻塞启动
     }
@@ -245,6 +263,9 @@ export default class EntryAbility extends UIAbility {
       this.cachedDensityScale = 0;
       this.isDarkMode = this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
       AppThemeManager.onSystemColorModeChange(this.isDarkMode);
+      // 窗口创建时按三档偏好强制颜色模式（manual 下覆盖系统值）
+      this.applyColorModePreference(AppThemeManager.getDarkModePreference());
+      const effectiveDark = AppThemeManager.isEffectiveDarkMode();
 
       // 全屏布局：内容延伸到屏幕边缘
       // 配合 expandSafeArea 让页面可延伸到状态栏区域
@@ -260,7 +281,7 @@ export default class EntryAbility extends UIAbility {
       await mainWindow.setWindowSystemBarEnable(['status', 'navigation']);
 
       // 设置状态栏和导航栏为透明
-      await this.applySystemBarStyle(mainWindow, this.isDarkMode, this.currentSurfaceStyle);
+      await this.applySystemBarStyle(mainWindow, effectiveDark, this.currentSurfaceStyle);
 
       // 设置窗口方向
       await mainWindow.setPreferredOrientation(window.Orientation.AUTO_ROTATION);
@@ -472,9 +493,9 @@ export default class EntryAbility extends UIAbility {
     this.currentSurfaceStyle = SystemUiThemeStore.getStyle();
     this.surfaceStyleUnsubscribe = SystemUiThemeStore.subscribe((style: SystemSurfaceStyle) => {
       this.currentSurfaceStyle = style;
-      this.applySystemBarStyle(mainWindow, this.isDarkMode, style).catch(() => {});
+      this.applySystemBarStyle(mainWindow, AppThemeManager.isEffectiveDarkMode(), style).catch(() => {});
     });
-    this.applySystemBarStyle(mainWindow, this.isDarkMode, this.currentSurfaceStyle).catch(() => {});
+    this.applySystemBarStyle(mainWindow, AppThemeManager.isEffectiveDarkMode(), this.currentSurfaceStyle).catch(() => {});
   }
 
   private async applySystemBarStyle(mainWindow: window.Window, isDark: boolean, style?: SystemSurfaceStyle): Promise<void> {
@@ -562,9 +583,12 @@ export default class EntryAbility extends UIAbility {
       const isDark = config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
       this.isDarkMode = isDark;
       AppThemeManager.onSystemColorModeChange(isDark);
+      // 按三档偏好重申颜色模式（manual 下保持强制值，不被系统变化带跑）
+      this.applyColorModePreference(AppThemeManager.getDarkModePreference());
+      const effectiveDark = AppThemeManager.isEffectiveDarkMode();
       this.windowStage.getMainWindow()
         .then((mainWindow: window.Window) => {
-          this.applySystemBarStyle(mainWindow, isDark, this.currentSurfaceStyle);
+          this.applySystemBarStyle(mainWindow, effectiveDark, this.currentSurfaceStyle);
           this.updateSafeAreaInsets(mainWindow, 'config_change');
           this.refreshBreakpointFromWindow(mainWindow);
         })
@@ -632,8 +656,8 @@ export default class EntryAbility extends UIAbility {
       hilog.info(DOMAIN_NUMBER, TAG,
         `服务初始化完成: 总计${stats.totalServices}, 已初始化${stats.initializedServices}, 错误${stats.errorServices}`);
 
-      // 6. 恢复用户"强制深色"偏好（设置页深色 Toggle 持久化；Preferences 就绪后应用）
-      await this.restoreForcedDarkMode();
+      // 6. 恢复用户明暗偏好（设置页三档持久化；Preferences 就绪后应用）
+      await this.restoreDarkModePreference();
 
     } catch (error) {
       const err = error as BusinessError;

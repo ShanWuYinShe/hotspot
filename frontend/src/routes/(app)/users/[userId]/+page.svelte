@@ -350,10 +350,11 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
-{#if loadError}
-	<LoadError message={loadError} onRetry={() => reloadKey++} />
-{:else}
 <SplitPageLayout contentClassName="animate-fade-in pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}">
+	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
+	{#if loadError}
+		<LoadError message={loadError} onRetry={() => reloadKey++} />
+	{:else}
 	<!-- 资料头（无封面数据：紧凑头部，返回/分享/更多 浮在首行，对齐动态详情作者行层级） -->
 	<div class="flex items-center justify-between">
 		<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} />
@@ -375,7 +376,7 @@
 				<div class="flex items-end justify-between gap-4">
 					<div class="flex min-w-0 items-center gap-4">
 						<div class="relative shrink-0">
-							<Avatar src={user.avatar} name={user.name} size={80} class="shadow-raised-lg" style="border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);" />
+							<Avatar src={user.avatar} name={user.name} size={80} class="border-2 border-surface-primary shadow-raised-lg" />
 							<span class="absolute bottom-1 right-1 rounded-full bg-status-online size-3.5 border-2 border-surface-primary"  ></span>
 						</div>
 						<div class="min-w-0 pt-1">
@@ -396,12 +397,10 @@
 							<MessageCircle class="size-3.5"  strokeWidth={1.5} />
 							私信
 						</button>
+						<!-- 关注按钮：边框/投影走 token 类（描边 1.5px→hairline 档收敛，border 基类保尺寸稳定） -->
 						<button
 							type="button"
-							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
-							style={followed
-								? 'border:var(--cst-border-width-regular) solid var(--cst-accent-default);box-shadow:var(--shadow-raised-sm);'
-								: 'box-shadow:var(--shadow-glow-md);border:var(--cst-border-width-hairline) solid transparent;'}
+							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 px-4 py-2 rounded-full border focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm' : 'border-transparent bg-accent-default text-text-on-accent shadow-glow-md'}"
 							disabled={blocked}
 							onclick={toggleFollow}
 						>
@@ -471,6 +470,7 @@
 		<EmptyState bare title="还没有照片" description="该用户发布带图瞬间后会显示在这里。" />
 	{/if}
 </div>
+	{/if}
 
 	{#snippet rail()}
 	<RailSection title="所在位置">
@@ -503,7 +503,7 @@
 		{#if platform.platform === 'mobile' && !blocked}
 			<div
 				class="flex gap-3 border-t border-border-default px-4 pt-2.5"
-				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md)) saturate(1.5);-webkit-backdrop-filter:blur(var(--cst-blur-md)) saturate(1.5);padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
+				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));-webkit-backdrop-filter:blur(var(--cst-blur-md));padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
 			>
 				<button
 					type="button"
@@ -516,8 +516,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl focus-ring transition-all disabled:opacity-muted text-sm {followed ? 'border border-accent-default bg-surface-primary text-accent-default' : 'bg-accent-default text-text-on-accent'}"
-					style={followed ? 'box-shadow:var(--shadow-raised-sm);' : 'box-shadow:var(--shadow-glow-md);'}
+					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border focus-ring transition-all disabled:opacity-muted text-sm {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm' : 'border-transparent bg-accent-default text-text-on-accent shadow-glow-md'}"
 					disabled={blocked}
 					onclick={toggleFollow}
 				>
@@ -533,5 +532,4 @@
 		{/if}
 	{/snippet}
 </SplitPageLayout>
-{/if}
 

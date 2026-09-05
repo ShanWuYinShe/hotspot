@@ -36,6 +36,7 @@ export interface StorageKeysType {
   SERVER_BASE_URL: string;
   AUTH_ACCOUNTS: string;
   THEME_MODE: string;
+  DARK_MODE_PREFERENCE: string;
   DEVICE_ID: string;
 }
 
@@ -48,6 +49,7 @@ export const StorageKeys: StorageKeysType = {
   // 多账号：保存所有账户的 AppAuthData（含 refresh_token），并记录当前活跃账号
   AUTH_ACCOUNTS: 'auth_accounts',
   THEME_MODE: 'theme_mode',
+  DARK_MODE_PREFERENCE: 'dark_mode_preference',
   // spec: 持久化 device_id（UUID v4），驱动单设备单会话踢人语义
   DEVICE_ID: 'device_id'
 };

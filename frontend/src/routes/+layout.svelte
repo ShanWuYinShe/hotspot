@@ -15,7 +15,9 @@
 	// SPA 模式（ssr=false）：本组件仅在客户端实例化，可直接访问 window。
 	// 若无 PUBLIC_API_URL，回退同源（经 nginx 网关反代 /api）。
 	setApiBaseUrl(import.meta.env.PUBLIC_API_URL ?? window.location.origin);
-	initTheme();
+	// 明暗三档：initTheme 读取持久化初值 + 订阅系统明暗变化，返回清理函数；
+	// $effect 保证注册在组件初始化上下文，销毁时移除 matchMedia 监听。
+	$effect(() => initTheme());
 	void initPlatform();
 	void initAuth();
 	// WS 实时通道：监听 auth store，登录后自动连接、登出后断开。

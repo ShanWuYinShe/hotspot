@@ -26,7 +26,7 @@ export struct NotificationBanner {
         // 图标
         SystemIcon({
           icon: this.getIcon(this.notification.type),
-          iconSize: 24,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
           iconColor: this.getPriorityColor(this.notification.priority)
         })
         .margin({ right: DesignConstants.SPACING.MD })
@@ -53,7 +53,7 @@ export struct NotificationBanner {
         // 关闭按钮
         SystemIcon({
           icon: AppIcon.CLOSE,
-          iconSize: 16,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
           iconColor: this.getPalette().textTertiary,
           clickable: true,
           onIconClick: () => {

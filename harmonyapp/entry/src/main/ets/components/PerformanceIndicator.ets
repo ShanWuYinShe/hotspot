@@ -203,7 +203,7 @@ export struct PerformanceIndicator {
         Row({ space: DesignConstants.SPACING.XS }) {
           SystemIcon({
             icon: this.getPerformanceLevel().icon,
-            iconSize: 16,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             iconColor: this.getPerformanceLevel().color
           })
           
@@ -218,7 +218,7 @@ export struct PerformanceIndicator {
         Row({ space: DesignConstants.SPACING.XS }) {
           SystemIcon({
             icon: AppIcon.WARNING,
-            iconSize: 14,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             iconColor: this.getPalette().accentBackground
           })
 
@@ -231,7 +231,7 @@ export struct PerformanceIndicator {
       // 展开按钮
       SystemIcon({
         icon: this.isExpanded ? AppIcon.ARROW_UP : AppIcon.ARROW_DOWN,
-        iconSize: 14,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
         onIconClick: () => {
           this.isExpanded = !this.isExpanded;
         }
@@ -275,13 +275,13 @@ export struct PerformanceIndicator {
         Row({ space: DesignConstants.SPACING.MD }) {
           SystemIcon({
             icon: AppIcon.REFRESH,
-            iconSize: 20,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
             onIconClick: () => this.onRefresh()
           })
 
           SystemIcon({
             icon: AppIcon.CLEAN,
-            iconSize: 20,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
             onIconClick: () => this.onClearCache()
           })
         }
@@ -306,7 +306,7 @@ export struct PerformanceIndicator {
         Row({ space: DesignConstants.SPACING.MD }) {
           SystemIcon({
             icon: this.getPerformanceLevel().icon,
-            iconSize: 32,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_LG,
             iconColor: this.getPerformanceLevel().color
           })
 
@@ -412,7 +412,7 @@ export struct PerformanceIndicator {
             Row({ space: DesignConstants.SPACING.MD }) {
               SystemIcon({
                 icon: alert.level === 'critical' ? AppIcon.ERROR : AppIcon.WARNING,
-                iconSize: 20,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
                 iconColor: alert.level === 'critical' ? this.getPalette().textTertiary : this.getPalette().accentBackground
               })
 
@@ -451,7 +451,7 @@ export struct PerformanceIndicator {
     Column({ space: DesignConstants.SPACING.SM }) {
       SystemIcon({
         icon: icon,
-        iconSize: 24,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
         iconColor: color
       })
 

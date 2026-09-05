@@ -110,7 +110,7 @@ export struct SystemButton {
       case 'primary':
         return p.accentText; // --text-on-accent
       case 'danger':
-        // danger 实底文字：恒定白色（vibrant_light 的 accentText 与 error 底对比 <4.5:1）
+        // danger 实底文字：恒定白色（vibrant_light error #C81E4E 配白字 5.60 ≥ 4.5）
         return DesignConstants.COLOR.WHITE;
       case 'secondary':
         return p.buttonSecondaryText;

@@ -83,18 +83,8 @@ export struct MomentsFeedPage {
   /** 动态 tag 列表（从前 N 条 moment.tags 聚合去重，对齐前端 moments tagsList 派生模式） */
   @State hotTags: string[] = [];
 
-  // 「活动」与「热门」后端逻辑完全一致（同走 moments/search sort_by=popular），无法区分，故移除
-  private readonly TABS: string[] = ['热门', '附近', '活动', '关注'];
-
-  private getAvailableTags(): string[] {
-    const tagSet = new Set<string>();
-    for (const moment of this.hotMoments) {
-      for (const tag of (moment.tags ?? [])) {
-        tagSet.add(tag);
-      }
-    }
-    return Array.from(tagSet);
-  }
+  // 「活动」tab 与「热门」同走 moments/search sort_by=popular、无法区分，已删除（留热门/附近/关注）
+  private readonly TABS: string[] = ['热门', '附近', '关注'];
 
   /** 位置行副标题（对齐前端 nearby/moments subtitle：{locationName} · 5km 内 / 5km 内） */
   private getLocationSubtitle(): string {
@@ -411,9 +401,8 @@ export struct MomentsFeedPage {
         if (useMasterDetail(this.currentBreakpoint)) {
           // ======== 宽屏两栏布局（master-detail，对齐前端 useMasterDetail） ========
           Row() {
-            // 左栏：标签药片 + 动态瀑布墙（WaterFlow 自滚）
+            // 左栏：动态瀑布墙（WaterFlow 自滚；tag 筛选走头部 hotTags TabsPillGroup）
             Column() {
-              this.buildTagChipsStrip()
               this.buildMomentFeed()
             }
             .width('100%')
@@ -433,7 +422,6 @@ export struct MomentsFeedPage {
         } else {
           // ======== 移动端单栏布局（对齐前端 !isDesktop 分支） ========
           Column() {
-            this.buildTagChipsStrip()
             // 推荐用户/群组（有数据才渲染；横向滚动卡片，独立于瀑布流滚动）
             if (this.recommendedUsers.length > 0) {
               this.buildRecommendedUsersSection()
@@ -599,58 +587,6 @@ export struct MomentsFeedPage {
     }
     .width('100%')
     .height('100%')
-  }
-
-  // ==================== 标签药片条 ====================
-  @Builder
-  buildTagChipsStrip() {
-    Scroll() {
-      Row({ space: DesignConstants.SPACING.SM }) {
-        ForEach(this.getAvailableTags(), (tag: string) => {
-          Text(tag)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.activeTag === tag
-              ? this.getCurrentThemePalette().accentText
-              : this.getCurrentThemePalette().textSecondary)
-            .backgroundColor(this.activeTag === tag
-              ? this.getCurrentThemePalette().accentBackground
-              : this.getCurrentThemePalette().surfaceBackground)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .padding({
-              left: DesignConstants.SPACING.MD3,
-              right: DesignConstants.SPACING.MD3,
-              top: DesignConstants.SPACING.SM2,
-              bottom: DesignConstants.SPACING.SM2
-            })
-            .shadow(this.activeTag === tag
-              ? this.getCurrentThemePalette().accentShadow
-              : this.getCurrentThemePalette().controlShadow)
-            .border({
-              width: DesignConstants.BORDER_WIDTH.HAIRLINE,
-              color: this.activeTag === tag
-                ? DesignConstants.COLOR.TRANSPARENT
-                : this.getSurfaceBorder()
-            })
-            // 选中底色/字色/阴影切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
-            .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
-            .onClick(() => {
-              this.activeTag = this.activeTag === tag ? '' : tag;
-              // 同步刷新 LazyForEach 数据源（含标签过滤），保持虚拟化列表与筛选一致
-              this.refreshVisibleDataSource();
-            })
-        }, (tag: string) => tag)
-      }
-      .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS })
-    }
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
-    .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.XS,
-      bottom: DesignConstants.SPACING.XS
-    })
   }
 
   // ==================== section 标题 ====================

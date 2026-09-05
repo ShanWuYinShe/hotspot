@@ -34,7 +34,9 @@
   --cst-palette-active-hover: rgba(46, 102, 192, 0.16);
   --cst-palette-on-accent: #FFFFFF;
   --cst-palette-online: #14B8A6;
-  --cst-palette-hot: #F43F5E;
+  /* danger 加深（#F43F5E→#C81E4E）：原值配白字 3.67、配深字 4.28 均不达 4.5；
+     加深后白字 5.60，danger 实底统一白字（对齐 harmonyapp error，同值经跨端校验锁定） */
+  --cst-palette-hot: #C81E4E;
   --cst-palette-warning: #F59E0B;
   --cst-palette-map-user: #2E66C0;
   /* 图钉主色校准：确保白字 --cst-content-on-marker 对比度 ≥4.5（原 #10B981/#F97316 过浅） */
@@ -112,6 +114,8 @@
   --cst-surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
   --cst-surface-media-scrim-strong: rgba(0, 0, 0, 0.55);
   --cst-surface-cover-scrim: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 65%);
+  /* 无封面占位底（me/edit 等引用，渐变表达由主题定义承载，页面只消费 token） */
+  --cst-surface-cover-placeholder: linear-gradient(135deg, color-mix(in srgb, var(--cst-accent-default) 26%, var(--cst-surface-primary)) 0%, color-mix(in srgb, var(--cst-accent-default) 8%, var(--cst-surface-primary)) 55%, var(--cst-surface-primary) 100%);
   --cst-surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
   --cst-surface-gallery-label: rgba(0, 0, 0, 0.46);
   --cst-surface-map-control: rgba(255, 255, 255, 0.20);
@@ -248,4 +252,6 @@
   /* ── card-menu dark ── */
   --cst-surface-card-menu: color-mix(in srgb, var(--cst-surface-primary) 82%, var(--cst-accent-default));
   --cst-border-card-menu: color-mix(in srgb, var(--cst-accent-default) 28%, var(--cst-border-default));
+  /* 无封面占位底（dark 沿用同表达式，引用 token 自动解析暗色值） */
+  --cst-surface-cover-placeholder: linear-gradient(135deg, color-mix(in srgb, var(--cst-accent-default) 26%, var(--cst-surface-primary)) 0%, color-mix(in srgb, var(--cst-accent-default) 8%, var(--cst-surface-primary)) 55%, var(--cst-surface-primary) 100%);
 }

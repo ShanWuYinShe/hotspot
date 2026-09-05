@@ -23,11 +23,11 @@ describe('Button', () => {
 		expect(btn.className).toContain('pointer-events-none');
 	});
 
-	it('danger 变体使用状态色与 on-* 文字 token', () => {
+	it('danger 变体使用状态色与 on-accent 文字 token（danger 实底统一白字，随明暗翻转）', () => {
 		const { container } = render(Button, { props: { children: label, variant: 'danger' } });
 		const btn = container.querySelector('button') as HTMLButtonElement;
 		expect(btn.className).toContain('bg-status-danger');
-		expect(btn.className).toContain('text-text-on-status');
+		expect(btn.className).toContain('text-text-on-accent');
 	});
 
 	it('点击触发事件并透传原生属性', async () => {

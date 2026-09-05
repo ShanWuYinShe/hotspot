@@ -29,7 +29,6 @@ export struct RelationshipHubPage {
   @State blocked: BlockedUserItem[] = [];
   @State activeRelTab: number = 0;
   @State searchKeyword: string = '';
-  @State onlineFilterIndex: number = 0; // 0=全部 1=在线 2=离线（对齐前端 SectionFilter）
 
   private isDestroyed: boolean = false;
 
@@ -60,14 +59,9 @@ export struct RelationshipHubPage {
     return this.blocked.length;
   }
 
-  /** 在线/离线过滤 + 昵称/备注关键词过滤（对齐前端 SectionFilter + SearchInput 客户端过滤） */
+  /** 昵称/备注关键词过滤（第二排在线/离线 pill 已删除，仅保留搜索框；黑名单区不过滤） */
   private filterUsers(items: RelatedUserItem[]): RelatedUserItem[] {
     let result: RelatedUserItem[] = items;
-    if (this.onlineFilterIndex === 1) {
-      result = result.filter((i: RelatedUserItem) => i.user.presence_status === 'online');
-    } else if (this.onlineFilterIndex === 2) {
-      result = result.filter((i: RelatedUserItem) => i.user.presence_status !== 'online');
-    }
     const kw = this.searchKeyword.trim().toLowerCase();
     if (kw.length > 0) {
       result = result.filter((i: RelatedUserItem) => {
@@ -160,7 +154,7 @@ export struct RelationshipHubPage {
           SystemLoadingView({ message: '加载关系数据…' })
             .layoutWeight(1)
         } else {
-        // 搜索框 + 在线过滤（对齐前端 Section 内嵌：search + filters 位于内容区顶部）
+        // 搜索框（关系四项 tab + 搜索框保留；在线/离线第二排 pill 已删除）
         SystemInput({
           value: this.searchKeyword,
           placeholder: '搜索昵称、备注…',
@@ -173,39 +167,24 @@ export struct RelationshipHubPage {
         })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
 
-        TabsPillGroup({
-          tabs: [
-            { label: '全部' },
-            { label: '在线' },
-            { label: '离线' }
-          ],
-          activeIndex: this.onlineFilterIndex,
-          actions: {
-            onChange: (index: number) => {
-              this.onlineFilterIndex = index;
-            }
-          }
-        })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-
         Scroll() {
           Column() {
             if (this.activeRelTab === 0) {
               RelationshipListSection({
                 embedded: true,
-                emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '暂时还没有好友。' : '没有符合条件的好友。',
+                emptyText: this.searchKeyword.length === 0 ? '暂时还没有好友。' : '没有符合条件的好友。',
                 friends: this.filterUsers(this.friends)
               })
             } else if (this.activeRelTab === 1) {
               RelationshipListSection({
                 embedded: true,
-                emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '还没有关注任何人。' : '没有符合条件的关注。',
+                emptyText: this.searchKeyword.length === 0 ? '还没有关注任何人。' : '没有符合条件的关注。',
                 following: this.filterUsers(this.following)
               })
             } else if (this.activeRelTab === 2) {
               RelationshipListSection({
                 embedded: true,
-                emptyText: this.onlineFilterIndex === 0 && this.searchKeyword.length === 0 ? '还没有粉丝。' : '没有符合条件的粉丝。',
+                emptyText: this.searchKeyword.length === 0 ? '还没有粉丝。' : '没有符合条件的粉丝。',
                 followers: this.filterUsers(this.followers)
               })
             } else {

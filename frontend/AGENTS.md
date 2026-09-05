@@ -316,7 +316,9 @@ theme/
   - 正文/辅助文字：`--cst-text-primary` / `--cst-text-secondary`
   - 主题色背景上的文字：`--cst-text-on-accent`（按钮/选中态；**随明暗模式切换
     深浅**——light 白配深色 accent、dark 深配浅色 accent）
-  - 状态色背景上的文字：`--cst-text-on-status`（online/warning 底）
+  - 状态色背景上的文字：`--cst-text-on-status`（online/warning 实底，如连接横幅）；
+    danger 实底按钮一律走 `--cst-text-on-accent`（随明暗翻转：light 白 / dark 深；
+    vibrant light danger `#C81E4E` 配白字 5.60，对齐鸿蒙 error 同值，与各确认按钮一致）
   - 图片/遮罩上的反色文字：`--cst-content-inverse`（**恒白**，仅用于图片/遮罩/
     深色 overlay 上，禁止用于 accent/status 实色背景——那些背景在 dark 下是浅色，
     恒白文字会低对比隐形；正确做法见下条）
@@ -360,6 +362,12 @@ theme/
   必须与 themes/{vibrant,forest}.css 的 `--cst-palette-accent-primary` 保持同步
 
 - 新组件优先使用语义名（`var(--cst-text-primary)`、`var(--cst-surface-page)` 等）+ Tailwind className
+- 明暗三档（`stores/theme.svelte.ts`）：`colorScheme='auto'|'light'|'dark'`（持久化键
+  `colorScheme`），`auto`=跟随系统（`matchMedia('(prefers-color-scheme: dark)')`
+  初值 + change 监听刷新，监听由根布局持有/清理）；`light`/`dark`=手动档（忽略系统
+  变化）。老 `isDark` 键只做一次性迁移（存在→对应手动档并删键，不存在→`auto`），
+  首帧脚本（`app.html`）同步三态逻辑防闪。设置页与 `AppearanceMenu` 用 `TabBar`
+  三段选择（跟随系统/浅色/深色），`toggleDark` 仅作手动档间切换的兼容入口
 - 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现
 - 浏览器 chrome 配色（`<meta name="theme-color">`）随当前主题画布色同步：
   首帧由 app.html 内联脚本按持久化偏好设置四态映射，之后由
@@ -473,7 +481,8 @@ theme/
     横向页面 gutter 是唯一例外（`--cst-page-gutter`，由 ContentColumn 统一管理）。
     存量内联尺寸（地图 PIN、StatusBar 信号/电池等物理装饰细件）可保留为例外
     布局尺寸例外（非控件尺寸，可用类时仍优先用类）：对话框高度
-    `78vh/max-height:700px`、聊天空态 `min-height:240px/max-width:220px`、
+    `78vh/max-height:700px`（桌面居中模态统一档）、移动 bottom-sheet 高度
+    `85%`（新会话）/`92%`（建群，表单更高）、聊天空态 `min-height:240px/max-width:220px`、
     上传占位 `height:110px`、封禁页 `max-width:360px`、横幅 `h-7` 类化后
     仅剩物理例外——新增此类布局尺寸时优先 Tailwind 类，确需内联则登记
 16. **毛玻璃模糊半径（强制，3 档）**：`backdrop-filter:blur()` 半径一律用
