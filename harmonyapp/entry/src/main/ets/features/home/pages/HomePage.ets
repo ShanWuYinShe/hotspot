@@ -710,7 +710,6 @@ export struct HomePage {
         .fontColor(this.getPalette().textSecondary)
         .textCase(TextCase.UpperCase)
         .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
-        .opacity(DesignConstants.OPACITY.EMPHASIZED)
 
       Blank()
 

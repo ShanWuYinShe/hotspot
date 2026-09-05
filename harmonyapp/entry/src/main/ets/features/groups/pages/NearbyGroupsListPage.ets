@@ -276,7 +276,7 @@ export struct NearbyGroupsListPage {
                   Text('此刻附近群组')
                     .fontSize(DesignConstants.FONT.SIZE.XS2)
                     .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                    .fontColor(this.getCurrentThemePalette().accentBackground)
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
                     .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
                     .textCase(TextCase.UpperCase)
                   Blank()

@@ -1495,6 +1495,7 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('群组名称')
@@ -1526,6 +1527,7 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('群组描述')
@@ -1552,6 +1554,7 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         }
         .width('100%')
         .padding({

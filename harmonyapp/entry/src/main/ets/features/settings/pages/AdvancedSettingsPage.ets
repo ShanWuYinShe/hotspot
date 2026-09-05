@@ -21,7 +21,7 @@ import { CacheManager } from '../../../core/cache/CacheManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
 import { LucideIcon } from '../../../components/LucideIcon';
-import { SettingsGroupLabel, SettingsRowDivider } from './SettingsSupport';
+import { SettingsGroupLabel, SettingsRowDivider, SettingsSectionCard } from './SettingsSupport';
 
 @Preview
 @Component
@@ -89,20 +89,26 @@ export struct AdvancedSettingsPage {
       })
 
       Column() {
-        // 对齐主设置页分组改版：eyebrow 分组 + 无外框 + 行间分隔线
+        // 对齐主设置页分组样板：eyebrow 分组 + 白卡发丝描边（SettingsSectionCard）+ 行间分隔线
         SettingsGroupLabel({ label: '工具' })
         Column() {
-          this.SettingItem(AppIcon.CLEAN, '清理缓存', '清除本地缓存数据', () => {
-            this.requestClearCache();
-          })
+          SettingsSectionCard() {
+            this.SettingItem(AppIcon.CLEAN, '清理缓存', '清除本地缓存数据', () => {
+              this.requestClearCache();
+            })
 
-          SettingsRowDivider()
+            SettingsRowDivider()
 
-          this.SettingItem(AppIcon.DEBUG, '调试面板', '网络诊断、状态检查', () => {
-            AppRouter.push(PageNames.DEBUG_PANEL);
-          })
+            this.SettingItem(AppIcon.DEBUG, '调试面板', '网络诊断、状态检查', () => {
+              AppRouter.push(PageNames.DEBUG_PANEL);
+            })
+          }
         }
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        .padding({
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
+          bottom: DesignConstants.SPACING.LG
+        })
       }
       .width('100%')
       .layoutWeight(1)
