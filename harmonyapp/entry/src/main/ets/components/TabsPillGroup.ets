@@ -84,29 +84,32 @@ export struct TabsPillGroup {
   }
 
   @Builder
-  private buildTab(tab: TabItem, index: number, isActiveTab: boolean) {
+  private buildTab(tab: TabItem, index: number) {
+    // 激活态必须在 builder 体内内联经 this.isActive(index) 读取（不可作按值参数传入）：
+    // ForEach key 不含 activeIndex（保位移动画），复用项只有自身状态依赖变化才会刷新，
+    // 按值传参会让高亮冻结在首帧（实测设置页明暗三档切换高亮不动，须重进页面才更新）
     Column() {
       Row({ space: DesignConstants.SPACING.SM2 }) {
         if (tab.icon) {
           LucideIcon({
             icon: tab.icon,
             iconSize: DesignConstants.FONT.SIZE.MD,
-            color: isActiveTab || this.hoveredIndex === index ?
+            color: this.isActive(index) || this.hoveredIndex === index ?
             this.getPalette().accentText : this.getPalette().tabBarInactive
           })
         }
 
         Text(tab.label)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(isActiveTab ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
-          .fontColor(isActiveTab || this.hoveredIndex === index ?
+          .fontWeight(this.isActive(index) ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
+          .fontColor(this.isActive(index) || this.hoveredIndex === index ?
           this.getPalette().accentText : this.getPalette().tabBarInactive)
 
         if (tab.count !== undefined && tab.count > 0) {
           Text(`${tab.count}`)
             .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .fontColor(isActiveTab ? this.getPalette().accentText : this.getPalette().tabBarInactive)
-            .opacity(isActiveTab ? DesignConstants.OPACITY.SUBTLE : DesignConstants.OPACITY.EMPHASIZED)
+            .fontColor(this.isActive(index) ? this.getPalette().accentText : this.getPalette().tabBarInactive)
+            .opacity(this.isActive(index) ? DesignConstants.OPACITY.SUBTLE : DesignConstants.OPACITY.EMPHASIZED)
         }
       }
       .justifyContent(FlexAlign.Center)
@@ -116,8 +119,8 @@ export struct TabsPillGroup {
       DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT :
       DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getPillBackground(index, isActiveTab))
-      .shadow(isActiveTab ? this.getPillShadow(true) : {
+      .backgroundColor(this.getPillBackground(index, this.isActive(index)))
+      .shadow(this.isActive(index) ? this.getPillShadow(true) : {
         radius: 0,
         color: DesignConstants.COLOR.TRANSPARENT,
         offsetX: 0,
@@ -138,7 +141,7 @@ export struct TabsPillGroup {
     // 等宽分段用 layoutWeight(1)；自由宽度收缩到内容宽
     .layoutWeight(this.freeWidth ? 0 : 1)
     // 按压差异：选中胶囊按压不再缩放（底色已表达选中），未选中按压缩放（「将选中」预览）
-    .scale(!isActiveTab && this.pressedIndex === index ?
+    .scale(!this.isActive(index) && this.pressedIndex === index ?
     {
       x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL,
       y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL
@@ -160,7 +163,7 @@ export struct TabsPillGroup {
       this.hoveredIndex = isHover ? index : -1;
     })
     .onClick(() => {
-      if (!isActiveTab) {
+      if (!this.isActive(index)) {
         this.dispatchChange(index);
       }
     })
@@ -171,7 +174,7 @@ export struct TabsPillGroup {
   build() {
     Row({ space: this.gap }) {
       ForEach(this.tabs, (tab: TabItem, index: number) => {
-        this.buildTab(tab, index, this.isActive(index))
+        this.buildTab(tab, index)
       }, (tab: TabItem, index: number) => `${tab.label}-${index}`)
     }
     .width('100%')
