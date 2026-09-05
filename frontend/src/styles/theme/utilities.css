@@ -413,8 +413,10 @@
 }
 
 /*── Shared image-first interaction ─────────────────────────────────────
-   图片优先的交互元素：框体永不改变占位。accent 边框画在继承的圆角
-   裁剪内部，只有内部图片做微妙缩放（对齐 Figma Make image-hover-frame）。 */
+   image-hover-frame：相册式小方格（照片墙缩略图）专用——框体永不改变占位，
+   accent 边框画在继承的圆角裁剪内部，只有内部图片做微妙缩放。
+   内容卡（NearbyImageCard）已统一 card-hover 抬升语言（投影+上浮 /
+   forest 纸面微染+边框），其图片微缩放由 card-hover:hover 选择器驱动。 */
 @layer utilities {
   .image-hover-frame {
     isolation: isolate;
@@ -437,7 +439,8 @@
     .image-hover-frame:hover::after {
       border-color: var(--cst-accent-default);
     }
-    .image-hover-frame:hover .image-hover-frame__image {
+    .image-hover-frame:hover .image-hover-frame__image,
+    .card-hover:hover .image-hover-frame__image {
       transform: scale(1.045);
     }
   }

@@ -6,7 +6,8 @@
 	// NearbyImageCard — 图片优先的附近内容卡片统一原语。
 	// 对齐 Figma Make data-display/NearbyImageCard 契约（Guidelines 标记为附近内容的唯一卡片实现）：
 	//   - 图片 object-cover 填满卡片，底部 tray 承载元数据/操作（不用页面色块垫在图片下）
-	//   - hover 仅内部图片微妙缩放（image-hover-frame__image），框体永不移动/缩放
+	//   - hover 与内容卡统一 card-hover 抬升语言（投影+上浮 / forest 纸面微染+边框），
+	//     内部图片随之微妙缩放（image-hover-frame__image）
 	//   - 底部 tray 用 --surface-card-menu + --border-card-menu，不用裸页面背景
 	// 替代 PostCard / FeaturedGroupCard / GroupCard / UserCard 内联重复实现。
 	//
@@ -44,15 +45,15 @@
 		class?: string;
 	} = $props();
 
-	// hover 反馈（图片缩放 + 内嵌 accent 边框）完全由 .image-hover-frame 规则驱动
-	// （.image-hover-frame:hover 规则，单一事实源——JS 状态与 :hover 不同步
-	// 会导致鼠标在卡片上滑动时反馈闪烁/丢失）。
-	// 不使用 card-hover：其 hover 外环会与 image-hover-frame 的内嵌 accent 边框叠加成双重边框；
-	// 键盘焦点由 focus-ring 承载。
+	// hover 与内容卡（SectionGroups/SectionMoments）统一走 card-hover 抬升语言
+	// （投影+上浮，forest 纸面微染+边框），图片微缩放由 .card-hover:hover
+	// .image-hover-frame__image 规则驱动（CSS :hover 单一事实源——JS 状态与
+	// :hover 不同步会导致鼠标滑动时反馈闪烁/丢失）。键盘焦点由 focus-ring 承载。
 	// 整卡按压 scale 由 --cst-card-tap-scale 驱动（vibrant 0.94 / forest 0.97，
-	// 对齐 Figma useHoverConfig tap）。
+	// 对齐 Figma useHoverConfig tap）；未按压时不写 inline transform，
+	// 让 card-hover 的 hover translateY 生效。
 	let pressed = $state(false);
-	const cardTransform = $derived(pressed ? 'scale(var(--cst-card-tap-scale, 0.94))' : 'scale(1)');
+	const cardTransform = $derived(pressed ? 'scale(var(--cst-card-tap-scale, 0.94))' : '');
 
 	// 行内子按钮（点赞/收藏/评论等）的按压由按钮自身的 hover-action/tap 承载，
 	// 不带动整卡缩放——否则点按钮时整卡一起缩，看起来像误触了卡片。
@@ -64,10 +65,10 @@
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <article
 	class={cn(
-		'image-hover-frame focus-ring relative h-full w-full cursor-pointer overflow-hidden',
+		'card-hover focus-ring relative h-full w-full cursor-pointer overflow-hidden border border-border-default',
 		className
 	)}
-	style="transform:{cardTransform};transition:transform var(--cst-motion-instant) var(--cst-ease-standard);"
+	style={cardTransform ? `transform:${cardTransform};transition:transform var(--cst-motion-instant) var(--cst-ease-standard);` : ''}
 	role={onClick ? 'button' : undefined}
 	aria-label={onClick ? imageAlt || undefined : undefined}
 	tabindex={onClick ? 0 : undefined}

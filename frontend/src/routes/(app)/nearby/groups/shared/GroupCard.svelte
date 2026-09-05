@@ -8,7 +8,7 @@
 	// 附近群组卡片（基于 NearbyImageCard 统一图片优先原语）。
 	// featured=false：网格卡（分类/隐私徽章 + 紧凑 footer）；
 	// featured=true：移动全宽精选卡（精选徽章 + 大号 footer）。
-	// 两种形态共用图片卡语言：无边框、hover 内嵌 accent 描边（image-hover-frame）、
+	// 两种形态共用卡片语言：card-hover 抬升（随 NearbyImageCard 统一）、
 	// rounded-md；精选的突出靠全宽大尺寸 + 徽章 + 大号 footer 表达。
 	let {
 		group,
