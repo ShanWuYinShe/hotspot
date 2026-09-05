@@ -65,10 +65,11 @@ func NewApp(cfg config.Config) (*App, error) {
 	platformauth.StartSweeper(rootCtx)
 	// Prune expired idempotency records from the in-memory store. Get/Reserve
 	// already apply lazy expiry so this is purely about bounding map growth.
-	// Redis 可用时幂等记录切到共享 store：多实例部署下同一 Idempotency-Key
-	// 只执行一次（进程内 store 各实例独立，多实例会重复执行写操作）。
+	// Redis 可用时切共享状态存储：幂等记录（同一 Idempotency-Key 只执行一次）
+	// 与限流计数（多实例共享阈值，进程内各实例独立会放大 N 倍）。
 	if redisClient != nil {
 		idempotency.SetStore(idempotency.NewRedisStore(redisClient))
+		ratelimit.SetRedisStore(redisClient)
 	}
 	idempotency.StartSweeper(rootCtx)
 	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisPinger(redisClient))

@@ -176,7 +176,7 @@ func Middleware(next http.Handler) http.Handler {
 		rules := classifyRules(r, CurrentRateLimits(r.Context()))
 		now := time.Now().UTC()
 		for _, rl := range rules {
-			if retryAfter, limited := allow(now, rl); limited {
+			if retryAfter, limited := redisAllow(now, rl); limited {
 				if retryAfter < 1 {
 					retryAfter = 1
 				}
