@@ -43,6 +43,10 @@ export default class EntryAbility extends UIAbility {
   private surfaceStyleUnsubscribe?: () => void;
   private currentSurfaceStyle: SystemSurfaceStyle = SystemUiThemeStore.getStyle();
   private isDarkMode: boolean = false;
+  // 最近一次已成功下发给 setColorMode 的值。setColorMode 即使值不变也会再触发
+  // onConfigurationUpdate，若在配置回调里无条件重申会无限递归（栈溢出启动即崩），
+  // 目标值与上次相同时必须跳过。
+  private appliedColorMode: ConfigurationConstant.ColorMode | null = null;
   private serviceRegistry = ServiceRegistry.getInstance();
   private rdbManager = RdbManager.getInstance();
 
@@ -170,6 +174,7 @@ export default class EntryAbility extends UIAbility {
       const appContext = this.context.getApplicationContext();
 
       // 默认颜色模式跟随系统（使用 ColorMode.COLOR_MODE_NOT_SET）
+      this.appliedColorMode = ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
       appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
 
       // 监听系统配置变化
@@ -188,13 +193,17 @@ export default class EntryAbility extends UIAbility {
   private applyColorModePreference(pref: DarkModePreference): void {
     try {
       const appContext = this.context.getApplicationContext();
-      if (pref === 'dark') {
-        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
-      } else if (pref === 'light') {
-        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
-      } else {
-        appContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+      const target = pref === 'dark'
+        ? ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+        : pref === 'light'
+          ? ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT
+          : ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
+      // setColorMode 会同步回调 onConfigurationUpdate；值未变化时跳过下发，避免递归
+      if (this.appliedColorMode === target) {
+        return;
       }
+      this.appliedColorMode = target;
+      appContext.setColorMode(target);
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, '应用颜色模式偏好失败: %{public}s', JSON.stringify(error));
     }
