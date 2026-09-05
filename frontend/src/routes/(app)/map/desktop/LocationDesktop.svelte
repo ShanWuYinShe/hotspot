@@ -121,7 +121,7 @@
 	}
 </script>
 
-<div class="flex h-full bg-surface-primary">
+<div class="flex h-full bg-surface-page">
 	<!-- ══ LEFT SIDEBAR ══ -->
 	<div class="flex flex-col shrink-0 w-85 border-r border-border-default"  >
 		<LocationDesktopPanel

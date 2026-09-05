@@ -15,6 +15,7 @@ const harmonyTheme = join(repoRoot, 'harmonyapp/entry/src/main/ets/core/theme/Th
 // 仅列两端都有明确对应关系的色；ets 侧独有装饰色（glow/tabBar 等）不在此列。
 const MAPPING = [
 	['--cst-palette-page-bg', ['pageBackground']],
+	['--cst-palette-chat-bg', ['chatBackground']],
 	['--cst-palette-text', ['textPrimary']],
 	['--cst-palette-text-muted', ['textSecondary']],
 	['--cst-palette-accent-primary', ['accentBackground', 'info', 'primaryButtonBorderColor']],

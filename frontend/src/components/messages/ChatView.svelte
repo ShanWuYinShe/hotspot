@@ -181,10 +181,10 @@
 	});
 </script>
 
-<div class="flex min-h-0 flex-col h-full bg-surface-primary">
+<div class="flex min-h-0 flex-col h-full bg-surface-chat">
 	<p class="sr-only" aria-live="polite">{lastIncoming ? `新消息：${lastIncoming.text}` : ''}</p>
 	<!-- Header -->
-	<div class="shrink-0 flex items-center gap-3 border-b border-border-default bg-surface-primary px-4 {compact ? 'h-13' : 'h-15'}">
+	<div class="shrink-0 flex items-center gap-3 border-b border-border-default bg-surface-chat px-4 {compact ? 'h-13' : 'h-15'}">
 		{#if showBackButton}
 			<button
 				type="button"

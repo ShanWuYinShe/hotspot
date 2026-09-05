@@ -256,7 +256,7 @@ const FILTER_TABS = [
 				{#if invites.length > 0}
 					<!-- 入群邀请待办区块（listMyInvites 补拉路径；接受/拒绝后移除） -->
 					<div class="mb-3 flex h-5 items-center gap-2">
-						<span class="eyebrow font-semibold text-text-primary">入群邀请</span>
+						<span class="eyebrow">入群邀请</span>
 						<span class="badge text-accent-default bg-accent-soft">{invites.length}</span>
 					</div>
 					<ListContainer bordered class="mb-5">
@@ -288,7 +288,7 @@ const FILTER_TABS = [
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2">
 						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full bg-accent-default" ></span>
-						<p class="eyebrow font-semibold text-text-primary" >新消息</p>
+						<p class="eyebrow">新消息</p>
 						<span class="badge text-accent-default bg-accent-soft">{unreadGroup.length}</span>
 					</div>
 					<ListContainer bordered>
@@ -301,7 +301,7 @@ const FILTER_TABS = [
 				{#if readGroup.length > 0}
 					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2 {unreadGroup.length > 0 ? 'mt-5' : ''}">
-						<p class="eyebrow font-medium text-text-secondary" >较早</p>
+						<p class="eyebrow">较早</p>
 						<span aria-hidden="true" class="h-px flex-1 bg-border-default"></span>
 					</div>
 					<ListContainer bordered>

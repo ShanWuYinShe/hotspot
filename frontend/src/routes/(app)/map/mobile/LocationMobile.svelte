@@ -177,7 +177,7 @@
 	const rightCtrlBottom = $derived(sheetH + 10);
 </script>
 
-<div class="bg-surface-primary" style="position:relative;width:100%;height:100%;overflow:hidden;">
+<div class="bg-surface-page" style="position:relative;width:100%;height:100%;overflow:hidden;">
 	<h1 class="sr-only">地图</h1>
 	<!-- ══ MAP (full screen, tappable) ══ -->
 	<!-- 原地点击空白由 MapCanvas onMapTap 承担（拖拽不触发）；键盘 Escape 等价收起见 svelte:window -->

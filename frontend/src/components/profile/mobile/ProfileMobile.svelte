@@ -49,7 +49,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		<!-- 资料页眉（eyebrow + 设置入口；底色对齐标准 PageHeader 的 surface-page） -->
 			<div class="border-b border-border-default bg-surface-page" >
 				<ContentColumn class="flex items-center justify-between py-3">
-					<p class="eyebrow font-medium text-text-secondary">个人中心</p>
+					<p class="eyebrow">个人中心</p>
 					{#if !needsAuth}
 						<!-- 未登录时设置页无意义，隐藏入口 -->
 						<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
@@ -118,7 +118,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 
 		<!-- 个人数据 5 行链接（白卡容器 + embedded 行分隔线） -->
 		<div class="mt-5">
-			<p class="eyebrow px-1 mb-2 text-text-primary opacity-emphasis">个人数据</p>
+			<p class="eyebrow px-1 mb-2">个人数据</p>
 			<p class="px-1 mb-2 text-xs text-text-secondary">在这里查看你的内容与关系</p>
 			<div class="card-raised rounded-lg overflow-hidden">
 			<ListContainer ariaLabel="个人数据">

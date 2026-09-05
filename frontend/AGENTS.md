@@ -340,6 +340,8 @@ theme/
   移动/平板视口直接暴露画布，桌面视口落在白浮卡内（`desktop-main-scroll > *`
   强制白底）；`PageHeader` 实底走 `.page-header-solid`（外壳感知：移动/平板画布色、
   桌面白色），sticky glass 仍走 `surface-nav-glass`。
+  唯一例外：聊天页独立画布 `--cst-surface-chat`（= chat-bg，微差于页面画布，
+  对齐鸿蒙 `chatBackground`），仅聊天页根/头部/输入条使用。
 - **数据层禁止携带颜色**：mock 数据/API 响应只返回语义标识（tag/type/category），
   不得包含 `color`/`bg` 等展示字段；视觉色由前端按语义键映射到 token
   （参照 `notify/shared/notify-data.ts` 的 `TYPE_CONFIG` 语义键

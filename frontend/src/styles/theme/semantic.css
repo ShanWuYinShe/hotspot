@@ -23,6 +23,9 @@
   --cst-surface-primary: var(--cst-palette-bg);
   --cst-surface-page: var(--cst-palette-page-bg);
   --cst-surface-overlay-strong: var(--cst-palette-overlay-strong);
+  /* 聊天独立画布：微差于页面画布（偏蓝/偏冷），对齐鸿蒙 chatBackground。
+     仅聊天页根/头部/输入条使用；消息列表透明，气泡/圆形按钮仍走白卡。 */
+  --cst-surface-chat: var(--cst-palette-chat-bg);
 
   /* Accent / Interactive */
   --cst-accent-default: var(--cst-palette-accent-primary);

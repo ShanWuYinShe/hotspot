@@ -18,6 +18,7 @@
   /* Semantic palette — enables bg-surface-primary, text-text-primary etc. */
   --color-surface-primary: var(--cst-surface-primary);
   --color-surface-page: var(--cst-surface-page);
+  --color-surface-chat: var(--cst-surface-chat);
   --color-text-primary: var(--cst-text-primary);
   --color-text-secondary: var(--cst-text-secondary);
   --color-text-on-accent: var(--cst-text-on-accent);

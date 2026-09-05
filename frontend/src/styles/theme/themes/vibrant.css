@@ -17,6 +17,7 @@
      取代旧的"同色 + 1px 描边"贴皮方案 */
   --cst-palette-bg: #FFFFFF;
   --cst-palette-page-bg: #EFF3F9;
+  --cst-palette-chat-bg: #EDF3FC;
   --cst-palette-text: #16233A;
   --cst-palette-text-muted: #52647F;
   /* accent 加深（#3578D4→#2E66C0）确保浅色下白字对比度 ≥4.5:1（原 4.39 不达标） */
@@ -168,6 +169,7 @@
   /* ── 原始色板 --cst-palette-* ── */
   --cst-palette-bg: #111D31;
   --cst-palette-page-bg: #0B1424;
+  --cst-palette-chat-bg: #0D1726;
   --cst-palette-text: #E8F1FF;
   --cst-palette-text-muted: #A5B6CE;
   --cst-palette-accent-primary: #69A8FF;
