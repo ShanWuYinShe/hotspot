@@ -94,9 +94,9 @@
 	class="flex flex-col h-screen w-screen overflow-hidden transition-colors duration-gentle font-sans"
 	style="background-color:var(--cst-surface-page);color:var(--cst-text-primary);"
 >
-	<!-- HEADER — 52px, full width -->
+	<!-- HEADER — 52px 白顶框（与侧栏/主面板同为白浮卡语言，border-b 分隔画布） -->
 	<header
-		class="relative z-[var(--cst-z-chrome)] shrink-0 flex items-center border-b border-border-default bg-surface-page px-5 gap-2"
+		class="relative z-[var(--cst-z-chrome)] shrink-0 flex items-center border-b border-border-default bg-surface-primary px-5 gap-2"
 		style="height:var(--cst-desktop-header-height);"
 	>
 		<!-- Logo -->
@@ -193,11 +193,11 @@
 		</div>
 	</header>
 
-	<!-- BODY — sidebar + main content（浮动双卡片：侧栏卡 + 内容卡浮于 workspace 舞台底色上） -->
+	<!-- BODY — 白浮动双卡（侧栏卡 + 内容卡浮于连续画布上，卡片自身边框为边界） -->
 	<div class="desktop-workspace relative z-0 flex flex-1 overflow-hidden" >
 		<!-- Sidebar (224px expanded / 72px collapsed, fixed width) -->
 		<aside
-			class="relative flex flex-col shrink-0 overflow-hidden box-border rounded-lg border border-border-default bg-surface-page shadow-raised-sm transition-[width,box-shadow] duration-standard ease-standard"
+			class="relative flex flex-col shrink-0 overflow-hidden box-border rounded-lg border border-border-default bg-surface-primary shadow-raised-sm transition-[width,box-shadow] duration-standard ease-standard"
 			style="width:{isSidebarCollapsed ? 'var(--cst-desktop-sidebar-collapsed)' : 'var(--cst-desktop-sidebar-width)'};padding:0.75rem;"
 		>
 			<!-- Scrollable nav region — takes all available space -->

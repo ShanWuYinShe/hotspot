@@ -34,7 +34,7 @@
 	{#if !isSubPage}
 		<aside
 			class="shrink-0 flex flex-col items-center"
-			style="width:var(--cst-mobile-rail-width);padding-top:max(env(safe-area-inset-top, 8px), 8px);padding-bottom:max(env(safe-area-inset-bottom, 8px), 8px);padding-left:max(env(safe-area-inset-left, 0px), 0px);gap:var(--cst-bottom-nav-pad-top);border-right:var(--cst-border-width-hairline) solid var(--cst-border-default);background-color:var(--cst-surface-primary);"
+			style="width:var(--cst-mobile-rail-width);padding-top:max(env(safe-area-inset-top, 8px), 8px);padding-bottom:max(env(safe-area-inset-bottom, 8px), 8px);padding-left:max(env(safe-area-inset-left, 0px), 0px);gap:var(--cst-bottom-nav-pad-top);border-right:var(--cst-border-width-hairline) solid var(--cst-border-default);background-color:var(--cst-surface-page);"
 		>
 			{#each NAV_ITEMS.slice(0, 2) as item}
 				<RailIcon
@@ -70,7 +70,7 @@
 		</aside>
 	{/if}
 
-	<RoutedContentViewport class="shrink-0" contentClassName="bg-surface-primary">
+	<RoutedContentViewport class="shrink-0">
 		{@render children()}
 	</RoutedContentViewport>
 

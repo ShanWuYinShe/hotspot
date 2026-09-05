@@ -13,10 +13,15 @@
   --cst-text-secondary: var(--cst-palette-text-muted);
   --cst-text-on-accent: var(--cst-palette-on-accent);
 
-  /* Surface */
+  /* Surface — 画廊连续画布契约（第一批 ui-gallery）：
+     --cst-surface-page（= page-bg）是应用内唯一的整层底色。外壳各层
+     （外框/内框/视口/状态栏/安全区/导航底座透明区）一律只许用它；
+     层级只靠白卡（surface-primary）+ 发丝描边 + 主题投影表达。
+     禁止任何外壳/组件再引入第二个整层底色（历史教训：MobilePortrait
+     内框白色 + 桌面 workspace 深灰造成的顶/中/底三截色）。
+     桌面舞台已并入画布（workspace token 删除），侧栏/主面板走白浮卡。 */
   --cst-surface-primary: var(--cst-palette-bg);
   --cst-surface-page: var(--cst-palette-page-bg);
-  --cst-surface-workspace: var(--cst-palette-workspace-bg);
   --cst-surface-overlay-strong: var(--cst-palette-overlay-strong);
 
   /* Accent / Interactive */

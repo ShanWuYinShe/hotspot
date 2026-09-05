@@ -28,7 +28,7 @@
 
 <div
 	class="shrink-0 flex items-center justify-between px-5 select-none"
-	style="height:44px;background-color:var(--cst-surface-primary);"
+	style="height:44px;background-color:var(--cst-surface-page);"
 >
 	<!-- Time -->
 		<span

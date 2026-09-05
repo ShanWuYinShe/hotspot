@@ -10,7 +10,8 @@
 	// PageHeader — 与正文共用同一 ContentColumn gutter 的页面页头。
 	// 对齐 Figma Make layout/page/PageHeader 契约：
 	//   - 内容包在 ContentColumn 内，左/右边缘与页面正文严格对齐
-	//   - 背景 var(--cst-surface-page)（桌面统一画布契约，sticky 时与滚动内容同底）
+	//   - 实底（glass=false）：.page-header-solid（外壳感知：移动/平板=画布色，
+//     桌面白浮卡内=白色；sticky 时与滚动内容同底，不透出滚动文字）
 	//   - 返回按钮默认仅非桌面显示；showBackOnDesktop 可显式开启
 	//
 	// ┌──────────────── 路由页面 ──────────────────────────┐
@@ -85,10 +86,10 @@
 </script>
 
 <header
-	class={cn('shrink-0', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]', className)}
+	class={cn('shrink-0', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]', !glass && 'page-header-solid', className)}
 	style={glass
 		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'
-		: 'background-color:var(--cst-surface-page);border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'}
+		: 'border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'}
 >
 	<ContentColumn {maxWidth} class={cn('pt-4 pb-3', contentClassName, belowPad)}>
 		<div class="flex items-center gap-3">

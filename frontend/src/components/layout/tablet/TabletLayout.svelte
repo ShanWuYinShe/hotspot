@@ -35,7 +35,7 @@
 <div
 	data-platform="tablet"
 	class="flex flex-col h-dvh w-full overflow-hidden transition-colors duration-gentle font-sans"
-	style="background-color:var(--cst-surface-primary);color:var(--cst-text-primary);"
+	style="background-color:var(--cst-surface-page);color:var(--cst-text-primary);"
 >
 	<StatusBar />
 

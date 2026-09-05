@@ -93,7 +93,6 @@ function buildPalette(
     label,
     description,
     pageBackground: colors.pageBackground,
-    workspaceBackground: colors.workspaceBackground,
     pageGlow: colors.pageGlow,
     heroGlow: colors.heroGlow,
     surfaceBackground: colors.surfaceBackground,

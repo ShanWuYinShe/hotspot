@@ -780,6 +780,8 @@ export struct SettingsPage {
       }
       .width('100%')
       .height('100%')
+      // 画布契约样板：页面整底 pageBackground 连续（header 默认 bar 变体同画布底）
+      .backgroundColor(this.getCurrentThemePalette().pageBackground)
       .bindSheet($$this.showThemeSheet, this.ThemeSheet(), {
         height: SheetSize.FIT_CONTENT,
         showClose: true,

@@ -37,7 +37,7 @@
 >
 	<div
 		class={cn('flex flex-col h-dvh w-full', 'transition-colors duration-gentle overflow-hidden relative')}
-		style="background-color:var(--cst-surface-primary);color:var(--cst-text-primary);"
+		style="background-color:var(--cst-surface-page);color:var(--cst-text-primary);"
 	>
 		<StatusBar />
 

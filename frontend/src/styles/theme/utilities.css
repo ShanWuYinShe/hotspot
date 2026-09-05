@@ -468,7 +468,9 @@
 /*── Routed page canvas + 三端页面契约 ──────────────────────────────────
    桌面、平板、手机共享同一结构化布局；标准页面用共享 gutter 而非各自
    发明外层内边距。平板是可工作画布：标记者在手机上保持移动度量，在
-   平板画布上以统一 24px 外 gutter 展开。 */
+   平板画布上以统一 24px 外 gutter 展开。
+   画布分壳：移动/平板视口直接暴露画布（surface-page）；桌面视口落在
+   白浮卡（.desktop-main-panel）内，内容跟随白卡（surface-primary）。 */
 @layer utilities {
   [data-page-viewport] {
     background: var(--cst-surface-page);
@@ -480,7 +482,15 @@
     margin-right: 0 !important;
   }
   [data-desktop-main] .desktop-main-scroll > * {
-    background-color: var(--cst-surface-page) !important;
+    background-color: var(--cst-surface-primary) !important;
+  }
+  /* 实底页头（PageHeader glass=false）：外壳感知底色——移动/平板跟随画布，
+     桌面跟随白浮卡；sticky 时与滚动内容同底，不透出滚动文字。 */
+  .page-header-solid {
+    background-color: var(--cst-surface-page);
+  }
+  [data-desktop-main] .page-header-solid {
+    background-color: var(--cst-surface-primary);
   }
 }
 

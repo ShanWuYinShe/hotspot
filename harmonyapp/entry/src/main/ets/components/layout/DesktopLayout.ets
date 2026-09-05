@@ -107,6 +107,11 @@ export struct DesktopLayout {
           }
           .width(DesignConstants.LAYOUT.DESKTOP_SIDEBAR_WIDTH) // 224
           .height('100%')
+          .borderRadius(DesignConstants.SHAPE.HERO_CARD) // 24
+          .backgroundColor(this.getPalette().surfaceBackground)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+          .shadow(this.getPalette().elevatedShadow)
+          .clip(true)
 
           Column() {
             this.MainContent()
@@ -125,8 +130,9 @@ export struct DesktopLayout {
       }
       .width('100%')
       .height('100%')
-      // 桌面舞台底色（深一档，承载浮动侧栏与内容卡的边界感，对齐前端 --cst-surface-workspace）
-      .backgroundColor(this.getPalette().workspaceBackground)
+      // 画布契约：桌面舞台与整层底色一律 pageBackground 连续画布（对齐前端 --cst-surface-page）；
+      // 层级只靠白浮卡（侧栏 / 主面板 surfaceBackground + 发丝描边 + 主题投影）表达，不再用深一档舞台灰
+      .backgroundColor(this.getPalette().pageBackground)
 
       // 通知中心 overlay（遮罩淡入淡出，避免 if 硬切闪现）
       if (this.showNotificationCenter) {
@@ -298,7 +304,8 @@ export struct DesktopLayout {
     .width('100%')
     .height(DesignConstants.LAYOUT.DESKTOP_HEADER_HEIGHT) // 52
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-    .backgroundColor(this.getPalette().surfaceBackground)
+    // 画布契约：顶栏整层用画布色连续（不再整条白色），分隔只靠底边发丝线
+    .backgroundColor(this.getPalette().pageBackground)
     .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getPalette().borderColor })
   }
 

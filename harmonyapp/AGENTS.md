@@ -137,6 +137,15 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 颜色：
 - 画布：`palette.pageBackground` / `palette.surfaceBackground`（对齐前端
   `--cst-surface-page` / `--cst-surface-primary`）
+- 画布契约（克制画廊，全量推广时遵守）：应用内只允许一个整层底色 = 画布
+  `pageBackground`（对齐前端 `--cst-surface-page`）；外壳各层（手机壳 / 桌面舞台 /
+  顶栏 / 页面整底 / header bar 变体）只许用画布色连续铺底，层级只靠白卡
+  `surfaceBackground` + 发丝描边（`BORDER_WIDTH.HAIRLINE` + `borderColor`）+
+  主题投影（`surfaceShadow` / `elevatedShadow`）表达。禁止引入第二档整层灰
+  （`workspaceBackground` 已删除：历史上与 `pageBackground` 两档灰并存造成断裂，
+  现桌面舞台改用 `pageBackground`、侧栏与主面板改为白浮卡）。分组卡样板见设置页
+  `SettingsSectionCard`（白卡 + 发丝描边 + 投影）、分组小标用 `textSecondary`
+  eyebrow（`SettingsGroupLabel`）、用户 hero 卡只保留白卡 + 描边（不加光晕）。
 - 表面：`palette.surfaceSubtle` / `palette.surfaceElevated` / `palette.chatBackground`
 - 文字：`palette.textPrimary` / `palette.textSecondary` / `palette.textTertiary`
 - 品牌：`palette.accentBackground`（forest `#3D7A55`，与前端

@@ -86,7 +86,7 @@
 				>
 					<span
 						class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
-						style="background:{active ? PIN_TONES[item.type].bg : 'var(--cst-surface-workspace)'};border:var(--cst-border-width-hairline) solid {active ? PIN_TONES[item.type].border : 'transparent'};"
+						style="background:{active ? PIN_TONES[item.type].bg : 'var(--cst-surface-primary)'};border:var(--cst-border-width-hairline) solid {active ? PIN_TONES[item.type].border : 'transparent'};"
 					>
 						{@html markerSvg(item.type, 1, { w: 14, h: 19 })}
 					</span>

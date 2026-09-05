@@ -332,6 +332,14 @@ theme/
     `--cst-surface-cover-scrim`（封面渐变）、`--cst-surface-glass-badge`（玻璃徽章）
   - hover/active：优先 `hover:bg-accent-soft` 等 token 类；背景填充走
     `--cst-interactive-hover-fill` / `--cst-interactive-active`
+- **画廊连续画布契约（强制）**：`--cst-surface-page`（= page-bg）是应用内唯一的
+  整层底色。外壳各层（外框/内框/视口/状态栏/安全区/导航底座透明区）一律只许用它；
+  层级只靠白卡（`surface-primary`：`card-raised`/`surface-hero`）+ 发丝描边 +
+  主题投影表达。禁止再引入第二个整层底色（`workspace` token 已删除，桌面舞台
+  并入画布，侧栏/主面板/顶栏走白浮卡语言）。分壳规则见 `utilities.css`：
+  移动/平板视口直接暴露画布，桌面视口落在白浮卡内（`desktop-main-scroll > *`
+  强制白底）；`PageHeader` 实底走 `.page-header-solid`（外壳感知：移动/平板画布色、
+  桌面白色），sticky glass 仍走 `surface-nav-glass`。
 - **数据层禁止携带颜色**：mock 数据/API 响应只返回语义标识（tag/type/category），
   不得包含 `color`/`bg` 等展示字段；视觉色由前端按语义键映射到 token
   （参照 `notify/shared/notify-data.ts` 的 `TYPE_CONFIG` 语义键

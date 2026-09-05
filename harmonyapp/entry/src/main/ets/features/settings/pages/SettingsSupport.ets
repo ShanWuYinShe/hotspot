@@ -110,13 +110,14 @@ export struct SettingsSectionCard {
           .width('100%')
       }
 
-      // 表面分层改版：白卡 + 圆角 + 阴影浮起（无边框线），分组感由卡片
-      // 承担、行间仍用 hairline 分隔线；靠底色差分层而非描边嵌套
+      // 画廊白卡：surfaceBackground 白卡 + 发丝描边 + 主题投影（画布契约样板）；
+      // 分组感由卡片承担、行间仍用 hairline 分隔线
       Column({ space: 0 }) {
         this.content();
       }
       .width('100%')
       .backgroundColor(this.getPalette().surfaceBackground)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
       .borderRadius(DesignConstants.SHAPE.CARD)
       .shadow(this.getPalette().elevatedShadow)
       .clip(true)

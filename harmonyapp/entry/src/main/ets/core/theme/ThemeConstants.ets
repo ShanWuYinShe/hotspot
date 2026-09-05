@@ -7,8 +7,6 @@ import { AppThemeShadow } from './AppThemeTypes';
 
 export interface ColorConfig {
   pageBackground: string;
-  /** 工作区舞台底色（比 page 深一档，对齐前端 --cst-palette-workspace-bg） */
-  workspaceBackground: string;
   pageGlow: string;
   heroGlow: string;
   surfaceBackground: string;
@@ -108,7 +106,6 @@ class ThemeShadowRegistry {
 export class ThemeConstants {
   static readonly DEFAULT_CLEAN_LIGHT_COLORS: ColorConfig = {
     pageBackground: '#F6F7F3',
-    workspaceBackground: '#EBEEE5',
     pageGlow: '#F2F4F2',
     heroGlow: '#E8EDE8',
     surfaceBackground: '#F6F7F3',
@@ -152,7 +149,6 @@ export class ThemeConstants {
 
   static readonly DEFAULT_CLEAN_DARK_COLORS: ColorConfig = {
     pageBackground: '#161A16',
-    workspaceBackground: '#0F130E',
     pageGlow: '#171A17',
     heroGlow: '#1A201A',
     surfaceBackground: '#161A16',
@@ -199,7 +195,6 @@ export class ThemeConstants {
   static readonly VIBRANT_LIGHT_COLORS: ColorConfig = {
     // 表面分层（对齐前端 vibrant.css）：画布灰蓝底 + 卡片纯白，卡片靠底色差与阴影浮起
     pageBackground: '#EFF3F9',
-    workspaceBackground: '#E6EBF4',
     pageGlow: '#E8EDFF',
     heroGlow: '#DDE4FF',
     surfaceBackground: '#FFFFFF',
@@ -243,7 +238,6 @@ export class ThemeConstants {
 
   static readonly VIBRANT_DARK_COLORS: ColorConfig = {
     pageBackground: '#0B1424',
-    workspaceBackground: '#060D19',
     pageGlow: '#122036',
     heroGlow: '#16263E',
     surfaceBackground: '#111D31',

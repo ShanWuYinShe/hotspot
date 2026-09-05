@@ -13,8 +13,6 @@
   /* ── 原始色板 --cst-palette-* ── */
   --cst-palette-bg: #F6F7F3;
   --cst-palette-page-bg: #F6F7F3;
-  /* 工作区舞台底色：比 page 深一档，承载浮动侧栏/内容卡片的边界感 */
-  --cst-palette-workspace-bg: #EBEEE5;
   --cst-palette-text: #152219;
   --cst-palette-text-muted: #3F5547;
   --cst-palette-accent-primary: #3D7A55;
@@ -191,7 +189,6 @@
   /* ── 原始色板 --cst-palette-* ── */
   --cst-palette-bg: #161A16;
   --cst-palette-page-bg: #161A16;
-  --cst-palette-workspace-bg: #0F130E;
   --cst-palette-text: #E8F1E9;
   --cst-palette-text-muted: #A8BDAE;
   --cst-palette-accent-primary: #52B878;

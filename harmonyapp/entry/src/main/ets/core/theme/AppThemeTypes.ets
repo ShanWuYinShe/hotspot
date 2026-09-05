@@ -81,8 +81,6 @@ export interface AppThemePalette {
   label: string;
   description: string;
   pageBackground: string;
-  /** 工作区舞台底色（比 page 深一档，承载浮动侧栏/卡片边界感，对齐前端 --cst-palette-workspace-bg） */
-  workspaceBackground: string;
   pageGlow: string;
   heroGlow: string;
   surfaceBackground: string;
