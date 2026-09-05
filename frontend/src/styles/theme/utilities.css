@@ -68,14 +68,21 @@
 
   .card-hover {
     cursor: pointer;
-    transition: box-shadow var(--cst-motion-relaxed) var(--cst-ease-standard);
+    transition:
+      box-shadow var(--cst-motion-relaxed) var(--cst-ease-standard),
+      transform var(--cst-motion-relaxed) var(--cst-ease-standard),
+      border-color var(--cst-motion-relaxed) var(--cst-ease-standard);
   }
   .card-hover:active { transform: scale(0.985); }
   .card-hover:focus-visible { outline: 2px solid var(--cst-accent-default); outline-offset: 2px; }
   @media (hover: hover) and (pointer: fine) {
     .card-hover:hover {
-      /* 只抬升投影，不画外环：卡片已有边框时避免“高亮外再叠一圈” */
-      box-shadow: var(--cst-elevation-card) !important;
+      /* 抬升 = 投影加深 + 轻微上浮：静止档 shadow-raised-md 与旧 hover 档
+         elevation-card 都是 ~10% 淡影，肉眼不可辨（等效无 hover）；
+         elevation-button（accent 18%）才有可感知的浮起。不画外环：
+         卡片已有边框时避免“高亮外再叠一圈”（forest 由边框加深承载）。 */
+      box-shadow: var(--cst-elevation-button) !important;
+      transform: translateY(-2px);
     }
   }
 
@@ -481,7 +488,13 @@
     margin-left: 0 !important;
     margin-right: 0 !important;
   }
-  [data-desktop-main] .desktop-main-scroll > * {
+  /* data-desktop-main 与 desktop-main-scroll 同在滚动 <main> 上（RoutedContentViewport
+     把 class prop 合并到同一元素），后代组合器永不匹配 → 桌面白浮卡强制白失效，
+     PageViewport 画布灰透出形成“白头部+灰身体”两截色。复合选择器命中同元素；
+     [data-page-viewport] 的画布灰在孙层，桌面同样压回白卡（移动/平板不受影响，
+     它们没有 data-desktop-main）。 */
+  [data-desktop-main].desktop-main-scroll > *,
+  [data-desktop-main] [data-page-viewport] {
     background-color: var(--cst-surface-primary) !important;
   }
   /* 实底页头（PageHeader glass=false）：外壳感知底色——移动/平板跟随画布，

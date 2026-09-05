@@ -169,8 +169,11 @@
   .forest .scale-btn:active { transform: scale(0.97); }
   @media (hover: hover) and (pointer: fine) {
     .forest .card-hover:hover {
-      /* forest 扁平：卡片 hover 不额外画外环，由边框色变化承载 */
+      /* forest 扁平：无阴影无位移，hover 由边框色加深承载（此前注释声明
+         「边框色变化承载」但未实现，hover 等效无效果） */
       box-shadow: none !important;
+      transform: none;
+      border-color: var(--cst-border-strong) !important;
     }
     .forest .circle-hover:hover {
       /* 圆形控件均自带边框：hover 由边框变 accent 承载，不再叠加外环 */
