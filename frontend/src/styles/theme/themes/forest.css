@@ -125,8 +125,11 @@
   --cst-surface-card-menu: color-mix(in srgb, var(--cst-surface-primary) 88%, var(--cst-accent-default));
   --cst-border-card-menu: color-mix(in srgb, var(--cst-accent-default) 22%, var(--cst-border-default));
 
-  /* ── 卡片按压缩放（forest tap 0.97）── */
+  /* ── 卡片交互档位（forest 纸面扁平：按压 0.97 / hover 不抬升（反馈由
+     微染+边框承载）/ 图片 hover 缩放 1.045）── */
   --cst-card-tap-scale: 0.97;
+  --cst-hover-lift: 0px;
+  --cst-hover-image-zoom: 1.045;
 }
 
 /* ═══ Forest 组件覆盖（@layer utilities，与 utilities.css 同层）═══ */
@@ -169,11 +172,10 @@
   .forest .scale-btn:active { transform: scale(0.97); }
   @media (hover: hover) and (pointer: fine) {
     .forest .card-hover:hover {
-      /* forest 扁平：无阴影无位移，hover = 纸面微染 + 边框加深
-         （对齐 surface-ghost/hover-btn 的主题内可交互语言，与
-         vibrant 抬升投影的感知强度对等） */
+      /* forest 扁平：无阴影，hover = 纸面微染 + 边框加深（对齐
+         surface-ghost/hover-btn 的主题内可交互语言，与 vibrant 抬升投影
+         的感知强度对等）；位移由主题 token 表达（--cst-hover-lift: 0） */
       box-shadow: none !important;
-      transform: none;
       border-color: var(--cst-border-strong) !important;
       background: var(--cst-interactive-hover) !important;
     }

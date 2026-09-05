@@ -77,12 +77,13 @@
   .card-hover:focus-visible { outline: 2px solid var(--cst-accent-default); outline-offset: 2px; }
   @media (hover: hover) and (pointer: fine) {
     .card-hover:hover {
-      /* 抬升 = 投影加深 + 轻微上浮：静止档 shadow-raised-md 与旧 hover 档
+      /* 抬升 = 投影加深 + 上浮（量随主题：vibrant 2px / forest 0——纸面反馈
+         由微染+边框承载）：静止档 shadow-raised-md 与旧 hover 档
          elevation-card 都是 ~10% 淡影，肉眼不可辨（等效无 hover）；
          elevation-button（accent 18%）才有可感知的浮起。不画外环：
          卡片已有边框时避免“高亮外再叠一圈”（forest 由边框加深承载）。 */
       box-shadow: var(--cst-elevation-button) !important;
-      transform: translateY(-2px);
+      transform: translateY(calc(var(--cst-hover-lift, 0px) * -1));
     }
   }
 
@@ -441,7 +442,7 @@
     }
     .image-hover-frame:hover .image-hover-frame__image,
     .card-hover:hover .image-hover-frame__image {
-      transform: scale(1.045);
+      transform: scale(var(--cst-hover-image-zoom, 1.045));
     }
   }
 
