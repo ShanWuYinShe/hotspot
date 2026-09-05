@@ -123,6 +123,11 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
 
 > 具体状态契约见「样式自查清单 → 交互状态契约」。
 
+> **UI 组件唯一目录**：`docs/ui-components.md`（原语清单、统一交互契约、
+> 近重复收敛 backlog）。新增任何 UI 前先查该清单；一个交互意图只允许一种
+> 反馈实现，新需求通过扩展原语 prop 表达，不新建近似组件。任何 UI 改动必须
+> 截图对比审查（改前/改后、双主题、受影响断面），不允许只靠代码 diff 判断视觉结果。
+
 ## 路由系统
 
 基于 SvelteKit 文件路由（SPA fallback 服务一切路径，动态路由无需占位枚举）：

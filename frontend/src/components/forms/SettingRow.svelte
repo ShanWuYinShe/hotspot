@@ -1,11 +1,14 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { cn } from '@/lib/utils';
+	import ListItem from '@/components/list/ListItem.svelte';
 
 	// SettingRow — 设置行（对齐 Figma Make SettingsPage）：
 	// 左侧 icon-badge 圆形容器 + 标题/副标题 + 右侧控件（Toggle/按钮/箭头等），
-	// 可选下方扩展区（extension：主题选择 grid 等换行内容）。
-	// 消除 settings 页 9 处手写重复（icon-badge + flex + title + desc 结构）。
+	// 可选下方扩展区（extension：主题选择 grid 等换行内容，属于该行的一部分，
+	// 随行 hover 一起高亮）。
+	// 行交互统一走 ListItem 原语（hover 填充 / 键盘 / aria 同全站行语言），
+	// 本组件只负责设置行的内容编排（此前为手写 hover-bg 行，近重复已收敛）。
 
 	let {
 		title,
@@ -30,20 +33,7 @@
 	} = $props();
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role, a11y_interactive_supports_focus, a11y_no_noninteractive_tabindex -->
-<div
-	class={cn('px-4 py-3.5', onRowClick && 'hover-bg cursor-pointer', className)}
-	role={onRowClick ? 'button' : undefined}
-	tabindex={onRowClick ? 0 : undefined}
-	onclick={onRowClick}
-	onkeydown={(e) => {
-		if (!onRowClick) return;
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			onRowClick();
-		}
-	}}
->
+<ListItem onClick={onRowClick} class={cn('px-4 py-3.5', className)}>
 	<div class="flex items-center gap-3">
 		<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9">
 			{@render icon()}
@@ -66,4 +56,4 @@
 	{#if extension}
 		<div class="mt-3">{@render extension()}</div>
 	{/if}
-</div>
+</ListItem>

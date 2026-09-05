@@ -180,8 +180,7 @@
 
 	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
 	<p class="eyebrow px-1 mt-6 mb-2">外观</p>
-	<div class="card-raised rounded-lg overflow-hidden">
-	<ListContainer>
+	<ListContainer bordered inset>
 			<SettingRow title="应用主题" description="选择一套全局视觉风格">
 				{#snippet icon()}
 					<Palette class="size-4 text-accent-default"   strokeWidth={1.5} />
@@ -230,12 +229,10 @@
 				{/snippet}
 			</SettingRow>
 	</ListContainer>
-	</div>
 
 	<!-- Notify -->
 	<p class="eyebrow px-1 mt-6 mb-2">通知</p>
-	<div class="card-raised rounded-lg overflow-hidden">
-	<ListContainer>
+	<ListContainer bordered inset>
 			<SettingRow title="推送通知" description="消息、提及与新动态提醒" onRowClick={toggleNotif}>
 				{#snippet icon()}
 					<Bell class="size-4 text-accent-default"   strokeWidth={1.5} />
@@ -243,12 +240,10 @@
 				<Toggle on={notif} onToggle={toggleNotif} label="推送通知" />
 			</SettingRow>
 	</ListContainer>
-	</div>
 
 	<!-- Privacy -->
 	<p class="eyebrow px-1 mt-6 mb-2">隐私与安全</p>
-	<div class="card-raised rounded-lg overflow-hidden">
-	<ListContainer>
+	<ListContainer bordered inset>
 			<SettingRow title="私密账号" description="仅关注者可查看你的内容" onRowClick={loading ? undefined : togglePrivateProfile}>
 				{#snippet icon()}
 					<Lock class="size-4 text-accent-default"   strokeWidth={1.5} />
@@ -262,12 +257,10 @@
 				<Toggle on={locationSharing} onToggle={toggleLocationSharing} label="位置共享" />
 			</SettingRow>
 	</ListContainer>
-	</div>
 
 	<!-- General -->
 	<p class="eyebrow px-1 mt-6 mb-2">通用</p>
-	<div class="card-raised rounded-lg overflow-hidden">
-	<ListContainer>
+	<ListContainer bordered inset>
 			<!-- 关于：复用 SettingRow 消除手写重复（版本号取自 package.json） -->
 			<SettingRow title="关于" description="HotSpot">
 				{#snippet icon()}
@@ -276,7 +269,6 @@
 				<span class="text-sm shrink-0 text-text-secondary">{APP_VERSION}</span>
 			</SettingRow>
 	</ListContainer>
-	</div>
 
 	<!-- Log Out — flat, less visually heavy；二次确认防误触 -->
 	<div class="mt-5">
