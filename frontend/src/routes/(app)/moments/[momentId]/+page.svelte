@@ -406,7 +406,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 								<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
 								编辑动态
 							</DropdownMenu.Item>
-							<DropdownMenu.Item class="text-status-danger" onSelect={() => { deleteOpen = true; moreOpen = false; }}>
+							<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { deleteOpen = true; moreOpen = false; }}>
 								<Trash2 class="size-3.5" strokeWidth={1.75} />
 								删除动态
 							</DropdownMenu.Item>

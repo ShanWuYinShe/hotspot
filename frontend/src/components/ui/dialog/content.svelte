@@ -39,28 +39,28 @@
 
 	const SIDE_CLASSES: Record<DialogSide, string> = {
 		center:
-			'inset-x-4 inset-y-4 m-auto rounded-xl shadow-[var(--cst-elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
+			'inset-x-4 inset-y-4 m-auto h-fit rounded-2xl border border-border-default/80 shadow-[var(--cst-elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
 		bottom:
 			// sm 起居中限宽：手机保持全宽 bottom sheet 手势形态；桌面/平板全宽 sheet
 			// 会把表单输入框/按钮拉满视口（设置类弹层尤其难看）。需要更宽容器的
 			// 页面型 sheet（发布编辑器/聊天容器）由调用方传 sm:max-w-* 覆盖（cn 走 twMerge）。
-			'bottom-0 left-0 right-0 sm:max-w-xl sm:mx-auto rounded-t-sheet shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
+			'bottom-0 left-0 right-0 sm:max-w-xl sm:mx-auto rounded-t-sheet border-t border-border-default/80 shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
 		right:
-			'top-0 bottom-0 right-0 w-3/4 border-l border-border-default shadow-[var(--cst-elevation-side-sheet)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right sm:max-w-sm',
+			'top-0 bottom-0 right-0 w-3/4 border-l border-border-default/80 shadow-[var(--cst-elevation-side-sheet)] data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right sm:max-w-sm',
 		left:
-			'top-0 bottom-0 left-0 w-3/4 border-r border-border-default shadow-[var(--cst-elevation-side-sheet)] data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left sm:max-w-sm',
+			'top-0 bottom-0 left-0 w-3/4 border-r border-border-default/80 shadow-[var(--cst-elevation-side-sheet)] data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left sm:max-w-sm',
 		top:
-			'top-0 left-0 right-0 rounded-b-sheet shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top'
+			'top-0 left-0 right-0 rounded-b-sheet border-b border-border-default/80 shadow-[var(--cst-elevation-sheet)] data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top'
 	};
 
-	// 遮罩走 --cst-surface-scrim（themes/*.css 按主题/明暗定义，vibrant≈0.38-0.42）。
+	// 遮罩走 --cst-surface-scrim（themes/*.css 按主题/明暗定义，vibrant≈0.38-0.42），叠加微虚化提升景深。
 	const canShowClose = $derived(showCloseButton && side !== 'center');
 </script>
 
 <Dialog.Portal>
 	<Dialog.Overlay
 		class={cn(
-			'fixed inset-0 z-[var(--cst-z-overlay)] bg-surface-scrim data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+			'fixed inset-0 z-[var(--cst-z-overlay)] bg-surface-scrim/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
 			overlayClassName
 		)}
 	/>

@@ -47,6 +47,20 @@ export struct SystemDialog {
 
         // 居中卡片
         Column() {
+          if (this.confirmVariant === 'danger') {
+            Row() {
+              Text('⚠️')
+                .fontSize(20)
+            }
+            .width(44)
+            .height(44)
+            .borderRadius(22)
+            .backgroundColor(this.getPalette().dangerSoft)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
+            .margin({ bottom: DesignConstants.SPACING.MD })
+          }
+
           if (this.title.length > 0) {
             Text(this.title)
               .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Bell, Check, MapPin, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, Trash2, UserPlus, Users } from '@lucide/svelte';
+	import { ArrowLeft, Bell, Check, LogOut, MapPin, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, Trash2, UserPlus, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -10,6 +10,7 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import * as Dialog from '@/components/ui/dialog';
+	import Button from '@/components/ui/button.svelte';
 	import GroupAnnouncementDialog from '@/components/groups/GroupAnnouncementDialog.svelte';
 	import MembersList from './shared/MembersList.svelte';
 	import ApplicationsList from './shared/ApplicationsList.svelte';
@@ -348,23 +349,33 @@
 	</StandardPageLayout>
 
 <Dialog.Root open={deleteAnnounceId !== null} onOpenChange={(next) => (next ? undefined : (deleteAnnounceId = null))}>
-	<Dialog.Content side="center" class="max-w-sm p-5" aria-label="确认删除公告">
-		<p class="text-md text-text-primary">删除这条公告？</p>
-		<p class="mt-1 text-sm text-text-secondary">删除后无法恢复。</p>
-		<div class="mt-4 flex items-center justify-end gap-3">
-			<button type="button" onclick={() => (deleteAnnounceId = null)} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
-			<button type="button" onclick={handleDeleteAnnouncement} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-status-danger enabled:bg-status-danger">确认删除</button>
+	<Dialog.Content side="center" class="max-w-sm p-0" aria-label="确认删除公告">
+		<div class="px-5 pt-6 pb-4">
+			<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-status-danger/10 text-status-danger ring-1 ring-status-danger/20">
+				<Trash2 class="size-5" />
+			</div>
+			<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">删除这条公告？</Dialog.Title>
+			<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">删除后无法恢复。</Dialog.Description>
+		</div>
+		<div class="flex items-center justify-end gap-2.5 px-5 pb-5">
+			<Button type="button" variant="secondary" size="md" onclick={() => (deleteAnnounceId = null)}>取消</Button>
+			<Button type="button" variant="danger" size="md" onclick={handleDeleteAnnouncement}>确认删除</Button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>
 
 <Dialog.Root open={leaveConfirmOpen} onOpenChange={(next) => (next ? undefined : (leaveConfirmOpen = false))}>
-	<Dialog.Content side="center" class="max-w-sm p-5" aria-label="确认退出群组">
-		<p class="text-md text-text-primary">退出群组「{gd.detail.name}」？</p>
-		<p class="mt-1 text-sm text-text-secondary">退出后将不再接收该群的聊天与公告。</p>
-		<div class="mt-4 flex items-center justify-end gap-3">
-			<button type="button" onclick={() => (leaveConfirmOpen = false)} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
-			<button type="button" onclick={handleLeaveConfirm} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-status-danger enabled:bg-status-danger">确认退出</button>
+	<Dialog.Content side="center" class="max-w-sm p-0" aria-label="确认退出群组">
+		<div class="px-5 pt-6 pb-4">
+			<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-status-danger/10 text-status-danger ring-1 ring-status-danger/20">
+				<LogOut class="size-5" />
+			</div>
+			<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">退出群组「{gd.detail.name}」？</Dialog.Title>
+			<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">退出后将不再接收该群的聊天与公告。</Dialog.Description>
+		</div>
+		<div class="flex items-center justify-end gap-2.5 px-5 pb-5">
+			<Button type="button" variant="secondary" size="md" onclick={() => (leaveConfirmOpen = false)}>取消</Button>
+			<Button type="button" variant="danger" size="md" onclick={handleLeaveConfirm}>确认退出</Button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

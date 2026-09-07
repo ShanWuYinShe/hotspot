@@ -375,9 +375,12 @@
 		{#if auth.isAuthenticated}
 			<Dialog.Root bind:open={confirmLogoutOpen}>
 				<Dialog.Content class="max-w-90 p-0">
-					<div class="px-5 pt-5 pb-4">
-						<Dialog.Title class="text-lg font-medium tracking-title text-text-primary">退出登录？</Dialog.Title>
-						<Dialog.Description class="mt-1 text-sm text-text-secondary">退出后将保持游客浏览，发布、关注等操作需要重新登录。</Dialog.Description>
+					<div class="px-5 pt-6 pb-4">
+						<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-status-danger/10 text-status-danger ring-1 ring-status-danger/20">
+							<LogOut class="size-5" />
+						</div>
+						<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">退出登录？</Dialog.Title>
+						<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">退出后将保持游客浏览，发布、关注等操作需要重新登录。</Dialog.Description>
 					</div>
 					<div class="flex flex-col gap-2 px-5 pb-5">
 						<Button type="button" variant="danger" size="lg" class="w-full" onclick={() => void handleLogout()}>退出登录</Button>

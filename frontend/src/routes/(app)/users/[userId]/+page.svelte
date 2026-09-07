@@ -327,9 +327,12 @@
 	<!-- 屏蔽/解除屏蔽二次确认（destructive 操作防误触） -->
 	<Dialog.Root bind:open={confirmBlockOpen}>
 		<Dialog.Content class="max-w-90 p-0">
-			<div class="px-5 pt-5 pb-4">
-				<Dialog.Title class="text-lg font-medium tracking-title text-text-primary">屏蔽该用户？</Dialog.Title>
-				<Dialog.Description class="mt-1 text-sm text-text-secondary">屏蔽后将无法收到对方消息与动态，且自动取消关注。</Dialog.Description>
+			<div class="px-5 pt-6 pb-4">
+				<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-status-danger/10 text-status-danger ring-1 ring-status-danger/20">
+					<UserX class="size-5" />
+				</div>
+				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">屏蔽该用户？</Dialog.Title>
+				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">屏蔽后将无法收到对方消息与动态，且自动取消关注。</Dialog.Description>
 			</div>
 			<div class="flex flex-col gap-2 px-5 pb-5">
 				<Button type="button" variant="danger" size="lg" class="w-full" onclick={() => { confirmBlockOpen = false; void toggleBlock(); }}>屏蔽</Button>
@@ -339,9 +342,12 @@
 	</Dialog.Root>
 	<Dialog.Root bind:open={confirmUnblockOpen}>
 		<Dialog.Content class="max-w-90 p-0">
-			<div class="px-5 pt-5 pb-4">
-				<Dialog.Title class="text-lg font-medium tracking-title text-text-primary">解除屏蔽？</Dialog.Title>
-				<Dialog.Description class="mt-1 text-sm text-text-secondary">解除后可以重新关注对方并接收其动态。</Dialog.Description>
+			<div class="px-5 pt-6 pb-4">
+				<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-accent-soft text-accent-default ring-1 ring-accent-border/30">
+					<Check class="size-5" />
+				</div>
+				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">解除屏蔽？</Dialog.Title>
+				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">解除后可以重新关注对方并接收其动态。</Dialog.Description>
 			</div>
 			<div class="flex flex-col gap-2 px-5 pb-5">
 				<Button type="button" variant="primary" size="lg" class="w-full" onclick={() => { confirmUnblockOpen = false; void toggleBlock(); }}>解除屏蔽</Button>

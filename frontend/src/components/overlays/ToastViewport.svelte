@@ -8,16 +8,36 @@
 	// （aria-label），自动消失由 store 的 setTimeout 负责。
 	// 层叠走 --cst-z-toast token；表面/描边/阴影全部用 design token。
 
-	const ICONS: Record<ToastKind, Component> = {
-		success: Check,
-		danger: CircleAlert,
-		info: Info
-	};
+	interface ToastConfig {
+		icon: Component;
+		iconClass: string;
+		badgeBg: string;
+		badgeRing: string;
+		borderClass: string;
+	}
 
-	const COLORS: Record<ToastKind, string> = {
-		success: 'text-status-online',
-		danger: 'text-status-danger',
-		info: 'text-accent-default'
+	const CONFIGS: Record<ToastKind, ToastConfig> = {
+		success: {
+			icon: Check,
+			iconClass: 'text-status-online',
+			badgeBg: 'bg-status-online/15',
+			badgeRing: 'ring-status-online/25',
+			borderClass: 'border-status-online/25'
+		},
+		danger: {
+			icon: CircleAlert,
+			iconClass: 'text-status-danger',
+			badgeBg: 'bg-status-danger/15',
+			badgeRing: 'ring-status-danger/25',
+			borderClass: 'border-status-danger/25'
+		},
+		info: {
+			icon: Info,
+			iconClass: 'text-accent-default',
+			badgeBg: 'bg-accent-soft',
+			badgeRing: 'ring-accent-border/30',
+			borderClass: 'border-border-default/80'
+		}
 	};
 </script>
 
@@ -27,15 +47,18 @@
 		aria-live="polite"
 	>
 		{#each toast.items as item (item.id)}
+			{@const cfg = CONFIGS[item.kind]}
 			<div
-				class="pointer-events-auto flex w-full max-w-sm items-center gap-2.5 rounded-md border border-border-default bg-surface-primary px-4 py-3 shadow-menu animate-in fade-in-0 slide-in-from-top-2"
+				class="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border {cfg.borderClass} bg-surface-primary/95 p-3.5 shadow-raised-lg backdrop-blur-md animate-in fade-in-0 slide-in-from-top-2"
 				role="status"
 			>
-				<svelte:component this={ICONS[item.kind]} class="size-4 shrink-0 {COLORS[item.kind]}" strokeWidth={2} />
-				<p class="min-w-0 flex-1 text-sm text-text-primary">{item.message}</p>
+				<div class="flex size-7 shrink-0 items-center justify-center rounded-full {cfg.badgeBg} ring-1 {cfg.badgeRing}">
+					<svelte:component this={cfg.icon} class="size-4 {cfg.iconClass}" strokeWidth={2.2} />
+				</div>
+				<p class="min-w-0 flex-1 text-sm font-medium text-text-primary leading-snug">{item.message}</p>
 				<button
 					type="button"
-					class="hit-slop shrink-0 focus-ring text-text-secondary"
+					class="hit-slop shrink-0 focus-ring rounded-lg p-1 text-text-tertiary transition-colors hover:bg-interactive-hover hover:text-text-primary"
 					aria-label="关闭通知"
 					onclick={() => dismissToast(item.id)}
 				>
