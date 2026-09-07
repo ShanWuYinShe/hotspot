@@ -89,54 +89,60 @@
 		/>
 	</div>
 
-	<Popover.Content customAnchor={rootEl} class="w-57.5 rounded-md p-2.5" role="dialog" aria-label="外观设置">
-			<div class="px-2 pb-2">
-				<p class="eyebrow">外观</p>
-				<p class="mt-1 text-xs text-text-secondary">
-					当前：{currentTheme} · {modeLabel}
+	<Popover.Content customAnchor={rootEl} class="w-76 rounded-xl p-3 shadow-raised-lg border border-border-default bg-surface-primary" role="dialog" aria-label="外观设置">
+			<div class="px-1 pb-2.5">
+				<p class="eyebrow text-text-secondary">外观</p>
+				<p class="mt-0.5 text-xs text-text-secondary">
+					当前：<span class="font-medium text-text-primary">{currentTheme}</span> · <span class="font-medium text-text-primary">{modeLabel}</span>
 				</p>
 			</div>
 
 			<section
 				aria-labelledby="theme-choice-label"
-				class="rounded-md ring-1 ring-border-default surface-tinted p-2"
+				class="rounded-lg ring-1 ring-border-default surface-tinted p-2.5"
 			>
-				<div class="flex items-center justify-between px-2 pb-2 pt-1">
+				<div class="flex items-center justify-between pb-2 pt-0.5 px-0.5">
 					<p id="theme-choice-label" class="eyebrow">主题</p>
 					<span class="text-xxs text-text-secondary">选择一种基调</span>
 				</div>
-				<div class="grid grid-cols-2 gap-1.5" role="group" aria-label="选择主题">
+				<div class="grid grid-cols-2 gap-2" role="group" aria-label="选择主题">
 					{#each THEME_OPTIONS as item}
 						{@const selected = theme.theme === item.id}
 						<button
 							type="button"
 							onclick={() => setTheme(item.id)}
 							aria-pressed={selected}
-							class="rounded-sm border p-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {selected
-								? 'border-accent-border bg-accent-soft text-accent-default hover:bg-interactive-active'
-								: 'border-border-default text-text-secondary hover:bg-interactive-hover'}"
+							class="rounded-md border p-2.5 text-left outline-none transition-all duration-standard focus-visible:ring-2 focus-visible:ring-accent-default {selected
+								? 'border-accent-border bg-accent-soft text-accent-default shadow-raised-xs'
+								: 'border-border-default bg-surface-primary text-text-secondary hover:bg-interactive-hover hover:text-text-primary'}"
 						>
-							<span
-								class="mb-2 block h-5 w-5 rounded-full ring-3"
-								style="background:{item.swatch};--tw-ring-color:{selected ? 'var(--cst-accent-soft)' : 'transparent'};"
-							></span>
-							<span class="block text-sm font-medium text-text-primary" >{item.label}</span>
+							<div class="flex items-center justify-between mb-2">
+								<span
+									class="block h-5 w-5 rounded-full ring-2 ring-offset-1 ring-offset-surface-primary"
+									style="background:{item.swatch};--tw-ring-color:{selected ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};"
+								></span>
+								{#if selected}
+									<Check size={13} class="text-accent-default" />
+								{/if}
+							</div>
+							<span class="block text-sm font-medium text-text-primary">{item.label}</span>
 							<span class="mt-0.5 block text-xxs text-text-secondary">{item.note}</span>
 						</button>
 					{/each}
 				</div>
 			</section>
 
-			<!-- 明暗三档（跟随系统/浅色/深色）：复用 TabBar 分段样式，不自造新组件 -->
+			<!-- 明暗三档（跟随系统/浅色/深色）：接入 TabBar segmented 形态，等宽底轨无粘连 -->
 			<section
 				aria-labelledby="color-scheme-label"
-				class="rounded-md ring-1 ring-border-default surface-tinted p-2 mt-2"
+				class="rounded-lg ring-1 ring-border-default surface-tinted p-2.5 mt-2.5"
 			>
-				<div class="flex items-center justify-between px-2 pb-2 pt-1">
+				<div class="flex items-center justify-between pb-2 pt-0.5 px-0.5">
 					<p id="color-scheme-label" class="eyebrow">明暗</p>
 					<span class="text-xxs text-text-secondary">当前：{modeLabel}</span>
 				</div>
 				<TabBar
+					variant="segmented"
 					items={COLOR_SCHEME_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
 					value={theme.colorScheme}
 					onChange={(id) => setColorScheme(id as ColorSchemeMode)}
@@ -147,15 +153,14 @@
 				<button
 					type="button"
 					onclick={handleMockToggle}
-					class="hover-btn mt-2 flex w-full items-center justify-between rounded-sm ring-1 ring-border-default px-3 py-2.5 text-left outline-none transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent-default text-text-primary"
-					
+					class="hover-btn mt-2.5 flex w-full items-center justify-between rounded-lg ring-1 ring-border-default bg-surface-primary p-2.5 text-left outline-none transition-colors hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default text-text-primary"
 				>
-					<span class="flex items-center gap-2">
-						<span class="flex h-6.5 w-6.5 items-center justify-center rounded-full bg-accent-soft">
-							<Database size={13} color="var(--cst-accent-default)" />
+					<span class="flex items-center gap-2.5">
+						<span class="flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft shrink-0">
+							<Database size={14} color="var(--cst-accent-default)" />
 						</span>
 						<span>
-							<span class="block text-sm font-medium">API 数据来源</span>
+							<span class="block text-xs font-medium">API 数据来源</span>
 							<span class="block text-xxs text-text-secondary">{mockEnabled ? '模拟数据' : '真实后端'}</span>
 						</span>
 					</span>
@@ -167,29 +172,33 @@
 					</span>
 				</button>
 
-				<div class="mt-2 rounded-sm ring-1 ring-border-default px-3 py-2.5 text-text-primary" >
-					<span class="block text-sm font-medium">模拟登录态</span>
-					<span class="mb-2 block text-xxs text-text-secondary">影响 login/register/guest/reset 的返回</span>
-					<ListContainer>
+				<div class="mt-2.5 rounded-lg ring-1 ring-border-default bg-surface-primary p-2.5 text-text-primary">
+					<div class="px-0.5 pb-2">
+						<span class="block text-xs font-medium">模拟登录态</span>
+						<span class="mt-0.5 block text-xxs text-text-secondary">影响 login/register/guest/reset 的返回</span>
+					</div>
+					<div class="space-y-1">
 						{#each AUTH_SCENARIOS as s}
-							<ListItem
-								pressed={scenario === s.id}
-								onClick={() => void applyScenario(s.id)}
-								ariaLabel={`切换登录态：${s.label}`}
-								class="flex items-center justify-between px-2 py-1.5"
+							{@const isCur = scenario === s.id}
+							<button
+								type="button"
+								onclick={() => void applyScenario(s.id)}
+								aria-pressed={isCur}
+								class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors duration-fast outline-none focus-visible:ring-2 focus-visible:ring-accent-default {isCur
+									? 'bg-accent-soft font-medium text-accent-default'
+									: 'text-text-primary hover:bg-interactive-hover'}"
 							>
-								<span class="{scenario === s.id ? 'text-text-on-accent' : 'text-text-primary'} text-xs">{s.label}</span>
-								{#if scenario === s.id}
-									<Check size={12}  class="text-text-on-accent" />
+								<span class="truncate">{s.label}</span>
+								{#if isCur}
+									<Check size={13} class="shrink-0 text-accent-default" />
 								{/if}
-							</ListItem>
+							</button>
 						{/each}
-					</ListContainer>
+					</div>
 					<button
 						type="button"
 						onclick={() => void resetLoggedOut()}
-						class="mt-2 w-full rounded-sm border border-border-default px-2 py-1.5 text-xs focus-ring transition-colors hover:bg-accent-soft text-text-secondary"
-						
+						class="mt-2.5 w-full rounded-md border border-border-default bg-surface-subtle py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-interactive-hover hover:text-text-primary focus-ring"
 					>
 						重置为未登录（匿名浏览）
 					</button>

@@ -180,7 +180,7 @@ export struct TabsPillGroup {
     .width('100%')
     // 自由宽度模式：透明容器、无灰底槽、无内边距（对齐前端 TabBar 容器）
     .padding(this.freeWidth ? 0 : DesignConstants.SPACING.THREE)
-    .borderRadius(this.freeWidth ? 0 : DesignConstants.RADIUS.LG)
+    .borderRadius(this.freeWidth ? 0 : DesignConstants.RADIUS.FULL)
     .backgroundColor(this.freeWidth ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().surfaceSubtle)
     .alignItems(VerticalAlign.Center)
   }

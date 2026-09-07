@@ -97,9 +97,10 @@ locationName = loc?.location_name ?? '';
 </div>
 
 <!-- Tabs -->
-<div class="shrink-0 flex gap-1.5 px-4 pb-3">
-	<!-- Tab row：统一 TabBar（胶囊），对齐 LocationSheetList 与全站分类 Tab 契约 -->
+<div class="shrink-0 px-4 pb-3">
+	<!-- Tab row：统一 TabBar（分段选择器） -->
 	<TabBar
+		variant="segmented"
 		items={[
 			{ id: 'nearby', label: '附近', icon: TrendingUp },
 			{ id: 'hot', label: '热门', icon: Star },
@@ -107,7 +108,7 @@ locationName = loc?.location_name ?? '';
 		]}
 		value={activeTab}
 		onChange={(id) => (activeTab = id as 'nearby' | 'hot' | 'recent')}
-		class="flex-1 px-1"
+		class="w-full"
 	/>
 </div>
 

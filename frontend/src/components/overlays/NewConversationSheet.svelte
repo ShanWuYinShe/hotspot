@@ -55,6 +55,7 @@
 	<!-- Tab switcher — 统一 TabBar 原语（禁止手写 tab 变体），保留原回调 -->
 	<div class="shrink-0 px-5 pt-3 pb-2">
 		<TabBar
+			variant="segmented"
 			items={[
 				{ id: 'chat', label: '开始私聊', icon: MessageCircle },
 				{ id: 'add', label: '添加好友', icon: UserPlus }

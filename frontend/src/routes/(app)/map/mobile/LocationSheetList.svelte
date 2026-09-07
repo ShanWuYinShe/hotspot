@@ -85,9 +85,10 @@ import PinMedia from '../shared/PinMedia.svelte';
 			</div>
 		{/if}
 
-		<!-- Tab row：统一 TabBar（胶囊） -->
+		<!-- Tab row：统一 TabBar（分段） -->
 		<div class="flex items-center gap-2 px-4 pb-2">
 			<TabBar
+				variant="segmented"
 				items={[
 					{ id: 'recent', label: '最近使用', icon: Clock },
 					{ id: 'hot', label: '热门地点', icon: Star }

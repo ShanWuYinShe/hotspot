@@ -28,4 +28,18 @@ describe('TabBar', () => {
 		await fireEvent.click(screen.getByRole('button', { name: /群组/ }));
 		expect(onChange).toHaveBeenCalledWith('groups');
 	});
+
+	it('variant="segmented" 渲染分段选择器与 tab 角色', async () => {
+		const onChange = vi.fn();
+		render(TabBar, { props: { items, value: 'moments', onChange, variant: 'segmented' } });
+		const tablist = screen.getByRole('tablist');
+		expect(tablist).toBeTruthy();
+		const tabButtons = screen.getAllByRole('tab');
+		expect(tabButtons).toHaveLength(2);
+		expect(tabButtons[0].getAttribute('aria-selected')).toBe('true');
+		expect(tabButtons[1].getAttribute('aria-selected')).toBe('false');
+		await fireEvent.click(tabButtons[1]);
+		expect(onChange).toHaveBeenCalledWith('groups');
+	});
 });
+

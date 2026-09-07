@@ -523,7 +523,7 @@
    胶囊圆角：激活项 accent 实底（组件内 bg-accent-default），未激活 hover 轻背景。 */
 .tab-item { border-radius: 9999px; }
 @media (hover: hover) and (pointer: fine) {
-  .tab-item:not([aria-pressed="true"]):hover {
+  .tab-item:not([aria-pressed="true"]):not([aria-selected="true"]):not([data-active="true"]):hover {
     background-color: var(--cst-interactive-hover-fill);
   }
 }

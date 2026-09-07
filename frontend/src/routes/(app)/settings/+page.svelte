@@ -248,6 +248,7 @@
 							</div>
 						</div>
 						<TabBar
+							variant="segmented"
 							items={THEME_OPTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.id === 'forest' ? Trees : Palette }))}
 							value={theme.theme}
 							onChange={(id) => setTheme(id as AppTheme)}
@@ -269,6 +270,7 @@
 							</div>
 						</div>
 						<TabBar
+							variant="segmented"
 							items={COLOR_SCHEME_OPTIONS.map((o) => ({ id: o.id, label: o.label, icon: o.id === 'dark' ? Moon : o.id === 'light' ? Sun : undefined }))}
 							value={theme.colorScheme}
 							onChange={(id) => setColorScheme(id as ColorSchemeMode)}
