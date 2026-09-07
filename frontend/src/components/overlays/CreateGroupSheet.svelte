@@ -81,8 +81,7 @@
 	{#if step === 'done'}
 		<div class="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
 			<div
-				class="flex items-center justify-center rounded-full bg-accent-default size-18"
-				style="box-shadow:var(--shadow-glow-lg);"
+				class="flex items-center justify-center rounded-full bg-accent-default size-18 shadow-raised-md"
 			>
 				<Check class="size-8 text-text-on-accent"   strokeWidth={2.5} />
 			</div>
@@ -94,8 +93,7 @@
 			<button
 				type="button"
 				onclick={onClose}
-				class="hover-btn px-8 py-3 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm font-medium"
-				style="box-shadow:var(--shadow-glow-lg);"
+				class="hover-btn px-8 py-3 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm font-medium shadow-raised-md"
 			>
 				完成
 			</button>
@@ -107,8 +105,7 @@
 				<!-- disabled 必须可见可解释：视觉降级 + 行内「即将开放」说明（title 在触屏不可见） -->
 				<button
 					type="button"
-					class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm focus-ring disabled:cursor-not-allowed disabled:opacity-faint"
-					style="width:100%;height:110px;"
+					class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm focus-ring disabled:cursor-not-allowed disabled:opacity-faint w-full h-28"
 					disabled
 					aria-disabled="true"
 					title="暂未开放"
@@ -193,7 +190,7 @@
 				class="flex items-center justify-between rounded-md border border-border-default bg-surface-primary px-4 py-3.5 shadow-raised-md"
 			>
 				<div class="flex items-center gap-3">
-					<Check class="size-4.5" style="color:{requiresApproval ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};" strokeWidth={1.5} />
+					<Check class="size-4.5 {requiresApproval ? 'text-accent-default' : 'text-text-secondary'}" strokeWidth={1.5} />
 					<div>
 						<p class="text-sm text-text-primary">新人需审核</p>
 						<p class="text-xs text-text-secondary">
@@ -230,8 +227,7 @@
 				type="button"
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
-				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium {canCreate && !creating ? 'bg-accent-default text-text-on-accent' : 'bg-surface-primary text-text-secondary'}"
-				style="box-shadow:{canCreate && !creating ? 'var(--shadow-glow-lg)' : 'var(--shadow-inset-sm)'};border:{canCreate && !creating ? 'none' : 'var(--cst-border-width-hairline) solid var(--cst-border-default)'};transition:all var(--cst-motion-standard) var(--cst-ease-standard);cursor:{canCreate && !creating ? 'pointer' : 'not-allowed'};"
+				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium transition-all duration-standard ease-standard {canCreate && !creating ? 'bg-accent-default text-text-on-accent shadow-raised-md border-none cursor-pointer' : 'bg-surface-primary text-text-secondary shadow-inset-sm border-hairline border-border-default cursor-not-allowed'}"
 			>
 		{creating ? '创建中…' : '创建群组'}
 	</button>

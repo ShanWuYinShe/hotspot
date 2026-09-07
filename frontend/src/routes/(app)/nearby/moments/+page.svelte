@@ -12,8 +12,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
-	import MomentCard from './shared/MomentCard.svelte';
-	import { createFeedInteractions, type FeedItem } from './shared/feed-interactions.svelte';
+	import MomentCard from '@/components/moments/MomentCard.svelte';
+	import { createFeedInteractions, type FeedItem } from '@/components/moments/moment-feed.svelte';
 	import { fetchNearbyMoments , netError } from '@/api';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
@@ -208,7 +208,7 @@ locationName = loc?.location_name ?? '';
 		{/snippet}
 		{#snippet trailing()}
 			{#if device === 'tablet'}
-				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default shadow-glow-sm" >
+				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default shadow-raised-sm" >
 					<Sparkles class="size-3 text-text-on-accent"   strokeWidth={2} />
 					<span class="text-text-on-accent text-xs">精选</span>
 				</div>

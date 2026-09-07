@@ -200,7 +200,7 @@
 				name={groupName}
 				size={compact ? 34 : 38}
 				shape="rounded"
-				style="border:var(--cst-border-width-regular) solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+				class="border-regular border-border-default shadow-raised-sm"
 			/>
 
 			<!-- Name + status -->

@@ -23,8 +23,8 @@
 
 <!-- Dense, horizontally comparable metrics: counts, ratios, and relationship states. -->
 <dl
-	class="grid overflow-hidden rounded-sm ring-border {className}"
-	style="grid-template-columns:repeat({items.length}, minmax(0, 1fr));gap:1px;background:var(--cst-border-default);"
+	class="grid overflow-hidden rounded-sm ring-border bg-border-default gap-px {className}"
+	style="grid-template-columns:repeat({items.length}, minmax(0, 1fr));"
 >
 	{#each items as item (item.label)}
 		<!-- DOM 保持 dt 先 dd 后（HTML 规范/读屏术语-定义顺序），视觉值在上用 col-reverse -->

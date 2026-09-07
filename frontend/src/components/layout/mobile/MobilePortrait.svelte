@@ -32,12 +32,10 @@
 </script>
 
 <div
-	class="min-h-dvh w-full flex justify-center items-start font-sans transition-colors duration-gentle"
-	style="background-color:var(--cst-surface-page);"
+	class="bg-surface-page min-h-dvh w-full flex justify-center items-start font-sans transition-colors duration-gentle"
 >
 	<div
-		class={cn('flex flex-col h-dvh w-full', 'transition-colors duration-gentle overflow-hidden relative')}
-		style="background-color:var(--cst-surface-page);color:var(--cst-text-primary);"
+		class={cn('bg-surface-page text-text-primary flex flex-col h-dvh w-full', 'transition-colors duration-gentle overflow-hidden relative')}
 	>
 		<StatusBar />
 
@@ -48,8 +46,7 @@
 		{#if !isSubPage}
 			<nav
 				aria-label="主导航"
-				class="shrink-0 w-full"
-				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);border-top:var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);transition:background var(--cst-motion-slow) var(--cst-ease-standard), border-color var(--cst-motion-slow) var(--cst-ease-standard);"
+				class="shrink-0 w-full nav-glass nav-glass--bottom"
 			>
 				<div
 					class="flex items-center px-2"
@@ -72,7 +69,7 @@
 						<button
 							type="button"
 							class="hover-btn scale-btn flex items-center justify-center focus-ring select-none rounded-full size-12.5"
-							style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabGlow};transition:background var(--cst-motion-standard) var(--cst-ease-standard), box-shadow var(--cst-motion-standard) var(--cst-ease-standard), transform var(--cst-motion-snappy) var(--cst-ease-standard), filter var(--cst-motion-snappy) var(--cst-ease-standard);"
+							style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabGlow};"
 							onclick={toggleComposer}
 							aria-label={composer.composerOpen ? '关闭' : '发布'}
 						>

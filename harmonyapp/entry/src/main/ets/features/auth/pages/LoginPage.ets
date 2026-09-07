@@ -559,55 +559,6 @@ export struct LoginPage {
             this.isLoginBtnPressed = false;
           }
         })
-
-      // 底部链接（对齐前端 AuthForm：注册 + 访客双入口，均可点击切换）；
-      // 纯 Text 热区 <44vp：补 padding + 按压缩放
-      Row({ space: DesignConstants.SPACING.LG }) {
-        Text('注册新账号')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().accentBackground)
-          .padding({
-            left: DesignConstants.SPACING.MD,
-            right: DesignConstants.SPACING.MD,
-            top: DesignConstants.SPACING.SM2,
-            bottom: DesignConstants.SPACING.SM2
-          })
-          .scale(this.linkPressed === 'register' ?
-            { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
-            { x: 1, y: 1 })
-          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
-          .onTouch((event: TouchEvent) => {
-            if (event.type === TouchType.Down) {
-              this.linkPressed = 'register';
-            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-              this.linkPressed = '';
-            }
-          })
-          .onClick(() => { this.loginMode = 'register'; })
-        Text('随便逛逛（访客）')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().accentBackground)
-          .padding({
-            left: DesignConstants.SPACING.MD,
-            right: DesignConstants.SPACING.MD,
-            top: DesignConstants.SPACING.SM2,
-            bottom: DesignConstants.SPACING.SM2
-          })
-          .scale(this.linkPressed === 'guest' ?
-            { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
-            { x: 1, y: 1 })
-          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
-          .onTouch((event: TouchEvent) => {
-            if (event.type === TouchType.Down) {
-              this.linkPressed = 'guest';
-            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-              this.linkPressed = '';
-            }
-          })
-          .onClick(() => { this.loginMode = 'guest'; })
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
     }
     .width('100%')
     .transition(
@@ -771,19 +722,6 @@ export struct LoginPage {
           && (!this.needsRegisterVerificationCode() || this.registerVerificationCode.trim().length > 0)),
         onPress: () => { this.userRegister(); }
       })
-
-      Row({ space: DesignConstants.SPACING.LG }) {
-        Text('已有账号？登录')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().accentBackground)
-          .onClick(() => { this.loginMode = 'login'; })
-        Text('随便逛逛（访客）')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().accentBackground)
-          .onClick(() => { this.loginMode = 'guest'; })
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)
     }
     .width('100%')
     .transition(

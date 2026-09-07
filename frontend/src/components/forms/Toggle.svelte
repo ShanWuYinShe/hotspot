@@ -39,7 +39,7 @@
 	<span
 		class="relative block rounded-full transition-[background-color,box-shadow] duration-standard ease-standard
 			{on
-			? 'bg-accent-default shadow-toggle-on group-hover:shadow-glow-sm'
+			? 'bg-accent-default shadow-toggle-on group-hover:shadow-raised-sm'
 			: 'bg-surface-toggle-off shadow-toggle-off'}"
 		style="width:{width}px;height:28px;"
 	>

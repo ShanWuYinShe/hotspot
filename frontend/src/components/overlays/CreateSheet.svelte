@@ -253,7 +253,7 @@
 		<button
 			type="submit"
 			disabled={!canPublish}
-			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-glow-md enabled:hover:shadow-glow-lg"
+			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-raised-sm enabled:hover:shadow-raised-md"
 		>
 			发布动态
 		</button>

@@ -81,7 +81,7 @@
 						type="button"
 						onclick={confirmEdit}
 						disabled={!draft.trim()}
-						class="hover-btn flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xxs text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-faint enabled:bg-accent-default enabled:shadow-glow-sm enabled:hover:shadow-glow-md"
+						class="hover-btn flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xxs text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-faint enabled:bg-accent-default enabled:shadow-raised-sm enabled:hover:shadow-raised-md"
 					>
 						<Check size={11} strokeWidth={2} />完成
 					</button>

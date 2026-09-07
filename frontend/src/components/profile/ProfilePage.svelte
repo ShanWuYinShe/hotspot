@@ -99,14 +99,16 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 				contentClassName="pt-4 pb-0"
 			>
 				{#snippet trailing()}
-					<button
-						type="button"
-						onclick={() => void goto(ROUTES.meEdit)}
-						class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
-					>
-						<Pencil class="size-4"  strokeWidth={1.75} />
-						编辑资料
-					</button>
+					{#if !loading && !needsAuth}
+						<button
+							type="button"
+							onclick={() => void goto(ROUTES.meEdit)}
+							class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
+						>
+							<Pencil class="size-4"  strokeWidth={1.75} />
+							编辑资料
+						</button>
+					{/if}
 				{/snippet}
 			</PageHeader>
 		{/snippet}

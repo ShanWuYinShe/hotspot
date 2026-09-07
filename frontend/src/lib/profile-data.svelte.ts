@@ -26,6 +26,12 @@ export interface GalleryMoment {
 	likes: number;
 	comments: number;
 	created_at: string;
+	user?: string;
+	avatar?: string;
+	location?: string;
+	tag?: string;
+	liked?: boolean;
+	saved?: boolean;
 }
 
 export interface ProfileStats {
@@ -38,13 +44,20 @@ export interface ProfileStats {
 
 /** Map a spec MomentItem to the flat GalleryMoment shape the gallery tiles consume. */
 function mapGalleryMoment(m: MomentItem): GalleryMoment {
+	const mine = (m.reactions || []).find((r) => r.reacted_by_me);
 	return {
 		id: m.moment_id,
 		img: m.images?.[0]?.url ?? '',
 		title: m.description ?? '',
 		likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 		comments: m.comments_count ?? 0,
-		created_at: m.created_at ?? ''
+		created_at: m.created_at ?? '',
+		user: m.user?.nickname ?? '',
+		avatar: m.user?.avatar_url ?? '',
+		location: m.location?.location_name ?? '',
+		tag: m.tags?.[0] ?? '',
+		liked: Boolean(mine),
+		saved: Boolean(m.is_favorited)
 	};
 }
 

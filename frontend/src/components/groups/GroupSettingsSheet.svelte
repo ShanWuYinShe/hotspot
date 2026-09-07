@@ -178,8 +178,7 @@
 				{/if}
 				<button
 					type="button"
-					class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7"
-					style="border:var(--cst-border-width-strong) solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
+					class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm"
 					onclick={() => coverInput?.click()}
 					aria-label="更换封面"
 				>
@@ -294,8 +293,7 @@
 			type="button"
 			onclick={() => void handleSave()}
 			disabled={!canSave}
-			class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium {canSave ? 'bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md' : 'bg-surface-primary text-text-secondary'}"
-			style="box-shadow:{canSave ? 'var(--shadow-glow-lg)' : 'var(--shadow-inset-sm)'};border:{canSave ? 'none' : 'var(--cst-border-width-hairline) solid var(--cst-border-default)'};transition:all var(--cst-motion-standard) var(--cst-ease-standard);cursor:{canSave ? 'pointer' : 'not-allowed'};"
+			class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium transition-all duration-standard ease-standard {canSave ? 'bg-accent-default text-text-on-accent shadow-raised-md border-none cursor-pointer' : 'bg-surface-primary text-text-secondary shadow-inset-sm border-hairline border-border-default cursor-not-allowed'}"
 		>
 			{saving ? '保存中…' : '保存设置'}
 		</button>
@@ -384,7 +382,7 @@
 		<p class="mt-1 text-sm text-text-secondary">转让后你将变为普通成员，无法再执行群管理操作。</p>
 		<div class="mt-4 flex items-center justify-end gap-3">
 			<button type="button" onclick={() => (transferTarget = null)} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
-			<button type="button" onclick={() => void handleConfirmTransfer()} disabled={transferring} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-muted enabled:bg-accent-default enabled:shadow-glow-sm enabled:hover:shadow-glow-md">确认转让</button>
+			<button type="button" onclick={() => void handleConfirmTransfer()} disabled={transferring} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-muted enabled:bg-accent-default enabled:shadow-raised-sm enabled:hover:shadow-raised-md">确认转让</button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

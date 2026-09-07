@@ -178,13 +178,12 @@
 	{:else if loadError}
 	<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
-	<div class="animate-fade-in flex flex-col gap-5">
+	<div class="animate-fade-in flex flex-col gap-5 max-w-3xl">
 	<!-- Avatar section -->
-	<div class="relative rounded-xl overflow-hidden" style="height:var(--cst-cover-height-sm);">
+	<div class="relative rounded-xl overflow-hidden h-cover-height-sm">
 		<!-- 无封面数据时的占位底：主题 token 承载（vibrant 渐变 / forest 纸面纯色），页面只引用；
 		     上传能力开放前「更换横幅」收敛为图标按钮（禁用态） -->
 		<div class="absolute inset-0" style="background:var(--cst-surface-cover-placeholder);"></div>
-		<div class="pointer-events-none absolute -right-6 -bottom-10 size-36 rounded-full" style="background:radial-gradient(circle, var(--cst-glow-accent) 0%, transparent 70%);"></div>
 		<button
 			type="button"
 			class="hover-btn absolute top-3 right-3 flex items-center justify-center rounded-full focus-ring bg-surface-overlay-strong text-content-inverse size-8 disabled:opacity-muted"
@@ -203,8 +202,7 @@
 			<Avatar src={avatar} name={nickname} size={72} shape="rounded" class="border-heavy border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
 			<button
 				type="button"
-				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7"
-				style="border:var(--cst-border-width-strong) solid var(--cst-surface-primary);box-shadow:var(--shadow-glow-sm);"
+				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm"
 				aria-label="更换头像"
 				disabled={uploadingAvatar}
 				onclick={() => avatarInput?.click()}

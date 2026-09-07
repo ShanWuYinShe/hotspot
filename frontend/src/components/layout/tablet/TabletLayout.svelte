@@ -34,8 +34,7 @@
 
 <div
 	data-platform="tablet"
-	class="flex flex-col h-dvh w-full overflow-hidden transition-colors duration-gentle font-sans"
-	style="background-color:var(--cst-surface-page);color:var(--cst-text-primary);"
+	class="flex flex-col h-dvh w-full overflow-hidden transition-colors duration-gentle font-sans bg-surface-page text-text-primary"
 >
 	<StatusBar />
 
@@ -78,8 +77,8 @@
 				<div class="flex items-center justify-center shrink-0 w-16" >
 					<button
 						type="button"
-						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring select-none size-12"
-						style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};transition:background var(--cst-motion-standard) var(--cst-ease-standard), box-shadow var(--cst-motion-standard) var(--cst-ease-standard), transform var(--cst-motion-snappy) var(--cst-ease-standard), filter var(--cst-motion-snappy) var(--cst-ease-standard);"
+						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring select-none size-12 {composer.composerOpen ? 'bg-text-secondary' : 'bg-accent-default'}"
+						style="box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};"
 						aria-label={composer.composerOpen ? '关闭' : '发布'}
 						onclick={toggleComposer}
 					>

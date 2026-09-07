@@ -24,28 +24,27 @@
 
 <button
 	type="button"
-	class="hover-btn nav-tab relative flex flex-col items-center justify-center rounded-lg pt-2.5 pb-2 gap-1 focus-ring select-none
+	class="hover-btn nav-tab relative flex flex-col items-center justify-center rounded-lg pt-2.5 pb-2 gap-1 focus-ring select-none flex-1 min-w-0
 		{isActive ? '' : 'hover:bg-interactive-hover'}"
-	style="flex:1;min-width:0;"
 	aria-label={label}	aria-current={isActive ? 'page' : undefined}
 	onclick={onClick}
 >
 	{#if isActive}
 		<div
-			class="transition-[opacity] duration-standard"
-			style="position:absolute;inset:4px 6px;border-radius:var(--cst-shape-lg);background:var(--cst-navigation-active-indicator);opacity:var(--cst-opacity-active);"
+			class="absolute rounded-lg transition-[opacity] duration-standard"
+			style="inset:4px 6px;background:var(--cst-navigation-active-indicator);opacity:var(--cst-opacity-active);"
 		></div>
 	{/if}
 
-	<div style="display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
+	<div class="flex items-center justify-center relative z-1">
 		<Icon
 			style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);"
 			strokeWidth={isActive ? 2 : 1.5}
 		/>
 	</div>
 	<span
-		class="text-xs leading-none {isActive ? 'font-semibold' : 'font-normal'}"
-		style="color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);position:relative;z-index:1;"
+		class="text-xs leading-none relative z-1 {isActive ? 'font-semibold' : 'font-normal'}"
+		style="color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);"
 	>
 		{label}
 	</span>

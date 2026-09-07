@@ -120,20 +120,23 @@
   --shadow-inset-sm: inset 5px 5px 10px var(--cst-elevation-shadow-dark), inset -5px -5px 10px var(--cst-elevation-shadow-light);
   --shadow-inset-md: inset 8px 8px 16px var(--cst-elevation-shadow-dark), inset -8px -8px 16px var(--cst-elevation-shadow-light);
 
-  /* Accent glow shadows — accent 光晕刻度。3 档强制收敛：
-     sm=0/3/10、md=0/4/14、lg=0/6/18。禁止组件手写 shadow-[0_Npx...] 或内联 glow。 */
-  --shadow-glow-sm: 0 3px 10px var(--cst-glow-accent);
-  --shadow-glow-md: 0 4px 14px var(--cst-glow-accent);
-  --shadow-glow-lg: 0 6px 18px var(--cst-glow-accent);
+  /* Accent subtle elevation — 现代内敛微投影，替代刺眼彩色大光晕（对齐 Linear / Stripe / macOS 规范） */
+  --shadow-glow-sm: 0 1px 2px rgba(0, 0, 0, 0.08), 0 1px 3px var(--cst-glow-accent);
+  --shadow-glow-md: 0 2px 5px rgba(0, 0, 0, 0.10), 0 2px 6px var(--cst-glow-accent);
+  --shadow-glow-lg: 0 4px 10px rgba(0, 0, 0, 0.12), 0 3px 8px var(--cst-glow-accent);
 
-  /* Danger glow shadows — danger 实底按钮/危险操作 hover 抬档（色随主题派生） */
-  --shadow-danger-glow-sm: 0 3px 10px var(--cst-glow-danger);
-  --shadow-danger-glow-md: 0 4px 14px var(--cst-glow-danger);
+  /* Danger subtle elevation — danger 实底按钮/危险操作 hover 抬档（色随主题派生） */
+  --shadow-danger-glow-sm: 0 1px 2px rgba(0, 0, 0, 0.08), 0 1px 3px var(--cst-glow-danger);
+  --shadow-danger-glow-md: 0 2px 5px rgba(0, 0, 0, 0.10), 0 2px 6px var(--cst-glow-danger);
 
   /* Toggle 轨道/滑块投影（on/off 双态档位，themes/*.css 定义） */
   --shadow-toggle-on: var(--cst-elevation-toggle-on);
   --shadow-toggle-off: var(--cst-elevation-toggle-off);
   --shadow-toggle-thumb: var(--cst-elevation-toggle-thumb);
+
+  /* Menu / dropdown elevation — 浮层/弹出菜单/Toast/连接横幅统一投影。
+     消除组件 shadow-[var(--cst-elevation-menu)] arbitrary 写法。 */
+  --shadow-menu: var(--cst-elevation-menu);
 
   /* Letter-spacing scale — 对齐 Figma eyebrow/分组标签/标题收紧，生成 tracking-* 类。
      eyebrow=0.14em（uppercase 分组标签）、label=0.12em（在线/未读小标）、
@@ -178,4 +181,10 @@
 
   /* Animation scale — 页面/内容入场 fade（keyframes 见 utilities.css cst-fade-in） */
   --animate-fade-in: cst-fade-in var(--cst-motion-standard) var(--cst-ease-standard);
+
+  /* Spacing scale extensions — 页面级动态尺寸/间距契约（消除 -[var(--cst-...)] arbitrary 写法） */
+  --spacing-cover-height: var(--cst-cover-height);
+  --spacing-cover-height-sm: var(--cst-cover-height-sm);
+  --spacing-cover-height-lg: var(--cst-cover-height-lg);
+  --spacing-page-gutter: var(--cst-page-gutter);
 }

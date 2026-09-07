@@ -21,7 +21,6 @@
 	);
 </script>
 
-<div class="ambient-glow">
 	<button
 		type="button"
 		class="hover-btn tap-97 surface-hero rounded-xl cursor-pointer overflow-hidden text-left w-full py-4.5 px-5"
@@ -44,7 +43,7 @@
 		</div>
 
 		<!-- Stats row：display 数字（大号粗体 + 紧字距），对齐 Figma stats 模式 -->
-		<div class="grid grid-cols-3 mt-4 bg-border-default gap-px"  style="border-radius:var(--cst-shape-md);overflow:hidden">
+		<div class="grid grid-cols-3 mt-4 bg-border-default gap-px rounded-md overflow-hidden">
 			<div class="flex flex-col items-center justify-center py-3 bg-surface-primary">
 				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary" >{stats.nearby}</span>
 				<span class="text-xxs mt-1.5 text-text-secondary"  >人附近</span>
@@ -59,4 +58,3 @@
 			</div>
 		</div>
 	</button>
-</div>

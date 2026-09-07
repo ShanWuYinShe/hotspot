@@ -17,6 +17,6 @@
 </script>
 
 <span
-	class="rounded-full {className}"
-	style="width:{px}px;height:{px}px;background:{color ?? 'var(--cst-status-online)'};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);position:absolute;bottom:0;right:0;"
+	class="absolute bottom-0 right-0 rounded-full border-strong border-surface-primary {className}"
+	style="width:{px}px;height:{px}px;background:{color ?? 'var(--cst-status-online)'};"
 ></span>

@@ -2,7 +2,7 @@
 
 多模块项目：HarmonyOS ArkTS 客户端 + Svelte Web 前端 + Go 主后端 + Rust 旧后端。
 
-通用约束（Git 规范、Commit 格式、验证流程、工具链偏好、Docker 等）以全局 `~/AGENTS.md` 为准（各 AI 工具的全局指令文件均链接到该文件），本文件只做项目特有补充，不得放宽或违背全局约束。
+通用约束（Git 规范、Commit 格式、验证流程、工具链偏好、Docker 等）以全局 `~/.config/opencode/AGENTS.md` 为准，本文件只做项目特有补充，不得放宽或违背全局约束。
 
 ## 仓库地图
 - `backend-go/`：Go 主后端，模块化单体 + S2 地理索引，当前所有后端开发在此进行。

@@ -754,7 +754,7 @@ export struct SettingsPage {
                   Button('退出登录')
                     .width('100%')
                     .height(DesignConstants.COMPONENT.LOGOUT_BUTTON_HEIGHT)
-                    .backgroundColor(Color.Transparent)
+                    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
                     .fontColor(this.getCurrentThemePalette().error)
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .type(ButtonType.Normal)

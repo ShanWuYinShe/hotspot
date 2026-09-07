@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
-	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
@@ -187,41 +186,31 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 							<Users size={40} color="var(--cst-text-secondary)" class="opacity-subtle" />
 						{/snippet}
 					</EmptyState>
-				{:else if isDesktop || isTablet}
-					<BspCardCanvas
-						items={list.slice(0, visibleCount)}
-						gap={14}
-						minRatio={0.68}
-						maxRatio={1.48}
-						minCardWidth={160}
-						minCardHeight={250}
-						minCanvasHeight={560}
-						ariaLabel="附近用户的不规则满铺布局"
-						hasMore={visibleCount < list.length}
-						onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, list.length))}
-					>
-						{#snippet renderItem(user: NearbyUser, index: number)}
+				{:else}
+					<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+						{#each list.slice(0, visibleCount) as user (user.id)}
 							<UserCard
-								user={user}
+								{user}
 								followed={followedIds.has(user.id)}
 								pending={followPending.has(user.id)}
 								onFollow={() => toggleFollow(user.id)}
 								onNavigate={() => void goto(ROUTES.user(user.id))}
 							/>
-						{/snippet}
-					</BspCardCanvas>
-				{:else}
-					<div class="grid grid-cols-2 gap-4">
-						{#each list as user, index (user.id)}
-							<UserCard
-								user={user}
-								followed={followedIds.has(user.id)}
-								onFollow={() => toggleFollow(user.id)}
-								onNavigate={() => void goto(ROUTES.user(user.id))}
-							/>
 						{/each}
 					</div>
+
+					{#if visibleCount < list.length}
+						<div class="mt-8 flex justify-center pb-6">
+							<button
+								type="button"
+								class="hover-btn px-6 py-2.5 rounded-full border border-border-default bg-surface-primary text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-interactive-hover transition-colors focus-ring"
+								onclick={() => (visibleCount = Math.min(visibleCount + 8, list.length))}
+							>
+								加载更多 ({list.length - visibleCount})
+							</button>
+						</div>
+					{/if}
 				{/if}
+			</div>
 		</div>
-	</div>
 </StandardPageLayout>

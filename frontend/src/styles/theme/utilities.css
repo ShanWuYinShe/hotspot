@@ -51,6 +51,23 @@
     background: var(--cst-surface-primary);
     border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);
   }
+
+  /* Navigation glass — 底部/侧栏导航毛玻璃效果（MobilePortrait 底栏 / MobileLandscape 侧栏共享）。
+     背景/模糊/描边/投影/过渡一次性定义，组件只需 class="nav-glass"。
+     底栏用 border-top，侧栏用 border-right（通过追加类或 style 覆盖边框方向）。 */
+  .nav-glass {
+    background: var(--cst-surface-nav-glass);
+    backdrop-filter: blur(var(--cst-blur-lg)) saturate(1.8);
+    -webkit-backdrop-filter: blur(var(--cst-blur-lg)) saturate(1.8);
+    box-shadow: var(--cst-elevation-nav);
+    transition: background var(--cst-motion-slow) var(--cst-ease-standard), border-color var(--cst-motion-slow) var(--cst-ease-standard);
+  }
+  .nav-glass--bottom {
+    border-top: var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);
+  }
+  .nav-glass--side {
+    border-right: var(--cst-border-width-hairline) solid var(--cst-border-default);
+  }
 }
 
 @layer utilities {
@@ -195,18 +212,7 @@
     position: relative;
   }
   .ambient-glow::before {
-    content: "";
-    position: absolute;
-    inset: -20% -10% auto -10%;
-    height: 70%;
-    background: radial-gradient(
-      ellipse at top,
-      var(--cst-glow-accent) 0%,
-      transparent 65%
-    );
-    opacity: var(--cst-opacity-glow);
-    pointer-events: none;
-    z-index: 0;
+    display: none;
   }
   .ambient-glow > * {
     position: relative;

@@ -400,7 +400,7 @@
 						<!-- 关注按钮：边框/投影走 token 类（描边 1.5px→hairline 档收敛，border 基类保尺寸稳定） -->
 						<button
 							type="button"
-							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 px-4 py-2 rounded-full border focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm' : 'border-transparent bg-accent-default text-text-on-accent shadow-glow-md'}"
+							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 px-4 py-2 rounded-full border focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm' : 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm'}"
 							disabled={blocked}
 							onclick={toggleFollow}
 						>
@@ -516,7 +516,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border focus-ring transition-all disabled:opacity-muted text-sm {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm' : 'border-transparent bg-accent-default text-text-on-accent shadow-glow-md'}"
+					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border focus-ring transition-all disabled:opacity-muted text-sm {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm' : 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm'}"
 					disabled={blocked}
 					onclick={toggleFollow}
 				>

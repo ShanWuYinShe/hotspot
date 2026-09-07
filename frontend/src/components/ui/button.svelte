@@ -19,7 +19,7 @@
 	// danger = 危险色光晕抬档（--shadow-danger-glow-*，随主题派生）。
 	// 带 bg-* 实底的变体命中全局 hover 排除集，必须自带 hover 反馈（交互四态契约）。
 	const VARIANTS: Record<ButtonVariant, string> = {
-		primary: 'bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md',
+		primary: 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md',
 		secondary: 'bg-surface-primary text-text-primary border border-border-default shadow-raised-sm hover:border-border-strong',
 		outline: 'bg-transparent text-text-primary border border-border-default hover:border-border-strong',
 		ghost: 'bg-transparent text-text-primary hover:bg-interactive-hover',
@@ -27,7 +27,7 @@
 	// text-text-on-status——后者是 online/warning 实底的文字位（vibrant light 下为深字，
 	// 落在加深后的 danger 实底 #C81E4E 上对比度不足）。与各确认按钮
 	//（enabled:bg-status-danger + text-text-on-accent）保持一致，对齐鸿蒙 danger 实底统一白字。
-		danger: 'bg-status-danger text-text-on-accent shadow-danger-glow-sm hover:shadow-danger-glow-md'
+		danger: 'bg-status-danger text-text-on-accent shadow-raised-sm hover:shadow-raised-md'
 	};
 
 	const SIZES: Record<ButtonSize, string> = {

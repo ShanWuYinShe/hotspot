@@ -27,8 +27,8 @@ export const TAG: string = 'LocationPickerPage';
 export const SEARCH_PANEL_HEIGHT: number = 440;
 export const MAX_HISTORY_ITEMS: number = 5;
 // 底部面板三段式吸附位置（内容高度，不含 safeAreaBottom）
-export const PANEL_SNAP_MIN: number = 120;       // 收起：手柄 + 搜索栏 + 确认按钮
-export const PANEL_SNAP_HALF: number = 224;      // 半展开：显示部分历史记录
+export const PANEL_SNAP_MIN: number = 164;       // 收起：手柄 + 搜索栏 + 确认按钮完整露出（避免被 clip 裁剪）
+export const PANEL_SNAP_HALF: number = 248;      // 半展开：显示部分历史记录
 export const PANEL_SNAP_MAX: number = 392;       // 全展开：完整内容
 export const DEFAULT_GESTURE_HINT: string = '长按地图即可快速选点';
 export const DOUBLE_CLICK_PLACEMENT_HINT: string = '已为你定位到该位置';

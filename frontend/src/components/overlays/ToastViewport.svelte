@@ -28,7 +28,7 @@
 	>
 		{#each toast.items as item (item.id)}
 			<div
-				class="pointer-events-auto flex w-full max-w-sm items-center gap-2.5 rounded-md border border-border-default bg-surface-primary px-4 py-3 shadow-[var(--cst-elevation-menu)] animate-in fade-in-0 slide-in-from-top-2"
+				class="pointer-events-auto flex w-full max-w-sm items-center gap-2.5 rounded-md border border-border-default bg-surface-primary px-4 py-3 shadow-menu animate-in fade-in-0 slide-in-from-top-2"
 				role="status"
 			>
 				<svelte:component this={ICONS[item.kind]} class="size-4 shrink-0 {COLORS[item.kind]}" strokeWidth={2} />

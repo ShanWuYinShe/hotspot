@@ -76,7 +76,7 @@ locationName = loc?.location_name ?? '';
 		{/if}
 	</div>
 	{#if searchResults.length > 0}
-		<ListContainer bordered class="absolute top-full left-4 right-4 z-30 mt-1" style="box-shadow:var(--cst-elevation-menu);">
+		<ListContainer bordered class="absolute top-full left-4 right-4 z-30 mt-1 shadow-menu">
 		{#each searchResults as r}
 			{@const isSelected = selectedLoc?.displayName === r.displayName}
 			<ListItem
@@ -277,8 +277,7 @@ locationName = loc?.location_name ?? '';
 	{/if}
 	<button
 		type="button"
-		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm h-11"
-		style="box-shadow:var(--shadow-glow-lg);"
+		class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm h-11 shadow-raised-md"
 		onclick={onConfirm}
 	>
 		<MapPin class="size-3.5"  strokeWidth={2} />

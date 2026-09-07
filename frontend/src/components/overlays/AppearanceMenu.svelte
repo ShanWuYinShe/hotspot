@@ -159,7 +159,7 @@
 							<span class="block text-xxs text-text-secondary">{mockEnabled ? '模拟数据' : '真实后端'}</span>
 						</span>
 					</span>
-					<span class="relative h-5 w-8.5 overflow-hidden rounded-full" style="background:{mockEnabled ? 'var(--cst-accent-default)' : 'var(--cst-border-strong)'};">
+					<span class="relative h-5 w-8.5 overflow-hidden rounded-full {mockEnabled ? 'bg-accent-default' : 'bg-border-strong'}">
 						<span
 							class="absolute top-0.75 h-3.5 w-3.5 rounded-full bg-content-inverse shadow-[var(--cst-elevation-control-thumb)]"
 							style="left:{mockEnabled ? 17 : 3}px;transition:left var(--cst-motion-standard) var(--cst-ease-bounce);"

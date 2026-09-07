@@ -91,7 +91,7 @@
 					disabled={pendingIds.has(f.id)}
 					class="hover-btn tap-92 hit-slop flex shrink-0 items-center gap-1 rounded-full border px-3.5 py-1.5 text-xs focus-ring disabled:pointer-events-none disabled:opacity-faint
 						{isUnfollowed(f.id)
-						? 'border-transparent bg-accent-default text-text-on-accent shadow-glow-sm hover:shadow-glow-md'
+						? 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'
 						: 'border-border-strong bg-transparent text-text-secondary hover:border-accent-border hover:bg-interactive-hover hover:text-text-primary'}"
 					onclick={(e) => {
 						e.stopPropagation();

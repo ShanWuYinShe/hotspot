@@ -64,8 +64,8 @@ class ThemeShadowRegistry {
     surface: new AppThemeShadow(10, '#143D7A55', 0, 2),
     // 弹层抬升（对齐前端 --cst-elevation-modal 0 24px 80px 0.24）
     elevated: new AppThemeShadow(40, '#3D000000', 0, 12),
-    // 主操作光晕（对齐前端 --cst-elevation-fab 0 6px 18px glow；forest 扁平退化：近透明）
-    accent: new AppThemeShadow(18, '#0A3D7A55', 0, 6),
+    // 主操作微投影（克制自然微阴影，消除刺眼大光晕）
+    accent: new AppThemeShadow(6, '#1A3D7A55', 0, 2),
     // 菜单浮层（对齐前端 --cst-elevation-menu 0 16px 40px 0.16）
     control: new AppThemeShadow(32, '#29000000', 0, 8),
     // 底部导航（对齐前端 --cst-elevation-nav，向上微光）
@@ -77,8 +77,8 @@ class ThemeShadowRegistry {
     surface: new AppThemeShadow(14, '#4D000000', 0, 4),
     // 弹层抬升（对齐前端 --cst-elevation-modal 0 28px 88px 0.42）
     elevated: new AppThemeShadow(44, '#6B000000', 0, 14),
-    // 主操作光晕（对齐前端 --cst-elevation-fab 0 6px 22px glow；深色 + forest 扁平退化：近透明）
-    accent: new AppThemeShadow(22, '#0D52B878', 0, 6),
+    // 主操作微投影
+    accent: new AppThemeShadow(8, '#1A52B878', 0, 3),
     // 菜单浮层
     control: new AppThemeShadow(40, '#59000000', 0, 8),
     // 底部导航（对齐前端 --cst-elevation-nav 0 -4px 24px 0.40）
@@ -88,7 +88,7 @@ class ThemeShadowRegistry {
   readonly VIBRANT_LIGHT: ThemeShadows = {
     surface: new AppThemeShadow(8, '#1A635BC8', 0, 3),
     elevated: new AppThemeShadow(14, '#30635BC8', 0, 6),
-    accent: new AppThemeShadow(22, '#522E66C0', 0, 8),
+    accent: new AppThemeShadow(6, '#242E66C0', 0, 2),
     control: new AppThemeShadow(4, '#0D635BC8', 0, 1),
     tabBar: new AppThemeShadow(8, '#18635BC8', 0, -2)
   };
@@ -96,8 +96,7 @@ class ThemeShadowRegistry {
   readonly VIBRANT_DARK: ThemeShadows = {
     surface: new AppThemeShadow(10, '#A6000000', 0, 3),
     elevated: new AppThemeShadow(16, '#80000000', 0, 5),
-    // 深色 accent 光晕退化：近透明（深色下有色发光显脏，对齐扁平宣言）
-    accent: new AppThemeShadow(22, '#1469A8FF', 0, 8),
+    accent: new AppThemeShadow(8, '#1869A8FF', 0, 3),
     control: new AppThemeShadow(4, '#0F69A8FF', 0, 0),
     tabBar: new AppThemeShadow(10, '#80000000', 0, -3)
   };

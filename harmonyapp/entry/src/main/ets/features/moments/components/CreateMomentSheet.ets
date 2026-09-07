@@ -347,8 +347,8 @@ export struct CreateMomentSheet {
           ForEach(this.imageUrls, (url: string, index: number) => {
             Stack({ alignContent: Alignment.TopEnd }) {
               Image(MediaUrlUtil.normalize(url))
-                .width(80)
-                .height(80)
+                .width(DesignConstants.COMPONENT.IMAGE_THUMBNAIL_SIZE)
+                .height(DesignConstants.COMPONENT.IMAGE_THUMBNAIL_SIZE)
                 .objectFit(ImageFit.Cover)
                 .borderRadius(DesignConstants.RADIUS.SM)
               Row() {
@@ -379,8 +379,8 @@ export struct CreateMomentSheet {
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .fontColor(this.getPalette().textSecondary)
             }
-            .width(80)
-            .height(80)
+            .width(DesignConstants.COMPONENT.IMAGE_THUMBNAIL_SIZE)
+            .height(DesignConstants.COMPONENT.IMAGE_THUMBNAIL_SIZE)
             .borderRadius(DesignConstants.RADIUS.SM)
             .border({
               width: DesignConstants.BORDER_WIDTH.HAIRLINE,

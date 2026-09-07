@@ -19,7 +19,7 @@
 	class="hover-btn hit-slop focus-ring flex shrink-0 items-center gap-1 rounded-full px-3.25 py-1.5 text-sm
 		{group.joined
 		? 'border border-border-strong text-text-secondary hover:bg-interactive-hover hover:text-text-primary'
-		: 'bg-accent-default font-semibold text-text-on-accent shadow-glow-sm hover:shadow-glow-md'}
+		: 'bg-accent-default font-semibold text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}
 		{pending ? 'pointer-events-none opacity-soft' : ''}"
 	aria-pressed={group.joined}
 	disabled={pending}

@@ -80,18 +80,6 @@ export struct PageShellContainer {
 
   build() {
     Stack({ alignContent: Alignment.Top }) {
-      // 顶部氛围光晕（统一注入，深色下消除「死黑」背景；对齐前端 ambient-glow）
-      if (this.ambientGlow) {
-        Column()
-          .width('70%')
-          .height(DesignConstants.LAYOUT.GLOW_BLOB_LARGE)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getPalette().heroGlow)
-          .opacity(this.getPalette().isDarkTheme ? 0.10 : 0.20)
-          .blur(DesignConstants.EFFECT.GLOW_BLUR_LARGE)
-          .align(Alignment.Top)
-          .margin({ top: DesignConstants.SPACING.MD })
-      }
 
       Row() {
         Column() {

@@ -270,6 +270,8 @@ export interface ComponentConstants {
   PLACEHOLDER_AREA_HEIGHT: number;
   /** 大图占位高度（110，创建页图片区） */
   IMAGE_PLACEHOLDER_HEIGHT: number;
+  /** 照片缩略图尺寸（80，CreateMomentSheet 图片选择器网格） */
+  IMAGE_THUMBNAIL_SIZE: number;
   /** 分享卡高度（130） */
   SHARE_CARD_HEIGHT: number;
   /** 日志区高度（300，调试面板） */
@@ -623,6 +625,8 @@ const COMPONENT: ComponentConstants = {
   SKELETON_CARD_HEIGHT: 100,
   PLACEHOLDER_AREA_HEIGHT: 120,
   IMAGE_PLACEHOLDER_HEIGHT: 110,
+  /** 照片缩略图尺寸（80，CreateMomentSheet 图片选择器网格） */
+  IMAGE_THUMBNAIL_SIZE: 80,
   SHARE_CARD_HEIGHT: 130,
   LOG_AREA_HEIGHT: 300,
   LOADING_GLYPH_SIZE: 46,

@@ -45,15 +45,15 @@
 </script>
 
 <div
-	class="relative shrink-0 {className}"
-	style="width:{size}px;height:{size}px;border-radius:{borderRadius};overflow:hidden;background:var(--cst-surface-primary);{ring ? 'border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);' : ''}{style}"
+	class="relative shrink-0 overflow-hidden bg-surface-primary {className}"
+	style="width:{size}px;height:{size}px;border-radius:{borderRadius};{ring ? 'border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);' : ''}{style}"
 >
 	{#if showImage}
 		<img src={src} loading="lazy" decoding="async" alt={name ?? ''} class="h-full w-full object-cover" onerror={() => (hasError = true)} />
 	{:else}
 		<span
-			class="flex h-full w-full items-center justify-center"
-			style="font-size:{Math.round(size * 0.42)}px;color:var(--cst-text-secondary);background:var(--cst-accent-soft-bg);"
+			class="flex h-full w-full items-center justify-center text-text-secondary bg-accent-bg"
+			style="font-size:{Math.round(size * 0.42)}px;"
 		>
 			{initial}
 		</span>

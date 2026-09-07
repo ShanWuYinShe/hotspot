@@ -76,8 +76,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 								type="button"
 								aria-label="更换头像"
 								onclick={() => void goto(ROUTES.meEdit)}
-								class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default text-text-on-accent size-7"
-								 style="border:var(--cst-border-width-strong) solid var(--cst-surface-primary);"
+								class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default text-text-on-accent size-7 border-strong border-surface-primary"
 							>
 								<Camera class="size-3.5"  strokeWidth={2} />
 							</button>
@@ -116,12 +115,11 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			</div>
 		</section>
 
-		<!-- 个人数据 5 行链接（白卡容器 + embedded 行分隔线） -->
+		<!-- 个人数据 5 行链接（唯一分组卡 ListContainer bordered：内缩圆角行） -->
 		<div class="mt-5">
 			<p class="eyebrow px-1 mb-2">个人数据</p>
 			<p class="px-1 mb-2 text-xs text-text-secondary">在这里查看你的内容与关系</p>
-			<div class="card-raised rounded-lg overflow-hidden">
-			<ListContainer ariaLabel="个人数据">
+			<ListContainer bordered ariaLabel="个人数据">
 			{#each DATA_ITEMS as item (item.section)}
 				<ListItem
 					onClick={() => void goto(ME_SECTION_PATHS[item.section])}
@@ -139,7 +137,6 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 				</ListItem>
 				{/each}
 			</ListContainer>
-			</div>
 		</div>
 	{/if}
 </StandardPageLayout>

@@ -55,8 +55,8 @@
 			type="button"
 			class="hover-btn scale-btn focus-ring flex items-center gap-2 rounded-full border px-4 py-2 text-sm
 				{open
-				? 'border-transparent bg-accent-default text-text-on-accent shadow-glow-md'
-				: 'border-border-default bg-surface-primary text-text-primary shadow-[var(--cst-elevation-fab)]'}"
+				? 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm'
+				: 'border-border-default bg-surface-primary text-text-primary shadow-raised-sm'}"
 			aria-label="筛选地图显示类型"
 			aria-expanded={open}
 			onclick={() => (open = !open)}

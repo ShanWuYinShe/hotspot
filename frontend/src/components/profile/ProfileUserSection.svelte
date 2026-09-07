@@ -160,7 +160,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					{/snippet}
 				</EmptyState>
 			{:else}
-				<ListContainer bordered inset>
+				<ListContainer bordered>
 					{#each items as item (item.id)}
 						{@render children(item)}
 					{/each}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Bell, Lock, ChevronRight, LogOut, Info, MapPin, Palette, Trees, Moon, Sun } from '@lucide/svelte';
+	import { Bell, Lock, ChevronRight, LogOut, Info, MapPin, Palette, Trees, Moon, Sun, UserRound } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -14,19 +14,19 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
-	import { logout } from '@/stores/auth.svelte';
+	import { auth, logout, requireAuth } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
-	import { theme, setTheme, setColorScheme, THEME_OPTIONS, COLOR_SCHEME_OPTIONS, type ColorSchemeMode } from '@/stores/theme.svelte';
-	import { getAccount, getSettings, updateSettings , netError } from '@/api';
+	import { theme, setTheme, setColorScheme, THEME_OPTIONS, COLOR_SCHEME_OPTIONS, type ColorSchemeMode, type AppTheme } from '@/stores/theme.svelte';
+	import { getAccount, getSettings, updateSettings, netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import pkg from '../../../../package.json';
 
-	// 设置页：主题/深色、通知、隐私开关（iOS 式）、关于、退出登录。
+	// 设置页：主题/深色、通知、隐私开关、关于、退出登录。
 	// 服务端字段对齐 spec UserSettings：位置共享 → location_visible、私密账号 →
 	// privacy_level；推送通知 spec 无服务端字段，是本地客户端偏好，
 	// 用 localStorage 持久化（不冒充服务端设置）。
 
-	const APP_VERSION = `v ${pkg.version}`;
+	const APP_VERSION = `v${pkg.version}`;
 
 	// 本地偏好（推送通知）——localStorage 持久化
 	const NOTIF_KEY = 'hotspot:notif';
@@ -51,13 +51,16 @@
 	let accountName = $state('');
 	let accountEmail = $state('');
 	let accountAvatar = $state('');
-	let loading = $state(true);
+	let loading = $state(false);
 	let loadError = $state<string | null>(null);
 	let reloadKey = $state(0);
 
-	// 服务端设置开关：乐观更新 + 失败回滚并提示（spec: users/update_settings；
-	// 业务失败 code!==0 与网络抛错统一走 catch 回滚 + toast）
+	// 服务端设置开关：未登录引导登录；已登录乐观更新 + 失败回滚并提示
 	const toggleLocationSharing = () => {
+		if (!auth.isAuthenticated) {
+			requireAuth({ action: '修改位置共享设置', run: toggleLocationSharing });
+			return;
+		}
 		const next = !locationSharing;
 		locationSharing = next;
 		void updateSettings({ settings: { location_visible: next } })
@@ -70,6 +73,10 @@
 			});
 	};
 	const togglePrivateProfile = () => {
+		if (!auth.isAuthenticated) {
+			requireAuth({ action: '修改私密账号设置', run: togglePrivateProfile });
+			return;
+		}
 		const next = !privateProfile;
 		privateProfile = next;
 		void updateSettings({ settings: { privacy_level: next ? 'private' : 'public' } })
@@ -90,6 +97,15 @@
 		void reloadKey;
 		let cancelled = false;
 		async function fetchData() {
+			if (!auth.isAuthenticated) {
+				// 未登录/访客：本地偏好（主题/外观/通知）可用，不拉敏感设置，不报 401 错误
+				accountName = '';
+				accountEmail = '';
+				accountAvatar = '';
+				loading = false;
+				loadError = null;
+				return;
+			}
 			try {
 				loading = true;
 				loadError = null;
@@ -113,8 +129,8 @@
 					if (settingsData.privacy_level !== undefined) privateProfile = settingsData.privacy_level === 'private';
 				}
 
-				// 两个请求都失败才整页报错：任一成功则页面主体（开关）仍可用，避免误报
-				if (accountRes.code !== 0 && settingsRes.code !== 0) {
+				// 仅非 401 网络/服务端严重异常时提示
+				if (accountRes.code !== 0 && settingsRes.code !== 0 && accountRes.code !== 401) {
 					loadError = accountRes.message ?? '加载失败，请稍后重试';
 				}
 			} catch {
@@ -137,8 +153,6 @@
 	);
 
 	const handleLogout = async () => {
-		// auth store logout clears client auth state and keeps the user on the
-		// current route (anonymous browsing). No more redirect to a dead /login.
 		await logout();
 		void goto(ROUTES.home);
 	};
@@ -147,152 +161,228 @@
 	<title>设置 · HotSpot</title>
 </svelte:head>
 
-
-<!-- contentMaxWidth 560：设置页是表单/列表型页面，走 .page-shell--form 同档窄栏；
-	默认全宽会让每行设置项在桌面端拉满视口、Toggle 远离标题 -->
-<StandardPageLayout contentMaxWidth={560} contentClassName="animate-fade-in pt-4 pb-10">
+<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-16">
 	{#snippet header()}
-		<PageHeader title="设置" onBack={() => history.back()} showBackOnDesktop maxWidth={560} titleSize={device === 'desktop' ? 'xl' : '2xl'} />
+		<PageHeader
+			title="设置"
+			subtitle="管理你的账号偏好、主题外观与系统选项"
+			onBack={() => history.back()}
+			showBackOnDesktop={false}
+			titleSize={device === 'desktop' ? '2xl' : '2xl'}
+		/>
 	{/snippet}
 
-		{#if loadError}
+	{#if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
-		{:else}
-	<!-- User card — hero with ambient glow（loading 期间显示占位骨架） -->
-		<div class="ambient-glow mb-3">
-			<button
-				type="button"
-				class="hover-btn flex items-center gap-4 px-4 py-3.5 rounded-lg w-full focus-ring text-left surface-hero"
-				onclick={() => void goto(ROUTES.meEdit)}
-			>
-				<Avatar class="border-2 border-surface-primary shadow-glow-md" src={accountAvatar} name={accountName} size={48}  />
-				<div class="flex-1 min-w-0">
-					{#if loading}
-						<InlineLoading label="加载中…" class="items-start gap-2 py-0" />
+	{:else}
+		<div class="flex flex-col divide-y divide-border-default max-w-5xl">
+			<!-- Section 1: 账号与身份 -->
+			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6 first:pt-2">
+				<div>
+					<h2 class="text-sm font-semibold text-text-primary">账号信息</h2>
+					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
+						当前登录状态与个人公开资料入口。
+					</p>
+				</div>
+				<div>
+					{#if auth.isAuthenticated}
+						<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-xs">
+							<div class="flex items-center gap-3.5 min-w-0">
+								<Avatar class="border-2 border-surface-primary shrink-0" src={accountAvatar} name={accountName} size={48} />
+								<div class="min-w-0">
+									<div class="flex items-center gap-2">
+										<p class="text-sm font-semibold text-text-primary truncate">{accountName || '用户'}</p>
+										<span class="text-xxs px-2 py-0.5 rounded-full bg-accent-soft text-accent-default font-medium">已登录</span>
+									</div>
+									<p class="text-xs text-text-secondary mt-0.5 truncate">{accountEmail || '未绑定邮箱'}</p>
+								</div>
+							</div>
+							<button
+								type="button"
+								onclick={() => void goto(ROUTES.meEdit)}
+								class="hover-btn px-4 py-2 text-xs font-medium rounded-md border border-border-default bg-surface-primary hover:bg-interactive-hover text-text-primary transition-colors focus-ring shrink-0"
+							>
+								编辑资料
+							</button>
+						</div>
 					{:else}
-						<p class="text-sm tracking-title text-text-primary">{accountName || '用户'}</p>
-						<p class="text-xs mt-0.5 text-text-secondary">{accountEmail || '未绑定邮箱'}</p>
+						<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-xs">
+							<div class="flex items-center gap-3.5 min-w-0">
+								<div class="flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent-default shrink-0">
+									<UserRound class="size-5" strokeWidth={1.5} />
+								</div>
+								<div class="min-w-0">
+									<p class="text-sm font-semibold text-text-primary">访客浏览中</p>
+									<p class="text-xs text-text-secondary mt-0.5">登录后可同步跨端偏好、个人主页与动态收藏</p>
+								</div>
+							</div>
+							<button
+								type="button"
+								onclick={() => requireAuth({ action: '登录账号', run: () => { reloadKey++; } })}
+								class="hover-btn px-4 py-2 text-xs font-medium rounded-md bg-accent-default hover:bg-accent-hover text-text-on-accent transition-colors focus-ring shrink-0"
+							>
+								登录 / 注册
+							</button>
+						</div>
 					{/if}
 				</div>
-				<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
-			</button>
+			</div>
+
+			<!-- Section 2: 外观与显示 -->
+			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
+				<div>
+					<h2 class="text-sm font-semibold text-text-primary">外观与显示</h2>
+					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
+						自定义界面的视觉色彩与深浅模式，全局即时生效。
+					</p>
+				</div>
+				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-xs overflow-hidden">
+					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+						<div class="flex items-center gap-3">
+							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
+								<Palette class="size-4 text-accent-default" strokeWidth={1.5} />
+							</div>
+							<div>
+								<p class="text-sm font-medium text-text-primary">应用主题</p>
+								<p class="text-xs text-text-secondary">选择全局视觉色彩风格</p>
+							</div>
+						</div>
+						<TabBar
+							items={THEME_OPTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.id === 'forest' ? Trees : Palette }))}
+							value={theme.theme}
+							onChange={(id) => setTheme(id as AppTheme)}
+						/>
+					</div>
+
+					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+						<div class="flex items-center gap-3">
+							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
+								{#if theme.isDark}
+									<Moon class="size-4 text-accent-default" strokeWidth={1.5} />
+								{:else}
+									<Sun class="size-4 text-accent-default" strokeWidth={1.5} />
+								{/if}
+							</div>
+							<div>
+								<p class="text-sm font-medium text-text-primary">外观模式</p>
+								<p class="text-xs text-text-secondary">{colorSchemeDesc}</p>
+							</div>
+						</div>
+						<TabBar
+							items={COLOR_SCHEME_OPTIONS.map((o) => ({ id: o.id, label: o.label, icon: o.id === 'dark' ? Moon : o.id === 'light' ? Sun : undefined }))}
+							value={theme.colorScheme}
+							onChange={(id) => setColorScheme(id as ColorSchemeMode)}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<!-- Section 3: 通知偏好 -->
+			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
+				<div>
+					<h2 class="text-sm font-semibold text-text-primary">通知偏好</h2>
+					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
+						管理新消息、互动提及与关注动态的系统提醒方式。
+					</p>
+				</div>
+				<ListContainer bordered inset>
+					<SettingRow
+						title="推送通知"
+						description="消息、提及与新动态提醒"
+						onRowClick={toggleNotif}
+					>
+						{#snippet icon()}
+							<Bell class="size-4 text-accent-default" strokeWidth={1.5} />
+						{/snippet}
+						<Toggle on={notif} onToggle={toggleNotif} label="推送通知" />
+					</SettingRow>
+				</ListContainer>
+			</div>
+
+			<!-- Section 4: 隐私与安全 -->
+			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
+				<div>
+					<h2 class="text-sm font-semibold text-text-primary">隐私与安全</h2>
+					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
+						控制个人公开主页以及地理位置在附近雷达中的可见性。
+					</p>
+				</div>
+				<ListContainer bordered inset>
+					<SettingRow
+						title="私密账号"
+						description="开启后仅关注者可查看你的主页与生活瞬间"
+						onRowClick={togglePrivateProfile}
+					>
+						{#snippet icon()}
+							<Lock class="size-4 text-accent-default" strokeWidth={1.5} />
+						{/snippet}
+						<Toggle on={privateProfile} onToggle={togglePrivateProfile} label="私密账号" />
+					</SettingRow>
+
+					<SettingRow
+						title="位置共享"
+						description="允许附近用户在发现雷达和地图中感知到你"
+						onRowClick={toggleLocationSharing}
+					>
+						{#snippet icon()}
+							<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
+						{/snippet}
+						<Toggle on={locationSharing} onToggle={toggleLocationSharing} label="位置共享" />
+					</SettingRow>
+				</ListContainer>
+			</div>
+
+			<!-- Section 5: 系统与关于 -->
+			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
+				<div>
+					<h2 class="text-sm font-semibold text-text-primary">系统与关于</h2>
+					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
+						客户端版本及当前设备会话状态。
+					</p>
+				</div>
+				<div class="flex flex-col gap-3">
+					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-xs">
+						<div class="flex items-center gap-3">
+							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
+								<Info class="size-4 text-accent-default" strokeWidth={1.5} />
+							</div>
+							<div>
+								<p class="text-sm font-medium text-text-primary">关于 HotSpot</p>
+								<p class="text-xs text-text-secondary">基于地理位置的实时社交与社区发现应用</p>
+							</div>
+						</div>
+						<span class="text-xs font-mono font-medium px-2.5 py-1 rounded-md bg-surface-page text-text-secondary border border-border-default">{APP_VERSION}</span>
+					</div>
+
+					{#if auth.isAuthenticated}
+						<div class="flex justify-end pt-2">
+							<button
+								type="button"
+								class="hover-btn inline-flex items-center gap-2 px-4 py-2 rounded-md focus-ring text-xs font-medium text-status-danger hover:bg-danger-bg border border-border-default bg-surface-primary transition-colors"
+								onclick={() => (confirmLogoutOpen = true)}
+							>
+								<LogOut class="size-3.5" strokeWidth={1.75} />
+								退出登录当前账号
+							</button>
+						</div>
+					{/if}
+				</div>
+			</div>
 		</div>
 
-	<!-- Appearance（对齐 Figma Make SettingsPage：应用主题二选一 + 深色模式） -->
-	<p class="eyebrow px-1 mt-6 mb-2">外观</p>
-	<ListContainer bordered inset>
-			<SettingRow title="应用主题" description="选择一套全局视觉风格">
-				{#snippet icon()}
-					<Palette class="size-4 text-accent-default"   strokeWidth={1.5} />
-				{/snippet}
-					{#snippet extension()}
-						<div class="grid grid-cols-2 gap-2">
-							{#each THEME_OPTIONS as t}
-								{@const selected = theme.theme === t.id}
-								<!-- 分段选择器显式两态（与 AppearanceMenu 主题按钮同一套 token 组合）：
-									未选中带边框常显可点区域，不用 surface-ghost（其未选中边框透明，
-									在 surface-flat 大底上第二个选项完全隐形） -->
-								<button
-									type="button"
-									aria-pressed={selected}
-									onclick={() => setTheme(t.id)}
-									class="flex items-center gap-2 rounded-sm border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {selected
-										? 'border-accent-border bg-accent-soft text-accent-default hover:bg-interactive-active'
-										: 'border-border-default text-text-secondary hover:bg-interactive-hover'}"
-								>
-									{#if t.id === 'forest'}
-										<Trees class="size-4"   strokeWidth={1.75} />
-									{:else}
-										<Palette class="size-4"   strokeWidth={1.75} />
-									{/if}
-									<span class="text-xs">{t.label}</span>
-								</button>
-							{/each}
-						</div>
-					{/snippet}
-			</SettingRow>
-			<SettingRow title="外观模式" description={colorSchemeDesc}>
-				{#snippet icon()}
-					{#if theme.isDark}
-						<Moon class="size-4 text-accent-default"   strokeWidth={1.5} />
-					{:else}
-						<Sun class="size-4 text-accent-default"   strokeWidth={1.5} />
-					{/if}
-				{/snippet}
-				{#snippet extension()}
-					<!-- 明暗三档（跟随系统/浅色/深色）：复用 TabBar 分段样式，不自造新组件 -->
-					<TabBar
-						items={COLOR_SCHEME_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
-						value={theme.colorScheme}
-						onChange={(id) => setColorScheme(id as ColorSchemeMode)}
-					/>
-				{/snippet}
-			</SettingRow>
-	</ListContainer>
-
-	<!-- Notify -->
-	<p class="eyebrow px-1 mt-6 mb-2">通知</p>
-	<ListContainer bordered inset>
-			<SettingRow title="推送通知" description="消息、提及与新动态提醒" onRowClick={toggleNotif}>
-				{#snippet icon()}
-					<Bell class="size-4 text-accent-default"   strokeWidth={1.5} />
-				{/snippet}
-				<Toggle on={notif} onToggle={toggleNotif} label="推送通知" />
-			</SettingRow>
-	</ListContainer>
-
-	<!-- Privacy -->
-	<p class="eyebrow px-1 mt-6 mb-2">隐私与安全</p>
-	<ListContainer bordered inset>
-			<SettingRow title="私密账号" description="仅关注者可查看你的内容" onRowClick={loading ? undefined : togglePrivateProfile}>
-				{#snippet icon()}
-					<Lock class="size-4 text-accent-default"   strokeWidth={1.5} />
-				{/snippet}
-				<Toggle on={privateProfile} onToggle={togglePrivateProfile} label="私密账号" />
-			</SettingRow>
-			<SettingRow title="位置共享" description="允许附近用户发现你" onRowClick={loading ? undefined : toggleLocationSharing}>
-				{#snippet icon()}
-					<MapPin class="size-4 text-accent-default"   strokeWidth={1.5} />
-				{/snippet}
-				<Toggle on={locationSharing} onToggle={toggleLocationSharing} label="位置共享" />
-			</SettingRow>
-	</ListContainer>
-
-	<!-- General -->
-	<p class="eyebrow px-1 mt-6 mb-2">通用</p>
-	<ListContainer bordered inset>
-			<!-- 关于：复用 SettingRow 消除手写重复（版本号取自 package.json） -->
-			<SettingRow title="关于" description="HotSpot">
-				{#snippet icon()}
-					<Info class="size-4 text-accent-default"   strokeWidth={1.5} />
-				{/snippet}
-				<span class="text-sm shrink-0 text-text-secondary">{APP_VERSION}</span>
-			</SettingRow>
-	</ListContainer>
-
-	<!-- Log Out — flat, less visually heavy；二次确认防误触 -->
-	<div class="mt-5">
-		<button
-			type="button"
-			class="hover-btn flex items-center justify-center gap-2 px-4 py-3 rounded-md w-full focus-ring text-status-danger hover:bg-danger-bg"
-			onclick={() => (confirmLogoutOpen = true)}
-		>
-			<LogOut class="size-3.5"  strokeWidth={1.75} />
-			<span class="text-sm">退出登录</span>
-		</button>
-	</div>
-
-	<Dialog.Root bind:open={confirmLogoutOpen}>
-		<Dialog.Content class="max-w-90 p-0">
-			<div class="px-5 pt-5 pb-4">
-				<Dialog.Title class="text-lg font-medium tracking-title text-text-primary">退出登录？</Dialog.Title>
-				<Dialog.Description class="mt-1 text-sm text-text-secondary">退出后将保持游客浏览，发布、关注等操作需要重新登录。</Dialog.Description>
-			</div>
-			<div class="flex flex-col gap-2 px-5 pb-5">
-				<Button type="button" variant="danger" size="lg" class="w-full" onclick={() => void handleLogout()}>退出登录</Button>
-				<Button type="button" variant="secondary" size="lg" class="w-full" onclick={() => (confirmLogoutOpen = false)}>取消</Button>
-			</div>
-		</Dialog.Content>
-	</Dialog.Root>
+		{#if auth.isAuthenticated}
+			<Dialog.Root bind:open={confirmLogoutOpen}>
+				<Dialog.Content class="max-w-90 p-0">
+					<div class="px-5 pt-5 pb-4">
+						<Dialog.Title class="text-lg font-medium tracking-title text-text-primary">退出登录？</Dialog.Title>
+						<Dialog.Description class="mt-1 text-sm text-text-secondary">退出后将保持游客浏览，发布、关注等操作需要重新登录。</Dialog.Description>
+					</div>
+					<div class="flex flex-col gap-2 px-5 pb-5">
+						<Button type="button" variant="danger" size="lg" class="w-full" onclick={() => void handleLogout()}>退出登录</Button>
+						<Button type="button" variant="secondary" size="lg" class="w-full" onclick={() => (confirmLogoutOpen = false)}>取消</Button>
+					</div>
+				</Dialog.Content>
+			</Dialog.Root>
 		{/if}
+	{/if}
 </StandardPageLayout>

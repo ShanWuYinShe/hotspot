@@ -269,8 +269,7 @@
 					{#each images as img, i (img.url + i)}
 						<button
 							type="button"
-							class="shrink-0 overflow-hidden rounded-sm focus-ring {i === index ? 'opacity-full outline-2 outline-accent-default' : 'opacity-soft hover:opacity-full'}"
-							style="width:44px;height:44px;"
+							class="shrink-0 overflow-hidden rounded-sm focus-ring size-11 {i === index ? 'opacity-full outline-2 outline-accent-default' : 'opacity-soft hover:opacity-full'}"
 							aria-label={`查看第 ${i + 1} 张`}
 							aria-current={i === index}
 							onclick={() => (index = i)}

@@ -77,9 +77,8 @@
 			}}
 		>
 			<Pin
-				class="size-3.5"
+				class="size-3.5 {isSelected ? 'text-text-on-accent' : chat.isPinned ? 'text-accent-default' : 'text-text-secondary'}"
 				strokeWidth={2}
-				style="color:{isSelected ? 'var(--cst-text-on-accent)' : chat.isPinned ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};"
 			/>
 		</button>
 	{/if}
@@ -87,7 +86,6 @@
 	{#if chat.unread > 0}
 		<span
 			class="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold size-5 {isSelected ? 'bg-text-on-accent text-accent-default' : 'bg-accent-default text-text-on-accent'}"
-			style="{isSelected ? '' : 'box-shadow:var(--shadow-glow-sm);'}"
 		>
 			{chat.unread}
 		</span>

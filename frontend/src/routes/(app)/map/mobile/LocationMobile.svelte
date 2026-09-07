@@ -363,7 +363,7 @@
 		<div class="shrink-0 px-4 pt-2 pb-4.5">
 			<button
 				type="button"
-				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm h-12.5 px-4 shadow-glow-lg"
+				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm h-12.5 px-4 shadow-raised-md"
 				onclick={handleConfirm}
 			>
 				<MapPin class="size-4 shrink-0" strokeWidth={2} />

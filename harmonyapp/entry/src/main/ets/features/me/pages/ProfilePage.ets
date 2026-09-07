@@ -715,27 +715,7 @@ export struct ProfilePage {
     NavDestination() {
       PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, ambientGlow: false }) {
         Stack({ alignContent: Alignment.Top }) {
-        Column() {}
-          .width('50%')
-          .height(DesignConstants.LAYOUT.GLOW_BLOB_LARGE)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getCurrentThemePalette().pageGlow)
-          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.06 : 0.18)
-          .blur(DesignConstants.EFFECT.GLOW_BLUR_LARGE)
-          .align(Alignment.Top)
-          .margin({ top: DesignConstants.SPACING.MD })
-
-        Column() {}
-          .width('32%')
-          .height(DesignConstants.LAYOUT.GLOW_BLOB_SMALL)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getCurrentThemePalette().heroGlow)
-          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.04 : 0.12)
-          .blur(DesignConstants.EFFECT.GLOW_BLUR_MEDIUM)
-          .align(Alignment.TopEnd)
-          .margin({ top: DesignConstants.LAYOUT.GLOW_BLOB_MARGIN_TOP, right: DesignConstants.SPACING.MD })
-
-        Column() {
+          Column() {
           if (!this.isLoggedIn && !this.isExternalProfileMode() && !this.isLoading) {
             // 未登录：全页面展示 LoginPromptView（与前端 protected route 对齐）
             this.buildGuestView()

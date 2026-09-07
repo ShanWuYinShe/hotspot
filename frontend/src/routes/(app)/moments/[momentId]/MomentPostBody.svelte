@@ -82,7 +82,7 @@
 <!-- Post images（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 users 详情一致）。
      单图保持全幅封面；多图改为网格（首图全幅 + 其余 3 列网格，点击任一张打开大图查看器）。 -->
 {#if cover}
-	<div class="relative overflow-hidden -mx-[var(--cst-page-gutter)]" style="height:var(--cst-cover-height-lg);">
+	<div class="relative overflow-hidden -mx-page-gutter h-cover-height-lg">
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<img
@@ -127,13 +127,13 @@
 		</div>
 	{/if}
 {:else}
-	<div class="relative flex flex-col items-center justify-center gap-2 overflow-hidden -mx-[var(--cst-page-gutter)] bg-accent-bg" style="height:var(--cst-cover-height-lg);">
+	<div class="relative flex flex-col items-center justify-center gap-2 overflow-hidden -mx-page-gutter bg-accent-bg h-cover-height-lg">
 		<MapPin size={28} class="text-accent-default" strokeWidth={1.5} />
 		<span class="text-text-secondary text-xs">来自 {moment.location || '附近'} 的动态</span>
 	</div>
 {/if}
 {#if moment.tag}
-	<div class="mt-3 inline-flex px-2.5 py-0.5 rounded-full bg-accent-default shadow-glow-sm" >
+	<div class="mt-3 inline-flex px-2.5 py-0.5 rounded-full bg-accent-default shadow-raised-sm" >
 		<span class="text-text-on-accent text-xxs">#{moment.tag}</span>
 	</div>
 {/if}

@@ -156,7 +156,7 @@
 				type="button"
 				disabled={!canSubmit}
 				onclick={handleSubmit}
-				class="hover-btn shrink-0 rounded-full px-5 py-2 text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-glow-sm enabled:hover:shadow-glow-md"
+				class="hover-btn shrink-0 rounded-full px-5 py-2 text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-raised-sm enabled:hover:shadow-raised-md"
 			>
 				{submitting ? '保存中…' : '保存'}
 			</button>

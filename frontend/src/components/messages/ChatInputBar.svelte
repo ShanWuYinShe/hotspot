@@ -45,7 +45,7 @@
 		type="button"
 		class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default focus-ring shrink-0 transition-all duration-standard size-9
 			{chat.inputVal.trim() && !chat.sending
-			? 'border-transparent bg-accent-default text-text-on-accent shadow-glow-md hover:shadow-glow-lg'
+			? 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'
 			: 'bg-surface-primary text-text-secondary shadow-raised-sm'}
 			{chat.sending ? 'pointer-events-none opacity-soft' : ''}"
 		onclick={() => void chat.handleSend()}

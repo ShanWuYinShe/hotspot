@@ -146,7 +146,7 @@
 			{/if}
 		</div>
 
-		<button type="button" disabled={selected.size === 0 || inviting} onclick={handleInvite} class="hover-btn mt-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-glow-sm enabled:hover:shadow-glow-md">
+		<button type="button" disabled={selected.size === 0 || inviting} onclick={handleInvite} class="hover-btn mt-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-raised-sm enabled:hover:shadow-raised-md">
 			<UserPlus size={15} strokeWidth={1.75} />
 			{inviting ? '邀请中…' : `邀请${selected.size > 0 ? ` ${selected.size} 人` : ''}`}
 		</button>
