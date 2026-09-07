@@ -34,8 +34,8 @@
   --cst-interactive-hover: var(--cst-palette-hover);
   --cst-interactive-active: var(--cst-palette-active-hover);
   --cst-glow-accent: var(--cst-palette-glow);
-  /* 危险色光晕：danger 实底按钮 hover 抬档（对齐 accent glow 契约，随主题/明暗派生） */
-  --cst-glow-danger: color-mix(in srgb, var(--cst-status-danger) 26%, transparent);
+  /* 危险色微阴影：克制中性，消除刺眼大红光晕 */
+  --cst-glow-danger: rgba(0, 0, 0, 0.12);
 
   /* Border */
   --cst-border-default: var(--cst-palette-border);

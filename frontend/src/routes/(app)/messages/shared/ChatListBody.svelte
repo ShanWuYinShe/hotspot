@@ -55,13 +55,12 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		</EmptyState>
 	</div>
 {:else}
-	<!-- 移动：一张 bordered 列表卡包全部会话行（行间 1px 分隔），与全 app
-	     「灰画布+白卡」语言一致；桌面分栏：embedded+inset 内缩圆角行
-	     （hover/选中填充离面板边缘 8px，Telegram/Slack 会话列表语言）。 -->
+	<!-- 会话列表：无生硬外框，移动与桌面分栏共用；
+	     桌面分栏：compact + inset；移动端：通透平铺流式列表。 -->
 	<ListContainer
-		bordered={!compact}
+		bordered={false}
 		inset={compact}
-		class={fill ? 'flex-1 overflow-y-auto no-scrollbar' : compact ? '' : 'mt-1'}
+		class={fill ? 'flex-1 overflow-y-auto no-scrollbar' : compact ? '' : 'mt-1 divide-y divide-border-subtle/30'}
 		ariaLabel="会话列表"
 	>
 		{#each chats as chat (chat.id)}

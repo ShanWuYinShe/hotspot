@@ -22,9 +22,9 @@
   --cst-palette-text-muted: #52647F;
   /* accent 加深（#3578D4→#2E66C0）确保浅色下白字对比度 ≥4.5:1（原 4.39 不达标） */
   --cst-palette-accent-primary: #2E66C0;
-  --cst-palette-glow: rgba(46, 102, 192, 0.22);
+  --cst-palette-glow: rgba(0, 0, 0, 0);
   --cst-palette-shadow-light: rgba(255, 255, 255, 1);
-  --cst-palette-shadow-dark: rgba(99, 91, 200, 0.12);
+  --cst-palette-shadow-dark: rgba(0, 0, 0, 0.08);
   --cst-palette-border: rgba(46, 102, 192, 0.18);
   --cst-palette-border-pressed: rgba(46, 102, 192, 0.32);
   --cst-palette-accent-soft: rgba(46, 102, 192, 0.10);
@@ -42,8 +42,8 @@
   --cst-palette-map-group: #0B7A56;
   --cst-palette-map-moment: #C2470B;
   --cst-palette-overlay-strong: rgba(12, 25, 48, 0.52);
-  --cst-palette-shadow-card: 0 4px 14px rgba(53, 120, 212, 0.10), 0 1px 4px rgba(53, 120, 212, 0.06);
-  --cst-palette-shadow-btn: 0 5px 14px rgba(53, 120, 212, 0.18);
+  --cst-palette-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --cst-palette-shadow-btn: 0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
 
   /* ── 透明度档位（opacity-* 语义类经 theme-registry 映射；glow 随主题/暗色变化）── */
   --cst-palette-opacity-none: 0;
@@ -92,7 +92,7 @@
   /* ── Shell / overlay primitives ── */
   --cst-surface-nav-glass: color-mix(in srgb, var(--cst-surface-panel) 90%, transparent);
   --cst-border-nav-glass: color-mix(in srgb, var(--cst-accent-default) 14%, transparent);
-  --cst-elevation-rail-hover: 0 6px 16px rgba(53, 120, 212, 0.18), 0 2px 6px rgba(53, 120, 212, 0.10);
+  --cst-elevation-rail-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
   --cst-surface-scrim: rgba(14, 10, 35, 0.38);
   --cst-surface-overlay: rgba(14, 10, 35, 0.38);
   --cst-border-inverse: rgba(255, 255, 255, 0.25);
@@ -121,13 +121,13 @@
   --cst-surface-map-control-active: rgba(255, 255, 255, 0.25);
   --cst-elevation-profile-avatar: 0 6px 20px rgba(0, 0, 0, 0.22);
   --cst-elevation-modal: 0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--cst-border-subtle);
-  --cst-elevation-fab: 0 6px 18px var(--cst-glow-accent), 0 2px 4px rgba(0, 0, 0, 0.10);
-  --cst-elevation-nav: 0 -2px 16px rgba(0,0,0,0.04), 0 8px 24px var(--cst-glow-accent);
+  --cst-elevation-fab: 0 4px 14px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.08);
+  --cst-elevation-nav: 0 -1px 3px rgba(0, 0, 0, 0.03);
   --cst-elevation-sheet: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--cst-border-subtle);
 
-  /* ── Nearby feed card-menu ── */
-  --cst-surface-card-menu: color-mix(in srgb, var(--cst-surface-primary) 88%, var(--cst-accent-default));
-  --cst-border-card-menu: color-mix(in srgb, var(--cst-accent-default) 22%, var(--cst-border-default));
+  /* ── Nearby feed card-menu（中性高雅，无炫光） ── */
+  --cst-surface-card-menu: var(--cst-surface-primary);
+  --cst-border-card-menu: var(--cst-border-subtle, var(--cst-border-default));
 
   /* ── 卡片交互档位（vibrant：按压 0.94 / hover 抬升 2px / 图片 hover 缩放 1.045）── */
   --cst-card-tap-scale: 0.94;
@@ -192,8 +192,8 @@
   --cst-palette-map-group: #34D399;
   --cst-palette-map-moment: #FB923C;
   --cst-palette-overlay-strong: rgba(0, 8, 20, 0.62);
-  --cst-palette-shadow-card: 0 4px 14px rgba(36, 105, 194, 0.16), 0 1px 4px rgba(0, 0, 0, 0.20);
-  --cst-palette-shadow-btn: 0 5px 14px rgba(105, 168, 255, 0.24);
+  --cst-palette-shadow-card: 0 2px 10px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.25);
+  --cst-palette-shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.18);
 
   /* ── 透明度档位（dark）── */
   --cst-palette-opacity-none: 0;
@@ -207,7 +207,7 @@
   --cst-palette-opacity-hover: 0.90;
   --cst-palette-opacity-full: 1;
   --cst-palette-opacity-active: 0.13;
-  --cst-palette-opacity-glow: 0.80;
+  --cst-palette-opacity-glow: 0.10;
 
   /* ── color-mix 预设（dark）── */
 
@@ -240,19 +240,19 @@
   /* ── Shell / overlay primitives (dark 覆盖) ── */
   --cst-surface-nav-glass: color-mix(in srgb, var(--cst-surface-panel) 90%, transparent);
   --cst-border-nav-glass: color-mix(in srgb, var(--cst-accent-default) 18%, transparent);
-  --cst-elevation-rail-hover: 0 6px 16px rgba(105, 168, 255, 0.22), 0 2px 6px rgba(105, 168, 255, 0.12);
+  --cst-elevation-rail-hover: 0 4px 14px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.20);
   --cst-surface-scrim: rgba(0, 0, 0, 0.42);
   --cst-surface-overlay: rgba(0, 0, 0, 0.42);
   --cst-text-on-status: #071426;
   --cst-content-on-marker: #071426;
-  --cst-elevation-fab: 0 6px 22px var(--cst-glow-accent), 0 2px 6px rgba(0,0,0,0.20);
-  --cst-elevation-nav: 0 -4px 24px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.28);
+  --cst-elevation-fab: 0 4px 16px rgba(0, 0, 0, 0.40), 0 1px 4px rgba(0, 0, 0, 0.25);
+  --cst-elevation-nav: 0 -2px 10px rgba(0, 0, 0, 0.35);
   --cst-elevation-sheet: 0 -8px 48px rgba(0,0,0,0.22), 0 -2px 0 var(--cst-border-subtle);
   --cst-elevation-modal: 0 28px 88px rgba(0,0,0,0.42), 0 0 0 1px var(--cst-border-subtle);
 
-  /* ── card-menu dark ── */
-  --cst-surface-card-menu: color-mix(in srgb, var(--cst-surface-primary) 82%, var(--cst-accent-default));
-  --cst-border-card-menu: color-mix(in srgb, var(--cst-accent-default) 28%, var(--cst-border-default));
+  /* ── card-menu dark（中性高雅，无炫光） ── */
+  --cst-surface-card-menu: var(--cst-surface-primary);
+  --cst-border-card-menu: var(--cst-border-subtle, var(--cst-border-default));
   /* 无封面占位底（dark 沿用同表达式，引用 token 自动解析暗色值） */
   --cst-surface-cover-placeholder: linear-gradient(135deg, color-mix(in srgb, var(--cst-accent-default) 26%, var(--cst-surface-primary)) 0%, color-mix(in srgb, var(--cst-accent-default) 8%, var(--cst-surface-primary)) 55%, var(--cst-surface-primary) 100%);
 }

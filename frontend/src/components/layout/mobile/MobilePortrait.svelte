@@ -27,8 +27,8 @@
 	const pathname = $derived(page.url.pathname);
 	const isSubPage = $derived(isSubPagePath(pathname));
 
-	// FAB 光晕：统一走 --elevation-fab（每主题/暗色已定义）
-	const fabGlow = $derived(composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)');
+	// FAB 悬浮投影：统一走 --cst-elevation-fab（中性高雅，无彩色炫光）
+	const fabShadow = $derived(composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)');
 </script>
 
 <div
@@ -49,48 +49,64 @@
 				class="shrink-0 w-full nav-glass nav-glass--bottom"
 			>
 				<div
-					class="flex items-center px-2"
+					class="grid grid-cols-5 items-center w-full px-2"
 					style="padding-top:var(--cst-bottom-nav-pad-top);padding-bottom:max(var(--cst-bottom-nav-pad-bottom), env(safe-area-inset-bottom, var(--cst-bottom-nav-pad-bottom)));"
 				>
-					<!-- 左侧：首页 + 附近（flex-1 与右侧对称，保持 FAB 居中） -->
-					<div class="flex flex-1 justify-center gap-4">
-						{#each NAV_ITEMS.slice(0, 2) as item}
-							<NavTab
-								label={item.label}
-								isActive={isPrimaryRouteActive(pathname, item.path)}
-								onClick={() => goto(item.path)}
-								Icon={item.icon}
-							/>
-						{/each}
+					<!-- Slot 1: 首页 (20%) -->
+					<div class="flex items-center justify-center w-full">
+						<NavTab
+							label={NAV_ITEMS[0].label}
+							isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[0].path)}
+							onClick={() => goto(NAV_ITEMS[0].path)}
+							Icon={NAV_ITEMS[0].icon}
+						/>
 					</div>
 
-					<!-- Centre FAB -->
-					<div class="flex flex-col items-center w-17" >
+					<!-- Slot 2: 附近 (20%) -->
+					<div class="flex items-center justify-center w-full">
+						<NavTab
+							label={NAV_ITEMS[1].label}
+							isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[1].path)}
+							onClick={() => goto(NAV_ITEMS[1].path)}
+							Icon={NAV_ITEMS[1].icon}
+						/>
+					</div>
+
+					<!-- Slot 3: Centre FAB (20%) -->
+					<div class="flex items-center justify-center w-full">
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center focus-ring select-none rounded-full size-12.5"
-							style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabGlow};"
+							class="hover-btn scale-btn flex items-center justify-center focus-ring select-none rounded-full size-12"
+							style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabShadow};"
 							onclick={toggleComposer}
 							aria-label={composer.composerOpen ? '关闭' : '发布'}
 						>
 							{#if composer.composerOpen}
-								<X class="size-5 text-text-on-accent"   strokeWidth={2} />
+								<X class="size-5 text-text-on-accent" strokeWidth={2} />
 							{:else}
-								<Plus class="size-5 text-text-on-accent"   strokeWidth={2} />
+								<Plus class="size-5 text-text-on-accent" strokeWidth={2} />
 							{/if}
 						</button>
 					</div>
 
-					<!-- 右侧：消息 + 我的（flex-1 与左侧对称） -->
-					<div class="flex flex-1 justify-center gap-4">
-						{#each NAV_ITEMS.slice(2, 4) as item}
-							<NavTab
-								label={item.label}
-								isActive={isPrimaryRouteActive(pathname, item.path)}
-								onClick={() => goto(item.path)}
-								Icon={item.icon}
-							/>
-						{/each}
+					<!-- Slot 4: 消息 (20%) -->
+					<div class="flex items-center justify-center w-full">
+						<NavTab
+							label={NAV_ITEMS[2].label}
+							isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[2].path)}
+							onClick={() => goto(NAV_ITEMS[2].path)}
+							Icon={NAV_ITEMS[2].icon}
+						/>
+					</div>
+
+					<!-- Slot 5: 我的 (20%) -->
+					<div class="flex items-center justify-center w-full">
+						<NavTab
+							label={NAV_ITEMS[3].label}
+							isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[3].path)}
+							onClick={() => goto(NAV_ITEMS[3].path)}
+							Icon={NAV_ITEMS[3].icon}
+						/>
 					</div>
 				</div>
 			</nav>

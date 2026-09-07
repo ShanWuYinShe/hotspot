@@ -86,19 +86,19 @@ class ThemeShadowRegistry {
   };
 
   readonly VIBRANT_LIGHT: ThemeShadows = {
-    surface: new AppThemeShadow(8, '#1A635BC8', 0, 3),
-    elevated: new AppThemeShadow(14, '#30635BC8', 0, 6),
-    accent: new AppThemeShadow(6, '#242E66C0', 0, 2),
-    control: new AppThemeShadow(4, '#0D635BC8', 0, 1),
-    tabBar: new AppThemeShadow(8, '#18635BC8', 0, -2)
+    surface: new AppThemeShadow(8, '#0F000000', 0, 2),
+    elevated: new AppThemeShadow(24, '#26000000', 0, 8),
+    accent: new AppThemeShadow(6, '#1A000000', 0, 2),
+    control: new AppThemeShadow(16, '#1F000000', 0, 4),
+    tabBar: new AppThemeShadow(8, '#0A000000', 0, -1)
   };
 
   readonly VIBRANT_DARK: ThemeShadows = {
-    surface: new AppThemeShadow(10, '#A6000000', 0, 3),
-    elevated: new AppThemeShadow(16, '#80000000', 0, 5),
-    accent: new AppThemeShadow(8, '#1869A8FF', 0, 3),
-    control: new AppThemeShadow(4, '#0F69A8FF', 0, 0),
-    tabBar: new AppThemeShadow(10, '#80000000', 0, -3)
+    surface: new AppThemeShadow(10, '#59000000', 0, 3),
+    elevated: new AppThemeShadow(24, '#80000000', 0, 8),
+    accent: new AppThemeShadow(8, '#4D000000', 0, 3),
+    control: new AppThemeShadow(16, '#4D000000', 0, 4),
+    tabBar: new AppThemeShadow(10, '#66000000', 0, -3)
   };
 }
 

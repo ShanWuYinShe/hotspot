@@ -42,10 +42,10 @@ let {
 </script>
 
 {#if bordered}
-	<!-- bordered：唯一分组卡 = 白底描边外框 + 内缩圆角行（macOS 设置语言） -->
+	<!-- bordered：优雅分组卡 = 纤细微描边 + 温润圆角行（iOS/macOS 设置语言） -->
 	<div
-		class={cn('flex flex-col gap-y-0.5 overflow-hidden rounded-md border bg-surface-primary p-2', className)}
-		style={`border-color:var(--cst-border-default);${styleProp}`}
+		class={cn('flex flex-col gap-y-0.5 overflow-hidden rounded-md border bg-surface-primary p-1.5', className)}
+		style={`border-color:var(--cst-border-subtle, var(--cst-border-default));box-shadow:var(--shadow-raised-sm);${styleProp}`}
 		role="list"
 		aria-label={ariaLabel}
 	>
@@ -57,8 +57,8 @@ let {
 		{@render children()}
 	</div>
 {:else}
-	<!-- embedded：无外框，仅行内分隔线 -->
-	<div role="list" class={cn('flex flex-col divide-y divide-border-default', className)} aria-label={ariaLabel}>
+	<!-- embedded：无外框，细腻行内发丝分隔线 -->
+	<div role="list" class={cn('flex flex-col divide-y divide-border-subtle/40', className)} aria-label={ariaLabel}>
 		{@render children()}
 	</div>
 {/if}

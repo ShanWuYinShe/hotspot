@@ -17,7 +17,7 @@
   --cst-palette-text: #152219;
   --cst-palette-text-muted: #3F5547;
   --cst-palette-accent-primary: #3D7A55;
-  --cst-palette-glow: rgba(61, 122, 85, 0.18);
+  --cst-palette-glow: rgba(0, 0, 0, 0);
   --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
   --cst-palette-shadow-dark: rgba(0, 0, 0, 0.0);
   --cst-palette-border: rgba(42, 73, 52, 0.24);
@@ -117,13 +117,13 @@
   --cst-surface-map-control-active: rgba(255, 255, 255, 0.25);
   --cst-elevation-profile-avatar: 0 6px 20px rgba(0, 0, 0, 0.22);
   --cst-elevation-modal: 0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--cst-border-subtle);
-  --cst-elevation-fab: 0 6px 18px var(--cst-glow-accent), 0 2px 4px rgba(0,0,0,0.10);
-  --cst-elevation-nav: 0 -2px 16px rgba(61,122,85,0.08), 0 8px 24px rgba(61,122,85,0.10);
+  --cst-elevation-fab: 0 4px 14px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.08);
+  --cst-elevation-nav: 0 -1px 3px rgba(0, 0, 0, 0.03);
   --cst-elevation-sheet: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--cst-border-subtle);
 
-  /* ── Nearby feed card-menu ── */
-  --cst-surface-card-menu: color-mix(in srgb, var(--cst-surface-primary) 88%, var(--cst-accent-default));
-  --cst-border-card-menu: color-mix(in srgb, var(--cst-accent-default) 22%, var(--cst-border-default));
+  /* ── Nearby feed card-menu（中性高雅，无炫光） ── */
+  --cst-surface-card-menu: var(--cst-surface-primary);
+  --cst-border-card-menu: var(--cst-border-subtle, var(--cst-border-default));
 
   /* ── 卡片交互档位（forest 纸面扁平：按压 0.97 / hover 不抬升（反馈由
      微染+边框承载）/ 图片 hover 缩放 1.045）── */
@@ -273,14 +273,14 @@
   --cst-surface-overlay: rgba(0, 0, 0, 0.42);
   --cst-text-on-status: #0C1911;
   --cst-content-on-marker: #0C1911;
-  --cst-elevation-fab: 0 6px 22px var(--cst-glow-accent), 0 2px 6px rgba(0,0,0,0.20);
-  --cst-elevation-nav: 0 -4px 24px rgba(0,0,0,0.40), 0 8px 32px rgba(0,0,0,0.28);
+  --cst-elevation-fab: 0 4px 16px rgba(0, 0, 0, 0.40), 0 1px 4px rgba(0, 0, 0, 0.25);
+  --cst-elevation-nav: 0 -2px 10px rgba(0, 0, 0, 0.35);
   --cst-elevation-sheet: 0 -8px 48px rgba(0,0,0,0.22), 0 -2px 0 var(--cst-border-subtle);
   --cst-elevation-modal: 0 28px 88px rgba(0,0,0,0.42), 0 0 0 1px var(--cst-border-subtle);
 
-  /* ── card-menu dark ── */
-  --cst-surface-card-menu: color-mix(in srgb, var(--cst-surface-primary) 82%, var(--cst-accent-default));
-  --cst-border-card-menu: color-mix(in srgb, var(--cst-accent-default) 28%, var(--cst-border-default));
+  /* ── card-menu dark（中性高雅，无炫光） ── */
+  --cst-surface-card-menu: var(--cst-surface-primary);
+  --cst-border-card-menu: var(--cst-border-subtle, var(--cst-border-default));
   /* 无封面占位底（forest 纸面语言：纯色淡底，无渐变） */
   --cst-surface-cover-placeholder: var(--cst-accent-soft-bg);
 }

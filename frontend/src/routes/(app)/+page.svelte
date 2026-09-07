@@ -102,7 +102,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 
 {#snippet momentRows(items: MomentItem[], onClick: (momentId: string) => void)}
-	<ListContainer bordered>
+	<ListContainer bordered={false} class="divide-y divide-border-subtle/30">
 		{#each items as moment, i (moment.moment_id)}
 			<MomentRow {moment} index={i} onClick={() => onClick(moment.moment_id)} />
 		{/each}

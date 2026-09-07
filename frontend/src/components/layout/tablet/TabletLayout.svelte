@@ -57,24 +57,33 @@
 				: 'padding:0;border-top:var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);'}
 		>
 			<div
-				class="flex items-center"
-				style="width:100%;max-width:{isWide ? 'var(--cst-tablet-dock-max)' : 'none'};border-radius:{isWide ? 'var(--radius-sheet)' : 0};background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);box-shadow:{isWide ? 'var(--cst-elevation-nav)' : 'none'};border:{isWide ? 'var(--cst-border-width-hairline) solid var(--cst-border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};gap:{isWide ? 6 : 14}px;"
+				class="grid grid-cols-5 items-center w-full"
+				style="width:100%;max-width:{isWide ? 'var(--cst-tablet-dock-max)' : 'none'};border-radius:{isWide ? 'var(--radius-sheet)' : 0};background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);box-shadow:{isWide ? 'var(--cst-elevation-nav)' : 'none'};border:{isWide ? 'var(--cst-border-width-hairline) solid var(--cst-border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};"
 			>
-				<!-- 左侧：首页 + 附近（flex-1 与右侧对称，保持 FAB 居中） -->
-				<div class="flex flex-1 justify-center gap-4">
-					{#each NAV_ITEMS.slice(0, 2) as item}
-						<NavTab
-							label={item.label}
-							iconSize={24}
-							Icon={item.icon}
-							isActive={isPrimaryRouteActive(pathname, item.path)}
-							onClick={() => goto(item.path)}
-						/>
-					{/each}
+				<!-- Slot 1: 首页 -->
+				<div class="flex items-center justify-center w-full">
+					<NavTab
+						label={NAV_ITEMS[0].label}
+						iconSize={24}
+						Icon={NAV_ITEMS[0].icon}
+						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[0].path)}
+						onClick={() => goto(NAV_ITEMS[0].path)}
+					/>
 				</div>
 
-				<!-- Centre FAB -->
-				<div class="flex items-center justify-center shrink-0 w-16" >
+				<!-- Slot 2: 附近 -->
+				<div class="flex items-center justify-center w-full">
+					<NavTab
+						label={NAV_ITEMS[1].label}
+						iconSize={24}
+						Icon={NAV_ITEMS[1].icon}
+						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[1].path)}
+						onClick={() => goto(NAV_ITEMS[1].path)}
+					/>
+				</div>
+
+				<!-- Slot 3: Centre FAB -->
+				<div class="flex items-center justify-center w-full">
 					<button
 						type="button"
 						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring select-none size-12 {composer.composerOpen ? 'bg-text-secondary' : 'bg-accent-default'}"
@@ -83,24 +92,33 @@
 						onclick={toggleComposer}
 					>
 						{#if composer.composerOpen}
-							<X class="size-5 text-text-on-accent"   strokeWidth={2} />
+							<X class="size-5 text-text-on-accent" strokeWidth={2} />
 						{:else}
-							<Plus class="size-5 text-text-on-accent"   strokeWidth={2} />
+							<Plus class="size-5 text-text-on-accent" strokeWidth={2} />
 						{/if}
 					</button>
 				</div>
 
-				<!-- 右侧：消息 + 我的（flex-1 与左侧对称） -->
-				<div class="flex flex-1 justify-center gap-4">
-					{#each NAV_ITEMS.slice(2, 4) as item}
-						<NavTab
-							label={item.label}
-							iconSize={24}
-							Icon={item.icon}
-							isActive={isPrimaryRouteActive(pathname, item.path)}
-							onClick={() => goto(item.path)}
-						/>
-					{/each}
+				<!-- Slot 4: 消息 -->
+				<div class="flex items-center justify-center w-full">
+					<NavTab
+						label={NAV_ITEMS[2].label}
+						iconSize={24}
+						Icon={NAV_ITEMS[2].icon}
+						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[2].path)}
+						onClick={() => goto(NAV_ITEMS[2].path)}
+					/>
+				</div>
+
+				<!-- Slot 5: 我的 -->
+				<div class="flex items-center justify-center w-full">
+					<NavTab
+						label={NAV_ITEMS[3].label}
+						iconSize={24}
+						Icon={NAV_ITEMS[3].icon}
+						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[3].path)}
+						onClick={() => goto(NAV_ITEMS[3].path)}
+					/>
 				</div>
 			</div>
 		</nav>
