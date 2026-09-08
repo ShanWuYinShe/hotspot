@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -152,4 +153,102 @@ func TestLimitRequestBodyRejectsOversize(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(strings.Repeat("x", MaxRequestBodyBytes+1024)))
 	handler.ServeHTTP(rr, req)
+}
+
+func TestMethodNotAllowedHandler(t *testing.T) {
+	rr := httptest.NewRecorder()
+	MethodNotAllowedHandler(rr, httptest.NewRequest(http.MethodPut, "/users", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 envelope, got status %d", rr.Code)
+	}
+	var resp ApiResponse[struct{}]
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Code != CodeInvalidRequest || resp.Message != "请求方法不被支持" {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestWriteInvalidRequestAndBusinessError(t *testing.T) {
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/test", nil)
+	WriteInvalidRequest(rr, req, "testOp", "参数非法")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rr.Code)
+	}
+	var resp ApiResponse[struct{}]
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Code != CodeInvalidRequest || resp.Message != "参数非法" {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestWriteAPIErrorBranches(t *testing.T) {
+	// 1. 带 Data 的 *APIError
+	t.Run("APIError with Data", func(t *testing.T) {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
+		apiErr := Forbidden(ReasonNotAdmin, "无管理员权限")
+		WriteAPIError(rr, req, "testOp", apiErr)
+
+		var resp ApiResponse[ForbiddenErrorData]
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Code != CodeForbidden || resp.Data == nil || resp.Data.ForbiddenReason != ReasonNotAdmin {
+			t.Fatalf("unexpected response: %#v", resp)
+		}
+	})
+
+	// 2. 不带 Data 的 *APIError
+	t.Run("APIError without Data", func(t *testing.T) {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
+		apiErr := InvalidRequest("缺少必要参数")
+		WriteAPIError(rr, req, "testOp", apiErr)
+
+		var resp ApiResponse[struct{}]
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Code != CodeInvalidRequest || resp.Message != "缺少必要参数" {
+			t.Fatalf("unexpected response: %#v", resp)
+		}
+	})
+
+	// 3. 普通 error 降级 500
+	t.Run("generic error fallback to 10600", func(t *testing.T) {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
+		WriteAPIError(rr, req, "testOp", errors.New("db disk failure"))
+
+		var resp ApiResponse[struct{}]
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Code != CodeInternalUnavailable || resp.Message != "服务暂时不可用" {
+			t.Fatalf("unexpected fallback: %#v", resp)
+		}
+	})
+}
+
+func TestBusinessAndBusinessForbiddenHelpers(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+	bResp := Business[string](req, "op1", CodeNotFound, "用户不存在")
+	if bResp.Code != CodeNotFound || bResp.Message != "用户不存在" {
+		t.Fatalf("unexpected Business resp: %#v", bResp)
+	}
+
+	fbResp := BusinessForbidden(req, "op2", ReasonBlockedByUser, "你已被该用户拉黑")
+	if fbResp.Code != CodeForbidden || fbResp.Message != "你已被该用户拉黑" || fbResp.Data == nil {
+		t.Fatalf("unexpected BusinessForbidden resp: %#v", fbResp)
+	}
+	fData, ok := (*fbResp.Data).(ForbiddenErrorData)
+	if !ok || fData.ForbiddenReason != ReasonBlockedByUser {
+		t.Fatalf("unexpected data structure: %#v", *fbResp.Data)
+	}
 }

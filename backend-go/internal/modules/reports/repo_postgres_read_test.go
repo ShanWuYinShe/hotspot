@@ -10,6 +10,8 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/types"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type reportRowValues struct {
@@ -157,4 +159,99 @@ func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected list error")
 	}
+}
+
+func TestReportCursorRoundTripAndValidation(t *testing.T) {
+	// 1. 空游标解析
+	emptyTime, emptyID, apiErr := decodeReportListCursor("")
+	if apiErr != nil || !emptyTime.IsZero() || emptyID != "" {
+		t.Fatalf("expected zero values on empty cursor, got time=%v, id=%s, err=%v", emptyTime, emptyID, apiErr)
+	}
+
+	// 2. 正常编码与解码
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	curStr := encodeReportListCursor(now, "rep_456")
+	if curStr == "" {
+		t.Fatal("expected non-empty cursor string")
+	}
+
+	gotTime, gotID, apiErr := decodeReportListCursor(curStr)
+	if apiErr != nil {
+		t.Fatalf("unexpected decode error: %v", apiErr)
+	}
+	if gotID != "rep_456" {
+		t.Fatalf("expected rep_456, got %s", gotID)
+	}
+	if !gotTime.Equal(now) {
+		t.Fatalf("expected %v, got %v", now, gotTime)
+	}
+
+	// 3. 非法游标字符串
+	_, _, apiErr = decodeReportListCursor("invalid-cursor-garbage")
+	if apiErr == nil {
+		t.Fatal("expected error on invalid cursor")
+	}
+}
+
+func TestApplyReportResolution(t *testing.T) {
+	now := time.Now().UTC()
+
+	// 1. handledAt 为 nil
+	item1 := ReportItem{Status: ReportStatusResolved}
+	applyReportResolution(&item1, nil, "已处理")
+	if item1.Resolution != nil {
+		t.Fatal("expected resolution to be nil when handledAt is nil")
+	}
+
+	// 2. status 为 pending
+	item2 := ReportItem{Status: ReportStatusPending}
+	applyReportResolution(&item2, &now, "待审核")
+	if item2.Resolution != nil {
+		t.Fatal("expected resolution to be nil when status is pending")
+	}
+
+	// 3. status 为 resolved
+	item3 := ReportItem{Status: ReportStatusResolved}
+	applyReportResolution(&item3, &now, "违规内容已下架")
+	if item3.Resolution == nil || item3.Resolution.Action != ReportActionResolve {
+		t.Fatalf("expected action resolve, got %+v", item3.Resolution)
+	}
+	if item3.Resolution.Note == nil || *item3.Resolution.Note != "违规内容已下架" {
+		t.Fatalf("unexpected note: %v", item3.Resolution.Note)
+	}
+
+	// 4. status 为 dismissed
+	item4 := ReportItem{Status: ReportStatusDismissed}
+	applyReportResolution(&item4, &now, "证据不足，驳回举报")
+	if item4.Resolution == nil || item4.Resolution.Action != ReportActionDismiss {
+		t.Fatalf("expected action dismiss, got %+v", item4.Resolution)
+	}
+}
+
+func TestTimeFromRFC3339(t *testing.T) {
+	parsed := timeFromRFC3339("2026-09-08T15:00:00Z")
+	if parsed.IsZero() || parsed.Year() != 2026 {
+		t.Fatalf("unexpected parsed time: %v", parsed)
+	}
+
+	invalid := timeFromRFC3339("not-a-timestamp")
+	if !invalid.IsZero() {
+		t.Fatalf("expected zero time on invalid input, got %v", invalid)
+	}
+}
+
+func TestModuleAndServiceInstantiation(t *testing.T) {
+	svc := NewService()
+	if svc == nil {
+		t.Fatal("expected non-nil service")
+	}
+
+	fac := persistence.NewFactory(config.Config{})
+	mod := NewModule(fac)
+	if mod == nil {
+		t.Fatal("expected non-nil module")
+	}
+
+	r := chi.NewRouter()
+	mod.Mount(r)
 }

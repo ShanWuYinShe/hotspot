@@ -3,12 +3,17 @@ package groups
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/rbac"
 )
 
 func TestGuardGroupIDExtraction(t *testing.T) {
@@ -151,4 +156,167 @@ func TestMatchesSearchCursor(t *testing.T) {
 	if matchesSearchCursor(meta, item, cur) {
 		t.Fatal("same count id lower must not match")
 	}
+}
+
+type mockRoleResolver struct {
+	roleFunc func(ctx context.Context, groupID string) (rbac.GroupRole, bool, error)
+}
+
+func (m mockRoleResolver) RoleOf(ctx context.Context, groupID string) (rbac.GroupRole, bool, error) {
+	if m.roleFunc != nil {
+		return m.roleFunc(ctx, groupID)
+	}
+	return "", false, nil
+}
+
+func TestGroupAdminGuardMiddleware(t *testing.T) {
+	orig := serviceGroupRoleResolver
+	defer func() { SetGroupRoleResolver(orig) }()
+
+	nextCalled := false
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nextCalled = true
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	// 1. 请求体缺少或错误的 group_id
+	t.Run("Invalid Body Without Group ID", func(t *testing.T) {
+		guard := groupAdminGuard(false)(nextHandler)
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/admin/update", strings.NewReader(`{}`))
+		guard.ServeHTTP(rr, req)
+
+		var resp httpx.ApiResponse[struct{}]
+		_ = json.NewDecoder(rr.Body).Decode(&resp)
+		if resp.Code != httpx.CodeInvalidRequest {
+			t.Fatalf("expected 10000 invalid request, got %d", resp.Code)
+		}
+	})
+
+	// 2. resolver 未注入 (fail-closed -> 10600)
+	t.Run("Resolver Not Configured Fail-Closed", func(t *testing.T) {
+		SetGroupRoleResolver(nil)
+		guard := groupAdminGuard(false)(nextHandler)
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/admin/update", strings.NewReader(`{"group_id":"g_1"}`))
+		guard.ServeHTTP(rr, req)
+
+		var resp httpx.ApiResponse[struct{}]
+		_ = json.NewDecoder(rr.Body).Decode(&resp)
+		if resp.Code != httpx.CodeInternalUnavailable {
+			t.Fatalf("expected 10600 when resolver nil, got %d", resp.Code)
+		}
+	})
+
+	// 3. resolver 返回 error (fail-closed -> 10600)
+	t.Run("Resolver Error Fail-Closed", func(t *testing.T) {
+		SetGroupRoleResolver(mockRoleResolver{
+			roleFunc: func(ctx context.Context, groupID string) (rbac.GroupRole, bool, error) {
+				return "", false, errors.New("db error")
+			},
+		})
+		guard := groupAdminGuard(false)(nextHandler)
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/admin/update", strings.NewReader(`{"group_id":"g_1"}`))
+		guard.ServeHTTP(rr, req)
+
+		var resp httpx.ApiResponse[struct{}]
+		_ = json.NewDecoder(rr.Body).Decode(&resp)
+		if resp.Code != httpx.CodeInternalUnavailable {
+			t.Fatalf("expected 10600 on resolver error, got %d", resp.Code)
+		}
+	})
+
+	// 4. 非群成员 -> 10200 + ReasonNotGroupMember
+	t.Run("Not Group Member", func(t *testing.T) {
+		SetGroupRoleResolver(mockRoleResolver{
+			roleFunc: func(ctx context.Context, groupID string) (rbac.GroupRole, bool, error) {
+				return "", false, nil
+			},
+		})
+		guard := groupAdminGuard(false)(nextHandler)
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/admin/update", strings.NewReader(`{"group_id":"g_1"}`))
+		guard.ServeHTTP(rr, req)
+
+		var resp httpx.ApiResponse[httpx.ForbiddenErrorData]
+		_ = json.NewDecoder(rr.Body).Decode(&resp)
+		if resp.Code != httpx.CodeForbidden || resp.Data == nil || resp.Data.ForbiddenReason != httpx.ReasonNotGroupMember {
+			t.Fatalf("expected ReasonNotGroupMember, got %+v", resp)
+		}
+	})
+
+	// 5. 普通群成员，非管理员 -> 10200 + ReasonNotGroupAdmin
+	t.Run("Member Not Admin", func(t *testing.T) {
+		SetGroupRoleResolver(mockRoleResolver{
+			roleFunc: func(ctx context.Context, groupID string) (rbac.GroupRole, bool, error) {
+				return rbac.GroupRoleMember, true, nil
+			},
+		})
+		guard := groupAdminGuard(false)(nextHandler)
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/admin/update", strings.NewReader(`{"group_id":"g_1"}`))
+		guard.ServeHTTP(rr, req)
+
+		var resp httpx.ApiResponse[httpx.ForbiddenErrorData]
+		_ = json.NewDecoder(rr.Body).Decode(&resp)
+		if resp.Code != httpx.CodeForbidden || resp.Data == nil || resp.Data.ForbiddenReason != httpx.ReasonNotGroupAdmin {
+			t.Fatalf("expected ReasonNotGroupAdmin, got %+v", resp)
+		}
+	})
+
+	// 6. 管理员访问 ownerOnly 端点（如解散群） -> 10200 + ReasonNotGroupOwner
+	t.Run("Admin On OwnerOnly Endpoint", func(t *testing.T) {
+		SetGroupRoleResolver(mockRoleResolver{
+			roleFunc: func(ctx context.Context, groupID string) (rbac.GroupRole, bool, error) {
+				return rbac.GroupRoleAdmin, true, nil
+			},
+		})
+		guard := groupAdminGuard(true)(nextHandler) // ownerOnly = true
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/admin/dismiss", strings.NewReader(`{"group_id":"g_1"}`))
+		guard.ServeHTTP(rr, req)
+
+		var resp httpx.ApiResponse[httpx.ForbiddenErrorData]
+		_ = json.NewDecoder(rr.Body).Decode(&resp)
+		if resp.Code != httpx.CodeForbidden || resp.Data == nil || resp.Data.ForbiddenReason != httpx.ReasonNotGroupOwner {
+			t.Fatalf("expected ReasonNotGroupOwner, got %+v", resp)
+		}
+	})
+
+	// 7. 管理员正常访问普通管理端点（ownerOnly=false） -> 放行
+	t.Run("Admin On Admin Endpoint Allowed", func(t *testing.T) {
+		SetGroupRoleResolver(mockRoleResolver{
+			roleFunc: func(ctx context.Context, groupID string) (rbac.GroupRole, bool, error) {
+				return rbac.GroupRoleAdmin, true, nil
+			},
+		})
+		nextCalled = false
+		guard := groupAdminGuard(false)(nextHandler)
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/admin/settings", strings.NewReader(`{"group_id":"g_1"}`))
+		guard.ServeHTTP(rr, req)
+
+		if !nextCalled || rr.Code != http.StatusNoContent {
+			t.Fatalf("expected next handler called with 204, got %d", rr.Code)
+		}
+	})
+
+	// 8. 群主访问 ownerOnly 端点 -> 放行
+	t.Run("Owner On OwnerOnly Endpoint Allowed", func(t *testing.T) {
+		SetGroupRoleResolver(mockRoleResolver{
+			roleFunc: func(ctx context.Context, groupID string) (rbac.GroupRole, bool, error) {
+				return rbac.GroupRoleOwner, true, nil
+			},
+		})
+		nextCalled = false
+		guard := groupAdminGuard(true)(nextHandler)
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/admin/dismiss", strings.NewReader(`{"group_id":"g_1"}`))
+		guard.ServeHTTP(rr, req)
+
+		if !nextCalled || rr.Code != http.StatusNoContent {
+			t.Fatalf("expected next handler called with 204, got %d", rr.Code)
+		}
+	})
 }

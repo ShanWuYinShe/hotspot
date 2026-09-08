@@ -12,7 +12,10 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/testdb"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // seedFollowedMoment 预置一条 author 发布的公开瞬间（含位置）。
@@ -262,3 +265,76 @@ func TestHandlerFetchNearbyAnonymousAllowed(t *testing.T) {
 }
 
 func intPtr(v int) *int { return &v }
+
+func TestServiceFetchNearbyCursorPagination(t *testing.T) {
+	repo := NewInMemoryRepository()
+	// 锚点为天安门：(39.9042, 116.4074)
+	centerLat, centerLng := 39.9042, 116.4074
+
+	// 创建 3 条距离由近到远的动态
+	// 动态 1：距中心 ~100m
+	seedFollowedMoment(t, repo, "author_near", "m_near", centerLat+0.001, centerLng)
+	// 动态 2：距中心 ~1km
+	seedFollowedMoment(t, repo, "author_mid", "m_mid", centerLat+0.01, centerLng)
+	// 动态 3：距中心 ~5km
+	seedFollowedMoment(t, repo, "author_far", "m_far", centerLat+0.05, centerLng)
+
+	svc := NewServiceWithRepo(repo)
+	refPoint := &GeoPoint{Latitude: centerLat, Longitude: centerLng}
+
+	radius := 50000
+	// 第一次请求：limit=2
+	firstPage, err := svc.FetchNearby(context.Background(), FetchNearbyMomentsRequest{
+		ReferencePoint: refPoint,
+		Radius:         &radius,
+		Pagination:     &PaginationParams{Limit: 2},
+	})
+	if err != nil {
+		t.Fatalf("fetch nearby page 1: %v", err)
+	}
+	if len(firstPage.Items) != 2 {
+		t.Fatalf("expected 2 items in page 1, got %d", len(firstPage.Items))
+	}
+	if firstPage.Items[0].Description != "m_near" || firstPage.Items[1].Description != "m_mid" {
+		t.Fatalf("unexpected ordering in page 1: %s, %s", firstPage.Items[0].Description, firstPage.Items[1].Description)
+	}
+	if firstPage.NextCursor == nil || *firstPage.NextCursor == "" {
+		t.Fatalf("expected valid next_cursor, got %+v", firstPage)
+	}
+
+	// 第二次请求：携带第一页游标
+	secondPage, err := svc.FetchNearby(context.Background(), FetchNearbyMomentsRequest{
+		ReferencePoint: refPoint,
+		Radius:         &radius,
+		Pagination:     &PaginationParams{Limit: 2, Cursor: *firstPage.NextCursor},
+	})
+	if err != nil {
+		t.Fatalf("fetch nearby page 2: %v", err)
+	}
+	if len(secondPage.Items) != 1 {
+		t.Fatalf("expected 1 item in page 2, got %d", len(secondPage.Items))
+	}
+	if secondPage.Items[0].Description != "m_far" {
+		t.Fatalf("expected m_far on page 2, got %s", secondPage.Items[0].Description)
+	}
+	if secondPage.NextCursor != nil {
+		t.Fatal("expected next_cursor=nil on last page")
+	}
+}
+
+func TestMomentsModuleMounting(t *testing.T) {
+	fac := persistence.NewFactory(config.Config{})
+	mod := NewModule(fac, nil, nil, nil, nil)
+	if mod == nil {
+		t.Fatal("expected non-nil moments module")
+	}
+	if mod.CommentsService() == nil {
+		t.Fatal("expected non-nil comments service attached to module")
+	}
+
+	r := chi.NewRouter()
+	mod.Mount(r)
+
+	pubR := chi.NewRouter()
+	mod.MountPublic(pubR)
+}
