@@ -353,7 +353,7 @@
 								<p class="text-xs text-text-secondary">基于地理位置的实时社交与社区发现应用</p>
 							</div>
 						</div>
-						<span class="text-xs font-mono font-medium px-2.5 py-1 rounded-md bg-surface-page text-text-secondary border border-border-default">{APP_VERSION}</span>
+						<span class="badge text-xs font-mono font-medium border border-border-default bg-transparent text-text-secondary">{APP_VERSION}</span>
 					</div>
 
 					{#if auth.isAuthenticated}

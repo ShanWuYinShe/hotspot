@@ -149,13 +149,13 @@
   .vibrant.dark .flat,
   .vibrant.dark .input-surface,
   .vibrant.dark .icon-badge {
-    background: color-mix(in srgb, var(--cst-surface-primary) 86%, var(--cst-accent-default) 6%);
+    background: color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-accent-default) 6%);
   }
   .vibrant .surface-flat {
-    background: color-mix(in srgb, var(--cst-surface-primary) 92%, var(--cst-accent-default) 3%);
+    background: color-mix(in srgb, var(--cst-surface-primary) 97%, var(--cst-accent-default) 3%);
   }
   .vibrant .input-surface {
-    background: color-mix(in srgb, var(--cst-surface-primary) 70%, var(--cst-accent-default) 5%) !important;
+    background: color-mix(in srgb, var(--cst-surface-primary) 95%, var(--cst-accent-default) 5%) !important;
     backdrop-filter: blur(var(--cst-blur-md)) saturate(1.25);
   }
   @media (hover: hover) and (pointer: fine) {

@@ -102,7 +102,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 
 {#snippet momentRows(items: MomentItem[], onClick: (momentId: string) => void)}
-	<ListContainer bordered={false} class="divide-y divide-border-subtle/30">
+	<ListContainer bordered>
 		{#each items as moment, i (moment.moment_id)}
 			<MomentRow {moment} index={i} onClick={() => onClick(moment.moment_id)} />
 		{/each}
@@ -134,7 +134,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{#snippet trailing()}
 				<div class="flex items-center gap-2">
 					{#if onlineCount > 0}
-						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full surface-flat">
+						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-default bg-surface-primary shadow-raised-xs">
 							<span class="rounded-full size-1.5 bg-status-online"></span>
 							<span class="text-xs text-text-secondary">{onlineCount} 在线</span>
 						</div>

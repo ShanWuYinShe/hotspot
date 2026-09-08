@@ -121,7 +121,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			<LoadError message={error} onRetry={retry} />
 		{:else}
 			<!-- 身份卡 + 居中统计（同一张卡，指标复用 MetricRow 原语） -->
-			<section class="mt-6 overflow-hidden rounded-lg surface-flat" aria-label="公开个人资料">
+			<section class="mt-6 overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="公开个人资料">
 				<div class="flex items-start gap-5 p-6">
 					<Avatar src={avatar} name={nickname} size={80} ring class="shrink-0" />
 					<div class="min-w-0 pt-1">
@@ -139,7 +139,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 
 			<!-- 双栏：我的内容入口 + 资料状态 -->
 			<div class="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-				<section class="rounded-lg surface-flat" aria-label="我的内容">
+				<section class="rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="我的内容">
 					<div class="border-b border-border-default px-6 py-4">
 						<h2 class="text-sm font-medium text-text-primary">我的内容</h2>
 						<p class="mt-1 text-xs text-text-secondary">你的瞬间、群组与社交关系都在这里。</p>
@@ -158,14 +158,14 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 									<span class="block text-sm font-medium text-text-primary">{item.title}</span>
 									<span class="mt-0.5 block truncate text-xs text-text-secondary">{item.description}</span>
 								</span>
-								<ChevronRight class="size-4 shrink-0 text-text-secondary"  strokeWidth={1.75} />
+								<ChevronRight class="size-4 text-text-secondary opacity-subtle" strokeWidth={1.5} />
 							</button>
 						{/each}
 					</div>
 				</section>
 
 				<!-- 资料状态 -->
-				<aside class="rounded-lg surface-flat p-5" aria-label="资料状态">
+				<aside class="rounded-lg border border-border-default bg-surface-primary p-5 shadow-raised-sm" aria-label="资料状态">
 					<div class="flex items-center justify-between">
 						<h2 class="text-sm font-medium text-text-primary">资料状态</h2>
 						<ShieldCheck class="size-4 text-accent-default"   strokeWidth={1.75} />

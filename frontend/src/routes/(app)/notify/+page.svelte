@@ -291,7 +291,7 @@ const FILTER_TABS = [
 						<p class="eyebrow">新消息</p>
 						<span class="badge text-accent-default bg-accent-soft">{unreadGroup.length}</span>
 					</div>
-					<ListContainer bordered={false} class="divide-y divide-border-subtle/30">
+					<ListContainer bordered class="mb-5">
 						{#each unreadGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
@@ -304,7 +304,7 @@ const FILTER_TABS = [
 						<p class="eyebrow">较早</p>
 						<span aria-hidden="true" class="h-px flex-1 bg-border-default"></span>
 					</div>
-					<ListContainer bordered={false} class="divide-y divide-border-subtle/30">
+					<ListContainer bordered>
 						{#each readGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}

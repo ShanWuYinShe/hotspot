@@ -22,7 +22,7 @@
 	} = $props();
 </script>
 
-<ListContainer bordered={false} class="divide-y divide-border-subtle/30">
+<ListContainer bordered>
 	{#each users as u (u.id)}
 		{@const followed = followingIds.has(u.id)}
 		<UserCardRow name={u.name} avatar={u.avatar}>

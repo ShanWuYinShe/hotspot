@@ -192,11 +192,11 @@
 		<div class="flex flex-col shrink-0 overflow-hidden w-80 border-r border-border-default bg-surface-primary">
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
 			<div class="shrink-0 border-b border-border-subtle/40">
-				<PageHeader title="消息" contentClassName="px-4 pt-4 pb-0">
+				<PageHeader title="消息" class="!bg-surface-primary" contentClassName="px-4 pt-4 pb-0">
 					{#snippet trailing()}
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-9"
+							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-xs size-9"
 							onclick={() => {
 								newChatTab = 'chat';
 								showNewChat = true;
@@ -241,8 +241,8 @@
 			/>
 		</div>
 
-		<!-- Right: chat view or empty state（对齐 Figma：无卡片包裹，直接平铺） -->
-		<div class="flex-1 overflow-hidden bg-surface-page">
+		<!-- Right: chat view or empty state（底色与面板统一，中间由发丝边框清晰划分） -->
+		<div class="flex-1 overflow-hidden bg-surface-primary">
 			{#if selectedId !== null && selectedChat}
 				<div class="h-full">
 					{#if selectedChat.kind === 'group'}

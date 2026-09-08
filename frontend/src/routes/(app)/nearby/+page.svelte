@@ -39,10 +39,10 @@
 		/>
 	{/snippet}
 
-	<!-- 搜索入口（门户第一入口）：内凹输入框形态，不与下方列表卡争层级 -->
+	<!-- 搜索入口（门户第一入口）：卡片式搜索框，与下方列表卡保持统一层次 -->
 	<button
 		type="button"
-		class="input-surface hover-btn flex w-full items-center gap-3 rounded-md px-4 py-3 text-left focus-ring"
+		class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary px-4 py-3 text-left shadow-raised-sm focus-ring hover:border-border-strong"
 		onclick={() => void goto(ROUTES.search)}
 	>
 		<SearchIcon class="size-5 shrink-0 text-accent-default" strokeWidth={1.75} />

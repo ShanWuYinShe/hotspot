@@ -198,7 +198,7 @@
 					<button
 						type="button"
 						onclick={() => void resetLoggedOut()}
-						class="mt-2.5 w-full rounded-md border border-border-default bg-surface-subtle py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-interactive-hover hover:text-text-primary focus-ring"
+						class="mt-2.5 w-full rounded-md border border-border-default bg-surface-primary py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-interactive-hover hover:text-text-primary focus-ring"
 					>
 						重置为未登录（匿名浏览）
 					</button>

@@ -27,6 +27,7 @@
   --color-accent-border: var(--cst-accent-border);
   --color-border-default: var(--cst-border-default);
   --color-border-strong: var(--cst-border-strong);
+  --color-border-subtle: var(--cst-border-subtle);
   --color-status-online: var(--cst-status-online);
   --color-status-danger: var(--cst-status-danger);
   --color-status-warning: var(--cst-status-warning);
