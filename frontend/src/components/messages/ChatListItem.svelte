@@ -88,7 +88,7 @@
 				{/if}
 				{#if chat.unread > 0}
 					<span
-						class="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-xs font-semibold tabular-nums {isSelected ? 'bg-text-on-accent text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+						class="inline-flex min-w-5 h-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold leading-none tabular-nums {isSelected ? 'bg-text-on-accent text-accent-default' : 'bg-accent-default text-text-on-accent'}"
 					>
 						{chat.unread}
 					</span>

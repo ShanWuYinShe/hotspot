@@ -165,7 +165,7 @@ locationName = loc?.location_name ?? '';
 							</div>
 						</div>
 						{#if isSelected}
-							<span class="shrink-0 rounded-full px-2 py-1 text-xxs text-accent-default bg-text-on-accent">已定位</span>
+							<span class="inline-flex h-5 shrink-0 items-center justify-center rounded-full bg-text-on-accent px-2 text-xxs font-medium leading-none text-accent-default">已定位</span>
 						{:else}
 							<ChevronRight class="size-3.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 						{/if}

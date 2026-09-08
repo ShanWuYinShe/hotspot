@@ -97,7 +97,7 @@
 		{#if moment.images.length > 1}
 			<button
 				type="button"
-				class="hover-btn absolute right-3 bottom-3 rounded-full bg-surface-media-scrim-strong px-2.5 py-1 text-xxs text-content-inverse focus-ring"
+				class="hover-btn absolute right-3 bottom-3 inline-flex h-5 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2.5 text-xxs font-medium leading-none text-content-inverse focus-ring"
 				aria-label={`查看全部 ${moment.images.length} 张图片`}
 				onclick={() => {
 					viewerIndex = 0;

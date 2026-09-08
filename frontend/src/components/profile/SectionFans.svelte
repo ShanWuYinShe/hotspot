@@ -92,7 +92,7 @@
 >
 	{#snippet headerExtra()}
 		{#if pendingCount > 0}
-			<span class="rounded-full px-2 py-0.5 text-xs text-status-warning" style="background:var(--cst-status-warning-bg);border:var(--cst-border-width-hairline) solid var(--cst-status-warning-border);">
+			<span class="inline-flex h-5 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none text-status-warning" style="background:var(--cst-status-warning-bg);border:var(--cst-border-width-hairline) solid var(--cst-status-warning-border);">
 				{pendingCount} 待回关
 			</span>
 		{/if}

@@ -153,7 +153,7 @@
 						</span>
 					</div>
 				</div>
-				<span class="rounded-full border border-accent-border bg-accent-soft px-2.5 py-1 text-xxs font-medium text-accent-default">
+				<span class="inline-flex h-5 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xxs font-medium leading-none text-accent-default">
 					正在发布
 				</span>
 			</div>

@@ -196,7 +196,7 @@
 		>
 			<!-- 顶栏：页码 + 关闭 -->
 			<div class="flex items-center justify-between px-4 pt-3 pb-1">
-				<span class="rounded-full bg-surface-media-scrim-strong px-2.5 py-0.5 text-xs tabular-nums text-content-inverse">
+				<span class="inline-flex h-6 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2.5 text-xs font-medium leading-none tabular-nums text-content-inverse">
 					{count > 0 ? index + 1 : 0} / {count}
 				</span>
 				<button

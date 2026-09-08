@@ -209,7 +209,7 @@
 			<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} variant="overlay" tone="inverse" />
 		</div>
 		<div class="absolute bottom-5 left-6 right-6">
-			<span class="rounded-full bg-surface-glass-badge px-2.5 py-1 text-xs text-content-inverse backdrop-blur-[var(--cst-blur-sm)]">{gd.detail.category}</span>
+			<span class="inline-flex h-6 items-center justify-center rounded-full bg-surface-glass-badge px-2.5 text-xs font-medium leading-none text-content-inverse backdrop-blur-[var(--cst-blur-sm)]">{gd.detail.category}</span>
 			<h1 class="mt-3 text-2xl md:text-3xl font-medium tracking-title text-content-inverse">{gd.detail.name}</h1>
 		</div>
 	</div>

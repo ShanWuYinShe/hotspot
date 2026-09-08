@@ -73,7 +73,7 @@ const needsAuth = $derived(myGroups.needsAuth);
 
 				<!-- 右上：在线人数徽章 -->
 				<div
-					class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-overlay-strong text-content-inverse text-xxs"
+					class="absolute top-2.5 right-2.5 z-[2] inline-flex h-5 items-center justify-center gap-1 px-2.5 rounded-full bg-surface-overlay-strong text-content-inverse text-xxs font-medium leading-none"
 					style="backdrop-filter:blur(var(--cst-blur-sm));"
 				>
 					<span class="rounded-full size-1.5 bg-status-online"></span>

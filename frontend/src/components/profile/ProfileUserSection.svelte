@@ -73,7 +73,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-text-primary text-sm">{title}</span>
-					<span class="rounded-full bg-accent-default px-2 py-0.5 text-xs text-text-on-accent">
+					<span class="inline-flex h-5 items-center justify-center rounded-full bg-accent-default px-2 text-xxs font-medium leading-none text-text-on-accent">
 						{count}{countSuffix}
 					</span>
 				</div>
@@ -82,7 +82,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				{/if}
 			</div>
 			{#if headerNote}
-				<span class="rounded-full bg-accent-soft px-3 py-1 text-xs text-accent-default border border-accent-border" >
+				<span class="inline-flex h-6 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xs font-medium leading-none text-accent-default">
 					{headerNote}
 				</span>
 			{:else if headerExtra}

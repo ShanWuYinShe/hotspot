@@ -25,8 +25,8 @@
 	} = $props();
 
 	const sizeClasses = {
-		sm: 'text-xxs',
-		md: 'text-xs'
+		sm: 'h-6 px-2.5 text-xxs',
+		md: 'h-7 px-3 text-xs'
 	} as const;
 </script>
 
@@ -36,7 +36,7 @@
 		aria-pressed={active}
 		disabled={disabled}
 		class={cn(
-			'hit-slop rounded-full outline-none transition-colors px-3 py-1.5 cursor-pointer surface-ghost focus-visible:ring-2 focus-visible:ring-accent-default',
+			'hit-slop inline-flex items-center justify-center gap-1 rounded-full outline-none leading-none transition-colors cursor-pointer surface-ghost focus-visible:ring-2 focus-visible:ring-accent-default',
 			sizeClasses[size],
 			disabled && 'pointer-events-none opacity-subtle',
 			active
@@ -56,7 +56,7 @@
 {:else}
 	<span
 		class={cn(
-			'rounded-full focus-ring transition-colors px-3 py-1',
+			'inline-flex items-center justify-center gap-1 rounded-full focus-ring leading-none transition-colors',
 			sizeClasses[size],
 			active
 				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold'

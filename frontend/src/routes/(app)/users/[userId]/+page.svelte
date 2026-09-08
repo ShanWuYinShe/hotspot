@@ -439,7 +439,7 @@
 					</span>
 				{/if}
 				{#each user.tags as t (t)}
-					<span class="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs text-accent-default border border-accent-border" >
+					<span class="inline-flex h-6 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xs font-medium leading-none text-accent-default">
 						#{t}
 					</span>
 				{/each}
@@ -486,7 +486,7 @@
 	<RailSection title="兴趣标签">
 		<div class="flex gap-2 flex-wrap">
 			{#each user.tags as t (t)}
-				<span class="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-default text-xs border border-accent-border" >
+				<span class="inline-flex h-6 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xs font-medium leading-none text-accent-default">
 					#{t}
 				</span>
 			{/each}
