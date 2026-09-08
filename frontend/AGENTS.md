@@ -92,6 +92,7 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
 
 - 调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 dev server 地址
 - 修改 nginx 配置后必须重启对应容器
+- **改动生效闭环**：代码改动合并进主分支后，若主实例开发容器在运行（`http://localhost:8888`），必须主动帮开发者执行 `docker compose -f docker-compose.yml -f docker-compose.dev.yml restart frontend nginx` 并确认 healthy，确保刷新浏览器即可立即看到最新改动效果
 - Svelte 组件互引必须写显式 `.svelte` 扩展名（默认导出）；Svelte 5 单文件单组件
 - 新增依赖后容器内需重装（entrypoint 有自动检测，或 `docker compose up -d --force-recreate frontend`）
 - 每个路由 `+page.svelte` 必须设置 `<svelte:head><title>`（格式 `页面名 · HotSpot`）；
@@ -120,6 +121,11 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
    `scripts/check-cross-platform-colors.mjs`（映射表内嵌于脚本：前端 forest ≡
    harmonyapp default_clean、success/error/info 随主题族色源），CI 会在漂移时
    拦截；主题选择器 swatch 也已纳入同一校验。
+6. **徽标与标签（Badge / Pill）居中与排版契约**：
+   - 必须同时声明 `inline-flex items-center justify-center leading-none`，杜绝未设行高导致继承全局行高（24px）产生“文字下沉贴底”或在近正方形上施加 `rounded-full` 产生“怪异胖椭圆”；
+   - 紧凑型徽标（未读数气泡、状态胶囊、卡片角标）：`h-5 px-2` 或 `h-5 px-2.5`，字号 `text-xxs`；
+   - 标准型标签（封面分类胶囊、个人兴趣标签、大图页码）：`h-6 px-2.5`，字号 `text-xs font-medium`；
+   - 表单筛选胶囊（`TagPill`）：`sm` 为 `h-6 px-2.5 text-xxs`，`md` 为 `h-7 px-3 text-xs`。
 
 > 具体状态契约见「样式自查清单 → 交互状态契约」。
 

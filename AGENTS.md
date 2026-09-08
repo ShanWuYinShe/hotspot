@@ -105,9 +105,23 @@ git branch -d <分支名>
 > 目录名同名冲突时禁止使用上面的默认清理命令（它作用于主实例项目，`-v` 会删除主实例
 > 数据卷）；改用上文第 3 步的独立项目命令。
 
+### 合并后主动重启主开发容器（确保最新效果立即可见）
+
+当 Worktree 分支代码完成验证并合并到 `main` 分支后，如果主开发环境容器正在运行（`http://localhost:8888`）：
+- **必须主动帮开发者重启受影响的主容器**，避免因 Vite dev 进程缓存或静态代理未刷新导致开发者看不到最新效果：
+  ```bash
+  # 前端改动
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml restart frontend nginx
+  # 后端改动（或全栈改动）
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml restart backend frontend nginx
+  ```
+- 重启后需通过 `docker compose ps` 确认容器恢复 `healthy` 状态，确保开发者刷新浏览器即可直接看到最新效果。
+
 ## 项目特有约束
 - 契约权威：`spec/` 是 API 契约的唯一权威来源；修改接口、字段、错误码前先对齐 `spec/`。
 - 跨端边界：距离与位置计算统一由后端完成，前端和客户端只展示结果。
 - **int64 跨端序列化统一为字符串**：JS（Svelte）与 ArkTS 的 number 是 IEEE754 double，无法无损表示 Go int64（安全整数上限 2^53）。凡 spec 定义 string、后端为 int64 的字段（如 WS `server_seq`），后端 JSON tag 必须加 `,string` 下发字符串；前端/harmonyapp 类型保持 string 仅透传/去重、不做数值运算。禁止以「后端实际下发数字」为由把客户端类型改成 number——正确修法是后端序列化为字符串。
 - Docker Compose 统一管理：所有服务（postgres、redis、seaweedfs、backend、frontend、nginx）统一通过 `docker compose` 编排启动/停止；不得混用宿主机进程与容器，也不允许单独启动某个服务绕过 compose。
+- **改动生效闭环**：代码改动合并到主分支后，若主环境 Docker 容器在运行，必须主动重启相关容器，确保最新效果立即可见，不得要求开发者手动重启。
 - 更新代码的过程中发现的问题、错误，都应该修复掉，不能因为不是本次修改引起的就搁置
+
