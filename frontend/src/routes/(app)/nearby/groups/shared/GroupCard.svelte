@@ -44,7 +44,7 @@
 		</div>
 	{:else}
 		<!-- 左上：分类 -->
-		<span class="absolute top-2 left-2 z-[2] px-1.5 py-0.5 rounded-full text-text-on-accent bg-accent-default text-xxs">{group.category}</span>
+		<span class="absolute top-2.5 left-2.5 z-[2] inline-flex h-5 items-center justify-center rounded-full bg-accent-default px-2.5 text-xxs font-medium leading-none text-text-on-accent shadow-raised-sm">{group.category}</span>
 
 		<!-- 右上：隐私 -->
 		<span class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full size-5 bg-surface-overlay-strong"  >

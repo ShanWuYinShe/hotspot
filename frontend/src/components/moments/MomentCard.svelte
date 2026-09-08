@@ -47,11 +47,11 @@
 		</div>
 	{/snippet}
 
-	<!-- Tag chip -->
+	<!-- Tag chip：标准居中胶囊，严格锁定 h-5 与 leading-none 避免行高继承膨胀偏心 -->
 	{#if item.tag}
-		<div class="absolute top-2.5 left-2.5 z-[2] px-2 py-0.5 rounded-full bg-accent-default shadow-raised-sm">
-			<span class="text-text-on-accent text-xxs font-medium">{item.tag}</span>
-		</div>
+		<span class="absolute top-2.5 left-2.5 z-[2] inline-flex h-5 items-center justify-center rounded-full bg-accent-default px-2.5 text-xxs font-medium leading-none text-text-on-accent shadow-raised-sm">
+			{item.tag}
+		</span>
 	{/if}
 
 	<!-- 底部信息托盘（surface-card-menu，由 NearbyImageCard footer 槽渲染） -->
