@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Home, MapPin, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
+	import { ArrowLeft, Home, MapPin, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
@@ -29,7 +29,57 @@
 
 	// FAB 悬浮投影：统一走 --cst-elevation-fab（中性高雅，无彩色炫光）
 	const fabShadow = $derived(composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)');
+
+	// 单手边缘轻扫返回手势（Swipe-to-Go-Back）——解救单手大屏握持痛点
+	let touchStartX = 0;
+	let touchStartY = 0;
+	let swipeDistance = $state(0);
+	let isEdgeSwiping = $state(false);
+
+	function handleTouchStart(e: TouchEvent) {
+		if (!isSubPage || e.touches.length !== 1) return;
+		const touch = e.touches[0];
+		if (!touch) return;
+		if (touch.clientX <= 32) {
+			touchStartX = touch.clientX;
+			touchStartY = touch.clientY;
+			isEdgeSwiping = true;
+			swipeDistance = 0;
+		}
+	}
+
+	function handleTouchMove(e: TouchEvent) {
+		if (!isEdgeSwiping || e.touches.length !== 1) return;
+		const touch = e.touches[0];
+		if (!touch) return;
+		const dx = touch.clientX - touchStartX;
+		const dy = touch.clientY - touchStartY;
+		// 垂直滚动倾向明显时取消边缘滑动手势
+		if (Math.abs(dy) > Math.abs(dx) * 1.2 && dx < 20) {
+			isEdgeSwiping = false;
+			swipeDistance = 0;
+			return;
+		}
+		if (dx > 0) {
+			swipeDistance = Math.min(dx, 120);
+		}
+	}
+
+	function handleTouchEnd() {
+		if (isEdgeSwiping && swipeDistance >= 60) {
+			history.back();
+		}
+		isEdgeSwiping = false;
+		swipeDistance = 0;
+	}
 </script>
+
+<svelte:window
+	ontouchstart={handleTouchStart}
+	ontouchmove={handleTouchMove}
+	ontouchend={handleTouchEnd}
+	ontouchcancel={handleTouchEnd}
+/>
 
 <div
 	class="bg-surface-page min-h-dvh w-full flex justify-center items-start font-sans transition-colors duration-gentle"
@@ -38,6 +88,18 @@
 		class={cn('bg-surface-page text-text-primary flex flex-col h-dvh w-full', 'transition-colors duration-gentle overflow-hidden relative')}
 	>
 		<StatusBar />
+
+		{#if isEdgeSwiping && swipeDistance > 15}
+			<div
+				class="pointer-events-none fixed left-0 top-1/2 -translate-y-1/2 z-[var(--cst-z-toast)] flex items-center gap-1.5 rounded-r-full bg-surface-primary/95 px-2.5 py-3 shadow-raised-lg border-y border-r border-border-default transition-all duration-rapid"
+				style={`transform: translate3d(${Math.min(swipeDistance * 0.35, 20)}px, -50%, 0); opacity: ${Math.min(swipeDistance / 40, 1)};`}
+			>
+				<ArrowLeft class="size-4 text-accent-default" strokeWidth={2.25} />
+				{#if swipeDistance >= 60}
+					<span class="text-xs font-medium text-text-primary pr-1">松开返回</span>
+				{/if}
+			</div>
+		{/if}
 
 		<div class="flex-1 min-h-0 overflow-hidden">
 			<RoutedContentViewport>{@render children()}</RoutedContentViewport>

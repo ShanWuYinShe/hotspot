@@ -148,6 +148,29 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 						</p>
 					</div>
 				</div>
+				<!-- 单手黄金操作区：拇指自然易达，告别天花板长距离伸展 -->
+				<div class="flex items-center gap-2.5 px-6 pb-5 pt-1">
+					<button
+						type="button"
+						onclick={() => void goto(ROUTES.meEdit)}
+						class="hover-btn inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border-default bg-surface-primary py-2 px-3 text-sm font-medium text-text-primary shadow-raised-xs focus-ring transition-colors hover:bg-accent-soft"
+					>
+						<Pencil class="size-4 text-text-secondary" strokeWidth={1.75} />
+						编辑资料
+					</button>
+					<div class="shrink-0">
+						<AppearanceMenu />
+					</div>
+					<button
+						type="button"
+						onclick={() => void goto(ROUTES.settings)}
+						class="hover-btn inline-flex items-center justify-center gap-1.5 rounded-md border border-border-default bg-surface-primary py-2 px-3.5 text-sm font-medium text-text-primary shadow-raised-xs focus-ring transition-colors hover:bg-accent-soft"
+						aria-label="系统设置"
+					>
+						<Settings class="size-4 text-text-secondary" strokeWidth={1.75} />
+						<span class="hidden sm:inline text-xs">设置</span>
+					</button>
+				</div>
 				<MetricRow items={metricItems} class="border-t border-border-default" />
 			</section>
 

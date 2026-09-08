@@ -4,6 +4,7 @@
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
@@ -90,18 +91,36 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 							</p>
 						</div>
 					</div>
+				</div>
+				{#if bio}
+					<p class="mt-3 max-w-107.5 text-xs leading-relaxed text-text-secondary">
+						{bio}
+					</p>
+				{/if}
+
+				<!-- 移动端单手黄金操作区：大拇指无需移位，直达高频设置、外观与编辑 -->
+				<div class="mt-4 flex items-center gap-2 pt-1">
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.meEdit)}
-						class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2.5 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
+						class="hover-btn inline-flex flex-1 items-center justify-center gap-1.5 border border-border-default rounded-md bg-surface-primary py-2 px-3 text-xs font-medium text-text-primary shadow-raised-xs focus-ring transition-colors hover:bg-accent-soft"
 					>
-						<Pencil class="size-3.5"  strokeWidth={1.75} />
+						<Pencil class="size-3.5 text-text-secondary" strokeWidth={1.75} />
 						编辑资料
 					</button>
+					<div class="shrink-0">
+						<AppearanceMenu />
+					</div>
+					<button
+						type="button"
+						onclick={() => void goto(ROUTES.settings)}
+						class="hover-btn inline-flex items-center justify-center gap-1.5 border border-border-default rounded-md bg-surface-primary py-2 px-3 text-xs font-medium text-text-primary shadow-raised-xs focus-ring transition-colors hover:bg-accent-soft"
+						aria-label="系统设置"
+					>
+						<Settings class="size-3.5 text-text-secondary" strokeWidth={1.75} />
+						<span>设置</span>
+					</button>
 				</div>
-				<p class="mt-5 max-w-107.5 text-sm leading-6 text-text-secondary">
-					{bio || '这个人还没有填写简介。'}
-				</p>
 			</div>
 			<!-- 统计横条：仅保留顶部分隔线，列间用留白（竖线在小屏三列里显得切割局促）。
 			     数字 display 化（大号粗体 + 紧字距），对齐 Figma stats 模式 -->
