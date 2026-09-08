@@ -298,86 +298,88 @@
 	</div>
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
-	<PageHeader title="消息" sticky titleSize="3xl" subtitleSize="sm">
-		{#snippet trailing()}
-			<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->
-			<div class="flex items-center gap-2">
-				{#if totalUnread > 0}
-					<span class="text-text-secondary text-xs">{totalUnread} 条未读</span>
-				{:else}
-					<span class="text-status-online text-xs">全部已读</span>
-				{/if}
-				<button
-					type="button"
-					class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring surface-flat size-9"
-					onclick={() => {
-						newChatTab = 'chat';
-						showNewChat = true;
-					}}
-					aria-label="发起新会话"
-				>
-					<Plus class="size-4 text-text-secondary"   strokeWidth={1.5} />
-				</button>
-			</div>
-		{/snippet}
-		{#snippet below()}
-			<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->
-			<div class="mt-3">
-				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-md px-4 py-2.5" />
-				<div class="mt-2.5">
-					<TabBar
-						items={FILTER_TABS}
-						value={chatFilter}
-						onChange={(id) => (chatFilter = id as typeof chatFilter)}
-						variant="segmented"
-					/>
+	<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
+		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize="3xl" subtitleSize="sm">
+			{#snippet trailing()}
+				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->
+				<div class="flex items-center gap-2">
+					{#if totalUnread > 0}
+						<span class="text-text-secondary text-xs">{totalUnread} 条未读</span>
+					{:else}
+						<span class="text-status-online text-xs">全部已读</span>
+					{/if}
+					<button
+						type="button"
+						class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-xs size-9"
+						onclick={() => {
+							newChatTab = 'chat';
+							showNewChat = true;
+						}}
+						aria-label="发起新会话"
+					>
+						<Plus class="size-4 text-text-secondary" strokeWidth={1.5} />
+					</button>
 				</div>
-			</div>
-		{/snippet}
-	</PageHeader>
+			{/snippet}
+			{#snippet below()}
+				<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->
+				<div class="mt-3">
+					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-md px-4 py-2.5" />
+					<div class="mt-2.5">
+						<TabBar
+							items={FILTER_TABS}
+							value={chatFilter}
+							onChange={(id) => (chatFilter = id as typeof chatFilter)}
+							variant="segmented"
+						/>
+					</div>
+				</div>
+			{/snippet}
+		</PageHeader>
 
-	<div class="animate-fade-in flex flex-col flex-1 pb-8">
-		{#if onlineChats.length > 0}
-			<div class="px-4 pt-2">
-				<OnlineStrip chats={onlineChats} onSelect={(c) => void goto(ROUTES.message(c.peerUserId || c.id))} />
-			</div>
-		{/if}
+		<div class="animate-fade-in flex flex-col flex-1 pb-8 bg-surface-primary">
+			{#if onlineChats.length > 0}
+				<div class="px-4 pt-2">
+					<OnlineStrip chats={onlineChats} onSelect={(c) => void goto(ROUTES.message(c.peerUserId || c.id))} />
+				</div>
+			{/if}
 
-		<div class="px-4 mt-3 mb-1.5">
-			<p class="eyebrow">最近</p>
+			<div class="px-4 mt-3 mb-1.5">
+				<p class="eyebrow">最近</p>
+			</div>
+
+			<ChatListBody
+				chats={filtered}
+				loadError={loadError}
+				needsAuth={needsAuth}
+				loading={loading}
+				onRetry={() => reloadKey++}
+				onSelect={(chat) => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
+				onTogglePin={togglePin}
+			/>
 		</div>
 
-		<ChatListBody
-			chats={filtered}
-			loadError={loadError}
-			needsAuth={needsAuth}
-			loading={loading}
-			onRetry={() => reloadKey++}
-			onSelect={(chat) => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
-			onTogglePin={togglePin}
-		/>
+		<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
+			<Dialog.Content side="bottom" class="overflow-hidden" style="height:85%;box-shadow:var(--cst-elevation-sheet);">
+				<NewConversationSheet
+					defaultTab={newChatTab}
+					onClose={() => (showNewChat = false)}
+					onNewChat={(id) => void goto(ROUTES.message(id))}
+					onCreateGroup={() => (showCreateGroup = true)}
+				/>
+			</Dialog.Content>
+		</Dialog.Root>
+
+		<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
+			<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;box-shadow:var(--cst-elevation-sheet);">
+				<CreateGroupSheet
+					onClose={() => (showCreateGroup = false)}
+					onCreated={(groupId) => {
+						showCreateGroup = false;
+						void goto(ROUTES.groupMessage(groupId));
+					}}
+				/>
+			</Dialog.Content>
+		</Dialog.Root>
 	</div>
-
-	<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
-		<Dialog.Content side="bottom" class="overflow-hidden" style="height:85%;box-shadow:var(--cst-elevation-sheet);">
-			<NewConversationSheet
-				defaultTab={newChatTab}
-				onClose={() => (showNewChat = false)}
-				onNewChat={(id) => void goto(ROUTES.message(id))}
-				onCreateGroup={() => (showCreateGroup = true)}
-			/>
-		</Dialog.Content>
-	</Dialog.Root>
-
-	<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
-		<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;box-shadow:var(--cst-elevation-sheet);">
-			<CreateGroupSheet
-				onClose={() => (showCreateGroup = false)}
-				onCreated={(groupId) => {
-					showCreateGroup = false;
-					void goto(ROUTES.groupMessage(groupId));
-				}}
-			/>
-		</Dialog.Content>
-	</Dialog.Root>
 {/if}
