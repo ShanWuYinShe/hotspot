@@ -11,7 +11,6 @@
 	import ChatListBody from './shared/ChatListBody.svelte';
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
 	import NewConversationSheet from '@/components/overlays/NewConversationSheet.svelte';
-	import TabBar from '@/components/navigation/TabBar.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead, updatePrivateChatPreferences, updateGroupPreferences , netError } from '@/api';
@@ -39,7 +38,7 @@
 				loading = true;
 				loadError = null;
 				needsAuth = false;
-				// 并行加载私聊与我的群组，合并为统一会话列表（按时间倒序）。
+				// 并行加载私聊与我的群组，合并为统一会话列表（按置顶 > 未读 > 已读，时间倒序）。
 				const [privRes, groupRes] = await Promise.all([
 					getPrivateChats().catch(() => netError({ items: [] })),
 					listMyGroups().catch(() => netError({ items: [] }))
@@ -90,7 +89,7 @@
 						kind: 'group'
 					};
 				});
-				// 私聊与群聊混合，统一按「置顶 > 未读 > 已读，组内时间倒序」排序。
+				// 私聊与群聊混合，统一按「置顶 > 未读 > 已读，组内时间倒序」自然排序。
 				const items = [...privateChats, ...groupChats].sort(compareChatItems);
 				chats = items;
 				// 在线状态实时化：仅对非 group 会话订阅全部对端（chats.id 语义即 peer user_id，
@@ -116,27 +115,17 @@
 
 	// 共享状态：搜索/新会话/建群（移动与桌面共用）
 	let searchQuery = $state('');
-	// 已读/未读只做过滤，不参与排序（避免读后列表跳动）
-	let chatFilter = $state<'all' | 'unread' | 'read'>('all');
-	const FILTER_TABS: { id: 'all' | 'unread' | 'read'; label: string }[] = [
-		{ id: 'all', label: '全部' },
-		{ id: 'unread', label: '未读' },
-		{ id: 'read', label: '已读' }
-	];
 	let showNewChat = $state(false);
 	let newChatTab = $state<'add' | 'chat'>('chat');
 	let showCreateGroup = $state(false);
 	// 会话 id：私聊为数字索引/chat id，群聊为字符串 group_id。
 	let selectedId = $state<number | string | null>(null);
 
-	// 选中会话：设置选中 id + 立即清零本地未读（徽章消失）+ 调 markRead API。
-	// 未读状态不随 ChatView 内部处理（那里只标记"已读"不影响列表徽章），
-	// 列表层必须自己联动，否则点击未读会话后徽章不消失。
+	// 选中会话：设置选中 id + 立即清零本地未读 + 自然重排归位 + 调 markRead API。
 	const selectChat = (chat: ChatItem) => {
 		if (selectedId !== chat.id) selectedId = chat.id;
 		if (chat.unread > 0) {
-			// 只清零本地未读徽章；列表按时间排序，位置不跳动
-			chats = chats.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c));
+			chats = chats.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c)).sort(compareChatItems);
 			// spec: private_messages/mark_read(scope=session) / group_messages/mark_read(scope=group)；
 			// 幂等语义，失败静默（徽章已本地清零，不打扰浏览）。
 			if (chat.kind === 'group') {
@@ -167,11 +156,7 @@
 	);
 
 	const filtered = $derived(
-		liveChats.filter((c) => {
-			const byFilter =
-				chatFilter === 'all' || (chatFilter === 'unread' ? c.unread > 0 : c.unread === 0);
-			return byFilter && c.name.toLowerCase().includes(searchQuery.toLowerCase());
-		})
+		liveChats.filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
 	);
 	const onlineChats = $derived(liveChats.filter((c) => c.online));
 	const totalUnread = $derived(chats.reduce((s, c) => s + c.unread, 0));
@@ -209,14 +194,6 @@
 					{#snippet below()}
 						<div class="mt-3">
 							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="px-3 py-2" textClass="text-sm" />
-							<div class="mt-2.5">
-								<TabBar
-									items={FILTER_TABS}
-									value={chatFilter}
-									onChange={(id) => (chatFilter = id as typeof chatFilter)}
-									variant="segmented"
-								/>
-							</div>
 						</div>
 					{/snippet}
 				</PageHeader>
@@ -325,14 +302,6 @@
 				<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->
 				<div class="mt-3">
 					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-md px-4 py-2.5" />
-					<div class="mt-2.5">
-						<TabBar
-							items={FILTER_TABS}
-							value={chatFilter}
-							onChange={(id) => (chatFilter = id as typeof chatFilter)}
-							variant="segmented"
-						/>
-					</div>
 				</div>
 			{/snippet}
 		</PageHeader>

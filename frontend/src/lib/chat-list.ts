@@ -1,8 +1,10 @@
 // 消息页会话列表的数据模型与排序。
 //
-// 排序（用户要求 + spec 置顶语义）：
-//   置顶的聊天优先，其余一律按最新一条消息时间倒序；时间相同用 id 做稳定 tie-breaker。
-// 已读/未读只用于过滤，不参与排序——避免阅读后会话因分组变化在列表内跳动。
+// 排序契约（符合主流即时通讯直觉）：
+//   1. 置顶会话（isPinned）排在最前面；
+//   2. 在同为置顶或同为普通的分组中，未读会话（unread > 0）优先排在已读会话前面；
+//   3. 组内统一按最新一条消息/活跃时间戳倒序排列；
+//   4. 时间相同用 id 做稳定 tie-breaker。
 
 export interface ChatItem {
 	id: string;
@@ -26,8 +28,15 @@ function tsOf(t: string): number {
 }
 
 export function compareChatItems(a: ChatItem, b: ChatItem): number {
+	// 1. 置顶优先
 	if (a.isPinned !== b.isPinned) return Number(b.isPinned) - Number(a.isPinned);
+	// 2. 未读优先（置顶内未读 > 置顶内已读；普通内未读 > 普通内已读）
+	const aUnread = a.unread > 0;
+	const bUnread = b.unread > 0;
+	if (aUnread !== bUnread) return Number(bUnread) - Number(aUnread);
+	// 3. 最新消息时间倒序
 	const byTime = tsOf(b.timestamp) - tsOf(a.timestamp);
 	if (byTime !== 0) return byTime;
+	// 4. 稳定 tie-breaker
 	return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
