@@ -36,10 +36,9 @@
 	pressed={isSelected}
 	onClick={onClick}
 	ariaLabel={`打开与 ${chat.name} 的会话`}
-	class="flex items-center gap-3.5 {compact ? 'px-4 py-2.5' : 'px-4 py-3'}"
+	class="flex items-center gap-3.5 {compact ? 'px-3.5 py-2.5' : 'px-4 py-3'}"
 >
 	<span class="relative shrink-0">
-		<!-- 头像默认无边框（列表行内多层描边是噪音）；仅选中态用 inverse 框在 accent 底上区分 -->
 		<Avatar
 			src={chat.avatar}
 			name={chat.name}
@@ -51,43 +50,50 @@
 		{/if}
 	</span>
 
-	<span class="min-w-0 flex-1">
-		<span class="mb-0.5 flex items-baseline justify-between">
-			<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} truncate text-sm">
+	<span class="min-w-0 flex-1 flex flex-col justify-center">
+		<span class="flex items-center justify-between gap-2 mb-0.5">
+			<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary font-medium'} truncate text-sm">
 				{chat.name}
 			</span>
-			<span class="{isSelected ? 'text-text-on-accent opacity-soft' : 'text-text-secondary'} shrink-0 text-xs">
+			<span class="{isSelected ? 'text-text-on-accent opacity-soft' : 'text-text-secondary'} shrink-0 text-xs font-normal tabular-nums">
 				{chat.time}
 			</span>
 		</span>
-		<span class="block truncate pr-4 {isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs">
-			{chat.lastMessage}
+		<span class="flex items-center justify-between gap-2">
+			<span class="truncate pr-1 {isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs">
+				{chat.lastMessage || '暂无消息'}
+			</span>
+			<span class="flex items-center gap-1.5 shrink-0">
+				{#if onTogglePin}
+					<button
+						type="button"
+						class="hover-btn scale-btn hit-slop focus-ring flex shrink-0 items-center justify-center rounded-full p-1 {isSelected || chat.isPinned ? '' : 'text-text-secondary opacity-muted hover:text-accent-default hover:opacity-full focus-visible:opacity-full'}"
+						aria-label={chat.isPinned ? '取消置顶' : '置顶'}
+						title={chat.isPinned ? '取消置顶' : '置顶'}
+						onclick={(e) => {
+							e.stopPropagation();
+							onTogglePin();
+						}}
+					>
+						<Pin
+							class="size-3.5 {isSelected ? 'text-text-on-accent' : chat.isPinned ? 'text-accent-default' : 'text-text-secondary'}"
+							strokeWidth={2}
+						/>
+					</button>
+				{:else if chat.isPinned}
+					<Pin
+						class="size-3.5 {isSelected ? 'text-text-on-accent' : 'text-text-secondary/70'}"
+						strokeWidth={2}
+					/>
+				{/if}
+				{#if chat.unread > 0}
+					<span
+						class="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-xs font-semibold tabular-nums {isSelected ? 'bg-text-on-accent text-accent-default' : 'bg-accent-default text-text-on-accent'}"
+					>
+						{chat.unread}
+					</span>
+				{/if}
+			</span>
 		</span>
 	</span>
-
-	{#if onTogglePin}
-		<button
-			type="button"
-			class="hover-btn scale-btn hit-slop focus-ring flex shrink-0 items-center justify-center rounded-full p-1 {isSelected || chat.isPinned ? '' : 'text-text-secondary opacity-muted hover:text-accent-default hover:opacity-full focus-visible:opacity-full'}"
-			aria-label={chat.isPinned ? '取消置顶' : '置顶'}
-			title={chat.isPinned ? '取消置顶' : '置顶'}
-			onclick={(e) => {
-				e.stopPropagation();
-				onTogglePin();
-			}}
-		>
-			<Pin
-				class="size-3.5 {isSelected ? 'text-text-on-accent' : chat.isPinned ? 'text-accent-default' : 'text-text-secondary'}"
-				strokeWidth={2}
-			/>
-		</button>
-	{/if}
-
-	{#if chat.unread > 0}
-		<span
-			class="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold size-5 {isSelected ? 'bg-text-on-accent text-accent-default' : 'bg-accent-default text-text-on-accent'}"
-		>
-			{chat.unread}
-		</span>
-	{/if}
 </ListItem>

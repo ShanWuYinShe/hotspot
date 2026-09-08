@@ -175,11 +175,8 @@
 	);
 	const onlineChats = $derived(liveChats.filter((c) => c.online));
 	const totalUnread = $derived(chats.reduce((s, c) => s + c.unread, 0));
-	// 分栏阈值 = 桌面 OR 宽平板（≥960px / isWideTablet）。
-	// 紧凑平板（600-959）走移动端单列流程：w-75=300px 左列 + 余宽聊天的分栏在
-	// 600-700vp 视口下会让右侧聊天被压到 300-400px，Tap & 键入都难用。
-	// 与 harmonyapp WIDE_MIN_VP=960 一致，让两端在"宽平板才分栏"上对齐。
-	const isDesktop = $derived(platform.platform === 'desktop' || platform.isWideTablet);
+	// 分栏阈值：桌面或所有平板端（≥600px）全面启用 Master-Detail 双栏分栏，彻底消灭单列拉伸与空白
+	const useSplitPane = $derived(platform.platform === 'desktop' || platform.platform === 'tablet');
 	const selectedChat = $derived(liveChats.find((c) => c.id === selectedId));
 </script>
 <svelte:head>
@@ -187,37 +184,37 @@
 </svelte:head>
 
 
-{#if isDesktop}
-	<!-- ═══ Desktop Messages — split pane (list left + chat right) ═══ -->
-	<!-- h-full：RoutedContentViewport 内容链现提供显式高度（见该组件注释），
-	     分栏固定视口高、左栏列表内部滚动；平板/桌面画布均撑满。 -->
+{#if useSplitPane}
+	<!-- ═══ Desktop / Tablet Messages — split pane (list left + chat right) ═══ -->
+	<!-- h-full：RoutedContentViewport 内容链提供显式高度，分栏固定视口高、左栏列表内部独立滚动；平板/桌面画布均撑满。 -->
 	<div class="content-mode-wide flex h-full">
 		<!-- Left: chat list -->
-		<div class="flex flex-col shrink-0 overflow-hidden w-75 border-r border-border-default"  >
+		<div class="flex flex-col shrink-0 overflow-hidden w-80 border-r border-border-default bg-surface-primary">
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
-			<div class="shrink-0">
-				<PageHeader title="消息"  contentClassName="px-4 pt-4 pb-0">
+			<div class="shrink-0 border-b border-border-subtle/40">
+				<PageHeader title="消息" contentClassName="px-4 pt-4 pb-0">
 					{#snippet trailing()}
 						<button
 							type="button"
-						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-9"
-						onclick={() => {
-							newChatTab = 'chat';
-							showNewChat = true;
-						}}
-						aria-label="发起新会话"
-					>
-						<Plus class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
+							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring surface-flat size-9"
+							onclick={() => {
+								newChatTab = 'chat';
+								showNewChat = true;
+							}}
+							aria-label="发起新会话"
+						>
+							<Plus class="size-4 text-text-secondary" strokeWidth={1.5} />
 						</button>
 					{/snippet}
 					{#snippet below()}
 						<div class="mt-3 pb-3">
-							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索…" class="px-3 py-2" textClass="text-sm" />
-							<div class="mt-3">
+							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="px-3 py-2" textClass="text-sm" />
+							<div class="mt-2.5">
 								<TabBar
 									items={FILTER_TABS}
 									value={chatFilter}
 									onChange={(id) => (chatFilter = id as typeof chatFilter)}
+									variant="segmented"
 								/>
 							</div>
 						</div>
@@ -245,7 +242,7 @@
 		</div>
 
 		<!-- Right: chat view or empty state（对齐 Figma：无卡片包裹，直接平铺） -->
-		<div class="flex-1 overflow-hidden">
+		<div class="flex-1 overflow-hidden bg-surface-page">
 			{#if selectedId !== null && selectedChat}
 				<div class="h-full">
 					{#if selectedChat.kind === 'group'}
@@ -255,10 +252,10 @@
 					{/if}
 				</div>
 			{:else}
-				<div class="h-full">
+				<div class="h-full flex items-center justify-center">
 					<EmptyState title="选择一个会话" description="从左侧选择联系人开始聊天" class="h-full justify-center py-0!" iconSize={72}>
 						{#snippet icon()}
-							<MessageSquareDashed class="size-7 opacity-muted text-text-secondary"  strokeWidth={1.5} />
+							<MessageSquareDashed class="size-9 opacity-muted text-text-secondary" strokeWidth={1.5} />
 						{/snippet}
 					</EmptyState>
 				</div>
@@ -327,23 +324,28 @@
 			<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->
 			<div class="mt-3 pb-3">
 				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-md px-4 py-2.5" />
-				<div class="mt-3">
+				<div class="mt-2.5">
 					<TabBar
 						items={FILTER_TABS}
 						value={chatFilter}
 						onChange={(id) => (chatFilter = id as typeof chatFilter)}
+						variant="segmented"
 					/>
 				</div>
 			</div>
 		{/snippet}
 	</PageHeader>
 
-	<ContentColumn class="animate-fade-in flex flex-col min-h-full pt-4 pb-6">
+	<div class="animate-fade-in flex flex-col flex-1 pb-8">
 		{#if onlineChats.length > 0}
-			<OnlineStrip chats={onlineChats} onSelect={(c) => void goto(ROUTES.message(c.peerUserId || c.id))} />
+			<div class="px-4 pt-2">
+				<OnlineStrip chats={onlineChats} onSelect={(c) => void goto(ROUTES.message(c.peerUserId || c.id))} />
+			</div>
 		{/if}
 
-		<p class="eyebrow mb-2.5">最近</p>
+		<div class="px-4 mt-3 mb-1.5">
+			<p class="eyebrow">最近</p>
+		</div>
 
 		<ChatListBody
 			chats={filtered}
@@ -354,7 +356,7 @@
 			onSelect={(chat) => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
 			onTogglePin={togglePin}
 		/>
-	</ContentColumn>
+	</div>
 
 	<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
 		<Dialog.Content side="bottom" class="overflow-hidden" style="height:85%;box-shadow:var(--cst-elevation-sheet);">
