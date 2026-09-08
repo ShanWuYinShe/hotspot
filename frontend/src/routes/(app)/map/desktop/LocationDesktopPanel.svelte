@@ -48,7 +48,7 @@ locationName = loc?.location_name ?? '';
 
 <!-- Header -->
 <div class="shrink-0">
-	<PageHeader title="位置选择" onBack={() => history.back()} subtitle={locationName || '位置选择'} sticky contentClassName="px-4 pt-4 pb-0" />
+	<PageHeader title="位置选择" onBack={() => history.back()} subtitle={locationName || '位置选择'} sticky contentClassName="px-4" />
 </div>
 
 <!-- Search -->

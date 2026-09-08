@@ -53,7 +53,6 @@
 		title="关系"
 		sticky
 		titleSize={device === 'desktop' ? 'xl' : '2xl'}
-		contentClassName="pt-4 pb-0"
 		onBack={() => void goto(ROUTES.me)}
 	>
 		{#snippet trailing()}

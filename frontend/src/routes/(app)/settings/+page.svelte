@@ -177,7 +177,7 @@
 	{:else}
 		<div class="flex flex-col divide-y divide-border-default max-w-5xl">
 			<!-- Section 1: 账号与身份 -->
-			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6 first:pt-2">
+			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6 first:pt-4">
 				<div>
 					<h2 class="text-sm font-semibold text-text-primary">账号信息</h2>
 					<p class="text-xs text-text-secondary mt-1 leading-relaxed">

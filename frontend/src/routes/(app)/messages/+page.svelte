@@ -192,7 +192,7 @@
 		<div class="flex flex-col shrink-0 overflow-hidden w-80 border-r border-border-default bg-surface-primary">
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
 			<div class="shrink-0 border-b border-border-subtle/40">
-				<PageHeader title="消息" class="!bg-surface-primary" contentClassName="px-4 pt-4 pb-0">
+				<PageHeader title="消息" class="!bg-surface-primary" contentClassName="px-4">
 					{#snippet trailing()}
 						<button
 							type="button"
@@ -207,7 +207,7 @@
 						</button>
 					{/snippet}
 					{#snippet below()}
-						<div class="mt-3 pb-3">
+						<div class="mt-3">
 							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="px-3 py-2" textClass="text-sm" />
 							<div class="mt-2.5">
 								<TabBar
@@ -298,7 +298,7 @@
 	</div>
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
-	<PageHeader title="消息" sticky titleSize="3xl" subtitleSize="sm" contentClassName="pt-4 pb-0">
+	<PageHeader title="消息" sticky titleSize="3xl" subtitleSize="sm">
 		{#snippet trailing()}
 			<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->
 			<div class="flex items-center gap-2">
@@ -322,7 +322,7 @@
 		{/snippet}
 		{#snippet below()}
 			<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->
-			<div class="mt-3 pb-3">
+			<div class="mt-3">
 				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-md px-4 py-2.5" />
 				<div class="mt-2.5">
 					<TabBar

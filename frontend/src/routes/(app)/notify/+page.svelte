@@ -221,7 +221,6 @@ const FILTER_TABS = [
 			title="通知"
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
-			contentClassName="pt-4 pb-0"
 			onBack={() => history.back()}
 		>
 			{#snippet trailing()}

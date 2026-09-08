@@ -79,10 +79,10 @@
 	};
 
 	const showBack = $derived(Boolean(onBack) && (platform.platform !== 'desktop' || showBackOnDesktop));
-	// header 底部统一预留呼吸：纯标题时标题与下边框之间留 pb-3，
-	// below 存在时（搜索框/Tab 栏等）同样给 below 内容与边框之间留 pb-3，
-	// 避免标题/附属区紧贴 border-bottom。页面可传 contentClassName 显式覆盖。
-	const belowPad = $derived(below ? 'pb-3' : '');
+	// header 统一预留黄金呼吸感：
+	// - 纯标题时标题/副标题/操作组与下边框之间留 pb-4.5（18px），上下留白匀称舒展，杜绝标题与分割线紧贴粘连；
+	// - below 存在时（搜索框/Tab 栏等），给 below 内容与下边框之间留 pb-3.5（14px）。
+	const headerPadding = $derived(below ? 'pt-4 pb-3.5' : 'pt-4.5 pb-4.5');
 </script>
 
 <header
@@ -91,7 +91,7 @@
 		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'
 		: 'border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'}
 >
-	<ContentColumn {maxWidth} class={cn('pt-4 pb-3', contentClassName, belowPad)}>
+	<ContentColumn {maxWidth} class={cn(headerPadding, contentClassName)}>
 		<div class="flex items-center gap-3">
 			{#if showBack}
 				<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />

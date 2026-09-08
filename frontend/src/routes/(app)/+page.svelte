@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ChevronRight, Search, Radar, Map } from '@lucide/svelte';
+	import { Bell, ChevronRight, Search, Radar, Map } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import HeroStats from '@/components/home/HeroStats.svelte';
@@ -141,6 +141,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					{/if}
 					{#if platform.platform !== 'desktop'}
 						<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
+						<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
 					{/if}
 					<ActionIconButton icon={Map} label="地图" onClick={() => void goto(ROUTES.map)} variant="ghost" size={36} />
 				</div>

@@ -1,9 +1,12 @@
 <script lang="ts">
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';	import { goto } from '$app/navigation';
-	import { MapPin, Pencil, ShieldCheck, Sparkles, UsersRound, Users, ChevronRight } from '@lucide/svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import { goto } from '$app/navigation';
+	import { MapPin, Pencil, Settings, ShieldCheck, Sparkles, UsersRound, Users, ChevronRight } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -96,18 +99,29 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 				title="个人总览"
 				subtitle="你的公开资料、内容与关系的入口。"
 				titleSize={device === 'desktop' ? 'xl' : '2xl'}
-				contentClassName="pt-4 pb-0"
 			>
 				{#snippet trailing()}
 					{#if !loading && !needsAuth}
-						<button
-							type="button"
-							onclick={() => void goto(ROUTES.meEdit)}
-							class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2.5 text-sm font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
-						>
-							<Pencil class="size-4"  strokeWidth={1.75} />
-							编辑资料
-						</button>
+						<div class="flex items-center gap-2">
+							{#if device !== 'desktop'}
+								<AppearanceMenu />
+								<ActionIconButton
+									icon={Settings}
+									label="设置"
+									onClick={() => void goto(ROUTES.settings)}
+									variant="ghost"
+									size={36}
+								/>
+							{/if}
+							<button
+								type="button"
+								onclick={() => void goto(ROUTES.meEdit)}
+								class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2 text-sm font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
+							>
+								<Pencil class="size-4"  strokeWidth={1.75} />
+								编辑资料
+							</button>
+						</div>
 					{/if}
 				{/snippet}
 			</PageHeader>
