@@ -27,7 +27,6 @@ import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemDialog } from '../../../components/SystemDialog';
-import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
@@ -96,8 +95,6 @@ export struct MessagePage {
   @State pressedChatKey: string = '';
   @State searchKeyword: string = '';
   @State chatItems: ChatItem[] = [];
-  /** 已读/未读过滤（0=全部 1=未读 2=已读），对齐前端 messages 页 TabBar 过滤 */
-  @State chatFilterIndex: number = 0;
   @State filteredChatItems: ChatItem[] = [];
 
   private getOnlineChats(): ChatItem[] {
@@ -124,14 +121,12 @@ export struct MessagePage {
 
   private applyFilter(): void {
     const keyword = this.searchKeyword.trim().toLowerCase();
-    const matchesKeyword = (item: ChatItem): boolean =>
-      keyword === '' || item.name.toLowerCase().indexOf(keyword) >= 0;
-    if (this.chatFilterIndex === 1) {
-      this.filteredChatItems = this.chatItems.filter((item: ChatItem) => matchesKeyword(item) && item.unreadCount > 0);
-    } else if (this.chatFilterIndex === 2) {
-      this.filteredChatItems = this.chatItems.filter((item: ChatItem) => matchesKeyword(item) && item.unreadCount === 0);
+    if (keyword === '') {
+      this.filteredChatItems = this.chatItems;
     } else {
-      this.filteredChatItems = this.chatItems.filter((item: ChatItem) => matchesKeyword(item));
+      this.filteredChatItems = this.chatItems.filter((item: ChatItem) =>
+        item.name.toLowerCase().indexOf(keyword) >= 0
+      );
     }
   }
 
@@ -418,9 +413,17 @@ export struct MessagePage {
   }
 
   private compareChatItems(a: ChatItem, b: ChatItem): number {
+    // 1. 置顶优先
     if (a.isPinned !== b.isPinned) {
       return a.isPinned ? -1 : 1;
     }
+    // 2. 未读优先（同级内未读会话排在已读会话之前）
+    const aUnread = a.unreadCount > 0;
+    const bUnread = b.unreadCount > 0;
+    if (aUnread !== bUnread) {
+      return aUnread ? -1 : 1;
+    }
+    // 3. 按最新消息时间倒序
     const timeDiff = b.lastTimestamp - a.lastTimestamp;
     if (timeDiff !== 0) {
       return timeDiff;
@@ -720,24 +723,6 @@ export struct MessagePage {
         onChange: (value: string) => {
           this.searchKeyword = value;
           this.applyFilter();
-        }
-      })
-      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-
-      // 已读/未读过滤（对齐前端 messages 页 TabBar：全部 / 未读 / 已读，未读带实时计数）
-      TabsPillGroup({
-        tabs: [
-          { label: '全部' },
-          { label: '未读', count: this.getTotalUnread() },
-          { label: '已读' }
-        ],
-        activeIndex: this.chatFilterIndex,
-        gap: DesignConstants.SPACING.XS,
-        actions: {
-          onChange: (index: number) => {
-            this.chatFilterIndex = index;
-            this.applyFilter();
-          }
         }
       })
       .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
