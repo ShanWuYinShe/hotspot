@@ -6,37 +6,18 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Go Backend
     runs-on: ubuntu-24.04
-    services:
-      postgres:
-        image: postgres:18.4-alpine
-        env:
-          POSTGRES_DB: hotspot_test
-          POSTGRES_USER: hotspot
-          POSTGRES_PASSWORD: hotspot
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U hotspot"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:8.10-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     env:
-      POSTGRES_DSN: postgresql://hotspot:hotspot@localhost:5432/hotspot_test?sslmode=disable
-      REDIS_URL: redis://localhost:6379/0
       AUTH_TOKEN_SECRET: ci-test-secret-key-at-least-32-bytes-long
       APP_ENV: ci
 
