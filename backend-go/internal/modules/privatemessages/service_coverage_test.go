@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/persistence"
 )
 
 func TestMemoryReplyMediaAndParticipants(t *testing.T) {
@@ -83,6 +85,74 @@ func TestServiceConstructorsAndLookupHelpers(t *testing.T) {
 	}
 	if found, _, err := svc2.IsReactionTargetVisible(ctx, "missing"); err != nil || found {
 		t.Fatalf("missing visible: found=%v err=%v", found, err)
+	}
+}
+
+func TestServiceReportSnapshot(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := pmAuthCtx("u1")
+	svc := NewServiceWithRepo(repo)
+
+	// 发送消息
+	sent, err := repo.Send(ctx, "u1", "u2", SendPrivateMessageRequest{
+		TargetUserID: "u2",
+		Type:         "text",
+		Content:      "举报测试私聊",
+	})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+
+	snap, found, err := svc.GetMessageReportSnapshot(ctx, sent.MessageID)
+	if err != nil || !found {
+		t.Fatalf("snapshot found=%v err=%v", found, err)
+	}
+	if snap.SenderUserID != "u1" || snap.TargetUserID != "u2" || snap.Content != "举报测试私聊" {
+		t.Fatalf("unexpected snapshot: %+v", snap)
+	}
+
+	_, found, err = svc.GetMessageReportSnapshot(ctx, "msg_missing")
+	if err != nil || found {
+		t.Fatalf("expected missing snapshot, found=%v", found)
+	}
+}
+
+func TestHandlerPaginationValidation(t *testing.T) {
+	if !isValidPagination(nil) {
+		t.Fatal("nil pagination should be valid")
+	}
+	if isValidPagination(&PaginationParams{Limit: -1}) {
+		t.Fatal("negative limit should be invalid")
+	}
+	if isValidPagination(&PaginationParams{Limit: 101}) {
+		t.Fatal(">100 limit should be invalid")
+	}
+	if !isValidPagination(&PaginationParams{Limit: 20}) {
+		t.Fatal("normal limit should be valid")
+	}
+	if isValidPagination(&PaginationParams{Limit: 20, Cursor: "bad_cursor"}) {
+		t.Fatal("invalid cursor should be invalid")
+	}
+}
+
+func TestServiceBuildHelpersAndRuntime(t *testing.T) {
+	repo := NewInMemoryRepository()
+	svc := NewServiceWithRepo(repo)
+	ctx := pmAuthCtx("u1")
+
+	// buildReplyTo & buildMedia on empty/missing
+	if reply := svc.buildReplyTo(ctx, "m1", "u1"); reply != nil {
+		t.Fatalf("expected nil reply, got %v", reply)
+	}
+	if media := svc.buildMedia(ctx, "f1", "u1"); media != nil {
+		t.Fatalf("expected nil media, got %v", media)
+	}
+
+	// NewRuntime constructor
+	factory := persistence.NewFactory(config.Config{})
+	rt := NewRuntime(factory, nil)
+	if rt == nil || rt.Handler() == nil || rt.ReadService() == nil {
+		t.Fatal("NewRuntime should initialize handler and read service")
 	}
 }
 

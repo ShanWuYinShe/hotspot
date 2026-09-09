@@ -133,3 +133,37 @@ func TestViewerUserIDHelper(t *testing.T) {
 func withTestPrincipal(ctx context.Context, userID string) context.Context {
 	return platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: userID, SessionID: "sess_" + userID})
 }
+
+func TestServiceUserListsAndDiscoveryHelpers(t *testing.T) {
+	ctx := context.Background()
+	repo := NewInMemoryRepository()
+	svc := NewServiceWithRepo(repo)
+
+	// 1. SetLocationProvider
+	svc.SetLocationProvider(nil)
+
+	// 2. SeedMomentsByUser & ListMomentsByAuthor
+	repo.SeedMomentsByUser("u1", []MomentItem{
+		{MomentID: "m1", User: UserInfo{UserID: "u1"}, PrivacyLevel: "public"},
+		{MomentID: "m2", User: UserInfo{UserID: "u1"}, PrivacyLevel: "private"},
+	})
+	publicList, err := svc.ListMomentsByAuthor(ctx, "u1", 10, "", false)
+	if err != nil || len(publicList.Items) != 1 {
+		t.Fatalf("ListMomentsByAuthor public: %v len=%d", err, len(publicList.Items))
+	}
+	allList, err := svc.ListMomentsByAuthor(ctx, "u1", 10, "", true)
+	if err != nil || len(allList.Items) != 2 {
+		t.Fatalf("ListMomentsByAuthor all: %v len=%d", err, len(allList.Items))
+	}
+
+	// 3. SeedReactedMoment & ListReactedByUser
+	repo.SeedReactedMoment("u2", MomentItem{
+		MomentID:     "m3",
+		User:         UserInfo{UserID: "u1"},
+		PrivacyLevel: "public",
+	})
+	reactedList, err := svc.ListReactedByUser(ctx, "u2", "u2", 10, "")
+	if err != nil || len(reactedList.Items) != 1 {
+		t.Fatalf("ListReactedByUser: %v len=%d", err, len(reactedList.Items))
+	}
+}

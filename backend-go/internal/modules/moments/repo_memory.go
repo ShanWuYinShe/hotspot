@@ -45,10 +45,11 @@ func (r *InMemoryRepository) SetBlockedTags(tags ...string) {
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		moments:     make(map[string]MomentItem),
-		byUser:      make(map[string][]string),
-		favorites:   make(map[string]map[string]time.Time),
-		followGraph: make(map[string]map[string]bool),
+		moments:       make(map[string]MomentItem),
+		byUser:        make(map[string][]string),
+		reactedByUser: make(map[string][]string),
+		favorites:     make(map[string]map[string]time.Time),
+		followGraph:   make(map[string]map[string]bool),
 	}
 }
 
@@ -604,6 +605,15 @@ func (r *InMemoryRepository) ListReactedByUser(_ context.Context, userID, viewer
 func (r *InMemoryRepository) SeedReactedMoment(userID string, item MomentItem) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.moments == nil {
+		r.moments = make(map[string]MomentItem)
+	}
+	if r.byUser == nil {
+		r.byUser = make(map[string][]string)
+	}
+	if r.reactedByUser == nil {
+		r.reactedByUser = make(map[string][]string)
+	}
 	r.moments[item.MomentID] = item
 	r.byUser[item.User.UserID] = append(r.byUser[item.User.UserID], item.MomentID)
 	r.reactedByUser[userID] = append(r.reactedByUser[userID], item.MomentID)

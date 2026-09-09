@@ -3,7 +3,10 @@ package groupmessages
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
+
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func TestMemoryRecallAsAdminAndAuxLookups(t *testing.T) {
@@ -120,5 +123,158 @@ func TestServiceIsReactionTargetVisibleRepoError(t *testing.T) {
 	ctx := context.Background()
 	if _, _, err := svc.IsReactionTargetVisible(ctx, "m1"); err == nil {
 		t.Fatal("repo error must propagate")
+	}
+}
+
+type stubMentionNotifier struct {
+	appendedCount int
+	lastTargetID  string
+	returnErr     error
+}
+
+func (s *stubMentionNotifier) AppendGroupMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, groupID, groupName, messageID, contentPreview string) (string, error) {
+	s.appendedCount++
+	s.lastTargetID = targetUserID
+	return "notify_123", s.returnErr
+}
+
+func TestServiceReportSnapshotAndMembership(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := gmAuthCtx("u1")
+	svc := NewServiceWithRepo(repo)
+
+	// 1. 发送消息
+	sent, err := repo.Send(ctx, SendGroupMessageRequest{
+		GroupID:      "g1",
+		SenderUserID: "u1",
+		Type:         "text",
+		Content:      "举报测试消息",
+	})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+
+	// 2. GetMessageReportSnapshot
+	snap, found, err := svc.GetMessageReportSnapshot(ctx, sent.MessageID)
+	if err != nil || !found {
+		t.Fatalf("snapshot found=%v err=%v", found, err)
+	}
+	if snap.GroupID != "g1" || snap.Content != "举报测试消息" {
+		t.Fatalf("unexpected snapshot: %+v", snap)
+	}
+
+	// 3. 不存在的消息快照
+	_, found, err = svc.GetMessageReportSnapshot(ctx, "msg_nonexistent")
+	if err != nil || found {
+		t.Fatalf("expected missing snapshot, found=%v", found)
+	}
+
+	// 4. IsGroupMember
+	isMember, err := svc.IsGroupMember(ctx, "g1", "u1")
+	if err != nil || !isMember {
+		t.Fatalf("expected member, got %v err=%v", isMember, err)
+	}
+	isMember, err = svc.IsGroupMember(ctx, "g1", "u_unknown")
+	if err != nil || isMember {
+		t.Fatalf("expected non-member, got %v err=%v", isMember, err)
+	}
+}
+
+func TestServiceReadCountFlusherAndFlush(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := gmAuthCtx("u1")
+	svc := NewServiceWithRepo(repo)
+
+	sent, err := repo.Send(ctx, SendGroupMessageRequest{
+		GroupID:      "g1",
+		SenderUserID: "u1",
+		Type:         "text",
+		Content:      "已读节流测试",
+	})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+
+	// 1. 手动触发 flushReadCounts
+	svc.flushReadCounts("g1", []string{sent.MessageID, "msg_missing"})
+
+	// 2. scheduleReadCountUpdate
+	svc.scheduleReadCountUpdate("g1", []string{sent.MessageID})
+
+	// 3. MarkAllRead
+	err = svc.MarkAllRead(ctx)
+	if err != nil {
+		t.Fatalf("MarkAllRead failed: %v", err)
+	}
+}
+
+func TestServiceNotifyMentions(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := gmAuthCtx("u1")
+
+	// u1, u2 为成员
+	repo.Send(ctx, SendGroupMessageRequest{GroupID: "g1", SenderUserID: "u1", Type: "text", Content: "init1"})
+	repo.Send(ctx, SendGroupMessageRequest{GroupID: "g1", SenderUserID: "u2", Type: "text", Content: "init2"})
+
+	notifier := &stubMentionNotifier{}
+	svc := NewServiceWithDeps(repo, nil, notifier, nil)
+
+	// 发送一条 @ u2 和 @ u1 和 @ u_outsider 的消息
+	req := SendGroupMessageRequest{
+		GroupID:      "g1",
+		SenderUserID: "u1",
+		Type:         "text",
+		Content:      "hello @u2 @outsider",
+		Mentions:     []string{"u2", "u1", "outsider"},
+	}
+	msg := MessageSentResult{
+		MessageID: "msg_m1",
+		SentAt:    "2026-01-01T00:00:00Z",
+	}
+
+	svc.notifyMentions(ctx, "u1", req, msg)
+	if notifier.appendedCount != 1 || notifier.lastTargetID != "u2" {
+		t.Fatalf("expected 1 mention notification to u2, got %d, lastTarget=%s", notifier.appendedCount, notifier.lastTargetID)
+	}
+}
+
+func TestHandlerSendValidation(t *testing.T) {
+	// 1. Type 空
+	if isValidSendRequest(SendGroupMessageRequest{}) {
+		t.Fatal("empty type should be invalid")
+	}
+	// 2. Mentions 超过 20
+	mentions21 := make([]string, 21)
+	if isValidSendRequest(SendGroupMessageRequest{Type: "text", Content: "hi", Mentions: mentions21}) {
+		t.Fatal(">20 mentions should be invalid")
+	}
+	// 3. text 内容为空或超长
+	if isValidSendRequest(SendGroupMessageRequest{Type: "text", Content: ""}) {
+		t.Fatal("empty text content should be invalid")
+	}
+	longContent := strings.Repeat("a", messageContentMaxRunes+1)
+	if isValidSendRequest(SendGroupMessageRequest{Type: "text", Content: longContent}) {
+		t.Fatal("overlength text content should be invalid")
+	}
+	// 4. image/video/audio/file 缺少 file_id 或有效
+	if isValidSendRequest(SendGroupMessageRequest{Type: "image"}) {
+		t.Fatal("empty file_id image should be invalid")
+	}
+	if !isValidSendRequest(SendGroupMessageRequest{Type: "image", FileID: "f1"}) {
+		t.Fatal("valid image should be valid")
+	}
+	if !isValidSendRequest(SendGroupMessageRequest{Type: "file", FileID: "f1"}) {
+		t.Fatal("valid file should be valid")
+	}
+	// 5. share 缺少 share_code 或有效
+	if isValidSendRequest(SendGroupMessageRequest{Type: "share"}) {
+		t.Fatal("empty share_code share should be invalid")
+	}
+	if !isValidSendRequest(SendGroupMessageRequest{Type: "share", ShareCode: "sc123"}) {
+		t.Fatal("valid share should be valid")
+	}
+	// 6. 未知类型
+	if isValidSendRequest(SendGroupMessageRequest{Type: "unknown"}) {
+		t.Fatal("unknown type should be invalid")
 	}
 }

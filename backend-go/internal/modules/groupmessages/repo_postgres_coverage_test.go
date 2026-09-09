@@ -39,6 +39,9 @@ func (r gmRow) Scan(dest ...any) error {
 		return errNoRows
 	}
 	for i := range dest {
+		if i >= len(r.values) {
+			break
+		}
 		switch d := dest[i].(type) {
 		case *string:
 			*d = r.values[i].(string)
@@ -123,6 +126,58 @@ func TestPostgresGroupMessagesNotConfigured(t *testing.T) {
 	}
 	if _, err := repo.Recall(ctx, RecallGroupMessageRequest{}); err != persistence.ErrNotImplemented {
 		t.Fatalf("recall: %v", err)
+	}
+}
+
+func TestPostgresQueryMethods(t *testing.T) {
+	ctx := context.Background()
+
+	// 1. GetReadCount
+	backendCount := &gmStub{rowValues: []any{5}}
+	repoCount := NewPostgresRepository(newGmFactory(backendCount))
+	count, err := repoCount.GetReadCount(ctx, "g1", "m1")
+	if err != nil || count != 5 {
+		t.Fatalf("GetReadCount: %d err=%v", count, err)
+	}
+
+	// 2. LatestMessageID
+	backendLatest := &gmStub{rowValues: []any{"m_latest"}}
+	repoLatest := NewPostgresRepository(newGmFactory(backendLatest))
+	latest, err := repoLatest.LatestMessageID(ctx, "g1")
+	if err != nil || latest != "m_latest" {
+		t.Fatalf("LatestMessageID: %q err=%v", latest, err)
+	}
+
+	// 3. IsMember
+	backendMember := &gmStub{rowValues: []any{1}}
+	repoMember := NewPostgresRepository(newGmFactory(backendMember))
+	isMember, err := repoMember.IsMember(ctx, "g1", "u1")
+	if err != nil || !isMember {
+		t.Fatalf("IsMember: %v err=%v", isMember, err)
+	}
+
+	// 4. MessageGroupID
+	backendGroupID := &gmStub{rowValues: []any{"g1"}}
+	repoGroupID := NewPostgresRepository(newGmFactory(backendGroupID))
+	gid, found, err := repoGroupID.MessageGroupID(ctx, "m1")
+	if err != nil || !found || gid != "g1" {
+		t.Fatalf("MessageGroupID: %q found=%v err=%v", gid, found, err)
+	}
+
+	// 5. MessageExists
+	backendExists := &gmStub{rowValues: []any{"u_sender", "nick", "avatar", "text", "hi", "", "2026-01-01T00:00:00Z"}}
+	repoExists := NewPostgresRepository(newGmFactory(backendExists))
+	found, sender, err := repoExists.MessageExists(ctx, "m1")
+	if err != nil || !found || sender != "u_sender" {
+		t.Fatalf("MessageExists: found=%v sender=%q err=%v", found, sender, err)
+	}
+
+	// 6. GetGroupName
+	backendName := &gmStub{rowValues: []any{"群名"}}
+	repoName := NewPostgresRepository(newGmFactory(backendName))
+	name, found, err := repoName.GetGroupName(ctx, "g1")
+	if err != nil || !found || name != "群名" {
+		t.Fatalf("GetGroupName: %q found=%v err=%v", name, found, err)
 	}
 }
 

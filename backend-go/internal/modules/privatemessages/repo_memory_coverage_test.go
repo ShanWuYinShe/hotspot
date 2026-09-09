@@ -35,3 +35,40 @@ func TestMemoryMessageExistsAndCount(t *testing.T) {
 		t.Fatalf("other direction: %#v err=%v", counts, err)
 	}
 }
+
+func TestMemoryRecentAndLastWithDeletedAfter(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+
+	// 1. 发送 2 条消息
+	_, err := repo.Send(ctx, "u1", "u2", SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: "first"})
+	if err != nil {
+		t.Fatalf("send 1: %v", err)
+	}
+	cutoff := time.Now().Add(-time.Minute)
+	_, err = repo.Send(ctx, "u1", "u2", SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: "second"})
+	if err != nil {
+		t.Fatalf("send 2: %v", err)
+	}
+
+	// 2. 携带 deletedAfter 过滤
+	recent, err := repo.Recent(ctx, "u1", "u2", 10, &cutoff)
+	if err != nil {
+		t.Fatalf("recent: %v", err)
+	}
+	if len(recent.Items) == 0 {
+		t.Fatal("expected recent items")
+	}
+
+	// 3. Last
+	last, err := repo.Last(ctx, "u1", "u2", &cutoff)
+	if err != nil || last == nil {
+		t.Fatalf("expected last message, got %v", last)
+	}
+
+	// 4. 空会话 Last
+	emptyLast, err := repo.Last(ctx, "u1", "u_nobody", nil)
+	if err != nil || emptyLast != nil {
+		t.Fatalf("expected nil for empty conversation last, got %v", emptyLast)
+	}
+}
