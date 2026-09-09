@@ -69,18 +69,13 @@ export struct TabsPillGroup {
     return this.hoveredIndex === index ? palette.accentMuted : DesignConstants.COLOR.TRANSPARENT;
   }
 
-  /** 选中胶囊 hover 阴影增强（同色系光晕抬档，表达已选中项的可交互增量） */
+  /** 选中胶囊投影：对齐前端 TabBar——选中 accent 实底胶囊无彩色光晕，
+   *  hover 增量由底色分支表达（未选中淡底预览），阴影保持中性 control 抬升 */
   private getPillShadow(isActiveTab: boolean): AppThemeShadow {
-    const base = this.getPalette().accentShadow;
-    if (!isActiveTab || this.hoveredIndex < 0) {
-      return base;
+    if (isActiveTab) {
+      return this.getPalette().controlShadow;
     }
-    return new AppThemeShadow(
-      Math.round(base.radius * 1.6),
-      base.color,
-      base.offsetX,
-      base.offsetY
-    );
+    return new AppThemeShadow(0, DesignConstants.COLOR.TRANSPARENT, 0, 0);
   }
 
   @Builder

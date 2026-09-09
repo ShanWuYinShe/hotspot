@@ -120,7 +120,7 @@ function buildPalette(
     tabBarActiveBackground: colors.tabBarActiveBackground,
     surfaceShadow: shadows.surface,
     elevatedShadow: shadows.elevated,
-    accentShadow: shadows.accent,
+
     controlShadow: shadows.control,
     tabBarShadow: shadows.tabBar,
     overlayStrong: colors.overlayStrong,

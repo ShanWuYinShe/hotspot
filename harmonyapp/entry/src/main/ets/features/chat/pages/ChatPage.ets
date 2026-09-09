@@ -1541,7 +1541,7 @@ export struct ChatPage {
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getCurrentThemePalette().accentBackground)
-      .shadow(this.getCurrentThemePalette().accentShadow)
+      .shadow(this.getCurrentThemePalette().surfaceShadow) // 对齐前端 raised-sm（无彩色光晕）
       .position({ x: '50%', y: '78%' })
       .translate({ x: -56, y: 0 }) // 半宽回中（markAnchor 亦可；pill 约 112vp 宽）
       .onClick(() => { this.jumpToBottom(); })

@@ -98,7 +98,7 @@ export struct UserCard {
     .border(this.isFollowing() ?
       { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground } :
       { width: 0 })
-    .shadow(this.isFollowing() ? undefined : this.getPalette().accentShadow)
+    .shadow(this.isFollowing() ? undefined : this.getPalette().surfaceShadow)
     // 双态按压差异：未跟随 = 缩放按压（「将选中」）；已跟随 = 边框加深（选中态再确认）
     .border(this.isFollowing() ?
       {

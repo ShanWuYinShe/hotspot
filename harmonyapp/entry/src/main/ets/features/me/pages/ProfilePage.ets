@@ -1180,8 +1180,7 @@ export struct ProfilePage {
             width: DesignConstants.BORDER_WIDTH.STRONG,
             color: this.getCurrentThemePalette().pageBackground
           })
-          .shadow(this.getCurrentThemePalette().accentShadow)
-          .onClick(() => this.changeAvatarDirectly())
+                    .onClick(() => this.changeAvatarDirectly())
           .accessibilityText('更换头像')
           // 触控热区：视觉 24 → 命中区 44（responseRegion 不占布局）
           .responseRegion({
@@ -1441,8 +1440,7 @@ export struct ProfilePage {
         .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(this.getAccentBackground())
         .border({ width: DesignConstants.BORDER_WIDTH.HEAVY, color: this.getCurrentThemePalette().pageBackground })
-        .shadow(this.getCurrentThemePalette().accentShadow)
-        .onClick(() => this.changeAvatarDirectly())
+                .onClick(() => this.changeAvatarDirectly())
         .accessibilityText('更换头像')
         .responseRegion({
           x: -DesignConstants.SPACING.SM,

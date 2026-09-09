@@ -134,7 +134,8 @@ export struct SearchPageHeader {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.isFocused ? this.getPalette().accentText : this.getSurfaceBorder() })
-    .shadow(this.isFocused ? this.getPalette().accentShadow : this.getPalette().surfaceShadow)
+    // 对齐前端 input-surface 聚焦契约：边框加深承载焦点（内凹阴影），无彩色光晕
+    .shadow(this.getPalette().surfaceShadow)
     // 裁剪子组件，防止 TextInput 系统默认视觉溢出圆角
     .clip(true)
   }

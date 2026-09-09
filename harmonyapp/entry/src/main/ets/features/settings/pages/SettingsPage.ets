@@ -921,7 +921,7 @@ export struct SettingsPage {
     .borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).card.borderRadius)
     .backgroundColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).surfaceBackground : this.getThemeOptionPalette(option).surfaceSubtle)
     .border({ width: this.isThemeOptionActive(option) ? DesignConstants.BORDER_WIDTH.REGULAR : DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).borderColor })
-    .shadow(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentShadow : this.getThemeOptionPalette(option).surfaceShadow)
+    .shadow(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).elevatedShadow : this.getThemeOptionPalette(option).surfaceShadow)
     // 选中底色/边框/阴影切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
     .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
     .onTouch((event: TouchEvent) => {

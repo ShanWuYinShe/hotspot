@@ -397,7 +397,7 @@ export struct PhoneLayout {
     .justifyContent(FlexAlign.Center)
     .backgroundColor(this.getPalette().accentBackground)
     .borderRadius(DesignConstants.RADIUS.FULL)
-    .shadow(this.getPalette().accentShadow)
+    .shadow(this.getPalette().elevatedShadow)
     // 按压反馈（对齐手机端 CreateTabBuilder FAB 语义）
     .scale(this.tabletFabPressed ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } :

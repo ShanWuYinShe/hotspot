@@ -72,7 +72,7 @@ export struct LoginPromptView {
           .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().accentBackground, 0.18))
-          .shadow(this.getPalette().accentShadow)
+          .shadow(this.getPalette().surfaceShadow)
 
         LucideIcon({
           icon: this.icon,

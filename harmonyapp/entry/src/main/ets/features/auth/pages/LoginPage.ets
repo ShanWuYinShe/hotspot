@@ -341,7 +341,7 @@ export struct LoginPage {
             .borderRadius(DesignConstants.RADIUS.FULL)
             .justifyContent(FlexAlign.Center)
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
-            .shadow(this.getCurrentThemePalette().accentShadow)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
 
             Text('热点')
               .fontSize(DesignConstants.FONT.SIZE.XS2)

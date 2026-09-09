@@ -215,7 +215,6 @@ export struct MomentFeedCard {
               .backgroundColor(this.getPalette().accentBackground)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
-              .shadow(this.getPalette().accentShadow)
           }
 
           Blank()

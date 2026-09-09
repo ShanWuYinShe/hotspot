@@ -43,17 +43,13 @@ export struct SurfaceIconButton {
   }
 
   private getShadowColor(): ShadowOptions {
+    // 对齐前端 header-action / ui/button：accent 实底图标钮用中性 raised 投影，
+    // hover 抬档 raised-md（无彩色光晕）
     if (this.kind === 'primary') {
-      const base = this.getPalette().accentShadow;
       if (this.isHovered && !this.disabled) {
-        return new AppThemeShadow(
-          Math.round(base.radius * 1.5),
-          base.color,
-          base.offsetX,
-          base.offsetY
-        );
+        return this.getPalette().elevatedShadow;
       }
-      return base;
+      return this.getPalette().surfaceShadow;
     }
     return new AppThemeShadow(0, DesignConstants.COLOR.TRANSPARENT, 0, 0);
   }

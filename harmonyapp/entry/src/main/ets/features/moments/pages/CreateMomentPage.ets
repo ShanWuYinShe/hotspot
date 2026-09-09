@@ -150,7 +150,7 @@ export struct CreateMomentPage {
   }
 
   private getPrimaryButtonShadow(): ShadowOptions {
-    return AppThemeVisuals.getAccentShadow(this.resolvedThemeId);
+    return AppThemeVisuals.getSurfaceShadow(this.resolvedThemeId);
   }
 
   private addTag(): void {

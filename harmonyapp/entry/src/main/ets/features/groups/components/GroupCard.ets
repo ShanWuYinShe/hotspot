@@ -124,7 +124,7 @@ export struct GroupCard {
         top: DesignConstants.SPACING.THREE,
         bottom: DesignConstants.SPACING.THREE
       })
-      .shadow(this.hasJoined() ? undefined : this.getPalette().accentShadow)
+      .shadow(this.hasJoined() ? undefined : this.getPalette().surfaceShadow)
       .scale(this.joinPressed ?
         { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
         { x: 1, y: 1 })

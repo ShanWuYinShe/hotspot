@@ -135,10 +135,6 @@ export class AppThemeVisuals {
     return AppThemeVisuals.getPalette(themeId).elevatedShadow;
   }
 
-  static getAccentShadow(themeId: string): ShadowOptions {
-    return AppThemeVisuals.getPalette(themeId).accentShadow;
-  }
-
   static getControlShadow(themeId: string): ShadowOptions {
     return AppThemeVisuals.getPalette(themeId).controlShadow;
   }
@@ -238,7 +234,7 @@ export class AppThemeVisuals {
       textColor: palette.accentText,
       borderColor: palette.primaryButtonBorderColor,
       borderWidth: 1,
-      shadow: palette.accentShadow,
+      shadow: palette.surfaceShadow,
       borderRadius: palette.visuals.shape.button,
       height: palette.visuals.metrics.profilePrimaryButtonHeight,
       horizontalPadding: palette.visuals.metrics.profilePrimaryButtonHorizontalPadding + DesignConstants.SPACING.XS
@@ -397,7 +393,7 @@ export class AppThemeVisuals {
         textColor: palette.accentText,
         borderColor: palette.borderColor,
         borderWidth: 1,
-        shadow: palette.accentShadow,
+        shadow: palette.surfaceShadow,
         borderRadius: palette.visuals.shape.button,
         height: palette.visuals.metrics.previewPrimaryButtonHeight,
         horizontalPadding: DesignConstants.SPACING.LG
@@ -437,7 +433,7 @@ export class AppThemeVisuals {
         textColor: palette.accentText,
         borderColor: palette.borderColor,
         borderWidth: 1,
-        shadow: palette.accentShadow,
+        shadow: palette.surfaceShadow,
         borderRadius: palette.visuals.shape.button,
         height: palette.visuals.metrics.chatSendButtonHeight,
         horizontalPadding: DesignConstants.SPACING.LG

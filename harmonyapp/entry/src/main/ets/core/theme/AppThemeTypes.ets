@@ -106,7 +106,7 @@ export interface AppThemePalette {
   tabBarActiveBackground: string;
   surfaceShadow: AppThemeShadow;
   elevatedShadow: AppThemeShadow;
-  accentShadow: AppThemeShadow;
+
   controlShadow: AppThemeShadow;
   tabBarShadow: AppThemeShadow;
   overlayStrong: string;

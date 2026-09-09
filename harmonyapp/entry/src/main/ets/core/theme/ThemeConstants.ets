@@ -51,7 +51,7 @@ export interface ColorConfig {
 export interface ThemeShadows {
   surface: AppThemeShadow;
   elevated: AppThemeShadow;
-  accent: AppThemeShadow;
+
   control: AppThemeShadow;
   tabBar: AppThemeShadow;
 }
@@ -62,8 +62,6 @@ class ThemeShadowRegistry {
     surface: new AppThemeShadow(10, '#143D7A55', 0, 2),
     // 弹层抬升（对齐前端 --cst-elevation-modal 0 24px 80px 0.24）
     elevated: new AppThemeShadow(40, '#3D000000', 0, 12),
-    // 主操作微投影（克制自然微阴影，消除刺眼大光晕）
-    accent: new AppThemeShadow(6, '#1A3D7A55', 0, 2),
     // 菜单浮层（对齐前端 --cst-elevation-menu 0 16px 40px 0.16）
     control: new AppThemeShadow(32, '#29000000', 0, 8),
     // 底部导航（对齐前端 --cst-elevation-nav，向上微光）
@@ -75,8 +73,6 @@ class ThemeShadowRegistry {
     surface: new AppThemeShadow(14, '#4D000000', 0, 4),
     // 弹层抬升（对齐前端 --cst-elevation-modal 0 28px 88px 0.42）
     elevated: new AppThemeShadow(44, '#6B000000', 0, 14),
-    // 主操作微投影
-    accent: new AppThemeShadow(8, '#1A52B878', 0, 3),
     // 菜单浮层
     control: new AppThemeShadow(40, '#59000000', 0, 8),
     // 底部导航（对齐前端 --cst-elevation-nav 0 -4px 24px 0.40）
@@ -86,7 +82,6 @@ class ThemeShadowRegistry {
   readonly VIBRANT_LIGHT: ThemeShadows = {
     surface: new AppThemeShadow(8, '#0F000000', 0, 2),
     elevated: new AppThemeShadow(24, '#26000000', 0, 8),
-    accent: new AppThemeShadow(6, '#1A000000', 0, 2),
     control: new AppThemeShadow(16, '#1F000000', 0, 4),
     tabBar: new AppThemeShadow(8, '#0A000000', 0, -1)
   };
@@ -94,7 +89,6 @@ class ThemeShadowRegistry {
   readonly VIBRANT_DARK: ThemeShadows = {
     surface: new AppThemeShadow(10, '#59000000', 0, 3),
     elevated: new AppThemeShadow(24, '#80000000', 0, 8),
-    accent: new AppThemeShadow(8, '#4D000000', 0, 3),
     control: new AppThemeShadow(16, '#4D000000', 0, 4),
     tabBar: new AppThemeShadow(10, '#66000000', 0, -3)
   };

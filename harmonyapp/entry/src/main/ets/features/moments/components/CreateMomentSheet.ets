@@ -575,7 +575,7 @@ export struct CreateMomentSheet {
           top: DesignConstants.SPACING.SM2,
           bottom: DesignConstants.SPACING.SM2
         })
-        .shadow(this.canPublish() ? this.getPalette().accentShadow : undefined)
+        .shadow(this.canPublish() ? this.getPalette().surfaceShadow : undefined)
         .onClick(() => {
           if (this.canPublish()) {
             this.publish();
