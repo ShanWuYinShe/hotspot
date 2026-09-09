@@ -83,6 +83,11 @@ jobs:
           cache: true
           cache-dependency-path: backend-go/go.sum
 
+      - name: run database migrations
+        run: |
+          cd backend-go
+          go run ./cmd/migrate
+
       - name: test database schema & spatial indexes
         run: |
           cd backend-go
