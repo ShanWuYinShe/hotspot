@@ -857,3 +857,182 @@ func TestPostgresIT_CommonGroupCount(t *testing.T) {
 		}
 	})
 }
+
+func TestPostgresIT_SearchGroups_S2SpatialFiltering(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		repo := NewPostgresRepository(txFactory)
+		ownerID := testdb.InsertUser(t, txFactory, "g_s2_owner", "Owner")
+
+		falseVal := false
+		trueVal := true
+
+		// 1. 附近可见群组 A (~290m)
+		gA, err := repo.Create(ctx, ownerID, CreateGroupRequest{
+			Name:         "Golang Beijing Near",
+			IsSearchable: &trueVal,
+			Location: Location{LocationName: "Loc", Point: struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			}{Latitude: 42.1260, Longitude: 88.5678}},
+		})
+		if err != nil {
+			t.Fatalf("create gA: %v", err)
+		}
+
+		// 2. 附近可见群组 B (~1300m)
+		gB, err := repo.Create(ctx, ownerID, CreateGroupRequest{
+			Name:         "Rust Beijing Medium",
+			IsSearchable: &trueVal,
+			Location: Location{LocationName: "Loc", Point: struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			}{Latitude: 42.1350, Longitude: 88.5678}},
+		})
+		if err != nil {
+			t.Fatalf("create gB: %v", err)
+		}
+
+		// 3. 附近不可搜索群组 C
+		gC, err := repo.Create(ctx, ownerID, CreateGroupRequest{
+			Name:         "Hidden Group",
+			IsSearchable: &falseVal,
+			Location: Location{LocationName: "Loc", Point: struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			}{Latitude: 42.1260, Longitude: 88.5678}},
+		})
+		if err != nil {
+			t.Fatalf("create gC: %v", err)
+		}
+
+		// 4. 附近解散软删除群组 D
+		gD, err := repo.Create(ctx, ownerID, CreateGroupRequest{
+			Name:         "Dismissed Group",
+			IsSearchable: &trueVal,
+			Location: Location{LocationName: "Loc", Point: struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			}{Latitude: 42.1260, Longitude: 88.5678}},
+		})
+		if err != nil {
+			t.Fatalf("create gD: %v", err)
+		}
+		if err := repo.Dismiss(ctx, gD.Group.GroupID); err != nil {
+			t.Fatalf("dismiss gD: %v", err)
+		}
+
+		// 5. 远距离群组 E (上海 ~3000km)
+		gE, err := repo.Create(ctx, ownerID, CreateGroupRequest{
+			Name:         "Shanghai Group Far",
+			IsSearchable: &trueVal,
+			Location: Location{LocationName: "Shanghai", Point: struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			}{Latitude: 31.2304, Longitude: 121.4737}},
+		})
+		if err != nil {
+			t.Fatalf("create gE: %v", err)
+		}
+
+		_ = gC
+		_ = gE
+
+		// 检索以参考点为中心、半径 5000m 内的群组，按距离排序
+		radius := 5000
+		resp, err := repo.Search(ctx, SearchGroupsRequest{
+			ReferencePoint: GeoPoint{Latitude: 42.1234, Longitude: 88.5678},
+			Radius:         &radius,
+			SortBy:         "distance",
+		})
+		if err != nil {
+			t.Fatalf("Search: %v", err)
+		}
+
+		if len(resp.Items) != 2 {
+			t.Fatalf("expected exactly 2 search results, got %d: %#v", len(resp.Items), resp.Items)
+		}
+
+		foundIDs := make(map[string]bool)
+		for _, item := range resp.Items {
+			foundIDs[item.Group.GroupID] = true
+			if item.Location == nil || item.Location.Distance == nil {
+				t.Fatalf("expected relative distance populated for group %s", item.Group.GroupID)
+			}
+		}
+
+		if !foundIDs[gA.Group.GroupID] || !foundIDs[gB.Group.GroupID] {
+			t.Fatalf("expected gA and gB in results: %#v", foundIDs)
+		}
+		if foundIDs[gC.Group.GroupID] {
+			t.Fatal("unsearchable group gC leaked into search results")
+		}
+		if foundIDs[gD.Group.GroupID] {
+			t.Fatal("dismissed group gD leaked into search results")
+		}
+		if foundIDs[gE.Group.GroupID] {
+			t.Fatal("far group gE leaked into 5km search results")
+		}
+
+		// 验证首项为更近的 gA
+		if resp.Items[0].Group.GroupID != gA.Group.GroupID {
+			t.Fatalf("expected gA as first result due to closer distance, got %s", resp.Items[0].Group.GroupID)
+		}
+		if *resp.Items[0].Location.Distance >= *resp.Items[1].Location.Distance {
+			t.Fatalf("expected items sorted by distance: dist(gA)=%.1f >= dist(gB)=%.1f",
+				*resp.Items[0].Location.Distance, *resp.Items[1].Location.Distance)
+		}
+	})
+}
+
+func TestPostgresIT_SearchGroups_KeywordAndSpatialFilter(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		repo := NewPostgresRepository(txFactory)
+		ownerID := testdb.InsertUser(t, txFactory, "g_kw_owner", "Owner")
+
+		trueVal := true
+		// 附近匹配关键字
+		gMatch, err := repo.Create(ctx, ownerID, CreateGroupRequest{
+			Name:         "HotSpot Enthusiasts Beijing",
+			IsSearchable: &trueVal,
+			Location: Location{LocationName: "Loc", Point: struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			}{Latitude: 42.1260, Longitude: 88.5678}},
+		})
+		if err != nil {
+			t.Fatalf("create gMatch: %v", err)
+		}
+
+		// 附近但不匹配关键字
+		_, err = repo.Create(ctx, ownerID, CreateGroupRequest{
+			Name:         "Outdoor Hikers Beijing",
+			IsSearchable: &trueVal,
+			Location: Location{LocationName: "Loc", Point: struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			}{Latitude: 42.1260, Longitude: 88.5678}},
+		})
+		if err != nil {
+			t.Fatalf("create gOther: %v", err)
+		}
+
+		radius := 5000
+		resp, err := repo.Search(ctx, SearchGroupsRequest{
+			ReferencePoint: GeoPoint{Latitude: 42.1234, Longitude: 88.5678},
+			Radius:         &radius,
+			Keyword:        "HotSpot",
+			SortBy:         "relevance",
+		})
+		if err != nil {
+			t.Fatalf("Search: %v", err)
+		}
+
+		if len(resp.Items) != 1 || resp.Items[0].Group.GroupID != gMatch.Group.GroupID {
+			t.Fatalf("expected only gMatch in keyword search, got %#v", resp.Items)
+		}
+	})
+}

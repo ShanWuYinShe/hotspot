@@ -82,15 +82,14 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchGroupsRequest
 				continue
 			}
 			meta.Distance = distance
-			meta.Bearing = bearing
-			value := float64(distance)
-			item.Location.Distance = &value
-			value = float64(bearing)
-			item.Location.BearingDegrees = &value
+			distanceVal := float64(distance)
+			bearingVal := float64(bearing)
+			item.Location.Distance = &distanceVal
+			item.Location.BearingDegrees = &bearingVal
 		} else if req.SortBy == searchSortDistance {
 			meta.Distance = geo.DistanceMeters(reference, groupLocationPoint(*item.Location))
-			value := float64(meta.Distance)
-			item.Location.Distance = &value
+			distanceVal := float64(meta.Distance)
+			item.Location.Distance = &distanceVal
 		}
 		items = append(items, item)
 		metas[item.Group.GroupID] = meta

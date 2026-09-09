@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/testdb"
 )
@@ -392,6 +393,61 @@ func TestPostgresIT_ListFollowingPagination(t *testing.T) {
 		}
 		if page2.NextCursor != nil {
 			t.Fatalf("page2: expected empty next_cursor (last page), got %q", *page2.NextCursor)
+		}
+	})
+}
+
+func TestPostgresIT_PutProfileUpdatesS2CellID(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		repo := NewPostgresRepository(txFactory)
+		userID := testdb.InsertUser(t, txFactory, "u_s2_cell_test", "S2User")
+		nowTS := nowRFC3339()
+
+		bjPoint := geo.Point{Latitude: 39.9042, Longitude: 116.4074}
+		profileBJ := MyProfile{
+			UserID:     userID,
+			Nickname:   "S2User",
+			UserType:   UserTypeNormal,
+			Location:   Location{LocationName: "Beijing", Point: GeoPoint{Latitude: bjPoint.Latitude, Longitude: bjPoint.Longitude}},
+			LastOnline: nowTS,
+			CreatedAt:  nowTS,
+		}
+		if err := repo.PutProfile(ctx, profileBJ); err != nil {
+			t.Fatalf("PutProfile (Beijing): %v", err)
+		}
+
+		qdb := txFactory.DB.(persistence.QueryableDB)
+		var s2CellID int64
+		if err := qdb.QueryRow(ctx, "SELECT s2_cell_id FROM users WHERE user_id = $1", userID).Scan(&s2CellID); err != nil {
+			t.Fatalf("query s2_cell_id: %v", err)
+		}
+		expectedBJCellID := geo.LeafCellID(bjPoint)
+		if s2CellID != expectedBJCellID {
+			t.Fatalf("expected s2_cell_id %d for Beijing, got %d", expectedBJCellID, s2CellID)
+		}
+
+		// 更新为上海坐标
+		shPoint := geo.Point{Latitude: 31.2304, Longitude: 121.4737}
+		profileSH := MyProfile{
+			UserID:     userID,
+			Nickname:   "S2User",
+			UserType:   UserTypeNormal,
+			Location:   Location{LocationName: "Shanghai", Point: GeoPoint{Latitude: shPoint.Latitude, Longitude: shPoint.Longitude}},
+			LastOnline: nowTS,
+			CreatedAt:  nowTS,
+		}
+		if err := repo.PutProfile(ctx, profileSH); err != nil {
+			t.Fatalf("PutProfile (Shanghai): %v", err)
+		}
+
+		if err := qdb.QueryRow(ctx, "SELECT s2_cell_id FROM users WHERE user_id = $1", userID).Scan(&s2CellID); err != nil {
+			t.Fatalf("query s2_cell_id: %v", err)
+		}
+		expectedSHCellID := geo.LeafCellID(shPoint)
+		if s2CellID != expectedSHCellID {
+			t.Fatalf("expected s2_cell_id %d for Shanghai, got %d", expectedSHCellID, s2CellID)
 		}
 	})
 }
