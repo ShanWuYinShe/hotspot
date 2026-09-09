@@ -61,7 +61,6 @@ const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
   textureOpacity: DesignConstants.EFFECT.TEXTURE_SOFT
 };
 
-const NO_SHADOW: AppThemeShadow = new AppThemeShadow(0, '#00000000', 0, 0);
 
 function cloneShadow(shadow: AppThemeShadow): AppThemeShadow {
   return new AppThemeShadow(shadow.radius, shadow.color, shadow.offsetX, shadow.offsetY);
@@ -93,8 +92,6 @@ function buildPalette(
     label,
     description,
     pageBackground: colors.pageBackground,
-    pageGlow: colors.pageGlow,
-    heroGlow: colors.heroGlow,
     surfaceBackground: colors.surfaceBackground,
     surfaceSubtle: colors.surfaceSubtle,
     surfaceElevated: colors.surfaceElevated,
@@ -146,12 +143,7 @@ const DEFAULT_CLEAN_LIGHT_VISUALS = buildVisualTokens(
   {
     // 头像抬升阴影（对齐前端 --cst-elevation-profile-avatar 0 6px 20px 0.22）
     avatarShadow: new AppThemeShadow(20, '#38000000', 0, 6),
-    haloShadow: NO_SHADOW,
-    previewShadow: new AppThemeShadow(24, '#29000000', 0, 8),
-    insetShadow: NO_SHADOW,
-    highlightShadow: NO_SHADOW,
-    // forest 扁平退化：tab 光晕近透明
-    tabActiveGlow: new AppThemeShadow(12, '#0A3D7A55', 0, 4)
+    previewShadow: new AppThemeShadow(24, '#29000000', 0, 8)
   }
 );
 
@@ -161,12 +153,7 @@ const DEFAULT_CLEAN_DARK_VISUALS = buildVisualTokens(
   {
     // 头像抬升阴影（深色增强透明度）
     avatarShadow: new AppThemeShadow(20, '#66000000', 0, 6),
-    haloShadow: NO_SHADOW,
-    previewShadow: new AppThemeShadow(28, '#59000000', 0, 8),
-    insetShadow: NO_SHADOW,
-    highlightShadow: NO_SHADOW,
-    // 深色 + forest 扁平退化：tab 光晕近透明
-    tabActiveGlow: new AppThemeShadow(12, '#0D52B878', 0, 4)
+    previewShadow: new AppThemeShadow(28, '#59000000', 0, 8)
   }
 );
 
@@ -213,11 +200,7 @@ const VIBRANT_LIGHT_VISUALS = buildVisualTokens(
   VIBRANT_THEME_METRICS,
   {
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.surface),
-    haloShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.control),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.elevated),
-    insetShadow: new AppThemeShadow(10, '#1A635BC8', 3, 3),
-    highlightShadow: new AppThemeShadow(8, '#C0FFFFFF', -3, -3),
-    tabActiveGlow: new AppThemeShadow(20, '#522E66C0', 0, 6)
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_LIGHT.elevated)
   }
 );
 
@@ -226,12 +209,7 @@ const VIBRANT_DARK_VISUALS = buildVisualTokens(
   VIBRANT_THEME_METRICS,
   {
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.surface),
-    haloShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.control),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.elevated),
-    insetShadow: new AppThemeShadow(10, '#80000000', 3, 3),
-    highlightShadow: new AppThemeShadow(8, '#1869A8FF', -3, -3),
-    // 深色光晕退化：近透明
-    tabActiveGlow: new AppThemeShadow(20, '#1469A8FF', 0, 6)
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.VIBRANT_DARK.elevated)
   }
 );
 

@@ -63,11 +63,7 @@ export interface AppThemeMetricTokens {
 
 export interface AppThemeEffectTokens {
   avatarShadow: AppThemeShadow;
-  haloShadow: AppThemeShadow;
   previewShadow: AppThemeShadow;
-  insetShadow: AppThemeShadow;
-  highlightShadow: AppThemeShadow;
-  tabActiveGlow: AppThemeShadow;
 }
 
 export interface AppThemeVisualTokens {
@@ -81,8 +77,6 @@ export interface AppThemePalette {
   label: string;
   description: string;
   pageBackground: string;
-  pageGlow: string;
-  heroGlow: string;
   surfaceBackground: string;
   surfaceSubtle: string;
   surfaceElevated: string;

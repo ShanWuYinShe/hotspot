@@ -89,7 +89,7 @@ export struct ProfileMomentGallery {
             .fontColor(this.palette().textSecondary)
         }
         .width('100%')
-        .height(DesignConstants.LAYOUT.GLOW_BLOB_MEDIUM)
+        .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE) // 64 对齐前端空态容器档
         .justifyContent(FlexAlign.Center)
       } else {
         Column({ space: DesignConstants.SPACING.SM }) {
@@ -114,7 +114,7 @@ export struct ProfileMomentGallery {
           .fontColor(this.palette().textSecondary)
       }
       .width('100%')
-      .height(DesignConstants.LAYOUT.GLOW_BLOB_MEDIUM)
+      .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE) // 64 对齐前端空态容器档
       .justifyContent(FlexAlign.Center)
     }
   }

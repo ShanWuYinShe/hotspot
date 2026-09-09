@@ -338,10 +338,6 @@ export interface ShapeSemanticTokens {
 // ==================== 设计常量聚合接口 ====================
 export interface MaterialEffectSystem {
   TEXTURE_SOFT: number;
-  /** 大号 glow 模糊（80，头像光晕） */
-  GLOW_BLUR_LARGE: number;
-  /** 中号 glow 模糊（64，头部光晕） */
-  GLOW_BLUR_MEDIUM: number;
 }
 
 // ==================== 页面布局系统接口（对齐前端 navigation chrome）====================
@@ -374,12 +370,6 @@ export interface LayoutSystem {
   HOME_COLUMN_WIDTH: number;
   /** 地图筛选面板宽度（180） */
   FILTER_PANEL_WIDTH: number;
-  /** 个人页 glow 光晕尺寸（180/160/120） */
-  GLOW_BLOB_LARGE: number;
-  GLOW_BLOB_MEDIUM: number;
-  GLOW_BLOB_SMALL: number;
-  /** 个人页 glow 光晕右上定位偏移（64） */
-  GLOW_BLOB_MARGIN_TOP: number;
   /** 登录卡片最大宽度（对齐前端 /login max-w-100=400px） */
   LOGIN_CARD_MAX_WIDTH: number;
 }
@@ -579,9 +569,7 @@ const INTERACTION: InteractionSystem = {
 
 // ==================== 组件特定常量 ====================
 const EFFECT: MaterialEffectSystem = {
-  TEXTURE_SOFT: 0.12,
-  GLOW_BLUR_LARGE: 80,
-  GLOW_BLUR_MEDIUM: 64,
+  TEXTURE_SOFT: 0.12
 };
 
 const COMPONENT: ComponentConstants = {
@@ -673,10 +661,6 @@ const LAYOUT: LayoutSystem = {
   NICKNAME_MAX_WIDTH: 56,
   HOME_COLUMN_WIDTH: 420,
   FILTER_PANEL_WIDTH: 180,
-  GLOW_BLOB_LARGE: 180,
-  GLOW_BLOB_MEDIUM: 160,
-  GLOW_BLOB_SMALL: 120,
-  GLOW_BLOB_MARGIN_TOP: 64,
   LOGIN_CARD_MAX_WIDTH: 400,
 };
 

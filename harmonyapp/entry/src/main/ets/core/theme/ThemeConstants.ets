@@ -7,8 +7,6 @@ import { AppThemeShadow } from './AppThemeTypes';
 
 export interface ColorConfig {
   pageBackground: string;
-  pageGlow: string;
-  heroGlow: string;
   surfaceBackground: string;
   surfaceSubtle: string;
   surfaceElevated: string;
@@ -105,8 +103,6 @@ class ThemeShadowRegistry {
 export class ThemeConstants {
   static readonly DEFAULT_CLEAN_LIGHT_COLORS: ColorConfig = {
     pageBackground: '#F6F7F3',
-    pageGlow: '#F2F4F2',
-    heroGlow: '#E8EDE8',
     surfaceBackground: '#F6F7F3',
     surfaceSubtle: '#F0F1F0',
     surfaceElevated: '#F6F7F3',
@@ -148,8 +144,6 @@ export class ThemeConstants {
 
   static readonly DEFAULT_CLEAN_DARK_COLORS: ColorConfig = {
     pageBackground: '#161A16',
-    pageGlow: '#171A17',
-    heroGlow: '#1A201A',
     surfaceBackground: '#161A16',
     surfaceSubtle: '#242624',
     surfaceElevated: '#181C18',
@@ -194,8 +188,6 @@ export class ThemeConstants {
   static readonly VIBRANT_LIGHT_COLORS: ColorConfig = {
     // 表面分层（对齐前端 vibrant.css）：画布灰蓝底 + 卡片纯白，卡片靠底色差与阴影浮起
     pageBackground: '#EFF3F9',
-    pageGlow: '#E8EDFF',
-    heroGlow: '#DDE4FF',
     surfaceBackground: '#FFFFFF',
     surfaceSubtle: '#EAF1FA',
     surfaceElevated: '#F7FAFF',
@@ -237,8 +229,6 @@ export class ThemeConstants {
 
   static readonly VIBRANT_DARK_COLORS: ColorConfig = {
     pageBackground: '#0B1424',
-    pageGlow: '#122036',
-    heroGlow: '#16263E',
     surfaceBackground: '#111D31',
     surfaceSubtle: '#14243A',
     surfaceElevated: '#16273C',

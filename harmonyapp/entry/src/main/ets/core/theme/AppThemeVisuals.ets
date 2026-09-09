@@ -48,7 +48,6 @@ export interface ThemeProfileIdentityStyle {
   titleFontSize: number;
   subtitleFontSize: number;
   avatarShadow: ShadowOptions;
-  haloShadow: ShadowOptions;
 }
 
 export interface ThemeProfileQuickActionStyle extends ThemeCardVisualStyle {
@@ -81,8 +80,6 @@ export interface ThemeTabBarVisualStyle {
   borderColor: ResourceColor;
   borderWidth: number;
   shadow: ShadowOptions;
-  activeGlow: ShadowOptions;
-  fabGlow: ShadowOptions;
   height: number;
   radius: number;
   floatingMargin: number;
@@ -99,7 +96,6 @@ export interface ThemePreviewVisualStyle {
   primaryButton: ThemeButtonVisualStyle;
   tileRadius: number;
   heroAvatarSize: number;
-  haloShadow: ShadowOptions;
 }
 
 export interface ThemeChatVisualStyle {
@@ -112,7 +108,6 @@ export interface ThemeChatVisualStyle {
 export class AppThemeVisuals {
   private static surfaceCardCache: Map<string, ThemeCardVisualStyle> = new Map();
   private static elevatedCardCache: Map<string, ThemeCardVisualStyle> = new Map();
-  private static compactCardCache: Map<string, ThemeCardVisualStyle> = new Map();
   private static listItemCardCache: Map<string, ThemeCardVisualStyle> = new Map();
   private static primaryButtonCache: Map<string, ThemeButtonVisualStyle> = new Map();
   private static secondaryButtonCache: Map<string, ThemeButtonVisualStyle> = new Map();
@@ -146,10 +141,6 @@ export class AppThemeVisuals {
 
   static getControlShadow(themeId: string): ShadowOptions {
     return AppThemeVisuals.getPalette(themeId).controlShadow;
-  }
-
-  static getTabBarShadow(themeId: string): ShadowOptions {
-    return AppThemeVisuals.getPalette(themeId).tabBarShadow;
   }
 
   static getOverlayStrong(themeId: string): string {
@@ -191,25 +182,6 @@ export class AppThemeVisuals {
       padding: palette.visuals.metrics.heroPadding
     };
     AppThemeVisuals.elevatedCardCache.set(key, style);
-    return style;
-  }
-
-  static getCompactCardStyle(themeId: string): ThemeCardVisualStyle {
-    const key = AppThemeVisuals.getThemeKey(themeId);
-    const cached = AppThemeVisuals.compactCardCache.get(key);
-    if (cached) {
-      return cached;
-    }
-    const palette = AppThemeVisuals.getPalette(themeId);
-    const style: ThemeCardVisualStyle = {
-      backgroundColor: palette.surfaceBackground,
-      borderColor: palette.borderColor,
-      borderWidth: 1,
-      shadow: palette.elevatedShadow,
-      borderRadius: palette.visuals.shape.compactCard,
-      padding: palette.visuals.metrics.cardPadding
-    };
-    AppThemeVisuals.compactCardCache.set(key, style);
     return style;
   }
 
@@ -329,8 +301,7 @@ export class AppThemeVisuals {
       avatarSize: palette.visuals.metrics.profileAvatarSize,
       titleFontSize: palette.visuals.metrics.profileTitleFontSize,
       subtitleFontSize: palette.visuals.metrics.profileSubtitleFontSize,
-      avatarShadow: palette.visuals.effects.avatarShadow,
-      haloShadow: palette.visuals.effects.haloShadow
+      avatarShadow: palette.visuals.effects.avatarShadow
     };
     AppThemeVisuals.profileIdentityCache.set(key, style);
     return style;
@@ -391,8 +362,6 @@ export class AppThemeVisuals {
       borderColor: palette.floatingBorderColor,
       borderWidth: 1,
       shadow: palette.tabBarShadow,
-      activeGlow: palette.visuals.effects.tabActiveGlow,
-      fabGlow: palette.accentShadow,
       height: palette.visuals.metrics.tabBarHeight,
       radius: palette.visuals.shape.tabBar,
       floatingMargin: palette.visuals.metrics.tabBarFloatingMargin,
@@ -434,8 +403,7 @@ export class AppThemeVisuals {
         horizontalPadding: DesignConstants.SPACING.LG
       },
       tileRadius: palette.visuals.shape.compactCard,
-      heroAvatarSize: palette.visuals.metrics.previewHeroAvatarSize,
-      haloShadow: palette.visuals.effects.haloShadow
+      heroAvatarSize: palette.visuals.metrics.previewHeroAvatarSize
     };
     AppThemeVisuals.previewCache.set(key, style);
     return style;
@@ -443,22 +411,6 @@ export class AppThemeVisuals {
 
   static getAvatarShadow(themeId: string): ShadowOptions {
     return AppThemeVisuals.getPalette(themeId).visuals.effects.avatarShadow;
-  }
-
-  static getAvatarHaloShadow(themeId: string): ShadowOptions {
-    return AppThemeVisuals.getPalette(themeId).visuals.effects.haloShadow;
-  }
-
-  static getNeuInsetShadow(themeId: string): ShadowOptions {
-    return AppThemeVisuals.getPalette(themeId).visuals.effects.insetShadow;
-  }
-
-  static getNeuHighlightShadow(themeId: string): ShadowOptions {
-    return AppThemeVisuals.getPalette(themeId).visuals.effects.highlightShadow;
-  }
-
-  static getTabActiveGlow(themeId: string): ShadowOptions {
-    return AppThemeVisuals.getPalette(themeId).visuals.effects.tabActiveGlow;
   }
 
   static getChatVisualStyle(themeId: string): ThemeChatVisualStyle {

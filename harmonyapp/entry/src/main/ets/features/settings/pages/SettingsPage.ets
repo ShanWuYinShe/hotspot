@@ -874,14 +874,12 @@ export struct SettingsPage {
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
               .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getThemeOptionPalette(option).borderColor })
-              .shadow(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).haloShadow)
 
             Blank()
               .width('70%')
               .height(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.height)
               .borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.borderRadius)
               .backgroundColor(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.backgroundColor)
-              .shadow(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.shadow)
 
             Row({ space: DesignConstants.SPACING.MD2 }) {
               Blank().layoutWeight(1).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD).borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).tileRadius).backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
@@ -895,7 +893,6 @@ export struct SettingsPage {
                 .height(DesignConstants.FONT.SIZE.XL)
                 .borderRadius(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).radius)
                 .backgroundColor(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).backgroundColor)
-                .shadow(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).shadow)
 
               Row() {}
                 .width(DesignConstants.COMPONENT.THEME_PREVIEW_BAR_WIDTH)
@@ -903,7 +900,6 @@ export struct SettingsPage {
                 .margin({ top: -19, left: DesignConstants.SPACING.SM })
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .backgroundColor(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).activeBackgroundColor)
-                .shadow(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).activeGlow)
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start)

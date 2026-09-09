@@ -553,27 +553,17 @@ export struct HomePage {
 
   @Builder
   private buildHeroStats() {
-    // 实时附近统计卡（对齐前端 HeroStats：ambient-glow 光晕 + radar 图标 + 标题/范围 + 三段统计）
-    Stack() {
-      // ambient 光晕层（对齐前端 ambient-glow：heroGlow 大圆模糊，随明暗调透明度）
-      Column()
-        .width(DesignConstants.LAYOUT.GLOW_BLOB_LARGE)
-        .height(DesignConstants.LAYOUT.GLOW_BLOB_LARGE)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.getPalette().heroGlow)
-        .blur(DesignConstants.EFFECT.GLOW_BLUR_MEDIUM)
-        .opacity(this.getPalette().isDarkTheme ? 0.4 : 0.7)
-        .position({ x: '55%', y: -DesignConstants.SPACING.LG2 })
-
-      Column() {
+    // 实时附近统计卡（对齐前端 HeroStats.svelte 当前实现：白卡 + 发丝描边 + raised 投影，
+    // 无 ambient 光晕——前端 09-07 去炫光治理已删除 glow 层，本端同步删除）
+    Column() {
       // Header row：图标 + 标题/范围 + 右箭头
       Row() {
-        Row({ space: DesignConstants.SPACING.SM }) {
-          // brand 圆形图标（对齐前端 38px brand 圆 + shadow-brand-btn）
+        Row({ space: DesignConstants.SPACING.SM2 }) {
+          // brand 圆形图标（对齐前端 size-9.5 圆 + accent 实底，无投影）
           Row() {
             LucideIcon({
               icon: AppIcon.NEARBY,
-              iconSize: DesignConstants.FONT.SIZE.MD,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
               paletteRole: 'accentText'
             })
           }
@@ -582,16 +572,15 @@ export struct HomePage {
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getPalette().accentBackground)
           .justifyContent(FlexAlign.Center)
-          .shadow(this.getPalette().accentShadow)
 
           Column() {
             Text('实时附近')
-              .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-body
+              .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-sm
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getPalette().textPrimary)
             // 副标题：定位名 · 范围 · 更新节奏（对齐前端 HeroStats rangeLabel）
             Text(this.getHeroRangeLabel())
-              .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-caption
+              .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs
               .fontColor(this.getPalette().textSecondary)
               .margin({ top: 1 })
               .maxLines(1)
@@ -606,7 +595,7 @@ export struct HomePage {
         Text() {
           LucideIcon({
             icon: AppIcon.ARROW_RIGHT,
-            iconSize: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             paletteRole: 'textSecondary'
           })
         }
@@ -614,16 +603,17 @@ export struct HomePage {
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      // Stats grid：三段统计 + 竖分割线（数字统一 accent，对齐前端 HeroStats）
+      // Stats grid：三段统计 + 竖分割线（对齐前端 bg-border-default gap-px 网格语义）
+      // 数字统一 text-2xl(24) bold，对齐前端 display 化 stats（0d528548）
       Row({ space: DesignConstants.SPACING.MD }) {
         // 人附近（对齐前端：显示实际返回条数，limit 12）
-        Column({ space: DesignConstants.SPACING.HALF }) {
+        Column({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${this.users.length}`)
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .fontColor(this.getPalette().textPrimary)
           Text('人附近')
-            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontSize(DesignConstants.FONT.SIZE.XS2) // 10 对齐前端 text-xxs
             .fontColor(this.getPalette().textSecondary)
         }
         .alignItems(HorizontalAlign.Center)
@@ -636,13 +626,13 @@ export struct HomePage {
           .backgroundColor(this.getPalette().borderColor)
 
         // 活动中（对齐前端 heroStats.active = moments.length）
-        Column({ space: DesignConstants.SPACING.HALF }) {
+        Column({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${this.moments.length}`)
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .fontColor(this.getPalette().textPrimary)
           Text('动态')
-            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(this.getPalette().textSecondary)
         }
         .alignItems(HorizontalAlign.Center)
@@ -655,13 +645,13 @@ export struct HomePage {
           .backgroundColor(this.getPalette().borderColor)
 
         // 在线
-        Column({ space: DesignConstants.SPACING.HALF }) {
+        Column({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${this.getOnlineCount()}`)
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .fontColor(this.getPalette().textPrimary)
           Text('在线')
-            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(this.getPalette().textSecondary)
         }
         .alignItems(HorizontalAlign.Center)
@@ -673,11 +663,12 @@ export struct HomePage {
     .width('100%')
     // 页边距对齐前端 px-5(20)：卡本体不可贴屏幕边缘（此前 100% 宽导致边框贴边不可见）
     .margin({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
-    // 对齐前端 surface-hero：p-4.5 px-5（上下18 左右20；18 按近邻归并原则取 16/20 档，左右 LG2）
+    // 对齐前端 HeroStats 卡：py-4.5(18→LG 档) px-5(LG2) + rounded-xl(24) + raised-sm 投影
     .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
     .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+    .shadow(this.getPalette().surfaceShadow)
     .scale(this.locationCardPressed
       ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
       : { x: 1, y: 1 })
@@ -695,21 +686,19 @@ export struct HomePage {
       }
     })
     .onClick(() => AppRouter.push(PageNames.NEARBY_USERS))
-    }
-    .width('100%')
-    .alignContent(Alignment.Center)
   }
 
   // ==================== 区块标题 (eyebrow) ====================
 
   @Builder
   private buildSectionHeader(title: string, linkText: string, pressedIndex: number, onViewAll: () => void) {
+    // 对齐前端 SectionHead.svelte：分区标题用真实标题层级（15px semibold），
+    // eyebrow 仅用于表单/分组 label；右侧 link-btn 文字链接 + 右箭头
     Row() {
       Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.XS2)
-        .fontColor(this.getPalette().textSecondary)
-        .textCase(TextCase.UpperCase)
-        .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPalette().textPrimary)
 
       Blank()
 
@@ -719,7 +708,7 @@ export struct HomePage {
           .fontColor(this.getPalette().accentBackground)
         LucideIcon({
           icon: AppIcon.ARROW_RIGHT,
-          iconSize: DesignConstants.FONT.SIZE.SM,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
           color: this.getPalette().accentBackground
         })
       }

@@ -163,19 +163,14 @@ export struct SystemButton {
 
   private getShadow(): ShadowOptions {
     const p = this.getPalette();
-    // 扁平风格：仅 primary / danger 带品牌阴影（对齐前端 --shadow-brand-btn）；
+    // 对齐前端 ui/button.svelte 当前契约：全部 variant 用 raised 双向投影
+    // （raised-sm 静态 / raised-md hover 抬档），无品牌光晕（前端已删除 accent glow）；
     // 无阴影时返回零阴影而非 undefined（undefined 实参会破坏属性链导致直角）
     if (this.variant === 'primary' || this.variant === 'danger') {
-      // hover（键鼠）光晕抬档：同色系阴影半径放大（对齐前端 hover:shadow-glow-md）
       if (this.isHovered && this.isInteractive()) {
-        return {
-          radius: Math.round(p.accentShadow.radius * 1.5),
-          color: p.accentShadow.color,
-          offsetX: p.accentShadow.offsetX,
-          offsetY: p.accentShadow.offsetY
-        };
+        return p.elevatedShadow;
       }
-      return p.accentShadow;
+      return p.surfaceShadow;
     }
     if (this.shadowed) {
       return p.controlShadow;

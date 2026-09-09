@@ -45,9 +45,8 @@ export struct SystemAvatar {
   }
 
   private getAvatarShadow(): ShadowOptions {
-    return this.avatarSize >= 80
-      ? AppThemeVisuals.getAvatarHaloShadow(this.resolvedThemeId)
-      : AppThemeVisuals.getAvatarShadow(this.resolvedThemeId);
+    // 对齐前端 Avatar：统一普通头像投影，无 halo 光晕特例
+    return AppThemeVisuals.getAvatarShadow(this.resolvedThemeId);
   }
 
   private getActualSrc(): string | Resource | undefined {
@@ -116,17 +115,9 @@ export struct SystemAvatar {
   }
 
   build() {
+    // 对齐前端 shared/Avatar.svelte：无 halo 光晕层（前端去炫光治理已删除 glow，
+    // 大尺寸头像同样只保留白卡/描边语言），仅头像本体 + 状态点
     Stack({ alignContent: Alignment.Center }) {
-      if (this.avatarSize >= 80) {
-        Row()
-          .width(this.avatarSize + 24)
-          .height(this.avatarSize + 24)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getPalette().heroGlow)
-          .opacity(this.getPalette().isDarkTheme ? 0.22 : 0.5)
-          .shadow(AppThemeVisuals.getAvatarHaloShadow(this.resolvedThemeId))
-      }
-
       this.buildAvatarContent()
     }
   }
