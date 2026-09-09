@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   backend:
-    name: Go Backend
+    name: Go Backend (Unit Tests)
     runs-on: ubuntu-24.04
     env:
       AUTH_TOKEN_SECRET: ci-test-secret-key-at-least-32-bytes-long
@@ -50,6 +50,49 @@ jobs:
               failed = 1
             }
           } END { if (failed) exit 1 }' /tmp/gotest.log
+
+  backend-integration:
+    name: Go Backend (Postgres Integration)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18.4-alpine
+        env:
+          POSTGRES_DB: hotspot_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      POSTGRES_DSN: postgresql://postgres:postgres_ci_password@localhost:5432/hotspot_test?sslmode=disable
+      AUTH_TOKEN_SECRET: ci-test-secret-key-at-least-32-bytes-long
+      APP_ENV: ci
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.5'
+          cache: true
+          cache-dependency-path: backend-go/go.sum
+
+      - name: test database schema & spatial indexes
+        run: |
+          cd backend-go
+          go test -v -count=1 ./test/integration -run 'TestRequiredTablesExist|TestExplainUsesExpectedS2Indexes'
+
+      - name: test real postgres repository integration
+        run: |
+          cd backend-go
+          go test -v -count=1 -run 'TestPostgresIT' ./internal/modules/...
+
 
   frontend:
     name: Frontend (SvelteKit)

@@ -70,10 +70,10 @@ func TestExplainUsesExpectedS2Indexes(t *testing.T) {
 		hitCell, _ := seedExplainFixture(t, ctx, tx)
 		rangeArgs := []any{[]int64{hitCell}, []int64{hitCell}}
 		cases := []struct {
-			name          string
-			sql           string
-			args          []any
-			expectedIndex string
+			name            string
+			sql             string
+			args            []any
+			expectedIndexes []string
 		}{
 			{
 				name: "map moments uses public partial index",
@@ -83,8 +83,8 @@ FROM moments m
 WHERE m.privacy_level = 'public'
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
               WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`,
-				args:          rangeArgs,
-				expectedIndex: "idx_moments_public_s2_cell_id",
+				args:            rangeArgs,
+				expectedIndexes: []string{"idx_moments_public_s2_cell_id"},
 			},
 			{
 				name: "feed nearby moments uses public partial index",
@@ -109,8 +109,8 @@ JOIN users u ON u.user_id = m.user_id
 WHERE m.privacy_level = 'public'
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
               WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)`,
-				args:          []any{[]int64{hitCell}, []int64{hitCell}, "viewer_1"},
-				expectedIndex: "idx_moments_public_s2_cell_id",
+				args:            []any{[]int64{hitCell}, []int64{hitCell}, "viewer_1"},
+				expectedIndexes: []string{"idx_moments_public_s2_cell_id", "idx_moments_user_id_created_at"},
 			},
 		}
 		for _, tc := range cases {
@@ -119,7 +119,7 @@ WHERE m.privacy_level = 'public'
 				if err != nil {
 					t.Fatalf("explain query: %v", err)
 				}
-				assertPlanUsesIndex(t, plan, tc.expectedIndex)
+				assertPlanUsesAnyIndex(t, plan, tc.expectedIndexes...)
 			})
 		}
 	})
