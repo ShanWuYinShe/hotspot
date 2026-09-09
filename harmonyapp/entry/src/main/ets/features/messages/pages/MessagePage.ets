@@ -1020,23 +1020,23 @@ export struct MessagePage {
       }
       .layoutWeight(1)
 
-      // 行尾未读徽章：accent 圆形 chip + 光晕（对齐前端行尾 size-5 徽章；
-      // 已读时保留占位避免文本区宽度跳变）
+      // 行尾未读徽章（对齐前端 ChatListItem 22cbd552 契约：inline-flex + h-5 + leading-none
+      // + tabular-nums，双轴居中，无光晕——前端徽标无 accent glow）
       Stack({ alignContent: Alignment.Center }) {
         if (item.unreadCount > 0) {
           Text(item.unreadCount > 99 ? '99+' : `${item.unreadCount}`)
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getCurrentThemePalette().accentText)
             .minFontScale(0.5)
             .maxLines(1)
+            .lineHeight(DesignConstants.FONT.SIZE.XS) // leading-none：行高锁字号防下沉
         }
       }
       .width(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
       .height(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(item.unreadCount > 0 ? this.getCurrentThemePalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
-      .shadow(item.unreadCount > 0 ? this.getCurrentThemePalette().accentShadow : { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 })
     }
     .width('100%')
     // 对齐前端 chat-list padding（10px 16px）+ radius-md

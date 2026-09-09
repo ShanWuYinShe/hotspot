@@ -31,13 +31,16 @@ export struct SystemBadge {
 
   build() {
     if (this.count > 0) {
+      // 对齐前端徽标契约（22cbd552）：紧凑徽标 h-5 px-2 text-xxs + leading-none，
+      // 行高锁字号防文字下沉，minFontScale 保数字溢出可读
       Text(this.getDisplayText())
         .fontSize(DesignConstants.FONT.SIZE.XS2)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().accentText)
         .backgroundColor(this.getPalette().accentBackground)
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .padding({ left: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF, top: 1, bottom: 1 })
+        .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: 1, bottom: 1 })
+        .lineHeight(DesignConstants.FONT.SIZE.XS2) // leading-none：行高锁字号
         .minFontScale(0.8)
         .maxLines(1)
     } else if (this.dotOnly) {

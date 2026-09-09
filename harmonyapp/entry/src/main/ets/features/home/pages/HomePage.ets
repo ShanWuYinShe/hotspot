@@ -528,15 +528,23 @@ export struct HomePage {
           .borderRadius(DesignConstants.RADIUS.FULL)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
           .backgroundColor(this.getPalette().surfaceBackground)
+          .shadow(this.getPalette().surfaceShadow) // 对齐前端 shadow-raised-xs
         }
 
-        // 搜索/地图入口：中性（透明底 + 主文字色图标），对齐前端 PageHeader 末尾
-        // 透明轮廓按钮——避免实色圆钮与下方内容视觉竞争；glyphSize 提到 20 对齐前端中等图标
+        // 搜索/通知/地图入口：中性（透明底 + 主文字色图标），对齐前端 PageHeader trailing
+        // （affa411a 为非桌面端补齐通知 Bell 快捷入口，本端同步；搜索/通知/地图三连）
         SurfaceIconButton({
           icon: AppIcon.SEARCH,
           kind: 'neutral',
           glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           onPress: () => AppRouter.push(PageNames.SEARCH)
+        })
+
+        SurfaceIconButton({
+          icon: AppIcon.NOTIFICATION,
+          kind: 'neutral',
+          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
+          onPress: () => AppStorage.setOrCreate<boolean>('openNotificationCenter', true)
         })
 
         SurfaceIconButton({
