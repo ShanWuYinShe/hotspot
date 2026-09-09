@@ -244,10 +244,38 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 尺寸（COMPONENT / LAYOUT，禁止裸 `width(N)` / `height(N)`）：
 - 头像 `AVATAR_SIZE.{XS 32, SMALL 40, SMALL_PLUS 44, MEDIUM 48, LARGE 80, XLARGE 96}`；按钮高度 `BUTTON_HEIGHT 42` / `BUTTON_HEIGHT_LG 48` / `ACTION_BUTTON_HEIGHT 28` / `ACTION_BUTTON_HEIGHT_MD 40` / `ACTION_BUTTON_HEIGHT_LG 34` / `SHEET_ACTION_HEIGHT 44` / `FILTER_CHIP_HEIGHT 30` / `LOGOUT_BUTTON_HEIGHT 50` / `PASSWORD_INPUT_HEIGHT 46`
 - 图标 `ICON_SIZE_2XS 14` / `ICON_SIZE_XS 16` / `ICON_SIZE_SM 20` / `ICON_SIZE_SM_PLUS 22` / `ICON_SIZE_MD 24` / `ICON_SIZE_LG 32` / `ICON_SIZE_EMPTY 48`（与 `FONT.SIZE` 解耦的独立 ICON 刻度，图标尺寸一律走此档，不用字号 token） / `STATUS_ICON_SIZE 28` / `LOADING_ICON_SIZE 20` / `LOADING_GLYPH_SIZE 46` / `BRAND_ICON_SIZE 38`；容器 `EMPTY_ICON_SIZE 64` / `LOADING_CONTAINER_SIZE 72` / `BANNER_HEIGHT 140` / `SKELETON_CARD_HEIGHT 100` / `PLACEHOLDER_AREA_HEIGHT 120` / `IMAGE_PLACEHOLDER_HEIGHT 110` / `SHARE_CARD_HEIGHT 130` / `LOG_AREA_HEIGHT 300` / `PROGRESS_STROKE_WIDTH 4`
-- 布局 `LAYOUT.{DESKTOP_HEADER_HEIGHT 52, DESKTOP_SIDEBAR_WIDTH 224, RIGHT_SIDEBAR_WIDTH 220, MOBILE_BOTTOM_NAV_HEIGHT 56, TABLET_NAV_MAX_WIDTH 520, FAB_SIZE 52, ICON_BUTTON_SIZE 36, LABEL_WIDTH 60, HOME_COLUMN_WIDTH 420, FILTER_PANEL_WIDTH 180, GLOW_BLOB_LARGE 180 / MEDIUM 160 / SMALL 120}`
+- 布局 `LAYOUT.{DESKTOP_HEADER_HEIGHT 52, DESKTOP_SIDEBAR_WIDTH 224, RIGHT_SIDEBAR_WIDTH 220, MOBILE_BOTTOM_NAV_HEIGHT 56, TABLET_NAV_MAX_WIDTH 520, FAB_SIZE 52, ICON_BUTTON_SIZE 36, LABEL_WIDTH 60, HOME_COLUMN_WIDTH 420, FILTER_PANEL_WIDTH 180}`（GLOW_BLOB_* 光晕尺寸已随 glow 体系删除）
 - 聊天 `CHAT.{BUBBLE_PADDING_H 16, BUBBLE_PADDING_V 10, IMAGE_BUBBLE_PADDING_H 14, IMAGE_BUBBLE_PADDING_V 6, IMAGE_MAX_WIDTH 200, ...}`
 
-阴影：扁平设计默认 `SHADOW.*` 全零；需要投影时用主题注册表 `AppThemeManager.getPaletteById(...).{surfaceShadow, elevatedShadow, accentShadow, controlShadow}`（真值在 `ThemeConstants` 的 ThemeShadowRegistry），禁止组件内 `.shadow({ radius: N, ... })` 手写。
+阴影：扁平设计默认 `SHADOW.*` 全零；需要投影时用主题注册表 `AppThemeManager.getPaletteById(...).{surfaceShadow, elevatedShadow, controlShadow, tabBarShadow}`（真值在 `ThemeConstants` 的 ThemeShadowRegistry），禁止组件内 `.shadow({ radius: N, ... })` 手写。**全端统一中性 raised 投影语言**：主按钮/主图标钮/加入·关注·发布等 accent 实底控件静态用 `surfaceShadow`、hover/按压抬档 `elevatedShadow`，禁止 `accentShadow` 彩色光晕（`accentShadow` 字段已随 glow 体系删除，对齐前端 ui/button `shadow-raised-sm hover:shadow-raised-md` 契约）。
+
+### 跨端同步机制（强制）
+
+前端与鸿蒙共享同一套设计 token 刻度，同步由 CI 脚本强制拦截，**改两端任一 token 必须同步改另一端**：
+
+| 校验 | 脚本 | 覆盖范围 |
+|---|---|---|
+| 跨端色彩 | `frontend/scripts/check-cross-platform-colors.mjs` | `themes/*.css --cst-palette-*` ↔ `ThemeConstants.ets ColorConfig` 逐值一致（2 主题 × 2 明暗 × 14 组映射）+ 主题 swatch |
+| 跨端刻度 | `frontend/scripts/check-cross-platform-scale.mjs` | 字号 9 档（`--text-*` ↔ `FONT.SIZE`）+ 圆角 5 档（`--radius-*` ↔ `RADIUS`）逐值一致；单端加近邻档即拦截。已登记豁免：`FONT.SIZE.LG=16`（HarmonyOS 平台适配档） |
+
+- 两脚本均挂入 `bun run check:theme`（随 `bun run check` 与 CI 生效），漂移即红。
+- **视觉结构同步约定**：前端 `components/home|messages|profile/` 下组件与鸿蒙
+  `components/`、`features/*/` 对应实现构成下方映射表——修改任一端的**共享组件**
+  （改动视觉契约：布局/字号档/圆角档/投影/动效）时，必须检查映射表对端并同步，
+  commit message 中注明「对齐 <前端组件/commit>」；仅平台适配差异（如 FAB 位置、
+  安全区）可不同步但需在两端代码注释中互指。
+
+### 跨端投影契约速查
+
+| 场景 | 静态 | hover/按压 |
+|---|---|---|
+| 主按钮（SystemButton primary/danger） | `surfaceShadow` | `elevatedShadow` |
+| accent 实底图标钮（SurfaceIconButton primary） | `surfaceShadow` | `elevatedShadow` |
+| 未加入群组/未关注/发布等可点 accent 控件 | `surfaceShadow` | `elevatedShadow` |
+| FAB | `elevatedShadow`（对齐前端 `--cst-elevation-fab` 中性投影） | — |
+| 白卡/统计卡/徽章 | `surfaceShadow` | — |
+| 选中胶囊（TabsPillGroup） | `controlShadow`（hover 增量走底色） | — |
+| 输入框聚焦 | `surfaceShadow` + 边框加深（不画光晕） | — |
 
 页面头部（强制 SystemPageHeader）：
 - 所有页面头部必须用 `SystemPageHeader`（或专用组件 `SearchPageHeader` / `ChatPageHeader`）。

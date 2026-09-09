@@ -121,6 +121,11 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
    `scripts/check-cross-platform-colors.mjs`（映射表内嵌于脚本：前端 forest ≡
    harmonyapp default_clean、success/error/info 随主题族色源），CI 会在漂移时
    拦截；主题选择器 swatch 也已纳入同一校验。
+   同链还有 `scripts/check-cross-platform-scale.mjs`：校验字号档
+   （`--text-*` ↔ 鸿蒙 `FONT.SIZE`，9 档）与圆角档（`--radius-*` ↔ 鸿蒙
+   `RADIUS`，5 档）逐值一致，单端新增近邻档/改档即 CI 拦截。已登记豁免：
+   鸿蒙 `FONT.SIZE.LG=16` 为 HarmonyOS 平台适配档。改字号/圆角 token 必须
+   两端同步（详见 harmonyapp/AGENTS.md「跨端同步机制」）。
 6. **徽标与标签（Badge / Pill）居中与排版契约**：
    - 必须同时声明 `inline-flex items-center justify-center leading-none`，杜绝未设行高导致继承全局行高（24px）产生“文字下沉贴底”或在近正方形上施加 `rounded-full` 产生“怪异胖椭圆”；
    - 紧凑型徽标（未读数气泡、状态胶囊、卡片角标）：`h-5 px-2` 或 `h-5 px-2.5`，字号 `text-xxs`；
