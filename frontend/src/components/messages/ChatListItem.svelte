@@ -36,7 +36,7 @@
 	pressed={isSelected}
 	onClick={onClick}
 	ariaLabel={`打开与 ${chat.name} 的会话`}
-	class="flex items-center gap-3.5 {compact ? 'px-3.5 py-2.5' : 'px-4 py-3'}"
+	class="group flex items-center gap-3.5 {compact ? 'px-3.5 py-2.5' : 'px-4 py-3'} {chat.isPinned && !isSelected ? 'bg-surface-subtle/30' : ''}"
 >
 	<span class="relative shrink-0">
 		<Avatar
@@ -64,27 +64,46 @@
 				{chat.lastMessage || '暂无消息'}
 			</span>
 			<span class="flex items-center gap-1.5 shrink-0">
-				{#if onTogglePin}
+				{#if chat.isPinned}
+					{#if onTogglePin}
+						<button
+							type="button"
+							class="hover-btn scale-btn hit-slop focus-ring flex shrink-0 items-center justify-center rounded-full p-1 {isSelected ? 'text-text-on-accent' : 'text-accent-default'}"
+							aria-label="取消置顶"
+							title="取消置顶"
+							onclick={(e) => {
+								e.stopPropagation();
+								onTogglePin();
+							}}
+						>
+							<Pin
+								class="size-3.5 {isSelected ? 'text-text-on-accent' : 'text-accent-default'}"
+								strokeWidth={2}
+							/>
+						</button>
+					{:else}
+						<Pin
+							class="size-3.5 {isSelected ? 'text-text-on-accent' : 'text-accent-default'}"
+							strokeWidth={2}
+						/>
+					{/if}
+				{:else if onTogglePin}
+					<!-- 未置顶时：默认常态完全隐藏！仅在桌面端鼠标 hover 或键盘 focus 时浮现快捷置顶 -->
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop focus-ring flex shrink-0 items-center justify-center rounded-full p-1 {isSelected || chat.isPinned ? '' : 'text-text-secondary opacity-muted hover:text-accent-default hover:opacity-full focus-visible:opacity-full'}"
-						aria-label={chat.isPinned ? '取消置顶' : '置顶'}
-						title={chat.isPinned ? '取消置顶' : '置顶'}
+						class="hover-btn scale-btn hit-slop focus-ring shrink-0 items-center justify-center rounded-full p-1 opacity-0 group-hover:opacity-70 hover:!opacity-100 focus-visible:opacity-100 transition-opacity duration-fast hidden md:flex text-text-secondary"
+						aria-label="置顶"
+						title="置顶"
 						onclick={(e) => {
 							e.stopPropagation();
 							onTogglePin();
 						}}
 					>
 						<Pin
-							class="size-3.5 {isSelected ? 'text-text-on-accent' : chat.isPinned ? 'text-accent-default' : 'text-text-secondary'}"
+							class="size-3.5 {isSelected ? 'text-text-on-accent' : 'text-text-secondary'}"
 							strokeWidth={2}
 						/>
 					</button>
-				{:else if chat.isPinned}
-					<Pin
-						class="size-3.5 {isSelected ? 'text-text-on-accent' : 'text-text-secondary/70'}"
-						strokeWidth={2}
-					/>
 				{/if}
 				{#if chat.unread > 0}
 					<span

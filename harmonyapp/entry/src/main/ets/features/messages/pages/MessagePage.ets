@@ -525,6 +525,9 @@ export struct MessagePage {
     if (this.pressedChatKey === this.getChatKey(item)) {
       return this.getCurrentThemePalette().surfaceSubtle;
     }
+    if (item.isPinned) {
+      return this.getCurrentThemePalette().surfaceSubtle;
+    }
     return DesignConstants.COLOR.TRANSPARENT;
   }
 
@@ -996,12 +999,24 @@ export struct MessagePage {
         }
         .width('100%')
 
-        Text(item.lastMessage || '')
-          .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs 预览
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
+        Row() {
+          Text(item.lastMessage || '')
+            .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs 预览
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+
+          if (item.isPinned) {
+            LucideIcon({
+              icon: AppIcon.PIN_FILL,
+              iconSize: 12,
+              paletteRole: 'accent'
+            })
+              .margin({ left: DesignConstants.SPACING.XS })
+          }
+        }
+        .width('100%')
       }
       .layoutWeight(1)
 

@@ -64,7 +64,6 @@
 				<span class="block text-sm text-text-primary">{member.name}</span>
 				<span class="text-xs text-text-secondary">{roleLabel(member.role)}</span>
 			</span>
-			<span class="text-xs text-text-secondary">查看资料</span>
 			{#if canManageMember(member)}
 				<button
 					type="button"

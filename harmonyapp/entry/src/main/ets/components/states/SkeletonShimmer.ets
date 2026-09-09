@@ -63,7 +63,7 @@ export struct SkeletonShimmer {
 
   private startShimmer() {
     this.shimmerOpacity = 1.0;
-    animateTo({
+    this.getUIContext().animateTo({
       duration: DesignConstants.ANIMATION.DURATION_SLOW, // 脉冲/shimmer 循环周期
       curve: DesignConstants.ANIMATION.CURVE_SMOOTH,
       iterations: -1,
@@ -75,7 +75,7 @@ export struct SkeletonShimmer {
 
   private stopShimmer() {
     // duration:0 立即把状态归位，中断无限循环动画（0.4→1 瞬时完成）
-    animateTo({ duration: 0 }, () => {
+    this.getUIContext().animateTo({ duration: 0 }, () => {
       this.shimmerOpacity = 1.0;
     });
   }

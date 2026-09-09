@@ -130,6 +130,10 @@ export enum AppIcon {
   // 时间图标
   TIME = 'sys.symbol.clock',
 
+  // 置顶/图钉图标
+  PIN = 'sys.symbol.pin',
+  PIN_FILL = 'sys.symbol.pin_fill',
+
   // 通用图标
   ALL = 'sys.symbol.square_grid_2x2'
 }
@@ -211,6 +215,8 @@ export const AppIconMap: Map<AppIcon, string> = new Map<AppIcon, string>([
   [AppIcon.BUG, 'exclamationmark'],
   [AppIcon.TIME, 'clock'],
   [AppIcon.MOON, 'moon'],
+  [AppIcon.PIN, 'pin'],
+  [AppIcon.PIN_FILL, 'pin_fill'],
   [AppIcon.ALL, 'square_grid_2x2']
 ]);
 

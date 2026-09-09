@@ -17,7 +17,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
-import { UserItem, GroupItem, MomentItem } from '../../../core/types/api';
+import { UserItem, GroupItem, MomentItem, SearchUsersRequest, SearchGroupsRequest, FetchNearbyMomentsRequest } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { UserCard } from '../components/UserCard';
 import { GroupCard } from '../../groups/components/GroupCard';
@@ -60,11 +60,17 @@ export struct NearbyPage {
     this.isLoading = true;
     this.loadError = '';
     try {
-      const [usersRes, groupsRes, momentsRes] = await Promise.all([
-        ApiClient.searchUsers({ radius: 5000, sort_by: 'distance', pagination: { limit: 8 } }).catch(() => null),
-        ApiClient.searchGroups({ radius: 5000, sort_by: 'distance', pagination: { limit: 4 } }).catch(() => null),
-        ApiClient.searchMoments({ radius: 5000, sort_by: 'distance', pagination: { limit: 6 } }).catch(() => null)
+      const usersReq: SearchUsersRequest = { radius: 5000, sort_by: 'distance', pagination: { limit: 8 } };
+      const groupsReq: SearchGroupsRequest = { radius: 5000, sort_by: 'distance', pagination: { limit: 4 } };
+      const momentsReq: FetchNearbyMomentsRequest = { radius: 5000, pagination: { limit: 6 } };
+      const results = await Promise.all([
+        ApiClient.searchUsers(usersReq).catch(() => null),
+        ApiClient.searchGroups(groupsReq).catch(() => null),
+        ApiClient.fetchNearbyMoments(momentsReq).catch(() => null)
       ]);
+      const usersRes = results[0];
+      const groupsRes = results[1];
+      const momentsRes = results[2];
 
       if (usersRes && usersRes.code === 0 && usersRes.data?.items) {
         this.nearbyUsers = usersRes.data.items;
@@ -228,7 +234,9 @@ export struct NearbyPage {
                     MomentWallCard({
                       moment: moment,
                       onOpenDetail: (m) => {
-                        AppRouter.push(PageNames.MOMENT_DETAIL, { moment_id: m.moment_id } as MomentDetailRouteParam);
+                        const param = new MomentDetailRouteParam();
+                        param.momentId = m.moment_id;
+                        AppRouter.push(PageNames.MOMENT_DETAIL, param);
                       }
                     })
                   }, (moment: MomentItem) => moment.moment_id)
@@ -241,7 +249,7 @@ export struct NearbyPage {
             if (!this.isLoading && this.nearbyUsers.length === 0 && this.nearbyGroups.length === 0 && this.nearbyMoments.length === 0) {
               EmptyState({
                 title: '周边暂时还没有动态',
-                description: '成为第一个点亮这片区域的人吧！'
+                message: '成为第一个点亮这片区域的人吧！'
               })
               .padding({ top: DesignConstants.SPACING.XL })
             }
@@ -275,7 +283,7 @@ export struct NearbyPage {
       Row({ space: DesignConstants.SPACING.XS }) {
         Text(actionText)
           .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getCurrentThemePalette().accentColor)
+          .fontColor(this.getCurrentThemePalette().accentText)
         LucideIcon({
           icon: AppIcon.ARROW_RIGHT,
           iconSize: DesignConstants.FONT.SIZE.XS,
@@ -305,7 +313,7 @@ export struct NearbyPage {
       .justifyContent(FlexAlign.Center)
 
       Text(entry.title)
-        .fontSize(DesignConstants.FONT.SIZE.XXS)
+        .fontSize(DesignConstants.FONT.SIZE.XS2)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .maxLines(1)

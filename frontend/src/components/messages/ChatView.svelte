@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, Phone, Video, MoreHorizontal } from '@lucide/svelte';
+	import { ArrowLeft } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import Avatar from '@/components/shared/Avatar.svelte';
@@ -235,34 +235,11 @@
 			</div>
 		</button>
 
-		<!-- Actions -->
-		<div class="flex gap-1.5">
-				{#each [{ icon: Phone, label: '语音通话' }, { icon: Video, label: '视频通话' }] as { icon: Icon, label }}
-					<button
-						type="button"
-						class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring disabled:opacity-muted {compact ? 'size-8' : 'size-9'}"
-						aria-label={label}
-						disabled
-						title="暂未开放"
-					>
-						<Icon class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
-					</button>
-				{/each}
-				<button
-					type="button"
-					class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary shadow-raised-sm focus-ring disabled:opacity-muted {compact ? 'size-8' : 'size-9'}"
-					aria-label="更多操作"
-					disabled
-					title="暂未开放"
-				>
-				<MoreHorizontal class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
-			</button>
-		</div>
 	</div>
 
 	<!-- Messages -->
 	<ChatMessageList {chat} canRecall={(msg) => msg.sent && inRecallWindow(msg.sentAt)} />
 
 	<!-- Input bar -->
-	<ChatInputBar {chat} showEmojiButton />
+	<ChatInputBar {chat} />
 </div>
