@@ -140,6 +140,9 @@ export struct PhoneLayout {
         // 背景改半透明（对齐前端 nav-glass 90%），否则实色会盖住 backgroundBlurStyle 使模糊失效
         .backgroundBlurStyle(BlurStyle.Thick)
         .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().tabBarBackground, 0.9))
+        // 对齐前端 nav-glass--bottom：顶部发丝描边（--cst-border-nav-glass accent 14% 混色，
+        // 本端以 floatingBorderColor 承载同语义）
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
         .layoutWeight(1)
         .padding({ bottom: this.safeAreaBottom })
         // 不在 Tabs 容器再加 maxWidth 约束：各页面通过 PageShellContainer / ResponsiveContainer

@@ -500,12 +500,12 @@ export struct HomePage {
   @Builder
   private buildStickyHeader() {
     // 统一走 SystemPageHeader（标题 + 副标题 + 位置 chip trailing）；
-    // 顶级 Tab 页标题对齐前端 titleSize=2xl（24）
+    // 顶级 Tab 页标题对齐前端 titleSize=3xl（30）+ semibold（移动端，+page.svelte）
     SystemPageHeader({
       title: '首页',
       subtitle: '发现周边有趣的人和事',
-      titleSize: DesignConstants.FONT.SIZE.XXL,
-      titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM
+      titleSize: DesignConstants.FONT.SIZE.XXXL,
+      titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD
     }) {
       // trailing: 在线计数 chip + 搜索/地图入口（对齐前端 PageHeader trailing；
       // 定位语义由 HeroStats 副标题承载）
@@ -815,14 +815,20 @@ export struct HomePage {
         .width('100%')
         .padding({ top: DesignConstants.SPACING.HALF })
       } else {
-        // 竖排用户行列表（对齐前端 NearbyUserRows：ListContainer + UserCardRow
-        // ——在线角标 + #tag · 距离副标题 + 关注按钮；移动端取前 4 位）
+        // 竖排用户行列表（对齐前端 NearbyUserRows：ListContainer bordered 白卡容器
+        // ——在线角标 + #tag · 距离副标题 + 关注按钮；移动端取前 4 位）。
+        // 白卡容器契约（154ace61）：rounded-md(16) + border-subtle + raised-sm + p-1.5(6)
         Column() {
           ForEach(this.nearbyHomeUsers(), (user: UserItem) => {
             this.buildNearbyUserRow(user)
           }, (user: UserItem) => user.user?.user_id ?? '')
         }
         .width('100%')
+        .padding(DesignConstants.SPACING.SM2)
+        .borderRadius(DesignConstants.SHAPE.INPUT)
+        .backgroundColor(this.getPalette().surfaceBackground)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+        .shadow(this.getPalette().surfaceShadow)
       }
     }
     .width('100%')
@@ -843,7 +849,7 @@ export struct HomePage {
         SystemAvatar({
           avatarUrl: user.user?.avatar_url ?? '',
           name: user.user?.nickname ?? '',
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS, // 44 对齐前端 tone='row' avatar 44
           shape: 'circle'
         })
         if (user.presence_status === 'online') {
@@ -856,11 +862,11 @@ export struct HomePage {
         }
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
 
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(user.user?.nickname ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 UserCardRow text-sm
           .fontWeight(DesignConstants.FONT.WEIGHT.REGULAR)
           .fontColor(this.getPalette().textPrimary)
           .maxLines(1)
@@ -897,7 +903,8 @@ export struct HomePage {
       })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
+    // 白卡容器内行：px-2.5 py-3（对齐前端 UserCardRow ListItem p-3 扣除容器 p-1.5）
+    .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     // 整行按压反馈（对齐 tap-97 语义）
     .scale(this.pressedUserKey === (user.user?.user_id ?? '') ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
@@ -1101,14 +1108,21 @@ export struct HomePage {
           .width('100%')
           .margin({ top: DesignConstants.SPACING.HALF })
       } else {
-        // 紧凑活动行列表（对齐前端 ActivityRow：色块 icon + 描述 + 地名 + chevron；
-        // 首页为大纲页，移动端取前 3 条，完整卡片流在附近动态专区）
+        // 紧凑活动行列表（对齐前端 momentRows：ListContainer bordered 白卡容器
+        // + ActivityRow 色块 icon + 描述 + 地名 + chevron；
+        // 首页为大纲页，移动端取前 3 条，完整卡片流在附近动态专区）。
+        // 白卡容器契约（154ace61）：rounded-md(16) + border-subtle + raised-sm + p-1.5(6)
         Column() {
           ForEach(this.homeActivityRows(), (moment: MomentItem, index: number) => {
             this.buildActivityRow(moment, index)
           }, (moment: MomentItem) => moment.moment_id)
         }
         .width('100%')
+        .padding(DesignConstants.SPACING.SM2)
+        .borderRadius(DesignConstants.SHAPE.INPUT)
+        .backgroundColor(this.getPalette().surfaceBackground)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+        .shadow(this.getPalette().surfaceShadow)
       }
     }
     .width('100%')
@@ -1189,7 +1203,8 @@ export struct HomePage {
       })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM2 + DesignConstants.SPACING.HALF + 1, bottom: DesignConstants.SPACING.SM2 + DesignConstants.SPACING.HALF + 1 })
+    // 白卡容器内行：px-3 py-2.5（对齐前端 ActivityRow ListItem px-4 py-3 扣除容器 p-1.5）
+    .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     // 整行按压反馈（对齐 tap-97 语义）
     .scale(this.pressedMomentKey === moment.moment_id ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :

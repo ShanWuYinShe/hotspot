@@ -6,15 +6,19 @@ import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { SystemAvatar } from '../../../components/SystemAvatar';
+import { SystemButton } from '../../../components/SystemButton';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
 
 /**
- * 附近用户卡 — 3:4 图片卡（头像即卡图，对齐前端 nearby/people/UserCard）。
- * 右上距离毛玻璃徽章；底部托盘 = 昵称 + bio 副行 + 在线点、
- * #tag 徽章 + 28vp 圆形关注钮（行内操作，不带动整卡按压）。
+ * 附近用户卡 — 双形态（对齐前端两处消费场景）：
+ * - portrait（默认）：3:4 图片卡，头像即卡图，对齐前端 nearby/people/UserCard——
+ *   右上距离毛玻璃徽章；底部托盘 = 昵称 + bio 副行 + 在线点、#tag 徽章 + 28vp 圆形关注钮。
+ * - compact：竖排白卡，对齐前端 nearby/+page「身边的新朋友」横滑卡——
+ *   avatar 48 + 名字 + 距离 + #tag 胶囊 + 全宽关注钮（rounded-md 16）。
  * 关注态优先读 InteractionStateStore 乐观更新，回退响应 relation。
  */
 @Reusable
@@ -22,9 +26,12 @@ import { LucideIcon } from '../../../components/LucideIcon';
 export struct UserCard {
   @Prop user: UserItem;
   @Prop showDistance: boolean = true;
+  /** 卡形态：portrait=3:4 图片卡（people 专区）；compact=竖排白卡（附近首页横滑） */
+  @Prop mode: string = 'portrait';
   @StorageLink('interaction_user_state') private userStateMap: Record<string, UserRelationState> = {};
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State private followPressed: boolean = false;
+  @State private followInFlight: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -43,38 +50,30 @@ export struct UserCard {
     return this.user.presence_status === 'online';
   }
 
-  private getDistanceText(): string {
-    const distance = this.user.location?.distance;
-    if (distance === undefined || distance === null) {
-      return '';
-    }
-    return LocationUtil.formatDistance(distance);
+  private getPrimaryTag(): string {
+    return this.user.tags && this.user.tags.length > 0 ? this.user.tags[0] : '';
   }
 
-  private getPrimaryTag(): string {
-    const tags = this.user.tags ?? [];
-    return tags.length > 0 ? tags[0] : '';
+  private getDistanceText(): string {
+    if (this.user.location?.distance === undefined || this.user.location?.distance === null) {
+      return '';
+    }
+    return LocationUtil.formatDistance(this.user.location.distance);
   }
 
   private openProfile(): void {
-    const userId = this.getUserId();
-    if (userId) {
-      const params = new ProfileRouteParam();
-      params.userId = userId;
-      AppRouter.push(PageNames.PROFILE, params);
-    }
+    const params = new ProfileRouteParam();
+    params.userId = this.getUserId();
+    AppRouter.push(PageNames.PROFILE, params);
   }
 
-  /** follow 请求进行中（防连点：乐观更新来回翻转 + 重复打 API） */
-  @State private followInFlight: boolean = false;
-
-  private toggleFollow(): void {
-    const userId = this.getUserId();
-    if (userId && !this.followInFlight) {
-      this.followInFlight = true;
-      interactionActions.setFollowUser(userId, !this.isFollowing()).finally(() => {
-        this.followInFlight = false;
-      });
+  private async toggleFollow(): Promise<void> {
+    if (this.followInFlight) return;
+    this.followInFlight = true;
+    try {
+      await interactionActions.setFollowUser(this.getUserId(), !this.isFollowing());
+    } finally {
+      this.followInFlight = false;
     }
   }
 
@@ -132,87 +131,206 @@ export struct UserCard {
       `关注 ${this.user.user?.nickname ?? ''}`)
   }
 
-  build() {
-    NearbyImageCard({
-      imageUrl: this.user.user?.avatar_url ?? '',
-      imageAlt: this.user.user?.nickname ?? '',
-      cardAspectRatio: 0.75,
-      placeholderText: this.user.user?.nickname ?? '',
-      badgeText: this.showDistance ? this.getDistanceText() : '',
-      badgeIcon: AppIcon.LOCATION,
-      badgeShape: 'pill',
-      badgeAlign: 'topRight',
-      onPress: () => this.openProfile()
-    }) {
-      Column() {
-        Row() {
-          Column({ space: DesignConstants.SPACING.THREE }) {
-            Text(this.user.user?.nickname ?? '')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-              .fontColor(this.getPalette().textPrimary)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
+  /** compact 形态全宽关注钮（对齐前端 nearby/+page w-full rounded-md py-1 text-xxs） */
+  @Builder
+  private buildCompactFollowButton() {
+    Row({ space: DesignConstants.SPACING.HALF }) {
+      if (this.isFollowing()) {
+        LucideIcon({
+          icon: AppIcon.CHECK,
+          iconSize: DesignConstants.FONT.SIZE.XS,
+          paletteRole: 'textSecondary'
+        })
+        Text('已关注')
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getPalette().textSecondary)
+      } else {
+        Text('关注')
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getPalette().accentText)
+      }
+    }
+    .width('100%')
+    .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
+    .justifyContent(FlexAlign.Center)
+    .borderRadius(DesignConstants.SHAPE.INPUT)
+    .backgroundColor(this.isFollowing() ? this.getPalette().surfaceSubtle : this.getPalette().accentBackground)
+    .border(this.isFollowing() ?
+      { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor } :
+      { width: 0 })
+    .shadow(this.isFollowing() ? { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 } : this.getPalette().surfaceShadow)
+    .scale(this.followPressed ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
+      { x: 1, y: 1 })
+    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.followPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.followPressed = false;
+      }
+    })
+    .onClick(() => this.toggleFollow())
+    .accessibilityText(this.isFollowing() ?
+      `取消关注 ${this.user.user?.nickname ?? ''}` :
+      `关注 ${this.user.user?.nickname ?? ''}`)
+  }
 
-            if (this.user.bio) {
-              Text(this.user.bio)
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getPalette().textSecondary)
+  /** compact 竖排白卡（对齐前端 nearby/+page 身边的新朋友卡：p-3 avatar48 名字/距离/tag 竖排） */
+  @Builder
+  private buildCompactCard() {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      Stack({ alignContent: Alignment.BottomEnd }) {
+        SystemAvatar({
+          avatarUrl: this.user.user?.avatar_url ?? '',
+          name: this.user.user?.nickname ?? '',
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM, // 48 对齐前端 size-12
+          shape: 'circle'
+        })
+        if (this.isOnline()) {
+          Row()
+            .width(DesignConstants.SPACING.MD)
+            .height(DesignConstants.SPACING.MD)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getPalette().online)
+            .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().surfaceBackground })
+        }
+      }
+
+      Text(this.user.user?.nickname ?? '')
+        .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs font-semibold
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPalette().textPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      // 距离行（对齐前端 MapPin size-2.5 + text-xxs）
+      if (this.showDistance && this.getDistanceText().length > 0) {
+        Row({ space: DesignConstants.SPACING.HALF }) {
+          LucideIcon({
+            icon: AppIcon.LOCATION,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            paletteRole: 'accent'
+          })
+          Text(this.getDistanceText())
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontColor(this.getPalette().textSecondary)
+        }
+        .alignItems(VerticalAlign.Center)
+      }
+
+      if (this.getPrimaryTag().length > 0) {
+        Text(`#${this.getPrimaryTag()}`)
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontColor(this.getPalette().accentBackground)
+          .backgroundColor(this.getPalette().accentMuted)
+          .borderRadius(DesignConstants.RADIUS.SM)
+          .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: 1, bottom: 1 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+
+      this.buildCompactFollowButton()
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    // 卡本体点击进主页（对齐前端整卡 button → /users/[id]；关注钮 stopPropagation 语义
+    // 由 ArkUI 子组件 onClick 不冒泡保证）
+    .onClick(() => this.openProfile())
+    .padding(DesignConstants.SPACING.MD) // p-3(12) 对齐前端
+    .backgroundColor(this.getPalette().surfaceBackground)
+    .borderRadius(DesignConstants.SHAPE.HERO_CARD) // 24 对齐前端 rounded-xl
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+    .shadow(this.getPalette().surfaceShadow)
+  }
+
+  build() {
+    if (this.mode === 'compact') {
+      this.buildCompactCard()
+    } else {
+      NearbyImageCard({
+        imageUrl: this.user.user?.avatar_url ?? '',
+        imageAlt: this.user.user?.nickname ?? '',
+        cardAspectRatio: 0.75,
+        placeholderText: this.user.user?.nickname ?? '',
+        badgeText: this.showDistance ? this.getDistanceText() : '',
+        badgeIcon: AppIcon.LOCATION,
+        badgeShape: 'pill',
+        badgeAlign: 'topRight',
+        onPress: () => this.openProfile()
+      }) {
+        Column() {
+          Row() {
+            Column({ space: DesignConstants.SPACING.THREE }) {
+              Text(this.user.user?.nickname ?? '')
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                .fontColor(this.getPalette().textPrimary)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+              if (this.user.bio) {
+                Text(this.user.bio)
+                  .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .fontColor(this.getPalette().textSecondary)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+              }
+            }
+            .alignItems(HorizontalAlign.Start)
+            .layoutWeight(1)
+
+            if (this.isOnline()) {
+              Row()
+                .width(DesignConstants.SPACING.MD2)
+                .height(DesignConstants.SPACING.MD2)
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .backgroundColor(this.getPalette().online)
+                .border({
+                  width: DesignConstants.BORDER_WIDTH.STRONG,
+                  color: this.getPalette().surfaceElevated
+                })
+                .margin({ left: DesignConstants.SPACING.SM })
             }
           }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
 
-          if (this.isOnline()) {
-            Row()
-              .width(DesignConstants.SPACING.MD2)
-              .height(DesignConstants.SPACING.MD2)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getPalette().online)
-              .border({
-                width: DesignConstants.BORDER_WIDTH.STRONG,
-                color: this.getPalette().surfaceElevated
-              })
-              .margin({ left: DesignConstants.SPACING.SM })
+          Row() {
+            if (this.getPrimaryTag().length > 0) {
+              Text(`#${this.getPrimaryTag()}`)
+                .fontSize(DesignConstants.FONT.SIZE.XS2)
+                .fontColor(this.getPalette().accentBackground)
+                .backgroundColor(this.getPalette().accentMuted)
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .padding({
+                  left: DesignConstants.SPACING.SM2,
+                  right: DesignConstants.SPACING.SM2,
+                  top: DesignConstants.SPACING.HALF,
+                  bottom: DesignConstants.SPACING.HALF
+                })
+                .maxLines(1)
+            }
+
+            Blank()
+
+            this.buildFollowButton()
           }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+          .margin({ top: DesignConstants.SPACING.SM })
         }
         .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        Row() {
-          if (this.getPrimaryTag().length > 0) {
-            Text(`#${this.getPrimaryTag()}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.getPalette().accentBackground)
-              .backgroundColor(this.getPalette().accentMuted)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .padding({
-                left: DesignConstants.SPACING.SM2,
-                right: DesignConstants.SPACING.SM2,
-                top: DesignConstants.SPACING.HALF,
-                bottom: DesignConstants.SPACING.HALF
-              })
-              .maxLines(1)
-          }
-
-          Blank()
-
-          this.buildFollowButton()
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-        .margin({ top: DesignConstants.SPACING.SM })
+        .alignItems(HorizontalAlign.Start)
+        .padding({
+          left: DesignConstants.SPACING.MD,
+          right: DesignConstants.SPACING.MD,
+          top: DesignConstants.SPACING.MD2,
+          bottom: DesignConstants.SPACING.MD2
+        })
       }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-      .padding({
-        left: DesignConstants.SPACING.MD,
-        right: DesignConstants.SPACING.MD,
-        top: DesignConstants.SPACING.MD2,
-        bottom: DesignConstants.SPACING.MD2
-      })
     }
   }
 }

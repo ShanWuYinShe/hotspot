@@ -115,8 +115,9 @@ export struct NearbyPage {
         SystemPageHeader({
           title: '附近',
           subtitle: '5km 实时探索',
-          titleSize: DesignConstants.FONT.SIZE.XXL,
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+          // 顶级 Tab 页标题对齐前端 titleSize=3xl（30）+ semibold（移动端）
+          titleSize: DesignConstants.FONT.SIZE.XXXL,
+          titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           backgroundVariant: 'transparent'
         }) {
           // trailing: 地图全景入口
@@ -190,9 +191,10 @@ export struct NearbyPage {
                   ForEach(this.nearbyUsers, (user: UserItem) => {
                     ListItem() {
                       Column() {
-                        UserCard({ user: user })
+                        // compact 竖排白卡（对齐前端 nearby/+page w-32=128 卡）
+                        UserCard({ user: user, mode: 'compact' })
                       }
-                      .width(140)
+                      .width(128)
                     }
                   }, (user: UserItem) => user.user?.user_id ?? '')
                 }
@@ -200,7 +202,6 @@ export struct NearbyPage {
                 .scrollBar(BarState.Off)
                 .edgeEffect(EdgeEffect.Spring)
                 .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-                .height(190)
               }
               .width('100%')
             }
@@ -313,12 +314,12 @@ export struct NearbyPage {
       .justifyContent(FlexAlign.Center)
 
       Text(entry.title)
-        .fontSize(DesignConstants.FONT.SIZE.XS2)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs font-semibold
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .maxLines(1)
       Text(entry.description)
-        .fontSize(8)
+        .fontSize(DesignConstants.FONT.SIZE.XS2) // 10 对齐前端 text-xxs（原裸 8 非法档）
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .maxLines(1)
     }
@@ -326,7 +327,7 @@ export struct NearbyPage {
     .height('100%')
     .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-    .borderRadius(DesignConstants.SHAPE.CARD)
+    .borderRadius(DesignConstants.SHAPE.HERO_CARD) // 24 对齐前端入口芯片 rounded-xl
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .shadow(this.getCurrentThemePalette().surfaceShadow)
     .justifyContent(FlexAlign.Center)
