@@ -104,6 +104,7 @@ function hotspotToPin(item: MapHotspotItem): Pin {
 		title: item.title,
 		tag: item.subtitle ?? undefined,
 		image: item.cover_url ?? undefined,
+		avatar: item.cover_url ?? undefined,
 		distance: item.location.distance != null ? formatDistance(item.location.distance) : undefined
 	};
 }
