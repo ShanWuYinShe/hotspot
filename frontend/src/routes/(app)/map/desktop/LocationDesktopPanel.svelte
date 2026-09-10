@@ -113,7 +113,7 @@ locationName = loc?.location_name ?? '';
 </div>
 
 <!-- List -->
-<div class="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 pb-3">
+<div class="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 pb-6">
 	{#if activeTab === 'nearby'}
 		<div class="animate-fade-in flex flex-col gap-2">
 			<!-- Current location card -->

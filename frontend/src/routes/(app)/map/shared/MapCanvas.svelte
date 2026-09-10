@@ -206,7 +206,7 @@
 			alt=""
 			draggable="false"
 			loading="eager"
-			class="absolute"
+			class="map-tile absolute"
 			style="left:{t.left}px;top:{t.top}px;width:256px;height:256px;user-select:none;"
 		/>
 	{/each}
@@ -218,3 +218,10 @@
 		© 高德地图
 	</span>
 </div>
+
+<style>
+	/* 深色主题下底图反色适配（标准 invert+hue-rotate 手法），marker/控件不受影响 */
+	:global(.dark) .map-tile {
+		filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.7);
+	}
+</style>

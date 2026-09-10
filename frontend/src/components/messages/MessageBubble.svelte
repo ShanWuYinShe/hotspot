@@ -10,6 +10,7 @@
 		text,
 		sent,
 		time,
+		senderName = '',
 		showCheck = false,
 		messageId = '',
 		recalled = false,
@@ -22,6 +23,7 @@
 		text: string;
 		sent: boolean;
 		time: string;
+		senderName?: string;
 		showCheck?: boolean;
 		messageId?: string;
 		recalled?: boolean;
@@ -57,6 +59,9 @@
 </script>
 
 <div class="group animate-fade-in flex {sent ? 'justify-end' : 'justify-start'}">
+	{#if !sent && senderName}
+		<p class="mb-0.5 text-xxs text-text-secondary px-1">{senderName}</p>
+	{/if}
 	<div
 		class="max-w-chat-bubble px-3.5 py-2.5 {sent
 			? 'bg-accent-default'

@@ -81,7 +81,7 @@
 				{/if}
 				<button
 					type="button"
-					class="hover-btn tap-92 hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 size-7
+					class="hover-btn tap-92 hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 size-9
 						{followed
 						? 'bg-accent-soft text-accent-default hover:bg-interactive-hover hover:text-text-primary'
 						: 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}
@@ -95,9 +95,9 @@
 					}}
 				>
 					{#if followed}
-						<UserCheck size={14} />
+						<UserCheck size={16} />
 					{:else}
-						<UserPlus size={14} />
+						<UserPlus size={16} />
 					{/if}
 				</button>
 			</div>

@@ -69,17 +69,19 @@
 								<Users size={12} />
 								{group.members}
 							</span>
-							<span class="flex items-center gap-1 shrink-0 text-status-online">
+							<span class="flex items-center gap-1 shrink-0 font-medium text-status-online">
 							<span class="rounded-full size-1.5 bg-status-online"></span>
 								{group.online} 在线
 							</span>
 							<span class="shrink-0">{group.distance}</span>
 						</div>
-						<!-- activity 独立 accent 行（对齐 Figma：与 stats 行分离） -->
-						<p class="mt-2 truncate text-xs text-accent-default">
-							<CalendarDays class="inline mr-1 size-3"  />
-							{group.activity}
-						</p>
+						{#if group.activity}
+							<!-- activity 独立 accent 行（对齐 Figma：与 stats 行分离） -->
+							<p class="mt-2 truncate text-xs text-accent-default">
+								<CalendarDays class="inline mr-1 size-3"  />
+								{group.activity}
+							</p>
+						{/if}
 					</div>
 					<JoinButton {group} {pending} {onToggle} />
 				</div>
@@ -111,10 +113,14 @@
 				</div>
 				<!-- activity 独立行（对齐 Figma：semantic-online 色 + CalendarDays 图标） -->
 				<div class="mt-2 flex items-center justify-between gap-2">
-					<span class="min-w-0 truncate text-status-online text-xxs">
-						<CalendarDays class="inline mr-1 size-2.5"  />
-						{group.activity}
-					</span>
+					{#if group.activity}
+						<span class="min-w-0 truncate text-status-online text-xxs">
+							<CalendarDays class="inline mr-1 size-2.5"  />
+							{group.activity}
+						</span>
+					{:else}
+						<span></span>
+					{/if}
 					<JoinButton {group} {pending} {onToggle} />
 				</div>
 			</div>

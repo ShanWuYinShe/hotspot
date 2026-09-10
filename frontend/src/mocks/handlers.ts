@@ -6,6 +6,7 @@ import {
   mockFriends, mockFollowing, mockFollowers,
   mockUserItem, relativeLocation,
   getMockAuthScenario, setMockLoggedIn, isMockLoggedIn,
+  USER_TAGS,
 } from "@/mocks/data";
 
 const API = "/api/v1";
@@ -90,7 +91,7 @@ const mockUserHotspots = mockUsers.map((u, i) => ({
   object_type: "user" as const,
   object_id: u.user_id,
   title: u.nickname,
-  subtitle: "附近用户",
+  subtitle: USER_TAGS[i],
   cover_url: u.avatar_url,
   location: relativeLocation(
     { latitude: 34.2604 + (i - 3) * 0.006, longitude: 117.1855 + (i % 2 === 0 ? 0.008 : -0.006) },
@@ -241,11 +242,11 @@ export const handlers = [
       // spec: UserProfileBundle — user 为 UserItem（嵌套 user: UserInfo + stats/relation 内嵌）
       user: {
         user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
-        bio: `这是 ${u.nickname} 的简介`,
+        bio: ['胶片摄影爱好者，周末常在回龙窝扫街。', '晨跑打卡第 300 天，云龙湖一圈配速 5 分 30 秒。', '黑胶收藏者，偶尔在户部山弹唱角客串。', '甜点师，探店是副业。', '独立书店店员，卖书也读书。', '旅行摄影师，地图上全是针脚。', '健身教练，撸铁也撸猫。'][idx] ?? null,
         tags: ['摄影', '户外'],
         presence_status: 'online',
         location: relativeLocation({ latitude: 34.26, longitude: 117.18 }, '徐州', 300, 45),
-        stats: { moments_count: userMoments.length || 24, friends_count: 18, followers_count: 89, following_count: 42, groups_count: 5 },
+        stats: { moments_count: userMoments.length, friends_count: 6, followers_count: 5 + idx * 3, following_count: 5, groups_count: 2 },
         relation: { is_following: idx !== 0, is_followed_by: false, is_blocked: false },
         social_context: null,
       }
@@ -262,7 +263,13 @@ export const handlers = [
   http.post(`${API}/users/fetch_friends`, () => requireMockAuth() ?? json(paginated(mockFriends))),
   http.post(`${API}/users/fetch_following`, () => requireMockAuth() ?? json(paginated(mockFollowing))),
   http.post(`${API}/users/fetch_followers`, () => requireMockAuth() ?? json(paginated(mockFollowers))),
-  http.post(`${API}/users/fetch_moments`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 12)))),
+http.post(`${API}/users/fetch_moments`, async ({ request }) => {
+	// spec: user_id 指定目标用户；缺失时回退当前用户（mockUsers[0]）
+	const body = (await request.json().catch(() => ({}))) as { user_id?: string };
+	const target = mockUsers.find((u) => u.user_id === body?.user_id) ?? mockUsers[0];
+	const own = mockMoments.filter((m) => m.user.user_id === target.user_id);
+	return requireMockAuth() ?? json(paginated(own.length ? own : mockMoments.slice(0, 4)));
+}),
   http.post(`${API}/users/fetch_reacted_moments`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(6, 18)))),
   http.post(`${API}/users/set_follow`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/users/set_block`, () => requireMockAuth() ?? json(apiOk(null))),
@@ -279,22 +286,20 @@ export const handlers = [
     return json(apiOk(found ?? mockMoments[0]));
   }),
   // 拥有者视角端点返回 OwnerMomentItem（MomentItem + privacy_level，spec moment.md）
-  http.post(`${API}/moments/fetch_created`, () =>
-    requireMockAuth() ?? json(paginated(mockMoments.slice(0, 9).map((m) => ({ ...m, privacy_level: "public" as const }))))),
-  // fetch_following 依赖查看者关注关系（无匿名版）→ 需登录；
-  // fetch_nearby 可见性不依赖身份（原 feed/nearby_moments 迁移，双版本）。
+http.post(`${API}/moments/fetch_created`, () => {
+	const own = mockMoments.filter((m) => m.user.user_id === mockUsers[0].user_id);
+	return requireMockAuth() ?? json(paginated(own.map((m) => ({ ...m, privacy_level: "public" as const }))));
+}),
   http.post(`${API}/moments/fetch_following`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 8)))),
   http.post(`${API}/moments/fetch_nearby`, async ({ request }) =>
     json(paginated(await withPaginationLimit(request, mockMoments.slice(0, 12))))),
-  // groups/search：附近群组/首页群组轮播共用（radius 显式时按距离过滤，
-  // sort_by=distance 按距离升序、popular 按成员数降序）。
-  http.post(`${API}/groups/search`, async ({ request }) =>
-    json(paginated(searchMockGroups(await request.json().catch(() => ({})))))),
-  http.post(`${PUBLIC_API}/groups/search`, async ({ request }) =>
-    json(paginated(searchMockGroups(await request.json().catch(() => ({})))))),
+  // fetch_favorites 依赖查看者收藏关系（无匿名版）→ 需登录
   http.post(`${API}/moments/fetch_favorites`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 6).map((m) => ({ ...m, favorited_at: '2026-08-01T08:00:00.000Z' }))))),
-  http.post(`${API}/moments/set_favorite`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${API}/moments/create`, () => requireMockAuth() ?? json(apiOk({ ...mockMoments[0], privacy_level: "public" as const }))),
+  // groups/search：附近群组/首页群组轮播共用（此前漏配 handler，请求旁路真实后端）
+  http.post(`${API}/groups/search`, async ({ request }) =>
+    json(paginated(await withPaginationLimit(request, searchMockGroups(await request.json().catch(() => ({}))))))),
+  http.post(`${PUBLIC_API}/groups/search`, async ({ request }) =>
+    json(paginated(await withPaginationLimit(request, searchMockGroups(await request.json().catch(() => ({}))))))),
   http.post(`${API}/moments/update`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { moment_id?: string; description?: string; tags?: string[]; privacy_level?: string };
     const base = mockMoments.find((m) => m.moment_id === body?.moment_id) ?? mockMoments[0];
@@ -321,6 +326,11 @@ export const handlers = [
     return json(paginated([
       { comment_id: `c${idx}-1`, user: mockUsers[(idx + 1) % mockUsers.length], content: "拍得真好看！", created_at: "2026-07-26T14:00:00Z", replies_count: 2, is_deleted: false, mentions: [], reactions: [{ emoji: "👍", count: 3, reacted_by_me: false }] },
       { comment_id: `c${idx}-2`, user: mockUsers[(idx + 2) % mockUsers.length], content: mockMoments[idx].tags[0] ? `这个${mockMoments[idx].tags[0]}主题好棒` : "什么相机拍的？", created_at: "2026-07-26T13:00:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
+...Array.from({ length: idx % 4 }, (_, k) => ({
+	comment_id: `c${idx}-x${k}`, user: mockUsers[(idx + 3 + k) % mockUsers.length],
+	content: ["这个构图太舒服了", "下次带我一个", "已收藏，周末就去", "光线绝了"][k % 4],
+	created_at: `2026-07-26T1${k}:30:00Z`, replies_count: 0, is_deleted: false, mentions: [], reactions: [],
+})),
     ]));
   }),
   http.post(`${API}/comments/create`, async ({ request }) => {
@@ -479,11 +489,12 @@ export const handlers = [
     const chat = mockChats.find((c) => c.other_user.user_id === body?.target_user_id);
     if (!chat) return requireMockAuth() ?? json(paginated([]));
     // 双向对话种子：包含自己（mockUsers[0]）的消息，让左右气泡样式都能被演练。
+    // spec：历史按 sent_at 倒序（新→旧）返回，客户端 reverse 后旧→新渲染
     return requireMockAuth() ?? json(paginated([
-      { message_id: `${chat.last_message.message_id}-seed1`, type: "text", content: "嗨，最近怎么样？", sender: chat.other_user, sent_at: "2026-07-25T10:00:00Z" },
-      { message_id: `${chat.last_message.message_id}-seed2`, type: "text", content: "还不错，刚从老街扫街回来", sender: mockUsers[0], sent_at: "2026-07-25T10:05:00Z" },
-      { message_id: `${chat.last_message.message_id}-seed3`, type: "text", content: "下次组队去拍云龙湖日出？", sender: mockUsers[0], sent_at: "2026-07-25T10:06:00Z" },
       chat.last_message,
+      { message_id: `${chat.last_message.message_id}-seed3`, type: "text", content: "下次组队去拍云龙湖日出？", sender: mockUsers[0], sent_at: "2026-07-25T10:06:00Z" },
+      { message_id: `${chat.last_message.message_id}-seed2`, type: "text", content: "还不错，刚从老街扫街回来", sender: mockUsers[0], sent_at: "2026-07-25T10:05:00Z" },
+      { message_id: `${chat.last_message.message_id}-seed1`, type: "text", content: "嗨，最近怎么样？", sender: chat.other_user, sent_at: "2026-07-25T10:00:00Z" },
     ]));
   }),
   // send: echo back a spec PrivateMessageItem so ChatView's optimistic append
@@ -505,10 +516,11 @@ export const handlers = [
     if (!group) return requireMockAuth() ?? json(paginated([]));
     const sender = mockUsers[mockGroups.indexOf(group) % mockUsers.length];
     // 三条消息三个发送者（含自己），展示群聊昵称/头像与左右气泡。
+    // spec：历史按 sent_at 倒序（新→旧）返回
     return requireMockAuth() ?? json(paginated([
-      { message_id: `gm-${group.group.group_id}-1`, type: "text", content: `欢迎来到「${group.group.name}」！`, sender, sent_at: "2026-07-26T09:00:00Z" },
-      { message_id: `gm-${group.group.group_id}-2`, type: "text", content: "本周活动安排见公告，记得准时参加～", sender: mockUsers[(mockGroups.indexOf(group) + 1) % mockUsers.length], sent_at: "2026-07-26T09:30:00Z" },
       { message_id: `gm-${group.group.group_id}-3`, type: "text", content: "周末主题拍摄有人组队吗？", sender: mockUsers[0], sent_at: "2026-07-26T09:45:00Z" },
+      { message_id: `gm-${group.group.group_id}-2`, type: "text", content: "本周活动安排见公告，记得准时参加～", sender: mockUsers[(mockGroups.indexOf(group) + 1) % mockUsers.length], sent_at: "2026-07-26T09:30:00Z" },
+      { message_id: `gm-${group.group.group_id}-1`, type: "text", content: `欢迎来到「${group.group.name}」！`, sender, sent_at: "2026-07-26T09:00:00Z" },
     ]));
   }),
   http.post(`${API}/group_messages/send`, async ({ request }) => {

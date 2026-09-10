@@ -245,8 +245,44 @@
 			</div>
 
 			{#if tab === 'overview'}
-				<div class="py-6">
-					<p class="max-w-3xl text-sm leading-7 text-text-secondary">{gd.detail.description}</p>
+				<div class="py-6 flex flex-col gap-6">
+					<p class="max-w-3xl text-sm leading-7 text-text-secondary">{gd.detail.description || '这个群还没有填写简介。'}</p>
+
+					<!-- 群组档案：数字档案 + 兴趣标签，填充简介页信息密度 -->
+					<div class="grid grid-cols-2 gap-3 max-w-3xl sm:grid-cols-4">
+						<div class="rounded-lg border border-border-default bg-surface-primary p-3.5">
+							<p class="text-xl font-semibold text-text-primary">{gd.detail.members}</p>
+							<p class="mt-0.5 text-xs text-text-secondary">成员</p>
+						</div>
+						<div class="rounded-lg border border-border-default bg-surface-primary p-3.5">
+							<p class="text-xl font-semibold text-status-online">{gd.detail.online}</p>
+							<p class="mt-0.5 text-xs text-text-secondary">在线</p>
+						</div>
+						<div class="rounded-lg border border-border-default bg-surface-primary p-3.5">
+							<p class="text-xl font-semibold text-text-primary">{gd.detail.distance || '—'}</p>
+							<p class="mt-0.5 text-xs text-text-secondary">距你</p>
+						</div>
+						<div class="rounded-lg border border-border-default bg-surface-primary p-3.5">
+							<p class="text-xl font-semibold text-text-primary">{gd.detail.category || '—'}</p>
+							<p class="mt-0.5 text-xs text-text-secondary">分类</p>
+						</div>
+					</div>
+
+					{#if gd.members.length > 0}
+						<!-- 成员预览：头像堆叠 + 成员数，引导到成员 Tab -->
+						<button
+							type="button"
+							class="hover-btn w-fit flex items-center gap-3 rounded-lg border border-border-default bg-surface-primary px-4 py-3 focus-ring transition-colors hover:bg-interactive-hover"
+							onclick={() => (tab = 'members')}
+						>
+							<div class="flex -space-x-2">
+								{#each gd.members.slice(0, 6) as m, i (m.userId ?? i)}
+									<img src={m.avatar} alt={m.name} class="size-8 rounded-full border-2 border-surface-primary object-cover" />
+								{/each}
+							</div>
+							<span class="text-sm text-text-primary">{gd.detail.members} 位成员 · 查看全部</span>
+						</button>
+					{/if}
 				</div>
 				{:else if tab === 'members'}
 					{#if canManageMembers}

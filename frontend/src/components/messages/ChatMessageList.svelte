@@ -10,10 +10,13 @@
 	// 视图差异仅 canRecall 判定（群聊管理员可撤回他人消息），由 props 注入。
 	let {
 		chat,
-		canRecall
+		canRecall,
+		showSenderNames = false
 	}: {
 		chat: ChatController;
 		canRecall: (msg: ChatMessage) => boolean;
+		/** 群聊= true：incoming 气泡上方显示发送者昵称 */
+		showSenderNames?: boolean;
 	} = $props();
 </script>
 
@@ -41,6 +44,7 @@
 						text={msg.text}
 						sent={msg.sent}
 						time={msg.time}
+						senderName={showSenderNames ? msg.senderName : ''}
 						showCheck={msg.id === chat.lastSentId}
 						messageId={msg.id}
 						recalled={msg.recalled}

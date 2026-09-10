@@ -39,9 +39,8 @@
 	];
 
 	const pathname = $derived(page.url.pathname);
-	const activeId = $derived(
-		pathname === ROUTES.admin ? 'overview' : (MODULES.find((m) => pathname.startsWith(`${m.href}`))?.id ?? 'overview')
-	);
+	// 按 URL 第二段精确匹配模块，避免 /admin/users 被 /admin 前缀误命中为「概览」
+	const activeId = $derived((pathname.split('/').filter(Boolean)[1] ?? 'overview') || 'overview');
 </script>
 
 <svelte:head>
@@ -58,16 +57,18 @@
 			onBack={() => history.back()}
 		>
 			{#snippet below()}
-				<div class="mt-3 overflow-x-auto pr-1">
-					<TabBar
-						items={MODULES.map((m) => ({ id: m.id, label: m.label }))}
-						value={activeId}
-						onChange={(id) => {
-							const target = MODULES.find((m) => m.id === id);
-							if (target && target.href !== pathname) void goto(target.href);
-						}}
-					/>
-				</div>
+				{#if admin.isAdmin}
+					<div class="mt-3 overflow-x-auto pr-1">
+						<TabBar
+							items={MODULES.map((m) => ({ id: m.id, label: m.label }))}
+							value={activeId}
+							onChange={(id) => {
+								const target = MODULES.find((m) => m.id === id);
+								if (target && target.href !== pathname) void goto(target.href);
+							}}
+						/>
+					</div>
+				{/if}
 			{/snippet}
 		</PageHeader>
 	{/snippet}
@@ -79,7 +80,7 @@
 	{:else if !admin.loaded}
 		<InlineLoading label="校验平台管理员权限…" />
 	{:else if !admin.isAdmin}
-		<EmptyState title="无访问权限" description="当前账号不是平台管理员。如需权限，请联系平台超级管理员授予。">
+		<EmptyState title="无访问权限" description="当前账号不是平台管理员，如需权限请联系超级管理员。">
 			{#snippet icon()}
 				<Shield class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 			{/snippet}

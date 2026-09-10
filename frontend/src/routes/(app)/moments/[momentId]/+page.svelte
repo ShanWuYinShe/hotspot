@@ -388,7 +388,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 </svelte:head>
 
 
-<SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
+<SplitPageLayout contentClassName="animate-fade-in pt-4 pb-28">
 	{#snippet header()}
 		<PageHeader title="动态详情" titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} onBack={() => history.back()}>
 			{#snippet trailing()}

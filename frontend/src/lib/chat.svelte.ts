@@ -21,6 +21,8 @@ export interface ChatMessage {
 	text: string;
 	sent: boolean; // true = outgoing (from current user)
 	time: string;
+	/** 群聊场景的发送者昵称（incoming 气泡上方展示；私聊不需要） */
+	senderName?: string;
 	/** 原始发送时间（ISO）；用于按本地日期分组。 */
 	sentAt?: string;
 	recalled?: boolean;

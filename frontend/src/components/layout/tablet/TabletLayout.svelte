@@ -40,9 +40,10 @@
 	<StatusBar />
 
 	<!-- RoutedContentViewport 是三端唯一的路由内容与滚动承载区。
-	     地图/消息为全画布页：禁用滚动，canvas 固定视口高度。 -->
+	     地图/消息为全画布页：禁用滚动，canvas 固定视口高度。
+	     宽平板浮动 Dock 悬于内容之上，画布需预留底部净空。 -->
 	<RoutedContentViewport
-		contentClassName="tablet-page-canvas {pathname === ROUTES.map ? 'h-full' : ''}"
+		contentClassName="tablet-page-canvas {pathname === ROUTES.map ? 'h-full' : ''} {isWide ? 'pb-28' : ''}"
 		style={(pathname === ROUTES.map || pathname === ROUTES.messages) ? 'overflow:hidden;' : undefined}
 	>
 		{@render children()}

@@ -95,9 +95,9 @@ const relation = (is_following: boolean, is_followed_by: boolean) => ({
   is_blocked: false,
 });
 
-export const mockFriends = mockUsers.slice(0, 6).map((u, i) => ({
+export const mockFriends = mockUsers.slice(1, 7).map((u, i) => ({
   user: { ...wrapUser(u, i), relation: relation(true, true) },
-  remark: i % 3 === 0 ? `${u.nickname}备注` : undefined,
+  remark: ['胶片搭子', undefined, '晨跑伴', undefined, undefined, '书友'][i],
   followed_at: isoDaysAgo(30 + i),
   followed_back_at: isoDaysAgo(20 + i),
 }));
@@ -108,7 +108,7 @@ export const mockFriends = mockUsers.slice(0, 6).map((u, i) => ({
 export const mockFollowing = mockUsers.slice(1, 6).map((u, i) => ({
   user: { ...wrapUser(u, i + 1), relation: relation(true, i % 2 === 0) },
   followed_at: isoDaysAgo(15 + i),
-  remark: i === 0 ? `${u.nickname}备注` : undefined,
+  remark: i === 0 ? '摄影同好' : undefined,
 }));
 
 export const mockFollowers = mockUsers.slice(2, 7).map((u, i) => ({
@@ -121,7 +121,7 @@ export const mockFollowers = mockUsers.slice(2, 7).map((u, i) => ({
 // presence/location/tags 按用户索引稳定派生，让「附近的人」卡片能展示
 // 距离/在线角标/兴趣 tag（此前恒 offline + location:null，卡片信息缺失）。
 const USER_PRESENCES = ["online", "offline", "online", "offline", "online", "offline", "online"] as const;
-const USER_TAGS = ["摄影", "户外", "音乐", "美食", "阅读", "旅行", "健身"] as const;
+export const USER_TAGS = ["摄影", "户外", "音乐", "美食", "阅读", "旅行", "健身"] as const;
 
 export function mockUserItem(u: MockUser) {
   const i = Math.max(0, mockUsers.indexOf(u));
@@ -169,7 +169,7 @@ export const mockAccount = {
   presence_status: "online",
   last_online_at: "2026-07-26T15:00:00Z",
   created_at: "2025-01-01T00:00:00Z",
-  stats: { moments_count: 72, friends_count: 42, followers_count: 315, following_count: 128, groups_count: 14 },
+  stats: { moments_count: 4, friends_count: 6, followers_count: 5, following_count: 5, groups_count: 2 },
 };
 
 // ── Settings (spec UserSettings) ───────────────────────────────
@@ -213,10 +213,10 @@ export const mockMoments = Array.from({ length: 24 }, (_, i) => {
     images: [{ url: momentPics[i % momentPics.length] }],
     tags: [["自然", "城市", "生活", "活动", "音乐", "人文"][i % 6]],
     mentions: [] as string[],
-    created_at: new Date(Date.now() - i * 3600000).toISOString(),
-    comments_count: Math.floor(Math.random() * 30) + 1,
+    created_at: isoDaysAgo(45 + i),
+    comments_count: 2 + (i % 4),
     shares_count: 0,
-    reactions: [{ emoji: "👍", count: Math.floor(Math.random() * 200) + 10, reacted_by_me: i % 3 === 0 }],
+    reactions: [{ emoji: "👍", count: 30 + ((i * 37) % 160), reacted_by_me: i % 3 === 0 }],
     location: { point: { latitude: 34.26 + i * 0.002, longitude: 117.18 + i * 0.003 }, location_name: ["植物园", "市中心", "老街手冲馆", "云龙湖", "彭城广场", "汉文化景区"][i % 6], distance: 300 + i * 200, bearing_degrees: (i * 47) % 360 },
     is_favorited: i % 4 === 0,
     is_deleted: false,

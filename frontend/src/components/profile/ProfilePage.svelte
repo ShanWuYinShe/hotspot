@@ -164,7 +164,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 				</section>
 
 				<!-- 资料状态 -->
-				<aside class="rounded-lg border border-border-default bg-surface-primary p-5 shadow-raised-sm" aria-label="资料状态">
+				<aside class="self-start rounded-lg border border-border-default bg-surface-primary p-5 shadow-raised-sm" aria-label="资料状态">
 					<div class="flex items-center justify-between">
 						<h2 class="text-sm font-medium text-text-primary">资料状态</h2>
 						<ShieldCheck class="size-4 text-accent-default"   strokeWidth={1.75} />

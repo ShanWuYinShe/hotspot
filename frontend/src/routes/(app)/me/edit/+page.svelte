@@ -2,7 +2,7 @@
 	// 简介长度契约：上限 150，超过 85%（128）进入告警色
 	const MAX_BIO = 150;
 	const BIO_WARN = Math.floor(MAX_BIO * 0.85);
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';	import { Camera, User, FileText, Check } from '@lucide/svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';	import { Camera, User, FileText, Check, Trash2 } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { logout } from '@/stores/auth.svelte';
@@ -178,7 +178,7 @@
 	{:else if loadError}
 	<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
-	<div class="animate-fade-in flex flex-col gap-5 max-w-3xl">
+	<div class="animate-fade-in mx-auto flex w-full max-w-3xl flex-col gap-5">
 	<!-- Avatar section -->
 	<div class="relative rounded-xl overflow-hidden h-cover-height-sm">
 		<!-- 无封面数据时的占位底：主题 token 承载（vibrant 渐变 / forest 纸面纯色），页面只引用；
@@ -318,9 +318,10 @@
 				type="button"
 				variant="outline"
 				size="md"
-				class="w-full justify-start rounded-md px-4 py-3.5 text-status-danger"
+				class="w-full justify-start gap-2 rounded-md border-status-danger/40 px-4 py-3.5 text-status-danger hover:bg-danger-bg"
 				onclick={() => (deleteConfirmOpen = true)}
 			>
+				<Trash2 class="size-4" strokeWidth={1.75} />
 				注销账号
 			</Button>
 		{/if}

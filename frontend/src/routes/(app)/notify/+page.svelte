@@ -14,6 +14,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import NotifyRow from './shared/NotifyRow.svelte';
+	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { TYPE_CONFIG, normalizeNotifType, type NotifyViewItem } from './shared/notify-data';
 	import { listNotifies, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite , netError } from '@/api';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
@@ -43,6 +44,7 @@ const FILTER_TABS = [
 	let filter = $state('all');
 
 	const device = $derived(platform.platform);
+	let needsAuth = $state(false);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
 	// WS 推送（ws:notify）到来时 +1，触发下方加载 effect 重新拉取通知与未读。
@@ -63,6 +65,7 @@ const FILTER_TABS = [
 		async function fetchNotifs() {
 			try {
 				loading = true;
+				needsAuth = false;
 				loadError = null;
 				const [notifRes, unreadRes, invitesRes] = await Promise.all([
 					listNotifies().catch(() => netError({ items: [] })),
@@ -72,6 +75,11 @@ const FILTER_TABS = [
 				if (cancelled) return;
 
 				const notifData = notifRes.code === 0 ? notifRes.data : null;
+				if (notifRes.code === 10100) {
+					// 未登录：给登录引导而非裸技术报错
+					if (!cancelled) needsAuth = true;
+					return;
+				}
 				if (notifRes.code !== 0) {
 					if (!cancelled) loadError = notifRes.message ?? '加载失败';
 					return;
@@ -80,7 +88,10 @@ const FILTER_TABS = [
 				if (invitesRes.code === 0) invites = invitesRes.data?.items ?? [];
 
 				if (notifData) {
-					const items: NotifyViewItem[] = (notifData.items || []).map((n, i) => {
+					const sorted = (notifData.items || []).slice().sort((a, b) =>
+						String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))
+					);
+					const items: NotifyViewItem[] = sorted.map((n, i) => {
 						const actor = n.payload?.actor ?? { user_id: '', nickname: '', avatar_url: null };
 						const groupName = n.payload?.group_name ?? '群组';
 						// 行内已渲染 actor 昵称（NotifyRow user.name），text 只承载动作语义，
@@ -315,6 +326,8 @@ const FILTER_TABS = [
 					<InlineLoading label="加载通知…" />
 				{:else if loadError}
 					<LoadError message={loadError} onRetry={() => reloadKey++} />
+				{:else if needsAuth}
+					<NeedsAuthNotice title="登录后查看" description="收到的点赞、评论与关注会出现在这里" />
 				{:else if filtered.length === 0}
 					<EmptyState
 						title={filter === 'all' ? '暂无通知' : '该分类下暂无通知'}
