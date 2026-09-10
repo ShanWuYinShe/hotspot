@@ -5,7 +5,6 @@
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -82,8 +81,10 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	     属于样板 pt-4 pb-6 的可登记变体。 -->
 	<StandardPageLayout contentClassName="animate-fade-in pt-6 pb-8">
 		{#snippet header()}
-			<!-- 页头不放操作按钮：编辑资料/外观/设置统一收在下方身份卡的操作区，
-			     同一页同一功能只允许一个入口（原先页头与身份卡各有一个「编辑资料」）。 -->
+			<!-- 页头不放操作按钮：编辑资料/设置统一收在下方身份卡的操作区，
+			     同一页同一功能只允许一个入口（原先页头与身份卡各有一个「编辑资料」）。
+			     外观控制不进身份卡：桌面顶栏已有常驻「外观设置」，其余设备走设置页
+			     「外观与显示」，避免与同屏「设置」按钮形成同一功能两条路径。 -->
 			<PageHeader
 				title="个人总览"
 				subtitle="你的公开资料、内容与关系的入口。"
@@ -122,9 +123,6 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 						<Pencil class="size-4 text-text-secondary" strokeWidth={1.75} />
 						编辑资料
 					</button>
-					<div class="shrink-0">
-						<AppearanceMenu />
-					</div>
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.settings)}

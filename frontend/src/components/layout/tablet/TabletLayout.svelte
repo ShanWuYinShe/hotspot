@@ -2,7 +2,7 @@
 	import type { Component, Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Home, MapPin, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
+	import { Home, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
@@ -21,10 +21,11 @@
 
 	const NAV_ITEMS: { path: string; icon: Component; label: string }[] = [
 		{ path: ROUTES.home, icon: Home, label: '首页' },
-		{ path: ROUTES.nearby, icon: MapPin, label: '附近' },
 		{ path: ROUTES.messages, icon: MessageCircle, label: '消息' },
 		{ path: ROUTES.me, icon: CircleUser, label: '我的' }
 	];
+	// 「附近」已从一级 Tab 移除：/nearby 聚合门户与首页完全重复（308 → /），
+	// 首页是唯一的附近聚合页，三个分区页从首页直达。
 
 	const pathname = $derived(page.url.pathname);
 	const isSubPage = $derived(isSubPagePath(pathname));
@@ -57,7 +58,7 @@
 				: 'padding:0;border-top:var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);'}
 		>
 			<div
-				class="grid grid-cols-5 items-center w-full"
+				class="grid grid-cols-4 items-center w-full"
 				style="width:100%;max-width:{isWide ? 'var(--cst-tablet-dock-max)' : 'none'};border-radius:{isWide ? 'var(--radius-sheet)' : 0};background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);box-shadow:{isWide ? 'var(--cst-elevation-nav)' : 'none'};border:{isWide ? 'var(--cst-border-width-hairline) solid var(--cst-border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};"
 			>
 				<!-- Slot 1: 首页 -->
@@ -71,18 +72,7 @@
 					/>
 				</div>
 
-				<!-- Slot 2: 附近 -->
-				<div class="flex items-center justify-center w-full">
-					<NavTab
-						label={NAV_ITEMS[1].label}
-						iconSize={24}
-						Icon={NAV_ITEMS[1].icon}
-						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[1].path)}
-						onClick={() => goto(NAV_ITEMS[1].path)}
-					/>
-				</div>
-
-				<!-- Slot 3: Centre FAB -->
+				<!-- Slot 2: Centre FAB -->
 				<div class="flex items-center justify-center w-full">
 					<button
 						type="button"
@@ -99,7 +89,18 @@
 					</button>
 				</div>
 
-				<!-- Slot 4: 消息 -->
+				<!-- Slot 3: 消息 -->
+				<div class="flex items-center justify-center w-full">
+					<NavTab
+						label={NAV_ITEMS[1].label}
+						iconSize={24}
+						Icon={NAV_ITEMS[1].icon}
+						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[1].path)}
+						onClick={() => goto(NAV_ITEMS[1].path)}
+					/>
+				</div>
+
+				<!-- Slot 4: 我的 -->
 				<div class="flex items-center justify-center w-full">
 					<NavTab
 						label={NAV_ITEMS[2].label}
@@ -107,17 +108,6 @@
 						Icon={NAV_ITEMS[2].icon}
 						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[2].path)}
 						onClick={() => goto(NAV_ITEMS[2].path)}
-					/>
-				</div>
-
-				<!-- Slot 5: 我的 -->
-				<div class="flex items-center justify-center w-full">
-					<NavTab
-						label={NAV_ITEMS[3].label}
-						iconSize={24}
-						Icon={NAV_ITEMS[3].icon}
-						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[3].path)}
-						onClick={() => goto(NAV_ITEMS[3].path)}
 					/>
 				</div>
 			</div>

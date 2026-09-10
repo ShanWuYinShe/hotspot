@@ -4,7 +4,6 @@
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
@@ -49,8 +48,9 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 <StandardPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		<!-- 资料页眉（eyebrow；底色对齐标准 PageHeader 的 surface-page）。
-		     不在此放设置/外观入口——它们统一收在下方身份卡的拇指操作区，
-		     同一页只保留一处设置入口。 -->
+			     不在此放设置/外观入口——它们统一收在下方身份卡的拇指操作区，
+			     同一页只保留一处设置入口；外观走设置页「外观与显示」，
+			     避免与「设置」按钮形成同一功能两条路径。 -->
 			<div class="border-b border-border-default bg-surface-page" >
 				<ContentColumn class="flex items-center justify-between py-3">
 					<p class="eyebrow">个人中心</p>
@@ -92,7 +92,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					</p>
 				{/if}
 
-				<!-- 移动端单手黄金操作区：大拇指无需移位，直达高频设置、外观与编辑 -->
+				<!-- 移动端单手黄金操作区：大拇指无需移位，直达高频设置与编辑 -->
 				<div class="mt-4 flex items-center gap-2 pt-1">
 					<button
 						type="button"
@@ -102,9 +102,6 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 						<Pencil class="size-3.5 text-text-secondary" strokeWidth={1.75} />
 						编辑资料
 					</button>
-					<div class="shrink-0">
-						<AppearanceMenu />
-					</div>
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.settings)}

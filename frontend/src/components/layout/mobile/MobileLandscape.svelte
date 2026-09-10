@@ -2,7 +2,7 @@
 	import type { Component, Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Home, MapPin, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
+	import { Home, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
@@ -11,12 +11,13 @@
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// 移动横屏：紧凑左栏（无状态栏），全高内容 + 右侧滑入发布面板。
+	// 「附近」已从一级导航移除：/nearby 聚合门户与首页完全重复（308 → /），
+	// 首页是唯一的附近聚合页，三个分区页从首页直达。
 
 	let { children }: { children: Snippet } = $props();
 
 	const NAV_ITEMS: { path: string; icon: Component; label: string }[] = [
 		{ path: ROUTES.home, icon: Home, label: '首页' },
-		{ path: ROUTES.nearby, icon: MapPin, label: '附近' },
 		{ path: ROUTES.messages, icon: MessageCircle, label: '消息' },
 		{ path: ROUTES.me, icon: CircleUser, label: '我的' }
 	];
@@ -35,7 +36,7 @@
 			class="shrink-0 flex flex-col items-center nav-glass nav-glass--side"
 			style="width:var(--cst-mobile-rail-width);padding-top:max(env(safe-area-inset-top, 8px), 8px);padding-bottom:max(env(safe-area-inset-bottom, 8px), 8px);padding-left:max(env(safe-area-inset-left, 0px), 0px);gap:var(--cst-bottom-nav-pad-top);"
 		>
-			{#each NAV_ITEMS.slice(0, 2) as item}
+			{#each NAV_ITEMS.slice(0, 1) as item}
 				<RailIcon
 					Icon={item.icon}
 					label={item.label}
@@ -58,7 +59,7 @@
 				{/if}
 			</button>
 
-			{#each NAV_ITEMS.slice(2, 4) as item}
+			{#each NAV_ITEMS.slice(1, 3) as item}
 				<RailIcon
 					Icon={item.icon}
 					label={item.label}

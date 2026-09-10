@@ -176,7 +176,8 @@ src/routes/
   (app)/
     +layout.svelte         # MainLayout 外壳（桌面/平板/移动/横屏四端分派）
     +page.svelte           # 首页（hero/动态/群组/用户；三端统一标题）
-    nearby/+page.svelte    # 附近聚合页（平板/移动端顶级导航 tab——人/群组/动态 + 搜索）
+    nearby/+page.ts        # ⚠️ 旧路径：附近聚合门户已并入首页（完全重复），308 重定向到 /
+                           #    首页是唯一附近聚合页（页头搜索/地图 + 人/群组/动态三板块）
     nearby/people/         # 附近的人
     nearby/groups/         # 附近的组
     nearby/moments/        # 附近时刻（页面样板结构权威基准）

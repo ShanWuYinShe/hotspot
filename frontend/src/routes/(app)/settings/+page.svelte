@@ -181,7 +181,7 @@
 				<div>
 					<h2 class="text-sm font-semibold text-text-primary">账号信息</h2>
 					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
-						当前登录状态与个人公开资料入口。
+						当前登录的账号信息。
 					</p>
 				</div>
 				<div>
@@ -197,13 +197,6 @@
 									<p class="text-xs text-text-secondary mt-0.5 truncate">{accountEmail || '未绑定邮箱'}</p>
 								</div>
 							</div>
-							<button
-								type="button"
-								onclick={() => void goto(ROUTES.meEdit)}
-								class="hover-btn px-4 py-2 text-xs font-medium rounded-md border border-border-default bg-surface-primary hover:bg-interactive-hover text-text-primary transition-colors focus-ring shrink-0"
-							>
-								编辑资料
-							</button>
 						</div>
 					{:else}
 						<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
