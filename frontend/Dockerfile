@@ -6,6 +6,9 @@ FROM oven/bun:${BUN_VERSION:-1.3.14}-alpine AS build
 WORKDIR /app
 # .npmrc 指定 npmmirror 源（bun.lock 亦为 npmmirror），避免回落 npmjs.org
 COPY package.json bun.lock .npmrc ./
+# package.json 的 prepare 脚本在 bun install 时执行，必须先于源码拷贝到位；
+# 容器内无 git，脚本会按其兼容性约定静默跳过
+COPY scripts/setup-git-hooks.sh ./scripts/
 RUN bun install --frozen-lockfile
 COPY . .
 # SPA 构建期无服务端渲染，PUBLIC_* 变量在客户端运行时读取（经 nginx 同源），无需注入
