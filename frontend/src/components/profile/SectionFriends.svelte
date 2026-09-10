@@ -68,29 +68,20 @@
 				<p class="mt-0.5 text-text-secondary text-xs">{f.handle}</p>
 			{/snippet}
 			{#snippet actions()}
-				<div class="flex flex-col gap-1.5 shrink-0">
-					<button
-						type="button"
-						class="hover-btn tap-92 hit-slop flex items-center justify-center gap-1 rounded-full bg-accent-default px-2.5 py-1.5 text-sm text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring"
-						onclick={(e) => {
-							e.stopPropagation();
-							void goto(ROUTES.message(f.id));
-						}}
-					>
-						<MessageCircle class="size-3"  strokeWidth={2} />
-						发消息
-					</button>
-					<button
-						type="button"
-						class="hover-btn tap-92 hit-slop flex items-center justify-center gap-1 rounded-full border border-border-default bg-surface-primary px-2.5 py-1.5 text-sm text-text-secondary hover:bg-accent-soft focus-ring"
-						onclick={(e) => {
-							e.stopPropagation();
-							void goto(`${ROUTES.user(f.id)}?from=relationships`);
-						}}
-					>
-						查看主页
-					</button>
-				</div>
+				<!-- 只留「发消息」：整行点击已跳该用户主页（UserCardRow onClick），
+				     原先并存的「查看主页」按钮是同一行内跳同一目标的重复入口；
+				     关注/粉丝两个分区同样只保留一个行内动作，三 tab 模式一致。 -->
+				<button
+					type="button"
+					class="hover-btn tap-92 hit-slop flex shrink-0 items-center justify-center gap-1 rounded-full bg-accent-default px-2.5 py-1.5 text-sm text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring"
+					onclick={(e) => {
+						e.stopPropagation();
+						void goto(ROUTES.message(f.id));
+					}}
+				>
+					<MessageCircle class="size-3"  strokeWidth={2} />
+					发消息
+				</button>
 			{/snippet}
 		</UserCardRow>
 	{/snippet}

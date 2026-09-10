@@ -82,28 +82,13 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	     属于样板 pt-4 pb-6 的可登记变体。 -->
 	<StandardPageLayout contentClassName="animate-fade-in pt-6 pb-8">
 		{#snippet header()}
+			<!-- 页头不放操作按钮：编辑资料/外观/设置统一收在下方身份卡的操作区，
+			     同一页同一功能只允许一个入口（原先页头与身份卡各有一个「编辑资料」）。 -->
 			<PageHeader
 				title="个人总览"
 				subtitle="你的公开资料、内容与关系的入口。"
 				titleSize={device === 'desktop' ? 'xl' : '2xl'}
-			>
-				{#snippet trailing()}
-					{#if !loading && !needsAuth}
-						<!-- 只保留「编辑资料」：设置与外观入口统一收在下方身份卡的拇指操作区，
-						     避免同一页出现两个设置入口（桌面外壳顶栏另有全局设置图标）。 -->
-						<div class="flex items-center gap-2">
-							<button
-								type="button"
-								onclick={() => void goto(ROUTES.meEdit)}
-								class="hover-btn inline-flex shrink-0 items-center gap-1.5 border border-border-default rounded-md bg-surface-primary px-3.5 py-2 text-sm font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
-							>
-								<Pencil class="size-4"  strokeWidth={1.75} />
-								编辑资料
-							</button>
-						</div>
-					{/if}
-				{/snippet}
-			</PageHeader>
+			/>
 		{/snippet}
 
 		{#if loading}
@@ -191,14 +176,8 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 						<div class="h-full rounded-full bg-accent-default" style="width:{filledCount * 20}%;"></div>
 					</div>
 					<p class="mt-2 text-xs text-text-secondary">{filledCount} 项基础资料已填写</p>
-					<button
-						type="button"
-						onclick={() => void goto(ROUTES.settings)}
-						class="hover-btn mt-5 flex w-full items-center justify-center gap-2 border border-border-default rounded-md bg-surface-primary py-2.5 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-accent-soft"
-					>
-						账号与隐私设置
-						<ChevronRight class="size-3.5"  strokeWidth={1.75} />
-					</button>
+					<!-- 此处原有一个「账号与隐私设置」按钮，与身份卡操作区的「设置」同目标同屏，
+					     属重复入口，已移除；设置统一走身份卡操作区。 -->
 				</aside>
 			</div>
 		{/if}

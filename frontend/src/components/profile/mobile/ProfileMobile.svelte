@@ -1,6 +1,6 @@
 <script lang="ts">
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';	import { goto } from '$app/navigation';
-	import { Camera, ChevronRight, Heart, ImageIcon, MapPin, Pencil, Settings, UserCheck, UserPlus, Users } from '@lucide/svelte';
+	import { ChevronRight, Heart, ImageIcon, MapPin, Pencil, Settings, UserCheck, UserPlus, Users } from '@lucide/svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
@@ -72,17 +72,10 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			<div class="p-5">
 				<div class="flex items-start justify-between gap-5">
 					<div class="flex min-w-0 items-center gap-4">
-						<div class="relative shrink-0">
-							<Avatar src={avatar} name={nickname} size={68} ring />
-							<button
-								type="button"
-								aria-label="更换头像"
-								onclick={() => void goto(ROUTES.meEdit)}
-								class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default text-text-on-accent size-7 border-strong border-surface-primary"
-							>
-								<Camera class="size-3.5"  strokeWidth={2} />
-							</button>
-						</div>
+						<!-- 头像不再挂「更换头像」相机按钮：它与下方「编辑资料」跳同一个页面，
+						     属同屏重复入口；且它只做跳转、并不直接改头像，affordance 有误导。
+						     头像更换统一走「编辑资料」。 -->
+						<Avatar src={avatar} name={nickname} size={68} ring class="shrink-0" />
 						<div class="min-w-0">
 							<h1 class="text-xl font-semibold tracking-title text-text-primary">{nickname || '未设置昵称'}</h1>
 							<p class="mt-0.5 text-xs text-text-secondary">{handle}</p>

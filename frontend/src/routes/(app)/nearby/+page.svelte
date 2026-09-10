@@ -17,7 +17,6 @@
 	import { startDefaultLocation, type DefaultLocation } from '@/lib/start-default-location';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
@@ -228,23 +227,15 @@
 
 <StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-5 pt-3 pb-16">
 	{#snippet header()}
+		<!-- 页头不再放「地图全景」图标按钮：正文「四大分区快捷入口」里已有带文字的
+		     「地图浏览」芯片跳同一目标，桌面外壳侧栏另有常驻的位置卡；三者同屏属重复入口。 -->
 		<PageHeader
 			title="附近"
 			subtitle={defaultLocation?.location_name ? `${defaultLocation.location_name} · 5km 实时探索` : '发现周边 5km 内有趣的人和事'}
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			subtitleSize={device === 'desktop' ? 'xs' : 'sm'}
-		>
-			{#snippet trailing()}
-				<ActionIconButton
-					icon={MapIcon}
-					label="地图全景"
-					onClick={() => void goto(ROUTES.map)}
-					variant="ghost"
-					size={36}
-				/>
-			{/snippet}
-		</PageHeader>
+		/>
 	{/snippet}
 
 	<!-- 顶部快捷搜索 + 四大分区入口芯片组（紧凑、精致、不占大片视口） -->
