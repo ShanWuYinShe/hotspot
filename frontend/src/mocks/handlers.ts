@@ -300,6 +300,72 @@ http.post(`${API}/moments/fetch_created`, () => {
     json(paginated(await withPaginationLimit(request, searchMockGroups(await request.json().catch(() => ({}))))))),
   http.post(`${PUBLIC_API}/groups/search`, async ({ request }) =>
     json(paginated(await withPaginationLimit(request, searchMockGroups(await request.json().catch(() => ({}))))))),
+  // moments/create：回显已创建瞬间（mock 阶段不持久化，本次会话 feed 可见性由前端状态承接）
+  http.post(`${API}/moments/create`, async ({ request }) =>
+    requireMockAuth() ?? json(apiOk((async () => {
+      const body = (await request.json().catch(() => ({}))) as { content?: string; tags?: string[] };
+      const u = mockUsers[0];
+      return {
+        moment_id: `moment_${Date.now()}`, user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
+        description: body?.content ?? '', images: [], tags: body?.tags ?? [], mentions: [],
+        created_at: new Date().toISOString(), comments_count: 0, shares_count: 0,
+        reactions: [{ emoji: "👍", count: 0, reacted_by_me: false }], location: null,
+        is_favorited: false, is_deleted: false, recommendation: null,
+      };
+    })()))),
+  http.post(`${API}/moments/set_favorite`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { moment_id?: string; active?: boolean };
+    return requireMockAuth() ?? json(apiOk({ moment_id: body?.moment_id ?? '', is_favorited: body?.active ?? true, favorited_at: new Date().toISOString() }));
+  }),
+  http.post(`${API}/moments/delete`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/reactions/fetch`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { target_id?: string };
+    return requireMockAuth() ?? json(apiOk({ items: [
+      { reaction_id: `r-${body?.target_id ?? 0}-1`, target_type: "moment", target_id: body?.target_id ?? "", emoji: "👍", count: 3, reacted_by_me: false, preview_users: [mockUsers[1], mockUsers[2]] },
+      { reaction_id: `r-${body?.target_id ?? 0}-2`, target_type: "moment", target_id: body?.target_id ?? "", emoji: "❤️", count: 1, reacted_by_me: false, preview_users: [mockUsers[3]] },
+    ], next_cursor: null }));
+  }),
+  http.post(`${API}/comments/fetch_replies`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { comment_id?: string };
+    const cid = body?.comment_id ?? "c";
+    return requireMockAuth() ?? json(paginated([
+      { comment_id: `${cid}-r1`, parent_id: cid, user: mockUsers[2], content: "同感，下次一起去！", created_at: "2026-07-26T15:00:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
+      { comment_id: `${cid}-r2`, parent_id: cid, user: mockUsers[4], content: "蹲一个定位 📍", created_at: "2026-07-26T15:10:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
+    ]));
+  }),
+  http.post(`${API}/comments/delete`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/comments/open_the_door`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { comment_id?: string };
+    return requireMockAuth() ?? json(apiOk({ comment_id: body?.comment_id ?? "c0", replies: { items: [], next_cursor: null } }));
+  }),
+  http.post(`${API}/private_chats/open_the_door`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { target_user_id?: string };
+    const chat = mockChats.find((c) => c.other_user.user_id === body?.target_user_id);
+    const other = chat?.other_user ?? mockUsers[1];
+    return requireMockAuth() ?? json(apiOk({
+      other_user: other, presence_status: "online", can_message: true,
+      recent_messages: { items: [], next_cursor: null },
+    }));
+  }),
+  http.post(`${API}/private_chats/update_preferences`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/private_chats/delete`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/update_preferences`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/groups/members/search`, () => requireMockAuth() ?? json(paginated([]))),
+  http.post(`${API}/users/update_location`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${PUBLIC_API}/comments/fetch_replies`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { comment_id?: string };
+    const cid = body?.comment_id ?? "c";
+    return json(paginated([
+      { comment_id: `${cid}-r1`, parent_id: cid, user: mockUsers[2], content: "同感，下次一起去！", created_at: "2026-07-26T15:00:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
+    ]));
+  }),
+  http.post(`${PUBLIC_API}/comments/open_the_door`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { comment_id?: string };
+    return json(apiOk({ comment_id: body?.comment_id ?? "c0", replies: { items: [], next_cursor: null } }));
+  }),
+  http.post(`${PUBLIC_API}/reactions/fetch`, () => json(apiOk({ items: [], next_cursor: null }))),
+  http.post(`${PUBLIC_API}/users/batch_fetch`, () => json(paginated(mockUsers.slice(0, 3).map(mockUserItem)))),
+  http.post(`${API}/users/batch_fetch`, () => requireMockAuth() ?? json(paginated(mockUsers.slice(0, 3).map(mockUserItem)))),
   http.post(`${API}/moments/update`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { moment_id?: string; description?: string; tags?: string[]; privacy_level?: string };
     const base = mockMoments.find((m) => m.moment_id === body?.moment_id) ?? mockMoments[0];
