@@ -52,6 +52,26 @@ Nginx 网关（`docker/nginx.dev.conf`）统一反代：
 | `/ws/` | Go 后端 WebSocket |
 | `/s3/` | SeaweedFS S3 |
 
+### OrbStack 本地域名（`.orb.local`）访问
+
+同一个实例除 `http://localhost:8888` 外，还有 OrbStack 发布的本地域名，可直接走
+HTTPS（OrbStack 自带受信任的开发证书）：
+
+- **同一个 nginx 容器有多个域名**，都指向当前容器：
+  `nginx.<compose 项目名>.orb.local`（服务名.项目名，主工作树即
+  `nginx.hotspot.orb.local`）、`<容器名>.orb.local`（如
+  `hotspot-nginx-1.orb.local`）；worktree 起的独立项目是
+  `nginx.<worktree 目录名>.orb.local`。
+- **只在本机有效**：解析走 **mDNS 多播**（`/etc/resolver/orb.local` 并不存在，
+  路由器 DNS 对 `.orb.local` 返回 NXDOMAIN，只有 `dns-sd` 能查到）。因此手机、
+  另一台电脑都解析不了——那类场景用 Mac 的局域网 IP。开了 VPN 或代理软件 TUN
+  模式也可能让多播失效，重启 OrbStack 恢复。
+- **`server.allowedHosts` 必须用前导点通配**：`vite.config.ts` 里写
+  `['.orb.local']`，Vite 的语义是「该域及其所有子域」。**禁止写死单个主机名**——
+  实测写死 `nginx.hotspot.orb.local` 时，`hotspot-nginx-1.orb.local`（容器名形式）
+  与 worktree 的 `nginx.<目录名>.orb.local` 全部返回 403
+  `Blocked request. This host ... is not allowed`。
+
 ### 宿主机上允许的调试操作
 
 - 类型检查：`bun run check`（svelte-check）
