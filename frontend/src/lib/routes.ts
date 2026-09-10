@@ -29,6 +29,7 @@ export const ROUTES = {
   meEdit: "/me/edit",
   settings: "/settings",
   map: "/map",
+  admin: "/admin",
   nearbyPeople: "/nearby/people",
   nearbyGroups: "/nearby/groups",
   nearbyMoments: "/nearby/moments",
@@ -64,6 +65,7 @@ export function isSubPagePath(pathname: string) {
   if (SUB_PAGE_PATHS.some((path) => pathname === path)) return true;
   if (pathname.startsWith(`${ROUTES.messages}/`)) return true;
   if (pathname.startsWith(`${ROUTES.me}/`)) return true;
+  if (pathname === ROUTES.admin || pathname.startsWith(`${ROUTES.admin}/`)) return true;
   return DETAIL_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
@@ -81,7 +83,8 @@ export function isPrimaryRouteActive(pathname: string, target: string) {
 export type DesktopNavId =
   | "home" | "nearby-people" | "nearby-groups" | "nearby-moments"
   | "messages" | "moments" | "my-groups"
-  | "relationships";
+  | "relationships"
+  | "admin";
 
 /**
  * The desktop rail only highlights destinations that actually exist in the rail.
@@ -92,6 +95,7 @@ export function getDesktopNavId(pathname: string, search = ""): DesktopNavId | n
   const source = new URLSearchParams(search).get("from");
 
   if (pathname === ROUTES.home) return "home";
+  if (pathname === ROUTES.admin || pathname.startsWith(`${ROUTES.admin}/`)) return "admin";
   if (pathname === ROUTES.messages || pathname.startsWith(`${ROUTES.messages}/`)) return "messages";
   if (pathname === ROUTES.nearbyGroups) return "nearby-groups";
   if (pathname === ROUTES.nearbyPeople) return "nearby-people";

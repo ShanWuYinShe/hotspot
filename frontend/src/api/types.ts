@@ -69,6 +69,7 @@ export type ReportReason =
 	| 'impersonation'
 	| 'self_harm'
 	| 'other';
+export type ReportAction = 'resolve' | 'dismiss';
 export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
 // spec: api_spec_errors.md → ForbiddenReason（10200 的 data.forbidden_reason，12 项权威枚举）
@@ -1177,4 +1178,257 @@ export interface MarkNotifyReadRequest {
 export interface BootstrapRequest {
 	client_type: 'web';
 	device_id: string | null;
+}
+
+// --- 平台管理（spec: api_spec_admin.md，/admin/v1 节点）---
+// 仅供平台管理员使用；平台管理员在 /api/v1 上与普通用户同权，平台权限不外溢。
+
+export type UserAccountStatus = 'normal' | 'banned';
+
+export interface AdminRoleBasic {
+	role_id: string;
+	name: string;
+}
+
+// rbac/me → 我的平台管理员权限；'*' 表示 superadmin（全部权限，PII 键仍需显式持有）
+export interface AdminPermissions {
+	permissions: string[];
+	roles: AdminRoleBasic[];
+}
+
+export interface AdminPermissionItem {
+	key: string;
+	description: string;
+}
+
+export interface AdminPermissionDictionary {
+	items: AdminPermissionItem[];
+}
+
+export interface AdminRoleItem {
+	role_id: string;
+	name: string;
+	description: string | null;
+	permissions: string[];
+}
+
+export interface AdminRoleList {
+	items: AdminRoleItem[];
+}
+
+export interface AdminOperatorItem {
+	user: UserInfo;
+	granted_at: string; // 最近一次授权时间
+	permissions: string[]; // '*' = superadmin
+	roles: AdminRoleBasic[];
+}
+
+export type AuditAction =
+	| 'user.ban'
+	| 'user.unban'
+	| 'group.dismiss'
+	| 'group.member_mute'
+	| 'group.member_ban'
+	| 'group.member_remove'
+	| 'announcement.create'
+	| 'announcement.update'
+	| 'announcement.delete'
+	| 'role.create'
+	| 'role.update'
+	| 'role.delete'
+	| 'role.set_permissions'
+	| 'admin.award'
+	| 'admin.revoke'
+	| 'report.judge'
+	| 'tag.set_ban'
+	| 'config.update';
+
+export type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'report' | 'tag' | 'config';
+
+export type AuditDetails = Extract<
+	{ type: 'user.ban'; reason: string | null; duration_days: number | null }
+	| { type: 'user.unban'; reason: string | null }
+	| { type: 'group.dismiss'; reason: string | null }
+	| { type: 'group.member_mute'; reason: string | null; duration_minutes: number | null }
+	| { type: 'group.member_ban'; reason: string | null }
+	| { type: 'group.member_remove'; reason: string | null }
+	| { type: 'announcement.create'; title: string }
+	| { type: 'announcement.update'; title: string; changed_fields: string[] }
+	| { type: 'announcement.delete'; title: string }
+	| { type: 'role.create'; role_name: string; permissions: string[] }
+	| { type: 'role.update'; role_name: string; added_permissions: string[]; removed_permissions: string[] }
+	| { type: 'role.delete'; role_name: string }
+	| { type: 'role.set_permissions'; role_name: string; permissions: string[] }
+	| { type: 'admin.award'; target_user_id: string; role_ids: string[]; award_all_permissions: boolean | null }
+	| { type: 'admin.revoke'; target_user_id: string }
+	| { type: 'report.judge'; report_id: string; action: ReportAction; note: string | null }
+	| { type: 'tag.set_ban'; name: string; active: boolean }
+	| { type: 'config.update'; config_key: string; old_value: unknown; new_value: unknown },
+	{ type: AuditAction }
+>;
+
+// 字段可见性：ip_location/device_summary 需 admin.audit.read；ip_address 需 admin.audit.read_ip（不足为 null）
+export interface AuditLogItem {
+	log_id: string;
+	action: AuditAction;
+	operator: UserInfo;
+	target_type: AuditTargetType;
+	target_id: string;
+	target_name: string | null;
+	details: AuditDetails | null;
+	ip_location: string | null;
+	ip_address: string | null;
+	device_summary: string | null;
+	created_at: string;
+}
+
+// AppConfig：完整应用配置；features/limits/contact 构成 ClientConfig 投影
+export interface UploadConfig {
+	image_max_size: number;
+	video_max_size: number;
+	audio_max_size: number;
+	file_max_size: number;
+	allowed_image_types: string[];
+	allowed_video_types: string[];
+}
+
+export interface ContentDefaults {
+	default_location: Location;
+	default_group_avatar_url: string;
+	default_user_avatar_url: string;
+	default_group_settings: GroupSettings;
+}
+
+export interface RateLimitConfig {
+	global_per_hour: number;
+	user_per_hour: number;
+	auth_register_per_10minutes: number;
+	auth_signin_per_10minutes: number;
+	auth_guest_per_10minutes: number;
+	auth_refresh_per_10minutes: number;
+	auth_reset_per_10minutes: number;
+	search_per_minute: number;
+	write_per_minute: number;
+	moments_create_per_minute: number;
+	comments_create_per_minute: number;
+	reports_create_per_hour: number;
+	upload_presign_per_hour: number;
+	ws_subscribe_per_second: number;
+	admin_read_per_minute: number;
+	admin_write_per_minute: number;
+}
+
+export interface ResponseDefaults {
+	search_suggest_count: number;
+	chat_recent_messages_count: number;
+	group_announcements_count: number;
+	system_announcements_count: number;
+	comment_top_replies_count: number;
+	user_profile_moments_count: number;
+}
+
+export interface AppConfig {
+	features: FeatureSwitches;
+	limits: AppLimits;
+	contact: ContactInfo;
+	upload: UploadConfig;
+	defaults: ContentDefaults;
+	rate_limits: RateLimitConfig;
+	response_defaults: ResponseDefaults;
+	updated_at: string | null;
+	updated_by_user_id: string | null;
+}
+
+export interface UpdateAppConfigRequest {
+	upload?: Partial<UploadConfig> | null;
+	defaults?: {
+		default_location?: Partial<Location> | null;
+		default_group_avatar_url?: string | null;
+		default_user_avatar_url?: string | null;
+		default_group_settings?: Partial<GroupSettings> | null;
+	} | null;
+	rate_limits?: Partial<RateLimitConfig> | null;
+	response_defaults?: Partial<ResponseDefaults> | null;
+	features?: Partial<FeatureSwitches> | null;
+	limits?: Partial<AppLimits> | null;
+	contact?: Partial<ContactInfo> | null;
+}
+
+// AdminUserItem 继承 UserItem；查看者字段（relation/social_context）平台视角为 null
+export interface AdminUserItem extends UserItem {
+	status: UserAccountStatus;
+	banned_until: string | null; // null = 未封禁/永久封禁
+	privacy_level: PrivacyLevel;
+	created_at: string;
+	last_active_at: string | null;
+	login_id: string;
+	register_ip: string | null; // 需 admin.users.read_ip
+	register_location: string | null;
+	last_login_ip: string | null; // 需 admin.users.read_ip
+	last_login_location: string | null;
+	email: string | null;
+	phone: string | null;
+}
+
+// AdminGroupItem 继承 GroupItem；viewer_state 平台视角为 null；owner 平台视角恒返回
+export interface AdminGroupItem extends GroupItem {
+	owner: UserInfo;
+	created_at: string;
+}
+
+// ReportItem（spec: types.md；客户端此前未消费，随平台管理举报裁决引入）
+export interface ReportSnapshot {
+	chat_type: 'private' | 'group';
+	target_chat_id: string;
+	message_type: MessageType;
+	snapshot_content: string | null;
+	snapshot_media: MessageMedia | null;
+	sent_at: string;
+}
+
+export interface ReportResolution {
+	action: ReportAction;
+	resolved_at: string;
+	note: string | null;
+}
+
+export interface ReportItem {
+	report_id: string;
+	target_type: ReportTargetType;
+	target_id: string;
+	reason: ReportReason;
+	description: string | null;
+	status: ReportStatus;
+	created_at: string;
+	handled_at: string | null;
+	message_snapshot: ReportSnapshot | null;
+	resolution: ReportResolution | null;
+}
+
+export interface AdminReportItem extends ReportItem {
+	reporter: UserInfo;
+	handled_by: UserInfo | null;
+	handle_note: string | null;
+}
+
+// AdminTagItem 扩展 TagItem；业务唯一键为 name（tag_id 仅展示/审计关联）
+export interface AdminTagItem extends TagItem {
+	tag_id: string;
+	created_at: string;
+}
+
+export interface SystemAnnouncementItem {
+	announcement_id: string;
+	title: string;
+	content: string;
+	severity: AnnounceSeverity;
+	action_url: string | null;
+	created_at: string;
+}
+
+export interface AdminAnnouncementItem extends SystemAnnouncementItem {
+	created_by: UserInfo;
+	send_push: boolean;
+	push_sent_at: string | null;
+	view_count: number;
 }

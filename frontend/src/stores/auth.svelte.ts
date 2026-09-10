@@ -13,6 +13,8 @@ import {
   type ApiResponse,
 } from '@/api';
 
+import { resetAdmin } from "@/stores/admin.svelte";
+
 export type AuthStatus = 'loading' | 'anonymous' | 'authenticated';
 
 export interface AuthUser {
@@ -177,6 +179,7 @@ export async function logout(): Promise<void> {
   status = 'anonymous';
   user = null;
   bannedMessage = null;
+  resetAdmin();
   setAuthenticated(false);
 }
 

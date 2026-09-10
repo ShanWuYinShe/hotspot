@@ -36,6 +36,14 @@ export {
   listComments,
   getMapCanvas,
   searchSuggest,
+  adminRbacMe, adminListPermissions, adminListRoles, adminCreateRole, adminUpdateRole,
+  adminDeleteRole, adminSetRolePermissions, adminListAdmins, adminAwardAdmin, adminRevokeAdmin,
+  adminListAuditLogs, adminGetAppConfig, adminUpdateAppConfig,
+  adminSearchUsers, adminOpenUser, adminSetUserBan,
+  adminSearchGroups, adminOpenGroup, adminDismissGroup,
+  adminListReports, adminJudgeReport,
+  adminSearchTags, adminSetTagBan,
+  adminListAnnouncements, adminCreateAnnouncement, adminUpdateAnnouncement, adminDeleteAnnouncement,
 } from '@/api/client';
 
 export type { ApiResponse, PaginatedData } from '@/api/client';

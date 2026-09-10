@@ -4,10 +4,11 @@
 	import { goto } from '$app/navigation';
 	import {
 		Home, Users, Rss, MessageCircle, Bell, ImageIcon,
-		Heart, Search, Settings, Plus, Navigation2, UserRound, PanelLeftClose, PanelLeftOpen
+		Heart, Search, Settings, Plus, Navigation2, UserRound, PanelLeftClose, PanelLeftOpen, Shield
 	} from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
+	import { admin, ensureAdminLoaded } from '@/stores/admin.svelte';
 	import { composer, openComposer, closeComposer } from '@/stores/composer.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
@@ -45,6 +46,11 @@
 		{ id: 'my-groups', icon: Users, label: '我的群组', path: ME_SECTION_PATHS.groups },
 		{ id: 'relationships', icon: Heart, label: '关系', path: ME_SECTION_PATHS.relationships }
 	];
+
+	// 登录后拉一次平台管理员权限：决定侧栏「管理后台」入口是否渲染
+	$effect(() => {
+		if (auth.status === 'authenticated') ensureAdminLoaded();
+	});
 
 	const pathname = $derived(page.url.pathname);
 	const searchString = $derived(page.url.search.slice(1));
@@ -225,6 +231,19 @@
 						<SidebarNavItem {item} isActive={activeNavId === item.id} onClick={() => handleNavClick(item)} collapsed={isSidebarCollapsed} />
 					{/each}
 				</div>
+
+				<!-- Section 3: 管理后台（仅平台管理员；权限随登录态拉取，非管理员不渲染） -->
+				{#if auth.status === 'authenticated' && admin.isAdmin}
+					<div class="my-3 self-center h-px bg-border-default transition-[width] duration-standard ease-standard" style="width:{isSidebarCollapsed ? 24 : '100%'};"></div>
+					<div class="flex flex-col gap-1">
+						<SidebarNavItem
+							item={{ icon: Shield, label: '管理后台' }}
+							isActive={activeNavId === 'admin'}
+							onClick={() => void goto(ROUTES.admin)}
+							collapsed={isSidebarCollapsed}
+						/>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Location Anchor — ALWAYS pinned to bottom -->
