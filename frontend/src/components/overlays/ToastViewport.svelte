@@ -58,7 +58,7 @@
 				<p class="min-w-0 flex-1 text-sm font-medium text-text-primary leading-snug">{item.message}</p>
 				<button
 					type="button"
-					class="hit-slop shrink-0 focus-ring rounded-lg p-1 text-text-tertiary transition-colors hover:bg-interactive-hover hover:text-text-primary"
+					class="hit-slop shrink-0 focus-ring rounded-lg p-1 text-text-secondary transition-colors hover:bg-interactive-hover hover:text-text-primary"
 					aria-label="关闭通知"
 					onclick={() => dismissToast(item.id)}
 				>

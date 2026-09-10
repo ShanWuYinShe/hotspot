@@ -130,11 +130,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	>
 	{#snippet header()}
 		<!-- ═══ 首页 — 统一 PageHeader（三端同标题；附近内容拆分到 /nearby 聚合页）═══ -->
-		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '3xl'} subtitle="发现周边有趣的人和事" subtitleSize={device === 'desktop' ? 'xs' : 'sm'} sticky>
+		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '2xl'} subtitle="发现周边有趣的人和事" subtitleSize={device === 'desktop' ? 'xs' : 'sm'} sticky>
 			{#snippet trailing()}
 				<div class="flex items-center gap-2">
 					{#if onlineCount > 0}
-						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-default bg-surface-primary shadow-raised-xs">
+						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-default bg-surface-primary shadow-raised-sm">
 							<span class="rounded-full size-1.5 bg-status-online"></span>
 							<span class="text-xs text-text-secondary">{onlineCount} 在线</span>
 						</div>

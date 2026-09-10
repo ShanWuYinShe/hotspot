@@ -98,7 +98,10 @@
   --cst-content-on-marker: #FFFFFF;
   --cst-text-on-status: #FFFFFF;
   --cst-surface-glass-badge: rgba(255, 255, 255, 0.18);
-  --cst-surface-control-thumb: var(--cst-content-inverse);
+  /* 弱化嵌入面：比卡片低一档的静态填充（分段控件底轨、置顶会话行）。
+     表达式经 --cst-text-primary 自适配明暗——light 向正文色微沉、dark 向正文色微浮，
+     故无需在 .forest.dark 重复定义（方向自动反转）。 */
+  --cst-surface-subtle: color-mix(in srgb, var(--cst-surface-primary) 92%, var(--cst-text-primary) 8%);
   --cst-elevation-menu: 0 16px 40px rgba(0, 0, 0, 0.16);
   --cst-elevation-control-thumb: 0 1px 3px rgba(0, 0, 0, 0.18);
   --cst-surface-toggle-off: rgba(120, 120, 128, 0.22);
@@ -114,7 +117,6 @@
   --cst-surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
   --cst-surface-gallery-label: rgba(0, 0, 0, 0.46);
   --cst-surface-map-control: rgba(255, 255, 255, 0.20);
-  --cst-surface-map-control-active: rgba(255, 255, 255, 0.25);
   --cst-elevation-profile-avatar: 0 6px 20px rgba(0, 0, 0, 0.22);
   --cst-elevation-modal: 0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--cst-border-subtle);
   --cst-elevation-fab: 0 4px 14px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -275,6 +277,9 @@
   --cst-content-on-marker: #0C1911;
   --cst-elevation-fab: 0 4px 16px rgba(0, 0, 0, 0.40), 0 1px 4px rgba(0, 0, 0, 0.25);
   --cst-elevation-nav: 0 -2px 10px rgba(0, 0, 0, 0.35);
+  /* 弹层/下拉投影在 dark 需加深——否则沿用 light 的 16% 黑，比同屏 modal(42%)/sheet(22%)
+     明显更「飘」。 */
+  --cst-elevation-menu: 0 16px 48px rgba(0, 0, 0, 0.42);
   --cst-elevation-sheet: 0 -8px 48px rgba(0,0,0,0.22), 0 -2px 0 var(--cst-border-subtle);
   --cst-elevation-modal: 0 28px 88px rgba(0,0,0,0.42), 0 0 0 1px var(--cst-border-subtle);
 

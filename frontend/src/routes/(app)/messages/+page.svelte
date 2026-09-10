@@ -181,7 +181,7 @@
 					{#snippet trailing()}
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-xs size-9"
+							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-sm size-9"
 							onclick={() => {
 								newChatTab = 'chat';
 								showNewChat = true;
@@ -276,7 +276,7 @@
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
 	<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
-		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize="3xl" subtitleSize="sm">
+		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} subtitleSize="sm">
 			{#snippet trailing()}
 				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->
 				<div class="flex items-center gap-2">
@@ -287,7 +287,7 @@
 					{/if}
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-xs size-9"
+						class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-sm size-9"
 						onclick={() => {
 							newChatTab = 'chat';
 							showNewChat = true;

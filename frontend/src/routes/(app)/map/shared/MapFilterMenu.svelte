@@ -64,7 +64,11 @@
 			<SlidersHorizontal class="size-3.5" strokeWidth={open ? 2.5 : 1.75} />
 			筛选
 			{#if !allActive}
-				<span class="text-xxs font-medium rounded-full" style="margin-left:2px;padding:1px 6px;background:{open ? 'var(--cst-surface-map-control-active)' : 'var(--cst-accent-soft)'};color:{open ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-default)'};">{activeFilters.size}</span>
+				<!-- 展开态按钮底为 accent 实色，徽章改用「反色对」（on-accent 底 + accent 字）——
+				     与 LocationDesktopPanel 的选中图钉标签同款。此前用 25% 半透明白底配
+				     on-accent 文字，浅色模式下为白字压浅底（≈3.4:1，低于 WCAG AA 4.5:1）
+				     且叠在 accent 实底上近乎隐形。 -->
+				<span class="text-xxs font-medium rounded-full" style="margin-left:2px;padding:1px 6px;background:{open ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-soft)'};color:var(--cst-accent-default);">{activeFilters.size}</span>
 			{/if}
 		</button>
 	</div>
@@ -80,7 +84,7 @@
 				{@const count = counts?.[item.type]}
 				<button
 					type="button"
-					class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left focus-ring transition-colors {active ? 'bg-accent-soft' : 'hover:bg-interactive-hover'} {active ? '' : 'opacity-soft'}"
+					class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left focus-ring transition-colors {active ? 'bg-accent-soft hover:bg-interactive-active' : 'hover:bg-interactive-hover'} {active ? '' : 'opacity-soft'}"
 					aria-pressed={active}
 					onclick={() => toggleFilter(item.type)}
 				>

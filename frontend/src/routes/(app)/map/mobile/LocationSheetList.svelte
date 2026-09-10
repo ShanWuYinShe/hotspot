@@ -7,6 +7,8 @@
 	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
 import PinMedia from '../shared/PinMedia.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
+	import * as Dialog from '@/components/ui/dialog';
+	import Button from '@/components/ui/button.svelte';
 
 	// 移动端地图「底部 Sheet 列表内容」：搜索建议 / 选中图钉 mini-card / Tab / 最近·热门列表。
 	// 页面私有组件（colocate），由 map/LocationMobile.svelte 渲染（仅 snap !== 'min' 时显示）。
@@ -33,6 +35,11 @@ import PinMedia from '../shared/PinMedia.svelte';
 		onOpenPinDetail: (pin: Pin) => void;
 		onClearPin: () => void;
 	} = $props();
+
+	// 清空最近记录不可恢复：走全站统一的 ui/dialog 危险操作确认
+	// （原先用 window.confirm——原生弹窗无法随主题/明暗变化，与全站危险操作
+	//   确认范式（settings 退出登录、me/edit 注销、groups 退群）割裂）。
+	let confirmClearOpen = $state(false);
 </script>
 
 {#if searchQuery && searchResults.length > 0}
@@ -98,13 +105,10 @@ import PinMedia from '../shared/PinMedia.svelte';
 				class="flex-1"
 			/>
 			{#if activeTab === 'recent' && recentItems.length > 0}
-				<!-- 一键清空不可恢复：二次确认防误触 -->
 				<button
 					type="button"
 					class="link-btn ml-auto -my-1 px-2 py-1 focus-ring text-xs text-text-secondary hover:text-accent-default"
-					onclick={() => {
-						if (window.confirm('清空全部最近记录？此操作不可恢复。')) recentItems = [];
-					}}
+					onclick={() => (confirmClearOpen = true)}
 				>
 					清空
 				</button>
@@ -179,4 +183,31 @@ import PinMedia from '../shared/PinMedia.svelte';
 			{/if}
 		{/if}
 	</div>
+{/if}
+
+{#if confirmClearOpen}
+	<Dialog.Root bind:open={confirmClearOpen}>
+		<Dialog.Content class="max-w-90 p-0">
+			<div class="px-5 pt-6 pb-4">
+				<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-status-danger/10 text-status-danger ring-1 ring-status-danger/20">
+					<Clock class="size-5" />
+				</div>
+				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">清空最近记录？</Dialog.Title>
+				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">此操作不可恢复，清空后需要重新搜索地点才会再次记录。</Dialog.Description>
+			</div>
+			<div class="flex flex-col gap-2 px-5 pb-5">
+				<Button
+					type="button"
+					variant="danger"
+					size="lg"
+					class="w-full"
+					onclick={() => {
+						recentItems = [];
+						confirmClearOpen = false;
+					}}
+				>清空</Button>
+				<Button type="button" variant="secondary" size="lg" class="w-full" onclick={() => (confirmClearOpen = false)}>取消</Button>
+			</div>
+		</Dialog.Content>
+	</Dialog.Root>
 {/if}

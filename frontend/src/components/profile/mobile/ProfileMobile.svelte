@@ -11,7 +11,8 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
-	import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
+	import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
+	import { relationshipsHref } from '@/lib/relationships';
 
 	// 移动个人主页：资料页眉 + 身份卡（68px 头像 + 编辑按钮 + stats 横条居中）
 	// + 个人数据 5 行链接（无 Tab/画廊）。仅 mobile 使用；tablet 归 ProfilePage。
@@ -29,13 +30,13 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	const needsAuth = $derived(account.needsAuth);
 	const retry = account.retry;
 
-	const DATA_ITEMS = $derived<{ section: ProfileSection; label: string; detail: string; icon: typeof ImageIcon }[]>([
-		{ section: 'relationships', label: '关系', detail: '好友 / 关注 / 粉丝', icon: Users },
-		{ section: 'moments', label: '我的瞬间', detail: '查看已发布的记录', icon: ImageIcon },
-		{ section: 'groups', label: '我的群组', detail: `${stats.groups_count} 个正在参与`, icon: Users },
-		{ section: 'friends', label: '好友', detail: `${stats.friends_count} 位好友`, icon: Heart },
-		{ section: 'following', label: '关注', detail: `${stats.following_count} 人`, icon: UserPlus },
-		{ section: 'fans', label: '粉丝', detail: `${stats.followers_count} 人`, icon: UserCheck }
+	const DATA_ITEMS = $derived<{ id: string; href: string; label: string; detail: string; icon: typeof ImageIcon }[]>([
+		{ id: 'moments', href: ME_SECTION_PATHS.moments, label: '我的瞬间', detail: '查看已发布的记录', icon: ImageIcon },
+		{ id: 'groups', href: ME_SECTION_PATHS.groups, label: '我的群组', detail: `${stats.groups_count} 个正在参与`, icon: Users },
+		// 好友/关注/粉丝直接深链到关系聚合页的对应 tab——不再各自维护一条独立路由
+		{ id: 'friends', href: relationshipsHref('friends'), label: '好友', detail: `${stats.friends_count} 位好友`, icon: Heart },
+		{ id: 'following', href: relationshipsHref('following'), label: '关注', detail: `${stats.following_count} 人`, icon: UserPlus },
+		{ id: 'fans', href: relationshipsHref('fans'), label: '粉丝', detail: `${stats.followers_count} 人`, icon: UserCheck }
 	]);
 
 	const statsList = $derived<{ label: string; value: number }[]>([
@@ -47,14 +48,12 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 
 <StandardPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
-		<!-- 资料页眉（eyebrow + 设置入口；底色对齐标准 PageHeader 的 surface-page） -->
+		<!-- 资料页眉（eyebrow；底色对齐标准 PageHeader 的 surface-page）。
+		     不在此放设置/外观入口——它们统一收在下方身份卡的拇指操作区，
+		     同一页只保留一处设置入口。 -->
 			<div class="border-b border-border-default bg-surface-page" >
 				<ContentColumn class="flex items-center justify-between py-3">
 					<p class="eyebrow">个人中心</p>
-					{#if !needsAuth}
-						<!-- 未登录时设置页无意义，隐藏入口 -->
-						<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={32} />
-					{/if}
 				</ContentColumn>
 			</div>
 	{/snippet}
@@ -66,8 +65,10 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 {:else if error}
 		<LoadError message={error} onRetry={retry} />
 	{:else}
-		<!-- 身份卡（compact）：头像复用 Avatar，统计横条居中（对齐桌面 MetricRow 原语） -->
-		<section class="card-raised rounded-lg" aria-label="个人资料">
+		<!-- 身份卡（compact）：头像复用 Avatar，统计横条居中（对齐桌面 MetricRow 原语）。
+		     卡片壳与桌面 ProfilePage 统一为「白卡 + 发丝描边 + 主题投影」语言
+		     （原 card-raised 纯投影，两端不一致）。 -->
+		<section class="rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="个人资料">
 			<div class="p-5">
 				<div class="flex items-start justify-between gap-5">
 					<div class="flex min-w-0 items-center gap-4">
@@ -103,7 +104,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.meEdit)}
-						class="hover-btn inline-flex flex-1 items-center justify-center gap-1.5 border border-border-default rounded-md bg-surface-primary py-2 px-3 text-xs font-medium text-text-primary shadow-raised-xs focus-ring transition-colors hover:bg-accent-soft"
+						class="hover-btn inline-flex flex-1 items-center justify-center gap-1.5 border border-border-default rounded-md bg-surface-primary py-2 px-3 text-xs font-medium text-text-primary shadow-raised-sm focus-ring transition-colors hover:bg-accent-soft"
 					>
 						<Pencil class="size-3.5 text-text-secondary" strokeWidth={1.75} />
 						编辑资料
@@ -114,7 +115,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.settings)}
-						class="hover-btn inline-flex items-center justify-center gap-1.5 border border-border-default rounded-md bg-surface-primary py-2 px-3 text-xs font-medium text-text-primary shadow-raised-xs focus-ring transition-colors hover:bg-accent-soft"
+						class="hover-btn inline-flex items-center justify-center gap-1.5 border border-border-default rounded-md bg-surface-primary py-2 px-3 text-xs font-medium text-text-primary shadow-raised-sm focus-ring transition-colors hover:bg-accent-soft"
 						aria-label="系统设置"
 					>
 						<Settings class="size-3.5 text-text-secondary" strokeWidth={1.75} />
@@ -139,9 +140,9 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			<p class="eyebrow px-1 mb-2">个人数据</p>
 			<p class="px-1 mb-2 text-xs text-text-secondary">在这里查看你的内容与关系</p>
 			<ListContainer bordered ariaLabel="个人数据">
-			{#each DATA_ITEMS as item (item.section)}
+			{#each DATA_ITEMS as item (item.id)}
 				<ListItem
-					onClick={() => void goto(ME_SECTION_PATHS[item.section])}
+					onClick={() => void goto(item.href)}
 					ariaLabel={item.label}
 					class="flex items-center gap-3 px-5 py-3.5"
 				>

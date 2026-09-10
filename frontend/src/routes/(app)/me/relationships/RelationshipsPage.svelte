@@ -9,16 +9,22 @@
 	import SectionFans from '@/components/profile/SectionFans.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
-	import { ROUTES, ME_SECTION_PATHS } from '@/lib/routes';
+	import { ROUTES } from '@/lib/routes';
+	import {
+		DEFAULT_RELATIONSHIP_TAB,
+		isRelationshipTab,
+		relationshipsHref,
+		type RelationshipTab
+	} from '@/lib/relationships';
 
 	// 关系聚合页（/me/relationships，桌面导航「关系」与通知页深链的落地页）：
 	// 好友 / 关注 / 粉丝 三 tab。对齐全站样板（nearby/moments）：StandardPageLayout
 	// + sticky PageHeader + below 胶囊 Tab 栏（随 header 吸顶）；tab 状态存 URL
 	// query（?tab=friends|following|fans，默认 friends），可刷新/分享/直达；
 	// 三个分区组件以 embedded 模式内嵌（隐藏各自 header，卡片网格布局）。
+	// 三 tab 是关系数据的唯一 canonical 入口（旧 /me/friends 等已重定向到此）。
 
-	type RelTab = 'friends' | 'following' | 'fans';
-	const TABS: { id: RelTab; label: string }[] = [
+	const TABS: { id: RelationshipTab; label: string }[] = [
 		{ id: 'friends', label: '好友' },
 		{ id: 'following', label: '关注' },
 		{ id: 'fans', label: '粉丝' }
@@ -30,18 +36,18 @@
 	const following = $derived(rel.following);
 	const followers = $derived(rel.followers);
 
-	const activeTab = $derived<RelTab>(
-		TABS.some((t) => t.id === page.url.searchParams.get('tab'))
-			? (page.url.searchParams.get('tab') as RelTab)
-			: 'friends'
+	const activeTab = $derived<RelationshipTab>(
+		isRelationshipTab(page.url.searchParams.get('tab'))
+			? (page.url.searchParams.get('tab') as RelationshipTab)
+			: DEFAULT_RELATIONSHIP_TAB
 	);
 	const activeCount = $derived(
 		activeTab === 'friends' ? friends.length : activeTab === 'following' ? following.length : followers.length
 	);
 
-	const switchTab = (tab: RelTab) => {
+	const switchTab = (tab: RelationshipTab) => {
 		if (tab === activeTab) return;
-		void goto(`${ME_SECTION_PATHS.relationships}?tab=${tab}`);
+		void goto(relationshipsHref(tab));
 	};
 
 	const device = $derived(platform.platform);
@@ -75,7 +81,7 @@
 			count: t.id === 'friends' ? friends.length : t.id === 'following' ? following.length : followers.length
 		}))}
 		value={activeTab}
-		onChange={(id) => switchTab(id as RelTab)}
+		onChange={(id) => switchTab(id as RelationshipTab)}
 	/>
 {/snippet}
 

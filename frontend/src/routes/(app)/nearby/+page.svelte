@@ -232,7 +232,7 @@
 			title="附近"
 			subtitle={defaultLocation?.location_name ? `${defaultLocation.location_name} · 5km 实时探索` : '发现周边 5km 内有趣的人和事'}
 			sticky
-			titleSize={device === 'desktop' ? 'xl' : '3xl'}
+			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			subtitleSize={device === 'desktop' ? 'xs' : 'sm'}
 		>
 			{#snippet trailing()}
@@ -251,7 +251,7 @@
 	<section class="flex flex-col gap-3">
 		<button
 			type="button"
-			class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary px-4 py-2.5 text-left shadow-raised-xs focus-ring transition-colors hover:border-border-strong"
+			class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary px-4 py-2.5 text-left shadow-raised-sm focus-ring transition-colors hover:border-border-strong"
 			onclick={() => void goto(ROUTES.search)}
 			aria-label="搜索周边内容"
 		>
@@ -265,7 +265,7 @@
 				<button
 					type="button"
 					onclick={() => void goto(section.href)}
-					class="hover-btn group flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border-default bg-surface-primary py-2.5 px-1 shadow-raised-xs transition-all hover:border-accent-default hover:bg-accent-soft/30 focus-ring"
+					class="hover-btn group flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border-default bg-surface-primary py-2.5 px-1 shadow-raised-sm transition-all hover:border-accent-default hover:bg-accent-soft focus-ring"
 				>
 					<span class="flex size-8 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-110">
 						<section.icon class="size-4" strokeWidth={1.75} />
@@ -300,10 +300,10 @@
 					onAction={() => void goto(ROUTES.nearbyPeople)}
 				/>
 				<!-- 横向滑轨：自然滚动，露出卡片边缘提示可滑动 -->
-				<div class="flex gap-3 overflow-x-auto pb-1.5 -mx-4 px-4 scrollbar-none snap-x">
+				<div class="flex gap-3 overflow-x-auto pb-1.5 -mx-4 px-4 no-scrollbar snap-x">
 					{#each nearbyFriends as friend (friend.id)}
 						<article
-							class="snap-start shrink-0 w-32 flex flex-col items-center rounded-xl border border-border-default bg-surface-primary p-3 shadow-raised-xs transition-all hover:border-border-strong hover:shadow-raised-sm"
+							class="snap-start shrink-0 w-32 flex flex-col items-center rounded-xl border border-border-default bg-surface-primary p-3 shadow-raised-sm transition-all hover:border-border-strong hover:shadow-raised-md"
 						>
 							<button
 								type="button"
@@ -326,7 +326,7 @@
 									<span>{friend.distance}</span>
 								</div>
 								{#if friend.tag}
-									<span class="mt-1.5 inline-block text-xxs px-1.5 py-0.5 rounded bg-accent-soft text-accent-default truncate max-w-full">
+									<span class="badge mt-1.5 bg-accent-soft text-accent-default truncate max-w-full">
 										{friend.tag}
 									</span>
 								{/if}
@@ -335,7 +335,7 @@
 							<button
 								type="button"
 								onclick={(e) => toggleFollow(friend.id, e)}
-								class="mt-2.5 w-full flex items-center justify-center gap-1 py-1 rounded-md text-xxs font-medium transition-colors {followingIds.has(friend.id) ? 'bg-surface-secondary text-text-secondary border border-border-default' : 'bg-accent-default text-text-on-accent shadow-raised-xs hover:bg-accent-hover'}"
+								class="mt-2.5 w-full flex items-center justify-center gap-1 py-1 rounded-md text-xxs font-medium transition-colors focus-ring {followingIds.has(friend.id) ? 'bg-surface-subtle text-text-secondary border border-border-default hover:bg-interactive-active' : 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
 								disabled={followPending.has(friend.id)}
 								aria-label={followingIds.has(friend.id) ? `取消关注 ${friend.name}` : `关注 ${friend.name}`}
 							>

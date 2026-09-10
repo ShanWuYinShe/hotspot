@@ -23,7 +23,7 @@
 
 	<button
 		type="button"
-		class="hover-btn tap-97 rounded-xl border border-border-default bg-surface-primary shadow-raised-sm cursor-pointer overflow-hidden text-left w-full py-4.5 px-5"
+		class="hover-btn tap-97 rounded-xl border border-border-default bg-surface-primary shadow-raised-sm hover:border-accent-default hover:shadow-raised-md cursor-pointer overflow-hidden text-left w-full py-4.5 px-5"
 		aria-label="查看附近的人"
 		onclick={onExplore}
 	>

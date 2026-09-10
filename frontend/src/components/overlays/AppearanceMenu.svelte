@@ -113,7 +113,7 @@
 							onclick={() => setTheme(item.id)}
 							aria-pressed={selected}
 							class="rounded-md border p-2.5 text-left outline-none transition-all duration-standard focus-visible:ring-2 focus-visible:ring-accent-default {selected
-								? 'border-accent-border bg-accent-soft text-accent-default shadow-raised-xs'
+								? 'border-accent-border bg-accent-soft text-accent-default shadow-raised-sm'
 								: 'border-border-default bg-surface-primary text-text-secondary hover:bg-interactive-hover hover:text-text-primary'}"
 						>
 							<div class="flex items-center justify-between mb-2">
@@ -184,7 +184,7 @@
 								type="button"
 								onclick={() => void applyScenario(s.id)}
 								aria-pressed={isCur}
-								class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors duration-fast outline-none focus-visible:ring-2 focus-visible:ring-accent-default {isCur
+								class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors duration-instant outline-none focus-visible:ring-2 focus-visible:ring-accent-default {isCur
 									? 'bg-accent-soft font-medium text-accent-default'
 									: 'text-text-primary hover:bg-interactive-hover'}"
 							>

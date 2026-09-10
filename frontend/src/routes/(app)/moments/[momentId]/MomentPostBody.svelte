@@ -97,7 +97,7 @@
 		{#if moment.images.length > 1}
 			<button
 				type="button"
-				class="hover-btn absolute right-3 bottom-3 inline-flex h-5 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2.5 text-xxs font-medium leading-none text-content-inverse focus-ring"
+				class="hover-btn absolute right-3 bottom-3 inline-flex h-5 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2.5 text-xxs font-medium leading-none text-content-inverse hover:opacity-hover focus-ring"
 				aria-label={`查看全部 ${moment.images.length} 张图片`}
 				onclick={() => {
 					viewerIndex = 0;
@@ -143,7 +143,7 @@
 	<div class="flex items-center gap-3 mb-3">
 		<button
 			type="button"
-			class="hover-btn size-11 shrink-0 cursor-pointer rounded-full border-2 border-accent-default bg-transparent p-0 overflow-hidden focus-ring focus-visible:ring-offset-surface-primary"
+			class="hover-btn size-11 shrink-0 cursor-pointer rounded-full border-2 border-accent-default bg-transparent p-0 overflow-hidden hover:opacity-hover focus-ring focus-visible:ring-offset-surface-primary"
 			aria-label={`查看${moment.user}的个人主页`}
 			onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
 		>

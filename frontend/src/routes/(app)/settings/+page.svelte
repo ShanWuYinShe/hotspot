@@ -168,7 +168,7 @@
 			subtitle="管理你的账号偏好、主题外观与系统选项"
 			onBack={() => history.back()}
 			showBackOnDesktop={false}
-			titleSize={device === 'desktop' ? '2xl' : '2xl'}
+			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		/>
 	{/snippet}
 
@@ -186,7 +186,7 @@
 				</div>
 				<div>
 					{#if auth.isAuthenticated}
-						<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-xs">
+						<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
 							<div class="flex items-center gap-3.5 min-w-0">
 								<Avatar class="border-2 border-surface-primary shrink-0" src={accountAvatar} name={accountName} size={48} />
 								<div class="min-w-0">
@@ -206,7 +206,7 @@
 							</button>
 						</div>
 					{:else}
-						<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-xs">
+						<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
 							<div class="flex items-center gap-3.5 min-w-0">
 								<div class="flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent-default shrink-0">
 									<UserRound class="size-5" strokeWidth={1.5} />
@@ -219,7 +219,7 @@
 							<button
 								type="button"
 								onclick={() => requireAuth({ action: '登录账号', run: () => { reloadKey++; } })}
-								class="hover-btn px-4 py-2 text-xs font-medium rounded-md bg-accent-default hover:bg-accent-hover text-text-on-accent transition-colors focus-ring shrink-0"
+								class="hover-btn px-4 py-2 text-xs font-medium rounded-md bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md transition-colors focus-ring shrink-0"
 							>
 								登录 / 注册
 							</button>
@@ -236,7 +236,7 @@
 						自定义界面的视觉色彩与深浅模式，全局即时生效。
 					</p>
 				</div>
-				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-xs overflow-hidden">
+				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-sm overflow-hidden">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
 						<div class="flex items-center gap-3">
 							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
@@ -293,6 +293,11 @@
 						description="消息、提及与新动态提醒"
 						onRowClick={toggleNotif}
 					>
+						{#snippet badge()}
+							<!-- 纯本机偏好（localStorage），后端 spec 无对应字段；与下方服务端
+							     开关（私密账号/位置共享）同列时必须标明生效范围，避免误以为已同步。 -->
+							<span class="badge bg-surface-subtle text-text-secondary">仅本机</span>
+						{/snippet}
 						{#snippet icon()}
 							<Bell class="size-4 text-accent-default" strokeWidth={1.5} />
 						{/snippet}
@@ -343,7 +348,7 @@
 					</p>
 				</div>
 				<div class="flex flex-col gap-3">
-					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-xs">
+					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
 						<div class="flex items-center gap-3">
 							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
 								<Info class="size-4 text-accent-default" strokeWidth={1.5} />

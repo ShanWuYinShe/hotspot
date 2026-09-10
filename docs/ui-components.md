@@ -40,8 +40,13 @@
 | `forms/SearchInput` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语 |
 | `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`） |
 | `overlays/SheetShell`、`ui/dialog`、`ui/popover`、`ui/dropdown-menu` | 弹层体系 |
-| `data-display/EmptyState` / `InlineLoading` / `LoadError`、`overlays/ToastViewport`、`shared/ConnectionBanner` | 状态反馈 |
+| `data-display/EmptyState` / `InlineLoading` / `LoadError` / `ListEnd`、`overlays/ToastViewport`、`shared/ConnectionBanner` | 状态反馈 |
 | `shared/Avatar` | 头像（尺寸/形状/状态点/环） |
+
+> 四种列表状态各司其职，不得互相替代：空 `EmptyState` / 加载中 `InlineLoading` /
+> 失败 `LoadError` / 已到底 `ListEnd`（文案「没有更多了」）。分页与无限滚动列表
+> 在内容耗尽时必须渲染 `ListEnd`——「加载更多」按钮消失而无收尾提示，用户无法
+> 区分「已到底」与「加载卡住」。
 
 ## 统一交互契约
 
@@ -59,10 +64,32 @@
    规则：改到某文件时把该文件的简单动作按钮顺手迁 `ui/button`/`ActionIconButton`。
 2. **表单 Input 原语缺失**：13 个文件手写 `<input>`；应建 `forms/Input`
    （前缀图标/清除/错误态），先落登录/注册/搜索之外的高频表单。
-3. **分组卡壳两种**：设置页 `card-raised`（投影）vs 关系列表 `ListContainer bordered`
-   （描边）。待统一为一种（对齐鸿蒙端「白卡+发丝描边+主题投影」）。
+3. **分组卡壳已收敛**（2026-09-10）：移动端 `ProfileMobile` 的 `card-raised`
+   已改为与桌面 `ProfilePage` 一致的「白卡 + 发丝描边 + 主题投影」
+   （`rounded-lg border border-border-default bg-surface-primary shadow-raised-sm`）；
+   设置页卡片壳已是同一表达式。新增卡片默认沿用该表达式，不再引入第四种壳。
 4. **触屏列表未启用 inset**：notify / me 个人数据等保持分隔线形态；
    评估是否全面切换 inset（触屏无 hover，影响仅视觉）。
+
+## 已完成的收敛（2026-09-10 全量审查批次）
+
+- **关系分区路由归一**：`/me/friends`、`/me/following`、`/me/fans` 三条与
+  `/me/relationships?tab=` 完全重复且无入站入口的孤儿路由，改为 308 重定向
+  （仅保留 `+page.ts`，UI 全部由 `me/relationships/RelationshipsPage.svelte` 承载）；
+  tab id 与深链构造的单一事实源见 `lib/relationships.ts`。
+- **个人主页入口去重**：`ProfilePage` / `ProfileMobile` 同一页曾各有 2 个设置入口
+  （页眉图标 + 身份卡按钮），现统一只保留身份卡的拇指操作区那一个。
+- **标题层级统一**：全站 `PageHeader` 的 `titleSize` 统一为
+  `device === 'desktop' ? 'xl' : '2xl'`（原首页/附近/消息页用 `3xl`，动态详情页
+  固定 `xl`，四套并存）。
+- **无 hover 反馈的按钮清零**：21 个自带底色/描边却因命中全局 hover 排除集而
+  完全没有 hover 的按钮，按「实底升一档投影 / 描边白底走 `hover:bg-accent-soft` /
+  遮罩按钮走 `hover:opacity-hover`」三档补齐。
+- **死类名清零 + 护栏**：11 个从未注册的类名（`shadow-raised-xs` 18 处、
+  `bg-surface-subtle`、`bg-surface-secondary`、`bg-accent-hover`、`text-text-tertiary`、
+  `duration-fast`、`ease-bounce`、`scrollbar-none`、`rounded-2xl`、`desktop-reveal` 等）
+  已全部修好，并新增 `scripts/check-utility-classes.mjs` 挂入 `bun run check:theme`
+  防复发。
 
 ## 流程要求
 

@@ -19,6 +19,9 @@
   --color-surface-primary: var(--cst-surface-primary);
   --color-surface-page: var(--cst-surface-page);
   --color-surface-chat: var(--cst-surface-chat);
+  /* 弱化嵌入面：分段控件底轨、置顶行等「比卡片低一档」的静态填充
+     （区别于 surface-primary 卡片面与 interactive-hover 交互悬停面） */
+  --color-surface-subtle: var(--cst-surface-subtle);
   --color-text-primary: var(--cst-text-primary);
   --color-text-secondary: var(--cst-text-secondary);
   --color-text-on-accent: var(--cst-text-on-accent);
@@ -69,8 +72,12 @@
   --border-width-strong: var(--cst-border-width-strong);
   --border-width-heavy: var(--cst-border-width-heavy);
 
-  /* System rhythm — 动效 token 注册（ease 用字面量，避免 @theme inline 自引用） */
+  /* System rhythm — 动效 token 注册（ease 用字面量，避免 @theme inline 自引用）。
+     弹簧 overshoot 曲线值已由 shared.css 的 --cst-ease-bounce 定义，此处补注册
+     Tailwind 键——此前组件写了 ease-bounce 类但注册层缺失，类名静默失效，
+     Toggle 滑块退化为标准曲线。 */
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-bounce: var(--cst-ease-bounce);
 
   /* Interaction / shell semantic colors（仅注册有 Tailwind 类消费的；
      其余 token 如 --surface-hover、--navigation-*、--marker-* 组件经 var() 直用，

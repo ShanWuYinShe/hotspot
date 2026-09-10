@@ -93,7 +93,7 @@
 			<button
 				type="button"
 				onclick={onClose}
-				class="hover-btn px-8 py-3 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm font-medium shadow-raised-md"
+				class="hover-btn px-8 py-3 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm font-medium shadow-raised-md hover:shadow-raised-lg"
 			>
 				完成
 			</button>
@@ -105,7 +105,7 @@
 				<!-- disabled 必须可见可解释：视觉降级 + 行内「即将开放」说明（title 在触屏不可见） -->
 				<button
 					type="button"
-					class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm focus-ring disabled:cursor-not-allowed disabled:opacity-faint w-full h-28"
+					class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm hover:border-accent-border hover:bg-accent-soft focus-ring disabled:cursor-not-allowed disabled:opacity-faint w-full h-28"
 					disabled
 					aria-disabled="true"
 					title="暂未开放"

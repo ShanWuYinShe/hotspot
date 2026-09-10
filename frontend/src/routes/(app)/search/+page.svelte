@@ -170,12 +170,14 @@
 
 	const hasResults = $derived(results.users.length + results.moments.length + results.topics.length + results.groups.length > 0);
 
+	// 计数在「搜索中」时不显示（undefined），搜索完成后即使是 0 也显示——
+	// 否则 0 结果与加载中都是「无计数」，两者不可区分（历史审查遗留项）。
 	const tabs = $derived<{ id: TabType; label: string; count?: number }[]>([
 		{ id: 'all', label: '全部' },
-		{ id: 'people', label: '用户', count: results.users.length || undefined },
-		{ id: 'posts', label: '动态', count: results.moments.length || undefined },
-		{ id: 'groups', label: '群组', count: results.groups.length || undefined },
-		{ id: 'topics', label: '话题', count: results.topics.length || undefined }
+		{ id: 'people', label: '用户', count: loading ? undefined : results.users.length },
+		{ id: 'posts', label: '动态', count: loading ? undefined : results.moments.length },
+		{ id: 'groups', label: '群组', count: loading ? undefined : results.groups.length },
+		{ id: 'topics', label: '话题', count: loading ? undefined : results.topics.length }
 	]);
 </script>
 <svelte:head>

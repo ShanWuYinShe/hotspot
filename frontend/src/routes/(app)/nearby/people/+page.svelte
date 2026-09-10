@@ -10,6 +10,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import UserCard, { type NearbyUser } from './UserCard.svelte';
 	import { searchUsers, follow , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
@@ -208,6 +209,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 								加载更多 ({list.length - visibleCount})
 							</button>
 						</div>
+					{:else}
+						<ListEnd class="pb-6" />
 					{/if}
 				{/if}
 			</div>

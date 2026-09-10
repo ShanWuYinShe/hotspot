@@ -329,6 +329,23 @@
     .link-btn:hover { text-decoration-color: currentColor; }
   }
 
+  /*── 桌面行内动作显现（desktop-reveal）──────────────────────────────
+     仅 fine pointer 生效：默认隐藏，所在行（.group）hover、自身键盘聚焦或
+     菜单展开（aria-expanded=true）时显现——降低列表噪音（Telegram/Slack 模式）。
+     触屏没有 hover，常显——隐藏等于没有入口。
+     此前 MessageBubble 引用了本类名但从未在样式层定义，按钮实际恒定显隐，
+     注释承诺的「仅行 hover 时显现」从未生效（死类名静默失效）。 */
+  .desktop-reveal { opacity: var(--cst-opacity-full); }
+  @media (hover: hover) and (pointer: fine) {
+    .desktop-reveal {
+      opacity: var(--cst-opacity-none);
+      transition: opacity var(--cst-motion-rapid) var(--cst-ease-standard);
+    }
+    .group:hover .desktop-reveal,
+    .desktop-reveal:focus-visible,
+    .desktop-reveal[aria-expanded="true"] { opacity: var(--cst-opacity-full); }
+  }
+
   /* 地图当前位置脉冲光晕（对齐 Figma Make LocationMobile motion.div：
      scale 1→1.8 / opacity 0.55→0 无限循环，var(--cst-motion-pulse) 节奏）。 */
   @keyframes map-pulse {

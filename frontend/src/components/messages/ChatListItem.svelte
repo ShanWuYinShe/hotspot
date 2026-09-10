@@ -36,7 +36,7 @@
 	pressed={isSelected}
 	onClick={onClick}
 	ariaLabel={`打开与 ${chat.name} 的会话`}
-	class="group flex items-center gap-3.5 {compact ? 'px-3.5 py-2.5' : 'px-4 py-3'} {chat.isPinned && !isSelected ? 'bg-surface-subtle/30' : ''}"
+	class="group flex items-center gap-3.5 {compact ? 'px-3.5 py-2.5' : 'px-4 py-3'} {chat.isPinned && !isSelected ? 'bg-surface-subtle' : ''}"
 >
 	<span class="relative shrink-0">
 		<Avatar
@@ -91,7 +91,7 @@
 					<!-- 未置顶时：默认常态完全隐藏！仅在桌面端鼠标 hover 或键盘 focus 时浮现快捷置顶 -->
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop focus-ring shrink-0 items-center justify-center rounded-full p-1 opacity-0 group-hover:opacity-70 hover:!opacity-100 focus-visible:opacity-100 transition-opacity duration-fast hidden md:flex text-text-secondary"
+						class="hover-btn scale-btn hit-slop focus-ring shrink-0 items-center justify-center rounded-full p-1 opacity-0 group-hover:opacity-70 hover:!opacity-100 focus-visible:opacity-100 transition-opacity duration-instant hidden md:flex text-text-secondary"
 						aria-label="置顶"
 						title="置顶"
 						onclick={(e) => {

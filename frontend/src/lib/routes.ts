@@ -1,28 +1,23 @@
 /**
  * Canonical application URLs mirror backend domains and resource names.
  *
- * 个人主页分区共 6 个：moments / groups / friends / following / fans 五个独立分区，
- * 外加 relationships 聚合分区（好友 + 关注 + 粉丝三 tab，内部用 ?tab= 切换）。
- * 全部为常驻固定路由（/me/moments、/me/relationships …），不走动态段；
- * relationships 独立渲染为样板页（StandardPageLayout，不走 ProfilePage
- * 分区模式）；桌面导航「关系」和通知页「新关注你的人」入口落在 relationships；
- * 移动端个人数据 5 行链接走独立分区。路径见 ME_SECTION_PATHS。
+ * 个人主页分区共 3 个：moments / groups / relationships（好友 + 关注 + 粉丝三 tab，
+ * 内部用 ?tab= 切换，见 RELATIONSHIP_TABS）。全部为常驻固定路由
+ * （/me/moments、/me/relationships …），不走动态段；relationships 独立渲染为
+ * 样板页（StandardPageLayout，不走 ProfilePage 分区模式）；桌面导航「关系」、
+ * 通知页「新关注你的人」与移动端个人数据行均落在 relationships。
+ *
+ * 历史遗留的 /me/friends、/me/following、/me/fans 三条路由与 relationships 的
+ * 三个 tab 内容完全重复（同一 Section 组件、同一数据，只是页头不同），且无任何
+ * 入站入口；现改为 308 重定向到 /me/relationships?tab=… 以保留旧链接可达性，
+ * 见 lib/relationships.ts。
  */
-export type ProfileSection =
-	| "moments"
-	| "groups"
-	| "friends"
-	| "following"
-	| "fans"
-	| "relationships";
+export type ProfileSection = "moments" | "groups" | "relationships";
 
 /** 个人主页固定分区页路径（常驻路由，非动态段）。 */
 export const ME_SECTION_PATHS: Record<ProfileSection, string> = {
   moments: "/me/moments",
   groups: "/me/groups",
-  friends: "/me/friends",
-  following: "/me/following",
-  fans: "/me/fans",
   relationships: "/me/relationships",
 };
 
@@ -107,8 +102,9 @@ export function getDesktopNavId(pathname: string, search = ""): DesktopNavId | n
     const section = pathname.slice(`${ROUTES.me}/`.length);
     if (section === "moments") return "moments";
     if (section === "groups") return "my-groups";
-    // 好友/关注/粉丝列表分区归属「关系」；其余尾段（如 edit）不亮。
-    if (["friends", "following", "fans", "relationships"].includes(section)) return "relationships";
+    // 关系聚合页归属「关系」；其余尾段（如 edit）不亮。
+    // （旧 friends/following/fans 已重定向，不再是有效 pathname。）
+    if (section === "relationships") return "relationships";
     return null;
   }
 

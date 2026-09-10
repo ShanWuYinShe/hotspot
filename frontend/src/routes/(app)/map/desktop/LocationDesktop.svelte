@@ -276,7 +276,7 @@
 					<div class="flex gap-2 shrink-0">
 						<button
 							type="button"
-							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm shadow-raised-sm"
+							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm shadow-raised-sm hover:shadow-raised-md"
 							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>
 							查看详情
@@ -284,7 +284,7 @@
 						</button>
 						<button
 							type="button"
-							class="hover-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shadow-raised-sm focus-ring"
+							class="hover-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shadow-raised-sm hover:bg-accent-soft focus-ring"
 							aria-label="关闭详情"
 							onclick={() => (selectedPin = null)}
 						>

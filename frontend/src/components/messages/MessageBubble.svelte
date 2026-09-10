@@ -69,6 +69,14 @@
 				<textarea
 					bind:value={draft}
 					rows="2"
+					aria-label="编辑消息内容"
+					onkeydown={(e) => {
+						// Esc 取消编辑（与「取消」按钮等价），Enter 不提交以支持多行换行
+						if (e.key === 'Escape') {
+							e.preventDefault();
+							editing = false;
+						}
+					}}
 					class="w-full resize-none rounded-sm bg-surface-primary px-2 py-1 text-sm text-text-primary outline-none focus-ring"
 				></textarea>
 				<div class="flex items-center justify-end gap-2">

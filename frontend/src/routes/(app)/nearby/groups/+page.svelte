@@ -4,6 +4,7 @@
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
+	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
@@ -193,6 +194,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						<GroupCard group={group} pending={joinPending.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 					{/each}
 				</div>
+			{/if}
+			{#if visibleCount >= filtered.length}
+				<ListEnd />
 			{/if}
 		{:else}
 			<EmptyState bare title="没有找到相关群组">

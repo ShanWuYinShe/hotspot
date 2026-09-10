@@ -43,7 +43,7 @@
 				aria-selected={isActive}
 				data-active={isActive ? 'true' : undefined}
 				class="tab-item flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs focus-ring transition-all duration-standard {isActive
-					? 'font-medium bg-accent-default text-text-on-accent shadow-raised-xs'
+					? 'font-medium bg-accent-default text-text-on-accent shadow-raised-sm'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
 				{#if tab.icon}
@@ -65,7 +65,7 @@
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
 				class="tab-item flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm focus-ring transition-colors duration-standard {isActive
-					? 'font-medium bg-accent-default text-text-on-accent shadow-raised-xs'
+					? 'font-medium bg-accent-default text-text-on-accent shadow-raised-sm'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
 				{#if tab.icon}

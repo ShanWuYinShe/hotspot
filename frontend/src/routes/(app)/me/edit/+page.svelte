@@ -186,7 +186,7 @@
 		<div class="absolute inset-0" style="background:var(--cst-surface-cover-placeholder);"></div>
 		<button
 			type="button"
-			class="hover-btn absolute top-3 right-3 flex items-center justify-center rounded-full focus-ring bg-surface-overlay-strong text-content-inverse size-8 disabled:opacity-muted"
+			class="hover-btn absolute top-3 right-3 flex items-center justify-center rounded-full focus-ring bg-surface-overlay-strong text-content-inverse hover:opacity-hover size-8 disabled:opacity-muted"
 			style="backdrop-filter:blur(var(--cst-blur-md));"
 			disabled
 			title="更换横幅（暂未开放）"
@@ -202,7 +202,7 @@
 			<Avatar src={avatar} name={nickname} size={72} shape="rounded" class="border-heavy border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
 			<button
 				type="button"
-				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm"
+				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm hover:shadow-raised-md"
 				aria-label="更换头像"
 				disabled={uploadingAvatar}
 				onclick={() => avatarInput?.click()}

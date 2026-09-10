@@ -84,7 +84,7 @@
 					class="hover-btn tap-92 hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 size-7
 						{followed
 						? 'bg-accent-soft text-accent-default hover:bg-interactive-hover hover:text-text-primary'
-						: 'bg-accent-default text-text-on-accent'}
+						: 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}
 						{pending ? 'pointer-events-none opacity-soft' : ''}"
 					aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
 					aria-pressed={followed}

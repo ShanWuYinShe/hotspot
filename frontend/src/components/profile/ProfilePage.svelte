@@ -5,7 +5,6 @@
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
@@ -13,9 +12,6 @@
 import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import SectionMoments from '@/components/profile/SectionMoments.svelte';
 	import SectionGroups from '@/components/profile/SectionGroups.svelte';
-	import SectionFriends from '@/components/profile/SectionFriends.svelte';
-	import SectionFollowing from '@/components/profile/SectionFollowing.svelte';
-	import SectionFans from '@/components/profile/SectionFans.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
 	import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 
@@ -45,10 +41,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 
 	const SECTION_META: Record<string, { title: string }> = {
 		moments: { title: '我的瞬间' },
-		groups: { title: '我的群组' },
-		friends: { title: '好友' },
-		following: { title: '关注' },
-		fans: { title: '粉丝' }
+		groups: { title: '我的群组' }
 	};
 	const meta = $derived(section && SECTION_META[section] ? SECTION_META[section] : null);
 	const device = $derived(platform.platform);
@@ -81,12 +74,6 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			<SectionMoments />
 		{:else if section === 'groups'}
 			<SectionGroups />
-		{:else if section === 'friends'}
-			<SectionFriends />
-		{:else if section === 'following'}
-			<SectionFollowing />
-		{:else if section === 'fans'}
-			<SectionFans />
 		{/if}
 	</StandardPageLayout>
 {:else}
@@ -102,17 +89,9 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			>
 				{#snippet trailing()}
 					{#if !loading && !needsAuth}
+						<!-- 只保留「编辑资料」：设置与外观入口统一收在下方身份卡的拇指操作区，
+						     避免同一页出现两个设置入口（桌面外壳顶栏另有全局设置图标）。 -->
 						<div class="flex items-center gap-2">
-							{#if device !== 'desktop'}
-								<AppearanceMenu />
-								<ActionIconButton
-									icon={Settings}
-									label="设置"
-									onClick={() => void goto(ROUTES.settings)}
-									variant="ghost"
-									size={36}
-								/>
-							{/if}
 							<button
 								type="button"
 								onclick={() => void goto(ROUTES.meEdit)}
@@ -153,7 +132,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.meEdit)}
-						class="hover-btn inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border-default bg-surface-primary py-2 px-3 text-sm font-medium text-text-primary shadow-raised-xs focus-ring transition-colors hover:bg-accent-soft"
+						class="hover-btn inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border-default bg-surface-primary py-2 px-3 text-sm font-medium text-text-primary shadow-raised-sm focus-ring transition-colors hover:bg-accent-soft"
 					>
 						<Pencil class="size-4 text-text-secondary" strokeWidth={1.75} />
 						编辑资料
@@ -164,7 +143,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.settings)}
-						class="hover-btn inline-flex items-center justify-center gap-1.5 rounded-md border border-border-default bg-surface-primary py-2 px-3.5 text-sm font-medium text-text-primary shadow-raised-xs focus-ring transition-colors hover:bg-accent-soft"
+						class="hover-btn inline-flex items-center justify-center gap-1.5 rounded-md border border-border-default bg-surface-primary py-2 px-3.5 text-sm font-medium text-text-primary shadow-raised-sm focus-ring transition-colors hover:bg-accent-soft"
 						aria-label="系统设置"
 					>
 						<Settings class="size-4 text-text-secondary" strokeWidth={1.75} />

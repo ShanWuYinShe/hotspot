@@ -245,7 +245,7 @@
 			<button
 				type="button"
 				disabled={!followed || savingRemark}
-				class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-border-default py-2.5 text-sm text-text-primary focus-ring disabled:opacity-muted"
+				class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-border-default py-2.5 text-sm text-text-primary hover:bg-accent-soft focus-ring disabled:opacity-muted"
 				onclick={async () => {
 					if (!followed) return;
 					savingRemark = true;
@@ -396,7 +396,7 @@
 					<div class="flex shrink-0 gap-2 pb-1">
 						<button
 							type="button"
-							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-2 text-xs text-text-secondary shadow-raised-sm focus-ring disabled:cursor-not-allowed disabled:opacity-muted"
+							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-2 text-xs text-text-secondary shadow-raised-sm hover:bg-accent-soft focus-ring disabled:cursor-not-allowed disabled:opacity-muted"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>
@@ -406,7 +406,7 @@
 						<!-- 关注按钮：边框/投影走 token 类（描边 1.5px→hairline 档收敛，border 基类保尺寸稳定） -->
 						<button
 							type="button"
-							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 px-4 py-2 rounded-full border focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm' : 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm'}"
+							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 px-4 py-2 rounded-full border focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm hover:bg-accent-soft' : 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
 							disabled={blocked}
 							onclick={toggleFollow}
 						>
@@ -513,7 +513,7 @@
 			>
 				<button
 					type="button"
-					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border-default bg-surface-primary text-sm text-text-secondary shadow-raised-sm focus-ring disabled:opacity-muted"
+					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border-default bg-surface-primary text-sm text-text-secondary shadow-raised-sm hover:bg-accent-soft focus-ring disabled:opacity-muted"
 					disabled={blocked}
 					onclick={() => !blocked && void goto(ROUTES.message(uid))}
 				>
@@ -522,7 +522,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border focus-ring transition-all disabled:opacity-muted text-sm {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm' : 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm'}"
+					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border focus-ring transition-all disabled:opacity-muted text-sm {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm hover:bg-accent-soft' : 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
 					disabled={blocked}
 					onclick={toggleFollow}
 				>

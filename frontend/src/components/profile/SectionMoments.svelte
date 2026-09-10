@@ -106,7 +106,7 @@
 			{/snippet}
 			{#snippet action()}
 				{#if activeTab === 'posts'}
-					<button type="button" onclick={openComposer} class="hover-btn rounded-full bg-accent-default px-4 py-2 text-sm font-medium text-text-on-accent focus-ring">
+					<button type="button" onclick={openComposer} class="hover-btn rounded-full bg-accent-default px-4 py-2 text-sm font-medium text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring">
 						发布第一条
 					</button>
 				{/if}

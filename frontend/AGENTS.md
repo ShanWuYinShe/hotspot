@@ -121,7 +121,11 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
    `scripts/check-cross-platform-colors.mjs`（映射表内嵌于脚本：前端 forest ≡
    harmonyapp default_clean、success/error/info 随主题族色源），CI 会在漂移时
    拦截；主题选择器 swatch 也已纳入同一校验。
-   同链还有 `scripts/check-cross-platform-scale.mjs`：校验字号档
+   同链还有 `scripts/check-utility-classes.mjs`：扫描 class 属性中消费的 token 类名，
+   校验每个类名都能在 `theme-registry.css` 注册键 / `themes/*.css` 定义 /
+   Tailwind 自带命名空间 / 项目自定义 `.class` 中找到来源——Tailwind v4 对未注册
+   utility 静默失效（写了不报错也不生成 CSS），这是唯一的防线。
+   还有 `scripts/check-cross-platform-scale.mjs`：校验字号档
    （`--text-*` ↔ 鸿蒙 `FONT.SIZE`，9 档）与圆角档（`--radius-*` ↔ 鸿蒙
    `RADIUS`，5 档）逐值一致，单端新增近邻档/改档即 CI 拦截。已登记豁免：
    鸿蒙 `FONT.SIZE.LG=16` 为 HarmonyOS 平台适配档。改字号/圆角 token 必须
@@ -161,11 +165,11 @@ src/routes/
     messages/[peerId]/     # 私聊详情（peerId 即对端 user_id）
     messages/group/[groupId]/  # 群聊详情
     me/                    # 个人主页总览（mobile→ProfileMobile，tablet/desktop→ProfilePage）
-    me/moments/            # 个人主页固定分区（moments / groups / friends / following / fans 五个
-    me/groups/             # 独立目录均为固定路由，任意设备走 ProfilePage 分区模式，不走动态段）
-    me/friends/
-    me/following/
-    me/fans/
+    me/moments/            # 个人主页固定分区（moments / groups 两个独立固定路由，
+    me/groups/             # 任意设备走 ProfilePage 分区模式，不走动态段）
+    me/friends/            # ⚠️ 旧路径：仅 +page.ts 做 308 重定向到
+    me/following/          #    /me/relationships?tab=…（单一事实源 lib/relationships.ts），
+    me/fans/               #    已无 +page.svelte，不得再在此挂任何 UI
     me/relationships/      # 关系聚合页（好友/关注/粉丝三 tab，colocate RelationshipsPage）
     me/edit/               # 编辑资料
     users/[userId]/        # 用户详情
@@ -209,8 +213,8 @@ src/routes/
     绑定，不在 header 操作行内，故不套 `PageHeader`，自建返回/分享/更多操作行 +
     封面下方 `<h1>`。与 `moments/[momentId]`（有独立标题"动态详情"，套 PageHeader）
     区分。
-  - 移动个人主页（`ProfileMobile`）：自建设置入口页眉（eyebrow + 设置按钮），非标准
-    列表页 header。
+  - 移动个人主页（`ProfileMobile`）：自建 eyebrow 页眉，非标准列表页 header；
+    设置/外观/编辑入口统一收在身份卡的拇指操作区，页眉不放重复入口。
   - 地图（全画布）与登录页（无 MainLayout 外壳）不适用。
 - 强制统一布局是为了保证切换页面时右侧内容区不发生水平偏移；存量页面需逐步对齐，
   不得新增其他例外（新增例外必须在上方登记）。
@@ -222,7 +226,7 @@ src/routes/
 StandardPageLayout                     # 全站唯一外层布局（components/layout/page/）
 ├── header snippet
 │   └── PageHeader                     # 三端统一页头
-│       ├── title / titleSize          # 桌面 20 / 平板 24 / 移动 22（样板页参考值）
+│       ├── title / titleSize          # 统一档：桌面 xl(20) / 平板·移动 2xl(24)
 │       ├── trailing snippet           # 计数、精选等右上信息
 │       └── below snippet              # 搜索框 + 分类 Tab 栏（随 header 吸顶）
 └── children                           # 正文，直接放 ContentColumn 内
@@ -257,6 +261,10 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
    spinner、空列表用 `EmptyState`（参照样板页 feedState snippet）；数据加载失败
    必须展示 `LoadError`（`components/data-display/LoadError.svelte`）并提供重试
    （`reloadKey` 递增触发 effect 重跑），禁止静默转空态。
+   分页/无限滚动列表**内容耗尽时必须渲染 `ListEnd`**（`components/data-display/ListEnd.svelte`，
+   文案「没有更多了」）——「加载更多」按钮消失而无收尾提示会让用户无法区分
+   「已到底」与「加载卡住」。四种状态各司其职：空列表 `EmptyState`、加载中
+   `InlineLoading`、失败 `LoadError`、到底 `ListEnd`，不得互相替代。
 7. **列表骨架契约**：列表一律用 `ListContainer` + `ListItem`（`components/list/`）。
    joined 行（默认 tone）**禁止叠加 rounded/border/shadow/ring 卡片类**——行间分隔
    由容器 divide 线承担，圆角外框由容器级（`ListContainer bordered` 唯一外框）或
@@ -348,6 +356,11 @@ theme/
     `--cst-surface-cover-scrim`（封面渐变）、`--cst-surface-glass-badge`（玻璃徽章）
   - hover/active：优先 `hover:bg-accent-soft` 等 token 类；背景填充走
     `--cst-interactive-hover-fill` / `--cst-interactive-active`
+  - 弱化嵌入面（分段控件底轨、置顶会话行等「比卡片低一档」的静态填充）：
+    `--cst-surface-subtle`（`bg-surface-subtle`）。与 `bg-interactive-hover`
+    的区别是语义：前者是「静态的凹陷/次表面」，后者是「悬停反馈」，不可互换。
+    该表达式经 `--cst-text-primary` 自适配明暗（light 微沉 / dark 微浮），
+    因此只在 themes/*.css 的 light 块定义一次，**不算缺失 dark 覆盖**
 - **画廊连续画布契约（强制）**：`--cst-surface-page`（= page-bg）是应用内唯一的
   整层底色。外壳各层（外框/内框/视口/状态栏/安全区/导航底座透明区）一律只许用它；
   层级只靠白卡（`surface-primary`：`card-raised`/`surface-hero`）+ 发丝描边 +
@@ -399,7 +412,10 @@ theme/
   首帧由 app.html 内联脚本按持久化偏好设置四态映射，之后由
   theme store 的 `applyClasses` 读取 `--cst-surface-page` 动态更新
 - 悬停/按压反馈统一用 `hover-btn/action/bg`、`scale-btn`、`tap-*`、`header-action` CSS
-  类（主题差异由 themes/*.css 的 `@layer utilities` 覆盖承载），避免 JS 状态动画
+  类（主题差异由 themes/*.css 的 `@layer utilities` 覆盖承载），避免 JS 状态动画。
+  **行内次要动作的显现**统一用 `desktop-reveal`（仅 fine pointer 默认隐藏，
+  行 `.group` hover / 自身 `:focus-visible` / `aria-expanded="true"` 时显现；
+  触屏无 hover 则常显）——禁止各页用 `opacity-0 group-hover:opacity-100` 自行拼装
 - 主题专属组件覆盖（`.vibrant .foo` / `.forest .foo`）统一放对应 themes/*.css 的
   `@layer utilities` 块，utilities.css 只保留与主题无关的通用类
 
@@ -427,17 +443,26 @@ theme/
    **禁止 1-2px 近邻档位并存**（原 xxxs/15/16/base 已砍/归并）；**禁止 `text-[Npx]`
    arbitrary 类、禁止 style 内联 `font-size:Npx`**（含动态 ternary——移到 class 三元）。
    **已登记例外**（与 `base.css` 的 h1-h4 元素级映射同等地位）：
-   - `PageHeader` 的 `titleSize`/`subtitleSize`：因 Figma 各页 header 刻意差异
-     （16/18/20/22/24），保留 `style="font-size:{N}px"` 内联，取值须落在刻度上
    - `Avatar` fallback 首字母 `font-size:{size*0.42}px`：随头像尺寸等比缩放，物理比例
+   > `PageHeader` 的 `titleSize`/`subtitleSize` 已重构为**字号档位 prop**
+   > （`md/base/lg/xl/2xl/3xl` → 映射 `TITLE_SIZE_CLASS`），不再有内联 `font-size`。
+   > 全站页面统一传 `device === 'desktop' ? 'xl' : '2xl'`（桌面 20 / 平板·移动 24），
+   > 不得逐页自选档位——标题层级是页面锚点，跨页漂移会破坏节奏。
 4. **accent/status 实色背景上的内容**：文字/图标必须用对应 `on-*` token
    （`text-text-on-accent`/`text-text-on-status`/`text-content-on-marker`），
    禁止恒白 `content-inverse`；选中行内若有与 accent 同色的 marker 图标需
    实色底衬托（PinMedia `selected`）
 5. **列表行**：交互行一律走 `ListItem`（高亮圆角/背景/反色由组件统一处理），
    不在页面里自写 hover 背景或叠行级卡片类
-6. **token 注册**：新 token 若需类名消费，同步补 `theme-registry.css` 注册，
-   并核对类名不带 `cst-` 前缀（`text-text-on-status` 而非 `text-cst-...`）
+6. **token 注册与类名有效性（强制）**：新 token 若需类名消费，同步补
+   `theme-registry.css` 注册，并核对类名不带 `cst-` 前缀（`text-text-on-status`
+   而非 `text-cst-...`）。Tailwind v4 对**未注册 utility 静默失效**（不报错、
+   不生成 CSS、svelte-check 无感），因此：
+   - 写任何带 token 语义的类名前，确认它在注册层/定义层/项目自定义 `.class` 中真实存在；
+   - 项目自定义工具类拼写必须与 `utilities.css` 一致（如 `no-scrollbar`，
+     曾误写 `scrollbar-none` 静默失效）；
+   - `bun run check:theme` 已串联 `scripts/check-utility-classes.mjs` 自动拦截，
+     本地 `bun run check` 与 CI 都会失败——不要绕过该检查。
 7. **hover/tap 类**：交互反馈用既有工具类（`hover-btn`/`hover-bg`/`scale-btn`/
    `tap-*`/`header-action`/`surface-ghost`/`card-hover`），不新发明交互类；
    状态差异必须一眼可辨，且禁止双重边框（高亮与元素自带边框不得叠成两圈），

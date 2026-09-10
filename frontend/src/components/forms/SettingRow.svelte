@@ -13,6 +13,7 @@
 	let {
 		title,
 		description,
+		badge,
 		icon,
 		onRowClick,
 		children,
@@ -21,6 +22,8 @@
 	}: {
 		title: string;
 		description?: string;
+		/** 标题右侧小标（如「仅本机」），用于标注该项的生效范围/状态，缺省不渲染。 */
+		badge?: Snippet;
 		/** 左侧图标（放入 size-9 icon-badge 圆形容器）。 */
 		icon: Snippet;
 		/** 整行点击代理（如行点击即切换右侧 Toggle，M3 设置行规范）；缺省为纯展示行。 */
@@ -39,7 +42,12 @@
 			{@render icon()}
 		</div>
 		<div class="flex-1 min-w-0">
-			<p class="text-sm text-text-primary">{title}</p>
+			<div class="flex items-center gap-2">
+				<p class="text-sm text-text-primary">{title}</p>
+				{#if badge}
+					{@render badge()}
+				{/if}
+			</div>
 			{#if description}
 				<p class="text-xs text-text-secondary">{description}</p>
 			{/if}

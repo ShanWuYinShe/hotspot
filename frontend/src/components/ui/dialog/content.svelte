@@ -39,7 +39,7 @@
 
 	const SIDE_CLASSES: Record<DialogSide, string> = {
 		center:
-			'inset-x-4 inset-y-4 m-auto h-fit rounded-2xl border border-border-default/80 shadow-[var(--cst-elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
+			'inset-x-4 inset-y-4 m-auto h-fit rounded-md border border-border-default/80 shadow-[var(--cst-elevation-modal)] data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
 		bottom:
 			// sm 起居中限宽：手机保持全宽 bottom sheet 手势形态；桌面/平板全宽 sheet
 			// 会把表单输入框/按钮拉满视口（设置类弹层尤其难看）。需要更宽容器的

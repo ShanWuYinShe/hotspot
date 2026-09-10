@@ -123,7 +123,7 @@
 				<button
 					type="button"
 					disabled={pendingIds.has(f.id)}
-					class="hover-btn tap-92 hit-slop flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring disabled:opacity-muted {isMutual ? 'bg-transparent text-text-secondary' : 'bg-accent-default text-text-on-accent'}"
+					class="hover-btn tap-92 hit-slop flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring disabled:opacity-muted {isMutual ? 'bg-transparent text-text-secondary hover:bg-interactive-hover' : 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
 					style={isMutual ? 'border:var(--cst-border-width-hairline) solid var(--cst-border-strong);' : 'border:var(--cst-border-width-hairline) solid transparent;'}
 					onclick={(e) => {
 						e.stopPropagation();

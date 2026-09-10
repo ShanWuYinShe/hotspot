@@ -5,6 +5,7 @@
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
+	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -307,5 +308,8 @@ locationName = loc?.location_name ?? '';
 			/>
 		{/snippet}
 		</BspCardCanvas>
+		{#if !loadingMore && visibleCount >= filtered.length && !nextCursor}
+			<ListEnd />
+		{/if}
 	{/if}
 </StandardPageLayout>
