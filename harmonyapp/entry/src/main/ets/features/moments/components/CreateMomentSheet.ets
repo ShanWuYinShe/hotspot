@@ -472,9 +472,8 @@ export struct CreateMomentSheet {
 
       Row({ space: DesignConstants.SPACING.SM }) {
         this.buildPrivacyOption('nearby', AppIcon.NEARBY, '附近可见')
-        // spec PrivacyLevel 仅 public/private 两档：friends 选项提交的是 private（仅自己），
-        // 文案必须如实（原「好友可见」与实际提交语义直接矛盾）
-        this.buildPrivacyOption('friends', AppIcon.LOCK, '仅自己')
+        // spec PrivacyLevel 仅 public/private 两档：附近可见(public) / 仅自己(private)，
+        // 原「friends」档提交的同样是 private，与「仅自己」重复，已收敛为两档
         this.buildPrivacyOption('private', AppIcon.LOCK, '仅自己')
       }
       .width('100%')
