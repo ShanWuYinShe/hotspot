@@ -1103,20 +1103,23 @@ export struct ProfilePage {
             }
 
             // 标签栏 —— 统一 TabsPillGroup；「喜欢/收藏」无数据源
-            // （spec UserProfileBundle 仅 recent_moments），移除恒空假 tab
-            TabsPillGroup({
-              tabs: [{ label: '帖子' }],
-              activeIndex: 0
-            })
-              .margin({ bottom: DesignConstants.SPACING.MD })
+            // （spec UserProfileBundle 仅 recent_moments），移除恒空假 tab。
+            // 无瞬间时不渲染 pill+画廊：单 tab 悬浮在个人数据卡下方视觉上像错位元素
+            if (this.myMoments.length > 0) {
+              TabsPillGroup({
+                tabs: [{ label: '帖子' }],
+                activeIndex: 0
+              })
+                .margin({ bottom: DesignConstants.SPACING.MD })
 
-            // 画廊 (根据选中的 tab 展示不同内容)
-            ProfileMomentGallery({
-              selectedTab: 0,
-              moments: this.myMoments,
-              columns: this.getMomentColumns(),
-              resolvedThemeId: this.resolvedThemeId
-            })
+              // 画廊 (根据选中的 tab 展示不同内容)
+              ProfileMomentGallery({
+                selectedTab: 0,
+                moments: this.myMoments,
+                columns: this.getMomentColumns(),
+                resolvedThemeId: this.resolvedThemeId
+              })
+            }
 
             // 菜单项
             Column({ space: 0 }) {
