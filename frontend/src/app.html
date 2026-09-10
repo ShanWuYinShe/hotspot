@@ -5,8 +5,10 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" content="#F7FAFF" />
 		<title>HotSpot</title>
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<!-- Inter 自托管（static/fonts/），与样式表并行预加载，消除文字换字体的跳动。
+		     字体请求一律走 CORS 模式，同源也必须写 crossorigin，否则会重复下载一次。
+		     中文字形不预加载——由系统字体栈承担，零网络成本。 -->
+		<link rel="preload" href="/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin />
 		<script>
 			// 首帧主题防闪烁：CSS 注入前先按持久化偏好设置 <html> 的 vibrant/forest + dark 类，
 			// 与 stores/theme.svelte.ts 的 colorScheme/appTheme 键保持一致。

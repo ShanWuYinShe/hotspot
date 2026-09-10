@@ -419,6 +419,24 @@ theme/
 - 主题专属组件覆盖（`.vibrant .foo` / `.forest .foo`）统一放对应 themes/*.css 的
   `@layer utilities` 块，utilities.css 只保留与主题无关的通用类
 
+## 字体（自托管，禁止第三方阻塞式引入）
+
+- **Inter 自托管**：`static/fonts/inter-latin-wght.woff2`（latin 子集，可变字重轴
+  100–900，48 KB），`@font-face` 定义在 `src/styles/fonts.css`，首帧 `<link rel="preload">`
+  在 `src/app.html`（字体请求必须带 `crossorigin`，否则同源也会下载两次）。
+- **中文字形走系统字体栈**，不自托管 CJK 字体：`"Inter", "PingFang SC",
+  "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans CJK SC", ui-sans-serif, system-ui…`
+  （定义在 `theme/base.css`）。与 harmonyapp 使用系统字体的策略一致，也避免为 CJK
+  背上数 MB 分片。
+- **禁止在 CSS 里 `@import` 任何第三方样式表**（字体/图标/CDN 主题等）。`@import`
+  在样式表内部是串行且阻塞的：浏览器会把整张应用样式表挂起，直到该第三方资源返回。
+  本项目实测代价——`@import url("https://fonts.googleapis.com/css2?...")` 122 KB /
+  2.4–5.1s，样式生效时间 2999ms；删除后同一构建 159ms（首次绘制 2908ms → 364ms）。
+  需要外部字体/图标时改为自托管，或用 `media="print"` + `onload` 切回的非阻塞 `<link>`
+  并注明理由。
+- **许可**：字体许可全文随资源存放（`static/fonts/OFL.txt`），并在
+  `frontend/ATTRIBUTIONS.md` 登记来源与许可类型。
+
 ## 样式自查清单（新增/修改样式后逐条过）
 
 > **核心原则：少档位 + 强制收敛**。设计系统的价值在约束而非自由——档位要少、

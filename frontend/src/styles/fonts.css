@@ -1,1 +1,32 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap");
+/*
+ * Inter（自托管，latin 子集，可变字重轴 100–900）。
+ *
+ * 为什么自托管而不是 @import Google Fonts：
+ * 原实现是 CSS 顶部的一条
+ *   @import url("https://fonts.googleapis.com/css2?family=Inter…&family=Noto+Sans+SC…");
+ * @import 会让浏览器把整张应用样式表**阻塞**到该第三方样式表返回为止。实测首次
+ * 加载该请求 122 KB、耗时 2.4–5.1s，样式生效时间 2999ms；同一构建只删掉这一行后
+ * 只需 159ms（首次绘制 2908ms → 364ms）。而且它注册的 432 个 @font-face 里绝大
+ * 多数是 Noto Sans SC 的 CJK 分片，首屏一个都用不到。
+ *
+ * 中文交给系统字体栈（PingFang SC / HarmonyOS Sans SC / 微软雅黑 …，见
+ * theme/base.css）：与 harmonyapp 使用系统字体的策略一致，也避免为一个 CJK 字体
+ * 背上数 MB 分片；拉丁字形仍由 Inter 承担，视觉与设计稿一致。
+ *
+ * unicode-range 与 Google 原声明保持一致——页面没有 latin 字符时浏览器不会下载
+ * 该文件（纯中文页面零字体请求）。
+ *
+ * 资源：static/fonts/inter-latin-wght.woff2（48 KB）
+ * 许可：SIL Open Font License 1.1，全文见 static/fonts/OFL.txt
+ */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-wght.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
