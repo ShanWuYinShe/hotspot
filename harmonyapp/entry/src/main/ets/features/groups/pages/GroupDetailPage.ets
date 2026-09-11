@@ -953,72 +953,80 @@ export struct GroupDetailPage {
     Column() {
       // 封面型头部（对齐前端 groups/[groupId]：全幅封面 + 返回浮层 + 左下分类胶囊 + 群名白字；
       // 鸿蒙 GroupInfo 无 banner 字段，用 accent 渐变占位，待后端支持后接真图）
+      // 子节点定位说明：ArkUI Stack 的子级 .align() 只影响其自身内容对齐、
+      // 不改变自身在 Stack 中的位置（曾致标题/分享钮全部叠在左上）。
+      // 因此：标题列放进内层 Stack（BottomStart 锚到封面左下），
+      // 分享按钮用通栏 Row 右对齐，返回按钮保持 TopStart + margin。
       Stack({ alignContent: Alignment.TopStart }) {
-        // 封面占位（accent 渐变，对齐 ProfileEditPage banner 占位模式）
-        Column()
+        // 封面（accent 渐变占位 + 左下分类胶囊/群名）
+        Stack({ alignContent: Alignment.BottomStart }) {
+          Column()
+            .width('100%')
+            .height(DesignConstants.LAYOUT.COVER_HEIGHT)
+            // 封面底部加深 scrim：文字区（群名白字）落在深色终止段，
+            // 浅色主题下纯 accent 淡渐变近似白底白字（对比度不足）
+            .linearGradient({
+              direction: GradientDirection.Bottom,
+              colors: [
+                [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.38), 0.0],
+                [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.28), 0.55],
+                [AppThemeVisuals.withAlpha(DesignConstants.COLOR.BLACK, 0.42), 1.0]
+              ]
+            })
+
+          // 左下：分类胶囊 + 群名（对齐前端封面底部：玻璃徽章 + h1 白字）
+          Column({ space: DesignConstants.SPACING.SM }) {
+            if (this.groupInfo?.tags && this.groupInfo.tags.length > 0) {
+              // 玻璃分类徽章（对齐前端 bg-surface-glass-badge + backdrop-blur-sm）
+              Text(`#${this.groupInfo.tags[0]}`)
+                .fontSize(DesignConstants.FONT.SIZE.XS2)
+                .fontColor(DesignConstants.COLOR.WHITE)
+                .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .backgroundBlurStyle(BlurStyle.Thin)
+                .backgroundColor(AppThemeVisuals.withAlpha(DesignConstants.COLOR.BLACK, 0.25))
+            }
+            if (this.groupInfo?.group?.name) {
+              Text(this.groupInfo.group.name)
+                .fontSize(DesignConstants.FONT.SIZE.XXL)
+                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                .fontColor(DesignConstants.COLOR.WHITE)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+          }
+          .alignItems(HorizontalAlign.Start)
           .width('100%')
-          .height(DesignConstants.LAYOUT.COVER_HEIGHT)
-          // 封面底部加深 scrim：文字区（群名白字）落在深色终止段，
-          // 浅色主题下纯 accent 淡渐变近似白底白字（对比度不足）
-          .linearGradient({
-            direction: GradientDirection.Bottom,
-            colors: [
-              [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.38), 0.0],
-              [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.28), 0.55],
-              [AppThemeVisuals.withAlpha(DesignConstants.COLOR.BLACK, 0.42), 1.0]
-            ]
-          })
-
-        // 返回按钮浮在封面左上（对齐前端 ActionIconButton overlay/inverse）
-        IconButton({
-          icon: AppIcon.BACK,
-          iconSize: IconSize.SMALL,
-          bgColor: DesignConstants.COLOR.TRANSPARENT,
-          iconColor: DesignConstants.COLOR.WHITE,
-          radius: DesignConstants.RADIUS.FULL,
-          minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-          onButtonClick: () => { AppRouter.pop(); }
-        })
-          .margin({ left: DesignConstants.SPACING.LG, top: this.getHeaderTopPadding() })
-
-        // 分享按钮浮在封面右上（原 SystemPageHeader rightAction 迁移）
-        IconButton({
-          icon: AppIcon.SHARE,
-          iconSize: IconSize.SMALL,
-          bgColor: DesignConstants.COLOR.TRANSPARENT,
-          iconColor: DesignConstants.COLOR.WHITE,
-          radius: DesignConstants.RADIUS.FULL,
-          minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-          onButtonClick: () => { this.shareGroup(); }
-        })
-          .margin({ right: DesignConstants.SPACING.LG, top: this.getHeaderTopPadding() })
-          .align(Alignment.TopEnd)
-
-        // 左下：分类胶囊 + 群名（对齐前端封面底部：玻璃徽章 + h1 白字）
-        Column({ space: DesignConstants.SPACING.SM }) {
-          if (this.groupInfo?.tags && this.groupInfo.tags.length > 0) {
-            // 玻璃分类徽章（对齐前端 bg-surface-glass-badge + backdrop-blur-sm）
-            Text(`#${this.groupInfo.tags[0]}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(DesignConstants.COLOR.WHITE)
-              .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundBlurStyle(BlurStyle.Thin)
-              .backgroundColor(AppThemeVisuals.withAlpha(DesignConstants.COLOR.BLACK, 0.25))
-          }
-          if (this.groupInfo?.group?.name) {
-            Text(this.groupInfo.group.name)
-              .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .fontColor(DesignConstants.COLOR.WHITE)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-          }
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
         }
-        .alignItems(HorizontalAlign.Start)
         .width('100%')
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
-        .align(Alignment.BottomStart)
+
+        // 顶部按钮行（返回左 / 分享右）：全宽透明 Row 会遮挡返回钮点击（已实测），
+        // 两钮必须同行；标题列已在内层 Stack 锚定封面左下，不与此行冲突
+        Row() {
+          IconButton({
+            icon: AppIcon.BACK,
+            iconSize: IconSize.SMALL,
+            bgColor: DesignConstants.COLOR.TRANSPARENT,
+            iconColor: DesignConstants.COLOR.WHITE,
+            radius: DesignConstants.RADIUS.FULL,
+            minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+            onButtonClick: () => { AppRouter.pop(); }
+          })
+          Blank()
+          IconButton({
+            icon: AppIcon.SHARE,
+            iconSize: IconSize.SMALL,
+            bgColor: DesignConstants.COLOR.TRANSPARENT,
+            iconColor: DesignConstants.COLOR.WHITE,
+            radius: DesignConstants.RADIUS.FULL,
+            minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+            onButtonClick: () => { this.shareGroup(); }
+          })
+        }
+        .width('100%')
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        .margin({ top: this.getHeaderTopPadding() })
       }
       .width('100%')
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
