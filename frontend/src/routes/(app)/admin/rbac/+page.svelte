@@ -232,6 +232,9 @@
 							</tr>
 						</thead>
 						<tbody>
+							{#if roles.length === 0}
+								<tr class={TR}><td class={TD} colspan={4}>暂无角色，点击「新建角色」创建。</td></tr>
+							{/if}
 							{#each roles as r (r.role_id)}
 								<tr class={TR}>
 									<td class={TD}>{r.name}</td>

@@ -34,6 +34,11 @@
 		banTarget = t;
 		hardDelete = false;
 	};
+	const unbanCurrent = async () => {
+		if (!banTarget) return;
+		await unban(banTarget.name);
+		banTarget = null;
+	};
 
 	const submitBan = async (active: boolean) => {
 		if (!banTarget && !active) return; // 解屏蔽无需目标（列表行内直接传 name）
@@ -102,10 +107,7 @@
 								<td class={TD}>{formatDateTime(t.created_at)}</td>
 								<td class={TD_ACTIONS}>
 									{#if canWrite}
-										<span class="flex justify-end gap-1.5">
-											<button type="button" class={ROW_BTN_DANGER} onclick={() => openBan(t)}>屏蔽</button>
-											<button type="button" class={ROW_BTN} disabled={pending} onclick={() => void unban(t.name)}>解除屏蔽</button>
-										</span>
+										<button type="button" class={ROW_BTN} onclick={() => openBan(t)}>状态管理</button>
 									{/if}
 								</td>
 							</tr>
@@ -142,6 +144,7 @@
 			</div>
 			<div class="flex justify-end gap-2 px-5 pb-5">
 				<Button type="button" variant="secondary" size="md" onclick={() => (banTarget = null)}>取消</Button>
+				<Button type="button" variant="secondary" size="md" disabled={pending} onclick={() => void unbanCurrent()}>解除屏蔽</Button>
 				<Button type="button" variant={hardDelete ? 'danger' : 'primary'} size="md" loading={pending} onclick={() => void submitBan(true)}>
 					{hardDelete ? '物理删除' : '确认屏蔽'}
 				</Button>

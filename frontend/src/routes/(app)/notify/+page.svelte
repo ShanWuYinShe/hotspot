@@ -327,7 +327,9 @@ const FILTER_TABS = [
 				{:else if loadError}
 					<LoadError message={loadError} onRetry={() => reloadKey++} />
 				{:else if needsAuth}
-					<NeedsAuthNotice title="登录后查看" description="收到的点赞、评论与关注会出现在这里" />
+					<div class="flex min-h-[50vh] items-center justify-center">
+						<NeedsAuthNotice title="登录后查看" description="收到的点赞、评论与关注会出现在这里" />
+					</div>
 				{:else if filtered.length === 0}
 					<EmptyState
 						title={filter === 'all' ? '暂无通知' : '该分类下暂无通知'}

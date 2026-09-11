@@ -297,7 +297,7 @@ http.post(`${API}/moments/fetch_created`, () => {
   http.post(`${API}/moments/fetch_favorites`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(0, 6).map((m) => ({ ...m, favorited_at: '2026-08-01T08:00:00.000Z' }))))),
   // groups/search：附近群组/首页群组轮播共用（此前漏配 handler，请求旁路真实后端）
   http.post(`${API}/groups/search`, async ({ request }) =>
-    json(paginated(await withPaginationLimit(request, searchMockGroups(await request.json().catch(() => ({}))))))),
+    json(paginated(await withPaginationLimit(request, searchMockGroups(await request.json().catch(() => ({}))).map((g) => ({ ...g, viewer_state: isMockLoggedIn() ? g.viewer_state : null })))))),
   http.post(`${PUBLIC_API}/groups/search`, async ({ request }) =>
     json(paginated(await withPaginationLimit(request, searchMockGroups(await request.json().catch(() => ({}))))))),
   // moments/create：回显已创建瞬间（mock 阶段不持久化，本次会话 feed 可见性由前端状态承接）

@@ -48,7 +48,9 @@
 	class="rounded-md aspect-[3/4]"
 >
 	{#snippet placeholder()}
-		<span class="text-accent-default text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
+		<span class="flex items-center justify-center rounded-full bg-accent-soft size-16">
+			<span class="text-accent-default text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
+		</span>
 	{/snippet}
 
 	<!-- 右上：距离（单份，消除历史重复徽章 bug） -->
