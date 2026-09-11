@@ -1,6 +1,7 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { curves } from '@kit.ArkUI';
@@ -155,25 +156,41 @@ export struct NearbyImageCard {
   @Builder
   private buildFallbackLayer() {
     Stack() {
-      // accent 渐变 + 首字兜底（对齐前端 surface-accent-gradient 占位层）
+      // 强调色透明叠层占位（对齐前端 surface-accent-gradient）：以 surfaceElevated 实底
+      // 托住 accent 两档透明渐变。直接用 accentMuted→surfaceBackground 在深色主题下
+      // 两个近黑色相融，卡片会渲染成一片近乎全黑的空白
+      Column()
+        .width('100%')
+        .height('100%')
+        .backgroundColor(this.getPalette().surfaceElevated)
+
       Column()
         .width('100%')
         .height('100%')
         .linearGradient({
           angle: 160,
           colors: [
-            [this.getPalette().accentMuted, 0.0],
-            [this.getPalette().surfaceBackground, 1.0]
+            [AppThemeVisuals.withAlpha(this.getPalette().accentBackground, 0.30), 0.0],
+            [AppThemeVisuals.withAlpha(this.getPalette().accentBackground, 0.06), 1.0]
           ] as [ResourceColor, number][]
         })
 
       Text(this.getPlaceholderInitial())
-        .fontSize(DesignConstants.FONT.SIZE.XXL)
+        .fontSize(this.getPlaceholderFontSize())
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-        .fontColor(this.getPalette().accentText)
+        .fontColor(AppThemeVisuals.withAlpha(this.getPalette().accentBackground, 0.9))
     }
     .width('100%')
     .height('100%')
+  }
+
+  /** 占位首字随卡片尺寸自适应（固定字号在大卡上存在感不足、小卡上溢出） */
+  private getPlaceholderFontSize(): number {
+    const base = Math.min(this.cardWidth, this.cardHeight > 0 ? this.cardHeight : this.cardWidth);
+    if (base <= 0) {
+      return DesignConstants.FONT.SIZE.XXL;
+    }
+    return Math.max(DesignConstants.FONT.SIZE.XL, Math.min(base * 0.3, 72));
   }
 
   @Builder

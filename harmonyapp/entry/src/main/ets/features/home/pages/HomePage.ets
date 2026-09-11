@@ -508,8 +508,10 @@ export struct HomePage {
       titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD
     }) {
       // trailing: 在线计数 chip + 搜索/地图入口（对齐前端 PageHeader trailing；
-      // 定位语义由 HeroStats 副标题承载）
-      Row({ space: DesignConstants.SPACING.SM }) {
+      // 定位语义由 HeroStats 副标题承载）。
+      // 收紧 trailing 占宽（chip 内边距、按钮 36、间距 SM2）：trailing 过宽会把
+      // layoutWeight(1) 的标题列压到 ~80vp，副标题「发现周边有趣的人和事」被截断成省略号
+      Row({ space: DesignConstants.SPACING.SM2 }) {
         // 0 人在线时隐藏计数 chip：空数据不广告（对齐前端隐藏空态的原则）
         if (this.getOnlineCount() > 0) {
           Row({ space: DesignConstants.SPACING.XS }) {
@@ -524,7 +526,7 @@ export struct HomePage {
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getPalette().textSecondary)
           }
-          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+          .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
           .borderRadius(DesignConstants.RADIUS.FULL)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
           .backgroundColor(this.getPalette().surfaceBackground)
@@ -536,6 +538,7 @@ export struct HomePage {
         SurfaceIconButton({
           icon: AppIcon.SEARCH,
           kind: 'neutral',
+          buttonSize: 36,
           glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           onPress: () => AppRouter.push(PageNames.SEARCH)
         })
@@ -543,6 +546,7 @@ export struct HomePage {
         SurfaceIconButton({
           icon: AppIcon.NOTIFICATION,
           kind: 'neutral',
+          buttonSize: 36,
           glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           onPress: () => AppStorage.setOrCreate<boolean>('openNotificationCenter', true)
         })
@@ -550,6 +554,7 @@ export struct HomePage {
         SurfaceIconButton({
           icon: AppIcon.MAP,
           kind: 'neutral',
+          buttonSize: 36,
           glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
         })
@@ -998,28 +1003,29 @@ export struct HomePage {
 
   @Builder
   private buildGroupCarouselCard(group: GroupItem) {
-    // 140×140 banner 图方卡 + 隐私圆徽章 + 图上 card-menu 托盘（对齐前端 GroupCarousel）
-    Pressable({ onPress: () => {
-      const groupId = group.group?.group_id;
-      if (groupId) {
-        const params = new GroupDetailRouteParam();
-        params.groupId = groupId;
-        AppRouter.push(PageNames.GROUP_DETAIL, params);
+    // 140×140 banner 图方卡 + 隐私圆徽章 + 图上 card-menu 托盘（对齐前端 GroupCarousel）。
+    // 导航必须走 NearbyImageCard 自身的 onPress：该组件根节点有自己的 onClick，
+    // 会吞掉外层 Pressable 的点击（点击落在卡上时 Pressable.onClick 不触发）
+    NearbyImageCard({
+      imageUrl: group.group?.avatar_url ?? '',
+      imageAlt: group.group?.name ?? '',
+      cardAspectRatio: 1,
+      placeholderText: group.group?.name ?? '',
+      // 私有群（密码/邀请加入）显示锁圆徽；公开群 pill 空文本即不渲染
+      badgeText: '',
+      badgeIcon: AppIcon.LOCK,
+      badgeShape: group.join_method !== 'direct' ? 'circle' : 'pill',
+      badgeVariant: 'glass',
+      badgeAlign: 'topRight',
+      onPress: () => {
+        const groupId = group.group?.group_id;
+        if (groupId) {
+          const params = new GroupDetailRouteParam();
+          params.groupId = groupId;
+          AppRouter.push(PageNames.GROUP_DETAIL, params);
+        }
       }
-    } }) {
-      Column() {
-        NearbyImageCard({
-          imageUrl: group.group?.avatar_url ?? '',
-          imageAlt: group.group?.name ?? '',
-          cardAspectRatio: 1,
-          placeholderText: group.group?.name ?? '',
-          // 私有群（密码/邀请加入）显示锁圆徽；公开群 pill 空文本即不渲染
-          badgeText: '',
-          badgeIcon: AppIcon.LOCK,
-          badgeShape: group.join_method !== 'direct' ? 'circle' : 'pill',
-          badgeVariant: 'glass',
-          badgeAlign: 'topRight'
-        }) {
+    }) {
           Column({ space: DesignConstants.SPACING.THREE }) {
             Text(group.group?.name ?? '')
               .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -1050,9 +1056,6 @@ export struct HomePage {
             bottom: DesignConstants.SPACING.SM2
           })
         }
-      }
-      .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
-    }
   }
 
   // ==================== 附近动态 ====================

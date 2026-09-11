@@ -302,6 +302,9 @@ struct Index {
   }
 
   private async onLoginStateChanged(): Promise<void> {
+    // 登录态切换会重建大量页面/弹窗层，此时重新解析一次主题：
+    // 否则窗口底色与毛玻璃材质可能停留在浅色默认值，深色主题下出现浅灰底栏
+    AppThemeManager.refreshResolvedThemePublic();
     if (this.isLoggedIn) {
       await this.notificationSyncService.syncUnreadCount().catch(() => {});
     } else {

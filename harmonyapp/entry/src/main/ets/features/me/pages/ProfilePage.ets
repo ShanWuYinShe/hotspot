@@ -164,6 +164,11 @@ export struct ProfilePage {
       const nickname = this.viewedUserProfile?.user?.nickname ?? '';
       return nickname.length > 0 ? nickname : '用户资料';
     }
+    // 编辑态是就地切换的子视图，页头需随之切换语义，
+    // 否则标题仍是「个人中心」+ 设置入口，与下方编辑表单相互矛盾
+    if (this.isEditing) {
+      return '编辑资料';
+    }
     // 对齐前端 /me 顶栏：固定「个人中心」小标题（不随昵称变化）
     return '个人中心';
   }
@@ -720,16 +725,28 @@ export struct ProfilePage {
             // 未登录：全页面展示 LoginPromptView（与前端 protected route 对齐）
             this.buildGuestView()
           } else {
-            SystemPageHeader({
-              title: this.resolveHeaderTitle(),
-              titleSize: this.isExternalProfileMode() ? DesignConstants.FONT.SIZE.XL : DesignConstants.FONT.SIZE.XXL,
-              titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
-              showBackButton: this.isExternalProfileMode(),
-              onBack: this.isExternalProfileMode() ? () => { AppRouter.pop(); } : undefined,
-              rightAction: (!this.isExternalProfileMode() && this.isLoggedIn)
-                ? { icon: AppIcon.SETTINGS, onClick: () => { AppRouter.push(PageNames.SETTINGS); }, accessibilityLabel: '设置' }
-                : undefined
-            })
+            // 编辑态与常态用 if 分支重建 SystemPageHeader：其 onBack/rightAction
+            // 是普通成员（非 @Prop），组件复用时不会被父级刷新，必须整颗重建
+            if (this.isEditing) {
+              SystemPageHeader({
+                title: '编辑资料',
+                titleSize: DesignConstants.FONT.SIZE.XXL,
+                titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+                showBackButton: true,
+                onBack: () => { this.cancelEdit(); }
+              })
+            } else {
+              SystemPageHeader({
+                title: this.resolveHeaderTitle(),
+                titleSize: this.isExternalProfileMode() ? DesignConstants.FONT.SIZE.XL : DesignConstants.FONT.SIZE.XXL,
+                titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+                showBackButton: this.isExternalProfileMode(),
+                onBack: this.isExternalProfileMode() ? () => { AppRouter.pop(); } : undefined,
+                rightAction: (!this.isExternalProfileMode() && this.isLoggedIn)
+                  ? { icon: AppIcon.SETTINGS, onClick: () => { AppRouter.push(PageNames.SETTINGS); }, accessibilityLabel: '设置' }
+                  : undefined
+              })
+            }
 
             if (this.isExternalProfileMode()) {
               Column() {
@@ -1251,8 +1268,8 @@ export struct ProfilePage {
           .width('100%')
           .margin({ top: DesignConstants.SPACING.LG })
       } else {
-        // 对齐前端：无简介时显示占位文案
-        Text('这个人还没有填写简介。')
+        // 对齐前端：无简介时显示占位文案（自己的资料页用第一人称）
+        Text('还没有填写简介，介绍一下自己吧')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getSecondaryTextColor())
           .width('100%')
@@ -1702,7 +1719,8 @@ export struct ProfilePage {
         .alignItems(VerticalAlign.Top)
 
         if (this.currentUser?.bio) {
-          Text(this.currentUser.bio || '这个人还没有填写简介。')
+          // 自己的资料页用第一人称占位（「这个人」是他人视角文案）
+          Text(this.currentUser.bio || '还没有填写简介，介绍一下自己吧')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .lineHeight(DesignConstants.FONT.LINE_HEIGHT.LG)
             .fontColor(this.getSecondaryTextColor())

@@ -414,6 +414,11 @@ export class AppThemeManager {
     AppThemeManager.syncSystemSurface();
   }
 
+  /** 供外部在大范围 UI 重建（如登录态切换）后强制重解主题并同步窗口/材质底色 */
+  static refreshResolvedThemePublic(): void {
+    AppThemeManager.refreshResolvedTheme();
+  }
+
   private static resolveThemeId(themeMode: ThemeMode): ResolvedThemeId {
     // 明暗偏好三档：auto 看系统 isDarkMode，manual 直接取偏好（与主题族正交）
     const effectiveDark = AppThemeManager.isEffectiveDarkMode();

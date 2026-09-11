@@ -116,10 +116,18 @@ export struct PhoneLayout {
                 MessagePage()
               }.width('100%').height('100%')
             } else {
-              LoginPromptView({
-                title: '消息功能需要登录',
-                subtitle: '登录后可与好友实时聊天、加入群组讨论'
-              })
+              // Tab 内嵌场景无 PageShell 托底，必须显式绘制页面底色：
+              // 透明背景会让窗口默认底色（浅色）透出，深色主题下整屏发灰
+              Column() {
+                LoginPromptView({
+                  title: '消息功能需要登录',
+                  subtitle: '登录后可与好友实时聊天、加入群组讨论',
+                  surfaceColor: this.getPalette().pageBackground
+                })
+              }
+              .width('100%')
+              .height('100%')
+              .backgroundColor(this.getPalette().pageBackground)
             }
           }.tabBar(this.TabBarBuilder(3))
           TabContent() { ProfilePage() }.tabBar(this.TabBarBuilder(4))
@@ -138,8 +146,12 @@ export struct PhoneLayout {
         .barBackgroundColor(DesignConstants.COLOR.TRANSPARENT)
         // 底部导航毛玻璃：Medium 档（对齐前端 --cst-blur-lg 底部导航档，见 AGENTS 映射表）
         // 背景改半透明（对齐前端 nav-glass 90%），否则实色会盖住 backgroundBlurStyle 使模糊失效
-        .backgroundBlurStyle(BlurStyle.Thick)
-        .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().tabBarBackground, 0.9))
+        .backgroundBlurStyle(BlurStyle.Thick, {
+          // 材质明暗必须跟随应用主题而非系统：系统浅色 + 应用深色时，
+          // 默认 SYSTEM 材质会在深色主题下渲染出浅灰底栏
+          colorMode: this.getPalette().isDarkTheme ? ThemeColorMode.DARK : ThemeColorMode.LIGHT
+        })
+        .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().tabBarBackground, 0.94))
         // 对齐前端 nav-glass--bottom：顶部发丝描边（--cst-border-nav-glass accent 14% 混色，
         // 本端以 floatingBorderColor 承载同语义）
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
@@ -199,6 +211,8 @@ export struct PhoneLayout {
               NotificationCenter({ onClose: () => { this.showNotificationCenter = false; } })
             }
             .width('100%').height('100%')
+            // 全屏通知面板避让状态栏：否则页头（标题/返回钮）画进系统时钟区域
+            .padding({ top: this.safeAreaTop })
             .backgroundColor(this.getPalette().pageBackground)
             .transition(TransitionEffect.OPACITY
               .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT }))
@@ -318,9 +332,11 @@ export struct PhoneLayout {
       .justifyContent(FlexAlign.SpaceAround)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().tabBarBackground, 0.9))
+      .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().tabBarBackground, 0.94))
       // 平板浮动药丸：Medium 档毛玻璃（对齐前端 tablet dock --cst-blur-lg）
-      .backgroundBlurStyle(BlurStyle.Thick)
+      .backgroundBlurStyle(BlurStyle.Thick, {
+        colorMode: this.getPalette().isDarkTheme ? ThemeColorMode.DARK : ThemeColorMode.LIGHT
+      })
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
       .shadow(this.getPalette().elevatedShadow)
     }

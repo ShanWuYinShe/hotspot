@@ -284,7 +284,9 @@ export struct NearbyPage {
       Row({ space: DesignConstants.SPACING.XS }) {
         Text(actionText)
           .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getCurrentThemePalette().accentText)
+          // 页面底色上的链接用 accent 本色（accentText 是「accent 底上的文字色」，
+          // 深色主题下为近黑色，直接落在深色页面上不可读）
+          .fontColor(this.getCurrentThemePalette().accentBackground)
         LucideIcon({
           icon: AppIcon.ARROW_RIGHT,
           iconSize: DesignConstants.FONT.SIZE.XS,

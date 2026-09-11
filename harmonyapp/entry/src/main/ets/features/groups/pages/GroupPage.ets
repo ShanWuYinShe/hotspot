@@ -471,40 +471,45 @@ export struct GroupPage {
     NavDestination() {
       PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
         Column() {
-          // 标题栏 —— 统一走 SystemPageHeader（标题 + 邀请/申请/创建 trailing）
+          // 标题栏 —— 对齐前端 /me/groups：页头只留标题 + 返回 + 主操作；
+          // 邀请/申请下移到内容区入口行。三枚按钮挤在 trailing 会把标题压成「我…」
           SystemPageHeader({
             title: '我的群组',
             titleSize: DesignConstants.FONT.SIZE.XXL,
             titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+            showBackButton: true,
+            onBack: () => { AppRouter.pop(); },
             backgroundVariant: 'transparent'
           }) {
-            // trailing: 三按钮簇（邀请/申请 次要 + 创建 主操作）
-            Row({ space: DesignConstants.SPACING.SM }) {
-              SystemButton({
-                label: '邀请',
-                variant: 'surface',
-                buttonSize: 'default',
-                shadowed: true,
-                onPress: () => { this.loadMyInvites(); }
-              })
-
-              SystemButton({
-                label: '申请',
-                variant: 'surface',
-                buttonSize: 'default',
-                shadowed: true,
-                onPress: () => { this.loadMyApplications(); }
-              })
-
-              SystemButton({
-                label: '创建',
-                variant: 'primary',
-                buttonSize: 'default',
-                pill: true,
-                onPress: () => { this.createGroup(); }
-              })
-            }
+            SystemButton({
+              label: '创建',
+              variant: 'primary',
+              buttonSize: 'small',
+              pill: true,
+              onPress: () => { this.createGroup(); }
+            })
           }
+
+          // 邀请/申请入口行（页头放不下，收进内容区；作用与原页头按钮一致）
+          Row({ space: DesignConstants.SPACING.SM }) {
+            SystemButton({
+              label: '收到的邀请',
+              variant: 'surface',
+              buttonSize: 'small',
+              onPress: () => { this.loadMyInvites(); }
+            })
+
+            SystemButton({
+              label: '我的申请',
+              variant: 'surface',
+              buttonSize: 'small',
+              onPress: () => { this.loadMyApplications(); }
+            })
+
+            Blank()
+          }
+          .width('100%')
+          .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.SM })
 
           // 内容区域
           if (this.isLoading) {
