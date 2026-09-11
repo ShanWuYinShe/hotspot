@@ -299,7 +299,7 @@ http.post(`${API}/moments/fetch_created`, () => {
   http.post(`${API}/groups/search`, async ({ request }) =>
     json(paginated(await withPaginationLimit(request, searchMockGroups(await request.json().catch(() => ({}))).map((g) => ({ ...g, viewer_state: isMockLoggedIn() ? g.viewer_state : null })))))),
   http.post(`${PUBLIC_API}/groups/search`, async ({ request }) =>
-    json(paginated(await withPaginationLimit(request, searchMockGroups(await request.json().catch(() => ({}))))))),
+    json(paginated(await withPaginationLimit(request, searchMockGroups(await request.json().catch(() => ({}))).map((g) => ({ ...g, viewer_state: isMockLoggedIn() ? g.viewer_state : null }))))))),
   // moments/create：回显已创建瞬间（mock 阶段不持久化，本次会话 feed 可见性由前端状态承接）
   http.post(`${API}/moments/create`, async ({ request }) =>
     requireMockAuth() ?? json(apiOk((async () => {
