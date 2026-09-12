@@ -63,8 +63,10 @@ func (s *smtpVerificationSender) SendVerification(ctx context.Context, to string
 	return s.sendMail(ctx, to, verificationEmailBody(code))
 }
 
-// dial 建立与 SMTP 服务器的加密会话：465 隐式 TLS 直连，其余端口
-// 明文拨号后升级 STARTTLS（服务器不支持则失败，不回退明文认证）。
+// dial 建立与 SMTP 服务器的会话：465 隐式 TLS 直连，其余端口明文拨号后
+// 升级 STARTTLS。安全边界在凭证：配置了 SMTP_USERNAME 时必须走加密通道
+// （无 STARTTLS 即失败），凭证不落明文；无凭证的本地捕获服务器（mailpit
+// 等）明文放行。
 func (s *smtpVerificationSender) dial(ctx context.Context) (*smtp.Client, error) {
 	addr := net.JoinHostPort(s.host, s.port)
 	host := s.host
@@ -85,13 +87,16 @@ func (s *smtpVerificationSender) dial(ctx context.Context) (*smtp.Client, error)
 		_ = conn.Close()
 		return nil, fmt.Errorf("auth: smtp client: %w", err)
 	}
-	if ok, _ := c.Extension("STARTTLS"); !ok {
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		if err := c.StartTLS(&tls.Config{ServerName: host}); err != nil {
+			_ = c.Close()
+			return nil, fmt.Errorf("auth: smtp starttls: %w", err)
+		}
+	} else if s.username != "" {
+		// 凭证只在加密通道上传输：配置了账号却无 STARTTLS 时拒绝，
+		// 不回退明文认证。无凭证的本地捕获服务器（mailpit 等）明文放行。
 		_ = c.Quit()
-		return nil, errors.New("auth: smtp server does not support STARTTLS")
-	}
-	if err := c.StartTLS(&tls.Config{ServerName: host}); err != nil {
-		_ = c.Close()
-		return nil, fmt.Errorf("auth: smtp starttls: %w", err)
+		return nil, errors.New("auth: smtp server does not support STARTTLS (required when credentials are set)")
 	}
 	return c, nil
 }
