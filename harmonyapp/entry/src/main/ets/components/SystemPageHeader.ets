@@ -135,7 +135,8 @@ export struct SystemPageHeader {
     SurfaceIconButton({
       icon: action.icon,
       kind: action.kind ?? 'neutral',
-      buttonSize: action.size ?? 40,
+      // 右侧图标钮与返回钮同尺寸（BACK_BUTTON_SIZE 40），页头左右视觉重量对称
+      buttonSize: action.size ?? DesignConstants.LAYOUT.BACK_BUTTON_SIZE,
       glyphSize: action.iconSize ?? 20,
       disabled: action.disabled ?? false,
       accessibilityLabel: action.accessibilityLabel ?? '',
@@ -169,7 +170,13 @@ export struct SystemPageHeader {
             if (this.canShowBackButton()) {
               SurfaceIconButton({
                 icon: AppIcon.BACK,
-                kind: 'neutral',
+                // 返回钮统一凸起中性样式（surface 浅底 + hairline 边框），与
+                // SearchPageHeader / 前端 ActionIconButton surface 同视觉；
+                // 40vp 大于普通图标钮（36）：导航关键动作易点不误触
+                kind: 'surface',
+                buttonSize: DesignConstants.LAYOUT.BACK_BUTTON_SIZE,
+                // 箭头字号 18（对齐前端 42 钮 * 0.42 ≈ 18 的图标比例）
+                glyphSize: DesignConstants.FONT.SIZE.LG_PLUS,
                 // 读屏标签：纯图标钮必须播报用途（缺省空串读屏只读「按钮」）
                 accessibilityLabel: '返回',
                 onPress: () => {

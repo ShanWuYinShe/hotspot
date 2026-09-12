@@ -30,6 +30,7 @@ export const ROUTES = {
   settings: "/settings",
   map: "/map",
   admin: "/admin",
+  nearby: "/nearby",
   nearbyPeople: "/nearby/people",
   nearbyGroups: "/nearby/groups",
   nearbyMoments: "/nearby/moments",
@@ -54,10 +55,7 @@ export const SUB_PAGE_PATHS = [
   ROUTES.settings,
   ROUTES.map,
   ROUTES.notify,
-  ROUTES.search,
-  ROUTES.nearbyPeople,
-  ROUTES.nearbyGroups,
-  ROUTES.nearbyMoments,
+  ROUTES.search
 ] as const;
 
 /** Paths that replace bottom navigation with a focused detail experience. */
@@ -73,6 +71,8 @@ export function isSubPagePath(pathname: string) {
 export function isPrimaryRouteActive(pathname: string, target: string) {
   // 首页是唯一聚合 tab：只对自身路径高亮，不包含其子页面。
   if (target === ROUTES.home) return pathname === target;
+  // 「附近」一级 tab：聚合门户与 people/groups/moments 三个分区子页统一高亮。
+  if (target === ROUTES.nearby) return pathname === target || pathname.startsWith(`${target}/`);
   return (
     pathname === target ||
     pathname.startsWith(`${target}/`) ||

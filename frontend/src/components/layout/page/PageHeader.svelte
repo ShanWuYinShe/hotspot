@@ -92,10 +92,11 @@
 		: 'border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'}
 >
 	<ContentColumn {maxWidth} class={cn(headerPadding, contentClassName)}>
-		<div class="flex items-center gap-3">
-			{#if showBack}
-				<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} />
-			{/if}
+			<div class="flex items-center gap-3">
+				{#if showBack}
+					<!-- 42：返回是导航关键动作，视觉与命中区大于普通 header 图标钮（36），易点不误触 -->
+					<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={42} />
+				{/if}
 			<div class={cn('min-w-0', trailing ? '' : 'flex-1')}>
 				<h1 class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
 				{#if subtitle}

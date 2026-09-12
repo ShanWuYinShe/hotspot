@@ -220,7 +220,8 @@ export struct NearbyGroupsListPage {
           }
         }
 
-        // 搜索栏（对齐前端 /groups/nearby）
+        // 搜索栏（对齐前端 /groups/nearby；SystemInput 自带 16 圆角 + hairline
+        // 边框，外层不得再叠 border——否则圆角输入框外套直角框形成双重外框）
         SystemInput({
           value: this.keyword,
           placeholder: '搜索群组',
@@ -231,7 +232,6 @@ export struct NearbyGroupsListPage {
           onSubmit: () => { this.loadGroups(true); }
         })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
 
         // 分类 TabsPillGroup（对齐前端 TabBar）
         TabsPillGroup({

@@ -5,7 +5,7 @@ import { AppIcon } from './SystemIcon';
 import { LucideIcon } from './LucideIcon';
 import { curves } from '@kit.ArkUI';
 
-export type SurfaceIconButtonKind = 'primary' | 'neutral';
+export type SurfaceIconButtonKind = 'primary' | 'neutral' | 'surface';
 
 @Component
 export struct SurfaceIconButton {
@@ -31,6 +31,10 @@ export struct SurfaceIconButton {
     if (this.kind === 'primary') {
       return this.getPalette().accentBackground;
     }
+    // surface → 凸起中性钮（对齐前端 ActionIconButton variant=surface 的浅底圆钮）
+    if (this.kind === 'surface') {
+      return this.getPalette().surfaceBackground;
+    }
     // neutral → 对齐前端 ActionIconButton variant=ghost：透明底、无边框、无阴影
     return DesignConstants.COLOR.TRANSPARENT;
   }
@@ -38,6 +42,10 @@ export struct SurfaceIconButton {
   private getBorderColor(): ResourceColor | Color {
     if (this.kind === 'primary') {
       return this.getPalette().accentBackground;
+    }
+    // surface → hairline 常规边框（凸起钮的描边语义）
+    if (this.kind === 'surface') {
+      return this.getPalette().borderColor;
     }
     return DesignConstants.COLOR.TRANSPARENT;
   }
@@ -51,12 +59,15 @@ export struct SurfaceIconButton {
       }
       return this.getPalette().surfaceShadow;
     }
+    if (this.kind === 'surface') {
+      return this.getPalette().surfaceShadow;
+    }
     return new AppThemeShadow(0, DesignConstants.COLOR.TRANSPARENT, 0, 0);
   }
 
-  /** neutral hover 淡底填充（键鼠）；primary 保持实底（阴影承载 hover） */
+  /** neutral/surface hover 淡底填充（键鼠）；primary 保持实底（阴影承载 hover） */
   private getHoverOverlayBackground(): ResourceColor {
-    if (this.kind === 'neutral' && this.isHovered && !this.disabled) {
+    if (this.kind !== 'primary' && this.isHovered && !this.disabled) {
       return this.getPalette().accentMuted;
     }
     return this.getBackgroundColor();
@@ -66,7 +77,7 @@ export struct SurfaceIconButton {
     if (this.kind === 'primary') {
       return this.getPalette().accentText;
     }
-    // ghost 图标用主文字色（对齐前端 PageHeader 末尾透明钮——深色保证在亮底上的可见性）
+    // ghost/surface 图标用主文字色（对齐前端 PageHeader 末尾透明钮——深色保证在亮底上的可见性）
     return this.getPalette().textPrimary;
   }
 

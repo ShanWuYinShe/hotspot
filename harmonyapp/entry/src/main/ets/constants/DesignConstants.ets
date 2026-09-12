@@ -356,6 +356,8 @@ export interface LayoutSystem {
   FAB_SIZE: number;
   /** 圆形图标按钮尺寸（对齐前端 36px，移动端可放大到 38px） */
   ICON_BUTTON_SIZE: number;
+  /** 页头返回按钮尺寸（40vp）：返回是导航关键动作，视觉与命中区大于普通图标钮（36），易点不误触 */
+  BACK_BUTTON_SIZE: number;
   /** 最小触控命中区（44，对齐 WCAG 2.5.5 / HarmonyOS 规范最小热区；视觉尺寸不变时用透明 padding 扩展） */
   MIN_HIT_TARGET: number;
   /** 统计标签列宽（60，对齐前端明细标签列） */
@@ -652,6 +654,7 @@ const LAYOUT: LayoutSystem = {
   TABLET_NAV_MAX_WIDTH: 680,
   FAB_SIZE: 52,
   ICON_BUTTON_SIZE: 36,
+  BACK_BUTTON_SIZE: 40,
   MIN_HIT_TARGET: 44,
   LABEL_WIDTH: 60,
   /** 会话列表行尾未读徽章直径（对齐前端 size-5=20px） */

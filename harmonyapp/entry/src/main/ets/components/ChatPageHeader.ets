@@ -55,17 +55,19 @@ export struct ChatPageHeader {
             })
         }
         .type(ButtonType.Circle)
-        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        // 与全局页头返回钮统一（BACK_BUTTON_SIZE 40）
+        .width(DesignConstants.LAYOUT.BACK_BUTTON_SIZE)
+        .height(DesignConstants.LAYOUT.BACK_BUTTON_SIZE)
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .accessibilityText('返回')
         .onClick(() => {
           this.onBack();
         })
-        // 触控热区：36 → 44（responseRegion 不占布局）
+        // 触控热区：BACK_BUTTON_SIZE(40) → 44（responseRegion 不占布局）；
+        // 返回钮尺寸与 SystemPageHeader / SearchPageHeader 统一为 40vp
         .responseRegion({
-          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
-          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.BACK_BUTTON_SIZE) / 2,
+          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.BACK_BUTTON_SIZE) / 2,
           width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
           height: DesignConstants.LAYOUT.MIN_HIT_TARGET
         })

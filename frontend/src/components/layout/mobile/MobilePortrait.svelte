@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Home, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
+	import { ArrowLeft, Home, Plus, X, MessageCircle, CircleUser, Compass } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
@@ -12,15 +12,16 @@
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
-	// MobilePortrait — 移动竖屏壳：状态栏 + 内容区 + 底部 3 Tab 导航（中央 FAB + 发布 Sheet）。
+	// MobilePortrait — 移动竖屏壳：状态栏 + 内容区 + 底部 4 Tab 导航（中央 FAB + 发布 Sheet）。
 	// 仅移动 portrait 分支使用（MainLayout 分派）。
-	// 「附近」已从一级 Tab 移除：/nearby 聚合门户与首页完全重复（308 → /），
-	// 首页是唯一的附近聚合页，三个分区页从首页直达。
+	// Tab 对齐鸿蒙端 PhoneLayout 五 slot：首页 / 附近 / 发布FAB / 消息 / 我的。
+	// 「附近」为一级 Tab（/nearby 聚合门户），people/groups/moments 分区子页从门户直达。
 
 	let { children }: { children: Snippet } = $props();
 
 	const NAV_ITEMS: { path: string; icon: typeof Home; label: string }[] = [
 		{ path: ROUTES.home, icon: Home, label: '首页' },
+		{ path: ROUTES.nearby, icon: Compass, label: '附近' },
 		{ path: ROUTES.messages, icon: MessageCircle, label: '消息' },
 		{ path: ROUTES.me, icon: CircleUser, label: '我的' }
 	];
@@ -112,10 +113,10 @@
 				class="shrink-0 w-full nav-glass nav-glass--bottom"
 			>
 				<div
-					class="grid grid-cols-4 items-center w-full px-2"
+					class="grid grid-cols-5 items-center w-full px-2"
 					style="padding-top:var(--cst-bottom-nav-pad-top);padding-bottom:max(var(--cst-bottom-nav-pad-bottom), env(safe-area-inset-bottom, var(--cst-bottom-nav-pad-bottom)));"
 				>
-					<!-- Slot 1: 首页 (25%) -->
+					<!-- Slot 1: 首页 (20%) -->
 					<div class="flex items-center justify-center w-full">
 						<NavTab
 							label={NAV_ITEMS[0].label}
@@ -125,7 +126,17 @@
 						/>
 					</div>
 
-					<!-- Slot 2: Centre FAB (25%) -->
+					<!-- Slot 2: 附近 (20%) -->
+					<div class="flex items-center justify-center w-full">
+						<NavTab
+							label={NAV_ITEMS[1].label}
+							isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[1].path)}
+							onClick={() => goto(NAV_ITEMS[1].path)}
+							Icon={NAV_ITEMS[1].icon}
+						/>
+					</div>
+
+					<!-- Slot 3: Centre FAB (20%) -->
 					<div class="flex items-center justify-center w-full">
 						<button
 							type="button"
@@ -142,23 +153,23 @@
 						</button>
 					</div>
 
-					<!-- Slot 3: 消息 (25%) -->
-					<div class="flex items-center justify-center w-full">
-						<NavTab
-							label={NAV_ITEMS[1].label}
-							isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[1].path)}
-							onClick={() => goto(NAV_ITEMS[1].path)}
-							Icon={NAV_ITEMS[1].icon}
-						/>
-					</div>
-
-					<!-- Slot 4: 我的 (25%) -->
+					<!-- Slot 4: 消息 (20%) -->
 					<div class="flex items-center justify-center w-full">
 						<NavTab
 							label={NAV_ITEMS[2].label}
 							isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[2].path)}
 							onClick={() => goto(NAV_ITEMS[2].path)}
 							Icon={NAV_ITEMS[2].icon}
+						/>
+					</div>
+
+					<!-- Slot 5: 我的 (20%) -->
+					<div class="flex items-center justify-center w-full">
+						<NavTab
+							label={NAV_ITEMS[3].label}
+							isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[3].path)}
+							onClick={() => goto(NAV_ITEMS[3].path)}
+							Icon={NAV_ITEMS[3].icon}
 						/>
 					</div>
 				</div>

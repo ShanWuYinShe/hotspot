@@ -58,8 +58,9 @@ export struct SearchPageHeader {
         })
     }
     .type(ButtonType.Circle)
-    .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    // 与 SystemPageHeader 返回钮统一：BACK_BUTTON_SIZE 40 凸起圆钮
+    .width(DesignConstants.LAYOUT.BACK_BUTTON_SIZE)
+    .height(DesignConstants.LAYOUT.BACK_BUTTON_SIZE)
     .backgroundColor(this.getSurfaceBackground())
     .shadow(this.getPalette().surfaceShadow)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
