@@ -1,13 +1,16 @@
 <script lang="ts">
 	import type { MapBounds } from './location-shared';
 	import { lngToWorldX, latToWorldY, worldXToLng, worldYToLat, wgs84ToGcj02, gcj02ToWgs84, tilesForViewport, viewportToBounds, type TileItem } from './map-projection';
+	import { mapSourceStore } from '@/stores/mapSource.svelte';
 
-	// 地图画布：自渲染 XYZ 瓦片层（高德瓦片经 nginx /amap-tiles/ 同源代理）
-	// + 拖拽平移 + 滚轮缩放。图钉/热力/我的位置由父组件以 bind:bounds 的
-	// 视口地理边界自行定位（小跨度下线性百分比与墨卡托完全对齐）。
+	// 地图画布：自渲染 XYZ 瓦片层（高德 /amap-tiles/ GCJ-02 · OSM /osm-tiles/
+	// WGS-84，均经 nginx 同源代理）+ 拖拽平移 + 滚轮缩放。图钉/热力/我的位置
+	// 由父组件以 bind:bounds 的视口地理边界自行定位（小跨度下线性百分比与
+	// 墨卡托完全对齐）。
 	//
-	// 坐标口径：center/bounds 对外均为 WGS-84；仅瓦片像素空间内部先换算
-	// GCJ-02（高德底图口径），拖拽位移同样在 GCJ 空间换算后反演回 WGS-84。
+	// 坐标口径：center/bounds 对外均为 WGS-84；瓦片像素空间按当前地图源选择
+	// 纠偏策略——高德底图先换算 GCJ-02，OSM 底图恒等直通；拖拽位移同样在
+	// 瓦片空间换算后反演回 WGS-84。
 	//
 	// center 双向绑定采用「手势结束才回写」策略：拖拽过程中只更新内部渲染
 	// 中心，pointerup 才写回 center，避免父级 $effect 逐帧重新拉取数据。
@@ -43,22 +46,28 @@
 		if (!dragging && center) renderCenter = center;
 	});
 
-	// 瓦片像素空间用 GCJ-02（高德口径）；对外 center/bounds 保持 WGS-84
-	const gcjCenter = $derived(activeCenter ? wgs84ToGcj02(activeCenter.lat, activeCenter.lng) : null);
+	// 瓦片像素空间纠偏策略：高德底图为 GCJ-02（WGS-84 → GCJ 换算），OSM 底图
+	// 为 WGS-84（恒等直通）。组件层其余代码不感知具体源，只调用这对函数。
+	let tileSource = $derived(mapSourceStore.source);
+	const toTileSpace = $derived(tileSource === 'amap' ? wgs84ToGcj02 : (lat: number, lng: number) => ({ lat, lng }));
+	const fromTileSpace = $derived(tileSource === 'amap' ? gcj02ToWgs84 : (lat: number, lng: number) => ({ lat, lng }));
+
+	// 瓦片像素空间用底图口径；对外 center/bounds 保持 WGS-84
+	const tileCenter = $derived(activeCenter ? toTileSpace(activeCenter.lat, activeCenter.lng) : null);
 
 	let tiles = $derived.by(() => {
-		if (!gcjCenter || width < 2 || height < 2) return [] as TileItem[];
-		return tilesForViewport(gcjCenter, zoom, { width, height });
+		if (!tileCenter || width < 2 || height < 2) return [] as TileItem[];
+		return tilesForViewport(tileCenter, zoom, { width, height });
 	});
 
 	// 视口边界回写（父组件供图钉/热力定位）。渲染中心变化即更新——拖拽中
 	// 图钉跟随移动，手势结束后 center prop 回写触发父级数据刷新。
-	// GCJ 空间求四角后反演回 WGS-84，保证与图钉/API 同口径。
+	// 瓦片空间求四角后反演回 WGS-84，保证与图钉/API 同口径。
 	$effect(() => {
-		if (!gcjCenter || width < 2 || height < 2) return;
-		const b = viewportToBounds(gcjCenter, zoom, { width, height });
-		const sw = gcj02ToWgs84(b.minLat, b.minLng);
-		const ne = gcj02ToWgs84(b.maxLat, b.maxLng);
+		if (!tileCenter || width < 2 || height < 2) return;
+		const b = viewportToBounds(tileCenter, zoom, { width, height });
+		const sw = fromTileSpace(b.minLat, b.minLng);
+		const ne = fromTileSpace(b.maxLat, b.maxLng);
 		bounds = { minLat: sw.lat, minLng: sw.lng, maxLat: ne.lat, maxLng: ne.lng };
 	});
 
@@ -67,10 +76,10 @@
 	// 图钉/热力逐帧跟随继续消费每帧回写的 bounds。
 	$effect(() => {
 		if (!center || width < 2 || height < 2) return;
-		const g = wgs84ToGcj02(center.lat, center.lng);
+		const g = toTileSpace(center.lat, center.lng);
 		const b = viewportToBounds(g, zoom, { width, height });
-		const sw = gcj02ToWgs84(b.minLat, b.minLng);
-		const ne = gcj02ToWgs84(b.maxLat, b.maxLng);
+		const sw = fromTileSpace(b.minLat, b.minLng);
+		const ne = fromTileSpace(b.maxLat, b.maxLng);
 		stableBounds = { minLat: sw.lat, minLng: sw.lng, maxLat: ne.lat, maxLng: ne.lng };
 	});
 
@@ -133,12 +142,12 @@
 		if (!moved && Math.abs(dx) + Math.abs(dy) < 3) return;
 		moved = true;
 		dragging = true;
-		// 像素位移 → 中心经纬度（拖拽方向与地图相反）；GCJ 空间换算后反演回 WGS-84
-		const startGcj = wgs84ToGcj02(dragStart.center.lat, dragStart.center.lng);
-		const cx = lngToWorldX(startGcj.lng, zoom) - dx;
-		const cy = latToWorldY(startGcj.lat, zoom) - dy;
+		// 像素位移 → 中心经纬度（拖拽方向与地图相反）；瓦片空间换算后反演回 WGS-84
+		const startTile = toTileSpace(dragStart.center.lat, dragStart.center.lng);
+		const cx = lngToWorldX(startTile.lng, zoom) - dx;
+		const cy = latToWorldY(startTile.lat, zoom) - dy;
 		const g = { lat: worldYToLat(cy, zoom), lng: worldXToLng(cx, zoom) };
-		renderCenter = gcj02ToWgs84(g.lat, g.lng);
+		renderCenter = fromTileSpace(g.lat, g.lng);
 	}
 
 	function onPointerUp(e?: PointerEvent) {
@@ -200,9 +209,9 @@
 	role="application"
 	aria-label="地图画布"
 >
-	{#each tiles as t (`${t.z}/${t.x}/${t.y}`)}
+	{#each tiles as t (`${tileSource}/${t.z}/${t.x}/${t.y}`)}
 		<img
-			src="/amap-tiles/{t.z}/{t.x}/{t.y}.png"
+			src="/{tileSource === 'amap' ? 'amap-tiles' : 'osm-tiles'}/{t.z}/{t.x}/{t.y}.png"
 			alt=""
 			draggable="false"
 			loading="eager"
@@ -215,7 +224,7 @@
 		class="absolute bottom-1 right-2 text-xxs opacity-subtle pointer-events-none"
 		style="color:var(--cst-text-secondary);"
 	>
-		© 高德地图
+		{tileSource === 'amap' ? '© 高德地图' : '© OpenStreetMap contributors'}
 	</span>
 </div>
 

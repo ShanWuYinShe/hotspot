@@ -50,11 +50,15 @@ func isAllDigits(s string) bool {
 }
 
 // defaultVerificationSender picks the delivery backend based on the environment.
-// In dev/test a logVerificationSender writes the code to the application log so
-// the password-reset (and future upgrade) flow is end-to-end usable without an
-// external gateway. In production-like environments a noopVerificationSender
-// preserves the previous "not configured" behavior until a real gateway is wired.
+// SMTP_HOST configured → SMTP sender in any environment, so the email channel
+// of register/password-reset is end-to-end usable in production; otherwise
+// dev/test falls back to a logVerificationSender (codes readable from the log)
+// and production-like environments keep a noopVerificationSender until a real
+// gateway is wired.
 func defaultVerificationSender(cfg config.Config) verificationSender {
+	if s := newSMTPVerificationSender(cfg); s != nil {
+		return s
+	}
 	if !cfg.IsProductionLike() {
 		return &logVerificationSender{}
 	}

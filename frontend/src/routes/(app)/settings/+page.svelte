@@ -17,6 +17,7 @@
 	import { auth, logout, requireAuth } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { theme, setTheme, setColorScheme, THEME_OPTIONS, COLOR_SCHEME_OPTIONS, type ColorSchemeMode, type AppTheme } from '@/stores/theme.svelte';
+	import { mapSourceStore, setMapSource, MAP_SOURCE_OPTIONS, initMapSource, type MapSource } from '@/stores/mapSource.svelte';
 	import { getAccount, getSettings, updateSettings, netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import pkg from '../../../../package.json';
@@ -147,6 +148,12 @@
 
 	let confirmLogoutOpen = $state(false);
 
+	// 地图源偏好（localStorage 持久化，本机生效；地图页快捷切换同步此值）
+	$effect(() => initMapSource());
+	const mapSourceDesc = $derived(
+		mapSourceStore.source === 'amap' ? '高德瓦片，国内街巷细节丰富' : 'OpenStreetMap，全球开源数据'
+	);
+
 	// 明暗三档描述（跟随系统/浅色/深色，与 TabBar 选择同步）
 	const colorSchemeDesc = $derived(
 		theme.colorScheme === 'auto' ? '跟随系统外观' : theme.colorScheme === 'dark' ? '当前使用深色外观' : '当前使用浅色外观'
@@ -272,7 +279,36 @@
 				</div>
 			</div>
 
-			<!-- Section 3: 通知偏好 -->
+			<!-- Section 3: 地图与位置 -->
+			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
+				<div>
+					<h2 class="text-sm font-semibold text-text-primary">地图与位置</h2>
+					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
+						选择地图页使用的底图源。两种底图均经站点同源代理加载，密钥不下发到浏览器。
+					</p>
+				</div>
+				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-sm overflow-hidden">
+					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+						<div class="flex items-center gap-3">
+							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
+								<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
+							</div>
+							<div>
+								<p class="text-sm font-medium text-text-primary">地图源</p>
+								<p class="text-xs text-text-secondary">{mapSourceDesc}</p>
+							</div>
+						</div>
+						<TabBar
+							variant="segmented"
+							items={MAP_SOURCE_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
+							value={mapSourceStore.source}
+							onChange={(id) => setMapSource(id as MapSource)}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<!-- Section 4: 通知偏好 -->
 			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
 				<div>
 					<h2 class="text-sm font-semibold text-text-primary">通知偏好</h2>
@@ -299,7 +335,7 @@
 				</ListContainer>
 			</div>
 
-			<!-- Section 4: 隐私与安全 -->
+			<!-- Section 5: 隐私与安全 -->
 			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
 				<div>
 					<h2 class="text-sm font-semibold text-text-primary">隐私与安全</h2>

@@ -45,6 +45,11 @@ services:
       APP_ENV: dev
       LOG_LEVEL: debug
       GOCACHE: /root/.cache/go-build
+      # dev 用 mailpit 本地收信（http://localhost:8025 查看收件箱），
+      # 验证码不会真正外发，端到端验证 SMTP 链路无需真实邮件账号。
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM: "HotSpot <noreply@chaoset.local>"
     # 覆盖 base healthcheck：air 首次全量编译较慢，放宽启动窗口
     # 契约要求空 Request 也必须传 JSON 对象；unhealthy 时 HTTP 仍为 200（code=10600），必须校验响应内容
     healthcheck:
@@ -112,6 +117,20 @@ services:
       timeout: 5s
       retries: 30
       start_period: 90s
+
+  # ── Mailpit（dev 本地 SMTP 收信）────────────────────────────────
+  # 捕获 backend 发出的验证码邮件；SMTP 在 compose 内网 1025，收件箱
+  # Web UI 映射到 http://127.0.0.1:8025（仅回环）。生产不启用此服务。
+  mailpit:
+    image: axllent/mailpit:v1.24
+    restart: always
+    ports:
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8025/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ── 前端 dev 模式（SvelteKit dev server）───────────────────────
   frontend:

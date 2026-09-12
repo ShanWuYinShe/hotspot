@@ -3,6 +3,10 @@
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
+	import { createLocateAction } from '@/lib/locate-action.svelte';
+	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
+	import { mapSourceStore } from '@/stores/mapSource.svelte';
+	import { showToast } from '@/stores/toast.svelte';
 	import { SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
 		PIN_COLORS, PIN_LABELS, PIN_TONES, fetchMapCanvas, fetchMapCanvasByViewport,
@@ -12,6 +16,7 @@
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
+	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
 	import PinMedia from '../shared/PinMedia.svelte';
 	import LocationDesktopPanel from './LocationDesktopPanel.svelte';
 
@@ -90,10 +95,53 @@
 		else void goto(ROUTES.moment(pin.id));
 	}
 
+	// ── 真实地理编码搜索（高德/OSM 随地图源，经同源代理）────────────
+	// 输入 debounce 400ms 后查询；服务不可用（如生产未配高德密钥）回退
+	// 本地演示数据，保证搜索框不因单一上游失效。
+	let remoteResults = $state<GeoPlace[] | null>(null);
+	let searchSeq = 0;
 	const searchResults = $derived(
-		searchQuery.trim() ? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 6) : []
+		searchQuery.trim() ? (remoteResults ?? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 6)) : []
 	);
 	const nearbyPins = $derived(mapPins.filter((p) => (p.count ?? 1) === 1));
+
+	$effect(() => {
+		const query = searchQuery.trim();
+		const source = mapSourceStore.source;
+		if (!query) {
+			remoteResults = null;
+			return;
+		}
+		const seq = ++searchSeq;
+		const controller = new AbortController();
+		const timer = setTimeout(() => {
+			void searchPlaces(source, query, mapCenter, { signal: controller.signal })
+				.then((places) => {
+					if (seq === searchSeq) remoteResults = places;
+				})
+				.catch(() => {
+					if (seq === searchSeq) remoteResults = null;
+				});
+		}, 400);
+		return () => {
+			clearTimeout(timer);
+			controller.abort();
+		};
+	});
+
+	// ── 定位到我（浏览器 GPS，失败回退默认位置并提示）──────────────
+	const locate = createLocateAction({
+		onSuccess: (fix) => {
+			mapCenter = { lat: fix.lat, lng: fix.lng };
+			selectedLoc = null;
+			searchQuery = '';
+			showToast(`已定位（精度约 ${Math.round(fix.accuracy)} 米）`, 'success');
+		},
+		onError: (err) => {
+			showToast(err.message, 'danger');
+			if (defaultCenter) mapCenter = defaultCenter;
+		}
+	});
 
 	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
 
@@ -216,22 +264,28 @@
 			<MapFilterMenu bind:activeFilters counts={mapCounts} showLegend align="start" />
 		</div>
 
-		<!-- 定位到当前：地图区域右上角，独立于标题栏 -->
-		<button
-			type="button"
-			class="hover-btn scale-btn absolute z-20 flex items-center justify-center rounded-full focus-ring size-10"
-			style="top:14px;right:14px;background:var(--cst-surface-primary);color:var(--cst-text-primary);border:var(--cst-border-width-hairline) solid var(--cst-border-default);box-shadow:var(--cst-elevation-fab);"
-			aria-label="定位到当前位置"
-			title="定位到当前位置"
-			onclick={(e) => {
-				e.stopPropagation();
-				mapCenter = defaultCenter;
-				selectedLoc = null;
-				searchQuery = '';
-			}}
-		>
-			<Crosshair class="size-4 text-accent-default" strokeWidth={1.75} />
-		</button>
+		<!-- 右上角控制组：定位到当前位置（浏览器 GPS，失败回退默认位置）+ 地图源切换 -->
+		<div class="absolute z-20 flex items-center gap-2" style="top:14px;right:14px;">
+			<MapSourceSwitch />
+			<button
+				type="button"
+				class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring size-10 disabled:pointer-events-none disabled:opacity-faint"
+				style="background:var(--cst-surface-primary);color:var(--cst-text-primary);border:var(--cst-border-width-hairline) solid var(--cst-border-default);box-shadow:var(--cst-elevation-fab);"
+				aria-label={locate.locating ? '正在定位…' : '定位到当前位置'}
+				title="定位到当前位置"
+				disabled={locate.locating}
+				onclick={(e) => {
+					e.stopPropagation();
+					void locate.locate();
+				}}
+			>
+				{#if locate.locating}
+					<span class="size-4 rounded-full animate-spin" style="border:2px solid var(--cst-border-default);border-top-color:var(--cst-accent-default);" role="status" aria-hidden="true"></span>
+				{:else}
+					<Crosshair class="size-4 text-accent-default" strokeWidth={1.75} />
+				{/if}
+			</button>
+		</div>
 
 
 		<!-- Selected pin popup -->

@@ -38,6 +38,13 @@ type Config struct {
 	S3ForcePathStyle       bool
 	S3PublicForcePathStyle bool
 	RedisURL               string
+	// SMTP 验证码发信配置（注册/忘记密码等邮箱验证码）。SMTPHost 为空表示
+	// 未接入发信网关，sender 侧回退到既有 noop/log 行为，不视为配置错误。
+	SMTPHost     string
+	SMTPPort     string
+	SMTPUsername string
+	SMTPPassword string
+	SMTPFrom     string
 	// ResumeTTLSeconds 控制 resume 增量恢复状态的保留秒数（spec L156：TTL ≈ 2×
 	// ping_interval，默认 60）。连接断开后服务端在该窗口内可增量续传；超期回退全量。
 	ResumeTTLSeconds int
@@ -72,6 +79,11 @@ func Load() Config {
 		S3ForcePathStyle:       envBoolOrDefault("S3_FORCE_PATH_STYLE", true),
 		S3PublicForcePathStyle: envBoolOrDefault("S3_PUBLIC_FORCE_PATH_STYLE", true),
 		RedisURL:               os.Getenv("REDIS_URL"),
+		SMTPHost:               os.Getenv("SMTP_HOST"),
+		SMTPPort:               envOrDefault("SMTP_PORT", "587"),
+		SMTPUsername:           os.Getenv("SMTP_USERNAME"),
+		SMTPPassword:           os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:               os.Getenv("SMTP_FROM"),
 		ResumeTTLSeconds:       envIntOrDefault("RESUME_TTL_SECONDS", 60),
 		BcryptCost:             bcryptCostOrDefault("BCRYPT_COST", defaultBcryptCost),
 	}

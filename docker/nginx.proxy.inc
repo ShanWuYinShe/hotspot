@@ -28,11 +28,45 @@ location /s3/ {
 
 # ── 高德瓦片同源代理（地图底图）──────────────────────────
 # 前端请求 /amap-tiles/{z}/{x}/{y}.png → 高德 appmaptile 栅格瓦片（GCJ-02）。
-# 栅格瓦片不需要 key/jscode；同源转发避免客户端直连外网（跨域/不可达环境），
-# 也为后续加 proxy_cache 缓存留好位置。
+# 栅格瓦片不需要 key/jscode；同源转发避免客户端直连外网（跨域/不可达环境）。
 location /amap-tiles/ {
     rewrite ^/amap-tiles/(\d+)/(\d+)/(\d+)\.png$ /appmaptile?lang=zh_cn&size=1&scale=1&style=7&x=$2&y=$3&z=$1 break;
     proxy_pass https://webrd04.is.autonavi.com;
     proxy_ssl_server_name on;
     proxy_set_header Host webrd04.is.autonavi.com;
+}
+
+# ── OpenStreetMap 瓦片同源代理（地图底图备选源）──────────
+# OSM 公共瓦片服务要求低频访问 + 大力缓存（osm.org/tile-use-policy）：
+# 代理侧 proxy_cache 落盘 30 天，同一瓦片只回源一次；Cache-Control 由
+# 上游下发（X-Cache-Lite 命中态也按上游 TTL 处理）。显式设置 UA/Referer
+# 便于 OSM 侧识别来源；缓存命中时不回源，天然满足使用政策。
+# 地图源切换（高德 GCJ-02 / OSM WGS-84）见前端 mapSource store。
+location /osm-tiles/ {
+    rewrite ^/osm-tiles/(\d+)/(\d+)/(\d+)\.png$ /$1/$2/$3.png break;
+    proxy_pass https://tile.openstreetmap.org;
+    proxy_ssl_server_name on;
+    proxy_set_header Host tile.openstreetmap.org;
+    proxy_set_header User-Agent "HotSpot-Proxy/1.0 (chaoset.com)";
+    proxy_set_header Accept-Encoding "";
+    proxy_cache osm_tiles;
+    proxy_cache_valid 200 30d;
+    proxy_cache_valid 404 1m;
+    proxy_cache_lock on;
+    proxy_cache_lock_timeout 5s;
+    add_header X-Tile-Cache $upstream_cache_status;
+}
+
+# ── OSM Nominatim 同源代理（地理编码，OSM 源配套）────────
+# 搜索（/search）与逆地理（/reverse）。公共 Nominatim 政策：≤1 req/s、
+# 必须带可识别 UA——限流 1r/s 在代理侧兜底，前端另有 debounce。
+# 语言随浏览器 Accept-Language 由上游解析。
+location /osm-service/ {
+    limit_req zone=osm_service burst=3 nodelay;
+    rewrite ^/osm-service/(.*)$ /$1 break;
+    proxy_pass https://nominatim.openstreetmap.org;
+    proxy_ssl_server_name on;
+    proxy_set_header Host nominatim.openstreetmap.org;
+    proxy_set_header User-Agent "HotSpot-Proxy/1.0 (chaoset.com)";
+    proxy_cache off;
 }

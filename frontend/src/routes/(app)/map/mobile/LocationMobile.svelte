@@ -3,15 +3,20 @@
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
+	import { createLocateAction } from '@/lib/locate-action.svelte';
+	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
+	import { mapSourceStore } from '@/stores/mapSource.svelte';
+	import { showToast } from '@/stores/toast.svelte';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, fetchMapCanvasByViewport, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
 	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
+	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
 
-	// 移动端地图探索：全屏 OSM + 可拖拽吸附底部 Sheet（148/318/540 三档）。
+	// 移动端地图探索：全屏底图（高德/OSM 可切换）+ 可拖拽吸附底部 Sheet（148/318/540 三档）。
 	// motion spring 吸附改 CSS transition。
 	// 筛选菜单由 map/shared/MapFilterMenu 统一承载（桌面/移动一致）。
 
@@ -140,7 +145,51 @@
 	});
 
 	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
-	const searchResults = $derived(searchQuery.trim() ? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 5) : []);
+	// ── 真实地理编码搜索（高德/OSM 随地图源，经同源代理）────────────
+	// 输入 debounce 400ms 后查询；服务不可用回退本地演示数据。
+	let remoteResults = $state<GeoPlace[] | null>(null);
+	let searchSeq = 0;
+	$effect(() => {
+		const query = searchQuery.trim();
+		const source = mapSourceStore.source;
+		if (!query) {
+			remoteResults = null;
+			return;
+		}
+		const seq = ++searchSeq;
+		const controller = new AbortController();
+		const timer = setTimeout(() => {
+			void searchPlaces(source, query, mapCenter, { signal: controller.signal })
+				.then((places) => {
+					if (seq === searchSeq) remoteResults = places;
+				})
+				.catch(() => {
+					if (seq === searchSeq) remoteResults = null;
+				});
+		}, 400);
+		return () => {
+			clearTimeout(timer);
+			controller.abort();
+		};
+	});
+	const searchResults = $derived(
+		searchQuery.trim() ? (remoteResults ?? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 5)) : []
+	);
+
+	// ── 定位到我（浏览器 GPS，失败回退默认位置并提示）──────────────
+	const locate = createLocateAction({
+		onSuccess: (fix) => {
+			mapCenter = { lat: fix.lat, lng: fix.lng };
+			selectedLoc = null;
+			searchQuery = '';
+			snapTo('mid');
+			showToast(`已定位（精度约 ${Math.round(fix.accuracy)} 米）`, 'success');
+		},
+		onError: (err) => {
+			showToast(err.message, 'danger');
+			if (defaultCenter) mapCenter = defaultCenter;
+		}
+	});
 
 	// 地图原地点击（MapCanvas 内部区分拖拽，拖动不再误触收起）：清选中并收起 sheet
 	function handleMapTap() {
@@ -271,21 +320,23 @@
 			</button>
 		</div>
 
-		<!-- 回到我的位置（re-center；原 Crosshair 与「我的位置」两个按钮功能重复，合并为一个） -->
+		<!-- 回到我的位置（浏览器 GPS，失败回退默认位置）+ 地图源切换 -->
 		<button
 			type="button"
-			aria-label="回到我的位置"
+			aria-label={locate.locating ? '正在定位…' : '回到我的位置'}
 			title="回到我的位置"
-			class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
+			class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5 disabled:pointer-events-none disabled:opacity-faint"
 			style="{floatBtnStyle}"
-			onclick={() => {
-				mapCenter = defaultCenter;
-				selectedLoc = null;
-				searchQuery = '';
-			}}
+			disabled={locate.locating}
+			onclick={() => void locate.locate()}
 		>
-			<Crosshair class="size-4.5 text-accent-default" strokeWidth={1.75} />
+			{#if locate.locating}
+				<span class="size-4.5 rounded-full animate-spin" style="border:2px solid var(--cst-border-default);border-top-color:var(--cst-accent-default);" role="status" aria-hidden="true"></span>
+			{:else}
+				<Crosshair class="size-4.5 text-accent-default" strokeWidth={1.75} />
+			{/if}
 		</button>
+		<MapSourceSwitch align="end" />
 	</div>
 
 	<!-- ══ BOTTOM SHEET (draggable) ══ -->

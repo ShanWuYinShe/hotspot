@@ -6,6 +6,7 @@
 	import { initWs } from '@/stores/ws.svelte';
 	import { initPresence } from '@/stores/presence.svelte';
 	import { initTheme } from '@/stores/theme.svelte';
+	import { initMapSource } from '@/stores/mapSource.svelte';
 	import { initPlatform } from '@/stores/platform.svelte';
 	import AuthGate from '@/components/auth/AuthGate.svelte';
 	import ToastViewport from '@/components/overlays/ToastViewport.svelte';
@@ -18,6 +19,8 @@
 	// 明暗三档：initTheme 读取持久化初值 + 订阅系统明暗变化，返回清理函数；
 	// $effect 保证注册在组件初始化上下文，销毁时移除 matchMedia 监听。
 	$effect(() => initTheme());
+	// 地图源偏好（高德/OSM）持久化初值，设置页与地图页共享。
+	initMapSource();
 	void initPlatform();
 	void initAuth();
 	// WS 实时通道：监听 auth store，登录后自动连接、登出后断开。
