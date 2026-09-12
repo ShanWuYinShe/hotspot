@@ -82,32 +82,8 @@ async function osmSearch(query: string, opts?: FetchOpts): Promise<GeoPlace[]> {
 		}));
 }
 
-/** 关键字搜索地点（WGS-84 输出）。失败抛 GeoServiceUnavailable，由调用方降级。 */
-export function searchPlaces(
-	source: MapSource,
-	query: string,
-	near: { lat: number; lng: number } | null,
-	opts?: FetchOpts
-): Promise<GeoPlace[]> {
-	return source === 'amap' ? amapSearch(query, near, opts) : osmSearch(query, opts);
-}
-
-/** 逆地理编码：坐标 → 文字地址（无结果返回 null，服务不可用抛错）。 */
-export async function reverseGeocode(
-	source: MapSource,
-	lat: number,
-	lng: number,
-	opts?: FetchOpts
-): Promise<string | null> {
-	if (source === 'amap') {
-		const g = wgs84ToGcj02(lat, lng);
-		const data = (await getJson(
-			`/amap-service/v3/geocode/regeo?location=${g.lng.toFixed(6)},${g.lat.toFixed(6)}`,
-			opts
-		)) as { status?: string; regeocode?: { formatted_address?: string } };
-		const addr = data.regeocode?.formatted_address?.trim();
-		return addr && addr !== '[]' ? addr : null;
-	}
+/** 逆地理编码（OSM Nominatim reverse）。 */
+async function osmReverse(lat: number, lng: number, opts?: FetchOpts): Promise<string | null> {
 	const params = new URLSearchParams({
 		lat: String(lat),
 		lon: String(lng),
@@ -120,4 +96,49 @@ export async function reverseGeocode(
 		error?: string;
 	};
 	return data.display_name?.trim() ?? null;
+}
+
+/** 高德逆地理编码：WGS-84 转 GCJ-02 后查询，返回格式化地址。 */
+async function amapReverse(lat: number, lng: number, opts?: FetchOpts): Promise<string | null> {
+	const g = wgs84ToGcj02(lat, lng);
+	const data = (await getJson(
+		`/amap-service/v3/geocode/regeo?location=${g.lng.toFixed(6)},${g.lat.toFixed(6)}`,
+		opts
+	)) as { status?: string; regeocode?: { formatted_address?: string } };
+	const addr = data.regeocode?.formatted_address?.trim();
+	return addr && addr !== '[]' ? addr : null;
+}
+
+/** 关键字搜索地点（WGS-84 输出）。失败抛 GeoServiceUnavailable，由调用方降级。 */
+export async function searchPlaces(
+	source: MapSource,
+	query: string,
+	near: { lat: number; lng: number } | null,
+	opts?: FetchOpts
+): Promise<GeoPlace[]> {
+	if (source !== 'amap') return osmSearch(query, opts);
+	try {
+		return await amapSearch(query, near, opts);
+	} catch (err) {
+		// 高德编码服务不可用（如 Web 服务 key 未配置/限流）时降级到 OSM
+		// 编码：底图仍是高德瓦片，结果来自 OSM（坐标同为 WGS-84）。
+		if (err instanceof GeoServiceUnavailable) return osmSearch(query, opts);
+		throw err;
+	}
+}
+
+/** 逆地理编码：坐标 → 文字地址（无结果返回 null，服务不可用抛错）。 */
+export async function reverseGeocode(
+	source: MapSource,
+	lat: number,
+	lng: number,
+	opts?: FetchOpts
+): Promise<string | null> {
+	if (source !== 'amap') return osmReverse(lat, lng, opts);
+	try {
+		return await amapReverse(lat, lng, opts);
+	} catch (err) {
+		if (err instanceof GeoServiceUnavailable) return osmReverse(lat, lng, opts);
+		throw err;
+	}
 }
