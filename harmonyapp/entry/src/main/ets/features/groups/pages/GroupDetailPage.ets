@@ -1151,6 +1151,14 @@ export struct GroupDetailPage {
           .margin({ bottom: DesignConstants.SPACING.MD })
           }
 
+          // 四宫格数据卡（对齐前端 groups/[groupId] 简介区 2×2 stats：成员/在线/距你/分类）
+          if (this.activeTab === 0) {
+            ListItem() {
+              this.buildStatsGrid()
+            }
+            .margin({ bottom: DesignConstants.SPACING.MD })
+          }
+
           // 成员列表入口（Tab 1 成员 或 Tab 0 简介均显示）
           ListItem() {
             Row() {
@@ -1427,6 +1435,63 @@ export struct GroupDetailPage {
       dragBar: true,
       backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
+  }
+
+  // 四宫格数据卡（对齐前端 groups/[groupId] 简介区 2×2 stats：成员/在线/距你/分类）
+  @Builder
+  private buildStatsGrid(): void {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        this.StatsCell(formatCount(this.groupInfo?.group?.members_count ?? 0), '成员')
+        this.StatsCell(this.formatOnlineCount(), '在线')
+      }
+      .width('100%')
+      Row({ space: DesignConstants.SPACING.SM }) {
+        this.StatsCell(this.formatDistanceCell(), '距你')
+        this.StatsCell(this.formatCategoryCell(), '分类')
+      }
+      .width('100%')
+    }
+    .width('100%')
+  }
+
+  private formatOnlineCount(): string {
+    const online = this.groupInfo?.online_members_count;
+    return online !== null && online !== undefined ? formatCount(online) : '—';
+  }
+
+  private formatDistanceCell(): string {
+    const loc = this.groupInfo?.location as RelativeLocation | null;
+    return loc?.distance !== undefined && loc?.distance !== null
+      ? LocationUtil.formatDistance(loc.distance)
+      : '—';
+  }
+
+  private formatCategoryCell(): string {
+    const tags = this.groupInfo?.tags;
+    return tags !== undefined && tags !== null && tags.length > 0 ? `#${tags[0]}` : '—';
+  }
+
+  @Builder
+  private StatsCell(value: string, label: string) {
+    Column({ space: DesignConstants.SPACING.THREE }) {
+      Text(value)
+        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+    }
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .layoutWeight(1)
+    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+    .backgroundColor(this.getSurfaceBackground())
+    .borderRadius(DesignConstants.RADIUS.MD)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
   }
 
   @Builder
