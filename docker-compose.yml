@@ -117,7 +117,10 @@ services:
       # ClientIP() 对所有请求返回 nginx 容器 IP，IP 维度限流全部失效。
       TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
       S3_ENDPOINT: http://seaweedfs:8333
-      S3_PUBLIC_ENDPOINT: http://localhost:${NGINX_PORT:-8888}/s3
+      # 127.0.0.1 而非 localhost：presigned URL 的 SigV4 签名把 Host（含端口）
+      # 纳入签名，客户端（鸿蒙/真机统一 hdc 转发到 127.0.0.1:8888）访问时的
+      # Host 必须与签发时一致，否则验签 403；nginx /s3/ 用 $http_host 透传
+      S3_PUBLIC_ENDPOINT: http://127.0.0.1:${NGINX_PORT:-8888}/s3
       S3_PUBLIC_FORCE_PATH_STYLE: "true"
       S3_FORCE_PATH_STYLE: "true"
       S3_REGION: us-east-1
