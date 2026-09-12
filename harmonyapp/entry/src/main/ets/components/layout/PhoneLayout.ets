@@ -37,7 +37,7 @@ import { SystemButton } from '../SystemButton';
 import { AppIcon } from '../SystemIcon';
 import { LucideIcon } from '../LucideIcon';
 import { AppRouter, LoginRouteParam } from '../../core/router/AppRouter';
-import { PageNames } from '../../constants/AppConstants';
+import { PageNames, StorageKeys } from '../../constants/AppConstants';
 import { CreateMomentSheet } from '../../features/moments/components/CreateMomentSheet';
 
 interface TabItem {
@@ -81,8 +81,25 @@ export struct PhoneLayout {
   /** 当前按下的底部导航 Tab 索引（-1 表示无），用于按下缩放反馈，对齐前端 hover-btn:active */
   @State pressedTabIndex: number = -1;
   @State private tabletFabPressed: boolean = false;
+  /** 路由页切 tab 一次性信号（设置页「个人资料」等）：≥0 为目标 tab，消费后复位 -1 */
+  @StorageLink(StorageKeys.SWITCH_TAB_REQUEST) @Watch('onSwitchTabRequest') switchTabRequest: number = -1;
 
   private tabsController: TabsController = new TabsController();
+
+  /** 消费切 tab 请求：立即复位，避免同值不再触发 @Watch */
+  private onSwitchTabRequest(): void {
+    const target = this.switchTabRequest;
+    if (target < 0) {
+      return;
+    }
+    AppStorage.setOrCreate<number>(StorageKeys.SWITCH_TAB_REQUEST, -1);
+    if (target === CREATE_TAB_INDEX) {
+      // 「+」不是真实标签，路由页也不应从底栏触达发布器
+      return;
+    }
+    this.tabsController.changeIndex(target);
+    this.currentTabIndex = target;
+  }
 
   build() {
     Stack() {

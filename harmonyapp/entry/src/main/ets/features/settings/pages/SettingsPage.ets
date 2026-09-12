@@ -6,8 +6,8 @@ import { AccountInfo, ApiVersionMeta, ClientConfig, SystemAnnouncementItem, User
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
-import { AppRouter, ProfileRouteParam, LoginRouteParam, AnnouncementsRouteParam } from '../../../core/router/AppRouter';
-import { PageNames } from '../../../constants/AppConstants';
+import { AppRouter, LoginRouteParam, AnnouncementsRouteParam } from '../../../core/router/AppRouter';
+import { PageNames, StorageKeys } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
@@ -323,11 +323,11 @@ export struct SettingsPage {
 
   private openProfile(): void {
     if (this.currentUser) {
-      AuthAccountManager.getCurrentUserId().then((userId: string | null) => {
-        const profileParams = new ProfileRouteParam();
-        profileParams.userId = userId ?? '';
-        AppRouter.push(PageNames.PROFILE, profileParams);
-      });
+      // 「我的资料」不 push 全屏 ProfilePage：自己看自己走非外部模式（无返回钮），
+      // NavDestination 全屏覆盖 tab 层后底栏假死、用户被卡死；前端 settings 用户卡
+      // 也不跳转。改为回 tab 根视图并切「我的」，由用户在个人中心点「编辑资料」。
+      AppRouter.clear();
+      AppStorage.setOrCreate<number>(StorageKeys.SWITCH_TAB_REQUEST, 4);
       return;
     }
     SystemToast.showWarning('请先登录', this.getUIContext());
@@ -445,24 +445,26 @@ export struct SettingsPage {
   }
 
   // ==================== 用户卡（对齐前端 settings 顶部 hero 用户卡） ====================
+  // currentUser 判空走可选链：登出等场景下 currentUser 先于 isLoggedIn 置空，
+  // 脏更新窗口内 if 守卫尚未重算，直接属性访问会崩（faultlogger jscrash 实录）
   @Builder
   private buildUserCard() {
     if (this.isLoggedIn && this.currentUser) {
       Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
-          avatarUrl: this.currentUser.avatar_url ?? '',
-          name: this.currentUser.nickname ?? '',
+          avatarUrl: this.currentUser?.avatar_url ?? '',
+          name: this.currentUser?.nickname ?? '',
           avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS
         })
 
         Column({ space: DesignConstants.SPACING.THREE }) {
-          Text(this.currentUser.nickname ?? '未命名用户')
+          Text(this.currentUser?.nickname ?? '未命名用户')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(this.currentUser.email || (this.userType === 'temp' ? '游客身份 · 未绑定邮箱' : '未绑定邮箱'))
+          Text(this.currentUser?.email || (this.userType === 'temp' ? '游客身份 · 未绑定邮箱' : '未绑定邮箱'))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
