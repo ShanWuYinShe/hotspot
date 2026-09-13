@@ -64,7 +64,8 @@ audit_js='(() => {
 	if (h1 !== 1) issues.push("h1=" + h1);
 	// 底部主导航 = MobilePortrait/TabletLayout 的 nav[aria-label="主导航"]；
 	// 桌面（侧边栏）与手机横屏（无底栏）合法值为 0，故仅记录不做硬断言。
-	return { url: location.pathname, title: document.title, vw, tabBars: document.querySelectorAll('nav[aria-label="主导航"]').length, issues };
+	// 注意 audit_js 整体是 shell 单引号字符串：JS 内一律用双引号（含转义），不得出现单引号。
+	return { url: location.pathname, title: document.title, vw, tabBars: document.querySelectorAll("nav[aria-label=\"主导航\"]").length, issues };
 })()'
 
 guest_login() {
