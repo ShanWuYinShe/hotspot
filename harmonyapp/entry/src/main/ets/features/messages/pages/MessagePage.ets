@@ -639,16 +639,19 @@ export struct MessagePage {
         titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         backgroundVariant: 'transparent'
       }) {
-        // trailing: 未读计数 + 添加(菜单)（对齐前端移动端 trailing：N 条未读 / 全部已读 + Plus ghost）
+        // trailing: 未读计数 + 添加(菜单)（对齐前端移动端 trailing：N 条未读 / 全部已读 + Plus ghost）；
+        // 无会话时状态文本整体隐藏（空列表上「全部已读」无意义）
         Row({ space: DesignConstants.SPACING.MD2 }) {
-          if (this.getTotalUnread() > 0) {
-            Text(`${this.getTotalUnread()} 条未读`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-          } else {
-            Text('全部已读')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
+          if (this.chatItems.length > 0) {
+            if (this.getTotalUnread() > 0) {
+              Text(`${this.getTotalUnread()} 条未读`)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+            } else {
+              Text('全部已读')
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+            }
           }
 
           Row() {

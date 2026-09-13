@@ -617,18 +617,8 @@ export struct MomentDetailPage {
         }
       }
 
-      Row({ space: DesignConstants.SPACING.LG }) {
-        Text(`点赞 ${formatCount(this.getMomentLikesCount(moment))}`)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-        Text(`评论 ${formatCount(this.getCommentCount(moment))}`)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-        Text(`分享 ${formatCount(moment.shares_count)}`)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-      }
-      .width('100%')
+      // 互动计数（点赞/评论/分享）不再在正文区重复展示：底部操作栏已带同值
+      // 计数（更醒目且可直接操作），保留一处即可。
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)

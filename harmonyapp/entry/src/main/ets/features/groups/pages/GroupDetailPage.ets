@@ -1047,49 +1047,8 @@ export struct GroupDetailPage {
           onAction: () => { this.loadGroupDetail(); }
         })
         } else if (this.groupInfo) {
-        // 元信息行（对齐前端 groups/[groupId]：成员 / 在线 / 距你 行，text-sm secondary）
-        Row({ space: DesignConstants.SPACING.LG }) {
-          Row({ space: DesignConstants.SPACING.XS }) {
-            LucideIcon({
-              icon: AppIcon.GROUP,
-              iconSize: DesignConstants.FONT.SIZE.SM,
-              paletteRole: 'textSecondary'
-            })
-            Text(`${formatCount(this.groupInfo.group.members_count)} 位成员`)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-          }
-
-          if (this.groupInfo.online_members_count !== null && this.groupInfo.online_members_count !== undefined && this.groupInfo.online_members_count > 0) {
-            Row({ space: DesignConstants.SPACING.XS }) {
-              Row()
-                .width(DesignConstants.SPACING.SM2)
-                .height(DesignConstants.SPACING.SM2)
-                .borderRadius(DesignConstants.RADIUS.FULL)
-                .backgroundColor(this.getCurrentThemePalette().online)
-              Text(`${this.groupInfo.online_members_count} 人在线`)
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(this.getCurrentThemePalette().online)
-            }
-            .alignItems(VerticalAlign.Center)
-          }
-
-          if ((this.groupInfo.location as RelativeLocation | null)?.distance !== undefined &&
-            (this.groupInfo.location as RelativeLocation | null)?.distance !== null) {
-            Row({ space: DesignConstants.SPACING.XS }) {
-              LucideIcon({
-                icon: AppIcon.LOCATION,
-                iconSize: DesignConstants.FONT.SIZE.SM,
-                paletteRole: 'textSecondary'
-              })
-              Text(`距你 ${LocationUtil.formatDistance((this.groupInfo.location as RelativeLocation).distance!)}`)
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-            }
-          }
-        }
-        .width('100%')
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD })
+        // 元信息（成员/在线/距你）不再在此重复展示：简介 tab 四宫格数据卡承载
+        // 同一份数据（大版优先），切 tab 时由「群组成员」入口行延续上下文。
 
         // 三 Tab（对齐前端 TabBar 胶囊：简介/成员/公告）
         TabsPillGroup({

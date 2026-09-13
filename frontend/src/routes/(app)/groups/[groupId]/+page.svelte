@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Bell, Check, LogOut, MapPin, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, Trash2, UserPlus, Users } from '@lucide/svelte';
+	import { ArrowLeft, Bell, Check, LogOut, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, Trash2, UserPlus } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -216,20 +216,8 @@
 
 	<div class="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
 		<main class="min-w-0">
-			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-text-secondary">
-				<span class="flex items-center gap-1.5">
-					<Users size={14} />
-					{gd.detail.members} 位成员
-				</span>
-				<span class="flex items-center gap-1.5 text-status-online">
-					<span class="h-2 w-2 rounded-full bg-status-online"></span>
-					{gd.onlineMemberCount} 人在线
-				</span>
-				<span class="flex items-center gap-1.5">
-					<MapPin size={14} />
-					距你 {gd.detail.distance}
-				</span>
-			</div>
+			<!-- 元信息（成员/在线/距你）不再在此重复展示：简介 tab 四宫格数据卡承载
+			     同一份数据（大版优先），与鸿蒙 GroupDetailPage 保持一致 -->
 
 			<!-- 分类 Tab（统一 TabBar 胶囊样式；pb-3 让胶囊与 border-b 分离，对齐 PageHeader below 约定） -->
 			<div class="mt-4 pb-3 border-b border-border-default">
