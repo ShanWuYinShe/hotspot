@@ -24,7 +24,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）；段位导航 NearbySegmentNav
 	// 置于 header below 吸顶，搜索/地图收敛为 header 右上角工具入口。
 
-	const TABS = ['热门', '附近', '关注'];
+	// 「周边」= 按距离排序的默认流（nearby feed）；原「附近」与一级 Tab 同名嵌套
+	// 易歧义，改用项目既有语汇「周边」。旧深链 ?tab=附近 经 normalizeTab 兼容映射。
+	const TABS = ['热门', '周边', '关注'];
+	const TAB_ALIASES: Record<string, string> = { 附近: '周边' };
 
 	let apiFeedItems = $state<FeedItem[]>([]);
 	let tags = $state<string[]>([]);
@@ -163,7 +166,8 @@ locationName = loc?.location_name ?? '';
 
 	function initTabFromUrl(): string {
 		const t = page.url.searchParams.get('tab') ?? '';
-		return TABS.includes(t) ? t : '热门';
+		const normalized = TAB_ALIASES[t] ?? t;
+		return TABS.includes(normalized) ? normalized : '热门';
 	}
 
 	// 传入 getter 而非数组快照：interactions.items 需跟随 apiFeedItems 更新

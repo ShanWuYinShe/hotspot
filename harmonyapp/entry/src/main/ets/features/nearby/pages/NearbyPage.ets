@@ -1,14 +1,17 @@
 /**
- * NearbyPage — 附近综合探索门户页（对齐前端 /nearby 顶级导航 tab）
+ * NearbyPage — 附近板块段位容器（对齐前端 /nearby 三段内容页 IA）
  *
- * 结构：顶部搜索 + 4 大分区快捷导航芯片 + 身边新朋友横向滑轨 + 身边兴趣圈 + 周边新鲜事动态流。
- * 消除空洞孤立按钮，展示真实周边数据。
+ * 结构：header（附近 + 搜索/地图工具图标）+ TabsPillGroup 三段段位导航
+ * （附近的人/群组/动态，对齐前端 NearbySegmentNav）+ 当前段真实周边数据
+ * 预览流，「查看全部」进入对应完整列表页（NearbyUsersListPage /
+ * NearbyGroupsListPage / MomentsFeedPage）。
+ * 原搜索卡片与 4 分区入口芯片已收敛：搜索/地图降为 header 右上角工具入口。
  */
 
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { LucideIcon } from '../../../components/LucideIcon';
-import { curves } from '@kit.ArkUI';
+import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppRouter, MomentDetailRouteParam } from '../../../core/router/AppRouter';
@@ -23,21 +26,15 @@ import { UserCard } from '../components/UserCard';
 import { GroupCard } from '../../groups/components/GroupCard';
 import { MomentWallCard } from '../../moments/components/MomentWallCard';
 import { EmptyState } from '../../../components/EmptyState';
-
-interface NearbySectionEntry {
-  key: string;
-  icon: AppIcon;
-  title: string;
-  description: string;
-}
+import { SystemLoadingView } from '../../../components/SystemLoadingView';
 
 @Preview
 @Component
 export struct NearbyPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
-  @State private searchEntryPressed: boolean = false;
-  @State private pressedSectionKey: string = '';
+  /** 当前段位（0 人 / 1 群组 / 2 动态），默认「附近的人」——对齐前端 /nearby → people */
+  @State private activeSection: number = 0;
 
   @State private nearbyUsers: UserItem[] = [];
   @State private nearbyGroups: GroupItem[] = [];
@@ -45,12 +42,7 @@ export struct NearbyPage {
   @State private isLoading: boolean = true;
   @State private loadError: string = '';
 
-  private static readonly SECTION_ENTRIES: NearbySectionEntry[] = [
-    { key: 'people', icon: AppIcon.PERSON, title: '附近的人', description: '新朋友' },
-    { key: 'groups', icon: AppIcon.GROUP, title: '附近群组', description: '兴趣圈' },
-    { key: 'moments', icon: AppIcon.SPARKLES, title: '附近动态', description: '新鲜事' },
-    { key: 'map', icon: AppIcon.MAP, title: '地图浏览', description: '全景看' }
-  ];
+  private static readonly SECTION_TABS: string[] = ['附近的人', '附近群组', '附近动态'];
 
   async aboutToAppear() {
     await this.loadData();
@@ -102,11 +94,25 @@ export struct NearbyPage {
     return this.getCurrentThemePalette().borderColor;
   }
 
-  private routeForSection(key: string): string {
-    if (key === 'people') return PageNames.NEARBY_USERS;
-    if (key === 'groups') return PageNames.NEARBY_GROUPS;
-    if (key === 'moments') return PageNames.NEARBY_MOMENTS;
-    return PageNames.LOCATION_PICKER;
+  /** 当前段位的空态文案（区分三种内容，引导语义对齐前端各段空态） */
+  private emptyTitleForSection(section: number): string {
+    if (section === 0) return '附近暂时没有的人';
+    if (section === 1) return '附近暂时没有群组';
+    return '附近暂时没有瞬间';
+  }
+
+  /** 当前段位「查看全部」去向（完整列表页，对齐前端各段路由） */
+  private routeForSection(section: number): string {
+    if (section === 0) return PageNames.NEARBY_USERS;
+    if (section === 1) return PageNames.NEARBY_GROUPS;
+    return PageNames.NEARBY_MOMENTS;
+  }
+
+  /** 当前段位是否有内容（决定渲染预览流还是空态） */
+  private sectionHasContent(section: number): boolean {
+    if (section === 0) return this.nearbyUsers.length > 0;
+    if (section === 1) return this.nearbyGroups.length > 0;
+    return this.nearbyMoments.length > 0;
   }
 
   build() {
@@ -120,68 +126,54 @@ export struct NearbyPage {
           titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           backgroundVariant: 'transparent'
         }) {
-          // trailing: 地图全景入口
-          SurfaceIconButton({
-            icon: AppIcon.MAP,
-            kind: 'neutral',
-            onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
-          })
+          // trailing: 搜索/地图是页面级工具，收敛在标题右侧（对齐前端 nearby 页 trailing）
+          Row({ space: DesignConstants.SPACING.SM }) {
+            SurfaceIconButton({
+              icon: AppIcon.SEARCH,
+              kind: 'neutral',
+              onPress: () => AppRouter.push(PageNames.SEARCH)
+            })
+            SurfaceIconButton({
+              icon: AppIcon.MAP,
+              kind: 'neutral',
+              onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
+            })
+          }
         }
+
+        // 段位导航（对齐前端 NearbySegmentNav：附近的人/群组/动态三段吸顶）
+        TabsPillGroup({
+          tabs: NearbyPage.SECTION_TABS.map((label: string) => ({ label: label } as TabItem)),
+          activeIndex: this.activeSection,
+          actions: {
+            onChange: (index: number) => {
+              this.activeSection = index;
+            }
+          }
+        })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
         Scroll() {
           Column({ space: DesignConstants.SPACING.LG }) {
-            // 搜索卡片入口
-            Row({ space: DesignConstants.SPACING.MD2 }) {
-              LucideIcon({
-                icon: AppIcon.SEARCH,
-                iconSize: DesignConstants.FONT.SIZE.LG,
-                paletteRole: 'accent'
+            if (this.isLoading) {
+              SystemLoadingView({ message: '正在探索周边…' })
+                .width('100%')
+                .padding({ top: DesignConstants.SPACING.XL })
+            } else if (this.loadError !== '') {
+              EmptyState({
+                title: this.loadError,
+                message: '下拉或稍后重试'
               })
-              Text('搜索用户、群组、动态、地点…')
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-                .layoutWeight(1)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-            }
-            .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-            .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-            .borderRadius(DesignConstants.SHAPE.INPUT)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .shadow(this.getCurrentThemePalette().surfaceShadow)
-            .scale(this.searchEntryPressed ?
-              { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-              { x: 1, y: 1 })
-            .animation({ curve: curves.springMotion(
-              DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-              DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-            ) })
-            .onTouch((event: TouchEvent) => {
-              if (event.type === TouchType.Down) {
-                this.searchEntryPressed = true;
-              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-                this.searchEntryPressed = false;
-              }
-            })
-            .onClick(() => { AppRouter.push(PageNames.SEARCH); })
-
-            // 4 大分区快捷入口芯片（紧凑 4 栏网格）
-            Grid() {
-              ForEach(NearbyPage.SECTION_ENTRIES, (entry: NearbySectionEntry) => {
-                GridItem() {
-                  this.buildSectionChip(entry)
-                }
-              }, (entry: NearbySectionEntry) => entry.key)
-            }
-            .columnsTemplate('1fr 1fr 1fr 1fr')
-            .columnsGap(DesignConstants.SPACING.SM)
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-            .height(76)
-
-            // ═══ 板块一：身边的新朋友 ═══
-            if (this.nearbyUsers.length > 0) {
+              .width('100%')
+            } else if (!this.sectionHasContent(this.activeSection)) {
+              EmptyState({
+                title: this.emptyTitleForSection(this.activeSection),
+                message: '成为第一个点亮这片区域的人吧！'
+              })
+              .width('100%')
+              .padding({ top: DesignConstants.SPACING.XL })
+            } else if (this.activeSection === 0) {
+              // ═══ 段位一：附近的人（横向滑轨）═══
               Column({ space: DesignConstants.SPACING.MD }) {
                 this.buildSectionHeader('身边的新朋友', '查看全部', () => {
                   AppRouter.push(PageNames.NEARBY_USERS);
@@ -191,7 +183,7 @@ export struct NearbyPage {
                   ForEach(this.nearbyUsers, (user: UserItem) => {
                     ListItem() {
                       Column() {
-                        // compact 竖排白卡（对齐前端 nearby/+page w-32=128 卡）
+                        // compact 竖排白卡（对齐前端 UserCard 网格卡）
                         UserCard({ user: user, mode: 'compact' })
                       }
                       .width(128)
@@ -204,27 +196,23 @@ export struct NearbyPage {
                 .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
               }
               .width('100%')
-            }
-
-            // ═══ 板块二：身边的兴趣圈 ═══
-            if (this.nearbyGroups.length > 0) {
+            } else if (this.activeSection === 1) {
+              // ═══ 段位二：附近群组 ═══
               Column({ space: DesignConstants.SPACING.MD }) {
                 this.buildSectionHeader('身边兴趣圈', '探索群组', () => {
                   AppRouter.push(PageNames.NEARBY_GROUPS);
                 })
 
                 Column({ space: DesignConstants.SPACING.MD }) {
-                  ForEach(this.nearbyGroups.slice(0, 2), (group: GroupItem) => {
+                  ForEach(this.nearbyGroups, (group: GroupItem) => {
                     GroupCard({ group: group, featured: false })
                   }, (group: GroupItem) => group.group?.group_id ?? '')
                 }
                 .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
               }
               .width('100%')
-            }
-
-            // ═══ 板块三：周边新鲜事 ═══
-            if (this.nearbyMoments.length > 0) {
+            } else {
+              // ═══ 段位三：附近动态 ═══
               Column({ space: DesignConstants.SPACING.MD }) {
                 this.buildSectionHeader('周边新鲜事', '更多动态', () => {
                   AppRouter.push(PageNames.NEARBY_MOMENTS);
@@ -245,14 +233,6 @@ export struct NearbyPage {
                 .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
               }
               .width('100%')
-            }
-
-            if (!this.isLoading && this.nearbyUsers.length === 0 && this.nearbyGroups.length === 0 && this.nearbyMoments.length === 0) {
-              EmptyState({
-                title: '周边暂时还没有动态',
-                message: '成为第一个点亮这片区域的人吧！'
-              })
-              .padding({ top: DesignConstants.SPACING.XL })
             }
 
             Row()
@@ -298,61 +278,9 @@ export struct NearbyPage {
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
   }
-
-  @Builder
-  private buildSectionChip(entry: NearbySectionEntry) {
-    Column({ space: DesignConstants.SPACING.XS }) {
-      Column() {
-        LucideIcon({
-          icon: entry.icon,
-          iconSize: DesignConstants.FONT.SIZE.MD,
-          paletteRole: 'accent'
-        })
-      }
-      .width(28)
-      .height(28)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getCurrentThemePalette().accentMuted)
-      .justifyContent(FlexAlign.Center)
-
-      Text(entry.title)
-        .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs font-semibold
-        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .maxLines(1)
-      Text(entry.description)
-        .fontSize(DesignConstants.FONT.SIZE.XS2) // 10 对齐前端 text-xxs（原裸 8 非法档）
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-        .maxLines(1)
-    }
-    .width('100%')
-    .height('100%')
-    .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-    .borderRadius(DesignConstants.SHAPE.HERO_CARD) // 24 对齐前端入口芯片 rounded-xl
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .justifyContent(FlexAlign.Center)
-    .scale(this.pressedSectionKey === entry.key ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-      { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(
-      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-    ) })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedSectionKey = entry.key;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedSectionKey = '';
-      }
-    })
-    .onClick(() => { AppRouter.push(this.routeForSection(entry.key)); })
-  }
 }
 
 @Builder
 export function NearbyPageBuilder() {
   NearbyPage()
 }
-

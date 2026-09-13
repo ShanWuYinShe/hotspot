@@ -83,8 +83,10 @@ export struct MomentsFeedPage {
   /** 动态 tag 列表（从前 N 条 moment.tags 聚合去重，对齐前端 moments tagsList 派生模式） */
   @State hotTags: string[] = [];
 
-  // 「活动」tab 与「热门」同走 moments/search sort_by=popular、无法区分，已删除（留热门/附近/关注）
-  private readonly TABS: string[] = ['热门', '附近', '关注'];
+  // 「活动」tab 与「热门」同走 moments/search sort_by=popular、无法区分，已删除；
+  // 原「附近」与一级 Tab「附近」同名嵌套易歧义，改用「周边」（nearby 距离序流，
+  // 对齐前端 nearby/moments TABS 改名）
+  private readonly TABS: string[] = ['热门', '周边', '关注'];
 
   /** 位置行副标题（对齐前端 nearby/moments subtitle：{locationName} · 5km 内 / 5km 内） */
   private getLocationSubtitle(): string {
@@ -202,8 +204,8 @@ export struct MomentsFeedPage {
     if (this.activeTab === '关注') {
       return '关注的动态';
     }
-    if (this.activeTab === '附近') {
-      return '附近的动态';
+    if (this.activeTab === '周边') {
+      return '周边动态';
     }
     return '热门动态';
   }
@@ -216,7 +218,7 @@ export struct MomentsFeedPage {
     if (!refresh) { this.isLoading = true; }
     this.errorMessage = '';
     try {
-      if (this.activeTab === '关注' || this.activeTab === '附近') {
+      if (this.activeTab === '关注' || this.activeTab === '周边') {
         await this.loadFeedMoments(this.activeTab === '关注' ? 'following' : 'nearby');
         return;
       }
