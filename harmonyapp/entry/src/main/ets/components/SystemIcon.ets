@@ -326,6 +326,10 @@ export struct IconButton {
           .fontSize(this.iconSize)
           .fontColor([this.getResolvedIconColor() as ResourceColor])
       }
+      // SymbolSpan 字形在 Text 行盒内默认 start 排版，固定尺寸钮中会偏离中心；
+      // Text 撑满 label 区并水平居中（垂直由 Button label 默认居中承载）
+      .width('100%')
+      .textAlign(TextAlign.Center)
     }
     .type(ButtonType.Normal)
     .stateEffect(true)
