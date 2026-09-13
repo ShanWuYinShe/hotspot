@@ -693,7 +693,6 @@ export struct CreateMomentPage {
         icon: AppIcon.CLOSE,
         iconSize: IconSize.SMALL,
         bgColor: DesignConstants.COLOR.TRANSPARENT,
-        paddingSize: 2,
         onButtonClick: (): void => this.removeTag(index)
       })
       .margin({ left: DesignConstants.SPACING.XS })

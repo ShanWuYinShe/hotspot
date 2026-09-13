@@ -302,7 +302,6 @@ export struct IconButton {
   @Prop iconColor: string | ResourceColor = DEFAULT_THEME_ICON_SENTINEL;
   @Prop bgColor: ResourceColor | string = DEFAULT_THEME_BG_SENTINEL;
   @Prop radius: number = 24;
-  @Prop paddingSize: number = 12;
   @Prop minButtonSize: number = 48;
   onButtonClick?: () => void;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
@@ -337,7 +336,9 @@ export struct IconButton {
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .borderRadius(this.radius)
     .shadow(this.getPalette().controlShadow)
-    .padding(this.paddingSize)
+    // padding 会把 label 区压缩到小于字形行盒（36 钮 + padding12 只剩 12×12 < 16 图标），
+    // 溢出按 start/顶锚定 → 图标偏右下；padding 归零让字形在完整固定尺寸内居中
+    .padding(0)
     .width(this.minButtonSize)
     .height(this.minButtonSize)
     .onClick(() => {

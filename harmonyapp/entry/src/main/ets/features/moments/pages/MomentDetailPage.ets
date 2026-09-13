@@ -761,7 +761,6 @@ export struct MomentDetailPage {
         iconColor: this.commentText.trim().length > 0 ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary,
         radius: DesignConstants.RADIUS.FULL,
         minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-        paddingSize: DesignConstants.SPACING.SM2,
         onButtonClick: () => { this.sendComment(); }
       })
         .enabled(this.commentText.trim().length > 0 && !this.commentSending)
@@ -775,12 +774,13 @@ export struct MomentDetailPage {
   @Builder
   /**
    * 移动端互动操作条（对齐前端 moments/[momentId] footer：四键图标 + 计数，
-   * 44pt 拇指热区等分；点赞/评论带计数，收藏/分享纯图标；激活态 accent 色）。
+   * 44pt 拇指热区等分；图标与计数水平并排（同动态卡片操作行），保证四键
+   * 图标基线一致；点赞/评论带计数，收藏/分享纯图标；激活态 accent 色）。
    */
   private buildActionBar(moment: MomentItem) {
     Row() {
       // 点赞（Heart + 计数，liked 时 accent）
-      Column({ space: DesignConstants.SPACING.HALF }) {
+      Row({ space: DesignConstants.SPACING.XS }) {
         LucideIcon({
           icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
           iconSize: DesignConstants.FONT.SIZE.LG,
@@ -805,7 +805,7 @@ export struct MomentDetailPage {
       .accessibilityText(this.isMomentLiked(moment) ? '取消点赞' : '点赞')
 
       // 评论（MessageCircle + 计数，点击滚动到评论区并聚焦输入栏）
-      Column({ space: DesignConstants.SPACING.HALF }) {
+      Row({ space: DesignConstants.SPACING.XS }) {
         LucideIcon({
           icon: AppIcon.MESSAGE,
           iconSize: DesignConstants.FONT.SIZE.LG,
@@ -832,7 +832,7 @@ export struct MomentDetailPage {
       .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
 
       // 收藏（Bookmark，saved 时 accent）
-      Column() {
+      Row() {
         LucideIcon({
           icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
           iconSize: DesignConstants.FONT.SIZE.LG,
@@ -847,7 +847,7 @@ export struct MomentDetailPage {
       .accessibilityText(this.isMomentFavorited(moment) ? '取消收藏' : '收藏')
 
       // 分享（Share）
-      Column() {
+      Row() {
         LucideIcon({
           icon: AppIcon.SHARE,
           iconSize: DesignConstants.FONT.SIZE.LG,
