@@ -62,7 +62,9 @@ audit_js='(() => {
 	});
 	const h1 = document.querySelectorAll("h1").length;
 	if (h1 !== 1) issues.push("h1=" + h1);
-	return { url: location.pathname, title: document.title, vw, tabBars: document.querySelectorAll("[data-tab-bar]").length, issues };
+	// 底部主导航 = MobilePortrait/TabletLayout 的 nav[aria-label="主导航"]；
+	// 桌面（侧边栏）与手机横屏（无底栏）合法值为 0，故仅记录不做硬断言。
+	return { url: location.pathname, title: document.title, vw, tabBars: document.querySelectorAll('nav[aria-label="主导航"]').length, issues };
 })()'
 
 guest_login() {
