@@ -1,17 +1,18 @@
 <script lang="ts">
-	import { MapPin, Sparkles } from '@lucide/svelte';
+	import { Map as MapIcon, MapPin, Search, Sparkles } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import NearbySegmentNav from '@/components/navigation/NearbySegmentNav.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MomentCard from '@/components/moments/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/moment-feed.svelte';
@@ -19,10 +20,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 
-	// 附近动态（/nearby/moments）：BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）。
-	// 全站样板页面：StandardPageLayout（sticky PageHeader + ContentColumn 全宽 gutter）
-	// + header 内 trailing 计数、below 搜索与分类 Tab —— 其他页面均以此为准。
-	// 对齐 Figma Make 附近动态页结构。
+	// 附近动态（/nearby/moments）：附近一级 Tab 的动态段位。
+	// BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）；段位导航 NearbySegmentNav
+	// 置于 header below 吸顶，搜索/地图收敛为 header 右上角工具入口。
 
 	const TABS = ['热门', '附近', '关注'];
 
@@ -120,7 +120,6 @@ locationName = loc?.location_name ?? '';
 	});
 
 	// 三端共用的过滤逻辑（收敛到单处实现）
-	let searchQuery = $state('');
 	// tab 支持深链：?tab= 初始化（刷新/分享保留分类），切换写回 URL
 	let activeTab = $state(initTabFromUrl());
 	let activeTag = $state<string | null>(null);
@@ -171,12 +170,7 @@ locationName = loc?.location_name ?? '';
 	const interactions = createFeedInteractions(() => apiFeedItems);
 
 	const filtered = $derived.by(() => {
-		const q = searchQuery.trim().toLowerCase();
-		let items = interactions.items.filter(
-			(i) =>
-				(!activeTag || i.tag === activeTag) &&
-				(!q || i.user.toLowerCase().includes(q) || i.content.toLowerCase().includes(q) || i.location.toLowerCase().includes(q))
-		);
+		let items = interactions.items.filter((i) => !activeTag || i.tag === activeTag);
 		// 分类 Tab 过滤：热门=按热度排序；关注=关注流（mock 无数据源，恒空）
 		if (activeTab === '热门') items = [...items].sort((a, b) => b.likes - a.likes);
 		else if (activeTab === '关注') items = [];
@@ -194,33 +188,32 @@ locationName = loc?.location_name ?? '';
 </svelte:head>
 
 
-<!-- ═══ 三端统一页面 header（样板：标题行 + trailing 计数/精选 + below 搜索 + 分类 Tab）═══ -->
+<!-- ═══ 三端统一页面 header（标题行 + trailing 工具入口 + below 段位导航 + 内容源 Tab）═══ -->
 {#snippet feedHeader()}
 	<PageHeader
-		title="附近动态"
-		subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'}
+		title="附近"
+		subtitle={locationName ? `${locationName} · 5km 内` : '5km 实时探索'}
 		sticky
-		titleSize={device === 'desktop' ? 'xl' : '2xl'}
+		titleSize={device === 'desktop' ? 'xl' : '3xl'}
 		onBack={() => history.back()}
 	>
 		{#snippet subtitleIcon()}
 			<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
 		{/snippet}
 		{#snippet trailing()}
-			{#if device === 'tablet'}
-				<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-default shadow-raised-sm" >
-					<Sparkles class="size-3 text-text-on-accent"   strokeWidth={2} />
-					<span class="text-text-on-accent text-xs">精选</span>
-				</div>
-			{:else}
-				<span class="text-text-secondary text-xs">{filtered.length} 条内容</span>
-			{/if}
+			<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
+			<div class="flex items-center gap-2">
+				<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} />
+				<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
+			</div>
 		{/snippet}
 		{#snippet below()}
-			<div class="mt-3 mb-2.5">
-				<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="地点、人物、关键词…" class="px-4 py-2.5 rounded-md" />
+			<div class="mt-3">
+				<NearbySegmentNav />
 			</div>
-			{@render tabBar()}
+			<div class="mt-3 pb-2">
+				{@render tabBar()}
+			</div>
 		{/snippet}
 	</PageHeader>
 {/snippet}

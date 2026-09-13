@@ -1,13 +1,14 @@
 <script lang="ts">
-	import { MapPin, Users } from '@lucide/svelte';
+	import { Map as MapIcon, MapPin, Search, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
+	import NearbySegmentNav from '@/components/navigation/NearbySegmentNav.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
@@ -18,12 +19,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 附近群组：分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙（对齐 Figma Make NearbyGroupsPage）。
+	// 附近群组：附近一级 Tab 的群组段位。分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙；
+	// 按名字找群走全局搜索（header 右上角搜索入口）。
 
 	const CATEGORIES = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
 
 	let activeCategory = $state('全部');
-	let searchQuery = $state('');
 	let groups = $state<Group[]>([]);
 	let visibleCount = $state(12);
 	let loading = $state(true);
@@ -73,13 +74,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	const isTablet = $derived(platform.platform === 'tablet');
 	const device = $derived(platform.platform);
 	const filtered = $derived(
-		groups.filter((group) => {
-			const q = searchQuery.trim().toLowerCase();
-			return (
-				(activeCategory === '全部' || group.category === activeCategory) &&
-				(!q || `${group.name}${group.desc}${group.category}`.toLowerCase().includes(q))
-			);
-		})
+		groups.filter((group) => activeCategory === '全部' || group.category === activeCategory)
 	);
 	const visibleGroups = $derived(filtered.slice(0, visibleCount));
 	const featured = $derived(filtered[0]);
@@ -124,30 +119,33 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
 			<PageHeader
-				title="附近群组"
-				subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'}
+				title="附近"
+				subtitle={locationName ? `${locationName} · 5km 内` : '5km 实时探索'}
 				sticky
-				titleSize={device === 'desktop' ? 'xl' : '2xl'}
+				titleSize={device === 'desktop' ? 'xl' : '3xl'}
 				onBack={() => history.back()}
 			>
 				{#snippet subtitleIcon()}
 					<MapPin class="size-2.5 text-accent-default"   strokeWidth={1.75} />
 				{/snippet}
 				{#snippet trailing()}
-					<!-- 计数统一在标题右侧（对齐首页/附近动态样板） -->
-					<span class="text-text-secondary text-xs">{filtered.length} 个活跃群组</span>
+					<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
+					<div class="flex items-center gap-2">
+						<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} />
+						<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
+					</div>
 				{/snippet}
-			{#snippet below()}
-				<!-- 搜索框（全设备全宽，对齐 Figma） + 分类标签：同处 sticky header 内 -->
-				<div class="mt-3">
-					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索群组、活动或兴趣" class="px-4 py-2.5 rounded-md" />
-				</div>
-				<!-- 分类过滤统一走 TabBar（胶囊） -->
-				<div class="mt-3">
-					<TabBar items={CATEGORIES.map((c) => ({ id: c, label: c }))} value={activeCategory} onChange={(id) => (activeCategory = id)} />
-				</div>
-			{/snippet}
-		</PageHeader>
+				{#snippet below()}
+					<!-- 段位导航 + 分类标签：同处 sticky header 内 -->
+					<div class="mt-3">
+						<NearbySegmentNav />
+					</div>
+					<!-- 分类过滤统一走 TabBar（胶囊） -->
+					<div class="mt-3 pb-2">
+						<TabBar items={CATEGORIES.map((c) => ({ id: c, label: c }))} value={activeCategory} onChange={(id) => (activeCategory = id)} />
+					</div>
+				{/snippet}
+			</PageHeader>
 	{/snippet}
 
 	<div class="min-w-0">
@@ -155,11 +153,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<InlineLoading label="加载附近群组…" />
 		{:else if loadError}
 			<LoadError message={loadError} onRetry={() => reloadKey++} />
-		{:else if filtered.length}
-			<div class="flex items-center justify-between mb-3">
-				<span class="eyebrow">此刻附近群组</span>
-				<span class="text-status-online font-medium text-xs">{totalOnline} 人正在群聊</span>
-			</div>
+			{:else if filtered.length}
+				<div class="flex items-center justify-between mb-3">
+					<span class="eyebrow">此刻附近群组</span>
+					<span class="text-status-online font-medium text-xs">{filtered.length} 个活跃 · {totalOnline} 人正在群聊</span>
+				</div>
 			{#if isDesktop || isTablet}
 				<!-- 精选卡用 GroupCard featured（对齐 Figma），其余用普通网格卡；保留 BSP 布局（决策） -->
 				{#if featured}

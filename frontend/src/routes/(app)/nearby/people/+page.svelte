@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { MapPin, Users } from '@lucide/svelte';
+	import { Map as MapIcon, MapPin, Search, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import NearbySegmentNav from '@/components/navigation/NearbySegmentNav.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
@@ -18,12 +19,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
 
-	// 附近的人：排序/标签过滤 + BSP 卡片墙（桌面）/ 网格（移动/平板）。
+	// 附近的人：附近一级 Tab 的默认段位。标题统一「附近」，段位由
+	// NearbySegmentNav 承担（搜索/地图收敛为 header 右上角工具入口）。
 
 	const SORT_OPTIONS = ['距离', '在线', '共同好友'];
 	const FILTER_TAGS = ['全部', '摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术'];
 
-	let searchQuery = $state('');
 	let sort = $state('距离');
 	let tagFilter = $state('全部');
 	let followedIds = $state<Set<string>>(new Set());
@@ -88,13 +89,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		};
 	});
 
-	// 过滤 + 排序
+	// 过滤 + 排序（按昵称找人走全局搜索：header 右上角搜索入口）
 	const list = $derived.by(() => {
-		const next = allUsers.filter(
-			(user) =>
-				(tagFilter === '全部' || user.tag === tagFilter) &&
-				(!searchQuery || `${user.name}${user.tag}${user.note}`.toLowerCase().includes(searchQuery.toLowerCase()))
-		);
+		const next = allUsers.filter((user) => tagFilter === '全部' || user.tag === tagFilter);
 		if (sort === '在线') return [...next].sort((a, b) => Number(b.isOnline) - Number(a.isOnline));
 		if (sort === '共同好友') return [...next].sort((a, b) => b.mutual - a.mutual);
 		return next;
@@ -139,24 +136,26 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
 		<PageHeader
-			title="附近的人"
-			subtitle={locationName ? `${locationName} · 5km 内` : '5km 内'}
+			title="附近"
+			subtitle={locationName ? `${locationName} · 5km 内` : '5km 实时探索'}
 			sticky
-			titleSize={device === 'desktop' ? 'xl' : '2xl'}
+			titleSize={device === 'desktop' ? 'xl' : '3xl'}
 			onBack={() => history.back()}
 		>
 			{#snippet subtitleIcon()}
 				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
 			{/snippet}
 			{#snippet trailing()}
-				<!-- 计数统一在标题右侧（对齐附近群组样板） -->
-				<span class="text-text-secondary text-xs">{list.length} 人</span>
+				<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
+				<div class="flex items-center gap-2">
+					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} />
+					<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
+				</div>
 			{/snippet}
 			{#snippet below()}
-				<!-- 搜索框 + 排序：sticky header 内只保留搜索与排序；标签过滤放正文首行
-				     （对齐附近动态样板，压缩 header 高度、把空间还给内容） -->
+				<!-- 段位导航 + 排序：sticky header 内只保留段位与排序；标签过滤放正文首行 -->
 				<div class="mt-3">
-					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索昵称、兴趣或此刻状态" class="px-4 py-2.5 rounded-md" />
+					<NearbySegmentNav />
 				</div>
 				<div class="mt-3 pb-2">
 					<TabBar items={SORT_OPTIONS.map((o) => ({ id: o, label: o }))} value={sort} onChange={(id) => (sort = id)} />
@@ -181,7 +180,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				{:else if loading}
 					<InlineLoading label="加载附近用户…" />
 				{:else if !list.length}
-					<EmptyState bare title="没有找到匹配的附近用户">
+					<EmptyState bare title="附近暂时没有匹配的用户">
 						{#snippet icon()}
 							<Users size={40} color="var(--cst-text-secondary)" class="opacity-subtle" />
 						{/snippet}
