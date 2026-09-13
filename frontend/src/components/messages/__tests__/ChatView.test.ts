@@ -111,6 +111,17 @@ describe('ChatView', () => {
 		expect(onBack).toHaveBeenCalledTimes(1);
 	});
 
+	it('10100 未登录时显示登录引导而非错误重试', async () => {
+		mocks.getPrivateMessages.mockResolvedValue({ code: 10100, message: 'Access Token 无效或过期' });
+		renderChat();
+		await waitFor(() => {
+			expect(screen.getByText('去登录')).toBeTruthy();
+		});
+		// 死胡同重试与输入栏一并隐藏
+		expect(screen.queryByText('重试')).toBeNull();
+		expect(screen.queryByLabelText('消息输入框')).toBeNull();
+	});
+
 	it('断线超阈值重连后自动补拉历史并去重合并（spec L163-165）', async () => {
 		mocks.wsClient.onStatusChange.mockImplementation((cb: (s: string) => void) => {
 			mocks.statusCb = cb;

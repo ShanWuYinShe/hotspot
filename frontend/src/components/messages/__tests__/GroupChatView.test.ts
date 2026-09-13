@@ -120,4 +120,15 @@ describe('GroupChatView', () => {
 		await fireEvent.click(screen.getByRole('button', { name: '返回' }));
 		expect(onBack).toHaveBeenCalledTimes(1);
 	});
+
+	it('10100 未登录时显示登录引导而非错误重试', async () => {
+		mocks.getGroupMessages.mockResolvedValue({ code: 10100, message: 'Access Token 无效或过期' });
+		renderGroup();
+		await waitFor(() => {
+			expect(screen.getByText('去登录')).toBeTruthy();
+		});
+		// 死胡同重试与输入栏一并隐藏
+		expect(screen.queryByText('重试')).toBeNull();
+		expect(screen.queryByLabelText('消息输入框')).toBeNull();
+	});
 });

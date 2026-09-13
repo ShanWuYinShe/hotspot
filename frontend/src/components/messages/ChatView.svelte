@@ -6,6 +6,7 @@
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
 	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
+	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { getPrivateMessages, sendPrivateMessage, markPrivateRead, recallPrivateMessage, updatePrivateMessage } from '@/api';
 	import {
@@ -50,6 +51,8 @@
 	// contactProp 仅作为初始联系人信息（此后可能由消息记录推导），有意只读取一次。
 	// 无 contact 时从历史中第一条非自己消息的 sender 推导。
 	let derivedContact = $state<ChatContact | null>(null);
+	// 10100（未登录/会话失效）是正常业务态：给登录引导而非死胡同重试（对齐 notify/me）。
+	let needsAuth = $state(false);
 
 	// spec: private_messages/send 返回 10200 时 data 携带 { forbidden_reason: ForbiddenReason }。
 	const SEND_BLOCK_REASONS: Record<string, string> = {
@@ -67,6 +70,12 @@
 				target_user_id: peerUserId,
 				pagination: { limit: 50, cursor }
 			}).catch(() => null);
+			if (res?.code === 10100) {
+				// 未登录：给登录引导而非死胡同重试
+				needsAuth = true;
+				return null;
+			}
+			needsAuth = false;
 			if (!res || res.code !== 0 || !res.data) return null;
 			const items = res.data.items;
 			const mapped: ChatMessage[] = items.map((m) => ({
@@ -237,9 +246,16 @@
 
 	</div>
 
-	<!-- Messages -->
-	<ChatMessageList {chat} canRecall={(msg) => msg.sent && inRecallWindow(msg.sentAt)} />
+	{#if needsAuth}
+		<!-- 未登录：登录引导（替代死胡同重试；输入栏一并隐藏，匿名不可发送） -->
+		<div class="flex flex-1 items-center justify-center">
+			<NeedsAuthNotice title="登录后查看" description="登录后即可查看和发起会话" />
+		</div>
+	{:else}
+		<!-- Messages -->
+		<ChatMessageList {chat} canRecall={(msg) => msg.sent && inRecallWindow(msg.sentAt)} />
 
-	<!-- Input bar -->
-	<ChatInputBar {chat} />
+		<!-- Input bar -->
+		<ChatInputBar {chat} />
+	{/if}
 </div>

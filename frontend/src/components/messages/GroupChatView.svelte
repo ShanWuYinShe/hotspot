@@ -5,6 +5,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
 	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
+	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { getGroupDetail, getGroupMessages, sendGroupMessage, markGroupRead, recallGroupMessage, recallGroupMessageAsAdmin, updateGroupMessage } from '@/api';
 	import { WS_GROUP_MESSAGE_EVENT, WS_GROUP_MESSAGE_UPDATE_EVENT, wsClient } from '@/lib/ws/client';
@@ -42,6 +43,8 @@
 
 	const meId = $derived(auth.user?.user_id ?? '__me__');
 	let myRole = $state<'owner' | 'admin' | 'member'>('member');
+	// 10100（未登录/会话失效）是正常业务态：给登录引导而非死胡同重试（对齐 notify/me）。
+	let needsAuth = $state(false);
 
 	// 群信息：失败静默，标题回退"群聊"。
 	$effect(() => {
@@ -69,6 +72,12 @@
 			const res = await getGroupMessages({ group_id: groupId, pagination: { limit: 50, cursor } }).catch(
 				() => null
 			);
+			if (res?.code === 10100) {
+				// 未登录：给登录引导而非死胡同重试
+				needsAuth = true;
+				return null;
+			}
+			needsAuth = false;
 			if (!res || res.code !== 0 || !res.data) return null;
 			const items = res.data.items;
 			const mapped: ChatMessage[] = items.map((m) => ({
@@ -222,9 +231,16 @@
 		</button>
 	</div>
 
-	<!-- Messages -->
-	<ChatMessageList {chat} canRecall={canRecallMessage} showSenderNames />
+	{#if needsAuth}
+		<!-- 未登录：登录引导（替代死胡同重试；输入栏一并隐藏，匿名不可发送） -->
+		<div class="flex flex-1 items-center justify-center">
+			<NeedsAuthNotice title="登录后查看" description="登录后即可查看和参与群聊" />
+		</div>
+	{:else}
+		<!-- Messages -->
+		<ChatMessageList {chat} canRecall={canRecallMessage} showSenderNames />
 
-	<!-- Input bar -->
-	<ChatInputBar {chat} />
+		<!-- Input bar -->
+		<ChatInputBar {chat} />
+	{/if}
 </div>

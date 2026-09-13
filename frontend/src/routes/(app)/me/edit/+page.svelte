@@ -14,6 +14,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { getAccount, updateAccount, deleteAccount , netError } from '@/api';
 	import { uploadMediaFile } from '@/lib/upload';
 	import { ROUTES } from '@/lib/routes';
@@ -38,6 +39,8 @@
 	let avatarInput = $state<HTMLInputElement | null>(null);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
+	// 10100（未登录/会话失效）是正常业务态：给登录引导而非裸技术报错（对齐 notify/me）。
+	let needsAuth = $state(false);
 	let reloadKey = $state(0);
 
 	const device = $derived(platform.platform);
@@ -48,9 +51,15 @@
 		async function fetchAccount() {
 			loading = true;
 			loadError = null;
+			needsAuth = false;
 			try {
 				const res = await getAccount().catch(() => netError(null));
 				if (cancelled) return;
+				if (res.code === 10100) {
+					// 未登录：给登录引导而非裸技术报错
+					needsAuth = true;
+					return;
+				}
 				const data = res.code === 0 ? res.data : null;
 				if (data) {
 					// spec: AccountData.nickname, .bio, .tags, .avatar_url, .user_id
@@ -175,6 +184,8 @@
 
 	{#if loading}
 	<InlineLoading label="加载资料…" />
+	{:else if needsAuth}
+	<NeedsAuthNotice title="登录后查看" description="登录后即可编辑你的资料" />
 	{:else if loadError}
 	<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
