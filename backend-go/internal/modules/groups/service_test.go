@@ -9,6 +9,7 @@ import (
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -288,6 +289,27 @@ func TestServiceOpenTheDoorNotFound(t *testing.T) {
 	_, ok, err := svc.OpenTheDoor(context.Background(), "missing")
 	if err != nil || ok {
 		t.Fatalf("expected not found, got ok=%v err=%v", ok, err)
+	}
+}
+
+func TestServiceOpenTheDoorFillsDistance(t *testing.T) {
+	// RelativeLocation 契约（spec api_spec_types.md）：有参考点时响应 location
+	// 必须携带 distance/bearing_degrees；详情此前漏算恒为 null。
+	item := ownerGroup()
+	item.Location = &RelativeLocation{
+		Point:        GeoPoint{Latitude: geo.DefaultFallbackLatitude + 0.01, Longitude: geo.DefaultFallbackLongitude},
+		LocationName: "somewhere",
+	}
+	svc := NewServiceWithRepo(&stubGroupsRepo{getResult: item, getFound: true})
+	got, ok, err := svc.OpenTheDoor(context.Background(), "g1")
+	if err != nil || !ok {
+		t.Fatalf("unexpected: ok=%v err=%v", ok, err)
+	}
+	if got.Location == nil || got.Location.Distance == nil || *got.Location.Distance <= 0 {
+		t.Fatalf("expected positive distance, got %+v", got.Location)
+	}
+	if got.Location.BearingDegrees == nil {
+		t.Fatal("expected bearing_degrees to be set")
 	}
 }
 

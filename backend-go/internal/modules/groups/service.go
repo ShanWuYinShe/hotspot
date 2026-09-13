@@ -149,6 +149,17 @@ func (s *Service) OpenTheDoor(ctx context.Context, groupID string) (GroupItem, b
 		return GroupItem{}, false, err
 	}
 	redactGroupFields(&item)
+	// RelativeLocation 契约（spec api_spec_types.md）：响应 location 的
+	// distance/bearing_degrees 相对浏览锚点计算，null 仅表示无参考点。
+	// 此前详情漏算恒为 null，群详情页「距你」卡显示为空；与 Search 对齐。
+	if ok && item.Location != nil {
+		reference := searchGeoPoint(s.resolveReferencePoint(ctx))
+		candidate := groupLocationPoint(*item.Location)
+		distance := float64(geo.DistanceMeters(reference, candidate))
+		bearing := float64(geo.BearingDegrees(reference, candidate))
+		item.Location.Distance = &distance
+		item.Location.BearingDegrees = &bearing
+	}
 	observability.L().Info("groups.open_the_door completed", "group_id", groupID, "found", ok, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return item, ok, nil
 }
