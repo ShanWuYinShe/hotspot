@@ -6,7 +6,7 @@ import {
   mockFriends, mockFollowing, mockFollowers,
   mockUserItem, relativeLocation,
   getMockAuthScenario, setMockLoggedIn, isMockLoggedIn,
-  USER_TAGS,
+  USER_TAGS, USER_BIOS,
 } from "@/mocks/data";
 
 const API = "/api/v1";
@@ -15,6 +15,14 @@ const ADMIN_API = "/admin/v1";
 
 function json(data: JsonBodyType) {
   return HttpResponse.json(data);
+}
+
+// mock 瞬间 created_at 随真实时间动态漂移（isoDaysAgo），评论固定写死日期会
+// 出现"评论早于发布"的时间倒置。评论时间一律派生自所属瞬间的 created_at 之后
+// 数小时，保证时序恒正。
+function hoursAfter(iso: string | undefined, hours: number): string {
+  const base = iso ? new Date(iso).getTime() : Date.now();
+  return new Date(base + hours * 3600000).toISOString();
 }
 
 /**
@@ -329,8 +337,8 @@ http.post(`${API}/moments/fetch_created`, () => {
     const body = (await request.json().catch(() => ({}))) as { comment_id?: string };
     const cid = body?.comment_id ?? "c";
     return requireMockAuth() ?? json(paginated([
-      { comment_id: `${cid}-r1`, parent_id: cid, user: mockUsers[2], content: "同感，下次一起去！", created_at: "2026-07-26T15:00:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
-      { comment_id: `${cid}-r2`, parent_id: cid, user: mockUsers[4], content: "蹲一个定位 📍", created_at: "2026-07-26T15:10:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
+      { comment_id: `${cid}-r1`, parent_id: cid, user: mockUsers[2], content: "同感，下次一起去！", created_at: hoursAfter(undefined, -2), replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
+      { comment_id: `${cid}-r2`, parent_id: cid, user: mockUsers[4], content: "蹲一个定位 📍", created_at: hoursAfter(undefined, -1), replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
     ]));
   }),
   http.post(`${API}/comments/delete`, () => requireMockAuth() ?? json(apiOk(null))),
@@ -356,7 +364,7 @@ http.post(`${API}/moments/fetch_created`, () => {
     const body = (await request.json().catch(() => ({}))) as { comment_id?: string };
     const cid = body?.comment_id ?? "c";
     return json(paginated([
-      { comment_id: `${cid}-r1`, parent_id: cid, user: mockUsers[2], content: "同感，下次一起去！", created_at: "2026-07-26T15:00:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
+      { comment_id: `${cid}-r1`, parent_id: cid, user: mockUsers[2], content: "同感，下次一起去！", created_at: hoursAfter(undefined, -1), replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
     ]));
   }),
   http.post(`${PUBLIC_API}/comments/open_the_door`, async ({ request }) => {
@@ -389,13 +397,14 @@ http.post(`${API}/moments/fetch_created`, () => {
     const body = (await request.json().catch(() => ({}))) as { moment_id?: string };
     const seed = mockMoments.findIndex((m) => m.moment_id === body?.moment_id);
     const idx = seed < 0 ? 0 : seed;
+    const postedAt = mockMoments[idx]?.created_at;
     return json(paginated([
-      { comment_id: `c${idx}-1`, user: mockUsers[(idx + 1) % mockUsers.length], content: "拍得真好看！", created_at: "2026-07-26T14:00:00Z", replies_count: 2, is_deleted: false, mentions: [], reactions: [{ emoji: "👍", count: 3, reacted_by_me: false }] },
-      { comment_id: `c${idx}-2`, user: mockUsers[(idx + 2) % mockUsers.length], content: mockMoments[idx].tags[0] ? `这个${mockMoments[idx].tags[0]}主题好棒` : "什么相机拍的？", created_at: "2026-07-26T13:00:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
+      { comment_id: `c${idx}-1`, user: mockUsers[(idx + 1) % mockUsers.length], content: "拍得真好看！", created_at: hoursAfter(postedAt, 3), replies_count: 2, is_deleted: false, mentions: [], reactions: [{ emoji: "👍", count: 3, reacted_by_me: false }] },
+      { comment_id: `c${idx}-2`, user: mockUsers[(idx + 2) % mockUsers.length], content: mockMoments[idx].tags[0] ? `这个${mockMoments[idx].tags[0]}主题好棒` : "什么相机拍的？", created_at: hoursAfter(postedAt, 5), replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
 ...Array.from({ length: idx % 4 }, (_, k) => ({
 	comment_id: `c${idx}-x${k}`, user: mockUsers[(idx + 3 + k) % mockUsers.length],
 	content: ["这个构图太舒服了", "下次带我一个", "已收藏，周末就去", "光线绝了"][k % 4],
-	created_at: `2026-07-26T1${k}:30:00Z`, replies_count: 0, is_deleted: false, mentions: [], reactions: [],
+	created_at: hoursAfter(postedAt, 6 + k), replies_count: 0, is_deleted: false, mentions: [], reactions: [],
 })),
     ]));
   }),
@@ -683,7 +692,7 @@ http.post(`${API}/moments/fetch_created`, () => {
     const profile: Record<string, unknown> = {
       user: {
         user: { user_id: u.user_id, nickname: u.nickname, avatar_url: u.avatar_url },
-        bio: `这是 ${u.nickname} 的简介`,
+        bio: USER_BIOS[idx % USER_BIOS.length],
         tags: ['摄影', '户外'],
         presence_status: 'online',
         location: relativeLocation({ latitude: 34.26, longitude: 117.18 }, '徐州', 300, 45),
@@ -715,9 +724,10 @@ http.post(`${API}/moments/fetch_created`, () => {
     const body = (await request.json().catch(() => ({}))) as { moment_id?: string };
     const seed = mockMoments.findIndex((m) => m.moment_id === body?.moment_id);
     const idx = seed < 0 ? 0 : seed;
+    const postedAt = mockMoments[idx]?.created_at;
     return json(paginated([
-      { comment_id: `c${idx}-1`, user: mockUsers[(idx + 1) % mockUsers.length], content: "拍得真好看！", created_at: "2026-07-26T14:00:00Z", replies_count: 2, is_deleted: false, mentions: [], reactions: [{ emoji: "👍", count: 3, reacted_by_me: false }] },
-      { comment_id: `c${idx}-2`, user: mockUsers[(idx + 2) % mockUsers.length], content: mockMoments[idx].tags[0] ? `这个${mockMoments[idx].tags[0]}主题好棒` : "什么相机拍的？", created_at: "2026-07-26T13:00:00Z", replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
+      { comment_id: `c${idx}-1`, user: mockUsers[(idx + 1) % mockUsers.length], content: "拍得真好看！", created_at: hoursAfter(postedAt, 3), replies_count: 2, is_deleted: false, mentions: [], reactions: [{ emoji: "👍", count: 3, reacted_by_me: false }] },
+      { comment_id: `c${idx}-2`, user: mockUsers[(idx + 2) % mockUsers.length], content: mockMoments[idx].tags[0] ? `这个${mockMoments[idx].tags[0]}主题好棒` : "什么相机拍的？", created_at: hoursAfter(postedAt, 5), replies_count: 0, is_deleted: false, mentions: [], reactions: [] },
     ]));
   }),
   http.post(`${PUBLIC_API}/groups/open_the_door`, async ({ request }) => {

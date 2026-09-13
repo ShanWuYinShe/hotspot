@@ -227,9 +227,11 @@
 
 			<!-- Name + status -->
 			<div class="flex-1 min-w-0">
-				<p class="truncate text-text-primary {compact ? 'text-sm' : 'text-md'}">
+				<!-- 会话对端名用 h1：每页唯一主标题（a11y；font-normal 抵消 base h1 的
+				     medium 字重，保持与原 p 一致的视觉） -->
+				<h1 class="truncate font-normal text-text-primary {compact ? 'text-sm' : 'text-md'}">
 					{peerName || '会话'}
-				</p>
+				</h1>
 			<p class="{typing.active ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'} text-xs" >
 				{#if typing.active}
 					正在输入…

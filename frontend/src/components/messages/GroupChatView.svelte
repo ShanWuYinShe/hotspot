@@ -215,9 +215,11 @@
 
 			<!-- Name + status -->
 			<div class="flex-1 min-w-0">
-				<p class="truncate text-text-primary {compact ? 'text-sm' : 'text-md'}">
+				<!-- 群名用 h1：每页唯一主标题（a11y；font-normal 抵消 base h1 的
+				     medium 字重，保持与原 p 一致的视觉） -->
+				<h1 class="truncate font-normal text-text-primary {compact ? 'text-sm' : 'text-md'}">
 					{groupName || '群聊'}
-				</p>
+				</h1>
 				<p class="{typing.active ? 'text-accent-default' : 'text-text-secondary'} text-xs" >
 					{#if typing.active}
 						{typing.actorName || '有人'}正在输入…

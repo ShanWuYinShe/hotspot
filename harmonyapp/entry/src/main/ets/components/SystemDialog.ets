@@ -50,7 +50,7 @@ export struct SystemDialog {
           if (this.confirmVariant === 'danger') {
             Row() {
               Text('⚠️')
-                .fontSize(20)
+                .fontSize(DesignConstants.FONT.SIZE.XL)
             }
             .width(44)
             .height(44)

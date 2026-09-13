@@ -35,13 +35,15 @@
 		type="button"
 		aria-pressed={active}
 		disabled={disabled}
+		// 注意不用 surface-ghost：它声明 border: solid transparent 且层叠在后，
+		// 会覆盖下面的 border-border-default。底色/边框由激活态显式承载。
 		class={cn(
-			'hit-slop inline-flex items-center justify-center gap-1 rounded-full outline-none leading-none transition-colors cursor-pointer surface-ghost focus-visible:ring-2 focus-visible:ring-accent-default',
+			'hit-slop inline-flex items-center justify-center gap-1 rounded-full outline-none leading-none transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-accent-default',
 			sizeClasses[size],
 			disabled && 'pointer-events-none opacity-subtle',
 			active
 				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold active:bg-interactive-active'
-				: 'text-text-secondary',
+				: 'border border-border-default bg-surface-primary text-text-secondary hover:bg-accent-soft',
 			className
 		)}
 		onclick={onClick}
@@ -60,7 +62,7 @@
 			sizeClasses[size],
 			active
 				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold'
-				: 'text-text-secondary',
+				: 'border border-border-default bg-surface-primary text-text-secondary',
 			className
 		)}
 	>

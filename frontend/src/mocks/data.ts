@@ -122,6 +122,16 @@ export const mockFollowers = mockUsers.slice(2, 7).map((u, i) => ({
 // 距离/在线角标/兴趣 tag（此前恒 offline + location:null，卡片信息缺失）。
 const USER_PRESENCES = ["online", "offline", "online", "offline", "online", "offline", "online"] as const;
 export const USER_TAGS = ["摄影", "户外", "音乐", "美食", "阅读", "旅行", "健身"] as const;
+// 用户简介（与 mockUsers 下标对齐；user_lumos 首项须与 mockAccount.bio 一致）。
+export const USER_BIOS = [
+  "记录城市光影",
+  "户外爱好者，周末不是在山里就是在去山里的路上",
+  "黑胶收藏者，偶尔在户部山弹唱角修串",
+  "咖啡馆猎人，徐州的馆子吃了个遍",
+  "读书博主，雨天与书更配",
+  "背包客，下一站大理",
+  "健身打卡中，深蹲架见",
+] as const;
 
 export function mockUserItem(u: MockUser) {
   const i = Math.max(0, mockUsers.indexOf(u));
