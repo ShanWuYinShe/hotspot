@@ -65,8 +65,11 @@ func TestServiceBatchPresignRejectsAnyInvalidItem(t *testing.T) {
 	}
 }
 
+// magicPNG PNG 文件头魔数，供 Complete 成功路径 stub 复用。
+var magicPNG = []byte("\x89PNG\r\n\x1a\n")
+
 func TestServiceCompleteSemantics(t *testing.T) {
-	provider := &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}}
+	provider := &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}, prefix: magicPNG}
 	repo := NewInMemoryRepository()
 	service := NewServiceWithRepoAndProvider(repo, provider)
 
@@ -132,6 +135,83 @@ func TestServiceCompleteRejectsMetadataMismatch(t *testing.T) {
 			t.Fatalf("expected ErrUploadConflict, got %v", err)
 		}
 	})
+}
+
+// 魔数嗅探（P2-1）：complete 阶段图片类别必须通过魔数校验，防止以声明的
+// Content-Type 伪装非图片内容（预签名直传的 Content-Type 由客户端控制）。
+func TestServiceCompleteRejectsMagicMismatch(t *testing.T) {
+	newAvatarUpload := func(t *testing.T, uploadID string) *Service {
+		t.Helper()
+		repo := NewInMemoryRepository()
+		_ = repo.Save(context.Background(), pendingUpload{UploadID: uploadID, UserID: "u1", StorageKey: "uploads/u1/" + uploadID + ".png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
+		return NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}})
+	}
+
+	t.Run("rejects html content declared as png", func(t *testing.T) {
+		service := newAvatarUpload(t, "upload_html")
+		service.provider.(*mediaStubProvider).prefix = []byte("<html><body>evil</body></html>")
+		if _, err := service.Complete(mediaContextWithUserAndKey("u1", "key1"), "upload_html"); !errors.Is(err, ErrUploadConflict) {
+			t.Fatalf("expected ErrUploadConflict, got %v", err)
+		}
+	})
+
+	t.Run("rejects empty object body", func(t *testing.T) {
+		service := newAvatarUpload(t, "upload_empty")
+		if _, err := service.Complete(mediaContextWithUserAndKey("u1", "key1"), "upload_empty"); !errors.Is(err, ErrUploadConflict) {
+			t.Fatalf("expected ErrUploadConflict, got %v", err)
+		}
+	})
+
+	t.Run("propagates read prefix failure", func(t *testing.T) {
+		service := newAvatarUpload(t, "upload_readerr")
+		service.provider.(*mediaStubProvider).prefixErr = errors.New("read boom")
+		if _, err := service.Complete(mediaContextWithUserAndKey("u1", "key1"), "upload_readerr"); err == nil || errors.Is(err, ErrUploadConflict) {
+			t.Fatalf("expected propagated read error, got %v", err)
+		}
+	})
+
+	t.Run("accepts real png magic", func(t *testing.T) {
+		service := newAvatarUpload(t, "upload_png")
+		service.provider.(*mediaStubProvider).prefix = magicPNG
+		if _, err := service.Complete(mediaContextWithUserAndKey("u1", "key1"), "upload_png"); err != nil {
+			t.Fatalf("expected success, got %v", err)
+		}
+	})
+
+	t.Run("skips non image categories", func(t *testing.T) {
+		repo := NewInMemoryRepository()
+		_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_file", UserID: "u1", StorageKey: "uploads/u1/upload_file.bin", FileName: "a.bin", DeclaredFileSize: 100, DeclaredMimeType: "application/pdf", Category: CategoryChatFile})
+		service := NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "application/pdf"}})
+		if _, err := service.Complete(mediaContextWithUserAndKey("u1", "key1"), "upload_file"); err != nil {
+			t.Fatalf("expected non-image category to skip magic check, got %v", err)
+		}
+	})
+}
+
+func TestMagicMatchesImageType(t *testing.T) {
+	cases := []struct {
+		name     string
+		prefix   []byte
+		mimeType string
+		want     bool
+	}{
+		{"jpeg", []byte{0xFF, 0xD8, 0xFF, 0xE0}, "image/jpeg", true},
+		{"jpeg truncated", []byte{0xFF, 0xD8}, "image/jpeg", false},
+		{"png", magicPNG, "image/png", true},
+		{"png broken", []byte("\x89PNG\x00\x00"), "image/png", false},
+		{"gif87a", []byte("GIF87a rest"), "image/gif", true},
+		{"gif89a", []byte("GIF89a rest"), "image/gif", true},
+		{"gif wrong", []byte("GIF86a rest"), "image/gif", false},
+		{"webp", []byte("RIFF\xf4\x01\x00\x00WEBPVP8 "), "image/webp", true},
+		{"webp riff only", []byte("RIFF\x00\x00\x00\x00JPEG"), "image/webp", false},
+		{"html as png", []byte("<html>"), "image/png", false},
+		{"non image passthrough", []byte("anything"), "application/pdf", true},
+	}
+	for _, tc := range cases {
+		if got := magicMatchesImageType(tc.prefix, tc.mimeType); got != tc.want {
+			t.Fatalf("%s: magicMatchesImageType=%v, want %v", tc.name, got, tc.want)
+		}
+	}
 }
 
 func TestServicePropagatesProviderAndRepositoryErrors(t *testing.T) {

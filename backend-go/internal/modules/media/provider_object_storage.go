@@ -83,6 +83,33 @@ func (p *ObjectStorageProvider) Head(ctx context.Context, storageKey string) (Ob
 	return ObjectMetadata{FileSize: size, MimeType: mimeType}, nil
 }
 
+// ReadPrefix fetches at most n leading bytes of the object via a range GET
+// (S3 semantics: 206 Partial Content; a server ignoring Range answers 200
+// with the full body — the LimitReader caps the read either way).
+func (p *ObjectStorageProvider) ReadPrefix(ctx context.Context, storageKey string, n int64) ([]byte, error) {
+	signedURL, err := p.presignInternalURL(ctx, http.MethodGet, storageKey, 5*time.Minute)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, signedURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Range", fmt.Sprintf("bytes=0-%d", n-1))
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrUploadNotReady
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("media object storage read prefix failed: status %d", resp.StatusCode)
+	}
+	return io.ReadAll(io.LimitReader(resp.Body, n))
+}
+
 // PresignGet returns a client-facing absolute URL that grants short-term
 // read access to the object at storageKey. The URL is signed against the
 // public (client-facing) endpoint so it is valid through the reverse proxy.

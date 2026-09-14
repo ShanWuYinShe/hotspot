@@ -37,6 +37,8 @@ type mediaStubProvider struct {
 	presignErr  error
 	headResp    ObjectMetadata
 	headErr     error
+	prefix      []byte
+	prefixErr   error
 }
 
 func (p *mediaStubProvider) Presign(context.Context, PresignFileInput, string) (PresignedUpload, error) {
@@ -47,6 +49,9 @@ func (p *mediaStubProvider) PresignGet(context.Context, string, time.Duration) (
 }
 func (p *mediaStubProvider) Head(context.Context, string) (ObjectMetadata, error) {
 	return p.headResp, p.headErr
+}
+func (p *mediaStubProvider) ReadPrefix(context.Context, string, int64) ([]byte, error) {
+	return p.prefix, p.prefixErr
 }
 
 func mediaAuthedRequest(method, target, body string) *http.Request {
@@ -122,7 +127,7 @@ func TestMediaHandlerCompleteMapsSpecCodes(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_ready", UserID: "u1", StorageKey: "uploads/u1/upload_ready.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
-	handler := NewHandler(NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}}))
+	handler := NewHandler(NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}, prefix: magicPNG}))
 
 	notFoundReq := mediaAuthedCompleteRequest("upload_missing", "abcd1234abcd1234abcd1234abcd1234")
 	notFoundRR := httptest.NewRecorder()
@@ -163,7 +168,7 @@ func TestMediaHandlerCompleteMapsSpecCodes(t *testing.T) {
 func TestMediaHandlerCompleteSucceedsWithoutIdempotencyKey(t *testing.T) {
 	repo := NewInMemoryRepository()
 	_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_naked", UserID: "u1", StorageKey: "uploads/u1/upload_naked.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
-	handler := NewHandler(NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}}))
+	handler := NewHandler(NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}, prefix: magicPNG}))
 
 	req := mediaAuthedCompleteRequest("upload_naked", "")
 	rr := httptest.NewRecorder()

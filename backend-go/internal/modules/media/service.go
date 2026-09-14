@@ -1,6 +1,7 @@
 package media
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/hex"
@@ -165,6 +166,14 @@ func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia,
 	if err := validateCompletedObjectMetadata(upload, meta); err != nil {
 		return UploadedMedia{}, err
 	}
+	// 魔数嗅探（P2-1）：图片类别在 complete 阶段读取对象前 512 字节校验魔数，
+	// 与声明/实际 Content-Type 比对——预签名直传的 Content-Type 由客户端控制，
+	// 仅凭声明无法防止把非图片内容（如 HTML）伪装成图片（存储型 XSS/解析器混淆）。
+	if isImageCategory(upload.Category) {
+		if err := s.sniffImageMagic(ctx, upload.StorageKey, normalizeMimeType(meta.MimeType)); err != nil {
+			return UploadedMedia{}, err
+		}
+	}
 	file := UploadedMedia{
 		FileID:   buildFileID(upload.UploadID, upload.UserID),
 		FileSize: meta.FileSize,
@@ -318,6 +327,51 @@ func normalizeMimeType(value string) string {
 		return strings.TrimSpace(value)
 	}
 	return mediaType
+}
+
+// magicSniffLen 魔数嗅探读取长度（覆盖 PNG/WebP 文件头 + RIFF 头部）。
+const magicSniffLen = 512
+
+// sniffImageMagic 读取对象前 magicSniffLen 字节，校验魔数与完成的 MIME 一致；
+// 读取失败按错误返回（fail-closed），不匹配返回 ErrUploadConflict。
+func (s *Service) sniffImageMagic(ctx context.Context, storageKey, mimeType string) error {
+	prefix, err := s.provider.ReadPrefix(ctx, storageKey, magicSniffLen)
+	if err != nil {
+		observability.L().Error("media.complete read prefix failed", "error", err, "storage_key", storageKey)
+		return err
+	}
+	if !magicMatchesImageType(prefix, mimeType) {
+		observability.L().Warn("media.complete magic mismatch", "mime_type", mimeType, "storage_key", storageKey)
+		return ErrUploadConflict
+	}
+	return nil
+}
+
+// isImageCategory 报告该类别是否为图片白名单类别（仅图片启用魔数校验）。
+func isImageCategory(category MediaCategory) bool {
+	switch category {
+	case CategoryAvatar, CategoryGroupAvatar, CategoryMomentImage, CategoryChatImage:
+		return true
+	default:
+		return false
+	}
+}
+
+// magicMatchesImageType 手写魔数表：判断前缀字节是否与图片 MIME 一致。
+// 非图片 MIME（当前不会传入）一律放行。
+func magicMatchesImageType(prefix []byte, mimeType string) bool {
+	switch mimeType {
+	case "image/jpeg":
+		return len(prefix) >= 3 && prefix[0] == 0xFF && prefix[1] == 0xD8 && prefix[2] == 0xFF
+	case "image/png":
+		return bytes.HasPrefix(prefix, []byte("\x89PNG\r\n\x1a\n"))
+	case "image/gif":
+		return bytes.HasPrefix(prefix, []byte("GIF87a")) || bytes.HasPrefix(prefix, []byte("GIF89a"))
+	case "image/webp":
+		return len(prefix) >= 12 && string(prefix[0:4]) == "RIFF" && string(prefix[8:12]) == "WEBP"
+	default:
+		return true
+	}
 }
 
 func buildFileID(uploadID, userID string) string {

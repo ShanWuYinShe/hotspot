@@ -1,6 +1,7 @@
 package media
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -555,5 +556,44 @@ func TestPresignURLRejectsInvalidEndpointURL(t *testing.T) {
 	_, err := provider.presignURL(context.Background(), http.MethodHead, "uploads/u1/upload_1.png", 5*time.Minute)
 	if err == nil {
 		t.Fatal("expected error for invalid endpoint URL, got nil")
+	}
+}
+
+// ReadPrefix 魔数嗅探取数（P2-1）：Range GET 读取对象前 n 字节。
+func TestObjectStorageProviderReadPrefix(t *testing.T) {
+	var gotRange string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("expected GET request, got %s", r.Method)
+		}
+		gotRange = r.Header.Get("Range")
+		if r.URL.Path == "/hotspot/uploads/u1/missing.png" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "image/png")
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write([]byte("\x89PNG\r\n\x1a\nrest-of-body-ignored"))
+	}))
+	defer server.Close()
+
+	provider := NewObjectStorageProvider(config.Config{
+		S3Endpoint:       server.URL,
+		S3Bucket:         "hotspot",
+		S3ForcePathStyle: true,
+	})
+	prefix, err := provider.ReadPrefix(context.Background(), "uploads/u1/upload_1.png", 512)
+	if err != nil {
+		t.Fatalf("ReadPrefix returned error: %v", err)
+	}
+	if gotRange != "bytes=0-511" {
+		t.Fatalf("expected range header bytes=0-511, got %q", gotRange)
+	}
+	if !bytes.HasPrefix(prefix, magicPNG) {
+		t.Fatalf("unexpected prefix: %q", prefix)
+	}
+
+	if _, err := provider.ReadPrefix(context.Background(), "uploads/u1/missing.png", 512); err != ErrUploadNotReady {
+		t.Fatalf("expected ErrUploadNotReady, got %v", err)
 	}
 }
