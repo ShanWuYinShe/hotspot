@@ -18,6 +18,7 @@ import { EmptyState } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemDialog } from '../../../components/SystemDialog';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
@@ -116,6 +117,8 @@ export struct GroupDetailPage {
   @State applicationsLoadingMore: boolean = false;
   @State isJoining: boolean = false;
   @State isLeaving: boolean = false;
+  /** 离开群组二次确认显隐（对齐 GroupCard / Web 同页：危险操作防误触）。 */
+  @State showLeaveConfirm: boolean = false;
   @State joinPassword: string = '';
   private groupId: string = '';
   @State handlingApplicationIds: string[] = [];
@@ -1250,9 +1253,23 @@ export struct GroupDetailPage {
                     fullWidth: true,
                     shadowed: true,
                     disabled: this.isLeaving,
-                    onPress: () => { this.leaveGroup(); }
+                    onPress: () => { this.showLeaveConfirm = true; }
                   })
                     .opacity(this.isLeaving ? DesignConstants.OPACITY.LOADING : 1)
+
+                  // 离开群组二次确认（对齐 GroupCard.ets / Web 同页规范形态）
+                  SystemDialog({
+                    visible: this.showLeaveConfirm,
+                    title: '退出群组',
+                    description: `退出「${this.groupInfo?.group?.name ?? '该群组'}」后需要重新申请加入`,
+                    confirmText: '退出',
+                    confirmVariant: 'danger',
+                    onCancel: () => { this.showLeaveConfirm = false; },
+                    onConfirm: () => {
+                      this.showLeaveConfirm = false;
+                      this.leaveGroup();
+                    }
+                  })
                 } else {
                   if (this.groupInfo?.join_method === 'password') {
                     SystemInput({

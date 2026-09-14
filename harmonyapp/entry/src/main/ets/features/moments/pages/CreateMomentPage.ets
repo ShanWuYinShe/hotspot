@@ -734,6 +734,13 @@ export struct CreateMomentPage {
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getOverlayBorderColor() })
       .margin({ top: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF })
       .onClick(() => this.removeImage(index))
+      // 触控热区：视觉 28 → 命中区 44（对齐 LAYOUT.MIN_HIT_TARGET，同类小钮同款）
+      .responseRegion({
+        x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.STATUS_ICON_SIZE) / 2,
+        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.STATUS_ICON_SIZE) / 2,
+        width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+      })
     }
     .width('100%')
     .height('100%')

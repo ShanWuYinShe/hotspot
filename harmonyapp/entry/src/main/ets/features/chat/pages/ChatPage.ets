@@ -1554,7 +1554,7 @@ export struct ChatPage {
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
       const param = context.pathInfo.param as Record<string, Object> | undefined;
-      if (param) {
+      if (param && param.chatId) {
         this.chatId = String(param.chatId ?? '');
         this.chatType = String(param.chatType ?? 'private_chat') as 'private_chat' | 'group_chat';
         this.title = String(param.title ?? '聊天');
@@ -1563,7 +1563,11 @@ export struct ChatPage {
         this.targetPresenceOnline = this.targetPresenceText === '在线';
         this.initChatData();
       } else {
+        // 缺参兜底（对齐 GroupDetailPage 缺群组ID模式）：直接进错误态，
+        // 不调 initChatData，否则 isLoading 恒 true 陷入无限加载。
         hilog.error(DOMAIN_NUMBER, TAG, 'ChatPage 缺少路由参数');
+        this.errorMessage = '缺少聊天参数';
+        this.isLoading = false;
       }
     })
   }
