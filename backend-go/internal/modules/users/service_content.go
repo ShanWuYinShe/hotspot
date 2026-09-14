@@ -47,6 +47,14 @@ func (s *Service) ChatSettingsFor(ctx context.Context, userID string) (allowPriv
 	return string(settings.AllowPrivateChat), true, nil
 }
 
+// SettingsFor 按 user_id 读取目标用户的完整设置，纯读、无写副作用。
+// 与 GetMySettings 的区别：后者在设置行缺失时会写入默认行（读路径带写副作用），
+// 因此不能用于探测其他用户（会凭空为对方插入 settings 行，审计 F-10）。
+// found=false 表示该用户从未保存过设置，调用方应按默认值处理。
+func (s *Service) SettingsFor(ctx context.Context, userID string) (UserSettings, bool, error) {
+	return s.repo.GetSettings(ctx, userID)
+}
+
 func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsRequest) error {
 	startedAt := time.Now()
 	observability.L().Info("users.update_my_settings started")

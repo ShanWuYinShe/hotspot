@@ -32,7 +32,10 @@ type Runtime struct {
 
 type userReader interface {
 	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
-	GetMySettings(context.Context) (users.UserSettings, error)
+	// SettingsFor 按 user_id 纯读目标用户设置（无写副作用）。此前用
+	// GetMySettings 伪造对方 Principal 探测，其「设置行缺失即写默认行」的
+	// 副作用会为对方凭空插入 settings 行（审计 F-10）。
+	SettingsFor(context.Context, string) (users.UserSettings, bool, error)
 	BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error)
 	Relationship(context.Context, string, string) (users.Relationship, error)
 }
@@ -264,12 +267,18 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 	if callerBlocked {
 		return httpx.Forbidden(httpx.ReasonBlockedByUser, "你已拉黑对方，无法发送")
 	}
-	settings, settingsErr := s.users.GetMySettings(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: targetUserID, SessionID: "private-message-probe"}))
+	settings, settingsFound, settingsErr := s.users.SettingsFor(ctx, targetUserID)
 	if settingsErr != nil {
 		return settingsErr
 	}
+	allowPrivateChat := users.ChatPermEveryone
+	if settingsFound {
+		allowPrivateChat = settings.AllowPrivateChat
+	}
+	// 对方从未保存设置时按默认处理：允许所有人私聊（与 users.defaultSettings 的
+	// ChatPermEveryone 一致，见 spec 用户设置默认值）。
 	isMutual := item.Relation != nil && item.Relation.IsFollowing && item.Relation.IsFollowedBy
-	switch settings.AllowPrivateChat {
+	switch allowPrivateChat {
 	case users.ChatPermNobody:
 		return httpx.Forbidden(httpx.ReasonPrivacySetting, "对方隐私设置不允许")
 	case users.ChatPermFriends:

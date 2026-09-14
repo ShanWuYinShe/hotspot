@@ -99,8 +99,8 @@ func (u *stubUserReader) OpenTheDoor(_ context.Context, userID string) (users.Us
 	}
 	return u.item, u.found, nil
 }
-func (u *stubUserReader) GetMySettings(_ context.Context) (users.UserSettings, error) {
-	return u.settings, u.settingsErr
+func (u *stubUserReader) SettingsFor(_ context.Context, _ string) (users.UserSettings, bool, error) {
+	return u.settings, true, u.settingsErr
 }
 
 func (u *stubUserReader) BlockStateBetween(_ context.Context, _ string, _ string) (callerBlocked, targetBlocked bool, err error) {

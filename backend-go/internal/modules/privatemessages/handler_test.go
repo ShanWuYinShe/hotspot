@@ -88,8 +88,8 @@ func (s *privateMessageUserStub) OpenTheDoor(context.Context, string) (users.Use
 	return s.item, s.ok, s.openErr
 }
 
-func (s *privateMessageUserStub) GetMySettings(context.Context) (users.UserSettings, error) {
-	return s.settings, s.setErr
+func (s *privateMessageUserStub) SettingsFor(context.Context, string) (users.UserSettings, bool, error) {
+	return s.settings, true, s.setErr
 }
 
 func (s *privateMessageUserStub) BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error) {

@@ -12,11 +12,13 @@ import (
 )
 
 type stubUserRepo struct {
-	profile       MyProfile
-	profileFound  bool
-	profileErr    error
-	putProfileErr error
-	deleteErr     error
+	profile      MyProfile
+	profileFound bool
+	// putSettingsCalls 统计 PutSettings 调用次数（F-10 纯读断言用）。
+	putSettingsCalls int
+	profileErr       error
+	putProfileErr    error
+	deleteErr        error
 
 	profiles    map[string]MyProfile
 	profilesErr error
@@ -124,6 +126,8 @@ func (r *stubUserRepo) GetSettingsBatch(_ context.Context, userIDs []string) (ma
 	return result, nil
 }
 func (r *stubUserRepo) PutSettings(_ context.Context, _ string, _ UserSettings) error {
+	// 计数供 F-10 用例断言「纯读路径不写库」。
+	r.putSettingsCalls++
 	return r.putSettingsErr
 }
 func (r *stubUserRepo) SearchProfiles(_ context.Context, _ SearchUsersRequest) (PaginatedProfiles, error) {
@@ -690,5 +694,44 @@ func TestServiceFollowSkipsNotificationWhenAlreadyFollowing(t *testing.T) {
 	}
 	if len(second.Items) != len(first.Items) {
 		t.Fatalf("repeat follow must not add notifications: before=%d after=%d", len(first.Items), len(second.Items))
+	}
+}
+
+// 审计 F-10：SettingsFor 是纯读，不得像 GetMySettings 那样在设置行缺失时
+// 写入默认行（读路径带写副作用会为被探测用户凭空插入 settings 行）。
+func TestServiceSettingsForIsReadOnly(t *testing.T) {
+	// 未找到设置：返回 found=false，且不产生任何写入。
+	repo := &stubUserRepo{}
+	svc := NewServiceWithRepo(repo)
+	_, found, err := svc.SettingsFor(userCtx("u1"), "u2")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if found {
+		t.Fatal("found must be false when the user never saved settings")
+	}
+	if repo.putSettingsCalls != 0 {
+		t.Fatalf("SettingsFor must not write: putSettingsCalls=%d", repo.putSettingsCalls)
+	}
+
+	// 对照组：GetMySettings 在缺行时会补写默认行（既有行为，仅自读端点使用）。
+	repo2 := &stubUserRepo{}
+	svc2 := NewServiceWithRepo(repo2)
+	if _, err := svc2.GetMySettings(userCtx("u1")); err != nil {
+		t.Fatalf("get_my_settings: %v", err)
+	}
+	if repo2.putSettingsCalls == 0 {
+		t.Fatal("GetMySettings is expected to backfill defaults (contrast case)")
+	}
+
+	// 已有设置：原样返回。
+	repo3 := &stubUserRepo{settingsFound: true, settings: UserSettings{AllowPrivateChat: ChatPermFriends}}
+	svc3 := NewServiceWithRepo(repo3)
+	got, found, err := svc3.SettingsFor(userCtx("u1"), "u2")
+	if err != nil || !found {
+		t.Fatalf("found=%v err=%v", found, err)
+	}
+	if got.AllowPrivateChat != ChatPermFriends {
+		t.Fatalf("AllowPrivateChat = %q, want %q", got.AllowPrivateChat, ChatPermFriends)
 	}
 }
