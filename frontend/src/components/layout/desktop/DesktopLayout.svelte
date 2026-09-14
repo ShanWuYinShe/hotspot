@@ -105,21 +105,29 @@
 		class="relative z-[var(--cst-z-chrome)] shrink-0 flex items-center border-b border-border-default bg-surface-primary px-5 gap-2"
 		style="height:var(--cst-desktop-header-height);"
 	>
-		<!-- Logo / 侧边栏开关：展开态分开（Logo 回首页 + 独立收起钮），折叠态二合一
-		     （Logo 即展开开关，与 Harness 式 rail 头一致，省一个顶栏坑位）。
+		<!-- Logo / 侧边栏开关：展开态分开（Logo 回首页 + 独立收起钮），折叠态
+		     「同一坑位」二合一——默认显示 Logo，hover 原位淡入展开图标，点击展开。
 		     Logo hover 不再套整片灰胶囊（hover-btn rounded-full 在图文组合上显笨重），
-		     改为品牌式反馈：Logo 微放大 + 字色切 accent，本体变化一眼可辨。 -->
+		     展开态改为品牌式反馈：Logo 微放大 + 字色切 accent，本体变化一眼可辨。 -->
 		{#if isSidebarCollapsed}
 			<button
 				type="button"
-				class="group flex items-center gap-1.5 mr-3 select-none rounded-full focus-ring px-1.5 py-1 hover:bg-interactive-hover"
+				class="group relative mr-3 flex size-9 shrink-0 select-none items-center justify-center rounded-full focus-ring hover:bg-interactive-hover"
 				aria-label="展开侧边栏"
 				aria-pressed={isSidebarCollapsed}
 				title="展开侧边栏"
 				onclick={() => (isSidebarCollapsed = false)}
 			>
-				<img src={imgHotSpot} alt="" class="rounded-full object-cover shrink-0 size-7 transition-transform duration-rapid group-hover:scale-105 group-active:scale-95" />
-				<PanelLeftOpen size={14} strokeWidth={2} class="shrink-0 text-text-secondary transition-colors group-hover:text-accent-default" />
+				<img
+					src={imgHotSpot}
+					alt="HotSpot"
+					class="size-7 rounded-full object-cover transition-opacity duration-rapid group-hover:opacity-0"
+				/>
+				<PanelLeftOpen
+					size={18}
+					strokeWidth={1.75}
+					class="absolute text-text-secondary opacity-0 transition-opacity duration-rapid group-hover:text-accent-default group-hover:opacity-100"
+				/>
 			</button>
 		{:else}
 			<button
@@ -135,7 +143,7 @@
 				<span class="tracking-tight text-lg text-text-primary transition-colors group-hover:text-accent-default">HotSpot</span>
 			</button>
 
-			<!-- 侧边栏折叠开关：展开态独立存在；折叠态收进上面的 Logo 二合一按钮 -->
+			<!-- 侧边栏折叠开关：展开态独立存在；折叠态与 Logo 同坑位 hover 切换（见上） -->
 			<button
 				type="button"
 				class="header-action hit-slop flex size-9 shrink-0 items-center justify-center rounded-full focus-ring text-text-secondary"

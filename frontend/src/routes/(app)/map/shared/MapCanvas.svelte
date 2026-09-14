@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { MapBounds } from './location-shared';
-	import { lngToWorldX, latToWorldY, worldXToLng, worldYToLat, wgs84ToGcj02, gcj02ToWgs84, tilesForViewport, viewportToBounds, type TileItem } from './map-projection';
+	import { lngToWorldX, latToWorldY, worldXToLng, worldYToLat, wgs84ToGcj02, gcj02ToWgs84, tilesForViewport, viewportToBounds, MAP_MIN_ZOOM, MAP_MAX_ZOOM, type TileItem } from './map-projection';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
 
 	// 地图画布：自渲染 XYZ 瓦片层（高德 /amap-tiles/ GCJ-02 · OSM /osm-tiles/
@@ -20,8 +20,8 @@
 		zoom = $bindable(14),
 		bounds = $bindable({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 }),
 		stableBounds = $bindable({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 }),
-		minZoom = 13,
-		maxZoom = 16,
+		minZoom = MAP_MIN_ZOOM,
+		maxZoom = MAP_MAX_ZOOM,
 		onMapTap
 	}: {
 		center: { lat: number; lng: number } | null;

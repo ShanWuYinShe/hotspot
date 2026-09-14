@@ -9,6 +9,7 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, fetchMapCanvasByViewport, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
+	import { MAP_MIN_ZOOM, MAP_MAX_ZOOM } from '../shared/map-projection';
 	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
@@ -305,8 +306,8 @@
 				class="flex items-center justify-center size-9 rounded-t-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
 				style="border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);"
 				aria-label="放大"
-				disabled={mapZoom >= 16}
-				onclick={() => (mapZoom = Math.min(16, mapZoom + 1))}
+				disabled={mapZoom >= MAP_MAX_ZOOM}
+				onclick={() => (mapZoom = Math.min(MAP_MAX_ZOOM, mapZoom + 1))}
 			>
 				<Plus class="size-4" strokeWidth={1.75} />
 			</button>
@@ -314,8 +315,8 @@
 				type="button"
 				class="flex items-center justify-center size-9 rounded-b-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
 				aria-label="缩小"
-				disabled={mapZoom <= 13}
-				onclick={() => (mapZoom = Math.max(13, mapZoom - 1))}
+				disabled={mapZoom <= MAP_MIN_ZOOM}
+				onclick={() => (mapZoom = Math.max(MAP_MIN_ZOOM, mapZoom - 1))}
 			>
 				<Minus class="size-4" strokeWidth={1.75} />
 			</button>

@@ -5,6 +5,13 @@
 
 export const TILE_SIZE = 256;
 
+/* ── 地图缩放级别界限 ─────────────────────────────────────────────
+   画布滚轮/捏合钳制（MapCanvas）与桌面/移动 +/- 按钮（LocationDesktop/Mobile）
+   共用，勿在调用处散落字面量。上限 19：高德栅格与 OSM 系瓦片源的支持级别；
+   下限 3 放开到洲际视野（此前 13~16 且初始 14，向上仅剩两级）。 */
+export const MAP_MIN_ZOOM = 3;
+export const MAP_MAX_ZOOM = 19;
+
 /* ── WGS-84 → GCJ-02 纠偏（国测局标准公开算法，中国境外直通） ── */
 
 const GCJ_A = 6378245; // 克拉索夫斯基椭球长半轴
