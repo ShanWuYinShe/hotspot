@@ -185,7 +185,7 @@ func (r *InMemoryRepository) Update(_ context.Context, req UpdateGroupMessageReq
 	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: msg.SentAt, Content: req.Content}, nil
 }
 
-func (r *InMemoryRepository) Recall(_ context.Context, req RecallGroupMessageRequest) (MessageEventMeta, error) {
+func (r *InMemoryRepository) Recall(_ context.Context, window time.Duration, req RecallGroupMessageRequest) (MessageEventMeta, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -202,10 +202,10 @@ func (r *InMemoryRepository) Recall(_ context.Context, req RecallGroupMessageReq
 		return MessageEventMeta{}, ErrPermissionDenied
 	}
 
-	// 检查撤回时间窗口（2分钟）
+	// 检查撤回时间窗（service 从 AppConfig 取值传入）；window<=0 = 撤回禁用。
 	sentTime, err := time.Parse(time.RFC3339Nano, msg.SentAt)
 	if err == nil {
-		if time.Since(sentTime) > 2*time.Minute {
+		if window <= 0 || time.Since(sentTime) > window {
 			return MessageEventMeta{}, ErrMessageRecallWindow
 		}
 	}

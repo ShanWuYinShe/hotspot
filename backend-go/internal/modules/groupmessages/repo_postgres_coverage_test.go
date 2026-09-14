@@ -85,7 +85,7 @@ func TestPostgresSendAndUpdateAndRecall(t *testing.T) {
 		t.Fatalf("update: %#v err=%v", updated, err)
 	}
 
-	recalled, err := repo.Recall(ctx, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: "u1"})
+	recalled, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: "u1"})
 	if err != nil || recalled.MessageID != sent.MessageID {
 		t.Fatalf("recall: %#v err=%v", recalled, err)
 	}
@@ -124,7 +124,7 @@ func TestPostgresGroupMessagesNotConfigured(t *testing.T) {
 	if _, err := repo.Update(ctx, UpdateGroupMessageRequest{}); err != persistence.ErrNotImplemented {
 		t.Fatalf("update: %v", err)
 	}
-	if _, err := repo.Recall(ctx, RecallGroupMessageRequest{}); err != persistence.ErrNotImplemented {
+	if _, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{}); err != persistence.ErrNotImplemented {
 		t.Fatalf("recall: %v", err)
 	}
 }

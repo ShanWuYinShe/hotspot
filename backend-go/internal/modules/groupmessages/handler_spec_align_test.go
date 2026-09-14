@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/httpx"
 )
@@ -135,7 +136,7 @@ func (r *specAdminRepo) History(context.Context, string, *PaginationParams) (Pag
 func (r *specAdminRepo) Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error) {
 	return MessageEventMeta{}, nil
 }
-func (r *specAdminRepo) Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error) {
+func (r *specAdminRepo) Recall(context.Context, time.Duration, RecallGroupMessageRequest) (MessageEventMeta, error) {
 	return MessageEventMeta{}, nil
 }
 func (r *specAdminRepo) RecallAsAdmin(context.Context, string) (MessageEventMeta, error) {

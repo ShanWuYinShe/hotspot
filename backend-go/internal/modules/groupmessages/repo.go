@@ -1,6 +1,9 @@
 package groupmessages
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type MessageEventMeta struct {
 	GroupID   string
@@ -23,7 +26,10 @@ type Repository interface {
 	History(context.Context, string, *PaginationParams) (PaginatedGroupMessages, error)
 
 	Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error)
-	Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error)
+	// Recall 撤回消息。window 为撤回时间窗（AppConfig.limits.
+	// message_recall_window_seconds，由 service 从 appConfig 取值传入）；
+	// window<=0 表示撤回禁用（spec chat.md：0=禁用），一律拒绝。
+	Recall(ctx context.Context, window time.Duration, req RecallGroupMessageRequest) (MessageEventMeta, error)
 	// RecallAsAdmin recalls a group message regardless of who sent it, with no
 	// recall-window enforcement. Used by the groups module's admin guard
 	// endpoint groups/admin/messages/recall (spec api_spec_group.md). Only

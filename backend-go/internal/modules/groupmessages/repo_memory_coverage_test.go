@@ -57,16 +57,16 @@ func TestMemoryGroupMessageLifecycle(t *testing.T) {
 	}
 
 	// Recall
-	recalled, err := repo.Recall(ctx, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: "u1"})
+	recalled, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: "u1"})
 	if err != nil || recalled.MessageID != sent.MessageID {
 		t.Fatalf("recall: %#v err=%v", recalled, err)
 	}
 	// 再次 recall → 错误（已撤回）
-	if _, err := repo.Recall(ctx, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: "u1"}); err == nil {
+	if _, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: "u1"}); err == nil {
 		t.Fatal("double recall must fail")
 	}
 	// 不存在的消息 recall → 错误
-	if _, err := repo.Recall(ctx, RecallGroupMessageRequest{MessageID: "missing", UserID: "u1"}); err == nil {
+	if _, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{MessageID: "missing", UserID: "u1"}); err == nil {
 		t.Fatal("recall missing must fail")
 	}
 }
@@ -150,5 +150,17 @@ func TestMemoryMessageExists(t *testing.T) {
 	exists, senderID, err := repo.MessageExists(ctx, sent.MessageID)
 	if err != nil || !exists || senderID != "u1" {
 		t.Fatalf("message exists: %v %q %v", exists, senderID, err)
+	}
+}
+
+// window<=0 = 撤回禁用（spec chat.md → message_recall_window_seconds 0=禁用）。
+func TestMemoryRecallDisabledWhenWindowZero(t *testing.T) {
+	repo := NewInMemoryRepository()
+	sent, err := repo.Send(context.Background(), SendGroupMessageRequest{GroupID: "g1", SenderUserID: "u1", Type: "text", Content: "hi"})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	if _, err := repo.Recall(context.Background(), 0, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: "u1"}); err != ErrMessageRecallWindow {
+		t.Fatalf("expected ErrMessageRecallWindow when window disabled, got %v", err)
 	}
 }

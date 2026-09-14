@@ -76,6 +76,21 @@ func (s *Service) SetShareValidator(v shareValidator) { s.shares = v }
 // daily quota). Optional: nil disables the quota check.
 func (s *Service) SetAppConfig(source appconfig.Source) { s.appConfig = source }
 
+// recallWindow 返回消息撤回时间窗（spec chat.md → AppConfig.limits.
+// message_recall_window_seconds）。appConfig 未接线时回退默认 120s（与
+// appconfig 默认配置一致）；配置 0/负值按 0 处理 = 撤回禁用。
+func (s *Service) recallWindow(ctx context.Context) time.Duration {
+	const fallbackSeconds = 120
+	seconds := fallbackSeconds
+	if s.appConfig != nil {
+		seconds = s.appConfig.Get(ctx).Limits.MessageRecallWindowSeconds
+	}
+	if seconds <= 0 {
+		return 0
+	}
+	return time.Duration(seconds) * time.Second
+}
+
 func NewRuntime(factory *persistence.Factory, source appconfig.Source) *Runtime {
 	repo := NewPostgresRepository(factory)
 	userService := users.NewServiceWithRepo(users.NewPostgresRepository(factory))
@@ -208,7 +223,7 @@ func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) e
 
 func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	meta, err := s.repo.Recall(ctx, principal.UserID, req)
+	meta, err := s.repo.Recall(ctx, principal.UserID, s.recallWindow(ctx), req)
 	if err != nil {
 		observability.L().Error("privatemessages.recall failed", "error", err, "message_id", req.MessageID)
 		return err

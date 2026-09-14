@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	groups "hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -115,7 +116,7 @@ func TestPostgresIT_RecallMessage(t *testing.T) {
 			Content:      "to recall",
 		})
 
-		_, err := repo.Recall(ctx, RecallGroupMessageRequest{
+		_, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{
 			MessageID: sent.MessageID,
 			UserID:    owner,
 		})
@@ -259,7 +260,7 @@ func TestPostgresIT_UpdateMessage_Recalled(t *testing.T) {
 		sent, _ := repo.Send(ctx, SendGroupMessageRequest{
 			GroupID: groupID, SenderUserID: owner, Type: "text", Content: "to be recalled",
 		})
-		if _, err := repo.Recall(ctx, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: owner}); err != nil {
+		if _, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: owner}); err != nil {
 			t.Fatalf("Recall: %v", err)
 		}
 
@@ -352,11 +353,11 @@ func TestPostgresIT_RecallMessage_AlreadyRecalled(t *testing.T) {
 		sent, _ := repo.Send(ctx, SendGroupMessageRequest{
 			GroupID: groupID, SenderUserID: owner, Type: "text", Content: "dup recall",
 		})
-		if _, err := repo.Recall(ctx, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: owner}); err != nil {
+		if _, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: owner}); err != nil {
 			t.Fatalf("first recall: %v", err)
 		}
 
-		_, err := repo.Recall(ctx, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: owner})
+		_, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: owner})
 		if !errors.Is(err, ErrMessageRecalled) {
 			t.Fatalf("expected ErrMessageRecalled on duplicate recall, got %v", err)
 		}
@@ -377,7 +378,7 @@ func TestPostgresIT_RecallMessage_NotSender(t *testing.T) {
 			GroupID: groupID, SenderUserID: owner, Type: "text", Content: "owner only",
 		})
 
-		_, err := repo.Recall(ctx, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: other})
+		_, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: other})
 		if !errors.Is(err, ErrPermissionDenied) {
 			t.Fatalf("expected ErrPermissionDenied, got %v", err)
 		}
@@ -392,7 +393,7 @@ func TestPostgresIT_RecallMessage_NotFound(t *testing.T) {
 		_ = createTestGroup(t, ctx, txFactory, owner, "GM Recall NF Group")
 		repo := NewPostgresRepository(txFactory)
 
-		_, err := repo.Recall(ctx, RecallGroupMessageRequest{MessageID: "gm_missing", UserID: owner})
+		_, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{MessageID: "gm_missing", UserID: owner})
 		if !errors.Is(err, ErrMessageNotFound) {
 			t.Fatalf("expected ErrMessageNotFound, got %v", err)
 		}

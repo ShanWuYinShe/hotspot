@@ -65,6 +65,8 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	shareModule := share.NewModule(factory)
 
 	gmModule := groupmessages.NewModule(factory, usersModule.Service, notificationService, shareModule.Service)
+	// 消息撤回时间窗接线（spec chat.md：AppConfig.limits.message_recall_window_seconds）
+	gmModule.Service.SetAppConfig(sharedAppConfig)
 	pcModule := privatechats.NewModule(factory, sharedAppConfig, shareModule.Service, usersModule.Service)
 
 	systemModule.Service().SetBootstrapResolver(systemBootstrapResolver{

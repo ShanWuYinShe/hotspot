@@ -52,7 +52,7 @@ func (r *stubMsgRepo) UnreadCount(_ context.Context, _, _ string, _ *time.Time) 
 func (r *stubMsgRepo) Update(_ context.Context, _ string, _ UpdatePrivateMessageRequest) (MessageEventMeta, error) {
 	return r.updateMeta, r.updateErr
 }
-func (r *stubMsgRepo) Recall(_ context.Context, _ string, _ RecallPrivateMessageRequest) (MessageEventMeta, error) {
+func (r *stubMsgRepo) Recall(_ context.Context, _ string, _ time.Duration, _ RecallPrivateMessageRequest) (MessageEventMeta, error) {
 	return r.recallMeta, r.recallErr
 }
 func (r *stubMsgRepo) MarkAsRead(_ context.Context, _ string, _ MarkPrivateMessagesReadRequest) (MessageEventMeta, error) {
@@ -120,10 +120,13 @@ func (u *stubUserReader) Relationship(_ context.Context, _ string, targetID stri
 }
 
 // quotaSource is a static appconfig.Source for the stranger quota tests.
-type quotaSource struct{ quota int }
+type quotaSource struct {
+	quota        int
+	recallWindow int // 撤回窗口秒数；未设置时按默认 120
+}
 
 func (q quotaSource) Get(context.Context) appconfig.AppConfig {
-	return appconfig.AppConfig{Limits: appconfig.Limits{StrangerMessageDailyQuota: q.quota}}
+	return appconfig.AppConfig{Limits: appconfig.Limits{StrangerMessageDailyQuota: q.quota, MessageRecallWindowSeconds: q.recallWindow}}
 }
 
 func msgCtx(userID string) context.Context {
@@ -283,6 +286,48 @@ func TestServiceRecallPropagatesError(t *testing.T) {
 	err := svc.Recall(msgCtx("u1"), RecallPrivateMessageRequest{MessageID: "pm1"})
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+// spec chat.md：撤回时间窗消费 AppConfig.limits.message_recall_window_seconds。
+func TestServiceRecallUsesConfiguredWindow(t *testing.T) {
+	repo := NewInMemoryRepository()
+	sent, err := repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "hi"})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	svc := NewServiceWithRepo(repo)
+	svc.SetAppConfig(quotaSource{recallWindow: 90})
+	if err := svc.Recall(msgCtx("alice"), RecallPrivateMessageRequest{MessageID: sent.MessageID}); err != nil {
+		t.Fatalf("expected recall within configured window to succeed, got %v", err)
+	}
+}
+
+// 窗口配置 0 = 撤回禁用（spec chat.md → message_recall_window_seconds 0=禁用）。
+func TestServiceRecallDisabledWhenWindowZero(t *testing.T) {
+	repo := NewInMemoryRepository()
+	sent, err := repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "hi"})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	svc := NewServiceWithRepo(repo)
+	svc.SetAppConfig(quotaSource{recallWindow: 0})
+	err = svc.Recall(msgCtx("alice"), RecallPrivateMessageRequest{MessageID: sent.MessageID})
+	if !errors.Is(err, ErrMessageNotRecallable) {
+		t.Fatalf("expected ErrMessageNotRecallable when window disabled, got %v", err)
+	}
+}
+
+// appConfig 未接线时回退默认 120s：新消息可撤回。
+func TestServiceRecallFallsBackToDefaultWindow(t *testing.T) {
+	repo := NewInMemoryRepository()
+	sent, err := repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "hi"})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	svc := NewServiceWithRepo(repo)
+	if err := svc.Recall(msgCtx("alice"), RecallPrivateMessageRequest{MessageID: sent.MessageID}); err != nil {
+		t.Fatalf("expected recall with default window to succeed, got %v", err)
 	}
 }
 

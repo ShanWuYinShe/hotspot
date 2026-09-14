@@ -3,6 +3,7 @@ package privatemessages
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 func TestInMemoryRepositorySendReturnsMessageSent(t *testing.T) {
@@ -268,7 +269,7 @@ func TestInMemoryRepositoryRecallWithinWindow(t *testing.T) {
 
 	sent, _ := repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "recall me"})
 
-	meta, err := repo.Recall(context.Background(), "alice", RecallPrivateMessageRequest{MessageID: sent.MessageID})
+	meta, err := repo.Recall(context.Background(), "alice", 2*time.Minute, RecallPrivateMessageRequest{MessageID: sent.MessageID})
 	if err != nil {
 		t.Fatalf("Recall returned error: %v", err)
 	}
@@ -287,7 +288,7 @@ func TestInMemoryRepositoryRecallPermissionDenied(t *testing.T) {
 
 	sent, _ := repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "msg"})
 
-	_, err := repo.Recall(context.Background(), "stranger", RecallPrivateMessageRequest{MessageID: sent.MessageID})
+	_, err := repo.Recall(context.Background(), "stranger", 2*time.Minute, RecallPrivateMessageRequest{MessageID: sent.MessageID})
 	if err != ErrMessagePermissionDenied {
 		t.Fatalf("expected ErrMessagePermissionDenied, got %v", err)
 	}
@@ -296,7 +297,7 @@ func TestInMemoryRepositoryRecallPermissionDenied(t *testing.T) {
 func TestInMemoryRepositoryRecallNotFound(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	_, err := repo.Recall(context.Background(), "alice", RecallPrivateMessageRequest{MessageID: "nonexistent"})
+	_, err := repo.Recall(context.Background(), "alice", 2*time.Minute, RecallPrivateMessageRequest{MessageID: "nonexistent"})
 	if err != ErrMessageNotFound {
 		t.Fatalf("expected ErrMessageNotFound, got %v", err)
 	}
@@ -421,7 +422,7 @@ func TestInMemoryRepositoryUpdateCannotEditAfterRecall(t *testing.T) {
 
 	sent, _ := repo.Send(context.Background(), "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "original"})
 
-	_, _ = repo.Recall(context.Background(), "alice", RecallPrivateMessageRequest{MessageID: sent.MessageID})
+	_, _ = repo.Recall(context.Background(), "alice", 2*time.Minute, RecallPrivateMessageRequest{MessageID: sent.MessageID})
 
 	_, err := repo.Update(context.Background(), "alice", UpdatePrivateMessageRequest{MessageID: sent.MessageID, Content: "updated"})
 	if err != ErrMessageNotEditable {

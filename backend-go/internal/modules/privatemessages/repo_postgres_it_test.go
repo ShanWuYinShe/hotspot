@@ -3,6 +3,7 @@ package privatemessages
 import (
 	"context"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/testdb"
@@ -93,7 +94,7 @@ func TestPostgresIT_RecallMessage(t *testing.T) {
 			t.Fatalf("Send: %v", err)
 		}
 
-		_, err = repo.Recall(ctx, alice, RecallPrivateMessageRequest{MessageID: sent.MessageID})
+		_, err = repo.Recall(ctx, alice, 2*time.Minute, RecallPrivateMessageRequest{MessageID: sent.MessageID})
 		if err != nil {
 			t.Fatalf("Recall: %v", err)
 		}

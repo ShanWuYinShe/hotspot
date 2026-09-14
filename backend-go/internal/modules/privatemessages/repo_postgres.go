@@ -84,7 +84,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 	}
 	return MessageEventMeta{TargetUserID: otherUserID(meta.ChatKey, userID), MessageID: req.MessageID, SentAt: meta.SentAt, Content: req.Content}, nil
 }
-func (r *PostgresRepository) Recall(ctx context.Context, userID string, req RecallPrivateMessageRequest) (MessageEventMeta, error) {
+func (r *PostgresRepository) Recall(ctx context.Context, userID string, window time.Duration, req RecallPrivateMessageRequest) (MessageEventMeta, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
@@ -99,12 +99,13 @@ func (r *PostgresRepository) Recall(ctx context.Context, userID string, req Reca
 	if meta.IsRecalled {
 		return MessageEventMeta{}, ErrMessageNotRecallable
 	}
+	// window<=0：撤回禁用（spec chat.md → message_recall_window_seconds 0=禁用）。
 	sentAt, parseErr := time.Parse(time.RFC3339Nano, meta.SentAt)
 	if parseErr != nil {
 		// fail-closed：解析异常的时间窗不得静默放行超时撤回（安全/产品约束）。
 		return MessageEventMeta{}, ErrMessageNotRecallable
 	}
-	if time.Since(sentAt) > 2*time.Minute {
+	if window <= 0 || time.Since(sentAt) > window {
 		return MessageEventMeta{}, ErrMessageNotRecallable
 	}
 	var updated string

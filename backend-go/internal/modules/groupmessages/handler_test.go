@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
@@ -41,7 +42,7 @@ func (r *stubGroupMessageRepo) History(_ context.Context, _ string, _ *Paginatio
 func (r *stubGroupMessageRepo) Update(_ context.Context, _ UpdateGroupMessageRequest) (MessageEventMeta, error) {
 	return r.updateMeta, r.updateErr
 }
-func (r *stubGroupMessageRepo) Recall(_ context.Context, _ RecallGroupMessageRequest) (MessageEventMeta, error) {
+func (r *stubGroupMessageRepo) Recall(_ context.Context, _ time.Duration, _ RecallGroupMessageRequest) (MessageEventMeta, error) {
 	return r.recallMeta, r.recallErr
 }
 func (r *stubGroupMessageRepo) RecallAsAdmin(_ context.Context, _ string) (MessageEventMeta, error) {

@@ -88,7 +88,7 @@ func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageR
 	return MessageEventMeta{GroupID: groupID, MessageID: req.MessageID, SentAt: sentAt, Content: req.Content}, nil
 }
 
-func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageRequest) (MessageEventMeta, error) {
+func (r *PostgresRepository) Recall(ctx context.Context, window time.Duration, req RecallGroupMessageRequest) (MessageEventMeta, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
@@ -105,7 +105,8 @@ func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageR
 		// fail-closed：解析异常的时间窗不得静默放行超时撤回（安全/产品约束）。
 		return MessageEventMeta{}, ErrMessageRecallWindow
 	}
-	if time.Since(sentTime) > 2*time.Minute {
+	// window<=0：撤回禁用（spec chat.md → message_recall_window_seconds 0=禁用）。
+	if window <= 0 || time.Since(sentTime) > window {
 		return MessageEventMeta{}, ErrMessageRecallWindow
 	}
 	// Owner check lives in the service layer via LookupMessageMeta; the SQL

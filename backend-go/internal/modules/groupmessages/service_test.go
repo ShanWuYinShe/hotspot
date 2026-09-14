@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/modules/users"
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -19,6 +21,7 @@ type stubRepo struct {
 	updateErr      error
 	recallMeta     MessageEventMeta
 	recallErr      error
+	recallWindow   time.Duration // 记录 service 传入的撤回窗口（窗口配置透传断言用）
 	markReadErr    error
 	markAllReadErr error
 
@@ -48,7 +51,8 @@ func (r *stubRepo) History(_ context.Context, _ string, _ *PaginationParams) (Pa
 func (r *stubRepo) Update(_ context.Context, _ UpdateGroupMessageRequest) (MessageEventMeta, error) {
 	return r.updateMeta, r.updateErr
 }
-func (r *stubRepo) Recall(_ context.Context, _ RecallGroupMessageRequest) (MessageEventMeta, error) {
+func (r *stubRepo) Recall(_ context.Context, window time.Duration, _ RecallGroupMessageRequest) (MessageEventMeta, error) {
+	r.recallWindow = window
 	return r.recallMeta, r.recallErr
 }
 func (r *stubRepo) RecallAsAdmin(_ context.Context, _ string) (MessageEventMeta, error) {
@@ -188,6 +192,40 @@ func TestServiceRecallDelegatesToRepo(t *testing.T) {
 	err := service.Recall(gmAuthCtx("u1"), RecallGroupMessageRequest{MessageID: "gm1", UserID: "u1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// recallWindowSource 静态 appconfig.Source（撤回窗口配置透传断言用）。
+type recallWindowSource int
+
+func (w recallWindowSource) Get(context.Context) appconfig.AppConfig {
+	return appconfig.AppConfig{Limits: appconfig.Limits{MessageRecallWindowSeconds: int(w)}}
+}
+
+// spec chat.md：撤回时间窗消费 AppConfig.limits.message_recall_window_seconds，
+// service 取值后透传 repo。
+func TestServiceRecallWindowFromAppConfig(t *testing.T) {
+	repo := &stubRepo{ownerMeta: MessageOwnerMeta{GroupID: "g1", SenderUserID: "u1"}, ownerFound: true}
+	service := NewServiceWithRepo(repo)
+	service.SetAppConfig(recallWindowSource(90))
+	err := service.Recall(gmAuthCtx("u1"), RecallGroupMessageRequest{MessageID: "gm1", UserID: "u1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.recallWindow != 90*time.Second {
+		t.Fatalf("expected configured window 90s passed to repo, got %v", repo.recallWindow)
+	}
+}
+
+// appConfig 未接线时回退默认 120s。
+func TestServiceRecallWindowFallsBackToDefault(t *testing.T) {
+	repo := &stubRepo{ownerMeta: MessageOwnerMeta{GroupID: "g1", SenderUserID: "u1"}, ownerFound: true}
+	service := NewServiceWithRepo(repo)
+	if err := service.Recall(gmAuthCtx("u1"), RecallGroupMessageRequest{MessageID: "gm1", UserID: "u1"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.recallWindow != 120*time.Second {
+		t.Fatalf("expected default window 120s, got %v", repo.recallWindow)
 	}
 }
 

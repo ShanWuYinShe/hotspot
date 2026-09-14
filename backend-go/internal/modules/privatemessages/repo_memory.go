@@ -191,7 +191,7 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 	return MessageEventMeta{}, ErrMessageNotFound
 }
 
-func (r *InMemoryRepository) Recall(_ context.Context, userID string, req RecallPrivateMessageRequest) (MessageEventMeta, error) {
+func (r *InMemoryRepository) Recall(_ context.Context, userID string, window time.Duration, req RecallPrivateMessageRequest) (MessageEventMeta, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for key, msgs := range r.messages {
@@ -205,8 +205,9 @@ func (r *InMemoryRepository) Recall(_ context.Context, userID string, req Recall
 			if msgs[i].RecalledAt != nil {
 				return MessageEventMeta{}, ErrMessageNotRecallable
 			}
+			// window<=0：撤回禁用（对齐 PG 实现，spec chat.md 0=禁用）。
 			sentAt, err := time.Parse("2006-01-02T15:04:05.000000000Z", msgs[i].SentAt)
-			if err == nil && time.Since(sentAt) > 2*time.Minute {
+			if err == nil && (window <= 0 || time.Since(sentAt) > window) {
 				return MessageEventMeta{}, ErrMessageNotRecallable
 			}
 			recalledAt := time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/modules/users"
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -53,13 +54,33 @@ type userReader interface {
 }
 
 type Service struct {
-	repo     Repository
-	users    userReader
-	mentions groupMentionNotifier // optional; nil => 群聊 @ 不落库通知（测试/降级模式）
-	shares   shareValidator       // optional; nil => 不校验 share_code（测试/降级模式）
+	repo      Repository
+	users     userReader
+	mentions  groupMentionNotifier // optional; nil => 群聊 @ 不落库通知（测试/降级模式）
+	shares    shareValidator       // optional; nil => 不校验 share_code（测试/降级模式）
+	appConfig appconfig.Source     // optional; nil => 撤回窗口回退默认 120s
 	// readFlusher 节流聚合 GroupMessageReadCountUpdated 推送（spec chat.md：
 	// 3-5 秒窗口最终一致，替代逐人广播）
 	readFlusher *readCountFlusher
+}
+
+// SetAppConfig wires the dynamic app config source（消息撤回时间窗
+// AppConfig.limits.message_recall_window_seconds，spec chat.md）。
+func (s *Service) SetAppConfig(source appconfig.Source) { s.appConfig = source }
+
+// recallWindow 返回消息撤回时间窗（spec chat.md → AppConfig.limits.
+// message_recall_window_seconds）。appConfig 未接线时回退默认 120s（与
+// appconfig 默认配置一致）；配置 0/负值按 0 处理 = 撤回禁用。
+func (s *Service) recallWindow(ctx context.Context) time.Duration {
+	const fallbackSeconds = 120
+	seconds := fallbackSeconds
+	if s.appConfig != nil {
+		seconds = s.appConfig.Get(ctx).Limits.MessageRecallWindowSeconds
+	}
+	if seconds <= 0 {
+		return 0
+	}
+	return time.Duration(seconds) * time.Second
 }
 
 // readCountFlusher 按群聚合待推送的已读计数更新，4 秒窗口批量 flush。
@@ -258,7 +279,7 @@ func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) err
 	if err := s.authorizeMessageMutation(ctx, req.MessageID, req.UserID); err != nil {
 		return err
 	}
-	meta, err := s.repo.Recall(ctx, req)
+	meta, err := s.repo.Recall(ctx, s.recallWindow(ctx), req)
 	if err != nil {
 		observability.L().Error("groupmessages.recall failed", "error", err, "message_id", req.MessageID)
 		return err

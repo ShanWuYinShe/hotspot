@@ -354,7 +354,7 @@ func TestPostgresRepositoryFailsClosedWhenQueryableUnavailable(t *testing.T) {
 	if _, err := repo.Update(context.Background(), "user_alice", UpdatePrivateMessageRequest{MessageID: "pm_1", Content: "updated"}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for update, got %v", err)
 	}
-	if _, err := repo.Recall(context.Background(), "user_alice", RecallPrivateMessageRequest{MessageID: "pm_1"}); !errors.Is(err, persistence.ErrNotImplemented) {
+	if _, err := repo.Recall(context.Background(), "user_alice", 2*time.Minute, RecallPrivateMessageRequest{MessageID: "pm_1"}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for recall, got %v", err)
 	}
 	if _, err := repo.MarkAsRead(context.Background(), "user_alice", MarkPrivateMessagesReadRequest{TargetUserID: "user_bob"}); !errors.Is(err, persistence.ErrNotImplemented) {
@@ -502,7 +502,7 @@ func TestPostgresRepositoryMutationSupportMatchesCurrentPhase(t *testing.T) {
 		t.Fatalf("expected update to persist content/edit timestamp, got %#v", backend.items[chatKey][0])
 	}
 
-	if _, err := repo.Recall(context.Background(), "user_alice", RecallPrivateMessageRequest{MessageID: "pm_2"}); err != nil {
+	if _, err := repo.Recall(context.Background(), "user_alice", 2*time.Minute, RecallPrivateMessageRequest{MessageID: "pm_2"}); err != nil {
 		t.Fatalf("expected recall to execute on postgres, got %v", err)
 	}
 	if backend.items[chatKey][1].RecalledAt == "" {

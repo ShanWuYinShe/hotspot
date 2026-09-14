@@ -30,7 +30,10 @@ type Repository interface {
 	Last(context.Context, string, string, *time.Time) (*PrivateMessageItem, error)
 	UnreadCount(context.Context, string, string, *time.Time) (int, error)
 	Update(context.Context, string, UpdatePrivateMessageRequest) (MessageEventMeta, error)
-	Recall(context.Context, string, RecallPrivateMessageRequest) (MessageEventMeta, error)
+	// Recall 撤回消息。window 为撤回时间窗（AppConfig.limits.
+	// message_recall_window_seconds，由 service 从 appConfig 取值传入）；
+	// window<=0 表示撤回禁用（spec chat.md：0=禁用），一律拒绝。
+	Recall(ctx context.Context, userID string, window time.Duration, req RecallPrivateMessageRequest) (MessageEventMeta, error)
 	MarkAsRead(context.Context, string, MarkPrivateMessagesReadRequest) (MessageEventMeta, error)
 	MarkAllRead(context.Context, string) error
 	GetMessageForReply(context.Context, string, string) (map[string]any, bool, error)
