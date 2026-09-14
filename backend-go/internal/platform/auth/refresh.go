@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 // RefreshRotationGrace 是旧 refresh token 轮换后的宽限期（spec
@@ -76,9 +78,18 @@ func (s *Service) RefreshSession(ctx context.Context, refreshToken string) (Auth
 }
 
 // resultFromRotated 处理已轮换 token 的宽限期复用：期内返回新链 token，
-// 期后拒绝。
+// 期后视为 token 盗用信号——吊销整个会话并拒绝（P2-4）。同一会话的全部
+// refresh 链共享 SessionID，会话吊销后旧链所有 token 在 RefreshSession
+// 入口（revoked session 检查）与 access token 校验（AuthenticateRequest）
+// 一并失效，即「检测到重用 → 吊销该会话链」。
 func (s *Service) resultFromRotated(ctx context.Context, session RefreshSession, now time.Time) (AuthResult, error) {
 	if now.After(session.GraceUntil) {
+		if _, revokeErr := s.sessions.Revoke(ctx, session.SessionID); revokeErr != nil {
+			observability.L().Error("refresh reuse: session revoke failed",
+				"session_id", session.SessionID, "user_id", session.UserID, "error", revokeErr)
+		}
+		observability.L().Warn("refresh token reuse detected, session chain revoked",
+			"user_id", session.UserID, "session_id", session.SessionID)
 		return AuthResult{}, errors.New("expired refresh rotation window")
 	}
 	rotated, ok, err := s.refreshes.Get(ctx, session.RotatedTo)
