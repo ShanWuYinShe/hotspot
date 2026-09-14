@@ -58,7 +58,9 @@ func (r *notifyListCaptureRepo) UnreadCount(context.Context, string) (UnreadSumm
 
 func (r *notifyListCaptureRepo) MarkAsRead(context.Context, string, []string) error { return nil }
 func (r *notifyListCaptureRepo) MarkAllRead(context.Context, string) error          { return nil }
-func (r *notifyListCaptureRepo) PruneReadBefore(context.Context, time.Time) (int64, error) { return 0, nil }
+func (r *notifyListCaptureRepo) PruneReadBefore(context.Context, time.Time) (int64, error) {
+	return 0, nil
+}
 func (r *notifyListCaptureRepo) MarkAllReadByType(context.Context, string, string) error {
 	return nil
 }
