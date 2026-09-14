@@ -13,6 +13,7 @@
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
+	import SettingsSection from './SettingsSection.svelte';
 	import { auth, logout, requireAuth } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { theme, setTheme, setColorScheme, THEME_OPTIONS, COLOR_SCHEME_OPTIONS, type ColorSchemeMode, type AppTheme } from '@/stores/theme.svelte';
@@ -184,58 +185,44 @@
 	{:else}
 		<div class="flex flex-col divide-y divide-border-default max-w-5xl">
 			<!-- Section 1: 账号与身份 -->
-			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6 first:pt-4">
-				<div>
-					<h2 class="text-sm font-semibold text-text-primary">账号信息</h2>
-					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
-						当前登录的账号信息。
-					</p>
-				</div>
-				<div>
-					{#if auth.isAuthenticated}
-						<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
-							<div class="flex items-center gap-3.5 min-w-0">
-								<Avatar class="border-2 border-surface-primary shrink-0" src={accountAvatar} name={accountName} size={48} />
-								<div class="min-w-0">
-									<div class="flex items-center gap-2">
-										<p class="text-sm font-semibold text-text-primary truncate">{accountName || '用户'}</p>
-										<span class="text-xxs px-2 py-0.5 rounded-full bg-accent-soft text-accent-default font-medium">已登录</span>
-									</div>
-									<p class="text-xs text-text-secondary mt-0.5 truncate">{accountEmail || '未绑定邮箱'}</p>
+			<SettingsSection title="账号信息" description="当前登录的账号信息。" class="first:pt-4">
+				{#if auth.isAuthenticated}
+					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
+						<div class="flex items-center gap-3.5 min-w-0">
+							<Avatar class="border-2 border-surface-primary shrink-0" src={accountAvatar} name={accountName} size={48} />
+							<div class="min-w-0">
+								<div class="flex items-center gap-2">
+									<p class="text-sm font-semibold text-text-primary truncate">{accountName || '用户'}</p>
+									<span class="text-xxs px-2 py-0.5 rounded-full bg-accent-soft text-accent-default font-medium">已登录</span>
 								</div>
+								<p class="text-xs text-text-secondary mt-0.5 truncate">{accountEmail || '未绑定邮箱'}</p>
 							</div>
 						</div>
-					{:else}
-						<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
-							<div class="flex items-center gap-3.5 min-w-0">
-								<div class="flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent-default shrink-0">
-									<UserRound class="size-5" strokeWidth={1.5} />
-								</div>
-								<div class="min-w-0">
-									<p class="text-sm font-semibold text-text-primary">访客浏览中</p>
-									<p class="text-xs text-text-secondary mt-0.5">登录后可同步跨端偏好、个人主页与动态收藏</p>
-								</div>
+					</div>
+				{:else}
+					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
+						<div class="flex items-center gap-3.5 min-w-0">
+							<div class="flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent-default shrink-0">
+								<UserRound class="size-5" strokeWidth={1.5} />
 							</div>
-							<button
-								type="button"
-								onclick={() => requireAuth({ action: '登录账号', run: () => { reloadKey++; } })}
-								class="hover-btn px-4 py-2 text-xs font-medium rounded-md bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md transition-colors focus-ring shrink-0"
-							>
-								登录 / 注册
-							</button>
+							<div class="min-w-0">
+								<p class="text-sm font-semibold text-text-primary">访客浏览中</p>
+								<p class="text-xs text-text-secondary mt-0.5">登录后可同步跨端偏好、个人主页与动态收藏</p>
+							</div>
 						</div>
-					{/if}
-				</div>
-			</div>
+						<button
+							type="button"
+							onclick={() => requireAuth({ action: '登录账号', run: () => { reloadKey++; } })}
+							class="hover-btn px-4 py-2 text-xs font-medium rounded-md bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md transition-colors focus-ring shrink-0"
+						>
+							登录 / 注册
+						</button>
+					</div>
+				{/if}
+			</SettingsSection>
 
 			<!-- Section 2: 外观与显示 -->
-			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
-				<div>
-					<h2 class="text-sm font-semibold text-text-primary">外观与显示</h2>
-					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
-						自定义界面的视觉色彩与深浅模式，全局即时生效。
-					</p>
-				</div>
+			<SettingsSection title="外观与显示" description="自定义界面的视觉色彩与深浅模式，全局即时生效。">
 				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-sm overflow-hidden">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
 						<div class="flex items-center gap-3">
@@ -277,16 +264,10 @@
 						/>
 					</div>
 				</div>
-			</div>
+			</SettingsSection>
 
 			<!-- Section 3: 地图与位置 -->
-			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
-				<div>
-					<h2 class="text-sm font-semibold text-text-primary">地图与位置</h2>
-					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
-						选择地图页使用的底图源。两种底图均经站点同源代理加载，密钥不下发到浏览器。
-					</p>
-				</div>
+			<SettingsSection title="地图与位置" description="选择地图页使用的底图源。两种底图均经站点同源代理加载，密钥不下发到浏览器。">
 				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-sm overflow-hidden">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
 						<div class="flex items-center gap-3">
@@ -306,16 +287,10 @@
 						/>
 					</div>
 				</div>
-			</div>
+			</SettingsSection>
 
 			<!-- Section 4: 通知偏好 -->
-			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
-				<div>
-					<h2 class="text-sm font-semibold text-text-primary">通知偏好</h2>
-					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
-						管理新消息、互动提及与关注动态的系统提醒方式。
-					</p>
-				</div>
+			<SettingsSection title="通知偏好" description="管理新消息、互动提及与关注动态的系统提醒方式。">
 				<ListContainer bordered inset>
 					<SettingRow
 						title="推送通知"
@@ -333,16 +308,10 @@
 						<Toggle on={notif} onToggle={toggleNotif} label="推送通知" />
 					</SettingRow>
 				</ListContainer>
-			</div>
+			</SettingsSection>
 
 			<!-- Section 5: 隐私与安全 -->
-			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
-				<div>
-					<h2 class="text-sm font-semibold text-text-primary">隐私与安全</h2>
-					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
-						控制个人公开主页以及地理位置在附近雷达中的可见性。
-					</p>
-				</div>
+			<SettingsSection title="隐私与安全" description="控制个人公开主页以及地理位置在附近雷达中的可见性。">
 				<ListContainer bordered inset>
 					<SettingRow
 						title="私密账号"
@@ -366,16 +335,10 @@
 						<Toggle on={locationSharing} onToggle={toggleLocationSharing} label="位置共享" />
 					</SettingRow>
 				</ListContainer>
-			</div>
+			</SettingsSection>
 
 			<!-- Section 5: 系统与关于 -->
-			<div class="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-4 lg:gap-10 py-6">
-				<div>
-					<h2 class="text-sm font-semibold text-text-primary">系统与关于</h2>
-					<p class="text-xs text-text-secondary mt-1 leading-relaxed">
-						客户端版本及当前设备会话状态。
-					</p>
-				</div>
+			<SettingsSection title="系统与关于" description="客户端版本及当前设备会话状态。">
 				<div class="flex flex-col gap-3">
 					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
 						<div class="flex items-center gap-3">
@@ -403,7 +366,7 @@
 						</div>
 					{/if}
 				</div>
-			</div>
+			</SettingsSection>
 		</div>
 
 		{#if auth.isAuthenticated}
