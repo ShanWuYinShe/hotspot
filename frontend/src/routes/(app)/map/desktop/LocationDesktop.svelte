@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { X, ChevronRight, Heart, Crosshair, Plus, Minus } from '@lucide/svelte';
+	import { X, ChevronRight, Heart, Crosshair } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import { smartBack } from '@/lib/smart-back';
@@ -14,12 +14,12 @@
 		PIN_COLORS, PIN_LABELS, PIN_TONES, fetchMapCanvas, fetchMapCanvasByViewport,
 		type MapBounds, type MapHeatBucket
 	} from '../shared/location-shared';
-	import { MAP_MIN_ZOOM, MAP_MAX_ZOOM } from '../shared/map-projection';
 	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
+	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import PinMedia from '../shared/PinMedia.svelte';
 	import LocationDesktopPanel from './LocationDesktopPanel.svelte';
 
@@ -220,31 +220,12 @@
 			</div>
 		{/if}
 
-		<!-- 缩放控制（右下角；画布拖拽/滚轮亦可缩放）。分段圆角由按钮自身承担，
-			不用 overflow-hidden 裁剪（会连带裁掉键盘焦点环），hover 填充与分隔线齐平。
-			按钮不用 hover-btn：分段组合控件中点击 0.94 缩放会让高亮块与整卡脱开，
-			hover/active 填充由全局 button 规则承载 -->
-		<div class="absolute z-30 flex flex-col rounded-lg border border-border-default bg-surface-primary" style="right:14px;bottom:20px;box-shadow:var(--cst-elevation-fab);">
-			<button
-				type="button"
-				class="flex items-center justify-center size-9 rounded-t-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
-				style="border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);"
-				aria-label="放大"
-				disabled={mapZoom >= MAP_MAX_ZOOM}
-				onclick={() => (mapZoom = Math.min(MAP_MAX_ZOOM, mapZoom + 1))}
-			>
-				<Plus class="size-4" strokeWidth={1.75} />
-			</button>
-			<button
-				type="button"
-				class="flex items-center justify-center size-9 rounded-b-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
-				aria-label="缩小"
-				disabled={mapZoom <= MAP_MIN_ZOOM}
-				onclick={() => (mapZoom = Math.max(MAP_MIN_ZOOM, mapZoom - 1))}
-			>
-				<Minus class="size-4" strokeWidth={1.75} />
-			</button>
-		</div>
+		<!-- 缩放控制（右下角；画布拖拽/滚轮亦可缩放），分段控件视觉契约见 MapZoomControls -->
+		<MapZoomControls
+			bind:zoom={mapZoom}
+			class="absolute z-30 border border-border-default bg-surface-primary"
+			style="right:14px;bottom:20px;box-shadow:var(--cst-elevation-fab);"
+		/>
 
 		<!-- 左上筛选菜单（桌面/移动共用组件；含计数徽章、至少一项约束与全部显示重置） -->
 		<div class="absolute z-20" style="top:14px;left:14px;">

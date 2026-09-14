@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search, MapPin, X, Crosshair, Check, ArrowLeft, Plus, Minus } from '@lucide/svelte';
+	import { Search, MapPin, X, Crosshair, Check, ArrowLeft } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
@@ -10,12 +10,12 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, fetchMapCanvasByViewport, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
-	import { MAP_MIN_ZOOM, MAP_MAX_ZOOM } from '../shared/map-projection';
 	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
+	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
 	import { smartBack } from '@/lib/smart-back';
 
@@ -283,30 +283,11 @@
 
 	<!-- ══ RIGHT CONTROLS — bottom tracks sheet ══ -->
 	<div style="position:absolute;right:12px;bottom:{rightCtrlBottom}px;z-index:35;display:flex;flex-direction:column;gap:8px;align-items:center;transition:bottom var(--cst-motion-spring) var(--cst-ease-bounce);">
-		<!-- Zoom in/out（画布拖拽/双指外滚轮亦可缩放）。分段圆角由按钮自身承担，
-			不用 overflow-hidden 裁剪（会连带裁掉键盘焦点环）。按钮不用 hover-btn：
-			分段组合控件中点击 0.94 缩放会让高亮块与整卡脱开 -->
-		<div class="flex flex-col rounded-lg" style="border:var(--cst-border-width-hairline) solid var(--cst-border-default);{floatBtnStyle}">
-			<button
-				type="button"
-				class="flex items-center justify-center size-9 rounded-t-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
-				style="border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);"
-				aria-label="放大"
-				disabled={mapZoom >= MAP_MAX_ZOOM}
-				onclick={() => (mapZoom = Math.min(MAP_MAX_ZOOM, mapZoom + 1))}
-			>
-				<Plus class="size-4" strokeWidth={1.75} />
-			</button>
-			<button
-				type="button"
-				class="flex items-center justify-center size-9 rounded-b-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
-				aria-label="缩小"
-				disabled={mapZoom <= MAP_MIN_ZOOM}
-				onclick={() => (mapZoom = Math.max(MAP_MIN_ZOOM, mapZoom - 1))}
-			>
-				<Minus class="size-4" strokeWidth={1.75} />
-			</button>
-		</div>
+		<!-- Zoom in/out（画布拖拽/双指外滚轮亦可缩放），分段控件视觉契约见 MapZoomControls -->
+		<MapZoomControls
+			bind:zoom={mapZoom}
+			style="border:var(--cst-border-width-hairline) solid var(--cst-border-default);{floatBtnStyle}"
+		/>
 
 		<!-- 回到我的位置（浏览器 GPS，失败回退默认位置）+ 地图源切换 -->
 		<button
