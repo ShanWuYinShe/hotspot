@@ -151,6 +151,19 @@ func TestServiceOpenTheDoorNotFound(t *testing.T) {
 	}
 }
 
+// 软删瞬间一律按不存在处理，含作者本人（spec api_spec_moment.md「删除语义」：
+// 软删占位只出现在 fetch_created/fetch_favorites）。
+func TestServiceOpenTheDoorSoftDeletedNotFoundEvenForOwner(t *testing.T) {
+	deleted := ownedMoment()
+	deleted.IsDeleted = true
+	repo := &stubMomentRepo{getResult: deleted, getFound: true}
+	svc := NewServiceWithRepo(repo)
+	_, ok, err := svc.OpenTheDoor(momentCtx("u1"), "m1")
+	if err != nil || ok {
+		t.Fatalf("expected soft-deleted moment to be not found for owner, got ok=%v err=%v", ok, err)
+	}
+}
+
 func TestServiceUpdateRequiresOwner(t *testing.T) {
 	repo := &stubMomentRepo{getResult: MomentItem{MomentID: "m1", User: UserInfo{UserID: "other"}}, getFound: true}
 	svc := NewServiceWithRepo(repo)

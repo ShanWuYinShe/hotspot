@@ -132,12 +132,14 @@ func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem,
 	if err != nil || !ok {
 		return MomentItem{}, false, err
 	}
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	isOwner := principal.UserID != "" && item.User.UserID == principal.UserID
-	if item.IsDeleted && !isOwner {
-		// 软删瞬间对非作者按不存在处理（spec api_spec_moment.md「删除语义」）
+	// 软删瞬间一律按不存在处理，含作者本人（spec api_spec_moment.md「删除
+	// 语义」：软删占位只出现在 fetch_created/fetch_favorites，open_the_door
+	// 对所有调用方按不存在处理）。
+	if item.IsDeleted {
 		return MomentItem{}, false, nil
 	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	isOwner := principal.UserID != "" && item.User.UserID == principal.UserID
 	if item.PrivacyLevel == "private" && !isOwner {
 		return MomentItem{}, false, nil
 	}
