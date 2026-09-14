@@ -173,7 +173,10 @@ func (h *Handler) sweepTypingThrottle(ctx context.Context) {
 // hijacking (a malicious page opens a WS to the legit server riding the
 // victim's cookies). Same-origin is the safe default for browser clients;
 // native clients (HarmonyOS) don't send a browser-style Origin header.
-var upgrader = websocket.Upgrader{CheckOrigin: sameOrigin}
+// EnableCompression 开启 permessage-deflate（审计 perf P3-2，gorilla v1.4+）：
+// WS 帧以 JSON 为主、重复字段多，压缩显著省带宽；代价是每连接常驻一份压缩
+// 上下文（客户端协商 context takeover 时），大连接量下以内存换流量。
+var upgrader = websocket.Upgrader{CheckOrigin: sameOrigin, EnableCompression: true}
 
 // sameOrigin allows the upgrade when the Origin header is absent (non-browser
 // client) or matches the request's own scheme+host. It blocks cross-origin
