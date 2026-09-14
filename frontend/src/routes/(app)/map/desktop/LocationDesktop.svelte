@@ -280,7 +280,7 @@
 				}}
 			>
 				{#if locate.locating}
-					<span class="size-4 rounded-full animate-spin" style="border:2px solid var(--cst-border-default);border-top-color:var(--cst-accent-default);" role="status" aria-hidden="true"></span>
+					<span class="spinner size-4" role="status" aria-hidden="true"></span>
 				{:else}
 					<Crosshair class="size-4 text-accent-default" strokeWidth={1.75} />
 				{/if}
