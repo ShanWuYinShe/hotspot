@@ -48,4 +48,9 @@ type Repository interface {
 	// time, grouped by the receiving user (used for the stranger daily quota
 	// check which is total-volume based across all non-mutual targets).
 	CountMessagesByTarget(ctx context.Context, senderID string, since time.Time) (map[string]int, error)
+	// LockStrangerQuota 对「发送者 + dayKey(UTC 日期)」取事务级咨询锁（PG
+	// advisory xact lock），串行化同发送者的陌生人配额检查与消息写入，消除
+	// check-then-act 竞态。必须在 RunInTransaction 事务内、配额计数之前调用；
+	// 非事务 ctx 或内存实现为 no-op。
+	LockStrangerQuota(ctx context.Context, senderID, dayKey string) error
 }

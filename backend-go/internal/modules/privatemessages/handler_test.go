@@ -47,6 +47,10 @@ func (r *privateMessageErrorRepo) UnreadCount(context.Context, string, string, *
 func (r *privateMessageErrorRepo) Update(context.Context, string, UpdatePrivateMessageRequest) (MessageEventMeta, error) {
 	return MessageEventMeta{}, r.updateErr
 }
+func (r *privateMessageErrorRepo) LockStrangerQuota(context.Context, string, string) error {
+	return nil
+}
+
 func (r *privateMessageErrorRepo) Recall(context.Context, string, time.Duration, RecallPrivateMessageRequest) (MessageEventMeta, error) {
 	return MessageEventMeta{}, r.recallErr
 }

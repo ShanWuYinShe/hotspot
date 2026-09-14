@@ -3,6 +3,7 @@ package privatemessages
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -309,4 +310,23 @@ func (r *PostgresRepository) CountMessagesByTarget(ctx context.Context, senderID
 		return nil, err
 	}
 	return counts, nil
+}
+
+// LockStrangerQuota 取「发送者 + UTC 日期」维度的事务级咨询锁（见
+// queryLockStrangerQuota）。锁在事务提交/回滚时自动释放；无事务 ctx 时
+// pg_advisory_xact_lock 会话级生效直到连接归还池——调用方必须保证在
+// RunInTransaction 事务内调用（service.Send 已保证）。
+func (r *PostgresRepository) LockStrangerQuota(ctx context.Context, senderID, dayKey string) error {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	var locked bool
+	if err := queryable.QueryRow(ctx, queryLockStrangerQuota, senderID+"\x00"+dayKey).Scan(&locked); err != nil {
+		return fmt.Errorf("privatemessages.LockStrangerQuota: %w", err)
+	}
+	if !locked {
+		return fmt.Errorf("privatemessages.LockStrangerQuota: lock not acquired")
+	}
+	return nil
 }

@@ -206,4 +206,10 @@ WHERE pm.chat_key = $1
 		JOIN private_chats pc ON pc.chat_key = pm.chat_key
 		WHERE pm.sender_user_id = $1 AND pm.sent_at >= $2
 		GROUP BY target_user_id`
+
+	// queryLockStrangerQuota 事务级咨询锁（事务结束自动释放，同 key 可重入）：
+	// 以「发送者 + UTC 日期」为 key 串行化同发送者的配额检查与消息写入，
+	// 消除 check-then-act 竞态（并发 Send 各自 COUNT 看不到对方未提交行会
+	// 双双超额放行）；先到者提交后，后到者的事务内 COUNT 能看到其消息。
+	queryLockStrangerQuota = `SELECT pg_advisory_xact_lock(hashtext($1)::bigint) IS NULL`
 )

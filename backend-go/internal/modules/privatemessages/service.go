@@ -2,6 +2,7 @@ package privatemessages
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"hotspot/backend-go/internal/modules/users"
@@ -52,6 +53,21 @@ type Service struct {
 	users     userReader
 	appConfig appconfig.Source // optional; nil => stranger quota disabled (0)
 	shares    shareValidator   // optional; nil => 不校验 share_code（测试/降级模式）
+	// tx 事务执行器（bootstrap/NewRuntime 注入）：陌生人配额的检查与消息写入
+	// 须在同一事务内经咨询锁串行化；nil（测试）时 fn 直接执行。
+	tx persistence.TxRunner
+}
+
+// SetTxRunner 注入事务执行器（装配时调用一次）。配额检查与 repo.Send 共享
+// 同一事务是 check-then-act 原子化的前提（见 Send）。
+func (s *Service) SetTxRunner(tx persistence.TxRunner) { s.tx = tx }
+
+// runInTx 在事务内执行 fn；执行器未接线（测试/降级）时直接执行。
+func (s *Service) runInTx(ctx context.Context, fn func(context.Context) error) error {
+	if s.tx == nil {
+		return fn(ctx)
+	}
+	return s.tx(ctx, fn)
 }
 
 func NewService() *Service {
@@ -96,6 +112,8 @@ func NewRuntime(factory *persistence.Factory, source appconfig.Source) *Runtime 
 	userService := users.NewServiceWithRepo(users.NewPostgresRepository(factory))
 	service := NewServiceWithDeps(repo, userService)
 	service.SetAppConfig(source)
+	// 陌生人配额原子化：配额检查与消息写入须在同一事务内经咨询锁串行化（见 Send）。
+	service.SetTxRunner(persistence.NewTxRunner(factory))
 	return &Runtime{
 		handler:     NewHandler(service),
 		readService: service,
@@ -127,20 +145,42 @@ func (r *Runtime) ReadService() ReadService {
 
 func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (MessageSentResult, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if err := s.ensureCanSend(ctx, principal.UserID, req.TargetUserID); err != nil {
-		return MessageSentResult{}, err
-	}
-	// share 类型：校验 share_code 存在且有效（spec api_spec_chat.md，防发送失效链接）
-	if req.ShareCode != "" && s.shares != nil {
-		if err := s.shares.ValidateShareCode(ctx, req.ShareCode); err != nil {
-			return MessageSentResult{}, ErrInvalidShareCode
+	var sent MessageSentResult
+	// 配额检查（ensureCanSend → enforceStrangerQuota 的 COUNT）与消息写入
+	// （repo.Send 的 INSERT）必须在同一事务内：先取「发送者 + UTC 日期」维度
+	// 的咨询锁，再 COUNT、再 INSERT——并发同发送者的请求在此串行，后到者的
+	// COUNT 能看到先到者已提交的消息，消除 check-then-act 双双超额的竞态。
+	err := s.runInTx(ctx, func(txCtx context.Context) error {
+		quotaApplies, err := s.ensureCanSend(txCtx, principal.UserID, req.TargetUserID)
+		if err != nil {
+			return err
 		}
-	}
-	msg, err := s.repo.Send(ctx, principal.UserID, req.TargetUserID, req)
+		// share 类型：校验 share_code 存在且有效（spec api_spec_chat.md，防发送失效链接）
+		if req.ShareCode != "" && s.shares != nil {
+			if err := s.shares.ValidateShareCode(txCtx, req.ShareCode); err != nil {
+				return ErrInvalidShareCode
+			}
+		}
+		if quotaApplies {
+			if err := s.repo.LockStrangerQuota(txCtx, principal.UserID, utcDayKey(time.Now())); err != nil {
+				return err
+			}
+			if err := s.enforceStrangerQuota(txCtx, principal.UserID); err != nil {
+				return err
+			}
+		}
+		msg, err := s.repo.Send(txCtx, principal.UserID, req.TargetUserID, req)
+		if err != nil {
+			observability.L().Error("privatemessages.send failed", "error", err, "target_user_id", req.TargetUserID)
+			return err
+		}
+		sent = msg
+		return nil
+	})
 	if err != nil {
-		observability.L().Error("privatemessages.send failed", "error", err, "target_user_id", req.TargetUserID)
 		return MessageSentResult{}, err
 	}
+	msg := sent
 	payload := map[string]any{
 		"message_id":     msg.MessageID,
 		"target_user_id": req.TargetUserID,
@@ -269,36 +309,42 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string) error {
+// ensureCanSend 校验发送前置条件：目标存在、非拉黑、对方隐私设置允许。
+// 返回 quotaApplies 表示随后需要做陌生人配额检查：self-send 有意绕过配额
+// （给自己发的消息不占陌生人额度，配额的总量口径在 enforceStrangerQuota 中
+// 同样排除 self 目标）；互相关注不在配额约束范围（spec chat.md 陌生人消息
+// 每日额度仅约束非互关目标）。
+func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string) (quotaApplies bool, err error) {
 	if s.users == nil {
-		return nil
+		return false, nil
 	}
 	item, ok, err := s.users.OpenTheDoor(ctx, targetUserID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if !ok {
-		return users.ErrUserNotFound
+		return false, users.ErrUserNotFound
 	}
 	if userID == targetUserID {
-		return nil
+		// self-send 绕过配额（有意口径，见函数注释）；配额不约束自己给自己发。
+		return false, nil
 	}
 	// 拉黑明确返回 blocked_by_user（产品决策：拉黑就显示拉黑，见 api_spec_errors.md ForbiddenReason）。
 	// 必须查双向黑名单：被对方拉黑的发送者才是拦截目标；OpenTheDoor 的 Relation.IsBlocked
 	// 是发送者视角（发送者拉黑了对方），单独用它会让被拉黑者照样发出消息。
 	callerBlocked, targetBlocked, blockErr := s.users.BlockStateBetween(ctx, userID, targetUserID)
 	if blockErr != nil {
-		return blockErr
+		return false, blockErr
 	}
 	if targetBlocked {
-		return httpx.Forbidden(httpx.ReasonBlockedByUser, "已被对方拉黑")
+		return false, httpx.Forbidden(httpx.ReasonBlockedByUser, "已被对方拉黑")
 	}
 	if callerBlocked {
-		return httpx.Forbidden(httpx.ReasonBlockedByUser, "你已拉黑对方，无法发送")
+		return false, httpx.Forbidden(httpx.ReasonBlockedByUser, "你已拉黑对方，无法发送")
 	}
 	settings, settingsFound, settingsErr := s.users.SettingsFor(ctx, targetUserID)
 	if settingsErr != nil {
-		return settingsErr
+		return false, settingsErr
 	}
 	allowPrivateChat := users.ChatPermEveryone
 	if settingsFound {
@@ -309,19 +355,22 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 	isMutual := item.Relation != nil && item.Relation.IsFollowing && item.Relation.IsFollowedBy
 	switch allowPrivateChat {
 	case users.ChatPermNobody:
-		return httpx.Forbidden(httpx.ReasonPrivacySetting, "对方隐私设置不允许")
+		return false, httpx.Forbidden(httpx.ReasonPrivacySetting, "对方隐私设置不允许")
 	case users.ChatPermFriends:
 		if !isMutual {
-			return httpx.Forbidden(httpx.ReasonPrivacySetting, "对方隐私设置不允许")
+			return false, httpx.Forbidden(httpx.ReasonPrivacySetting, "对方隐私设置不允许")
 		}
 	}
-	// 陌生人消息每日额度:仅对非互相关注用户生效(0 = 禁止任何陌生人消息)
-	if !isMutual {
-		if err := s.enforceStrangerQuota(ctx, userID); err != nil {
-			return err
-		}
-	}
-	return nil
+	// 陌生人消息每日额度:仅对非互相关注用户生效(0 = 禁止任何陌生人消息)。
+	// 检查本身在 Send 的事务闭包内、咨询锁之后执行（配额原子化）。
+	return !isMutual, nil
+}
+
+// utcDayKey 返回 t 的 UTC 日期键（yyyy-mm-dd），配额咨询锁与计数窗口共用
+// 同一日界。
+func utcDayKey(t time.Time) string {
+	u := t.UTC()
+	return fmt.Sprintf("%04d-%02d-%02d", u.Year(), u.Month(), u.Day())
 }
 
 // enforceStrangerQuota checks AppConfig.limits.stranger_message_daily_quota:

@@ -32,9 +32,11 @@ type stubMsgRepo struct {
 	markAllErr error
 	counts     map[string]int
 	countErr   error
+	ops        []string // 配额原子化断言：lock/count/send 的调用顺序记录
 }
 
 func (r *stubMsgRepo) Send(_ context.Context, _, _ string, _ SendPrivateMessageRequest) (MessageSentResult, error) {
+	r.ops = append(r.ops, "send")
 	return r.sendResult, r.sendErr
 }
 func (r *stubMsgRepo) History(_ context.Context, _ string, _ ListPrivateMessagesRequest) (PaginatedMessages, error) {
@@ -52,6 +54,11 @@ func (r *stubMsgRepo) UnreadCount(_ context.Context, _, _ string, _ *time.Time) 
 func (r *stubMsgRepo) Update(_ context.Context, _ string, _ UpdatePrivateMessageRequest) (MessageEventMeta, error) {
 	return r.updateMeta, r.updateErr
 }
+func (r *stubMsgRepo) LockStrangerQuota(_ context.Context, _, _ string) error {
+	r.ops = append(r.ops, "lock")
+	return nil
+}
+
 func (r *stubMsgRepo) Recall(_ context.Context, _ string, _ time.Duration, _ RecallPrivateMessageRequest) (MessageEventMeta, error) {
 	return r.recallMeta, r.recallErr
 }
@@ -75,6 +82,7 @@ func (r *stubMsgRepo) MessageExists(_ context.Context, _ string) (bool, string, 
 	return false, "", nil
 }
 func (r *stubMsgRepo) CountMessagesByTarget(_ context.Context, _ string, _ time.Time) (map[string]int, error) {
+	r.ops = append(r.ops, "count")
 	return r.counts, r.countErr
 }
 func (r *stubMsgRepo) GetMessageReportSnapshot(_ context.Context, _ string) (MessageReportSnapshot, bool, error) {
@@ -390,6 +398,53 @@ func TestServiceUnreadCountPropagatesError(t *testing.T) {
 	_, err := svc.UnreadCount(msgCtx("u1"), "u2", nil)
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+// 配额原子化：lock 必须先于 count、count 先于 send（同事务内咨询锁串行化
+// check-then-act，见 Send）。
+func TestServiceSendStrangerQuotaLocksBeforeCounting(t *testing.T) {
+	repo := &stubMsgRepo{
+		sendResult: MessageSentResult{MessageID: "pm1"},
+		counts:     map[string]int{"u2": 1},
+	}
+	svc := NewServiceWithDeps(repo, &stubUserReader{
+		found:     true,
+		item:      users.UserItem{Relation: &users.Relationship{}},
+		relations: map[string]users.Relationship{"u2": {}},
+		settings:  users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+	})
+	svc.SetAppConfig(quotaSource{quota: 5})
+	if _, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: "hi"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []string{"lock", "count", "send"}
+	if len(repo.ops) != len(want) {
+		t.Fatalf("expected ops %v, got %v", want, repo.ops)
+	}
+	for i, op := range want {
+		if repo.ops[i] != op {
+			t.Fatalf("expected ops %v, got %v", want, repo.ops)
+		}
+	}
+}
+
+// self-send 有意绕过配额：不取锁、不计数。
+func TestServiceSendSelfTargetSkipsQuotaLock(t *testing.T) {
+	repo := &stubMsgRepo{sendResult: MessageSentResult{MessageID: "pm1"}}
+	svc := NewServiceWithDeps(repo, &stubUserReader{
+		found:    true,
+		item:     users.UserItem{Relation: &users.Relationship{}},
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+	})
+	svc.SetAppConfig(quotaSource{quota: 0}) // 0=禁陌生人消息；self 不受影响
+	if _, err := svc.Send(msgCtx("u1"), SendPrivateMessageRequest{TargetUserID: "u1", Type: "text", Content: "note"}); err != nil {
+		t.Fatalf("expected self-send to bypass quota, got %v", err)
+	}
+	for _, op := range repo.ops {
+		if op == "lock" || op == "count" {
+			t.Fatalf("self-send must not trigger quota ops, got %v", repo.ops)
+		}
 	}
 }
 

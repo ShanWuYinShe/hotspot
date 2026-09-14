@@ -362,6 +362,13 @@ func (r *InMemoryRepository) GetMessageReportSnapshot(_ context.Context, message
 	return MessageReportSnapshot{}, false, nil
 }
 
+// LockStrangerQuota 内存实现的 no-op：单进程内 CountMessagesByTarget 与 Send
+// 均在 r.mu 互斥保护下，无跨请求的 check-then-act 竞态窗口（咨询锁只对 PG
+// 并发事务有意义）。
+func (r *InMemoryRepository) LockStrangerQuota(_ context.Context, _, _ string) error {
+	return nil
+}
+
 func (r *InMemoryRepository) CountMessagesByTarget(_ context.Context, senderID string, since time.Time) (map[string]int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
