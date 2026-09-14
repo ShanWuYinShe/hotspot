@@ -24,6 +24,10 @@
 	const isSuper = $derived(admin.permissions.includes('*'));
 </script>
 
+<svelte:head>
+	<title>管理概览 · HotSpot</title>
+</svelte:head>
+
 <div class="flex flex-col gap-5 max-w-5xl">
 	<!-- 身份卡：当前平台管理员 -->
 	<section class="rounded-lg border border-border-default bg-surface-primary p-5 shadow-raised-sm" aria-label="管理员身份">

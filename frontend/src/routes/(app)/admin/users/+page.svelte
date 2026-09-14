@@ -79,6 +79,10 @@
 	const statusText = (u: AdminUserItem) => (u.status === 'banned' ? (u.banned_until ? `封禁至 ${formatDateTime(u.banned_until)}` : '永久封禁') : '正常');
 </script>
 
+<svelte:head>
+	<title>用户管理 · HotSpot</title>
+</svelte:head>
+
 {#if !canRead}
 	<EmptyState title="无访问权限" description="需要 admin.users.read 权限" />
 {:else}

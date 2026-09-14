@@ -80,6 +80,10 @@
 	};
 </script>
 
+<svelte:head>
+	<title>举报裁决 · HotSpot</title>
+</svelte:head>
+
 {#if !canRead}
 	<EmptyState title="无访问权限" description="需要 admin.reports.read 权限" />
 {:else}

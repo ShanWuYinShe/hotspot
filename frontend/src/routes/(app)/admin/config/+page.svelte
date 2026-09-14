@@ -75,6 +75,10 @@
 	};
 </script>
 
+<svelte:head>
+	<title>系统配置 · HotSpot</title>
+</svelte:head>
+
 {#if !canRead}
 	<EmptyState title="无访问权限" description="需要 admin.app_config.read 权限" />
 {:else if loading}

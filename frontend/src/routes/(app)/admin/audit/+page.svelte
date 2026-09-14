@@ -68,6 +68,10 @@
 	};
 </script>
 
+<svelte:head>
+	<title>审计日志 · HotSpot</title>
+</svelte:head>
+
 {#if !canRead}
 	<EmptyState title="无访问权限" description="需要 admin.audit.read 权限" />
 {:else}

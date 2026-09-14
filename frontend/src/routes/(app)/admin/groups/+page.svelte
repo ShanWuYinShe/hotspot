@@ -46,6 +46,10 @@
 	};
 </script>
 
+<svelte:head>
+	<title>群组管理 · HotSpot</title>
+</svelte:head>
+
 {#if !canRead}
 	<EmptyState title="无访问权限" description="需要 admin.groups.read 权限" />
 {:else}

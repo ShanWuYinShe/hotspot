@@ -112,6 +112,10 @@
 	};
 </script>
 
+<svelte:head>
+	<title>系统公告 · HotSpot</title>
+</svelte:head>
+
 {#if !canRead}
 	<EmptyState title="无访问权限" description="需要 admin.announcements.read 权限" />
 {:else}
