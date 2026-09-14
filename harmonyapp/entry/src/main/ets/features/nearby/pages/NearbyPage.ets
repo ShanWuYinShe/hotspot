@@ -106,7 +106,7 @@ export struct NearbyPage {
 
   /** 当前段位的空态文案（区分三种内容，引导语义对齐前端各段空态） */
   private emptyTitleForSection(section: number): string {
-    if (section === 0) return '附近暂时没有的人';
+    if (section === 0) return '附近暂时没有其他人';
     if (section === 1) return '附近暂时没有群组';
     return '附近暂时没有瞬间';
   }
@@ -177,9 +177,12 @@ export struct NearbyPage {
               })
               .width('100%')
             } else if (!this.sectionHasContent(this.activeSection)) {
+              // 空态引导动作（P2-5）：发动态是点亮附近区域的主路径，三段空态共用
               EmptyState({
                 title: this.emptyTitleForSection(this.activeSection),
-                message: '成为第一个点亮这片区域的人吧！'
+                message: '成为第一个点亮这片区域的人吧！',
+                actionLabel: '去发动态',
+                onAction: () => AppRouter.push(PageNames.CREATE_MOMENT)
               })
               .width('100%')
               .padding({ top: DesignConstants.SPACING.XL })
