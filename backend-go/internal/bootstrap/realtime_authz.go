@@ -27,6 +27,19 @@ type realtimeUserRepo struct{ repo users.Repository }
 
 type realtimeGroupRepo struct{ repo groups.Repository }
 
+// realtimePresenceWriter 把 users repo 的运行时 presence 写（WS 连接生命周期）
+// 适配到 realtime 的 presenceWriter 接口。repo 用具体类型 *users.PostgresRepository：
+// SetPresenceStatus 只挂在 Postgres 实现（memory repo 无 WS 生命周期，无需实现）。
+type realtimePresenceWriter struct{ repo *users.PostgresRepository }
+
+func (a realtimePresenceWriter) SetPresence(ctx context.Context, userID string, online bool) error {
+	status := users.UserPresenceOffline
+	if online {
+		status = users.UserPresenceOnline
+	}
+	return a.repo.SetPresenceStatus(ctx, userID, status)
+}
+
 func (a realtimeActorProvider) GetActorInfo(ctx context.Context, userID string) (actor.Info, error) {
 	return a.svc.GetActorInfo(ctx, userID)
 }

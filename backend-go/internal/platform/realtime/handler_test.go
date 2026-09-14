@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -176,6 +178,105 @@ func TestRealtimeWebsocketLifecycle(t *testing.T) {
 	}
 	if online.Type != "UserOnline" {
 		t.Fatalf("unexpected online event: %#v", online)
+	}
+}
+
+// stubPresenceWriter 记录 presence 写调用序列，供 presence 落库时机断言。
+type stubPresenceWriter struct {
+	mu     sync.Mutex
+	calls  []string // 形如 "user_alice=online"
+	failOn string   // 命中该 user_id 时返回错误（验证写失败不中断连接）
+}
+
+func (s *stubPresenceWriter) SetPresence(_ context.Context, userID string, online bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	status := "offline"
+	if online {
+		status = "online"
+	}
+	s.calls = append(s.calls, userID+"="+status)
+	if s.failOn == userID {
+		return fmt.Errorf("db down")
+	}
+	return nil
+}
+
+func (s *stubPresenceWriter) snapshot() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string(nil), s.calls...)
+}
+
+// TestRealtimePresenceWrittenOnFirstConnectAndLastDisconnect 验证 presence 落库
+// 时机：首条连接 online 一次、最后一条连接断开 offline 一次；多连接共存时中间
+// 建连/断开不写；写失败不影响连接生命周期。
+func TestRealtimePresenceWrittenOnFirstConnectAndLastDisconnect(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, err := authService.IssueSession(context.Background(), "user_alice")
+	if err != nil {
+		t.Fatalf("issue session: %v", err)
+	}
+	handler := newRealtimeHandlerForTest(authService)
+	presence := &stubPresenceWriter{failOn: "user_alice"} // 故意写失败：不得中断连接
+	handler.SetPresenceWriter(presence)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	dial := func() *websocket.Conn {
+		conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+		if err != nil {
+			t.Fatalf("dial websocket: %v", err)
+		}
+		if err := conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}}); err != nil {
+			t.Fatalf("write auth: %v", err)
+		}
+		var established Event
+		if err := conn.ReadJSON(&established); err != nil {
+			t.Fatalf("read established: %v", err)
+		}
+		if established.Type != "ConnectionEstablished" {
+			t.Fatalf("unexpected event: %#v", established)
+		}
+		return conn
+	}
+
+	conn1 := dial()
+	if got := presence.snapshot(); len(got) != 1 || got[0] != "user_alice=online" {
+		t.Fatalf("after first connect, presence calls = %v, want [user_alice=online]", got)
+	}
+
+	// 第二条连接（同 user 多端）：不重复写 online。
+	conn2 := dial()
+	if got := presence.snapshot(); len(got) != 1 {
+		t.Fatalf("after second connect, presence calls = %v, want unchanged", got)
+	}
+
+	// 断开第一条：仍有连接存活，不写 offline。
+	_ = conn1.Close()
+	waitForCalls(t, presence, 1)
+
+	// 断开最后一条：写 offline（写失败仅记日志）。
+	_ = conn2.Close()
+	waitForCalls(t, presence, 2)
+	if got := presence.snapshot(); got[1] != "user_alice=offline" {
+		t.Fatalf("after last disconnect, presence calls = %v, want second call user_alice=offline", got)
+	}
+}
+
+// waitForCalls 轮询等待 presence 调用数达到 want（断连 defer 异步执行）。
+func waitForCalls(t *testing.T, presence *stubPresenceWriter, want int) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if len(presence.snapshot()) >= want {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for %d presence calls, got %v", want, presence.snapshot())
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

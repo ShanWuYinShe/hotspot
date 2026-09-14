@@ -47,11 +47,21 @@ type banAuthorizer interface {
 	IsBanned(context.Context, string) (bool, error)
 }
 
+// presenceWriter persists runtime presence transitions to the users table
+// (online on the first connection of a user, offline when the last one
+// closes). Implemented by the users module repository via bootstrap wiring;
+// nil (dev/test default) skips the DB write — the UserOnline/UserOffline
+// broadcast events below are unaffected either way.
+type presenceWriter interface {
+	SetPresence(ctx context.Context, userID string, online bool) error
+}
+
 type Handler struct {
 	auth           *platformauth.Service
 	userRepo       userRelationAuthorizer
 	groupRepo      groupMembershipAuthorizer
 	bans           banAuthorizer
+	presence       presenceWriter
 	actorProvider  typingActorProvider
 	typingThrottle sync.Map
 	resumeStore    ResumeStore
@@ -98,9 +108,27 @@ func (h *Handler) SetActorProvider(p typingActorProvider) { h.actorProvider = p 
 // the HTTP RequiredAuth middleware so both paths degrade identically.
 func (h *Handler) SetBanAuthorizer(b banAuthorizer) { h.bans = b }
 
+// SetPresenceWriter wires the runtime presence persister (users table).
+// Optional (nil = no DB write, dev/test default); write failures only log and
+// never interrupt the connection lifecycle.
+func (h *Handler) SetPresenceWriter(p presenceWriter) { h.presence = p }
+
 // SetResumeStore 注入 resume 增量恢复存储（spec L156, L159）。nil 时退化为 NopResumeStore
 // 语义：token 仍下发但 LoadState 恒空，客户端回退全量重放（spec L161 降级保证）。
 func (h *Handler) SetResumeStore(s ResumeStore) { h.resumeStore = s }
+
+// markPresence 落库 presence 变更。断连 defer 执行时请求 ctx（r.Context()）
+// 已被取消，故统一用独立超时 ctx；写失败仅记日志，不影响连接生命周期。
+func (h *Handler) markPresence(userID string, online bool) {
+	if h.presence == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := h.presence.SetPresence(ctx, userID, online); err != nil {
+		observability.L().Warn("ws: presence db write failed", "user_id", userID, "online", online, "error", err)
+	}
+}
 
 // resolveTypingActor builds the actor UserInfo map for the typing event.
 func (h *Handler) resolveTypingActor(ctx context.Context, userID string) map[string]any {
@@ -249,6 +277,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	subs := newSubscriptions()
 	sink := newSocketSink(conn)
 	if DefaultHub().RegisterUser(principal.UserID, principal.SessionID, sink) {
+		// 首条连接：presence 落库 online（groups/search 的 presence_status 统计依据）。
+		h.markPresence(principal.UserID, true)
 		DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOnline, Payload: UserOnlinePayload{UserID: principal.UserID, OnlineAt: time.Now().UTC().Format(time.RFC3339)}})
 	}
 	defer func() {
@@ -261,6 +291,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			baselineSeq = h.resumeStore.LastSeq()
 		}
 		if DefaultHub().UnregisterUser(principal.UserID, principal.SessionID, sink) {
+			// 最后一条连接断开：presence 落库 offline（多连接共存时中间断开不写，
+			// 由 Hub 的「连接数归零」判定保证语义）。
+			h.markPresence(principal.UserID, false)
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOffline, Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
 		}
 		// 停掉该连接的 writer goroutine（幂等；conn.Close 另有外层 defer 兜底）。

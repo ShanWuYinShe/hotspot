@@ -87,6 +87,9 @@ func NewApp(cfg config.Config) (*App, error) {
 	realtimeHandler.SetActorProvider(realtimeActorProvider{svc: userService})
 	// WS 握手封禁检查：与 HTTP RequiredAuth 同源（admin repo IsBanned）、同口径（fail-open）
 	realtimeHandler.SetBanAuthorizer(realtimeBanAuthorizer{repo: adminRepo})
+	// 运行时 presence 落库（首条连接 online / 最后一条断开 offline）：groups/search
+	// 的 presence_status='online' 统计以此为准（写失败仅记日志，不中断连接）。
+	realtimeHandler.SetPresenceWriter(realtimePresenceWriter{repo: userRepo})
 	// resume 增量恢复（spec L156, L159）：Redis 可用时创建跨实例事件存储并注入
 	// Hub（seq 分配/事件累积）与 Handler（token 生命周期/回放）。Redis 不可用时
 	// Hub/Handler 的 resumeStore 为 nil，退化为全量重放（spec L161）。

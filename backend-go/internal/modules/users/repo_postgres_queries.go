@@ -77,6 +77,17 @@ SET nickname = '已注销用户',
     is_deleted = TRUE
 WHERE user_id = $1`
 
+	// queryUpdatePresenceStatus 是 presence 的运行时写路径（WS 首条连接建立置
+	// online、最后一条连接断开置 offline）。此前 presence_status 只有注册 INSERT、
+	// 资料 upsert 覆写、注销置 offline 三个非运行时写点，groups/search 等处的
+	// presence_status='online' 统计恒错。last_online 与 presence_status 是一对，
+	// 写 presence 时一并落到 NOW()（「最后在线」随之有了真实来源）。
+	queryUpdatePresenceStatus = `
+UPDATE users
+SET presence_status = $2,
+    last_online = NOW()
+WHERE user_id = $1`
+
 	queryDeleteAuthAccountByUserID = `DELETE FROM auth_accounts WHERE user_id = $1`
 
 	queryRevokeAllUserSessions = `DELETE FROM auth_sessions WHERE user_id = $1`

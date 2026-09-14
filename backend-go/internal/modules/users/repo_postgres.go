@@ -169,6 +169,18 @@ func (r *PostgresRepository) SetRemark(ctx context.Context, userID, targetUserID
 	return queryable.Exec(ctx, queryUpsertUserRelationRemark, userID, targetUserID, remark)
 }
 
+// SetPresenceStatus 更新运行时 presence（WS 连接生命周期调用：上线 online、
+// 最后一条连接断开 offline，SQL 内同步刷新 last_online）。挂具体类型而非
+// Repository 大接口：仅 platform/realtime 经 bootstrap adapter 消费，
+// memory repo 无需实现（realtime 侧 nil writer 时跳过写库）。
+func (r *PostgresRepository) SetPresenceStatus(ctx context.Context, userID string, status UserPresenceStatus) error {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryUpdatePresenceStatus, userID, string(status))
+}
+
 // CheckBlockedTags 返回 tags 中命中平台屏蔽标签（admin_blocked_tags）的标签名；空表示无屏蔽标签。
 func (r *PostgresRepository) CheckBlockedTags(ctx context.Context, tags []string) ([]string, error) {
 	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
