@@ -52,9 +52,11 @@ GROUP BY g.group_id, g.name, g.avatar_url, g.description, g.location_name, g.lat
          g.join_method, g.requires_approval, g.tags, g.next_activity_at, g.is_searchable, g.max_members, g.created_at, g.owner_id
 LIMIT $2`
 
+	// popularity 的点赞数取 reactions 实时聚合：likes_count 自点赞改为 reactions
+	// 后已无写路径、恒为 0，继续使用会让点赞对搜索建议热度零贡献（审计 F-08）。
 	querySearchSuggestMoments = `
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.location_name, m.latitude, m.longitude,
-       (m.likes_count + m.comments_count + m.shares_count) AS popularity
+       ((SELECT COUNT(*) FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id) + m.comments_count + m.shares_count) AS popularity
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.privacy_level = 'public'

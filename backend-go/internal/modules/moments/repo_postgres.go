@@ -280,10 +280,15 @@ func searchScoreSQL(sortBy string, kwArg, tagArg int) string {
 	case "popular":
 		// 热度排序含时间衰减因子（spec api_spec_moment.md moments/search 排序：
 		// 「按互动热度排序（含时间衰减因子；具体衰减算法为服务端实现细节）」）。
-		// 实现：score = (likes_count + comments_count) / POWER(发布小时龄 + 2, 1.5)，
+		// 实现：score = (点赞数 + comments_count) / POWER(发布小时龄 + 2, 1.5)，
 		// 小时龄钳制非负（防未来时间戳导致负底数幂报错）。now() 单语句内恒定，
 		// 页内排序自洽；跨请求衰减值漂移属契约声明的弱一致范畴。
-		return "((m.likes_count + m.comments_count)::float8 / POWER(GREATEST(EXTRACT(EPOCH FROM (now() - m.created_at)) / 3600.0, 0.0) + 2.0, 1.5))"
+		//
+		// 点赞数取 reactions 实时聚合而非 m.likes_count：likes_count 是旧「点赞」
+		// 模型遗留的冗余列，自点赞改为 reactions 表后已无任何写路径、恒为 0——
+		// 继续用它会让最主要的互动信号（点赞）对热度零贡献（审计 F-08）。
+		// 相关子查询走 reactions 主键 (target_type, target_id, user_id) 前缀，代价可控。
+		return "(((SELECT COUNT(*) FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id) + m.comments_count)::float8 / POWER(GREATEST(EXTRACT(EPOCH FROM (now() - m.created_at)) / 3600.0, 0.0) + 2.0, 1.5))"
 	case "newest":
 		return "0"
 	default:

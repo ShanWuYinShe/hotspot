@@ -217,7 +217,9 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			items = append(items, item)
 		}
 		if limit >= 0 {
-			popular := strings.Contains(query, "m.likes_count + m.comments_count")
+			// popular 排序的点赞数改由 reactions 聚合（F-08）：此桩用
+			// LikesCount 字段模拟该聚合值，故按新 SQL 片段识别 popular。
+			popular := strings.Contains(query, "SELECT COUNT(*) FROM reactions r WHERE r.target_type = 'moment'")
 			sort.Slice(items, func(i, j int) bool {
 				if popular {
 					si := items[i].LikesCount + items[i].CommentsCount

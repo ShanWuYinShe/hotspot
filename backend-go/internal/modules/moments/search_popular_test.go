@@ -95,15 +95,23 @@ func TestMemorySearchPopularCursorPaginationNoDupNoSkip(t *testing.T) {
 }
 
 // TestBuildSearchMomentsQueryPopularDecayAndViewerState：SQL 形状对齐——
-// popular 分值含时间衰减；登录查看者追加 EXISTS(moment_favorites) 尾列，
-// 匿名查询不含该列；keyset 谓词以 float8 比较衰减分值。
+// popular 分值含时间衰减 + reactions 聚合点赞数（likes_count 已无写路径，
+// 见 F-08）；登录查看者追加 EXISTS(moment_favorites) 尾列，匿名查询不含该列；
+// keyset 谓词以 float8 比较衰减分值。
 func TestBuildSearchMomentsQueryPopularDecayAndViewerState(t *testing.T) {
 	sql, args := buildSearchMomentsQuery(nil, nil, "popular", 21, nil, "viewer_1")
-	if !strings.Contains(sql, "m.likes_count + m.comments_count") || !strings.Contains(sql, "POWER(") {
-		t.Fatalf("popular score must embed time-decay POWER expression: %s", sql)
+	if !strings.Contains(sql, "SELECT COUNT(*) FROM reactions r WHERE r.target_type = 'moment'") ||
+		!strings.Contains(sql, "m.comments_count") || !strings.Contains(sql, "POWER(") {
+		t.Fatalf("popular score must aggregate reactions and embed time-decay POWER expression: %s", sql)
 	}
 	if !strings.Contains(sql, "GREATEST(EXTRACT(EPOCH FROM") {
 		t.Fatalf("decay hours must be clamped non-negative: %s", sql)
+	}
+	// 排序表达式不得再用已无写路径的 likes_count（SELECT 列表仍投影该兼容列，
+	// json:"-" 不对外，属有意保留），只看 ORDER BY 段。
+	orderBy := sql[strings.Index(sql, "ORDER BY"):]
+	if strings.Contains(orderBy, "likes_count") {
+		t.Fatalf("popular ORDER BY must not use the dead likes_count column: %s", orderBy)
 	}
 	if !strings.Contains(sql, "EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $1)") {
 		t.Fatalf("viewer search must fill is_favorited via parameterized EXISTS: %s", sql)
