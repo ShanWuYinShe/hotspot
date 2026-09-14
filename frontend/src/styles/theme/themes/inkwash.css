@@ -1,0 +1,293 @@
+/* ── Inkwash / 水墨 Theme ────────────────────────────────────────────
+   Character: Chinese ink-wash painting — generous negative space + fine ink
+   hairlines. "水墨" = ink wash — 宣纸留白、朱砂一点。
+   Light: warm xuan-paper #FBF9F3 on rice-canvas #F5F2EA，朱砂 accent
+   Dark:  ink-night #181A1C — 淡墨宣纸字、暖赭 accent
+   Shadows: light = 硬边墨线 ring（描边表达层级，仿 forest flat）；
+            dark = 深投影（仿 vibrant dark）。
+
+   本文件是 Inkwash 主题的**唯一定义来源**（light + dark）。
+────────────────────────────────────────────────────────────────────── */
+
+/* ═══ Inkwash Light ═══ */
+.inkwash {
+  /* ── 原始色板 --cst-palette-* ── */
+  /* 表面分层：画布（page）宣纸暖底 + 卡片（bg）宣纸白，层级靠细墨线描边表达 */
+  --cst-palette-bg: #FBF9F3;
+  --cst-palette-page-bg: #F5F2EA;
+  --cst-palette-chat-bg: #F1EDE3;
+  --cst-palette-text: #2B2A26;
+  --cst-palette-text-muted: #6E6A60;
+  --cst-palette-accent-primary: #A63A2E;
+  --cst-palette-glow: rgba(0, 0, 0, 0);
+  --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
+  --cst-palette-shadow-dark: rgba(0, 0, 0, 0.0);
+  --cst-palette-border: rgba(43, 42, 38, 0.20);
+  --cst-palette-border-pressed: rgba(43, 42, 38, 0.32);
+  --cst-palette-accent-soft: rgba(166, 58, 46, 0.10);
+  --cst-palette-accent-soft-border: rgba(166, 58, 46, 0.28);
+  --cst-palette-hover: rgba(166, 58, 46, 0.12);
+  --cst-palette-active-hover: rgba(166, 58, 46, 0.17);
+  --cst-palette-on-accent: #FFFFFF;
+  --cst-palette-online: #3F7256;
+  --cst-palette-hot: #9E2140;
+  --cst-palette-warning: #8F7026;
+  --cst-palette-map-user: #A63A2E;
+  --cst-palette-map-group: #4A7048;
+  --cst-palette-map-moment: #8A6426;
+  --cst-palette-overlay-strong: rgba(26, 24, 20, 0.42);
+  --cst-palette-shadow-card: 0 0 0 1.5px rgba(43, 42, 38, 0.14);
+  --cst-palette-shadow-btn: 0 0 0 1.5px rgba(43, 42, 38, 0.20);
+
+  /* ── 透明度档位（opacity-* 语义类经 theme-registry 映射；glow 随主题/暗色变化）── */
+  --cst-palette-opacity-none: 0;
+  --cst-palette-opacity-faint: 0.30;
+  --cst-palette-opacity-subtle: 0.40;
+  --cst-palette-opacity-muted: 0.50;
+  --cst-palette-opacity-dim: 0.60;
+  --cst-palette-opacity-soft: 0.70;
+  --cst-palette-opacity-emphasis: 0.80;
+  --cst-palette-opacity-tap: 0.84;
+  --cst-palette-opacity-hover: 0.90;
+  --cst-palette-opacity-full: 1;
+  --cst-palette-opacity-active: 0.13;
+  --cst-palette-opacity-glow: 0.95;
+
+  /* ── color-mix 预设（token 内部派生；组件/数据层不得再写 color-mix）── */
+
+  /* ── 语义色族完整档位（主色 → 淡底 -bg / 淡边框 -border / 光晕 -glow）──
+     数据驱动色（通知/事件/图钉/活动）在前端只做语义键 → 本组 token 的映射，
+     组件与数据层一律引用这些预定义档位，不再自行 color-mix */
+  --cst-accent-soft-bg: color-mix(in srgb, var(--cst-palette-accent-primary) 10%, transparent);
+  --cst-accent-border-soft: color-mix(in srgb, var(--cst-palette-accent-primary) 24%, transparent);
+  --cst-status-online-bg: color-mix(in srgb, var(--cst-palette-online) 12%, transparent);
+  --cst-status-online-border: color-mix(in srgb, var(--cst-palette-online) 22%, transparent);
+  --cst-status-danger-bg: color-mix(in srgb, var(--cst-palette-hot) 12%, transparent);
+  --cst-status-danger-border: color-mix(in srgb, var(--cst-palette-hot) 22%, transparent);
+  --cst-status-warning-bg: color-mix(in srgb, var(--cst-palette-warning) 12%, transparent);
+  --cst-status-warning-border: color-mix(in srgb, var(--cst-palette-warning) 22%, transparent);
+  --cst-marker-user-bg: color-mix(in srgb, var(--cst-palette-map-user) 12%, transparent);
+  --cst-marker-user-border: color-mix(in srgb, var(--cst-palette-map-user) 22%, transparent);
+  --cst-marker-user-glow: color-mix(in srgb, var(--cst-palette-map-user) 42%, transparent);
+  --cst-marker-group-bg: color-mix(in srgb, var(--cst-palette-map-group) 12%, transparent);
+  --cst-marker-group-border: color-mix(in srgb, var(--cst-palette-map-group) 22%, transparent);
+  --cst-marker-group-glow: color-mix(in srgb, var(--cst-palette-map-group) 42%, transparent);
+  --cst-marker-moment-bg: color-mix(in srgb, var(--cst-palette-map-moment) 12%, transparent);
+  --cst-marker-moment-border: color-mix(in srgb, var(--cst-palette-map-moment) 22%, transparent);
+  --cst-marker-moment-glow: color-mix(in srgb, var(--cst-palette-map-moment) 42%, transparent);
+
+  /* ── shadcn 桥接（仅 base.css @apply 消费的 4 个；其余 token 无引用，见 shadcn.css）── */
+  --cst-background: var(--cst-surface-primary);
+  --cst-foreground: var(--cst-text-primary);
+  --cst-border: var(--cst-border-default);
+  --cst-ring: var(--cst-accent-default);
+  --cst-destructive: var(--cst-status-danger);
+
+  /* ── Shell / overlay primitives ── */
+  --cst-surface-nav-glass: color-mix(in srgb, var(--cst-surface-panel) 90%, transparent);
+  --cst-border-nav-glass: color-mix(in srgb, var(--cst-accent-default) 15%, transparent);
+  --cst-elevation-rail-hover: 0 0 0 1px rgba(43, 42, 38, 0.20);
+  --cst-surface-scrim: rgba(26, 24, 20, 0.38);
+  --cst-surface-overlay: rgba(26, 24, 20, 0.38);
+  --cst-border-inverse: rgba(255, 255, 255, 0.25);
+  --cst-content-inverse: #FFFFFF;
+  --cst-content-inverse-muted: rgba(255, 255, 255, 0.70);
+  --cst-content-inverse-secondary: rgba(255, 255, 255, 0.80);
+  --cst-content-on-marker: #FFFFFF;
+  --cst-text-on-status: #FFFFFF;
+  --cst-surface-glass-badge: rgba(255, 255, 255, 0.18);
+  /* 弱化嵌入面：比卡片低一档的静态填充（分段控件底轨、置顶会话行）。
+     表达式经 --cst-text-primary 自适配明暗——light 向正文色微沉、dark 向正文色微浮，
+     故无需在 .inkwash.dark 重复定义（方向自动反转）。 */
+  --cst-surface-subtle: color-mix(in srgb, var(--cst-surface-primary) 92%, var(--cst-text-primary) 8%);
+  --cst-elevation-menu: 0 16px 40px rgba(0, 0, 0, 0.16);
+  --cst-elevation-control-thumb: 0 1px 3px rgba(0, 0, 0, 0.18);
+  --cst-surface-toggle-off: rgba(120, 120, 128, 0.22);
+  --cst-surface-toggle-thumb: var(--cst-surface-panel);
+  --cst-elevation-toggle-on: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+  --cst-elevation-toggle-off: inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(120, 120, 128, 0.15);
+  --cst-elevation-toggle-thumb: 0 1px 4px rgba(0, 0, 0, 0.26), 0 0.5px 1px rgba(0, 0, 0, 0.14);
+  --cst-surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
+  --cst-surface-media-scrim-strong: rgba(0, 0, 0, 0.55);
+  --cst-surface-cover-scrim: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 65%);
+  /* 无封面占位底（inkwash 纸面语言：朱砂淡底纯色，无渐变） */
+  --cst-surface-cover-placeholder: var(--cst-accent-soft-bg);
+  --cst-surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
+  --cst-surface-gallery-label: rgba(0, 0, 0, 0.46);
+  --cst-surface-map-control: rgba(255, 255, 255, 0.20);
+  --cst-elevation-profile-avatar: 0 6px 20px rgba(0, 0, 0, 0.22);
+  --cst-elevation-modal: 0 24px 80px rgba(0,0,0,0.24), 0 0 0 1px var(--cst-border-subtle);
+  --cst-elevation-fab: 0 4px 14px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.08);
+  --cst-elevation-nav: 0 -1px 3px rgba(0, 0, 0, 0.03);
+  --cst-elevation-sheet: 0 -8px 40px rgba(0,0,0,0.18), 0 -2px 0 var(--cst-border-subtle);
+
+  /* ── Nearby feed card-menu（中性高雅，无炫光） ── */
+  --cst-surface-card-menu: var(--cst-surface-primary);
+  --cst-border-card-menu: var(--cst-border-subtle, var(--cst-border-default));
+
+  /* ── 卡片交互档位（inkwash 宣纸扁平：按压 0.97 / hover 不抬升（反馈由
+     墨色微染+细墨线承载）/ 图片 hover 缩放 1.045）── */
+  --cst-card-tap-scale: 0.97;
+  --cst-hover-lift: 0px;
+  --cst-hover-image-zoom: 1.045;
+}
+
+/* ═══ Inkwash 组件覆盖（@layer utilities，与 utilities.css 同层）═══ */
+@layer utilities {
+  /* inkwash 纸面语言下 card-raised 用墨线 ring 表达浮起（无投影） */
+  .inkwash .card-raised,
+  .inkwash.dark .card-raised {
+    box-shadow: 0 0 0 1.5px var(--cst-border-default);
+  }
+
+  /* 圆形图标按钮：surface 态默认消费 shadow-raised-sm（JS 不再按主题分支），
+     inkwash 宣纸语言下压平——层级由 hairline border 承载 */
+  .inkwash .action-icon-btn {
+    box-shadow: none !important;
+  }
+
+  /* strict paper-flat：无阴影，仅 border 描边（icon-badge 除外：
+     基类已改 accent 淡底无描边，inkwash 下同样适用，不再压回纸面底） */
+  .inkwash .input-surface,
+  .inkwash .flat,
+  .inkwash .pressed,
+  .inkwash .card-hover,
+  .inkwash .circle-hover {
+    box-shadow: none !important;
+    background: var(--cst-surface-primary);
+  }
+  .inkwash .input-surface:focus-within {
+    /* inkwash 保持纸面扁平：内凹 1px 墨线加深，无外发光 */
+    box-shadow: inset 0 0 0 1px var(--cst-border-strong) !important;
+  }
+  .inkwash .pressed {
+    box-shadow: inset 0 0 0 1px var(--cst-border-strong) !important;
+  }
+  .inkwash .input-surface {
+    /* 宣纸暖白输入面：卡面混入 6% 画布暖底 + 内凹细墨线 */
+    background: color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-surface-page) 6%) !important;
+    box-shadow: inset 0 0 0 1px var(--cst-border-default) !important;
+  }
+  .inkwash .surface-hero,
+  .inkwash.dark .surface-hero {
+    box-shadow: 0 0 0 1.5px var(--cst-border-strong);
+    border-color: var(--cst-border-strong);
+  }
+  /* 扁平——无位移无阴影，仅背景色承载（hover 墨色透明度微染由
+     --cst-interactive-hover 提供）；缩放保留但保守（对齐 forest） */
+  .inkwash .hover-btn:active,
+  .inkwash .hover-action:active,
+  .inkwash .scale-btn:active { transform: scale(0.97); }
+  @media (hover: hover) and (pointer: fine) {
+    .inkwash .card-hover:hover {
+      /* inkwash 扁平：无阴影，hover = 宣纸墨色微染 + 细墨线加深 */
+      box-shadow: none !important;
+      border-color: var(--cst-border-strong) !important;
+      background: var(--cst-interactive-hover) !important;
+    }
+    .inkwash .circle-hover:hover {
+      /* 圆形控件均自带边框：hover 由边框变 accent 承载，不再叠加外环 */
+      box-shadow: none !important;
+    }
+    .inkwash .surface-ghost:hover {
+      background: var(--cst-interactive-hover);
+      border-color: var(--cst-accent-border);
+    }
+    .inkwash .scale-btn:hover { transform: scale(1.08); }
+    .inkwash .hover-action:hover { transform: scale(1.18); }
+  }
+}
+
+/* ═══ Inkwash Dark ═══ */
+.inkwash.dark {
+  /* ── 原始色板 --cst-palette-* ── */
+  --cst-palette-bg: #212426;
+  --cst-palette-page-bg: #181A1C;
+  --cst-palette-chat-bg: #1D2022;
+  --cst-palette-text: #EAE6DA;
+  --cst-palette-text-muted: #A8A49A;
+  --cst-palette-accent-primary: #D07763;
+  --cst-palette-glow: rgba(208, 119, 99, 0.20);
+  --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
+  --cst-palette-shadow-dark: rgba(0, 0, 0, 0.60);
+  --cst-palette-border: rgba(234, 230, 218, 0.16);
+  --cst-palette-border-pressed: rgba(234, 230, 218, 0.28);
+  --cst-palette-accent-soft: rgba(208, 119, 99, 0.12);
+  --cst-palette-accent-soft-border: rgba(208, 119, 99, 0.30);
+  --cst-palette-hover: rgba(208, 119, 99, 0.18);
+  --cst-palette-active-hover: rgba(208, 119, 99, 0.24);
+  --cst-palette-on-accent: #1F1512;
+  --cst-palette-online: #82B297;
+  --cst-palette-hot: #DE8496;
+  --cst-palette-warning: #D6A54E;
+  --cst-palette-map-user: #D07763;
+  --cst-palette-map-group: #7FA88B;
+  --cst-palette-map-moment: #C89B5A;
+  --cst-palette-overlay-strong: rgba(0, 0, 0, 0.58);
+  --cst-palette-shadow-card: 0 2px 10px rgba(0, 0, 0, 0.50), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --cst-palette-shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.30);
+
+  /* ── 透明度档位（dark）── */
+  --cst-palette-opacity-none: 0;
+  --cst-palette-opacity-faint: 0.30;
+  --cst-palette-opacity-subtle: 0.40;
+  --cst-palette-opacity-muted: 0.50;
+  --cst-palette-opacity-dim: 0.60;
+  --cst-palette-opacity-soft: 0.70;
+  --cst-palette-opacity-emphasis: 0.80;
+  --cst-palette-opacity-tap: 0.84;
+  --cst-palette-opacity-hover: 0.90;
+  --cst-palette-opacity-full: 1;
+  --cst-palette-opacity-active: 0.13;
+  --cst-palette-opacity-glow: 0.95;
+
+  /* ── color-mix 预设（dark）── */
+
+  /* ── 语义色族完整档位（dark）── */
+  --cst-accent-soft-bg: color-mix(in srgb, var(--cst-palette-accent-primary) 12%, transparent);
+  --cst-accent-border-soft: color-mix(in srgb, var(--cst-palette-accent-primary) 30%, transparent);
+  --cst-status-online-bg: color-mix(in srgb, var(--cst-palette-online) 14%, transparent);
+  --cst-status-online-border: color-mix(in srgb, var(--cst-palette-online) 28%, transparent);
+  --cst-status-danger-bg: color-mix(in srgb, var(--cst-palette-hot) 14%, transparent);
+  --cst-status-danger-border: color-mix(in srgb, var(--cst-palette-hot) 28%, transparent);
+  --cst-status-warning-bg: color-mix(in srgb, var(--cst-palette-warning) 14%, transparent);
+  --cst-status-warning-border: color-mix(in srgb, var(--cst-palette-warning) 28%, transparent);
+  --cst-marker-user-bg: color-mix(in srgb, var(--cst-palette-map-user) 14%, transparent);
+  --cst-marker-user-border: color-mix(in srgb, var(--cst-palette-map-user) 30%, transparent);
+  --cst-marker-user-glow: color-mix(in srgb, var(--cst-palette-map-user) 50%, transparent);
+  --cst-marker-group-bg: color-mix(in srgb, var(--cst-palette-map-group) 14%, transparent);
+  --cst-marker-group-border: color-mix(in srgb, var(--cst-palette-map-group) 30%, transparent);
+  --cst-marker-group-glow: color-mix(in srgb, var(--cst-palette-map-group) 50%, transparent);
+  --cst-marker-moment-bg: color-mix(in srgb, var(--cst-palette-map-moment) 14%, transparent);
+  --cst-marker-moment-border: color-mix(in srgb, var(--cst-palette-map-moment) 30%, transparent);
+  --cst-marker-moment-glow: color-mix(in srgb, var(--cst-palette-map-moment) 50%, transparent);
+
+  /* ── shadcn 桥接（dark，同上）── */
+  --cst-background: var(--cst-surface-primary);
+  --cst-foreground: var(--cst-text-primary);
+  --cst-border: var(--cst-border-default);
+  --cst-ring: var(--cst-accent-default);
+  --cst-destructive: var(--cst-status-danger);
+
+  /* ── Shell / overlay primitives (dark 覆盖) ── */
+  --cst-surface-nav-glass: color-mix(in srgb, var(--cst-surface-panel) 92%, transparent);
+  --cst-border-nav-glass: color-mix(in srgb, var(--cst-accent-default) 16%, transparent);
+  --cst-elevation-rail-hover: 0 0 0 1px rgba(234, 230, 218, 0.28);
+  --cst-surface-scrim: rgba(0, 0, 0, 0.42);
+  --cst-surface-overlay: rgba(0, 0, 0, 0.42);
+  --cst-text-on-status: #1F1512;
+  --cst-content-on-marker: #1F1512;
+  --cst-elevation-fab: 0 4px 16px rgba(0, 0, 0, 0.40), 0 1px 4px rgba(0, 0, 0, 0.25);
+  --cst-elevation-nav: 0 -2px 10px rgba(0, 0, 0, 0.35);
+  /* 弹层/下拉投影在 dark 需加深——否则沿用 light 的 16% 黑，比同屏 modal(42%)/sheet(22%)
+     明显更「飘」。 */
+  --cst-elevation-menu: 0 16px 48px rgba(0, 0, 0, 0.42);
+  --cst-elevation-sheet: 0 -8px 48px rgba(0,0,0,0.22), 0 -2px 0 var(--cst-border-subtle);
+  --cst-elevation-modal: 0 28px 88px rgba(0,0,0,0.42), 0 0 0 1px var(--cst-border-subtle);
+
+  /* ── card-menu dark（中性高雅，无炫光） ── */
+  --cst-surface-card-menu: var(--cst-surface-primary);
+  --cst-border-card-menu: var(--cst-border-subtle, var(--cst-border-default));
+  /* 无封面占位底（inkwash 纸面语言：纯色淡底，无渐变） */
+  --cst-surface-cover-placeholder: var(--cst-accent-soft-bg);
+}

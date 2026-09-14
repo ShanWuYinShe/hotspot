@@ -11,12 +11,13 @@
    Layer 2 — Themes (each theme is a single self-contained file)
      4. themes/vibrant.css  — :root,.vibrant / .vibrant.dark（全部 vibrant 值）
      5. themes/forest.css   — .forest / .forest.dark（全部 forest 值）
+     6. themes/inkwash.css  — .inkwash / .inkwash.dark（全部 inkwash 值）
 
    Layout & Presentation
-     6. layout.css          — context rail + workspace dimensions
-     7. base.css            — @layer base (typography + button feedback)
-     8. theme-registry.css  — @theme inline (Tailwind class registration)
-     9. utilities.css       — @layer utilities (component classes)
+     7. layout.css          — context rail + workspace dimensions
+     8. base.css            — @layer base (typography + button feedback)
+     9. theme-registry.css  — @theme inline (Tailwind class registration)
+     10. utilities.css      — @layer utilities (component classes)
 ────────────────────────────────────────────────────────────────────── */
 
 @import './shadcn.css';
@@ -24,6 +25,7 @@
 @import './semantic.css';
 @import './themes/vibrant.css';
 @import './themes/forest.css';
+@import './themes/inkwash.css';
 @import './layout.css';
 @import './base.css';
 @import './theme-registry.css';

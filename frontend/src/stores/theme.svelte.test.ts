@@ -133,6 +133,31 @@ it('toggleDark 在手动档之间切换（兼容入口）', async () => {
   expect(document.documentElement.classList.contains('forest')).toBe(true);
 });
 
+it('setTheme 切到 inkwash：持久化 + 旧主题类移除', async () => {
+  const { initTheme, setTheme, theme } = await import('./theme.svelte');
+  initTheme();
+  setTheme('inkwash');
+  expect(theme.theme).toBe('inkwash');
+  expect(localStorage.getItem('appTheme')).toBe('inkwash');
+  const cls = document.documentElement.classList;
+  expect(cls.contains('inkwash')).toBe(true);
+  expect(cls.contains('vibrant')).toBe(false);
+  expect(cls.contains('forest')).toBe(false);
+});
+
+it('持久化 inkwash 初值：initTheme 恢复 inkwash（含 dark 类）', async () => {
+  localStorage.setItem('appTheme', 'inkwash');
+  localStorage.setItem('colorScheme', 'dark');
+  const { initTheme, theme } = await import('./theme.svelte');
+  initTheme();
+  expect(theme.theme).toBe('inkwash');
+  expect(theme.isDark).toBe(true);
+  const cls = document.documentElement.classList;
+  expect(cls.contains('inkwash')).toBe(true);
+  expect(cls.contains('dark')).toBe(true);
+  expect(cls.contains('vibrant')).toBe(false);
+});
+
 it('非法持久化主题值回退默认 vibrant', async () => {
   localStorage.setItem('appTheme', 'invalid-theme');
   localStorage.setItem('colorScheme', 'invalid-mode');
@@ -143,6 +168,19 @@ it('非法持久化主题值回退默认 vibrant', async () => {
   expect(theme.isDark).toBe(false);
   expect(document.documentElement.classList.contains('vibrant')).toBe(true);
   expect(document.documentElement.classList.contains('dark')).toBe(false);
+});
+
+it('主题切换链 vibrant → inkwash → forest：类列表互斥且只剩当前主题', async () => {
+  const { initTheme, setTheme } = await import('./theme.svelte');
+  initTheme();
+  const cls = document.documentElement.classList;
+  setTheme('inkwash');
+  expect(cls.contains('inkwash')).toBe(true);
+  expect(cls.contains('vibrant')).toBe(false);
+  setTheme('forest');
+  expect(cls.contains('forest')).toBe(true);
+  expect(cls.contains('inkwash')).toBe(false);
+  expect(localStorage.getItem('appTheme')).toBe('forest');
 });
 
 it('initTheme 幂等：重复调用不改变已应用的主题', async () => {

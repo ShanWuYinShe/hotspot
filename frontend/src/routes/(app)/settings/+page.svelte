@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Bell, Lock, ChevronRight, LogOut, Info, MapPin, Palette, Trees, Moon, Sun, UserRound } from '@lucide/svelte';
+	import { Bell, Lock, ChevronRight, LogOut, Info, MapPin, Palette, Moon, Sun, UserRound } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -249,7 +249,7 @@
 						</div>
 						<TabBar
 							variant="segmented"
-							items={THEME_OPTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.id === 'forest' ? Trees : Palette }))}
+							items={THEME_OPTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.icon }))}
 							value={theme.theme}
 							onChange={(id) => setTheme(id as AppTheme)}
 						/>

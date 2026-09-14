@@ -11,7 +11,7 @@
 		     中文字形不预加载——由系统字体栈承担，零网络成本。 -->
 		<link rel="preload" href="/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin />
 		<script>
-			// 首帧主题防闪烁：CSS 注入前先按持久化偏好设置 <html> 的 vibrant/forest + dark 类，
+			// 首帧主题防闪烁：CSS 注入前先按持久化偏好设置 <html> 的 vibrant/forest/inkwash + dark 类，
 			// 与 stores/theme.svelte.ts 的 colorScheme/appTheme 键保持一致。
 			// 三态：colorScheme=light/dark 直接取值；auto（或缺失）时读老 isDark
 			// 显式值做首帧兼容，否则跟随系统 matchMedia。
@@ -26,15 +26,15 @@
 					else if (window.matchMedia) dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 					else dark = false;
 					var t = localStorage.getItem('appTheme');
-					if (t !== 'forest' && t !== 'vibrant') t = 'vibrant';
+					if (t !== 'forest' && t !== 'vibrant' && t !== 'inkwash') t = 'vibrant';
 					var root = document.documentElement;
 					root.classList.add(t);
 					if (dark) root.classList.add('dark');
 					// 浏览器 chrome 配色（移动端地址栏）：与 themes/*.css 的
 					// --cst-surface-page 保持一致；CSS 加载后由 theme store 动态接管
 					var themeColor = dark
-						? { vibrant: '#0B1424', forest: '#161A16' }
-						: { vibrant: '#F7FAFF', forest: '#F6F7F3' };
+						? { vibrant: '#0B1424', forest: '#161A16', inkwash: '#181A1C' }
+						: { vibrant: '#F7FAFF', forest: '#F6F7F3', inkwash: '#F5F2EA' };
 					var meta = document.querySelector('meta[name="theme-color"]');
 					if (meta) meta.setAttribute('content', themeColor[t]);
 				} catch (e) {

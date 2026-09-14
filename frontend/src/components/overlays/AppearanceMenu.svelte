@@ -105,7 +105,7 @@
 					<p id="theme-choice-label" class="eyebrow">主题</p>
 					<span class="text-xxs text-text-secondary">选择一种基调</span>
 				</div>
-				<div class="grid grid-cols-2 gap-2" role="group" aria-label="选择主题">
+				<div class="grid grid-cols-3 gap-2" role="group" aria-label="选择主题">
 					{#each THEME_OPTIONS as item}
 						{@const selected = theme.theme === item.id}
 						<button

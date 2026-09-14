@@ -95,10 +95,10 @@ function checkComposed(theme, mode, ark) {
 	return problems;
 }
 
-const THEMES = ['vibrant', 'forest'];
+const THEMES = ['vibrant', 'forest', 'inkwash'];
 // ets 侧常量前缀映射：前端 forest(清野) ≡ harmonyapp default_clean（accent #3D7A55 同源）；
 // harmonyapp 另有 figma_neu 开发用主题，前端无对应，不纳入校验。
-const ETS_PREFIX = { vibrant: 'VIBRANT', forest: 'DEFAULT_CLEAN' };
+const ETS_PREFIX = { vibrant: 'VIBRANT', forest: 'DEFAULT_CLEAN', inkwash: 'INKWASH' };
 const MODES = ['light', 'dark'];
 
 // ── 归一化：rgba(r,g,b,a) / #RGB / #RRGGBB / #RRGGBBAA / 带空格 → 统一 #RRGGBBAA（小写）──
@@ -146,7 +146,7 @@ function parseArkPalettes() {
 	const ets = readFileSync(harmonyTheme, 'utf8');
 	const palettes = {};
 	for (const m of ets.matchAll(
-		/static readonly (VIBRANT_LIGHT|VIBRANT_DARK|DEFAULT_CLEAN_LIGHT|DEFAULT_CLEAN_DARK)_COLORS: ColorConfig = \{([\s\S]*?)\n  \};/g
+		/static readonly (VIBRANT_LIGHT|VIBRANT_DARK|DEFAULT_CLEAN_LIGHT|DEFAULT_CLEAN_DARK|INKWASH_LIGHT|INKWASH_DARK)_COLORS: ColorConfig = \{([\s\S]*?)\n  \};/g
 	)) {
 		const [, constName, body] = m;
 		const fields = {};
@@ -160,7 +160,11 @@ function parseArkPalettes() {
 			if (normalized) fields[f[1]] = normalized;
 		}
 		// 常量名（如 DEFAULT_CLEAN_LIGHT）→ 主题族/明暗 归一到前端命名（forest_light 等）
-		const key = constName.replace('DEFAULT_CLEAN', 'forest').replace('VIBRANT', 'vibrant').toLowerCase();
+		const key = constName
+			.replace('DEFAULT_CLEAN', 'forest')
+			.replace('VIBRANT', 'vibrant')
+			.replace('INKWASH', 'inkwash')
+			.toLowerCase();
 		palettes[key] = fields;
 	}
 	return palettes;
@@ -221,4 +225,6 @@ if (problems.length > 0) {
 	console.error('修正方向：以 spec/设计定稿为准，两侧同步改，勿单端改色。');
 	process.exit(1);
 }
-console.log(`跨端色彩一致 OK：${THEMES.length} 主题 × ${MODES.length} 明暗 × ${MAPPING.length} 组映射已对齐（vibrant/forest light+dark）。`);
+console.log(
+	`跨端色彩一致 OK：${THEMES.length} 主题 × ${MODES.length} 明暗 × ${MAPPING.length} 组映射已对齐（${THEMES.join('/')} light+dark）。`
+);

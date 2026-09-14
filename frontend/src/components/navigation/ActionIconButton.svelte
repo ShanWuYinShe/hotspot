@@ -1,11 +1,12 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
-	import { theme } from '@/stores/theme.svelte';
 
 	// ActionIconButton — 圆形图标按钮（对齐 Figma Make ActionIconButton 契约）。
 	// variant: surface（凸起）/ overlay（图片覆盖层 blur）/ ghost（透明）。
 	// tone: muted / accent / inverse 决定图标颜色；hover/tap 由 scale-btn 承载。
 	// Figma 无 active 态、无 strokeWidth 变化；焦点环由 focus-ring 统一承载。
+	// 主题差异（vibrant 浮起投影 / forest·inkwash 纸面压平）由 themes/*.css 的
+	// .action-icon-btn 覆盖承载，本组件不按主题分支。
 
 	let {
 		icon: Icon,
@@ -41,13 +42,13 @@
 		// header-action 等类的 hover 背景填充
 		return `width:${size}px;height:${size}px;border:var(--cst-border-width-hairline) solid transparent;`;
 	}
-		return `width:${size}px;height:${size}px;background:var(--cst-surface-raised);border:var(--cst-border-width-hairline) solid var(--cst-border-subtle);box-shadow:${theme.theme === 'forest' ? 'none' : 'var(--shadow-raised-sm)'};`;
+		return `width:${size}px;height:${size}px;background:var(--cst-surface-raised);border:var(--cst-border-width-hairline) solid var(--cst-border-subtle);box-shadow:var(--shadow-raised-sm);`;
 	});
 </script>
 
 <button
 	type={type}
-	class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-muted {className}"
+	class="action-icon-btn hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-muted {className}"
 	style={style}
 	aria-label={label}
 	title={label}

@@ -338,6 +338,7 @@ theme/
   semantic.css           # Layer 1: 语义 token（--cst-text-primary 等 → --cst-palette-*）
   themes/vibrant.css     # Layer 2: 星际主题（全部 --cst-palette-* 值）
   themes/forest.css      # Layer 2: 清野主题（全部 --cst-palette-* 值）
+  themes/inkwash.css     # Layer 2: 水墨主题（全部 --cst-palette-* 值）
   layout.css             # 布局变量（context-rail、workspace）
   base.css               # @layer base（排版 + 按钮基线）
   theme-registry.css     # @theme inline Tailwind 注册（字号 text-*/字距 tracking-*/行高
@@ -350,7 +351,7 @@ theme/
 **所有涉及配色的取值——字体颜色、背景、边框、hover 颜色、active 颜色、阴影、
 遮罩、状态色、图钉/标记色等——必须来自 design token，严格禁止在页面/组件中
 单独定义色值**（禁止 `text-white`、`color:#fff`、`bg-black/50`、内联 `rgba(...)`
-等字面量）。所有 token 必须能随主题（vibrant/forest）与明暗模式正确变化。
+等字面量）。所有 token 必须能随主题（vibrant/forest/inkwash）与明暗模式正确变化。
 
 - **前缀约定**：全部 design token 使用 `cst-` 前缀（`--cst-text-primary`、
   `--cst-surface-primary`、`--cst-elevation-card`…），一眼可识别 token 来源。
@@ -401,13 +402,13 @@ theme/
   （参照 `notify/shared/notify-data.ts` 的 `TYPE_CONFIG` 语义键
   → token 映射模式）
 - **组件/数据层禁止 color-mix 表达式**：需要淡底/淡边框/光晕时引用主题预定义
-  档位 token——每个语义色族在 themes/{vibrant,forest}.css 定义三档：
+  档位 token——每个语义色族在 themes/{vibrant,forest,inkwash}.css 定义三档：
   `-bg`（淡底）、`-border`（淡边框）、`-glow`（光晕），如
   `--cst-status-warning-bg/-border/-glow`、`--cst-marker-user-bg/-border/-glow`。
   color-mix 只允许出现在 `styles/theme/` 定义体系内部（themes/*.css 的 token 值、
   semantic.css 的语义派生档位、utilities.css/base.css 的既有工具类——值即最终定义）；
   页面/组件/数据层仍然禁止，需要新档位时先在定义体系补 token
-- 新增组件时若缺语义 token，先在 themes/{vibrant,forest}.css 补 `--cst-*`
+- 新增组件时若缺语义 token，先在 themes/{vibrant,forest,inkwash}.css 补 `--cst-*`
   定义（light + dark），不得在组件里写死色值绕过
 - **新增 token 必须同步注册 Tailwind 类**：需要以 `bg-*/text-*/border-*` 类名
   消费的 token，必须在 `theme-registry.css` 的 `@theme inline` 补 `--color-*`
@@ -422,8 +423,9 @@ theme/
   禁止内嵌主题色 hex
 - **主题选择器 swatch（stores/theme.svelte.ts `THEME_OPTIONS`）**：色板需在
   主题激活前静态展示**目标主题**的 accent 代表色，而 CSS 变量只能解析“当前”
-  主题，故保留字面 hex（vibrant `#2E66C0` / forest `#3D7A55`）作为已登记例外；
-  必须与 themes/{vibrant,forest}.css 的 `--cst-palette-accent-primary` 保持同步
+  主题，故保留字面 hex（vibrant `#2E66C0` / forest `#3D7A55` / inkwash `#A63A2E`）
+  作为已登记例外；必须与 themes/{vibrant,forest,inkwash}.css 的
+  `--cst-palette-accent-primary` 保持同步（check-cross-platform-colors.mjs 直比）
 
 - 新组件优先使用语义名（`var(--cst-text-primary)`、`var(--cst-surface-page)` 等）+ Tailwind className
 - 明暗三档（`stores/theme.svelte.ts`）：`colorScheme='auto'|'light'|'dark'`（持久化键
@@ -432,7 +434,7 @@ theme/
   变化）。老 `isDark` 键只做一次性迁移（存在→对应手动档并删键，不存在→`auto`），
   首帧脚本（`app.html`）同步三态逻辑防闪。设置页与 `AppearanceMenu` 用 `TabBar`
   三段选择（跟随系统/浅色/深色），`toggleDark` 仅作手动档间切换的兼容入口
-- 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` + `.dark` 类实现
+- 主题切换通过 `<html>` 上的 `.vibrant` / `.forest` / `.inkwash` + `.dark` 类实现
 - 浏览器 chrome 配色（`<meta name="theme-color">`）随当前主题画布色同步：
   首帧由 app.html 内联脚本按持久化偏好设置四态映射，之后由
   theme store 的 `applyClasses` 读取 `--cst-surface-page` 动态更新
@@ -441,7 +443,7 @@ theme/
   **行内次要动作的显现**统一用 `desktop-reveal`（仅 fine pointer 默认隐藏，
   行 `.group` hover / 自身 `:focus-visible` / `aria-expanded="true"` 时显现；
   触屏无 hover 则常显）——禁止各页用 `opacity-0 group-hover:opacity-100` 自行拼装
-- 主题专属组件覆盖（`.vibrant .foo` / `.forest .foo`）统一放对应 themes/*.css 的
+- 主题专属组件覆盖（`.vibrant .foo` / `.forest .foo` / `.inkwash .foo`）统一放对应 themes/*.css 的
   `@layer utilities` 块，utilities.css 只保留与主题无关的通用类
 
 ## 字体（自托管，禁止第三方阻塞式引入）
@@ -536,7 +538,7 @@ theme/
     - **accent 光晕**（accent 实色背景发光）：`shadow-glow-sm/md/lg`（3 档：
       sm=0/3/10、md=0/4/14、lg=0/6/18）
     - **Material 单向/弹层投影**：`var(--cst-elevation-card)`/`-button`/`-modal`/`-sheet`/`-menu`
-      （语义 token，themes/{vibrant,forest}.css 各自定义真值）；弹层/下拉菜单用
+      （语义 token，themes/{vibrant,forest,inkwash}.css 各自定义真值）；弹层/下拉菜单用
       投影表达层级，不依赖描边环
     **地图标记光晕**：结构 token `var(--cst-marker-shadow)`（0 2px 10px 定位点）/
     `var(--cst-marker-halo)`（0 0 8px 小光点），色值由调用方按 marker tone 提供
