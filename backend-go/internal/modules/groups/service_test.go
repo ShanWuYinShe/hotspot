@@ -1429,6 +1429,16 @@ func TestServiceSetMemberRoleRejectsNonMemberTarget(t *testing.T) {
 	}
 }
 
+// 解禁目标必须是群成员（对齐 MuteMember 的 IsMember 校验）。
+func TestServiceUnmuteMemberRejectsNonMemberTarget(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.UnmuteMember(grpCtx("u1"), UnmuteMemberRequest{GroupID: "g1", UserID: "u2"})
+	if !errors.Is(err, ErrTargetNotMember) {
+		t.Fatalf("expected target not member, got %v", err)
+	}
+}
+
 func TestServiceMuteMemberRejectsNonMemberTarget(t *testing.T) {
 	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
 	svc := NewServiceWithRepo(repo)

@@ -197,6 +197,12 @@ func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) err
 	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return ErrAccessRestricted
 	}
+	// 目标必须是群成员（对齐 MuteMember）：非成员直接放行会广播无效事件。
+	if member, err := s.repo.IsMember(ctx, req.GroupID, req.UserID); err != nil {
+		return err
+	} else if !member {
+		return ErrTargetNotMember
+	}
 	if err := s.repo.UnmuteMember(ctx, principal.UserID, req); err != nil {
 		return err
 	}
