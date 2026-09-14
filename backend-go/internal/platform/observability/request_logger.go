@@ -24,6 +24,13 @@ func (rc *responseCapture) Write(b []byte) (int, error) {
 	return n, err
 }
 
+// slowRequestLogThreshold 及以上延迟的成功请求保留 Info 级访问日志。
+// 取舍（审计 perf P3-3）：成功且快的请求全量记 Info 会在高 QPS 下淹没真正
+// 需要关注的信号（错误/慢请求）并放大日志量，故降为 Debug——线上 log level
+// 为 info 时不输出，本地/排查时可调低 level 全量查看；错误（>=400）与慢请求
+// 保留原有级别，可观测性不受影响。
+const slowRequestLogThreshold = 500 * time.Millisecond
+
 func RequestLoggerMiddleware(logger *Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -58,8 +65,10 @@ func RequestLoggerMiddleware(logger *Logger) func(http.Handler) http.Handler {
 				logger.Error("request completed (server error)", fields...)
 			case rc.status >= 400:
 				logger.Warn("request completed (client error)", fields...)
+			case elapsed >= slowRequestLogThreshold:
+				logger.Info("request completed (slow)", fields...)
 			default:
-				logger.Info("request completed", fields...)
+				logger.Debug("request completed", fields...)
 			}
 		})
 	}

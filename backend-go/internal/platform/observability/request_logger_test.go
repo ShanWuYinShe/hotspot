@@ -16,7 +16,9 @@ func TestRequestLoggerMiddlewareUsesRequestmetaClientIP(t *testing.T) {
 	if err := requestmeta.InitTrustedProxies(""); err != nil {
 		t.Fatalf("init trusted proxies: %v", err)
 	}
-	core, logs := observer.New(zapcore.InfoLevel)
+	// 成功且快速的请求降为 Debug（审计 perf P3-3），observer 用 Debug 级收集
+	// 才能捕获该条目并校验 requestmeta 字段。
+	core, logs := observer.New(zapcore.DebugLevel)
 	logger := &Logger{base: zap.New(core).Sugar()}
 	handler := RequestIDMiddleware(RequestLoggerMiddleware(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
