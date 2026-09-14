@@ -268,6 +268,13 @@ func stringValue(value *string) string {
 	return *value
 }
 
+// groupSearchHardCap 是群搜索候选集的防御性硬上限：搜索的精确半径过滤、
+// 排序与分页都在 Go 侧完成，SQL 层不排序不分页，若无上限，候选集会随群
+// 规模无界增长（最坏退化一次 Query 全表载入内存）。此上限不是业务分页——
+// 正常排序分页逻辑不变，仅防止极端规模下把可搜索全表拉进进程；根治需把
+// 排序/裁剪下推 SQL（既定决策：等产品拍板排序口径后再实施，不在本处做）。
+const groupSearchHardCap = 1000
+
 // buildGroupSearchQuery assembles the static search SQL. S2 cell prefiltering
 // for the radius bounds (EXISTS unnest) and the coarse keyword/tag filters stay
 // in SQL; exact radius filtering, sorting and pagination are applied in Go on
@@ -298,5 +305,7 @@ func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any) {
 	if req.Tag != "" {
 		builder.WriteString(fmt.Sprintf(" AND %s = ANY(g.tags)", nextArg(req.Tag)))
 	}
+	// 防御性候选集硬上限（见 groupSearchHardCap），非业务分页。
+	builder.WriteString(fmt.Sprintf(" LIMIT %d", groupSearchHardCap))
 	return builder.String(), args
 }

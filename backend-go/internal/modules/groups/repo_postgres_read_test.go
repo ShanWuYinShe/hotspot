@@ -15,6 +15,18 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// 搜索 SQL 必须携带防御性候选集硬上限：精确过滤/排序/分页在 Go 侧进行，
+// 无 LIMIT 时候选集随群规模无界增长（最坏全表载入）。
+func TestBuildGroupSearchQueryCarriesHardCap(t *testing.T) {
+	query, _ := buildGroupSearchQuery(SearchGroupsRequest{Keyword: "hot"})
+	if !strings.Contains(query, " LIMIT ") {
+		t.Fatal("expected search query to carry a defensive LIMIT clause")
+	}
+	if !strings.Contains(query, "LIMIT 1000") {
+		t.Fatalf("expected LIMIT %d, got: %s", groupSearchHardCap, query)
+	}
+}
+
 type groupBackendStub struct {
 	rows      [][]any
 	queryErrs map[string]error
