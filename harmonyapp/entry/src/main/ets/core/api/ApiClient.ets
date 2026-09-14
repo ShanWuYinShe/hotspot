@@ -155,6 +155,7 @@ import {
   FetchGroupMessagesRequest,
   UpdateGroupMessageRequest,
   RecallGroupMessageRequest,
+  RecallAdminGroupMessageRequest,
   MarkGroupReadRequest,
 
   // 举报
@@ -815,6 +816,11 @@ export class ApiClient {
 
   static async recallGroupMessage(params: RecallGroupMessageRequest): Promise<ApiResponse<void>> {
     return HttpUtil.post<ApiResponse<void>, RecallGroupMessageRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.RECALL, params);
+  }
+
+  // 群主/管理员撤回他人消息（spec groups/admin/messages/recall，无时间窗，对齐前端 recallGroupMessageAsAdmin）
+  static async recallGroupMessageAsAdmin(params: RecallAdminGroupMessageRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, RecallAdminGroupMessageRequest>(ApiEndpoints.GROUP.ADMIN_RECALL_MESSAGE, params);
   }
 
   static async markGroupMessagesRead(params: MarkGroupReadRequest): Promise<ApiResponse<void>> {

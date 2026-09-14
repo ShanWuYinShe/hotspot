@@ -353,6 +353,12 @@ export interface RecallGroupMessageRequest {
   message_id: string;
 }
 
+// 群主/管理员撤回他人消息（spec group.md → groups/admin/messages/recall，无时间窗）
+export interface RecallAdminGroupMessageRequest {
+  group_id: string;
+  message_id: string;
+}
+
 export interface MarkGroupReadRequest {
   scope: string;
   group_id?: string;

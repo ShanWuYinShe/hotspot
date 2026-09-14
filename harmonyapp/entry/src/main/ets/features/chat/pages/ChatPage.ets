@@ -14,15 +14,20 @@ import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, SendPri
 import type {
   ServerEvent,
   PrivateMessageNewEvent,
+  PrivateMessageEditedEvent,
+  PrivateMessageRecalledEvent,
   GroupMessageNewEvent,
+  GroupMessageEditedEvent,
+  GroupMessageRecalledEvent,
   PrivateTypingEvent,
   GroupTypingEvent
 } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
-import { ChatMessageItem } from '../components/ChatMessageItem';
+import { ChatMessageItem, ChatMessageView } from '../components/ChatMessageItem';
 import { ChatActionsSheet } from '../components/ChatActionsSheet';
+import { MessageActionsSheet } from '../components/MessageActionsSheet';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
@@ -64,6 +69,10 @@ const SAFE_AREA_SPIKE_DELTA: number = 48;
 const DUPLICATE_MESSAGE_TIME_WINDOW_MS: number = 1500;
 const SEND_DUPLICATE_GUARD_WINDOW_MS: number = 1200;
 const KEYBOARD_DISMISS_NAV_GUARD_MS: number = 260;
+// 撤回时间窗（spec message_recall_window_seconds，默认 300s；服务端 10400 兜底，
+// 对齐前端 RECALL_WINDOW_MS）
+const RECALL_WINDOW_MS: number = 300000;
+const RECALLED_MESSAGE_TEXT: string = '消息已撤回';
 
 // 统一消息接口用于UI展示
 interface ChatMessage {
@@ -78,6 +87,10 @@ interface ChatMessage {
   isSystem: boolean;
   /** 本地乐观气泡标记（发送中未确认；WS 回显后由服务端消息替换） */
   pending?: boolean;
+  /** 已撤回（气泡渲染「消息已撤回」，对齐前端 recalled） */
+  recalled?: boolean;
+  /** 已编辑（时间行「· 已编辑」标记，对齐前端 editedAt） */
+  edited?: boolean;
   rawData?: Object;
 }
 
@@ -120,6 +133,9 @@ export struct ChatPage {
   @State targetPresenceOnline: boolean = false;
   @State isGroupServerMuted: boolean = false;
   @State groupMutedUntil: string = '';
+  /** 单条消息操作面板（编辑/撤回，对齐前端 MessageBubble ⋮ 菜单） */
+  @State showMessageActionsSheet: boolean = false;
+  @State actionMessage: ChatMessage | null = null;
 
   private chatId: string = '';
   private chatType: 'private_chat' | 'group_chat' = 'private_chat';
@@ -142,6 +158,8 @@ export struct ChatPage {
   private lastSendSignature: string = '';
   private lastSendAtMs: number = 0;
   private lastKeyboardDismissAtMs: number = 0;
+  /** 当前用户在群聊中的角色（owner/admin 可撤回他人消息；私聊不使用） */
+  private groupRole: string = 'member';
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -557,12 +575,13 @@ export struct ChatPage {
             nextCursor = response.data?.next_cursor ?? null;
           }
 
-          // 获取群组详情中的 viewer_state，填充服务端禁言状态
+          // 获取群组详情中的 viewer_state，填充服务端禁言状态与角色（角色用于管理员撤回）
           try {
             const groupResp = await ApiClient.getGroupDetail({ group_id: this.chatId });
             if (groupResp.code === 0 && groupResp.data?.viewer_state) {
               this.isGroupServerMuted = groupResp.data.viewer_state.is_muted;
               this.groupMutedUntil = groupResp.data.viewer_state.muted_until ?? '';
+              this.groupRole = groupResp.data.viewer_state.role;
             }
           } catch (e) {
             hilog.warn(DOMAIN_NUMBER, TAG, `加载群组禁言状态失败: ${JSON.stringify(e)}`);
@@ -694,9 +713,12 @@ export struct ChatPage {
     }
     
     const messageType: MessageType = item.type as MessageType;
+    const isRecalled = item.recalled_at !== null && item.recalled_at !== undefined;
     return {
       id: item.message_id,
-      content: item.media?.url || item.content || (item.type === 'image' ? '[图片]' : '[非文本消息]'),
+      // 已撤回消息统一渲染占位文案（对齐前端：m.recalled_at ? '消息已撤回' : content）
+      content: isRecalled ? RECALLED_MESSAGE_TEXT :
+        (item.media?.url || item.content || (item.type === 'image' ? '[图片]' : '[非文本消息]')),
       senderId: senderId,
       senderName: senderName,
       senderAvatar: senderAvatar,
@@ -704,6 +726,8 @@ export struct ChatPage {
       sentAt: item.sent_at,
       isSelf: isSelf,
       isSystem: item.type === 'system',
+      recalled: isRecalled,
+      edited: item.edited_at !== null && item.edited_at !== undefined,
       rawData: item
     };
   }
@@ -772,6 +796,10 @@ export struct ChatPage {
   private subscribeToEvents() {
     this.webSocketService.on('PrivateMessageNew', this.onPrivateMessageNew);
     this.webSocketService.on('GroupMessageNew', this.onGroupMessageNew);
+    this.webSocketService.on('PrivateMessageEdited', this.onPrivateMessageEdited);
+    this.webSocketService.on('PrivateMessageRecalled', this.onPrivateMessageRecalled);
+    this.webSocketService.on('GroupMessageEdited', this.onGroupMessageEdited);
+    this.webSocketService.on('GroupMessageRecalled', this.onGroupMessageRecalled);
     this.webSocketService.on('PrivateTyping', this.onPrivateTyping);
     this.webSocketService.on('GroupTyping', this.onGroupTyping);
     this.webSocketService.on('ConnectionEstablished', this.onConnectionEstablished);
@@ -780,6 +808,10 @@ export struct ChatPage {
   private unsubscribeFromEvents() {
     this.webSocketService.off('PrivateMessageNew', this.onPrivateMessageNew);
     this.webSocketService.off('GroupMessageNew', this.onGroupMessageNew);
+    this.webSocketService.off('PrivateMessageEdited', this.onPrivateMessageEdited);
+    this.webSocketService.off('PrivateMessageRecalled', this.onPrivateMessageRecalled);
+    this.webSocketService.off('GroupMessageEdited', this.onGroupMessageEdited);
+    this.webSocketService.off('GroupMessageRecalled', this.onGroupMessageRecalled);
     this.webSocketService.off('PrivateTyping', this.onPrivateTyping);
     this.webSocketService.off('GroupTyping', this.onGroupTyping);
     this.webSocketService.off('ConnectionEstablished', this.onConnectionEstablished);
@@ -1261,24 +1293,26 @@ export struct ChatPage {
             .padding(DesignConstants.SPACING.MD)
           }
         }
-        LazyForEach(this.messagesDataSource, (msg: ChatMessage, index: number) => {
-          ListItem() {
-            Column() {
-              if (this.shouldShowDatePill(index)) {
-                this.buildDatePill(formatDateLabel(msg.sentAt))
+            LazyForEach(this.messagesDataSource, (msg: ChatMessage, index: number) => {
+              ListItem() {
+                Column() {
+                  if (this.shouldShowDatePill(index)) {
+                    this.buildDatePill(formatDateLabel(msg.sentAt))
+                  }
+                  ChatMessageItem({
+                    msg: msg,
+                    isGroupChat: this.chatType === 'group_chat',
+                    isLastSent: msg.isSelf && msg.id === this.getLastSentMessageId(),
+                    timeText: this.formatMessageTime(msg.sentAt),
+                    hasActions: this.hasMessageActions(msg),
+                    onMessageClick: (view: ChatMessageView) => { this.openMessageActions(view); },
+                    palette: this.getCurrentThemePalette(),
+                    chatTheme: this.getChatTheme()
+                  })
+                }
+                .width('100%')
               }
-              ChatMessageItem({
-                msg: msg,
-                isGroupChat: this.chatType === 'group_chat',
-                isLastSent: msg.isSelf && msg.id === this.getLastSentMessageId(),
-                timeText: this.formatMessageTime(msg.sentAt),
-                palette: this.getCurrentThemePalette(),
-                chatTheme: this.getChatTheme()
-              })
-            }
-            .width('100%')
-          }
-        }, (msg: ChatMessage) => msg.id)
+            }, (msg: ChatMessage) => msg.id)
 
       }
       .scrollBar(BarState.Off)
@@ -1510,6 +1544,12 @@ export struct ChatPage {
       dragBar: true,
       backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
+    .bindSheet($$this.showMessageActionsSheet, this.messageActionsSheetBuilder(), {
+      height: SheetSize.FIT_CONTENT,
+      showClose: true,
+      dragBar: true,
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
+    })
     }
 
     // 举报二次确认
@@ -1615,6 +1655,213 @@ export struct ChatPage {
     }
   }
 
+  // ==================== 消息撤回/编辑（对齐前端 MessageBubble ⋮ 菜单） ====================
+
+  /** 撤回时间窗（spec message_recall_window_seconds 默认 300s；无时间戳放行，服务端兜底） */
+  private isInRecallWindow(sentAt: string): boolean {
+    if (!sentAt) {
+      return true;
+    }
+    const sentAtMs = Date.parse(sentAt);
+    if (Number.isNaN(sentAtMs)) {
+      return true;
+    }
+    return Date.now() - sentAtMs < RECALL_WINDOW_MS;
+  }
+
+  private isGroupAdminOrOwner(): boolean {
+    return this.groupRole === 'owner' || this.groupRole === 'admin';
+  }
+
+  /** 自己的消息：时限内可撤回（对齐前端 canRecall = sent && inRecallWindow） */
+  private canRecallMessage(msg: ChatMessage): boolean {
+    return msg.isSelf && !msg.recalled && msg.pending !== true && this.isInRecallWindow(msg.sentAt);
+  }
+
+  /** 群主/管理员撤回他人消息：无时间窗（对齐前端 recallGroupMessageAsAdmin 分支） */
+  private canAdminRecallMessage(msg: ChatMessage): boolean {
+    return this.chatType === 'group_chat' && !msg.isSelf && !msg.recalled && !msg.isSystem &&
+      this.isGroupAdminOrOwner();
+  }
+
+  /** 编辑：仅本人的文本消息且未撤回（对齐前端 canEdit = sent；spec 限定 type=text） */
+  private canEditMessage(msg: ChatMessage): boolean {
+    return msg.isSelf && !msg.recalled && msg.type === 'text' && msg.pending !== true;
+  }
+
+  private hasMessageActions(msg: ChatMessage): boolean {
+    return this.canEditMessage(msg) || this.canRecallMessage(msg) || this.canAdminRecallMessage(msg);
+  }
+
+  /** 气泡点击：定位原始消息并唤起操作面板 */
+  private openMessageActions(view: ChatMessageView): void {
+    const target = this.messages.find((m: ChatMessage) => m.id === view.id);
+    if (target === undefined || !this.hasMessageActions(target)) {
+      return;
+    }
+    this.dismissKeyboardOnOutsideTap();
+    this.actionMessage = target;
+    this.showMessageActionsSheet = true;
+  }
+
+  /** 面板回填内容（避免 Builder 内可空链式求值） */
+  private resolveActionMessageContent(): string {
+    const msg = this.actionMessage;
+    if (msg === null) {
+      return '';
+    }
+    return msg.content;
+  }
+
+  private isActionMessageEditable(): boolean {
+    const msg = this.actionMessage;
+    if (msg === null) {
+      return false;
+    }
+    return this.canEditMessage(msg);
+  }
+
+  private isActionMessageRecallable(): boolean {
+    const msg = this.actionMessage;
+    if (msg === null) {
+      return false;
+    }
+    return this.canRecallMessage(msg) || this.canAdminRecallMessage(msg);
+  }
+
+  /** 本地标记撤回（HTTP 成功后先落本地，WS 回环再幂等覆盖；对齐前端 handleRecall） */
+  private applyRecallLocally(messageId: string): void {
+    if (!messageId) {
+      return;
+    }
+    this.messages = this.messages.map((m: ChatMessage): ChatMessage => {
+      if (m.id === messageId) {
+        const next: ChatMessage = {
+          id: m.id,
+          content: RECALLED_MESSAGE_TEXT,
+          senderId: m.senderId,
+          senderName: m.senderName,
+          senderAvatar: m.senderAvatar,
+          type: m.type,
+          sentAt: m.sentAt,
+          isSelf: m.isSelf,
+          isSystem: m.isSystem,
+          recalled: true,
+          rawData: m.rawData
+        };
+        return next;
+      }
+      return m;
+    });
+    this.messagesDataSource.setData(this.messages);
+  }
+
+  /** 本地应用编辑结果（HTTP 成功后先落本地，WS 回环再幂等覆盖；对齐前端 handleEdit） */
+  private applyEditLocally(messageId: string, content: string): void {
+    if (!messageId) {
+      return;
+    }
+    this.messages = this.messages.map((m: ChatMessage): ChatMessage => {
+      if (m.id === messageId) {
+        const next: ChatMessage = {
+          id: m.id,
+          content: content,
+          senderId: m.senderId,
+          senderName: m.senderName,
+          senderAvatar: m.senderAvatar,
+          type: m.type,
+          sentAt: m.sentAt,
+          isSelf: m.isSelf,
+          isSystem: m.isSystem,
+          recalled: m.recalled,
+          edited: true,
+          rawData: m.rawData
+        };
+        return next;
+      }
+      return m;
+    });
+    this.messagesDataSource.setData(this.messages);
+  }
+
+  private async handleRecallMessage(): Promise<void> {
+    const msg = this.actionMessage;
+    this.showMessageActionsSheet = false;
+    this.actionMessage = null;
+    if (!msg) {
+      return;
+    }
+    try {
+      if (msg.isSelf) {
+        // 自己的消息走消息撤回端点（仅作者，时间窗内）
+        if (this.chatType === 'private_chat') {
+          await ApiClient.recallPrivateMessage({ message_id: msg.id });
+        } else {
+          await ApiClient.recallGroupMessage({ message_id: msg.id });
+        }
+      } else {
+        // 群主/管理员撤回他人消息走 groups/admin/messages/recall（无时间窗）
+        await ApiClient.recallGroupMessageAsAdmin({ group_id: this.chatId, message_id: msg.id });
+      }
+      this.applyRecallLocally(msg.id);
+    } catch {
+      SystemToast.showError('撤回失败', this.getUIContext());
+    }
+  }
+
+  private async handleEditMessageSubmit(content: string): Promise<void> {
+    const msg = this.actionMessage;
+    if (!msg || !content) {
+      return;
+    }
+    try {
+      if (this.chatType === 'private_chat') {
+        await ApiClient.updatePrivateMessage({ message_id: msg.id, content: content });
+      } else {
+        await ApiClient.updateGroupMessage({ message_id: msg.id, content: content });
+      }
+      this.showMessageActionsSheet = false;
+      this.actionMessage = null;
+      this.applyEditLocally(msg.id, content);
+    } catch {
+      SystemToast.showError('编辑失败', this.getUIContext());
+    }
+  }
+
+  // ==================== 消息编辑/撤回 WS 事件（实时同步对端操作） ====================
+
+  private onPrivateMessageEdited = (event: ServerEvent): void => {
+    if (event.type !== 'PrivateMessageEdited') return;
+    if (this.chatType !== 'private_chat') return;
+    const payload = (event as PrivateMessageEditedEvent).payload;
+    if (this.targetId && payload.target_user_id !== this.targetId) return;
+    this.applyEditLocally(payload.message_id, payload.content);
+  }
+
+  private onPrivateMessageRecalled = (event: ServerEvent): void => {
+    if (event.type !== 'PrivateMessageRecalled') return;
+    if (this.chatType !== 'private_chat') return;
+    const payload = (event as PrivateMessageRecalledEvent).payload;
+    if (this.targetId && payload.target_user_id !== this.targetId) return;
+    this.applyRecallLocally(payload.message_id);
+  }
+
+  private onGroupMessageEdited = (event: ServerEvent): void => {
+    if (event.type !== 'GroupMessageEdited') return;
+    if (this.chatType !== 'group_chat') return;
+    const payload = (event as GroupMessageEditedEvent).payload;
+    if (payload.group_id !== this.chatId) return;
+    this.applyEditLocally(payload.message_id, payload.content);
+  }
+
+  private onGroupMessageRecalled = (event: ServerEvent): void => {
+    if (event.type !== 'GroupMessageRecalled') return;
+    if (this.chatType !== 'group_chat') return;
+    const payload = (event as GroupMessageRecalledEvent).payload;
+    if (payload.group_id !== this.chatId) return;
+    this.applyRecallLocally(payload.message_id);
+  }
+
   @Builder
   private conversationActionsSheetBuilder() {
     ChatActionsSheet({
@@ -1642,6 +1889,24 @@ export struct ChatPage {
         this.showReportConfirm = true;
       },
       onClose: () => { this.showConversationActionsSheet = false; }
+    })
+  }
+
+  @Builder
+  private messageActionsSheetBuilder() {
+    MessageActionsSheet({
+      messageContent: this.resolveActionMessageContent(),
+      canEdit: this.isActionMessageEditable(),
+      canRecall: this.isActionMessageRecallable(),
+      palette: this.getCurrentThemePalette(),
+      surfaceBackground: this.getSurfaceBackground(),
+      surfaceBorder: this.getSurfaceBorder(),
+      onEdit: (content: string) => { this.handleEditMessageSubmit(content); },
+      onRecall: () => { this.handleRecallMessage(); },
+      onClose: () => {
+        this.showMessageActionsSheet = false;
+        this.actionMessage = null;
+      }
     })
   }
 

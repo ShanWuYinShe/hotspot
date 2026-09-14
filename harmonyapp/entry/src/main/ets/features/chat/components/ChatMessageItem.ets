@@ -26,6 +26,12 @@ export interface ChatMessageView {
   sentAt: string;
   isSelf: boolean;
   isSystem: boolean;
+  /** 已撤回（渲染为「消息已撤回」，对齐前端 MessageBubble recalled 态） */
+  recalled?: boolean;
+  /** 已编辑（时间行追加「· 已编辑」标记，对齐前端 editedAt） */
+  edited?: boolean;
+  /** 本地乐观气泡（发送中未确认，不可撤回/编辑） */
+  pending?: boolean;
   rawData?: Object;
 }
 
@@ -38,6 +44,11 @@ export struct ChatMessageItem {
   @Prop timeText: string = '';
   palette: AppThemePalette = AppThemeManager.getPaletteById('vibrant_light');
   chatTheme: ChatThemeColors = ChatThemeManager.current();
+
+  /** 气泡是否可唤起操作面板（编辑/撤回；由页面按权限计算） */
+  @Prop hasActions: boolean = false;
+  /** 气泡点击上抛（唤起消息操作面板） */
+  onMessageClick?: (msg: ChatMessageView) => void = undefined;
 
   /** 图片加载失败标记（加载占位显示） */
   @State imageFailed: boolean = false;
@@ -132,7 +143,14 @@ export struct ChatMessageItem {
               }
               .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
               .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
-              .onClick(() => { this.previewImage(); })
+              .onClick(() => {
+                // 有可操作项（撤回）时点击唤起操作面板，否则走图片预览
+                if (this.hasActions && this.onMessageClick) {
+                  this.onMessageClick(this.msg);
+                  return;
+                }
+                this.previewImage();
+              })
               .accessibilityText('点击预览图片')
               // 图片气泡也带时间/已读底行（与文本气泡一致，Telegram 规范）
               Row({ space: DesignConstants.SPACING.XS }) {
@@ -152,17 +170,26 @@ export struct ChatMessageItem {
               .width('100%')
               .margin({ top: DesignConstants.SPACING.HALF })
             } else {
-              Text(this.msg.content)
+              // 已撤回：斜体「消息已撤回」（对齐前端 MessageBubble recalled 态）
+              Text(this.msg.recalled ? '消息已撤回' : this.msg.content)
                 .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
-                .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText : this.palette.textPrimary)
+                .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText :
+                  (this.msg.recalled ? this.palette.textSecondary : this.palette.textPrimary))
+                .fontStyle(this.msg.recalled === true ? FontStyle.Italic : FontStyle.Normal)
                 .maxLines(200)
 
-              // 气泡内底行：时间（自己=on-accent 70%；对方=textSecondary）+ 已读勾
+              // 气泡内底行：时间（自己=on-accent 70%；对方=textSecondary）+ 已编辑 + 已读勾
               Row({ space: DesignConstants.SPACING.XS }) {
                 Text(this.timeText)
                   .fontSize(DesignConstants.FONT.SIZE.XS2)
                   .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText : this.palette.textSecondary)
                   .opacity(this.msg.isSelf ? DesignConstants.OPACITY.EMPHASIZED : 1)
+                if (this.msg.edited && !this.msg.recalled) {
+                  Text('· 已编辑')
+                    .fontSize(DesignConstants.FONT.SIZE.XS2)
+                    .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText : this.palette.textSecondary)
+                    .opacity(this.msg.isSelf ? DesignConstants.OPACITY.EMPHASIZED : 1)
+                }
                 if (this.msg.isSelf && this.isLastSent) {
                   LucideIcon({
                       icon: AppIcon.CHECK_ALL,
@@ -190,6 +217,16 @@ export struct ChatMessageItem {
           // 气泡纯色底无边框无阴影（对齐前端 MessageBubble 与主流 IM；
           // 描边+阴影会让气泡呈现「浮肿的框」）
           .margin({ top: DesignConstants.SPACING.HALF })
+          .onClick(() => {
+            // 图片消息点击由内部 Stack 消费（预览/操作面板二选一），此处跳过避免双触发
+            if (this.msg.type === 'image') {
+              return;
+            }
+            // 文本气泡点击唤起消息操作面板（编辑/撤回，对齐前端 ⋮ 菜单入口）
+            if (this.hasActions && this.onMessageClick) {
+              this.onMessageClick(this.msg);
+            }
+          })
         }
         .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
         .layoutWeight(1)
