@@ -128,7 +128,7 @@
 
 	{#if showCreate}
 		<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
-			<Dialog.Content side="bottom" class="overflow-hidden sm:max-w-2xl" style="height:90%;">
+			<Dialog.Content side="bottom" class="overflow-hidden sm:max-w-2xl" style="height:var(--cst-sheet-height-xl);">
 				<CreateSheet onClose={closeComposer} />
 			</Dialog.Content>
 		</Dialog.Root>

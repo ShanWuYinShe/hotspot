@@ -178,7 +178,7 @@
 		{/if}
 
 		<Dialog.Root open={composer.composerOpen} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
-			<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;">
+			<Dialog.Content side="bottom" class="overflow-hidden" style="height:var(--cst-sheet-height-2xl);">
 				<CreateSheet onClose={closeComposer} />
 			</Dialog.Content>
 		</Dialog.Root>

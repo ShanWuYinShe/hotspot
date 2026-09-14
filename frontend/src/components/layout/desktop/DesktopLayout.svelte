@@ -290,7 +290,7 @@
 
 	<!-- CREATE MODAL — centered dialog on desktop -->
 	<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
-		<Dialog.Content side="center" class="overflow-hidden w-120"  style="height:78vh;max-height:700px">
+		<Dialog.Content side="center" class="overflow-hidden w-120"  style="height:var(--cst-sheet-height);max-height:var(--cst-sheet-max-height)">
 			<CreateSheet onClose={closeComposer} />
 		</Dialog.Content>
 	</Dialog.Root>

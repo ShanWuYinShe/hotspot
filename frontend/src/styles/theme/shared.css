@@ -70,6 +70,18 @@
   --cst-marker-halo: 0 0 8px;       /* 小光点（图例/当前位置点）光晕 */
 }
 
+/* ── Sheet height scale — 弹层高度档位（与主题无关）────────────────────
+   消除各弹层调用方散落手抄的 height/max-height 值：center 模态弹层用主档
+   （78vh + 700px 上限），底部大 sheet 按内容体量分三档（85/90/92%）。
+   组件只引用 var()，新增弹层必须落在既有档位上。 */
+:root {
+  --cst-sheet-height: 78vh;          /* 主档：center 模态弹层（消息页弹层、布局层聊天容器） */
+  --cst-sheet-max-height: 700px;     /* 主档配套上限 */
+  --cst-sheet-height-lg: 85%;        /* 底部 sheet：发起新会话（移动端消息页） */
+  --cst-sheet-height-xl: 90%;        /* 底部 sheet：平板端聊天容器 */
+  --cst-sheet-height-2xl: 92%;       /* 底部 sheet：近满屏（移动端聊天容器/创建群组） */
+}
+
 /* ── Chat layout tokens — 聊天布局契约（对齐 harmonyapp DesignConstants.CHAT）──
    气泡最大宽度占比两端统一 75%（前端原 76% 漂移已收敛）；行高/圆角随页面内 token。 */
 :root {

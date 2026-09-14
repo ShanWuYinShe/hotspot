@@ -244,7 +244,7 @@
 				side="center"
 				class="overflow-hidden"
 				aria-label="发起新会话"
-				style="width:27.5rem;height:78vh;max-height:700px;"
+				style="width:27.5rem;height:var(--cst-sheet-height);max-height:var(--cst-sheet-max-height);"
 			>
 				<NewConversationSheet
 					defaultTab={newChatTab}
@@ -262,7 +262,7 @@
 		</Dialog.Root>
 
 		<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
-			<Dialog.Content side="center" class="overflow-hidden w-120" aria-label="创建群组"  style="height:78vh;max-height:700px">
+			<Dialog.Content side="center" class="overflow-hidden w-120" aria-label="创建群组"  style="height:var(--cst-sheet-height);max-height:var(--cst-sheet-max-height)">
 				<CreateGroupSheet
 					onClose={() => (showCreateGroup = false)}
 					onCreated={(groupId) => {
@@ -329,7 +329,7 @@
 		</div>
 
 		<Dialog.Root open={showNewChat} onOpenChange={(next) => (next ? undefined : (showNewChat = false))}>
-			<Dialog.Content side="bottom" class="overflow-hidden" style="height:85%;box-shadow:var(--cst-elevation-sheet);">
+			<Dialog.Content side="bottom" class="overflow-hidden" style="height:var(--cst-sheet-height-lg);box-shadow:var(--cst-elevation-sheet);">
 				<NewConversationSheet
 					defaultTab={newChatTab}
 					onClose={() => (showNewChat = false)}
@@ -340,7 +340,7 @@
 		</Dialog.Root>
 
 		<Dialog.Root open={showCreateGroup} onOpenChange={(next) => (next ? undefined : (showCreateGroup = false))}>
-			<Dialog.Content side="bottom" class="overflow-hidden" style="height:92%;box-shadow:var(--cst-elevation-sheet);">
+			<Dialog.Content side="bottom" class="overflow-hidden" style="height:var(--cst-sheet-height-2xl);box-shadow:var(--cst-elevation-sheet);">
 				<CreateGroupSheet
 					onClose={() => (showCreateGroup = false)}
 					onCreated={(groupId) => {
