@@ -8,6 +8,7 @@
 	import SearchDiscovery from './shared/SearchDiscovery.svelte';
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
 	import { smartBack } from '@/lib/smart-back';
+	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
 
 	// 搜索页：最近搜索（localStorage）、热门搜索、推荐话题、全部/用户/动态/话题 Tab。
 	// 对齐 Figma Make SearchPage：卡片使用 surface-primary + border 的 token 类，
@@ -50,26 +51,16 @@
 	// 输入联想（search/suggest，spec prefix 1-50 必填、types=['tag']）：
 	// 关键词非空时防抖取 tag 联想，作为结果页顶部的「相关话题」快速入口。
 	// 空查询不调 suggest（spec 空串会 10000），发现态只保留最近搜索。
-	$effect(() => {
-		const prefix = keyword;
-		if (!prefix) {
-			discoveryTopics = [];
-			return;
-		}
-		let cancelled = false;
-		const timer = setTimeout(() => {
-			void searchSuggest({ prefix, reference_point: null, types: ['tag'], radius: null }).then((res) => {
-				if (cancelled) return;
-				const suggest = res as unknown as { code: number; data?: { items?: Array<{ payload?: { name?: string } }> } | null };
-				const items = suggest.code === 0 ? suggest.data?.items ?? [] : [];
-				const names = items.map((i) => i.payload?.name ?? '').filter(Boolean) as string[];
-				discoveryTopics = names;
-			});
-		}, 300);
-		return () => {
-			cancelled = true;
-			clearTimeout(timer);
-		};
+	createDebouncedSearch({
+		query: () => keyword,
+		fetch: (prefix) => searchSuggest({ prefix, reference_point: null, types: ['tag'], radius: null }),
+		apply: (res) => {
+			const suggest = res as unknown as { code: number; data?: { items?: Array<{ payload?: { name?: string } }> } | null };
+			const items = suggest.code === 0 ? suggest.data?.items ?? [] : [];
+			const names = items.map((i) => i.payload?.name ?? '').filter(Boolean) as string[];
+			discoveryTopics = names;
+		},
+		clear: () => (discoveryTopics = [])
 	});
 
 	// 发现态热门话题：只拉一次（无查询时展示，有查询时不打扰结果态）
@@ -153,11 +144,13 @@
 		}
 	}
 
-	// 300ms 防抖
-	$effect(() => {
-		const term = keyword;
-		const timer = setTimeout(() => void doSearch(term), 300);
-		return () => clearTimeout(timer);
+	// 结果搜索同样统一 300ms 防抖（SEARCH_DEBOUNCE_MS）；请求竞态由 doSearch 内部 seq 承载。
+	// 行为微调：清空关键词由「防抖到期后清空结果」改为立即清空（输入框已空时旧结果不应滞留）。
+	createDebouncedSearch({
+		query: () => keyword,
+		fetch: (term) => doSearch(term).then(() => undefined),
+		apply: () => {},
+		clear: () => void doSearch('')
 	});
 
 	const remember = (value: string) => {

@@ -5,6 +5,7 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
 	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
+	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
@@ -148,31 +149,16 @@
 
 	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
 	// ── 真实地理编码搜索（高德/OSM 随地图源，经同源代理）────────────
-	// 输入 debounce 400ms 后查询；服务不可用回退本地演示数据。
+	// 输入防抖 300ms 后查询；服务不可用回退本地演示数据。
 	let remoteResults = $state<GeoPlace[] | null>(null);
-	let searchSeq = 0;
-	$effect(() => {
-		const query = searchQuery.trim();
-		const source = mapSourceStore.source;
-		if (!query) {
-			remoteResults = null;
-			return;
-		}
-		const seq = ++searchSeq;
-		const controller = new AbortController();
-		const timer = setTimeout(() => {
-			void searchPlaces(source, query, mapCenter, { signal: controller.signal })
-				.then((places) => {
-					if (seq === searchSeq) remoteResults = places;
-				})
-				.catch(() => {
-					if (seq === searchSeq) remoteResults = null;
-				});
-		}, 400);
-		return () => {
-			clearTimeout(timer);
-			controller.abort();
-		};
+	createDebouncedSearch({
+		query: () => searchQuery.trim(),
+		deps: () => mapSourceStore.source,
+		fetch: (query, signal) => searchPlaces(mapSourceStore.source, query, mapCenter, { signal }),
+		apply: (places) => (remoteResults = places),
+		clear: () => (remoteResults = null),
+		// 请求失败同样回退本地演示数据
+		onError: () => (remoteResults = null)
 	});
 	const searchResults = $derived(
 		searchQuery.trim() ? (remoteResults ?? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 5)) : []
