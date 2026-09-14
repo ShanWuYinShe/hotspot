@@ -538,10 +538,16 @@ func (s *Service) PublishNearbyNewMoment(ctx context.Context, targetUserID, acto
 		"moment_summary": momentSummaryPayload,
 		"distance":       distance,
 	}
+	// notify_id 先生成后共用（对齐 AppendGroupMentioned 等模式）：落库记录与
+	// NearbyNewMoment WS payload 携带同一 id，客户端可去重并对齐 HTTP 侧通知
+	//（spec api_spec_websocket.md）。
+	id := newNotifyID()
+	payload["notify_id"] = id
 	if err := s.repo.Append(ctx, targetUserID, NotifyItem{
-		Type:    "nearby_new_moment",
-		IsRead:  false,
-		Payload: payload,
+		NotifyID: id,
+		Type:     "nearby_new_moment",
+		IsRead:   false,
+		Payload:  payload,
 	}); err != nil {
 		observability.L().Error("notifys.publish_nearby_new_moment append failed", "error", err)
 		return err

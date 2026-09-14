@@ -353,6 +353,11 @@ func TestPublishNearbyNewMomentNoProviderAppendsAndPushes(t *testing.T) {
 	if !ok || eventPayload["moment_id"] != "moment_42" || eventPayload["distance"] != 350 {
 		t.Fatalf("unexpected event payload: %#v", sink.events[0].Payload)
 	}
+	// WS payload 携带与落库记录一致的 notify_id（spec api_spec_websocket.md，
+	// 客户端去重 + 对齐 HTTP 侧通知）。
+	if eventPayload["notify_id"] != item.NotifyID || item.NotifyID == "" {
+		t.Fatalf("expected event notify_id to match persisted record, event=%v item=%#v", eventPayload["notify_id"], item)
+	}
 }
 
 func TestPublishNearbyNewMomentEnabledProviderAppendsAndPushes(t *testing.T) {
