@@ -4,7 +4,6 @@
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import NearbySegmentNav from '@/components/navigation/NearbySegmentNav.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -26,8 +25,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		peopleProgressKey
 	} from './people-progress.svelte';
 
-	// 附近的人：附近一级 Tab 的默认段位。标题统一「附近」，段位由
-	// NearbySegmentNav 承担（搜索/地图收敛为 header 右上角工具入口）。
+	// 附近的人：独立路由页（/nearby/people，也是 /nearby 落点）。
+	// 人/群组/动态三段各为独立页面，不再共用段位导航 Tabs（段位导航已删除：
+	// 同页多标签形态易把三份不同数据耦合到一起）；搜索/地图收敛为 header
+	// 右上角工具入口，跨段切换走桌面侧栏、移动底部导航（附近→默认段）与首页三分流。
 
 	const SORT_OPTIONS = ['距离', '在线', '共同好友'];
 	const FILTER_TAGS = ['全部', '摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术'];
@@ -194,10 +195,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				</div>
 			{/snippet}
 			{#snippet below()}
-				<!-- 段位导航 + 排序：sticky header 内只保留段位与排序；标签过滤放正文首行 -->
-				<div class="mt-3">
-					<NearbySegmentNav />
-				</div>
+				<!-- 排序：sticky header 内只保留排序；标签过滤放正文首行 -->
 				<div class="mt-3 pb-2">
 					<TabBar items={SORT_OPTIONS.map((o) => ({ id: o, label: o }))} value={sort} onChange={(id) => (sort = id)} />
 				</div>

@@ -264,9 +264,11 @@
 			<MapFilterMenu bind:activeFilters counts={mapCounts} showLegend align="start" />
 		</div>
 
-		<!-- 右上角控制组：定位到当前位置（浏览器 GPS，失败回退默认位置）+ 地图源切换 -->
+		<!-- 右上角控制组：定位到当前位置（浏览器 GPS，失败回退默认位置）+ 地图源切换。
+		     地图源菜单 align="end"：按钮贴右边缘，菜单向左展开防视口裁剪
+		     （此前默认 align="start" 向右展开，200px 菜单被右边缘挡住一部分）。 -->
 		<div class="absolute z-20 flex items-center gap-2" style="top:14px;right:14px;">
-			<MapSourceSwitch />
+			<MapSourceSwitch align="end" />
 			<button
 				type="button"
 				class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring size-10 disabled:pointer-events-none disabled:opacity-faint"

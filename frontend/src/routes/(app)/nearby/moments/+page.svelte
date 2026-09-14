@@ -10,7 +10,6 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
-	import NearbySegmentNav from '@/components/navigation/NearbySegmentNav.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -27,9 +26,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		feedProgressKey
 	} from './shared/feed-progress.svelte';
 
-	// 附近动态（/nearby/moments）：附近一级 Tab 的动态段位。
-	// BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）；段位导航 NearbySegmentNav
-	// 置于 header below 吸顶，搜索/地图收敛为 header 右上角工具入口。
+	// 附近动态（/nearby/moments）：独立路由页。
+	// BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）；人/群组/动态三段各为
+	// 独立页面，不再共用段位导航 Tabs；搜索/地图收敛为 header 右上角工具入口。
 
 	// 「周边」= 按距离排序的默认流（nearby feed）；原「附近」与一级 Tab 同名嵌套
 	// 易歧义，改用项目既有语汇「周边」。旧深链 ?tab=附近 经 normalizeTab 兼容映射。
@@ -217,7 +216,7 @@ locationName = loc?.location_name ?? '';
 </svelte:head>
 
 
-<!-- ═══ 三端统一页面 header（标题行 + trailing 工具入口 + below 段位导航 + 内容源 Tab）═══ -->
+<!-- ═══ 三端统一页面 header（标题行 + trailing 工具入口 + below 内容源 Tab）═══ -->
 {#snippet feedHeader()}
 	<PageHeader
 		title="附近"
@@ -237,9 +236,6 @@ locationName = loc?.location_name ?? '';
 			</div>
 		{/snippet}
 		{#snippet below()}
-			<div class="mt-3">
-				<NearbySegmentNav />
-			</div>
 			<div class="mt-3 pb-2">
 				{@render tabBar()}
 			</div>

@@ -15,7 +15,8 @@
 	// MobilePortrait — 移动竖屏壳：状态栏 + 内容区 + 底部 4 Tab 导航（中央 FAB + 发布 Sheet）。
 	// 仅移动 portrait 分支使用（MainLayout 分派）。
 	// Tab 对齐鸿蒙端 PhoneLayout 五 slot：首页 / 附近 / 发布FAB / 消息 / 我的。
-	// 「附近」为一级 Tab（/nearby 聚合门户），people/groups/moments 分区子页从门户直达。
+	// 「附近」为一级 Tab（/nearby 落点为「附近的人」）；人/群组/动态三段各为独立
+	// 页面（段位导航已删除），跨段切换走首页三分流（人物推荐/附近活动/群组轮播）。
 
 	let { children }: { children: Snippet } = $props();
 

@@ -6,7 +6,6 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
-	import NearbySegmentNav from '@/components/navigation/NearbySegmentNav.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -20,7 +19,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { smartBack } from '@/lib/smart-back';
 
-	// 附近群组：附近一级 Tab 的群组段位。分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙；
+	// 附近群组（/nearby/groups）：独立路由页。分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙；
 	// 按名字找群走全局搜索（header 右上角搜索入口）。
 
 	const CATEGORIES = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
@@ -137,11 +136,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					</div>
 				{/snippet}
 				{#snippet below()}
-					<!-- 段位导航 + 分类标签：同处 sticky header 内 -->
-					<div class="mt-3">
-						<NearbySegmentNav />
-					</div>
-					<!-- 分类过滤统一走 TabBar（胶囊） -->
+					<!-- 分类过滤统一走 TabBar（胶囊），随 header 吸顶 -->
 					<div class="mt-3 pb-2">
 						<TabBar items={CATEGORIES.map((c) => ({ id: c, label: c }))} value={activeCategory} onChange={(id) => (activeCategory = id)} />
 					</div>
