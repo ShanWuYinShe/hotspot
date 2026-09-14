@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	"hotspot/backend-go/internal/modules/admin"
 	"hotspot/backend-go/internal/modules/auth"
 	"hotspot/backend-go/internal/modules/groupmessages"
@@ -32,17 +34,20 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 	return modules
 }
 
-// BuildModulesWithRedisPinger is like BuildModules but additionally wires a
-// redis liveness probe into the system module's health check. Pass nil when
-// redis is not configured (single-instance mode) — the health endpoint then
-// skips the redis probe instead of reporting degraded. ctx governs the
-// lifetime of module-owned background goroutines (e.g. the auth login-tracker
-// sweeper) and should be the application root context.
+// BuildModulesWithRedisPinger is like BuildModules but additionally wires the
+// redis client into the shared-state stores: the system module's health check
+// probe, the auth module's Redis login-failure tracker (P2-2：多实例共享爆破
+// 计数且重启不丢), and (via the caller handing this same client to
+// idempotency/ratelimit) cross-instance idempotency and rate limiting. Pass
+// nil when redis is not configured (single-instance mode) — those stores then
+// keep their in-process implementations. ctx governs the lifetime of
+// module-owned background goroutines (e.g. the auth login-tracker sweeper)
+// and should be the application root context.
 //
 // The second return value is the admin repository exposed as the platform-wide
 // ban checker (IsBanned); bootstrap hands it to the realtime handler so the WS
 // handshake enforces bans exactly like the HTTP RequiredAuth middleware.
-func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory *persistence.Factory, redisPinger func(ctx context.Context) error) ([]modulekit.Module, admin.Repository) {
+func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory *persistence.Factory, rdb *redis.Client) ([]modulekit.Module, admin.Repository) {
 	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
 	ratelimit.SetSource(sharedAppConfig)
 	// 通知服务全应用单一实例：此前 moments/groups/users/admin 各自再建一份
@@ -55,7 +60,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	imageResolver := NewMomentImageResolver(mediaModule.Service)
 	momentsModule := moments.NewModule(factory, usersModule.Service, sharedAppConfig, imageResolver, notificationService)
 	systemModule := system.NewModule(factory, sharedAppConfig)
-	systemModule.SetHealthRedisPinger(redisPinger)
+	systemModule.SetHealthRedisPinger(redisPinger(rdb))
 
 	shareModule := share.NewModule(factory)
 
@@ -104,6 +109,10 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// IsBanned can be wired into the platform auth Service (BanChecker),
 	// enforcing httpx.CodeAccountBanned for banned accounts on RequiredAuth endpoints.
 	authModule := auth.NewModule(ctx, cfg, factory, sharedAppConfig)
+	if rdb != nil {
+		// 登录失败锁定切 Redis（P2-2）：多实例共享计数，重启不丢锁定状态。
+		authModule.SetLoginTracker(auth.NewRedisLoginTracker(rdb))
+	}
 	adminModule := admin.NewModule(factory, sharedAppConfig, notificationService)
 	// 举报快照源接线（spec api_spec_types.md ReportSnapshot：服务端生成）：
 	// 群聊 + 私聊两个消息源在各自模块构造完成后注入 reports；mediaFiles 经

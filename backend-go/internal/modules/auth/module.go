@@ -16,6 +16,7 @@ import (
 
 type Module struct {
 	handler *Handler
+	service *Service
 }
 
 func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Factory, source appconfig.Source) *Module {
@@ -26,8 +27,12 @@ func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Fact
 	ConfigureHashingCost(cfg.BcryptCost)
 	repo := NewPostgresRepository(factory)
 	service := NewServiceWithSource(ctx, authService, repo, cfg, source)
-	return &Module{handler: NewHandler(service)}
+	return &Module{handler: NewHandler(service), service: service}
 }
+
+// SetLoginTracker 替换登录失败追踪器（P2-2）：Redis 可用时由 bootstrap 注入
+// Redis 实现，保证多实例共享计数与重启不丢锁定状态；缺省为进程内实现。
+func (m *Module) SetLoginTracker(tracker FailedLoginTracker) { m.service.loginTracker = tracker }
 
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/auth", func(authRouter chi.Router) {

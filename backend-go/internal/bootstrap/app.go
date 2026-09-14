@@ -75,7 +75,7 @@ func NewApp(cfg config.Config) (*App, error) {
 		logger.Info("redis not configured, idempotency running in single-instance mode")
 	}
 	idempotency.StartSweeper(rootCtx)
-	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisPinger(redisClient))
+	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisClient)
 	bridge := initRedisBridgeFromClient(cfg, logger, redisClient)
 	router := NewHTTPRouterWithLogger(modules, logger)
 	rootMux := http.NewServeMux()
