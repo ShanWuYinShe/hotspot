@@ -1,6 +1,9 @@
 /**
  * Skeleton — 骨架屏占位块
  *
+ * 选型规则：列表型首屏等待用骨架屏（本组件，可配 SkeletonShimmer 动效），
+ * 操作型等待（提交/动作反馈）用 SystemLoadingView。
+ *
  * 用法：
  *   Skeleton({ blockWidth: '100%', blockHeight: 16, cornerRadius: 4 })
  *   Skeleton({ blockWidth: 200, blockHeight: 200, cornerRadius: '50%' })

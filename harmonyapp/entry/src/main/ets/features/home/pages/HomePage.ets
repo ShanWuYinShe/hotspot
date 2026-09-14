@@ -31,6 +31,8 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
+import { Skeleton } from '../../../components/states/Skeleton';
+import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -804,32 +806,29 @@ export struct HomePage {
           .width('100%')
           .margin({ top: DesignConstants.SPACING.MD })
       } else if (this.usersLoading && this.users.length === 0) {
-        // loading skeleton（行骨架：头像圆 + 两行文字）
-        Column({ space: DesignConstants.SPACING.MD }) {
-          ForEach(['1', '2', '3'], (_: string) => {
-            Row({ space: DesignConstants.SPACING.MD }) {
-              Column()
-                .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-                .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-                .borderRadius(DesignConstants.RADIUS.FULL)
-                .backgroundColor(this.getPalette().surfaceSubtle)
-              Column({ space: DesignConstants.SPACING.XS }) {
-                Column()
-                  .width('65%')
-                  .height(DesignConstants.FONT.SIZE.SM)
-                  .borderRadius(DesignConstants.RADIUS.SM)
-                  .backgroundColor(this.getPalette().surfaceSubtle)
-                Column()
-                  .width('45%')
-                  .height(DesignConstants.FONT.SIZE.XS)
-                  .borderRadius(DesignConstants.RADIUS.SM)
-                  .backgroundColor(this.getPalette().surfaceSubtle)
-              }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
+        // loading skeleton（行骨架：头像圆 + 两行文字；P1-3 收敛 Skeleton/SkeletonShimmer）
+        Column() {
+          SkeletonShimmer({ active: true }) {
+            Column({ space: DesignConstants.SPACING.MD }) {
+              ForEach(['1', '2', '3'], (_: string) => {
+                Row({ space: DesignConstants.SPACING.MD }) {
+                  Skeleton({
+                    blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+                    blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+                    cornerRadius: DesignConstants.RADIUS.FULL
+                  })
+                  Column({ space: DesignConstants.SPACING.XS }) {
+                    Skeleton({ blockWidth: '65%', blockHeight: DesignConstants.FONT.SIZE.SM })
+                    Skeleton({ blockWidth: '45%', blockHeight: DesignConstants.FONT.SIZE.XS })
+                  }
+                  .alignItems(HorizontalAlign.Start)
+                  .layoutWeight(1)
+                }
+                .width('100%')
+              }, (_: string) => _)
             }
             .width('100%')
-          }, (_: string) => _)
+          }
         }
         .width('100%')
         .padding({ top: DesignConstants.SPACING.HALF })
@@ -974,17 +973,18 @@ export struct HomePage {
         Scroll() {
           Row({ space: DesignConstants.SPACING.MD }) {
             if (this.groupsLoading && this.groups.length === 0) {
-              // loading skeleton
-              Column()
-                .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
-                .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
-                .borderRadius(DesignConstants.SHAPE.CARD)
-                .backgroundColor(this.getPalette().surfaceSubtle)
-              Column()
-                .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
-                .height(DesignConstants.COMPONENT.BANNER_HEIGHT)
-                .borderRadius(DesignConstants.SHAPE.CARD)
-                .backgroundColor(this.getPalette().surfaceSubtle)
+              // loading skeleton（P1-3 收敛 Skeleton；横滚 Row 内不用 SkeletonShimmer
+              // 包装——其根节点 width('100%') 会破坏横向滚动的内容宽度）
+              Skeleton({
+                blockWidth: DesignConstants.COMPONENT.GROUP_CARD_WIDTH,
+                blockHeight: DesignConstants.COMPONENT.BANNER_HEIGHT,
+                cornerRadius: DesignConstants.SHAPE.CARD
+              })
+              Skeleton({
+                blockWidth: DesignConstants.COMPONENT.GROUP_CARD_WIDTH,
+                blockHeight: DesignConstants.COMPONENT.BANNER_HEIGHT,
+                cornerRadius: DesignConstants.SHAPE.CARD
+              })
             } else {
               ForEach(this.groups, (group: GroupItem) => {
                 // 固定卡宽容器：NearbyImageCard 依赖外部宽度测量，横滚 Row 不提供宽度约束
