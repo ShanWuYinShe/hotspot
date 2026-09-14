@@ -40,6 +40,10 @@
 	let avatarInput = $state<HTMLInputElement | null>(null);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
+	// inline 错误（对齐 AuthForm：aria-invalid + 描述关联 + role="alert" 就近错误行）：
+	// nicknameError 为字段级，formError 为表单级（服务端保存失败）
+	let nicknameError = $state<string | null>(null);
+	let formError = $state<string | null>(null);
 	// 10100（未登录/会话失效）是正常业务态：给登录引导而非裸技术报错（对齐 notify/me）。
 	let needsAuth = $state(false);
 	let reloadKey = $state(0);
@@ -95,9 +99,13 @@
 		if (saving) return;
 		const trimmedNickname = nickname.trim();
 		if (!trimmedNickname) {
-			showToast('昵称不能为空', 'danger');
+			// 字段级错误就近内联展示并聚焦，替代只靠 toast 的瞬时反馈
+			nicknameError = '昵称不能为空';
+			document.getElementById('edit-nickname')?.focus();
 			return;
 		}
+		nicknameError = null;
+		formError = null;
 		saving = true;
 		try {
 			// spec: updateAccount { nickname?, avatar_file_id?, bio?, tags?, gender? }
@@ -116,7 +124,8 @@
 				smartBack();
 			}, 800);
 		} catch (err) {
-			showToast(err instanceof Error && err.message ? err.message : '保存失败，请重试', 'danger');
+			// 服务端保存失败：表单级错误行内联展示（保留可重试的持久反馈）
+			formError = err instanceof Error && err.message ? err.message : '保存失败，请重试';
 		} finally {
 			saving = false;
 		}
@@ -247,11 +256,21 @@
 			<input
 				id="edit-nickname"
 				bind:value={nickname}
-				oninput={(e) => (nickname = e.currentTarget.value.slice(0, 30))}
+				oninput={(e) => {
+					nickname = e.currentTarget.value.slice(0, 30);
+					// 输入即清除 inline 错误（对齐 AuthForm clearFieldError）
+					if (nicknameError) nicknameError = null;
+					if (formError) formError = null;
+				}}
 				placeholder="你的名字"
-				class="w-full bg-transparent text-text-primary text-sm"
+				aria-invalid={nicknameError ? 'true' : undefined}
+				aria-describedby={nicknameError ? 'edit-nickname-error' : undefined}
+				class="w-full bg-transparent text-sm"
 			/>
 		</div>
+		{#if nicknameError}
+			<p id="edit-nickname-error" class="text-xs text-status-danger" role="alert">{nicknameError}</p>
+		{/if}
 	</div>
 
 	<div class="flex flex-col gap-1.5">
@@ -277,6 +296,10 @@
 			</div>
 		</div>
 	</div>
+
+	{#if formError}
+		<p class="text-xs text-status-danger" role="alert">{formError}</p>
+	{/if}
 
 	<!-- Interest tags -->
 	<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">

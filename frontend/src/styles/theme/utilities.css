@@ -256,6 +256,14 @@
   .input-surface textarea:focus-visible {
     outline: none;
   }
+
+  /* 错误态：字段输入 aria-invalid 时整框转 danger 色（inline 错误契约的视觉半边，
+     配合 aria-describedby + role="alert" 就近错误行，见 AuthForm / me/edit）。 */
+  .input-surface:has(input[aria-invalid='true']),
+  .input-surface:has(textarea[aria-invalid='true']) {
+    border-color: var(--cst-status-danger-border) !important;
+    box-shadow: inset 0 0 0 1px var(--cst-status-danger-border) !important;
+  }
 }
 
   /*── Hover/active 反馈（对齐 Figma Make useHoverConfig 契约）───────── */
