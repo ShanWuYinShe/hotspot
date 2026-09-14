@@ -19,6 +19,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { fetchNearbyMoments , netError } from '@/api';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 附近动态（/nearby/moments）：附近一级 Tab 的动态段位。
 	// BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）；段位导航 NearbySegmentNav
@@ -199,7 +200,7 @@ locationName = loc?.location_name ?? '';
 		subtitle={locationName ? `${locationName} · 5km 内` : '5km 实时探索'}
 		sticky
 		titleSize={device === 'desktop' ? 'xl' : '3xl'}
-		onBack={() => history.back()}
+		onBack={() => smartBack()}
 	>
 		{#snippet subtitleIcon()}
 			<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />

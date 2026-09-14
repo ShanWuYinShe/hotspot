@@ -7,6 +7,7 @@
 	import Toggle from '@/components/forms/Toggle.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import type { GroupItem, UpdateGroupRequest } from '@/api/types';
 
@@ -375,14 +376,13 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<!-- 转让确认（危险操作，参照删除公告的 Dialog 范式） -->
-<Dialog.Root open={transferTarget !== null} onOpenChange={(next) => (next ? undefined : (transferTarget = null))}>
-	<Dialog.Content side="center" class="max-w-sm p-5" aria-label="确认转让群主">
-		<p class="text-md text-text-primary">确定将群主转让给 {transferTarget?.name}？</p>
-		<p class="mt-1 text-sm text-text-secondary">转让后你将变为普通成员，无法再执行群管理操作。</p>
-		<div class="mt-4 flex items-center justify-end gap-3">
-			<button type="button" onclick={() => (transferTarget = null)} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
-			<button type="button" onclick={() => void handleConfirmTransfer()} disabled={transferring} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-muted enabled:bg-accent-default enabled:shadow-raised-sm enabled:hover:shadow-raised-md">确认转让</button>
-		</div>
-	</Dialog.Content>
-</Dialog.Root>
+<!-- 转让确认（危险操作，ConfirmDialog 规范形态） -->
+<ConfirmDialog
+	open={transferTarget !== null}
+	title="确定将群主转让给 {transferTarget?.name}？"
+	description="转让后你将变为普通成员，无法再执行群管理操作。"
+	confirmLabel="确认转让"
+	loading={transferring}
+	onCancel={() => (transferTarget = null)}
+	onConfirm={() => void handleConfirmTransfer()}
+/>

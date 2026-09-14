@@ -24,6 +24,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { follow } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import type { GroupInviteItem } from '@/api/types';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
 	// 入群邀请：通知行内联接受/拒绝（实时路径）+ 顶部「入群邀请」待办区块
@@ -233,7 +234,7 @@ const FILTER_TABS = [
 			title="通知"
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
-			onBack={() => history.back()}
+			onBack={() => smartBack()}
 		>
 			{#snippet trailing()}
 				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「全部已读」同排 -->

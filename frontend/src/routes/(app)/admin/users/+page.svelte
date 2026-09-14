@@ -7,10 +7,10 @@
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
+	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
-	import * as Dialog from '@/components/ui/dialog';
-	import Button from '@/components/ui/button.svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN_DANGER } from '../shared/table';
 	import { formatDateTime } from '@/lib/utils';
@@ -151,50 +151,38 @@
 			</div>
 
 			{#if list.hasMore}
-				<div class="flex justify-center">
-					<button type="button" class="hover-btn rounded-full border border-border-default bg-surface-primary px-5 py-2 text-sm text-text-secondary focus-ring transition-colors hover:text-text-primary disabled:opacity-faint" disabled={list.loadingMore} onclick={list.loadMore}>
-						{list.loadingMore ? '加载中…' : '加载更多'}
-					</button>
-				</div>
+				<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
 			{:else}
 				<ListEnd />
 			{/if}
 		{/if}
 	</div>
 
-	<Dialog.Root open={banTarget !== null} onOpenChange={(next) => (next ? undefined : (banTarget = null))}>
-		<Dialog.Content class="max-w-90 p-0">
-			<div class="px-5 pt-6 pb-4">
-				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">
-					{banTarget?.status === 'banned' ? '解封用户' : '封禁用户'}
-				</Dialog.Title>
-				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">
-					目标：{banTarget?.user.nickname}（<span class="font-mono">{banTarget?.user.user_id}</span>）
-					{#if banTarget?.status !== 'banned'}
-						。封禁将断开其在线连接并阻止登录，操作记入审计日志。
-					{/if}
-				</Dialog.Description>
-				<div class="mt-4 flex flex-col gap-3">
+	<ConfirmDialog
+		open={banTarget !== null}
+		title={banTarget?.status === 'banned' ? '解封用户' : '封禁用户'}
+		description={banTarget?.status === 'banned'
+			? `目标：${banTarget?.user.nickname}（${banTarget?.user.user_id}）`
+			: `目标：${banTarget?.user.nickname}（${banTarget?.user.user_id}）。封禁将断开其在线连接并阻止登录，操作记入审计日志。`}
+		confirmLabel={banTarget?.status === 'banned' ? '确认解封' : '确认封禁'}
+		confirmVariant={banTarget?.status === 'banned' ? 'primary' : 'danger'}
+		loading={banPending}
+		onCancel={() => (banTarget = null)}
+		onConfirm={() => void submitBan(banTarget?.status !== 'banned')}
+	>
+		{#snippet extra()}
+			<div class="flex flex-col gap-3">
+				<label class="flex flex-col gap-1.5">
+					<span class="text-xs text-text-secondary">原因（记入审计日志，可留空）</span>
+					<textarea bind:value={banReason} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3 py-2 text-sm text-text-primary"></textarea>
+				</label>
+				{#if banTarget?.status !== 'banned'}
 					<label class="flex flex-col gap-1.5">
-						<span class="text-xs text-text-secondary">原因（记入审计日志，可留空）</span>
-						<textarea bind:value={banReason} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3 py-2 text-sm text-text-primary"></textarea>
+						<span class="text-xs text-text-secondary">封禁天数（留空或 0 = 永久）</span>
+						<input type="number" min={0} bind:value={banDays} class="input-surface rounded-md px-3 py-2 text-sm text-text-primary" />
 					</label>
-					{#if banTarget?.status !== 'banned'}
-						<label class="flex flex-col gap-1.5">
-							<span class="text-xs text-text-secondary">封禁天数（留空或 0 = 永久）</span>
-							<input type="number" min={0} bind:value={banDays} class="input-surface rounded-md px-3 py-2 text-sm text-text-primary" />
-						</label>
-					{/if}
-				</div>
-			</div>
-			<div class="flex justify-end gap-2 px-5 pb-5">
-				<Button type="button" variant="secondary" size="md" onclick={() => (banTarget = null)}>取消</Button>
-				{#if banTarget?.status === 'banned'}
-					<Button type="button" variant="primary" size="md" loading={banPending} onclick={() => void submitBan(false)}>确认解封</Button>
-				{:else}
-					<Button type="button" variant="danger" size="md" loading={banPending} onclick={() => void submitBan(true)}>确认封禁</Button>
 				{/if}
 			</div>
-		</Dialog.Content>
-	</Dialog.Root>
+		{/snippet}
+	</ConfirmDialog>
 {/if}

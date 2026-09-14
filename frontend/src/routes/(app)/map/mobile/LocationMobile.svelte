@@ -15,6 +15,7 @@
 	import MapHeatDot from '../shared/MapHeatDot.svelte';
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 移动端地图探索：全屏底图（高德/OSM 可切换）+ 可拖拽吸附底部 Sheet（148/318/540 三档）。
 	// motion spring 吸附改 CSS transition。
@@ -210,7 +211,7 @@
 		try {
 			localStorage.setItem('hotspot_last_location', JSON.stringify([loc.lat, loc.lng]));
 		} catch {}
-		history.back();
+		smartBack();
 	}
 
 	// 图钉详情跳转：user/group/moment 分别路由到对应详情页
@@ -283,7 +284,7 @@
 					class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
 					style="{floatBtnStyle}"
 					aria-label="返回"
-					onclick={() => history.back()}
+					onclick={() => smartBack()}
 				>
 					<ArrowLeft class="size-4.5 text-text-primary" strokeWidth={2} />
 				</button>

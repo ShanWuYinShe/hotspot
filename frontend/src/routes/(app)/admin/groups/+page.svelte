@@ -7,9 +7,9 @@
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
+	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
-	import * as Dialog from '@/components/ui/dialog';
-	import Button from '@/components/ui/button.svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN_DANGER } from '../shared/table';
 	import { formatDateTime } from '@/lib/utils';
@@ -100,33 +100,27 @@
 			</div>
 
 			{#if list.hasMore}
-				<div class="flex justify-center">
-					<button type="button" class="hover-btn rounded-full border border-border-default bg-surface-primary px-5 py-2 text-sm text-text-secondary focus-ring transition-colors hover:text-text-primary disabled:opacity-faint" disabled={list.loadingMore} onclick={list.loadMore}>
-						{list.loadingMore ? '加载中…' : '加载更多'}
-					</button>
-				</div>
+				<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
 			{:else}
 				<ListEnd />
 			{/if}
 		{/if}
 	</div>
 
-	<Dialog.Root open={dismissTarget !== null} onOpenChange={(next) => (next ? undefined : (dismissTarget = null))}>
-		<Dialog.Content class="max-w-90 p-0">
-			<div class="px-5 pt-6 pb-4">
-				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">解散群组「{dismissTarget?.group.name}」？</Dialog.Title>
-				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">
-					解散后所有成员将收到系统解散通知（不暴露平台管理员身份），待处理的申请与邀请自动作废。原因仅记入审计日志。
-				</Dialog.Description>
-				<label class="mt-4 flex flex-col gap-1.5">
-					<span class="text-xs text-text-secondary">解散原因（可留空）</span>
-					<textarea bind:value={dismissReason} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3 py-2 text-sm text-text-primary"></textarea>
-				</label>
-			</div>
-			<div class="flex justify-end gap-2 px-5 pb-5">
-				<Button type="button" variant="secondary" size="md" onclick={() => (dismissTarget = null)}>取消</Button>
-				<Button type="button" variant="danger" size="md" loading={pending} onclick={() => void submitDismiss()}>确认解散</Button>
-			</div>
-		</Dialog.Content>
-	</Dialog.Root>
+	<ConfirmDialog
+		open={dismissTarget !== null}
+		title="解散群组「{dismissTarget?.group.name}」？"
+		description="解散后所有成员将收到系统解散通知（不暴露平台管理员身份），待处理的申请与邀请自动作废。原因仅记入审计日志。"
+		confirmLabel="确认解散"
+		loading={pending}
+		onCancel={() => (dismissTarget = null)}
+		onConfirm={() => void submitDismiss()}
+	>
+		{#snippet extra()}
+			<label class="flex flex-col gap-1.5">
+				<span class="text-xs text-text-secondary">解散原因（可留空）</span>
+				<textarea bind:value={dismissReason} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3 py-2 text-sm text-text-primary"></textarea>
+			</label>
+		{/snippet}
+	</ConfirmDialog>
 {/if}

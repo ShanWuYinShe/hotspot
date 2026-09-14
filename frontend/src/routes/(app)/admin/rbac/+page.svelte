@@ -8,6 +8,7 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER, ROW_BTN_PRIMARY } from '../shared/table';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -370,18 +371,15 @@
 	</Dialog.Root>
 
 	<!-- 角色删除确认 -->
-	<Dialog.Root open={deleteTarget !== null} onOpenChange={(next) => (next ? undefined : (deleteTarget = null))}>
-		<Dialog.Content class="max-w-90 p-0">
-			<div class="px-5 pt-6 pb-4">
-				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">删除角色「{deleteTarget?.name}」？</Dialog.Title>
-				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">持有该角色的平台管理员将失去其权限。</Dialog.Description>
-			</div>
-			<div class="flex justify-end gap-2 px-5 pb-5">
-				<Button type="button" variant="secondary" size="md" onclick={() => (deleteTarget = null)}>取消</Button>
-				<Button type="button" variant="danger" size="md" loading={opPending} onclick={() => void submitDelete()}>确认删除</Button>
-			</div>
-		</Dialog.Content>
-	</Dialog.Root>
+	<ConfirmDialog
+		open={deleteTarget !== null}
+		title="删除角色「{deleteTarget?.name}」？"
+		description="持有该角色的平台管理员将失去其权限。"
+		confirmLabel="确认删除"
+		loading={opPending}
+		onCancel={() => (deleteTarget = null)}
+		onConfirm={() => void submitDelete()}
+	/>
 
 	<!-- 授予管理员 -->
 	<Dialog.Root open={awardOpen} onOpenChange={(next) => (next ? undefined : (awardOpen = false))}>
@@ -422,16 +420,13 @@
 	</Dialog.Root>
 
 	<!-- 撤销确认 -->
-	<Dialog.Root open={revokeTarget !== null} onOpenChange={(next) => (next ? undefined : (revokeTarget = null))}>
-		<Dialog.Content class="max-w-90 p-0">
-			<div class="px-5 pt-6 pb-4">
-				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">撤销 {revokeTarget?.user.nickname} 的平台管理员？</Dialog.Title>
-				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">撤销后该用户立即失去全部平台管理权限。</Dialog.Description>
-			</div>
-			<div class="flex justify-end gap-2 px-5 pb-5">
-				<Button type="button" variant="secondary" size="md" onclick={() => (revokeTarget = null)}>取消</Button>
-				<Button type="button" variant="danger" size="md" loading={opPending} onclick={() => void submitRevoke()}>确认撤销</Button>
-			</div>
-		</Dialog.Content>
-	</Dialog.Root>
+	<ConfirmDialog
+		open={revokeTarget !== null}
+		title="撤销 {revokeTarget?.user.nickname} 的平台管理员？"
+		description="撤销后该用户立即失去全部平台管理权限。"
+		confirmLabel="确认撤销"
+		loading={opPending}
+		onCancel={() => (revokeTarget = null)}
+		onConfirm={() => void submitRevoke()}
+	/>
 {/if}

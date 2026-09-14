@@ -11,6 +11,7 @@
 	import { createMoment } from '@/api';
 	import { uploadMediaFiles } from '@/lib/upload';
 	import { showToast } from '@/stores/toast.svelte';
+	import { draft, clearDraft } from '@/stores/composer.svelte';
 
 	// 三端共用的发布器（手机 Sheet / 平板 Sheet / 桌面对话框）。
 	// 对齐 Figma Make：header 提供「创建群组」surface 切换。
@@ -29,11 +30,9 @@
 		{ id: 'private', label: '仅自己', hint: '保存在我的瞬间', icon: Lock }
 	];
 
-	let text = $state('');
-	let selectedMoods = $state<Set<string>>(new Set());
-	let imageFiles = $state<File[]>([]);
+	// 草稿字段走 composer store（跨弹层挂载存活，关闭重开不丢稿）；
+	// 位置每次重开重新定位（不存草稿，避免陈旧定位）。
 	let locationName = $state('');
-	let audience = $state<'nearby' | 'friends' | 'private'>('nearby');
 	let topicActive = $state(false);
 	let submitting = $state(false);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
@@ -44,42 +43,41 @@
 	}));
 
 	const toggleMood = (tag: string) => {
-		const next = new Set(selectedMoods);
-		next.has(tag) ? next.delete(tag) : next.add(tag);
-		selectedMoods = next;
+		const next = draft.moods.includes(tag) ? draft.moods.filter((t) => t !== tag) : [...draft.moods, tag];
+		draft.moods = next;
 	};
 
 	const appendText = (snippet: string) => {
-		if (text.includes(snippet)) return;
-		const separator = text.trim().length ? '\n' : '';
-		text = `${text}${separator}${snippet}`.slice(0, 280);
+		if (draft.text.includes(snippet)) return;
+		const separator = draft.text.trim().length ? '\n' : '';
+		draft.text = `${draft.text}${separator}${snippet}`.slice(0, 280);
 	};
 
 	const toggleTopic = () => {
 		const topic = locationName ? `#${locationName}` : '';
 		if (!topic) return;
 		if (topicActive) {
-			text = text.replace(topic, '').replace(/\n\n+/g, '\n').trimEnd();
+			draft.text = draft.text.replace(topic, '').replace(/\n\n+/g, '\n').trimEnd();
 		} else {
 			appendText(topic);
 		}
 		topicActive = !topicActive;
 	};
 
-	const canPublish = $derived(text.trim().length > 0 && !submitting);
-	const activeAudience = $derived(AUDIENCES.find((item) => item.id === audience) ?? AUDIENCES[0]);
+	const canPublish = $derived(draft.text.trim().length > 0 && !submitting);
+	const activeAudience = $derived(AUDIENCES.find((item) => item.id === draft.audience) ?? AUDIENCES[0]);
 
 	const handleSubmit = async () => {
 		if (!canPublish) return;
 		submitting = true;
 		try {
 			// 多图上传（spec：batch_presign → 并发 PUT → batch_complete），拿 file_id[] 随动态一起创建
-			const image_file_ids = imageFiles.length > 0
-				? await uploadMediaFiles(imageFiles, 'moment_image')
+			const image_file_ids = draft.images.length > 0
+				? await uploadMediaFiles(draft.images, 'moment_image')
 				: undefined;
 			const res = await createMoment({
-				description: text.trim(),
-				tags: Array.from(selectedMoods),
+				description: draft.text.trim(),
+				tags: [...draft.moods],
 				// spec：location 必填（types.md 契约级）。优先用户参考点，缺失时回退
 				// ClientConfig default_location；两者皆缺（配置不可用）才退化为零点。
 				location: {
@@ -89,11 +87,12 @@
 					location_name: locationName || ''
 				},
 				// spec PrivacyLevel 仅有 'public' | 'private'：nearby→public，其余（含 UI 的 friends 占位）→private
-				privacy_level: audience === 'nearby' ? 'public' : 'private',
+				privacy_level: draft.audience === 'nearby' ? 'public' : 'private',
 				image_file_ids
 			});
 			if (res.code === 0) {
 				showToast('发布成功', 'success');
+				clearDraft();
 				onClose();
 			} else {
 				// 业务失败（非抛错路径）：透出服务端信息
@@ -160,8 +159,8 @@
 
 			<div class="input-surface rounded-lg p-4">
 				<textarea
-					bind:value={text}
-					oninput={(e) => (text = e.currentTarget.value.slice(0, 280))}
+					bind:value={draft.text}
+					oninput={(e) => (draft.text = e.currentTarget.value.slice(0, 280))}
 					placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
 					class="min-h-30.5 w-full resize-none bg-transparent text-sm leading-7 text-text-primary placeholder:text-text-secondary"
 					aria-label="动态内容"
@@ -188,27 +187,27 @@
 						<Hash size={16} strokeWidth={topicActive ? 2 : 1.5} />
 					</button>
 					</div>
-					<span class="text-xs tabular-nums {text.length >= 260 ? 'text-status-danger' : 'text-text-secondary'}">
-						{text.length}/280
+					<span class="text-xs tabular-nums {draft.text.length >= 260 ? 'text-status-danger' : 'text-text-secondary'}">
+						{draft.text.length}/280
 					</span>
 				</div>
 			</div>
 
 			<section aria-labelledby="image-label">
 				<p id="image-label" class="mb-2 eyebrow">照片</p>
-				<ImagePicker files={imageFiles} onFilesChange={(f) => (imageFiles = f)} max={9} />
+				<ImagePicker files={draft.images} onFilesChange={(f) => (draft.images = f)} max={9} />
 			</section>
 
 			<section aria-labelledby="mood-label">
 				<div class="mb-2 flex items-center justify-between">
 					<p id="mood-label" class="eyebrow">此刻氛围</p>
-					{#if selectedMoods.size > 0}
-						<span class="text-xxs text-text-secondary">已选 {selectedMoods.size} 项</span>
+					{#if draft.moods.length > 0}
+						<span class="text-xxs text-text-secondary">已选 {draft.moods.length} 项</span>
 					{/if}
 				</div>
 				<div class="flex flex-wrap gap-2">
 					{#each MOOD_TAGS as tag}
-						{@const active = selectedMoods.has(tag)}
+						{@const active = draft.moods.includes(tag)}
 						<TagPill active={active} onClick={() => toggleMood(tag)}>
 							{tag}
 						</TagPill>
@@ -226,10 +225,10 @@
 				</div>
 				<div class="grid grid-cols-3 gap-1">
 					{#each AUDIENCES as { id, label, icon: AudienceIcon }}
-						{@const active = audience === id}
+						{@const active = draft.audience === id}
 						<button
 							type="button"
-							onclick={() => (audience = id)}
+							onclick={() => (draft.audience = id)}
 							aria-pressed={active}
 							class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {active
 								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
@@ -247,7 +246,7 @@
 	<footer class="flex flex-none items-center gap-3 border-t border-border-default bg-surface-primary px-5 py-3">
 		<div class="min-w-0 flex-1">
 			<p class="truncate text-xs text-text-secondary">
-				{selectedMoods.size ? `将以 ${Array.from(selectedMoods).join(' · ')} 的氛围出现` : '选择氛围，让附近的人更容易找到你'}
+				{draft.moods.length ? `将以 ${draft.moods.join(' · ')} 的氛围出现` : '选择氛围，让附近的人更容易找到你'}
 			</p>
 		</div>
 		<button

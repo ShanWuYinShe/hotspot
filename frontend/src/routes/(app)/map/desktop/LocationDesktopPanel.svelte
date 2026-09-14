@@ -9,6 +9,7 @@
 	import { RECENT_LOCATIONS, HOT_LOCATIONS, type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
 import PinMedia from '../shared/PinMedia.svelte';
+import { smartBack } from '@/lib/smart-back';
 
 	// 桌面地图「左侧面板」：标题/搜索/Tab 列表/确认。
 	// 页面私有组件（colocate），由 map/LocationDesktop.svelte 渲染。
@@ -48,7 +49,7 @@ locationName = loc?.location_name ?? '';
 
 <!-- Header -->
 <div class="shrink-0">
-	<PageHeader title="位置选择" onBack={() => history.back()} subtitle={locationName || '位置选择'} sticky contentClassName="px-4" />
+	<PageHeader title="位置选择" onBack={() => smartBack()} subtitle={locationName || '位置选择'} sticky contentClassName="px-4" />
 </div>
 
 <!-- Search -->

@@ -17,6 +17,7 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
 	import { platform } from '@/stores/platform.svelte';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 用户详情：关注/私信/屏蔽/举报/备注 + 瞬间画廊 + 桌面 Rail。
 
@@ -363,7 +364,7 @@
 	{:else}
 	<!-- 资料头（无封面数据：紧凑头部，返回/分享/更多 浮在首行，对齐动态详情作者行层级） -->
 	<div class="flex items-center justify-between">
-		<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} />
+		<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} />
 		<div class="flex gap-2">
 			<ActionIconButton icon={Share2} label={shareCopied ? '链接已复制' : '分享资料'} onClick={copyProfileLink} />
 			<ActionIconButton

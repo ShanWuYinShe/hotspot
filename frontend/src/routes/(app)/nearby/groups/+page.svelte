@@ -18,6 +18,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { searchGroups, joinGroup, leaveGroup , netError } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 附近群组：附近一级 Tab 的群组段位。分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙；
 	// 按名字找群走全局搜索（header 右上角搜索入口）。
@@ -123,7 +124,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				subtitle={locationName ? `${locationName} · 5km 内` : '5km 实时探索'}
 				sticky
 				titleSize={device === 'desktop' ? 'xl' : '3xl'}
-				onBack={() => history.back()}
+				onBack={() => smartBack()}
 			>
 				{#snippet subtitleIcon()}
 					<MapPin class="size-2.5 text-accent-default"   strokeWidth={1.75} />

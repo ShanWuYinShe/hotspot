@@ -13,6 +13,7 @@
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { Shield } from '@lucide/svelte';
 	import { ROUTES } from '@/lib/routes';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 平台管理后台布局（/admin）：统一守卫（登录 → rbac/me 权限）+ 模块导航。
 	// 非平台管理员（10200 not_admin）在此收敛为无权限空态，模块页不再各自判 admin。
@@ -54,7 +55,7 @@
 			subtitle="平台管理（仅平台管理员可见）"
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
-			onBack={() => history.back()}
+			onBack={() => smartBack()}
 		>
 			{#snippet below()}
 				{#if admin.isAdmin}

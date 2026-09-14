@@ -7,6 +7,7 @@
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
+	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
@@ -117,11 +118,7 @@
 			</div>
 
 			{#if list.hasMore}
-				<div class="flex justify-center">
-					<button type="button" class="hover-btn rounded-full border border-border-default bg-surface-primary px-5 py-2 text-sm text-text-secondary focus-ring transition-colors hover:text-text-primary disabled:opacity-faint" disabled={list.loadingMore} onclick={list.loadMore}>
-						{list.loadingMore ? '加载中…' : '加载更多'}
-					</button>
-				</div>
+				<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
 			{:else}
 				<ListEnd />
 			{/if}

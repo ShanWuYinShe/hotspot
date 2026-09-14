@@ -18,6 +18,7 @@
 	import { getAccount, updateAccount, deleteAccount , netError } from '@/api';
 	import { uploadMediaFile } from '@/lib/upload';
 	import { ROUTES } from '@/lib/routes';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 编辑资料：昵称/简介/兴趣标签（5 个上限）+ 注销按钮。
 
@@ -112,7 +113,7 @@
 			showToast('已保存', 'success');
 			savedTimer = window.setTimeout(() => {
 				saved = false;
-				history.back();
+				smartBack();
 			}, 800);
 		} catch (err) {
 			showToast(err instanceof Error && err.message ? err.message : '保存失败，请重试', 'danger');
@@ -162,7 +163,7 @@
 
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
-		<PageHeader title="编辑资料" onBack={() => history.back()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
+		<PageHeader title="编辑资料" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 	{#snippet trailing()}
 		<Button
 			type="button"

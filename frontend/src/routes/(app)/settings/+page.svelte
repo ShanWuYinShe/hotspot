@@ -12,8 +12,7 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
-	import * as Dialog from '@/components/ui/dialog';
-	import Button from '@/components/ui/button.svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { auth, logout, requireAuth } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { theme, setTheme, setColorScheme, THEME_OPTIONS, COLOR_SCHEME_OPTIONS, type ColorSchemeMode, type AppTheme } from '@/stores/theme.svelte';
@@ -21,6 +20,7 @@
 	import { getAccount, getSettings, updateSettings, netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import pkg from '../../../../package.json';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 设置页：主题/深色、通知、隐私开关、关于、退出登录。
 	// 服务端字段对齐 spec UserSettings：位置共享 → location_visible、私密账号 →
@@ -173,7 +173,7 @@
 		<PageHeader
 			title="设置"
 			subtitle="管理你的账号偏好、主题外观与系统选项"
-			onBack={() => history.back()}
+			onBack={() => smartBack()}
 			showBackOnDesktop={false}
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		/>
@@ -407,21 +407,16 @@
 		</div>
 
 		{#if auth.isAuthenticated}
-			<Dialog.Root bind:open={confirmLogoutOpen}>
-				<Dialog.Content class="max-w-90 p-0">
-					<div class="px-5 pt-6 pb-4">
-						<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-status-danger/10 text-status-danger ring-1 ring-status-danger/20">
-							<LogOut class="size-5" />
-						</div>
-						<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">退出登录？</Dialog.Title>
-						<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">退出后将保持游客浏览，发布、关注等操作需要重新登录。</Dialog.Description>
-					</div>
-					<div class="flex flex-col gap-2 px-5 pb-5">
-						<Button type="button" variant="danger" size="lg" class="w-full" onclick={() => void handleLogout()}>退出登录</Button>
-						<Button type="button" variant="secondary" size="lg" class="w-full" onclick={() => (confirmLogoutOpen = false)}>取消</Button>
-					</div>
-				</Dialog.Content>
-			</Dialog.Root>
+			<ConfirmDialog
+				open={confirmLogoutOpen}
+				title="退出登录？"
+				description="退出后将保持游客浏览，发布、关注等操作需要重新登录。"
+				icon={LogOut}
+				layout="stacked"
+				confirmLabel="退出登录"
+				onCancel={() => (confirmLogoutOpen = false)}
+				onConfirm={() => void handleLogout()}
+			/>
 		{/if}
 	{/if}
 </StandardPageLayout>

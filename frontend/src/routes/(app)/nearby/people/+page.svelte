@@ -18,6 +18,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { formatDistance } from '@/lib/utils';
 	import { showToast } from '@/stores/toast.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 附近的人：附近一级 Tab 的默认段位。标题统一「附近」，段位由
 	// NearbySegmentNav 承担（搜索/地图收敛为 header 右上角工具入口）。
@@ -29,6 +30,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let tagFilter = $state('全部');
 	let followedIds = $state<Set<string>>(new Set());
 	let visibleCount = $state(12);
+	let sentinelEl = $state<HTMLElement | null>(null);
 	let allUsers = $state<NearbyUser[]>([]);
 	let loading = $state(true);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
@@ -104,6 +106,22 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// in-flight 去重（防连点双翻转，响应式供按钮 pending 态）；业务失败（code≠0）显式判 code 回滚
 	let followPending = $state(new Set<string>());
 
+	// 无限滚动哨兵（内容型列表统一自动加载，对齐 nearby/moments；切片逻辑保留，
+	// 每次 +8；过滤/排序变化导致 list 缩短时哨兵不再出现，visibleCount 由切片钳制）。
+	$effect(() => {
+		if (visibleCount >= list.length) return;
+		const el = sentinelEl;
+		if (!el) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((e) => e.isIntersecting)) visibleCount = Math.min(visibleCount + 8, list.length);
+			},
+			{ root: null, rootMargin: '600px 0px 0px 0px' }
+		);
+		observer.observe(el);
+		return () => observer.disconnect();
+	});
+
 	const toggleFollow = async (id: string) => {
 		if (followPending.has(id)) return;
 		if (!requireAuth({ action: '关注', targetId: id, run: () => void toggleFollow(id) })) return;
@@ -140,7 +158,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			subtitle={locationName ? `${locationName} · 5km 内` : '5km 实时探索'}
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '3xl'}
-			onBack={() => history.back()}
+			onBack={() => smartBack()}
 		>
 			{#snippet subtitleIcon()}
 				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
@@ -199,14 +217,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					</div>
 
 					{#if visibleCount < list.length}
-						<div class="mt-8 flex justify-center pb-6">
-							<button
-								type="button"
-								class="hover-btn px-6 py-2.5 rounded-full border border-border-default bg-surface-primary text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-interactive-hover transition-colors focus-ring"
-								onclick={() => (visibleCount = Math.min(visibleCount + 8, list.length))}
-							>
-								加载更多 ({list.length - visibleCount})
-							</button>
+						<div bind:this={sentinelEl} class="flex justify-center px-4 py-6" aria-hidden="true">
+							<InlineLoading label="加载更多…" />
 						</div>
 					{:else}
 						<ListEnd class="pb-6" />

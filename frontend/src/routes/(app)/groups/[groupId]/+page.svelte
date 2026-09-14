@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Bell, Check, LogOut, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, Trash2, UserPlus } from '@lucide/svelte';
+	import { ArrowLeft, Bell, Check, LogOut, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, UserPlus } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -9,8 +9,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
-	import * as Dialog from '@/components/ui/dialog';
-	import Button from '@/components/ui/button.svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import GroupAnnouncementDialog from '@/components/groups/GroupAnnouncementDialog.svelte';
 	import MembersList from './shared/MembersList.svelte';
 	import ApplicationsList from './shared/ApplicationsList.svelte';
@@ -29,6 +28,7 @@
 	import GroupSettingsSheet from '@/components/groups/GroupSettingsSheet.svelte';
 	import type { MemberAction } from '@/components/groups/MemberActionSheet.svelte';
 	import type { UpdateGroupRequest } from '@/api/types';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 群组详情：封面 + 简介/成员/公告三 Tab + 加入按钮 + 桌面侧栏。
 	// 状态/加载/WS/操作收敛到 useGroupDetail 工厂；本页只保留 UI + 角色门控。
@@ -206,7 +206,7 @@
 		     与 NearbyImageCard 的 --cst-surface-media-scrim-card 用法一致） -->
 		<div class="absolute inset-0" style="background:var(--cst-surface-cover-scrim);"></div>
 		<div class="absolute left-5 top-4">
-			<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => history.back()} variant="overlay" tone="inverse" />
+			<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} variant="overlay" tone="inverse" />
 		</div>
 		<div class="absolute bottom-5 left-6 right-6">
 			<span class="inline-flex h-6 items-center justify-center rounded-full bg-surface-glass-badge px-2.5 text-xs font-medium leading-none text-content-inverse backdrop-blur-[var(--cst-blur-sm)]">{gd.detail.category}</span>
@@ -372,37 +372,24 @@
 	{/if}
 	</StandardPageLayout>
 
-<Dialog.Root open={deleteAnnounceId !== null} onOpenChange={(next) => (next ? undefined : (deleteAnnounceId = null))}>
-	<Dialog.Content side="center" class="max-w-sm p-0" aria-label="确认删除公告">
-		<div class="px-5 pt-6 pb-4">
-			<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-status-danger/10 text-status-danger ring-1 ring-status-danger/20">
-				<Trash2 class="size-5" />
-			</div>
-			<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">删除这条公告？</Dialog.Title>
-			<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">删除后无法恢复。</Dialog.Description>
-		</div>
-		<div class="flex items-center justify-end gap-2.5 px-5 pb-5">
-			<Button type="button" variant="secondary" size="md" onclick={() => (deleteAnnounceId = null)}>取消</Button>
-			<Button type="button" variant="danger" size="md" onclick={handleDeleteAnnouncement}>确认删除</Button>
-		</div>
-	</Dialog.Content>
-</Dialog.Root>
+<ConfirmDialog
+	open={deleteAnnounceId !== null}
+	title="删除这条公告？"
+	description="删除后无法恢复。"
+	confirmLabel="确认删除"
+	onCancel={() => (deleteAnnounceId = null)}
+	onConfirm={handleDeleteAnnouncement}
+/>
 
-<Dialog.Root open={leaveConfirmOpen} onOpenChange={(next) => (next ? undefined : (leaveConfirmOpen = false))}>
-	<Dialog.Content side="center" class="max-w-sm p-0" aria-label="确认退出群组">
-		<div class="px-5 pt-6 pb-4">
-			<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-status-danger/10 text-status-danger ring-1 ring-status-danger/20">
-				<LogOut class="size-5" />
-			</div>
-			<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">退出群组「{gd.detail.name}」？</Dialog.Title>
-			<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">退出后将不再接收该群的聊天与公告。</Dialog.Description>
-		</div>
-		<div class="flex items-center justify-end gap-2.5 px-5 pb-5">
-			<Button type="button" variant="secondary" size="md" onclick={() => (leaveConfirmOpen = false)}>取消</Button>
-			<Button type="button" variant="danger" size="md" onclick={handleLeaveConfirm}>确认退出</Button>
-		</div>
-	</Dialog.Content>
-</Dialog.Root>
+<ConfirmDialog
+	open={leaveConfirmOpen}
+	title="退出群组「{gd.detail.name}」？"
+	description="退出后将不再接收该群的聊天与公告。"
+	icon={LogOut}
+	confirmLabel="确认退出"
+	onCancel={() => (leaveConfirmOpen = false)}
+	onConfirm={handleLeaveConfirm}
+/>
 
 <GroupAnnouncementDialog
 	open={announceOpen}

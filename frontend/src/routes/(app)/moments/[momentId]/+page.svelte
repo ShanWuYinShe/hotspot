@@ -26,6 +26,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDateTime } from '@/lib/utils';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
 
@@ -350,7 +351,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			const res = await deleteMoment({ moment_id: momentId });
 			if (res.code === 0) {
 				showToast('动态已删除', 'success');
-				history.back();
+				smartBack();
 			} else {
 				showToast(res.message || '删除失败', 'danger');
 			}
@@ -390,7 +391,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 <SplitPageLayout contentClassName="animate-fade-in pt-4 pb-28">
 	{#snippet header()}
-		<PageHeader title="动态详情" titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} onBack={() => history.back()}>
+		<PageHeader title="动态详情" titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} onBack={() => smartBack()}>
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">

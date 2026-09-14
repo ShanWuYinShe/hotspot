@@ -2,6 +2,7 @@
 	import { X, ChevronRight, Heart, Crosshair, Plus, Minus } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
+	import { smartBack } from '@/lib/smart-back';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
 	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
@@ -163,9 +164,8 @@
 				localStorage.setItem('hotspot_last_location', JSON.stringify([selectedLoc.lat, selectedLoc.lng]));
 			} catch {}
 		}
-		// 深链直入时无站内历史，back 会离开站点——回退到首页
-		if (window.history.length > 1 && document.referrer.startsWith(window.location.origin)) history.back();
-		else void goto(ROUTES.home);
+		// 深链直入时无站内历史，back 会离开站点——统一走 smartBack（站内历史则 back，否则回首页）
+		smartBack();
 	}
 </script>
 

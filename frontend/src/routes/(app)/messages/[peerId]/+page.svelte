@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ChatView from '@/components/messages/ChatView.svelte';
+	import { smartBack } from '@/lib/smart-back';
 
 	// 私聊窗口（peerId 即对端 user_id，spec: target_user_id）。
 
@@ -11,5 +12,5 @@
 
 
 <div class="flex flex-col" style="height:100%;background-color:var(--cst-surface-chat);">
-	<ChatView peerUserId={params.peerId ?? ''} showBackButton onBack={() => history.back()} />
+	<ChatView peerUserId={params.peerId ?? ''} showBackButton onBack={() => smartBack()} />
 </div>
