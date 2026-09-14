@@ -223,6 +223,11 @@ func (s *Service) CheckCommentable(ctx context.Context, momentID string) (found 
 	if err != nil || !ok {
 		return ok, false, err
 	}
+	// 软删瞬间按不存在处理（spec api_spec_moment.md：评论挂载按不存在处理；
+	// 对齐 IsReactionTargetVisible 的 IsDeleted 口径）。
+	if item.IsDeleted {
+		return false, false, nil
+	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	// 私有瞬间非拥有者按不存在处理（spec 防枚举：private 内容不暴露存在性 → 10300）。
 	if item.PrivacyLevel == "private" && item.User.UserID != principal.UserID {

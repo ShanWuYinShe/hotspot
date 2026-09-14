@@ -188,7 +188,11 @@ func (r *PostgresRepository) IsBanned(ctx context.Context, userID string) (bool,
 	if err != nil || !found {
 		return false, err
 	}
-	return state.Status == UserAccountStatusBanned, nil
+	if state.Status != UserAccountStatusBanned {
+		return false, nil
+	}
+	// 限期封禁到期即视为解封（状态机闭合；admin 列表 banned_until 同口径展示）。
+	return !state.Expired(time.Now().UTC()), nil
 }
 
 // ListUserIDsAfter 按 user_id 升序 keyset 取一批未注销用户 id（公告 fanout

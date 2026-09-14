@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"testing"
+	"time"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -650,5 +651,58 @@ func TestServiceHandleReportHappyPath(t *testing.T) {
 	}
 	if apiErr != nil {
 		t.Fatalf("unexpected api error: %v", apiErr)
+	}
+}
+
+// --- IsBanned 限期封禁到期判定 ---
+
+func TestIsBannedHonorsBanExpiry(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	ctx := context.Background()
+	repo.GrantAdmin(ctx, AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	seven := 7
+	if apiErr, err := svc.SetUserBan(adminCtx("admin1"), AdminSetUserBanRequest{UserID: "user_bob", Reason: "violation", Active: true, DurationDays: &seven}); err != nil || apiErr != nil {
+		t.Fatalf("ban setup failed: apiErr=%v err=%v", apiErr, err)
+	}
+	// 未到期仍封禁。
+	if banned, err := repo.IsBanned(ctx, "user_bob"); err != nil || !banned {
+		t.Fatalf("expected active temporary ban, banned=%v err=%v", banned, err)
+	}
+	// 回拨 BannedAt 到 8 天前（7 天限期已过）→ 到期视为解封。
+	st := repo.banStates["user_bob"]
+	st.BannedAt = time.Now().UTC().Add(-8 * 24 * time.Hour)
+	repo.banStates["user_bob"] = st
+	if banned, err := repo.IsBanned(ctx, "user_bob"); err != nil || banned {
+		t.Fatalf("expected expired ban to read as unbanned, banned=%v err=%v", banned, err)
+	}
+	// 永久封禁不受时间流逝影响（fail-closed）。
+	if apiErr, err := svc.SetUserBan(adminCtx("admin1"), AdminSetUserBanRequest{UserID: "user_alice", Reason: "violation", Active: true}); err != nil || apiErr != nil {
+		t.Fatalf("permanent ban setup failed: apiErr=%v err=%v", apiErr, err)
+	}
+	perm := repo.banStates["user_alice"]
+	perm.BannedAt = time.Now().UTC().Add(-365 * 24 * time.Hour)
+	repo.banStates["user_alice"] = perm
+	if banned, err := repo.IsBanned(ctx, "user_alice"); err != nil || !banned {
+		t.Fatalf("expected permanent ban to persist, banned=%v err=%v", banned, err)
+	}
+}
+
+func TestUserBanStateExpired(t *testing.T) {
+	now := time.Now().UTC()
+	cases := []struct {
+		name  string
+		state UserBanState
+		want  bool
+	}{
+		{"未封禁", UserBanState{Status: UserAccountStatusNormal}, false},
+		{"限期内", UserBanState{Status: UserAccountStatusBanned, DurationDays: 7, BannedAt: now.Add(-24 * time.Hour)}, false},
+		{"已到期", UserBanState{Status: UserAccountStatusBanned, DurationDays: 7, BannedAt: now.Add(-8 * 24 * time.Hour)}, true},
+		{"永久封禁", UserBanState{Status: UserAccountStatusBanned, BannedAt: now.Add(-365 * 24 * time.Hour)}, false},
+		{"缺时间戳按永久处理", UserBanState{Status: UserAccountStatusBanned, DurationDays: 7}, false},
+	}
+	for _, tc := range cases {
+		if got := tc.state.Expired(now); got != tc.want {
+			t.Fatalf("%s: Expired=%v, want %v", tc.name, got, tc.want)
+		}
 	}
 }

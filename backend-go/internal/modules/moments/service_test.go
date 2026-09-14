@@ -312,6 +312,23 @@ func TestServiceCheckCommentableMomentNotFound(t *testing.T) {
 	}
 }
 
+func TestServiceCheckCommentableDeletedMoment(t *testing.T) {
+	// 软删瞬间按不存在处理（spec api_spec_moment.md 评论挂载；对齐
+	// IsReactionTargetVisible 口径，防已删瞬间被评论且计数被污染）。
+	repo := &stubMomentRepo{getResult: MomentItem{MomentID: "m1", User: UserInfo{UserID: "u1"}, PrivacyLevel: "public", IsDeleted: true}, getFound: true}
+	svc := NewServiceWithRepo(repo)
+	found, canComment, err := svc.CheckCommentable(momentCtx("u1"), "m1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if found {
+		t.Fatalf("expected found=false for deleted moment, got found=%v", found)
+	}
+	if canComment {
+		t.Fatalf("expected canComment=false, got true")
+	}
+}
+
 // ---------- A) Favorite/Unfavorite 错误路径 ----------
 
 func TestServiceFavoritePropagatesRepoError(t *testing.T) {

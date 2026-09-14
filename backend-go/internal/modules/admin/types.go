@@ -209,6 +209,20 @@ type UserBanState struct {
 	BannedAt     time.Time
 }
 
+// Expired 限期封禁是否已到期（spec api_spec_admin.md users/set_ban 区分永久
+// 与限期）：DurationDays<=0 为永久封禁，需手动解封；BannedAt 零值（历史行缺
+// 时间戳）按永久处理，避免误解封（fail-closed）。调用方一律经此判定，
+// 不得只看 Status 位。
+func (s UserBanState) Expired(now time.Time) bool {
+	if s.Status != UserAccountStatusBanned {
+		return false
+	}
+	if s.DurationDays <= 0 || s.BannedAt.IsZero() {
+		return false
+	}
+	return !now.Before(s.BannedAt.Add(time.Duration(s.DurationDays) * 24 * time.Hour))
+}
+
 type reportHandleRecord struct {
 	Item       AdminReportItem
 	TargetUser usersmodule.UserInfo

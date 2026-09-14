@@ -168,5 +168,8 @@ func (r *InMemoryRepository) IsBanned(_ context.Context, userID string) (bool, e
 	if !ok {
 		return false, nil
 	}
-	return state.Status == UserAccountStatusBanned, nil
+	if state.Status != UserAccountStatusBanned {
+		return false, nil
+	}
+	return !state.Expired(time.Now().UTC()), nil
 }
