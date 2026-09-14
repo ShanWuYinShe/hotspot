@@ -49,6 +49,8 @@ type groupErrorRepo struct {
 	removeMemberErr       error
 	isMemberResult        bool
 	isMemberErr           error
+	isBannedResult        bool
+	isBannedErr           error
 }
 
 func (r *groupErrorRepo) Create(context.Context, string, CreateGroupRequest) (GroupItem, error) {
@@ -71,6 +73,9 @@ func (r *groupErrorRepo) ListMembers(context.Context, string, *GroupRole, int, s
 }
 func (r *groupErrorRepo) IsMember(context.Context, string, string) (bool, error) {
 	return r.isMemberResult, r.isMemberErr
+}
+func (r *groupErrorRepo) IsBanned(context.Context, string, string) (bool, error) {
+	return r.isBannedResult, r.isBannedErr
 }
 func (r *groupErrorRepo) GetApplication(_ context.Context, applicationID string) (GroupApplicationItem, bool, error) {
 	for _, a := range r.listApplicationsItems {
@@ -1721,8 +1726,9 @@ func TestHandlerAcceptInviteReturns10300WhenNotFound(t *testing.T) {
 
 func TestHandlerRemoveMemberReturnsSuccess(t *testing.T) {
 	repo := &groupErrorRepo{
-		getResult: GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
-		getFound:  true,
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
+		getFound:       true,
+		isMemberResult: true,
 		announceItems: []GroupAnnouncementItem{{
 			AnnouncementID: "ann1",
 			GroupID:        "g1",
@@ -1788,6 +1794,7 @@ func TestHandlerRemoveMemberReturns10600OnUnknownError(t *testing.T) {
 	repo := &groupErrorRepo{
 		getResult:       GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
 		getFound:        true,
+		isMemberResult:  true,
 		removeMemberErr: errors.New("boom"),
 	}
 	handler := NewHandler(NewServiceWithRepo(repo))

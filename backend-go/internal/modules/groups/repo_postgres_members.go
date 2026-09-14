@@ -186,8 +186,11 @@ func (r *PostgresRepository) BanMember(ctx context.Context, userID string, req B
 		return persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	// 插封禁 + 移除成员两步包进同一事务：避免「已封禁但仍是成员」的
-	// 中间状态，且删除成员失败不再被吞。
+	// 插封禁 + 移除成员 + 撤销 pending 申请/邀请包进同一事务：避免「已封禁
+	// 但仍是成员」的中间状态，删除成员失败不再被吞；级联撤销是对契约
+	// spec api_spec_group.md → set_ban「封禁时被 ban 用户发出的该群 pending
+	// 申请置 revoked；发给被 ban 用户的该群 pending 邀请置 revoked」的落实，
+	// 同时堵住「封禁后经邀请直通 / 审批通过回归」两条旁路。
 	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
 		txQueryable, ok := persistence.QueryableForTx(txCtx, r.factory)
 		if !ok {
@@ -196,7 +199,13 @@ func (r *PostgresRepository) BanMember(ctx context.Context, userID string, req B
 		if err := txQueryable.Exec(txCtx, queryInsertGroupBan, req.GroupID, req.UserID, userID, nullableStringPtr(req.Reason), now); err != nil {
 			return err
 		}
-		return txQueryable.Exec(txCtx, queryDeleteGroupMember, req.GroupID, req.UserID)
+		if err := txQueryable.Exec(txCtx, queryDeleteGroupMember, req.GroupID, req.UserID); err != nil {
+			return err
+		}
+		if err := txQueryable.Exec(txCtx, queryRevokeApplicationsByApplicant, req.GroupID, req.UserID, now); err != nil {
+			return err
+		}
+		return txQueryable.Exec(txCtx, queryRevokeInvitesByInvitee, req.GroupID, req.UserID, now)
 	})
 }
 

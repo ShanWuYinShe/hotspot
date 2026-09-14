@@ -933,7 +933,7 @@ func TestServiceRejectApplicationPropagatesRepoError(t *testing.T) {
 // --- SetMemberRole ---
 
 func TestServiceSetMemberRoleHappyPath(t *testing.T) {
-	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, members: []GroupMemberItem{{User: UserInfo{UserID: "u2"}}}}
 	svc := NewServiceWithRepo(repo)
 	err := svc.SetMemberRole(grpCtx("u1"), SetMemberRoleRequest{GroupID: "g1", UserID: "u2", Role: GroupRoleAdmin})
 	if err != nil {
@@ -942,7 +942,7 @@ func TestServiceSetMemberRoleHappyPath(t *testing.T) {
 }
 
 func TestServiceSetMemberRolePropagatesRepoError(t *testing.T) {
-	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, setRoleErr: errors.New("db error")}
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, members: []GroupMemberItem{{User: UserInfo{UserID: "u2"}}}, setRoleErr: errors.New("db error")}
 	svc := NewServiceWithRepo(repo)
 	err := svc.SetMemberRole(grpCtx("u1"), SetMemberRoleRequest{GroupID: "g1", UserID: "u2", Role: GroupRoleAdmin})
 	if err == nil {
@@ -956,7 +956,7 @@ func TestServiceSetMemberRolePropagatesRepoError(t *testing.T) {
 // --- MuteMember ---
 
 func TestServiceMuteMemberHappyPath(t *testing.T) {
-	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, members: []GroupMemberItem{{User: UserInfo{UserID: "u2"}}}}
 	svc := NewServiceWithRepo(repo)
 	err := svc.MuteMember(grpCtx("u1"), MuteMemberRequest{GroupID: "g1", UserID: "u2", DurationMinutes: 10})
 	if err != nil {
@@ -965,7 +965,7 @@ func TestServiceMuteMemberHappyPath(t *testing.T) {
 }
 
 func TestServiceMuteMemberPropagatesRepoError(t *testing.T) {
-	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, muteErr: errors.New("db error")}
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, members: []GroupMemberItem{{User: UserInfo{UserID: "u2"}}}, muteErr: errors.New("db error")}
 	svc := NewServiceWithRepo(repo)
 	err := svc.MuteMember(grpCtx("u1"), MuteMemberRequest{GroupID: "g1", UserID: "u2", DurationMinutes: 10})
 	if err == nil {
@@ -1053,7 +1053,7 @@ func TestServiceListBannedMembersRejectsNotFound(t *testing.T) {
 // --- RemoveMember ---
 
 func TestServiceRemoveMemberHappyPath(t *testing.T) {
-	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, members: []GroupMemberItem{{User: UserInfo{UserID: "u2"}}}}
 	svc := NewServiceWithRepo(repo)
 	err := svc.RemoveMember(grpCtx("u1"), RemoveMemberRequest{GroupID: "g1", UserID: "u2"})
 	if err != nil {
@@ -1062,7 +1062,7 @@ func TestServiceRemoveMemberHappyPath(t *testing.T) {
 }
 
 func TestServiceRemoveMemberPropagatesRepoError(t *testing.T) {
-	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, removeErr: errors.New("db error")}
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, members: []GroupMemberItem{{User: UserInfo{UserID: "u2"}}}, removeErr: errors.New("db error")}
 	svc := NewServiceWithRepo(repo)
 	err := svc.RemoveMember(grpCtx("u1"), RemoveMemberRequest{GroupID: "g1", UserID: "u2"})
 	if err == nil {
@@ -1369,4 +1369,86 @@ func (r *stubGroupsRepo) ListGroupsByUser(context.Context, string, int, string) 
 
 func (r *stubGroupsRepo) CountCommonGroups(context.Context, string, string) (int, error) {
 	return 0, nil
+}
+
+// --- 审计修复新增：封禁旁路 / owner 自降级 / 非成员操作 ---
+
+func TestServiceSetMemberRoleRejectsOwnerDemotion(t *testing.T) {
+	// owner 对本人自降级会制造无人可管理的「孤儿群」，必须拒绝（10400）。
+	owner := "u1"
+	item := ownerGroup()
+	item.OwnerID = &owner
+	repo := &stubGroupsRepo{getResult: item, getFound: true, isMemberResult: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.SetMemberRole(grpCtx("u1"), SetMemberRoleRequest{GroupID: "g1", UserID: "u1", Role: GroupRoleMember})
+	if !errors.Is(err, ErrBusinessConflict) {
+		t.Fatalf("expected business conflict for owner self-demotion, got %v", err)
+	}
+}
+
+func TestServiceSetMemberRoleRejectsNonMemberTarget(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.SetMemberRole(grpCtx("u1"), SetMemberRoleRequest{GroupID: "g1", UserID: "u2", Role: GroupRoleAdmin})
+	if !errors.Is(err, ErrTargetNotMember) {
+		t.Fatalf("expected target not member, got %v", err)
+	}
+}
+
+func TestServiceMuteMemberRejectsNonMemberTarget(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.MuteMember(grpCtx("u1"), MuteMemberRequest{GroupID: "g1", UserID: "u2", DurationMinutes: 10})
+	if !errors.Is(err, ErrTargetNotMember) {
+		t.Fatalf("expected target not member, got %v", err)
+	}
+}
+
+func TestServiceRemoveMemberRejectsNonMemberTarget(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	err := svc.RemoveMember(grpCtx("u1"), RemoveMemberRequest{GroupID: "g1", UserID: "u2"})
+	if !errors.Is(err, ErrTargetNotMember) {
+		t.Fatalf("expected target not member, got %v", err)
+	}
+}
+
+func TestServiceInviteMemberRejectsBannedTarget(t *testing.T) {
+	// 契约：邀请已被封禁的用户返回 10400 语义（ErrBannedInGroup）。
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, isBanned: map[string]bool{"u2": true}}
+	svc := NewServiceWithRepo(repo)
+	_, err := svc.InviteMember(grpCtx("u1"), InviteMemberRequest{GroupID: "g1", UserID: "u2"})
+	if !errors.Is(err, ErrBannedInGroup) {
+		t.Fatalf("expected banned in group, got %v", err)
+	}
+}
+
+func TestServiceAcceptInviteRejectsBannedUser(t *testing.T) {
+	pending := ApplicationStatusPending
+	repo := &stubGroupsRepo{
+		getResult: ownerGroup(),
+		getFound:  true,
+		isBanned:  map[string]bool{"u2": true},
+		myInvites: []GroupInviteItem{{InviteID: "inv1", Status: pending, Group: GroupInfo{GroupID: "g1"}, Inviter: UserInfo{UserID: "u3"}}},
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.AcceptInvite(grpCtx("u2"), AcceptInviteRequest{InviteID: "inv1"})
+	if !errors.Is(err, ErrBannedInGroup) {
+		t.Fatalf("expected banned in group, got %v", err)
+	}
+}
+
+func TestServiceApproveApplicationRejectsBannedApplicant(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, isBanned: map[string]bool{"u2": true}}
+	repo.apps = []GroupApplicationItem{{
+		ApplicationID: "app1",
+		GroupID:       "g1",
+		Applicant:     UserInfo{UserID: "u2"},
+		Status:        ApplicationStatusPending,
+	}}
+	svc := NewServiceWithRepo(repo)
+	err := svc.ApproveApplication(grpCtx("u1"), ApproveGroupApplicationRequest{GroupID: "g1", ApplicationID: "app1"})
+	if !errors.Is(err, ErrBannedInGroup) {
+		t.Fatalf("expected banned in group, got %v", err)
+	}
 }

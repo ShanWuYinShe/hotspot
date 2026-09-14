@@ -37,6 +37,15 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 		s.notifyGroupInviteExpired(ctx, principal.UserID, invite)
 		return ErrInviteExpired
 	}
+	// C.3 同款封禁拦截（对齐 JoinGroup service.go:464）：JoinGroup 入口有该
+	// 检查而 AcceptInvite 此前没有，被群封禁用户换个入口即可回归。数据层
+	// BanMember 已级联撤销 pending 邀请，此处再做一次服务级防御（覆盖封禁
+	// 与接受之间的并发窗口）。
+	if banned, err := s.repo.IsBanned(ctx, invite.Group.GroupID, principal.UserID); err != nil {
+		return err
+	} else if banned {
+		return ErrBannedInGroup
+	}
 	if err := s.repo.AcceptInvite(ctx, principal.UserID, req.InviteID); err != nil {
 		return err
 	}
@@ -96,6 +105,13 @@ func (s *Service) InviteMember(ctx context.Context, req InviteMemberRequest) (In
 	}
 	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
 		return Invitation{}, ErrAccessRestricted
+	}
+	// 契约（spec api_spec_group.md → groups/admin/invites/create 错误码）：
+	// 邀请已被封禁的用户返回 10400。此前不校验，被封禁用户可经邀请直通回归。
+	if banned, err := s.repo.IsBanned(ctx, req.GroupID, req.UserID); err != nil {
+		return Invitation{}, err
+	} else if banned {
+		return Invitation{}, ErrBannedInGroup
 	}
 	// TTL（spec types.md group_invite_ttl_hours）：0 = 永不过期（expires_at 省略）
 	var expiresAt *time.Time

@@ -211,6 +211,24 @@ func (r *InMemoryRepository) BanMember(_ context.Context, userID string, req Ban
 		group.Group.MembersCount = len(members)
 		r.groups[req.GroupID] = group
 	}
+	// 封禁级联（契约级，spec api_spec_group.md → set_ban）：被 ban 用户发出的
+	// 该群 pending 申请、发给被 ban 用户的该群 pending 邀请，均置 revoked。
+	// 与 PG 实现同口径，防止封禁被「邀请直通 / 审批通过」两条旁路绕过。
+	revoked := ApplicationStatusRevoked
+	for id, application := range r.applications {
+		if application.GroupID == req.GroupID && application.ApplicantID == req.UserID && application.Status == ApplicationStatusPending {
+			application.Status = revoked
+			application.HandledAt = &now
+			r.applications[id] = application
+		}
+	}
+	for id, invite := range r.invites {
+		if invite.GroupID == req.GroupID && invite.InviteeID == req.UserID && invite.Status == ApplicationStatusPending {
+			invite.Status = revoked
+			invite.RespondedAt = &now
+			r.invites[id] = invite
+		}
+	}
 	return nil
 }
 

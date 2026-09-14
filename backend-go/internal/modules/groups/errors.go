@@ -3,13 +3,16 @@ package groups
 import "errors"
 
 var (
-	ErrAccessRestricted     = errors.New("权限不足")
-	ErrPermissionDenied     = ErrAccessRestricted
-	ErrGroupNotFound        = errors.New("群组不存在")
-	ErrUserNotFound         = errors.New("用户不存在")
-	ErrBusinessConflict     = errors.New("业务冲突")
-	ErrAlreadyMember        = errors.New("已是群成员")
-	ErrAlreadyBanned        = errors.New("已被封禁")
+	ErrAccessRestricted = errors.New("权限不足")
+	ErrPermissionDenied = ErrAccessRestricted
+	ErrGroupNotFound    = errors.New("群组不存在")
+	ErrUserNotFound     = errors.New("用户不存在")
+	ErrBusinessConflict = errors.New("业务冲突")
+	ErrAlreadyMember    = errors.New("已是群成员")
+	ErrAlreadyBanned    = errors.New("已被封禁")
+	// ErrBannedInGroup 对应 httpx.ReasonBannedInGroup（10200），映射到
+	// accept_invite / invite_member / approve_application 的封禁拦截出口。
+	ErrBannedInGroup        = errors.New("已被群封禁，无法加入")
 	ErrNotMember            = errors.New("不是群成员")
 	ErrAlreadyApplied       = errors.New("已申请过")
 	ErrAlreadyProcessed     = errors.New("已处理")

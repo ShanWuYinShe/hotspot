@@ -39,6 +39,14 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 		// probe applications across groups (spec api_spec_group.md).
 		return ErrApplicationNotFound
 	}
+	// 封禁拦截（对齐 JoinGroup service.go:464 与数据层级联撤销）：申请在封禁
+	// 前提交、封禁后才被审批时，不得借此入群。BanMember 已把该用户的 pending
+	// 申请置 revoked，此处再做一次服务级防御，覆盖并发窗口。
+	if banned, err := s.repo.IsBanned(ctx, application.GroupID, application.Applicant.UserID); err != nil {
+		return err
+	} else if banned {
+		return ErrBannedInGroup
+	}
 	if err := s.repo.ApproveApplication(ctx, principal.UserID, req.ApplicationID); err != nil {
 		return err
 	}
@@ -91,6 +99,20 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 	if req.Role != GroupRoleAdmin && req.Role != GroupRoleMember {
 		return ErrAccessRestricted
 	}
+	// 目标保护（spec api_spec_group.md → set_role 的 owner 语义）：群主不可被
+	// 降级——含 owner 对本人自降级。owner_id 只在 transfer_ownership 中变更，
+	// 自降级会让 group_members.role 失去 owner，而 Dismiss / TransferOwnership /
+	// 再次 SetMemberRole 均要求 role==owner，群将进入无人可管理的「孤儿群」死态。
+	if isGroupOwner(group.OwnerID, req.UserID) {
+		return ErrBusinessConflict
+	}
+	// 目标必须是群成员：repo 的 UPDATE 对 0 行命中不报错，此前对非成员调用会
+	// 静默成功并广播对非成员的角色变更事件。
+	if member, err := s.repo.IsMember(ctx, req.GroupID, req.UserID); err != nil {
+		return err
+	} else if !member {
+		return ErrTargetNotMember
+	}
 	if err := s.repo.SetMemberRole(ctx, principal.UserID, req); err != nil {
 		return err
 	}
@@ -134,8 +156,16 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 	if isGroupOwner(group.OwnerID, req.UserID) {
 		return ErrBusinessConflict
 	}
+	// 参数校验先于资源状态校验（保持既有语义：非法时长一律 ErrAccessRestricted）。
 	if req.DurationMinutes < 1 || req.DurationMinutes > MaxMuteDurationMinutes {
 		return ErrAccessRestricted
+	}
+	// 目标必须是群成员：repo 的 UPDATE 对 0 行命中不报错，此前对非成员调用会
+	// 静默成功并广播 Muted 事件（F-15）。
+	if member, err := s.repo.IsMember(ctx, req.GroupID, req.UserID); err != nil {
+		return err
+	} else if !member {
+		return ErrTargetNotMember
 	}
 	if err := s.repo.MuteMember(ctx, principal.UserID, req); err != nil {
 		return err
@@ -265,6 +295,13 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 	// 目标保护（spec group.md → members/remove）：群主不可被移除
 	if isGroupOwner(group.OwnerID, req.UserID) {
 		return ErrBusinessConflict
+	}
+	// 目标必须是群成员：repo 的 DELETE 对 0 行命中不报错，此前对非成员调用会
+	// 静默成功并广播 Removed 事件（F-15）。
+	if member, err := s.repo.IsMember(ctx, req.GroupID, req.UserID); err != nil {
+		return err
+	} else if !member {
+		return ErrTargetNotMember
 	}
 	if err := s.repo.RemoveMember(ctx, principal.UserID, req); err != nil {
 		return err

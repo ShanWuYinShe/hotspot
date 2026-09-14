@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
 )
 
@@ -68,6 +69,14 @@ func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
 	var req UpdateLocationRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Location.LocationName == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		return
+	}
+	// Reject out-of-range coordinates before they corrupt the S2 index: an
+	// invalid point yields s2_cell_id=0, which falls outside every BETWEEN
+	// range and silently drops the user from map/nearby/search（对齐 moments
+	// Create/Update 的同款校验）。
+	if !geo.IsValidPoint(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}) {
+		httpx.WriteInvalidRequest(w, r, "UpdateLocation", "参数错误: 经纬度超出有效范围")
 		return
 	}
 	if err := h.service.UpdateLocation(r.Context(), req); err != nil {

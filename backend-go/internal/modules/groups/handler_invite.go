@@ -37,6 +37,10 @@ func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
 		}
+		if errors.Is(err, ErrBannedInGroup) {
+			httpx.WriteAPIError(w, r, "AcceptInvite", httpx.Forbidden(httpx.ReasonBannedInGroup, "已被群封禁，无法加入"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -86,6 +90,11 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, ErrAlreadyMember) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "已是群成员"))
+			return
+		}
+		// spec api_spec_group.md → invites/create 错误码：邀请已被封禁的用户 10400。
+		if errors.Is(err, ErrBannedInGroup) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "该用户已被群封禁，无法邀请"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

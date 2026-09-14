@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/observability"
@@ -27,6 +28,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateGroupRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Name == "" || req.Location.LocationName == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		return
+	}
+	// Reject out-of-range coordinates before they corrupt the S2 index: an
+	// invalid point yields s2_cell_id=0, which falls outside every BETWEEN
+	// range and silently drops the group from map/nearby/search（对齐 moments
+	// Create/Update 的同款校验）。
+	if !geo.IsValidPoint(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}) {
+		httpx.WriteInvalidRequest(w, r, "Create", "参数错误: 经纬度超出有效范围")
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "groups/create", func() httpx.ApiResponse[any] {
@@ -108,6 +117,11 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ClearPassword != nil && *req.ClearPassword && req.Password != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "密码参数冲突"))
+		return
+	}
+	// 同 Create：更新定位时也必须在入库前拒绝非法坐标。
+	if req.Location != nil && !geo.IsValidPoint(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}) {
+		httpx.WriteInvalidRequest(w, r, "Update", "参数错误: 经纬度超出有效范围")
 		return
 	}
 	item, err := h.service.Update(r.Context(), req)

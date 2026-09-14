@@ -305,6 +305,21 @@ ORDER BY gb.banned_at DESC, gb.user_id ASC`
 	queryIsGroupBanned = `
 SELECT 1 FROM group_bans WHERE group_id = $1 AND user_id = $2`
 
+	// 封禁级联（契约级，spec api_spec_group.md → set_ban）：
+	// 被 ban 用户「发出的」该群 pending 申请、以及「发给」被 ban 用户的该群
+	// pending 邀请，均须置 revoked。此前完全缺失级联——BanMember 只插封禁 +
+	// 删成员，导致封禁后 pending 申请仍可被管理员审批通过、pending 邀请仍可
+	// 被接受，封禁拦截被两条旁路绕过。
+	queryRevokeApplicationsByApplicant = `
+UPDATE group_applications
+SET status = 'revoked', handled_at = $3
+WHERE group_id = $1 AND applicant_user_id = $2 AND status = 'pending'`
+
+	queryRevokeInvitesByInvitee = `
+UPDATE group_invites
+SET status = 'revoked', responded_at = $3
+WHERE group_id = $1 AND invitee_user_id = $2 AND status = 'pending'`
+
 	queryUpdateGroupOwner = `
 UPDATE groups
 SET owner_id = $2

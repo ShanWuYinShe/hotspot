@@ -57,6 +57,11 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "申请已处理"))
 			return
 		}
+		// 申请人在封禁后再被审批：与 JoinGroup 的群封禁拦截同口径（10200）。
+		if errors.Is(err, ErrBannedInGroup) {
+			httpx.WriteAPIError(w, r, "ApproveApplication", httpx.Forbidden(httpx.ReasonBannedInGroup, "申请人已被群封禁，无法加入"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -111,6 +116,15 @@ func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
+		if errors.Is(err, ErrTargetNotMember) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "目标用户不是群成员"))
+			return
+		}
+		// 群主不可降级（含自降级）：10400 业务冲突（spec api_spec_group.md → set_role 错误码）。
+		if errors.Is(err, ErrBusinessConflict) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不可降级，请先转让群主身份"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -144,6 +158,10 @@ func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, ErrAccessRestricted) {
 			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
+			return
+		}
+		if errors.Is(err, ErrTargetNotMember) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "目标用户不是群成员"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -212,6 +230,10 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, ErrAccessRestricted) {
 			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
+			return
+		}
+		if errors.Is(err, ErrTargetNotMember) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "目标用户不是群成员"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
