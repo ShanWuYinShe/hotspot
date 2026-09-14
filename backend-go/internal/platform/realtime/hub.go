@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"sync"
+	"time"
 
 	"hotspot/backend-go/internal/platform/observability"
 )
@@ -315,10 +316,15 @@ func (h *Hub) publish(channel string, event Event) {
 	p := h.publisher
 	h.mu.RUnlock()
 	if p != nil {
+		// 1s 硬 deadline（审计 perf P2-5）：publish 在广播热路径上，Redis 卡死
+		// 时不能继承无界 ctx 拖住广播方；超时按发布失败降级处理。不用请求 ctx：
+		// 广播常由后台任务触发，请求 ctx 可能早已取消。
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 		// Cross-instance fan-out: a publish failure means subscribers on other
 		// instances silently miss the event. Log it so operators can detect a
 		// degraded redis bridge rather than losing events invisibly.
-		if err := p.Publish(context.Background(), channel, event); err != nil {
+		if err := p.Publish(ctx, channel, event); err != nil {
 			observability.L().Warn("hub cross-instance publish failed", "channel", channel, "error", err)
 		}
 	}

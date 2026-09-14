@@ -183,6 +183,13 @@ func newRedisClient(cfg config.Config, logger *observability.Logger) *redis.Clie
 		logger.Error("invalid redis url, falling back to single-instance mode", "err", err)
 		return nil
 	}
+	// fail-slow（审计 perf P2-5）：Redis 故障/网络分区时命令必须在秒级失败并
+	// 降级，而不是挂到调用方 ctx 超时（resume 2s / ratelimit 2s）甚至无限阻塞，
+	// 把延迟放大到所有共享 Redis 的热路径。dial 500ms / read+write 1s 只约束
+	// 单命令，健康实例不受影响。
+	opts.DialTimeout = 500 * time.Millisecond
+	opts.ReadTimeout = time.Second
+	opts.WriteTimeout = time.Second
 	rdb := redis.NewClient(opts)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
