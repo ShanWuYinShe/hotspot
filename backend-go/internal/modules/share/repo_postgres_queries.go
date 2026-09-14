@@ -45,10 +45,13 @@ const (
 	SET is_revoked = TRUE
 	WHERE share_id = $1 AND creator_user_id = $2 AND is_revoked = FALSE`
 
+	// 目标可见性（spec api_spec_share.md「校验目标资源存在且可访问」）：
+	// 已注销（is_deleted）用户按不可访问处理，创建分享返回 10300 防枚举。
 	queryShareUserExists = `
 	SELECT user_id, nickname, COALESCE(avatar_url, '')
 	FROM users
-	WHERE user_id = $1`
+	WHERE user_id = $1
+	  AND is_deleted = FALSE`
 
 	queryShareGroupExists = `
 	SELECT group_id, name, COALESCE(description, ''), COALESCE(avatar_url, '')

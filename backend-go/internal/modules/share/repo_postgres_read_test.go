@@ -26,15 +26,23 @@ type shareStubRecord struct {
 	IsRevoked     bool
 }
 
+type shareStubUser struct {
+	Nickname string
+	Avatar   string
+	Deleted  bool // 模拟 users.is_deleted（已注销用户）
+}
+
 type shareBackendStub struct {
 	shares       map[string]shareStubRecord
 	byCode       map[string]string
 	execErrs     map[string]error
 	queryErrs    map[string]error
 	queryRowErrs map[string]error
-	users        map[string][2]string
+	users        map[string]shareStubUser
 	groups       map[string][3]string
-	moments      map[string][4]string
+	// moments 值末位为可见性：public 之外的值（private/deleted）模拟
+	// queryShareMomentExists 的 privacy_level='public' AND is_deleted=FALSE 过滤。
+	moments map[string][5]string
 }
 
 func newShareBackendStub() *shareBackendStub {
@@ -44,15 +52,15 @@ func newShareBackendStub() *shareBackendStub {
 		execErrs:     make(map[string]error),
 		queryErrs:    make(map[string]error),
 		queryRowErrs: make(map[string]error),
-		users: map[string][2]string{
-			"user_alice": {"Alice", "https://example.com/alice.png"},
-			"user_bob":   {"Bob", "https://example.com/bob.png"},
+		users: map[string]shareStubUser{
+			"user_alice": {Nickname: "Alice", Avatar: "https://example.com/alice.png"},
+			"user_bob":   {Nickname: "Bob", Avatar: "https://example.com/bob.png"},
 		},
 		groups: map[string][3]string{
 			"group_1": {"Group One", "A nice group", "https://example.com/group.png"},
 		},
-		moments: map[string][4]string{
-			"moment_1": {"hello world", "Shanghai", "Bob", "https://example.com/bob.png"},
+		moments: map[string][5]string{
+			"moment_1": {"hello world", "Shanghai", "Bob", "https://example.com/bob.png", "public"},
 		},
 	}
 }
@@ -103,7 +111,7 @@ func (b *shareBackendStub) QueryRow(_ context.Context, query string, args ...any
 		}
 		record := b.shares[shareID]
 		creator := b.users[record.CreatorUserID]
-		return testdb.RowValues{Values: []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatorUserID, creator[0], creator[1], record.PayloadJSON, record.CreatedAt, record.ExpiresAt, record.IsRevoked}}
+		return testdb.RowValues{Values: []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatorUserID, creator.Nickname, creator.Avatar, record.PayloadJSON, record.CreatedAt, record.ExpiresAt, record.IsRevoked}}
 	case queryGetShareByID:
 		record, ok := b.shares[args[0].(string)]
 		if !ok {
@@ -112,10 +120,11 @@ func (b *shareBackendStub) QueryRow(_ context.Context, query string, args ...any
 		return testdb.RowValues{Values: []any{record.ShareID, record.CreatorUserID, record.IsRevoked}}
 	case queryShareUserExists:
 		user, ok := b.users[args[0].(string)]
-		if !ok {
+		// 对齐 SQL 过滤：已注销（is_deleted）用户按不存在处理。
+		if !ok || user.Deleted {
 			return testdb.RowValues{Err: pgx.ErrNoRows}
 		}
-		return testdb.RowValues{Values: []any{args[0].(string), user[0], user[1]}}
+		return testdb.RowValues{Values: []any{args[0].(string), user.Nickname, user.Avatar}}
 	case queryShareGroupExists:
 		group, ok := b.groups[args[0].(string)]
 		if !ok {
@@ -124,7 +133,8 @@ func (b *shareBackendStub) QueryRow(_ context.Context, query string, args ...any
 		return testdb.RowValues{Values: []any{args[0].(string), group[0], group[1], group[2]}}
 	case queryShareMomentExists:
 		moment, ok := b.moments[args[0].(string)]
-		if !ok {
+		// 对齐 SQL 过滤：privacy_level='public' 且未删除的瞬间才可见。
+		if !ok || moment[4] != "public" {
 			return testdb.RowValues{Err: pgx.ErrNoRows}
 		}
 		return testdb.RowValues{Values: []any{args[0].(string), moment[0], moment[1], moment[2], moment[3]}}
@@ -275,6 +285,34 @@ func TestPostgresRepositoryRejectsMissingTarget(t *testing.T) {
 	_, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}})
 	if !errors.Is(err, ErrShareNotFound) {
 		t.Fatalf("expected ErrShareNotFound, got %v", err)
+	}
+}
+
+// 目标可见性（spec api_spec_share.md：目标资源必须存在且可访问，不可访问统一
+// 按不存在返回 10300 防枚举）：已注销用户、私密动态、已删动态均拒绝创建分享。
+func TestPostgresRepositoryRejectsInvisibleTargets(t *testing.T) {
+	backend := newShareBackendStub()
+	backend.users["user_ghost"] = shareStubUser{Nickname: "Ghost", Deleted: true}
+	backend.moments["moment_private"] = [5]string{"secret", "", "Bob", "", "private"}
+	backend.moments["moment_deleted"] = [5]string{"gone", "", "Bob", "", "deleted"}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory)
+
+	cases := []struct {
+		name      string
+		shareType string
+		payload   map[string]any
+	}{
+		{"deleted user", ShareTypeUser, map[string]any{"shared_user_id": "user_ghost"}},
+		{"private moment", ShareTypeMoment, map[string]any{"shared_moment_id": "moment_private"}},
+		{"deleted moment", ShareTypeMoment, map[string]any{"shared_moment_id": "moment_deleted"}},
+	}
+	for _, tc := range cases {
+		_, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: tc.shareType, Payload: tc.payload})
+		if !errors.Is(err, ErrShareNotFound) {
+			t.Fatalf("%s: expected ErrShareNotFound, got %v", tc.name, err)
+		}
 	}
 }
 
