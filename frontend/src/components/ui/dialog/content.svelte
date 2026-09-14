@@ -10,7 +10,7 @@
 	// 的 inset-x-* 覆盖类经 tailwind-merge 撕裂（left 被删而 translate 残留→左移半宽），
 	// 且 zoom 动画的 keyframes transform 会整体覆盖 translate 造成入场位置跳动。
 	// 调用方只需传宽度（max-w-*/w-*）与内距，定位由组件统一承担。
-	// 对齐 Figma Make overlays/Sheet：遮罩用更深 scrim（black/50）；side sheet 可选自动右上角 X 关闭按钮。
+	// 对齐 Figma Make overlays/Sheet：遮罩用满值主题 scrim（与 ImageViewer 统一）；side sheet 可选自动右上角 X 关闭按钮。
 	// 交互能力（Escape / 外部点击 / 焦点圈 / 滚动锁 / body 滚动锁定）由 bits-ui Dialog.Content 提供。
 	import { Dialog } from 'bits-ui';
 	import { X } from '@lucide/svelte';
@@ -53,14 +53,15 @@
 			'top-0 left-0 right-0 rounded-b-sheet border-b border-border-default/80 shadow-sheet data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top'
 	};
 
-	// 遮罩走 --cst-surface-scrim（themes/*.css 按主题/明暗定义，vibrant≈0.38-0.42），叠加微虚化提升景深。
+	// 遮罩走 --cst-surface-scrim 满值（themes/*.css 按主题/明暗定义，vibrant≈0.38-0.42），
+	// 与 ImageViewer 深遮罩统一（原 /80 减淡档已收敛），叠加微虚化提升景深。
 	const canShowClose = $derived(showCloseButton && side !== 'center');
 </script>
 
 <Dialog.Portal>
 	<Dialog.Overlay
 		class={cn(
-			'fixed inset-0 z-[var(--cst-z-overlay)] bg-surface-scrim/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+			'fixed inset-0 z-[var(--cst-z-overlay)] bg-surface-scrim backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
 			overlayClassName
 		)}
 	/>
