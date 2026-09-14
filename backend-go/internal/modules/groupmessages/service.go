@@ -12,11 +12,13 @@ import (
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/textutil"
 	"hotspot/backend-go/internal/platform/types"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // groupMentionNotifier 落库群聊 @ 通知（由 notify 模块实现，见 module.go 装配）。
 type groupMentionNotifier interface {
-	AppendGroupMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, groupID, groupName, messageID, contentPreview string) (string, error)
+	AppendGroupMentionedBatch(ctx context.Context, targetUserIDs []string, actor types.UserInfo, groupID, groupName, messageID, contentPreview string) (map[string]string, error)
 }
 
 // shareValidator 校验 share_code 有效性（由 share 模块实现，见 module.go 装配）。
@@ -172,8 +174,8 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 	return msg, nil
 }
 
-// notifyMentions 对被 @ 的成员逐人落库 group_mentioned 通知并推送
-// GroupMessageMentioned 事件（自动推送，无需订阅该群频道）。
+// notifyMentions 对被 @ 的成员批量落库 group_mentioned 通知（单次往返）并以
+// 有界并发推送 GroupMessageMentioned 事件（自动推送，无需订阅该群频道）。
 func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req SendGroupMessageRequest, msg MessageSentResult) {
 	if s.mentions == nil || len(req.Mentions) == 0 {
 		return
@@ -185,33 +187,46 @@ func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req Se
 		observability.L().Error("groupmessages.mentions filter members failed", "error", err, "group_id", req.GroupID)
 		return
 	}
-	if len(mentionedMembers) == 0 {
+	targets := make([]string, 0, len(mentionedMembers))
+	for _, mentionedUserID := range mentionedMembers {
+		if mentionedUserID != actorUserID {
+			targets = append(targets, mentionedUserID)
+		}
+	}
+	if len(targets) == 0 {
 		return
 	}
 	actor := s.resolveUserInfo(ctx, actorUserID)
 	groupName := s.resolveGroupName(ctx, req.GroupID)
 	contentPreview := textutil.TruncateRunes(req.Content, 80)
-	for _, mentionedUserID := range mentionedMembers {
-		if mentionedUserID == actorUserID {
-			continue
-		}
-		notificationID := ""
-		id, err := s.mentions.AppendGroupMentioned(ctx, mentionedUserID, actor, req.GroupID, groupName, msg.MessageID, contentPreview)
-		if err != nil {
-			observability.L().Error("groupmessages.mentions append failed", "error", err, "group_id", req.GroupID, "mentioned_user_id", mentionedUserID)
-		} else {
-			notificationID = id
-		}
-		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeGroupMessageMentioned, Payload: map[string]any{
-			"notify_id":       notificationID,
-			"group_id":        req.GroupID,
-			"group_name":      groupName, // spec websocket.md：与 notify payload 对齐，直接渲染通知标题
-			"message_id":      msg.MessageID,
-			"actor":           actor,
-			"content_preview": contentPreview,
-			"mentioned_at":    msg.SentAt,
-		}})
+	// 批量落库（单次往返）：失败时记日志并按通知缺失降级（notify_id 置空），
+	// 广播仍照常进行——与此前逐人失败只影响该人的口径一致，只是失败粒度为整批。
+	notifyIDs, err := s.mentions.AppendGroupMentionedBatch(ctx, targets, actor, req.GroupID, groupName, msg.MessageID, contentPreview)
+	if err != nil {
+		observability.L().Error("groupmessages.mentions batch append failed", "error", err, "group_id", req.GroupID, "count", len(targets))
 	}
+	// 并行推送（有界并发）：每条 BroadcastToUser 内部含 resume Record + 跨实例
+	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟。
+	broadcast := func(mentionedUserID, notificationID string) func() error {
+		return func() error {
+			realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeGroupMessageMentioned, Payload: map[string]any{
+				"notify_id":       notificationID,
+				"group_id":        req.GroupID,
+				"group_name":      groupName, // spec websocket.md：与 notify payload 对齐，直接渲染通知标题
+				"message_id":      msg.MessageID,
+				"actor":           actor,
+				"content_preview": contentPreview,
+				"mentioned_at":    msg.SentAt,
+			}})
+			return nil
+		}
+	}
+	group, _ := errgroup.WithContext(context.Background())
+	group.SetLimit(8)
+	for _, mentionedUserID := range targets {
+		group.Go(broadcast(mentionedUserID, notifyIDs[mentionedUserID]))
+	}
+	_ = group.Wait()
 }
 func (s *Service) History(ctx context.Context, groupID string, pagination *PaginationParams) (PaginatedGroupMessages, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)

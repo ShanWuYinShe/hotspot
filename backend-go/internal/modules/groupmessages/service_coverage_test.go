@@ -3,6 +3,7 @@ package groupmessages
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -139,10 +140,14 @@ type stubMentionNotifier struct {
 	returnErr     error
 }
 
-func (s *stubMentionNotifier) AppendGroupMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, groupID, groupName, messageID, contentPreview string) (string, error) {
-	s.appendedCount++
-	s.lastTargetID = targetUserID
-	return "notify_123", s.returnErr
+func (s *stubMentionNotifier) AppendGroupMentionedBatch(ctx context.Context, targetUserIDs []string, actor types.UserInfo, groupID, groupName, messageID, contentPreview string) (map[string]string, error) {
+	ids := make(map[string]string, len(targetUserIDs))
+	for i, targetUserID := range targetUserIDs {
+		s.appendedCount++
+		s.lastTargetID = targetUserID
+		ids[targetUserID] = "notify_123_" + strconv.Itoa(i)
+	}
+	return ids, s.returnErr
 }
 
 func TestServiceReportSnapshotAndMembership(t *testing.T) {
