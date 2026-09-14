@@ -143,7 +143,7 @@ export struct SettingsRowDivider {
 }
 
 /**
- * 主题二选一分段卡（星际/清野，对齐前端 settings 主题分段选择器）。
+ * 主题三选一分段卡（星际/清野/水墨，对齐前端 settings 主题分段选择器）。
  * 独立 @Component：此前是 SettingsPage 的带参 @Builder 经 SettingsSectionCard 的
  * @BuilderParam 渲染，跨组件作用域下 onClick 不触发，必须拆成组件。
  */

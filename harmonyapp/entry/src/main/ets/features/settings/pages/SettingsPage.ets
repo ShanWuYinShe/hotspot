@@ -514,9 +514,9 @@ export struct SettingsPage {
     }
   }
 
-  // ==================== 主题分段卡（对齐前端主题二选一：星际 / 清野） ====================
+  // ==================== 主题分段卡（对齐前端主题三选一：星际 / 清野 / 水墨） ====================
   // 独立组件 SettingsThemeSegmentCard（@Builder 经 @BuilderParam 跨组件渲染时
-  // onClick 丢失，见 SettingsSupport 内组件注释）
+  // onClick 丢失，见 SettingsSupport 内组件注释）；三卡各 layoutWeight(1) 横向均分
   private getActiveSegmentModes(): ThemeMode[] {
     // 跟随系统时默认解析为 vibrant，星旗舰同步高亮
     return this.themeMode === 'follow_system' ? ['vibrant'] : [this.themeMode];
@@ -559,6 +559,13 @@ export struct SettingsPage {
                           label: '清野',
                           swatch: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.accentBackground,
                           selected: this.getActiveSegmentModes().indexOf('default_clean') >= 0,
+                          onSelect: (mode: string) => { this.handleThemeChange(mode as ThemeMode); }
+                        })
+                        SettingsThemeSegmentCard({
+                          mode: 'inkwash',
+                          label: '水墨',
+                          swatch: ThemeConstants.INKWASH_LIGHT_COLORS.accentBackground,
+                          selected: this.getActiveSegmentModes().indexOf('inkwash') >= 0,
                           onSelect: (mode: string) => { this.handleThemeChange(mode as ThemeMode); }
                         })
                       }
@@ -625,7 +632,7 @@ export struct SettingsPage {
                       SettingsEntryRow({ item: {
                         icon: AppIcon.STAR_FILL,
                         title: '更多外观模式',
-                        subtitle: '跟随系统 / 星际 / 清野（大图预览）',
+                        subtitle: '跟随系统 / 星际 / 清野 / 水墨（大图预览）',
                         action: () => { this.showThemeSheet = true; }
                       } })
                     }

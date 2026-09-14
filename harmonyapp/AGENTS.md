@@ -132,7 +132,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 
 ### 设计系统（design-tokens）
 
-所有颜色、字号、间距、圆角、阴影只用 DesignConstants / AppThemeManager token，对齐前端 design token 系统（vibrant / forest 双主题，单一事实源）。禁止在页面/组件里硬编码十六进制色值或裸数字 `fontSize(N)` / `padding({left:N})`。
+所有颜色、字号、间距、圆角、阴影只用 DesignConstants / AppThemeManager token，对齐前端 design token 系统（vibrant / forest / inkwash 三主题，单一事实源）。禁止在页面/组件里硬编码十六进制色值或裸数字 `fontSize(N)` / `padding({left:N})`。
 
 颜色：
 - 画布：`palette.pageBackground` / `palette.surfaceBackground`（对齐前端
@@ -160,7 +160,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
   `setColorMode` 对应关系：`dark`→`COLOR_MODE_DARK` / `light`→`COLOR_MODE_LIGHT` /
   `auto`→`COLOR_MODE_NOT_SET`（`EntryAbility` 三处 + 设置页切换处统一按此三选一，
   旧 `settings_dark_forced=true` 用户已迁移为 `dark`）
-- 主题族（vibrant/forest）双端可选集一致（本端 `default_clean`= forest 清野）；已删除主题族的存量偏好一律映射 vibrant 对应明暗
+- 主题族（vibrant/forest/inkwash）双端可选集一致（本端 `default_clean`= forest 清野、`inkwash`= 水墨）；已删除主题族的存量偏好一律映射 vibrant 对应明暗
 
 字号（FONT.SIZE，禁用裸 `fontSize(N)`）：`XS_MINUS 9` / `XS2 10` / `XS 11` / `SM 12` / `MD 14` / `LG 16` / `LG_PLUS 18` / `XL 20` / `XXL 24` / `XXXL 30` / `HERO 36`（近邻档 13/15/22/28/32/48/56 与 XXXL_PLUS 36 已按前端口径归并/删除，不保留；`LG 16` 为 HarmonyOS 标准正文尺寸的平台适配档）。字重 `FONT.WEIGHT.{REGULAR,MEDIUM,SEMIBOLD,BOLD}`。行高 `FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}`；字距 `FONT.LETTER_SPACING.{EYEBROW 1.4, LABEL 1.2, FIELD 1.28, ICON_LABEL 0.6}`（对齐前端 tracking-eyebrow/label/field 刻度）。
 
@@ -255,7 +255,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 
 | 校验 | 脚本 | 覆盖范围 |
 |---|---|---|
-| 跨端色彩 | `frontend/scripts/check-cross-platform-colors.mjs` | `themes/*.css --cst-palette-*` ↔ `ThemeConstants.ets ColorConfig` 逐值一致（2 主题 × 2 明暗 × 14 组映射）+ 主题 swatch |
+| 跨端色彩 | `frontend/scripts/check-cross-platform-colors.mjs` | `themes/*.css --cst-palette-*` ↔ `ThemeConstants.ets ColorConfig` 逐值一致（3 主题 × 2 明暗 × 14 组映射）+ 主题 swatch |
 | 跨端刻度 | `frontend/scripts/check-cross-platform-scale.mjs` | 字号 9 档（`--text-*` ↔ `FONT.SIZE`）+ 圆角 5 档（`--radius-*` ↔ `RADIUS`）逐值一致；单端加近邻档即拦截。已登记豁免：`FONT.SIZE.LG=16`（HarmonyOS 平台适配档） |
 
 - 两脚本均挂入 `bun run check:theme`（随 `bun run check` 与 CI 生效），漂移即红。

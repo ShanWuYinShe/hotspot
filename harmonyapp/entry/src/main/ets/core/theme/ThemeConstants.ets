@@ -92,6 +92,28 @@ class ThemeShadowRegistry {
     control: new AppThemeShadow(16, '#4D000000', 0, 4),
     tabBar: new AppThemeShadow(10, '#66000000', 0, -3)
   };
+
+  readonly INKWASH_LIGHT: ThemeShadows = {
+    // 宣纸扁平：卡片用极淡墨影近似前端「细墨线描边」表达层级（ArkUI 无 spread 做不了硬边 ring）
+    surface: new AppThemeShadow(10, '#0F2B2A26', 0, 2),
+    // 弹层抬升（对齐前端 --cst-elevation-modal 0 24px 80px 0.24，留白性格略收敛）
+    elevated: new AppThemeShadow(40, '#2E000000', 0, 12),
+    // 菜单浮层（对齐前端 --cst-elevation-menu 0 16px 40px 0.16）
+    control: new AppThemeShadow(32, '#24000000', 0, 8),
+    // 底部导航（对齐前端 --cst-elevation-nav，向上微光）
+    tabBar: new AppThemeShadow(24, '#142B2A26', 0, -4)
+  };
+
+  readonly INKWASH_DARK: ThemeShadows = {
+    // 深色下黑阴影对比弱，卡片抬升改用更亮的描边承载（border 单独加亮），阴影只做轻微加深
+    surface: new AppThemeShadow(10, '#59000000', 0, 3),
+    // 弹层抬升（对齐前端 --cst-elevation-modal 0 28px 88px 0.42）
+    elevated: new AppThemeShadow(24, '#80000000', 0, 8),
+    // 菜单浮层
+    control: new AppThemeShadow(16, '#4D000000', 0, 4),
+    // 底部导航（对齐前端 --cst-elevation-nav 0 -2px 10px 0.35）
+    tabBar: new AppThemeShadow(10, '#66000000', 0, -3)
+  };
 }
 
 export class ThemeConstants {
@@ -266,5 +288,96 @@ export class ThemeConstants {
     mapMoment: '#FB923C',
     dangerSoft: '#2C2131',
     warningSoft: '#2C2B24',
+  };
+
+  static readonly INKWASH_LIGHT_COLORS: ColorConfig = {
+    // 表面分层（对齐前端 inkwash.css）：画布宣纸暖底 + 卡片宣纸白，层级靠细墨线描边表达
+    pageBackground: '#F5F2EA',
+    surfaceBackground: '#FBF9F3',
+    surfaceSubtle: '#F0EBE0',
+    surfaceElevated: '#FBF9F3',
+    // borderColor = CSS rgba(43,42,38,0.20)，ArkTS #AARRGGBB alpha 前置（跨端校验直比）
+    borderColor: '#332B2A26',
+    floatingBorderColor: '#142B2A26',
+    sheetBackground: '#F5F2EA',
+    accentBackground: '#A63A2E',
+    accentText: '#FFFFFF',
+    // accentMuted = accent-soft（10% 朱砂）预合成到 #F5F2EA（跨端校验直比）
+    accentMuted: '#EDDFD7',
+    chatBackground: '#F1EDE3',
+    systemSurfaceBaseColor: '#F1EDE3',
+    // overlayStrong = CSS rgba(26,24,20,0.42)，ArkTS #AARRGGBB alpha 前置
+    overlayStrong: '#6B1A1814',
+    textPrimary: '#2B2A26',
+    textSecondary: '#6E6A60',
+    // 宣纸灰 tertiary：on 画布 #F5F2EA 对比 4.68（≥4.5），比 textSecondary(#6E6A60, 4.82) 弱一档
+    textTertiary: '#706C62',
+    iconMuted: '#6E6A60',
+    buttonSecondaryBackground: '#F0EBE0',
+    buttonSecondaryText: '#2B2A26',
+    primaryButtonBorderColor: '#A63A2E',
+    inputBackgroundColor: '#F0EBE0',
+    quickActionBackgroundColor: '#FFFFFF',
+    tabBarBackground: '#FAF8F2',
+    tabBarInactive: '#6E6A60',
+    // tabBarActiveBackground = accent @ 0.13 预合成到 #F5F2EA（跨端校验直比）
+    tabBarActiveBackground: '#EBDAD2',
+    isDarkTheme: false,
+    online: '#3F7256',
+    warning: '#8F7026',
+    success: '#3F7256',
+    error: '#9E2140',
+    info: '#A63A2E',
+    mapUser: '#A63A2E',
+    mapGroup: '#4A7048',
+    mapMoment: '#8A6426',
+    // 淡底对齐前端 inkwash light danger/warning 12% 预混（#9E2140 / #8F7026 × 12% over #F5F2EA）
+    dangerSoft: '#EAD9D5',
+    warningSoft: '#E9E2D2',
+  };
+
+  static readonly INKWASH_DARK_COLORS: ColorConfig = {
+    pageBackground: '#181A1C',
+    surfaceBackground: '#212426',
+    surfaceSubtle: '#26292B',
+    surfaceElevated: '#24272A',
+    // borderColor = CSS rgba(234,230,218,0.16)，ArkTS #AARRGGBB alpha 前置（跨端校验直比）
+    borderColor: '#29EAE6DA',
+    floatingBorderColor: '#14EAE6DA',
+    sheetBackground: '#181A1C',
+    accentBackground: '#D07763',
+    accentText: '#1F1512',
+    // accentMuted = accent-soft（12% 暖赭）预合成到 #181A1C（跨端校验直比）
+    accentMuted: '#2E2525',
+    chatBackground: '#1D2022',
+    systemSurfaceBaseColor: '#181A1C',
+    // overlayStrong = CSS rgba(0,0,0,0.58)，ArkTS #AARRGGBB alpha 前置
+    overlayStrong: '#94000000',
+    textPrimary: '#EAE6DA',
+    textSecondary: '#A8A49A',
+    // 宣纸灰 tertiary：on 画布 #181A1C 对比 5.20（≥4.5），比 textSecondary(#A8A49A, 7.01) 弱一档
+    textTertiary: '#908C82',
+    iconMuted: '#A8A49A',
+    buttonSecondaryBackground: '#26292B',
+    buttonSecondaryText: '#EAE6DA',
+    primaryButtonBorderColor: '#D07763',
+    inputBackgroundColor: '#26292B',
+    quickActionBackgroundColor: '#141617',
+    tabBarBackground: '#181A1C',
+    tabBarInactive: '#A8A49A',
+    // tabBarActiveBackground = accent @ 0.13 预合成到 #181A1C（跨端校验直比）
+    tabBarActiveBackground: '#302625',
+    isDarkTheme: true,
+    online: '#82B297',
+    warning: '#D6A54E',
+    success: '#82B297',
+    error: '#DE8496',
+    info: '#D07763',
+    mapUser: '#D07763',
+    mapGroup: '#7FA88B',
+    mapMoment: '#C89B5A',
+    // 淡底对齐前端 inkwash dark danger/warning 14% 预混（#DE8496 / #D6A54E × 14% over #181A1C）
+    dangerSoft: '#34292D',
+    warningSoft: '#332E23',
   };
 }

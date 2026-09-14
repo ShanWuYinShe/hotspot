@@ -1,10 +1,12 @@
-export type ThemeMode = 'follow_system' | 'default_clean' | 'vibrant';
+export type ThemeMode = 'follow_system' | 'default_clean' | 'vibrant' | 'inkwash';
 
 export type ResolvedThemeId =
   | 'default_clean_light'
   | 'default_clean_dark'
   | 'vibrant_light'
-  | 'vibrant_dark';
+  | 'vibrant_dark'
+  | 'inkwash_light'
+  | 'inkwash_dark';
 
 /** 明暗偏好三档（与 ThemeMode 主题族正交）：auto 跟随系统，light/dark 手动锁定 */
 export type DarkModePreference = 'auto' | 'light' | 'dark';

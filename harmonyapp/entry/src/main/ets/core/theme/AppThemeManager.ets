@@ -253,10 +253,50 @@ const VIBRANT_DARK = buildPalette(
   false
 );
 
+// 水墨：宣纸扁平语言，形制/尺寸沿用默认 tokens（对齐清野做法）
+const INKWASH_LIGHT_VISUALS = buildVisualTokens(
+  DEFAULT_THEME_SHAPE,
+  DEFAULT_THEME_METRICS,
+  {
+    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.INKWASH_LIGHT.surface),
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.INKWASH_LIGHT.elevated)
+  }
+);
+
+const INKWASH_DARK_VISUALS = buildVisualTokens(
+  DEFAULT_THEME_SHAPE,
+  DEFAULT_THEME_METRICS,
+  {
+    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.INKWASH_DARK.surface),
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.INKWASH_DARK.elevated)
+  }
+);
+
+const INKWASH_LIGHT = buildPalette(
+  'inkwash_light',
+  '水墨',
+  '宣纸墨韵、朱砂强调',
+  ThemeConstants.INKWASH_LIGHT_COLORS,
+  ThemeConstants.SHADOWS.INKWASH_LIGHT,
+  INKWASH_LIGHT_VISUALS,
+  true
+);
+
+const INKWASH_DARK = buildPalette(
+  'inkwash_dark',
+  '水墨',
+  '墨夜留白、暖赭强调',
+  ThemeConstants.INKWASH_DARK_COLORS,
+  ThemeConstants.SHADOWS.INKWASH_DARK,
+  INKWASH_DARK_VISUALS,
+  false
+);
+
 const THEME_OPTIONS: ThemeOptionItem[] = [
   { mode: 'follow_system', label: '跟随系统', description: '自动匹配系统明暗模式' } as ThemeOptionItem,
   { mode: 'vibrant', label: '星际', description: '冷色玻璃、蓝调强调' } as ThemeOptionItem,
-  { mode: 'default_clean', label: '清野', description: '自然纸面、森林绿强调' } as ThemeOptionItem
+  { mode: 'default_clean', label: '清野', description: '自然纸面、森林绿强调' } as ThemeOptionItem,
+  { mode: 'inkwash', label: '水墨', description: '宣纸墨韵、朱砂强调' } as ThemeOptionItem
 ];
 
 export class AppThemeManager {
@@ -358,6 +398,10 @@ export class AppThemeManager {
         return VIBRANT_DARK;
       case 'vibrant_light':
         return VIBRANT_LIGHT;
+      case 'inkwash_dark':
+        return INKWASH_DARK;
+      case 'inkwash_light':
+        return INKWASH_LIGHT;
       case 'default_clean_dark':
         return DEFAULT_CLEAN_DARK;
       case 'default_clean_light':
@@ -430,6 +474,8 @@ export class AppThemeManager {
         return effectiveDark ? 'vibrant_dark' : 'vibrant_light';
       case 'default_clean':
         return effectiveDark ? 'default_clean_dark' : 'default_clean_light';
+      case 'inkwash':
+        return effectiveDark ? 'inkwash_dark' : 'inkwash_light';
       default:
         return DEFAULT_RESOLVED_THEME_ID;
     }
@@ -440,6 +486,7 @@ export class AppThemeManager {
       case 'default_clean':
       case 'follow_system':
       case 'vibrant':
+      case 'inkwash':
         return themeMode;
       case 'figma_neu':
         // 已删除主题族迁移：存量偏好一律映射 vibrant（明暗由偏好/系统重解，与原明暗对应）
@@ -466,6 +513,8 @@ export class AppThemeManager {
       case 'default_clean_light':
       case 'vibrant_dark':
       case 'vibrant_light':
+      case 'inkwash_dark':
+      case 'inkwash_light':
         return resolvedThemeId;
       case 'figma_neu_dark':
         // 已删除主题族迁移：resolved id 按明暗映射 vibrant 对应档
