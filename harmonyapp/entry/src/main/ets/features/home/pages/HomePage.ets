@@ -30,7 +30,7 @@ import { interactionActions } from '../../../core/state/InteractionActions';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
-import { EmptyState } from '../../../components/EmptyState';
+import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -82,6 +82,7 @@ export struct HomePage {
   @State locationCardPressed: boolean = false;
   @State pressedUserKey: string = '';
   @State pressedMomentKey: string = '';
+  @State isRefreshing: boolean = false;
 
   private interactionStore = InteractionStateStore.getInstance();
   private isDestroyed: boolean = false;
@@ -365,6 +366,9 @@ export struct HomePage {
       // 粘性头部
       this.buildStickyHeader()
 
+      // 整页下拉刷新（P2-2）：Refresh 包内容区（sticky header 保持粘性在外）
+      Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+        Column() {
       if (this.getReferencePoint() === null) {
         // 未设置浏览位置：聚合页无数据源，引导先去设置位置（避免误导性「附近没有内容」）
         EmptyState({
@@ -408,6 +412,13 @@ export struct HomePage {
       } else {
         this.buildHomeBody()
       }
+        }
+        .width('100%')
+        .height('100%')
+      }
+      .width('100%')
+      .layoutWeight(1)
+      .onRefreshing(() => { this.refreshHome(); })
     }
     .width('100%')
     .height('100%')
@@ -435,6 +446,15 @@ export struct HomePage {
     this.loadNearbyMoments();
     this.loadNearbyUsers();
     this.loadNearbyGroups();
+  }
+
+  /** 下拉刷新（P2-2）：三个分区并行重载，全部落地后收起刷新指示器 */
+  private async refreshHome(): Promise<void> {
+    try {
+      await Promise.all([this.loadNearbyMoments(), this.loadNearbyUsers(), this.loadNearbyGroups()]);
+    } finally {
+      this.isRefreshing = false;
+    }
   }
 
   @Builder
