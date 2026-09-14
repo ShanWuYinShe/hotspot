@@ -21,6 +21,7 @@ import { SystemButton } from '../../../components/SystemButton';
 import { SystemDialog } from '../../../components/SystemDialog';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
+import { SystemToggle } from '../../../components/SystemToggle';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
@@ -34,7 +35,9 @@ import {
   GroupAnnouncementItem,
   RelativeLocation,
   SettableGroupRole,
-  UpdateGroupRequest
+  UpdateGroupRequest,
+  AdminBannedMemberItem,
+  UserItem
 } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
@@ -71,6 +74,11 @@ const DOMAIN_NUMBER: number = 0xFF17;
 const TAG: string = 'GroupDetailPage';
 const GROUP_NAME_MAX: number = 50;
 const GROUP_DESCRIPTION_MAX: number = 500;
+// 群公告字数上限（对齐前端 GroupAnnouncementDialog：标题 50 / 内容 1000）
+const ANNOUNCEMENT_TITLE_MAX: number = 50;
+const ANNOUNCEMENT_CONTENT_MAX: number = 1000;
+// 禁言时长档（分钟）
+const MUTE_DURATION_MINUTES: number = 30;
 
 interface GroupDetailParams {
   groupId: string;
@@ -136,12 +144,56 @@ export struct GroupDetailPage {
   @State editGroupAvatarFileId: string = '';
   @State isSavingGroupInfo: boolean = false;
   @State isEditGroupAvatarUploading: boolean = false;
+  // 群设置扩展（对齐前端 GroupSettingsSheet：私密/新人审核开关）
+  @State editGroupPrivate: boolean = false;
+  @State editGroupRequiresApproval: boolean = false;
+  // 群公告管理（对齐前端 GroupAnnouncementDialog：owner/admin 可创建/编辑/删除）
+  @State showAnnouncementSheet: boolean = false;
+  @State announcementEditing: GroupAnnouncementItem | null = null;
+  @State announcementTitle: string = '';
+  @State announcementContent: string = '';
+  @State announcementPinned: boolean = false;
+  @State isSavingAnnouncement: boolean = false;
+  @State showAnnouncementDeleteConfirm: boolean = false;
+  @State deleteAnnouncementTarget: GroupAnnouncementItem | null = null;
+  // 邀请成员（对齐前端 InviteMembersSheet：搜索 + 多选 + 批量邀请）
+  @State showInviteSheet: boolean = false;
+  @State inviteKeyword: string = '';
+  @State inviteResults: UserItem[] = [];
+  @State isSearchingInviteUsers: boolean = false;
+  @State inviteSearchError: string = '';
+  @State inviteSelectedIds: string[] = [];
+  @State isInviting: boolean = false;
+  private inviteSearchTimer: number = -1;
+  private inviteSearchSeq: number = 0;
+  /** 转让群主：候选成员（非群主、非自己，对齐前端 transferableMembers） */
+  @State transferSectionOpen: boolean = false;
+  @State transferCandidates: GroupMemberItem[] = [];
+  @State isLoadingTransferCandidates: boolean = false;
+  // 封禁管理（对齐前端 banned 子 Tab：名单 + 解封）
+  @State showBannedListSheet: boolean = false;
+  @State bannedMembers: AdminBannedMemberItem[] = [];
+  @State isLoadingBannedMembers: boolean = false;
+  /** 封禁二次确认目标（危险操作防误触，对齐前端 MemberActionSheet ban 语义） */
+  @State showBanConfirm: boolean = false;
+  @State banTargetMember: GroupMemberItem | null = null;
+  /** 转让群主确认目标（仅群主；对齐前端危险区 ConfirmDialog 语义） */
+  @State showTransferConfirm: boolean = false;
+  @State transferTargetMember: GroupMemberItem | null = null;
+  /** 解散群组二次确认（仅群主；不可逆，对齐前端危险区） */
+  @State showDismissConfirm: boolean = false;
+  @State isDismissingGroup: boolean = false;
+  @State isTransferringOwnership: boolean = false;
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
   }
 
   aboutToDisappear(): void {
+    if (this.inviteSearchTimer !== -1) {
+      clearTimeout(this.inviteSearchTimer);
+      this.inviteSearchTimer = -1;
+    }
     KeyboardDismissManager.getInstance().dismiss();
   }
 
@@ -181,6 +233,9 @@ export struct GroupDetailPage {
     this.showMemberList = false;
     this.showApplicationList = false;
     this.showEditGroupSheet = false;
+    this.showAnnouncementSheet = false;
+    this.showInviteSheet = false;
+    this.showBannedListSheet = false;
   }
 
   private async loadGroupDetail(): Promise<void> {
@@ -221,6 +276,129 @@ export struct GroupDetailPage {
       }
     } catch (error) {
       // 静默失败：公告 Tab 显示空态，不阻塞主流程
+    }
+  }
+
+  // ==================== 群公告管理（对齐前端 GroupAnnouncementDialog，owner/admin） ====================
+
+  /** 公告管理权限（对齐前端 canManageAnnouncements = joined && (owner|admin)） */
+  private canManageAnnouncements(): boolean {
+    return this.isMember && this.isAdminOrOwnerRole();
+  }
+
+  private openCreateAnnouncement(): void {
+    if (!this.canManageAnnouncements()) {
+      SystemToast.showWarning('仅群主或管理员可管理群公告', this.getUIContext());
+      return;
+    }
+    this.announcementEditing = null;
+    this.announcementTitle = '';
+    this.announcementContent = '';
+    this.announcementPinned = false;
+    this.closeOverlaySheets();
+    this.showAnnouncementSheet = true;
+  }
+
+  private openEditAnnouncement(item: GroupAnnouncementItem): void {
+    if (!this.canManageAnnouncements()) {
+      SystemToast.showWarning('仅群主或管理员可管理群公告', this.getUIContext());
+      return;
+    }
+    this.announcementEditing = item;
+    this.announcementTitle = item.title;
+    this.announcementContent = item.content;
+    this.announcementPinned = item.is_pinned;
+    this.closeOverlaySheets();
+    this.showAnnouncementSheet = true;
+  }
+
+  private closeAnnouncementSheet(): void {
+    if (this.isSavingAnnouncement) {
+      return;
+    }
+    this.showAnnouncementSheet = false;
+    this.announcementEditing = null;
+  }
+
+  private async submitAnnouncement(): Promise<void> {
+    if (!this.ensureLoggedIn('管理群公告')) return;
+    if (!this.canManageAnnouncements()) {
+      SystemToast.showWarning('无权限管理群公告', this.getUIContext());
+      return;
+    }
+    const title = this.announcementTitle.trim();
+    const content = this.announcementContent.trim();
+    if (!title || !content) {
+      SystemToast.showWarning('公告标题和内容不能为空', this.getUIContext());
+      return;
+    }
+    const editing = this.announcementEditing;
+    this.isSavingAnnouncement = true;
+    try {
+      if (editing === null) {
+        const response = await ApiClient.createGroupAnnouncement({
+          group_id: this.groupId,
+          title: title,
+          content: content,
+          is_pinned: this.announcementPinned
+        });
+        if (response.code !== 0) {
+          SystemToast.showError(getErrorMessage(response, '发布失败'), this.getUIContext());
+          return;
+        }
+      } else {
+        const response = await ApiClient.updateGroupAnnouncement({
+          group_id: this.groupId,
+          announcement_id: editing.announcement_id,
+          title: title,
+          content: content,
+          is_pinned: this.announcementPinned
+        });
+        if (response.code !== 0) {
+          SystemToast.showError(getErrorMessage(response, '保存失败'), this.getUIContext());
+          return;
+        }
+      }
+      SystemToast.showSuccess(editing === null ? '公告已发布' : '公告已更新', this.getUIContext());
+      this.showAnnouncementSheet = false;
+      this.announcementEditing = null;
+      await this.loadGroupAnnouncements();
+    } catch {
+      SystemToast.showError('保存失败，请重试', this.getUIContext());
+    } finally {
+      this.isSavingAnnouncement = false;
+    }
+  }
+
+  private requestDeleteAnnouncement(item: GroupAnnouncementItem): void {
+    if (!this.canManageAnnouncements()) {
+      SystemToast.showWarning('无权限管理群公告', this.getUIContext());
+      return;
+    }
+    this.deleteAnnouncementTarget = item;
+    this.showAnnouncementDeleteConfirm = true;
+  }
+
+  private async handleDeleteAnnouncement(): Promise<void> {
+    const target = this.deleteAnnouncementTarget;
+    this.showAnnouncementDeleteConfirm = false;
+    this.deleteAnnouncementTarget = null;
+    if (target === null) {
+      return;
+    }
+    try {
+      const response = await ApiClient.deleteGroupAnnouncement({
+        group_id: this.groupId,
+        announcement_id: target.announcement_id
+      });
+      if (response.code === 0) {
+        SystemToast.showSuccess('公告已删除', this.getUIContext());
+        await this.loadGroupAnnouncements();
+      } else {
+        SystemToast.showError(getErrorMessage(response, '删除失败'), this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('删除失败，请重试', this.getUIContext());
     }
   }
 
@@ -535,6 +713,9 @@ export struct GroupDetailPage {
     this.editGroupAvatarPreviewUrl = this.groupInfo.group?.avatar_url ?? '';
     this.editGroupAvatarLocalUri = '';
     this.editGroupAvatarFileId = '';
+    // 群设置扩展回填（对齐前端 GroupSettingsSheet：仅 invite_only 二元，密码群编辑保持公开形态）
+    this.editGroupPrivate = this.groupInfo.join_method === 'invite_only';
+    this.editGroupRequiresApproval = this.groupInfo.requires_approval;
     this.closeOverlaySheets();
     this.showEditGroupSheet = true;
   }
@@ -616,6 +797,9 @@ export struct GroupDetailPage {
     const currentName = this.groupInfo.group?.name ?? '';
     const currentDescription = this.groupInfo.description ?? '';
     const hasAvatarChange = this.editGroupAvatarLocalUri.length > 0;
+    const nextJoinMethod = this.editGroupPrivate ? 'invite_only' : 'direct';
+    const hasSettingsChange = nextJoinMethod !== this.groupInfo.join_method ||
+      this.editGroupRequiresApproval !== this.groupInfo.requires_approval;
 
     if (!trimmedName) {
       SystemToast.showWarning('群组名称不能为空', this.getUIContext());
@@ -629,7 +813,8 @@ export struct GroupDetailPage {
       SystemToast.showWarning(`群组描述最多 ${GROUP_DESCRIPTION_MAX} 字符`, this.getUIContext());
       return;
     }
-    if (trimmedName === currentName && trimmedDescription === currentDescription && !hasAvatarChange) {
+    if (trimmedName === currentName && trimmedDescription === currentDescription &&
+      !hasAvatarChange && !hasSettingsChange) {
       SystemToast.show('未检测到可保存的变更', this.getUIContext());
       return;
     }
@@ -642,7 +827,9 @@ export struct GroupDetailPage {
         group_id: this.groupId,
         name: trimmedName,
         description: trimmedDescription,
-        avatar_file_id: avatarFileId
+        avatar_file_id: avatarFileId,
+        join_method: nextJoinMethod,
+        requires_approval: this.editGroupRequiresApproval
       };
       const response = await ApiClient.updateGroup(request);
       if (response.code === 0) {
@@ -656,6 +843,307 @@ export struct GroupDetailPage {
       SystemToast.showError('更新群组信息失败', this.getUIContext());
     } finally {
       this.isSavingGroupInfo = false;
+    }
+  }
+
+  // ==================== 群管理面板补齐（对齐前端 InviteMembersSheet / banned / 危险区） ====================
+
+  // ---- 邀请成员：搜索用户 + 多选 + 批量邀请（对齐前端 InviteMembersSheet） ----
+
+  private openInviteSheet(): void {
+    if (!this.ensureLoggedIn('邀请成员')) return;
+    if (!this.canManageApplications()) {
+      SystemToast.showWarning('仅群主或管理员可邀请成员', this.getUIContext());
+      return;
+    }
+    this.inviteKeyword = '';
+    this.inviteResults = [];
+    this.inviteSearchError = '';
+    this.inviteSelectedIds = [];
+    this.isInviting = false;
+    this.inviteSearchSeq += 1;
+    this.closeOverlaySheets();
+    this.showInviteSheet = true;
+  }
+
+  private isInviteUserSelected(userId: string): boolean {
+    return this.inviteSelectedIds.includes(userId);
+  }
+
+  private toggleInviteUser(userId: string): void {
+    if (this.isInviteUserSelected(userId)) {
+      this.inviteSelectedIds = this.inviteSelectedIds.filter((id: string) => id !== userId);
+    } else {
+      this.inviteSelectedIds = this.inviteSelectedIds.concat([userId]);
+    }
+  }
+
+  /** 邀请搜索输入防抖（350ms，对齐前端 InviteMembersSheet onInput） */
+  private handleInviteKeywordChange(value: string): void {
+    this.inviteKeyword = value;
+    if (this.inviteSearchTimer !== -1) {
+      clearTimeout(this.inviteSearchTimer);
+      this.inviteSearchTimer = -1;
+    }
+    const keyword = value.trim();
+    if (!keyword) {
+      this.inviteResults = [];
+      this.inviteSearchError = '';
+      return;
+    }
+    this.inviteSearchTimer = setTimeout(() => {
+      this.inviteSearchTimer = -1;
+      this.searchInviteUsers(keyword);
+    }, 350);
+  }
+
+  private async searchInviteUsers(keyword: string): Promise<void> {
+    const seq = ++this.inviteSearchSeq;
+    this.isSearchingInviteUsers = true;
+    this.inviteSearchError = '';
+    try {
+      const response = await ApiClient.searchUsers({ keyword: keyword, pagination: { limit: 20 } });
+      // 竞态保护：仅最新一次搜索的结果允许落地（对齐前端 searchSeq 模式）
+      if (seq !== this.inviteSearchSeq) {
+        return;
+      }
+      if (response.code === 0) {
+        this.inviteResults = response.data?.items ?? [];
+      } else {
+        this.inviteResults = [];
+        this.inviteSearchError = getErrorMessage(response, '搜索失败');
+      }
+    } catch {
+      if (seq !== this.inviteSearchSeq) {
+        return;
+      }
+      // 失败必须清空结果：避免用户把上一次关键词的命中项误当作当前结果邀请
+      this.inviteResults = [];
+      this.inviteSearchError = '网络异常，请稍后重试';
+    } finally {
+      if (seq === this.inviteSearchSeq) {
+        this.isSearchingInviteUsers = false;
+      }
+    }
+  }
+
+  private async submitInvites(): Promise<void> {
+    if (this.inviteSelectedIds.length === 0 || this.isInviting) {
+      return;
+    }
+    this.isInviting = true;
+    let okCount = 0;
+    try {
+      for (const userId of this.inviteSelectedIds) {
+        const response = await ApiClient.inviteMember({ group_id: this.groupId, user_id: userId });
+        if (response.code === 0) {
+          okCount += 1;
+        }
+      }
+      const total = this.inviteSelectedIds.length;
+      if (okCount === total) {
+        SystemToast.showSuccess(`已邀请 ${okCount} 人`, this.getUIContext());
+      } else if (okCount > 0) {
+        SystemToast.showSuccess(`已邀请 ${okCount}/${total} 人`, this.getUIContext());
+      } else {
+        SystemToast.showError('邀请失败', this.getUIContext());
+      }
+      this.showInviteSheet = false;
+    } catch {
+      SystemToast.showError('邀请失败，请重试', this.getUIContext());
+    } finally {
+      this.isInviting = false;
+    }
+  }
+
+  // ---- 封禁管理：名单 + 解封 + 成员封禁（对齐前端 banned 子 Tab / MemberActionSheet） ----
+
+  private async loadBannedMembers(): Promise<void> {
+    if (!this.canManageApplications()) {
+      return;
+    }
+    this.isLoadingBannedMembers = true;
+    try {
+      const response = await ApiClient.getBannedMembers({
+        group_id: this.groupId,
+        pagination: { limit: 100 }
+      });
+      if (response.code === 0) {
+        this.bannedMembers = response.data?.items ?? [];
+      }
+    } catch {
+      // 静默失败：列表显示空态
+    } finally {
+      this.isLoadingBannedMembers = false;
+    }
+  }
+
+  private openBannedListSheet(): void {
+    if (!this.canManageApplications()) {
+      SystemToast.showWarning('仅群主或管理员可查看封禁名单', this.getUIContext());
+      return;
+    }
+    this.closeOverlaySheets();
+    this.showBannedListSheet = true;
+    this.loadBannedMembers();
+  }
+
+  private async unbanMember(banned: AdminBannedMemberItem): Promise<void> {
+    if (!this.ensureLoggedIn('解封成员')) return;
+    const userId = banned.user?.user_id;
+    if (!userId) return;
+    try {
+      const response = await ApiClient.unbanMember({ group_id: this.groupId, user_id: userId });
+      if (response.code === 0) {
+        this.bannedMembers = this.bannedMembers.filter((item: AdminBannedMemberItem) =>
+          item.user?.user_id !== userId);
+        SystemToast.showSuccess('已解封', this.getUIContext());
+      } else {
+        SystemToast.showError(getErrorMessage(response, '解封失败'), this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('解封失败，请重试', this.getUIContext());
+    }
+  }
+
+  /** 成员菜单「封禁并移出」入口：二次确认（危险操作防误触） */
+  private requestBanMember(member: GroupMemberItem): void {
+    if (!this.canManageMember(member)) {
+      SystemToast.showWarning('无权限封禁该成员', this.getUIContext());
+      return;
+    }
+    this.banTargetMember = member;
+    this.showBanConfirm = true;
+  }
+
+  private async confirmBanMember(): Promise<void> {
+    const member = this.banTargetMember;
+    this.showBanConfirm = false;
+    this.banTargetMember = null;
+    if (member === null) {
+      return;
+    }
+    const userId = member.user?.user_id;
+    if (!userId) return;
+    try {
+      const response = await ApiClient.banMember({ group_id: this.groupId, user_id: userId });
+      if (response.code === 0) {
+        // 封禁后成员移出群组（对齐前端 ban 后 loadMembers 刷新语义）
+        this.members = this.members.filter((item: GroupMemberItem) => item.user?.user_id !== userId);
+        this.membersDataSource.setData(this.members);
+        if (this.groupInfo?.group) {
+          this.groupInfo.group.members_count = Math.max(0, (this.groupInfo.group.members_count ?? 0) - 1);
+        }
+        SystemToast.showSuccess('已封禁并移出群组', this.getUIContext());
+      } else {
+        SystemToast.showError(getErrorMessage(response, '封禁失败'), this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('封禁失败，请重试', this.getUIContext());
+    }
+  }
+
+  // ---- 危险区（仅群主）：转让群主 / 解散群组（对齐前端 GroupSettingsSheet 危险区） ----
+
+  /** 展开转让成员选择（懒加载候选成员：非群主、非自己） */
+  private toggleTransferSection(): void {
+    this.transferSectionOpen = !this.transferSectionOpen;
+    if (this.transferSectionOpen && this.transferCandidates.length === 0) {
+      this.loadTransferCandidates();
+    }
+  }
+
+  private async loadTransferCandidates(): Promise<void> {
+    this.isLoadingTransferCandidates = true;
+    try {
+      const response = await ApiClient.getGroupMembers({
+        group_id: this.groupId,
+        pagination: { limit: 100 }
+      });
+      if (response.code === 0) {
+        this.transferCandidates = (response.data?.items ?? []).filter((member: GroupMemberItem) =>
+          member.role !== 'owner' && !this.isCurrentUser(member.user?.user_id));
+      }
+    } catch {
+      // 静默失败：展示「暂无可转让成员」空态
+    } finally {
+      this.isLoadingTransferCandidates = false;
+    }
+  }
+
+  private getRoleShortText(role: string): string {
+    if (role === 'admin') {
+      return '管理员';
+    }
+    return '成员';
+  }
+
+  private requestTransferOwnership(member: GroupMemberItem): void {
+    if (!this.isOwnerRole()) {
+      SystemToast.showWarning('仅群主可转让群主身份', this.getUIContext());
+      return;
+    }
+    if (this.isCurrentUser(member.user?.user_id)) {
+      return;
+    }
+    this.transferTargetMember = member;
+    this.showTransferConfirm = true;
+  }
+
+  private async confirmTransferOwnership(): Promise<void> {
+    const member = this.transferTargetMember;
+    this.showTransferConfirm = false;
+    this.transferTargetMember = null;
+    if (member === null) {
+      return;
+    }
+    const userId = member.user?.user_id;
+    if (!userId) return;
+    this.isTransferringOwnership = true;
+    try {
+      const response = await ApiClient.transferOwnership({ group_id: this.groupId, new_owner_id: userId });
+      if (response.code === 0) {
+        SystemToast.showSuccess('群主已转让', this.getUIContext());
+        this.showEditGroupSheet = false;
+        await this.loadGroupDetail();
+      } else {
+        SystemToast.showError(getErrorMessage(response, '转让失败'), this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('转让失败，请重试', this.getUIContext());
+    } finally {
+      this.isTransferringOwnership = false;
+    }
+  }
+
+  private requestDismissGroup(): void {
+    if (!this.isOwnerRole()) {
+      SystemToast.showWarning('仅群主可解散群组', this.getUIContext());
+      return;
+    }
+    this.showDismissConfirm = true;
+  }
+
+  private async confirmDismissGroup(): Promise<void> {
+    if (!this.isOwnerRole()) {
+      this.showDismissConfirm = false;
+      return;
+    }
+    this.showDismissConfirm = false;
+    this.isDismissingGroup = true;
+    try {
+      const response = await ApiClient.dismissGroup({ group_id: this.groupId });
+      if (response.code === 0) {
+        SystemToast.showSuccess('群组已解散', this.getUIContext());
+        InteractionStateStore.getInstance().updateGroupMembership(this.groupId, { is_member: false });
+        AppRouter.pop();
+      } else {
+        SystemToast.showError(getErrorMessage(response, '解散失败'), this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('解散失败，请重试', this.getUIContext());
+    } finally {
+      this.isDismissingGroup = false;
     }
   }
 
@@ -896,14 +1384,28 @@ export struct GroupDetailPage {
     } else {
       menus.push({
         value: '禁言 30 分钟',
-        action: () => { this.muteMember(member, 30); }
+        action: () => { this.muteMember(member, MUTE_DURATION_MINUTES); }
       });
     }
     menus.push({
       value: '移出群组',
       action: () => { this.removeMember(member); }
     });
+    // 封禁并移出（对齐前端 MemberActionSheet ban 项；二次确认在 requestBanMember 内）
+    menus.push({
+      value: '封禁并移出',
+      action: () => { this.requestBanMember(member); }
+    });
     return menus;
+  }
+
+  /** 行内是否展示操作菜单（轻量布尔判断；替代渲染期构造完整菜单数组判空） */
+  private hasMemberActions(member: GroupMemberItem): boolean {
+    const userId = member.user?.user_id;
+    if (userId && !this.isCurrentUser(userId)) {
+      return true;
+    }
+    return this.canManageMember(member);
   }
 
   private getRoleDisplayText(role: string): string {
@@ -1234,6 +1736,27 @@ export struct GroupDetailPage {
                       loading: this.isSavingGroupInfo,
                       onPress: () => { this.openEditGroupSheet(); }
                     })
+
+                    // 邀请成员 / 封禁名单（对齐前端成员 Tab 管理入口，owner/admin 可见）
+                    SystemButton({
+                      label: '邀请成员',
+                      variant: 'surface',
+                      buttonSize: 'default',
+                      pill: true,
+                      fullWidth: true,
+                      shadowed: true,
+                      onPress: () => { this.openInviteSheet(); }
+                    })
+
+                    SystemButton({
+                      label: '封禁名单',
+                      variant: 'surface',
+                      buttonSize: 'default',
+                      pill: true,
+                      fullWidth: true,
+                      shadowed: true,
+                      onPress: () => { this.openBannedListSheet(); }
+                    })
                   }
 
                   SystemButton({
@@ -1304,8 +1827,23 @@ export struct GroupDetailPage {
           .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
-          // Tab 2 公告（对齐前端 AnnouncementsList：标题/内容/时间/置顶徽章）
+          // Tab 2 公告（对齐前端 AnnouncementsList：标题/内容/时间/置顶徽章；
+          // owner/admin 可发布/编辑/删除，对齐前端 canManageAnnouncements 门控）
           if (this.activeTab === 2) {
+            if (this.canManageAnnouncements()) {
+              ListItem() {
+                SystemButton({
+                  label: '发布新公告',
+                  variant: 'surface-accent',
+                  buttonSize: 'default',
+                  pill: true,
+                  fullWidth: true,
+                  shadowed: true,
+                  onPress: () => { this.openCreateAnnouncement(); }
+                })
+              }
+              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD })
+            }
             if (this.announcements.length === 0) {
               ListItem() {
                 EmptyState({
@@ -1334,6 +1872,7 @@ export struct GroupDetailPage {
                         .fontColor(this.getCurrentThemePalette().textPrimary)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
+                        .layoutWeight(1)
                     }
                     .width('100%')
 
@@ -1348,6 +1887,26 @@ export struct GroupDetailPage {
                       .fontSize(DesignConstants.FONT.SIZE.XS)
                       .fontColor(this.getCurrentThemePalette().textTertiary)
                       .width('100%')
+
+                    if (this.canManageAnnouncements()) {
+                      Row({ space: DesignConstants.SPACING.SM }) {
+                        SystemButton({
+                          label: '编辑',
+                          variant: 'surface',
+                          buttonSize: 'small',
+                          onPress: () => { this.openEditAnnouncement(item); }
+                        })
+                        SystemButton({
+                          label: '删除',
+                          variant: 'surface-danger',
+                          buttonSize: 'small',
+                          onPress: () => { this.requestDeleteAnnouncement(item); }
+                        })
+                      }
+                      .width('100%')
+                      .justifyContent(FlexAlign.End)
+                      .margin({ top: DesignConstants.SPACING.XS })
+                    }
                   }
                   .width('100%')
                   .alignItems(HorizontalAlign.Start)
@@ -1359,6 +1918,22 @@ export struct GroupDetailPage {
                 .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                 .margin({ bottom: DesignConstants.SPACING.MD })
               }, (item: GroupAnnouncementItem) => item.announcement_id)
+
+              // 删除公告二次确认（危险操作统一样式，对齐前端 ConfirmDialog 语义）
+              ListItem() {
+                SystemDialog({
+                  visible: this.showAnnouncementDeleteConfirm,
+                  title: '删除公告',
+                  description: `确定删除「${this.deleteAnnouncementTarget?.title ?? ''}」？删除后不可恢复`,
+                  confirmText: '删除',
+                  confirmVariant: 'danger',
+                  onCancel: () => {
+                    this.showAnnouncementDeleteConfirm = false;
+                    this.deleteAnnouncementTarget = null;
+                  },
+                  onConfirm: () => { this.handleDeleteAnnouncement(); }
+                })
+              }
             }
           }
 
@@ -1407,6 +1982,24 @@ export struct GroupDetailPage {
     })
     .bindSheet($$this.showEditGroupSheet, this.buildEditGroupSheet(), {
       height: '78%',
+      showClose: false,
+      dragBar: true,
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
+    })
+    .bindSheet($$this.showAnnouncementSheet, this.buildAnnouncementSheet(), {
+      height: SheetSize.FIT_CONTENT,
+      showClose: false,
+      dragBar: true,
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
+    })
+    .bindSheet($$this.showInviteSheet, this.buildInviteSheet(), {
+      height: '70%',
+      showClose: false,
+      dragBar: true,
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
+    })
+    .bindSheet($$this.showBannedListSheet, this.buildBannedListSheet(), {
+      height: '70%',
       showClose: false,
       dragBar: true,
       backgroundColor: this.getCurrentThemePalette().sheetBackground
@@ -1604,6 +2197,177 @@ export struct GroupDetailPage {
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+
+          // 群设置扩展（对齐前端 GroupSettingsSheet：私密群组 / 新人需审核）
+          Column({ space: DesignConstants.SPACING.MD }) {
+            Text('入群设置')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+              .width('100%')
+
+            Row({ space: DesignConstants.SPACING.MD }) {
+              Column({ space: DesignConstants.SPACING.HALF }) {
+                Text(this.editGroupPrivate ? '私密群组' : '公开群组')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
+                Text(this.editGroupPrivate ? '仅受邀请的人可加入' : '所有人都可以找到并加入')
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+
+              SystemToggle({
+                isOn: this.editGroupPrivate,
+                onToggle: (next: boolean) => { this.editGroupPrivate = next; }
+              })
+            }
+            .width('100%')
+
+            Row({ space: DesignConstants.SPACING.MD }) {
+              Column({ space: DesignConstants.SPACING.HALF }) {
+                Text('新人需审核')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
+                Text(this.editGroupRequiresApproval ? '申请需群主/管理员审核通过后加入' : '申请后直接加入')
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+
+              SystemToggle({
+                isOn: this.editGroupRequiresApproval,
+                onToggle: (next: boolean) => { this.editGroupRequiresApproval = next; }
+              })
+            }
+            .width('100%')
+          }
+          .padding(DesignConstants.SPACING.LG)
+          .backgroundColor(this.getSurfaceBackground())
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+
+          // 危险区（仅群主）：转让群主 / 解散群组（对齐前端 GroupSettingsSheet 危险区）
+          if (this.isOwnerRole()) {
+            Column({ space: DesignConstants.SPACING.MD }) {
+              Row({ space: DesignConstants.SPACING.XS }) {
+                LucideIcon({
+                  icon: AppIcon.WARNING,
+                  iconSize: DesignConstants.FONT.SIZE.SM,
+                  color: this.getCurrentThemePalette().error
+                })
+                Text('危险区')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                  .fontColor(this.getCurrentThemePalette().error)
+              }
+              .width('100%')
+
+              // 转让群主：展开候选成员选择 + 二次确认
+              Column({ space: DesignConstants.SPACING.SM }) {
+                Row() {
+                  Text('转让群主')
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
+                    .layoutWeight(1)
+                  SystemButton({
+                    label: this.transferSectionOpen ? '收起' : '选择成员',
+                    variant: 'surface',
+                    buttonSize: 'small',
+                    onPress: () => { this.toggleTransferSection(); }
+                  })
+                }
+                .width('100%')
+
+                if (this.transferSectionOpen) {
+                  if (this.isLoadingTransferCandidates) {
+                    Text('成员加载中...')
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
+                      .fontColor(this.getCurrentThemePalette().textSecondary)
+                      .width('100%')
+                  } else if (this.transferCandidates.length === 0) {
+                    Text('群内暂无其他成员可转让')
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
+                      .fontColor(this.getCurrentThemePalette().textSecondary)
+                      .width('100%')
+                  } else {
+                    ForEach(this.transferCandidates, (member: GroupMemberItem) => {
+                      Row({ space: DesignConstants.SPACING.SM }) {
+                        Text(member.user?.nickname ?? '')
+                          .fontSize(DesignConstants.FONT.SIZE.SM)
+                          .fontColor(this.getCurrentThemePalette().textPrimary)
+                          .maxLines(1)
+                          .textOverflow({ overflow: TextOverflow.Ellipsis })
+                          .layoutWeight(1)
+                        Text(this.getRoleShortText(member.role))
+                          .fontSize(DesignConstants.FONT.SIZE.XS)
+                          .fontColor(this.getCurrentThemePalette().textSecondary)
+                        SystemButton({
+                          label: '转让',
+                          variant: 'surface',
+                          buttonSize: 'small',
+                          onPress: () => { this.requestTransferOwnership(member); }
+                        })
+                      }
+                      .width('100%')
+                    }, (member: GroupMemberItem) => member.user?.user_id ?? member.joined_at ?? '')
+                  }
+                }
+              }
+              .width('100%')
+
+              // 解散群组：不可逆，系统确认弹窗二次确认
+              Column({ space: DesignConstants.SPACING.SM }) {
+                Text('解散群组')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
+                  .width('100%')
+                Text('解散后不可恢复，所有成员将被移出')
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .width('100%')
+                SystemButton({
+                  label: '解散群组',
+                  variant: 'surface-danger',
+                  buttonSize: 'small',
+                  disabled: this.isDismissingGroup,
+                  onPress: () => { this.requestDismissGroup(); }
+                })
+              }
+              .width('100%')
+            }
+            .padding(DesignConstants.SPACING.LG)
+            .backgroundColor(this.getCurrentThemePalette().dangerSoft)
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().error })
+
+            // 转让二次确认（危险操作确认弹窗，对齐前端 ConfirmDialog 语义）
+            SystemDialog({
+              visible: this.showTransferConfirm,
+              title: '确定转让群主？',
+              description: `转让后将变为普通成员，无法再执行群管理操作。接收者：${this.transferTargetMember?.user?.nickname ?? ''}`,
+              confirmText: '确认转让',
+              confirmVariant: 'danger',
+              onCancel: () => {
+                this.showTransferConfirm = false;
+                this.transferTargetMember = null;
+              },
+              onConfirm: () => { this.confirmTransferOwnership(); }
+            })
+
+            // 解散二次确认（不可逆操作，系统确认弹窗）
+            SystemDialog({
+              visible: this.showDismissConfirm,
+              title: '解散群组',
+              description: '解散后不可恢复，所有成员将被移出。确定解散该群组？',
+              confirmText: '解散',
+              confirmVariant: 'danger',
+              onCancel: () => { this.showDismissConfirm = false; },
+              onConfirm: () => { this.confirmDismissGroup(); }
+            })
+          }
         }
         .width('100%')
         .padding({
@@ -1617,6 +2381,303 @@ export struct GroupDetailPage {
       .layoutWeight(1)
       .scrollBar(BarState.Off)
     }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+  }
+
+  // ==================== 群公告编辑面板（创建/编辑共用，对齐前端 GroupAnnouncementDialog） ====================
+  @Builder
+  private buildAnnouncementSheet() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Text(this.announcementEditing === null ? '发布群公告' : '编辑群公告')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .layoutWeight(1)
+
+        SystemButton({
+          label: '取消',
+          variant: 'surface',
+          buttonSize: 'large',
+          shadowed: true,
+          disabled: this.isSavingAnnouncement,
+          onPress: () => { this.closeAnnouncementSheet(); }
+        })
+
+        SystemButton({
+          label: this.announcementEditing === null ? '发布' : '保存',
+          variant: 'primary',
+          buttonSize: 'large',
+          loading: this.isSavingAnnouncement,
+          onPress: () => { this.submitAnnouncement(); }
+        })
+      }
+      .width('100%')
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
+
+      Scroll() {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          Column({ space: DesignConstants.SPACING.SM }) {
+            SystemInput({
+              value: this.announcementTitle,
+              placeholder: '公告标题',
+              fontSize: DesignConstants.FONT.SIZE.MD,
+              inputHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
+              maxLength: ANNOUNCEMENT_TITLE_MAX,
+              onChange: (value: string) => { this.announcementTitle = value; }
+            })
+              .backgroundColor(this.getSurfaceSubtle())
+              .shadow(this.getCurrentThemePalette().controlShadow)
+              .borderRadius(DesignConstants.RADIUS.MD)
+              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+              .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+
+            Text(`${this.announcementTitle.trim().length}/${ANNOUNCEMENT_TITLE_MAX}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().textTertiary)
+              .width('100%')
+              .textAlign(TextAlign.End)
+          }
+          .width('100%')
+
+          Column({ space: DesignConstants.SPACING.SM }) {
+            SystemTextArea({
+              value: this.announcementContent,
+              placeholder: '公告内容…',
+              minHeight: DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT,
+              maxLength: ANNOUNCEMENT_CONTENT_MAX,
+              fontSize: DesignConstants.FONT.SIZE.MD,
+              onChange: (value: string) => { this.announcementContent = value; }
+            })
+
+            Text(`${this.announcementContent.trim().length}/${ANNOUNCEMENT_CONTENT_MAX}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().textTertiary)
+              .width('100%')
+              .textAlign(TextAlign.End)
+          }
+          .width('100%')
+
+          // 置顶开关（对齐前端 isPinned 置顶 pill）
+          Row({ space: DesignConstants.SPACING.MD }) {
+            Text('置顶这条公告')
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .fontColor(this.getCurrentThemePalette().textPrimary)
+              .layoutWeight(1)
+            SystemToggle({
+              isOn: this.announcementPinned,
+              onToggle: (next: boolean) => { this.announcementPinned = next; }
+            })
+          }
+          .width('100%')
+          .padding(DesignConstants.SPACING.LG)
+          .backgroundColor(this.getSurfaceBackground())
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+        }
+        .width('100%')
+        .padding({
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
+          top: DesignConstants.SPACING.SM,
+          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+        })
+      }
+      .width('100%')
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+  }
+
+  // ==================== 邀请成员面板（搜索 + 多选 + 批量邀请，对齐前端 InviteMembersSheet） ====================
+  @Builder
+  private buildInviteSheet() {
+    Column() {
+      Row() {
+        Text('邀请成员入群')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .layoutWeight(1)
+        Text(`${this.inviteSelectedIds.length} 人已选`)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+      }
+      .width('100%')
+      .padding(DesignConstants.SPACING.LG)
+
+      SystemInput({
+        value: this.inviteKeyword,
+        placeholder: '搜索用户昵称…',
+        fontSize: DesignConstants.FONT.SIZE.MD,
+        inputHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
+        onChange: (value: string) => { this.handleInviteKeywordChange(value); }
+      })
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        .backgroundColor(this.getSurfaceSubtle())
+        .shadow(this.getCurrentThemePalette().controlShadow)
+        .borderRadius(DesignConstants.RADIUS.MD)
+
+      if (this.isSearchingInviteUsers) {
+        Column() {
+          SystemLoadingView({ message: '搜索中...' })
+        }
+        .layoutWeight(1)
+      } else if (this.inviteSearchError.length > 0) {
+        Column() {
+          EmptyState({
+            icon: AppIcon.WARNING,
+            title: this.inviteSearchError,
+            actionLabel: '重试',
+            onAction: () => { this.searchInviteUsers(this.inviteKeyword.trim()); }
+          })
+        }
+        .layoutWeight(1)
+      } else if (this.inviteResults.length === 0) {
+        Column() {
+          EmptyState({
+            icon: AppIcon.EMPTY,
+            message: this.inviteKeyword.trim().length > 0 ? '无匹配用户' : '输入昵称搜索用户',
+            bare: true
+          })
+        }
+        .layoutWeight(1)
+      } else {
+        List() {
+          ForEach(this.inviteResults, (user: UserItem) => {
+            ListItem() {
+              Row({ space: DesignConstants.SPACING.SM }) {
+                SystemAvatar({
+                  src: user.user?.avatar_url ?? '',
+                  name: user.user?.nickname ?? '',
+                  avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS
+                })
+                Text(user.user?.nickname ?? '')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
+                SystemButton({
+                  label: this.isInviteUserSelected(user.user?.user_id ?? '') ? '已选择' : '选择',
+                  variant: this.isInviteUserSelected(user.user?.user_id ?? '') ? 'surface-accent' : 'surface',
+                  buttonSize: 'small',
+                  onPress: () => { this.toggleInviteUser(user.user?.user_id ?? ''); }
+                })
+              }
+              .width('100%')
+              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+            }
+          }, (user: UserItem) => user.user?.user_id ?? '')
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .scrollBar(BarState.Off)
+      }
+
+      Column() {
+        SystemButton({
+          label: this.isInviting ? '邀请中...' :
+            (this.inviteSelectedIds.length > 0 ? `邀请 ${this.inviteSelectedIds.length} 人` : '邀请'),
+          variant: 'primary',
+          buttonSize: 'default',
+          pill: true,
+          fullWidth: true,
+          loading: this.isInviting,
+          disabled: this.inviteSelectedIds.length === 0,
+          onPress: () => { this.submitInvites(); }
+        })
+      }
+      .width('100%')
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+  }
+
+  // ==================== 封禁名单面板（解封，对齐前端 BannedList） ====================
+  @Builder
+  private buildBannedListSheet() {
+    Column() {
+      Row() {
+        Text('封禁名单')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .layoutWeight(1)
+        Text(`${this.bannedMembers.length} 人`)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+      }
+      .width('100%')
+      .padding(DesignConstants.SPACING.LG)
+
+      if (this.isLoadingBannedMembers) {
+        Column() {
+          SystemLoadingView({ message: '加载封禁名单中...' })
+        }
+        .layoutWeight(1)
+      } else if (this.bannedMembers.length === 0) {
+        Column() {
+          EmptyState({
+            icon: AppIcon.EMPTY,
+            title: '暂无封禁成员',
+            bare: true,
+            fillMode: true
+          })
+        }
+        .layoutWeight(1)
+      } else {
+        List() {
+          ForEach(this.bannedMembers, (banned: AdminBannedMemberItem) => {
+            ListItem() {
+              Row({ space: DesignConstants.SPACING.SM }) {
+                SystemAvatar({
+                  src: banned.user?.avatar_url ?? '',
+                  name: banned.user?.nickname ?? '',
+                  avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS
+                })
+                Column({ space: DesignConstants.SPACING.HALF }) {
+                  Text(banned.user?.nickname ?? '')
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  if (banned.reason !== null && banned.reason !== undefined && banned.reason.length > 0) {
+                    Text(`原因：${banned.reason}`)
+                      .fontSize(DesignConstants.FONT.SIZE.XS)
+                      .fontColor(this.getCurrentThemePalette().textSecondary)
+                      .maxLines(1)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  }
+                }
+                .alignItems(HorizontalAlign.Start)
+                .layoutWeight(1)
+                SystemButton({
+                  label: '解封',
+                  variant: 'surface',
+                  buttonSize: 'small',
+                  onPress: () => { this.unbanMember(banned); }
+                })
+              }
+              .width('100%')
+              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+            }
+          }, (banned: AdminBannedMemberItem) => banned.user?.user_id ?? banned.banned_at)
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .scrollBar(BarState.Off)
+      }
+    }
+    .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
@@ -1659,7 +2720,8 @@ export struct GroupDetailPage {
                 member: member,
                 roleText: this.getRoleDisplayText(member.role),
                 roleColor: this.getRoleColor(member.role),
-                showMenu: this.buildMemberActionMenus(member).length > 0,
+                // 审计 P3-5：showMenu 判定走轻量布尔方法，不在渲染期构造完整菜单数组
+                showMenu: this.hasMemberActions(member),
                 palette: this.getCurrentThemePalette(),
                 surfaceBackground: this.getSurfaceBackground(),
                 menuItems: this.buildMemberActionMenus(member)
