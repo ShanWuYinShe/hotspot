@@ -226,6 +226,9 @@ export interface ComponentConstants {
   ACTION_BUTTON_HEIGHT_LG: number;
   /** sheet 内操作行按钮（44） */
   SHEET_ACTION_HEIGHT: number;
+  /** 确认弹窗危险态图标圆底边长（44）。前端 ConfirmDialog 同容器为 size-10(40)，
+   *  本档为存量平台适配值，仅收敛圆角（原 22 → RADIUS.FULL），不改尺寸 */
+  DIALOG_ICON_TILE_SIZE: number;
   /** 主按钮大号（48，登录/提交主操作） */
   BUTTON_HEIGHT_LG: number;
   /** 次级按钮小号（36，列表/卡片内嵌入按钮） */
@@ -246,6 +249,11 @@ export interface ComponentConstants {
   BANNER_HEIGHT: number;
   /** 首页群组横滑卡片宽度（140） */
   GROUP_CARD_WIDTH: number;
+  /** 附近首页「身边的新朋友」横滑用户卡宽度（128）。前端 /nearby 聚合门户已删除
+   *  （307 → /nearby/people，对端改为行列表），本档为本端门户专属，保留原值不变更布局 */
+  NEARBY_USER_CARD_WIDTH: number;
+  /** 首页「附近活动」行首图标圆底边长（34，对齐前端 ActivityRow size-8.5） */
+  ACTIVITY_ICON_TILE_SIZE: number;
   /** 附近群组 featured 精选全宽卡高度（对齐前端 min-h-85=340px） */
   GROUP_FEATURED_HEIGHT: number;
   /** 通知中心加载空态区域高度（200） */
@@ -591,6 +599,7 @@ const COMPONENT: ComponentConstants = {
   ACTION_BUTTON_HEIGHT_MD: 40,
   ACTION_BUTTON_HEIGHT_LG: 34,
   SHEET_ACTION_HEIGHT: 44,
+  DIALOG_ICON_TILE_SIZE: 44,
   BUTTON_HEIGHT_LG: 48,
   BUTTON_HEIGHT_SM: 36,
   FILTER_CHIP_HEIGHT: 30,
@@ -601,6 +610,8 @@ const COMPONENT: ComponentConstants = {
   BRAND_ICON_SIZE: 38,
   BANNER_HEIGHT: 140,
   GROUP_CARD_WIDTH: 140,
+  NEARBY_USER_CARD_WIDTH: 128,
+  ACTIVITY_ICON_TILE_SIZE: 34,
   /** 附近群组 featured 精选全宽卡高度（对齐前端 min-h-85=340px） */
   GROUP_FEATURED_HEIGHT: 340,
   LOADING_AREA_HEIGHT: 200,

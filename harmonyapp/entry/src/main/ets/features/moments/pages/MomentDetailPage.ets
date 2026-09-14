@@ -27,6 +27,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { LoginGate } from '../../../core/state/LoginGate';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemDialog } from '../../../components/SystemDialog';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState } from '../../../components/EmptyState';
@@ -83,6 +84,10 @@ export struct MomentDetailPage {
   @State commentsLoading: boolean = false;
   @State commentsError: string = '';
   @State commentSending: boolean = false;
+  /** 删除确认弹窗可见性（作者视角，SystemDialog danger 二次确认） */
+  @State showDeleteConfirm: boolean = false;
+  /** 删除请求 in-flight 守卫（防连点重复提交，对齐发布器 isPublishing 范式） */
+  @State isDeleting: boolean = false;
   /** 本地新增评论数（服务端计数刷新前叠加展示，避免手动克隆 MomentItem） */
   @State commentAdditions: number = 0;
   /** 评论点赞 in-flight 去重（防连点双翻转） */
@@ -476,6 +481,16 @@ export struct MomentDetailPage {
       .width('100%')
       .height('100%')
       }
+      // 删除动态二次确认（作者视角，danger 范式对齐 GroupCard 退群确认）
+      SystemDialog({
+        visible: this.showDeleteConfirm,
+        title: '删除动态',
+        description: '删除后不可恢复，评论与点赞将一并清除',
+        confirmText: '删除',
+        confirmVariant: 'danger',
+        onCancel: () => { this.showDeleteConfirm = false; },
+        onConfirm: () => { this.deleteMoment(); }
+      })
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -488,7 +503,11 @@ export struct MomentDetailPage {
 
   @Builder
   private buildTopBar() {
-    // 统一走 SystemPageHeader（标题 + 返回 + 可选编辑 rightAction）
+    // 统一走 SystemPageHeader（标题 + 返回 + 作者视角更多菜单）。
+    // 对齐前端 moments/[momentId] 的 more-menu（编辑动态/删除动态）：作者视角
+    // 用 trailing 更多钮 + bindMenu 承载，编辑入口从 rightAction 迁移至此，
+    // 使删除入口有处可挂（此前端内无删除入口，而 CreateMomentPage 编辑态文案
+    // 却引导用户「删除后重新发布」，形成死胡同，审计 P2-5）。
     SystemPageHeader({
       title: '动态详情',
       showBackButton: true,
@@ -497,10 +516,63 @@ export struct MomentDetailPage {
       titleSize: DesignConstants.FONT.SIZE.LG,
       titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
       backgroundVariant: 'transparent',
-      rightAction: this.isOwner()
-        ? { icon: AppIcon.EDIT, onClick: () => this.editMoment() }
-        : null
-    })
+      rightAction: null
+    }) {
+      if (this.isOwner()) {
+        Row() {
+          LucideIcon({
+            icon: AppIcon.MORE,
+            iconSize: DesignConstants.FONT.SIZE.MD,
+            paletteRole: 'textSecondary'
+          })
+        }
+        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .justifyContent(FlexAlign.Center)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+        .responseRegion({
+          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+          width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+        })
+        .bindMenu([
+          {
+            value: '编辑动态',
+            action: () => { this.editMoment(); }
+          },
+          {
+            value: '删除动态',
+            action: () => { this.showDeleteConfirm = true; }
+          }
+        ])
+      }
+    }
+  }
+
+  /**
+   * 删除当前动态（作者视角）：SystemDialog danger 二次确认后调
+   * ApiClient.deleteMoment。成功 toast + 返回上一页（列表页在下次
+   * aboutToAppear 时重拉，自然收敛；与编辑流的返回语义一致）。
+   */
+  private async deleteMoment(): Promise<void> {
+    if (!this.moment || this.isDeleting) return;
+    this.isDeleting = true;
+    try {
+      const resp = await ApiClient.deleteMoment({ moment_id: this.moment.moment_id });
+      if (resp.code === 0) {
+        SystemToast.showSuccess('动态已删除', this.getUIContext());
+        AppRouter.pop();
+      } else {
+        SystemToast.show(resp.message || '删除失败，请重试', this.getUIContext());
+      }
+    } catch {
+      SystemToast.show('删除失败，请重试', this.getUIContext());
+    } finally {
+      this.isDeleting = false;
+      this.showDeleteConfirm = false;
+    }
   }
 
   @Builder

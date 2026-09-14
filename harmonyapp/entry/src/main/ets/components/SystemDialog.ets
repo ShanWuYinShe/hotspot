@@ -2,6 +2,8 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { SystemButton, ButtonVariant } from './SystemButton';
+import { AppIcon } from './SystemIcon';
+import { LucideIcon } from './LucideIcon';
 
 /**
  * 通用确认对话框（对齐前端 confirm-dialog）
@@ -34,11 +36,15 @@ export struct SystemDialog {
   build() {
     if (this.visible) {
       Stack() {
-        // 遮罩层
+        // 遮罩层：closeOnMaskClick 时才可交互/可聚焦，否则对读屏隐藏
+        // （无名可点元素会让读屏用户遇到「按钮」却听不到用途）
         Column()
           .width('100%')
           .height('100%')
           .backgroundColor(this.getPalette().overlayStrong)
+          .focusable(this.closeOnMaskClick)
+          .accessibilityText('关闭弹窗')
+          .accessibilityLevel(this.closeOnMaskClick ? 'yes' : 'no')
           .onClick(() => {
             if (this.closeOnMaskClick) {
               this.onCancel?.();
@@ -49,12 +55,16 @@ export struct SystemDialog {
         Column() {
           if (this.confirmVariant === 'danger') {
             Row() {
-              Text('⚠️')
-                .fontSize(DesignConstants.FONT.SIZE.XL)
+              // 危险态图标走统一 AppIcon 符号体系（原 emoji ⚠️ 无法随主题染色）
+              LucideIcon({
+                icon: AppIcon.WARNING,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
+                paletteRole: 'error'
+              })
             }
-            .width(44)
-            .height(44)
-            .borderRadius(22)
+            .width(DesignConstants.COMPONENT.DIALOG_ICON_TILE_SIZE)
+            .height(DesignConstants.COMPONENT.DIALOG_ICON_TILE_SIZE)
+            .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getPalette().dangerSoft)
             .justifyContent(FlexAlign.Center)
             .alignItems(VerticalAlign.Center)

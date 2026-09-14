@@ -44,13 +44,15 @@ export struct EmptyState {
           .opacity(DesignConstants.OPACITY.MUTED)
         } else {
           Stack() {
-            // 图标底改 accent 淡底、glyph 用主题色（对齐前端空态的柔和 accent 图标，
-            // 消除此前灰底灰字 + muted 叠加导致的「禁止符号」观感）
+            // 对齐前端 EmptyState 非 bare 契约：圆形容器 = 透明底 + 发丝描边
+            // （frontend rounded-full border border-border-default shadow-raised-sm，
+            // 无填充色；原 accentMuted 实底为单端发散，已收敛）
             Column()
               .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
               .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getPalette().accentMuted)
+              .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
               .shadow(this.getPalette().surfaceShadow)
 
             LucideIcon({
@@ -64,20 +66,23 @@ export struct EmptyState {
           .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
         }
 
-        // 主标题（大字）—— 对齐前端 EmptyState title；
+        // 主标题 —— 对齐前端 EmptyState title（text-sm = FONT.SIZE.SM，与描述同尺寸靠
+        // 字重 + 颜色区分层级：title font-medium + textPrimary，description regular + textSecondary）。
+        // 注意：前端 --text-sm 在 theme-registry.css 覆盖为 12px（非 Tailwind 默认 14），
+        // 故此处取 SM 而非 MD。
         // bare 变体 title 用 textSecondary（对齐前端 bare 契约 muted 文案）
         if ((this.title ?? '').length > 0) {
           Text(this.title)
-            .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-sm
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.bare ? this.getPalette().textSecondary : this.getPalette().textPrimary)
             .textAlign(TextAlign.Center)
         }
 
-        // 说明文字（小字）
+        // 说明文字 —— 对齐前端 EmptyState description（text-sm = FONT.SIZE.SM，同尺寸二级）
         if ((this.message ?? '').length > 0) {
           Text(this.message)
-            .fontSize(DesignConstants.FONT.SIZE.SM) // 12
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-sm
             .fontColor(this.getPalette().textSecondary)
             .textAlign(TextAlign.Center)
             .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)

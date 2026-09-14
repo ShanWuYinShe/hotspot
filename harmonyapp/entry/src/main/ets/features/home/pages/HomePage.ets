@@ -1185,9 +1185,9 @@ export struct HomePage {
           color: this.activityAccent(index)
         })
       }
-      // 对齐前端 size-8.5(34px) 图标圆底
-      .width(34)
-      .height(34)
+      // 对齐前端 ActivityRow size-8.5(34px) 图标圆底
+      .width(DesignConstants.COMPONENT.ACTIVITY_ICON_TILE_SIZE)
+      .height(DesignConstants.COMPONENT.ACTIVITY_ICON_TILE_SIZE)
       .borderRadius(DesignConstants.RADIUS.SM)
       .backgroundColor(this.activitySoftBg(index))
       .justifyContent(FlexAlign.Center)

@@ -1,7 +1,9 @@
 /**
  * 消息列表页面
  * 使用 HarmonyOS 原生能力 + 系统颜色资源（支持深色模式）
- * LazyForEach + RDB 缓存 + swipeAction
+ * 会话列表：LazyForEach 虚拟化（过滤后的视图绑 filteredChatDataSource）
+ * ＋ MessageCacheService（RDB）本地缓存首屏兜底；行操作走长按上下文菜单
+ * （置顶/删除），不使用 swipeAction。
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
@@ -96,6 +98,8 @@ export struct MessagePage {
   @State searchKeyword: string = '';
   @State chatItems: ChatItem[] = [];
   @State filteredChatItems: ChatItem[] = [];
+  /** 过滤后的视图数据源：LazyForEach 绑定它做虚拟化（原实现用 ForEach 全量渲染） */
+  private filteredChatDataSource: BasicDataSource<ChatItem> = new BasicDataSource<ChatItem>([]);
 
   private getOnlineChats(): ChatItem[] {
     const online: ChatItem[] = [];
@@ -128,6 +132,8 @@ export struct MessagePage {
         item.name.toLowerCase().indexOf(keyword) >= 0
       );
     }
+    // 同步到 LazyForEach 数据源（虚拟化渲染的唯一数据入口）
+    this.filteredChatDataSource.setData(this.filteredChatItems);
   }
 
   async aboutToAppear() {
@@ -812,21 +818,25 @@ export struct MessagePage {
         )
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          Scroll() {
-            Column() {
-              // 过滤结果为空（对齐前端：无匹配会话空态）
-              if (this.filteredChatItems.length === 0) {
+          List() {
+            // 过滤结果为空（对齐前端：无匹配会话空态）
+            if (this.filteredChatItems.length === 0) {
+              ListItem() {
                 EmptyState({ icon: AppIcon.SEARCH, message: '没有找到会话', bare: true })
                   .margin({ top: DesignConstants.SPACING.XXL })
               }
+            }
 
-              // 在线头像条
-              if (this.filteredChatItems.length > 0 && this.getOnlineChats().length > 0) {
+            // 在线头像条
+            if (this.filteredChatItems.length > 0 && this.getOnlineChats().length > 0) {
+              ListItem() {
                 this.buildOnlineAvatarsStrip()
               }
+            }
 
-              if (this.filteredChatItems.length > 0) {
-                // "最近" 标签
+            if (this.filteredChatItems.length > 0) {
+              // "最近" 标签
+              ListItem() {
                 Text('最近')
                   .fontSize(DesignConstants.FONT.SIZE.XS2)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -839,45 +849,49 @@ export struct MessagePage {
                     bottom: DesignConstants.SPACING.MD2
                   })
               }
+            }
 
-              // 会话列表（对齐前端 ListContainer 嵌入式：无外框卡片，仅行间分割线）
-              if (this.filteredChatItems.length > 0) {
-                Column() {
-                  ForEach(this.filteredChatItems, (item: ChatItem, index: number) => {
-                    Column() {
-                      this.buildChatItem(item)
-                    }
-                    .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-
-                    if (index < this.filteredChatItems.length - 1) {
-                      Row()
-                        .width('100%')
-                        .height(DesignConstants.BORDER_WIDTH.SUBPIXEL)
-                        .backgroundColor(this.getSurfaceBorder())
-                        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-                    }
-                  }, (item: ChatItem) => item.id + item.type)
-                }
-                .width('100%')
-                .margin({
-                  left: DesignConstants.SPACING.LG2,
-                  right: DesignConstants.SPACING.LG2
-                })
+            // 会话列表（对齐前端 ListContainer 嵌入式：无外框卡片，仅行间分割线）
+            // LazyForEach 按可视区虚拟化；行间分割线交给 ListItemGroup.divider
+            // 承担（原 ForEach 内手写的分割线 Row 已删除）。ListItemGroup 只包会话行，
+            // 避免 List 级 divider 在空态/在线条/「最近」标签之间误画线。
+            if (this.filteredChatItems.length > 0) {
+              ListItemGroup() {
+                LazyForEach(this.filteredChatDataSource, (item: ChatItem) => {
+                  ListItem() {
+                    this.buildChatItem(item)
+                  }
+                  .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+                }, (item: ChatItem) => item.id + item.type)
               }
+              .width('100%')
+              .margin({
+                left: DesignConstants.SPACING.LG2,
+                right: DesignConstants.SPACING.LG2
+              })
+              .divider({
+                strokeWidth: DesignConstants.BORDER_WIDTH.SUBPIXEL,
+                color: this.getSurfaceBorder(),
+                startMargin: DesignConstants.SPACING.LG,
+                endMargin: DesignConstants.SPACING.LG
+              })
+            }
 
-              if (this.isLoadingMore) {
+            if (this.isLoadingMore) {
+              ListItem() {
                 LoadingMoreIndicator()
                   .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
               }
             }
-            .width('100%')
-            .padding({
-              bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
-            })
           }
           .width('100%')
+          .padding({
+            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+          })
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring)
+          // 与 ChatPage 会话/消息列表同档预加载
+          .cachedCount(8)
           .onReachEnd(() => { this.loadMore(); })
         }
         .layoutWeight(1)

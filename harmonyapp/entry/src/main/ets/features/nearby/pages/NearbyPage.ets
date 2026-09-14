@@ -183,10 +183,10 @@ export struct NearbyPage {
                   ForEach(this.nearbyUsers, (user: UserItem) => {
                     ListItem() {
                       Column() {
-                        // compact 竖排白卡（对齐前端 UserCard 网格卡）
+                        // compact 竖排白卡（本端门户横滑卡，宽度见 NEARBY_USER_CARD_WIDTH 注释）
                         UserCard({ user: user, mode: 'compact' })
                       }
-                      .width(128)
+                      .width(DesignConstants.COMPONENT.NEARBY_USER_CARD_WIDTH)
                     }
                   }, (user: UserItem) => user.user?.user_id ?? '')
                 }
