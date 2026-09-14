@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { afterNavigate, beforeNavigate } from '$app/navigation';
 	import { cn } from '@/lib/utils';
-	import { decideScroll, savePosition } from '@/lib/scroll-positions';
+	import { decideScroll, restoreScrollTop, savePosition } from '@/lib/scroll-positions';
 	import PageViewport from './PageViewport.svelte';
 
 	// 布局组件（layout/page）。
@@ -41,20 +41,12 @@
 	} = $props();
 
 	// 路由级滚动存取（SvelteKit 只管 window，本项目滚动 owner 是本 <main>）：
-	// 离开存位；popstate 返回按存位恢复（内容由各页进度 store 同步重建，无异步
-	// 等待）；进新 pathname 置顶；同路由内导航（如 ?tab= 切换）保持不动。
-	// 程序化赋值走 instant（scroll-smooth 类会让恢复变成缓慢漂移）。
+	// 离开存位；popstate 返回按存位恢复；进新 pathname 置顶；同路由内导航
+	//（如 ?tab= 切换）保持不动。
+	// 恢复用追到为止（restoreScrollTop）：图片/瀑布流布局异步长高时单次赋值
+	// 会被钳位，每帧重设直到到达目标或布局稳定。
 	let mainEl: HTMLElement | null = $state(null);
 	const savedTops = new Map<string, number>();
-
-	function setTopInstant(top: number): void {
-		if (!mainEl) return;
-		const prev = mainEl.style.scrollBehavior;
-		mainEl.style.scrollBehavior = 'auto';
-		mainEl.scrollTop = top;
-		void mainEl.offsetHeight;
-		mainEl.style.scrollBehavior = prev;
-	}
 
 	beforeNavigate((nav) => {
 		if (mainEl && nav.from?.url) savePosition(savedTops, nav.from.url.pathname, mainEl.scrollTop);
@@ -62,9 +54,8 @@
 
 	afterNavigate((nav) => {
 		const decision = decideScroll(nav.type, nav.from?.url.pathname ?? null, nav.to?.url.pathname ?? null, savedTops);
-		if (decision.action === 'keep') return;
-		// 内容在同 tick 内由进度 store 同步重建；rAF 等一帧让布局落定再赋值。
-		requestAnimationFrame(() => setTopInstant(decision.action === 'restore' ? decision.top : 0));
+		if (decision.action === 'keep' || !mainEl) return;
+		restoreScrollTop(mainEl, decision.action === 'restore' ? decision.top : 0);
 	});
 </script>
 

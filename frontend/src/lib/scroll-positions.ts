@@ -34,3 +34,55 @@ export function decideScroll(
 	if (fromPathname !== toPathname) return { action: 'top' };
 	return { action: 'keep' };
 }
+
+/** 可滚动元素的最小结构（组件传真 DOM，单测传桩）。 */
+export interface ScrollableElement {
+	scrollTop: number;
+	readonly scrollHeight: number;
+	readonly clientHeight: number;
+	style: { scrollBehavior: string };
+	offsetHeight: number;
+}
+
+/**
+ * 追到为止的位置恢复：图片/瀑布流布局异步长高时，单次赋值会被钳位到当时
+ * 的最大高度。每帧重设，直到到达目标、高度连续 5 帧不动，或 40 帧上限。
+ * style 恢复调用方原值（覆盖 scroll-smooth 的平滑漂移）。
+ */
+export function restoreScrollTop(
+	el: ScrollableElement | null,
+	top: number,
+	schedule: (cb: () => void) => void = (cb) => requestAnimationFrame(cb)
+): void {
+	if (!el) return;
+	const prevBehavior = el.style.scrollBehavior;
+	el.style.scrollBehavior = 'auto';
+	if (top <= 0) {
+		el.scrollTop = 0;
+		void el.offsetHeight;
+		el.style.scrollBehavior = prevBehavior;
+		return;
+	}
+	let attempts = 0;
+	let stableHeightCount = 0;
+	let lastHeight = -1;
+	const tick = () => {
+		el.scrollTop = top;
+		attempts++;
+		if (Math.abs(el.scrollTop - top) <= 2 || attempts >= 40) {
+			el.style.scrollBehavior = prevBehavior;
+			return;
+		}
+		if (el.scrollHeight === lastHeight) stableHeightCount++;
+		else {
+			stableHeightCount = 0;
+			lastHeight = el.scrollHeight;
+		}
+		if (stableHeightCount >= 5) {
+			el.style.scrollBehavior = prevBehavior;
+			return;
+		}
+		schedule(tick);
+	};
+	schedule(tick);
+}
