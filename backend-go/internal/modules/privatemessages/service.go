@@ -34,6 +34,7 @@ type userReader interface {
 	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
 	GetMySettings(context.Context) (users.UserSettings, error)
 	BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error)
+	Relationship(context.Context, string, string) (users.Relationship, error)
 }
 
 // shareValidator 校验 share_code 有效性（由 share 模块实现，见 module.go 装配）。
@@ -312,14 +313,14 @@ func (s *Service) enforceStrangerQuota(ctx context.Context, userID string) error
 		if targetID == userID {
 			continue
 		}
-		// 用发送者视角的 ctx 查询 relation:互相关注(双向)不算陌生人。
-		item, ok, err := s.users.OpenTheDoor(ctx, targetID)
-		if err != nil || !ok {
-			// 目标查询失败/不存在:无法判定关系,跳过不计入。
+		// 只需双向关注判定，一次 Relationship 查询即可（此前调全量 OpenTheDoor，
+		// 单目标 15+ 次查询再乘以目标数）。查不到关系视为陌生人计入（fail-closed，
+		// 与配额的总量口径一致）；查询错误跳过不计入。
+		rel, err := s.users.Relationship(ctx, userID, targetID)
+		if err != nil {
 			continue
 		}
-		isMutual := item.Relation != nil && item.Relation.IsFollowing && item.Relation.IsFollowedBy
-		if !isMutual {
+		if !rel.IsFollowing || !rel.IsFollowedBy {
 			strangerTotal += count
 		}
 	}

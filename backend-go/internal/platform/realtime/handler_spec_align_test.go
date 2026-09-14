@@ -59,7 +59,7 @@ func (s *eventSink) Close() error { return nil }
 // --- resolveTypingActor ---
 
 func TestResolveTypingActorWithProvider(t *testing.T) {
-	h := NewHandler(nil, nil, nil, nil)
+	h := NewHandler(nil, nil, nil)
 	defer h.Close()
 	h.SetActorProvider(stubTypingActorProvider{infos: map[string]actor.Info{
 		"u1": {UserID: "u1", Nickname: "Alice", AvatarURL: "https://a.example/alice.png"},
@@ -72,7 +72,7 @@ func TestResolveTypingActorWithProvider(t *testing.T) {
 }
 
 func TestResolveTypingActorFallsBackWithoutProvider(t *testing.T) {
-	h := NewHandler(nil, nil, nil, nil) // actorProvider == nil
+	h := NewHandler(nil, nil, nil) // actorProvider == nil
 	defer h.Close()
 
 	a := h.resolveTypingActor(context.Background(), "u1")
@@ -85,7 +85,7 @@ func TestResolveTypingActorFallsBackWithoutProvider(t *testing.T) {
 }
 
 func TestResolveTypingActorFallsBackOnProviderError(t *testing.T) {
-	h := NewHandler(nil, nil, nil, nil)
+	h := NewHandler(nil, nil, nil)
 	defer h.Close()
 	h.SetActorProvider(stubTypingActorProvider{err: errors.New("boom")})
 
@@ -98,7 +98,7 @@ func TestResolveTypingActorFallsBackOnProviderError(t *testing.T) {
 // --- canSendPrivateTyping 分支 ---
 
 func TestCanSendPrivateTypingRejectsEmptyOrMissingDeps(t *testing.T) {
-	h := NewHandler(nil, nil, nil, nil) // userRepo == nil
+	h := NewHandler(nil, nil, nil) // userRepo == nil
 	defer h.Close()
 
 	if h.canSendPrivateTyping(context.Background(), "", "b") {
@@ -133,7 +133,7 @@ func TestCanSendPrivateTypingPermissionBranches(t *testing.T) {
 			"viewer_blocked": {"target_everyone": {isBlocked: true}},
 		},
 	}
-	h := NewHandler(nil, nil, repo, nil)
+	h := NewHandler(nil, repo, nil)
 	defer h.Close()
 	ctx := context.Background()
 
@@ -158,13 +158,13 @@ func TestCanSendPrivateTypingPermissionBranches(t *testing.T) {
 }
 
 func TestCanSendPrivateTypingRejectsOnRepoErrors(t *testing.T) {
-	h := NewHandler(nil, nil, errUserRepo{settingsErr: errors.New("boom")}, nil)
+	h := NewHandler(nil, errUserRepo{settingsErr: errors.New("boom")}, nil)
 	defer h.Close()
 	if h.canSendPrivateTyping(context.Background(), "a", "b") {
 		t.Fatal("settings error must reject")
 	}
 
-	h2 := NewHandler(nil, nil, errUserRepo{relErr: errors.New("boom")}, nil)
+	h2 := NewHandler(nil, errUserRepo{relErr: errors.New("boom")}, nil)
 	defer h2.Close()
 	if h2.canSendPrivateTyping(context.Background(), "a", "b") {
 		t.Fatal("relationship error must reject")
@@ -197,7 +197,6 @@ func TestRealtimePrivateTypingPushesPayloadToTarget(t *testing.T) {
 	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
-		stubUserPresenceService{items: map[string]string{}},
 		stubUserRepo{settings: map[string]struct {
 			presenceVisible  bool
 			allowPrivateChat string

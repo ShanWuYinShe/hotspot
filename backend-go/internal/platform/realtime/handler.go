@@ -21,12 +21,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// userPresenceAuthorizer 查询目标用户详情（在场状态）。OpenTheDoor 为刻意
-// 命名（「查户口」= 取详情），与 moments 的瞬间详情接口同语义，禁止改名。
-type userPresenceAuthorizer interface {
-	OpenTheDoor(context.Context, string) (string, bool, error)
-}
-
 // typingActorProvider resolves nickname/avatar for the typing actor (UserInfo
 // in the pushed typing payloads). Implemented by the users module Service via
 // bootstrap wiring; nil falls back to {user_id, nickname=user_id}.
@@ -55,7 +49,6 @@ type banAuthorizer interface {
 
 type Handler struct {
 	auth           *platformauth.Service
-	users          userPresenceAuthorizer
 	userRepo       userRelationAuthorizer
 	groupRepo      groupMembershipAuthorizer
 	bans           banAuthorizer
@@ -72,15 +65,15 @@ type Handler struct {
 // production — should pass the app's root context so shutdown stops the
 // goroutine. Tests that build a handler per test can pass context.Background()
 // and rely on Close (invoked via server.Close cleanup) to stop the sweeper.
-func NewHandler(auth *platformauth.Service, userService userPresenceAuthorizer, userRepo userRelationAuthorizer, groupRepo groupMembershipAuthorizer) *Handler {
-	return NewHandlerWithContext(context.Background(), auth, userService, userRepo, groupRepo)
+func NewHandler(auth *platformauth.Service, userRepo userRelationAuthorizer, groupRepo groupMembershipAuthorizer) *Handler {
+	return NewHandlerWithContext(context.Background(), auth, userRepo, groupRepo)
 }
 
 // NewHandlerWithContext is the context-aware constructor. Prefer this from
 // bootstrap so the sweeper is tied to the application lifetime.
-func NewHandlerWithContext(ctx context.Context, auth *platformauth.Service, userService userPresenceAuthorizer, userRepo userRelationAuthorizer, groupRepo groupMembershipAuthorizer) *Handler {
+func NewHandlerWithContext(ctx context.Context, auth *platformauth.Service, userRepo userRelationAuthorizer, groupRepo groupMembershipAuthorizer) *Handler {
 	sweepCtx, cancel := context.WithCancel(ctx)
-	h := &Handler{auth: auth, users: userService, userRepo: userRepo, groupRepo: groupRepo, stop: cancel}
+	h := &Handler{auth: auth, userRepo: userRepo, groupRepo: groupRepo, stop: cancel}
 	h.wg.Add(1)
 	worker.Go("realtime.typing_sweeper", func() { h.sweepTypingThrottle(sweepCtx) })
 	return h
@@ -249,7 +242,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// subs 提前声明：断线 defer 需保存订阅快照（spec L156「订阅状态由服务端恢复」），
 	// resume 回放聚合也依赖断线时快照中的 GroupIDs。
 	subs := newSubscriptions()
-	sink := &socketSink{conn: conn}
+	sink := newSocketSink(conn)
 	if DefaultHub().RegisterUser(principal.UserID, principal.SessionID, sink) {
 		DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOnline, Payload: UserOnlinePayload{UserID: principal.UserID, OnlineAt: time.Now().UTC().Format(time.RFC3339)}})
 	}
@@ -265,6 +258,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if DefaultHub().UnregisterUser(principal.UserID, principal.SessionID, sink) {
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOffline, Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
 		}
+		// 停掉该连接的 writer goroutine（幂等；conn.Close 另有外层 defer 兜底）。
+		_ = sink.Close()
 		observability.L().Info("ws: disconnected", "user_id", principal.UserID, "session_id", principal.SessionID, "connection_id", connectionID)
 		// resume：连接断开时保存 state（LastSeq + 订阅快照），作为重连续传起点与
 		// 服务端订阅恢复依据（spec L156）。多端登录共享全局 seq 流，LastSeq 取全局。
@@ -467,12 +462,8 @@ func (h *Handler) canSubscribeUser(ctx context.Context, viewerUserID, targetUser
 	if viewerUserID == targetUserID {
 		return true
 	}
-	if h.users != nil {
-		presenceStatus, ok, err := h.users.OpenTheDoor(ctx, targetUserID)
-		if err == nil && ok {
-			return presenceStatus != ""
-		}
-	}
+	// 订阅鉴权只需要 presence 可见性（一次 GetSettings），不走全量 OpenTheDoor
+	// 社交上下文（后者单次 15+ 次查询，500 ID 的订阅消息会放大成数千次 DB 往返）。
 	if h.userRepo == nil {
 		return true
 	}

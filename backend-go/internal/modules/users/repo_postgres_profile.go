@@ -32,6 +32,34 @@ func (r *PostgresRepository) GetProfile(ctx context.Context, userID string) (MyP
 	return profile, true, nil
 }
 
+// GetProfiles 批量取画像（一次往返；不含 Stats，调用方按需另取）。
+func (r *PostgresRepository) GetProfiles(ctx context.Context, userIDs []string) (map[string]MyProfile, error) {
+	result := make(map[string]MyProfile, len(userIDs))
+	if len(userIDs) == 0 {
+		return result, nil
+	}
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	rows, err := queryable.Query(ctx, queryGetUserProfiles, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		profile, err := scanUserProfileRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		result[profile.UserID] = profile
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func (r *PostgresRepository) GetSettings(ctx context.Context, userID string) (UserSettings, bool, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {

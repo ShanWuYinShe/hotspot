@@ -53,6 +53,12 @@ type invalidCursorRepo struct{}
 func (invalidCursorRepo) GetProfile(context.Context, string) (MyProfile, bool, error) {
 	return MyProfile{}, false, nil
 }
+func (invalidCursorRepo) GetProfiles(context.Context, []string) (map[string]MyProfile, error) {
+	return map[string]MyProfile{}, nil
+}
+func (invalidCursorRepo) MutualFriends(context.Context, string, string, int) (int, []UserInfo, error) {
+	return 0, nil, nil
+}
 func (invalidCursorRepo) PutProfile(context.Context, MyProfile) error { return nil }
 func (invalidCursorRepo) DeleteProfile(context.Context, string) error { return nil }
 func (invalidCursorRepo) GetSettings(context.Context, string) (UserSettings, bool, error) {
@@ -113,6 +119,12 @@ func (invalidCursorRepo) UserExists(context.Context, string) (bool, error) { ret
 
 func (r *userErrorRepo) GetProfile(context.Context, string) (MyProfile, bool, error) {
 	return MyProfile{}, false, r.getProfileErr
+}
+func (r *userErrorRepo) GetProfiles(context.Context, []string) (map[string]MyProfile, error) {
+	return nil, r.getProfileErr
+}
+func (r *userErrorRepo) MutualFriends(context.Context, string, string, int) (int, []UserInfo, error) {
+	return 0, nil, r.getProfileErr
 }
 func (r *userErrorRepo) PutProfile(context.Context, MyProfile) error { return r.putProfileErr }
 func (r *userErrorRepo) DeleteProfile(context.Context, string) error { return r.deleteErr }

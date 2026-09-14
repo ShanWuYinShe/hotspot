@@ -19,21 +19,15 @@ func (a realtimeBanAuthorizer) IsBanned(ctx context.Context, userID string) (boo
 	return a.repo.IsBanned(ctx, userID)
 }
 
-type realtimeUserService struct{ svc *users.Service }
+// realtimeActorProvider 只保留 typing actor 解析：订阅鉴权已收敛到
+// userRepo.GetSettings（一次查询），不再经全量 OpenTheDoor 取 presence。
+type realtimeActorProvider struct{ svc *users.Service }
 
 type realtimeUserRepo struct{ repo users.Repository }
 
 type realtimeGroupRepo struct{ repo groups.Repository }
 
-func (a realtimeUserService) OpenTheDoor(ctx context.Context, userID string) (string, bool, error) {
-	item, ok, err := a.svc.OpenTheDoor(ctx, userID)
-	if !ok || err != nil || item.PresenceStatus == nil {
-		return "", ok, err
-	}
-	return string(*item.PresenceStatus), ok, nil
-}
-
-func (a realtimeUserService) GetActorInfo(ctx context.Context, userID string) (actor.Info, error) {
+func (a realtimeActorProvider) GetActorInfo(ctx context.Context, userID string) (actor.Info, error) {
 	return a.svc.GetActorInfo(ctx, userID)
 }
 

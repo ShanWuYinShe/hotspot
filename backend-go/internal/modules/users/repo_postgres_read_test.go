@@ -23,6 +23,14 @@ func (r *userFallbackRepo) GetProfile(context.Context, string) (MyProfile, bool,
 	r.markUsed()
 	return MyProfile{}, false, nil
 }
+func (r *userFallbackRepo) GetProfiles(context.Context, []string) (map[string]MyProfile, error) {
+	r.markUsed()
+	return map[string]MyProfile{}, nil
+}
+func (r *userFallbackRepo) MutualFriends(context.Context, string, string, int) (int, []UserInfo, error) {
+	r.markUsed()
+	return 0, nil, nil
+}
 func (r *userFallbackRepo) PutProfile(context.Context, MyProfile) error {
 	r.markUsed()
 	return nil

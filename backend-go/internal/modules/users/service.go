@@ -196,7 +196,7 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 
 func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, bool, error) {
 	startedAt := time.Now()
-	observability.L().Info("users.open_the_door started", "user_id", userID)
+	observability.L().Debug("users.open_the_door started", "user_id", userID)
 	profile, ok, err := s.repo.GetProfile(ctx, userID)
 	if err != nil {
 		observability.L().Error("users.open_the_door failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -204,7 +204,7 @@ func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, boo
 	}
 	if !ok || profile.IsDeleted {
 		// 已注销用户按不存在处理（spec api_spec_user.md：不再可被搜索/访问）
-		observability.L().Info("users.open_the_door not found", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		observability.L().Debug("users.open_the_door not found", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return UserItem{}, false, nil
 	}
 	settings, ok, err := s.repo.GetSettings(ctx, userID)
@@ -235,28 +235,37 @@ func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, boo
 		}
 		item.SocialContext = socialContext
 	}
-	observability.L().Info("users.open_the_door completed", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	observability.L().Debug("users.open_the_door completed", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return item, true, nil
+}
+
+// Relationship 直查双向关注关系（配额判定等只需要关系、不需要完整上下文的
+// 热路径用；不走 OpenTheDoor 全量社交上下文）。
+func (s *Service) Relationship(ctx context.Context, userID, targetUserID string) (Relationship, error) {
+	return s.repo.Relationship(ctx, userID, targetUserID)
 }
 
 // BatchGet resolves multiple users at once (spec api_spec_user.md
 // users/batch_fetch). Returns a user_id -> UserInfo map（共享类型，仅为补全
 // 昵称/头像等基础信息，不携带 relation/stats 等查看者字段）；ids that do
-// not exist (or fail privacy checks) are simply absent from the map. Each
-// user is resolved through the same OpenTheDoor privacy path so visibility
-// rules stay consistent with the single-user endpoint.
+// not exist (or are deleted) are simply absent from the map.
+//
+// User 本体不含任何 viewer 门控字段（门控只影响 presence/location/stats），
+// 故一次 GetProfiles 批量取画像即与 OpenTheDoor 逐个解析等价，且天然跳过
+// social_context 拼装——此前循环调 OpenTheDoor 把 15+ 查询/人的全量上下文
+// （含好友列表分页求交）全部算完再只取 User，是 BatchGet 放大的主因。
 func (s *Service) BatchGet(ctx context.Context, userIDs []string) (map[string]UserInfo, error) {
 	result := make(map[string]UserInfo, len(userIDs))
+	profiles, err := s.repo.GetProfiles(ctx, userIDs)
+	if err != nil {
+		return nil, err
+	}
 	for _, userID := range userIDs {
-		item, ok, err := s.OpenTheDoor(ctx, userID)
-		if err != nil {
-			observability.L().Error("users.batch_fetch single lookup failed", "error", err, "user_id", userID)
+		profile, ok := profiles[userID]
+		if !ok || profile.IsDeleted {
 			continue
 		}
-		if !ok {
-			continue
-		}
-		result[userID] = item.User
+		result[userID] = userItemFromProfile(profile, nil, false, false, false).User
 	}
 	return result, nil
 }

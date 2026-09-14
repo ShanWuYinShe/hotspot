@@ -320,10 +320,6 @@ func TestResumeIgnoresForeignToken(t *testing.T) {
 func newRealtimeHandlerForTestWithGroups(authService *platformauth.Service, members map[string][]string) *Handler {
 	return NewHandler(
 		authService,
-		stubUserPresenceService{items: map[string]string{
-			"user_alice": "online",
-			"user_bob":   "online",
-		}},
 		stubUserRepo{settings: map[string]struct {
 			presenceVisible  bool
 			allowPrivateChat string

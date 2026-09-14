@@ -43,6 +43,59 @@ func (r *InMemoryRepository) GetProfile(_ context.Context, userID string) (MyPro
 	profile, ok := r.profiles[userID]
 	return profile, ok, nil
 }
+
+func (r *InMemoryRepository) GetProfiles(_ context.Context, userIDs []string) (map[string]MyProfile, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	result := make(map[string]MyProfile, len(userIDs))
+	for _, userID := range userIDs {
+		if profile, ok := r.profiles[userID]; ok {
+			result[userID] = profile
+		}
+	}
+	return result, nil
+}
+
+// MutualFriends 内存版：全量求交（总数精确；PG 版同语义单条 SQL）。
+// 预览按最近互关优先（对齐 PG 的 ORDER BY），数量上限 previewLimit。
+func (r *InMemoryRepository) MutualFriends(_ context.Context, viewerID, targetID string, previewLimit int) (int, []UserInfo, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if previewLimit < 0 {
+		previewLimit = 0
+	}
+	type candidate struct {
+		userID   string
+		recentAt string
+	}
+	candidates := make([]candidate, 0)
+	for otherID, rel := range r.relations[viewerID] {
+		if !rel.Following || !r.relations[otherID][viewerID].Following {
+			continue
+		}
+		if trel, ok := r.relations[targetID][otherID]; !ok || !trel.Following || !r.relations[otherID][targetID].Following {
+			continue
+		}
+		candidates = append(candidates, candidate{
+			userID:   otherID,
+			recentAt: maxStringTime(rel.FollowedAt, r.relations[otherID][viewerID].FollowedAt),
+		})
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].recentAt != candidates[j].recentAt {
+			return candidates[i].recentAt > candidates[j].recentAt
+		}
+		return candidates[i].userID < candidates[j].userID
+	})
+	preview := make([]UserInfo, 0, previewLimit)
+	for i, c := range candidates {
+		if i >= previewLimit {
+			break
+		}
+		preview = append(preview, UserInfo{UserID: c.userID, Nickname: r.nicknameFor(c.userID), AvatarURL: types.StrPtr(r.profiles[c.userID].AvatarURL)})
+	}
+	return len(candidates), preview, nil
+}
 func (r *InMemoryRepository) PutProfile(_ context.Context, profile MyProfile) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

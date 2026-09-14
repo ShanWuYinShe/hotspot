@@ -19,15 +19,6 @@ import (
 
 func wsURL(serverURL string) string { return "ws" + strings.TrimPrefix(serverURL, "http") + "/ws/v1" }
 
-type stubUserPresenceService struct {
-	items map[string]string
-}
-
-func (s stubUserPresenceService) OpenTheDoor(_ context.Context, userID string) (string, bool, error) {
-	item, ok := s.items[userID]
-	return item, ok, nil
-}
-
 type stubUserRepo struct {
 	settings map[string]struct {
 		presenceVisible  bool
@@ -101,10 +92,6 @@ func (s stubGroupRepo) IsMember(_ context.Context, groupID, userID string) (bool
 func newRealtimeHandlerForTest(authService *platformauth.Service) *Handler {
 	return NewHandler(
 		authService,
-		stubUserPresenceService{items: map[string]string{
-			"user_alice": "online",
-			"user_bob":   "online",
-		}},
 		stubUserRepo{settings: map[string]struct {
 			presenceVisible  bool
 			allowPrivateChat string
@@ -330,7 +317,6 @@ func TestRealtimeRejectsUserSubscriptionWhenPresenceHidden(t *testing.T) {
 	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
-		stubUserPresenceService{items: map[string]string{"user_hidden": ""}},
 		stubUserRepo{settings: map[string]struct {
 			presenceVisible  bool
 			allowPrivateChat string
@@ -374,7 +360,6 @@ func TestRealtimeSetSubscriptionsMixedItems(t *testing.T) {
 	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
-		stubUserPresenceService{items: map[string]string{"user_bob": "online", "user_hidden": ""}},
 		stubUserRepo{settings: map[string]struct {
 			presenceVisible  bool
 			allowPrivateChat string
@@ -448,7 +433,6 @@ func TestRealtimeRejectsGroupSubscriptionForNonMember(t *testing.T) {
 	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
-		stubUserPresenceService{items: map[string]string{}},
 		stubUserRepo{settings: map[string]struct {
 			presenceVisible  bool
 			allowPrivateChat string
@@ -489,7 +473,6 @@ func TestRealtimeAllowsUnsubscribeEvenWhenTargetNowDenied(t *testing.T) {
 	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
-		stubUserPresenceService{items: map[string]string{"user_hidden": ""}},
 		stubUserRepo{settings: map[string]struct {
 			presenceVisible  bool
 			allowPrivateChat string
@@ -530,7 +513,6 @@ func TestRealtimeRejectsPrivateTypingWhenPrivateChatDenied(t *testing.T) {
 	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
-		stubUserPresenceService{items: map[string]string{}},
 		stubUserRepo{
 			settings: map[string]struct {
 				presenceVisible  bool
@@ -574,7 +556,6 @@ func TestRealtimeRejectsGroupTypingForNonMember(t *testing.T) {
 	result, _ := authService.IssueSession(context.Background(), "user_alice")
 	handler := NewHandler(
 		authService,
-		stubUserPresenceService{items: map[string]string{}},
 		stubUserRepo{settings: map[string]struct {
 			presenceVisible  bool
 			allowPrivateChat string
@@ -620,7 +601,6 @@ func TestRealtimeAllowsGroupSubscriptionAndTypingBeyondFirstHundredMembers(t *te
 	members = append(members, "user_alice")
 	handler := NewHandler(
 		authService,
-		stubUserPresenceService{items: map[string]string{}},
 		stubUserRepo{settings: map[string]struct {
 			presenceVisible  bool
 			allowPrivateChat string

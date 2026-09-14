@@ -6,6 +6,12 @@ SELECT user_id, nickname, COALESCE(avatar_url, ''), user_type, COALESCE(bio, '')
 FROM users
 WHERE user_id = $1`
 
+	// queryGetUserProfiles 与 queryGetUserProfile 同列，供 GetProfiles 一次取多行。
+	queryGetUserProfiles = `
+SELECT user_id, nickname, COALESCE(avatar_url, ''), user_type, COALESCE(bio, ''), COALESCE(gender, ''), COALESCE(email, ''), COALESCE(phone, ''), location_name, latitude, longitude, presence_status, last_online, created_at, is_deleted
+FROM users
+WHERE user_id = ANY($1)`
+
 	queryListUserProfileTags = `
 SELECT tag_name
 FROM user_profile_tags
@@ -189,6 +195,20 @@ SELECT
   (SELECT COUNT(*) FROM user_relations ur WHERE ur.target_user_id = $1 AND ur.is_following = TRUE),
   (SELECT COUNT(*) FROM user_relations ur WHERE ur.user_id = $1 AND ur.is_following = TRUE),
   (SELECT COUNT(*) FROM group_members gm JOIN groups g ON g.group_id = gm.group_id WHERE gm.user_id = $1 AND g.deleted_at IS NULL)`
+
+	// queryMutualFriends 双向共同好友一次查全：总数经 COUNT(*) OVER 随行返回
+	//（LIMIT 只截预览，不截总数），预览按最近互关优先。
+	queryMutualFriends = `
+SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), COUNT(*) OVER() AS total
+FROM user_relations a1
+JOIN user_relations a2 ON a2.user_id = a1.target_user_id AND a2.target_user_id = a1.user_id AND a2.is_following = TRUE
+JOIN user_relations b1 ON b1.target_user_id = a1.target_user_id
+JOIN user_relations b2 ON b2.user_id = b1.target_user_id AND b2.target_user_id = b1.user_id AND b2.is_following = TRUE
+JOIN users u ON u.user_id = a1.target_user_id
+WHERE a1.user_id = $1 AND a1.is_following = TRUE
+  AND b1.user_id = $2 AND b1.is_following = TRUE
+ORDER BY GREATEST(a1.followed_at, a2.followed_at) DESC, u.user_id ASC
+LIMIT $3`
 
 	queryListBlockedUsers = `
 SELECT target_user_id, blocked_at, COALESCE(block_reason, '')

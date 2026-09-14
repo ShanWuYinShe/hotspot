@@ -1,31 +1,86 @@
 package realtime
 
 import (
+	"encoding/json"
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-// writeTimeout is the deadline applied before each WriteJSON call.
-// A slow or malicious consumer that stalls the TCP connection will cause
-// the write to fail, allowing the hub to drop the sink and continue
-// delivering to other connections on the same channel.
+// writeTimeout is the deadline applied to each queued write by the writer
+// goroutine. A slow or malicious consumer that stalls the TCP connection
+// fails its own writes without blocking broadcast initiators.
 const writeTimeout = 5 * time.Second
+
+// sendQueueSize bounds each connection's outbound buffer. Broadcast Send
+// never blocks the caller: a stalled consumer's queue fills and further
+// events are dropped (fail-fast for one connection instead of stalling the
+// HTTP goroutine sending a group message to hundreds of members).
+const sendQueueSize = 128
+
+// errSendQueueFull reports a dropped event: the consumer is slower than the
+// broadcast rate. Callers (hub deliver paths) intentionally ignore Send
+// errors, matching the previous best-effort broadcast semantics.
+var errSendQueueFull = errors.New("realtime: send queue full, event dropped")
 
 type socketSink struct {
 	conn *websocket.Conn
-	mu   sync.Mutex
+	// mu serializes raw conn writes between the writer goroutine and
+	// closeWithCode (gorilla forbids concurrent writers).
+	mu        sync.Mutex
+	send      chan []byte
+	done      chan struct{}
+	closeOnce sync.Once
 }
 
+func newSocketSink(conn *websocket.Conn) *socketSink {
+	s := &socketSink{
+		conn: conn,
+		send: make(chan []byte, sendQueueSize),
+		done: make(chan struct{}),
+	}
+	go s.writeLoop()
+	return s
+}
+
+// Send marshals the event and enqueues it for the writer goroutine. It never
+// blocks: on a full queue or closed sink it returns an error immediately.
 func (s *socketSink) Send(event Event) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	_ = s.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
-	return s.conn.WriteJSON(event)
+	data, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+	select {
+	case s.send <- data:
+		return nil
+	case <-s.done:
+		return errors.New("realtime: sink closed")
+	default:
+		return errSendQueueFull
+	}
+}
+
+func (s *socketSink) writeLoop() {
+	for {
+		select {
+		case <-s.done:
+			return
+		case data := <-s.send:
+			s.mu.Lock()
+			_ = s.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
+			writeErr := s.conn.WriteMessage(websocket.TextMessage, data)
+			s.mu.Unlock()
+			if writeErr != nil {
+				return
+			}
+		}
+	}
 }
 
 func (s *socketSink) Close() error {
+	s.closeOnce.Do(func() { close(s.done) })
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.conn.Close()

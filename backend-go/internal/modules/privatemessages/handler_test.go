@@ -96,6 +96,10 @@ func (s *privateMessageUserStub) BlockStateBetween(context.Context, string, stri
 	return false, false, nil
 }
 
+func (s *privateMessageUserStub) Relationship(context.Context, string, string) (users.Relationship, error) {
+	return users.Relationship{}, nil
+}
+
 func withPrivateMessagePrincipal(req *http.Request) *http.Request {
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	return req.WithContext(ctx)

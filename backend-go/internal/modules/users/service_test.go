@@ -17,6 +17,13 @@ type stubUserRepo struct {
 	putProfileErr error
 	deleteErr     error
 
+	profiles    map[string]MyProfile
+	profilesErr error
+
+	mutualTotal   int
+	mutualPreview []UserInfo
+	mutualErr     error
+
 	settings       UserSettings
 	settingsFound  bool
 	settingsErr    error
@@ -64,6 +71,28 @@ type stubUserRepo struct {
 
 func (r *stubUserRepo) GetProfile(_ context.Context, _ string) (MyProfile, bool, error) {
 	return r.profile, r.profileFound, r.profileErr
+}
+
+func (r *stubUserRepo) GetProfiles(_ context.Context, userIDs []string) (map[string]MyProfile, error) {
+	if r.profilesErr != nil {
+		return nil, r.profilesErr
+	}
+	if r.profiles != nil {
+		return r.profiles, nil
+	}
+	result := make(map[string]MyProfile, len(userIDs))
+	if r.profileFound {
+		for _, id := range userIDs {
+			if id == r.profile.UserID {
+				result[id] = r.profile
+			}
+		}
+	}
+	return result, nil
+}
+
+func (r *stubUserRepo) MutualFriends(_ context.Context, _, _ string, _ int) (int, []UserInfo, error) {
+	return r.mutualTotal, r.mutualPreview, r.mutualErr
 }
 func (r *stubUserRepo) PutProfile(_ context.Context, p MyProfile) error {
 	if r.putProfileErr != nil {
@@ -587,4 +616,31 @@ func (r *stubUserRepo) ListReactedByUser(_ context.Context, _ string, _ string, 
 }
 func (r *stubUserRepo) CountCommonGroups(_ context.Context, _, _ string) (int, error) {
 	return 0, nil
+}
+
+func TestServiceBatchGetSkipsMissingAndDeleted(t *testing.T) {
+	// BatchGet 一次取多画像：缺席与已注销直接缺席，不携带 relation/stats。
+	repo := &stubUserRepo{profiles: map[string]MyProfile{
+		"u1": {UserID: "u1", Nickname: "One"},
+		"u2": {UserID: "u2", Nickname: "Two", IsDeleted: true},
+	}}
+	svc := NewServiceWithRepo(repo)
+	got, err := svc.BatchGet(userCtx("viewer"), []string{"u1", "u2", "missing"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected only u1, got %v", got)
+	}
+	if got["u1"].Nickname != "One" {
+		t.Fatalf("unexpected user: %+v", got["u1"])
+	}
+}
+
+func TestServiceBatchGetPropagatesBatchError(t *testing.T) {
+	repo := &stubUserRepo{profilesErr: errors.New("boom")}
+	svc := NewServiceWithRepo(repo)
+	if _, err := svc.BatchGet(userCtx("viewer"), []string{"u1"}); err == nil {
+		t.Fatal("expected error, got nil")
+	}
 }

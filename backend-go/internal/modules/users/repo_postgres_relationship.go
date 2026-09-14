@@ -25,6 +25,44 @@ func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUse
 	return Relationship{IsFollowing: following, IsFollowedBy: followedBy, IsBlocked: blocked}, nil
 }
 
+// MutualFriends 一次查询返回双向共同好友总数 + 前 previewLimit 个预览
+// （总数经 COUNT(*) OVER 随行，不被 LIMIT 截断）。替代逐用户全量分页好友
+// 列表再内存求交的做法（OpenTheDoor 热路径）。
+func (r *PostgresRepository) MutualFriends(ctx context.Context, viewerUserID, targetUserID string, previewLimit int) (int, []UserInfo, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return 0, nil, persistence.ErrNotImplemented
+	}
+	if previewLimit < 0 {
+		previewLimit = 0
+	}
+	// LIMIT 0 会连总数一起截掉：只想要总数时仍取 1 行读 COUNT(*) OVER。
+	fetchLimit := previewLimit
+	if fetchLimit < 1 {
+		fetchLimit = 1
+	}
+	rows, err := queryable.Query(ctx, queryMutualFriends, viewerUserID, targetUserID, fetchLimit)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer rows.Close()
+	total := 0
+	preview := make([]UserInfo, 0, previewLimit)
+	for rows.Next() {
+		var userID, nickname, avatarURL string
+		if err := rows.Scan(&userID, &nickname, &avatarURL, &total); err != nil {
+			return 0, nil, err
+		}
+		if len(preview) < previewLimit {
+			preview = append(preview, UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return 0, nil, err
+	}
+	return total, preview, nil
+}
+
 // BlockedEitherWay 一次往返解析 a、b 双向拉黑状态（callerBlocked = a 拉黑 b）。
 // 发送/typing 等热路径用它替代两次 Relationship 调用（4 条 SQL → 1 条）。
 func (r *PostgresRepository) BlockedEitherWay(ctx context.Context, aUserID, bUserID string) (callerBlocked, targetBlocked bool, err error) {

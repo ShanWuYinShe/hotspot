@@ -93,3 +93,38 @@ func TestInMemoryBlockCascade_ClearsBothFollows(t *testing.T) {
 		t.Fatalf("expected b->a not blocked but unfollowed: %#v", relBA)
 	}
 }
+
+func TestInMemoryMutualFriends(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+	mutual := func(a, b string) {
+		t.Helper()
+		if err := repo.Follow(ctx, a, b, FollowSourceProfile, ""); err != nil {
+			t.Fatalf("follow %s->%s: %v", a, b, err)
+		}
+		if err := repo.Follow(ctx, b, a, FollowSourceProfile, ""); err != nil {
+			t.Fatalf("follow %s->%s: %v", b, a, err)
+		}
+	}
+	mutual("viewer", "m1")
+	mutual("viewer", "m2")
+	mutual("target", "m1")
+	mutual("target", "m2")
+	// 单向关注不成共同好友。
+	if err := repo.Follow(ctx, "viewer", "stranger", FollowSourceProfile, ""); err != nil {
+		t.Fatalf("follow stranger: %v", err)
+	}
+	total, preview, err := repo.MutualFriends(ctx, "viewer", "target", 1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if total != 2 {
+		t.Fatalf("expected total=2, got %d", total)
+	}
+	if len(preview) != 1 {
+		t.Fatalf("expected 1 preview, got %d", len(preview))
+	}
+	if preview[0].UserID != "m1" && preview[0].UserID != "m2" {
+		t.Fatalf("unexpected preview: %+v", preview[0])
+	}
+}

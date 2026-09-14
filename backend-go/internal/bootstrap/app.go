@@ -83,8 +83,8 @@ func NewApp(cfg config.Config) (*App, error) {
 	userRepo := users.NewPostgresRepository(persistenceFactory)
 	groupRepo := groups.NewPostgresRepository(persistenceFactory)
 	userService := users.NewServiceWithRepo(userRepo)
-	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), realtimeUserService{svc: userService}, realtimeUserRepo{repo: userRepo}, realtimeGroupRepo{repo: groupRepo})
-	realtimeHandler.SetActorProvider(realtimeUserService{svc: userService})
+	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), realtimeUserRepo{repo: userRepo}, realtimeGroupRepo{repo: groupRepo})
+	realtimeHandler.SetActorProvider(realtimeActorProvider{svc: userService})
 	// WS 握手封禁检查：与 HTTP RequiredAuth 同源（admin repo IsBanned）、同口径（fail-open）
 	realtimeHandler.SetBanAuthorizer(realtimeBanAuthorizer{repo: adminRepo})
 	// resume 增量恢复（spec L156, L159）：Redis 可用时创建跨实例事件存储并注入

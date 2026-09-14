@@ -87,19 +87,15 @@ type stubUserReader struct {
 	userErr       error
 	settings      users.UserSettings
 	settingsErr   error
-	byTarget      map[string]users.UserItem // per-target item lookup (stranger quota relation checks)
-	callerBlocked bool                      // BlockStateBetween：发送者拉黑了对方
-	targetBlocked bool                      // BlockStateBetween：对方拉黑了发送者
+	relations     map[string]users.Relationship // per-target relation (stranger quota checks)
+	relationErr   error
+	callerBlocked bool // BlockStateBetween：发送者拉黑了对方
+	targetBlocked bool // BlockStateBetween：对方拉黑了发送者
 }
 
 func (u *stubUserReader) OpenTheDoor(_ context.Context, userID string) (users.UserItem, bool, error) {
 	if u.userErr != nil {
 		return users.UserItem{}, false, u.userErr
-	}
-	if u.byTarget != nil {
-		if item, ok := u.byTarget[userID]; ok {
-			return item, true, nil
-		}
 	}
 	return u.item, u.found, nil
 }
@@ -109,6 +105,18 @@ func (u *stubUserReader) GetMySettings(_ context.Context) (users.UserSettings, e
 
 func (u *stubUserReader) BlockStateBetween(_ context.Context, _ string, _ string) (callerBlocked, targetBlocked bool, err error) {
 	return u.callerBlocked, u.targetBlocked, nil
+}
+
+func (u *stubUserReader) Relationship(_ context.Context, _ string, targetID string) (users.Relationship, error) {
+	if u.relationErr != nil {
+		return users.Relationship{}, u.relationErr
+	}
+	if u.relations != nil {
+		if rel, ok := u.relations[targetID]; ok {
+			return rel, nil
+		}
+	}
+	return users.Relationship{}, nil
 }
 
 // quotaSource is a static appconfig.Source for the stranger quota tests.
@@ -347,9 +355,9 @@ func TestServiceSendStrangerQuotaAggregatesAcrossTargets(t *testing.T) {
 	svc := NewServiceWithDeps(repo, &stubUserReader{
 		found: true,
 		item:  users.UserItem{Relation: &users.Relationship{}},
-		byTarget: map[string]users.UserItem{
-			"u2": {Relation: &users.Relationship{}}, // 陌生人(非互关)
-			"u3": {Relation: &users.Relationship{}}, // 陌生人(非互关)
+		relations: map[string]users.Relationship{
+			"u2": {}, // 陌生人(非互关)
+			"u3": {}, // 陌生人(非互关)
 		},
 		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	})
@@ -370,9 +378,9 @@ func TestServiceSendStrangerQuotaAllowsUnderTotal(t *testing.T) {
 	svc := NewServiceWithDeps(repo, &stubUserReader{
 		found: true,
 		item:  users.UserItem{Relation: &users.Relationship{}},
-		byTarget: map[string]users.UserItem{
-			"u2": {Relation: &users.Relationship{}},
-			"u3": {Relation: &users.Relationship{}},
+		relations: map[string]users.Relationship{
+			"u2": {},
+			"u3": {},
 		},
 		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	})
@@ -391,9 +399,9 @@ func TestServiceSendStrangerQuotaIgnoresMutualFollows(t *testing.T) {
 	svc := NewServiceWithDeps(repo, &stubUserReader{
 		found: true,
 		item:  users.UserItem{Relation: &users.Relationship{}},
-		byTarget: map[string]users.UserItem{
-			"u2": {Relation: &users.Relationship{}},                                      // 陌生人
-			"u3": {Relation: &users.Relationship{IsFollowing: true, IsFollowedBy: true}}, // 互相关注
+		relations: map[string]users.Relationship{
+			"u2": {},                                      // 陌生人
+			"u3": {IsFollowing: true, IsFollowedBy: true}, // 互相关注
 		},
 		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
 	})

@@ -6,6 +6,12 @@ import (
 
 type Repository interface {
 	GetProfile(context.Context, string) (MyProfile, bool, error)
+	// GetProfiles 批量取画像（一次往返，供 BatchGet 列表补全用；不含 Stats，
+	// 需要统计的调用方走 GetProfile）。缺席/已注销判定由调用方按 IsDeleted 做。
+	GetProfiles(context.Context, []string) (map[string]MyProfile, error)
+	// MutualFriends 一次查询返回双向共同好友总数 + 前 previewLimit 个预览
+	//（总数精确，不截断）。替代逐用户全量分页好友列表再内存求交的做法。
+	MutualFriends(context.Context, string, string, int) (int, []UserInfo, error)
 	PutProfile(context.Context, MyProfile) error
 	DeleteProfile(context.Context, string) error
 	GetSettings(context.Context, string) (UserSettings, bool, error)

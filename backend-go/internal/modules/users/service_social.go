@@ -220,20 +220,13 @@ func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, t
 	if !ok {
 		viewerProfile = s.defaultProfile(ctx, viewerUserID)
 	}
-	mutualFriends, err := collectMutualFriends(ctx, s.repo, viewerUserID, targetProfile.UserID)
+	mutualTotal, mutualPreview, err := s.repo.MutualFriends(ctx, viewerUserID, targetProfile.UserID, 3)
 	if err != nil {
 		return nil, err
 	}
-	context := &SocialContext{MutualFriendsCount: len(mutualFriends)}
-	if len(mutualFriends) > 0 {
-		preview := make([]UserInfo, 0, minInt(len(mutualFriends), 3))
-		for _, friend := range mutualFriends {
-			preview = append(preview, friend.User.User)
-			if len(preview) == 3 {
-				break
-			}
-		}
-		context.MutualFriendsPreview = preview
+	context := &SocialContext{MutualFriendsCount: mutualTotal}
+	if len(mutualPreview) > 0 {
+		context.MutualFriendsPreview = mutualPreview
 	}
 	targetSettings, ok, err := s.repo.GetSettings(ctx, targetProfile.UserID)
 	if err != nil {
@@ -257,63 +250,10 @@ func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, t
 	}
 	// 无任何共同点 → null（恒定 nullable：null = 不适用，spec api_spec_base.md）。
 	// 不返回 {"mutual_friends_count":0} 这类空壳对象。
-	if len(mutualFriends) == 0 && len(commonTags) == 0 && (context.CommonGroupsCount == nil || *context.CommonGroupsCount == 0) {
+	if mutualTotal == 0 && len(commonTags) == 0 && (context.CommonGroupsCount == nil || *context.CommonGroupsCount == 0) {
 		return nil, nil
 	}
 	return context, nil
-}
-
-func collectMutualFriends(ctx context.Context, repo Repository, viewerUserID, targetUserID string) ([]RelatedUserItem, error) {
-	// TODO(perf): this still paginates each user's entire friend list in memory and
-	// intersects them in Go. It should be replaced by a single SQL-based mutual-friends
-	// query (self-join on user_relations) that returns the intersection directly. Until
-	// that lands, mutualFriendsScanCap bounds the number of friends scanned per user so
-	// very large friend lists cannot blow up into unbounded pagination.
-	viewerFriends, err := collectFriendsByUser(ctx, repo, viewerUserID)
-	if err != nil {
-		return nil, err
-	}
-	targetFriends, err := collectFriendsByUser(ctx, repo, targetUserID)
-	if err != nil {
-		return nil, err
-	}
-	targetSet := make(map[string]struct{}, len(targetFriends))
-	for _, item := range targetFriends {
-		targetSet[item.User.User.UserID] = struct{}{}
-	}
-	mutual := make([]RelatedUserItem, 0)
-	for _, item := range viewerFriends {
-		if _, ok := targetSet[item.User.User.UserID]; ok {
-			mutual = append(mutual, item)
-		}
-	}
-	return mutual, nil
-}
-
-// mutualFriendsScanCap is a temporary upper bound on how many friend rows are
-// scanned per user when computing mutual friends. See collectMutualFriends.
-const mutualFriendsScanCap = 500
-
-func collectFriendsByUser(ctx context.Context, repo Repository, userID string) ([]RelatedUserItem, error) {
-	items := make([]RelatedUserItem, 0)
-	cursor := ""
-	pageSize := 100
-	for {
-		page, err := repo.ListFriends(ctx, userID, pageSize, cursor)
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, page.Items...)
-		// Stop once we've scanned the cap or there are no more pages.
-		if page.NextCursor == nil || len(items) >= mutualFriendsScanCap {
-			if len(items) > mutualFriendsScanCap {
-				items = items[:mutualFriendsScanCap]
-			}
-			break
-		}
-		cursor = *page.NextCursor
-	}
-	return items, nil
 }
 
 func intersectTags(left, right []string) []string {
