@@ -25,7 +25,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { UserCard } from '../components/UserCard';
 import { GroupCard } from '../../groups/components/GroupCard';
 import { MomentWallCard } from '../../moments/components/MomentWallCard';
-import { EmptyState } from '../../../components/EmptyState';
+import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 
 @Preview
@@ -41,11 +41,21 @@ export struct NearbyPage {
   @State private nearbyMoments: MomentItem[] = [];
   @State private isLoading: boolean = true;
   @State private loadError: string = '';
+  @State private isRefreshing: boolean = false;
 
   private static readonly SECTION_TABS: string[] = ['附近的人', '附近群组', '附近动态'];
 
   async aboutToAppear() {
     await this.loadData();
+  }
+
+  /** 下拉刷新（P2-1：错误文案承诺了「下拉重试」，此前页面无 Refresh） */
+  private async refreshNearby(): Promise<void> {
+    try {
+      await this.loadData();
+    } finally {
+      this.isRefreshing = false;
+    }
   }
 
   private async loadData(): Promise<void> {
@@ -153,6 +163,7 @@ export struct NearbyPage {
         })
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
         Scroll() {
           Column({ space: DesignConstants.SPACING.LG }) {
             if (this.isLoading) {
@@ -241,10 +252,14 @@ export struct NearbyPage {
           .width('100%')
         }
         .width('100%')
-        .layoutWeight(1)
+        .height('100%')
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
         .align(Alignment.Top)
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .onRefreshing(() => { this.refreshNearby(); })
       }
       .width('100%')
       .height('100%')
