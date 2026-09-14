@@ -304,6 +304,11 @@ func (r *InMemoryRepository) MessageParticipants(_ context.Context, messageID st
 	for key, items := range r.messages {
 		for _, item := range items {
 			if item.MessageID == messageID {
+				// 已撤回消息按不存在处理（与 PG 侧 is_recalled = FALSE 同口径，
+				// 审计 F-11）：该方法仅被 IsReactionTargetVisible 消费。
+				if item.RecalledAt != nil {
+					return "", "", false, nil
+				}
 				// 会话键为 userA:userB；接收方为键中除发送者外的另一方
 				return item.Sender.UserID, otherUserID(key, item.Sender.UserID), true, nil
 			}

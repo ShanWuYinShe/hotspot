@@ -75,6 +75,12 @@ func (p commentReactionProvider) Resolve(ctx context.Context, commentID string) 
 	if !found {
 		return reactions.TargetContext{}, false, nil
 	}
+	// 软删评论按不存在处理（与 moments/CheckCommentable 的 IsDeleted 口径一致）：
+	// 此前只查存在性，软删评论（content=''）仍可被点赞，并给作者发
+	// reaction_added 通知（审计 F-11）。
+	if item.IsDeleted {
+		return reactions.TargetContext{}, false, nil
+	}
 	// 目标可见性（spec reaction.md）：评论挂载的瞬间不可见（private 非拥有者）时按不存在处理
 	if p.moments != nil {
 		if _, visible, err := p.moments.IsReactionTargetVisible(ctx, item.MomentID); err != nil {

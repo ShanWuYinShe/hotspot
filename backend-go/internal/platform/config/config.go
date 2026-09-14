@@ -14,6 +14,13 @@ import (
 // Operators can override via BCRYPT_COST, subject to Validate() clamping.
 const defaultBcryptCost = 12
 
+// Postgres 连接池默认尺寸（可用 POSTGRES_MAX_CONNS / POSTGRES_MIN_CONNS 覆盖）。
+// pgx 默认 MaxConns=4 对生产偏低；25 是单实例的合理值，多实例部署需下调。
+const (
+	defaultPostgresMaxConns = 25
+	defaultPostgresMinConns = 2
+)
+
 type Config struct {
 	AppName                string
 	AppEnv                 string
@@ -52,6 +59,11 @@ type Config struct {
 	// [bcrypt.MinCost, bcrypt.MaxCost]; Validate() rejects anything outside
 	// that range. Defaults to defaultBcryptCost (OWASP minimum).
 	BcryptCost int
+	// PostgresMaxConns / PostgresMinConns 控制每实例的 Postgres 连接池尺寸
+	// （POSTGRES_MAX_CONNS / POSTGRES_MIN_CONNS）。多实例部署时各实例独立持池，
+	// 需按实例数下调以免撞上 Postgres max_connections（默认 100）。
+	PostgresMaxConns int
+	PostgresMinConns int
 }
 
 func Load() Config {
@@ -86,6 +98,10 @@ func Load() Config {
 		SMTPFrom:               os.Getenv("SMTP_FROM"),
 		ResumeTTLSeconds:       envIntOrDefault("RESUME_TTL_SECONDS", 60),
 		BcryptCost:             bcryptCostOrDefault("BCRYPT_COST", defaultBcryptCost),
+		// Postgres 连接池尺寸。多实例部署时各实例独立持池，默认 25 在 3 实例
+		// 下已逼近 Postgres 默认 max_connections=100，需要按实例数下调。
+		PostgresMaxConns: envIntOrDefault("POSTGRES_MAX_CONNS", defaultPostgresMaxConns),
+		PostgresMinConns: envIntOrDefault("POSTGRES_MIN_CONNS", defaultPostgresMinConns),
 	}
 }
 

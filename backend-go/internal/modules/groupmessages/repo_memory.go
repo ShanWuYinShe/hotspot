@@ -397,8 +397,13 @@ func (r *InMemoryRepository) MessageExists(_ context.Context, messageID string) 
 func (r *InMemoryRepository) MessageGroupID(_ context.Context, messageID string) (string, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	groupID, _, _, found := r.findMessage(messageID)
+	groupID, _, msg, found := r.findMessage(messageID)
 	if !found {
+		return "", false, nil
+	}
+	// 撤回消息按不存在处理（与 PG 侧 is_recalled = FALSE 同口径，审计 F-11）：
+	// 该方法仅被 IsReactionTargetVisible 消费，撤回后不应再接受 reaction。
+	if msg.RecalledAt != nil {
 		return "", false, nil
 	}
 	return groupID, true, nil

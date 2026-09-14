@@ -159,12 +159,14 @@ const (
 		FROM private_messages
 		WHERE message_id = $1`
 
+	// 仅被 IsReactionTargetVisible 消费：已撤回消息按不存在处理（不再接受
+	// 新的 reaction，与软删评论/软删瞬间同口径，审计 F-11）。
 	queryPrivateMessageParticipants = `
 SELECT pm.sender_user_id,
        CASE WHEN pc.user_a_id = pm.sender_user_id THEN pc.user_b_id ELSE pc.user_a_id END
 FROM private_messages pm
 JOIN private_chats pc ON pc.chat_key = pm.chat_key
-WHERE pm.message_id = $1`
+WHERE pm.message_id = $1 AND pm.is_recalled = FALSE`
 
 	// queryGetPrivateMessageSnapshot 取私聊消息真值（举报快照生成依据，spec
 	// api_spec_types.md ReportSnapshot：服务端受理举报时生成并冻结）。

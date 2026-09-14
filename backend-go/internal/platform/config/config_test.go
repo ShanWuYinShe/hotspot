@@ -350,3 +350,44 @@ func TestValidateAcceptsOWASPMinimumBcryptCost(t *testing.T) {
 		t.Fatalf("expected OWASP minimum cost to validate, got %v", err)
 	}
 }
+
+// POSTGRES_MAX_CONNS / POSTGRES_MIN_CONNS 应被解析并生效（审计 perf P3-1：
+// 注释曾声称可用 env 调整，实际硬编码 25/2）。空/非法值回退默认。
+func TestLoadPostgresPoolSize(t *testing.T) {
+	restore := func(key, old string) {
+		if old == "" {
+			_ = os.Unsetenv(key)
+		} else {
+			_ = os.Setenv(key, old)
+		}
+	}
+	oldMax, oldMin := os.Getenv("POSTGRES_MAX_CONNS"), os.Getenv("POSTGRES_MIN_CONNS")
+	defer func() {
+		restore("POSTGRES_MAX_CONNS", oldMax)
+		restore("POSTGRES_MIN_CONNS", oldMin)
+	}()
+
+	// 默认值
+	_ = os.Unsetenv("POSTGRES_MAX_CONNS")
+	_ = os.Unsetenv("POSTGRES_MIN_CONNS")
+	cfg := Load()
+	if cfg.PostgresMaxConns != 25 || cfg.PostgresMinConns != 2 {
+		t.Fatalf("default pool size = %d/%d, want 25/2", cfg.PostgresMaxConns, cfg.PostgresMinConns)
+	}
+
+	// 显式覆盖
+	_ = os.Setenv("POSTGRES_MAX_CONNS", "8")
+	_ = os.Setenv("POSTGRES_MIN_CONNS", "1")
+	cfg = Load()
+	if cfg.PostgresMaxConns != 8 || cfg.PostgresMinConns != 1 {
+		t.Fatalf("overridden pool size = %d/%d, want 8/1", cfg.PostgresMaxConns, cfg.PostgresMinConns)
+	}
+
+	// 非法值（非正整数）回退默认，不产生 0 或负数
+	_ = os.Setenv("POSTGRES_MAX_CONNS", "abc")
+	_ = os.Setenv("POSTGRES_MIN_CONNS", "0")
+	cfg = Load()
+	if cfg.PostgresMaxConns != 25 || cfg.PostgresMinConns != 2 {
+		t.Fatalf("invalid pool size = %d/%d, want fallback 25/2", cfg.PostgresMaxConns, cfg.PostgresMinConns)
+	}
+}

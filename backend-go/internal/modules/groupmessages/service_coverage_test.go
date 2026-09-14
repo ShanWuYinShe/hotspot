@@ -106,6 +106,13 @@ func TestServiceLookupAndVisibilityHelpers(t *testing.T) {
 	if found, _, err := svc.IsReactionTargetVisible(ctx, "missing"); err != nil || found {
 		t.Fatalf("missing visibility: found=%v err=%v", found, err)
 	}
+	// 已撤回消息按不存在处理（审计 F-11）：撤回后不再接受新的 reaction。
+	if _, err := repo.Recall(ctx, RecallGroupMessageRequest{MessageID: sent.MessageID, UserID: "u2"}); err != nil {
+		t.Fatalf("recall for visibility test: %v", err)
+	}
+	if found, visible, err := svc.IsReactionTargetVisible(ctx, sent.MessageID); err != nil || found || visible {
+		t.Fatalf("recalled message must be invisible: found=%v visible=%v err=%v", found, visible, err)
+	}
 
 	// resolveGroupName：有群名返回群名，无群名回退空串
 	repo.SetGroupName("g1", "热群")

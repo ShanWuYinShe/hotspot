@@ -177,10 +177,12 @@ FROM group_members WHERE group_id = $1 AND user_id = $2`
 		LEFT JOIN users u ON u.user_id = gm.sender_user_id
 		WHERE gm.message_id = $1`
 
+	// 仅被 IsReactionTargetVisible 消费：撤回消息按不存在处理（不再接受
+	// 新的 reaction，与软删评论/软删瞬间同口径，审计 F-11）。
 	queryGetGroupMessageGroupID = `
 		SELECT group_id
 		FROM group_messages
-		WHERE message_id = $1`
+		WHERE message_id = $1 AND is_recalled = FALSE`
 
 	// queryGetGroupMessageSnapshot 取群消息真值（举报快照生成依据，spec
 	// api_spec_types.md ReportSnapshot：服务端受理举报时生成并冻结）。
