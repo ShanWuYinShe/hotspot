@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Service struct {
@@ -29,14 +30,22 @@ func (s *Service) AccessTTL() time.Duration  { return s.accessTTL }
 func (s *Service) RefreshTTL() time.Duration { return s.refreshTTL }
 
 // IsUserBanned reports whether the user is currently banned. Returns false
-// when no ban checker is configured. A checker error is treated as not banned
-// (fail-open) so a transient DB issue does not lock out every request.
+// when no ban checker is configured. The checker reads the persisted ban fact
+// directly from Postgres (admin repository) — there is no cache layer in
+// front of it. A checker error is treated as not banned (fail-open) so a
+// transient DB issue does not lock out every request, but the failure is
+// logged so silent security degradations stay observable (P2-3).
 func (s *Service) IsUserBanned(ctx context.Context, userID string) bool {
 	if s.banChecker == nil {
 		return false
 	}
 	banned, err := s.banChecker.IsBanned(ctx, userID)
-	return err == nil && banned
+	if err != nil {
+		observability.L().Warn("ban check failed, failing open",
+			"user_id", userID, "error", err)
+		return false
+	}
+	return banned
 }
 
 type AuthResult struct {

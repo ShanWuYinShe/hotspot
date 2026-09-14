@@ -221,9 +221,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// 封禁检查（HTTP 中间件不覆盖 WS 握手路径）：被封禁账号不得建立实时连接，
 	// 否则封禁仅剩 HTTP 生效、实时通道（订阅/typing/事件）完全绕过。
-	// fail-open 与 RequiredAuth 同口径：ban checker 瞬时故障时不锁死全部连接。
+	// fail-open 与 RequiredAuth 同口径：ban checker 瞬时故障时不锁死全部连接，
+	// 但故障必须记日志（P2-3：安全降级不可静默）。
 	if h.bans != nil {
-		if banned, err := h.bans.IsBanned(ctx, principal.UserID); err == nil && banned {
+		banned, err := h.bans.IsBanned(ctx, principal.UserID)
+		if err != nil {
+			observability.L().Warn("ws: ban check failed, failing open",
+				"user_id", principal.UserID, "error", err)
+		} else if banned {
 			observability.L().Warn("ws: auth rejected, account banned", "user_id", principal.UserID)
 			_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSAccountBanned, Message: "账号已被封禁", Severity: "fatal", Retryable: false}})
 			sendCloseFrame(conn, 4003, "account banned")
