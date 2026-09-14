@@ -11,6 +11,8 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type ReadService interface {
@@ -148,8 +150,20 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 		}
 	}
 	event := realtime.Event{Type: realtime.EventTypePrivateMessageNew, Payload: payload}
-	realtime.DefaultHub().BroadcastToUser(req.TargetUserID, event)
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
+	// 收发双方各一次 BroadcastToUser（每次内部 record+publish 两次 Redis 往返），
+	// 串行即 4 RTT（审计 perf P1-4）。两条广播目标集合不相交、同一事件，
+	// 并行无顺序语义；同步等待两条完成才返回，失败处理与现状一致（广播失败
+	// 不影响消息已落库的返回结果）。不异步化：HTTP 响应前必须保证投递已发起。
+	group, _ := errgroup.WithContext(context.Background())
+	group.Go(func() error {
+		realtime.DefaultHub().BroadcastToUser(req.TargetUserID, event)
+		return nil
+	})
+	group.Go(func() error {
+		realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
+		return nil
+	})
+	_ = group.Wait()
 	return msg, nil
 }
 
