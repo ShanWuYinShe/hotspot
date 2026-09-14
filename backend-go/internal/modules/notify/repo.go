@@ -18,6 +18,11 @@ type Repository interface {
 	UnreadCount(context.Context, string) (UnreadSummaryResult, error)
 	MarkAsRead(context.Context, string, []string) error
 	MarkAllRead(context.Context, string) error
+	// PruneReadBefore 物理删除「已读且 created_at 早于 before」的通知，返回
+	// 删除行数。供后台 prune sweeper 调用（防无限增长）。注意表无 updated_at
+	// 列，以 created_at 近似已读年龄——实际已读时间不早于 created_at，该口径
+	// 只会少删（保守）。
+	PruneReadBefore(ctx context.Context, before time.Time) (int64, error)
 }
 
 func normalizeNotifyItem(item NotifyItem) NotifyItem {

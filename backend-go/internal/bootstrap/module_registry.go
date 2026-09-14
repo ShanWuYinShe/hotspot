@@ -53,6 +53,11 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// 通知服务全应用单一实例：此前 moments/groups/users/admin 各自再建一份
 	// notify.Service（共 5 个实例并存），装配属 bootstrap 职责，现统一注入。
 	notificationService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
+	// 通知后台清理（NOTIFY_PRUNE_ENABLED，默认开启）：每 24h 删除已读超 90 天
+	// 的通知，防止表无限增长；goroutine 绑定 ctx 随优雅停机退出。
+	if cfg.NotifyPruneEnabled {
+		notificationService.StartPruneSweeper(ctx)
+	}
 	usersModule := users.NewModule(factory, sharedAppConfig, notificationService)
 	groupsModule := groups.NewModule(factory, usersModule.Service, notificationService)
 	mediaModule := media.NewModule(cfg, factory)

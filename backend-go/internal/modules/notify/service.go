@@ -2,12 +2,30 @@ package notify
 
 import (
 	"context"
+	"sync"
+	"time"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/types"
+	"hotspot/backend-go/internal/platform/worker"
+)
+
+// 通知 prune 参数（保守值）：已读通知保留 90 天后物理删除，每 24h 扫一轮。
+// 通知只增不删会无限增长（notifications 表随交互历史线性膨胀），删除仅限
+// 「已读 + 创建超保留期」——未读通知与近期通知不受影响。表无 updated_at 列，
+// 以 created_at 近似已读年龄，实际只会少删（见 repo.PruneReadBefore）。
+const (
+	notifyPruneRetention = 90 * 24 * time.Hour
+	notifyPruneInterval  = 24 * time.Hour
+)
+
+var (
+	pruneMu      sync.Mutex
+	pruneCancel  context.CancelFunc
+	pruneStarted bool
 )
 
 type Service struct {
@@ -17,6 +35,58 @@ type Service struct {
 
 func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
+
+// StartPruneSweeper 启动后台 prune（对齐 idempotency.StartSweeper 模式）：
+// 每 notifyPruneInterval 物理删除一次「已读且超 notifyPruneRetention」的
+// 通知。重复调用为 no-op；goroutine 绑定 ctx（应用根上下文），优雅停机时
+// 退出。调用方（bootstrap）经配置开关决定是否启动。
+func (s *Service) StartPruneSweeper(ctx context.Context) {
+	pruneMu.Lock()
+	defer pruneMu.Unlock()
+	if pruneStarted {
+		return
+	}
+	sweepCtx, cancel := context.WithCancel(ctx)
+	pruneCancel = cancel
+	pruneStarted = true
+	worker.Go("notify.prune_sweeper", func() { s.runPruneSweeper(sweepCtx) })
+}
+
+// StopPruneSweeper 停止后台 prune（测试用）。
+func StopPruneSweeper() {
+	pruneMu.Lock()
+	defer pruneMu.Unlock()
+	if pruneCancel != nil {
+		pruneCancel()
+		pruneCancel = nil
+	}
+	pruneStarted = false
+}
+
+func (s *Service) runPruneSweeper(ctx context.Context) {
+	ticker := time.NewTicker(notifyPruneInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.pruneOnce(time.Now())
+		}
+	}
+}
+
+// pruneOnce 执行一轮删除；失败只记日志（下轮重试，尽力而为）。
+func (s *Service) pruneOnce(now time.Time) {
+	pruned, err := s.repo.PruneReadBefore(context.Background(), now.Add(-notifyPruneRetention))
+	if err != nil {
+		observability.L().Warn("notify.prune failed", "error", err)
+		return
+	}
+	if pruned > 0 {
+		observability.L().Info("notify.prune completed", "pruned", pruned)
+	}
+}
 
 func (s *Service) SetNearbyNotifyProvider(p NearbyNotifySettingsProvider) { s.nearbyNotifyProvider = p }
 

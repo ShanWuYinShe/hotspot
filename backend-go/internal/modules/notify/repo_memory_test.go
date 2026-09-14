@@ -3,6 +3,9 @@ package notify
 import (
 	"context"
 	"testing"
+	"time"
+
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // TestInMemoryAppendMany_FansOutToAllUsers verifies AppendMany delivers the
@@ -134,5 +137,37 @@ func TestInMemoryAppendBatchPerUser_LengthMismatchIsError(t *testing.T) {
 	repo := NewInMemoryRepository()
 	if err := repo.AppendBatchPerUser(context.Background(), []string{"u1"}, []NotifyItem{}); err == nil {
 		t.Fatal("expected length mismatch error")
+	}
+}
+
+// PruneReadBefore：只删「已读且 created_at 超期」的通知，未读与新鲜通知保留。
+func TestPruneReadBeforeDeletesOnlyExpiredRead(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+	old := time.Now().UTC().Add(-100 * 24 * time.Hour).Format(time.RFC3339)
+	fresh := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
+	appendAt := func(userID, id, createdAt string, isRead bool) {
+		if err := repo.Append(ctx, userID, NotifyItem{NotifyID: id, Type: "new_follower", IsRead: isRead, CreatedAt: createdAt}); err != nil {
+			t.Fatalf("append: %v", err)
+		}
+	}
+	appendAt("u1", "notif_old_read", old, true)    // 删
+	appendAt("u1", "notif_old_unread", old, false) // 留（未读）
+	appendAt("u1", "notif_fresh_read", fresh, true)
+	appendAt("u2", "notif_other", old, true) // 删（跨用户）
+
+	pruned, err := repo.PruneReadBefore(ctx, time.Now().UTC().Add(-90*24*time.Hour))
+	if err != nil {
+		t.Fatalf("prune: %v", err)
+	}
+	if pruned != 2 {
+		t.Fatalf("expected 2 pruned, got %d", pruned)
+	}
+	items, err := repo.List(ctx, "u1", NotifyListRequest{Pagination: &types.PaginationParams{Limit: 10}})
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(items.Items) != 2 {
+		t.Fatalf("expected 2 remaining for u1, got %d", len(items.Items))
 	}
 }

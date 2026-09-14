@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -57,6 +58,7 @@ func (r *notifyListCaptureRepo) UnreadCount(context.Context, string) (UnreadSumm
 
 func (r *notifyListCaptureRepo) MarkAsRead(context.Context, string, []string) error { return nil }
 func (r *notifyListCaptureRepo) MarkAllRead(context.Context, string) error          { return nil }
+func (r *notifyListCaptureRepo) PruneReadBefore(context.Context, time.Time) (int64, error) { return 0, nil }
 func (r *notifyListCaptureRepo) MarkAllReadByType(context.Context, string, string) error {
 	return nil
 }
@@ -307,4 +309,33 @@ func TestServiceListReturnsRepositoryError(t *testing.T) {
 	if _, err := service.List(ctx, NotifyListRequest{}); !errors.Is(err, repo.listErr) {
 		t.Fatalf("expected repo error, got %v", err)
 	}
+}
+
+// pruneOnce 调用 repo.PruneReadBefore 并以 now-90d 为截止（保守口径）。
+func TestServicePruneOnceDelegatesWithRetentionCutoff(t *testing.T) {
+	var gotBefore time.Time
+	called := false
+	repo := &pruneCaptureRepo{prune: func(before time.Time) (int64, error) {
+		called = true
+		gotBefore = before
+		return 3, nil
+	}}
+	svc := NewServiceWithRepo(repo)
+	svc.pruneOnce(time.Now())
+	if !called {
+		t.Fatal("expected prune to be invoked")
+	}
+	age := time.Since(gotBefore)
+	if age < 89*24*time.Hour || age > 91*24*time.Hour {
+		t.Fatalf("expected cutoff ~90d ago, got %v", age)
+	}
+}
+
+type pruneCaptureRepo struct {
+	notifyListCaptureRepo
+	prune func(before time.Time) (int64, error)
+}
+
+func (r *pruneCaptureRepo) PruneReadBefore(_ context.Context, before time.Time) (int64, error) {
+	return r.prune(before)
 }

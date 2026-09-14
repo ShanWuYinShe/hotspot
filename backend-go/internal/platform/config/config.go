@@ -64,6 +64,10 @@ type Config struct {
 	// 需按实例数下调以免撞上 Postgres max_connections（默认 100）。
 	PostgresMaxConns int
 	PostgresMinConns int
+	// NotifyPruneEnabled 控制是否启动通知后台清理（NOTIFY_PRUNE_ENABLED）：
+	// 每 24h 物理删除「已读且创建超 90 天」的通知，防止 notifications 表无限
+	// 增长（删除口径保守，见 notify repo.PruneReadBefore）。默认开启。
+	NotifyPruneEnabled bool
 }
 
 func Load() Config {
@@ -100,8 +104,9 @@ func Load() Config {
 		BcryptCost:             bcryptCostOrDefault("BCRYPT_COST", defaultBcryptCost),
 		// Postgres 连接池尺寸。多实例部署时各实例独立持池，默认 25 在 3 实例
 		// 下已逼近 Postgres 默认 max_connections=100，需要按实例数下调。
-		PostgresMaxConns: envIntOrDefault("POSTGRES_MAX_CONNS", defaultPostgresMaxConns),
-		PostgresMinConns: envIntOrDefault("POSTGRES_MIN_CONNS", defaultPostgresMinConns),
+		PostgresMaxConns:   envIntOrDefault("POSTGRES_MAX_CONNS", defaultPostgresMaxConns),
+		PostgresMinConns:   envIntOrDefault("POSTGRES_MIN_CONNS", defaultPostgresMinConns),
+		NotifyPruneEnabled: envBoolOrDefault("NOTIFY_PRUNE_ENABLED", true),
 	}
 }
 

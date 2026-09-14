@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -132,4 +133,22 @@ func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) err
 		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, queryMarkAllNotifysRead, userID)
+}
+
+// PruneReadBefore 物理删除已读且创建早于 before 的通知（repo.go 接口注释）。
+func (r *PostgresRepository) PruneReadBefore(ctx context.Context, before time.Time) (int64, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	rows, err := queryable.Query(ctx, queryPruneReadNotifys, before.UTC())
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	var pruned int64
+	for rows.Next() {
+		pruned++
+	}
+	return pruned, rows.Err()
 }

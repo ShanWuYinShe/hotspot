@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -44,6 +45,9 @@ func (r *notifyErrorRepo) MarkAsRead(context.Context, string, []string) error {
 }
 func (r *notifyErrorRepo) MarkAllRead(context.Context, string) error {
 	return r.markAllErr
+}
+func (r *notifyErrorRepo) PruneReadBefore(context.Context, time.Time) (int64, error) {
+	return 0, nil
 }
 
 func withPrincipal(req *http.Request) *http.Request {

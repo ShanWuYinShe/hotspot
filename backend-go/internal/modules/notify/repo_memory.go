@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 	"sync"
+	"time"
 )
 
 type InMemoryRepository struct {
@@ -138,6 +139,30 @@ func (r *InMemoryRepository) MarkAllRead(_ context.Context, userID string) error
 		r.items[userID][i].IsRead = true
 	}
 	return nil
+}
+
+// PruneReadBefore 物理删除已读且创建早于 before 的通知（repo.go 接口注释）。
+func (r *InMemoryRepository) PruneReadBefore(_ context.Context, before time.Time) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var pruned int64
+	for userID, items := range r.items {
+		kept := items[:0]
+		for _, item := range items {
+			createdAt, err := time.Parse(time.RFC3339, item.CreatedAt)
+			if err == nil && item.IsRead && createdAt.Before(before) {
+				pruned++
+				continue
+			}
+			kept = append(kept, item)
+		}
+		if len(kept) == 0 {
+			delete(r.items, userID)
+			continue
+		}
+		r.items[userID] = kept
+	}
+	return pruned, nil
 }
 
 func bucket(notifyType string) string {
