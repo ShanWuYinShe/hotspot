@@ -80,6 +80,8 @@ export struct SearchPage {
 
   private readonly RECENT_SEARCHES_KEY: string = 'search_recent';
   @State hasSearched: boolean = false;
+  /** 搜索失败内联错误态（P2-4）：结果区展示 EmptyState + 重试，替代纯 toast */
+  @State searchError: string = '';
   @State suggestItems: SearchSuggestItem[] = [];
   private suggestTimerId: number = 0;
   @State userActionPendingIds: string[] = [];
@@ -271,6 +273,7 @@ export struct SearchPage {
 
     this.isLoading = true;
     this.hasSearched = true;
+    this.searchError = '';
     this.keyword = trimmedKeyword;
     this.suggestItems = [];
     this.rememberSearch(trimmedKeyword);
@@ -336,10 +339,16 @@ export struct SearchPage {
           });
           this.topicResults = Array.from(topicSet);
         }
+
+        // 三路全部业务失败：结果区转入错误态，避免误显示「未找到相关内容」空态
+        if (usersResp.code !== 0 && groupsResp.code !== 0 && momentsResp.code !== 0) {
+          this.searchError = getErrorMessage(momentsResp, getErrorMessage(usersResp, '搜索失败，请稍后重试'));
+        }
       });
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `搜索失败: ${error}`);
-      SystemToast.showError('搜索失败', this.getUIContext());
+      // 内联错误态承载失败反馈（可重试），不再叠加 toast 双重提示
+      this.searchError = '搜索失败，请检查网络后重试';
     } finally {
       this.isLoading = false;
     }
@@ -474,6 +483,19 @@ export struct SearchPage {
           .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
         } else {
           Column() {
+            if (this.searchError.length > 0) {
+              // 搜索失败内联错误态（P2-4）：EmptyState + 重试动作，替代纯 toast
+              EmptyState({
+                icon: AppIcon.WARNING,
+                title: '搜索失败',
+                message: this.searchError,
+                actionLabel: '重试',
+                onAction: () => { this.doSearch(); },
+                fillMode: true
+              })
+                .width('100%')
+                .layoutWeight(1)
+            } else {
             TabsPillGroup({
               tabs: [
                 { label: '全部' } as TabItem,
@@ -501,6 +523,7 @@ export struct SearchPage {
               this.TopicResultList()
             } else {
               this.GroupResultList()
+            }
             }
           }
           .width('100%')
