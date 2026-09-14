@@ -85,9 +85,13 @@ LIMIT $5`
 		FROM groups g
 	JOIN group_members gm ON gm.group_id = g.group_id
 	LEFT JOIN group_message_read_state grs ON grs.group_id = g.group_id AND grs.user_id = $1
-	LEFT JOIN (
-		SELECT group_id, COUNT(*)::int AS members_count FROM group_members GROUP BY group_id
-	) mem ON mem.group_id = g.group_id
+	-- members_count 走 LATERAL 逐行计数（PK 前缀索引探测），而非此前对整个
+	-- group_members 表的无过滤 GROUP BY 全表聚合 + hash aggregate——后者与用户
+	-- 页大小无关、恒为全表扫描，外层 keyset 分页形同虚设（审计 perf P1-3）。
+	-- 外层 WHERE gm.user_id = $1 已把行集限定为当前页，LATERAL 只跑页大小次数。
+	LEFT JOIN LATERAL (
+		SELECT COUNT(*)::int AS members_count FROM group_members gm2 WHERE gm2.group_id = g.group_id
+	) mem ON TRUE
 	LEFT JOIN LATERAL (
 		SELECT m.message_id, m.type, m.content, u.user_id AS sender_user_id, u.nickname AS sender_nickname, u.avatar_url AS sender_avatar_url, m.sent_at
 		FROM group_messages m
