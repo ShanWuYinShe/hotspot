@@ -2,7 +2,8 @@ package users
 
 import (
 	"context"
-	"strings"
+	"errors"
+	"fmt"
 	"time"
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
@@ -12,9 +13,19 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/types"
 )
+
+// AccountCredentialWriter 由 auth 模块实现（bootstrap 注入，对齐
+// SetContentProviders 等跨模块注入模式）：为既有用户写入登录凭证。
+type AccountCredentialWriter interface {
+	// AttachCredentials 将 login_id+password 写入登录凭证存储（auth_accounts）。
+	// login_id 已被占用时返回包装了 ErrLoginIDTaken 的错误（映射 10400）；
+	// ctx 携带事务时实现须加入该事务，与 user_type 同事务落库。
+	AttachCredentials(ctx context.Context, userID, loginID, password string) error
+}
 
 type Service struct {
 	repo          Repository
@@ -24,6 +35,17 @@ type Service struct {
 	// nil 时对应端点按 ErrInvalidRequest 之外的服务错误拒绝（不可静默空结果）。
 	groupsByUser  GroupsByUserProvider
 	momentsByUser MomentsByUserProvider
+	// 凭证写入（upgrade），bootstrap 注入 auth 模块实现 + 事务执行器；
+	// Upgrade 依赖二者，缺一按服务错误拒绝（见 ErrUpgradeUnavailable）。
+	credentials AccountCredentialWriter
+	runInTx     persistence.TxRunner
+}
+
+// SetCredentialWriter 注入凭证写入实现与事务执行器（bootstrap 装配）。
+// Upgrade 在同一事务内写凭证与 user_type，二者须同时提供。
+func (s *Service) SetCredentialWriter(w AccountCredentialWriter, runInTx persistence.TxRunner) {
+	s.credentials = w
+	s.runInTx = runInTx
 }
 
 // SetContentProviders 注入跨模块读聚合实现（groups/moments Service）。
@@ -322,16 +344,27 @@ func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) (Accou
 	if profile.UserType == UserTypeNormal {
 		return AccountData{}, ErrConflict
 	}
-	profile.UserType = UserTypeNormal
-	// 推断规则（spec api_spec_user.md AccountData.email/phone）：
-	// 含 '@' → email；纯数字 → phone；用户名 → 两字段均省略。
-	switch {
-	case strings.Contains(req.LoginID, "@"):
-		profile.Email = req.LoginID
-	case isNumericLoginID(req.LoginID):
-		profile.Phone = req.LoginID
+	// 凭证写入（spec api_spec_user.md → upgrade 契约级语义：升级成功后
+	// login_id+password 落登录凭证，否则升级用户无法重新登录）依赖 bootstrap
+	// 注入的 auth 模块实现；未接线时拒绝升级，不可静默只改 user_type。
+	if s.credentials == nil || s.runInTx == nil {
+		observability.L().Error("users.upgrade failed: credential writer not wired", "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return AccountData{}, ErrUpgradeUnavailable
 	}
-	if err := s.repo.PutProfile(ctx, profile); err != nil {
+	profile.UserType = UserTypeNormal
+	// login_id 为用户名型（手机号/邮箱已被 handler 依 spec 拦截），故不再
+	// 从 login_id 推断 profile.email/phone。凭证与 user_type 在同一事务落库：
+	// 先写凭证，login_id 占用（唯一约束 → 10400）时整个事务回滚。
+	writeAll := func(txCtx context.Context) error {
+		if err := s.credentials.AttachCredentials(txCtx, principal.UserID, req.LoginID, req.Password); err != nil {
+			if errors.Is(err, ErrLoginIDTaken) {
+				return ErrLoginIDTaken
+			}
+			return fmt.Errorf("users.Upgrade: attach credentials: %w", err)
+		}
+		return s.repo.PutProfile(txCtx, profile)
+	}
+	if err := s.runInTx(ctx, writeAll); err != nil {
 		observability.L().Error("users.upgrade failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return AccountData{}, err
 	}

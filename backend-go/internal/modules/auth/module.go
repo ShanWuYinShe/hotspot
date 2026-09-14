@@ -34,6 +34,10 @@ func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Fact
 // Redis 实现，保证多实例共享计数与重启不丢锁定状态；缺省为进程内实现。
 func (m *Module) SetLoginTracker(tracker FailedLoginTracker) { m.service.loginTracker = tracker }
 
+// Service 暴露模块服务（bootstrap 跨模块注入用，如 users.Upgrade 的
+// 凭证写入，spec api_spec_user.md → upgrade）。
+func (m *Module) Service() *Service { return m.service }
+
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/auth", func(authRouter chi.Router) {
 		authRouter.Group(func(group chi.Router) {

@@ -665,6 +665,10 @@ func (r *recordingAuthRepo) Register(context.Context, RegisterParams) (Account, 
 	return r.registerAccount, nil
 }
 
+func (r *recordingAuthRepo) AttachCredential(context.Context, string, string, string) error {
+	return nil
+}
+
 func (r *recordingAuthRepo) CreateGuest(context.Context, GuestParams) (Account, error) {
 	return r.guestAccount, nil
 }

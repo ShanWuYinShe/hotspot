@@ -80,6 +80,29 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 // same repo method run against either a tx (when RunInTransaction is active) or
 // the pool, without the caller caring which.
 
+// AttachCredential 为既有用户追加登录凭证（users/upgrade 复用注册的凭证写入：
+// 同一张 auth_accounts 表、同一 bcrypt 口径）。INSERT 撞 login_id 唯一约束时
+// 返回 ErrLoginIDConflict（users 侧映射 10400）；ctx 携带事务时自动加入该事务，
+// 使凭证与 user_type 同事务落库。
+func (r *PostgresRepository) AttachCredential(ctx context.Context, userID, loginID, password string) error {
+	queryable, ok := r.queryable(ctx)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	hashed, err := hashPassword(password)
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	if err := queryable.Exec(ctx, queryInsertAuthAccount, loginID, userID, hashed, now, now); err != nil {
+		if persistence.IsUniqueViolation(err) {
+			return ErrLoginIDConflict
+		}
+		return fmt.Errorf("auth.AttachCredential: insert: %w", err)
+	}
+	return nil
+}
+
 func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams) (Account, error) {
 	userID, err := generateUserID()
 	if err != nil {

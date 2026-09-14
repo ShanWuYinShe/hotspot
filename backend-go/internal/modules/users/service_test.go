@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
@@ -446,6 +447,25 @@ func TestServiceDeleteAccountRejectsWrongConfirmation(t *testing.T) {
 
 // --- Upgrade ---
 
+// stubCredentialWriter 记录 AttachCredentials 调用（upgrade 凭证写入测试桩）。
+type stubCredentialWriter struct {
+	calls   []UpgradeAccountRequest
+	userIDs []string
+	err     error
+}
+
+func (w *stubCredentialWriter) AttachCredentials(_ context.Context, userID, loginID, password string) error {
+	if w.err != nil {
+		return w.err
+	}
+	w.userIDs = append(w.userIDs, userID)
+	w.calls = append(w.calls, UpgradeAccountRequest{LoginID: loginID, Password: password})
+	return nil
+}
+
+// noopTxRunner 直通事务执行器（内存测试无需真实事务）。
+func noopTxRunner(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
+
 func TestServiceUpgradeRejectsAlreadyNormal(t *testing.T) {
 	repo := &stubUserRepo{profile: testProfile("u1"), profileFound: true}
 	svc := NewServiceWithRepo(repo)
@@ -456,33 +476,66 @@ func TestServiceUpgradeRejectsAlreadyNormal(t *testing.T) {
 	}
 }
 
-func TestServiceUpgradeWithEmailWritesToEmail(t *testing.T) {
+// spec api_spec_user.md → upgrade 契约级语义：升级须把 login_id+password 落
+// 登录凭证（auth_accounts），且与 user_type 同事务写入。
+func TestServiceUpgradeWritesCredentials(t *testing.T) {
 	tempProfile := testProfile("u1")
 	tempProfile.UserType = UserTypeTemp
 	repo := &stubUserRepo{profile: tempProfile, profileFound: true}
 	svc := NewServiceWithRepo(repo)
 	svc.SetContentProviders(repo, repo)
-	_, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "test@test.com", Password: "pass"})
+	writer := &stubCredentialWriter{}
+	svc.SetCredentialWriter(writer, noopTxRunner)
+	data, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "username01", Password: "pass"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if repo.profile.Email != "test@test.com" {
-		t.Fatalf("expected email to be set, got %q", repo.profile.Email)
+	if len(writer.calls) != 1 {
+		t.Fatalf("expected exactly one AttachCredentials call, got %d", len(writer.calls))
+	}
+	if writer.calls[0].LoginID != "username01" || writer.calls[0].Password != "pass" {
+		t.Fatalf("unexpected credential payload: %+v", writer.calls[0])
+	}
+	if writer.userIDs[0] != "u1" {
+		t.Fatalf("expected credentials attached to u1, got %q", writer.userIDs[0])
+	}
+	if repo.profile.UserType != UserTypeNormal {
+		t.Fatalf("expected user_type normal, got %q", repo.profile.UserType)
+	}
+	if data.UserType != UserTypeNormal {
+		t.Fatalf("expected response user_type normal, got %q", data.UserType)
 	}
 }
 
-func TestServiceUpgradeWithPhoneWritesToPhone(t *testing.T) {
+// 凭证写入依赖未接线时升级必须拒绝（只改 user_type 不落凭证会导致升级用户
+// 无法重新登录）。
+func TestServiceUpgradeWithoutCredentialWriterFails(t *testing.T) {
 	tempProfile := testProfile("u1")
 	tempProfile.UserType = UserTypeTemp
 	repo := &stubUserRepo{profile: tempProfile, profileFound: true}
 	svc := NewServiceWithRepo(repo)
 	svc.SetContentProviders(repo, repo)
-	_, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "13800138000", Password: "pass"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	_, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "username01", Password: "pass"})
+	if !errors.Is(err, ErrUpgradeUnavailable) {
+		t.Fatalf("expected ErrUpgradeUnavailable, got %v", err)
 	}
-	if repo.profile.Phone != "13800138000" {
-		t.Fatalf("expected phone to be set, got %q", repo.profile.Phone)
+}
+
+// login_id 已被占用（凭证写入返回 ErrLoginIDTaken）→ 10400，user_type 不变。
+func TestServiceUpgradeLoginIDTaken(t *testing.T) {
+	tempProfile := testProfile("u1")
+	tempProfile.UserType = UserTypeTemp
+	repo := &stubUserRepo{profile: tempProfile, profileFound: true}
+	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
+	writer := &stubCredentialWriter{err: fmt.Errorf("wrap: %w", ErrLoginIDTaken)}
+	svc.SetCredentialWriter(writer, noopTxRunner)
+	_, err := svc.Upgrade(userCtx("u1"), UpgradeAccountRequest{LoginID: "taken01", Password: "pass"})
+	if !errors.Is(err, ErrLoginIDTaken) {
+		t.Fatalf("expected ErrLoginIDTaken, got %v", err)
+	}
+	if repo.profile.UserType == UserTypeNormal {
+		t.Fatalf("expected user_type to stay temp on conflict")
 	}
 }
 

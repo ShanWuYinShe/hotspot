@@ -49,6 +49,9 @@ type stubAuthRepo struct {
 func (r *stubAuthRepo) Register(_ context.Context, _ RegisterParams) (Account, error) {
 	return r.registerAccount, r.registerErr
 }
+func (r *stubAuthRepo) AttachCredential(context.Context, string, string, string) error {
+	return nil
+}
 func (r *stubAuthRepo) CreateGuest(_ context.Context, _ GuestParams) (Account, error) {
 	return r.guestAccount, r.guestErr
 }
@@ -169,6 +172,35 @@ func TestServiceRegisterPropagatesRepoError(t *testing.T) {
 	svc, _ := newTestService(repo)
 	_, err := svc.Register(context.Background(), RegisterRequest{LoginID: "dup"}, defaultMeta())
 	if !errors.Is(err, ErrLoginIDConflict) {
+		t.Fatalf("expected login id conflict, got %v", err)
+	}
+}
+
+// --- AttachCredentials（users/upgrade 凭证写入） ---
+
+// AttachCredential 写入的凭证须可用于 Authenticate（spec api_spec_user.md →
+// upgrade 契约级语义：升级后该凭证可登录）。
+func TestServiceAttachCredentialsEnablesLogin(t *testing.T) {
+	cfg := testConfig()
+	repo := NewInMemoryRepository()
+	svc := NewService(platformauth.NewService(cfg), repo, cfg)
+	if err := svc.AttachCredentials(context.Background(), "u1", "username01", "secret"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := repo.Authenticate(context.Background(), "username01", "secret"); err != nil {
+		t.Fatalf("expected credential to authenticate after upgrade, got %v", err)
+	}
+}
+
+// login_id 已被占用 → ErrLoginIDConflict（users 侧映射 10400）。
+func TestServiceAttachCredentialsRejectsTakenLoginID(t *testing.T) {
+	cfg := testConfig()
+	repo := NewInMemoryRepository()
+	svc := NewService(platformauth.NewService(cfg), repo, cfg)
+	if err := svc.AttachCredentials(context.Background(), "u1", "taken01", "secret"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if err := svc.AttachCredentials(context.Background(), "u2", "taken01", "other"); !errors.Is(err, ErrLoginIDConflict) {
 		t.Fatalf("expected login id conflict, got %v", err)
 	}
 }

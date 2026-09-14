@@ -113,6 +113,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		// 登录失败锁定切 Redis（P2-2）：多实例共享计数，重启不丢锁定状态。
 		authModule.SetLoginTracker(auth.NewRedisLoginTracker(rdb))
 	}
+	// upgrade 凭证写入接线（spec api_spec_user.md → upgrade 契约级语义）：
+	// users.Upgrade 在同一事务内写 auth_accounts 凭证与 user_type。
+	usersModule.Service.SetCredentialWriter(upgradeCredentialWriter{svc: authModule.Service()}, persistence.NewTxRunner(factory))
 	adminModule := admin.NewModule(factory, sharedAppConfig, notificationService)
 	// 举报快照源接线（spec api_spec_types.md ReportSnapshot：服务端生成）：
 	// 群聊 + 私聊两个消息源在各自模块构造完成后注入 reports；mediaFiles 经

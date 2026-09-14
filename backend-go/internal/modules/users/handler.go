@@ -94,6 +94,9 @@ func apiErrorFromService(err error) *httpx.APIError {
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}
 	case errors.Is(err, ErrBlockedTag):
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "标签包含被屏蔽内容"}
+	case errors.Is(err, ErrLoginIDTaken):
+		// 10400（spec api_spec_user.md → upgrade：login_id 已被占用）
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "login_id 已被占用"}
 	case errors.Is(err, ErrConflict):
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "业务冲突"}
 	case errors.Is(err, ErrInvalidRequest):

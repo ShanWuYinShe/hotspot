@@ -38,6 +38,10 @@ type GuestParams struct {
 
 type Repository interface {
 	Register(context.Context, RegisterParams) (Account, error)
+	// AttachCredential 为既有用户追加登录凭证（spec api_spec_user.md →
+	// upgrade：升级须把 login_id+password 落 auth_accounts）。与 Register
+	// 不同，不创建 profile/settings；login_id 已被占用返回 ErrLoginIDConflict。
+	AttachCredential(ctx context.Context, userID, loginID, password string) error
 	CreateGuest(context.Context, GuestParams) (Account, error)
 	Authenticate(context.Context, string, string) (Account, error)
 	UpdateLoginMeta(context.Context, string, string, string) error

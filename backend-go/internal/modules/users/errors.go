@@ -12,4 +12,10 @@ var (
 	ErrInvalidRequest = errors.New("users: invalid request")
 	// ErrBlockedTag 用户资料 tags 含被屏蔽标签（10400）。
 	ErrBlockedTag = errors.New("users: tags contain blocked tag")
+	// ErrLoginIDTaken 升级时 login_id 已被占用（spec api_spec_user.md →
+	// upgrade 错误码 10400）。由凭证写入实现（auth 模块）包装返回。
+	ErrLoginIDTaken = errors.New("users: login_id already taken")
+	// ErrUpgradeUnavailable 凭证写入依赖（auth 模块）未接线，升级被拒绝——
+	// 只改 user_type 不落凭证会导致升级用户无法重新登录（spec 契约级语义）。
+	ErrUpgradeUnavailable = errors.New("users: credential writer not wired")
 )

@@ -88,6 +88,30 @@ func (r *InMemoryRepository) Register(_ context.Context, params RegisterParams) 
 	return account.Account, nil
 }
 
+// AttachCredential 为既有用户追加登录凭证（users/upgrade）。login_id 已存在
+// 返回 ErrLoginIDConflict（对齐 PG 唯一约束语义）；目标用户无账号记录时按
+// CreateGuest 的内存形态补一条（LoginID/PasswordHash 回填到同一记录）。
+func (r *InMemoryRepository) AttachCredential(_ context.Context, userID, loginID, password string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, exists := r.accountsByLogin[loginID]; exists {
+		return ErrLoginIDConflict
+	}
+	hashed, err := hashPassword(password)
+	if err != nil {
+		return err
+	}
+	account, ok := r.accountsByUser[userID]
+	if !ok {
+		account = accountRecord{Account: Account{UserID: userID}}
+	}
+	account.LoginID = loginID
+	account.PasswordHash = hashed
+	r.accountsByUser[userID] = account
+	r.accountsByLogin[loginID] = account
+	return nil
+}
+
 func (r *InMemoryRepository) CreateGuest(_ context.Context, params GuestParams) (Account, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

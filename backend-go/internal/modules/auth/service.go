@@ -164,6 +164,18 @@ func NewServiceWithSource(ctx context.Context, auth *platformauth.Service, repo 
 	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, codeSender: defaultVerificationSender(cfg), loginTracker: newInMemoryLoginTracker(ctx)}
 }
 
+// AttachCredentials 为既有用户写入登录凭证（spec api_spec_user.md → upgrade
+// 契约级语义：升级成功后 login_id+password 落 auth_accounts，此后可用于
+// /public/v1/auth/signin）。复用注册路径的 bcrypt 口径；login_id 已被占用
+// 返回 ErrLoginIDConflict。ctx 携带 users 模块开启的事务时自动加入该事务，
+// 使凭证与 user_type 同事务落库（见 persistence.RunInTransaction 嵌套语义）。
+func (s *Service) AttachCredentials(ctx context.Context, userID, loginID, password string) error {
+	if err := s.repo.AttachCredential(ctx, userID, loginID, password); err != nil {
+		return fmt.Errorf("auth.Service.AttachCredentials: %w", err)
+	}
+	return nil
+}
+
 // GetStatus 返回当前会话状态（spec auth.md → auth/session）。
 // 该端点挂在必须认证节点下；无 principal 属编程/测试错误，按 10100 处理。
 func (s *Service) GetStatus(ctx context.Context) (SessionStatus, error) {
