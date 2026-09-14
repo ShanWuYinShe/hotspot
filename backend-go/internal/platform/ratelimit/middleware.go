@@ -167,9 +167,19 @@ func AllowWebsocketSubscribe(ctx context.Context, userID, connectionID string) (
 	return allow(time.Now().UTC(), rule{name: "ws_subscribe_per_second", strategy: "fixed", limit: limit, window: time.Second, scope: "connection", key: key})
 }
 
+// testBypassWarnOnce 保证「APP_ENV=test 关闭限流」只告警一次：限流被关闭
+// 必须可观测（P3-1），防止环境变量误配导致部署悄悄跑在无限流状态。逐请求
+// 告警会淹没日志，One-shot 足以暴露配置问题。测试基建（docker dev/e2e）
+// 依赖 APP_ENV=test 绕过限流，故保留该开关而非新增专用变量。
+var testBypassWarnOnce sync.Once
+
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if os.Getenv("APP_ENV") == "test" {
+			testBypassWarnOnce.Do(func() {
+				observability.L().Warn("rate limiting DISABLED: APP_ENV=test bypass is active",
+					"env", os.Getenv("APP_ENV"))
+			})
 			next.ServeHTTP(w, r)
 			return
 		}
