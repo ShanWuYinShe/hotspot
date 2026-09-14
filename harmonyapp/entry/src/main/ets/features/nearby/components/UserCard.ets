@@ -7,8 +7,8 @@ import { PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
-import { SystemButton } from '../../../components/SystemButton';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
+import { Pressable } from '../../../components/Pressable';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
@@ -30,7 +30,6 @@ export struct UserCard {
   @Prop mode: string = 'portrait';
   @StorageLink('interaction_user_state') private userStateMap: Record<string, UserRelationState> = {};
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
-  @State private followPressed: boolean = false;
   @State private followInFlight: boolean = false;
 
   private getPalette() {
@@ -79,103 +78,85 @@ export struct UserCard {
 
   @Builder
   private buildFollowButton() {
-    Row() {
-      LucideIcon({
-        icon: this.isFollowing() ? AppIcon.CHECK : AppIcon.ADD,
-        iconSize: DesignConstants.FONT.SIZE.SM,
-        color: this.isFollowing() ? this.getPalette().accentText : DesignConstants.COLOR.WHITE
+    // 按压反馈统一走 Pressable（P3-1）：原双态按压（未关注缩放/已关注边框加深）
+    // 收敛为统一 spring 缩放手感；id 保留在内部 Row 供 NearbyImageCard
+    // CHILD_CONTROL_PREFIX 约定识别行内子控件（属性放内容组件上——自定义组件
+    // 尾随闭包后不可链式属性）
+    Pressable({
+      onPress: () => this.toggleFollow(),
+      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
+    }) {
+      Row() {
+        LucideIcon({
+          icon: this.isFollowing() ? AppIcon.CHECK : AppIcon.ADD,
+          iconSize: DesignConstants.FONT.SIZE.SM,
+          color: this.isFollowing() ? this.getPalette().accentText : DesignConstants.COLOR.WHITE
+        })
+      }
+      .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}follow-${this.getUserId()}`)
+      .width(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
+      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(this.isFollowing() ?
+        this.getPalette().accentMuted :
+        this.getPalette().accentBackground)
+      .border(this.isFollowing() ?
+        { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground } :
+        { width: 0 })
+      .shadow(this.isFollowing() ? undefined : this.getPalette().surfaceShadow)
+      .accessibilityText(this.isFollowing() ?
+        `取消关注 ${this.user.user?.nickname ?? ''}` :
+        `关注 ${this.user.user?.nickname ?? ''}`)
+      // 触控热区：视觉 28vp，responseRegion 外扩到 44vp（不占布局）
+      .responseRegion({
+        x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
+        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
+        width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
       })
     }
-    .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}follow-${this.getUserId()}`)
-    .width(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-    .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-    .borderRadius(DesignConstants.RADIUS.FULL)
-    .justifyContent(FlexAlign.Center)
-    .backgroundColor(this.isFollowing() ?
-      this.getPalette().accentMuted :
-      this.getPalette().accentBackground)
-    .border(this.isFollowing() ?
-      { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground } :
-      { width: 0 })
-    .shadow(this.isFollowing() ? undefined : this.getPalette().surfaceShadow)
-    // 双态按压差异：未跟随 = 缩放按压（「将选中」）；已跟随 = 边框加深（选中态再确认）
-    .border(this.isFollowing() ?
-      {
-        width: this.followPressed ?
-        DesignConstants.BORDER_WIDTH.STRONG :
-        DesignConstants.BORDER_WIDTH.HAIRLINE,
-        color: this.getPalette().accentBackground
-      } :
-      { width: 0 })
-    .scale(!this.isFollowing() && this.followPressed ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-      { x: 1, y: 1 })
-    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.followPressed = true;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.followPressed = false;
-      }
-    })
-    .onClick(() => this.toggleFollow())
-    // 触控热区：视觉 28vp，responseRegion 外扩到 44vp（不占布局）
-    .responseRegion({
-      x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
-      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
-      width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
-      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-    })
-    .accessibilityText(this.isFollowing() ?
-      `取消关注 ${this.user.user?.nickname ?? ''}` :
-      `关注 ${this.user.user?.nickname ?? ''}`)
   }
 
   /** compact 形态全宽关注钮（对齐前端 nearby/+page w-full rounded-md py-1 text-xxs） */
   @Builder
   private buildCompactFollowButton() {
-    Row({ space: DesignConstants.SPACING.HALF }) {
-      if (this.isFollowing()) {
-        LucideIcon({
-          icon: AppIcon.CHECK,
-          iconSize: DesignConstants.FONT.SIZE.XS,
-          paletteRole: 'textSecondary'
-        })
-        Text('已关注')
-          .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getPalette().textSecondary)
-      } else {
-        Text('关注')
-          .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getPalette().accentText)
+    // 按压反馈统一走 Pressable（P3-1，springMotion 手感）
+    Pressable({
+      onPress: () => this.toggleFollow(),
+      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_PILL
+    }) {
+      Row({ space: DesignConstants.SPACING.HALF }) {
+        if (this.isFollowing()) {
+          LucideIcon({
+            icon: AppIcon.CHECK,
+            iconSize: DesignConstants.FONT.SIZE.XS,
+            paletteRole: 'textSecondary'
+          })
+          Text('已关注')
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getPalette().textSecondary)
+        } else {
+          Text('关注')
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getPalette().accentText)
+        }
       }
+      .width('100%')
+      .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
+      .justifyContent(FlexAlign.Center)
+      .borderRadius(DesignConstants.SHAPE.INPUT)
+      .backgroundColor(this.isFollowing() ? this.getPalette().surfaceSubtle : this.getPalette().accentBackground)
+      .border(this.isFollowing() ?
+        { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor } :
+        { width: 0 })
+      .shadow(this.isFollowing() ? { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 } : this.getPalette().surfaceShadow)
+      .accessibilityText(this.isFollowing() ?
+        `取消关注 ${this.user.user?.nickname ?? ''}` :
+        `关注 ${this.user.user?.nickname ?? ''}`)
     }
-    .width('100%')
-    .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
-    .justifyContent(FlexAlign.Center)
-    .borderRadius(DesignConstants.SHAPE.INPUT)
-    .backgroundColor(this.isFollowing() ? this.getPalette().surfaceSubtle : this.getPalette().accentBackground)
-    .border(this.isFollowing() ?
-      { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor } :
-      { width: 0 })
-    .shadow(this.isFollowing() ? { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 } : this.getPalette().surfaceShadow)
-    .scale(this.followPressed ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
-      { x: 1, y: 1 })
-    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.followPressed = true;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.followPressed = false;
-      }
-    })
-    .onClick(() => this.toggleFollow())
-    .accessibilityText(this.isFollowing() ?
-      `取消关注 ${this.user.user?.nickname ?? ''}` :
-      `关注 ${this.user.user?.nickname ?? ''}`)
   }
 
   /** compact 竖排白卡（对齐前端 nearby/+page 身边的新朋友卡：p-3 avatar48 名字/距离/tag 竖排） */

@@ -30,6 +30,8 @@ export struct Pressable {
   disabled: boolean = false;
   /** hover 淡填充色（键鼠外接；不传则无 hover 反馈）。 */
   hoverFill?: ResourceColor = undefined;
+  /** 根节点是否撑满父宽（默认 true 整行按压；行内小控件传 false 自适应内容宽）。 */
+  fillWidth: boolean = true;
 
   @State isPressed: boolean = false;
   @State isHovered: boolean = false;
@@ -40,7 +42,7 @@ export struct Pressable {
     Column() {
       this.content();
     }
-    .width('100%')
+    .width(this.fillWidth ? '100%' : undefined)
     .onAreaChange((_oldValue: Area, newValue: Area) => {
       this.pressWidth = newValue.width as number;
       this.pressHeight = newValue.height as number;

@@ -6,6 +6,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
+import { Pressable } from '../../../components/Pressable';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
@@ -24,7 +25,6 @@ export struct GroupCard {
   @Prop group: GroupItem;
   @Prop featured: boolean = false;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
-  @State private joinPressed: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -104,47 +104,44 @@ export struct GroupCard {
 
   @Builder
   private buildJoinButton() {
-    Text(this.hasJoined() ? '已加入' : '加入')
-      .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}join-${this.getGroupId()}`)
-      .fontSize(DesignConstants.FONT.SIZE.XS)
-      .fontWeight(this.hasJoined() ? DesignConstants.FONT.WEIGHT.REGULAR : DesignConstants.FONT.WEIGHT.SEMIBOLD)
-      .fontColor(this.hasJoined() ?
-        this.getPalette().textSecondary :
-        this.getPalette().accentText)
-      .backgroundColor(this.hasJoined() ?
-        DesignConstants.COLOR.TRANSPARENT :
-        this.getPalette().accentBackground)
-      .border(this.hasJoined() ?
-        { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor } :
-        { width: 0 })
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .padding({
-        left: DesignConstants.SPACING.MD2,
-        right: DesignConstants.SPACING.MD2,
-        top: DesignConstants.SPACING.THREE,
-        bottom: DesignConstants.SPACING.THREE
-      })
-      .shadow(this.hasJoined() ? undefined : this.getPalette().surfaceShadow)
-      .scale(this.joinPressed ?
-        { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
-        { x: 1, y: 1 })
-      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
-      .onTouch((event: TouchEvent) => {
-        if (event.type === TouchType.Down) {
-          this.joinPressed = true;
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          this.joinPressed = false;
-        }
-      })
-      .onClick(() => this.toggleJoin())
-      .accessibilityText(this.hasJoined() ? `退出群组 ${this.group.group?.name ?? ''}` : `加入群组 ${this.group.group?.name ?? ''}`)
-      // 触控热区：视觉高 ~18vp（Text+3vp padding），responseRegion 外扩到 44vp
-      .responseRegion({
-        x: -DesignConstants.SPACING.MD,
-        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
-        width: '130%',
-        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-      })
+    // 按压反馈统一走 Pressable（P3-1，springMotion 手感）；fillWidth:false 自适应
+    // 药丸内容宽（默认撑满会破坏 footer Row 的 Blank 布局）；id 保留在内部 Text
+    // 供 NearbyImageCard CHILD_CONTROL_PREFIX 约定识别行内子控件
+    Pressable({
+      onPress: () => this.toggleJoin(),
+      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_PILL,
+      fillWidth: false
+    }) {
+      Text(this.hasJoined() ? '已加入' : '加入')
+        .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}join-${this.getGroupId()}`)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontWeight(this.hasJoined() ? DesignConstants.FONT.WEIGHT.REGULAR : DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.hasJoined() ?
+          this.getPalette().textSecondary :
+          this.getPalette().accentText)
+        .backgroundColor(this.hasJoined() ?
+          DesignConstants.COLOR.TRANSPARENT :
+          this.getPalette().accentBackground)
+        .border(this.hasJoined() ?
+          { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor } :
+          { width: 0 })
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .padding({
+          left: DesignConstants.SPACING.MD2,
+          right: DesignConstants.SPACING.MD2,
+          top: DesignConstants.SPACING.THREE,
+          bottom: DesignConstants.SPACING.THREE
+        })
+        .shadow(this.hasJoined() ? undefined : this.getPalette().surfaceShadow)
+        .accessibilityText(this.hasJoined() ? `退出群组 ${this.group.group?.name ?? ''}` : `加入群组 ${this.group.group?.name ?? ''}`)
+        // 触控热区：视觉高 ~18vp（Text+3vp padding），responseRegion 外扩到 44vp
+        .responseRegion({
+          x: -DesignConstants.SPACING.MD,
+          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
+          width: '130%',
+          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+        })
+    }
   }
 
   @Builder

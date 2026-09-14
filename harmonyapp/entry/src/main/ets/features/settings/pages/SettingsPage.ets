@@ -1,4 +1,5 @@
 import { GlobalStateManager, KEY_CLIENT_CONFIG, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE } from '../../../core/state/GlobalStateManager';
+import { curves } from '@kit.ArkUI';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -931,8 +932,17 @@ export struct SettingsPage {
     .backgroundColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).surfaceBackground : this.getThemeOptionPalette(option).surfaceSubtle)
     .border({ width: this.isThemeOptionActive(option) ? DesignConstants.BORDER_WIDTH.REGULAR : DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).borderColor })
     .shadow(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).elevatedShadow : this.getThemeOptionPalette(option).surfaceShadow)
-    // 选中底色/边框/阴影切换过渡（对齐 DesktopLayout 导航项，避免硬跳）
-    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
+    // 选中底色/边框/阴影切换过渡与按压缩放合并为一处 spring 动画
+    // （对齐仓内统一 springMotion 手感，P3-1/P3-3：消除重复 .animation）
+    .scale(this.themeCardPressed === option.mode && !this.isThemeOptionActive(option) ?
+      { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } :
+      { x: 1, y: 1 })
+    .animation({
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      )
+    })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.themeCardPressed = option.mode;
@@ -940,10 +950,6 @@ export struct SettingsPage {
         this.themeCardPressed = '';
       }
     })
-    .scale(this.themeCardPressed === option.mode && !this.isThemeOptionActive(option) ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } :
-      { x: 1, y: 1 })
-    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_SMOOTH })
     .onClick(() => {
       this.handleThemeChange(option.mode).catch(() => {
         SystemToast.showError('切换主题失败', this.getUIContext());

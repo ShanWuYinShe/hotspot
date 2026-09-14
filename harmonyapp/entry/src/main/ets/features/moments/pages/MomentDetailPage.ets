@@ -76,8 +76,6 @@ export struct MomentDetailPage {
   @State likePending: boolean = false;
   /** 点赞计数弹跳（count-pop：成功瞬间 1→1.3→1，对齐前端 cst-count-pop） */
   @State likePop: boolean = false;
-  /** 操作条按压键（comment/share 按压缩放反馈） */
-  @State actionBarPressedKey: string = '';
   @State favoritePending: boolean = false;
   @State comments: CommentItem[] = [];
   @State commentText: string = '';
@@ -727,25 +725,27 @@ export struct MomentDetailPage {
           .width('100%')
           .textAlign(TextAlign.Start)
 
-        // 评论点赞 + 回复（对齐前端评论行：点赞 Heart+计数 / 回复按钮）
+        // 评论点赞 + 回复（对齐前端评论行：点赞 Heart+计数 / 回复按钮）；
+        // 点赞按压反馈统一走 Pressable（P3-1）
         Row({ space: DesignConstants.SPACING.MD }) {
-          Row({ space: DesignConstants.SPACING.XS }) {
-            LucideIcon({
-              icon: this.isCommentLiked(comment) ? AppIcon.HEART_FILL : AppIcon.HEART,
-              iconSize: DesignConstants.FONT.SIZE.SM,
-              color: this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
-            })
-            Text(formatCount(this.getCommentLikesCount(comment)))
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+          Pressable({
+            onPress: () => { this.toggleCommentLike(comment.comment_id); },
+            pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON,
+            fillWidth: false
+          }) {
+            Row({ space: DesignConstants.SPACING.XS }) {
+              LucideIcon({
+                icon: this.isCommentLiked(comment) ? AppIcon.HEART_FILL : AppIcon.HEART,
+                iconSize: DesignConstants.FONT.SIZE.SM,
+                color: this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+              })
+              Text(formatCount(this.getCommentLikesCount(comment)))
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+            }
+            .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+            .accessibilityText(this.isCommentLiked(comment) ? '取消点赞评论' : '点赞评论')
           }
-          .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-          .scale(this.commentLikePending.has(comment.comment_id) ?
-            { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-            { x: 1, y: 1 })
-          .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
-          .onClick(() => { this.toggleCommentLike(comment.comment_id); })
-          .accessibilityText(this.isCommentLiked(comment) ? '取消点赞评论' : '点赞评论')
 
           Text('回复')
             .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -850,96 +850,101 @@ export struct MomentDetailPage {
    * 图标基线一致；点赞/评论带计数，收藏/分享纯图标；激活态 accent 色）。
    */
   private buildActionBar(moment: MomentItem) {
+    // 四键按压反馈统一走 Pressable（P3-1，springMotion 手感）；likePending/
+    // favoritePending 保留防重入语义，按压视觉不再由手写 scale 承担
     Row() {
-      // 点赞（Heart + 计数，liked 时 accent）
-      Row({ space: DesignConstants.SPACING.XS }) {
-        LucideIcon({
-          icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
-          iconSize: DesignConstants.FONT.SIZE.LG,
-          color: this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
-        })
-        Text(formatCount(this.getMomentLikesCount(moment)))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
-          .scale(this.likePop ?
-            { x: DesignConstants.INTERACTION.SCALE_LIKE_POP, y: DesignConstants.INTERACTION.SCALE_LIKE_POP } :
-            { x: 1, y: 1 })
-          .animation({
-            duration: DesignConstants.ANIMATION.DURATION_FAST,
-            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
-          })
+      // 点赞（Heart + 计数，liked 时 accent）；外层 Row 承载等分布局与读屏文案
+      // （自定义组件尾随闭包后不可链式属性，Pressable 属性全部走构造参数）
+      Row() {
+        Pressable({
+          onPress: () => { this.toggleLike(); },
+          pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
+        }) {
+          Row({ space: DesignConstants.SPACING.XS }) {
+            LucideIcon({
+              icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
+              iconSize: DesignConstants.FONT.SIZE.LG,
+              color: this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+            })
+            Text(formatCount(this.getMomentLikesCount(moment)))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+              .scale(this.likePop ?
+                { x: DesignConstants.INTERACTION.SCALE_LIKE_POP, y: DesignConstants.INTERACTION.SCALE_LIKE_POP } :
+                { x: 1, y: 1 })
+              .animation({
+                duration: DesignConstants.ANIMATION.DURATION_FAST,
+                curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+              })
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.Center)
+        }
       }
       .layoutWeight(1)
-      .justifyContent(FlexAlign.Center)
-      .scale(this.likePending ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } : { x: 1, y: 1 })
-      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
-      .onClick(() => { this.toggleLike(); })
       .accessibilityText(this.isMomentLiked(moment) ? '取消点赞' : '点赞')
 
       // 评论（MessageCircle + 计数，点击滚动到评论区并聚焦输入栏）
-      Row({ space: DesignConstants.SPACING.XS }) {
-        LucideIcon({
-          icon: AppIcon.MESSAGE,
-          iconSize: DesignConstants.FONT.SIZE.LG,
-          color: this.getCurrentThemePalette().textSecondary
-        })
-        Text(formatCount(this.getCommentCount(moment)))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
+      Row() {
+        Pressable({
+          onPress: () => { this.contentScroller.scrollEdge(Edge.Bottom); },
+          pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
+        }) {
+          Row({ space: DesignConstants.SPACING.XS }) {
+            LucideIcon({
+              icon: AppIcon.MESSAGE,
+              iconSize: DesignConstants.FONT.SIZE.LG,
+              color: this.getCurrentThemePalette().textSecondary
+            })
+            Text(formatCount(this.getCommentCount(moment)))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.Center)
+        }
       }
       .layoutWeight(1)
-      .justifyContent(FlexAlign.Center)
-      .onClick(() => { this.contentScroller.scrollEdge(Edge.Bottom); })
       .accessibilityText('查看评论')
-      .onTouch((event: TouchEvent) => {
-        if (event.type === TouchType.Down) {
-          this.actionBarPressedKey = 'comment';
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          this.actionBarPressedKey = '';
-        }
-      })
-      .scale(this.actionBarPressedKey === 'comment' ?
-        { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-        { x: 1, y: 1 })
-      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
 
       // 收藏（Bookmark，saved 时 accent）
       Row() {
-        LucideIcon({
-          icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
-          iconSize: DesignConstants.FONT.SIZE.LG,
-          color: this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
-        })
+        Pressable({
+          onPress: () => { this.toggleFavorite(); },
+          pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
+        }) {
+          Row() {
+            LucideIcon({
+              icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
+              iconSize: DesignConstants.FONT.SIZE.LG,
+              color: this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+            })
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.Center)
+        }
       }
       .layoutWeight(1)
-      .justifyContent(FlexAlign.Center)
-      .scale(this.favoritePending ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } : { x: 1, y: 1 })
-      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
-      .onClick(() => { this.toggleFavorite(); })
       .accessibilityText(this.isMomentFavorited(moment) ? '取消收藏' : '收藏')
 
       // 分享（Share）
       Row() {
-        LucideIcon({
-          icon: AppIcon.SHARE,
-          iconSize: DesignConstants.FONT.SIZE.LG,
-          color: this.getCurrentThemePalette().textSecondary
-        })
+        Pressable({
+          onPress: () => { this.shareMoment(); },
+          pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
+        }) {
+          Row() {
+            LucideIcon({
+              icon: AppIcon.SHARE,
+              iconSize: DesignConstants.FONT.SIZE.LG,
+              color: this.getCurrentThemePalette().textSecondary
+            })
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.Center)
+        }
       }
       .layoutWeight(1)
-      .justifyContent(FlexAlign.Center)
-      .onClick(() => { this.shareMoment(); })
-      .onTouch((event: TouchEvent) => {
-        if (event.type === TouchType.Down) {
-          this.actionBarPressedKey = 'share';
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          this.actionBarPressedKey = '';
-        }
-      })
-      .scale(this.actionBarPressedKey === 'share' ?
-        { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-        { x: 1, y: 1 })
-      .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
       .accessibilityText('分享动态')
     }
     .width('100%')

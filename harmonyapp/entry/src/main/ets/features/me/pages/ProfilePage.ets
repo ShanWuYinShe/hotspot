@@ -19,6 +19,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { ViewedMomentThumb } from '../components/ViewedMomentThumb';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { Pressable } from '../../../components/Pressable';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { PageShellContainer } from '../../../components/PageShellContainer';
@@ -98,9 +99,6 @@ export struct ProfilePage {
   @State myFollowersCount: number = 0;
   @State myFollowingCount: number = 0;
   @State selectedTab: number = 0;
-  /** 数据行按压/hover（对齐 ProfileMenuItem 按压契约；原行点击零反馈） */
-  @State private profileRowPressed: string = '';
-  @State private profileRowHovered: string = '';
   // 快速体验弹窗
   // 升级表单
   @State showUpgradeForm: boolean = false;
@@ -1487,72 +1485,60 @@ export struct ProfilePage {
 
   @Builder
   private buildProfileDataRow(icon: AppIcon, label: string, detail: string, onTap: () => void, divider: boolean) {
-    // 对齐前端 ProfileMobile：圆形 icon-badge(32) + 左侧两行（标题/副标题）+ 右箭头
-    Row({ space: DesignConstants.SPACING.MD }) {
-      Row() {
+    // 对齐前端 ProfileMobile：圆形 icon-badge(32) + 左侧两行（标题/副标题）+ 右箭头；
+    // 按压反馈统一走 Pressable（P3-1），键鼠 hover 淡填充由 hoverFill 提供
+    Pressable({
+      onPress: () => { onTap(); },
+      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW,
+      hoverFill: this.getCurrentThemePalette().accentMuted
+    }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        Row() {
+          LucideIcon({
+            icon: icon,
+            iconSize: DesignConstants.FONT.SIZE.SM,
+            color: this.getAccentBackground()
+          })
+        }
+        .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+        .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getCurrentThemePalette().accentMuted)
+        .justifyContent(FlexAlign.Center)
+
+        Column({ space: DesignConstants.SPACING.HALF }) {
+          Text(label)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getPrimaryTextColor())
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(detail)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getSecondaryTextColor())
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
         LucideIcon({
-          icon: icon,
+          icon: AppIcon.ARROW_RIGHT,
           iconSize: DesignConstants.FONT.SIZE.SM,
-          color: this.getAccentBackground()
+          color: this.getSecondaryTextColor()
         })
       }
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getCurrentThemePalette().accentMuted)
-      .justifyContent(FlexAlign.Center)
-
-      Column({ space: DesignConstants.SPACING.HALF }) {
-        Text(label)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPrimaryTextColor())
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(detail)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getSecondaryTextColor())
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-
-      LucideIcon({
-        icon: AppIcon.ARROW_RIGHT,
-        iconSize: DesignConstants.FONT.SIZE.SM,
-        color: this.getSecondaryTextColor()
+      .width('100%')
+      .padding({
+        left: DesignConstants.SPACING.LG2,
+        right: DesignConstants.SPACING.LG2,
+        top: DesignConstants.SPACING.MD3,
+        bottom: DesignConstants.SPACING.MD3
       })
+      .border(divider ? {
+        width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
+        color: { bottom: this.getSurfaceBorder() }
+      } : { width: 0 })
     }
-    .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.LG2,
-      right: DesignConstants.SPACING.LG2,
-      top: DesignConstants.SPACING.MD3,
-      bottom: DesignConstants.SPACING.MD3
-    })
-    .border(divider ? {
-      width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
-      color: { bottom: this.getSurfaceBorder() }
-    } : { width: 0 })
-    .backgroundColor(this.profileRowPressed === label ?
-      this.getCurrentThemePalette().surfaceSubtle :
-      (this.profileRowHovered === label ? this.getCurrentThemePalette().accentMuted :
-      DesignConstants.COLOR.TRANSPARENT))
-    .scale(this.profileRowPressed === label ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW } :
-      { x: 1, y: 1 })
-    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: Curve.EaseOut })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.profileRowPressed = label;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.profileRowPressed = '';
-      }
-    })
-    .onHover((isHover: boolean) => {
-      this.profileRowHovered = isHover ? label : '';
-    })
-    .onClick(() => { onTap(); })
   }
 
   @Builder
