@@ -5,14 +5,17 @@ import { ROUTES } from '@/lib/routes';
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
-// smartBack 契约：站内历史 → history.back()；深链直达（无站内历史）→ goto fallback。
+// smartBack 契约：history.length > 1 → history.back()；深链直达
+//（length === 1，无处可退）→ goto fallback。
+// 刻意不用 document.referrer：SPA 内导航不更新它，用它会把站内流转
+//（如列表进详情再返回）误判成深链送去首页。
 describe('smartBack', () => {
 	beforeEach(() => {
 		vi.mocked(goto).mockClear();
 	});
 
-	it('站内历史存在时 history.back()', () => {
-		Object.defineProperty(document, 'referrer', { value: `${window.location.origin}/nearby/moments`, configurable: true });
+	it('有历史可退时 history.back()（不看 referrer）', () => {
+		Object.defineProperty(document, 'referrer', { value: '', configurable: true });
 		Object.defineProperty(window, 'history', { value: { back: vi.fn(), length: 2 }, configurable: true });
 		smartBack();
 		expect(window.history.back).toHaveBeenCalledTimes(1);
@@ -20,15 +23,14 @@ describe('smartBack', () => {
 	});
 
 	it('深链直达（history.length<=1）时 goto 首页', () => {
-		Object.defineProperty(document, 'referrer', { value: '', configurable: true });
 		Object.defineProperty(window, 'history', { value: { back: vi.fn(), length: 1 }, configurable: true });
 		smartBack();
+		expect(window.history.back).not.toHaveBeenCalled();
 		expect(goto).toHaveBeenCalledWith(ROUTES.home);
 	});
 
-	it('站外 referrer 时 goto 指定 fallback', () => {
-		Object.defineProperty(document, 'referrer', { value: 'https://evil.example/post', configurable: true });
-		Object.defineProperty(window, 'history', { value: { back: vi.fn(), length: 5 }, configurable: true });
+	it('支持指定 fallback', () => {
+		Object.defineProperty(window, 'history', { value: { back: vi.fn(), length: 1 }, configurable: true });
 		smartBack('/nearby/moments');
 		expect(goto).toHaveBeenCalledWith('/nearby/moments');
 	});
