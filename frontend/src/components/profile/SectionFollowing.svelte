@@ -5,7 +5,7 @@
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
-	import { follow } from '@/api';
+	import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -14,36 +14,19 @@
 	let { embedded = false }: { embedded?: boolean } = $props();
 
 	let followingFilter = $state<'all' | 'mutual'>('all');
-	// 取关状态以服务端 following 列表为基准，本地 overrides 承载乐观切换（API 失败回滚）
-	let unfollowOverrides = $state<Record<string, boolean>>({});
-	let pendingIds = $state<Set<string>>(new Set());
+	// 取关状态：服务端 following 列表即基准（全员初始已关注），乐观切换与回滚由共享模块承载
+	const followState = createOptimisticFollow();
 
 	// getter 对象解构会拿到非响应式快照，$derived 桥接
 	const rel = useRelationships();
 	const following = $derived(rel.following);
 	const loading = $derived(rel.loading);
 
-	const isUnfollowed = (id: string) => unfollowOverrides[id] ?? false;
+	const isUnfollowed = (id: string) => !followState.isFollowed(id, true);
 
 	const toggleUnfollow = async (id: string, name: string) => {
-		if (pendingIds.has(id)) return;
-		const prev = isUnfollowed(id);
-		const next = !prev;
-		unfollowOverrides = { ...unfollowOverrides, [id]: next };
-		pendingIds = new Set([...pendingIds, id]);
-		try {
-			// spec: users/set_follow——取消关注 active:false，重新关注 active:true
-			const res = await follow({ user_id: id, active: !next });
-			if (res.code !== 0) throw new Error(res.message ?? '操作失败');
-			if (next) showToast(`已取消关注 ${name}`, 'success');
-		} catch {
-			unfollowOverrides = { ...unfollowOverrides, [id]: prev };
-			showToast('操作失败，请重试', 'danger');
-		} finally {
-			const rest = new Set(pendingIds);
-			rest.delete(id);
-			pendingIds = rest;
-		}
+		const r = await followState.toggle(id, true);
+		if (r.ok && !r.followed) showToast(`已取消关注 ${name}`, 'success');
 	};
 
 	const filtered = $derived(followingFilter === 'mutual' ? following.filter((f) => f.isMutual) : following);
@@ -88,7 +71,7 @@
 				<button
 					type="button"
 					aria-pressed={!isUnfollowed(f.id)}
-					disabled={pendingIds.has(f.id)}
+					disabled={followState.isPending(f.id)}
 					class="hover-btn tap-92 hit-slop flex shrink-0 items-center gap-1 rounded-full border px-3.5 py-1.5 text-xs focus-ring disabled:pointer-events-none disabled:opacity-faint
 						{isUnfollowed(f.id)
 						? 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'

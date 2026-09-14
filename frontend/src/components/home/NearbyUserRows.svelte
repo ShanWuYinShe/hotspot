@@ -10,21 +10,22 @@
 
 	let {
 		users,
-		followingIds,
-		followPending,
+		isFollowed,
+		isPending,
 		onToggle
 	}: {
 		users: NearbyUser[];
-		followingIds: Set<string>;
-		/** 关注请求进行中的用户 id（按钮禁点防重复提交） */
-		followPending?: Set<string>;
+		/** 该用户当前是否已关注（乐观态由父级的共享关注状态承载） */
+		isFollowed: (id: string) => boolean;
+		/** 关注请求进行中判断（按钮禁点防重复提交） */
+		isPending?: (id: string) => boolean;
 		onToggle: (id: string) => void;
 	} = $props();
 </script>
 
 <ListContainer bordered>
 	{#each users as u (u.id)}
-		{@const followed = followingIds.has(u.id)}
+		{@const followed = isFollowed(u.id)}
 		<UserCardRow name={u.name} avatar={u.avatar}>
 			{#snippet avatarBadge()}
 				{#if u.isOnline}
@@ -44,7 +45,7 @@
 				{/if}
 			{/snippet}
 			{#snippet actions()}
-				{@const pending = followPending?.has(u.id) ?? false}
+				{@const pending = isPending?.(u.id) ?? false}
 				<!-- 双态 hover 差异（四态契约）：未关注 = accent 光晕抬档；已关注 = 描边加深 + 淡底填充 -->
 				<Button
 					type="button"

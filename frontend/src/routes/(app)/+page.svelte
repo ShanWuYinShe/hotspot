@@ -19,8 +19,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
-	import { follow } from '@/api';
-	import { showToast } from '@/stores/toast.svelte';
+import { createOptimisticFollow } from '@/lib/relationships.svelte';
 
 	// 首页「附近」：Hero 统计 + 附近动态 + 群组轮播 + 推荐列表。
 	// 三端统一 PageHeader（title + 额外信息 + trailing 工具区）+ 内容区：
@@ -65,29 +64,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		};
 	});
 
-	let followingIds = $state<Set<string>>(new Set());
-	let followPending = $state<Set<string>>(new Set());
-	const toggleFollow = (id: string) => {
-		if (followPending.has(id)) return;
-		const n = new Set(followingIds);
-		const next = !n.has(id);
-		next ? n.add(id) : n.delete(id);
-		followingIds = n;
-		followPending = new Set(followPending).add(id);
-		// spec: users/set_follow 两态统一；乐观更新 + 失败回滚
-		follow({ user_id: id, active: next })
-			.catch(() => {
-				const r = new Set(followingIds);
-				next ? r.delete(id) : r.add(id);
-				followingIds = r;
-				showToast('操作失败，请重试', 'danger');
-			})
-			.finally(() => {
-				const rest = new Set(followPending);
-				rest.delete(id);
-				followPending = rest;
-			});
-	};
+	// 首页「附近的人」无服务端关注基准字段（NearbyUser 无该信息），全员初始未关注
+	// （base 恒 false）；乐观切换与失败回滚由共享模块承载。历史上此处不检查响应
+	// code（仅捕获网络异常），收敛后与分区版对齐：code!==0 同样回滚并提示。
+	const followState = createOptimisticFollow();
+	const toggleFollow = (id: string) => void followState.toggle(id, false);
 	const onlineCount = $derived(nearbyUsers.filter((u) => u.isOnline).length);
 	const heroStats = $derived({
 		nearby: String(nearbyUsers.length),
@@ -121,7 +102,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	<div>
 		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
 		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
-		<NearbyUserRows users={nearbyUsers.slice(0, 4)} {followingIds} {followPending} onToggle={toggleFollow} />
+		<NearbyUserRows
+			users={nearbyUsers.slice(0, 4)}
+			isFollowed={(id) => followState.isFollowed(id, false)}
+			isPending={(id) => followState.isPending(id)}
+			onToggle={toggleFollow}
+		/>
 	</div>
 {/snippet}
 
@@ -199,7 +185,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				</div>
 
 				<div class="mt-6">
-					<NearbyUserRows users={nearbyUsers} {followingIds} {followPending} onToggle={toggleFollow} />
+					<NearbyUserRows
+						users={nearbyUsers}
+						isFollowed={(id) => followState.isFollowed(id, false)}
+						isPending={(id) => followState.isPending(id)}
+						onToggle={toggleFollow}
+					/>
 				</div>
 			</div>
 		</div>

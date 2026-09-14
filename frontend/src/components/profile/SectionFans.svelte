@@ -5,7 +5,7 @@
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { useRelationships, type MappedFollower } from '@/lib/profile-data.svelte';
-	import { follow } from '@/api';
+	import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -20,30 +20,14 @@
 	const followers = $derived(rel.followers);
 	const loading = $derived(rel.loading);
 
-	// 回关状态以服务端 isMutual 为基准，本地 overrides 承载乐观切换（API 失败回滚）
-	let followOverrides = $state<Record<string, boolean>>({});
-	let pendingIds = $state<Set<string>>(new Set());
+	// 回关状态以服务端 isMutual 为基准，乐观切换与回滚由共享模块承载
+	const followState = createOptimisticFollow();
 
-	const isMutualWith = (f: MappedFollower) => followOverrides[f.id] ?? f.isMutual;
+	const isMutualWith = (f: MappedFollower) => followState.isFollowed(f.id, f.isMutual);
 
 	const toggleFollow = async (f: MappedFollower) => {
-		const prev = isMutualWith(f);
-		const next = !prev;
-		followOverrides = { ...followOverrides, [f.id]: next };
-		pendingIds = new Set([...pendingIds, f.id]);
-		try {
-			// spec: users/set_follow——回关 active:true，取消回关 active:false
-			const res = await follow({ user_id: f.id, active: next });
-			if (res.code !== 0) throw new Error(res.message ?? '操作失败');
-			if (next) showToast(`已关注 ${f.name}`, 'success');
-		} catch {
-			followOverrides = { ...followOverrides, [f.id]: prev };
-			showToast('操作失败，请重试', 'danger');
-		} finally {
-			const rest = new Set(pendingIds);
-			rest.delete(f.id);
-			pendingIds = rest;
-		}
+		const r = await followState.toggle(f.id, f.isMutual);
+		if (r.ok && r.followed) showToast(`已关注 ${f.name}`, 'success');
 	};
 
 	const filtered = $derived(
@@ -122,7 +106,7 @@
 			{#snippet actions()}
 				<button
 					type="button"
-					disabled={pendingIds.has(f.id)}
+					disabled={followState.isPending(f.id)}
 					class="hover-btn tap-92 hit-slop flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring disabled:opacity-muted {isMutual ? 'bg-transparent text-text-secondary hover:bg-interactive-hover' : 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
 					style={isMutual ? 'border:var(--cst-border-width-hairline) solid var(--cst-border-strong);' : 'border:var(--cst-border-width-hairline) solid transparent;'}
 					onclick={(e) => {
