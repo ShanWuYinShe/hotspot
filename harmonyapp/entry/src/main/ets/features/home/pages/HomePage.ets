@@ -507,10 +507,11 @@ export struct HomePage {
       titleSize: DesignConstants.FONT.SIZE.XXXL,
       titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD
     }) {
-      // trailing: 在线计数 chip + 搜索/地图入口（对齐前端 PageHeader trailing；
-      // 定位语义由 HeroStats 副标题承载）。
-      // 收紧 trailing 占宽（chip 内边距、按钮 36、间距 SM2）：trailing 过宽会把
-      // layoutWeight(1) 的标题列压到 ~80vp，副标题「发现周边有趣的人和事」被截断成省略号
+      // trailing: 在线计数 chip + 搜索/通知/地图入口（对齐前端 PageHeader trailing）。
+      // 溢出优先级（对齐前端弹性契约）：trailing 簇 flexShrink(0) 锁定不被压缩，
+      // 窄屏下由标题副标题先省略让位（SystemPageHeader 内 Text 已 maxLines(1)+Ellipsis），
+      // chip 文本同样 maxLines(1) 单行不折行——此前 trailing 无收缩保护，
+      // 窄屏下 chip 会被压折行（对齐前端 360px 下「4 在线」折成两行的同款问题）。
       Row({ space: DesignConstants.SPACING.SM2 }) {
         // 0 人在线时隐藏计数 chip：空数据不广告（对齐前端隐藏空态的原则）
         if (this.getOnlineCount() > 0) {
@@ -525,7 +526,9 @@ export struct HomePage {
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getPalette().textSecondary)
+              .maxLines(1)
           }
+          .flexShrink(0)
           .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
           .borderRadius(DesignConstants.RADIUS.FULL)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
@@ -559,6 +562,7 @@ export struct HomePage {
           onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
         })
       }
+      .flexShrink(0)
     }
   }
 

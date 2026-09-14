@@ -132,11 +132,13 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		<!-- ═══ 首页 — 统一 PageHeader（三端同标题；附近内容拆分到 /nearby 聚合页）═══ -->
 		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '2xl'} subtitle="发现周边有趣的人和事" subtitleSize={device === 'desktop' ? 'xs' : 'sm'} sticky>
 			{#snippet trailing()}
-				<div class="flex items-center gap-2">
+				<!-- trailing 簇锁定不收缩：chip 单行不折行（whitespace-nowrap + leading-none，
+				     徽标排版契约），窄屏下由标题副标题先截断让位，操作钮与在线计数始终完整。 -->
+				<div class="flex shrink-0 items-center gap-2">
 					{#if onlineCount > 0}
-						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-default bg-surface-primary shadow-raised-sm">
-							<span class="rounded-full size-1.5 bg-status-online"></span>
-							<span class="text-xs text-text-secondary">{onlineCount} 在线</span>
+						<div class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3 py-1.5 leading-none whitespace-nowrap shadow-raised-sm">
+							<span class="size-1.5 shrink-0 rounded-full bg-status-online"></span>
+							<span class="text-xs whitespace-nowrap text-text-secondary tabular-nums">{onlineCount} 在线</span>
 						</div>
 					{/if}
 					{#if platform.platform !== 'desktop'}

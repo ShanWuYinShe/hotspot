@@ -228,8 +228,14 @@ export struct SystemPageHeader {
         .alignItems(this.titleAlign === TextAlign.Center ? HorizontalAlign.Center : HorizontalAlign.Start)
 
         // 右侧：trailing(优先) → rightAction → action
+        // trailing 包一层 flexShrink(0)：窄屏下操作簇不被压缩折行，由标题列
+        // layoutWeight(1) + Text 省略先让位（对齐前端 PageHeader trailing shrink-0 契约）
         if (this.trailing) {
-          this.trailing!()
+          Row() {
+            this.trailing!()
+          }
+          .flexShrink(0)
+          .alignItems(VerticalAlign.Center)
         } else if (this.hasRightAction()) {
           Row({ space: DesignConstants.SPACING.SM }) {
             if (this.rightAction) {

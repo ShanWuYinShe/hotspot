@@ -97,19 +97,23 @@
 					<!-- 42：返回是导航关键动作，视觉与命中区大于普通 header 图标钮（36），易点不误触 -->
 					<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={42} />
 				{/if}
-			<div class={cn('min-w-0', trailing ? '' : 'flex-1')}>
+			<!-- 标题列恒为弹性列（flex-1 min-w-0）：窄屏下标题区先让位收缩，
+			     trailing 操作簇由 shrink-0 锁定不被压缩；溢出优先级 = 操作钮 > 装饰 chip > 副标题尾字。
+			    （此前有 trailing 时标题列无 flex-1，trailing 又无 shrink-0，360px 级窄屏下
+			     在线 chip 与副标题同时被压折行。） -->
+			<div class="min-w-0 flex-1">
 				<h1 class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
 				{#if subtitle}
-					<p class="mt-1 flex items-center gap-1 text-text-secondary {SUBTITLE_SIZE_CLASS[subtitleSize]}">
+					<p class="mt-1 flex min-w-0 items-center gap-1 text-text-secondary {SUBTITLE_SIZE_CLASS[subtitleSize]}">
 						{#if subtitleIcon}
-							{@render subtitleIcon()}
+							<span class="flex shrink-0 items-center">{@render subtitleIcon()}</span>
 						{/if}
-						{subtitle}
+						<span class="truncate">{subtitle}</span>
 					</p>
 				{/if}
 			</div>
 			{#if trailing}
-				{@render trailing()}
+				<div class="shrink-0">{@render trailing()}</div>
 			{/if}
 		</div>
 		{#if below}
