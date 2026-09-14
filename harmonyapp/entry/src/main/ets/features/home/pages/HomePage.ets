@@ -380,25 +380,16 @@ export struct HomePage {
           onAction: () => AppRouter.push(PageNames.LOCATION_PICKER)
         })
       } else if (this.isHomePageAllFailed()) {
-        // 整页兜底：三个接口都失败（对齐前端 LoadError 契约，提供统一重试）
-        Column({ space: DesignConstants.SPACING.MD }) {
-          Text('首页数据加载失败')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-            .fontColor(this.getPalette().textPrimary)
-          Text('网络似乎不太顺畅，请稍后重试。')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getPalette().textSecondary)
-          SystemButton({
-            label: '重试',
-            variant: 'secondary',
-            buttonSize: 'small',
-            onPress: () => this.reloadHome()
-          })
-        }
-        .width('100%')
-        .alignItems(HorizontalAlign.Center)
-        .padding({ top: DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE, bottom: DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE })
+        // 整页兜底：三个接口都失败（对齐前端 LoadError 契约，提供统一重试；
+        // P1-2 错误态收敛 EmptyState）
+        EmptyState({
+          icon: AppIcon.WARNING,
+          title: '首页数据加载失败',
+          message: '网络似乎不太顺畅，请稍后重试。',
+          fillMode: true,
+          actionLabel: '重试',
+          onAction: () => this.reloadHome()
+        })
       } else if (this.isHomePageAllEmpty()) {
         // 整页空态：附近没有任何内容（对齐前端 EmptyState「附近还没有内容」）
         EmptyState({
@@ -793,21 +784,15 @@ export struct HomePage {
       })
 
       if (!this.usersLoading && this.usersError.length > 0) {
-        Column({ space: DesignConstants.SPACING.SM }) {
-          Text(this.usersError)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getPalette().textSecondary)
-            .width('100%')
-            .textAlign(TextAlign.Center)
-          SystemButton({
-            label: '重试',
-            variant: 'outline',
-            buttonSize: 'small',
-            onPress: () => { this.loadNearbyUsers(); }
-          })
-        }
+        // 加载失败：错误文案 + 重试（P1-2 错误态收敛 EmptyState bare，区块级极简）
+        EmptyState({
+          icon: AppIcon.WARNING,
+          message: this.usersError,
+          actionLabel: '重试',
+          onAction: () => { this.loadNearbyUsers(); },
+          bare: true
+        })
         .width('100%')
-        .alignItems(HorizontalAlign.Center)
         .margin({ top: DesignConstants.SPACING.SM })
       } else if (!this.usersLoading && this.users.length === 0) {
         // 空态（对齐前端 EmptyState bare：极简形态，替代单行灰字；审查 P2 空态统一）
@@ -968,22 +953,16 @@ export struct HomePage {
       })
 
       if (!this.groupsLoading && this.groupsError.length > 0) {
-        // 加载失败：错误文案 + 重试（对齐前端 LoadError 契约，禁止静默转空态）
-        Column({ space: DesignConstants.SPACING.SM }) {
-          Text(this.groupsError)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getPalette().textSecondary)
-            .width('100%')
-            .textAlign(TextAlign.Center)
-          SystemButton({
-            label: '重试',
-            variant: 'outline',
-            buttonSize: 'small',
-            onPress: () => { this.loadNearbyGroups(); }
-          })
-        }
+        // 加载失败：错误文案 + 重试（对齐前端 LoadError 契约，禁止静默转空态；
+        // P1-2 错误态收敛 EmptyState bare，区块级极简）
+        EmptyState({
+          icon: AppIcon.WARNING,
+          message: this.groupsError,
+          actionLabel: '重试',
+          onAction: () => { this.loadNearbyGroups(); },
+          bare: true
+        })
         .width('100%')
-        .alignItems(HorizontalAlign.Center)
         .margin({ top: DesignConstants.SPACING.SM })
       } else if (!this.groupsLoading && this.groups.length === 0) {
         Text('附近暂时没有活跃的群组。')
@@ -1097,22 +1076,16 @@ export struct HomePage {
       })
 
       if (!this.momentsLoading && this.momentsError.length > 0) {
-        // 加载失败：错误文案 + 重试（对齐前端 LoadError 契约，禁止静默转空态）
-        Column({ space: DesignConstants.SPACING.SM }) {
-          Text(this.momentsError)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getPalette().textSecondary)
-            .width('100%')
-            .textAlign(TextAlign.Center)
-          SystemButton({
-            label: '重试',
-            variant: 'outline',
-            buttonSize: 'small',
-            onPress: () => { this.loadNearbyMoments(); }
-          })
-        }
+        // 加载失败：错误文案 + 重试（对齐前端 LoadError 契约，禁止静默转空态；
+        // P1-2 错误态收敛 EmptyState bare，区块级极简）
+        EmptyState({
+          icon: AppIcon.WARNING,
+          message: this.momentsError,
+          actionLabel: '重试',
+          onAction: () => { this.loadNearbyMoments(); },
+          bare: true
+        })
         .width('100%')
-        .alignItems(HorizontalAlign.Center)
         .margin({ top: DesignConstants.SPACING.SM })
       } else if (this.momentsLoading && this.moments.length === 0) {
         Column({ space: DesignConstants.SPACING.MD }) {
