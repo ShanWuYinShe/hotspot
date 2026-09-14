@@ -330,7 +330,7 @@
 				type="button"
 				variant="outline"
 				size="md"
-				class="w-full justify-start gap-2 rounded-md border-status-danger/40 px-4 py-3.5 text-status-danger hover:bg-danger-bg"
+				class="w-full justify-start gap-2 rounded-md border-status-danger-border px-4 py-3.5 text-status-danger hover:bg-danger-bg"
 				onclick={() => (deleteConfirmOpen = true)}
 			>
 				<Trash2 class="size-4" strokeWidth={1.75} />

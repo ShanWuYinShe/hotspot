@@ -10,8 +10,8 @@ export const TABLE = 'w-full text-sm border-collapse';
 /** 表头单元格 */
 export const TH = 'px-4 py-2.5 text-left text-xs font-medium text-text-secondary whitespace-nowrap border-b border-border-default bg-surface-subtle';
 
-/** 行 */
-export const TR = 'border-b border-border-default last:border-b-0 hover:bg-interactive-hover/50 transition-colors';
+/** 行（hover 走整档 --cst-interactive-hover；/50 属透明度越档，见 AGENTS.md 交互状态契约） */
+export const TR = 'border-b border-border-default last:border-b-0 hover:bg-interactive-hover transition-colors';
 
 /** 单元格 */
 export const TD = 'px-4 py-2.5 align-middle text-text-primary whitespace-nowrap';

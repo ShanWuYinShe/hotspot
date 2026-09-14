@@ -20,22 +20,22 @@
 		success: {
 			icon: Check,
 			iconClass: 'text-status-online',
-			badgeBg: 'bg-status-online/15',
-			badgeRing: 'ring-status-online/25',
-			borderClass: 'border-status-online/25'
+			badgeBg: 'bg-status-online-bg',
+			badgeRing: 'ring-status-online-border',
+			borderClass: 'border-status-online-border'
 		},
 		danger: {
 			icon: CircleAlert,
 			iconClass: 'text-status-danger',
-			badgeBg: 'bg-status-danger/15',
-			badgeRing: 'ring-status-danger/25',
-			borderClass: 'border-status-danger/25'
+			badgeBg: 'bg-danger-bg',
+			badgeRing: 'ring-status-danger-border',
+			borderClass: 'border-status-danger-border'
 		},
 		info: {
 			icon: Info,
 			iconClass: 'text-accent-default',
 			badgeBg: 'bg-accent-soft',
-			badgeRing: 'ring-accent-border/30',
+			badgeRing: 'ring-accent-border',
 			borderClass: 'border-border-default/80'
 		}
 	};

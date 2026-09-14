@@ -73,6 +73,10 @@
 	};
 </script>
 
+<svelte:head>
+	<title>标签管理 · HotSpot</title>
+</svelte:head>
+
 {#if !canRead}
 	<EmptyState title="无访问权限" description="需要 admin.tags.read 权限" />
 {:else}
@@ -132,7 +136,7 @@
 				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">
 					软屏蔽：该标签不再可被新建/搜索命中，历史数据保留不变。
 				</Dialog.Description>
-				<label class="mt-4 flex items-start gap-2.5 rounded-md border border-status-danger/30 bg-danger-bg/50 p-3">
+				<label class="mt-4 flex items-start gap-2.5 rounded-md border border-status-danger-border bg-danger-bg p-3">
 					<input type="checkbox" bind:checked={hardDelete} class="mt-0.5" />
 					<span class="text-xs leading-relaxed text-text-primary">
 						物理删除（不可逆）：从所有历史引用中移除该标签，删除后同名标签视为新标签可重新创建。

@@ -35,10 +35,17 @@
   --color-status-danger: var(--cst-status-danger);
   --color-status-warning: var(--cst-status-warning);
 
-  /* Color-mix presets（引用语义色淡底档位，随主题/明暗变） */
+  /* Color-mix presets（引用语义色淡底档位，随主题/明暗变）。
+     每个状态色族提供 -bg（淡底）/ -border（淡边框）两档语义类，供 bg / border / ring
+     工具类直接消费；组件不得用 /10~/50 透明度算术就地造档（AGENTS.md 样式自查清单第 17 条）。
+     danger 淡底的历史类名为 --color-danger-bg（沿用既有 ~10 处消费点，不重复注册别名）。 */
   --color-accent-bg: var(--cst-accent-soft-bg);
   --color-danger-bg: var(--cst-status-danger-bg);
   --color-status-danger-border: var(--cst-status-danger-border);
+  --color-status-online-bg: var(--cst-status-online-bg);
+  --color-status-online-border: var(--cst-status-online-border);
+  --color-status-warning-bg: var(--cst-status-warning-bg);
+  --color-status-warning-border: var(--cst-status-warning-border);
 
   /* Font size scale — Tailwind v4 字号命名空间必须是 --text-*（--font-size-* 不生成
      utility）。设计原则：少档位 + 强制收敛，禁止 1-2px 近邻档位并存（人眼分不清，
@@ -142,9 +149,15 @@
   --shadow-toggle-off: var(--cst-elevation-toggle-off);
   --shadow-toggle-thumb: var(--cst-elevation-toggle-thumb);
 
-  /* Menu / dropdown elevation — 浮层/弹出菜单/Toast/连接横幅统一投影。
-     消除组件 shadow-[var(--cst-elevation-menu)] arbitrary 写法。 */
+  /* Overlay elevation — 浮层统一投影注册（值由 themes/*.css 按主题/明暗定义）。
+     消除组件 shadow-[var(--cst-elevation-*)] arbitrary 写法（对照 --shadow-menu 先例）：
+     menu=下拉/Toast/连接横幅、modal=居中模态、sheet=上下 sheet、side-sheet=左右全高面板、
+     control-thumb=开关滑块。 */
   --shadow-menu: var(--cst-elevation-menu);
+  --shadow-modal: var(--cst-elevation-modal);
+  --shadow-sheet: var(--cst-elevation-sheet);
+  --shadow-side-sheet: var(--cst-elevation-side-sheet);
+  --shadow-control-thumb: var(--cst-elevation-control-thumb);
 
   /* Letter-spacing scale — 对齐 Figma eyebrow/分组标签/标题收紧，生成 tracking-* 类。
      eyebrow=0.14em（uppercase 分组标签）、label=0.12em（在线/未读小标）、

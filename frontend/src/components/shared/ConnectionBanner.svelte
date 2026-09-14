@@ -24,7 +24,7 @@
 		class="pointer-events-none fixed inset-x-0 top-3 z-[var(--cst-z-toast)] flex justify-center px-4"
 	>
 		<div
-			class="pointer-events-auto flex items-center gap-2 rounded-full border border-status-warning/40 bg-surface-primary/95 px-3.5 py-1.5 shadow-raised-md backdrop-blur-md animate-in fade-in-0 slide-in-from-top-2"
+			class="pointer-events-auto flex items-center gap-2 rounded-full border border-status-warning-border bg-surface-primary/95 px-3.5 py-1.5 shadow-raised-md backdrop-blur-md animate-in fade-in-0 slide-in-from-top-2"
 		>
 			<span class="relative flex size-2 shrink-0">
 				<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-warning opacity-75"></span>
