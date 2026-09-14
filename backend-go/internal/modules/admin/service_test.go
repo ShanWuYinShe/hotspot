@@ -44,6 +44,18 @@ func (s *stubPushService) AppendSystemAnnouncement(_ context.Context, _ []string
 	return s.announcedID, nil
 }
 
+func (s *stubPushService) NewAnnouncementNotifyID() string {
+	s.announced = true
+	s.announcedID = "notif_ann_1"
+	return s.announcedID
+}
+
+func (s *stubPushService) AppendSystemAnnouncementWithID(_ context.Context, id string, _ []string, _ systemmodule.SystemAnnouncementItem) (string, error) {
+	s.announced = true
+	s.announcedID = id
+	return id, nil
+}
+
 func (s *stubPushService) PushSystemAnnouncement(_ systemmodule.SystemAnnouncementItem, notificationID string) {
 	s.pushed = true
 	s.pushedID = notificationID

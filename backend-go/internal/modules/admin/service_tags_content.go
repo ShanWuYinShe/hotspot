@@ -135,7 +135,10 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 		// （limit 被 NormalizeLimit 钳到 100），公告只落库给前 100 个用户。
 		const fanoutBatch = 500
 		afterUserID := ""
-		var lastNotificationID string
+		// 整条公告共用一个 notify_id（跨批次复用）：契约要求 WS 的 notify_id
+		// 与 notify/fetch 的主键一致，客户端据此去重与 mark_read。若每批各自
+		// 生成 id，只有最后一批能被客户端命中（审计 F-06）。
+		notificationID := s.pushService.NewAnnouncementNotifyID()
 		for {
 			batch, listErr := s.repo.ListUserIDsAfter(ctx, afterUserID, fanoutBatch)
 			if listErr != nil {
@@ -144,21 +147,17 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 			if len(batch) == 0 {
 				break
 			}
-			notificationID, err := s.pushService.AppendSystemAnnouncement(ctx, batch, item.PublicItem())
-			if err != nil {
+			if _, err := s.pushService.AppendSystemAnnouncementWithID(ctx, notificationID, batch, item.PublicItem()); err != nil {
 				return AdminAnnouncementItem{}, nil, err
 			}
-			lastNotificationID = notificationID
 			if len(batch) < fanoutBatch {
 				break
 			}
 			afterUserID = batch[len(batch)-1]
 		}
 		// BroadcastToAll 是一次全体在线广播，必须移出批次循环（否则广播 N 次）。
-		// 跨批次落库 notify_id 不同（批内 row_number 后缀），客户端去重以
-		// payload 里的 announcement_id 为准，notify_id 仅作展示。
-		if req.SendPush && lastNotificationID != "" {
-			s.pushService.PushSystemAnnouncement(item.PublicItem(), lastNotificationID)
+		if req.SendPush && notificationID != "" {
+			s.pushService.PushSystemAnnouncement(item.PublicItem(), notificationID)
 		}
 	}
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {

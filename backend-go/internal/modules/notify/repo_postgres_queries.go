@@ -19,19 +19,18 @@ LIMIT $6`
 INSERT INTO notifications (notification_id, user_id, type, is_read, created_at, payload)
 VALUES ($1, $2, $3, $4, $5, $6::jsonb)`
 
-	// queryInsertNotifysBatch fans out one notify to many users in
-	// a single round trip. Each row gets its own notification_id (the table's
-	// PK is notification_id alone, so a shared id would collide on the 2nd
-	// user); the prefix is concatenated with the row ordinal to keep ids unique
-	// while remaining traceable to the same logical event.
+	// queryInsertNotifysBatch fans out one notify to many users in a single
+	// round trip。主键为 (notification_id, user_id)（050 迁移），因此同一逻辑
+	// 通知的所有收件人**共用同一个 notification_id**——这是契约要求
+	// （spec api_spec_websocket.md「消息可靠性与去重」：WS 的 notify_id 与
+	// notify/fetch 的 NotifyItem.notify_id 为同一主键，客户端据此去重与
+	// mark_read）。此前每行用 `$2 || '_' || row_number()` 造独立主键，服务层
+	// 却只下发不含后缀的基础 id，导致 mark_read 落空、公告去重失效（审计 F-06）。
 	queryInsertNotifysBatch = `
-WITH target AS (
-  SELECT uid, row_number() OVER () AS rn
-  FROM unnest($1::text[]) AS uid
-)
 INSERT INTO notifications (notification_id, user_id, type, is_read, created_at, payload)
-SELECT $2 || '_' || rn, uid, $3, $4, $5, $6::jsonb
-FROM target`
+SELECT $2, uid, $3, $4, $5, $6::jsonb
+FROM unnest($1::text[]) AS uid
+ON CONFLICT (notification_id, user_id) DO NOTHING`
 
 	queryUnreadNotifyCounts = `
 SELECT type, COUNT(*)::text

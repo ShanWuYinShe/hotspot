@@ -214,6 +214,18 @@ func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) err
 	return nil
 }
 
+// memberCountAfterMutation 在成员增删后取权威成员数，用于 WS 事件的
+// member_count 字段（spec api_spec_websocket.md：GroupMemberRemovedPayload
+// 的 member_count 为「剩余成员总数」）。不能对变更前的快照机械 ±1：封禁允许
+// 作用于非成员（拉黑进入），此时成员数并不减一。重读失败时回退到调用方
+// 传入的估计值，保证事件仍可下发。
+func (s *Service) memberCountAfterMutation(ctx context.Context, groupID string, fallback int) int {
+	if refreshed, ok, err := s.repo.Get(ctx, groupID); err == nil && ok {
+		return refreshed.Group.MembersCount
+	}
+	return fallback
+}
+
 func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
@@ -249,7 +261,7 @@ func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) err
 				"removed_by":   s.resolveUserInfo(ctx, principal.UserID),
 				"reason":       "banned",
 				"removed_at":   time.Now().UTC().Format(time.RFC3339),
-				"member_count": group.Group.MembersCount,
+				"member_count": s.memberCountAfterMutation(ctx, req.GroupID, group.Group.MembersCount),
 			},
 		}
 		realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
@@ -306,6 +318,8 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 	if err := s.repo.RemoveMember(ctx, principal.UserID, req); err != nil {
 		return err
 	}
+	// 移除后重读权威计数（spec：RemovedPayload.member_count 为剩余成员总数）。
+	remaining := s.memberCountAfterMutation(ctx, req.GroupID, group.Group.MembersCount)
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRemoved,
 		Payload: map[string]any{
@@ -314,7 +328,7 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 			"removed_by":   s.resolveUserInfo(ctx, principal.UserID),
 			"reason":       "kicked",
 			"removed_at":   time.Now().UTC().Format(time.RFC3339),
-			"member_count": group.Group.MembersCount,
+			"member_count": remaining,
 		},
 	})
 	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{
@@ -323,7 +337,7 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 			"group_id":     req.GroupID,
 			"reason":       "kicked",
 			"removed_at":   time.Now().UTC().Format(time.RFC3339),
-			"member_count": group.Group.MembersCount,
+			"member_count": remaining,
 		},
 	})
 	return nil

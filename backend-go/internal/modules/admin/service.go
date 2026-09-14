@@ -24,6 +24,11 @@ type Service struct {
 
 type announcementPushService interface {
 	AppendSystemAnnouncement(ctx context.Context, userIDs []string, item systemmodule.SystemAnnouncementItem) (string, error)
+	// NewAnnouncementNotifyID 预生成整条公告共用的 notify_id；
+	// AppendSystemAnnouncementWithID 用该 id 落库某一批收件人——全量 fanout
+	// 会分多批，但契约要求整条公告对应同一个 WS notify_id（见 notify.Service）。
+	NewAnnouncementNotifyID() string
+	AppendSystemAnnouncementWithID(ctx context.Context, id string, userIDs []string, item systemmodule.SystemAnnouncementItem) (string, error)
 	PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem, notificationID string)
 	// Report-outcome notifications (resolve/dismiss), returning the generated
 	// notification_id for the realtime payload.

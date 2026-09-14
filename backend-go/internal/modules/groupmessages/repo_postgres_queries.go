@@ -33,7 +33,14 @@ const (
 		       COALESCE((
 		         SELECT COUNT(*)::int
 		         FROM group_message_read_state grs
-		         WHERE grs.group_id = gm.group_id AND grs.last_read_sent_at >= gm.sent_at
+		         JOIN group_members member
+		           ON member.group_id = grs.group_id AND member.user_id = grs.user_id
+		         WHERE grs.group_id = gm.group_id
+		           AND grs.last_read_sent_at >= gm.sent_at
+		           -- 只统计「消息发出时已在群」的成员：晚于该消息入群的新成员
+		           -- 不可能真正读过它，且 mark_all_read 会把游标一次推到最新，
+		           -- 否则入群前全部历史消息都会被计入已读人数（F-07 虚高主因）。
+		           AND member.joined_at <= gm.sent_at
 		       ), 0) AS read_count
 		FROM group_messages gm
 		LEFT JOIN users sender ON sender.user_id = gm.sender_user_id
@@ -86,7 +93,8 @@ const (
 	    last_read_sent_at = EXCLUDED.last_read_sent_at,
 	    updated_at = NOW()
 	WHERE group_message_read_state.last_read_sent_at IS NULL
-	   OR group_message_read_state.last_read_sent_at <= EXCLUDED.last_read_sent_at`
+	   OR (group_message_read_state.last_read_sent_at, COALESCE(group_message_read_state.last_read_message_id, ''))
+	      < (EXCLUDED.last_read_sent_at, COALESCE(EXCLUDED.last_read_message_id, ''))`
 
 	queryMarkGroupMessagesReadToLatest = `
 	INSERT INTO group_message_read_state (group_id, user_id, last_read_message_id, last_read_sent_at, updated_at)
@@ -105,13 +113,17 @@ const (
 	    last_read_sent_at = EXCLUDED.last_read_sent_at,
 	    updated_at = NOW()
 	WHERE group_message_read_state.last_read_sent_at IS NULL
-	   OR group_message_read_state.last_read_sent_at <= EXCLUDED.last_read_sent_at`
+	   OR (group_message_read_state.last_read_sent_at, COALESCE(group_message_read_state.last_read_message_id, ''))
+	      < (EXCLUDED.last_read_sent_at, COALESCE(EXCLUDED.last_read_message_id, ''))`
 
 	queryGroupMessageReadCount = `
 	SELECT COUNT(*)::int
 	FROM group_message_read_state grs
+	JOIN group_members member
+	  ON member.group_id = grs.group_id AND member.user_id = grs.user_id
 	WHERE grs.group_id = $1
-	  AND grs.last_read_sent_at >= (SELECT gm.sent_at FROM group_messages gm WHERE gm.group_id = $1 AND gm.message_id = $2)`
+	  AND grs.last_read_sent_at >= (SELECT gm.sent_at FROM group_messages gm WHERE gm.group_id = $1 AND gm.message_id = $2)
+	  AND member.joined_at <= (SELECT gm.sent_at FROM group_messages gm WHERE gm.group_id = $1 AND gm.message_id = $2)`
 
 	queryLatestGroupMessageID = `
 	SELECT gm.message_id
@@ -150,7 +162,8 @@ FROM group_members WHERE group_id = $1 AND user_id = $2`
 	    last_read_sent_at = EXCLUDED.last_read_sent_at,
 	    updated_at = NOW()
 	WHERE group_message_read_state.last_read_sent_at IS NULL
-	   OR group_message_read_state.last_read_sent_at <= EXCLUDED.last_read_sent_at`
+	   OR (group_message_read_state.last_read_sent_at, COALESCE(group_message_read_state.last_read_message_id, ''))
+	      < (EXCLUDED.last_read_sent_at, COALESCE(EXCLUDED.last_read_message_id, ''))`
 
 	queryGetGroupMessageForReply = `
 		SELECT gm.sender_user_id,

@@ -483,14 +483,17 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 		s.notifyGroupApplicationReceived(ctx, group, principal.UserID, result.ApplicationID, req.Message)
 	}
 	if result.Status == EnterGroupStatusJoined {
-		// 直接加入（spec group.md → join 推送）：向群内广播 GroupMemberJoined
+		// 直接加入（spec group.md → join 推送）：向群内广播 GroupMemberJoined。
+		// member_count 必须是入群后的总数：group 是 JoinGroup 之前的快照，
+		// 入群使其 +1（与 ApproveApplication/AcceptInvite 的写法对齐）。
+		// 此前直接下发旧快照，所有客户端的群成员数徽标在新旧值间抖动（F-03）。
 		realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 			Type: realtime.EventTypeGroupMemberJoined,
 			Payload: map[string]any{
 				"group_id":     req.GroupID,
 				"user":         s.resolveUserInfo(ctx, principal.UserID),
 				"role":         string(GroupRoleMember),
-				"member_count": group.Group.MembersCount,
+				"member_count": group.Group.MembersCount + 1,
 				"joined_at":    time.Now().UTC().Format(time.RFC3339),
 			},
 		})

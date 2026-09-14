@@ -28,6 +28,12 @@ func (s *capturePushStub) AppendSystemAnnouncement(_ context.Context, _ []string
 	return "notif_ann_1", nil
 }
 
+func (s *capturePushStub) NewAnnouncementNotifyID() string { return "notif_ann_1" }
+
+func (s *capturePushStub) AppendSystemAnnouncementWithID(_ context.Context, id string, _ []string, _ systemmodule.SystemAnnouncementItem) (string, error) {
+	return id, nil
+}
+
 func (s *capturePushStub) PushSystemAnnouncement(_ systemmodule.SystemAnnouncementItem, _ string) {}
 
 func (s *capturePushStub) AppendReportResolved(_ context.Context, reporterUserID, reportID, targetType, targetID, note string) (string, error) {
