@@ -437,6 +437,24 @@ func TestCreateReplyToMissingParentReturnsCommentNotFound(t *testing.T) {
 	}
 }
 
+// 已软删评论按不存在处理：不允许对已删除评论继续回复。
+func TestCreateReplyToSoftDeletedParentReturnsCommentNotFound(t *testing.T) {
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	parent, err := repo.Create(context.Background(), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "parent"})
+	if err != nil {
+		t.Fatalf("create parent: %v", err)
+	}
+	if err := repo.SoftDelete(context.Background(), parent.CommentID); err != nil {
+		t.Fatalf("soft delete parent: %v", err)
+	}
+	_, err = service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_1", ParentID: parent.CommentID, Content: "reply"})
+	if !errors.Is(err, ErrCommentNotFound) {
+		t.Fatalf("expected ErrCommentNotFound for soft-deleted parent, got %v", err)
+	}
+}
+
 func firstCommentID(t *testing.T, repo *InMemoryRepository, momentID string) string {
 	t.Helper()
 	page, err := repo.List(context.Background(), momentID, 20, "")

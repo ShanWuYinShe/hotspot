@@ -378,7 +378,9 @@ func (s *Service) resolveReplyTarget(ctx context.Context, parentID string) (Comm
 	if err != nil {
 		return CommentItem{}, false, err
 	}
-	if !found {
+	// 已软删评论按不存在处理：不允许对已删除的评论继续回复（与 Delete 的
+	// 幂等软删语义一致，回复目标消失即视为评论不存在）。
+	if !found || parent.IsDeleted {
 		return CommentItem{}, false, ErrCommentNotFound
 	}
 	return parent, true, nil
