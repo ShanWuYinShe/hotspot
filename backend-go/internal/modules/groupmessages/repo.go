@@ -42,6 +42,9 @@ type Repository interface {
 	MarkAllRead(context.Context, string) ([]string, error)
 	// GetReadCount 返回群消息当前已读成员数（read_count 事件负载）。
 	GetReadCount(ctx context.Context, groupID string, messageID string) (int, error)
+	// GetReadCounts 批量返回多条群消息的已读成员数（单次往返，替代 flush
+	// 逐消息查询）。结果按 message_id 索引，不存在的消息缺席。
+	GetReadCounts(ctx context.Context, groupID string, messageIDs []string) (map[string]int, error)
 	// LatestMessageID 返回群内最新消息 ID（mark_read 无 up_to 时的事件目标）。
 	LatestMessageID(ctx context.Context, groupID string) (string, error)
 	IsMember(context.Context, string, string) (bool, error)

@@ -301,6 +301,24 @@ func (r *InMemoryRepository) GetReadCount(_ context.Context, groupID string, mes
 	return 0, ErrMessageNotFound
 }
 
+// GetReadCounts 批量版（单进程直接循环，无往返成本）；不存在的消息缺席。
+func (r *InMemoryRepository) GetReadCounts(_ context.Context, groupID string, messageIDs []string) (map[string]int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	counts := make(map[string]int, len(messageIDs))
+	known := make(map[string]struct{}, len(r.items[groupID]))
+	for _, msg := range r.items[groupID] {
+		known[msg.MessageID] = struct{}{}
+	}
+	for _, id := range messageIDs {
+		if _, ok := known[id]; !ok {
+			continue
+		}
+		counts[id] = r.readCount[groupID][id]
+	}
+	return counts, nil
+}
+
 func (r *InMemoryRepository) LatestMessageID(_ context.Context, groupID string) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

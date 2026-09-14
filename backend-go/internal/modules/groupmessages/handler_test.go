@@ -76,6 +76,10 @@ func (r *stubGroupMessageRepo) MarkAllRead(_ context.Context, _ string) ([]strin
 	return nil, r.markAllErr
 }
 
+func (r *stubGroupMessageRepo) GetReadCounts(_ context.Context, _ string, _ []string) (map[string]int, error) {
+	return nil, nil
+}
+
 func (r *stubGroupMessageRepo) GetReadCount(_ context.Context, _ string, _ string) (int, error) {
 	return 0, nil
 }

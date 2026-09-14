@@ -128,6 +128,20 @@ const (
 	  AND grs.last_read_sent_at >= (SELECT gm.sent_at FROM group_messages gm WHERE gm.group_id = $1 AND gm.message_id = $2)
 	  AND member.joined_at <= (SELECT gm.sent_at FROM group_messages gm WHERE gm.group_id = $1 AND gm.message_id = $2)`
 
+	// queryGroupMessageReadCounts 批量版已读计数：一次往返取多条消息的已读
+	// 成员数（flush 节流窗口尾使用），计数口径与 queryGroupMessageReadCount
+	// 一致（last_read_sent_at >= 消息 sent_at 且 joined_at <= sent_at 的成员）。
+	queryGroupMessageReadCounts = `
+SELECT gm.message_id, COUNT(member.user_id)::int
+FROM group_messages gm
+LEFT JOIN group_message_read_state grs
+  ON grs.group_id = gm.group_id AND grs.last_read_sent_at >= gm.sent_at
+LEFT JOIN group_members member
+  ON member.group_id = grs.group_id AND member.user_id = grs.user_id
+ AND member.joined_at <= gm.sent_at
+WHERE gm.group_id = $1 AND gm.message_id = ANY($2)
+GROUP BY gm.message_id`
+
 	queryLatestGroupMessageID = `
 	SELECT gm.message_id
 	FROM group_messages gm

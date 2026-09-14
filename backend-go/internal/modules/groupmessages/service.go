@@ -379,10 +379,15 @@ func (s *Service) scheduleReadCountUpdate(groupID string, messageIDs []string) {
 func (s *Service) flushReadCounts(groupID string, messageIDs []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	// 批量一次取回整窗消息的已读计数（替代逐消息查询的 N 次往返）。
+	counts, err := s.repo.GetReadCounts(ctx, groupID, messageIDs)
+	if err != nil {
+		observability.L().Warn("groupmessages.read_count lookup failed", "error", err, "group_id", groupID, "messages", len(messageIDs))
+		return
+	}
 	for _, messageID := range messageIDs {
-		count, err := s.repo.GetReadCount(ctx, groupID, messageID)
-		if err != nil {
-			observability.L().Warn("groupmessages.read_count lookup failed", "error", err, "group_id", groupID, "message_id", messageID)
+		count, ok := counts[messageID]
+		if !ok {
 			continue
 		}
 		realtime.DefaultHub().BroadcastToGroup(groupID, realtime.Event{

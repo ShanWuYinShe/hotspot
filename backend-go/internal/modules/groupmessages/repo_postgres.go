@@ -206,6 +206,32 @@ func (r *PostgresRepository) GetReadCount(ctx context.Context, groupID string, m
 	return count, nil
 }
 
+// GetReadCounts 批量返回已读成员数（单次往返）；不存在的消息缺席。
+func (r *PostgresRepository) GetReadCounts(ctx context.Context, groupID string, messageIDs []string) (map[string]int, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	counts := make(map[string]int, len(messageIDs))
+	if len(messageIDs) == 0 {
+		return counts, nil
+	}
+	rows, err := queryable.Query(ctx, queryGroupMessageReadCounts, groupID, messageIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var messageID string
+		var count int
+		if err := rows.Scan(&messageID, &count); err != nil {
+			return nil, err
+		}
+		counts[messageID] = count
+	}
+	return counts, rows.Err()
+}
+
 func (r *PostgresRepository) LatestMessageID(ctx context.Context, groupID string) (string, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {

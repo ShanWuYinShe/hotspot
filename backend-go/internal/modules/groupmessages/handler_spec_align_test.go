@@ -150,6 +150,10 @@ func (r *specAdminRepo) MarkAsRead(context.Context, string, MarkGroupMessagesRea
 	return nil
 }
 func (r *specAdminRepo) MarkAllRead(context.Context, string) ([]string, error) { return nil, nil }
+func (r *specAdminRepo) GetReadCounts(_ context.Context, _ string, _ []string) (map[string]int, error) {
+	return nil, nil
+}
+
 func (r *specAdminRepo) GetReadCount(context.Context, string, string) (int, error) {
 	return 0, nil
 }

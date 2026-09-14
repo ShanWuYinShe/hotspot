@@ -164,3 +164,33 @@ func TestMemoryRecallDisabledWhenWindowZero(t *testing.T) {
 		t.Fatalf("expected ErrMessageRecallWindow when window disabled, got %v", err)
 	}
 }
+
+// GetReadCounts 批量版：存在的消息返回计数，不存在的消息缺席（flush 节流
+// 窗口尾单次往返取回整窗计数）。
+func TestMemoryGetReadCountsBatch(t *testing.T) {
+	repo := NewInMemoryRepository()
+	s1, err := repo.Send(context.Background(), SendGroupMessageRequest{GroupID: "g1", SenderUserID: "u1", Type: "text", Content: "m1"})
+	if err != nil {
+		t.Fatalf("send 1: %v", err)
+	}
+	s2, err := repo.Send(context.Background(), SendGroupMessageRequest{GroupID: "g1", SenderUserID: "u1", Type: "text", Content: "m2"})
+	if err != nil {
+		t.Fatalf("send 2: %v", err)
+	}
+	if err := repo.MarkAsRead(context.Background(), "u2", MarkGroupMessagesReadRequest{GroupID: "g1", UpToMessageID: s1.MessageID}); err != nil {
+		t.Fatalf("mark read: %v", err)
+	}
+	counts, err := repo.GetReadCounts(context.Background(), "g1", []string{s1.MessageID, s2.MessageID, "gm_missing"})
+	if err != nil {
+		t.Fatalf("get read counts: %v", err)
+	}
+	if counts[s1.MessageID] != 1 {
+		t.Fatalf("expected 1 reader for first message, got %#v", counts)
+	}
+	if count, ok := counts[s2.MessageID]; !ok || count != 0 {
+		t.Fatalf("expected 0 readers for second message (present), got %#v", counts)
+	}
+	if _, ok := counts["gm_missing"]; ok {
+		t.Fatalf("expected missing message to be absent, got %#v", counts)
+	}
+}
