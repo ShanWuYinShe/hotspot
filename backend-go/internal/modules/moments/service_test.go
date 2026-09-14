@@ -490,14 +490,6 @@ type stubNotifyWriter struct {
 	appended map[string]int
 }
 
-func (w *stubNotifyWriter) AppendMentioned(_ context.Context, targetUserID string, _ types.UserInfo, _ string, _ string, _ types.MomentSummary, _ string, _ string) (string, error) {
-	if w.appended == nil {
-		w.appended = make(map[string]int)
-	}
-	w.appended[targetUserID]++
-	return "n1", nil
-}
-
 func (w *stubNotifyWriter) AppendMentionedBatch(_ context.Context, targetUserIDs []string, _ types.UserInfo, _ string, _ string, _ types.MomentSummary, _ string, _ string) (map[string]string, error) {
 	if w.appended == nil {
 		w.appended = make(map[string]int)

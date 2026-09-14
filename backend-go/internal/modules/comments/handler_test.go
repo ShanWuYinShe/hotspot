@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -93,8 +94,12 @@ func (s *stubNotifWriter) AppendMomentCommented(_ context.Context, _ string, _ t
 func (s *stubNotifWriter) AppendCommentReply(_ context.Context, _ string, _ types.UserInfo, _ string, _ types.MomentSummary, _, _, _, _ string) (string, error) {
 	return "notif_stub", nil
 }
-func (s *stubNotifWriter) AppendMentioned(_ context.Context, _ string, _ types.UserInfo, _, _ string, _ types.MomentSummary, _, _ string) (string, error) {
-	return "notif_stub", nil
+func (s *stubNotifWriter) AppendMentionedBatch(_ context.Context, targetUserIDs []string, _ types.UserInfo, _, _ string, _ types.MomentSummary, _, _ string) (map[string]string, error) {
+	ids := make(map[string]string, len(targetUserIDs))
+	for i, targetUserID := range targetUserIDs {
+		ids[targetUserID] = "notif_stub_" + strconv.Itoa(i)
+	}
+	return ids, nil
 }
 
 // --- helpers ---

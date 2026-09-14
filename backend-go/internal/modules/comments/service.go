@@ -16,6 +16,8 @@ import (
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/textutil"
 	"hotspot/backend-go/internal/platform/types"
+
+	"golang.org/x/sync/errgroup"
 )
 
 var ErrMomentNotFound = errors.New("comments: moment not found")
@@ -49,7 +51,7 @@ type ReactionAggregator interface {
 type commentNotificationWriter interface {
 	AppendMomentCommented(ctx context.Context, targetUserID string, actor types.UserInfo, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (string, error)
 	AppendCommentReply(ctx context.Context, targetUserID string, actor types.UserInfo, momentID string, momentSummary types.MomentSummary, parentCommentID string, parentPreview string, replyID string, replyPreview string) (string, error)
-	AppendMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (string, error)
+	AppendMentionedBatch(ctx context.Context, targetUserIDs []string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (map[string]string, error)
 }
 
 func NewService(repo Repository, moments MomentProvider) *Service {
@@ -441,30 +443,52 @@ func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNot
 	}})
 }
 
+// notifyMentionedUsers 对被提及用户批量落库 mentioned 通知（单次往返）并以
+// 有界并发推送 ContentMentioned 事件。
 func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext MomentNotificationContext, actor types.UserInfo, item CommentItem, mentionTargets map[string]struct{}) {
 	momentSummary := notificationMomentSummary(momentContext, item.MomentID)
 	commentPreview := summarizeCommentText(item.Content, "")
-	for _, targetUserID := range sortedMentionTargets(mentionTargets) {
-		notificationID := ""
-		if s.notifications != nil {
-			id, err := s.notifications.AppendMentioned(ctx, targetUserID, actor, "comment", item.MomentID, momentSummary, item.CommentID, commentPreview)
-			if err != nil {
-				observability.L().Error("comments.create append mentioned notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
-			} else {
-				notificationID = id
-			}
-		}
-		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: map[string]any{
-			"notify_id":       notificationID,
-			"target_type":     "comment",
-			"moment_id":       item.MomentID,
-			"comment_id":      item.CommentID,
-			"moment_summary":  momentSummary,
-			"comment_preview": commentPreview,
-			"actor":           actor,
-			"mentioned_at":    item.CreatedAt,
-		}})
+	targets := sortedMentionTargets(mentionTargets)
+	if len(targets) == 0 {
+		return
 	}
+	// 批量落库（单次往返）：失败时记日志并按通知缺失降级（notify_id 置空），
+	// 广播仍照常进行——与此前逐人失败只影响该人的口径一致，只是失败粒度为整批。
+	var notifyIDs map[string]string
+	var appendErr error
+	if s.notifications != nil {
+		notifyIDs, appendErr = s.notifications.AppendMentionedBatch(ctx, targets, actor, "comment", item.MomentID, momentSummary, item.CommentID, commentPreview)
+		if appendErr != nil {
+			observability.L().Error("comments.create batch append mentioned notifications failed", "error", appendErr, "moment_id", item.MomentID, "comment_id", item.CommentID, "count", len(targets))
+		}
+	}
+	// 并行推送（有界并发）：每条 BroadcastToUser 内部含 resume Record + 跨实例
+	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟。
+	broadcast := func(targetUserID, notificationID string) func() error {
+		return func() error {
+			realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: map[string]any{
+				"notify_id":       notificationID,
+				"target_type":     "comment",
+				"moment_id":       item.MomentID,
+				"comment_id":      item.CommentID,
+				"moment_summary":  momentSummary,
+				"comment_preview": commentPreview,
+				"actor":           actor,
+				"mentioned_at":    item.CreatedAt,
+			}})
+			return nil
+		}
+	}
+	group, _ := errgroup.WithContext(context.Background())
+	group.SetLimit(8)
+	for _, targetUserID := range targets {
+		var notificationID string
+		if notifyIDs != nil {
+			notificationID = notifyIDs[targetUserID]
+		}
+		group.Go(broadcast(targetUserID, notificationID))
+	}
+	_ = group.Wait()
 }
 
 func buildCommentActor(item CommentItem, fallbackUserID string) types.UserInfo {

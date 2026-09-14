@@ -58,9 +58,9 @@ func (w *failingNotificationWriter) AppendCommentReply(context.Context, string, 
 	w.calls++
 	return "", errors.New("notification down")
 }
-func (w *failingNotificationWriter) AppendMentioned(context.Context, string, types.UserInfo, string, string, types.MomentSummary, string, string) (string, error) {
+func (w *failingNotificationWriter) AppendMentionedBatch(context.Context, []string, types.UserInfo, string, string, types.MomentSummary, string, string) (map[string]string, error) {
 	w.calls++
-	return "", errors.New("notification down")
+	return nil, errors.New("notification down")
 }
 
 func testCommentContext(userID string) context.Context {
