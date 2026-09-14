@@ -9,10 +9,10 @@ func TestMemoryRelationshipsAndBlocking(t *testing.T) {
 	repo := NewInMemoryRepository()
 	ctx := context.Background()
 
-	if err := repo.Follow(ctx, "u1", "u2", "search", "m1"); err != nil {
+	if _, err := repo.Follow(ctx, "u1", "u2", "search", "m1"); err != nil {
 		t.Fatalf("follow: %v", err)
 	}
-	if err := repo.Follow(ctx, "u2", "u1", "", ""); err != nil {
+	if _, err := repo.Follow(ctx, "u2", "u1", "", ""); err != nil {
 		t.Fatalf("mutual follow: %v", err)
 	}
 	if err := repo.Block(ctx, "u1", "u3", "spam"); err != nil {
@@ -111,8 +111,8 @@ func TestMemoryBlockedEitherWay(t *testing.T) {
 func TestMemoryDeleteProfileClearsRelationships(t *testing.T) {
 	repo := NewInMemoryRepository()
 	ctx := context.Background()
-	_ = repo.Follow(ctx, "u1", "u2", "", "")
-	_ = repo.Follow(ctx, "u2", "u1", "", "")
+	_, _ = repo.Follow(ctx, "u1", "u2", "", "")
+	_, _ = repo.Follow(ctx, "u2", "u1", "", "")
 
 	if err := repo.DeleteProfile(ctx, "u1"); err != nil {
 		t.Fatalf("delete profile: %v", err)

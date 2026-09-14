@@ -14,11 +14,14 @@ import (
 type userRelStub struct {
 	relationRow []any
 	execErr     error
-	execs       int
+	// queryErr 注入 QueryRow 的扫描错误：Follow 现走 QueryRow + RETURNING
+	// （审计 F-12 的 changed 语义），不再经 Exec 路径。
+	queryErr error
+	execs    int
 }
 
 func (s *userRelStub) QueryRow(_ context.Context, _ string, _ ...any) persistence.Row {
-	return userRelRow{values: s.relationRow}
+	return userRelRow{values: s.relationRow, err: s.queryErr}
 }
 
 func (s *userRelStub) Query(_ context.Context, _ string, _ ...any) (persistence.Rows, error) {
@@ -32,9 +35,13 @@ func (s *userRelStub) Exec(_ context.Context, _ string, _ ...any) error {
 
 type userRelRow struct {
 	values []any
+	err    error
 }
 
 func (r userRelRow) Scan(dest ...any) error {
+	if r.err != nil {
+		return r.err
+	}
 	if r.values == nil {
 		return errNoRows
 	}
@@ -68,7 +75,7 @@ func TestPostgresFollowBlockUnblockLifecycle(t *testing.T) {
 	repo := NewPostgresRepository(newUserFactory(backend))
 	ctx := context.Background()
 
-	if err := repo.Follow(ctx, "u1", "u2", "search", "m1"); err != nil {
+	if _, err := repo.Follow(ctx, "u1", "u2", "search", "m1"); err != nil {
 		t.Fatalf("follow: %v", err)
 	}
 	if err := repo.Unfollow(ctx, "u1", "u2"); err != nil {
@@ -87,9 +94,9 @@ func TestPostgresFollowBlockUnblockLifecycle(t *testing.T) {
 		t.Fatalf("expected writes, got %d", backend.execs)
 	}
 
-	// 关系查询出错 → 错误传播
-	backend.execErr = errFakeDB
-	if err := repo.Follow(ctx, "u1", "u2", "", ""); err == nil {
+	// 关系查询出错 → 错误传播（Follow 走 QueryRow + RETURNING）
+	backend.queryErr = errFakeDB
+	if _, err := repo.Follow(ctx, "u1", "u2", "", ""); err == nil {
 		t.Fatal("expected follow error propagation")
 	}
 }
@@ -111,7 +118,7 @@ func TestPostgresPutSettingsAndDeleteProfile(t *testing.T) {
 func TestPostgresUsersNotConfigured(t *testing.T) {
 	repo := NewPostgresRepository(persistence.NewFactory(config.Config{}))
 	ctx := context.Background()
-	if err := repo.Follow(ctx, "u1", "u2", "", ""); err != persistence.ErrNotImplemented {
+	if _, err := repo.Follow(ctx, "u1", "u2", "", ""); err != persistence.ErrNotImplemented {
 		t.Fatalf("follow: %v", err)
 	}
 	if err := repo.PutSettings(ctx, "u1", UserSettings{}); err != persistence.ErrNotImplemented {

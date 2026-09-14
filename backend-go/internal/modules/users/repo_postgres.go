@@ -2,11 +2,14 @@ package users
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type PostgresRepository struct {
@@ -96,12 +99,25 @@ func (r *PostgresRepository) PutSettings(ctx context.Context, userID string, set
 	}
 	return queryable.Exec(ctx, queryUpsertUserSettings, userID, settings.PrivacyLevel, settings.LocationVisible, settings.PresenceVisible, settings.SocialListsVisible, settings.GroupsVisible, settings.ReactedMomentsVisible, settings.StatsVisible, settings.AllowFollow, settings.AllowPrivateChat, settings.Searchable, settings.PhoneSearchable, settings.NicknameSearchable, settings.LocationSearchable, settings.NearbyMomentNotify)
 }
-func (r *PostgresRepository) Follow(ctx context.Context, userID, targetUserID string, source FollowSource, sourceMomentID string) error {
+
+// Follow 建立关注关系并报告是否发生状态迁移：SQL 带 `WHERE is_following = FALSE`
+// 守卫 + RETURNING，已关注时 0 行命中（ErrNoRows）→ changed=false，调用方跳过
+// 重复通知（审计 F-12）。
+func (r *PostgresRepository) Follow(ctx context.Context, userID, targetUserID string, source FollowSource, sourceMomentID string) (bool, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
-		return persistence.ErrNotImplemented
+		return false, persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryUpsertUserRelationFollow, userID, targetUserID, nowRFC3339())
+	var following bool
+	err := queryable.QueryRow(ctx, queryUpsertUserRelationFollow, userID, targetUserID, nowRFC3339()).Scan(&following)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// 已处于关注状态：no-op，不重复通知。
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 func (r *PostgresRepository) Unfollow(ctx context.Context, userID, targetUserID string) error {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)

@@ -69,10 +69,10 @@ func TestInMemoryPutProfile_ReplacesTagsWholesale(t *testing.T) {
 func TestInMemoryBlockCascade_ClearsBothFollows(t *testing.T) {
 	repo := NewInMemoryRepository()
 	ctx := context.Background()
-	if err := repo.Follow(ctx, "user_a", "user_b", FollowSourceProfile, ""); err != nil {
+	if _, err := repo.Follow(ctx, "user_a", "user_b", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow a->b: %v", err)
 	}
-	if err := repo.Follow(ctx, "user_b", "user_a", FollowSourceProfile, ""); err != nil {
+	if _, err := repo.Follow(ctx, "user_b", "user_a", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow b->a: %v", err)
 	}
 	if err := repo.BlockCascade(ctx, "user_a", "user_b", "spam"); err != nil {
@@ -99,10 +99,10 @@ func TestInMemoryMutualFriends(t *testing.T) {
 	ctx := context.Background()
 	mutual := func(a, b string) {
 		t.Helper()
-		if err := repo.Follow(ctx, a, b, FollowSourceProfile, ""); err != nil {
+		if _, err := repo.Follow(ctx, a, b, FollowSourceProfile, ""); err != nil {
 			t.Fatalf("follow %s->%s: %v", a, b, err)
 		}
-		if err := repo.Follow(ctx, b, a, FollowSourceProfile, ""); err != nil {
+		if _, err := repo.Follow(ctx, b, a, FollowSourceProfile, ""); err != nil {
 			t.Fatalf("follow %s->%s: %v", b, a, err)
 		}
 	}
@@ -111,7 +111,7 @@ func TestInMemoryMutualFriends(t *testing.T) {
 	mutual("target", "m1")
 	mutual("target", "m2")
 	// 单向关注不成共同好友。
-	if err := repo.Follow(ctx, "viewer", "stranger", FollowSourceProfile, ""); err != nil {
+	if _, err := repo.Follow(ctx, "viewer", "stranger", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow stranger: %v", err)
 	}
 	total, preview, err := repo.MutualFriends(ctx, "viewer", "target", 1)

@@ -7,6 +7,7 @@ import (
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
+	"hotspot/backend-go/internal/modules/notify"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
@@ -46,6 +47,10 @@ type stubUserRepo struct {
 
 	relation    Relationship
 	relationErr error
+
+	// followNoop 让 stub 的 Follow 返回 changed=false，用于验证「已关注」时
+	// 服务层跳过重复通知（审计 F-12）。
+	followNoop bool
 
 	friends    PaginatedFriends
 	friendsErr error
@@ -124,8 +129,13 @@ func (r *stubUserRepo) PutSettings(_ context.Context, _ string, _ UserSettings) 
 func (r *stubUserRepo) SearchProfiles(_ context.Context, _ SearchUsersRequest) (PaginatedProfiles, error) {
 	return r.searchResult, r.searchErr
 }
-func (r *stubUserRepo) Follow(_ context.Context, _ string, _ string, _ FollowSource, _ string) error {
-	return r.followErr
+func (r *stubUserRepo) Follow(_ context.Context, _ string, _ string, _ FollowSource, _ string) (bool, error) {
+	// followNoop 模拟「已关注」的 no-op 路径（审计 F-12：changed=false 时
+	// 服务层必须跳过通知与广播）。
+	if r.followNoop {
+		return false, r.followErr
+	}
+	return true, r.followErr
 }
 func (r *stubUserRepo) Unfollow(_ context.Context, _, _ string) error        { return r.unfollowErr }
 func (r *stubUserRepo) Block(_ context.Context, _, _, _ string) error        { return r.blockErr }
@@ -642,5 +652,43 @@ func TestServiceBatchGetPropagatesBatchError(t *testing.T) {
 	svc := NewServiceWithRepo(repo)
 	if _, err := svc.BatchGet(userCtx("viewer"), []string{"u1"}); err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+// 审计 F-12：仓储报告 changed=false（此前已关注）时，Follow 必须是彻底 no-op
+// ——不落 new_follower 通知、不广播实时事件。此前 upsert 恒成功，反复
+// follow 会每轮重复通知。
+func TestServiceFollowSkipsNotificationWhenAlreadyFollowing(t *testing.T) {
+	notificationRepo := notify.NewInMemoryRepository()
+	newSvc := func(repo *stubUserRepo) *Service {
+		svc := NewServiceWithDeps(repo, notify.NewServiceWithRepo(notificationRepo), nil)
+		svc.SetContentProviders(repo, repo)
+		return svc
+	}
+
+	// 对照：首次关注会落一条通知。
+	if err := newSvc(&stubUserRepo{exists: true, settingsFound: true, settings: defaultSettings()}).
+		Follow(userCtx("u1"), "u2", FollowSourceProfile, ""); err != nil {
+		t.Fatalf("first follow: %v", err)
+	}
+	first, err := notificationRepo.List(context.Background(), "u2", notify.NotifyListRequest{Pagination: &notify.PaginationParams{Limit: 50}})
+	if err != nil {
+		t.Fatalf("list after first follow: %v", err)
+	}
+	if len(first.Items) == 0 {
+		t.Fatal("expected a new_follower notification after the first follow")
+	}
+
+	// 已关注 → 仓储 changed=false：不得再落通知。
+	noop := &stubUserRepo{exists: true, settingsFound: true, settings: defaultSettings(), followNoop: true}
+	if err := newSvc(noop).Follow(userCtx("u1"), "u2", FollowSourceProfile, ""); err != nil {
+		t.Fatalf("repeat follow: %v", err)
+	}
+	second, err := notificationRepo.List(context.Background(), "u2", notify.NotifyListRequest{Pagination: &notify.PaginationParams{Limit: 50}})
+	if err != nil {
+		t.Fatalf("list after repeat follow: %v", err)
+	}
+	if len(second.Items) != len(first.Items) {
+		t.Fatalf("repeat follow must not add notifications: before=%d after=%d", len(first.Items), len(second.Items))
 	}
 }

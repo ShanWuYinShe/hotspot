@@ -103,7 +103,7 @@ func TestPostgresIT_FollowAndRelationship(t *testing.T) {
 		alice := testdb.InsertUser(t, txFactory, "u_follow_alice", "Alice")
 		bob := testdb.InsertUser(t, txFactory, "u_follow_bob", "Bob")
 
-		if err := repo.Follow(ctx, alice, bob, FollowSourceProfile, ""); err != nil {
+		if _, err := repo.Follow(ctx, alice, bob, FollowSourceProfile, ""); err != nil {
 			t.Fatalf("Follow: %v", err)
 		}
 
@@ -199,14 +199,14 @@ func TestPostgresIT_ListFriendsReturnsMutualFollows(t *testing.T) {
 		carol := testdb.InsertUser(t, txFactory, "u_lf_carol", "Carol")
 
 		// Alice follows Bob, Bob follows Alice → mutual (friend)
-		if err := repo.Follow(ctx, alice, bob, FollowSourceProfile, ""); err != nil {
+		if _, err := repo.Follow(ctx, alice, bob, FollowSourceProfile, ""); err != nil {
 			t.Fatalf("Follow alice->bob: %v", err)
 		}
-		if err := repo.Follow(ctx, bob, alice, FollowSourceProfile, ""); err != nil {
+		if _, err := repo.Follow(ctx, bob, alice, FollowSourceProfile, ""); err != nil {
 			t.Fatalf("Follow bob->alice: %v", err)
 		}
 		// Alice follows Carol but Carol does not follow back → NOT a friend
-		if err := repo.Follow(ctx, alice, carol, FollowSourceProfile, ""); err != nil {
+		if _, err := repo.Follow(ctx, alice, carol, FollowSourceProfile, ""); err != nil {
 			t.Fatalf("Follow alice->carol: %v", err)
 		}
 
@@ -234,7 +234,7 @@ func TestPostgresIT_ListFollowingAndFollowers(t *testing.T) {
 		alice := testdb.InsertUser(t, txFactory, "u_lfol_alice", "Alice")
 		bob := testdb.InsertUser(t, txFactory, "u_lfol_bob", "Bob")
 
-		if err := repo.Follow(ctx, alice, bob, FollowSourceProfile, ""); err != nil {
+		if _, err := repo.Follow(ctx, alice, bob, FollowSourceProfile, ""); err != nil {
 			t.Fatalf("Follow: %v", err)
 		}
 
@@ -270,10 +270,10 @@ func TestPostgresIT_ListFollowingMutualFlag(t *testing.T) {
 		alice := testdb.InsertUser(t, txFactory, "u_mutual_alice", "Alice")
 		bob := testdb.InsertUser(t, txFactory, "u_mutual_bob", "Bob")
 
-		if err := repo.Follow(ctx, alice, bob, FollowSourceProfile, ""); err != nil {
+		if _, err := repo.Follow(ctx, alice, bob, FollowSourceProfile, ""); err != nil {
 			t.Fatalf("Follow alice->bob: %v", err)
 		}
-		if err := repo.Follow(ctx, bob, alice, FollowSourceProfile, ""); err != nil {
+		if _, err := repo.Follow(ctx, bob, alice, FollowSourceProfile, ""); err != nil {
 			t.Fatalf("Follow bob->alice: %v", err)
 		}
 
@@ -326,9 +326,9 @@ func TestPostgresIT_CountUserStatsViaGetProfile(t *testing.T) {
 		carol := testdb.InsertUser(t, txFactory, "u_stats_carol", "Carol")
 
 		// Create friendships: alice<->bob (mutual), alice->carol (one-way)
-		repo.Follow(ctx, alice, bob, FollowSourceProfile, "")
-		repo.Follow(ctx, bob, alice, FollowSourceProfile, "")
-		repo.Follow(ctx, alice, carol, FollowSourceProfile, "")
+		_, _ = repo.Follow(ctx, alice, bob, FollowSourceProfile, "")
+		_, _ = repo.Follow(ctx, bob, alice, FollowSourceProfile, "")
+		_, _ = repo.Follow(ctx, alice, carol, FollowSourceProfile, "")
 
 		profile, found, err := repo.GetProfile(ctx, alice)
 		if err != nil {
@@ -366,7 +366,7 @@ func TestPostgresIT_ListFollowingPagination(t *testing.T) {
 		// Follow all 3 targets
 		for i := 0; i < 3; i++ {
 			target := "u_page_target_" + string(rune('A'+i))
-			if err := repo.Follow(ctx, alice, target, FollowSourceProfile, ""); err != nil {
+			if _, err := repo.Follow(ctx, alice, target, FollowSourceProfile, ""); err != nil {
 				t.Fatalf("Follow %s: %v", target, err)
 			}
 		}

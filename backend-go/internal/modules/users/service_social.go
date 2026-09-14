@@ -33,9 +33,18 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 	if !settings.AllowFollow {
 		return ErrPermissionDenied
 	}
-	if err := s.repo.Follow(ctx, principal.UserID, targetUserID, source, sourceMomentID); err != nil {
+	// changed=false 表示此前已关注（no-op）：跳过全部通知与实时事件广播。
+	// spec api_spec_user.md set_follow：重复关注同一状态应为 no-op（既不重复
+	// 落通知也不重复推送）——此前 upsert 恒成功，反复 follow/unfollow 每轮都
+	// 会再发一条 new_follower（并可能重复 mutual_follow）（审计 F-12）。
+	changed, err := s.repo.Follow(ctx, principal.UserID, targetUserID, source, sourceMomentID)
+	if err != nil {
 		observability.L().Error("users.follow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
+	}
+	if !changed {
+		observability.L().Info("users.follow no-op (already following)", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return nil
 	}
 	actor := s.buildFollowActor(ctx, principal.UserID)
 	followedAt := time.Now().UTC().Format(time.RFC3339)

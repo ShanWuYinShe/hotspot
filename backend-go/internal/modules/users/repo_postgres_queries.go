@@ -128,11 +128,19 @@ nearby_moment_notify = EXCLUDED.nearby_moment_notify`
 
 	// 关系操作的条件更新：每个操作只写自己的字段，避免 read-modify-write
 	// 的 lost update（并发 Follow+Block 互相覆盖对方字段）。
+	//
+	// DO UPDATE 带 `WHERE is_following = FALSE` 守卫 + RETURNING：已关注时命中 0 行
+	// （pgx.ErrNoRows），服务层据此跳过重复通知——此前 upsert 恒成功，反复
+	// follow/unfollow 每轮都会再落一条 new_follower（并可能重复 mutual_follow）
+	// 通知（审计 F-12）。返回行即表示确实发生了「未关注 → 关注」的状态迁移
+	// （新插入或取消关注后重新关注，两者都应通知）。
 	queryUpsertUserRelationFollow = `
 INSERT INTO user_relations (user_id, target_user_id, is_following, followed_at)
 VALUES ($1,$2,TRUE,$3)
 ON CONFLICT (user_id, target_user_id) DO UPDATE SET
-is_following = TRUE, followed_at = EXCLUDED.followed_at`
+is_following = TRUE, followed_at = EXCLUDED.followed_at
+WHERE user_relations.is_following = FALSE
+RETURNING is_following`
 
 	queryUpsertUserRelationUnfollow = `
 INSERT INTO user_relations (user_id, target_user_id, is_following)

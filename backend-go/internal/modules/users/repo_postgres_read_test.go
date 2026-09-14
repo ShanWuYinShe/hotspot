@@ -51,9 +51,9 @@ func (r *userFallbackRepo) SearchProfiles(context.Context, SearchUsersRequest) (
 	r.markUsed()
 	return PaginatedProfiles{}, nil
 }
-func (r *userFallbackRepo) Follow(context.Context, string, string, FollowSource, string) error {
+func (r *userFallbackRepo) Follow(context.Context, string, string, FollowSource, string) (bool, error) {
 	r.markUsed()
-	return nil
+	return true, nil
 }
 func (r *userFallbackRepo) Unfollow(context.Context, string, string) error {
 	r.markUsed()
@@ -230,7 +230,7 @@ func TestPostgresRepositoryWritesReturnExecErrors(t *testing.T) {
 		t.Fatal("expected put profile error")
 	}
 	backend.execErrs = map[string]error{queryUpsertUserRelationFollow: errors.New("boom")}
-	if err := repo.Follow(context.Background(), "user_alice", "user_bob", FollowSourceProfile, ""); err == nil {
+	if _, err := repo.Follow(context.Background(), "user_alice", "user_bob", FollowSourceProfile, ""); err == nil {
 		t.Fatal("expected follow error")
 	}
 }

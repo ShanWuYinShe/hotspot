@@ -206,14 +206,18 @@ func (r *InMemoryRepository) SearchProfiles(_ context.Context, req SearchUsersRe
 	}
 	return result, nil
 }
-func (r *InMemoryRepository) Follow(_ context.Context, userID, targetUserID string, _ FollowSource, _ string) error {
+func (r *InMemoryRepository) Follow(_ context.Context, userID, targetUserID string, _ FollowSource, _ string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	relation := r.ensureRelation(userID, targetUserID)
+	// 与 PG 实现同口径：已关注时是 no-op（changed=false），调用方跳过重复通知。
+	if relation.Following {
+		return false, nil
+	}
 	relation.Following = true
 	relation.FollowedAt = nowMemoryRFC3339()
 	r.relations[userID][targetUserID] = relation
-	return nil
+	return true, nil
 }
 func (r *InMemoryRepository) Unfollow(_ context.Context, userID, targetUserID string) error {
 	r.mu.Lock()

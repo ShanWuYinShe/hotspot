@@ -18,7 +18,9 @@ type Repository interface {
 	GetSettingsBatch(context.Context, []string) (map[string]UserSettings, error)
 	PutSettings(context.Context, string, UserSettings) error
 	SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error)
-	Follow(context.Context, string, string, FollowSource, string) error
+	// Follow 建立关注关系，返回本次是否真的发生了「未关注 → 关注」状态迁移。
+	// 已关注时为 no-op 返回 (false, nil)，调用方据此跳过重复通知（审计 F-12）。
+	Follow(context.Context, string, string, FollowSource, string) (changed bool, err error)
 	Unfollow(context.Context, string, string) error
 	Block(context.Context, string, string, string) error
 	// BlockCascade 原子完成「拉黑 + 解除双方关注」级联（spec api_spec_user.md block），

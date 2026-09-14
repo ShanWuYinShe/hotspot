@@ -71,8 +71,8 @@ func (invalidCursorRepo) PutSettings(context.Context, string, UserSettings) erro
 func (invalidCursorRepo) SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error) {
 	return PaginatedProfiles{InvalidCursor: true}, nil
 }
-func (invalidCursorRepo) Follow(context.Context, string, string, FollowSource, string) error {
-	return nil
+func (invalidCursorRepo) Follow(context.Context, string, string, FollowSource, string) (bool, error) {
+	return true, nil
 }
 func (invalidCursorRepo) Unfollow(context.Context, string, string) error             { return nil }
 func (invalidCursorRepo) Block(context.Context, string, string, string) error        { return nil }
@@ -140,8 +140,8 @@ func (r *userErrorRepo) PutSettings(context.Context, string, UserSettings) error
 func (r *userErrorRepo) SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error) {
 	return PaginatedProfiles{}, r.searchErr
 }
-func (r *userErrorRepo) Follow(context.Context, string, string, FollowSource, string) error {
-	return r.followErr
+func (r *userErrorRepo) Follow(context.Context, string, string, FollowSource, string) (bool, error) {
+	return true, r.followErr
 }
 func (r *userErrorRepo) Unfollow(context.Context, string, string) error      { return r.unfollowErr }
 func (r *userErrorRepo) Block(context.Context, string, string, string) error { return r.blockErr }
@@ -641,10 +641,10 @@ func TestInMemoryListFollowingCursorAdvancesPage(t *testing.T) {
 			t.Fatalf("put profile %s: %v", id, err)
 		}
 	}
-	if err := repo.Follow(ctx, "user_a", "user_b", FollowSourceProfile, ""); err != nil {
+	if _, err := repo.Follow(ctx, "user_a", "user_b", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow b: %v", err)
 	}
-	if err := repo.Follow(ctx, "user_a", "user_c", FollowSourceProfile, ""); err != nil {
+	if _, err := repo.Follow(ctx, "user_a", "user_c", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow c: %v", err)
 	}
 	first, err := repo.ListFollowing(ctx, "user_a", 1, "")
@@ -902,10 +902,10 @@ func TestListFriendsHappyPath(t *testing.T) {
 	if err := repo.PutSettings(ctx, "user_bob", defaultSettings()); err != nil {
 		t.Fatalf("put bob settings: %v", err)
 	}
-	if err := repo.Follow(ctx, "user_alice", "user_bob", FollowSourceProfile, ""); err != nil {
+	if _, err := repo.Follow(ctx, "user_alice", "user_bob", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow bob: %v", err)
 	}
-	if err := repo.Follow(ctx, "user_bob", "user_alice", FollowSourceProfile, ""); err != nil {
+	if _, err := repo.Follow(ctx, "user_bob", "user_alice", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow alice: %v", err)
 	}
 	req := httptest.NewRequest(http.MethodPost, "/list_friends", strings.NewReader(`{"user_id":"user_alice"}`)).WithContext(ctx)
@@ -1000,7 +1000,7 @@ func TestListFollowingHappyPath(t *testing.T) {
 	if err := repo.PutSettings(ctx, "user_bob", defaultSettings()); err != nil {
 		t.Fatalf("put bob settings: %v", err)
 	}
-	if err := repo.Follow(ctx, "user_alice", "user_bob", FollowSourceProfile, ""); err != nil {
+	if _, err := repo.Follow(ctx, "user_alice", "user_bob", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow bob: %v", err)
 	}
 	req := httptest.NewRequest(http.MethodPost, "/list_following", strings.NewReader(`{"user_id":"user_alice"}`)).WithContext(ctx)
@@ -1095,7 +1095,7 @@ func TestListFollowersHappyPath(t *testing.T) {
 	if err := repo.PutSettings(ctx, "user_bob", defaultSettings()); err != nil {
 		t.Fatalf("put bob settings: %v", err)
 	}
-	if err := repo.Follow(ctx, "user_bob", "user_alice", FollowSourceProfile, ""); err != nil {
+	if _, err := repo.Follow(ctx, "user_bob", "user_alice", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("bob follows alice: %v", err)
 	}
 	req := httptest.NewRequest(http.MethodPost, "/list_followers", strings.NewReader(`{"user_id":"user_alice"}`)).WithContext(ctx)
