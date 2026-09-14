@@ -181,6 +181,11 @@ func (r *PostgresRepository) ResetPassword(ctx context.Context, loginID, verific
 	}
 	now := time.Now().UTC()
 	if !ok || request.UsedAt != nil || now.After(request.ExpiresAt) {
+		// 验码失败即计数（防爆破：满 5 次静默作废最新有效码，对外仍返回
+		// 原错误，不新增可探测口径；见 maxVerificationCodeFailures）。
+		if err := r.recordResetCodeFailure(ctx, queryable, loginID, now); err != nil {
+			return Account{}, fmt.Errorf("auth.ResetPassword: record failure: %w", err)
+		}
 		return Account{}, ErrPasswordResetNotFound
 	}
 	hashed, err := hashPassword(newPassword)
@@ -253,7 +258,7 @@ func (r *PostgresRepository) CreateRegisterCode(ctx context.Context, loginID str
 }
 
 // VerifyRegisterCode 校验注册验证码有效（存在、未消费、未过期），不消费——
-// 消费发生在注册成功后（ConsumeRegisterCode），失败路径不烧码。
+// 消费发生在注册成功后（ConsumeRegisterCode）；失败路径只计数，满阈值才烧码。
 func (r *PostgresRepository) VerifyRegisterCode(ctx context.Context, loginID, verificationCode string) error {
 	queryable, ok := r.queryable(ctx)
 	if !ok {
@@ -262,9 +267,50 @@ func (r *PostgresRepository) VerifyRegisterCode(ctx context.Context, loginID, ve
 	var requestID string
 	if err := queryable.QueryRow(ctx, queryValidRegisterCode, loginID, verificationCode, time.Now().UTC()).Scan(&requestID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			if ferr := r.recordRegisterCodeFailure(ctx, queryable, loginID, time.Now().UTC()); ferr != nil {
+				return fmt.Errorf("auth.VerifyRegisterCode: record failure: %w", ferr)
+			}
 			return ErrInvalidRegisterCode
 		}
 		return fmt.Errorf("auth.VerifyRegisterCode: lookup: %w", err)
+	}
+	return nil
+}
+
+// recordResetCodeFailure 给 login_id 最新有效重置码 +1 次失败，满
+// maxVerificationCodeFailures 次即作废该码（烧码后正确码同样失效，调用方
+// 必须重新发送）。无有效码时为 no-op。
+func (r *PostgresRepository) recordResetCodeFailure(ctx context.Context, queryable persistence.Queryable, loginID string, now time.Time) error {
+	var requestID string
+	var failures int
+	if err := queryable.QueryRow(ctx, queryBumpResetCodeFailure, loginID, now).Scan(&requestID, &failures); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("auth.recordResetCodeFailure: bump: %w", err)
+	}
+	if failures >= maxVerificationCodeFailures {
+		if err := queryable.Exec(ctx, queryBurnResetCode, requestID, now); err != nil {
+			return fmt.Errorf("auth.recordResetCodeFailure: burn: %w", err)
+		}
+	}
+	return nil
+}
+
+// recordRegisterCodeFailure 注册码同款失败计数 + 烧码。
+func (r *PostgresRepository) recordRegisterCodeFailure(ctx context.Context, queryable persistence.Queryable, loginID string, now time.Time) error {
+	var requestID string
+	var failures int
+	if err := queryable.QueryRow(ctx, queryBumpRegisterCodeFailure, loginID, now).Scan(&requestID, &failures); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("auth.recordRegisterCodeFailure: bump: %w", err)
+	}
+	if failures >= maxVerificationCodeFailures {
+		if err := queryable.Exec(ctx, queryBurnRegisterCode, requestID, now); err != nil {
+			return fmt.Errorf("auth.recordRegisterCodeFailure: burn: %w", err)
+		}
 	}
 	return nil
 }

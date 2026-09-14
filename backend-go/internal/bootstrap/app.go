@@ -70,6 +70,9 @@ func NewApp(cfg config.Config) (*App, error) {
 	if redisClient != nil {
 		idempotency.SetStore(idempotency.NewRedisStore(redisClient))
 		ratelimit.SetRedisStore(redisClient)
+		logger.Info("redis shared stores enabled", "idempotency", "redis", "ratelimit", "redis")
+	} else {
+		logger.Info("redis not configured, idempotency running in single-instance mode")
 	}
 	idempotency.StartSweeper(rootCtx)
 	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisPinger(redisClient))

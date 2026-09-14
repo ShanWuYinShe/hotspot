@@ -107,3 +107,38 @@ func TestStartSweeperHonorsCancellation(t *testing.T) {
 	StartSweeper(context.Background())
 	StopSweeper()
 }
+
+// stubStore is a non-in-memory Store: SetStore must accept any Store
+// implementation (previously it silently dropped everything that was not
+// *InMemoryStore, so the Redis store wired by bootstrap never took effect).
+type stubStore struct{ *InMemoryStore }
+
+func TestSetStoreAcceptsNonInMemoryStore(t *testing.T) {
+	prev := currentStore()
+	t.Cleanup(func() { SetStore(prev) })
+	SetStore(&stubStore{NewInMemoryStore()})
+	if _, ok := currentStore().(*stubStore); !ok {
+		t.Fatalf("expected current store to be *stubStore, got %T", currentStore())
+	}
+}
+
+// noopStore implements Store without Sweep (like RedisStore, whose expiry
+// is handled server-side via TTL): StartSweeper must skip it cleanly.
+type noopStore struct{}
+
+func (noopStore) Get(string, string) (Record, bool) { return Record{}, false }
+func (noopStore) Reserve(string, string, time.Time) (Record, bool) {
+	return Record{}, false
+}
+func (noopStore) Save(Record)           {}
+func (noopStore) Delete(string, string) {}
+
+func TestStartSweeperSkipsStoreWithoutSweep(t *testing.T) {
+	prev := currentStore()
+	t.Cleanup(func() { SetStore(prev) })
+	SetStore(noopStore{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	StartSweeper(ctx)
+	StopSweeper()
+}

@@ -141,7 +141,8 @@ func queryUserSuggestions(ctx context.Context, queryable persistence.Queryable, 
 		var lastOnline time.Time
 		var tags []string
 		var momentsCount, friendsCount, followersCount, followingCount, groupsCount int
-		if err := rows.Scan(&userID, &nickname, &avatarURL, &bio, &locationName, &latitude, &longitude, &presenceStatus, &lastOnline, &tags, &momentsCount, &friendsCount, &followersCount, &followingCount, &groupsCount); err != nil {
+		var locationVisible, presenceVisible, statsVisible bool
+		if err := rows.Scan(&userID, &nickname, &avatarURL, &bio, &locationName, &latitude, &longitude, &presenceStatus, &lastOnline, &tags, &momentsCount, &friendsCount, &followersCount, &followingCount, &groupsCount, &locationVisible, &presenceVisible, &statsVisible); err != nil {
 			return nil, err
 		}
 		distance := distanceFrom(reference, latitude, longitude)
@@ -151,29 +152,41 @@ func queryUserSuggestions(ctx context.Context, queryable persistence.Queryable, 
 		// payload 复用通用 UserItem 结构（spec api_spec_types.md）：
 		// 不含 viewer 相关的 @auth-only 字段（relation/social_context），
 		// 与 suggest 无登录上下文的查询语义一致。
+		// L1 可见性门控（spec api_spec_authz.md #28/#108「可见性过滤」，
+		// 对齐 users open_the_door 的 isSelf||settings.XVisible 口径；suggest
+		// 为匿名上下文，isSelf 恒假）：location_visible=false 不输出 location
+		//（含精确坐标与 distance/bearing，防三角定位），presence_visible=false
+		// 不输出 presence_status/last_online_at，stats_visible=false 不输出 stats。
 		user := map[string]any{"user_id": userID, "nickname": nickname}
 		if avatarURL != "" {
 			user["avatar_url"] = avatarURL
 		}
-		payload := map[string]any{"user": user, "location": relativeLocationPayload(reference, locationName, latitude, longitude)}
+		payload := map[string]any{"user": user}
+		if locationVisible {
+			payload["location"] = relativeLocationPayload(reference, locationName, latitude, longitude)
+		}
 		if bio != "" {
 			payload["bio"] = bio
 		}
 		if len(tags) > 0 {
 			payload["tags"] = tags
 		}
-		if ps := presenceStatusPtr(presenceStatus); ps != "" {
-			payload["presence_status"] = ps
+		if presenceVisible {
+			if ps := presenceStatusPtr(presenceStatus); ps != "" {
+				payload["presence_status"] = ps
+			}
+			if !lastOnline.IsZero() {
+				payload["last_online_at"] = lastOnline.UTC().Format(time.RFC3339)
+			}
 		}
-		if !lastOnline.IsZero() {
-			payload["last_online_at"] = lastOnline.UTC().Format(time.RFC3339)
-		}
-		payload["stats"] = map[string]any{
-			"moments_count":   momentsCount,
-			"friends_count":   friendsCount,
-			"followers_count": followersCount,
-			"following_count": followingCount,
-			"groups_count":    groupsCount,
+		if statsVisible {
+			payload["stats"] = map[string]any{
+				"moments_count":   momentsCount,
+				"friends_count":   friendsCount,
+				"followers_count": followersCount,
+				"following_count": followingCount,
+				"groups_count":    groupsCount,
+			}
 		}
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "user", Payload: payload},

@@ -22,6 +22,7 @@ type passwordResetRecord struct {
 	ExpiresAt        time.Time
 	CreatedAt        time.Time
 	UsedAt           *time.Time
+	FailedAttempts   int
 }
 
 // registerCodeRecord 注册验证码记录（与 passwordResetRecord 同构，独立存放：
@@ -33,6 +34,7 @@ type registerCodeRecord struct {
 	ExpiresAt        time.Time
 	CreatedAt        time.Time
 	ConsumedAt       *time.Time
+	FailedAttempts   int
 }
 
 type InMemoryRepository struct {
@@ -44,6 +46,11 @@ type InMemoryRepository struct {
 }
 
 const passwordResetThrottleWindow = 10 * time.Minute
+
+// maxVerificationCodeFailures 验证码容错次数：同一 login_id 最新有效码累计
+// 失败满此数即静默作废（防爆破；对齐登录侧 defaultMaxFailures = 5）。
+// PG 与内存双实现共用（同包常量）。
+const maxVerificationCodeFailures = 5
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
@@ -172,6 +179,8 @@ func (r *InMemoryRepository) ResetPassword(_ context.Context, loginID, verificat
 		break
 	}
 	if requestIndex == -1 {
+		// 验码失败即计数，满阈值静默作废最新有效码（对齐 PG 实现）。
+		r.burnResetCodeOnFailure(loginID, now)
 		return Account{}, ErrPasswordResetNotFound
 	}
 	hashed, err := hashPassword(newPassword)
@@ -239,10 +248,11 @@ func (r *InMemoryRepository) CreateRegisterCode(_ context.Context, loginID strin
 	return code, nil
 }
 
-// VerifyRegisterCode 校验注册验证码有效（存在、未消费、未过期），不消费。
+// VerifyRegisterCode 校验注册验证码有效（存在、未消费、未过期），不消费；
+// 失败路径计数，满阈值静默作废最新有效码（对齐 PG 实现）。
 func (r *InMemoryRepository) VerifyRegisterCode(_ context.Context, loginID, verificationCode string) error {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	now := time.Now().UTC()
 	items := r.registerCodes[loginID]
 	for i := len(items) - 1; i >= 0; i-- {
@@ -251,6 +261,7 @@ func (r *InMemoryRepository) VerifyRegisterCode(_ context.Context, loginID, veri
 			return nil
 		}
 	}
+	r.burnRegisterCodeOnFailure(loginID, now)
 	return ErrInvalidRegisterCode
 }
 
@@ -283,4 +294,37 @@ func (r *InMemoryRepository) LastRegisterCode(loginID string) string {
 		}
 	}
 	return ""
+}
+
+// burnResetCodeOnFailure 给 login_id 最新有效重置码 +1 次失败，满
+// maxVerificationCodeFailures 次即作废该码。调用方须持有 r.mu 写锁。
+func (r *InMemoryRepository) burnResetCodeOnFailure(loginID string, now time.Time) {
+	items := r.resetsByLogin[loginID]
+	for i := len(items) - 1; i >= 0; i-- {
+		if items[i].UsedAt != nil || now.After(items[i].ExpiresAt) {
+			continue
+		}
+		items[i].FailedAttempts++
+		if items[i].FailedAttempts >= maxVerificationCodeFailures {
+			usedAt := now
+			items[i].UsedAt = &usedAt
+		}
+		return
+	}
+}
+
+// burnRegisterCodeOnFailure 注册码同款失败计数 + 烧码。调用方须持有 r.mu 写锁。
+func (r *InMemoryRepository) burnRegisterCodeOnFailure(loginID string, now time.Time) {
+	items := r.registerCodes[loginID]
+	for i := len(items) - 1; i >= 0; i-- {
+		if items[i].ConsumedAt != nil || now.After(items[i].ExpiresAt) {
+			continue
+		}
+		items[i].FailedAttempts++
+		if items[i].FailedAttempts >= maxVerificationCodeFailures {
+			consumedAt := now
+			items[i].ConsumedAt = &consumedAt
+		}
+		return
+	}
 }

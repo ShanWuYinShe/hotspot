@@ -26,7 +26,8 @@ SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), COALESCE(u.bio, ''), u
        COALESCE((SELECT COUNT(*) FROM user_relations ur JOIN user_relations rev ON rev.user_id = ur.target_user_id AND rev.target_user_id = ur.user_id AND rev.is_following = TRUE WHERE ur.user_id = u.user_id AND ur.is_following = TRUE), 0),
        COALESCE((SELECT COUNT(*) FROM user_relations ur WHERE ur.target_user_id = u.user_id AND ur.is_following = TRUE), 0),
        COALESCE((SELECT COUNT(*) FROM user_relations ur WHERE ur.user_id = u.user_id AND ur.is_following = TRUE), 0),
-       COALESCE((SELECT COUNT(*) FROM group_members gm JOIN groups g ON g.group_id = gm.group_id WHERE gm.user_id = u.user_id AND g.deleted_at IS NULL), 0)
+       COALESCE((SELECT COUNT(*) FROM group_members gm JOIN groups g ON g.group_id = gm.group_id WHERE gm.user_id = u.user_id AND g.deleted_at IS NULL), 0),
+       us.location_visible, us.presence_visible, us.stats_visible
 FROM users u
 JOIN user_settings us ON us.user_id = u.user_id
 WHERE us.searchable = TRUE

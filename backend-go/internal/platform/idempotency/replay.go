@@ -13,21 +13,29 @@ import (
 
 // defaultStore is read on every request and written once at boot, so guard it
 // with an atomic pointer instead of a bare global (which would race under
-// -race and on reconfigure).
-var defaultStore atomic.Pointer[InMemoryStore]
+// -race and on reconfigure). The pointer holds any Store implementation:
+// InMemoryStore for single-instance, RedisStore when Redis is configured
+// (bootstrap wires it — previously SetStore silently dropped non-in-memory
+// stores, breaking cross-instance idempotency).
+var defaultStore atomic.Pointer[Store]
 
 func init() {
-	defaultStore.Store(NewInMemoryStore())
+	SetStore(NewInMemoryStore())
 }
 
-// currentStore returns the active store. Reserved for future swap-in of a
-// distributed store; today it's always the in-memory one.
-func currentStore() Store { return defaultStore.Load() }
+// currentStore returns the active store.
+func currentStore() Store {
+	if p := defaultStore.Load(); p != nil {
+		return *p
+	}
+	return NewInMemoryStore()
+}
 
 func SetStore(store Store) {
-	if s, ok := store.(*InMemoryStore); ok && s != nil {
-		defaultStore.Store(s)
+	if store == nil {
+		return
 	}
+	defaultStore.Store(&store)
 }
 
 func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, producer func() httpx.ApiResponse[T]) bool {

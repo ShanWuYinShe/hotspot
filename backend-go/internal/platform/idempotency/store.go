@@ -137,9 +137,11 @@ var (
 )
 
 // StartSweeper launches a background goroutine that periodically prunes
-// expired records from the default in-memory store. It is safe to call
-// from bootstrap; calling it again while a sweeper is already running is a
-// no-op. The goroutine exits when ctx is cancelled.
+// expired records from the default store when it supports sweeping
+// (InMemoryStore). Stores with server-side expiry (RedisStore via TTL) are
+// left alone. It is safe to call from bootstrap; calling it again while a
+// sweeper is already running is a no-op. The goroutine exits when ctx is
+// cancelled.
 //
 // Get/Reserve already apply lazy expiry (StatusExpired → 22001) so correctness
 // does not depend on the sweeper; it just keeps the map from growing forever.
@@ -149,8 +151,8 @@ func StartSweeper(ctx context.Context) {
 	if sweeperStarted {
 		return
 	}
-	store := defaultStore.Load()
-	if store == nil {
+	store, ok := currentStore().(interface{ Sweep(time.Time) })
+	if !ok {
 		return
 	}
 	sweepCtx, cancel := context.WithCancel(ctx)
@@ -172,7 +174,7 @@ func StopSweeper() {
 	sweeperMu.Unlock()
 }
 
-func runSweeper(ctx context.Context, store *InMemoryStore) {
+func runSweeper(ctx context.Context, store interface{ Sweep(time.Time) }) {
 	defer func() {
 		sweeperMu.Lock()
 		sweeperCancel = nil

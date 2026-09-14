@@ -44,6 +44,21 @@ LIMIT 1`
 SET used_at = $2
 WHERE request_id = $1`
 
+	// 验码失败计数：给 login_id 最新有效码 failed_attempts + 1（048 迁移）。
+	// 子查询在执行瞬间重判有效（未用、未过期），并发下至多多放行一两次，
+	// 对 5 次烧码阈值无实质影响。
+	queryBumpResetCodeFailure = `UPDATE auth_password_reset_requests
+SET failed_attempts = failed_attempts + 1
+WHERE request_id = (
+  SELECT request_id FROM auth_password_reset_requests
+  WHERE login_id = $1 AND used_at IS NULL AND expires_at > $2
+  ORDER BY created_at DESC LIMIT 1)
+RETURNING request_id, failed_attempts`
+
+	queryBurnResetCode = `UPDATE auth_password_reset_requests
+SET used_at = $2
+WHERE request_id = $1`
+
 	queryUpdateAccountPassword = `UPDATE auth_accounts
 SET password_hash = $2, updated_at = $3
 WHERE user_id = $1`
@@ -65,4 +80,16 @@ LIMIT 1`
 	queryConsumeRegisterCode = `UPDATE auth_register_verification_codes
 SET consumed_at = $3
 WHERE login_id = $1 AND verification_code = $2 AND consumed_at IS NULL`
+
+	queryBumpRegisterCodeFailure = `UPDATE auth_register_verification_codes
+SET failed_attempts = failed_attempts + 1
+WHERE request_id = (
+  SELECT request_id FROM auth_register_verification_codes
+  WHERE login_id = $1 AND consumed_at IS NULL AND expires_at > $2
+  ORDER BY created_at DESC LIMIT 1)
+RETURNING request_id, failed_attempts`
+
+	queryBurnRegisterCode = `UPDATE auth_register_verification_codes
+SET consumed_at = $2
+WHERE request_id = $1`
 )
