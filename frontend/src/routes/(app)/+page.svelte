@@ -90,15 +90,21 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	</ListContainer>
 {/snippet}
 
-{#snippet homeContent()}
-	<!-- 移动端成功态内容（loading/error/empty 三态由外层 156-166 统一承载，只写一次）。
-	     首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
+{#snippet heroColumn(momentItems: MomentItem[], withMoreAction: boolean)}
+	<!-- Hero 统计 + 附近活动 + 群组轮播：移动/桌面双布局共用，
+	     活动列表条数与「更多」入口经参数区分 -->
 	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
 	<div>
-		<SectionHead title="附近活动" action="更多" onAction={() => void goto(ROUTES.nearbyMoments)} />
-		{@render momentRows(moments.slice(0, 3), (id) => void goto(ROUTES.moment(id)))}
+		<SectionHead title="附近活动" action={withMoreAction ? '更多' : undefined} onAction={() => void goto(ROUTES.nearbyMoments)} />
+		{@render momentRows(momentItems, (id) => void goto(ROUTES.moment(id)))}
 	</div>
 	<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
+{/snippet}
+
+{#snippet homeContent()}
+	<!-- 移动端成功态内容（loading/error/empty 三态由外层统一承载，只写一次）。
+	     首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
+	{@render heroColumn(moments.slice(0, 3), true)}
 	<div>
 		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
 		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
@@ -155,14 +161,9 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 		     homeContent（单栏堆叠，4 条人物推荐 + 查看全部），与移动端保持同款
 		     内容密度。 -->
 		<div class="grid grid-cols-[21.25rem_minmax(0,1fr)] gap-6">
-			<!-- Left: hero + activity + groups (340px) -->
+			<!-- Left: hero + activity + groups (340px)，与移动端共用 heroColumn（全量动态、无「更多」入口） -->
 			<div class="flex flex-col gap-6 border-r border-border-default pr-6">
-				<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
-				<div>
-					<SectionHead title="附近活动" />
-					{@render momentRows(moments, (id) => void goto(ROUTES.moment(id)))}
-				</div>
-				<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
+				{@render heroColumn(moments, false)}
 			</div>
 
 			<!-- Right: full nearby-users list -->
