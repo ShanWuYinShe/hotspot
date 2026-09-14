@@ -539,6 +539,61 @@ func TestServiceUpgradeLoginIDTaken(t *testing.T) {
 	}
 }
 
+// --- update_account 头像归属校验 ---
+
+// stubAvatarResolver 校验行为桩：err != nil 时一律拒绝。
+type stubAvatarResolver struct{ err error }
+
+func (r stubAvatarResolver) ResolveAvatarImage(_ context.Context, _, _ string) error {
+	return r.err
+}
+
+// spec api_spec_user.md update_account 10300：avatar_file_id 不存在/不归属
+// 当前用户/非 avatar 类/未完成上传时拒绝更新。
+func TestUpdateMyProfileRejectsForeignAvatar(t *testing.T) {
+	repo := &stubUserRepo{profile: testProfile("u1"), profileFound: true}
+	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
+	svc.SetAvatarMediaResolver(stubAvatarResolver{err: errors.New("not owned")})
+	avatar := "file_foreign"
+	err := svc.UpdateMyProfile(userCtx("u1"), UpdateAccountRequest{AvatarFileID: &avatar})
+	if !errors.Is(err, ErrAvatarNotOwned) {
+		t.Fatalf("expected ErrAvatarNotOwned, got %v", err)
+	}
+	if repo.profile.AvatarURL == "file_foreign" {
+		t.Fatal("expected profile avatar to stay unchanged")
+	}
+}
+
+func TestUpdateMyProfileAcceptsOwnedAvatar(t *testing.T) {
+	repo := &stubUserRepo{profile: testProfile("u1"), profileFound: true}
+	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
+	svc.SetAvatarMediaResolver(stubAvatarResolver{})
+	avatar := "file_owned"
+	if err := svc.UpdateMyProfile(userCtx("u1"), UpdateAccountRequest{AvatarFileID: &avatar}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.profile.AvatarURL != "file_owned" {
+		t.Fatalf("expected avatar to be updated, got %q", repo.profile.AvatarURL)
+	}
+}
+
+// 空字符串表示清除头像（spec update_account），不经过归属校验。
+func TestUpdateMyProfileClearAvatarSkipsOwnershipCheck(t *testing.T) {
+	repo := &stubUserRepo{profile: testProfile("u1"), profileFound: true}
+	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
+	svc.SetAvatarMediaResolver(stubAvatarResolver{err: errors.New("must not be called")})
+	avatar := ""
+	if err := svc.UpdateMyProfile(userCtx("u1"), UpdateAccountRequest{AvatarFileID: &avatar}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.profile.AvatarURL != "" {
+		t.Fatalf("expected avatar cleared, got %q", repo.profile.AvatarURL)
+	}
+}
+
 // --- SetRemark ---
 
 func TestServiceSetRemarkRequiresFollowing(t *testing.T) {

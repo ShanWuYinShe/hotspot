@@ -27,6 +27,15 @@ type AccountCredentialWriter interface {
 	AttachCredentials(ctx context.Context, userID, loginID, password string) error
 }
 
+// AccountAvatarMediaResolver 校验 avatar_file_id 归属（media 模块实现，
+// bootstrap 注入，仿 moments 的 ImageResolver 模式）。
+type AccountAvatarMediaResolver interface {
+	// ResolveAvatarImage 校验 fileID 存在、归属 userID、category=avatar 且
+	// 上传已完成；不满足时返回错误（update_account 映射 10300，
+	// spec api_spec_user.md update_account 错误码）。
+	ResolveAvatarImage(ctx context.Context, fileID, userID string) error
+}
+
 type Service struct {
 	repo          Repository
 	notifications userNotificationWriter
@@ -39,7 +48,13 @@ type Service struct {
 	// Upgrade 依赖二者，缺一按服务错误拒绝（见 ErrUpgradeUnavailable）。
 	credentials AccountCredentialWriter
 	runInTx     persistence.TxRunner
+	// avatar_file_id 归属校验（update_account），bootstrap 注入 media 模块实现；
+	// nil 时跳过校验（与 moments.validateImageOwnership 的 nil 口径一致）。
+	avatarMedia AccountAvatarMediaResolver
 }
+
+// SetAvatarMediaResolver 注入 avatar_file_id 归属校验实现（bootstrap 装配）。
+func (s *Service) SetAvatarMediaResolver(r AccountAvatarMediaResolver) { s.avatarMedia = r }
 
 // SetCredentialWriter 注入凭证写入实现与事务执行器（bootstrap 装配）。
 // Upgrade 在同一事务内写凭证与 user_type，二者须同时提供。
@@ -111,6 +126,16 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		profile.Nickname = *req.Nickname
 	}
 	if req.AvatarFileID != nil {
+		// 归属校验（spec api_spec_user.md update_account 错误码 10300）：
+		// avatar_file_id 须来自当前用户已完成上传的 avatar 类媒体；空字符串
+		// 表示清除头像，不校验。校验实现未接线时跳过（对齐 moments
+		// validateImageOwnership 的 nil 口径，bootstrap 恒注入）。
+		if *req.AvatarFileID != "" && s.avatarMedia != nil {
+			if err := s.avatarMedia.ResolveAvatarImage(ctx, *req.AvatarFileID, principal.UserID); err != nil {
+				observability.L().Warn("users.update_account avatar denied", "error", err, "user_id", principal.UserID)
+				return ErrAvatarNotOwned
+			}
+		}
 		profile.AvatarURL = *req.AvatarFileID
 	}
 	if req.Bio != nil {

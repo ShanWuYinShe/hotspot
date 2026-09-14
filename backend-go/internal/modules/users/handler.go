@@ -97,6 +97,10 @@ func apiErrorFromService(err error) *httpx.APIError {
 	case errors.Is(err, ErrLoginIDTaken):
 		// 10400（spec api_spec_user.md → upgrade：login_id 已被占用）
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "login_id 已被占用"}
+	case errors.Is(err, ErrAvatarNotOwned):
+		// 10300（spec api_spec_user.md → update_account：avatar_file_id 对应的
+		// 媒体资源不存在或不属于当前用户）
+		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "媒体资源不存在或不属于当前用户"}
 	case errors.Is(err, ErrConflict):
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "业务冲突"}
 	case errors.Is(err, ErrInvalidRequest):

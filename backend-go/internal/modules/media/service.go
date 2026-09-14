@@ -212,6 +212,22 @@ func (s *Service) ResolveMomentImages(ctx context.Context, fileIDs []string, use
 	return assets, nil
 }
 
+// ResolveAvatarImage 校验单个 avatar_file_id：存在、归属 userID、category 为
+// avatar 且上传已完成（spec api_spec_user.md update_account 错误码 10300：
+// avatar_file_id 对应的媒体资源不存在或不属于当前用户）。不满足时返回
+// ErrMediaNotOwned；users 模块经 AccountAvatarMediaResolver 接口注入调用。
+func (s *Service) ResolveAvatarImage(ctx context.Context, fileID, userID string) error {
+	assets, err := s.repo.ResolveByFileIDs(ctx, []string{fileID}, userID, CategoryAvatar)
+	if err != nil {
+		observability.L().Error("media.resolve_avatar_image failed", "error", err)
+		return err
+	}
+	if _, ok := assets[fileID]; !ok {
+		return ErrMediaNotOwned
+	}
+	return nil
+}
+
 // PresignGet signs a short-term client-facing read URL for the given storage key.
 func (s *Service) PresignGet(ctx context.Context, storageKey string, ttl time.Duration) (string, error) {
 	return s.provider.PresignGet(ctx, storageKey, ttl)

@@ -18,4 +18,7 @@ var (
 	// ErrUpgradeUnavailable 凭证写入依赖（auth 模块）未接线，升级被拒绝——
 	// 只改 user_type 不落凭证会导致升级用户无法重新登录（spec 契约级语义）。
 	ErrUpgradeUnavailable = errors.New("users: credential writer not wired")
+	// ErrAvatarNotOwned avatar_file_id 不存在/不归属当前用户/非 avatar 类/
+	// 未完成上传（spec api_spec_user.md update_account 错误码 10300）。
+	ErrAvatarNotOwned = errors.New("users: avatar_file_id not owned or not ready")
 )
