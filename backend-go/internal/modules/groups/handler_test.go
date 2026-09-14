@@ -298,7 +298,7 @@ func TestDismissGroupUsesGroupIDAndBroadcastsDismissedEvent(t *testing.T) {
 		t.Fatalf("create group: %v", err)
 	}
 	sink := &groupRealtimeSink{}
-	hub.RegisterUser("user_alice", "sess_alice", sink)
+	hub.SetGroupSubscriptions([]string{created.Group.GroupID}, sink)
 	if err := service.Dismiss(ctx, DismissGroupRequest{GroupID: created.Group.GroupID}); err != nil {
 		t.Fatalf("dismiss group: %v", err)
 	}

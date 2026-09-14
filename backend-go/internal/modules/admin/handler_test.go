@@ -568,14 +568,15 @@ func TestSearchGroupsAndDismissGroup(t *testing.T) {
 	if !foundDismissAudit {
 		t.Fatalf("unexpected audit logs: %#v", store.auditLogs)
 	}
-	if len(aliceSink.events) != 1 || aliceSink.events[0].Type != "GroupDismissed" {
-		t.Fatalf("unexpected alice events: %#v", aliceSink.events)
-	}
-	if len(bobSink.events) != 1 || bobSink.events[0].Type != "GroupDismissed" {
-		t.Fatalf("unexpected bob events: %#v", bobSink.events)
-	}
+	// 解散仅按群广播一次：成员 sink 通过群订阅收到各自一份，无逐成员重复投递。
 	if len(groupSink.events) != 1 || groupSink.events[0].Type != "GroupDismissed" {
 		t.Fatalf("unexpected group events: %#v", groupSink.events)
+	}
+	if len(aliceSink.events) != 0 {
+		t.Fatalf("expected no per-user duplicate events for alice, got %#v", aliceSink.events)
+	}
+	if len(bobSink.events) != 0 {
+		t.Fatalf("expected no per-user duplicate events for bob, got %#v", bobSink.events)
 	}
 }
 

@@ -161,10 +161,6 @@ func (s *Service) DismissGroup(ctx context.Context, req AdminDismissGroupRequest
 	if strings.TrimSpace(req.GroupID) == "" || len(req.Reason) > 500 {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	memberIDs, err := s.repo.ListGroupMemberIDs(ctx, req.GroupID)
-	if err != nil {
-		return nil, err
-	}
 	item, found, err := s.repo.DismissGroup(ctx, req.GroupID)
 	if err != nil {
 		if apiErr := asAPIError(err); apiErr != nil {
@@ -176,9 +172,8 @@ func (s *Service) DismissGroup(ctx context.Context, req AdminDismissGroupRequest
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "群组不存在"}, nil
 	}
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "policy_violation"}}
-	for _, userID := range memberIDs {
-		realtime.DefaultHub().BroadcastToUser(userID, event)
-	}
+	// 仅按群广播一次：逐成员 BroadcastToUser 会让在线成员各收到两份重复事件；
+	// 离线成员由 resume 兜底（解散为持久状态，重连后群已不可见）。
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("group.dismiss"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("group"), TargetID: req.GroupID, TargetName: item.Group.Name, Details: map[string]any{"type": "group.dismiss", "reason": strings.TrimSpace(req.Reason)}}); err != nil {
 		return nil, err

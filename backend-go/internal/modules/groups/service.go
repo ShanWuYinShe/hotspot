@@ -351,7 +351,8 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 		}
 	}
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "owner_dismissed"}}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
+	// 仅按群广播一次（owner 亦是成员，另发 BroadcastToUser 会收到重复事件）；
+	// 离线成员由 resume 兜底（解散为持久状态，重连后群已不可见）。
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
 	observability.L().Info("groups.dismiss completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
