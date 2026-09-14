@@ -18,6 +18,8 @@ import (
 	"hotspot/backend-go/internal/platform/resourceguard"
 	"hotspot/backend-go/internal/platform/textutil"
 	"hotspot/backend-go/internal/platform/types"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type Service struct {
@@ -41,6 +43,7 @@ type ReactionAggregator interface {
 
 type momentNotificationWriter interface {
 	AppendMentioned(ctx context.Context, targetUserID string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (string, error)
+	AppendMentionedBatch(ctx context.Context, targetUserIDs []string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (map[string]string, error)
 }
 
 func NewService() *Service {
@@ -618,11 +621,20 @@ func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, 
 	s.notifyMentionUserIDs(ctx, actorUserID, item, normalizeMomentMentions(item.Mentions))
 }
 
-// notifyMentionUserIDs 对明确列出的提及用户逐个落通知 + 推送。
+// notifyMentionUserIDs 对明确列出的提及用户批量落库通知 + 并行推送。
 // notifyMomentMentions（Create）通知全部 mentions；Update 只传新旧差集，
 // 避免每次编辑都给已通知过的用户重复推送（每用户 = 1 次通知落库 + 1 次 WS 广播）。
 func (s *Service) notifyMentionUserIDs(ctx context.Context, actorUserID string, item MomentItem, mentionedUserIDs []string) {
 	if s.notifications == nil {
+		return
+	}
+	targets := make([]string, 0, len(mentionedUserIDs))
+	for _, mentionedUserID := range mentionedUserIDs {
+		if mentionedUserID != actorUserID {
+			targets = append(targets, mentionedUserID)
+		}
+	}
+	if len(targets) == 0 {
 		return
 	}
 	momentSummary := momentSummaryForItem(item)
@@ -631,26 +643,33 @@ func (s *Service) notifyMentionUserIDs(ctx context.Context, actorUserID string, 
 		observability.L().Error("moments.mentions build actor failed", "error", err, "user_id", actorUserID)
 		actor = fallbackActor(actorUserID)
 	}
-	for _, mentionedUserID := range mentionedUserIDs {
-		if mentionedUserID == actorUserID {
-			continue
-		}
-		notificationID := ""
-		id, err := s.notifications.AppendMentioned(ctx, mentionedUserID, actor, "moment", item.MomentID, momentSummary, "", "")
-		if err != nil {
-			observability.L().Error("moments.mentions append notification failed", "error", err, "moment_id", item.MomentID, "mentioned_user_id", mentionedUserID)
-		} else {
-			notificationID = id
-		}
-		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: map[string]any{
-			"notify_id":      notificationID,
-			"target_type":    "moment",
-			"moment_id":      item.MomentID,
-			"moment_summary": momentSummary,
-			"actor":          actor,
-			"mentioned_at":   item.CreatedAt,
-		}})
+	// 批量落库（单次往返）：失败时记日志并按通知缺失降级（notify_id 置空），
+	// 广播仍照常进行——与此前逐人失败只影响该人的口径一致，只是失败粒度为整批。
+	notifyIDs, err := s.notifications.AppendMentionedBatch(ctx, targets, actor, "moment", item.MomentID, momentSummary, "", "")
+	if err != nil {
+		observability.L().Error("moments.mentions batch append notifications failed", "error", err, "moment_id", item.MomentID, "count", len(targets))
 	}
+	// 并行推送（有界并发）：每条 BroadcastToUser 内部含 resume Record + 跨实例
+	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟（mentions 上限 20）。
+	broadcast := func(mentionedUserID, notificationID string) func() error {
+		return func() error {
+			realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: map[string]any{
+				"notify_id":      notificationID,
+				"target_type":    "moment",
+				"moment_id":      item.MomentID,
+				"moment_summary": momentSummary,
+				"actor":          actor,
+				"mentioned_at":   item.CreatedAt,
+			}})
+			return nil
+		}
+	}
+	group, _ := errgroup.WithContext(context.Background())
+	group.SetLimit(8)
+	for _, mentionedUserID := range targets {
+		group.Go(broadcast(mentionedUserID, notifyIDs[mentionedUserID]))
+	}
+	_ = group.Wait()
 }
 
 // broadcastMomentDeletedToFavorites 推送 MomentDeleted 给收藏该瞬间的用户

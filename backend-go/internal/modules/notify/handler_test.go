@@ -30,6 +30,9 @@ func (r *notifyErrorRepo) Append(context.Context, string, NotifyItem) error {
 func (r *notifyErrorRepo) AppendMany(context.Context, []string, NotifyItem) error {
 	return r.appendErr
 }
+func (r *notifyErrorRepo) AppendBatchPerUser(context.Context, []string, []NotifyItem) error {
+	return r.appendErr
+}
 func (r *notifyErrorRepo) List(context.Context, string, NotifyListRequest) (PaginatedNotify, error) {
 	return PaginatedNotify{}, r.listErr
 }

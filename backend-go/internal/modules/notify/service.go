@@ -341,6 +341,41 @@ func (s *Service) AppendMentioned(ctx context.Context, targetUserID string, acto
 	return id, err
 }
 
+// AppendMentionedBatch 批量落库多个被提及用户的 mentioned 通知（单次往返，
+// @ 提及热路径用）。每个用户独立 notify_id 且各自内嵌 payload，语义与逐人
+// AppendMentioned 完全一致；落库失败整体报错（调用方按通知缺失降级推送），
+// 返回 userID → notify_id 映射供调用方构造 WS 推送 payload。
+func (s *Service) AppendMentionedBatch(ctx context.Context, targetUserIDs []string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (map[string]string, error) {
+	items := make([]NotifyItem, 0, len(targetUserIDs))
+	ids := make([]string, 0, len(targetUserIDs))
+	for range targetUserIDs {
+		payload := map[string]any{
+			"type":           "mentioned",
+			"actor":          actor,
+			"target_type":    targetType,
+			"moment_id":      momentID,
+			"moment_summary": momentSummary,
+		}
+		if commentID != "" {
+			payload["comment_id"] = commentID
+		}
+		if commentPreview != "" {
+			payload["comment_preview"] = commentPreview
+		}
+		id := newNotifyID()
+		items = append(items, NotifyItem{NotifyID: id, Type: "mentioned", IsRead: false, Payload: payload})
+		ids = append(ids, id)
+	}
+	if err := s.repo.AppendBatchPerUser(ctx, targetUserIDs, items); err != nil {
+		return nil, err
+	}
+	out := make(map[string]string, len(ids))
+	for i, targetUserID := range targetUserIDs {
+		out[targetUserID] = ids[i]
+	}
+	return out, nil
+}
+
 // AppendGroupMentioned records a group-chat mention notify
 // (NotifyType='group_mentioned', spec api_spec_notify.md) and returns the
 // notify_id to embed in the pushed GroupMessageMentioned payload.
@@ -363,6 +398,37 @@ func (s *Service) AppendGroupMentioned(ctx context.Context, targetUserID string,
 		Payload:  payload,
 	})
 	return id, err
+}
+
+// AppendGroupMentionedBatch 批量落库群聊 @ 通知（单次往返）。与
+// AppendMentionedBatch 同构：每用户独立 notify_id 且各自内嵌 payload，
+// 失败整体报错，返回 userID → notify_id 映射。
+func (s *Service) AppendGroupMentionedBatch(ctx context.Context, targetUserIDs []string, actor types.UserInfo, groupID, groupName, messageID, contentPreview string) (map[string]string, error) {
+	items := make([]NotifyItem, 0, len(targetUserIDs))
+	ids := make([]string, 0, len(targetUserIDs))
+	for range targetUserIDs {
+		payload := map[string]any{
+			"type":       "group_mentioned",
+			"actor":      actor,
+			"group_id":   groupID,
+			"group_name": groupName,
+			"message_id": messageID,
+		}
+		if contentPreview != "" {
+			payload["content_preview"] = contentPreview
+		}
+		id := newNotifyID()
+		items = append(items, NotifyItem{NotifyID: id, Type: "group_mentioned", IsRead: false, Payload: payload})
+		ids = append(ids, id)
+	}
+	if err := s.repo.AppendBatchPerUser(ctx, targetUserIDs, items); err != nil {
+		return nil, err
+	}
+	out := make(map[string]string, len(ids))
+	for i, targetUserID := range targetUserIDs {
+		out[targetUserID] = ids[i]
+	}
+	return out, nil
 }
 
 // PushSystemAnnouncement broadcasts a system announcement to all online

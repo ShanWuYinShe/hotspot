@@ -3,6 +3,7 @@ package moments
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -495,6 +496,18 @@ func (w *stubNotifyWriter) AppendMentioned(_ context.Context, targetUserID strin
 	}
 	w.appended[targetUserID]++
 	return "n1", nil
+}
+
+func (w *stubNotifyWriter) AppendMentionedBatch(_ context.Context, targetUserIDs []string, _ types.UserInfo, _ string, _ string, _ types.MomentSummary, _ string, _ string) (map[string]string, error) {
+	if w.appended == nil {
+		w.appended = make(map[string]int)
+	}
+	ids := make(map[string]string, len(targetUserIDs))
+	for i, targetUserID := range targetUserIDs {
+		w.appended[targetUserID]++
+		ids[targetUserID] = "n" + strconv.Itoa(i+1)
+	}
+	return ids, nil
 }
 
 func TestEnsureMentionsLimitBoundary(t *testing.T) {

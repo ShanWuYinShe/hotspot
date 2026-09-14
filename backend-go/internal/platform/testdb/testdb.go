@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"hotspot/backend-go/internal/platform/geo"
@@ -67,6 +68,10 @@ func initPool(t *testing.T, dsn string) *pgxpool.Pool {
 	if err != nil {
 		t.Fatalf("parse postgres dsn: %v", err)
 	}
+	// 与生产 persistence.NewFactory 保持同一 QueryExecMode（simple protocol）：
+	// IT 若走 pgx 默认二进制协议，timestamptz 等 OID 无法 Scan 进 string，
+	// 会误报生产不存在的错误（反之亦然），测试结果失去代表性。
+	poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		t.Fatalf("create pool: %v", err)

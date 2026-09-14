@@ -10,8 +10,8 @@ SELECT notification_id, type, is_read, created_at, payload::text
 FROM notifications
 WHERE user_id = $1
   AND ($2 = '' OR type = $2)
-  AND ($3 IS NULL OR is_read = $3)
-  AND ($4 IS NULL OR created_at < $4 OR (created_at = $4 AND notification_id < $5))
+  AND ($3::boolean IS NULL OR is_read = $3::boolean)
+  AND ($4::timestamptz IS NULL OR created_at < $4::timestamptz OR (created_at = $4::timestamptz AND notification_id < $5))
 ORDER BY created_at DESC, notification_id DESC
 LIMIT $6`
 
@@ -30,6 +30,17 @@ VALUES ($1, $2, $3, $4, $5, $6::jsonb)`
 INSERT INTO notifications (notification_id, user_id, type, is_read, created_at, payload)
 SELECT $2, uid, $3, $4, $5, $6::jsonb
 FROM unnest($1::text[]) AS uid
+ON CONFLICT (notification_id, user_id) DO NOTHING`
+
+	// queryInsertNotifysBatchPerUser 与 queryInsertNotifysBatch 的区别：每行
+	// 携带**各自独立**的 notify_id 与 payload（@ 提及场景：payload 内嵌各自
+	// 的 notify_id，语义与逐人 Append 一致），六个同长数组按位 unnest 成行、
+	// 单次往返插入。created_at 以 RFC3339 文本传入、显式 cast 为 timestamptz
+	// （unnest 产出的 text 不会隐式转换）。主键 (notification_id, user_id)
+	// 冲突时跳过（与批量公告一致）。
+	queryInsertNotifysBatchPerUser = `
+INSERT INTO notifications (notification_id, user_id, type, is_read, created_at, payload)
+SELECT unnest($1::text[]), unnest($2::text[]), unnest($3::text[]), unnest($4::bool[]), unnest($5::text[])::timestamptz, unnest($6::jsonb[])
 ON CONFLICT (notification_id, user_id) DO NOTHING`
 
 	queryUnreadNotifyCounts = `

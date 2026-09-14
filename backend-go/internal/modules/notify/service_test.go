@@ -14,13 +14,14 @@ import (
 type sinkStub struct{ events []realtime.Event }
 
 type notifyListCaptureRepo struct {
-	userID     string
-	appendUser string
-	appendMany []string
-	appended   []NotifyItem
-	req        NotifyListRequest
-	list       PaginatedNotify
-	listErr    error
+	userID             string
+	appendUser         string
+	appendMany         []string
+	appendBatchUserIDs []string
+	appended           []NotifyItem
+	req                NotifyListRequest
+	list               PaginatedNotify
+	listErr            error
 }
 
 func (s *sinkStub) Send(e realtime.Event) error { s.events = append(s.events, e); return nil }
@@ -35,6 +36,12 @@ func (r *notifyListCaptureRepo) Append(_ context.Context, userID string, item No
 func (r *notifyListCaptureRepo) AppendMany(_ context.Context, userIDs []string, item NotifyItem) error {
 	r.appendMany = append([]string(nil), userIDs...)
 	r.appended = append(r.appended, item)
+	return nil
+}
+
+func (r *notifyListCaptureRepo) AppendBatchPerUser(_ context.Context, userIDs []string, items []NotifyItem) error {
+	r.appendBatchUserIDs = append([]string(nil), userIDs...)
+	r.appended = append(r.appended, items...)
 	return nil
 }
 

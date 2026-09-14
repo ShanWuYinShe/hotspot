@@ -10,6 +10,10 @@ import (
 type Repository interface {
 	Append(context.Context, string, NotifyItem) error
 	AppendMany(context.Context, []string, NotifyItem) error
+	// AppendBatchPerUser 批量落库多用户**各自独立**的通知（@ 提及场景）。
+	// userIDs 与 items 按位对应、长度必须相等；与 AppendMany（全收件人共用
+	// 同一 notify_id）语义不同，勿混用。
+	AppendBatchPerUser(context.Context, []string, []NotifyItem) error
 	List(context.Context, string, NotifyListRequest) (PaginatedNotify, error)
 	UnreadCount(context.Context, string) (UnreadSummaryResult, error)
 	MarkAsRead(context.Context, string, []string) error

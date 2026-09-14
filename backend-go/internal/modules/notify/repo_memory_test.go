@@ -82,3 +82,57 @@ func TestInMemoryAppendMany_DeliversAllWithSharedId(t *testing.T) {
 		}
 	}
 }
+
+// --- AppendBatchPerUser（@ 提及批量：每用户独立 notify_id） ---
+
+// TestInMemoryAppendBatchPerUser_DeliversPerUserItems verifies each recipient
+// gets its own item (and thus its own notify_id), mirroring the postgres
+// per-row batch insert.
+func TestInMemoryAppendBatchPerUser_DeliversPerUserItems(t *testing.T) {
+	repo := NewInMemoryRepository()
+	users := []string{"u1", "u2", "u3"}
+	items := []NotifyItem{
+		{NotifyID: "notif_1", Type: "mentioned", Payload: map[string]any{"moment_id": "m1"}},
+		{NotifyID: "notif_2", Type: "mentioned", Payload: map[string]any{"moment_id": "m1"}},
+		{NotifyID: "notif_3", Type: "mentioned", Payload: map[string]any{"moment_id": "m1"}},
+	}
+	if err := repo.AppendBatchPerUser(context.Background(), users, items); err != nil {
+		t.Fatalf("AppendBatchPerUser failed: %v", err)
+	}
+	for i, uid := range users {
+		page, _ := repo.List(context.Background(), uid, NotifyListRequest{})
+		if len(page.Items) != 1 {
+			t.Fatalf("user %s: expected 1 notify, got %d", uid, len(page.Items))
+		}
+		if page.Items[0].NotifyID != items[i].NotifyID {
+			t.Fatalf("user %s: notify_id = %q, want %q", uid, page.Items[0].NotifyID, items[i].NotifyID)
+		}
+	}
+}
+
+// TestInMemoryAppendBatchPerUser_SkipsEmptyUserIDs verifies empty user ids are
+// ignored (matching AppendMany and the postgres batch filtering).
+func TestInMemoryAppendBatchPerUser_SkipsEmptyUserIDs(t *testing.T) {
+	repo := NewInMemoryRepository()
+	err := repo.AppendBatchPerUser(context.Background(),
+		[]string{"u1", "", "u2"},
+		[]NotifyItem{{NotifyID: "notif_1", Type: "mentioned"}, {NotifyID: "notif_2", Type: "mentioned"}, {NotifyID: "notif_3", Type: "mentioned"}})
+	if err != nil {
+		t.Fatalf("AppendBatchPerUser failed: %v", err)
+	}
+	for _, uid := range []string{"u1", "u2"} {
+		page, _ := repo.List(context.Background(), uid, NotifyListRequest{})
+		if len(page.Items) != 1 {
+			t.Fatalf("user %s: expected 1 notify, got %d", uid, len(page.Items))
+		}
+	}
+}
+
+// TestInMemoryAppendBatchPerUser_LengthMismatchIsError verifies the positional
+// pairing contract is enforced.
+func TestInMemoryAppendBatchPerUser_LengthMismatchIsError(t *testing.T) {
+	repo := NewInMemoryRepository()
+	if err := repo.AppendBatchPerUser(context.Background(), []string{"u1"}, []NotifyItem{}); err == nil {
+		t.Fatal("expected length mismatch error")
+	}
+}
