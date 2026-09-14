@@ -19,4 +19,15 @@
 	--breakpoint-lg: 1280px;
 	--breakpoint-xl: 1536px;
 	--breakpoint-2xl: 1792px;
+
+	/*
+	 * sans 字体栈覆写：布局壳（Desktop/Tablet/Mobile*）根元素挂的 `font-sans`
+	 * 工具类会压过 base.css 的 body 继承栈——不覆写时 Tailwind 默认栈不含
+	 * Inter，自托管 Inter 全站不生效，app.html 的字体 preload 也永不命中
+	 * （浏览器告警「preload 资源未使用」）。此处与 base.css body 栈保持同一
+	 * 列表，改动必须两处同步。
+	 */
+	--font-sans: 'Inter', 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei',
+		'Noto Sans CJK SC', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+		'Segoe UI', sans-serif;
 }
