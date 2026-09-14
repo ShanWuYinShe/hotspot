@@ -8,6 +8,19 @@ import (
 	"time"
 )
 
+// GetInvite 按 invite_id 直查邀请（repo.go 接口注释）。
+func (r *InMemoryRepository) GetInvite(_ context.Context, inviteID string) (GroupInviteItem, string, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	record, ok := r.invites[inviteID]
+	if !ok {
+		return GroupInviteItem{}, "", false, nil
+	}
+	group := r.groups[record.GroupID]
+	item := GroupInviteItem{InviteID: record.InviteID, Group: group.Group, Inviter: UserInfo{UserID: record.InviterID, Nickname: record.InviterID}, Message: record.Message, Status: record.Status, CreatedAt: record.CreatedAt, ExpiresAt: record.ExpiresAt, RespondedAt: record.RespondedAt}
+	return item, record.InviteeID, true, nil
+}
+
 func (r *InMemoryRepository) ListMyInvites(_ context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupInviteItem, string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

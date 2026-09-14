@@ -69,6 +69,8 @@ type stubGroupsRepo struct {
 	cancelErr error
 
 	myInvites    []GroupInviteItem
+	getInvite    func(inviteID string) (item GroupInviteItem, invitee string, found bool) // GetInvite 直查槽位（nil 回退扫 myInvites）
+	getInviteErr error
 	myInvitesCur string
 	myInvitesErr error
 
@@ -172,6 +174,24 @@ func (r *stubGroupsRepo) ListMyApplications(_ context.Context, _ string, _ *Appl
 	return r.myApps, r.myAppsCur, r.myAppsErr
 }
 func (r *stubGroupsRepo) CancelApplication(_ context.Context, _ string) error { return r.cancelErr }
+
+// GetInvite 桩：getInvite 槽位非空时按其返回（直查路径），否则回退扫
+// myInvites 列表（模拟旧行为的测试兼容）。
+func (r *stubGroupsRepo) GetInvite(_ context.Context, inviteID string) (GroupInviteItem, string, bool, error) {
+	if r.getInvite != nil {
+		item, invitee, found := r.getInvite(inviteID)
+		return item, invitee, found, r.getInviteErr
+	}
+	for _, item := range r.myInvites {
+		if item.InviteID == inviteID {
+			// invitee 返回空：myInvites 桩数据不携带被邀请人，视为「属于
+			// 查询者」（service 侧空 invitee 跳过归属校验）。
+			return item, "", true, nil
+		}
+	}
+	return GroupInviteItem{}, "", false, r.myInvitesErr
+}
+
 func (r *stubGroupsRepo) ListMyInvites(_ context.Context, _ string, _ *ApplicationStatus, _ int, _ string) ([]GroupInviteItem, string, error) {
 	return r.myInvites, r.myInvitesCur, r.myInvitesErr
 }
@@ -723,6 +743,20 @@ func TestServiceUpdatePreferencesHappyPath(t *testing.T) {
 // =========================================================================
 // A) service_invite 补充测试
 // =========================================================================
+
+// 直查归属校验：invitee 不符的邀请（他人的邀请）按不存在处理，不泄漏存在性。
+func TestServiceAcceptInviteRejectsForeignInvite(t *testing.T) {
+	repo := &stubGroupsRepo{
+		getInvite: func(inviteID string) (GroupInviteItem, string, bool) {
+			return GroupInviteItem{InviteID: "inv1", Group: GroupInfo{GroupID: "g1"}, Status: ApplicationStatusPending}, "u_other", true
+		},
+	}
+	svc := NewServiceWithRepo(repo)
+	err := svc.AcceptInvite(grpCtx("u1"), AcceptInviteRequest{InviteID: "inv1"})
+	if !errors.Is(err, ErrGroupNotFound) {
+		t.Fatalf("expected ErrGroupNotFound for foreign invite, got %v", err)
+	}
+}
 
 func TestServiceAcceptInviteHappyPath(t *testing.T) {
 	pending := ApplicationStatusPending

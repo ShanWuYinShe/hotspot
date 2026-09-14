@@ -30,6 +30,10 @@ type Repository interface {
 	LeaveGroup(context.Context, string, string) error
 	ListMyApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error)
 	CancelApplication(context.Context, string) error
+	// GetInvite 按 invite_id 直查邀请（对照 GetApplication：替代按列表
+	// limit=1000 的截断扫描）。invitee 为被邀请人 user_id，供归属校验与撤销
+	// 通知寻址。邀请不存在时 found=false。
+	GetInvite(ctx context.Context, inviteID string) (invite GroupInviteItem, invitee string, found bool, err error)
 	ListMyInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupInviteItem, string, error)
 	AcceptInvite(context.Context, string, string) error
 	RejectInvite(context.Context, string) error

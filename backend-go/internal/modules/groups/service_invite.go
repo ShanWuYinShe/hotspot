@@ -160,15 +160,14 @@ func (s *Service) RevokeInvite(ctx context.Context, req RevokeSentInviteRequest)
 		return ErrAccessRestricted
 	}
 	// Locate the invite to address the notification/event to the invitee.
-	var inviteeID string
-	sent, _, err := s.repo.ListSentInvites(ctx, req.GroupID, nil, 1000, "")
-	if err == nil {
-		for _, item := range sent {
-			if item.InviteID == req.InviteID && item.Status == ApplicationStatusPending {
-				inviteeID = item.Invitee.UserID
-				break
-			}
-		}
+	// 直查替代 limit=1000 的列表扫描（超限截断会漏检）；invitee 仅在「邀请
+	// 属于本群且仍 pending」时用于通知寻址（与旧口径一致）。
+	invite, inviteeID, found, err := s.repo.GetInvite(ctx, req.InviteID)
+	if err != nil {
+		return err
+	}
+	if !found || invite.Group.GroupID != req.GroupID || invite.Status != ApplicationStatusPending {
+		inviteeID = ""
 	}
 	if err := s.repo.RevokeInvite(ctx, req.GroupID, req.InviteID); err != nil {
 		return err
@@ -229,14 +228,15 @@ func (s *Service) notifyGroupInviteExpired(ctx context.Context, inviteeUserID st
 }
 
 func (s *Service) findInviteForUser(ctx context.Context, userID string, inviteID string) (GroupInviteItem, bool, error) {
-	items, _, err := s.repo.ListMyInvites(ctx, userID, nil, 1000, "")
-	if err != nil {
+	// 直查替代 limit=1000 的列表扫描；邀请不属于该用户（invitee 不符）按
+	// 不存在处理，不泄漏他人邀请的存在性。invitee 为空仅出现在测试桩回退
+	// （生产 PG/内存实现恒返回非空 invitee），此时跳过归属校验。
+	item, inviteeUserID, found, err := s.repo.GetInvite(ctx, inviteID)
+	if err != nil || !found {
 		return GroupInviteItem{}, false, err
 	}
-	for _, item := range items {
-		if item.InviteID == inviteID {
-			return item, true, nil
-		}
+	if inviteeUserID != "" && inviteeUserID != userID {
+		return GroupInviteItem{}, false, nil
 	}
-	return GroupInviteItem{}, false, nil
+	return item, true, nil
 }

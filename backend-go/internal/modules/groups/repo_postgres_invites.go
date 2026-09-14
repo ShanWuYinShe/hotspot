@@ -230,25 +230,49 @@ func (r *PostgresRepository) RevokeInvite(ctx context.Context, groupID string, i
 	return nil
 }
 
+// GetInvite 按 invite_id 直查邀请（repo.go 接口注释）。found=false 表示
+// 邀请不存在。
+func (r *PostgresRepository) GetInvite(ctx context.Context, inviteID string) (GroupInviteItem, string, bool, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return GroupInviteItem{}, "", false, persistence.ErrNotImplemented
+	}
+	item, invitee, err := loadInviteWithInvitee(ctx, queryable, inviteID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return GroupInviteItem{}, "", false, nil
+		}
+		return GroupInviteItem{}, "", false, err
+	}
+	return item, invitee, true, nil
+}
+
 func (r *PostgresRepository) loadInvite(ctx context.Context, inviteID string) (GroupInviteItem, error) {
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
 		return GroupInviteItem{}, persistence.ErrNotImplemented
 	}
+	item, _, err := loadInviteWithInvitee(ctx, queryable, inviteID)
+	return item, err
+}
+
+// loadInviteWithInvitee 按主键取邀请并补全 group base 与成员数，同时返回
+// invitee_user_id（GroupInviteItem 是 API 输出形状，不携带该字段）。
+func loadInviteWithInvitee(ctx context.Context, queryable persistence.Queryable, inviteID string) (GroupInviteItem, string, error) {
 	var item GroupInviteItem
-	var groupID, inviterUserID, message, statusText string
+	var groupID, inviterUserID, inviteeUserID, message, statusText string
 	var createdAt time.Time
 	var expiresAt, respondedAt *time.Time
-	if err := queryable.QueryRow(ctx, queryGetGroupInvite, inviteID).Scan(&item.InviteID, &groupID, &inviterUserID, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
-		return GroupInviteItem{}, err
+	if err := queryable.QueryRow(ctx, queryGetGroupInvite, inviteID).Scan(&item.InviteID, &groupID, &inviterUserID, &inviteeUserID, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
+		return GroupInviteItem{}, "", err
 	}
 	group, err := getGroupBase(ctx, queryable, groupID)
 	if err != nil {
-		return GroupInviteItem{}, err
+		return GroupInviteItem{}, "", err
 	}
 	count, err := countGroupMembers(ctx, queryable, groupID)
 	if err != nil {
-		return GroupInviteItem{}, err
+		return GroupInviteItem{}, "", err
 	}
 	group.Group.MembersCount = count
 	item.Group = group.Group
@@ -266,5 +290,5 @@ func (r *PostgresRepository) loadInvite(ctx context.Context, inviteID string) (G
 		value := respondedAt.UTC().Format(time.RFC3339)
 		item.RespondedAt = &value
 	}
-	return item, nil
+	return item, inviteeUserID, nil
 }

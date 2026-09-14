@@ -130,6 +130,14 @@ func (r *groupErrorRepo) CancelApplication(context.Context, string) error {
 func (r *groupErrorRepo) ListMyInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupInviteItem, string, error) {
 	return r.listMyInvitesItems, "", r.listMyInvitesErr
 }
+func (r *groupErrorRepo) GetInvite(_ context.Context, inviteID string) (GroupInviteItem, string, bool, error) {
+	for _, item := range r.listMyInvitesItems {
+		if item.InviteID == inviteID {
+			return item, "user_alice", true, nil
+		}
+	}
+	return GroupInviteItem{}, "", false, nil
+}
 func (r *groupErrorRepo) AcceptInvite(context.Context, string, string) error {
 	return r.acceptInviteErr
 }

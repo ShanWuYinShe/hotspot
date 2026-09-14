@@ -121,10 +121,11 @@ func TestServiceRevokeInviteNotifiesInvitee(t *testing.T) {
 	pending := ApplicationStatusPending
 	reason := "no longer needed"
 	repo := &captureGroupsRepo{stubGroupsRepo: &stubGroupsRepo{
-		getResult:      ownerGroup(),
-		getFound:       true,
-		sentInvites:    []GroupSentInviteItem{{InviteID: "inv1", Status: pending, Invitee: UserInfo{UserID: "u2"}}},
-		sentInvitesErr: nil,
+		getResult: ownerGroup(),
+		getFound:  true,
+		getInvite: func(inviteID string) (GroupInviteItem, string, bool) {
+			return GroupInviteItem{InviteID: "inv1", Group: GroupInfo{GroupID: "g1"}, Status: pending}, "u2", true
+		},
 	}}
 	writer := &notifyWriterStub{}
 	svc := NewServiceWithDeps(repo, writer, nil)
