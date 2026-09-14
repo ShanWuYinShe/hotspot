@@ -574,6 +574,10 @@ export struct HomePage {
     // 无 ambient 光晕——前端 09-07 去炫光治理已删除 glow 层，本端同步删除）
     Column() {
       // Header row：图标 + 标题/范围 + 右箭头
+      // 弹性契约（对齐前端 HeroStats）：左侧文本簇 layoutWeight(1) 先收缩，
+      // 右箭头 flexShrink(0) 锁定；定位名过长时副标题单行省略，不顶出箭头。
+      // （此前靠 Blank 撑开，文本簇无宽度约束，副标题 maxLines(1) 的省略永远触发不了，
+      // 长定位名会把箭头顶出卡外——对齐前端同款问题。）
       Row() {
         Row({ space: DesignConstants.SPACING.SM2 }) {
           // brand 圆形图标（对齐前端 size-9.5 圆 + accent 实底，无投影）
@@ -604,10 +608,10 @@ export struct HomePage {
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
         }
         .alignItems(VerticalAlign.Center)
-
-        Blank()
+        .layoutWeight(1)
 
         Text() {
           LucideIcon({
@@ -616,6 +620,7 @@ export struct HomePage {
             paletteRole: 'textSecondary'
           })
         }
+        .flexShrink(0)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)

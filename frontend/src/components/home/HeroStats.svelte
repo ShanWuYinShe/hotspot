@@ -27,19 +27,21 @@
 		aria-label="查看附近的人"
 		onclick={onExplore}
 	>
-		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-2.5">
-				<div class="flex items-center justify-center rounded-full bg-accent-default size-9.5">
+		<!-- 标题行弹性契约（对齐 PageHeader）：左侧文本簇 flex-1 min-w-0 先收缩，
+		     右箭头 shrink-0 锁定；定位名过长时副标题单行截断，不顶出箭头、不贴卡边裁字。 -->
+		<div class="flex items-center justify-between gap-2">
+			<div class="flex min-w-0 flex-1 items-center gap-2.5">
+				<div class="flex shrink-0 items-center justify-center rounded-full bg-accent-default size-9.5">
 					<Radar class="size-4.5 text-text-on-accent"   strokeWidth={2} />
 				</div>
-				<div>
+				<div class="min-w-0">
 					<p class="text-sm font-medium text-text-primary" >实时附近</p>
-					<p class="text-xs mt-px text-text-secondary"  >
+					<p class="text-xs mt-px truncate text-text-secondary"  >
 						{rangeLabel}
 					</p>
 				</div>
 			</div>
-			<ChevronRight class="size-4 text-text-secondary"   strokeWidth={1.5} />
+			<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 		</div>
 
 		<!-- Stats row：display 数字（大号粗体 + 紧字距），对齐 Figma stats 模式 -->
