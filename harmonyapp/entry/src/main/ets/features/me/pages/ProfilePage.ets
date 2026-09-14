@@ -56,6 +56,8 @@ import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 const DOMAIN_NUMBER: number = 0xFF03;
 const TAG: string = 'ProfilePage';
 const PASSWORD_POLICY_HINT: string = '密码需为8-128位且同时包含字母和数字';
+// 备注长度上限（对齐前端 remarkDraft.slice(0, 24)）
+const REMARK_MAX: number = 24;
 
 interface ProfilePageParams {
   userId?: string;
@@ -115,6 +117,10 @@ export struct ProfilePage {
   @State viewedUserMoments: MomentItem[] = [];
   @State viewedUserLoading: boolean = false;
   @State viewedUserError: string = '';
+  // 设置备注（对齐前端 users/[userId] 备注名称；仅已关注可保存）
+  @State showRemarkSheet: boolean = false;
+  @State remarkDraft: string = '';
+  @State isSavingRemark: boolean = false;
   private isDestroyed: boolean = false;
 
   private webSocketService = WebSocketService.getInstance();
@@ -219,6 +225,42 @@ export struct ProfilePage {
       }
     } finally {
       this.viewedFollowPending = false;
+    }
+  }
+
+  // ==================== 设置备注（对齐前端 users/[userId] set_remark） ====================
+
+  private openRemarkSheet(): void {
+    if (!this.ensureLoggedIn('设置备注')) {
+      return;
+    }
+    // 对齐前端：仅已关注可设置备注（disabled={!followed}）
+    if (!this.isViewedUserFollowing()) {
+      SystemToast.showWarning('关注对方后可设备注', this.getUIContext());
+      return;
+    }
+    this.remarkDraft = '';
+    this.showRemarkSheet = true;
+  }
+
+  private async saveRemark(): Promise<void> {
+    const uid = this.viewedUserProfile?.user?.user_id ?? '';
+    if (!uid || !this.isViewedUserFollowing() || this.isSavingRemark) {
+      return;
+    }
+    this.isSavingRemark = true;
+    try {
+      const response = await ApiClient.setFriendRemark({ user_id: uid, remark: this.remarkDraft.trim() });
+      if (response.code === 0) {
+        this.showRemarkSheet = false;
+        SystemToast.showSuccess('备注已保存', this.getUIContext());
+      } else {
+        SystemToast.showError(getErrorMessage(response, '保存失败'), this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('保存失败，请重试', this.getUIContext());
+    } finally {
+      this.isSavingRemark = false;
     }
   }
 
@@ -811,6 +853,12 @@ export struct ProfilePage {
       .width('100%')
       .height('100%')
       .backgroundColor(this.getCurrentThemePalette().pageBackground)
+      .bindSheet($$this.showRemarkSheet, this.buildRemarkSheet(), {
+        height: SheetSize.FIT_CONTENT,
+        showClose: true,
+        dragBar: true,
+        backgroundColor: this.getCurrentThemePalette().sheetBackground
+      })
       }
     }
     .hideTitleBar(true)
@@ -960,7 +1008,8 @@ export struct ProfilePage {
         .align(Alignment.TopStart)
         .scrollBar(BarState.Off)
 
-        // 底部操作条（对齐前端 footer snippet：私信 + 关注 下沉拇指热区）
+        // 底部操作条（对齐前端 footer snippet：私信 + 关注 下沉拇指热区；
+        // 备注入口对齐前端「更多操作」sheet 的备注名称，仅已关注可保存）
         Row({ space: DesignConstants.SPACING.MD }) {
           SystemButton({
             label: '私信',
@@ -979,6 +1028,16 @@ export struct ProfilePage {
             disabled: this.viewedFollowPending,
             onPress: () => {
               this.toggleViewedUserFollow();
+            }
+          })
+            .layoutWeight(1)
+
+          SystemButton({
+            label: '备注',
+            variant: 'outline',
+            buttonSize: 'small',
+            onPress: () => {
+              this.openRemarkSheet();
             }
           })
             .layoutWeight(1)
@@ -1011,6 +1070,67 @@ export struct ProfilePage {
     }
     .alignItems(HorizontalAlign.Center)
     .layoutWeight(1)
+  }
+
+  // ==================== 备注编辑半模态（对齐前端备注名称输入，仅已关注可保存） ====================
+  @Builder
+  private buildRemarkSheet() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Text('设置备注')
+        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+
+      Text(`备注${this.viewedUserProfile?.user?.nickname ?? ''}，只对你可见`)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+
+      SystemInput({
+        value: this.remarkDraft,
+        placeholder: '备注名称',
+        fontSize: DesignConstants.FONT.SIZE.MD,
+        inputHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
+        maxLength: REMARK_MAX,
+        onChange: (value: string) => { this.remarkDraft = value; }
+      })
+        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+        .shadow(this.getCurrentThemePalette().controlShadow)
+        .borderRadius(DesignConstants.RADIUS.MD)
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+
+      Text(`${this.remarkDraft.trim().length}/${REMARK_MAX}`)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(this.getCurrentThemePalette().textTertiary)
+        .width('100%')
+        .textAlign(TextAlign.End)
+
+      Row({ space: DesignConstants.SPACING.SM }) {
+        SystemButton({
+          label: '取消',
+          variant: 'surface',
+          buttonSize: 'sheet',
+          fullWidth: true,
+          onPress: () => { this.showRemarkSheet = false; }
+        })
+        SystemButton({
+          label: '保存',
+          variant: 'primary',
+          buttonSize: 'sheet',
+          fullWidth: true,
+          loading: this.isSavingRemark,
+          disabled: !this.isViewedUserFollowing(),
+          onPress: () => { this.saveRemark(); }
+        })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.XXL,
+      right: DesignConstants.SPACING.XXL,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.XXL
+    })
   }
 
   // ==================== 匿名用户 - 游客界面 ====================
