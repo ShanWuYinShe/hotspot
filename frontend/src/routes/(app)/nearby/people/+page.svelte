@@ -19,6 +19,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
 	import { smartBack } from '@/lib/smart-back';
+	import {
+		getPeopleProgress,
+		setPeopleProgress,
+		clearPeopleProgress,
+		peopleProgressKey
+	} from './people-progress.svelte';
 
 	// 附近的人：附近一级 Tab 的默认段位。标题统一「附近」，段位由
 	// NearbySegmentNav 承担（搜索/地图收敛为 header 右上角工具入口）。
@@ -47,7 +53,18 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		// spec: users/search radius 仅显式提供时按半径过滤（此处显式传 5km 承接
 		// 附近的人语义）；sort_by='distance' 距离计算依赖 reference_point，
 		// 可选 — 未传时服务端按回退链解析。
+		// 会话进度保持：同一定位 key 下直接采用 store（返回不重拉）；定位变化/
+		// 手动重试（先清 store）才走网络。
 		void reloadKey;
+		const progressKey = peopleProgressKey(referencePoint);
+		const saved = getPeopleProgress();
+		if (saved && (progressKey === '' || saved.key === progressKey)) {
+			allUsers = saved.users;
+			visibleCount = saved.visibleCount;
+			loadError = null;
+			loading = false;
+			return;
+		}
 		let cancelled = false;
 		async function fetchUsers() {
 			try {
@@ -78,6 +95,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						note: u.bio ?? ''
 					}));
 					allUsers = items;
+					setPeopleProgress({ key: progressKey, users: items, visibleCount });
 				}
 			} catch {
 				if (!cancelled) loadError = '加载失败，请稍后重试';
@@ -108,13 +126,18 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	// 无限滚动哨兵（内容型列表统一自动加载，对齐 nearby/moments；切片逻辑保留，
 	// 每次 +8；过滤/排序变化导致 list 缩短时哨兵不再出现，visibleCount 由切片钳制）。
+	// 切片推进同步回进度 store（返回保持已展开长度）。
 	$effect(() => {
 		if (visibleCount >= list.length) return;
 		const el = sentinelEl;
 		if (!el) return;
 		const observer = new IntersectionObserver(
 			(entries) => {
-				if (entries.some((e) => e.isIntersecting)) visibleCount = Math.min(visibleCount + 8, list.length);
+				if (entries.some((e) => e.isIntersecting)) {
+					visibleCount = Math.min(visibleCount + 8, list.length);
+					const saved = getPeopleProgress();
+					if (saved) setPeopleProgress({ ...saved, visibleCount });
+				}
 			},
 			{ root: null, rootMargin: '600px 0px 0px 0px' }
 		);
@@ -194,7 +217,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		<div class={isTablet ? 'grid gap-6' : ''}>
 			<div class="min-w-0">
 				{#if loadError}
-					<LoadError message={loadError} onRetry={() => reloadKey++} />
+					<LoadError message={loadError} onRetry={() => { clearPeopleProgress(); reloadKey++; }} />
 				{:else if loading}
 					<InlineLoading label="加载附近用户…" />
 				{:else if !list.length}

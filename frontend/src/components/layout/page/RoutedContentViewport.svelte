@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { afterNavigate, beforeNavigate } from '$app/navigation';
 	import { cn } from '@/lib/utils';
+	import { decideScroll, savePosition } from '@/lib/scroll-positions';
 	import PageViewport from './PageViewport.svelte';
 
 	// 布局组件（layout/page）。
@@ -37,10 +39,38 @@
 		style?: string;
 		desktopPane?: boolean;
 	} = $props();
+
+	// 路由级滚动存取（SvelteKit 只管 window，本项目滚动 owner 是本 <main>）：
+	// 离开存位；popstate 返回按存位恢复（内容由各页进度 store 同步重建，无异步
+	// 等待）；进新 pathname 置顶；同路由内导航（如 ?tab= 切换）保持不动。
+	// 程序化赋值走 instant（scroll-smooth 类会让恢复变成缓慢漂移）。
+	let mainEl: HTMLElement | null = $state(null);
+	const savedTops = new Map<string, number>();
+
+	function setTopInstant(top: number): void {
+		if (!mainEl) return;
+		const prev = mainEl.style.scrollBehavior;
+		mainEl.style.scrollBehavior = 'auto';
+		mainEl.scrollTop = top;
+		void mainEl.offsetHeight;
+		mainEl.style.scrollBehavior = prev;
+	}
+
+	beforeNavigate((nav) => {
+		if (mainEl && nav.from?.url) savePosition(savedTops, nav.from.url.pathname, mainEl.scrollTop);
+	});
+
+	afterNavigate((nav) => {
+		const decision = decideScroll(nav.type, nav.from?.url.pathname ?? null, nav.to?.url.pathname ?? null, savedTops);
+		if (decision.action === 'keep') return;
+		// 内容在同 tick 内由进度 store 同步重建；rAF 等一帧让布局落定再赋值。
+		requestAnimationFrame(() => setTopInstant(decision.action === 'restore' ? decision.top : 0));
+	});
 </script>
 
 <main
 	id="main-content"
+	bind:this={mainEl}
 	{...(desktopPane ? { 'data-desktop-main': '' } : {})}
 	class={cn(
 		'h-full min-h-0 flex-1 w-full overflow-y-auto overflow-x-hidden no-scrollbar scroll-smooth',

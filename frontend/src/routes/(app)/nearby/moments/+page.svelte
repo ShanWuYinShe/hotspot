@@ -20,6 +20,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 	import { smartBack } from '@/lib/smart-back';
+	import {
+		getMomentsProgress,
+		setMomentsProgress,
+		clearMomentsProgress,
+		feedProgressKey
+	} from './shared/feed-progress.svelte';
 
 	// 附近动态（/nearby/moments）：附近一级 Tab 的动态段位。
 	// BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）；段位导航 NearbySegmentNav
@@ -73,7 +79,20 @@ locationName = loc?.location_name ?? '';
 		// spec: moments/fetch_nearby reference_point 可选 — 服务端按回退链解析
 		// （显式 point → 最近 update_location → ClientConfig 默认）。
 		// 有 point 就传、没有就不传照常请求。
+		// 会话进度保持：同一定位 key 下直接采用 store（返回不重拉）；定位变化/
+		// 手动重试（先清 store）才走网络。
 		void reloadKey;
+		const progressKey = feedProgressKey(referencePoint);
+		const saved = getMomentsProgress();
+		if (saved && (progressKey === '' || saved.key === progressKey)) {
+			apiFeedItems = saved.items;
+			nextCursor = saved.nextCursor;
+			visibleCount = saved.visibleCount;
+			tags = saved.tags;
+			loadError = null;
+			loading = false;
+			return;
+		}
 		let cancelled = false;
 		async function fetchData() {
 			try {
@@ -110,6 +129,7 @@ locationName = loc?.location_name ?? '';
 						}
 					}
 					tags = tagsList;
+					setMomentsProgress({ key: progressKey, items: apiFeedItems, nextCursor, visibleCount, tags });
 				}
 			} catch {
 				if (!cancelled) loadError = '加载失败，请稍后重试';
@@ -148,6 +168,8 @@ locationName = loc?.location_name ?? '';
 					apiFeedItems = [...apiFeedItems, ...fresh];
 					nextCursor = res.data.next_cursor ?? '';
 					visibleCount = Math.min(visibleCount + 8, apiFeedItems.length);
+					const saved = getMomentsProgress();
+					if (saved) setMomentsProgress({ ...saved, items: apiFeedItems, nextCursor, visibleCount });
 				}
 			} catch {
 				// 忽略：下次哨兵触发重试
@@ -157,6 +179,8 @@ locationName = loc?.location_name ?? '';
 			return;
 		}
 		visibleCount = Math.min(visibleCount + 8, apiFeedItems.length);
+		const savedSlice = getMomentsProgress();
+		if (savedSlice) setMomentsProgress({ ...savedSlice, visibleCount });
 	}
 
 	// 仅服务端 moment_id 可导航；本地合成 id（无 moment_id 的项）不可点进详情
@@ -251,7 +275,7 @@ locationName = loc?.location_name ?? '';
 	{#if loading}
 		<InlineLoading label="加载附近动态…" />
 	{:else if loadError}
-		<LoadError message={loadError} onRetry={() => reloadKey++} />
+		<LoadError message={loadError} onRetry={() => { clearMomentsProgress(); reloadKey++; }} />
 	{:else if activeTab === '关注'}
 		<!-- 关注流专属空态：与「附近无内容」区分，指引用户先去关注 -->
 		<EmptyState title="关注的人还没有发布动态" description="去附近的人页关注感兴趣的用户，动态会出现在这里。">
