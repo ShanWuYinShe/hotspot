@@ -111,7 +111,9 @@ export class ThemeConstants {
     overlayStrong: '#6B141C14',
     textPrimary: '#152219',
     textSecondary: '#3F5547',
-    textTertiary: '#7A837E',
+    // 审计 P3-4：原 #7A837E on 纸面 #F6F7F3 对比度仅 3.77(<4.5)，加深至 #5F6C64（5.12），
+    // 色相同族微加深、仍保持比 textSecondary(#3F5547) 弱一档的层次
+    textTertiary: '#5F6C64',
     iconMuted: '#3F5547',
     buttonSecondaryBackground: '#F0F1F0',
     buttonSecondaryText: '#152219',
@@ -152,7 +154,9 @@ export class ThemeConstants {
     overlayStrong: '#8A000000',
     textPrimary: '#E8F1E9',
     textSecondary: '#A8BDAE',
-    textTertiary: '#5A6B60',
+    // 审计 P3-4：原 #5A6B60 on #161A16 对比度仅 3.10(<4.5)，提亮至 #7E8D82（5.04），
+    // 仍保持比 textSecondary(#A8BDAE) 弱一档的层次
+    textTertiary: '#7E8D82',
     iconMuted: '#A8BDAE',
     buttonSecondaryBackground: '#242624',
     buttonSecondaryText: '#E8F1E9',
@@ -196,7 +200,9 @@ export class ThemeConstants {
     overlayStrong: '#850C1930',
     textPrimary: '#16233A',
     textSecondary: '#52647F',
-    textTertiary: '#767F92',
+    // 审计 P3-4：原 #767F92 on 卡片白底 4.02 / on 画布 #EFF3F9 3.61（均 <4.5），
+    // 加深至 #626C80（5.28 / 4.74），同族微加深、仍比 textSecondary(#52647F) 弱一档
+    textTertiary: '#626C80',
     iconMuted: '#52647F',
     buttonSecondaryBackground: '#EDF3FC',
     buttonSecondaryText: '#16233A',
@@ -237,7 +243,9 @@ export class ThemeConstants {
     overlayStrong: '#9E000814',
     textPrimary: '#E8F1FF',
     textSecondary: '#A5B6CE',
-    textTertiary: '#5E6C85',
+    // 审计 P3-4：原 #5E6C85 on #111D31 对比度仅 3.24(<4.5)，提亮至 #7D8BA3（4.90），
+    // 仍保持比 textSecondary(#A5B6CE) 弱一档的层次
+    textTertiary: '#7D8BA3',
     iconMuted: '#A5B6CE',
     buttonSecondaryBackground: '#14243A',
     buttonSecondaryText: '#E8F1FF',
