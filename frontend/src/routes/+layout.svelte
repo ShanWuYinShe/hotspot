@@ -9,6 +9,7 @@
 	import { initMapSource } from '@/stores/mapSource.svelte';
 	import { initPlatform } from '@/stores/platform.svelte';
 	import AuthGate from '@/components/auth/AuthGate.svelte';
+	import BootSplash from '@/components/shared/BootSplash.svelte';
 	import ToastViewport from '@/components/overlays/ToastViewport.svelte';
 
 	let { children }: { children: Snippet } = $props();
@@ -44,10 +45,10 @@
 {#if showApp}
 	{@render children()}
 {:else}
-	<!-- 启动占位：token 化 spinner（.spinner 自带 reduced-motion 降级），
+	<!-- 启动占位：logo 基座 SVG 动画（BootSplash，reduced-motion 由全局规则降级），
 	     避免未解析 auth 时页面闪错数据 -->
 	<div class="fixed inset-0 grid place-items-center bg-surface-page">
-		<div class="spinner size-7" role="status" aria-label="加载中"></div>
+		<BootSplash />
 	</div>
 {/if}
 <AuthGate />
