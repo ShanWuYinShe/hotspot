@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/idgen"
 )
 
 const mediaPresignTTL = 15 * time.Minute
@@ -36,7 +37,13 @@ func NewObjectStorageProvider(cfg config.Config) *ObjectStorageProvider {
 }
 
 func (p *ObjectStorageProvider) Presign(ctx context.Context, req PresignFileInput, ownerUserID string) (PresignedUpload, error) {
-	uploadID := fmt.Sprintf("upload_%d", p.now().UTC().UnixNano())
+	// upload_id 用 crypto/rand 随机 ID（P3-2）：原先 UnixNano 顺序可枚举，
+	// 攻击者可按时间窗遍历猜测他人 upload_id；idgen 提供 96 位熵防遍历，
+	// 同时消除并发同纳秒碰撞（与 share/moment 等 ID 生成口径一致）。
+	uploadID, err := idgen.WithPrefix("upload_")
+	if err != nil {
+		return PresignedUpload{}, err
+	}
 	storageKey := storageKeyFor(ownerUserID, uploadID, req.FileName)
 	uploadURL, headers, expiresAt, err := p.presignPutObjectURL(ctx, storageKey, req.MimeType, req.MD5)
 	if err != nil {
