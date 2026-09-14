@@ -196,3 +196,47 @@ func itoa(i int) string {
 	}
 	return string(buf[pos:])
 }
+
+// TestHubReverseIndexIsolatesSinks 验证反向索引语义（审计 perf P3-5）：
+// 多 sink 各自登记订阅时，Set*Subscriptions 全量重建与 UnregisterUser 清理
+// 只影响自己登记的 keys，其他 sink 的订阅与广播不受影响。
+func TestHubReverseIndexIsolatesSinks(t *testing.T) {
+	hub := NewHub()
+	sinkA := &sinkStub{}
+	sinkB := &sinkStub{}
+
+	hub.SetUserSubscriptions([]string{"user_1", "user_2"}, sinkA)
+	hub.SetGroupSubscriptions([]string{"group_1"}, sinkA)
+	hub.SetUserSubscriptions([]string{"user_2", "user_3"}, sinkB)
+	hub.SetGroupSubscriptions([]string{"group_1", "group_2"}, sinkB)
+
+	// sinkA 全量重建 user 订阅：user_1 移除、user_4 新增，user_2 双方共存。
+	hub.SetUserSubscriptions([]string{"user_2", "user_4"}, sinkA)
+
+	// user_1 只被 sinkA 订阅过：重建后双方都不该收到。
+	hub.BroadcastToUserSubscribers("user_1", Event{Type: "T"})
+	if len(sinkA.events) != 0 || len(sinkB.events) != 0 {
+		t.Fatalf("重建后 user_1 广播不应到达任何 sink, A=%#v B=%#v", sinkA.events, sinkB.events)
+	}
+	// user_2 由 A、B 同时订阅：广播双方都应收到（重建不误伤 B 的订阅）。
+	hub.BroadcastToUserSubscribers("user_2", Event{Type: "T"})
+	if len(sinkA.events) != 1 || len(sinkB.events) != 1 {
+		t.Fatalf("user_2 广播应同时到达 A、B, A=%#v B=%#v", sinkA.events, sinkB.events)
+	}
+
+	// 注销 sinkB：其 user/group 订阅全部清理，sinkA 的不受影响。
+	hub.UnregisterUser("user_b", "sess_b", sinkB)
+	sinkA.events = nil
+	sinkB.events = nil
+	hub.BroadcastToUserSubscribers("user_2", Event{Type: "T"})
+	hub.BroadcastToUserSubscribers("user_3", Event{Type: "T"})
+	hub.BroadcastToGroup("group_1", Event{Type: "T"})
+	hub.BroadcastToGroup("group_2", Event{Type: "T"})
+	if len(sinkB.events) != 0 {
+		t.Fatalf("注销后 sinkB 不应收到任何广播, got %#v", sinkB.events)
+	}
+	// sinkA：user_2 (user 订阅) + group_1 (group 订阅) 各一条；user_3/group_2 不订阅。
+	if len(sinkA.events) != 2 {
+		t.Fatalf("sinkA 应恰好收到 user_2 与 group_1 两条, got %#v", sinkA.events)
+	}
+}

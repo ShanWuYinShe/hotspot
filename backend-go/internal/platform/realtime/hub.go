@@ -31,12 +31,23 @@ type Hub struct {
 	bySession      map[string][]FanoutSink
 	byUserWatchers map[string][]FanoutSink
 	byGroup        map[string][]FanoutSink
-	publisher      EventPublisher
-	resumeStore    ResumeStore
+	// subsBySink 反向索引（审计 perf P3-5）：每个 sink 登记过的订阅 keys，
+	// Set*Subscriptions 全量重建与 UnregisterUser 清理时按记录精确删除，
+	// 取代此前对 byUserWatchers/byGroup 的全表扫描。
+	subsBySink  map[FanoutSink]*subEntry
+	publisher   EventPublisher
+	resumeStore ResumeStore
+}
+
+// subEntry 记录单个 sink 在订阅表中的 keys 集合（所有权归 Hub：创建/更新/
+// 销毁都发生在 Hub 持锁的方法内）。
+type subEntry struct {
+	userKeys  map[string]struct{}
+	groupKeys map[string]struct{}
 }
 
 func NewHub() *Hub {
-	return &Hub{byUser: map[string][]FanoutSink{}, bySession: map[string][]FanoutSink{}, byUserWatchers: map[string][]FanoutSink{}, byGroup: map[string][]FanoutSink{}}
+	return &Hub{byUser: map[string][]FanoutSink{}, bySession: map[string][]FanoutSink{}, byUserWatchers: map[string][]FanoutSink{}, byGroup: map[string][]FanoutSink{}, subsBySink: map[FanoutSink]*subEntry{}}
 }
 
 func (h *Hub) SetPublisher(p EventPublisher) {
@@ -60,8 +71,8 @@ func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
 	if len(h.byUser[userID]) >= maxConnectionsPerUser {
 		// 踢最旧连接：新连接几乎总是活跃方；被踢连接由其读循环的 Close 报错退出。
 		oldest := h.byUser[userID][0]
-		h.removeSinkLocked(h.bySession, sessionIDOf(h.bySession, oldest), oldest)
-		h.removeSinkLocked(h.byUser, userID, oldest)
+		h.removeSinkFromSliceAt(h.bySession, sessionIDOf(h.bySession, oldest), oldest)
+		h.removeSinkFromSliceAt(h.byUser, userID, oldest)
 		_ = oldest.Close()
 	}
 	first := len(h.byUser[userID]) == 0
@@ -85,25 +96,26 @@ func sessionIDOf(m map[string][]FanoutSink, sink FanoutSink) string {
 func (h *Hub) UnregisterUser(userID, sessionID string, sink FanoutSink) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.removeSinkLocked(h.bySession, sessionID, sink)
-	// 订阅表必须同步清理：sink 只在 applyAuthorizedSubscriptions 注册，此前
-	// 断连不清 byUserWatchers/byGroup，sink 永久残留（内存单调泄漏 + 之后每次
-	// 群播向死连接白付一次写系统调用）。
-	h.removeSinkLocked(h.byUserWatchers, "", sink)
-	h.removeSinkLocked(h.byGroup, "", sink)
-	return h.removeSinkLocked(h.byUser, userID, sink)
+	h.removeSinkFromSliceAt(h.bySession, sessionID, sink)
+	// 订阅表同步清理：按反向索引记录的 keys 精确删除（O(k)），不再全表扫描。
+	// sink 只在 Set*Subscriptions 注册；断连时若订阅表残留，之后每次群播都会
+	// 向死连接白付一次写系统调用。
+	if entry, ok := h.subsBySink[sink]; ok {
+		for key := range entry.userKeys {
+			removeSinkFromSlice(h.byUserWatchers, key, sink)
+		}
+		for key := range entry.groupKeys {
+			removeSinkFromSlice(h.byGroup, key, sink)
+		}
+		delete(h.subsBySink, sink)
+	}
+	return h.removeSinkFromSliceAt(h.byUser, userID, sink)
 }
 
-// removeSinkLocked 从 m[key]（key 为 "" 时扫全表）移除 sink；返回该 key 下
-// 是否因此变空（保留「最后一个连接」语义）。调用方必须持有 h.mu。
-func (h *Hub) removeSinkLocked(m map[string][]FanoutSink, key string, sink FanoutSink) bool {
-	if key != "" {
-		return removeSinkFromSlice(m, key, sink)
-	}
-	for k := range m {
-		removeSinkFromSlice(m, k, sink)
-	}
-	return false
+// removeSinkFromSliceAt 从 m[key] 移除 sink；返回该 key 下是否因此变空
+// （保留「最后一个连接」语义）。调用方必须持有 h.mu。
+func (h *Hub) removeSinkFromSliceAt(m map[string][]FanoutSink, key string, sink FanoutSink) bool {
+	return removeSinkFromSlice(m, key, sink)
 }
 
 // removeSinkFromSlice 原地过滤 m[key] 中的 sink，清空时删除 key。
@@ -146,45 +158,43 @@ func (h *Hub) closeSessionLocal(sessionID string, event Event) {
 	}
 }
 
+// entryForSinkLocked 返回 sink 的反向索引条目，缺失时创建。
+func (h *Hub) entryForSinkLocked(sink FanoutSink) *subEntry {
+	entry, ok := h.subsBySink[sink]
+	if !ok {
+		entry = &subEntry{userKeys: map[string]struct{}{}, groupKeys: map[string]struct{}{}}
+		h.subsBySink[sink] = entry
+	}
+	return entry
+}
+
 func (h *Hub) SetUserSubscriptions(userIDs []string, sink FanoutSink) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for uid, sinks := range h.byUserWatchers {
-		out := sinks[:0]
-		for _, s := range sinks {
-			if s != sink {
-				out = append(out, s)
-			}
-		}
-		if len(out) == 0 {
-			delete(h.byUserWatchers, uid)
-		} else {
-			h.byUserWatchers[uid] = out
-		}
+	entry := h.entryForSinkLocked(sink)
+	// 全量重建语义：先按反向索引删掉该 sink 的旧 user keys（O(旧 keys)），
+	// 不再全表扫描（审计 perf P3-5）。
+	for key := range entry.userKeys {
+		removeSinkFromSlice(h.byUserWatchers, key, sink)
 	}
+	entry.userKeys = make(map[string]struct{}, len(userIDs))
 	for _, uid := range userIDs {
 		h.byUserWatchers[uid] = append(h.byUserWatchers[uid], sink)
+		entry.userKeys[uid] = struct{}{}
 	}
 }
 
 func (h *Hub) SetGroupSubscriptions(groupIDs []string, sink FanoutSink) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for gid, sinks := range h.byGroup {
-		out := sinks[:0]
-		for _, s := range sinks {
-			if s != sink {
-				out = append(out, s)
-			}
-		}
-		if len(out) == 0 {
-			delete(h.byGroup, gid)
-		} else {
-			h.byGroup[gid] = out
-		}
+	entry := h.entryForSinkLocked(sink)
+	for key := range entry.groupKeys {
+		removeSinkFromSlice(h.byGroup, key, sink)
 	}
+	entry.groupKeys = make(map[string]struct{}, len(groupIDs))
 	for _, gid := range groupIDs {
 		h.byGroup[gid] = append(h.byGroup[gid], sink)
+		entry.groupKeys[gid] = struct{}{}
 	}
 }
 
