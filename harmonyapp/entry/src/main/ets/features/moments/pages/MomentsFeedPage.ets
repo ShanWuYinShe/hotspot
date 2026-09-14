@@ -17,7 +17,8 @@ import { InteractionStateStore, UserRelationState } from '../../../core/state/In
 import {
   UserItem, GroupItem, MomentItem,
   SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship, GeoPoint, PaginationParams,
-  SearchMomentsRequest, FetchFollowingMomentsRequest, FetchNearbyMomentsRequest
+  SearchMomentsRequest, FetchFollowingMomentsRequest, FetchNearbyMomentsRequest,
+  ApiResponse, PaginatedData
 } from '../../../core/types/api';
 import { curves } from '@kit.ArkUI';
 import { LocationUtil } from '../../../core/location/LocationUtil';
@@ -35,7 +36,7 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
-import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
+import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemButton } from '../../../components/SystemButton';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import pasteboard from '@ohos.pasteboard';
@@ -77,6 +78,10 @@ export struct MomentsFeedPage {
   private interactionStore = InteractionStateStore.getInstance();
   private isDestroyed: boolean = false;
   @State isRefreshing: boolean = false;
+  /** 触底加载更多状态（cursor 分页，照 NearbyUsersListPage 模式） */
+  @State isLoadingMore: boolean = false;
+  @State hasMore: boolean = false;
+  @State nextCursor: string = '';
   @State userActionPendingIds: string[] = [];
   @State activeTab: string = '热门';
   @State activeTag: string = '';
@@ -169,6 +174,7 @@ export struct MomentsFeedPage {
       if (this.isDestroyed || version !== this.loadVersion) return;
       if (response.code === 0) {
         this.hotMoments = response.data?.items ?? [];
+        this.storeCursor(response);
         this.deriveHotTags();
         this.hotMomentsDataSource.setData(this.getVisibleMoments());
         this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
@@ -188,6 +194,7 @@ export struct MomentsFeedPage {
       if (this.isDestroyed || version !== this.loadVersion) return;
       if (response.code === 0) {
         this.hotMoments = response.data?.items ?? [];
+        this.storeCursor(response);
         this.deriveHotTags();
         this.hotMomentsDataSource.setData(this.getVisibleMoments());
         this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
@@ -197,6 +204,54 @@ export struct MomentsFeedPage {
       } else if (!this.hasAnyData()) {
         this.errorMessage = getErrorMessage(response, '加载失败');
       }
+    }
+  }
+
+  /** 记录分页游标（spec：next_cursor 恒在，null = 没有更多） */
+  private storeCursor(response: ApiResponse<PaginatedData<MomentItem>>): void {
+    this.hasMore = !!(response.data?.next_cursor);
+    this.nextCursor = response.data?.next_cursor ?? '';
+  }
+
+  /** 触底加载更多（cursor 分页）：按当前 tab 走同源接口，追加并同步 tag 过滤与互动态 */
+  private async loadMoreMoments(): Promise<void> {
+    if (this.isLoadingMore || !this.hasMore || this.isLoading) return;
+    const version = this.loadVersion;
+    this.isLoadingMore = true;
+    try {
+      const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+      const refPoint: GeoPoint | undefined = refLoc ? { latitude: refLoc.latitude, longitude: refLoc.longitude } : undefined;
+      const pagination: PaginationParams = { limit: 20, cursor: this.nextCursor };
+      let response: ApiResponse<PaginatedData<MomentItem>>;
+      if (this.activeTab === '关注') {
+        const request: FetchFollowingMomentsRequest = { reference_point: refPoint, pagination: pagination };
+        response = await ApiClient.fetchFollowingMoments(request);
+      } else if (this.activeTab === '周边') {
+        const request: FetchNearbyMomentsRequest = {
+          reference_point: refPoint,
+          radius: DefaultConfig.NEARBY_RADIUS,
+          pagination: pagination
+        };
+        response = await ApiClient.fetchNearbyMoments(request);
+      } else {
+        const request: SearchMomentsRequest = { sort_by: 'popular', pagination: pagination };
+        response = await ApiClient.searchMoments(request);
+      }
+      if (this.isDestroyed || version !== this.loadVersion) return;
+      if (response.code === 0) {
+        // 按 moment_id 去重后追加，避免游标边界重复项打崩 LazyForEach 键
+        const known = new Set<string>(this.hotMoments.map((m: MomentItem) => m.moment_id));
+        const fresh = (response.data?.items ?? []).filter((m: MomentItem) => m.moment_id && !known.has(m.moment_id));
+        this.hotMoments = this.hotMoments.concat(fresh);
+        fresh.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
+        this.storeCursor(response);
+        this.deriveHotTags();
+        this.refreshVisibleDataSource();
+      }
+    } catch {
+      // 静默失败：保持游标不变，用户再次触底即可重试
+    } finally {
+      this.isLoadingMore = false;
     }
   }
 
@@ -217,6 +272,9 @@ export struct MomentsFeedPage {
     const version = ++this.loadVersion;
     if (!refresh) { this.isLoading = true; }
     this.errorMessage = '';
+    // 首屏/刷新重置游标，避免残留上一轮 hasMore 误触发触底加载
+    this.hasMore = false;
+    this.nextCursor = '';
     try {
       if (this.activeTab === '关注' || this.activeTab === '周边') {
         await this.loadFeedMoments(this.activeTab === '关注' ? 'following' : 'nearby');
@@ -262,6 +320,7 @@ export struct MomentsFeedPage {
         const trendingResponse = results[0];
         if (trendingResponse.code === 0) {
           this.hotMoments = trendingResponse.data?.items ?? [];
+          this.storeCursor(trendingResponse);
           this.deriveHotTags();
           this.hotMomentsDataSource.setData(this.getVisibleMoments());
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
@@ -274,6 +333,7 @@ export struct MomentsFeedPage {
         if (this.isDestroyed) return;
         if (trendingResponse.code === 0) {
           this.hotMoments = trendingResponse.data?.items ?? [];
+          this.storeCursor(trendingResponse);
           this.deriveHotTags();
           this.hotMomentsDataSource.setData(this.getVisibleMoments());
           this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
@@ -311,8 +371,10 @@ export struct MomentsFeedPage {
           onBack: this.showBackButton ? () => { AppRouter.pop(); } : null
         }) {
           if (this.getVisibleMoments().length > 0) {
-            // 当前页数量（limit 20 截断）：满 20 显示 20+，标注限定（审查 P2 数据展示诚实）
-            Text(this.getVisibleMoments().length >= 20 ? '20+ 条内容' : `${this.getVisibleMoments().length} 条内容`)
+            // 已加载数量（cursor 分页）：还有更多时以「+」标注，计数诚实（审查 P2）
+            Text(this.hasMore ?
+              `${this.getVisibleMoments().length}+ 条内容` :
+              `${this.getVisibleMoments().length} 条内容`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
@@ -468,32 +530,51 @@ export struct MomentsFeedPage {
       if (this.getVisibleMoments().length > 0) {
         // Refresh 直接包可滚动的 WaterFlow（子组件需为滚动组件下拉刷新才生效）
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          WaterFlow() {
-            // LazyForEach 虚拟化（审查 P1-9：替换全量 ForEach，长列表滚动不掉帧）；
-            // 数据源由 refreshVisibleDataSource 保持与标签过滤同步
-            LazyForEach(this.hotMomentsDataSource, (moment: MomentItem) => {
-              FlowItem() {
-                MomentWallCard({
-                  moment: moment,
-                  onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
-                  onImagePreview: (momentId: string, images: string[], index: number) => {
-                    this.previewImage(momentId, images, index);
-                  }
-                })
-              }
-            }, (moment: MomentItem) => moment.moment_id)
+          Column() {
+            WaterFlow() {
+              // LazyForEach 虚拟化（审查 P1-9：替换全量 ForEach，长列表滚动不掉帧）；
+              // 数据源由 refreshVisibleDataSource 保持与标签过滤同步
+              LazyForEach(this.hotMomentsDataSource, (moment: MomentItem) => {
+                FlowItem() {
+                  MomentWallCard({
+                    moment: moment,
+                    onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
+                    onImagePreview: (momentId: string, images: string[], index: number) => {
+                      this.previewImage(momentId, images, index);
+                    }
+                  })
+                }
+              }, (moment: MomentItem) => moment.moment_id)
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .columnsTemplate(this.getWallColumns() === 3 ? '1fr 1fr 1fr' : '1fr 1fr')
+            .columnsGap(DesignConstants.SPACING.LG)
+            .rowsGap(DesignConstants.SPACING.LG)
+            .padding({
+              left: DesignConstants.SPACING.LG,
+              right: DesignConstants.SPACING.LG,
+              bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+            })
+            .cachedCount(4)
+            .scrollBar(BarState.Off)
+            // 触底加载更多（cursor 分页，P2-3：突破首屏 20 条封顶）
+            .onReachEnd(() => { this.loadMoreMoments(); })
+
+            // 分页状态条（WaterFlow 外常驻，规避 FlowItem 跨列占位；照 NearbyUsersListPage 模式）
+            if (this.hasMore) {
+              LoadingMoreIndicator()
+            } else {
+              Text('没有更多了')
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontColor(this.getCurrentThemePalette().textTertiary)
+                .width('100%')
+                .textAlign(TextAlign.Center)
+                .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.LG })
+            }
           }
           .width('100%')
-          .columnsTemplate(this.getWallColumns() === 3 ? '1fr 1fr 1fr' : '1fr 1fr')
-          .columnsGap(DesignConstants.SPACING.LG)
-          .rowsGap(DesignConstants.SPACING.LG)
-          .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
-            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
-          })
-          .cachedCount(4)
-          .scrollBar(BarState.Off)
+          .height('100%')
         }
         .width('100%')
         .layoutWeight(1)
