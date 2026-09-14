@@ -412,15 +412,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 				continue
 			}
-			if !h.canSendPrivateTyping(principalCtx, principal.UserID, payload.TargetUserID) {
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSPermission, Message: "无权限", Severity: "warning", Retryable: false}})
-				continue
-			}
+			// 节流前置（审计 perf P2-2）：窗口内帧直接丢弃、不再打 DB 鉴权。
+			// 语义不变——节流时间戳只在通过 DB 校验后更新，故 3s 窗口内的首帧
+			// 仍会走完整 DB 校验，被节流帧与鉴权失败帧一样静默（不广播、不回错）。
 			typingKey := fmt.Sprintf("typing:%s:%s", principal.UserID, payload.TargetUserID)
 			if last, ok := h.typingThrottle.Load(typingKey); ok {
 				if t, ok := last.(time.Time); ok && time.Since(t) < 3*time.Second {
 					continue
 				}
+			}
+			if !h.canSendPrivateTyping(principalCtx, principal.UserID, payload.TargetUserID) {
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSPermission, Message: "无权限", Severity: "warning", Retryable: false}})
+				continue
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
 			actorInfo := h.resolveTypingActor(principalCtx, principal.UserID)
@@ -434,15 +437,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 				continue
 			}
-			if !h.isGroupMember(principalCtx, principal.UserID, payload.GroupID) {
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSPermission, Message: "无权限", Severity: "warning", Retryable: false}})
-				continue
-			}
+			// 节流前置（审计 perf P2-2），语义同 SendPrivateTyping。
 			typingKey := fmt.Sprintf("typing:%s:%s", principal.UserID, payload.GroupID)
 			if last, ok := h.typingThrottle.Load(typingKey); ok {
 				if t, ok := last.(time.Time); ok && time.Since(t) < 3*time.Second {
 					continue
 				}
+			}
+			if !h.isGroupMember(principalCtx, principal.UserID, payload.GroupID) {
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSPermission, Message: "无权限", Severity: "warning", Retryable: false}})
+				continue
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
 			DefaultHub().BroadcastToGroupNoRecord(payload.GroupID, Event{Type: EventTypeGroupTyping, Payload: GroupTypingPayload{GroupID: payload.GroupID, Actor: h.resolveTypingActor(principalCtx, principal.UserID), IsTyping: payload.IsTyping}})

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -277,6 +278,78 @@ func waitForCalls(t *testing.T, presence *stubPresenceWriter, want int) {
 			t.Fatalf("timed out waiting for %d presence calls, got %v", want, presence.snapshot())
 		}
 		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// countingUserRepo 统计 GetSettings 调用次数，供 typing 节流前置断言使用。
+type countingUserRepo struct {
+	stubUserRepo
+	getSettingsCalls int32
+}
+
+func (c *countingUserRepo) GetSettings(ctx context.Context, userID string) (bool, string, bool, error) {
+	atomic.AddInt32(&c.getSettingsCalls, 1)
+	return c.stubUserRepo.GetSettings(ctx, userID)
+}
+
+// TestRealtimePrivateTypingThrottleSkipsDBCheck 验证节流前置（审计 perf P2-2）：
+// 3s 窗口内的后续 typing 帧直接丢弃、不再触发 DB 鉴权；首帧仍走 DB 校验。
+func TestRealtimePrivateTypingThrottleSkipsDBCheck(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, err := authService.IssueSession(context.Background(), "user_alice")
+	if err != nil {
+		t.Fatalf("issue session: %v", err)
+	}
+	repo := &countingUserRepo{stubUserRepo: stubUserRepo{
+		settings: map[string]struct {
+			presenceVisible  bool
+			allowPrivateChat string
+		}{},
+		relations: map[string]map[string]struct {
+			isFollowing  bool
+			isFollowedBy bool
+			isBlocked    bool
+		}{},
+	}}
+	handler := NewHandler(authService, repo, stubGroupRepo{members: map[string][]string{}})
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	if err := conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}}); err != nil {
+		t.Fatalf("write auth: %v", err)
+	}
+	var established Event
+	if err := conn.ReadJSON(&established); err != nil {
+		t.Fatalf("read established: %v", err)
+	}
+
+	frame := Event{Type: "SendPrivateTyping", Payload: PrivateTypingSendPayload{TargetUserID: "user_bob", IsTyping: true}}
+	if err := conn.WriteJSON(frame); err != nil {
+		t.Fatalf("write first typing: %v", err)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for atomic.LoadInt32(&repo.getSettingsCalls) == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	before := atomic.LoadInt32(&repo.getSettingsCalls)
+	if before == 0 {
+		t.Fatal("首帧应触发 DB 鉴权")
+	}
+
+	// 3s 窗口内的第二帧：必须被节流（DB 调用数不再增长）。
+	if err := conn.WriteJSON(frame); err != nil {
+		t.Fatalf("write second typing: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	after := atomic.LoadInt32(&repo.getSettingsCalls)
+	if after != before {
+		t.Fatalf("被节流帧不应触发 DB 鉴权: before=%d after=%d", before, after)
 	}
 }
 
