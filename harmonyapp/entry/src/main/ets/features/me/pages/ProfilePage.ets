@@ -497,7 +497,9 @@ export struct ProfilePage {
       SystemToast.showWarning('仅管理员可访问', this.getUIContext());
       return;
     }
-    AppRouter.push(PageNames.DEBUG_PANEL);
+    // 管理员工具台落点为管理后台概览页（此前误指向调试面板，功能名与落点不符）；
+    // 调试面板保留在高级设置的 DEBUG_BUILD 门控入口内。
+    AppRouter.push(PageNames.ADMIN_OVERVIEW);
   }
 
   private startEdit(): void {

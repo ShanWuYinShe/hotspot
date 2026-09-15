@@ -17,6 +17,9 @@ const PROD_SERVER = 'https://api.chaoset.com';
 
 export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;
 
+// 构建旗标透出：调试类入口（调试面板等）按此门控，release 构建不可达。
+export const DEBUG_BUILD: boolean = DEBUG;
+
 // 由同一个 BaseUrl 推导出 API / WebSocket 地址（避免多处硬编码）
 export const API_BASE_URL: string = SERVER_BASE_URL;
 export const WS_BASE_URL: string = SERVER_BASE_URL.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws/v1';

@@ -11,7 +11,7 @@ import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { AppRouter } from '../../../core/router/AppRouter';
-import { PageNames } from '../../../constants/AppConstants';
+import { PageNames, DEBUG_BUILD } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -97,11 +97,15 @@ export struct AdvancedSettingsPage {
               this.requestClearCache();
             })
 
-            SettingsRowDivider()
+            // 调试面板仅 debug 构建可达：面板暴露 Token 状态与网络工具，
+            // release 构建不应给普通用户入口（审查 高-1）。
+            if (DEBUG_BUILD) {
+              SettingsRowDivider()
 
-            this.SettingItem(AppIcon.DEBUG, '调试面板', '网络诊断、状态检查', () => {
-              AppRouter.push(PageNames.DEBUG_PANEL);
-            })
+              this.SettingItem(AppIcon.DEBUG, '调试面板', '网络诊断、状态检查', () => {
+                AppRouter.push(PageNames.DEBUG_PANEL);
+              })
+            }
           }
         }
         .padding({

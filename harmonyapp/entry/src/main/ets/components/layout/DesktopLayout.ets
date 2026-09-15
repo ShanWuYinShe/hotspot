@@ -16,6 +16,7 @@ import { type BreakpointType } from '../../core/responsive/Breakpoint';
 import { DesignConstants } from '../../constants/DesignConstants';
 import { DESKTOP_PRIMARY_NAV, DESKTOP_PERSONAL_NAV, type AppNavItem } from '../../constants/AppNavigation';
 import { PageNames } from '../../constants/AppConstants';
+import { ApiClient } from '../../core/api/ApiClient';
 import { HomePage } from '../../features/home/pages/HomePage';
 import { MomentsFeedPage } from '../../features/moments/pages/MomentsFeedPage';
 import { MessagePage } from '../../features/messages/pages/MessagePage';
@@ -467,11 +468,21 @@ export struct DesktopLayout {
         this.hoveredNavLabel = isHover ? '__admin__' : '';
       })
       .onClick(() => {
-        if (this.isLoggedIn) {
-          AppRouter.push(PageNames.ADMIN_OVERVIEW);
-        } else {
+        if (!this.isLoggedIn) {
           this.openLogin('管理后台');
+          return;
         }
+        // 服务端权限二次校验：此前只查登录态，普通用户可直达管理概览页。
+        // 与 ProfilePage.openAdminPanel 同口径（非管理员 toast 拦截）。
+        ApiClient.getMyAdminPermissions().then((response) => {
+          if (response.code === 0 && response.data) {
+            AppRouter.push(PageNames.ADMIN_OVERVIEW);
+          } else {
+            SystemToast.showWarning('仅管理员可访问', this.getUIContext());
+          }
+        }).catch(() => {
+          SystemToast.showWarning('仅管理员可访问', this.getUIContext());
+        });
       })
 
       Blank().layoutWeight(1)
