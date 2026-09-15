@@ -14,7 +14,7 @@
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead, updatePrivateChatPreferences, updateGroupPreferences , netError } from '@/api';
-	import { formatTime } from '@/lib/chat.svelte';
+	import { formatTime, formatChatListTime } from '@/lib/chat.svelte';
 	import { compareChatItems, type ChatItem } from '@/lib/chat-list';
 	import { ROUTES } from '@/lib/routes';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
@@ -62,7 +62,7 @@
 					name: c.other_user?.nickname ?? '',
 					avatar: c.other_user?.avatar_url ?? '',
 					lastMessage: c.last_message?.content ?? '',
-					time: formatTime(c.last_message?.sent_at ?? c.last_activity_at),
+					time: formatChatListTime(c.last_message?.sent_at ?? c.last_activity_at),
 					timestamp: c.last_message?.sent_at ?? c.last_activity_at ?? '',
 					unread: c.unread_count ?? 0,
 					isPinned: c.is_pinned ?? false,
@@ -80,7 +80,7 @@
 						// spec: last_message 仅 groups/fetch_joined 返回,非文本消息预览为空。
 						// 排序/展示统一以最新一条消息时间为准，无消息时回退群组活跃时间
 						lastMessage: c.last_message?.content ?? '',
-						time: formatTime(c.last_message?.sent_at ?? c.last_activity_at ?? ''),
+						time: formatChatListTime(c.last_message?.sent_at ?? c.last_activity_at ?? ''),
 						timestamp: c.last_message?.sent_at ?? c.last_activity_at ?? '',
 						unread: c.viewer_state?.unread_count ?? 0,
 						isPinned: c.viewer_state?.is_pinned ?? false,

@@ -265,7 +265,8 @@
 						>
 							<div class="flex -space-x-2">
 								{#each gd.members.slice(0, 6) as m, i (m.userId ?? i)}
-									<img src={m.avatar} alt={m.name} class="size-8 rounded-full border-2 border-surface-primary object-cover" />
+									<!-- Avatar 原语：自带懒加载与 initials 兜底（审查 M6，替换裸 img） -->
+									<Avatar src={m.avatar} name={m.name} size={32} class="rounded-full border-2 border-surface-primary object-cover" />
 								{/each}
 							</div>
 							<span class="text-sm text-text-primary">{gd.detail.members} 位成员 · 查看全部</span>

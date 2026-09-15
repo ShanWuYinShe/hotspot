@@ -79,6 +79,24 @@ export function formatTime(iso?: string): string {
 	return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+/**
+ * 会话列表时间戳（审查 M1）：此前恒用 formatTime 的 HH:mm，三天前的会话
+ * 显示「17:20」式误导。按时间差切换——今天→HH:mm / 昨天→「昨天」 /
+ * 今年→M月D日 / 跨年→YYYY年M月D日。
+ */
+export function formatChatListTime(iso?: string): string {
+	if (!iso) return '';
+	const d = new Date(iso);
+	if (isNaN(d.getTime())) return '';
+	const now = new Date();
+	const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+	const dayDiff = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+	if (dayDiff === 0) return formatTime(iso);
+	if (dayDiff === 1) return '昨天';
+	if (d.getFullYear() === now.getFullYear()) return `${d.getMonth() + 1}月${d.getDate()}日`;
+	return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
 /** 日期分组胶囊文案：今天 / 昨天 / M月D日（跨年带年份）。 */
 export function formatDateLabel(iso?: string): string {
 	if (!iso) return '今天';

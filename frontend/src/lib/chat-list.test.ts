@@ -1,6 +1,7 @@
 // 会话列表排序契约：置顶优先，同级下未读优先，组内按最新消息时间倒序。
 import { describe, it, expect } from 'vitest';
 import { compareChatItems, type ChatItem } from './chat-list';
+import { formatChatListTime } from './chat.svelte';
 
 function chat(partial: Omit<Partial<ChatItem>, 'timestamp' | 'time'> & { id: string; timestamp: string }): ChatItem {
 	return {
@@ -60,5 +61,33 @@ describe('compareChatItems', () => {
 		const a = chat({ id: 'a', timestamp: '2026-01-01T00:00:00Z' });
 		const b = chat({ id: 'b', timestamp: '2026-01-01T00:00:00Z' });
 		expect([b, a].sort(compareChatItems).map((c) => c.id)).toEqual(['a', 'b']);
+	});
+});
+
+// 会话列表时间戳（审查 M1）：旧会话不得显示裸 HH:mm。
+describe('formatChatListTime', () => {
+	it('今天显示 HH:mm', () => {
+		const now = new Date();
+		const iso = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 5).toISOString();
+		expect(formatChatListTime(iso)).toBe('09:05');
+	});
+
+	it('昨天显示「昨天」', () => {
+		const d = new Date();
+		d.setDate(d.getDate() - 1);
+		expect(formatChatListTime(d.toISOString())).toBe('昨天');
+	});
+
+	it('今年更早显示 M月D日', () => {
+		const d = new Date();
+		d.setMonth(0, 7); // 1 月 7 日（今年范围内，除非测试恰在 1 月 1-7 日跨年附近）
+		if (d.getTime() > Date.now() - 2 * 86400000) return; // 跨年边缘跳过
+		expect(formatChatListTime(d.toISOString())).toBe('1月7日');
+	});
+
+	it('空值与非法输入返回空串', () => {
+		expect(formatChatListTime('')).toBe('');
+		expect(formatChatListTime(undefined)).toBe('');
+		expect(formatChatListTime('not-a-date')).toBe('');
 	});
 });
