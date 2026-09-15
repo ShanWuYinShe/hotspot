@@ -538,9 +538,18 @@ func TestPostgresApproveAcceptTxAndInviteMember(t *testing.T) {
 	appRow := []any{"a1", "group_1", "群名", "", 3, "u2", "", "pending", gTestTime, nil, nil}
 	inviteRow := []any{"i1", "group_1", "u1", "u2", "", "pending", gTestTime, gTestTime, nil}
 
-	// ApproveApplication：loadApplication + tx 内两个 Exec
+	// ApproveApplication：loadApplication + tx 内封禁复检 + 两个 Exec
 	stub := &groupFullStub{
-		queryRow: map[string][]any{queryGetGroupApplication: appRow, queryGetGroup: groupBaseRow(false), queryLockGroupCapacity: {200, 0}, queryUpdateGroupApplication: {"a1"}},
+		queryRow: map[string][]any{
+			queryGetGroupApplication:    appRow,
+			queryGetGroup:               groupBaseRow(false),
+			queryLockGroupCapacity:      {200, 0},
+			queryUpdateGroupApplication: {"a1"},
+		},
+		queryRowErr: map[string]error{
+			// 未封禁（ErrNoRows → 复检放行）
+			queryIsGroupBanned: pgx.ErrNoRows,
+		},
 	}
 	if err := newGroupsFullRepo(stub).ApproveApplication(ctx, "u1", "a1"); err != nil {
 		t.Fatalf("approve: %v", err)

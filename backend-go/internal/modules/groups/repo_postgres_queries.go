@@ -276,10 +276,19 @@ WHERE group_id = $1 AND user_id = $2`
 DELETE FROM group_members
 WHERE group_id = $1 AND user_id = $2`
 
+	// 角色 SetMemberRole 专用：role <> 'owner' 守卫挡住对 owner 行的任何改动
+	// （审计 F-05 防线二，服务层已拒绝 owner 目标）。owner 行唯一合法的变更
+	// 是转让群主，走 queryDemoteGroupOwnerRole（同事务内、已验操作者身份）。
 	queryUpdateGroupMemberRole = `
 UPDATE group_members
 SET role = $3
-WHERE group_id = $1 AND user_id = $2`
+WHERE group_id = $1 AND user_id = $2 AND role <> 'owner'`
+
+	// 转让群主第一步专用：仅当行当前是 owner 才降级，防误伤普通成员。
+	queryDemoteGroupOwnerRole = `
+UPDATE group_members
+SET role = $3
+WHERE group_id = $1 AND user_id = $2 AND role = 'owner'`
 
 	queryMuteGroupMember = `
 UPDATE group_members

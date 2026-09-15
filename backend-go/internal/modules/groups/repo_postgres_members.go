@@ -286,7 +286,9 @@ func (r *PostgresRepository) TransferOwnership(ctx context.Context, userID strin
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := txQueryable.Exec(txCtx, queryUpdateGroupMemberRole, req.GroupID, userID, string(GroupRoleAdmin)); err != nil {
+		// 降旧 owner 走专用守卫（仅 role='owner' 行可降）：queryUpdateGroupMemberRole
+		// 的 role <> 'owner' 守卫会挡住这条合法变更。
+		if err := txQueryable.Exec(txCtx, queryDemoteGroupOwnerRole, req.GroupID, userID, string(GroupRoleAdmin)); err != nil {
 			return err
 		}
 		if err := txQueryable.Exec(txCtx, queryUpdateGroupMemberRole, req.GroupID, req.NewOwnerID, string(GroupRoleOwner)); err != nil {

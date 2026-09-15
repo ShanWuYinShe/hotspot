@@ -101,6 +101,17 @@ func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID 
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
+		// 封禁复检下沉到事务内（审计 F-04 收口）：服务层的 IsBanned 检查与
+		// 本事务提交之间存在竞态窗口（检查后、提交前被 ban），此处同事务
+		// 复检封死旁路；BanMember 的 pending 申请级联撤销仍是兜底。
+		var one int
+		err := queryable.QueryRow(txCtx, queryIsGroupBanned, record.GroupID, record.Applicant.UserID).Scan(&one)
+		switch {
+		case err == nil:
+			return ErrBannedInGroup
+		case !errors.Is(err, pgx.ErrNoRows):
+			return err
+		}
 		if err := enforceGroupCapacity(txCtx, queryable, record.GroupID); err != nil {
 			return err
 		}

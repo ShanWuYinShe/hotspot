@@ -66,6 +66,12 @@ func (r *InMemoryRepository) ApproveApplication(_ context.Context, approverID, a
 	if record.Status != ApplicationStatusPending {
 		return ErrAlreadyProcessed
 	}
+	// 与 Postgres 实现的审批事务内封禁复检同语义（审计 F-04）。
+	if banned, ok := r.banned[record.GroupID]; ok {
+		if _, isBanned := banned[record.ApplicantID]; isBanned {
+			return ErrBannedInGroup
+		}
+	}
 	record.Status = ApplicationStatusAccepted
 	now := time.Now().UTC().Format(time.RFC3339)
 	record.HandledAt = &now

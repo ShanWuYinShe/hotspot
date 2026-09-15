@@ -145,6 +145,11 @@ func (r *InMemoryRepository) SetMemberRole(_ context.Context, userID string, req
 	if !ok {
 		return ErrNotMember
 	}
+	// 与 Postgres 实现的 role <> 'owner' 守卫同语义（审计 F-05 防线二）：
+	// owner 行不允许经 SetMemberRole 变更，转让群主另有专用路径。
+	if membership.Role == GroupRoleOwner {
+		return ErrBusinessConflict
+	}
 	membership.Role = req.Role
 	members[req.UserID] = membership
 	_ = userID

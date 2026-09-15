@@ -2,6 +2,7 @@ package groups
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"hotspot/backend-go/internal/platform/persistence"
@@ -213,6 +214,26 @@ func TestPostgresIT_SetMemberRole(t *testing.T) {
 		for _, m := range members {
 			if m.User.UserID == memberID && m.Role != GroupRoleAdmin {
 				t.Fatalf("role: got %q, want %q", m.Role, GroupRoleAdmin)
+			}
+		}
+
+		// 审计 F-05 防线二：SQL 守卫挡住对 owner 行的角色变更（服务层已拒，
+		// 此处验证即便绕过服务层、owner 行也不可被降级/改动）。
+		memberRole := GroupRoleMember
+		if err := repo.SetMemberRole(ctx, ownerID, SetMemberRoleRequest{
+			GroupID: group.Group.GroupID,
+			UserID:  ownerID,
+			Role:    memberRole,
+		}); err != nil {
+			t.Fatalf("SetMemberRole on owner should be silently guarded, got %v", err)
+		}
+		members, _, err = repo.ListMembers(ctx, group.Group.GroupID, nil, 10, "")
+		if err != nil {
+			t.Fatalf("ListMembers (post guard): %v", err)
+		}
+		for _, m := range members {
+			if m.User.UserID == ownerID && m.Role != GroupRoleOwner {
+				t.Fatalf("owner row was mutated: got %q, want %q", m.Role, GroupRoleOwner)
 			}
 		}
 	})
@@ -483,6 +504,71 @@ func TestPostgresIT_UpdatePreferences(t *testing.T) {
 			IsMuted: &muted,
 		}); err != nil {
 			t.Fatalf("UpdatePreferences (toggle): %v", err)
+		}
+	})
+}
+
+// 审计 F-04 收口：服务层 IsBanned 与审批事务提交之间存在竞态窗口，审批
+// 事务内必须复检封禁——已封禁申请人的审批整体失败（申请保持 pending、
+// 不产生成员行）。
+func TestPostgresIT_ApproveApplicationBannedInTx(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		repo := NewPostgresRepository(txFactory)
+		ownerID := testdb.InsertUser(t, txFactory, "g_banapp_owner", "Owner")
+		applicantID := testdb.InsertUser(t, txFactory, "g_banapp_applicant", "Applicant")
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Banned Approve Test", GroupJoinMethodDirect)
+		approval := true
+		if err := repo.Update(ctx, ownerID, UpdateGroupRequest{GroupID: groupID, RequiresApproval: &approval}); err != nil {
+			t.Fatalf("set requires_approval: %v", err)
+		}
+
+		result, err := repo.JoinGroup(ctx, applicantID, groupID, nil, nil)
+		if err != nil {
+			t.Fatalf("JoinGroup (approval): %v", err)
+		}
+		if result.ApplicationID == nil || *result.ApplicationID == "" {
+			t.Fatal("expected non-empty application id")
+		}
+
+		// 服务层检查之后、审批事务之前，申请人被封禁（模拟竞态窗口）。
+		// 双防线生效顺序：审批事务内的封禁复检先行，返回精确原因
+		// ErrBannedInGroup；即便复检被绕过，级联撤销 + pending 守卫也会让
+		// 审批以 ErrAlreadyProcessed 失败——已封禁申请人不可能被通过。
+		if err := repo.BanMember(ctx, ownerID, BanMemberRequest{GroupID: groupID, UserID: applicantID}); err != nil {
+			t.Fatalf("BanMember: %v", err)
+		}
+
+		if err := repo.ApproveApplication(ctx, ownerID, *result.ApplicationID); !errors.Is(err, ErrBannedInGroup) {
+			t.Fatalf("ApproveApplication on banned applicant: got %v, want ErrBannedInGroup", err)
+		}
+
+		// 申请保持非 pending（已被级联置 revoked），且未产生成员行
+		apps, _, err := repo.ListApplications(ctx, groupID, nil, 10, "")
+		if err != nil {
+			t.Fatalf("ListApplications: %v", err)
+		}
+		found := false
+		for _, a := range apps {
+			if a.ApplicationID == *result.ApplicationID {
+				found = true
+				if a.Status != ApplicationStatusRevoked {
+					t.Fatalf("application status: got %q, want %q", a.Status, ApplicationStatusRevoked)
+				}
+			}
+		}
+		if !found {
+			t.Fatal("application record should still exist (revoked by cascade)")
+		}
+		members, _, err := repo.ListMembers(ctx, groupID, nil, 10, "")
+		if err != nil {
+			t.Fatalf("ListMembers: %v", err)
+		}
+		for _, m := range members {
+			if m.User.UserID == applicantID {
+				t.Fatal("banned applicant must not become a member")
+			}
 		}
 	})
 }
