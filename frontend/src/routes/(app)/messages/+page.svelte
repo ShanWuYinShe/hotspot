@@ -14,7 +14,7 @@
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead, updatePrivateChatPreferences, updateGroupPreferences , netError } from '@/api';
-	import { formatTime, formatChatListTime } from '@/lib/chat.svelte';
+	import { formatChatListTime } from '@/lib/chat.svelte';
 	import { compareChatItems, type ChatItem } from '@/lib/chat-list';
 	import { ROUTES } from '@/lib/routes';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
