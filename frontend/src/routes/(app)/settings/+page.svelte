@@ -189,7 +189,7 @@
 				{#if auth.isAuthenticated}
 					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
 						<div class="flex items-center gap-3.5 min-w-0">
-							<Avatar class="border-2 border-surface-primary shrink-0" src={accountAvatar} name={accountName} size={48} />
+							<Avatar class="border-2 border-surface-primary shrink-0" src={accountAvatar} name={accountName} size="lg" />
 							<div class="min-w-0">
 								<div class="flex items-center gap-2">
 									<p class="text-sm font-semibold text-text-primary truncate">{accountName || '用户'}</p>

@@ -115,7 +115,7 @@
 								ariaLabel={`查看 ${person.nickname} 的资料`}
 								class="flex items-center gap-3 px-4 py-3.5"
 							>
-								<Avatar src={person.avatar_url ?? ''} name={person.nickname} size={36} />
+								<Avatar src={person.avatar_url ?? ''} name={person.nickname} size="md" />
 								<span class="min-w-0 flex-1">
 									<span class="block text-sm text-text-primary">{person.nickname}</span>
 									<span class="mt-0.5 block text-xs text-text-secondary">
@@ -184,7 +184,7 @@
 								ariaLabel={`查看群组 ${group.name}`}
 								class="flex items-center gap-3 px-4 py-3.5"
 							>
-								<Avatar src={group.avatar_url ?? ''} name={group.name} size={36} shape="rounded" />
+								<Avatar src={group.avatar_url ?? ''} name={group.name} size="md" shape="rounded" />
 								<span class="min-w-0 flex-1">
 									<span class="block text-sm text-text-primary">{group.name}</span>
 									<span class="mt-0.5 block text-xs text-text-secondary">

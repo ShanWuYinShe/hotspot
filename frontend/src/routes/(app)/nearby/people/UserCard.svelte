@@ -69,8 +69,9 @@
 					<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>
 				</div>
 				{#if user.isOnline}
+					<!-- 行内状态点统一 8px 档（审查 M3：9px 近邻异档归并） -->
 					<span
-						class="shrink-0 rounded-full size-2.25 ring-2 ring-surface-card-menu bg-status-online"
+						class="shrink-0 rounded-full size-2 ring-2 ring-surface-card-menu bg-status-online"
 						title="在线"
 					></span>
 				{/if}

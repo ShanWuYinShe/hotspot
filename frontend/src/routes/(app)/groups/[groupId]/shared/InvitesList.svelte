@@ -22,7 +22,7 @@
 <ListContainer bordered class="mt-4">
 	{#each invites as inv (inv.invite_id)}
 		<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${inv.invitee.nickname} 的入群邀请`}>
-			<Avatar src={inv.invitee.avatar_url ?? undefined} name={inv.invitee.nickname} size={40} />
+			<Avatar src={inv.invitee.avatar_url ?? undefined} name={inv.invitee.nickname} size="lg" />
 			<span class="min-w-0 flex-1">
 				<span class="block truncate text-sm text-text-primary">{inv.invitee.nickname}</span>
 				<span class="text-xs text-text-secondary">{inviteStatusText(inv.status)} · {formatDateTime(inv.created_at)}</span>

@@ -26,7 +26,7 @@
 		disabled={!onClick}
 		onclick={onClick}
 	>
-		<Avatar src={avatar} name={name} size={34} class="border border-border-default" />
+		<Avatar src={avatar} name={name} size="md" class="border border-border-default" />
 		<div class="flex-1 min-w-0">
 			<p   class="truncate text-sm text-text-primary">{name}</p>
 			{#if sub}

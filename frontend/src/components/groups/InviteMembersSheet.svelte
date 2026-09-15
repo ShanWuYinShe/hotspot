@@ -131,7 +131,7 @@
 						class="hover-btn flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors duration-rapid ease-standard outline-none focus-visible:ring-2 focus-visible:ring-accent-default
 							{isSelected ? 'bg-accent-soft hover:bg-interactive-active' : 'hover:bg-interactive-hover'}"
 					>
-						<Avatar src={u.user.avatar_url ?? undefined} name={u.user.nickname} size={36} />
+						<Avatar src={u.user.avatar_url ?? undefined} name={u.user.nickname} size="md" />
 						<span class="min-w-0 flex-1">
 							<span class="block truncate text-sm text-text-primary">{u.user.nickname}</span>
 						</span>

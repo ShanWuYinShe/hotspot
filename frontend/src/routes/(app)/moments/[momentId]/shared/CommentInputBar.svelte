@@ -19,7 +19,7 @@
 	class="shrink-0 flex items-center gap-2.5 bg-surface-primary border-t border-border-default px-4 pt-3"
 	style="padding-bottom:max(0.75rem, env(safe-area-inset-bottom));"
 >
-	<Avatar class="border border-border-default" src={auth.user?.avatar_url} name={auth.user?.nickname} size={30} />
+	<Avatar class="border border-border-default" src={auth.user?.avatar_url} name={auth.user?.nickname} size="md" />
 	<div class="flex-1 flex items-center px-4 rounded-md input-surface h-9.5">
 		<input
 			bind:this={inputEl}

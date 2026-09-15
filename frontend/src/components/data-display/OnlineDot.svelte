@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { cn } from '@/lib/utils';
+
 	// OnlineDot — 在线状态圆点（绝对定位在头像包装内）。
+	// className 经 tailwind-merge 合并：大头像角标可覆写内边距（如 bottom-1 right-1）。
 
 	let {
 		size = 'md',
@@ -17,6 +20,7 @@
 </script>
 
 <span
-	class="absolute bottom-0 right-0 rounded-full border-strong border-surface-primary {className}"
+	data-online-dot
+	class={cn('absolute bottom-0 right-0 rounded-full border-strong border-surface-primary', className)}
 	style="width:{px}px;height:{px}px;background:{color ?? 'var(--cst-status-online)'};"
 ></span>

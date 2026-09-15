@@ -202,7 +202,7 @@
 					<Avatar
 						src={auth.user.avatar_url || undefined}
 						name={auth.user.nickname || '用户'}
-						size={32}
+						size="md"
 						style="border:var(--cst-border-width-regular) solid var(--cst-border-default);"
 					/>
 				</button>

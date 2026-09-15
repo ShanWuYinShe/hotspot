@@ -20,7 +20,7 @@
 <ListContainer bordered class="mt-4">
 	{#each banned as item (item.user.user_id)}
 		<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${item.user.nickname} 的封禁记录`}>
-			<Avatar src={item.user.avatar_url ?? undefined} name={item.user.nickname} size={40} />
+			<Avatar src={item.user.avatar_url ?? undefined} name={item.user.nickname} size="lg" />
 			<span class="min-w-0 flex-1">
 				<span class="block truncate text-sm text-text-primary">{item.user.nickname}</span>
 				<span class="text-xs text-text-secondary">{formatDateTime(item.banned_at)}{item.reason ? ` · ${item.reason}` : ''}</span>

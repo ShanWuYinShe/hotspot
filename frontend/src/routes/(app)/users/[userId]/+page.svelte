@@ -3,6 +3,7 @@
 	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
@@ -383,8 +384,9 @@
 				<div class="flex items-end justify-between gap-4">
 					<div class="flex min-w-0 items-center gap-4">
 						<div class="relative shrink-0">
-							<Avatar src={user.avatar} name={user.name} size={80} class="border-2 border-surface-primary shadow-raised-lg" />
-							<span class="absolute bottom-1 right-1 rounded-full bg-status-online size-3.5 border-2 border-surface-primary"  ></span>
+							<Avatar src={user.avatar} name={user.name} size="xl" class="border-2 border-surface-primary shadow-raised-lg" />
+							<!-- 角标统一 OnlineDot（审查 M3：手写 14px 异档收编为 lg 档 + 内边距覆写） -->
+							<OnlineDot size="lg" class="bottom-1 right-1 border-2" />
 						</div>
 						<div class="min-w-0 pt-1">
 							<h1 class="truncate text-2xl font-medium tracking-title text-text-primary">{user.name}</h1>

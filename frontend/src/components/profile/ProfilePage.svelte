@@ -102,7 +102,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			<!-- 身份卡 + 居中统计（同一张卡，指标复用 MetricRow 原语） -->
 			<section class="mt-6 overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="公开个人资料">
 				<div class="flex items-start gap-5 p-6">
-					<Avatar src={avatar} name={nickname} size={80} ring class="shrink-0" />
+					<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0" />
 					<div class="min-w-0 pt-1">
 						<h2 class="text-2xl font-medium tracking-title text-text-primary">{nickname || '未设置昵称'}</h2>
 						<p class="mt-1 text-sm text-text-secondary">{handle}</p>

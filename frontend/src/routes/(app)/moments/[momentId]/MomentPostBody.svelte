@@ -147,7 +147,7 @@
 			aria-label={`查看${moment.user}的个人主页`}
 			onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
 		>
-			<Avatar src={moment.avatar} name={moment.user} size={44} />
+			<Avatar src={moment.avatar} name={moment.user} size="lg" />
 		</button>
 		<div class="flex-1">
 			<p class="text-text-primary text-sm">{moment.user}</p>
@@ -228,7 +228,7 @@
 					aria-label={`查看${c.user}的个人主页`}
 					onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
 				>
-					<Avatar src={c.avatar} name={c.user} size={34} />
+					<Avatar src={c.avatar} name={c.user} size="md" />
 				</button>
 				<div class="flex-1">
 					<div class="flex items-baseline gap-2">

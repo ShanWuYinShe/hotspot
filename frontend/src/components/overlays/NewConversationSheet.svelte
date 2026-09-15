@@ -139,7 +139,7 @@
 								ariaLabel={`与 ${c.name} 开始私聊`}
 								class="flex items-center gap-3.5 px-4 py-3"
 							>
-								<Avatar src={c.avatar} name={c.name} size={44} />
+								<Avatar src={c.avatar} name={c.name} size="lg" />
 								<div class="flex-1 min-w-0">
 									<p class="text-text-primary text-sm">{c.name}</p>
 									<p class="text-text-secondary text-xs">发起新会话</p>

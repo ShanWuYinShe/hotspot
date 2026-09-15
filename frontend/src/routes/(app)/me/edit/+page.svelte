@@ -220,7 +220,7 @@
 	<!-- Avatar edit -->
 	<div class="flex items-center gap-4 -mt-8">
 		<div class="relative shrink-0">
-			<Avatar src={avatar} name={nickname} size={72} shape="rounded" class="border-heavy border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
+			<Avatar src={avatar} name={nickname} size="xl" shape="rounded" class="border-heavy border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
 			<button
 				type="button"
 				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm hover:shadow-raised-md"

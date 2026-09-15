@@ -75,7 +75,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 						<!-- 头像不再挂「更换头像」相机按钮：它与下方「编辑资料」跳同一个页面，
 						     属同屏重复入口；且它只做跳转、并不直接改头像，affordance 有误导。
 						     头像更换统一走「编辑资料」。 -->
-						<Avatar src={avatar} name={nickname} size={68} ring class="shrink-0" />
+						<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0" />
 						<div class="min-w-0">
 							<h1 class="text-xl font-semibold tracking-title text-text-primary">{nickname || '未设置昵称'}</h1>
 							<p class="mt-0.5 text-xs text-text-secondary">{handle}</p>

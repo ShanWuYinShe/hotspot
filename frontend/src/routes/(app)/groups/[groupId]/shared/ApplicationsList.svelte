@@ -22,7 +22,7 @@
 <ListContainer bordered class="mt-4">
 	{#each applications as app (app.application_id)}
 		<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${app.applicant.nickname} 的入群申请`}>
-			<Avatar src={app.applicant.avatar_url ?? undefined} name={app.applicant.nickname} size={40} />
+			<Avatar src={app.applicant.avatar_url ?? undefined} name={app.applicant.nickname} size="lg" />
 			<span class="min-w-0 flex-1">
 				<span class="block truncate text-sm text-text-primary">{app.applicant.nickname}</span>
 				<span class="text-xs text-text-secondary">{formatDateTime(app.created_at)}{app.message ? ` · ${app.message}` : ''}</span>

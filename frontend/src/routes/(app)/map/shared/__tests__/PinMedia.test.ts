@@ -9,7 +9,8 @@ describe('PinMedia', () => {
 			props: { pin: { id: 'p1', type: 'user', lat: 30.5, lng: 117.5, avatar: 'a.jpg', name: '鹿鸣', online: true } as never }
 		});
 		expect(container.querySelector('img')?.getAttribute('alt')).toBe('鹿鸣');
-		expect(container.querySelector('.bg-status-online')).not.toBeNull();
+		// 角标统一走 OnlineDot（data-online-dot 稳定锚点）
+		expect(container.querySelector('[data-online-dot]')).not.toBeNull();
 	});
 
 	it('动态图钉渲染图片缩略', () => {

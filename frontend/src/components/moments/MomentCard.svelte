@@ -60,7 +60,7 @@
 			<!-- 作者行：头像 + 昵称 + 位置 -->
 			<div class="flex min-w-0 items-center gap-2">
 				{#if item.avatar || item.user}
-					<Avatar src={item.avatar} name={item.user} size={22} style="border:var(--cst-border-width-regular) solid var(--cst-border-card-menu);" />
+					<Avatar src={item.avatar} name={item.user} size="xs" style="border:var(--cst-border-width-regular) solid var(--cst-border-card-menu);" />
 					<span class="truncate text-sm text-text-primary font-semibold">{item.user || '匿名用户'}</span>
 				{/if}
 				{#if item.location}

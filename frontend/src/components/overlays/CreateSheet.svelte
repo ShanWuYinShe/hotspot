@@ -144,7 +144,7 @@
 		<div class="mx-auto flex w-full max-w-140 flex-col gap-4">
 			<div class="flex items-center justify-between gap-3">
 				<div class="flex min-w-0 items-center gap-2.5">
-					<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size={36} class="border border-border-default" />
+					<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size="md" class="border border-border-default" />
 					<div class="min-w-0">
 						<p class="text-sm font-medium text-text-primary">{auth.user?.nickname || '用户'}</p>
 						<span class="mt-0.5 flex items-center gap-1 text-xs text-text-secondary">
