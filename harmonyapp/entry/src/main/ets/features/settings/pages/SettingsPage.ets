@@ -907,7 +907,10 @@ export struct SettingsPage {
               Row() {}
                 .width(DesignConstants.COMPONENT.THEME_PREVIEW_BAR_WIDTH)
                 .height(DesignConstants.COMPONENT.THEME_PREVIEW_BAR_HEIGHT)
-                .margin({ top: -19, left: DesignConstants.SPACING.SM })
+                .margin({
+                  top: DesignConstants.COMPONENT.THEME_PREVIEW_INDICATOR_OVERLAP,
+                  left: DesignConstants.SPACING.SM
+                })
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .backgroundColor(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).activeBackgroundColor)
             }

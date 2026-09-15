@@ -316,7 +316,8 @@ export struct ProfileEditPage {
               .margin({ top: DesignConstants.SPACING.LG })
             }
             .width('100%')
-            .margin({ top: -40 })
+            // 头像区上移叠入 hero 头图（负 margin 特例收口到 DesignConstants，审查 P3-3）
+            .margin({ top: DesignConstants.COMPONENT.PROFILE_AVATAR_HEADER_OVERLAP })
             .padding({ left: DesignConstants.SPACING.LG })
 
             // 表单字段

@@ -295,6 +295,10 @@ export interface ComponentConstants {
   THEME_PREVIEW_BAR_HEIGHT: number;
   /** 加载环描边宽度（4） */
   PROGRESS_STROKE_WIDTH: number;
+  /** 主题预览卡 tab 选中指示条上移叠入 tab bar 的负 margin（-19，SettingsPage 预览卡） */
+  THEME_PREVIEW_INDICATOR_OVERLAP: number;
+  /** 资料编辑页头像区上移叠入 hero 头图的负 margin（-40，ProfileEditPage） */
+  PROFILE_AVATAR_HEADER_OVERLAP: number;
 }
 
 // ==================== 聊天主题布局常量接口 ====================
@@ -636,6 +640,12 @@ const COMPONENT: ComponentConstants = {
   THEME_PREVIEW_BAR_WIDTH: 54,
   THEME_PREVIEW_BAR_HEIGHT: 16,
   PROGRESS_STROKE_WIDTH: 4,
+  // 负 margin 特例：均为「内容叠入上方区块」的既成视觉，命名以说明用途，
+  // 禁止新增裸负值（审查 P3-3）
+  /** 主题预览卡 tab 选中指示条上移叠入 tab bar（SettingsPage 预览卡） */
+  THEME_PREVIEW_INDICATOR_OVERLAP: -19,
+  /** 资料编辑页头像区上移叠入 hero 头图（ProfileEditPage） */
+  PROFILE_AVATAR_HEADER_OVERLAP: -40,
 };
 
 const CHAT: ChatLayoutConstants = {
