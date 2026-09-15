@@ -226,7 +226,7 @@ export struct ProfileEditPage {
 
   private getHeaderAction(): PageHeaderAction | null {
     return {
-      label: this.isSaved ? '' : (this.isSaving ? '保存中...' : '保存'),
+      label: this.isSaved ? '' : (this.isSaving ? '保存中…' : '保存'),
       onClick: () => this.handleSave(),
       disabled: this.isSaving || this.isSaved
     };
@@ -361,7 +361,7 @@ export struct ProfileEditPage {
 
             // 底部保存按钮
             SystemButton({
-              label: this.isSaved ? '已保存' : (this.isSaving ? '保存中...' : '保存'),
+              label: this.isSaved ? '已保存' : (this.isSaving ? '保存中…' : '保存'),
               variant: this.isSaved ? 'secondary' : 'primary',
               buttonSize: 'large',
               fullWidth: true,

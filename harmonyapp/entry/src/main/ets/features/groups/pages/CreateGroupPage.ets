@@ -465,7 +465,7 @@ export struct CreateGroupPage {
                   Text('建议使用清晰、易识别的头像')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor(this.getCurrentThemePalette().textPrimary)
-                  Text(this.isGroupAvatarUploading ? '群头像上传中...' : '未设置时将使用默认群头像')
+                  Text(this.isGroupAvatarUploading ? '群头像上传中…' : '未设置时将使用默认群头像')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor(this.getCurrentThemePalette().textSecondary)
                 }
@@ -524,7 +524,7 @@ export struct CreateGroupPage {
                       .maxLines(2)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                   } else {
-                    Text('正在获取位置...')
+                    Text('正在获取位置…')
                       .fontSize(DesignConstants.FONT.SIZE.MD)
                       .fontColor(this.getCurrentThemePalette().textSecondary)
                   }

@@ -286,7 +286,7 @@ export class I18nManager extends BaseSingleton {
     zhCnCommon.set('delete', '删除');
     zhCnCommon.set('edit', '编辑');
     zhCnCommon.set('save', '保存');
-    zhCnCommon.set('loading', '加载中...');
+    zhCnCommon.set('loading', '加载中…');
     zhCnCommon.set('error', '错误');
     zhCnCommon.set('success', '成功');
     zhCnCommon.set('warning', '警告');

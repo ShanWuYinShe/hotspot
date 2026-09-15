@@ -258,6 +258,8 @@ export interface ComponentConstants {
   GROUP_FEATURED_HEIGHT: number;
   /** 通知中心加载空态区域高度（200） */
   LOADING_AREA_HEIGHT: number;
+  /** 空态 fillMode 最小高度 */
+  EMPTY_FILL_MIN_HEIGHT: number;
   /** 创建群组人数输入框宽度（64） */
   NUMBER_INPUT_WIDTH: number;
   /** 通用图标尺寸档（16/20/24） */
@@ -619,6 +621,8 @@ const COMPONENT: ComponentConstants = {
   /** 附近群组 featured 精选全宽卡高度（对齐前端 min-h-85=340px） */
   GROUP_FEATURED_HEIGHT: 340,
   LOADING_AREA_HEIGHT: 200,
+  /** 空态 fillMode 最小高度（对齐前端页面级空态撑高） */
+  EMPTY_FILL_MIN_HEIGHT: 420,
   NUMBER_INPUT_WIDTH: 64,
   ICON_SIZE_XS: 16,
   ICON_SIZE_SM: 20,

@@ -271,7 +271,7 @@ export struct LoginPage {
       Column() {
       if (this.isLoading) {
         SystemLoadingView({
-          message: this.loadingStage || '加载中...',
+          message: this.loadingStage || '加载中…',
           progressType: 'determinate',
           showProgress: true,
           externalProgress: this.loadingProgress
@@ -801,7 +801,7 @@ export struct LoginPage {
 
     try {
       await LoadingUtil.withMinimumTime(async () => {
-        this.loadingStage = '正在创建访客身份...';
+        this.loadingStage = '正在创建访客身份…';
         this.loadingProgress = 40;
 
         const request: GuestRequest = {
@@ -811,7 +811,7 @@ export struct LoginPage {
         };
         const response = await ApiClient.createTempUser(request);
         if (response.code === 0 && response.data) {
-          this.loadingStage = '创建成功，正在初始化...';
+          this.loadingStage = '创建成功，正在初始化…';
           this.loadingProgress = 70;
           await this.handleAuthSuccess(response.data, 'temp');
           this.loadingProgress = 100;
@@ -848,7 +848,7 @@ export struct LoginPage {
 
     try {
       await LoadingUtil.withMinimumTime(async () => {
-        this.loadingStage = '正在验证登录信息...';
+        this.loadingStage = '正在验证登录信息…';
         this.loadingProgress = 40;
 
         const loginRequest: LoginRequest = {
@@ -860,7 +860,7 @@ export struct LoginPage {
 
         const response = await ApiClient.login(loginRequest);
         if (response.code === 0 && response.data) {
-          this.loadingStage = '登录成功，正在初始化...';
+          this.loadingStage = '登录成功，正在初始化…';
           this.loadingProgress = 70;
 
           PasswordSecurityUtil.clearSensitiveString(this.password);
@@ -974,7 +974,7 @@ export struct LoginPage {
 
     try {
       await LoadingUtil.withMinimumTime(async () => {
-        this.loadingStage = '正在注册...';
+        this.loadingStage = '正在注册…';
         this.loadingProgress = 40;
 
         const registerRequest: RegisterRequest = {
@@ -988,7 +988,7 @@ export struct LoginPage {
 
         const response = await ApiClient.register(registerRequest);
         if (response.code === 0 && response.data) {
-          this.loadingStage = '注册成功，正在初始化...';
+          this.loadingStage = '注册成功，正在初始化…';
           this.loadingProgress = 70;
 
           PasswordSecurityUtil.clearSensitiveString(this.registerPassword);

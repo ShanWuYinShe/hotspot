@@ -455,7 +455,7 @@ export struct SearchPage {
         })
 
         if (this.isLoading) {
-          SystemLoadingView({ message: '搜索中...' })
+          SystemLoadingView({ message: '搜索中…' })
             .layoutWeight(1)
         } else if (this.keyword.trim().length === 0 && !this.hasSearched) {
           this.DiscoveryView()

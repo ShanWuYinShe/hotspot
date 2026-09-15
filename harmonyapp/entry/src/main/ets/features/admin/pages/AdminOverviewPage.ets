@@ -113,7 +113,7 @@ struct AdminOverviewPage {
         })
 
         if (this.isLoading) {
-          SystemLoadingView({ message: '加载管理权限...' }).layoutWeight(1)
+          SystemLoadingView({ message: '加载管理权限…' }).layoutWeight(1)
         } else if (this.errorMessage.length > 0 && this.permissions.length === 0) {
           EmptyState({
             icon: AppIcon.SHIELD,

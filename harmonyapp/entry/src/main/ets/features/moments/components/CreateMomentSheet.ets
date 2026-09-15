@@ -112,15 +112,17 @@ export struct CreateMomentSheet {
       return;
     }
     this.isPublishing = true;
-    this.publishingMessage = '正在发布...';
+    // 进度文案与最短 loading 时长对齐 CreateMomentPage（双入口行为一致，防加载闪烁）
+    this.publishingMessage = '正在处理图片…';
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       const localLoc = this.localLocation;
       const imageFileIds: string[] = [];
 
       // 串行压缩并上传（对齐 CreateMomentPage：压缩失败降级原图）
+      await LoadingUtil.withMinimumTime(async (): Promise<void> => {
       for (let i = 0; i < this.imageUrls.length; i++) {
-        this.publishingMessage = `正在上传第 ${i + 1}/${this.imageUrls.length} 张图片...`;
+        this.publishingMessage = `正在上传第 ${i + 1}/${this.imageUrls.length} 张图片…`;
         try {
           const compressedPath = await MediaServiceManager.compressImage(context, this.imageUrls[i], 80, 1024 * 1024 * 2);
           const uploadUri = await MediaServiceManager.prepareFileForUpload(context, compressedPath);
@@ -138,7 +140,7 @@ export struct CreateMomentSheet {
         }
       }
 
-      this.publishingMessage = '正在发布...';
+      this.publishingMessage = '正在发布…';
       const geoPoint: GeoPoint = { latitude: localLoc.latitude, longitude: localLoc.longitude };
       const request: CreateMomentRequest = {
         description: this.description.trim(),
@@ -157,6 +159,7 @@ export struct CreateMomentSheet {
       } else {
         SystemToast.showError(response.message || '发布瞬间失败', this.getUIContext());
       }
+      }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `发布失败: ${JSON.stringify(error)}`);
       SystemToast.showError('发布瞬间失败', this.getUIContext());

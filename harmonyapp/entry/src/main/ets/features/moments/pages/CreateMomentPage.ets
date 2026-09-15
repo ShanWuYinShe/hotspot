@@ -233,7 +233,7 @@ export struct CreateMomentPage {
 
     const localLoc = this.localLocation;
     this.isPublishing = true;
-    this.publishingMessage = '正在处理图片...';
+    this.publishingMessage = '正在处理图片…';
     
     try {
       if (this.isDestroyed) return;
@@ -244,7 +244,7 @@ export struct CreateMomentPage {
         // 串行压缩并上传图片
         for (let i = 0; i < this.imageUrls.length; i++) {
           const imageUrl = this.imageUrls[i];
-          this.publishingMessage = `正在上传第 ${i + 1}/${this.imageUrls.length} 张图片...`;
+          this.publishingMessage = `正在上传第 ${i + 1}/${this.imageUrls.length} 张图片…`;
           
           try {
             // 1. 压缩图片
@@ -282,7 +282,7 @@ export struct CreateMomentPage {
           }
         }
         
-        this.publishingMessage = '正在发布...';
+        this.publishingMessage = '正在发布…';
 
         const geoPoint: GeoPoint = {
           latitude: localLoc.latitude,
@@ -390,7 +390,7 @@ export struct CreateMomentPage {
             Column() {
               SystemTextArea({
                 value: this.description,
-                placeholder: '写下你想分享的内容...',
+                placeholder: '写下你想分享的内容…',
                 minHeight: DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT,
                 // spec api_spec_base.md 字段校验约束：description(moment) 1-2000 字符
                 maxLength: 2000,
@@ -620,7 +620,7 @@ export struct CreateMomentPage {
                 .borderRadius(DesignConstants.RADIUS.MD)
                 .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
               } else {
-                Text('正在获取位置信息...')
+                Text('正在获取位置信息…')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')

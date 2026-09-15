@@ -112,7 +112,7 @@ export struct EmptyState {
     }
     .width('100%')
     .height('100%')
-    .constraintSize({ minHeight: this.fillMode ? 420 : 0 })
+    .constraintSize({ minHeight: this.fillMode ? DesignConstants.COMPONENT.EMPTY_FILL_MIN_HEIGHT : 0 })
     .justifyContent(FlexAlign.Center)
     .padding(DesignConstants.SPACING.XL)
   }
@@ -126,7 +126,7 @@ export struct EmptyState {
 @Reusable
 @Component
 export struct LoadingMoreIndicator {
-  @Prop message: string = '加载更多...';
+  @Prop message: string = '加载更多…';
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private getPalette() {
@@ -167,7 +167,7 @@ export function RefreshIndicator() {
       .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
       .color(AppThemeManager.getSafeCurrentPalette().accentBackground)
       .accessibilityText('正在刷新')
-    Text('正在刷新...')
+    Text('正在刷新…')
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .margin({ left: DesignConstants.SPACING.SM })
       .fontColor(AppThemeManager.getSafeCurrentPalette().textSecondary)

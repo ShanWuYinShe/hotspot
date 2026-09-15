@@ -1539,7 +1539,7 @@ export struct GroupDetailPage {
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
-        SystemLoadingView({ message: '加载群组信息中...' })
+        SystemLoadingView({ message: '加载群组信息中…' })
           .layoutWeight(1)
           .transition(
             TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -2117,7 +2117,7 @@ export struct GroupDetailPage {
               .onClick(() => this.selectEditGroupAvatar())
 
               Column({ space: DesignConstants.SPACING.SM }) {
-                Text(this.isEditGroupAvatarUploading ? '头像上传中...' : '点击头像可重新选择')
+                Text(this.isEditGroupAvatarUploading ? '头像上传中…' : '点击头像可重新选择')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
 
@@ -2285,7 +2285,7 @@ export struct GroupDetailPage {
 
                 if (this.transferSectionOpen) {
                   if (this.isLoadingTransferCandidates) {
-                    Text('成员加载中...')
+                    Text('成员加载中…')
                       .fontSize(DesignConstants.FONT.SIZE.SM)
                       .fontColor(this.getCurrentThemePalette().textSecondary)
                       .width('100%')
@@ -2528,7 +2528,7 @@ export struct GroupDetailPage {
 
       if (this.isSearchingInviteUsers) {
         Column() {
-          SystemLoadingView({ message: '搜索中...' })
+          SystemLoadingView({ message: '搜索中…' })
         }
         .layoutWeight(1)
       } else if (this.inviteSearchError.length > 0) {
@@ -2585,7 +2585,7 @@ export struct GroupDetailPage {
 
       Column() {
         SystemButton({
-          label: this.isInviting ? '邀请中...' :
+          label: this.isInviting ? '邀请中…' :
             (this.inviteSelectedIds.length > 0 ? `邀请 ${this.inviteSelectedIds.length} 人` : '邀请'),
           variant: 'primary',
           buttonSize: 'default',
@@ -2623,7 +2623,7 @@ export struct GroupDetailPage {
 
       if (this.isLoadingBannedMembers) {
         Column() {
-          SystemLoadingView({ message: '加载封禁名单中...' })
+          SystemLoadingView({ message: '加载封禁名单中…' })
         }
         .layoutWeight(1)
       } else if (this.bannedMembers.length === 0) {
@@ -2705,7 +2705,7 @@ export struct GroupDetailPage {
 
       // 成员列表
       if (this.isLoadingMembers && this.members.length === 0) {
-        SystemLoadingView({ message: '加载成员列表中...' }).layoutWeight(1)
+        SystemLoadingView({ message: '加载成员列表中…' }).layoutWeight(1)
       } else if (this.members.length === 0 && this.membersErrorMessage) {
         EmptyState({
           icon: AppIcon.WARNING,
@@ -2734,7 +2734,7 @@ export struct GroupDetailPage {
             ListItem() {
               Row({ space: DesignConstants.SPACING.SM }) {
                 LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-                Text('加载更多...')
+                Text('加载更多…')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
               }
@@ -2783,7 +2783,7 @@ export struct GroupDetailPage {
       .padding(DesignConstants.SPACING.LG)
 
       if (this.isLoadingApplications && this.applications.length === 0) {
-        SystemLoadingView({ message: '加载入群申请中...' }).layoutWeight(1)
+        SystemLoadingView({ message: '加载入群申请中…' }).layoutWeight(1)
       } else if (this.applications.length === 0 && this.applicationsErrorMessage) {
         EmptyState({
           icon: AppIcon.WARNING,
@@ -2811,7 +2811,7 @@ export struct GroupDetailPage {
             ListItem() {
               Row({ space: DesignConstants.SPACING.SM }) {
                 LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-                Text('加载更多...')
+                Text('加载更多…')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
               }

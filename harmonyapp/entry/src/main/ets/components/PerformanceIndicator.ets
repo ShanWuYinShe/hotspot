@@ -295,7 +295,7 @@ export struct PerformanceIndicator {
             .height(DesignConstants.COMPONENT.ICON_SIZE_XS)
             .color(this.getPalette().accentBackground)
 
-          Text('刷新中...')
+          Text('刷新中…')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getPalette().textSecondary)
         }

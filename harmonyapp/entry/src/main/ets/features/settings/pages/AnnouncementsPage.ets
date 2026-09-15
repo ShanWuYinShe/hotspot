@@ -88,7 +88,7 @@ export struct AnnouncementsPage {
 
         // 首次网络加载（无数据）时显示加载反馈，避免页面空白静默；下拉刷新由 Refresh 自身指示器反馈
         if (this.loading && this.announcements.length === 0) {
-          SystemLoadingView({ message: '加载中...' })
+          SystemLoadingView({ message: '加载中…' })
             .layoutWeight(1)
             .width('100%')
         } else if (!this.loading && this.announcements.length === 0) {

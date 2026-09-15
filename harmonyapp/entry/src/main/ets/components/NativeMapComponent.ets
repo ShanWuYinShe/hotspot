@@ -983,7 +983,7 @@ export struct NativeMapComponent {
           LoadingProgress()
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
             .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-          Text('加载地图中...')
+          Text('加载地图中…')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
         }

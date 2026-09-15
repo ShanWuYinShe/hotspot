@@ -234,7 +234,7 @@ export struct MySharesPage {
         })
           .layoutWeight(1)
       } else if (this.isLoading) {
-        SystemLoadingView({ message: '正在加载我的分享...' })
+        SystemLoadingView({ message: '正在加载我的分享…' })
           .layoutWeight(1)
       } else if (this.errorMessage && this.shares.length === 0) {
         EmptyState({

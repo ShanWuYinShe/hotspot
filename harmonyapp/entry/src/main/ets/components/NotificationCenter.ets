@@ -10,6 +10,7 @@ import { TabsPillGroup, TabItem } from './TabsPillGroup';
 import { AppRouter, AnnouncementsRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../core/router/AppRouter';
 import { PageNames } from '../constants/AppConstants';
 import { SystemToast } from './SystemToast';
+import { SystemDialog } from './SystemDialog';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 import { DesignConstants } from '../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
@@ -47,6 +48,8 @@ export struct NotificationCenter {
   @State private hasMore: boolean = false;
   @State private errorMessage: string = '';
   @State private actionLoadingIds: string[] = [];
+  // 全部已读确认弹窗（对齐全站 SystemDialog 范式，替代系统 showAlertDialog）
+  @State private markAllDialogVisible: boolean = false;
   @State private pressedNotificationId: string = '';
   @State private pressedClose: boolean = false;
 
@@ -452,20 +455,7 @@ export struct NotificationCenter {
             buttonSize: 'small',
             // 批量标记不可撤销：二次确认防误触
             onPress: () => {
-              this.getUIContext().showAlertDialog({
-                title: '全部标记已读',
-                message: `将 ${this.getUnreadCount()} 条通知标记为已读，此操作不可撤销。`,
-                primaryButton: {
-                  value: '标记',
-                  fontColor: this.getPalette().accentBackground,
-                  action: () => { this.onMarkAllRead(); }
-                },
-                secondaryButton: {
-                  value: '取消',
-                  fontColor: this.getPalette().textSecondary,
-                  action: () => {}
-                }
-              });
+              this.markAllDialogVisible = true;
             }
           })
         }
@@ -495,7 +485,7 @@ export struct NotificationCenter {
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
             .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
             .color(this.getPalette().accentBackground)
-          Text('加载中...')
+          Text('加载中…')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.getPalette().textSecondary)
         }
@@ -564,7 +554,7 @@ export struct NotificationCenter {
 
             if (this.isLoadingMore) {
               ListItem() {
-                LoadingMoreIndicator({ message: '正在加载更多通知...' })
+                LoadingMoreIndicator({ message: '正在加载更多通知…' })
               }
             }
           }
@@ -581,6 +571,22 @@ export struct NotificationCenter {
           }
         })
       }
+
+      // 全部已读二次确认（与全站确认弹窗视觉一致）
+      SystemDialog({
+        visible: this.markAllDialogVisible,
+        title: '全部标记已读',
+        description: `将 ${this.getUnreadCount()} 条通知标记为已读，此操作不可撤销。`,
+        confirmText: '标记',
+        showCancel: true,
+        onCancel: () => {
+          this.markAllDialogVisible = false;
+        },
+        onConfirm: () => {
+          this.markAllDialogVisible = false;
+          this.onMarkAllRead();
+        }
+      })
     }
     .width('100%')
     .height('100%')

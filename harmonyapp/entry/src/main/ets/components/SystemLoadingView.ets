@@ -9,7 +9,7 @@ import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 @Component
 export struct SystemLoadingView {
-  @Prop message: string = '加载中...';
+  @Prop message: string = '加载中…';
   @Prop showProgress: boolean = true;
   @Prop showSystemInfo: boolean = false;
   @Prop progressType: 'indeterminate' | 'determinate' = 'indeterminate';

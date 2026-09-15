@@ -12,6 +12,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { SystemButton } from '../../../components/SystemButton';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -52,6 +53,8 @@ export struct SubscriptionsPage {
   @State private loading: boolean = true;
   @State private savingKey: string = '';
   @State private data: LocalSubscriptionPrefs | null = null;
+  // 页面级加载失败态：失败时明确告知当前展示的是兜底默认值（否则用户无从分辨）
+  @State private loadError: boolean = false;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
@@ -110,6 +113,7 @@ export struct SubscriptionsPage {
       await this.load();
     } catch (e) {
       this.loading = false;
+      this.loadError = true;
       SystemToast.showError('加载失败', this.getUIContext());
     }
   }
@@ -117,12 +121,15 @@ export struct SubscriptionsPage {
   private async load(): Promise<void> {
     if (this.isDestroyed) return;
     this.loading = true;
+    this.loadError = false;
     try {
       const stored = await PreferencesUtil.getObject<LocalSubscriptionPrefs>(SUBSCRIPTIONS_STORAGE_KEY);
       if (this.isDestroyed) return;
       this.data = stored ?? this.getDefaultPrefs();
     } catch (e) {
+      // 本地读取失败：展示默认偏好，但置错误态提示用户当前并非其真实设置
       this.data = this.getDefaultPrefs();
+      this.loadError = true;
     } finally {
       this.loading = false;
     }
@@ -194,11 +201,32 @@ export struct SubscriptionsPage {
       })
 
       if (this.loading) {
-        SystemLoadingView({ message: '加载订阅设置...' })
+        SystemLoadingView({ message: '加载订阅设置…' })
           .layoutWeight(1)
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       } else {
         List() {
+          if (this.loadError) {
+            ListItem() {
+              Column({ space: DesignConstants.SPACING.SM }) {
+                Text('加载失败，当前展示默认偏好')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                SystemButton({
+                  label: '重试',
+                  variant: 'outline',
+                  buttonSize: 'small',
+                  onPress: () => {
+                    if (!this.isDestroyed) void this.ensureAuthAndLoad();
+                  }
+                })
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Center)
+              .padding(DesignConstants.SPACING.MD)
+            }
+          }
+
           ListItem() {
             this.ListHeader('通知类型')
           }

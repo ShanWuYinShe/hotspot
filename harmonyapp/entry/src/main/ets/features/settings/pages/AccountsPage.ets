@@ -219,7 +219,7 @@ export struct AccountsPage {
       })
 
       if (this.isLoading) {
-        SystemLoadingView({ message: '加载账号列表...' })
+        SystemLoadingView({ message: '加载账号列表…' })
           .transition(
             TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
               .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))

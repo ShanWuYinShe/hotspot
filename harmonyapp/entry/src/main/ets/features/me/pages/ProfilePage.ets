@@ -803,7 +803,7 @@ export struct ProfilePage {
                   .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
               )
             } else if (this.isLoading) {
-              SystemLoadingView({ message: '正在更新...' })
+              SystemLoadingView({ message: '正在更新…' })
                 .layoutWeight(1)
                 .transition(
                   TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -882,7 +882,7 @@ export struct ProfilePage {
   @Builder
   private buildExternalProfileView(): void {
     if (this.viewedUserLoading) {
-      SystemLoadingView({ message: '正在加载用户资料...' })
+      SystemLoadingView({ message: '正在加载用户资料…' })
         .layoutWeight(1)
     } else if (this.viewedUserError.length > 0 || !this.viewedUserProfile) {
       EmptyState({
@@ -1704,7 +1704,7 @@ export struct ProfilePage {
               this.showUpgradeForm = false;
             })
 
-          Button(this.isUpgrading ? '升级中...' : '确认升级')
+          Button(this.isUpgrading ? '升级中…' : '确认升级')
             .type(ButtonType.Normal)
             .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
             .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
@@ -1894,7 +1894,7 @@ export struct ProfilePage {
         })
 
         if (this.isAvatarUploading) {
-          Text('头像上传中...')
+          Text('头像上传中…')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getSecondaryTextColor())
         } else {
@@ -1937,7 +1937,7 @@ export struct ProfilePage {
           .opacity(this.isLoading || this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.cancelEdit())
 
-        Button(this.isLoading ? '保存中...' : '保存')
+        Button(this.isLoading ? '保存中…' : '保存')
           .type(ButtonType.Normal)
           .backgroundColor(this.getAccentBackground())
           .fontColor(this.getAccentText())

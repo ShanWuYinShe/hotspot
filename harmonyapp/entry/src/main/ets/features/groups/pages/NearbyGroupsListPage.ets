@@ -251,7 +251,7 @@ export struct NearbyGroupsListPage {
 
         // 内容区
         if (this.isLoading) {
-          SystemLoadingView({ message: '正在加载附近的群组...' })
+          SystemLoadingView({ message: '正在加载附近的群组…' })
             .layoutWeight(1)
         } else if (!this.hasAnyData() && this.errorMessage) {
           EmptyState({

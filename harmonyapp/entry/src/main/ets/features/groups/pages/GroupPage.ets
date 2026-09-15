@@ -514,7 +514,7 @@ export struct GroupPage {
 
           // 内容区域
           if (this.isLoading) {
-            SystemLoadingView({ message: '正在加载我的群组...' })
+            SystemLoadingView({ message: '正在加载我的群组…' })
               .transition(
                 TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
                   .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
@@ -584,7 +584,7 @@ export struct GroupPage {
       .padding(DesignConstants.SPACING.LG)
 
       if (this.invitesLoading && this.myInvites.length === 0) {
-        SystemLoadingView({ message: '加载邀请中...' }).layoutWeight(1)
+        SystemLoadingView({ message: '加载邀请中…' }).layoutWeight(1)
       } else if (this.myInvites.length === 0 && this.invitesError) {
         EmptyState({ icon: AppIcon.WARNING, message: this.invitesError, actionLabel: '重试', onAction: () => this.loadMyInvites() })
           .layoutWeight(1)
@@ -600,7 +600,7 @@ export struct GroupPage {
 
           if (this.invitesLoadingMore) {
             ListItem() {
-              LoadingMoreIndicator({ message: '加载更多邀请...' })
+              LoadingMoreIndicator({ message: '加载更多邀请…' })
             }
           }
         }
@@ -655,7 +655,7 @@ export struct GroupPage {
 
       Row({ space: DesignConstants.SPACING.SM }) {
         SystemButton({
-          label: this.isInviteHandling(invite.invite_id) ? '处理中...' : '接受',
+          label: this.isInviteHandling(invite.invite_id) ? '处理中…' : '接受',
           variant: 'primary',
           buttonSize: 'default',
           pill: true,
@@ -704,7 +704,7 @@ export struct GroupPage {
       .padding(DesignConstants.SPACING.LG)
 
       if (this.applicationsLoading && this.myApplications.length === 0) {
-        SystemLoadingView({ message: '加载申请中...' }).layoutWeight(1)
+        SystemLoadingView({ message: '加载申请中…' }).layoutWeight(1)
       } else if (this.myApplications.length === 0 && this.applicationsError) {
         EmptyState({ icon: AppIcon.WARNING, message: this.applicationsError, actionLabel: '重试', onAction: () => this.loadMyApplications() })
           .layoutWeight(1)
@@ -720,7 +720,7 @@ export struct GroupPage {
 
           if (this.applicationsLoadingMore) {
             ListItem() {
-              LoadingMoreIndicator({ message: '加载更多申请...' })
+              LoadingMoreIndicator({ message: '加载更多申请…' })
             }
           }
         }

@@ -233,7 +233,7 @@ export class TimerManager {
    * 应用退出时的清理方法
    */
   static cleanup(): void {
-    logger.info('TimerManager开始清理...');
+    logger.info('TimerManager开始清理…');
     TimerManager.clearAll();
     logger.info('TimerManager清理完成');
   }

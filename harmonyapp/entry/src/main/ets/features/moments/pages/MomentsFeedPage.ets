@@ -446,7 +446,7 @@ export struct MomentsFeedPage {
 
       // 内容区
       if (this.isLoading) {
-        SystemLoadingView({ message: '正在加载附近动态...' })
+        SystemLoadingView({ message: '正在加载附近动态…' })
           .layoutWeight(1)
           .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))

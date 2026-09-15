@@ -446,7 +446,7 @@ export struct MomentDetailPage {
       Column() {
         this.buildTopBar()
         if (this.isLoading) {
-          SystemLoadingView({ message: '正在加载动态详情...' })
+          SystemLoadingView({ message: '正在加载动态详情…' })
         } else if (!this.moment) {
           EmptyState({
             icon: AppIcon.WARNING,

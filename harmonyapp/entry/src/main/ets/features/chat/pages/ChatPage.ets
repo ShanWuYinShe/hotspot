@@ -862,7 +862,7 @@ export struct ChatPage {
       if (uris.length === 0) return;
 
       this.isSending = true;
-      SystemToast.show('图片上传中...', this.getUIContext());
+      SystemToast.show('图片上传中…', this.getUIContext());
 
       const category: MediaCategory = 'chat_image';
       const uploaded = await ApiClient.uploadFile(context, uris[0], category);
@@ -1120,12 +1120,12 @@ export struct ChatPage {
       previewNames.push(this.resolveGroupTypingDisplayName(this.groupTypingUserIds[index]));
     }
     if (count === 1) {
-      return `${previewNames[0]} 正在输入...`;
+      return `${previewNames[0]} 正在输入…`;
     }
     if (count <= GROUP_TYPING_NAME_PREVIEW_LIMIT) {
-      return `${previewNames.join('、')} 正在输入...`;
+      return `${previewNames.join('、')} 正在输入…`;
     }
-    return `${previewNames.join('、')} 等 ${count} 人正在输入...`;
+    return `${previewNames.join('、')} 等 ${count} 人正在输入…`;
   }
 
   private resolveGroupTypingDisplayName(userId: string): string {
@@ -1224,7 +1224,7 @@ export struct ChatPage {
       })
 
       if (this.isLoading) {
-        SystemLoadingView({ message: '加载消息...' })
+        SystemLoadingView({ message: '加载消息…' })
           .layoutWeight(1)
           .onTouch((event: TouchEvent) => {
             if (event.type === TouchType.Down) {
@@ -1284,7 +1284,7 @@ export struct ChatPage {
           ListItem() {
             Row({ space: DesignConstants.SPACING.SM }) {
               LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-              Text('加载更早消息...')
+              Text('加载更早消息…')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor(this.getCurrentThemePalette().textSecondary)
             }
@@ -1351,7 +1351,7 @@ export struct ChatPage {
 
       if (this.chatType === 'private_chat' && this.isOtherUserTyping) {
         Row() {
-          Text('对方正在输入...')
+          Text('对方正在输入…')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
@@ -1431,7 +1431,7 @@ export struct ChatPage {
         })
         .onClick(() => this.pickAttachment())
 
-        TextInput({ text: this.inputText, placeholder: '发送消息...' })
+        TextInput({ text: this.inputText, placeholder: '发送消息…' })
           .layoutWeight(1)
           .maxLength(MESSAGE_CONTENT_MAX)
           .height(this.getChatVisualStyle().input.height)

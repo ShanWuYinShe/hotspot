@@ -31,28 +31,30 @@ export class SystemToast {
    * 显示成功Toast
    */
   static showSuccess(message: string, uiContext: UIContext): void {
-    SystemToast.show(`✅ ${message}`, uiContext);
+    // 系统 toast 原生样式下 emoji 前缀是唯一「出戏」元素（全站图标已统一 Lucide 体系），
+    // 且语义已由 toast 类型（成功/失败样式）承载，去掉前缀保持克制视觉。
+    SystemToast.show(message, uiContext);
   }
 
   /**
    * 显示错误Toast
    */
   static showError(message: string, uiContext: UIContext): void {
-    SystemToast.show(`❌ ${message}`, uiContext);
+    SystemToast.show(message, uiContext);
   }
 
   /**
    * 显示警告Toast
    */
   static showWarning(message: string, uiContext: UIContext): void {
-    SystemToast.show(`⚠️ ${message}`, uiContext);
+    SystemToast.show(message, uiContext);
   }
 
   /**
    * 显示信息Toast
    */
   static showInfo(message: string, uiContext: UIContext): void {
-    SystemToast.show(`ℹ️ ${message}`, uiContext);
+    SystemToast.show(message, uiContext);
   }
 
   /**

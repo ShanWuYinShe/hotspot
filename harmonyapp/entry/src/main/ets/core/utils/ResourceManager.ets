@@ -201,7 +201,7 @@ export class ResourceManager {
    * 强制清理所有资源
    */
   static async cleanup(): Promise<void> {
-    logger.info('开始清理所有资源...');
+    logger.info('开始清理所有资源…');
     const cleanupPromises: Promise<void>[] = [];
 
     for (const [id, info] of ResourceManager.resources.entries()) {

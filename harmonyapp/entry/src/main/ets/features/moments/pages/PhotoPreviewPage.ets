@@ -27,6 +27,14 @@ export struct PhotoPreviewPage {
   @State positionY: number = 0;
   @State compWidth: number = 0;
   @State compHeight: number = 0;
+  // 加载失败标记（按下标）：弱网/失效链接时给明确反馈，避免纯黑屏无法区分加载中/失败
+  @State failedFlags: boolean[] = [];
+
+  private markFailed(index: number): void {
+    const next = [...this.failedFlags];
+    next[index] = true;
+    this.failedFlags = next;
+  }
 
   private getSurfaceBorder(): string {
     return DesignConstants.COLOR.OVERLAY_LIGHT;
@@ -50,13 +58,31 @@ export struct PhotoPreviewPage {
         .backgroundColor(DesignConstants.COLOR.BLACK)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
 
-      // 图片轮播
+      // 图片轮播（key 拼下标：同一 URL 出现两次时 key 冲突会串页）
       Swiper(this.swiperController) {
         ForEach(this.images, (imageUrl: string, index: number) => {
-          Image(MediaUrlUtil.normalize(imageUrl))
-            .width('100%')
-            .height('100%')
-            .objectFit(ImageFit.Contain)
+          Stack() {
+            Image(MediaUrlUtil.normalize(imageUrl))
+              .width('100%')
+              .height('100%')
+              .objectFit(ImageFit.Contain)
+              .onError(() => this.markFailed(index))
+            if (this.failedFlags[index]) {
+              Column() {
+                Text('图片加载失败')
+                  .fontColor(DesignConstants.COLOR.MEDIA_CHROME_TEXT)
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                Text('请检查网络后退出重进')
+                  .fontColor(DesignConstants.COLOR.MEDIA_CHROME_TEXT)
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .margin({ top: DesignConstants.SPACING.SM })
+                  .opacity(0.7)
+              }
+              .width('100%')
+            }
+          }
+          .width('100%')
+          .height('100%')
             .geometryTransition(this.momentId ? 'moment_img_' + this.momentId + '_' + index : '')
             .scale({ x: this.currentIndex === index ? this.scaleValue : 1, y: this.currentIndex === index ? this.scaleValue : 1, z: 1 })
             .translate({ x: this.currentIndex === index ? this.offsetX : 0, y: this.currentIndex === index ? this.offsetY : 0 })
@@ -147,7 +173,7 @@ export struct PhotoPreviewPage {
                   })
               )
             )
-        }, (item: string) => item)
+        }, (item: string, index: number) => `${item}_${index}`)
       }
       .index(this.currentIndex)
       .width('100%')

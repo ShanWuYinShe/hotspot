@@ -57,7 +57,7 @@ export struct GroupApplicationRow {
 
       Row({ space: DesignConstants.SPACING.SM }) {
         SystemButton({
-          label: this.handling ? '处理中...' : '批准',
+          label: this.handling ? '处理中…' : '批准',
           variant: 'primary',
           buttonSize: 'large',
           disabled: this.handling,

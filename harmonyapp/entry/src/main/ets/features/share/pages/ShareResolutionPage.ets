@@ -118,7 +118,7 @@ export struct ShareResolutionPage {
     PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
         if (this.isLoading) {
-          SystemLoadingView({ message: '正在加载分享内容...' })
+          SystemLoadingView({ message: '正在加载分享内容…' })
             .layoutWeight(1)
         } else {
           EmptyState({

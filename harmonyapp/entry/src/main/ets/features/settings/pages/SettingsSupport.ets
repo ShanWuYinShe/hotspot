@@ -447,7 +447,7 @@ export struct SettingsMetaCard {
       if (this.loading) {
         Row({ space: DesignConstants.SPACING.SM }) {
           LoadingProgress().width(DesignConstants.SPACING.LG).height(DesignConstants.SPACING.LG).color(this.getPalette().accentBackground)
-          Text('正在获取版本信息...')
+          Text('正在获取版本信息…')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textSecondary)
         }

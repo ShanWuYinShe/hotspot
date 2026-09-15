@@ -388,7 +388,7 @@ export struct SearchPanel {
         Column() {
           if (this.isSearching) {
             // 加载态统一 SystemLoadingView（与其余页面一致）
-            SystemLoadingView({ message: '正在搜索...' })
+            SystemLoadingView({ message: '正在搜索…' })
           } else if (this.searchResults.length > 0) {
             // 搜索结果列表
             List({ space: DesignConstants.SPACING.SM }) {
