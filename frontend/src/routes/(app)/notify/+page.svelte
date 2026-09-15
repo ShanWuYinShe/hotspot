@@ -12,6 +12,7 @@
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import NotifyRow from './shared/NotifyRow.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
@@ -23,7 +24,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { relationshipsHref } from '@/lib/relationships';
 	import { follow } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
-	import type { GroupInviteItem } from '@/api/types';
+	import type { GroupInviteItem, NotifyItem } from '@/api/types';
 	import { smartBack } from '@/lib/smart-back';
 
 	// 通知列表：类型过滤、单条/全部已读、桌面右侧概览 Rail。
@@ -43,6 +44,10 @@ const FILTER_TABS = [
 	/** 我收到的待处理入群邀请（listMyInvites，默认仅 pending） */
 	let invites = $state<GroupInviteItem[]>([]);
 	let filter = $state('all');
+	// 分页（审查 M5）：长期积累的通知此前一次全量拉取；改 cursor 分页 + 手动加载更多。
+	const NOTIFY_PAGE_SIZE = 30;
+	let nextCursor = $state<string | null>(null);
+	let loadingMore = $state(false);
 
 	const device = $derived(platform.platform);
 	let needsAuth = $state(false);
@@ -69,7 +74,7 @@ const FILTER_TABS = [
 				needsAuth = false;
 				loadError = null;
 				const [notifRes, unreadRes, invitesRes] = await Promise.all([
-					listNotifies().catch(() => netError({ items: [] })),
+					listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE } }).catch(() => netError({ items: [], next_cursor: null })),
 					getUnreadCount().catch(() => netError({ total: 0 })),
 					listMyInvites().catch(() => netError({ items: [] }))
 				]);
@@ -85,47 +90,12 @@ const FILTER_TABS = [
 					if (!cancelled) loadError = notifRes.message ?? '加载失败';
 					return;
 				}
+				if (!cancelled) nextCursor = notifData?.next_cursor ?? null;
 
 				if (invitesRes.code === 0) invites = invitesRes.data?.items ?? [];
 
 				if (notifData) {
-					const sorted = (notifData.items || []).slice().sort((a, b) =>
-						String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))
-					);
-					const items: NotifyViewItem[] = sorted.map((n, i) => {
-						const actor = n.payload?.actor ?? { user_id: '', nickname: '', avatar_url: null };
-						const groupName = n.payload?.group_name ?? '群组';
-						// 行内已渲染 actor 昵称（NotifyRow user.name），text 只承载动作语义，
-						// 避免昵称出现两遍。
-						let text = '';
-						if (n.type === 'moment_commented') text = n.payload?.comment_preview ?? '评论了你的动态';
-						else if (n.type === 'comment_reply') text = `回复了你的评论:${n.payload?.reply_content_preview ?? ''}`;
-						else if (n.type === 'new_follower') text = '关注了你';
-						else if (n.type === 'mutual_follow') text = '和你互相关注了';
-						else if (n.type === 'group_invite_received') text = `邀请你加入 ${groupName}`;
-						else if (n.type === 'group_application_accepted') text = `你加入「${groupName}」的申请已通过`;
-						else if (n.type === 'group_application_rejected') text = `${n.payload?.rejected_by?.nickname ?? '管理员'} 拒绝了你的「${groupName}」入群申请`;
-						else if (n.type === 'reaction_added') text = `做出了反应 ${n.payload?.emoji ?? ''}`;
-						else if (n.type === 'group_mentioned') text = `在「${groupName}」群聊中 @ 了你${n.payload?.content_preview ? `:${n.payload.content_preview}` : ''}`;
-						else if (n.type === 'report_resolved') text = `你举报的内容已处理${n.payload?.note ? `:${n.payload.note}` : ''}`;
-						else if (n.type === 'report_dismissed') text = `你的举报未通过审核${n.payload?.note ? `:${n.payload.note}` : ''}`;
-						else if (n.type === 'nearby_new_moment') text = '在附近发布了新瞬间';
-						else if (n.type === 'system_announcement') text = n.payload?.title ?? '系统公告';
-						else text = n.payload?.message ?? '';
-						return {
-							id: n.notify_id ?? String(i + 1),
-							// 归一化为语义键，使图标/计数/分区过滤都能命中 TYPE_CONFIG。
-							type: normalizeNotifType(n.type ?? 'reaction_added'),
-							read: n.is_read ?? false,
-							time: formatDateTime(n.created_at),
-							user: { id: actor.user_id ?? '', name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
-							text,
-							momentImage: n.payload?.moment_summary?.cover_url ?? undefined,
-							// 入群邀请通知携带 invite_id，供行内接受/拒绝
-							inviteId: n.type === 'group_invite_received' ? (n.payload as { invite_id?: string })?.invite_id : undefined
-						};
-					});
-					notifies = items;
+					notifies = toViewItems(notifData.items || [], 0);
 				}
 			} catch {
 				if (!cancelled) loadError = '加载失败，请稍后重试';
@@ -138,6 +108,61 @@ const FILTER_TABS = [
 			cancelled = true;
 		};
 	});
+
+	/** 后端通知 → 视图模型（首页与加载更多共用；offset 供 fallback id 去重）。 */
+	function toViewItems(raw: NotifyItem[], offset: number): NotifyViewItem[] {
+		const sorted = raw.slice().sort((a, b) =>
+			String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))
+		);
+		return sorted.map((n, i) => {
+			const actor = n.payload?.actor ?? { user_id: '', nickname: '', avatar_url: null };
+			const groupName = n.payload?.group_name ?? '群组';
+			// 行内已渲染 actor 昵称（NotifyRow user.name），text 只承载动作语义，
+			// 避免昵称出现两遍。
+			let text = '';
+			if (n.type === 'moment_commented') text = n.payload?.comment_preview ?? '评论了你的动态';
+			else if (n.type === 'comment_reply') text = `回复了你的评论:${n.payload?.reply_content_preview ?? ''}`;
+			else if (n.type === 'new_follower') text = '关注了你';
+			else if (n.type === 'mutual_follow') text = '和你互相关注了';
+			else if (n.type === 'group_invite_received') text = `邀请你加入 ${groupName}`;
+			else if (n.type === 'group_application_accepted') text = `你加入「${groupName}」的申请已通过`;
+			else if (n.type === 'group_application_rejected') text = `${n.payload?.rejected_by?.nickname ?? '管理员'} 拒绝了你的「${groupName}」入群申请`;
+			else if (n.type === 'reaction_added') text = `做出了反应 ${n.payload?.emoji ?? ''}`;
+			else if (n.type === 'group_mentioned') text = `在「${groupName}」群聊中 @ 了你${n.payload?.content_preview ? `:${n.payload.content_preview}` : ''}`;
+			else if (n.type === 'report_resolved') text = `你举报的内容已处理${n.payload?.note ? `:${n.payload.note}` : ''}`;
+			else if (n.type === 'report_dismissed') text = `你的举报未通过审核${n.payload?.note ? `:${n.payload.note}` : ''}`;
+			else if (n.type === 'nearby_new_moment') text = '在附近发布了新瞬间';
+			else if (n.type === 'system_announcement') text = n.payload?.title ?? '系统公告';
+			else text = n.payload?.message ?? '';
+			return {
+				id: n.notify_id ?? String(offset + i + 1),
+				// 归一化为语义键，使图标/计数/分区过滤都能命中 TYPE_CONFIG。
+				type: normalizeNotifType(n.type ?? 'reaction_added'),
+				read: n.is_read ?? false,
+				time: formatDateTime(n.created_at),
+				user: { id: actor.user_id ?? '', name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
+				text,
+				momentImage: n.payload?.moment_summary?.cover_url ?? undefined,
+				// 入群邀请通知携带 invite_id，供行内接受/拒绝
+				inviteId: n.type === 'group_invite_received' ? (n.payload as { invite_id?: string })?.invite_id : undefined
+			};
+		});
+	}
+
+	/** 加载下一页（cursor keyset，服务端按时间倒序，追加即保持全局有序）。 */
+	async function loadMoreNotifs() {
+		if (nextCursor === null || loadingMore) return;
+		loadingMore = true;
+		try {
+			const res = await listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE, cursor: nextCursor } }).catch(() => netError({ items: [], next_cursor: null }));
+			if (res.code === 0 && res.data) {
+				notifies = [...notifies, ...toViewItems(res.data.items || [], notifies.length)];
+				nextCursor = res.data.next_cursor ?? null;
+			}
+		} finally {
+			loadingMore = false;
+		}
+	}
 
 	const unread = $derived(notifies.filter((n) => !n.read).length);
 	let followedBack = $state<Set<string>>(new Set());
@@ -274,7 +299,7 @@ const FILTER_TABS = [
 					<ListContainer bordered class="mb-5">
 						{#each invites as inv (inv.invite_id)}
 							<div class="flex items-center gap-3.5 px-3 py-3.5">
-								<Avatar src={inv.group.avatar_url} name={inv.group.name} size={40} shape="rounded" />
+								<Avatar src={inv.group.avatar_url} name={inv.group.name} size="lg" shape="rounded" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{inv.group.name}</span>
 									<span class="text-xs text-text-secondary">{inv.inviter.nickname} 邀请你 · {formatDateTime(inv.created_at)}</span>
@@ -321,6 +346,12 @@ const FILTER_TABS = [
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
 					</ListContainer>
+				{/if}
+
+				{#if !loading && nextCursor !== null}
+					<div class="mt-5">
+						<LoadMoreButton label="加载更早通知" loading={loadingMore} onLoad={() => void loadMoreNotifs()} />
+					</div>
 				{/if}
 
 				{#if loading}

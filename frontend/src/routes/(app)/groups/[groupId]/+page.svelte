@@ -266,7 +266,7 @@
 							<div class="flex -space-x-2">
 								{#each gd.members.slice(0, 6) as m, i (m.userId ?? i)}
 									<!-- Avatar 原语：自带懒加载与 initials 兜底（审查 M6，替换裸 img） -->
-									<Avatar src={m.avatar} name={m.name} size={32} class="rounded-full border-2 border-surface-primary object-cover" />
+									<Avatar src={m.avatar} name={m.name} size="md" class="rounded-full border-2 border-surface-primary object-cover" />
 								{/each}
 							</div>
 							<span class="text-sm text-text-primary">{gd.detail.members} 位成员 · 查看全部</span>
@@ -295,8 +295,11 @@
 						onlineMemberIds={gd.onlineMemberIds}
 						canManageMembers={canManageMembers}
 						canManageMember={canManageMember}
+						hasMore={gd.hasMoreMembers()}
+						loadingMore={gd.isLoadingMoreMembers()}
 						onInvite={() => (inviteOpen = true)}
 						onManage={(m) => (actionMember = m)}
+						onLoadMore={() => void gd.loadMoreMembers()}
 					/>
 					{:else if memberTab === 'applications'}
 						<ApplicationsList

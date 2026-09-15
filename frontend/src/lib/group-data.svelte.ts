@@ -8,7 +8,7 @@
 import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi , netError } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
-import type { GroupRole, GroupSentInviteItem, AdminBannedMemberItem, GroupItem, UpdateGroupRequest, GroupApplicationItem } from '@/api/types';
+import type { GroupRole, GroupSentInviteItem, AdminBannedMemberItem, GroupItem, UpdateGroupRequest, GroupApplicationItem, GroupMemberItem } from '@/api/types';
 
 export interface GroupDetail {
 	name: string;
@@ -106,23 +106,20 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		}
 	}
 
+	/** 成员分页（审查 M5）：大群此前一次全量拉取渲染；改 cursor 分页 + 手动加载更多。 */
+	const MEMBERS_PAGE_SIZE = 50;
+	let membersCursor = $state<string | null>(null);
+	let membersLoadingMore = $state(false);
+
 	async function loadMembers(gid: string) {
 		try {
-			const membersRes = await getGroupMembers(gid).catch(() => netError({ items: [] }));
+			const membersRes = await getGroupMembers(gid, { limit: MEMBERS_PAGE_SIZE }).catch(() => netError({ items: [], next_cursor: null }));
 			if (currentGid() !== gid) return;
 			const membersData = membersRes.code === 0 ? membersRes.data : null;
 			if (membersData) {
-				const items: GroupMember[] = (membersData.items || []).map((m, i) => ({
-					id: i + 1,
-					userId: m.user?.user_id ?? '',
-					name: m.user?.nickname ?? '',
-					role: m.role ?? '成员',
-					avatar: m.user?.avatar_url ?? '',
-					presence: m.presence_status ?? null
-					// 禁言截止时间在群管理视角（groups/admin/members/list，AdminGroupMemberItem）；
-					// 公开 members/list 已不含 muted_until（视角分离）。
-				}));
+				const items = toGroupMembers(membersData.items || [], 0);
 				members = items;
+				membersCursor = membersData.next_cursor ?? null;
 				// 成员快照的在线状态播种进 presence store（后续 WS 事件继续覆盖）。
 				const snapshotOnline = items.filter((m) => m.presence === 'online' && m.userId).map((m) => m.userId);
 				if (snapshotOnline.length > 0) opts.seedPresence?.(snapshotOnline);
@@ -134,6 +131,56 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 			}
 		} catch {
 			// empty data is normal
+		}
+	}
+
+	function toGroupMembers(raw: GroupMemberItem[], offset: number): GroupMember[] {
+		return raw.map((m, i) => ({
+			id: offset + i + 1,
+			userId: m.user?.user_id ?? '',
+			name: m.user?.nickname ?? '',
+			role: m.role ?? '成员',
+			avatar: m.user?.avatar_url ?? '',
+			presence: m.presence_status ?? null
+			// 禁言截止时间在群管理视角（groups/admin/members/list，AdminGroupMemberItem）；
+			// 公开 members/list 已不含 muted_until（视角分离）。
+		}));
+	}
+
+	/** 是否还有更多成员（MembersList 据此渲染 LoadMoreButton）。 */
+	function hasMoreMembers(): boolean {
+		return membersCursor !== null;
+	}
+
+	function isLoadingMoreMembers(): boolean {
+		return membersLoadingMore;
+	}
+
+	/** 加载下一页成员并追加（含 presence 播种与订阅扩容）。gid 取当前工厂
+	 * 绑定的群（currentGid），翻页期间切群由竞态守卫丢弃迟到响应。 */
+	async function loadMoreMembers() {
+		const gid = currentGid();
+		if (membersCursor === null || membersLoadingMore) return;
+		membersLoadingMore = true;
+		try {
+			const res = await getGroupMembers(gid, { limit: MEMBERS_PAGE_SIZE, cursor: membersCursor }).catch(() => netError({ items: [], next_cursor: null }));
+			if (currentGid() !== gid) return;
+			if (res.code === 0 && res.data) {
+				const items = toGroupMembers(res.data.items || [], members.length);
+				members = [...members, ...items];
+				membersCursor = res.data.next_cursor ?? null;
+				const snapshotOnline = items.filter((m) => m.presence === 'online' && m.userId).map((m) => m.userId);
+				if (snapshotOnline.length > 0) opts.seedPresence?.(snapshotOnline);
+				// 订阅扩容：新页成员纳入 presence 实时订阅（复用既有 watch 句柄重建）。
+				unwatchMembers?.();
+				if (opts.watchPresence) {
+					unwatchMembers = opts.watchPresence(members.map((m) => m.userId).filter(Boolean));
+				}
+			}
+		} catch {
+			// keep current page on failure
+		} finally {
+			membersLoadingMore = false;
 		}
 	}
 
@@ -378,6 +425,9 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		loadAll,
 		loadDetail,
 		loadMembers,
+		hasMoreMembers,
+		isLoadingMoreMembers,
+		loadMoreMembers,
 		loadAnnouncements,
 		createAnnouncement,
 		updateAnnouncement,

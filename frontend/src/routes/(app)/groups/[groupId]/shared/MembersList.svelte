@@ -2,6 +2,7 @@
 	import { UserPlus, MoreHorizontal } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
+	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { goto } from '$app/navigation';
@@ -10,6 +11,8 @@
 
 	// MembersList —— 成员列表 + （管理者）添加成员入口；行点击进资料，
 	// 管理按钮交由父级 MemberActionSheet 处理。
+	// 分页：大群走 cursor 分页，尾部 LoadMoreButton 由父级 group-data 驱动
+	//（审查 M5：此前一次全量拉取渲染）。
 
 	/** 后端 role 值 → 中文展示（未收录角色回退原值）。 */
 	const ROLE_LABELS: Record<string, string> = {
@@ -24,15 +27,21 @@
 		onlineMemberIds,
 		canManageMembers,
 		canManageMember,
+		hasMore = false,
+		loadingMore = false,
 		onInvite,
-		onManage
+		onManage,
+		onLoadMore
 	}: {
 		members: GroupMember[];
 		onlineMemberIds: Set<string>;
 		canManageMembers: boolean;
 		canManageMember: (m: GroupMember) => boolean;
+		hasMore?: boolean;
+		loadingMore?: boolean;
 		onInvite: () => void;
 		onManage: (m: GroupMember) => void;
+		onLoadMore?: () => void;
 	} = $props();
 </script>
 
@@ -55,7 +64,7 @@
 			class="flex list-row-standard items-center gap-3 px-3.5 py-3"
 		>
 			<div class="relative">
-				<Avatar src={member.avatar} name={member.name} size={40} />
+				<Avatar src={member.avatar} name={member.name} size="lg" />
 				{#if onlineMemberIds.has(member.userId)}
 					<OnlineDot size="md" />
 				{/if}
@@ -77,3 +86,8 @@
 		</ListItem>
 	{/each}
 </ListContainer>
+{#if hasMore && onLoadMore}
+	<div class="mt-4">
+		<LoadMoreButton label="加载更多成员" loading={loadingMore} onLoad={onLoadMore} />
+	</div>
+{/if}
