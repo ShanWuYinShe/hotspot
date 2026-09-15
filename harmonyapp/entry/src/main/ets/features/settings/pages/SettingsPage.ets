@@ -40,7 +40,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
-import { common } from '@kit.AbilityKit';
+import { common, bundleManager } from '@kit.AbilityKit';
 import { ConfigurationConstant } from '@kit.AbilityKit';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -63,6 +63,7 @@ export struct SettingsPage {
   @StorageLink(KEY_DARK_MODE_PREFERENCE) darkModePreference: DarkModePreference = 'auto';
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State systemMeta: ApiVersionMeta | null = null;
+  @State appVersionName: string = '';
   @State systemMetaLoading: boolean = false;
   @State systemMetaError: string = '';
   @State systemMetaLastChecked: string = '';
@@ -89,6 +90,17 @@ export struct SettingsPage {
     this.refreshAll(false);
     this.loadLocalPreferences();
     this.loadUserSettings();
+    this.loadAppVersion();
+  }
+
+  /** 应用自身版本（AppScope/app.json5 versionName，发版约定见 harmonyapp/AGENTS.md） */
+  private async loadAppVersion(): Promise<void> {
+    try {
+      const bundleInfo = await bundleManager.getBundleInfoForSelf(bundleManager.BundleFlag.GET_BUNDLE_INFO_DEFAULT);
+      this.appVersionName = bundleInfo.versionName ?? '';
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `获取应用版本失败: ${JSON.stringify(error)}`);
+    }
   }
 
   aboutToDisappear(): void {
@@ -723,7 +735,7 @@ export struct SettingsPage {
                       SettingsEntryRow({ item: {
                         icon: AppIcon.INFO,
                         title: '关于',
-                        subtitle: this.systemMeta ? `版本 ${this.systemMeta.version}` : '版本信息加载中…',
+                        subtitle: this.appVersionName ? `版本 ${this.appVersionName}` : '版本信息加载中…',
                         action: () => { this.loadSystemMeta(true); }
                       } })
                     }

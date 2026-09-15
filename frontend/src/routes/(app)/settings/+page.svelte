@@ -20,7 +20,7 @@
 	import { mapSourceStore, setMapSource, MAP_SOURCE_OPTIONS, initMapSource, type MapSource } from '@/stores/mapSource.svelte';
 	import { getAccount, getSettings, updateSettings, netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
-	import pkg from '../../../../package.json';
+	import { buildInfo } from '@/lib/build-info.svelte';
 	import { smartBack } from '@/lib/smart-back';
 
 	// 设置页：主题/深色、通知、隐私开关、关于、退出登录。
@@ -28,7 +28,10 @@
 	// privacy_level；推送通知 spec 无服务端字段，是本地客户端偏好，
 	// 用 localStorage 持久化（不冒充服务端设置）。
 
-	const APP_VERSION = `v${pkg.version}`;
+	// 构建版本指纹来自 /version.json（构建期产物），非 package.json——
+	// 后者长期不随发布演进，不能作为线上版本依据。
+	void buildInfo.load();
+	const shortCommit = $derived(buildInfo.info?.commit ? buildInfo.info.commit.slice(0, 7) : '');
 
 	// 本地偏好（推送通知）——localStorage 持久化
 	const NOTIF_KEY = 'hotspot:notif';
@@ -350,7 +353,12 @@
 								<p class="text-xs text-text-secondary">基于地理位置的实时社交与社区发现应用</p>
 							</div>
 						</div>
-						<span class="badge text-xs font-mono font-medium border border-border-default bg-transparent text-text-secondary">{APP_VERSION}</span>
+						<div class="flex flex-col items-end gap-0.5">
+							<span class="badge text-xs font-mono font-medium border border-border-default bg-transparent text-text-secondary">{buildInfo.info?.version ?? '…'}</span>
+							{#if shortCommit}
+								<span class="text-[10px] font-mono text-text-secondary">构建 {shortCommit}</span>
+							{/if}
+						</div>
 					</div>
 
 					{#if auth.isAuthenticated}

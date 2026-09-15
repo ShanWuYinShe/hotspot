@@ -1,0 +1,81 @@
+# ── Release：tag 驱动的镜像构建与产物分发 ──────────────────────────
+# 推送 v* tag 触发：构建前后端生产镜像（注入 GIT_VERSION/GIT_COMMIT/
+# GIT_BUILD_TIME 版本指纹）→ docker save 压缩 → 挂到同名 GitHub Release。
+#
+# 生产部署（本地执行 scripts/deploy-production.sh vX.Y.Z）：从 Release 下载
+# 镜像包 → 服务器 docker load → compose up。服务器全程不接触源码、不构建，
+# 替代早期 rsync 源码到服务器构建的非常规做法。
+#
+# 触发前条件：tag 必须已在 origin/main 上（deploy 脚本会校验）。
+# 凭据：仅内置 GITHUB_TOKEN（contents: write 用于创建 Release/上传资产）。
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  IMAGE_BACKEND: hotspot-backend
+  IMAGE_FRONTEND: hotspot-frontend
+
+jobs:
+  build-push-release:
+    name: Build & Attach Images
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve version fingerprint
+        run: |
+          echo "GIT_VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          echo "GIT_COMMIT=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "GIT_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Build backend image
+        run: |
+          docker build backend-go \
+            --build-arg GOPROXY=https://proxy.golang.org,direct \
+            --build-arg GIT_VERSION="$GIT_VERSION" \
+            --build-arg GIT_COMMIT="$GIT_COMMIT" \
+            --build-arg GIT_BUILD_TIME="$GIT_BUILD_TIME" \
+            -t "$IMAGE_BACKEND:$GIT_VERSION"
+
+      - name: Build frontend image
+        run: |
+          docker build frontend \
+            --build-arg GIT_VERSION="$GIT_VERSION" \
+            --build-arg GIT_COMMIT="$GIT_COMMIT" \
+            --build-arg GIT_BUILD_TIME="$GIT_BUILD_TIME" \
+            -t "$IMAGE_FRONTEND:$GIT_VERSION"
+
+      - name: Smoke-check fingerprint inside images
+        run: |
+          echo "backend labels:"; docker inspect "$IMAGE_BACKEND:$GIT_VERSION" --format '{{index .Config.Labels "org.opencontainers.image.version"}} / {{index .Config.Labels "org.opencontainers.image.revision"}}'
+          test "$(docker inspect "$IMAGE_BACKEND:$GIT_VERSION" --format '{{index .Config.Labels "org.opencontainers.image.version"}}')" = "$GIT_VERSION"
+          test "$(docker inspect "$IMAGE_FRONTEND:$GIT_VERSION" --format '{{index .Config.Labels "org.opencontainers.image.version"}}')" = "$GIT_VERSION"
+
+      - name: Pack images
+        run: |
+          docker save "$IMAGE_BACKEND:$GIT_VERSION" "$IMAGE_FRONTEND:$GIT_VERSION" | gzip > \
+            "hotspot-images-${GIT_VERSION}.tar.gz"
+          ls -lh "hotspot-images-${GIT_VERSION}.tar.gz"
+
+      - name: Create GitHub Release and attach images
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GIT_VERSION" \
+            --verify-tag \
+            --title "$GIT_VERSION" \
+            --notes "生产镜像构建产物（hotspot-backend / hotspot-frontend）。
+          部署：./scripts/deploy-production.sh $GIT_VERSION
+          版本指纹：version=$GIT_VERSION commit=$GIT_COMMIT built=$GIT_BUILD_TIME" \
+            "hotspot-images-${GIT_VERSION}.tar.gz"

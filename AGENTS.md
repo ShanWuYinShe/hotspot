@@ -25,7 +25,7 @@ bun run --cwd frontend build
 
 ## 版本号与发布
 
-版本号以 git tag（`vX.Y.Z`）为源，`git describe` 生成版本串并注入全部产物（后端 health/启动日志、前端 `/version.json`、镜像 OCI label），用于线上排障精确回溯。发布统一走 `./scripts/deploy-production.sh [vX.Y.Z]`（含版本注入、前端 volume 刷新与部署后自动核验）；鸿蒙端版本约定见 `harmonyapp/AGENTS.md`。详见 README「版本号管理与发布」。
+版本号以 git tag（`vX.Y.Z`）为源，`git describe` 生成版本串并注入全部产物（后端 health/启动日志、前端 `/version.json` 与设置页徽标、镜像 OCI label），用于线上排障精确回溯。发布为产物分发：tag 触发 CI（`.github/workflows/release.yml`）构建镜像挂 GitHub Release，本地 `./scripts/deploy-production.sh vX.Y.Z` 下载分发到服务器 `docker load`——服务器不接触源码、不构建；鸿蒙端版本约定见 `harmonyapp/AGENTS.md`。详见 README「版本号管理与发布」。
 
 ## 调试入口
 

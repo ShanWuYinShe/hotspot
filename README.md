@@ -36,11 +36,17 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 | 层 | 查看方式 |
 |----|----------|
 | Go 后端 | `POST /public/v1/system/health` 响应的 `version`/`commit`/`build_time`；容器启动日志首行 |
-| Web 前端 | `GET /version.json`（构建产物静态文件） |
+| Web 前端 | `GET /version.json`（构建产物静态文件）；设置页「关于 HotSpot」徽标对用户可见 |
 | Docker 镜像 | `IMAGE_TAG` 即版本串；OCI label（`org.opencontainers.image.revision`）含完整 commit |
-| 鸿蒙客户端 | `AppScope/app.json5` 的 `versionName`（发版约定见 `harmonyapp/AGENTS.md`） |
+| 鸿蒙客户端 | 设置页「关于」行显示 `AppScope/app.json5` 的 `versionName`（发版约定见 `harmonyapp/AGENTS.md`） |
 
-发布：`./scripts/deploy-production.sh [vX.Y.Z]`——打 tag（可选）→ rsync 到生产服务器 → 注入 `GIT_VERSION/GIT_COMMIT/GIT_BUILD_TIME` 构建镜像 → 滚动更新 → 自动核对线上版本指纹与本次发布一致。回滚：`IMAGE_TAG=<旧版本> docker compose up -d`。
+发布为**产物分发模式**，服务器不接触源码、不构建：
+
+1. 打 tag 并推送（`git tag vX.Y.Z && git push origin vX.Y.Z`）；
+2. CI「Release」工作流自动构建前后端镜像（注入版本指纹），打包挂到同名 GitHub Release；
+3. 本地执行 `./scripts/deploy-production.sh vX.Y.Z`：下载 Release 镜像包 → 服务器 `docker load` → 滚动更新 → 自动核对线上版本指纹与本次发布一致。
+
+回滚：`IMAGE_TAG=<旧版本> docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d` 后重启 nginx。
 
 ## 文档
 

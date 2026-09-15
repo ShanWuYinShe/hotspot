@@ -34,6 +34,10 @@ ARG GIT_BUILD_TIME=
 LABEL org.opencontainers.image.version=${GIT_VERSION} \
       org.opencontainers.image.revision=${GIT_COMMIT} \
       org.opencontainers.image.created=${GIT_BUILD_TIME}
-COPY --from=build /app/build/ /build/
-# 保持容器运行：命名卷首次挂载时从镜像复制产物（healthcheck 依赖存活容器）
-CMD ["sh", "-c", "sleep infinity"]
+# 产物在镜像内固定放 /srv/dist（不放在 /build——那是 compose 命名卷挂载点，
+# 挂载会遮住镜像内容，这正是「卷非空时新产物不生效」坑的根源）。
+COPY --from=build /app/build/ /srv/dist/
+
+# 每次容器启动（= 每次换镜像重建）先把卷清空再灌入新产物：静态卷自刷新，
+# 无需部署脚本再做手工 tar 拷贝；随后保持容器存活（healthcheck 依赖）。
+CMD ["sh", "-c", "rm -rf /build/* /build/.[!.]* /build/..?* 2>/dev/null; cp -r /srv/dist/. /build/ && exec sleep infinity"]
