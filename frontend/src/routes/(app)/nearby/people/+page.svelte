@@ -181,7 +181,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			title="附近"
 			subtitle={locationName ? `${locationName} · 5km 内` : '5km 实时探索'}
 			sticky
-			titleSize={device === 'desktop' ? 'xl' : '3xl'}
+			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			onBack={() => smartBack()}
 		>
 			{#snippet subtitleIcon()}
@@ -221,7 +221,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				{:else if !list.length}
 					<EmptyState bare title="附近暂时没有匹配的用户">
 						{#snippet icon()}
-							<Users size={40} color="var(--cst-text-secondary)" class="opacity-subtle" />
+							<Users size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
 						{/snippet}
 					</EmptyState>
 				{:else}

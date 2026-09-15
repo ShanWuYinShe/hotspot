@@ -12,7 +12,8 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import SectionMoments from '@/components/profile/SectionMoments.svelte';
 	import SectionGroups from '@/components/profile/SectionGroups.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
-	import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
+	import { smartBack } from '@/lib/smart-back';
+import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 
 	// 个人主页（/me）——全设备使用：
 	// 总览 = 个人总览（身份卡 + 居中统计 + 我的内容入口 + 资料状态 aside），
@@ -67,7 +68,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	     Section 组件为纯内容（不自建滚动/gutter），gutter 由 ContentColumn 统一提供 -->
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
-			<PageHeader title={meta.title} sticky titleSize={device === 'desktop' ? 'xl' : '2xl'} onBack={() => void goto(ROUTES.me)} />
+			<PageHeader title={meta.title} sticky titleSize={device === 'desktop' ? 'xl' : '2xl'} onBack={() => smartBack(ROUTES.me)} />
 		{/snippet}
 		{#if section === 'moments'}
 			<SectionMoments />

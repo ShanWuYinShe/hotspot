@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Hash, Lock, MapPin, Smile, Users, X } from '@lucide/svelte';
+	import { Hash, Lock, MapPin, Smile, X } from '@lucide/svelte';
 	import type { Component } from 'svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
@@ -25,9 +25,11 @@
 
 	const MOOD_TAGS = ['松弛', '漫游', '咖啡', '展览', '自然', '夜色'];
 
-	const AUDIENCES: { id: 'nearby' | 'friends' | 'private'; label: string; hint: string; icon: Component }[] = [
+	// spec PrivacyLevel 仅有 'public' | 'private'（api_spec_types.md）：曾展示的
+	// 「好友可见」选项后端并无对应档位（会静默存成仅自己，好友看不到），在服务端
+	// 补齐 friends 档之前必须摘掉，不能假装提供该能力。
+	const AUDIENCES: { id: 'nearby' | 'private'; label: string; hint: string; icon: Component }[] = [
 		{ id: 'nearby', label: '附近可见', hint: '进入附近动态', icon: MapPin },
-		{ id: 'friends', label: '好友可见', hint: '仅你的好友', icon: Users },
 		{ id: 'private', label: '仅自己', hint: '保存在我的瞬间', icon: Lock }
 	];
 
@@ -87,7 +89,6 @@
 						(await loadDefaultLocation())?.point ?? { latitude: 0, longitude: 0 },
 					location_name: locationName || ''
 				},
-				// spec PrivacyLevel 仅有 'public' | 'private'：nearby→public，其余（含 UI 的 friends 占位）→private
 				privacy_level: draft.audience === 'nearby' ? 'public' : 'private',
 				image_file_ids
 			});
@@ -224,7 +225,7 @@
 					<p id="audience-label" class="eyebrow">谁可以看到</p>
 					<span class="text-xxs text-text-secondary">{activeAudience.hint}</span>
 				</div>
-				<div class="grid grid-cols-3 gap-1">
+				<div class="grid grid-cols-2 gap-1">
 					{#each AUDIENCES as { id, label, icon: AudienceIcon }}
 						{@const active = draft.audience === id}
 						<button

@@ -34,7 +34,7 @@ describe('composer draft', () => {
 		draft.text = 'x';
 		draft.moods = ['夜色'];
 		draft.images = [new File(['x'], 'x.png')];
-		draft.audience = 'friends';
+		draft.audience = 'private';
 		clearDraft();
 		expect(hasDraft()).toBe(false);
 		expect(draft.audience).toBe('nearby');

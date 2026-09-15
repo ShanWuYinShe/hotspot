@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { MapPin, UserCheck, UserPlus } from '@lucide/svelte';
+	import { MapPin } from '@lucide/svelte';
+	import FollowButton from '@/components/ui/FollowButton.svelte';
 	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
 
 	// 附近用户卡片：基于 NearbyImageCard 统一图片优先原语。
@@ -82,27 +83,8 @@
 				{:else}
 					<span></span>
 				{/if}
-				<button
-					type="button"
-					class="hover-btn tap-92 hit-slop flex items-center justify-center rounded-full focus-ring shrink-0 size-9
-						{followed
-						? 'bg-accent-soft text-accent-default hover:bg-interactive-hover hover:text-text-primary'
-						: 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}
-						{pending ? 'pointer-events-none opacity-soft' : ''}"
-					aria-label={followed ? `取消关注 ${user.name}` : `关注 ${user.name}`}
-					aria-pressed={followed}
-					disabled={pending}
-					onclick={(e) => {
-						e.stopPropagation();
-						onFollow();
-					}}
-				>
-					{#if followed}
-						<UserCheck size={16} />
-					{:else}
-						<UserPlus size={16} />
-					{/if}
-				</button>
+				<!-- 纯图标档 FollowButton（空间受限卡片行） -->
+				<FollowButton iconOnly active={followed} pending={pending} onToggle={() => onFollow()} />
 			</div>
 		</div>
 	{/snippet}

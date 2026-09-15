@@ -163,7 +163,7 @@
 <!-- Dialog 外壳：open 控制显隐（对齐 InviteMembersSheet 范式）。此前缺这层导致
 	SheetShell 常驻文档流；bottom 档 sm 起居中限宽由 Dialog.Content 统一承担 -->
 <Dialog.Root open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
-	<Dialog.Content side="bottom" class="overflow-hidden max-h-[88vh]" aria-label="群设置">
+	<Dialog.Content side="bottom" class="overflow-hidden max-h-[90vh]" aria-label="群设置">
 		<SheetShell title="群设置" {onClose}>
 	<div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-8 flex flex-col gap-5">
 		<!-- Cover photo：空封面渲染占位图标（img src="" 会让浏览器把 alt 文字

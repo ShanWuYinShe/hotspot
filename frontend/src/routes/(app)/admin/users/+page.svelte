@@ -12,7 +12,7 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN_DANGER } from '../shared/table';
+	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER } from '../shared/table';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 用户管理：筛选（状态 / 注册类型 / 按昵称或 ID 搜索）+ 封禁、解封（两态统一 set_ban）。
@@ -143,7 +143,7 @@
 								<td class={TD}>{u.last_active_at ? formatDateTime(u.last_active_at) : '—'}</td>
 								<td class={TD_ACTIONS}>
 									{#if canWrite}
-										<button type="button" class={u.status === 'banned' ? ROW_BTN_DANGER : ROW_BTN_DANGER} onclick={() => openBan(u)}>
+										<button type="button" class={u.status === 'banned' ? ROW_BTN : ROW_BTN_DANGER} onclick={() => openBan(u)}>
 											{u.status === 'banned' ? '解封' : '封禁'}
 										</button>
 									{/if}

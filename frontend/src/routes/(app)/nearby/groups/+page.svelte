@@ -1,4 +1,5 @@
 <script lang="ts">
+import { formatCount } from '@/lib/utils';
 	import { Map as MapIcon, MapPin, Search, Users, LogOut } from '@lucide/svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { goto } from '$app/navigation';
@@ -133,7 +134,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				title="附近"
 				subtitle={locationName ? `${locationName} · 5km 内` : '5km 实时探索'}
 				sticky
-				titleSize={device === 'desktop' ? 'xl' : '3xl'}
+				titleSize={device === 'desktop' ? 'xl' : '2xl'}
 				onBack={() => smartBack()}
 			>
 				{#snippet subtitleIcon()}
@@ -163,7 +164,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{:else if filtered.length}
 				<div class="flex items-center justify-between mb-3">
 					<span class="eyebrow">此刻附近群组</span>
-					<span class="text-status-online font-medium text-xs">{filtered.length} 个活跃 · {totalOnline} 人正在群聊</span>
+					<span class="text-status-online font-medium text-xs">{filtered.length} 个活跃 · {formatCount(totalOnline)} 人正在群聊</span>
 				</div>
 			{#if isDesktop || isTablet}
 				<!-- 精选卡用 GroupCard featured（对齐 Figma），其余用普通网格卡；保留 BSP 布局（决策） -->

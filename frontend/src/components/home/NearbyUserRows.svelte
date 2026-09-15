@@ -3,7 +3,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
-	import Button from '@/components/ui/button.svelte';
+	import FollowButton from '@/components/ui/FollowButton.svelte';
 
 	// 首页的「附近用户」行列表：ListContainer + UserCardRow
 	// （在线角标 + #tag · 距离副标题 + 关注按钮）。
@@ -46,20 +46,7 @@
 			{/snippet}
 			{#snippet actions()}
 				{@const pending = isPending?.(u.id) ?? false}
-				<!-- 双态 hover 差异（四态契约）：未关注 = accent 光晕抬档；已关注 = 描边加深 + 淡底填充 -->
-				<Button
-					type="button"
-					variant={followed ? 'outline' : 'primary'}
-					size="sm"
-					aria-pressed={followed}
-					disabled={pending}
-					class="hit-slop rounded-full px-3 py-1 {followed
-						? 'border-border-strong text-text-secondary hover:border-accent-border hover:bg-interactive-hover hover:text-text-primary'
-						: ''}"
-					onclick={() => onToggle(u.id)}
-				>
-					{followed ? '已关注' : '关注'}
-				</Button>
+				<FollowButton active={followed} pending={pending} onToggle={() => onToggle(u.id)} />
 			{/snippet}
 		</UserCardRow>
 	{/each}

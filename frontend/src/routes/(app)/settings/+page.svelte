@@ -183,7 +183,9 @@
 		/>
 	{/snippet}
 
-	{#if loadError}
+	{#if loading}
+		<InlineLoading label="加载设置…" />
+	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
 		<div class="flex flex-col divide-y divide-border-default max-w-5xl">
@@ -340,7 +342,7 @@
 				</ListContainer>
 			</SettingsSection>
 
-			<!-- Section 5: 系统与关于 -->
+			<!-- Section 6: 系统与关于 -->
 			<SettingsSection title="系统与关于" description="客户端版本及当前设备会话状态。">
 				<div class="flex flex-col gap-3">
 					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
@@ -356,7 +358,7 @@
 						<div class="flex flex-col items-end gap-0.5">
 							<span class="badge text-xs font-mono font-medium border border-border-default bg-transparent text-text-secondary">{buildInfo.info?.version ?? '…'}</span>
 							{#if shortCommit}
-								<span class="text-[10px] font-mono text-text-secondary">构建 {shortCommit}</span>
+								<span class="text-xxs font-mono text-text-secondary">构建 {shortCommit}</span>
 							{/if}
 						</div>
 					</div>

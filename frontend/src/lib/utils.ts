@@ -28,3 +28,20 @@ export function formatDateTime(iso?: string | null): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+/** 数字缩写（审计 P1-8）：社交计数 ≥1万 缩写为 x.x万，其余原样。全站唯一实现。 */
+export function formatCount(n: number): string {
+	if (n >= 10000) {
+		const v = n / 10000;
+		const s = v >= 100 ? Math.round(v).toString() : v.toFixed(1).replace(/\.0$/, '');
+		return `${s}万`;
+	}
+	return n.toString();
+}
+
+/** 相对日文案（审计 P1-7）：「今天/N天前/N周前」。列表语境相对时间的统一实现。 */
+export function formatRelativeDays(daysAgo: number): string {
+	if (daysAgo <= 1) return '今天';
+	if (daysAgo <= 7) return `${daysAgo}天前`;
+	return `${Math.floor(daysAgo / 7)}周前`;
+}

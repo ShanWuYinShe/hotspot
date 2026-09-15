@@ -1,9 +1,11 @@
 <script lang="ts">
+import { formatCount } from '@/lib/utils';
 	import { goto } from '$app/navigation';
 	import { ArrowLeft, Bell, Check, LogOut, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, UserPlus } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
@@ -150,15 +152,34 @@
 	};
 
 	// 申请审批（owner/admin）：同意后成员列表由工厂同步刷新
+	// 审批防重复提交（对齐 notify 页 invitePending 范式）：连点双发会产生
+	// 第二次「申请不存在」的失败提示甚至重复入群。
+	let applicationPending = $state(new Set<string>());
 	const handleApproveApplication = async (applicationId: string) => {
-		const res = await gd.approveApplication(applicationId);
-		if (res.code === 0) showToast('已同意申请', 'success');
-		else showToast(res.message || '操作失败', 'danger');
+		if (applicationPending.has(applicationId)) return;
+		applicationPending = new Set(applicationPending).add(applicationId);
+		try {
+			const res = await gd.approveApplication(applicationId);
+			if (res.code === 0) showToast('已同意申请', 'success');
+			else showToast(res.message || '操作失败', 'danger');
+		} finally {
+			const rest = new Set(applicationPending);
+			rest.delete(applicationId);
+			applicationPending = rest;
+		}
 	};
 	const handleRejectApplication = async (applicationId: string) => {
-		const res = await gd.rejectApplication(applicationId);
-		if (res.code === 0) showToast('已拒绝申请', 'success');
-		else showToast(res.message || '操作失败', 'danger');
+		if (applicationPending.has(applicationId)) return;
+		applicationPending = new Set(applicationPending).add(applicationId);
+		try {
+			const res = await gd.rejectApplication(applicationId);
+			if (res.code === 0) showToast('已拒绝申请', 'success');
+			else showToast(res.message || '操作失败', 'danger');
+		} finally {
+			const rest = new Set(applicationPending);
+			rest.delete(applicationId);
+			applicationPending = rest;
+		}
 	};
 
 	const handleMemberAction = async (action: MemberAction, durationMinutes?: number) => {
@@ -192,7 +213,9 @@
 
 <StandardPageLayout contentClassName="animate-fade-in pb-6">
 	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
-	{#if gd.loadError}
+	{#if gd.loading}
+		<InlineLoading label="加载群组…" />
+	{:else if gd.loadError}
 		<LoadError message={gd.loadError} onRetry={() => void gd.loadAll(params.groupId ?? '')} />
 	{:else}
 	<!-- 全幅封面（负 margin 抵消 ContentColumn gutter） -->
@@ -239,7 +262,7 @@
 					<!-- 群组档案：数字档案 + 兴趣标签，填充简介页信息密度 -->
 					<div class="grid grid-cols-2 gap-3 max-w-3xl sm:grid-cols-4">
 						<div class="rounded-lg border border-border-default bg-surface-primary p-3.5">
-							<p class="text-xl font-semibold text-text-primary">{gd.detail.members}</p>
+							<p class="text-xl font-semibold text-text-primary">{formatCount(gd.detail.members)}</p>
 							<p class="mt-0.5 text-xs text-text-secondary">成员</p>
 						</div>
 						<div class="rounded-lg border border-border-default bg-surface-primary p-3.5">
@@ -269,7 +292,7 @@
 									<Avatar src={m.avatar} name={m.name} size="md" class="rounded-full border-2 border-surface-primary object-cover" />
 								{/each}
 							</div>
-							<span class="text-sm text-text-primary">{gd.detail.members} 位成员 · 查看全部</span>
+							<span class="text-sm text-text-primary">{formatCount(gd.detail.members)} 位成员 · 查看全部</span>
 						</button>
 					{/if}
 				</div>
@@ -305,6 +328,7 @@
 						<ApplicationsList
 							applications={gd.applications}
 						{formatDateTime}
+						pending={applicationPending}
 						onApprove={(id) => void handleApproveApplication(id)}
 						onReject={(id) => void handleRejectApplication(id)}
 					/>

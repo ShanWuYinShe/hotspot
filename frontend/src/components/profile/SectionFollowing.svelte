@@ -3,7 +3,8 @@
 	import { UserPlus, Check, Heart } from '@lucide/svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
-	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+	import FollowButton from '@/components/ui/FollowButton.svelte';
+import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	import { showToast } from '@/stores/toast.svelte';
@@ -68,27 +69,11 @@
 				<p class="truncate mt-px text-text-secondary text-xs">{f.desc}</p>
 			{/snippet}
 			{#snippet actions()}
-				<button
-					type="button"
-					aria-pressed={!isUnfollowed(f.id)}
-					disabled={followState.isPending(f.id)}
-					class="hover-btn tap-92 hit-slop flex shrink-0 items-center gap-1 rounded-full border px-3.5 py-1.5 text-xs focus-ring disabled:pointer-events-none disabled:opacity-faint
-						{isUnfollowed(f.id)
-						? 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'
-						: 'border-border-strong bg-transparent text-text-secondary hover:border-accent-border hover:bg-interactive-hover hover:text-text-primary'}"
-					onclick={(e) => {
-						e.stopPropagation();
-						void toggleUnfollow(f.id, f.name);
-					}}
-				>
-					{#if isUnfollowed(f.id)}
-						<UserPlus class="size-2.5"  strokeWidth={2} />
-						关注
-					{:else}
-						<Check class="size-2.5"  strokeWidth={2.5} />
-						已关注
-					{/if}
-				</button>
+				<FollowButton
+					active={!isUnfollowed(f.id)}
+					pending={followState.isPending(f.id)}
+					onToggle={() => void toggleUnfollow(f.id, f.name)}
+				/>
 			{/snippet}
 		</UserCardRow>
 	{/snippet}

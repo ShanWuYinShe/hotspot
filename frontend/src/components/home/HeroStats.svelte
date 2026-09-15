@@ -1,4 +1,5 @@
 <script lang="ts">
+import { formatCount } from '@/lib/utils';
 	import { Radar, ChevronRight } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 
@@ -10,7 +11,7 @@
 		locationName = ''
 	}: {
 		onExplore: () => void;
-		stats: { nearby: string; active: string; online: string };
+		stats: { nearby: number; active: number; online: number };
 		locationName?: string;
 	} = $props();
 
@@ -47,15 +48,15 @@
 		<!-- Stats row：display 数字（大号粗体 + 紧字距），对齐 Figma stats 模式 -->
 		<div class="grid grid-cols-3 mt-4 bg-border-default gap-px rounded-md overflow-hidden">
 			<div class="flex flex-col items-center justify-center py-3 bg-surface-primary">
-				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary" >{stats.nearby}</span>
+				<span class="text-2xl font-semibold leading-none tracking-tight tabular-nums text-text-primary" >{formatCount(stats.nearby)}</span>
 				<span class="text-xxs mt-1.5 text-text-secondary"  >人附近</span>
 			</div>
 			<div class="flex flex-col items-center justify-center py-3 bg-surface-primary">
-				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary" >{stats.active}</span>
+				<span class="text-2xl font-semibold leading-none tracking-tight tabular-nums text-text-primary" >{formatCount(stats.active)}</span>
 				<span class="text-xxs mt-1.5 text-text-secondary"  >动态</span>
 			</div>
 			<div class="flex flex-col items-center justify-center py-3 bg-surface-primary">
-				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary" >{stats.online}</span>
+				<span class="text-2xl font-semibold leading-none tracking-tight tabular-nums text-text-primary" >{formatCount(stats.online)}</span>
 				<span class="text-xxs mt-1.5 text-text-secondary"  >在线</span>
 			</div>
 		</div>

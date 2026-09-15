@@ -2,6 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { MapPin, Heart, MessageCircle, Share2, Bookmark, Check } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { platform } from '@/stores/platform.svelte';
@@ -42,6 +44,8 @@
 		moment,
 		comments,
 		commentCount,
+		hasMoreComments,
+		loadingMoreComments,
 		liked,
 		saved,
 		shareStatus,
@@ -50,11 +54,15 @@
 		onShare,
 		onCommentClick,
 		onReply,
-		onToggleCommentLike
+		onToggleCommentLike,
+		onLoadMoreComments
 	}: {
 		moment: MomentData;
 		comments: MomentComment[];
 		commentCount: number;
+		/** 评论 cursor 分页：还有下一页（null cursor 时不渲染加载更多） */
+		hasMoreComments: boolean;
+		loadingMoreComments: boolean;
 		liked: boolean;
 		saved: boolean;
 		shareStatus: 'idle' | 'copied' | 'failed';
@@ -67,6 +75,7 @@
 		onReply: (user: string) => void;
 		/** 评论点赞切换（reactions/set target_type='comment'） */
 		onToggleCommentLike: (commentId: string) => void;
+		onLoadMoreComments: () => void;
 	} = $props();
 
 	// 大图查看器状态
@@ -219,6 +228,13 @@
 	<p class="eyebrow mt-4 mb-3" id="moment-comments">
 		评论 · {commentCount}
 	</p>
+	{#if comments.length === 0}
+		<EmptyState bare title="还没有评论" description="来说点什么的">
+			{#snippet icon()}
+				<MessageCircle class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+			{/snippet}
+		</EmptyState>
+	{/if}
 	<div class="flex flex-col gap-4">
 		{#each comments as c (c.id)}
 			<div class="flex gap-3">
@@ -263,6 +279,11 @@
 			</div>
 		{/each}
 	</div>
+	{#if hasMoreComments}
+		<div class="mt-4">
+			<LoadMoreButton label="加载更多评论" loading={loadingMoreComments} onLoad={onLoadMoreComments} />
+		</div>
+	{/if}
 </div>
 
 <ImageViewer bind:open={viewerOpen} images={moment.images.map((url) => ({ url, alt: '动态图片' }))} bind:index={viewerIndex} />

@@ -83,6 +83,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	}
 	let moment = $state<MomentData>(emptyMoment());
 	let apiComments = $state<MomentComment[]>([]);
+	// 评论 cursor 分页（契约 listComments 支持 pagination）：null = 无更多页。
+	// 此前只拉第一页且无加载更多入口，超出首页的评论永远不可见。
+	const COMMENT_PAGE_SIZE = 20;
+	let commentsNextCursor = $state<string | null>(null);
+	let commentsLoadingMore = $state(false);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
 	let reloadKey = $state(0);
@@ -112,7 +117,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				apiComments = [];
 				const [detailRes, commentsRes] = await Promise.all([
 					getMomentDetail(momentId).catch(() => netError(null)),
-					listComments(momentId).catch(() => netError({ items: [] }))
+					listComments(momentId, { limit: COMMENT_PAGE_SIZE }).catch(() => netError({ items: [], next_cursor: null }))
 				]);
 				if (cancelled) return;
 
@@ -190,6 +195,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						liked: (c.reactions || []).some((r) => r.reacted_by_me)
 					}));
 					apiComments = items;
+					commentsNextCursor = commentsData.next_cursor ?? null;
 				}
 			} catch {
 				// empty data is normal
@@ -273,10 +279,35 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		}
 	};
 
+	// 加载更多评论（cursor 分页）：与 notify 页同款 LoadMoreButton 交互
+	const loadMoreComments = async () => {
+		if (commentsNextCursor === null || commentsLoadingMore) return;
+		commentsLoadingMore = true;
+		try {
+			const res = await listComments(momentId, { limit: COMMENT_PAGE_SIZE, cursor: commentsNextCursor }).catch(() => netError({ items: [], next_cursor: null }));
+			if (res.code === 0 && res.data) {
+				const items: MomentComment[] = (res.data.items || []).map((c) => ({
+					id: c.comment_id,
+					userId: c.user?.user_id ?? '',
+					user: c.user?.nickname ?? '',
+					avatar: c.user?.avatar_url ?? '',
+					text: c.content ?? '',
+					time: formatDateTime(c.created_at),
+					likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0),
+					liked: (c.reactions || []).some((r) => r.reacted_by_me)
+				}));
+				const known = new Set(apiComments.map((c) => c.id));
+				apiComments = [...apiComments, ...items.filter((c) => !known.has(c.id))];
+				commentsNextCursor = res.data.next_cursor ?? null;
+			}
+		} finally {
+			commentsLoadingMore = false;
+		}
+	};
+
 	// 评论点赞：登录闸 + 乐观翻转（likes 同步 ±1，服务端计数已含本人，刷新后口径一致）
 	// + reactions/set(target_type='comment')，失败回滚
-	const toggleCommentLike = async (commentId: string) => {
-		const target = apiComments.find((c) => c.id === commentId);
+	const toggleCommentLike = async (commentId: string) => {		const target = apiComments.find((c) => c.id === commentId);
 		if (!target || commentLikePending.has(commentId)) return;
 		if (!requireAuth({ action: '点赞', targetId: commentId, run: () => void toggleCommentLike(commentId) })) return;
 		const prev = target.liked;
@@ -438,6 +469,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{moment}
 			comments={apiComments}
 			{commentCount}
+			hasMoreComments={commentsNextCursor !== null}
+			loadingMoreComments={commentsLoadingMore}
 			{liked}
 			{saved}
 			{shareStatus}
@@ -447,6 +480,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			onCommentClick={focusComments}
 			onReply={replyTo}
 			onToggleCommentLike={(id) => void toggleCommentLike(id)}
+			onLoadMoreComments={() => void loadMoreComments()}
 		/>
 	{/if}
 

@@ -9,6 +9,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+import FollowButton from '@/components/ui/FollowButton.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -121,16 +122,16 @@ const FILTER_TABS = [
 			// 避免昵称出现两遍。
 			let text = '';
 			if (n.type === 'moment_commented') text = n.payload?.comment_preview ?? '评论了你的动态';
-			else if (n.type === 'comment_reply') text = `回复了你的评论:${n.payload?.reply_content_preview ?? ''}`;
+			else if (n.type === 'comment_reply') text = `回复了你的评论：${n.payload?.reply_content_preview ?? ''}`;
 			else if (n.type === 'new_follower') text = '关注了你';
 			else if (n.type === 'mutual_follow') text = '和你互相关注了';
 			else if (n.type === 'group_invite_received') text = `邀请你加入 ${groupName}`;
 			else if (n.type === 'group_application_accepted') text = `你加入「${groupName}」的申请已通过`;
 			else if (n.type === 'group_application_rejected') text = `${n.payload?.rejected_by?.nickname ?? '管理员'} 拒绝了你的「${groupName}」入群申请`;
 			else if (n.type === 'reaction_added') text = `做出了反应 ${n.payload?.emoji ?? ''}`;
-			else if (n.type === 'group_mentioned') text = `在「${groupName}」群聊中 @ 了你${n.payload?.content_preview ? `:${n.payload.content_preview}` : ''}`;
-			else if (n.type === 'report_resolved') text = `你举报的内容已处理${n.payload?.note ? `:${n.payload.note}` : ''}`;
-			else if (n.type === 'report_dismissed') text = `你的举报未通过审核${n.payload?.note ? `:${n.payload.note}` : ''}`;
+			else if (n.type === 'group_mentioned') text = `在「${groupName}」群聊中 @ 了你${n.payload?.content_preview ? `：${n.payload.content_preview}` : ''}`;
+			else if (n.type === 'report_resolved') text = `你举报的内容已处理${n.payload?.note ? `：${n.payload.note}` : ''}`;
+			else if (n.type === 'report_dismissed') text = `你的举报未通过审核${n.payload?.note ? `：${n.payload.note}` : ''}`;
 			else if (n.type === 'nearby_new_moment') text = '在附近发布了新瞬间';
 			else if (n.type === 'system_announcement') text = n.payload?.title ?? '系统公告';
 			else text = n.payload?.message ?? '';
@@ -397,27 +398,27 @@ const FILTER_TABS = [
 				</div>
 			</RailSection>
 
+			{#if notifies.filter((n) => n.type === 'follow').length > 0}
 			<RailSection title="新关注你的人" action="全部" onAction={() => void goto(relationshipsHref('fans'))}>
 				<div class="flex flex-col gap-3">
 					{#each notifies.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
 							{#snippet trailing()}
-								<Button
-									type="button"
-									variant={followedBack.has(n.user.id) ? 'outline' : 'secondary'}
-									size="sm"
-									class="rounded-full px-2.5 py-1 text-accent-default"
+								<FollowButton
+									active={followedBack.has(n.user.id)}
 									disabled={followedBack.has(n.user.id)}
-									onclick={() => void followBack(n)}
-								>
-									{followedBack.has(n.user.id) ? '已关注' : '回关'}
-								</Button>
+									labelActive="已关注"
+									labelInactive="回关"
+									onToggle={() => void followBack(n)}
+								/>
 							{/snippet}
 						</RailUserRow>
 					{/each}
 				</div>
 			</RailSection>
+			{/if}
 
+			{#if notifies.filter((n) => n.type === 'nearby').length > 0}
 			<RailSection title="此刻附近" action="查看" onAction={() => void goto(ROUTES.nearbyPeople)}>
 				<div class="flex flex-col gap-3">
 					{#each notifies.filter((n) => n.type === 'nearby').slice(0, 3) as n (n.id)}
@@ -425,6 +426,7 @@ const FILTER_TABS = [
 					{/each}
 				</div>
 			</RailSection>
+			{/if}
 		</div>
 	{/snippet}
 </SplitPageLayout>

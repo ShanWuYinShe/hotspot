@@ -1,6 +1,8 @@
 <script lang="ts">
+import { formatRelativeDays } from '@/lib/utils';
 	import { goto } from '$app/navigation';
-	import { UserPlus, Check } from '@lucide/svelte';
+	import { Check, UserPlus } from '@lucide/svelte';
+	import FollowButton from '@/components/ui/FollowButton.svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
@@ -41,8 +43,7 @@
 	const mutualCount = $derived(followers.filter((f) => isMutualWith(f)).length);
 	const pendingCount = $derived(followers.length - mutualCount);
 
-	const fanLabel = (joinedDays: number) =>
-		joinedDays <= 1 ? '今天' : joinedDays <= 7 ? `${joinedDays}天前` : `${Math.floor(joinedDays / 7)}周前`;
+	const fanLabel = formatRelativeDays;
 
 	const FILTERS: SectionFilter[] = [
 		{ id: 'all', label: '全部' },
@@ -104,24 +105,13 @@
 				</p>
 			{/snippet}
 			{#snippet actions()}
-				<button
-					type="button"
-					disabled={followState.isPending(f.id)}
-					class="hover-btn tap-92 hit-slop flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs focus-ring disabled:opacity-muted {isMutual ? 'bg-transparent text-text-secondary hover:bg-interactive-hover' : 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
-					style={isMutual ? 'border:var(--cst-border-width-hairline) solid var(--cst-border-strong);' : 'border:var(--cst-border-width-hairline) solid transparent;'}
-					onclick={(e) => {
-						e.stopPropagation();
-						void toggleFollow(f);
-					}}
-				>
-					{#if isMutual}
-						<Check class="size-2.5"  strokeWidth={2.5} />
-						互关
-					{:else}
-						<UserPlus class="size-2.5"  strokeWidth={2} />
-						回关
-					{/if}
-				</button>
+				<FollowButton
+					active={isMutual}
+					pending={followState.isPending(f.id)}
+					labelActive="互关"
+					labelInactive="回关"
+					onToggle={() => void toggleFollow(f)}
+				/>
 			{/snippet}
 		</UserCardRow>
 	{/snippet}

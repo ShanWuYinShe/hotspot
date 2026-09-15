@@ -5,6 +5,7 @@
 import type { FeedItem } from '@/components/moments/moment-feed.svelte';
 
 export interface MomentsFeedProgress {
+	savedAt: number;
 	key: string;
 	items: FeedItem[];
 	nextCursor: string;
@@ -14,7 +15,13 @@ export interface MomentsFeedProgress {
 
 let progress = $state<MomentsFeedProgress | null>(null);
 
+/** 缓存有效期：无刷新入口的会话级缓存不能整场会话保鲜，5 分钟后强制重拉。 */
+const PROGRESS_TTL_MS = 5 * 60 * 1000;
+
 export function getMomentsProgress(): MomentsFeedProgress | null {
+	if (progress && Date.now() - progress.savedAt > PROGRESS_TTL_MS) {
+		progress = null;
+	}
 	return progress;
 }
 

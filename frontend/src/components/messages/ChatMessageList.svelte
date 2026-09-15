@@ -30,7 +30,7 @@
 		<LoadError message="消息加载失败，请检查网络后重试" onRetry={() => void chat.reload()} class="h-full" />
 	{:else if chat.messages.length === 0}
 		<!-- 空会话：统一 EmptyState 空态（对齐全局空态契约） -->
-		<EmptyState iconSize={56} class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧">
+		<EmptyState class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧">
 			{#snippet icon()}
 				<MessageCircle class="size-5.5 text-text-secondary" strokeWidth={1.5} />
 			{/snippet}

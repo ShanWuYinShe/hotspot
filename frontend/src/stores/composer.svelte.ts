@@ -4,7 +4,8 @@
 // $state 会丢稿（移动端把手下拉 64px 误触即丢）；store 单例跨挂载存活，
 // 关闭重开草稿仍在，发布成功后 clearDraft() 清空。
 
-export type ComposerAudience = 'nearby' | 'friends' | 'private';
+// 'friends' 档已移除：spec PrivacyLevel 无对应档位（曾静默存为 private，见 CreateSheet 注释）。
+export type ComposerAudience = 'nearby' | 'private';
 
 let composerOpen = $state(false);
 

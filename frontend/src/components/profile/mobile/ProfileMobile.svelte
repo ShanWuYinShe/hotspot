@@ -118,7 +118,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			<div class="grid grid-cols-3 border-t border-border-default">
 				{#each statsList as stat}
 					<div class="px-4 py-3.5 text-center">
-						<p class="text-2xl font-bold tabular-nums tracking-tight text-text-primary">{stat.value}</p>
+						<p class="text-2xl font-semibold tabular-nums tracking-tight text-text-primary">{stat.value}</p>
 						<p class="mt-0.5 text-xs text-text-secondary">{stat.label}</p>
 					</div>
 				{/each}

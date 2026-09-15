@@ -17,7 +17,7 @@ describe('moments feed progress', () => {
 	});
 
 	it('存取往返', () => {
-		setMomentsProgress({ key: 'k', items: [], nextCursor: 'c', visibleCount: 20, tags: ['咖啡'] });
+		setMomentsProgress({ savedAt: Date.now(), key: 'k', items: [], nextCursor: 'c', visibleCount: 20, tags: ['咖啡'] });
 		const saved = getMomentsProgress();
 		expect(saved?.nextCursor).toBe('c');
 		expect(saved?.visibleCount).toBe(20);

@@ -128,7 +128,7 @@ locationName = loc?.location_name ?? '';
 						}
 					}
 					tags = tagsList;
-					setMomentsProgress({ key: progressKey, items: apiFeedItems, nextCursor, visibleCount, tags });
+					setMomentsProgress({ savedAt: Date.now(), key: progressKey, items: apiFeedItems, nextCursor, visibleCount, tags });
 				}
 			} catch {
 				if (!cancelled) loadError = '加载失败，请稍后重试';
@@ -222,7 +222,7 @@ locationName = loc?.location_name ?? '';
 		title="附近"
 		subtitle={locationName ? `${locationName} · 5km 内` : '5km 实时探索'}
 		sticky
-		titleSize={device === 'desktop' ? 'xl' : '3xl'}
+		titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		onBack={() => smartBack()}
 	>
 		{#snippet subtitleIcon()}
@@ -276,13 +276,13 @@ locationName = loc?.location_name ?? '';
 		<!-- 关注流专属空态：与「附近无内容」区分，指引用户先去关注 -->
 		<EmptyState title="关注的人还没有发布动态" description="去附近的人页关注感兴趣的用户，动态会出现在这里。">
 			{#snippet icon()}
-				<Sparkles size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
+				<Sparkles size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
 			{/snippet}
 		</EmptyState>
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">
 			{#snippet icon()}
-				<Sparkles size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
+				<Sparkles size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
 			{/snippet}
 		</EmptyState>
 	{/if}

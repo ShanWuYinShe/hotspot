@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import HeroStats from '../HeroStats.svelte';
 
-const stats = { nearby: '5', active: '3', online: '12' };
+const stats = { nearby: 5, active: 3, online: 12 };
 
 describe('HeroStats', () => {
 	it('渲染主按钮 aria-label 与统计数字', () => {

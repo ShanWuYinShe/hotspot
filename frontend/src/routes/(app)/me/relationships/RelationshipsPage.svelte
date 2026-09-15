@@ -9,6 +9,7 @@
 	import SectionFans from '@/components/profile/SectionFans.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
+	import { smartBack } from '@/lib/smart-back';
 	import { ROUTES } from '@/lib/routes';
 	import {
 		DEFAULT_RELATIONSHIP_TAB,
@@ -59,7 +60,7 @@
 		title="关系"
 		sticky
 		titleSize={device === 'desktop' ? 'xl' : '2xl'}
-		onBack={() => void goto(ROUTES.me)}
+		onBack={() => smartBack(ROUTES.me)}
 	>
 		{#snippet trailing()}
 			<span class="text-text-secondary text-xs" aria-live="polite">{activeCount} 人</span>

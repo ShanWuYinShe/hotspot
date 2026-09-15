@@ -6,6 +6,9 @@
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+import { formatCount } from '@/lib/utils';
+import FollowButton from '@/components/ui/FollowButton.svelte';
+import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
@@ -123,7 +126,7 @@
 		};
 	});
 
-	const fmtNum = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+	const fmtNum = formatCount;
 
 	// in-flight 去重（防连点双翻转）；业务失败（code≠0）显式判 code 回滚
 	let followPending = false;
@@ -360,7 +363,9 @@
 
 <SplitPageLayout contentClassName="animate-fade-in pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}">
 	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
-	{#if loadError}
+	{#if loading}
+		<InlineLoading label="加载资料…" />
+	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
 	<!-- 资料头（无封面数据：紧凑头部，返回/分享/更多 浮在首行，对齐动态详情作者行层级） -->
@@ -406,21 +411,8 @@
 							<MessageCircle class="size-3.5"  strokeWidth={1.5} />
 							私信
 						</button>
-						<!-- 关注按钮：边框/投影走 token 类（描边 1.5px→hairline 档收敛，border 基类保尺寸稳定） -->
-						<button
-							type="button"
-							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 px-4 py-2 rounded-full border focus-ring transition-all disabled:cursor-not-allowed disabled:opacity-muted text-xs {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm hover:bg-accent-soft' : 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
-							disabled={blocked}
-							onclick={toggleFollow}
-						>
-							{#if followed}
-								<UserCheck class="size-3.5"  strokeWidth={1.5} />
-								已关注
-							{:else}
-								<UserPlus class="size-3.5"  strokeWidth={1.5} />
-								关注
-							{/if}
-						</button>
+						<!-- 关注按钮：统一走 FollowButton（审计 P1-6 收敛 6 种手写写法） -->
+						<FollowButton active={followed} disabled={blocked} size="wide" onToggle={() => toggleFollow()} />
 					</div>
 					{/if}
 				</div>
@@ -523,20 +515,7 @@
 					<MessageCircle class="size-4"  strokeWidth={1.75} />
 					私信
 				</button>
-				<button
-					type="button"
-					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border focus-ring transition-all disabled:opacity-muted text-sm {followed ? 'border-accent-default bg-surface-primary text-accent-default shadow-raised-sm hover:bg-accent-soft' : 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
-					disabled={blocked}
-					onclick={toggleFollow}
-				>
-					{#if followed}
-						<UserCheck class="size-4"  strokeWidth={1.75} />
-						已关注
-					{:else}
-						<UserPlus class="size-4"  strokeWidth={1.75} />
-						关注
-					{/if}
-				</button>
+				<FollowButton active={followed} disabled={blocked} size="block" onToggle={() => toggleFollow()} />
 			</div>
 		{/if}
 	{/snippet}

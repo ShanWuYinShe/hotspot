@@ -71,9 +71,9 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	const toggleFollow = (id: string) => void followState.toggle(id, false);
 	const onlineCount = $derived(nearbyUsers.filter((u) => u.isOnline).length);
 	const heroStats = $derived({
-		nearby: String(nearbyUsers.length),
-		active: String(moments.length),
-		online: String(onlineCount)
+		nearby: nearbyUsers.length,
+		active: moments.length,
+		online: onlineCount
 	});
 
 </script>
