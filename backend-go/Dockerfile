@@ -18,10 +18,31 @@ RUN go mod download
 
 COPY . .
 
+# 版本指纹（由部署侧传入：scripts/deploy-production.sh 自动取 git describe /
+# 完整 sha / UTC 时间；本地直接 build 不传时兜底 dev，不破坏层缓存）。
+ARG GIT_VERSION=dev
+ARG GIT_COMMIT=
+ARG GIT_BUILD_TIME=
+
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} go build -ldflags="-s -w" -o server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} \
+    go build -ldflags="-s -w \
+      -X hotspot/backend-go/internal/platform/buildinfo.Version=${GIT_VERSION} \
+      -X hotspot/backend-go/internal/platform/buildinfo.Commit=${GIT_COMMIT} \
+      -X hotspot/backend-go/internal/platform/buildinfo.BuildTime=${GIT_BUILD_TIME}" \
+    -o server ./cmd/server
 
 FROM alpine:${ALPINE_VERSION}
+
+# ARG 按 stage 作用域：第二阶段重新声明才能在 LABEL 中引用全局 build args
+ARG GIT_VERSION=dev
+ARG GIT_COMMIT=
+ARG GIT_BUILD_TIME=
+
+# OCI 标准镜像标签：docker inspect 即可核对镜像对应的源码版本
+LABEL org.opencontainers.image.version=${GIT_VERSION} \
+      org.opencontainers.image.revision=${GIT_COMMIT} \
+      org.opencontainers.image.created=${GIT_BUILD_TIME}
 
 RUN sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#g' /etc/apk/repositories \
     && apk add --no-cache ca-certificates tzdata curl

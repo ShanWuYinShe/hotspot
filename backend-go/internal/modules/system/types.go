@@ -45,6 +45,11 @@ type ApiVersionMeta struct {
 type HealthStatus struct {
 	Status    SystemHealthStatus `json:"status"`
 	Timestamp string             `json:"timestamp"`
+	// 版本指纹（构建期经 -ldflags 注入，spec api_spec_types.md HealthStatus）：
+	// 线上排障时确认当前运行产物；本地裸构建时为 version=dev、其余为空串。
+	Version   string `json:"version"`
+	Commit    string `json:"commit"`
+	BuildTime string `json:"build_time"`
 }
 
 type SystemAnnouncementItem struct {

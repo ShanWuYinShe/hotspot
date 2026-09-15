@@ -69,3 +69,6 @@ docs/superpowers/
 .workbuddy/
 .v2c/
 backups/
+
+# 构建期生成的前端版本指纹（scripts/write-version-info.mjs）
+frontend/static/version.json

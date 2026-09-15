@@ -12,10 +12,15 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/bootstrap"
+	"hotspot/backend-go/internal/platform/buildinfo"
 	"hotspot/backend-go/internal/platform/config"
 )
 
 func main() {
+	// 版本信息放在所有初始化之前打印：即使后续 config/bootstrap 失败，
+	// docker logs 里也留有本次运行产物的版本指纹（线上排障第一入口）。
+	log.Printf("hotspot-backend starting: version=%s", buildinfo.Summary())
+
 	cfg := config.Load()
 	if err := cfg.Validate(); err != nil {
 		log.Fatalf("invalid config: %v", err)

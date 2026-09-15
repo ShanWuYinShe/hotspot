@@ -1169,7 +1169,7 @@ interface MetaRequest {}
 
 系统健康检查。
 
-**说明**：HTTP 非 200 表示未进入业务层；HTTP 200 时，`code=0` 表示系统可用（`data.status` 为 `healthy` 或 `degraded`），`code=10600` 表示系统不可用（`unhealthy`，`data` 省略，原因见 `message`）。
+**说明**：HTTP 非 200 表示未进入业务层；HTTP 200 时，`code=0` 表示系统可用（`data.status` 为 `healthy` 或 `degraded`），`code=10600` 表示系统不可用（`unhealthy`，`data` 省略，原因见 `message`）。`data.version`/`data.commit`/`data.build_time` 为构建期注入的版本指纹（见 api_spec_types.md HealthStatus），线上排障时据此核对当前运行产物；Web 前端产物对应 `/version.json` 静态文件。
 
 **Request**: `HealthRequest`
 ```typescript

@@ -29,6 +29,19 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 启动后访问 `http://localhost:8888`（nginx 网关统一反代前端、API 与 WebSocket）。
 
+## 版本号管理与发布
+
+版本号以 git tag 为准（`vX.Y.Z`，全项目共用一个 tag 序列），`git describe --tags --always` 自动生成人类可读版本串，git commit sha 做精确回溯锚点。版本指纹贯穿发布链路，线上出问题时可逐层核对：
+
+| 层 | 查看方式 |
+|----|----------|
+| Go 后端 | `POST /public/v1/system/health` 响应的 `version`/`commit`/`build_time`；容器启动日志首行 |
+| Web 前端 | `GET /version.json`（构建产物静态文件） |
+| Docker 镜像 | `IMAGE_TAG` 即版本串；OCI label（`org.opencontainers.image.revision`）含完整 commit |
+| 鸿蒙客户端 | `AppScope/app.json5` 的 `versionName`（发版约定见 `harmonyapp/AGENTS.md`） |
+
+发布：`./scripts/deploy-production.sh [vX.Y.Z]`——打 tag（可选）→ rsync 到生产服务器 → 注入 `GIT_VERSION/GIT_COMMIT/GIT_BUILD_TIME` 构建镜像 → 滚动更新 → 自动核对线上版本指纹与本次发布一致。回滚：`IMAGE_TAG=<旧版本> docker compose up -d`。
+
 ## 文档
 
 - [AGENTS.md](AGENTS.md) — 协作规范

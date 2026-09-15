@@ -8,6 +8,15 @@ HarmonyOS ArkTS 客户端。覆盖认证(含多账户切换)/发现与搜索/信
 
 API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）。
 
+## 版本号管理
+
+App 版本唯一来源是 `AppScope/app.json5`（`versionName` + `versionCode`），EntryAbility 启动时经 bundleManager 读取并打日志。**每次发版必须同步两处**：
+
+1. 仓库根打 git tag `vX.Y.Z`（与线上 Web 端共用同一 tag 序列，`git describe` 是全项目版本号的生成源）；
+2. `app.json5` 的 `versionName` 设为 tag 的 `X.Y.Z`，`versionCode` 设为 `X*1000000 + Y*1000 + Z`（如 `v1.2.3` → `1002003`）。
+
+排查用户反馈时以 `versionName` 定位到对应 tag，再由 tag 拿到精确 commit。未 bump 版本即发安装包 = 无法溯源，视为发布事故。
+
 ## 构建 & 测试
 
 DevEco Studio 工具路径（node/hvigor/ohpm 以本机 `/Applications/DevEco-Studio.app/Contents/tools/` 下实际目录为准，使用前 `ls` 验证；JAVA_HOME 见全局「本机环境」Android Studio JBR 条目，变动时用 `mdfind` 定位）：

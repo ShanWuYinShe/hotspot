@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/buildinfo"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 )
@@ -35,6 +36,11 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.Code(code), message))
 		return
 	}
+	// 版本指纹随 health 下发（spec api_spec_types.md HealthStatus）：线上排障
+	// 时从公网即可确认当前运行产物，无需登机查容器。
+	data.Version = buildinfo.Version
+	data.Commit = buildinfo.Commit
+	data.BuildTime = buildinfo.BuildTime
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(*data))
 }
 

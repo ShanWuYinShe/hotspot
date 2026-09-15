@@ -23,6 +23,10 @@ bun install --cwd frontend
 bun run --cwd frontend build
 ```
 
+## 版本号与发布
+
+版本号以 git tag（`vX.Y.Z`）为源，`git describe` 生成版本串并注入全部产物（后端 health/启动日志、前端 `/version.json`、镜像 OCI label），用于线上排障精确回溯。发布统一走 `./scripts/deploy-production.sh [vX.Y.Z]`（含版本注入、前端 volume 刷新与部署后自动核验）；鸿蒙端版本约定见 `harmonyapp/AGENTS.md`。详见 README「版本号管理与发布」。
+
 ## 调试入口
 
 不要直接启动前端 dev server 直连浏览器。前端是纯 UI，必须配合后端服务。

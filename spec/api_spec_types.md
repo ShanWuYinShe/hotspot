@@ -607,6 +607,11 @@ type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 interface HealthStatus {
   status: SystemHealthStatus;
   timestamp: string;
+  // 构建期注入的版本指纹（-ldflags 注入；本地裸构建为 version="dev"、其余空串）。
+  // 用途：线上排障时核对该实例运行的源码版本，commit 为精确回溯锚点。
+  version: string;      // git describe --tags --always，如 "v1.0.0" / "v1.0.0-2-g1a2b3c4"
+  commit: string;       // 完整 git commit sha
+  build_time: string;   // 镜像构建时刻（UTC RFC3339）
 }
 
 // 客户端公开配置（AppConfig 的可见投影；客户端启动时获取并缓存）
