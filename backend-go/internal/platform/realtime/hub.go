@@ -247,6 +247,92 @@ func (h *Hub) deliverUserSubscribersLocal(userID string, event Event) {
 	}
 }
 
+// subscriptionRevoker 由连接层实现：服务端强制摘除订阅时（踢出/退群/群解散），
+// 经 sink 回调同步清理该连接的订阅快照——否则下一次 SetSubscriptions 全量重建
+// 会把已撤销的订阅加回 byGroup（applyAuthorizedSubscriptions 以连接侧快照为
+// 重建依据），撤销形同虚设。
+type subscriptionRevoker interface {
+	revokeSubscription(kind, id string)
+}
+
+// RevokeGroupSubscription 强制摘除某用户全部连接对指定群的订阅（成员被移出/
+// 封禁/退群时由 groups 模块调用）。群消息广播按 byGroup 直投全文，而订阅鉴权
+// 只发生在 SetSubscriptions 时刻——成员资格变更后不摘除，被移出者保持连接即可
+// 继续实时收到群内消息。跨实例经 revoke: 控制通道同步（对端只清注册表，不下发
+// 任何客户端事件：spec 未定义订阅撤销事件，客户端经既有 GroupMemberRemoved 等
+// 事件感知成员资格变更）。
+func (h *Hub) RevokeGroupSubscription(userID, groupID string) {
+	h.revokeGroupLocal(userID, groupID)
+	h.publish(redisChannelRevoke+userID, Event{Type: EventTypeSubscriptionRevoked, Payload: SubscriptionRevokedPayload{GroupID: groupID}})
+}
+
+// revokeGroupLocal 摘除本实例内该用户全部连接的群订阅，并经 sink 回调同步连接层
+// 订阅快照。回调在锁外调用：其内部触碰连接侧 subscriptions（自有锁），与 h.mu
+// 无交集，避免锁序耦合。
+func (h *Hub) revokeGroupLocal(userID, groupID string) {
+	h.mu.Lock()
+	affected := make([]FanoutSink, 0, 1)
+	for _, sink := range h.byUser[userID] {
+		if entry, ok := h.subsBySink[sink]; ok {
+			if _, subscribed := entry.groupKeys[groupID]; subscribed {
+				delete(entry.groupKeys, groupID)
+				affected = append(affected, sink)
+			}
+		}
+	}
+	if len(affected) > 0 {
+		byGroup := h.byGroup[groupID]
+		out := byGroup[:0]
+		for _, sink := range byGroup {
+			revoked := false
+			for _, a := range affected {
+				if sink == a {
+					revoked = true
+					break
+				}
+			}
+			if !revoked {
+				out = append(out, sink)
+			}
+		}
+		if len(out) == 0 {
+			delete(h.byGroup, groupID)
+		} else {
+			h.byGroup[groupID] = out
+		}
+	}
+	h.mu.Unlock()
+	for _, sink := range affected {
+		if revoker, ok := sink.(subscriptionRevoker); ok {
+			revoker.revokeSubscription("group", groupID)
+		}
+	}
+}
+
+// DropGroup 群解散后摘除全部订阅者对该群的订阅（解散影响全组成员，逐成员
+// RevokeGroupSubscription 需要遍历成员表，直接按群 key 清理一次到位）。
+func (h *Hub) DropGroup(groupID string) {
+	h.dropGroupLocal(groupID)
+	h.publish(redisChannelGroupDrop+groupID, Event{Type: EventTypeSubscriptionRevoked, Payload: SubscriptionRevokedPayload{GroupID: groupID}})
+}
+
+func (h *Hub) dropGroupLocal(groupID string) {
+	h.mu.Lock()
+	sinks := h.byGroup[groupID]
+	delete(h.byGroup, groupID)
+	for _, sink := range sinks {
+		if entry, ok := h.subsBySink[sink]; ok {
+			delete(entry.groupKeys, groupID)
+		}
+	}
+	h.mu.Unlock()
+	for _, sink := range sinks {
+		if revoker, ok := sink.(subscriptionRevoker); ok {
+			revoker.revokeSubscription("group", groupID)
+		}
+	}
+}
+
 func (h *Hub) BroadcastToGroup(groupID string, event Event) {
 	// resume enrich（spec L156, L173）：群事件分配全局单调 seq 并写入 per-group 事件流。
 	// 断线成员重连时按订阅快照聚合其订阅 group 流回放（handler Replay）；广播侧不做

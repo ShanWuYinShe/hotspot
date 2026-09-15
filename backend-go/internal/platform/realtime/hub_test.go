@@ -240,3 +240,125 @@ func TestHubReverseIndexIsolatesSinks(t *testing.T) {
 		t.Fatalf("sinkA 应恰好收到 user_2 与 group_1 两条, got %#v", sinkA.events)
 	}
 }
+
+// revocableSink 模拟 socketSink 的回调接线：撤销回调把连接侧订阅快照更新后
+// 全量重建（对齐 handler 的 onSubscriptionRevoked + applyAuthorizedSubscriptions
+// 重建路径），用于验证「撤销后重建不复活」的闭环。
+type revocableSink struct {
+	sinkStub
+	onRevoke func(kind, id string)
+}
+
+func (s *revocableSink) revokeSubscription(kind, id string) {
+	if s.onRevoke != nil {
+		s.onRevoke(kind, id)
+	}
+}
+
+// TestHubRevokeGroupSubscription 验证成员资格变更后的订阅强制摘除（安全修复）：
+// 被移出成员保持连接也不再收到群消息，其他群订阅与其他成员不受影响；
+// 连接侧快照经回调同步后，下一次全量重建不会把已撤销订阅加回 byGroup。
+func TestHubRevokeGroupSubscription(t *testing.T) {
+	hub := NewHub()
+	sink := &revocableSink{}
+	hub.RegisterUser("user_alice", "sess_1", sink)
+	// 连接侧订阅快照（handler 的 subs 状态）+ 初始注册。
+	snapshot := map[string]bool{"group_1": true, "group_2": true}
+	hub.SetGroupSubscriptions([]string{"group_1", "group_2"}, sink)
+	// 模拟 handler：撤销回调同步快照并全量重建。
+	sink.onRevoke = func(kind, id string) {
+		delete(snapshot, id)
+		ids := make([]string, 0, len(snapshot))
+		for gid := range snapshot {
+			ids = append(ids, gid)
+		}
+		hub.SetGroupSubscriptions(ids, sink)
+	}
+	otherSink := &sinkStub{}
+	hub.RegisterUser("user_bob", "sess_2", otherSink)
+	hub.SetGroupSubscriptions([]string{"group_1"}, otherSink)
+
+	hub.RevokeGroupSubscription("user_alice", "group_1")
+
+	sink.events = nil
+	otherSink.events = nil
+	hub.BroadcastToGroup("group_1", Event{Type: "GroupMessageNew"})
+	// group_2 订阅仍在（只摘除目标群）。
+	hub.BroadcastToGroup("group_2", Event{Type: "GroupMessageNew"})
+	if len(sink.events) != 1 {
+		t.Fatalf("撤销后 alice 只应收到 group_2 一条, got %#v", sink.events)
+	}
+	if len(otherSink.events) != 1 {
+		t.Fatalf("其他成员 bob 的 group_1 订阅不应受影响, got %#v", otherSink.events)
+	}
+
+	// 模拟客户端下一次 SetSubscriptions：按连接侧快照全量重建（已不含 group_1），
+	// 群消息仍不会送达 alice——验证快照同步闭环。
+	hub.BroadcastToGroup("group_1", Event{Type: "GroupMessageNew"})
+	if len(sink.events) != 1 {
+		t.Fatalf("后续广播不得再送达被移出成员, got %#v", sink.events)
+	}
+}
+
+// TestHubRevokeGroupSubscriptionWithoutCallback 验证未实现回调的 sink（测试桩）
+// 也至少被摘除 byGroup 投递——注册表清理不依赖回调存在。
+func TestHubRevokeGroupSubscriptionWithoutCallback(t *testing.T) {
+	hub := NewHub()
+	sink := &sinkStub{}
+	hub.RegisterUser("user_alice", "sess_1", sink)
+	hub.SetGroupSubscriptions([]string{"group_1"}, sink)
+	hub.RevokeGroupSubscription("user_alice", "group_1")
+	hub.BroadcastToGroup("group_1", Event{Type: "GroupMessageNew"})
+	if len(sink.events) != 0 {
+		t.Fatalf("撤销后不应再收到群广播, got %#v", sink.events)
+	}
+}
+
+// TestHubDropGroup 验证群解散后全部订阅者摘除，其他群的订阅不受影响。
+func TestHubDropGroup(t *testing.T) {
+	hub := NewHub()
+	sinkA := &sinkStub{}
+	sinkB := &sinkStub{}
+	hub.RegisterUser("user_a", "sess_a", sinkA)
+	hub.RegisterUser("user_b", "sess_b", sinkB)
+	hub.SetGroupSubscriptions([]string{"group_1", "group_2"}, sinkA)
+	hub.SetGroupSubscriptions([]string{"group_1"}, sinkB)
+
+	hub.DropGroup("group_1")
+
+	sinkA.events = nil
+	sinkB.events = nil
+	hub.BroadcastToGroup("group_1", Event{Type: "T"})
+	hub.BroadcastToGroup("group_2", Event{Type: "T"})
+	if len(sinkA.events) != 1 || len(sinkB.events) != 0 {
+		t.Fatalf("解散后 group_1 全员摘除、group_2 保留, A=%#v B=%#v", sinkA.events, sinkB.events)
+	}
+}
+
+// TestBridgeDispatchRevokeChannels 验证跨实例控制通道：revoke:/groupdrop: 只清
+// 注册表，不向 sink 投递事件（对端实例不应产生客户端可见输出）。
+func TestBridgeDispatchRevokeChannels(t *testing.T) {
+	hub := NewHub()
+	sink := &revocableSink{}
+	hub.RegisterUser("user_alice", "sess_1", sink)
+	hub.SetGroupSubscriptions([]string{"group_1", "group_2"}, sink)
+	revoked := map[string]string{}
+	sink.onRevoke = func(kind, id string) { revoked[kind+"/"+id] = id }
+
+	bridge := &RedisBridge{hub: hub}
+	bridge.dispatchLocal("revoke:user_alice", Event{Type: EventTypeSubscriptionRevoked, Payload: map[string]any{"group_id": "group_1"}})
+	bridge.dispatchLocal("groupdrop:group_2", Event{Type: EventTypeSubscriptionRevoked, Payload: map[string]any{"group_id": "group_2"}})
+
+	if _, ok := revoked["group/group_1"]; !ok {
+		t.Fatalf("revoke: 通道应触发回调, got %#v", revoked)
+	}
+	if _, ok := revoked["group/group_2"]; !ok {
+		t.Fatalf("groupdrop: 通道应触发回调, got %#v", revoked)
+	}
+	// 全部订阅已清：后续广播不可达。
+	hub.BroadcastToGroup("group_1", Event{Type: "T"})
+	hub.BroadcastToGroup("group_2", Event{Type: "T"})
+	if len(sink.events) != 0 {
+		t.Fatalf("控制通道处理后不应有广播可达, got %#v", sink.events)
+	}
+}

@@ -354,6 +354,8 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 	// 仅按群广播一次（owner 亦是成员，另发 BroadcastToUser 会收到重复事件）；
 	// 离线成员由 resume 兜底（解散为持久状态，重连后群已不可见）。
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
+	// 解散后摘除全部订阅者对该群的订阅（成员资格随解散全部终止）。
+	realtime.DefaultHub().DropGroup(req.GroupID)
 	observability.L().Info("groups.dismiss completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
@@ -529,6 +531,8 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 			"left_at":  time.Now().UTC().Format(time.RFC3339),
 		},
 	})
+	// 退群即摘除本人对该群的订阅（与踢出/封禁同一口径）。
+	realtime.DefaultHub().RevokeGroupSubscription(principal.UserID, req.GroupID)
 	return nil
 }
 

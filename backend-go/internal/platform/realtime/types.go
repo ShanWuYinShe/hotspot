@@ -10,6 +10,16 @@ const (
 	EventTypeSessionRevoked        = "SessionRevoked"
 )
 
+// EventTypeSubscriptionRevoked 仅用于跨实例控制通道（redis bridge revoke:/
+// groupdrop:），不下发客户端：spec 未定义订阅撤销事件，客户端经既有
+// GroupMemberRemoved / GroupMemberLeft / GroupDismissed 感知成员资格变更。
+const EventTypeSubscriptionRevoked = "SubscriptionRevoked"
+
+// SubscriptionRevokedPayload 是撤销控制事件的载荷（仅实例间流转）。
+type SubscriptionRevokedPayload struct {
+	GroupID string `json:"group_id"`
+}
+
 // 用户状态
 const (
 	EventTypeUserOnline  = "UserOnline"

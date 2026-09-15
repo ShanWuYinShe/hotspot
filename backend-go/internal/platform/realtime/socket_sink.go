@@ -33,6 +33,9 @@ type socketSink struct {
 	send      chan []byte
 	done      chan struct{}
 	closeOnce sync.Once
+	// onSubscriptionRevoked 由 handler 在 RegisterUser 之前注册（此后只读，
+	// 无需加锁）：服务端强制摘除订阅时同步连接侧订阅快照，见 Hub.revokeGroupLocal。
+	onSubscriptionRevoked func(kind, id string)
 }
 
 func newSocketSink(conn *websocket.Conn) *socketSink {
@@ -43,6 +46,13 @@ func newSocketSink(conn *websocket.Conn) *socketSink {
 	}
 	go s.writeLoop()
 	return s
+}
+
+// revokeSubscription 实现 subscriptionRevoker：把强制撤销转交给连接层的快照回调。
+func (s *socketSink) revokeSubscription(kind, id string) {
+	if s.onSubscriptionRevoked != nil {
+		s.onSubscriptionRevoked(kind, id)
+	}
 }
 
 // Send marshals the event and enqueues it for the writer goroutine. It never

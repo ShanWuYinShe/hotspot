@@ -279,6 +279,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// resume 回放聚合也依赖断线时快照中的 GroupIDs。
 	subs := newSubscriptions()
 	sink := newSocketSink(conn)
+	// 服务端强制摘除订阅（踢出/封禁/退群/群解散）时同步连接侧快照：快照是
+	// SetSubscriptions 全量重建 Hub 注册表的依据，不清会把已撤销订阅加回去。
+	// 必须在 RegisterUser 之前赋值（此后经 Hub 读，无其他写入者）。
+	sink.onSubscriptionRevoked = func(kind, id string) {
+		subs.apply("unsubscribe", kind, []string{id})
+	}
 	if DefaultHub().RegisterUser(principal.UserID, principal.SessionID, sink) {
 		// 首条连接：presence 落库 online（groups/search 的 presence_status 统计依据）。
 		h.markPresence(principal.UserID, true)

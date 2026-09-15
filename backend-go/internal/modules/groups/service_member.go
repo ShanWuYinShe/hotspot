@@ -272,6 +272,9 @@ func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) err
 		}
 		realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
 		realtime.DefaultHub().BroadcastToUser(req.UserID, event)
+		// 封禁即时移除成员资格：强制摘除被禁用户的群订阅，防止其保持连接继续
+		// 实时收到群消息（订阅鉴权只在 SetSubscriptions 时刻生效）。
+		realtime.DefaultHub().RevokeGroupSubscription(req.UserID, req.GroupID)
 		return nil
 	}
 	return s.repo.UnbanMember(ctx, principal.UserID, UnbanMemberRequest{
@@ -346,6 +349,8 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 			"member_count": remaining,
 		},
 	})
+	// 踢出即摘除该用户的群订阅（同 SetMemberBan：防止保持连接继续收群消息）。
+	realtime.DefaultHub().RevokeGroupSubscription(req.UserID, req.GroupID)
 	return nil
 }
 

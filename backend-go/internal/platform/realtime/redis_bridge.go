@@ -21,6 +21,9 @@ const (
 	redisChannelGroup   = "group:"
 	redisChannelSession = "session:"
 	redisChannelAll     = "all"
+	// 订阅撤销控制通道（跨实例同步强制摘除，见 Hub.RevokeGroupSubscription / DropGroup）。
+	redisChannelRevoke    = "revoke:"
+	redisChannelGroupDrop = "groupdrop:"
 )
 
 type redisEnvelope struct {
@@ -118,9 +121,21 @@ func (b *RedisBridge) dispatchLocal(channel string, event Event) {
 	case strings.HasPrefix(channel, redisChannelUser):
 		userID := strings.TrimPrefix(channel, redisChannelUser)
 		b.hub.deliverUserLocal(userID, event)
+	case strings.HasPrefix(channel, redisChannelGroupDrop):
+		groupID := strings.TrimPrefix(channel, redisChannelGroupDrop)
+		b.hub.dropGroupLocal(groupID)
 	case strings.HasPrefix(channel, redisChannelGroup):
 		groupID := strings.TrimPrefix(channel, redisChannelGroup)
 		b.hub.deliverGroupLocal(groupID, event)
+	case strings.HasPrefix(channel, redisChannelRevoke):
+		// 订阅撤销控制事件：只清本实例注册表，不向 sink 投递（载荷 group_id
+		// 经 JSON 往返为 map，按宽口径解析）。
+		userID := strings.TrimPrefix(channel, redisChannelRevoke)
+		if groupID, ok := event.Payload.(map[string]any)["group_id"].(string); ok {
+			b.hub.revokeGroupLocal(userID, groupID)
+		} else {
+			observability.L().Warn("redis bridge: revoke event missing group_id", "user_id", userID)
+		}
 	case channel == redisChannelAll:
 		b.hub.deliverAllLocal(event)
 	default:
