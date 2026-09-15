@@ -7,6 +7,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
+import { formatCardTime } from '../../../core/utils/FormatUtil';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -446,26 +447,8 @@ export struct MessagePage {
   }
 
   private formatTime(timeStr: string): string {
-    if (!timeStr) {
-      return '';
-    }
-    const time = new Date(timeStr);
-    if (!Number.isFinite(time.getTime())) {
-      return '';
-    }
-    const now = new Date();
-    if (time.toDateString() === now.toDateString()) {
-      return `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
-    }
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (time.toDateString() === yesterday.toDateString()) {
-      return '昨天';
-    }
-    if (time.getFullYear() === now.getFullYear()) {
-      return `${(time.getMonth() + 1).toString().padStart(2, '0')}-${time.getDate().toString().padStart(2, '0')}`;
-    }
-    return time.toLocaleDateString();
+    // 统一收敛 FormatUtil（跨年分支此前走 toLocaleDateString 输出美式日期）。
+    return formatCardTime(timeStr);
   }
 
   private enterChat(item: ChatItem) {

@@ -4,6 +4,7 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
+import { formatDateTime } from '../../../core/utils/FormatUtil';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
@@ -121,16 +122,8 @@ export struct MomentDetailPage {
   }
 
   private formatTime(timeStr: string): string {
-    const time = new Date(timeStr);
-    const now = new Date();
-    const hhmm = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
-    if (time.toDateString() === now.toDateString()) {
-      return hhmm;
-    }
-    // 对齐前端格式：YYYY-MM-DD HH:mm（此前 toLocaleDateString 输出美式 8/31/2026）
-    const mm = (time.getMonth() + 1).toString().padStart(2, '0');
-    const dd = time.getDate().toString().padStart(2, '0');
-    return `${time.getFullYear()}-${mm}-${dd} ${hhmm}`;
+    // 统一收敛 FormatUtil（YYYY-MM-DD HH:mm，对齐前端格式）。
+    return formatDateTime(timeStr);
   }
 
 

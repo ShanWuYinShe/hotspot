@@ -116,9 +116,9 @@ export struct DebugPanel {
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
               
-              Text(`WebSocket: ${this.webSocketService.isConnected() ? '✅ 已连接' : '❌ 未连接'}`)
+              Text(`WebSocket: ${this.webSocketService.isConnected() ? '已连接' : '未连接'}`)
               Text(`User ID: ${this.currentUserId || 'N/A'}`)
-              Text(`Token: ${this.currentUser ? 'Has Token' : 'No Token'}`)
+              Text(`Token: ${this.currentUser ? '有 Token' : '无 Token'}`)
             }
             .alignItems(HorizontalAlign.Start)
             .width('100%')

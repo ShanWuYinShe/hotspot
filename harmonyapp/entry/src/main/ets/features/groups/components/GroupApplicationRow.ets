@@ -8,6 +8,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemButton } from '../../../components/SystemButton';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { GroupApplicationItem } from '../../../core/types/api';
+import { formatDateTime } from '../../../core/utils/FormatUtil';
 
 @Component
 export struct GroupApplicationRow {
@@ -36,7 +37,7 @@ export struct GroupApplicationRow {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-          Text(`申请于 ${new Date(this.application.created_at).toLocaleString()}`)
+          Text(`申请于 ${formatDateTime(this.application.created_at)}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.palette?.textSecondary)
             .margin({ top: DesignConstants.SPACING.XS })

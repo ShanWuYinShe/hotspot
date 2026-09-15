@@ -7,6 +7,7 @@ import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
+import { formatDateTime } from '../../../core/utils/FormatUtil';
 import {
   GroupApplicationItem,
   GroupInviteItem,
@@ -761,7 +762,7 @@ export struct GroupPage {
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
-          Text(`申请时间：${new Date(application.created_at).toLocaleString()}`)
+          Text(`申请时间：${formatDateTime(application.created_at)}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)

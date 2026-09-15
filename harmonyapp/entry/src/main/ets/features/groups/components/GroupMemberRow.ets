@@ -9,6 +9,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { GroupMemberItem } from '../../../core/types/api';
+import { formatDate } from '../../../core/utils/FormatUtil';
 import { LucideIcon } from '../../../components/LucideIcon';
 
 @Component
@@ -48,7 +49,7 @@ export struct GroupMemberRow {
             .borderRadius(DesignConstants.SHAPE.CHIP)
 
           if (this.member.joined_at) {
-            Text(`加入于 ${new Date(this.member.joined_at).toLocaleDateString()}`)
+            Text(`加入于 ${formatDate(this.member.joined_at)}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.palette?.textSecondary)
               .margin({ left: DesignConstants.SPACING.SM })
