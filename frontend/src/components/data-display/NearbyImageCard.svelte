@@ -55,6 +55,15 @@
 	let pressed = $state(false);
 	const cardTransform = $derived(pressed ? 'scale(var(--cst-card-tap-scale, 0.94))' : '');
 
+	// 图片加载占位（审查 M4）：图片型信息流首刷在弱网下是「白卡跳动」。
+	// 加载完成前显示 accent 渐变层兜底，onload 后渐显图片，避免空白闪现。
+	let imageLoaded = $state(false);
+	$effect(() => {
+		// src 变化（翻页/复用）后回到占位态
+		void imageSrc;
+		imageLoaded = false;
+	});
+
 	// 行内子按钮（点赞/收藏/评论等）的按压由按钮自身的 hover-action/tap 承载，
 	// 不带动整卡缩放——否则点按钮时整卡一起缩，看起来像误触了卡片。
 	function pressedFromEvent(e: PointerEvent): boolean {
@@ -87,11 +96,16 @@
 	}}
 >
 	{#if imageSrc}
+		<!-- 加载占位：onload 前垫 accent 渐变（pointer-events-none 不拦行内按钮） -->
+		{#if !imageLoaded}
+			<div class="surface-accent-gradient pointer-events-none absolute inset-0 z-[1] animate-pulse"></div>
+		{/if}
 		<img
 			src={imageSrc}
 			alt={imageAlt}
 			loading="lazy"
-			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform"
+			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform transition-opacity duration-standard {imageLoaded ? 'opacity-100' : 'opacity-0'}"
+			onload={() => (imageLoaded = true)}
 			onerror={onImageError}
 		/>
 	{:else if placeholder}
