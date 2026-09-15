@@ -24,7 +24,7 @@ COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml --profi
 
 TARGET="${1:-main}"
 if [ "$TARGET" != "main" ] && [[ ! "$TARGET" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "!! 参数必须是 main 或 vX.Y.Z tag（当前值：$TARGET）"; exit 1
+  echo "!! 参数必须是 main 或 vX.Y.Z tag（当前值：${TARGET}）"; exit 1
 fi
 
 echo "==> 校验本地 main 与 origin/main 同步、工作区干净…"
@@ -47,7 +47,7 @@ else
 fi
 
 VERSION="$(git -C "$REPO_ROOT" describe --tags --always "$REF")"
-COMMIT="$(git -C "$REPO_ROOT" rev-parse "$REF")"
+COMMIT="$(git -C "$REPO_ROOT" rev-parse "$REF^{commit}")"
 BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "==> 部署版本: $VERSION (commit ${COMMIT:0:12}, built $BUILD_TIME)"
 
@@ -67,12 +67,12 @@ rsync -az --delete "${RSYNC_EXCLUDES[@]}" "$REPO_ROOT/" "$SERVER:$REMOTE_DIR/"
 
 SSH="ssh $SERVER"
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
-  echo "==> 构建镜像（GIT_* 注入版本指纹，IMAGE_TAG=$VERSION）…"
+  echo "==> 构建镜像（GIT_* 注入版本指纹，IMAGE_TAG=${VERSION}）…"
   $SSH "cd $REMOTE_DIR && GIT_VERSION='$VERSION' GIT_COMMIT='$COMMIT' GIT_BUILD_TIME='$BUILD_TIME' \
     IMAGE_TAG='$VERSION' $COMPOSE build backend frontend-build"
 fi
 
-echo "==> 滚动更新（IMAGE_TAG=$VERSION，compose 比对新 tag 镜像重建容器）…"
+echo "==> 滚动更新（IMAGE_TAG=${VERSION}，compose 比对新 tag 镜像重建容器）…"
 $SSH "cd $REMOTE_DIR && IMAGE_TAG='$VERSION' $COMPOSE up -d"
 
 # 前端静态卷刷新：Docker 命名卷非空时不会自动复制新镜像内容（2026-09-15 实测），
@@ -112,4 +112,4 @@ for _ in $(seq 1 10); do
   sleep 2
 done
 
-echo "🎉 部署完成: $VERSION → $SERVER:$REMOTE_DIR（镜像 tag=$VERSION，回滚：IMAGE_TAG=<旧版本> $COMPOSE up -d）"
+echo "🎉 部署完成: ${VERSION} → ${SERVER}:${REMOTE_DIR}（镜像 tag=${VERSION}，回滚：IMAGE_TAG=<旧版本> ${COMPOSE} up -d）"
