@@ -12,6 +12,7 @@
 	import { uploadMediaFiles } from '@/lib/upload';
 	import { showToast } from '@/stores/toast.svelte';
 	import { draft, clearDraft } from '@/stores/composer.svelte';
+	import Button from '@/components/ui/button.svelte';
 
 	// 三端共用的发布器（手机 Sheet / 平板 Sheet / 桌面对话框）。
 	// 对齐 Figma Make：header 提供「创建群组」surface 切换。
@@ -249,13 +250,9 @@
 				{draft.moods.length ? `将以 ${draft.moods.join(' · ')} 的氛围出现` : '选择氛围，让附近的人更容易找到你'}
 			</p>
 		</div>
-		<button
-			type="submit"
-			disabled={!canPublish}
-			class="hover-btn shrink-0 rounded-full px-5 py-2.5 text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-raised-sm enabled:hover:shadow-raised-md"
-		>
+		<Button type="submit" size="md" disabled={!canPublish} class="rounded-full px-5">
 			发布动态
-		</button>
+		</Button>
 	</footer>
 </form>
 {:else}

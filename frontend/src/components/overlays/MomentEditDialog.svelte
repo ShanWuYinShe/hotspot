@@ -6,6 +6,7 @@
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import { updateMoment } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
+	import Button from '@/components/ui/button.svelte';
 
 	let {
 		open,
@@ -152,14 +153,15 @@
 			>
 				取消
 			</button>
-			<button
+			<Button
 				type="button"
 				disabled={!canSubmit}
 				onclick={handleSubmit}
-				class="hover-btn shrink-0 rounded-full px-5 py-2 text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:border disabled:border-border-default disabled:bg-transparent disabled:text-text-secondary enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-raised-sm enabled:hover:shadow-raised-md"
+				size="md"
+				class="rounded-full px-5"
 			>
 				{submitting ? '保存中…' : '保存'}
-			</button>
+			</Button>
 		</footer>
 	</Dialog.Content>
 </Dialog.Root>

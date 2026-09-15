@@ -286,7 +286,7 @@
 		</div>
 
 		{#if saveError}
-			<p class="text-sm text-status-warning">{saveError}</p>
+			<p class="text-sm text-status-danger">{saveError}</p>
 		{/if}
 
 		<!-- Save button -->
@@ -367,7 +367,7 @@
 				</div>
 
 				{#if dangerError}
-					<p class="mt-2 text-sm text-status-warning">{dangerError}</p>
+					<p class="mt-2 text-sm text-status-danger">{dangerError}</p>
 				{/if}
 			</section>
 		{/if}

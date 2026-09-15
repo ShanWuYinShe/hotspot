@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { Check } from '@lucide/svelte';
+	import Button from '@/components/ui/button.svelte';
 	import type { Group } from './group-data';
 
 	// 加入/已加入切换按钮（对齐 Figma Make NearbyGroupsPage JoinButton）。
-	// 双态样式全部类化——inline 背景会压制 hover 反馈，导致两态 hover 相同：
-	//   未加入：accent 实底 + glow，hover 光晕抬档（hover:shadow-glow-md）；
-	//   已加入：中性描边，hover 淡底填充 + 文字加深——两态 hover 反馈不同（四态契约）。
-	// pending：提交中禁点防重复请求（乐观更新期间）。
+	// 统一走 ui/button 原语（审查 H1：第四种手写主按钮收敛）：
+	//   未加入：primary（accent 实底 + 光晕抬档）胶囊 sm 档；
+	//   已加入：outline 变体 + 描边加深/文字降级覆写，hover 淡底填充——两态
+	//   hover 反馈不同（四态契约）。pending：禁点防重复提交（乐观更新期间）。
 	let {
 		group,
 		pending = false,
@@ -14,15 +15,17 @@
 	}: { group: Group; pending?: boolean; onToggle: () => void } = $props();
 </script>
 
-<button
+<Button
 	type="button"
-	class="hover-btn hit-slop focus-ring flex shrink-0 items-center gap-1 rounded-full px-3.25 py-1.5 text-sm
+	variant={group.joined ? 'outline' : 'primary'}
+	size="sm"
+	disabled={pending}
+	class="hit-slop rounded-full px-3 gap-1
 		{group.joined
-		? 'border border-border-strong text-text-secondary hover:bg-interactive-hover hover:text-text-primary'
-		: 'bg-accent-default font-semibold text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}
+		? 'border-border-strong text-text-secondary hover:bg-interactive-hover hover:text-text-primary'
+		: 'font-semibold'}
 		{pending ? 'pointer-events-none opacity-soft' : ''}"
 	aria-pressed={group.joined}
-	disabled={pending}
 	onclick={(e) => {
 		e.stopPropagation();
 		onToggle();
@@ -34,4 +37,4 @@
 	{:else}
 		加入
 	{/if}
-</button>
+</Button>

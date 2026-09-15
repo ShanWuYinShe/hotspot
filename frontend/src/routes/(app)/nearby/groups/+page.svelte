@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Map as MapIcon, MapPin, Search, Users } from '@lucide/svelte';
+	import { Map as MapIcon, MapPin, Search, Users, LogOut } from '@lucide/svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
@@ -85,11 +86,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// join 对需审核群组返回 pending_approval——UI 仍标记 joined 简化（真实后端
 	// 以 is_joined 为准，审核通过前列表不会把它标为已加入）。
 	let joinPending = $state(new Set<string>());
+	// 退群确认（对齐群详情页的危险操作确认范式）：误触即退群不可接受，
+	// 加入仍即时生效（低风险、可随时退）。
+	let leaveTarget = $state<Group | null>(null);
 
-	const toggleJoin = (id: string) => {
-		const group = groups.find((g) => g.id === id);
-		if (!group || joinPending.has(id)) return;
-		const next = !group.joined;
+	const applyJoin = (id: string, next: boolean) => {
 		joinPending = new Set(joinPending).add(id);
 		groups = groups.map((g) => (g.id === id ? { ...g, joined: next } : g));
 		const done = (res: { code: number }) => {
@@ -108,6 +109,16 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		} else {
 			void leaveGroup(id).then(done).catch(() => done(netError(undefined)));
 		}
+	};
+
+	const toggleJoin = (id: string) => {
+		const group = groups.find((g) => g.id === id);
+		if (!group || joinPending.has(id)) return;
+		if (group.joined) {
+			leaveTarget = group;
+			return;
+		}
+		applyJoin(id, true);
 	};
 </script>
 <svelte:head>
@@ -201,3 +212,16 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		{/if}
 	</div>
 </StandardPageLayout>
+
+<ConfirmDialog
+	open={leaveTarget !== null}
+	title="退出群组「{leaveTarget?.name ?? ''}」？"
+	description="退出后将不再接收该群的聊天与公告。"
+	icon={LogOut}
+	confirmLabel="确认退出"
+	onCancel={() => (leaveTarget = null)}
+	onConfirm={() => {
+		if (leaveTarget) applyJoin(leaveTarget.id, false);
+		leaveTarget = null;
+	}}
+/>

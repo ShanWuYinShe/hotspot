@@ -6,6 +6,7 @@
 	import Toggle from '@/components/forms/Toggle.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
+	import Button from '@/components/ui/button.svelte';
 
 	// CreateGroupSheet — 创建群组的底部 Sheet / 模态。
 	// 使用处：NearbyGroups(FAB)、Profile > 我的群组（页头按钮）、
@@ -219,18 +220,19 @@
 			</div>
 
 			{#if createError}
-				<p class="text-sm text-status-warning">{createError}</p>
+				<p class="text-sm text-status-danger">{createError}</p>
 			{/if}
 
 			<!-- Create button -->
-			<button
+			<Button
 				type="button"
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
-				class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium transition-all duration-standard ease-standard {canCreate && !creating ? 'bg-accent-default text-text-on-accent shadow-raised-md border-none cursor-pointer' : 'bg-surface-primary text-text-secondary shadow-inset-sm border-hairline border-border-default cursor-not-allowed'}"
+				size="lg"
+				class="w-full rounded-full"
 			>
-		{creating ? '创建中…' : '创建群组'}
-	</button>
+				{creating ? '创建中…' : '创建群组'}
+			</Button>
 	</div>
 {/if}
 </SheetShell>
