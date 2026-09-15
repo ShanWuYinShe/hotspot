@@ -122,7 +122,7 @@ services:
   # 捕获 backend 发出的验证码邮件；SMTP 在 compose 内网 1025，收件箱
   # Web UI 映射到 http://127.0.0.1:8025（仅回环）。生产不启用此服务。
   mailpit:
-    image: axllent/mailpit:v1.24
+    image: axllent/mailpit:${MAILPIT_VERSION:-v1.24}
     restart: always
     ports:
       - "127.0.0.1:8025:8025"
@@ -134,7 +134,7 @@ services:
 
   # ── 前端 dev 模式（SvelteKit dev server）───────────────────────
   frontend:
-    image: oven/bun:1.3.14-alpine
+    image: oven/bun:${BUN_VERSION:-1.3.14}-alpine
     pull_policy: missing
     user: root
     working_dir: /app
