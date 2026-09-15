@@ -1,0 +1,47 @@
+# ── HotSpot 生产部署 override（仓库文件，随 git 发布）─────────────────
+# 用法（服务器）: docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d
+# 发布流程见 scripts/deploy-production.sh（rsync 同步本文件，服务器无需手写）。
+#
+# 与仓库基线 docker-compose.yml 的差异：
+#   1. 网络拓扑遵循服务器 AGENTS.md 硬约束：对外入口走 ipvlan L3（外部网络
+#      ipvlan_docker，IPv6 直连），服务间流量走 hotspot_internal bridge，
+#      不发布任何宿主机端口（host 443 已被 workwork xray 占用）。
+#   2. nginx 挂载 TLS 配置与 Cloudflare Origin CA 证书（80/443 双监听，
+#      兼容 CF SSL flexible/full 模式）。cert/ 与 .env 仍由服务器侧维护
+#      （含私钥与密码，不入库），见本仓库 .env.example。
+#   3. S3_PUBLIC_ENDPOINT 改为生产域名（presigned URL 的公网形态）。
+
+services:
+  postgres:
+    networks: [hotspot_internal]
+
+  redis:
+    networks: [hotspot_internal]
+
+  seaweedfs:
+    networks: [hotspot_internal]
+
+  backend:
+    networks: [hotspot_internal]
+    environment:
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-https://chaoset.com/s3}
+
+  frontend:
+    networks: [hotspot_internal]
+
+  nginx:
+    networks:
+      hotspot_internal:
+      ipvlan_docker:
+        ipv6_address: "${HOTSPOT_IPV6:-2605:a141:2322:2623:1::20}"
+    ports: !override []
+    volumes:
+      - ./docker/nginx.prod-tls.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/prod-server.inc:/etc/nginx/conf.d/server.inc:ro
+      - ./cert:/etc/nginx/certs:ro
+
+networks:
+  hotspot_internal:
+    driver: bridge
+  ipvlan_docker:
+    external: true

@@ -13,8 +13,12 @@
 #   SERVER=workwork-server REMOTE_DIR=~/hotspot   # SSH 目标与远端目录
 #   SKIP_BUILD=1                                  # 跳过镜像构建（仅同步+up）
 #
-# 依赖：rsync、ssh；服务器侧维护文件（cert/.env/nginx.prod-tls.conf 等）
-# 必须在 RSYNC_EXCLUDES 中排除——漏排会被 --delete 删除（2026-09-13 事故）。
+# 依赖：rsync、ssh；服务器侧维护的秘密文件（cert/、.env、
+# docker/amap.prod.inc，含私钥/密码/地图 key，不入库）必须在
+# RSYNC_EXCLUDES 中排除——漏排会被 --delete 删除（2026-09-13 事故）。
+# 生产 compose 与网关配置（docker-compose.prod.yml、
+# docker/nginx.prod-tls.conf、docker/prod-server.inc）已入库随 git 发布，
+# 不再排除；其变量默认值与原服务器侧文件等效，首次同步即对齐。
 set -euo pipefail
 
 SERVER="${SERVER:-workwork-server}"
@@ -60,8 +64,7 @@ RSYNC_EXCLUDES=(
   --exclude 'CLAUDE.md' --exclude 'AGENTS.md' --exclude '.DS_Store'
   --exclude 'node_modules/' --exclude 'frontend/build/' --exclude 'frontend/.svelte-kit/'
   --exclude 'frontend/static/version.json'
-  --exclude 'docker/amap.prod.inc' --exclude 'docker/nginx.prod-tls.conf'
-  --exclude 'docker/prod-server.inc' --exclude 'docker-compose.prod.yml'
+  --exclude 'docker/amap.prod.inc'
 )
 rsync -az --delete "${RSYNC_EXCLUDES[@]}" "$REPO_ROOT/" "$SERVER:$REMOTE_DIR/"
 
