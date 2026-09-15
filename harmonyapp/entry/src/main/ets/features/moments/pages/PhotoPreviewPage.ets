@@ -4,7 +4,8 @@
  */
 
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
@@ -161,14 +162,16 @@ export struct PhotoPreviewPage {
         this.offsetY = 0;
       })
 
-      // 顶部关闭按钮
+      // 顶部关闭按钮：媒体镀铬白字（iconColor 逃逸口），透明底浮于照片上
       Row() {
-        IconButton({
+        SurfaceIconButton({
           icon: AppIcon.CLOSE,
-          iconSize: IconSize.LARGE,
+          kind: 'neutral',
+          buttonSize: DesignConstants.LAYOUT.BACK_BUTTON_SIZE,
+          glyphSize: DesignConstants.FONT.SIZE.LG_PLUS,
           iconColor: DesignConstants.COLOR.MEDIA_CHROME_TEXT,
-          bgColor: DesignConstants.COLOR.TRANSPARENT,
-          onButtonClick: () => {
+          accessibilityLabel: '关闭预览',
+          onPress: () => {
             AppRouter.pop();
           }
         })

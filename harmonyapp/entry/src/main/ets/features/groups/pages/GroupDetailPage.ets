@@ -22,7 +22,8 @@ import { SystemDialog } from '../../../components/SystemDialog';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { SystemToggle } from '../../../components/SystemToggle';
-import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
@@ -1507,26 +1508,27 @@ export struct GroupDetailPage {
         .width('100%')
 
         // 顶部按钮行（返回左 / 分享右）：全宽透明 Row 会遮挡返回钮点击（已实测），
-        // 两钮必须同行；标题列已在内层 Stack 锚定封面左下，不与此行冲突
+        // 两钮必须同行；标题列已在内层 Stack 锚定封面左下，不与此行冲突。
+        // hero 封面上的媒体镀铬钮：白字 + 透明底（iconColor 逃逸口），a11y 补齐
         Row() {
-          IconButton({
+          SurfaceIconButton({
             icon: AppIcon.BACK,
-            iconSize: IconSize.SMALL,
-            bgColor: DesignConstants.COLOR.TRANSPARENT,
+            kind: 'neutral',
+            buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+            glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             iconColor: DesignConstants.COLOR.WHITE,
-            radius: DesignConstants.RADIUS.FULL,
-            minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-            onButtonClick: () => { AppRouter.pop(); }
+            accessibilityLabel: '返回',
+            onPress: () => { AppRouter.pop(); }
           })
           Blank()
-          IconButton({
+          SurfaceIconButton({
             icon: AppIcon.SHARE,
-            iconSize: IconSize.SMALL,
-            bgColor: DesignConstants.COLOR.TRANSPARENT,
+            kind: 'neutral',
+            buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+            glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             iconColor: DesignConstants.COLOR.WHITE,
-            radius: DesignConstants.RADIUS.FULL,
-            minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-            onButtonClick: () => { this.shareGroup(); }
+            accessibilityLabel: '分享群组',
+            onPress: () => { this.shareGroup(); }
           })
         }
         .width('100%')

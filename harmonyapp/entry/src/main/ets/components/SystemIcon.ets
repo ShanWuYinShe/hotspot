@@ -9,7 +9,6 @@ import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { DesignConstants } from '../constants/DesignConstants';
 
 const DEFAULT_THEME_ICON_SENTINEL: string = '__theme_icon_default__';
-const DEFAULT_THEME_BG_SENTINEL: string = '__theme_bg_default__';
 
 /**
  * 应用图标枚举
@@ -244,19 +243,6 @@ export interface SystemIconParams {
 }
 
 /**
- * 图标按钮组件参数接口
- */
-export interface IconButtonParams {
-  icon: AppIcon;
-  size?: IconSize;
-  iconColor?: string | ResourceColor;
-  backgroundColor?: ResourceColor;
-  borderRadius?: number;
-  padding?: number;
-  onClick?: () => void;
-}
-
-/**
  * 系统图标组件
  */
 @Reusable
@@ -291,60 +277,5 @@ export struct SystemIcon {
   }
 }
 
-/**
- * 带背景的图标按钮组件
- */
-@Reusable
-@Component
-export struct IconButton {
-  @Prop icon: AppIcon;
-  @Prop iconSize: IconSize = IconSize.LARGE;
-  @Prop iconColor: string | ResourceColor = DEFAULT_THEME_ICON_SENTINEL;
-  @Prop bgColor: ResourceColor | string = DEFAULT_THEME_BG_SENTINEL;
-  @Prop radius: number = 24;
-  @Prop minButtonSize: number = 48;
-  onButtonClick?: () => void;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
-
-  private getPalette() {
-    return AppThemeManager.getPaletteById(this.resolvedThemeId);
-  }
-
-  private getResolvedIconColor(): string | ResourceColor {
-    return this.iconColor === DEFAULT_THEME_ICON_SENTINEL ? this.getPalette().accentBackground : this.iconColor;
-  }
-
-  private getResolvedBackgroundColor(): ResourceColor | string {
-    return this.bgColor === DEFAULT_THEME_BG_SENTINEL ? this.getPalette().buttonSecondaryBackground : this.bgColor;
-  }
-
-  build() {
-    Button() {
-      Text() {
-        SymbolSpan($r(this.icon))
-          .fontSize(this.iconSize)
-          .fontColor([this.getResolvedIconColor() as ResourceColor])
-      }
-      // SymbolSpan 字形在 Text 行盒内默认 start 排版，固定尺寸钮中会偏离中心；
-      // Text 撑满 label 区并水平居中（垂直由 Button label 默认居中承载）
-      .width('100%')
-      .textAlign(TextAlign.Center)
-    }
-    .type(ButtonType.Normal)
-    .stateEffect(true)
-    .backgroundColor(this.getResolvedBackgroundColor())
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-    .borderRadius(this.radius)
-    .shadow(this.getPalette().controlShadow)
-    // padding 会把 label 区压缩到小于字形行盒（36 钮 + padding12 只剩 12×12 < 16 图标），
-    // 溢出按 start/顶锚定 → 图标偏右下；padding 归零让字形在完整固定尺寸内居中
-    .padding(0)
-    .width(this.minButtonSize)
-    .height(this.minButtonSize)
-    .onClick(() => {
-      if (this.onButtonClick) {
-        this.onButtonClick();
-      }
-    })
-  }
-}
+// 旧 IconButton（SymbolSpan + 手写 48vp 底色钮）已删除：带交互的图标钮统一走
+// SurfaceIconButton（LucideIcon + 44vp 命中区 + a11y + spring 按压，审查 中-1）。

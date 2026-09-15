@@ -11,7 +11,8 @@ import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil'
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPageHeader';
-import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -689,11 +690,13 @@ export struct CreateMomentPage {
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(this.getCurrentThemePalette().accentBackground)
 
-      IconButton({
+      SurfaceIconButton({
         icon: AppIcon.CLOSE,
-        iconSize: IconSize.SMALL,
-        bgColor: DesignConstants.COLOR.TRANSPARENT,
-        onButtonClick: (): void => this.removeTag(index)
+        kind: 'neutral',
+        buttonSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
+        glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        accessibilityLabel: `移除标签 ${tag}`,
+        onPress: (): void => this.removeTag(index)
       })
       .margin({ left: DesignConstants.SPACING.XS })
     }

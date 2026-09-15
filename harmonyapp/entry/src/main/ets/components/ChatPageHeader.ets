@@ -17,7 +17,7 @@ import { AppIcon } from './SystemIcon';
 import { SystemAvatar } from './SystemAvatar';
 import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
-import { LucideIcon } from '../components/LucideIcon';
+import { SurfaceIconButton } from './SurfaceIconButton';
 
 @Component
 export struct ChatPageHeader {
@@ -47,29 +47,17 @@ export struct ChatPageHeader {
     Row() {
       // 左侧：返回按钮 + 可选 leading 头像 + 标题
       Row() {
-        Button() {
-          LucideIcon({
-              icon: AppIcon.BACK,
-              iconSize: DesignConstants.FONT.SIZE.XL,
-              color: this.getPalette().textPrimary
-            })
-        }
-        .type(ButtonType.Circle)
-        // 与全局页头返回钮统一（BACK_BUTTON_SIZE 40）
-        .width(DesignConstants.LAYOUT.BACK_BUTTON_SIZE)
-        .height(DesignConstants.LAYOUT.BACK_BUTTON_SIZE)
-        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-        .accessibilityText('返回')
-        .onClick(() => {
-          this.onBack();
-        })
-        // 触控热区：BACK_BUTTON_SIZE(40) → 44（responseRegion 不占布局）；
-        // 返回钮尺寸与 SystemPageHeader / SearchPageHeader 统一为 40vp
-        .responseRegion({
-          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.BACK_BUTTON_SIZE) / 2,
-          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.BACK_BUTTON_SIZE) / 2,
-          width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
-          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+        // 返回钮统一走 SurfaceIconButton（与 SystemPageHeader / SearchPageHeader
+        // 同款凸起中性 40vp：a11y + spring 按压 + 44 命中区由组件内聚，审查 中-1/低-4）
+        SurfaceIconButton({
+          icon: AppIcon.BACK,
+          kind: 'surface',
+          buttonSize: DesignConstants.LAYOUT.BACK_BUTTON_SIZE,
+          glyphSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          accessibilityLabel: '返回',
+          onPress: () => {
+            this.onBack();
+          }
         })
 
         if (this.showAvatar) {
@@ -104,27 +92,15 @@ export struct ChatPageHeader {
       .layoutWeight(1)
 
       // 尾随：会话操作 ghost 圆钮（对齐前端 trailing ghost 动作组）
-      Button() {
-        LucideIcon({
-            icon: AppIcon.MORE,
-            iconSize: DesignConstants.FONT.SIZE.MD,
-            color: this.getPalette().textSecondary
-          })
-      }
-      .type(ButtonType.Circle)
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-      .backgroundColor(this.getPalette().surfaceSubtle)
-      .accessibilityText('会话操作')
-      .onClick(() => {
-        this.onTrailingAction();
-      })
-      // 触控热区：32（AVATAR_SIZE.XS 尺寸档借用）→ 44（responseRegion 不占布局）
-      .responseRegion({
-        x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.AVATAR_SIZE.XS) / 2,
-        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.AVATAR_SIZE.XS) / 2,
-        width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
-        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+      SurfaceIconButton({
+        icon: AppIcon.MORE,
+        kind: 'surface',
+        buttonSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+        glyphSize: DesignConstants.FONT.SIZE.MD,
+        accessibilityLabel: '会话操作',
+        onPress: () => {
+          this.onTrailingAction();
+        }
       })
     }
     .width('100%')

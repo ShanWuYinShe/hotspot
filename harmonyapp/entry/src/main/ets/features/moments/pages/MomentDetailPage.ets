@@ -33,7 +33,8 @@ import { SystemButton } from '../../../components/SystemButton';
 import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState } from '../../../components/EmptyState';
 import { Pressable } from '../../../components/Pressable';
-import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
@@ -819,18 +820,17 @@ export struct MomentDetailPage {
       })
         .layoutWeight(1)
 
-      IconButton({
+      // 发送评论：primary accent 实底；空文案/发送中走组件内聚 disabled 态
+      //（替代旧外挂 .enabled/.opacity 与双态底色切换）
+      SurfaceIconButton({
         icon: AppIcon.SEND,
-        iconSize: IconSize.SMALL,
-        bgColor: this.commentText.trim().length > 0 ? this.getCurrentThemePalette().accentBackground : this.getSurfaceSubtle(),
-        iconColor: this.commentText.trim().length > 0 ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().textSecondary,
-        radius: DesignConstants.RADIUS.FULL,
-        minButtonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-        onButtonClick: () => { this.sendComment(); }
+        kind: 'primary',
+        buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+        glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        disabled: this.commentText.trim().length === 0 || this.commentSending,
+        accessibilityLabel: '发送评论',
+        onPress: () => { this.sendComment(); }
       })
-        .enabled(this.commentText.trim().length > 0 && !this.commentSending)
-        .opacity(this.commentText.trim().length === 0 || this.commentSending ?
-        DesignConstants.OPACITY.DISABLED : 1)
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })

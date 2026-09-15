@@ -16,7 +16,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
-import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SoftDivider } from '../../../components/SoftDivider';
 import { DesignConstants } from '../../../constants/DesignConstants';

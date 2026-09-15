@@ -16,6 +16,9 @@ export struct SurfaceIconButton {
   @Prop disabled: boolean = false;
   /** 无障碍语义描述（图标钮无文字，读屏依赖此标签，如全局返回钮「返回」） */
   @Prop accessibilityLabel: string = '';
+  /** 图标色逃逸口（媒体镀铬白字、品牌色等特殊着色）；空串走 kind 主题色。
+   *  仅限媒体浮层/hero 封面等主题色不可达的场景，常规页面禁止使用。 */
+  @Prop iconColor: string | ResourceColor = '';
   onPress?: () => void;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
@@ -74,6 +77,10 @@ export struct SurfaceIconButton {
   }
 
   private getIconColor(): ResourceColor | Color {
+    // 逃逸口显式着色优先（媒体镀铬等）
+    if (this.iconColor !== '') {
+      return this.iconColor;
+    }
     if (this.kind === 'primary') {
       return this.getPalette().accentText;
     }

@@ -3,7 +3,8 @@
  */
 
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemCard } from '../../../components/SystemCard';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
@@ -56,21 +57,18 @@ export struct DebugPanel {
     return this.getCurrentThemePalette().surfaceBackground;
   }
 
-  private getSurfaceSubtle(): string {
-    return this.getCurrentThemePalette().surfaceSubtle;
-  }
-
   build() {
     NavDestination() {
     Column() {
       // 标题栏
       Row() {
-        IconButton({
+        SurfaceIconButton({
           icon: AppIcon.BACK,
-          iconSize: IconSize.LARGE,
-          iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: this.getSurfaceSubtle(),
-          onButtonClick: () => {
+          kind: 'surface',
+          buttonSize: DesignConstants.LAYOUT.BACK_BUTTON_SIZE,
+          glyphSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          accessibilityLabel: '返回',
+          onPress: () => {
             AppRouter.pop();
           }
         })
@@ -82,12 +80,13 @@ export struct DebugPanel {
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
-        IconButton({
-          icon: AppIcon.CLOSE, // Used as Clear
-          iconSize: IconSize.LARGE,
-          iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: this.getSurfaceSubtle(),
-          onButtonClick: () => {
+        SurfaceIconButton({
+          icon: AppIcon.CLOSE,
+          kind: 'surface',
+          buttonSize: DesignConstants.LAYOUT.BACK_BUTTON_SIZE,
+          glyphSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          accessibilityLabel: '清空日志',
+          onPress: () => {
             this.logs = [];
           }
         })

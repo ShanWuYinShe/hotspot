@@ -12,8 +12,8 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
-import curves from '@ohos.curves';
 import { LucideIcon } from '../components/LucideIcon';
+import { SurfaceIconButton } from './SurfaceIconButton';
 
 @Component
 export struct SearchPageHeader {
@@ -33,7 +33,6 @@ export struct SearchPageHeader {
   onSubmit: (() => void) | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
-  @State private isBackPressed: boolean = false;
   @State private isFocused: boolean = false;
 
   private getPalette() {
@@ -50,38 +49,18 @@ export struct SearchPageHeader {
 
   @Builder
   private BackCircleButton() {
-    Button() {
-      LucideIcon({
-          icon: AppIcon.BACK,
-          iconSize: DesignConstants.FONT.SIZE.MD,
-          color: this.getPalette().textSecondary
-        })
-    }
-    .type(ButtonType.Circle)
-    // 与 SystemPageHeader 返回钮统一：BACK_BUTTON_SIZE 40 凸起圆钮
-    .width(DesignConstants.LAYOUT.BACK_BUTTON_SIZE)
-    .height(DesignConstants.LAYOUT.BACK_BUTTON_SIZE)
-    .backgroundColor(this.getSurfaceBackground())
-    .shadow(this.getPalette().surfaceShadow)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .scale(this.isBackPressed
-      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON }
-      : { x: 1, y: 1 })
-    .animation({
-      curve: curves.springMotion(
-        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-      )
-    })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.isBackPressed = true;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.isBackPressed = false;
+    // 返回钮统一走 SurfaceIconButton（与 SystemPageHeader 同款凸起中性 40vp：
+    // a11y + spring 按压 + 44 命中区由组件内聚，审查 中-1/低-4）。
+    // isBackPressed 手写按压态由组件的 spring 缩放替代，一并移除。
+    SurfaceIconButton({
+      icon: AppIcon.BACK,
+      kind: 'surface',
+      buttonSize: DesignConstants.LAYOUT.BACK_BUTTON_SIZE,
+      glyphSize: DesignConstants.FONT.SIZE.LG_PLUS,
+      accessibilityLabel: '返回',
+      onPress: () => {
+        this.onBack();
       }
-    })
-    .onClick(() => {
-      this.onBack();
     })
   }
 

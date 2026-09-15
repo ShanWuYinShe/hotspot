@@ -2,7 +2,8 @@ import { MomentItem, MomentImage, UserInfo } from '../core/types/api';
 import { interactionActions } from '../core/state/InteractionActions';
 import { MomentSocialState, isMomentLikedByReactions, sumReactionCounts } from '../core/state/InteractionStateStore';
 import { SystemAvatar } from './SystemAvatar';
-import { AppIcon, IconButton, IconSize } from './SystemIcon';
+import { AppIcon } from './SystemIcon';
+import { SurfaceIconButton } from './SurfaceIconButton';
 import { DesignConstants } from '../constants/DesignConstants';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { LocationUtil } from '../core/location/LocationUtil';
@@ -643,16 +644,20 @@ export struct MomentFeedCard {
 
   @Builder
   private actionBar(): void {
+    // 内容动作钮统一走 SurfaceIconButton neutral（36 钮 + 44 命中区 + a11y）；
+    // 动作钮语义为图标+计数并排，底色保持透明（对齐旧 IconButton 透明底用法）。
     Row() {
       Row({ space: DesignConstants.SPACING.XL }) {
         Row({ space: DesignConstants.SPACING.XS }) {
-          IconButton({
+          SurfaceIconButton({
             icon: this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART,
-            iconSize: IconSize.MEDIUM,
+            kind: 'neutral',
+            glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
             iconColor: this.isLikedByMe()
               ? this.getPalette().accentBackground
               : this.getPalette().textSecondary,
-            onButtonClick: () => this.onLikeClick(this.moment)
+            accessibilityLabel: this.isLikedByMe() ? '取消点赞' : '点赞',
+            onPress: () => this.onLikeClick(this.moment)
           })
           Text(this.formatCount(this.getMomentState()?.likes_count ?? sumReactionCounts(this.moment.reactions)))
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -660,11 +665,13 @@ export struct MomentFeedCard {
         }
 
         Row({ space: DesignConstants.SPACING.XS }) {
-          IconButton({
+          SurfaceIconButton({
             icon: AppIcon.MESSAGE,
-            iconSize: IconSize.MEDIUM,
+            kind: 'neutral',
+            glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
             iconColor: this.getPalette().textSecondary,
-            onButtonClick: () => this.openMomentDetail(this.moment)
+            accessibilityLabel: '查看评论',
+            onPress: () => this.openMomentDetail(this.moment)
           })
           Text(this.formatCount(this.getMomentState()?.comments_count ?? this.moment.comments_count))
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -675,19 +682,23 @@ export struct MomentFeedCard {
       Blank()
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        IconButton({
+        SurfaceIconButton({
           icon: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? AppIcon.STAR_FILL : AppIcon.STAR,
-          iconSize: IconSize.MEDIUM,
+          kind: 'neutral',
+          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           iconColor: this.getMomentState()?.is_favorited ?? this.moment.is_favorited
             ? this.getPalette().accentBackground
             : this.getPalette().textSecondary,
-          onButtonClick: () => this.onFavoriteClick(this.moment)
+          accessibilityLabel: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? '取消收藏' : '收藏',
+          onPress: () => this.onFavoriteClick(this.moment)
         })
-        IconButton({
+        SurfaceIconButton({
           icon: AppIcon.SHARE,
-          iconSize: IconSize.MEDIUM,
+          kind: 'neutral',
+          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           iconColor: this.getPalette().textSecondary,
-          onButtonClick: () => this.shareMoment(this.moment)
+          accessibilityLabel: '分享动态',
+          onPress: () => this.shareMoment(this.moment)
         })
       }
     }

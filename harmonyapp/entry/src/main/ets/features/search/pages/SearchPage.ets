@@ -24,7 +24,7 @@ import { SystemButton } from '../../../components/SystemButton';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
-import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { isDesktopForm } from '../../../core/responsive/Breakpoint';

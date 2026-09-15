@@ -7,7 +7,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { curves } from '@kit.ArkUI';
-import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { AppRouter } from '../../../core/router/AppRouter';
