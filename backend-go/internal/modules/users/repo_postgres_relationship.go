@@ -18,11 +18,11 @@ func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUse
 	if err != nil {
 		return Relationship{}, err
 	}
-	followedBy, _, _, _, _, _, err := r.getRelationFields(ctx, targetUserID, userID)
+	followedBy, blockedReverse, _, _, _, _, err := r.getRelationFields(ctx, targetUserID, userID)
 	if err != nil {
 		return Relationship{}, err
 	}
-	return Relationship{IsFollowing: following, IsFollowedBy: followedBy, IsBlocked: blocked}, nil
+	return Relationship{IsFollowing: following, IsFollowedBy: followedBy, IsBlocked: blocked, TargetBlocked: blockedReverse}, nil
 }
 
 // MutualFriends 一次查询返回双向共同好友总数 + 前 previewLimit 个预览
@@ -119,20 +119,21 @@ func (r *PostgresRepository) RelationshipBatch(ctx context.Context, fromUserID s
 		return nil, err
 	}
 	forwardRows.Close()
-	// Reverse edge: is each target following me?
+	// Reverse edge: is each target following me? did each target block me?
 	reverseRows, err := queryable.Query(ctx, queryListUserRelationsReverse, fromUserID, toUserIDs)
 	if err != nil {
 		return nil, err
 	}
 	for reverseRows.Next() {
 		var sourceUserID string
-		var following bool
-		if err := reverseRows.Scan(&sourceUserID, &following); err != nil {
+		var following, blocked bool
+		if err := reverseRows.Scan(&sourceUserID, &following, &blocked); err != nil {
 			reverseRows.Close()
 			return nil, err
 		}
 		rel := result[sourceUserID]
 		rel.IsFollowedBy = following
+		rel.TargetBlocked = blocked
 		result[sourceUserID] = rel
 	}
 	if err := reverseRows.Err(); err != nil {

@@ -29,6 +29,10 @@ type Repository interface {
 	Recent(context.Context, string, string, int, *time.Time) (PaginatedMessages, error)
 	Last(context.Context, string, string, *time.Time) (*PrivateMessageItem, error)
 	UnreadCount(context.Context, string, string, *time.Time) (int, error)
+	// LastByChatKeys / UnreadCountsByChatKeys：会话列表批量读（privatechats.List
+	// 消费，替代逐会话 Last/UnreadCount 的 N+1；boundaries 缺失的 key 视为 nil）。
+	LastByChatKeys(ctx context.Context, userID string, chatKeys []string, boundaries map[string]*time.Time) (map[string]PrivateMessageItem, error)
+	UnreadCountsByChatKeys(ctx context.Context, userID string, chatKeys []string, boundaries map[string]*time.Time) (map[string]int, error)
 	Update(context.Context, string, UpdatePrivateMessageRequest) (MessageEventMeta, error)
 	// Recall 撤回消息。window 为撤回时间窗（AppConfig.limits.
 	// message_recall_window_seconds，由 service 从 appConfig 取值传入）；

@@ -13,14 +13,13 @@ func (r *PostgresRepository) History(ctx context.Context, userID string, req Lis
 }
 
 func (r *PostgresRepository) Recent(ctx context.Context, userID, targetUserID string, limit int, deletedAfter *time.Time) (PaginatedMessages, error) {
-	history, err := r.historySince(ctx, userID, targetUserID, nil, deletedAfter)
-	if err != nil {
-		return PaginatedMessages{}, err
+	// limit 下推 SQL（审计 perf H-2）：此前恒取默认页（21 行）再内存截断，
+	// Last（limit=1）每会话白读 20 行完整消息并在 List 中被逐会话放大。
+	var pagination *PaginationParams
+	if limit > 0 {
+		pagination = &PaginationParams{Limit: limit}
 	}
-	if limit > 0 && len(history.Items) > limit {
-		history.Items = history.Items[:limit]
-	}
-	return history, nil
+	return r.historySince(ctx, userID, targetUserID, pagination, deletedAfter)
 }
 
 func (r *PostgresRepository) Last(ctx context.Context, userID, targetUserID string, deletedAfter *time.Time) (*PrivateMessageItem, error) {
@@ -51,6 +50,83 @@ func (r *PostgresRepository) UnreadCount(ctx context.Context, userID, targetUser
 		return 0, err
 	}
 	return count, nil
+}
+
+// LastByChatKeys 批量取每个会话最近一条（单条 DISTINCT ON 往返）。
+// boundaries 缺失的 key 以 NULL 下推（不限可见性下界）。
+func (r *PostgresRepository) LastByChatKeys(ctx context.Context, userID string, chatKeys []string, boundaries map[string]*time.Time) (map[string]PrivateMessageItem, error) {
+	if len(chatKeys) == 0 {
+		return map[string]PrivateMessageItem{}, nil
+	}
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	// sinceValues 用 []*time.Time 类型化下推（nil → NULL）：[]any 混合 nil 时
+	// pgx 无法推断 timestamptz[] 元素类型。
+	sinceValues := make([]*time.Time, len(chatKeys))
+	for i, key := range chatKeys {
+		if boundary, ok := boundaries[key]; ok && boundary != nil {
+			utc := boundary.UTC()
+			sinceValues[i] = &utc
+		}
+	}
+	rows, err := queryable.Query(ctx, queryLastPrivateMessagesByChatKeys, chatKeys, sinceValues)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make(map[string]PrivateMessageItem, len(chatKeys))
+	for rows.Next() {
+		var chatKey string
+		var item PrivateMessageItem
+		var fileID string
+		var senderNickname string
+		var senderAvatar string
+		if err := rows.Scan(&chatKey, &item.MessageID, &item.Type, &item.Content, &fileID, &item.ShareCode, &item.Sender.UserID, &senderNickname, &senderAvatar, &item.SentAt); err != nil {
+			return nil, err
+		}
+		item.Sender.Nickname = senderNickname
+		item.Sender.AvatarURL = types.StrPtr(senderAvatar)
+		if fileID != "" {
+			item.Media = &MessageMedia{URL: fileID}
+		}
+		result[chatKey] = item
+	}
+	return result, rows.Err()
+}
+
+// UnreadCountsByChatKeys 批量取各会话未读数（单条 GROUP BY 往返）。
+func (r *PostgresRepository) UnreadCountsByChatKeys(ctx context.Context, userID string, chatKeys []string, boundaries map[string]*time.Time) (map[string]int, error) {
+	if len(chatKeys) == 0 {
+		return map[string]int{}, nil
+	}
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	sinceValues := make([]*time.Time, len(chatKeys))
+	for i, key := range chatKeys {
+		if boundary, ok := boundaries[key]; ok && boundary != nil {
+			utc := boundary.UTC()
+			sinceValues[i] = &utc
+		}
+	}
+	rows, err := queryable.Query(ctx, queryUnreadPrivateMessageCountsByChatKeys, chatKeys, userID, sinceValues)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make(map[string]int, len(chatKeys))
+	for rows.Next() {
+		var chatKey string
+		var count int
+		if err := rows.Scan(&chatKey, &count); err != nil {
+			return nil, err
+		}
+		result[chatKey] = count
+	}
+	return result, rows.Err()
 }
 
 func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUserID string, pagination *PaginationParams, deletedAfter *time.Time) (PaginatedMessages, error) {

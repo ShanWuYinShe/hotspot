@@ -51,6 +51,12 @@ func (r *stubMsgRepo) Last(_ context.Context, _, _ string, _ *time.Time) (*Priva
 func (r *stubMsgRepo) UnreadCount(_ context.Context, _, _ string, _ *time.Time) (int, error) {
 	return r.unread, r.unreadErr
 }
+func (r *stubMsgRepo) LastByChatKeys(_ context.Context, _ string, _ []string, _ map[string]*time.Time) (map[string]PrivateMessageItem, error) {
+	return map[string]PrivateMessageItem{}, nil
+}
+func (r *stubMsgRepo) UnreadCountsByChatKeys(_ context.Context, _ string, _ []string, _ map[string]*time.Time) (map[string]int, error) {
+	return map[string]int{}, nil
+}
 func (r *stubMsgRepo) Update(_ context.Context, _ string, _ UpdatePrivateMessageRequest) (MessageEventMeta, error) {
 	return r.updateMeta, r.updateErr
 }

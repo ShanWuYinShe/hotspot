@@ -208,7 +208,7 @@ func TestRelationshipBatchPostgres(t *testing.T) {
 		{"t1", true, false}, {"t2", false, true},
 	}}
 	reverse := &listRowsValues{rows: [][]any{
-		{"t1", true}, {"t2", false},
+		{"t1", true, false}, {"t2", false, true},
 	}}
 	stub := &userListStub{rowsSeq: []persistence.Rows{forward, reverse}}
 	result, err = newUserListRepo(stub).RelationshipBatch(ctx, "me", []string{"t1", "t2"})
@@ -221,6 +221,9 @@ func TestRelationshipBatchPostgres(t *testing.T) {
 	if result["t2"].IsFollowing || !result["t2"].IsBlocked || result["t2"].IsFollowedBy {
 		t.Fatalf("t2 rel: %#v", result["t2"])
 	}
+	if !result["t2"].TargetBlocked {
+		t.Fatalf("t2 TargetBlocked (reverse is_blocked) 应为 true: %#v", result["t2"])
+	}
 
 	cases := []struct {
 		name string
@@ -231,11 +234,11 @@ func TestRelationshipBatchPostgres(t *testing.T) {
 		{"forward rows err", &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{{"t1", true, false}}, err: errors.New("tail")}}}},
 		{"reverse scan err", &userListStub{rowsSeq: []persistence.Rows{
 			&listRowsValues{rows: [][]any{{"t1", true, false}}},
-			&listRowsValues{rows: [][]any{{"t1", true}}, scanErr: errors.New("scan")},
+			&listRowsValues{rows: [][]any{{"t1", true, false}}, scanErr: errors.New("scan")},
 		}}},
 		{"reverse rows err", &userListStub{rowsSeq: []persistence.Rows{
 			&listRowsValues{rows: [][]any{{"t1", true, false}}},
-			&listRowsValues{rows: [][]any{{"t1", true}}, err: errors.New("tail")},
+			&listRowsValues{rows: [][]any{{"t1", true, false}}, err: errors.New("tail")},
 		}}},
 	}
 	for _, tc := range cases {

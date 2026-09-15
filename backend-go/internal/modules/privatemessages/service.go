@@ -20,6 +20,14 @@ type ReadService interface {
 	Recent(context.Context, string, int, *time.Time) (PaginatedMessages, error)
 	Last(context.Context, string, *time.Time) (*PrivateMessageItem, error)
 	UnreadCount(context.Context, string, *time.Time) (int, error)
+	// LastByChatKeys 批量取当前用户各会话的最近一条可见消息（会话列表一次
+	// 往返，替代逐会话 Last 的 N+1）。boundaries 按 chat_key 给出可见性下界
+	//（visibleBoundary；缺失的 key 视为 nil 不限）。会话无消息时不出现在
+	// 结果 map 中。
+	LastByChatKeys(ctx context.Context, chatKeys []string, boundaries map[string]*time.Time) (map[string]PrivateMessageItem, error)
+	// UnreadCountsByChatKeys 批量取当前用户各会话未读数（单条 GROUP BY
+	// 往返，口径与 UnreadCount 一致；无未读的 key 不出现在结果 map 中）。
+	UnreadCountsByChatKeys(ctx context.Context, chatKeys []string, boundaries map[string]*time.Time) (map[string]int, error)
 	LookupMessage(ctx context.Context, messageID string) (found bool, senderID string, err error)
 	// IsReactionTargetVisible 判定消息对当前调用方可反应（spec reaction.md 目标可见性）
 	IsReactionTargetVisible(ctx context.Context, messageID string) (found bool, visible bool, err error)
@@ -240,6 +248,19 @@ func (s *Service) Last(ctx context.Context, targetUserID string, deletedAfter *t
 func (s *Service) UnreadCount(ctx context.Context, targetUserID string, deletedAfter *time.Time) (int, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	return s.repo.UnreadCount(ctx, principal.UserID, targetUserID, deletedAfter)
+}
+
+// LastByChatKeys 会话列表批量读（viewer 经 principal 解析；chat_keys 须为
+// 当前用户自己的会话，越权 key 查不到任何行，天然无泄露面）。
+func (s *Service) LastByChatKeys(ctx context.Context, chatKeys []string, boundaries map[string]*time.Time) (map[string]PrivateMessageItem, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.LastByChatKeys(ctx, principal.UserID, chatKeys, boundaries)
+}
+
+// UnreadCountsByChatKeys 会话列表批量读（viewer 经 principal 解析）。
+func (s *Service) UnreadCountsByChatKeys(ctx context.Context, chatKeys []string, boundaries map[string]*time.Time) (map[string]int, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.UnreadCountsByChatKeys(ctx, principal.UserID, chatKeys, boundaries)
 }
 
 func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) error {

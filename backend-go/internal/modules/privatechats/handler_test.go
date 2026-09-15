@@ -48,12 +48,14 @@ func (r *privateChatErrorRepo) DeleteForUser(context.Context, string, string, *t
 }
 
 type privateChatMessageReader struct {
-	recentErr   error
-	lastErr     error
-	unreadErr   error
-	recent      privatemessages.PaginatedMessages
-	last        *privatemessages.PrivateMessageItem
-	unreadCount int
+	recentErr    error
+	lastErr      error
+	unreadErr    error
+	recent       privatemessages.PaginatedMessages
+	last         *privatemessages.PrivateMessageItem
+	unreadCount  int
+	lastByChat   map[string]privatemessages.PrivateMessageItem
+	unreadByChat map[string]int
 }
 
 func (r *privateChatMessageReader) Recent(context.Context, string, int, *time.Time) (privatemessages.PaginatedMessages, error) {
@@ -75,6 +77,26 @@ func (r *privateChatMessageReader) UnreadCount(context.Context, string, *time.Ti
 		return 0, r.unreadErr
 	}
 	return r.unreadCount, nil
+}
+
+func (r *privateChatMessageReader) LastByChatKeys(_ context.Context, _ []string, _ map[string]*time.Time) (map[string]privatemessages.PrivateMessageItem, error) {
+	if r.lastErr != nil {
+		return nil, r.lastErr
+	}
+	if r.lastByChat == nil {
+		return map[string]privatemessages.PrivateMessageItem{}, nil
+	}
+	return r.lastByChat, nil
+}
+
+func (r *privateChatMessageReader) UnreadCountsByChatKeys(_ context.Context, _ []string, _ map[string]*time.Time) (map[string]int, error) {
+	if r.unreadErr != nil {
+		return nil, r.unreadErr
+	}
+	if r.unreadByChat == nil {
+		return map[string]int{}, nil
+	}
+	return r.unreadByChat, nil
 }
 func (r *privateChatMessageReader) IsReactionTargetVisible(_ context.Context, _ string) (bool, bool, error) {
 	return false, false, nil
@@ -105,6 +127,19 @@ func (r *privateChatUserReader) GetMySettings(context.Context) (users.UserSettin
 
 func (r *privateChatUserReader) BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error) {
 	return false, false, nil
+}
+
+func (r *privateChatUserReader) ChatTargetsContext(_ context.Context, _ string, targetUserIDs []string) (map[string]users.ChatTargetContext, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	result := make(map[string]users.ChatTargetContext, len(targetUserIDs))
+	for _, id := range targetUserIDs {
+		if id == r.item.User.UserID && r.ok {
+			result[id] = users.ChatTargetContext{Info: r.item.User, Relation: users.Relationship{}}
+		}
+	}
+	return result, nil
 }
 
 func newHandlers() (*Handler, *privatemessages.Handler) {

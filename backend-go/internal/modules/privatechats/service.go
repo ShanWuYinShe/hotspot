@@ -14,8 +14,9 @@ import (
 
 type userReader interface {
 	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
-	ChatSettingsFor(context.Context, string) (allowPrivateChat string, found bool, err error)
-	BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error)
+	// ChatTargetsContext 批量解析目标上下文（画像/在线态/双向关系/私聊权限），
+	// 替代逐会话 OpenTheDoor + BlockStateBetween + ChatSettingsFor 的 N+1。
+	ChatTargetsContext(context.Context, string, []string) (map[string]users.ChatTargetContext, error)
 }
 
 type Service struct {
@@ -57,12 +58,16 @@ func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLi
 		state.DeletedAt = nil
 		state.VisibleSince = &now
 	}
-	chat, err := s.buildChat(ctx, principal.UserID, state)
+	chats, err := s.buildChats(ctx, principal.UserID, []ChatState{state})
 	if err != nil {
 		observability.L().Error("privatechats.open_the_door build_chat failed", "error", err, "target_user_id", targetUserID)
 		return PrivateChatOpenResult{}, err
 	}
-	return PrivateChatOpenResult{Chat: chat, RecentMessages: recent}, nil
+	if len(chats) == 0 {
+		// 对方已注销/不存在（批量组装按不可达跳过）。
+		return PrivateChatOpenResult{}, users.ErrUserNotFound
+	}
+	return PrivateChatOpenResult{Chat: chats[0], RecentMessages: recent}, nil
 }
 func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (PaginatedPrivateChats, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
@@ -71,16 +76,9 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 		observability.L().Error("privatechats.list failed", "error", err)
 		return PaginatedPrivateChats{}, err
 	}
-	items := make([]PrivateChatItem, 0, len(states))
-	for _, state := range states {
-		item, err := s.buildChat(ctx, principal.UserID, state)
-		if err != nil {
-			return PaginatedPrivateChats{}, err
-		}
-		if state.DeletedAt != nil && item.LastMessage == nil {
-			continue
-		}
-		items = append(items, item)
+	items, err := s.buildChats(ctx, principal.UserID, states)
+	if err != nil {
+		return PaginatedPrivateChats{}, err
 	}
 	// 排序键用解析后的时间值而非 RFC3339Nano 字符串：变长小数秒格式下
 	// 字典序与时间序相反（"12:00:00Z" > "12:00:00.5Z"），同秒会话会错序。
@@ -151,36 +149,73 @@ func (s *Service) Delete(ctx context.Context, targetUserID string) error {
 	return s.repo.DeleteForUser(ctx, principal.UserID, targetUserID, &now)
 }
 
-func (s *Service) buildChat(ctx context.Context, userID string, state ChatState) (PrivateChatItem, error) {
-	userItem, ok, err := s.users.OpenTheDoor(ctx, state.TargetID)
+// buildChats 批量组装会话列表项（审计 perf H-1）：此前逐会话 buildChat 触发
+// 5 类 N+1（users.OpenTheDoor 内部 ~7+ 查询、Last 恒读 21 行、UnreadCount、
+// BlockStateBetween、ChatSettingsFor），50 会话 ≈ 500 次 DB 往返。现收敛为
+// 3 次批量读（消息末条 DISTINCT ON、未读 GROUP BY、目标上下文批量），会话
+// 数量级增长时往返数恒定。对方已注销的会话按不可达跳过（对齐 users 注销语义）。
+func (s *Service) buildChats(ctx context.Context, userID string, states []ChatState) ([]PrivateChatItem, error) {
+	items := make([]PrivateChatItem, 0, len(states))
+	if len(states) == 0 {
+		return items, nil
+	}
+	chatKeys := make([]string, 0, len(states))
+	targetIDs := make([]string, 0, len(states))
+	boundaries := make(map[string]*time.Time, len(states))
+	for _, state := range states {
+		chatKeys = append(chatKeys, state.ChatKey)
+		targetIDs = append(targetIDs, state.TargetID)
+		boundaries[state.ChatKey] = visibleBoundary(state)
+	}
+	lastByChat, err := s.messages.LastByChatKeys(ctx, chatKeys, boundaries)
 	if err != nil {
-		return PrivateChatItem{}, err
+		observability.L().Error("privatechats.build_chats last batch failed", "error", err)
+		return nil, err
 	}
-	if !ok {
-		return PrivateChatItem{}, users.ErrUserNotFound
-	}
-	boundary := visibleBoundary(state)
-	last, err := s.messages.Last(ctx, state.TargetID, boundary)
+	unreadByChat, err := s.messages.UnreadCountsByChatKeys(ctx, chatKeys, boundaries)
 	if err != nil {
-		observability.L().Error("privatechats.build_chat last message failed", "error", err, "target_user_id", state.TargetID)
-		return PrivateChatItem{}, err
+		observability.L().Error("privatechats.build_chats unread batch failed", "error", err)
+		return nil, err
 	}
-	unreadCount, err := s.messages.UnreadCount(ctx, state.TargetID, boundary)
+	targets, err := s.users.ChatTargetsContext(ctx, userID, targetIDs)
 	if err != nil {
-		return PrivateChatItem{}, err
+		observability.L().Error("privatechats.build_chats targets batch failed", "error", err)
+		return nil, err
 	}
-	createdAt := state.CreatedAt.UTC().Format(time.RFC3339Nano)
+	for _, state := range states {
+		target, ok := targets[state.TargetID]
+		if !ok {
+			// 对方已注销/不存在：跳过该会话而非让整个列表失败
+			//（spec api_spec_user.md：注销用户不再可被访问）。
+			continue
+		}
+		var last *privatemessages.PrivateMessageItem
+		if item, found := lastByChat[state.ChatKey]; found {
+			last = &item
+		}
+		item := s.assembleChat(userID, state, target, last, unreadByChat[state.ChatKey])
+		if state.DeletedAt != nil && item.LastMessage == nil {
+			continue
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+// assembleChat 由批量取回的数据纯内存组装单个会话项，权限判定与
+// can_message/blocked_reason 口径见行内注释（契约 api_spec_chat.md）。
+func (s *Service) assembleChat(userID string, state ChatState, target users.ChatTargetContext, last *privatemessages.PrivateMessageItem, unreadCount int) PrivateChatItem {
 	item := PrivateChatItem{
-		OtherUser:      UserInfo{UserID: userItem.User.UserID, Nickname: userItem.User.Nickname, AvatarURL: userItem.User.AvatarURL},
+		OtherUser:      UserInfo{UserID: target.Info.UserID, Nickname: target.Info.Nickname, AvatarURL: target.Info.AvatarURL},
 		UnreadCount:    unreadCount,
 		IsMuted:        state.IsMuted,
 		IsPinned:       state.IsPinned,
 		LastActivityAt: state.CreatedAt.UTC().Format(time.RFC3339Nano),
-		CreatedAt:      &createdAt,
+		CreatedAt:      func() *string { c := state.CreatedAt.UTC().Format(time.RFC3339Nano); return &c }(),
 		CanMessage:     true,
 	}
-	if userItem.PresenceStatus != nil {
-		ps := string(*userItem.PresenceStatus)
+	if target.PresenceStatus != nil {
+		ps := string(*target.PresenceStatus)
 		item.PresenceStatus = &ps
 	}
 	// 契约(api_spec_chat.md → PrivateChatItem)：blocked_reason 仅 can_message=false
@@ -190,28 +225,18 @@ func (s *Service) buildChat(ctx context.Context, userID string, state ChatState)
 		item.CanMessage = false
 		item.ForbiddenReason = &r
 	}
-	// 双向黑名单都要置 can_message=false：OpenTheDoor 的 Relation.IsBlocked 是
-	// 查看者视角（查看者拉黑了对方），对方拉黑查看者需走 BlockStateBetween 补判。
-	callerBlocked, targetBlocked, blockErr := s.users.BlockStateBetween(ctx, userID, state.TargetID)
-	if blockErr != nil {
-		return item, blockErr
-	}
-	if callerBlocked || targetBlocked {
+	// 双向黑名单都要置 can_message=false：Relation.IsBlocked 是查看者视角
+	//（查看者拉黑了对方），对方拉黑查看者看 TargetBlocked。
+	if target.Relation.IsBlocked || target.Relation.TargetBlocked {
 		blockReason(httpx.ReasonBlockedByUser)
 	}
-	// 对方的私聊权限设置：显式按 user id 读取（users.Service.ChatSettingsFor），
-	// 不再伪造对方 Principal 复用 GetMySettings 绕过身份层。
-	allowPerm, found, settingsErr := s.users.ChatSettingsFor(ctx, state.TargetID)
-	if settingsErr != nil {
-		return item, settingsErr
-	}
-	if found {
-		allowPrivateChat := users.ChatPerm(allowPerm)
-		switch allowPrivateChat {
+	// 对方的私聊权限设置：friends-only 需双向关注。
+	if target.SettingsFound {
+		switch target.AllowPrivateChat {
 		case users.ChatPermNobody:
 			blockReason(httpx.ReasonPrivacySetting)
 		case users.ChatPermFriends:
-			if userItem.Relation == nil || !(userItem.Relation.IsFollowing && userItem.Relation.IsFollowedBy) {
+			if !(target.Relation.IsFollowing && target.Relation.IsFollowedBy) {
 				blockReason(httpx.ReasonPrivacySetting)
 			}
 		}
@@ -224,7 +249,7 @@ func (s *Service) buildChat(ctx context.Context, userID string, state ChatState)
 		item.LastActivityAt = last.SentAt
 		item.LastMessage = &LastMessage{MessageID: last.MessageID, Content: last.Content, Type: last.Type, ShareCode: last.ShareCode, Sender: UserInfo{UserID: last.Sender.UserID, Nickname: last.Sender.Nickname, AvatarURL: last.Sender.AvatarURL}, SentAt: last.SentAt}
 	}
-	return item, nil
+	return item
 }
 
 func visibleBoundary(state ChatState) *time.Time {

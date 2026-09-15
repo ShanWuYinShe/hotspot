@@ -126,6 +126,63 @@ func (r *InMemoryRepository) Last(ctx context.Context, userID, targetUserID stri
 	return &recent.Items[0], nil
 }
 
+// LastByChatKeys 批量语义与逐 key Last 一致（内存实现无往返成本，循环复用）。
+func (r *InMemoryRepository) LastByChatKeys(ctx context.Context, userID string, chatKeys []string, boundaries map[string]*time.Time) (map[string]PrivateMessageItem, error) {
+	result := make(map[string]PrivateMessageItem, len(chatKeys))
+	for _, chatKey := range chatKeys {
+		target, ok := targetOfChatKey(chatKey, userID)
+		if !ok {
+			continue
+		}
+		var boundary *time.Time
+		if boundaries != nil {
+			boundary = boundaries[chatKey]
+		}
+		item, err := r.Last(ctx, userID, target, boundary)
+		if err != nil {
+			return nil, err
+		}
+		if item != nil {
+			result[chatKey] = *item
+		}
+	}
+	return result, nil
+}
+
+// UnreadCountsByChatKeys 批量语义与逐 key UnreadCount 一致。
+func (r *InMemoryRepository) UnreadCountsByChatKeys(ctx context.Context, userID string, chatKeys []string, boundaries map[string]*time.Time) (map[string]int, error) {
+	result := make(map[string]int, len(chatKeys))
+	for _, chatKey := range chatKeys {
+		target, ok := targetOfChatKey(chatKey, userID)
+		if !ok {
+			continue
+		}
+		var boundary *time.Time
+		if boundaries != nil {
+			boundary = boundaries[chatKey]
+		}
+		count, err := r.UnreadCount(ctx, userID, target, boundary)
+		if err != nil {
+			return nil, err
+		}
+		if count > 0 {
+			result[chatKey] = count
+		}
+	}
+	return result, nil
+}
+
+// targetOfChatKey 从确定性 chat_key 反解对方 user_id（chat_key = 较小 id + ":" +
+// 较大 id，与 conversationKey 同规则；user_id 由 idgen 生成不含分隔符）。
+func targetOfChatKey(chatKey, userID string) (string, bool) {
+	for _, target := range strings.Split(chatKey, ":") {
+		if target != "" && target != userID {
+			return target, true
+		}
+	}
+	return "", false
+}
+
 func (r *InMemoryRepository) UnreadCount(_ context.Context, userID, targetUserID string, deletedAfter *time.Time) (int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

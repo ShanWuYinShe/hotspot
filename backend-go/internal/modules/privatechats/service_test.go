@@ -64,6 +64,30 @@ func (m *stubMsgReadService) Last(_ context.Context, _ string, _ *time.Time) (*p
 func (m *stubMsgReadService) UnreadCount(_ context.Context, _ string, _ *time.Time) (int, error) {
 	return m.unreadCount, m.unreadErr
 }
+func (m *stubMsgReadService) LastByChatKeys(_ context.Context, chatKeys []string, _ map[string]*time.Time) (map[string]privatemessages.PrivateMessageItem, error) {
+	if m.lastErr != nil {
+		return nil, m.lastErr
+	}
+	result := make(map[string]privatemessages.PrivateMessageItem, len(chatKeys))
+	if m.lastResult != nil {
+		for _, key := range chatKeys {
+			result[key] = *m.lastResult
+		}
+	}
+	return result, nil
+}
+func (m *stubMsgReadService) UnreadCountsByChatKeys(_ context.Context, chatKeys []string, _ map[string]*time.Time) (map[string]int, error) {
+	if m.unreadErr != nil {
+		return nil, m.unreadErr
+	}
+	result := make(map[string]int, len(chatKeys))
+	if m.unreadCount > 0 {
+		for _, key := range chatKeys {
+			result[key] = m.unreadCount
+		}
+	}
+	return result, nil
+}
 func (m *stubMsgReadService) IsReactionTargetVisible(_ context.Context, _ string) (bool, bool, error) {
 	return false, false, nil
 }
@@ -92,6 +116,19 @@ func (u *stubChatUserReader) GetMySettings(_ context.Context) (users.UserSetting
 }
 func (u *stubChatUserReader) BlockStateBetween(_ context.Context, _ string, _ string) (callerBlocked, targetBlocked bool, err error) {
 	return false, false, nil
+}
+
+func (u *stubChatUserReader) ChatTargetsContext(_ context.Context, _ string, targetUserIDs []string) (map[string]users.ChatTargetContext, error) {
+	if u.userErr != nil {
+		return nil, u.userErr
+	}
+	result := make(map[string]users.ChatTargetContext, len(targetUserIDs))
+	for _, id := range targetUserIDs {
+		if u.found {
+			result[id] = users.ChatTargetContext{Info: u.item.User, PresenceStatus: u.item.PresenceStatus, Relation: users.Relationship{}, AllowPrivateChat: u.settings.AllowPrivateChat, SettingsFound: true}
+		}
+	}
+	return result, nil
 }
 
 func chatCtx(userID string) context.Context {

@@ -23,6 +23,12 @@ func (m mockPrivateMessagesReadService) Last(context.Context, string, *time.Time
 func (m mockPrivateMessagesReadService) UnreadCount(context.Context, string, *time.Time) (int, error) {
 	return 0, nil
 }
+func (m mockPrivateMessagesReadService) LastByChatKeys(context.Context, []string, map[string]*time.Time) (map[string]privatemessages.PrivateMessageItem, error) {
+	return map[string]privatemessages.PrivateMessageItem{}, nil
+}
+func (m mockPrivateMessagesReadService) UnreadCountsByChatKeys(context.Context, []string, map[string]*time.Time) (map[string]int, error) {
+	return map[string]int{}, nil
+}
 func (m mockPrivateMessagesReadService) LookupMessage(context.Context, string) (bool, string, error) {
 	return false, "", nil
 }

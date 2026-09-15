@@ -157,6 +157,68 @@ func (s *Service) BlockStateBetween(ctx context.Context, aUserID, bUserID string
 	return s.repo.BlockedEitherWay(ctx, aUserID, bUserID)
 }
 
+// ChatTargetContext 会话列表单目标上下文（ChatTargetsContext 的批量产物，
+// 供 privatechats.List 一次组装，替代逐会话 OpenTheDoor 的 7+ 查询 N+1）。
+type ChatTargetContext struct {
+	// Info 基础画像（id/昵称/头像）。
+	Info UserInfo
+	// PresenceStatus 经对方 presence_visible 门控后的在线状态（nil = 不可见）。
+	PresenceStatus *UserPresenceStatus
+	// Relation viewer→target 的双向关系快照：IsFollowing/IsFollowedBy 供
+	// friends-only 私聊权限判定，IsBlocked/TargetBlocked 供双向拉黑拦截
+	//（与单查 Relationship 口径一致；恒非 nil）。
+	Relation Relationship
+	// AllowPrivateChat 对方私聊权限设置；SettingsFound=false 时未持久化
+	//（调用方按默认 everyone 处理）。
+	AllowPrivateChat ChatPerm
+	SettingsFound    bool
+}
+
+// ChatTargetsContext 批量解析 viewer 对多个目标的会话上下文：3 次批量往返
+// （画像、设置、关系双向边）替代逐目标 OpenTheDoor + BlockStateBetween +
+// ChatSettingsFor 的 N+1。已注销/不存在目标不出现在结果中。
+func (s *Service) ChatTargetsContext(ctx context.Context, viewerID string, targetUserIDs []string) (map[string]ChatTargetContext, error) {
+	if len(targetUserIDs) == 0 {
+		return map[string]ChatTargetContext{}, nil
+	}
+	profiles, err := s.repo.GetProfiles(ctx, targetUserIDs)
+	if err != nil {
+		return nil, err
+	}
+	live := make([]string, 0, len(targetUserIDs))
+	for _, id := range targetUserIDs {
+		if profile, ok := profiles[id]; ok && !profile.IsDeleted {
+			live = append(live, id)
+		}
+	}
+	settingsBatch, err := s.repo.GetSettingsBatch(ctx, live)
+	if err != nil {
+		return nil, err
+	}
+	relations, err := s.repo.RelationshipBatch(ctx, viewerID, live)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]ChatTargetContext, len(live))
+	for _, id := range live {
+		profile := profiles[id]
+		settings, found := settingsBatch[id]
+		presenceVisible := !found || settings.PresenceVisible
+		item := ChatTargetContext{
+			Info:             UserInfo{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: types.StrPtr(profile.AvatarURL)},
+			Relation:         relations[id],
+			AllowPrivateChat: settings.AllowPrivateChat,
+			SettingsFound:    found,
+		}
+		if presenceVisible {
+			ps := profile.PresenceStatus
+			item.PresenceStatus = &ps
+		}
+		result[id] = item
+	}
+	return result, nil
+}
+
 func (s *Service) Unblock(ctx context.Context, targetUserID string) error {
 	startedAt := time.Now()
 	observability.L().Info("users.unblock started", "target_user_id", targetUserID)

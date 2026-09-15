@@ -201,9 +201,10 @@ WHERE user_id = $1 AND target_user_id = ANY($2)`
 
 	// queryListUserRelationsReverse fetches the reverse-edge rows
 	// (target_user_id = $1 → user_id = ANY($2)) for a batched
-	// relationship lookup so RelationshipBatch can resolve IsFollowedBy.
+	// relationship lookup so RelationshipBatch can resolve IsFollowedBy
+	// and TargetBlocked (对方是否拉黑了查看者).
 	queryListUserRelationsReverse = `
-SELECT user_id, is_following
+SELECT user_id, is_following, is_blocked
 FROM user_relations
 WHERE target_user_id = $1 AND user_id = ANY($2)`
 

@@ -44,6 +44,12 @@ func (r *privateMessageErrorRepo) Last(context.Context, string, string, *time.Ti
 func (r *privateMessageErrorRepo) UnreadCount(context.Context, string, string, *time.Time) (int, error) {
 	return 0, r.recentErr
 }
+func (r *privateMessageErrorRepo) LastByChatKeys(context.Context, string, []string, map[string]*time.Time) (map[string]PrivateMessageItem, error) {
+	return nil, r.lastErr
+}
+func (r *privateMessageErrorRepo) UnreadCountsByChatKeys(context.Context, string, []string, map[string]*time.Time) (map[string]int, error) {
+	return nil, r.recentErr
+}
 func (r *privateMessageErrorRepo) Update(context.Context, string, UpdatePrivateMessageRequest) (MessageEventMeta, error) {
 	return MessageEventMeta{}, r.updateErr
 }

@@ -196,6 +196,43 @@ WHERE pm.chat_key = $1
   AND (prs.last_read_sent_at IS NULL OR pm.sent_at > prs.last_read_sent_at
        OR (pm.sent_at = prs.last_read_sent_at AND prs.last_read_message_id IS NOT NULL AND pm.message_id <> prs.last_read_message_id))`
 
+	// queryLastPrivateMessagesByChatKeys 会话列表批量取最近一条（DISTINCT ON +
+	// VALUES 边界下推），替代逐会话 Last 的 N+1（审计 perf H-1/H-2）。
+	// 行形状是 queryPrivateMessagesHistory 的预览子集（message/type/content/
+	// file/share/sender/sent_at），不含 reply 与 is_read（列表预览不需要）。
+	queryLastPrivateMessagesByChatKeys = `
+SELECT DISTINCT ON (pm.chat_key)
+       pm.chat_key,
+       pm.message_id,
+       pm.type,
+       COALESCE(pm.content, ''),
+       COALESCE(pm.file_id, ''),
+       COALESCE(pm.share_code, ''),
+       pm.sender_user_id,
+       COALESCE(sender.nickname, ''),
+       COALESCE(sender.avatar_url, ''),
+       TO_CHAR(pm.sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+FROM private_messages pm
+JOIN (SELECT unnest($1::text[]) AS chat_key, unnest($2::timestamptz[]) AS since) b
+  ON b.chat_key = pm.chat_key AND (b.since IS NULL OR pm.sent_at > b.since)
+LEFT JOIN users sender ON sender.user_id = pm.sender_user_id
+ORDER BY pm.chat_key, pm.sent_at DESC, pm.message_id DESC`
+
+	// queryUnreadPrivateMessageCountsByChatKeys 会话列表批量未读数（单条
+	// GROUP BY，口径与 queryUnreadPrivateMessageCount 逐字一致）。
+	queryUnreadPrivateMessageCountsByChatKeys = `
+SELECT pm.chat_key, COUNT(*)
+FROM private_messages pm
+JOIN (SELECT unnest($1::text[]) AS chat_key, unnest($3::timestamptz[]) AS since) b
+  ON b.chat_key = pm.chat_key AND (b.since IS NULL OR pm.sent_at > b.since)
+LEFT JOIN private_chat_read_state prs
+  ON prs.chat_key = pm.chat_key AND prs.user_id = $2
+WHERE pm.sender_user_id <> $2
+  AND pm.is_recalled = FALSE
+  AND (prs.last_read_sent_at IS NULL OR pm.sent_at > prs.last_read_sent_at
+       OR (pm.sent_at = prs.last_read_sent_at AND prs.last_read_message_id IS NOT NULL AND pm.message_id <> prs.last_read_message_id))
+GROUP BY pm.chat_key`
+
 	queryCountPrivateMessagesByTarget = `
 		SELECT CASE
 		         WHEN pc.user_a_id = $1 THEN pc.user_b_id

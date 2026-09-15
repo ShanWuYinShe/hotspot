@@ -10,6 +10,9 @@ type Relationship struct {
 	IsFollowing  bool `json:"is_following"`
 	IsFollowedBy bool `json:"is_followed_by"`
 	IsBlocked    bool `json:"is_blocked"`
+	// TargetBlocked 对方拉黑了查看者（查看者视角的反向边）。不进 API 契约，
+	// 供会话列表等内部消费方一次批量取回双向拉黑状态。
+	TargetBlocked bool `json:"-"`
 }
 
 var (
