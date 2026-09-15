@@ -43,6 +43,7 @@ type AdminRateLimitConfig struct {
 	ReportsCreatePerHour     int `json:"reports_create_per_hour"`
 	UploadPresignPerHour     int `json:"upload_presign_per_hour"`
 	WSSubscribePerSecond     int `json:"ws_subscribe_per_second"`
+	WSHandshakePerMinute     int `json:"ws_handshake_per_minute"`
 	AdminReadPerMinute       int `json:"admin_read_per_minute"`
 	AdminWritePerMinute      int `json:"admin_write_per_minute"`
 }
@@ -137,6 +138,7 @@ type PartialRateLimitConfig struct {
 	ReportsCreatePerHour     *int `json:"reports_create_per_hour,omitempty"`
 	UploadPresignPerHour     *int `json:"upload_presign_per_hour,omitempty"`
 	WSSubscribePerSecond     *int `json:"ws_subscribe_per_second,omitempty"`
+	WSHandshakePerMinute     *int `json:"ws_handshake_per_minute,omitempty"`
 	AdminReadPerMinute       *int `json:"admin_read_per_minute,omitempty"`
 	AdminWritePerMinute      *int `json:"admin_write_per_minute,omitempty"`
 }

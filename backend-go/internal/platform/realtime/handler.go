@@ -85,7 +85,10 @@ func NewHandlerWithContext(ctx context.Context, auth *platformauth.Service, user
 	sweepCtx, cancel := context.WithCancel(ctx)
 	h := &Handler{auth: auth, userRepo: userRepo, groupRepo: groupRepo, stop: cancel}
 	h.wg.Add(1)
-	worker.GoRestartable("realtime.typing_sweeper", func() { h.sweepTypingThrottle(sweepCtx) })
+	// 注意用 worker.Go 而非 GoRestartable：sweepTypingThrottle 自带 defer
+	// h.wg.Done() 与 Close 的 wg.Wait() 配对，panic 重启会造成二次 Done
+	// （负计数 panic）并破坏 Wait 语义。纯内存 throttle 清理无重启价值。
+	worker.Go("realtime.typing_sweeper", func() { h.sweepTypingThrottle(sweepCtx) })
 	return h
 }
 

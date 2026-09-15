@@ -203,6 +203,7 @@ func applyRateLimitsPatch(target *AdminRateLimitConfig, patch PartialRateLimitCo
 		{&target.ReportsCreatePerHour, patch.ReportsCreatePerHour},
 		{&target.UploadPresignPerHour, patch.UploadPresignPerHour},
 		{&target.WSSubscribePerSecond, patch.WSSubscribePerSecond},
+		{&target.WSHandshakePerMinute, patch.WSHandshakePerMinute},
 		{&target.AdminReadPerMinute, patch.AdminReadPerMinute},
 		{&target.AdminWritePerMinute, patch.AdminWritePerMinute},
 	}

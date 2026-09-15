@@ -33,6 +33,10 @@ func Go(name string, fn func()) {
 // (1s 起步，封顶 30s)；fn 干净返回（如 ctx 取消触发的停机退出）不重启。
 // 此前单循环长驻 sweeper（通知清理、限流清理等）一次未预期 panic 即永久
 // 停转——例如通知 prune 停转会让 notifications 表恢复无限增长。
+//
+// 契约：fn 不得自带 Add/Done、WaitGroup 等外部生命周期计数——panic 重启会
+// 二次触发 Done（负计数 panic）并破坏 Wait 语义（realtime 的 typing sweeper
+// 与 redis bridge 即因此必须用 Go）。适用于纯内聚状态的循环（ticker sweeper）。
 func GoRestartable(name string, fn func()) {
 	go func() {
 		backoff := time.Second

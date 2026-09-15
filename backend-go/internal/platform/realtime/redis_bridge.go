@@ -62,7 +62,10 @@ func NewRedisBridge(rdb *redis.Client, instanceID string, hub *Hub) (*RedisBridg
 	b.subCh = sub.Channel()
 
 	b.done.Add(1)
-	worker.GoRestartable("realtime.redis_bridge", b.receiveLoop)
+	// 注意用 worker.Go 而非 GoRestartable：receiveLoop 自带 defer b.done.Done()
+	// 与 Close 的 done.Wait() 配对，panic 重启会造成二次 Done（负计数 panic）
+	// 并破坏 Wait 语义。桥内消息处理已逐条防抖（unmarshal 失败仅记日志跳过）。
+	worker.Go("realtime.redis_bridge", b.receiveLoop)
 	return b, nil
 }
 
@@ -128,14 +131,21 @@ func (b *RedisBridge) dispatchLocal(channel string, event Event) {
 		groupID := strings.TrimPrefix(channel, redisChannelGroup)
 		b.hub.deliverGroupLocal(groupID, event)
 	case strings.HasPrefix(channel, redisChannelRevoke):
-		// 订阅撤销控制事件：只清本实例注册表，不向 sink 投递（载荷 group_id
-		// 经 JSON 往返为 map，按宽口径解析）。
+		// 订阅撤销控制事件：只清本实例注册表，不向 sink 投递。载荷经 JSON
+		// 往返为 map（跨实例脏消息/空载荷按宽口径防抖，不做未检查断言——
+		// nil interface 断言会 panic）。
 		userID := strings.TrimPrefix(channel, redisChannelRevoke)
-		if groupID, ok := event.Payload.(map[string]any)["group_id"].(string); ok {
-			b.hub.revokeGroupLocal(userID, groupID)
-		} else {
-			observability.L().Warn("redis bridge: revoke event missing group_id", "user_id", userID)
+		payload, ok := event.Payload.(map[string]any)
+		if !ok {
+			observability.L().Warn("redis bridge: revoke event with unexpected payload", "user_id", userID)
+			break
 		}
+		groupID, ok := payload["group_id"].(string)
+		if !ok || groupID == "" {
+			observability.L().Warn("redis bridge: revoke event missing group_id", "user_id", userID)
+			break
+		}
+		b.hub.revokeGroupLocal(userID, groupID)
 	case channel == redisChannelAll:
 		b.hub.deliverAllLocal(event)
 	default:
