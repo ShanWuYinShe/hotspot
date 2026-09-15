@@ -22,6 +22,11 @@ import (
 
 var ErrMomentNotFound = errors.New("comments: moment not found")
 
+// mentionsMaxCount 契约级上限（api_spec_base.md 字段校验约束：mentions 最多 20 个）。
+// 与 moments/groupmessages 对齐：每个 mention 触发一次通知落库 + 一次 WS 推送，
+// 不限制会让单条评论放大为数万条通知（轰炸向量）。
+const mentionsMaxCount = 20
+
 type Service struct {
 	repo          Repository
 	moments       MomentProvider
@@ -84,6 +89,9 @@ func (s *Service) ensureContentLength(ctx context.Context, content string) error
 func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (CommentItem, error) {
 	if err := s.ensureContentLength(ctx, req.Content); err != nil {
 		return CommentItem{}, err
+	}
+	if len(req.Mentions) > mentionsMaxCount {
+		return CommentItem{}, ErrTooManyMentions
 	}
 	if err := s.ensureMomentCommentable(ctx, req.MomentID); err != nil {
 		return CommentItem{}, err

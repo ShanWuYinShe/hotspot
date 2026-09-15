@@ -47,6 +47,10 @@ type InMemoryRepository struct {
 
 const passwordResetThrottleWindow = 10 * time.Minute
 
+// registerCodeThrottleWindow 注册验证码 per-login_id 发送节流窗口：IP 维度
+// 由 ratelimit 桶控制，此处按 login_id 兜底防代理池绕过后的验证码轰炸。
+const registerCodeThrottleWindow = 60 * time.Second
+
 // maxVerificationCodeFailures 验证码容错次数：同一 login_id 最新有效码累计
 // 失败满此数即静默作废（防爆破；对齐登录侧 defaultMaxFailures = 5）。
 // PG 与内存双实现共用（同包常量）。
@@ -251,9 +255,16 @@ func (r *InMemoryRepository) LastResetCode(loginID string) string {
 }
 
 // CreateRegisterCode 生成并落库注册验证码（不校验账号存在性，防枚举）。
+// per-login_id 发送节流对齐 PG 实现（registerCodeThrottleWindow）。
 func (r *InMemoryRepository) CreateRegisterCode(_ context.Context, loginID string, expiresAt time.Time) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	now := time.Now().UTC()
+	if items := r.registerCodes[loginID]; len(items) > 0 {
+		if latest := items[len(items)-1]; now.Sub(latest.CreatedAt) < registerCodeThrottleWindow {
+			return "", ErrRegisterCodeThrottled
+		}
+	}
 	requestID, err := generateUserID()
 	if err != nil {
 		return "", err
@@ -267,7 +278,7 @@ func (r *InMemoryRepository) CreateRegisterCode(_ context.Context, loginID strin
 		LoginID:          loginID,
 		VerificationCode: code,
 		ExpiresAt:        expiresAt,
-		CreatedAt:        time.Now().UTC(),
+		CreatedAt:        now,
 	})
 	return code, nil
 }

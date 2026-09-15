@@ -14,6 +14,9 @@ var (
 	ErrInvalidCursor           = errors.New("private_messages: invalid cursor")
 	// ErrInvalidShareCode：share 类型消息的 share_code 无效（不存在/已撤销/已过期）。
 	ErrInvalidShareCode = errors.New("private_messages: invalid share code")
+	// ErrFileNotOwned：媒体消息的 file_id 不存在、不属于发送者或未完成上传
+	// （对齐 moments 图片归属口径，spec 10300）。
+	ErrFileNotOwned = errors.New("private_messages: file not owned by sender")
 )
 
 type MessageEventMeta struct {

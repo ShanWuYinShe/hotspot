@@ -36,6 +36,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			if errors.Is(err, ErrCommentTooLong) {
 				return httpx.Business[any](r, "Create", httpx.CodeInvalidRequest, "评论内容超过长度限制")
 			}
+			if errors.Is(err, ErrTooManyMentions) {
+				return httpx.Business[any](r, "Create", httpx.CodeInvalidRequest, "mentions 数量超过上限")
+			}
 			// 契约(api_spec_errors.md)：10200 必带 data.forbidden_reason
 			if errors.Is(err, ErrCommentPrivacyDenied) {
 				return httpx.BusinessForbidden(r, "Create", httpx.ReasonPrivacySetting, "瞬间作者限制评论")

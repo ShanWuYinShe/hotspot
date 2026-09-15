@@ -21,4 +21,9 @@ var (
 	// ErrAvatarNotOwned avatar_file_id 不存在/不归属当前用户/非 avatar 类/
 	// 未完成上传（spec api_spec_user.md update_account 错误码 10300）。
 	ErrAvatarNotOwned = errors.New("users: avatar_file_id not owned or not ready")
+	// ErrInvalidProfileField 资料字段违反契约约束（10400）：nickname 1-30 字符、
+	// bio 0-500 字符、tags 每个标签 1-30 字符且最多 10 个、gender 枚举
+	// （spec api_spec_base.md「通用字段约束」、api_spec_user.md Gender）。
+	// 不校验会让 ~1MB bio/数千 tag 直通入库并在查看主页时原样放大回显。
+	ErrInvalidProfileField = errors.New("users: profile field violates contract constraints")
 )

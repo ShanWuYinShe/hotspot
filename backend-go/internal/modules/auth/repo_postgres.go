@@ -259,7 +259,8 @@ func (r *PostgresRepository) ChangePassword(ctx context.Context, userID, oldPass
 
 // CreateRegisterCode 生成并落库注册验证码。与密码重置不同：注册码不校验账号
 // 是否存在（login_id 可能尚未注册，不 FK 账号表），防枚举由「无论是否存在均
-// 落库 + 发送」实现；频率控制依赖 ratelimit 的 auth_register_per_10minutes 桶。
+// 落库 + 发送」实现；频率控制由 IP 维度 ratelimit 桶 + per-login_id 节流窗口
+//（registerCodeThrottleWindow，与密码重置的 repo 级节流同模式）双重兜底。
 func (r *PostgresRepository) CreateRegisterCode(ctx context.Context, loginID string, expiresAt time.Time) (string, error) {
 	queryable, ok := r.queryable(ctx)
 	if !ok {
@@ -274,10 +275,31 @@ func (r *PostgresRepository) CreateRegisterCode(ctx context.Context, loginID str
 		return "", err
 	}
 	now := time.Now().UTC()
+	// per-login_id 发送节流：IP 桶可被代理池绕过，同一手机号/邮箱的
+	// 验证码轰炸（骚扰 + 短信成本）须在 repo 层按 login_id 兜底。
+	if latest, err := r.latestRegisterCodeCreatedAt(ctx, queryable, loginID); err != nil {
+		return "", fmt.Errorf("auth.CreateRegisterCode: throttle check: %w", err)
+	} else if latest != nil && now.Sub(*latest) < registerCodeThrottleWindow {
+		return "", ErrRegisterCodeThrottled
+	}
 	if err := queryable.Exec(ctx, queryInsertRegisterCode, requestID, loginID, code, expiresAt.UTC(), now); err != nil {
 		return "", fmt.Errorf("auth.CreateRegisterCode: insert: %w", err)
 	}
 	return code, nil
+}
+
+// latestRegisterCodeCreatedAt 返回该 login_id 最近一条注册验证码的落库时间；
+// 无记录时返回 (nil, nil)。
+func (r *PostgresRepository) latestRegisterCodeCreatedAt(ctx context.Context, queryable persistence.Queryable, loginID string) (*time.Time, error) {
+	var createdAt time.Time
+	err := queryable.QueryRow(ctx, queryLatestRegisterCodeCreatedAt, loginID).Scan(&createdAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &createdAt, nil
 }
 
 // VerifyRegisterCode 校验注册验证码有效（存在、未消费、未过期），不消费——

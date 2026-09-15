@@ -101,6 +101,18 @@ func ensureMentionsLimit(mentions []string) error {
 	return nil
 }
 
+// tagsMaxCount 契约级上限（api_spec_base.md 字段校验约束：tags 默认最多 10 个）。
+// tags 逐条 INSERT，不限制会让单条请求放大为数千次写。
+const tagsMaxCount = 10
+
+// ensureTagsLimit 校验 tags 数量上限；Create 与 Update 共用。
+func ensureTagsLimit(tags []string) error {
+	if len(tags) > tagsMaxCount {
+		return ErrTooManyTags
+	}
+	return nil
+}
+
 func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMomentItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	// distance/bearing_degrees 是响应侧相对位置字段，由服务端基于 reference_point
@@ -114,6 +126,9 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMom
 		return OwnerMomentItem{}, err
 	}
 	if err := ensureMentionsLimit(req.Mentions); err != nil {
+		return OwnerMomentItem{}, err
+	}
+	if err := ensureTagsLimit(req.Tags); err != nil {
 		return OwnerMomentItem{}, err
 	}
 	if err := s.validateImageOwnership(ctx, principal.UserID, req.ImageFileIDs); err != nil {
@@ -315,6 +330,11 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMom
 	// mentions 是 patch 语义：nil=未传保持不变；显式传数组（含空数组=清空）才校验上限。
 	if req.Mentions != nil {
 		if err := ensureMentionsLimit(req.Mentions); err != nil {
+			return OwnerMomentItem{}, err
+		}
+	}
+	if req.Tags != nil {
+		if err := ensureTagsLimit(req.Tags); err != nil {
 			return OwnerMomentItem{}, err
 		}
 	}

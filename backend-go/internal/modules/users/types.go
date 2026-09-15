@@ -11,6 +11,13 @@ type UserPresenceStatus string
 
 type Gender string
 
+// Gender 枚举（spec api_spec_user.md）：type Gender = 'male' | 'female' | 'other'。
+const (
+	GenderMale   Gender = "male"
+	GenderFemale Gender = "female"
+	GenderOther  Gender = "other"
+)
+
 const (
 	UserTypeTemp   UserType = "temp"
 	UserTypeNormal UserType = "normal"

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
@@ -123,6 +124,10 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		profile = s.defaultProfile(ctx, principal.UserID)
 	}
 	if req.Nickname != nil {
+		// 契约（spec api_spec_base.md「通用字段约束」）：nickname 1-30 字符。
+		if n := utf8.RuneCountInString(*req.Nickname); n < 1 || n > 30 {
+			return ErrInvalidProfileField
+		}
 		profile.Nickname = *req.Nickname
 	}
 	if req.AvatarFileID != nil {
@@ -139,9 +144,22 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		profile.AvatarURL = *req.AvatarFileID
 	}
 	if req.Bio != nil {
+		// 契约：bio 0-500 字符（空串=清除）。不设上限会被塞 ~1MB 并在主页回显放大。
+		if utf8.RuneCountInString(*req.Bio) > 500 {
+			return ErrInvalidProfileField
+		}
 		profile.Bio = *req.Bio
 	}
 	if req.Tags != nil {
+		// 契约（spec api_spec_base.md）：每个标签 1-30 字符，最多 10 个。
+		if len(*req.Tags) > 10 {
+			return ErrInvalidProfileField
+		}
+		for _, tag := range *req.Tags {
+			if n := utf8.RuneCountInString(tag); n < 1 || n > 30 {
+				return ErrInvalidProfileField
+			}
+		}
 		// 契约（spec api_spec_user.md update_account）：tags 含被屏蔽标签 → 10400。
 		if blocked, err := s.repo.CheckBlockedTags(ctx, *req.Tags); err != nil {
 			observability.L().Error("users.update_my_profile blocked-tags check failed", "error", err)
@@ -152,6 +170,12 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		profile.Tags = *req.Tags
 	}
 	if req.Gender != nil {
+		// 契约（spec api_spec_user.md）：gender ∈ male/female/other；空串=清除。
+		switch *req.Gender {
+		case "", GenderMale, GenderFemale, GenderOther:
+		default:
+			return ErrInvalidProfileField
+		}
 		profile.Gender = *req.Gender
 	}
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
@@ -290,6 +314,12 @@ func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, boo
 // 热路径用；不走 OpenTheDoor 全量社交上下文）。
 func (s *Service) Relationship(ctx context.Context, userID, targetUserID string) (Relationship, error) {
 	return s.repo.Relationship(ctx, userID, targetUserID)
+}
+
+// RelationshipBatch 批量取 userID 对各目标的关注关系（单次往返）。供消息发送
+// 等热路径的批量互关判定消费，替代逐目标 Relationship 的 N 次点查。
+func (s *Service) RelationshipBatch(ctx context.Context, userID string, targetUserIDs []string) (map[string]Relationship, error) {
+	return s.repo.RelationshipBatch(ctx, userID, targetUserIDs)
 }
 
 // BatchGet resolves multiple users at once (spec api_spec_user.md

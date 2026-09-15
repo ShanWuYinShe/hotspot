@@ -71,6 +71,12 @@ WHERE user_id = $1`
 	queryInsertRegisterCode = `INSERT INTO auth_register_verification_codes (request_id, login_id, verification_code, expires_at, created_at, consumed_at)
 VALUES ($1, $2, $3, $4, $5, NULL)`
 
+	queryLatestRegisterCodeCreatedAt = `SELECT created_at
+FROM auth_register_verification_codes
+WHERE login_id = $1
+ORDER BY created_at DESC
+LIMIT 1`
+
 	queryValidRegisterCode = `SELECT request_id
 FROM auth_register_verification_codes
 WHERE login_id = $1 AND verification_code = $2 AND consumed_at IS NULL AND expires_at > $3

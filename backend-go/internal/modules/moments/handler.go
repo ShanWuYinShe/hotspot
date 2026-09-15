@@ -50,6 +50,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			switch {
 			case errors.Is(err, ErrDescriptionTooLong):
 				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeInvalidRequest, "内容超过长度限制")
+			case errors.Is(err, ErrTooManyTags):
+				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeInvalidRequest, "tags 数量超过上限")
 			case errors.Is(err, ErrTooManyMentions):
 				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeInvalidRequest, "mentions 数量超过上限")
 			case errors.Is(err, ErrTooManyImages):
@@ -167,6 +169,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, ErrPermissionDenied) {
 			httpx.WriteAPIError(w, r, "Update", httpx.Forbidden(httpx.ReasonNotResourceOwner, "非瞬间作者，无权编辑"))
+			return
+		}
+		if errors.Is(err, ErrTooManyTags) {
+			httpx.WriteInvalidRequest(w, r, "Update", "tags 数量超过上限")
 			return
 		}
 		if errors.Is(err, ErrTooManyImages) {

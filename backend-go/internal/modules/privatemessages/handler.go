@@ -49,6 +49,10 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 			if errors.Is(err, ErrInvalidShareCode) {
 				return httpx.Business[any](r, "Send", httpx.CodeConflict, "分享链接无效或已过期")
 			}
+			// file_id 不存在/不属于发送者/未完成上传 → 10300（对齐 moments 图片归属口径）
+			if errors.Is(err, ErrFileNotOwned) {
+				return httpx.Business[any](r, "Send", httpx.CodeNotFound, "附件不存在或不属于当前用户")
+			}
 			observability.LogServerError(r, "Send", err)
 			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
@@ -79,6 +83,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req UpdatePrivateMessageRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MessageID == "" || req.Content == "" {
 		httpx.WriteInvalidRequest(w, r, "Update", "参数错误")
+		return
+	}
+	// 编辑与 send 同受契约 content(message) 1-5000 字符约束，防止先发短消息
+	// 再编辑绕过上限、把 ~1MB 内容广播给对端。
+	if utf8.RuneCountInString(req.Content) > messageContentMaxRunes {
+		httpx.WriteInvalidRequest(w, r, "Update", "参数错误: 内容超过长度限制")
 		return
 	}
 	if err := h.service.Update(r.Context(), req); err != nil {

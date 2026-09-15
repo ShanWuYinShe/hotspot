@@ -101,6 +101,9 @@ func apiErrorFromService(err error) *httpx.APIError {
 		// 10300（spec api_spec_user.md → update_account：avatar_file_id 对应的
 		// 媒体资源不存在或不属于当前用户）
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "媒体资源不存在或不属于当前用户"}
+	case errors.Is(err, ErrInvalidProfileField):
+		// 10400（spec api_spec_base.md「通用字段约束」：nickname/bio/tags/gender）
+		return &httpx.APIError{Code: httpx.CodeInvalidRequest, Message: "资料字段不符合约束"}
 	case errors.Is(err, ErrConflict):
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "业务冲突"}
 	case errors.Is(err, ErrInvalidRequest):

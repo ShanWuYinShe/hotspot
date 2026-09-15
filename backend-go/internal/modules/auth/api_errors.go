@@ -14,6 +14,9 @@ var (
 	ErrPasswordResetNotFound          = errors.New("auth: password reset not found")
 	ErrPasswordResetThrottled         = errors.New("auth: password reset throttled")
 	ErrVerificationServiceUnavailable = errors.New("auth: verification service not available")
+	// ErrRegisterCodeThrottled 同一 login_id 注册验证码发送过频（per-login_id
+	// 节流窗口，对齐密码重置的 repo 级节流；IP 维度由 ratelimit 桶兜底）。
+	ErrRegisterCodeThrottled = errors.New("auth: register code throttled")
 	ErrAccountLocked                  = errors.New("auth: account locked due to too many failed attempts")
 	// ErrAccountBanned 封禁账号尝试登录（spec api_spec_errors.md → 10201：
 	// 客户端须强制登出并展示专用封禁页，与普通错误 toast 语义不同）。
@@ -55,6 +58,9 @@ func apiErrorFrom(err error) *httpx.APIError {
 	case errors.Is(err, ErrPasswordResetThrottled):
 		// 同上：窗口自最近一次请求起算，取完整窗口作为保守等待。
 		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "请求过于频繁", RetryAfterSeconds: int(passwordResetThrottleWindow.Seconds())}
+	case errors.Is(err, ErrRegisterCodeThrottled):
+		// 10500（spec api_spec_errors.md）：注册验证码发送过频，携带 Retry-After。
+		return &httpx.APIError{Code: httpx.CodeRateLimited, Message: "验证码发送过于频繁，请稍后再试", RetryAfterSeconds: int(registerCodeThrottleWindow.Seconds())}
 	case errors.Is(err, ErrVerificationServiceUnavailable):
 		// 验证码服务不可用属服务端错误（spec 10600），非客户端限流（10500）
 		return &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "验证码服务暂不可用"}

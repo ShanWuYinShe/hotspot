@@ -257,6 +257,15 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platfo
 func (s *Service) SendRegisterCode(ctx context.Context, req SendRegisterCodeRequest) error {
 	code, err := s.repo.CreateRegisterCode(ctx, req.LoginID, time.Now().UTC().Add(10*time.Minute))
 	if err != nil {
+		// 发送节流是预期业务限流：直接透传（apiErrorFrom 映射 10500 + Retry-After），
+		// 不与基础设施错误混记 Error。
+		if errors.Is(err, ErrRegisterCodeThrottled) {
+			observability.L().Warn("verification code send throttled for register",
+				"method", "SendRegisterCode",
+				"login_id", observability.Redact(req.LoginID),
+			)
+			return err
+		}
 		observability.L().Error("service error",
 			"method", "SendRegisterCode",
 			"error", err,
