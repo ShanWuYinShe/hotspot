@@ -62,7 +62,7 @@ func NewRedisBridge(rdb *redis.Client, instanceID string, hub *Hub) (*RedisBridg
 	b.subCh = sub.Channel()
 
 	b.done.Add(1)
-	worker.Go("realtime.redis_bridge", b.receiveLoop)
+	worker.GoRestartable("realtime.redis_bridge", b.receiveLoop)
 	return b, nil
 }
 

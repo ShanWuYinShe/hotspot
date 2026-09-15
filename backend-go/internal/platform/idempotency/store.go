@@ -158,7 +158,7 @@ func StartSweeper(ctx context.Context) {
 	sweepCtx, cancel := context.WithCancel(ctx)
 	sweeperCancel = cancel
 	sweeperStarted = true
-	worker.Go("idempotency.sweeper", func() { runSweeper(sweepCtx, store) })
+	worker.GoRestartable("idempotency.sweeper", func() { runSweeper(sweepCtx, store) })
 }
 
 // StopSweeper cancels the running sweeper if any. Intended for tests.

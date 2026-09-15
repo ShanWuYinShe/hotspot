@@ -85,6 +85,12 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 	}
 	result, err := s.repo.Create(ctx, principal.UserID, req, snapshot)
 	if err != nil {
+		// 并发竞态兜底（审查 L-2）：唯一索引 uq_reports_creator_target 命中
+		// 说明并发请求已创建同目标举报，回查按重复语义返回既有 report_id。
+		existingID, duplicate, dupErr := s.repo.FindExistingReport(ctx, principal.UserID, req.TargetType, req.TargetID)
+		if dupErr == nil && duplicate {
+			return ReportCreated{ReportID: existingID, IsDuplicate: true}, nil
+		}
 		observability.L().Error("reports.create failed", "error", err)
 		return ReportCreated{}, err
 	}

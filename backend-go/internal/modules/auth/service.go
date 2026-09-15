@@ -62,7 +62,7 @@ func newInMemoryLoginTracker(ctx context.Context) *inMemoryLoginTracker {
 	// Bind the sweeper to ctx so it exits when the app root context is
 	// cancelled (graceful shutdown), and wrap it with worker.Go so a panic
 	// inside the sweep loop is recovered instead of crashing the process.
-	worker.Go("auth.login_tracker.sweeper", func() { t.sweep(ctx) })
+	worker.GoRestartable("auth.login_tracker.sweeper", func() { t.sweep(ctx) })
 	return t
 }
 

@@ -281,6 +281,7 @@ func defaultConfig(runtime config.Config) AppConfig {
 			ReportsCreatePerHour:     20,
 			UploadPresignPerHour:     100,
 			WSSubscribePerSecond:     10,
+			WSHandshakePerMinute:     60,
 			AdminReadPerMinute:       120,
 			AdminWritePerMinute:      60,
 		},

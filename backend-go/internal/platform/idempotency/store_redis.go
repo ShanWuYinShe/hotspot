@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 // RedisStore 把幂等记录放到共享 Redis：多实例部署下同一 Idempotency-Key
@@ -55,14 +57,20 @@ func (s *RedisStore) Reserve(scope, key string, expiresAt time.Time) (Record, bo
 	// SET NX：key 不存在 → 写入 processing 并声明执行权；已存在 → 取出现有记录。
 	ok, err := s.rdb.SetNX(ctx, k, payload, ttl).Result()
 	if err != nil {
-		return Record{}, false
+		// fail-open（与 login tracker 同口径）：Redis 抖动时放弃幂等保证
+		// 直通执行，优于让全部带幂等键的写端点整体不可用（22002 拒服）。
+		// 代价是该 key 在故障窗口内失去去重（重复执行由业务侧幂等性兜底）。
+		observability.L().Warn("idempotency redis reserve failed, failing open", "error", err)
+		return processing, true
 	}
 	if ok {
 		return processing, true
 	}
 	b, err := s.rdb.Get(ctx, k).Result()
 	if err != nil {
-		return Record{}, false
+		// 同上：已存在 key 但读不出（故障窗口），直通执行。
+		observability.L().Warn("idempotency redis get failed, failing open", "error", err)
+		return processing, true
 	}
 	existing, _ := unmarshalRecord(b)
 	return existing, false

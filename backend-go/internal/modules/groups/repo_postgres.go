@@ -350,6 +350,13 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 			return EnterGroupResult{}, err
 		}
 		if err := queryable.Exec(ctx, queryInsertGroupApplication, applicationID, groupID, userID, nullableStringPtr(message), string(ApplicationStatusPending), now); err != nil {
+			// 并发竞态兜底（审查 L-1）：唯一索引 uq_group_applications_pending
+			// 命中说明并发请求已插入 pending 申请，回查按「已有申请」语义返回
+			//（与前置查重分支同一结果），而非向调用方抛 500。
+			var concurrentID string
+			if retryErr := queryable.QueryRow(ctx, queryFindPendingGroupApplication, groupID, userID).Scan(&concurrentID); retryErr == nil && concurrentID != "" {
+				return EnterGroupResult{Status: EnterGroupStatusPendingApproval, ApplicationID: &concurrentID}, nil
+			}
 			return EnterGroupResult{}, err
 		}
 		return EnterGroupResult{Status: EnterGroupStatusPendingApproval, IsNewApplication: true, ApplicationID: &applicationID}, nil

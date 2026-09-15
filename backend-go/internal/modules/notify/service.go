@@ -49,7 +49,7 @@ func (s *Service) StartPruneSweeper(ctx context.Context) {
 	sweepCtx, cancel := context.WithCancel(ctx)
 	pruneCancel = cancel
 	pruneStarted = true
-	worker.Go("notify.prune_sweeper", func() { s.runPruneSweeper(sweepCtx) })
+	worker.GoRestartable("notify.prune_sweeper", func() { s.runPruneSweeper(sweepCtx) })
 }
 
 // StopPruneSweeper 停止后台 prune（测试用）。
@@ -77,8 +77,12 @@ func (s *Service) runPruneSweeper(ctx context.Context) {
 }
 
 // pruneOnce 执行一轮删除；失败只记日志（下轮重试，尽力而为）。
+// 独立超时 ctx（审查 M-4）：DB 卡顿不得挂住 sweeper goroutine（配合
+// GoRestartable，panic 也不会永久停转）。
 func (s *Service) pruneOnce(now time.Time) {
-	pruned, err := s.repo.PruneReadBefore(context.Background(), now.Add(-notifyPruneRetention))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	pruned, err := s.repo.PruneReadBefore(ctx, now.Add(-notifyPruneRetention))
 	if err != nil {
 		observability.L().Warn("notify.prune failed", "error", err)
 		return

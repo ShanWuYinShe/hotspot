@@ -98,7 +98,9 @@ func NewApp(cfg config.Config) (*App, error) {
 		realtime.DefaultHub().SetResumeStore(resumeStore)
 		realtimeHandler.SetResumeStore(resumeStore)
 	}
-	rootMux.Handle("/ws/v1", realtimeHandler)
+	// 握手 per-IP 限流（审查 L-6）：升级请求发生在鉴权之前，须与其他 HTTP
+	// 入口同样限流；APP_ENV=test 同口径绕过。
+	rootMux.Handle("/ws/v1", ratelimit.WebsocketHandshakeMiddleware(realtimeHandler))
 
 	return &App{
 		cfg:         cfg,

@@ -37,7 +37,7 @@ func StartSweeper(ctx context.Context) {
 	sweepCtx, cancel := context.WithCancel(ctx)
 	authSweeperCancel = cancel
 	authSweeperStarted = true
-	worker.Go("platformauth.sweeper", func() { runAuthSweeper(sweepCtx) })
+	worker.GoRestartable("platformauth.sweeper", func() { runAuthSweeper(sweepCtx) })
 }
 
 // StopSweeper cancels any running sweeper and is intended for tests.

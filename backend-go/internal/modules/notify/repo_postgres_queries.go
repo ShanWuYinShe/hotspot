@@ -59,8 +59,16 @@ UPDATE notifications
 SET is_read = TRUE
 WHERE user_id = $1 AND is_read = FALSE`
 
-	// queryPruneReadNotifys 物理删除已读且创建早于截止时间的通知（后台 prune
-	// sweeper 专用，见 Service.StartPruneSweeper）。notifications 无 updated_at
-	// 列，以 created_at 近似已读年龄（保守：只会少删）。
-	queryPruneReadNotifys = `DELETE FROM notifications WHERE is_read = TRUE AND created_at < $1 RETURNING notification_id`
+	// queryPruneReadNotifysBatch 分批物理删除已读且创建早于截止时间的通知
+	// （后台 prune sweeper 专用，见 Service.StartPruneSweeper）。notifications
+	// 无 updated_at 列，以 created_at 近似已读年龄（保守：只会少删）。
+	// 子查询 LIMIT 封顶单事务体量，防存量积压时长事务持锁 + WAL 尖刺（审查 M-4）。
+	queryPruneReadNotifysBatch = `
+DELETE FROM notifications
+WHERE notification_id IN (
+  SELECT notification_id FROM notifications
+  WHERE is_read = TRUE AND created_at < $1
+  LIMIT $2
+)
+RETURNING notification_id`
 )

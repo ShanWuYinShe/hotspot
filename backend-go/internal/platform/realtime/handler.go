@@ -85,7 +85,7 @@ func NewHandlerWithContext(ctx context.Context, auth *platformauth.Service, user
 	sweepCtx, cancel := context.WithCancel(ctx)
 	h := &Handler{auth: auth, userRepo: userRepo, groupRepo: groupRepo, stop: cancel}
 	h.wg.Add(1)
-	worker.Go("realtime.typing_sweeper", func() { h.sweepTypingThrottle(sweepCtx) })
+	worker.GoRestartable("realtime.typing_sweeper", func() { h.sweepTypingThrottle(sweepCtx) })
 	return h
 }
 

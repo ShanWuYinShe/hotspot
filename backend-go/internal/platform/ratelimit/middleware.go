@@ -61,7 +61,7 @@ func StartSweeper(ctx context.Context) {
 	sweepCtx, cancel := context.WithCancel(ctx)
 	sweeperCancel = cancel
 	sweeperStarted = true
-	worker.Go("ratelimit.sweeper", func() { sweepStores(sweepCtx) })
+	worker.GoRestartable("ratelimit.sweeper", func() { sweepStores(sweepCtx) })
 }
 
 // StopSweeper cancels the background sweeper if one is running and blocks
@@ -165,6 +165,43 @@ func AllowWebsocketSubscribe(ctx context.Context, userID, connectionID string) (
 		key = userID
 	}
 	return allow(time.Now().UTC(), rule{name: "ws_subscribe_per_second", strategy: "fixed", limit: limit, window: time.Second, scope: "connection", key: key})
+}
+
+// AllowWebsocketHandshake 按 IP 限制 WS 升级请求（审查 L-6）：握手在鉴权前，
+// 匿名者可低成本发起 TCP+升级洪泛（每次握手触发一次封禁查询）。认证后的
+// 连接数上限（maxConnectionsPerUser）不覆盖该面。
+func AllowWebsocketHandshake(ctx context.Context, ip string) (int, bool) {
+	if ip == "" {
+		return 0, false
+	}
+	limit := CurrentRateLimits(ctx).WSHandshakePerMinute
+	if limit <= 0 {
+		return 0, false
+	}
+	return allow(time.Now().UTC(), rule{name: "ws_handshake_per_minute", strategy: "fixed", limit: limit, window: time.Minute, scope: "ip", key: ip})
+}
+
+// WebsocketHandshakeMiddleware wraps the WS upgrade endpoint with the per-IP
+// handshake limiter. Unlike the JSON API, upgrade requests get a bare
+// HTTP 429 + Retry-After (no JSON body — the client hasn't spoken WS yet,
+// and WS clients surface the HTTP status directly).
+func WebsocketHandshakeMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if os.Getenv("APP_ENV") == "test" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if retryAfter, limited := AllowWebsocketHandshake(r.Context(), requestmeta.ClientIP(r)); limited {
+			if retryAfter < 1 {
+				retryAfter = 1
+			}
+			observability.L().Warn("ws handshake rate limited", "ip", requestmeta.ClientIP(r), "retry_after", retryAfter)
+			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // testBypassWarnOnce 保证「APP_ENV=test 关闭限流」只告警一次：限流被关闭

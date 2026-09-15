@@ -135,20 +135,34 @@ func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) err
 	return queryable.Exec(ctx, queryMarkAllNotifysRead, userID)
 }
 
+// pruneBatchSize 单批删除上限（审查 M-4）：存量千万级已读通知时单条无界
+// DELETE 会形成长事务持锁 + WAL 尖刺，分批循环把单事务体量封顶。
+const pruneBatchSize = 5000
+
 // PruneReadBefore 物理删除已读且创建早于 before 的通知（repo.go 接口注释）。
+// 分批循环执行，直至某批删除数不足一批（删完）。
 func (r *PostgresRepository) PruneReadBefore(ctx context.Context, before time.Time) (int64, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return 0, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryPruneReadNotifys, before.UTC())
-	if err != nil {
-		return 0, err
-	}
-	defer rows.Close()
 	var pruned int64
-	for rows.Next() {
-		pruned++
+	for {
+		rows, err := queryable.Query(ctx, queryPruneReadNotifysBatch, before.UTC(), pruneBatchSize)
+		if err != nil {
+			return pruned, err
+		}
+		var batch int64
+		for rows.Next() {
+			batch++
+		}
+		if err := rows.Err(); err != nil {
+			return pruned, err
+		}
+		rows.Close()
+		pruned += batch
+		if batch < pruneBatchSize {
+			return pruned, nil
+		}
 	}
-	return pruned, rows.Err()
 }
