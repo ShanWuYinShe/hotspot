@@ -62,6 +62,7 @@ ssh "$SERVER" "cd $REMOTE_DIR && mv tmp-deploy-incoming/docker-compose.yml tmp-d
   mv tmp-deploy-incoming/nginx.headers.inc tmp-deploy-incoming/nginx.proxy.inc tmp-deploy-incoming/nginx.prod-tls.conf tmp-deploy-incoming/prod-server.inc docker/ && rmdir tmp-deploy-incoming"
 
 echo "==> 上传镜像包并 docker load（${TARGET}）…"
+ssh "$SERVER" "mkdir -p $REMOTE_DIR/tmp-deploy-incoming"
 scp -q "$TARBALL" "$SERVER:$REMOTE_DIR/tmp-deploy-incoming/hotspot-images-$TARGET.tar.gz"
 ssh "$SERVER" "docker load -i $REMOTE_DIR/tmp-deploy-incoming/hotspot-images-$TARGET.tar.gz && \
   rm -rf $REMOTE_DIR/tmp-deploy-incoming"
