@@ -98,6 +98,17 @@ func (s *privateMessageUserStub) OpenTheDoor(context.Context, string) (users.Use
 	return s.item, s.ok, s.openErr
 }
 
+func (s *privateMessageUserStub) BatchGet(_ context.Context, userIDs []string) (map[string]users.UserInfo, error) {
+	out := make(map[string]users.UserInfo, len(userIDs))
+	if !s.ok {
+		return out, s.openErr
+	}
+	for _, id := range userIDs {
+		out[id] = users.UserInfo{UserID: id, Nickname: s.item.User.Nickname, AvatarURL: s.item.User.AvatarURL}
+	}
+	return out, nil
+}
+
 func (s *privateMessageUserStub) SettingsFor(context.Context, string) (users.UserSettings, bool, error) {
 	return s.settings, true, s.setErr
 }
@@ -108,6 +119,14 @@ func (s *privateMessageUserStub) BlockStateBetween(context.Context, string, stri
 
 func (s *privateMessageUserStub) Relationship(context.Context, string, string) (users.Relationship, error) {
 	return users.Relationship{}, nil
+}
+
+func (s *privateMessageUserStub) RelationshipBatch(_ context.Context, _ string, targetUserIDs []string) (map[string]users.Relationship, error) {
+	out := make(map[string]users.Relationship, len(targetUserIDs))
+	for _, id := range targetUserIDs {
+		out[id] = users.Relationship{}
+	}
+	return out, nil
 }
 
 func withPrivateMessagePrincipal(req *http.Request) *http.Request {

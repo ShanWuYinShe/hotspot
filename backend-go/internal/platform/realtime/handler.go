@@ -39,6 +39,27 @@ type groupMembershipAuthorizer interface {
 	IsMember(context.Context, string, string) (bool, error)
 }
 
+// PresenceSetting 是订阅鉴权批量路径的目标用户 presence 摘要（bootstrap 适配层
+// 从 users.UserSettings 投影，避免 realtime 依赖完整 settings 类型）。
+type PresenceSetting struct {
+	PresenceVisible bool
+	Found           bool
+}
+
+// settingsBatchReader 能力探测接口（可选）：支持批量取目标用户 settings 时，
+// 订阅鉴权走批量路径——单条订阅消息最坏 500 个 user ID，逐条 GetSettings 会把
+// 连接读循环阻塞成串行 DB 往返（Ping 无法回应 → 客户端超时断连 → 重连风暴）。
+// 未实现时回退逐条（内存 repo/测试）。
+type settingsBatchReader interface {
+	GetSettingsBatch(ctx context.Context, userIDs []string) (map[string]PresenceSetting, error)
+}
+
+// membershipBatchReader 能力探测接口（可选）：批量判定 viewer 是否为各群成员，
+// 与 settingsBatchReader 同动机。未实现时回退逐条 IsMember。
+type membershipBatchReader interface {
+	AreMembers(ctx context.Context, groupIDs []string, userID string) (map[string]bool, error)
+}
+
 // banAuthorizer reports whether a user is currently banned platform-wide.
 // Implemented by the admin module's repository via bootstrap wiring. Without
 // it the realtime channel would accept connections from banned accounts —
@@ -472,12 +493,28 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) applyAuthorizedSubscriptions(ctx context.Context, viewerUserID string, payload SetSubscriptionsPayload, subs *subscriptions, sink FanoutSink) (SubscribeAckPayload, SubscriptionsSnapshotPayload) {
 	ack := SubscribeAckPayload{ClientRequestID: payload.ClientRequestID, Operation: payload.Operation, Code: 0, Accepted: []SubscriptionItem{}}
-	// allowedByType 汇总同类型多 item 的通过 ID（订阅项可按 type 分多条提交）
+	// allowedByType 汇总同类型多 item 的通过 ID（订阅项可按 type 分多条提交）。
+	// 鉴权结果按 type 预计算（批量优先）：user 走 settingsBatchReader 一次往返、
+	// group 走 membershipBatchReader 一次往返；能力未接线或批量查询失败时回退
+	// 逐条（语义不变，仅慢）。
+	presenceAllowed := h.presenceAllowedBatch(ctx, viewerUserID, payload)
+	groupAllowed := h.groupAllowedBatch(ctx, viewerUserID, payload)
+	// 任一类型批量不可用即整体回退逐条（两种类型并存且其一失败时，语义仍与
+	// 旧实现完全一致）。
+	batchMode := payload.Operation != "unsubscribe" && presenceAllowed != nil && groupAllowed != nil
 	allowedByType := map[string][]string{}
 	for _, item := range payload.Items {
 		allowed := make([]string, 0, len(item.IDs))
 		for _, id := range item.IDs {
-			if payload.Operation == "unsubscribe" || h.isSubscriptionAllowed(ctx, viewerUserID, item.Type, id) {
+			permitted := payload.Operation == "unsubscribe"
+			if !permitted {
+				if batchMode {
+					permitted = h.subscriptionAllowed(item.Type, id, presenceAllowed, groupAllowed)
+				} else {
+					permitted = h.isSubscriptionAllowed(ctx, viewerUserID, item.Type, id)
+				}
+			}
+			if permitted {
 				allowed = append(allowed, id)
 				continue
 			}
@@ -499,6 +536,87 @@ func (h *Handler) applyAuthorizedSubscriptions(ctx context.Context, viewerUserID
 	DefaultHub().SetUserSubscriptions(snapshot.UserIDs, sink)
 	DefaultHub().SetGroupSubscriptions(snapshot.GroupIDs, sink)
 	return ack, snapshot
+}
+
+// presenceAllowedBatch 预计算 payload 中全部 user 订阅的可见性判定；nil 表示
+// 该类型无批量结果（逐条回退）。判定语义与 canSubscribeUser 逐条版一致：
+// self 恒通过、目标无 settings 行（Found=false）恒通过、其余按 presence_visible。
+func (h *Handler) presenceAllowedBatch(ctx context.Context, viewerUserID string, payload SetSubscriptionsPayload) map[string]bool {
+	batch, ok := h.userRepo.(settingsBatchReader)
+	if !ok {
+		return nil
+	}
+	ids := collectSubscriptionIDs(payload, "user")
+	if len(ids) == 0 {
+		return map[string]bool{}
+	}
+	settings, err := batch.GetSettingsBatch(ctx, ids)
+	if err != nil {
+		return nil
+	}
+	allowed := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		if id == viewerUserID {
+			allowed[id] = true
+			continue
+		}
+		s, found := settings[id]
+		if !found || !s.Found {
+			allowed[id] = true
+			continue
+		}
+		allowed[id] = s.PresenceVisible
+	}
+	return allowed
+}
+
+// groupAllowedBatch 预计算 payload 中全部 group 订阅的成员判定；nil 表示回退逐条。
+func (h *Handler) groupAllowedBatch(ctx context.Context, viewerUserID string, payload SetSubscriptionsPayload) map[string]bool {
+	batch, ok := h.groupRepo.(membershipBatchReader)
+	if !ok {
+		return nil
+	}
+	ids := collectSubscriptionIDs(payload, "group")
+	if len(ids) == 0 {
+		return map[string]bool{}
+	}
+	members, err := batch.AreMembers(ctx, ids, viewerUserID)
+	if err != nil {
+		return nil
+	}
+	allowed := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		allowed[id] = members[id]
+	}
+	return allowed
+}
+
+func collectSubscriptionIDs(payload SetSubscriptionsPayload, kind string) []string {
+	seen := make(map[string]struct{})
+	ids := make([]string, 0, 16)
+	for _, item := range payload.Items {
+		if item.Type != kind {
+			continue
+		}
+		for _, id := range item.IDs {
+			if _, dup := seen[id]; dup {
+				continue
+			}
+			seen[id] = struct{}{}
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+func (h *Handler) subscriptionAllowed(kind, id string, presenceAllowed, groupAllowed map[string]bool) bool {
+	if kind == "user" && presenceAllowed != nil {
+		return presenceAllowed[id]
+	}
+	if kind == "group" && groupAllowed != nil {
+		return groupAllowed[id]
+	}
+	return h.isSubscriptionAllowed(context.Background(), "", kind, id)
 }
 
 func (h *Handler) isSubscriptionAllowed(ctx context.Context, viewerUserID, kind, id string) bool {

@@ -546,3 +546,11 @@ type stubUserReader struct{}
 func (stubUserReader) OpenTheDoor(_ context.Context, _ string) (users.UserItem, bool, error) {
 	return users.UserItem{}, false, nil
 }
+
+func (stubUserReader) BatchGet(_ context.Context, userIDs []string) (map[string]users.UserInfo, error) {
+	out := make(map[string]users.UserInfo, len(userIDs))
+	for _, id := range userIDs {
+		out[id] = users.UserInfo{UserID: id, Nickname: id}
+	}
+	return out, nil
+}

@@ -34,6 +34,10 @@ var ErrUserMuted = errors.New("groupmessages: user is muted")
 // ErrInvalidShareCode：share 类型消息的 share_code 无效（不存在/已撤销/已过期）。
 var ErrInvalidShareCode = errors.New("groupmessages: invalid share code")
 
+// ErrFileNotOwned：媒体消息的 file_id 不存在、不属于发送者或未完成上传
+// （对齐 moments 图片归属口径，spec 10300）。
+var ErrFileNotOwned = errors.New("groupmessages: file not owned by sender")
+
 type MutedError struct {
 	MutedUntil string
 }
@@ -50,7 +54,10 @@ func (e *MutedError) Unwrap() error {
 }
 
 type userReader interface {
-	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
+	// OpenTheDoor 全量公开主页（9+ 查询），仅保留给低频路径。
+	// BatchGet 批量取基础信息（单查询）：发送链路的 WS 负载只需要
+	// 昵称/头像，走全量主页是每条消息 3+ 次无谓点查（审计 perf P1-2）。
+	BatchGet(context.Context, []string) (map[string]users.UserInfo, error)
 }
 
 type Service struct {
@@ -156,6 +163,16 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 	if req.ShareCode != "" && s.shares != nil {
 		if err := s.shares.ValidateShareCode(ctx, req.ShareCode); err != nil {
 			return MessageSentResult{}, ErrInvalidShareCode
+		}
+	}
+	// 附件归属校验：file_id 必须属于发送者且已完成上传，防止把他人/不存在的
+	// 媒体标识固化进消息行（对齐 moments 图片归属校验，spec 10300）。
+	if req.FileID != "" {
+		if _, ok, err := s.repo.GetMediaForMessage(ctx, req.FileID, userID); err != nil {
+			observability.L().Error("groupmessages.send media check failed", "error", err, "file_id", req.FileID)
+			return MessageSentResult{}, err
+		} else if !ok {
+			return MessageSentResult{}, ErrFileNotOwned
 		}
 	}
 	msg, err := s.repo.Send(ctx, req)
@@ -437,9 +454,11 @@ func (s *Service) ensureMember(ctx context.Context, groupID, userID string) erro
 func (s *Service) resolveUserInfo(ctx context.Context, userID string) types.UserInfo {
 	info := types.UserInfo{UserID: userID, Nickname: userID}
 	if s.users != nil {
-		if item, ok, err := s.users.OpenTheDoor(ctx, userID); err == nil && ok {
-			info.Nickname = item.User.Nickname
-			info.AvatarURL = item.User.AvatarURL
+		if items, err := s.users.BatchGet(ctx, []string{userID}); err == nil {
+			if item, ok := items[userID]; ok {
+				info.Nickname = item.Nickname
+				info.AvatarURL = item.AvatarURL
+			}
 		}
 	}
 	return info

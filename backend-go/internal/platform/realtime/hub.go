@@ -34,9 +34,13 @@ type Hub struct {
 	// subsBySink 反向索引（审计 perf P3-5）：每个 sink 登记过的订阅 keys，
 	// Set*Subscriptions 全量重建与 UnregisterUser 清理时按记录精确删除，
 	// 取代此前对 byUserWatchers/byGroup 的全表扫描。
-	subsBySink  map[FanoutSink]*subEntry
-	publisher   EventPublisher
-	resumeStore ResumeStore
+	subsBySink map[FanoutSink]*subEntry
+	// sessionBySink 反向索引（审计 perf P1-8）：sink → 注册时的 sessionID。
+	// 踢最旧连接时 O(1) 定位其 session，取代对 bySession 的全表扫描——
+	// 该扫描持写锁，大在线量下会阻塞所有广播/注册/注销（全局停顿）。
+	sessionBySink map[FanoutSink]string
+	publisher     EventPublisher
+	resumeStore   ResumeStore
 }
 
 // subEntry 记录单个 sink 在订阅表中的 keys 集合（所有权归 Hub：创建/更新/
@@ -47,7 +51,7 @@ type subEntry struct {
 }
 
 func NewHub() *Hub {
-	return &Hub{byUser: map[string][]FanoutSink{}, bySession: map[string][]FanoutSink{}, byUserWatchers: map[string][]FanoutSink{}, byGroup: map[string][]FanoutSink{}, subsBySink: map[FanoutSink]*subEntry{}}
+	return &Hub{byUser: map[string][]FanoutSink{}, bySession: map[string][]FanoutSink{}, byUserWatchers: map[string][]FanoutSink{}, byGroup: map[string][]FanoutSink{}, subsBySink: map[FanoutSink]*subEntry{}, sessionBySink: map[FanoutSink]string{}}
 }
 
 func (h *Hub) SetPublisher(p EventPublisher) {
@@ -71,32 +75,25 @@ func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
 	if len(h.byUser[userID]) >= maxConnectionsPerUser {
 		// 踢最旧连接：新连接几乎总是活跃方；被踢连接由其读循环的 Close 报错退出。
 		oldest := h.byUser[userID][0]
-		h.removeSinkFromSliceAt(h.bySession, sessionIDOf(h.bySession, oldest), oldest)
+		if evictedSession, ok := h.sessionBySink[oldest]; ok {
+			h.removeSinkFromSliceAt(h.bySession, evictedSession, oldest)
+			delete(h.sessionBySink, oldest)
+		}
 		h.removeSinkFromSliceAt(h.byUser, userID, oldest)
 		_ = oldest.Close()
 	}
 	first := len(h.byUser[userID]) == 0
 	h.byUser[userID] = append(h.byUser[userID], sink)
 	h.bySession[sessionID] = append(h.bySession[sessionID], sink)
+	h.sessionBySink[sink] = sessionID
 	return first
-}
-
-// sessionIDOf 反查 sink 所属的 session key（仅踢旧路径使用，O(n) 可接受）。
-func sessionIDOf(m map[string][]FanoutSink, sink FanoutSink) string {
-	for key, sinks := range m {
-		for _, s := range sinks {
-			if s == sink {
-				return key
-			}
-		}
-	}
-	return ""
 }
 
 func (h *Hub) UnregisterUser(userID, sessionID string, sink FanoutSink) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.removeSinkFromSliceAt(h.bySession, sessionID, sink)
+	delete(h.sessionBySink, sink)
 	// 订阅表同步清理：按反向索引记录的 keys 精确删除（O(k)），不再全表扫描。
 	// sink 只在 Set*Subscriptions 注册；断连时若订阅表残留，之后每次群播都会
 	// 向死连接白付一次写系统调用。
@@ -138,6 +135,42 @@ func removeSinkFromSlice(m map[string][]FanoutSink, key string, sink FanoutSink)
 func (h *Hub) CloseSession(sessionID string, event Event) {
 	h.closeSessionLocal(sessionID, event)
 	h.publish("session:"+sessionID, event)
+}
+
+// DrainConnections 向全部在线连接发送 1001（Going Away）并等待其读循环退出，
+// 优雅停机专用。http.Server.Shutdown 不会等待 hijacked 的 WS 连接：若跳过排空
+// 直接关 DB 池，存活连接的后续查询全部报「池已关闭」，客户端也要等 ping 超时
+// 才发现断线。带界轮询：单连接 close 写有超时（socketSink.closeWithCode），
+// 不配合的客户端最多拖到 timeout。返回仍在注册表中的残留连接数（诊断用）。
+func (h *Hub) DrainConnections(timeout time.Duration) int {
+	deadline := time.Now().Add(timeout)
+	for {
+		h.mu.RLock()
+		if len(h.sessionBySink) == 0 {
+			h.mu.RUnlock()
+			return 0
+		}
+		sinks := make([]FanoutSink, 0, len(h.sessionBySink))
+		for sink := range h.sessionBySink {
+			sinks = append(sinks, sink)
+		}
+		h.mu.RUnlock()
+		for _, sink := range sinks {
+			if ws, ok := sink.(interface {
+				closeWithCode(code int, reason string) error
+			}); ok {
+				_ = ws.closeWithCode(1001, "server shutting down")
+				continue
+			}
+			_ = sink.Close()
+		}
+		if time.Now().After(deadline) {
+			h.mu.RLock()
+			defer h.mu.RUnlock()
+			return len(h.sessionBySink)
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 }
 
 func (h *Hub) closeSessionLocal(sessionID string, event Event) {

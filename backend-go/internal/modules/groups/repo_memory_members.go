@@ -100,6 +100,22 @@ func (r *InMemoryRepository) IsMember(_ context.Context, groupID, userID string)
 	return false, nil
 }
 
+// AreMembers 批量判定成员资格（内存实现为一次锁下逐 key 查 map，无 IO）。
+func (r *InMemoryRepository) AreMembers(_ context.Context, groupIDs []string, userID string) (map[string]bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	result := make(map[string]bool, len(groupIDs))
+	for _, groupID := range groupIDs {
+		if _, ok := result[groupID]; ok {
+			continue
+		}
+		if members, ok := r.members[groupID]; ok {
+			_, result[groupID] = members[userID]
+		}
+	}
+	return result, nil
+}
+
 // IsBanned reports whether the user is banned from the group (join-time check, C.3).
 func (r *InMemoryRepository) IsBanned(_ context.Context, groupID, userID string) (bool, error) {
 	r.mu.RLock()

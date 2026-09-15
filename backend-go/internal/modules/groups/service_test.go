@@ -127,6 +127,22 @@ func (r *stubGroupsRepo) IsMember(_ context.Context, _ string, userID string) (b
 	}
 	return false, nil
 }
+func (r *stubGroupsRepo) AreMembers(_ context.Context, groupIDs []string, userID string) (map[string]bool, error) {
+	result := make(map[string]bool, len(groupIDs))
+	for _, groupID := range groupIDs {
+		if r.isMemberResult {
+			result[groupID] = true
+			continue
+		}
+		for _, m := range r.members {
+			if m.User.UserID == userID {
+				result[groupID] = true
+				break
+			}
+		}
+	}
+	return result, nil
+}
 func (r *stubGroupsRepo) GetApplication(_ context.Context, applicationID string) (GroupApplicationItem, bool, error) {
 	// Read from the `apps` field that existing tests populate.
 	for _, a := range r.apps {

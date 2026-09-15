@@ -42,13 +42,19 @@ type Runtime struct {
 }
 
 type userReader interface {
+	// OpenTheDoor 全量公开主页（9+ 查询）。仅保留给低频路径；发送链路已改用
+	// BatchGet/Relationship 轻量查询（审计 perf P1-1），不要新增调用。
 	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
+	// BatchGet 批量取基础信息（nickname/avatar/存在性，单查询）。
+	BatchGet(context.Context, []string) (map[string]users.UserInfo, error)
 	// SettingsFor 按 user_id 纯读目标用户设置（无写副作用）。此前用
 	// GetMySettings 伪造对方 Principal 探测，其「设置行缺失即写默认行」的
 	// 副作用会为对方凭空插入 settings 行（审计 F-10）。
 	SettingsFor(context.Context, string) (users.UserSettings, bool, error)
 	BlockStateBetween(context.Context, string, string) (callerBlocked, targetBlocked bool, err error)
 	Relationship(context.Context, string, string) (users.Relationship, error)
+	// RelationshipBatch 批量互关判定（单次往返，陌生人配额消费）。
+	RelationshipBatch(context.Context, string, []string) (map[string]users.Relationship, error)
 }
 
 // shareValidator 校验 share_code 有效性（由 share 模块实现，见 module.go 装配）。
@@ -154,15 +160,29 @@ func (r *Runtime) ReadService() ReadService {
 func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (MessageSentResult, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	var sent MessageSentResult
-	// 配额检查（ensureCanSend → enforceStrangerQuota 的 COUNT）与消息写入
-	// （repo.Send 的 INSERT）必须在同一事务内：先取「发送者 + UTC 日期」维度
-	// 的咨询锁，再 COUNT、再 INSERT——并发同发送者的请求在此串行，后到者的
-	// COUNT 能看到先到者已提交的消息，消除 check-then-act 双双超额的竞态。
-	err := s.runInTx(ctx, func(txCtx context.Context) error {
-		quotaApplies, err := s.ensureCanSend(txCtx, principal.UserID, req.TargetUserID)
-		if err != nil {
-			return err
+	// 附件归属校验：file_id 必须属于发送者且已完成上传，防止把他人/不存在的
+	// 媒体标识固化进消息行（对齐 moments 图片归属校验，spec 10300）。
+	// 放事务外：该校验不参与配额原子性，失败早退。
+	if req.FileID != "" {
+		if _, ok, err := s.repo.GetMediaForMessage(ctx, req.FileID, principal.UserID); err != nil {
+			observability.L().Error("privatemessages.send media check failed", "error", err, "file_id", req.FileID)
+			return MessageSentResult{}, err
+		} else if !ok {
+			return MessageSentResult{}, ErrFileNotOwned
 		}
+	}
+	// 前置校验（事务外）：拉黑/隐私/互关判定与配额原子性无关，留在事务内
+	// 只会让每条消息占住连接池连接执行十余次查询（审计 perf P1-1）。事务内
+	// 仅保留配额咨询锁 + COUNT + INSERT 的原子序列。
+	quotaApplies, err := s.ensureCanSend(ctx, principal.UserID, req.TargetUserID)
+	if err != nil {
+		return MessageSentResult{}, err
+	}
+	// 配额检查（enforceStrangerQuota 的 COUNT）与消息写入（repo.Send 的 INSERT）
+	// 必须在同一事务内：先取「发送者 + UTC 日期」维度的咨询锁，再 COUNT、
+	// 再 INSERT——并发同发送者的请求在此串行，后到者的 COUNT 能看到先到者
+	// 已提交的消息，消除 check-then-act 双双超额的竞态。
+	err = s.runInTx(ctx, func(txCtx context.Context) error {
 		// share 类型：校验 share_code 存在且有效（spec api_spec_chat.md，防发送失效链接）
 		if req.ShareCode != "" && s.shares != nil {
 			if err := s.shares.ValidateShareCode(txCtx, req.ShareCode); err != nil {
@@ -335,15 +355,20 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 // （给自己发的消息不占陌生人额度，配额的总量口径在 enforceStrangerQuota 中
 // 同样排除 self 目标）；互相关注不在配额约束范围（spec chat.md 陌生人消息
 // 每日额度仅约束非互关目标）。
+//
+// 轻量化（审计 perf P1-1）：仅用 BatchGet（存在性，1 查询）+ BlockStateBetween +
+// SettingsFor + Relationship（互关）共 4 次点查，不再走 OpenTheDoor 全量主页
+// （9+ 查询，含 stats 五重 COUNT 与社交上下文拼装）。调用方在事务外调用——
+// 这些前置校验不参与配额原子性，留在事务内只会占住连接池连接。
 func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string) (quotaApplies bool, err error) {
 	if s.users == nil {
 		return false, nil
 	}
-	item, ok, err := s.users.OpenTheDoor(ctx, targetUserID)
+	existing, err := s.users.BatchGet(ctx, []string{targetUserID})
 	if err != nil {
 		return false, err
 	}
-	if !ok {
+	if _, ok := existing[targetUserID]; !ok {
 		return false, users.ErrUserNotFound
 	}
 	if userID == targetUserID {
@@ -351,8 +376,7 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 		return false, nil
 	}
 	// 拉黑明确返回 blocked_by_user（产品决策：拉黑就显示拉黑，见 api_spec_errors.md ForbiddenReason）。
-	// 必须查双向黑名单：被对方拉黑的发送者才是拦截目标；OpenTheDoor 的 Relation.IsBlocked
-	// 是发送者视角（发送者拉黑了对方），单独用它会让被拉黑者照样发出消息。
+	// 必须查双向黑名单：被对方拉黑的发送者才是拦截目标。
 	callerBlocked, targetBlocked, blockErr := s.users.BlockStateBetween(ctx, userID, targetUserID)
 	if blockErr != nil {
 		return false, blockErr
@@ -373,7 +397,12 @@ func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string
 	}
 	// 对方从未保存设置时按默认处理：允许所有人私聊（与 users.defaultSettings 的
 	// ChatPermEveryone 一致，见 spec 用户设置默认值）。
-	isMutual := item.Relation != nil && item.Relation.IsFollowing && item.Relation.IsFollowedBy
+	isMutual := false
+	if rel, relErr := s.users.Relationship(ctx, userID, targetUserID); relErr == nil {
+		isMutual = rel.IsFollowing && rel.IsFollowedBy
+	} else {
+		return false, relErr
+	}
 	switch allowPrivateChat {
 	case users.ChatPermNobody:
 		return false, httpx.Forbidden(httpx.ReasonPrivacySetting, "对方隐私设置不允许")
@@ -416,19 +445,36 @@ func (s *Service) enforceStrangerQuota(ctx context.Context, userID string) error
 	if err != nil {
 		return err
 	}
+	targetIDs := make([]string, 0, len(counts))
+	for targetID := range counts {
+		targetIDs = append(targetIDs, targetID)
+	}
+	// 批量互关判定（单次往返）：此前按目标逐条 Relationship，今日发过 50 个
+	// 陌生人即 50 次点查，且全部在事务内执行。批量失败回退逐条（单条错误
+	// 跳过不计入，与历史语义一致）。
+	mutual := make(map[string]bool, len(targetIDs))
+	if len(targetIDs) > 0 && s.users != nil {
+		rels, err := s.users.RelationshipBatch(ctx, userID, targetIDs)
+		if err != nil {
+			observability.L().Warn("privatemessages.quota relationship batch failed, falling back", "error", err, "user_id", userID)
+			for _, targetID := range targetIDs {
+				rel, relErr := s.users.Relationship(ctx, userID, targetID)
+				if relErr == nil {
+					mutual[targetID] = rel.IsFollowing && rel.IsFollowedBy
+				}
+			}
+		} else {
+			for targetID, rel := range rels {
+				mutual[targetID] = rel.IsFollowing && rel.IsFollowedBy
+			}
+		}
+	}
 	strangerTotal := 0
 	for targetID, count := range counts {
 		if targetID == userID {
 			continue
 		}
-		// 只需双向关注判定，一次 Relationship 查询即可（此前调全量 OpenTheDoor，
-		// 单目标 15+ 次查询再乘以目标数）。查不到关系视为陌生人计入（fail-closed，
-		// 与配额的总量口径一致）；查询错误跳过不计入。
-		rel, err := s.users.Relationship(ctx, userID, targetID)
-		if err != nil {
-			continue
-		}
-		if !rel.IsFollowing || !rel.IsFollowedBy {
+		if !mutual[targetID] {
 			strangerTotal += count
 		}
 	}
@@ -441,10 +487,14 @@ func (s *Service) enforceStrangerQuota(ctx context.Context, userID string) error
 func (s *Service) resolveUserInfo(ctx context.Context, userID string) map[string]any {
 	info := map[string]any{"user_id": userID}
 	if s.users != nil {
-		if item, ok, err := s.users.OpenTheDoor(ctx, userID); err == nil && ok {
-			info["nickname"] = item.User.Nickname
-			if item.User.AvatarURL != nil && *item.User.AvatarURL != "" {
-				info["avatar_url"] = *item.User.AvatarURL
+		// 轻量取昵称/头像（单查询）：此前走 OpenTheDoor 全量主页（9+ 查询，
+		// 含 stats 五重 COUNT），而 WS 负载只需要 basic info（审计 perf P1-1）。
+		if items, err := s.users.BatchGet(ctx, []string{userID}); err == nil {
+			if item, ok := items[userID]; ok {
+				info["nickname"] = item.Nickname
+				if item.AvatarURL != nil && *item.AvatarURL != "" {
+					info["avatar_url"] = *item.AvatarURL
+				}
 			}
 		}
 	}

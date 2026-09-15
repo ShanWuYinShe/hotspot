@@ -49,7 +49,8 @@ func NewApp(cfg config.Config) (*App, error) {
 	if err := ensureSchema(cfg, persistenceFactory); err != nil {
 		return nil, err
 	}
-	resourceguard.SetDefaultChecker(newResourceGuardChecker(persistenceFactory))
+	resourceguardChecker := newResourceGuardChecker(persistenceFactory)
+	resourceguard.SetDefaultChecker(resourceguardChecker)
 	// Create the redis client (if configured) before building modules so the
 	// system health endpoint can probe it. The same client is handed to the
 	// realtime bridge below.
@@ -63,6 +64,11 @@ func NewApp(cfg config.Config) (*App, error) {
 	rootCtx, rootCancel := context.WithCancel(context.Background())
 	ratelimit.StartSweeper(rootCtx)
 	platformauth.StartSweeper(rootCtx)
+	// resourceguard missing 缓存定期清扫：条目仅在同 key 再次探测时惰性删除，
+	// 扫描器打随机 ID 可让 map 无上限增长。
+	if dbChecker, ok := resourceguardChecker.(*resourceguard.DBChecker); ok {
+		dbChecker.StartSweeper(rootCtx, time.Minute)
+	}
 	// Prune expired idempotency records from the in-memory store. Get/Reserve
 	// already apply lazy expiry so this is purely about bounding map growth.
 	// Redis 可用时切共享状态存储：幂等记录（同一 Idempotency-Key 只执行一次）
@@ -124,6 +130,12 @@ func (a *App) Logger() *observability.Logger {
 }
 
 func (a *App) Shutdown() {
+	// 先排空 WS 连接（1001 Going Away + 有界等待）：server.Shutdown 不等待
+	// hijacked 连接，若先关 Redis/DB，存活连接的后续操作全部报错，客户端也要
+	// 等 ping 超时才发现断线。排空只需给各连接发 close frame，不依赖后端服务。
+	if remaining := realtime.DefaultHub().DrainConnections(3 * time.Second); remaining > 0 {
+		a.logger.Warn("ws drain left active connections", "remaining", remaining)
+	}
 	if a.bridge != nil {
 		a.bridge.Close()
 	}

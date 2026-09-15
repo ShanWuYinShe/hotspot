@@ -113,6 +113,18 @@ func (u *stubUserReader) OpenTheDoor(_ context.Context, userID string) (users.Us
 	}
 	return u.item, u.found, nil
 }
+func (u *stubUserReader) BatchGet(_ context.Context, userIDs []string) (map[string]users.UserInfo, error) {
+	if u.userErr != nil {
+		return nil, u.userErr
+	}
+	out := make(map[string]users.UserInfo, len(userIDs))
+	if u.found {
+		for _, id := range userIDs {
+			out[id] = users.UserInfo{UserID: id, Nickname: u.item.User.Nickname, AvatarURL: u.item.User.AvatarURL}
+		}
+	}
+	return out, nil
+}
 func (u *stubUserReader) SettingsFor(_ context.Context, _ string) (users.UserSettings, bool, error) {
 	return u.settings, true, u.settingsErr
 }
@@ -131,6 +143,18 @@ func (u *stubUserReader) Relationship(_ context.Context, _ string, targetID stri
 		}
 	}
 	return users.Relationship{}, nil
+}
+
+func (u *stubUserReader) RelationshipBatch(ctx context.Context, userID string, targetUserIDs []string) (map[string]users.Relationship, error) {
+	out := make(map[string]users.Relationship, len(targetUserIDs))
+	for _, id := range targetUserIDs {
+		rel, err := u.Relationship(ctx, userID, id)
+		if err != nil {
+			return nil, err
+		}
+		out[id] = rel
+	}
+	return out, nil
 }
 
 // quotaSource is a static appconfig.Source for the stranger quota tests.

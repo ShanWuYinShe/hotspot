@@ -174,6 +174,31 @@ func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID strin
 	return true, nil
 }
 
+// AreMembers 批量判定成员资格（单次往返，queryGetGroupMemberships 现成 SQL）。
+func (r *PostgresRepository) AreMembers(ctx context.Context, groupIDs []string, userID string) (map[string]bool, error) {
+	result := make(map[string]bool, len(groupIDs))
+	if len(groupIDs) == 0 {
+		return result, nil
+	}
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	rows, err := queryable.Query(ctx, queryGetGroupMemberships, userID, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var groupID string
+		if err := rows.Scan(&groupID); err != nil {
+			return nil, err
+		}
+		result[groupID] = true
+	}
+	return result, rows.Err()
+}
+
 // GetApplication loads a single application by ID. Used to replace the O(groups
 // × applications) scan in findApplicationForApprover with a single lookup
 // followed by an admin-rights check.

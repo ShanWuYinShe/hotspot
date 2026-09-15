@@ -9,6 +9,7 @@ import (
 	"hotspot/backend-go/internal/modules/reports"
 	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/actor"
+	"hotspot/backend-go/internal/platform/realtime"
 )
 
 // realtimeBanAuthorizer adapts the admin module repository to the realtime
@@ -49,6 +50,20 @@ func (a realtimeUserRepo) GetSettings(ctx context.Context, userID string) (bool,
 	return settings.PresenceVisible, string(settings.AllowPrivateChat), ok, err
 }
 
+// GetSettingsBatch 批量 presence/私聊设置（realtime 订阅鉴权批量路径）。
+// 返回轻量结构避免 realtime 依赖 users 的完整 settings 类型。
+func (a realtimeUserRepo) GetSettingsBatch(ctx context.Context, userIDs []string) (map[string]realtime.PresenceSetting, error) {
+	settings, err := a.repo.GetSettingsBatch(ctx, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]realtime.PresenceSetting, len(settings))
+	for id, s := range settings {
+		out[id] = realtime.PresenceSetting{PresenceVisible: s.PresenceVisible, Found: true}
+	}
+	return out, nil
+}
+
 func (a realtimeUserRepo) Relationship(ctx context.Context, userID, targetUserID string) (bool, bool, bool, error) {
 	relation, err := a.repo.Relationship(ctx, userID, targetUserID)
 	return relation.IsFollowing, relation.IsFollowedBy, relation.IsBlocked, err
@@ -72,6 +87,11 @@ func (a realtimeGroupRepo) ListMembers(ctx context.Context, groupID string, limi
 
 func (a realtimeGroupRepo) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
 	return a.repo.IsMember(ctx, groupID, userID)
+}
+
+// AreMembers 批量成员判定（realtime 订阅鉴权批量路径）。
+func (a realtimeGroupRepo) AreMembers(ctx context.Context, groupIDs []string, userID string) (map[string]bool, error) {
+	return a.repo.AreMembers(ctx, groupIDs, userID)
 }
 
 // reportsMediaSource adapts the media module Service to the reports snapshot

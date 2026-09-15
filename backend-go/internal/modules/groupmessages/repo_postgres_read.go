@@ -33,6 +33,10 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 	}
 	defer rows.Close()
 	items := []GroupMessageItem{}
+	// fileIDsByIndex 与 items 同步索引：媒体元数据循环后单次批量回填，
+	// 避免逐条查询（N+1）。语义与 WS media 负载一致（url=storage_key）。
+	fileIDsByIndex := make([]string, 0, limit+1)
+	fileIDs := make([]string, 0, limit+1)
 	for rows.Next() {
 		var item GroupMessageItem
 		var editedAt string
@@ -67,9 +71,24 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 		item.ReadCount = &readCount
 		item.Sender = map[string]any{"user_id": senderUserID, "nickname": senderNickname, "avatar_url": senderAvatar}
 		items = append(items, item)
+		fileIDsByIndex = append(fileIDsByIndex, fileID)
+		if fileID != "" {
+			fileIDs = append(fileIDs, fileID)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedGroupMessages{}, err
+	}
+	if len(fileIDs) > 0 {
+		mediaByFileID, err := r.mediaByFileIDs(ctx, queryable, fileIDs)
+		if err != nil {
+			return PaginatedGroupMessages{}, err
+		}
+		for i := range items {
+			if media, ok := mediaByFileID[fileIDsByIndex[i]]; ok {
+				items[i].Media = media
+			}
+		}
 	}
 	if len(items) <= limit {
 		return PaginatedGroupMessages{Items: items}, nil
@@ -77,4 +96,30 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 	next := items[limit-1]
 	c := encodeGroupMessageCursor(next.SentAt, next.MessageID)
 	return PaginatedGroupMessages{Items: items[:limit], NextCursor: &c}, nil
+}
+
+// mediaByFileIDs 批量取消息媒体元数据（单次往返），字段语义与 GetMediaForMessage
+// 的 WS media 负载一致（url=storage_key）。仅回填 status='completed' 的文件；
+// 未命中的 file_id（历史脏数据）保持 media 为空，由客户端占位兜底。
+func (r *PostgresRepository) mediaByFileIDs(ctx context.Context, queryable persistence.Queryable, fileIDs []string) (map[string]map[string]any, error) {
+	rows, err := queryable.Query(ctx, queryGroupMediaFilesByIDs, fileIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	mediaByFileID := make(map[string]map[string]any, len(fileIDs))
+	for rows.Next() {
+		var fileID, storageKey, fileName, mimeType string
+		var fileSize int
+		if err := rows.Scan(&fileID, &storageKey, &fileName, &fileSize, &mimeType); err != nil {
+			return nil, err
+		}
+		mediaByFileID[fileID] = map[string]any{
+			"url":       storageKey,
+			"file_name": fileName,
+			"file_size": fileSize,
+			"mime_type": mimeType,
+		}
+	}
+	return mediaByFileID, rows.Err()
 }

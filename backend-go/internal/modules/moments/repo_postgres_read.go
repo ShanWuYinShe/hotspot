@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"hotspot/backend-go/internal/platform/cursor"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"time"
 
@@ -132,8 +133,15 @@ func (r *PostgresRepository) LoadMyState(ctx context.Context, momentID, userID s
 	}
 	var favorited int
 	isFavorited := false
-	if err := queryable.QueryRow(ctx, queryCheckMomentFavorite, userID, momentID).Scan(&favorited); err == nil {
+	// ErrNoRows=未收藏是正常分支；其余错误（连接失败等）记录日志后按未收藏
+	// 返回——签名 *MyMomentState 无 error 出口，吞掉真实错误会掩盖故障。
+	err := queryable.QueryRow(ctx, queryCheckMomentFavorite, userID, momentID).Scan(&favorited)
+	switch {
+	case err == nil:
 		isFavorited = true
+	case errors.Is(err, pgx.ErrNoRows):
+	default:
+		observability.L().Error("moments.load_my_state favorite check failed", "error", err, "moment_id", momentID, "user_id", userID)
 	}
 	return &MyMomentState{IsFavorited: isFavorited}
 }

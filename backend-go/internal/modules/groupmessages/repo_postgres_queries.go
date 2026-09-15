@@ -222,4 +222,15 @@ FROM group_members WHERE group_id = $1 AND user_id = $2`
 		       declared_mime_type
 		FROM media_upload_sessions
 		WHERE file_id = $1 AND status = 'completed' AND user_id = $2`
+
+	// queryGroupMediaFilesByIDs 批量取消息媒体元数据（History media 回填）。
+	// 历史行面向全体群成员可见，不做 owner 过滤；仅回填 completed 文件。
+	queryGroupMediaFilesByIDs = `
+		SELECT file_id,
+		       storage_key,
+		       COALESCE(file_name, ''),
+		       declared_file_size,
+		       declared_mime_type
+		FROM media_upload_sessions
+		WHERE file_id = ANY($1) AND status = 'completed'`
 )

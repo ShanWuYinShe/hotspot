@@ -15,6 +15,10 @@ type Repository interface {
 	ListAdminMembers(context.Context, string, *GroupRole, int, string) ([]AdminGroupMemberItem, string, error)
 	SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
 	IsMember(context.Context, string, string) (bool, error)
+	// AreMembers 批量判定 userID 是否为各群成员（单次往返）。WS 订阅鉴权
+	// 消费：订阅消息最坏携带 100 个群 ID，逐条 IsMember 会把读循环阻塞成
+	// 串行 DB 往返。缺失的 group_id 不在返回 map 中（非成员）。
+	AreMembers(context.Context, []string, string) (map[string]bool, error)
 	IsBanned(context.Context, string, string) (bool, error)
 	GetApplication(context.Context, string) (GroupApplicationItem, bool, error)
 	ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error)

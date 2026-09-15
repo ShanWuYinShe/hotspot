@@ -20,6 +20,8 @@ WHERE moment_id = $1`
 	// queryListMomentImagesByMomentIDs returns ordered image rows joined with
 	// the completed media upload sessions. Rows are ordered by position so the
 	// caller can append them directly to MomentItem.Images in publish order.
+	// JOIN 条件必须带 status='completed'：045 的 idx_media_upload_sessions_file_id
+	// 是 partial index，谓词不匹配则退化为对 media_upload_sessions 的全表扫描。
 	queryListMomentImagesByMomentIDs = `
 SELECT mi.moment_id,
        mus.file_id,
@@ -29,7 +31,7 @@ SELECT mi.moment_id,
        COALESCE(mus.height, 0),
        COALESCE(mus.final_mime_type, '')
 FROM moment_images mi
-JOIN media_upload_sessions mus ON mus.file_id = mi.file_id
+JOIN media_upload_sessions mus ON mus.file_id = mi.file_id AND mus.status = 'completed'
 WHERE mi.moment_id = ANY($1)
 ORDER BY mi.moment_id, mi.position ASC`
 )

@@ -98,6 +98,34 @@ func (c *DBChecker) markMissing(kind ResourceKind, id string) {
 	c.mu.Unlock()
 }
 
+// StartSweeper 启动过期 missing 缓存的后台清扫（对齐 idempotency/notify 的
+// sweeper 模式）：missing 条目仅在同 key 再次探测时惰性删除，扫描器打随机
+// ID 可让 map 无上限增长（内存泄漏向量）。goroutine 绑定 ctx，停机即退出。
+func (c *DBChecker) StartSweeper(ctx context.Context, interval time.Duration) {
+	if c == nil {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				now := time.Now().UTC()
+				c.mu.Lock()
+				for key, expiresAt := range c.missing {
+					if now.After(expiresAt) {
+						delete(c.missing, key)
+					}
+				}
+				c.mu.Unlock()
+			}
+		}
+	}()
+}
+
 func queryForKind(kind ResourceKind) string {
 	switch kind {
 	case ResourceUser:
