@@ -102,6 +102,14 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		authorBlockedCaller, _, err := usersModule.Service.BlockStateBetween(checkCtx, authorID, callerID)
 		return authorBlockedCaller, err
 	})
+	// 动态收藏/reaction 拉黑拦截（对齐评论与私聊口径：双向拉黑即不可交互，
+	// 防止 reaction 击穿拉黑关系触发对方通知）。fail-closed 同上。
+	momentsModule.Service.SetBlockChecker(func(callerID, authorID string) (bool, error) {
+		checkCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		callerBlocked, authorBlocked, err := usersModule.Service.BlockStateBetween(checkCtx, callerID, authorID)
+		return callerBlocked || authorBlocked, err
+	})
 	// reference_point 回退链第 2 级：已登录用户最近位置（users 模块实现，
 	// 经 Service 接口注入 moments fetch_nearby/fetch_following 与各 search 端点）。
 	momentsModule.Service.SetLocationProvider(usersModule.Service)

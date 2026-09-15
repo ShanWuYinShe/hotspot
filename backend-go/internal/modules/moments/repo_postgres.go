@@ -242,6 +242,16 @@ func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit 
 		builder.WriteString(fmt.Sprintf(", EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $%d)", len(args)))
 	}
 	builder.WriteString(` FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND m.is_deleted = FALSE`)
+	if viewerID != "" {
+		// 双向拉黑过滤（对齐 fetch_following/fetch_nearby 口径）：搜索是发现面，
+		// 被拉黑/拉黑对方作者的瞬间不应出现在结果里。
+		args = append(args, viewerID)
+		v := len(args)
+		builder.WriteString(fmt.Sprintf(
+			" AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = $%d AND blk.target_user_id = m.user_id AND blk.is_blocked = TRUE)"+
+				" AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = m.user_id AND blk.target_user_id = $%d AND blk.is_blocked = TRUE)",
+			v, v))
+	}
 	kwArg := 0
 	tagArg := 0
 	if keyword != nil && *keyword != "" {
@@ -290,7 +300,9 @@ func searchScoreSQL(sortBy string, kwArg, tagArg int) string {
 		// 相关子查询走 reactions 主键 (target_type, target_id, user_id) 前缀，代价可控。
 		return "(((SELECT COUNT(*) FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id) + m.comments_count)::float8 / POWER(GREATEST(EXTRACT(EPOCH FROM (now() - m.created_at)) / 3600.0, 0.0) + 2.0, 1.5))"
 	case "newest":
-		return "0"
+		// 0::float8：裸整数常量会被 Postgres 当作 ORDER BY 位置引用（42P10），
+		// 必须带类型成为表达式。
+		return "0::float8"
 	default:
 		parts := make([]string, 0, 2)
 		if kwArg > 0 {
@@ -301,7 +313,8 @@ func searchScoreSQL(sortBy string, kwArg, tagArg int) string {
 			parts = append(parts, "1")
 		}
 		if len(parts) == 0 {
-			return "0"
+			// 无 keyword/tag 的 relevance 退化为常量分，理由同 newest 的 0::float8。
+			return "0::float8"
 		}
 		return strings.Join(parts, " + ")
 	}

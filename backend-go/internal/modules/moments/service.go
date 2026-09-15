@@ -31,6 +31,9 @@ type Service struct {
 	runInTx       persistence.TxRunner
 	reactions     ReactionAggregator // optional; nil => reactions[] not filled
 	locations     LocationProvider   // optional; nil => reference_point 回退链跳过用户最近位置一级
+	// blockChecker 可选注入：caller 与瞬间作者间双向拉黑判定（对齐 comments 的
+	// 依赖倒置模式，bootstrap 统一接线）。nil（dev/test 默认）时跳过拉黑检查。
+	blockChecker func(callerID, authorID string) (bool, error)
 }
 
 // ReactionAggregator computes per-emoji reaction aggregates for moments.
@@ -204,9 +207,25 @@ func (s *Service) Exists(ctx context.Context, momentID string) (bool, error) {
 	return s.repo.Exists(ctx, momentID)
 }
 
+// SetBlockChecker 注入 caller↔作者双向拉黑判定（依赖倒置：moments 不直接
+// import users，由 bootstrap 接线；查询出错 fail-closed 向上返回）。
+func (s *Service) SetBlockChecker(fn func(callerID, authorID string) (bool, error)) {
+	s.blockChecker = fn
+}
+
+// blockedEitherWay caller 与作者任一方拉黑即视为阻断（feed/交互全链路口径对齐
+// 私聊与 WS presence）。返回 (是否阻断, 错误)。
+func (s *Service) blockedEitherWay(callerID, authorID string) (bool, error) {
+	if s.blockChecker == nil || callerID == "" || authorID == "" || callerID == authorID {
+		return false, nil
+	}
+	return s.blockChecker(callerID, authorID)
+}
+
 // IsReactionTargetVisible 判定瞬间对当前调用方可见（spec reaction.md 目标可见性）：
 // 软删瞬间与 private 瞬间（非拥有者）统一按不存在处理（found=false → 10300，
-// 不因报错路径差异泄漏存在性）。
+// 不因报错路径差异泄漏存在性）；双向拉黑按不可见处理（reaction 不得击穿拉黑
+// 关系触发对方通知）。
 func (s *Service) IsReactionTargetVisible(ctx context.Context, momentID string) (found bool, visible bool, err error) {
 	item, ok, err := s.repo.Get(ctx, momentID)
 	if err != nil || !ok {
@@ -217,6 +236,13 @@ func (s *Service) IsReactionTargetVisible(ctx context.Context, momentID string) 
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if item.PrivacyLevel == "private" && item.User.UserID != principal.UserID {
+		return true, false, nil
+	}
+	blocked, err := s.blockedEitherWay(principal.UserID, item.User.UserID)
+	if err != nil {
+		return true, false, err
+	}
+	if blocked {
 		return true, false, nil
 	}
 	return true, true, nil
@@ -368,7 +394,8 @@ func (s *Service) Delete(ctx context.Context, momentID string) error {
 }
 
 // ensureInteractable 校验瞬间对当前用户可交互：必须存在、未软删且可见
-// （public 或拥有者）。不可见统一 ErrMomentNotFound（10300 防枚举）。
+// （public 或拥有者），且与作者无双向拉黑。不可见统一 ErrMomentNotFound
+// （10300 防枚举）；拉黑查询失败 fail-closed 向上返回。
 func (s *Service) ensureInteractable(ctx context.Context, momentID string) error {
 	item, ok, err := s.repo.Get(ctx, momentID)
 	if err != nil {
@@ -379,6 +406,13 @@ func (s *Service) ensureInteractable(ctx context.Context, momentID string) error
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if item.PrivacyLevel == "private" && item.User.UserID != principal.UserID {
+		return ErrMomentNotFound
+	}
+	blocked, err := s.blockedEitherWay(principal.UserID, item.User.UserID)
+	if err != nil {
+		return err
+	}
+	if blocked {
 		return ErrMomentNotFound
 	}
 	return nil

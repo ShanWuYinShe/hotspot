@@ -160,6 +160,9 @@ JOIN users u ON u.user_id = m.user_id
 JOIN user_relations ur ON ur.target_user_id = m.user_id AND ur.user_id = $1 AND ur.is_following = TRUE
 WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE
+  -- 双向拉黑过滤（对齐私聊/评论口径）：任何一方拉黑即互不可见
+  AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = $1 AND blk.target_user_id = m.user_id AND blk.is_blocked = TRUE)
+  AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = m.user_id AND blk.target_user_id = $1 AND blk.is_blocked = TRUE)
   AND ($2::timestamptz IS NULL OR m.created_at < $2::timestamptz OR (m.created_at = $2::timestamptz AND m.moment_id < $3))
 ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $4`
@@ -189,6 +192,9 @@ FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE
+  -- 双向拉黑过滤（对齐私聊/评论口径）：任何一方拉黑即互不可见
+  AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = $3 AND blk.target_user_id = m.user_id AND blk.is_blocked = TRUE)
+  AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = m.user_id AND blk.target_user_id = $3 AND blk.is_blocked = TRUE)
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
               WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)
 ORDER BY m.created_at DESC
