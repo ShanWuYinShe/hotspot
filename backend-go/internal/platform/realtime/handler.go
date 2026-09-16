@@ -85,6 +85,7 @@ type Handler struct {
 	presence       presenceWriter
 	actorProvider  typingActorProvider
 	typingThrottle sync.Map
+	actorCache     sync.Map // userID → actorCacheEntry（typing actor 短缓存，审计 perf P2-2）
 	resumeStore    ResumeStore
 	stop           context.CancelFunc
 	wg             sync.WaitGroup
@@ -154,24 +155,56 @@ func (h *Handler) markPresence(userID string, online bool) {
 	}
 }
 
+// typingActorCacheTTL 是 typing actor 信息的进程内缓存窗口（审计 perf P2-2
+// 收口）：节流前置后每个 (user,target) 对最多每 3s 打一次 GetActorInfo DB 查询，
+// 群聊内多对并发时仍是可观的热路径 DB 压力。昵称/头像变更延迟 ≤TTL 对 typing
+// 指示无感知影响。
+const typingActorCacheTTL = 30 * time.Second
+
+type actorCacheEntry struct {
+	actor map[string]any
+	at    time.Time
+}
+
 // resolveTypingActor builds the actor UserInfo map for the typing event.
+// 进程内短缓存（30s）：同 user 的连续 typing 帧不再逐帧打 GetActorInfo。
+// DB 错误不缓存（瞬态故障下一帧重试）；「用户不存在」的兜底结果照常缓存
+// （稳定状态）。
 func (h *Handler) resolveTypingActor(ctx context.Context, userID string) map[string]any {
-	if h.actorProvider != nil {
-		if info, err := h.actorProvider.GetActorInfo(ctx, userID); err == nil {
-			actorInfo := map[string]any{"user_id": info.UserID, "nickname": info.Nickname}
-			if info.AvatarURL != "" {
-				actorInfo["avatar_url"] = info.AvatarURL
-			}
-			return actorInfo
+	if cached, ok := h.actorCache.Load(userID); ok {
+		if entry, ok := cached.(actorCacheEntry); ok && time.Since(entry.at) < typingActorCacheTTL {
+			return entry.actor
 		}
 	}
-	return map[string]any{"user_id": userID, "nickname": userID}
+	actor, cacheable := h.lookupTypingActor(ctx, userID)
+	if cacheable {
+		h.actorCache.Store(userID, actorCacheEntry{actor: actor, at: time.Now()})
+	}
+	return actor
+}
+
+// lookupTypingActor 查询 typing actor；cacheable=false 表示瞬态故障（不缓存，
+// 下一帧重试），true 表示稳定结果（含「用户不存在」兜底，可缓存）。
+func (h *Handler) lookupTypingActor(ctx context.Context, userID string) (actor map[string]any, cacheable bool) {
+	if h.actorProvider != nil {
+		info, err := h.actorProvider.GetActorInfo(ctx, userID)
+		if err != nil {
+			return map[string]any{"user_id": userID, "nickname": userID}, false
+		}
+		actor = map[string]any{"user_id": info.UserID, "nickname": info.Nickname}
+		if info.AvatarURL != "" {
+			actor["avatar_url"] = info.AvatarURL
+		}
+		return actor, true
+	}
+	return map[string]any{"user_id": userID, "nickname": userID}, true
 }
 
 // sweepTypingThrottle periodically drops stale typing-throttle entries so the
 // sync.Map doesn't grow unboundedly with each unique (user,target) pair over
 // the process lifetime. The throttle window is 3s; entries older than a minute
-// are dead. It exits when ctx is cancelled.
+// are dead. It exits when ctx is cancelled. actorCache（TTL 30s）同周期清扫：
+// 超过 2 分钟未刷新的条目已必然过期。
 func (h *Handler) sweepTypingThrottle(ctx context.Context) {
 	defer h.wg.Done()
 	ticker := time.NewTicker(time.Minute)
@@ -185,6 +218,13 @@ func (h *Handler) sweepTypingThrottle(ctx context.Context) {
 			h.typingThrottle.Range(func(key, value any) bool {
 				if t, ok := value.(time.Time); ok && t.Before(cutoff) {
 					h.typingThrottle.Delete(key)
+				}
+				return true
+			})
+			actorCutoff := time.Now().Add(-2 * typingActorCacheTTL)
+			h.actorCache.Range(func(key, value any) bool {
+				if entry, ok := value.(actorCacheEntry); ok && entry.at.Before(actorCutoff) {
+					h.actorCache.Delete(key)
 				}
 				return true
 			})

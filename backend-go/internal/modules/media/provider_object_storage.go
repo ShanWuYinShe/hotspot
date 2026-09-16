@@ -12,6 +12,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
@@ -20,10 +21,29 @@ import (
 
 const mediaPresignTTL = 15 * time.Minute
 
+// presign GET 读 URL 的进程内缓存（审计 perf P3-4）：同一 key 在窗口内返回
+// 同一签名 URL——(a) 免去每次 feed 渲染对每图重复的 SigV4 签名；(b) URL 跨请求
+// 稳定，客户端（浏览器磁盘缓存）命中率显著提升。签名仅是授权，不冻结对象内容，
+// 对象被覆盖后旧 URL 即取新内容，无陈旧性问题。两代轮换限容：条目存活 1–2 个
+// 窗口（远短于 GET TTL），总内存有界。PUT/HEAD 不缓存（上传与内部探测要求新鲜）。
+const (
+	presignCacheWindow     = time.Hour
+	presignCacheMaxEntries = 8192
+)
+
+type presignCacheEntry struct {
+	url string
+}
+
 type ObjectStorageProvider struct {
 	cfg    config.Config
 	client *http.Client
 	now    func() time.Time
+
+	presignMu      sync.Mutex
+	presignCur     map[string]presignCacheEntry
+	presignPrev    map[string]presignCacheEntry
+	presignRotated time.Time // 零值 = 尚未初始化，首次访问即起算窗口
 }
 
 func NewObjectStorageProvider(cfg config.Config) *ObjectStorageProvider {
@@ -120,8 +140,55 @@ func (p *ObjectStorageProvider) ReadPrefix(ctx context.Context, storageKey strin
 // PresignGet returns a client-facing absolute URL that grants short-term
 // read access to the object at storageKey. The URL is signed against the
 // public (client-facing) endpoint so it is valid through the reverse proxy.
+// 读 URL 走两代缓存（审计 perf P3-4）：窗口内同 key 返回同一签名 URL，签名
+// 结果 1–2 个窗口后自然过期重签（远短于读 TTL，安全性不受影响）。
 func (p *ObjectStorageProvider) PresignGet(ctx context.Context, storageKey string, ttl time.Duration) (string, error) {
-	return p.presignURL(ctx, http.MethodGet, storageKey, ttl)
+	cacheKey := "get:" + storageKey + ":" + ttl.String()
+	if url, ok := p.cachedPresignedURL(cacheKey); ok {
+		return url, nil
+	}
+	url, err := p.presignURL(ctx, http.MethodGet, storageKey, ttl)
+	if err != nil {
+		return "", err
+	}
+	p.storePresignedURL(cacheKey, url)
+	return url, nil
+}
+
+// cachedPresignedURL 查缓存并按窗口懒轮换（cur → prev，prev 丢弃）。
+func (p *ObjectStorageProvider) cachedPresignedURL(cacheKey string) (string, bool) {
+	p.presignMu.Lock()
+	defer p.presignMu.Unlock()
+	now := p.now()
+	if p.presignRotated.IsZero() {
+		p.presignRotated = now
+		p.presignCur = map[string]presignCacheEntry{}
+	}
+	if now.Sub(p.presignRotated) >= presignCacheWindow {
+		p.presignPrev = p.presignCur
+		p.presignCur = map[string]presignCacheEntry{}
+		p.presignRotated = now
+	}
+	if entry, ok := p.presignCur[cacheKey]; ok {
+		return entry.url, true
+	}
+	if entry, ok := p.presignPrev[cacheKey]; ok {
+		return entry.url, true
+	}
+	return "", false
+}
+
+// storePresignedURL 写入当前代；容量满时放弃缓存（签名路径仍正确返回）。
+func (p *ObjectStorageProvider) storePresignedURL(cacheKey, url string) {
+	p.presignMu.Lock()
+	defer p.presignMu.Unlock()
+	if p.presignCur == nil {
+		p.presignCur = map[string]presignCacheEntry{}
+	}
+	if len(p.presignCur) >= presignCacheMaxEntries {
+		return
+	}
+	p.presignCur[cacheKey] = presignCacheEntry{url: url}
 }
 
 func (p *ObjectStorageProvider) presignURL(ctx context.Context, method, storageKey string, ttl time.Duration) (string, error) {

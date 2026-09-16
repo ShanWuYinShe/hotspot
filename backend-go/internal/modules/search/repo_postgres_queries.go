@@ -22,7 +22,9 @@ LIMIT $2`
 	// P2-3）收敛为 4 个 LATERAL（tags / moments / 三个关注计数合一个 / groups）。
 	// 内层先过滤 + LIMIT 派生表（原查询无 ORDER BY，LIMIT 行集本就任意，语义不变），
 	// LATERAL 只对页内 ≤20 行各执行一次；3 个 user_relations 计数合并后单行只扫
-	// 一次关系表。
+	// 一次关系表。三个统计 LATERAL 内部按 u.stats_visible 短路（P2-3 收口）：
+	// 匿名 suggest 上下文里统计仅在该开关为真时进入 payload，关闭时跳过
+	// moments/relations/groups 三处聚合（CASE 短路标量子查询）。
 	querySearchSuggestUsers = `
 SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), COALESCE(u.bio, ''), u.location_name, u.latitude, u.longitude,
        u.presence_status, u.last_online,
@@ -54,9 +56,10 @@ LEFT JOIN LATERAL (
     WHERE pt.user_id = u.user_id
 ) t ON TRUE
 LEFT JOIN LATERAL (
-    SELECT COUNT(*) AS moments_count
-    FROM moments m2
-    WHERE m2.user_id = u.user_id AND m2.is_deleted = FALSE
+    SELECT CASE WHEN u.stats_visible THEN
+        (SELECT COUNT(*) FROM moments m2
+         WHERE m2.user_id = u.user_id AND m2.is_deleted = FALSE)
+    ELSE 0 END AS moments_count
 ) m ON TRUE
 LEFT JOIN LATERAL (
     SELECT
@@ -66,13 +69,14 @@ LEFT JOIN LATERAL (
     FROM user_relations ur
     LEFT JOIN user_relations rev
       ON rev.user_id = ur.target_user_id AND rev.target_user_id = ur.user_id AND rev.is_following = TRUE
-    WHERE ur.user_id = u.user_id OR ur.target_user_id = u.user_id
+    WHERE u.stats_visible AND (ur.user_id = u.user_id OR ur.target_user_id = u.user_id)
 ) rel ON TRUE
 LEFT JOIN LATERAL (
-    SELECT COUNT(*) AS groups_count
-    FROM group_members gm3
-    JOIN groups g3 ON g3.group_id = gm3.group_id
-    WHERE gm3.user_id = u.user_id AND g3.deleted_at IS NULL
+    SELECT CASE WHEN u.stats_visible THEN
+        (SELECT COUNT(*) FROM group_members gm3
+         JOIN groups g3 ON g3.group_id = gm3.group_id
+         WHERE gm3.user_id = u.user_id AND g3.deleted_at IS NULL)
+    ELSE 0 END AS groups_count
 ) gc ON TRUE
 LIMIT $2`
 
