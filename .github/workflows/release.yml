@@ -49,11 +49,16 @@ jobs:
             -t "$IMAGE_BACKEND:$GIT_VERSION"
 
       - name: Build frontend image
+        env:
+          # 高德 Web key：仓库 Settings → Secrets 中维护（VITE_AMAP_KEY），缺失则
+          # 构建产物自动走 OSM 降级；key 会烘焙进静态产物，配额与告警见 .env.example
+          VITE_AMAP_KEY: ${{ secrets.VITE_AMAP_KEY }}
         run: |
           docker build frontend \
             --build-arg GIT_VERSION="$GIT_VERSION" \
             --build-arg GIT_COMMIT="$GIT_COMMIT" \
             --build-arg GIT_BUILD_TIME="$GIT_BUILD_TIME" \
+            --build-arg VITE_AMAP_KEY="$VITE_AMAP_KEY" \
             -t "$IMAGE_FRONTEND:$GIT_VERSION"
 
       - name: Smoke-check fingerprint inside images

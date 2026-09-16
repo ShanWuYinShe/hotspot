@@ -205,6 +205,9 @@ services:
         GIT_VERSION: ${GIT_VERSION:-dev}
         GIT_COMMIT: ${GIT_COMMIT:-}
         GIT_BUILD_TIME: ${GIT_BUILD_TIME:-}
+        # 高德 Web key：构建期烘焙进产物（dev 经 .env 直达容器，prod 经 CI secret）；
+        # 为空则前端自动走 OSM 降级
+        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
     image: hotspot-frontend:${IMAGE_TAG:-latest}
 
   # ── Gateway (Nginx) ─────────────────────────────────────────────

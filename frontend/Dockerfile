@@ -21,6 +21,10 @@ ARG GIT_BUILD_TIME=
 ENV GIT_VERSION=${GIT_VERSION} \
     GIT_COMMIT=${GIT_COMMIT} \
     GIT_BUILD_TIME=${GIT_BUILD_TIME}
+# 高德 Web key（构建期烘焙进静态产物；geo-service.ts 经 import.meta.env 读取，
+# 为空则自动走 OSM 降级。key 打包后可被提取，配额与告警见 .env.example）
+ARG VITE_AMAP_KEY=
+ENV VITE_AMAP_KEY=${VITE_AMAP_KEY:-}
 # SPA 构建期无服务端渲染，PUBLIC_* 变量在客户端运行时读取（经 nginx 同源），无需注入
 RUN bun run build
 

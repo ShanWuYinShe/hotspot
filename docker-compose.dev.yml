@@ -138,6 +138,10 @@ services:
     pull_policy: missing
     user: root
     working_dir: /app
+    # 高德 Web key：经根 .env 直达 Vite dev server（import.meta.env 读取）；
+    # 为空则前端自动走 OSM 降级
+    environment:
+      VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
     # Dev 统一从 nginx(8888) 进入。SvelteKit dev server 监听 5173。
     volumes:
       - ./frontend:/app
