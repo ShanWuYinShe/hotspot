@@ -112,7 +112,6 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
 
 - 调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 dev server 地址
 - 修改 nginx 配置后必须重启对应容器
-- **改动生效闭环**：代码改动合并进主分支后，若主实例开发容器在运行（`http://localhost:8888`），必须主动帮开发者执行 `docker compose -f docker-compose.yml -f docker-compose.dev.yml restart frontend nginx` 并确认 healthy，确保刷新浏览器即可立即看到最新改动效果
 - Svelte 组件互引必须写显式 `.svelte` 扩展名（默认导出）；Svelte 5 单文件单组件
 - 新增依赖后容器内需重装（entrypoint 有自动检测，或 `docker compose up -d --force-recreate frontend`）
 - 每个路由 `+page.svelte` 必须设置 `<svelte:head><title>`（格式 `页面名 · HotSpot`）；

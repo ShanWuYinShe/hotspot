@@ -1,8 +1,8 @@
 # hotspot
 
-多模块项目：HarmonyOS ArkTS 客户端 + Svelte Web 前端 + Go 主后端 + Rust 旧后端。
+多模块项目：HarmonyOS ArkTS 客户端 + Svelte Web 前端 + Go 主后端。
 
-通用约束（Git 规范、Commit 格式、验证流程、工具链偏好、Docker 等）以全局 `~/.config/opencode/AGENTS.md` 为准，本文件只做项目特有补充，不得放宽或违背全局约束。
+通用约束（Git 规范、Commit 格式、验证流程、工具链偏好、Docker 等）以全局 `~/AGENTS.md` 为准（各 AI 工具的全局指令文件均链接到该文件），本文件只做项目特有补充，不得放宽或违背全局约束。
 
 ## 仓库地图
 - `backend-go/`：Go 主后端，模块化单体 + S2 地理索引，当前所有后端开发在此进行。
@@ -26,6 +26,23 @@ bun run --cwd frontend build
 ## 版本号与发布
 
 版本号以 git tag（`vX.Y.Z`）为源，`git describe` 生成版本串并注入全部产物（后端 health/启动日志、前端 `/version.json` 与设置页徽标、镜像 OCI label），用于线上排障精确回溯。发布为产物分发：tag 触发 CI（`.github/workflows/release.yml`）构建镜像挂 GitHub Release，本地 `./scripts/deploy-production.sh vX.Y.Z` 下载分发到服务器 `docker load`——服务器不接触源码、不构建；鸿蒙端版本约定见 `harmonyapp/AGENTS.md`。详见 README「版本号管理与发布」。
+
+### 发布门禁（硬性）：先本地 Docker 验证，再打 tag
+
+禁止把未经本地验证的改动打 tag 发布：在 `git tag vX.Y.Z` 之前，必须按顺序完成：
+
+1. 联调：`docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d` 全员 healthy，在 `http://localhost:8888`（nginx 网关）走通本次改动；前端改动辅以 `bun run browser:qa` 巡检（见 `frontend/AGENTS.md`）。
+2. 集成测试（后端有改动时）：`docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d backend-test`，再在 `backend-go/` 目录执行 `BACKEND_URL=http://localhost:8082 go test -count=1 ./test/integration/`（完整约定见 `backend-go/AGENTS.md`）。
+3. 生产镜像本地构建（与 CI Release 同构的 Dockerfile；CI 在打 tag 后才构建，本地先构建等于把失败提前；三个指纹变量必须一起传，否则 OCI version 回落为 `dev`）：
+   ```bash
+   GIT_VERSION=<候选版本> GIT_COMMIT=$(git rev-parse HEAD) GIT_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+     IMAGE_TAG=<候选版本> docker compose --profile prod build backend frontend-build
+   ```
+4. 版本指纹就地核对：`docker inspect hotspot-backend:<候选版本> / hotspot-frontend:<候选版本>` 的 OCI `org.opencontainers.image.version` 必须等于候选版本、`revision` 等于本次 commit（Release 工作流同款断言，本地先跑）。
+
+全部通过后才打 tag（tag 必须落在 `origin/main` 上）→ 等 CI「Release」成功 → `./scripts/deploy-production.sh vX.Y.Z`（脚本会复核 tag 位置与版本指纹）。
+
+例外：纯文档/注释改动（`*.md`、代码注释）可跳过第 1、2 步；文档改动不进镜像时第 3、4 步也可跳过。
 
 ## 调试入口
 
@@ -125,7 +142,7 @@ git branch -d <分支名>
 - 契约权威：`spec/` 是 API 契约的唯一权威来源；修改接口、字段、错误码前先对齐 `spec/`。
 - 跨端边界：距离与位置计算统一由后端完成，前端和客户端只展示结果。
 - **int64 跨端序列化统一为字符串**：JS（Svelte）与 ArkTS 的 number 是 IEEE754 double，无法无损表示 Go int64（安全整数上限 2^53）。凡 spec 定义 string、后端为 int64 的字段（如 WS `server_seq`），后端 JSON tag 必须加 `,string` 下发字符串；前端/harmonyapp 类型保持 string 仅透传/去重、不做数值运算。禁止以「后端实际下发数字」为由把客户端类型改成 number——正确修法是后端序列化为字符串。
-- Docker Compose 统一管理：所有服务（postgres、redis、seaweedfs、backend、frontend、nginx）统一通过 `docker compose` 编排启动/停止；不得混用宿主机进程与容器，也不允许单独启动某个服务绕过 compose。
+- Docker Compose 统一管理：运行时服务（postgres、redis、seaweedfs、backend、frontend、nginx）统一通过 `docker compose` 编排启动/停止；不得混用宿主机进程与容器，也不允许单独启动某个运行时服务绕过 compose。静态检查（`bun run check/test/build`、Go 单测等不依赖服务间协作的命令）可在宿主机执行。
 - **改动生效闭环**：代码改动合并到主分支后，若主环境 Docker 容器在运行，必须主动重启相关容器，确保最新效果立即可见，不得要求开发者手动重启。
-- 更新代码的过程中发现的问题、错误，都应该修复掉，不能因为不是本次修改引起的就搁置
+- 本次变更范围内发现的问题顺手修复（全局「核心原则」）；范围外的问题记到 `.workwork/` 或如实告知用户，不擅自扩大改动面。
 

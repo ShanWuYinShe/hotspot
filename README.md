@@ -42,6 +42,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 发布为**产物分发模式**，服务器不接触源码、不构建：
 
+0. 本地 Docker 验证（硬性前置，链路见 `AGENTS.md`「发布门禁」：dev 联调 → 集成测试 → 生产镜像构建 → 版本指纹核对），通过后才允许打 tag；
 1. 打 tag 并推送（`git tag vX.Y.Z && git push origin vX.Y.Z`）；
 2. CI「Release」工作流自动构建前后端镜像（注入版本指纹），打包挂到同名 GitHub Release；
 3. 本地执行 `./scripts/deploy-production.sh vX.Y.Z`：下载 Release 镜像包 → 服务器 `docker load` → 滚动更新 → 自动核对线上版本指纹与本次发布一致。
