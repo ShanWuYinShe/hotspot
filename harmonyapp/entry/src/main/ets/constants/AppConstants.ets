@@ -17,6 +17,14 @@ const PROD_SERVER = 'https://api.chaoset.com';
 
 export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;
 
+// Web 端站点入口（nginx 网关同域服务前端静态页），分享链接指向此域名。
+// 路径与 Web 路由表保持一致：/users/:id、/groups/:id、/moments/:id、/share/:code
+// （frontend/src/lib/routes.ts）。debug 走本地网关，dev compose 同样服务 Web 前端。
+const DEV_WEB_SERVER = 'http://127.0.0.1:8888';
+const PROD_WEB_SERVER = 'https://chaoset.com';
+
+export const WEB_BASE_URL: string = DEBUG ? DEV_WEB_SERVER : PROD_WEB_SERVER;
+
 // 构建旗标透出：调试类入口（调试面板等）按此门控，release 构建不可达。
 export const DEBUG_BUILD: boolean = DEBUG;
 

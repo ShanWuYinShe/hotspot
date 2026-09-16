@@ -5,6 +5,7 @@
 
 import { common, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { WEB_BASE_URL } from '../../constants/AppConstants';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'SystemShareService';
@@ -61,7 +62,7 @@ export class SystemShareService {
     const content = new ShareContent();
     content.title = `来认识 ${nickname}`;
     content.description = bio || '快来 HotSpot 和附近的人交流吧！';
-    content.url = userId ? `https://geotalk.app/user/${userId}` : '';
+    content.url = userId ? `${WEB_BASE_URL}/users/${userId}` : '';
     return content;
   }
 
@@ -70,7 +71,7 @@ export class SystemShareService {
     const content = new ShareContent();
     content.title = `加入群组「${groupName}」`;
     content.description = description || '在 HotSpot 发现有趣的附近群组';
-    content.url = groupId ? `https://geotalk.app/group/${groupId}` : '';
+    content.url = groupId ? `${WEB_BASE_URL}/groups/${groupId}` : '';
     return content;
   }
 
@@ -79,7 +80,7 @@ export class SystemShareService {
     const content = new ShareContent();
     content.title = `${author} 的动态`;
     content.description = text.length > 100 ? text.substring(0, 100) + '...' : text;
-    content.url = momentId ? `https://geotalk.app/moment/${momentId}` : '';
+    content.url = momentId ? `${WEB_BASE_URL}/moments/${momentId}` : '';
     return content;
   }
 }

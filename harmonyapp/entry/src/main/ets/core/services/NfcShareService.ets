@@ -4,6 +4,7 @@
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { WEB_BASE_URL } from '../../constants/AppConstants';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'NfcShareService';
@@ -52,7 +53,7 @@ export class NfcShareService {
     data.userId = userId;
     data.nickname = nickname;
     data.bio = bio;
-    data.url = `https://geotalk.app/user/${userId}`;
+    data.url = `${WEB_BASE_URL}/users/${userId}`;
     return data;
   }
 }

@@ -6,6 +6,7 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ApiClient } from '../api/ApiClient';
 import { SystemShareService, ShareContent } from '../services/SystemShareService';
+import { WEB_BASE_URL } from '../../constants/AppConstants';
 import {
   ShareType,
   SharePayload,
@@ -36,7 +37,7 @@ export class ShareActionHelper {
 
       if (response.code === 0 && response.data) {
         const shareCode = response.data.share_code;
-        const shareUrl = `https://geotalk.app/share/${shareCode}`;
+        const shareUrl = `${WEB_BASE_URL}/share/${shareCode}`;
 
         const content = new ShareContent();
         content.title = title;
