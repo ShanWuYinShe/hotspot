@@ -175,8 +175,7 @@ src/routes/
   (app)/
     +layout.svelte         # MainLayout 外壳（桌面/平板/移动/横屏四端分派）
     +page.svelte           # 首页（hero/动态/群组/用户；三端统一标题）
-    nearby/+page.ts        # ⚠️ 旧路径：附近聚合门户已并入首页（完全重复），308 重定向到 /
-                           #    首页是唯一附近聚合页（页头搜索/地图 + 人/群组/动态三板块）
+    nearby/+page.ts        # /nearby 落点：307 重定向到 /nearby/people（语义由“附近的人”承接）
     nearby/people/         # 附近的人
     nearby/groups/         # 附近的组
     nearby/moments/        # 附近时刻（页面样板结构权威基准）
@@ -206,8 +205,6 @@ src/routes/
 
 > 分栏页（`notify/`、`moments/[momentId]/`、`users/[userId]/`）
 > 使用 `SplitPageLayout`；其余 `(app)` 页面（含首页、群组详情、个人主页）使用 `StandardPageLayout`。
-
-> 注：管理后台（spec `api_spec_admin.md`）已有后端契约，前端 `src/api/endpoints.ts` 也登记了 `Admin` 端点（如 `admin/rbac/me`），但**页面尚未实现，后续再补**——功能边界中的「管理后台」为待建项，勿误判为遗漏。
 
 路由常量见 `@/lib/routes`（个人主页分区路径用 `ME_SECTION_PATHS` 静态映射，不走动态段）。
 

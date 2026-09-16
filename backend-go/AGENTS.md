@@ -63,7 +63,7 @@ Handler -> Service -> Repository
 - `module.go`：挂载路由；在 `internal/bootstrap/module_registry.go` 的 `BuildModules()` 中注册
 - `handler.go`（必要时 `handler_xxx.go` 按子域拆分）
 - `service.go`（必要时 `service_xxx.go`）
-- `repo.go` + `repo_postgres.go` + `repo_memory.go`（内存实现用于测试）
+- `repo.go`（接口） + `repo_postgres.go`（生产） + `repo_memory.go`（内存，用于单测与无 DB 场景）为最小集合；SQL 集中 `repo_postgres_queries.go`，允许按子域继续拆分（`repo_postgres_<子域>.go` / `handler_<子域>.go` / `service_<子域>.go`，如 moments 现有 `repo_postgres_read.go` / `repo_postgres_images.go`）
 - `types.go`：请求/响应/内部模型（DTO）
 - `errors.go`：模块级 sentinel error
 
