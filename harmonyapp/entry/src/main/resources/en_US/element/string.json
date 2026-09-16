@@ -25,24 +25,8 @@
       "value": "We need network access to connect to the server and sync data"
     },
     {
-      "name": "network_reason",
-      "value": "We need network state access to optimize data transfer"
-    },
-    {
-      "name": "camera_reason",
-      "value": "We need camera access to capture and share moments"
-    },
-    {
-      "name": "media_reason",
-      "value": "We need media access to save and share photos"
-    },
-    {
       "name": "vibrate_reason",
       "value": "We need vibration permission for haptic feedback"
-    },
-    {
-      "name": "microphone_reason",
-      "value": "We need microphone access to record voice messages"
     },
     {
       "name": "auth_login",

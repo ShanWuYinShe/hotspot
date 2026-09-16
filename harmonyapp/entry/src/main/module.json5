@@ -39,48 +39,8 @@
         }
       },
       {
-        "name": "ohos.permission.GET_NETWORK_INFO",
-        "reason": "$string:network_reason",
-        "usedScene": {
-          "abilities": ["EntryAbility"],
-          "when": "inuse"
-        }
-      },
-      {
-        "name": "ohos.permission.CAMERA",
-        "reason": "$string:camera_reason",
-        "usedScene": {
-          "abilities": ["EntryAbility"],
-          "when": "inuse"
-        }
-      },
-      {
-        "name": "ohos.permission.READ_MEDIA",
-        "reason": "$string:media_reason",
-        "usedScene": {
-          "abilities": ["EntryAbility"],
-          "when": "inuse"
-        }
-      },
-      {
-        "name": "ohos.permission.WRITE_MEDIA",
-        "reason": "$string:media_reason",
-        "usedScene": {
-          "abilities": ["EntryAbility"],
-          "when": "inuse"
-        }
-      },
-      {
         "name": "ohos.permission.VIBRATE",
         "reason": "$string:vibrate_reason",
-        "usedScene": {
-          "abilities": ["EntryAbility"],
-          "when": "inuse"
-        }
-      },
-      {
-        "name": "ohos.permission.MICROPHONE",
-        "reason": "$string:microphone_reason",
         "usedScene": {
           "abilities": ["EntryAbility"],
           "when": "inuse"
