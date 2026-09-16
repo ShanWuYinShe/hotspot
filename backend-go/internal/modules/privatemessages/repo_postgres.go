@@ -321,12 +321,10 @@ func (r *PostgresRepository) LockStrangerQuota(ctx context.Context, senderID, da
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	var locked bool
-	if err := queryable.QueryRow(ctx, queryLockStrangerQuota, senderID+"\x00"+dayKey).Scan(&locked); err != nil {
+	// 阻塞锁返回即已持有（并发同 key 的后到者在此等待，先到者提交后放行），
+	// 仅需捕获执行错误，无「未获得」分支。
+	if err := queryable.Exec(ctx, queryLockStrangerQuota, senderID+"|"+dayKey); err != nil {
 		return fmt.Errorf("privatemessages.LockStrangerQuota: %w", err)
-	}
-	if !locked {
-		return fmt.Errorf("privatemessages.LockStrangerQuota: lock not acquired")
 	}
 	return nil
 }

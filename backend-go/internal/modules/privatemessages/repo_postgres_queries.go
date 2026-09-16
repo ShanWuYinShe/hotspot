@@ -248,5 +248,8 @@ GROUP BY pm.chat_key`
 	// 以「发送者 + UTC 日期」为 key 串行化同发送者的配额检查与消息写入，
 	// 消除 check-then-act 竞态（并发 Send 各自 COUNT 看不到对方未提交行会
 	// 双双超额放行）；先到者提交后，后到者的事务内 COUNT 能看到其消息。
-	queryLockStrangerQuota = `SELECT pg_advisory_xact_lock(hashtext($1)::bigint) IS NULL`
+	// 用阻塞版 pg_advisory_xact_lock 且不读返回值：阻塞锁返回即已持有；
+	// 不写 `IS NULL` 判定——PG 18 上 void IS NULL 恒为 false（实测），
+	// 会把「已获得锁」误判为失败。
+	queryLockStrangerQuota = `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`
 )
