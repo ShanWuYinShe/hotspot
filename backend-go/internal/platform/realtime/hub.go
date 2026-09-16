@@ -43,6 +43,16 @@ type Hub struct {
 	resumeStore   ResumeStore
 }
 
+// recordPublisher 是 ResumeStore 的可选扩展：单次 Redis 往返完成「seq 分配 +
+// Stream 写入 + 跨实例 PUBLISH」（审计 perf P1-4，把广播热路径的两次串行往返
+// 合并为一次）。RedisResumeStore 实现之；NopResumeStore 与测试桩不必实现——
+// Hub 经类型断言探测，未实现时走既有两步路径（Record → publish）。
+// published=false 表示脚本失败，Hub 回退独立 publish（降级语义不变）。
+type recordPublisher interface {
+	RecordUserAndPublish(userID, channel string, event Event) (seq int64, published bool)
+	RecordGroupAndPublish(groupID, channel string, event Event) (seq int64, published bool)
+}
+
 // subEntry 记录单个 sink 在订阅表中的 keys 集合（所有权归 Hub：创建/更新/
 // 销毁都发生在 Hub 持锁的方法内）。
 type subEntry struct {
@@ -238,6 +248,20 @@ func (h *Hub) BroadcastToUser(userID string, event Event) {
 	h.mu.RLock()
 	store := h.resumeStore
 	h.mu.RUnlock()
+	// 组合路径（审计 perf P1-4）：seq 分配 + Stream 写入 + 跨实例 PUBLISH 在
+	// 一次 Redis 往返内完成。组合已含发布时跳过独立 publish；脚本失败时回退
+	// 独立 publish（此时 seq 为 0，与既有 record 失败降级语义一致）。
+	if rp, ok := store.(recordPublisher); ok {
+		seq, published := rp.RecordUserAndPublish(userID, "user:"+userID, event)
+		if seq > 0 {
+			event.ServerSeq = seq
+		}
+		h.deliverUserLocal(userID, event)
+		if !published {
+			h.publish("user:"+userID, event)
+		}
+		return
+	}
 	if store != nil {
 		if seq := store.Record(userID, event); seq > 0 {
 			event.ServerSeq = seq
@@ -370,9 +394,22 @@ func (h *Hub) BroadcastToGroup(groupID string, event Event) {
 	// resume enrich（spec L156, L173）：群事件分配全局单调 seq 并写入 per-group 事件流。
 	// 断线成员重连时按订阅快照聚合其订阅 group 流回放（handler Replay）；广播侧不做
 	// 成员解析（成员查询放热路径会放大写压力，且 Hub 路由层不应依赖业务 repo）。
+	// 组合路径语义与 BroadcastToGroupUser 对应的 user 版相同（审计 perf P1-4，
+	// 单次 Redis 往返；失败回退独立 publish）。
 	h.mu.RLock()
 	store := h.resumeStore
 	h.mu.RUnlock()
+	if rp, ok := store.(recordPublisher); ok {
+		seq, published := rp.RecordGroupAndPublish(groupID, "group:"+groupID, event)
+		if seq > 0 {
+			event.ServerSeq = seq
+		}
+		h.deliverGroupLocal(groupID, event)
+		if !published {
+			h.publish("group:"+groupID, event)
+		}
+		return
+	}
 	if store != nil {
 		if seq := store.RecordGroup(groupID, event); seq > 0 {
 			event.ServerSeq = seq

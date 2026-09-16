@@ -82,20 +82,38 @@ redis.call('PEXPIRE', KEYS[2], ARGV[2])
 return seq
 `)
 
+// recordAndPublishScript 在 recordScript 基础上追加跨实例 PUBLISH（仍一次往返），
+// 广播热路径由两次串行 Redis 往返（record → publish）降为一次（审计 perf P1-4）。
+// 发布载荷为 bridge 信封的手工拼接 JSON：{"o":<origin>,"s":<seq>,"e":<event>}——
+// s 为顶层数字 seq（int64 十进制文本拼接，无 double 精度问题），e 为不含 seq 的
+// 原始事件 blob；bridge 解码后把 s 回填到 Event.ServerSeq（见 decodeEnvelope）。
+// 不用 cjson 补写事件内 server_seq：cjson 数字经 double 往返有精度风险，且拼接
+// 不依赖事件字段形态。PUBLISH 放脚本末尾：XADD 先落，跨实例投递不会快于落库。
+var recordAndPublishScript = redis.NewScript(`
+local seq = redis.call('INCR', KEYS[1])
+redis.call('XADD', KEYS[2], seq, 'e', ARGV[1])
+redis.call('PEXPIRE', KEYS[2], ARGV[2])
+redis.call('PUBLISH', KEYS[3], '{"o":' .. ARGV[3] .. ',"s":' .. seq .. ',"e":' .. ARGV[1] .. '}')
+return seq
+`)
+
 // RedisResumeStore 用 Redis Streams + INCR 实现 ResumeStore（跨实例共享，spec L159）。
 // 共享调用方的 *redis.Client；Close 不关闭它（由 bootstrap 统一管理，与 RedisBridge 同源）。
 type RedisResumeStore struct {
-	rdb *redis.Client
-	ttl time.Duration
+	rdb    *redis.Client
+	ttl    time.Duration
+	origin string
 }
 
 // NewRedisResumeStore 创建基于共享 rdb 的存储。ttl<=0 时用 DefaultResumeTTL。
 // rdb 必须非 nil（Redis 不可用时调用方应改用 NopResumeStore）。
-func NewRedisResumeStore(rdb *redis.Client, ttl time.Duration) *RedisResumeStore {
+// origin 为本实例标识（与 RedisBridge 的 instanceID 一致）：组合脚本发布的信封
+// 带此 origin，bridge 靠它跳过本实例消息——两处不一致会导致本实例重复投递。
+func NewRedisResumeStore(rdb *redis.Client, ttl time.Duration, origin string) *RedisResumeStore {
 	if ttl <= 0 {
 		ttl = DefaultResumeTTL
 	}
-	return &RedisResumeStore{rdb: rdb, ttl: ttl}
+	return &RedisResumeStore{rdb: rdb, ttl: ttl, origin: origin}
 }
 
 func (s *RedisResumeStore) streamKey(userID string) string { return resumeStreamPrefix + userID }
@@ -140,6 +158,47 @@ func (s *RedisResumeStore) RecordGroup(groupID string, event Event) int64 {
 		return 0
 	}
 	return s.recordInto(s.groupStreamKey(groupID), event)
+}
+
+// RecordUserAndPublish 在单次 Redis 往返内完成「seq 分配 + Stream 写入 + 跨实例
+// PUBLISH」（审计 perf P1-4：广播热路径原为 record → publish 两次串行往返）。
+// published=true 表示跨实例发布已随脚本完成，Hub 可跳过独立 publish。
+// 失败返回 (0,false)，Hub 降级回退两步路径（record 语义：seq 缺失 → 客户端
+// 全量重放兜底；publish 语义：失败仅记日志）。origin 未配置时按不支持处理。
+func (s *RedisResumeStore) RecordUserAndPublish(userID, channel string, event Event) (int64, bool) {
+	if userID == "" || s.origin == "" {
+		return 0, false
+	}
+	return s.recordAndPublishInto(s.streamKey(userID), channel, event)
+}
+
+// RecordGroupAndPublish 同 RecordUserAndPublish，写入 group Stream 并发布群频道。
+func (s *RedisResumeStore) RecordGroupAndPublish(groupID, channel string, event Event) (int64, bool) {
+	if groupID == "" || s.origin == "" {
+		return 0, false
+	}
+	return s.recordAndPublishInto(s.groupStreamKey(groupID), channel, event)
+}
+
+// recordAndPublishInto 组合脚本执行。channel 必须是 bridge 语义的不带前缀频道
+// （如 "user:<id>"），脚本内补 hotspot: 前缀，与 RedisBridge.Publish 对齐。
+func (s *RedisResumeStore) recordAndPublishInto(streamKey, channel string, event Event) (int64, bool) {
+	blob, err := json.Marshal(event)
+	if err != nil {
+		observability.L().Warn("resume: marshal event failed", "stream", streamKey, "err", err)
+		return 0, false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	ttlMs := int64(s.ttl / time.Millisecond)
+	seq, err := recordAndPublishScript.Run(ctx, s.rdb,
+		[]string{resumeGlobalSeqKey, streamKey, redisChannelPrefix + channel},
+		string(blob), ttlMs, strconv.Quote(s.origin)).Int64()
+	if err != nil {
+		observability.L().Warn("realtime: record+publish failed, falling back to two-step path", "stream", streamKey, "err", err)
+		return 0, false
+	}
+	return seq, true
 }
 
 // Replay 回放 user 流 + groupIDs 各 group 流中 seq > fromSeq 的事件，跨流按全局

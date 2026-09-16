@@ -10,14 +10,19 @@ import (
 )
 
 // newMiniredisStore 启动一个内存 Redis（miniredis）并返回基于它的 RedisResumeStore。
-// miniredis 提供真实 Redis 语义（Streams/Lua/TTL），使 ResumeStore 的 Redis 交互
-// 可在单测内验证（项目此前 realtime 的 redis 层零覆盖，本测试顺带补齐基础）。
+// miniredis 提供真实 Redis 语义（Streams/Lua/TTL/PubSub），使 ResumeStore 的 Redis
+// 交互可在单测内验证（项目此前 realtime 的 redis 层零覆盖，本测试顺带补齐基础）。
 func newMiniredisStore(t *testing.T) (*RedisResumeStore, *miniredis.Miniredis) {
+	t.Helper()
+	return newMiniredisStoreWithOrigin(t, "hs-test")
+}
+
+func newMiniredisStoreWithOrigin(t *testing.T, origin string) (*RedisResumeStore, *miniredis.Miniredis) {
 	t.Helper()
 	s := miniredis.RunT(t)
 	rdb := redis.NewClient(&redis.Options{Addr: s.Addr()})
 	t.Cleanup(func() { _ = rdb.Close() })
-	return NewRedisResumeStore(rdb, 0), s // ttl=0 → DefaultResumeTTL(60s)
+	return NewRedisResumeStore(rdb, 0, origin), s // ttl=0 → DefaultResumeTTL(60s)
 }
 
 func TestRedisResumeStoreRecordReplaySeqMonotonic(t *testing.T) {
@@ -178,8 +183,8 @@ func TestRedisResumeStoreCrossInstance(t *testing.T) {
 	rdbA := redis.NewClient(&redis.Options{Addr: s.Addr()})
 	rdbB := redis.NewClient(&redis.Options{Addr: s.Addr()})
 	t.Cleanup(func() { _ = rdbA.Close(); _ = rdbB.Close() })
-	storeA := NewRedisResumeStore(rdbA, 0)
-	storeB := NewRedisResumeStore(rdbB, 0)
+	storeA := NewRedisResumeStore(rdbA, 0, "hs-a")
+	storeB := NewRedisResumeStore(rdbB, 0, "hs-b")
 
 	// 实例 A 上 user 产生事件（写入共享 Stream）
 	seq1 := storeA.Record("u1", Event{Type: EventTypePrivateMessageNew})

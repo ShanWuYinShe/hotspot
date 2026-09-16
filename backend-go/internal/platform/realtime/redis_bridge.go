@@ -29,6 +29,10 @@ const (
 type redisEnvelope struct {
 	Origin string `json:"o"`
 	Event  Event  `json:"e"`
+	// Seq 仅由组合脚本（resume_store recordAndPublishScript）发布时携带：
+	// 事件 blob 内不含 server_seq，seq 在信封顶层，解码后回填到 Event（审计
+	// perf P1-4）。常规 Publish 路径不带此字段（零值跳过回填），新旧格式兼容。
+	Seq int64 `json:"s,omitempty"`
 }
 
 // RedisBridge implements EventPublisher using Redis Pub/Sub.
@@ -98,8 +102,8 @@ func (b *RedisBridge) receiveLoop() {
 		if b.closed.Load() {
 			return
 		}
-		var envelope redisEnvelope
-		if err := json.Unmarshal([]byte(msg.Payload), &envelope); err != nil {
+		envelope, err := decodeEnvelope([]byte(msg.Payload))
+		if err != nil {
 			observability.L().Warn("redis bridge: invalid envelope", "err", err)
 			continue
 		}
@@ -109,6 +113,19 @@ func (b *RedisBridge) receiveLoop() {
 		channel := strings.TrimPrefix(msg.Channel, redisChannelPrefix)
 		b.dispatchLocal(channel, envelope.Event)
 	}
+}
+
+// decodeEnvelope 解码 bridge 信封并回填组合脚本携带的 seq（信封顶层 "s" →
+// Event.ServerSeq）。常规 Publish（无 "s"）事件原样透传，新旧格式兼容。
+func decodeEnvelope(payload []byte) (redisEnvelope, error) {
+	var envelope redisEnvelope
+	if err := json.Unmarshal(payload, &envelope); err != nil {
+		return redisEnvelope{}, err
+	}
+	if envelope.Seq > 0 {
+		envelope.Event.ServerSeq = envelope.Seq
+	}
+	return envelope, nil
 }
 
 func (b *RedisBridge) dispatchLocal(channel string, event Event) {

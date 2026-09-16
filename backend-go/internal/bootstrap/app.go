@@ -82,7 +82,8 @@ func NewApp(cfg config.Config) (*App, error) {
 	}
 	idempotency.StartSweeper(rootCtx)
 	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisClient)
-	bridge := initRedisBridgeFromClient(cfg, logger, redisClient)
+	// bridge 在下方 redisClient 块内创建（instanceID 需同时注入 resumeStore）
+	var bridge *realtime.RedisBridge
 	router := NewHTTPRouterWithLogger(modules, logger)
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/", router)
@@ -99,10 +100,15 @@ func NewApp(cfg config.Config) (*App, error) {
 	// resume 增量恢复（spec L156, L159）：Redis 可用时创建跨实例事件存储并注入
 	// Hub（seq 分配/事件累积）与 Handler（token 生命周期/回放）。Redis 不可用时
 	// Hub/Handler 的 resumeStore 为 nil，退化为全量重放（spec L161）。
+	// instanceID 提前生成并同时注入 resumeStore 与 bridge（审计 perf P1-4）：
+	// 组合脚本发布的信封以 origin 标记本实例，bridge 靠它跳过自收消息——
+	// 两处 origin 不一致会导致本实例重复投递，必须同源。
 	if redisClient != nil {
-		resumeStore := realtime.NewRedisResumeStore(redisClient, time.Duration(cfg.ResumeTTLSeconds)*time.Second)
+		instanceID := fmt.Sprintf("hs-%d", time.Now().UnixNano())
+		resumeStore := realtime.NewRedisResumeStore(redisClient, time.Duration(cfg.ResumeTTLSeconds)*time.Second, instanceID)
 		realtime.DefaultHub().SetResumeStore(resumeStore)
 		realtimeHandler.SetResumeStore(resumeStore)
+		bridge = initRedisBridgeFromClient(cfg, logger, redisClient, instanceID)
 	}
 	// 握手 per-IP 限流（审查 L-6）：升级请求发生在鉴权之前，须与其他 HTTP
 	// 入口同样限流；APP_ENV=test 同口径绕过。
@@ -225,14 +231,15 @@ func redisPinger(rdb *redis.Client) func(context.Context) error {
 }
 
 // initRedisBridgeFromClient starts the realtime pub/sub bridge using rdb.
+// instanceID 必须与注入 RedisResumeStore 的 origin 同源（组合脚本发布的信封
+// 靠它跳过自收消息，见 NewApp 内的创建顺序）。
 // Takes ownership of rdb: when no bridge is created (nil client or init
 // failure) the caller is responsible for closing rdb; when a bridge is created
 // its Close() closes the underlying client.
-func initRedisBridgeFromClient(cfg config.Config, logger *observability.Logger, rdb *redis.Client) *realtime.RedisBridge {
+func initRedisBridgeFromClient(cfg config.Config, logger *observability.Logger, rdb *redis.Client, instanceID string) *realtime.RedisBridge {
 	if rdb == nil {
 		return nil
 	}
-	instanceID := fmt.Sprintf("hs-%d", time.Now().UnixNano())
 	bridge, err := realtime.NewRedisBridge(rdb, instanceID, realtime.DefaultHub())
 	if err != nil {
 		logger.Error("redis bridge init failed, falling back to single-instance mode", "err", err)
