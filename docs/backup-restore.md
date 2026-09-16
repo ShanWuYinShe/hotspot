@@ -66,7 +66,15 @@ zcat "$BACKUP_DIR/hotspot-db-$STAMP.sql.gz" | grep -c "CREATE TABLE"   # sanity 
 
 ```cron
 30 3 * * * /home/workuser/hotspot/scripts/backup-postgres.sh >> /home/workuser/hotspot/backups/backup.log 2>&1
+0 4 * * * /home/workuser/hotspot/scripts/backup-seaweedfs.sh >> /home/workuser/hotspot/backups/backup.log 2>&1
+*/10 * * * * /home/workuser/hotspot/scripts/health-check.sh >> /home/workuser/hotspot/backups/health-check.log 2>&1
 ```
+
+- `scripts/backup-seaweedfs.sh`：媒体卷定时打包（第 4 节的手动方案即由此脚本固化）。
+- `scripts/health-check.sh`：健康巡检（后端 health 端点、核心容器运行状态、磁盘水位），
+  异常时非零退出并留日志；**这是当前唯一的线上巡检通道**，新机器重建时必须重配 crontab。
+- 另有部署兜底：`scripts/deploy-production.sh` 在滚动更新前自动执行一次
+  pg_dump（服务器 `backups/` + 本机 `.workwork/` 各一份），备份失败即中止部署。
 
 ---
 
@@ -108,7 +116,12 @@ SeaweedFS stores uploaded images/videos as files under `/data` in the
 **not** rely on S3-level tooling, because the volume also holds SeaweedFS's
 internal metadata that is not exposed via the S3 API.
 
-### Option A: rsync via a temporary mount (recommended for small/medium)
+### Option A: 定时脚本（推荐，`scripts/backup-seaweedfs.sh`）
+
+定时打包见第 2 节 crontab；脚本经一次性只读挂载容器执行 tar，不写入业务卷。
+以下为手动方案的等价说明。
+
+### Option B: rsync via a temporary mount
 
 ```bash
 # Copy the entire volume out to the host filesystem.
@@ -131,7 +144,7 @@ docker run --rm \
 docker compose start seaweedfs
 ```
 
-### Option B: volume snapshot (Docker / cloud)
+### Option C: volume snapshot (Docker / cloud)
 
 If the Docker volume is backed by a block device or cloud volume (zfs, EBS,
 etc.), use the host's snapshot mechanism — it is faster and more consistent

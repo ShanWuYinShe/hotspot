@@ -11,7 +11,9 @@
 # 前置条件：
 #   1. tag 已推送且 CI「Release」工作流成功（Release 已挂镜像包）
 #   2. tag 在 origin/main 上
-# 环境变量：SERVER / REMOTE_DIR 同前。
+# 环境变量：SERVER / REMOTE_DIR 同前；DEPLOY_DB_USER / DEPLOY_DB_NAME 覆盖备份库配置。
+# 安全网：滚动更新前自动 pg_dump（服务器 backups/ + 本机 .workwork/ 各一份），
+# 备份失败即中止部署——迁移不可逆，无快照不上线。
 #
 # 回滚（服务器侧）：IMAGE_TAG=<旧版本> docker compose -f docker-compose.yml \
 #   -f docker-compose.prod.yml --profile prod up -d && docker restart hotspot-nginx-1
@@ -66,6 +68,19 @@ ssh "$SERVER" "mkdir -p $REMOTE_DIR/tmp-deploy-incoming"
 scp -q "$TARBALL" "$SERVER:$REMOTE_DIR/tmp-deploy-incoming/hotspot-images-$TARGET.tar.gz"
 ssh "$SERVER" "docker load -i $REMOTE_DIR/tmp-deploy-incoming/hotspot-images-$TARGET.tar.gz && \
   rm -rf $REMOTE_DIR/tmp-deploy-incoming"
+
+# ── 部署前数据库备份（硬性步骤，失败即中止部署）──────────────────────
+# 新版本迁移不可逆（无 down 迁移），上线前必须先有快照：服务器本地一份 +
+# scp 回本机一份（本机副本即异地备份，服务器磁盘故障也有退路）。
+echo "==> 部署前数据库备份…"
+DEPLOY_DB_USER="${DEPLOY_DB_USER:-postgres}"
+DEPLOY_DB_NAME="${DEPLOY_DB_NAME:-hotspot}"
+BACKUP_STAMP="$(date +%Y%m%d_%H%M%S)"
+BACKUP_NAME="hotspot_pre_deploy_${TARGET}_${BACKUP_STAMP}.sql.gz"
+ssh "$SERVER" "mkdir -p $REMOTE_DIR/backups && docker exec hotspot-postgres-1 pg_dump -U $DEPLOY_DB_USER -d $DEPLOY_DB_NAME -Z1 > $REMOTE_DIR/backups/$BACKUP_NAME"
+scp -q "$SERVER:$REMOTE_DIR/backups/$BACKUP_NAME" "$REPO_ROOT/.workwork/$BACKUP_NAME"
+BACKUP_SIZE="$(ssh "$SERVER" "du -h $REMOTE_DIR/backups/$BACKUP_NAME | cut -f1")"
+echo "✅ 备份完成: $BACKUP_NAME（${BACKUP_SIZE}，服务器 $REMOTE_DIR/backups/ + 本机 .workwork/）"
 
 echo "==> 滚动更新（IMAGE_TAG=${TARGET}；frontend 容器启动时自刷新静态卷）…"
 ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' $COMPOSE up -d && docker restart hotspot-nginx-1 >/dev/null && echo 'nginx restarted'"
