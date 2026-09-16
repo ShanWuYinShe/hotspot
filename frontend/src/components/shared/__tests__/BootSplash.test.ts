@@ -21,5 +21,22 @@ describe('BootSplash', () => {
 		// 弧线渐变引用存在
 		expect(container.querySelector('linearGradient')).not.toBeNull();
 		expect(container.querySelector('image[href]')).not.toBeNull();
+		// 游龙精华：主彗星 + 对侧余烬双光点同组旋转（零新增动画成本）
+		expect(container.querySelector('.orbit .comet')).not.toBeNull();
+		expect(container.querySelector('.orbit .ember')).not.toBeNull();
+	});
+
+	it('流光渐变走主题 token：accent 收尾 warning 鎏金（浅色可对比）', () => {
+		const { container } = render(BootSplash);
+		const stops = [...container.querySelectorAll('linearGradient stop')];
+		// 四档：accent 尾（淡出）→ accent → warning → warning 首（亮端）
+		expect(stops.length).toBe(4);
+		const styles = stops.map((s) => s.getAttribute('style') ?? '');
+		expect(styles[0]).toContain('--cst-accent-default');
+		expect(styles[styles.length - 1]).toContain('--cst-status-warning');
+		// 全渐变禁止硬编码 hex（主题 token 契约）
+		for (const s of container.querySelectorAll('linearGradient stop')) {
+			expect(s.getAttribute('style') ?? '').not.toMatch(/#[0-9a-fA-F]{3,8}/);
+		}
 	});
 });
