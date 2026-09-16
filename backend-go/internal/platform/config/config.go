@@ -68,6 +68,10 @@ type Config struct {
 	// 每 24h 物理删除「已读且创建超 90 天」的通知，防止 notifications 表无限
 	// 增长（删除口径保守，见 notify repo.PruneReadBefore）。默认开启。
 	NotifyPruneEnabled bool
+	// AdminBootstrapUserID 首管理员引导（ADMIN_BOOTSTRAP_USER_ID）：admin_users
+	// 表为空时启动阶段把该已注册用户提权为超管（'*'），解决「授权端点要求
+	// 已是管理员」的鸡生蛋死锁。已有任意管理员时为 no-op，重启/误配不提权。
+	AdminBootstrapUserID string
 }
 
 func Load() Config {
@@ -104,9 +108,10 @@ func Load() Config {
 		BcryptCost:             bcryptCostOrDefault("BCRYPT_COST", defaultBcryptCost),
 		// Postgres 连接池尺寸。多实例部署时各实例独立持池，默认 25 在 3 实例
 		// 下已逼近 Postgres 默认 max_connections=100，需要按实例数下调。
-		PostgresMaxConns:   envIntOrDefault("POSTGRES_MAX_CONNS", defaultPostgresMaxConns),
-		PostgresMinConns:   envIntOrDefault("POSTGRES_MIN_CONNS", defaultPostgresMinConns),
-		NotifyPruneEnabled: envBoolOrDefault("NOTIFY_PRUNE_ENABLED", true),
+		PostgresMaxConns:     envIntOrDefault("POSTGRES_MAX_CONNS", defaultPostgresMaxConns),
+		PostgresMinConns:     envIntOrDefault("POSTGRES_MIN_CONNS", defaultPostgresMinConns),
+		NotifyPruneEnabled:   envBoolOrDefault("NOTIFY_PRUNE_ENABLED", true),
+		AdminBootstrapUserID: os.Getenv("ADMIN_BOOTSTRAP_USER_ID"),
 	}
 }
 

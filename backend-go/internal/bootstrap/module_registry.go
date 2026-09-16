@@ -25,8 +25,10 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/modulekit"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
@@ -143,6 +145,26 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		svc.SetBanChecker(adminModule.Repo)
 	}
 	platformauth.SetAdminChecker(adminModule.Repo)
+	// 首管理员引导（ADMIN_BOOTSTRAP_USER_ID，见 config.AdminBootstrapUserID）：
+	// admin_users 表为空时把指定已注册用户提权为超管，解决「授权端点要求已是
+	// 管理员」的鸡生蛋死锁。仅此一次成立——已有任意（未撤销）管理员即为 no-op。
+	// 查询/写入失败只记日志不阻断启动（新环境首次启动迁移刚跑完，表必为空态可用）。
+	if cfg.AdminBootstrapUserID != "" {
+		adminPage, err := adminModule.Repo.ListAdmins(ctx, types.PaginationParams{Limit: 1})
+		switch {
+		case err != nil:
+			observability.L().Warn("admin bootstrap: 无法读取管理员列表，跳过首管理员引导", "error", err)
+		case len(adminPage.Items) > 0:
+			observability.L().Info("admin bootstrap: 已存在平台管理员，跳过引导")
+		default:
+			if grantErr := adminModule.Repo.GrantAdmin(ctx, admin.AdminGrantUpsert{UserID: cfg.AdminBootstrapUserID, GrantAllPermissions: true}); grantErr != nil {
+				observability.L().Error("admin bootstrap: 首管理员提权失败（确认该用户已完成注册）",
+					"user_id", cfg.AdminBootstrapUserID, "error", grantErr)
+			} else {
+				observability.L().Info("admin bootstrap: 已授予首个平台超管", "user_id", cfg.AdminBootstrapUserID)
+			}
+		}
+	}
 	// Owner-dismiss audit entries are written through the admin module (spec
 	// api_spec_group.md: dismiss reason is audit-only).
 	groupsModule.Service.SetGroupDismissAuditWriter(adminModule)
