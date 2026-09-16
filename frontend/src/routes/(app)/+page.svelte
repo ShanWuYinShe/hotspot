@@ -171,8 +171,8 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 				<div class="flex items-end justify-between mb-5">
 					<div>
 						<span class="eyebrow">附近的人</span>
-						<p class="text-xs mt-1 text-text-secondary"  >
-							5km 范围内 · 实时更新
+						<p class="text-xs mt-1 text-text-secondary">
+							5km 内 · 实时更新
 						</p>
 					</div>
 					<button

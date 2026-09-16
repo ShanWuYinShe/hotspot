@@ -3,7 +3,7 @@
 	import { lngToWorldX, latToWorldY, worldXToLng, worldYToLat, wgs84ToGcj02, gcj02ToWgs84, tilesForViewport, viewportToBounds, MAP_MIN_ZOOM, MAP_MAX_ZOOM, type TileItem } from './map-projection';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
 
-	// 地图画布：自渲染 XYZ 瓦片层（高德 /amap-tiles/ GCJ-02 · OSM /osm-tiles/
+	// 地图画布：自渲染 XYZ 瓦片层（高德瓦片浏览器直连 GCJ-02 · OSM 走 /osm-tiles/
 	// WGS-84，均经 nginx 同源代理）+ 拖拽平移 + 滚轮缩放。图钉/热力/我的位置
 	// 由父组件以 bind:bounds 的视口地理边界自行定位（小跨度下线性百分比与
 	// 墨卡托完全对齐）。
@@ -211,7 +211,11 @@
 >
 	{#each tiles as t (`${tileSource}/${t.z}/${t.x}/${t.y}`)}
 		<img
-			src="/{tileSource === 'amap' ? 'amap-tiles' : 'osm-tiles'}/{t.z}/{t.x}/{t.y}.png"
+			src={tileSource === 'amap'
+				? // 高德栅格瓦片浏览器直连（免 key；<img> 不受同源策略限制）。
+				  // webrd01-04 子域按坐标哈希轮换，避开单域 6 连接的浏览器并发上限。
+				  `https://webrd0${((t.x + t.y) % 4) + 1}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x=${t.x}&y=${t.y}&z=${t.z}`
+				: `/osm-tiles/${t.z}/${t.x}/${t.y}.png`}
 			alt=""
 			draggable="false"
 			loading="eager"

@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { searchPlaces, reverseGeocode, GeoServiceUnavailable } from './geo-service';
 
-// 地理编码服务：高德/OSM 双源路由、坐标口径转换、503 降级。
-// fetch 全局 mock；坐标断言取 GCJ-02 反演后的 WGS-84 近似值。
+// 高德直连 key：默认注入测试 key；「未配置」用例单独 stubEnv('') 覆盖。
+vi.stubEnv('VITE_AMAP_KEY', 'test-amap-key');
+const { searchPlaces, reverseGeocode, GeoServiceUnavailable } = await import('./geo-service');
+
+// 地理编码服务：高德（restapi 直连）/OSM（同源代理）双源路由、坐标口径转换、降级链。
+// fetch 全局 mock；VITE_AMAP_KEY 经 vi.stubEnv 注入；坐标断言取 GCJ-02 反演后的 WGS-84 近似值。
 
 const amapPoi = {
 	status: '1',
@@ -10,14 +13,15 @@ const amapPoi = {
 };
 
 describe('searchPlaces (amap)', () => {
-	it('走 /amap-service/ 代理，结果反演回 WGS-84，near 转 GCJ 传参', async () => {
+	it('直连 restapi.amap.com，key 注入 query，结果反演回 WGS-84，near 转 GCJ 传参', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(amapPoi), { status: 200 }));
 		vi.stubGlobal('fetch', fetchMock);
 
 		const places = await searchPlaces('amap', '咖啡', { lat: 39.9, lng: 116.4 });
 
 		const [url] = fetchMock.mock.calls[0] as [string];
-		expect(url.startsWith('/amap-service/v3/place/text?')).toBe(true);
+		expect(url.startsWith('https://restapi.amap.com/v3/place/text?')).toBe(true);
+		expect(url).toContain('key=test-amap-key');
 		expect(url).toContain('keywords=');
 		// near 中心换算 GCJ-02 后为「经度,纬度」顺序
 		expect(url).toMatch(/location=\d+\.\d{6}%2C\d+\.\d{6}|location=\d+\.\d{6},\d+\.\d{6}/);
@@ -55,7 +59,10 @@ describe('searchPlaces (osm)', () => {
 });
 
 describe('service unavailable', () => {
-	it('高德代理 503（未配置密钥）抛 GeoServiceUnavailable', async () => {
+	beforeEach(() => vi.stubEnv('VITE_AMAP_KEY', 'test-amap-key'));
+	afterEach(() => vi.unstubAllEnvs());
+
+	it('高德直连 503（限流/故障）抛 GeoServiceUnavailable', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 503 })));
 		await expect(searchPlaces('amap', 'x', null)).rejects.toBeInstanceOf(GeoServiceUnavailable);
 	});
@@ -64,11 +71,29 @@ describe('service unavailable', () => {
 		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 503 })));
 		await expect(reverseGeocode('osm', 39.9, 116.4)).rejects.toBeInstanceOf(GeoServiceUnavailable);
 	});
+
+	it('VITE_AMAP_KEY 未配置时高德源不发请求，直接降级 OSM', async () => {
+		vi.stubEnv('VITE_AMAP_KEY', '');
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+			new Response(JSON.stringify([{ display_name: '后备', lat: '1', lon: '2' }]), { status: 200 })
+		));
+		const places = await searchPlaces('amap', 'x', null);
+		const fetchMock = vi.mocked(globalThis.fetch);
+		const [url] = fetchMock.mock.calls[0] as [string];
+		expect(url.startsWith('/osm-service/search?')).toBe(true);
+		expect(places).toHaveLength(1);
+	});
 });
 
 describe('reverseGeocode', () => {
-	beforeEach(() => vi.stubGlobal('fetch', vi.fn()));
-	afterEach(() => vi.unstubAllGlobals());
+	beforeEach(() => {
+		vi.stubEnv('VITE_AMAP_KEY', 'test-amap-key');
+		vi.stubGlobal('fetch', vi.fn());
+	});
+	afterEach(() => {
+		vi.unstubAllEnvs();
+		vi.unstubAllGlobals();
+	});
 
 	it('高德：WGS-84 转 GCJ 后查询，返回格式化地址', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(
@@ -78,7 +103,7 @@ describe('reverseGeocode', () => {
 		const addr = await reverseGeocode('amap', 39.9, 116.4);
 		expect(addr).toBe('北京市东城区某街 1 号');
 		const [url] = fetchMock.mock.calls[0] as [string];
-		expect(url.startsWith('/amap-service/v3/geocode/regeo?location=')).toBe(true);
+		expect(url.startsWith('https://restapi.amap.com/v3/geocode/regeo?location=')).toBe(true);
 	});
 
 	it('OSM：空结果返回 null', async () => {

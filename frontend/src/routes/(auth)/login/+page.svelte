@@ -8,7 +8,7 @@
 	// 路由级进入成功后回首页；经 requireAuth 进入时 auth store 已持有
 	// pending action 并在成功后自动重放。
 	// 卡片结构对齐 Figma Make LoginPage：rounded-lg 400px 卡片 + 品牌区（Leaf 圆标 +
-	// 品牌 eyebrow + 标语），品牌名保留当前项目「热点」。
+	// 品牌 eyebrow + 标语），品牌名统一为站名「HotSpot」（与 <title> 一致）。
 </script>
 <svelte:head>
 	<title>登录 · HotSpot</title>
@@ -20,7 +20,7 @@
 		<div class="flex items-center justify-center rounded-full size-11 shadow-raised-sm bg-accent-default text-text-on-accent">
 			<Leaf class="size-5"  strokeWidth={1.75} />
 		</div>
-		<p class="mt-6 eyebrow font-medium text-accent-default">热点</p>
+		<p class="mt-6 eyebrow font-medium text-accent-default">HotSpot</p>
 		<h1 class="mt-2 text-2xl font-medium tracking-title text-text-primary">回来看看附近的故事。</h1>
 		<p class="mt-2 text-sm leading-6 text-text-secondary">使用手机号、邮箱或账号登录。</p>
 

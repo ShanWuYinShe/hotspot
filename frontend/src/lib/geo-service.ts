@@ -1,7 +1,10 @@
-// 地理编码服务（按地图源路由，全部经 nginx 同源代理，前端零密钥）。
-//   高德：/amap-service/ → restapi.amap.com（key/jscode 由服务器侧注入；
-//         未配置时 nginx 返回 503，本层转为 GeoServiceUnavailable）。
-//   OSM：/osm-service/ → nominatim.openstreetmap.org（代理侧限流 1r/s）。
+// 地理编码服务（按地图源路由）。
+//   高德：浏览器直连 restapi.amap.com（实测响应带 Access-Control-Allow-Origin:*，
+//         支持跨域直调）。key 经构建期注入（VITE_AMAP_KEY）；Web 服务 key 在前端
+//         可被提取盗刷，请在高德控制台为该 key 单独设置低配额与用量告警。
+//         key 未配置时本层直接抛 GeoServiceUnavailable 降级 OSM，不发无效请求。
+//   OSM：/osm-service/ → nginx 同源代理 → nominatim.openstreetmap.org
+//         （公共 Nominatim 政策要求服务端限流/缓存，且国内直连不可达，保留代理）。
 //
 // 坐标口径：应用数据 WGS-84。高德 Web 服务出入参均为 GCJ-02，故搜索结果
 // 的坐标经 gcj02ToWgs84 反演回 WGS-84，"near" 中心先 wgs84ToGcj02 再传参；
@@ -16,6 +19,17 @@ export interface GeoPlace {
 	lng: number;
 	/** 补充说明（地址/类别），展示用 */
 	desc?: string;
+}
+
+/** 高德 Web 服务 key（构建期注入）。空值表示未配置，高德源直接降级 OSM。 */
+function amapKey(): string {
+	return ((import.meta.env?.VITE_AMAP_KEY as string | undefined) ?? '').trim();
+}
+
+/** 高德 restapi 直连 URL（key 注入 query；协议 https，国内可直连无需代理）。 */
+function amapUrl(path: string, params: URLSearchParams): string {
+	params.set('key', amapKey());
+	return `https://restapi.amap.com${path}?${params.toString()}`;
 }
 
 export class GeoServiceUnavailable extends Error {
@@ -44,7 +58,8 @@ async function amapSearch(query: string, near: { lat: number; lng: number } | nu
 		// 高德 location 口径为「经度,纬度」
 		params.set('location', `${g.lng.toFixed(6)},${g.lat.toFixed(6)}`);
 	}
-	const data = (await getJson(`/amap-service/v3/place/text?${params}`, opts)) as {
+	if (!amapKey()) throw new GeoServiceUnavailable();
+	const data = (await getJson(amapUrl('/v3/place/text', params), opts)) as {
 		status?: string;
 		pois?: Array<{ name?: string; address?: string; pname?: string; cityname?: string; adname?: string; location?: string }>;
 	};
@@ -100,11 +115,13 @@ async function osmReverse(lat: number, lng: number, opts?: FetchOpts): Promise<s
 
 /** 高德逆地理编码：WGS-84 转 GCJ-02 后查询，返回格式化地址。 */
 async function amapReverse(lat: number, lng: number, opts?: FetchOpts): Promise<string | null> {
+	if (!amapKey()) throw new GeoServiceUnavailable();
 	const g = wgs84ToGcj02(lat, lng);
-	const data = (await getJson(
-		`/amap-service/v3/geocode/regeo?location=${g.lng.toFixed(6)},${g.lat.toFixed(6)}`,
-		opts
-	)) as { status?: string; regeocode?: { formatted_address?: string } };
+	const params = new URLSearchParams({ location: `${g.lng.toFixed(6)},${g.lat.toFixed(6)}` });
+	const data = (await getJson(amapUrl('/v3/geocode/regeo', params), opts)) as {
+		status?: string;
+		regeocode?: { formatted_address?: string }
+	};
 	const addr = data.regeocode?.formatted_address?.trim();
 	return addr && addr !== '[]' ? addr : null;
 }

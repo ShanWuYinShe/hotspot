@@ -1,8 +1,9 @@
 # ── 高德 Web 服务同源代理（默认占位）──────────────────────
 # 本文件经 compose 挂载为 /etc/nginx/conf.d/amap.inc（dev/prod 共用挂载点）。
 #
-# 前端地理编码统一走同源路径 /amap-service/（如 /amap-service/v3/geocode/regeo），
-# 由本文件决定转发行为。密钥（key/jscode）只在服务器侧注入，前端零密钥：
+# 注意：Web 前端的高德编码已改为浏览器直连 restapi.amap.com（key 经
+# VITE_AMAP_KEY 构建期注入），本代理块仅为兼容已发布客户端保留，新代码不再调用。
+# 密钥（key/jscode）只在服务器侧注入，前端零密钥：
 #
 #   生产：在服务器维护不入库的 docker/amap.prod.inc（与 cert/ 同模式，权限 600），
 #         覆盖为真实转发（key/jscode 由 nginx 追加进 query），内容形如：

@@ -220,7 +220,7 @@ locationName = loc?.location_name ?? '';
 {#snippet feedHeader()}
 	<PageHeader
 		title="附近"
-		subtitle={locationName ? `${locationName} · 5km 内` : '5km 实时探索'}
+		subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
 		sticky
 		titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		onBack={() => smartBack()}

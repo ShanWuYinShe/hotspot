@@ -17,8 +17,8 @@ import { formatCount } from '@/lib/utils';
 
 	const rangeLabel = $derived(
 		platform.platform === 'mobile'
-			? (locationName ? `${locationName} · 5km 内 · 持续更新` : '5km 内 · 持续更新')
-			: '5km 内 · 持续更新'
+			? (locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新')
+			: '5km 内 · 实时更新'
 	);
 </script>
 

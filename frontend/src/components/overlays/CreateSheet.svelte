@@ -38,6 +38,8 @@
 	let locationName = $state('');
 	let topicActive = $state(false);
 	let submitting = $state(false);
+	// 发布阶段提示（审计 P2-8：大图慢网上传期间给到第 n 张 / 百分比反馈）
+	let submitStatus = $state('');
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
 
 	$effect(() => startDefaultLocation((loc) => {
@@ -73,11 +75,15 @@
 	const handleSubmit = async () => {
 		if (!canPublish) return;
 		submitting = true;
+		submitStatus = '';
 		try {
 			// 多图上传（spec：batch_presign → 并发 PUT → batch_complete），拿 file_id[] 随动态一起创建
 			const image_file_ids = draft.images.length > 0
-				? await uploadMediaFiles(draft.images, 'moment_image')
+				? await uploadMediaFiles(draft.images, 'moment_image', (fileIndex, fraction) => {
+						submitStatus = `正在上传第 ${fileIndex + 1}/${draft.images.length} 张 · ${Math.round(fraction * 100)}%`;
+					})
 				: undefined;
+			submitStatus = '正在发布…';
 			const res = await createMoment({
 				description: draft.text.trim(),
 				tags: [...draft.moods],
@@ -105,6 +111,7 @@
 			showToast('发布失败，请检查网络后重试', 'danger');
 		} finally {
 			submitting = false;
+			submitStatus = '';
 		}
 	};
 </script>
@@ -154,9 +161,11 @@
 						</span>
 					</div>
 				</div>
-				<span class="inline-flex h-5 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xxs font-medium leading-none text-accent-default">
-					正在发布
-				</span>
+				{#if submitting}
+					<span class="inline-flex h-5 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xxs font-medium leading-none text-accent-default">
+						{submitStatus || '正在发布…'}
+					</span>
+				{/if}
 			</div>
 
 			<div class="input-surface rounded-lg p-4">
@@ -252,7 +261,7 @@
 			</p>
 		</div>
 		<Button type="submit" size="md" disabled={!canPublish} class="rounded-full px-5">
-			发布动态
+			{submitStatus || '发布动态'}
 		</Button>
 	</footer>
 </form>
