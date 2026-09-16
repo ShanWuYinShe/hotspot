@@ -99,8 +99,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let liked = $state(false);
 	let saved = $state(false);
 	let likeEmoji = $state('👍');
-	// 编辑所需原始字段（扁平 moment 未保留 description/tags/privacy_level）
-	let momentRaw = $state<{ description: string; tags: string[]; privacy_level: 'public' | 'private' }>({ description: '', tags: [], privacy_level: 'public' });
+	// 编辑所需原始字段（扁平 moment 未保留 description/tags/privacy_level）。
+	// privacy_level 三态：null = 拥有者可见性未探测完成，编辑弹窗据此禁用可见性修改。
+	let momentRaw = $state<{ description: string; tags: string[]; privacy_level: 'public' | 'private' | null }>({ description: '', tags: [], privacy_level: null });
 	let deleteOpen = $state(false);
 	let editOpen = $state(false);
 	let deleting = $state(false);
@@ -160,10 +161,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					momentRaw = {
 						description: detailData.description ?? '',
 						tags: detailData.tags ?? [],
-						privacy_level: 'public'
+						privacy_level: null
 					};
 					// privacy_level 属拥有者数据（OwnerMomentItem），不在公开详情类型 MomentItem 中：
 					// 拥有者编辑前经 moments/fetch_created 取回实际可见性（视角分离）。
+					// 探测完成前保持 null，编辑弹窗会禁用可见性修改并按「保持原值」提交。
 					if (detailData.user?.user_id === auth.user?.user_id) {
 						void (async () => {
 							let cursor: string | null = null;
@@ -393,7 +395,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		}
 	};
 
-	const handleUpdated = (updated: { description: string; tags: string[]; privacy_level: 'public' | 'private' }) => {
+	const handleUpdated = (updated: { description: string; tags: string[]; privacy_level: 'public' | 'private' | null }) => {
 		moment = { ...moment, content: updated.description, tag: updated.tags[0] ?? '' };
 		momentRaw = updated;
 	};

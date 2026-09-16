@@ -17,9 +17,12 @@
 	}: {
 		open: boolean;
 		momentId: string;
-		initial: { description: string; tags: string[]; privacy_level: 'public' | 'private' };
+		// privacy_level 为 null 表示拥有者可见性尚未探测完成（视角分离：公开详情
+		// 不返回该字段）。未知期间禁止改可见性、提交省略该字段（patch 语义保持原值），
+		// 防止把私有动态误存为公开。
+		initial: { description: string; tags: string[]; privacy_level: 'public' | 'private' | null };
 		onClose: () => void;
-		onUpdated: (updated: { description: string; tags: string[]; privacy_level: 'public' | 'private' }) => void;
+		onUpdated: (updated: { description: string; tags: string[]; privacy_level: 'public' | 'private' | null }) => void;
 	} = $props();
 
 	const MOOD_TAGS = ['松弛', '漫游', '咖啡', '展览', '自然', '夜色'];
@@ -27,7 +30,7 @@
 	// 初值不引用 props（快照由下方 $effect 在打开时回填，与 GroupSettingsSheet 模式一致）
 	let text = $state('');
 	let selectedTags = $state<Set<string>>(new Set());
-	let privacy = $state<'public' | 'private'>('public');
+	let privacy = $state<'public' | 'private' | null>(null);
 	let submitting = $state(false);
 
 	// 打开时按 initial 重置表单（切换不同动态编辑）
@@ -52,11 +55,12 @@
 		if (!canSubmit) return;
 		submitting = true;
 		try {
+			// 可见性未知（探测未完成/失败）时不传 privacy_level：未传字段保持不变。
 			const res = await updateMoment({
 				moment_id: momentId,
 				description: text.trim(),
 				tags: Array.from(selectedTags),
-				privacy_level: privacy
+				...(privacy !== null ? { privacy_level: privacy } : {})
 			});
 			if (res.code === 0) {
 				onUpdated({ description: text.trim(), tags: Array.from(selectedTags), privacy_level: privacy });
@@ -119,12 +123,16 @@
 
 		<section aria-labelledby="edit-privacy-label" class="mt-4 rounded-md ring-1 ring-border-default surface-tinted p-2">
 			<p id="edit-privacy-label" class="px-2 pb-2 pt-1 eyebrow">谁可以看到</p>
+			{#if privacy === null}
+				<p class="px-2 pb-2 text-xs text-text-secondary">可见性获取中，稍候可修改；现在保存将保持当前设置</p>
+			{/if}
 			<div class="grid grid-cols-2 gap-1">
 				<button
 					type="button"
 					aria-pressed={privacy === 'public'}
+					disabled={privacy === null}
 					onclick={() => (privacy = 'public')}
-					class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {privacy === 'public'
+					class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-50 {privacy === 'public'
 						? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
 						: 'text-text-secondary hover:bg-interactive-hover'}"
 				>
@@ -134,8 +142,9 @@
 				<button
 					type="button"
 					aria-pressed={privacy === 'private'}
+					disabled={privacy === null}
 					onclick={() => (privacy = 'private')}
-					class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {privacy === 'private'
+					class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-50 {privacy === 'private'
 						? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
 						: 'text-text-secondary hover:bg-interactive-hover'}"
 				>
