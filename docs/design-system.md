@@ -1,5 +1,11 @@
 # HotSpot 设计系统
 
+> ⚠️ 历史快照（已停更）：本文件仍停留在双主题族时代——缺少 `inkwash`、
+> 含已删除的 `workspace` token、映射组数（11）也与检查脚本（14）对不上。
+> **现行权威是两端 `AGENTS.md`（根 `AGENTS.md` + `frontend/AGENTS.md` +
+> `harmonyapp/AGENTS.md`）与 `frontend/scripts/check-cross-platform-*.mjs`
+> （CI 强制执行）**；本文件仅供考古，不做对齐依据，改 token 时不要同步改这里。
+
 > 单一事实源（Single Source of Truth）。本文件从 Svelte Web 前端（`frontend/`）的
 > `--cst-*` token 体系整理而来，覆盖**桌面端 / 平板端 / 移动端**三档设备形态，
 > 并给出前端（CSS token）↔ 鸿蒙（`DesignConstants` / `ThemeConstants`）的逐项映射，

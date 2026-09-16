@@ -54,7 +54,7 @@
    由 ListItem 内聚；容器 `inset` 时高亮天然离边 8px，禁止行高亮顶容器边。
 2. **卡片 hover**：只走 `card-hover`；参数全部 token 化
    （`--cst-hover-lift` / `--cst-hover-image-zoom` / `--cst-card-tap-scale`），
-   主题在 `themes/{vibrant,forest}.css` 各自演绎。
+   主题在 `themes/{vibrant,forest,inkwash}.css` 各自演绎。
 3. **按压**：行 = opacity-tap；卡片 = `--cst-card-tap-scale`；按钮 = `hover-btn`。
 4. **明暗**：一律 token，禁止组件写死色值/色 mix。
 

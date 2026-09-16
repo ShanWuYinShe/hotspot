@@ -21,7 +21,8 @@ access-controlled secret store.
 ## 1. PostgreSQL (manual one-liner)
 
 Run from the host that runs the compose stack. Output is a gzipped,
-plain-SQL dump that can be restored into a fresh `postgres:17` container.
+plain-SQL dump that can be restored into a fresh `postgres:18` container
+(compose pins `POSTGRES_VERSION=18.4`; keep major versions aligned).
 
 ```bash
 # Set these to match your deployment.
@@ -54,42 +55,18 @@ zcat "$BACKUP_DIR/hotspot-db-$STAMP.sql.gz" | grep -c "CREATE TABLE"   # sanity 
 
 ---
 
-## 2. Sample cron job
+## 2. 定时备份（服务器 cron，以仓库脚本为准）
 
-Drop into `/etc/cron.d/hotspot-backup` (runs as root at 02:30 daily, keeps 14
-days). Adjust paths and retention to taste.
+定时备份的唯一来源是 `scripts/backup-postgres.sh`，用法与默认值（保留最近
+14 份、备份目录为仓库根 `backups/`，已 gitignore）见脚本头注释。不要另写备份
+命令或 cron 片段——两处维护必然漂移（本节早前引用过并不存在的
+`scripts/backup-db.sh`，即此类漂移的实例）。
+
+服务器侧示例（以脚本头注释为准）：
 
 ```cron
-SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-30 2 * * * root \
-  COMPOSE_FILE=/opt/hotspot/docker-compose.yml \
-  BACKUP_DIR=/opt/hotspot/backups \
-  DB_CONTAINER=hotspot-postgres-1 \
-  /opt/hotspot/scripts/backup-db.sh >> /var/log/hotspot-backup.log 2>&1
-
-# Prune — keep last 14 days of DB dumps.
-15 3 * * * root find /opt/hotspot/backups -name 'hotspot-db-*.sql.gz' -mtime +14 -delete
+30 3 * * * /home/workuser/hotspot/scripts/backup-postgres.sh >> /home/workuser/hotspot/backups/backup.log 2>&1
 ```
-
-A minimal `scripts/backup-db.sh` wrapper (mirrors section 1, exits non-zero on
-failure so cron mail alerts):
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-: "${BACKUP_DIR:?BACKUP_DIR must be set}"
-: "${DB_CONTAINER:?DB_CONTAINER must be set}"
-mkdir -p "$BACKUP_DIR"
-STAMP=$(date -u +%Y%m%dT%H%M%SZ)
-docker exec "$DB_CONTAINER" \
-  pg_dump -U postgres -d hotspot --no-owner --clean --if-exists \
-  | gzip > "$BACKUP_DIR/hotspot-db-$STAMP.sql.gz"
-test -s "$BACKUP_DIR/hotspot-db-$STAMP.sql.gz"   # fail if empty
-```
-
-Make it executable: `chmod +x scripts/backup-db.sh`.
 
 ---
 

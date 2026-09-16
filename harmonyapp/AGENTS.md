@@ -10,12 +10,12 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 
 ## 版本号管理
 
-App 版本唯一来源是 `AppScope/app.json5`（`versionName` + `versionCode`），EntryAbility 启动时经 bundleManager 读取并打日志。**每次发版必须同步两处**：
+App 版本唯一来源是 `AppScope/app.json5`（`versionName` + `versionCode`），EntryAbility 启动时经 bundleManager 读取并打日志。**各端版本独立**：Web/后端用仓库 git tag（`vX.Y.Z`）发版，鸿蒙不跟 tag 走——Web 发版不需要 bump `app.json5`，只有鸿蒙发版才 bump：
 
-1. 仓库根打 git tag `vX.Y.Z`（与线上 Web 端共用同一 tag 序列，`git describe` 是全项目版本号的生成源）；
-2. `app.json5` 的 `versionName` 设为 tag 的 `X.Y.Z`，`versionCode` 设为 `X*1000000 + Y*1000 + Z`（如 `v1.2.3` → `1002003`）。
+- `versionName` 取本次鸿蒙发版的 `X.Y.Z`，`versionCode` 设为 `X*1000000 + Y*1000 + Z`（如 `1.2.3` → `1002003`）；
+- 发版流程：commit 在对应 Worktree 内完成；合并进主分支后推送（见全局 Git 准则）。
 
-排查用户反馈时以 `versionName` 定位到对应 tag，再由 tag 拿到精确 commit。未 bump 版本即发安装包 = 无法溯源，视为发布事故。
+排查用户反馈时以 `versionName` 定位到发版 commit。未 bump 版本即发安装包 = 无法溯源，视为发布事故。
 
 ## 构建 & 测试
 

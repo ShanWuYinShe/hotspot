@@ -61,7 +61,7 @@ worktree 内调试同样通过 Docker Compose，与主工作树自动隔离：
 
 - 不要指定 `-p`：compose 项目名默认取当前目录名（主工作树 = `hotspot`，worktree = 该分支目录名），自动隔离容器/网络/volume；显式 `-p hotspot` 会接管主实例容器，隔离失效
 - 在对应 worktree 根目录执行（`docker-compose.yml` 在 worktree 内同样存在），cwd 必须是该目录
-- 默认端口映射（8888/8081/5432）与主实例相同，同一时间只允许一套 dev 环境运行；需要并行时按下方「目录名同名冲突」节重映射端口
+- 默认端口映射（8888 网关 / 8081 后端直连 / 5432 postgres / 8333 seaweedfs / 6379 redis / 8025 mailpit）与主实例相同，同一时间只允许一套 dev 环境运行；需要并行时按下方「目录名同名冲突」节重映射端口
 
 ### worktree 目录名与主工作树同名（compose 项目名冲突）
 

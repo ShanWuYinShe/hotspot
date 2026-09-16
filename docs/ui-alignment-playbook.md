@@ -1,6 +1,6 @@
 # UI 跨端对齐 Playbook（Web 移动端 ↔ HarmonyOS ↔ 未来 Android）
 
-> 本文回答「怎么做对齐」，与 `docs/design-system.md`（「对齐到什么值」的 token 单一事实源）互补。
+> 本文回答「怎么做对齐」，与 token 权威（两端 `AGENTS.md` + `check-cross-platform-*.mjs`）互补（`docs/design-system.md` 为已停更的历史快照，仅供考古）。
 > 经验来自 harmonyapp 与前端移动端的整轮实战对齐（2026-09），方法论可直接迁移到后续 Android 端。
 
 ---
@@ -22,7 +22,7 @@
 前端 `themes/*.css` 的 `--cst-palette-*` ↔ 客户端主题常量，**逐值相等**。
 
 - 已有 CI 防线：`bun run --cwd frontend check:theme`（`check-cross-platform-colors.mjs`），
-  覆盖 13 组直比映射 + 合成色规则（accent-soft/active 指示器预合成）。
+  覆盖 14 组直比映射 + 合成色规则（accent-soft/active 指示器预合成）。
 - **透明色陷阱**（防线演进的核心教训）：
   - 前端大量用 `rgba()` / `color-mix()` 表达「accent N% 叠加底色」；客户端常量只能写**预合成不透明 hex**。
     公式：`blend = round(fg×a + bg×(1−a))`，例：accent #2E66C0 @0.13 over #F7FAFF = `#DDE7F7`。
@@ -96,7 +96,7 @@
 | 半屏发布 | Radix Dialog bottom | sheet 28 圆角 | `ModalBottomSheet` |
 | 反向转发 | — | `hdc fport` | `adb reverse tcp:8888 tcp:8888` |
 | 布局实测 | computed style | `uitest dumpLayout` | `uiautomator dump` |
-| 校验防线 | `check:theme`（已覆盖两主题） | 同左 | 同一脚本加 Android 资源解析分支 |
+| 校验防线 | `check:theme`（已覆盖三主题） | 同左 | 同一脚本加 Android 资源解析分支 |
 
 ## 5. 踩坑实录（每条都真实付出过排查成本）
 
@@ -123,5 +123,5 @@
 2. 客户端同页截图 + dumpLayout
 3. 差异 → 归因到 token（改 ThemeConstants/DesignConstants，进 CI）或规格（改布局代码）
 4. 每修一批：构建 → 部署 → 截图回归 → check:theme 绿
-5. 新增的对应关系沉淀进 design-system.md 映射表与 check 脚本 MAPPING
+5. 新增的对应关系沉淀进两端 `AGENTS.md` 的映射表与 check 脚本 MAPPING
 ```
