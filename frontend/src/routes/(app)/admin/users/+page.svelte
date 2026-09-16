@@ -57,6 +57,11 @@
 
 	const submitBan = async (active: boolean) => {
 		if (!banTarget || banPending) return;
+		// 天数填了就必须是正整数：负数/0 静默转永久封禁会放大操作后果（后端对负数本就拒绝）。
+		if (active && banDays !== null && (!Number.isFinite(banDays) || banDays < 1)) {
+			showToast('封禁天数需为正整数，留空表示永久封禁', 'danger');
+			return;
+		}
 		banPending = true;
 		try {
 			const res = await adminSetUserBan({

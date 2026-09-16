@@ -60,6 +60,11 @@
 
 	const submitJudge = async () => {
 		if (!judgeTarget || pending) return;
+		// 天数填了就必须是正整数：负数静默转永久封禁会放大操作后果（后端对负数本就拒绝）。
+		if (action === 'resolve' && banDays !== null && (!Number.isFinite(banDays) || banDays < 1)) {
+			showToast('封禁天数需为正整数，留空表示不封禁', 'danger');
+			return;
+		}
 		pending = true;
 		try {
 			const res = await adminJudgeReport({
@@ -125,7 +130,7 @@
 									<span class="ml-1.5 text-xs text-text-secondary font-mono">{r.target_id}</span>
 								</td>
 								<td class={TD}>{r.reason}</td>
-								<td class={`${TD} max-w-56 truncate`} title={r.description ?? ''}>{r.description ?? '—'}</td>
+								<td class={`${TD} max-w-56 truncate`} title={r.description ?? r.message_snapshot?.snapshot_content ?? ''}>{r.description ?? r.message_snapshot?.snapshot_content ?? '—'}</td>
 								<td class={TD}>{r.reporter?.nickname ?? '—'}</td>
 								<td class={TD}>
 									<span class="badge {r.status === 'pending' ? 'bg-accent-soft text-accent-default' : r.status === 'resolved' ? 'bg-surface-subtle text-text-secondary' : 'bg-surface-subtle text-text-secondary'}">
@@ -159,6 +164,21 @@
 				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">
 					目标 {judgeTarget?.target_type}（<span class="font-mono">{judgeTarget?.target_id}</span>），原因：{judgeTarget?.reason}
 				</Dialog.Description>
+				{#if judgeTarget?.target_type === 'message' && judgeTarget?.message_snapshot}
+					{@const snap = judgeTarget.message_snapshot}
+					<div class="mt-3 rounded-md bg-surface-subtle px-3 py-2.5">
+						<p class="text-xs text-text-secondary">
+							被举报消息（{snap.chat_type === 'group' ? '群聊' : '私聊'} · {formatDateTime(snap.sent_at)}）
+						</p>
+						{#if snap.snapshot_content}
+							<p class="mt-1 text-sm break-all text-text-primary">{snap.snapshot_content}</p>
+						{:else if snap.snapshot_media}
+							<p class="mt-1 text-sm text-text-primary">[媒体消息：{snap.snapshot_media.mime_type ?? '附件'}]</p>
+						{:else}
+							<p class="mt-1 text-sm text-text-secondary">（内容为空）</p>
+						{/if}
+					</div>
+				{/if}
 				<div class="mt-4 flex flex-col gap-3">
 					<div class="flex gap-2">
 						<button
