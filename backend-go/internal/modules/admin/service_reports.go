@@ -65,11 +65,10 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 	if req.Action == ReportActionResolve {
 		switch record.Item.TargetType {
 		case ReportTargetTypeGroup:
-			if _, _, err := s.repo.DismissGroup(ctx, record.Item.TargetID); err != nil {
-				if apiErr := asAPIError(err); apiErr != nil {
-					return apiErr, nil
-				}
-				return nil, err
+			// 与 groups/dismiss 端点共用同一解散链路（成员 GroupDismissed 广播 +
+			// group.dismiss 审计），避免经举报通道解散时群成员无感知、操作不可追溯。
+			if _, apiErr, err := s.dismissGroupAndTrace(ctx, actor, record.Item.TargetID, note); apiErr != nil || err != nil {
+				return apiErr, err
 			}
 		case ReportTargetTypeUser:
 			if apiErr, err := s.banReportedUser(ctx, actor, record.TargetUser.UserID, note, req.BanDurationDays); apiErr != nil || err != nil {
@@ -100,7 +99,7 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 			}
 		}
 	}
-	_, ok, err := s.repo.HandleReport(ctx, req.ReportID, req.Action, note, &UserInfo{UserID: actor.UserID, Nickname: actor.UserID})
+	_, ok, err := s.repo.HandleReport(ctx, req.ReportID, req.Action, note, &UserInfo{UserID: actor.UserID, Nickname: actor.Nickname})
 	if err != nil {
 		if errors.Is(err, errReportAlreadyHandled) {
 			// 并发裁决败者：副作用（解散/封禁/删内容）可能已由获胜方执行，
@@ -115,8 +114,15 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 	if !ok {
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "举报不存在"}, nil
 	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.judge"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: map[string]any{"type": "report.judge", "report_id": req.ReportID, "action": string(req.Action), "note": note}}); err != nil {
-		return nil, err
+	judgeDetails := map[string]any{"type": "report.judge", "report_id": req.ReportID, "action": string(req.Action), "note": note}
+	if req.BanDurationDays != nil {
+		// 封禁时长进裁决审计：与 user.ban 审计互为印证，裁决记录自身可回答「禁了多久」。
+		judgeDetails["ban_duration_days"] = *req.BanDurationDays
+	}
+	// 裁决审计失败按 best-effort 处理（记错误日志，不回滚已生效的裁决）：
+	// 此时举报已终态，返回错误只会诱导重试并撞上 10400 已处理。
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.judge"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: judgeDetails}); err != nil {
+		observability.L().Error("admin: report judge audit log append failed", "error", err, "report_id", req.ReportID)
 	}
 	// Notify the reporter about the outcome (resolve/dismiss only; escalate
 	// keeps the report pending and does not notify).
@@ -127,11 +133,13 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 }
 
 // banReportedUser 按举报处理附带的天数封禁目标用户（nil = 不封禁，跳过）。
+// appendAudit=true：经举报通道的封禁与 users/set_ban 端点同权同责，必须留痕
+// （spec api_spec_admin.md：封禁操作均记录审计日志），否则「谁禁的、禁多久」无从追溯。
 func (s *Service) banReportedUser(ctx context.Context, actor AdminActor, targetUserID, note string, banDays *int) (*httpx.APIError, error) {
 	if banDays == nil {
 		return nil, nil
 	}
-	return s.banUser(ctx, actor, targetUserID, note, banDays, false)
+	return s.banUser(ctx, actor, targetUserID, note, banDays, true)
 }
 
 // notifyReportHandled persists the report_resolved/report_dismissed
@@ -226,7 +234,7 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 		}
 	}
 	if appendAudit {
-		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.ban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("user"), TargetID: userID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.ban", "reason": strings.TrimSpace(reason), "duration_days": duration}}); err != nil {
+		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.ban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("user"), TargetID: userID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.ban", "reason": strings.TrimSpace(reason), "duration_days": duration}}); err != nil {
 			return nil, err
 		}
 	}

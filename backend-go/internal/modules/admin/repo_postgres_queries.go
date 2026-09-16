@@ -288,6 +288,17 @@ WHERE g.deleted_at IS NULL AND g.group_id = $1`
 UPDATE groups
 SET deleted_at = NOW()
 WHERE group_id = $1 AND deleted_at IS NULL`
+	// 解散级联（spec api_spec_admin.md groups/dismiss 契约级）：该群全部 pending
+	// 申请/邀请自动置 revoked，字段口径与 groups 模块 BanMember 的级联一致
+	//（申请记 handled_at、邀请记 responded_at）。与 queryAdminDismissGroup 同事务执行。
+	queryAdminRevokePendingGroupApplications = `
+UPDATE group_applications
+SET status = 'revoked', handled_at = $2
+WHERE group_id = $1 AND status = 'pending'`
+	queryAdminRevokePendingGroupInvites = `
+UPDATE group_invites
+SET status = 'revoked', responded_at = $2
+WHERE group_id = $1 AND status = 'pending'`
 	queryAdminListGroupMemberIDs = `
 SELECT user_id
 FROM group_members

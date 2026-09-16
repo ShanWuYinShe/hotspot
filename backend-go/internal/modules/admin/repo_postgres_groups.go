@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"hotspot/backend-go/internal/platform/types"
+	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
 
@@ -77,15 +78,30 @@ func (r *PostgresRepository) GetGroup(ctx context.Context, groupID string) (Admi
 }
 
 func (r *PostgresRepository) DismissGroup(ctx context.Context, groupID string) (AdminGroupItem, bool, error) {
-	queryable, ok := r.queryable(ctx)
-	if !ok {
+	if _, ok := r.queryable(ctx); !ok {
 		return AdminGroupItem{}, false, persistence.ErrNotImplemented
 	}
 	item, found, err := r.GetGroup(ctx, groupID)
 	if err != nil || !found {
 		return AdminGroupItem{}, found, err
 	}
-	if err := queryable.Exec(ctx, queryAdminDismissGroup, groupID); err != nil {
+	// 解散 + 级联作废 pending 申请/邀请包进同一事务（spec api_spec_admin.md
+	// groups/dismiss 契约级）：避免「群已解散、申请仍可被同意」的中间态。
+	err = persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		txQueryable, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if err := txQueryable.Exec(txCtx, queryAdminDismissGroup, groupID); err != nil {
+			return err
+		}
+		now := time.Now().UTC()
+		if err := txQueryable.Exec(txCtx, queryAdminRevokePendingGroupApplications, groupID, now); err != nil {
+			return err
+		}
+		return txQueryable.Exec(txCtx, queryAdminRevokePendingGroupInvites, groupID, now)
+	})
+	if err != nil {
 		return AdminGroupItem{}, false, err
 	}
 	return item, true, nil

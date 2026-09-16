@@ -718,3 +718,87 @@ func TestUserBanStateExpired(t *testing.T) {
 		}
 	}
 }
+
+// --- 经举报通道的解散/封禁必须与 admin 端点同权同责（广播+审计留痕） ---
+
+// findAuditByAction 在内存 repo 的审计日志里找指定 action 的最新一条。
+func findAuditByAction(t *testing.T, repo *InMemoryRepository, action AuditAction) AuditLogEntry {
+	t.Helper()
+	repo.mu.RLock()
+	defer repo.mu.RUnlock()
+	for i := len(repo.auditOrder) - 1; i >= 0; i-- {
+		if entry := repo.auditLogs[repo.auditOrder[i]]; entry.Action == action {
+			return entry
+		}
+	}
+	t.Fatalf("audit log with action %q not found", action)
+	return AuditLogEntry{}
+}
+
+func TestServiceHandleReportResolveGroupTracesDismissal(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	// 补充管理员用户档案，验证审计 operator 记录的是资料昵称而非裸 user_id。
+	repo.mu.Lock()
+	repo.users["admin1"] = UserInfo{UserID: "admin1", Nickname: "Ops Admin"}
+	repo.mu.Unlock()
+	now := time.Now().UTC().Format(time.RFC3339)
+	repo.reports["report_group"] = reportHandleRecord{
+		Item: AdminReportItem{
+			ReportID:   "report_group",
+			TargetType: ReportTargetTypeGroup,
+			TargetID:   "group_hotspot",
+			Reason:     "spam",
+			Status:     ReportStatusPending,
+			CreatedAt:  now,
+			Reporter:   UserInfo{UserID: "user_alice", Nickname: "Alice"},
+		},
+	}
+	apiErr, err := svc.HandleReport(adminCtx("admin1"), JudgeAdminReportRequest{ReportID: "report_group", Action: ReportActionResolve, Note: "违规群组"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("unexpected api error: %v", apiErr)
+	}
+	// 群已解散。
+	if _, found, _ := repo.GetGroup(context.Background(), "group_hotspot"); found {
+		t.Fatal("expected group_hotspot to be dismissed")
+	}
+	// 解散动作留痕：group.dismiss 审计存在，操作者昵称取自管理员资料而非裸 user_id。
+	entry := findAuditByAction(t, repo, "group.dismiss")
+	if entry.TargetID != "group_hotspot" {
+		t.Fatalf("group.dismiss target = %q, want group_hotspot", entry.TargetID)
+	}
+	if entry.Operator.Nickname == "" || entry.Operator.Nickname == "admin1" {
+		t.Fatalf("group.dismiss operator nickname = %q, want admin1 的资料昵称", entry.Operator.Nickname)
+	}
+	// 裁决本身留痕：report.judge 审计存在。
+	findAuditByAction(t, repo, "report.judge")
+}
+
+func TestServiceHandleReportResolveBanWritesAudit(t *testing.T) {
+	svc, repo, _, _ := newTestService()
+	repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true})
+	seven := 7
+	apiErr, err := svc.HandleReport(adminCtx("admin1"), JudgeAdminReportRequest{ReportID: "report_1", Action: ReportActionResolve, Note: "spam", BanDurationDays: &seven})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if apiErr != nil {
+		t.Fatalf("unexpected api error: %v", apiErr)
+	}
+	// 封禁动作留痕：user.ban 审计存在且含封禁时长。
+	entry := findAuditByAction(t, repo, "user.ban")
+	if entry.TargetID != "user_bob" {
+		t.Fatalf("user.ban target = %q, want user_bob", entry.TargetID)
+	}
+	if got := entry.Details["duration_days"]; got != seven {
+		t.Fatalf("user.ban duration_days = %v, want %d", got, seven)
+	}
+	// 裁决审计同样记录封禁时长，单条裁决即可回答「禁了多久」。
+	judge := findAuditByAction(t, repo, "report.judge")
+	if got := judge.Details["ban_duration_days"]; got != seven {
+		t.Fatalf("report.judge ban_duration_days = %v, want %d", got, seven)
+	}
+}

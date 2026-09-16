@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 	"strings"
 	"time"
@@ -90,7 +91,7 @@ func (s *Service) SetUserBan(ctx context.Context, req AdminSetUserBanRequest) (*
 	// 见 api_spec_errors.md）；spec api_spec_admin.md users/set_ban 安全约束：
 	// 封禁/解封操作均记录审计日志（含 no-op 解封尝试，便于审计追溯）。
 	if !ok || state.Status != UserAccountStatusBanned {
-		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.unban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("user"), TargetID: req.UserID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.unban", "reason": strings.TrimSpace(req.Reason), "no_op": true}}); err != nil {
+		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.unban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("user"), TargetID: req.UserID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.unban", "reason": strings.TrimSpace(req.Reason), "no_op": true}}); err != nil {
 			return nil, err
 		}
 		return nil, nil
@@ -106,7 +107,7 @@ func (s *Service) SetUserBan(ctx context.Context, req AdminSetUserBanRequest) (*
 		}
 		return nil, err
 	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.unban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("user"), TargetID: req.UserID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.unban", "reason": strings.TrimSpace(req.Reason)}}); err != nil {
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.unban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("user"), TargetID: req.UserID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.unban", "reason": strings.TrimSpace(req.Reason)}}); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -161,24 +162,35 @@ func (s *Service) DismissGroup(ctx context.Context, req AdminDismissGroupRequest
 	if strings.TrimSpace(req.GroupID) == "" || len(req.Reason) > 500 {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	item, found, err := s.repo.DismissGroup(ctx, req.GroupID)
+	_, apiErr, err = s.dismissGroupAndTrace(ctx, actor, req.GroupID, req.Reason)
+	return apiErr, err
+}
+
+// dismissGroupAndTrace 执行群解散并补齐两级契约动作：成员 GroupDismissed 广播 +
+// group.dismiss 审计。admin 端点（groups/dismiss）与举报裁决（reports/judge
+// resolve 群目标）共用，保证两条解散路径语义一致（spec api_spec_admin.md
+// groups/dismiss 安全约束）。
+// 审计写入失败按 best-effort 处理（记错误日志，不回滚已生效的解散）：解散不可逆，
+// 失败报错只会诱导管理员重试并撞上「群组不存在」。
+func (s *Service) dismissGroupAndTrace(ctx context.Context, actor AdminActor, groupID, reason string) (AdminGroupItem, *httpx.APIError, error) {
+	item, found, err := s.repo.DismissGroup(ctx, groupID)
 	if err != nil {
 		if apiErr := asAPIError(err); apiErr != nil {
-			return apiErr, nil
+			return AdminGroupItem{}, apiErr, nil
 		}
-		return nil, err
+		return AdminGroupItem{}, nil, err
 	}
 	if !found {
-		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "群组不存在"}, nil
+		return AdminGroupItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "群组不存在"}, nil
 	}
-	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "policy_violation"}}
+	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": groupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "policy_violation"}}
 	// 仅按群广播一次：逐成员 BroadcastToUser 会让在线成员各收到两份重复事件；
 	// 离线成员由 resume 兜底（解散为持久状态，重连后群已不可见）。
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("group.dismiss"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("group"), TargetID: req.GroupID, TargetName: item.Group.Name, Details: map[string]any{"type": "group.dismiss", "reason": strings.TrimSpace(req.Reason)}}); err != nil {
-		return nil, err
+	realtime.DefaultHub().BroadcastToGroup(groupID, event)
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("group.dismiss"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("group"), TargetID: groupID, TargetName: item.Group.Name, Details: map[string]any{"type": "group.dismiss", "reason": strings.TrimSpace(reason)}}); err != nil {
+		observability.L().Error("admin: group dismiss audit log append failed", "error", err, "group_id", groupID)
 	}
-	return nil, nil
+	return item, nil, nil
 }
 
 func validateAdminUserSearchRequest(req AdminUserSearchRequest) *httpx.APIError {
