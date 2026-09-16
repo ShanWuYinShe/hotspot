@@ -29,26 +29,16 @@ const (
 		       COALESCE(TO_CHAR(reply.sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), ''),
 		       COALESCE(gm.sender_user_id, ''),
 		       COALESCE(sender.nickname, ''),
-		       COALESCE(sender.avatar_url, ''),
-		       COALESCE(rc.read_count, 0) AS read_count
+		       COALESCE(sender.avatar_url, '')
 		FROM group_messages gm
 		LEFT JOIN users sender ON sender.user_id = gm.sender_user_id
 		LEFT JOIN group_messages reply ON reply.message_id = gm.reply_to_message_id
 		LEFT JOIN users reply_sender ON reply_sender.user_id = reply.sender_user_id
-		-- read_count 走 LATERAL 逐行计数，仅对当前页 LIMIT 行执行（审计 perf P1-2，
-		-- 与 groups 列表 members_count 的 P1-3 同法）。已读判定保持 F-07 语义不变：
-		-- 只统计「消息发出时已在群」的成员——晚于该消息入群的新成员不可能真正读过
-		-- 它，且 mark_all_read 会把游标一次推到最新，否则入群前全部历史消息都会被
-		-- 计入已读人数（F-07 虚高主因）。
-		LEFT JOIN LATERAL (
-		  SELECT COUNT(*)::int AS read_count
-		  FROM group_message_read_state grs
-		  JOIN group_members member
-		    ON member.group_id = grs.group_id AND member.user_id = grs.user_id
-		  WHERE grs.group_id = gm.group_id
-		    AND grs.last_read_sent_at >= gm.sent_at
-		    AND member.joined_at <= gm.sent_at
-		) rc ON TRUE
+		-- read_count 不在本查询逐行 LATERAL 计数：万人大群每行扫一遍
+		-- read_state×members（审计 perf P2-13）。History 由 repo 在主查询后用
+		-- queryGroupMessageReadCounts 按当前页 message_id ANY 一次聚合回填，
+		-- 计数口径不变（last_read_sent_at >= sent_at 且 joined_at <= sent_at，
+		-- 即只统计「消息发出时已在群」的成员，F-07 语义）。
 		WHERE gm.group_id = $1
 		  AND ($2::timestamptz IS NULL OR gm.sent_at < $2::timestamptz OR (gm.sent_at = $2::timestamptz AND gm.message_id < $3))
 		ORDER BY gm.sent_at DESC, gm.message_id DESC

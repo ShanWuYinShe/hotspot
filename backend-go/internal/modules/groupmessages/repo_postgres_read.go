@@ -37,6 +37,7 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 	// 避免逐条查询（N+1）。语义与 WS media 负载一致（url=storage_key）。
 	fileIDsByIndex := make([]string, 0, limit+1)
 	fileIDs := make([]string, 0, limit+1)
+	messageIDs := make([]string, 0, limit+1)
 	for rows.Next() {
 		var item GroupMessageItem
 		var editedAt string
@@ -48,8 +49,7 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 		var fileID, shareCode string
 		var replyMessageID, replyType, replyContent, replyShareCode string
 		var replySenderID, replyNickname, replyAvatar, replySentAt string
-		var readCount int
-		if err := rows.Scan(&item.MessageID, &item.Type, &content, &item.SentAt, &editedAt, &recalledAt, &fileID, &shareCode, &replyMessageID, &replyType, &replyContent, &replyShareCode, &replySenderID, &replyNickname, &replyAvatar, &replySentAt, &senderUserID, &senderNickname, &senderAvatar, &readCount); err != nil {
+		if err := rows.Scan(&item.MessageID, &item.Type, &content, &item.SentAt, &editedAt, &recalledAt, &fileID, &shareCode, &replyMessageID, &replyType, &replyContent, &replyShareCode, &replySenderID, &replyNickname, &replyAvatar, &replySentAt, &senderUserID, &senderNickname, &senderAvatar); err != nil {
 			return PaginatedGroupMessages{}, err
 		}
 		item.Content = types.StrPtr(content)
@@ -68,16 +68,27 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 		}
 		item.EditedAt = types.StrPtr(editedAt)
 		item.RecalledAt = types.StrPtr(recalledAt)
-		item.ReadCount = &readCount
 		item.Sender = map[string]any{"user_id": senderUserID, "nickname": senderNickname, "avatar_url": senderAvatar}
 		items = append(items, item)
 		fileIDsByIndex = append(fileIDsByIndex, fileID)
 		if fileID != "" {
 			fileIDs = append(fileIDs, fileID)
 		}
+		messageIDs = append(messageIDs, item.MessageID)
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedGroupMessages{}, err
+	}
+	// 已读计数页面级一次聚合回填（取代逐行 LATERAL，见 queryGroupMessagesHistory 注释）
+	if readCounts, err := r.readCountsByMessageIDs(ctx, queryable, groupID, messageIDs); err != nil {
+		return PaginatedGroupMessages{}, err
+	} else {
+		for i := range items {
+			if rc, ok := readCounts[items[i].MessageID]; ok {
+				count := rc
+				items[i].ReadCount = &count
+			}
+		}
 	}
 	if len(fileIDs) > 0 {
 		mediaByFileID, err := r.mediaByFileIDs(ctx, queryable, fileIDs)
@@ -96,6 +107,30 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 	next := items[limit-1]
 	c := encodeGroupMessageCursor(next.SentAt, next.MessageID)
 	return PaginatedGroupMessages{Items: items[:limit], NextCursor: &c}, nil
+}
+
+// readCountsByMessageIDs 页面级批量已读计数（单次往返，口径与逐条版一致：
+// last_read_sent_at >= 消息 sent_at 且成员 joined_at <= sent_at）。缺失的消息
+// 不在返回 map 中（调用方按 0 处理）。
+func (r *PostgresRepository) readCountsByMessageIDs(ctx context.Context, queryable persistence.Queryable, groupID string, messageIDs []string) (map[string]int, error) {
+	result := make(map[string]int, len(messageIDs))
+	if len(messageIDs) == 0 {
+		return result, nil
+	}
+	rows, err := queryable.Query(ctx, queryGroupMessageReadCounts, groupID, messageIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var messageID string
+		var count int
+		if err := rows.Scan(&messageID, &count); err != nil {
+			return nil, err
+		}
+		result[messageID] = count
+	}
+	return result, rows.Err()
 }
 
 // mediaByFileIDs 批量取消息媒体元数据（单次往返），字段语义与 GetMediaForMessage
