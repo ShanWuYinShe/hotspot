@@ -127,6 +127,7 @@ import type {
 	CompleteUploadRequest,
 	BootstrapRequest,
 	PaginationParams,
+	ShareDetail,
 } from '@/api/types';
 
 // 分页信封由 types.ts 提供；此处集中重导出供页面直接使用。
@@ -487,3 +488,6 @@ export async function adminCreateAnnouncement(params: { title: string; content: 
 }
 export async function adminUpdateAnnouncement(params: { announcement_id: string; title: string | null; content: string | null; severity: AnnounceSeverity | null; action_url: string | null }) { return request<AdminAnnouncementItem>(Endpoints.Admin.Announcements.Update, params); }
 export async function adminDeleteAnnouncement(params: { announcement_id: string }) { return request<void>(Endpoints.Admin.Announcements.Delete, params); }
+
+// 分享码落地（spec api_spec_public.md share/open_the_door；仅 public 版，匿名可调）
+export async function openShareDoor(params: { share_code: string }) { return request<ShareDetail>(Endpoints.Share.Get, params); }

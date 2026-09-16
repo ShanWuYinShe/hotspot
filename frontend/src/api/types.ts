@@ -1432,3 +1432,27 @@ export interface AdminAnnouncementItem extends SystemAnnouncementItem {
 	push_sent_at: string | null;
 	view_count: number;
 }
+
+// ===== 分享码落地（spec api_spec_public.md share/open_the_door；仅 public 版，无登录镜像） =====
+
+export type ShareType = 'user' | 'group' | 'moment' | 'location';
+
+export interface ShareBase {
+	share_id: string;
+	share_code: string;
+	share_type: ShareType;
+	creator: UserInfo;
+	created_at: string;
+	expires_at: string | null;
+}
+
+export interface ShareDetail {
+	share: ShareBase;
+	payload:
+		| { shared_user_id: string }
+		| { shared_group_id: string }
+		| { shared_moment_id: string }
+		| { shared_location: Location };
+	// 目标资源不可访问（删除/隐私变更）时为 null；分享撤销/过期整体 10300
+	preview: Record<string, unknown> | null;
+}

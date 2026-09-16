@@ -34,6 +34,7 @@ export {
   createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement,
   listUserMoments, listUserReactedMoments,
   listComments,
+  openShareDoor,
   getMapCanvas,
   searchSuggest,
   adminRbacMe, adminListPermissions, adminListRoles, adminCreateRole, adminUpdateRole,
