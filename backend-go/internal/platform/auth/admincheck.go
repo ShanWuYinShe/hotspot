@@ -39,7 +39,7 @@ func IsAdminUser(ctx context.Context, userID string) bool {
 	return err == nil && isAdmin
 }
 
-// AdminAccess 校验当前 principal 是否为管理员（httpx.CodeForbidden/非系统管理员）。
+// AdminAccess 校验当前 principal 是否为平台管理员（httpx.CodeForbidden/非平台管理员）。
 // 管理端点统一挂该中间件（admin 模块 /admin/v1 分组）。
 func AdminAccess(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +49,7 @@ func AdminAccess(next http.Handler) http.Handler {
 				"method", r.Method,
 				"uri", r.URL.RequestURI(),
 			)
-			httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(httpx.CodeForbidden, "非系统管理员", httpx.Forbidden(httpx.ReasonNotAdmin, "非系统管理员").Data))
+			httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(httpx.CodeForbidden, "非平台管理员", httpx.Forbidden(httpx.ReasonNotAdmin, "非平台管理员").Data))
 			return
 		}
 		if !IsAdminUser(r.Context(), principal.UserID) {
@@ -58,7 +58,7 @@ func AdminAccess(next http.Handler) http.Handler {
 				"uri", r.URL.RequestURI(),
 				"user_id", principal.UserID,
 			)
-			httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(httpx.CodeForbidden, "非系统管理员", httpx.Forbidden(httpx.ReasonNotAdmin, "非系统管理员").Data))
+			httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(httpx.CodeForbidden, "非平台管理员", httpx.Forbidden(httpx.ReasonNotAdmin, "非平台管理员").Data))
 			return
 		}
 		next.ServeHTTP(w, r)

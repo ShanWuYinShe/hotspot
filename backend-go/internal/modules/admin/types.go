@@ -108,7 +108,10 @@ type AdminRbacRevokeAdminRequest struct {
 }
 
 type AdminActor struct {
-	UserID              string
+	UserID string
+	// Nickname 供审计日志 operator 展示；repo 未能取到时留空，
+	// newAuditEntry 会兜底回填 UserID。
+	Nickname            string
 	Permissions         []string
 	Roles               []AdminRoleBasic
 	GrantAllPermissions bool

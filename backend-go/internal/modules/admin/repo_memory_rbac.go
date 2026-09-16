@@ -18,6 +18,7 @@ func (r *InMemoryRepository) GetActor(_ context.Context, userID string) (AdminAc
 	if userID == "admin" {
 		return AdminActor{
 			UserID:              "admin",
+			Nickname:            "admin",
 			Permissions:         []string{wildcardPermission},
 			Roles:               []AdminRoleBasic{{RoleID: "role_super", Name: "Super Admin"}},
 			GrantAllPermissions: true,
@@ -267,7 +268,11 @@ func (r *InMemoryRepository) actorFromRecordLocked(record adminGrantRecord) (Adm
 		}
 		permissions = sortAndUniqueStrings(permissions)
 	}
-	return AdminActor{UserID: record.userID, Permissions: permissions, Roles: roles, GrantAllPermissions: record.grantAllPermissions}, true, nil
+	nickname := record.userID
+	if user, ok := r.users[record.userID]; ok && user.Nickname != "" {
+		nickname = user.Nickname
+	}
+	return AdminActor{UserID: record.userID, Nickname: nickname, Permissions: permissions, Roles: roles, GrantAllPermissions: record.grantAllPermissions}, true, nil
 }
 
 func (r *InMemoryRepository) lookupUserLocked(userID string) (UserInfo, bool) {

@@ -124,6 +124,7 @@ func (r *PostgresRepository) getActorFromDB(ctx context.Context, queryable persi
 	}
 	return AdminActor{
 		UserID:              record.User.UserID,
+		Nickname:            record.User.Nickname,
 		Permissions:         record.permissionsForResponse(),
 		Roles:               record.rolesForResponse(),
 		GrantAllPermissions: record.GrantAllPermissions,

@@ -99,7 +99,11 @@ func applyPositiveIntPatch(target *int, patch *int) *httpx.APIError {
 
 func newAuditEntry(ctx context.Context, actor AdminActor, entry AuditLogEntry) AuditLogEntry {
 	if entry.Operator.UserID == "" {
-		entry.Operator = UserInfo{UserID: actor.UserID, Nickname: actor.UserID}
+		nickname := actor.Nickname
+		if nickname == "" {
+			nickname = actor.UserID
+		}
+		entry.Operator = UserInfo{UserID: actor.UserID, Nickname: nickname}
 	}
 	if entry.CreatedAt.IsZero() {
 		entry.CreatedAt = time.Now().UTC()

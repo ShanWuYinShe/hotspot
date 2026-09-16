@@ -72,7 +72,7 @@ func (s *Service) SetTagBan(ctx context.Context, req AdminSetTagBanRequest) (*ht
 	if req.HardDelete {
 		details["hard_delete"] = true
 	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagSetBan, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details}); err != nil {
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagSetBan, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details}); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -122,7 +122,7 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 	}
 	title := strings.TrimSpace(req.Title)
 	input := systemmodule.AnnouncementCreateInput{
-		Actor: systemmodule.AnnouncementActor{UserID: actor.UserID, Nickname: actor.UserID},
+		Actor: systemmodule.AnnouncementActor{UserID: actor.UserID, Nickname: actor.Nickname},
 		Title: title, Content: strings.TrimSpace(req.Content), Severity: req.Severity,
 		ActionURL: strings.TrimSpace(req.ActionURL), SendPush: req.SendPush,
 	}
@@ -160,7 +160,7 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 			s.pushService.PushSystemAnnouncement(item.PublicItem(), notificationID)
 		}
 	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {
 		return AdminAnnouncementItem{}, nil, err
 	}
 	return toAdminAnnouncementItem(item), nil, nil
@@ -218,7 +218,7 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncement
 	if len(changedFields) > 0 {
 		details["changed_fields"] = changedFields
 	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementUpdate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: req.AnnouncementID, TargetName: updatedTitle, Details: details}); err != nil {
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementUpdate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: req.AnnouncementID, TargetName: updatedTitle, Details: details}); err != nil {
 		return AdminAnnouncementItem{}, nil, err
 	}
 	return toAdminAnnouncementItem(updated), nil, nil
@@ -249,7 +249,7 @@ func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string)
 		}
 		return nil, err
 	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: announcementID, TargetName: current.Title, Details: AuditDetails{"type": string(AuditActionAnnouncementDelete), "title": current.Title}}); err != nil {
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: announcementID, TargetName: current.Title, Details: AuditDetails{"type": string(AuditActionAnnouncementDelete), "title": current.Title}}); err != nil {
 		return nil, err
 	}
 	return nil, nil
