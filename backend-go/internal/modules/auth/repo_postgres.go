@@ -260,7 +260,7 @@ func (r *PostgresRepository) ChangePassword(ctx context.Context, userID, oldPass
 // CreateRegisterCode 生成并落库注册验证码。与密码重置不同：注册码不校验账号
 // 是否存在（login_id 可能尚未注册，不 FK 账号表），防枚举由「无论是否存在均
 // 落库 + 发送」实现；频率控制由 IP 维度 ratelimit 桶 + per-login_id 节流窗口
-//（registerCodeThrottleWindow，与密码重置的 repo 级节流同模式）双重兜底。
+// （registerCodeThrottleWindow，与密码重置的 repo 级节流同模式）双重兜底。
 func (r *PostgresRepository) CreateRegisterCode(ctx context.Context, loginID string, expiresAt time.Time) (string, error) {
 	queryable, ok := r.queryable(ctx)
 	if !ok {

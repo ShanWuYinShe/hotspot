@@ -17,7 +17,7 @@ var (
 	// ErrRegisterCodeThrottled 同一 login_id 注册验证码发送过频（per-login_id
 	// 节流窗口，对齐密码重置的 repo 级节流；IP 维度由 ratelimit 桶兜底）。
 	ErrRegisterCodeThrottled = errors.New("auth: register code throttled")
-	ErrAccountLocked                  = errors.New("auth: account locked due to too many failed attempts")
+	ErrAccountLocked         = errors.New("auth: account locked due to too many failed attempts")
 	// ErrAccountBanned 封禁账号尝试登录（spec api_spec_errors.md → 10201：
 	// 客户端须强制登出并展示专用封禁页，与普通错误 toast 语义不同）。
 	ErrAccountBanned = errors.New("auth: account banned")
