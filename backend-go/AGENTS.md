@@ -69,7 +69,14 @@ Handler -> Service -> Repository
 
 ## 数据库迁移
 
-`migrations/` 下 `NNN_描述.sql` 格式，嵌入二进制由启动时自动执行。新增 migration 使用下一个可用序号。
+`migrations/` 下 `NNN_描述.sql` 格式，嵌入二进制由启动时自动执行（字典序全量重跑，幂等靠各自 `IF NOT EXISTS`）。新增 migration 使用下一个可用序号（CI 校验序号唯一且无重复，`scripts/check-migrations.sh`）。
+
+**向后兼容纪律（硬性）**：迁移必须兼容「上一个已发布版本」的二进制——发布是无停机产物替换，旧版后端会短暂与新 schema 共存：
+
+- 只加不删：新迁移内不 DROP/RENAME 仍在被上一版本读写的列与表；废弃列先停止写入，跨一个版本再清理（expand-contract 两阶段）。
+- 改列语义/回填数据用 `DO $$` 自检式幂等写法（参照 `050`），不依赖「只跑一次」。
+- 数据性一次性迁移（无法按格式判幂等的）必须用 `data_migrations` 旗标表包裹（参照 `053`）。
+- 无 down 迁移：回滚版本 = 旧镜像 + 保留新 schema，因此 schema 变更必须对旧代码向后兼容，这是唯一防线。
 
 ## 路由与协议
 
