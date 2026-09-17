@@ -23,7 +23,6 @@ allow 2c0f:f248::/32;
 deny all;
 
 include /etc/nginx/conf.d/headers.inc;
-add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
 
 location /api/ {
     limit_req zone=api burst=20 nodelay;
@@ -49,7 +48,10 @@ location /public/ {
     proxy_set_header X-Request-ID $request_id;
 }
 
-location /admin/ {
+# 仅代理 /admin/v1 API 节点（与仓库基线 nginx.conf 一致）；/admin/* 前端
+# 页面路由必须回落 SPA（下方 location / 的 try_files），否则管理后台深链/刷新
+# 会被整段代理给 Go 后端返回 404。
+location /admin/v1/ {
     limit_req zone=admin burst=10 nodelay;
     proxy_pass http://backend;
     proxy_http_version 1.1;
