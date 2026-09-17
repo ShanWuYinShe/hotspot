@@ -109,14 +109,15 @@ func TestRefreshSessionRejectsReplayedTokenAfterGraceWindow(t *testing.T) {
 	if _, err := service.RefreshSession(context.Background(), issued.RefreshToken); err != nil {
 		t.Fatalf("refresh session: %v", err)
 	}
-	stored, ok, err := service.refreshes.Get(context.Background(), issued.RefreshToken)
+	// 存储键为 token 哈希（migration 053 起全表口径一致）。
+	stored, ok, err := service.refreshes.Get(context.Background(), HashRefreshToken(issued.RefreshToken))
 	if err != nil || !ok {
 		t.Fatalf("get old refresh session: ok=%v err=%v", ok, err)
 	}
 	stored.GraceUntil = time.Now().UTC().Add(-time.Second)
 	memoryStore := service.refreshes.(*InMemoryRefreshStore)
 	memoryStore.mu.Lock()
-	memoryStore.items[issued.RefreshToken] = stored
+	memoryStore.items[HashRefreshToken(issued.RefreshToken)] = stored
 	memoryStore.mu.Unlock()
 
 	_, err = service.RefreshSession(context.Background(), issued.RefreshToken)

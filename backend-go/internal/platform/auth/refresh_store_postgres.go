@@ -37,7 +37,7 @@ func (s *PostgresRefreshStore) Rotate(ctx context.Context, oldToken string, curr
 	}
 	graceUntil := time.Now().UTC().Add(RefreshRotationGrace)
 	var rotated string
-	if err := queryable.QueryRow(ctx, queryRotateRefreshToken, oldToken, next.RefreshToken, graceUntil, next.UserID, next.SessionID, next.ExpiresAt).Scan(&rotated); err != nil {
+	if err := queryable.QueryRow(ctx, queryRotateRefreshToken, oldToken, next.RefreshToken, graceUntil, next.UserID, next.SessionID, next.ExpiresAt, next.GraceTokenEnc).Scan(&rotated); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// UPDATE 带 rotated_to IS NULL 守卫后 0 行命中：旧 token 已被并发
 			// 请求轮换，本次未获得轮换权。
@@ -56,7 +56,7 @@ func (s *PostgresRefreshStore) Get(ctx context.Context, token string) (RefreshSe
 	var session RefreshSession
 	var rotatedTo *string
 	var graceUntil *time.Time
-	if err := queryable.QueryRow(ctx, queryGetRefreshToken, token).Scan(&session.UserID, &session.SessionID, &session.RefreshToken, &rotatedTo, &graceUntil, &session.ExpiresAt); err != nil {
+	if err := queryable.QueryRow(ctx, queryGetRefreshToken, token).Scan(&session.UserID, &session.SessionID, &session.RefreshToken, &rotatedTo, &graceUntil, &session.ExpiresAt, &session.GraceTokenEnc); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return RefreshSession{}, false, nil
 		}

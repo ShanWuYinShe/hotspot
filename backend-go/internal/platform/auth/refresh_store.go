@@ -13,6 +13,9 @@ type RefreshSession struct {
 	RotatedTo    string
 	GraceUntil   time.Time
 	ExpiresAt    time.Time
+	// GraceTokenEnc 宽限期托管：轮换后新链 token 的 AES-GCM 密文（密钥
+	// 不在 DB），供并发刷新败者在宽限期内换回明文。仅被轮换的旧行携带。
+	GraceTokenEnc []byte
 }
 
 type RefreshStore struct {
@@ -43,6 +46,7 @@ func (s *RefreshStore) Rotate(_ context.Context, oldToken string, current Refres
 	defer s.mu.Unlock()
 	current.RotatedTo = next.RefreshToken
 	current.GraceUntil = time.Now().UTC().Add(30 * time.Second)
+	current.GraceTokenEnc = next.GraceTokenEnc
 	s.items[oldToken] = current
 	s.items[next.RefreshToken] = next
 	return nil

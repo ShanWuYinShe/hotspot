@@ -16,6 +16,10 @@ type Service struct {
 	refreshes  RefreshTokenStore
 	sessions   SessionStore
 	banChecker BanChecker
+	// escrow 宽限期托管（AES-GCM，密钥取自 AUTH_TOKEN_SECRET）：轮换时托管
+	// 新链 token 明文，并发刷新败者在宽限期内凭此换回。nil 时（理论上不可达，
+	// config.Validate 强制非空 secret）宽限期冲突路径按无效处理。
+	escrow *TokenEscrow
 }
 
 // SetBanChecker injects a ban checker (typically the admin module's
@@ -66,12 +70,14 @@ type SessionMeta struct {
 }
 
 func NewService(cfg config.Config) *Service {
+	escrow, _ := NewTokenEscrow(cfg.AuthTokenSecret)
 	return &Service{
 		tokens:     NewTokenManager(cfg.AuthTokenSecret),
 		accessTTL:  15 * time.Minute,
 		refreshTTL: 30 * 24 * time.Hour,
 		refreshes:  NewInMemoryRefreshStore(),
 		sessions:   NewInMemorySessionStore(),
+		escrow:     escrow,
 	}
 }
 
@@ -82,12 +88,14 @@ func NewServiceWithStores(cfg config.Config, sessions SessionStore, refreshes Re
 	if refreshes == nil {
 		refreshes = NewInMemoryRefreshStore()
 	}
+	escrow, _ := NewTokenEscrow(cfg.AuthTokenSecret)
 	return &Service{
 		tokens:     NewTokenManager(cfg.AuthTokenSecret),
 		accessTTL:  15 * time.Minute,
 		refreshTTL: 30 * 24 * time.Hour,
 		refreshes:  refreshes,
 		sessions:   sessions,
+		escrow:     escrow,
 	}
 }
 
@@ -142,7 +150,8 @@ func (s *Service) IssueSessionWithMeta(ctx context.Context, userID string, meta 
 	}); err != nil {
 		return AuthResult{}, err
 	}
-	if err := s.refreshes.Save(ctx, RefreshSession{UserID: userID, SessionID: sessionID, RefreshToken: refreshToken, ExpiresAt: refreshExpires}); err != nil {
+	// 存储只落哈希（migration 053 起全表口径一致），明文仅随 AuthResult 返还客户端。
+	if err := s.refreshes.Save(ctx, RefreshSession{UserID: userID, SessionID: sessionID, RefreshToken: HashRefreshToken(refreshToken), ExpiresAt: refreshExpires}); err != nil {
 		return AuthResult{}, err
 	}
 	return AuthResult{Principal: newPrincipal(userID, sessionID, ""), AccessToken: accessToken, RefreshToken: refreshToken, AccessExpires: accessExp, RefreshExpires: refreshExpires}, nil

@@ -57,6 +57,7 @@ func (s *InMemoryRefreshStore) Rotate(_ context.Context, oldToken string, curren
 	}
 	current.RotatedTo = next.RefreshToken
 	current.GraceUntil = time.Now().UTC().Add(RefreshRotationGrace)
+	current.GraceTokenEnc = next.GraceTokenEnc
 	s.items[oldToken] = current
 	s.items[next.RefreshToken] = next
 	return nil

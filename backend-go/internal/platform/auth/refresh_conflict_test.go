@@ -40,19 +40,30 @@ func newConflictService(graceUntil time.Time) (*Service, *conflictRefreshStore) 
 	}); err != nil {
 		panic(err)
 	}
+	// 存储键为 token 哈希（migration 053 起全表口径一致）；被轮换的旧行
+	// 携带新链 token 的托管密文，供宽限期分支解密回明文。
+	escrow, err := NewTokenEscrow("test-secret")
+	if err != nil {
+		panic(err)
+	}
+	sealed, err := escrow.Seal("winner_token")
+	if err != nil {
+		panic(err)
+	}
 	refreshes := &conflictRefreshStore{records: map[string]RefreshSession{
-		"old_token": {
-			UserID:       "user_1",
-			SessionID:    "sess_conflict",
-			RefreshToken: "old_token",
-			ExpiresAt:    now.Add(time.Hour),
-			RotatedTo:    "winner_token",
-			GraceUntil:   graceUntil,
+		HashRefreshToken("old_token"): {
+			UserID:        "user_1",
+			SessionID:     "sess_conflict",
+			RefreshToken:  HashRefreshToken("old_token"),
+			ExpiresAt:     now.Add(time.Hour),
+			RotatedTo:     HashRefreshToken("winner_token"),
+			GraceUntil:    graceUntil,
+			GraceTokenEnc: sealed,
 		},
-		"winner_token": {
+		HashRefreshToken("winner_token"): {
 			UserID:       "user_1",
 			SessionID:    "sess_conflict",
-			RefreshToken: "winner_token",
+			RefreshToken: HashRefreshToken("winner_token"),
 			ExpiresAt:    now.Add(24 * time.Hour),
 		},
 	}}

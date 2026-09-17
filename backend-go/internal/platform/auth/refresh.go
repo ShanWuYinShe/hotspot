@@ -18,7 +18,10 @@ const RefreshRotationGrace = 30 * time.Second
 var ErrRefreshRotationConflict = errors.New("refresh token already rotated concurrently")
 
 func (s *Service) RefreshSession(ctx context.Context, refreshToken string) (AuthResult, error) {
-	session, ok, err := s.refreshes.Get(ctx, refreshToken)
+	// 存储键为 token 的 SHA-256（migration 053 起全表口径一致）；
+	// 明文仅存在于客户端持有与宽限期托管密文中。
+	refreshKey := HashRefreshToken(refreshToken)
+	session, ok, err := s.refreshes.Get(ctx, refreshKey)
 	if err != nil {
 		return AuthResult{}, err
 	}
@@ -48,15 +51,25 @@ func (s *Service) RefreshSession(ctx context.Context, refreshToken string) (Auth
 	next := RefreshSession{
 		UserID:       session.UserID,
 		SessionID:    session.SessionID,
-		RefreshToken: newRefreshToken,
+		RefreshToken: HashRefreshToken(newRefreshToken),
 		ExpiresAt:    now.Add(s.refreshTTL),
 	}
-	if err := s.refreshes.Rotate(ctx, refreshToken, session, next); err != nil {
+	// 托管新链 token 明文：并发刷新败者在宽限期内凭密文换回明文
+	//（resultFromRotated）。托管失败则本轮不产生托管——败者将走
+	// 「宽限期内但无托管」兜底，安全侧失败。
+	if s.escrow != nil {
+		sealed, sealErr := s.escrow.Seal(newRefreshToken)
+		if sealErr != nil {
+			return AuthResult{}, sealErr
+		}
+		next.GraceTokenEnc = sealed
+	}
+	if err := s.refreshes.Rotate(ctx, refreshKey, session, next); err != nil {
 		if errors.Is(err, ErrRefreshRotationConflict) {
 			// 并发轮换败者：旧 token 刚被另一请求轮换（仍在宽限期内），
 			// 重读 store 后走宽限期分支返回获胜链的 token——这正是轮换
 			// 机制要兜住的「攻击者与真实客户端并发刷新」场景。
-			rotated, ok, err := s.refreshes.Get(ctx, refreshToken)
+			rotated, ok, err := s.refreshes.Get(ctx, refreshKey)
 			if err != nil {
 				return AuthResult{}, err
 			}
@@ -96,6 +109,19 @@ func (s *Service) resultFromRotated(ctx context.Context, session RefreshSession,
 	if err != nil {
 		return AuthResult{}, err
 	}
+	if s.escrow == nil || len(session.GraceTokenEnc) == 0 {
+		// 无托管可解（理论不可达：轮换必写托管；迁移过渡期的存量宽限行
+		// 除外）。安全侧失败：拒绝刷新，真实客户端重新登录。
+		observability.L().Warn("refresh grace escrow missing",
+			"user_id", session.UserID, "session_id", session.SessionID)
+		return AuthResult{}, errors.New("invalid refresh token")
+	}
+	gracePlaintext, decErr := s.escrow.Open(session.GraceTokenEnc)
+	if decErr != nil || gracePlaintext == "" {
+		observability.L().Warn("refresh grace escrow decrypt failed",
+			"user_id", session.UserID, "session_id", session.SessionID, "error", decErr)
+		return AuthResult{}, errors.New("invalid refresh token")
+	}
 	if !ok {
 		return AuthResult{}, errors.New("invalid refresh token")
 	}
@@ -107,7 +133,7 @@ func (s *Service) resultFromRotated(ctx context.Context, session RefreshSession,
 	return AuthResult{
 		Principal:      principal,
 		AccessToken:    accessToken,
-		RefreshToken:   rotated.RefreshToken,
+		RefreshToken:   gracePlaintext,
 		AccessExpires:  accessExp,
 		RefreshExpires: rotated.ExpiresAt,
 	}, nil

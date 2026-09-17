@@ -55,10 +55,12 @@ SET user_id = EXCLUDED.user_id,
 	// 两个请求只有一个能命中 rotated CTE（另一个 0 行 → INSERT 不执行 →
 	// RETURNING 无行），repo 据此返回轮换冲突，防止分叉出两个互不可见的
 	// 有效 token（绕过被盗会话的复用检测）。
+	// $7 = grace_token_enc：新链 token 的 AES-GCM 托管密文，写在被轮换的
+	// 旧行上——并发刷新败者在宽限期内凭此换回明文，行随 sweeper 清除。
 	queryRotateRefreshToken = `
 WITH rotated AS (
     UPDATE auth_refresh_tokens
-    SET rotated_to = $2, grace_until = $3
+    SET rotated_to = $2, grace_until = $3, grace_token_enc = $7
     WHERE refresh_token = $1 AND rotated_to IS NULL
     RETURNING 1
 )
@@ -74,7 +76,7 @@ SET user_id = EXCLUDED.user_id,
 RETURNING refresh_token`
 
 	queryGetRefreshToken = `
-SELECT user_id, session_id, refresh_token, rotated_to, grace_until, expires_at
+SELECT user_id, session_id, refresh_token, rotated_to, grace_until, expires_at, grace_token_enc
 FROM auth_refresh_tokens
 WHERE refresh_token = $1`
 
