@@ -232,3 +232,35 @@ WHERE file_id = $1 AND status = 'completed'`
 	}
 	return meta, true, nil
 }
+
+// ListStaleUploads 返回超过保留期仍未完成的会话（按 created_at 升序，
+// 旧行优先处理），供保留期 GC 逐条删对象+删行。
+func (r *PostgresRepository) ListStaleUploads(ctx context.Context, cutoff time.Time, limit int) ([]pendingUpload, error) {
+	queryable, err := r.queryable(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := queryable.Query(ctx, queryListStaleUploads, cutoff, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]pendingUpload, 0)
+	for rows.Next() {
+		var item pendingUpload
+		if err := rows.Scan(&item.UploadID, &item.StorageKey, &item.UserID); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+// DeleteUploadRow 按 upload_id 物理删除会话行（GC 第二步）。
+func (r *PostgresRepository) DeleteUploadRow(ctx context.Context, uploadID string) error {
+	queryable, err := r.queryable(ctx)
+	if err != nil {
+		return err
+	}
+	return queryable.Exec(ctx, queryDeleteUploadRow, uploadID)
+}

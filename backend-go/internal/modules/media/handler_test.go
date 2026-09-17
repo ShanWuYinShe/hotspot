@@ -25,6 +25,12 @@ func (r *mediaErrorRepo) Save(context.Context, pendingUpload) error { return r.s
 func (r *mediaErrorRepo) Get(context.Context, string) (pendingUpload, bool, error) {
 	return pendingUpload{}, false, r.getErr
 }
+
+func (r *mediaErrorRepo) ListStaleUploads(context.Context, time.Time, int) ([]pendingUpload, error) {
+	return nil, nil
+}
+func (r *mediaErrorRepo) DeleteUploadRow(context.Context, string) error { return nil }
+
 func (r *mediaErrorRepo) Complete(context.Context, string, UploadedMedia, string) (pendingUpload, bool, error) {
 	return pendingUpload{}, false, r.completeErr
 }
@@ -53,6 +59,11 @@ func (p *mediaStubProvider) Head(context.Context, string) (ObjectMetadata, error
 func (p *mediaStubProvider) ReadPrefix(context.Context, string, int64) ([]byte, error) {
 	return p.prefix, p.prefixErr
 }
+func (p *mediaStubProvider) Delete(context.Context, string) error { return nil }
+func (p *mediaStubProvider) GetObject(context.Context, string) ([]byte, error) {
+	return p.prefix, p.prefixErr
+}
+func (p *mediaStubProvider) PutObject(context.Context, string, string, []byte) error { return nil }
 
 func mediaAuthedRequest(method, target, body string) *http.Request {
 	req := httptest.NewRequest(method, target, strings.NewReader(body))

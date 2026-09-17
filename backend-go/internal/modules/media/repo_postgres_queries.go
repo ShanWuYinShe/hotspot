@@ -87,3 +87,16 @@ WHERE file_id = ANY($1)
   AND category = $3
   AND status = 'completed'`
 )
+
+// 保留期 GC（retention.go）：超期未完成会话 + 其孤儿存储对象。
+const (
+	queryListStaleUploads = `
+SELECT upload_id, storage_key, user_id
+FROM media_upload_sessions
+WHERE status <> 'completed' AND created_at < $1
+ORDER BY created_at ASC
+LIMIT $2`
+
+	queryDeleteUploadRow = `
+DELETE FROM media_upload_sessions WHERE upload_id = $1 AND status <> 'completed'`
+)

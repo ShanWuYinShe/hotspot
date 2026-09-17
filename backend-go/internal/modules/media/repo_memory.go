@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"sync"
+	"time"
 )
 
 type InMemoryRepository struct {
@@ -92,4 +93,31 @@ func (r *InMemoryRepository) CompletedFileMetaByID(ctx context.Context, fileID s
 		FileSize:     upload.File.FileSize,
 		Duration:     upload.File.Duration,
 	}, true, nil
+}
+
+func (r *InMemoryRepository) ListStaleUploads(_ context.Context, cutoff time.Time, limit int) ([]pendingUpload, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := make([]pendingUpload, 0)
+	for _, item := range r.uploads {
+		if item.Completed {
+			continue
+		}
+		created, err := time.Parse(time.RFC3339, item.CreatedAt)
+		if err != nil || !created.Before(cutoff) {
+			continue
+		}
+		items = append(items, item)
+		if len(items) >= limit {
+			break
+		}
+	}
+	return items, nil
+}
+
+func (r *InMemoryRepository) DeleteUploadRow(_ context.Context, uploadID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.uploads, uploadID)
+	return nil
 }

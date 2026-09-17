@@ -98,4 +98,31 @@ RETURNING request_id, failed_attempts`
 	queryBurnRegisterCode = `UPDATE auth_register_verification_codes
 SET consumed_at = $2
 WHERE request_id = $1`
+
+	// 数据保留期清理（retention.go）：auth_sessions 行含 IP/设备 PII，
+	// 已撤销 30 天后删除；验证码/重置码行内含验证码明文，过期 7 天后删除。
+	// 此前两类行永不删除（唯一出口是注销级联），表随注册量无限增长。
+	querySweepRevokedSessions = `
+WITH del AS (
+    DELETE FROM auth_sessions
+    WHERE revoked_at IS NOT NULL AND revoked_at < $1
+    RETURNING 1
+)
+SELECT COUNT(*) FROM del`
+
+	querySweepRegisterCodes = `
+WITH del AS (
+    DELETE FROM auth_register_verification_codes
+    WHERE expires_at < $1
+    RETURNING 1
+)
+SELECT COUNT(*) FROM del`
+
+	querySweepPasswordResets = `
+WITH del AS (
+    DELETE FROM auth_password_reset_requests
+    WHERE expires_at < $1
+    RETURNING 1
+)
+SELECT COUNT(*) FROM del`
 )

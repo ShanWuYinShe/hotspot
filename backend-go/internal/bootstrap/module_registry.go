@@ -64,6 +64,11 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	groupsModule := groups.NewModule(factory, usersModule.Service, notificationService)
 	mediaModule := media.NewModule(cfg, factory)
 	mediaModule.Service.SetAppConfig(sharedAppConfig)
+	// 数据保留期清理（RETENTION_SWEEP_ENABLED，默认开启）：未完成上传会话
+	// 超期后删对象+删行（孤儿文件此前永不清理）。
+	if cfg.RetentionSweepEnabled {
+		mediaModule.Service.StartRetentionSweeper(ctx)
+	}
 	imageResolver := NewMomentImageResolver(mediaModule.Service)
 	momentsModule := moments.NewModule(factory, usersModule.Service, sharedAppConfig, imageResolver, notificationService)
 	systemModule := system.NewModule(factory, sharedAppConfig)
@@ -126,6 +131,10 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// IsBanned can be wired into the platform auth Service (BanChecker),
 	// enforcing httpx.CodeAccountBanned for banned accounts on RequiredAuth endpoints.
 	authModule := auth.NewModule(ctx, cfg, factory, sharedAppConfig)
+	// 数据保留期清理：已撤销会话（含 IP PII）与过期验证码行到期物理删除。
+	if cfg.RetentionSweepEnabled {
+		authModule.StartRetentionSweeper(ctx)
+	}
 	if rdb != nil {
 		// 登录失败锁定切 Redis（P2-2）：多实例共享计数，重启不丢锁定状态。
 		authModule.SetLoginTracker(auth.NewRedisLoginTracker(rdb))

@@ -135,6 +135,33 @@ func (s *Service) BatchPresign(ctx context.Context, files []PresignFileInput) (P
 	return PresignedUploads{Uploads: uploads}, nil
 }
 
+// scrubImageMetadata 清洗图片元数据（EXIF/XMP/IPTC，含 GPS）：直传对象
+// 原样入库，带 GPS 的照片会把发布坐标之外的住址级位置暴露给一切可见者。
+// fail-open：读取/解析失败保留原文件并告警——清洗不可用不能阻塞合法上传，
+// 只记录该对象未经清洗（配合保留期 GC 与审计排查）。
+func (s *Service) scrubImageMetadata(ctx context.Context, storageKey, mimeType string) {
+	data, err := s.provider.GetObject(ctx, storageKey)
+	if err != nil {
+		observability.L().Warn("image metadata scrub: get object failed", "error", err, "storage_key", storageKey)
+		return
+	}
+	cleaned, changed, err := stripImageMetadata(data)
+	if err != nil {
+		observability.L().Warn("image metadata scrub: parse failed, keeping original", "error", err, "storage_key", storageKey)
+		return
+	}
+	if !changed {
+		return
+	}
+	if err := s.provider.PutObject(ctx, storageKey, mimeType, cleaned); err != nil {
+		// 回写失败：对象仍为未清洗原版，仅告警（Head 核对只对 Content-Type/Length，
+		// 回写后的长度差不会使 complete 失败——此时 meta 仍是原对象尺寸）。
+		observability.L().Warn("image metadata scrub: put cleaned object failed", "error", err, "storage_key", storageKey)
+		return
+	}
+	observability.L().Info("image metadata scrubbed", "storage_key", storageKey, "bytes_before", len(data), "bytes_after", len(cleaned))
+}
+
 func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
@@ -173,6 +200,7 @@ func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia,
 		if err := s.sniffImageMagic(ctx, upload.StorageKey, normalizeMimeType(meta.MimeType)); err != nil {
 			return UploadedMedia{}, err
 		}
+		s.scrubImageMetadata(ctx, upload.StorageKey, normalizeMimeType(meta.MimeType))
 	}
 	file := UploadedMedia{
 		FileID:   buildFileID(upload.UploadID, upload.UserID),

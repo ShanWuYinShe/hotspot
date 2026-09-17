@@ -72,6 +72,10 @@ type Config struct {
 	// 表为空时启动阶段把该已注册用户提权为超管（'*'），解决「授权端点要求
 	// 已是管理员」的鸡生蛋死锁。已有任意管理员时为 no-op，重启/误配不提权。
 	AdminBootstrapUserID string
+	// RetentionSweepEnabled 数据保留期清理（RETENTION_SWEEP_ENABLED）：auth
+	// 已撤销会话/过期验证码行、media 未完成上传会话及孤儿对象到期物理删除，
+	// 防止上述表与存储无限累积。默认开启。
+	RetentionSweepEnabled bool
 }
 
 func Load() Config {
@@ -108,10 +112,11 @@ func Load() Config {
 		BcryptCost:             bcryptCostOrDefault("BCRYPT_COST", defaultBcryptCost),
 		// Postgres 连接池尺寸。多实例部署时各实例独立持池，默认 25 在 3 实例
 		// 下已逼近 Postgres 默认 max_connections=100，需要按实例数下调。
-		PostgresMaxConns:     envIntOrDefault("POSTGRES_MAX_CONNS", defaultPostgresMaxConns),
-		PostgresMinConns:     envIntOrDefault("POSTGRES_MIN_CONNS", defaultPostgresMinConns),
-		NotifyPruneEnabled:   envBoolOrDefault("NOTIFY_PRUNE_ENABLED", true),
-		AdminBootstrapUserID: os.Getenv("ADMIN_BOOTSTRAP_USER_ID"),
+		PostgresMaxConns:      envIntOrDefault("POSTGRES_MAX_CONNS", defaultPostgresMaxConns),
+		PostgresMinConns:      envIntOrDefault("POSTGRES_MIN_CONNS", defaultPostgresMinConns),
+		NotifyPruneEnabled:    envBoolOrDefault("NOTIFY_PRUNE_ENABLED", true),
+		AdminBootstrapUserID:  os.Getenv("ADMIN_BOOTSTRAP_USER_ID"),
+		RetentionSweepEnabled: envBoolOrDefault("RETENTION_SWEEP_ENABLED", true),
 	}
 }
 

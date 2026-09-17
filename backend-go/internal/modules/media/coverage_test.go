@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/testdb"
@@ -24,6 +25,12 @@ func (r *mediaErrRepo) Save(ctx context.Context, upload pendingUpload) error {
 func (r *mediaErrRepo) Get(ctx context.Context, uploadID string) (pendingUpload, bool, error) {
 	return r.repo.Get(ctx, uploadID)
 }
+
+func (r *mediaErrRepo) ListStaleUploads(context.Context, time.Time, int) ([]pendingUpload, error) {
+	return nil, nil
+}
+func (r *mediaErrRepo) DeleteUploadRow(context.Context, string) error { return nil }
+
 func (r *mediaErrRepo) Complete(ctx context.Context, uploadID string, media UploadedMedia, storageKey string) (pendingUpload, bool, error) {
 	if r.err != nil {
 		return pendingUpload{}, false, r.err

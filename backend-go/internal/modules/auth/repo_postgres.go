@@ -425,3 +425,30 @@ func (r accountRecord) withDerivedFields() accountRecord {
 	r.Account = Account{UserID: r.UserID, LoginID: r.LoginID, Nickname: r.LoginID, UserType: "normal"}
 	return r
 }
+
+// SweepRetention 数据保留期清理（retention.go）：已撤销会话（含 IP PII）
+// 与过期验证码/重置码行（行内含验证码明文）到期后物理删除，防止相关表
+// 无限累积。删除按时间列过滤，幂等可重入。
+func (r *PostgresRepository) SweepRetention(ctx context.Context, now time.Time, sessionRetention, codeRetention time.Duration) (int64, error) {
+	queryable, ok := r.queryable(ctx)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	var total int64
+	for _, stmt := range []struct {
+		sql     string
+		cutover time.Time
+	}{
+		{querySweepRevokedSessions, now.Add(-sessionRetention)},
+		{querySweepRegisterCodes, now.Add(-codeRetention)},
+		{querySweepPasswordResets, now.Add(-codeRetention)},
+	} {
+		// Queryable.Exec 无受影响行数返回：用 DELETE...RETURNING 计数。
+		var deleted int64
+		if err := queryable.QueryRow(ctx, stmt.sql, stmt.cutover).Scan(&deleted); err != nil {
+			return total, err
+		}
+		total += deleted
+	}
+	return total, nil
+}

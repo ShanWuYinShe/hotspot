@@ -1,6 +1,7 @@
 package media
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -78,6 +79,32 @@ func (p *ObjectStorageProvider) Presign(ctx context.Context, req PresignFileInpu
 	}, nil
 }
 
+// Delete 删除存储对象（保留期 GC 用）：对象不存在视为已删（幂等），
+// 其余非 2xx 返回错误由调用方决定重试策略。
+func (p *ObjectStorageProvider) Delete(ctx context.Context, storageKey string) error {
+	signedURL, err := p.presignInternalURL(ctx, http.MethodDelete, storageKey, 5*time.Minute)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, signedURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode == http.StatusNotFound {
+		return nil
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("media object storage delete failed: status %d", resp.StatusCode)
+	}
+	return nil
+}
+
 func (p *ObjectStorageProvider) Head(ctx context.Context, storageKey string) (ObjectMetadata, error) {
 	signedURL, err := p.presignInternalURL(ctx, http.MethodHead, storageKey, 5*time.Minute)
 	if err != nil {
@@ -135,6 +162,56 @@ func (p *ObjectStorageProvider) ReadPrefix(ctx context.Context, storageKey strin
 		return nil, fmt.Errorf("media object storage read prefix failed: status %d", resp.StatusCode)
 	}
 	return io.ReadAll(io.LimitReader(resp.Body, n))
+}
+
+// GetObject 读取完整对象（EXIF 清洗链路）。
+func (p *ObjectStorageProvider) GetObject(ctx context.Context, storageKey string) ([]byte, error) {
+	signedURL, err := p.presignInternalURL(ctx, http.MethodGet, storageKey, 5*time.Minute)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, signedURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrUploadNotReady
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("media object storage get failed: status %d", resp.StatusCode)
+	}
+	return io.ReadAll(resp.Body)
+}
+
+// PutObject 覆写对象（清洗后原键回写；Content-Type 必须保持，否则存储端
+// MIME 变化会使后续 Head 核对与客户端展示错位）。
+func (p *ObjectStorageProvider) PutObject(ctx context.Context, storageKey, contentType string, data []byte) error {
+	signedURL, err := p.presignInternalURL(ctx, http.MethodPut, storageKey, 5*time.Minute)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, signedURL, bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("media object storage put failed: status %d", resp.StatusCode)
+	}
+	return nil
 }
 
 // PresignGet returns a client-facing absolute URL that grants short-term

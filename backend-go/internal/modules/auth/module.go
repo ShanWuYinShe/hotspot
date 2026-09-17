@@ -17,6 +17,7 @@ import (
 type Module struct {
 	handler *Handler
 	service *Service
+	repo    *PostgresRepository
 }
 
 func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Factory, source appconfig.Source) *Module {
@@ -27,7 +28,7 @@ func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Fact
 	ConfigureHashingCost(cfg.BcryptCost)
 	repo := NewPostgresRepository(factory)
 	service := NewServiceWithSource(ctx, authService, repo, cfg, source)
-	return &Module{handler: NewHandler(service), service: service}
+	return &Module{handler: NewHandler(service), service: service, repo: repo}
 }
 
 // SetLoginTracker 替换登录失败追踪器（P2-2）：Redis 可用时由 bootstrap 注入
