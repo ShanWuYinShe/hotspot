@@ -200,6 +200,11 @@ func (s *Service) RefreshTTL() time.Duration { return s.auth.RefreshTTL() }
 
 func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
+	// 平台开关服务端强制（features.enable_public_registration）：管理后台关闭
+	// 注册后，绕过客户端开关的直接 API 调用同样被拒（10400）。
+	if !s.appConfig.Get(ctx).Features.EnablePublicRegistration {
+		return platformauth.AuthResult{}, ErrRegistrationClosed
+	}
 	// 手机号/邮箱型 login_id 必须先验证所有权（spec api_spec_public.md →
 	// register）：验证码错误/过期 → 10401；已占用的 login_id 由 repo 的唯一
 	// 约束拒绝（10400）。
@@ -356,6 +361,10 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 
 func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
+	// 平台开关服务端强制（features.enable_guest_register），同 Register。
+	if !s.appConfig.Get(ctx).Features.EnableGuestRegister {
+		return platformauth.AuthResult{}, ErrGuestDisabled
+	}
 	// Nickname 可选（spec api_spec_public.md → guest）：null/空时服务端生成
 	// 默认昵称「游客·xxxx」（4 位小写字母数字随机），进入后引导修改。
 	nickname := ""

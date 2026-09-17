@@ -337,7 +337,9 @@ interface RegisterRequest {
 
 **Response**: `ApiResponse<AuthTokenPair>`
 
-**错误码**: `10400`（login_id 已被占用） `10401`（验证码错误/过期）
+**平台开关（契约级）**：`features.enable_public_registration`（`api_spec_types.md` FeatureSwitches）由平台管理员配置，**服务端强制**——关闭时本端点直接返回 `10400`（message「当前未开放注册」），客户端开关仅作入口隐藏，不能替代服务端校验。
+
+**错误码**: `10400`（login_id 已被占用 / 注册未开放） `10401`（验证码错误/过期）
 
 ---
 
@@ -384,6 +386,8 @@ interface GuestRequest {
 ```
 
 **Response**: `ApiResponse<AuthTokenPair>`
+
+**平台开关（契约级）**：`features.enable_guest_register` 关闭时本端点返回 `10400`（message「当前未开放访客模式」），服务端强制（同 register）。
 
 ---
 

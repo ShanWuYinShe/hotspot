@@ -653,3 +653,42 @@ func TestNewServiceWithSourceDevWiresLogSender(t *testing.T) {
 		t.Fatalf("expected *logVerificationSender in dev, got %T", svc.codeSender)
 	}
 }
+
+// --- 平台功能开关服务端强制（features.enable_*）：绕过客户端的直接调用同样被拒 ---
+
+func TestServiceRegisterRejectedWhenRegistrationClosed(t *testing.T) {
+	repo := &stubAuthRepo{registerAccount: Account{UserID: "u1"}}
+	cfg := testConfig()
+	source := appconfig.NewStaticSource(cfg)
+	svc := NewServiceWithSource(context.Background(), platformauth.NewService(cfg), repo, cfg, source)
+	if _, err := source.Update(context.Background(), func(cfg appconfig.AppConfig) appconfig.AppConfig {
+		cfg.Features.EnablePublicRegistration = false
+		return cfg
+	}); err != nil {
+		t.Fatalf("failed to flip switch: %v", err)
+	}
+	_, err := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com", Password: "pass", VerificationCode: types.StrPtr("123456")}, defaultMeta())
+	if !errors.Is(err, ErrRegistrationClosed) {
+		t.Fatalf("expected ErrRegistrationClosed, got %v", err)
+	}
+	// 关闭态下不应触达 repo（不会部分创建账号）。
+	if len(repo.consumedCodeArgs) != 0 {
+		t.Fatalf("expected repo untouched, consumed args = %#v", repo.consumedCodeArgs)
+	}
+}
+
+func TestServiceGuestRejectedWhenGuestDisabled(t *testing.T) {
+	repo := &stubAuthRepo{guestAccount: Account{UserID: "g1"}}
+	cfg := testConfig()
+	source := appconfig.NewStaticSource(cfg)
+	svc := NewServiceWithSource(context.Background(), platformauth.NewService(cfg), repo, cfg, source)
+	if _, err := source.Update(context.Background(), func(cfg appconfig.AppConfig) appconfig.AppConfig {
+		cfg.Features.EnableGuestRegister = false
+		return cfg
+	}); err != nil {
+		t.Fatalf("failed to flip switch: %v", err)
+	}
+	if _, err := svc.Guest(context.Background(), GuestRequest{}, defaultMeta()); !errors.Is(err, ErrGuestDisabled) {
+		t.Fatalf("expected ErrGuestDisabled, got %v", err)
+	}
+}

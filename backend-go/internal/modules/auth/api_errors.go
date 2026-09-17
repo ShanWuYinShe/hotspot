@@ -27,6 +27,11 @@ var (
 	// ErrMissingRegisterCode 手机号/邮箱型注册缺验证码（参数缺失 → 10000，
 	// 与「验证码错误」的 10401 区分）。
 	ErrMissingRegisterCode = errors.New("auth: missing register verification code")
+	// ErrRegistrationClosed 平台管理员关闭开放注册（AppConfig.features.
+	// enable_public_registration=false，服务端强制拦截，不依赖客户端开关）。
+	ErrRegistrationClosed = errors.New("auth: public registration disabled")
+	// ErrGuestDisabled 平台管理员关闭访客入口（features.enable_guest_register=false）。
+	ErrGuestDisabled = errors.New("auth: guest register disabled")
 )
 
 func apiErrorFrom(err error) *httpx.APIError {
@@ -70,6 +75,12 @@ func apiErrorFrom(err error) *httpx.APIError {
 	case errors.Is(err, ErrMissingRegisterCode):
 		// 手机号/邮箱型注册缺验证码属参数缺失（10000）
 		return &httpx.APIError{Code: httpx.CodeInvalidRequest, Message: "参数错误"}
+	case errors.Is(err, ErrRegistrationClosed):
+		// 平台管理员关闭注册：业务规则拒绝（10400，服务端强制，
+		// spec api_spec_types.md → FeatureSwitches）
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "当前未开放注册"}
+	case errors.Is(err, ErrGuestDisabled):
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "当前未开放访客模式"}
 	default:
 		return &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 	}
