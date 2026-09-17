@@ -52,8 +52,10 @@ func (r *PostgresRepository) PutProfile(ctx context.Context, profile MyProfile) 
 
 // DeleteProfile 账户删除匿名化（spec api_spec_user.md「数据保留策略」）：
 // users 行保留（user_id 关联不断，已发布内容因不触发级联而保留），
-// 昵称/头像等个人信息替换为"已注销用户"占位并标记 is_deleted；
-// 个人数据（登录凭证/会话/设置/关系/收藏/通知/私聊记录/上传会话）同一事务清理。
+// 昵称/头像等个人信息替换为"已注销用户"占位并标记 is_deleted，位置与 IP 类
+// PII 一并清除；个人数据（登录凭证/会话/设置/关系/收藏/通知/己方私聊视角
+// 状态/群成员身份/上传会话）同一事务清理。私聊消息本体保留（对方视角的
+// 对话完整性，见 queryDeleteUserChatReadState 注释）。
 func (r *PostgresRepository) DeleteProfile(ctx context.Context, userID string) error {
 	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return persistence.ErrNotImplemented
@@ -71,7 +73,9 @@ func (r *PostgresRepository) DeleteProfile(ctx context.Context, userID string) e
 			{queryDeleteUserProfileTagsByUserID, userID},
 			{queryDeleteUserFavorites, userID},
 			{queryDeleteUserNotifications, userID},
-			{queryDeleteUserPrivateChats, userID},
+			{queryDeleteUserChatReadState, userID},
+			{queryDeleteUserChatUserState, userID},
+			{queryDeleteUserGroupMemberships, userID},
 			{queryDeleteUserUploadSessions, userID},
 		} {
 			if err := r.execInTx(txCtx, stmt.sql, stmt.arg); err != nil {

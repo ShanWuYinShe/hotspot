@@ -63,7 +63,9 @@ s2_cell_id = EXCLUDED.s2_cell_id`
 
 	// 账户删除匿名化（spec api_spec_user.md「数据保留策略」）：users 行保留
 	// （user_id 关联不断、内容因不触发级联而保留），昵称/头像等替换为占位，
-	// is_deleted 标记使已注销用户不再可被搜索/访问。
+	// is_deleted 标记使已注销用户不再可被搜索/访问。位置与 IP 类 PII
+	// （register/last_login IP 与定位、经纬度、S2 格网）一并清除——删除权的
+	// 对象是个人数据，行保留不代表溯源字段可留存。
 	queryAnonymizeUserProfile = `
 UPDATE users
 SET nickname = '已注销用户',
@@ -73,6 +75,16 @@ SET nickname = '已注销用户',
     email = NULL,
     phone = NULL,
     location_name = '',
+    latitude = 0,
+    longitude = 0,
+    s2_cell_id = 0,
+    register_ip = NULL,
+    register_location = NULL,
+    last_login_ip = NULL,
+    last_login_location = NULL,
+    banned_reason = NULL,
+    banned_duration_days = NULL,
+    banned_at = NULL,
     presence_status = 'offline',
     is_deleted = TRUE
 WHERE user_id = $1`
@@ -102,9 +114,18 @@ WHERE user_id = $1`
 
 	queryDeleteUserNotifications = `DELETE FROM notifications WHERE user_id = $1`
 
-	queryDeleteUserPrivateChats = `
-DELETE FROM private_chats
-WHERE user_a_id = $1 OR user_b_id = $1`
+	// 注销只清己方的私聊视角数据（per-user 状态行），private_chats 与
+	// private_messages 保留：messages FK CASCADE 在 private_chats 上，删聊天
+	// 行会把对方视角的整段对话（含对方发出的消息）一并物理删除，违反 spec
+	// api_spec_user.md「维护其他用户视角的……对话完整性」。对方视角里发送者
+	// 经 users 行匿名化显示为「已注销用户」；注销方凭证/会话已清，无法再登录。
+	queryDeleteUserChatReadState = `DELETE FROM private_chat_read_state WHERE user_id = $1`
+
+	queryDeleteUserChatUserState = `DELETE FROM private_chat_user_state WHERE user_id = $1`
+
+	// 注销退出所有群（group_members 行删除即释放名额）；已发布群消息按内容
+	// 保留策略不删，发送者显示为「已注销用户」。
+	queryDeleteUserGroupMemberships = `DELETE FROM group_members WHERE user_id = $1`
 
 	queryDeleteUserUploadSessions = `DELETE FROM media_upload_sessions WHERE user_id = $1`
 
