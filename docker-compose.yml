@@ -26,6 +26,10 @@ services:
     image: postgres:${POSTGRES_VERSION:-18.4}-alpine
     restart: always
     logging: *default_logging
+    # pg_stat_statements：查询统计基线；log_min_duration_statement：500ms 以上
+    # 慢查询进容器日志。扩展开启需一次性 CREATE EXTENSION pg_stat_statements
+    #（见 .env.example 注释）。两参数此前缺省关闭，慢查询定位手段为零。
+    command: postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all -c log_min_duration_statement=500
     environment:
       POSTGRES_DB: hotspot
       POSTGRES_USER: postgres
@@ -129,6 +133,9 @@ services:
       LOG_LEVEL: info
       APP_HOST: 0.0.0.0
       APP_PORT: "8081"
+      # Go 软内存上限：容器 limit 1g，留 ~100MiB 给非堆分配（栈/CGO/pgx 缓冲），
+      # 让 GC 在逼近上限前主动回收而非被 OOM kill。
+      GOMEMLIMIT: 900MiB
       POSTGRES_DSN: postgres://postgres:${POSTGRES_PASSWORD:-change-me}@postgres:5432/hotspot?sslmode=disable
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:?AUTH_TOKEN_SECRET must be set to a high-entropy value (>=32 bytes) in production}

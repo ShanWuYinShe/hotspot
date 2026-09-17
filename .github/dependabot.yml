@@ -1,0 +1,21 @@
+# Dependabot：依赖升级自动化（成熟度审计：此前全手动，版本持续漂移）。
+# 覆盖 Go 后端与 CI actions；前端为 bun 管理（dependabot 不支持 bun.lock，
+# 升级走手动 `bun update`，由 AGENTS.md 的 lockfile 原则约束）。
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /backend-go
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+    commit-message:
+      prefix: 构建
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+    commit-message:
+      prefix: 持续集成

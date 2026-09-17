@@ -77,8 +77,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # --notes（静态运维说明）+ --generate-notes（自动变更列表）：此前只有
+          # 静态模板，Release 页看不到每个版本改了什么。
           gh release create "$GIT_VERSION" \
             --verify-tag \
+            --generate-notes \
             --title "$GIT_VERSION" \
             --notes "生产镜像构建产物（hotspot-backend / hotspot-frontend）。
           部署：./scripts/deploy-production.sh $GIT_VERSION
