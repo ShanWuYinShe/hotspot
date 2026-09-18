@@ -36,11 +36,16 @@ func TestOriginWhitelistExactMatch(t *testing.T) {
 }
 
 // 通配 "*"：直接回 * 且不带 Vary；无 Origin 请求直通。
-func TestWildcardAndNoOrigin(t *testing.T) {
+// 默认配置（同源部署）：跨源一律不放行——不发 ACAO，请求原样透传；
+// 无 Origin 的同源请求同样透传。白名单经 WithAllowedOrigins 显式开启。
+func TestDefaultConfigRejectsCrossOrigin(t *testing.T) {
 	cfg := DefaultConfig()
-	wild := serve(cfg, "https://any.example", http.MethodGet)
-	if got := wild.Header().Get("Access-Control-Allow-Origin"); got != "*" {
-		t.Fatalf("expected *, got %q", got)
+	cross := serve(cfg, "https://any.example", http.MethodGet)
+	if cross.Header().Get("Access-Control-Allow-Origin") != "" {
+		t.Fatal("default config must not emit ACAO for cross-origin requests")
+	}
+	if cross.Code != http.StatusOK {
+		t.Fatalf("rejected cross-origin request should pass through to handler, got %d", cross.Code)
 	}
 	noOrigin := serve(cfg, "", http.MethodGet)
 	if noOrigin.Header().Get("Access-Control-Allow-Origin") != "" {
@@ -48,9 +53,22 @@ func TestWildcardAndNoOrigin(t *testing.T) {
 	}
 }
 
-// 预检（OPTIONS）：204 + Methods/Headers/MaxAge；普通请求透传下一处理器。
+func TestAllowedOriginsWhitelist(t *testing.T) {
+	cfg := DefaultConfig().WithAllowedOrigins([]string{"https://a.example"})
+	allowed := serve(cfg, "https://a.example", http.MethodGet)
+	if got := allowed.Header().Get("Access-Control-Allow-Origin"); got != "https://a.example" {
+		t.Fatalf("expected origin echo, got %q", got)
+	}
+	denied := serve(cfg, "https://evil.example", http.MethodGet)
+	if denied.Header().Get("Access-Control-Allow-Origin") != "" {
+		t.Fatal("non-whitelisted origin must not receive ACAO")
+	}
+}
+
+// 预检（OPTIONS）：白名单内 204 + Methods/Headers/MaxAge；普通请求透传
+// 下一处理器；白名单外预检同样透传（无 CORS 头）。
 func TestPreflightHeaders(t *testing.T) {
-	cfg := DefaultConfig()
+	cfg := DefaultConfig().WithAllowedOrigins([]string{"https://a.example"})
 	preflight := serve(cfg, "https://a.example", http.MethodOptions)
 	if preflight.Code != http.StatusNoContent {
 		t.Fatalf("preflight status = %d, want 204", preflight.Code)

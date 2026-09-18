@@ -287,6 +287,17 @@ func classifyRules(r *http.Request, cfg appconfig.RateLimitConfig) []rule {
 		}
 		return rules
 	}
+	if strings.HasSuffix(path, "/open_the_door") {
+		// 探测族（users/groups/moments/comments/private_chats/share 的
+		// open_the_door，登录与匿名双节点）：存在性与内容探测面，逐 ID 枚举
+		// 风险高于普通只读，此前仅全局 IP 小时桶兜底——与搜索同级单独计量
+		//（复用 SearchPerMinute 配置，同类反枚举语义）。
+		key := subjectKey(ip, principal, hasPrincipal)
+		if key != "" && cfg.SearchPerMinute > 0 {
+			rules = append(rules, rule{name: "probe_per_minute", strategy: "token_bucket", limit: cfg.SearchPerMinute, window: time.Minute, scope: subjectScope(ip, principal, hasPrincipal), key: key})
+		}
+		return rules
+	}
 	if !route.readOnly {
 		key := subjectKey(ip, principal, hasPrincipal)
 		if key != "" && cfg.WritePerMinute > 0 {

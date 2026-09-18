@@ -22,15 +22,26 @@ type Config struct {
 }
 
 // DefaultConfig 返回适合本项目开发/生产环境的默认 CORS 配置。
+// 同源部署（nginx 同一 server 服务前端与 API）：跨源请求只可能来自
+// 恶意页面，默认不响应任何跨源（不发 Access-Control-Allow-Origin）；
+// 确有跨源消费方时经 CORS_ALLOWED_ORIGINS 显式配置白名单。
+// 此前的全局 "*" 是多余暴露面——一旦未来有人顺手打开
+// AllowCredentials 即成为「任意站点带凭证跨源」的高危组合。
 func DefaultConfig() Config {
 	return Config{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   nil,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "Idempotency-Key", "X-Request-ID"},
 		ExposedHeaders:   []string{"X-Request-ID"},
 		AllowCredentials: false,
 		MaxAge:           300,
 	}
+}
+
+// WithAllowedOrigins 设置允许的跨源白名单（供 bootstrap 经环境变量装配）。
+func (c Config) WithAllowedOrigins(origins []string) Config {
+	c.AllowedOrigins = origins
+	return c
 }
 
 // Middleware 返回一个符合 chi 中间件签名的 CORS 处理函数。

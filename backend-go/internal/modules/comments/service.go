@@ -276,13 +276,19 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 	if comment.IsDeleted {
 		return nil
 	}
-	if err := s.repo.SoftDelete(ctx, req.CommentID); err != nil {
-		return err
+	// 软删与计数递减同一事务（数据治理审计：两步此前独立执行且递减失败仅
+	// Warn，moments.comment_count 漂移不可自愈；创建路径已同款事务）。
+	// 递减在此成为事务内失败即整体回滚，不再吞错。
+	deleteAll := func(txCtx context.Context) error {
+		if err := s.repo.SoftDelete(txCtx, req.CommentID); err != nil {
+			return err
+		}
+		return s.moments.DecrementCommentCount(txCtx, comment.MomentID)
 	}
-	if err := s.moments.DecrementCommentCount(ctx, comment.MomentID); err != nil {
-		observability.L().Warn("comments.delete decrement count failed", "error", err, "moment_id", comment.MomentID)
+	if s.runInTx != nil {
+		return s.runInTx(ctx, deleteAll)
 	}
-	return nil
+	return deleteAll(ctx)
 }
 
 func (s *Service) ListReplies(ctx context.Context, req CommentRepliesRequest) (PaginatedComments, error) {

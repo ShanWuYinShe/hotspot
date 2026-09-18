@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/cors"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -23,7 +24,9 @@ func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.L
 
 func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) http.Handler {
 	r := chi.NewRouter()
-	r.Use(cors.Middleware(cors.DefaultConfig()))
+	// CORS 白名单经 CORS_ALLOWED_ORIGINS 装配：同源部署默认为空（不响应跨源）。
+	corsCfg := cors.DefaultConfig().WithAllowedOrigins(config.Load().CorsAllowedOrigins)
+	r.Use(cors.Middleware(corsCfg))
 	r.Use(observability.RequestIDMiddleware)
 	if logger != nil {
 		r.Use(observability.RequestLoggerMiddleware(logger))

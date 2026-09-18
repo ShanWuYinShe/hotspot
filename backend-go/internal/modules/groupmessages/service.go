@@ -120,6 +120,15 @@ func (f *readCountFlusher) schedule(groupID string, messageIDs []string, flush f
 		return
 	}
 	f.timers[groupID] = time.AfterFunc(readCountFlushDelay, func() {
+		// AfterFunc 回调在独立 goroutine 执行：flush 内含 DB 查询与 WS 广播，
+		// panic 会击穿整个进程（platform/worker 等后台 goroutine 均有同款
+		// recover 口径），此处补齐。
+		defer func() {
+			if r := recover(); r != nil {
+				observability.L().Error("read count flusher panic recovered",
+					"group_id", groupID, "panic", r)
+			}
+		}()
 		f.mu.Lock()
 		ids := make([]string, 0, len(f.pending[groupID]))
 		for id := range f.pending[groupID] {

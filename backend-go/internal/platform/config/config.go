@@ -76,6 +76,9 @@ type Config struct {
 	// 已撤销会话/过期验证码行、media 未完成上传会话及孤儿对象到期物理删除，
 	// 防止上述表与存储无限累积。默认开启。
 	RetentionSweepEnabled bool
+	// CorsAllowedOrigins 跨源白名单（CORS_ALLOWED_ORIGINS，逗号分隔）：同源
+	// 部署默认为空（不响应任何跨源）；确有跨源消费方时显式配置。
+	CorsAllowedOrigins []string
 }
 
 func Load() Config {
@@ -117,6 +120,7 @@ func Load() Config {
 		NotifyPruneEnabled:    envBoolOrDefault("NOTIFY_PRUNE_ENABLED", true),
 		AdminBootstrapUserID:  os.Getenv("ADMIN_BOOTSTRAP_USER_ID"),
 		RetentionSweepEnabled: envBoolOrDefault("RETENTION_SWEEP_ENABLED", true),
+		CorsAllowedOrigins:    envStringList("CORS_ALLOWED_ORIGINS"),
 	}
 }
 
@@ -129,6 +133,21 @@ func envOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func envStringList(key string) []string {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }
 
 func envBoolOrDefault(key string, fallback bool) bool {
