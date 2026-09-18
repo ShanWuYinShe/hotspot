@@ -154,13 +154,21 @@ type ConnectionEstablishedPayload struct {
 type ErrorCode int
 
 const (
-	CodeWSProtocol   ErrorCode = 20000 // 连接/协议错误（鉴权失败/心跳超时/消息格式错误）
-	CodeWSRateLimit  ErrorCode = 20300 // 限流
-	CodeWSPermission ErrorCode = 20400 // 权限错误（无权限/操作受限/群组已解散）
-	// CodeWSAccountBanned 账号被封禁（握手鉴权阶段拒绝，spec 10201 同源语义：
-	// 客户端须清除本地会话并展示封禁页，不可自动重连）。
-	CodeWSAccountBanned ErrorCode = 20401
+	CodeWSProtocol  ErrorCode = 20000 // 连接/协议错误（鉴权失败/心跳超时/消息格式错误）
+	CodeWSRateLimit ErrorCode = 20300 // 限流
+	// CodeWSDenied 订阅/typing 权限不足。spec api_spec_errors.md：20400 为
+	// 历史遗留禁用码，该语义已并入 20100（订阅错误段）。
+	CodeWSDenied ErrorCode = 20100
 )
+
+// AccountBannedPayload 账号封禁（spec api_spec_websocket.md）：纯实时事件，
+// 不落库通知；客户端收到后立即登出，服务端随后以 close 4001 断开。
+type AccountBannedPayload struct {
+	Reason       string  `json:"reason"`
+	DurationDays int     `json:"duration_days"` // 0 = 永久
+	BannedAt     string  `json:"banned_at"`
+	BannedUntil  *string `json:"banned_until"` // null = 永久封禁
+}
 
 type ErrorPayload struct {
 	Code       ErrorCode         `json:"code"`

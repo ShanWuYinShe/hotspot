@@ -12,31 +12,34 @@ import (
 type PaginationParams = types.PaginationParams
 
 type chatCursor struct {
+	// IsPinned 必须参与游标：排序为「置顶优先 → 活跃时间倒序」，若游标缺失
+	// 置顶维度，页边界落在置顶区时下一页会把全部非置顶会话过滤掉（不可达）。
+	IsPinned       bool   `json:"is_pinned"`
 	LastActivityAt string `json:"last_activity_at"`
 	UserID         string `json:"user_id"`
 }
 
-func encodeChatCursor(lastActivityAt, userID string) string {
-	value, err := platformcursor.Encode("private_chats.list", chatCursor{LastActivityAt: lastActivityAt, UserID: userID})
+func encodeChatCursor(isPinned bool, lastActivityAt, userID string) string {
+	value, err := platformcursor.Encode("private_chats.list", chatCursor{IsPinned: isPinned, LastActivityAt: lastActivityAt, UserID: userID})
 	if err != nil {
 		return ""
 	}
 	return value
 }
 
-func decodeChatCursor(value string) (time.Time, string, error) {
+func decodeChatCursor(value string) (bool, time.Time, string, error) {
 	if value == "" {
-		return time.Time{}, "", nil
+		return false, time.Time{}, "", nil
 	}
 	var decoded chatCursor
 	if err := platformcursor.Decode("private_chats.list", value, &decoded); err != nil || decoded.LastActivityAt == "" || decoded.UserID == "" {
-		return time.Time{}, "", privatemessages.ErrInvalidCursor
+		return false, time.Time{}, "", privatemessages.ErrInvalidCursor
 	}
 	parsed, err := time.Parse(time.RFC3339Nano, decoded.LastActivityAt)
 	if err != nil {
-		return time.Time{}, "", privatemessages.ErrInvalidCursor
+		return false, time.Time{}, "", privatemessages.ErrInvalidCursor
 	}
-	return parsed.UTC(), decoded.UserID, nil
+	return decoded.IsPinned, parsed.UTC(), decoded.UserID, nil
 }
 
 type UserInfo = types.UserInfo

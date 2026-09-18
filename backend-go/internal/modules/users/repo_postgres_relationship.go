@@ -89,7 +89,9 @@ func (r *PostgresRepository) RelationshipBatch(ctx context.Context, fromUserID s
 	if len(toUserIDs) == 0 {
 		return result, nil
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	// 本方法会在 privatemessages 的事务闭包内被调用：必须复用 ctx 绑定的事务
+	// 连接，直取共享池会在事务内写入相关行时读到未提交一致性之外的旧数据。
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return result, persistence.ErrNotImplemented
 	}
@@ -145,7 +147,8 @@ func (r *PostgresRepository) RelationshipBatch(ctx context.Context, fromUserID s
 }
 
 func (r *PostgresRepository) getRelationFields(ctx context.Context, userID, targetUserID string) (bool, bool, string, any, any, string, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	// 同 RelationshipBatch：可能在事务闭包内被调用，必须复用 ctx 事务连接。
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return false, false, "", nil, nil, "", persistence.ErrNotImplemented
 	}

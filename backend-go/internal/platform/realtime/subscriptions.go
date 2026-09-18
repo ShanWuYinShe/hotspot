@@ -12,6 +12,25 @@ func newSubscriptions() *subscriptions {
 	return &subscriptions{userIDs: map[string]bool{}, groupIDs: map[string]bool{}}
 }
 
+// 连接级订阅上限（与 ConnectionEstablished.config.max_subscriptions 下发的
+// 数值一致，spec api_spec_websocket.md）。
+const (
+	maxUserSubscriptionsPerConnection  = 500
+	maxGroupSubscriptionsPerConnection = 100
+)
+
+// subscriptionTypeLimit 返回订阅类型的连接级上限；ok=false 表示未知类型。
+func subscriptionTypeLimit(kind string) (limit int, ok bool) {
+	switch kind {
+	case "user":
+		return maxUserSubscriptionsPerConnection, true
+	case "group":
+		return maxGroupSubscriptionsPerConnection, true
+	default:
+		return 0, false
+	}
+}
+
 func (s *subscriptions) snapshot() SubscriptionsSnapshotPayload {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

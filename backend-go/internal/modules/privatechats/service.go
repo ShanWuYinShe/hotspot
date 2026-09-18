@@ -97,7 +97,7 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 	if req.Pagination != nil {
 		cursor = req.Pagination.Cursor
 	}
-	cursorAt, cursorUserID, err := decodeChatCursor(cursor)
+	cursorPinned, cursorAt, cursorUserID, err := decodeChatCursor(cursor)
 	if err != nil {
 		return PaginatedPrivateChats{}, err
 	}
@@ -106,6 +106,14 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 		for _, item := range items {
 			lastActivityAt, parseErr := time.Parse(time.RFC3339Nano, item.LastActivityAt)
 			if parseErr != nil {
+				continue
+			}
+			// 与排序键严格同序：置顶区整体在前，游标落在置顶区时仅当本条
+			// 也置顶才参与时间比较，非置顶区同理，避免跨区过滤掉可达会话。
+			if item.IsPinned != cursorPinned {
+				if !item.IsPinned {
+					filtered = append(filtered, item)
+				}
 				continue
 			}
 			if lastActivityAt.Before(cursorAt) || (lastActivityAt.Equal(cursorAt) && item.OtherUser.UserID > cursorUserID) {
@@ -122,7 +130,7 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 		return PaginatedPrivateChats{Items: items}, nil
 	}
 	next := items[limit-1]
-	c := encodeChatCursor(next.LastActivityAt, next.OtherUser.UserID)
+	c := encodeChatCursor(next.IsPinned, next.LastActivityAt, next.OtherUser.UserID)
 	return PaginatedPrivateChats{Items: items[:limit], NextCursor: &c}, nil
 }
 

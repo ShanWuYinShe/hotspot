@@ -45,22 +45,37 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "CompleteUpload", "参数错误")
 		return
 	}
-	// 原子语义：任一 upload_id 校验失败则整批失败，不部分完成。
+	// 整批原子语义（spec api_spec_media.md）：第一阶段对全部 upload_id 执行
+	// 校验（归属/对象存在性/元数据/魔数/EXIF 清洗），任一失败整批失败且未产生
+	// completed 状态；第二阶段才逐个落库（仅剩 DB 写入，失败属内部错误，
+	// 靠 upload 级自然幂等重试恢复）。
 	uploads := make([]UploadedMedia, 0, len(req.UploadIDs))
+	writeCompleteErr := func(err error) {
+		switch {
+		case errors.Is(err, ErrUploadNotFound):
+			httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeNotFound, "upload_id 不存在")
+		case errors.Is(err, ErrUploadNotReady), errors.Is(err, ErrUploadConflict):
+			httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeConflict, "上传状态冲突")
+		case errors.Is(err, ErrInvalidMediaRequest):
+			httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeInvalidRequest, "参数错误")
+		default:
+			observability.LogServerError(r, "CompleteUpload", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		}
+	}
+	prepared := make([]UploadedMedia, 0, len(req.UploadIDs))
 	for _, uploadID := range req.UploadIDs {
-		file, err := h.service.Complete(r.Context(), uploadID)
+		file, err := h.service.PrepareComplete(r.Context(), uploadID)
 		if err != nil {
-			switch {
-			case errors.Is(err, ErrUploadNotFound):
-				httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeNotFound, "upload_id 不存在")
-			case errors.Is(err, ErrUploadNotReady), errors.Is(err, ErrUploadConflict):
-				httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeConflict, "上传状态冲突")
-			case errors.Is(err, ErrInvalidMediaRequest):
-				httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeInvalidRequest, "参数错误")
-			default:
-				observability.LogServerError(r, "CompleteUpload", err)
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
-			}
+			writeCompleteErr(err)
+			return
+		}
+		prepared = append(prepared, file)
+	}
+	for i, uploadID := range req.UploadIDs {
+		file, err := h.service.CommitComplete(r.Context(), uploadID, prepared[i])
+		if err != nil {
+			writeCompleteErr(err)
 			return
 		}
 		uploads = append(uploads, file)

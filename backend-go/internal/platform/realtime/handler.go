@@ -68,6 +68,21 @@ type banAuthorizer interface {
 	IsBanned(context.Context, string) (bool, error)
 }
 
+// BanDetails 携带封禁详情（spec api_spec_websocket.md AccountBannedPayload）。
+type BanDetails struct {
+	Reason       string
+	DurationDays int
+	BannedAt     time.Time
+	BannedUntil  *time.Time // nil = 永久封禁
+}
+
+// banDetailProvider 可选提供封禁详情用于组装 AccountBanned payload；bootstrap
+// 侧由 admin repo（GetUserBanState）适配。未接线时以零值详情降级（reason 兜底
+// 文案，banned_until=null 表示未知/永久）。
+type banDetailProvider interface {
+	BanDetails(ctx context.Context, userID string) (BanDetails, bool, error)
+}
+
 // presenceWriter persists runtime presence transitions to the users table
 // (online on the first connection of a user, offline when the last one
 // closes). Implemented by the users module repository via bootstrap wiring;
@@ -132,6 +147,30 @@ func (h *Handler) SetActorProvider(p typingActorProvider) { h.actorProvider = p 
 // Optional (nil = no ban check, dev/test default); the fail-open policy matches
 // the HTTP RequiredAuth middleware so both paths degrade identically.
 func (h *Handler) SetBanAuthorizer(b banAuthorizer) { h.bans = b }
+
+// banPayload 组装 AccountBanned 事件负载：优先取封禁详情（原因/时长/起止），
+// 详情未接线时以兜底文案降级（banned_until=null 表示永久或未知）。
+func (h *Handler) banPayload(ctx context.Context, userID string) AccountBannedPayload {
+	if dp, ok := h.bans.(banDetailProvider); ok {
+		if detail, found, err := dp.BanDetails(ctx, userID); err == nil && found {
+			payload := AccountBannedPayload{
+				Reason:       detail.Reason,
+				DurationDays: detail.DurationDays,
+			}
+			if !detail.BannedAt.IsZero() {
+				payload.BannedAt = detail.BannedAt.UTC().Format(time.RFC3339)
+			} else {
+				payload.BannedAt = time.Now().UTC().Format(time.RFC3339)
+			}
+			if detail.BannedUntil != nil {
+				until := detail.BannedUntil.UTC().Format(time.RFC3339)
+				payload.BannedUntil = &until
+			}
+			return payload
+		}
+	}
+	return AccountBannedPayload{Reason: "账号已被封禁", BannedAt: time.Now().UTC().Format(time.RFC3339)}
+}
 
 // SetPresenceWriter wires the runtime presence persister (users table).
 // Optional (nil = no DB write, dev/test default); write failures only log and
@@ -325,8 +364,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				"user_id", principal.UserID, "error", err)
 		} else if banned {
 			observability.L().Warn("ws: auth rejected, account banned", "user_id", principal.UserID)
-			_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSAccountBanned, Message: "账号已被封禁", Severity: "fatal", Retryable: false}})
-			sendCloseFrame(conn, 4003, "account banned")
+			// spec：推送 AccountBanned 事件后以 close 4001 断开（客户端据此
+			// 停止自动重连并展示封禁页；登录将得到 10201）。
+			_ = conn.WriteJSON(Event{Type: EventTypeAccountBanned, Payload: h.banPayload(ctx, principal.UserID)})
+			sendCloseFrame(conn, 4001, "account banned")
 			return
 		}
 	}
@@ -388,8 +429,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	payload := ConnectionEstablishedPayload{ConnectionID: connectionID, UserID: principal.UserID, ServerTime: time.Now().UTC().Format(time.RFC3339), ResumeToken: resumeToken, ServerSeq: currentLastSeq}
 	payload.Config.PingInterval = 30
 	payload.Config.PingTimeout = 10
-	payload.Config.MaxSubscriptions.User = 500
-	payload.Config.MaxSubscriptions.Group = 100
+	payload.Config.MaxSubscriptions.User = maxUserSubscriptionsPerConnection
+	payload.Config.MaxSubscriptions.Group = maxGroupSubscriptionsPerConnection
 	if err := sink.Send(Event{Type: EventTypeConnectionEstablished, Payload: payload}); err != nil {
 		return
 	}
@@ -450,10 +491,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			// 按类型限额裁剪（user 500 / group 100，与 CE config 一致）；超限与
 			// 未知类型计入 failed_ids（reason: limit_exceeded / invalid）。
+			// 跨 item 的总量上限在 applyAuthorizedSubscriptions 汇总侧兜底。
 			failed := []FailedSubscription{}
 			items := make([]SubscriptionItem, 0, len(payload.Items))
 			for _, item := range payload.Items {
-				limit, ok := map[string]int{"user": 500, "group": 100}[item.Type]
+				limit, ok := subscriptionTypeLimit(item.Type)
 				if !ok {
 					for _, id := range item.IDs {
 						failed = append(failed, FailedSubscription{Type: item.Type, SubscriptionID: id, Reason: "invalid"})
@@ -495,7 +537,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if !h.canSendPrivateTyping(principalCtx, principal.UserID, payload.TargetUserID) {
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSPermission, Message: "无权限", Severity: "warning", Retryable: false}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSDenied, Message: "无权限", Severity: "warning", Retryable: false}})
 				continue
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
@@ -518,7 +560,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if !h.isGroupMember(principalCtx, principal.UserID, payload.GroupID) {
-				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSPermission, Message: "无权限", Severity: "warning", Retryable: false}})
+				_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSDenied, Message: "无权限", Severity: "warning", Retryable: false}})
 				continue
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
@@ -543,6 +585,7 @@ func (h *Handler) applyAuthorizedSubscriptions(ctx context.Context, viewerUserID
 	// 旧实现完全一致）。
 	batchMode := payload.Operation != "unsubscribe" && presenceAllowed != nil && groupAllowed != nil
 	allowedByType := map[string][]string{}
+	seenByType := map[string]map[string]bool{}
 	for _, item := range payload.Items {
 		allowed := make([]string, 0, len(item.IDs))
 		for _, id := range item.IDs {
@@ -563,7 +606,51 @@ func (h *Handler) applyAuthorizedSubscriptions(ctx context.Context, viewerUserID
 		if len(allowed) > 0 {
 			ack.Accepted = append(ack.Accepted, SubscriptionItem{Type: item.Type, IDs: allowed})
 		}
-		allowedByType[item.Type] = append(allowedByType[item.Type], allowed...)
+		seen := seenByType[item.Type]
+		if seen == nil {
+			seen = make(map[string]bool, len(allowed))
+			seenByType[item.Type] = seen
+		}
+		for _, id := range allowed {
+			if !seen[id] {
+				seen[id] = true
+				allowedByType[item.Type] = append(allowedByType[item.Type], id)
+			}
+		}
+	}
+	// 单条订阅消息可携带多个同类型 item，逐 item 裁剪后累加仍会突破连接级
+	// 上限（500 user / 100 group）——这里按类型做总量截断，超出部分计入
+	// failed_ids；resume 恢复路径每类型只提交一个 item，天然受同一约束。
+	truncated := false
+	if payload.Operation != "unsubscribe" {
+		for kind, allowed := range allowedByType {
+			limit, ok := subscriptionTypeLimit(kind)
+			if !ok || len(allowed) <= limit {
+				continue
+			}
+			for _, id := range allowed[limit:] {
+				ack.FailedIDs = append(ack.FailedIDs, FailedSubscription{Type: kind, SubscriptionID: id, Reason: "limit_exceeded"})
+				delete(seenByType[kind], id)
+			}
+			allowedByType[kind] = allowed[:limit]
+			truncated = true
+		}
+	}
+	if truncated {
+		// Accepted 必须反映实际生效的订阅，总量截断后按剩余集合重建。
+		ack.Accepted = ack.Accepted[:0]
+		for _, item := range payload.Items {
+			seen := seenByType[item.Type]
+			allowed := make([]string, 0, len(item.IDs))
+			for _, id := range item.IDs {
+				if seen[id] {
+					allowed = append(allowed, id)
+				}
+			}
+			if len(allowed) > 0 {
+				ack.Accepted = append(ack.Accepted, SubscriptionItem{Type: item.Type, IDs: allowed})
+			}
+		}
 	}
 	if len(ack.FailedIDs) > 0 {
 		ack.Code = 20100

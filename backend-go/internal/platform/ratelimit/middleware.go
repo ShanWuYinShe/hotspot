@@ -164,7 +164,9 @@ func AllowWebsocketSubscribe(ctx context.Context, userID, connectionID string) (
 	if key == "" {
 		key = userID
 	}
-	return allow(time.Now().UTC(), rule{name: "ws_subscribe_per_second", strategy: "fixed", limit: limit, window: time.Second, scope: "connection", key: key})
+	// 走 redisAllow（Redis 未接线时内部自动回退进程内）：恒用进程内计数会让
+	// 多实例部署下 WS 订阅限额放大为配置 × 实例数，与 HTTP 侧行为不一致。
+	return redisAllow(time.Now().UTC(), rule{name: "ws_subscribe_per_second", strategy: "fixed", limit: limit, window: time.Second, scope: "connection", key: key})
 }
 
 // AllowWebsocketHandshake 按 IP 限制 WS 升级请求（审查 L-6）：握手在鉴权前，
@@ -178,7 +180,8 @@ func AllowWebsocketHandshake(ctx context.Context, ip string) (int, bool) {
 	if limit <= 0 {
 		return 0, false
 	}
-	return allow(time.Now().UTC(), rule{name: "ws_handshake_per_minute", strategy: "fixed", limit: limit, window: time.Minute, scope: "ip", key: ip})
+	// 同 AllowWebsocketSubscribe：握手限流也走分布式计数，避免多实例放大。
+	return redisAllow(time.Now().UTC(), rule{name: "ws_handshake_per_minute", strategy: "fixed", limit: limit, window: time.Minute, scope: "ip", key: ip})
 }
 
 // WebsocketHandshakeMiddleware wraps the WS upgrade endpoint with the per-IP

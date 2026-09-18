@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -718,7 +719,7 @@ func TestRealtimeRejectsPrivateTypingWhenPrivateChatDenied(t *testing.T) {
 	if err := conn.ReadJSON(&denied); err != nil {
 		t.Fatalf("read denied event: %v", err)
 	}
-	if denied.Type != "Error" || denied.Payload.Code != 20400 {
+	if denied.Type != "Error" || denied.Payload.Code != 20100 {
 		payload, _ := json.Marshal(denied)
 		t.Fatalf("unexpected denied event: %s", payload)
 	}
@@ -758,7 +759,7 @@ func TestRealtimeRejectsGroupTypingForNonMember(t *testing.T) {
 	if err := conn.ReadJSON(&denied); err != nil {
 		t.Fatalf("read denied event: %v", err)
 	}
-	if denied.Type != "Error" || denied.Payload.Code != 20400 {
+	if denied.Type != "Error" || denied.Payload.Code != 20100 {
 		payload, _ := json.Marshal(denied)
 		t.Fatalf("unexpected denied event: %s", payload)
 	}
@@ -850,5 +851,135 @@ func TestSameOriginBlocksCrossOrigin(t *testing.T) {
 	req.Header.Set("Origin", "://bad")
 	if sameOrigin(req) {
 		t.Fatal("malformed origin should be blocked")
+	}
+}
+
+// 回归：单条订阅消息可携带多个同类型 item，逐 item 裁剪后累加仍会突破
+// 连接级上限——总量截断必须在汇总侧生效（spec：max_subscriptions 500/100）。
+func TestRealtimeSubscriptionTotalLimitAcrossItems(t *testing.T) {
+	SetDefaultHub(NewHub())
+	ratelimit.SetSource(appconfig.NewStaticSource(config.Config{}))
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, _ := authService.IssueSession(context.Background(), "user_alice")
+	handler := newRealtimeHandlerForTest(authService)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
+	var established Event
+	_ = conn.ReadJSON(&established)
+
+	unique := func(prefix string, n int) []string {
+		ids := make([]string, n)
+		for i := range ids {
+			ids[i] = fmt.Sprintf("%s_%d", prefix, i)
+		}
+		return ids
+	}
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{
+		ClientRequestID: "req-multi",
+		Operation:       "set",
+		Items: []SubscriptionItem{
+			{Type: "user", IDs: unique("user_a", 400)},
+			{Type: "user", IDs: unique("user_b", 400)},
+		},
+	}})
+	var ack struct {
+		Type    string              `json:"type"`
+		Payload SubscribeAckPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&ack); err != nil {
+		t.Fatalf("read ack: %v", err)
+	}
+	var snapshot struct {
+		Type    string                       `json:"type"`
+		Payload SubscriptionsSnapshotPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&snapshot); err != nil {
+		t.Fatalf("read snapshot: %v", err)
+	}
+	if ack.Type != "SubscribeAck" || ack.Payload.Code == 0 {
+		payload, _ := json.Marshal(ack)
+		t.Fatalf("expected partial-failure ack, got: %s", payload)
+	}
+	accepted := 0
+	for _, item := range ack.Payload.Accepted {
+		if item.Type != "user" {
+			t.Fatalf("unexpected accepted type %q", item.Type)
+		}
+		accepted += len(item.IDs)
+	}
+	if accepted != maxUserSubscriptionsPerConnection {
+		t.Fatalf("expected exactly %d accepted user subscriptions, got %d", maxUserSubscriptionsPerConnection, accepted)
+	}
+	failed := 0
+	for _, f := range ack.Payload.FailedIDs {
+		if f.Reason != "limit_exceeded" {
+			t.Fatalf("unexpected failure reason %q", f.Reason)
+		}
+		failed++
+	}
+	if failed != 300 {
+		t.Fatalf("expected 300 limit_exceeded failures, got %d", failed)
+	}
+	if len(snapshot.Payload.UserIDs) != maxUserSubscriptionsPerConnection {
+		t.Fatalf("expected snapshot bounded to %d users, got %d", maxUserSubscriptionsPerConnection, len(snapshot.Payload.UserIDs))
+	}
+}
+
+type stubBanAuthorizer struct {
+	banned  bool
+	details func() (BanDetails, bool, error)
+}
+
+func (s stubBanAuthorizer) IsBanned(context.Context, string) (bool, error) { return s.banned, nil }
+func (s stubBanAuthorizer) BanDetails(context.Context, string) (BanDetails, bool, error) {
+	if s.details == nil {
+		return BanDetails{}, false, nil
+	}
+	return s.details()
+}
+
+// 回归：WS 握手封禁拒绝必须按 spec 走「推送 AccountBanned 事件 + close 4001」，
+// 不得使用禁用的应用层错误码（20401）或未定义的 close code（4003）。
+func TestRealtimeHandshakeRejectsBannedWithSpecCloseCode(t *testing.T) {
+	SetDefaultHub(NewHub())
+	ratelimit.SetSource(appconfig.NewStaticSource(config.Config{}))
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, _ := authService.IssueSession(context.Background(), "user_banned")
+	handler := newRealtimeHandlerForTest(authService)
+	until := time.Now().UTC().Add(72 * time.Hour)
+	handler.SetBanAuthorizer(stubBanAuthorizer{banned: true, details: func() (BanDetails, bool, error) {
+		return BanDetails{Reason: "违规内容", DurationDays: 3, BannedAt: time.Now().UTC().Add(-time.Hour), BannedUntil: &until}, true, nil
+	}})
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
+	var banned struct {
+		Type    string               `json:"type"`
+		Payload AccountBannedPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&banned); err != nil {
+		t.Fatalf("read account banned event: %v", err)
+	}
+	if banned.Type != "AccountBanned" {
+		t.Fatalf("expected AccountBanned event, got %q", banned.Type)
+	}
+	if banned.Payload.Reason != "违规内容" || banned.Payload.DurationDays != 3 || banned.Payload.BannedUntil == nil {
+		t.Fatalf("unexpected payload: %#v", banned.Payload)
+	}
+	_, _, err = conn.ReadMessage()
+	var closeErr *websocket.CloseError
+	if !errors.As(err, &closeErr) || closeErr.Code != 4001 {
+		t.Fatalf("expected close code 4001, got %v", err)
 	}
 }

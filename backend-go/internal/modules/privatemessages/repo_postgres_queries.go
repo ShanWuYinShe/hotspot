@@ -182,8 +182,11 @@ FROM private_messages pm
 JOIN private_chats pc ON pc.chat_key = pm.chat_key
 WHERE pm.message_id = $1`
 
-	// 未读数独立 COUNT（口径与 History 的 is_read CASE 一致：对方发来的、
-	// sent_at 晚于已读游标的消息）。
+	// 未读数独立 COUNT。注意与 History 的 is_read 口径不同且均符合契约
+	//（api_spec_chat.md）：is_read 是发送方视角（join 对方的已读游标，
+	// 判断「对方是否已读我发的消息」，我收到的消息恒 true）；未读数是
+	// 接收方视角（join 自己的已读游标，统计对方发来、晚于游标的条数）。
+	// 两者不可互相推导，修改任一侧时须对照契约语义。
 	queryUnreadPrivateMessageCount = `
 SELECT COUNT(*)
 FROM private_messages pm

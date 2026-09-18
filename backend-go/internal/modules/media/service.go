@@ -163,6 +163,19 @@ func (s *Service) scrubImageMetadata(ctx context.Context, storageKey, mimeType s
 }
 
 func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia, error) {
+	file, err := s.PrepareComplete(ctx, uploadID)
+	if err != nil {
+		return UploadedMedia{}, err
+	}
+	return s.CommitComplete(ctx, uploadID, file)
+}
+
+// PrepareComplete 执行 complete 的全部校验与副作用前置（归属、对象存在性、
+// 元数据、图片魔数与 EXIF 清洗），但不置 completed 状态。批量 complete 以
+// 「先整批校验、再整批提交」两阶段满足 spec 的整批原子语义
+// （api_spec_media.md：任一 upload_id 校验失败则整批失败，不部分完成）。
+// 已完成 upload 直接返回既有 file（自然幂等，无副作用）。
+func (s *Service) PrepareComplete(ctx context.Context, uploadID string) (UploadedMedia, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
 		return UploadedMedia{}, ErrInvalidMediaRequest
@@ -181,7 +194,6 @@ func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia,
 		// Idempotency-Key——覆盖"complete 成功但响应丢失后重试"场景。
 		return upload.File, nil
 	}
-	key := idempotency.KeyFromContext(ctx) // 仅记录用途（repo 存储），不参与幂等判定
 	meta, err := s.provider.Head(ctx, upload.StorageKey)
 	if err != nil {
 		if errors.Is(err, ErrUploadNotReady) {
@@ -202,12 +214,28 @@ func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia,
 		}
 		s.scrubImageMetadata(ctx, upload.StorageKey, normalizeMimeType(meta.MimeType))
 	}
-	file := UploadedMedia{
+	return UploadedMedia{
 		FileID:   buildFileID(upload.UploadID, upload.UserID),
 		FileSize: meta.FileSize,
 		MimeType: meta.MimeType,
+	}, nil
+}
+
+// CommitComplete 将 PrepareComplete 通过的 upload 落为 completed。仅剩 DB
+// 写入；此时再失败属内部错误，靠 upload 级幂等重试恢复。
+func (s *Service) CommitComplete(ctx context.Context, uploadID string, file UploadedMedia) (UploadedMedia, error) {
+	principal, ok := platformauth.PrincipalFromContext(ctx)
+	if !ok || principal.UserID == "" {
+		return UploadedMedia{}, ErrInvalidMediaRequest
 	}
-	completed, ok, err := s.repo.Complete(ctx, uploadID, file, key)
+	// 并发/重复提交下已完成直接返回既有映射（与 PrepareComplete 的幂等口径一致）。
+	if upload, found, err := s.repo.Get(ctx, uploadID); err != nil {
+		observability.L().Error("media.complete get failed", "error", err, "upload_id", uploadID)
+		return UploadedMedia{}, err
+	} else if found && upload.Completed {
+		return upload.File, nil
+	}
+	completed, ok, err := s.repo.Complete(ctx, uploadID, file, idempotency.KeyFromContext(ctx))
 	if err != nil {
 		observability.L().Error("media.complete save failed", "error", err, "upload_id", uploadID)
 		return UploadedMedia{}, err

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/worker"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -105,25 +106,28 @@ func (c *DBChecker) StartSweeper(ctx context.Context, interval time.Duration) {
 	if c == nil {
 		return
 	}
-	go func() {
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				now := time.Now().UTC()
-				c.mu.Lock()
-				for key, expiresAt := range c.missing {
-					if now.After(expiresAt) {
-						delete(c.missing, key)
-					}
+	// 全仓库后台循环统一 worker 启动：panic 自愈重启，不击穿进程。
+	worker.GoRestartable("resourceguard.sweeper", func() { c.sweepLoop(ctx, interval) })
+}
+
+func (c *DBChecker) sweepLoop(ctx context.Context, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			now := time.Now().UTC()
+			c.mu.Lock()
+			for key, expiresAt := range c.missing {
+				if now.After(expiresAt) {
+					delete(c.missing, key)
 				}
-				c.mu.Unlock()
 			}
+			c.mu.Unlock()
 		}
-	}()
+	}
 }
 
 func queryForKind(kind ResourceKind) string {

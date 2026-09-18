@@ -101,6 +101,9 @@ func (s *socketSink) Close() error {
 // can apply the specified reconnect semantics (4001 → refresh token & retry,
 // 1008 → protocol violation, 1011 → backoff retry, 1000 → graceful).
 func (s *socketSink) closeWithCode(code int, reason string) error {
+	// 与 Close 同步标记 sink 已关闭：writeLoop 随之退出、后续 Send 直接拒绝。
+	// 不依赖「调用方随后必定调用 Close()」的隐式约定。
+	s.closeOnce.Do(func() { close(s.done) })
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	_ = s.conn.SetWriteDeadline(time.Now().Add(writeTimeout))

@@ -363,3 +363,61 @@ func TestServiceUpdateSettingsWithInMemoryRepo(t *testing.T) {
 func (u *stubChatUserReader) ChatSettingsFor(_ context.Context, _ string) (string, bool, error) {
 	return string(u.settings.AllowPrivateChat), u.found, u.userErr
 }
+
+// echoChatTargets 让每个会话目标解析为自身（stubChatUserReader 对全部目标
+// 返回同一用户，无法构造多用户分页场景）。
+type echoChatTargets struct{ stubChatUserReader }
+
+func (u *echoChatTargets) ChatTargetsContext(_ context.Context, _ string, targetUserIDs []string) (map[string]users.ChatTargetContext, error) {
+	result := make(map[string]users.ChatTargetContext, len(targetUserIDs))
+	for _, id := range targetUserIDs {
+		result[id] = users.ChatTargetContext{
+			Info:             users.UserInfo{UserID: id, Nickname: "用户" + id},
+			AllowPrivateChat: users.ChatPermEveryone,
+			SettingsFound:    true,
+		}
+	}
+	return result, nil
+}
+
+// 回归：排序为「置顶优先 → 活跃时间倒序」，游标必须携带置顶维度。
+// 旧实现页边界落在置顶会话（活跃时间早于非置顶会话）时，下一页把更新的
+// 非置顶会话整体过滤掉，永远不可达。
+func TestServiceListPaginationAcrossPinnedBoundary(t *testing.T) {
+	now := time.Now().UTC()
+	repo := &stubChatRepo{states: []ChatState{
+		{TargetID: "u2", CreatedAt: now, IsPinned: true},
+		{TargetID: "u3", CreatedAt: now.Add(-2 * time.Hour), IsPinned: true},
+		{TargetID: "u4", CreatedAt: now.Add(-1 * time.Hour)},
+	}}
+	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &echoChatTargets{stubChatUserReader{found: true}})
+
+	seen := make([]string, 0, 3)
+	visited := make(map[string]bool, 3)
+	cursor := ""
+	for page := 0; page < 10; page++ {
+		result, err := svc.List(chatCtx("u1"), MyPrivateChatsRequest{Pagination: &PaginationParams{Limit: 1, Cursor: cursor}})
+		if err != nil {
+			t.Fatalf("page %d: unexpected error: %v", page, err)
+		}
+		if len(result.Items) != 1 {
+			t.Fatalf("page %d: expected 1 item, got %d", page, len(result.Items))
+		}
+		id := result.Items[0].OtherUser.UserID
+		if visited[id] {
+			t.Fatalf("page %d: user %s visited twice (infinite loop)", page, id)
+		}
+		visited[id] = true
+		seen = append(seen, id)
+		if result.NextCursor == nil {
+			break
+		}
+		cursor = *result.NextCursor
+	}
+	if len(seen) != 3 {
+		t.Fatalf("expected all 3 chats reachable across pages, got %v", seen)
+	}
+	if seen[0] != "u2" || seen[1] != "u3" || seen[2] != "u4" {
+		t.Fatalf("expected pinned-first order [u2 u3 u4], got %v", seen)
+	}
+}

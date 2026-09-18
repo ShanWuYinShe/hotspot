@@ -419,6 +419,22 @@ func (s *Service) Refresh(ctx context.Context, req RefreshTokenRequest, deviceID
 	if req.ClientType == ClientTypeWeb {
 		refreshToken = refreshCookie
 	}
+	// 设备绑定预校验前置于轮换：不匹配的请求在轮换前拒绝，避免伪造 device_id
+	// 也触发一次 token 轮换并把旧 token 推入宽限期。预解析失败（无效/过期
+	// token）不在此报错，统一交给 RefreshSession 返回标准错误口径。
+	if deviceID != "" {
+		if sessionID, ok, resolveErr := s.auth.SessionIDForRefreshToken(ctx, refreshToken); resolveErr == nil && ok {
+			session, found, getErr := s.auth.GetSession(ctx, sessionID)
+			if getErr != nil || !found || session.DeviceID != deviceID {
+				observability.L().Warn("refresh device_id mismatch",
+					"method", "Refresh",
+					"session_id", sessionID,
+					"claimed_device_id", deviceID,
+				)
+				return platformauth.AuthResult{}, ErrInvalidCredentials
+			}
+		}
+	}
 	result, err := s.auth.RefreshSession(ctx, refreshToken)
 	if err != nil {
 		observability.L().Error("service error",

@@ -89,6 +89,17 @@ func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
 			h.removeSinkFromSliceAt(h.bySession, evictedSession, oldest)
 			delete(h.sessionBySink, oldest)
 		}
+		// 订阅反向索引同步清理（与 UnregisterUser 同口径）：等读循环退出再清，
+		// 窗口期内群播会向死 sink 白付一次写系统调用。
+		if entry, ok := h.subsBySink[oldest]; ok {
+			for key := range entry.userKeys {
+				removeSinkFromSlice(h.byUserWatchers, key, oldest)
+			}
+			for key := range entry.groupKeys {
+				removeSinkFromSlice(h.byGroup, key, oldest)
+			}
+			delete(h.subsBySink, oldest)
+		}
 		h.removeSinkFromSliceAt(h.byUser, userID, oldest)
 		_ = oldest.Close()
 	}

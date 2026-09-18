@@ -256,3 +256,38 @@ func assertMediaCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx
 func (r *mediaErrorRepo) CompletedFileMetaByID(context.Context, string) (FileMeta, bool, error) {
 	return FileMeta{}, false, nil
 }
+
+// 回归：批量 complete 的整批原子语义（spec api_spec_media.md「任一 upload_id
+// 校验失败则整批失败，不部分完成」）——排在前面的 upload 校验通过、排在后面
+// 的失败时，前者不得被置为 completed。
+func TestMediaHandlerCompleteBatchStaysAtomicOnFailure(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	repo := NewInMemoryRepository()
+	_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_atomic_ok", UserID: "u1", StorageKey: "uploads/u1/upload_atomic_ok.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
+	handler := NewHandler(NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}, prefix: magicPNG}))
+
+	batchReq := mediaAuthedRequest(http.MethodPost, "/complete_upload", `{"upload_ids":["upload_atomic_ok","upload_missing"]}`)
+	batchRR := httptest.NewRecorder()
+	handler.CompleteUpload(batchRR, batchReq)
+	assertMediaCode(t, batchRR, httpx.CodeNotFound)
+
+	if upload, found, err := repo.Get(context.Background(), "upload_atomic_ok"); err != nil || !found {
+		t.Fatalf("get upload: found=%v err=%v", found, err)
+	} else if upload.Completed {
+		t.Fatal("upload passed validation must not be completed when the batch fails")
+	}
+
+	retryReq := mediaAuthedCompleteRequest("upload_atomic_ok", "")
+	retryRR := httptest.NewRecorder()
+	handler.CompleteUpload(retryRR, retryReq)
+	var resp struct {
+		Code httpx.Code       `json:"code"`
+		Data CompletedUploads `json:"data"`
+	}
+	if err := json.NewDecoder(retryRR.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 || len(resp.Data.Uploads) != 1 || resp.Data.Uploads[0].FileID == "" {
+		t.Fatalf("unexpected retry response: %#v", resp)
+	}
+}

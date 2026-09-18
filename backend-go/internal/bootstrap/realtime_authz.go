@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"time"
 
 	"hotspot/backend-go/internal/modules/admin"
 	"hotspot/backend-go/internal/modules/groups"
@@ -18,6 +19,26 @@ type realtimeBanAuthorizer struct{ repo admin.Repository }
 
 func (a realtimeBanAuthorizer) IsBanned(ctx context.Context, userID string) (bool, error) {
 	return a.repo.IsBanned(ctx, userID)
+}
+
+// BanDetails 提供封禁详情（realtime 的 AccountBanned 事件负载，spec
+// api_spec_websocket.md）：限期封禁换算 banned_until，永久封禁为 nil。
+func (a realtimeBanAuthorizer) BanDetails(ctx context.Context, userID string) (realtime.BanDetails, bool, error) {
+	state, found, err := a.repo.GetUserBanState(ctx, userID)
+	if err != nil || !found {
+		return realtime.BanDetails{}, false, err
+	}
+	detail := realtime.BanDetails{
+		Reason:       state.Reason,
+		DurationDays: state.DurationDays,
+		BannedAt:     state.BannedAt,
+	}
+	// 与 UserBanState.Expired 同口径：DurationDays>0 且 BannedAt 非零为限期封禁。
+	if state.DurationDays > 0 && !state.BannedAt.IsZero() {
+		until := state.BannedAt.Add(time.Duration(state.DurationDays) * 24 * time.Hour)
+		detail.BannedUntil = &until
+	}
+	return detail, true, nil
 }
 
 // realtimeActorProvider 只保留 typing actor 解析：订阅鉴权已收敛到

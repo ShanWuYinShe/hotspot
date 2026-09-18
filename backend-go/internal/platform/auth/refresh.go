@@ -17,6 +17,29 @@ const RefreshRotationGrace = 30 * time.Second
 // rotated_to IS NULL 守卫 0 行命中）。调用方应重读 store 走宽限期分支。
 var ErrRefreshRotationConflict = errors.New("refresh token already rotated concurrently")
 
+// SessionIDForRefreshToken 只读解析 refresh token 对应的会话（不轮换、不产生
+// 副作用），供设备绑定等预校验前置于 RefreshSession：不匹配的请求应在轮换前
+// 被拒绝，否则伪造参数也能触发一次 token 轮换并把旧 token 推入宽限期。
+// token 无效/过期或会话已吊销时返回 ok=false（err==nil）；查询故障返回 err。
+func (s *Service) SessionIDForRefreshToken(ctx context.Context, refreshToken string) (sessionID string, ok bool, err error) {
+	refreshKey := HashRefreshToken(refreshToken)
+	session, found, err := s.refreshes.Get(ctx, refreshKey)
+	if err != nil || !found {
+		return "", false, err
+	}
+	if time.Now().UTC().After(session.ExpiresAt) {
+		return "", false, nil
+	}
+	stored, found, err := s.sessions.Get(ctx, session.SessionID)
+	if err != nil {
+		return "", false, err
+	}
+	if !found || stored.RevokedAt != nil {
+		return "", false, nil
+	}
+	return session.SessionID, true, nil
+}
+
 func (s *Service) RefreshSession(ctx context.Context, refreshToken string) (AuthResult, error) {
 	// 存储键为 token 的 SHA-256（migration 053 起全表口径一致）；
 	// 明文仅存在于客户端持有与宽限期托管密文中。
