@@ -139,7 +139,7 @@ func (r *specAdminRepo) Update(context.Context, UpdateGroupMessageRequest) (Mess
 func (r *specAdminRepo) Recall(context.Context, time.Duration, RecallGroupMessageRequest) (MessageEventMeta, error) {
 	return MessageEventMeta{}, nil
 }
-func (r *specAdminRepo) RecallAsAdmin(context.Context, string) (MessageEventMeta, error) {
+func (r *specAdminRepo) RecallAsAdmin(context.Context, string, string) (MessageEventMeta, error) {
 	if r.recalled {
 		return MessageEventMeta{}, ErrMessageRecalled
 	}

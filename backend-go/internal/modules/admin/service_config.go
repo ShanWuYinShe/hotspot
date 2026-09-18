@@ -160,8 +160,17 @@ func applyDefaultsPatch(target *ContentDefaults, patch UpdateDefaultsPayload) *h
 			}
 			target.DefaultGroupSettings.JoinMethod = *gs.JoinMethod
 		}
+		if gs.RequiresApproval != nil {
+			target.DefaultGroupSettings.RequiresApproval = *gs.RequiresApproval
+		}
+		if gs.HasPassword != nil {
+			target.DefaultGroupSettings.HasPassword = *gs.HasPassword
+		}
 		if gs.IsSearchable != nil {
 			target.DefaultGroupSettings.IsSearchable = *gs.IsSearchable
+		}
+		if gs.MembersSearchable != nil {
+			target.DefaultGroupSettings.MembersSearchable = *gs.MembersSearchable
 		}
 		if gs.MaxMembers != nil {
 			if *gs.MaxMembers <= 0 {
@@ -259,6 +268,7 @@ func applyLimitsPatch(target *AppLimits, patch PartialAppLimits) *httpx.APIError
 		{&target.MaxGroupMembers, patch.MaxGroupMembers},
 		{&target.MaxMomentTags, patch.MaxMomentTags},
 		{&target.MaxMomentImages, patch.MaxMomentImages},
+		{&target.MaxChatFiles, patch.MaxChatFiles},
 		{&target.MomentDescriptionMaxLength, patch.MomentDescriptionMaxLength},
 		{&target.CommentMaxLength, patch.CommentMaxLength},
 		{&target.SearchRadiusMax, patch.SearchRadiusMax},

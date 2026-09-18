@@ -7,8 +7,8 @@ const (
 	WHERE group_id = $1`
 
 	queryInsertGroupMessage = `
-	INSERT INTO group_messages (message_id, group_id, sender_user_id, type, content, share_code, file_id, reply_to_message_id, sent_at)
-	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`
+	INSERT INTO group_messages (message_id, group_id, sender_user_id, type, content, share_code, file_id, reply_to_message_id, mentions, sent_at)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`
 
 	queryGroupMessagesHistory = `
 		SELECT gm.message_id,
@@ -29,9 +29,14 @@ const (
 		       COALESCE(TO_CHAR(reply.sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), ''),
 		       COALESCE(gm.sender_user_id, ''),
 		       COALESCE(sender.nickname, ''),
-		       COALESCE(sender.avatar_url, '')
+		       COALESCE(sender.avatar_url, ''),
+		       COALESCE(gm.recalled_by, ''),
+		       COALESCE(recall_operator.nickname, ''),
+		       COALESCE(recall_operator.avatar_url, ''),
+		       gm.mentions
 		FROM group_messages gm
 		LEFT JOIN users sender ON sender.user_id = gm.sender_user_id
+		LEFT JOIN users recall_operator ON recall_operator.user_id = gm.recalled_by
 		LEFT JOIN group_messages reply ON reply.message_id = gm.reply_to_message_id
 		LEFT JOIN users reply_sender ON reply_sender.user_id = reply.sender_user_id
 		-- read_count 不在本查询逐行 LATERAL 计数：万人大群每行扫一遍
@@ -54,7 +59,7 @@ const (
 
 	queryRecallGroupMessage = `
 	UPDATE group_messages
-	SET is_recalled = TRUE, recalled_at = NOW()
+	SET is_recalled = TRUE, recalled_at = NOW(), recalled_by = $2
 	WHERE message_id = $1 AND sender_user_id = $2 AND is_recalled = FALSE
 	RETURNING message_id`
 
@@ -62,7 +67,7 @@ const (
 	// it, with no recall-window enforcement（groups/admin/messages/recall）。
 	queryRecallGroupMessageAsAdminReturning = `
 	UPDATE group_messages
-	SET is_recalled = TRUE, recalled_at = NOW()
+	SET is_recalled = TRUE, recalled_at = NOW(), recalled_by = $2
 	WHERE message_id = $1 AND is_recalled = FALSE
 	RETURNING message_id`
 
@@ -209,7 +214,11 @@ FROM group_members WHERE group_id = $1 AND user_id = $2`
 		       storage_key,
 		       COALESCE(file_name, ''),
 		       declared_file_size,
-		       declared_mime_type
+		       declared_mime_type,
+		       COALESCE(thumbnail_url, ''),
+		       width,
+		       height,
+		       duration
 		FROM media_upload_sessions
 		WHERE file_id = $1 AND status = 'completed' AND user_id = $2`
 
@@ -220,7 +229,11 @@ FROM group_members WHERE group_id = $1 AND user_id = $2`
 		       storage_key,
 		       COALESCE(file_name, ''),
 		       declared_file_size,
-		       declared_mime_type
+		       declared_mime_type,
+		       COALESCE(thumbnail_url, ''),
+		       width,
+		       height,
+		       duration
 		FROM media_upload_sessions
 		WHERE file_id = ANY($1) AND status = 'completed'`
 )

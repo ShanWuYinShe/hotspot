@@ -60,18 +60,35 @@ func TestMemoryRecallAsAdminAndAuxLookups(t *testing.T) {
 		t.Fatalf("missing group id: found=%v err=%v", found, err)
 	}
 
-	// RecallAsAdmin：管理员撤回（非发送者也可）
-	meta, err := repo.RecallAsAdmin(ctx, second.MessageID)
+	// RecallAsAdmin：管理员撤回（非发送者也可，recalled_by=操作者）
+	meta, err := repo.RecallAsAdmin(ctx, second.MessageID, "admin_1")
 	if err != nil || meta.MessageID != second.MessageID {
 		t.Fatalf("recall as admin: %#v err=%v", meta, err)
 	}
 	// 已撤回 → ErrMessageRecalled
-	if _, err := repo.RecallAsAdmin(ctx, second.MessageID); err != ErrMessageRecalled {
+	if _, err := repo.RecallAsAdmin(ctx, second.MessageID, "admin_1"); err != ErrMessageRecalled {
 		t.Fatalf("double admin recall: %v", err)
 	}
 	// 不存在 → ErrMessageNotFound
-	if _, err := repo.RecallAsAdmin(ctx, "missing"); err != ErrMessageNotFound {
+	if _, err := repo.RecallAsAdmin(ctx, "missing", "admin_1"); err != ErrMessageNotFound {
 		t.Fatalf("admin recall missing: %v", err)
+	}
+	// 回归（spec api_spec_chat.md GroupMessageItem）：recalled_by 记录撤回
+	// 操作者（管理员撤回时非作者本人），mentions 落库并恒为数组。
+	hist, err := repo.History(ctx, "g1", nil)
+	if err != nil {
+		t.Fatalf("history after admin recall: %v", err)
+	}
+	for _, item := range hist.Items {
+		if item.MessageID != second.MessageID {
+			continue
+		}
+		if item.RecalledBy == nil || item.RecalledBy["user_id"] != "admin_1" {
+			t.Fatalf("expected recalled_by=admin_1, got %#v", item.RecalledBy)
+		}
+		if item.Mentions == nil {
+			t.Fatal("mentions must always be an array (empty at minimum)")
+		}
 	}
 	// 普通 Recall 对已撤回消息 → ErrMessageRecalled
 	if _, err := repo.Recall(ctx, 2*time.Minute, RecallGroupMessageRequest{MessageID: second.MessageID, UserID: "u2"}); err != ErrMessageRecalled {

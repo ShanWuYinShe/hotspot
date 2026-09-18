@@ -55,7 +55,7 @@ func (r *stubRepo) Recall(_ context.Context, window time.Duration, _ RecallGroup
 	r.recallWindow = window
 	return r.recallMeta, r.recallErr
 }
-func (r *stubRepo) RecallAsAdmin(_ context.Context, _ string) (MessageEventMeta, error) {
+func (r *stubRepo) RecallAsAdmin(_ context.Context, _, _ string) (MessageEventMeta, error) {
 	return r.recallMeta, r.recallErr
 }
 func (r *stubRepo) MarkAsRead(_ context.Context, _ string, _ MarkGroupMessagesReadRequest) error {

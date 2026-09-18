@@ -7,8 +7,10 @@ import (
 	"strings"
 	"time"
 
+	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type PostgresRepository struct {
@@ -30,6 +32,14 @@ func (r *PostgresRepository) Suggest(ctx context.Context, req SearchSuggestReque
 		return SearchSuggestResponse{Items: []SearchSuggestItem{}}, nil
 	}
 
+	// 登录视角（/api/v1）与匿名视角（/public/v1）共用实现：以 ctx 中的
+	// principal 区分。登录视角按 spec 填充 relation/social_context 与
+	// viewer_state 等查看者字段；匿名视角不含查看者字段（Public 对偶类型）。
+	viewerID := ""
+	if principal, ok := platformauth.PrincipalFromContext(ctx); ok {
+		viewerID = principal.UserID
+	}
+
 	allowed := normalizeSuggestTypes(req.Types)
 	items := make([]scoredSuggestItem, 0)
 	if allowed["tag"] {
@@ -40,14 +50,14 @@ func (r *PostgresRepository) Suggest(ctx context.Context, req SearchSuggestReque
 		items = append(items, tagItems...)
 	}
 	if allowed["user"] {
-		userItems, err := queryUserSuggestions(ctx, queryable, prefix, req.ReferencePoint, req.Radius)
+		userItems, err := queryUserSuggestions(ctx, queryable, viewerID, prefix, req.ReferencePoint, req.Radius)
 		if err != nil {
 			return SearchSuggestResponse{}, err
 		}
 		items = append(items, userItems...)
 	}
 	if allowed["group"] {
-		groupItems, err := queryGroupSuggestions(ctx, queryable, prefix, req.ReferencePoint, req.Radius)
+		groupItems, err := queryGroupSuggestions(ctx, queryable, viewerID, prefix, req.ReferencePoint, req.Radius)
 		if err != nil {
 			return SearchSuggestResponse{}, err
 		}
@@ -128,56 +138,90 @@ func queryTagSuggestions(ctx context.Context, queryable persistence.Queryable, p
 	return items, nil
 }
 
-func queryUserSuggestions(ctx context.Context, queryable persistence.Queryable, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
+func queryUserSuggestions(ctx context.Context, queryable persistence.Queryable, viewerID, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
 	rows, err := queryable.Query(ctx, querySearchSuggestUsers, prefix, maxSuggestRows)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]scoredSuggestItem, 0)
+	type scannedUser struct {
+		userID, nickname, avatarURL, bio, locationName, presenceStatus          string
+		latitude, longitude                                                     float64
+		lastOnline                                                              time.Time
+		tags                                                                    []string
+		momentsCount, friendsCount, followersCount, followingCount, groupsCount int
+		locationVisible, presenceVisible, statsVisible                          bool
+		distance                                                                int
+	}
+	scanned := make([]scannedUser, 0, maxSuggestRows)
 	for rows.Next() {
-		var userID, nickname, avatarURL, bio, locationName, presenceStatus string
-		var latitude, longitude float64
-		var lastOnline time.Time
-		var tags []string
-		var momentsCount, friendsCount, followersCount, followingCount, groupsCount int
-		var locationVisible, presenceVisible, statsVisible bool
-		if err := rows.Scan(&userID, &nickname, &avatarURL, &bio, &locationName, &latitude, &longitude, &presenceStatus, &lastOnline, &tags, &momentsCount, &friendsCount, &followersCount, &followingCount, &groupsCount, &locationVisible, &presenceVisible, &statsVisible); err != nil {
+		var u scannedUser
+		if err := rows.Scan(&u.userID, &u.nickname, &u.avatarURL, &u.bio, &u.locationName, &u.latitude, &u.longitude, &u.presenceStatus, &u.lastOnline, &u.tags, &u.momentsCount, &u.friendsCount, &u.followersCount, &u.followingCount, &u.groupsCount, &u.locationVisible, &u.presenceVisible, &u.statsVisible); err != nil {
 			return nil, err
 		}
-		distance := distanceFrom(reference, latitude, longitude)
-		if radius > 0 && distance > radius {
+		u.distance = distanceFrom(reference, u.latitude, u.longitude)
+		if radius > 0 && u.distance > radius {
 			continue
 		}
-		// payload 复用通用 UserItem 结构（spec api_spec_types.md）：
-		// 不含 viewer 相关的 @auth-only 字段（relation/social_context），
-		// 与 suggest 无登录上下文的查询语义一致。
-		// L1 可见性门控（spec api_spec_authz.md #28/#108「可见性过滤」，
+		scanned = append(scanned, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// 登录视角批量取查看者关系（正向关注/拉黑 + 反向被关注），一次往返。
+	following, followedBy, blocked := map[string]bool{}, map[string]bool{}, map[string]bool{}
+	if viewerID != "" && len(scanned) > 0 {
+		ids := make([]string, 0, len(scanned))
+		for _, u := range scanned {
+			ids = append(ids, u.userID)
+		}
+		if err := collectViewerRelations(ctx, queryable, viewerID, ids, following, followedBy, blocked); err != nil {
+			return nil, err
+		}
+	}
+	items := make([]scoredSuggestItem, 0, len(scanned))
+	for _, u := range scanned {
+		userID, nickname, avatarURL, bio := u.userID, u.nickname, u.avatarURL, u.bio
+		lastOnline, tags := u.lastOnline, u.tags
+		momentsCount, friendsCount, followersCount, followingCount, groupsCount := u.momentsCount, u.friendsCount, u.followersCount, u.followingCount, u.groupsCount
+		locationVisible, presenceVisible, statsVisible := u.locationVisible, u.presenceVisible, u.statsVisible
+		presenceStatus, locationName, latitude, longitude := u.presenceStatus, u.locationName, u.latitude, u.longitude
+		distance := u.distance
+		// payload 复用通用 UserItem 结构（spec api_spec_types.md，形状恒定）：
+		// 可空字段显式 null（bio/location/presence_status/last_online_at/stats、
+		// tags 恒为数组）。L1 可见性门控（spec api_spec_authz.md #28/#108，
 		// 对齐 users open_the_door 的 isSelf||settings.XVisible 口径；suggest
-		// 为匿名上下文，isSelf 恒假）：location_visible=false 不输出 location
-		//（含精确坐标与 distance/bearing，防三角定位），presence_visible=false
-		// 不输出 presence_status/last_online_at，stats_visible=false 不输出 stats。
-		user := map[string]any{"user_id": userID, "nickname": nickname}
-		if avatarURL != "" {
-			user["avatar_url"] = avatarURL
-		}
-		payload := map[string]any{"user": user}
-		if locationVisible {
-			payload["location"] = relativeLocationPayload(reference, locationName, latitude, longitude)
-		}
-		if bio != "" {
-			payload["bio"] = bio
-		}
-		if len(tags) > 0 {
+		// 无 isSelf 场景）：隐藏即 null（location 含精确坐标与 distance/bearing，
+		// 隐藏防三角定位）。登录视角补充查看者字段 relation（无任何关系时为
+		// null）与 social_context（spec：搜索/列表场景恒 null）；匿名视角不含
+		// 查看者字段（Public 对偶类型）。
+		user := map[string]any{"user_id": userID, "nickname": nickname, "avatar_url": types.StrPtr(avatarURL)}
+		payload := map[string]any{"user": user, "bio": types.StrPtr(bio)}
+		if tags == nil {
+			payload["tags"] = []string{}
+		} else {
 			payload["tags"] = tags
 		}
+		if locationVisible {
+			payload["location"] = relativeLocationPayload(reference, locationName, latitude, longitude)
+		} else {
+			payload["location"] = nil
+		}
 		if presenceVisible {
-			if ps := presenceStatusPtr(presenceStatus); ps != "" {
+			ps := presenceStatusPtr(presenceStatus)
+			if ps == "" {
+				payload["presence_status"] = nil
+			} else {
 				payload["presence_status"] = ps
 			}
-			if !lastOnline.IsZero() {
+			if lastOnline.IsZero() {
+				payload["last_online_at"] = nil
+			} else {
 				payload["last_online_at"] = lastOnline.UTC().Format(time.RFC3339)
 			}
+		} else {
+			payload["presence_status"] = nil
+			payload["last_online_at"] = nil
 		}
 		if statsVisible {
 			payload["stats"] = map[string]any{
@@ -186,6 +230,20 @@ func queryUserSuggestions(ctx context.Context, queryable persistence.Queryable, 
 				"followers_count": followersCount,
 				"following_count": followingCount,
 				"groups_count":    groupsCount,
+			}
+		} else {
+			payload["stats"] = nil
+		}
+		if viewerID != "" {
+			payload["social_context"] = nil
+			if following[userID] || followedBy[userID] || blocked[userID] {
+				payload["relation"] = map[string]any{
+					"is_following":   following[userID],
+					"is_followed_by": followedBy[userID],
+					"is_blocked":     blocked[userID],
+				}
+			} else {
+				payload["relation"] = nil
 			}
 		}
 		items = append(items, scoredSuggestItem{
@@ -213,7 +271,7 @@ func presenceStatusPtr(raw string) string {
 	}
 }
 
-func queryGroupSuggestions(ctx context.Context, queryable persistence.Queryable, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
+func queryGroupSuggestions(ctx context.Context, queryable persistence.Queryable, viewerID, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
 	rows, err := queryable.Query(ctx, querySearchSuggestGroups, prefix, maxSuggestRows)
 	if err != nil {
 		return nil, err
@@ -237,38 +295,28 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.Queryable,
 		if radius > 0 && distance > radius {
 			continue
 		}
-		// payload 复用通用 GroupItem 结构（spec api_spec_types.md）
-		group := map[string]any{"group_id": groupID, "name": name, "members_count": membersCount}
-		if avatarURL != nil && *avatarURL != "" {
-			group["avatar_url"] = *avatarURL
-		}
+		// payload 复用通用 GroupItem 结构（spec api_spec_types.md，形状恒定）：
+		// 群管理字段（is_searchable/max_members）不属于 GroupItem（属
+		// GroupSettings）；created_at/owner_id 为「详情返回」，搜索场景显式
+		// null；last_activity_at/viewer_state/friends_in_group 建议场景 null
+		//（viewer_state/friends_in_group 仅登录视角携带键，匿名 Public 类型无）。
+		group := map[string]any{"group_id": groupID, "name": name, "members_count": membersCount, "avatar_url": avatarURL}
 		payload := map[string]any{
 			"group":                group,
+			"description":          description,
+			"tags":                 firstNonNilStrings(tags),
 			"join_method":          joinMethod,
 			"requires_approval":    requiresApproval,
 			"location":             relativeLocationPayload(reference, locationName, latitude, longitude),
+			"last_activity_at":     nil,
 			"online_members_count": onlineMembersCount,
+			"next_activity_at":     nextActivity,
+			"created_at":           nil,
+			"owner_id":             nil,
 		}
-		if description != nil && *description != "" {
-			payload["description"] = *description
-		}
-		if len(tags) > 0 {
-			payload["tags"] = tags
-		}
-		if nextActivity != nil && *nextActivity != "" {
-			payload["next_activity_at"] = *nextActivity
-		}
-		if isSearchable {
-			payload["is_searchable"] = isSearchable
-		}
-		if maxMembers > 0 {
-			payload["max_members"] = maxMembers
-		}
-		if !createdAt.IsZero() {
-			payload["created_at"] = createdAt.UTC().Format(time.RFC3339)
-		}
-		if ownerID != "" {
-			payload["owner_id"] = ownerID
+		if viewerID != "" {
+			payload["viewer_state"] = nil
+			payload["friends_in_group"] = nil
 		}
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "group", Payload: payload},
@@ -293,10 +341,10 @@ func queryMomentSuggestions(ctx context.Context, queryable persistence.Queryable
 	defer rows.Close()
 	items := make([]scoredSuggestItem, 0)
 	for rows.Next() {
-		var momentID, userID, nickname, description, locationName string
+		var momentID, userID, nickname, authorAvatar, description, locationName, coverURL string
 		var latitude, longitude float64
 		var popularity int
-		if err := rows.Scan(&momentID, &userID, &nickname, &description, &locationName, &latitude, &longitude, &popularity); err != nil {
+		if err := rows.Scan(&momentID, &userID, &nickname, &authorAvatar, &description, &locationName, &latitude, &longitude, &coverURL, &popularity); err != nil {
 			return nil, err
 		}
 		distance := distanceFrom(reference, latitude, longitude)
@@ -306,9 +354,11 @@ func queryMomentSuggestions(ctx context.Context, queryable persistence.Queryable
 		payload := map[string]any{
 			"moment_id":           momentID,
 			"description_preview": truncatePreview(description),
+			"cover_url":           types.StrPtr(coverURL),
 			"author": map[string]any{
-				"user_id":  userID,
-				"nickname": nickname,
+				"user_id":    userID,
+				"nickname":   nickname,
+				"avatar_url": types.StrPtr(authorAvatar),
 			},
 			"location": relativeLocationPayload(reference, locationName, latitude, longitude),
 		}
@@ -391,9 +441,59 @@ func distanceFrom(reference GeoPoint, latitude, longitude float64) int {
 	return distance
 }
 
+// collectViewerRelations 批量取查看者对目标用户的正向/反向关系边（口径与
+// users 模块 RelationshipBatch 一致），用于登录视角 suggest 的 relation 填充。
+func collectViewerRelations(ctx context.Context, queryable persistence.Queryable, viewerID string, targetIDs []string, following, followedBy, blocked map[string]bool) error {
+	if len(targetIDs) == 0 {
+		return nil
+	}
+	rows, err := queryable.Query(ctx, querySuggestViewerRelations, viewerID, targetIDs)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var targetUserID string
+		var isFollowing, isBlocked bool
+		if err := rows.Scan(&targetUserID, &isFollowing, &isBlocked); err != nil {
+			return err
+		}
+		following[targetUserID] = isFollowing
+		blocked[targetUserID] = isBlocked
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	// 反向边（对方是否关注查看者）：口径同 users 模块 queryListUserRelationsReverse。
+	reverseRows, err := queryable.Query(ctx, querySuggestViewerRelationsReverse, viewerID, targetIDs)
+	if err != nil {
+		return err
+	}
+	defer reverseRows.Close()
+	for reverseRows.Next() {
+		var sourceUserID string
+		var revFollowing bool
+		if err := reverseRows.Scan(&sourceUserID, &revFollowing); err != nil {
+			return err
+		}
+		followedBy[sourceUserID] = revFollowing
+	}
+	return reverseRows.Err()
+}
+
+// firstNonNilStrings 返回 tags；nil 切片归一为空数组（spec：数组恒在）。
+func firstNonNilStrings(tags []string) []string {
+	if tags == nil {
+		return []string{}
+	}
+	return tags
+}
+
 func truncatePreview(description string) string {
 	// 按 rune 截断：字节切片会把多字节字符（中文）拦腰截断产生非法 UTF-8。
-	return textutil.TruncateRunes(description, 60)
+	// 上限 100 对齐 spec MomentSummary.description_preview。
+	return textutil.TruncateRunes(description, 100)
 }
 
 func dedupeSuggestItems(items []scoredSuggestItem) []scoredSuggestItem {

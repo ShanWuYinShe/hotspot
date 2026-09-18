@@ -35,7 +35,7 @@ type Repository interface {
 	// endpoint groups/admin/messages/recall (spec api_spec_group.md). Only
 	// not-found (ErrMessageNotFound) and already-recalled (ErrMessageRecalled)
 	// conflicts are returned.
-	RecallAsAdmin(ctx context.Context, messageID string) (MessageEventMeta, error)
+	RecallAsAdmin(ctx context.Context, messageID, operatorID string) (MessageEventMeta, error)
 	MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error
 	// MarkAllRead 标记用户全部群消息已读，返回受影响的 group_ids（驱动
 	// GroupMessageReadCountUpdated 的节流推送）。

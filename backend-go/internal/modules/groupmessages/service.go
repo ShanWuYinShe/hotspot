@@ -332,7 +332,7 @@ func (s *Service) RecallMessageAsAdmin(ctx context.Context, operatorID, groupID,
 	if !found || meta.GroupID != groupID {
 		return ErrMessageNotFound
 	}
-	meta2, err := s.repo.RecallAsAdmin(ctx, messageID)
+	meta2, err := s.repo.RecallAsAdmin(ctx, messageID, operatorID)
 	if err != nil {
 		observability.L().Error("groupmessages.recall_as_admin failed", "error", err, "message_id", messageID, "group_id", groupID)
 		return err

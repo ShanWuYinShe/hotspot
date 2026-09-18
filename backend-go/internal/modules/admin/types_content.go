@@ -14,11 +14,13 @@ type AdminUploadConfig struct {
 }
 
 type AdminGroupSettings struct {
-	JoinMethod       groupsmodule.GroupJoinMethod `json:"join_method"`
-	RequiresApproval bool                         `json:"requires_approval"`
-	IsSearchable     bool                         `json:"is_searchable"`
-	MaxMembers       int                          `json:"max_members"`
-	Location         Location                     `json:"location"`
+	JoinMethod        groupsmodule.GroupJoinMethod `json:"join_method"`
+	RequiresApproval  bool                         `json:"requires_approval"`
+	HasPassword       bool                         `json:"has_password"`
+	IsSearchable      bool                         `json:"is_searchable"`
+	MembersSearchable bool                         `json:"members_searchable"`
+	MaxMembers        int                          `json:"max_members"`
+	Location          Location                     `json:"location"`
 }
 
 type ContentDefaults struct {
@@ -117,10 +119,13 @@ type PartialLocation struct {
 }
 
 type PartialGroupSettings struct {
-	JoinMethod   *groupsmodule.GroupJoinMethod `json:"join_method,omitempty"`
-	IsSearchable *bool                         `json:"is_searchable,omitempty"`
-	MaxMembers   *int                          `json:"max_members,omitempty"`
-	Location     *PartialLocation              `json:"location,omitempty"`
+	JoinMethod        *groupsmodule.GroupJoinMethod `json:"join_method,omitempty"`
+	RequiresApproval  *bool                         `json:"requires_approval,omitempty"`
+	HasPassword       *bool                         `json:"has_password,omitempty"`
+	IsSearchable      *bool                         `json:"is_searchable,omitempty"`
+	MembersSearchable *bool                         `json:"members_searchable,omitempty"`
+	MaxMembers        *int                          `json:"max_members,omitempty"`
+	Location          *PartialLocation              `json:"location,omitempty"`
 }
 
 type PartialRateLimitConfig struct {
@@ -157,6 +162,7 @@ type PartialAppLimits struct {
 	MaxGroupMembers            *int     `json:"max_group_members,omitempty"`
 	MaxMomentTags              *int     `json:"max_moment_tags,omitempty"`
 	MaxMomentImages            *int     `json:"max_moment_images,omitempty"`
+	MaxChatFiles               *int     `json:"max_chat_files,omitempty"`
 	MomentDescriptionMaxLength *int     `json:"moment_description_max_length,omitempty"`
 	CommentMaxLength           *int     `json:"comment_max_length,omitempty"`
 	SearchRadiusMax            *int     `json:"search_radius_max,omitempty"`

@@ -46,10 +46,12 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 		var senderNickname string
 		var senderAvatar string
 		var content string
+		var recalledBy, recalledByNickname, recalledByAvatar string
+		var mentions []string
 		var fileID, shareCode string
 		var replyMessageID, replyType, replyContent, replyShareCode string
 		var replySenderID, replyNickname, replyAvatar, replySentAt string
-		if err := rows.Scan(&item.MessageID, &item.Type, &content, &item.SentAt, &editedAt, &recalledAt, &fileID, &shareCode, &replyMessageID, &replyType, &replyContent, &replyShareCode, &replySenderID, &replyNickname, &replyAvatar, &replySentAt, &senderUserID, &senderNickname, &senderAvatar); err != nil {
+		if err := rows.Scan(&item.MessageID, &item.Type, &content, &item.SentAt, &editedAt, &recalledAt, &fileID, &shareCode, &replyMessageID, &replyType, &replyContent, &replyShareCode, &replySenderID, &replyNickname, &replyAvatar, &replySentAt, &senderUserID, &senderNickname, &senderAvatar, &recalledBy, &recalledByNickname, &recalledByAvatar, &mentions); err != nil {
 			return PaginatedGroupMessages{}, err
 		}
 		item.Content = types.StrPtr(content)
@@ -69,6 +71,15 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 		item.EditedAt = types.StrPtr(editedAt)
 		item.RecalledAt = types.StrPtr(recalledAt)
 		item.Sender = map[string]any{"user_id": senderUserID, "nickname": senderNickname, "avatar_url": senderAvatar}
+		// mentions 恒在（spec：空数组 = 无 @）；历史行 DEFAULT '{}' 兜底 nil。
+		if mentions == nil {
+			item.Mentions = []string{}
+		} else {
+			item.Mentions = mentions
+		}
+		if recalledBy != "" {
+			item.RecalledBy = map[string]any{"user_id": recalledBy, "nickname": recalledByNickname, "avatar_url": recalledByAvatar}
+		}
 		items = append(items, item)
 		fileIDsByIndex = append(fileIDsByIndex, fileID)
 		if fileID != "" {
@@ -79,11 +90,15 @@ func (r *PostgresRepository) History(ctx context.Context, groupID string, pagina
 	if err := rows.Err(); err != nil {
 		return PaginatedGroupMessages{}, err
 	}
-	// 已读计数页面级一次聚合回填（取代逐行 LATERAL，见 queryGroupMessagesHistory 注释）
+	// 已读计数页面级一次聚合回填（取代逐行 LATERAL，见 queryGroupMessagesHistory 注释）。
+	// 已撤回消息 read_count 恒 null（spec：null = 不适用，含已撤回消息）。
 	if readCounts, err := r.readCountsByMessageIDs(ctx, queryable, groupID, messageIDs); err != nil {
 		return PaginatedGroupMessages{}, err
 	} else {
 		for i := range items {
+			if items[i].RecalledAt != nil {
+				continue
+			}
 			if rc, ok := readCounts[items[i].MessageID]; ok {
 				count := rc
 				items[i].ReadCount = &count
@@ -133,9 +148,11 @@ func (r *PostgresRepository) readCountsByMessageIDs(ctx context.Context, queryab
 	return result, rows.Err()
 }
 
-// mediaByFileIDs 批量取消息媒体元数据（单次往返），字段语义与 GetMediaForMessage
-// 的 WS media 负载一致（url=storage_key）。仅回填 status='completed' 的文件；
-// 未命中的 file_id（历史脏数据）保持 media 为空，由客户端占位兜底。
+// mediaByFileIDs 批量取消息媒体元数据（单次往返），键集合与 spec MessageMedia
+// 一致（8 键恒定 nullable：url/thumbnail_url/width/height/mime_type/file_name/
+// file_size/duration）。url=storage_key 与 WS media 负载同语义。仅回填
+// status='completed' 的文件；未命中的 file_id（历史脏数据）保持 media 为空，
+// 由客户端占位兜底。
 func (r *PostgresRepository) mediaByFileIDs(ctx context.Context, queryable persistence.Queryable, fileIDs []string) (map[string]map[string]any, error) {
 	rows, err := queryable.Query(ctx, queryGroupMediaFilesByIDs, fileIDs)
 	if err != nil {
@@ -144,16 +161,21 @@ func (r *PostgresRepository) mediaByFileIDs(ctx context.Context, queryable persi
 	defer rows.Close()
 	mediaByFileID := make(map[string]map[string]any, len(fileIDs))
 	for rows.Next() {
-		var fileID, storageKey, fileName, mimeType string
+		var fileID, storageKey, fileName, mimeType, thumbnailURL string
 		var fileSize int
-		if err := rows.Scan(&fileID, &storageKey, &fileName, &fileSize, &mimeType); err != nil {
+		var width, height, duration *int
+		if err := rows.Scan(&fileID, &storageKey, &fileName, &fileSize, &mimeType, &thumbnailURL, &width, &height, &duration); err != nil {
 			return nil, err
 		}
 		mediaByFileID[fileID] = map[string]any{
-			"url":       storageKey,
-			"file_name": fileName,
-			"file_size": fileSize,
-			"mime_type": mimeType,
+			"url":           storageKey,
+			"thumbnail_url": types.StrPtr(thumbnailURL),
+			"width":         width,
+			"height":        height,
+			"mime_type":     types.StrPtr(mimeType),
+			"file_name":     types.StrPtr(fileName),
+			"file_size":     fileSize,
+			"duration":      duration,
 		}
 	}
 	return mediaByFileID, rows.Err()

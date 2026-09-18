@@ -75,7 +75,7 @@ func TestPostgresRepositoryFiltersUnknownTypesAsAll(t *testing.T) {
 		querySearchSuggestTags:    {{"hot", 8}},
 		querySearchSuggestUsers:   {{"user_1", "hot-user", "", "", "南天门", 35.0, 112.0, "online", time.Time{}, []string{}, 0, 0, 0, 0, 0, true, true, true}},
 		querySearchSuggestGroups:  {{"group_1", "hot-group", "", "", "南天门", 35.0, 112.0, 5, "direct", false, []string{}, "", true, 500, time.Time{}, "owner1", 2}},
-		querySearchSuggestMoments: {{"moment_1", "user_1", "Alice", "hot moment", "南天门", 35.0, 112.0, 9}},
+		querySearchSuggestMoments: {{"moment_1", "user_1", "Alice", "", "hot moment", "南天门", 35.0, 112.0, "", 9}},
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
@@ -239,10 +239,10 @@ func TestPostgresRepositoryMomentQueryRequiresPublicMoments(t *testing.T) {
 	}
 }
 
-func TestPostgresRepositoryOmitsFieldsHiddenByVisibilitySwitches(t *testing.T) {
-	// L1 可见性门控（api_spec_authz.md #28/#108）：suggest 为匿名上下文，
-	// location_visible/presence_visible/stats_visible=false 的字段不得出现在
-	// payload 中（精确坐标 + distance/bearing 可被三角定位，绝不能泄漏）。
+func TestPostgresRepositoryNullsFieldsHiddenByVisibilitySwitches(t *testing.T) {
+	// L1 可见性门控（api_spec_authz.md #28/#108）+ 类型稳定性（api_spec_base.md）：
+	// location_visible/presence_visible/stats_visible=false 的字段以显式 null
+	// 返回（键恒在、值为 null）——精确坐标 + distance/bearing 仍绝不泄漏。
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestUsers: {
 			{"user_hidden", "hot-hidden", "", "", "某处", 35.0, 112.0, "online", time.Now(), []string{"tag1"}, 3, 2, 1, 1, 1, false, false, false},
@@ -264,8 +264,12 @@ func TestPostgresRepositoryOmitsFieldsHiddenByVisibilitySwitches(t *testing.T) {
 		t.Fatalf("expected hidden user to remain searchable, got %#v", resp.Items)
 	}
 	for _, key := range []string{"location", "presence_status", "last_online_at", "stats"} {
-		if _, present := hidden[key]; present {
-			t.Fatalf("expected %q to be omitted for hidden user, got %#v", key, hidden[key])
+		val, present := hidden[key]
+		if !present {
+			t.Fatalf("expected %q key to be present (explicit null) for hidden user", key)
+		}
+		if val != nil {
+			t.Fatalf("expected %q to be null for hidden user, got %#v", key, val)
 		}
 	}
 	open, ok := byID["user_open"]

@@ -33,13 +33,21 @@ func (p *AppConfigProvider) GetClientConfig(ctx context.Context) ClientConfig {
 			EnableMoments:            cfg.Features.EnableMoments,
 			EnableNearbyPeople:       cfg.Features.EnableNearbyPeople,
 		},
+		// 投影必须覆盖 AppLimits 全部 12 字段（spec api_spec_types.md）：
+		// 客户端撤回窗口/陌生人配额/表情白名单等校验依赖这些限额。
 		Limits: AppLimits{
 			MaxGroupMembers:            cfg.Limits.MaxGroupMembers,
 			MaxMomentTags:              cfg.Limits.MaxMomentTags,
 			MaxMomentImages:            cfg.Limits.MaxMomentImages,
+			MaxChatFiles:               cfg.Limits.MaxChatFiles,
 			MomentDescriptionMaxLength: cfg.Limits.MomentDescriptionMaxLength,
 			CommentMaxLength:           cfg.Limits.CommentMaxLength,
 			SearchRadiusMax:            cfg.Limits.SearchRadiusMax,
+			MessageRecallWindowSeconds: cfg.Limits.MessageRecallWindowSeconds,
+			StrangerMessageDailyQuota:  cfg.Limits.StrangerMessageDailyQuota,
+			ReactionEmojis:             cfg.Limits.ReactionEmojis,
+			GroupInviteTTLHours:        cfg.Limits.GroupInviteTTLHours,
+			GroupApplicationTTLHours:   cfg.Limits.GroupApplicationTTLHours,
 		},
 		Contact: ContactInfo{
 			SupportEmail:      cfg.Contact.SupportEmail,

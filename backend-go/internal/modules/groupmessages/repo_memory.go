@@ -55,13 +55,17 @@ func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest
 	r.seq++
 	// 固定 9 位纳秒（不用 RFC3339Nano：尾零截断会让等值时间输出不同长度的
 	// 字符串，History 的字符串排序与游标比较随之失序）。
+	mentions := req.Mentions
+	if mentions == nil {
+		mentions = []string{}
+	}
 	msg := GroupMessageItem{
 		MessageID:    fmt.Sprintf("gm_%d_%d", now.UnixNano(), r.seq),
 		SenderUserID: req.SenderUserID,
 		Type:         req.Type,
 		Content:      types.StrPtr(req.Content),
 		SentAt:       now.Format("2006-01-02T15:04:05.000000000Z"),
-		Mentions:     req.Mentions,
+		Mentions:     mentions,
 	}
 	if req.ShareCode != "" {
 		msg.ShareCode = types.StrPtr(req.ShareCode)
@@ -201,6 +205,9 @@ func (r *InMemoryRepository) Recall(_ context.Context, window time.Duration, req
 	if msg.SenderUserID == "" || msg.SenderUserID != req.UserID {
 		return MessageEventMeta{}, ErrPermissionDenied
 	}
+	// 撤回操作者落库（作者撤回即作者本人），History 的 recalled_by 与实时
+	// 事件口径一致（spec api_spec_chat.md GroupMessageItem.recalled_by）。
+	msg.RecalledBy = map[string]any{"user_id": req.UserID}
 
 	// 检查撤回时间窗（service 从 AppConfig 取值传入）；window<=0 = 撤回禁用。
 	sentTime, err := time.Parse(time.RFC3339Nano, msg.SentAt)
@@ -219,7 +226,7 @@ func (r *InMemoryRepository) Recall(_ context.Context, window time.Duration, req
 // RecallAsAdmin recalls a message regardless of sender, skipping the owner and
 // recall-window checks (admin path, see spec api_spec_group.md). Only
 // not-found and already-recalled conflicts are returned.
-func (r *InMemoryRepository) RecallAsAdmin(_ context.Context, messageID string) (MessageEventMeta, error) {
+func (r *InMemoryRepository) RecallAsAdmin(_ context.Context, messageID, operatorID string) (MessageEventMeta, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -232,6 +239,7 @@ func (r *InMemoryRepository) RecallAsAdmin(_ context.Context, messageID string) 
 	}
 	recalledAt := time.Now().UTC().Format(time.RFC3339Nano)
 	msg.RecalledAt = &recalledAt
+	msg.RecalledBy = map[string]any{"user_id": operatorID}
 	r.items[groupID][index] = *msg
 	return MessageEventMeta{GroupID: groupID, MessageID: messageID, SentAt: msg.SentAt}, nil
 }

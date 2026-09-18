@@ -48,7 +48,11 @@ func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageReque
 	// sent_at 纳秒精度：秒级截断会让同秒消息的排序退化为随机 message_id 兜底，
 	// 破坏 History 顺序与已读游标语义（私聊侧同为 RFC3339Nano）。
 	sentAt := now.Format(time.RFC3339Nano)
-	if err := queryable.Exec(ctx, queryInsertGroupMessage, messageID, req.GroupID, senderID, req.Type, req.Content, shareCode, fileID, replyTo, sentAt); err != nil {
+	mentions := req.Mentions
+	if mentions == nil {
+		mentions = []string{}
+	}
+	if err := queryable.Exec(ctx, queryInsertGroupMessage, messageID, req.GroupID, senderID, req.Type, req.Content, shareCode, fileID, replyTo, mentions, sentAt); err != nil {
 		return MessageSentResult{}, err
 	}
 	return MessageSentResult{MessageID: messageID, SentAt: sentAt}, nil
@@ -129,7 +133,7 @@ func (r *PostgresRepository) Recall(ctx context.Context, window time.Duration, r
 
 // RecallAsAdmin recalls a group message regardless of sender, with no
 // recall-window enforcement (admin path, spec api_spec_group.md).
-func (r *PostgresRepository) RecallAsAdmin(ctx context.Context, messageID string) (MessageEventMeta, error) {
+func (r *PostgresRepository) RecallAsAdmin(ctx context.Context, messageID, operatorID string) (MessageEventMeta, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageEventMeta{}, persistence.ErrNotImplemented
@@ -142,7 +146,7 @@ func (r *PostgresRepository) RecallAsAdmin(ctx context.Context, messageID string
 		return MessageEventMeta{}, ErrMessageRecalled
 	}
 	var updated string
-	if err := queryable.QueryRow(ctx, queryRecallGroupMessageAsAdminReturning, messageID).Scan(&updated); err != nil {
+	if err := queryable.QueryRow(ctx, queryRecallGroupMessageAsAdminReturning, messageID, operatorID).Scan(&updated); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return MessageEventMeta{}, ErrMessageRecalled
 		}
@@ -448,19 +452,25 @@ func (r *PostgresRepository) GetMediaForMessage(ctx context.Context, fileID, own
 	if !ok {
 		return nil, false, persistence.ErrNotImplemented
 	}
-	var fileIDFound, storageKey, fileName, mimeType string
+	var fileIDFound, storageKey, fileName, mimeType, thumbnailURL string
 	var fileSize int
-	err := queryable.QueryRow(ctx, queryGetGroupMediaFileForMessage, fileID, ownerUserID).Scan(&fileIDFound, &storageKey, &fileName, &fileSize, &mimeType)
+	var width, height, duration *int
+	err := queryable.QueryRow(ctx, queryGetGroupMediaFileForMessage, fileID, ownerUserID).Scan(&fileIDFound, &storageKey, &fileName, &fileSize, &mimeType, &thumbnailURL, &width, &height, &duration)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, false, nil
 		}
 		return nil, false, err
 	}
+	// 键集合与 History media 回填一致（spec MessageMedia 8 键恒定 nullable）。
 	return map[string]any{
-		"url":       storageKey,
-		"file_name": fileName,
-		"file_size": fileSize,
-		"mime_type": mimeType,
+		"url":           storageKey,
+		"thumbnail_url": types.StrPtr(thumbnailURL),
+		"width":         width,
+		"height":        height,
+		"mime_type":     types.StrPtr(mimeType),
+		"file_name":     types.StrPtr(fileName),
+		"file_size":     fileSize,
+		"duration":      duration,
 	}, true, nil
 }

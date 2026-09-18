@@ -45,7 +45,7 @@ func (r *stubGroupMessageRepo) Update(_ context.Context, _ UpdateGroupMessageReq
 func (r *stubGroupMessageRepo) Recall(_ context.Context, _ time.Duration, _ RecallGroupMessageRequest) (MessageEventMeta, error) {
 	return r.recallMeta, r.recallErr
 }
-func (r *stubGroupMessageRepo) RecallAsAdmin(_ context.Context, _ string) (MessageEventMeta, error) {
+func (r *stubGroupMessageRepo) RecallAsAdmin(_ context.Context, _, _ string) (MessageEventMeta, error) {
 	return r.recallMeta, r.recallErr
 }
 func (r *stubGroupMessageRepo) MarkAsRead(ctx context.Context, userID string, req MarkGroupMessagesReadRequest) error {

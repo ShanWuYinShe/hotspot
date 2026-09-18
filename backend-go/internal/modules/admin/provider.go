@@ -40,9 +40,6 @@ func (p *AppConfigProvider) UpdateAppConfig(ctx context.Context, updatedByUserID
 	}
 	updated, err := p.source.Update(ctx, func(cur appconfig.AppConfig) appconfig.AppConfig {
 		merged := sourceAppConfigFromAdmin(next)
-		// admin DTO 不含 MaxChatFiles：保留持久化当前值，任何一次后台配置
-		// 更新都不得把它清零（同类丢字段 bug 曾把 4 个 TTL/配额字段清零）。
-		merged.Limits.MaxChatFiles = cur.Limits.MaxChatFiles
 		return merged
 	})
 	if err != nil {
@@ -63,6 +60,7 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AdminAppConfig {
 			MaxGroupMembers:            cfg.Limits.MaxGroupMembers,
 			MaxMomentTags:              cfg.Limits.MaxMomentTags,
 			MaxMomentImages:            cfg.Limits.MaxMomentImages,
+			MaxChatFiles:               cfg.Limits.MaxChatFiles,
 			MomentDescriptionMaxLength: cfg.Limits.MomentDescriptionMaxLength,
 			CommentMaxLength:           cfg.Limits.CommentMaxLength,
 			SearchRadiusMax:            cfg.Limits.SearchRadiusMax,
@@ -97,9 +95,12 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AdminAppConfig {
 			DefaultGroupAvatar: cfg.Defaults.DefaultGroupAvatar,
 			DefaultUserAvatar:  cfg.Defaults.DefaultUserAvatar,
 			DefaultGroupSettings: AdminGroupSettings{
-				JoinMethod:   groupsmodule.GroupJoinMethod(cfg.Defaults.DefaultGroupSettings.JoinMethod),
-				IsSearchable: cfg.Defaults.DefaultGroupSettings.IsSearchable,
-				MaxMembers:   cfg.Defaults.DefaultGroupSettings.MaxMembers,
+				JoinMethod:        groupsmodule.GroupJoinMethod(cfg.Defaults.DefaultGroupSettings.JoinMethod),
+				RequiresApproval:  cfg.Defaults.DefaultGroupSettings.RequiresApproval,
+				HasPassword:       cfg.Defaults.DefaultGroupSettings.HasPassword,
+				IsSearchable:      cfg.Defaults.DefaultGroupSettings.IsSearchable,
+				MembersSearchable: cfg.Defaults.DefaultGroupSettings.MembersSearchable,
+				MaxMembers:        cfg.Defaults.DefaultGroupSettings.MaxMembers,
 				Location: Location{
 					Point: GeoPoint{
 						Latitude:  cfg.Defaults.DefaultGroupSettings.Location.Point.Latitude,
@@ -154,6 +155,7 @@ func sourceAppConfigFromAdmin(cfg AdminAppConfig) appconfig.AppConfig {
 			MaxGroupMembers:            cfg.Limits.MaxGroupMembers,
 			MaxMomentTags:              cfg.Limits.MaxMomentTags,
 			MaxMomentImages:            cfg.Limits.MaxMomentImages,
+			MaxChatFiles:               cfg.Limits.MaxChatFiles,
 			MomentDescriptionMaxLength: cfg.Limits.MomentDescriptionMaxLength,
 			CommentMaxLength:           cfg.Limits.CommentMaxLength,
 			SearchRadiusMax:            cfg.Limits.SearchRadiusMax,
@@ -188,9 +190,12 @@ func sourceAppConfigFromAdmin(cfg AdminAppConfig) appconfig.AppConfig {
 			DefaultUserAvatar:  cfg.Defaults.DefaultUserAvatar,
 			DefaultGroupAvatar: cfg.Defaults.DefaultGroupAvatar,
 			DefaultGroupSettings: appconfig.GroupSettings{
-				JoinMethod:   string(cfg.Defaults.DefaultGroupSettings.JoinMethod),
-				IsSearchable: cfg.Defaults.DefaultGroupSettings.IsSearchable,
-				MaxMembers:   cfg.Defaults.DefaultGroupSettings.MaxMembers,
+				JoinMethod:        string(cfg.Defaults.DefaultGroupSettings.JoinMethod),
+				RequiresApproval:  cfg.Defaults.DefaultGroupSettings.RequiresApproval,
+				HasPassword:       cfg.Defaults.DefaultGroupSettings.HasPassword,
+				IsSearchable:      cfg.Defaults.DefaultGroupSettings.IsSearchable,
+				MembersSearchable: cfg.Defaults.DefaultGroupSettings.MembersSearchable,
+				MaxMembers:        cfg.Defaults.DefaultGroupSettings.MaxMembers,
 				Location: appconfig.Location{
 					Point: appconfig.GeoPoint{
 						Latitude:  cfg.Defaults.DefaultGroupSettings.Location.Point.Latitude,

@@ -13,6 +13,7 @@ type Location struct {
 type GroupSettings struct {
 	JoinMethod        string   `json:"join_method"`
 	RequiresApproval  bool     `json:"requires_approval"`
+	HasPassword       bool     `json:"has_password"`
 	IsSearchable      bool     `json:"is_searchable"`
 	MembersSearchable bool     `json:"members_searchable"`
 	MaxMembers        int      `json:"max_members"`

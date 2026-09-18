@@ -107,10 +107,23 @@ LIMIT $2`
 	// 点赞计数由 SELECT 内标量子查询（审计 perf P2-3）改为 LATERAL（ORDER BY
 	// popularity 需要对全部候选行求值，执行次数与原相关子查询一致）。
 	querySearchSuggestMoments = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.location_name, m.latitude, m.longitude,
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, m.location_name, m.latitude, m.longitude,
+       COALESCE(cover.cover_url, ''),
        (lk.likes_count + m.comments_count + m.shares_count) AS popularity
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
+LEFT JOIN LATERAL (
+    SELECT mi.file_id
+    FROM moment_images mi
+    WHERE mi.moment_id = m.moment_id
+    ORDER BY mi.position
+    LIMIT 1
+) first_img ON TRUE
+LEFT JOIN LATERAL (
+    SELECT COALESCE(NULLIF(s.thumbnail_url, ''), s.storage_key) AS cover_url
+    FROM media_upload_sessions s
+    WHERE s.file_id = first_img.file_id AND s.status = 'completed'
+) cover ON TRUE
 LEFT JOIN LATERAL (
     SELECT COUNT(*) AS likes_count
     FROM reactions r
@@ -121,4 +134,18 @@ WHERE m.privacy_level = 'public'
   AND m.description ILIKE '%' || $1 || '%'
 ORDER BY popularity DESC
 LIMIT $2`
+
+	// querySuggestViewerRelations 批量取查看者对建议用户的关注/拉黑正向边与
+	// 被关注反向边（spec api_spec_types.md Relationship：登录视角 relation 填充，
+	// 无任何关系时为 null）。口径与 users 模块 RelationshipBatch 的两条边一致。
+	querySuggestViewerRelations = `
+SELECT target_user_id, is_following, is_blocked
+FROM user_relations
+WHERE user_id = $1 AND target_user_id = ANY($2)`
+
+	// querySuggestViewerRelationsReverse 反向边（对方是否关注查看者）。
+	querySuggestViewerRelationsReverse = `
+SELECT user_id, is_following
+FROM user_relations
+WHERE target_user_id = $1 AND user_id = ANY($2)`
 )
