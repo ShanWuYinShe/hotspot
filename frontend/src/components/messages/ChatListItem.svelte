@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Pin } from '@lucide/svelte';
+	import { Pin, BellOff, Trash2 } from '@lucide/svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
@@ -16,18 +16,26 @@
 	//     宽度跳变导致点击位移
 	//   - 置顶：isPinned 高亮 Pin 图标；onTogglePin 可选（不传则不渲染），
 	//     点击时 stopPropagation，避免触发行选中/导航
+	//   - 免打扰：isMuted 名字旁常显 BellOff 弱标识；开关按钮 active 态常显、
+	//     未开启走 desktop-reveal（行 hover/focus 显现，触屏常显是唯一入口）
+	//   - 删除：onDelete 可选（私聊有 private_chats/delete，群聊无删除端点不传），
+	//     desktop-reveal 显现，二次确认由页面层 ConfirmDialog 承担
 
 	let {
 		chat,
 		isSelected = false,
 		onClick,
 		onTogglePin,
+		onToggleMute,
+		onDelete,
 		compact = false
 	}: {
 		chat: ChatItem;
 		isSelected?: boolean;
 		onClick: () => void;
 		onTogglePin?: () => void;
+		onToggleMute?: () => void;
+		onDelete?: () => void;
 		compact?: boolean;
 	} = $props();
 </script>
@@ -52,8 +60,13 @@
 
 	<span class="min-w-0 flex-1 flex flex-col justify-center">
 		<span class="flex items-center justify-between gap-2 mb-0.5">
-			<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary font-medium'} truncate text-sm">
-				{chat.name}
+			<span class="flex min-w-0 items-center gap-1">
+				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary font-medium'} truncate text-sm">
+					{chat.name}
+				</span>
+				{#if chat.isMuted}
+					<BellOff class="size-3 shrink-0 {isSelected ? 'text-text-on-accent opacity-soft' : 'text-text-secondary'}" strokeWidth={2} aria-hidden="true" />
+				{/if}
 			</span>
 			<span class="{isSelected ? 'text-text-on-accent opacity-soft' : 'text-text-secondary'} shrink-0 text-xs font-normal tabular-nums">
 				{chat.time}
@@ -100,6 +113,49 @@
 						}}
 					>
 						<Pin
+							class="size-3.5 {isSelected ? 'text-text-on-accent' : 'text-text-secondary'}"
+							strokeWidth={2}
+						/>
+					</button>
+				{/if}
+				{#if onToggleMute}
+					<!-- 免打扰开关：开启时常显（与 Pin 高亮同语义），未开启 desktop-reveal 显现 -->
+					<button
+						type="button"
+						class="hover-btn scale-btn hit-slop focus-ring {chat.isMuted
+							? 'flex shrink-0 items-center justify-center rounded-full p-1'
+							: 'desktop-reveal hidden shrink-0 items-center justify-center rounded-full p-1 md:flex'} {isSelected
+							? 'text-text-on-accent'
+							: chat.isMuted
+								? 'text-accent-default'
+								: 'text-text-secondary'}"
+						aria-label={chat.isMuted ? '关闭免打扰' : '开启免打扰'}
+						aria-pressed={chat.isMuted}
+						title={chat.isMuted ? '关闭免打扰' : '开启免打扰'}
+						onclick={(e) => {
+							e.stopPropagation();
+							onToggleMute();
+						}}
+					>
+						<BellOff
+							class="size-3.5 {isSelected ? 'text-text-on-accent' : chat.isMuted ? 'text-accent-default' : 'text-text-secondary'}"
+							strokeWidth={2}
+						/>
+					</button>
+				{/if}
+				{#if onDelete}
+					<!-- 删除会话（仅私聊）：desktop-reveal 显现，点击由页面层二次确认 -->
+					<button
+						type="button"
+						class="hover-btn scale-btn hit-slop focus-ring desktop-reveal hidden shrink-0 items-center justify-center rounded-full p-1 md:flex {isSelected ? 'text-text-on-accent' : 'text-text-secondary'}"
+						aria-label={`删除与 ${chat.name} 的会话`}
+						title="删除会话"
+						onclick={(e) => {
+							e.stopPropagation();
+							onDelete();
+						}}
+					>
+						<Trash2
 							class="size-3.5 {isSelected ? 'text-text-on-accent' : 'text-text-secondary'}"
 							strokeWidth={2}
 						/>

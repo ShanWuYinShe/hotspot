@@ -7,6 +7,7 @@
 	import SectionFriends from '@/components/profile/SectionFriends.svelte';
 	import SectionFollowing from '@/components/profile/SectionFollowing.svelte';
 	import SectionFans from '@/components/profile/SectionFans.svelte';
+	import SectionBlocked from '@/components/profile/SectionBlocked.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { smartBack } from '@/lib/smart-back';
@@ -28,7 +29,8 @@
 	const TABS: { id: RelationshipTab; label: string }[] = [
 		{ id: 'friends', label: '好友' },
 		{ id: 'following', label: '关注' },
-		{ id: 'fans', label: '粉丝' }
+		{ id: 'fans', label: '粉丝' },
+		{ id: 'blocked', label: '黑名单' }
 	];
 
 	// getter 对象解构会拿到非响应式快照，$derived 桥接
@@ -42,8 +44,10 @@
 			? (page.url.searchParams.get('tab') as RelationshipTab)
 			: DEFAULT_RELATIONSHIP_TAB
 	);
+	// 黑名单计数由 SectionBlocked 自行拉取（fetch_blocked），页头计数对 blocked 不显示
+	// 具体值（避免重复请求），仅统计三个关系 tab
 	const activeCount = $derived(
-		activeTab === 'friends' ? friends.length : activeTab === 'following' ? following.length : followers.length
+		activeTab === 'friends' ? friends.length : activeTab === 'following' ? following.length : activeTab === 'fans' ? followers.length : 0
 	);
 
 	const switchTab = (tab: RelationshipTab) => {
@@ -63,7 +67,10 @@
 		onBack={() => smartBack(ROUTES.me)}
 	>
 		{#snippet trailing()}
-			<span class="text-text-secondary text-xs" aria-live="polite">{activeCount} 人</span>
+			<!-- 黑名单计数在 SectionBlocked 内自持（避免页头重复请求），此处仅统计关系 tab -->
+			{#if activeTab !== 'blocked'}
+				<span class="text-text-secondary text-xs" aria-live="polite">{activeCount} 人</span>
+			{/if}
 		{/snippet}
 		{#snippet below()}
 			<!-- TabBar 作为 below 首元素需带上间距（对齐 nearby/moments 样板 below 首元素 mt-3） -->
@@ -79,7 +86,7 @@
 		items={TABS.map((t) => ({
 			id: t.id,
 			label: t.label,
-			count: t.id === 'friends' ? friends.length : t.id === 'following' ? following.length : followers.length
+			count: t.id === 'friends' ? friends.length : t.id === 'following' ? following.length : t.id === 'fans' ? followers.length : undefined
 		}))}
 		value={activeTab}
 		onChange={(id) => switchTab(id as RelationshipTab)}
@@ -97,7 +104,9 @@
 		<SectionFriends embedded />
 	{:else if activeTab === 'following'}
 		<SectionFollowing embedded />
-	{:else}
+	{:else if activeTab === 'fans'}
 		<SectionFans embedded />
+	{:else}
+		<SectionBlocked embedded />
 	{/if}
 </StandardPageLayout>

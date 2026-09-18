@@ -683,6 +683,32 @@ export interface SessionStatus {
 	expires_at: string;
 }
 
+// 会话管理（spec: auth.md → fetch_sessions / revoke_session / revoke_other_sessions）
+export interface SessionItem {
+	session_id: string;         // 会话标识，用于展示和撤销操作
+	device_id: string;          // 设备标识（会话主键的一部分）
+	device_type: string | null; // 设备类型展示（如 "iOS" / "Android" / "Web"）
+	device_name: string | null; // 设备名称展示（如 "iPhone 15 Pro" / "Chrome on macOS"）
+	ip_address: string | null;  // 脱敏显示
+	ip_location: string | null; // IP 地理位置
+	created_at: string;
+	last_active_at: string;
+	is_current: boolean;        // 当前请求所属会话
+}
+export interface SessionList {
+	items: SessionItem[];
+}
+export interface ChangePasswordRequest {
+	old_password: string;
+	new_password: string;
+}
+export interface RevokeSessionRequest {
+	session_id: string;
+}
+export interface RevokeOtherSessionsResult {
+	revoked_count: number;
+}
+
 // --- Users（spec: api_spec_user.md）---
 export interface AccountData {
 	// spec: user.md → get_account
@@ -1043,6 +1069,22 @@ export interface SearchUsersRequest {
 }
 export interface UpdateSettingsRequest {
 	settings: Record<string, unknown>;
+}
+
+// spec: api_spec_user.md → users/upgrade（访客升级；仅用户名型 login_id，手机号/邮箱待验证码服务）
+export interface UpgradeAccountRequest {
+	login_id: string;
+	password: string;
+}
+
+// spec: api_spec_user.md → users/fetch_blocked（我的拉黑列表；命名空间天生私有）
+export interface FetchBlockedRequest {
+	pagination: PaginationParams | null;
+}
+export interface BlockedUserItem {
+	user: UserInfo;
+	blocked_at: string;
+	reason: string | null;
 }
 
 // Moments 流（spec: api_spec_moment.md → moments/fetch_following、fetch_nearby）
@@ -1436,6 +1478,25 @@ export interface AdminAnnouncementItem extends SystemAnnouncementItem {
 // ===== 分享码落地（spec api_spec_public.md share/open_the_door；仅 public 版，无登录镜像） =====
 
 export type ShareType = 'user' | 'group' | 'moment' | 'location';
+
+// spec: api_spec_types.md → SharePayload（与 share_type 判别匹配的四载荷联合）
+export type SharePayload =
+	| { shared_user_id: string }
+	| { shared_group_id: string }
+	| { shared_moment_id: string }
+	| { shared_location: Location };
+
+// spec: api_spec_share.md → share/create（幂等端点：必须携带 Idempotency-Key）
+export interface CreateShareRequest {
+	share_type: ShareType;
+	payload: SharePayload;
+	expires_in_seconds: number | null; // null = 默认由系统配置
+}
+export interface ShareCreated {
+	share_id: string;
+	share_code: string;
+	expires_at: string | null;
+}
 
 export interface ShareBase {
 	share_id: string;

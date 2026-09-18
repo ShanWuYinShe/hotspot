@@ -7,6 +7,7 @@
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
 	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
+	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { getPrivateMessages, sendPrivateMessage, markPrivateRead, recallPrivateMessage, updatePrivateMessage } from '@/api';
 	import {
@@ -188,6 +189,9 @@
 			unwatch();
 		};
 	});
+
+	// 收到消息的举报（reports/create target_type='message'）
+	let reportMessageId = $state<string | null>(null);
 </script>
 
 <div class="flex min-h-0 flex-col h-full bg-surface-chat">
@@ -255,9 +259,17 @@
 		</div>
 	{:else}
 		<!-- Messages -->
-		<ChatMessageList {chat} canRecall={(msg) => msg.sent && inRecallWindow(msg.sentAt)} />
+		<ChatMessageList {chat} canRecall={(msg) => msg.sent && inRecallWindow(msg.sentAt)} onReport={(id) => (reportMessageId = id)} />
 
 		<!-- Input bar -->
 		<ChatInputBar {chat} />
 	{/if}
 </div>
+
+<ReportDialog
+	open={reportMessageId !== null}
+	targetType="message"
+	targetId={reportMessageId ?? ''}
+	targetLabel="这条消息"
+	onClose={() => (reportMessageId = null)}
+/>

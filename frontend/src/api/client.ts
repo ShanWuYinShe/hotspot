@@ -99,6 +99,15 @@ import type {
 	SendRegisterCodeRequest,
 	RequestPasswordResetRequest,
 	ResetPasswordRequest,
+	ChangePasswordRequest,
+	RevokeSessionRequest,
+	SessionList,
+	RevokeOtherSessionsResult,
+	UpgradeAccountRequest,
+	FetchBlockedRequest,
+	BlockedUserItem,
+	CreateShareRequest,
+	ShareCreated,
 	UpdateAccountRequest,
 	SetFollowRequest,
 	SetBlockRequest,
@@ -253,6 +262,14 @@ export async function requestPasswordReset(params: RequestPasswordResetRequest) 
 export async function resetPassword(params: ResetPasswordRequest)      { return request<AuthTokenPair>(Endpoints.Auth.ResetPassword, params); }
 // spec: api_spec_public.md → auth/send_register_code（手机号/邮箱型 login_id 的所有权验证，防枚举恒成功）
 export async function sendRegisterCode(params: SendRegisterCodeRequest) { return request<void>(Endpoints.Auth.SendRegisterCode, params); }
+// spec: api_spec_auth.md → auth/change_password（成功后服务端自动吊销其余会话；10401=旧密码错误）
+export async function changePassword(params: ChangePasswordRequest) { return request<void>(Endpoints.Auth.ChangePassword, params); }
+// spec: api_spec_auth.md → auth/fetch_sessions（全量活跃会话，当前会话置顶，无分页）
+export async function fetchSessions() { return request<SessionList>(Endpoints.Auth.FetchSessions); }
+// spec: api_spec_auth.md → auth/revoke_session（不允许撤销当前会话，10400；当前会话走 signout）
+export async function revokeSession(params: RevokeSessionRequest) { return request<void>(Endpoints.Auth.RevokeSession, params); }
+// spec: api_spec_auth.md → auth/revoke_other_sessions（撤销当前会话之外的所有其他活跃会话）
+export async function revokeOtherSessions() { return request<RevokeOtherSessionsResult>(Endpoints.Auth.RevokeOtherSessions); }
 
 // Users
 export async function getAccount()                        { return request<AccountData>(Endpoints.Users.GetAccount); }
@@ -264,6 +281,12 @@ export async function updateSettings(params: { settings: Partial<UserSettings> }
 }
 export async function follow(params: SetFollowRequest)              { return request<void>(Endpoints.Users.Follow, params); }
 export async function block(params: SetBlockRequest)               { return request<void>(Endpoints.Users.Block, params); }
+// 解除拉黑 = set_block 两态统一端点的 active=false 侧（spec: api_spec_user.md → users/set_block）
+export async function unblock(params: Omit<SetBlockRequest, 'active'>) { return block({ ...params, active: false }); }
+// spec: api_spec_user.md → users/fetch_blocked（我的拉黑列表，blocked_at 倒序）
+export async function fetchBlocked(params?: FetchBlockedRequest)   { return request<PaginatedData<BlockedUserItem>>(Endpoints.Users.ListBlocked, params ?? { pagination: null }); }
+// spec: api_spec_user.md → users/upgrade（访客绑定登录凭证升级为正式账号；返回升级后完整账户数据）
+export async function upgradeAccount(params: UpgradeAccountRequest) { return request<AccountData>(Endpoints.Users.Upgrade, params); }
 export async function deleteAccount(params: object)       { return request<void>(Endpoints.Users.DeleteAccount, params); }
 // spec: api_spec_user.md → users/open_the_door（include_recent_moments=true 时返回主页首屏聚合）
 export async function openTheDoor(userId: string, includeRecentMoments = false) {
@@ -327,6 +350,8 @@ export async function createReport(params: CreateReportRequest)        { return 
 
 // Chat
 export async function getPrivateChats(params?: { pagination?: PaginationParams })    { return request<PaginatedData<PrivateChatItem>>(Endpoints.PrivateChats.List, params ?? {}); }
+// spec: api_spec_chat.md → private_chats/delete { target_user_id }（仅删除自己视角的会话）
+export async function deletePrivateChat(params: { target_user_id: string }) { return request<void>(Endpoints.PrivateChats.Delete, params); }
 export async function getPrivateChatDetail(params: { target_user_id: string }) { return request<PrivateChatOpenResult>(Endpoints.PrivateChats.GetDetail, params); }
 export async function getPrivateMessages(params: ListPrivateMessagesRequest)  { return request<PaginatedData<PrivateMessageItem>>(Endpoints.PrivateMessages.List, params); }
 export async function sendPrivateMessage(params: SendPrivateMessageRequest)  { return request<MessageSentResult>(Endpoints.PrivateMessages.Send, params, { 'Idempotency-Key': newIdempotencyKey() }); }
@@ -491,3 +516,5 @@ export async function adminDeleteAnnouncement(params: { announcement_id: string 
 
 // 分享码落地（spec api_spec_public.md share/open_the_door；仅 public 版，匿名可调）
 export async function openShareDoor(params: { share_code: string }) { return request<ShareDetail>(Endpoints.Share.Get, params); }
+// 分享码创建（spec api_spec_share.md share/create；契约幂等端点：必须携带 Idempotency-Key）
+export async function createShare(params: CreateShareRequest) { return request<ShareCreated>(Endpoints.Share.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }

@@ -17,6 +17,8 @@ export interface ChatItem {
 	timestamp: string;
 	unread: number;
 	isPinned: boolean;
+	/** 免打扰（spec PrivateChatItem.is_muted / GroupViewerState.is_muted）；不阻塞未读徽章，仅弱化提醒。 */
+	isMuted: boolean;
 	online: boolean;
 	kind?: 'private' | 'group';
 }

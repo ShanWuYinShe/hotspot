@@ -16,17 +16,26 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { getAccount, updateAccount, deleteAccount , netError } from '@/api';
+	import type { Gender } from '@/api/types';
 	import { uploadMediaFile } from '@/lib/upload';
 	import { ROUTES } from '@/lib/routes';
 	import { smartBack } from '@/lib/smart-back';
 
-	// 编辑资料：昵称/简介/兴趣标签（5 个上限）+ 注销按钮。
+	// 编辑资料：昵称/简介/兴趣标签（5 个上限）+ 性别 + 注销按钮。
 
 	const TAG_OPTIONS = ['摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术', '科技', '游戏', '户外', '时尚', '电影'];
+	// 性别（spec: api_spec_user.md → Gender；'other' 覆盖非二元/不愿透露；null = 未设置）
+	const GENDER_OPTIONS: { id: Gender; label: string }[] = [
+		{ id: 'male', label: '男' },
+		{ id: 'female', label: '女' },
+		{ id: 'other', label: '其他' }
+	];
 
 	let nickname = $state('');
 	let bio = $state('');
 	let tags = $state<Set<string>>(new Set());
+	// gender 为 null 时保存不携带该字段（updateAccount 为 patch 语义，undefined = 保持不变）
+	let gender = $state<Gender | null>(null);
 	let saved = $state(false);
 	let savedTimer: number | undefined;
 	$effect(() => () => window.clearTimeout(savedTimer));
@@ -67,12 +76,13 @@
 				}
 				const data = res.code === 0 ? res.data : null;
 				if (data) {
-					// spec: AccountData.nickname, .bio, .tags, .avatar_url, .user_id
+					// spec: AccountData.nickname, .bio, .tags, .avatar_url, .user_id, .gender?
 					nickname = data.nickname;
 					bio = data.bio ?? '';
 					avatar = data.avatar_url ?? '';
 					userId = data.user_id;
 					if (data.tags) tags = new Set(data.tags);
+					gender = data.gender ?? null;
 				} else {
 					// 加载失败必须显式暴露：否则空表单 + 可保存 = 用户一键清空自己的资料
 					loadError = res.message ?? '加载资料失败';
@@ -114,7 +124,8 @@
 			const res = await updateAccount({
 				nickname: trimmedNickname,
 				bio: bio.trim(),
-				tags: Array.from(tags)
+				tags: Array.from(tags),
+				...(gender ? { gender } : {})
 			});
 			if (res.code !== 0) throw new Error(res.message || '保存失败');
 			saved = true;
@@ -296,6 +307,20 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Gender（spec: updateAccount.gender，单选；不选 = 保持服务端当前值） -->
+	<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
+		<legend class="flex items-center gap-1.5 text-text-secondary text-xs uppercase tracking-field">
+			性别
+		</legend>
+		<div class="flex flex-wrap gap-2">
+			{#each GENDER_OPTIONS as g (g.id)}
+				<TagPill active={gender === g.id} onClick={() => (gender = gender === g.id ? null : g.id)}>
+					{g.label}
+				</TagPill>
+			{/each}
+		</div>
+	</fieldset>
 
 	{#if formError}
 		<p class="text-xs text-status-danger" role="alert">{formError}</p>

@@ -13,6 +13,7 @@ const chat = {
 	timestamp: '2026-08-10T10:24:00Z',
 	unread: 3,
 	isPinned: false,
+	isMuted: false,
 	online: true
 };
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { MapPin, Heart, MessageCircle, Share2, Bookmark, Check } from '@lucide/svelte';
+	import { MapPin, Heart, MessageCircle, Share2, Bookmark, Check, Flag } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
@@ -8,6 +8,7 @@
 	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { platform } from '@/stores/platform.svelte';
+	import { auth } from '@/stores/auth.svelte';
 
 	// 动态详情内容体：作者/正文/图片（单图全幅封面、多图网格）/操作条/评论区。
 	// 评论输入栏由页面经 SplitPageLayout footer 渲染，本组件只负责内容体。
@@ -56,6 +57,7 @@
 		onCommentClick,
 		onReply,
 		onToggleCommentLike,
+		onReportComment,
 		onLoadMoreComments
 	}: {
 		moment: MomentData;
@@ -76,6 +78,8 @@
 		onReply: (user: string) => void;
 		/** 评论点赞切换（reactions/set target_type='comment'） */
 		onToggleCommentLike: (commentId: string) => void;
+		/** 评论举报（reports/create target_type='comment'） */
+		onReportComment: (commentId: string) => void;
 		onLoadMoreComments: () => void;
 	} = $props();
 
@@ -275,6 +279,15 @@
 							class="hover-action hit-slop focus-ring text-text-secondary text-xs"
 							onclick={() => onReply(c.user)}
 						>回复</button>
+						{#if c.userId && c.userId !== auth.user?.user_id}
+							<!-- 非本人评论可举报（spec: api_spec_report.md，目标属于当前用户时服务端 10400） -->
+							<button
+								type="button"
+								class="hover-action hit-slop focus-ring text-text-secondary text-xs"
+								aria-label={`举报 ${c.user} 的评论`}
+								onclick={() => onReportComment(c.id)}
+							>举报</button>
+						{/if}
 					</div>
 				</div>
 			</div>

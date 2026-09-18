@@ -19,6 +19,8 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		onRetry,
 		onSelect,
 		onTogglePin,
+		onToggleMute,
+		onDelete,
 		selectedId = null,
 		compact = false,
 		fill = false
@@ -31,6 +33,10 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		onRetry: () => void;
 		onSelect: (chat: ChatItem) => void;
 		onTogglePin: (chat: ChatItem) => void;
+		/** 免打扰切换（spec: update_preferences is_muted）；缺省不渲染入口 */
+		onToggleMute?: (chat: ChatItem) => void;
+		/** 删除会话（仅私聊有删除端点，群聊由调用方不渲染入口）；缺省不渲染 */
+		onDelete?: (chat: ChatItem) => void;
 		selectedId?: number | string | null;
 		compact?: boolean;
 		fill?: boolean;
@@ -69,6 +75,8 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 				isSelected={selectedId === chat.id}
 				onClick={() => onSelect(chat)}
 				onTogglePin={() => onTogglePin(chat)}
+				onToggleMute={onToggleMute ? () => onToggleMute(chat) : undefined}
+				onDelete={onDelete ? () => onDelete(chat) : undefined}
 				{compact}
 			/>
 		{/each}

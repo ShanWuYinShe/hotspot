@@ -22,6 +22,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { smartBack } from '@/lib/smart-back';
+	import { copyShareLink } from '@/lib/share';
 
 	// 用户详情：关注/私信/屏蔽/举报/备注 + 瞬间画廊 + 桌面 Rail。
 
@@ -205,15 +206,17 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		}
 	};
 
+	// 分享：share/create 生成分享码并复制 /share/[code] 落地链接；
+	// 创建失败（匿名/网络异常）降级为复制页面原始链接（lib/share 统一降级链）。
 	const copyProfileLink = async () => {
-		try {
-			await navigator.clipboard?.writeText(`${window.location.origin}${ROUTES.user(uid)}`);
-			shareCopied = true;
-			showToast('链接已复制', 'success');
-			window.setTimeout(() => (shareCopied = false), 1600);
-		} catch {
+		const result = await copyShareLink({ type: 'user', id: uid });
+		if (result === 'failed') {
 			showToast('复制失败，请手动复制地址栏链接', 'danger');
+			return;
 		}
+		shareCopied = true;
+		showToast(result === 'shared' ? '分享链接已复制' : '链接已复制', 'success');
+		window.setTimeout(() => (shareCopied = false), 1600);
 	};
 </script>
 <svelte:head>

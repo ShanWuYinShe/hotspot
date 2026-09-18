@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { CheckCheck, MoreHorizontal, Check } from '@lucide/svelte';
+	import { CheckCheck, MoreHorizontal, Check, Flag } from '@lucide/svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 
 	// MessageBubble — 聊天气泡单元（私聊 ChatView / 群聊 GroupChatView 共用）。
 	// 发送方向由 sent 决定；recalled 渲染为灰色斜体「消息已撤回」；自己发出的非撤回消息
 	// 可挂载 ⋮ 菜单（撤回/编辑，按 canRecall/canEdit 动态显示）；编辑为内联 textarea 态。
+	// 收到的消息（!sent）可挂载 ⋮ 菜单「举报」（canReport，reports/create target_type='message'）。
 
 	let {
 		text,
@@ -17,8 +18,10 @@
 		editedAt = '',
 		canRecall = false,
 		canEdit = false,
+		canReport = false,
 		onRecall,
-		onEdit
+		onEdit,
+		onReport
 	}: {
 		text: string;
 		sent: boolean;
@@ -30,8 +33,11 @@
 		editedAt?: string;
 		canRecall?: boolean;
 		canEdit?: boolean;
+		/** 收到的消息可举报（own messages 服务端 10400，不展示入口） */
+		canReport?: boolean;
 		onRecall?: (id: string) => void;
 		onEdit?: (id: string, content: string) => void;
+		onReport?: (id: string) => void;
 	} = $props();
 
 	let menuEl = $state<HTMLElement | null>(null);
@@ -40,7 +46,9 @@
 	let draft = $state('');
 
 	// $derived：keyed each 复用实例时 props（recalled/canRecall/canEdit）会变化，需响应式重算
-	const hasMenu = $derived(sent && !recalled && (canRecall || canEdit));
+	const hasMenu = $derived(
+		!recalled && ((sent && (canRecall || canEdit)) || (!sent && canReport))
+	);
 
 	const startEdit = () => {
 		draft = text;
@@ -55,6 +63,10 @@
 	const handleRecall = () => {
 		menuOpen = false;
 		onRecall?.(messageId);
+	};
+	const handleReport = () => {
+		menuOpen = false;
+		onReport?.(messageId);
 	};
 </script>
 
@@ -148,6 +160,12 @@
 				{#if canRecall}
 					<!-- 危险操作：hover/键盘高亮走 danger 淡底档（与普通项 accent-soft 区分） -->
 					<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={handleRecall}>撤回</DropdownMenu.Item>
+				{/if}
+				{#if canReport}
+					<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={handleReport}>
+						<Flag class="size-3.5" strokeWidth={1.75} />
+						举报
+					</DropdownMenu.Item>
 				{/if}
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>

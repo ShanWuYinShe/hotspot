@@ -1,7 +1,7 @@
 <script lang="ts">
 import { formatCount } from '@/lib/utils';
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Bell, Check, LogOut, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, UserPlus } from '@lucide/svelte';
+	import { ArrowLeft, Bell, Check, Flag, LogOut, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, UserPlus, X } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -12,6 +12,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
+	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
+	import * as Dialog from '@/components/ui/dialog';
 	import GroupAnnouncementDialog from '@/components/groups/GroupAnnouncementDialog.svelte';
 	import MembersList from './shared/MembersList.svelte';
 	import ApplicationsList from './shared/ApplicationsList.svelte';
@@ -151,6 +153,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		leaveConfirmOpen = false;
 	};
 
+	// 更多操作菜单（封面右上角）：举报群组（spec: api_spec_report.md；群主举报自己的群
+	// 服务端 10400，故群主不展示入口）
+	let moreOpen = $state(false);
+	let reportOpen = $state(false);
+	const canReportGroup = $derived(gd.myRole !== 'owner');
+
 	// 申请审批（owner/admin）：同意后成员列表由工厂同步刷新
 	// 审批防重复提交（对齐 notify 页 invitePending 范式）：连点双发会产生
 	// 第二次「申请不存在」的失败提示甚至重复入群。
@@ -230,6 +238,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		<div class="absolute inset-0" style="background:var(--cst-surface-cover-scrim);"></div>
 		<div class="absolute left-5 top-4">
 			<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} variant="overlay" tone="inverse" />
+		</div>
+		<div class="absolute right-5 top-4">
+			<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = true)} variant="overlay" tone="inverse" />
 		</div>
 		<div class="absolute bottom-5 left-6 right-6">
 			<span class="inline-flex h-6 items-center justify-center rounded-full bg-surface-glass-badge px-2.5 text-xs font-medium leading-none text-content-inverse backdrop-blur-[var(--cst-blur-sm)]">{gd.detail.category}</span>
@@ -417,6 +428,42 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	confirmLabel="确认退出"
 	onCancel={() => (leaveConfirmOpen = false)}
 	onConfirm={handleLeaveConfirm}
+/>
+
+<!-- 更多操作菜单（bottom sheet，对齐用户详情页「更多操作」交互模式） -->
+<Dialog.Root open={moreOpen} onOpenChange={(next) => (next ? undefined : (moreOpen = false))}>
+	<Dialog.Content
+		side="bottom"
+		class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl p-5"
+		aria-label={`${gd.detail.name} 的更多操作`}
+		style="box-shadow:var(--cst-elevation-modal);"
+	>
+		<div class="flex items-center justify-between">
+			<div>
+				<p class="eyebrow">更多操作</p>
+				<p class="mt-1 text-md text-text-primary">{gd.detail.name}</p>
+			</div>
+			<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} />
+		</div>
+		{#if canReportGroup}
+			<button
+				type="button"
+				class="hover-btn mt-4 flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm text-status-danger outline-none hover:bg-danger-bg focus-visible:ring-2 focus-visible:ring-status-danger"
+				onclick={() => { moreOpen = false; reportOpen = true; }}
+			>
+				<Flag size={14} />
+				举报群组
+			</button>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
+
+<ReportDialog
+	open={reportOpen}
+	targetType="group"
+	targetId={params.groupId ?? ''}
+	targetLabel="该群组"
+	onClose={() => (reportOpen = false)}
 />
 
 <GroupAnnouncementDialog

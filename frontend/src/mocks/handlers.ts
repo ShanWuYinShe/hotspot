@@ -224,6 +224,20 @@ export const handlers = [
   // 发送注册验证码（防枚举：无论 login_id 是否已注册均成功）
   http.post(`${PUBLIC_API}/auth/send_register_code`, () => authFormScenarioError() ?? json(apiOk(null))),
 
+  // ── Auth 会话管理（spec: api_spec_auth.md，/api/v1/auth/*）─────────────
+  // change_password：mock 无密码真值校验，恒成功（真实后端 10401=旧密码错误）。
+  http.post(`${API}/auth/change_password`, () => requireMockAuth() ?? json(apiOk(null))),
+  // fetch_sessions：返回当前会话 + 两个其他设备会话（当前置顶，其余按 last_active_at 倒序）。
+  http.post(`${API}/auth/fetch_sessions`, () => requireMockAuth() ?? json(apiOk({
+    items: [
+      { session_id: "sess_cur", device_id: "mock-device-1", device_type: "Web", device_name: "Chrome on macOS", ip_address: "192.168.xxx.xxx", ip_location: "江苏徐州", created_at: "2026-09-01T08:00:00Z", last_active_at: new Date().toISOString(), is_current: true },
+      { session_id: "sess_ipad", device_id: "mock-device-2", device_type: "iOS", device_name: "iPad Air", ip_address: "223.xxx.xxx.7", ip_location: "江苏南京", created_at: "2026-09-10T09:30:00Z", last_active_at: new Date(Date.now() - 3600000).toISOString(), is_current: false },
+      { session_id: "sess_phone", device_id: "mock-device-3", device_type: "Android", device_name: "HarmonyOS Phone", ip_address: "117.xxx.xxx.42", ip_location: "江苏徐州", created_at: "2026-09-12T21:10:00Z", last_active_at: new Date(Date.now() - 86400000).toISOString(), is_current: false },
+    ],
+  }))),
+  http.post(`${API}/auth/revoke_session`, () => requireMockAuth() ?? json(apiOk(null))),
+  http.post(`${API}/auth/revoke_other_sessions`, () => requireMockAuth() ?? json(apiOk({ revoked_count: 2 }))),
+
   // ── Users ──────────────────────────────────────
   // get_account / get_settings are auth-required → guarded. open_the_door is
   // optional → not guarded (anonymous sees public profile, my_state omitted).
@@ -281,6 +295,18 @@ http.post(`${API}/users/fetch_moments`, async ({ request }) => {
   http.post(`${API}/users/fetch_reacted_moments`, () => requireMockAuth() ?? json(paginated(mockMoments.slice(6, 18)))),
   http.post(`${API}/users/set_follow`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/users/set_block`, () => requireMockAuth() ?? json(apiOk(null))),
+  // 我的拉黑列表（spec: users/fetch_blocked，blocked_at 倒序；解除拉黑走 set_block active=false）
+  http.post(`${API}/users/fetch_blocked`, () => requireMockAuth() ?? json(paginated([
+    { user: mockUsers[5], blocked_at: "2026-09-05T10:00:00Z", reason: "私信骚扰" },
+    { user: mockUsers[6], blocked_at: "2026-08-21T09:00:00Z", reason: null },
+  ]))),
+  // 访客升级（spec: users/upgrade；返回升级后完整账户数据，user_type 变为 normal）
+  http.post(`${API}/users/upgrade`, async ({ request }) => {
+    const auth = requireMockAuth();
+    if (auth) return auth;
+    const body = (await request.json().catch(() => ({}))) as { login_id?: string };
+    return json(apiOk({ ...mockAccount, user_type: "normal", email: body?.login_id ? `${body.login_id}@example.com` : mockAccount.email }));
+  }),
 
   // ── Moments ────────────────────────────────────
   // search/open_the_door 是 auth-optional（匿名可见公开 moments）。
@@ -467,19 +493,19 @@ http.post(`${API}/moments/fetch_created`, () => {
   http.post(`${API}/groups/admin/invites/create`, () => requireMockAuth() ?? json(apiOk({ invite_id: `inv-${Date.now()}`, expires_at: new Date(Date.now() + 86400000).toISOString() }))),
   http.post(`${API}/groups/admin/members/remove`, () => requireMockAuth() ?? json(apiOk(null))),
   // 封禁名单（读，owner/admin 可见；最近封禁在前）
-  http.post(`${API}/groups/admin/members/fetch_banned`, () => json(apiOk(paginated([
+  http.post(`${API}/groups/admin/members/fetch_banned`, () => json(paginated([
     { user: mockUsers[5], banned_at: "2026-07-20T08:00:00Z", reason: "恶意刷屏" },
     { user: mockUsers[6], banned_at: "2026-07-18T08:00:00Z", reason: "发布违规内容" },
-  ])))),
+  ]))),
   // 已发邀请：sent/list 默认仅返回 pending（契约过期语义：过期自动置 revoked）
-  http.post(`${API}/groups/admin/invites/fetch_sent`, () => json(apiOk(paginated(mockUsers.slice(1, 4).map((u, i) => ({
+  http.post(`${API}/groups/admin/invites/fetch_sent`, () => json(paginated(mockUsers.slice(1, 4).map((u, i) => ({
     invite_id: `inv-sent-${i + 1}`,
     invitee: u,
     inviter: mockUsers[0],
     status: "pending",
     created_at: new Date(Date.now() - (i + 1) * 86400000).toISOString(),
     expires_at: new Date(Date.now() + (7 - i) * 86400000).toISOString(),
-  })))))),
+  }))))),
   // 撤销已发邀请（写操作 → 需登录）
   http.post(`${API}/groups/admin/invites/revoke`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${PUBLIC_API}/groups/announcements/fetch`, () => json(apiOk({ items: [
@@ -537,17 +563,17 @@ http.post(`${API}/moments/fetch_created`, () => {
     }));
   }),
   // 申请审批（管理员视角；list 默认仅返回 pending，与契约工作台语义一致）
-  http.post(`${API}/groups/admin/applications/fetch`, () => json(apiOk(paginated([
+  http.post(`${API}/groups/admin/applications/fetch`, () => json(paginated([
     { application_id: "app_1", group: mockGroups[0].group, applicant: mockUsers[1], message: "想加入一起拍照", status: "pending", created_at: new Date(Date.now() - 2 * 3600000).toISOString(), expires_at: new Date(Date.now() + 46 * 3600000).toISOString() },
     { application_id: "app_2", group: mockGroups[0].group, applicant: mockUsers[2], status: "pending", created_at: new Date(Date.now() - 5 * 3600000).toISOString(), expires_at: new Date(Date.now() + 43 * 3600000).toISOString() },
-  ])))),
+  ]))),
   http.post(`${API}/groups/admin/applications/approve`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${API}/groups/admin/applications/reject`, () => requireMockAuth() ?? json(apiOk(null))),
   // 我收到的邀请（received/list 默认仅 pending；inv_1 与通知 notif_4 呼应，演示通知与待办双入口）
-  http.post(`${API}/groups/invites/fetch_received`, () => json(apiOk(paginated([
+  http.post(`${API}/groups/invites/fetch_received`, () => json(paginated([
     { invite_id: "inv_1", group: mockGroups[0].group, inviter: mockUsers[4], message: "周末一起拍照呀", status: "pending", created_at: new Date(Date.now() - 10 * 3600000).toISOString(), expires_at: new Date(Date.now() + 38 * 3600000).toISOString() },
     { invite_id: "inv_3", group: mockGroups[3].group, inviter: mockUsers[2], status: "pending", created_at: new Date(Date.now() - 26 * 3600000).toISOString(), expires_at: new Date(Date.now() + 22 * 3600000).toISOString() },
-  ])))),
+  ]))),
   http.post(`${API}/groups/invites/accept`, () => requireMockAuth() ?? json(apiOk({ group_id: "group_1" }))),
   http.post(`${API}/groups/invites/reject`, () => requireMockAuth() ?? json(apiOk(null))),
   // 转让/解散（仅群主；dismiss 成功后由前端 onDismissed 处理跳转，WS GroupDismissed 真实后端推送）
@@ -679,6 +705,28 @@ http.post(`${API}/moments/fetch_created`, () => {
   // ── Reports ────────────────────────────────────
   // spec ReportCreated：is_duplicate 恒在（true = 幂等回放已有举报单）
   http.post(`${API}/reports/create`, () => requireMockAuth() ?? json(apiOk({ report_id: "report_1", is_duplicate: false }))),
+
+  // ── Share（spec: api_spec_share.md share/create）──────────────
+  // 幂等端点（Idempotency-Key）；share_code 为 12 位 [A-HJ-NP-Z2-9] 大写字符集。
+  http.post(`${API}/share/create`, async ({ request }) => {
+    const auth = requireMockAuth();
+    if (auth) return auth;
+    const body = (await request.json().catch(() => ({}))) as { share_type?: string };
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const code = Array.from({ length: 12 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+    return json(apiOk({
+      share_id: `share_${Date.now()}`,
+      share_code: code,
+      expires_at: body?.share_type === "location" ? null : new Date(Date.now() + 7 * 86400000).toISOString(),
+    }));
+  }),
+
+  // 我提交的入群申请（spec: groups/applications/fetch_submitted；cancel 撤回 pending 申请）
+  http.post(`${API}/groups/applications/fetch_submitted`, () => requireMockAuth() ?? json(paginated([
+    { application_id: "app_sub_1", group: mockGroups[2].group, applicant: mockUsers[0], message: "想加入一起拍摄 vlog", status: "pending", created_at: new Date(Date.now() - 6 * 3600000).toISOString(), expires_at: new Date(Date.now() + 66 * 3600000).toISOString() },
+    { application_id: "app_sub_2", group: mockGroups[3].group, applicant: mockUsers[0], status: "rejected", created_at: new Date(Date.now() - 3 * 86400000).toISOString(), handled_at: new Date(Date.now() - 2 * 86400000).toISOString(), handled_by: mockUsers[2] },
+  ]))),
+  http.post(`${API}/groups/applications/cancel`, () => requireMockAuth() ?? json(apiOk(null))),
   // ── Public 双版本端点（/public/v1）────────────────
   // 匿名浏览时 client 会切到 public 前缀；这里为常用只读端点提供 mock。
   // spec: public users/search 返回 PublicUserItem（同 UserItem 去 relation/social_context，
@@ -800,21 +848,21 @@ http.post(`${API}/moments/fetch_created`, () => {
   http.post(`${ADMIN_API}/rbac/roles/update`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${ADMIN_API}/rbac/roles/delete`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${ADMIN_API}/rbac/roles/set_permissions`, () => requireMockAuth() ?? json(apiOk(null))),
-  http.post(`${ADMIN_API}/rbac/admins/fetch`, () => requireMockAuth() ?? json(apiOk(paginated([
+  http.post(`${ADMIN_API}/rbac/admins/fetch`, () => requireMockAuth() ?? json(paginated([
     { user: mockUsers[0], granted_at: "2026-01-10T08:00:00Z", permissions: ["*"], roles: [{ role_id: "role_super", name: "超级管理员" }] },
     { user: mockUsers[1], granted_at: "2026-03-02T09:30:00Z", permissions: ["admin.reports.read", "admin.reports.write", "admin.tags.read", "admin.tags.write"], roles: [{ role_id: "role_moderator", name: "内容审核" }] },
-  ])))),
+  ]))),
   http.post(`${ADMIN_API}/rbac/admins/award`, () => requireMockAuth() ?? json(apiOk(null))),
   http.post(`${ADMIN_API}/rbac/admins/revoke`, () => requireMockAuth() ?? json(apiOk(null))),
 
-  http.post(`${ADMIN_API}/audit/fetch`, () => requireMockAuth() ?? json(apiOk(paginated([
+  http.post(`${ADMIN_API}/audit/fetch`, () => requireMockAuth() ?? json(paginated([
     { log_id: "log_8", action: "report.judge", operator: mockUsers[0], target_type: "report", target_id: "rep_2", target_name: null, details: { type: "report.judge", report_id: "rep_2", action: "resolve", note: "确认垃圾营销" }, ip_location: "江苏徐州", ip_address: "117.136.8.1", device_summary: "Chrome 152 / macOS", created_at: "2026-09-01T12:00:00Z" },
     { log_id: "log_7", action: "user.ban", operator: mockUsers[0], target_type: "user", target_id: "user_lin", target_name: "林一", details: { type: "user.ban", reason: "多次发布违规内容", duration_days: 7 }, ip_location: "江苏徐州", ip_address: "117.136.8.1", device_summary: "Chrome 152 / macOS", created_at: "2026-08-30T10:00:00Z" },
     { log_id: "log_6", action: "announcement.create", operator: mockUsers[0], target_type: "announcement", target_id: "ann_1", target_name: "国庆假期活动预告", details: { type: "announcement.create", title: "国庆假期活动预告" }, ip_location: "江苏徐州", ip_address: null, device_summary: "Chrome 152 / macOS", created_at: "2026-08-28T09:00:00Z" },
     { log_id: "log_5", action: "group.dismiss", operator: mockUsers[1], target_type: "group", target_id: "group_4", target_name: "黄楼夜读角", details: { type: "group.dismiss", reason: "长期无管理" }, ip_location: "江苏南京", ip_address: "58.241.0.2", device_summary: "Safari 19 / iPadOS", created_at: "2026-08-20T16:30:00Z" },
     { log_id: "log_4", action: "tag.set_ban", operator: mockUsers[1], target_type: "tag", target_id: "刷单", target_name: "刷单", details: { type: "tag.set_ban", name: "刷单", active: true }, ip_location: "江苏南京", ip_address: "58.241.0.2", device_summary: "Safari 19 / iPadOS", created_at: "2026-08-18T11:00:00Z" },
     { log_id: "log_3", action: "role.create", operator: mockUsers[0], target_type: "role", target_id: "role_ops", target_name: "用户运营", details: { type: "role.create", role_name: "用户运营", permissions: ["admin.users.read", "admin.users.write"] }, ip_location: "江苏徐州", ip_address: "117.136.8.1", device_summary: "Chrome 152 / macOS", created_at: "2026-08-10T08:00:00Z" },
-  ])))),
+  ]))),
 
   http.post(`${ADMIN_API}/app_config`, () => requireMockAuth() ?? json(apiOk({
     features: { enable_public_registration: true, enable_guest_register: true, enable_moments: true, enable_nearby_people: true },
@@ -831,7 +879,7 @@ http.post(`${API}/moments/fetch_created`, () => {
 
   http.post(`${ADMIN_API}/users/search`, ({ request }) => {
     if (isMockLoggedIn() === false) return requireMockAuth()!;
-    return json(apiOk(paginated(mockUsers.map((u, i) => ({
+    return json(paginated(mockUsers.map((u, i) => ({
       ...mockUserItem(u),
       status: i === 5 ? "banned" : "normal",
       banned_until: i === 5 ? "2026-09-06T00:00:00Z" : null,
@@ -845,42 +893,42 @@ http.post(`${API}/moments/fetch_created`, () => {
       last_login_location: "江苏徐州",
       email: `${u.user_id.split("_")[1]}@example.com`,
       phone: null,
-    })))));
+    }))));
   }),
   http.post(`${ADMIN_API}/users/open_the_door`, () => requireMockAuth() ?? json(apiError(10300, "资源不存在"))),
   http.post(`${ADMIN_API}/users/set_ban`, () => requireMockAuth() ?? json(apiOk(null))),
 
-  http.post(`${ADMIN_API}/groups/search`, () => requireMockAuth() ?? json(apiOk(paginated(mockGroups.map((g, i) => ({
+  http.post(`${ADMIN_API}/groups/search`, () => requireMockAuth() ?? json(paginated(mockGroups.map((g, i) => ({
     ...g,
     viewer_state: null,
     owner: mockUsers[i % mockUsers.length],
     created_at: "2026-02-01T08:00:00Z",
-  })))))),
+  }))))),
   http.post(`${ADMIN_API}/groups/open_the_door`, () => requireMockAuth() ?? json(apiError(10300, "资源不存在"))),
   http.post(`${ADMIN_API}/groups/dismiss`, () => requireMockAuth() ?? json(apiOk(null))),
 
-  http.post(`${ADMIN_API}/reports/fetch`, () => requireMockAuth() ?? json(apiOk(paginated([
+  http.post(`${ADMIN_API}/reports/fetch`, () => requireMockAuth() ?? json(paginated([
     { report_id: "rep_1", target_type: "moment", target_id: "moment_2", reason: "spam", description: "疑似营销刷屏", status: "pending", created_at: "2026-09-08T10:00:00Z", handled_at: null, message_snapshot: null, resolution: null, reporter: mockUsers[2], handled_by: null, handle_note: null },
     { report_id: "rep_2", target_type: "user", target_id: "user_lin", reason: "harassment", description: "私信骚扰", status: "resolved", created_at: "2026-09-01T09:00:00Z", handled_at: "2026-09-01T12:00:00Z", message_snapshot: null, resolution: { action: "resolve", resolved_at: "2026-09-01T12:00:00Z", note: "确认垃圾营销" }, reporter: mockUsers[3], handled_by: mockUsers[0], handle_note: "确认垃圾营销" },
     { report_id: "rep_3", target_type: "comment", target_id: "comment_7", reason: "hate_speech", description: null, status: "pending", created_at: "2026-09-07T20:00:00Z", handled_at: null, message_snapshot: null, resolution: null, reporter: mockUsers[4], handled_by: null, handle_note: null },
     { report_id: "rep_4", target_type: "group", target_id: "group_4", reason: "misinformation", description: "群内传播不实信息", status: "dismissed", created_at: "2026-08-25T09:00:00Z", handled_at: "2026-08-26T10:00:00Z", message_snapshot: null, resolution: { action: "dismiss", resolved_at: "2026-08-26T10:00:00Z", note: "证据不足" }, reporter: mockUsers[5], handled_by: mockUsers[1], handle_note: "证据不足" },
-  ])))),
+  ]))),
   http.post(`${ADMIN_API}/reports/judge`, () => requireMockAuth() ?? json(apiOk(null))),
 
-  http.post(`${ADMIN_API}/tags/search`, () => requireMockAuth() ?? json(apiOk(paginated([
+  http.post(`${ADMIN_API}/tags/search`, () => requireMockAuth() ?? json(paginated([
     { name: "摄影", usage_count: 128, tag_id: "tag_1", created_at: "2026-01-01T00:00:00Z" },
     { name: "旅行", usage_count: 96, tag_id: "tag_2", created_at: "2026-01-01T00:00:00Z" },
     { name: "音乐", usage_count: 74, tag_id: "tag_3", created_at: "2026-01-01T00:00:00Z" },
     { name: "美食", usage_count: 65, tag_id: "tag_4", created_at: "2026-01-01T00:00:00Z" },
     { name: "刷单", usage_count: 12, tag_id: "tag_5", created_at: "2026-06-01T00:00:00Z" },
     { name: "代开发票", usage_count: 3, tag_id: "tag_6", created_at: "2026-06-15T00:00:00Z" },
-  ])))),
+  ]))),
   http.post(`${ADMIN_API}/tags/set_ban`, () => requireMockAuth() ?? json(apiOk(null))),
 
-  http.post(`${ADMIN_API}/announcements/fetch`, () => requireMockAuth() ?? json(apiOk(paginated([
+  http.post(`${ADMIN_API}/announcements/fetch`, () => requireMockAuth() ?? json(paginated([
     { announcement_id: "ann_2", title: "社区规范更新", content: "《社区规范》 v2.1 已生效，请留意点赞与评论的新约定。", severity: "warning", action_url: "https://hotspot.app/terms", created_at: "2026-08-20T10:00:00Z", created_by: mockUsers[0], send_push: true, push_sent_at: "2026-08-20T10:05:00Z", view_count: 1520 },
     { announcement_id: "ann_1", title: "国庆假期活动预告", content: "国庆期间将开启「城市漫游」主题活动，发布带 #城市漫游 标签的瞬间即可参与。", severity: "info", action_url: null, created_at: "2026-08-28T09:00:00Z", created_by: mockUsers[0], send_push: false, push_sent_at: null, view_count: 860 },
-  ])))),
+  ]))),
   http.post(`${ADMIN_API}/announcements/create`, () => requireMockAuth() ?? json(apiOk({
     announcement_id: `ann_${Date.now()}`, title: "新公告", content: "", severity: "info", action_url: null,
     created_at: new Date().toISOString(), created_by: mockUsers[0], send_push: false, push_sent_at: null, view_count: 0,

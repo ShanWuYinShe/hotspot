@@ -12,6 +12,7 @@ function chat(partial: Omit<Partial<ChatItem>, 'timestamp' | 'time'> & { id: str
 		time: '',
 		unread: 0,
 		isPinned: false,
+		isMuted: false,
 		online: false,
 		...partial
 	};

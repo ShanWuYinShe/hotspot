@@ -6,6 +6,7 @@
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
 	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
+	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { getGroupDetail, getGroupMessages, sendGroupMessage, markGroupRead, recallGroupMessage, recallGroupMessageAsAdmin, updateGroupMessage } from '@/api';
 	import { WS_GROUP_MESSAGE_EVENT, WS_GROUP_MESSAGE_UPDATE_EVENT, wsClient } from '@/lib/ws/client';
@@ -181,6 +182,9 @@
 			typing.reset();
 		};
 	});
+
+	// 收到消息的举报（reports/create target_type='message'）
+	let reportMessageId = $state<string | null>(null);
 </script>
 
 <div class="flex min-h-0 flex-col h-full bg-surface-chat">
@@ -240,9 +244,17 @@
 		</div>
 	{:else}
 		<!-- Messages -->
-		<ChatMessageList {chat} canRecall={canRecallMessage} showSenderNames />
+		<ChatMessageList {chat} canRecall={canRecallMessage} showSenderNames onReport={(id) => (reportMessageId = id)} />
 
 		<!-- Input bar -->
 		<ChatInputBar {chat} />
 	{/if}
 </div>
+
+<ReportDialog
+	open={reportMessageId !== null}
+	targetType="message"
+	targetId={reportMessageId ?? ''}
+	targetLabel="这条消息"
+	onClose={() => (reportMessageId = null)}
+/>

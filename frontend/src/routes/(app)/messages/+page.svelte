@@ -12,8 +12,10 @@
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
 	import NewConversationSheet from '@/components/overlays/NewConversationSheet.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import { getPrivateChats, listMyGroups, markPrivateRead, markGroupRead, updatePrivateChatPreferences, updateGroupPreferences , netError } from '@/api';
+	import { getPrivateChats, deletePrivateChat, listMyGroups, markPrivateRead, markGroupRead, updatePrivateChatPreferences, updateGroupPreferences , netError } from '@/api';
+	import { showToast } from '@/stores/toast.svelte';
 	import { formatChatListTime } from '@/lib/chat.svelte';
 	import { compareChatItems, type ChatItem } from '@/lib/chat-list';
 	import { ROUTES } from '@/lib/routes';
@@ -66,6 +68,7 @@
 					timestamp: c.last_message?.sent_at ?? c.last_activity_at ?? '',
 					unread: c.unread_count ?? 0,
 					isPinned: c.is_pinned ?? false,
+					isMuted: c.is_muted ?? false,
 					online: c.presence_status === 'online',
 					kind: 'private'
 				}));
@@ -84,6 +87,7 @@
 						timestamp: c.last_message?.sent_at ?? c.last_activity_at ?? '',
 						unread: c.viewer_state?.unread_count ?? 0,
 						isPinned: c.viewer_state?.is_pinned ?? false,
+						isMuted: c.viewer_state?.is_muted ?? false,
 						online: false,
 						group: true,
 						kind: 'group'
@@ -149,6 +153,45 @@
 			chats = chats.map((c) => (c.id === chat.id ? { ...c, isPinned: !next } : c)).sort(compareChatItems);
 		});
 	};
+
+	// 免打扰开关：与置顶同款乐观更新（spec: private_chats|groups update_preferences is_muted），
+	// 失败回滚并提示。免打扰不改变排序与未读计数，仅弱化提醒语义。
+	const toggleMute = (chat: ChatItem) => {
+		const next = !chat.isMuted;
+		chats = chats.map((c) => (c.id === chat.id ? { ...c, isMuted: next } : c));
+		const req =
+			chat.kind === 'group'
+				? updateGroupPreferences({ group_id: String(chat.id), is_muted: next })
+				: updatePrivateChatPreferences({ target_user_id: chat.peerUserId || String(chat.id), is_muted: next });
+		void req
+			.then((res) => {
+				if (res.code !== 0) throw new Error(res.message || '设置失败');
+			})
+			.catch(() => {
+				chats = chats.map((c) => (c.id === chat.id ? { ...c, isMuted: !next } : c));
+				showToast('免打扰设置失败，请重试', 'danger');
+			});
+	};
+
+	// 删除会话（仅私聊；spec: private_chats/delete 只影响自己视角，对方不受影响）：
+	// ConfirmDialog 确认后调 API，成功移除本地行；群聊无删除端点（退群走 groups/exit）。
+	const handleDeleteChat = () => {
+		const chat = deleteTarget;
+		if (!chat) return;
+		void deletePrivateChat({ target_user_id: chat.peerUserId || String(chat.id) })
+			.then((res) => {
+				if (res.code === 0) {
+					chats = chats.filter((c) => c.id !== chat.id);
+					if (selectedId === chat.id) selectedId = null;
+					showToast('会话已删除', 'success');
+				} else {
+					showToast(res.message || '删除失败，请重试', 'danger');
+				}
+			})
+			.catch(() => showToast('删除失败，请重试', 'danger'))
+			.finally(() => (deleteTarget = null));
+	};
+	let deleteTarget = $state<ChatItem | null>(null);
 
 	// 渲染用实时在线判定：WS 推送优先，HTTP 快照（chat.online）仅兜底
 	const liveChats = $derived(
@@ -216,6 +259,8 @@
 				onRetry={() => reloadKey++}
 				onSelect={selectChat}
 				onTogglePin={togglePin}
+				onToggleMute={toggleMute}
+				onDelete={(chat) => (deleteTarget = chat)}
 				{selectedId}
 				compact
 				fill
@@ -330,6 +375,8 @@
 				onRetry={() => reloadKey++}
 				onSelect={(chat) => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
 				onTogglePin={togglePin}
+				onToggleMute={toggleMute}
+				onDelete={(chat) => (deleteTarget = chat)}
 			/>
 		</div>
 
@@ -357,3 +404,14 @@
 		</Dialog.Root>
 	</div>
 {/if}
+
+<!-- 删除会话确认（危险操作防误触；仅删除自己视角的私聊会话，对方不受影响） -->
+<ConfirmDialog
+	open={deleteTarget !== null}
+	title={`删除与「${deleteTarget?.name ?? ''}」的会话？`}
+	description="删除后将清空本机的聊天记录，对方不受影响。"
+	icon={MessageSquareDashed}
+	confirmLabel="删除会话"
+	onCancel={() => (deleteTarget = null)}
+	onConfirm={handleDeleteChat}
+/>

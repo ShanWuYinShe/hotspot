@@ -44,7 +44,8 @@ let bannedMessage = $state<string | null>(null);
 let loginPromptOpen = $state(false);
 let pendingAction = $state<PendingAction | null>(null);
 
-async function refreshUser(): Promise<void> {
+/** 重新拉取当前账号（users/account）并同步登录态。供升级等改变 user_type 的操作后刷新。 */
+export async function refreshUser(): Promise<void> {
   const res = await getAccount().catch(() => null);
   if (res && res.code === 0 && res.data) {
     const d = res.data;

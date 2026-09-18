@@ -7,6 +7,7 @@
 import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
+	import SectionGroupApplications from '@/components/profile/SectionGroupApplications.svelte';
 	import { useMyGroups } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -111,3 +112,6 @@ const needsAuth = $derived(myGroups.needsAuth);
 	{:else}
 		<EmptyState bare title="还没有加入群组" description="去附近群组发现感兴趣的小组。" />
 	{/if}
+
+	<!-- 我的入群申请进度（pending 可撤回；未登录时区块自隐藏） -->
+	<SectionGroupApplications />

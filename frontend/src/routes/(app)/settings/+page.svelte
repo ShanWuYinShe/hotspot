@@ -14,6 +14,7 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import SettingsSection from './SettingsSection.svelte';
+	import AccountSecuritySection from './AccountSecuritySection.svelte';
 	import { auth, logout, requireAuth } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { theme, setTheme, setColorScheme, THEME_OPTIONS, COLOR_SCHEME_OPTIONS, type ColorSchemeMode, type AppTheme } from '@/stores/theme.svelte';
@@ -315,7 +316,17 @@
 				</ListContainer>
 			</SettingsSection>
 
-			<!-- Section 5: 隐私与安全 -->
+			<!-- Section 5: 账号与安全（登录用户：修改密码/登录设备管理；游客：升级入口。
+			     区块自身登录门控，避免匿名暴露无意义的安全操作） -->
+			{#if auth.isAuthenticated}
+				<SettingsSection title="账号与安全" description="修改登录密码、管理活跃设备登录态。">
+					<ListContainer bordered inset>
+						<AccountSecuritySection />
+					</ListContainer>
+				</SettingsSection>
+			{/if}
+
+			<!-- Section 6: 隐私与安全 -->
 			<SettingsSection title="隐私与安全" description="控制个人公开主页以及地理位置在附近雷达中的可见性。">
 				<ListContainer bordered inset>
 					<SettingRow
@@ -342,7 +353,7 @@
 				</ListContainer>
 			</SettingsSection>
 
-			<!-- Section 6: 系统与关于 -->
+			<!-- Section 7: 系统与关于 -->
 			<SettingsSection title="系统与关于" description="客户端版本及当前设备会话状态。">
 				<div class="flex flex-col gap-3">
 					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">

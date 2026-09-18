@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { MoreHorizontal, Link2, Send, PencilLine, Trash2, Heart, MessageCircle, Bookmark, Share2, Check } from '@lucide/svelte';
+	import { MoreHorizontal, Link2, Send, PencilLine, Trash2, Heart, MessageCircle, Bookmark, Share2, Check, Flag } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -22,11 +22,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import CommentInputBar from './shared/CommentInputBar.svelte';
 	import { toNearbyRailRows } from './nearby-rail';
 	import MomentEditDialog from '@/components/overlays/MomentEditDialog.svelte';
+	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments , netError } from '@/api';
-	import { ROUTES } from '@/lib/routes';
 	import { formatDateTime } from '@/lib/utils';
 	import { smartBack } from '@/lib/smart-back';
+	import { copyShareLink } from '@/lib/share';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
 
@@ -105,6 +106,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let deleteOpen = $state(false);
 	let editOpen = $state(false);
 	let deleting = $state(false);
+	// 举报目标：动态本体或某条评论（spec api_spec_report.md target_type='moment'|'comment'）
+	let reportTarget = $state<{ target_type: 'moment' | 'comment'; target_id: string } | null>(null);
 
 	$effect(() => {
 		void reloadKey;
@@ -400,15 +403,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		momentRaw = updated;
 	};
 
+	// 分享：share/create 生成分享码并复制 /share/[code] 落地链接；
+	// 创建失败（匿名/网络异常）降级为复制页面原始链接（lib/share 统一降级链）。
 	const copyMomentLink = async () => {
-		const momentUrl = `${window.location.origin}${ROUTES.moment(momentId)}`;
-		try {
-			if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
-			await navigator.clipboard.writeText(momentUrl);
-			shareStatus = 'copied';
-		} catch {
-			shareStatus = 'failed';
-		}
+		const result = await copyShareLink({ type: 'moment', id: momentId });
+		shareStatus = result === 'failed' ? 'failed' : 'copied';
 		moreOpen = false;
 		window.setTimeout(() => (shareStatus = 'idle'), 1800);
 	};
@@ -430,22 +429,28 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					<div bind:this={moreMenuEl} class="relative">
 						<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = !moreOpen)} />
 					</div>
-					<DropdownMenu.Content customAnchor={moreMenuEl}>
-						<DropdownMenu.Item onSelect={() => void copyMomentLink()}>
-							<Link2 class="size-3.5 text-accent-default"   strokeWidth={1.75} />
-							复制链接
-						</DropdownMenu.Item>
-						{#if isAuthor}
-							<DropdownMenu.Item onSelect={() => { editOpen = true; moreOpen = false; }}>
-								<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
-								编辑动态
+						<DropdownMenu.Content customAnchor={moreMenuEl}>
+							<DropdownMenu.Item onSelect={() => void copyMomentLink()}>
+								<Link2 class="size-3.5 text-accent-default"   strokeWidth={1.75} />
+								复制链接
 							</DropdownMenu.Item>
-							<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { deleteOpen = true; moreOpen = false; }}>
-								<Trash2 class="size-3.5" strokeWidth={1.75} />
-								删除动态
-							</DropdownMenu.Item>
-						{/if}
-					</DropdownMenu.Content>
+							{#if isAuthor}
+								<DropdownMenu.Item onSelect={() => { editOpen = true; moreOpen = false; }}>
+									<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
+									编辑动态
+								</DropdownMenu.Item>
+								<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { deleteOpen = true; moreOpen = false; }}>
+									<Trash2 class="size-3.5" strokeWidth={1.75} />
+									删除动态
+								</DropdownMenu.Item>
+							{:else if moment.id}
+								<!-- 非作者可举报动态（spec: api_spec_report.md，目标属于当前用户时服务端 10400） -->
+								<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { reportTarget = { target_type: 'moment', target_id: momentId }; moreOpen = false; }}>
+									<Flag class="size-3.5" strokeWidth={1.75} />
+									举报动态
+								</DropdownMenu.Item>
+							{/if}
+						</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			{/snippet}
 		</PageHeader>
@@ -482,6 +487,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			onCommentClick={focusComments}
 			onReply={replyTo}
 			onToggleCommentLike={(id) => void toggleCommentLike(id)}
+			onReportComment={(id) => (reportTarget = { target_type: 'comment', target_id: id })}
 			onLoadMoreComments={() => void loadMoreComments()}
 		/>
 	{/if}
@@ -546,6 +552,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 </SplitPageLayout>
 
 <DeleteMomentDialog open={deleteOpen} {deleting} onCancel={() => (deleteOpen = false)} onConfirm={handleDelete} />
+
+<ReportDialog
+	open={reportTarget !== null}
+	targetType={reportTarget?.target_type ?? 'moment'}
+	targetId={reportTarget?.target_id ?? ''}
+	targetLabel={reportTarget?.target_type === 'comment' ? '这条评论' : '这条动态'}
+	onClose={() => (reportTarget = null)}
+/>
 
 <MomentEditDialog
 	open={editOpen}

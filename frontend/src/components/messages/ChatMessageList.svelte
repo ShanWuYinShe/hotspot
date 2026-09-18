@@ -11,12 +11,15 @@
 	let {
 		chat,
 		canRecall,
-		showSenderNames = false
+		showSenderNames = false,
+		onReport
 	}: {
 		chat: ChatController;
 		canRecall: (msg: ChatMessage) => boolean;
 		/** 群聊= true：incoming 气泡上方显示发送者昵称 */
 		showSenderNames?: boolean;
+		/** 收到消息的举报入口（reports/create target_type='message'）；缺省不渲染 */
+		onReport?: (messageId: string) => void;
 	} = $props();
 </script>
 
@@ -51,8 +54,10 @@
 						editedAt={msg.editedAt}
 						canRecall={canRecall(msg)}
 						canEdit={msg.sent}
+						canReport={!msg.sent && Boolean(onReport)}
 						onRecall={(id) => void chat.handleRecall(id)}
 						onEdit={(id, content) => void chat.handleEdit(id, content)}
+						onReport={(id) => onReport?.(id)}
 					/>
 				{/each}
 			{/each}
