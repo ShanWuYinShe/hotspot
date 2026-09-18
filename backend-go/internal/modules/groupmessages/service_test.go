@@ -554,3 +554,55 @@ func (stubUserReader) BatchGet(_ context.Context, userIDs []string) (map[string]
 	}
 	return out, nil
 }
+
+type stubGroupReactionsSource struct {
+	agg map[string][]Reaction
+	err error
+}
+
+func (s *stubGroupReactionsSource) AggregatedGroupMessageReactions(_ context.Context, _ []string) (map[string][]Reaction, error) {
+	return s.agg, s.err
+}
+
+// 回归（spec api_spec_chat.md GroupMessageItem.reactions 恒在数组）：
+// 无数据源时空数组兜底；有数据源时按消息 ID 回填聚合；聚合失败降级空数组
+// 且不使拉取整体失败。
+func TestServiceHistoryAttachesReactions(t *testing.T) {
+	repo := &stubRepo{historyResult: PaginatedGroupMessages{Items: []GroupMessageItem{
+		{MessageID: "gm1"}, {MessageID: "gm2"},
+	}}}
+	service := NewServiceWithRepo(repo)
+
+	result, err := service.History(gmAuthCtx("u1"), "g1", nil)
+	if err != nil {
+		t.Fatalf("history: %v", err)
+	}
+	for _, item := range result.Items {
+		if item.Reactions == nil || len(item.Reactions) != 0 {
+			t.Fatalf("expected empty non-nil reactions without source, got %#v", item.Reactions)
+		}
+	}
+
+	service.SetReactionsSource(&stubGroupReactionsSource{agg: map[string][]Reaction{
+		"gm1": {{Emoji: "👍", Count: 3, ReactedByMe: true}},
+	}})
+	result, err = service.History(gmAuthCtx("u1"), "g1", nil)
+	if err != nil {
+		t.Fatalf("history with source: %v", err)
+	}
+	if len(result.Items[0].Reactions) != 1 || result.Items[0].Reactions[0].Emoji != "👍" || !result.Items[0].Reactions[0].ReactedByMe {
+		t.Fatalf("unexpected gm1 reactions: %#v", result.Items[0].Reactions)
+	}
+	if result.Items[1].Reactions == nil || len(result.Items[1].Reactions) != 0 {
+		t.Fatalf("expected gm2 empty reactions, got %#v", result.Items[1].Reactions)
+	}
+
+	service.SetReactionsSource(&stubGroupReactionsSource{err: errors.New("boom")})
+	result, err = service.History(gmAuthCtx("u1"), "g1", nil)
+	if err != nil {
+		t.Fatalf("history with failing source must degrade, got %v", err)
+	}
+	if result.Items[0].Reactions == nil || len(result.Items[0].Reactions) != 0 {
+		t.Fatalf("expected degraded empty reactions, got %#v", result.Items[0].Reactions)
+	}
+}

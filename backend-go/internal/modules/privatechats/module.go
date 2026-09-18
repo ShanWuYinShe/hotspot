@@ -36,6 +36,12 @@ func NewModule(factory *persistence.Factory, source appconfig.Source, shares sha
 func (m *Module) MessageService() privatemessages.ReadService {
 	return m.messageRuntime.ReadService()
 }
+
+// SetMessageReactionsSource 把消息表情反应聚合源转发给消息读服务
+// （open_the_door 的 recent_messages 与 private_messages/fetch 同源生效）。
+func (m *Module) SetMessageReactionsSource(src privatemessages.MessageReactionsSource) {
+	m.messageRuntime.SetReactionsSource(src)
+}
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/private_chats", func(chatRouter chi.Router) {
 		chatRouter.Group(func(group chi.Router) {

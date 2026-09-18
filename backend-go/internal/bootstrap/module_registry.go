@@ -92,6 +92,11 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		messageReactionProvider{groupMessages: gmModule.Service, privateMessages: pcModule.MessageService()},
 	}
 	reactionsModule := reactions.NewModule(factory, reactionProviders, notificationService, usersModule.Service)
+	// 消息 reactions 聚合下发（spec api_spec_chat.md：消息项 reactions 恒在
+	// 数组，空数组 = 无）。reactionProviders 承担「对谁可反应」的正向鉴权，
+	// 这里是反向读路径：聊天消息拉取批量取聚合（reacted_by_me 按查看者）。
+	gmModule.Service.SetReactionsSource(groupMessageReactionsSource{svc: reactionsModule.Service})
+	pcModule.SetMessageReactionsSource(privateMessageReactionsSource{svc: reactionsModule.Service})
 	// reaction emoji 白名单校验依赖 AppConfig.limits.reaction_emojis
 	reactionsModule.Service.SetAppConfig(sharedAppConfig)
 	// Wire the reactions aggregator into moments/comments so MomentItem.reactions[]

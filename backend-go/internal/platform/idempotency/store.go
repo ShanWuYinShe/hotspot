@@ -28,6 +28,9 @@ type Record struct {
 	Status    Status
 	Response  []byte
 	ExpiresAt time.Time
+	// BodyHash 是请求体的 SHA-256（幂等上下文一致性校验，spec api_spec_errors.md
+	// 22000「幂等上下文不匹配」）。存量记录为空时跳过比对（灰度兼容）。
+	BodyHash string `json:"body_hash,omitempty"`
 }
 
 type Store interface {

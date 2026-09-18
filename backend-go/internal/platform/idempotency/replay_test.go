@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -244,5 +245,56 @@ func TestReplayOrStoreProcessingStatus22002(t *testing.T) {
 	_ = json.Unmarshal(rr.Body.Bytes(), &body)
 	if body["code"].(float64) != 22002 {
 		t.Fatalf("expected 22002 (processing), got %v", body["code"])
+	}
+}
+
+// 回归（spec api_spec_errors.md 22000「幂等上下文不匹配」）：同一
+// Idempotency-Key 换请求体重试不得静默回放首次响应，必须返回 22000 让客户端
+// 换键重试；同 key 同请求体仍正常回放；无 key 请求不受影响。
+func TestReplayOrStoreRejectsBodyMismatchWithConflict(t *testing.T) {
+	store := NewInMemoryStore()
+	SetStore(store)
+	key := "abcd1234abcd1234abcd1234abcd1234"
+
+	newReq := func(body string) *http.Request {
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		return req.WithContext(WithKey(req.Context(), key))
+	}
+
+	rr1 := httptest.NewRecorder()
+	count := 0
+	ReplayOrStore(rr1, newReq(`{"v":1}`), "scope", func() httpx.ApiResponse[dummyResult] {
+		count++
+		return httpx.Success(dummyResult{Value: "first"})
+	})
+	if count != 1 {
+		t.Fatalf("expected first execution, got %d", count)
+	}
+
+	// 同 key 换请求体：22000，producer 不执行。
+	rrMismatch := httptest.NewRecorder()
+	ReplayOrStore(rrMismatch, newReq(`{"v":2}`), "scope", func() httpx.ApiResponse[dummyResult] {
+		count++
+		return httpx.Success(dummyResult{Value: "should-not-run"})
+	})
+	var mismatch map[string]any
+	_ = json.Unmarshal(rrMismatch.Body.Bytes(), &mismatch)
+	if count != 1 || mismatch["code"].(float64) != float64(httpx.CodeIdempotencyConflict) {
+		t.Fatalf("expected 22000 conflict without producer call, got count=%d body=%s", count, rrMismatch.Body.String())
+	}
+
+	// 同 key 同请求体：正常回放首次响应。
+	rrReplay := httptest.NewRecorder()
+	ReplayOrStore(rrReplay, newReq(`{"v":1}`), "scope", func() httpx.ApiResponse[dummyResult] {
+		count++
+		return httpx.Success(dummyResult{Value: "first"})
+	})
+	if count != 1 {
+		t.Fatalf("expected replay without producer call, got %d", count)
+	}
+	var replayed map[string]any
+	_ = json.Unmarshal(rrReplay.Body.Bytes(), &replayed)
+	if replayed["data"].(map[string]any)["Value"] != "first" {
+		t.Fatalf("expected replayed first response, got %s", rrReplay.Body.String())
 	}
 }

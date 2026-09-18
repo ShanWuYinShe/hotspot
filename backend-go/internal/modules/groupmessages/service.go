@@ -63,9 +63,10 @@ type userReader interface {
 type Service struct {
 	repo      Repository
 	users     userReader
-	mentions  groupMentionNotifier // optional; nil => 群聊 @ 不落库通知（测试/降级模式）
-	shares    shareValidator       // optional; nil => 不校验 share_code（测试/降级模式）
-	appConfig appconfig.Source     // optional; nil => 撤回窗口回退默认 120s
+	mentions  groupMentionNotifier   // optional; nil => 群聊 @ 不落库通知（测试/降级模式）
+	reactions MessageReactionsSource // optional; nil => reactions 恒空数组（降级）
+	shares    shareValidator         // optional; nil => 不校验 share_code（测试/降级模式）
+	appConfig appconfig.Source       // optional; nil => 撤回窗口回退默认 120s
 	// readFlusher 节流聚合 GroupMessageReadCountUpdated 推送（spec chat.md：
 	// 3-5 秒窗口最终一致，替代逐人广播）
 	readFlusher *readCountFlusher
@@ -275,12 +276,48 @@ func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req Se
 	}
 	_ = group.Wait()
 }
+
+// SetReactionsSource 注入消息表情反应聚合源（bootstrap 经 reactions 模块适配）。
+func (s *Service) SetReactionsSource(src MessageReactionsSource) { s.reactions = src }
+
+// attachReactions 按契约补齐 reactions 恒在数组（spec api_spec_chat.md：
+// 空数组 = 无反应）：无数据源时全部置空数组；有数据源时单次批量聚合
+// （reacted_by_me 按当前查看者）。聚合失败降级为空数组并记日志，不使
+// 历史拉取整体失败。
+func (s *Service) attachReactions(ctx context.Context, items []GroupMessageItem) {
+	for i := range items {
+		items[i].Reactions = []Reaction{}
+	}
+	if s.reactions == nil || len(items) == 0 {
+		return
+	}
+	ids := make([]string, 0, len(items))
+	for _, item := range items {
+		ids = append(ids, item.MessageID)
+	}
+	agg, err := s.reactions.AggregatedGroupMessageReactions(ctx, ids)
+	if err != nil {
+		observability.L().Warn("groupmessages.attach_reactions failed", "error", err)
+		return
+	}
+	for i := range items {
+		if rs, ok := agg[items[i].MessageID]; ok && len(rs) > 0 {
+			items[i].Reactions = rs
+		}
+	}
+}
+
 func (s *Service) History(ctx context.Context, groupID string, pagination *PaginationParams) (PaginatedGroupMessages, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if err := s.ensureMember(ctx, groupID, principal.UserID); err != nil {
 		return PaginatedGroupMessages{}, err
 	}
-	return s.repo.History(ctx, groupID, pagination)
+	result, err := s.repo.History(ctx, groupID, pagination)
+	if err != nil {
+		return PaginatedGroupMessages{}, err
+	}
+	s.attachReactions(ctx, result.Items)
+	return result, nil
 }
 
 func (s *Service) Update(ctx context.Context, req UpdateGroupMessageRequest) error {

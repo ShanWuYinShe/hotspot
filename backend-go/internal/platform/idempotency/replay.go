@@ -1,7 +1,11 @@
 package idempotency
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"io"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -10,6 +14,13 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/requestmeta"
 )
+
+// hashRequestBody 计算请求体指纹（SHA-256）。仅在携带 Idempotency-Key 时调用，
+// 请求体此前已被 LimitRequestBody 中间件封顶（1MiB），缓冲内存有界。
+func hashRequestBody(body []byte) string {
+	sum := sha256.Sum256(body)
+	return hex.EncodeToString(sum[:])
+}
 
 // defaultStore is read on every request and written once at boot, so guard it
 // with an atomic pointer instead of a bare global (which would race under
@@ -58,6 +69,18 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 	}
 	scopedKey := actor + "::" + key
 
+	// 幂等上下文一致性（spec api_spec_errors.md 22000「幂等上下文不匹配」）：
+	// 同一 key 换请求体重放会静默拿到首次响应且本次不执行，掩盖客户端串键
+	// 缺陷（如发错内容却"成功"）。缓冲请求体计算指纹并回填 body 供 producer
+	// 读取；命中完成态记录时比对，存量记录（无哈希）跳过比对以兼容滚动升级。
+	body, readErr := io.ReadAll(r.Body)
+	if readErr != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		return true
+	}
+	r.Body = io.NopCloser(bytes.NewReader(body))
+	bodyHash := hashRequestBody(body)
+
 	// Reserve atomically: returns (record, true) when we claimed it (now
 	// processing), or (existing, false) when a record already exists.
 	// Expired hits return StatusExpired so we can emit 22001 instead of
@@ -69,6 +92,10 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 			return true
 		}
 		if existing.Status == StatusCompleted {
+			if existing.BodyHash != "" && existing.BodyHash != bodyHash {
+				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeIdempotencyConflict, "幂等上下文不匹配"))
+				return true
+			}
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(existing.Response)
@@ -98,7 +125,7 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 		return true
 	}
 	blob, _ := json.Marshal(payload)
-	store.Save(Record{Key: scopedKey, Scope: scope, Status: StatusCompleted, Response: append(blob, '\n'), ExpiresAt: expiresAt})
+	store.Save(Record{Key: scopedKey, Scope: scope, Status: StatusCompleted, Response: append(blob, '\n'), ExpiresAt: expiresAt, BodyHash: bodyHash})
 	httpx.WriteJSON(w, http.StatusOK, payload)
 	return true
 }

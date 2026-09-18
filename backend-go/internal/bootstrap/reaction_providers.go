@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"hotspot/backend-go/internal/modules/comments"
+	"hotspot/backend-go/internal/modules/groupmessages"
 	"hotspot/backend-go/internal/modules/moments"
+	"hotspot/backend-go/internal/modules/privatemessages"
 	"hotspot/backend-go/internal/modules/reactions"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -130,4 +132,46 @@ func (p messageReactionProvider) Resolve(ctx context.Context, messageID string) 
 		}
 	}
 	return reactions.TargetContext{}, false, nil
+}
+
+// ── 反向读路径适配：聊天消息 reactions 聚合下发 ─────────────────────────
+// reactions 模块的 AggregateBatch 经此适配给聊天读服务（private_messages/fetch、
+// private_chats/open_the_door.recent_messages、group_messages/fetch）。本地
+// Reaction 类型与 chat 模块声明一一对应，由适配器转换（避免 chat→reactions
+// import 依赖）。
+
+type privateMessageReactionsSource struct{ svc *reactions.Service }
+
+func (s privateMessageReactionsSource) AggregatedMessageReactions(ctx context.Context, messageIDs []string) (map[string][]privatemessages.Reaction, error) {
+	agg, err := s.svc.AggregateBatch(ctx, reactions.ReactTargetMessage, messageIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string][]privatemessages.Reaction, len(agg))
+	for id, rs := range agg {
+		items := make([]privatemessages.Reaction, 0, len(rs))
+		for _, r := range rs {
+			items = append(items, privatemessages.Reaction{Emoji: r.Emoji, Count: r.Count, ReactedByMe: r.ReactedByMe})
+		}
+		out[id] = items
+	}
+	return out, nil
+}
+
+type groupMessageReactionsSource struct{ svc *reactions.Service }
+
+func (s groupMessageReactionsSource) AggregatedGroupMessageReactions(ctx context.Context, messageIDs []string) (map[string][]groupmessages.Reaction, error) {
+	agg, err := s.svc.AggregateBatch(ctx, reactions.ReactTargetMessage, messageIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string][]groupmessages.Reaction, len(agg))
+	for id, rs := range agg {
+		items := make([]groupmessages.Reaction, 0, len(rs))
+		for _, r := range rs {
+			items = append(items, groupmessages.Reaction{Emoji: r.Emoji, Count: r.Count, ReactedByMe: r.ReactedByMe})
+		}
+		out[id] = items
+	}
+	return out, nil
 }

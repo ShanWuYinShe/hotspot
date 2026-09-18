@@ -65,8 +65,9 @@ type shareValidator interface {
 type Service struct {
 	repo      Repository
 	users     userReader
-	appConfig appconfig.Source // optional; nil => stranger quota disabled (0)
-	shares    shareValidator   // optional; nil => 不校验 share_code（测试/降级模式）
+	appConfig appconfig.Source       // optional; nil => stranger quota disabled (0)
+	shares    shareValidator         // optional; nil => 不校验 share_code（测试/降级模式）
+	reactions MessageReactionsSource // optional; nil => reactions 恒空数组（降级）
 	// tx 事务执行器（bootstrap/NewRuntime 注入）：陌生人配额的检查与消息写入
 	// 须在同一事务内经咨询锁串行化；nil（测试）时 fn 直接执行。
 	tx persistence.TxRunner
@@ -146,6 +147,14 @@ func NewRuntimeWithRepo(repo Repository) *Runtime {
 func (r *Runtime) SetShareValidator(v shareValidator) {
 	if svc, ok := r.readService.(*Service); ok {
 		svc.SetShareValidator(v)
+	}
+}
+
+// SetReactionsSource 把消息表情反应聚合源接进 runtime service（bootstrap 经
+// privatechats.Module 转发）。
+func (r *Runtime) SetReactionsSource(src MessageReactionsSource) {
+	if svc, ok := r.readService.(*Service); ok {
+		svc.SetReactionsSource(src)
 	}
 }
 
@@ -250,14 +259,54 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 	return msg, nil
 }
 
+// SetReactionsSource 注入消息表情反应聚合源（bootstrap 经 reactions 模块适配）。
+func (s *Service) SetReactionsSource(src MessageReactionsSource) { s.reactions = src }
+
+// attachReactions 按契约补齐 reactions 恒在数组（spec api_spec_chat.md：
+// 空数组 = 无反应）：无数据源时全部置空数组；有数据源时单次批量聚合
+// （reacted_by_me 按当前查看者）。聚合失败降级为空数组并记日志，不让
+// 历史拉取整体失败。
+func (s *Service) attachReactions(ctx context.Context, items []PrivateMessageItem) {
+	for i := range items {
+		items[i].Reactions = []Reaction{}
+	}
+	if s.reactions == nil || len(items) == 0 {
+		return
+	}
+	ids := make([]string, 0, len(items))
+	for _, item := range items {
+		ids = append(ids, item.MessageID)
+	}
+	agg, err := s.reactions.AggregatedMessageReactions(ctx, ids)
+	if err != nil {
+		observability.L().Warn("privatemessages.attach_reactions failed", "error", err)
+		return
+	}
+	for i := range items {
+		if rs, ok := agg[items[i].MessageID]; ok && len(rs) > 0 {
+			items[i].Reactions = rs
+		}
+	}
+}
+
 func (s *Service) History(ctx context.Context, req ListPrivateMessagesRequest) (PaginatedMessages, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.History(ctx, principal.UserID, req)
+	result, err := s.repo.History(ctx, principal.UserID, req)
+	if err != nil {
+		return PaginatedMessages{}, err
+	}
+	s.attachReactions(ctx, result.Items)
+	return result, nil
 }
 
 func (s *Service) Recent(ctx context.Context, targetUserID string, limit int, deletedAfter *time.Time) (PaginatedMessages, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.Recent(ctx, principal.UserID, targetUserID, limit, deletedAfter)
+	result, err := s.repo.Recent(ctx, principal.UserID, targetUserID, limit, deletedAfter)
+	if err != nil {
+		return PaginatedMessages{}, err
+	}
+	s.attachReactions(ctx, result.Items)
+	return result, nil
 }
 
 func (s *Service) Last(ctx context.Context, targetUserID string, deletedAfter *time.Time) (*PrivateMessageItem, error) {

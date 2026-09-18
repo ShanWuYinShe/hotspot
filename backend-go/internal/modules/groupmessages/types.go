@@ -1,6 +1,7 @@
 package groupmessages
 
 import (
+	"context"
 	"time"
 
 	platformcursor "hotspot/backend-go/internal/platform/cursor"
@@ -18,6 +19,21 @@ type MessageBrief struct {
 	SentAt    string         `json:"sent_at"`
 }
 
+// Reaction 是消息表情反应聚合（spec api_spec_chat.md Reaction：空数组 = 无
+// 反应；reacted_by_me 恒定布尔）。本地声明避免模块间 import 依赖，由
+// bootstrap 适配 reactions 模块的同名类型。
+type Reaction struct {
+	Emoji       string `json:"emoji"`
+	Count       int    `json:"count"`
+	ReactedByMe bool   `json:"reacted_by_me"`
+}
+
+// MessageReactionsSource 提供消息级表情反应批量聚合（bootstrap 注入 reactions
+// 模块适配器）。nil 时 reactions 恒为空数组（降级不报错）。
+type MessageReactionsSource interface {
+	AggregatedGroupMessageReactions(ctx context.Context, messageIDs []string) (map[string][]Reaction, error)
+}
+
 type GroupMessageItem struct {
 	MessageID    string         `json:"message_id"`
 	SenderUserID string         `json:"-"` // 内部存储用；对外通过 Sender map 暴露
@@ -33,6 +49,7 @@ type GroupMessageItem struct {
 	EditedAt     *string        `json:"edited_at"`
 	RecalledAt   *string        `json:"recalled_at"`
 	ReadCount    *int           `json:"read_count"`
+	Reactions    []Reaction     `json:"reactions"`
 }
 type MessageSentResult struct {
 	MessageID string `json:"message_id"`
