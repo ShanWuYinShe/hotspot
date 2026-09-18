@@ -9,7 +9,7 @@ require (
 	github.com/golang/geo v0.0.0-20251030142647-5906ab3d21fa
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.8.0
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.43.0
 )
 
@@ -23,6 +23,6 @@ require (
 	github.com/redis/go-redis/v9 v9.19.0
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sync v0.17.0
 	golang.org/x/text v0.30.0 // indirect
 )
