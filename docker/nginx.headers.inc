@@ -10,6 +10,10 @@ add_header X-Frame-Options "DENY" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), usb=()" always;
+# 跨域隔离（OWASP Secure Headers 基线）：同源部署下用户内容（/s3/）不应被
+# 任意站点嵌入读取；COOP 阻断跨窗口 opener 攻击面。
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+add_header Cross-Origin-Resource-Policy "same-origin" always;
 #  - script-src 'unsafe-inline'：SvelteKit 模块引导需内联 bootstrap script
 #    （<script type="module">import { start } ...），被 'self' 拦截会导致
 #    生产白屏；无第三方注入面，风险可控
