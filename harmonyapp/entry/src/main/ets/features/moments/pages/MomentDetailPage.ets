@@ -31,7 +31,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemDialog } from '../../../components/SystemDialog';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemInput } from '../../../components/SystemInput';
-import { EmptyState } from '../../../components/EmptyState';
+import { EmptyState, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { Pressable } from '../../../components/Pressable';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
@@ -168,6 +168,9 @@ export struct MomentDetailPage {
   private async loadComments(): Promise<void> {
     if (this.isDestroyed || !this.momentId) return;
     this.commentsLoading = true;
+    // 请求开始即清错误（对齐 HomePage.loadNearbyUsers 范式）：否则重试成功后
+    // commentsError 残留，错误态分支优先级高于列表/空态，成功结果被错误态掩盖
+    this.commentsError = '';
     try {
       const request: FetchCommentsRequest = { moment_id: this.momentId, pagination: { limit: 50 } };
       const response = await ApiClient.getComments(request);
@@ -778,22 +781,28 @@ export struct MomentDetailPage {
         .width('100%')
 
       if (this.commentsLoading && this.comments.length === 0) {
-        Text('加载评论中…')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
+        // 首屏加载：区块级加载指示器（SystemLoadingView 为整页形态，根节点 height('100%')
+        // 会把滚动内容区块撑满视口，故用 EmptyState.ets 同文件的标准区块级 LoadingMoreIndicator）
+        LoadingMoreIndicator({ message: '加载评论中…' })
           .width('100%')
       } else if (this.commentsError.length > 0) {
-        // 错误态与空态区分：失败可重试（点击错误行重新拉取）
-        Text(`${this.commentsError}（点击重试）`)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().error)
+        // 错误态与空态区分：失败可重试（EmptyState bare + 重试按钮，对齐 HomePage
+        // 区块级错误态范式 P1-2「错误态收敛 EmptyState bare，区块级极简」）
+        EmptyState({
+          icon: AppIcon.WARNING,
+          message: this.commentsError,
+          actionLabel: '重试',
+          onAction: () => { this.loadComments(); },
+          bare: true
+        })
           .width('100%')
-          .padding(DesignConstants.SPACING.SM)
-          .onClick(() => { this.loadComments(); })
       } else if (this.comments.length === 0) {
-        Text('还没有评论，来抢沙发')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
+        // 空态（对齐 HomePage 区块级空态范式：EmptyState bare 替代单行灰字）
+        EmptyState({
+          icon: AppIcon.MESSAGE,
+          message: '还没有评论，来抢沙发',
+          bare: true
+        })
           .width('100%')
       } else {
         ForEach(this.comments, (comment: CommentItem) => {

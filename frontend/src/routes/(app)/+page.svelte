@@ -8,7 +8,7 @@
 	import type { MomentItem } from '@/api/types';
 	import { fetchHomeFeed } from '@/components/home/home-feed';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-	import MomentRow from '@/components/home/ActivityRow.svelte';
+	import ActivityRow from '@/components/home/ActivityRow.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -85,7 +85,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 {#snippet momentRows(items: MomentItem[], onClick: (momentId: string) => void)}
 	<ListContainer bordered>
 		{#each items as moment, i (moment.moment_id)}
-			<MomentRow {moment} index={i} onClick={() => onClick(moment.moment_id)} />
+			<ActivityRow {moment} index={i} onClick={() => onClick(moment.moment_id)} />
 		{/each}
 	</ListContainer>
 {/snippet}

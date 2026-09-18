@@ -36,7 +36,9 @@
   /* danger 加深（#F43F5E→#C81E4E）：原值配白字 3.67、配深字 4.28 均不达 4.5；
      加深后白字 5.60，danger 实底统一白字（对齐 harmonyapp error，同值经跨端校验锁定） */
   --cst-palette-hot: #C81E4E;
-  --cst-palette-warning: #F59E0B;
+  /* warning 加深（#F59E0B→#B45309）：浅色下小字 warning 文本对比度 2.1→5.0
+     （≥4.5，对齐 forest/inkwash 同类校准；同值经跨端校验锁定 harmonyapp warning） */
+  --cst-palette-warning: #B45309;
   --cst-palette-map-user: #2E66C0;
   /* 图钉主色校准：确保白字 --cst-content-on-marker 对比度 ≥4.5（原 #10B981/#F97316 过浅） */
   --cst-palette-map-group: #0B7A56;

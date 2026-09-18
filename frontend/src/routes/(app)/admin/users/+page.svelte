@@ -121,13 +121,13 @@
 				<table class={TABLE}>
 					<thead>
 						<tr>
-							<th class={TH}>用户</th>
-							<th class={TH}>登录 ID</th>
-							<th class={TH}>状态</th>
-							<th class={TH}>邮箱</th>
-							<th class={TH}>注册时间</th>
-							<th class={TH}>最后活跃</th>
-							<th class={TH}></th>
+							<th scope="col" class={TH}>用户</th>
+							<th scope="col" class={TH}>登录 ID</th>
+							<th scope="col" class={TH}>状态</th>
+							<th scope="col" class={TH}>邮箱</th>
+							<th scope="col" class={TH}>注册时间</th>
+							<th scope="col" class={TH}>最后活跃</th>
+							<th scope="col" class={TH}></th>
 						</tr>
 					</thead>
 					<tbody>

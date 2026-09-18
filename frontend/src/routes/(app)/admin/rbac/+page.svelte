@@ -230,10 +230,10 @@
 					<table class={TABLE}>
 						<thead>
 							<tr>
-								<th class={TH}>角色</th>
-								<th class={TH}>描述</th>
-								<th class={TH}>权限</th>
-								<th class={TH}></th>
+								<th scope="col" class={TH}>角色</th>
+								<th scope="col" class={TH}>描述</th>
+								<th scope="col" class={TH}>权限</th>
+								<th scope="col" class={TH}></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -285,11 +285,11 @@
 					<table class={TABLE}>
 						<thead>
 							<tr>
-								<th class={TH}>用户</th>
-								<th class={TH}>权限</th>
-								<th class={TH}>角色</th>
-								<th class={TH}>授权时间</th>
-								<th class={TH}></th>
+								<th scope="col" class={TH}>用户</th>
+								<th scope="col" class={TH}>权限</th>
+								<th scope="col" class={TH}>角色</th>
+								<th scope="col" class={TH}>授权时间</th>
+								<th scope="col" class={TH}></th>
 							</tr>
 						</thead>
 						<tbody>

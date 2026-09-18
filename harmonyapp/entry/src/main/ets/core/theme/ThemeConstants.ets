@@ -236,7 +236,9 @@ export class ThemeConstants {
     tabBarActiveBackground: '#D6E1F2',
     isDarkTheme: false,
     online: '#14B8A6',
-    warning: '#F59E0B',
+    // warning 加深（#F59E0B→#B45309，对齐前端 vibrant light 同名校准）：
+    // 浅色小字文本对比度 2.1→5.0（≥4.5）
+    warning: '#B45309',
     success: '#14B8A6',
     // danger 实底对比度：#F43F5E 配白字仅 3.67（配深字 4.28），均不达 4.5；加深至 #C81E4E
     //（白字 5.60、红字 on 浅底 4.92、红字 on dangerSoft 4.54，对齐前端 danger 实底同类修复）
@@ -246,7 +248,8 @@ export class ThemeConstants {
     mapGroup: '#0B7A56',
     mapMoment: '#C2470B',
     dangerSoft: '#F7E2EA',
-    warningSoft: '#F7EEDF',
+    // warningSoft = warning 13% 预合成叠 page-bg（随 warning 加深同步复算）
+    warningSoft: '#EEE4DF',
   };
 
   static readonly VIBRANT_DARK_COLORS: ColorConfig = {

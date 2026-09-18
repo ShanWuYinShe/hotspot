@@ -29,7 +29,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	interface UserData {
 		name: string;
-		handle: string;
 		bio: string;
 		location: string;
 		avatar: string;
@@ -42,7 +41,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	let user = $state<UserData>({
 		name: '',
-		handle: '',
 		bio: '',
 		location: '',
 		avatar: '',
@@ -87,7 +85,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					const r = u.relation;
 					user = {
 						name: u.user.nickname,
-						handle: u.user.user_id ? `@${u.user.nickname.replace(/\s/g, '_')}` : '',
 						bio: u.bio ?? '',
 						location: u.location?.location_name ?? '',
 						avatar: u.user.avatar_url ?? '',
@@ -395,7 +392,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						</div>
 						<div class="min-w-0 pt-1">
 							<h1 class="truncate text-2xl font-medium tracking-title text-text-primary">{user.name}</h1>
-							<p class="mt-1 truncate text-text-secondary">{user.handle}{remark ? ` · ${remark}` : ''}</p>
+							<p class="mt-1 truncate text-text-secondary">{remark}</p>
 						</div>
 					</div>
 

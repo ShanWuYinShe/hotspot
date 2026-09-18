@@ -14,6 +14,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import NotifyRow from './shared/NotifyRow.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
@@ -353,6 +354,9 @@ const FILTER_TABS = [
 					<div class="mt-5">
 						<LoadMoreButton label="加载更早通知" loading={loadingMore} onLoad={() => void loadMoreNotifs()} />
 					</div>
+				{:else if filtered.length > 0 && !loadError && nextCursor === null}
+					<!-- 分页耗尽契约（frontend/AGENTS.md）：到底必须渲染 ListEnd -->
+					<ListEnd />
 				{/if}
 
 				{#if loading}

@@ -137,13 +137,13 @@
 				<table class={TABLE}>
 					<thead>
 						<tr>
-							<th class={TH}>标题</th>
-							<th class={TH}>级别</th>
-							<th class={TH}>发布人</th>
-							<th class={TH}>浏览</th>
-							<th class={TH}>推送</th>
-							<th class={TH}>发布时间</th>
-							<th class={TH}></th>
+							<th scope="col" class={TH}>标题</th>
+							<th scope="col" class={TH}>级别</th>
+							<th scope="col" class={TH}>发布人</th>
+							<th scope="col" class={TH}>浏览</th>
+							<th scope="col" class={TH}>推送</th>
+							<th scope="col" class={TH}>发布时间</th>
+							<th scope="col" class={TH}></th>
 						</tr>
 					</thead>
 					<tbody>

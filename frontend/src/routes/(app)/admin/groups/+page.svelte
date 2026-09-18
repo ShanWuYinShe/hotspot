@@ -69,11 +69,11 @@
 				<table class={TABLE}>
 					<thead>
 						<tr>
-							<th class={TH}>群组</th>
-							<th class={TH}>群主</th>
-							<th class={TH}>成员数</th>
-							<th class={TH}>创建时间</th>
-							<th class={TH}></th>
+							<th scope="col" class={TH}>群组</th>
+							<th scope="col" class={TH}>群主</th>
+							<th scope="col" class={TH}>成员数</th>
+							<th scope="col" class={TH}>创建时间</th>
+							<th scope="col" class={TH}></th>
 						</tr>
 					</thead>
 					<tbody>

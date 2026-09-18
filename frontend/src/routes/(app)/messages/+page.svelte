@@ -177,6 +177,10 @@
 		<div class="flex flex-col shrink-0 overflow-hidden w-80 border-r border-border-default bg-surface-primary">
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
 			<div class="shrink-0 border-b border-border-subtle/40">
+				<!-- 登记例外：本页三栏面板有意用 surface-primary 实底（与画廊画布
+				     契约不同），PageHeader 的 page-header-solid 外壳感知底色（移动端
+				     =surface-page）在此会与列表面板错配，故用 ! 覆盖为面板同色。
+				     全项目唯一一处 ! 覆盖，勿仿照。 -->
 				<PageHeader title="消息" class="!bg-surface-primary" contentClassName="px-4">
 					{#snippet trailing()}
 						<button
@@ -276,6 +280,7 @@
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
 	<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
+		<!-- 同上：登记例外（surface-primary 面板实底，见左栏说明）。 -->
 		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} subtitleSize="sm">
 			{#snippet trailing()}
 				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->

@@ -4,6 +4,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { platform } from '@/stores/platform.svelte';
@@ -282,6 +283,11 @@
 	{#if hasMoreComments}
 		<div class="mt-4">
 			<LoadMoreButton label="加载更多评论" loading={loadingMoreComments} onLoad={onLoadMoreComments} />
+		</div>
+	{:else if comments.length > 0}
+		<!-- 分页耗尽契约（frontend/AGENTS.md）：到底必须渲染 ListEnd -->
+		<div class="mt-4">
+			<ListEnd />
 		</div>
 	{/if}
 </div>

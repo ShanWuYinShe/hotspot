@@ -103,14 +103,14 @@
 				<table class={TABLE}>
 					<thead>
 						<tr>
-							<th class={TH}>时间</th>
-							<th class={TH}>操作者</th>
-							<th class={TH}>动作</th>
-							<th class={TH}>目标</th>
-							<th class={TH}>详情</th>
-							<th class={TH}>IP 位置</th>
-							{#if canReadIp}<th class={TH}>IP 地址</th>{/if}
-							<th class={TH}>设备</th>
+							<th scope="col" class={TH}>时间</th>
+							<th scope="col" class={TH}>操作者</th>
+							<th scope="col" class={TH}>动作</th>
+							<th scope="col" class={TH}>目标</th>
+							<th scope="col" class={TH}>详情</th>
+							<th scope="col" class={TH}>IP 位置</th>
+							{#if canReadIp}<th scope="col" class={TH}>IP 地址</th>{/if}
+							<th scope="col" class={TH}>设备</th>
 						</tr>
 					</thead>
 					<tbody>

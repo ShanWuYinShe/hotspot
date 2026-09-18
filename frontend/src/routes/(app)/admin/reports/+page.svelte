@@ -113,13 +113,13 @@
 				<table class={TABLE}>
 					<thead>
 						<tr>
-							<th class={TH}>目标</th>
-							<th class={TH}>原因</th>
-							<th class={TH}>描述</th>
-							<th class={TH}>举报人</th>
-							<th class={TH}>状态</th>
-							<th class={TH}>时间</th>
-							<th class={TH}></th>
+							<th scope="col" class={TH}>目标</th>
+							<th scope="col" class={TH}>原因</th>
+							<th scope="col" class={TH}>描述</th>
+							<th scope="col" class={TH}>举报人</th>
+							<th scope="col" class={TH}>状态</th>
+							<th scope="col" class={TH}>时间</th>
+							<th scope="col" class={TH}></th>
 						</tr>
 					</thead>
 					<tbody>

@@ -96,10 +96,10 @@
 				<table class={TABLE}>
 					<thead>
 						<tr>
-							<th class={TH}>标签</th>
-							<th class={TH}>使用次数</th>
-							<th class={TH}>创建时间</th>
-							<th class={TH}></th>
+							<th scope="col" class={TH}>标签</th>
+							<th scope="col" class={TH}>使用次数</th>
+							<th scope="col" class={TH}>创建时间</th>
+							<th scope="col" class={TH}></th>
 						</tr>
 					</thead>
 					<tbody>
