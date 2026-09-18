@@ -3,7 +3,7 @@ module hotspot/backend-go
 go 1.26
 
 require (
-	github.com/alicebob/miniredis/v2 v2.38.0
+	github.com/alicebob/miniredis/v2 v2.39.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golang/geo v0.0.0-20251030142647-5906ab3d21fa
@@ -23,6 +23,6 @@ require (
 	github.com/redis/go-redis/v9 v9.19.0
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sync v0.17.0
 	golang.org/x/text v0.30.0 // indirect
 )
