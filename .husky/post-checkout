@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# worktree 新建 / 分支切换后自动隐藏本机调试签名改动。
+#
+# harmonyapp/build-profile.json5 的 signingConfigs 是单机有效的调试签名
+# （见 harmonyapp/AGENTS.md「调试签名」），DevEco 失配即重写；若任其进入
+# git 视野，切分支就会把它还原成旧口令导致签名失配。每个 checkout 只需一次
+# skip-worktree，此钩子（git checkout / worktree add 自动触发）负责补上。
+#
+# 故意不用 set -e 且恒 exit 0：这只是降噪，绝不能阻塞 checkout。
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)" 2>/dev/null || exit 0
+git update-index --skip-worktree harmonyapp/build-profile.json5 2>/dev/null || true
+exit 0

@@ -45,7 +45,7 @@ Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编
 
 - `build-profile.json5` 的 `signingConfigs.default` 是**本机调试签名**：材料在各人 `~/.ohos/config/` 下，路径与口令均为单机有效；提交的版本只对提交者本机可用，对其他机器无意义。
 - DevEco 会在材料失配时自动重生并重写该文件（`git status` 见 M 属正常）：本机能编能装就不用管；**不要把轮换后的口令反复提交**（纯噪音）。
-- 各 checkout 配好一次后执行（隐藏本地改动，防切分支把文件还原成旧口令导致签名失配）：
+- 各 checkout 的隐藏由 `.husky/post-checkout` 自动完成（新建 worktree / 切分支即挂 `skip-worktree`，防切分支把文件还原成旧口令导致签名失配），一般不用手动执行；若标记丢失再手动补一次：
   `git update-index --skip-worktree harmonyapp/build-profile.json5`
 - 新 worktree 检出即带可用签名，开箱即用；若将来 DevEco 整体重生材料，各 checkout 打开一次即自动修复，互不干扰。
 - 生产/发布签名走正式证书流程，不在此文件里配明文。
