@@ -1,6 +1,103 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 提交前校验（与 CI frontend job 对齐）：svelte-check + eslint + 主题一致性。
-# 注意：此处校验失败必须非零退出，否则 git 会放行提交。
-bun run --cwd frontend check
+# 路径分流提交检查：只对暂存区命中的项目跑对应门禁（与 CI job 对齐）。
+#
+#   frontend/   → bun run check（svelte-check + eslint + 主题一致性，对齐 CI frontend）
+#   backend-go/ → gofmt（暂存文件）+ go build + go vet / go test（受影响包）
+#                 + check-migrations.sh（暂存区含迁移时），对齐 CI backend
+#   harmonyapp/ → hvigor assembleApp（debug，含类型检查），对齐 harmonyapp/AGENTS.md
+#   其他路径（spec/、docker、scripts、文档等）→ 无专属门禁，CI 兜底
+#
+# 工具链缺失时告警跳过（不阻塞提交，CI 兜底）；门禁失败必须非零退出。
+cd "$(git rev-parse --show-toplevel)"
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+if [ -z "$STAGED" ]; then
+  exit 0
+fi
+
+has_staged_under() {
+  # $1 为目录前缀（含尾部斜杠，如 frontend/）
+  echo "$STAGED" | grep -q "^$1"
+}
+
+FAILED=0
+note() { echo "==> [pre-commit] $1"; }
+warn_skip() { echo "==> [pre-commit] 跳过 $1（$2，CI 兜底）"; }
+
+# ── frontend ────────────────────────────────────────────────────
+if has_staged_under "frontend/"; then
+  if ! command -v bun >/dev/null 2>&1; then
+    warn_skip "frontend 检查" "bun 不可用"
+  elif [ ! -d frontend/node_modules ]; then
+    warn_skip "frontend 检查" "frontend/node_modules 缺失，先执行 bun install --cwd frontend"
+  else
+    note "frontend 检查：bun run check"
+    bun run --cwd frontend check || FAILED=1
+  fi
+else
+  note "frontend 无暂存改动，跳过"
+fi
+
+# ── backend-go ──────────────────────────────────────────────────
+if has_staged_under "backend-go/"; then
+  if ! command -v go >/dev/null 2>&1; then
+    warn_skip "backend-go 检查" "go 工具链不可用"
+  else
+    # gofmt：只看仍存在的暂存 .go 文件
+    GOFILES=$(echo "$STAGED" | grep "^backend-go/.*\.go$" || true)
+    EXISTING=" "
+    for f in $GOFILES; do
+      [ -f "$f" ] && EXISTING="$EXISTING $f"
+    done
+    if [ "$EXISTING" != " " ]; then
+      # shellcheck disable=SC2086
+      UNFORMATTED=$(gofmt -l $EXISTING || true)
+      if [ -n "$UNFORMATTED" ]; then
+        echo "以下文件未通过 gofmt（执行 gofmt -w 修复）:"
+        echo "$UNFORMATTED"
+        FAILED=1
+      fi
+    fi
+    # 受影响包：暂存 .go 文件所在目录（排除需 Docker 的集成测试）
+    PKGS=$(for f in $GOFILES; do dirname "$f"; done | sort -u | sed "s|^backend-go/|./|" | grep -v "^\./test/integration$" || true)
+    if [ -n "$PKGS" ]; then
+      note "backend-go 构建：go build ./..."
+      (cd backend-go && go build ./...) || FAILED=1
+      # shellcheck disable=SC2086
+      note "backend-go vet/单测（受影响包）：$PKGS"
+      (cd backend-go && go vet $PKGS) || FAILED=1
+      # shellcheck disable=SC2086
+      (cd backend-go && go test -short -count=1 $PKGS) || FAILED=1
+    else
+      note "backend-go 仅非 .go 改动，跳过编译与单测"
+    fi
+    if echo "$STAGED" | grep -q "^backend-go/migrations/.*\.sql$"; then
+      note "backend-go 迁移序号校验：scripts/check-migrations.sh"
+      ./scripts/check-migrations.sh || FAILED=1
+    fi
+  fi
+else
+  note "backend-go 无暂存改动，跳过"
+fi
+
+# ── harmonyapp ──────────────────────────────────────────────────
+if has_staged_under "harmonyapp/"; then
+  NODE_BIN="${NODE:-/Applications/DevEco-Studio.app/Contents/tools/node/bin/node}"
+  HVIGOR_BIN="${HVIGOR:-/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js}"
+  if [ ! -x "$NODE_BIN" ] || [ ! -f "$HVIGOR_BIN" ]; then
+    warn_skip "harmonyapp 检查" "DevEco 工具链缺失（NODE/HVIGOR），见 harmonyapp/AGENTS.md"
+  else
+    note "harmonyapp 检查：hvigor assembleApp（debug，约 45s）"
+    (cd harmonyapp && "$NODE_BIN" "$HVIGOR_BIN" --mode project -p product=default -p buildMode=debug assembleApp --analyze=normal --parallel --incremental --no-daemon) || FAILED=1
+  fi
+else
+  note "harmonyapp 无暂存改动，跳过"
+fi
+
+if [ "$FAILED" -ne 0 ]; then
+  echo "==> [pre-commit] 门禁失败，提交已拦截"
+  exit 1
+fi
+note "门禁通过"
