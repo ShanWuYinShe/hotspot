@@ -419,10 +419,12 @@ func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, l
 			return PaginatedMoments{}, err
 		}
 		item.IsFavorited = true
-		item.FavoritedAt = favoritedAt // spec moment.md → FavoritedMomentItem.favorited_at
+		item.FavoritedAt = favoritedAt.UTC().Format(time.RFC3339) // spec moment.md → FavoritedMomentItem.favorited_at（展示截断到秒）
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
-		cursors = append(cursors, encodeMomentFavoriteCursor(favoritedAt, item.MomentID))
+		// 游标携带纳秒全精度（秒截断会丢同秒收藏，见 scanFavoriteMomentRow 注释）；
+		// 解码侧 time.Parse(RFC3339Nano) 兼容秒/纳秒两种历史格式，老游标仍有效。
+		cursors = append(cursors, encodeMomentFavoriteCursor(favoritedAt.UTC().Format(time.RFC3339Nano), item.MomentID))
 		if len(items) == limit+1 {
 			tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs[:limit])
 			if err != nil {

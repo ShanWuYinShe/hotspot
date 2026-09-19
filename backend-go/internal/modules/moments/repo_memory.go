@@ -408,7 +408,8 @@ func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, lim
 	var nextCursor *string
 	if len(page) > limit {
 		boundary := page[limit-1]
-		c := encodeMomentFavoriteCursor(boundary.favoritedAt.UTC().Format(time.RFC3339), boundary.item.MomentID)
+		// 游标携带纳秒全精度（秒截断会丢同秒收藏，与 Postgres 侧同因）。
+		c := encodeMomentFavoriteCursor(boundary.favoritedAt.UTC().Format(time.RFC3339Nano), boundary.item.MomentID)
 		nextCursor = &c
 		page = page[:limit]
 	}

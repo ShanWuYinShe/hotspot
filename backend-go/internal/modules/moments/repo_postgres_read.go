@@ -245,13 +245,17 @@ func loadMomentMentions(ctx context.Context, queryable persistence.Queryable, mo
 	return mentionsByMomentID, nil
 }
 
-func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, string, error) {
+// scanFavoriteMomentRow 返回展现实体与全精度收藏时刻：FavoritedAt 对外展示
+// 截断到秒（spec 时间格式），游标必须携带纳秒全精度——favorited_at 列以
+// time.Now().UTC() 全精度写入，若游标截断到秒，同秒多条收藏翻页时会因
+// keyset 谓词 (favorited_at < cursor) 恒假而静默丢失（秒截断丢数据）。
+func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, time.Time, error) {
 	var item MomentItem
 	var userID, nickname, locationName, privacyLevel string
 	var createdAt, favoritedAt time.Time
 	var latitude, longitude float64
 	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted, &favoritedAt); err != nil {
-		return MomentItem{}, "", fmt.Errorf("moments.scanFavoriteMomentRow scan: %w", err)
+		return MomentItem{}, time.Time{}, fmt.Errorf("moments.scanFavoriteMomentRow scan: %w", err)
 	}
 	if nickname == "" {
 		nickname = userID
@@ -263,5 +267,5 @@ func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem,
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 	item.PrivacyLevel = privacyLevel
-	return item, favoritedAt.UTC().Format(time.RFC3339), nil
+	return item, favoritedAt.UTC(), nil
 }

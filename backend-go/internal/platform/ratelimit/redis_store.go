@@ -112,6 +112,8 @@ func redisFixedWindow(ctx context.Context, rdb *redis.Client, key string, now ti
 
 // tokenBucketScript：令牌桶（HASH 存 tokens/last_refill_ms）。
 // KEYS[1]=key; ARGV: now_ms, capacity(=limit), rate_per_ms(浮点)
+// 每次 HSET 后续期 PEXPIRE（2×窗口，由 capacity/rate 反推窗口毫秒）：
+// 此前无过期，一次性 IP/用户键永久残留，随运行时间无界增长。
 var tokenBucketScript = redis.NewScript(`
 local state = redis.call('HMGET', KEYS[1], 'tokens', 'last_ms')
 local tokens = tonumber(state[1])
@@ -126,10 +128,12 @@ end
 tokens = math.min(capacity, tokens + (now - last) * rate)
 if tokens < 1 then
 	redis.call('HSET', KEYS[1], 'tokens', tokens, 'last_ms', now)
+	redis.call('PEXPIRE', KEYS[1], math.ceil(tonumber(ARGV[2]) / rate * 2))
 	local retry_ms = math.max(1, math.ceil((1 - tokens) / rate))
 	return {1, retry_ms}
 end
 redis.call('HSET', KEYS[1], 'tokens', tokens - 1, 'last_ms', now)
+redis.call('PEXPIRE', KEYS[1], math.ceil(tonumber(ARGV[2]) / rate * 2))
 return {0, 0}
 `)
 

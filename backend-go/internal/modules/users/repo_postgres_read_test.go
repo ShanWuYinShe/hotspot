@@ -259,9 +259,15 @@ func TestUserMomentCursorIsOpaqueAndTamperProof(t *testing.T) {
 	if !ok || at.UTC().Format(time.RFC3339) != "2026-03-29T12:00:00Z" {
 		t.Fatalf("unexpected parsed at: %#v", parsedAt)
 	}
-	tampered := cursor[:len(cursor)-2] + "AA"
-	if tampered == cursor {
-		t.Fatal("expected tampered cursor to differ from original")
+	// 篡改末两位 base64 字符。原串末尾可能恰为 "AA"（随机 nonce 使密文每次
+	// 不同），此时篡改串等于原串，防篡改判定必然通过导致随机失败（同 handler_test.go
+	// TestSearchCursorIsOpaqueAndTamperProof 的 10493b8c 修复）；必须保证篡改串与
+	// 原串必然不同，AES-GCM 标签校验保证任一字符变化都无法解密。
+	tampered := cursor[:len(cursor)-2]
+	if strings.HasSuffix(cursor, "AA") {
+		tampered += "BB"
+	} else {
+		tampered += "AA"
 	}
 	if _, _, err := decodeUserMomentCursor(tampered); !errors.Is(err, ErrInvalidCursor) {
 		t.Fatalf("expected invalid cursor error, got %v", err)

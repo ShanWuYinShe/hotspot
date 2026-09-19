@@ -123,6 +123,7 @@ Handler -> Service -> Repository
 
 - 禁止 OFFSET，必须使用 cursor/keyset 分页
 - cursor 不透明，客户端只透传；编码/解码仅在 Repository 层
+- 时间 keyset 的精度必须对齐：游标携带的时间精度不得粗于排序列的写入精度（如列以 `time.Now().UTC()` 全精度写入，游标必须用 `RFC3339Nano` 编码；秒截断游标配全精度列会导致同秒行在翻页中静默丢失，见 `moments/fetch_favorites` 修复先例）。新增时间 keyset 列表时，复核「写入精度 × 游标精度 × 谓词」三者一致
 - limit 默认 20、上限 100，由 Service 层兜底裁剪
 - 无更多数据时 `next_cursor` 为 `null`（恒定 nullable，见 `spec/api_spec_types.md`），禁止省略字段
 

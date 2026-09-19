@@ -45,7 +45,7 @@ func (s *RefreshStore) Rotate(_ context.Context, oldToken string, current Refres
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	current.RotatedTo = next.RefreshToken
-	current.GraceUntil = time.Now().UTC().Add(30 * time.Second)
+	current.GraceUntil = time.Now().UTC().Add(RefreshRotationGrace)
 	current.GraceTokenEnc = next.GraceTokenEnc
 	s.items[oldToken] = current
 	s.items[next.RefreshToken] = next

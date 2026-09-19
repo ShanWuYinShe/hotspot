@@ -18,6 +18,14 @@ import (
 // 回退全量重放（spec L157, L161）。可通过 config RESUME_TTL_SECONDS 覆盖。
 const DefaultResumeTTL = 60 * time.Second
 
+// resumeStreamMaxLen 是单条 resume Stream 的条目硬上限（XTRIM MAXLEN）：
+// 脚本每次写入都续期 PEXPIRE，持续活跃的流永不过期，若无上限会随进程
+// 运行时间无界增长（热群 1 条/秒即每天 8.6 万条全量事件 JSON）。2000 条覆盖
+// 60 秒窗口内 33 条/秒的持续写入；超出后最旧条目被丢弃，基线早于裁剪点的
+// 重连客户端将静默缺失中间事件（与 60 秒 TTL 过期回退全量重放同属弱一致范畴，
+// 残余风险：单流 60 秒超 2000 事件的极端热点）。
+const resumeStreamMaxLen = 2000
+
 // ResumeStore 维护 resume 增量恢复所需的跨实例状态（spec L156, L159）。
 //
 // seq 为全局单调（单一 INCR 计数器）：user 事件与 group 事件共享同一 seq 空间，
@@ -78,6 +86,7 @@ const (
 var recordScript = redis.NewScript(`
 local seq = redis.call('INCR', KEYS[1])
 redis.call('XADD', KEYS[2], seq, 'e', ARGV[1])
+redis.call('XTRIM', KEYS[2], 'MAXLEN', ARGV[3])
 redis.call('PEXPIRE', KEYS[2], ARGV[2])
 return seq
 `)
@@ -92,8 +101,9 @@ return seq
 var recordAndPublishScript = redis.NewScript(`
 local seq = redis.call('INCR', KEYS[1])
 redis.call('XADD', KEYS[2], seq, 'e', ARGV[1])
+redis.call('XTRIM', KEYS[2], 'MAXLEN', ARGV[3])
 redis.call('PEXPIRE', KEYS[2], ARGV[2])
-redis.call('PUBLISH', KEYS[3], '{"o":' .. ARGV[3] .. ',"s":' .. seq .. ',"e":' .. ARGV[1] .. '}')
+redis.call('PUBLISH', KEYS[3], '{"o":' .. ARGV[4] .. ',"s":' .. seq .. ',"e":' .. ARGV[1] .. '}')
 return seq
 `)
 
@@ -135,7 +145,7 @@ func (s *RedisResumeStore) recordInto(streamKey string, event Event) int64 {
 	ttlMs := int64(s.ttl / time.Millisecond)
 	seq, err := recordScript.Run(ctx, s.rdb,
 		[]string{resumeGlobalSeqKey, streamKey},
-		string(blob), ttlMs).Int64()
+		string(blob), ttlMs, resumeStreamMaxLen).Int64()
 	if err != nil {
 		observability.L().Warn("resume: record failed, client will fall back to full replay", "stream", streamKey, "err", err)
 		return 0
@@ -193,7 +203,7 @@ func (s *RedisResumeStore) recordAndPublishInto(streamKey, channel string, event
 	ttlMs := int64(s.ttl / time.Millisecond)
 	seq, err := recordAndPublishScript.Run(ctx, s.rdb,
 		[]string{resumeGlobalSeqKey, streamKey, redisChannelPrefix + channel},
-		string(blob), ttlMs, strconv.Quote(s.origin)).Int64()
+		string(blob), ttlMs, resumeStreamMaxLen, strconv.Quote(s.origin)).Int64()
 	if err != nil {
 		observability.L().Warn("realtime: record+publish failed, falling back to two-step path", "stream", streamKey, "err", err)
 		return 0, false
