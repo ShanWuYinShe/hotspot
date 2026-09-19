@@ -11,7 +11,9 @@
 # 前置条件：
 #   1. tag 已推送且 CI「Release」工作流成功（Release 已挂镜像包）
 #   2. tag 在 origin/main 上
-# 环境变量：SERVER / REMOTE_DIR 同前；DEPLOY_DB_USER / DEPLOY_DB_NAME 覆盖备份库配置。
+# 环境变量：SERVER / REMOTE_DIR 同前；DEPLOY_DB_USER / DEPLOY_DB_NAME 覆盖备份库配置；
+#   DEPLOY_DB_CONTAINER 覆盖备份用的 postgres 容器名（默认 hotspot-postgres-1，
+#   依赖服务器部署目录名为 hotspot，与 scripts/backup-postgres.sh 的 CONTAINER 对应）。
 # 安全网：滚动更新前自动 pg_dump（服务器 backups/ + 本机 .workwork/ 各一份），
 # 备份失败即中止部署——迁移不可逆，无快照不上线。
 #
@@ -44,6 +46,15 @@ git -C "$REPO_ROOT" merge-base --is-ancestor "$TARGET" origin/main || { echo "!!
 COMMIT="$(git -C "$REPO_ROOT" rev-parse "${TARGET}^{commit}")"
 echo "==> 部署版本: ${TARGET} (commit ${COMMIT:0:12})"
 
+# docker-compose.prod.yml 的 `ports: !override []` 依赖 YAML merge tag（Compose v2.24+），
+# 过旧版本解析报错晦涩，提前拦下。
+MIN_COMPOSE="2.24.0"
+SERVER_COMPOSE="$(ssh "$SERVER" "docker compose version --short")"
+if [ "$(printf '%s\n%s\n' "$MIN_COMPOSE" "$SERVER_COMPOSE" | sort -V | head -1)" != "$MIN_COMPOSE" ]; then
+  echo "!! 服务器 Docker Compose ${SERVER_COMPOSE} 过旧，需 ≥ v${MIN_COMPOSE}"; exit 1
+fi
+echo "    服务器 Docker Compose: ${SERVER_COMPOSE}"
+
 echo "==> 从 GitHub Release 下载镜像包…"
 mkdir -p "$STAGING"
 ( cd "$REPO_ROOT" && gh release download "$TARGET" --dir "$STAGING" --clobber --pattern 'hotspot-images-*.tar.gz' )
@@ -75,9 +86,10 @@ ssh "$SERVER" "docker load -i $REMOTE_DIR/tmp-deploy-incoming/hotspot-images-$TA
 echo "==> 部署前数据库备份…"
 DEPLOY_DB_USER="${DEPLOY_DB_USER:-postgres}"
 DEPLOY_DB_NAME="${DEPLOY_DB_NAME:-hotspot}"
+DEPLOY_DB_CONTAINER="${DEPLOY_DB_CONTAINER:-hotspot-postgres-1}"
 BACKUP_STAMP="$(date +%Y%m%d_%H%M%S)"
 BACKUP_NAME="hotspot_pre_deploy_${TARGET}_${BACKUP_STAMP}.sql.gz"
-ssh "$SERVER" "mkdir -p $REMOTE_DIR/backups && docker exec hotspot-postgres-1 pg_dump -U $DEPLOY_DB_USER -d $DEPLOY_DB_NAME -Z1 > $REMOTE_DIR/backups/$BACKUP_NAME"
+ssh "$SERVER" "mkdir -p $REMOTE_DIR/backups && docker exec $DEPLOY_DB_CONTAINER pg_dump -U $DEPLOY_DB_USER -d $DEPLOY_DB_NAME -Z1 > $REMOTE_DIR/backups/$BACKUP_NAME"
 scp -q "$SERVER:$REMOTE_DIR/backups/$BACKUP_NAME" "$REPO_ROOT/.workwork/$BACKUP_NAME"
 BACKUP_SIZE="$(ssh "$SERVER" "du -h $REMOTE_DIR/backups/$BACKUP_NAME | cut -f1")"
 echo "✅ 备份完成: $BACKUP_NAME（${BACKUP_SIZE}，服务器 $REMOTE_DIR/backups/ + 本机 .workwork/）"
@@ -100,18 +112,18 @@ done
 [ -n "$backend_ok" ] || { echo "!! 150s 内后端版本校验未通过，检查 docker logs hotspot-backend-1"; exit 1; }
 
 frontend_ok=""
-for _ in $(seq 1 12); do
+for i in $(seq 1 12); do
   FE="$(ssh "$SERVER" "docker exec hotspot-frontend-1 cat /build/version.json" 2>/dev/null || true)"
   if echo "$FE" | grep -q "\"version\": *\"$TARGET\""; then
     echo "✅ 前端版本指纹一致: $FE"
     frontend_ok=1
     break
   fi
-  if [ "$_" = "12" ]; then
-    echo "!! 前端静态卷版本校验未通过: $FE"; exit 1
-  fi
   sleep 2
 done
+# 不能用循环变量 _ 判断是否走完最后一轮：_ 即 bash 特殊变量 $_，会被循环体内
+# 的命令覆盖（sleep 等），导致校验失败也不中止、部署被误报成功。
+[ -n "$frontend_ok" ] || { echo "!! 前端静态卷版本校验未通过: ${FE:-<空>}"; exit 1; }
 
 rm -f "$TARBALL"
 echo "🎉 部署完成: ${TARGET} → ${SERVER}:${REMOTE_DIR}（回滚：IMAGE_TAG=<旧版本> ${COMPOSE} up -d && docker restart hotspot-nginx-1）"

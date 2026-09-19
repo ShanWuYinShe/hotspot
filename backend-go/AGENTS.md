@@ -69,7 +69,7 @@ Handler -> Service -> Repository
 
 ## 数据库迁移
 
-`migrations/` 下 `NNN_描述.sql` 格式，嵌入二进制由启动时自动执行（字典序全量重跑，幂等靠各自 `IF NOT EXISTS`）。新增 migration 使用下一个可用序号（CI 校验序号唯一且无重复，`scripts/check-migrations.sh`）。
+`migrations/` 下 `NNN_描述.sql` 格式，嵌入二进制由启动时自动执行（字典序全量重跑，幂等靠各自 `IF NOT EXISTS`）。新增 migration 使用下一个可用序号（CI 校验序号唯一且无重复——历史 009 重号在脚本白名单放行，见仓库根 `scripts/check-migrations.sh`）。
 
 **向后兼容纪律（硬性）**：迁移必须兼容「上一个已发布版本」的二进制——发布是无停机产物替换，旧版后端会短暂与新 schema 共存：
 

@@ -11,7 +11,7 @@ HotSpot 的 Web 前端，基于 SvelteKit 的纯 UI 层，所有数据来自后�
 - 地图浏览
 - 发现与搜索
 - 个人中心
-- 管理后台（待建）
+- 管理后台（users/groups/reports/tags/announcements/rbac/audit/config）
 
 ## 运行
 

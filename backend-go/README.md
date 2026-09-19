@@ -50,7 +50,7 @@ backend-go/
 ├── test/integration/       # 集成测试（E2E，需要 Docker）
 ├── internal/
 │   ├── bootstrap/          # 装配：模块注册、路由、WS、worker、迁移
-│   ├── modules/            # 18 个业务模块（auth/users/groups/chat/moments/…）
+│   ├── modules/            # 17 个业务模块（auth/users/groups/chat/moments/…）
 │   │   └── <模块>/         # 统一骨架：types/handler/service/repo(+memory/postgres/queries)/module
 │   └── platform/           # 基础设施：auth/persistence/httpx/realtime/observability/…
 └── spec 契约见仓库根 spec/（只读）

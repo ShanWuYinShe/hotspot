@@ -46,8 +46,11 @@ jobs:
         run: ./scripts/check-migrations.sh
       - name: go test (with coverage gate)
         run: |
+          # GitHub Actions 默认 shell 为 bash -e（无 pipefail），`go test | tee`
+          # 的退出码取自 tee，测试失败不会让本步骤变红，必须显式开启 pipefail。
+          set -eo pipefail
           cd backend-go
-          go test -count=1 $(go list ./... | grep -v /test/integration) -coverprofile=/tmp/cover.out 2>&1 | tee /tmp/gotest.log
+          go test -count=1 -cover $(go list ./... | grep -v /test/integration) 2>&1 | tee /tmp/gotest.log
           # 业务模块覆盖率门槛：internal/modules 下任一包 <70% 即失败。
           # go test 单包输出格式：ok  <pkg>  <dur>  coverage: <x>% of statements
           awk '/^ok .*coverage: [0-9.]+% of statements/ {

@@ -1,5 +1,9 @@
 # ── HotSpot Base Configuration ────────────────────────────────────
-# 构建 + 运行: docker compose up --build -d
+# 构建 + 运行: docker compose --profile prod build backend frontend-build
+#              && docker compose up -d
+#   （base 的 frontend 服务只引用镜像 hotspot-frontend:${IMAGE_TAG:-latest}，
+#   构建入口是 --profile prod 的 frontend-build；直接 `up --build` 会因本地
+#   没有该镜像而 pull 失败）
 # 仅运行:     docker compose up -d
 # 开发模式:   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 #

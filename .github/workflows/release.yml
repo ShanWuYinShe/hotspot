@@ -6,7 +6,8 @@
 # 镜像包 → 服务器 docker load → compose up。服务器全程不接触源码、不构建，
 # 替代早期 rsync 源码到服务器构建的非常规做法。
 #
-# 触发前条件：tag 必须已在 origin/main 上（deploy 脚本会校验）。
+# 触发前条件：tag 必须已在 origin/main 上（deploy 脚本会校验），且该提交的
+# CI 已跑完并全绿（首个 job 强制断言，查不到或未完成一律拒绝发布）。
 # 凭据：仅内置 GITHUB_TOKEN（contents: write 用于创建 Release/上传资产）。
 
 name: Release
@@ -27,8 +28,40 @@ env:
   IMAGE_FRONTEND: hotspot-frontend
 
 jobs:
+  require-ci:
+    name: Require CI Green on Tagged Commit
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+    steps:
+      - name: Assert CI passed for this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eo pipefail
+          # tag 若紧跟合并推送，CI 可能还在跑：等待其完成（上限 40 分钟），
+          # 结论非 success（失败 / 查不到 / 超时）一律拒绝出包。
+          deadline=$(( $(date +%s) + 2400 ))
+          while :; do
+            row="$(gh run list --workflow CI --commit "$GITHUB_SHA" \
+              --json status,conclusion \
+              --jq 'first(.[] | select(.status == "completed"))' 2>/dev/null || true)"
+            if [ -n "$row" ]; then
+              conclusion="$(printf '%s' "$row" | jq -r '.conclusion')"
+              echo "tagged commit $GITHUB_SHA CI conclusion: $conclusion"
+              test "$conclusion" = "success"
+              exit 0
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::该提交的 CI 未在 40 分钟内完成，拒绝发布（请确认 CI 结论后重推 tag）"
+              exit 1
+            fi
+            sleep 60
+          done
+
   build-push-release:
     name: Build & Attach Images
+    needs: require-ci
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
