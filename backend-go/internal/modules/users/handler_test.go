@@ -618,7 +618,15 @@ func TestSearchCursorIsOpaqueAndTamperProof(t *testing.T) {
 		t.Fatalf("expected opaque cursor, got plain json payload %#v", plain)
 	}
 
-	tampered := result.NextCursor[:len(result.NextCursor)-1] + "A"
+	// 篡改末位 base64 字符。原末位可能恰为 'A'（随机 nonce 使密文每次不同，
+	// 概率约 1/64~1/4——此测试曾在 CI 上随机挂），必须保证篡改串与原串
+	// 必然不同；AES-GCM 标签校验保证任一字符变化都无法解密。
+	tampered := result.NextCursor[:len(result.NextCursor)-1]
+	if strings.HasSuffix(result.NextCursor, "A") {
+		tampered += "B"
+	} else {
+		tampered += "A"
+	}
 	invalid, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{
 		Keyword:        "Alice",
 		ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112},
