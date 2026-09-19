@@ -2,9 +2,9 @@
 
 ## 功能边界
 
-HarmonyOS ArkTS 客户端。覆盖认证(含多账户切换)/发现与搜索/信息流/生活瞬间与评论/媒体上传/聊天(私聊+群聊)/群组/通知与公告/举报/地图(原生组件+位置选择器)/附近/个人中心。管理后台功能仅 Web 端提供,本端不含。支付与交易、端侧离线同步不在范围内。
+HarmonyOS ArkTS 客户端。覆盖认证(含多账户切换)/发现与搜索/信息流/生活瞬间与评论/媒体上传/聊天(私聊+群聊)/群组/通知与公告/举报/地图(原生组件+位置选择器)/附近/个人中心/管理后台/订阅管理。支付与交易、端侧离线同步不在范围内。
 
-订阅管理:契约待定,当前 spec 未定义订阅相关 API,待后续版本补充。
+管理后台与订阅管理的端内页面已存在（`AdminOverviewPage`/`SubscriptionsPage`，路由常量见 `AppConstants.ets`）；管理后台契约见 `spec/api_spec_admin.md`，其余以 `spec/` 为准。
 
 API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）。
 
@@ -39,7 +39,7 @@ PATH=$JAVA_HOME/bin:$PATH
 
 如果修正 `DEVECO_SDK_HOME` / `JAVA_HOME` 后仍复用旧环境，先运行 `$NODE $HVIGOR --stop-daemon`，再重新构建。
 
-Lint & Format: DevEco Studio 内置，无独立 CLI。代码检查由 IDE 在编辑时自动执行。
+Lint & Format: 依赖 DevEco Studio IDE 内置检查；仓库根 `code-linter.json5` 是 codelinter 的规则配置（性能/TS 语法/安全规则集），命令行批量检查可配合 codelinter CLI 使用。
 
 ## 调试签名（本机绑定）
 

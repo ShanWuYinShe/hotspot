@@ -96,7 +96,8 @@ bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 逐页截图并生成报告。输出统一在仓库根 `.workwork/browser-check/qa-<时间戳>/`
 （已 gitignore，不提交）。
 
-`bun run build` 是 `vite build`（不含 `svelte-kit sync`；重建 `.svelte-kit/` 的是
+`bun run build` 是 `write-version-info`（注入版本信息）+ `vite build`（不含
+`svelte-kit sync`；重建 `.svelte-kit/` 的是
 `dev`/`check` 脚本里的 `svelte-kit sync`），但会读取并写入 `.svelte-kit/` 产物，
 与正在运行的 dev server 共用该目录，可能相互干扰。需要跑 build 前先停掉 frontend
 容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
@@ -577,22 +578,22 @@ theme/
     `85%`（新会话）/`92%`（建群，表单更高）、聊天空态 `min-height:240px/max-width:220px`、
     上传占位 `height:110px`、封禁页 `max-width:360px`、横幅 `h-7` 类化后
     仅剩物理例外——新增此类布局尺寸时优先 Tailwind 类，确需内联则登记
-16. **毛玻璃模糊半径（强制，3 档）**：`backdrop-filter:blur()` 半径一律用
+14. **毛玻璃模糊半径（强制，3 档）**：`backdrop-filter:blur()` 半径一律用
     `var(--cst-blur-sm/md/lg)` token（sm=8 轻徽章、md=16 sticky header/overlay、
     lg=24 底部导航/tablet dock），禁止内联 `blur(Npx)` 字面量（原 8/10/16/18/24/28px
     六种已收敛到 3 档）
-17. **opacity**：优先用 Tailwind `opacity-*` 标准档类（10/20/30.../100），减少内联
+15. **opacity**：优先用 Tailwind `opacity-*` 标准档类（10/20/30.../100），减少内联
     `style="opacity:0.N"`。装饰性图标/文字透明度应归标准档（0.5→opacity-50 等）；
     导航激活态背景等精确视觉调校允许保留内联值（0.12~0.15 区间属刻意微调）
-18. **焦点可见性（强制）**：所有可交互元素必须有可见键盘焦点环。统一用
+16. **焦点可见性（强制）**：所有可交互元素必须有可见键盘焦点环。统一用
     `focus-ring` 类（`focus-visible` 时 accent outline）或等效的
     `focus-visible:ring-2 focus-visible:ring-accent-default`；**禁止无替代地使用
     `outline-none`**（Tailwind v4 的 `outline-none` 会压掉 base.css 的全局按钮轮廓）。
     图标按钮必须同时提供 `aria-label`；紧凑图标按钮（<44px）叠加 `hit-slop` 扩展触控热区
-19. **减弱动效（强制）**：新增加载/装饰动画必须考虑 `prefers-reduced-motion`；
+17. **减弱动效（强制）**：新增加载/装饰动画必须考虑 `prefers-reduced-motion`；
     utilities.css 已提供全局降级（动画瞬时化、`map-pulse-halo` 停用、
     spinner 放慢），不得绕过
-14. **动效曲线（强制）**：过渡缓动曲线一律用 `var(--cst-ease-*)` token，禁止内联
+18. **动效曲线（强制）**：过渡缓动曲线一律用 `var(--cst-ease-*)` token，禁止内联
     `cubic-bezier(...)` 字面量：
     - `--cst-ease-standard`=(0.22,1,0.36,1)：标准减速曲线（绝大多数 transition）
     - `--cst-ease-bounce`=(0.34,1.56,0.64,1)：弹簧 overshoot 曲线（FAB、toggle 滑块、
@@ -601,7 +602,7 @@ theme/
     **duration 不强制 token 化**：`0.10s`~`0.30s` 的精细时长差异是 Figma 动效契约的
    有意设计（btn 0.17s、action 0.14s、tap 0.10s 等），`--cst-motion-standard:220ms`
     仅作基准参考，不代表统一时长；组件按 Figma 契约保留各自动效时长
-15. **z-index 层叠**：分两类，不混用：
+19. **z-index 层叠**：分两类，不混用：
     - **全站页面级层叠**（弹层/抽屉/Toast 等跨组件浮层）：用 `--cst-z-*` token
       （dropdown=10 / overlay=40 / modal=50 / toast=60），经 `z-[var(--cst-z-modal)]`
       等引用
