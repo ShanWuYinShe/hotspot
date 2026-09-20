@@ -2,6 +2,7 @@ package reactions
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 	"testing"
@@ -281,10 +282,7 @@ func TestUnreactBroadcastsToTargetOwner(t *testing.T) {
 	if len(actorSink.events) != 0 {
 		t.Fatalf("ReactionRemoved must not be delivered to the actor, got %+v", actorSink.events)
 	}
-	payload, ok := ownerSink.events[0].Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map payload, got %T", ownerSink.events[0].Payload)
-	}
+	payload := decodePayload(t, ownerSink.events[0].Payload)
 	// 契约:反应移除不产生通知,payload 不含 notification_id。
 	if _, has := payload["notify_id"]; has {
 		t.Fatalf("ReactionRemoved payload must not carry notification_id, got %+v", payload)
@@ -313,4 +311,20 @@ func TestUnreactSkipsBroadcastWhenTargetGone(t *testing.T) {
 	if len(ownerSink.events) != 0 {
 		t.Fatalf("no broadcast expected for deleted target, got %+v", ownerSink.events)
 	}
+}
+
+// decodePayload 把 WS payload（现为类型化 struct）经 JSON round-trip 转回
+// map，让既有键级断言继续验证「序列化后的形状」——那才是真正的线上契约。
+// 注意数字经 JSON 解码为 float64。
+func decodePayload(t *testing.T, p any) map[string]any {
+	t.Helper()
+	b, err := json.Marshal(p)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatalf("payload is not an object: %v (%#v)", err, p)
+	}
+	return m
 }

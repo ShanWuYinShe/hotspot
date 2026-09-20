@@ -220,27 +220,23 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 		return MessageSentResult{}, err
 	}
 	msg := sent
-	payload := map[string]any{
-		"message_id":     msg.MessageID,
-		"target_user_id": req.TargetUserID,
-		"sender":         s.resolveUserInfo(ctx, principal.UserID),
-		"type":           req.Type,
-		"sent_at":        msg.SentAt,
-	}
-	if req.Content != "" {
-		payload["content"] = req.Content
-	}
-	if req.ShareCode != "" {
-		payload["share_code"] = req.ShareCode
+	payload := PrivateMessageSentPayload{
+		MessageID:    msg.MessageID,
+		TargetUserID: req.TargetUserID,
+		Sender:       s.resolveUserInfo(ctx, principal.UserID),
+		Type:         req.Type,
+		SentAt:       msg.SentAt,
+		Content:      req.Content,
+		ShareCode:    req.ShareCode,
 	}
 	if req.ReplyToMessageID != "" {
 		if replyTo := s.buildReplyTo(ctx, req.ReplyToMessageID, principal.UserID); replyTo != nil {
-			payload["reply_to"] = replyTo
+			payload.ReplyTo = replyTo
 		}
 	}
 	if req.FileID != "" {
 		if media := s.buildMedia(ctx, req.FileID, principal.UserID); media != nil {
-			payload["media"] = media
+			payload.Media = media
 		}
 	}
 	event := realtime.Event{Type: realtime.EventTypePrivateMessageNew, Payload: payload}
@@ -342,11 +338,11 @@ func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) e
 		return err
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
-	event := realtime.Event{Type: realtime.EventTypePrivateMessageEdited, Payload: map[string]any{
-		"message_id":     req.MessageID,
-		"target_user_id": meta.TargetUserID,
-		"content":        meta.Content,
-		"edited_at":      now,
+	event := realtime.Event{Type: realtime.EventTypePrivateMessageEdited, Payload: PrivateMessageEditedPayload{
+		MessageID:    req.MessageID,
+		TargetUserID: meta.TargetUserID,
+		Content:      meta.Content,
+		EditedAt:     now,
 	}}
 	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
@@ -361,11 +357,11 @@ func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) e
 		return err
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
-	event := realtime.Event{Type: realtime.EventTypePrivateMessageRecalled, Payload: map[string]any{
-		"message_id":     req.MessageID,
-		"target_user_id": meta.TargetUserID,
-		"recalled_by":    s.resolveUserInfo(ctx, principal.UserID),
-		"recalled_at":    now,
+	event := realtime.Event{Type: realtime.EventTypePrivateMessageRecalled, Payload: PrivateMessageRecalledPayload{
+		MessageID:    req.MessageID,
+		TargetUserID: meta.TargetUserID,
+		RecalledBy:   s.resolveUserInfo(ctx, principal.UserID),
+		RecalledAt:   now,
 	}}
 	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
@@ -379,11 +375,11 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadReq
 		observability.L().Error("privatemessages.mark_as_read failed", "error", err, "target_user_id", req.TargetUserID, "up_to_message_id", req.UpToMessageID)
 		return err
 	}
-	event := realtime.Event{Type: realtime.EventTypePrivateMessageRead, Payload: map[string]any{
-		"target_user_id":   meta.TargetUserID,
-		"up_to_message_id": meta.MessageID,
-		"reader_id":        principal.UserID,
-		"read_at":          time.Now().UTC().Format(time.RFC3339Nano),
+	event := realtime.Event{Type: realtime.EventTypePrivateMessageRead, Payload: PrivateMessageReadPayload{
+		TargetUserID:  meta.TargetUserID,
+		UpToMessageID: meta.MessageID,
+		ReaderID:      principal.UserID,
+		ReadAt:        time.Now().UTC().Format(time.RFC3339Nano),
 	}}
 	// 契约(api_spec_websocket.md):PrivateMessageRead 仅推给私聊对端（让对方得知已读）。
 	// 不推给已读方自己的其他设备——跨设备已读同步不在本协议范围（self-sync 已移除）。

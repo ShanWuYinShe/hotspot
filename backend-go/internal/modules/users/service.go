@@ -185,9 +185,9 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 	now := time.Now().UTC().Format(time.RFC3339)
 	event := realtime.Event{
 		Type: realtime.EventTypeUserProfileUpdated,
-		Payload: map[string]any{
-			"user_id":    principal.UserID,
-			"updated_at": now,
+		Payload: UserProfileUpdatedPayload{
+			UserID:    principal.UserID,
+			UpdatedAt: now,
 		},
 	}
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
@@ -370,9 +370,9 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 	now := time.Now().UTC().Format(time.RFC3339)
 	event := realtime.Event{
 		Type: realtime.EventTypeUserProfileUpdated,
-		Payload: map[string]any{
-			"user_id":    principal.UserID,
-			"updated_at": now,
+		Payload: UserProfileUpdatedPayload{
+			UserID:    principal.UserID,
+			UpdatedAt: now,
 		},
 	}
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)

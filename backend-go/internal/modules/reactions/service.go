@@ -140,12 +140,12 @@ func (s *Service) unreact(ctx context.Context, req SetReactionRequest) error {
 	// produce a notification).
 	realtime.DefaultHub().BroadcastToUser(ownerID, realtime.Event{
 		Type: EventTypeReactionRemoved,
-		Payload: map[string]any{
-			"target_type": string(req.TargetType),
-			"target_id":   req.TargetID,
-			"emoji":       req.Emoji,
-			"actor":       s.buildActor(ctx, principal.UserID),
-			"removed_at":  time.Now().UTC().Format(time.RFC3339),
+		Payload: ReactionRemovedPayload{
+			TargetType: string(req.TargetType),
+			TargetID:   req.TargetID,
+			Emoji:      req.Emoji,
+			Actor:      s.buildActor(ctx, principal.UserID),
+			RemovedAt:  time.Now().UTC().Format(time.RFC3339),
 		},
 	})
 	return nil

@@ -511,17 +511,17 @@ func (s *Service) AppendGroupMentionedBatch(ctx context.Context, targetUserIDs [
 // event against the HTTP notify/fetch record (spec api_spec_websocket.md).
 func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem, notifyID string) {
 	// 契约(api_spec_websocket.md → SystemAnnouncement)：payload 复用 SystemAnnouncementItem
-	announcement := map[string]any{
-		"announcement_id": item.AnnouncementID,
-		"title":           item.Title,
-		"content":         item.Content,
-		"severity":        item.Severity,
-		"created_at":      item.CreatedAt,
+	announcement := AnnouncementBody{
+		AnnouncementID: item.AnnouncementID,
+		Title:          item.Title,
+		Content:        item.Content,
+		Severity:       string(item.Severity),
+		CreatedAt:      item.CreatedAt,
 	}
 	if item.ActionURL != nil && *item.ActionURL != "" {
-		announcement["action_url"] = *item.ActionURL
+		announcement.ActionURL = *item.ActionURL
 	}
-	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: realtime.EventTypeSystemAnnouncement, Payload: map[string]any{"notify_id": notifyID, "announcement": announcement}})
+	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: realtime.EventTypeSystemAnnouncement, Payload: SystemAnnouncementPayload{NotifyID: notifyID, Announcement: announcement}})
 }
 
 func (s *Service) PublishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error {

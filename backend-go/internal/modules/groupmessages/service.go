@@ -257,14 +257,14 @@ func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req Se
 	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟。
 	broadcast := func(mentionedUserID, notificationID string) func() error {
 		return func() error {
-			realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeGroupMessageMentioned, Payload: map[string]any{
-				"notify_id":       notificationID,
-				"group_id":        req.GroupID,
-				"group_name":      groupName, // spec websocket.md：与 notify payload 对齐，直接渲染通知标题
-				"message_id":      msg.MessageID,
-				"actor":           actor,
-				"content_preview": contentPreview,
-				"mentioned_at":    msg.SentAt,
+			realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeGroupMessageMentioned, Payload: GroupMessageMentionedPayload{
+				NotifyID:       notificationID,
+				GroupID:        req.GroupID,
+				GroupName:      groupName, // spec websocket.md：与 notify payload 对齐，直接渲染通知标题
+				MessageID:      msg.MessageID,
+				Actor:          actor,
+				ContentPreview: contentPreview,
+				MentionedAt:    msg.SentAt,
 			}})
 			return nil
 		}
@@ -329,11 +329,11 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupMessageRequest) err
 		observability.L().Error("groupmessages.update failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageEdited, Payload: map[string]any{
-		"group_id":   meta.GroupID,
-		"message_id": meta.MessageID,
-		"content":    meta.Content,
-		"edited_at":  time.Now().UTC().Format(time.RFC3339),
+	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageEdited, Payload: GroupMessageEditedPayload{
+		GroupID:   meta.GroupID,
+		MessageID: meta.MessageID,
+		Content:   meta.Content,
+		EditedAt:  time.Now().UTC().Format(time.RFC3339),
 	}})
 	return nil
 }
@@ -347,11 +347,11 @@ func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) err
 		observability.L().Error("groupmessages.recall failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: map[string]any{
-		"group_id":    meta.GroupID,
-		"message_id":  meta.MessageID,
-		"recalled_by": map[string]any{"user_id": req.UserID},
-		"recalled_at": time.Now().UTC().Format(time.RFC3339),
+	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: GroupMessageRecalledPayload{
+		GroupID:    meta.GroupID,
+		MessageID:  meta.MessageID,
+		RecalledBy: RecalledByUser{UserID: req.UserID},
+		RecalledAt: time.Now().UTC().Format(time.RFC3339),
 	}})
 	return nil
 }
@@ -374,11 +374,11 @@ func (s *Service) RecallMessageAsAdmin(ctx context.Context, operatorID, groupID,
 		observability.L().Error("groupmessages.recall_as_admin failed", "error", err, "message_id", messageID, "group_id", groupID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToGroup(groupID, realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: map[string]any{
-		"group_id":    groupID,
-		"message_id":  messageID,
-		"recalled_by": map[string]any{"user_id": operatorID},
-		"recalled_at": meta2.SentAt,
+	realtime.DefaultHub().BroadcastToGroup(groupID, realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: GroupMessageRecalledPayload{
+		GroupID:    groupID,
+		MessageID:  messageID,
+		RecalledBy: RecalledByUser{UserID: operatorID},
+		RecalledAt: meta2.SentAt,
 	}})
 	return nil
 }
@@ -455,11 +455,11 @@ func (s *Service) flushReadCounts(groupID string, messageIDs []string) {
 		}
 		realtime.DefaultHub().BroadcastToGroup(groupID, realtime.Event{
 			Type: realtime.EventTypeGroupMessageReadCountUpdated,
-			Payload: map[string]any{
-				"group_id":   groupID,
-				"message_id": messageID,
-				"read_count": count,
-				"updated_at": time.Now().UTC().Format(time.RFC3339),
+			Payload: GroupMessageReadCountUpdatedPayload{
+				GroupID:   groupID,
+				MessageID: messageID,
+				ReadCount: count,
+				UpdatedAt: time.Now().UTC().Format(time.RFC3339),
 			},
 		})
 	}

@@ -202,19 +202,16 @@ func TestPushSystemAnnouncementFansOut(t *testing.T) {
 	if aliceSink.events[0].Type != "SystemAnnouncement" || bobSink.events[0].Type != "SystemAnnouncement" {
 		t.Fatalf("unexpected event types: %#v %#v", aliceSink.events, bobSink.events)
 	}
-	alicePayload, ok := aliceSink.events[0].Payload.(map[string]any)
+	// payload 已类型化为 SystemAnnouncementPayload，直接字段断言
+	alicePayload, ok := aliceSink.events[0].Payload.(SystemAnnouncementPayload)
 	if !ok {
 		t.Fatalf("unexpected alice payload type: %#v", aliceSink.events[0].Payload)
 	}
 	// spec websocket.md → SystemAnnouncement：payload 结构为 {notify_id, announcement}
-	aliceAnnouncement, ok := alicePayload["announcement"].(map[string]any)
-	if !ok {
-		t.Fatalf("unexpected alice announcement payload: %#v", alicePayload)
-	}
-	if alicePayload["notify_id"] != "notif_1" || aliceAnnouncement["announcement_id"] != "ann_1" || aliceAnnouncement["title"] != "维护通知" || aliceAnnouncement["content"] != "今晚维护" || aliceAnnouncement["action_url"] != "https://example.com/maint" || aliceAnnouncement["severity"] != systemmodule.AnnounceLevelInfo {
+	if alicePayload.NotifyID != "notif_1" || alicePayload.Announcement.AnnouncementID != "ann_1" || alicePayload.Announcement.Title != "维护通知" || alicePayload.Announcement.Content != "今晚维护" || alicePayload.Announcement.ActionURL != "https://example.com/maint" || alicePayload.Announcement.Severity != string(systemmodule.AnnounceLevelInfo) {
 		t.Fatalf("unexpected alice payload: %#v", alicePayload)
 	}
-	if bobPayload, ok := bobSink.events[0].Payload.(map[string]any); !ok || bobPayload["notify_id"] != "notif_1" {
+	if bobPayload, ok := bobSink.events[0].Payload.(SystemAnnouncementPayload); !ok || bobPayload.NotifyID != "notif_1" {
 		t.Fatalf("unexpected bob payload: %#v", bobSink.events[0].Payload)
 	}
 }

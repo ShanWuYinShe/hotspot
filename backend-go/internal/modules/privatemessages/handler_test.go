@@ -175,12 +175,12 @@ func TestSendBroadcastsPrivateMessageNewToTarget(t *testing.T) {
 	if event.Type != "PrivateMessageNew" {
 		t.Fatalf("expected PrivateMessageNew, got %s", event.Type)
 	}
-	payload, ok := event.Payload.(map[string]any)
+	sent, ok := event.Payload.(PrivateMessageSentPayload)
 	if !ok {
 		t.Fatalf("unexpected payload type: %T", event.Payload)
 	}
-	if payload["message_id"] != msg.MessageID {
-		t.Fatalf("expected message_id %s, got %v", msg.MessageID, payload["message_id"])
+	if sent.MessageID != msg.MessageID {
+		t.Fatalf("expected message_id %s, got %v", msg.MessageID, sent.MessageID)
 	}
 }
 

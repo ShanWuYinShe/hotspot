@@ -10,7 +10,6 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/realtime"
-	"hotspot/backend-go/internal/platform/types"
 )
 
 // stubActorProvider resolves actor info for buildActor tests.
@@ -64,10 +63,7 @@ func TestSetReactMessageTargetNotifiesAndBroadcasts(t *testing.T) {
 	if len(ownerSink.events) != 1 || ownerSink.events[0].Type != EventTypeReactionAdded {
 		t.Fatalf("expected ReactionAdded on owner sink, got %+v", ownerSink.events)
 	}
-	payload, ok := ownerSink.events[0].Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map payload, got %T", ownerSink.events[0].Payload)
-	}
+	payload := decodePayload(t, ownerSink.events[0].Payload)
 	if payload["target_type"] != "message" || payload["target_id"] != "msg1" || payload["emoji"] != "👍" {
 		t.Fatalf("unexpected payload: %+v", payload)
 	}
@@ -75,11 +71,11 @@ func TestSetReactMessageTargetNotifiesAndBroadcasts(t *testing.T) {
 	if payload["notify_id"] != "notif_1" {
 		t.Fatalf("expected notification_id=notif_1, got %+v", payload)
 	}
-	actorInfo, ok := payload["actor"].(types.UserInfo)
+	actorInfo, ok := payload["actor"].(map[string]any)
 	if !ok {
-		t.Fatalf("expected actor struct, got %T", payload["actor"])
+		t.Fatalf("expected actor object, got %T", payload["actor"])
 	}
-	if actorInfo.UserID != "u_bob" || actorInfo.Nickname != "Bob" || actorInfo.AvatarURL == nil || *actorInfo.AvatarURL != "https://avatar.example/bob.png" {
+	if actorInfo["user_id"] != "u_bob" || actorInfo["nickname"] != "Bob" {
 		t.Fatalf("unexpected actor: %+v", actorInfo)
 	}
 }

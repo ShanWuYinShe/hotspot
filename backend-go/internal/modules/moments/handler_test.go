@@ -277,10 +277,7 @@ func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 	if len(bobSink.events) != 1 || bobSink.events[0].Type != "ContentMentioned" {
 		t.Fatalf("unexpected realtime events: %#v", bobSink.events)
 	}
-	payload, ok := bobSink.events[0].Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("unexpected payload type: %#v", bobSink.events[0].Payload)
-	}
+	payload := decodePayload(t, bobSink.events[0].Payload)
 	if payload["target_type"] != "moment" || payload["moment_id"] != created.MomentID {
 		t.Fatalf("unexpected realtime payload: %#v", payload)
 	}
@@ -1086,4 +1083,20 @@ func (r *errorRepo) ListMomentsByAuthor(context.Context, string, int, string, bo
 }
 func (r *errorRepo) ListReactedByUser(context.Context, string, string, int, string) (PaginatedMoments, error) {
 	return PaginatedMoments{}, nil
+}
+
+// decodePayload 把 WS payload（现为类型化 struct）经 JSON round-trip 转回
+// map，让既有键级断言继续验证「序列化后的形状」——那才是真正的线上契约。
+// 注意数字经 JSON 解码为 float64。
+func decodePayload(t *testing.T, p any) map[string]any {
+	t.Helper()
+	b, err := json.Marshal(p)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatalf("payload is not an object: %v (%#v)", err, p)
+	}
+	return m
 }

@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -184,7 +185,7 @@ func (s *Service) dismissGroupAndTrace(ctx context.Context, actor AdminActor, gr
 	if !found {
 		return AdminGroupItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "群组不存在"}, nil
 	}
-	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": groupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "policy_violation"}}
+	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: groups.GroupDismissedPayload{GroupID: groupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "policy_violation"}}
 	// 仅按群广播一次：逐成员 BroadcastToUser 会让在线成员各收到两份重复事件；
 	// 离线成员由 resume 兜底（解散为持久状态，重连后群已不可见）。
 	realtime.DefaultHub().BroadcastToGroup(groupID, event)

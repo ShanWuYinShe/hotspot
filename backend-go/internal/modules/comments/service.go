@@ -417,14 +417,14 @@ func (s *Service) notifyMomentAuthor(ctx context.Context, momentContext MomentNo
 			notificationID = id
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMomentCommented, Payload: map[string]any{
-		"notify_id":      notificationID,
-		"moment_id":      item.MomentID,
-		"moment_summary": momentSummary,
-		"comment_id":     item.CommentID,
-		"actor":          actor,
-		"content":        item.Content,
-		"commented_at":   item.CreatedAt,
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMomentCommented, Payload: MomentCommentedPayload{
+		NotifyID:      notificationID,
+		MomentID:      item.MomentID,
+		MomentSummary: momentSummary,
+		CommentID:     item.CommentID,
+		Actor:         actor,
+		Content:       item.Content,
+		CommentedAt:   item.CreatedAt,
 	}})
 }
 
@@ -446,16 +446,16 @@ func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNot
 			notificationID = id
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeCommentReply, Payload: map[string]any{
-		"notify_id":               notificationID,
-		"moment_id":               item.MomentID,
-		"moment_summary":          momentSummary,
-		"comment_id":              replyTarget.CommentID,
-		"replied_comment_preview": parentPreview,
-		"reply_id":                item.CommentID,
-		"actor":                   actor,
-		"content":                 item.Content,
-		"replied_at":              item.CreatedAt,
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeCommentReply, Payload: CommentReplyPayload{
+		NotifyID:              notificationID,
+		MomentID:              item.MomentID,
+		MomentSummary:         momentSummary,
+		CommentID:             replyTarget.CommentID,
+		RepliedCommentPreview: parentPreview,
+		ReplyID:               item.CommentID,
+		Actor:                 actor,
+		Content:               item.Content,
+		RepliedAt:             item.CreatedAt,
 	}})
 }
 
@@ -482,15 +482,15 @@ func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext Moment
 	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟。
 	broadcast := func(targetUserID, notificationID string) func() error {
 		return func() error {
-			realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: map[string]any{
-				"notify_id":       notificationID,
-				"target_type":     "comment",
-				"moment_id":       item.MomentID,
-				"comment_id":      item.CommentID,
-				"moment_summary":  momentSummary,
-				"comment_preview": commentPreview,
-				"actor":           actor,
-				"mentioned_at":    item.CreatedAt,
+			realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: ContentMentionedPayload{
+				NotifyID:       notificationID,
+				TargetType:     "comment",
+				MomentID:       item.MomentID,
+				CommentID:      item.CommentID,
+				MomentSummary:  momentSummary,
+				CommentPreview: commentPreview,
+				Actor:          actor,
+				MentionedAt:    item.CreatedAt,
 			}})
 			return nil
 		}

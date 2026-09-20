@@ -374,9 +374,9 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMom
 	s.notifyMentionUserIDs(ctx, principal.UserID, updated, newlyMentioned)
 	s.hydrateImages(ctx, &updated)
 	// 瞬间被编辑 → 推送给作者的其他在线设备（多端同步，spec api_spec_websocket.md）
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMomentUpdated, Payload: map[string]any{
-		"moment_id":  req.MomentID,
-		"updated_at": time.Now().UTC().Format(time.RFC3339),
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMomentUpdated, Payload: MomentUpdatedPayload{
+		MomentID:  req.MomentID,
+		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
 	}})
 	return toOwnerMoment(updated), nil
 }
@@ -403,9 +403,9 @@ func (s *Service) Delete(ctx context.Context, momentID string) error {
 	// 软删后推送 MomentDeleted（spec api_spec_websocket.md）：作者其他在线设备 + 收藏者
 	// 据此将本地列表/收藏更新为"已删除"占位。
 	now := time.Now().UTC().Format(time.RFC3339)
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: map[string]any{
-		"moment_id":  momentID,
-		"deleted_at": now,
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: MomentDeletedPayload{
+		MomentID:  momentID,
+		DeletedAt: now,
 	}})
 	if err := s.broadcastMomentDeletedToFavorites(ctx, momentID, principal.UserID, now); err != nil {
 		observability.L().Warn("moments.delete favorite broadcast failed", "error", err, "moment_id", momentID)
@@ -708,13 +708,13 @@ func (s *Service) notifyMentionUserIDs(ctx context.Context, actorUserID string, 
 	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟（mentions 上限 20）。
 	broadcast := func(mentionedUserID, notificationID string) func() error {
 		return func() error {
-			realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: map[string]any{
-				"notify_id":      notificationID,
-				"target_type":    "moment",
-				"moment_id":      item.MomentID,
-				"moment_summary": momentSummary,
-				"actor":          actor,
-				"mentioned_at":   item.CreatedAt,
+			realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: ContentMentionedPayload{
+				NotifyID:      notificationID,
+				TargetType:    "moment",
+				MomentID:      item.MomentID,
+				MomentSummary: momentSummary,
+				Actor:         actor,
+				MentionedAt:   item.CreatedAt,
 			}})
 			return nil
 		}
@@ -738,9 +738,9 @@ func (s *Service) broadcastMomentDeletedToFavorites(ctx context.Context, momentI
 		if userID == exceptUserID {
 			continue
 		}
-		realtime.DefaultHub().BroadcastToUser(userID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: map[string]any{
-			"moment_id":  momentID,
-			"deleted_at": deletedAt,
+		realtime.DefaultHub().BroadcastToUser(userID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: MomentDeletedPayload{
+			MomentID:  momentID,
+			DeletedAt: deletedAt,
 		}})
 	}
 	return nil

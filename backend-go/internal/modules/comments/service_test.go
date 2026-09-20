@@ -2,6 +2,7 @@ package comments
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -100,10 +101,7 @@ func TestCreateTopLevelCommentSendsRealtimeAndNotificationToMomentAuthor(t *test
 	if event.Type != "MomentCommented" {
 		t.Fatalf("unexpected event type: %#v", event)
 	}
-	payload, ok := event.Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("unexpected payload type: %#v", event.Payload)
-	}
+	payload := decodePayload(t, event.Payload)
 	if payload["moment_id"] != "moment_1" || payload["comment_id"] != comment.CommentID || payload["content"] != "top level comment" {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
@@ -199,10 +197,7 @@ func TestCreateReplySendsRealtimeAndNotificationToParentAuthor(t *testing.T) {
 	if event.Type != "CommentReply" {
 		t.Fatalf("unexpected event type: %#v", event)
 	}
-	payload, ok := event.Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("unexpected payload type: %#v", event.Payload)
-	}
+	payload := decodePayload(t, event.Payload)
 	if payload["comment_id"] != parent.CommentID || payload["reply_id"] != reply.CommentID || payload["replied_comment_preview"] != "parent" || payload["content"] != "reply" {
 		t.Fatalf("unexpected reply payload: %#v", payload)
 	}
@@ -293,10 +288,7 @@ func TestCreateCommentMentionSendsRealtimeAndNotification(t *testing.T) {
 	if event.Type != "ContentMentioned" {
 		t.Fatalf("unexpected event type: %#v", event)
 	}
-	payload, ok := event.Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("unexpected payload type: %#v", event.Payload)
-	}
+	payload := decodePayload(t, event.Payload)
 	if payload["comment_id"] != comment.CommentID || payload["target_type"] != "comment" || payload["comment_preview"] != "hello @carol" {
 		t.Fatalf("unexpected mention payload: %#v", payload)
 	}
@@ -651,4 +643,20 @@ func TestCreateCommentRejectsOverlongContent(t *testing.T) {
 	if _, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_1", Content: strings.Repeat("评", defaultCommentMaxRunes)}); err != nil {
 		t.Fatalf("expected boundary-length comment to pass, got %v", err)
 	}
+}
+
+// decodePayload 把 WS payload（现为类型化 struct）经 JSON round-trip 转回
+// map，让既有键级断言继续验证「序列化后的形状」——那才是真正的线上契约。
+// 注意数字经 JSON 解码为 float64。
+func decodePayload(t *testing.T, p any) map[string]any {
+	t.Helper()
+	b, err := json.Marshal(p)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatalf("payload is not an object: %v (%#v)", err, p)
+	}
+	return m
 }
