@@ -100,7 +100,7 @@ ssh "$SERVER" "docker exec -i $DEPLOY_DB_CONTAINER pg_restore -l >/dev/null < $R
   || { echo "!! 备份完整性校验失败（pg_restore -l 非零），中止部署"; exit 1; }
 scp -q "$SERVER:$REMOTE_DIR/backups/$BACKUP_NAME" "$REPO_ROOT/.workwork/$BACKUP_NAME"
 BACKUP_SIZE="$(ssh "$SERVER" "du -h $REMOTE_DIR/backups/$BACKUP_NAME | cut -f1")"
-echo "✅ 备份完成并已校验: $BACKUP_NAME（${BACKUP_SIZE}，服务器 $REMOTE_DIR/backups/ + 本机 .workwork/）"
+echo "✅ 备份完成并已校验: ${BACKUP_NAME}（${BACKUP_SIZE}，服务器 $REMOTE_DIR/backups/ + 本机 .workwork/）"
 
 echo "==> 读取当前线上版本（作为自动回滚目标）…"
 PREVIOUS_TAG="$(ssh "$SERVER" "docker inspect hotspot-backend-1 --format '{{index .Config.Labels \"org.opencontainers.image.version\"}}'" 2>/dev/null || true)"
