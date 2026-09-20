@@ -15,5 +15,5 @@ CREATE TABLE IF NOT EXISTS auth_password_reset_requests (
   used_at TIMESTAMPTZ NULL
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_password_reset_requests_login_id_created_at
+CREATE INDEX IF NOT EXISTS idx_auth_password_reset_requests_login_id_created_at
   ON auth_password_reset_requests(login_id, created_at DESC);

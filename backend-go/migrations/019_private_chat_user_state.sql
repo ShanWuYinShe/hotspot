@@ -9,5 +9,5 @@ CREATE TABLE IF NOT EXISTS private_chat_user_state (
     PRIMARY KEY (chat_key, user_id)
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_private_chat_user_state_user_updated_at
+CREATE INDEX IF NOT EXISTS idx_private_chat_user_state_user_updated_at
     ON private_chat_user_state (user_id, updated_at DESC);

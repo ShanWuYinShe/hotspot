@@ -8,5 +8,5 @@ CREATE TABLE IF NOT EXISTS comment_likes (
   PRIMARY KEY (comment_id, user_id)
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_comment_likes_comment_liked_at
+CREATE INDEX IF NOT EXISTS idx_comment_likes_comment_liked_at
   ON comment_likes(comment_id, liked_at DESC);

@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS group_announcements (
   deleted_at TIMESTAMPTZ
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_announcements_group_pinned_created
+CREATE INDEX IF NOT EXISTS idx_group_announcements_group_pinned_created
   ON group_announcements(group_id, is_pinned DESC, created_at DESC, announcement_id DESC) WHERE deleted_at IS NULL;
 
 -- Group member settings and moderation
@@ -30,5 +30,5 @@ CREATE TABLE IF NOT EXISTS group_bans (
   PRIMARY KEY (group_id, user_id)
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_bans_group_banned_at
+CREATE INDEX IF NOT EXISTS idx_group_bans_group_banned_at
   ON group_bans(group_id, banned_at DESC, user_id ASC);

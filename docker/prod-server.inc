@@ -67,6 +67,25 @@ include /etc/nginx/conf.d/proxy.inc;
 
 include /etc/nginx/conf.d/amap.inc;
 
+# ── 分享链接爬虫预览（OG meta，登记例外）────────────────────────
+# 默认走 SPA fallback（下方同款 try_files，用户打开 /share/[code] 页面）；
+# 爬虫 UA 命中 $share_crawler（map 定义于 nginx.prod-tls.conf）时 if 内
+# proxy_pass 覆盖默认分支，转给后端 GET /share/{code} 极简 HTML（og 标签）。
+location /share/ {
+    limit_req zone=api burst=20 nodelay;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Request-ID $request_id;
+    if ($share_crawler) {
+        proxy_pass http://backend;
+    }
+    try_files $uri $uri/ /index.html;
+}
+
 location /_app/ {
     include /etc/nginx/conf.d/headers.inc;
     add_header Cache-Control "public, immutable, max-age=31536000";

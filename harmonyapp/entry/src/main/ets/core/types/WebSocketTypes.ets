@@ -66,6 +66,9 @@ export enum ServerEventType {
 	REACTION_REMOVED = 'ReactionRemoved',
 	MOMENT_COMMENTED = 'MomentCommented',
 	COMMENT_REPLY = 'CommentReply',
+	// 瞬间生命周期多端同步（spec；类型已登记，UI 消费待接——与前端同态）
+	MOMENT_UPDATED = 'MomentUpdated',
+	MOMENT_DELETED = 'MomentDeleted',
 	// 瞬间/评论内容中被 @（spec 事件名；历史幽灵值 'MessageMentioned' 已删除）
 	CONTENT_MENTIONED = 'ContentMentioned',
 	GROUP_MESSAGE_MENTIONED = 'GroupMessageMentioned',
@@ -343,6 +346,31 @@ export interface MomentCommentedPayload {
 export interface MomentCommentedEvent {
   type: 'MomentCommented'
   payload: MomentCommentedPayload
+}
+
+// 瞬间被编辑（仅推送给作者的其他在线设备，用于多端同步；spec
+// api_spec_websocket.md → MomentUpdatedPayload）。类型已登记，UI 消费与
+// 前端同态待接（前端亦为类型登记未消费）。
+export interface MomentUpdatedPayload {
+  moment_id: string
+  updated_at: string
+}
+
+export interface MomentUpdatedEvent {
+  type: 'MomentUpdated'
+  payload: MomentUpdatedPayload
+}
+
+// 瞬间被软删除（推送作者其他设备 + 已收藏用户，纯实时事件不落库通知；
+// spec api_spec_websocket.md → MomentDeletedPayload）。
+export interface MomentDeletedPayload {
+  moment_id: string
+  deleted_at: string
+}
+
+export interface MomentDeletedEvent {
+  type: 'MomentDeleted'
+  payload: MomentDeletedPayload
 }
 
 export interface CommentReplyPayload {
@@ -958,6 +986,8 @@ export type ServerEvent =
   | ReactionRemovedEvent
   | MomentCommentedEvent
   | CommentReplyEvent
+  | MomentUpdatedEvent
+  | MomentDeletedEvent
   | ContentMentionedEvent
   | GroupMessageMentionedEvent
   | UserProfileUpdatedEvent

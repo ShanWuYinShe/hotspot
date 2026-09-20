@@ -18,7 +18,7 @@ WHERE a.application_id <> b.application_id
   AND (a.created_at > b.created_at
        OR (a.created_at = b.created_at AND a.application_id > b.application_id));
 
-CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_group_applications_pending
+CREATE UNIQUE INDEX IF NOT EXISTS uq_group_applications_pending
   ON group_applications(group_id, applicant_user_id) WHERE status = 'pending';
 
 -- 举报：同人同目标至多一条（重复举报按重复语义返回既有 report_id）。
@@ -31,5 +31,5 @@ WHERE a.report_id <> b.report_id
   AND (a.created_at > b.created_at
        OR (a.created_at = b.created_at AND a.report_id > b.report_id));
 
-CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_reports_creator_target
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reports_creator_target
   ON reports(creator_user_id, target_type, target_id);

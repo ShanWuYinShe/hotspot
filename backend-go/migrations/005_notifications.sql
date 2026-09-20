@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS notifications (
   payload JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_notifications_user_created_at ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created_at ON notifications(user_id, created_at DESC);

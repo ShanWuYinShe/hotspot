@@ -4,5 +4,5 @@ CREATE TABLE IF NOT EXISTS user_profile_tags (
   PRIMARY KEY (user_id, tag_name)
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_profile_tags_name_user
+CREATE INDEX IF NOT EXISTS idx_user_profile_tags_name_user
   ON user_profile_tags(tag_name, user_id ASC);

@@ -9,9 +9,9 @@ CREATE TABLE IF NOT EXISTS group_applications (
   handled_by_user_id TEXT REFERENCES users(user_id) ON DELETE SET NULL
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_applications_group_created_at
+CREATE INDEX IF NOT EXISTS idx_group_applications_group_created_at
   ON group_applications(group_id, created_at DESC, application_id DESC);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_applications_applicant_created_at
+CREATE INDEX IF NOT EXISTS idx_group_applications_applicant_created_at
   ON group_applications(applicant_user_id, created_at DESC, application_id DESC);
 
 CREATE TABLE IF NOT EXISTS group_invites (
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS group_invites (
   responded_at TIMESTAMPTZ
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_invites_group_created_at
+CREATE INDEX IF NOT EXISTS idx_group_invites_group_created_at
   ON group_invites(group_id, created_at DESC, invite_id DESC);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_invites_invitee_created_at
+CREATE INDEX IF NOT EXISTS idx_group_invites_invitee_created_at
   ON group_invites(invitee_user_id, created_at DESC, invite_id DESC);

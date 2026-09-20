@@ -26,10 +26,10 @@ CREATE TABLE IF NOT EXISTS groups (
   s2_cell_id BIGINT NOT NULL DEFAULT 0
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_groups_owner_created_at ON groups(owner_id, created_at DESC);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_groups_active_created_at ON groups(created_at DESC, group_id ASC) WHERE deleted_at IS NULL;
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_groups_s2_cell_id ON groups(s2_cell_id);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_groups_visible_s2_cell_id ON groups(s2_cell_id) WHERE deleted_at IS NULL AND is_searchable = TRUE;
+CREATE INDEX IF NOT EXISTS idx_groups_owner_created_at ON groups(owner_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_groups_active_created_at ON groups(created_at DESC, group_id ASC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_groups_s2_cell_id ON groups(s2_cell_id);
+CREATE INDEX IF NOT EXISTS idx_groups_visible_s2_cell_id ON groups(s2_cell_id) WHERE deleted_at IS NULL AND is_searchable = TRUE;
 
 CREATE TABLE IF NOT EXISTS private_messages (
   message_id TEXT PRIMARY KEY,
@@ -47,8 +47,8 @@ CREATE TABLE IF NOT EXISTS private_messages (
   reply_to_message_id TEXT NULL REFERENCES private_messages(message_id) ON DELETE SET NULL
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_private_messages_chat_key_sent_at ON private_messages(chat_key, sent_at DESC);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_private_messages_chat_key_reply_to ON private_messages(chat_key, reply_to_message_id);
+CREATE INDEX IF NOT EXISTS idx_private_messages_chat_key_sent_at ON private_messages(chat_key, sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_private_messages_chat_key_reply_to ON private_messages(chat_key, reply_to_message_id);
 
 CREATE TABLE IF NOT EXISTS group_messages (
   message_id TEXT PRIMARY KEY,
@@ -63,4 +63,4 @@ CREATE TABLE IF NOT EXISTS group_messages (
   edited_at TIMESTAMPTZ
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_messages_group_id_sent_at ON group_messages(group_id, sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_group_messages_group_id_sent_at ON group_messages(group_id, sent_at DESC);

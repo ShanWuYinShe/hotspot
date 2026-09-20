@@ -35,6 +35,11 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/revoke", m.handler.Revoke)
 		})
 	})
+
+	// 爬虫预览落地页（GET /share/{code}，登记例外见 og.go 头注释）：仅限流
+	// 不鉴权——解析 share code 本身即匿名能力（open_the_door 同源）。流量来自
+	// nginx 的 share_crawler UA 分支（真实用户走 SPA，见 docker/nginx*.conf）。
+	r.With(ratelimit.Middleware).Get("/share/{code}", m.handler.ServeCrawlerHTML)
 }
 
 // MountPublic mounts the anonymous share-code resolution endpoint on the

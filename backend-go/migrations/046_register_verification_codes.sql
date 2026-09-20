@@ -12,5 +12,5 @@ CREATE TABLE IF NOT EXISTS auth_register_verification_codes (
   consumed_at TIMESTAMPTZ NULL
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_register_codes_login_id_created_at
+CREATE INDEX IF NOT EXISTS idx_auth_register_codes_login_id_created_at
   ON auth_register_verification_codes(login_id, created_at DESC);
