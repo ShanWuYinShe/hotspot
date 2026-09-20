@@ -42,6 +42,12 @@ jobs:
           fi
       - name: go vet
         run: go vet -C backend-go ./...
+      # 官方漏洞扫描（golang.org/x/vuln）：只报实际调用到的漏洞符号，噪音低于
+      # 依赖清单比对。版本随官方 @latest（扫描器本身与漏洞库同源更新）。
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          cd backend-go && "$(go env GOPATH)/bin/govulncheck" ./...
       - name: check migration numbering
         run: ./scripts/check-migrations.sh
       - name: go test (with coverage gate)
