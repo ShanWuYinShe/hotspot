@@ -72,8 +72,10 @@ const FILTER_TABS = [
 		let cancelled = false;
 		async function fetchNotifs() {
 			try {
-				loading = true;
 				needsAuth = false;
+				// 仅首刷（无数据）展示整页 loading；WS 触发的后台刷新静默换数据，
+				// 避免用户浏览列表时每来一条新通知整表闪一次 spinner。
+				if (!notifies.length) loading = true;
 				loadError = null;
 				const [notifRes, unreadRes, invitesRes] = await Promise.all([
 					listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE } }).catch(() => netError({ items: [], next_cursor: null })),
@@ -89,7 +91,11 @@ const FILTER_TABS = [
 					return;
 				}
 				if (notifRes.code !== 0) {
-					if (!cancelled) loadError = notifRes.message ?? '加载失败';
+					// 后台刷新失败不整页替换为错误态：已有列表时降级为 toast 提示
+					if (!cancelled) {
+						if (notifies.length) showToast(notifRes.message || '通知刷新失败', 'danger');
+						else loadError = notifRes.message ?? '加载失败';
+					}
 					return;
 				}
 				if (!cancelled) nextCursor = notifData?.next_cursor ?? null;
@@ -100,7 +106,10 @@ const FILTER_TABS = [
 					notifies = toViewItems(notifData.items || [], 0);
 				}
 			} catch {
-				if (!cancelled) loadError = '加载失败，请稍后重试';
+				if (!cancelled) {
+					if (notifies.length) showToast('通知刷新失败，请稍后重试', 'danger');
+					else loadError = '加载失败，请稍后重试';
+				}
 			} finally {
 				if (!cancelled) loading = false;
 			}

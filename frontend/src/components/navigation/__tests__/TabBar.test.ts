@@ -29,16 +29,17 @@ describe('TabBar', () => {
 		expect(onChange).toHaveBeenCalledWith('groups');
 	});
 
-	it('variant="segmented" 渲染分段选择器与 tab 角色', async () => {
+	it('variant="segmented" 同样以 aria-pressed 表达选中（统一筛选器语义）', async () => {
+		// 契约变更：segmented 曾用 role=tablist/tab/aria-selected，但本组件是内容
+		// 筛选器（无 tabpanel 关联、无方向键导航），残缺 ARIA tabs 模式对读屏
+		// 是混合语义；按 AGENTS.md 登记契约统一为 aria-pressed。
 		const onChange = vi.fn();
 		render(TabBar, { props: { items, value: 'moments', onChange, variant: 'segmented' } });
-		const tablist = screen.getByRole('tablist');
-		expect(tablist).toBeTruthy();
-		const tabButtons = screen.getAllByRole('tab');
-		expect(tabButtons).toHaveLength(2);
-		expect(tabButtons[0].getAttribute('aria-selected')).toBe('true');
-		expect(tabButtons[1].getAttribute('aria-selected')).toBe('false');
-		await fireEvent.click(tabButtons[1]);
+		const buttons = screen.getAllByRole('button');
+		expect(buttons).toHaveLength(2);
+		expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
+		expect(buttons[1].getAttribute('aria-pressed')).toBe('false');
+		await fireEvent.click(buttons[1]);
 		expect(onChange).toHaveBeenCalledWith('groups');
 	});
 });

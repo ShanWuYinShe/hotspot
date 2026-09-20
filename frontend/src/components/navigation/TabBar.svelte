@@ -31,16 +31,16 @@
 {#if variant === 'segmented'}
 	<div
 		data-tab-bar
-		role="tablist"
 		class="grid grid-flow-col auto-cols-fr gap-1 rounded-full bg-surface-subtle p-1 ring-1 ring-border-default/70 {className}"
 	>
 		{#each items as tab}
 			{@const isActive = value === tab.id}
+			<!-- 语义与 pills 一致用 aria-pressed（内容筛选器，非 ARIA tabs 模式——
+			     本组件无 tabpanel 关联与方向键导航，role=tab 是残缺实现） -->
 			<button
 				type="button"
-				role="tab"
 				onclick={() => onChange(tab.id)}
-				aria-selected={isActive}
+				aria-pressed={isActive}
 				data-active={isActive ? 'true' : undefined}
 				class="tab-item flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs focus-ring transition-all duration-standard {isActive
 					? 'font-medium bg-accent-default text-text-on-accent shadow-raised-sm'

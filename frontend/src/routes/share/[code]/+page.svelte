@@ -87,7 +87,7 @@
 			</div>
 			<button
 				type="button"
-				onclick={() => goto('/map', { replaceState: true })}
+				onclick={() => goto(ROUTES.map, { replaceState: true })}
 				class="rounded-full bg-accent-soft px-5 py-2 text-sm font-medium text-accent-default outline-none transition-colors hover:bg-interactive-active focus-visible:ring-2 focus-visible:ring-accent-default"
 			>
 				打开地图

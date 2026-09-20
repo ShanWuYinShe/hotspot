@@ -14,6 +14,7 @@ import {
 } from '@/api';
 
 import { resetAdmin } from "@/stores/admin.svelte";
+import { resetPresence } from "@/stores/presence.svelte";
 
 export type AuthStatus = 'loading' | 'anonymous' | 'authenticated';
 
@@ -88,6 +89,7 @@ export function initAuth(): () => void {
     status = 'anonymous';
     user = null;
     bannedMessage = null;
+    resetPresence();
     setAuthenticated(false);
   };
   const onBanned = (e: Event) => {
@@ -95,6 +97,7 @@ export function initAuth(): () => void {
     status = 'anonymous';
     user = null;
     bannedMessage = detail?.message ?? '账号已被封禁';
+    resetPresence();
   };
   window.addEventListener('auth-failed', onFailed as EventListener);
   window.addEventListener('auth-banned', onBanned as EventListener);
@@ -181,6 +184,7 @@ export async function logout(): Promise<void> {
   user = null;
   bannedMessage = null;
   resetAdmin();
+  resetPresence();
   setAuthenticated(false);
 }
 

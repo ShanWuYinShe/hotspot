@@ -166,12 +166,37 @@ export function setApiBaseUrl(url: string) {
 }
 
 /**
+ * DeviceId：幂等键的 client_id 段（spec: api_spec_base.md「幂等性」client_id=DeviceId）。
+ * 优先读后端下发的 device_id Cookie（非 HttpOnly、10 年长效、登出不清除）；
+ * 无 Cookie 可读时（首请求前/非浏览器环境）回落 localStorage 持久化的随机 UUID，
+ * 保证同设备重试稳定。
+ */
+function getDeviceId(): string {
+  if (typeof document !== 'undefined') {
+    const m = document.cookie.match(/(?:^|;\s*)device_id=([^;]*)/);
+    if (m?.[1]) return decodeURIComponent(m[1]);
+  }
+  if (typeof localStorage !== 'undefined') {
+    let id = localStorage.getItem('hotspot:device-id');
+    if (!id) {
+      id = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `web-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      try { localStorage.setItem('hotspot:device-id', id); } catch {}
+    }
+    return id;
+  }
+  return 'hotspot-web';
+}
+
+/**
  * 生成幂等键（spec: api_spec_base.md「幂等性（契约级）」）。
- * 格式：{client_id}-{timestamp_ms}-{random}，长度 32-64，字符集 [a-zA-Z0-9-_]。
- * Web 端没有独立 device_id 可读时使用固定 client_id，至少保证同页面重试稳定。
+ * 格式：{client_id}-{timestamp_ms}-{random}，长度 32-64，字符集 [a-zA-Z0-9-_]；
+ * 服务端按该正则校验，超长/非法 key 会被当作无 key 静默跳过幂等。
+ * DeviceId 最长可达 41 字符（mock 前缀形态），截断到 24 保总量 ≤64。
  */
 export function newIdempotencyKey(): string {
-  const clientId = 'hotspot-web';
+  const clientId = getDeviceId().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'hotspot-web';
   const timestampMs = Date.now().toString();
   const random = Math.random().toString(36).slice(2, 14).replace(/[^a-zA-Z0-9_-]/g, '');
   const key = `${clientId}-${timestampMs}-${random}`;
@@ -194,31 +219,67 @@ function emitAuthEvent(type: 'auth-failed' | 'auth-banned', message?: string) {
   window.dispatchEvent(new CustomEvent(type, { detail: { type, message } }));
 }
 
+/** 默认请求超时：挂起请求不再让页面 spinner 永久停留（上传走 XHR 独立通道不受此限）。 */
+const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
+
+interface RequestOptions {
+	/** 外部中止信号（如页面卸载/竞态清理）；与内部超时任一触发即中止请求。 */
+	signal?: AbortSignal;
+	/** 覆盖默认超时（ms）。 */
+	timeoutMs?: number;
+}
+
 async function request<T>(
   endpoint: string,
   body?: unknown,
   extraHeaders: Record<string, string> = {},
   retryCount = 0,
   requestId = newRequestId(),
+  opts?: RequestOptions,
 ): Promise<ApiResponse<T>> {
   const url = `${baseUrl}${endpoint}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'X-Request-Id': requestId, ...extraHeaders },
-    body: body ? JSON.stringify(body) : '{}',
-  });
+  // 超时与外部 signal 合流到内部 controller（不经 AbortSignal.any，兼容测试环境）
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    opts?.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+  );
+  const abortFromCaller = () => controller.abort();
+  if (opts?.signal) {
+    if (opts.signal.aborted) abortFromCaller();
+    else opts.signal.addEventListener('abort', abortFromCaller, { once: true });
+  }
+  let res: Response;
+  let json: ApiResponse<T>;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-Request-Id': requestId, ...extraHeaders },
+      body: body ? JSON.stringify(body) : '{}',
+      signal: controller.signal,
+    });
+    json = await res.json();
+  } catch (err) {
+    // 超时/取消在 fetch 层表现为 AbortError——映射为可读文案，让调用方按
+    // 网络错误提示/重试，而非裸 "The operation was aborted"。
+    if (controller.signal.aborted) {
+      throw new Error(opts?.signal?.aborted ? '请求已取消' : '请求超时，请检查网络后重试');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    opts?.signal?.removeEventListener('abort', abortFromCaller);
+  }
 
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
-    try { const errBody = await res.json(); msg = (errBody as any).message ?? msg; } catch {}
+    try { msg = (json as unknown as any).message ?? msg; } catch {}
     // A non-200 transport failure is unexpected per spec (business errors come
     // back as 200 + code). Surface it; AuthContext treats a thrown request as
     // a soft failure the caller can handle.
     throw new Error(msg);
   }
-
-  const json: ApiResponse<T> = await res.json();
 
   // 10201: account banned — force-drop and show the ban screen with the message.
   if (json.code === 10201) {
@@ -244,7 +305,7 @@ async function request<T>(
       })().finally(() => { refreshLock = null; });
     }
     const ok = await refreshLock;
-    if (ok) return request<T>(endpoint, body, extraHeaders, retryCount + 1, requestId);
+    if (ok) return request<T>(endpoint, body, extraHeaders, retryCount + 1, requestId, opts);
     // Refresh failed: notify AuthContext so it can drop to anonymous and prompt.
     emitAuthEvent('auth-failed');
   }

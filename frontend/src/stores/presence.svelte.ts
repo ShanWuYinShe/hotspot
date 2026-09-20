@@ -33,6 +33,14 @@ export function initPresence(): () => void {
 }
 
 /**
+ * 清空在线状态集合。登出/会话失效/切换账号时调用：
+ * 在线集合是上一个账号会话期间收集的，跨账号残留会让新账号首帧看到错误在线点。
+ */
+export function resetPresence(): void {
+  onlineUsers.clear();
+}
+
+/**
  * 订阅一批用户的在线状态（去重 + 引用计数）。
  * 未连接时 setSubscriptions 仅更新本地订阅状态，重连后自动重放，安全。
  * @returns 清理函数：释放引用计数并取消订阅（调用多次幂等安全）。

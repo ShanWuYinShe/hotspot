@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, MessageCircle } from '@lucide/svelte';
+	import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from '@lucide/svelte';
 	import { login, register, guest } from '@/stores/auth.svelte';
 	import { requestPasswordReset, resetPassword, sendRegisterCode } from '@/api';
 	import Button from '@/components/ui/button.svelte';
@@ -449,22 +449,8 @@
 	</Button>
 
 	{#if mode === 'login' && !compact}
-		<!-- 其他方式（对齐 Figma Make LoginPage） -->
-		<div class="flex items-center gap-3 text-xs text-text-secondary">
-			<span class="h-px flex-1 bg-border-default"></span>
-			其他方式
-			<span class="h-px flex-1 bg-border-default"></span>
-		</div>
-		<Button
-			type="button"
-			variant="secondary"
-			size="md"
-			class="mt-4 w-full"
-			onclick={() => (error = '微信登录暂未开放，请使用密码登录')}
-		>
-			<MessageCircle class="size-4 text-accent-default"   strokeWidth={1.75} />
-			使用微信继续
-		</Button>
+		<!-- 微信登录暂未开放：按本组件「不展示不可用选项」原则不下发点了必报错的死按钮，
+		     原「其他方式」分隔线随微信按钮一并移除，仅保留条款行 -->
 		<p class="mt-5 text-center text-xs leading-5 text-text-secondary">登录即表示你同意服务条款与隐私政策。</p>
 	{/if}
 
