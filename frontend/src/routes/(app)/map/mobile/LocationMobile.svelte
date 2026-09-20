@@ -4,6 +4,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
+	import { autoLocateOnce, readLastLocation } from '@/lib/map-auto-locate';
 	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
 	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
@@ -94,17 +95,41 @@
 	let mapBounds = $state<MapBounds>({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 });
 	// 数据请求用稳定边界（手势/缩放结束才回写）；图钉/热力跟随用每帧 mapBounds
 	let mapStableBounds = $state<MapBounds>({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 });
-	let mapCenter = $state<{ lat: number; lng: number } | null>(null);
+	// 首屏初值取上次确认的浏览锚点（localStorage 同步可读），不等 client_config；
+	// 配置回来或自动定位成功后再校正。
+	let mapCenter = $state<{ lat: number; lng: number } | null>(readLastLocation());
+	// 中心来源（本地锚点/服务端默认位置）是否判定完毕——用于结束首屏 loading
+	let centerResolved = $state(false);
+	// 用户是否已手动选点：自动定位结果不再抢镜头
+	let userPicked = $state(false);
 	let defaultCenter = $state<{ lat: number; lng: number } | null>(null);
 	let recentItems = $state(RECENT_LOCATIONS);
 	let activeTab = $state<'recent' | 'hot'>('recent');
 
-	// 初始/复位中心来自 ClientConfig default_location（MSW mock），不写死坐标。
-	$effect(() => startDefaultLocation((loc) => {
-						const point = loc?.point ? { lat: loc.point.latitude, lng: loc.point.longitude } : null;
+	// 服务端默认位置（ClientConfig default_location）——本地无锚点时的兜底与复位目标。
+	// centerReloadKey：让「重试」能重新拉一次配置：loadDefaultLocation 失败不缓存，
+	// 重调即重新请求；否则无锚点 + 配置失败时重试按钮是死的。
+	let centerReloadKey = $state(0);
+	$effect(() => {
+		void centerReloadKey;
+		return startDefaultLocation((loc) => {
+			const point = loc?.point ? { lat: loc.point.latitude, lng: loc.point.longitude } : null;
 			defaultCenter = point;
 			if (!mapCenter) mapCenter = point;
-}));
+			centerResolved = true;
+		});
+	});
+
+	// 进入地图自动定位一次（Geolocation 单次快照，不会自动更新；权限按域名持久记忆，
+	// 允许过之后调用不再弹窗）。成功即采纳为最新中心，覆盖首屏锚点快照；用户已手动
+	// 选点则让位。拒绝/不支持静默回退默认位置、不 toast 打扰。
+	$effect(() => {
+		void (async () => {
+			const fix = await autoLocateOnce();
+			if (!fix || userPicked) return;
+			mapCenter = { lat: fix.lat, lng: fix.lng };
+		})();
+	});
 
 	// map/canvas 数据
 	let mapPins = $state<Pin[]>([]);
@@ -113,6 +138,13 @@
 	let mapError = $state<string | null>(null);
 	let mapReloadKey = $state(0);
 
+	// 重试：既重拉地图数据，也重拉中心配置——中心拿不到时只 bump mapReloadKey
+	// 会原地踏步（effect 因 !center 直接返回），重试按钮形同死的。
+	function retryLoad() {
+		centerReloadKey++;
+		mapReloadKey++;
+	}
+
 	// 视口中心/边界或筛选变化时重新拉取。依赖 stableBounds（手势/缩放结束才回写），
 	// 拖拽中的逐帧 bounds 变化只驱动图钉定位，不触发请求。
 	$effect(() => {
@@ -120,7 +152,14 @@
 		const center = mapCenter;
 		const types = [...activeFilters];
 		const bounds = mapStableBounds;
-		if (!center) return;
+		if (!center) {
+			// 中心未定不请求；判定完毕仍无中心就结束 loading 并给可重试提示，避免永久空转。
+			if (centerResolved) {
+				mapLoading = false;
+				mapError = '暂时无法获取位置信息';
+			}
+			return;
+		}
 		let cancelled = false;
 		mapLoading = true;
 		mapError = null;
@@ -167,6 +206,7 @@
 	// ── 定位到我（浏览器 GPS，失败回退默认位置并提示）──────────────
 	const locate = createLocateAction({
 		onSuccess: (fix) => {
+			userPicked = true;
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 			selectedLoc = null;
 			searchQuery = '';
@@ -186,6 +226,7 @@
 	}
 
 	function handleSelectLoc(loc: LocationResult) {
+		userPicked = true;
 		selectedLoc = loc;
 		searchQuery = loc.displayName;
 		mapCenter = { lat: loc.lat, lng: loc.lng };
@@ -242,6 +283,7 @@
 				isSelected={selectedPin?.id === pin.id}
 				onSelect={(e) => {
 					e.stopPropagation();
+					userPicked = true;
 					selectedPin = selectedPin?.id === pin.id ? null : pin;
 					if (snap === 'min') snapTo('mid');
 				}}
@@ -257,7 +299,7 @@
 			<!-- 加载失败：给出原因与重试，避免空白地图被误认为「附近什么都没有」 -->
 			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full bg-surface-primary px-3 py-1.5 text-xs text-status-danger shadow-raised-sm border border-border-default" >
 				<span>{mapError}</span>
-				<button type="button" class="link-btn focus-ring rounded-sm text-accent-default" onclick={() => mapReloadKey++}>重试</button>
+				<button type="button" class="link-btn focus-ring rounded-sm text-accent-default" onclick={retryLoad}>重试</button>
 			</div>
 		{/if}
 	</div>
