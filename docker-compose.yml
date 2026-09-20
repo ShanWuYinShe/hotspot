@@ -165,6 +165,11 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
+      # 首管理员引导：后端启动时 admin_users 为空则把该 user_id 提权为超管
+      # （.env.example 有同名字段；引导完成后建议从 .env 移除）。
+      ADMIN_BOOTSTRAP_USER_ID: ${ADMIN_BOOTSTRAP_USER_ID:-}
+      # 数据保留期清理开关（auth_code/验证码/过期分享等清扫），默认开启。
+      RETENTION_SWEEP_ENABLED: ${RETENTION_SWEEP_ENABLED:-true}
       # pprof 仅监听 localhost（容器内回环），不暴露到宿主机/外部网络。
       # 留空可在生产关闭：PPROF_ADDR=
       PPROF_ADDR: ${PPROF_ADDR:-127.0.0.1:6060}
