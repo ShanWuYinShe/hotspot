@@ -139,7 +139,7 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
    `themes/*.css` 的 `--cst-palette-*` 是同一套色板的两端表达，改色必须两侧
    同步。校验脚本、覆盖范围与同步流程的**唯一权威描述**见根 `docs/design-system.md`
    第 14 节与 `harmonyapp/AGENTS.md`「跨端同步机制」——`bun run check:theme`
-   已串联色彩/刻度/utility 类名三个检查脚本，CI 漂移即拦截；改字号/圆角 token
+   已串联 parity 与色彩/刻度/utility 类名共四个检查脚本，CI 漂移即拦截；改字号/圆角 token
    必须两端同步。
 6. **徽标与标签（Badge / Pill）居中与排版契约**：
    - 必须同时声明 `inline-flex items-center justify-center leading-none`，杜绝未设行高导致继承全局行高（24px）产生“文字下沉贴底”或在近正方形上施加 `rounded-full` 产生“怪异胖椭圆”；
@@ -164,6 +164,8 @@ src/routes/
   +layout.svelte           # 全局壳（styles + stores + AuthGate；MSW 注册在 hooks.client.ts）
   +error.svelte            # 404
   (auth)/login/+page.svelte    # 登录页（无 MainLayout 外壳）
+  share/[code]/+page.svelte    # 分享落地页（真实用户走 SPA；爬虫 UA 由 nginx 分流到后端 OG，
+                               # 见 backend-go/AGENTS.md「分享 OG」）
   (app)/
     +layout.svelte         # MainLayout 外壳（桌面/平板/移动/横屏四端分派）
     +page.svelte           # 首页（hero/动态/群组/用户；三端统一标题）
@@ -401,8 +403,7 @@ theme/
 - **新增 token 必须同步注册 Tailwind 类**：需要以 `bg-*/text-*/border-*` 类名
   消费的 token，必须在 `theme-registry.css` 的 `@theme inline` 补 `--color-*`
   注册（如 `--color-text-on-status`）；只经 `var()` 内联引用的才可跳过。
-  已踩坑：`--cst-text-on-status` 未注册导致 `text-cst-text-on-status` 死类名
-  静默失效（Tailwind 无此前缀，类名不生成任何样式，svelte-check 不报错）
+  未注册即产生死类名静默失效（机制、踩坑案例与自查方法统一见自查清单第 6 条）
 - **图钉 SVG 资源（assets/markers/*.svg）**：主题色 fill/stroke 一律用
   `currentColor`，由 `location-shared.ts` 的 `markerSvg()` 以
   `style="color:var(--cst-marker-*)"` 染色，随主题/明暗变化；资源内仅保留
@@ -471,8 +472,10 @@ theme/
 2. **颜色**：组件内禁止 hex/rgba 字面量（数据层同样禁止）；arbitrary 类
    （`bg-[#...]`/`shadow-[...]`）禁止含色值。阴影色值统一走 `--shadow-*` token
    （见第 11 条），不得在 `shadow-[...]` 或内联 `box-shadow` 里手写色值
-3. **字号（强制，6 档）**：全站字号一律用 `text-*` 刻度类（`--text-*` token 6 档：
-   **xxs=10 / xs=11 / sm=12 / md=14**；text-lg 及以上沿用 Tailwind 默认 18/20/24/30/36）。
+3. **字号（强制，9 档）**：全站字号一律用 `text-*` 刻度类——**4 档自定义 token
+   （`--text-*`：xxs=10 / xs=11 / sm=12 / md=14）+ Tailwind 默认 5 档**
+   （text-lg 及以上 18/20/24/30/36），与 `check-cross-platform-scale.mjs` 的
+   `FONT_MAP`、`harmonyapp/AGENTS.md`「字号 9 档」同口径。
    - xxs=10：极小 uppercase 标签（eyebrow、分组标）
    - xs=11：辅助文字（副标题、计数、时间戳）
    - sm=12：正文（原 13px 已归并，消除 1px 噪声）
@@ -502,7 +505,7 @@ theme/
      本地 `bun run check` 与 CI 都会失败——不要绕过该检查。
 7. **hover/tap 类**：交互反馈用既有工具类（`hover-btn`/`hover-bg`/`scale-btn`/
    `tap-*`/`header-action`/`surface-ghost`/`card-hover`），不新发明交互类；
-   状态差异必须一眼可辨，且禁止双重边框（高亮与元素自带边框不得叠成两圈），
+   禁止双重边框（高亮与元素自带边框不得叠成两圈），
    具体契约见本节末尾「交互状态契约」
 8. **字距（强制）**：字距一律用 `tracking-*` 刻度类，禁止 `tracking-[Nem]` arbitrary
    类与内联 `letter-spacing:Nem`：

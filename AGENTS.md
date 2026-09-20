@@ -12,7 +12,7 @@
 
 ## 构建 & 验证
 
-各模块命令以子项目 `AGENTS.md` 为唯一维护处（`backend-go/AGENTS.md`、`frontend/AGENTS.md`、`harmonyapp/AGENTS.md`），此处不重复列出，避免多处同步。快速入口：
+各模块命令以子项目 `AGENTS.md` 为唯一维护处（`backend-go/AGENTS.md`、`frontend/AGENTS.md`、`harmonyapp/AGENTS.md`），此处不重复列出，避免多处同步。以下快速入口仅为速记，与子项目 `AGENTS.md` 不一致时以后者为准：
 
 ```bash
 go build -C backend-go ./... && go vet -C backend-go ./... && go test -C backend-go ./...  # 后端
@@ -86,7 +86,13 @@ worktree 内调试同样通过 Docker Compose，与主工作树自动隔离：
      backend-test:
        ports: !override
          - "127.0.0.1:8084:8081"
+     mailpit:
+       ports: !override
+         - "127.0.0.1:8026:8025"
    ```
+
+   mailpit 无 profile、宿主端口写死 8025，不重映射则 worktree `up -d` 直接端口冲突；
+   observability profile（prometheus 9090 / grafana 3001）若启用，同理需一并重映射。
 
 2. 启动（cwd 必须是该 worktree 根目录；`NGINX_PORT` 同时驱动 nginx 宿主端口与
    后端 `S3_PUBLIC_ENDPOINT`，必须一起改为不冲突端口）：
@@ -139,6 +145,6 @@ git branch -d <分支名>
 - 跨端边界：距离与位置计算统一由后端完成，前端和客户端只展示结果。
 - **int64 跨端序列化统一为字符串**：JS（Svelte）与 ArkTS 的 number 是 IEEE754 double，无法无损表示 Go int64（安全整数上限 2^53）。凡 spec 定义 string、后端为 int64 的字段（如 WS `server_seq`），后端 JSON tag 必须加 `,string` 下发字符串；前端/harmonyapp 类型保持 string 仅透传/去重、不做数值运算。禁止以「后端实际下发数字」为由把客户端类型改成 number——正确修法是后端序列化为字符串。
 - Docker Compose 统一管理：运行时服务（postgres、redis、seaweedfs、backend、frontend、nginx）统一通过 `docker compose` 编排启动/停止；不得混用宿主机进程与容器，也不允许单独启动某个运行时服务绕过 compose。静态检查（`bun run check/test/build`、Go 单测等不依赖服务间协作的命令）可在宿主机执行。
-- **改动生效闭环**：代码改动合并到主分支后，若主环境 Docker 容器在运行，必须主动重启相关容器，确保最新效果立即可见，不得要求开发者手动重启。
+- **改动生效闭环**：代码改动合并到主分支后，若主环境 Docker 容器在运行，必须主动重启相关容器，确保最新效果立即可见——命令与健康检查见「合并后主动重启主开发容器」。
 - 范围外的问题记到 `.workwork/` 或如实告知用户，不擅自扩大改动面。
 

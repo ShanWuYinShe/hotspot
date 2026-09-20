@@ -5,7 +5,7 @@
 
 ## 入口
 - 查接口、导航、路径前缀速查 → `api_spec_index.md`
-- 通用规则 → `api_spec_base.md` / `api_spec_types.md` / `api_spec_errors.md`
+- 通用规则 → `api_spec_base.md` / `api_spec_authz.md`（守卫与权限）/ `api_spec_types.md` / `api_spec_errors.md`
 
 ## 纪律(只读)
 - 实现规范、构建命令、功能边界不在本目录——在各子项目根的 `AGENTS.md`(`backend-go/`、`frontend/`、`harmonyapp/`)。

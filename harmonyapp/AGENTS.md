@@ -39,7 +39,7 @@ PATH=$JAVA_HOME/bin:$PATH
 
 如果修正 `DEVECO_SDK_HOME` / `JAVA_HOME` 后仍复用旧环境，先运行 `$NODE $HVIGOR --stop-daemon`，再重新构建。
 
-Lint & Format: 依赖 DevEco Studio IDE 内置检查；仓库根 `code-linter.json5` 是 codelinter 的规则配置（性能/TS 语法/安全规则集），命令行批量检查可配合 codelinter CLI 使用。
+Lint & Format: 依赖 DevEco Studio IDE 内置检查；`harmonyapp/code-linter.json5`（本模块根）是 codelinter 的规则配置（性能/TS 语法/安全规则集），命令行批量检查可配合 codelinter CLI 使用。
 
 ## 调试签名（本机绑定）
 
