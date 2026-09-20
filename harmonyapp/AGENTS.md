@@ -121,10 +121,7 @@ Lint & Format: 依赖 DevEco Studio IDE 内置检查；仓库根 `code-linter.js
 
 ## 组件与样式
 
-- 颜色一律使用 `AppThemeManager.getPaletteById(resolvedThemeId)` 的 palette token（或
-  `DesignConstants` 系统/图片固定色），禁止硬编码色值；`$r('app.color.*')` 资源
-  仅用于启动窗口等系统场景（当前 color.json 只保留 start_window_background）
-- 字体大小、间距等使用 `DesignConstants` 常量
+- 颜色/字号/间距/圆角等一律走 `DesignConstants` / `AppThemeManager` token，禁止硬编码——强制细则见下方「UI/UX 设计规范」与 `docs/design-system.md`。
 - 核心服务使用单例模式（`GlobalStateManager.getInstance()`）
 
 ## 组件原语强制（对齐前端 button/input 体系）
@@ -146,86 +143,25 @@ Lint & Format: 依赖 DevEco Studio IDE 内置检查；仓库根 `code-linter.js
 
 ## UI/UX 设计规范
 
-以下为内联设计规范（原 `.claude/rules/design-tokens.md` 已并入本文件），改 UI 前必读，避免硬编码色值/字号/间距、避免手搓页面头部。
+设计 token 的**全部数值档位**（颜色/字号/间距/圆角/边框/动效/交互反馈/透明度/尺寸/阴影/模糊）、双端共享组件映射表与跨端投影契约速查的唯一权威是 [docs/design-system.md](../docs/design-system.md)（仓库根 docs/），改 UI 前必读。本节只保留强制规则与指针。
 
-### 设计系统（design-tokens）
+- **禁止硬编码**：颜色一律使用 `AppThemeManager.getPaletteById(resolvedThemeId)` 的 palette token（或 `DesignConstants` 系统/图片固定色），禁止硬编码色值；字号/间距/圆角/边框/动效/透明度/尺寸一律用 `DesignConstants` 对应 token 档位，禁止裸 `fontSize(N)` / `padding({left:N})` / `width(N)` / `duration: N` / `scale(...)`；`$r('app.color.*')` 资源仅用于启动窗口等系统场景（当前 color.json 只保留 start_window_background）。
+- **跨端同步机制（强制）**：前端与鸿蒙共享同一套设计 token 刻度，同步由 CI 脚本强制拦截，**改两端任一 token 必须同步改另一端**：
 
-所有颜色、字号、间距、圆角、阴影只用 DesignConstants / AppThemeManager token，对齐前端 design token 系统（vibrant / forest / inkwash 三主题，单一事实源）。禁止在页面/组件里硬编码十六进制色值或裸数字 `fontSize(N)` / `padding({left:N})`。
+  | 校验 | 脚本 | 覆盖范围 |
+  |---|---|---|
+  | 跨端色彩 | `frontend/scripts/check-cross-platform-colors.mjs` | `themes/*.css --cst-palette-*` ↔ `ThemeConstants.ets ColorConfig` 逐值一致（3 主题 × 2 明暗 × 14 组映射）+ 主题 swatch |
+  | 跨端刻度 | `frontend/scripts/check-cross-platform-scale.mjs` | 字号 9 档（`--text-*` ↔ `FONT.SIZE`）+ 圆角 5 档（`--radius-*` ↔ `RADIUS`）逐值一致；单端加近邻档即拦截。已登记豁免：`FONT.SIZE.LG=16`（HarmonyOS 平台适配档） |
 
-颜色：
-- 画布：`palette.pageBackground` / `palette.surfaceBackground`（对齐前端
-  `--cst-surface-page` / `--cst-surface-primary`）
-- 画布契约（克制画廊，全量推广时遵守）：应用内只允许一个整层底色 = 画布
-  `pageBackground`（对齐前端 `--cst-surface-page`）；外壳各层（手机壳 / 桌面舞台 /
-  顶栏 / 页面整底 / header bar 变体）只许用画布色连续铺底，层级只靠白卡
-  `surfaceBackground` + 发丝描边（`BORDER_WIDTH.HAIRLINE` + `borderColor`）+
-  主题投影（`surfaceShadow` / `elevatedShadow`）表达。禁止引入第二档整层灰
-  （`workspaceBackground` 已删除：历史上与 `pageBackground` 两档灰并存造成断裂，
-  现桌面舞台改用 `pageBackground`、侧栏与主面板改为白浮卡）。分组卡样板见设置页
-  `SettingsSectionCard`（白卡 + 发丝描边 + 投影）、分组小标用 `textSecondary`
-  eyebrow（`SettingsGroupLabel`）、用户 hero 卡只保留白卡 + 描边（不加光晕）。
-- 表面：`palette.surfaceSubtle` / `palette.surfaceElevated` / `palette.chatBackground`
-- 文字：`palette.textPrimary` / `palette.textSecondary` / `palette.textTertiary`
-- 品牌：`palette.accentBackground`（forest `#3D7A55`，与前端
-  `--cst-palette-accent-primary`（`--cst-accent-default`）一致）
-- 语义：`palette.success` / `palette.warning` / `palette.error` / `palette.info`
-- 地图标记：`palette.mapUser / mapGroup / mapMoment`（对齐前端 `--cst-marker-user/group/moment`，随主题/明暗变）；状态淡底：`palette.dangerSoft / warningSoft`（对齐前端 `--cst-status-danger/warning-bg` 12~14% 预混档位；success/info 淡底用 `getSoftStatusBackground('success' | 'info')` 派生）
-- 主题解析：`AppThemeManager.getPaletteById(resolvedThemeId)` → `@StorageProp(KEY_RESOLVED_THEME_ID)`
-- 明暗三档：`DarkModePreference`（`auto` 跟随系统 / `light` 手动浅色 / `dark` 手动深色，
-  缺省 `auto`，与 `ThemeMode` 主题族正交，持久化键 `dark_mode_preference`，单通道经
-  `AppThemeManager.setDarkModePreference` 读写）；`auto` 时解析看系统 `isDarkMode`，
-  `manual` 时直接取偏好（`onSystemColorModeChange` 仅 `auto` 时改变结果）；
-  `setColorMode` 对应关系：`dark`→`COLOR_MODE_DARK` / `light`→`COLOR_MODE_LIGHT` /
-  `auto`→`COLOR_MODE_NOT_SET`（`EntryAbility` 三处 + 设置页切换处统一按此三选一，
-  旧 `settings_dark_forced=true` 用户已迁移为 `dark`）
-- 主题族（vibrant/forest/inkwash）双端可选集一致（本端 `default_clean`= forest 清野、`inkwash`= 水墨）；已删除主题族的存量偏好一律映射 vibrant 对应明暗
-
-字号（FONT.SIZE，禁用裸 `fontSize(N)`）：`XS_MINUS 9` / `XS2 10` / `XS 11` / `SM 12` / `MD 14` / `LG 16` / `LG_PLUS 18` / `XL 20` / `XXL 24` / `XXXL 30` / `HERO 36`（近邻档 13/15/22/28/32/48/56 与 XXXL_PLUS 36 已按前端口径归并/删除，不保留；`LG 16` 为 HarmonyOS 标准正文尺寸的平台适配档）。字重 `FONT.WEIGHT.{REGULAR,MEDIUM,SEMIBOLD,BOLD}`。行高 `FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}`；字距 `FONT.LETTER_SPACING.{EYEBROW 1.4, LABEL 1.2, FIELD 1.28, ICON_LABEL 0.6}`（对齐前端 tracking-eyebrow/label/field 刻度）。
-
-间距（SPACING，4px 网格 + 微步）：`HALF 2` / `THREE 3` / `XS 4` / `SM2 6` / `SM 8` / `MD2 10` / `MD 12` / `MD3 14` / `LG 16` / `LG2 20` / `XL 24` / `XXL 32`。禁止组件内 `padding({left:16})` 这类裸数——用 `SPACING.LG`。1vp 级微距（top:1 等）与 0 值允许保留（对齐前端间距不强制收敛原则）。
-
-边框宽度（BORDER_WIDTH，对齐前端 `--cst-border-width-*`）：`HAIRLINE 1` / `REGULAR 1.5` /
-`STRONG 2` / `HEAVY 3`。禁止 `.border({ width: 1 })` 裸数，一律 `DesignConstants.BORDER_WIDTH.*`。
-
-圆角（RADIUS / SHAPE）：`SM 12` / `MD 16` / `LG 20` / `XL 24` / `FULL 999`（已与前端 `--radius` 四档收敛完全一致 + sheet 28；近邻档 8/18/22 已删除，禁止再引入）。语义形状 `SHAPE.{CARD 20, HERO_CARD 24, COMPACT_CARD 16, PREVIEW_CARD 20, LIST_ITEM 20, ICON_TILE 12, INPUT 16, BUTTON FULL, CHIP FULL, TAB_BAR 24, SHEET_TOP_RADIUS 28}`，按前端语义用法对齐（hero/feature 24、主按钮胶囊 FULL、弹层顶部 28）。
-
-动效（ANIMATION，禁用裸 `duration: N`）：`DURATION_SHORT 200` / `DURATION_MEDIUM 300` / `DURATION_CONTENT_SWITCH 400` / `DURATION_SHEET 320`（底部弹层统一）/ `DURATION_250` / `DURATION_280` / `DURATION_FAST 150` / `DURATION_SLOW 1500`（脉冲/shimmer）/ `DURATION_STAGGER_DELAY 150`；曲线 `CURVE_EASE_IN_OUT` / `CURVE_EASE_OUT` / `CURVE_FAST_OUT_SLOW_IN` / `CURVE_SMOOTH`。Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）。
-
-交互反馈（INTERACTION，禁用裸 `scale(...)` / 裸 curve）：按压强度用
-`SCALE_PRESSED_*`（对齐前端 `tap-*`/`hover-btn` 契约，数值为 HarmonyOS 平台适配档）：
-- 主按钮按压 0.95 ↔ 前端 `hover-btn` tap 0.94；行内图标 0.90 ↔ `scale-btn` tap 0.94
-- 卡片 0.97 ↔ `tap-97`；瀑布流卡 0.96 ↔ `tap-96`（前端按页微调档同理）
-- 输入行 0.98 ↔ `tap-98`；胶囊/筛选 0.94 ↔ `tap-94`
-- hover 抬升用 `HOVER_ELEVATION`（ArkUI elevation，对应前端 fine-pointer hover 缩放），
-  弹簧动效用 `SPRING_RESPONSE_*` / `SPRING_DAMPING_*`（对应前端 `--cst-ease-bounce`）
-
-玻璃效果（毛玻璃背景）：用系统 `BlurStyle` 枚举（平台原生，非数值 token），
-按模糊强度对应前端 `--cst-blur-*` 三档：
-- `BlurStyle.Thin` ↔ 前端 `--cst-blur-sm`（8px，轻徽章/浮层）
-- `BlurStyle.Regular` ↔ 前端 `--cst-blur-md`（16px，sticky header/overlay）
-- `BlurStyle.Thick` ↔ 前端 `--cst-blur-lg`（24px，底部导航/tablet dock；
-  当前 SDK 的 BlurStyle 枚举无 `Medium` 档，强档一律用 `Thick`）
-
-双端共享组件映射（新增/修改组件时先查此表，避免两端各自发明同类组件）：
-
-| 前端（Svelte） | 鸿蒙（ArkTS） | 说明 |
-|---|---|---|
-| `layout/page/PageHeader` | `SystemPageHeader` / `SearchPageHeader` / `ChatPageHeader` | 页面头部（含 below/搜索/聊天空态） |
-| `StandardPageLayout` / `SplitPageLayout` / `ContentColumn` | `PageShellContainer` | 页面内容栏档位（form/narrow/default/wide/feed） |
-| `MainLayout`（desktop/mobile/tablet） | `layout/DesktopLayout` / `PhoneLayout` / `ResponsiveContainer` | 设备外壳分派 |
-| `EmptyState` | `EmptyState` | 空态（同名同契约） |
-| `shared/Avatar` | `SystemAvatar` | 头像（尺寸/形状/状态点） |
-| `forms/SearchInput` | `SearchPageHeader` / `SmartSearchComponent` | 搜索输入 |
-| `navigation/TabBar` / `NavTab` / `RailIcon` | `TabsPillGroup`（默认等宽分段；`freeWidth` 形态对齐前端胶囊行，`TabItem.count` 对齐角标） / `PhoneLayout` 底部导航 | 分类/导航 Tab |
-| `list/ListItem` / `ListContainer` | `SystemCard`（listItem 变体）/ `SettingsEntryRow` | 列表行（行级卡片禁止规则同前端） |
-| `overlays/SheetShell` / `ui/dialog` | `SystemDialog` / `bindSheet` | 弹层/抽屉 |
-| `forms/TagPill` | `TabsPillGroup` chip / `FILTER_CHIP_HEIGHT` | 标签/筛选胶囊 |
-| `data-display/EmptyState` 加载态 | `SystemLoadingView` / `Skeleton` | 加载/骨架 |
-| `data-display/MetricRow` / `HeroStats` | `StatSegments` | 统计段 |
-| `routes/moments/shared/MomentCard` | `MomentFeedCard` | 动态卡片 |
-| `auth/LoginPromptSheet` | `LoginPromptView` | 未登录引导 |
-| `messages/ChatView` 等 | `ChatPage` / `ChatPageHeader` | 聊天界面 |
-| `routes/(app)/nearby/+page.svelte`（附近聚合） | `features/nearby/pages/NearbyPage` | 附近门户页（纯导航门户：搜索入口 + 人/群组/动态三张分区入口卡，不拉取数据，内容流在各专区页），手机/平板底栏「附近」tab |
+  两脚本均挂入 `bun run check:theme`（随 `bun run check` 与 CI 生效），漂移即红。
+- **视觉结构同步约定**：前端 `components/home|messages|profile/` 下组件与鸿蒙 `components/`、`features/*/` 对应实现构成 design-system.md 第 13 节映射表——修改任一端的**共享组件**（改动视觉契约：布局/字号档/圆角档/投影/动效）时，必须检查映射表对端并同步，commit message 中注明「对齐 <前端组件/commit>」；仅平台适配差异（如 FAB 位置、安全区）可不同步但需在两端代码注释中互指。
+- **页面头部（强制 SystemPageHeader）**：
+  - 所有页面头部必须用 `SystemPageHeader`（或专用组件 `SearchPageHeader` / `ChatPageHeader`）；禁止手搓 `Row { Text(...).fontSize(XL)... Button(...) }` 头部。
+  - 已登记例外（无标准页面头部）：登录页 `LoginPage`（无主壳）、主壳 `Index`（容器）、地图全屏 `LocationPickerPage`、图片全屏预览 `PhotoPreviewPage`、分享解析中间页 `ShareResolutionPage`（无内容 UI，仅 loading/错误/跳转）、调试面板 `DebugPanel`；`SettingsSupport.ets` 等仅导出页面子组件的文件不算页面。
+  - SystemPageHeader API：`title` / `subtitle` / `showBackButton`+`onBack` / `action`(文本按钮) / `leftAction`+`rightAction`(IconAction) / `trailing`(@BuilderParam 任意尾随) / `titleAlign` / `titleSize` / `titleWeight` / `backgroundVariant`('bar'|'transparent'|'card')。
+  - 安全区由 SystemPageHeader 内聚（自带 `@StorageLink('safeAreaTop')` + `expandSafeArea`），页面无需重复写。
+  - 内联搜索框头部 → `SearchPageHeader`；浮动卡片+头像头部 → `ChatPageHeader`。
+- **页面内容栏（PageShellContainer）**：强制使用；档位数值（form/narrow/default/wide + feed 两档）见 design-system.md 第 12 节。
 
 ### 页面路由对齐（web → harmony）
 
@@ -256,54 +192,3 @@ Lint & Format: 依赖 DevEco Studio IDE 内置检查；仓库根 `code-linter.js
   最近搜索持久化在 PreferencesUtil（键 `search_recent`，最多 5 条）。
 - WS 事件类型与 spec/前端对齐：含 `GroupMessageReadCountUpdated` /
   `GroupMemberRoleChanged`（已登记类型与订阅，展示由群详情/聊天页按需刷新）。
-
-透明度（OPACITY）：`DISABLED 0.38` / `PRESSED 0.72` / `LOADING 0.58` / `SUBTLE 0.85` / `MUTED 0.5` / `EMPHASIZED 0.8`（对齐前端 opacity-50/80 标准档；FADED 0.4 档已归并删除）。
-
-尺寸（COMPONENT / LAYOUT，禁止裸 `width(N)` / `height(N)`）：
-- 头像 `AVATAR_SIZE.{XS 32, SMALL 40, SMALL_PLUS 44, MEDIUM 48, LARGE 80, XLARGE 96}`；按钮高度 `BUTTON_HEIGHT 42` / `BUTTON_HEIGHT_LG 48` / `ACTION_BUTTON_HEIGHT 28` / `ACTION_BUTTON_HEIGHT_MD 40` / `ACTION_BUTTON_HEIGHT_LG 34` / `SHEET_ACTION_HEIGHT 44` / `FILTER_CHIP_HEIGHT 30` / `LOGOUT_BUTTON_HEIGHT 50` / `PASSWORD_INPUT_HEIGHT 46`
-- 图标 `ICON_SIZE_2XS 14` / `ICON_SIZE_XS 16` / `ICON_SIZE_SM 20` / `ICON_SIZE_SM_PLUS 22` / `ICON_SIZE_MD 24` / `ICON_SIZE_LG 32` / `ICON_SIZE_EMPTY 48`（与 `FONT.SIZE` 解耦的独立 ICON 刻度，图标尺寸一律走此档，不用字号 token） / `STATUS_ICON_SIZE 28` / `LOADING_ICON_SIZE 20` / `LOADING_GLYPH_SIZE 46` / `BRAND_ICON_SIZE 38`；容器 `EMPTY_ICON_SIZE 64` / `LOADING_CONTAINER_SIZE 72` / `BANNER_HEIGHT 140` / `SKELETON_CARD_HEIGHT 100` / `PLACEHOLDER_AREA_HEIGHT 120` / `IMAGE_PLACEHOLDER_HEIGHT 110` / `SHARE_CARD_HEIGHT 130` / `LOG_AREA_HEIGHT 300` / `PROGRESS_STROKE_WIDTH 4`
-- 布局 `LAYOUT.{DESKTOP_HEADER_HEIGHT 52, DESKTOP_SIDEBAR_WIDTH 224, RIGHT_SIDEBAR_WIDTH 220, MOBILE_BOTTOM_NAV_HEIGHT 56, TABLET_NAV_MAX_WIDTH 520, FAB_SIZE 52, ICON_BUTTON_SIZE 36, LABEL_WIDTH 60, HOME_COLUMN_WIDTH 420, FILTER_PANEL_WIDTH 180}`（GLOW_BLOB_* 光晕尺寸已随 glow 体系删除）
-- 聊天 `CHAT.{BUBBLE_PADDING_H 16, BUBBLE_PADDING_V 10, IMAGE_BUBBLE_PADDING_H 14, IMAGE_BUBBLE_PADDING_V 6, IMAGE_MAX_WIDTH 200, ...}`
-
-阴影：扁平设计默认 `SHADOW.*` 全零；需要投影时用主题注册表 `AppThemeManager.getPaletteById(...).{surfaceShadow, elevatedShadow, controlShadow, tabBarShadow}`（真值在 `ThemeConstants` 的 ThemeShadowRegistry），禁止组件内 `.shadow({ radius: N, ... })` 手写。**全端统一中性 raised 投影语言**：主按钮/主图标钮/加入·关注·发布等 accent 实底控件静态用 `surfaceShadow`、hover/按压抬档 `elevatedShadow`，禁止 `accentShadow` 彩色光晕（`accentShadow` 字段已随 glow 体系删除，对齐前端 ui/button `shadow-raised-sm hover:shadow-raised-md` 契约）。
-
-### 跨端同步机制（强制）
-
-前端与鸿蒙共享同一套设计 token 刻度，同步由 CI 脚本强制拦截，**改两端任一 token 必须同步改另一端**：
-
-| 校验 | 脚本 | 覆盖范围 |
-|---|---|---|
-| 跨端色彩 | `frontend/scripts/check-cross-platform-colors.mjs` | `themes/*.css --cst-palette-*` ↔ `ThemeConstants.ets ColorConfig` 逐值一致（3 主题 × 2 明暗 × 14 组映射）+ 主题 swatch |
-| 跨端刻度 | `frontend/scripts/check-cross-platform-scale.mjs` | 字号 9 档（`--text-*` ↔ `FONT.SIZE`）+ 圆角 5 档（`--radius-*` ↔ `RADIUS`）逐值一致；单端加近邻档即拦截。已登记豁免：`FONT.SIZE.LG=16`（HarmonyOS 平台适配档） |
-
-- 两脚本均挂入 `bun run check:theme`（随 `bun run check` 与 CI 生效），漂移即红。
-- **视觉结构同步约定**：前端 `components/home|messages|profile/` 下组件与鸿蒙
-  `components/`、`features/*/` 对应实现构成下方映射表——修改任一端的**共享组件**
-  （改动视觉契约：布局/字号档/圆角档/投影/动效）时，必须检查映射表对端并同步，
-  commit message 中注明「对齐 <前端组件/commit>」；仅平台适配差异（如 FAB 位置、
-  安全区）可不同步但需在两端代码注释中互指。
-
-### 跨端投影契约速查
-
-| 场景 | 静态 | hover/按压 |
-|---|---|---|
-| 主按钮（SystemButton primary/danger） | `surfaceShadow` | `elevatedShadow` |
-| accent 实底图标钮（SurfaceIconButton primary） | `surfaceShadow` | `elevatedShadow` |
-| 未加入群组/未关注/发布等可点 accent 控件 | `surfaceShadow` | `elevatedShadow` |
-| FAB | `elevatedShadow`（对齐前端 `--cst-elevation-fab` 中性投影） | — |
-| 白卡/统计卡/徽章 | `surfaceShadow` | — |
-| 选中胶囊（TabsPillGroup） | `controlShadow`（hover 增量走底色） | — |
-| 输入框聚焦 | `surfaceShadow` + 边框加深（不画光晕） | — |
-
-页面头部（强制 SystemPageHeader）：
-- 所有页面头部必须用 `SystemPageHeader`（或专用组件 `SearchPageHeader` / `ChatPageHeader`）。
-- 禁止手搓 `Row { Text(...).fontSize(XL)... Button(...) }` 头部。
-- 已登记例外（无标准页面头部）：登录页 `LoginPage`（无主壳）、主壳 `Index`（容器）、
-  地图全屏 `LocationPickerPage`、图片全屏预览 `PhotoPreviewPage`、分享解析中间页
-  `ShareResolutionPage`（无内容 UI，仅 loading/错误/跳转）、调试面板 `DebugPanel`；
-  `SettingsSupport.ets` 等仅导出页面子组件的文件不算页面。
-- SystemPageHeader API：`title` / `subtitle` / `showBackButton`+`onBack` / `action`(文本按钮) / `leftAction`+`rightAction`(IconAction) / `trailing`(@BuilderParam 任意尾随) / `titleAlign` / `titleSize` / `titleWeight` / `backgroundVariant`('bar'|'transparent'|'card')。
-- 安全区由 SystemPageHeader 内聚（自带 `@StorageLink('safeAreaTop')` + `expandSafeArea`），页面无需重复写。
-- 内联搜索框头部 → `SearchPageHeader`；浮动卡片+头像头部 → `ChatPageHeader`。
-
-页面内容栏（PageShellContainer）：档位（对齐前端 `.page-shell`）：`form 560` / `narrow 720` / `default 1180` / `wide 1320`；feed：`feed-narrow 640` / `feed-medium 960`。

@@ -135,21 +135,12 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
    `transition:... 0.2s ...`）。改主题/节奏只需改 token 文件，全站一致生效。
    登记例外：布局几何（width/height/position/gap 的 px）与 StatusBar 模拟系统
    chrome 的微圆角属于非主题风格，不受此条约束。
-5. **跨端色彩对齐**：harmonyapp `ThemeConstants.ets` 的 ColorConfig 与本项目
+5. **跨端色彩与刻度对齐**：harmonyapp `ThemeConstants.ets` 的 ColorConfig 与本项目
    `themes/*.css` 的 `--cst-palette-*` 是同一套色板的两端表达，改色必须两侧
-   同步。`bun run check:theme` 已串联
-   `scripts/check-cross-platform-colors.mjs`（映射表内嵌于脚本：前端 forest ≡
-   harmonyapp default_clean、success/error/info 随主题族色源），CI 会在漂移时
-   拦截；主题选择器 swatch 也已纳入同一校验。
-   同链还有 `scripts/check-utility-classes.mjs`：扫描 class 属性中消费的 token 类名，
-   校验每个类名都能在 `theme-registry.css` 注册键 / `themes/*.css` 定义 /
-   Tailwind 自带命名空间 / 项目自定义 `.class` 中找到来源——Tailwind v4 对未注册
-   utility 静默失效（写了不报错也不生成 CSS），这是唯一的防线。
-   还有 `scripts/check-cross-platform-scale.mjs`：校验字号档
-   （`--text-*` ↔ 鸿蒙 `FONT.SIZE`，9 档）与圆角档（`--radius-*` ↔ 鸿蒙
-   `RADIUS`，5 档）逐值一致，单端新增近邻档/改档即 CI 拦截。已登记豁免：
-   鸿蒙 `FONT.SIZE.LG=16` 为 HarmonyOS 平台适配档。改字号/圆角 token 必须
-   两端同步（详见 harmonyapp/AGENTS.md「跨端同步机制」）。
+   同步。校验脚本、覆盖范围与同步流程的**唯一权威描述**见根 `docs/design-system.md`
+   第 14 节与 `harmonyapp/AGENTS.md`「跨端同步机制」——`bun run check:theme`
+   已串联色彩/刻度/utility 类名三个检查脚本，CI 漂移即拦截；改字号/圆角 token
+   必须两端同步。
 6. **徽标与标签（Badge / Pill）居中与排版契约**：
    - 必须同时声明 `inline-flex items-center justify-center leading-none`，杜绝未设行高导致继承全局行高（24px）产生“文字下沉贴底”或在近正方形上施加 `rounded-full` 产生“怪异胖椭圆”；
    - 紧凑型徽标（未读数气泡、状态胶囊、卡片角标）：`h-5 px-2` 或 `h-5 px-2.5`，字号 `text-xxs`；
@@ -466,6 +457,10 @@ theme/
 > **核心原则：少档位 + 强制收敛**。设计系统的价值在约束而非自由——档位要少、
 > 近邻值必须归并（1-2px 差异人眼分不清，并存只会让界面碎、无节奏）。「不够用就
 > 归到最近档位」是默认动作，新增档位需充分论证。同一类东西禁止变体过多。
+> 各档位的**双端对照数值与语义用法**的唯一权威是根 `docs/design-system.md`
+> （圆角第 6 节 / 字号第 4 节 / 间距第 5 节 / 模糊第 9 节 / 动效第 10 节 /
+> 阴影第 8 节）；本清单只保留前端执行规则与速记档位，改 token 数值时以
+> design-system.md 为准并两端同步。
 
 1. **圆角（4 档 + full）**：控件/卡片圆角一律用 `rounded-*` 类（`--radius-*` 档位：
    **sm 12 / md 16 / lg 20 / xl 24px** + `rounded-full` 圆形 + `rounded-sheet` 28px 弹层）
