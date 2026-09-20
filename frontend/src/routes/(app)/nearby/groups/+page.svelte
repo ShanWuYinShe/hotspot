@@ -5,6 +5,7 @@ import { formatCount } from '@/lib/utils';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
+	import { readLastLocation } from '@/lib/map-auto-locate';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
@@ -30,15 +31,24 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let groups = $state<Group[]>([]);
 	let visibleCount = $state(12);
 	let loading = $state(true);
-	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
-	let locationName = $state('');
+	// 本机浏览锚点（localStorage 同步可读）优先于服务端默认位置。
+	const savedAnchor = readLastLocation();
+	let referencePoint = $state<{ latitude: number; longitude: number } | null>(
+		savedAnchor ? { latitude: savedAnchor.lat, longitude: savedAnchor.lng } : null
+	);
+	let locationName = $state(savedAnchor?.name ?? '');
 	let loadError = $state<string | null>(null);
 	let reloadKey = $state(0);
 
+	// 浏览锚点优先（spec api_spec_types.md：reference_point = 当前在看哪里/距离基准）：
+	// 地图页「设为浏览锚点」写入的 hotspot_last_location 才是本机生效值，
+	// 无锚点才回退服务端默认位置。此前只读默认位置，用户在地图上设的锚点
+	// 对附近列表毫无影响。
 	$effect(() => startDefaultLocation((loc) => {
-				referencePoint = loc?.point ?? null;
-				locationName = loc?.location_name ?? '';
-}));
+		if (savedAnchor) return;
+		referencePoint = loc?.point ?? null;
+		locationName = loc?.location_name ?? '';
+	}));
 
 	$effect(() => {
 		// spec: groups/search radius 仅显式提供时按半径过滤（此处显式传 5km 承接

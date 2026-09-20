@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { MapPin, ChevronRight } from '@lucide/svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
+	import { readLastLocation } from '@/lib/map-auto-locate';
 
 	// 侧栏底部「位置选择」锚点入口（地图门户）。
 	// 独立小卡片形态（tinted 底 + hairline 边框），与上方导航行明确区隔：
@@ -14,9 +15,12 @@
 		collapsed?: boolean;
 	} = $props();
 
-	let locationName = $state('');
+	// 与附近页同一口径：本机浏览锚点优先，无锚点才回退服务端默认位置。
+	const savedAnchor = readLastLocation();
+	let locationName = $state(savedAnchor?.name ?? '');
 
 	$effect(() => startDefaultLocation((loc) => {
+		if (savedAnchor) return;
 		locationName = loc?.location_name ?? '';
 	}));
 </script>

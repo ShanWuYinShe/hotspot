@@ -4,7 +4,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
-	import { autoLocateOnce, readLastLocation } from '@/lib/map-auto-locate';
+	import { autoLocateOnce, readLastLocation, writeLastLocation } from '@/lib/map-auto-locate';
 	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
 	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
@@ -235,10 +235,9 @@
 	}
 
 	function handleConfirm() {
-		const loc = selectedLoc ?? { displayName: '当前位置', lat: mapCenter?.lat ?? 0, lng: mapCenter?.lng ?? 0 };
-		try {
-			localStorage.setItem('hotspot_last_location', JSON.stringify([loc.lat, loc.lng]));
-		} catch {}
+		// 未选地点时以视口中心兜底（与桌面端一致）；坐标无效则不写入。
+		const point = selectedLoc ?? mapCenter;
+		if (point) writeLastLocation({ ...point, name: selectedLoc?.displayName });
 		smartBack();
 	}
 

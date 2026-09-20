@@ -5,7 +5,7 @@
 	import { smartBack } from '@/lib/smart-back';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
-	import { autoLocateOnce, readLastLocation } from '@/lib/map-auto-locate';
+	import { autoLocateOnce, readLastLocation, writeLastLocation } from '@/lib/map-auto-locate';
 	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
 	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
@@ -191,11 +191,12 @@
 	}
 
 	function handleConfirm() {
-		if (selectedLoc) {
-			try {
-				localStorage.setItem('hotspot_last_location', JSON.stringify([selectedLoc.lat, selectedLoc.lng]));
-			} catch {}
-		}
+		// 锚点语义 = 「以当前视口中心为准」：未选地点时用 mapCenter 兜底，
+		// 与移动端 handleConfirm 对齐（此前只在 selectedLoc 存在时写入，
+		// 未选地点点「设为浏览锚点」是空操作——按钮能点但什么都没发生）。
+		const point = selectedLoc ?? mapCenter;
+		// 选中地点时连带名称一起持久化：附近页/侧栏显示的位置名须与锚点一致。
+		if (point) writeLastLocation({ ...point, name: selectedLoc?.displayName });
 		// 深链直入时无站内历史，back 会离开站点——统一走 smartBack（站内历史则 back，否则回首页）
 		smartBack();
 	}
