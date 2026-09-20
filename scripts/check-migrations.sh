@@ -15,17 +15,11 @@ if [ -n "$dupes" ]; then
   echo "!! 迁移序号重复：$dupes（新增迁移不得与既有序号重复）"
   exit 1
 fi
+echo "迁移序号校验 OK"
 
-# ── 建索引必须 CONCURRENTLY ─────────────────────────────────────
-# 迁移在服务启动时自动执行且与旧版本二进制共存（无停机产物替换）：
-# 普通 CREATE INDEX 的 SHARE 锁会阻塞读写，表越大停写越久。runner 逐文件
-# 单 Exec 无外层事务，CONCURRENTLY 语法可行；注意并发构建失败会留下 INVALID
-# 索引且 IF NOT EXISTS 不会重建——发布 runbook：启动日志见索引报错时先
-# DROP INVALID 再重启。
-bad_index=$(grep -ln 'CREATE.*INDEX' *.sql | xargs grep -hn 'CREATE.*INDEX' | grep -v 'CONCURRENTLY' || true)
-if [ -n "$bad_index" ]; then
-  echo "!! 以下建索引语句未使用 CONCURRENTLY（违反 backend-go/AGENTS.md 迁移纪律）:"
-  echo "$bad_index"
-  exit 1
-fi
-echo "迁移序号校验 OK（含建索引 CONCURRENTLY 检查）"
+# 已知限制（2026-09-20 实测）：迁移经 pgx 简单协议整文件单消息执行，多语句
+# 文件落入 PostgreSQL 隐式事务块，CREATE INDEX CONCURRENTLY 会以 25001 拒绝
+# （cmd/migrate 与服务端 ensureSchema 两条路径均如此）。因此「建索引
+# CONCURRENTLY 避免停写」在当前迁移架构下不可行；要消除建索引停写需先做
+# schema_migrations 版本表 + 把建索引拆成单语句迁移文件（遗留项，勿直接改用
+# CONCURRENTLY——CI 单测与启动路径都会红）。
