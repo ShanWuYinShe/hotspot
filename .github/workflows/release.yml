@@ -43,14 +43,18 @@ jobs:
           # 结论非 success（失败 / 查不到 / 超时）一律拒绝出包。
           deadline=$(( $(date +%s) + 2400 ))
           while :; do
-            row="$(gh run list --workflow CI --commit "$GITHUB_SHA" \
-              --json status,conclusion \
-              --jq 'first(.[] | select(.status == "completed"))' 2>/dev/null || true)"
-            if [ -n "$row" ]; then
-              conclusion="$(printf '%s' "$row" | jq -r '.conclusion')"
-              echo "tagged commit $GITHUB_SHA CI conclusion: $conclusion"
-              test "$conclusion" = "success"
-              exit 0
+            if ! raw="$(gh run list --workflow CI --commit "$GITHUB_SHA" --json status,conclusion 2>&1)"; then
+              echo "::warning::gh 查询失败（runner 网络/鉴权抖动），60s 后重试：$raw"
+            else
+              echo "gh 返回：$raw"
+              row="$(printf '%s' "$raw" | jq 'first(.[] | select(.status == "completed"))')"
+              if [ -n "$row" ] && [ "$row" != "null" ]; then
+                conclusion="$(printf '%s' "$row" | jq -r '.conclusion')"
+                echo "tagged commit $GITHUB_SHA CI conclusion: $conclusion"
+                test "$conclusion" = "success"
+                exit 0
+              fi
+              echo "CI 尚未完成，60s 后重试…"
             fi
             if [ "$(date +%s)" -ge "$deadline" ]; then
               echo "::error::该提交的 CI 未在 40 分钟内完成，拒绝发布（请确认 CI 结论后重推 tag）"
