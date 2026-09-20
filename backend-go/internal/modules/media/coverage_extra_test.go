@@ -116,15 +116,15 @@ func TestMediaServiceStartRetentionSweeperIdempotentGuard(t *testing.T) {
 	defer sweepCancel()
 	svc.StartRetentionSweeper(sweepCtx)
 	svc.StartRetentionSweeper(sweepCtx)
-	if !retentionSweepStarted {
+	if !retentionSweeperRunning() {
 		t.Fatal("expected retention sweeper started flag to be set")
 	}
 	sweepCancel()
 	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) && retentionSweepStarted {
+	for time.Now().Before(deadline) && retentionSweeperRunning() {
 		time.Sleep(5 * time.Millisecond)
 	}
-	if retentionSweepStarted {
+	if retentionSweeperRunning() {
 		t.Fatal("expected retention sweeper started flag to reset after ctx cancel")
 	}
 }

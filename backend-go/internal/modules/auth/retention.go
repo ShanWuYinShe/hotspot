@@ -23,6 +23,15 @@ var (
 	retentionSweepStarted bool
 )
 
+// retentionSweeperRunning 加锁读取 sweeper 存活标志：flag 的所有读写必须
+// 经过 retentionSweepMu，否则 -race 下裸读与 goroutine 退出时的重置构成
+// data race（与 media 模块同款修复）。
+func retentionSweeperRunning() bool {
+	retentionSweepMu.Lock()
+	defer retentionSweepMu.Unlock()
+	return retentionSweepStarted
+}
+
 // StartRetentionSweeper 启动 PG 数据保留期清理（auth_sessions / 注册验证码 /
 // 密码重置请求）。幂等：重复调用为 no-op；goroutine 绑定 ctx 随优雅停机退出。
 func (m *Module) StartRetentionSweeper(ctx context.Context) {

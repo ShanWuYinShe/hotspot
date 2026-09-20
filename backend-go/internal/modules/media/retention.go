@@ -23,6 +23,15 @@ var (
 	retentionSweepStarted bool
 )
 
+// retentionSweeperRunning 加锁读取 sweeper 存活标志：flag 的所有读写必须
+// 经过 retentionSweepMu，否则 -race 下裸读与 goroutine 退出时的重置构成
+// data race（TestMediaServiceStartRetentionSweeperIdempotentGuard 即因此失败）。
+func retentionSweeperRunning() bool {
+	retentionSweepMu.Lock()
+	defer retentionSweepMu.Unlock()
+	return retentionSweepStarted
+}
+
 // StartRetentionSweeper 启动上传会话保留期清理：超过保留期的未完成会话，
 // 先删其可能已部分上传的存储对象（幂等，404 视为已删），再删会话行。
 // goroutine 绑定 ctx 随优雅停机退出；重复调用 no-op。

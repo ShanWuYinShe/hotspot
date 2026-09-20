@@ -81,16 +81,16 @@ func TestAuthModuleStartRetentionSweeperRunsOnceAndStops(t *testing.T) {
 	m.StartRetentionSweeper(sweepCtx)
 	// 重复调用 no-op（幂等守卫分支）。
 	m.StartRetentionSweeper(sweepCtx)
-	if !retentionSweepStarted {
+	if !retentionSweeperRunning() {
 		t.Fatal("expected retention sweeper started flag to be set")
 	}
 
 	sweepCancel()
 	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) && retentionSweepStarted {
+	for time.Now().Before(deadline) && retentionSweeperRunning() {
 		time.Sleep(5 * time.Millisecond)
 	}
-	if retentionSweepStarted {
+	if retentionSweeperRunning() {
 		t.Fatal("expected retention sweeper started flag to reset after ctx cancel")
 	}
 }
