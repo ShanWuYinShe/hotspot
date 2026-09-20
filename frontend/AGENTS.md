@@ -81,7 +81,7 @@ HTTPS（OrbStack 自带受信任的开发证书）：
 ### 浏览器巡检（可选，需 dev 环境已启动）
 
 前置：dev 环境已启动（见上），宿主机已安装 `agent-browser`
-（`npm i -g agent-browser && agent-browser install`）。
+（`bun install -g agent-browser && agent-browser install`）。
 
 ```bash
 # 桌面 20 页
