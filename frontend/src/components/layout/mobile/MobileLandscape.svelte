@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { Home, Plus, X, MessageCircle, CircleUser } from '@lucide/svelte';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
+	import { unread } from '@/stores/unread.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import RailIcon from '@/components/layout/mobile/RailIcon.svelte';
@@ -65,6 +66,7 @@
 					label={item.label}
 					isActive={isPrimaryRouteActive(pathname, item.path)}
 					onClick={() => goto(item.path)}
+					count={item.path === ROUTES.messages ? unread.chat : 0}
 				/>
 			{/each}
 		</aside>

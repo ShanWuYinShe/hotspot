@@ -10,6 +10,7 @@
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { admin, ensureAdminLoaded } from '@/stores/admin.svelte';
 	import { composer, openComposer, closeComposer } from '@/stores/composer.svelte';
+	import { unread } from '@/stores/unread.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
@@ -185,7 +186,7 @@
 				class="header-action"
 			/>
 
-			<ActionIconButton icon={Bell} label="通知" onClick={() => guardNav('查看通知', ROUTES.notify)} variant="ghost" size={36} class="header-action" />
+			<ActionIconButton icon={Bell} label="通知" badge={unread.notify} onClick={() => guardNav('查看通知', ROUTES.notify)} variant="ghost" size={36} class="header-action" />
 
 			<AppearanceMenu />
 
@@ -250,7 +251,13 @@
 				<!-- Section 2: Personal nav -->
 				<div class="flex flex-col gap-1">
 					{#each PERSONAL_NAV as item (item.id)}
-						<SidebarNavItem {item} isActive={activeNavId === item.id} onClick={() => handleNavClick(item)} collapsed={isSidebarCollapsed} />
+						<SidebarNavItem
+							{item}
+							isActive={activeNavId === item.id}
+							onClick={() => handleNavClick(item)}
+							collapsed={isSidebarCollapsed}
+							badge={item.id === 'messages' ? unread.chat : 0}
+						/>
 					{/each}
 				</div>
 

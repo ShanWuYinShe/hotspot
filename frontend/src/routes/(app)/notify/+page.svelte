@@ -20,6 +20,7 @@ import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { TYPE_CONFIG, normalizeNotifType, type NotifyViewItem } from './shared/notify-data';
 	import { listNotifies, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite , netError } from '@/api';
+	import { setNotifyUnread, unread as globalUnread } from '@/stores/unread.svelte';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
@@ -104,6 +105,10 @@ const FILTER_TABS = [
 
 				if (notifData) {
 					notifies = toViewItems(notifData.items || [], 0);
+				}
+				// 服务端未读真相回写全局徽标（markRead/全部已读后同样经此收敛）
+				if (!cancelled && unreadRes.code === 0 && unreadRes.data) {
+					setNotifyUnread(unreadRes.data.total);
 				}
 			} catch {
 				if (!cancelled) {
@@ -193,18 +198,26 @@ const FILTER_TABS = [
 
 	const markAllRead = () => {
 		// spec: notify.md → mark_read（参数必显式）：scope='all' 全部已读。乐观更新 + 失败回滚。
-		const snapshot = notifies;
-		notifies = notifies.map((n) => ({ ...n, read: true }));
-		void markRead({ scope: 'all' }).catch(() => {
-			notifies = snapshot;
-			showToast('全部已读失败，请重试', 'danger');
+	const snapshot = notifies;
+	notifies = notifies.map((n) => ({ ...n, read: true }));
+	setNotifyUnread(0);
+	void markRead({ scope: 'all' }).catch(() => {
+		notifies = snapshot;
+		// 回滚：向服务端复核未读真相（徽标与列表一并还原）
+		void getUnreadCount().then((r) => {
+			if (r.code === 0 && r.data) setNotifyUnread(r.data.total);
 		});
-	};
-	const markSingleRead = (id: string) => {
-		notifies = notifies.map((n) => (n.id === id ? { ...n, read: true } : n));
-		// spec: notify.md → mark_read（参数必显式）：scope='ids' 指定 1-50 条。
-		void markRead({ scope: 'ids', notify_ids: [id] }).catch(() => {});
-	};
+		showToast('全部已读失败，请重试', 'danger');
+	});
+};
+const markSingleRead = (id: string) => {
+	// 先取原状态再变异：仅原本未读的项才递减全局徽标
+	const wasUnread = notifies.find((n) => n.id === id)?.read === false;
+	notifies = notifies.map((n) => (n.id === id ? { ...n, read: true } : n));
+	// spec: notify.md → mark_read（参数必显式）：scope='ids' 指定 1-50 条。
+	if (wasUnread) setNotifyUnread(Math.max(0, globalUnread.notify - 1));
+	void markRead({ scope: 'ids', notify_ids: [id] }).catch(() => {});
+};
 	const remove = (id: string) => {
 		notifies = notifies.filter((n) => n.id !== id);
 	};

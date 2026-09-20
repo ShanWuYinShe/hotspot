@@ -15,6 +15,7 @@ import {
 
 import { resetAdmin } from "@/stores/admin.svelte";
 import { resetPresence } from "@/stores/presence.svelte";
+import { applyBootstrapUnread, resetUnread } from "@/stores/unread.svelte";
 
 export type AuthStatus = 'loading' | 'anonymous' | 'authenticated';
 
@@ -72,10 +73,12 @@ export function initAuth(): () => void {
     // 服务端在此下发 device_id Cookie；auth/register、auth/guest、auth/signin 等
     // Web 端认证变更都从该 Cookie 读取设备标识，缺失即 10000 参数错误。
     // 失败不阻塞启动（匿名浏览公开端点不受影响）。
-    await apiBootstrap().catch(() => null);
+    const boot = await apiBootstrap().catch(() => null);
     const res = await checkAuthStatus().catch(() => null);
     const data = res && res.code === 0 ? res.data : null;
     if (data) {
+      // 冷启动未读校准：bootstrap 已携带服务端现算的 unread_summary，零额外请求
+      applyBootstrapUnread(boot && boot.code === 0 ? boot.data?.unread_summary : null);
       await refreshUser();
     } else {
       status = 'anonymous';
@@ -90,6 +93,7 @@ export function initAuth(): () => void {
     user = null;
     bannedMessage = null;
     resetPresence();
+    resetUnread();
     setAuthenticated(false);
   };
   const onBanned = (e: Event) => {
@@ -98,6 +102,7 @@ export function initAuth(): () => void {
     user = null;
     bannedMessage = detail?.message ?? '账号已被封禁';
     resetPresence();
+    resetUnread();
   };
   window.addEventListener('auth-failed', onFailed as EventListener);
   window.addEventListener('auth-banned', onBanned as EventListener);
@@ -150,6 +155,10 @@ function replayPending(): void {
 async function onAuthSuccess(): Promise<void> {
   bannedMessage = null;
   await refreshUser();
+  // 登录/注册/访客成功后重新 bootstrap：拉取该账号的 unread_summary 校准全局
+  // 未读徽标（与冷启动同一来源；失败静默——后续由 WS 增量与页面回写收敛）。
+  const boot = await apiBootstrap().catch(() => null);
+  applyBootstrapUnread(boot && boot.code === 0 ? boot.data?.unread_summary : null);
   if (pendingAction) {
     replayPending();
   }
@@ -185,6 +194,7 @@ export async function logout(): Promise<void> {
   bannedMessage = null;
   resetAdmin();
   resetPresence();
+  resetUnread();
   setAuthenticated(false);
 }
 

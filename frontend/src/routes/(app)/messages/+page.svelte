@@ -20,9 +20,13 @@
 	import { compareChatItems, type ChatItem } from '@/lib/chat-list';
 	import { ROUTES } from '@/lib/routes';
 	import { presence, watchPresence } from '@/stores/presence.svelte';
+	import { setChatUnread } from '@/stores/unread.svelte';
+	import { WS_PRIVATE_MESSAGE_EVENT, WS_GROUP_MESSAGE_EVENT } from '@/lib/ws/client';
 
 	// 消息列表：在线条 + 会话列表（私聊 + 群聊混合）+ 新会话 Sheet + 建群 Sheet；
 	// 桌面左右分栏（内嵌 ChatView / GroupChatView）。
+	// WS 实时：ws:private-message / ws:group-message 触发 reloadKey 静默重拉
+	// （仅首刷无数据时展示整页 loading，后台刷新不打扰浏览）。
 
 	let chats = $state<ChatItem[]>([]);
 	let loading = $state(true);
@@ -32,12 +36,26 @@
 	let reloadKey = $state(0);
 	let unwatchPresence: (() => void) | null = null;
 
+	// WS 新消息 → 静默重拉会话列表（行级未读/排序/最新一条随服务端真相刷新）
+	$effect(() => {
+		const onWsMessage = () => {
+			reloadKey++;
+		};
+		window.addEventListener(WS_PRIVATE_MESSAGE_EVENT, onWsMessage);
+		window.addEventListener(WS_GROUP_MESSAGE_EVENT, onWsMessage);
+		return () => {
+			window.removeEventListener(WS_PRIVATE_MESSAGE_EVENT, onWsMessage);
+			window.removeEventListener(WS_GROUP_MESSAGE_EVENT, onWsMessage);
+		};
+	});
+
 	$effect(() => {
 		void reloadKey;
 		let cancelled = false;
 		async function fetchChats() {
 			try {
-				loading = true;
+				// 仅首刷（无数据）展示整页 loading；WS 触发的后台刷新静默换数据
+				if (!chats.length) loading = true;
 				loadError = null;
 				needsAuth = false;
 				// 并行加载私聊与我的群组，合并为统一会话列表（按置顶 > 未读 > 已读，时间倒序）。
@@ -203,6 +221,10 @@
 	);
 	const onlineChats = $derived(liveChats.filter((c) => c.online));
 	const totalUnread = $derived(chats.reduce((s, c) => s + c.unread, 0));
+	// 页面数据是服务端真相：任何变化（拉取/WS 重拉/打开会话清零）同步全局未读徽标
+	$effect(() => {
+		setChatUnread(totalUnread);
+	});
 	// 分栏阈值：桌面或所有平板端（≥600px）全面启用 Master-Detail 双栏分栏，彻底消灭单列拉伸与空白
 	const useSplitPane = $derived(platform.platform === 'desktop' || platform.platform === 'tablet');
 	const selectedChat = $derived(liveChats.find((c) => c.id === selectedId));

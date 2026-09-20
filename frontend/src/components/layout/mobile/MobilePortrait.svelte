@@ -5,6 +5,7 @@
 	import { ArrowLeft, Home, Plus, X, MessageCircle, CircleUser, Compass } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { composer, openComposer, closeComposer, toggleComposer } from '@/stores/composer.svelte';
+	import { unread } from '@/stores/unread.svelte';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import StatusBar from '@/components/layout/StatusBar.svelte';
@@ -161,6 +162,7 @@
 							isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[2].path)}
 							onClick={() => goto(NAV_ITEMS[2].path)}
 							Icon={NAV_ITEMS[2].icon}
+							count={unread.chat}
 						/>
 					</div>
 
