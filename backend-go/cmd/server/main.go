@@ -64,10 +64,18 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// server.Shutdown 超时（如有连接卡在空闲读）不能像 log.Fatalf 那样直接
+	// os.Exit：那会跳过 app.Shutdown() 的 WS 排空 / bridge 关闭 / DB 池回收，
+	// 客户端只能等 ping 超时。记日志、保留非零退出码、清理照常执行。
+	exitCode := 0
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("shutdown server: %v", err)
+		log.Printf("shutdown server: %v", err)
+		exitCode = 1
 	}
 	app.Shutdown()
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
 }
 
 // warnInsecureDefaults prints a loud banner to stderr whenever the loaded

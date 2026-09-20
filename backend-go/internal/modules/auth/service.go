@@ -301,8 +301,16 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 
 	account, err := s.repo.Authenticate(ctx, req.LoginID, req.Password)
 	if err != nil {
+		// ErrInvalidCredentials 是预期业务错误（密码错误/账号不存在，防枚举下
+		// 两者同响应）：按约定走 Warn，不与基础设施错误混记 Error。
 		if errors.Is(err, ErrInvalidCredentials) {
 			s.loginTracker.RecordFailed(ctx, req.LoginID)
+			observability.L().Warn("login failed: invalid credentials",
+				"method", "Login",
+				"login_id", observability.Redact(req.LoginID),
+				"elapsed_ms", time.Since(startedAt).Milliseconds(),
+			)
+			return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Login: authenticate: %w", err)
 		}
 		observability.L().Error("service error",
 			"method", "Login",
