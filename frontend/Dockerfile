@@ -42,6 +42,16 @@ LABEL org.opencontainers.image.version=${GIT_VERSION} \
 # 挂载会遮住镜像内容，这正是「卷非空时新产物不生效」坑的根源）。
 COPY --from=build /app/build/ /srv/dist/
 
+# 非 root 运行：uid/gid 显式固定为 100:101——deploy-production.sh 迁移存量
+# 卷属主时依赖该值（存量 hotspot_frontend_build 卷属主为 root，容器降权前
+# 需 docker run alpine chown 100:101 一次性迁移，脚本已内置、幂等）。
+# 预建 /build 并 chown：命名卷首挂载时 Docker 会复制挂载点属主，新部署的
+# 卷直接以 app 属主初始化，容器内无需特权操作。
+RUN addgroup -S -g 101 app && adduser -S -u 100 -G app app \
+    && mkdir -p /build && chown app:app /build
+
+USER app
+
 # 每次容器启动（= 每次换镜像重建）先把卷清空再灌入新产物：静态卷自刷新，
 # 无需部署脚本再做手工 tar 拷贝；随后保持容器存活（healthcheck 依赖）。
 CMD ["sh", "-c", "rm -rf /build/* /build/.[!.]* /build/..?* 2>/dev/null; cp -r /srv/dist/. /build/ && exec sleep infinity"]

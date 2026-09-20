@@ -5,3 +5,8 @@
 server
 bin/
 coverage/
+# 集成测试源码与本地工具产物不进构建上下文（生产 Dockerfile 与 Dockerfile.dev
+# 均只 go build ./cmd/server，air 编译产物 ./tmp 亦不参与镜像构建）
+test/
+tmp/
+.workwork/
