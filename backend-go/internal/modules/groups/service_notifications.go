@@ -55,11 +55,11 @@ func (s *Service) notifyGroupApplicationExpired(ctx context.Context, group Group
 		}
 		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{
 			Type: realtime.EventTypeGroupApplicationExpired,
-			Payload: map[string]any{
-				"application_id": application.ApplicationID,
-				"group_id":       group.Group.GroupID,
-				"applicant":      applicant,
-				"expired_at":     now,
+			Payload: GroupApplicationExpiredPayload{
+				ApplicationID: application.ApplicationID,
+				GroupID:       group.Group.GroupID,
+				Applicant:     applicant,
+				ExpiredAt:     now,
 			},
 		})
 	}
@@ -152,7 +152,7 @@ func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem
 // inviter. 纯实时事件（spec api_spec_websocket.md：不落库通知）。
 func (s *Service) notifyGroupInviteAccepted(ctx context.Context, invite GroupInviteItem, userID string) {
 	user := s.resolveUserInfo(ctx, userID)
-	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteResponse, Payload: map[string]any{"invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteResponse, Payload: GroupInviteResponsePayload{InviteID: invite.InviteID, GroupID: invite.Group.GroupID, User: user, RespondedAt: time.Now().UTC().Format(time.RFC3339)}})
 }
 
 func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group GroupItem, applicantUserID string, applicationID *string, message *string) {
@@ -177,9 +177,9 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 				notificationID = id
 			}
 		}
-		payload := map[string]any{"notify_id": notificationID, "application_id": applicationID, "group_id": group.Group.GroupID, "applicant": applicant, "created_at": time.Now().UTC().Format(time.RFC3339)}
+		payload := GroupApplicationReceivedPayload{NotifyID: notificationID, ApplicationID: applicationID, GroupID: group.Group.GroupID, Applicant: applicant, CreatedAt: time.Now().UTC().Format(time.RFC3339)}
 		if message != nil && *message != "" {
-			payload["message"] = *message
+			payload.Message = message
 		}
 		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationReceived, Payload: payload})
 	}
@@ -195,5 +195,5 @@ func (s *Service) notifyGroupApplicationAccepted(ctx context.Context, group Grou
 			notificationID = id
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationResponse, Payload: map[string]any{"notify_id": notificationID, "application_id": application.ApplicationID, "group": map[string]any{"group_id": group.Group.GroupID, "name": group.Group.Name, "avatar_url": group.Group.AvatarURL, "members_count": group.Group.MembersCount}, "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationResponse, Payload: GroupApplicationResponsePayload{NotifyID: notificationID, ApplicationID: application.ApplicationID, Group: GroupBriefPayload{GroupID: group.Group.GroupID, Name: group.Group.Name, AvatarURL: group.Group.AvatarURL, MembersCount: group.Group.MembersCount}, RespondedAt: time.Now().UTC().Format(time.RFC3339)}})
 }

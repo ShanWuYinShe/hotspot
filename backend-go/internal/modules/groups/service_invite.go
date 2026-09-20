@@ -50,7 +50,7 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 		return err
 	}
 	s.notifyGroupInviteAccepted(ctx, invite, principal.UserID)
-	realtime.DefaultHub().BroadcastToGroup(invite.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: map[string]any{"group_id": invite.Group.GroupID, "user": s.resolveUserInfo(ctx, principal.UserID), "role": string(GroupRoleMember), "member_count": invite.Group.MembersCount + 1, "joined_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToGroup(invite.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: invite.Group.GroupID, User: s.resolveUserInfo(ctx, principal.UserID), Role: string(GroupRoleMember), MemberCount: invite.Group.MembersCount + 1, JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
 	return nil
 }
 
@@ -184,14 +184,14 @@ func (s *Service) notifyGroupInviteRevoked(ctx context.Context, group GroupItem,
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	revokedBy := s.resolveUserInfo(ctx, principal.UserID)
 	now := time.Now().UTC().Format(time.RFC3339)
-	payload := map[string]any{
-		"invite_id":  inviteID,
-		"group_id":   group.Group.GroupID,
-		"revoked_by": revokedBy,
-		"revoked_at": now,
+	payload := GroupInviteRevokedPayload{
+		InviteID:  inviteID,
+		GroupID:   group.Group.GroupID,
+		RevokedBy: revokedBy,
+		RevokedAt: now,
 	}
 	if reason != nil && *reason != "" {
-		payload["reason"] = *reason
+		payload.Reason = reason
 	}
 	realtime.DefaultHub().BroadcastToUser(inviteeUserID, realtime.Event{Type: realtime.EventTypeGroupInviteRevoked, Payload: payload})
 }
@@ -219,10 +219,10 @@ func (s *Service) notifyGroupInviteExpired(ctx context.Context, inviteeUserID st
 	now := time.Now().UTC().Format(time.RFC3339)
 	realtime.DefaultHub().BroadcastToUser(inviteeUserID, realtime.Event{
 		Type: realtime.EventTypeGroupInviteExpired,
-		Payload: map[string]any{
-			"invite_id":  invite.InviteID,
-			"group_id":   invite.Group.GroupID,
-			"expired_at": now,
+		Payload: GroupInviteExpiredPayload{
+			InviteID:  invite.InviteID,
+			GroupID:   invite.Group.GroupID,
+			ExpiredAt: now,
 		},
 	})
 }

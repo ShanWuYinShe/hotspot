@@ -51,7 +51,7 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 		return err
 	}
 	s.notifyGroupApplicationAccepted(ctx, group, application)
-	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: map[string]any{"group_id": group.Group.GroupID, "user": s.resolveUserInfo(ctx, application.Applicant.UserID), "role": string(GroupRoleMember), "member_count": group.Group.MembersCount + 1, "joined_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: group.Group.GroupID, User: s.resolveUserInfo(ctx, application.Applicant.UserID), Role: string(GroupRoleMember), MemberCount: group.Group.MembersCount + 1, JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
 	return nil
 }
 
@@ -119,22 +119,22 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 	// 推送（spec group.md → set_role）：向群内广播 GroupMemberRoleChanged
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRoleChanged,
-		Payload: map[string]any{
-			"group_id":   req.GroupID,
-			"user":       s.resolveUserInfo(ctx, req.UserID),
-			"role":       string(req.Role),
-			"changed_by": s.resolveUserInfo(ctx, principal.UserID),
-			"changed_at": time.Now().UTC().Format(time.RFC3339),
+		Payload: GroupMemberRoleChangedPayload{
+			GroupID:   req.GroupID,
+			User:      s.resolveUserInfo(ctx, req.UserID),
+			Role:      string(req.Role),
+			ChangedBy: s.resolveUserInfo(ctx, principal.UserID),
+			ChangedAt: time.Now().UTC().Format(time.RFC3339),
 		},
 	})
 	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRoleChanged,
-		Payload: map[string]any{
-			"group_id":   req.GroupID,
-			"user":       s.resolveUserInfo(ctx, req.UserID),
-			"role":       string(req.Role),
-			"changed_by": s.resolveUserInfo(ctx, principal.UserID),
-			"changed_at": time.Now().UTC().Format(time.RFC3339),
+		Payload: GroupMemberRoleChangedPayload{
+			GroupID:   req.GroupID,
+			User:      s.resolveUserInfo(ctx, req.UserID),
+			Role:      string(req.Role),
+			ChangedBy: s.resolveUserInfo(ctx, principal.UserID),
+			ChangedAt: time.Now().UTC().Format(time.RFC3339),
 		},
 	})
 	return nil
@@ -172,12 +172,12 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 	}
 	event := realtime.Event{
 		Type: realtime.EventTypeGroupMemberMuted,
-		Payload: map[string]any{
-			"group_id":         req.GroupID,
-			"user":             s.resolveUserInfo(ctx, req.UserID),
-			"muted_by":         s.resolveUserInfo(ctx, principal.UserID),
-			"duration_minutes": req.DurationMinutes,
-			"muted_at":         time.Now().UTC().Format(time.RFC3339),
+		Payload: GroupMemberMutedPayload{
+			GroupID:         req.GroupID,
+			User:            s.resolveUserInfo(ctx, req.UserID),
+			MutedBy:         s.resolveUserInfo(ctx, principal.UserID),
+			DurationMinutes: req.DurationMinutes,
+			MutedAt:         time.Now().UTC().Format(time.RFC3339),
 		},
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
@@ -208,11 +208,11 @@ func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) err
 	}
 	event := realtime.Event{
 		Type: realtime.EventTypeGroupMemberUnmuted,
-		Payload: map[string]any{
-			"group_id":   req.GroupID,
-			"user":       s.resolveUserInfo(ctx, req.UserID),
-			"unmuted_by": s.resolveUserInfo(ctx, principal.UserID),
-			"unmuted_at": time.Now().UTC().Format(time.RFC3339),
+		Payload: GroupMemberUnmutedPayload{
+			GroupID:   req.GroupID,
+			User:      s.resolveUserInfo(ctx, req.UserID),
+			UnmutedBy: s.resolveUserInfo(ctx, principal.UserID),
+			UnmutedAt: time.Now().UTC().Format(time.RFC3339),
 		},
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
@@ -261,13 +261,13 @@ func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) err
 		}
 		event := realtime.Event{
 			Type: realtime.EventTypeGroupMemberRemoved,
-			Payload: map[string]any{
-				"group_id":     req.GroupID,
-				"user":         s.resolveUserInfo(ctx, req.UserID),
-				"removed_by":   s.resolveUserInfo(ctx, principal.UserID),
-				"reason":       "banned",
-				"removed_at":   time.Now().UTC().Format(time.RFC3339),
-				"member_count": s.memberCountAfterMutation(ctx, req.GroupID, group.Group.MembersCount),
+			Payload: GroupMemberRemovedPayload{
+				GroupID:     req.GroupID,
+				User:        userInfoPtr(s.resolveUserInfo(ctx, req.UserID)),
+				RemovedBy:   userInfoPtr(s.resolveUserInfo(ctx, principal.UserID)),
+				Reason:      "banned",
+				RemovedAt:   time.Now().UTC().Format(time.RFC3339),
+				MemberCount: s.memberCountAfterMutation(ctx, req.GroupID, group.Group.MembersCount),
 			},
 		}
 		realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
@@ -331,22 +331,22 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 	remaining := s.memberCountAfterMutation(ctx, req.GroupID, group.Group.MembersCount)
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRemoved,
-		Payload: map[string]any{
-			"group_id":     req.GroupID,
-			"user":         s.resolveUserInfo(ctx, req.UserID),
-			"removed_by":   s.resolveUserInfo(ctx, principal.UserID),
-			"reason":       "kicked",
-			"removed_at":   time.Now().UTC().Format(time.RFC3339),
-			"member_count": remaining,
+		Payload: GroupMemberRemovedPayload{
+			GroupID:     req.GroupID,
+			User:        userInfoPtr(s.resolveUserInfo(ctx, req.UserID)),
+			RemovedBy:   userInfoPtr(s.resolveUserInfo(ctx, principal.UserID)),
+			Reason:      "kicked",
+			RemovedAt:   time.Now().UTC().Format(time.RFC3339),
+			MemberCount: remaining,
 		},
 	})
 	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRemoved,
-		Payload: map[string]any{
-			"group_id":     req.GroupID,
-			"reason":       "kicked",
-			"removed_at":   time.Now().UTC().Format(time.RFC3339),
-			"member_count": remaining,
+		Payload: GroupMemberRemovedPayload{
+			GroupID:     req.GroupID,
+			Reason:      "kicked",
+			RemovedAt:   time.Now().UTC().Format(time.RFC3339),
+			MemberCount: remaining,
 		},
 	})
 	// 踢出即摘除该用户的群订阅（同 SetMemberBan：防止保持连接继续收群消息）。
@@ -386,12 +386,12 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 	// 推送（spec group.md → transfer_ownership）：owner 变更即角色变更，向群内广播
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRoleChanged,
-		Payload: map[string]any{
-			"group_id":   req.GroupID,
-			"user":       s.resolveUserInfo(ctx, req.NewOwnerID),
-			"role":       string(GroupRoleOwner),
-			"changed_by": s.resolveUserInfo(ctx, principal.UserID),
-			"changed_at": time.Now().UTC().Format(time.RFC3339),
+		Payload: GroupMemberRoleChangedPayload{
+			GroupID:   req.GroupID,
+			User:      s.resolveUserInfo(ctx, req.NewOwnerID),
+			Role:      string(GroupRoleOwner),
+			ChangedBy: s.resolveUserInfo(ctx, principal.UserID),
+			ChangedAt: time.Now().UTC().Format(time.RFC3339),
 		},
 	})
 	return nil

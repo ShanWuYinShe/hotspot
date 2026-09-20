@@ -2,6 +2,7 @@ package groups
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"hotspot/backend-go/internal/platform/httpx"
 	"strings"
@@ -1391,10 +1392,7 @@ func TestServiceUpdateBroadcastsGroupUpdatedWithChangedFields(t *testing.T) {
 	if len(sink.events) != 1 || sink.events[0].Type != realtime.EventTypeGroupUpdated {
 		t.Fatalf("unexpected realtime events: %#v", sink.events)
 	}
-	payload, ok := sink.events[0].Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("payload not a map: %#v", sink.events[0].Payload)
-	}
+	payload := decodePayload(t, sink.events[0].Payload)
 	fields, ok := payload["updated_fields"].(map[string]any)
 	if !ok {
 		t.Fatalf("updated_fields missing from payload: %#v", payload)
@@ -1511,4 +1509,20 @@ func TestServiceApproveApplicationRejectsBannedApplicant(t *testing.T) {
 	if !errors.Is(err, ErrBannedInGroup) {
 		t.Fatalf("expected banned in group, got %v", err)
 	}
+}
+
+// decodePayload 把 WS payload（现为类型化 struct）经 JSON round-trip 转回
+// map，让既有键级断言继续验证「序列化后的形状」——那才是真正的线上契约。
+// 注意数字经 JSON 解码为 float64。
+func decodePayload(t *testing.T, p any) map[string]any {
+	t.Helper()
+	b, err := json.Marshal(p)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatalf("payload is not an object: %v (%#v)", err, p)
+	}
+	return m
 }

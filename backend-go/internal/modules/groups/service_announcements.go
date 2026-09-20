@@ -32,12 +32,12 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnounc
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupAnnouncementCreated,
-		Payload: map[string]any{
-			"group_id":        req.GroupID,
-			"announcement_id": item.AnnouncementID,
-			"title":           item.Title,
-			"created_by":      s.resolveUserInfo(ctx, principal.UserID),
-			"created_at":      item.CreatedAt,
+		Payload: GroupAnnouncementCreatedPayload{
+			GroupID:        req.GroupID,
+			AnnouncementID: item.AnnouncementID,
+			Title:          item.Title,
+			CreatedBy:      s.resolveUserInfo(ctx, principal.UserID),
+			CreatedAt:      item.CreatedAt,
 		},
 	})
 	observability.L().Info("groups.create_announcement completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())

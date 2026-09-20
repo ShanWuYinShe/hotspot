@@ -146,10 +146,7 @@ func TestServiceRevokeInviteNotifiesInvitee(t *testing.T) {
 	if event.Type != realtime.EventTypeGroupInviteRevoked {
 		t.Fatalf("expected GroupInviteRevoked, got %q", event.Type)
 	}
-	payload, ok := event.Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map payload, got %#v", event.Payload)
-	}
+	payload := decodePayload(t, event.Payload)
 	for _, key := range []string{"invite_id", "group_id", "revoked_by", "revoked_at"} {
 		if payload[key] == nil {
 			t.Fatalf("expected payload key %q, got %#v", key, payload)
@@ -207,10 +204,7 @@ func TestServiceRejectInviteNotifiesInviter(t *testing.T) {
 	if event.Type != realtime.EventTypeGroupInviteRejected {
 		t.Fatalf("expected GroupInviteRejected, got %q", event.Type)
 	}
-	payload, ok := event.Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map payload, got %#v", event.Payload)
-	}
+	payload := decodePayload(t, event.Payload)
 	for _, key := range []string{"invite_id", "group_id", "rejected_by", "rejected_at"} {
 		if payload[key] == nil {
 			t.Fatalf("expected payload key %q, got %#v", key, payload)
@@ -219,8 +213,8 @@ func TestServiceRejectInviteNotifiesInviter(t *testing.T) {
 	if payload["invite_id"] != "inv1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
-	rejectedBy, ok := payload["rejected_by"].(types.UserInfo)
-	if !ok || rejectedBy.UserID != "u1" {
+	rejectedBy, ok := payload["rejected_by"].(map[string]any)
+	if !ok || rejectedBy["user_id"] != "u1" {
 		t.Fatalf("unexpected rejected_by in event: %#v", payload["rejected_by"])
 	}
 	if payload["reason"] != reason {
@@ -249,10 +243,7 @@ func TestServiceRejectInviteOmitsReasonWhenEmpty(t *testing.T) {
 	if len(inviterSink.events) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(inviterSink.events))
 	}
-	payload, ok := inviterSink.events[0].Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map payload, got %#v", inviterSink.events[0].Payload)
-	}
+	payload := decodePayload(t, inviterSink.events[0].Payload)
 	if _, hasReason := payload["reason"]; hasReason {
 		t.Fatalf("expected no reason in event payload, got %#v", payload)
 	}
@@ -291,10 +282,7 @@ func TestServiceRejectInviteLazyExpiryRevokesAndPushesExpired(t *testing.T) {
 	if event.Type != realtime.EventTypeGroupInviteExpired {
 		t.Fatalf("expected GroupInviteExpired, got %q", event.Type)
 	}
-	payload, ok := event.Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map payload, got %#v", event.Payload)
-	}
+	payload := decodePayload(t, event.Payload)
 	if payload["invite_id"] != "inv1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
@@ -363,15 +351,15 @@ func TestServiceCancelApplicationNotifiesAdmins(t *testing.T) {
 	if len(memberSink.events) != 0 {
 		t.Fatalf("expected no event for plain member, got %#v", memberSink.events)
 	}
-	payload, ok := ownerSink.events[0].Payload.(map[string]any)
-	if !ok || payload["application_id"] != "app1" || payload["group_id"] != "g1" {
+	payload := decodePayload(t, ownerSink.events[0].Payload)
+	if payload["application_id"] != "app1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected owner payload: %#v", ownerSink.events[0].Payload)
 	}
 	if payload["cancelled_at"] == nil {
 		t.Fatalf("unexpected owner payload fields: %#v", payload)
 	}
-	applicant, ok := payload["applicant"].(types.UserInfo)
-	if !ok || applicant.UserID != "u2" {
+	applicant, ok := payload["applicant"].(map[string]any)
+	if !ok || applicant["user_id"] != "u2" {
 		t.Fatalf("unexpected applicant in payload: %#v", payload["applicant"])
 	}
 }
@@ -437,10 +425,7 @@ func TestServiceRejectApplicationNotifiesApplicant(t *testing.T) {
 	if event.Type != realtime.EventTypeGroupApplicationRejected {
 		t.Fatalf("expected GroupApplicationRejected, got %q", event.Type)
 	}
-	payload, ok := event.Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map payload, got %#v", event.Payload)
-	}
+	payload := decodePayload(t, event.Payload)
 	if payload["application_id"] != "app1" || payload["reason"] != reason {
 		t.Fatalf("unexpected event payload: %#v", payload)
 	}
@@ -490,8 +475,8 @@ func TestServiceRejectApplicationLazyExpiryCancelsAndPushesExpired(t *testing.T)
 	if len(adminSink.events) != 1 || adminSink.events[0].Type != realtime.EventTypeGroupApplicationExpired {
 		t.Fatalf("unexpected admin events: %#v", adminSink.events)
 	}
-	payload, ok := adminSink.events[0].Payload.(map[string]any)
-	if !ok || payload["application_id"] != "app1" || payload["group_id"] != "g1" {
+	payload := decodePayload(t, adminSink.events[0].Payload)
+	if payload["application_id"] != "app1" || payload["group_id"] != "g1" {
 		t.Fatalf("unexpected expired payload: %#v", adminSink.events[0].Payload)
 	}
 	if payload["expired_at"] == nil {

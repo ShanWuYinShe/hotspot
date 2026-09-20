@@ -308,8 +308,8 @@ func TestDismissGroupUsesGroupIDAndBroadcastsDismissedEvent(t *testing.T) {
 	if len(sink.events) != 1 || sink.events[0].Type != "GroupDismissed" {
 		t.Fatalf("unexpected realtime events: %#v", sink.events)
 	}
-	payload, ok := sink.events[0].Payload.(map[string]any)
-	if !ok || payload["group_id"] != created.Group.GroupID || payload["reason"] != "owner_dismissed" {
+	payload := decodePayload(t, sink.events[0].Payload)
+	if payload["group_id"] != created.Group.GroupID || payload["reason"] != "owner_dismissed" {
 		t.Fatalf("unexpected dismiss payload: %#v", sink.events[0].Payload)
 	}
 }

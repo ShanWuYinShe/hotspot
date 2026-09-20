@@ -285,13 +285,13 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 	} else if err := updateFn(ctx); err != nil {
 		return GroupItem{}, err
 	}
-	payload := map[string]any{
-		"group_id":   req.GroupID,
-		"updated_by": s.resolveUserInfo(ctx, principal.UserID),
-		"updated_at": time.Now().UTC().Format(time.RFC3339),
+	payload := GroupUpdatedPayload{
+		GroupID:   req.GroupID,
+		UpdatedBy: s.resolveUserInfo(ctx, principal.UserID),
+		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
 	}
 	if updatedFields := buildGroupUpdatedFields(group, updated, req); len(updatedFields) > 0 {
-		payload["updated_fields"] = updatedFields
+		payload.UpdatedFields = updatedFields
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type:    realtime.EventTypeGroupUpdated,
@@ -377,7 +377,7 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 			observability.L().Error("groups.dismiss audit failed", "error", err, "group_id", req.GroupID)
 		}
 	}
-	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "owner_dismissed"}}
+	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: GroupDismissedPayload{GroupID: req.GroupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "owner_dismissed"}}
 	// 仅按群广播一次（owner 亦是成员，另发 BroadcastToUser 会收到重复事件）；
 	// 离线成员由 resume 兜底（解散为持久状态，重连后群已不可见）。
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
@@ -519,12 +519,12 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 		// 此前直接下发旧快照，所有客户端的群成员数徽标在新旧值间抖动（F-03）。
 		realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 			Type: realtime.EventTypeGroupMemberJoined,
-			Payload: map[string]any{
-				"group_id":     req.GroupID,
-				"user":         s.resolveUserInfo(ctx, principal.UserID),
-				"role":         string(GroupRoleMember),
-				"member_count": group.Group.MembersCount + 1,
-				"joined_at":    time.Now().UTC().Format(time.RFC3339),
+			Payload: GroupMemberJoinedPayload{
+				GroupID:     req.GroupID,
+				User:        s.resolveUserInfo(ctx, principal.UserID),
+				Role:        string(GroupRoleMember),
+				MemberCount: group.Group.MembersCount + 1,
+				JoinedAt:    time.Now().UTC().Format(time.RFC3339),
 			},
 		})
 	}
@@ -552,10 +552,10 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberLeft,
-		Payload: map[string]any{
-			"group_id": req.GroupID,
-			"user":     s.resolveUserInfo(ctx, principal.UserID),
-			"left_at":  time.Now().UTC().Format(time.RFC3339),
+		Payload: GroupMemberLeftPayload{
+			GroupID: req.GroupID,
+			User:    s.resolveUserInfo(ctx, principal.UserID),
+			LeftAt:  time.Now().UTC().Format(time.RFC3339),
 		},
 	})
 	// 退群即摘除本人对该群的订阅（与踢出/封禁同一口径）。
