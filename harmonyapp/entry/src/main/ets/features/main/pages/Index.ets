@@ -174,7 +174,7 @@ struct Index {
       const wsEventTypes: string[] = [
         'ConnectionEstablished', 'NewFollower', 'MutualFollow',
         'MomentCommented', 'CommentReply',
-        'MessageMentioned', 'ReactionAdded', 'GroupInviteReceived', 'GroupInviteResponse',
+        'ContentMentioned', 'ReactionAdded', 'GroupInviteReceived', 'GroupInviteResponse',
         'GroupInviteRejected',
         'GroupInviteRevoked', 'GroupInviteExpired',
         'GroupApplicationReceived', 'GroupApplicationResponse',
@@ -541,7 +541,7 @@ struct Index {
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
-          case 'MessageMentioned': {
+          case 'ContentMentioned': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
             const targetType = String(payloadRecord.target_type);
@@ -838,7 +838,7 @@ struct Index {
       'MutualFollow',
       'MomentCommented',
       'CommentReply',
-      'MessageMentioned',
+      'ContentMentioned',
       'ReactionAdded',
       'GroupInviteReceived',
       'GroupInviteResponse',

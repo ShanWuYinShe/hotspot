@@ -61,14 +61,14 @@ export enum ServerEventType {
   NEW_FOLLOWER = 'NewFollower',
   MUTUAL_FOLLOW = 'MutualFollow',
 
-  // 瞬间互动（含表情反应）
-  REACTION_ADDED = 'ReactionAdded',
-  REACTION_REMOVED = 'ReactionRemoved',
-  MOMENT_COMMENTED = 'MomentCommented',
-  COMMENT_REPLY = 'CommentReply',
-  MESSAGE_MENTIONED = 'MessageMentioned',
-  CONTENT_MENTIONED = 'ContentMentioned',
-  GROUP_MESSAGE_MENTIONED = 'GroupMessageMentioned',
+	// 瞬间互动（含表情反应）
+	REACTION_ADDED = 'ReactionAdded',
+	REACTION_REMOVED = 'ReactionRemoved',
+	MOMENT_COMMENTED = 'MomentCommented',
+	COMMENT_REPLY = 'CommentReply',
+	// 瞬间/评论内容中被 @（spec 事件名；历史幽灵值 'MessageMentioned' 已删除）
+	CONTENT_MENTIONED = 'ContentMentioned',
+	GROUP_MESSAGE_MENTIONED = 'GroupMessageMentioned',
 
   // 私聊
   PRIVATE_MESSAGE_NEW = 'PrivateMessageNew',
@@ -362,7 +362,11 @@ export interface CommentReplyEvent {
   payload: CommentReplyPayload
 }
 
-export interface MessageMentionedPayload {
+// spec（api_spec_websocket.md → ContentMentionedPayload）：瞬间/评论内容中被 @。
+// 历史上本文件曾并留幽灵事件 MessageMentioned（spec/后端均无），已删除；
+// 事件枚举现只有 CONTENT_MENTIONED，与 spec 一一对应。
+
+export interface ContentMentionedPayload {
   notify_id: string   // 与 notify/fetch 的 NotifyItem.notify_id 同主键
   target_type: 'moment' | 'comment'
   moment_id: string
@@ -373,9 +377,9 @@ export interface MessageMentionedPayload {
   mentioned_at: string
 }
 
-export interface MessageMentionedEvent {
-  type: 'MessageMentioned'
-  payload: MessageMentionedPayload
+export interface ContentMentionedEvent {
+  type: 'ContentMentioned'
+  payload: ContentMentionedPayload
 }
 
 // 群聊消息中被 @（spec websocket.md → GroupMessageMentioned，含 group_name）
@@ -827,7 +831,9 @@ export interface GroupApplicationRejectedPayload {
   notify_id: string
   application_id: string
   group: GroupInfo
-  rejected_by: UserInfo   // 处理管理员（申请人可见管理员身份）
+  // 契约注意：spec（api_spec_websocket.md → GroupApplicationRejectedPayload）
+  // 刻意不含 rejected_by——「不暴露审批者身份：审批是群行为而非个人行为，
+  // 申请人无权知道具体是哪位管理员处理」。勿自行添加该字段。
   rejected_at: string
   reason?: string
 }
@@ -952,7 +958,7 @@ export type ServerEvent =
   | ReactionRemovedEvent
   | MomentCommentedEvent
   | CommentReplyEvent
-  | MessageMentionedEvent
+  | ContentMentionedEvent
   | GroupMessageMentionedEvent
   | UserProfileUpdatedEvent
   | SystemAnnouncementEvent
