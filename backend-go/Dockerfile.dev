@@ -6,7 +6,7 @@
 #   - postgresql-client 预装：backend-test 启动脚本用 pg_isready/psql
 #     做就绪等待与建库（构建期安装，避免运行时出网装包）
 # 生产部署请用 Dockerfile（无 toolchain、无 air、USER app）。
-ARG GO_VERSION=1.26.5
+ARG GO_VERSION=1.26.6
 ARG AIR_VERSION=1.67.4
 
 FROM golang:${GO_VERSION}-alpine

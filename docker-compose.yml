@@ -115,7 +115,7 @@ services:
       context: ./backend-go
       dockerfile: Dockerfile
       args:
-        GO_VERSION: ${GO_VERSION:-1.26.5}
+        GO_VERSION: ${GO_VERSION:-1.26.6}
         ALPINE_VERSION: ${ALPINE_VERSION:-3.24.1}
         # 版本指纹：部署脚本（scripts/deploy-production.sh）注入；本地直接
         # build 不设这些 env 时兜底 dev，默认值恒定不破坏构建缓存
