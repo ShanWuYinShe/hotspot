@@ -24,10 +24,12 @@ func TestS2LeafCellMigrationAddsPartialIndexesForHotReadPaths(t *testing.T) {
 		allSQL.WriteString("\n")
 	}
 	sql := allSQL.String()
+	// 建索引一律 CONCURRENTLY（迁移纪律：无停机替换下普通 CREATE INDEX 的
+	// SHARE 锁阻塞读写；见 backend-go/AGENTS.md「数据库迁移」）。
 	checks := []string{
-		"CREATE INDEX IF NOT EXISTS idx_moments_public_s2_cell_id ON moments(s2_cell_id) WHERE privacy_level = 'public';",
-		"CREATE INDEX IF NOT EXISTS idx_moments_non_private_s2_cell_id ON moments(s2_cell_id) WHERE privacy_level <> 'private';",
-		"CREATE INDEX IF NOT EXISTS idx_groups_visible_s2_cell_id ON groups(s2_cell_id) WHERE deleted_at IS NULL AND is_searchable = TRUE;",
+		"CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_moments_public_s2_cell_id ON moments(s2_cell_id) WHERE privacy_level = 'public';",
+		"CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_moments_non_private_s2_cell_id ON moments(s2_cell_id) WHERE privacy_level <> 'private';",
+		"CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_groups_visible_s2_cell_id ON groups(s2_cell_id) WHERE deleted_at IS NULL AND is_searchable = TRUE;",
 	}
 	for _, want := range checks {
 		if !strings.Contains(sql, want) {
