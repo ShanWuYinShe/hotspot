@@ -43,20 +43,23 @@ jobs:
       - name: go vet
         run: go vet -C backend-go ./...
       # 官方漏洞扫描（golang.org/x/vuln）：只报实际调用到的漏洞符号，噪音低于
-      # 依赖清单比对。版本随官方 @latest（扫描器本身与漏洞库同源更新）。
+      # 依赖清单比对。版本固定（go list -m -versions golang.org/x/vuln 查询后
+      # 手动升级），避免 @latest 漂移导致扫描器行为不可复现。
       - name: govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
           cd backend-go && "$(go env GOPATH)/bin/govulncheck" ./...
       - name: check migration numbering
         run: ./scripts/check-migrations.sh
+      # -race：数据竞争在单测并发场景下才能暴露（如 media retention sweeper
+      # 标志位的读写），本地回归也需带 -race 跑全量后再提交。
       - name: go test (with coverage gate)
         run: |
           # GitHub Actions 默认 shell 为 bash -e（无 pipefail），`go test | tee`
           # 的退出码取自 tee，测试失败不会让本步骤变红，必须显式开启 pipefail。
           set -eo pipefail
           cd backend-go
-          go test -count=1 -cover $(go list ./... | grep -v /test/integration) 2>&1 | tee /tmp/gotest.log
+          go test -race -count=1 -cover $(go list ./... | grep -v /test/integration) 2>&1 | tee /tmp/gotest.log
           # 业务模块覆盖率门槛：internal/modules 下任一包 <70% 即失败。
           # go test 单包输出格式：ok  <pkg>  <dur>  coverage: <x>% of statements
           awk '/^ok .*coverage: [0-9.]+% of statements/ {
@@ -69,6 +72,70 @@ jobs:
               failed = 1
             }
           } END { if (failed) exit 1 }' /tmp/gotest.log
+
+  # ── 基础设施配置静态校验 ─────────────────────────────────────────
+  # compose 三种叠加组合的语法/合并校验 + 三份 nginx 配置的 nginx -t。
+  # nginx 配置此前零校验：改动只在部署时才暴露（服务器 up 失败）。
+  infra:
+    name: Infra (Compose & Nginx Config)
+    runs-on: ubuntu-24.04
+    env:
+      # base 中 AUTH_TOKEN_SECRET 为 :? 强制变量；config 仅做语法/合并校验，
+      # 哑值不参与任何产物
+      AUTH_TOKEN_SECRET: ci-dummy-secret-for-compose-config-validation-only
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: docker compose config (base / +dev / +prod)
+        run: |
+          docker compose -f docker-compose.yml config -q
+          docker compose -f docker-compose.yml -f docker-compose.dev.yml config -q
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q
+
+      - name: nginx -t (base / dev / prod-tls)
+        run: |
+          set -eo pipefail
+          NGINX_IMAGE=nginx:1.30.4-alpine   # 与 docker-compose.yml NGINX_VERSION 默认值同步
+          # upstream 服务名是 compose DNS 名，nginx 启动初始化时必须能解析——
+          # --add-host 指到 127.0.0.1 占位（只校验语法与 include/证书文件可达，
+          # 不真正反代）；卷挂载路径与各 compose 文件保持一致。
+
+          # base（docker-compose.yml：nginx.conf + headers/proxy/amap 片段）
+          docker run --rm \
+            -v "$PWD/docker/nginx.conf":/etc/nginx/conf.d/default.conf:ro \
+            -v "$PWD/docker/nginx.headers.inc":/etc/nginx/conf.d/headers.inc:ro \
+            -v "$PWD/docker/nginx.proxy.inc":/etc/nginx/conf.d/proxy.inc:ro \
+            -v "$PWD/docker/amap.default.inc":/etc/nginx/conf.d/amap.inc:ro \
+            --add-host backend:127.0.0.1 --add-host seaweedfs:127.0.0.1 \
+            "$NGINX_IMAGE" nginx -t
+
+          # dev（docker-compose.dev.yml：nginx.dev.conf + dev 专用 proxy 片段）
+          docker run --rm \
+            -v "$PWD/docker/nginx.dev.conf":/etc/nginx/conf.d/default.conf:ro \
+            -v "$PWD/docker/nginx.headers.inc":/etc/nginx/conf.d/headers.inc:ro \
+            -v "$PWD/docker/nginx.dev.proxy.inc":/etc/nginx/conf.d/proxy.inc:ro \
+            -v "$PWD/docker/amap.default.inc":/etc/nginx/conf.d/amap.inc:ro \
+            --add-host backend:127.0.0.1 --add-host seaweedfs:127.0.0.1 --add-host frontend:127.0.0.1 \
+            "$NGINX_IMAGE" nginx -t
+
+          # prod TLS（docker-compose.prod.yml：nginx.prod-tls.conf + server.inc）。
+          # 证书与 amap.prod.inc 由服务器侧维护不入库：证书用一次性自签占位、
+          # amap 用仓库默认片段代替——只校验配置语法与证书文件解析。
+          openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+            -keyout /tmp/chaoset.key -out /tmp/chaoset.pem -days 1 -nodes -subj '/CN=ci'
+          cp /tmp/chaoset.pem /tmp/cloudflare-origin-pull.pem  # ssl_verify_client 只需文件存在
+          docker run --rm \
+            -v "$PWD/docker/nginx.prod-tls.conf":/etc/nginx/conf.d/default.conf:ro \
+            -v "$PWD/docker/prod-server.inc":/etc/nginx/conf.d/server.inc:ro \
+            -v "$PWD/docker/nginx.headers.inc":/etc/nginx/conf.d/headers.inc:ro \
+            -v "$PWD/docker/nginx.proxy.inc":/etc/nginx/conf.d/proxy.inc:ro \
+            -v "$PWD/docker/amap.default.inc":/etc/nginx/conf.d/amap.inc:ro \
+            -v /tmp/chaoset.pem:/etc/nginx/certs/chaoset.pem:ro \
+            -v /tmp/chaoset.key:/etc/nginx/certs/chaoset.key:ro \
+            -v /tmp/cloudflare-origin-pull.pem:/etc/nginx/certs/cloudflare-origin-pull.pem:ro \
+            --add-host backend:127.0.0.1 --add-host seaweedfs:127.0.0.1 \
+            "$NGINX_IMAGE" nginx -t
 
   backend-integration:
     name: Go Backend (Postgres Integration)

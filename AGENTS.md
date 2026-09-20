@@ -35,6 +35,7 @@ bun install --cwd frontend && bun run --cwd frontend build                      
      IMAGE_TAG=<候选版本> docker compose --profile prod build backend frontend-build
    ```
 4. 版本指纹就地核对：`docker inspect hotspot-backend:<候选版本> / hotspot-frontend:<候选版本>` 的 OCI `org.opencontainers.image.version` 必须等于候选版本、`revision` 等于本次 commit（Release 工作流同款断言，本地先跑）。
+5. 鸿蒙端人工确认（CI 不覆盖 harmonyapp）：其构建/类型检查仅存在于开发者本机 DevEco 链路（pre-commit 调 hvigor `assembleApp`，工具链缺失时告警跳过），CI 无对应 job 兜底——tag 前必须人工确认涉及 `harmonyapp/` 的改动已在本地通过 hvigor 构建（见 `harmonyapp/AGENTS.md`）。
 
 全部通过后才打 tag（tag 必须落在 `origin/main` 上）→ 等 CI「Release」成功 → `./scripts/deploy-production.sh vX.Y.Z`（脚本会复核 tag 位置与版本指纹）。
 
