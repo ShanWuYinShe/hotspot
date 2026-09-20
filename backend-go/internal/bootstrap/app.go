@@ -85,6 +85,12 @@ func NewApp(cfg config.Config) (*App, error) {
 	// bridge 在下方 redisClient 块内创建（instanceID 需同时注入 resumeStore）
 	var bridge *realtime.RedisBridge
 	router := NewHTTPRouterWithLogger(modules, logger)
+	// /metrics 自定义采集器装配：WS 连接/订阅规模 + DB 连接池统计
+	//（HTTP 请求指标经 RequestMetricsMiddleware 在路由层采集）。
+	observability.Register(realtime.NewHubCollector(realtime.DefaultHub()))
+	if persistenceFactory.DB != nil {
+		observability.Register(NewDBPoolCollector(persistenceFactory.DB))
+	}
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/", router)
 	userRepo := users.NewPostgresRepository(persistenceFactory)

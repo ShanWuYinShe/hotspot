@@ -35,8 +35,15 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) htt
 	// request bodies before they reach handlers.
 	r.Use(httpx.Recoverer)
 	r.Use(httpx.LimitRequestBody)
+	// 请求计数/耗时指标（chi 路由模板维度）。放在 Recoverer 之后：panic
+	// 恢复为 500 的请求同样被计数。
+	r.Use(observability.RequestMetricsMiddleware)
 	r.NotFound(httpx.NotFoundHandler)
 	r.MethodNotAllowed(httpx.MethodNotAllowedHandler)
+	// Prometheus 抓取端点：仅 compose 网络内可达（nginx 不反代 /metrics，
+	// 外部访问落到 SPA 兜底）；可选采集栈见 docker-compose.yml observability
+	// profile。不挂限流——15s 抓取节奏不会触发限流桶，也不应被其干扰。
+	r.Method(http.MethodGet, "/metrics", observability.MetricsHandler())
 	for _, module := range modules {
 		module.Mount(r)
 	}

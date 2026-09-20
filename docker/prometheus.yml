@@ -1,0 +1,19 @@
+# ── HotSpot Prometheus 采集配置（observability profile）─────────────
+# 挂载为 prometheus 容器主配置（docker-compose.yml services.prometheus）。
+# 抓取仅发生在 compose 网络内：backend 的 /metrics 不经 nginx 对外暴露。
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Go 后端：HTTP 请求指标 / WS 连接规模 / pgxpool 统计 / Go 运行时与进程。
+  # 路径与端口即 backend 容器 8081（nginx 上游同名服务）。
+  - job_name: hotspot-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:8081"]
+
+  # Prometheus 自省（抓取器自身的活跃度/耗时）。
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

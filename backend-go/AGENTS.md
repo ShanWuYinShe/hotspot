@@ -173,3 +173,10 @@ WebSocket 契约以 `spec/api_spec_websocket.md` 为权威来源，本节仅列�
 
 - 日志必须携带 `X-Request-Id`，使用结构化日志，禁止 `fmt.Println`
 - 禁止记录密码、Token、隐私内容；IP 在日志中可记录，但对外响应需脱敏
+
+## 指标（/metrics）
+
+- `GET /metrics` 暴露 Prometheus 文本指标；仅 compose 网络内可达（nginx 不反代该路径，外部访问落到 SPA 兜底）
+- registry 统一用 `observability.Registry()`，禁止 `prometheus.DefaultRegisterer`（避免把无关全局采集器带进抓取面）；自定义采集器经 `observability.Register()` 在 bootstrap 装配
+- 内置采集面：Go 运行时/进程、HTTP 请求计数与耗时（`RequestMetricsMiddleware`，route 维度用 chi 路由模板，未匹配归 `unmatched`——禁止把请求路径直接当标签值，基数爆炸）、WS 连接规模（`realtime.NewHubCollector`）、pgxpool 统计（`NewDBPoolCollector`）
+- 采集栈（可选，默认不启动）：`docker compose --profile observability up -d` → prometheus :9090 / grafana :3001（数据源已 provisioning；镜像 pin 见 `.env.example`）

@@ -257,8 +257,56 @@ services:
           memory: 256m
           cpus: "1"
 
+  # ── 可观测性采集栈（可选：--profile observability，默认不启动）───
+  # 启动：docker compose --profile observability up -d
+  #   （生产服务器叠加该 profile 时，镜像需服务器自行 pull——走镜像源或代理）
+  # 入口：prometheus http://127.0.0.1:9090 / grafana http://127.0.0.1:3001
+  #   （均只绑回环；grafana 数据源已自动 provisioning 指向 prometheus）
+  # backend 的 /metrics 仅供 compose 网络内抓取（nginx 不反代该路径）。
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.4.1}
+    profiles: ["observability"]
+    restart: always
+    logging: *default_logging
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1"
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-12.0.2}
+    profiles: ["observability"]
+    restart: always
+    logging: *default_logging
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-hotspot-dev-only}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./docker/grafana-provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "1"
+# healthcheck 说明：prometheus/grafana 镜像内 curl/wget 可用性不统一，
+# 为避免臆造探针暂不配置——二者为可选旁路服务，不参与服务依赖链。
+
 volumes:
   postgres_data:
   redis_data:
   seaweedfs_data:
   frontend_build:
+  prometheus_data:
+  grafana_data:

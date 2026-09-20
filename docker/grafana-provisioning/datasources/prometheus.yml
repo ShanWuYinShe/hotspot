@@ -1,0 +1,12 @@
+# ── Grafana 数据源自动 provisioning（observability profile）────────
+# 挂载为 /etc/grafana/provisioning/datasources/prometheus.yml，Grafana
+# 启动即注入 Prometheus 数据源，免去手工配置 UI。
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
