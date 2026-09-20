@@ -259,6 +259,36 @@ describe('事件映射', () => {
     window.removeEventListener('ws:notify', onNotify);
   });
 
+  it('ContentMentioned（瞬间/评论 @，spec 事件名）派发 ws:notify', () => {
+    // 回归锁：历史上前端误写 'MessageMentioned'（spec/后端均为 ContentMentioned），
+    // 导致 Web 端永远收不到瞬间/评论 @ 通知。
+    const client = new WsClient({ url: 'ws://test.local/ws/v1' });
+    const onNotify = vi.fn();
+    window.addEventListener('ws:notify', onNotify);
+
+    client.connect();
+    FakeWebSocket.instances[0].open();
+    FakeWebSocket.instances[0].message({
+      type: 'ContentMentioned',
+      payload: {
+        notify_id: 'n-2',
+        target_type: 'moment',
+        moment_id: 'm-1',
+        comment_id: null,
+        moment_summary: { moment_id: 'm-1', description_preview: '看看这个', cover_url: null },
+        comment_preview: null,
+        actor: { user_id: 'u2', nickname: '小美' },
+        mentioned_at: '2025-01-01T00:00:00.000Z'
+      }
+    });
+    expect(onNotify).toHaveBeenCalledTimes(1);
+    const detail = (onNotify.mock.calls[0][0] as CustomEvent).detail;
+    expect(detail.type).toBe('ContentMentioned');
+    expect(detail.payload.notify_id).toBe('n-2');
+
+    window.removeEventListener('ws:notify', onNotify);
+  });
+
   it('私聊消息事件派发 ws:private-message（detail 为 payload）', () => {
     const client = new WsClient({ url: 'ws://test.local/ws/v1' });
     const onMsg = vi.fn();

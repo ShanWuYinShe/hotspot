@@ -45,7 +45,8 @@ export type ServerEventType =
   | 'MomentUpdated'
   | 'MomentDeleted'
   | 'CommentReply'
-  | 'MessageMentioned'
+  // 瞬间/评论内容中被 @（spec 为 ContentMentioned；群聊 @ 走 GroupMessageMentioned）
+  | 'ContentMentioned'
   // 私聊
   | 'PrivateMessageNew'
   | 'PrivateMessageEdited'
@@ -171,9 +172,14 @@ export interface SubscribeAckPayload {
   failed_ids?: FailedSubscriptionId[];
 }
 
-/** 服务端推送的当前全部订阅快照（GetSubscriptions 响应 / SetSubscriptions 处理后）。 */
+/** 服务端推送的当前全部订阅快照（GetSubscriptions 响应 / SetSubscriptions 处理后）。
+ *  形状对齐 spec（api_spec_websocket.md → SubscriptionsSnapshotPayload）与后端
+ *  realtime/types.go：{client_request_id, user_ids, group_ids}，而非按类型分组的
+ *  accepted 数组。 */
 export interface SubscriptionsSnapshotPayload {
-  accepted: { type: 'user' | 'group'; ids: string[] }[];
+  client_request_id: string | null; // 仅响应 GetSubscriptions 时携带（主动推送时 null）
+  user_ids: string[]; // 当前 user 类型订阅（空数组 = 无）
+  group_ids: string[]; // 当前 group 类型订阅（空数组 = 无）
 }
 
 export interface SessionRevokedPayload {
@@ -251,6 +257,26 @@ export interface MomentCommentedPayload {
   content: string;
   commented_at: string;
   [key: string]: unknown; // moment_summary 等剩余字段宽松透传
+}
+
+/** 瞬间摘要（spec api_spec_types.md → MomentSummary，本文件自包含故本地镜像）。 */
+export interface WsMomentSummary {
+  moment_id: string;
+  description_preview: string;
+  cover_url: string | null;
+}
+
+/** 瞬间/评论内容中被 @（spec api_spec_websocket.md → ContentMentionedPayload；
+ *  群聊 @ 走 GroupMessageMentioned）。 */
+export interface ContentMentionedPayload {
+  notify_id: string;
+  target_type: 'moment' | 'comment';
+  moment_id: string;
+  comment_id: string | null; // 仅 comment 场景非 null
+  moment_summary: WsMomentSummary;
+  comment_preview: string | null; // 仅 comment 场景非 null
+  actor: UserInfo;
+  mentioned_at: string;
 }
 
 export interface GroupInviteReceivedPayload {
@@ -354,7 +380,7 @@ export interface ServerEventPayloadMap {
   ReactionAdded: Record<string, unknown>;
   ReactionRemoved: Record<string, unknown>;
   CommentReply: Record<string, unknown>;
-  MessageMentioned: Record<string, unknown>;
+  ContentMentioned: ContentMentionedPayload;
   GroupMessageNew: Record<string, unknown>;
   GroupMessageEdited: Record<string, unknown>;
   GroupMessageRecalled: Record<string, unknown>;

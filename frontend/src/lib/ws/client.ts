@@ -58,7 +58,7 @@ const NOTIFY_EVENT_TYPES = new Set<ServerEventType>([
   'MutualFollow',
   'MomentCommented',
   'CommentReply',
-  'MessageMentioned',
+  'ContentMentioned',
   'ReactionAdded',
   'GroupInviteReceived',
   'GroupInviteRevoked',

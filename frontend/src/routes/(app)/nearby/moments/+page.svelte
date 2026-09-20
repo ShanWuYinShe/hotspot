@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Map as MapIcon, MapPin, Search, Sparkles } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -15,7 +16,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MomentCard from '@/components/moments/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/moment-feed.svelte';
-	import { fetchNearbyMoments , netError } from '@/api';
+	import { fetchFollowingMoments, fetchNearbyMoments, netError } from '@/api';
+	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 	import { smartBack } from '@/lib/smart-back';
@@ -154,6 +156,15 @@ locationName = loc?.location_name ?? '';
 	// 失败不推进（loadingMore 复位后下次触发自然重试），避免静默丢页。
 	async function handleLoadMore() {
 		if (loadingMore) return;
+		if (isFollowing) {
+			// 关注流：服务端 cursor 翻页；cursor 耗尽后推进已加载集合内的渲染切片
+			if (followingCursor) {
+				await loadFollowing(false);
+			} else {
+				visibleCount = Math.min(visibleCount + 8, filtered.length);
+			}
+			return;
+		}
 		if (nextCursor) {
 			loadingMore = true;
 			try {
@@ -188,22 +199,95 @@ locationName = loc?.location_name ?? '';
 		void goto(focusComments ? `${ROUTES.moment(id)}?focus=comments` : ROUTES.moment(id));
 	}
 
+	// ── 关注流（moments/fetch_following，登录态接口）──
+	// 独立数据源 + 独立加载态：访客（10100）是正常业务态，走 NeedsAuthNotice
+	// 登录引导而非 LoadError（契约见 NeedsAuthNotice 组件注释）。
+	const isFollowing = $derived(activeTab === '关注');
+	let followingItems = $state<FeedItem[]>([]);
+	let followingCursor = $state('');
+	let followingLoading = $state(false);
+	let followingError = $state<string | null>(null);
+	let followingNeedsAuth = $state(false);
+	// 已成功拉过首页：切走再切回不重拉（刷新入口 = LoadError 重试 / 重新进入页面）
+	let followingLoaded = $state(false);
+
+	async function loadFollowing(reset: boolean) {
+		if (followingLoading) return;
+		followingLoading = true;
+		if (reset) {
+			followingCursor = '';
+			followingError = null;
+			followingNeedsAuth = false;
+		}
+		try {
+			const res = await fetchFollowingMoments({
+				pagination: followingCursor
+					? { limit: PAGE_LIMIT, cursor: followingCursor }
+					: { limit: PAGE_LIMIT }
+			});
+			if (res.code === 10100) {
+				followingNeedsAuth = true;
+				return;
+			}
+			if (res.code !== 0 || !res.data) {
+				followingError = res.message ?? '加载失败，请稍后重试';
+				return;
+			}
+			const fresh = (res.data.items || []).map(mapMoment);
+			if (followingCursor) {
+				const known = new Set(followingItems.map((i) => i.id));
+				followingItems = [...followingItems, ...fresh.filter((i) => !known.has(i.id))];
+				// 翻页追加后推进渲染切片，与附近流的「每页多看 8 张」节奏一致
+				visibleCount = Math.min(visibleCount + 8, followingItems.length);
+			} else {
+				followingItems = fresh;
+				visibleCount = INITIAL_VISIBLE;
+			}
+			followingCursor = res.data.next_cursor ?? '';
+			followingLoaded = true;
+		} catch {
+			followingError = '加载失败，请稍后重试';
+		} finally {
+			followingLoading = false;
+		}
+	}
+
+	// 首次切到「关注」再拉取（保持「热门/周边」首刷不受登录态影响）；
+	// untrack：loadFollowing 内部读写的 cursor/loading 是 fetch 状态，不应成为本 effect 依赖
+	$effect(() => {
+		if (isFollowing && !followingLoaded && !followingLoading) {
+			void untrack(() => loadFollowing(true));
+		}
+	});
+
 	function initTabFromUrl(): string {
 		const t = page.url.searchParams.get('tab') ?? '';
 		const normalized = TAB_ALIASES[t] ?? t;
 		return TABS.includes(normalized) ? normalized : '热门';
 	}
 
-	// 传入 getter 而非数组快照：interactions.items 需跟随 apiFeedItems 更新
-	const interactions = createFeedInteractions(() => apiFeedItems);
+	// 传入 getter 而非数组快照：items 需随当前 Tab 数据源（附近流/关注流）更新，
+	// 点赞/收藏的乐观更新与回滚作用于当前展示的列表
+	const interactions = createFeedInteractions(() => (isFollowing ? followingItems : apiFeedItems));
 
 	const filtered = $derived.by(() => {
 		let items = interactions.items.filter((i) => !activeTag || i.tag === activeTag);
-		// 分类 Tab 过滤：热门=按热度排序；关注=关注流（mock 无数据源，恒空）
+		// 分类 Tab 过滤：热门=按热度排序；周边=距离序（接口默认序）；关注=时间序（接口默认序）
 		if (activeTab === '热门') items = [...items].sort((a, b) => b.likes - a.likes);
-		else if (activeTab === '关注') items = [];
 		return items;
 	});
+
+	// 列表到底收尾（ListEnd）与哨兵续载（hasMore）按当前 Tab 的翻页状态判定
+	const showListEnd = $derived(
+		isFollowing
+			? followingLoaded && !followingLoading && !followingError && !followingNeedsAuth && !followingCursor
+			: !loadingMore && visibleCount >= filtered.length && !nextCursor
+	);
+	const feedHasMore = $derived(
+		isFollowing
+			? followingLoading || Boolean(followingCursor)
+			: loadingMore || visibleCount < filtered.length || Boolean(nextCursor)
+	);
 
 	const device = $derived(platform.platform);
 	const gridColumns = $derived(device === 'mobile' ? 2 : device === 'tablet' ? 2 : 3);
@@ -266,19 +350,30 @@ locationName = loc?.location_name ?? '';
 	/>
 {/snippet}
 
-<!-- ═══ 加载中 / 空列表状态（与附近的人、附近群组一致）═══ -->
+<!-- ═══ 加载中 / 空列表状态（关注流四态独立：登录引导 / 错误重试 / 空态区分）═══ -->
 {#snippet feedState()}
-	{#if loading}
+	{#if isFollowing}
+		{#if followingLoading && !followingItems.length}
+			<InlineLoading label="加载关注动态…" />
+		{:else if followingNeedsAuth}
+			<NeedsAuthNotice
+				title="登录后查看关注动态"
+				description="登录后即可查看你关注的人发布的瞬间"
+			/>
+		{:else if followingError}
+			<LoadError message={followingError} onRetry={() => void loadFollowing(true)} />
+		{:else}
+			<!-- 关注流空态：与「附近无内容」区分，指引用户先去关注 -->
+			<EmptyState title="关注的人还没有发布动态" description="去附近的人页关注感兴趣的用户，动态会出现在这里。">
+				{#snippet icon()}
+					<Sparkles size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
+				{/snippet}
+			</EmptyState>
+		{/if}
+	{:else if loading}
 		<InlineLoading label="加载附近动态…" />
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => { clearMomentsProgress(); reloadKey++; }} />
-	{:else if activeTab === '关注'}
-		<!-- 关注流专属空态：与「附近无内容」区分，指引用户先去关注 -->
-		<EmptyState title="关注的人还没有发布动态" description="去附近的人页关注感兴趣的用户，动态会出现在这里。">
-			{#snippet icon()}
-				<Sparkles size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
-			{/snippet}
-		</EmptyState>
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">
 			{#snippet icon()}
@@ -298,7 +393,9 @@ locationName = loc?.location_name ?? '';
 		{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto pr-1')}
 	</div>
 
-	{#if loading || !filtered.length}
+	{#if isFollowing
+		? (followingLoading && !followingItems.length) || followingNeedsAuth || followingError || !filtered.length
+		: loading || loadError || !filtered.length}
 		{@render feedState()}
 	{:else}
 		<!-- BSP 瓦片墙（所有项进统一网格，无首项 hero；列数随平台：桌面 3 / 平板 2 / 移动 2） -->
@@ -311,7 +408,7 @@ locationName = loc?.location_name ?? '';
 			minCardHeight={minCardHeight}
 			minCanvasHeight={minCanvasHeight}
 			ariaLabel="附近动态的不规则满铺布局"
-			hasMore={loadingMore || visibleCount < filtered.length || Boolean(nextCursor)}
+			hasMore={feedHasMore}
 			onLoadMore={() => void handleLoadMore()}
 		>
 		{#snippet renderItem(item: FeedItem, index: number)}
@@ -326,7 +423,7 @@ locationName = loc?.location_name ?? '';
 			/>
 		{/snippet}
 		</BspCardCanvas>
-		{#if !loadingMore && visibleCount >= filtered.length && !nextCursor}
+		{#if showListEnd}
 			<ListEnd />
 		{/if}
 	{/if}
