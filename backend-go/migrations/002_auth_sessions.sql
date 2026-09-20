@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
   ip_location TEXT NOT NULL DEFAULT ''
 );
 
-CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions(user_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions(user_id);
 
 CREATE TABLE IF NOT EXISTS auth_refresh_tokens (
   refresh_token TEXT PRIMARY KEY,
@@ -21,5 +21,5 @@ CREATE TABLE IF NOT EXISTS auth_refresh_tokens (
   expires_at TIMESTAMPTZ NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_auth_refresh_tokens_user_id ON auth_refresh_tokens(user_id);
-CREATE INDEX IF NOT EXISTS idx_auth_refresh_tokens_session_id ON auth_refresh_tokens(session_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_refresh_tokens_user_id ON auth_refresh_tokens(user_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_refresh_tokens_session_id ON auth_refresh_tokens(session_id);

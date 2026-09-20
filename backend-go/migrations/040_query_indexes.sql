@@ -5,8 +5,8 @@
 -- 3) moments description ILIKE 搜索：pg_trgm GIN 索引，关键词搜索免全表扫。
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_comments_parent_id ON comments(parent_id);
 
-CREATE INDEX IF NOT EXISTS idx_group_messages_sender_user_id ON group_messages(sender_user_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_messages_sender_user_id ON group_messages(sender_user_id);
 
-CREATE INDEX IF NOT EXISTS idx_moments_description_trgm ON moments USING GIN (description gin_trgm_ops);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_moments_description_trgm ON moments USING GIN (description gin_trgm_ops);

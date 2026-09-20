@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS moment_tags (
   PRIMARY KEY (moment_id, tag_name)
 );
 
-CREATE INDEX IF NOT EXISTS idx_moment_tags_name_created_at ON moment_tags(tag_name, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_moment_tags_name_created_at ON moment_tags(tag_name, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS admin_blocked_tags (
   name TEXT PRIMARY KEY,
@@ -29,10 +29,10 @@ CREATE TABLE IF NOT EXISTS system_announcements (
   deleted_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_system_announcements_public_created_at
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_system_announcements_public_created_at
   ON system_announcements(created_at DESC, announcement_id DESC)
   WHERE deleted_at IS NULL AND status = 'published';
 
-CREATE INDEX IF NOT EXISTS idx_system_announcements_admin_created_at
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_system_announcements_admin_created_at
   ON system_announcements(created_at DESC, announcement_id DESC)
   WHERE deleted_at IS NULL;

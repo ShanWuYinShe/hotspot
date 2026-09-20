@@ -20,6 +20,10 @@ type Service struct {
 	provider        Provider
 	moderationStore ModerationStore
 	pushService     announcementPushService
+	// banCacheInvalidator 封禁状态变更后失效平台 auth 的进程内缓存（bootstrap
+	// 接线 platformauth.Service.InvalidateBanCache）：保证解封/封禁即时生效，
+	// 不等 banCacheTTL 窗口。nil 时跳过（单测/未接线场景）。
+	banCacheInvalidator func(userIDs ...string)
 }
 
 type announcementPushService interface {
@@ -41,6 +45,18 @@ func NewService(repo Repository, provider Provider, moderationStore ModerationSt
 		moderationStore = NewInMemoryModerationStore()
 	}
 	return &Service{repo: repo, provider: provider, moderationStore: moderationStore, pushService: pushService}
+}
+
+// SetBanCacheInvalidator wires the platform auth ban-cache invalidation hook
+// (bootstrap 接线；userIDs 传空表示全量失效)。
+func (s *Service) SetBanCacheInvalidator(fn func(userIDs ...string)) {
+	s.banCacheInvalidator = fn
+}
+
+func (s *Service) invalidateBanCache(userID string) {
+	if s.banCacheInvalidator != nil {
+		s.banCacheInvalidator(userID)
+	}
 }
 
 func (s *Service) actorFromContext(ctx context.Context) (AdminActor, bool, error) {

@@ -7,5 +7,5 @@ CREATE TABLE IF NOT EXISTS group_message_read_state (
     PRIMARY KEY (group_id, user_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_group_message_read_state_user_updated_at
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_message_read_state_user_updated_at
     ON group_message_read_state (user_id, updated_at DESC);

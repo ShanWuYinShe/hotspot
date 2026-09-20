@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS users (
   s2_cell_id BIGINT NOT NULL DEFAULT 0
 );
 
-CREATE INDEX IF NOT EXISTS idx_users_s2_cell_id ON users(s2_cell_id);
-CREATE INDEX IF NOT EXISTS idx_users_status_created_at ON users(status, created_at DESC, user_id ASC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_s2_cell_id ON users(s2_cell_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status_created_at ON users(status, created_at DESC, user_id ASC);
 
 CREATE TABLE IF NOT EXISTS user_settings (
   user_id TEXT PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS user_relations (
   PRIMARY KEY (user_id, target_user_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_relations_target ON user_relations(target_user_id);
-CREATE INDEX IF NOT EXISTS idx_user_relations_user_followed_at ON user_relations(user_id, followed_at DESC, target_user_id ASC) WHERE is_following = TRUE;
-CREATE INDEX IF NOT EXISTS idx_user_relations_target_followed_at ON user_relations(target_user_id, followed_at DESC, user_id ASC) WHERE is_following = TRUE;
-CREATE INDEX IF NOT EXISTS idx_user_relations_user_blocked_at ON user_relations(user_id, blocked_at DESC, target_user_id ASC) WHERE is_blocked = TRUE;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_relations_target ON user_relations(target_user_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_relations_user_followed_at ON user_relations(user_id, followed_at DESC, target_user_id ASC) WHERE is_following = TRUE;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_relations_target_followed_at ON user_relations(target_user_id, followed_at DESC, user_id ASC) WHERE is_following = TRUE;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_relations_user_blocked_at ON user_relations(user_id, blocked_at DESC, target_user_id ASC) WHERE is_blocked = TRUE;

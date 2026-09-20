@@ -130,6 +130,8 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// 共同群组数）：注入 groups/moments Service，替代 users repo 直查对方表。
 	usersModule.Service.SetContentProviders(groupsModule.Service, momentsModule.Service)
 	groupsModule.Service.SetAppConfig(sharedAppConfig)
+	// groups.Update 的 读-改-再读 序列包事务（对齐 moments.Update 纪律）。
+	groupsModule.Service.SetTxRunner(persistence.NewTxRunner(factory))
 	searchModule := search.NewModule(factory, sharedAppConfig)
 	searchModule.Service.SetLocationProvider(usersModule.Service)
 	// Construct auth + admin before the module slice so the admin repo's
@@ -157,6 +159,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	reportsModule.Service.SetMessageSnapshotSource(reports.NewMessageSnapshotSource(gmModule.Service, pcModule.MessageService(), reportsMediaSource{svc: mediaModule.Service}))
 	if svc := platformauth.DefaultService(); svc != nil {
 		svc.SetBanChecker(adminModule.Repo)
+		// 封禁缓存失效接线：admin 封禁/解封状态变更后即时失效平台 auth 的
+		// 进程内缓存（banCacheTTL 窗口内的撤销延迟归零）。
+		adminModule.Service.SetBanCacheInvalidator(svc.InvalidateBanCache)
 	}
 	platformauth.SetAdminChecker(adminModule.Repo)
 	// 首管理员引导（ADMIN_BOOTSTRAP_USER_ID，见 config.AdminBootstrapUserID）：

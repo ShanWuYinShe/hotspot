@@ -15,6 +15,7 @@ import (
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/rbac"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
@@ -67,6 +68,15 @@ type Service struct {
 	locations     LocationProvider        // optional; nil => skip user-location fallback
 	appConfig     appconfig.Source        // optional; nil => default TTLs for invite/application expiry
 	audit         GroupDismissAuditWriter // optional; nil => dismiss audit is skipped
+	runInTx       persistence.TxRunner    // optional; nil => Update 直跑（对齐 moments.Update：写路径包事务）
+}
+
+// SetTxRunner wires the optional transaction runner（bootstrap 注入；
+// Update 的 读-改-再读 序列包进同一事务，避免并发更新拼出两版 diff）。
+func (s *Service) SetTxRunner(runInTx persistence.TxRunner) {
+	if s != nil {
+		s.runInTx = runInTx
+	}
 }
 
 // GroupDismissAuditWriter records a group-dismiss audit entry (spec
@@ -230,33 +240,50 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 	startedAt := time.Now()
 	observability.L().Info("groups.update started", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	group, ok, err := s.repo.Get(ctx, req.GroupID)
-	if err != nil {
-		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+
+	// 读-改-再读包进同一事务：Get(前)/Update/Get(后) 不在同一快照时，并发
+	// 更新会让 updated_fields/广播 payload 拼出两版字段（对齐 moments.Update
+	// 的 tx 纪律；runInTx 未接线时退化为直跑，行为与旧实现一致）。
+	var group, updated GroupItem
+	updateFn := func(ctx context.Context) error {
+		var ok bool
+		var err error
+		group, ok, err = s.repo.Get(ctx, req.GroupID)
+		if err != nil {
+			observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			return err
+		}
+		if !ok {
+			observability.L().Warn("groups.update not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			return ErrGroupNotFound
+		}
+		// C.1：update 权限从 owner-only 改为 owner/admin（守卫中间件已拦非 admin；此处防御性再判）
+		if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
+			observability.L().Warn("groups.update permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			return httpx.Forbidden(httpx.ReasonNotGroupAdmin, "非群管理员")
+		}
+		if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
+			observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			return fmt.Errorf("groups.Service.Update: repo: %w", err)
+		}
+		// 重新读取以构造 updated_fields（对比变更前后）并返回更新后完整对象
+		// （内容类更新返回更新后对象，spec api_spec_base.md「设计规范」）。
+		updated, ok, err = s.repo.Get(ctx, req.GroupID)
+		if err != nil {
+			observability.L().Error("groups.update refresh failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			return fmt.Errorf("groups.Service.Update: refresh: %w", err)
+		}
+		if !ok {
+			return ErrGroupNotFound
+		}
+		return nil
+	}
+	if s.runInTx != nil {
+		if err := s.runInTx(ctx, updateFn); err != nil {
+			return GroupItem{}, err
+		}
+	} else if err := updateFn(ctx); err != nil {
 		return GroupItem{}, err
-	}
-	if !ok {
-		observability.L().Warn("groups.update not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return GroupItem{}, ErrGroupNotFound
-	}
-	// C.1：update 权限从 owner-only 改为 owner/admin（守卫中间件已拦非 admin；此处防御性再判）
-	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
-		observability.L().Warn("groups.update permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return GroupItem{}, httpx.Forbidden(httpx.ReasonNotGroupAdmin, "非群管理员")
-	}
-	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
-		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return GroupItem{}, fmt.Errorf("groups.Service.Update: repo: %w", err)
-	}
-	// 重新读取以构造 updated_fields（对比变更前后）并返回更新后完整对象
-	// （内容类更新返回更新后对象，spec api_spec_base.md「设计规范」）。
-	updated, ok, err := s.repo.Get(ctx, req.GroupID)
-	if err != nil {
-		observability.L().Error("groups.update refresh failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return GroupItem{}, fmt.Errorf("groups.Service.Update: refresh: %w", err)
-	}
-	if !ok {
-		return GroupItem{}, ErrGroupNotFound
 	}
 	payload := map[string]any{
 		"group_id":   req.GroupID,

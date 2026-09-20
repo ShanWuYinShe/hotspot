@@ -10,10 +10,10 @@
 --    ILIKE（045 已覆盖 users/groups，动态标签漏配，表随动态线性增长）。
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE INDEX IF NOT EXISTS idx_private_chats_user_a ON private_chats(user_a_id);
-CREATE INDEX IF NOT EXISTS idx_private_chats_user_b ON private_chats(user_b_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_private_chats_user_a ON private_chats(user_a_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_private_chats_user_b ON private_chats(user_b_id);
 
-CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read);
-CREATE INDEX IF NOT EXISTS idx_notifications_read_created_at ON notifications(created_at) WHERE is_read = TRUE;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_notifications_read_created_at ON notifications(created_at) WHERE is_read = TRUE;
 
-CREATE INDEX IF NOT EXISTS idx_moment_tags_name_trgm ON moment_tags USING GIN (tag_name gin_trgm_ops);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_moment_tags_name_trgm ON moment_tags USING GIN (tag_name gin_trgm_ops);

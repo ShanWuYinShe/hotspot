@@ -222,6 +222,7 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 		}
 		return nil, err
 	}
+	s.invalidateBanCache(userID)
 	payload := map[string]any{"reason": strings.TrimSpace(reason), "duration_days": duration, "banned_at": bannedAt.Format(time.RFC3339)}
 	sessionIDs, err := s.repo.ListUserSessions(ctx, userID)
 	if err != nil {

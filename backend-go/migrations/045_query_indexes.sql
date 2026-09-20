@@ -8,11 +8,11 @@
 --    收藏者列表。
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE INDEX IF NOT EXISTS idx_media_upload_sessions_file_id
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_media_upload_sessions_file_id
   ON media_upload_sessions(file_id) WHERE status = 'completed';
 
-CREATE INDEX IF NOT EXISTS idx_users_nickname_trgm ON users USING GIN (nickname gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_users_bio_trgm ON users USING GIN (bio gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_groups_name_trgm ON groups USING GIN (name gin_trgm_ops);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_nickname_trgm ON users USING GIN (nickname gin_trgm_ops);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_bio_trgm ON users USING GIN (bio gin_trgm_ops);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_groups_name_trgm ON groups USING GIN (name gin_trgm_ops);
 
-CREATE INDEX IF NOT EXISTS idx_moment_favorites_moment_id ON moment_favorites(moment_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_moment_favorites_moment_id ON moment_favorites(moment_id);

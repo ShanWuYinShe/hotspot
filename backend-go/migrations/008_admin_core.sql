@@ -28,6 +28,6 @@ CREATE TABLE IF NOT EXISTS admin_user_roles (
   PRIMARY KEY (user_id, role_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_admin_roles_active_name ON admin_roles(name) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_admin_users_granted_at ON admin_users(granted_at DESC, user_id ASC) WHERE revoked_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_admin_user_roles_role_id ON admin_user_roles(role_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_admin_roles_active_name ON admin_roles(name) WHERE deleted_at IS NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_admin_users_granted_at ON admin_users(granted_at DESC, user_id ASC) WHERE revoked_at IS NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_admin_user_roles_role_id ON admin_user_roles(role_id);

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS shares (
   is_revoked BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE INDEX IF NOT EXISTS idx_shares_creator_created_at ON shares(creator_user_id, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_shares_creator_created_at ON shares(creator_user_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS reports (
   report_id TEXT PRIMARY KEY,
@@ -25,6 +25,6 @@ CREATE TABLE IF NOT EXISTS reports (
   handle_note TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_reports_creator_created_at ON reports(creator_user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_reports_status_created_at ON reports(status, created_at DESC, report_id DESC);
-CREATE INDEX IF NOT EXISTS idx_reports_target_type_created_at ON reports(target_type, created_at DESC, report_id DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reports_creator_created_at ON reports(creator_user_id, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reports_status_created_at ON reports(status, created_at DESC, report_id DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reports_target_type_created_at ON reports(target_type, created_at DESC, report_id DESC);

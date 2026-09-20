@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS media_upload_sessions (
     completed_at TIMESTAMPTZ NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_media_upload_sessions_user_created_at
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_media_upload_sessions_user_created_at
     ON media_upload_sessions (user_id, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_media_upload_sessions_storage_key
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_media_upload_sessions_storage_key
     ON media_upload_sessions (storage_key);

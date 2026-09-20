@@ -6,5 +6,5 @@ CREATE TABLE IF NOT EXISTS moment_images (
   PRIMARY KEY (moment_id, file_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_moment_images_moment_position
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_moment_images_moment_position
   ON moment_images(moment_id, position);

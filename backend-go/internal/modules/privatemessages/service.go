@@ -122,9 +122,11 @@ func (s *Service) recallWindow(ctx context.Context) time.Duration {
 	return time.Duration(seconds) * time.Second
 }
 
-func NewRuntime(factory *persistence.Factory, source appconfig.Source) *Runtime {
+func NewRuntime(factory *persistence.Factory, source appconfig.Source, userService userReader) *Runtime {
+	// userService 由调用方注入（bootstrap 传共享的 users.Service 实例）：
+	// 模块边界约定「不 import 对方 repo」，此前在此处自建 users repo/service
+	// 造成 bootstrap 之外多出一份无谓实例。
 	repo := NewPostgresRepository(factory)
-	userService := users.NewServiceWithRepo(users.NewPostgresRepository(factory))
 	service := NewServiceWithDeps(repo, userService)
 	service.SetAppConfig(source)
 	// 陌生人配额原子化：配额检查与消息写入须在同一事务内经咨询锁串行化（见 Send）。

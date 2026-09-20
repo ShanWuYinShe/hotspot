@@ -148,9 +148,9 @@ func TestServiceBuildHelpersAndRuntime(t *testing.T) {
 		t.Fatalf("expected nil media, got %v", media)
 	}
 
-	// NewRuntime constructor
+	// NewRuntime constructor（userService 经参数注入，传 nil 覆盖默认分支）
 	factory := persistence.NewFactory(config.Config{})
-	rt := NewRuntime(factory, nil)
+	rt := NewRuntime(factory, nil, nil)
 	if rt == nil || rt.Handler() == nil || rt.ReadService() == nil {
 		t.Fatal("NewRuntime should initialize handler and read service")
 	}

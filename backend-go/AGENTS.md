@@ -77,6 +77,7 @@ Handler -> Service -> Repository
 - 改列语义/回填数据用 `DO $$` 自检式幂等写法（参照 `050`），不依赖「只跑一次」。
 - 数据性一次性迁移（无法按格式判幂等的）必须用 `data_migrations` 旗标表包裹（参照 `053`）。
 - 无 down 迁移：回滚版本 = 旧镜像 + 保留新 schema，因此 schema 变更必须对旧代码向后兼容，这是唯一防线。
+- **建索引一律 `CREATE INDEX CONCURRENTLY IF NOT EXISTS`**：普通 CREATE INDEX 的 SHARE 锁阻塞读写，与无停机替换纪律冲突（表越大停写越久）；runner 逐文件单 Exec 无外层事务，CONCURRENTLY 语法可行。注意并发构建失败会留下 INVALID 索引且 `IF NOT EXISTS` 不会重建——启动日志见索引报错时先 DROP INVALID 索引再重启（CI 有 lint 拦截，见 `scripts/check-migrations.sh`）。
 
 ## 路由与协议
 

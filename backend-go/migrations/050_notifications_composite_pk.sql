@@ -57,5 +57,5 @@ END $$;
 -- notify/mark_read 与列表查询都按 (user_id, notification_id) 过滤，
 -- 复合主键的前缀是 notification_id，需为 user_id 侧补索引（列表分页已由
 -- 005 的 idx_notifications_user_created_at 承担，这里补按 id 定位已读）。
-CREATE INDEX IF NOT EXISTS idx_notifications_user_notification
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_notifications_user_notification
   ON notifications(user_id, notification_id);

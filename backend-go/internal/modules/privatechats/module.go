@@ -27,7 +27,9 @@ type Module struct {
 }
 
 func NewModule(factory *persistence.Factory, source appconfig.Source, shares shareValidator, userService *users.Service) *Module {
-	messageRuntime := privatemessages.NewRuntime(factory, source)
+	// userService 同时注入消息运行时与会话服务：privatemessages 消费 userReader
+	// 接口，与 bootstrap 共享同一 users.Service 实例（不再自建 repo，模块边界约定）。
+	messageRuntime := privatemessages.NewRuntime(factory, source, userService)
 	messageRuntime.SetShareValidator(shares)
 	chatService := NewServiceWithDeps(NewPostgresRepository(factory), messageRuntime.ReadService(), userService)
 	return &Module{chatHandler: NewHandler(chatService, source), messageHandler: messageRuntime.Handler(), messageRuntime: messageRuntime}

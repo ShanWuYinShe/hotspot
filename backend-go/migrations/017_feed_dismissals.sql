@@ -8,5 +8,5 @@ CREATE TABLE IF NOT EXISTS feed_dismissals (
     PRIMARY KEY (user_id, target_type, target_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_feed_dismissals_user_created_at
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_feed_dismissals_user_created_at
     ON feed_dismissals (user_id, created_at DESC);

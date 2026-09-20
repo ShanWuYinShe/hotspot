@@ -20,6 +20,9 @@ type Module struct {
 	// Repo is exposed so bootstrap can wire its IsBanned into the platform auth
 	// Service (BanChecker), enforcing httpx.CodeAccountBanned for banned accounts.
 	Repo Repository
+	// Service is exposed so bootstrap can wire cross-cutting hooks (currently
+	// SetBanCacheInvalidator：封禁状态变更 → 平台 auth 缓存即时失效)。
+	Service *Service
 }
 
 func NewModule(factory *persistence.Factory, source appconfig.MutableSource, pushService *notify.Service) *Module {
@@ -32,7 +35,7 @@ func NewModule(factory *persistence.Factory, source appconfig.MutableSource, pus
 
 func NewModuleWithDeps(repo Repository, provider Provider, moderationStore ModerationStore, pushService announcementPushService) *Module {
 	service := NewService(repo, provider, moderationStore, pushService)
-	return &Module{handler: NewHandler(service), Repo: repo}
+	return &Module{handler: NewHandler(service), Repo: repo, Service: service}
 }
 
 func (m *Module) Mount(r chi.Router) {

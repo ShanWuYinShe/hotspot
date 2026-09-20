@@ -6,4 +6,4 @@ CREATE TABLE IF NOT EXISTS group_members (
   PRIMARY KEY (group_id, user_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_group_members_user_id ON group_members(user_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_members_user_id ON group_members(user_id);

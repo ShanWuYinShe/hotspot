@@ -107,6 +107,7 @@ func (s *Service) SetUserBan(ctx context.Context, req AdminSetUserBanRequest) (*
 		}
 		return nil, err
 	}
+	s.invalidateBanCache(req.UserID)
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.unban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("user"), TargetID: req.UserID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.unban", "reason": strings.TrimSpace(req.Reason)}}); err != nil {
 		return nil, err
 	}

@@ -21,9 +21,9 @@ CREATE TABLE IF NOT EXISTS reactions (
 
 -- List reactions for a single target, ordered by reacted_at DESC (most recent
 -- first), user_id ASC as a stable tie-breaker. Backs reactions/fetch.
-CREATE INDEX IF NOT EXISTS idx_reactions_target_reacted_at
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reactions_target_reacted_at
   ON reactions(target_type, target_id, reacted_at DESC, user_id ASC);
 
 -- "What did this user react to?" lookups (e.g. users/fetch_reacted_moments).
-CREATE INDEX IF NOT EXISTS idx_reactions_user_reacted_at
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reactions_user_reacted_at
   ON reactions(user_id, reacted_at DESC, target_id DESC);
