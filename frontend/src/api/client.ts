@@ -109,6 +109,7 @@ import type {
 	CreateShareRequest,
 	ShareCreated,
 	UpdateAccountRequest,
+	UpdateLocationRequest,
 	SetFollowRequest,
 	SetBlockRequest,
 	SearchUsersRequest,
@@ -339,6 +340,11 @@ export async function getSettings()                       { return request<UserS
 // spec: api_spec_user.md → users/update_settings（request 为 { settings: Partial<UserSettings> }）
 export async function updateSettings(params: { settings: Partial<UserSettings> }) {
 	return request<void>(Endpoints.Users.UpdateSettings, params);
+}
+// spec: api_spec_user.md → users/update_location（真实位置上报：用于被他人发现/展示大致位置）。
+// 不在 MUST 幂等清单，不加 Idempotency-Key。
+export async function updateLocation(params: UpdateLocationRequest) {
+	return request<void>(Endpoints.Users.UpdateLocation, params);
 }
 export async function follow(params: SetFollowRequest)              { return request<void>(Endpoints.Users.Follow, params); }
 export async function block(params: SetBlockRequest)               { return request<void>(Endpoints.Users.Block, params); }

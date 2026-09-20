@@ -6,6 +6,8 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
 	import { autoLocateOnce, readLastLocation, writeLastLocation } from '@/lib/map-auto-locate';
+	import { reportLocation } from '@/lib/location-report';
+	import { auth } from '@/stores/auth.svelte';
 	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
 	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
@@ -70,7 +72,11 @@
 	$effect(() => {
 		void (async () => {
 			const fix = await autoLocateOnce();
-			if (!fix || userPicked) return;
+			if (!fix) return;
+			// 真实位置上报（users/update_location）：与是否采纳为中心无关，
+			// 上报的是「用户在哪」；失败静默，不打断交互。
+			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
+			if (userPicked) return;
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 		})();
 	});
@@ -163,6 +169,7 @@
 	const locate = createLocateAction({
 		onSuccess: (fix) => {
 			userPicked = true;
+			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 			selectedLoc = null;
 			searchQuery = '';

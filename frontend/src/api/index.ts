@@ -4,7 +4,7 @@ export {
   login, register, guest, logout, checkAuthStatus,
   requestPasswordReset, resetPassword, sendRegisterCode,
   changePassword, fetchSessions, revokeSession, revokeOtherSessions,
-  getAccount, updateAccount, getSettings, updateSettings,
+  getAccount, updateAccount, updateLocation, getSettings, updateSettings,
   follow, block, unblock, fetchBlocked, upgradeAccount, openTheDoor, setRemark,
   deleteAccount,
   presignUpload, completeUpload,

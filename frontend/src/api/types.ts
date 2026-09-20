@@ -1044,6 +1044,11 @@ export interface ResetPasswordRequest {
 }
 
 // Users
+// spec: api_spec_user.md → users/update_location（真实位置上报，非浏览锚点；location 必填）
+export interface UpdateLocationRequest {
+	location: Location;
+}
+
 export interface UpdateAccountRequest {
 	nickname?: string;
 	avatar_file_id?: string;
