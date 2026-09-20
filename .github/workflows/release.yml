@@ -43,8 +43,8 @@ jobs:
           # 结论非 success（失败 / 查不到 / 超时）一律拒绝出包。
           deadline=$(( $(date +%s) + 2400 ))
           while :; do
-            if ! raw="$(gh run list --workflow CI --commit "$GITHUB_SHA" --json status,conclusion 2>&1)"; then
-              echo "::warning::gh 查询失败（runner 网络/鉴权抖动），60s 后重试：$raw"
+            if ! raw="$(gh run list --workflow CI --commit "$GITHUB_SHA" -R "$GITHUB_REPOSITORY" --json status,conclusion 2>&1)"; then
+              echo "::warning::gh 查询失败，60s 后重试：$raw"
             else
               echo "gh 返回：$raw"
               row="$(printf '%s' "$raw" | jq 'first(.[] | select(.status == "completed"))')"
