@@ -24,7 +24,7 @@ func MountRoutes(r chi.Router, handler *Handler) {
 	r.Route("/audit", func(audit chi.Router) {
 		audit.Post("/fetch", handler.ListAuditLogs)
 	})
-	// /admin/v1/app_config 是名词化端点（无动词段）。不要用同前缀子路由，
+	// /admin/api/v1/app_config 是名词化端点（无动词段）。不要用同前缀子路由，
 	// 否则 chi 会用子路由覆盖裸路径；这里注册两个独立叶子路由即可。
 	r.Post("/app_config", handler.GetAppConfig)
 	r.Post("/app_config/update", handler.UpdateAppConfig)

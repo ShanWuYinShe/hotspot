@@ -17,7 +17,7 @@
 - **纯匿名**：本节点**完全不解析 Token**（Cookie/Header 中的 Token 一律忽略）。响应形状与调用者是否恰好持有 Token 无关；不存在任何隐式身份增强
 - **无身份类资源约束**：本节点仅适用可见性过滤（privacy_level / searchable 系列 / social_lists_visible 等），无 owner/participant/member/self 类约束
 - **限流**：本节点请求一律按 **IP 维度**限流（见 `api_spec_base.md`「限流策略」）
-- **类型隔离**：本节点端点的 Request/Response 使用专属类型，与 `/api/v1`（含 groups/admin 子树）、`/admin/v1` **禁止共用**（规则见下方「类型体系」）
+- **类型隔离**：本节点端点的 Request/Response 使用专属类型，与 `/api/v1`（含 groups/admin 子树）、`/admin/api/v1` **禁止共用**（规则见下方「类型体系」）
 - **镜像判定原则**：仅当登录版存在真实增量——查看者状态字段，或可见性判定依赖身份（如 `reactions/fetch` 的私聊消息仅参与者可见）——才在 `/api/v1` 设登录镜像版；无任何增量的端点仅在本节点提供（如 `map/canvas`、`share/open_the_door`、`groups/announcements/fetch`、system 的 meta/health/announcements/fetch/client_config）
 
 ## 类型体系（契约级）
@@ -92,7 +92,7 @@ Token 通过服务端 `Set-Cookie` 响应头投递，**禁止**使用 `Authoriza
 
 ### App 端（`client_type='app'`）
 
-Token 通过响应体投递：返回 `ApiResponse<AuthTokenPairApp>`，响应体中包含 `access_token`、`refresh_token` 及各自过期时间；客户端负责安全存储（Keychain / Keystore）。后续调用 `/api/v1`、`/admin/v1` 端点时以 `Authorization: Bearer <token>` 携带。
+Token 通过响应体投递：返回 `ApiResponse<AuthTokenPairApp>`，响应体中包含 `access_token`、`refresh_token` 及各自过期时间；客户端负责安全存储（Keychain / Keystore）。后续调用 `/api/v1`、`/admin/api/v1` 端点时以 `Authorization: Bearer <token>` 携带。
 
 ### Cookie 更新时机（Web 端）
 
@@ -1203,7 +1203,7 @@ interface SystemAnnouncementList {
 **说明**：
 - 返回当前有效的公告（"有效"= 未被平台管理员删除的公告；create 即发布，delete 即下线），返回条数由服务端 `AppConfig.response_defaults.system_announcements_count` 控制，客户端不传数量参数
 - 普通用户只需获取最新的 N 条公告，无需分页翻阅历史
-- 平台管理员查看/搜索全部公告（含历史）请使用 `/admin/v1/announcements/fetch`（定义于 `api_spec_admin.md`）
+- 平台管理员查看/搜索全部公告（含历史）请使用 `/admin/api/v1/announcements/fetch`（定义于 `api_spec_admin.md`）
 - **排序**: 按 `created_at` 倒序，`announcement_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 ---

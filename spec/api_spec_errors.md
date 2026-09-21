@@ -31,8 +31,8 @@
 | 错误码 | 隐含适用范围 |
 |-------|-------------|
 | `10000` | 所有端点（参数错误/请求体非法） |
-| `10100` | `/api/v1`、`/admin/v1` 全部端点、`signin`（凭证错误防枚举统一此码）与 `refresh_token`（凭证特例）；`/public/v1` 其余端点不解析 token，不产生此码 |
-| `10201` | `/api/v1`、`/admin/v1` 全部端点（账号被封禁，中间件级检查） |
+| `10100` | `/api/v1`、`/admin/api/v1` 全部端点、`signin`（凭证错误防枚举统一此码）与 `refresh_token`（凭证特例）；`/public/v1` 其余端点不解析 token，不产生此码 |
+| `10201` | `/api/v1`、`/admin/api/v1` 全部端点（账号被封禁，中间件级检查） |
 | `10500` | 所有端点（触发限流） |
 | `10600` | 所有端点（服务端错误/系统不可用） |
 | `22000` / `22001` / `22002` | 所有可能返回幂等键相关错误的端点（即需要实现幂等的端点） |
@@ -51,9 +51,9 @@ interface ForbiddenErrorData {
 
 // 权限拒绝原因枚举（11 项，权威定义）
 type ForbiddenReason =
-  | 'not_admin'                    // /admin/v1：非平台管理员
-  | 'insufficient_admin_permission'// /admin/v1：是平台管理员但缺权限键（message 指明缺哪个键）
-  | 'admin_protected_target'       // /admin/v1：封禁/撤销目标为平台管理员或超管
+  | 'not_admin'                    // /admin/api/v1：非平台管理员
+  | 'insufficient_admin_permission'// /admin/api/v1：是平台管理员但缺权限键（message 指明缺哪个键）
+  | 'admin_protected_target'       // /admin/api/v1：封禁/撤销目标为平台管理员或超管
   | 'not_group_member'             // 非目标群成员（守卫/资源约束失败）
   | 'not_group_admin'              // 群管理守卫子树：非目标群 owner/admin
   | 'not_group_owner'              // owner 专属端点：非群主

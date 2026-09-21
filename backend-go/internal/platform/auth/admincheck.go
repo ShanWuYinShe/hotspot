@@ -40,7 +40,7 @@ func IsAdminUser(ctx context.Context, userID string) bool {
 }
 
 // AdminAccess 校验当前 principal 是否为平台管理员（httpx.CodeForbidden/非平台管理员）。
-// 管理端点统一挂该中间件（admin 模块 /admin/v1 分组）。
+// 管理端点统一挂该中间件（admin 模块 /admin/api/v1 分组）。
 func AdminAccess(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		principal, ok := PrincipalFromContext(r.Context())

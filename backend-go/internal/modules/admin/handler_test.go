@@ -111,15 +111,15 @@ func TestAdminModerationRoutesAreMounted(t *testing.T) {
 		path string
 		body string
 	}{
-		{name: "users search", path: "/admin/v1/users/search", body: `{"nickname":"bob","pagination":{"limit":10}}`},
-		{name: "users open", path: "/admin/v1/users/open_the_door", body: `{"user_id":"user_bob"}`},
-		{name: "groups search", path: "/admin/v1/groups/search", body: `{"name":"hot","pagination":{"limit":10}}`},
-		{name: "groups open", path: "/admin/v1/groups/open_the_door", body: `{"group_id":"group_hotspot"}`},
-		{name: "reports search", path: "/admin/v1/reports/fetch", body: `{"status":"pending","pagination":{"limit":10}}`},
-		{name: "tags search", path: "/admin/v1/tags/search", body: `{"keyword":"hot","pagination":{"limit":10}}`},
-		{name: "announcements list", path: "/admin/v1/announcements/fetch", body: `{"pagination":{"limit":10}}`},
-		{name: "app_config get", path: "/admin/v1/app_config", body: `{}`},
-		{name: "app_config update", path: "/admin/v1/app_config/update", body: `{"limits":{"max_group_members":300}}`},
+		{name: "users search", path: "/admin/api/v1/users/search", body: `{"nickname":"bob","pagination":{"limit":10}}`},
+		{name: "users open", path: "/admin/api/v1/users/open_the_door", body: `{"user_id":"user_bob"}`},
+		{name: "groups search", path: "/admin/api/v1/groups/search", body: `{"name":"hot","pagination":{"limit":10}}`},
+		{name: "groups open", path: "/admin/api/v1/groups/open_the_door", body: `{"group_id":"group_hotspot"}`},
+		{name: "reports search", path: "/admin/api/v1/reports/fetch", body: `{"status":"pending","pagination":{"limit":10}}`},
+		{name: "tags search", path: "/admin/api/v1/tags/search", body: `{"keyword":"hot","pagination":{"limit":10}}`},
+		{name: "announcements list", path: "/admin/api/v1/announcements/fetch", body: `{"pagination":{"limit":10}}`},
+		{name: "app_config get", path: "/admin/api/v1/app_config", body: `{}`},
+		{name: "app_config update", path: "/admin/api/v1/app_config/update", body: `{"limits":{"max_group_members":300}}`},
 	}
 
 	for _, tc := range tests {
@@ -141,7 +141,7 @@ func TestAdminModerationRoutesAreMounted(t *testing.T) {
 
 func TestAdminModerationRoutesRequireAuth(t *testing.T) {
 	router, _ := newMountedAdminRouter(t)
-	req := httptest.NewRequest(http.MethodPost, "/admin/v1/users/search", strings.NewReader(`{"nickname":"bob"}`))
+	req := httptest.NewRequest(http.MethodPost, "/admin/api/v1/users/search", strings.NewReader(`{"nickname":"bob"}`))
 	rr := httptest.NewRecorder()
 
 	router.ServeHTTP(rr, req)
@@ -157,7 +157,7 @@ func TestAdminModerationRoutesRequireAuth(t *testing.T) {
 
 func TestAdminModerationRoutesRequireAdminPermission(t *testing.T) {
 	router, issueToken := newMountedAdminRouter(t)
-	req := httptest.NewRequest(http.MethodPost, "/admin/v1/users/search", strings.NewReader(`{"nickname":"bob"}`))
+	req := httptest.NewRequest(http.MethodPost, "/admin/api/v1/users/search", strings.NewReader(`{"nickname":"bob"}`))
 	req.Header.Set("Authorization", "Bearer "+issueToken("user_bob"))
 	rr := httptest.NewRecorder()
 
@@ -893,7 +893,7 @@ func TestListAdminAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 		t.Fatalf("expected stored notification_id to match broadcast payload: broadcast=%v stored admin=%q alice=%q", adminPayload.NotifyID, adminNotifications.Items[0].NotifyID, aliceNotifications.Items[0].NotifyID)
 	}
 
-	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/admin/v1/announcements/list", strings.NewReader(`{"severity":"warning","pagination":{"limit":10}}`)), "admin", true)
+	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/admin/api/v1/announcements/list", strings.NewReader(`{"severity":"warning","pagination":{"limit":10}}`)), "admin", true)
 	searchRR := httptest.NewRecorder()
 	handler.ListAdminAnnouncements(searchRR, searchReq)
 	searchResp := decodeResponse[PaginatedAdminAnnouncements](t, searchRR)
@@ -909,7 +909,7 @@ func TestListAdminAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 		t.Fatalf("unexpected update response: %#v", updateResp)
 	}
 
-	searchUpdatedReq := adminContext(httptest.NewRequest(http.MethodPost, "/admin/v1/announcements/list", strings.NewReader(`{"severity":"info","pagination":{"limit":10}}`)), "admin", true)
+	searchUpdatedReq := adminContext(httptest.NewRequest(http.MethodPost, "/admin/api/v1/announcements/list", strings.NewReader(`{"severity":"info","pagination":{"limit":10}}`)), "admin", true)
 	searchUpdatedRR := httptest.NewRecorder()
 	handler.ListAdminAnnouncements(searchUpdatedRR, searchUpdatedReq)
 	searchUpdatedResp := decodeResponse[PaginatedAdminAnnouncements](t, searchUpdatedRR)
@@ -936,7 +936,7 @@ func TestListAdminAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 		t.Fatalf("unexpected second delete response: %#v", deleteAgainResp)
 	}
 
-	searchAfterDeleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/admin/v1/announcements/list", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
+	searchAfterDeleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/admin/api/v1/announcements/list", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
 	searchAfterDeleteRR := httptest.NewRecorder()
 	handler.ListAdminAnnouncements(searchAfterDeleteRR, searchAfterDeleteReq)
 	searchAfterDeleteResp := decodeResponse[PaginatedAdminAnnouncements](t, searchAfterDeleteRR)

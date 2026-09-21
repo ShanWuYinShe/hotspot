@@ -267,7 +267,7 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	// 评论删除仅作者（spec api_spec_comment.md「删除评论（仅评论作者）」）。
-	// 平台审核删除统一走 /admin/v1/reports/judge，本端点没有「平台管理员」分支。
+	// 平台审核删除统一走 /admin/api/v1/reports/judge，本端点没有「平台管理员」分支。
 	isOwner := comment.User.UserID == principal.UserID
 	if !isOwner {
 		return ErrPermissionDenied

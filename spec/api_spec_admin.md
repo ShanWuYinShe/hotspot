@@ -1,11 +1,11 @@
 # HotSpot API - 平台管理节点
 
-> 本文档定义 HotSpot 平台管理节点（**/admin/v1**）的 RPC 接口，包括权限管理（RBAC）、审计日志、全局配置与内容审核（用户/群组/举报/标签/公告）。
-> **节点性质（契约级）**：/admin/v1 是独立于客户端 /api/v1 的全局节点，仅供平台管理员使用；平台管理员在 /api/v1 上与普通用户完全同权，平台权限不外溢（见 `api_spec_authz.md`「交叉规则」）。
+> 本文档定义 HotSpot 平台管理节点（**/admin/api/v1**）的 RPC 接口，包括权限管理（RBAC）、审计日志、全局配置与内容审核（用户/群组/举报/标签/公告）。
+> **节点性质（契约级）**：/admin/api/v1 是独立于客户端 /api/v1 的全局节点，仅供平台管理员使用；平台管理员在 /api/v1 上与普通用户完全同权，平台权限不外溢（见 `api_spec_authz.md`「交叉规则」）。
 
 ## 模块信息
 
-- **节点**: `/admin/v1`（平台管理员）
+- **节点**: `/admin/api/v1`（平台管理员）
 - **命名空间**: `rbac` / `audit` / `app_config` / `users` / `groups` / `reports` / `tags` / `announcements`
 - **引用**: 
   - 基础规范：`api_spec_base.md`
@@ -29,33 +29,33 @@
 
 | 端点 | 说明 | 权限键 |
 |-----|------|------|
-| `POST /admin/v1/rbac/me` | 我的平台管理员权限 | 是平台管理员即可 |
-| `POST /admin/v1/rbac/permissions/fetch` | 权限字典 | admin.rbac.manage |
-| `POST /admin/v1/rbac/roles/fetch` | 角色列表 | admin.rbac.manage |
-| `POST /admin/v1/rbac/roles/create` | 创建角色 | admin.rbac.manage |
-| `POST /admin/v1/rbac/roles/update` | 更新角色 | admin.rbac.manage |
-| `POST /admin/v1/rbac/roles/delete` | 删除角色 | admin.rbac.manage |
-| `POST /admin/v1/rbac/roles/set_permissions` | 设置角色权限 | admin.rbac.manage |
-| `POST /admin/v1/rbac/admins/fetch` | 平台管理员列表 | admin.rbac.manage |
-| `POST /admin/v1/rbac/admins/award` | 授权/更新平台管理员 | admin.rbac.manage |
-| `POST /admin/v1/rbac/admins/revoke` | 撤销平台管理员 | admin.rbac.manage |
-| `POST /admin/v1/audit/fetch` | 审计日志列表 | admin.audit.read |
-| `POST /admin/v1/app_config` | 获取完整应用配置 | admin.app_config.read |
-| `POST /admin/v1/app_config/update` | 更新应用配置（按 section 部分更新） | admin.app_config.write |
-| `POST /admin/v1/users/search` | 搜索用户 | admin.users.read |
-| `POST /admin/v1/users/open_the_door` | 用户详情 | admin.users.read |
-| `POST /admin/v1/users/set_ban` | 设置用户封禁状态（两态统一） | admin.users.write |
-| `POST /admin/v1/groups/search` | 搜索群组 | admin.groups.read |
-| `POST /admin/v1/groups/open_the_door` | 群组详情 | admin.groups.read |
-| `POST /admin/v1/groups/dismiss` | 解散群组 | admin.groups.write |
-| `POST /admin/v1/reports/fetch` | 举报列表（按状态/类型过滤） | admin.reports.read |
-| `POST /admin/v1/reports/judge` | 裁决举报（resolve/dismiss） | admin.reports.write |
-| `POST /admin/v1/tags/search` | 搜索标签 | admin.tags.read |
-| `POST /admin/v1/tags/set_ban` | 设置标签屏蔽状态（两态统一：屏蔽/解屏蔽，可选物理删除） | admin.tags.write |
-| `POST /admin/v1/announcements/fetch` | 系统公告列表（按 severity 过滤） | admin.announcements.read |
-| `POST /admin/v1/announcements/create` | 发布系统公告 | admin.announcements.write |
-| `POST /admin/v1/announcements/update` | 更新系统公告 | admin.announcements.write |
-| `POST /admin/v1/announcements/delete` | 删除系统公告 | admin.announcements.write |
+| `POST /admin/api/v1/rbac/me` | 我的平台管理员权限 | 是平台管理员即可 |
+| `POST /admin/api/v1/rbac/permissions/fetch` | 权限字典 | admin.rbac.manage |
+| `POST /admin/api/v1/rbac/roles/fetch` | 角色列表 | admin.rbac.manage |
+| `POST /admin/api/v1/rbac/roles/create` | 创建角色 | admin.rbac.manage |
+| `POST /admin/api/v1/rbac/roles/update` | 更新角色 | admin.rbac.manage |
+| `POST /admin/api/v1/rbac/roles/delete` | 删除角色 | admin.rbac.manage |
+| `POST /admin/api/v1/rbac/roles/set_permissions` | 设置角色权限 | admin.rbac.manage |
+| `POST /admin/api/v1/rbac/admins/fetch` | 平台管理员列表 | admin.rbac.manage |
+| `POST /admin/api/v1/rbac/admins/award` | 授权/更新平台管理员 | admin.rbac.manage |
+| `POST /admin/api/v1/rbac/admins/revoke` | 撤销平台管理员 | admin.rbac.manage |
+| `POST /admin/api/v1/audit/fetch` | 审计日志列表 | admin.audit.read |
+| `POST /admin/api/v1/app_config` | 获取完整应用配置 | admin.app_config.read |
+| `POST /admin/api/v1/app_config/update` | 更新应用配置（按 section 部分更新） | admin.app_config.write |
+| `POST /admin/api/v1/users/search` | 搜索用户 | admin.users.read |
+| `POST /admin/api/v1/users/open_the_door` | 用户详情 | admin.users.read |
+| `POST /admin/api/v1/users/set_ban` | 设置用户封禁状态（两态统一） | admin.users.write |
+| `POST /admin/api/v1/groups/search` | 搜索群组 | admin.groups.read |
+| `POST /admin/api/v1/groups/open_the_door` | 群组详情 | admin.groups.read |
+| `POST /admin/api/v1/groups/dismiss` | 解散群组 | admin.groups.write |
+| `POST /admin/api/v1/reports/fetch` | 举报列表（按状态/类型过滤） | admin.reports.read |
+| `POST /admin/api/v1/reports/judge` | 裁决举报（resolve/dismiss） | admin.reports.write |
+| `POST /admin/api/v1/tags/search` | 搜索标签 | admin.tags.read |
+| `POST /admin/api/v1/tags/set_ban` | 设置标签屏蔽状态（两态统一：屏蔽/解屏蔽，可选物理删除） | admin.tags.write |
+| `POST /admin/api/v1/announcements/fetch` | 系统公告列表（按 severity 过滤） | admin.announcements.read |
+| `POST /admin/api/v1/announcements/create` | 发布系统公告 | admin.announcements.write |
+| `POST /admin/api/v1/announcements/update` | 更新系统公告 | admin.announcements.write |
+| `POST /admin/api/v1/announcements/delete` | 删除系统公告 | admin.announcements.write |
 
 ## 类型定义
 
@@ -76,7 +76,7 @@ type UserAccountStatus = 'normal' | 'banned';
 - **superadmin**：`permissions` 包含 `'*'`，表示拥有全部平台权限（除 PII 键 read_ip ×2 需显式持有）
 - **普通平台管理员**：通过角色/权限表获得细粒度权限，字段可见性由具体权限决定
 
-### POST /admin/v1/rbac/me
+### POST /admin/api/v1/rbac/me
 
 获取我的平台管理员权限信息。
 
@@ -105,7 +105,7 @@ interface AdminPermissions {
 
 ---
 
-### POST /admin/v1/rbac/permissions/fetch
+### POST /admin/api/v1/rbac/permissions/fetch
 
 获取权限字典。
 
@@ -134,7 +134,7 @@ interface AdminPermissionItem {
 
 ---
 
-### POST /admin/v1/rbac/roles/fetch
+### POST /admin/api/v1/rbac/roles/fetch
 
 获取角色列表。
 
@@ -167,7 +167,7 @@ interface AdminRoleItem {
 
 ---
 
-### POST /admin/v1/rbac/roles/create
+### POST /admin/api/v1/rbac/roles/create
 
 创建角色。
 
@@ -187,7 +187,7 @@ interface CreateAdminRoleRequest {
 
 ---
 
-### POST /admin/v1/rbac/roles/update
+### POST /admin/api/v1/rbac/roles/update
 
 更新角色。
 
@@ -209,7 +209,7 @@ interface UpdateAdminRoleRequest {
 
 ---
 
-### POST /admin/v1/rbac/roles/delete
+### POST /admin/api/v1/rbac/roles/delete
 
 删除角色。
 
@@ -228,7 +228,7 @@ interface DeleteAdminRoleRequest {
 
 ---
 
-### POST /admin/v1/rbac/roles/set_permissions
+### POST /admin/api/v1/rbac/roles/set_permissions
 
 设置角色权限。
 
@@ -243,7 +243,7 @@ interface SetAdminRolePermissionsRequest {
 ```
 
 **说明**：
-- `permission_keys` 必须来自权限字典（`POST /admin/v1/rbac/permissions/fetch` 返回值）
+- `permission_keys` 必须来自权限字典（`POST /admin/api/v1/rbac/permissions/fetch` 返回值）
 - 仅 superadmin 可以设置 `'*'`（全量权限）；普通平台管理员设置 `'*'` 时返回 `10200`
 
 **Response**: `ApiResponse`
@@ -252,7 +252,7 @@ interface SetAdminRolePermissionsRequest {
 
 ---
 
-### POST /admin/v1/rbac/admins/fetch
+### POST /admin/api/v1/rbac/admins/fetch
 
 获取平台管理员列表。
 
@@ -281,7 +281,7 @@ interface AdminOperatorItem {
 
 ---
 
-### POST /admin/v1/rbac/admins/award
+### POST /admin/api/v1/rbac/admins/award
 
 授予/更新平台管理员。
 
@@ -309,7 +309,7 @@ interface AwardAdminRequest {
 
 ---
 
-### POST /admin/v1/rbac/admins/revoke
+### POST /admin/api/v1/rbac/admins/revoke
 
 撤销平台管理员。
 
@@ -340,7 +340,7 @@ interface RevokeAdminRequest {
 | `ip_address` | `admin.audit.read_ip` | 敏感 PII；权限不足时为 null |
 | `device_summary` | `admin.audit.read` | User-Agent 脱敏后的设备摘要 |
 
-### POST /admin/v1/audit/fetch
+### POST /admin/api/v1/audit/fetch
 
 查询审计日志列表。
 
@@ -368,7 +368,7 @@ interface FetchAuditLogsRequest {
 type AuditAction = 
   | 'user.ban'           // 封禁用户
   | 'user.unban'         // 解封用户
-  | 'group.dismiss'      // 解散群组（群主经 groups/admin/dismiss，或平台侧经 /admin/v1/groups/dismiss）
+  | 'group.dismiss'      // 解散群组（群主经 groups/admin/dismiss，或平台侧经 /admin/api/v1/groups/dismiss）
   | 'group.member_mute'  // 禁言群成员（由群管理员通过 groups/admin/members/set_mute 触发）
   | 'group.member_ban'   // 封禁群成员（由群管理员通过 groups/admin/members/set_ban active=true 触发）
   | 'group.member_remove'// 移除群成员（由群管理员通过 groups/admin/members/remove 触发）
@@ -433,7 +433,7 @@ interface AuditLogItem {
 
 **设计说明**：`AppConfig` 是完整的应用配置，由平台管理员统一管理。其中 `features`/`limits`/`contact` 部分构成 `ClientConfig`（投影给客户端），其余为仅服务端使用的运行参数。
 
-### POST /admin/v1/app_config
+### POST /admin/api/v1/app_config
 
 获取完整应用配置（AppConfig）。
 
@@ -469,7 +469,7 @@ interface AppConfig {
 
 ---
 
-### POST /admin/v1/app_config/update
+### POST /admin/api/v1/app_config/update
 
 更新应用配置（按 section 部分更新，Patch 语义）。
 
@@ -576,7 +576,7 @@ interface ResponseDefaults {
 
 ## 内容审核 API
 
-### POST /admin/v1/users/search
+### POST /admin/api/v1/users/search
 
 搜索用户（平台管理）。
 
@@ -619,7 +619,7 @@ interface AdminUserItem extends UserItem {
 
 ---
 
-### POST /admin/v1/users/open_the_door
+### POST /admin/api/v1/users/open_the_door
 
 获取用户详情（平台管理）。
 
@@ -638,7 +638,7 @@ interface OpenAdminUserDoorRequest {
 
 ---
 
-### POST /admin/v1/users/set_ban
+### POST /admin/api/v1/users/set_ban
 
 设置用户封禁状态（两态统一端点，平台管理）。
 
@@ -670,7 +670,7 @@ interface SetAdminUserBanRequest {
 
 ---
 
-### POST /admin/v1/groups/search
+### POST /admin/api/v1/groups/search
 
 搜索群组（平台管理）。
 
@@ -700,7 +700,7 @@ interface AdminGroupItem extends GroupItem {
 
 ---
 
-### POST /admin/v1/groups/open_the_door
+### POST /admin/api/v1/groups/open_the_door
 
 获取群组详情（平台管理）。
 
@@ -719,7 +719,7 @@ interface OpenAdminGroupDoorRequest {
 
 ---
 
-### POST /admin/v1/groups/dismiss
+### POST /admin/api/v1/groups/dismiss
 
 解散群组（平台管理）。
 
@@ -745,7 +745,7 @@ interface DismissAdminGroupRequest {
 
 ---
 
-### POST /admin/v1/reports/fetch
+### POST /admin/api/v1/reports/fetch
 
 举报列表（平台管理）。按状态/目标类型过滤（无关键字搜索语义，故命名 `fetch` 而非 `search`）。
 
@@ -774,7 +774,7 @@ interface AdminReportItem extends ReportItem {
 
 ---
 
-### POST /admin/v1/reports/judge
+### POST /admin/api/v1/reports/judge
 
 裁决举报（平台管理）：`resolve` 确认有效 / `dismiss` 驳回。
 
@@ -812,7 +812,7 @@ interface JudgeAdminReportRequest {
 
 ---
 
-### POST /admin/v1/tags/search
+### POST /admin/api/v1/tags/search
 
 搜索标签（平台管理）。
 
@@ -840,7 +840,7 @@ interface AdminTagItem extends TagItem {
 
 ---
 
-### POST /admin/v1/tags/set_ban
+### POST /admin/api/v1/tags/set_ban
 
 设置标签屏蔽状态（两态统一端点，平台管理）。`active=false` 解屏蔽消除误操作不可逆问题。
 
@@ -868,7 +868,7 @@ interface SetAdminTagBanRequest {
 
 ---
 
-### POST /admin/v1/announcements/fetch
+### POST /admin/api/v1/announcements/fetch
 
 系统公告列表（平台管理视角），返回包含平台管理字段的公告列表。
 
@@ -901,7 +901,7 @@ interface AdminAnnouncementItem extends SystemAnnouncementItem {
 
 ---
 
-### POST /admin/v1/announcements/create
+### POST /admin/api/v1/announcements/create
 
 发布系统公告（平台管理）。
 
@@ -925,7 +925,7 @@ interface CreateAnnouncementRequest {
 
 ---
 
-### POST /admin/v1/announcements/update
+### POST /admin/api/v1/announcements/update
 
 更新系统公告（平台管理）。
 
@@ -948,7 +948,7 @@ interface UpdateAnnouncementRequest {
 
 ---
 
-### POST /admin/v1/announcements/delete
+### POST /admin/api/v1/announcements/delete
 
 删除公告（平台管理）。
 

@@ -524,7 +524,7 @@ export function netError<T>(fallback: T): ApiResponse<T> {
 	return { code: -1, message: '网络异常', data: fallback };
 }
 
-// ── 平台管理（spec: api_spec_admin.md，/admin/v1；仅平台管理员）──
+// ── 平台管理（spec: api_spec_admin.md，/admin/api/v1；仅平台管理员）──
 
 // RBAC
 export async function adminRbacMe()                      { return request<AdminPermissions>(Endpoints.Admin.Rbac.GetMe); }

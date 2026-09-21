@@ -39,7 +39,7 @@ func NewModuleWithDeps(repo Repository, provider Provider, moderationStore Moder
 }
 
 func (m *Module) Mount(r chi.Router) {
-	r.Route("/admin/v1", func(adminRouter chi.Router) {
+	r.Route("/admin/api/v1", func(adminRouter chi.Router) {
 		adminRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
 			// AdminAccess is a middleware backstop on top of the service-layer RBAC:

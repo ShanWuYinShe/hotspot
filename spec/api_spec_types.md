@@ -214,14 +214,14 @@ interface MessageMedia extends MediaAsset {
 
 本节定义业务核心对象。遵循 **Info (嵌入用) -> Item (统一数据类型)** 的分层模式。查看者相关字段一律「恒定存在 + null 表达不适用」，不同视角由不同端点承载（`OwnerXxxItem`/`AdminXxxItem`/`XxxViewerState`）。
 
-> **节点归属**：本节 Item 类型内嵌查看者字段（`relation` / `viewer_state` / `is_favorited` / `Reaction.reacted_by_me` 等），仅服务 `/api/v1`（含 groups/admin 子树）与 `/admin/v1` 登录视角；`/public/v1` 使用 `api_spec_public.md` 的 `PublicXxxItem` 对偶类型。
+> **节点归属**：本节 Item 类型内嵌查看者字段（`relation` / `viewer_state` / `is_favorited` / `Reaction.reacted_by_me` 等），仅服务 `/api/v1`（含 groups/admin 子树）与 `/admin/api/v1` 登录视角；`/public/v1` 使用 `api_spec_public.md` 的 `PublicXxxItem` 对偶类型。
 
 ### 用户 (User)
 
 **平台管理员可见性规则**：
 - 平台管理员使用 /api/v1 时与普通用户**无区别**：使用相同端点、获得相同响应形态
 - `UserInfo`/`UserItem` 不包含管理员标识，普通用户无法通过任何普通 API 判断对方是否为平台管理员
-- 平台管理员专用字段仅在 `/admin/v1` 通过独立 Admin 类型返回（见 `api_spec_admin.md`）
+- 平台管理员专用字段仅在 `/admin/api/v1` 通过独立 Admin 类型返回（见 `api_spec_admin.md`）
 
 **UserInfo**: 用户基础信息（用于嵌套在其他对象中）
 ```typescript

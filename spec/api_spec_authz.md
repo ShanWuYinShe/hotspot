@@ -20,11 +20,11 @@
 | `/public/v1/` | 无身份判定；仅可见性过滤（资源约束在引擎） |
 | `/api/v1/` | 认证在平台层中间件；资源约束在引擎 |
 | `/api/v1/groups/admin/` | 子树级统一中间件（惰性解析 group_id → 角色） |
-| `/admin/v1/` | 节点级统一中间件（身份 + `admin.*` 权限键） |
+| `/admin/api/v1/` | 节点级统一中间件（身份 + `admin.*` 权限键） |
 
-**节点即档位（契约级）**：身份要求由节点前缀唯一表达——`/public/v1` = 纯匿名（不解析 Token）、`/api/v1` = 注册用户、`/admin/v1` = 平台管理员。唯一特例：`/public/v1/auth/refresh_token` 以请求体中的 refresh_token 为凭证（凭证语义独立于节点匿名语义）。详见 `api_spec_base.md`「节点身份语义」。
+**节点即档位（契约级）**：身份要求由节点前缀唯一表达——`/public/v1` = 纯匿名（不解析 Token）、`/api/v1` = 注册用户、`/admin/api/v1` = 平台管理员。唯一特例：`/public/v1/auth/refresh_token` 以请求体中的 refresh_token 为凭证（凭证语义独立于节点匿名语义）。详见 `api_spec_base.md`「节点身份语义」。
 
-**判定顺序（契约级）**：认证（仅 /api/v1、/admin/v1）→ 可见性（10300 防枚举）→ 守卫/授权（10200 + forbidden_reason）。可见性失败必须先于授权失败返回，不可见资源连「无权限」都不暴露。
+**判定顺序（契约级）**：认证（仅 /api/v1、/admin/api/v1）→ 可见性（10300 防枚举）→ 守卫/授权（10200 + forbidden_reason）。可见性失败必须先于授权失败返回，不可见资源连「无权限」都不暴露。
 
 **端点单角色原则（契约级）**：每个端点只有一种调用者角色与一种检查规则；双角色语义（「作者或管理员」）一律拆分为两个端点。角色层级（owner ⊃ admin ⊃ member）由守卫层级表达，不是端点内条件分支。
 
@@ -65,7 +65,7 @@
 
 ---
 
-## 平台权限键（/admin/v1 专用）
+## 平台权限键（/admin/api/v1 专用）
 
 | 权限键 | 说明 |
 |--------|------|
@@ -89,7 +89,7 @@
 **角色模型**：
 - **superadmin**：`permissions=['*']`，拥有全部权限键；仅 PII 键（`read_ip` ×2）要求显式持有
 - **admin**：绑定 `AdminRole`（roles/* 机制），permissions = 角色集合并集
-- 权限蕴含（契约级）：`/admin/v1/reports/judge` 在 `action='resolve'` 且携带 `ban_duration_days` 时，实际执行封禁——调用方除 `admin.reports.write` 外必须同时具备 `admin.users.write`，权限不足返回 `10200` + `insufficient_admin_permission`
+- 权限蕴含（契约级）：`/admin/api/v1/reports/judge` 在 `action='resolve'` 且携带 `ban_duration_days` 时，实际执行封禁——调用方除 `admin.reports.write` 外必须同时具备 `admin.users.write`，权限不足返回 `10200` + `insufficient_admin_permission`
 
 ---
 
@@ -97,8 +97,8 @@
 
 1. **登录用户调 /public/v1 得到与匿名完全相同的响应**：public 节点不解析 Token，无任何隐式身份增强；需要登录视角（viewer_state / relation 等）必须调 `/api/v1` 对应端点
 2. **平台管理员在 /api/v1 上与普通用户完全同权**：平台权限不外溢到客户端 API
-3. **群角色与 /admin/v1 无关**：群主/群管理员的动作全部在客户端 API（含守卫子树）执行；其中落审计的动作范围以 `api_spec_admin.md` 的 `AuditAction` 枚举为唯一权威（现覆盖群解散与群成员禁言/封禁/移除）；平台节点只做平台级动作
-4. **/admin/v1 响应使用独立 `AdminXxxItem` 类型**：客户端类型的可见性注解与视角规则不适用于该节点；其字段可见性由 `admin.*` 权限键 + PII 键控制
+3. **群角色与 /admin/api/v1 无关**：群主/群管理员的动作全部在客户端 API（含守卫子树）执行；其中落审计的动作范围以 `api_spec_admin.md` 的 `AuditAction` 枚举为唯一权威（现覆盖群解散与群成员禁言/封禁/移除）；平台节点只做平台级动作
+4. **/admin/api/v1 响应使用独立 `AdminXxxItem` 类型**：客户端类型的可见性注解与视角规则不适用于该节点；其字段可见性由 `admin.*` 权限键 + PII 键控制
 5. **同一用户多角色分别判定、互不传递**：用户可同时是平台管理员与某群群主，两套判定按节点与上下文独立进行
 6. **术语纪律**：文档禁止裸称「管理员」；一律写「平台管理员」或「群主/群管理员」
 
@@ -108,11 +108,11 @@
 
 | 失败 | 码 | data | 适用节点 |
 |------|-----|------|----------|
-| 未认证（/api/v1、/admin/v1 及 refresh_token 凭证特例） | 10100 | 无 | /public/v1 之外 |
+| 未认证（/api/v1、/admin/api/v1 及 refresh_token 凭证特例） | 10100 | 无 | /public/v1 之外 |
 | 不存在/不可见（含隐私隐藏，防枚举） | 10300 | 无 | 全部 |
 | 权限不足 | 10200 | `{ forbidden_reason: ForbiddenReason }`（**必填**） | 全部（public 节点为隐私类 reason：privacy_setting / not_group_member） |
 | 业务冲突/前置不满足 | 10400 | 端点可显式声明结构化 data（如 `data.mute`） | 全部 |
-| 账号封禁（强制登出） | 10201 | 无（中间件级） | /api/v1、/admin/v1 |
+| 账号封禁（强制登出） | 10201 | 无（中间件级） | /api/v1、/admin/api/v1 |
 
 `ForbiddenReason` 枚举（11 项）的权威定义在 `api_spec_errors.md`。
 
@@ -123,7 +123,7 @@
 ## 权限矩阵（契约附件）
 
 > 列说明：
-> - **节点即档位**：块标题即节点，节点身份语义见上（/public/v1 纯匿名、/api/v1 注册用户、groups/admin 守卫子树、/admin/v1 平台管理员）
+> - **节点即档位**：块标题即节点，节点身份语义见上（/public/v1 纯匿名、/api/v1 注册用户、groups/admin 守卫子树、/admin/api/v1 平台管理员）
 > - 守卫/约束 = 守卫子树（groups/admin）、平台权限键（admin.*）或资源约束（owner=resource.owner、part=chat.participant、gmember=group.member、self、可见性过滤）
 > - reason = 10200 时的 forbidden_reason
 > - 幂等 = 幂等键/自然去重/no-op 语义
@@ -284,35 +284,35 @@
 | 138 | `/api/v1/groups/admin/transfer_ownership` | owner 专属 | not_group_owner | 10300/10400(目标非成员) | 自然去重 |
 | 139 | `/api/v1/groups/admin/messages/recall` | 守卫(owner/admin) | not_group_admin | 10300/10400 | — |
 
-### /admin/v1（平台管理员节点）
+### /admin/api/v1（平台管理员节点）
 
 | # | 端点 | 守卫 | 10200 reason | 特有失败 | 幂等/no-op |
 |---|------|------|--------------|----------|------------|
-| 140 | `/admin/v1/rbac/me` | 平台管理员 | not_admin | — | — |
-| 141 | `/admin/v1/rbac/permissions/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
-| 142 | `/admin/v1/rbac/roles/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
-| 143 | `/admin/v1/rbac/roles/create` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10400 重名 | — |
-| 144 | `/admin/v1/rbac/roles/update` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300/10400 | — |
-| 145 | `/admin/v1/rbac/roles/delete` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300/10400 | — |
-| 146 | `/admin/v1/rbac/roles/set_permissions` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；* 仅超管 | — |
-| 147 | `/admin/v1/rbac/admins/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
-| 148 | `/admin/v1/rbac/admins/award` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；award_all 仅超管 | — |
-| 149 | `/admin/v1/rbac/admins/revoke` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；撤超管仅超管 | — |
-| 150 | `/admin/v1/audit/fetch` | admin.audit.read | not_admin/insufficient_admin_permission | — | — |
-| 151 | `/admin/v1/app_config` | admin.app_config.read | not_admin/insufficient_admin_permission | — | — |
-| 152 | `/admin/v1/app_config/update` | admin.app_config.write | not_admin/insufficient_admin_permission | — | — |
-| 153 | `/admin/v1/users/search` | admin.users.read | not_admin/insufficient_admin_permission | — | — |
-| 154 | `/admin/v1/users/open_the_door` | admin.users.read | not_admin/insufficient_admin_permission | 10300 | — |
-| 155 | `/admin/v1/users/set_ban` | admin.users.write | not_admin/insufficient_admin_permission/admin_protected_target | 10300/10400 | no-op 解封 |
-| 156 | `/admin/v1/groups/search` | admin.groups.read | not_admin/insufficient_admin_permission | — | — |
-| 157 | `/admin/v1/groups/open_the_door` | admin.groups.read | not_admin/insufficient_admin_permission | 10300 | — |
-| 158 | `/admin/v1/groups/dismiss` | admin.groups.write | not_admin/insufficient_admin_permission | 10300 | — |
-| 159 | `/admin/v1/reports/fetch` | admin.reports.read | not_admin/insufficient_admin_permission | — | — |
-| 160 | `/admin/v1/reports/judge` | admin.reports.write(+蕴含 users.write) | not_admin/insufficient_admin_permission | 10300/10400 | — |
-| 161 | `/admin/v1/tags/search` | admin.tags.read | not_admin/insufficient_admin_permission | — | — |
-| 162 | `/admin/v1/tags/set_ban` | admin.tags.write | not_admin/insufficient_admin_permission | 10300 | no-op 解屏蔽 |
-| 163 | `/admin/v1/announcements/fetch` | admin.announcements.read | not_admin/insufficient_admin_permission | — | — |
-| 164 | `/admin/v1/announcements/create` | admin.announcements.write | not_admin/insufficient_admin_permission | — | 幂等 |
-| 165 | `/admin/v1/announcements/update` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
-| 166 | `/admin/v1/announcements/delete` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
+| 140 | `/admin/api/v1/rbac/me` | 平台管理员 | not_admin | — | — |
+| 141 | `/admin/api/v1/rbac/permissions/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
+| 142 | `/admin/api/v1/rbac/roles/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
+| 143 | `/admin/api/v1/rbac/roles/create` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10400 重名 | — |
+| 144 | `/admin/api/v1/rbac/roles/update` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300/10400 | — |
+| 145 | `/admin/api/v1/rbac/roles/delete` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300/10400 | — |
+| 146 | `/admin/api/v1/rbac/roles/set_permissions` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；* 仅超管 | — |
+| 147 | `/admin/api/v1/rbac/admins/fetch` | admin.rbac.manage | not_admin/insufficient_admin_permission | — | — |
+| 148 | `/admin/api/v1/rbac/admins/award` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；award_all 仅超管 | — |
+| 149 | `/admin/api/v1/rbac/admins/revoke` | admin.rbac.manage | not_admin/insufficient_admin_permission | 10300；撤超管仅超管 | — |
+| 150 | `/admin/api/v1/audit/fetch` | admin.audit.read | not_admin/insufficient_admin_permission | — | — |
+| 151 | `/admin/api/v1/app_config` | admin.app_config.read | not_admin/insufficient_admin_permission | — | — |
+| 152 | `/admin/api/v1/app_config/update` | admin.app_config.write | not_admin/insufficient_admin_permission | — | — |
+| 153 | `/admin/api/v1/users/search` | admin.users.read | not_admin/insufficient_admin_permission | — | — |
+| 154 | `/admin/api/v1/users/open_the_door` | admin.users.read | not_admin/insufficient_admin_permission | 10300 | — |
+| 155 | `/admin/api/v1/users/set_ban` | admin.users.write | not_admin/insufficient_admin_permission/admin_protected_target | 10300/10400 | no-op 解封 |
+| 156 | `/admin/api/v1/groups/search` | admin.groups.read | not_admin/insufficient_admin_permission | — | — |
+| 157 | `/admin/api/v1/groups/open_the_door` | admin.groups.read | not_admin/insufficient_admin_permission | 10300 | — |
+| 158 | `/admin/api/v1/groups/dismiss` | admin.groups.write | not_admin/insufficient_admin_permission | 10300 | — |
+| 159 | `/admin/api/v1/reports/fetch` | admin.reports.read | not_admin/insufficient_admin_permission | — | — |
+| 160 | `/admin/api/v1/reports/judge` | admin.reports.write(+蕴含 users.write) | not_admin/insufficient_admin_permission | 10300/10400 | — |
+| 161 | `/admin/api/v1/tags/search` | admin.tags.read | not_admin/insufficient_admin_permission | — | — |
+| 162 | `/admin/api/v1/tags/set_ban` | admin.tags.write | not_admin/insufficient_admin_permission | 10300 | no-op 解屏蔽 |
+| 163 | `/admin/api/v1/announcements/fetch` | admin.announcements.read | not_admin/insufficient_admin_permission | — | — |
+| 164 | `/admin/api/v1/announcements/create` | admin.announcements.write | not_admin/insufficient_admin_permission | — | 幂等 |
+| 165 | `/admin/api/v1/announcements/update` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
+| 166 | `/admin/api/v1/announcements/delete` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
 

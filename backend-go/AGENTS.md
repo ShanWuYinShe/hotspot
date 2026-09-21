@@ -116,7 +116,7 @@ data_migrations 旗标、禁止 CREATE INDEX CONCURRENTLY 的原因、INVALID �
 
 幂等契约以 `spec/api_spec_base.md` 为权威来源，本节仅列出实现侧约束：
 
-- 需要实现幂等的端点以 spec 的清单为准（当前 10 个：moments/create、comments/create、groups/create、groups/admin/announcements/create、/admin/v1/announcements/create、share/create、private_messages/send、group_messages/send、auth/register、auth/guest）；不需要的端点不得强制要求 `Idempotency-Key`
+- 需要实现幂等的端点以 spec 的清单为准（当前 10 个：moments/create、comments/create、groups/create、groups/admin/announcements/create、/admin/api/v1/announcements/create、share/create、private_messages/send、group_messages/send、auth/register、auth/guest）；不需要的端点不得强制要求 `Idempotency-Key`
 - 服务端按 `(user_id + endpoint + key)` 去重，仅缓存成功响应（`code == 0`）
 
 ## 分页

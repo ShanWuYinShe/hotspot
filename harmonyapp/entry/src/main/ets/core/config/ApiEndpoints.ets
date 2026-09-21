@@ -203,7 +203,7 @@ class ShareEndpoints {
 
 // Admin
 class AdminRbacEndpoints {
-  readonly GET_ME: string = '/admin/v1/rbac/me';
+  readonly GET_ME: string = '/admin/api/v1/rbac/me';
 }
 
 class AdminEndpoints {

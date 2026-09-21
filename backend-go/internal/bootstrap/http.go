@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"hotspot/backend-go/internal/platform/buildinfo"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/cors"
 	"hotspot/backend-go/internal/platform/httpx"
@@ -44,6 +45,10 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) htt
 	// 外部访问落到 SPA 兜底）；可选采集栈见 docker-compose.yml observability
 	// profile。不挂限流——15s 抓取节奏不会触发限流桶，也不应被其干扰。
 	r.Method(http.MethodGet, "/metrics", observability.MetricsHandler())
+	// 存活探针（全站约定 GET /healthz）：无鉴权、无限流、无请求体要求，
+	// 只回 status/version/commit/build_time，供 LB/容器健康检查与 ops 绿灯
+	// 聚合。业务健康（DB/Redis 连通性）仍走 POST /public/v1/system/health。
+	r.Method(http.MethodGet, "/healthz", http.HandlerFunc(healthzProbe))
 	for _, module := range modules {
 		module.Mount(r)
 	}
@@ -61,4 +66,15 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) htt
 	}
 	r.Mount("/public/v1", publicRouter)
 	return r
+}
+
+// healthzProbe 存活探针（全站约定 GET /healthz）
+// 无鉴权、无限流、无请求体要求。
+func healthzProbe(w http.ResponseWriter, r *http.Request) {
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(map[string]string{
+		"status":     "ok",
+		"version":    buildinfo.Version,
+		"commit":     buildinfo.Commit,
+		"build_time": buildinfo.BuildTime,
+	}))
 }

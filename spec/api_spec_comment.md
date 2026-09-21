@@ -68,7 +68,7 @@ interface CreateCommentRequest {
 
 ### POST /api/v1/comments/delete
 
-删除评论（**仅评论作者**）。平台审核删除评论统一走 `/admin/v1/reports/judge`（见 `api_spec_admin.md`），本端点不设平台管理员分支。
+删除评论（**仅评论作者**）。平台审核删除评论统一走 `/admin/api/v1/reports/judge`（见 `api_spec_admin.md`），本端点不设平台管理员分支。
 
 **删除语义（软删除，与主流社交产品一致）**：
 - 评论**不物理删除**，标记为 `is_deleted=true`，`content` 清空（客户端展示"该评论已删除"占位）

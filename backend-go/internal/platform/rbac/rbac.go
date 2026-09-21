@@ -4,7 +4,7 @@
 // 契约要点（spec/api_spec_authz.md）：
 //   - /api/v1 客户端：认证档位 + 资源约束（owner/participant/group.member/self）
 //   - /api/v1/groups/admin 守卫子树：统一守卫 = 调用者是目标群 owner/admin
-//   - /admin/v1 节点：required + admin.* 权限键
+//   - /admin/api/v1 节点：required + admin.* 权限键
 //   - 平台管理员与群组管理员是完全不同的两套体系，按节点分别判定、互不传递
 package rbac
 

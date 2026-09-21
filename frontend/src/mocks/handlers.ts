@@ -11,7 +11,7 @@ import {
 
 const API = "/api/v1";
 const PUBLIC_API = "/public/v1";
-const ADMIN_API = "/admin/v1";
+const ADMIN_API = "/admin/api/v1";
 
 function json(data: JsonBodyType) {
   return HttpResponse.json(data);
@@ -810,7 +810,7 @@ http.post(`${API}/moments/fetch_created`, () => {
     unread_summary: { notify_total: 0, notify_by_type: { social: 0, interaction: 0, group: 0, report: 0, nearby: 0, system: 0 }, private_chat_unread_count: 0, group_chat_unread_count: 0, total_badge: 0 },
   }), request)),
 
-  // ── 平台管理（spec: api_spec_admin.md，/admin/v1；仅平台管理员）──
+  // ── 平台管理（spec: api_spec_admin.md，/admin/api/v1；仅平台管理员）──
   // mock 当前登录用户为 superadmin（permissions: ['*']），便于开发期全模块联调。
 
   http.post(`${ADMIN_API}/rbac/me`, () => requireMockAuth() ?? json(apiOk({

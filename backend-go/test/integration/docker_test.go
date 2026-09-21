@@ -1628,76 +1628,76 @@ func TestMedia_E2E_CompleteBeforeUpload(t *testing.T) {
 func TestAdmin_RBAC_GetMe(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/rbac/me", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/rbac/me", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_ListPermissions(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/rbac/permissions/fetch", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/rbac/permissions/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_RolesList(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/rbac/roles/fetch", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/rbac/roles/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_RBAC_AdminsList(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/rbac/admins/fetch", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/rbac/admins/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_AppConfigGet(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/app_config", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/app_config", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_UsersSearch(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/users/search", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/users/search", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_GroupsSearch(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/groups/search", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/groups/search", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_ReportsSearch(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/reports/fetch", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/reports/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_TagsSearch(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/tags/search", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/tags/search", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_Announcements(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/announcements/fetch", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/announcements/fetch", map[string]any{}, &resp)
 	})
 }
 
 func TestAdmin_Audit(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]
-		apiRespOK(t, "/admin/v1/audit/fetch", map[string]any{}, &resp)
+		apiRespOK(t, "/admin/api/v1/audit/fetch", map[string]any{}, &resp)
 	})
 }

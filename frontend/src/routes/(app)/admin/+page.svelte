@@ -46,7 +46,7 @@
 				</div>
 			</div>
 			{#if device === 'desktop'}
-				<span class="badge bg-accent-soft text-accent-default">/admin/v1</span>
+				<span class="badge bg-accent-soft text-accent-default">/admin/api/v1</span>
 			{/if}
 		</div>
 		{#if !isSuper && admin.permissions.length > 0}

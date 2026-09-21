@@ -1,9 +1,9 @@
 // API endpoint registry — MUST match spec/api_spec_*.md.
-// 节点：/public/v1（纯匿名）、/api/v1（注册用户）、/api/v1/groups/admin（群管理守卫子树）、/admin/v1（平台管理节点）。
+// 节点：/public/v1（纯匿名）、/api/v1（注册用户）、/api/v1/groups/admin（群管理守卫子树）、/admin/api/v1（平台管理节点）。
 
 const PUBLIC_PREFIX = '/public/v1';
 const PREFIX = '/api/v1';
-const ADMIN_PREFIX = '/admin/v1';
+const ADMIN_PREFIX = '/admin/api/v1';
 
 export const Endpoints = {
   Auth: {
@@ -185,7 +185,7 @@ export const Endpoints = {
     List: PREFIX + '/reports/fetch',
   },
 
-  // 平台管理节点（/admin/v1/*，仅平台管理员）
+  // 平台管理节点（/admin/api/v1/*，仅平台管理员）
   Admin: {
     Rbac: {
       GetMe: ADMIN_PREFIX + '/rbac/me',

@@ -563,7 +563,7 @@ func TestServiceDeleteIdempotentNoOp(t *testing.T) {
 }
 
 // TestServiceDeleteOnlyAuthor：评论删除仅评论作者（spec api_spec_comment.md「删除评论（仅评论作者）」）。
-// 平台管理员即使注入 IsAdmin 也不得删除他人评论（该职责在 /admin/v1/reports/judge，本端点不设平台管理员分支）。
+// 平台管理员即使注入 IsAdmin 也不得删除他人评论（该职责在 /admin/api/v1/reports/judge，本端点不设平台管理员分支）。
 func TestServiceDeleteOnlyAuthor(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)

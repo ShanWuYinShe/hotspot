@@ -24,6 +24,18 @@ deny all;
 
 include /etc/nginx/conf.d/headers.inc;
 
+# 存活探针（全站约定 GET /healthz）：无鉴权、无限流，直通后端。
+location = /healthz {
+    proxy_pass http://backend;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Request-ID $request_id;
+}
+
 location /api/ {
     limit_req zone=api burst=20 nodelay;
     proxy_pass http://backend;
@@ -48,10 +60,10 @@ location /public/ {
     proxy_set_header X-Request-ID $request_id;
 }
 
-# 仅代理 /admin/v1 API 节点（与仓库基线 nginx.conf 一致）；/admin/* 前端
+# 仅代理 /admin/api/v1 API 节点（与仓库基线 nginx.conf 一致）；/admin/* 前端
 # 页面路由必须回落 SPA（下方 location / 的 try_files），否则管理后台深链/刷新
 # 会被整段代理给 Go 后端返回 404。
-location /admin/v1/ {
+location /admin/api/v1/ {
     limit_req zone=admin burst=10 nodelay;
     proxy_pass http://backend;
     proxy_http_version 1.1;

@@ -97,7 +97,7 @@ func TestAdminAccessMiddleware(t *testing.T) {
 
 	// 1. 无 principal 上下文
 	t.Run("No Principal Denied", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/v1/users", nil)
+		req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/users", nil)
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
 
@@ -115,7 +115,7 @@ func TestAdminAccessMiddleware(t *testing.T) {
 
 	// 2. 有 principal 但非管理员
 	t.Run("Non Admin Denied", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/v1/users", nil)
+		req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/users", nil)
 		ctx := WithPrincipal(req.Context(), Principal{UserID: "normal_user"})
 		req = req.WithContext(ctx)
 
@@ -136,7 +136,7 @@ func TestAdminAccessMiddleware(t *testing.T) {
 
 	// 3. 有 principal 且是真实管理员
 	t.Run("Admin Allowed", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/admin/v1/users", nil)
+		req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/users", nil)
 		ctx := WithPrincipal(req.Context(), Principal{UserID: "real_admin"})
 		req = req.WithContext(ctx)
 

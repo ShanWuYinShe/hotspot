@@ -54,7 +54,7 @@
 
 | 文件 | 说明 |
 |-----|------|
-| [api_spec_admin.md](api_spec_admin.md) | 平台管理节点 /admin/v1（RBAC 权限管理、审计日志、服务端配置、内容审核） |
+| [api_spec_admin.md](api_spec_admin.md) | 平台管理节点 /admin/api/v1（RBAC 权限管理、审计日志、服务端配置、内容审核） |
 
 ## 权威边界与冲突处理
 
@@ -89,7 +89,7 @@ v1 重设计对端点集做过一次完整存废审查，后续端点增删沿�
 
 ## 设计要点速览（v1 重设计）
 
-- **三节点+守卫子树（节点即档位）**：/public/v1（未注册用户，纯匿名）、/api/v1（注册用户：正式+临时同权）、/api/v1/groups/admin（群管理守卫子树，群管理员属普通用户范畴）、/admin/v1（平台管理员节点）；看 URL 前缀即知身份要求；平台管理员在 /api/v1 与普通用户完全同权
+- **三节点+守卫子树（节点即档位）**：/public/v1（未注册用户，纯匿名）、/api/v1（注册用户：正式+临时同权）、/api/v1/groups/admin（群管理守卫子树，群管理员属普通用户范畴）、/admin/api/v1（平台管理员节点）；看 URL 前缀即知身份要求；平台管理员在 /api/v1 与普通用户完全同权
 - **一个端点 = 一种角色 + 一个固定形状**：不同视角不同端点（OwnerXxxItem / AdminXxxItem / XxxViewerState），@xxx-only 注解全量废除
 - **恒定 nullable**：权限/隐私条件字段恒在，null = 隐藏/不适用；`next_cursor: string | null`
 - **命名**：动词表 + 状态限定词（created/joined/submitted/sent/received/favorites/blocked/banned/reacted）；`_my` 后缀与 `My` 类型前缀全量废除；`open_the_door` 为详情动词（玩梗保护条款保留）；禁用 `notification`（统一 `notify`）
@@ -126,5 +126,5 @@ v1 重设计对端点集做过一次完整存废审查，后续端点增删沿�
 | /api/v1/reports/ | api_spec_report.md |
 | /api/v1/notify/ | api_spec_notify.md |
 | /api/v1/system/ | api_spec_system.md |
-| /admin/v1/ | api_spec_admin.md + api_spec_authz.md |
+| /admin/api/v1/ | api_spec_admin.md + api_spec_authz.md |
 | /ws/v1 | api_spec_websocket.md |

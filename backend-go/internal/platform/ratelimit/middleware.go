@@ -373,7 +373,7 @@ func classifyRoute(path string) (routeClass, bool) {
 		// 匿名节点（spec api_spec_public.md）：认证入口在 appendAuthRules 已按 IP
 		// 处理并提前返回；其余端点全部只读，按 IP 维度限流（无 principal）。
 		return routeClass{readOnly: true}, true
-	case strings.HasPrefix(path, "/admin/v1/"):
+	case strings.HasPrefix(path, "/admin/api/v1/"):
 		return routeClass{adminOnly: true, readOnly: isAdminReadPath(path)}, true
 	case strings.HasPrefix(path, "/api/v1/system/"):
 		return routeClass{readOnly: true}, true

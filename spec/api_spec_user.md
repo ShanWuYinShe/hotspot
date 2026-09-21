@@ -332,7 +332,7 @@ interface AccountData {
   user_id: string;
   nickname: string;
   avatar_url: string | null;
-  user_type: UserType;          // 账号类型（temp/normal），仅表达账号生命周期；平台管理员身份通过 /admin/v1/rbac/me 获取
+  user_type: UserType;          // 账号类型（temp/normal），仅表达账号生命周期；平台管理员身份通过 /admin/api/v1/rbac/me 获取
   bio: string | null;
   tags: string[];
   gender: Gender | null;        // Gender 定义于本模块「类型定义」小节

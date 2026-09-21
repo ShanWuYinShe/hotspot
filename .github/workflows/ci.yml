@@ -223,8 +223,7 @@ jobs:
       - name: wait for backend health
         run: |
           for i in $(seq 1 60); do
-            if curl -sf -X POST -H 'Content-Type: application/json' -d '{}' \
-              http://localhost:8081/public/v1/system/health > /dev/null; then
+            if curl -sf http://localhost:8081/healthz > /dev/null; then
               echo "backend ready after $i probes"; exit 0
             fi
             sleep 2
@@ -248,6 +247,22 @@ jobs:
         if: failure()
         run: tail -200 /tmp/backend.log
 
+  contract-guard:
+    name: Contract Prefix Guard
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: forbid legacy /admin/v1 node
+        run: |
+          set -eo pipefail
+          # 本文件自身含守卫字面量，做扫描例外（此处是唯一允许出现旧前缀的地方）
+          hits=$(grep -rn "/admin/v1" --include="*.md" --include="*.go" --include="*.ts" --include="*.svelte" --include="*.ets" --include="*.conf" --include="*.inc" --include="*.yml" --include="*.sh" . 2>/dev/null | grep -v -e "harmonyapp/entry/build/" -e "frontend/.svelte-kit/" -e "frontend/node_modules/" -e "^./.workwork/" -e "^./.github/workflows/ci.yml" || true)
+          if [ -n "$hits" ]; then
+            echo "发现旧管理节点 /admin/v1（已迁移为 /admin/api/v1，见 spec/api_spec_base.md）："
+            echo "$hits"
+            exit 1
+          fi
+          echo "prefix guard passed"
 
   frontend:
     name: Frontend (SvelteKit)

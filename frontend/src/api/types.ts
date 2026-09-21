@@ -1227,7 +1227,7 @@ export interface BootstrapRequest {
 	device_id: string | null;
 }
 
-// --- 平台管理（spec: api_spec_admin.md，/admin/v1 节点）---
+// --- 平台管理（spec: api_spec_admin.md，/admin/api/v1 节点）---
 // 仅供平台管理员使用；平台管理员在 /api/v1 上与普通用户同权，平台权限不外溢。
 
 export type UserAccountStatus = 'normal' | 'banned';
