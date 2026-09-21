@@ -10,9 +10,8 @@ description: hotspot 项目的 worktree 调试环境操作细则：compose 隔�
 本 skill 覆盖 worktree 内的隔离调试、同名冲突处理、以及合并后的容器重启。
 主工作树开发环境本身的启停约定见项目 AGENTS.md「调试入口」。
 
-worktree 内调试同样通过 Docker Compose，与主工作树自动隔离：
+worktree 内调试同样通过 Docker Compose，与主工作树自动隔离。隔离原理（项目名取目录名、`-p` 接管风险）与同名冲突通用处理见全局 skill `docker-workflow`「worktree 隔离」节；下方是本项目的具体端口、命令与约束：
 
-- 不要指定 `-p`：compose 项目名默认取当前目录名（主工作树 = `hotspot`，worktree = 该分支目录名），自动隔离容器/网络/volume；显式 `-p hotspot` 会接管主实例容器，隔离失效
 - 在对应 worktree 根目录执行（`docker-compose.yml` 在 worktree 内同样存在），cwd 必须是该目录
 - 默认端口映射（8888 网关 / 8081 后端直连 / 5432 postgres / 8333 seaweedfs / 6379 redis / 8025 mailpit）与主实例相同，同一时间只允许一套 dev 环境运行；需要并行时按下方「目录名同名冲突」节重映射端口
 
