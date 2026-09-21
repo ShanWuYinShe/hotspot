@@ -52,6 +52,9 @@ services:
         limits:
           memory: 1g
           cpus: "2"
+          # 进程数上限（postgres 每连接一进程）：内存限制之外的第二道 fork 洪泛防线。
+          # 以下各常驻服务同理，按并发形态取值：backend(Go) 512，其余 256 / 64。
+          pids: 256
 
   # ── Cache & Pub/Sub (Redis) ───────────────────────────────────────
   redis:
@@ -71,6 +74,7 @@ services:
         limits:
           memory: 512m
           cpus: "1"
+          pids: 256
 
   # ── Object Storage (S3-compatible) ──────────────────────────────
   seaweedfs:
@@ -108,6 +112,7 @@ services:
         limits:
           memory: 1g
           cpus: "1"
+          pids: 256
 
   # ── Backend (Go API) ────────────────────────────────────────────
   backend:
@@ -185,6 +190,7 @@ services:
         limits:
           memory: 1g
           cpus: "2"
+          pids: 512
 
   # ── Frontend (SvelteKit SPA 静态产物) ─────────────────────
   # 生产模式: hotspot-frontend:${IMAGE_TAG:-latest} 仅持有 build 产物，通过共享 volume 挂给网关 nginx。
@@ -207,6 +213,7 @@ services:
         limits:
           memory: 256m
           cpus: "1"
+          pids: 64
 
   # ── Frontend Builder (仅生产构建) ─────────────────────────────
   frontend-build:
@@ -256,6 +263,7 @@ services:
         limits:
           memory: 256m
           cpus: "1"
+          pids: 256
 
   # ── 可观测性采集栈（可选：--profile observability，默认不启动）───
   # 启动：docker compose --profile observability up -d
