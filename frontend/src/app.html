@@ -7,6 +7,9 @@
 		<meta name="theme-color" content="#F7FAFF" />
 		<title>HotSpot</title>
 		<link rel="icon" type="image/png" href="/favicon.png" />
+		<!-- PWA：manifest + iOS 主屏图标（R36-1）。图标由 src/assets/hotspot-logo.png 派生 -->
+		<link rel="manifest" href="/manifest.webmanifest" />
+		<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 		<!-- Inter 自托管（static/fonts/），与样式表并行预加载，消除文字换字体的跳动。
 		     字体请求一律走 CORS 模式，同源也必须写 crossorigin，否则会重复下载一次。
 		     中文字形不预加载——由系统字体栈承担，零网络成本。 -->

@@ -1,0 +1,16 @@
+{
+	"name": "HotSpot",
+	"short_name": "HotSpot",
+	"description": "HotSpot —— 位置社交：发现附近的人、群组与生活瞬间。",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"orientation": "portrait-primary",
+	"background_color": "#0B1424",
+	"theme_color": "#F7FAFF",
+	"icons": [
+		{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+		{ "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+		{ "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+	]
+}
