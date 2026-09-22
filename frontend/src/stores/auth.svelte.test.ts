@@ -11,6 +11,8 @@ vi.mock('@/api', () => ({
   register: vi.fn(),
   logout: vi.fn(),
   setAuthenticated: vi.fn(),
+  // auth store 经 unread/ws 链传递引用此导出（WS 4001 刷新通道）
+  refreshSessionToken: vi.fn(async () => true),
 }));
 
 import * as api from '@/api';

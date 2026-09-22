@@ -32,8 +32,8 @@
 		class: className = '',
 		style = ''
 	}: {
-		/** Image URL. When empty/undefined or the image fails to load, the name initial is shown instead. */
-		src?: string;
+		/** Image URL. When empty/undefined/null (spec 恒定 nullable) or the image fails to load, the name initial is shown instead. */
+		src?: string | null;
 		/** Display name — supplies the alt text and the fallback initial. */
 		name?: string;
 		/** Named scale (preferred) or explicit px for one-off exceptions. */

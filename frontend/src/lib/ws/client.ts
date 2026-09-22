@@ -11,6 +11,8 @@
 // - SessionRevoked/AccountBanned → auth-failed/auth-banned CustomEvent（与 client.ts 一致）
 // - 通知类/私聊类事件 → ws:* CustomEvent 供 UI 消费
 
+import { refreshSessionToken } from '@/api';
+
 import type {
   AuthPayload,
   ClientEventType,
@@ -31,6 +33,12 @@ export type WsStatus = 'idle' | 'connecting' | 'connected' | 'disconnected';
 export interface WsClientOptions {
   /** 覆盖连接 URL（测试注入用）；默认基于 location.origin 推导 `${origin}/ws/v1` */
   url?: string;
+  /**
+   * close 4001（Token 失效）时的刷新通道：返回 true = 刷新成功并重连一次；
+   * false/未提供 = 保持旧行为（发 auth-failed、等待上层登出）。
+   * spec close code 表：4001 应「刷新 token 或重新登录后重连」。
+   */
+  refreshBeforeReconnect?: () => Promise<boolean>;
   /** 重连退避基数（ms），默认 1000 */
   baseBackoffMs?: number;
   /** 重连退避上限（ms），默认 30000 */
@@ -49,8 +57,10 @@ export const WS_GROUP_MESSAGE_UPDATE_EVENT = 'ws:group-message-update';
 
 const WS_PATH = '/ws/v1';
 
-/** 服务端主动断开且不应自动重连的 close code（契约级）。 */
-const NO_RECONNECT_CODES = new Set([1000, 1008, 4001]);
+/** 服务端主动断开且不应自动重连的 close code（契约级）。
+ *  4001 不在此列：spec 规定「刷新 token 或重新登录后重连」，
+ *  由 handleAuthCloseWithRefresh 特殊处理（见 handleClose）。 */
+const NO_RECONNECT_CODES = new Set([1000, 1008]);
 
 /** 通知类事件 → ws:notify（payload 携带 notify_id，与 notify/fetch 同主键）。 */
 const NOTIFY_EVENT_TYPES = new Set<ServerEventType>([
@@ -98,6 +108,8 @@ export class WsClient {
     WsClientOptions;
   /** 手动断开（登出）标记：禁止自动重连。 */
   private manualClose = false;
+  /** 4001 刷新重连的一次性标记：ConnectionEstablished 成功后复位 */
+  private authReconnectAttempted = false;
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -296,6 +308,7 @@ export class WsClient {
         this.pingIntervalMs = Math.max(1, p.config?.ping_interval ?? 30) * 1000;
         this.pingTimeoutMs = Math.max(1, p.config?.ping_timeout ?? 10) * 1000;
         this.reconnectAttempts = 0;
+        this.authReconnectAttempted = false;
         this.setStatus('connected');
         this.startHeartbeat();
         // 重连成功后用 set 全量重放订阅（本地订阅状态为权威；resume 成功时服务端已恢复，set 幂等无害）
@@ -424,9 +437,35 @@ export class WsClient {
   private handleClose(code: number): void {
     this.clearTimers();
     this.ws = null;
+    // 4001 = Token 失效（spec close code 表：刷新后重连）。SessionRevoked
+    // 流程已置 manualClose（会话被吊销，刷新无意义）走旧路径；纯 Token
+    // 过期则刷新一次后重连，刷新失败才移交上层登出。
+    if (code === 4001 && !this.manualClose) {
+      this.handleAuthCloseWithRefresh();
+      return;
+    }
     const shouldReconnect = !this.manualClose && !NO_RECONNECT_CODES.has(code);
     this.setStatus('disconnected');
     if (shouldReconnect) this.scheduleReconnect();
+  }
+
+  private handleAuthCloseWithRefresh(): void {
+    this.setStatus('disconnected');
+    const refresh = this.options.refreshBeforeReconnect;
+    if (!refresh || this.authReconnectAttempted) {
+      this.emitAuthEvent(WS_AUTH_FAILED_EVENT, '登录状态已失效');
+      return;
+    }
+    this.authReconnectAttempted = true;
+    void refresh().then((ok) => {
+      if (ok) {
+        this.reconnectAttempts = 0;
+        this.authReconnectAttempted = false;
+        this.scheduleReconnect();
+      } else {
+        this.emitAuthEvent(WS_AUTH_FAILED_EVENT, '登录状态已失效，请重新登录');
+      }
+    });
   }
 
   /** 指数退避 + 随机 jitter（1s/2s/4s…最大 30s）。 */
@@ -492,6 +531,10 @@ export class WsClient {
 }
 
 /** 模块单例（非浏览器环境 no-op，与 src/api/client.ts 一致）。 */
-export const wsClient = new WsClient();
+// 单例注入 4001 刷新通道（api 层 refreshSessionToken：复用同一刷新端点与
+// 单飞锁；lib/ws 不直接依赖 api 的其余部分，仅此回调边界）。
+export const wsClient = new WsClient({
+  refreshBeforeReconnect: refreshSessionToken,
+});
 
 export type { ClientWsEvent, ServerWsEvent };

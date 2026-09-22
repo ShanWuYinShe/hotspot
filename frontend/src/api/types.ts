@@ -38,10 +38,10 @@ export interface MediaAsset {
 }
 
 export interface MessageMedia extends MediaAsset {
-	// spec: types.md → MessageMedia
-	file_name?: string;
-	file_size?: number;
-	duration?: number;
+	// spec: types.md → MessageMedia（恒定 nullable：字段恒在，null = 不适用）
+	file_name: string | null;
+	file_size: number | null;
+	duration: number | null;
 }
 
 export interface Reaction {
@@ -154,10 +154,10 @@ export interface UserItem {
 }
 
 export interface GroupInfo {
-	// spec: types.md → GroupInfo
+	// spec: types.md → GroupInfo（恒定 nullable）
 	group_id: string;
 	name: string;
-	avatar_url?: string;
+	avatar_url: string | null;
 	members_count: number;
 }
 
@@ -711,16 +711,16 @@ export interface RevokeOtherSessionsResult {
 
 // --- Users（spec: api_spec_user.md）---
 export interface AccountData {
-	// spec: user.md → get_account
+	// spec: user.md → get_account（恒定 nullable：可选值显式 | null，非省略）
 	user_id: string;
 	nickname: string;
-	avatar_url?: string;
+	avatar_url: string | null;
 	user_type: UserType;
-	bio?: string;
+	bio: string | null;
 	tags: string[];
-	gender?: Gender;
-	email?: string;
-	phone?: string;
+	gender: Gender | null;
+	email: string | null;
+	phone: string | null;
 	location: Location;
 	presence_status: UserPresenceStatus;
 	last_online_at: string;

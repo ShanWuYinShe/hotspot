@@ -289,6 +289,57 @@ describe('事件映射', () => {
     window.removeEventListener('ws:notify', onNotify);
   });
 
+  it('4001 + 刷新成功 → 重连（spec close code 表：刷新后重连）', async () => {
+    const refresh = vi.fn(async () => true);
+    const client = new WsClient({ url: 'ws://test.local/ws/v1', refreshBeforeReconnect: refresh });
+    client.connect();
+    const first = FakeWebSocket.instances[0];
+    first.open();
+    first.message({
+      type: 'ConnectionEstablished',
+      payload: { connection_id: 'c1', user_id: 'u1', server_time: '2025-01-01T00:00:00.000Z', resume_token: 't', server_seq: '1', config: { ping_interval: 30, ping_timeout: 10, max_subscriptions: { user: 500, group: 100 } } }
+    });
+
+    first.onclose!({ code: 4001 });
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await vi.waitFor(
+      () => {
+        expect(FakeWebSocket.instances.length).toBeGreaterThanOrEqual(2);
+      },
+      { timeout: 4000 }
+    );
+    // 刷新成功重连后，标记复位：再次 4001 仍会走刷新
+    const second = FakeWebSocket.instances[1];
+    second.open();
+    second.onclose!({ code: 4001 });
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('4001 + 无刷新通道 → 派发 auth-failed 且不重连', () => {
+    const onFailed = vi.fn();
+    window.addEventListener('auth-failed', onFailed);
+    const client = new WsClient({ url: 'ws://test.local/ws/v1' });
+    client.connect();
+    FakeWebSocket.instances[0].open();
+    FakeWebSocket.instances[0].onclose!({ code: 4001 });
+    expect(onFailed).toHaveBeenCalledTimes(1);
+    expect(FakeWebSocket.instances.length).toBe(1);
+    window.removeEventListener('auth-failed', onFailed);
+  });
+
+  it('SessionRevoked 流程的 4001 不触发刷新（会话吊销刷新无意义）', () => {
+    const refresh = vi.fn(async () => true);
+    const client = new WsClient({ url: 'ws://test.local/ws/v1', refreshBeforeReconnect: refresh });
+    client.connect();
+    FakeWebSocket.instances[0].open();
+    FakeWebSocket.instances[0].message({
+      type: 'SessionRevoked',
+      payload: { reason: 'device_evicted', revoked_at: '2025-01-01T00:00:00.000Z' }
+    });
+    FakeWebSocket.instances[0].onclose!({ code: 4001 });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
   it('私聊消息事件派发 ws:private-message（detail 为 payload）', () => {
     const client = new WsClient({ url: 'ws://test.local/ws/v1' });
     const onMsg = vi.fn();

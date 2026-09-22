@@ -290,28 +290,37 @@ async function request<T>(
 
   // 10100: access token invalid/expired. Try a single deduped refresh + retry.
   if (json.code === 10100 && retryCount < 1) {
-    if (!refreshLock) {
-      refreshLock = (async () => {
-        try {
-          const r = await fetch(`${baseUrl}${Endpoints.Auth.RefreshToken}`, {
-            method: 'POST', credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }, body: '{}',
-          });
-          if (r.ok) {
-            const j = await r.json();
-            if (j.code === 0) return true;
-          }
-        } catch {}
-        return false;
-      })().finally(() => { refreshLock = null; });
-    }
-    const ok = await refreshLock;
+    const ok = await refreshSessionToken();
     if (ok) return request<T>(endpoint, body, extraHeaders, retryCount + 1, requestId, opts);
     // Refresh failed: notify AuthContext so it can drop to anonymous and prompt.
     emitAuthEvent('auth-failed');
   }
 
   return json;
+}
+
+/**
+ * 主动刷新会话 token（单飞：并发调用共享同一次刷新）。
+ * 消费方：HTTP 10100 重试（request 内）与 WS 4001 重连（ws client 注入）。
+ * @returns 刷新是否成功。
+ */
+export async function refreshSessionToken(): Promise<boolean> {
+  if (!refreshLock) {
+    refreshLock = (async () => {
+      try {
+        const r = await fetch(`${baseUrl}${Endpoints.Auth.RefreshToken}`, {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }, body: '{}',
+        });
+        if (r.ok) {
+          const j = await r.json();
+          if (j.code === 0) return true;
+        }
+      } catch {}
+      return false;
+    })().finally(() => { refreshLock = null; });
+  }
+  return refreshLock;
 }
 
 // Auth

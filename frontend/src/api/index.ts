@@ -3,6 +3,7 @@ export {
   setApiBaseUrl,
   login, register, guest, logout, checkAuthStatus,
   requestPasswordReset, resetPassword, sendRegisterCode,
+  refreshSessionToken,
   changePassword, fetchSessions, revokeSession, revokeOtherSessions,
   getAccount, updateAccount, updateLocation, getSettings, updateSettings,
   follow, block, unblock, fetchBlocked, upgradeAccount, openTheDoor, setRemark,
