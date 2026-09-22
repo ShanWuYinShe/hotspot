@@ -18,7 +18,7 @@
 <div class="flex flex-col rounded-lg {className}" {style}>
 	<button
 		type="button"
-		class="flex items-center justify-center size-9 rounded-t-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
+		class="flex items-center justify-center size-10 rounded-t-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
 		style="border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);"
 		aria-label="放大"
 		disabled={zoom >= MAP_MAX_ZOOM}
@@ -28,7 +28,7 @@
 	</button>
 	<button
 		type="button"
-		class="flex items-center justify-center size-9 rounded-b-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
+		class="flex items-center justify-center size-10 rounded-b-lg focus-ring text-text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint"
 		aria-label="缩小"
 		disabled={zoom <= MAP_MIN_ZOOM}
 		onclick={() => (zoom = Math.max(MAP_MIN_ZOOM, zoom - 1))}

@@ -95,7 +95,8 @@ import { smartBack } from '@/lib/smart-back';
 </div>
 
 <!-- List -->
-<div class="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 pb-6">
+<!-- 底部渐隐：滚动内容探入悬浮确认按钮下方时柔和收尾，避免行被硬切 -->
+<div class="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 pb-6" style="mask-image:linear-gradient(to bottom, black calc(100% - 24px), transparent 100%);-webkit-mask-image:linear-gradient(to bottom, black calc(100% - 24px), transparent 100%);">
 	<div class="animate-fade-in flex flex-col gap-2">
 		<!-- Current location card -->
 		<div class="flex items-center gap-3 p-3.5 rounded-md bg-accent-default text-text-on-accent">

@@ -37,7 +37,7 @@
 				if (cancelled) return;
 				if (res.code !== 0 || !res.data) {
 					phase = 'error';
-					errorMessage = res.code === 10300 ? '分享不存在或已过期' : res.message || '分享解析失败';
+					errorMessage = res.code === 10300 ? '分享不存在或已过期' : '分享链接无效或已失效';
 					return;
 				}
 				detail = res.data;
@@ -67,7 +67,7 @@
 	{#if phase === 'loading'}
 		<p class="text-md text-text-secondary" role="status">正在解析分享…</p>
 	{:else if phase === 'error'}
-		<p class="text-md text-text-primary">{errorMessage}</p>
+		<p class="text-2xl font-semibold tracking-title text-text-primary">{errorMessage}</p>
 		<button
 			type="button"
 			onclick={() => goto(ROUTES.home, { replaceState: true })}

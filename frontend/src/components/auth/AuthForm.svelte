@@ -31,6 +31,7 @@
 	let {
 		compact = false,
 		onSuccess,
+		onModeChange,
 		initialMode = 'login'
 	}: {
 		/** When true the form is rendered inside a compact sheet (no hero/header). */
@@ -39,6 +40,8 @@
 		onSuccess?: () => void;
 		/** Initial mode. */
 		initialMode?: AuthMode;
+		/** 模式切换回调（登录/注册/访客…）：宿主据此切换品牌区文案语境。 */
+		onModeChange?: (m: AuthMode) => void;
 	} = $props();
 
 	// initialMode 仅在挂载时生效（此后模式切换走 switchMode）：闭包读取一次初始值
@@ -114,6 +117,7 @@
 	const switchMode = (m: AuthMode) => {
 		mode = m;
 		reset();
+		onModeChange?.(m);
 	};
 
 	function validate(): FieldErrors {
@@ -443,7 +447,7 @@
 		disabled={submitting}
 	>
 		{submitting ? '处理中…' : submitLabel(mode)}
-		{#if !submitting && mode === 'login'}
+		{#if !submitting && (mode === 'login' || mode === 'register')}
 			<ArrowRight class="size-4"  strokeWidth={1.75} />
 		{/if}
 	</Button>
@@ -456,7 +460,7 @@
 
 	<!-- Mode switcher -->
 	<div class="flex flex-wrap items-center justify-center gap-3.5 mt-1" >
-		{#if mode !== 'login' && mode !== 'forgot' && mode !== 'reset'}
+		{#if mode === 'register'}
 			<button type="button" onclick={() => switchMode('login')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
 				已有账号？登录
 			</button>
@@ -469,7 +473,7 @@
 				忘记密码
 			</button>
 		{/if}
-		{#if mode === 'register' || mode === 'forgot' || mode === 'reset'}
+		{#if mode === 'forgot' || mode === 'reset'}
 			<button type="button" onclick={() => switchMode('login')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
 				返回登录
 			</button>

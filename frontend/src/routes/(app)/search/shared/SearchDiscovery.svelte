@@ -55,7 +55,7 @@
 			</ListContainer>
 		{:else}
 			<!-- 紧凑空态：一行引导文案，不占视觉重量 -->
-			<p class="mt-3 text-sm text-text-secondary opacity-soft">输入关键词，搜索用户、动态与地点。</p>
+			<p class="mt-3 text-sm text-text-secondary opacity-soft">暂无搜索记录，输入关键词开始探索。</p>
 		{/if}
 	</section>
 
