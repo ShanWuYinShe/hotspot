@@ -19,5 +19,7 @@ add_header Cross-Origin-Resource-Policy "same-origin" always;
 #    生产白屏；无第三方注入面，风险可控
 #  - style-src 'unsafe-inline'：Tailwind / Svelte 注入内联样式
 #  - img-src：允许 data: URI 与任意 https CDN（用户头像/地图瓦片）
-#  - connect-src 'self'：API/WS 必须同源；如需接外部 API 在此追加
-add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+#  - connect-src 'self'：API/WS 必须同源；restapi.amap.com 为高德 Web 服务
+#    API（地理编码/POI 搜索直连，见 lib/geo-service.ts）。当前未配置 key 时
+#    不会向其发请求，放行是为了配置 key 后不被 CSP 拦截退回演示数据
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://restapi.amap.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
