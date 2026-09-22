@@ -7,7 +7,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
-import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
+import { interactionEventHub, InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { curves } from '@kit.ArkUI';
 import { LocationInfo } from '../../../core/location/LocationUtil';
@@ -110,7 +110,8 @@ export struct ProfilePage {
   @State pressedThumbKey: string = '';
   @State viewedUserId: string = '';
   @State viewedUserProfile: UserItem | null = null;
-  @StorageLink('interaction_user_state') viewedUserStateMap: Record<string, UserRelationState> = {};
+  // 仅持被查看用户的关系态（单实体定向订阅，同 UserCard 范式）
+  @State viewedUserRelation: UserRelationState | undefined = undefined;
   @State viewedFollowPending: boolean = false;
   @State viewedUserMoments: MomentItem[] = [];
   @State viewedUserLoading: boolean = false;
@@ -194,6 +195,11 @@ export struct ProfilePage {
         this.viewedUserProfile = response.data.user;
         this.viewedUserMoments = response.data.recent_moments?.items ?? [];
         InteractionStateStore.getInstance().patchUserFromItem(this.viewedUserProfile);
+        // 播种：patch 已写入 store，读取快照恢复本页关系态
+        const existing = interactionEventHub.getUserState(this.viewedUserProfile.user?.user_id ?? '');
+        if (existing) {
+          this.viewedUserRelation = existing;
+        }
       } else {
         this.viewedUserError = getErrorMessage(response, '无法获取该用户资料');
       }
@@ -206,7 +212,7 @@ export struct ProfilePage {
 
   private isViewedUserFollowing(): boolean {
     const uid = this.viewedUserProfile?.user?.user_id ?? '';
-    return this.viewedUserStateMap[uid]?.relation?.is_following ?? false;
+    return (this.viewedUserRelation?.user_id === uid ? this.viewedUserRelation?.relation?.is_following : undefined) ?? false;
   }
 
   private async toggleViewedUserFollow(): Promise<void> {
@@ -319,8 +325,18 @@ export struct ProfilePage {
     }
   }
 
+  // 被查看用户的关系态定向更新（单实体，同 UserCard 范式）
+  private handleViewedUserStateUpdate(payload: Object): void {
+    const state = payload as UserRelationState;
+    const uid = this.viewedUserProfile?.user?.user_id ?? '';
+    if (state && uid && state.user_id === uid) {
+      this.viewedUserRelation = state;
+    }
+  }
+
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
+    interactionEventHub.on('user_relation_updated', this.handleViewedUserStateUpdate);
     if (this.currentUser) {
       this.editNickname = this.currentUser.nickname;
       this.editBio = this.currentUser.bio || '';
@@ -345,6 +361,7 @@ export struct ProfilePage {
 
   aboutToDisappear(): void {
     this.isDestroyed = true;
+    interactionEventHub.off('user_relation_updated', this.handleViewedUserStateUpdate);
     KeyboardDismissManager.getInstance().dismiss();
     try {
       NfcShareService.getInstance().clearShareData();

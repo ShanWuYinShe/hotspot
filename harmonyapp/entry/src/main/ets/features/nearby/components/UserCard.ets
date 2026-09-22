@@ -1,6 +1,6 @@
 import { UserItem } from '../../../core/types/api';
 import { interactionActions } from '../../../core/state/InteractionActions';
-import { UserRelationState } from '../../../core/state/InteractionStateStore';
+import { UserRelationState, interactionEventHub} from '../../../core/state/InteractionStateStore'
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
@@ -28,7 +28,9 @@ export struct UserCard {
   @Prop showDistance: boolean = true;
   /** 卡形态：portrait=3:4 图片卡（people 专区）；compact=竖排白卡（附近首页横滑） */
   @Prop mode: string = 'portrait';
-  @StorageLink('interaction_user_state') private userStateMap: Record<string, UserRelationState> = {};
+  // 仅持本卡关系态：整 Map 订阅会让任意用户关注动作触发全部卡重算。
+  // 事件总线按 user_id 过滤定向更新（快照冷启动播种见 aboutToAppear）。
+  @State private socialState: UserRelationState | undefined = undefined;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State private followInFlight: boolean = false;
 
@@ -36,12 +38,32 @@ export struct UserCard {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
+  aboutToAppear(): void {
+    // 播种：组件创建晚于状态写入时从 store 快照恢复
+    const existing = interactionEventHub.getUserState(this.getUserId());
+    if (existing) {
+      this.socialState = existing;
+    }
+    interactionEventHub.on('user_relation_updated', this.handleUserStateUpdate);
+  }
+
+  aboutToDisappear(): void {
+    interactionEventHub.off('user_relation_updated', this.handleUserStateUpdate);
+  }
+
+  private handleUserStateUpdate(payload: Object): void {
+    const state = payload as UserRelationState;
+    if (state && state.user_id === this.getUserId()) {
+      this.socialState = state;
+    }
+  }
+
   private getUserId(): string {
     return this.user.user?.user_id ?? '';
   }
 
   private isFollowing(): boolean {
-    const state = this.userStateMap[this.getUserId()];
+    const state = this.socialState;
     return state?.relation?.is_following ?? this.user.relation?.is_following ?? false;
   }
 
