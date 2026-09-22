@@ -318,7 +318,7 @@ jobs:
     name: Docker Build Smoke (Prod Images)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # 生产镜像可构建性机器门禁：此前 Dockerfile 只在打 tag 后的 Release 才
       # 首次构建，构建参数/层次错误要到发布阶段才暴露。GHA 缓存层复用把增量
       # 成本压到可接受范围。
