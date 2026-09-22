@@ -80,8 +80,9 @@ jobs:
     name: Infra (Compose & Nginx Config)
     runs-on: ubuntu-24.04
     env:
-      # base 中 AUTH_TOKEN_SECRET 为 :? 强制变量；config 仅做语法/合并校验，
-      # 哑值不参与任何产物
+      # base 中 POSTGRES_PASSWORD / AUTH_TOKEN_SECRET 为 :? 强制变量（凭证必填
+      # 加固后新增前者）；config 仅做语法/合并校验，哑值不参与任何产物
+      POSTGRES_PASSWORD: ci-dummy-password-for-compose-config-validation-only
       AUTH_TOKEN_SECRET: ci-dummy-secret-for-compose-config-validation-only
 
     steps:
