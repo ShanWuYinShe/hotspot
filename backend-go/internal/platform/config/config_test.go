@@ -113,7 +113,7 @@ func prodBootable() Config {
 		AppEnv:          "production",
 		AuthTokenSecret: stringOfLen(48),
 		PostgresDSN:     "postgres://postgres:realpw@db:5432/hotspot",
-		RedisURL:        "redis://redis:6379/0",
+		RedisURL:        "redis://:prod-redis-password@redis:6379/0",
 		S3AccessKey:     "real-access-key",
 		S3SecretKey:     "real-secret-key",
 		BcryptCost:      defaultBcryptCost,
@@ -254,7 +254,7 @@ func TestValidateAcceptsStrongSecretInProduction(t *testing.T) {
 		AppEnv:          "production",
 		AuthTokenSecret: stringOfLen(48),
 		PostgresDSN:     "postgres://postgres:pw@db:5432/hotspot",
-		RedisURL:        "redis://redis:6379/0",
+		RedisURL:        "redis://:prod-redis-password@redis:6379/0",
 		BcryptCost:      defaultBcryptCost,
 	}
 	if err := cfg.Validate(); err != nil {
@@ -283,7 +283,7 @@ func TestValidateAcceptsStagingWithStrongSecret(t *testing.T) {
 		AppEnv:          "staging",
 		AuthTokenSecret: stringOfLen(40),
 		PostgresDSN:     "postgres://postgres:pw@db:5432/hotspot",
-		RedisURL:        "redis://redis:6379/0",
+		RedisURL:        "redis://:prod-redis-password@redis:6379/0",
 		BcryptCost:      defaultBcryptCost,
 	}
 	if err := cfg.Validate(); err != nil {

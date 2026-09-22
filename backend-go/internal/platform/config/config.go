@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -385,6 +386,9 @@ func (c Config) Validate() error {
 	if c.RedisURL == "" {
 		return errors.New("REDIS_URL must be set in production (refusing to start with no Redis — WebSocket fanout would be unsafe across instances)")
 	}
+	if !redisURLEmbedsPassword(c.RedisURL) {
+		return errors.New("REDIS_URL must embed a password in production (redis://:<password>@host:port/db) — an unauthenticated Redis in shared networks is a takeover vector")
+	}
 	if findings := c.checkInsecureDefaults(); c.hasCritical(findings) {
 		return fmt.Errorf("insecure default configuration detected:\n%s", formatFindings(findings))
 	}
@@ -410,4 +414,19 @@ func formatFindings(findings []DefaultFinding) string {
 func (c Config) IsProductionLike() bool {
 	env := strings.ToLower(strings.TrimSpace(c.AppEnv))
 	return env == "" || env == "production" || env == "prod" || env == "staging" || env == "stage"
+}
+
+// redisURLEmbedsPassword 判断 redis URL 是否携带密码。约定形态为
+// redis://:<password>@host:port/db（用户名空、密码非空）；含用户名+密码的
+// 形态同样接受。解析失败或密码为空视为未携带。
+func redisURLEmbedsPassword(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	if u.User == nil {
+		return false
+	}
+	password, ok := u.User.Password()
+	return ok && password != ""
 }

@@ -37,7 +37,9 @@ services:
     environment:
       POSTGRES_DB: hotspot
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      # 必填（:? 与 AUTH_TOKEN_SECRET 同哲学）：缺失即拒启，杜绝带弱口令上线的静默路径；
+      # 开发默认值见 .env.example（cp .env.example .env 即得）。
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (dev: postgres; see .env.example)}"
     volumes:
       # Postgres 18+ 官方镜像使用 /var/lib/postgresql/<major>/docker 存放数据，
       # 卷需挂到 /var/lib/postgresql（而非旧版的 /var/lib/postgresql/data）。
@@ -61,11 +63,16 @@ services:
     image: redis:${REDIS_VERSION:-8.10}-alpine
     restart: always
     logging: *default_logging
-    command: redis-server --appendonly yes
+    # REDIS_PASSWORD 非空即启用 requirepass（同源 .env；REDIS_URL 默认模板会
+    # 携带同口令）；空 = 关闭认证（保持既有单机内网行为）。生产建议设置。
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD:-}"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # 兼容认证/非认证双模式：带口令 ping 失败（未启用认证）时回落匿名 ping
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping || redis-cli ping"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -146,7 +153,7 @@ services:
       # 让 GC 在逼近上限前主动回收而非被 OOM kill。
       GOMEMLIMIT: 900MiB
       POSTGRES_DSN: postgres://postgres:${POSTGRES_PASSWORD:-change-me}@postgres:5432/hotspot?sslmode=disable
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      REDIS_URL: ${REDIS_URL:-redis://:${REDIS_PASSWORD:-}@redis:6379/0}
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:?AUTH_TOKEN_SECRET must be set to a high-entropy value (>=32 bytes) in production}
       APP_NAME: hotspot-backend-go
       # 信任 compose 内网反代（nginx）转发的 X-Forwarded-For/X-Real-IP，否则
