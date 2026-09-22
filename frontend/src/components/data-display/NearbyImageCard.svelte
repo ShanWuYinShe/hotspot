@@ -67,33 +67,26 @@
 	// 行内子按钮（点赞/收藏/评论等）的按压由按钮自身的 hover-action/tap 承载，
 	// 不带动整卡缩放——否则点按钮时整卡一起缩，看起来像误触了卡片。
 	function pressedFromEvent(e: PointerEvent): boolean {
-		return !(e.target as HTMLElement).closest('button');
+		// 覆盖按钮（.card-cover）= 卡片本体，按压带动整卡；行内操作按钮不带动
+		const btn = (e.target as HTMLElement).closest('button');
+		return !btn || btn.hasAttribute('data-cover');
 	}
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <article
 	class={cn(
-		'card-hover focus-ring relative h-full w-full cursor-pointer overflow-hidden border border-border-default',
+		'card-hover relative h-full w-full overflow-hidden border border-border-default',
+		onClick &&
+			'[&_button]:relative [&_button]:z-20 [&_a]:relative [&_a]:z-20',
 		className
 	)}
 	style={cardTransform ? `transform:${cardTransform};transition:transform var(--cst-motion-instant) var(--cst-ease-standard);` : ''}
-	role={onClick ? 'button' : undefined}
-	aria-label={onClick ? imageAlt || undefined : undefined}
-	tabindex={onClick ? 0 : undefined}
 	onpointerdown={(e) => {
 		if (pressedFromEvent(e)) pressed = true;
 	}}
 	onpointerup={() => (pressed = false)}
 	onpointerleave={() => (pressed = false)}
-	onclick={onClick}
-	onkeydown={(e) => {
-		// 仅卡片自身聚焦时响应；行内子按钮（点赞/收藏等）的键盘事件不得触发行导航
-		if (onClick && e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-			e.preventDefault();
-			onClick();
-		}
-	}}
 >
 	{#if imageSrc}
 		<!-- 加载占位：onload 前垫 accent 渐变（pointer-events-none 不拦行内按钮） -->
@@ -126,5 +119,17 @@
 		>
 			{@render footer()}
 		</div>
+	{/if}
+	{#if onClick}
+		<!-- 卡片点击覆盖层（最后绘制，z-10 高于图片/遮罩/z-[1] 占位层/footer 非按钮区）：
+		     真实 button 承载点击/键盘/aria，行内操作按钮经根上 auto-lift(z-20) 保持可点——
+		     根不再持 button 语义，消除 nested-interactive（button 嵌套交互子件） -->
+		<button
+			type="button"
+			class="absolute inset-0 z-10 cursor-pointer focus-ring"
+			data-cover
+			aria-label={imageAlt || undefined}
+			onclick={onClick}
+		></button>
 	{/if}
 </article>

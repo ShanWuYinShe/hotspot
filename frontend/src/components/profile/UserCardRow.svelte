@@ -40,7 +40,7 @@
 	tone={tone === 'card' ? 'card' : undefined}
 	class="flex items-center gap-3 {tone === 'card' ? 'p-3.5' : 'p-3'}"
 	{onClick}
-	{ariaLabel}
+	ariaLabel={ariaLabel ?? name}
 	{style}
 >
 	<Avatar ring src={avatar} name={name} size={tone === 'card' ? 48 : 44}>

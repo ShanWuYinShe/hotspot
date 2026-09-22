@@ -19,24 +19,28 @@ describe('NearbyImageCard', () => {
 		expect(container.querySelector('img')).toBeNull();
 	});
 
-	it('onClick 提供时 role=button 并点击触发', async () => {
+	it('onClick 提供时由覆盖按钮承载点击（根不再持 button 语义）', async () => {
 		const onClick = vi.fn();
 		const { container } = render(NearbyImageCard, {
 			props: { imageSrc: 'x', onClick }
 		});
 		const card = container.querySelector('article') as HTMLElement;
-		expect(card.getAttribute('role')).toBe('button');
-		await fireEvent.click(card);
+		expect(card.getAttribute('role')).toBeNull();
+		const cover = card.querySelector('[data-cover]') as HTMLElement;
+		expect(cover.tagName).toBe('BUTTON');
+		await fireEvent.click(cover);
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
 
-	it('键盘 Enter 触发 onClick', async () => {
+	it('覆盖按钮为原生 button（键盘 Enter/Space 原生激活）', async () => {
 		const onClick = vi.fn();
 		const { container } = render(NearbyImageCard, {
 			props: { imageSrc: 'x', onClick }
 		});
-		const card = container.querySelector('article') as HTMLElement;
-		await fireEvent.keyDown(card, { key: 'Enter' });
+		const cover = container.querySelector('[data-cover]') as HTMLElement;
+		expect(cover.tagName).toBe('BUTTON');
+		expect((cover as HTMLButtonElement).type).toBe('button');
+		await fireEvent.click(cover);
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
 });

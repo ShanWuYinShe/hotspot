@@ -36,7 +36,7 @@
 	} = $props();
 </script>
 
-<ListItem onClick={onRowClick} class={cn('px-4 py-3.5', className)}>
+<ListItem onClick={onRowClick} ariaLabel={title} class={cn('px-4 py-3.5', className)}>
 	<div class="flex items-center gap-3">
 		<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9">
 			{@render icon()}

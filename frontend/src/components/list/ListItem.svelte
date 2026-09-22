@@ -109,26 +109,23 @@
 	});
 </script>
 
-{#if inList}
-	<div role="listitem">
-		{@render row()}
-	</div>
-{:else}
-	{@render row()}
-{/if}
+{@render row()}
 
 {#snippet row()}
-	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+	<!-- 交互语义在覆盖按钮上；根容器按上下文取语义角色：列表内=listitem
+	     （aria-required-children），裸用=group（非静态，允许视觉反馈的指针事件） -->
 	<div
-		role={onClick ? 'button' : undefined}
+		role={inList ? 'listitem' : 'group'}
 		aria-label={ariaLabel}
-		aria-pressed={pressed ? 'true' : undefined}
 		data-active={pressed ? 'true' : undefined}
-		tabindex={onClick ? 0 : undefined}
 		class={cn(
-			'relative transition-[background-color,border-radius,box-shadow,opacity] duration-standard ease-standard focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default',
-			onClick && 'cursor-pointer',
+			'relative transition-[background-color,border-radius,box-shadow,opacity] duration-standard ease-standard',
 			isCard ? 'rounded-md border' : 'bg-surface-primary',
+			// 行内既有的操作按钮/链接/输入相对定位抬升到行覆盖按钮之上（axe
+			// nested-interactive：button 语义不得嵌套交互子件）；后写的覆盖按钮
+			// 与它们同层级时 DOM 顺序在先，不拦操作点击
+			onClick &&
+				'[&_button]:relative [&_button]:z-10 [&_a]:relative [&_a]:z-10 [&_input]:relative [&_input]:z-10 [&_select]:relative [&_select]:z-10',
 			className
 		)}
 		style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? 'var(--cst-motion-instant)' : 'var(--cst-motion-standard)'};`}
@@ -137,27 +134,27 @@
 			hovered = false;
 			pointerDown = false;
 		}}
-		onfocus={() => (focused = true)}
-		onblur={() => {
-			focused = false;
-			pointerDown = false;
-		}}
 		onpointerdown={() => onClick && (pointerDown = true)}
 		onpointerup={() => (pointerDown = false)}
-		onclick={onClick}
-		onkeydown={
-			onClick
-				? (e) => {
-						// 仅行自身聚焦时响应，避免行内嵌套按钮的键盘事件冒泡触发行导航
-						if (e.target !== e.currentTarget) return;
-						if (e.key === 'Enter' || e.key === ' ') {
-							e.preventDefault();
-							onClick();
-						}
-					}
-				: undefined
-		}
 	>
+		{#if onClick}
+			<!-- 行点击覆盖层：真实 button 承载点击/键盘（Enter+Space 原生）/aria，
+			     内容里的操作按钮经上方 auto-lift 类保持可点——根不再持 button 语义，
+			     消除 nested-interactive（button 嵌套交互子件） -->
+			<button
+				type="button"
+				class="absolute inset-0 z-10 cursor-pointer focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+				data-cover
+				aria-label={ariaLabel}
+				aria-pressed={pressed ? 'true' : undefined}
+				onclick={onClick}
+				onfocus={() => (focused = true)}
+				onblur={() => {
+					focused = false;
+					pointerDown = false;
+				}}
+			></button>
+		{/if}
 		{@render children()}
 	</div>
 {/snippet}
