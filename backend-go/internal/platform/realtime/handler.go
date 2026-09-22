@@ -743,7 +743,11 @@ func (h *Handler) subscriptionAllowed(kind, id string, presenceAllowed, groupAll
 	if kind == "group" && groupAllowed != nil {
 		return groupAllowed[id]
 	}
-	return h.isSubscriptionAllowed(context.Background(), "", kind, id)
+	// 兜底分支实际不可达：kind 上游已约束为 user/group，且两种批量 map 在
+	// batchMode 下恒覆盖全部 id。历史实现在此用空 viewer 调
+	// isSubscriptionAllowed——若真可达，「自己订阅自己」会被误判 denied。
+	// 显式 false：语义保守（拒绝），不再伪装成一次真实的鉴权查询。
+	return false
 }
 
 func (h *Handler) isSubscriptionAllowed(ctx context.Context, viewerUserID, kind, id string) bool {

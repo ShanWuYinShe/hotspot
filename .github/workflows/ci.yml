@@ -274,6 +274,14 @@ jobs:
         with:
           bun-version: '1.3.14'
 
+      # bun 全局安装缓存：以 bun.lock 为键，未命中才全量下载
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
       - name: bun install
         run: bun install --cwd frontend
       - name: type-check (svelte-check)
@@ -305,3 +313,29 @@ jobs:
         run: |
           go install github.com/zricethezav/gitleaks/v8@v8.30.1
           gitleaks git .
+
+  docker-build:
+    name: Docker Build Smoke (Prod Images)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      # 生产镜像可构建性机器门禁：此前 Dockerfile 只在打 tag 后的 Release 才
+      # 首次构建，构建参数/层次错误要到发布阶段才暴露。GHA 缓存层复用把增量
+      # 成本压到可接受范围。
+      - uses: docker/setup-buildx-action@v3
+      - name: build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend-go
+          file: backend-go/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

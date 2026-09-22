@@ -3,7 +3,7 @@
  * 严格遵循 api_spec_websocket.md 定义
  */
 
-import { UserInfo, GroupInfo, ClientType, MessageType, MessageMedia, MessageBrief, GroupAnnouncementItem, MomentSummary, UserSettings, FollowSource, GroupJoinMethod, Location } from './api';
+import { UserInfo, GroupInfo, ClientType, MessageType, MessageMedia, MessageBrief, GroupAnnouncementItem, MomentSummary, UserSettings, FollowSource, GroupJoinMethod, Location, RelativeLocation } from './api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF38;
@@ -695,22 +695,25 @@ export interface GroupAnnouncementCreatedEvent {
   payload: GroupAnnouncementCreatedPayload
 }
 
+// 对齐 spec（api_spec_websocket.md → GroupUpdatedPayload）：updated_fields 只含
+// 变更字段，且按推送范围过滤——is_searchable/max_members 为 @group-admin-only
+// 不经群广播下发，has_password 不在服务端 diff 集合内；location 为服务端
+// 下发的 RelativeLocation | null（null = 清除位置），非请求侧 Location。
 export interface GroupUpdatedFields {
   name?: string
   avatar_url?: string
   description?: string
   tags?: string[]
   join_method?: GroupJoinMethod
-  is_searchable?: boolean
-  max_members?: number
-  has_password?: boolean
-  location?: Location
+  requires_approval?: boolean
+  next_activity_at?: string
+  location?: RelativeLocation | null
 }
 
 export interface GroupUpdatedPayload {
   group_id: string
   updated_fields: GroupUpdatedFields
-  updated_by: string
+  updated_by: UserInfo
   updated_at: string
 }
 

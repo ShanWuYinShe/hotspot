@@ -92,12 +92,16 @@ const MAX_IDEMPOTENCY_RETRY_COUNT = 1;
 const MEDIA_URL_FIELDS: string[] = ['url', 'avatar_url', 'thumbnail_url', 'cover_url'];
 
 /**
- * 幂等键的 client_id 前缀。绑定到持久化 device_id 的前 8 位，使幂等上下文
- * 在同设备跨重启稳定（spec：Idempotency-Key 绑定 user_id + endpoint + key，
- * client_id 部分代表发起端身份）。device_id 尚未初始化时退化为进程内稳定值。
+ * 幂等键的 client_id 段。spec（api_spec_base.md「幂等性」）要求
+ * client_id = DeviceId；取持久化 device_id 全值，仅过滤非法字符并截断到
+ * 24 位——服务端按 ^[A-Za-z0-9_-]{32,64}$ 校验整键，超长会被当作无 key
+ * 静默跳过幂等（与 Web 端同策略）。device_id 尚未初始化时退化为进程内
+ * 稳定值。
  */
 function getIdempotencyClientId(): string {
-  return DeviceIdUtil.getDeviceId().split('-').join('').substring(0, 8);
+  const raw = DeviceIdUtil.getDeviceId();
+  const sanitized = raw.replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 24);
+  return sanitized.length > 0 ? sanitized : 'harmonyapp';
 }
 
 /**

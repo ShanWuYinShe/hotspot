@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"net"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -43,10 +45,19 @@ func TestSMTPSenderRejectsSMSChannel(t *testing.T) {
 }
 
 func TestSMTPSenderDialFailsFastOnUnreachableHost(t *testing.T) {
-	// 保留 IP 段（RFC 5737 TEST-NET-1）保证快速连接失败而非外呼
-	s := &smtpVerificationSender{host: "192.0.2.1", port: "587"}
+	// 先占用再释放一个本机端口：拨回该端口必然立即 ECONNREFUSED。
+	// 此前用 RFC 5737 TEST-NET-1（192.0.2.1），在 macOS/部分网络上会等满
+	// 系统 TCP 超时（实测 ~15s），拖慢整个包的测试。
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	port := l.Addr().(*net.TCPAddr).Port
+	_ = l.Close()
+
+	s := &smtpVerificationSender{host: "127.0.0.1", port: strconv.Itoa(port)}
 	if err := s.SendVerification(context.Background(), "a@b.com", ChannelEmail, "123456"); err == nil {
-		t.Fatal("expected dial error for unreachable SMTP host")
+		t.Fatal("expected dial error for closed SMTP port")
 	}
 }
 
