@@ -20,7 +20,7 @@
 | 原语 | 职责 |
 |---|---|
 | `list/ListContainer` | 列表容器，四形态：`bordered`（开放页面卡片）/ embedded（面板内集合）× `inset`（内缩圆角行，Telegram/macOS 语言）/ 默认（分隔线）。可 hover 表面用 `inset` |
-| `list/ListItem` | **唯一行交互原语**。hover/选中填充、12px 圆角、键盘、aria、`tone: joined/card`。行级卡片类禁止（eslint 强制） |
+| `list/ListItem` | **唯一行交互原语**。hover/选中填充、12px 圆角、键盘、aria、`tone: joined/card`。行级卡片类禁止（eslint 强制）。列表容器内自动包 `role=listitem`（ListContainer 经 context 声明；ListEnd/InlineLoading 同机制），裸用不变 |
 | 行包装组件 | `ChatListItem` / `home/ActivityRow` / `profile/UserCardRow` / `forms/SettingRow`——只做内容编排，交互全部委托 ListItem |
 
 ### 卡片（CSS 卡语言 + 一个内容卡原语）

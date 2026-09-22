@@ -1,6 +1,12 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { cn } from '@/lib/utils';
+	import { setInListContext } from './context';
+
+	// a11y 契约：role=list 的直接子元素必须为 listitem（axe aria-required-children）。
+	// 容器在此向子树声明列表上下文，ListItem/ListEnd/InlineLoading 在列表内
+	// 自动包裹 role=listitem，调用方零感知。
+	setInListContext();
 
 // 列表骨架组件（list）——列表只有两个公共组件：ListContainer（容器）+ ListItem（行）。
 // ListContainer 按所在区域二选一（对齐 Figma Make ListContainers 契约）：

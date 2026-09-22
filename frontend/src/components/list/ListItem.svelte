@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { cn } from '@/lib/utils';
+	import { isInListContext } from './context';
 
 	// 列表骨架组件（list）——列表只有两个公共组件：ListContainer（容器）+ ListItem（行）。
 	// ListItem 是唯一交互行组件（对齐 Figma Make InteractiveListRow 契约）：
@@ -69,8 +70,13 @@
 			);
 		}
 	});
+	// 列表容器内自动包一层 role=listitem（axe aria-required-children：list 的
+	// 直接子元素必须为 listitem，交互 button 语义保留在内层；listitem > button
+	// 为合法 ARIA 组合）。裸用（独立卡片行等）不包裹，DOM 与既有契约一致。
+	const inList = isInListContext();
 	// hover 或 focus 时行处于「激活表面」：叠加 hover-fill 背景
 	const surfaceActive = $derived(hovered || focused);
+
 	// 对齐 Figma Make：可点击时 tap → opacity-tap 档（0.1s），无 scale
 	const itemOpacity = $derived(onClick && pointerDown ? 'var(--cst-opacity-tap)' : 'var(--cst-opacity-full)');
 
@@ -103,45 +109,55 @@
 	});
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<div
-	role={onClick ? 'button' : undefined}
-	aria-label={ariaLabel}
-	aria-pressed={pressed ? 'true' : undefined}
-	data-active={pressed ? 'true' : undefined}
-	tabindex={onClick ? 0 : undefined}
-	class={cn(
-		'relative transition-[background-color,border-radius,box-shadow,opacity] duration-standard ease-standard focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default',
-		onClick && 'cursor-pointer',
-		isCard ? 'rounded-md border' : 'bg-surface-primary',
-		className
-	)}
-	style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? 'var(--cst-motion-instant)' : 'var(--cst-motion-standard)'};`}
-	onmouseenter={() => canHover && (hovered = true)}
-	onmouseleave={() => {
-		hovered = false;
-		pointerDown = false;
-	}}
-	onfocus={() => (focused = true)}
-	onblur={() => {
-		focused = false;
-		pointerDown = false;
-	}}
-	onpointerdown={() => onClick && (pointerDown = true)}
-	onpointerup={() => (pointerDown = false)}
-	onclick={onClick}
-	onkeydown={
-		onClick
-			? (e) => {
-					// 仅行自身聚焦时响应，避免行内嵌套按钮的键盘事件冒泡触发行导航
-					if (e.target !== e.currentTarget) return;
-					if (e.key === 'Enter' || e.key === ' ') {
-						e.preventDefault();
-						onClick();
+{#if inList}
+	<div role="listitem">
+		{@render row()}
+	</div>
+{:else}
+	{@render row()}
+{/if}
+
+{#snippet row()}
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+	<div
+		role={onClick ? 'button' : undefined}
+		aria-label={ariaLabel}
+		aria-pressed={pressed ? 'true' : undefined}
+		data-active={pressed ? 'true' : undefined}
+		tabindex={onClick ? 0 : undefined}
+		class={cn(
+			'relative transition-[background-color,border-radius,box-shadow,opacity] duration-standard ease-standard focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default',
+			onClick && 'cursor-pointer',
+			isCard ? 'rounded-md border' : 'bg-surface-primary',
+			className
+		)}
+		style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? 'var(--cst-motion-instant)' : 'var(--cst-motion-standard)'};`}
+		onmouseenter={() => canHover && (hovered = true)}
+		onmouseleave={() => {
+			hovered = false;
+			pointerDown = false;
+		}}
+		onfocus={() => (focused = true)}
+		onblur={() => {
+			focused = false;
+			pointerDown = false;
+		}}
+		onpointerdown={() => onClick && (pointerDown = true)}
+		onpointerup={() => (pointerDown = false)}
+		onclick={onClick}
+		onkeydown={
+			onClick
+				? (e) => {
+						// 仅行自身聚焦时响应，避免行内嵌套按钮的键盘事件冒泡触发行导航
+						if (e.target !== e.currentTarget) return;
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							onClick();
+						}
 					}
-				}
-			: undefined
-	}
->
-	{@render children()}
-</div>
+				: undefined
+		}
+	>
+		{@render children()}
+	</div>
+{/snippet}
