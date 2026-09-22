@@ -1,6 +1,6 @@
 import { MomentItem, MomentImage, UserInfo } from '../core/types/api';
 import { interactionActions } from '../core/state/InteractionActions';
-import { MomentSocialState, isMomentLikedByReactions, sumReactionCounts } from '../core/state/InteractionStateStore';
+import { interactionEventHub, MomentSocialState, isMomentLikedByReactions, sumReactionCounts } from '../core/state/InteractionStateStore';
 import { SystemAvatar } from './SystemAvatar';
 import { AppIcon } from './SystemIcon';
 import { SurfaceIconButton } from './SurfaceIconButton';
@@ -33,7 +33,10 @@ export struct MomentFeedCard {
   @Prop textFontSize: number = DesignConstants.FONT.SIZE.SM;
   onOpenDetail?: (moment: MomentItem) => void;
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
-  @StorageLink('interaction_moment_state') private momentStateMap: Record<string, MomentSocialState> = {};
+  // 仅持有本卡社交态：历史上整 Map @StorageLink，任意卡片点赞会让全列表
+  // 可见卡重算；改为事件总线按 moment_id 过滤的定向更新（快照冷启动播种见
+  // aboutToAppear，快照本体仍在 AppStorage 供跨页恢复）。
+  @State private socialState: MomentSocialState | undefined = undefined;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State private isPressed: boolean = false;
   @State private pressedActionKey: string = '';
@@ -52,6 +55,24 @@ export struct MomentFeedCard {
     const next: string[] = this.failedImageUrls.slice();
     next.push(url);
     this.failedImageUrls = next;
+  }
+
+  aboutToAppear(): void {
+    // 播种：组件创建晚于状态写入时（返回列表/翻页回看）从 store 快照恢复
+    this.socialState = interactionEventHub.getMomentState(this.moment.moment_id);
+    interactionEventHub.on('moment_updated', this.handleMomentStateUpdate);
+  }
+
+  aboutToDisappear(): void {
+    interactionEventHub.off('moment_updated', this.handleMomentStateUpdate);
+  }
+
+  // 原型方法引用保证 on/off 拿到同一函数实例
+  private handleMomentStateUpdate(payload: Object): void {
+    const state = payload as MomentSocialState;
+    if (state && state.moment_id === this.moment.moment_id) {
+      this.socialState = state;
+    }
   }
 
   private getPalette() {
@@ -117,7 +138,7 @@ export struct MomentFeedCard {
   }
 
   private getMomentState(): MomentSocialState | undefined {
-    return this.momentStateMap[this.moment.moment_id];
+    return this.socialState;
   }
 
   // 点赞态由 reactions[].reacted_by_me 推导（响应数据驱动，优先本地最新聚合，回退响应数据）

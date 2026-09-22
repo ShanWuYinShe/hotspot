@@ -4,6 +4,12 @@ import { MomentItem, UserItem, GroupItem, Relationship, Reaction } from '../type
 const DOMAIN_NUMBER: number = 0xFF32;
 const TAG: string = 'InteractionStateStore';
 
+// AppStorage 快照键：跨页恢复的单一事实源仍在 store，UI 组件不应整 Map
+// @StorageLink 订阅（任意单条更新会触发全部订阅组件重算）。UI 接入范式：
+// aboutToAppear 播种 + interactionEventHub.on 按实体 id 过滤的定向更新
+//（参照 MomentFeedCard / MomentWallCard / MomentDetailPage）。
+// 跟进项：interaction_user_state 仍有 5 处整 Map 订阅（HomePage 等），
+// 关注/拉黑低频故暂缓，改造范式与 moment 侧相同。
 const KEY_MOMENT_STATE: string = 'interaction_moment_state';
 const KEY_USER_STATE: string = 'interaction_user_state';
 const KEY_GROUP_STATE: string = 'interaction_group_state';

@@ -1,6 +1,7 @@
 import { MomentItem } from '../../../core/types/api';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import {
+  interactionEventHub,
   MomentSocialState,
   isMomentLikedByReactions,
   sumReactionCounts
@@ -28,7 +29,9 @@ export struct MomentWallCard {
   @Prop moment: MomentItem;
   onOpenDetail?: (moment: MomentItem) => void;
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
-  @StorageLink('interaction_moment_state') private momentStateMap: Record<string, MomentSocialState> = {};
+  // 同 MomentFeedCard：仅持有本卡社交态，事件总线按 moment_id 定向更新
+  //（整 Map 订阅会让任意卡片点赞引发全部墙卡重算）。
+  @State private socialState: MomentSocialState | undefined = undefined;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @State private likePopped: boolean = false;
 
@@ -37,7 +40,23 @@ export struct MomentWallCard {
   }
 
   private getMomentState(): MomentSocialState | undefined {
-    return this.momentStateMap[this.moment.moment_id];
+    return this.socialState;
+  }
+
+  aboutToAppear(): void {
+    this.socialState = interactionEventHub.getMomentState(this.moment.moment_id);
+    interactionEventHub.on('moment_updated', this.handleMomentStateUpdate);
+  }
+
+  aboutToDisappear(): void {
+    interactionEventHub.off('moment_updated', this.handleMomentStateUpdate);
+  }
+
+  private handleMomentStateUpdate(payload: Object): void {
+    const state = payload as MomentSocialState;
+    if (state && state.moment_id === this.moment.moment_id) {
+      this.socialState = state;
+    }
   }
 
   private isLikedByMe(): boolean {

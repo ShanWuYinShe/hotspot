@@ -9,7 +9,7 @@ import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { interactionActions } from '../../../core/state/InteractionActions';
-import { InteractionStateStore, MomentSocialState, isMomentLikedByReactions, sumReactionCounts } from '../../../core/state/InteractionStateStore';
+import { interactionEventHub, InteractionStateStore, MomentSocialState, isMomentLikedByReactions, sumReactionCounts } from '../../../core/state/InteractionStateStore';
 import { AppRouter, EditMomentRouteParam, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import {
@@ -66,7 +66,8 @@ export struct MomentDetailPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink('interaction_moment_state') momentStateMap: Record<string, MomentSocialState> = {};
+  // 同 MomentFeedCard：仅持有本页社交态，事件总线按 moment_id 定向更新
+  @State socialState: MomentSocialState | undefined = undefined;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
 
   private stateManager = GlobalStateManager.getInstance();
@@ -100,10 +101,20 @@ export struct MomentDetailPage {
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
+    interactionEventHub.on('moment_updated', this.handleMomentStateUpdate);
   }
 
   aboutToDisappear(): void {
     this.isDestroyed = true;
+    interactionEventHub.off('moment_updated', this.handleMomentStateUpdate);
+  }
+
+  // momentId 在 onReady 才赋值，过滤条件同时覆盖加载前/后两种时序
+  private handleMomentStateUpdate(payload: Object): void {
+    const state = payload as MomentSocialState;
+    if (state && (state.moment_id === this.momentId || (this.moment !== null && state.moment_id === this.moment.moment_id))) {
+      this.socialState = state;
+    }
   }
 
   private getCurrentThemePalette() {
@@ -153,6 +164,8 @@ export struct MomentDetailPage {
       if (response.code === 0 && response.data) {
         this.moment = response.data;
         InteractionStateStore.getInstance().patchMomentFromItem(response.data);
+        // 播种：详情页创建早于 onReady/加载完成，从 store 快照恢复本页社交态
+        this.socialState = interactionEventHub.getMomentState(response.data.moment_id);
         this.loadComments();
       } else {
         this.errorMessage = getErrorMessage(response, '加载动态详情失败');
@@ -426,12 +439,12 @@ export struct MomentDetailPage {
 
   private isMomentLiked(moment: MomentItem): boolean {
     // 点赞态由 reactions[].reacted_by_me 推导（响应数据驱动，优先本地最新聚合）
-    const state = this.momentStateMap[moment.moment_id];
+    const state = this.socialState;
     return isMomentLikedByReactions(state?.reactions ?? moment.reactions);
   }
 
   private isMomentFavorited(moment: MomentItem): boolean {
-    const state = this.momentStateMap[moment.moment_id];
+    const state = this.socialState;
     if (state) {
       return state.is_favorited;
     }
@@ -439,7 +452,7 @@ export struct MomentDetailPage {
   }
 
   private getMomentLikesCount(moment: MomentItem): number {
-    const state = this.momentStateMap[moment.moment_id];
+    const state = this.socialState;
     return state ? state.likes_count : sumReactionCounts(moment.reactions);
   }
 
