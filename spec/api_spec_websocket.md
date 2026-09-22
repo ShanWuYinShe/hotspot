@@ -146,7 +146,7 @@ WebSocket close code 受 RFC 6455 约束（范围 1000-4999），应用层错误
 | `1000` | 正常关闭（服务端主动优雅关闭） | 不自动重连 |
 | `1008` | Policy Violation（协议违规，如发送未鉴权事件） | 记录日志，不自动重连 |
 | `4001` | 认证失败/Token 失效/会话被驱逐（`SessionRevoked`）/账号封禁（推送 `AccountBanned` 后断开） | 刷新 token 或重新登录后重连（封禁场景登录将得到 `10201`） |
-| `4002` | 限流（连接级或订阅级超限） | 按 `Retry-After` 等待后重连 |
+| `4002` | 限流（连接级或订阅级超限） | 按 `Retry-After` 等待后重连（现状标注：当前服务端实现无 `4002` 发出点，限流经由应用层 `10500` 表达；保留为契约预留） |
 | `1011` | 服务端内部错误 | 指数退避重连 |
 
 > 说明：`Error` 事件（见下方）的 payload `code` 字段仍使用 `api_spec_errors.md` 的应用层错误码（2xxxx 段），用于客户端精确的错误处理与提示；它与 close code 是两个独立维度。
@@ -246,6 +246,10 @@ type PongPayload = Record<string, never>;  // 空对象
 interface WebSocketEvent<TType = string, TPayload = unknown> {
   type: TType;
   payload: TPayload;
+  // 服务端出站事件的全局单调序号（int64 跨端统一序列化为 string，客户端仅
+  // 透传与去重、不做数值运算）。仅 resume 路径的持久化事件携带（ConnectionEstablished
+  // 携带的是基线，见下方）；客户端发送事件无此字段。
+  server_seq?: string;
 }
 
 // 服务端推送事件：type 必须来自 ServerEventType；payload 为 unknown，具体由各事件接口约束
@@ -309,7 +313,7 @@ type ServerEventType =
   | "SystemAnnouncement" | "AccountBanned"
   // 协议控制
   | "Error" | "SubscribeAck"
-  | "SubscriptionsSnapshot"          // 订阅快照（GetSubscriptions 响应；SetSubscriptions 处理完成后亦推送）;
+  | "SubscriptionsSnapshot"          // 订阅快照（GetSubscriptions 响应；SetSubscriptions 处理完成后亦推送）
 
 // 客户端发送事件类型枚举（强制：WebSocketEvent.type 必须来自该枚举）
 type ClientEventType =

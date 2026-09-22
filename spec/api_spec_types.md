@@ -448,11 +448,13 @@ interface ReactionItem {
 }
 ```
 
+```typescript
 // 批量用户解析结果（users/batch_fetch 响应；跨节点共享——无查看者字段的纯 UserInfo 映射，
 // api 版与 public 版共用，见 api_spec_user.md / api_spec_public.md）
 interface UsersBatchResult {
   users: Record<string, UserInfo>;  // user_id → UserInfo；不存在的 user_id 不出现在 map 中
 }
+```
 
 ### 消息 (Message)
 
