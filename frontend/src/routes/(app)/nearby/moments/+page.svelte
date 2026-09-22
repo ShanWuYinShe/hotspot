@@ -65,6 +65,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			avatar: m.user?.avatar_url ?? '',
 			location: m.location?.location_name ?? '',
 			tag: m.tags?.[0] ?? '',
+			tags: m.tags ?? [],
 			content: m.description ?? '',
 			image: m.images?.[0]?.url ?? '',
 			likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
@@ -95,7 +96,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		void reloadKey;
 		const progressKey = feedProgressKey(referencePoint);
 		const saved = getMomentsProgress();
-		if (saved && (progressKey === '' || saved.key === progressKey)) {
+		// 无定位（progressKey 为空）时不用缓存：空 key 会命中异地旧列表造成串台。
+		if (saved && progressKey !== '' && saved.key === progressKey) {
 			apiFeedItems = saved.items;
 			nextCursor = saved.nextCursor;
 			visibleCount = saved.visibleCount;
@@ -281,7 +283,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	const interactions = createFeedInteractions(() => (isFollowing ? followingItems : apiFeedItems));
 
 	const filtered = $derived.by(() => {
-		let items = interactions.items.filter((i) => !activeTag || i.tag === activeTag);
+		// 标签按全量匹配：首标签之外同样可命中（此前只比 tags[0]）。
+		let items = interactions.items.filter((i) => !activeTag || i.tags.includes(activeTag));
 		// 分类 Tab 过滤：热门=按热度排序；周边=距离序（接口默认序）；关注=时间序（接口默认序）
 		if (activeTab === '热门') items = [...items].sort((a, b) => b.likes - a.likes);
 		return items;

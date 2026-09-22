@@ -17,7 +17,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
 	import { showToast } from '@/stores/toast.svelte';
-	import { requireAuth } from '@/stores/auth.svelte';
+	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import {
 		getPeopleProgress,
@@ -69,7 +69,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		void reloadKey;
 		const progressKey = peopleProgressKey(referencePoint);
 		const saved = getPeopleProgress();
-		if (saved && (progressKey === '' || saved.key === progressKey)) {
+		// 无定位（progressKey 为空）时不用缓存：空 key 会命中异地旧列表造成串台。
+		if (saved && progressKey !== '' && saved.key === progressKey) {
 			allUsers = saved.users;
 			visibleCount = saved.visibleCount;
 			loadError = null;
@@ -102,6 +103,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						avatar: u.user?.avatar_url ?? '',
 						isOnline: u.presence_status === 'online',
 						tag: u.tags?.[0] ?? '',
+						tags: u.tags ?? [],
 						mutual: u.social_context?.mutual_friends_count ?? 0,
 						note: u.bio ?? ''
 					}));
@@ -122,7 +124,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	// 过滤 + 排序（按昵称找人走全局搜索：header 右上角搜索入口）
 	const list = $derived.by(() => {
-		const next = allUsers.filter((user) => tagFilter === '全部' || user.tag === tagFilter);
+		// 自己不在附近的人里露面（对齐鸿蒙客户端；后端不过滤请求者）。
+		const selfId = auth.user?.user_id;
+		const next = allUsers.filter(
+			(user) =>
+				(!selfId || user.id !== selfId) &&
+				// 标签按全量匹配：首标签之外同样可命中（此前只比 tags[0]）。
+				(tagFilter === '全部' || user.tags.includes(tagFilter))
+		);
 		if (sort === '在线') return [...next].sort((a, b) => Number(b.isOnline) - Number(a.isOnline));
 		if (sort === '共同好友') return [...next].sort((a, b) => b.mutual - a.mutual);
 		return next;

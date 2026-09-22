@@ -13,7 +13,9 @@
 		distance: string;
 		avatar: string;
 		isOnline: boolean;
+		/** 展示用首标签（卡片 #tag）；筛选走全量 tags（首标签之外同样可命中） */
 		tag: string;
+		tags: string[];
 		mutual: number;
 		note: string;
 	}
@@ -54,11 +56,13 @@
 		</span>
 	{/snippet}
 
-	<!-- 右上：距离（单份，消除历史重复徽章 bug） -->
+	<!-- 右上：距离（单份，消除历史重复徽章 bug；无距离时整 pill 隐藏，免得剩个光杆图钉） -->
+	{#if user.distance}
 	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-overlay-strong" style="backdrop-filter:blur(var(--cst-blur-sm));">
 		<MapPin class="w-2.5 h-2.5 text-content-inverse" strokeWidth={1.5} />
 		<span class="text-content-inverse text-xxs">{user.distance}</span>
 	</div>
+	{/if}
 
 	{#snippet footer()}
 		<div class="px-3 pt-2.5 pb-2.5">

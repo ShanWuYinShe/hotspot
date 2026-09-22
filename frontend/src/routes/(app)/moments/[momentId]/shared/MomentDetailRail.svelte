@@ -19,6 +19,7 @@
 	} = $props();
 </script>
 
+{#if moment.user}
 <RailSection title="作者">
 	<RailUserRow avatar={moment.avatar} name={moment.user} sub={moment.location} onClick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}>
 		{#snippet trailing()}
@@ -35,12 +36,16 @@
 		{/snippet}
 	</RailUserRow>
 </RailSection>
+{/if}
 
+{#if moment.location}
 <RailSection title="相关位置">
 	<RailLocationMini name={moment.location} />
 </RailSection>
+{/if}
 
 <!-- 此刻附近（moments/fetch_nearby） -->
+{#if nearbyNow.length > 0}
 <RailSection title="此刻附近" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)}>
 	<div class="flex flex-col gap-3">
 		{#each nearbyNow as u (u.id)}
@@ -49,7 +54,10 @@
 	</div>
 </RailSection>
 
+{/if}
+
 <!-- 更多动态（moments/search） -->
+{#if relatedMoments.length > 0}
 <RailSection title="更多动态" action="发现" onAction={() => void goto(ROUTES.nearbyMoments)}>
 	<div class="flex flex-col gap-3">
 		{#each relatedMoments as p (p.id)}
@@ -57,3 +65,4 @@
 		{/each}
 	</div>
 </RailSection>
+{/if}

@@ -73,6 +73,7 @@
 			avatar: m.avatar || account.avatar || '',
 			location: m.location || (activeTab === 'posts' ? account.locationName : '') || '',
 			tag: m.tag || '',
+			tags: m.tag ? [m.tag] : [],
 			content: m.title || '',
 			image: m.img || '',
 			likes: m.likes || 0,

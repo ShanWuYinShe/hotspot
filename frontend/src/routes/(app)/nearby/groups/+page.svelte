@@ -86,7 +86,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	const isTablet = $derived(platform.platform === 'tablet');
 	const device = $derived(platform.platform);
 	const filtered = $derived(
-		groups.filter((group) => activeCategory === '全部' || group.category === activeCategory)
+		// 类目按全量标签匹配：首标签之外同样可命中（此前只比 tags[0]）。
+		groups.filter((group) => activeCategory === '全部' || group.tags.includes(activeCategory))
 	);
 	const visibleGroups = $derived(filtered.slice(0, visibleCount));
 	const featured = $derived(filtered[0]);

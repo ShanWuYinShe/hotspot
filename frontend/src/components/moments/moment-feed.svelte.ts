@@ -10,7 +10,9 @@ export interface FeedItem {
 	user: string;
 	avatar: string;
 	location: string;
+	/** 展示用首标签；筛选走全量 tags（首标签之外同样可命中） */
 	tag: string;
+	tags: string[];
 	content: string;
 	image: string;
 	likes: number;

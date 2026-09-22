@@ -474,10 +474,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	{/if}
 
 	{#snippet rail()}
+	<!-- 空数据不占卡：加载失败/无位置/无标签时整卡隐藏（此前失败态与无标签用户都留空框） -->
+	{#if user.location}
 	<RailSection title="所在位置">
 		<RailLocationMini name={user.location} />
 	</RailSection>
+	{/if}
 
+	{#if user.tags.length > 0}
 	<RailSection title="兴趣标签">
 		<div class="flex gap-2 flex-wrap">
 			{#each user.tags as t (t)}
@@ -487,6 +491,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{/each}
 		</div>
 	</RailSection>
+	{/if}
 
 	{#if mutualFriends.length > 0}
 		<RailSection title="共同好友">
