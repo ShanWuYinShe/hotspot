@@ -235,8 +235,8 @@ rollback() {
 # 中止——带着不可写卷滚动更新必然触发版本校验失败与回滚，不如提前拦下。
 FRONTEND_VOLUME="${DEPLOY_FRONTEND_VOLUME:-hotspot_frontend_build}"
 echo "==> 迁移 frontend 静态卷属主为 100:101（幂等）…"
-ssh "$SERVER" "docker run --rm --entrypoint sh -v $FRONTEND_VOLUME:/build hotspot-backend:$TARGET -c 'chown -R 100:101 /build'" \
-  || { echo "!! frontend 静态卷（$FRONTEND_VOLUME）属主迁移失败，中止部署"; exit 1; }
+ssh "$SERVER" "docker run --rm --user 0:0 --entrypoint sh -v $FRONTEND_VOLUME:/build hotspot-backend:$TARGET -c 'chown -R 100:101 /build'" \
+  || { echo "!! frontend 静态卷（${FRONTEND_VOLUME}）属主迁移失败，中止部署"; exit 1; }
 
 echo "==> 滚动更新（IMAGE_TAG=${TARGET}；frontend 容器启动时自刷新静态卷）…"
 ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' $COMPOSE up -d && docker restart $NGINX_CONTAINER >/dev/null && echo 'nginx restarted'"
@@ -253,7 +253,7 @@ for _ in $(seq 1 30); do
     break
   fi
 done
-[ -n "$backend_ok" ] || rollback "150s 内后端版本校验未通过（检查 docker logs $BACKEND_CONTAINER）"
+[ -n "$backend_ok" ] || rollback "150s 内后端版本校验未通过（检查 docker logs ${BACKEND_CONTAINER}）"
 
 frontend_ok=""
 for i in $(seq 1 12); do
@@ -270,4 +270,4 @@ done
 [ -n "$frontend_ok" ] || rollback "前端静态卷版本校验未通过: ${FE:-<空>}"
 
 rm -f "$TARBALL"
-echo "🎉 部署完成: ${TARGET} → ${SERVER}:${REMOTE_DIR}（回滚：IMAGE_TAG=<旧版本> ${COMPOSE} up -d && docker restart $NGINX_CONTAINER）"
+echo "🎉 部署完成: ${TARGET} → ${SERVER}:${REMOTE_DIR}（回滚：IMAGE_TAG=<旧版本> ${COMPOSE} up -d && docker restart ${NGINX_CONTAINER}）"
