@@ -31,6 +31,7 @@ import { MediaUrlUtil } from '../utils/MediaUrlUtil';
 import { AuthAccountManager } from '../state/AuthAccountManager';
 import { GlobalStateManager } from '../state/GlobalStateManager';
 import { MockInterceptor } from '../mock/MockInterceptor';
+import { ApiError } from './ApiError';
 
 /**
  * Spec MUST 幂等端点列表
@@ -89,6 +90,40 @@ const TOKEN_OPTIONAL_ENDPOINTS: string[] = [
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'HttpUtil';
 const MAX_IDEMPOTENCY_RETRY_COUNT = 1;
+
+// ── 请求管线基础设施 ────────────────────────────────────────────────
+
+/** 单次尝试的三种结局：成功（result 可用）/ 终态失败（failure 待抛）/ 重试。 */
+enum AttemptDirective {
+  DONE,
+  FAIL,
+  RETRY
+}
+
+/**
+ * 一次请求的可变上下文：跨重试循环各阶段共享。原实现把这些状态用
+ * 8 个方法参数 + 3 个递归计数器传递，分支一多便不可读；集中后每段
+ * 处理器只改写自己负责的字段。
+ */
+class RequestContext {
+  url: string = '';
+  method: http.RequestMethod = http.RequestMethod.POST;
+  data: Object | undefined = undefined;
+  retried: boolean = false;
+  forcedIdempotencyKey: string = '';
+  idempotencyRetryCount: number = 0;
+  omitAuthHeader: boolean = false;
+  rateLimitRetryCount: number = 0;
+
+  // 单次尝试内的派生状态（performAttempt 写入，重试判定读取）
+  hasAuthHeader: boolean = false;
+  isMustIdempotent: boolean = false;
+  idempotencyKey: string = '';
+
+  // 终态载荷：DONE 时为成功响应，FAIL 时为待抛 ApiError
+  result?: Object;
+  failure?: ApiError;
+}
 const MEDIA_URL_FIELDS: string[] = ['url', 'avatar_url', 'thumbnail_url', 'cover_url'];
 
 /**
@@ -410,6 +445,11 @@ export class HttpUtil {
    * Token 刷新流程（双层机制）：
    * 1. 主动刷新：请求发出前检查 access_token_expires_at，即将过期则提前刷新
    * 2. 被动刷新：收到 10100 时自动刷新 token 并重试一次
+   *
+   * 实现（管线化）：单次尝试封装在 performAttempt，各重试分支在改写
+   * RequestContext 后由 request() 的有界循环重新进入——取代历史上
+   * 8 参数 + 3 个递归计数器的自我递归。重试判定的先后顺序与原实现
+   * 严格一致（封禁 → 限流 → 认证刷新 → 匿名降级 → 幂等重试 → 业务错误）。
    */
   static async request<TResponse, TRequest>(
     url: string,
@@ -422,6 +462,7 @@ export class HttpUtil {
     rateLimitRetryCount: number = 0
   ): Promise<TResponse> {
     // DEV mock interceptor — returns canned ApiResponse when enabled.
+    // mock 命中不进入任何重试/降级逻辑（与原实现一致）。
     if (MockInterceptor.isEnabled()) {
       const canned = MockInterceptor.match(url);
       if (canned) {
@@ -430,43 +471,81 @@ export class HttpUtil {
       }
     }
 
+    const ctx = new RequestContext();
+    ctx.url = url;
+    ctx.method = method;
+    ctx.data = data as Object;
+    ctx.retried = retried;
+    ctx.forcedIdempotencyKey = forcedIdempotencyKey;
+    ctx.idempotencyRetryCount = idempotencyRetryCount;
+    ctx.omitAuthHeader = omitAuthHeader;
+    ctx.rateLimitRetryCount = rateLimitRetryCount;
+
+    try {
+      // 有界循环：每个重试分支都有独立计数上限（retried/rl<1/idem<1），
+      // 不存在无界重入。
+      while (true) {
+        const directive = await HttpUtil.performAttempt(ctx);
+        if (directive === AttemptDirective.DONE) {
+          return ctx.result as TResponse;
+        }
+        if (directive === AttemptDirective.FAIL) {
+          throw ctx.failure!;
+        }
+        // RETRY：ctx 已被对应分支改写（换端点/换键/退避/计数）。
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      if (errorMsg.includes('Network') || errorMsg.includes('timeout') || errorMsg.includes('connect')) {
+        const baseUrl2 = await HttpUtil.getBaseUrl();
+        hilog.error(DOMAIN_NUMBER, TAG, `网络连接问题，请检查服务器地址: ${baseUrl2}`);
+      }
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(errorMsg);
+    }
+  }
+
+  /**
+   * 单次尝试：发送请求并按业务码判定 DONE / FAIL / RETRY。
+   * RETRY 时本函数已完成对应的上下文改写与退避等待。
+   */
+  private static async performAttempt(ctx: RequestContext): Promise<AttemptDirective> {
     // 匿名请求路由（spec api_spec_base.md 节点身份语义）：/api/v1 必须携带有效
     // token，未登录时对「公开可浏览」端点直接改走 /public/v1 对偶端点，而不是
-    // 打 /api/v1 稳定吃 10100。此前未登录状态下首页/搜索/附近的请求全部失败。
-    let effectiveUrl = url;
-    if (!omitAuthHeader && !(await HttpUtil.getToken())) {
-      const alias = PUBLIC_ENDPOINT_ALIASES.get(url);
+    // 打 /api/v1 稳定吃 10100。每次尝试顶部重估（换键/换端点重试后依然成立）。
+    if (!ctx.omitAuthHeader && !(await HttpUtil.getToken())) {
+      const alias = PUBLIC_ENDPOINT_ALIASES.get(ctx.url);
       if (alias) {
-        effectiveUrl = alias;
-        hilog.info(DOMAIN_NUMBER, TAG, `未登录，匿名端点改走 public 节点: ${url} -> ${alias}`);
+        hilog.info(DOMAIN_NUMBER, TAG, `未登录，匿名端点改走 public 节点: ${ctx.url} -> ${alias}`);
+        ctx.url = alias;
       }
     }
 
     const baseUrl = await HttpUtil.getBaseUrl();
-    const fullUrl = `${baseUrl}${effectiveUrl}`;
+    const fullUrl = `${baseUrl}${ctx.url}`;
     const httpRequest = http.createHttp();
     const startTime = Date.now();
-
-    hilog.info(DOMAIN_NUMBER, TAG, `HTTP请求: ${method} ${fullUrl}`);
+    hilog.info(DOMAIN_NUMBER, TAG, `HTTP请求: ${ctx.method} ${fullUrl}`);
 
     try {
-      const tokenForRetryCheck = omitAuthHeader ? '' : await HttpUtil.getToken();
-      const hasAuthHeader = !omitAuthHeader && !!tokenForRetryCheck;
+      ctx.hasAuthHeader = !ctx.omitAuthHeader && !!(await HttpUtil.getToken());
 
       // 主动刷新：如果 token 即将过期，先刷新再发请求
-      if (hasAuthHeader && !retried) {
+      if (ctx.hasAuthHeader && !ctx.retried) {
         await HttpUtil.proactiveRefreshIfNeeded();
       }
 
-      const isMustIdempotentEndpoint = MUST_IDEMPOTENT_ENDPOINTS.includes(url);
-      const currentIdempotencyKey = isMustIdempotentEndpoint
-        ? (forcedIdempotencyKey || generateIdempotencyKey())
+      ctx.isMustIdempotent = MUST_IDEMPOTENT_ENDPOINTS.includes(ctx.url);
+      ctx.idempotencyKey = ctx.isMustIdempotent
+        ? (ctx.forcedIdempotencyKey || generateIdempotencyKey())
         : '';
-      const headers = await HttpUtil.buildHeaders(url, currentIdempotencyKey, omitAuthHeader);
+      const headers = await HttpUtil.buildHeaders(ctx.url, ctx.idempotencyKey, ctx.omitAuthHeader);
       const requestOptions: http.HttpRequestOptions = {
-        method,
+        method: ctx.method,
         header: headers,
-        extraData: data ? JSON.stringify(data) : undefined,
+        extraData: ctx.data !== undefined ? JSON.stringify(ctx.data) : undefined,
         connectTimeout: 30000,
         readTimeout: 30000
       };
@@ -482,13 +561,12 @@ export class HttpUtil {
       let result: Object;
       try {
         result = JSON.parse(response.result as string);
-        const resultCode = (result as Record<string, Object>)?.code;
-        hilog.debug(DOMAIN_NUMBER, TAG, `响应 code=${resultCode ?? 'unknown'}`);
+        const resultCodeForLog = (result as Record<string, Object>)?.code;
+        hilog.debug(DOMAIN_NUMBER, TAG, `响应 code=${resultCodeForLog ?? 'unknown'}`);
       } catch (parseError) {
         throw new Error(`JSON解析失败: ${parseError}`);
       }
 
-      // 业务成功与否仅以 ApiResponse.code 判定（后端统一返回 HTTP 200）
       if (!isApiResponse(result)) {
         throw new Error('响应格式不符合 ApiResponse 约定');
       }
@@ -496,43 +574,38 @@ export class HttpUtil {
       const origin = HttpUtil.extractOrigin(baseUrl);
       HttpUtil.resolveRelativeMediaUrls(result, origin);
 
-      const resultRecord = result as Record<string, Object>;
-      const resultCode = resultRecord.code as number;
+      const resultCode = (result as Record<string, Object>).code as number;
 
-      // 10201：账号被封禁 -> 强制登出 + 封禁页
+      // ── 封禁：强制登出 + 封禁页（终态）──────────────────────────
       if (isAccountBannedCode(resultCode)) {
         await HttpUtil.clearAuthData();
         const param = new LoginRouteParam();
         param.reason = 'banned';
-        param.action = (resultRecord.message as string) || '账号已被封禁';
+        param.action = ((result as Record<string, Object>).message as string) || '账号已被封禁';
         AppRouter.clear();
         AppRouter.push('LoginPage', param);
-        const err = new Error('账号已被封禁');
-        (err as Object as Record<string, Object>).code = resultCode;
-        throw err;
+        ctx.failure = new ApiError('账号已被封禁', resultCode);
+        return AttemptDirective.FAIL;
       }
 
-      // 10500：限流 -> 按 Retry-After 等待后重试
-      if (isRateLimitCode(resultCode) && rateLimitRetryCount < 1) {
+      // ── 限流：按 Retry-After 等待后重试（至多一次）──────────────
+      if (isRateLimitCode(resultCode) && ctx.rateLimitRetryCount < 1) {
         const retryAfterHeader = (response.header as Record<string, string>)?.['Retry-After'] ?? '5';
         const retryAfterSec = parseInt(retryAfterHeader) || 5;
         hilog.warn(DOMAIN_NUMBER, TAG, `收到 10500 限流，${retryAfterSec}s 后重试`);
         await new Promise<void>((resolve) => setTimeout(resolve, retryAfterSec * 1000));
-        return await HttpUtil.request<TResponse, TRequest>(
-          url, method, data, retried, forcedIdempotencyKey,
-          idempotencyRetryCount, omitAuthHeader, rateLimitRetryCount + 1
-        );
+        ctx.rateLimitRetryCount += 1;
+        return AttemptDirective.RETRY;
       }
 
-      // 10100：认证失败 -> 首次尝试时自动刷新 token 并重试
-      if (!retried && hasAuthHeader && isAuthErrorCode(resultCode)) {
+      // ── 认证失败：刷新 token 后重试（至多一次，键保持 sticky）────
+      if (!ctx.retried && ctx.hasAuthHeader && isAuthErrorCode(resultCode)) {
         hilog.info(DOMAIN_NUMBER, TAG, '收到 10100 认证失败，尝试刷新 token');
         const refreshed = await HttpUtil.ensureRefreshToken();
         if (refreshed) {
-          return await HttpUtil.request<TResponse, TRequest>(
-            url, method, data, true, currentIdempotencyKey,
-            idempotencyRetryCount, omitAuthHeader, rateLimitRetryCount
-          );
+          ctx.retried = true;
+          ctx.forcedIdempotencyKey = ctx.idempotencyKey;
+          return AttemptDirective.RETRY;
         }
         hilog.warn(DOMAIN_NUMBER, TAG, '令牌刷新失败，已强制登出');
         await HttpUtil.clearAuthData();
@@ -540,105 +613,79 @@ export class HttpUtil {
         param.reason = 'expired';
         AppRouter.clear();
         AppRouter.push('LoginPage', param);
+        // 不 return：落入下方匿名降级分支（原实现即如此——刷新失败的
+        // 公开端点还有一次匿名重试机会）
       }
 
-      // 认证失败且本次携带了 Authorization 的公开端点：匿名降级重试必须换到
-      // /public/v1 对偶节点——重打 /api/v1（仅去掉 Authorization）仍会 10100，
-      // 属于无效重试。无对偶的 token_optional 端点保留原同节点匿名重试。
-      if (isAuthErrorCode(resultCode) && hasAuthHeader && !omitAuthHeader) {
-        const alias = PUBLIC_ENDPOINT_ALIASES.get(url);
+      // ── 认证失败：匿名降级（公开对偶节点 / token_optional 同节点）──
+      if (isAuthErrorCode(resultCode) && ctx.hasAuthHeader && !ctx.omitAuthHeader) {
+        const alias = PUBLIC_ENDPOINT_ALIASES.get(ctx.url);
         if (alias) {
-          hilog.info(DOMAIN_NUMBER, TAG, `认证失败，公开端点降级为匿名 public 节点重试: ${url} -> ${alias}`);
-          return await HttpUtil.request<TResponse, TRequest>(
-            alias, method, data, true, currentIdempotencyKey,
-            idempotencyRetryCount, true, rateLimitRetryCount
-          );
+          hilog.info(DOMAIN_NUMBER, TAG, `认证失败，公开端点降级为匿名 public 节点重试: ${ctx.url} -> ${alias}`);
+          ctx.url = alias;
+          ctx.omitAuthHeader = true;
+          ctx.retried = true;
+          ctx.forcedIdempotencyKey = ctx.idempotencyKey;
+          return AttemptDirective.RETRY;
+        }
+        if (isTokenOptionalEndpoint(ctx.url)) {
+          hilog.info(DOMAIN_NUMBER, TAG, `token_optional 端点认证失败，匿名降级重试: ${ctx.url}`);
+          ctx.omitAuthHeader = true;
+          ctx.retried = true;
+          ctx.forcedIdempotencyKey = ctx.idempotencyKey;
+          return AttemptDirective.RETRY;
         }
       }
-      if (isAuthErrorCode(resultCode) && hasAuthHeader && isTokenOptionalEndpoint(url) && !omitAuthHeader) {
-        hilog.info(DOMAIN_NUMBER, TAG, `token_optional 端点认证失败，匿名降级重试: ${url}`);
-        return await HttpUtil.request<TResponse, TRequest>(
-          url, method, data, true, currentIdempotencyKey,
-          idempotencyRetryCount, true, rateLimitRetryCount
-        );
-      }
 
-      // 幂等错误自动重试（仅 MUST 幂等端点）
-      if (isMustIdempotentEndpoint && idempotencyRetryCount < MAX_IDEMPOTENCY_RETRY_COUNT) {
+      // ── 幂等错误自动重试（仅 MUST 幂等端点，至多 MAX 次）─────────
+      if (ctx.isMustIdempotent && ctx.idempotencyRetryCount < MAX_IDEMPOTENCY_RETRY_COUNT) {
         if (resultCode === ErrorCode.IDEMPOTENCY_IN_FLIGHT) {
           await new Promise<void>((resolve) => setTimeout(resolve, 1200));
-          return await HttpUtil.request<TResponse, TRequest>(
-            url, method, data, retried, currentIdempotencyKey,
-            idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
-          );
+          ctx.idempotencyRetryCount += 1;
+          ctx.forcedIdempotencyKey = ctx.idempotencyKey;
+          return AttemptDirective.RETRY;
         }
-        // 22000 CONFLICT：同一个幂等键被复用于不同请求体 → 必须换新键重试
         if (resultCode === ErrorCode.IDEMPOTENCY_KEY_CONFLICT) {
           hilog.warn(DOMAIN_NUMBER, TAG, `收到 ${ErrorCode.IDEMPOTENCY_KEY_CONFLICT} 幂等键冲突，换新键重试`);
-          return await HttpUtil.request<TResponse, TRequest>(
-            url, method, data, retried, generateIdempotencyKey(),
-            idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
-          );
+          ctx.idempotencyRetryCount += 1;
+          ctx.forcedIdempotencyKey = generateIdempotencyKey();
+          return AttemptDirective.RETRY;
         }
-        // 22001 CACHE_EXPIRED：缓存响应过期且无法恢复 → 生成新键重试（spec: api_spec_base.md「幂等性」）
         if (resultCode === ErrorCode.IDEMPOTENCY_CACHE_EXPIRED) {
           hilog.warn(DOMAIN_NUMBER, TAG, `收到 ${ErrorCode.IDEMPOTENCY_CACHE_EXPIRED} 幂等缓存过期，换新键重试`);
-          return await HttpUtil.request<TResponse, TRequest>(
-            url, method, data, retried, generateIdempotencyKey(),
-            idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
-          );
+          ctx.idempotencyRetryCount += 1;
+          ctx.forcedIdempotencyKey = generateIdempotencyKey();
+          return AttemptDirective.RETRY;
         }
       }
 
-      // 其他业务错误
+      // ── 业务错误：类型化 ApiError（终态）────────────────────────
       if (resultCode !== 0) {
         const snapshot = extractApiErrorSnapshot(result, response.responseCode);
         const userMessage = guessUserMessageFromSnapshot(snapshot, '操作失败');
         hilog.error(DOMAIN_NUMBER, TAG, `业务错误 [${snapshot.code}]: ${userMessage}`);
 
-        const err = new Error(userMessage);
-        const errRecord = err as Object as Record<string, Object>;
-        if (snapshot.code !== undefined) {
-          errRecord.code = snapshot.code;
-        }
-        if (snapshot.status !== undefined) {
-          errRecord.status = snapshot.status;
-        }
-        // 附带响应 data（10200 权限失败时 data = { forbidden_reason: ForbiddenReason }，见 spec api_spec_errors.md），供调用方读取
-        const responseData = resultRecord.data;
-        if (responseData !== undefined && responseData !== null) {
-          errRecord.data = responseData;
-          const dataRecord = responseData as Record<string, Object>;
-          const dataReason = dataRecord.forbidden_reason;
+        let responseData: Object | undefined = undefined;
+        let forbiddenReason: string | undefined = undefined;
+        const rawData = (result as Record<string, Object>).data;
+        if (rawData !== undefined && rawData !== null) {
+          responseData = rawData;
+          const dataReason = (rawData as Record<string, Object>).forbidden_reason;
           if (typeof dataReason === 'string' && dataReason.length > 0) {
-            errRecord.forbidden_reason = dataReason;
+            forbiddenReason = dataReason;
           }
         }
-        throw err;
+        ctx.failure = new ApiError(userMessage, snapshot.code, snapshot.status, responseData, forbiddenReason);
+        return AttemptDirective.FAIL;
       }
 
-      hilog.info(DOMAIN_NUMBER, TAG, `请求成功: ${method} ${url} (${responseTime}ms)`);
-      return result as TResponse;
-
-    } catch (error) {
-      const responseTime = Date.now() - startTime;
-      const errorMsg = error instanceof Error ? error.message : '未知错误';
-      hilog.error(DOMAIN_NUMBER, TAG, `请求失败: ${method} ${url} (${responseTime}ms) ${errorMsg}`);
-
-      if (errorMsg.includes('Network') || errorMsg.includes('timeout') || errorMsg.includes('connect')) {
-        const baseUrl2 = await HttpUtil.getBaseUrl();
-        hilog.error(DOMAIN_NUMBER, TAG, `网络连接问题，请检查服务器地址: ${baseUrl2}`);
-      }
-
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error(errorMsg);
+      hilog.info(DOMAIN_NUMBER, TAG, `请求成功: ${ctx.method} ${ctx.url} (${responseTime}ms)`);
+      ctx.result = result;
+      return AttemptDirective.DONE;
     } finally {
       httpRequest.destroy();
     }
   }
-
   // POST 方法 - 支持强类型请求体
   static post<TResponse, TRequest>(url: string, data: TRequest): Promise<TResponse> {
     return HttpUtil.request<TResponse, TRequest>(url, http.RequestMethod.POST, data);

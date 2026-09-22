@@ -9,6 +9,7 @@ import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/Global
 import { ApiClient } from '../../../core/api/ApiClient';
 import { formatDateLabel } from '../../../core/utils/FormatUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
+import { ApiError } from '../../../core/network/ApiError';
 import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
 import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, FetchPrivateMessagesRequest, FetchGroupMessagesRequest, MarkPrivateReadRequest, MarkGroupReadRequest, OpenUserDoorRequest, CreateReportRequest, MediaCategory } from '../../../core/types/api';
 import type {
@@ -996,8 +997,7 @@ export struct ChatPage {
       this.lastSendSignature = '';
       this.lastSendAtMs = 0;
       // 契约 errors.md：send 返回 10200 时 data = { forbidden_reason: ForbiddenReason }（blocked_by_user/privacy_setting/stranger_quota_exceeded）
-      const errRecord = error as Object as Record<string, Object>;
-      const reason = typeof errRecord.forbidden_reason === 'string' ? errRecord.forbidden_reason : '';
+      const reason = ApiError.forbiddenReasonOf(error as Object);
       let failMessage = '发送失败';
       if (reason === 'blocked_by_user') {
         failMessage = '你已被对方拉黑';
