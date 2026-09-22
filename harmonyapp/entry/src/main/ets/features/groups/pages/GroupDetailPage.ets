@@ -11,6 +11,9 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { GroupMemberRow } from '../components/GroupMemberRow';
 import { GroupApplicationRow } from '../components/GroupApplicationRow';
+import { AnnouncementEditorSheet } from '../components/AnnouncementEditorSheet';
+import { GroupMemberListSheet } from '../components/GroupMemberListSheet';
+import { GroupApplicationListSheet } from '../components/GroupApplicationListSheet';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -76,8 +79,6 @@ const TAG: string = 'GroupDetailPage';
 const GROUP_NAME_MAX: number = 50;
 const GROUP_DESCRIPTION_MAX: number = 500;
 // 群公告字数上限（对齐前端 GroupAnnouncementDialog：标题 50 / 内容 1000）
-const ANNOUNCEMENT_TITLE_MAX: number = 50;
-const ANNOUNCEMENT_CONTENT_MAX: number = 1000;
 // 禁言时长档（分钟）
 const MUTE_DURATION_MINUTES: number = 30;
 
@@ -2391,110 +2392,17 @@ export struct GroupDetailPage {
   // ==================== 群公告编辑面板（创建/编辑共用，对齐前端 GroupAnnouncementDialog） ====================
   @Builder
   private buildAnnouncementSheet() {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      Row({ space: DesignConstants.SPACING.SM }) {
-        Text(this.announcementEditing === null ? '发布群公告' : '编辑群公告')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-
-        SystemButton({
-          label: '取消',
-          variant: 'surface',
-          buttonSize: 'large',
-          shadowed: true,
-          disabled: this.isSavingAnnouncement,
-          onPress: () => { this.closeAnnouncementSheet(); }
-        })
-
-        SystemButton({
-          label: this.announcementEditing === null ? '发布' : '保存',
-          variant: 'primary',
-          buttonSize: 'large',
-          loading: this.isSavingAnnouncement,
-          onPress: () => { this.submitAnnouncement(); }
-        })
-      }
-      .width('100%')
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
-
-      Scroll() {
-        Column({ space: DesignConstants.SPACING.LG }) {
-          Column({ space: DesignConstants.SPACING.SM }) {
-            SystemInput({
-              value: this.announcementTitle,
-              placeholder: '公告标题',
-              fontSize: DesignConstants.FONT.SIZE.MD,
-              inputHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
-              maxLength: ANNOUNCEMENT_TITLE_MAX,
-              onChange: (value: string) => { this.announcementTitle = value; }
-            })
-              .backgroundColor(this.getSurfaceSubtle())
-              .shadow(this.getCurrentThemePalette().controlShadow)
-              .borderRadius(DesignConstants.RADIUS.MD)
-              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-              .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
-
-            Text(`${this.announcementTitle.trim().length}/${ANNOUNCEMENT_TITLE_MAX}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textTertiary)
-              .width('100%')
-              .textAlign(TextAlign.End)
-          }
-          .width('100%')
-
-          Column({ space: DesignConstants.SPACING.SM }) {
-            SystemTextArea({
-              value: this.announcementContent,
-              placeholder: '公告内容…',
-              minHeight: DesignConstants.COMPONENT.PLACEHOLDER_AREA_HEIGHT,
-              maxLength: ANNOUNCEMENT_CONTENT_MAX,
-              fontSize: DesignConstants.FONT.SIZE.MD,
-              onChange: (value: string) => { this.announcementContent = value; }
-            })
-
-            Text(`${this.announcementContent.trim().length}/${ANNOUNCEMENT_CONTENT_MAX}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textTertiary)
-              .width('100%')
-              .textAlign(TextAlign.End)
-          }
-          .width('100%')
-
-          // 置顶开关（对齐前端 isPinned 置顶 pill）
-          Row({ space: DesignConstants.SPACING.MD }) {
-            Text('置顶这条公告')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor(this.getCurrentThemePalette().textPrimary)
-              .layoutWeight(1)
-            SystemToggle({
-              isOn: this.announcementPinned,
-              onToggle: (next: boolean) => { this.announcementPinned = next; }
-            })
-          }
-          .width('100%')
-          .padding(DesignConstants.SPACING.LG)
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-        }
-        .width('100%')
-        .padding({
-          left: DesignConstants.SPACING.LG,
-          right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.SM,
-          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
-        })
-      }
-      .width('100%')
-      .layoutWeight(1)
-      .scrollBar(BarState.Off)
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    // 已提取为子域组件（状态经 @Link 双向同步；保存/取消回调交回页面）
+    AnnouncementEditorSheet({
+      editing: this.announcementEditing,
+      title: this.announcementTitle,
+      content: this.announcementContent,
+      pinned: this.announcementPinned,
+      saving: this.isSavingAnnouncement,
+      safeAreaBottom: this.safeAreaBottom,
+      onCancel: () => { this.closeAnnouncementSheet(); },
+      onSubmit: () => { this.submitAnnouncement(); }
+    })
   }
 
   // ==================== 邀请成员面板（搜索 + 多选 + 批量邀请，对齐前端 InviteMembersSheet） ====================
@@ -2687,159 +2595,37 @@ export struct GroupDetailPage {
 
   @Builder
   buildMemberListSheet() {
-    Column() {
-      // 标题
-      Row() {
-        Text('群组成员')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-
-        Text(`${this.members.length} 人`)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-      }
-      .width('100%')
-      .padding(DesignConstants.SPACING.LG)
-
-      // 成员列表
-      if (this.isLoadingMembers && this.members.length === 0) {
-        SystemLoadingView({ message: '加载成员列表中…' }).layoutWeight(1)
-      } else if (this.members.length === 0 && this.membersErrorMessage) {
-        EmptyState({
-          icon: AppIcon.WARNING,
-          title: this.membersErrorMessage,
-          actionLabel: '重试',
-          fillMode: true,
-          onAction: () => { this.loadGroupMembers(); }
-        })
-      } else if (this.members.length > 0) {
-        List() {
-          LazyForEach(this.membersDataSource, (member: GroupMemberItem) => {
-            ListItem() {
-              GroupMemberRow({
-                member: member,
-                roleText: this.getRoleDisplayText(member.role),
-                roleColor: this.getRoleColor(member.role),
-                // 审计 P3-5：showMenu 判定走轻量布尔方法，不在渲染期构造完整菜单数组
-                showMenu: this.hasMemberActions(member),
-                palette: this.getCurrentThemePalette(),
-                surfaceBackground: this.getSurfaceBackground(),
-                menuItems: this.buildMemberActionMenus(member)
-              })
-            }
-          }, (member: GroupMemberItem) => member.user?.user_id ?? member.joined_at ?? '')
-          if (this.membersLoadingMore) {
-            ListItem() {
-              Row({ space: DesignConstants.SPACING.SM }) {
-                LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-                Text('加载更多…')
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Center)
-              .padding(DesignConstants.SPACING.MD)
-            }
-          }
-        }
-        .width('100%')
-        .layoutWeight(1)
-        // 横向留白由外层 PageShellContainer 统一提供，这里不再叠加
-        .scrollBar(BarState.Off)
-        .cachedCount(5)
-        .onReachEnd(() => { this.loadMoreMembers(); })
-      } else {
-        EmptyState({
-          icon: AppIcon.EMPTY,
-          title: '暂无成员信息',
-          bare: true,
-          fillMode: true
-        })
-      }
-    }
-    .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
-    .width('100%')
-    .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    GroupMemberListSheet({
+      members: this.members,
+      isLoadingMembers: this.isLoadingMembers,
+      membersErrorMessage: this.membersErrorMessage,
+      membersLoadingMore: this.membersLoadingMore,
+      safeAreaBottom: this.safeAreaBottom,
+      membersDataSource: this.membersDataSource,
+      onRetryLoad: () => { this.loadGroupMembers(); },
+      onLoadMore: () => { this.loadMoreMembers(); },
+      roleTextFor: (member: GroupMemberItem): string => this.getRoleDisplayText(member.role),
+      roleColorFor: (member: GroupMemberItem): ResourceColor => this.getRoleColor(member.role),
+      showMenuFor: (member: GroupMemberItem): boolean => this.hasMemberActions(member),
+      menuItemsFor: (member: GroupMemberItem): MenuElement[] => this.buildMemberActionMenus(member)
+    })
   }
 
   @Builder
   buildApplicationListSheet() {
-    Column() {
-      Row() {
-        Text('入群申请')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-
-        Text(`${this.applications.length} 条`)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-      }
-      .width('100%')
-      .padding(DesignConstants.SPACING.LG)
-
-      if (this.isLoadingApplications && this.applications.length === 0) {
-        SystemLoadingView({ message: '加载入群申请中…' }).layoutWeight(1)
-      } else if (this.applications.length === 0 && this.applicationsErrorMessage) {
-        EmptyState({
-          icon: AppIcon.WARNING,
-          title: this.applicationsErrorMessage,
-          actionLabel: '重试',
-          fillMode: true,
-          onAction: () => { this.loadGroupApplications(); }
-        })
-      } else if (this.applications.length > 0) {
-        List() {
-          LazyForEach(this.applicationsDataSource, (application: GroupApplicationItem) => {
-            ListItem() {
-              GroupApplicationRow({
-                application: application,
-                handling: this.isApplicationHandling(application.application_id),
-                palette: this.getCurrentThemePalette(),
-                surfaceBackground: this.getSurfaceBackground(),
-                onApprove: () => { this.approveApplication(application); },
-                onReject: () => { this.rejectApplication(application); }
-              })
-            }
-          }, (application: GroupApplicationItem) => application.application_id)
-
-          if (this.applicationsLoadingMore) {
-            ListItem() {
-              Row({ space: DesignConstants.SPACING.SM }) {
-                LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-                Text('加载更多…')
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Center)
-              .padding(DesignConstants.SPACING.MD)
-            }
-          }
-        }
-        .width('100%')
-        .layoutWeight(1)
-        // 横向留白由外层 PageShellContainer 统一提供，这里不再叠加
-        .scrollBar(BarState.Off)
-        .cachedCount(5)
-        .onReachEnd(() => { this.loadMoreGroupApplications(); })
-      } else {
-        EmptyState({
-          icon: AppIcon.EMPTY,
-          title: '暂无待处理申请',
-          bare: true,
-          fillMode: true
-        })
-      }
-    }
-    .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
-    .width('100%')
-    .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    GroupApplicationListSheet({
+      applications: this.applications,
+      isLoadingApplications: this.isLoadingApplications,
+      applicationsErrorMessage: this.applicationsErrorMessage,
+      applicationsLoadingMore: this.applicationsLoadingMore,
+      safeAreaBottom: this.safeAreaBottom,
+      applicationsDataSource: this.applicationsDataSource,
+      onRetryLoad: () => { this.loadGroupApplications(); },
+      onLoadMore: () => { this.loadMoreGroupApplications(); },
+      handlingFor: (applicationId: string): boolean => this.isApplicationHandling(applicationId),
+      onApprove: (application: GroupApplicationItem): void => { this.approveApplication(application); },
+      onReject: (application: GroupApplicationItem): void => { this.rejectApplication(application); }
+    })
   }
 }
 
