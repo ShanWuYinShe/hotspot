@@ -126,6 +126,24 @@ async function amapReverse(lat: number, lng: number, opts?: FetchOpts): Promise<
 	return addr && addr !== '[]' ? addr : null;
 }
 
+/**
+ * 逆地理结果截短展示。OSM display_name 是逗号分隔的完整地址（"xx路, xx区, 北京市, 中国"），
+ * 卡片副标题只取前两段；高德 formatted_address 本身就是单行短地址，原样返回。
+ * 与 osmSearch 的截短口径一致。空串返回 null。
+ */
+export function formatReverseAddress(displayName: string | null | undefined): string | null {
+	const text = displayName?.trim();
+	if (!text) return null;
+	if (!text.includes(',')) return text;
+	const short = text
+		.split(',')
+		.slice(0, 2)
+		.map((s) => s.trim())
+		.filter(Boolean)
+		.join(' · ');
+	return short || text;
+}
+
 /** 关键字搜索地点（WGS-84 输出）。失败抛 GeoServiceUnavailable，由调用方降级。 */
 export async function searchPlaces(
 	source: MapSource,

@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { SlidersHorizontal, Check } from '@lucide/svelte';
+	import { SlidersHorizontal } from '@lucide/svelte';
 	import * as Popover from '@/components/ui/popover';
+	import MenuPanel from '@/components/overlays/MenuPanel.svelte';
 	import { PIN_TONES, markerSvg } from './location-shared';
 	import type { PinType } from './location-data';
 
@@ -73,59 +74,43 @@
 		</button>
 	</div>
 
-	<Popover.Content {align} side="bottom" sideOffset={8} customAnchor={anchorEl} class="w-64 overflow-hidden rounded-xl p-0">
-		<div class="flex items-center justify-between border-b border-border-default px-3.5 py-2.5">
-			<span class="text-sm font-medium text-text-primary">显示类型</span>
-			<span class="text-xxs text-text-secondary">{activeFilters.size}/3 已选</span>
-		</div>
-		<div class="flex flex-col gap-1 p-1.5">
-			{#each ALL as item (item.type)}
-				{@const active = activeFilters.has(item.type)}
-				{@const count = counts?.[item.type]}
-				<button
-					type="button"
-					class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left focus-ring transition-colors {active ? 'bg-accent-soft hover:bg-interactive-active' : 'hover:bg-interactive-hover'} {active ? '' : 'opacity-soft'}"
-					aria-pressed={active}
-					onclick={() => toggleFilter(item.type)}
+	<Popover.Content {align} side="bottom" sideOffset={8} customAnchor={anchorEl} class="p-0">
+		<MenuPanel
+			title="显示类型"
+			meta="{activeFilters.size}/3 已选"
+			ariaLabel="筛选地图显示类型"
+			multi
+			options={ALL.map((item) => {
+				const active = activeFilters.has(item.type);
+				const count = counts?.[item.type];
+				return {
+					id: item.type,
+					title: item.label,
+					desc: active ? '正在显示' : '已隐藏',
+					badge: count !== undefined ? (active ? `${count}` : '—') : undefined,
+					selected: active,
+					dimmed: !active
+				};
+			})}
+			onSelect={(id) => toggleFilter(id as PinType)}
+			footer={{ actionLabel: '全部显示', actionDisabled: allActive, onAction: showAll }}
+		>
+			{#snippet leading(opt)}
+				{@const type = opt.id as PinType}
+				{@const active = activeFilters.has(type)}
+				<span
+					class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
+					style="background:{active ? PIN_TONES[type].bg : 'var(--cst-surface-primary)'};border:var(--cst-border-width-hairline) solid {active ? PIN_TONES[type].border : 'transparent'};"
 				>
-					<span
-						class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
-						style="background:{active ? PIN_TONES[item.type].bg : 'var(--cst-surface-primary)'};border:var(--cst-border-width-hairline) solid {active ? PIN_TONES[item.type].border : 'transparent'};"
-					>
-						{@html markerSvg(item.type, 1, { w: 14, h: 19 })}
-					</span>
-					<span class="min-w-0 flex-1">
-						<span class="block text-sm text-text-primary">{item.label}</span>
-						<span class="mt-0.5 block text-xxs text-text-secondary">{active ? '正在显示' : '已隐藏'}</span>
-					</span>
-					{#if count !== undefined}
-						<span class="shrink-0 text-xs text-text-secondary">{active ? count : '—'}</span>
-					{/if}
-					<span
-						class="flex size-5 shrink-0 items-center justify-center rounded-full transition-colors {active ? 'bg-accent-default text-text-on-accent' : 'bg-border-default text-transparent'}"
-					>
-						<Check class="size-3" strokeWidth={3} />
-					</span>
-				</button>
-			{/each}
-		</div>
-		<div class="flex items-center justify-between border-t border-border-default px-3.5 py-2">
-			{#if showLegend}
-				<span class="flex items-center gap-2 text-xs text-text-secondary">
+					{@html markerSvg(type, 1, { w: 14, h: 19 })}
+				</span>
+			{/snippet}
+			{#snippet footerLeading()}
+				{#if showLegend}
 					<span class="size-3 rounded-full" style="background:var(--cst-marker-user);border:var(--cst-border-width-strong) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-halo) var(--cst-marker-user-glow);"></span>
 					我的位置
-				</span>
-			{:else}
-				<span></span>
-			{/if}
-			<button
-				type="button"
-				class="link-btn focus-ring rounded-sm px-1 text-xs text-accent-default {allActive ? 'pointer-events-none opacity-soft' : ''}"
-				disabled={allActive}
-				onclick={showAll}
-			>
-				全部显示
-			</button>
-		</div>
+				{/if}
+			{/snippet}
+		</MenuPanel>
 	</Popover.Content>
 </Popover.Root>

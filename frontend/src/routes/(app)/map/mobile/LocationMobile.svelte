@@ -4,14 +4,14 @@
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
-	import { autoLocateOnce, readLastLocation, writeLastLocation } from '@/lib/map-auto-locate';
+	import { autoLocateOnce, clearLocateDeclined, readLastLocation, writeLastLocation } from '@/lib/map-auto-locate';
 	import { reportLocation } from '@/lib/location-report';
 	import { auth } from '@/stores/auth.svelte';
 	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
 	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
 	import { showToast } from '@/stores/toast.svelte';
-	import { RECENT_LOCATIONS, HOT_LOCATIONS, SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
+	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, fetchMapCanvasByViewport, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
 	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
@@ -105,8 +105,8 @@
 	// 用户是否已手动选点：自动定位结果不再抢镜头
 	let userPicked = $state(false);
 	let defaultCenter = $state<{ lat: number; lng: number } | null>(null);
-	let recentItems = $state(RECENT_LOCATIONS);
-	let activeTab = $state<'recent' | 'hot'>('recent');
+	// 最近使用：搜索选点后记录（会话内状态，原演示播种已按产品决定移除）
+	let recentItems = $state<LocationResult[]>([]);
 
 	// 服务端默认位置（ClientConfig default_location）——本地无锚点时的兜底与复位目标。
 	// centerReloadKey：让「重试」能重新拉一次配置：loadDefaultLocation 失败不缓存，
@@ -193,7 +193,8 @@
 
 	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
 	// ── 真实地理编码搜索（高德/OSM 随地图源，经同源代理）────────────
-	// 输入防抖 300ms 后查询；服务不可用回退本地演示数据。
+	// 输入防抖 300ms 后查询；服务不可用/无结果时诚实展示空态，
+	// 不回退本地演示数据（原 SEARCH_DB 兜底带虚构打卡人数，已移除）。
 	let remoteResults = $state<GeoPlace[] | null>(null);
 	createDebouncedSearch({
 		query: () => searchQuery.trim(),
@@ -201,19 +202,21 @@
 		fetch: (query, signal) => searchPlaces(mapSourceStore.source, query, mapCenter, { signal }),
 		apply: (places) => (remoteResults = places),
 		clear: () => (remoteResults = null),
-		// 请求失败同样回退本地演示数据
+		// 请求失败按空结果处理
 		onError: () => (remoteResults = null)
 	});
-	const searchResults = $derived(
-		searchQuery.trim() ? (remoteResults ?? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 5)) : []
-	);
+	const searchResults = $derived(searchQuery.trim() ? (remoteResults ?? []) : []);
 
 	// ── 定位到我（浏览器 GPS，失败回退默认位置并提示）──────────────
+	// 成功即持久化为浏览锚点：下次进地图先读到本次定位，不会掉回默认位置；
+	// 权限既已授予，顺手清除自动定位拒绝标记，下次进入恢复自动定位。
 	const locate = createLocateAction({
 		onSuccess: (fix) => {
 			userPicked = true;
 			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
 			mapCenter = { lat: fix.lat, lng: fix.lng };
+			writeLastLocation({ lat: fix.lat, lng: fix.lng });
+			clearLocateDeclined();
 			selectedLoc = null;
 			searchQuery = '';
 			snapTo('mid');
@@ -237,14 +240,23 @@
 		searchQuery = loc.displayName;
 		mapCenter = { lat: loc.lat, lng: loc.lng };
 		selectedPin = null;
+		// 记录到「最近使用」：会话内状态，按名称去重、最新在前，最多 8 条
+		recentItems = [loc, ...recentItems.filter((r) => r.displayName !== loc.displayName)].slice(0, 8);
 		if (snap === 'max') snapTo('mid');
 	}
 
 	function handleConfirm() {
-		// 未选地点时以视口中心兜底（与桌面端一致）；坐标无效则不写入。
+		// 只写好浏览锚点、不关页：用户自己决定何时离开（返回按钮仍在顶栏）。
+		// 未选地点时以视口中心兜底（与桌面端一致）。
 		const point = selectedLoc ?? mapCenter;
-		if (point) writeLastLocation({ ...point, name: selectedLoc?.displayName });
-		smartBack();
+		if (!point) {
+			showToast('暂时无法获取位置信息', 'danger');
+			return;
+		}
+		// 标记已手动确认：迟到的自动定位不再覆盖刚写好的锚点。
+		userPicked = true;
+		writeLastLocation({ ...point, name: selectedLoc?.displayName });
+		showToast('浏览锚点已设置', 'success');
 	}
 
 	// 图钉详情跳转：user/group/moment 分别路由到对应详情页
@@ -352,7 +364,8 @@
 				<Crosshair class="size-4.5 text-accent-default" strokeWidth={1.75} />
 			{/if}
 		</button>
-		<MapSourceSwitch align="end" />
+		<!-- 右侧控制列贴着底部 Sheet：菜单向上展开，否则会压住 Sheet 内容 -->
+		<MapSourceSwitch align="end" side="top" />
 	</div>
 
 	<!-- ══ BOTTOM SHEET (draggable) ══ -->
@@ -418,7 +431,6 @@
 				{searchResults}
 				bind:selectedPin
 				bind:selectedLoc
-				bind:activeTab
 				bind:recentItems
 				onSelectLoc={handleSelectLoc}
 				onOpenPinDetail={openPinDetail}

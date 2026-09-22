@@ -3,9 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // 地图首屏定位 helper：锚点读写（含历史数组格式兼容）、拒绝记忆、自动定位三态。
 // navigator.geolocation 经 defineProperty 桩化；拒绝/超时错误需自带实例常量
 // （PERMISSION_DENIED 等），否则 mapNativeError 的 switch 走 default 分支。
-const { autoLocateDeclined, autoLocateOnce, readLastLocation, writeLastLocation } = await import(
-	'./map-auto-locate'
-);
+const { autoLocateDeclined, autoLocateOnce, clearLocateDeclined, readLastLocation, writeLastLocation } =
+	await import('./map-auto-locate');
 
 const CODES = { PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 };
 const KEY = 'hotspot_last_location';
@@ -123,5 +122,23 @@ describe('autoLocateOnce', () => {
 		const mock = stubGeolocation(mockFix());
 		await expect(autoLocateOnce()).resolves.toBeNull();
 		expect(mock.getCurrentPosition).not.toHaveBeenCalled();
+	});
+});
+
+describe('clearLocateDeclined', () => {
+	beforeEach(() => localStorage.clear());
+
+	it('清除后自动定位恢复工作（手动定位成功即过期旧拒绝）', async () => {
+		localStorage.setItem('hotspot:locate-denied', '1');
+		expect(autoLocateDeclined()).toBe(true);
+		clearLocateDeclined();
+		expect(autoLocateDeclined()).toBe(false);
+		stubGeolocation(mockFix());
+		await expect(autoLocateOnce()).resolves.toMatchObject({ lat: 39.9, lng: 116.4 });
+	});
+
+	it('无标记时调用无副作用', () => {
+		clearLocateDeclined();
+		expect(autoLocateDeclined()).toBe(false);
 	});
 });

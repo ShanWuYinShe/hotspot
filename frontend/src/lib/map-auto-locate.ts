@@ -85,6 +85,18 @@ export function writeLastLocation(point: MapPoint): void {
 	}
 }
 
+/**
+ * 清除自动定位拒绝标记。用户手动点「定位到我」并成功时调用：权限既已授予，
+ * 旧的拒绝标记已过期，下次进地图恢复自动定位，免得回退到默认位置。
+ */
+export function clearLocateDeclined(): void {
+	try {
+		storage()?.removeItem(DENIED_KEY);
+	} catch {
+		/* 存储不可用则忽略，下次进入再按拒绝处理 */
+	}
+}
+
 /** 用户是否拒绝过自动定位（拒绝后不再自动打扰）。 */
 export function autoLocateDeclined(): boolean {
 	const store = storage();

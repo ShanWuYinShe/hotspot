@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // 高德直连 key：默认注入测试 key；「未配置」用例单独 stubEnv('') 覆盖。
 vi.stubEnv('VITE_AMAP_KEY', 'test-amap-key');
-const { searchPlaces, reverseGeocode, GeoServiceUnavailable } = await import('./geo-service');
+const { searchPlaces, reverseGeocode, formatReverseAddress, GeoServiceUnavailable } = await import(
+	'./geo-service'
+);
 
 // 地理编码服务：高德（restapi 直连）/OSM（同源代理）双源路由、坐标口径转换、降级链。
 // fetch 全局 mock；VITE_AMAP_KEY 经 vi.stubEnv 注入；坐标断言取 GCJ-02 反演后的 WGS-84 近似值。
@@ -106,9 +108,34 @@ describe('reverseGeocode', () => {
 		expect(url.startsWith('https://restapi.amap.com/v3/geocode/regeo?location=')).toBe(true);
 	});
 
+	it('OSM：返回 display_name 全串（截短由调用方经 formatReverseAddress 处理）', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(new Response(JSON.stringify({ display_name: 'xx路, xx区, 北京市' }), { status: 200 }))
+		);
+		const addr = await reverseGeocode('osm', 39.9, 116.4);
+		expect(addr).toBe('xx路, xx区, 北京市');
+	});
+
 	it('OSM：空结果返回 null', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'no results' }), { status: 200 })));
 		const addr = await reverseGeocode('osm', 0, 0);
 		expect(addr).toBeNull();
+	});
+});
+
+describe('formatReverseAddress', () => {
+	it('OSM 长地址截前两段（与 osmSearch 截短口径一致）', () => {
+		expect(formatReverseAddress('xx路 1 号, xx区, 北京市, 中国')).toBe('xx路 1 号 · xx区');
+	});
+
+	it('高德单行短地址原样返回', () => {
+		expect(formatReverseAddress('北京市东城区某街 1 号')).toBe('北京市东城区某街 1 号');
+	});
+
+	it('空值/空白一律返回 null', () => {
+		expect(formatReverseAddress(null)).toBeNull();
+		expect(formatReverseAddress('   ')).toBeNull();
+		expect(formatReverseAddress(', , ')).toBe(', ,');
 	});
 });

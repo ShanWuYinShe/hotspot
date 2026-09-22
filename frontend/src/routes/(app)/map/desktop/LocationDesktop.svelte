@@ -2,17 +2,16 @@
 	import { X, ChevronRight, Heart, Crosshair } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
-	import { smartBack } from '@/lib/smart-back';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
-	import { autoLocateOnce, readLastLocation, writeLastLocation } from '@/lib/map-auto-locate';
+	import { autoLocateOnce, clearLocateDeclined, readLastLocation, writeLastLocation } from '@/lib/map-auto-locate';
 	import { reportLocation } from '@/lib/location-report';
 	import { auth } from '@/stores/auth.svelte';
-	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
+	import { formatReverseAddress, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/geo-service';
 	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
 	import { showToast } from '@/stores/toast.svelte';
-	import { SEARCH_DB, type PinType, type Pin, type LocationResult } from '../shared/location-data';
+	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
 		PIN_COLORS, PIN_LABELS, PIN_TONES, fetchMapCanvas, fetchMapCanvasByViewport,
 		type MapBounds, type MapHeatBucket
@@ -35,7 +34,6 @@
 	let selectedPin = $state<Pin | null>(null);
 	let selectedLoc = $state<LocationResult | null>(null);
 	let activeFilters = $state<Set<PinType>>(new Set(['user', 'group', 'moment']));
-	let activeTab = $state<'nearby' | 'hot' | 'recent'>('nearby');
 	// 瓦片缩放级别（13≈全市 / 16≈街区）；数据请求半径仍由 fetchMapCanvas 内部约定
 	let mapZoom = $state(14);
 	// 首屏初值取上次确认的浏览锚点（localStorage 同步可读），不再干等 client_config；
@@ -49,6 +47,13 @@
 	// 数据请求用稳定边界（手势/缩放结束才回写）；图钉/热力跟随用每帧 mapBounds
 	let mapStableBounds = $state<MapBounds>({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 });
 	let defaultCenter = $state<{ lat: number; lng: number } | null>(null);
+	// 服务端默认位置名（ClientConfig default_location.location_name）：逆地理失败时的兜底。
+	let defaultName = $state('');
+	// 上次确认的浏览锚点（含名）：中心与其同格且逆地理缺席时，用锚点名兜底。
+	let anchorPoint = $state<{ lat: number; lng: number; name?: string } | null>(readLastLocation());
+	// 逆地理结果（key=四位小数网格；失败记 null 免重复请求，随 centerNamenull 兜底链消化）。
+	let reverseEntry = $state<{ key: string; name: string | null } | null>(null);
+	const reverseCache = new Map<string, string | null>();
 
 	// 服务端默认位置（ClientConfig default_location）——本地无锚点时的兜底与复位目标。
 	// centerResolved 回调落地后置真：无锚点且配置也拿不到时结束首屏 loading，不空转。
@@ -60,6 +65,7 @@
 		return startDefaultLocation((loc) => {
 			const point = loc?.point ? { lat: loc.point.latitude, lng: loc.point.longitude } : null;
 			defaultCenter = point;
+			defaultName = loc?.location_name ?? '';
 			if (!mapCenter) mapCenter = point;
 			centerResolved = true;
 		});
@@ -80,6 +86,57 @@
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 		})();
 	});
+
+	// 视口中心地名：选了地点/图钉直接用其名；否则逆地理编码实际中心。
+	// 防抖 500ms + 网格缓存：Nominatim 经自家 /osm-service 代理免费调用（高德源优先高德 key，
+	// 未配 key 自动降级 OSM），高频拖拽不刷服务。失败/未决时由下面的 locationName 兜底链消化。
+	$effect(() => {
+		const center = mapCenter;
+		const source = mapSourceStore.source;
+		if (selectedLoc || selectedPin || !center) return;
+		const key = `${center.lat.toFixed(4)},${center.lng.toFixed(4)}`;
+		const hit = reverseCache.get(key);
+		if (hit !== undefined) {
+			reverseEntry = { key, name: hit };
+			return;
+		}
+		let cancelled = false;
+		const timer = setTimeout(() => {
+			void reverseGeocode(source, center.lat, center.lng)
+				.then((raw) => {
+					if (cancelled) return;
+					const name = formatReverseAddress(raw);
+					reverseCache.set(key, name);
+					reverseEntry = { key, name };
+				})
+				.catch(() => {
+					if (cancelled) return;
+					reverseCache.set(key, null);
+					if (reverseEntry?.key === key) reverseEntry = { key, name: null };
+				});
+		}, 500);
+		return () => {
+			cancelled = true;
+			clearTimeout(timer);
+		};
+	});
+
+	// 左侧栏显示的地名（顶栏副标题 +「当前位置」卡片）：永远描述实际视口中心，
+	// 而非服务端静态默认名。优先级：选中地点 > 选中图钉 > 同格逆地理 > 同格锚点名 > 服务端默认名。
+	const locationName = $derived(
+		selectedLoc?.displayName ??
+			(selectedPin?.name || selectedPin?.title || undefined) ??
+			(mapCenter && reverseEntry && reverseEntry.key === `${mapCenter.lat.toFixed(4)},${mapCenter.lng.toFixed(4)}`
+				? reverseEntry.name
+				: undefined) ??
+			(mapCenter &&
+			anchorPoint?.name &&
+			anchorPoint.lat.toFixed(4) === mapCenter.lat.toFixed(4) &&
+			anchorPoint.lng.toFixed(4) === mapCenter.lng.toFixed(4)
+				? anchorPoint.name
+				: undefined) ??
+			defaultName
+	);
 
 	// map/canvas 数据
 	let mapPins = $state<Pin[]>([]);
@@ -147,12 +204,10 @@
 	}
 
 	// ── 真实地理编码搜索（高德/OSM 随地图源，经同源代理）────────────
-	// 输入防抖 300ms 后查询；服务不可用（如生产未配高德密钥）回退
-	// 本地演示数据，保证搜索框不因单一上游失效。
+	// 输入防抖 300ms 后查询；服务不可用/无结果时诚实展示空态，
+	// 不回退本地演示数据（原 SEARCH_DB 兜底带虚构打卡人数，已移除）。
 	let remoteResults = $state<GeoPlace[] | null>(null);
-	const searchResults = $derived(
-		searchQuery.trim() ? (remoteResults ?? SEARCH_DB.filter((s) => s.displayName.includes(searchQuery)).slice(0, 6)) : []
-	);
+	const searchResults = $derived(searchQuery.trim() ? (remoteResults ?? []) : []);
 	const nearbyPins = $derived(mapPins.filter((p) => (p.count ?? 1) === 1));
 
 	createDebouncedSearch({
@@ -161,16 +216,21 @@
 		fetch: (query, signal) => searchPlaces(mapSourceStore.source, query, mapCenter, { signal }),
 		apply: (places) => (remoteResults = places),
 		clear: () => (remoteResults = null),
-		// 请求失败同样回退本地演示数据
+		// 请求失败按空结果处理
 		onError: () => (remoteResults = null)
 	});
 
 	// ── 定位到我（浏览器 GPS，失败回退默认位置并提示）──────────────
+	// 成功即持久化为浏览锚点：下次进地图先读到本次定位，不会掉回默认位置；
+	// 权限既已授予，顺手清除自动定位拒绝标记，下次进入恢复自动定位。
 	const locate = createLocateAction({
 		onSuccess: (fix) => {
 			userPicked = true;
 			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
 			mapCenter = { lat: fix.lat, lng: fix.lng };
+			writeLastLocation({ lat: fix.lat, lng: fix.lng });
+			anchorPoint = { lat: fix.lat, lng: fix.lng };
+			clearLocateDeclined();
 			selectedLoc = null;
 			searchQuery = '';
 			showToast(`已定位（精度约 ${Math.round(fix.accuracy)} 米）`, 'success');
@@ -198,14 +258,19 @@
 	}
 
 	function handleConfirm() {
-		// 锚点语义 = 「以当前视口中心为准」：未选地点时用 mapCenter 兜底，
-		// 与移动端 handleConfirm 对齐（此前只在 selectedLoc 存在时写入，
-		// 未选地点点「设为浏览锚点」是空操作——按钮能点但什么都没发生）。
+		// 只写好浏览锚点、不关页：用户自己决定何时离开（返回在左侧面板顶栏）。
+		// 锚点语义 = 「以当前视口中心为准」：未选地点时用 mapCenter 兜底。
 		const point = selectedLoc ?? mapCenter;
+		if (!point) {
+			showToast('暂时无法获取位置信息', 'danger');
+			return;
+		}
+		// 标记已手动确认：迟到的自动定位不再覆盖刚写好的锚点。
+		userPicked = true;
 		// 选中地点时连带名称一起持久化：附近页/侧栏显示的位置名须与锚点一致。
-		if (point) writeLastLocation({ ...point, name: selectedLoc?.displayName });
-		// 深链直入时无站内历史，back 会离开站点——统一走 smartBack（站内历史则 back，否则回首页）
-		smartBack();
+		writeLastLocation({ ...point, name: selectedLoc?.displayName });
+		anchorPoint = { lat: point.lat, lng: point.lng, name: selectedLoc?.displayName ?? undefined };
+		showToast('浏览锚点已设置', 'success');
 	}
 </script>
 
@@ -216,10 +281,10 @@
 			bind:searchQuery
 			{searchResults}
 			{nearbyPins}
-			bind:activeTab
 			bind:selectedPin
 			bind:selectedLoc
 			{mapCounts}
+			locationName={locationName}
 			onSelectPin={handleSelectPin}
 			onSelectLoc={handleSelectLoc}
 			onConfirm={handleConfirm}
