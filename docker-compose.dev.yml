@@ -124,6 +124,12 @@ services:
   mailpit:
     image: axllent/mailpit:${MAILPIT_VERSION:-v1.24}
     restart: always
+    # 资源限制：此前是全栈唯一无上限容器（Go 运行时 + 收件积累可无界增长）
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
     ports:
       - "127.0.0.1:8025:8025"
     healthcheck:
