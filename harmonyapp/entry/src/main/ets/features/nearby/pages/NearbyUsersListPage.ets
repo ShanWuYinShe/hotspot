@@ -93,11 +93,11 @@ export struct NearbyUsersListPage {
   /** 刷新列表数据源：onlineOnly 时按 presence_status 客户端过滤在线用户 */
   private refreshUsersDataSource(): void {
     let filtered = this.users;
-    // 兴趣分类（对齐前端 tagFilter）：「全部」不过滤；其余按 tags[0] === activeTag 客户端过滤
+    // 兴趣分类（对齐前端 tagFilter 全量匹配）：「全部」不过滤；其余按 tags 全量匹配，首标签之外同样可命中
     if (this.activeTag !== '全部') {
       filtered = filtered.filter((u: UserItem) => {
         const tags = u.tags ?? [];
-        return tags.length > 0 && tags[0] === this.activeTag;
+        return tags.includes(this.activeTag);
       });
     }
     if (this.onlineOnly) {
@@ -276,7 +276,7 @@ export struct NearbyUsersListPage {
               const tag = NearbyUsersListPage.FILTER_TAGS[index] || '全部';
               if (tag === this.activeTag) return;
               this.activeTag = tag;
-              // 客户端过滤（不重新请求服务端）—— 对齐前端 tagFilter === '全部' || user.tag === tagFilter 语义
+              // 客户端过滤（不重新请求服务端）—— 对齐前端全量标签匹配语义
               this.refreshUsersDataSource();
             }
           }

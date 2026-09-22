@@ -227,23 +227,43 @@ export struct LocationPickerPage {
     this.applyMapRegion(lat, lng);
   }
 
-  /** 定位到当前位置 */
-  private locateUser(): void {
+  /**
+   * 定位到当前位置。对齐 Web「定位到我」：显式定位即持久化为浏览锚点，
+   * 下次进地图优先回到这里，不会掉回默认位置（此前只动镜头不写锚点，
+   * 重进即丢失）。名称取刚解析到的位置名，精度提示口径与 Web 一致。
+   */
+  private async locateUser(): Promise<void> {
     // 无定位时显式反馈（原静默 return，用户点定位钮无任何响应）
-    if (!this.currentLocation) {
+    const src = this.currentLocation;
+    if (!src) {
       this.showMapToast('暂无定位信息，请授权定位后重试');
       return;
     }
     const converted = CoordinateConverter.convertWgs84ToGcj02(
-      this.currentLocation.latitude, this.currentLocation.longitude
+      src.latitude, src.longitude
     );
     this.setCenter(converted.latitude, converted.longitude);
     this.updateMarkers();
     this.moveCameraSmoothly(converted.latitude, converted.longitude);
     // Harmony 端对齐 Web：显式动作才更新选中位置并解析名称
-    this.resolveLocation(converted.latitude, converted.longitude).catch((e: Error) => {
-      hilog.warn(DOMAIN_NUMBER, TAG, `locateUser 解析位置失败: ${e?.message ?? e}`);
-    });
+    try {
+      await this.resolveLocation(converted.latitude, converted.longitude);
+    } catch (e) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `locateUser 解析位置失败: ${(e as Error)?.message ?? e}`);
+    }
+    const anchorName: string = this.locationName.length > 0 ? this.locationName : '当前位置';
+    const anchor: LocationInfo = {
+      latitude: src.latitude,
+      longitude: src.longitude,
+      locationName: anchorName
+    };
+    GlobalStateManager.setBrowseAnchor(anchor);
+    AnchorHistoryUtil.addToHistory(anchor.latitude, anchor.longitude, anchorName);
+    const accuracy: number | undefined = src.accuracy;
+    const locatedTip: string = (typeof accuracy === 'number' && Number.isFinite(accuracy))
+      ? `已定位（精度约 ${Math.round(accuracy)} 米）`
+      : '已定位';
+    SystemToast.showSuccess(`${locatedTip}，浏览锚点已设置`, this.getUIContext());
   }
 
   /** 回到当前浏览锚点位置（与“回到当前位置”区分） */
@@ -497,8 +517,9 @@ export struct LocationPickerPage {
     }
 
     GlobalStateManager.setBrowseAnchor(location);
-    SystemToast.showSuccess('浏览锚点已更新', this.getUIContext());
-    AppRouter.pop();
+    // 锚点模式只写好锚点、不关页：用户自己决定何时离开（对齐 Web 地图页 handleConfirm）。
+    // location_pick 模式（为创建群组/动态选点）仍需 pop，把结果带回调用页。
+    SystemToast.showSuccess('浏览锚点已设置', this.getUIContext());
   }
 
 	private async fetchMapRenderData(trigger: string = 'unknown'): Promise<void> {
