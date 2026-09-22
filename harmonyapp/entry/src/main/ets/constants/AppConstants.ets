@@ -7,13 +7,13 @@ import { DEBUG } from 'BuildProfile';
 
 // API 配置：根据构建模式自动切换
 // debug  → 开发服务器（docker compose 的 nginx 网关，端口 = .env NGINX_PORT 默认 8888）
-// release → 正式域名
+// release → 正式域名（与 Web 网关同域同构；api 子域未建 DNS，禁止引用）
 // 模拟器与真机统一走 127.0.0.1:8888 + hdc 反向转发（等价 adb reverse，不依赖
 // SLIRP NAT——实测部分模拟器实例 10.0.2.2 用户态 NAT 不可达或延迟极高）：
 // - 模拟器：`hdc -t 127.0.0.1:5555 rport tcp:8888 tcp:8888`
 // - 真机：`hdc -t <设备序列号> fport tcp:8888 tcp:8888`（USB 反向转发）
 const DEV_SERVER = 'http://127.0.0.1:8888';
-const PROD_SERVER = 'https://api.chaoset.com';
+const PROD_SERVER = 'https://chaoset.com';
 
 export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;
 
