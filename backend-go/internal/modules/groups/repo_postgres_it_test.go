@@ -148,6 +148,11 @@ func TestPostgresIT_DismissGroup(t *testing.T) {
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		repo := NewPostgresRepository(txFactory)
 		ownerID := testdb.InsertUser(t, txFactory, "g_dismiss_owner", "Owner")
+		// 子行填充：成员/公告/封禁/申请/邀请全部就位——解散必须同事务清理，
+		// 只删 groups 行会留下幽灵详情（成员数假象）与孤儿子表（线上实测）。
+		memberID := testdb.InsertUser(t, txFactory, "g_dismiss_member", "Member")
+		applicantID := testdb.InsertUser(t, txFactory, "g_dismiss_applicant", "Applicant")
+		inviteeID := testdb.InsertUser(t, txFactory, "g_dismiss_invitee", "Invitee")
 
 		group, err := repo.Create(ctx, ownerID, CreateGroupRequest{
 			Name:       "Dismiss Test Group",
@@ -165,12 +170,53 @@ func TestPostgresIT_DismissGroup(t *testing.T) {
 			t.Fatalf("Dismiss: %v", err)
 		}
 
+		if _, err := repo.CreateAnnouncement(ctx, ownerID, CreateGroupAnnouncementRequest{
+			GroupID: group.Group.GroupID, Title: "t", Content: "c",
+		}); err != nil {
+			t.Fatalf("CreateAnnouncement: %v", err)
+		}
+		if err := repo.BanMember(ctx, ownerID, BanMemberRequest{
+			GroupID: group.Group.GroupID, UserID: memberID,
+		}); err != nil {
+			t.Fatalf("BanMember: %v", err)
+		}
+		qdb, ok := txFactory.DB.(persistence.QueryableDB)
+		if !ok {
+			t.Fatal("factory.DB is not QueryableDB")
+		}
+		seed := func(query string, args ...any) {
+			t.Helper()
+			if err := qdb.Exec(context.Background(), query, args...); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+		}
+		seed(`INSERT INTO group_applications (application_id, group_id, applicant_user_id, message, status, created_at)
+		      VALUES ('app_dismiss_it', $1, $2, '', 'pending', now())`, group.Group.GroupID, applicantID)
+		seed(`INSERT INTO group_invites (invite_id, group_id, inviter_user_id, invitee_user_id, message, status, created_at, expires_at)
+		      VALUES ('inv_dismiss_it', $1, $2, $3, '', 'pending', now(), now() + interval '1 day')`, group.Group.GroupID, ownerID, inviteeID)
+
 		_, found, err := repo.Get(ctx, group.Group.GroupID)
 		if err != nil {
 			t.Fatalf("Get after dismiss: %v", err)
 		}
 		if found {
 			t.Fatal("expected found=false after dismiss")
+		}
+
+		// 子表必须全部清空（幽灵成员数/详情缺陷回归断言）
+		for _, table := range []string{
+			"group_members", "group_applications", "group_invites",
+			"group_bans", "group_announcements",
+		} {
+			var n int
+			if err := qdb.QueryRow(context.Background(),
+				"SELECT count(*) FROM "+table+" WHERE group_id = $1",
+				group.Group.GroupID).Scan(&n); err != nil {
+				t.Fatalf("count %s: %v", table, err)
+			}
+			if n != 0 {
+				t.Fatalf("expected %s to be empty after dismiss, got %d rows", table, n)
+			}
 		}
 	})
 }

@@ -241,6 +241,31 @@ RETURNING invite_id`
 DELETE FROM groups
 WHERE group_id = $1`
 
+	// 解散群组的事务性清理（repo.Dismiss）：groups 行硬删前必须同事务清空
+	// 全部子表——否则残留成员/申请/邀请/封禁/公告行，让已解散群在详情页
+	// 呈现幽灵态（可见 + 虚假成员数，且可再次点击加入后被 404 拒绝）。
+	// group_messages 按归档语义保留（群不存在后无查询路径触达）。
+	// read_state 由 049 迁移的 FK ON DELETE CASCADE 随 group_members 自动清理。
+	queryDeleteGroupMembersByGroup = `
+DELETE FROM group_members
+WHERE group_id = $1`
+
+	queryDeleteGroupApplicationsByGroup = `
+DELETE FROM group_applications
+WHERE group_id = $1`
+
+	queryDeleteGroupInvitesByGroup = `
+DELETE FROM group_invites
+WHERE group_id = $1`
+
+	queryDeleteGroupBansByGroup = `
+DELETE FROM group_bans
+WHERE group_id = $1`
+
+	queryDeleteGroupAnnouncementsByGroup = `
+DELETE FROM group_announcements
+WHERE group_id = $1`
+
 	queryInsertGroupAnnouncement = `
 INSERT INTO group_announcements (announcement_id, group_id, title, content, created_by_user_id, is_pinned, created_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)`

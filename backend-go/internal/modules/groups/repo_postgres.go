@@ -148,15 +148,28 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 }
 
 func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error {
-	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	err := queryable.Exec(ctx, queryDeleteGroup, groupID)
-	if err != nil {
-		return fmt.Errorf("groups.Dismiss: %w", err)
-	}
-	return nil
+	// 子行（成员/申请/邀请/封禁/公告）与 groups 行同事务清理：只删 groups 会
+	// 留下幽灵详情（成员数假象）与孤儿子行。read_state 由 049 的 FK CASCADE
+	// 随成员行自动清理；group_messages 按归档语义保留。
+	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		tx, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		for _, q := range []string{
+			queryDeleteGroupApplicationsByGroup,
+			queryDeleteGroupInvitesByGroup,
+			queryDeleteGroupBansByGroup,
+			queryDeleteGroupAnnouncementsByGroup,
+			queryDeleteGroupMembersByGroup,
+			queryDeleteGroup,
+		} {
+			if err := tx.Exec(txCtx, q, groupID); err != nil {
+				return fmt.Errorf("groups.Dismiss: %w", err)
+			}
+		}
+		return nil
+	})
 }
 
 func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
