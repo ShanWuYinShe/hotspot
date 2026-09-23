@@ -18,6 +18,7 @@ import { smartBack } from '@/lib/smart-back';
 	let {
 		searchQuery = $bindable(''),
 		searchResults = $bindable<LocationResult[]>([]),
+		searching = false,
 		nearbyPins = $bindable<Pin[]>([]),
 		selectedPin = $bindable<Pin | null>(null),
 		selectedLoc = $bindable<LocationResult | null>(null),
@@ -31,6 +32,8 @@ import { smartBack } from '@/lib/smart-back';
 	}: {
 		searchQuery?: string;
 		searchResults?: LocationResult[];
+		/** 地理编码请求进行中（上游偶发数秒慢，需「搜索中」指示）。 */
+		searching?: boolean;
 		nearbyPins?: Pin[];
 		selectedPin?: Pin | null;
 		selectedLoc?: LocationResult | null;
@@ -91,6 +94,12 @@ import { smartBack } from '@/lib/smart-back';
 			</ListItem>
 		{/each}
 		</ListContainer>
+	{:else if searching}
+		<!-- 搜索中指示：上游偶发数秒级慢响应（OSM 代理），零反馈会被当成搜索失效 -->
+		<div class="absolute top-full left-4 right-4 z-30 mt-1 flex items-center gap-2 rounded-lg border border-border-default bg-surface-primary px-3.5 py-2.5 shadow-menu">
+			<span class="spinner size-3.5" role="status" aria-label="搜索中"></span>
+			<span class="text-sm text-text-secondary">搜索中…</span>
+		</div>
 	{/if}
 </div>
 

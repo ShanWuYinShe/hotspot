@@ -21,6 +21,8 @@ export interface DebouncedSearchOptions<T> {
 	clear: () => void;
 	/** 请求失败时回调（未提供则静默）；过期响应不会进入本回调。 */
 	onError?: () => void;
+	/** 请求进行中回调：防抖开始置 true，结果落地/失败/取消置 false（驱动「搜索中」指示）。 */
+	onPending?: (pending: boolean) => void;
 	/** 额外响应式依赖（如地图源切换），变化时重新防抖。 */
 	deps?: () => void;
 }
@@ -32,24 +34,33 @@ export function createDebouncedSearch<T>(options: DebouncedSearchOptions<T>): vo
 		const query = options.query();
 		if (options.deps) options.deps();
 		if (!query) {
+			options.onPending?.(false);
 			options.clear();
 			return;
 		}
 		const current = ++seq;
 		const controller = new AbortController();
+		options.onPending?.(true);
 		const timer = setTimeout(() => {
 			options
 				.fetch(query, controller.signal)
 				.then((data) => {
-					if (current === seq) options.apply(data);
+					if (current === seq) {
+						options.onPending?.(false);
+						options.apply(data);
+					}
 				})
 				.catch(() => {
-					if (current === seq) options.onError?.();
+					if (current === seq) {
+						options.onPending?.(false);
+						options.onError?.();
+					}
 				});
 		}, SEARCH_DEBOUNCE_MS);
 		return () => {
 			clearTimeout(timer);
 			controller.abort();
+			if (current === seq) options.onPending?.(false);
 		};
 	});
 }

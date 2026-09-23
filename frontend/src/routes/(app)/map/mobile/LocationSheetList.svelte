@@ -17,6 +17,7 @@ import * as Dialog from '@/components/ui/dialog';
 	let {
 		searchQuery = $bindable(''),
 		searchResults = $bindable<LocationResult[]>([]),
+		searching = false,
 		selectedPin = $bindable<Pin | null>(null),
 		selectedLoc = $bindable<LocationResult | null>(null),
 		recentItems = $bindable<LocationResult[]>([]),
@@ -26,6 +27,8 @@ import * as Dialog from '@/components/ui/dialog';
 	}: {
 		searchQuery?: string;
 		searchResults?: LocationResult[];
+		/** 地理编码请求进行中（OSM 代理偶发数秒慢，需「搜索中」指示）。 */
+		searching?: boolean;
 		selectedPin?: Pin | null;
 		selectedLoc?: LocationResult | null;
 		recentItems?: LocationResult[];
@@ -60,6 +63,13 @@ import * as Dialog from '@/components/ui/dialog';
 			</ListItem>
 		{/each}
 	</ListContainer>
+{:else if searchQuery && searching}
+	<!-- 搜索中指示（OSM 代理偶发数秒级慢响应，零反馈会被当成搜索失效） -->
+	<EmptyState bare title="搜索中…" class="py-8">
+		{#snippet icon()}
+			<span class="spinner size-6" role="status" aria-label="搜索中"></span>
+		{/snippet}
+	</EmptyState>
 {:else if searchQuery && searchResults.length === 0}
 	<!-- 空态统一 EmptyState（bare + 紧凑 py-8：地图 sheet 不是整页，不套 py-20） -->
 	<EmptyState bare title="未找到匹配地点" class="py-8">

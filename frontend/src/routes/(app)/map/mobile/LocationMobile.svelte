@@ -196,6 +196,8 @@
 	// 输入防抖 300ms 后查询；服务不可用/无结果时诚实展示空态，
 	// 不回退本地演示数据（原 SEARCH_DB 兜底带虚构打卡人数，已移除）。
 	let remoteResults = $state<GeoPlace[] | null>(null);
+	// 搜索进行中（OSM 代理偶发数秒慢，需指示）
+	let searching = $state(false);
 	createDebouncedSearch({
 		query: () => searchQuery.trim(),
 		deps: () => mapSourceStore.source,
@@ -203,7 +205,8 @@
 		apply: (places) => (remoteResults = places),
 		clear: () => (remoteResults = null),
 		// 请求失败按空结果处理
-		onError: () => (remoteResults = null)
+		onError: () => (remoteResults = null),
+		onPending: (p) => (searching = p)
 	});
 	const searchResults = $derived(searchQuery.trim() ? (remoteResults ?? []) : []);
 
@@ -429,6 +432,7 @@
 			<LocationSheetList
 				bind:searchQuery
 				{searchResults}
+				{searching}
 				bind:selectedPin
 				bind:selectedLoc
 				bind:recentItems

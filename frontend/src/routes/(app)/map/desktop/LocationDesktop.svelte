@@ -207,6 +207,8 @@
 	// 输入防抖 300ms 后查询；服务不可用/无结果时诚实展示空态，
 	// 不回退本地演示数据（原 SEARCH_DB 兜底带虚构打卡人数，已移除）。
 	let remoteResults = $state<GeoPlace[] | null>(null);
+	// 搜索进行中：上游（OSM 代理）偶发数秒级慢响应，无指示会让用户以为搜索失效
+	let searching = $state(false);
 	const searchResults = $derived(searchQuery.trim() ? (remoteResults ?? []) : []);
 	const nearbyPins = $derived(mapPins.filter((p) => (p.count ?? 1) === 1));
 
@@ -217,7 +219,8 @@
 		apply: (places) => (remoteResults = places),
 		clear: () => (remoteResults = null),
 		// 请求失败按空结果处理
-		onError: () => (remoteResults = null)
+		onError: () => (remoteResults = null),
+		onPending: (p) => (searching = p)
 	});
 
 	// ── 定位到我（浏览器 GPS，失败回退默认位置并提示）──────────────
@@ -280,6 +283,7 @@
 		<LocationDesktopPanel
 			bind:searchQuery
 			{searchResults}
+			{searching}
 			{nearbyPins}
 			bind:selectedPin
 			bind:selectedLoc
