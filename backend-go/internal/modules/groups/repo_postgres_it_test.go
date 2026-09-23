@@ -166,10 +166,6 @@ func TestPostgresIT_DismissGroup(t *testing.T) {
 			t.Fatalf("Create: %v", err)
 		}
 
-		if err := repo.Dismiss(ctx, group.Group.GroupID); err != nil {
-			t.Fatalf("Dismiss: %v", err)
-		}
-
 		if _, err := repo.CreateAnnouncement(ctx, ownerID, CreateGroupAnnouncementRequest{
 			GroupID: group.Group.GroupID, Title: "t", Content: "c",
 		}); err != nil {
@@ -194,6 +190,11 @@ func TestPostgresIT_DismissGroup(t *testing.T) {
 		      VALUES ('app_dismiss_it', $1, $2, '', 'pending', now())`, group.Group.GroupID, applicantID)
 		seed(`INSERT INTO group_invites (invite_id, group_id, inviter_user_id, invitee_user_id, message, status, created_at, expires_at)
 		      VALUES ('inv_dismiss_it', $1, $2, $3, '', 'pending', now(), now() + interval '1 day')`, group.Group.GroupID, ownerID, inviteeID)
+
+		// 解散：HTTP 200 但子行必须同事务清空（幽灵详情/假成员数回归断言）
+		if err := repo.Dismiss(ctx, group.Group.GroupID); err != nil {
+			t.Fatalf("Dismiss: %v", err)
+		}
 
 		_, found, err := repo.Get(ctx, group.Group.GroupID)
 		if err != nil {
