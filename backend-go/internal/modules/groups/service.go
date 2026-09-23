@@ -128,8 +128,7 @@ func (s *Service) SetLocationProvider(lp LocationProvider) { s.locations = lp }
 func (s *Service) SetAppConfig(source appconfig.Source) { s.appConfig = source }
 
 func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem, error) {
-	startedAt := time.Now()
-	observability.L().Info("groups.create started")
+	op := observability.Begin("groups.create")
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	// C.4：tags 含被屏蔽标签 → 10400（经注入的 BlockedTagChecker；未注入时跳过）
 	if blockedTagChecker != nil {
@@ -142,20 +141,19 @@ func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem
 	}
 	item, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {
-		observability.L().Error("groups.create failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return GroupItem{}, fmt.Errorf("groups.Service.Create: repo: %w", err)
 	}
 	resourceguard.RecordGroup(ctx, item.Group.GroupID)
-	observability.L().Info("groups.create completed", "group_id", item.Group.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("group_id", item.Group.GroupID)
 	return item, nil
 }
 
 func (s *Service) OpenTheDoor(ctx context.Context, groupID string) (GroupItem, bool, error) {
-	startedAt := time.Now()
-	observability.L().Info("groups.open_the_door started", "group_id", groupID)
+	op := observability.Begin("groups.open_the_door", "group_id", groupID)
 	item, ok, err := s.repo.Get(ctx, groupID)
 	if err != nil {
-		observability.L().Error("groups.open_the_door failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return GroupItem{}, false, err
 	}
 	redactGroupFields(&item)
@@ -170,7 +168,7 @@ func (s *Service) OpenTheDoor(ctx context.Context, groupID string) (GroupItem, b
 		item.Location.Distance = &distance
 		item.Location.BearingDegrees = &bearing
 	}
-	observability.L().Info("groups.open_the_door completed", "group_id", groupID, "found", ok, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("group_id", groupID, "found", ok)
 	return item, ok, nil
 }
 
@@ -192,14 +190,13 @@ func redactGroupFields(item *GroupItem) {
 }
 
 func (s *Service) Search(ctx context.Context, req SearchGroupsRequest) (PaginatedGroups, error) {
-	startedAt := time.Now()
-	observability.L().Info("groups.search started", "keyword", req.Keyword, "tag", req.Tag, "sort_by", req.SortBy)
+	op := observability.Begin("groups.search", "keyword", req.Keyword, "tag", req.Tag, "sort_by", req.SortBy)
 	if req.ReferencePoint.Latitude == 0 && req.ReferencePoint.Longitude == 0 {
 		req.ReferencePoint = s.resolveReferencePoint(ctx)
 	}
 	result, err := s.repo.Search(ctx, req)
 	if err != nil {
-		observability.L().Error("groups.search failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return PaginatedGroups{}, err
 	}
 	reference := searchGeoPoint(req.ReferencePoint)
@@ -214,7 +211,7 @@ func (s *Service) Search(ctx context.Context, req SearchGroupsRequest) (Paginate
 		result.Items[i].OwnerID = nil
 		redactGroupFields(&result.Items[i])
 	}
-	observability.L().Info("groups.search completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return result, nil
 }
 
@@ -237,8 +234,7 @@ func (s *Service) resolveReferencePoint(ctx context.Context) GeoPoint {
 }
 
 func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem, error) {
-	startedAt := time.Now()
-	observability.L().Info("groups.update started", "group_id", req.GroupID)
+	op := observability.Begin("groups.update", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 
 	// 读-改-再读包进同一事务：Get(前)/Update/Get(后) 不在同一快照时，并发
@@ -250,27 +246,27 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 		var err error
 		group, ok, err = s.repo.Get(ctx, req.GroupID)
 		if err != nil {
-			observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			op.Fail(err)
 			return err
 		}
 		if !ok {
-			observability.L().Warn("groups.update not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			op.Warn("not found", "group_id", req.GroupID)
 			return ErrGroupNotFound
 		}
 		// C.1：update 权限从 owner-only 改为 owner/admin（守卫中间件已拦非 admin；此处防御性再判）
 		if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
-			observability.L().Warn("groups.update permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			op.Warn("permission denied", "group_id", req.GroupID)
 			return httpx.Forbidden(httpx.ReasonNotGroupAdmin, "非群管理员")
 		}
 		if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
-			observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			op.Fail(err)
 			return fmt.Errorf("groups.Service.Update: repo: %w", err)
 		}
 		// 重新读取以构造 updated_fields（对比变更前后）并返回更新后完整对象
 		// （内容类更新返回更新后对象，spec api_spec_base.md「设计规范」）。
 		updated, ok, err = s.repo.Get(ctx, req.GroupID)
 		if err != nil {
-			observability.L().Error("groups.update refresh failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			op.Fail(err, "stage", "refresh")
 			return fmt.Errorf("groups.Service.Update: refresh: %w", err)
 		}
 		if !ok {
@@ -297,7 +293,7 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 		Type:    realtime.EventTypeGroupUpdated,
 		Payload: payload,
 	})
-	observability.L().Info("groups.update completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("group_id", req.GroupID)
 	return updated, nil
 }
 
@@ -345,20 +341,19 @@ func equalStringPtr(a, b *string) bool {
 }
 
 func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
-	startedAt := time.Now()
-	observability.L().Info("groups.dismiss started", "group_id", req.GroupID)
+	op := observability.Begin("groups.dismiss", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
-		observability.L().Error("groups.dismiss failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	if !ok {
-		observability.L().Warn("groups.dismiss not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("not found", "group_id", req.GroupID)
 		return ErrGroupNotFound
 	}
 	if group.ViewerState == nil || group.ViewerState.Role != GroupRoleOwner {
-		observability.L().Warn("groups.dismiss permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("permission denied", "group_id", req.GroupID)
 		return ErrAccessRestricted
 	}
 	reason := ""
@@ -369,7 +364,7 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 		}
 	}
 	if err := s.repo.Dismiss(ctx, req.GroupID); err != nil {
-		observability.L().Error("groups.dismiss failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return fmt.Errorf("groups.Service.Dismiss: repo: %w", err)
 	}
 	if s.audit != nil {
@@ -383,20 +378,19 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
 	// 解散后摘除全部订阅者对该群的订阅（成员资格随解散全部终止）。
 	realtime.DefaultHub().DropGroup(req.GroupID)
-	observability.L().Info("groups.dismiss completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("group_id", req.GroupID)
 	return nil
 }
 
 func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]GroupMemberItem, string, error) {
-	startedAt := time.Now()
-	observability.L().Info("groups.list_members started", "group_id", req.GroupID)
+	op := observability.Begin("groups.list_members", "group_id", req.GroupID)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
-		observability.L().Error("groups.list_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return nil, "", err
 	}
 	if !ok {
-		observability.L().Warn("groups.list_members not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("not found", "group_id", req.GroupID)
 		return nil, "", ErrGroupNotFound
 	}
 	// C.2：调用者非成员且群 members_searchable=false → 10200+not_group_member（httpx.Forbidden）
@@ -415,23 +409,22 @@ func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]G
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
 	items, cursor, err := s.repo.ListMembers(ctx, req.GroupID, req.Role, limit, types.PaginationCursor(req.Pagination))
 	if err != nil {
-		observability.L().Error("groups.list_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return nil, "", err
 	}
-	observability.L().Info("groups.list_members completed", "group_id", req.GroupID, "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("group_id", req.GroupID, "count", len(items))
 	return items, cursor, nil
 }
 
 func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersRequest) ([]GroupMemberItem, string, error) {
-	startedAt := time.Now()
-	observability.L().Info("groups.search_members started", "group_id", req.GroupID)
+	op := observability.Begin("groups.search_members", "group_id", req.GroupID)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
-		observability.L().Error("groups.search_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return nil, "", err
 	}
 	if !ok {
-		observability.L().Warn("groups.search_members not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("not found", "group_id", req.GroupID)
 		return nil, "", ErrGroupNotFound
 	}
 	// 搜索资格（spec api_spec_group.md members/search 10400）：非成员仅当群设置
@@ -441,53 +434,51 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 	if isMember {
 		isMember, err = s.repo.IsMember(ctx, req.GroupID, principal.UserID)
 		if err != nil {
-			observability.L().Error("groups.search_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			op.Fail(err)
 			return nil, "", err
 		}
 	}
 	if !isMember && !group.MembersSearchable {
-		observability.L().Warn("groups.search_members not eligible", "group_id", req.GroupID, "user_id", principal.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("not eligible", "group_id", req.GroupID, "user_id", principal.UserID)
 		return nil, "", httpx.Forbidden(httpx.ReasonNotGroupMember, "非群成员")
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
 	items, cursor, err := s.repo.SearchMembers(ctx, req.GroupID, req.Keyword, req.Role, limit, types.PaginationCursor(req.Pagination))
 	if err != nil {
-		observability.L().Error("groups.search_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return nil, "", err
 	}
-	observability.L().Info("groups.search_members completed", "group_id", req.GroupID, "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("group_id", req.GroupID, "count", len(items))
 	return items, cursor, nil
 }
 
 func (s *Service) ListMyGroups(ctx context.Context, req MyGroupsRequest) ([]GroupItem, string, error) {
-	startedAt := time.Now()
-	observability.L().Info("groups.list_my_groups started")
+	op := observability.Begin("groups.list_my_groups")
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
 	items, cursor, err := s.repo.ListMyGroups(ctx, principal.UserID, limit, types.PaginationCursor(req.Pagination))
 	if err != nil {
-		observability.L().Error("groups.list_my_groups failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return nil, "", err
 	}
-	observability.L().Info("groups.list_my_groups completed", "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("count", len(items))
 	return items, cursor, nil
 }
 
 func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGroupResult, error) {
-	startedAt := time.Now()
-	observability.L().Info("groups.join_group started", "group_id", req.GroupID)
+	op := observability.Begin("groups.join_group", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
-		observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return EnterGroupResult{}, err
 	}
 	if !ok {
-		observability.L().Warn("groups.join_group not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("not found", "group_id", req.GroupID)
 		return EnterGroupResult{}, ErrGroupNotFound
 	}
 	if group.ViewerState != nil {
-		observability.L().Info("groups.join_group already joined", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		observability.L().Info("groups.join_group already joined", "group_id", req.GroupID, "elapsed_ms", op.ElapsedMillis())
 		return EnterGroupResult{Status: EnterGroupStatusJoined}, nil
 	}
 	// C.3：被封禁用户无法加入群，返回 10200+banned_in_group（httpx.Forbidden）
@@ -500,12 +491,12 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 	// spec group.md → join 收口：invite_only 群不支持 join（加入唯一入口为
 	// groups/invites/accept），一律返回 10400。
 	if group.JoinMethod == GroupJoinMethodInviteOnly {
-		observability.L().Warn("groups.join_group invite_only not supported", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("invite_only not supported", "group_id", req.GroupID)
 		return EnterGroupResult{}, ErrBusinessConflict
 	}
 	result, err := s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
 	if err != nil {
-		observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return EnterGroupResult{}, fmt.Errorf("groups.Service.JoinGroup: repo: %w", err)
 	}
 	if result.Status == EnterGroupStatusPendingApproval && result.IsNewApplication {
@@ -528,7 +519,7 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 			},
 		})
 	}
-	observability.L().Info("groups.join_group completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("group_id", req.GroupID)
 	return result, nil
 }
 

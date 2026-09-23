@@ -10,6 +10,18 @@
 - `harmonyapp/`：HarmonyOS ArkTS 客户端。
 - `spec/`：API 契约的唯一权威来源（只读）。
 
+## 按需加载的 skill（.agents/skills/）
+
+| skill | 何时加载 |
+|---|---|
+| `hotspot-worktree-debug` | worktree 内 compose 调试、端口映射与收尾清理 |
+| `hotspot-backend-migrations` | 编写或执行 backend-go 数据库迁移 SQL、命名与兼容约束 |
+| `hotspot-harmony-ui` | 修改 harmonyapp 界面样式、使用设计 token、跨端色彩/刻度同步 |
+| `hotspot-frontend-layout` | 修改前端页面结构、布局分栏、选用 Standard/SplitPageLayout |
+| `hotspot-frontend-routing` | 新增或调整前端路由、+page.svelte 组织与设备分派 |
+| `hotspot-frontend-style` | 前端组件交互四态契约（hover/focus/active/disabled）与样式自查 |
+| `hotspot-frontend-theme` | 前端修改颜色/字号/圆角 token、自托管字体与主题配置 |
+
 ## 构建 & 验证
 
 各模块命令以子项目 `AGENTS.md` 为唯一维护处（`backend-go/AGENTS.md`、`frontend/AGENTS.md`、`harmonyapp/AGENTS.md`），此处不重复列出，避免多处同步。以下快速入口仅为速记，与子项目 `AGENTS.md` 不一致时以后者为准：
