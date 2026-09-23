@@ -8,6 +8,7 @@
 import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi , netError } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
+import { showToast } from '@/stores/toast.svelte';
 import type { GroupRole, GroupSentInviteItem, AdminBannedMemberItem, GroupItem, UpdateGroupRequest, GroupApplicationItem, GroupMemberItem } from '@/api/types';
 
 export interface GroupDetail {
@@ -250,10 +251,13 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		joinPending = true;
 		const next = !joined;
 		joined = next;
-		const done = (res: { code: number }) => {
+		const done = (res: { code: number; message?: string }) => {
 			joinPending = false;
 			if (res.code !== 0) {
 				joined = !next;
+				// 失败必须反馈（此前静默回滚：群主退群被 10400「群主需先转让群主身份」
+				// 拒绝时按钮闪一下回弹，用户完全不知道原因）
+				showToast(res.message || '操作失败', 'danger');
 			} else if (next) {
 				// 加入成功：乐观置 member（my_state.role 在下次 loadDetail 时以服务端为准）
 				myRole = 'member';

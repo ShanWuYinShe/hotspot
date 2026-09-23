@@ -373,7 +373,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<button
 				type="button"
 				class="hover-btn w-full rounded-full border px-4 py-3 text-sm font-medium focus-ring {gd.joined ? 'border-accent-border text-accent-default hover:bg-interactive-hover' : 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
-				onclick={() => (gd.joined ? (leaveConfirmOpen = true) : gd.toggleJoin())}
+				onclick={() => {
+							if (gd.joined && gd.myRole === 'owner') {
+								// 群主直接退群必被拒（10400）：预防式引导先转让，而非弹确认后再失败
+								showToast('群主需先转让群主身份（群管理 → 转让群主）', 'danger');
+								return;
+							}
+							gd.joined ? (leaveConfirmOpen = true) : gd.toggleJoin();
+						}}
 			>
 				{#if gd.joined}
 					<span class="flex items-center justify-center gap-1.5">
