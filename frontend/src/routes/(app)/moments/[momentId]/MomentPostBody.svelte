@@ -234,7 +234,7 @@
 		评论 · {commentCount}
 	</p>
 	{#if comments.length === 0}
-		<EmptyState bare title="还没有评论" description="来说点什么的">
+		<EmptyState bare title="还没有评论" description="来说点什么吧">
 			{#snippet icon()}
 				<MessageCircle class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 			{/snippet}
