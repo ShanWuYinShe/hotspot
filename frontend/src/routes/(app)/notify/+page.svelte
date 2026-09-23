@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { untrack } from 'svelte';
+import { goto } from '$app/navigation';
 	import { Bell, CheckCheck } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
@@ -76,7 +77,8 @@ const FILTER_TABS = [
 				needsAuth = false;
 				// 仅首刷（无数据）展示整页 loading；WS 触发的后台刷新静默换数据，
 				// 避免用户浏览列表时每来一条新通知整表闪一次 spinner。
-				if (!notifies.length) loading = true;
+				// notifies 读取必须 untrack：数组回写会成为 effect 依赖 → 无限请求循环（同 messages）
+				if (untrack(() => !notifies.length)) loading = true;
 				loadError = null;
 				const [notifRes, unreadRes, invitesRes] = await Promise.all([
 					listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE } }).catch(() => netError({ items: [], next_cursor: null })),

@@ -21,6 +21,9 @@ export interface MapPoint {
 }
 
 const LAST_KEY = 'hotspot_last_location';
+
+/** 锚点写入后派发（同窗口）：侧栏位置卡等常驻组件据此重读锚点。 */
+export const LOCATION_ANCHOR_UPDATED_EVENT = 'location:anchor-updated';
 const DENIED_KEY = 'hotspot:locate-denied';
 
 function storage(): Storage | null {
@@ -80,6 +83,7 @@ export function writeLastLocation(point: MapPoint): void {
 		const name = point.name?.trim();
 		if (name) payload.name = name;
 		store.setItem(LAST_KEY, JSON.stringify(payload));
+		window.dispatchEvent(new CustomEvent(LOCATION_ANCHOR_UPDATED_EVENT));
 	} catch {
 		/* 隐私模式等存储不可用场景：不打断交互 */
 	}

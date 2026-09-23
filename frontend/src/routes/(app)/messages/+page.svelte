@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Plus, MessageSquareDashed } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
@@ -55,7 +56,9 @@
 		async function fetchChats() {
 			try {
 				// 仅首刷（无数据）展示整页 loading；WS 触发的后台刷新静默换数据
-				if (!chats.length) loading = true;
+				// chats 读取必须 untrack：否则数组回写（新引用）成为 effect 依赖，
+				// fetch 完成即重跑自身 → 登录态下无限请求循环（线上 P0）
+				if (untrack(() => !chats.length)) loading = true;
 				loadError = null;
 				needsAuth = false;
 				// 并行加载私聊与我的群组，合并为统一会话列表（按置顶 > 未读 > 已读，时间倒序）。
