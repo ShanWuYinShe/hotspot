@@ -10,6 +10,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ActivityRow from '@/components/home/ActivityRow.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
+	import { auth } from '@/stores/auth.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation, type DefaultLocation } from '@/lib/start-default-location';
@@ -69,9 +70,15 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	// code（仅捕获网络异常），收敛后与分区版对齐：code!==0 同样回滚并提示。
 	const followState = createOptimisticFollow();
 	const toggleFollow = (id: string) => void followState.toggle(id, false);
-	const onlineCount = $derived(nearbyUsers.filter((u) => u.isOnline).length);
+	// 登录态排除自己（对齐 nearby 页与鸿蒙端）：自己不该出现在「附近的人」里，
+	// 更不能对着自己的行显示「关注」。匿名无身份，全展示。
+	const visibleNearbyUsers = $derived.by(() => {
+		const selfId = auth.user?.user_id;
+		return selfId ? nearbyUsers.filter((u) => u.id !== selfId) : nearbyUsers;
+	});
+	const onlineCount = $derived(visibleNearbyUsers.filter((u) => u.isOnline).length);
 	const heroStats = $derived({
-		nearby: nearbyUsers.length,
+		nearby: visibleNearbyUsers.length,
 		active: moments.length,
 		online: onlineCount
 	});
@@ -109,7 +116,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
 		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
 		<NearbyUserRows
-			users={nearbyUsers.slice(0, 4)}
+			users={visibleNearbyUsers.slice(0, 4)}
 			isFollowed={(id) => followState.isFollowed(id, false)}
 			isPending={(id) => followState.isPending(id)}
 			onToggle={toggleFollow}
@@ -148,7 +155,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 		<InlineLoading label="加载首页数据…" />
 	{:else if error}
 		<LoadError message={error} onRetry={() => reloadKey++} />
-	{:else if moments.length === 0 && nearbyUsers.length === 0 && nearbyGroups.length === 0}
+	{:else if moments.length === 0 && visibleNearbyUsers.length === 0 && nearbyGroups.length === 0}
 		<EmptyState title="附近还没有内容" description="去发布第一条动态，或到附近的人认识新朋友。">
 			{#snippet icon()}
 				<Radar class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
@@ -187,7 +194,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 
 				<div class="mt-6">
 					<NearbyUserRows
-						users={nearbyUsers}
+						users={visibleNearbyUsers}
 						isFollowed={(id) => followState.isFollowed(id, false)}
 						isPending={(id) => followState.isPending(id)}
 						onToggle={toggleFollow}
