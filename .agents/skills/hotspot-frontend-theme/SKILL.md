@@ -117,7 +117,7 @@ theme/
   themes/vibrant.css     # Layer 2: 星际主题（全部 --cst-palette-* 值）
   themes/forest.css      # Layer 2: 清野主题（全部 --cst-palette-* 值）
   themes/inkwash.css     # Layer 2: 水墨主题（全部 --cst-palette-* 值）
-  layout.css             # 布局变量（context-rail、workspace）
+  layout.css             # 布局尺寸变量（context-rail 宽/间距、workspace-gap/inset 等；无颜色 token）
   base.css               # @layer base（排版 + 按钮基线）
   theme-registry.css     # @theme inline Tailwind 注册（字号 text-*/字距 tracking-*/行高
                          #   leading-*/圆角 radius-*/阴影 shadow-raised-*+inset-*+glow-*/动效 ease-*）

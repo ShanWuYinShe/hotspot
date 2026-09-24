@@ -20,8 +20,8 @@ description: hotspot 前端页面布局契约：StandardPageLayout / SplitPageLa
   - 聊天页面（桌面端与移动端）因分栏/全屏会话布局特殊，可暂不套用
     `StandardPageLayout`/`SplitPageLayout`；但页头、列表与正文的 gutter/padding
     仍必须与样板一致（沿用 `PageHeader` + `ContentColumn`）。桌面消息分栏左栏
-    （`w-75`=300px 窄列）不进 `--cst-page-gutter`，用 `px-4` 压缩 gutter（见样式
-    自查清单第 8 条窄列特例）。
+    （`w-75`=300px 窄列）不进 `--cst-page-gutter`，用 `px-4` 压缩 gutter（见 skill
+    `hotspot-frontend-style` 的「窄列特例」，已登记例外）。
   - **封面/紧凑型资料头**（`groups/[groupId]`、`users/[userId]`）：标题与封面/头像
     绑定，不在 header 操作行内，故不套 `PageHeader`，自建返回/分享/更多操作行 +
     封面下方 `<h1>`。与 `moments/[momentId]`（有独立标题"动态详情"，套 PageHeader）

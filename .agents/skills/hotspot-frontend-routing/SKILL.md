@@ -16,7 +16,7 @@ src/routes/
   +error.svelte            # 404
   (auth)/login/+page.svelte    # 登录页（无 MainLayout 外壳）
   share/[code]/+page.svelte    # 分享落地页（真实用户走 SPA；爬虫 UA 由 nginx 分流到后端 OG，
-                               # 见 backend-go/AGENTS.md「分享 OG」）
+                               # 见 backend-go/AGENTS.md「路由与协议」的 /share/{code} 登记例外）
   (app)/
     +layout.svelte         # MainLayout 外壳（桌面/平板/移动/横屏四端分派）
     +page.svelte           # 首页（hero/动态/群组/用户；三端统一标题）

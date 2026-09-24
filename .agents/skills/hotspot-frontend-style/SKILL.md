@@ -23,11 +23,11 @@ description: hotspot 前端样式与交互状态契约：样式自查清单 19 �
    （开关半高圆角、状态条 1-3px 指示条、拖拽把手）
 2. **颜色**：组件内禁止 hex/rgba 字面量（数据层同样禁止）；arbitrary 类
    （`bg-[#...]`/`shadow-[...]`）禁止含色值。阴影色值统一走 `--shadow-*` token
-   （见第 11 条），不得在 `shadow-[...]` 或内联 `box-shadow` 里手写色值
+   （见上方第 10 条「阴影」），不得在 `shadow-[...]` 或内联 `box-shadow` 里手写色值
 3. **字号（强制，9 档）**：全站字号一律用 `text-*` 刻度类——**4 档自定义 token
    （`--text-*`：xxs=10 / xs=11 / sm=12 / md=14）+ Tailwind 默认 5 档**
    （text-lg 及以上 18/20/24/30/36），与 `check-cross-platform-scale.mjs` 的
-   `FONT_MAP`、`harmonyapp/AGENTS.md`「字号 9 档」同口径。
+   `FONT_MAP`、`frontend/AGENTS.md`「字号 9 档」同口径（跨端一致性见 skill `hotspot-harmony-ui`）。
    - xxs=10：极小 uppercase 标签（eyebrow、分组标）
    - xs=11：辅助文字（副标题、计数、时间戳）
    - sm=12：正文（原 13px 已归并，消除 1px 噪声）
@@ -36,6 +36,7 @@ description: hotspot 前端样式与交互状态契约：样式自查清单 19 �
    arbitrary 类、禁止 style 内联 `font-size:Npx`**（含动态 ternary——移到 class 三元）。
    **已登记例外**（与 `base.css` 的 h1-h4 元素级映射同等地位）：
    - `Avatar` fallback 首字母 `font-size:{size*0.42}px`：随头像尺寸等比缩放，物理比例
+     恒定；字号档位类不适用于此例外，保持内联按尺寸计算。
    > `PageHeader` 的 `titleSize`/`subtitleSize` 已重构为**字号档位 prop**
    > （`md/base/lg/xl/2xl/3xl` → 映射 `TITLE_SIZE_CLASS`），不再有内联 `font-size`。
    > 全站页面统一传 `device === 'desktop' ? 'xl' : '2xl'`（桌面 20 / 平板·移动 24），
@@ -185,7 +186,7 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 
 - **禁止透明度越档**：`hover:bg-accent-soft/50` 之类 `/N` 变体一律用整档
   `hover:bg-interactive-hover`（accent-soft 本身就是 10~14% 淡底，再砍半档等于
-  用 opacity 造新档位，违反第 17 条）。
+  用 opacity 造新档位，违反上方第 15 条「opacity」）。
 - 已选中态（`aria-pressed=true` / `bg-accent-soft` 打底）的 hover 走
   `hover:bg-interactive-active`，不用 interactive-hover。
 - 导航 Tab 不参与本表：`.tab-item` 规则统一提供 `--cst-interactive-hover-fill`
@@ -194,7 +195,7 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 
 硬性规则：
 - 输入框聚焦态由整框承载：内层 input/textarea 不画自身焦点框
-  （utilities.css `.input-surface:focus-visible` 统一压制，与第 18 条焦点可见性配合）；
+  （utilities.css `.input-surface:focus-visible` 统一压制，与上方第 16 条「焦点可见性」配合）；
   底色保持中性，不引入 accent 色，避免与错误态等 accent 元素抢视觉。
 - 禁止双重边框：card-hover 只抬投影不画外环；带边框的卡片 hover 用
   `hover:border-accent-default`；surface-flat 的 hover 描边仅对可交互元素生效。
