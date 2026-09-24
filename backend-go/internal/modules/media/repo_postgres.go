@@ -230,6 +230,11 @@ WHERE file_id = $1 AND status = 'completed'`
 		&meta.FileSize,
 		&meta.Duration,
 	); err != nil {
+		// no rows = 文件不存在（已清理/未落地）：归一为 found=false 的预期业务
+		// 分支，调用方与内存实现同口径，不再以 Error 级日志刷屏。
+		if errors.Is(err, pgx.ErrNoRows) {
+			return FileMeta{}, false, nil
+		}
 		return FileMeta{}, false, err
 	}
 	return meta, true, nil
