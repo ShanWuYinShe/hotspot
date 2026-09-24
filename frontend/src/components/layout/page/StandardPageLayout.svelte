@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { cn } from '@/lib/utils';
 	import ContentColumn from './ContentColumn.svelte';
 
 	// 布局组件（layout/page）。
@@ -30,11 +31,15 @@
 	} = $props();
 </script>
 
-<section data-standard-page-layout class="min-h-full w-full">
+<section data-standard-page-layout class="flex min-h-full w-full flex-col">
 	{#if header}
 		{@render header()}
 	{/if}
-	<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
+	<!-- flex flex-col + ContentColumn flex-1：正文列至少撑满视口剩余高度。
+		 页面总高不变（section 本就 min-h-full），但让需要「贯穿到底」的分栏
+		 分割线等布局在短内容页成立（如首页桌面双列的 border-r）。
+		 header 为 sticky flex 子项，行为不变。 -->
+	<ContentColumn maxWidth={contentMaxWidth} class={cn(contentClassName, 'flex-1')}>
 		{@render children()}
 	</ContentColumn>
 </section>
