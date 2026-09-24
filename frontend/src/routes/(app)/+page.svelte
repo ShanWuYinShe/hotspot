@@ -103,6 +103,10 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 		void anchorVersion;
 		heroLocationName = readLastLocation()?.name ?? defaultLocation?.location_name ?? '';
 	});
+	// 空态补充说明：与基准同源，让「没有匹配的用户」可解释（对齐附近页空态）。
+	const nearbyFilterHint = $derived(
+		heroLocationName ? `正在按「${heroLocationName}」5km 范围筛选` : undefined
+	);
 	const heroStats = $derived({
 		nearby: visibleNearbyUsers.length,
 		active: moments.length,
@@ -146,6 +150,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 			isFollowed={(id) => followState.isFollowed(id, false)}
 			isPending={(id) => followState.isPending(id)}
 			onToggle={toggleFollow}
+			emptyHint={nearbyFilterHint}
 		/>
 	</div>
 {/snippet}
@@ -193,7 +198,9 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 		     ≤500px、600-700vp 时压到 ≤260px，使 NearbyUserRows 不可读。平板直接走
 		     homeContent（单栏堆叠，4 条人物推荐 + 查看全部），与移动端保持同款
 		     内容密度。 -->
-		<div class="grid grid-cols-[21.25rem_minmax(0,1fr)] gap-6">
+		<!-- min-h-full：让双列行至少撑满正文列（flex-1 已撑满视口剩余），左列
+			 border-r 分割线随之贯穿到页底，短内容时不再像中途截断。 -->
+		<div class="grid min-h-full grid-cols-[21.25rem_minmax(0,1fr)] gap-6">
 			<!-- Left: hero + activity + groups (340px)，与移动端共用 heroColumn（全量动态、无「更多」入口） -->
 			<div class="flex flex-col gap-6 border-r border-border-default pr-6">
 				{@render heroColumn(moments, false)}
@@ -224,6 +231,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 						isFollowed={(id) => followState.isFollowed(id, false)}
 						isPending={(id) => followState.isPending(id)}
 						onToggle={toggleFollow}
+						emptyHint={nearbyFilterHint}
 					/>
 				</div>
 			</div>
