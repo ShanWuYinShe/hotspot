@@ -101,7 +101,10 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	let heroLocationName = $state('');
 	$effect(() => {
 		void anchorVersion;
-		heroLocationName = readLastLocation()?.name ?? defaultLocation?.location_name ?? '';
+		// 锚点存在（即使无名称）时基准就是锚点，位置名不得回退默认位置名——
+		// 否则统计按锚点算、文案却写「南天门」，0 人与文案自相矛盾（线上截图实测）。
+		const a = readLastLocation();
+		heroLocationName = a?.name ?? (a ? '自定义位置' : defaultLocation?.location_name ?? '');
 	});
 	// 空态补充说明：与基准同源，让「没有匹配的用户」可解释（对齐附近页空态）。
 	const nearbyFilterHint = $derived(

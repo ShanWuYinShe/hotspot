@@ -50,7 +50,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(
 		initialAnchor ? { latitude: initialAnchor.lat, longitude: initialAnchor.lng } : null
 	);
-	let locationName = $state(initialAnchor?.name ?? '');
+	let locationName = $state(initialAnchor?.name ?? (initialAnchor ? '自定义位置' : ''));
 	// 服务端默认位置名（空态「改用默认位置」按钮文案用；与基准选择解耦）。
 	let defaultLocationName = $state('');
 	let loadError = $state<string | null>(null);
@@ -74,7 +74,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		clearPeopleProgress();
 		if (anchor) {
 			referencePoint = { latitude: anchor.lat, longitude: anchor.lng };
-			locationName = anchor.name ?? '';
+			locationName = anchor.name ?? '自定义位置';
 		} else {
 			referencePoint = null;
 			locationName = '';
