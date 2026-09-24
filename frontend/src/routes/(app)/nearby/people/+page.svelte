@@ -3,12 +3,13 @@
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
-	import { readLastLocation } from '@/lib/map-auto-locate';
+	import { LOCATION_ANCHOR_UPDATED_EVENT, clearLastLocation, readLastLocation } from '@/lib/map-auto-locate';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Button from '@/components/ui/button.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
@@ -41,12 +42,17 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let sentinelEl = $state<HTMLElement | null>(null);
 	let allUsers = $state<NearbyUser[]>([]);
 	let loading = $state(true);
-	// 本机浏览锚点（localStorage 同步可读）优先于服务端默认位置。
-	const savedAnchor = readLastLocation();
+	// 本机浏览锚点（localStorage 同步可读）优先于服务端默认位置。锚点为响应式：
+	// 地图/位置选择更新或清除锚点时经事件同步（见下方监听）。初始值取挂载时刻
+	// 一次性快照（state_referenced_locally 警告口径：后续同步只经 applyAnchor）。
+	const initialAnchor = readLastLocation();
+	let anchor = $state(initialAnchor);
 	let referencePoint = $state<{ latitude: number; longitude: number } | null>(
-		savedAnchor ? { latitude: savedAnchor.lat, longitude: savedAnchor.lng } : null
+		initialAnchor ? { latitude: initialAnchor.lat, longitude: initialAnchor.lng } : null
 	);
-	let locationName = $state(savedAnchor?.name ?? '');
+	let locationName = $state(initialAnchor?.name ?? '');
+	// 服务端默认位置名（空态「改用默认位置」按钮文案用；与基准选择解耦）。
+	let defaultLocationName = $state('');
 	let loadError = $state<string | null>(null);
 	let reloadKey = $state(0);
 
@@ -55,10 +61,29 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// 无锚点才回退服务端默认位置。此前只读默认位置，用户在地图上设的锚点
 	// 对附近列表毫无影响。
 	$effect(() => startDefaultLocation((loc) => {
-		if (savedAnchor) return;
+		defaultLocationName = loc?.location_name ?? '';
+		if (anchor) return;
 		referencePoint = loc?.point ?? null;
 		locationName = loc?.location_name ?? '';
 	}));
+
+	// 锚点更新/清除监听：地图「设为浏览锚点」与空态「改用默认位置」都会触发，
+	// 此处同步基准并重拉列表（进度缓存按定位 key 隔离，手动清除防止串台）。
+	function applyAnchor() {
+		anchor = readLastLocation();
+		clearPeopleProgress();
+		if (anchor) {
+			referencePoint = { latitude: anchor.lat, longitude: anchor.lng };
+			locationName = anchor.name ?? '';
+		} else {
+			referencePoint = null;
+			locationName = '';
+		}
+	}
+	$effect(() => {
+		window.addEventListener(LOCATION_ANCHOR_UPDATED_EVENT, applyAnchor);
+		return () => window.removeEventListener(LOCATION_ANCHOR_UPDATED_EVENT, applyAnchor);
+	});
 
 	$effect(() => {
 		// spec: users/search radius 仅显式提供时按半径过滤（此处显式传 5km 承接
@@ -238,9 +263,26 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				{:else if loading}
 					<InlineLoading label="加载附近用户…" />
 				{:else if !list.length}
-					<EmptyState bare title="附近暂时没有匹配的用户">
+					<!-- 空态自解释：锚点基准下为空必须让用户知道「在看哪里」，否则与
+						 首页（同基准）之外的旧认知矛盾（线上实测困惑源）。 -->
+					<EmptyState
+						bare
+						title={anchor ? (anchor.name ? `「${anchor.name}」附近暂时没有用户` : '当前查看的位置附近暂时没有用户') : '附近暂时没有匹配的用户'}
+						description={anchor ? '正在按你设置的浏览位置筛选 5km 范围。' : undefined}
+					>
 						{#snippet icon()}
 							<Users size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
+						{/snippet}
+						{#snippet action()}
+							{#if anchor}
+								<Button
+									type="button"
+									variant="secondary"
+									size="sm"
+									onclick={() => { clearLastLocation(); applyAnchor(); }}
+								>
+									改用默认位置{defaultLocationName ? `（${defaultLocationName}）` : ''}</Button>
+							{/if}
 						{/snippet}
 					</EmptyState>
 				{:else}

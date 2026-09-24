@@ -1,7 +1,6 @@
 <script lang="ts">
 import { formatCount } from '@/lib/utils';
 	import { Radar, ChevronRight } from '@lucide/svelte';
-	import { platform } from '@/stores/platform.svelte';
 
 	// Hero 统计横幅——单一焦点 + 环境光晕。
 
@@ -15,11 +14,10 @@ import { formatCount } from '@/lib/utils';
 		locationName?: string;
 	} = $props();
 
-	const rangeLabel = $derived(
-		platform.platform === 'mobile'
-			? (locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新')
-			: '5km 内 · 实时更新'
-	);
+	// 位置名两端统一显示：首页与附近页共用浏览锚点/默认位置基准（此前桌面端
+	// 恒为「5km 内 · 实时更新」，用户自定义锚点后看不到当前基准，与附近页
+	// 列表数对不上时无从解释）。
+	const rangeLabel = $derived(locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新');
 </script>
 
 	<button

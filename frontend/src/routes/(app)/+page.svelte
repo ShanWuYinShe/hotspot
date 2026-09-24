@@ -14,6 +14,7 @@
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation, type DefaultLocation } from '@/lib/start-default-location';
+	import { LOCATION_ANCHOR_UPDATED_EVENT, readLastLocation } from '@/lib/map-auto-locate';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -41,14 +42,33 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 			defaultLocation = loc ?? null;
 }));
 
+	// 浏览锚点版本号：地图/位置选择更新锚点后经事件触发重拉（与附近页同规则）。
+	let anchorVersion = $state(0);
+	$effect(() => {
+		const onChanged = () => { anchorVersion++; };
+		window.addEventListener(LOCATION_ANCHOR_UPDATED_EVENT, onChanged);
+		return () => window.removeEventListener(LOCATION_ANCHOR_UPDATED_EVENT, onChanged);
+	});
+
+	// 位置基准与附近页统一（spec api_spec_types.md reference_point = 当前在看哪里）：
+	// 浏览锚点优先，回退服务端默认位置。此前首页只认默认位置、附近页锚点优先，
+	// 用户设置自定义锚点后首页「5 人附近」与附近页「没有匹配的用户」自相矛盾
+	//（线上实测）。同一数据的两个入口必须同一基准。
+	function currentReferencePoint(): { latitude: number; longitude: number } | null {
+		const anchor = readLastLocation();
+		if (anchor) return { latitude: anchor.lat, longitude: anchor.lng };
+		return defaultLocation?.point ?? null;
+	}
+
 	$effect(() => {
 		void reloadKey;
+		void anchorVersion;
 		let cancelled = false;
 		async function fetchData() {
 			try {
 				loading = true;
 				error = null;
-				const feed = await fetchHomeFeed(defaultLocation?.point);
+				const feed = await fetchHomeFeed(currentReferencePoint());
 				if (cancelled) return;
 				moments = feed.moments;
 				nearbyUsers = feed.users;
@@ -77,6 +97,12 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 		return selfId ? nearbyUsers.filter((u) => u.id !== selfId) : nearbyUsers;
 	});
 	const onlineCount = $derived(visibleNearbyUsers.filter((u) => u.isOnline).length);
+	// 位置名与基准同源（锚点名 → 默认位置名）；anchorVersion 触发重读。
+	let heroLocationName = $state('');
+	$effect(() => {
+		void anchorVersion;
+		heroLocationName = readLastLocation()?.name ?? defaultLocation?.location_name ?? '';
+	});
 	const heroStats = $derived({
 		nearby: visibleNearbyUsers.length,
 		active: moments.length,
@@ -100,7 +126,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 {#snippet heroColumn(momentItems: MomentItem[], withMoreAction: boolean)}
 	<!-- Hero 统计 + 附近活动 + 群组轮播：移动/桌面双布局共用，
 	     活动列表条数与「更多」入口经参数区分 -->
-	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={defaultLocation?.location_name ?? ''} />
+	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={heroLocationName} />
 	<div>
 		<SectionHead title="附近活动" action={withMoreAction ? '更多' : undefined} onAction={() => void goto(ROUTES.nearbyMoments)} />
 		{@render momentRows(momentItems, (id) => void goto(ROUTES.moment(id)))}
@@ -179,7 +205,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 					<div>
 						<span class="eyebrow">附近的人</span>
 						<p class="text-xs mt-1 text-text-secondary">
-							5km 内 · 实时更新
+							{heroLocationName ? `${heroLocationName} · 5km 内` : '5km 内 · 实时更新'}
 						</p>
 					</div>
 					<button

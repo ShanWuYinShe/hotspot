@@ -74,6 +74,21 @@ export function readLastLocation(): MapPoint | null {
 	}
 }
 
+/**
+ * 清除浏览锚点（附近页「改用默认位置」等场景）：随后派发锚点更新事件，
+ * 侧栏位置卡等常驻组件据此回退默认位置。存储不可用时静默忽略。
+ */
+export function clearLastLocation(): void {
+	const store = storage();
+	if (!store) return;
+	try {
+		store.removeItem(LAST_KEY);
+	} catch {
+		/* 隐私模式等存储不可用场景：不打断交互 */
+	}
+	window.dispatchEvent(new CustomEvent(LOCATION_ANCHOR_UPDATED_EVENT));
+}
+
 /** 写入浏览锚点（坐标必填；名称可选）。存储不可用时静默忽略，不打断交互。 */
 export function writeLastLocation(point: MapPoint): void {
 	const store = storage();
