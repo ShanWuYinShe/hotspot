@@ -35,6 +35,9 @@ type AccountAvatarMediaResolver interface {
 	// 上传已完成；不满足时返回错误（update_account 映射 10300，
 	// spec api_spec_user.md update_account 错误码）。
 	ResolveAvatarImage(ctx context.Context, fileID, userID string) error
+	// AvatarPublicPath 返回 file_id 在 avatar_url 字段中的稳定存储形态
+	// （/public/v1/media/avatars/ 相对代理路径，见 media 包 service_avatar.go）。
+	AvatarPublicPath(fileID string) string
 }
 
 type Service struct {
@@ -135,13 +138,19 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		// avatar_file_id 须来自当前用户已完成上传的 avatar 类媒体；空字符串
 		// 表示清除头像，不校验。校验实现未接线时跳过（对齐 moments
 		// validateImageOwnership 的 nil 口径，bootstrap 恒注入）。
-		if *req.AvatarFileID != "" && s.avatarMedia != nil {
+		if *req.AvatarFileID == "" || s.avatarMedia == nil {
+			// 空串（清除头像，不校验）或校验实现未接线（测试口径，对齐
+			// moments validateImageOwnership 的 nil 口径）：原样赋值，不转换。
+			profile.AvatarURL = *req.AvatarFileID
+		} else {
 			if err := s.avatarMedia.ResolveAvatarImage(ctx, *req.AvatarFileID, principal.UserID); err != nil {
 				observability.L().Warn("users.update_account avatar denied", "error", err, "user_id", principal.UserID)
 				return ErrAvatarNotOwned
 			}
+			// avatar_url 存稳定代理路径而非裸 file_id：此前直存 file_id，客户端
+			// <img src>/Image() 拿到无效相对路径，全站头像坏图（线上实测）。
+			profile.AvatarURL = s.avatarMedia.AvatarPublicPath(*req.AvatarFileID)
 		}
-		profile.AvatarURL = *req.AvatarFileID
 	}
 	if req.Bio != nil {
 		// 契约：bio 0-500 字符（空串=清除）。不设上限会被塞 ~1MB 并在主页回显放大。

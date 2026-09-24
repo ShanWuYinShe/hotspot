@@ -30,6 +30,14 @@ func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
 	return &Module{handler: NewHandler(service), Service: service}
 }
 
+// MountPublic 挂载匿名头像代理端点（GET /public/v1/media/avatars/{file_id}，
+// 302 到签名读 URL）。avatar_url 存储的就是该代理路径（见 service_avatar.go），
+// 登记 GET 例外见 handler_avatar.go 头注释。仅限流不鉴权：头像为公开资料，
+// 端点只做类别白名单 + 302，不回源文件内容。
+func (m *Module) MountPublic(r chi.Router) {
+	r.Get("/media/avatars/{file_id}", m.handler.ServeAvatar)
+}
+
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/media", func(mediaRouter chi.Router) {
 		mediaRouter.Group(func(group chi.Router) {

@@ -65,10 +65,11 @@ type Service struct {
 	repo          Repository
 	notifications groupNotificationWriter
 	users         actor.Provider
-	locations     LocationProvider        // optional; nil => skip user-location fallback
-	appConfig     appconfig.Source        // optional; nil => default TTLs for invite/application expiry
-	audit         GroupDismissAuditWriter // optional; nil => dismiss audit is skipped
-	runInTx       persistence.TxRunner    // optional; nil => Update 直跑（对齐 moments.Update：写路径包事务）
+	locations     LocationProvider         // optional; nil => skip user-location fallback
+	appConfig     appconfig.Source         // optional; nil => default TTLs for invite/application expiry
+	audit         GroupDismissAuditWriter  // optional; nil => dismiss audit is skipped
+	avatarMedia   GroupAvatarMediaResolver // optional; nil => 头像直存旧口径（内存测试路径）
+	runInTx       persistence.TxRunner     // optional; nil => Update 直跑（对齐 moments.Update：写路径包事务）
 }
 
 // SetTxRunner wires the optional transaction runner（bootstrap 注入；
@@ -127,6 +128,36 @@ func (s *Service) SetLocationProvider(lp LocationProvider) { s.locations = lp }
 // TTLs). Optional: nil falls back to default TTLs.
 func (s *Service) SetAppConfig(source appconfig.Source) { s.appConfig = source }
 
+// GroupAvatarMediaResolver 校验群头像 avatar_file_id 归属并给出稳定代理路径
+// （media 模块实现，bootstrap 注入；对齐 users 的 AccountAvatarMediaResolver 模式）。
+type GroupAvatarMediaResolver interface {
+	// ResolveGroupAvatarImage 校验 fileID 存在、归属 userID、category=group_avatar
+	// 且上传已完成；不满足时返回错误。
+	ResolveGroupAvatarImage(ctx context.Context, fileID, userID string) error
+	// AvatarPublicPath 返回 file_id 的稳定代理路径（avatar_url 存储形态，
+	// 直存裸 file_id 会让客户端 <img src>/Image() 坏图——线上实测）。
+	AvatarPublicPath(fileID string) string
+}
+
+// SetGroupAvatarMediaResolver 注入群头像校验/路径实现（bootstrap 装配；
+// nil 时跳过校验与转换，行为回到直存 file_id 的旧口径，仅内存测试路径）。
+func (s *Service) SetGroupAvatarMediaResolver(r GroupAvatarMediaResolver) { s.avatarMedia = r }
+
+// resolveGroupAvatarInput 校验并转换创建/更新入参中的 avatar_file_id：
+// 非空且 resolver 已注入时先归属校验（非本人上传的 file_id 拒绝——此前无校验，
+// 任意 file_id 可被设为群头像），再转成 avatar_url 的稳定代理路径存储。
+func (s *Service) resolveGroupAvatarInput(ctx context.Context, fileID, userID, op string) (string, error) {
+	if fileID == "" || s.avatarMedia == nil {
+		return fileID, nil
+	}
+	if err := s.avatarMedia.ResolveGroupAvatarImage(ctx, fileID, userID); err != nil {
+		observability.L().Warn("groups avatar denied", "error", err, "op", op, "user_id", userID)
+		// *httpx.APIError 由 handler 原样透传（groups Create/Update 错误分支）
+		return "", httpx.InvalidRequest("头像文件不存在或不属于当前用户")
+	}
+	return s.avatarMedia.AvatarPublicPath(fileID), nil
+}
+
 func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem, error) {
 	op := observability.Begin("groups.create")
 	principal, _ := platformauth.PrincipalFromContext(ctx)
@@ -139,6 +170,14 @@ func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem
 			}
 		}
 	}
+	// 群头像归属校验 + 代理路径转换（见 resolveGroupAvatarInput；此前直存
+	// 裸 file_id 且无归属校验——客户端坏图且任意 file_id 可被设为群头像）。
+	avatarURL, err := s.resolveGroupAvatarInput(ctx, req.AvatarFileID, principal.UserID, "create")
+	if err != nil {
+		op.Fail(err)
+		return GroupItem{}, err
+	}
+	req.AvatarFileID = avatarURL
 	item, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {
 		op.Fail(err)
@@ -258,6 +297,14 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 			op.Warn("permission denied", "group_id", req.GroupID)
 			return httpx.Forbidden(httpx.ReasonNotGroupAdmin, "非群管理员")
 		}
+		// 头像入参与 Create 同口径：非空时归属校验 + 代理路径转换（空串=不改，
+		// repo 层 COALESCE 语义）。
+		avatarURL, avErr := s.resolveGroupAvatarInput(ctx, req.AvatarFileID, principal.UserID, "update")
+		if avErr != nil {
+			op.Fail(avErr)
+			return avErr
+		}
+		req.AvatarFileID = avatarURL
 		if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
 			op.Fail(err)
 			return fmt.Errorf("groups.Service.Update: repo: %w", err)

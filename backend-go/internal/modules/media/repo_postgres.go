@@ -207,7 +207,8 @@ func (r *PostgresRepository) CompletedFileMetaByID(ctx context.Context, fileID s
 		return FileMeta{}, false, err
 	}
 	const q_ = `
-SELECT storage_key,
+SELECT category,
+       storage_key,
        COALESCE(thumbnail_url, ''),
        COALESCE(width, 0),
        COALESCE(height, 0),
@@ -219,6 +220,7 @@ FROM media_upload_sessions
 WHERE file_id = $1 AND status = 'completed'`
 	var meta FileMeta
 	if err := q.QueryRow(ctx, q_, fileID).Scan(
+		&meta.Category,
 		&meta.StorageKey,
 		&meta.ThumbnailURL,
 		&meta.Width,

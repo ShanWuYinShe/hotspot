@@ -64,6 +64,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	groupsModule := groups.NewModule(factory, usersModule.Service, notificationService)
 	mediaModule := media.NewModule(cfg, factory)
 	mediaModule.Service.SetAppConfig(sharedAppConfig)
+	// 群头像归属校验 + 稳定代理路径转换（groups create/update；对齐 users 的
+	// AccountAvatarMediaResolver 注入，groupsModule 创建在先，此处回填注入）。
+	groupsModule.Service.SetGroupAvatarMediaResolver(mediaModule.Service)
 	// 数据保留期清理（RETENTION_SWEEP_ENABLED，默认开启）：未完成上传会话
 	// 超期后删对象+删行（孤儿文件此前永不清理）。
 	if cfg.RetentionSweepEnabled {

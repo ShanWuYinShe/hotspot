@@ -548,6 +548,10 @@ func (r stubAvatarResolver) ResolveAvatarImage(_ context.Context, _, _ string) e
 	return r.err
 }
 
+func (r stubAvatarResolver) AvatarPublicPath(fileID string) string {
+	return "/public/v1/media/avatars/" + fileID
+}
+
 // spec api_spec_user.md update_account 10300：avatar_file_id 不存在/不归属
 // 当前用户/非 avatar 类/未完成上传时拒绝更新。
 func TestUpdateMyProfileRejectsForeignAvatar(t *testing.T) {
@@ -574,8 +578,10 @@ func TestUpdateMyProfileAcceptsOwnedAvatar(t *testing.T) {
 	if err := svc.UpdateMyProfile(userCtx("u1"), UpdateAccountRequest{AvatarFileID: &avatar}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if repo.profile.AvatarURL != "file_owned" {
-		t.Fatalf("expected avatar to be updated, got %q", repo.profile.AvatarURL)
+	// avatar_url 存稳定代理路径（非裸 file_id）：客户端直接可用，见 media 包
+	// service_avatar.go 与 UpdateMyProfile 转换注释。
+	if repo.profile.AvatarURL != "/public/v1/media/avatars/file_owned" {
+		t.Fatalf("expected proxied avatar URL, got %q", repo.profile.AvatarURL)
 	}
 }
 

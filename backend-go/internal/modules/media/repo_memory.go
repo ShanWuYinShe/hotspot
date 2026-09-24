@@ -84,6 +84,7 @@ func (r *InMemoryRepository) CompletedFileMetaByID(ctx context.Context, fileID s
 		return FileMeta{}, false, err
 	}
 	return FileMeta{
+		Category:     upload.Category,
 		StorageKey:   upload.StorageKey,
 		ThumbnailURL: upload.File.ThumbnailURL,
 		Width:        upload.File.Width,
