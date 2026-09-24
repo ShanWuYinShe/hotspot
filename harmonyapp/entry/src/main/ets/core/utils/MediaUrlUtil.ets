@@ -28,6 +28,12 @@ export class MediaUrlUtil {
       return `${origin}${trimmed}`;
     }
 
+    // 后端代理相对路径（如 avatar_url 现存 /public/v1/media/avatars/<file_id>，
+    // 302 到签名读 URL）：与 web 同源语义，拼 API origin 后直接可加载。
+    if (trimmed.startsWith('/public/') || trimmed.startsWith('/api/')) {
+      return `${origin}${trimmed}`;
+    }
+
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return MediaUrlUtil.rewriteLocalAbsoluteUrl(trimmed, origin);
     }

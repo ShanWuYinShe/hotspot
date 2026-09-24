@@ -19,6 +19,7 @@ import { LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from '../components/LucideIcon';
+import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 
 type NotificationFilterKey = 'all' | 'unread' | 'interaction' | 'group' | 'report' | 'nearby' | 'system';
 
@@ -616,7 +617,8 @@ export struct NotificationCenter {
       // 头像 + 类型图标徽章
       Stack({ alignContent: Alignment.Center }) {
         if (notification.payload?.actor?.avatar_url) {
-          Image(notification.payload.actor.avatar_url)
+          // 经 MediaUrlUtil 归一：avatar_url 为 /public/ 相对代理路径时拼 API origin
+          Image(MediaUrlUtil.normalize(notification.payload.actor.avatar_url))
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
             .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
             .borderRadius(DesignConstants.RADIUS.FULL)
