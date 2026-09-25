@@ -35,14 +35,17 @@ type Service struct {
 	appConfig     appconfig.Source
 	runInTx       persistence.TxRunner // optional; nil => no transaction wrapping
 	reactions     ReactionAggregator   // optional; nil => reactions[] not filled
-	// blockChecks 可选注入：判定 caller 是否被目标瞬间作者拉黑（spec comment create →
-	// 被拉黑 → 10200 + blocked_by_user）。生产由 users 侧实现注入；nil 表示不启用
-	//（不产生误判，仅暴露 privacy_setting 路径）。返回 true 表示被拉黑。
-	blockChecks func(callerID, authorID string) (bool, error)
+	// blockChecks 可选注入：判定 caller 与目标瞬间作者之间的拉黑关系
+	// （spec comment create → 被拉黑 → 10200 + blocked_by_user）。生产由
+	// users 侧实现注入；nil 表示不启用（不产生误判，仅暴露 privacy_setting
+	// 路径）。返回 (caller 拉黑了 author, author 拉黑了 caller)：任一方向
+	// 成立即阻断（对齐 reaction/私聊/presence 的双向口径；此前仅以后者定向
+	// 判定，被拉黑方仍可评论并触发通知）。
+	blockChecks func(callerID, authorID string) (callerBlocked, authorBlocked bool, err error)
 }
 
 // SetBlockChecker 注入拉黑判定（依赖倒置：comments 不直接 import users）。
-func (s *Service) SetBlockChecker(fn func(callerID, authorID string) (bool, error)) {
+func (s *Service) SetBlockChecker(fn func(callerID, authorID string) (callerBlocked, authorBlocked bool, err error)) {
 	s.blockChecks = fn
 }
 
@@ -585,16 +588,21 @@ func (s *Service) ensureMomentCommentable(ctx context.Context, momentID string) 
 			author = mc.UserID
 		}
 		if author != "" && caller != "" {
-			blocked, err := s.blockChecks(caller, author)
+			callerBlocked, authorBlocked, err := s.blockChecks(caller, author)
 			if err != nil {
 				// 黑名单查询失败时 fail-closed：返回错误（统一 10600）而非放行，
 				// 避免 DB 抖动期间被拉黑用户可继续评论。
 				observability.L().Error("comments.block_check failed", "error", err, "author_id", author)
 				return err
 			}
-			if blocked {
+			if authorBlocked {
 				// 被瞬间作者拉黑（spec comment create → 10200 + blocked_by_user）
 				return ErrCommentBlockedByUser
+			}
+			if callerBlocked {
+				// 拉黑了瞬间作者：同样阻断（对齐 reaction 双向口径），
+				// 否则被拉黑方仍可评论并触发通知。
+				return ErrCommentBlockingUser
 			}
 		}
 	}

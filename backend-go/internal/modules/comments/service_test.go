@@ -466,6 +466,58 @@ func TestCreateCommentReturnsNoPermissionWhenMomentExistsButNotCommentable(t *te
 	}
 }
 
+// 双向拉黑任一成立即阻断评论（对齐 reaction/私聊/presence 口径；此前仅
+// 作者拉黑调用方一侧，被拉黑方仍可评论并触发通知）。
+func TestCreateCommentRejectsWhenBlockedByAuthor(t *testing.T) {
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{
+		exists: true, commentableFound: true, commentable: true,
+		notificationOK:      true,
+		notificationContext: MomentNotificationContext{UserID: "user_alice"},
+	}
+	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service.SetBlockChecker(func(callerID, authorID string) (bool, bool, error) {
+		return false, true, nil
+	})
+	_, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "m1", Content: "hi"})
+	if !errors.Is(err, ErrCommentBlockedByUser) {
+		t.Fatalf("expected ErrCommentBlockedByUser, got %v", err)
+	}
+}
+
+func TestCreateCommentRejectsWhenBlockingAuthor(t *testing.T) {
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{
+		exists: true, commentableFound: true, commentable: true,
+		notificationOK:      true,
+		notificationContext: MomentNotificationContext{UserID: "user_alice"},
+	}
+	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service.SetBlockChecker(func(callerID, authorID string) (bool, bool, error) {
+		return true, false, nil
+	})
+	_, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "m1", Content: "hi"})
+	if !errors.Is(err, ErrCommentBlockingUser) {
+		t.Fatalf("expected ErrCommentBlockingUser, got %v", err)
+	}
+}
+
+func TestCreateCommentPassesWithoutBlock(t *testing.T) {
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{
+		exists: true, commentableFound: true, commentable: true,
+		notificationOK:      true,
+		notificationContext: MomentNotificationContext{UserID: "user_alice"},
+	}
+	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service.SetBlockChecker(func(callerID, authorID string) (bool, bool, error) {
+		return false, false, nil
+	})
+	if _, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "m1", Content: "hi"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestCreateCommentReturnsNotFoundWhenMomentDoesNotExist(t *testing.T) {
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{commentableFound: false}

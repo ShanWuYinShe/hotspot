@@ -10,6 +10,9 @@ var (
 	ErrCommentPrivacyDenied = errors.New("comments: moment author restricts commenting")
 	// ErrCommentBlockedByUser：被瞬间作者拉黑（spec comment create → 10200 + blocked_by_user）。
 	ErrCommentBlockedByUser = errors.New("comments: caller is blocked by the moment author")
+	// ErrCommentBlockingUser：拉黑了瞬间作者（10200 + blocked_by_user；与
+	// reaction/私聊/presence 的双向口径对齐，否则被拉黑方仍可评论并触发通知）。
+	ErrCommentBlockingUser = errors.New("comments: caller has blocked the moment author")
 	// ErrCommentTooLong：评论内容超过 ClientConfig comment_max_length（spec 10400）。
 	ErrCommentTooLong = errors.New("comments: content exceeds max length")
 	// ErrTooManyMentions：mentions 数量超过 api_spec_base.md 字段校验约束上限 20（spec 10000）。

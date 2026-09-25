@@ -34,7 +34,7 @@ func TestServiceCoverageSettersAndGetters(t *testing.T) {
 
 	// SetBlockChecker 注入后生效（nil 注入不 panic）
 	svc.SetBlockChecker(nil)
-	svc.SetBlockChecker(func(callerID, authorID string) (bool, error) { return callerID == "blocked", nil })
+	svc.SetBlockChecker(func(callerID, authorID string) (bool, bool, error) { return callerID == "blocked", false, nil })
 	if svc.blockChecks == nil {
 		t.Fatal("blockChecks must be wired")
 	}

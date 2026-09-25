@@ -109,13 +109,13 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	momentsModule.CommentsService().SetReactionAggregator(commentReactionAggregator{reactions: reactionsModule.Service})
 	// 评论拉黑拦截（spec api_spec_authz.md comments/create：黑名单 → 10200 + blocked_by_user）。
 	// fn 签名无 ctx，此处用独立超时上下文单查双向拉黑表；查询出错向上返回错误
-	// （fail-closed，由 comments service 映射统一 10600），authorID 拉黑了 callerID
-	// 时返回 blocked=true。
-	momentsModule.CommentsService().SetBlockChecker(func(callerID, authorID string) (bool, error) {
+	// （fail-closed，由 comments service 映射统一 10600）。双向任一成立即阻断。
+	momentsModule.CommentsService().SetBlockChecker(func(callerID, authorID string) (callerBlocked, authorBlocked bool, err error) {
 		checkCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		authorBlockedCaller, _, err := usersModule.Service.BlockStateBetween(checkCtx, authorID, callerID)
-		return authorBlockedCaller, err
+		// 双向任一成立即阻断（对齐 reaction/私聊/presence 口径；此前仅以后者
+		// 定向判定，被拉黑方仍可评论并触发通知）。
+		return usersModule.Service.BlockStateBetween(checkCtx, callerID, authorID)
 	})
 	// 动态收藏/reaction 拉黑拦截（对齐评论与私聊口径：双向拉黑即不可交互，
 	// 防止 reaction 击穿拉黑关系触发对方通知）。fail-closed 同上。
