@@ -115,3 +115,16 @@ export GOMODCACHE=/Users/liyou/work/hotspot/.workwork/go-mod
   docker compose -f docker-compose.yml -f docker-compose.dev.yml restart backend frontend nginx
   ```
 - 重启后需通过 `docker compose ps` 确认容器恢复 `healthy` 状态，确保开发者刷新浏览器即可直接看到最新效果。
+
+### 单文件 bind mount 编辑后：restart 不够，必须 force-recreate（2026-09-25 实测）
+
+编辑已被单文件 bind mount 进容器的配置（如 `docker/nginx.dev.conf`）后，文件 inode 变化，
+容器内挂载点悬空（`docker exec <容器> nginx -t` 报 open failed）——**`docker compose restart nginx`
+不会重做挂载**，必须：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --force-recreate nginx
+```
+
+重建后 `nginx -t` 与 `docker compose ps` healthy 再验。曾致 fixer 改完 `proxy_cookie_flags`
+后反复验证失败，排查半天才定位到挂载悬空（教训来源：dev 网关剥凭证 Cookie Secure 修复）。
