@@ -64,17 +64,19 @@ type stubGroupsRepo struct {
 	settingsErr error
 	leaveErr    error
 
-	myApps    []GroupApplicationItem
-	myAppsCur string
-	myAppsErr error
+	myApps       []GroupApplicationItem
+	myAppsCur    string
+	myAppsErr    error
+	myAppsStatus *ApplicationStatus
 
 	cancelErr error
 
-	myInvites    []GroupInviteItem
-	getInvite    func(inviteID string) (item GroupInviteItem, invitee string, found bool) // GetInvite 直查槽位（nil 回退扫 myInvites）
-	getInviteErr error
-	myInvitesCur string
-	myInvitesErr error
+	myInvites       []GroupInviteItem
+	myInvitesStatus *ApplicationStatus
+	getInvite       func(inviteID string) (item GroupInviteItem, invitee string, found bool) // GetInvite 直查槽位（nil 回退扫 myInvites）
+	getInviteErr    error
+	myInvitesCur    string
+	myInvitesErr    error
 
 	acceptErr    error
 	rejectInvErr error
@@ -188,7 +190,8 @@ func (r *stubGroupsRepo) UpdatePreferences(_ context.Context, _ string, _ Update
 	return r.settingsErr
 }
 func (r *stubGroupsRepo) LeaveGroup(_ context.Context, _ string, _ string) error { return r.leaveErr }
-func (r *stubGroupsRepo) ListMyApplications(_ context.Context, _ string, _ *ApplicationStatus, _ int, _ string) ([]GroupApplicationItem, string, error) {
+func (r *stubGroupsRepo) ListMyApplications(_ context.Context, _ string, status *ApplicationStatus, _ int, _ string) ([]GroupApplicationItem, string, error) {
+	r.myAppsStatus = status
 	return r.myApps, r.myAppsCur, r.myAppsErr
 }
 func (r *stubGroupsRepo) CancelApplication(_ context.Context, _ string) error { return r.cancelErr }
@@ -210,7 +213,8 @@ func (r *stubGroupsRepo) GetInvite(_ context.Context, inviteID string) (GroupInv
 	return GroupInviteItem{}, "", false, r.myInvitesErr
 }
 
-func (r *stubGroupsRepo) ListMyInvites(_ context.Context, _ string, _ *ApplicationStatus, _ int, _ string) ([]GroupInviteItem, string, error) {
+func (r *stubGroupsRepo) ListMyInvites(_ context.Context, _ string, status *ApplicationStatus, _ int, _ string) ([]GroupInviteItem, string, error) {
+	r.myInvitesStatus = status
 	return r.myInvites, r.myInvitesCur, r.myInvitesErr
 }
 func (r *stubGroupsRepo) AcceptInvite(_ context.Context, _ string, _ string) error {
@@ -871,6 +875,30 @@ func TestServiceListMyInvitesDelegatesToRepo(t *testing.T) {
 	}
 }
 
+// spec group.md → fetch_received：status 缺省 pending；查历史显式传 all。
+func TestServiceListMyInvitesDefaultsToPending(t *testing.T) {
+	repo := &stubGroupsRepo{}
+	svc := NewServiceWithRepo(repo)
+	if _, _, err := svc.ListMyInvites(grpCtx("u1"), MyInvitesRequest{}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.myInvitesStatus == nil || *repo.myInvitesStatus != ApplicationStatusPending {
+		t.Fatalf("expected pending default, got %#v", repo.myInvitesStatus)
+	}
+}
+
+func TestServiceListMyInvitesAllPassesThrough(t *testing.T) {
+	repo := &stubGroupsRepo{}
+	svc := NewServiceWithRepo(repo)
+	all := ApplicationStatus("all")
+	if _, _, err := svc.ListMyInvites(grpCtx("u1"), MyInvitesRequest{Status: &all}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.myInvitesStatus != nil {
+		t.Fatalf("expected nil (no filter) for all, got %#v", repo.myInvitesStatus)
+	}
+}
+
 func TestServiceListMyInvitesNormalizesLimit(t *testing.T) {
 	repo := &stubGroupsRepo{
 		myInvites: []GroupInviteItem{{InviteID: "inv1"}},
@@ -1201,6 +1229,30 @@ func TestServiceListMyApplicationsNormalizesLimit(t *testing.T) {
 	}
 	if len(items) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+}
+
+// spec group.md → fetch_submitted：status 缺省 pending；查历史显式传 all。
+func TestServiceListMyApplicationsDefaultsToPending(t *testing.T) {
+	repo := &stubGroupsRepo{}
+	svc := NewServiceWithRepo(repo)
+	if _, _, err := svc.ListMyApplications(grpCtx("u1"), MyApplicationsRequest{}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.myAppsStatus == nil || *repo.myAppsStatus != ApplicationStatusPending {
+		t.Fatalf("expected pending default, got %#v", repo.myAppsStatus)
+	}
+}
+
+func TestServiceListMyApplicationsAllPassesThrough(t *testing.T) {
+	repo := &stubGroupsRepo{}
+	svc := NewServiceWithRepo(repo)
+	all := ApplicationStatus("all")
+	if _, _, err := svc.ListMyApplications(grpCtx("u1"), MyApplicationsRequest{Status: &all}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.myAppsStatus != nil {
+		t.Fatalf("expected nil (no filter) for all, got %#v", repo.myAppsStatus)
 	}
 }
 

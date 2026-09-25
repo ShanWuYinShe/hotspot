@@ -604,7 +604,7 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 func (s *Service) ListMyApplications(ctx context.Context, req MyApplicationsRequest) ([]GroupApplicationItem, string, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
-	return s.repo.ListMyApplications(ctx, principal.UserID, req.Status, limit, types.PaginationCursor(req.Pagination))
+	return s.repo.ListMyApplications(ctx, principal.UserID, defaultPendingStatus(req.Status), limit, types.PaginationCursor(req.Pagination))
 }
 
 func (s *Service) CancelApplication(ctx context.Context, req CancelApplicationRequest) error {

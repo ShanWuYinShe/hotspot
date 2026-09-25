@@ -47,6 +47,9 @@ const FILTER_TABS = [
 	let notifies = $state<NotifyViewItem[]>([]);
 	/** 我收到的待处理入群邀请（listMyInvites，默认仅 pending） */
 	let invites = $state<GroupInviteItem[]>([]);
+	/** invites 是否成功加载：用于判定通知行邀请动作的显隐（加载失败时
+	保持旧行为——按钮照常显示，点击走后端诚实报错）。 */
+	let invitesLoaded = false;
 	let filter = $state('all');
 	// 分页（审查 M5）：长期积累的通知此前一次全量拉取；改 cursor 分页 + 手动加载更多。
 	const NOTIFY_PAGE_SIZE = 30;
@@ -103,10 +106,13 @@ const FILTER_TABS = [
 				}
 				if (!cancelled) nextCursor = notifData?.next_cursor ?? null;
 
-				if (invitesRes.code === 0) invites = invitesRes.data?.items ?? [];
+				if (invitesRes.code === 0) {
+					invites = invitesRes.data?.items ?? [];
+					invitesLoaded = true;
+				}
 
 				if (notifData) {
-					notifies = toViewItems(notifData.items || [], 0);
+					notifies = stripDecidedInviteActions(toViewItems(notifData.items || [], 0));
 				}
 				// 服务端未读真相回写全局徽标（markRead/全部已读后同样经此收敛）
 				if (!cancelled && unreadRes.code === 0 && unreadRes.data) {
@@ -167,6 +173,14 @@ const FILTER_TABS = [
 		});
 	}
 
+	/** 已决邀请的通知行不再提供接受/拒绝（后端 listMyInvites 默认 pending；
+	行残留时点之只会收到“已过期”错误）。invites 未成功加载时保持原样。 */
+	function stripDecidedInviteActions(items: NotifyViewItem[]): NotifyViewItem[] {
+		if (!invitesLoaded) return items;
+		const pending = new Set(invites.map((i) => i.invite_id));
+		return items.map((n) => (n.inviteId && !pending.has(n.inviteId) ? { ...n, inviteId: undefined } : n));
+	}
+
 	/** 加载下一页（cursor keyset，服务端按时间倒序，追加即保持全局有序）。 */
 	async function loadMoreNotifs() {
 		if (nextCursor === null || loadingMore) return;
@@ -174,7 +188,7 @@ const FILTER_TABS = [
 		try {
 			const res = await listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE, cursor: nextCursor } }).catch(() => netError({ items: [], next_cursor: null }));
 			if (res.code === 0 && res.data) {
-				notifies = [...notifies, ...toViewItems(res.data.items || [], notifies.length)];
+				notifies = stripDecidedInviteActions([...notifies, ...toViewItems(res.data.items || [], notifies.length)]);
 				nextCursor = res.data.next_cursor ?? null;
 			}
 		} finally {
