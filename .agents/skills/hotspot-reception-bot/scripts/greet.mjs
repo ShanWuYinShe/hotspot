@@ -75,7 +75,8 @@ export async function api(path, body, token, idem) {
 // 登录态缓存:token 有效期内(余量 ≥120s)复用,砍掉高频轮次的重复登录(平台鉴权限流 60 次/10min/IP)
 // 缓存挂在 state(gitignored 运行时文件,TTL ≤15 分钟),不新增任何落盘面。
 // persona 参数化:多人格各用各的账号/deviceId 登录、各写各的 state。
-export async function signin(state, persona = P) {
+export async function signin(state, persona = P, deviceIdOverride = null) {
+  const deviceId = deviceIdOverride || persona.deviceId;
   if (state?.auth?.token && state?.auth?.expiresAt) {
     const remainMs = Date.parse(state.auth.expiresAt) - Date.now();
     if (remainMs > 120 * 1000) {
@@ -83,7 +84,7 @@ export async function signin(state, persona = P) {
     }
   }
   const attempt = async () => api('/public/v1/auth/signin', {
-    login_id: persona.loginId, password: persona.password, client_type: 'app', device_id: persona.deviceId,
+    login_id: persona.loginId, password: persona.password, client_type: 'app', device_id: deviceId,
   });
   let r = await attempt();
   // 高频轮次会触发 IP 限流(10500,窗口 10 分钟),退避 60s 后重试一次
