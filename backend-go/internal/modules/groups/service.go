@@ -207,7 +207,7 @@ func (s *Service) OpenTheDoor(ctx context.Context, groupID string) (GroupItem, b
 		item.Location.Distance = &distance
 		item.Location.BearingDegrees = &bearing
 	}
-	op.Complete("group_id", groupID, "found", ok)
+	op.Complete("found", ok)
 	return item, ok, nil
 }
 
@@ -340,7 +340,7 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 		Type:    realtime.EventTypeGroupUpdated,
 		Payload: payload,
 	})
-	op.Complete("group_id", req.GroupID)
+	op.Complete()
 	return updated, nil
 }
 
@@ -425,7 +425,7 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
 	// 解散后摘除全部订阅者对该群的订阅（成员资格随解散全部终止）。
 	realtime.DefaultHub().DropGroup(req.GroupID)
-	op.Complete("group_id", req.GroupID)
+	op.Complete()
 	return nil
 }
 
@@ -459,7 +459,7 @@ func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]G
 		op.Fail(err)
 		return nil, "", err
 	}
-	op.Complete("group_id", req.GroupID, "count", len(items))
+	op.Complete("count", len(items))
 	return items, cursor, nil
 }
 
@@ -495,7 +495,7 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 		op.Fail(err)
 		return nil, "", err
 	}
-	op.Complete("group_id", req.GroupID, "count", len(items))
+	op.Complete("count", len(items))
 	return items, cursor, nil
 }
 
@@ -566,7 +566,7 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 			},
 		})
 	}
-	op.Complete("group_id", req.GroupID)
+	op.Complete()
 	return result, nil
 }
 
