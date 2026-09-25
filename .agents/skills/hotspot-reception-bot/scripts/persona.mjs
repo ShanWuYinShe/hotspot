@@ -57,10 +57,15 @@ export function pickRoundRobin(shared, personaNames) {
   return pick;
 }
 
-// 回复归属解析(纯函数,可单测):用户已被人格接触过 → 永远归那个人格(连续性
-// 铁律);by 不是合法人格名(system/admin 等)→ 回退默认人格;从未联系过(用户
-// 主动私聊我们)→ 按轮转分配并当场登记,后续归属就此固定。
-export function resolvePersonaFor(shared, uid, personaNames, fallback = 'linxiaoman') {
+// 回复归属解析(纯函数,可单测)。优先级:explicit(--persona 显式指定;同一用户
+// 可能与多个人格各有会话,by 只是最早接触者,显式指定才能定位正确会话)> by 归属
+// (连续性铁律,谁欢迎归谁)> 轮转分配(从未联系过,当场登记归属)。by 不是合法
+// 人格名(system/admin 等)→ 回退 fallback;explicit 不在名单 → 抛错。
+export function resolvePersonaFor(shared, uid, personaNames, { explicit, fallback = 'linxiaoman' } = {}) {
+  if (explicit) {
+    if (!personaNames.includes(explicit)) throw new Error(`人格 ${explicit} 不在人格池中(可用: ${personaNames.join(', ')})`);
+    return explicit;
+  }
   const by = shared.contacted?.[uid]?.by;
   if (by) return personaNames.includes(by) ? by : fallback;
   const pick = pickRoundRobin(shared, personaNames);

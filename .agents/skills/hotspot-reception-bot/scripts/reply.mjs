@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-// 单条回复工具:node reply.mjs --to <user_id> --text "<内容>" | --text-file <路径>
-// 人格解析(自动模式):WELCOME_PERSONA 锁定 > shared.contacted[to].by(连续性铁律,
-// 谁欢迎归谁)> 从未联系过 → 轮转分配并当场登记(by 非法如 system/admin → 默认林小满)。
+// 单条回复工具:node reply.mjs --to <user_id> --text "<内容>" | --text-file <路径> [--persona <名>]
+// 人格解析优先级:--persona 显式指定 > WELCOME_PERSONA 锁定 > shared.contacted[to].by
+// (连续性铁律,谁欢迎归谁)> 从未联系过 → 轮转分配并当场登记(by 非法如 system/admin
+// → 默认林小满)。同一用户可能与多个人格各有会话,by 只是最早接触者——球在哪个
+// 人格的会话里,就用 inbox 输出的归属 --persona 指定,否则会错发到 by 人格。
 // 回复计入该人格当日配额,并写共享联系登记簿、标记会话已读。
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
@@ -18,15 +20,10 @@ function arg(name) {
 
 async function main() {
   const to = arg('--to');
+  const personaArg = arg('--persona'); // 显式指定:最高优先(定位多会话归属,见文件头)
   const textFile = arg('--text-file');
   const text = textFile ? readFileSync(textFile, 'utf8').trim() : arg('--text');
-  if (!to || !text) { console.error('用法: node reply.mjs --to <user_id> --text "<内容>" | --text-file <路径>'); process.exit(1); }
-  // --force 是纯布尔 flag,不能用 arg()(取 flag 的下一个 token):放在命令末尾时
-  // 取到 undefined 被当成「未加 --force」,仍被时段拦截;与 greet/engage 一致用 includes。
-  if (!process.argv.includes('--force') && !inWindow()) {
-    console.log('不在接待时段(23:00–次日09:00),加 --force 可强制回复。');
-    process.exit(0);
-  }
+  if (!to || !text) { console.error('用法: node reply.mjs --to <user_id> --text "<内容>" | --text-file <路径> [--persona <名>]'); process.exit(1); }
   const shared = loadShared();
   const personas = listPersonas();
   const names = personas.map((p) => p.name);
@@ -35,8 +32,18 @@ async function main() {
     console.error(`WELCOME_PERSONA=${locked} 不在人格池中(可用: ${names.join(', ')})`);
     process.exit(1);
   }
-  // 人格归属:锁定优先;否则按登记簿归属(新用户轮转分配并登记)
-  const name = locked || resolvePersonaFor(shared, to, names);
+  if (personaArg && !names.includes(personaArg)) {
+    console.error(`人格 ${personaArg} 不在人格池中(可用: ${names.join(', ')})`);
+    process.exit(1);
+  }
+  // --force 是纯布尔 flag,不能用 arg()(取 flag 的下一个 token):放在命令末尾时
+  // 取到 undefined 被当成「未加 --force」,仍被时段拦截;与 greet/engage 一致用 includes。
+  if (!process.argv.includes('--force') && !inWindow()) {
+    console.log('不在接待时段(23:00–次日09:00),加 --force 可强制回复。');
+    process.exit(0);
+  }
+  // 人格归属:显式 --persona / 锁定优先;否则按登记簿归属(新用户轮转分配并登记)
+  const name = resolvePersonaFor(shared, to, names, { explicit: personaArg || locked });
   const P = loadPersona(name);
   if (!P.password) {
     console.error(`缺少 ${name} 的口令(WELCOME_PASSWORD_${name.toUpperCase()})`);

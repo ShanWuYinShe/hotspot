@@ -146,6 +146,21 @@ const NAMES = ['jiajing', 'linxiaoman', 'yanshifan'];
 	rd('归属固定不再推进', s3.rrIndex, 1);
 }
 
+// ── 显式 --persona:优先于 by 归属(同一用户可与多个人格各有会话,by 只是最早接触者)──
+{
+	const shared = { contacted: { u1: { by: 'jiajing' } } };
+	rd('显式优先于 by 归属', resolvePersonaFor(shared, 'u1', NAMES, { explicit: 'yanshifan' }), 'yanshifan');
+	rd('显式不推进轮转', shared.rrIndex ?? 0, 0);
+	rd('显式不覆盖登记簿', shared.contacted.u1.by, 'jiajing');
+	const s4 = {};
+	rd('显式指定新用户直接采用', resolvePersonaFor(s4, 'u9', NAMES, { explicit: 'linxiaoman' }), 'linxiaoman');
+	rd('显式新用户不登记 auto_assign', s4.contacted?.u9 ?? null, null);
+	rd('显式新用户不推进轮转', s4.rrIndex ?? 0, 0);
+	let threw = false;
+	try { resolvePersonaFor({}, 'u', NAMES, { explicit: 'nope' }); } catch { threw = true; }
+	rd('显式非法抛错', threw, true);
+}
+
 // ── 口令解析:WELCOME_PASSWORD_<大写人格名> 优先,回退 WELCOME_PASSWORD ──
 {
 	const savedP = process.env.WELCOME_PASSWORD, savedJ = process.env.WELCOME_PASSWORD_JIAJING, savedL = process.env.WELCOME_PASSWORD_LINXIAOMAN;
@@ -171,7 +186,7 @@ const NAMES = ['jiajing', 'linxiaoman', 'yanshifan'];
 
 // 段落计数(输出供值班核对,计数与实际用例数一致)
 const sanitizeCases = 13; // 防投毒净化段实际用例数
-const rrCases = 21;      // 轮转与归属解析段实际用例数
+const rrCases = 29;      // 轮转与归属解析段实际用例数
 const totalFail = failed + qfail + gfail + sfail + pfail + rfail;
 console.log(`时段 ${cases.length}(窗口内 ${inWin}) / 配额 7 / 守卫 ${guardCases.length} / 净化 ${sanitizeCases} / 人格配置 ${jsons.length} 份 / 轮转归属 ${rrCases},失败 ${totalFail}`);
 process.exit(totalFail ? 1 : 0);

@@ -51,7 +51,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         const items = await pendingInbox(me.access_token, p);
         console.log(`\n[${p.nickname}](${p.name}) 待回复会话 ${items.length} 个 | 人物卡: ${p.card}`);
         for (const c of items) {
-          console.log(`\n== ${c.nickname} (${c.user_id})`);
+          // 归属人格 = 该会话所在账号(同一用户可与多个人格各有会话);回复时显式 --persona 定位
+          console.log(`\n== ${c.nickname} (${c.user_id})  [归属: ${p.name} | 回复: node reply.mjs --to ${c.user_id} --persona ${p.name} --text-file <路径>]`);
           for (const m of c.history) console.log(`  [${m.sent_at.slice(5, 16)}] ${m.who}: ${m.content}`);
         }
         if (!items.length) console.log('全部会话均已回复 ✓');
