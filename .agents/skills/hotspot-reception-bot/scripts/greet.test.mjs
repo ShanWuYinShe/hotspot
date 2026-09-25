@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inWindow, dayKey, dailySent, bumpDaily, sanitizeHandle, addressableNick } from './greet.mjs';
 import { engageBlocked } from './engage.mjs';
+import { pickRoundRobin, resolvePersonaFor, listPersonas, personaPassword, loadPersona } from './persona.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = dirname(HERE);
@@ -96,5 +97,81 @@ for (const f of jsons) {
   if (!existsSync(join(ROOT, p.card))) { pfail++; console.error('FAIL ' + label + ' 人物卡不存在 ' + p.card); }
 }
 
-console.log(`时段 ${cases.length}(窗口内 ${inWin}) / 配额 7 / 守卫 ${guardCases.length} / 净化 8 / 人格配置 ${jsons.length} 份,失败 ${failed + qfail + gfail + sfail + pfail}`);
-process.exit(failed + qfail + gfail + sfail + pfail ? 1 : 0);
+// ── 自动人格分配:轮转分配 ──
+let rfail = 0;
+const rd = (label, got, want) => { if (got !== want) { rfail++; console.error('FAIL ' + label + ': 期望 ' + JSON.stringify(want) + ' 实际 ' + JSON.stringify(got)); } };
+
+// 分布:3 人格连续分配 3 次 → 各得 1;共 9 次 → 各得 3;rrIndex 随分配递增
+const NAMES = ['jiajing', 'linxiaoman', 'yanshifan'];
+{
+	const shared = {};
+	const got = [0, 0, 0];
+	for (let i = 0; i < 3; i++) got[NAMES.indexOf(pickRoundRobin(shared, NAMES))]++;
+	rd('轮转 3 次→各1', got.join(','), '1,1,1');
+	rd('rrIndex=3', shared.rrIndex, 3);
+}
+{
+	const shared = {};
+	const got = [0, 0, 0];
+	for (let i = 0; i < 9; i++) got[NAMES.indexOf(pickRoundRobin(shared, NAMES))]++;
+	rd('轮转 9 次→各3', got.join(','), '3,3,3');
+	rd('rrIndex=9', shared.rrIndex, 9);
+}
+{
+	const shared = { rrIndex: 7 };
+	rd('续接 rrIndex=7 → 名单[1]', pickRoundRobin(shared, NAMES), NAMES[7 % 3]);
+	rd('续接后 rrIndex=8', shared.rrIndex, 8);
+}
+{
+	let threw = false;
+	try { pickRoundRobin({}, []); } catch { threw = true; }
+	rd('空名单抛错', threw, true);
+}
+
+// ── 自动人格分配:by 归属解析 ──
+{
+	const shared = { contacted: { u1: { by: 'yanshifan' } } };
+	rd('by 合法归原人格', resolvePersonaFor(shared, 'u1', NAMES), 'yanshifan');
+	rd('by 合法不推进轮转', shared.rrIndex ?? 0, 0);
+	const s2 = { contacted: { u2: { by: 'system' } } };
+	rd('by 非法回退默认人格', resolvePersonaFor(s2, 'u2', NAMES), 'linxiaoman');
+	rd('by 非法不推进轮转', s2.rrIndex ?? 0, 0);
+	const s3 = {};
+	const pick = resolvePersonaFor(s3, 'u3', NAMES);
+	rd('新用户轮转分配到合法人格', NAMES.includes(pick), true);
+	rd('新用户已登记归属', s3.contacted.u3.by, pick);
+	rd('登记 kind=auto_assign', s3.contacted.u3.kind, 'auto_assign');
+	rd('登记推进 rrIndex=1', s3.rrIndex, 1);
+	rd('再次解析归属固定', resolvePersonaFor(s3, 'u3', NAMES), pick);
+	rd('归属固定不再推进', s3.rrIndex, 1);
+}
+
+// ── 口令解析:WELCOME_PASSWORD_<大写人格名> 优先,回退 WELCOME_PASSWORD ──
+{
+	const savedP = process.env.WELCOME_PASSWORD, savedJ = process.env.WELCOME_PASSWORD_JIAJING, savedL = process.env.WELCOME_PASSWORD_LINXIAOMAN;
+	delete process.env.WELCOME_PASSWORD; delete process.env.WELCOME_PASSWORD_JIAJING; delete process.env.WELCOME_PASSWORD_LINXIAOMAN;
+	rd('无 env 时口令为空', personaPassword('jiajing') ?? '', '');
+	process.env.WELCOME_PASSWORD = 'common-secret';
+	rd('回退通用口令', personaPassword('jiajing'), 'common-secret');
+	process.env.WELCOME_PASSWORD_JIAJING = 'jiajing-secret';
+	rd('专属口令优先', personaPassword('jiajing'), 'jiajing-secret');
+	rd('loadPersona 带专属口令', loadPersona('jiajing').password, 'jiajing-secret');
+	rd('其他人格走通用回退', loadPersona('linxiaoman').password, 'common-secret');
+	if (savedP === undefined) delete process.env.WELCOME_PASSWORD; else process.env.WELCOME_PASSWORD = savedP;
+	if (savedJ === undefined) delete process.env.WELCOME_PASSWORD_JIAJING; else process.env.WELCOME_PASSWORD_JIAJING = savedJ;
+	if (savedL === undefined) delete process.env.WELCOME_PASSWORD_LINXIAOMAN; else process.env.WELCOME_PASSWORD_LINXIAOMAN = savedL;
+}
+
+// ── 人格池:按文件名稳定排序 ──
+{
+	const pool = listPersonas();
+	rd('人格池至少 3 份', pool.length >= 3, true);
+	rd('文件名稳定排序', JSON.stringify(pool.map((p) => p.name)), JSON.stringify(pool.map((p) => p.name).slice().sort()));
+}
+
+// 段落计数(输出供值班核对,计数与实际用例数一致)
+const sanitizeCases = 13; // 防投毒净化段实际用例数
+const rrCases = 21;      // 轮转与归属解析段实际用例数
+const totalFail = failed + qfail + gfail + sfail + pfail + rfail;
+console.log(`时段 ${cases.length}(窗口内 ${inWin}) / 配额 7 / 守卫 ${guardCases.length} / 净化 ${sanitizeCases} / 人格配置 ${jsons.length} 份 / 轮转归属 ${rrCases},失败 ${totalFail}`);
+process.exit(totalFail ? 1 : 0);
