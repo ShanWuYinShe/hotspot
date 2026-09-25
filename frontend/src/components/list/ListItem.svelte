@@ -123,9 +123,12 @@
 			isCard ? 'rounded-md border' : 'bg-surface-primary',
 			// 行内既有的操作按钮/链接/输入相对定位抬升到行覆盖按钮之上（axe
 			// nested-interactive：button 语义不得嵌套交互子件）；后写的覆盖按钮
-			// 与它们同层级时 DOM 顺序在先，不拦操作点击
+			// 与它们同层级时 DOM 顺序在先，不拦操作点击。
+			// 注意必须排除覆盖按钮自身（data-cover）：否则 [&_button]:relative 会
+			// 覆盖它的 absolute（CSS 层叠 .relative 在后），按钮塌缩成 0×0，
+			// 真实鼠标点击全部落在内容元素上，整行「点了没反应」（线上实测 P0）。
 			onClick &&
-				'[&_button]:relative [&_button]:z-10 [&_a]:relative [&_a]:z-10 [&_input]:relative [&_input]:z-10 [&_select]:relative [&_select]:z-10',
+				'[&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-10 [&_a]:relative [&_a]:z-10 [&_input]:relative [&_input]:z-10 [&_select]:relative [&_select]:z-10',
 			className
 		)}
 		style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? 'var(--cst-motion-instant)' : 'var(--cst-motion-standard)'};`}
