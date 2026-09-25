@@ -72,3 +72,6 @@ backups/
 
 # 构建期生成的前端版本指纹（scripts/write-version-info.mjs）
 frontend/static/version.json
+
+# 接待机器人运行时状态（含用户联系记录与当日配额计数，不入库）
+.agents/skills/hotspot-reception-bot/state/*.json
