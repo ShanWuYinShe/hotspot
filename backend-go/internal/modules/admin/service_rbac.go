@@ -3,70 +3,65 @@ package admin
 import (
 	"context"
 	"strings"
-	"time"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 )
 
 func (s *Service) GetMe(ctx context.Context) (AdminPermissions, *httpx.APIError, error) {
-	startedAt := time.Now()
-	observability.L().Info("admin.get_me started")
+	op := observability.Begin("admin.get_me")
 	actor, found, err := s.actorFromContext(ctx)
 	if err != nil {
 		if apiErr := asAPIError(err); apiErr != nil {
-			observability.L().Warn("admin.get_me auth failed", "error", apiErr, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			op.Warn("auth failed", "error", apiErr)
 			return AdminPermissions{}, apiErr, nil
 		}
-		observability.L().Error("admin.get_me error", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return AdminPermissions{}, nil, err
 	}
 	if !found {
-		observability.L().Warn("admin.get_me not admin", "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("not admin")
 		return AdminPermissions{}, httpx.Forbidden(httpx.ReasonNotAdmin, "非平台管理员"), nil
 	}
-	observability.L().Info("admin.get_me completed", "user_id", actor.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("user_id", actor.UserID)
 	return actor.Response(), nil, nil
 }
 
 func (s *Service) ListPermissions(ctx context.Context) (AdminPermissionDictionary, *httpx.APIError, error) {
-	startedAt := time.Now()
-	observability.L().Info("admin.permissions.fetch started")
+	op := observability.Begin("admin.permissions.fetch")
 	if _, apiErr, err := s.requirePermission(ctx, permissionRbacManage); apiErr != nil || err != nil {
-		observability.L().Warn("admin.permissions.fetch permission denied", "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("permission denied")
 		return AdminPermissionDictionary{}, apiErr, err
 	}
 	items, err := s.repo.ListPermissions(ctx)
 	if err != nil {
-		observability.L().Error("admin.permissions.fetch query failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err, "stage", "query")
 		return AdminPermissionDictionary{}, nil, err
 	}
-	observability.L().Info("admin.permissions.fetch completed", "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("count", len(items))
 	return AdminPermissionDictionary{Items: items}, nil, nil
 }
 
 func (s *Service) ListRoles(ctx context.Context) (AdminRoleList, *httpx.APIError, error) {
-	startedAt := time.Now()
-	observability.L().Info("admin.list_roles started")
+	op := observability.Begin("admin.list_roles")
 	if _, apiErr, err := s.requirePermission(ctx, permissionRbacManage); apiErr != nil || err != nil {
-		observability.L().Warn("admin.list_roles permission denied", "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("permission denied")
 		return AdminRoleList{}, apiErr, err
 	}
 	items, err := s.repo.ListRoles(ctx)
 	if err != nil {
-		observability.L().Error("admin.list_roles query failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err, "stage", "query")
 		return AdminRoleList{}, nil, err
 	}
-	observability.L().Info("admin.list_roles completed", "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("count", len(items))
 	return AdminRoleList{Items: items}, nil, nil
 }
 
 func (s *Service) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest) (AdminRoleItem, *httpx.APIError, error) {
-	startedAt := time.Now()
-	observability.L().Info("admin.create_role started", "role_name", req.Name)
+	op := observability.Begin("admin.create_role", "role_name", req.Name)
 	actor, apiErr, err := s.requirePermission(ctx, permissionRbacManage)
 	if apiErr != nil || err != nil {
-		observability.L().Warn("admin.create_role permission denied", "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("permission denied")
 		return AdminRoleItem{}, apiErr, err
 	}
 	if strings.TrimSpace(req.Name) == "" {
@@ -75,10 +70,10 @@ func (s *Service) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest
 	item, err := s.repo.CreateRole(ctx, req)
 	if err != nil {
 		if apiErr := asAPIError(err); apiErr != nil {
-			observability.L().Warn("admin.create_role business error", "error", apiErr, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			op.Warn("business error", "error", apiErr)
 			return AdminRoleItem{}, apiErr, nil
 		}
-		observability.L().Error("admin.create_role failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return AdminRoleItem{}, nil, err
 	}
 	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
