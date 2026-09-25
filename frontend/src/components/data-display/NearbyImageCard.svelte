@@ -78,7 +78,11 @@
 	class={cn(
 		'card-hover relative h-full w-full overflow-hidden border border-border-default',
 		onClick &&
-			'[&_button]:relative [&_button]:z-20 [&_a]:relative [&_a]:z-20',
+			// button 抬升必须排除覆盖按钮自身(:not([data-cover])):否则 [&_button]:relative
+			// 与它的 absolute 同 specificity,且工具类生成顺序 .relative 在 .absolute 之后,
+			// 覆盖按钮塌缩 0×0,整卡点击失效(线上实测 P0,同 ListItem);静态防线见
+			// eslint-rules/no-cover-button-collapse.mjs
+			'[&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20',
 		className
 	)}
 	style={cardTransform ? `transform:${cardTransform};transition:transform var(--cst-motion-instant) var(--cst-ease-standard);` : ''}

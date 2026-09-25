@@ -32,6 +32,19 @@ describe('NearbyImageCard', () => {
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
 
+	it('按钮抬升类必须排除覆盖按钮自身（:not([data-cover])）', () => {
+		// 回归防线:jsdom 不应用 Tailwind 样式表,塌缩(0×0)只能靠类串断言拦截——
+		// [&_button]:relative 与覆盖按钮 absolute 同 specificity 且 .relative 后生成,
+		// 一旦漏排除,真实浏览器整卡点击失效(线上实测 P0)
+		const { container } = render(NearbyImageCard, {
+			props: { imageSrc: 'x', onClick: () => {} }
+		});
+		const root = container.querySelector('article') as HTMLElement;
+		expect(root.className).toContain('[&_button:not([data-cover])]:relative');
+		expect(root.className).toContain('[&_button:not([data-cover])]:z-20');
+		expect(root.className).not.toMatch(/\[&_button\]:(?:relative|z-\d+)/);
+	});
+
 	it('覆盖按钮为原生 button（键盘 Enter/Space 原生激活）', async () => {
 		const onClick = vi.fn();
 		const { container } = render(NearbyImageCard, {

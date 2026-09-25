@@ -13,6 +13,7 @@ import { parser as tsParser } from 'typescript-eslint';
 import { noListItemCardClasses } from './eslint-rules/no-list-item-card-classes.mjs';
 import { iconButtonHasLabel } from './eslint-rules/icon-button-has-label.mjs';
 import { noPlainOutlineNone } from './eslint-rules/no-plain-outline-none.mjs';
+import { noCoverButtonCollapse } from './eslint-rules/no-cover-button-collapse.mjs';
 
 export default [
 	{
@@ -33,14 +34,16 @@ export default [
 				rules: {
 					'no-list-item-card-classes': noListItemCardClasses,
 					'icon-button-has-label': iconButtonHasLabel,
-					'no-plain-outline-none': noPlainOutlineNone
+					'no-plain-outline-none': noPlainOutlineNone,
+					'no-cover-button-collapse': noCoverButtonCollapse
 				}
 			}
 		},
 		rules: {
 			'hotspot/no-list-item-card-classes': 'error',
 			'hotspot/icon-button-has-label': 'error',
-			'hotspot/no-plain-outline-none': 'error'
+			'hotspot/no-plain-outline-none': 'error',
+			'hotspot/no-cover-button-collapse': 'error'
 		}
 	}
 ];
