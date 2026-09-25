@@ -84,6 +84,28 @@ git branch -d <分支名>
 > 数据卷）；改用上文第 3 步的独立项目命令。
 
 
+## worktree 内跑 Go 工具链：缓存必须用绝对路径重定向（含 pre-commit 门禁）
+
+在 worktree 内跑 `go build/vet/test`（含 `.husky/pre-commit` 钩子触发的门禁）时，
+`GOCACHE`/`GOMODCACHE` 若用 `$PWD/.workwork/...` 相对路径重定向，缓存会落在
+**该 worktree 内部**（实测 2026-09-25：pre-commit 在 worktree 根执行，`$PWD` 即
+worktree 根）。后果：Go 模块缓存解压目录默认只读（0444/0555），`git worktree remove`
+报 Permission denied，目录删不掉。
+
+正确做法——绝对路径指向主工作树共享缓存（门禁本身不降级，实测同日 build+vet+test 通过）：
+
+```bash
+export GOCACHE=/Users/liyou/work/hotspot/.workwork/go-build
+export GOMODCACHE=/Users/liyou/work/hotspot/.workwork/go-mod
+```
+
+- `.husky/pre-commit` 不覆盖这两个变量、继承 shell 环境，提交前 `export` 即可让
+  门禁在沙盒/受限环境跑通。
+- 已踩坑的 worktree 目录删除被挡时：
+  `chmod -R u+w .worktrees/<分支名> && rm -rf .worktrees/<分支名>`
+  （`git worktree list` 已注销、仅剩目录时无需再跑 `git worktree remove`）。
+
+
 当 Worktree 分支代码完成验证并合并到 `main` 分支后，如果主开发环境容器正在运行（`http://localhost:8888`）：
 - **必须主动帮开发者重启受影响的主容器**，避免因 Vite dev 进程缓存或静态代理未刷新导致开发者看不到最新效果：
   ```bash
