@@ -68,6 +68,15 @@
 		onTabChange: (id: TabType) => void;
 		onChoose: (value: string) => void;
 	} = $props();
+
+	// 单 tab 为空时同样给空态（此前仅全局无结果才显示，切到空 tab 一片空白）。
+	const tabEmpty = $derived(
+		tab === 'people' ? results.users.length === 0
+		: tab === 'posts' ? results.moments.length === 0
+		: tab === 'groups' ? results.groups.length === 0
+		: tab === 'topics' ? results.topics.length === 0
+		: !hasResults
+	);
 </script>
 
 <section class="mt-5" aria-label="搜索结果">
@@ -90,7 +99,7 @@
 
 	{#if loading}
 		<InlineLoading label="搜索中…" />
-	{:else if !hasResults}
+	{:else if !hasResults || tabEmpty}
 		<!-- 空态统一 EmptyState（对齐全局空态契约） -->
 		<EmptyState iconSize={56} title={`没有找到“${query}”`} description="换个关键词再试试。">
 			{#snippet icon()}

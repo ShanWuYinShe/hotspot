@@ -34,6 +34,24 @@ describe('SearchResults', () => {
 		expect(screen.getByText('没有找到“鹿”')).toBeTruthy();
 	});
 
+	it('单 tab 为空同样给空态（此前切到空 tab 一片空白）', () => {
+		render(
+			SearchResults,
+			base({
+				tab: 'people',
+				hasResults: true,
+				results: {
+					users: [],
+					moments: [{ moment_id: 'm1', description: '有内容' }],
+					topics: [],
+					groups: []
+				}
+			})
+		);
+		expect(screen.getByText('没有找到“鹿”')).toBeTruthy();
+		expect(screen.queryByText('有内容')).toBeNull();
+	});
+
 	it('渲染用户结果与 Tab 切换回调', async () => {
 		const onTabChange = vi.fn();
 		render(
