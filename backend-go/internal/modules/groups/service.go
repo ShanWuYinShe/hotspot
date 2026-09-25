@@ -289,12 +289,12 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 			return err
 		}
 		if !ok {
-			op.Warn("not found", "group_id", req.GroupID)
+			op.Warn("not found")
 			return ErrGroupNotFound
 		}
 		// C.1：update 权限从 owner-only 改为 owner/admin（守卫中间件已拦非 admin；此处防御性再判）
 		if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
-			op.Warn("permission denied", "group_id", req.GroupID)
+			op.Warn("permission denied")
 			return httpx.Forbidden(httpx.ReasonNotGroupAdmin, "非群管理员")
 		}
 		// 头像入参与 Create 同口径：非空时归属校验 + 代理路径转换（空串=不改，
@@ -396,11 +396,11 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 		return err
 	}
 	if !ok {
-		op.Warn("not found", "group_id", req.GroupID)
+		op.Warn("not found")
 		return ErrGroupNotFound
 	}
 	if group.ViewerState == nil || group.ViewerState.Role != GroupRoleOwner {
-		op.Warn("permission denied", "group_id", req.GroupID)
+		op.Warn("permission denied")
 		return ErrAccessRestricted
 	}
 	reason := ""
@@ -437,7 +437,7 @@ func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]G
 		return nil, "", err
 	}
 	if !ok {
-		op.Warn("not found", "group_id", req.GroupID)
+		op.Warn("not found")
 		return nil, "", ErrGroupNotFound
 	}
 	// C.2：调用者非成员且群 members_searchable=false → 10200+not_group_member（httpx.Forbidden）
@@ -450,7 +450,7 @@ func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]G
 		}
 	}
 	if !isMember && !group.MembersSearchable {
-		observability.L().Warn("groups.list_members not eligible", "group_id", req.GroupID, "user_id", principal.UserID)
+		op.Warn("not eligible", "user_id", principal.UserID)
 		return nil, "", httpx.Forbidden(httpx.ReasonNotGroupMember, "非群成员")
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
@@ -471,7 +471,7 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 		return nil, "", err
 	}
 	if !ok {
-		op.Warn("not found", "group_id", req.GroupID)
+		op.Warn("not found")
 		return nil, "", ErrGroupNotFound
 	}
 	// 搜索资格（spec api_spec_group.md members/search 10400）：非成员仅当群设置
@@ -486,7 +486,7 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 		}
 	}
 	if !isMember && !group.MembersSearchable {
-		op.Warn("not eligible", "group_id", req.GroupID, "user_id", principal.UserID)
+		op.Warn("not eligible", "user_id", principal.UserID)
 		return nil, "", httpx.Forbidden(httpx.ReasonNotGroupMember, "非群成员")
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
@@ -521,7 +521,7 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 		return EnterGroupResult{}, err
 	}
 	if !ok {
-		op.Warn("not found", "group_id", req.GroupID)
+		op.Warn("not found")
 		return EnterGroupResult{}, ErrGroupNotFound
 	}
 	if group.ViewerState != nil {
@@ -532,13 +532,13 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 	if banned, err := s.repo.IsBanned(ctx, req.GroupID, principal.UserID); err != nil {
 		return EnterGroupResult{}, err
 	} else if banned {
-		observability.L().Warn("groups.join_group banned", "group_id", req.GroupID, "user_id", principal.UserID)
+		op.Warn("banned", "user_id", principal.UserID)
 		return EnterGroupResult{}, httpx.Forbidden(httpx.ReasonBannedInGroup, "已被群封禁，无法加入")
 	}
 	// spec group.md → join 收口：invite_only 群不支持 join（加入唯一入口为
 	// groups/invites/accept），一律返回 10400。
 	if group.JoinMethod == GroupJoinMethodInviteOnly {
-		op.Warn("invite_only not supported", "group_id", req.GroupID)
+		op.Warn("invite_only not supported")
 		return EnterGroupResult{}, ErrBusinessConflict
 	}
 	result, err := s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)

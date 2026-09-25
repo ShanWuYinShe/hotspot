@@ -5,29 +5,27 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
-	"time"
 )
 
 func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
-	startedAt := time.Now()
-	observability.L().Info("groups.create_announcement started", "group_id", req.GroupID)
+	op := observability.Begin("groups.create_announcement", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
-		observability.L().Error("groups.create_announcement failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return GroupAnnouncementItem{}, err
 	}
 	if !ok {
-		observability.L().Warn("groups.create_announcement not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("not found")
 		return GroupAnnouncementItem{}, ErrGroupNotFound
 	}
 	if group.ViewerState == nil || (group.ViewerState.Role != GroupRoleOwner && group.ViewerState.Role != GroupRoleAdmin) {
-		observability.L().Warn("groups.create_announcement permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Warn("permission denied")
 		return GroupAnnouncementItem{}, ErrAccessRestricted
 	}
 	item, err := s.repo.CreateAnnouncement(ctx, principal.UserID, req)
 	if err != nil {
-		observability.L().Error("groups.create_announcement failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return GroupAnnouncementItem{}, err
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
@@ -40,19 +38,18 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnounc
 			CreatedAt:      item.CreatedAt,
 		},
 	})
-	observability.L().Info("groups.create_announcement completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return item, nil
 }
 
 func (s *Service) ListAnnouncements(ctx context.Context, req GroupAnnouncementsRequest) ([]GroupAnnouncementItem, error) {
-	startedAt := time.Now()
-	observability.L().Info("groups.list_announcements started", "group_id", req.GroupID)
+	op := observability.Begin("groups.list_announcements", "group_id", req.GroupID)
 	items, err := s.repo.ListAnnouncements(ctx, req.GroupID)
 	if err != nil {
-		observability.L().Error("groups.list_announcements failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return nil, err
 	}
-	observability.L().Info("groups.list_announcements completed", "group_id", req.GroupID, "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("count", len(items))
 	return items, nil
 }
 

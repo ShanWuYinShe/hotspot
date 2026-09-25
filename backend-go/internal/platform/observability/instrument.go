@@ -23,7 +23,8 @@ type Operation struct {
 	kv        []any
 }
 
-// Begin 记录 "<op> started"（kv 为该操作全程携带的公共字段）并开始计时。
+// Begin 记录 "<op> started"（kv 为该操作全程携带的公共字段，started/failed/
+// warned/completed 四阶段日志自动附加）并开始计时。
 func Begin(op string, kv ...any) *Operation {
 	L().Info(op+" started", kv...)
 	return &Operation{op: op, startedAt: time.Now(), kv: kv}
@@ -33,7 +34,7 @@ func (o *Operation) elapsedMs() int64 {
 	return time.Since(o.startedAt).Milliseconds()
 }
 
-// base 组装公共字段 + 额外字段 + 自动 elapsed_ms。
+// base 组装 Begin kv + 额外字段 + 自动 elapsed_ms。
 func (o *Operation) base(extra ...any) []any {
 	fields := make([]any, 0, len(o.kv)+len(extra)+2)
 	fields = append(fields, o.kv...)
@@ -41,18 +42,16 @@ func (o *Operation) base(extra ...any) []any {
 	return append(fields, "elapsed_ms", o.elapsedMs())
 }
 
-// Fail 记录 Error 级 "<op> failed"（error 字段在首，elapsed_ms 收尾）。
+// Fail 记录 Error 级 "<op> failed"：error 字段在首，Begin kv 与 extra 依次居中，
+// elapsed_ms 收尾。kv 已含的字段无需在 extra 里重复（重复会输出两个同名键）。
 func (o *Operation) Fail(err error, extra ...any) {
-	fields := make([]any, 0, len(extra)+2)
-	fields = append(fields, "error", err)
-	fields = append(fields, extra...)
-	L().Error(o.op+" failed", append(fields, "elapsed_ms", o.elapsedMs())...)
+	L().Error(o.op+" failed", append([]any{"error", err}, o.base(extra...)...)...)
 }
 
 // Warn 记录 Warn 级 "<op> <suffix>"（预期业务拒绝走 Warn，见 AGENTS.md 日志纪律），
-// 自动附加 elapsed_ms。
+// 自动携带 Begin kv 与 elapsed_ms；kv 已含的字段无需重复传入。
 func (o *Operation) Warn(suffix string, kv ...any) {
-	L().Warn(o.op+" "+suffix, append(kv, "elapsed_ms", o.elapsedMs())...)
+	L().Warn(o.op+" "+suffix, o.base(kv...)...)
 }
 
 // Complete 记录 Info 级 "<op> completed"（extra 为结果字段，elapsed_ms 收尾）。
