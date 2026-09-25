@@ -26,7 +26,7 @@ async function main() {
   }
   const state = loadState();
   const shared = loadShared();
-  const me = await signin();
+  const me = await signin(state);
   let cap = 10;
   const cfg = await api('/public/v1/system/client_config', {});
   if (cfg.code === 0 && cfg.data?.limits?.stranger_message_daily_quota) {
@@ -52,5 +52,6 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
+  // 顶层异常包装:崩溃栈对值班无信息量,输出干净一行错误(下轮自动重试)
+  main().catch((e) => { console.error('执行异常:', e?.message || e); process.exit(3); });
 }

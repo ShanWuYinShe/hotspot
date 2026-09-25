@@ -67,11 +67,29 @@ export async function api(path, body, token, idem) {
   return res.json().catch(() => ({}));
 }
 
-export async function signin() {
-  const r = await api('/public/v1/auth/signin', {
+// 登录态缓存:token 有效期内(余量 ≥120s)复用,砍掉高频轮次的重复登录(平台鉴权限流 60 次/10min/IP)
+// 缓存挂在 state(gitignored 运行时文件,TTL ≤15 分钟),不新增任何落盘面
+export async function signin(state) {
+  if (state?.auth?.token && state?.auth?.expiresAt) {
+    const remainMs = Date.parse(state.auth.expiresAt) - Date.now();
+    if (remainMs > 120 * 1000) {
+      return { access_token: state.auth.token, user_id: state.auth.userId, cached: true };
+    }
+  }
+  const attempt = async () => api('/public/v1/auth/signin', {
     login_id: P.loginId, password: P.password, client_type: 'app', device_id: P.deviceId,
   });
+  let r = await attempt();
+  // 高频轮次会触发 IP 限流(10500,窗口 10 分钟),退避 60s 后重试一次
+  if (r.code === 10500) {
+    console.log('触发限流(10500),等待 60s 重试…');
+    await new Promise((res) => setTimeout(res, 60000));
+    r = await attempt();
+  }
   if (r.code !== 0) throw new Error('登录失败: ' + JSON.stringify(r));
+  if (state) {
+    state.auth = { token: r.data.access_token, expiresAt: r.data.access_token_expires_at, userId: r.data.user_id };
+  }
   return r.data;
 }
 
@@ -154,7 +172,7 @@ async function main() {
   }
   const state = loadState();
   const shared = loadShared();
-  const me = await signin();
+  const me = await signin(state);
   const token = me.access_token;
   console.log(`[${PERSONA}] 登录成功, user_id =`, me.user_id, `(数据源: ${DATA_SOURCE})`);
 
@@ -213,5 +231,6 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
+  // 顶层异常包装:崩溃栈对值班无信息量,输出干净一行错误(下轮自动重试)
+  main().catch((e) => { console.error('执行异常:', e?.message || e); process.exit(3); });
 }

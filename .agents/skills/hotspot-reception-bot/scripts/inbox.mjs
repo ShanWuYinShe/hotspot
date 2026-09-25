@@ -4,7 +4,7 @@
 // 纯 API 实现(private_chats/fetch + private_messages/fetch),本地与线上通用。
 // 回复前先读 persona.json 的 card 人物卡,保持人设一致。
 import { pathToFileURL } from 'node:url';
-import { loadPersona, activePersonaName } from './persona.mjs';
+import { loadPersona, loadState, saveState, activePersonaName } from './persona.mjs';
 import { api, signin } from './greet.mjs';
 
 const BASE = process.env.WELCOME_BASE_URL || 'http://localhost:8888';
@@ -31,14 +31,23 @@ async function pendingInbox(token) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const P2 = P;
-  if (!P2.password) { console.error('缺少 WELCOME_PASSWORD 环境变量'); process.exit(1); }
-  const me = await signin();
-  const items = await pendingInbox(me.access_token);
-  console.log(`[${activePersonaName()}] 待回复会话 ${items.length} 个`);
-  for (const c of items) {
-    console.log(`\n== ${c.nickname} (${c.user_id})`);
-    for (const m of c.history) console.log(`  [${m.sent_at.slice(5, 16)}] ${m.who}: ${m.content}`);
-  }
-  if (!items.length) console.log('全部会话均已回复 ✓');
+  // 顶层异常包装:崩溃栈对值班无信息量,输出干净一行错误(下轮自动重试)
+  (async () => {
+    try {
+      if (!P.password) { console.error('缺少 WELCOME_PASSWORD 环境变量'); process.exit(1); }
+      const st = loadState();
+      const me = await signin(st);
+      saveState(st);
+      const items = await pendingInbox(me.access_token);
+      console.log(`[${activePersonaName()}] 待回复会话 ${items.length} 个`);
+      for (const c of items) {
+        console.log(`\n== ${c.nickname} (${c.user_id})`);
+        for (const m of c.history) console.log(`  [${m.sent_at.slice(5, 16)}] ${m.who}: ${m.content}`);
+      }
+      if (!items.length) console.log('全部会话均已回复 ✓');
+    } catch (e) {
+      console.error('执行异常:', e?.message || e);
+      process.exit(3);
+    }
+  })();
 }
