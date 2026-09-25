@@ -89,38 +89,36 @@ func NewServiceWithDeps(repo Repository, notificationWriter userNotificationWrit
 }
 
 func (s *Service) GetMyProfile(ctx context.Context) (AccountData, error) {
-	startedAt := time.Now()
-	observability.L().Info("users.get_my_profile started")
+	op := observability.Begin("users.get_my_profile")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return AccountData{}, err
 	}
 	if profile, ok, err := s.repo.GetProfile(ctx, principal.UserID); err != nil {
-		observability.L().Error("users.get_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return AccountData{}, err
 	} else if ok {
-		observability.L().Info("users.get_my_profile completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Complete()
 		return toAccountData(profile), nil
 	}
 	profile := s.defaultProfile(ctx, principal.UserID)
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
-		observability.L().Error("users.get_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return AccountData{}, err
 	}
-	observability.L().Info("users.get_my_profile completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return toAccountData(profile), nil
 }
 
 func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest) error {
-	startedAt := time.Now()
-	observability.L().Info("users.update_my_profile started")
+	op := observability.Begin("users.update_my_profile")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
 	}
 	profile, ok, err := s.repo.GetProfile(ctx, principal.UserID)
 	if err != nil {
-		observability.L().Error("users.update_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	if !ok {
@@ -171,7 +169,7 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		}
 		// 契约（spec api_spec_user.md update_account）：tags 含被屏蔽标签 → 10400。
 		if blocked, err := s.repo.CheckBlockedTags(ctx, *req.Tags); err != nil {
-			observability.L().Error("users.update_my_profile blocked-tags check failed", "error", err)
+			op.Fail(err, "stage", "blocked-tags-check")
 			return err
 		} else if len(blocked) > 0 {
 			return ErrBlockedTag
@@ -188,7 +186,7 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		profile.Gender = *req.Gender
 	}
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
-		observability.L().Error("users.update_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -201,18 +199,17 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 	}
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	realtime.DefaultHub().BroadcastToUserSubscribers(principal.UserID, event)
-	observability.L().Info("users.update_my_profile completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return nil
 }
 
 func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (PaginatedUsers, error) {
-	startedAt := time.Now()
-	observability.L().Info("users.search started")
+	op := observability.Begin("users.search")
 	// reference_point 缺失时按回退链解析:用户存储位置 → default_location
 	req.ReferencePoint = s.resolveReferencePoint(ctx, req.ReferencePoint)
 	profiles, err := s.repo.SearchProfiles(ctx, req)
 	if err != nil {
-		observability.L().Error("users.search failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return PaginatedUsers{}, err
 	}
 	if profiles.InvalidCursor {
@@ -266,7 +263,7 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 		}
 		items = append(items, item)
 	}
-	observability.L().Info("users.search completed", "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("count", len(items))
 	var next *string
 	if profiles.NextCursor != "" {
 		next = &profiles.NextCursor
@@ -357,15 +354,14 @@ func (s *Service) BatchGet(ctx context.Context, userIDs []string) (map[string]Us
 }
 
 func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest) error {
-	startedAt := time.Now()
-	observability.L().Info("users.update_location started")
+	op := observability.Begin("users.update_location")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
 	}
 	profile, ok, err := s.repo.GetProfile(ctx, principal.UserID)
 	if err != nil {
-		observability.L().Error("users.update_location failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	if !ok {
@@ -373,7 +369,7 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 	}
 	profile.Location = req.Location
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
-		observability.L().Error("users.update_location failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -386,20 +382,19 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 	}
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	realtime.DefaultHub().BroadcastToUserSubscribers(principal.UserID, event)
-	observability.L().Info("users.update_location completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return nil
 }
 
 func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) (AccountData, error) {
-	startedAt := time.Now()
-	observability.L().Info("users.upgrade started")
+	op := observability.Begin("users.upgrade")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return AccountData{}, err
 	}
 	profile, ok, err := s.repo.GetProfile(ctx, principal.UserID)
 	if err != nil {
-		observability.L().Error("users.upgrade failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return AccountData{}, err
 	}
 	if !ok {
@@ -412,7 +407,7 @@ func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) (Accou
 	// login_id+password 落登录凭证，否则升级用户无法重新登录）依赖 bootstrap
 	// 注入的 auth 模块实现；未接线时拒绝升级，不可静默只改 user_type。
 	if s.credentials == nil || s.runInTx == nil {
-		observability.L().Error("users.upgrade failed: credential writer not wired", "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(ErrUpgradeUnavailable, "stage", "credential-writer")
 		return AccountData{}, ErrUpgradeUnavailable
 	}
 	profile.UserType = UserTypeNormal
@@ -429,12 +424,12 @@ func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) (Accou
 		return s.repo.PutProfile(txCtx, profile)
 	}
 	if err := s.runInTx(ctx, writeAll); err != nil {
-		observability.L().Error("users.upgrade failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return AccountData{}, err
 	}
 	// Token/Session 语义（spec api_spec_user.md）：升级不吊销当前 session、不重发
 	// token——user_type 更新后现有 token 继续有效，客户端无需重新登录。
-	observability.L().Info("users.upgrade completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return toAccountData(profile), nil
 }
 
@@ -452,8 +447,7 @@ func isNumericLoginID(loginID string) bool {
 }
 
 func (s *Service) DeleteAccount(ctx context.Context, req DeleteAccountRequest) error {
-	startedAt := time.Now()
-	observability.L().Info("users.delete_account started")
+	op := observability.Begin("users.delete_account")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
@@ -463,10 +457,10 @@ func (s *Service) DeleteAccount(ctx context.Context, req DeleteAccountRequest) e
 		return ErrInvalidRequest
 	}
 	if err := s.repo.DeleteProfile(ctx, principal.UserID); err != nil {
-		observability.L().Error("users.delete_account failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
-	observability.L().Info("users.delete_account completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return nil
 }
 

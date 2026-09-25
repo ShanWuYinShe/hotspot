@@ -2,7 +2,6 @@ package users
 
 import (
 	"context"
-	"time"
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
@@ -12,25 +11,24 @@ import (
 )
 
 func (s *Service) GetMySettings(ctx context.Context) (UserSettings, error) {
-	startedAt := time.Now()
-	observability.L().Info("users.get_my_settings started")
+	op := observability.Begin("users.get_my_settings")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return UserSettings{}, err
 	}
 	if settings, ok, err := s.repo.GetSettings(ctx, principal.UserID); err != nil {
-		observability.L().Error("users.get_my_settings failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return UserSettings{}, err
 	} else if ok {
-		observability.L().Info("users.get_my_settings completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Complete()
 		return settings, nil
 	}
 	settings := defaultSettings()
 	if err := s.repo.PutSettings(ctx, principal.UserID, settings); err != nil {
-		observability.L().Error("users.get_my_settings failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return UserSettings{}, err
 	}
-	observability.L().Info("users.get_my_settings completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return settings, nil
 }
 
@@ -56,15 +54,14 @@ func (s *Service) SettingsFor(ctx context.Context, userID string) (UserSettings,
 }
 
 func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsRequest) error {
-	startedAt := time.Now()
-	observability.L().Info("users.update_my_settings started")
+	op := observability.Begin("users.update_my_settings")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
 	}
 	settings, ok, err := s.repo.GetSettings(ctx, principal.UserID)
 	if err != nil {
-		observability.L().Error("users.update_my_settings failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	if !ok {
@@ -72,17 +69,16 @@ func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsReques
 	}
 	applySettingsPatch(&settings, req.Settings)
 	if err := s.repo.PutSettings(ctx, principal.UserID, settings); err != nil {
-		observability.L().Error("users.update_my_settings failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	// 不推送 self-sync 事件（设置状态不做跨设备实时同步，见 api_spec_index.md 预留）
-	observability.L().Info("users.update_my_settings completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return nil
 }
 
 func (s *Service) ListReactedMoments(ctx context.Context, req UserReactedMomentsRequest) (momenttypes.PaginatedMoments, error) {
-	startedAt := time.Now()
-	observability.L().Info("users.list_reacted_moments started", "user_id", req.UserID)
+	op := observability.Begin("users.list_reacted_moments", "user_id", req.UserID)
 	if req.UserID == "" {
 		return momenttypes.PaginatedMoments{}, ErrInvalidRequest
 	}
@@ -92,7 +88,7 @@ func (s *Service) ListReactedMoments(ctx context.Context, req UserReactedMoments
 	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
 	settings, ok, err := s.repo.GetSettings(ctx, req.UserID)
 	if err != nil {
-		observability.L().Error("users.list_reacted_moments failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return momenttypes.PaginatedMoments{}, err
 	}
 	if !ok {
@@ -114,7 +110,7 @@ func (s *Service) ListReactedMoments(ctx context.Context, req UserReactedMoments
 	}
 	result, err := s.momentsByUser.ListReactedByUser(ctx, req.UserID, viewerUserID, limit, cursor)
 	if err != nil {
-		observability.L().Error("users.list_reacted_moments failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return momenttypes.PaginatedMoments{}, err
 	}
 	for i := range result.Items {
@@ -122,7 +118,7 @@ func (s *Service) ListReactedMoments(ctx context.Context, req UserReactedMoments
 			result.Items[i].PrivacyLevel = ""
 		}
 	}
-	observability.L().Info("users.list_reacted_moments completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return result, nil
 }
 

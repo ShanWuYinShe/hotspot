@@ -11,8 +11,7 @@ import (
 )
 
 func (s *Service) Follow(ctx context.Context, targetUserID string, source FollowSource, sourceMomentID string) error {
-	startedAt := time.Now()
-	observability.L().Info("users.follow started", "target_user_id", targetUserID)
+	op := observability.Begin("users.follow", "target_user_id", targetUserID)
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
@@ -39,11 +38,11 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 	// 会再发一条 new_follower（并可能重复 mutual_follow）（审计 F-12）。
 	changed, err := s.repo.Follow(ctx, principal.UserID, targetUserID, source, sourceMomentID)
 	if err != nil {
-		observability.L().Error("users.follow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	if !changed {
-		observability.L().Info("users.follow no-op (already following)", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		observability.L().Info("users.follow no-op (already following)", "target_user_id", targetUserID, "elapsed_ms", op.ElapsedMillis())
 		return nil
 	}
 	actor := s.buildFollowActor(ctx, principal.UserID)
@@ -57,7 +56,7 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 	if s.notifications != nil {
 		id, err := s.notifications.AppendNewFollower(ctx, targetUserID, actor, sourceValue, sourceMomentID)
 		if err != nil {
-			observability.L().Error("users.follow notification append failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			observability.L().Error("users.follow notification append failed", "error", err, "elapsed_ms", op.ElapsedMillis())
 		} else {
 			notificationID = id
 		}
@@ -72,7 +71,7 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeNewFollower, Payload: newFollowerPayload})
 	relation, err := s.repo.Relationship(ctx, targetUserID, principal.UserID)
 	if err != nil {
-		observability.L().Error("users.follow relationship check failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err, "stage", "relationship-check")
 		return err
 	}
 	if relation.IsFollowing {
@@ -82,13 +81,13 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 		if s.notifications != nil {
 			id, err := s.notifications.AppendMutualFollow(ctx, principal.UserID, actor)
 			if err != nil {
-				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", principal.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", principal.UserID, "elapsed_ms", op.ElapsedMillis())
 			} else {
 				notificationIDForPrincipal = id
 			}
 			id, err = s.notifications.AppendMutualFollow(ctx, targetUserID, actor)
 			if err != nil {
-				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", targetUserID, "elapsed_ms", op.ElapsedMillis())
 			} else {
 				notificationIDForTarget = id
 			}
@@ -98,13 +97,12 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 		realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForPrincipal})
 		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForTarget})
 	}
-	observability.L().Info("users.follow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return nil
 }
 
 func (s *Service) Unfollow(ctx context.Context, targetUserID string) error {
-	startedAt := time.Now()
-	observability.L().Info("users.unfollow started", "target_user_id", targetUserID)
+	op := observability.Begin("users.unfollow", "target_user_id", targetUserID)
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
@@ -116,17 +114,16 @@ func (s *Service) Unfollow(ctx context.Context, targetUserID string) error {
 		return err
 	}
 	if err := s.repo.Unfollow(ctx, principal.UserID, targetUserID); err != nil {
-		observability.L().Error("users.unfollow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	// 不推送 self-sync 事件（关系状态不做跨设备实时同步，见 api_spec_index.md 预留）
-	observability.L().Info("users.unfollow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return nil
 }
 
 func (s *Service) Block(ctx context.Context, targetUserID, reason string) error {
-	startedAt := time.Now()
-	observability.L().Info("users.block started", "target_user_id", targetUserID)
+	op := observability.Begin("users.block", "target_user_id", targetUserID)
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
@@ -141,11 +138,11 @@ func (s *Service) Block(ctx context.Context, targetUserID, reason string) error 
 	// 解除拉黑不自动恢复（需重新关注）。与微博/Instagram 等主流产品一致。
 	// BlockCascade 在同一事务内完成三步写，避免中间状态。
 	if err := s.repo.BlockCascade(ctx, principal.UserID, targetUserID, reason); err != nil {
-		observability.L().Error("users.block failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	// 不推送 self-sync 事件（关系状态不做跨设备实时同步，见 api_spec_index.md 预留）
-	observability.L().Info("users.block completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return nil
 }
 
@@ -220,8 +217,7 @@ func (s *Service) ChatTargetsContext(ctx context.Context, viewerID string, targe
 }
 
 func (s *Service) Unblock(ctx context.Context, targetUserID string) error {
-	startedAt := time.Now()
-	observability.L().Info("users.unblock started", "target_user_id", targetUserID)
+	op := observability.Begin("users.unblock", "target_user_id", targetUserID)
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
@@ -233,17 +229,16 @@ func (s *Service) Unblock(ctx context.Context, targetUserID string) error {
 		return err
 	}
 	if err := s.repo.Unblock(ctx, principal.UserID, targetUserID); err != nil {
-		observability.L().Error("users.unblock failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
 	// 不推送 self-sync 事件（关系状态不做跨设备实时同步，见 api_spec_index.md 预留）
-	observability.L().Info("users.unblock completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return nil
 }
 
 func (s *Service) SetRemark(ctx context.Context, targetUserID, remark string) error {
-	startedAt := time.Now()
-	observability.L().Info("users.set_remark started", "target_user_id", targetUserID)
+	op := observability.Begin("users.set_remark", "target_user_id", targetUserID)
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
@@ -259,16 +254,15 @@ func (s *Service) SetRemark(ctx context.Context, targetUserID, remark string) er
 		return ErrConflict
 	}
 	if err := s.repo.SetRemark(ctx, principal.UserID, targetUserID, remark); err != nil {
-		observability.L().Error("users.set_remark failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return err
 	}
-	observability.L().Info("users.set_remark completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete()
 	return nil
 }
 
 func (s *Service) ListBlocked(ctx context.Context, req MyBlockedRequest) (PaginatedBlockedUsers, error) {
-	startedAt := time.Now()
-	observability.L().Info("users.list_blocked started")
+	op := observability.Begin("users.list_blocked")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return PaginatedBlockedUsers{}, err
@@ -276,10 +270,10 @@ func (s *Service) ListBlocked(ctx context.Context, req MyBlockedRequest) (Pagina
 	limit, cursor := normalizePagination(req.Pagination)
 	items, err := s.repo.ListBlocked(ctx, principal.UserID, limit, cursor)
 	if err != nil {
-		observability.L().Error("users.list_blocked failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		op.Fail(err)
 		return PaginatedBlockedUsers{}, err
 	}
-	observability.L().Info("users.list_blocked completed", "count", len(items.Items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	op.Complete("count", len(items.Items))
 	return items, nil
 }
 
