@@ -6,19 +6,20 @@
 // 纯 API 实现(private_chats/fetch + private_messages/fetch),本地与线上通用。
 import { pathToFileURL } from 'node:url';
 import { listPersonas, loadState, saveState } from './persona.mjs';
-import { api, signin } from './greet.mjs';
+import { apiAuthed, signin } from './greet.mjs';
 
-async function pendingInbox(token, persona) {
-  const chats = await api('/api/v1/private_chats/fetch', { pagination: null }, token);
+async function pendingInbox(state, persona) {
+  // 鉴权请求走 apiAuthed:会话被同设备的其他脚本/轮次顶下线(10100)时自动重登录自愈
+  const chats = await apiAuthed(state, persona, '/api/v1/private_chats/fetch', { pagination: null }, state.auth?.token);
   if (chats.code !== 0) throw new Error('private_chats/fetch 失败: ' + JSON.stringify(chats));
   const out = [];
   for (const c of chats.data?.items ?? []) {
     if (!(c.unread_count > 0)) continue;
     const peer = c.other_user?.user_id;
     if (!peer) continue;
-    const hist = await api('/api/v1/private_messages/fetch', {
+    const hist = await apiAuthed(state, persona, '/api/v1/private_messages/fetch', {
       target_user_id: peer, pagination: { limit: 8 },
-    }, token);
+    }, state.auth?.token);
     const items = hist.code === 0 ? (hist.data?.items ?? []).slice().reverse() : [];
     out.push({
       user_id: peer, nickname: c.other_user?.nickname ?? peer,
@@ -46,9 +47,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (i > 0) await new Promise((res) => setTimeout(res, 2000)); // 人格间间隔 2s 防鉴权限流
       try {
         const st = loadState(p.name);
-        const me = await signin(st, p);
+        await signin(st, p); // 保证已登录(state.auth 缓存命中则复用)
+        const items = await pendingInbox(st, p);
+        // pendingInbox 内可能发生 10100 自愈重登录,新 token 已写 st.auth,统一落盘
         saveState(st, p.name);
-        const items = await pendingInbox(me.access_token, p);
         console.log(`\n[${p.nickname}](${p.name}) 待回复会话 ${items.length} 个 | 人物卡: ${p.card}`);
         for (const c of items) {
           // 归属人格 = 该会话所在账号(同一用户可与多个人格各有会话);回复时显式 --persona 定位

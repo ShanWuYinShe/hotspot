@@ -11,7 +11,7 @@ import {
   loadPersona, listPersonas, resolvePersonaFor,
   loadState, saveState, loadShared, saveShared, markContacted, activePersonaName,
 } from './persona.mjs';
-import { api, signin, inWindow, effectiveDailySent, bumpDaily } from './greet.mjs';
+import { api, apiAuthed, signin, inWindow, effectiveDailySent, bumpDaily } from './greet.mjs';
 
 function arg(name) {
   const i = process.argv.indexOf(name);
@@ -50,7 +50,7 @@ async function main() {
     process.exit(1);
   }
   const state = loadState(name);
-  const me = await signin(state, P);
+  await signin(state, P); // 保证已登录(state.auth 缓存命中则复用)
   let cap = 10;
   const cfg = await api('/public/v1/system/client_config', {});
   if (cfg.code === 0 && cfg.data?.limits?.stranger_message_daily_quota) {
@@ -60,17 +60,17 @@ async function main() {
     console.error(`[${name}] 今日陌生人配额(${cap} 条)已用完,明天再回或手工调整 state`);
     process.exit(3);
   }
-  const r = await api('/api/v1/private_messages/send', {
+  const r = await apiAuthed(state, P, '/api/v1/private_messages/send', {
     target_user_id: to, type: 'text', content: text,
     file_id: null, share_code: null, reply_to_message_id: null,
-  }, me.access_token, crypto.randomUUID());
+  }, state.auth?.token, crypto.randomUUID());
   if (r.code !== 0) { console.error('发送失败:', JSON.stringify(r)); process.exit(2); }
   bumpDaily(state);
   // 登记簿刷新:by 保持归属人格不变(连续性铁律),时间戳/kind 更新为本次回复
   markContacted(shared, to, name, { message_id: r.data?.message_id, kind: 'reply' });
   if (!state.engaged[to]) state.engaged[to] = { at: new Date().toISOString(), via: 'reply' };
   // 回复后把会话标为已读,收件箱不再重复提示
-  await api('/api/v1/private_messages/mark_read', { scope: 'session', target_user_id: to }, me.access_token).catch(() => {});
+  await apiAuthed(state, P, '/api/v1/private_messages/mark_read', { scope: 'session', target_user_id: to }, state.auth?.token).catch(() => {});
   saveState(state, name);
   saveShared(shared);
   console.log(`[${P.nickname}](${name}) 已回复`, to, '| message_id =', r.data?.message_id);

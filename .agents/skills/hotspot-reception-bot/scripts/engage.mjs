@@ -15,7 +15,7 @@ import {
   loadState, saveState, loadShared, saveShared, markContacted, activePersonaName,
 } from './persona.mjs';
 import {
-  api, signin, sanitizeHandle, addressableNick, inWindow, bumpDaily, effectiveDailySent, dbOutboundCounts,
+  api, apiAuthed, signin, sanitizeHandle, addressableNick, inWindow, bumpDaily, effectiveDailySent, dbOutboundCounts,
 } from './greet.mjs';
 
 const FORCE = process.argv.includes('--force');
@@ -188,7 +188,7 @@ async function main() {
     const en = engageOf.get(name) ?? [];
     if (!fu.length && !en.length) continue;
     console.log(`[${name}] 待关怀:跟进 ${fu.length} 人 + 新分配 ${en.length} 人`);
-    const peers = DATA_SOURCE === 'api' ? await myChatPeers(sessions[name].access_token) : null;
+    const peers = DATA_SOURCE === 'api' ? await myChatPeers(st.auth?.token) : null;
     let perCount = 0;
     const queue = [...fu.map((u) => ({ u, follow: true })), ...en.map((u) => ({ u, follow: false }))];
     for (const { u, follow } of queue) {
@@ -204,10 +204,10 @@ async function main() {
         : (u.has_moments ? p.lines.engageNewWithMoments : p.lines.engageNew);
       const content = renderLine(lines[perCount % lines.length], sanitizeHandle(u.nickname), safeTag);
       if (DRY) { console.log('[dry-run]', name, '->', u.user_id, u.nickname, '|', content.slice(0, 24) + '…'); sent++; perCount++; sentBy[name] = perCount; continue; }
-      const r = await api('/api/v1/private_messages/send', {
+      const r = await apiAuthed(st, p, '/api/v1/private_messages/send', {
         target_user_id: u.user_id, type: 'text', content,
         file_id: null, share_code: null, reply_to_message_id: null,
-      }, sessions[name].access_token, crypto.randomUUID());
+      }, st.auth?.token, crypto.randomUUID());
       if (r.code === 0) {
         sent++; perCount++; sentBy[name] = perCount;
         bumpDaily(st);

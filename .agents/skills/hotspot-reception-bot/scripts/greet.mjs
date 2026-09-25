@@ -99,6 +99,20 @@ export async function signin(state, persona = P) {
   return r.data;
 }
 
+// 鉴权请求自愈:同一人格账号/deviceId 被其他脚本或轮次重新登录时会顶掉旧会话
+// (10100),登录缓存只能缓解不能根治。此封装在 10100 时清掉 state.auth 缓存、
+// 强制重登录取新 token 并重试一次;state.auth 已同步刷新,调用方后续请求从
+// state.auth.token 取值即为新会话。
+export async function apiAuthed(state, persona, path, body, token, idem) {
+  let r = await api(path, body, token, idem);
+  if (r.code === 10100) {
+    delete state.auth;
+    const me = await signin(state, persona);
+    r = await api(path, body, me.access_token, idem);
+  }
+  return r;
+}
+
 // ── 当日已发计数:DB 模式以出站消息为准;API 模式以共享登记簿为准 ────────
 export function dbOutboundToday(persona = P) {
   if (DATA_SOURCE !== 'db') return 0;
@@ -237,10 +251,10 @@ async function main() {
     const perCount = sentBy[name] || 0;
     const content = renderLine(templates[perCount % templates.length], nick);
     if (DRY) { console.log('[dry-run]', name, '->', u.user_id, u.nickname); sent++; sentBy[name] = perCount + 1; continue; }
-    const r = await api('/api/v1/private_messages/send', {
+    const r = await apiAuthed(st, persona, '/api/v1/private_messages/send', {
       target_user_id: u.user_id, type: 'text', content,
       file_id: null, share_code: null, reply_to_message_id: null,
-    }, sessions[name].access_token, crypto.randomUUID());
+    }, st.auth?.token, crypto.randomUUID());
     if (r.code === 0) {
       sent++; sentBy[name] = perCount + 1;
       bumpDaily(st);
