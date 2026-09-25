@@ -185,16 +185,19 @@ const FILTER_TABS = [
 	const unread = $derived(notifies.filter((n) => !n.read).length);
 	let followedBack = $state<Set<string>>(new Set());
 
-	// 桌面 Rail「回关」：直接关注通知中的 actor（spec: users/set_follow）
+	// 桌面 Rail「回关」：直接关注通知中的 actor（spec: users/set_follow）。
+	// code!==0 视为失败并回滚（此前只捕获网络异常：业务失败会误报成功 toast
+	// 且按钮永久卡死在已关注；与用户详情/附近的人/共享模块同口径）。
 	const followBack = async (n: NotifyViewItem) => {
 		if (!n.user.id || followedBack.has(n.user.id)) return;
 		followedBack = new Set([...followedBack, n.user.id]);
 		try {
-			await follow({ user_id: n.user.id, active: true });
+			const res = await follow({ user_id: n.user.id, active: true });
+			if (res.code !== 0) throw new Error(res.message || '操作失败');
 			showToast(`已关注 ${n.user.name}`, 'success');
-		} catch {
+		} catch (err) {
 			followedBack = new Set([...followedBack].filter((id) => id !== n.user.id));
-			showToast('操作失败，请重试', 'danger');
+			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
 		}
 	};
 
