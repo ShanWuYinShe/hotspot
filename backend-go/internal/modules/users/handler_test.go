@@ -1516,6 +1516,10 @@ func (r *userErrorRepo) ListMomentsByAuthor(context.Context, string, int, string
 func (r *userErrorRepo) ListReactedByUser(context.Context, string, string, int, string) (momenttypes.PaginatedMoments, error) {
 	return momenttypes.PaginatedMoments{}, errors.New("boom")
 }
+func (r *userErrorRepo) OwnedGroupCount(context.Context, string) (int, error) {
+	return 0, nil
+}
+
 func (r *userErrorRepo) CountCommonGroups(context.Context, string, string) (int, error) {
 	return 0, errors.New("boom")
 }

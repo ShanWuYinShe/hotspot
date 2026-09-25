@@ -503,6 +503,23 @@ func (r *InMemoryRepository) CountCommonGroups(_ context.Context, viewerUserID, 
 	return count, nil
 }
 
+// CountOwnedGroups 统计 members 表中 role=owner 的群数（内存无已解散残留，
+// Dismiss 硬删条目）。
+func (r *InMemoryRepository) CountOwnedGroups(_ context.Context, userID string) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	count := 0
+	for groupID, members := range r.members {
+		if _, ok := r.groups[groupID]; !ok {
+			continue
+		}
+		if m, ok := members[userID]; ok && m.Role == GroupRoleOwner {
+			count++
+		}
+	}
+	return count, nil
+}
+
 // SeedGroupsByUser 填充「按用户聚合的群组列表」测试数据（供跨包 handler
 // 测试构造 users 聚合场景；生产路径走 PostgresRepository）。
 func (r *InMemoryRepository) SeedGroupsByUser(userID string, items []GroupItem) {

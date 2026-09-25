@@ -94,6 +94,9 @@ func apiErrorFromService(err error) *httpx.APIError {
 		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}
 	case errors.Is(err, ErrBlockedTag):
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "标签包含被屏蔽内容"}
+	case errors.Is(err, ErrOwnsGroups):
+		// 10400（spec api_spec_user.md → delete_account）：仍是群主时拒绝注销。
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "你是群的群主，请先转让群主或解散群组后再注销"}
 	case errors.Is(err, ErrLoginIDTaken):
 		// 10400（spec api_spec_user.md → upgrade：login_id 已被占用）
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "login_id 已被占用"}

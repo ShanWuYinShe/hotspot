@@ -36,6 +36,8 @@ type stubUserRepo struct {
 	searchResult PaginatedProfiles
 	searchErr    error
 
+	ownedCount int
+
 	followErr    error
 	unfollowErr  error
 	blockErr     error
@@ -466,6 +468,34 @@ func TestServiceDeleteAccountRejectsWrongConfirmation(t *testing.T) {
 	}
 }
 
+// 孤儿群守卫：仍担任群主时拒绝注销（对齐退群时「群主需先转让」的既有规则；
+// 注销会删掉全部 membership 含群主行，群行残留即永久无主）。
+func TestServiceDeleteAccountRejectsWhenOwningGroups(t *testing.T) {
+	repo := &stubUserRepo{ownedCount: 2}
+	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
+	err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"})
+	if !errors.Is(err, ErrOwnsGroups) {
+		t.Fatalf("expected owns-groups rejection, got %v", err)
+	}
+}
+
+func TestServiceDeleteAccountProceedsWhenOwningNone(t *testing.T) {
+	repo := &stubUserRepo{ownedCount: 0}
+	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
+	if err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServiceDeleteAccountProceedsWithoutProvider(t *testing.T) {
+	svc := NewServiceWithRepo(&stubUserRepo{})
+	if err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // --- Upgrade ---
 
 // stubCredentialWriter 记录 AttachCredentials 调用（upgrade 凭证写入测试桩）。
@@ -750,6 +780,9 @@ func (p *stubContentProviders) ListReactedByUser(_ context.Context, _ string, _ 
 func (p *stubContentProviders) CountCommonGroups(_ context.Context, _, _ string) (int, error) {
 	return 0, nil
 }
+func (p *stubContentProviders) OwnedGroupCount(_ context.Context, _ string) (int, error) {
+	return p.repo.ownedCount, nil
+}
 
 // ListGroupsByUser / ListMomentsByAuthor / ListReactedByUser / CountCommonGroups：
 // stubUserRepo 同时实现 GroupsByUserProvider / MomentsByUserProvider（数据复用
@@ -765,6 +798,9 @@ func (r *stubUserRepo) ListReactedByUser(_ context.Context, _ string, _ string, 
 }
 func (r *stubUserRepo) CountCommonGroups(_ context.Context, _, _ string) (int, error) {
 	return 0, nil
+}
+func (r *stubUserRepo) OwnedGroupCount(_ context.Context, _ string) (int, error) {
+	return r.ownedCount, nil
 }
 
 func TestServiceBatchGetSkipsMissingAndDeleted(t *testing.T) {

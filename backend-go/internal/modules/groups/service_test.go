@@ -31,6 +31,7 @@ type stubGroupsRepo struct {
 	searchErr       error
 	updateErr       error
 	dismissErr      error
+	ownedCount      int
 
 	members    []GroupMemberItem
 	membersCur string
@@ -1417,6 +1418,10 @@ func (r *stubGroupsRepo) ListGroupsByUser(context.Context, string, int, string) 
 
 func (r *stubGroupsRepo) CountCommonGroups(context.Context, string, string) (int, error) {
 	return 0, nil
+}
+
+func (r *stubGroupsRepo) CountOwnedGroups(context.Context, string) (int, error) {
+	return r.ownedCount, nil
 }
 
 // --- 审计修复新增：封禁旁路 / owner 自降级 / 非成员操作 ---

@@ -665,3 +665,9 @@ func (s *Service) ListGroupsByUser(ctx context.Context, userID string, limit int
 func (s *Service) CountCommonGroups(ctx context.Context, viewerUserID, targetUserID string) (int, error) {
 	return s.repo.CountCommonGroups(ctx, viewerUserID, targetUserID)
 }
+
+// OwnedGroupCount delegates CountOwnedGroups for the users-facing aggregation
+// family (users 注销守卫：群主注销会制造孤儿群，必须先转让或解散）。
+func (s *Service) OwnedGroupCount(ctx context.Context, userID string) (int, error) {
+	return s.repo.CountOwnedGroups(ctx, userID)
+}

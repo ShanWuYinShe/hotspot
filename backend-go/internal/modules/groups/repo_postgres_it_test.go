@@ -973,6 +973,46 @@ func TestPostgresIT_TransferOwnership(t *testing.T) {
 	})
 }
 
+func TestPostgresIT_CountOwnedGroups(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		repo := NewPostgresRepository(txFactory)
+		ownerID := testdb.InsertUser(t, txFactory, "u_cog_owner", "Owner")
+		memberID := testdb.InsertUser(t, txFactory, "u_cog_member", "Member")
+
+		group, err := repo.Create(ctx, ownerID, CreateGroupRequest{
+			Name:       "Owned Count Group",
+			JoinMethod: GroupJoinMethodDirect,
+			Location: Location{LocationName: "Beijing", Point: struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			}{Latitude: 39.9, Longitude: 116.4}},
+		})
+		if err != nil {
+			t.Fatalf("Create: %v", err)
+		}
+		if _, err := repo.JoinGroup(ctx, memberID, group.Group.GroupID, nil, nil); err != nil {
+			t.Fatalf("JoinGroup: %v", err)
+		}
+
+		count, err := repo.CountOwnedGroups(ctx, ownerID)
+		if err != nil {
+			t.Fatalf("CountOwnedGroups owner: %v", err)
+		}
+		if count != 1 {
+			t.Fatalf("expected 1 owned group, got %d", count)
+		}
+		count, err = repo.CountOwnedGroups(ctx, memberID)
+		if err != nil {
+			t.Fatalf("CountOwnedGroups member: %v", err)
+		}
+		if count != 0 {
+			t.Fatalf("expected 0 owned groups for member, got %d", count)
+		}
+	})
+}
+
 func TestPostgresIT_CommonGroupCount(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)

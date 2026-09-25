@@ -389,6 +389,15 @@ WHERE gm.user_id = $1 AND g.deleted_at IS NULL AND g.is_searchable = TRUE
 ORDER BY gm.joined_at DESC, g.group_id ASC
 LIMIT $4`
 
+	// queryCountOwnedGroups 统计用户担任群主的未解散群数，供 users 注销守卫：
+	// 群主注销会制造无人可管理的孤儿群（退群/降级等路径均已拒绝制造孤儿，
+	// 见 SetMemberRole 审计 F-05），注销前必须先转让或解散。
+	queryCountOwnedGroups = `
+SELECT COUNT(*)
+FROM group_members gm
+JOIN groups g ON g.group_id = gm.group_id
+WHERE gm.user_id = $1 AND gm.role = 'owner' AND g.deleted_at IS NULL`
+
 	queryCountCommonGroups = `
 SELECT COUNT(*)
 FROM (

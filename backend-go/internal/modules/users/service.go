@@ -456,6 +456,20 @@ func (s *Service) DeleteAccount(ctx context.Context, req DeleteAccountRequest) e
 	if req.Confirmation != "DELETE_MY_ACCOUNT" {
 		return ErrInvalidRequest
 	}
+	// 孤儿群守卫：仍担任群主时拒绝注销（对齐退群时「群主需先转让」的既有
+	// 规则；注销会删掉全部 membership 含群主行，群行残留即永久无主）。
+	// groupsByUser 未接线时跳过（测试口径，对齐 avatarMedia nil 口径）。
+	if s.groupsByUser != nil {
+		owned, err := s.groupsByUser.OwnedGroupCount(ctx, principal.UserID)
+		if err != nil {
+			op.Fail(err)
+			return err
+		}
+		if owned > 0 {
+			op.Warn("owns groups")
+			return ErrOwnsGroups
+		}
+	}
 	if err := s.repo.DeleteProfile(ctx, principal.UserID); err != nil {
 		op.Fail(err)
 		return err

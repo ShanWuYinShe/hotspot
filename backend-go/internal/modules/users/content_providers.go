@@ -17,6 +17,9 @@ type GroupsByUserProvider interface {
 	ListGroupsByUser(ctx context.Context, userID string, limit int, cursor string) (grouptypes.PaginatedGroups, error)
 	// CountCommonGroups 两用户共同群组数（主页「共同群组」徽标）。
 	CountCommonGroups(ctx context.Context, viewerUserID, targetUserID string) (int, error)
+	// OwnedGroupCount 用户担任群主的未解散群数（注销守卫：群主注销会制造
+	// 无人可管理的孤儿群，必须先转让或解散）。
+	OwnedGroupCount(ctx context.Context, userID string) (int, error)
 }
 
 // MomentsByUserProvider 返回按作者聚合的瞬间列表。

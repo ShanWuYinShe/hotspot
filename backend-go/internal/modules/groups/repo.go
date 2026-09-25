@@ -57,4 +57,6 @@ type Repository interface {
 	// Service.ListGroupsByUser).
 	ListGroupsByUser(context.Context, string, int, string) (PaginatedGroups, error)
 	CountCommonGroups(context.Context, string, string) (int, error)
+	// CountOwnedGroups 统计用户担任群主的未解散群数（注销守卫消费）。
+	CountOwnedGroups(context.Context, string) (int, error)
 }

@@ -117,3 +117,16 @@ func (r *PostgresRepository) CountCommonGroups(ctx context.Context, viewerUserID
 	}
 	return count, nil
 }
+
+// CountOwnedGroups counts non-dismissed groups where the user holds the owner role.
+func (r *PostgresRepository) CountOwnedGroups(ctx context.Context, userID string) (int, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	var count int
+	if err := queryable.QueryRow(ctx, queryCountOwnedGroups, userID).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
