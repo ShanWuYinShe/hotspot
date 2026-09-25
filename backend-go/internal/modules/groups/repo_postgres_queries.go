@@ -190,12 +190,15 @@ WHERE gi.group_id = $1 AND ($2 = '' OR gi.status = $2)
 ORDER BY gi.created_at DESC, gi.invite_id DESC
 LIMIT $5`
 
+	// inviter 昵称经 users 表解析（此前占位填 user_id，通知待办区块直接
+	// 把裸 id 展示给用户；与 ListSentInvites 的 LEFT JOIN 口径对齐）。
 	queryListMyInvites = `
 SELECT gi.invite_id, gi.group_id, g.name, COALESCE(g.avatar_url, ''),
        (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = gi.group_id) AS members_count,
-       gi.inviter_user_id, COALESCE(gi.message, ''), gi.status, gi.created_at, gi.expires_at, gi.responded_at
+       gi.inviter_user_id, COALESCE(iu.nickname, ''), COALESCE(gi.message, ''), gi.status, gi.created_at, gi.expires_at, gi.responded_at
 FROM group_invites gi
 JOIN groups g ON g.group_id = gi.group_id
+LEFT JOIN users iu ON iu.user_id = gi.inviter_user_id
 WHERE gi.invitee_user_id = $1 AND ($2 = '' OR gi.status = $2)
   AND ($3::timestamptz IS NULL OR gi.created_at < $3 OR (gi.created_at = $3 AND gi.invite_id < $4))
 ORDER BY gi.created_at DESC, gi.invite_id DESC

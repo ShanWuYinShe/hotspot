@@ -724,6 +724,10 @@ func TestPostgresIT_InviteFlow(t *testing.T) {
 		if myInvites[0].Group.GroupID != groupID {
 			t.Fatalf("group id: got %q, want %q", myInvites[0].Group.GroupID, groupID)
 		}
+		// 邀请人昵称必须解析（此前占位填 user_id，通知待办区块直接展示裸 id）。
+		if myInvites[0].Inviter.Nickname != "Owner" {
+			t.Fatalf("inviter nickname: got %q, want %q", myInvites[0].Inviter.Nickname, "Owner")
+		}
 
 		// Accept the invite
 		if err := repo.AcceptInvite(ctx, inviteeID, *inv.InviteID); err != nil {

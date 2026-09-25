@@ -465,7 +465,7 @@ func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 		return []any{id, "group_1", "群名", "", 3, "u2", "备注", "pending", gTestTime, nil, nil}
 	}
 	inviteRow := func(id string) []any {
-		return []any{id, "group_1", "群名", "", 3, "u1", "消息", "pending", gTestTime, gTestTime, nil}
+		return []any{id, "group_1", "群名", "", 3, "u1", "邀请人昵称", "消息", "pending", gTestTime, gTestTime, nil}
 	}
 	sentRow := func(id string) []any {
 		return []any{id, "u1", "邀请人", "u2", "被邀请人", "消息", "pending", gTestTime, gTestTime, gTestTime}
@@ -499,6 +499,9 @@ func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 	invites, _, err := newGroupsFullRepo(stub).ListMyInvites(ctx, "u2", nil, 20, "")
 	if err != nil || len(invites) != 1 || invites[0].ExpiresAt == nil || invites[0].Message == nil {
 		t.Fatalf("list my invites: %#v err=%v", invites, err)
+	}
+	if invites[0].Inviter.Nickname != "邀请人昵称" {
+		t.Fatalf("inviter nickname: got %q, want %q", invites[0].Inviter.Nickname, "邀请人昵称")
 	}
 	stub = &groupFullStub{queryRowsErr: map[string]error{queryListMyInvites: errors.New("boom")}}
 	if _, _, err := newGroupsFullRepo(stub).ListMyInvites(ctx, "u2", nil, 20, ""); err == nil {
@@ -701,7 +704,7 @@ func TestPostgresRowsErrPaths(t *testing.T) {
 				_, _, err := r.ListMyApplications(ctx, "u2", nil, 20, "")
 				return err
 			}},
-		{queryListMyInvites, []any{"i1", "g", "群", "", 3, "u1", "", "pending", gTestTime, nil, nil},
+		{queryListMyInvites, []any{"i1", "g", "群", "", 3, "u1", "邀请人", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListMyInvites(ctx, "u2", nil, 20, ""); return err }},
 		{queryListSentInvites, []any{"i1", "u1", "邀请人", "u2", "被邀请人", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListSentInvites(ctx, "g", nil, 20, ""); return err }},

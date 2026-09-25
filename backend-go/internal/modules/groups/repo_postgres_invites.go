@@ -38,15 +38,15 @@ func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, s
 	createdAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupInviteItem
-		var inviterUserID, groupID, message, statusText, groupName, groupAvatar string
+		var inviterUserID, inviterNickname, groupID, message, statusText, groupName, groupAvatar string
 		var membersCount int
 		var createdAt time.Time
 		var expiresAt, respondedAt *time.Time
-		if err := rows.Scan(&item.InviteID, &groupID, &groupName, &groupAvatar, &membersCount, &inviterUserID, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
+		if err := rows.Scan(&item.InviteID, &groupID, &groupName, &groupAvatar, &membersCount, &inviterUserID, &inviterNickname, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
 			return nil, "", err
 		}
 		item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: types.StrPtr(groupAvatar), MembersCount: membersCount}
-		item.Inviter = UserInfo{UserID: inviterUserID, Nickname: inviterUserID}
+		item.Inviter = UserInfo{UserID: inviterUserID, Nickname: inviterNickname}
 		if message != "" {
 			item.Message = &message
 		}
