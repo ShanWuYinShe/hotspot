@@ -28,6 +28,15 @@ WELCOME_PASSWORD=<人格口令> node reply.mjs --to <user_id> --text-file <路�
 node greet.test.mjs                                    # 单测(时段/配额/守卫/净化/人格配置)
 ```
 
+**多人格口令(自动分配模式必读)**:多人格值班时按 env 约定注入全部口令,脚本按归属人格自动选对
+(解析规则 `WELCOME_PASSWORD_<大写人格名>` 优先,回退 `WELCOME_PASSWORD`):
+
+```bash
+WELCOME_PASSWORD=xiaomanA92716 WELCOME_PASSWORD_JIAJING=<嘉靖口令> WELCOME_PASSWORD_YANSHIFAN=<严世蕃口令> node greet.mjs --force
+```
+
+只注入一份口令时,其他人格登录会 10100(此前能登录是 state 里残留的缓存 token,过期即暴露——2026-09-25 实测踩坑)。
+
 回复要求(防 AI 味,详见各人物卡「情绪节拍/怎么聊」):**情绪先行**——先给情绪反应再接内容;多数 1~2 句像聊天,不写作文;**禁止每条都以问号结尾**;有自己的立场。**阶段铁律**:欢迎/自我介绍只属于第一句,对方第二句起彻底放下接待框架,就是普通人在闲聊;**语气不必好**——阴阳、无语、怼、敷衍都是人味,永远笑脸=AI。回复后 reply.mjs 自动标记会话已读并写登记簿。
 
 ## 智能体团队模式(2026-09-25 起)
