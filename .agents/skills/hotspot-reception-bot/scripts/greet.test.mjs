@@ -3,7 +3,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { inWindow, dayKey, dailySent, bumpDaily, sanitizeHandle } from './greet.mjs';
+import { inWindow, dayKey, dailySent, bumpDaily, sanitizeHandle, addressableNick } from './greet.mjs';
 import { engageBlocked } from './engage.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -71,6 +71,12 @@ sd('shell危险字符剥离', sanitizeHandle('a;b|c&d<e>f'), 'abcdef');
 sd('美元符剥离', sanitizeHandle('a$b'), 'ab');
 sd('长度截断为20', sanitizeHandle('x'.repeat(50)).length, 20);
 sd('洗后为空返回空串', sanitizeHandle('\n\n'), '');
+// 可称呼判定:带情绪标点/过长 → 不称呼;正常短名 → 可称呼
+sd('正常短名可称呼', addressableNick('举重冠军'), '举重冠军');
+sd('带问号不称呼', addressableNick('你也通倭?'), '');
+sd('带感叹号不称呼', addressableNick('冲呀!'), '');
+sd('超12字截断仍可称呼', addressableNick('这是一个非常非常非常长的昵称啊').length, 12);
+sd('空名不称呼', addressableNick(''), '');
 
 // ── 人格配置完整性 ──
 let pfail = 0;

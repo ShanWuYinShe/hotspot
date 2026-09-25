@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url';
 import {
   loadPersona, loadState, saveState, loadShared, saveShared, markContacted, activePersonaName,
 } from './persona.mjs';
-import { api, signin, sanitizeHandle, inWindow, dailySent, bumpDaily, effectiveDailySent, dayKey } from './greet.mjs';
+import { api, signin, sanitizeHandle, addressableNick, inWindow, dailySent, bumpDaily, effectiveDailySent, dayKey } from './greet.mjs';
 
 const FORCE = process.argv.includes('--force');
 const DRY = process.argv.includes('--dry-run');
@@ -150,7 +150,7 @@ async function main() {
     }
     const g = state.greeted[u.user_id];
     const isFollowUp = Boolean(g); // 欢迎过没回应 → 轻声跟进;没欢迎过(注册后未到窗口) → 顺带完成欢迎
-    const safeTag = sanitizeHandle(u.last_tag ?? '', 20); // 防投毒:用户可控标签净化后才进话术
+    const safeTag = addressableNick(u.last_tag ?? '', 20); // 防投毒:用户可控标签净化后才进话术
     const lines = isFollowUp ? P.lines.followUp
       : (u.has_moments ? P.lines.engageNewWithMoments : P.lines.engageNew);
     const content = renderLine(lines[sent % lines.length], sanitizeHandle(u.nickname), safeTag);

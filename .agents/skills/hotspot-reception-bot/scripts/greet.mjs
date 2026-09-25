@@ -49,6 +49,15 @@ export function sanitizeHandle(name, max = 20) {
     .slice(0, max);
 }
 
+// 可称呼判定:昵称带情绪标点(?!!~…)或过长时,嵌入话术会产生歧义/冒犯
+// (实测:昵称「你也通倭?」嵌入欢迎语变成「你好呀,你也通倭?,欢迎加入」,读来像骂人),此时降级为不称呼
+export function addressableNick(name, max = 12) {
+  const s = sanitizeHandle(name, max);
+  if (!s) return '';
+  if (/[?!?!~\u2026\u3002,.,\s]/.test(s)) return '';
+  return s;
+}
+
 // ── HTTP ───────────────────────────────────────────────────────────────
 export async function api(path, body, token, idem) {
   const headers = { 'Content-Type': 'application/json' };
@@ -170,7 +179,7 @@ async function main() {
       console.log(`今日陌生人配额(${cap} 条)已用完,剩余 ${users.length - sent - skipped} 人留到下个窗口`);
       break;
     }
-    const nick = u.nickname.startsWith('游客·') ? '' : sanitizeHandle(u.nickname);
+    const nick = u.nickname.startsWith('游客·') ? '' : addressableNick(u.nickname); // 语义怪/带情绪标点昵称降级不称呼(防投毒)
     const templates = P.lines.welcome;
     const content = renderLine(templates[sent % templates.length], nick);
     if (DRY) { console.log('[dry-run] ->', u.user_id, u.nickname); sent++; continue; }
