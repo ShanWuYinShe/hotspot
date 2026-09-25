@@ -7,13 +7,15 @@ import { formatRelativeDays } from '@/lib/utils';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { useRelationships, type MappedFollower } from '@/lib/profile-data.svelte';
-	import { createOptimisticFollow } from '@/lib/relationships.svelte';
+	import { createOptimisticFollow, type OptimisticFollow } from '@/lib/relationships.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 粉丝分区：ProfileUserSection 骨架 + UserCardRow 行（含统计行与待回关徽章）。
 
-	let { embedded = false }: { embedded?: boolean } = $props();
+	// followState 由调用方（关系聚合页）注入共享，跨 tab 切换保持一致；
+	// 独立使用时回退本地实例（行为不变）。
+	let { embedded = false, followState = createOptimisticFollow() }: { embedded?: boolean; followState?: OptimisticFollow } = $props();
 
 	let fanFilter = $state<'all' | 'mutual' | 'pending'>('all');
 
@@ -23,7 +25,6 @@ import { formatRelativeDays } from '@/lib/utils';
 	const loading = $derived(rel.loading);
 
 	// 回关状态以服务端 isMutual 为基准，乐观切换与回滚由共享模块承载
-	const followState = createOptimisticFollow();
 
 	const isMutualWith = (f: MappedFollower) => followState.isFollowed(f.id, f.isMutual);
 

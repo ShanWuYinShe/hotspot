@@ -18,6 +18,7 @@
 		relationshipsHref,
 		type RelationshipTab
 	} from '@/lib/relationships';
+	import { createOptimisticFollow } from '@/lib/relationships.svelte';
 
 	// 关系聚合页（/me/relationships，桌面导航「关系」与通知页深链的落地页）：
 	// 好友 / 关注 / 粉丝 三 tab。对齐全站样板（nearby/moments）：StandardPageLayout
@@ -39,6 +40,11 @@
 	const following = $derived(rel.following);
 	const followers = $derived(rel.followers);
 
+	// 页级共享的乐观关注实例：注入 Following/Fans 分区，tab 内切换即时同步
+	// 行、分区计数与页头徽标；跨 tab 保持一致；页重挂载时重建（与数据同生命周期）。
+	const followState = createOptimisticFollow();
+	const followingCount = $derived(following.filter((f) => followState.isFollowed(f.id, true)).length);
+
 	const activeTab = $derived<RelationshipTab>(
 		isRelationshipTab(page.url.searchParams.get('tab'))
 			? (page.url.searchParams.get('tab') as RelationshipTab)
@@ -47,7 +53,7 @@
 	// 黑名单计数由 SectionBlocked 自行拉取（fetch_blocked），页头计数对 blocked 不显示
 	// 具体值（避免重复请求），仅统计三个关系 tab
 	const activeCount = $derived(
-		activeTab === 'friends' ? friends.length : activeTab === 'following' ? following.length : activeTab === 'fans' ? followers.length : 0
+		activeTab === 'friends' ? friends.length : activeTab === 'following' ? followingCount : activeTab === 'fans' ? followers.length : 0
 	);
 
 	const switchTab = (tab: RelationshipTab) => {
@@ -86,7 +92,7 @@
 		items={TABS.map((t) => ({
 			id: t.id,
 			label: t.label,
-			count: t.id === 'friends' ? friends.length : t.id === 'following' ? following.length : t.id === 'fans' ? followers.length : undefined
+			count: t.id === 'friends' ? friends.length : t.id === 'following' ? followingCount : t.id === 'fans' ? followers.length : undefined
 		}))}
 		value={activeTab}
 		onChange={(id) => switchTab(id as RelationshipTab)}
@@ -103,9 +109,9 @@
 	{#if activeTab === 'friends'}
 		<SectionFriends embedded />
 	{:else if activeTab === 'following'}
-		<SectionFollowing embedded />
+		<SectionFollowing embedded {followState} />
 	{:else if activeTab === 'fans'}
-		<SectionFans embedded />
+		<SectionFans embedded {followState} />
 	{:else}
 		<SectionBlocked embedded />
 	{/if}
