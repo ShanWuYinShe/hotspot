@@ -303,6 +303,27 @@ func TestServiceFollowRejectsSelf(t *testing.T) {
 	}
 }
 
+// 注销用户按不存在处理（038 匿名化留行 + is_deleted）：ensureUserExists
+// 必须看删除标记，否则 follow/block 等会静默成功并重建已清理的关系边。
+func TestServiceFollowRejectsDeletedTarget(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+	if err := repo.PutProfile(ctx, MyProfile{UserID: "u1", Nickname: "u1", UserType: UserTypeNormal}); err != nil {
+		t.Fatalf("PutProfile u1: %v", err)
+	}
+	if err := repo.PutProfile(ctx, MyProfile{UserID: "u2", Nickname: "u2", UserType: UserTypeNormal}); err != nil {
+		t.Fatalf("PutProfile u2: %v", err)
+	}
+	if err := repo.DeleteProfile(ctx, "u2"); err != nil {
+		t.Fatalf("DeleteProfile u2: %v", err)
+	}
+	svc := NewServiceWithDeps(repo, nil, nil)
+	err := svc.Follow(userCtx("u1"), "u2", FollowSourceProfile, "")
+	if !errors.Is(err, ErrUserNotFound) {
+		t.Fatalf("expected not found for deleted target, got %v", err)
+	}
+}
+
 func TestServiceFollowRejectsUnknownTarget(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{exists: false})
 	svc.SetContentProviders(&stubUserRepo{exists: false}, &stubUserRepo{exists: false})

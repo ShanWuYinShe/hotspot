@@ -426,8 +426,8 @@ func (r *InMemoryRepository) ListFollowers(_ context.Context, userID string, lim
 func (r *InMemoryRepository) UserExists(_ context.Context, userID string) (bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	_, ok := r.profiles[userID]
-	return ok, nil
+	profile, ok := r.profiles[userID]
+	return ok && !profile.IsDeleted, nil
 }
 
 func (r *InMemoryRepository) ensureRelation(userID, targetUserID string) memoryRelation {

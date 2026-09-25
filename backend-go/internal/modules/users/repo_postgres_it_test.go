@@ -186,6 +186,19 @@ func TestPostgresIT_UserExists(t *testing.T) {
 		if exists {
 			t.Fatal("expected exists=false for nonexistent user")
 		}
+
+		// 注销是匿名化留行：存在性检查必须看 is_deleted 标记，否则
+		// follow/block 等会静默成功并重建已被清理的关系边。
+		if err := repo.DeleteProfile(ctx, userID); err != nil {
+			t.Fatalf("DeleteProfile: %v", err)
+		}
+		exists, err = repo.UserExists(ctx, userID)
+		if err != nil {
+			t.Fatalf("UserExists deleted: %v", err)
+		}
+		if exists {
+			t.Fatal("expected exists=false for deleted user")
+		}
 	})
 }
 

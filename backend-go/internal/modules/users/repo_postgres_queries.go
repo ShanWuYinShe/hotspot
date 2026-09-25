@@ -303,8 +303,11 @@ WHERE me.target_user_id = $1 AND me.is_following = TRUE
 ORDER BY me.followed_at DESC, u.user_id ASC
 LIMIT $4`
 
+	// 已注销用户按不存在处理（038 匿名化留行 + is_deleted 标记；此前只查
+	// 行存在，导致 follow/block 等经 ensureUserExists 的操作对注销用户静默
+	// 成功并重建已被清理的关系边）。
 	queryUserExists = `
-SELECT 1 FROM users WHERE user_id = $1`
+SELECT 1 FROM users WHERE user_id = $1 AND is_deleted = FALSE`
 
 	// queryListBlockedUserTags 返回 tags 中命中平台屏蔽标签（admin_blocked_tags）的标签名（update_account 10400）。
 	queryListBlockedUserTags = `
