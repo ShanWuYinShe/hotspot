@@ -3,6 +3,8 @@ package media
 import (
 	"errors"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
@@ -14,6 +16,20 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
+}
+
+// requestOrigin 返回发起请求的页面 origin（Origin 头优先，Referer 兜底），
+// 形如 http://localhost:8888。上传直传 URL 需与其同源（见 PresignUpload）。
+func requestOrigin(r *http.Request) string {
+	if o := strings.TrimSpace(r.Header.Get("Origin")); o != "" && o != "null" {
+		return o
+	}
+	if ref := strings.TrimSpace(r.Header.Get("Referer")); ref != "" {
+		if u, err := url.Parse(ref); err == nil && u.Scheme != "" && u.Host != "" {
+			return u.Scheme + "://" + u.Host
+		}
+	}
+	return ""
 }
 
 func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +47,13 @@ func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 	// 以 $http_host 原样转发；跨源 XHR PUT 会被浏览器 CORS 拦截）。注入请求入口
 	// origin 供动态签名；S3_PUBLIC_ENDPOINT 静态配置降级为无入口信息时的回退。
 	ctx := r.Context()
-	if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
+	// 入口 origin 优先取 Origin/Referer（天然含端口，与页面 origin 完全一致）；
+	// r.Host 经 nginx $host 转发会丢端口，仅作最终回退。
+	if ep := requestOrigin(r); ep != "" {
+		if u, err := url.Parse(ep); err == nil && u.Host != "" {
+			ctx = WithClientRequestEndpoint(ctx, u.Scheme, u.Host)
+		}
+	} else if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
 		ctx = WithClientRequestEndpoint(ctx, proto, r.Host)
 	} else if r.TLS != nil {
 		ctx = WithClientRequestEndpoint(ctx, "https", r.Host)
