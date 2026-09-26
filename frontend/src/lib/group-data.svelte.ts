@@ -5,7 +5,7 @@
 // 调用方式：组件 <script> 顶层 const gd = useGroupDetail({...})；工厂内的
 // $state/$effect 生命周期绑定组件实例，卸载自动清理（WS 订阅 + presence 订阅）。
 
-import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi, listMyApplications, cancelGroupApplication, netError } from '@/api';
+import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi, listMyApplications, cancelGroupApplication, listAdminGroupMembers, netError } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
 import { showToast } from '@/stores/toast.svelte';
@@ -117,6 +117,8 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 					}
 				}
 				myRole = detailData.viewer_state?.role ?? null;
+				// 角色就绪后补合并禁言态（loadMembers 先于 detail 完成时角色尚不可知）。
+				void mergeMuteState(gid);
 			} else if (detailRes.code !== 0) {
 				loadError = detailRes.message ?? '加载失败，请稍后重试';
 			}
@@ -148,8 +150,31 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 					unwatchMembers = opts.watchPresence(items.map((m) => m.userId).filter(Boolean));
 				}
 			}
+			// 管理员视角补禁言状态（公开列表不含，见 mergeMuteState）；非管理员为 no-op。
+			void mergeMuteState(gid);
 		} catch {
 			// empty data is normal
+		}
+	}
+
+	/**
+	 * 管理员/群主视角合并 muted_until：公开 members/list 已不含该字段（视角分离），
+	 * 缺了它 MemberActionSheet 的 isMuted 恒为 false——「禁言/解除禁言」只会显示前者，
+	 * 已禁言成员无法被提前解除（后端 set_mute 本就是两态统一端点）。
+	 */
+	async function mergeMuteState(gid: string) {
+		if (myRole !== 'owner' && myRole !== 'admin') return;
+		try {
+			const res = await listAdminGroupMembers({ group_id: gid, pagination: { limit: MEMBERS_PAGE_SIZE } }).catch(() => netError({ items: [] }));
+			if (currentGid() !== gid || res.code !== 0) return;
+			const mutedMap = new Map<string, string>();
+			for (const m of res.data?.items ?? []) {
+				if (m.user?.user_id && m.muted_until) mutedMap.set(m.user.user_id, m.muted_until);
+			}
+			if (mutedMap.size === 0) return;
+			members = members.map((m) => (mutedMap.has(m.userId) ? { ...m, mutedUntil: mutedMap.get(m.userId) } : m));
+		} catch {
+			// 查询失败维持现状（禁言态缺失只影响操作入口，不影响展示）。
 		}
 	}
 
