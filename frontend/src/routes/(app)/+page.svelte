@@ -85,11 +85,11 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 		};
 	});
 
-	// 首页「附近的人」无服务端关注基准字段（NearbyUser 无该信息），全员初始未关注
-	// （base 恒 false）；乐观切换与失败回滚由共享模块承载。历史上此处不检查响应
-	// code（仅捕获网络异常），收敛后与分区版对齐：code!==0 同样回滚并提示。
+	// 关注基准来自 users/search relation.is_following（NearbyUser.isFollowing）：
+	// 已关注的用户显示「已关注」（乐观切换与失败回滚由共享模块承载）。
+	const baseFollowed = (id: string) => nearbyUsers.find((u) => u.id === id)?.isFollowing ?? false;
 	const followState = createOptimisticFollow();
-	const toggleFollow = (id: string) => void followState.toggle(id, false);
+	const toggleFollow = (id: string) => void followState.toggle(id, baseFollowed(id));
 	// 登录态排除自己（对齐 nearby 页与鸿蒙端）：自己不该出现在「附近的人」里，
 	// 更不能对着自己的行显示「关注」。匿名无身份，全展示。
 	const visibleNearbyUsers = $derived.by(() => {
@@ -154,7 +154,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
 		<NearbyUserRows
 			users={visibleNearbyUsers.slice(0, 4)}
-			isFollowed={(id) => followState.isFollowed(id, false)}
+			isFollowed={(id) => followState.isFollowed(id, baseFollowed(id))}
 			isPending={(id) => followState.isPending(id)}
 			onToggle={toggleFollow}
 			emptyHint={nearbyFilterHint}
@@ -236,7 +236,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 				<div class="mt-6">
 					<NearbyUserRows
 						users={visibleNearbyUsers}
-						isFollowed={(id) => followState.isFollowed(id, false)}
+						isFollowed={(id) => followState.isFollowed(id, baseFollowed(id))}
 						isPending={(id) => followState.isPending(id)}
 						onToggle={toggleFollow}
 						emptyHint={nearbyFilterHint}

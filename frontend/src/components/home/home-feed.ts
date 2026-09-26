@@ -50,7 +50,8 @@ export async function fetchHomeFeed(
 			distance: formatDistance(u.location?.distance),
 			avatar: u.user?.avatar_url ?? '',
 			isOnline: u.presence_status === 'online',
-			tag: u.tags?.[0] ?? ''
+			tag: u.tags?.[0] ?? '',
+			isFollowing: u.relation?.is_following ?? false
 		})),
 		groups: (groupsData?.items ?? []).map((g) => ({
 			id: g.group?.group_id ?? '',

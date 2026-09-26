@@ -6,4 +6,6 @@ export interface NearbyUser {
 	avatar: string;
 	isOnline: boolean;
 	tag: string;
+	/** 查看者是否已关注（users/search relation.is_following；关注钮初始态基准） */
+	isFollowing: boolean;
 }

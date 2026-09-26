@@ -4,8 +4,8 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import NearbyUserRows from '../NearbyUserRows.svelte';
 
 const users = [
-	{ id: 'u1', name: '鹿鸣', avatar: '', tag: '摄影', distance: '0.3km', isOnline: true },
-	{ id: 'u2', name: '清野', avatar: '', tag: '徒步', distance: '0.8km', isOnline: false }
+	{ id: 'u1', name: '鹿鸣', avatar: '', tag: '摄影', distance: '0.3km', isOnline: true, isFollowing: false },
+	{ id: 'u2', name: '清野', avatar: '', tag: '徒步', distance: '0.8km', isOnline: false, isFollowing: true }
 ];
 
 const baseProps = {
