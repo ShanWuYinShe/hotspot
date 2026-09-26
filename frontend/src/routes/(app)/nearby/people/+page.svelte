@@ -98,6 +98,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		if (saved && progressKey !== '' && saved.key === progressKey) {
 			allUsers = saved.users;
 			visibleCount = saved.visibleCount;
+			// 关注态随列表缓存回填：返回本页时按钮仍反映真实关系。
+			followedIds = new Set(saved.users.filter((u) => u.isFollowing).map((u) => u.id));
 			loadError = null;
 			loading = false;
 			return;
@@ -130,9 +132,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						tag: u.tags?.[0] ?? '',
 						tags: u.tags ?? [],
 						mutual: u.social_context?.mutual_friends_count ?? 0,
-						note: u.bio ?? ''
+						note: u.bio ?? '',
+						// 查看者关注态回填：列表初始按钮即反映真实关系（而非一律「关注」）。
+						isFollowing: u.relation?.is_following ?? false
 					}));
 					allUsers = items;
+					followedIds = new Set(items.filter((u) => u.isFollowing).map((u) => u.id));
 					setPeopleProgress({ key: progressKey, users: items, visibleCount });
 				}
 			} catch {

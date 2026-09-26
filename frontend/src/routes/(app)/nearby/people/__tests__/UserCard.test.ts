@@ -13,6 +13,7 @@ const base = (over: Partial<NearbyUser> = {}): NearbyUser => ({
 	tags: ['摄影', '旅行'],
 	mutual: 2,
 	note: '记录城市光影',
+	isFollowing: false,
 	...over
 });
 

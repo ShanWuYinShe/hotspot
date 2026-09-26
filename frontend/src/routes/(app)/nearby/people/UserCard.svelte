@@ -18,6 +18,8 @@
 		tags: string[];
 		mutual: number;
 		note: string;
+		/** 查看者是否已关注（users/search relation.is_following；进度缓存沿用） */
+		isFollowing: boolean;
 	}
 
 	let {
