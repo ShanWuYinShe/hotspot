@@ -252,15 +252,16 @@ ORDER BY GREATEST(a1.followed_at, a2.followed_at) DESC, u.user_id ASC
 LIMIT $3`
 
 	queryListBlockedUsers = `
-SELECT target_user_id, blocked_at, COALESCE(block_reason, '')
-FROM user_relations
-WHERE user_id = $1 AND is_blocked = TRUE
+SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), b.blocked_at, COALESCE(b.block_reason, '')
+FROM user_relations b
+JOIN users u ON u.user_id = b.target_user_id
+WHERE b.user_id = $1 AND b.is_blocked = TRUE
   AND (
     $2::timestamptz IS NULL
-    OR blocked_at < $2::timestamptz
-    OR (blocked_at = $2::timestamptz AND target_user_id > $3)
+    OR b.blocked_at < $2::timestamptz
+    OR (b.blocked_at = $2::timestamptz AND b.target_user_id > $3)
   )
-ORDER BY blocked_at DESC, target_user_id ASC
+ORDER BY b.blocked_at DESC, b.target_user_id ASC
 LIMIT $4`
 
 	queryListFriends = `

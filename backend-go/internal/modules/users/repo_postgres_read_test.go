@@ -175,7 +175,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 		},
 		queryRowsByQuery: map[string][][]any{
 			"FROM users u":        {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false}},
-			queryListBlockedUsers: {{"user_bob", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
+			queryListBlockedUsers: {{"user_bob", "Bob", "", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
 		},
 		queryErrs: map[string]error{},
 		execErrs:  map[string]error{},
@@ -197,7 +197,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 		t.Fatalf("unexpected search result: %#v err=%v", profiles, err)
 	}
 	blocked, err := repo.ListBlocked(context.Background(), "user_alice", 20, "")
-	if err != nil || len(blocked.Items) != 1 || blocked.Items[0].User.UserID != "user_bob" {
+	if err != nil || len(blocked.Items) != 1 || blocked.Items[0].User.UserID != "user_bob" || blocked.Items[0].User.Nickname != "Bob" {
 		t.Fatalf("unexpected blocked users: %#v err=%v", blocked, err)
 	}
 	rel, err := repo.Relationship(context.Background(), "user_alice", "user_bob")

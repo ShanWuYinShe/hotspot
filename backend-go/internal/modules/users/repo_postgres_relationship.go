@@ -183,12 +183,16 @@ func listBlockedUsersPostgres(ctx context.Context, factory *persistence.Factory,
 	items := make([]BlockedUserItem, 0, limit+1)
 	cursors := make([]string, 0, limit+1)
 	for rows.Next() {
-		var targetUserID, reason string
+		var targetUserID, nickname, avatarURL, reason string
 		var blockedAt time.Time
-		if err := rows.Scan(&targetUserID, &blockedAt, &reason); err != nil {
+		if err := rows.Scan(&targetUserID, &nickname, &avatarURL, &blockedAt, &reason); err != nil {
 			return PaginatedBlockedUsers{}, err
 		}
-		items = append(items, BlockedUserItem{User: UserInfo{UserID: targetUserID, Nickname: targetUserID}, BlockedAt: blockedAt.UTC().Format(time.RFC3339), Reason: types.StrPtr(reason)})
+		items = append(items, BlockedUserItem{
+			User:      UserInfo{UserID: targetUserID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
+			BlockedAt: blockedAt.UTC().Format(time.RFC3339),
+			Reason:    types.StrPtr(reason),
+		})
 		cursors = append(cursors, encodeUserCursor(blockedAt, targetUserID))
 		if len(items) == limit+1 {
 			c := cursors[limit-1]
