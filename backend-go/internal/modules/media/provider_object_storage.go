@@ -351,32 +351,6 @@ func (p *ObjectStorageProvider) internalEndpoint(context.Context) (*url.URL, boo
 	return endpoint, p.cfg.S3ForcePathStyle, nil
 }
 
-// 浏览器上传直传的入口 origin（scheme+host）。由 PresignUpload handler 从
-// 请求注入：upload_url 必须与用户访问站点的 origin 同源——SigV4 签名含 Host
-// （nginx /s3/ 以 $http_host 原样转发），且同源 XHR 不受 CORS 限制。静态
-// S3_PUBLIC_ENDPOINT（如 http://127.0.0.1:8888/s3）在用户从 localhost/域名/
-// https 等其它入口访问时会产生跨源 PUT（浏览器拦截，Failed to fetch），
-// 故仅在无入口信息（脚本/内部调用）时作为回退。
-type clientRequestEndpointKey struct{}
-
-type clientRequestEndpoint struct {
-	Scheme string
-	Host   string
-}
-
-// WithClientRequestEndpoint 把请求入口 origin 注入 context（host 为空视为无入口信息）。
-func WithClientRequestEndpoint(ctx context.Context, scheme, host string) context.Context {
-	if host == "" {
-		return ctx
-	}
-	return context.WithValue(ctx, clientRequestEndpointKey{}, clientRequestEndpoint{Scheme: scheme, Host: host})
-}
-
-func clientRequestEndpointFromContext(ctx context.Context) (clientRequestEndpoint, bool) {
-	ep, ok := ctx.Value(clientRequestEndpointKey{}).(clientRequestEndpoint)
-	return ep, ok && ep.Host != ""
-}
-
 func (p *ObjectStorageProvider) clientFacingEndpoint(ctx context.Context) (*url.URL, bool, error) {
 	staticEndpoint, forcePathStyle, err := p.configClientFacingEndpoint()
 	if err != nil {

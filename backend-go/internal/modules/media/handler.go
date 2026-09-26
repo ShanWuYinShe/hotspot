@@ -3,8 +3,6 @@ package media
 import (
 	"errors"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
@@ -18,20 +16,6 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-// requestOrigin 返回发起请求的页面 origin（Origin 头优先，Referer 兜底），
-// 形如 http://localhost:8888。上传直传 URL 需与其同源（见 PresignUpload）。
-func requestOrigin(r *http.Request) string {
-	if o := strings.TrimSpace(r.Header.Get("Origin")); o != "" && o != "null" {
-		return o
-	}
-	if ref := strings.TrimSpace(r.Header.Get("Referer")); ref != "" {
-		if u, err := url.Parse(ref); err == nil && u.Scheme != "" && u.Host != "" {
-			return u.Scheme + "://" + u.Host
-		}
-	}
-	return ""
-}
-
 func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 	var req PresignUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.Files) == 0 {
@@ -43,24 +27,9 @@ func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "PresignUpload", "批量文件数超出上限")
 		return
 	}
-	// 上传直传 URL 与用户访问站点的 origin 必须同源（SigV4 签名含 Host，nginx /s3/
-	// 以 $http_host 原样转发；跨源 XHR PUT 会被浏览器 CORS 拦截）。注入请求入口
-	// origin 供动态签名；S3_PUBLIC_ENDPOINT 静态配置降级为无入口信息时的回退。
-	ctx := r.Context()
-	// 入口 origin 优先取 Origin/Referer（天然含端口，与页面 origin 完全一致）；
-	// r.Host 经 nginx $host 转发会丢端口，仅作最终回退。
-	if ep := requestOrigin(r); ep != "" {
-		if u, err := url.Parse(ep); err == nil && u.Host != "" {
-			ctx = WithClientRequestEndpoint(ctx, u.Scheme, u.Host)
-		}
-	} else if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
-		ctx = WithClientRequestEndpoint(ctx, proto, r.Host)
-	} else if r.TLS != nil {
-		ctx = WithClientRequestEndpoint(ctx, "https", r.Host)
-	} else {
-		ctx = WithClientRequestEndpoint(ctx, "http", r.Host)
-	}
-	uploads, err := h.service.BatchPresign(ctx, req.Files)
+	// 直传 URL 的入口 origin 由 ClientEndpointMiddleware 全局注入 context
+	// （见 client_endpoint.go），此处无需再处理。
+	uploads, err := h.service.BatchPresign(r.Context(), req.Files)
 	if err != nil {
 		if errors.Is(err, ErrInvalidMediaRequest) {
 			httpx.WriteInvalidRequest(w, r, "PresignUpload", "参数错误")

@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"hotspot/backend-go/internal/modules/media"
 	"hotspot/backend-go/internal/platform/buildinfo"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/cors"
@@ -25,6 +26,9 @@ func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.L
 
 func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) http.Handler {
 	r := chi.NewRouter()
+	// 媒体客户端端点：按请求入口 origin 注入 context，媒体模块据此生成与页面
+	// 同源的直传/读 URL（跨源会被 CORS/LNA 拦截，见 media/client_endpoint.go）。
+	r.Use(media.ClientEndpointMiddleware)
 	// CORS 白名单经 CORS_ALLOWED_ORIGINS 装配：同源部署默认为空（不响应跨源）。
 	corsCfg := cors.DefaultConfig().WithAllowedOrigins(config.Load().CorsAllowedOrigins)
 	r.Use(cors.Middleware(corsCfg))
