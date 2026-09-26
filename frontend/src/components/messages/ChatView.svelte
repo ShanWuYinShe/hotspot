@@ -9,7 +9,7 @@
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { getPrivateMessages, sendPrivateMessage, markPrivateRead, recallPrivateMessage, updatePrivateMessage } from '@/api';
+	import { getPrivateMessages, sendPrivateMessage, markPrivateRead, recallPrivateMessage, updatePrivateMessage, openTheDoor } from '@/api';
 	import {
 		WS_PRIVATE_MESSAGE_EVENT,
 		WS_PRIVATE_MESSAGE_UPDATE_EVENT,
@@ -154,6 +154,31 @@
 
 	// 展示用联系人：调用方传入优先，否则用历史推导值。
 	const contact = $derived(contactProp ?? derivedContact);
+
+	// 对端资料主动解析：新会话历史里没有对端 sender 时兜底（头部显示「?」、
+	// 标题回退「会话」）。有调用方传入/已推导/匿名/无 peerUserId 时不重复拉取。
+	let peerProfileLoaded = $state(false);
+	$effect(() => {
+		if (peerProfileLoaded || derivedContact || contactProp || !peerUserId) return;
+		if (!auth.isAuthenticated) return;
+		peerProfileLoaded = true;
+		void openTheDoor(peerUserId)
+			.then((res) => {
+				if (res.code !== 0 || derivedContact) return;
+				const u = res.data?.user?.user;
+				if (u?.nickname) {
+					derivedContact = {
+						name: u.nickname,
+						avatar: u.avatar_url ?? '',
+						online: false
+					};
+				}
+			})
+			.catch(() => {
+				// 拉取失败静默：头部回退「?/会话」，不影响消息收发；重进页面可重试。
+				peerProfileLoaded = false;
+			});
+	});
 
 	const peerName = $derived(contact?.name ?? '');
 	// 在线状态实时化：优先 WS 推送（presence store），HTTP 快照 contact.online 仅作初始兜底。
