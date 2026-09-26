@@ -1,9 +1,13 @@
 # ── 共享代理 location（dev 版）───────────────────────────────────────
 # 与 docker/nginx.proxy.inc（prod 事实源）内容同构，唯一差异：
 # OSM 官方瓦片源 tile.openstreetmap.org 在国内网络直连不可达（容器内实测
-# TCP 全超时），本地 dev 换用 CARTO basemaps 镜像（OSM 数据，voyager 样式，
-# 国内直连可达；z 0-20）。Nominatim（/osm-service/）没有等价公开镜像，
-# dev 保持官方上游——不可达时地理编码降级失败，瓦片显示不受影响。
+# TCP 全超时 / TLS RST / DNS 污染），本地 dev 曾换用 CARTO basemaps 镜像
+# ——2026-09-26 起 CARTO 对无 API key 请求返回「API KEY REQUIRED」占位
+# 瓦片（HTTP 200，ETag 前缀 wm-），该源不可用。现换用 FOSSGIS 的
+# tile.openstreetmap.de（OSM 数据、免 key、国内直连实测可达；usage policy
+# 要求合理用量与署名，attribution 已在前端瓦片层展示
+# © OpenStreetMap contributors）。Nominatim（/osm-service/）没有等价公开
+# 镜像，dev 保持官方上游——不可达时地理编码降级失败，瓦片显示不受影响。
 # 两个文件的瓦片 location 改动必须保持同步。
 # 由 docker-compose.dev.yml 挂载为 /etc/nginx/conf.d/proxy.inc，
 # 由 docker/nginx.dev.conf 在 server 块内 include。
@@ -53,10 +57,10 @@ location /amap-tiles/ {
 # 缓存与 UA 标识策略与 prod 一致：30 天落盘、同一瓦片只回源一次；
 # 连接/读取超时收紧，上游异常快速 502 不拖死视口加载。
 location /osm-tiles/ {
-    rewrite ^/osm-tiles/(\d+)/(\d+)/(\d+)\.png$ /rastertiles/voyager/$1/$2/$3.png break;
-    proxy_pass https://basemaps.cartocdn.com;
+    rewrite ^/osm-tiles/(\d+)/(\d+)/(\d+)\.png$ /$1/$2/$3.png break;
+    proxy_pass https://tile.openstreetmap.de;
     proxy_ssl_server_name on;
-    proxy_set_header Host basemaps.cartocdn.com;
+    proxy_set_header Host tile.openstreetmap.de;
     proxy_set_header User-Agent "HotSpot-Proxy/1.0 (chaoset.com)";
     proxy_set_header Accept-Encoding "";
     proxy_connect_timeout 5s;
