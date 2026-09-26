@@ -132,6 +132,7 @@ import type {
 	RecallGroupMessageAdminRequest,
 	SetReactionRequest,
 	CreateCommentRequest,
+	DeleteCommentRequest,
 	CreateReportRequest,
 	MarkNotifyReadRequest,
 	CompleteUploadRequest,
@@ -507,6 +508,8 @@ export async function setReaction(params: SetReactionRequest)         { return r
 
 // Comments
 export async function createComment(params: CreateCommentRequest)       { return request<CommentItem>(Endpoints.Comments.Create, params, { 'Idempotency-Key': newIdempotencyKey() }); }
+// spec: api_spec_comment.md → comments/delete（仅评论作者；软删除——顶层删后子评论保留，展示占位）
+export async function deleteComment(params: DeleteCommentRequest)       { return request<void>(Endpoints.Comments.Delete, params); }
 
 // Moments — favorite (two-state via active per spec)
 export async function favoriteMoment(params: FavoriteMomentRequest)      { return request<void>(Endpoints.Moments.Favorite, params); }

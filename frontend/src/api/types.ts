@@ -1208,6 +1208,9 @@ export interface CreateCommentRequest {
 	parent_id?: string;
 	mentions?: string[];
 }
+export interface DeleteCommentRequest {
+	comment_id: string;
+}
 export interface CreateReportRequest {
 	target_type: ReportTargetType;
 	target_id: string;

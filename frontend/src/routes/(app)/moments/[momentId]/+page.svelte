@@ -23,8 +23,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { toNearbyRailRows } from './nearby-rail';
 	import MomentEditDialog from '@/components/overlays/MomentEditDialog.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { showToast } from '@/stores/toast.svelte';
-	import { getMomentDetail, listComments, setReaction, createComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments , netError } from '@/api';
+	import { getMomentDetail, listComments, setReaction, createComment, deleteComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments , netError } from '@/api';
 	import { formatDateTime } from '@/lib/utils';
 	import { smartBack } from '@/lib/smart-back';
 	import { copyShareLink } from '@/lib/share';
@@ -198,7 +199,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						text: c.content ?? '',
 						time: formatDateTime(c.created_at),
 						likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0),
-						liked: (c.reactions || []).some((r) => r.reacted_by_me)
+						liked: (c.reactions || []).some((r) => r.reacted_by_me),
+						isDeleted: c.is_deleted
 					}));
 					apiComments = items;
 					commentsNextCursor = commentsData.next_cursor ?? null;
@@ -253,7 +255,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			text,
 			time: '刚刚',
 			likes: 0,
-			liked: false
+			liked: false,
+			isDeleted: false
 		};
 		apiComments = [...apiComments, optimistic];
 		commentDelta += 1;
@@ -273,7 +276,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				text: c.content ?? text,
 				time: formatDateTime(c.created_at),
 				likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0),
-				liked: (c.reactions || []).some((r) => r.reacted_by_me)
+				liked: (c.reactions || []).some((r) => r.reacted_by_me),
+				isDeleted: false
 			};
 			apiComments = apiComments.map((item) => (item.id === optimistic.id ? confirmed : item));
 		} catch (err) {
@@ -300,7 +304,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					text: c.content ?? '',
 					time: formatDateTime(c.created_at),
 					likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0),
-					liked: (c.reactions || []).some((r) => r.reacted_by_me)
+					liked: (c.reactions || []).some((r) => r.reacted_by_me),
+					isDeleted: c.is_deleted
 				}));
 				const known = new Set(apiComments.map((c) => c.id));
 				apiComments = [...apiComments, ...items.filter((c) => !known.has(c.id))];
@@ -328,6 +333,28 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
 		} finally {
 			commentLikePending.delete(commentId);
+		}
+	};
+
+	// 删除自己的评论（spec: comments/delete，仅作者；软删除——顶层删后子评论保留，
+	// 列表展示「该评论已删除」占位）。计数口径与 handleComment 的 +1 对称取 -1。
+	let commentDeleteTarget = $state<string | null>(null);
+	let commentDeletePending = $state(false);
+	const handleCommentDelete = async () => {
+		const target = commentDeleteTarget;
+		if (!target || commentDeletePending) return;
+		commentDeletePending = true;
+		try {
+			const res = await deleteComment({ comment_id: target });
+			if (res.code !== 0) throw new Error(res.message || '删除失败');
+			showToast('评论已删除', 'success');
+			commentDelta -= 1;
+			apiComments = apiComments.map((c) => (c.id === target ? { ...c, isDeleted: true, text: '', liked: false, likes: 0 } : c));
+		} catch (err) {
+			showToast(err instanceof Error && err.message ? err.message : '删除失败，请重试', 'danger');
+		} finally {
+			commentDeletePending = false;
+			commentDeleteTarget = null;
 		}
 	};
 
@@ -491,6 +518,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			onReply={replyTo}
 			onToggleCommentLike={(id) => void toggleCommentLike(id)}
 			onReportComment={(id) => (reportTarget = { target_type: 'comment', target_id: id })}
+			onDeleteComment={(id) => (commentDeleteTarget = id)}
 			onLoadMoreComments={() => void loadMoreComments()}
 		/>
 	{/if}
@@ -555,6 +583,16 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 </SplitPageLayout>
 
 <DeleteMomentDialog open={deleteOpen} {deleting} onCancel={() => (deleteOpen = false)} onConfirm={handleDelete} />
+
+<ConfirmDialog
+	open={commentDeleteTarget !== null}
+	title="删除这条评论？"
+	description="删除后将显示「该评论已删除」，其下的回复保留。"
+	confirmLabel={commentDeletePending ? '删除中…' : '确认删除'}
+	loading={commentDeletePending}
+	onCancel={() => (commentDeleteTarget = null)}
+	onConfirm={() => void handleCommentDelete()}
+/>
 
 <ReportDialog
 	open={reportTarget !== null}

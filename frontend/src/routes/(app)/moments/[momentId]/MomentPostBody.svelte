@@ -24,6 +24,8 @@
 		time: string;
 		likes: number;
 		liked: boolean;
+		/** 软删除占位（comments/delete：content 清空，展示「该评论已删除」） */
+		isDeleted: boolean;
 	}
 
 	export interface MomentData {
@@ -58,6 +60,7 @@
 		onReply,
 		onToggleCommentLike,
 		onReportComment,
+		onDeleteComment,
 		onLoadMoreComments
 	}: {
 		moment: MomentData;
@@ -80,6 +83,8 @@
 		onToggleCommentLike: (commentId: string) => void;
 		/** 评论举报（reports/create target_type='comment'） */
 		onReportComment: (commentId: string) => void;
+		/** 删除自己的评论（comments/delete，作者本人；页面负责确认层） */
+		onDeleteComment: (commentId: string) => void;
 		onLoadMoreComments: () => void;
 	} = $props();
 
@@ -260,6 +265,10 @@
 						>{c.user}</button>
 						<span class="text-text-secondary text-xs">{c.time}</span>
 					</div>
+					{#if c.isDeleted}
+						<!-- 软删除占位（spec: api_spec_comment.md comments/delete）：内容清空，回复保留 -->
+						<p class="text-text-secondary text-sm mt-0.5 leading-relaxed italic">该评论已删除</p>
+					{:else}
 					<p class="text-text-secondary text-sm mt-0.5 leading-relaxed">{c.text}</p>
 					<div class="flex items-center gap-3 mt-1.5">
 						<button
@@ -279,7 +288,15 @@
 							class="hover-action hit-slop focus-ring text-text-secondary text-xs"
 							onclick={() => onReply(c.user)}
 						>回复</button>
-						{#if c.userId && c.userId !== auth.user?.user_id}
+						{#if c.userId && c.userId === auth.user?.user_id}
+							<!-- 本人评论可删除（spec: api_spec_comment.md comments/delete，仅作者） -->
+							<button
+								type="button"
+								class="hover-action hit-slop focus-ring text-text-secondary text-xs"
+								aria-label="删除我的评论"
+								onclick={() => onDeleteComment(c.id)}
+							>删除</button>
+						{:else if c.userId && c.userId !== auth.user?.user_id}
 							<!-- 非本人评论可举报（spec: api_spec_report.md，目标属于当前用户时服务端 10400） -->
 							<button
 								type="button"
@@ -289,6 +306,7 @@
 							>举报</button>
 						{/if}
 					</div>
+					{/if}
 				</div>
 			</div>
 		{/each}

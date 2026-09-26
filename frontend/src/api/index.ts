@@ -24,6 +24,7 @@ export {
   updatePrivateChatPreferences, updateGroupPreferences,
   setReaction,
   createComment,
+  deleteComment,
   favoriteMoment,
   getGroupMembers, getGroupAnnouncements,
   searchGroups, updateGroup, dismissGroup, transferGroupOwnership,
