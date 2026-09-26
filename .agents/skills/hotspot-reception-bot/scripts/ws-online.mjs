@@ -83,9 +83,8 @@ function connectPersona(p) {
       c.resumeToken = ev.payload.resume_token;
       auth.resumeToken = c.resumeToken; saveWsAuth(name, auth);
       const interval = (ev.payload.config?.ping_interval ?? 30) * 1000;
-      console.log('PING-DEBUG: interval_ms =', interval, '| config =', JSON.stringify(ev.payload.config));
       clearInterval(c.pingTimer);
-      c.pingTimer = setInterval(() => { try { const m = JSON.stringify({ type: 'Ping', payload: {} }); ws.send(m); console.log('PING-SENT @', new Date().toISOString()); } catch (e) { console.log('PING-ERROR:', e?.message || e); } }, interval);
+      c.pingTimer = setInterval(() => { try { ws.send(JSON.stringify({ type: 'Ping', payload: {} })); } catch (e) { log(`[${p.name}] Ping 发送异常: ${e?.message || e}`); } }, interval);
       setStatus(name, true);
       log(`[${name}] WS 在线 (connection=${ev.payload.connection_id})`);
     } else if (ev.type === 'Pong') {
@@ -142,3 +141,5 @@ async function main() {
 }
 
 main().catch((e) => { console.error('执行异常:', e?.message || e); process.exit(3); });
+process.on('uncaughtException', (e) => log('未捕获异常(进程保持存活): ' + (e?.message || e)));
+process.on('unhandledRejection', (e) => log('未处理的Promise拒绝(保持存活): ' + (e?.message || e)));

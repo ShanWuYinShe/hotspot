@@ -39,6 +39,19 @@ WELCOME_PASSWORD=xiaomanA92716 WELCOME_PASSWORD_JIAJING=<嘉靖口令> WELCOME_P
 
 回复要求(防 AI 味,详见各人物卡「情绪节拍/怎么聊」):**情绪先行**——先给情绪反应再接内容;多数 1~2 句像聊天,不写作文;**禁止每条都以问号结尾**;有自己的立场。**阶段铁律**:欢迎/自我介绍只属于第一句,对方第二句起彻底放下接待框架,就是普通人在闲聊;**语气不必好**——阴阳、无语、怼、敷衍都是人味,永远笑脸=AI。回复后 reply.mjs 自动标记会话已读并写登记簿。
 
+回复后 reply.mjs 自动标记会话已读并写登记簿。
+
+**在线保活(ws-online.mjs)**:长驻进程,窗口内为全部人格维持 WS 长连接(在线状态由 WS Auth 驱动,HTTP 调用不产生在线);窗口外自动断开(人格"睡觉");每人格独立 wsDeviceId(与脚本 device 分离,避免单设备单会话互顶);断线自动重连(4001 先刷 token,1011 退避)。启动/停止:
+
+```bash
+# 启动(nohup 后台,PID 记入 state/ws-online.pid,日志 state/ws-online.log)
+cd scripts && WELCOME_PASSWORD=xiaomanA92716 WELCOME_PASSWORD_JIAJING=<嘉靖口令> WELCOME_PASSWORD_YANSHIFAN=<严世蕃口令> nohup node ws-online.mjs >> ../state/ws-online.log 2>&1 &
+# 停止
+kill $(cat ../state/ws-online.pid)
+```
+
+注意:keeper 重登录会顶掉同 wsDevice 旧会话(自愈重连),但**不会**顶掉脚本 device 的会话——两者设备隔离。
+
 ## 智能体团队模式(2026-09-25 起)
 
 - **reception 队友**:专职执行上述循环并以林小满身份语境化回复;每轮向 lead 汇报摘要;只运营账号不修代码,发现问题报 lead
