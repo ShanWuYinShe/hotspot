@@ -58,6 +58,7 @@ type stubGroupsRepo struct {
 	apps       []GroupApplicationItem
 	appsCur    string
 	appsErr    error
+	appsStatus *ApplicationStatus
 	approveErr error
 	rejectErr  error
 
@@ -177,7 +178,8 @@ func (r *stubGroupsRepo) UpdateAnnouncement(_ context.Context, _ string, _ Updat
 func (r *stubGroupsRepo) DeleteAnnouncement(_ context.Context, _ string, _ string) error {
 	return r.deleteAnnErr
 }
-func (r *stubGroupsRepo) ListApplications(_ context.Context, _ string, _ *ApplicationStatus, _ int, _ string) ([]GroupApplicationItem, string, error) {
+func (r *stubGroupsRepo) ListApplications(_ context.Context, _ string, status *ApplicationStatus, _ int, _ string) ([]GroupApplicationItem, string, error) {
+	r.appsStatus = status
 	return r.apps, r.appsCur, r.appsErr
 }
 func (r *stubGroupsRepo) ApproveApplication(_ context.Context, _ string, _ string) error {
@@ -896,6 +898,30 @@ func TestServiceListMyInvitesAllPassesThrough(t *testing.T) {
 	}
 	if repo.myInvitesStatus != nil {
 		t.Fatalf("expected nil (no filter) for all, got %#v", repo.myInvitesStatus)
+	}
+}
+
+// spec group.md → admin/applications/fetch：status 缺省 pending；查历史显式传 all。
+func TestServiceListApplicationsDefaultsToPending(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	if _, _, err := svc.ListApplications(grpCtx("u1"), GroupApplicationsRequest{GroupID: "g1"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.appsStatus == nil || *repo.appsStatus != ApplicationStatusPending {
+		t.Fatalf("expected pending default, got %#v", repo.appsStatus)
+	}
+}
+
+func TestServiceListApplicationsAllPassesThrough(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	all := ApplicationStatus("all")
+	if _, _, err := svc.ListApplications(grpCtx("u1"), GroupApplicationsRequest{GroupID: "g1", Status: &all}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.appsStatus != nil {
+		t.Fatalf("expected nil (no filter) for all, got %#v", repo.appsStatus)
 	}
 }
 

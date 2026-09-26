@@ -13,7 +13,7 @@ import (
 func TestApproveApplicationBanRecheckInTx(t *testing.T) {
 	stub := &groupFullStub{
 		queryRow: map[string][]any{
-			queryGetGroupApplication: {"a1", "group_1", "群名", "", 3, "u2", "", "pending", gTestTime, nil, nil},
+			queryGetGroupApplication: {"a1", "group_1", "群名", "", 3, "u2", "申请人", "", "pending", gTestTime, nil, nil},
 			queryGetGroup:            groupBaseRow(false),
 			// queryIsGroupBanned 命中：申请人已被封禁
 			queryIsGroupBanned: {1},

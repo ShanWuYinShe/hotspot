@@ -247,7 +247,7 @@ func TestPostgresIsMemberAndGetApplication(t *testing.T) {
 	}
 
 	// GetApplication：存在（loadApplication 需要 queryGetGroupApplication + queryGetGroup）
-	appRow := []any{"a1", "group_1", "群", "", 3, "u2", "备注", "pending", gTestTime, nil, nil}
+	appRow := []any{"a1", "group_1", "群", "", 3, "u2", "申请人", "备注", "pending", gTestTime, nil, nil}
 	stub = &groupFullStub{
 		queryRow: map[string][]any{queryGetGroupApplication: appRow, queryGetGroup: groupBaseRow(false)},
 	}
@@ -459,10 +459,10 @@ func TestPostgresAnnouncementLifecycle(t *testing.T) {
 func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 	ctx := context.Background()
 	appRow := func(id string) []any {
-		return []any{id, "group_1", "群名", "", 3, "u2", "备注", "pending", gTestTime, gTestTime, "u1"}
+		return []any{id, "group_1", "群名", "", 3, "u2", "申请人昵称", "备注", "pending", gTestTime, gTestTime, "u1"}
 	}
 	myAppRow := func(id string) []any {
-		return []any{id, "group_1", "群名", "", 3, "u2", "备注", "pending", gTestTime, nil, nil}
+		return []any{id, "group_1", "群名", "", 3, "u2", "申请人昵称", "备注", "pending", gTestTime, nil, nil}
 	}
 	inviteRow := func(id string) []any {
 		return []any{id, "group_1", "群名", "", 3, "u1", "邀请人昵称", "消息", "pending", gTestTime, gTestTime, nil}
@@ -477,6 +477,9 @@ func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 	items, _, err := newGroupsFullRepo(stub).ListApplications(ctx, "group_1", &status, 20, "")
 	if err != nil || len(items) != 2 || items[0].Message == nil || items[0].HandledAt == nil {
 		t.Fatalf("list applications: %#v err=%v", items, err)
+	}
+	if items[0].Applicant.Nickname != "申请人昵称" {
+		t.Fatalf("applicant nickname: got %q, want %q", items[0].Applicant.Nickname, "申请人昵称")
 	}
 	stub = &groupFullStub{queryRowsErr: map[string]error{queryListGroupApplications: errors.New("boom")}}
 	if _, _, err := newGroupsFullRepo(stub).ListApplications(ctx, "g", nil, 20, ""); err == nil {
@@ -538,7 +541,7 @@ func strPtr(s string) *string { return &s }
 
 func TestPostgresApproveAcceptTxAndInviteMember(t *testing.T) {
 	ctx := context.Background()
-	appRow := []any{"a1", "group_1", "群名", "", 3, "u2", "", "pending", gTestTime, nil, nil}
+	appRow := []any{"a1", "group_1", "群名", "", 3, "u2", "申请人", "", "pending", gTestTime, nil, nil}
 	inviteRow := []any{"i1", "group_1", "u1", "u2", "", "pending", gTestTime, gTestTime, nil}
 
 	// ApproveApplication：loadApplication + tx 内封禁复检 + 两个 Exec
@@ -697,9 +700,9 @@ func TestPostgresRowsErrPaths(t *testing.T) {
 	}{
 		{queryListGroupAnnouncements, []any{"a1", "g", "t", "c", "u1", false, gTestTime},
 			func(r *PostgresRepository) error { _, err := r.ListAnnouncements(ctx, "g"); return err }},
-		{queryListGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "", "pending", gTestTime, nil, nil},
+		{queryListGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "申请人", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListApplications(ctx, "g", nil, 20, ""); return err }},
-		{queryListMyGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "", "pending", gTestTime, nil, nil},
+		{queryListMyGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "申请人", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error {
 				_, _, err := r.ListMyApplications(ctx, "u2", nil, 20, "")
 				return err

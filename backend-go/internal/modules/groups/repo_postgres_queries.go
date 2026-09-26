@@ -127,17 +127,21 @@ LIMIT 1`
 	queryGetGroupApplication = `
 SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
        (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = ga.group_id) AS members_count,
-       ga.applicant_user_id, COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
+       ga.applicant_user_id, COALESCE(au.nickname, ''), COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
 FROM group_applications ga
 JOIN groups g ON g.group_id = ga.group_id
+LEFT JOIN users au ON au.user_id = ga.applicant_user_id
 WHERE ga.application_id = $1`
 
+	// 申请人昵称经 users 表解析（此前占位填 user_id，管理收件箱直接展示裸
+	// id；与 ListSentInvites/ListMyInvites 的 LEFT JOIN 口径对齐）。
 	queryListGroupApplications = `
 SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
        (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = ga.group_id) AS members_count,
-       ga.applicant_user_id, COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
+       ga.applicant_user_id, COALESCE(au.nickname, ''), COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
 FROM group_applications ga
 JOIN groups g ON g.group_id = ga.group_id
+LEFT JOIN users au ON au.user_id = ga.applicant_user_id
 WHERE ga.group_id = $1 AND ($2 = '' OR ga.status = $2)
   AND ($3::timestamptz IS NULL OR ga.created_at < $3 OR (ga.created_at = $3 AND ga.application_id < $4))
 ORDER BY ga.created_at DESC, ga.application_id DESC
@@ -146,9 +150,10 @@ LIMIT $5`
 	queryListMyGroupApplications = `
 SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
        (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = ga.group_id) AS members_count,
-       ga.applicant_user_id, COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
+       ga.applicant_user_id, COALESCE(au.nickname, ''), COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
 FROM group_applications ga
 JOIN groups g ON g.group_id = ga.group_id
+LEFT JOIN users au ON au.user_id = ga.applicant_user_id
 WHERE ga.applicant_user_id = $1 AND ($2 = '' OR ga.status = $2)
 ORDER BY ga.created_at DESC, ga.application_id DESC`
 

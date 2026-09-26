@@ -477,6 +477,10 @@ func TestPostgresIT_ApplicationApproveReject(t *testing.T) {
 		if len(apps) != 1 {
 			t.Fatalf("expected 1 pending application, got %d", len(apps))
 		}
+		// 申请人昵称必须解析（此前占位填 user_id，管理收件箱直接展示裸 id）。
+		if apps[0].Applicant.Nickname != "Applicant" {
+			t.Fatalf("applicant nickname: got %q, want %q", apps[0].Applicant.Nickname, "Applicant")
+		}
 
 		if err := repo.ApproveApplication(ctx, ownerID, *applicationID); err != nil {
 			t.Fatalf("ApproveApplication: %v", err)

@@ -25,7 +25,7 @@ func (s *Service) ListApplications(ctx context.Context, req GroupApplicationsReq
 		return nil, "", ErrAccessRestricted
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
-	return s.repo.ListApplications(ctx, req.GroupID, req.Status, limit, types.PaginationCursor(req.Pagination))
+	return s.repo.ListApplications(ctx, req.GroupID, defaultPendingStatus(req.Status), limit, types.PaginationCursor(req.Pagination))
 }
 
 func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplicationRequest) error {
