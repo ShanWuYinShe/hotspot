@@ -69,6 +69,7 @@
 	const feedItems = $derived<FeedItem[]>(
 		(archive || []).map((m) => ({
 			id: m.id,
+			is_deleted: m.is_deleted ?? false,
 			user: m.user || account.nickname || '我',
 			avatar: m.avatar || account.avatar || '',
 			location: m.location || (activeTab === 'posts' ? account.locationName : '') || '',
@@ -149,15 +150,22 @@
 		<div class="pt-6">
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 				{#each interactions.items as item (item.id)}
-					<MomentCard
-						{item}
-						liked={item.liked}
-						saved={item.saved}
-						onLike={() => void interactions.toggleLike(item.id)}
-						onSave={() => void interactions.toggleSave(item.id)}
-						onClick={() => openMoment(item.id)}
-						onCommentClick={() => openMoment(item.id, true)}
-					/>
+					{#if item.is_deleted}
+						<!-- 软删除墓碑（契约：客户端展示占位）：不可点、无操作，仅说明状态 -->
+						<div class="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-md border border-border-default bg-surface-primary px-4 text-center">
+							<p class="text-sm text-text-secondary">该瞬间已删除</p>
+						</div>
+					{:else}
+						<MomentCard
+							{item}
+							liked={item.liked}
+							saved={item.saved}
+							onLike={() => void interactions.toggleLike(item.id)}
+							onSave={() => void interactions.toggleSave(item.id)}
+							onClick={() => openMoment(item.id)}
+							onCommentClick={() => openMoment(item.id, true)}
+						/>
+					{/if}
 				{/each}
 			</div>
 		</div>

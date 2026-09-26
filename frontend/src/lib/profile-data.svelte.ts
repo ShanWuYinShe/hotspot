@@ -21,6 +21,8 @@ import type {
 
 export interface GalleryMoment {
 	id: string;
+	/** 软删除墓碑（后端下发 is_deleted，契约要求客户端展示占位而非空白卡）。 */
+	is_deleted: boolean;
 	img: string;
 	title: string;
 	likes: number;
@@ -47,6 +49,7 @@ function mapGalleryMoment(m: MomentItem): GalleryMoment {
 	const mine = (m.reactions || []).find((r) => r.reacted_by_me);
 	return {
 		id: m.moment_id,
+		is_deleted: m.is_deleted ?? false,
 		img: m.images?.[0]?.url ?? '',
 		title: m.description ?? '',
 		likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),

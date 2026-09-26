@@ -7,6 +7,8 @@ import { showToast } from '@/stores/toast.svelte';
 
 export interface FeedItem {
 	id: string;
+	/** 软删除墓碑：为 true 时调用方渲染占位而非内容卡（可选，其余列表默认正常卡）。 */
+	is_deleted?: boolean;
 	user: string;
 	avatar: string;
 	location: string;
