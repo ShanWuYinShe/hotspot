@@ -150,7 +150,8 @@ const FILTER_TABS = [
 			String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))
 		);
 		return sorted.map((n, i) => {
-			const actor = n.payload?.actor ?? { user_id: '', nickname: '', avatar_url: null };
+			// 入群申请的发起者在 payload.applicant（非 actor），一并兜底。
+			const actor = n.payload?.actor ?? n.payload?.applicant ?? { user_id: '', nickname: '', avatar_url: null };
 			const groupName = n.payload?.group_name ?? '群组';
 			// 行内已渲染 actor 昵称（NotifyRow user.name），text 只承载动作语义，
 			// 避免昵称出现两遍。
@@ -160,6 +161,7 @@ const FILTER_TABS = [
 			else if (n.type === 'new_follower') text = '关注了你';
 			else if (n.type === 'mutual_follow') text = '和你互相关注了';
 			else if (n.type === 'group_invite_received') text = `邀请你加入 ${groupName}`;
+			else if (n.type === 'group_application_received') text = `申请加入「${groupName}」，去群管理处理`;
 			else if (n.type === 'group_application_accepted') text = `你加入「${groupName}」的申请已通过`;
 			else if (n.type === 'group_application_rejected') text = `${n.payload?.rejected_by?.nickname ?? '管理员'} 拒绝了你的「${groupName}」入群申请`;
 			else if (n.type === 'reaction_added') text = `做出了反应 ${n.payload?.emoji ?? ''}`;

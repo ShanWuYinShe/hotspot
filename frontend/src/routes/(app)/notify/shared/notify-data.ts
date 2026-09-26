@@ -43,6 +43,7 @@ const NOTIFY_TYPE_TO_CATEGORY: Record<string, string> = {
 	group_mentioned: 'comment',
 	nearby_new_moment: 'nearby',
 	group_invite_received: 'event',
+	group_application_received: 'event',
 	group_application_accepted: 'event',
 	group_application_rejected: 'event',
 	report_resolved: 'event',
