@@ -880,6 +880,13 @@ func TestPostgresIT_BanUnbanAndListBanned(t *testing.T) {
 		if banned[0].User.UserID != badMemberID {
 			t.Fatalf("banned user_id: got %q, want %q", banned[0].User.UserID, badMemberID)
 		}
+		// 被封禁者与操作者昵称必须解析（此前占位填 user_id，名单直接展示裸 id）。
+		if banned[0].User.Nickname != "Bad" {
+			t.Fatalf("banned nickname: got %q, want %q", banned[0].User.Nickname, "Bad")
+		}
+		if banned[0].BannedBy == nil || banned[0].BannedBy.Nickname != "Owner" {
+			t.Fatalf("banned_by nickname: got %#v, want Owner", banned[0].BannedBy)
+		}
 
 		if err := repo.UnbanMember(ctx, ownerID, UnbanMemberRequest{
 			GroupID: groupID,

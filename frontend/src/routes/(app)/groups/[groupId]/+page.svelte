@@ -205,6 +205,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			if (res.code === 0) {
 				showToast('操作成功', 'success');
 				void gd.loadMembers(gid);
+				// 封禁后同步刷新封禁名单（此前只刷成员列表，切到名单 tab 仍是旧数据）。
+				if (action === 'ban') void gd.loadBannedMembers(gid);
 				actionMember = null;
 			} else {
 				showToast(res.message || '操作失败', 'danger');

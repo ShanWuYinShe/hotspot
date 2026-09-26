@@ -342,9 +342,13 @@ ON CONFLICT (group_id, user_id) DO UPDATE SET banned_by_user_id = $3, reason = $
 DELETE FROM group_bans
 WHERE group_id = $1 AND user_id = $2`
 
+	// 被封禁者与操作者昵称经 users 表解析（此前占位填 user_id，封禁名单
+	// 直接展示裸 id；与申请/邀请列表的 LEFT JOIN 口径对齐）。
 	queryListGroupBans = `
-SELECT gb.user_id, gb.banned_at, gb.reason, gb.banned_by_user_id
+SELECT gb.user_id, COALESCE(bu.nickname, ''), gb.banned_at, gb.reason, gb.banned_by_user_id, COALESCE(ou.nickname, '')
 FROM group_bans gb
+LEFT JOIN users bu ON bu.user_id = gb.user_id
+LEFT JOIN users ou ON ou.user_id = gb.banned_by_user_id
 WHERE gb.group_id = $1
 ORDER BY gb.banned_at DESC, gb.user_id ASC`
 

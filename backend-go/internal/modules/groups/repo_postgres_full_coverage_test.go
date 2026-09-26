@@ -524,12 +524,15 @@ func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 
 	// ListBannedMembers
 	banRow := func(uid string) []any {
-		return []any{uid, gTestTime, "理由", "u1"}
+		return []any{uid, "被封禁昵称", gTestTime, "理由", "u1", "操作者昵称"}
 	}
 	stub = &groupFullStub{queryRows: map[string][][]any{queryListGroupBans: {banRow("u2"), banRow("u3")}}}
 	banned, _, err := newGroupsFullRepo(stub).ListBannedMembers(ctx, "group_1", 20, "")
 	if err != nil || len(banned) != 2 || banned[0].Reason == nil || banned[0].BannedBy == nil || banned[0].BannedAt == "" {
 		t.Fatalf("list banned: %#v err=%v", banned, err)
+	}
+	if banned[0].User.Nickname != "被封禁昵称" || banned[0].BannedBy.Nickname != "操作者昵称" {
+		t.Fatalf("banned nicknames: got %q/%q", banned[0].User.Nickname, banned[0].BannedBy.Nickname)
 	}
 	stub = &groupFullStub{queryRowsErr: map[string]error{queryListGroupBans: errors.New("boom")}}
 	if _, _, err := newGroupsFullRepo(stub).ListBannedMembers(ctx, "g", 20, ""); err == nil {
@@ -711,7 +714,7 @@ func TestPostgresRowsErrPaths(t *testing.T) {
 			func(r *PostgresRepository) error { _, _, err := r.ListMyInvites(ctx, "u2", nil, 20, ""); return err }},
 		{queryListSentInvites, []any{"i1", "u1", "邀请人", "u2", "被邀请人", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListSentInvites(ctx, "g", nil, 20, ""); return err }},
-		{queryListGroupBans, []any{"u2", gTestTime, nil, nil},
+		{queryListGroupBans, []any{"u2", "昵称", gTestTime, nil, "u1", "操作者"},
 			func(r *PostgresRepository) error { _, _, err := r.ListBannedMembers(ctx, "g", 20, ""); return err }},
 	}
 	for _, tc := range rowsErrCases {

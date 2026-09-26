@@ -233,14 +233,15 @@ func (r *PostgresRepository) ListBannedMembers(ctx context.Context, groupID stri
 		var bannedAt time.Time
 		var reason *string
 		var bannedByUserID *string
-		if err := rows.Scan(&item.User.UserID, &bannedAt, &reason, &bannedByUserID); err != nil {
+		var userNickname, bannedByNickname string
+		if err := rows.Scan(&item.User.UserID, &userNickname, &bannedAt, &reason, &bannedByUserID, &bannedByNickname); err != nil {
 			return nil, "", err
 		}
-		item.User.Nickname = item.User.UserID
+		item.User.Nickname = userNickname
 		item.BannedAt = bannedAt.UTC().Format(time.RFC3339)
 		item.Reason = reason
 		if bannedByUserID != nil && *bannedByUserID != "" {
-			item.BannedBy = &UserInfo{UserID: *bannedByUserID, Nickname: *bannedByUserID}
+			item.BannedBy = &UserInfo{UserID: *bannedByUserID, Nickname: bannedByNickname}
 		}
 		items = append(items, item)
 	}
