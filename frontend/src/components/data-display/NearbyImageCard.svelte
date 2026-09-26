@@ -76,7 +76,10 @@
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <article
 	class={cn(
-		'card-hover relative h-full w-full overflow-hidden border border-border-default',
+		// isolate：卡片自成堆叠上下文——内部按钮 z-20 保持覆盖按钮可点（P0），
+		// 整卡对外按 DOM 顺序绘制，滚动到 sticky header（z-sticky=20）下方时
+		// 不再与其内部按钮平级竞胜（用户反馈：卡片按钮压 header）。
+		'card-hover isolate relative h-full w-full overflow-hidden border border-border-default',
 		onClick &&
 			// button 抬升必须排除覆盖按钮自身(:not([data-cover])):否则 [&_button]:relative
 			// 与它的 absolute 同 specificity,且工具类生成顺序 .relative 在 .absolute 之后,

@@ -43,6 +43,9 @@ describe('NearbyImageCard', () => {
 		expect(root.className).toContain('[&_button:not([data-cover])]:relative');
 		expect(root.className).toContain('[&_button:not([data-cover])]:z-20');
 		expect(root.className).not.toMatch(/\[&_button\]:(?:relative|z-\d+)/);
+		// 卡片根自成堆叠上下文：内部按钮保持可点，整卡滚动到 sticky header
+		// 下方时不再平级竞胜（用户反馈：卡片按钮压 header）。
+		expect(root.className.split(/\s+/)).toContain('isolate');
 	});
 
 	it('覆盖按钮为原生 button（键盘 Enter/Space 原生激活）', async () => {
