@@ -153,8 +153,10 @@ SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`
 	queryFilterGroupMemberIDs = `
 SELECT user_id FROM group_members WHERE group_id = $1 AND user_id = ANY($2)`
 
+	// 禁言判定含到期：muted_until 非空且已过 → 视为未禁言（临时禁言自动恢复）；
+	// is_muted 且 muted_until 为空 → 永久禁言。否则到期后仍被永久拒绝。
 	queryMemberMuteStatus = `
-SELECT is_muted, COALESCE(TO_CHAR(muted_until AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), '')
+SELECT is_muted AND (muted_until IS NULL OR muted_until > NOW()), COALESCE(TO_CHAR(muted_until AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), '')
 FROM group_members WHERE group_id = $1 AND user_id = $2`
 
 	queryMarkAllGroupMessagesRead = `
