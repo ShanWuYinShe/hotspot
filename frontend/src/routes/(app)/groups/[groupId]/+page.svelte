@@ -494,7 +494,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	open={inviteOpen}
 	groupId={params.groupId}
 	onClose={() => (inviteOpen = false)}
-	onInvited={() => void gd.loadMembers(params.groupId)}
+	onInvited={() => {
+		// 邀请后同步刷新已发邀请列表（此前只刷成员，切到邀请管理 tab 仍是旧数据）。
+		void gd.loadMembers(params.groupId);
+		void gd.loadSentInvites(params.groupId);
+	}}
 />
 
 <GroupSettingsSheet

@@ -430,6 +430,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		loadDetail,
 		loadMembers,
 		loadBannedMembers,
+		loadSentInvites,
 		hasMoreMembers,
 		isLoadingMoreMembers,
 		loadMoreMembers,
