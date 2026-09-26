@@ -276,9 +276,8 @@ func (p *ObjectStorageProvider) presignInternalURL(ctx context.Context, method, 
 	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.internalEndpoint)
 }
 
-func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, method, storageKey string, ttl time.Duration, endpointFn func() (*url.URL, bool, error)) (string, error) {
-	_ = ctx
-	endpoint, forcePathStyle, err := endpointFn()
+func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, method, storageKey string, ttl time.Duration, endpointFn func(context.Context) (*url.URL, bool, error)) (string, error) {
+	endpoint, forcePathStyle, err := endpointFn(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -344,7 +343,7 @@ func (p *ObjectStorageProvider) presignPutObjectURL(ctx context.Context, storage
 	return uploadURL, headers, expiresAt, nil
 }
 
-func (p *ObjectStorageProvider) internalEndpoint() (*url.URL, bool, error) {
+func (p *ObjectStorageProvider) internalEndpoint(context.Context) (*url.URL, bool, error) {
 	endpoint, err := url.Parse(strings.TrimSpace(p.cfg.S3Endpoint))
 	if err != nil {
 		return nil, false, err
@@ -352,11 +351,51 @@ func (p *ObjectStorageProvider) internalEndpoint() (*url.URL, bool, error) {
 	return endpoint, p.cfg.S3ForcePathStyle, nil
 }
 
-func (p *ObjectStorageProvider) clientFacingEndpoint() (*url.URL, bool, error) {
+// 浏览器上传直传的入口 origin（scheme+host）。由 PresignUpload handler 从
+// 请求注入：upload_url 必须与用户访问站点的 origin 同源——SigV4 签名含 Host
+// （nginx /s3/ 以 $http_host 原样转发），且同源 XHR 不受 CORS 限制。静态
+// S3_PUBLIC_ENDPOINT（如 http://127.0.0.1:8888/s3）在用户从 localhost/域名/
+// https 等其它入口访问时会产生跨源 PUT（浏览器拦截，Failed to fetch），
+// 故仅在无入口信息（脚本/内部调用）时作为回退。
+type clientRequestEndpointKey struct{}
+
+type clientRequestEndpoint struct {
+	Scheme string
+	Host   string
+}
+
+// WithClientRequestEndpoint 把请求入口 origin 注入 context（host 为空视为无入口信息）。
+func WithClientRequestEndpoint(ctx context.Context, scheme, host string) context.Context {
+	if host == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, clientRequestEndpointKey{}, clientRequestEndpoint{Scheme: scheme, Host: host})
+}
+
+func clientRequestEndpointFromContext(ctx context.Context) (clientRequestEndpoint, bool) {
+	ep, ok := ctx.Value(clientRequestEndpointKey{}).(clientRequestEndpoint)
+	return ep, ok && ep.Host != ""
+}
+
+func (p *ObjectStorageProvider) clientFacingEndpoint(ctx context.Context) (*url.URL, bool, error) {
+	staticEndpoint, forcePathStyle, err := p.configClientFacingEndpoint()
+	if err != nil {
+		return nil, false, err
+	}
+	if ep, ok := clientRequestEndpointFromContext(ctx); ok {
+		dynamic := *staticEndpoint
+		dynamic.Scheme = ep.Scheme
+		dynamic.Host = ep.Host
+		return &dynamic, true, nil
+	}
+	return staticEndpoint, forcePathStyle, nil
+}
+
+func (p *ObjectStorageProvider) configClientFacingEndpoint() (*url.URL, bool, error) {
 	rawEndpoint := strings.TrimSpace(p.cfg.S3PublicEndpoint)
 	forcePathStyle := p.cfg.S3PublicForcePathStyle
 	if rawEndpoint == "" {
-		return p.internalEndpoint()
+		return p.internalEndpoint(context.Background())
 	}
 	endpoint, err := url.Parse(rawEndpoint)
 	if err != nil {

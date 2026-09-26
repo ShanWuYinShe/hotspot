@@ -27,7 +27,18 @@ func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "PresignUpload", "批量文件数超出上限")
 		return
 	}
-	uploads, err := h.service.BatchPresign(r.Context(), req.Files)
+	// 上传直传 URL 与用户访问站点的 origin 必须同源（SigV4 签名含 Host，nginx /s3/
+	// 以 $http_host 原样转发；跨源 XHR PUT 会被浏览器 CORS 拦截）。注入请求入口
+	// origin 供动态签名；S3_PUBLIC_ENDPOINT 静态配置降级为无入口信息时的回退。
+	ctx := r.Context()
+	if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
+		ctx = WithClientRequestEndpoint(ctx, proto, r.Host)
+	} else if r.TLS != nil {
+		ctx = WithClientRequestEndpoint(ctx, "https", r.Host)
+	} else {
+		ctx = WithClientRequestEndpoint(ctx, "http", r.Host)
+	}
+	uploads, err := h.service.BatchPresign(ctx, req.Files)
 	if err != nil {
 		if errors.Is(err, ErrInvalidMediaRequest) {
 			httpx.WriteInvalidRequest(w, r, "PresignUpload", "参数错误")
