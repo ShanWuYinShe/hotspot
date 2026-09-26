@@ -32,7 +32,7 @@ node greet.test.mjs                                    # 单测(时段/配额/�
 (解析规则 `WELCOME_PASSWORD_<大写人格名>` 优先,回退 `WELCOME_PASSWORD`):
 
 ```bash
-WELCOME_PASSWORD=xiaomanA92716 WELCOME_PASSWORD_JIAJING=<嘉靖口令> WELCOME_PASSWORD_YANSHIFAN=<严世蕃口令> node greet.mjs --force
+WELCOME_PASSWORD=<林小满口令> WELCOME_PASSWORD_JIAJING=<嘉靖口令> WELCOME_PASSWORD_YANSHIFAN=<严世蕃口令> node greet.mjs --force
 ```
 
 只注入一份口令时,其他人格登录会 10100(此前能登录是 state 里残留的缓存 token,过期即暴露——2026-09-25 实测踩坑)。
@@ -45,7 +45,7 @@ WELCOME_PASSWORD=xiaomanA92716 WELCOME_PASSWORD_JIAJING=<嘉靖口令> WELCOME_P
 
 ```bash
 # 启动(nohup 后台,PID 记入 state/ws-online.pid,日志 state/ws-online.log)
-cd scripts && WELCOME_PASSWORD=xiaomanA92716 WELCOME_PASSWORD_JIAJING=<嘉靖口令> WELCOME_PASSWORD_YANSHIFAN=<严世蕃口令> nohup node ws-online.mjs >> ../state/ws-online.log 2>&1 &
+cd scripts && WELCOME_PASSWORD=<林小满口令> WELCOME_PASSWORD_JIAJING=<嘉靖口令> WELCOME_PASSWORD_YANSHIFAN=<严世蕃口令> nohup node ws-online.mjs >> ../state/ws-online.log 2>&1 &
 # 停止
 kill $(cat ../state/ws-online.pid)
 ```
