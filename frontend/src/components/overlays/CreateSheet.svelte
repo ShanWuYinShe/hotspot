@@ -8,6 +8,7 @@
 	import { auth } from '@/stores/auth.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { loadDefaultLocation } from '@/lib/default-location';
+	import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
 	import { createMoment } from '@/api';
 	import { uploadMediaFiles } from '@/lib/upload';
 	import { showToast } from '@/stores/toast.svelte';
@@ -100,6 +101,9 @@
 			});
 			if (res.code === 0) {
 				showToast('发布成功', 'success');
+				// 附近瞬间 feed 的会话进度缓存立即失效：否则发布后 5 分钟内
+				// （TTL）列表仍采用发布前的旧集合，用户看不到自己刚发的内容。
+				clearMomentsProgress();
 				clearDraft();
 				onClose();
 			} else {

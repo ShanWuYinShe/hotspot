@@ -6,6 +6,7 @@
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import { updateMoment } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
+	import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
 	import Button from '@/components/ui/button.svelte';
 
 	let {
@@ -66,6 +67,8 @@
 				onUpdated({ description: text.trim(), tags: Array.from(selectedTags), privacy_level: privacy });
 				onClose();
 				showToast('动态已更新', 'success');
+				// 编辑内容/可见性已变：附近 feed 会话缓存立即失效，避免 5 分钟内展示旧数据。
+				clearMomentsProgress();
 			} else {
 				showToast(res.message || '保存失败', 'danger');
 			}

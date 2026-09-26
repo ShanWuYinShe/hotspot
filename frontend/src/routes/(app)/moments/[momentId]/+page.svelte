@@ -28,6 +28,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { formatDateTime } from '@/lib/utils';
 	import { smartBack } from '@/lib/smart-back';
 	import { copyShareLink } from '@/lib/share';
+	import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
 
@@ -387,6 +388,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			const res = await deleteMoment({ moment_id: momentId });
 			if (res.code === 0) {
 				showToast('动态已删除', 'success');
+				// 已删瞬间不再出现在附近 feed 的会话缓存里（返回列表即重拉）。
+				clearMomentsProgress();
 				smartBack();
 			} else {
 				showToast(res.message || '删除失败', 'danger');

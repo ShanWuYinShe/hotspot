@@ -27,7 +27,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		setMomentsProgress,
 		clearMomentsProgress,
 		feedProgressKey
-	} from './shared/feed-progress.svelte';
+	} from '@/lib/moments-feed-progress.svelte';
 
 	// 附近动态（/nearby/moments）：独立路由页。
 	// BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）；人/群组/动态三段各为

@@ -5,7 +5,7 @@ import {
 	setMomentsProgress,
 	clearMomentsProgress,
 	feedProgressKey
-} from '../feed-progress.svelte';
+} from '../moments-feed-progress.svelte';
 
 describe('moments feed progress', () => {
 	beforeEach(() => {
