@@ -104,6 +104,23 @@ describe('ChatView', () => {
 		});
 	});
 
+	it('发送被拒时直显后端方向文案（拉黑方视角）', async () => {
+		mocks.sendPrivateMessage.mockResolvedValue({
+			code: 10200,
+			message: '你已拉黑对方，无法发送',
+			data: { forbidden_reason: 'blocked_by_user' }
+		});
+		renderChat();
+		const input = screen.getByLabelText('消息输入框');
+		await fireEvent.input(input, { target: { value: '还能说话吗' } });
+		await fireEvent.keyDown(input, { key: 'Enter' });
+		await waitFor(() => {
+			expect(screen.getByText('你已拉黑对方，无法发送')).toBeTruthy();
+		});
+		// 乐观消息已回滚：列表中没有该文本的消息气泡
+		expect(screen.queryByText('还能说话吗')).toBeNull();
+	});
+
 	it('返回按钮触发 onBack', async () => {
 		const onBack = vi.fn();
 		renderChat(onBack);

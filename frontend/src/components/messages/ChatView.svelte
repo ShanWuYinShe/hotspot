@@ -106,9 +106,11 @@
 			const res = await sendPrivateMessage({ target_user_id: peerUserId, type: 'text', content: text });
 			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
 			// spec: 10200 时 data = { forbidden_reason: ForbiddenReason }。
+			// 后端 message 方向敏感（如拉黑方/被拉黑方两套文案），优先直显；
+			// 本地映射仅作缺失兜底。
 			if (res.code === 10200) {
 				const reason = (res.data as { forbidden_reason?: string } | undefined)?.forbidden_reason;
-				return { code: res.code, error: (reason && SEND_BLOCK_REASONS[reason]) || '消息发送失败' };
+				return { code: res.code, error: res.message || (reason && SEND_BLOCK_REASONS[reason]) || '消息发送失败' };
 			}
 			return { code: res.code, error: '消息发送失败' };
 		},

@@ -100,7 +100,8 @@
 		sendMessage: async (text) => {
 			const res = await sendGroupMessage({ group_id: groupId, type: 'text', content: text });
 			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
-			return { code: res.code, error: '消息发送失败' };
+			// 后端 message 已是面向用户的 curated 文案（如禁言/封禁原因），优先直显。
+			return { code: res.code, error: res.message || '消息发送失败' };
 		},
 		sendTypingSignal: (isTyping) => {
 			// 未连接静默丢弃。
