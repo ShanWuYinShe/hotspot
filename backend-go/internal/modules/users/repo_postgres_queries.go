@@ -158,6 +158,20 @@ nickname_searchable = EXCLUDED.nickname_searchable,
 location_searchable = EXCLUDED.location_searchable,
 nearby_moment_notify = EXCLUDED.nearby_moment_notify`
 
+	// 附近新瞬间通知目标：开启通知、带有最新位置、未注销且非作者的用户。
+	// 半径过滤用经纬度包围盒（5km 量级下误差可忽略；精确 Haversine 距离在
+	// Go 层计算，符合「S2/SQL 预过滤 + Go 精确计算」的地理口径）。
+	queryNearbyMomentNotifyTargets = `
+SELECT u.user_id, u.latitude, u.longitude
+FROM users u
+JOIN user_settings us ON us.user_id = u.user_id
+WHERE us.nearby_moment_notify = TRUE
+  AND u.is_deleted = FALSE
+  AND u.user_id <> $1
+  AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL
+  AND u.latitude BETWEEN $2 AND $3
+  AND u.longitude BETWEEN $4 AND $5`
+
 	// 关系操作的条件更新：每个操作只写自己的字段，避免 read-modify-write
 	// 的 lost update（并发 Follow+Block 互相覆盖对方字段）。
 	//

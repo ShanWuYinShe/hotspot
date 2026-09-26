@@ -128,3 +128,44 @@ func TestInMemoryMutualFriends(t *testing.T) {
 		t.Fatalf("unexpected preview: %+v", preview[0])
 	}
 }
+
+func TestRepoNearbyMomentNotifyTargetsFilters(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+
+	// u1：作者（排除）；u2：圈内开启通知；u3：圈内未开启；u4：圈外开启；u5：已注销
+	usersIn := map[string]struct {
+		lat, lng float64
+		notify   bool
+		deleted  bool
+	}{
+		"u1": {35.0976, 112.6124, false, false},
+		"u2": {35.0980, 112.6130, true, false},
+		"u3": {35.0980, 112.6130, false, false},
+		"u4": {40.0000, 116.0000, true, false},
+		"u5": {35.0980, 112.6130, true, true},
+	}
+	for uid, u := range usersIn {
+		p := MyProfile{UserID: uid, IsDeleted: u.deleted}
+		p.Location.Point.Latitude = u.lat
+		p.Location.Point.Longitude = u.lng
+		if err := repo.PutProfile(ctx, p); err != nil {
+			t.Fatalf("put profile %s: %v", uid, err)
+		}
+		if err := repo.PutSettings(ctx, uid, UserSettings{NearbyMomentNotify: u.notify}); err != nil {
+			t.Fatalf("put settings %s: %v", uid, err)
+		}
+	}
+
+	targets, err := repo.NearbyMomentNotifyTargets(ctx, 35.0976, 112.6124, 5000, "u1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	gots := map[string]bool{}
+	for _, t := range targets {
+		gots[t.UserID] = true
+	}
+	if len(targets) != 1 || !gots["u2"] {
+		t.Fatalf("应只返回 u2, got %#v", gots)
+	}
+}

@@ -273,3 +273,7 @@ func TestUserMomentCursorIsOpaqueAndTamperProof(t *testing.T) {
 		t.Fatalf("expected invalid cursor error, got %v", err)
 	}
 }
+
+func (r *userFallbackRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string) ([]NearbyNotifyTarget, error) {
+	return nil, nil
+}

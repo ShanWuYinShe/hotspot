@@ -929,3 +929,7 @@ func TestServiceSettingsForIsReadOnly(t *testing.T) {
 		t.Fatalf("AllowPrivateChat = %q, want %q", got.AllowPrivateChat, ChatPermFriends)
 	}
 }
+
+func (r *stubUserRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string) ([]NearbyNotifyTarget, error) {
+	return nil, nil
+}

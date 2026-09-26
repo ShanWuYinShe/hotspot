@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"math"
 	"sort"
 	"strings"
 	"sync"
@@ -710,4 +711,31 @@ func decodeSearchCursor(raw string) (searchCursor, error) {
 		return searchCursor{}, ErrInvalidCursor
 	}
 	return decoded, nil
+}
+
+// NearbyMomentNotifyTargets 内存实现：遍历 profiles（带位置）+ settings
+// （nearby_moment_notify），包围盒过滤。精确距离由调用方（moments）计算。
+func (r *InMemoryRepository) NearbyMomentNotifyTargets(_ context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string) ([]NearbyNotifyTarget, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	latDelta := float64(radiusMeters) / 111320.0
+	lngDelta := float64(radiusMeters) / (111320.0 * max(0.05, math.Cos(centerLat*math.Pi/180.0)))
+	targets := make([]NearbyNotifyTarget, 0)
+	for uid, p := range r.profiles {
+		if uid == excludeUserID || p.IsDeleted {
+			continue
+		}
+		if !r.settings[uid].NearbyMomentNotify {
+			continue
+		}
+		lat, lng := p.Location.Point.Latitude, p.Location.Point.Longitude
+		if lat < centerLat-latDelta || lat > centerLat+latDelta {
+			continue
+		}
+		if lng < centerLng-lngDelta || lng > centerLng+lngDelta {
+			continue
+		}
+		targets = append(targets, NearbyNotifyTarget{UserID: uid, Latitude: lat, Longitude: lng})
+	}
+	return targets, nil
 }

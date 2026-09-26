@@ -579,3 +579,73 @@ func TestServiceCreateNotifiesAllMentions(t *testing.T) {
 		t.Fatalf("作者本人不应被通知, got %d", notif.appended["u1"])
 	}
 }
+
+func TestServiceCreateNotifiesNearbyUsers(t *testing.T) {
+	created := ownedMoment()
+	created.PrivacyLevel = "public"
+	created.User = UserInfo{UserID: "u1", Nickname: "作者"}
+	repo := &stubMomentRepo{created: created}
+
+	var targetsCalls int
+	targetsFn := func(ctx context.Context, lat, lng float64, radius int, exclude string) ([]NearbyNotifyTarget, error) {
+		targetsCalls++
+		if exclude != "u1" {
+			t.Fatalf("exclude 应为作者 u1, got %q", exclude)
+		}
+		return []NearbyNotifyTarget{
+			{UserID: "u2", Latitude: lat + 0.001, Longitude: lng},
+		}, nil
+	}
+	published := map[string]int{}
+	publisher := stubNearbyPublisher{onPublish: func(target string) { published[target]++ }}
+
+	svc := NewServiceWithDeps(repo, &stubNotifyWriter{}, nil)
+	svc.SetNearbyNotifyTargetsReader(targetsFn)
+	svc.SetNearbyNotifyPublisher(publisher)
+
+	_, err := svc.Create(momentCtx("u1"), CreateMomentRequest{
+		Description: "nearby",
+		Location:    &Location{Point: types.GeoPoint{Latitude: 35.0976, Longitude: 112.6124}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if targetsCalls != 1 {
+		t.Fatalf("targets fn 应被调用 1 次, got %d", targetsCalls)
+	}
+	if published["u2"] != 1 {
+		t.Fatalf("u2 应收到附近通知, got %#v", published)
+	}
+}
+
+func TestServiceCreateSkipsNearbyNotifyWithoutLocation(t *testing.T) {
+	created := ownedMoment()
+	created.PrivacyLevel = "public"
+	repo := &stubMomentRepo{created: created}
+
+	targetsCalls := 0
+	svc := NewServiceWithDeps(repo, &stubNotifyWriter{}, nil)
+	svc.SetNearbyNotifyTargetsReader(func(ctx context.Context, lat, lng float64, radius int, exclude string) ([]NearbyNotifyTarget, error) {
+		targetsCalls++
+		return nil, nil
+	})
+	svc.SetNearbyNotifyPublisher(stubNearbyPublisher{onPublish: func(string) {}})
+
+	if _, err := svc.Create(momentCtx("u1"), CreateMomentRequest{Description: "无位置"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if targetsCalls != 0 {
+		t.Fatalf("无位置时不应查询目标, got %d", targetsCalls)
+	}
+}
+
+type stubNearbyPublisher struct {
+	onPublish func(targetUserID string)
+}
+
+func (s stubNearbyPublisher) PublishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error {
+	if s.onPublish != nil {
+		s.onPublish(targetUserID)
+	}
+	return nil
+}

@@ -34,7 +34,17 @@ type Service struct {
 	// blockChecker 可选注入：caller 与瞬间作者间双向拉黑判定（对齐 comments 的
 	// 依赖倒置模式，bootstrap 统一接线）。nil（dev/test 默认）时跳过拉黑检查。
 	blockChecker func(callerID, authorID string) (bool, error)
+	// 附近新瞬间通知（可选注入，bootstrap 接线）：目标查询（users 实现）+
+	// 通知发布（notify 实现）。nil（未接线）时 Create 静默跳过附近通知。
+	nearbyNotifyTargets   NearbyNotifyTargetsFn
+	nearbyNotifyPublisher NearbyNotifyPublisher
 }
+
+// SetNearbyNotifyTargetsReader 注入附近通知目标查询（users 模块实现）。
+func (s *Service) SetNearbyNotifyTargetsReader(fn NearbyNotifyTargetsFn) { s.nearbyNotifyTargets = fn }
+
+// SetNearbyNotifyPublisher 注入附近通知发布器（notify 模块实现）。
+func (s *Service) SetNearbyNotifyPublisher(p NearbyNotifyPublisher) { s.nearbyNotifyPublisher = p }
 
 // ReactionAggregator computes per-emoji reaction aggregates for moments.
 // Implemented by the reactions module (dependency inversion: moments never
@@ -141,6 +151,17 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMom
 	}
 	resourceguard.RecordMoment(ctx, item.MomentID)
 	s.notifyMomentMentions(ctx, principal.UserID, item)
+	// 附近新瞬间通知（spec api_spec_websocket.md NearbyNewMoment）：带位置的
+	// 公开瞬间创建后，向开启 nearby_moment_notify 的附近用户推送。无位置或
+	// 未接线时跳过；目标查询/发布失败不阻断创建主流程（尽力而为）。
+	if req.Location != nil && (item.PrivacyLevel == "" || item.PrivacyLevel == "public") {
+		s.notifyNearbyNewMoment(ctx, principal.UserID, item.MomentID,
+			req.Location.Point.Latitude, req.Location.Point.Longitude,
+			item.User, types.MomentSummary{
+				MomentID:           item.MomentID,
+				DescriptionPreview: summarizeMomentDescription(item.Description),
+			})
+	}
 	s.hydrateImages(ctx, &item)
 	return toOwnerMoment(item), nil
 }

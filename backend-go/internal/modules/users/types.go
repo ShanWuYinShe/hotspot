@@ -107,6 +107,14 @@ func toAccountData(profile MyProfile) AccountData {
 	}
 }
 
+// NearbyNotifyTarget 附近新瞬间通知的目标用户（开启 nearby_moment_notify
+// 且带有最新位置的用户）。
+type NearbyNotifyTarget struct {
+	UserID    string
+	Latitude  float64
+	Longitude float64
+}
+
 type ChatPerm string
 
 const (

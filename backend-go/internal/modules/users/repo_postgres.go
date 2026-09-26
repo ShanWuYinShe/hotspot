@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
@@ -263,3 +264,31 @@ func nowRFC3339() string {
 // queryableForTx returns the Queryable bound to ctx by RunInTransaction, or
 // nil when no transaction is in effect. Mirrors the helper used by groups/
 // moments/comments so repo methods transparently join an in-flight tx.
+
+// NearbyMomentNotifyTargets 实现见 repo.go 接口注释；SQL 见
+// repo_postgres_queries.go queryNearbyMomentNotifyTargets（包围盒预过滤）。
+func (r *PostgresRepository) NearbyMomentNotifyTargets(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string) ([]NearbyNotifyTarget, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	latDelta := float64(radiusMeters) / 111320.0
+	// 中纬度经度收缩按 cos(纬度) 精确收缩（Go 1.21+ 内建 max）。
+	lngDelta := float64(radiusMeters) / (111320.0 * max(0.05, math.Cos(centerLat*math.Pi/180.0)))
+	rows, err := queryable.Query(ctx, queryNearbyMomentNotifyTargets,
+		excludeUserID, centerLat-latDelta, centerLat+latDelta,
+		centerLng-lngDelta, centerLng+lngDelta)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	targets := make([]NearbyNotifyTarget, 0)
+	for rows.Next() {
+		var t NearbyNotifyTarget
+		if err := rows.Scan(&t.UserID, &t.Latitude, &t.Longitude); err != nil {
+			return nil, err
+		}
+		targets = append(targets, t)
+	}
+	return targets, rows.Err()
+}

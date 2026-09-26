@@ -40,5 +40,9 @@ type Repository interface {
 	ListFriends(context.Context, string, int, string) (PaginatedFriends, error)
 	ListFollowing(context.Context, string, int, string) (PaginatedFollowing, error)
 	ListFollowers(context.Context, string, int, string) (PaginatedFollowers, error)
+	// NearbyMomentNotifyTargets 返回以 (centerLat, centerLng) 为中心、
+	// radiusMeters 半径内、开启了 nearby_moment_notify 且带有最新位置的用户
+	//（排除 excludeUserID，通常为瞬间作者）。供 moments 附近新瞬间通知用。
+	NearbyMomentNotifyTargets(context.Context, float64, float64, int, string) ([]NearbyNotifyTarget, error)
 	UserExists(context.Context, string) (bool, error)
 }
