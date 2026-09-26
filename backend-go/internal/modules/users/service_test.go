@@ -281,6 +281,29 @@ func TestServiceGetMySettingsCreatesDefault(t *testing.T) {
 	}
 }
 
+func TestServiceUpdateMySettingsRejectsInvalidChatPerm(t *testing.T) {
+	repo := &stubUserRepo{settingsFound: true}
+
+	svc := NewServiceWithRepo(repo)
+	svc.SetContentProviders(repo, repo)
+
+	bad := ChatPerm("followers")
+	err := svc.UpdateMySettings(userCtx("u1"), UpdateSettingsRequest{
+		Settings: PartialUserSettings{AllowPrivateChat: &bad},
+	})
+	if !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("expected ErrInvalidRequest, got %v", err)
+	}
+
+	good := ChatPermFriends
+	err = svc.UpdateMySettings(userCtx("u1"), UpdateSettingsRequest{
+		Settings: PartialUserSettings{AllowPrivateChat: &good},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error for valid perm: %v", err)
+	}
+}
+
 func TestServiceUpdateMySettingsAppliesPatch(t *testing.T) {
 	repo := &stubUserRepo{settingsFound: true}
 	svc := NewServiceWithRepo(repo)

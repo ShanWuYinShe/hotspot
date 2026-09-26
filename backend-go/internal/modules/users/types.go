@@ -115,6 +115,17 @@ const (
 	ChatPermNobody   ChatPerm = "nobody"
 )
 
+// Valid 报告该私聊权限是否为契约枚举值（spec api_spec_types.md ChatPerm）。
+// 更新入口必须校验：未知值写入后，发送侧 switch 会 fall-through 放行，
+// 导致隐私设置静默失效。
+func (c ChatPerm) Valid() bool {
+	switch c {
+	case ChatPermEveryone, ChatPermFriends, ChatPermNobody:
+		return true
+	}
+	return false
+}
+
 type UserSettings struct {
 	PrivacyLevel       string `json:"privacy_level"`
 	LocationVisible    bool   `json:"location_visible"`

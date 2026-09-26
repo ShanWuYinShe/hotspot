@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"fmt"
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
@@ -58,6 +59,11 @@ func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsReques
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
+	}
+	// 枚举校验：非法 allow_private_chat 一旦落库，发送侧 switch 对未知值
+	// fall-through 放行，隐私设置会静默失效（fail-open）。
+	if req.Settings.AllowPrivateChat != nil && !req.Settings.AllowPrivateChat.Valid() {
+		return fmt.Errorf("%w: allow_private_chat", ErrInvalidRequest)
 	}
 	settings, ok, err := s.repo.GetSettings(ctx, principal.UserID)
 	if err != nil {
