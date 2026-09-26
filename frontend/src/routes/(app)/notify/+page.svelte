@@ -20,7 +20,7 @@ import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import NotifyRow from './shared/NotifyRow.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { TYPE_CONFIG, normalizeNotifType, type NotifyViewItem } from './shared/notify-data';
-	import { listNotifies, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite , netError } from '@/api';
+	import { listNotifies, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite, listFollowing, netError } from '@/api';
 	import { setNotifyUnread, unread as globalUnread } from '@/stores/unread.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
@@ -84,10 +84,13 @@ const FILTER_TABS = [
 				// notifies 读取必须 untrack：数组回写会成为 effect 依赖 → 无限请求循环（同 messages）
 				if (untrack(() => !notifies.length)) loading = true;
 				loadError = null;
-				const [notifRes, unreadRes, invitesRes] = await Promise.all([
+				const [notifRes, unreadRes, invitesRes, followingRes] = await Promise.all([
 					listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE } }).catch(() => netError({ items: [], next_cursor: null })),
 					getUnreadCount().catch(() => netError({ total: 0 })),
-					listMyInvites().catch(() => netError({ items: [] }))
+					listMyInvites().catch(() => netError({ items: [] })),
+					// rail 回关钮诚实化：已关注的 actor 直接显示「已关注」（后端 set_follow
+					// 幂等 no-op 不会出错，但按钮不应显示与真实关系相反的动作）。
+					listFollowing({ user_id: auth.user?.user_id ?? '', pagination: { limit: 100 } }).catch(() => netError({ items: [], next_cursor: null }))
 				]);
 				if (cancelled) return;
 
@@ -110,6 +113,13 @@ const FILTER_TABS = [
 				if (invitesRes.code === 0) {
 					invites = invitesRes.data?.items ?? [];
 					invitesLoaded = true;
+				}
+
+				if (followingRes.code === 0) {
+					const ids = (followingRes.data?.items ?? [])
+						.map((u) => u.user?.user?.user_id ?? '')
+						.filter(Boolean);
+					followedBack = new Set([...followedBack, ...ids]);
 				}
 
 				if (notifData) {
