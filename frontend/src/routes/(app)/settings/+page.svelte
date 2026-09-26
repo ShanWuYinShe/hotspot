@@ -273,7 +273,7 @@
 			</SettingsSection>
 
 			<!-- Section 3: 地图与位置 -->
-			<SettingsSection title="地图与位置" description="选择地图页使用的底图源。两种底图均经站点同源代理加载，密钥不下发到浏览器。">
+			<SettingsSection title="地图与位置" description="选择地图页使用的底图源。高德瓦片浏览器直连（免密钥，GCJ-02）；OpenStreetMap 经站点同源代理加载。">
 				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-sm overflow-hidden">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
 						<div class="flex items-center gap-3">
