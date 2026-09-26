@@ -78,13 +78,14 @@ function connectPersona(p) {
     ws.send(JSON.stringify({ type: 'Auth', payload: { client_type: 'app', access_token: auth.token || null, device_id: wsDeviceId(name), resume_token: c.resumeToken } }));
   });
   ws.addEventListener('message', (raw) => {
-    let ev; try { ev = JSON.parse(raw.toString()); } catch { return; }
+    let ev; try { ev = JSON.parse(String(raw.data)); } catch { return; }
     if (ev.type === 'ConnectionEstablished') {
       c.resumeToken = ev.payload.resume_token;
       auth.resumeToken = c.resumeToken; saveWsAuth(name, auth);
       const interval = (ev.payload.config?.ping_interval ?? 30) * 1000;
+      console.log('PING-DEBUG: interval_ms =', interval, '| config =', JSON.stringify(ev.payload.config));
       clearInterval(c.pingTimer);
-      c.pingTimer = setInterval(() => { try { ws.send(JSON.stringify({ type: 'Ping', payload: {} })); } catch {} }, interval);
+      c.pingTimer = setInterval(() => { try { const m = JSON.stringify({ type: 'Ping', payload: {} }); ws.send(m); console.log('PING-SENT @', new Date().toISOString()); } catch (e) { console.log('PING-ERROR:', e?.message || e); } }, interval);
       setStatus(name, true);
       log(`[${name}] WS 在线 (connection=${ev.payload.connection_id})`);
     } else if (ev.type === 'Pong') {
