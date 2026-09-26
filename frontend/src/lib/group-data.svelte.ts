@@ -5,7 +5,7 @@
 // 调用方式：组件 <script> 顶层 const gd = useGroupDetail({...})；工厂内的
 // $state/$effect 生命周期绑定组件实例，卸载自动清理（WS 订阅 + presence 订阅）。
 
-import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi , netError } from '@/api';
+import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi, listMyApplications, cancelGroupApplication, netError } from '@/api';
 import { wsClient } from '@/lib/ws/client';
 import { formatDistance, formatDateTime } from '@/lib/utils';
 import { showToast } from '@/stores/toast.svelte';
@@ -48,6 +48,8 @@ export interface UseGroupDetailOptions {
 	watchPresence?: (ids: string[]) => () => void;
 	/** 在线判定（页面注入 presence.isOnline）。 */
 	isOnline?: (userId: string) => boolean;
+	/** 登录态判定（页面注入 auth.isAuthenticated）：未登录时跳过待审查询。 */
+	isAuthenticated?: () => boolean;
 	/** 成员快照在线状态播种（页面注入 onlineUsers.add：HTTP 快照 → WS 实时的既定升级路径）。 */
 	seedPresence?: (ids: string[]) => void;
 }
@@ -65,6 +67,10 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 	/** 入群申请（owner/admin 工作台；默认仅 pending） */
 	let applications = $state<GroupApplicationItem[]>([]);
 	let joined = $state(false);
+	/** 入群申请待审（需审核群）：joined=false 且此标记 true 时展示“审核中”而非“已加入”。 */
+	let joinPendingApproval = $state(false);
+	/** 待审申请 id（取消申请用；重载后经自查列表回填）。 */
+	let pendingApplicationId = $state<string | null>(null);
 	/** 加入/退出请求进行中——防连点 */
 	let joinPending = $state(false);
 	let loading = $state(true);
@@ -97,7 +103,19 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 					description: detailData.description ?? detail.description,
 					banner: g.avatar_url ?? detail.banner
 				};
-				if (detailData.viewer_state) joined = true;
+				if (detailData.viewer_state) {
+					joined = true;
+					joinPendingApproval = false;
+					pendingApplicationId = null;
+				} else {
+					joined = false;
+					// 非成员时回填待审态（重载后亦诚实）：仅登录用户查一次自查列表。
+					if (opts.isAuthenticated?.()) void refreshPendingState(gid);
+					else {
+						joinPendingApproval = false;
+						pendingApplicationId = null;
+					}
+				}
 				myRole = detailData.viewer_state?.role ?? null;
 			} else if (detailRes.code !== 0) {
 				loadError = detailRes.message ?? '加载失败，请稍后重试';
@@ -243,15 +261,34 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		loading = false;
 	}
 
+	// 待审态回填：在自查列表中找本群 pending 申请（重载/外跳返回后亦诚实）。
+	async function refreshPendingState(gid: string) {
+		try {
+			const res = await listMyApplications().catch(() => netError(undefined));
+			if (currentGid() !== gid) return;
+			const hit = res.code === 0
+				? (res.data?.items ?? []).find((a) => a.group?.group_id === gid && a.status === 'pending')
+				: undefined;
+			if (hit) {
+				joinPendingApproval = true;
+				pendingApplicationId = hit.application_id;
+			} else {
+				joinPendingApproval = false;
+				pendingApplicationId = null;
+			}
+		} catch {
+			// 查询失败保持现状（按钮仍为加入群组，可重试）。
+		}
+	}
+
 	// 加入/退出：乐观更新 + 失败回滚（spec: groups/enter、groups/exit）。
-	// join 对需审核群组返回 pending_approval——UI 仍标记 joined 简化（真实后端
-	// 以 my_state.is_joined 为准，审核通过前详情不会把它标为已加入）。
+	// 需审核群返回 pending_approval 时进入待审态（审核中·可取消），不再冒充已加入。
 	function toggleJoin() {
 		if (joinPending) return;
 		joinPending = true;
 		const next = !joined;
 		joined = next;
-		const done = (res: { code: number; message?: string }) => {
+		const done = (res: { code: number; message?: string; data?: unknown }) => {
 			joinPending = false;
 			if (res.code !== 0) {
 				joined = !next;
@@ -259,8 +296,17 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 				// 拒绝时按钮闪一下回弹，用户完全不知道原因）
 				showToast(res.message || '操作失败', 'danger');
 			} else if (next) {
-				// 加入成功：乐观置 member（my_state.role 在下次 loadDetail 时以服务端为准）
-				myRole = 'member';
+				const joinData = res.data as { status?: string; application_id?: string | null } | null | undefined;
+				if (joinData?.status === 'pending_approval') {
+					// 待审：纠正乐观的 joined，记录申请 id 供取消。
+					joined = false;
+					joinPendingApproval = true;
+					pendingApplicationId = joinData.application_id ?? null;
+					showToast('申请已提交，待群主审核', 'success');
+				} else {
+					// 加入成功：乐观置 member（my_state.role 在下次 loadDetail 时以服务端为准）
+					myRole = 'member';
+				}
 			}
 		};
 		const gid = currentGid();
@@ -269,6 +315,22 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		} else {
 			void leaveGroup(gid).then(done).catch(() => done(netError(undefined)));
 		}
+	}
+
+	// 取消入群申请（待审态）：成功后回到未加入态，可重新申请。
+	async function cancelJoinApplication() {
+		if (!pendingApplicationId) return { code: -1 };
+		const gid = currentGid();
+		const appId = pendingApplicationId;
+		const res = await cancelGroupApplication({ group_id: gid, application_id: appId }).catch(() => netError(undefined));
+		if (res.code === 0) {
+			joinPendingApproval = false;
+			pendingApplicationId = null;
+			showToast('已取消申请', 'success');
+		} else {
+			showToast(res.message || '取消失败', 'danger');
+		}
+		return res;
 	}
 
 	// 公告管理（owner/admin；createGroupAnnouncement 自带幂等键）。成功后刷新公告列表（WS 也会推，幂等）。
@@ -421,6 +483,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		get applications() { return applications; },
 		get joined() { return joined; },
 		get joinPending() { return joinPending; },
+		get joinPendingApproval() { return joinPendingApproval; },
 		get loading() { return loading; },
 		get loadError() { return loadError; },
 		get myRole() { return myRole; },
@@ -439,6 +502,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		updateAnnouncement,
 		deleteAnnouncement,
 		revokeSentInvite,
+		cancelJoinApplication,
 		unbanMember,
 		updateGroupSettings,
 		approveApplication,
