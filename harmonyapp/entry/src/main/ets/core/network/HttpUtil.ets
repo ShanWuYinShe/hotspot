@@ -202,12 +202,20 @@ function buildPublicAliases(): Map<string, string> {
 const PUBLIC_ENDPOINT_ALIASES: Map<string, string> = buildPublicAliases();
 
 
+/**
+ * 刷新结果三态：ok（可重试原请求）/ invalid（会话确已失效，调用方清除并登出）/
+ * transport-error（服务端不可达等传输失败，调用方不得清除会话、按可重试处理）。
+ * 背景：部署滚动窗口内续期撞上后端不可用时，以往不分青红皂白统一清除会话，
+ * 导致“每次发版 App 都掉登录”（与 Web 端同类缺陷，对齐其三态方案）。
+ */
+export type RefreshOutcome = 'ok' | 'invalid' | 'transport-error';
+
 export class HttpUtil {
   /**
    * 全局刷新锁：避免并发 refresh_token 触发"轮换冲突"
    * Spec 建议：同一时刻只允许一个刷新请求在飞
    */
-  private static refreshPromise: Promise<boolean> | null = null;
+  private static refreshPromise: Promise<RefreshOutcome> | null = null;
 
   private static async getBaseUrl(): Promise<string> {
     try {
@@ -322,16 +330,16 @@ export class HttpUtil {
    * - App 端必须在 body 中传 refresh_token，不传 access_token
    * - 并发刷新通过 refreshPromise 锁避免竞态
    */
-  private static async ensureRefreshToken(): Promise<boolean> {
+  private static async ensureRefreshToken(): Promise<RefreshOutcome> {
     if (HttpUtil.refreshPromise) return HttpUtil.refreshPromise;
 
-    HttpUtil.refreshPromise = (async () => {
+    HttpUtil.refreshPromise = (async (): Promise<RefreshOutcome> => {
       try {
         const authData = await HttpUtil.getAuthData();
         const refreshToken = authData?.refresh_token;
         if (!refreshToken) {
           hilog.warn(DOMAIN_NUMBER, TAG, '无 refresh_token，无法刷新');
-          return false;
+          return 'invalid';
         }
 
         const baseUrl = await HttpUtil.getBaseUrl();
@@ -353,13 +361,13 @@ export class HttpUtil {
         try {
           payload = JSON.parse(response.result as string) as Object;
         } catch {
-          return false;
+          return 'transport-error';
         } finally {
           httpRequest.destroy();
         }
 
         const payloadRecord = payload as Record<string, Object>;
-        if (!payloadRecord || typeof payloadRecord.code !== 'number') return false;
+        if (!payloadRecord || typeof payloadRecord.code !== 'number') return 'transport-error';
 
         if (payloadRecord.code === 0 && payloadRecord.data) {
           const newAuth = payloadRecord.data as AuthData;
@@ -367,20 +375,20 @@ export class HttpUtil {
           await PreferencesUtil.setObject(StorageKeys.AUTH_DATA, newAuth);
           await AuthAccountManager.upsertAndActivate(newAuth);
           hilog.info(DOMAIN_NUMBER, TAG, 'Token 刷新成功');
-          return true;
+          return 'ok';
         }
 
         // 刷新失败（10100=refresh_token 无效、10201=账号被封禁等），清除认证状态
         hilog.warn(DOMAIN_NUMBER, TAG, `Token 刷新失败，code=${payloadRecord.code}`);
         await HttpUtil.clearAuthData();
-        return false;
+        return 'invalid';
       } catch (error) {
         // 网络层异常（超时/断网/连接失败）≠ 凭证失效：spec 只要求 refresh_token
         // 无效（10100）时清除会话。弱网下走到这里的刷新请求会抛异常，若此时
         // clearAuthData 会把用户误踢回登录页——保留本地会话，仅返回刷新失败，
         // 后续网络恢复后可重试刷新。
         hilog.warn(DOMAIN_NUMBER, TAG, `refresh_token failed (network): ${JSON.stringify(error)}`);
-        return false;
+        return 'transport-error';
       } finally {
         HttpUtil.refreshPromise = null;
       }
@@ -601,11 +609,18 @@ export class HttpUtil {
       // ── 认证失败：刷新 token 后重试（至多一次，键保持 sticky）────
       if (!ctx.retried && ctx.hasAuthHeader && isAuthErrorCode(resultCode)) {
         hilog.info(DOMAIN_NUMBER, TAG, '收到 10100 认证失败，尝试刷新 token');
-        const refreshed = await HttpUtil.ensureRefreshToken();
-        if (refreshed) {
+        const outcome = await HttpUtil.ensureRefreshToken();
+        if (outcome === 'ok') {
           ctx.retried = true;
           ctx.forcedIdempotencyKey = ctx.idempotencyKey;
           return AttemptDirective.RETRY;
+        }
+        if (outcome === 'transport-error') {
+          // 传输失败（部署滚动/弱网）：不得清除会话——抛可重试错误由上层
+          // 提示，本地会话保留，网络恢复后自然续上。
+          hilog.warn(DOMAIN_NUMBER, TAG, '令牌刷新传输失败，保持会话并上报可重试错误');
+          ctx.failure = new ApiError('网络异常，请稍后重试');
+          return AttemptDirective.FAIL;
         }
         hilog.warn(DOMAIN_NUMBER, TAG, '令牌刷新失败，已强制登出');
         await HttpUtil.clearAuthData();
