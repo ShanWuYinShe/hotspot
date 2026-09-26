@@ -96,6 +96,61 @@ describe('10100 刷新重试', () => {
     window.removeEventListener('auth-failed', onFailed);
   });
 
+describe('主动续期', () => {
+    afterEach(() => {
+      client.setKnownAccessExpiry(null);
+    });
+
+    it('临期请求先静默刷新、重学过期后再发原请求', async () => {
+      client.setApiBaseUrl(BASE);
+      client.setKnownAccessExpiry(new Date(Date.now() + 60_000).toISOString());
+      const freshExpiry = new Date(Date.now() + 15 * 60_000).toISOString();
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 0, data: {} }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 0, data: { user_id: 'u1', expires_at: freshExpiry } }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 0, data: { ok: true } }) });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const res = await client.checkAuthStatus();
+      expect(res.code).toBe(0);
+      const urls = dispatchCalls(fetchMock);
+      expect(urls).toHaveLength(3);
+      expect(urls[0]).toContain('refresh_token');
+      expect(urls[1]).toContain('auth/session');
+      expect(urls[2]).toContain('auth/session');
+    });
+
+    it('未临期不触发刷新', async () => {
+      client.setApiBaseUrl(BASE);
+      client.setKnownAccessExpiry(new Date(Date.now() + 15 * 60_000).toISOString());
+      const fetchMock = mockFetchOnce({ code: 0, data: { ok: true } });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await client.checkAuthStatus();
+      const urls = dispatchCalls(fetchMock);
+      expect(urls).toHaveLength(1);
+      expect(urls[0]).not.toContain('refresh_token');
+    });
+
+    it('主动刷新传输失败不阻塞原请求、不派发登出', async () => {
+      const onFailed = vi.fn();
+      window.addEventListener('auth-failed', onFailed);
+      client.setApiBaseUrl(BASE);
+      client.setKnownAccessExpiry(new Date(Date.now() + 60_000).toISOString());
+      const fetchMock = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('fetch failed'))
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 0, data: { ok: true } }) });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const res = await client.checkAuthStatus();
+      expect(res.code).toBe(0);
+      expect(onFailed).not.toHaveBeenCalled();
+      window.removeEventListener('auth-failed', onFailed);
+    });
+  });
+
   it('刷新失败时派发 auth-failed 事件', async () => {
     const onFailed = vi.fn();
     window.addEventListener('auth-failed', onFailed);

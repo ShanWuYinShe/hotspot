@@ -10,6 +10,7 @@ import {
   bootstrap as apiBootstrap,
   checkAuthStatus, getAccount, guest as apiGuest, login as apiLogin,
   logout as apiLogout, register as apiRegister, setAuthenticated,
+  setKnownAccessExpiry,
   type ApiResponse,
 } from '@/api';
 
@@ -104,8 +105,10 @@ export function initAuth(): () => void {
     if (data) {
       // 冷启动未读校准：bootstrap 已携带服务端现算的 unread_summary，零额外请求
       applyBootstrapUnread(boot && boot.code === 0 ? boot.data?.unread_summary : null);
+      setKnownAccessExpiry(data.expires_at);
       await refreshUser();
     } else {
+      setKnownAccessExpiry(null);
       status = 'anonymous';
       user = null;
       setAuthenticated(false);
@@ -115,6 +118,7 @@ export function initAuth(): () => void {
   // Listen for auth-failed / auth-banned events dispatched by the API client.
   const onFailed = () => {
     transportFailed = false;
+    setKnownAccessExpiry(null);
     status = 'anonymous';
     user = null;
     bannedMessage = null;
@@ -124,6 +128,7 @@ export function initAuth(): () => void {
   };
   const onBanned = (e: Event) => {
     transportFailed = false;
+    setKnownAccessExpiry(null);
     const detail = (e as CustomEvent<AuthEvent>).detail;
     status = 'anonymous';
     user = null;
@@ -162,6 +167,7 @@ export async function recheckAuth(): Promise<void> {
   }
   if (res && res.code === 0 && res.data) {
     transportFailed = false;
+    setKnownAccessExpiry(res.data.expires_at);
     await refreshUser();
   } else if (res) {
     // 服务端明确答复非成功：不是传输问题，清除自愈标记。
@@ -212,6 +218,9 @@ function replayPending(): void {
 async function onAuthSuccess(): Promise<void> {
   bannedMessage = null;
   await refreshUser();
+  // 登录后习得 access 过期时间，驱动后续请求的主动续期（失败静默，被动链兜底）。
+  const st = await checkAuthStatus().catch(() => null);
+  if (st && st.code === 0 && st.data) setKnownAccessExpiry(st.data.expires_at);
   // 登录/注册/访客成功后重新 bootstrap：拉取该账号的 unread_summary 校准全局
   // 未读徽标（与冷启动同一来源；失败静默——后续由 WS 增量与页面回写收敛）。
   const boot = await apiBootstrap().catch(() => null);
@@ -246,6 +255,7 @@ export async function logout(): Promise<void> {
   await apiLogout().catch(() => {});
   // Web: cookies are cleared server-side; we only reset client state.
   // Per the anonymous-browsing strategy, stay on the current route.
+  setKnownAccessExpiry(null);
   status = 'anonymous';
   user = null;
   bannedMessage = null;

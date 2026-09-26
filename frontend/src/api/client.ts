@@ -220,6 +220,40 @@ function emitAuthEvent(type: 'auth-failed' | 'auth-banned', message?: string) {
   window.dispatchEvent(new CustomEvent(type, { detail: { type, message } }));
 }
 
+/** 已知的 access 过期时间（ms epoch；由 checkAuthStatus 习得，供主动续期用）。 */
+let knownAccessExpiresAt: number | null = null;
+
+/** 由 auth store 在会话检查成功/登出时同步（成功带服务端下发的 expires_at）。 */
+export function setKnownAccessExpiry(iso: string | null | undefined): void {
+  if (!iso) {
+    knownAccessExpiresAt = null;
+    return;
+  }
+  const t = Date.parse(iso);
+  knownAccessExpiresAt = Number.isFinite(t) ? t : null;
+}
+
+/** 提前续期阈值（对齐鸿蒙 3 分钟）：临期请求先静默续期，避免 10100 往返撞上服务端不可用窗口。 */
+const PROACTIVE_REFRESH_THRESHOLD_MS = 3 * 60 * 1000;
+
+/**
+ * 主动续期：access 临期时先静默刷新，成功后重学过期时间。
+ * 失败一律忽略（invalid → 后续请求走 10100 正常锁存；transport → 同理不锁存），
+ * 绝不代替调用方做登录态判决。
+ */
+async function proactiveRefreshIfNeeded(): Promise<void> {
+  if (knownAccessExpiresAt == null) return;
+  if (knownAccessExpiresAt - Date.now() >= PROACTIVE_REFRESH_THRESHOLD_MS) return;
+  const outcome = await refreshSessionToken();
+  if (outcome !== 'ok') return;
+  try {
+    const st = await request<SessionStatus>(Endpoints.Auth.Session, {}, {}, 0, newRequestId(), { skipProactive: true });
+    if (st.code === 0 && st.data) setKnownAccessExpiry(st.data.expires_at);
+  } catch {
+    // 重学失败忽略：被动续期链兜底。
+  }
+}
+
 /** 默认请求超时：挂起请求不再让页面 spinner 永久停留（上传走 XHR 独立通道不受此限）。 */
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 
@@ -228,6 +262,8 @@ interface RequestOptions {
 	signal?: AbortSignal;
 	/** 覆盖默认超时（ms）。 */
 	timeoutMs?: number;
+	/** 跳过主动续期（内部续期后的重学请求防重入）。 */
+	skipProactive?: boolean;
 }
 
 async function request<T>(
@@ -239,6 +275,8 @@ async function request<T>(
   opts?: RequestOptions,
 ): Promise<ApiResponse<T>> {
   const url = `${baseUrl}${endpoint}`;
+  // 主动续期（临期静默刷新；跳过标记用于内部重学防重入）。
+  if (!opts?.skipProactive) await proactiveRefreshIfNeeded();
   // 超时与外部 signal 合流到内部 controller（不经 AbortSignal.any，兼容测试环境）
   const controller = new AbortController();
   const timer = setTimeout(

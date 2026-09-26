@@ -11,6 +11,7 @@ vi.mock('@/api', () => ({
   register: vi.fn(),
   logout: vi.fn(),
   setAuthenticated: vi.fn(),
+  setKnownAccessExpiry: vi.fn(),
   // auth store 经 unread/ws 链传递引用此导出（WS 4001 刷新通道）
   refreshSessionToken: vi.fn(async () => true),
 }));
@@ -130,6 +131,14 @@ it('真正失效的匿名态不因 online 事件打扰', async () => {
   await new Promise((r) => setTimeout(r, 10));
   expect(vi.mocked(api.checkAuthStatus).mock.calls.length).toBe(calls);
   expect(auth.status).toBe('anonymous');
+});
+
+it('登录成功后同步 access 过期时间供主动续期', async () => {
+  const { login } = await import('./auth.svelte');
+  vi.mocked(api.login).mockResolvedValue({ code: 0, data: { client_type: 'web' } });
+  vi.mocked(api.checkAuthStatus).mockResolvedValue({ code: 0, data: { user_id: 'u1', expires_at: '2099-01-01T00:00:00Z' } });
+  await login({ login_id: 'u1', password: 'x' });
+  expect(vi.mocked(api.setKnownAccessExpiry).mock.calls.flat()).toContain('2099-01-01T00:00:00Z');
 });
 
 it('auth-failed 事件降级为 anonymous', async () => {
