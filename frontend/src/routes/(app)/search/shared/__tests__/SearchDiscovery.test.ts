@@ -1,5 +1,6 @@
 // SearchDiscovery 契约测试：发现态渲染与选择/清除回调。
-// 热门/话题区块已移除（无服务端数据源，见组件注释），发现态只保留最近搜索。
+// 热门话题（moments/search 热门模式 tags 聚合）点击走 onChooseTopic（tag 语义搜索），
+// 最近搜索点击走 onChoose（关键词搜索），两条入口分流。
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import SearchDiscovery from '../SearchDiscovery.svelte';
@@ -7,7 +8,7 @@ import SearchDiscovery from '../SearchDiscovery.svelte';
 describe('SearchDiscovery', () => {
 	it('渲染最近搜索区域', () => {
 		render(SearchDiscovery, {
-			props: { recent: ['回龙窝'], onChoose: () => {}, onClear: () => {} }
+			props: { recent: ['回龙窝'], onChoose: () => {}, onChooseTopic: () => {}, onClear: () => {} }
 		});
 		expect(screen.getByText('最近搜索')).toBeTruthy();
 		expect(screen.getByText('回龙窝')).toBeTruthy();
@@ -15,7 +16,7 @@ describe('SearchDiscovery', () => {
 
 	it('空最近搜索显示提示文案', () => {
 		render(SearchDiscovery, {
-			props: { recent: [], onChoose: () => {}, onClear: () => {} }
+			props: { recent: [], onChoose: () => {}, onChooseTopic: () => {}, onClear: () => {} }
 		});
 		expect(screen.getByText('暂无搜索记录，输入关键词开始探索。')).toBeTruthy();
 	});
@@ -24,11 +25,21 @@ describe('SearchDiscovery', () => {
 		const onChoose = vi.fn();
 		const onClear = vi.fn();
 		render(SearchDiscovery, {
-			props: { recent: ['回龙窝'], onChoose, onClear }
+			props: { recent: ['回龙窝'], onChoose, onChooseTopic: () => {}, onClear }
 		});
 		await fireEvent.click(screen.getByRole('button', { name: '重新搜索 回龙窝' }));
 		expect(onChoose).toHaveBeenCalledWith('回龙窝');
 		await fireEvent.click(screen.getByRole('button', { name: '清除' }));
 		expect(onClear).toHaveBeenCalledTimes(1);
+	});
+
+	it('渲染热门话题并触发 onChooseTopic（tag 语义搜索分流）', async () => {
+		const onChooseTopic = vi.fn();
+		render(SearchDiscovery, {
+			props: { recent: [], hotTopics: ['松弛'], onChoose: () => {}, onChooseTopic, onClear: () => {} }
+		});
+		expect(screen.getByText('热门话题')).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: '#松弛' }));
+		expect(onChooseTopic).toHaveBeenCalledWith('松弛');
 	});
 });

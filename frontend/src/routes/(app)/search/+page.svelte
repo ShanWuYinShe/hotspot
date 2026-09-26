@@ -24,6 +24,8 @@
 	}
 
 	let query = $state('');
+	/** 非空 = tag 语义搜索（moments/search tag 参数）；输入/最近搜索路径复位为 null */
+	let searchTag = $state<string | null>(null);
 	let tab = $state<TabType>('all');
 	let searchSeq = 0;
 	let recent = $state<string[]>(readRecent());
@@ -98,7 +100,7 @@
 		try {
 			const [usersRes, momentsRes, groupsRes] = await Promise.all([
 				searchUsers({ keyword: term }).catch(() => netError({ items: [] })),
-				searchMoments({ keyword: term }).catch(() => netError({ items: [] })),
+				searchMoments(searchTag ? { tag: searchTag } : { keyword: term }).catch(() => netError({ items: [] })),
 				searchGroups({ keyword: term }).catch(() => netError({ items: [] }))
 			]);
 			const rawUsers = usersRes.code === 0 ? usersRes.data?.items : undefined;
@@ -157,6 +159,18 @@
 		recent = [value, ...recent.filter((r) => r !== value)].slice(0, 5);
 	};
 	const choose = (value: string) => {
+		searchTag = null;
+		query = value;
+		remember(value);
+		tab = 'all';
+	};
+
+	// 热门话题点击：按 tag 语义搜索（moments/search 的 tag 参数精确匹配
+	// moment_tags），而非把 tag 名当 description 关键词——只存在于标签上的
+	// 话题（正文不含该词）用关键词搜必然 0 结果。手动输入/最近搜索仍走
+	// 关键词路径（searchTag 在输入 onChange 与 choose 中复位）。
+	const chooseTopic = (value: string) => {
+		searchTag = value;
 		query = value;
 		remember(value);
 		tab = 'all';
@@ -187,7 +201,7 @@
 				<div class="mt-3 mb-2.5">
 					<SearchInput
 						value={query}
-						onChange={(v) => (query = v)}
+						onChange={(v) => { searchTag = null; query = v; }}
 						placeholder="搜索用户、动态、地点或话题"
 						autofocus
 						onEnter={(v) => v.trim() && remember(v.trim())}
@@ -202,7 +216,7 @@
 		<LoadError message={searchError} onRetry={() => void doSearch(keyword)} />
 	{:else if !keyword}
 		<!-- 无查询发现态：最近搜索 + 热门话题（无数据时 SearchDiscovery 内部不渲染该区块） -->
-		<SearchDiscovery recent={recent} hotTopics={hotTopics} onChoose={choose} onClear={() => (recent = [])} />
+		<SearchDiscovery recent={recent} hotTopics={hotTopics} onChoose={choose} onChooseTopic={chooseTopic} onClear={() => (recent = [])} />
 	{:else}
 		<!-- 有查询结果态（对齐 Figma）；输入联想（相关话题）作为顶部快速入口 -->
 		<SearchResults

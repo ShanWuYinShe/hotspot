@@ -13,12 +13,15 @@
 		recent,
 		hotTopics = [],
 		onChoose,
+		onChooseTopic,
 		onClear
 	}: {
 		recent: string[];
 		/** 热门话题（为空时不渲染区块） */
 		hotTopics?: string[];
 		onChoose: (value: string) => void;
+		/** 热门话题点击：按 tag 语义搜索（moments/search tag 参数），与关键词搜索分流 */
+		onChooseTopic: (value: string) => void;
 		onClear: () => void;
 	} = $props();
 </script>
@@ -68,7 +71,7 @@
 			</div>
 			<div class="mt-3 flex flex-wrap gap-2">
 				{#each hotTopics as topic (topic)}
-					<TagPill onClick={() => onChoose(topic)}>#{topic}</TagPill>
+					<TagPill onClick={() => onChooseTopic(topic)}>#{topic}</TagPill>
 				{/each}
 			</div>
 		</section>
