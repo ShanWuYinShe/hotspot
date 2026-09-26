@@ -150,6 +150,12 @@ func waitForBackendWithPost(url string, timeout time.Duration) error {
 }
 
 func req(method, path string, body, result any) (int, error) {
+	return reqWithHost("", method, path, body, result)
+}
+
+// reqWithHost 支持覆写 Host 头（media presign 直传 URL 按请求 Host 签名——
+// 集成环境用它对齐 /s3/ 网关域，保证 PUT 验签通过）。host 为空=默认 backendAddr。
+func reqWithHost(host, method, path string, body, result any) (int, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)
@@ -165,6 +171,9 @@ func req(method, path string, body, result any) (int, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Request-Id", "test-"+fmt.Sprint(time.Now().UnixNano()))
 	req.Header.Set("Idempotency-Key", fmt.Sprintf("%032x%032x", time.Now().UnixNano(), atomic.AddInt64(&idempKeySeq, 1)))
+	if host != "" {
+		req.Host = host
+	}
 	if accessToken != "" {
 		req.Header.Set("Authorization", "Bearer "+accessToken)
 	}
@@ -252,6 +261,22 @@ func responseMessageOf(result any) string {
 func apiRespOK(t *testing.T, path string, body, result any) {
 	requireBackend(t)
 	status, err := post(path, body, result)
+	if err != nil {
+		t.Fatalf("POST %s: %v", path, err)
+	}
+	if status != http.StatusOK {
+		t.Fatalf("POST %s: got status %d, want 200", path, status)
+	}
+	if code, ok := responseCodeOf(result); ok && code != 0 {
+		t.Fatalf("POST %s: code=%d message=%s", path, code, responseMessageOf(result))
+	}
+}
+
+// apiRespOKWithHost 以指定 Host 头发起 POST（media presign 直传 URL 按请求
+// Host 签名——集成环境用它对齐 /s3/ 网关域，保证 PUT 验签通过）。其余同 apiRespOK。
+func apiRespOKWithHost(t *testing.T, host, path string, body, result any) {
+	requireBackend(t)
+	status, err := reqWithHost(host, "POST", path, body, result)
 	if err != nil {
 		t.Fatalf("POST %s: %v", path, err)
 	}
@@ -1418,7 +1443,7 @@ func TestMedia_E2E_PresignUploadComplete(t *testing.T) {
 	defer func() { accessToken = oldToken }()
 
 	var presignResp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/media/presign_upload", map[string]any{
+	apiRespOKWithHost(t, "127.0.0.1:8888", "/api/v1/media/presign_upload", map[string]any{
 		"files": []map[string]any{
 			{"file_name": "photo.png", "file_size": 66, "mime_type": "image/png", "category": "avatar"},
 		},
@@ -1429,6 +1454,11 @@ func TestMedia_E2E_PresignUploadComplete(t *testing.T) {
 	uploadURL, _ := presignUpload["upload_url"].(string)
 	if uploadID == "" || uploadURL == "" {
 		t.Fatalf("presign returned empty upload_id or upload_url: %+v", presignResp)
+	}
+	// 直传 URL 的 origin 跟随 presign 请求的 Host（nginx /s3/ 以 $http_host 转发，
+	// SigV4 验签依赖该一致性）；集成环境以网关 host 发起 presign，PUT 即同 URL。
+	if !strings.HasPrefix(uploadURL, "http://127.0.0.1:8888/s3/") {
+		t.Fatalf("upload_url should follow presign request host, got %s", uploadURL)
 	}
 
 	pngBytes := []byte{
@@ -1490,7 +1520,7 @@ func TestMedia_E2E_BatchPresignUploadComplete(t *testing.T) {
 	defer func() { accessToken = oldToken }()
 
 	var batchResp ApiResponse[map[string]any]
-	apiRespOK(t, "/api/v1/media/presign_upload", map[string]any{
+	apiRespOKWithHost(t, "127.0.0.1:8888", "/api/v1/media/presign_upload", map[string]any{
 		"files": []map[string]any{
 			{"file_name": "a.png", "file_size": 66, "mime_type": "image/png", "category": "avatar"},
 		},
@@ -1514,6 +1544,10 @@ func TestMedia_E2E_BatchPresignUploadComplete(t *testing.T) {
 	uploadURL, _ := upload["upload_url"].(string)
 	if uploadID == "" || uploadURL == "" {
 		t.Fatal("batch upload missing upload_id or upload_url")
+	}
+	// 直传 URL 的 origin 跟随 presign 请求的 Host（同单文件 E2E 断言）。
+	if !strings.HasPrefix(uploadURL, "http://127.0.0.1:8888/s3/") {
+		t.Fatalf("upload_url should follow presign request host, got %s", uploadURL)
 	}
 
 	pngBytes := []byte{
