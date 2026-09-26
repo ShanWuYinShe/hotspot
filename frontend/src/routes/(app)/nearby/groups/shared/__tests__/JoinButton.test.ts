@@ -31,4 +31,24 @@ describe('JoinButton', () => {
 		await fireEvent.click(screen.getByRole('button'));
 		expect(onToggle).toHaveBeenCalledTimes(1);
 	});
+
+	// 需审核群申请 pending 时不得冒充「已加入」（对齐群详情页三态语义）。
+	it('待审时渲染「审核中 · 点击取消」与描边类，不显示已加入', () => {
+		const { container } = render(JoinButton, {
+			props: { group: { joined: false } as never, pendingApproval: true, onToggle: () => {} }
+		});
+		expect(screen.getByRole('button', { name: /审核中 · 点击取消/ })).toBeTruthy();
+		expect(screen.queryByRole('button', { name: /已加入/ })).toBeNull();
+		expect((container.querySelector('button') as HTMLElement).className).toContain('border-border-strong');
+		expect((container.querySelector('button') as HTMLElement).getAttribute('aria-pressed')).toBe('false');
+	});
+
+	it('待审时点击仍触发 onToggle（由页面分流为取消申请）', async () => {
+		const onToggle = vi.fn();
+		render(JoinButton, {
+			props: { group: { joined: false } as never, pendingApproval: true, onToggle }
+		});
+		await fireEvent.click(screen.getByRole('button'));
+		expect(onToggle).toHaveBeenCalledTimes(1);
+	});
 });

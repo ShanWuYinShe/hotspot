@@ -13,6 +13,7 @@
 	let {
 		group,
 		pending = false,
+		pendingApproval = false,
 		onToggle,
 		onOpen,
 		featured = false
@@ -20,6 +21,8 @@
 		group: Group;
 		/** 加入/退出请求进行中（JoinButton 禁点防重复提交） */
 		pending?: boolean;
+		/** 入群申请待审（JoinButton 显示「审核中 · 点击取消」，点击=取消申请） */
+		pendingApproval?: boolean;
 		onToggle: () => void;
 		onOpen: () => void;
 		featured?: boolean;
@@ -83,7 +86,7 @@
 							</p>
 						{/if}
 					</div>
-					<JoinButton {group} {pending} {onToggle} />
+					<JoinButton {group} {pending} {pendingApproval} {onToggle} />
 				</div>
 			</div>
 		{:else}
@@ -121,7 +124,7 @@
 					{:else}
 						<span></span>
 					{/if}
-					<JoinButton {group} {pending} {onToggle} />
+					<JoinButton {group} {pending} {pendingApproval} {onToggle} />
 				</div>
 			</div>
 		{/if}

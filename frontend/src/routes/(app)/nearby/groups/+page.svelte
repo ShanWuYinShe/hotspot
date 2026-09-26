@@ -17,7 +17,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import GroupCard from './shared/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
-	import { searchGroups, joinGroup, leaveGroup , netError } from '@/api';
+	import { searchGroups, joinGroup, leaveGroup, cancelGroupApplication, listMyApplications, netError } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { smartBack } from '@/lib/smart-back';
@@ -72,6 +72,16 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					return;
 				}
 				groups = (res.code === 0 && res.data ? res.data.items : []).map(mapGroup);
+				// 待审态回填：viewer_state 仅成员非 null，申请 pending 时列表看不出——
+				// 自查申请列表，让「审核中 · 点击取消」在刷新/外跳返回后依然诚实。
+				void listMyApplications().then((mine) => {
+					if (cancelled || mine.code !== 0) return;
+					const approvals = new Map<string, string>();
+					for (const a of mine.data?.items ?? []) {
+						if (a.status === 'pending') approvals.set(a.group?.group_id ?? '', a.application_id);
+					}
+					pendingApprovals = approvals;
+				});
 			} finally {
 				if (!cancelled) loading = false;
 			}
@@ -95,9 +105,13 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	const totalOnline = $derived(filtered.reduce((sum, group) => sum + group.online, 0));
 
 	// 加入/退出：乐观更新 + 失败回滚（spec: groups/enter、groups/exit）。
-	// join 对需审核群组返回 pending_approval——UI 仍标记 joined 简化（真实后端
-	// 以 is_joined 为准，审核通过前列表不会把它标为已加入）。
+	// join 对需审核群组返回 pending_approval：不再冒充「已加入」（3cbb2bec 同类），
+	// 改入待审态——按钮「审核中 · 点击取消」，点击取消申请，可重新申请。
+	// viewer_state 仅成员非 null，申请 pending 时列表看不出，故用
+	// listMyApplications 回填（刷新/外跳返回后仍诚实）。
 	let joinPending = $state(new Set<string>());
+	/** 待审申请表：group_id → application_id */
+	let pendingApprovals = $state(new Map<string, string>());
 	// 退群确认（对齐群详情页的危险操作确认范式）：误触即退群不可接受，
 	// 加入仍即时生效（低风险、可随时退）。
 	let leaveTarget = $state<Group | null>(null);
@@ -105,15 +119,25 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	const applyJoin = (id: string, next: boolean) => {
 		joinPending = new Set(joinPending).add(id);
 		groups = groups.map((g) => (g.id === id ? { ...g, joined: next } : g));
-		const done = (res: { code: number }) => {
+		const done = (res: { code: number; message?: string; data?: unknown }) => {
 			const rest = new Set(joinPending);
 			rest.delete(id);
 			joinPending = rest;
 			if (res.code !== 0) {
 				groups = groups.map((g) => (g.id === id ? { ...g, joined: !next } : g));
-				showToast(next ? '加入失败，请重试' : '退出失败，请重试', 'danger');
+				showToast(res.message || (next ? '加入失败，请重试' : '退出失败，请重试'), 'danger');
+			} else if (next) {
+				const joinData = res.data as { status?: string; application_id?: string | null } | null | undefined;
+				if (joinData?.status === 'pending_approval') {
+					// 待审：纠正乐观的 joined，记录申请 id 供取消（对齐群详情页三态）。
+					groups = groups.map((g) => (g.id === id ? { ...g, joined: false } : g));
+					pendingApprovals = new Map(pendingApprovals).set(id, joinData.application_id ?? '');
+					showToast('申请已提交，待群主审核', 'success');
+				} else {
+					showToast('已加入群组', 'success');
+				}
 			} else {
-				showToast(next ? '已加入群组' : '已退出群组', 'success');
+				showToast('已退出群组', 'success');
 			}
 		};
 		if (next) {
@@ -123,9 +147,32 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		}
 	};
 
+	// 取消入群申请（待审态）：成功后回到未加入态，可重新申请（对齐群详情页）。
+	const cancelApplication = async (id: string) => {
+		const appId = pendingApprovals.get(id);
+		if (!appId) return;
+		joinPending = new Set(joinPending).add(id);
+		const res = await cancelGroupApplication({ group_id: id, application_id: appId }).catch(() => netError(undefined));
+		const rest = new Set(joinPending);
+		rest.delete(id);
+		joinPending = rest;
+		if (res.code === 0) {
+			const nextApprovals = new Map(pendingApprovals);
+			nextApprovals.delete(id);
+			pendingApprovals = nextApprovals;
+			showToast('已取消申请', 'success');
+		} else {
+			showToast(res.message || '取消失败，请重试', 'danger');
+		}
+	};
+
 	const toggleJoin = (id: string) => {
 		const group = groups.find((g) => g.id === id);
 		if (!group || joinPending.has(id)) return;
+		if (pendingApprovals.has(id)) {
+			void cancelApplication(id);
+			return;
+		}
 		if (group.joined) {
 			leaveTarget = group;
 			return;
@@ -181,7 +228,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				<!-- 精选卡用 GroupCard featured（对齐 Figma），其余用普通网格卡；保留 BSP 布局（决策） -->
 				{#if featured}
 					<div class="mb-5">
-						<GroupCard featured group={featured} pending={joinPending.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+						<GroupCard featured group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
 				<BspCardCanvas
@@ -197,18 +244,18 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
 				>
 					{#snippet renderItem(group: Group, index: number)}
-						<GroupCard group={group} pending={joinPending.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
+						<GroupCard group={group} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 					{/snippet}
 				</BspCardCanvas>
 			{:else}
 				{#if featured}
 					<div class="mb-5">
-						<GroupCard featured group={featured} pending={joinPending.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+						<GroupCard featured group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
 				<div class="grid grid-cols-2 gap-4">
 					{#each rest as group (group.id)}
-						<GroupCard group={group} pending={joinPending.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
+						<GroupCard group={group} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 					{/each}
 				</div>
 			{/if}
