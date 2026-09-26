@@ -26,6 +26,8 @@
 		liked: boolean;
 		/** 软删除占位（comments/delete：content 清空，展示「该评论已删除」） */
 		isDeleted: boolean;
+		/** 一级回复（spec: 两级评论模型；fetch 顶层列表的 top_replies 预览） */
+		replies: MomentComment[];
 	}
 
 	export interface MomentData {
@@ -77,8 +79,8 @@
 		onShare: () => void;
 		/** 操作条评论计数点击：滚动到评论区并聚焦输入栏 */
 		onCommentClick: () => void;
-		/** 评论区"回复"点击：聚焦输入栏并 @ 对方 */
-		onReply: (user: string) => void;
+		/** 评论区"回复"点击：携带目标评论 ID，页面聚焦输入栏并 @ 对方（提交带 parent_id） */
+		onReply: (user: string, commentId: string) => void;
 		/** 评论点赞切换（reactions/set target_type='comment'） */
 		onToggleCommentLike: (commentId: string) => void;
 		/** 评论举报（reports/create target_type='comment'） */
@@ -286,7 +288,7 @@
 						<button
 							type="button"
 							class="hover-action hit-slop focus-ring text-text-secondary text-xs"
-							onclick={() => onReply(c.user)}
+							onclick={() => onReply(c.user, c.id)}
 						>回复</button>
 						{#if c.userId && c.userId === auth.user?.user_id}
 							<!-- 本人评论可删除（spec: api_spec_comment.md comments/delete，仅作者） -->
@@ -306,6 +308,49 @@
 							>举报</button>
 						{/if}
 					</div>
+					{/if}
+					{#if c.replies.length > 0}
+						<div class="mt-3 flex flex-col gap-3 border-l-2 border-border-default pl-3">
+							{#each c.replies as r (r.id)}
+								<div class="flex gap-2.5">
+									<button
+										type="button"
+										class="hover-btn shrink-0 rounded-full focus-ring"
+										aria-label={`查看${r.user}的个人主页`}
+										onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
+									>
+										<Avatar src={r.avatar} name={r.user} size="sm" />
+									</button>
+									<div class="flex-1">
+										<div class="flex items-baseline gap-2">
+											<button
+												type="button"
+												class="link-btn text-text-primary text-sm focus-ring rounded-sm"
+												onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
+											>{r.user}</button>
+											{#if !r.isDeleted}
+											<span class="text-text-secondary text-xs">回复 @{c.user}</span>
+											{/if}
+											<span class="text-text-secondary text-xs">{r.time}</span>
+										</div>
+										{#if r.isDeleted}
+											<p class="text-text-secondary text-sm mt-0.5 leading-relaxed italic">该评论已删除</p>
+										{:else}
+											<p class="text-text-secondary text-sm mt-0.5 leading-relaxed">{r.text}</p>
+										{/if}
+										{#if !r.isDeleted}
+											<div class="flex items-center gap-3 mt-1">
+												<button
+													type="button"
+													class="hover-action hit-slop focus-ring text-text-secondary text-xs"
+													onclick={() => onReply(r.user, c.id)}
+												>回复</button>
+											</div>
+										{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
 					{/if}
 				</div>
 			</div>

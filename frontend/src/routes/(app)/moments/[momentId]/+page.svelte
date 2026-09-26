@@ -17,6 +17,23 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
 	import MomentPostBody from './MomentPostBody.svelte';
+	import type { CommentItem } from '@/api/types';
+
+	/** CommentItem → MomentComment（含 top_replies 一级回复映射；列表映射共用） */
+	function toMomentComment(c: CommentItem): MomentComment {
+		return {
+			id: c.comment_id,
+			userId: c.user?.user_id ?? '',
+			user: c.user?.nickname ?? '',
+			avatar: c.user?.avatar_url ?? '',
+			text: c.content ?? '',
+			time: formatDateTime(c.created_at),
+			likes: (c.reactions || []).reduce((sum, rx) => sum + (rx.count ?? 0), 0),
+			liked: (c.reactions || []).some((rx) => rx.reacted_by_me),
+			isDeleted: c.is_deleted,
+			replies: (c.top_replies ?? []).map(toMomentComment)
+		};
+	}
 	import MomentDetailRail from './shared/MomentDetailRail.svelte';
 	import DeleteMomentDialog from './shared/DeleteMomentDialog.svelte';
 	import CommentInputBar from './shared/CommentInputBar.svelte';
@@ -190,18 +207,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				}
 
 				if (commentsData) {
-					const items: MomentComment[] = (commentsData.items || []).map((c) => ({
-						// 真实 comment_id（评论点赞 reactions/set target_id 用）
-						id: c.comment_id,
-						userId: c.user?.user_id ?? '',
-						user: c.user?.nickname ?? '',
-						avatar: c.user?.avatar_url ?? '',
-						text: c.content ?? '',
-						time: formatDateTime(c.created_at),
-						likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0),
-						liked: (c.reactions || []).some((r) => r.reacted_by_me),
-						isDeleted: c.is_deleted
-					}));
+					const items: MomentComment[] = (commentsData.items || []).map(toMomentComment);
 					apiComments = items;
 					commentsNextCursor = commentsData.next_cursor ?? null;
 				}
@@ -240,12 +246,59 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let commentPending = $state(false);
 	const commentLikePending = new Set<string>();
 
+	// 回复目标（顶层评论）：非空时提交携带 parent_id，输入区上方显示取消条。
+	let replyTarget = $state<{ commentId: string; userId: string; user: string } | null>(null);
+	const startReply = (user: string, commentId: string) => {
+		replyTarget = { commentId, userId: '', user };
+		input = '@' + user + ' ';
+		commentInputEl?.focus();
+	};
+	const cancelReply = () => {
+		replyTarget = null;
+		input = input.replace(/^@\S+\s*/, '');
+	};
+
 	const handleComment = async () => {
 		const text = input.trim();
 		if (!text || commentPending) return;
 		// 写操作先过登录闸：匿名提交只会失败回滚，用户侧无任何反馈
 		if (!requireAuth({ action: '评论', targetId: momentId, run: () => void handleComment() })) return;
+		const reply = replyTarget;
 		input = '';
+		if (reply) {
+			// 回复：携带 parent_id（spec 两级评论模型）+ mentions 通知被回复人；
+			// 成功后插入父级 replies（父级不在已加载集合时重拉第一页）。
+			commentPending = true;
+			try {
+				const res = await createComment({
+					moment_id: momentId,
+					content: text,
+					parent_id: reply.commentId,
+					mentions: reply.userId ? [reply.userId] : []
+				});
+				if (res.code !== 0 || !res.data) throw new Error(res.message || '回复发布失败');
+				showToast('回复已发布', 'success');
+				commentDelta += 1;
+				const parent = apiComments.find((c) => c.id === reply.commentId);
+				if (parent) {
+					apiComments = apiComments.map((c) =>
+						c.id === reply.commentId ? { ...c, replies: [...c.replies, toMomentComment(res.data)] } : c
+					);
+				} else {
+					const refreshed = await listComments(momentId, { limit: COMMENT_PAGE_SIZE }).catch(() => netError({ items: [], next_cursor: null }));
+					if (refreshed.code === 0 && refreshed.data) {
+						apiComments = refreshed.data.items.map(toMomentComment);
+						commentsNextCursor = refreshed.data.next_cursor ?? null;
+					}
+				}
+				replyTarget = null;
+			} catch (err) {
+				showToast(err instanceof Error && err.message ? err.message : '回复发布失败，请重试', 'danger');
+			} finally {
+				commentPending = false;
+			}
+			return;
+		}
 		// Optimistic append; createComment confirms server-side.
 		const optimistic: MomentComment = {
 			id: `optimistic-${Date.now()}`,
@@ -256,7 +309,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			time: '刚刚',
 			likes: 0,
 			liked: false,
-			isDeleted: false
+			isDeleted: false,
+			replies: []
 		};
 		apiComments = [...apiComments, optimistic];
 		commentDelta += 1;
@@ -267,18 +321,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			if (res.code !== 0 || !res.data) throw new Error(res.message || '评论发布失败');
 			// 用服务端真实 CommentItem 回填乐观条目：后续点赞走
 			// reactions/set(target_id=comment_id)，乐观占位 id 必然失败。
-			const c = res.data;
-			const confirmed: MomentComment = {
-				id: c.comment_id,
-				userId: c.user?.user_id ?? optimistic.userId,
-				user: c.user?.nickname ?? optimistic.user,
-				avatar: c.user?.avatar_url ?? optimistic.avatar,
-				text: c.content ?? text,
-				time: formatDateTime(c.created_at),
-				likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0),
-				liked: (c.reactions || []).some((r) => r.reacted_by_me),
-				isDeleted: false
-			};
+			const confirmed = toMomentComment(res.data);
 			apiComments = apiComments.map((item) => (item.id === optimistic.id ? confirmed : item));
 		} catch (err) {
 			apiComments = apiComments.filter((c) => c.id !== optimistic.id);
@@ -296,17 +339,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		try {
 			const res = await listComments(momentId, { limit: COMMENT_PAGE_SIZE, cursor: commentsNextCursor }).catch(() => netError({ items: [], next_cursor: null }));
 			if (res.code === 0 && res.data) {
-				const items: MomentComment[] = (res.data.items || []).map((c) => ({
-					id: c.comment_id,
-					userId: c.user?.user_id ?? '',
-					user: c.user?.nickname ?? '',
-					avatar: c.user?.avatar_url ?? '',
-					text: c.content ?? '',
-					time: formatDateTime(c.created_at),
-					likes: (c.reactions || []).reduce((s, r) => s + (r.count ?? 0), 0),
-					liked: (c.reactions || []).some((r) => r.reacted_by_me),
-					isDeleted: c.is_deleted
-				}));
+				const items: MomentComment[] = (res.data.items || []).map(toMomentComment);
 				const known = new Set(apiComments.map((c) => c.id));
 				apiComments = [...apiComments, ...items.filter((c) => !known.has(c.id))];
 				commentsNextCursor = res.data.next_cursor ?? null;
@@ -515,7 +548,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			onToggleSave={() => void toggleSave()}
 			onShare={() => void copyMomentLink()}
 			onCommentClick={focusComments}
-			onReply={replyTo}
+			onReply={(user, commentId) => startReply(user, commentId)}
 			onToggleCommentLike={(id) => void toggleCommentLike(id)}
 			onReportComment={(id) => (reportTarget = { target_type: 'comment', target_id: id })}
 			onDeleteComment={(id) => (commentDeleteTarget = id)}
@@ -574,6 +607,16 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			</div>
 		{/if}
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
+		{#if replyTarget}
+			<div class="mx-6 mb-1 flex items-center justify-between rounded-md border border-border-default bg-surface-subtle px-3 py-1.5">
+				<p class="truncate text-xs text-text-secondary">回复 @{replyTarget.user}</p>
+				<button
+					type="button"
+					class="link-btn shrink-0 text-xs text-text-secondary"
+					onclick={cancelReply}
+				>取消回复</button>
+			</div>
+		{/if}
 		<CommentInputBar bind:input bind:inputEl={commentInputEl} onSend={() => void handleComment()} />
 	{/snippet}
 
