@@ -44,6 +44,9 @@ let user = $state<AuthUser | null>(null);
 let bannedMessage = $state<string | null>(null);
 /** True when requireAuth opened the login prompt. */
 let loginPromptOpen = $state(false);
+/** 上次会话检查是否因传输失败（而非真正失效）落到匿名：此类匿名态可在
+服务恢复后自愈（online/切回前台时静默重查），真正的失效不打扰用户。 */
+let transportFailed = false;
 let pendingAction = $state<PendingAction | null>(null);
 
 /** 重新拉取当前账号（users/account）并同步登录态。供升级等改变 user_type 的操作后刷新。 */
@@ -84,12 +87,16 @@ export function initAuth(): () => void {
     // 传输失败退避重试（部署滚动窗口内冷启动）：只在真正的会话失效时落
     // 匿名，避免后端短暂不可用造成“发版即掉登录”且永不恢复。
     let res: Awaited<ReturnType<typeof checkAuthStatus>> | null = null;
+    transportFailed = false;
     for (let attempt = 0; ; attempt++) {
       try {
         res = await checkAuthStatus();
         break;
       } catch {
-        if (attempt >= 2) break;
+        if (attempt >= 2) {
+          transportFailed = true;
+          break;
+        }
         await new Promise<void>((r) => setTimeout(r, attempt === 0 ? 2000 : 5000));
       }
     }
@@ -107,6 +114,7 @@ export function initAuth(): () => void {
 
   // Listen for auth-failed / auth-banned events dispatched by the API client.
   const onFailed = () => {
+    transportFailed = false;
     status = 'anonymous';
     user = null;
     bannedMessage = null;
@@ -115,6 +123,7 @@ export function initAuth(): () => void {
     setAuthenticated(false);
   };
   const onBanned = (e: Event) => {
+    transportFailed = false;
     const detail = (e as CustomEvent<AuthEvent>).detail;
     status = 'anonymous';
     user = null;
@@ -124,10 +133,40 @@ export function initAuth(): () => void {
   };
   window.addEventListener('auth-failed', onFailed as EventListener);
   window.addEventListener('auth-banned', onBanned as EventListener);
+  // 传输失败锁存的匿名态自愈：网络恢复/切回前台时静默重查一次，成功即
+  // 恢复登录态（WS 生命周期跟随 status 自动重连）。仅 transportFailed 时
+  // 触发，从未登录过的匿名用户与封禁用户不受打扰。
+  const maybeRecover = () => {
+    if (status === 'anonymous' && transportFailed && !bannedMessage) void recheckAuth();
+  };
+  window.addEventListener('online', maybeRecover);
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') maybeRecover();
+  };
+  document.addEventListener('visibilitychange', onVisible);
   return () => {
     window.removeEventListener('auth-failed', onFailed as EventListener);
     window.removeEventListener('auth-banned', onBanned as EventListener);
+    window.removeEventListener('online', maybeRecover);
+    document.removeEventListener('visibilitychange', onVisible);
   };
+}
+
+/** 静默重查会话（自愈入口）：成功恢复登录态；仍失败则保持匿名。 */
+export async function recheckAuth(): Promise<void> {
+  let res;
+  try {
+    res = await checkAuthStatus();
+  } catch {
+    return;
+  }
+  if (res && res.code === 0 && res.data) {
+    transportFailed = false;
+    await refreshUser();
+  } else if (res) {
+    // 服务端明确答复非成功：不是传输问题，清除自愈标记。
+    transportFailed = false;
+  }
 }
 
 /** Require auth before a write action; if anonymous, opens the login prompt. Returns true if allowed. */

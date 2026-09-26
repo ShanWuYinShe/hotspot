@@ -103,6 +103,35 @@ it('refreshUser 传输失败时保持现有登录态', async () => {
   expect(auth.user?.user_id).toBe('u1');
 });
 
+it('传输失败锁存后服务恢复可自愈', async () => {
+  vi.useFakeTimers();
+  try {
+    const { initAuth, recheckAuth, auth } = await import('./auth.svelte');
+    vi.mocked(api.checkAuthStatus).mockRejectedValue(new Error('fetch failed'));
+    void initAuth();
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(auth.status).toBe('anonymous');
+    vi.mocked(api.checkAuthStatus).mockResolvedValue({ code: 0, data: { user_id: 'u1', expires_at: '2099-01-01T00:00:00Z' } });
+    await recheckAuth();
+    expect(auth.status).toBe('authenticated');
+    expect(auth.user?.user_id).toBe('u1');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('真正失效的匿名态不因 online 事件打扰', async () => {
+  const { initAuth, auth } = await import('./auth.svelte');
+  void initAuth();
+  await new Promise((r) => setTimeout(r, 10));
+  expect(auth.status).toBe('anonymous');
+  const calls = vi.mocked(api.checkAuthStatus).mock.calls.length;
+  window.dispatchEvent(new Event('online'));
+  await new Promise((r) => setTimeout(r, 10));
+  expect(vi.mocked(api.checkAuthStatus).mock.calls.length).toBe(calls);
+  expect(auth.status).toBe('anonymous');
+});
+
 it('auth-failed 事件降级为 anonymous', async () => {
   const { initAuth, auth } = await import('./auth.svelte');
   void initAuth();
