@@ -11,7 +11,7 @@
 // - SessionRevoked/AccountBanned → auth-failed/auth-banned CustomEvent（与 client.ts 一致）
 // - 通知类/私聊类事件 → ws:* CustomEvent 供 UI 消费
 
-import { refreshSessionToken } from '@/api';
+import { refreshSessionToken, type RefreshOutcome } from '@/api';
 
 import type {
   AuthPayload,
@@ -34,11 +34,12 @@ export interface WsClientOptions {
   /** 覆盖连接 URL（测试注入用）；默认基于 location.origin 推导 `${origin}/ws/v1` */
   url?: string;
   /**
-   * close 4001（Token 失效）时的刷新通道：返回 true = 刷新成功并重连一次；
-   * false/未提供 = 保持旧行为（发 auth-failed、等待上层登出）。
+   * close 4001（Token 失效）时的刷新通道（api 层 refreshSessionToken 三态）：
+   * ok = 刷新成功并重连一次；invalid/未提供 = 发 auth-failed、等待上层登出；
+   * transport-error = 后端不可达，不锁存登出，按退避重连（部署滚动窗口即此情形）。
    * spec close code 表：4001 应「刷新 token 或重新登录后重连」。
    */
-  refreshBeforeReconnect?: () => Promise<boolean>;
+  refreshBeforeReconnect?: () => Promise<RefreshOutcome>;
   /** 重连退避基数（ms），默认 1000 */
   baseBackoffMs?: number;
   /** 重连退避上限（ms），默认 30000 */
@@ -457,13 +458,17 @@ export class WsClient {
       return;
     }
     this.authReconnectAttempted = true;
-    void refresh().then((ok) => {
-      if (ok) {
+    void refresh().then((outcome) => {
+      if (outcome === 'ok') {
         this.reconnectAttempts = 0;
         this.authReconnectAttempted = false;
         this.scheduleReconnect();
-      } else {
+      } else if (outcome === 'invalid') {
         this.emitAuthEvent(WS_AUTH_FAILED_EVENT, '登录状态已失效，请重新登录');
+      } else {
+        // transport-error：复位后按退避重连，不锁存登出（后端恢复后自然续上）。
+        this.authReconnectAttempted = false;
+        this.scheduleReconnect();
       }
     });
   }

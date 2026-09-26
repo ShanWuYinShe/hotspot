@@ -290,7 +290,7 @@ describe('事件映射', () => {
   });
 
   it('4001 + 刷新成功 → 重连（spec close code 表：刷新后重连）', async () => {
-    const refresh = vi.fn(async () => true);
+    const refresh = vi.fn(async () => 'ok' as const);
     const client = new WsClient({ url: 'ws://test.local/ws/v1', refreshBeforeReconnect: refresh });
     client.connect();
     const first = FakeWebSocket.instances[0];
@@ -327,8 +327,26 @@ describe('事件映射', () => {
     window.removeEventListener('auth-failed', onFailed);
   });
 
+  it('4001 + 刷新传输失败 → 不锁存、按退避重连', async () => {
+    const onFailed = vi.fn();
+    window.addEventListener('auth-failed', onFailed);
+    const refresh = vi.fn(async () => 'transport-error' as const);
+    const client = new WsClient({ url: 'ws://test.local/ws/v1', refreshBeforeReconnect: refresh, baseBackoffMs: 10, maxBackoffMs: 20 });
+    client.connect();
+    FakeWebSocket.instances[0].open();
+    FakeWebSocket.instances[0].onclose!({ code: 4001 });
+    await vi.waitFor(
+      () => {
+        expect(FakeWebSocket.instances.length).toBeGreaterThanOrEqual(2);
+      },
+      { timeout: 4000 }
+    );
+    expect(onFailed).not.toHaveBeenCalled();
+    window.removeEventListener('auth-failed', onFailed);
+  });
+
   it('SessionRevoked 流程的 4001 不触发刷新（会话吊销刷新无意义）', () => {
-    const refresh = vi.fn(async () => true);
+    const refresh = vi.fn(async () => 'ok' as const);
     const client = new WsClient({ url: 'ws://test.local/ws/v1', refreshBeforeReconnect: refresh });
     client.connect();
     FakeWebSocket.instances[0].open();

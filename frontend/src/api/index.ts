@@ -49,5 +49,5 @@ export {
   adminListAnnouncements, adminCreateAnnouncement, adminUpdateAnnouncement, adminDeleteAnnouncement,
 } from '@/api/client';
 
-export type { ApiResponse, PaginatedData } from '@/api/client';
+export type { ApiResponse, PaginatedData, RefreshOutcome } from '@/api/client';
 export { netError } from '@/api/client';

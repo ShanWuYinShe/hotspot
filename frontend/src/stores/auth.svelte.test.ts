@@ -76,6 +76,33 @@ it('已认证时 requireAuth 直接放行', async () => {
   expect(run).toHaveBeenCalledTimes(1);
 });
 
+it('启动时传输失败退避重试，恢复后仍可登录', async () => {
+  vi.useFakeTimers();
+  try {
+    const { initAuth, auth } = await import('./auth.svelte');
+    vi.mocked(api.checkAuthStatus)
+      .mockRejectedValueOnce(new Error('fetch failed'))
+      .mockResolvedValueOnce({ code: 0, data: { user_id: 'u1', expires_at: '2099-01-01T00:00:00Z' } });
+    void initAuth();
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(auth.status).toBe('authenticated');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('refreshUser 传输失败时保持现有登录态', async () => {
+  const { initAuth, refreshUser, auth } = await import('./auth.svelte');
+  vi.mocked(api.checkAuthStatus).mockResolvedValue({ code: 0, data: { user_id: 'u1', expires_at: '2099-01-01T00:00:00Z' } });
+  void initAuth();
+  await new Promise((r) => setTimeout(r, 10));
+  expect(auth.status).toBe('authenticated');
+  vi.mocked(api.getAccount).mockRejectedValueOnce(new Error('fetch failed'));
+  await refreshUser();
+  expect(auth.status).toBe('authenticated');
+  expect(auth.user?.user_id).toBe('u1');
+});
+
 it('auth-failed 事件降级为 anonymous', async () => {
   const { initAuth, auth } = await import('./auth.svelte');
   void initAuth();

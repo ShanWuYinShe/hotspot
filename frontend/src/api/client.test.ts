@@ -82,6 +82,20 @@ describe('10100 刷新重试', () => {
     expect(urls.filter((u) => u.includes('refresh_token'))).toHaveLength(1);
   });
 
+  it('刷新传输失败（后端不可达）时不锁存、抛可重试错误', async () => {
+    const onFailed = vi.fn();
+    window.addEventListener('auth-failed', onFailed);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 10100 }) })
+      .mockRejectedValueOnce(new Error('fetch failed'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(client.checkAuthStatus()).rejects.toThrow('网络异常');
+    expect(onFailed).not.toHaveBeenCalled();
+    window.removeEventListener('auth-failed', onFailed);
+  });
+
   it('刷新失败时派发 auth-failed 事件', async () => {
     const onFailed = vi.fn();
     window.addEventListener('auth-failed', onFailed);

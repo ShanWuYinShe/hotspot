@@ -48,7 +48,14 @@ let pendingAction = $state<PendingAction | null>(null);
 
 /** 重新拉取当前账号（users/account）并同步登录态。供升级等改变 user_type 的操作后刷新。 */
 export async function refreshUser(): Promise<void> {
-  const res = await getAccount().catch(() => null);
+  let res;
+  try {
+    res = await getAccount();
+  } catch {
+    // 传输失败（后端短暂不可达）：保持现有登录态，由调用方 toast/重试，
+    // 不锁存匿名（此前 catch 即判匿名，部署滚动窗口内必掉线）。
+    return;
+  }
   if (res && res.code === 0 && res.data) {
     const d = res.data;
     user = {
@@ -74,7 +81,18 @@ export function initAuth(): () => void {
     // Web 端认证变更都从该 Cookie 读取设备标识，缺失即 10000 参数错误。
     // 失败不阻塞启动（匿名浏览公开端点不受影响）。
     const boot = await apiBootstrap().catch(() => null);
-    const res = await checkAuthStatus().catch(() => null);
+    // 传输失败退避重试（部署滚动窗口内冷启动）：只在真正的会话失效时落
+    // 匿名，避免后端短暂不可用造成“发版即掉登录”且永不恢复。
+    let res: Awaited<ReturnType<typeof checkAuthStatus>> | null = null;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        res = await checkAuthStatus();
+        break;
+      } catch {
+        if (attempt >= 2) break;
+        await new Promise<void>((r) => setTimeout(r, attempt === 0 ? 2000 : 5000));
+      }
+    }
     const data = res && res.code === 0 ? res.data : null;
     if (data) {
       // 冷启动未读校准：bootstrap 已携带服务端现算的 unread_summary，零额外请求

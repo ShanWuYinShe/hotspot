@@ -150,7 +150,7 @@ export interface ApiResponse<T> {
 }
 
 let baseUrl = '';
-let refreshLock: Promise<boolean> | null = null;
+let refreshLock: Promise<RefreshOutcome> | null = null;
 let authenticated = false;
 
 /** 供 auth store 在登录态变化时同步，驱动双版本端点选择（/public/v1 vs /api/v1）。 */
@@ -290,34 +290,53 @@ async function request<T>(
 
   // 10100: access token invalid/expired. Try a single deduped refresh + retry.
   if (json.code === 10100 && retryCount < 1) {
-    const ok = await refreshSessionToken();
-    if (ok) return request<T>(endpoint, body, extraHeaders, retryCount + 1, requestId, opts);
-    // Refresh failed: notify AuthContext so it can drop to anonymous and prompt.
-    emitAuthEvent('auth-failed');
+    const outcome = await refreshSessionToken();
+    if (outcome === 'ok') return request<T>(endpoint, body, extraHeaders, retryCount + 1, requestId, opts);
+    if (outcome === 'invalid') {
+      // Refresh failed: notify AuthContext so it can drop to anonymous and prompt.
+      emitAuthEvent('auth-failed');
+      return json;
+    }
+    // transport-error（后端滚动/网关抖动等不可达）：不得锁存登出——抛可重试
+    // 错误由调用方处理（toast/重试），登录态保持，待服务端恢复后自然续上。
+    throw new Error('网络异常，请稍后重试');
   }
 
   return json;
 }
 
 /**
+ * 刷新结果三态：ok（可重试原请求）/ invalid（会话确已失效，调用方锁存登出）/
+ * transport-error（服务端不可达等传输失败，调用方不得锁存登出、按可重试处理）。
+ * 背景：部署滚动窗口内续期恰好撞上后端不可用时有大量用户在线，以往不分青红
+ * 皂白统一锁存匿名，导致“每次发版都掉登录”且永不自动恢复。
+ */
+export type RefreshOutcome = 'ok' | 'invalid' | 'transport-error';
+
+/**
  * 主动刷新会话 token（单飞：并发调用共享同一次刷新）。
  * 消费方：HTTP 10100 重试（request 内）与 WS 4001 重连（ws client 注入）。
- * @returns 刷新是否成功。
  */
-export async function refreshSessionToken(): Promise<boolean> {
+export async function refreshSessionToken(): Promise<RefreshOutcome> {
   if (!refreshLock) {
-    refreshLock = (async () => {
+    refreshLock = (async (): Promise<RefreshOutcome> => {
+      let res: Response;
       try {
-        const r = await fetch(`${baseUrl}${Endpoints.Auth.RefreshToken}`, {
+        res = await fetch(`${baseUrl}${Endpoints.Auth.RefreshToken}`, {
           method: 'POST', credentials: 'include',
           headers: { 'Content-Type': 'application/json' }, body: '{}',
         });
-        if (r.ok) {
-          const j = await r.json();
-          if (j.code === 0) return true;
-        }
-      } catch {}
-      return false;
+      } catch {
+        return 'transport-error';
+      }
+      if (!res.ok) return 'transport-error';
+      let code: number;
+      try {
+        code = (await res.json()).code;
+      } catch {
+        return 'transport-error';
+      }
+      return code === 0 ? 'ok' : 'invalid';
     })().finally(() => { refreshLock = null; });
   }
   return refreshLock;
