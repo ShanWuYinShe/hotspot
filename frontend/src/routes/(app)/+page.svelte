@@ -134,10 +134,13 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	<!-- Hero 统计 + 附近活动 + 群组轮播：移动/桌面双布局共用，
 	     活动列表条数与「更多」入口经参数区分 -->
 	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={heroLocationName} />
-	<div>
-		<SectionHead title="附近活动" action={withMoreAction ? '更多' : undefined} onAction={() => void goto(ROUTES.nearbyMoments)} />
-		{@render momentRows(momentItems, (id) => void goto(ROUTES.moment(id)))}
-	</div>
+	<!-- 大纲页密度：无内容时整段隐藏（标题+空框），专区经导航/更多入口可达 -->
+	{#if momentItems.length > 0}
+		<div>
+			<SectionHead title="附近活动" action={withMoreAction ? '更多' : undefined} onAction={() => void goto(ROUTES.nearbyMoments)} />
+			{@render momentRows(momentItems, (id) => void goto(ROUTES.moment(id)))}
+		</div>
+	{/if}
 	<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
 {/snippet}
 
@@ -145,6 +148,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	<!-- 移动端成功态内容（loading/error/empty 三态由外层统一承载，只写一次）。
 	     首页为大纲页：列表限长 + 「更多」链接导航到专区 -->
 	{@render heroColumn(moments.slice(0, 3), true)}
+	{#if visibleNearbyUsers.length > 0}
 	<div>
 		<SectionHead title="人物推荐" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)} />
 		<!-- 对齐 Figma HomePage：人物推荐仅展示前 4 位，其余引导到附近的人专区 -->
@@ -156,6 +160,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 			emptyHint={nearbyFilterHint}
 		/>
 	</div>
+	{/if}
 {/snippet}
 
 	<StandardPageLayout

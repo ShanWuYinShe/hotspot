@@ -305,6 +305,6 @@
 - `FONT.SIZE.LG = 16`：HarmonyOS 标准正文尺寸，平台有意差异（跨端刻度脚本豁免项）。
 - 明暗切换：鸿蒙 `DarkModePreference` 三档（auto/light/dark），web 端可手动切换；
   主题族（vibrant/forest/inkwash）两端可选集一致。
-- 布局几何（width/height/gap 的 px）与 StatusBar 模拟 chrome 微圆角：非主题风格，不受 token 约束。
+- 布局几何（width/height/gap 的 px）：非主题风格，不受 token 约束。
 - 主题选择器 swatch：静态展示目标主题 accent，保留字面 hex（vibrant `#2E66C0` / forest `#3D7A55`），须与 themes 同步。
 - `figma_neu` 主题：鸿蒙存量兼容项，非双端对齐目标。

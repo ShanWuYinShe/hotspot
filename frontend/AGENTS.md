@@ -133,8 +133,8 @@ bun run --cwd frontend build   # adapter-static 产物输出到 build/
    rounded-*、tracking-*、opacity-*、duration-* 等），禁止内联硬编码风格值
    （如 `color:#xxx`、`opacity:0.45`、`border-radius:Npx`、`border:1px solid`、
    `transition:... 0.2s ...`）。改主题/节奏只需改 token 文件，全站一致生效。
-   登记例外：布局几何（width/height/position/gap 的 px）与 StatusBar 模拟系统
-   chrome 的微圆角属于非主题风格，不受此条约束。
+   登记例外：布局几何（width/height/position/gap 的 px）属于非主题风格，
+   不受此条约束。
 5. **跨端色彩与刻度对齐**：harmonyapp `ThemeConstants.ets` 的 ColorConfig 与本项目
    `themes/*.css` 的 `--cst-palette-*` 是同一套色板的两端表达，改色必须两侧
    同步。校验脚本、覆盖范围与同步流程的**唯一权威描述**见根 `docs/design-system.md`

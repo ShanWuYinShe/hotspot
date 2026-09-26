@@ -8,7 +8,7 @@
 	import { unread } from '@/stores/unread.svelte';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import StatusBar from '@/components/layout/StatusBar.svelte';
+	
 	import NavTab from '@/components/layout/mobile/NavTab.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
@@ -91,8 +91,6 @@
 	<div
 		class={cn('bg-surface-page text-text-primary flex flex-col h-dvh w-full', 'transition-colors duration-gentle overflow-hidden relative')}
 	>
-		<StatusBar />
-
 		{#if isEdgeSwiping && swipeDistance > 15}
 			<div
 				class="pointer-events-none fixed left-0 top-1/2 -translate-y-1/2 z-[var(--cst-z-toast)] flex items-center gap-1.5 rounded-r-full bg-surface-primary/95 px-2.5 py-3 shadow-raised-lg border-y border-r border-border-default transition-all duration-rapid"

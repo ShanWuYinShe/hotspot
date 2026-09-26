@@ -17,6 +17,11 @@ describe('GroupCarousel', () => {
 		expect(screen.getByAltText('云龙湖晨跑团')).toBeTruthy();
 	});
 
+	it('空列表时整段隐藏（标题+横滚均不渲染）', () => {
+		render(GroupCarousel, { props: { groups: [], onSeeAll: () => {} } });
+		expect(screen.queryByText('附近群组')).toBeNull();
+	});
+
 	it('点击「更多」触发 onSeeAll', async () => {
 		const onSeeAll = vi.fn();
 		render(GroupCarousel, { props: { groups, onSeeAll } });

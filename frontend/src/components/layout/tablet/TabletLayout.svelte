@@ -8,7 +8,7 @@
 	import { unread } from '@/stores/unread.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
-	import StatusBar from '@/components/layout/StatusBar.svelte';
+	
 	import NavTab from '@/components/layout/mobile/NavTab.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
@@ -38,8 +38,6 @@
 	data-platform="tablet"
 	class="flex flex-col h-dvh w-full overflow-hidden transition-colors duration-gentle font-sans bg-surface-page text-text-primary"
 >
-	<StatusBar />
-
 	<!-- RoutedContentViewport 是三端唯一的路由内容与滚动承载区。
 	     地图/消息为全画布页：禁用滚动，canvas 固定视口高度。
 	     宽平板浮动 Dock 悬于内容之上，画布需预留底部净空。 -->

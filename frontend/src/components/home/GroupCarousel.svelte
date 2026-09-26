@@ -30,6 +30,8 @@
 	const openGroup = (id: string) => void goto(ROUTES.group(id));
 </script>
 
+<!-- 大纲页密度：无群组时整段隐藏（标题+空横滚），专区经导航可达 -->
+{#if groups.length > 0}
 <div>
 	<SectionHead title="附近群组" action="更多" onAction={onSeeAll} />
 	<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2 pr-1">
@@ -76,3 +78,4 @@
 		{/each}
 	</div>
 </div>
+{/if}
