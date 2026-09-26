@@ -22,6 +22,7 @@ import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import { TYPE_CONFIG, normalizeNotifType, type NotifyViewItem } from './shared/notify-data';
 	import { listNotifies, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite , netError } from '@/api';
 	import { setNotifyUnread, unread as globalUnread } from '@/stores/unread.svelte';
+	import { auth } from '@/stores/auth.svelte';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
@@ -198,6 +199,9 @@ const FILTER_TABS = [
 
 	const unread = $derived(notifies.filter((n) => !n.read).length);
 	let followedBack = $state<Set<string>>(new Set());
+	// A 关注 B 成互关时双方都会收到 mutual_follow，actor 都是 B——A 自己 rail 里的
+	// 行 actor 就是自己，回关自己永远失败（诚实报错）。这类行不再提供回关按钮。
+	const meId = $derived(auth.user?.user_id ?? '');
 
 	// 桌面 Rail「回关」：直接关注通知中的 actor（spec: users/set_follow）。
 	// code!==0 视为失败并回滚（此前只捕获网络异常：业务失败会误报成功 toast
@@ -446,7 +450,7 @@ const markSingleRead = (id: string) => {
 			{#if notifies.filter((n) => n.type === 'follow').length > 0}
 			<RailSection title="新关注你的人" action="全部" onAction={() => void goto(relationshipsHref('fans'))}>
 				<div class="flex flex-col gap-3">
-					{#each notifies.filter((n) => n.type === 'follow').slice(0, 3) as n (n.id)}
+					{#each notifies.filter((n) => n.type === 'follow' && n.user.id !== meId).slice(0, 3) as n (n.id)}
 						<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
 							{#snippet trailing()}
 								<FollowButton
