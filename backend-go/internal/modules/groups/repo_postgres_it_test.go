@@ -67,6 +67,41 @@ func TestPostgresIT_CreateAndGetGroup(t *testing.T) {
 	})
 }
 
+// TestPostgresIT_GetToleratesNullDescriptionAndAvatar 回归：description/
+// avatar_url 为 NULL 的群行必须可读（COALESCE 兜底），不得报 scan 错误。
+func TestPostgresIT_GetToleratesNullDescriptionAndAvatar(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		repo := NewPostgresRepository(txFactory)
+		ownerID := testdb.InsertUser(t, txFactory, "g_null_owner", "NullOwner")
+		groupID := createTestGroup(t, ctx, repo, ownerID, "Null Desc Group", GroupJoinMethodDirect)
+		queryable, ok := persistence.RepoQueryable(ctx, txFactory)
+		if !ok {
+			t.Fatal("no queryable")
+		}
+		if err := queryable.Exec(ctx, `UPDATE groups SET description = NULL, avatar_url = NULL WHERE group_id = $1`, groupID); err != nil {
+			t.Fatalf("null out columns: %v", err)
+		}
+		got, found, err := repo.Get(ctx, groupID)
+		if err != nil {
+			t.Fatalf("Get: %v", err)
+		}
+		if !found {
+			t.Fatal("expected found=true")
+		}
+		// NULL 经 COALESCE 读成空串：description 走 StrPtr 归一为 nil（与 API
+		// 建群空描述形态一致），avatar_url 直扫为指向空串的指针。
+		// 关键断言是 Get 不报 scan 错误。
+		if got.Description != nil {
+			t.Fatalf("description: got %#v, want nil", got.Description)
+		}
+		if got.Group.AvatarURL == nil || *got.Group.AvatarURL != "" {
+			t.Fatalf("avatar_url: got %#v, want empty", got.Group.AvatarURL)
+		}
+	})
+}
+
 func TestPostgresIT_JoinGroupAndListMembers(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
