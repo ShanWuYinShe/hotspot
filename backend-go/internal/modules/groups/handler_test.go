@@ -39,6 +39,7 @@ type groupErrorRepo struct {
 	deleteAnnouncementErr error
 	listApplicationsErr   error
 	listApplicationsItems []GroupApplicationItem
+	cancelApplicationErr  error
 	approveApplicationErr error
 	rejectApplicationErr  error
 	listMyInvitesItems    []GroupInviteItem
@@ -125,7 +126,7 @@ func (r *groupErrorRepo) ListMyApplications(context.Context, string, *Applicatio
 	return nil, "", nil
 }
 func (r *groupErrorRepo) CancelApplication(context.Context, string) error {
-	return nil
+	return r.cancelApplicationErr
 }
 func (r *groupErrorRepo) ListMyInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupInviteItem, string, error) {
 	return r.listMyInvitesItems, "", r.listMyInvitesErr
@@ -1562,6 +1563,20 @@ func TestHandlerCancelApplicationRejectsMissingApplicationID(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.CancelApplication(rr, req)
 	assertGroupCode(t, rr, httpx.CodeInvalidRequest)
+}
+
+func TestHandlerCancelApplicationMapsAlreadyProcessed(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{
+		listApplicationsItems: []GroupApplicationItem{
+			{ApplicationID: "app_1", GroupID: "g1", Applicant: UserInfo{UserID: "user_alice"}},
+		},
+		cancelApplicationErr: ErrAlreadyProcessed,
+	}))
+	req := httptest.NewRequest(http.MethodPost, "/groups/applications/cancel", strings.NewReader(`{"group_id":"g1","application_id":"app_1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.CancelApplication(rr, req)
+	assertGroupCode(t, rr, httpx.CodeConflict)
 }
 
 // --- TransferOwnership ---
