@@ -45,6 +45,7 @@ type groupErrorRepo struct {
 	listMyInvitesItems    []GroupInviteItem
 	listMyInvitesErr      error
 	rejectInviteErr       error
+	revokeInviteErr       error
 	transferOwnershipErr  error
 	acceptInviteErr       error
 	removeMemberErr       error
@@ -152,7 +153,7 @@ func (r *groupErrorRepo) ListSentInvites(context.Context, string, *ApplicationSt
 	return nil, "", nil
 }
 func (r *groupErrorRepo) RevokeInvite(context.Context, string, string) error {
-	return nil
+	return r.revokeInviteErr
 }
 func (r *groupErrorRepo) SetMemberRole(context.Context, string, SetMemberRoleRequest) error {
 	return nil
@@ -992,6 +993,20 @@ func TestRevokeInviteHandlerMapsGroupNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.RevokeInvite(rr, req)
 	assertGroupCode(t, rr, httpx.CodeNotFound)
+}
+
+func TestRevokeInviteHandlerMapsExpiredInvite(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult:       GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
+		getFound:        true,
+		revokeInviteErr: ErrInviteExpired,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := httptest.NewRequest(http.MethodPost, "/groups/admin/invites/revoke", strings.NewReader(`{"group_id":"g1","invite_id":"inv1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	rr := httptest.NewRecorder()
+	handler.RevokeInvite(rr, req)
+	assertGroupCode(t, rr, httpx.CodeConflict)
 }
 
 // --- Announcements ---

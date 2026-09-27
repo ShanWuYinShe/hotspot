@@ -158,6 +158,12 @@ func (h *Handler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
+		// 对齐 Accept/RejectInvite：非 pending（已撤销/已接受/已过期）邀请
+		// 的重复撤销一律 10400「邀请已失效」，而非 10600 内部错误兜底。
+		if errors.Is(err, ErrInviteExpired) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "邀请已失效"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
