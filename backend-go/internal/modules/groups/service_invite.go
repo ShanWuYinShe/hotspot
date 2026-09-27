@@ -11,8 +11,8 @@ import (
 )
 
 // defaultPendingStatus 落实 spec「status 缺省 pending；查历史显式传 all」
-// （fetch_received / fetch_submitted 共用；此前直通导致缺省返回全状态，
-// 已决邀请重回待办区块并带可点按钮）。
+// （fetch_received / fetch_submitted / fetch_sent 共用；此前直通导致缺省返回全状态，
+// 已决邀请重回待办区块或已决邀请混入发件待办并带可点按钮）。
 func defaultPendingStatus(status *ApplicationStatus) *ApplicationStatus {
 	if status == nil {
 		pending := ApplicationStatusPending
@@ -159,7 +159,7 @@ func (s *Service) ListSentInvites(ctx context.Context, req GroupSentInvitesReque
 		return nil, "", ErrAccessRestricted
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
-	return s.repo.ListSentInvites(ctx, req.GroupID, req.Status, limit, types.PaginationCursor(req.Pagination))
+	return s.repo.ListSentInvites(ctx, req.GroupID, defaultPendingStatus(req.Status), limit, types.PaginationCursor(req.Pagination))
 }
 
 func (s *Service) RevokeInvite(ctx context.Context, req RevokeSentInviteRequest) error {

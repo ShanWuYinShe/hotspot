@@ -85,9 +85,10 @@ type stubGroupsRepo struct {
 	inviteResult Invitation
 	inviteErr    error
 
-	sentInvites    []GroupSentInviteItem
-	sentInvitesCur string
-	sentInvitesErr error
+	sentInvites       []GroupSentInviteItem
+	sentInvitesStatus *ApplicationStatus
+	sentInvitesCur    string
+	sentInvitesErr    error
 
 	revokeInvErr error
 
@@ -237,7 +238,8 @@ func (r *stubGroupsRepo) RejectInvite(_ context.Context, _ string) error { retur
 func (r *stubGroupsRepo) InviteMember(_ context.Context, _ string, _ InviteMemberRequest, _ *time.Time) (Invitation, error) {
 	return r.inviteResult, r.inviteErr
 }
-func (r *stubGroupsRepo) ListSentInvites(_ context.Context, _ string, _ *ApplicationStatus, _ int, _ string) ([]GroupSentInviteItem, string, error) {
+func (r *stubGroupsRepo) ListSentInvites(_ context.Context, _ string, status *ApplicationStatus, _ int, _ string) ([]GroupSentInviteItem, string, error) {
+	r.sentInvitesStatus = status
 	return r.sentInvites, r.sentInvitesCur, r.sentInvitesErr
 }
 func (r *stubGroupsRepo) RevokeInvite(_ context.Context, _ string, _ string) error {
@@ -1423,6 +1425,30 @@ func TestServiceListSentInvitesHappyPath(t *testing.T) {
 	}
 	if cursor != "cursor1" {
 		t.Fatalf("expected cursor1, got %s", cursor)
+	}
+}
+
+// spec group.md → admin/invites/fetch_sent：status 缺省 pending；查历史显式传 all。
+func TestServiceListSentInvitesDefaultsToPending(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	if _, _, err := svc.ListSentInvites(grpCtx("u1"), GroupSentInvitesRequest{GroupID: "g1"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.sentInvitesStatus == nil || *repo.sentInvitesStatus != ApplicationStatusPending {
+		t.Fatalf("expected pending default, got %#v", repo.sentInvitesStatus)
+	}
+}
+
+func TestServiceListSentInvitesAllPassesThrough(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true}
+	svc := NewServiceWithRepo(repo)
+	all := ApplicationStatus("all")
+	if _, _, err := svc.ListSentInvites(grpCtx("u1"), GroupSentInvitesRequest{GroupID: "g1", Status: &all}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.sentInvitesStatus != nil {
+		t.Fatalf("expected nil (no filter) for all, got %#v", repo.sentInvitesStatus)
 	}
 }
 
