@@ -127,6 +127,13 @@ func (s *Service) InviteMember(ctx context.Context, req InviteMemberRequest) (In
 	} else if banned {
 		return Invitation{}, ErrBannedInGroup
 	}
+	// 被邀请者已是成员则 no-op 成功（spec group.md → 邀请响应）：不建邀请、
+	// 不推送通知。内存实现另有同款防御，此处统一服务层口径覆盖双实现。
+	if member, err := s.repo.IsMember(ctx, req.GroupID, req.UserID); err != nil {
+		return Invitation{}, err
+	} else if member {
+		return Invitation{}, nil
+	}
 	// TTL（spec types.md group_invite_ttl_hours）：0 = 永不过期（expires_at 省略）
 	var expiresAt *time.Time
 	if s.appConfig != nil {

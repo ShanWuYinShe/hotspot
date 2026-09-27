@@ -681,6 +681,19 @@ func TestServiceInviteMemberHappyPath(t *testing.T) {
 	}
 }
 
+func TestServiceInviteMemberNoOpForExistingMember(t *testing.T) {
+	// 已是成员则 no-op 成功：inviteErr 设为 boom 可证未走到 repo 层。
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, isMemberResult: true, inviteErr: errors.New("must not reach repo")}
+	svc := NewServiceWithRepo(repo)
+	inv, err := svc.InviteMember(grpCtx("u1"), InviteMemberRequest{GroupID: "g1", UserID: "u2"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if inv.InviteID != nil {
+		t.Fatalf("expected nil invite_id for no-op, got %s", *inv.InviteID)
+	}
+}
+
 // --- Remove member ---
 
 func TestServiceRemoveMemberCannotRemoveSelf(t *testing.T) {
