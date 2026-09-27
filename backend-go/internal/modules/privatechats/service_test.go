@@ -158,6 +158,15 @@ func TestServiceOpenTheDoorCreatesChat(t *testing.T) {
 	}
 }
 
+func TestServiceOpenTheDoorRejectsMissingTarget(t *testing.T) {
+	repo := &stubChatRepo{}
+	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &stubChatUserReader{found: false})
+	_, err := svc.OpenTheDoor(chatCtx("u1"), "missing", 20)
+	if !errors.Is(err, users.ErrUserNotFound) {
+		t.Fatalf("expected users.ErrUserNotFound, got %v", err)
+	}
+}
+
 func TestServiceOpenTheDoorPropagatesCreateError(t *testing.T) {
 	repo := &stubChatRepo{createErr: errors.New("boom")}
 	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &stubChatUserReader{})

@@ -30,6 +30,13 @@ func NewServiceWithDeps(repo Repository, messages privatemessages.ReadService, u
 }
 func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLimit int) (PrivateChatOpenResult, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	// 与 Delete/UpdateSettings 对齐：先确认目标用户存在，不存在按 10300
+	// 处理，避免 GetOrCreate 在外键约束上失败并落到 10600。
+	if _, ok, err := s.users.OpenTheDoor(ctx, targetUserID); err != nil {
+		return PrivateChatOpenResult{}, err
+	} else if !ok {
+		return PrivateChatOpenResult{}, users.ErrUserNotFound
+	}
 	createdAt, err := s.repo.GetOrCreate(ctx, principal.UserID, targetUserID)
 	if err != nil {
 		observability.L().Error("privatechats.open_the_door get_or_create failed", "error", err, "target_user_id", targetUserID)
