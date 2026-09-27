@@ -26,7 +26,7 @@ export interface NotifyViewItem {
  */
 export function resolveNotifHref(
 	type: string,
-	payload: NotifyPayload | undefined,
+	payload: Partial<NotifyPayload> | undefined,
 	actorId: string
 ): string | undefined {
 	const p = (payload ?? {}) as NotifyPayload;
