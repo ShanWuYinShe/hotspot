@@ -13,7 +13,7 @@ var (
 	// ErrCommentBlockingUser：拉黑了瞬间作者（10200 + blocked_by_user；与
 	// reaction/私聊/presence 的双向口径对齐，否则被拉黑方仍可评论并触发通知）。
 	ErrCommentBlockingUser = errors.New("comments: caller has blocked the moment author")
-	// ErrCommentTooLong：评论内容超过 ClientConfig comment_max_length（spec 10400）。
+	// ErrCommentTooLong：评论内容超过 ClientConfig comment_max_length（spec comment create 未单列该码，handler 按参数错误映射 10000）。
 	ErrCommentTooLong = errors.New("comments: content exceeds max length")
 	// ErrTooManyMentions：mentions 数量超过 api_spec_base.md 字段校验约束上限 20（spec 10000）。
 	// 与 moments/groupmessages 对齐：不限制会放大通知写入（每个 mention 触发一次
