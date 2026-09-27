@@ -28,6 +28,8 @@
 		isDeleted: boolean;
 		/** 一级回复（spec: 两级评论模型；fetch 顶层列表的 top_replies 预览） */
 		replies: MomentComment[];
+		/** 回复总数（comments/fetch 的 replies_count；> replies.length 表示预览被截断） */
+		repliesCount: number;
 	}
 
 	export interface MomentData {
@@ -60,6 +62,7 @@
 		onShare,
 		onCommentClick,
 		onReply,
+		onExpandReplies,
 		onToggleCommentLike,
 		onReportComment,
 		onDeleteComment,
@@ -81,6 +84,8 @@
 		onCommentClick: () => void;
 		/** 评论区"回复"点击：携带目标评论 ID，页面聚焦输入栏并 @ 对方（提交带 parent_id） */
 		onReply: (user: string, commentId: string) => void;
+		/** 「查看全部回复」点击：页面拉取 fetch_replies 全量并回填 */
+		onExpandReplies: (commentId: string) => void | Promise<void>;
 		/** 评论点赞切换（reactions/set target_type='comment'） */
 		onToggleCommentLike: (commentId: string) => void;
 		/** 评论举报（reports/create target_type='comment'） */
@@ -350,6 +355,13 @@
 									</div>
 								</div>
 							{/each}
+							{#if c.repliesCount > c.replies.length}
+								<button
+									type="button"
+									class="link-btn text-text-secondary text-xs self-start focus-ring rounded-sm"
+								onclick={() => onExpandReplies(c.id)}
+								>查看全部 {c.repliesCount} 条回复</button>
+						{/if}
 						</div>
 					{/if}
 				</div>

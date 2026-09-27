@@ -31,7 +31,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			likes: (c.reactions || []).reduce((sum, rx) => sum + (rx.count ?? 0), 0),
 			liked: (c.reactions || []).some((rx) => rx.reacted_by_me),
 			isDeleted: c.is_deleted,
-			replies: (c.top_replies ?? []).map(toMomentComment)
+			replies: (c.top_replies ?? []).map(toMomentComment),
+			repliesCount: c.replies_count ?? 0
 		};
 	}
 	import MomentDetailRail from './shared/MomentDetailRail.svelte';
@@ -42,7 +43,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { showToast } from '@/stores/toast.svelte';
-	import { getMomentDetail, listComments, setReaction, createComment, deleteComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments , netError } from '@/api';
+	import { getMomentDetail, listComments, listCommentReplies, setReaction, createComment, deleteComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments , netError } from '@/api';
 	import { formatDateTime } from '@/lib/utils';
 	import { smartBack } from '@/lib/smart-back';
 	import { copyShareLink } from '@/lib/share';
@@ -257,6 +258,16 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		replyTarget = null;
 		input = input.replace(/^@\S+\s*/, '');
 	};
+	// 「查看全部回复」：fetch_replies 拉全量（时间正序）替换预览。
+	const expandReplies = async (commentId: string) => {
+		const res = await listCommentReplies(commentId, { limit: 100 }).catch(() => null);
+		if (!res || res.code !== 0 || !res.data) {
+			showToast('加载回复失败，请重试', 'danger');
+			return;
+		}
+		const full = res.data.items.map(toMomentComment);
+		apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, replies: full } : c));
+	};
 
 	const handleComment = async () => {
 		const text = input.trim();
@@ -310,7 +321,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			likes: 0,
 			liked: false,
 			isDeleted: false,
-			replies: []
+			replies: [],
+			repliesCount: 0
 		};
 		apiComments = [...apiComments, optimistic];
 		commentDelta += 1;
@@ -549,6 +561,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			onShare={() => void copyMomentLink()}
 			onCommentClick={focusComments}
 			onReply={(user, commentId) => startReply(user, commentId)}
+			onExpandReplies={(commentId) => void expandReplies(commentId)}
 			onToggleCommentLike={(id) => void toggleCommentLike(id)}
 			onReportComment={(id) => (reportTarget = { target_type: 'comment', target_id: id })}
 			onDeleteComment={(id) => (commentDeleteTarget = id)}

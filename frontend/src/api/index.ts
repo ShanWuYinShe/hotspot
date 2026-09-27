@@ -36,7 +36,7 @@ export {
   getGroupSettings, listAdminGroupMembers, recallGroupMessageAsAdmin,
   createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement,
   listUserMoments, listUserReactedMoments,
-  listComments,
+  listComments, listCommentReplies,
   openShareDoor, createShare,
   getMapCanvas,
   searchSuggest,

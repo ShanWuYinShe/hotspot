@@ -576,6 +576,10 @@ export async function listUserReactedMoments(userId: string, pagination?: Pagina
 export async function listComments(momentId: string, pagination?: PaginationParams) {
   return request<PaginatedData<CommentItem>>(pick(Endpoints.Comments.List, Endpoints.Public.Comments.List), { moment_id: momentId, pagination });
 }
+// spec: api_spec_comment.md → comments/fetch_replies（子评论列表，时间正序）
+export async function listCommentReplies(commentId: string, pagination?: PaginationParams) {
+  return request<PaginatedData<CommentItem>>(pick(Endpoints.Comments.ListReplies, Endpoints.Public.Comments.ListReplies), { comment_id: commentId, pagination });
+}
 
 // Map
 export async function getMapCanvas(params: MapCanvasRequest) { return request<MapCanvasResponse>(Endpoints.Map.Canvas, params); }
