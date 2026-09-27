@@ -41,6 +41,12 @@ func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "AcceptInvite", httpx.Forbidden(httpx.ReasonBannedInGroup, "已被群封禁，无法加入"))
 			return
 		}
+		// 对齐 RejectInvite：已撤销/已拒绝/已过期的邀请一律 10200「邀请已失效」，
+		// 而非 10600 内部错误兜底（此前缺失该映射，撤销后接受会打到 10600）。
+		if errors.Is(err, ErrInviteExpired) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "邀请已失效"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
