@@ -112,17 +112,18 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(profile))
 }
 
+// isValidLoginID 校验升级 login_id 形态：邮箱沿用 auth 侧同语义分支；
+// 用户名型为「不含 '@' 且非纯数字」（纯数字视为手机号，由调用方拦截），
+// 长度 3-64 与 auth 侧 isValidAuthLoginID 用户名分支对齐。
 func isValidLoginID(loginID string) bool {
 	if strings.Contains(loginID, "@") {
 		parts := strings.SplitN(loginID, "@", 2)
 		return len(parts[0]) > 0 && len(parts[1]) > 0 && strings.Contains(parts[1], ".")
 	}
-	for _, c := range loginID {
-		if c < '0' || c > '9' {
-			return false
-		}
+	if isNumericLoginID(loginID) {
+		return false
 	}
-	return len(loginID) >= 5
+	return len(loginID) >= 3 && len(loginID) <= 64
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {

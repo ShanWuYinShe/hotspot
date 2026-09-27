@@ -1406,9 +1406,9 @@ func TestHandlerUpgradeRejectsInvalidLoginID(t *testing.T) {
 	}{
 		{name: "random string", loginID: "abc!@#"},
 		{name: "too short phone", loginID: "123"},
+		{name: "too short username", loginID: "ab"},
 		{name: "email without domain dot", loginID: "user@com"},
 		{name: "email without local part", loginID: "@example.com"},
-		{name: "mixed alphanumeric", loginID: "abc123def"},
 	}
 
 	for _, tc := range tests {
@@ -1453,6 +1453,24 @@ func TestHandlerUpgradeRejectsPhoneWithoutVerification(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"login_id":"13800138000","password":"secret"}`)).WithContext(ctx)
 	handler.Upgrade(rr, req)
 	assertUserCode(t, rr, httpx.CodeInvalidRequest)
+}
+
+func TestHandlerUpgradeUsernameReachesService(t *testing.T) {
+	service := NewService()
+	handler := NewHandler(service)
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	alice := defaultTestProfile("user_alice")
+	alice.UserType = UserTypeNormal
+	if err := service.repo.PutProfile(context.Background(), alice); err != nil {
+		t.Fatalf("put profile: %v", err)
+	}
+
+	// 用户名型 login_id 必须通过两道门控进入 service：正式用户此时返回 10400
+	//（此前用户名在第一道门控即被误杀，升级入口实际不可达）。
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"login_id":"alice123","password":"secret"}`)).WithContext(ctx)
+	handler.Upgrade(rr, req)
+	assertUserCode(t, rr, httpx.CodeConflict)
 }
 
 func TestHandlerUpdateLocationRejectsEmptyLocationName(t *testing.T) {
