@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { TYPE_CONFIG, type NotifyViewItem } from './notify-data';
 
@@ -27,7 +28,11 @@
 </script>
 
 <ListItem
-	onClick={() => onRead(notif.id)}
+	onClick={() => {
+		onRead(notif.id);
+		// 点击跳转（payload 上下文推导的 href；行内接受/拒绝按钮已 stopPropagation）
+		if (notif.href) void goto(notif.href);
+	}}
 	ariaLabel={`通知：${notif.user.name}${notif.text}`}
 	class="flex items-center gap-3.5 px-4 py-3"
 >

@@ -3,6 +3,8 @@
 import type { Component } from 'svelte';
 import { Heart, UserPlus, MessageCircle, Bell, MapPin } from '@lucide/svelte';
 
+import type { NotifyPayload } from '@/api/types';
+
 export interface NotifyViewItem {
 	id: string;
 	type: string;
@@ -13,6 +15,41 @@ export interface NotifyViewItem {
 	momentImage?: string;
 	/** 入群邀请通知携带的 invite_id（payload.invite_id），供接受/拒绝操作使用。 */
 	inviteId?: string;
+	/** 点击通知行的跳转目标（payload 上下文推导：瞬间/用户/群详情）；无则不跳转。 */
+	href?: string;
+}
+
+/**
+ * 按 payload 上下文推导通知行点击的跳转目标（统一口径，全类型一致）：
+ * 瞬间类 → 瞬间详情；关注类 → actor 主页；群类 → 群详情；其余不跳转。
+ * type 为后端原始类型（非语义归一化键）。
+ */
+export function resolveNotifHref(
+	type: string,
+	payload: NotifyPayload | undefined,
+	actorId: string
+): string | undefined {
+	const p = (payload ?? {}) as NotifyPayload;
+	switch (type) {
+		case 'nearby_new_moment':
+		case 'moment_commented':
+		case 'comment_reply':
+		case 'mentioned':
+			return p.moment_id ? `/moments/${p.moment_id}` : undefined;
+		case 'reaction_added':
+			return p.target_type === 'moment' && p.target_id ? `/moments/${p.target_id}` : undefined;
+		case 'new_follower':
+		case 'mutual_follow':
+			return actorId ? `/users/${actorId}` : undefined;
+		case 'group_invite_received':
+		case 'group_application_received':
+		case 'group_application_accepted':
+		case 'group_application_rejected':
+		case 'group_mentioned':
+			return p.group_id ? `/groups/${p.group_id}` : undefined;
+		default:
+			return undefined;
+	}
 }
 
 // 通知类型语义 → design token 色族档位（主色 + 淡底/淡边框，参照主题 -bg/-border 定义）。

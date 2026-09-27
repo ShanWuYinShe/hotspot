@@ -19,7 +19,7 @@ import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import NotifyRow from './shared/NotifyRow.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
-	import { TYPE_CONFIG, normalizeNotifType, type NotifyViewItem } from './shared/notify-data';
+	import { TYPE_CONFIG, normalizeNotifType, resolveNotifHref, type NotifyViewItem } from './shared/notify-data';
 	import { listNotifies, getUnreadCount, markRead, listMyInvites, acceptGroupInvite, rejectGroupInvite, listFollowing, netError } from '@/api';
 	import { setNotifyUnread, unread as globalUnread } from '@/stores/unread.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -176,6 +176,10 @@ const FILTER_TABS = [
 			}
 			else if (n.type === 'system_announcement') text = n.payload?.title ?? '系统公告';
 			else text = n.payload?.message ?? '';
+			// 点击跳转目标：按 payload 上下文路由到瞬间/用户/群详情（系统公告与
+			// 举报处理通知无自然落点，不跳转）。actorId 为上方兜底后的 actor。
+			const actorId = String(actor.user_id ?? '');
+			const href = resolveNotifHref(n.type ?? '', n.payload ?? {}, actorId);
 			return {
 				id: n.notify_id ?? String(offset + i + 1),
 				// 归一化为语义键，使图标/计数/分区过滤都能命中 TYPE_CONFIG。
@@ -186,7 +190,8 @@ const FILTER_TABS = [
 				text,
 				momentImage: n.payload?.moment_summary?.cover_url ?? undefined,
 				// 入群邀请通知携带 invite_id，供行内接受/拒绝
-				inviteId: n.type === 'group_invite_received' ? (n.payload as { invite_id?: string })?.invite_id : undefined
+				inviteId: n.type === 'group_invite_received' ? (n.payload as { invite_id?: string })?.invite_id : undefined,
+				href
 			};
 		});
 	}
