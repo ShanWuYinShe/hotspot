@@ -219,6 +219,17 @@ func TestHandlerCreateRejectsMomentNotFound(t *testing.T) {
 	assertCode(t, rr, httpx.CodeNotFound)
 }
 
+func TestHandlerCreateRejectsMissingParent(t *testing.T) {
+	handler := newTestHandler(&stubCommentRepo{}, defaultMoments())
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"moment_id":"m1","content":"hi","parent_id":"missing"}`))
+	req = withAuth(req, "u1")
+	req.Header.Set("Idempotency-Key", "qqqq1234qqqq1234qqqq1234qqqq1234")
+
+	handler.Create(rr, req)
+	assertCode(t, rr, httpx.CodeNotFound)
+}
+
 func TestHandlerCreatePropagatesError(t *testing.T) {
 	repo := &stubCommentRepo{createErr: errors.New("boom")}
 	handler := newTestHandler(repo, defaultMoments())

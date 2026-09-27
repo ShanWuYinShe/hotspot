@@ -33,6 +33,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			if errors.Is(err, ErrMomentNotFound) {
 				return httpx.Business[any](r, "Create", httpx.CodeNotFound, "瞬间不存在")
 			}
+			if errors.Is(err, ErrCommentNotFound) {
+				return httpx.Business[any](r, "Create", httpx.CodeNotFound, "评论不存在")
+			}
 			if errors.Is(err, ErrCommentTooLong) {
 				return httpx.Business[any](r, "Create", httpx.CodeInvalidRequest, "评论内容超过长度限制")
 			}
