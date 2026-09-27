@@ -136,6 +136,13 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 
 func (s *Service) UpdateSettings(ctx context.Context, req UpdatePrivateChatSettingsRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	// 与 Delete 对齐：先确认目标用户存在，不存在按 10300 处理，避免
+	// GetOrCreate 在外键约束上失败并落到 10600。
+	if _, ok, err := s.users.OpenTheDoor(ctx, req.TargetUserID); err != nil {
+		return err
+	} else if !ok {
+		return users.ErrUserNotFound
+	}
 	if _, err := s.repo.GetOrCreate(ctx, principal.UserID, req.TargetUserID); err != nil {
 		return err
 	}

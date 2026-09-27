@@ -275,16 +275,25 @@ func TestServiceListPropagatesError(t *testing.T) {
 
 func TestServiceUpdateSettingsHappyPath(t *testing.T) {
 	repo := &stubChatRepo{}
-	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &stubChatUserReader{})
+	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &stubChatUserReader{found: true})
 	err := svc.UpdateSettings(chatCtx("u1"), UpdatePrivateChatSettingsRequest{TargetUserID: "u2", IsMuted: boolPtr(true)})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
+func TestServiceUpdateSettingsRejectsMissingTarget(t *testing.T) {
+	repo := &stubChatRepo{}
+	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &stubChatUserReader{found: false})
+	err := svc.UpdateSettings(chatCtx("u1"), UpdatePrivateChatSettingsRequest{TargetUserID: "missing", IsMuted: boolPtr(true)})
+	if !errors.Is(err, users.ErrUserNotFound) {
+		t.Fatalf("expected users.ErrUserNotFound, got %v", err)
+	}
+}
+
 func TestServiceUpdateSettingsPropagatesError(t *testing.T) {
 	repo := &stubChatRepo{updateSetErr: errors.New("boom")}
-	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &stubChatUserReader{})
+	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &stubChatUserReader{found: true})
 	err := svc.UpdateSettings(chatCtx("u1"), UpdatePrivateChatSettingsRequest{TargetUserID: "u2"})
 	if err == nil {
 		t.Fatal("expected error")
