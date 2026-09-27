@@ -168,7 +168,12 @@ const FILTER_TABS = [
 			else if (n.type === 'group_mentioned') text = `在「${groupName}」群聊中 @ 了你${n.payload?.content_preview ? `：${n.payload.content_preview}` : ''}`;
 			else if (n.type === 'report_resolved') text = `你举报的内容已处理${n.payload?.note ? `：${n.payload.note}` : ''}`;
 			else if (n.type === 'report_dismissed') text = `你的举报未通过审核${n.payload?.note ? `：${n.payload.note}` : ''}`;
-			else if (n.type === 'nearby_new_moment') text = '在附近发布了新瞬间';
+			else if (n.type === 'nearby_new_moment') {
+				// payload.distance 由发布时后端计算（米）；≤1000m 显示米，否则公里。
+				const dist = typeof n.payload?.distance === 'number' ? n.payload.distance : null;
+				const distText = dist === null ? '' : dist <= 1000 ? `（${dist}m）` : `（${(dist / 1000).toFixed(1)}km）`;
+				text = `在附近发布了新瞬间${distText}`;
+			}
 			else if (n.type === 'system_announcement') text = n.payload?.title ?? '系统公告';
 			else text = n.payload?.message ?? '';
 			return {
