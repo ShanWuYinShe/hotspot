@@ -20,6 +20,10 @@ func (h *Handler) ListMyInvites(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "groups.handler", err)
 			return
 		}
+		if errors.Is(err, ErrInvalidCursor) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -127,6 +131,10 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, ErrAccessRestricted) {
 			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
+			return
+		}
+		if errors.Is(err, ErrInvalidCursor) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

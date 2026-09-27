@@ -103,6 +103,10 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "Search", httpx.Forbidden(httpx.ReasonPrivacySetting, "权限不足"))
 			return
 		}
+		if errors.Is(err, ErrInvalidCursor) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			return
+		}
 		httpx.WriteAPIError(w, r, "Search", err)
 		return
 	}
@@ -186,6 +190,10 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
 		}
+		if errors.Is(err, ErrInvalidCursor) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -214,6 +222,10 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "SearchMembers", httpx.Forbidden(httpx.ReasonNotGroupMember, "不具备群组成员搜索资格"))
 			return
 		}
+		if errors.Is(err, ErrInvalidCursor) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -230,6 +242,10 @@ func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if _, ok := err.(*httpx.APIError); ok {
 			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
+		if errors.Is(err, ErrInvalidCursor) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -447,6 +463,10 @@ func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if _, ok := err.(*httpx.APIError); ok {
 			httpx.WriteAPIError(w, r, "groups.handler", err)
+			return
+		}
+		if errors.Is(err, ErrInvalidCursor) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

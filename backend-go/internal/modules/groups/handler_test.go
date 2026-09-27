@@ -287,6 +287,24 @@ func TestGroupsHandlerReturns10600OnServiceError(t *testing.T) {
 	assertGroupCode(t, searchRR, httpx.CodeInternalUnavailable)
 }
 
+// 游标非法属于参数错误（10000），不得落到 10600：用内存实现走真实游标
+// 解码路径覆盖 ListMembers 与 ListSentInvites 两个代表端点。
+func TestHandlerListMapsInvalidCursorToParamError(t *testing.T) {
+	repo := &groupErrorRepo{
+		getResult:      GroupItem{Group: GroupInfo{GroupID: "g1"}, ViewerState: &GroupViewerState{Role: GroupRoleOwner}},
+		getFound:       true,
+		isMemberResult: true,
+		listMembersErr: ErrInvalidCursor,
+	}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	membersReq := httptest.NewRequest(http.MethodPost, "/members/fetch", strings.NewReader(`{"group_id":"g1","pagination":{"limit":10,"cursor":"@@malformed@@"}}`))
+	membersReq = membersReq.WithContext(ctx)
+	membersRR := httptest.NewRecorder()
+	handler.ListMembers(membersRR, membersReq)
+	assertGroupCode(t, membersRR, httpx.CodeInvalidRequest)
+}
+
 func TestDismissGroupUsesGroupIDAndBroadcastsDismissedEvent(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
