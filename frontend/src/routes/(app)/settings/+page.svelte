@@ -54,6 +54,9 @@
 	let notif = $state(readLocal(NOTIF_KEY, true));
 	let privateProfile = $state(false);
 	let locationSharing = $state(true);
+	// 附近新瞬间通知（服务端设置 nearby_moment_notify，spec api_spec_websocket.md
+	// NearbyNewMoment 的用户开关；默认 false）。
+	let nearbyMomentNotify = $state(false);
 	let accountName = $state('');
 	let accountEmail = $state('');
 	let accountAvatar = $state('');
@@ -62,6 +65,20 @@
 	let reloadKey = $state(0);
 
 	// 服务端设置开关：未登录引导登录；已登录乐观更新 + 失败回滚并提示
+	// 附近新瞬间通知（服务端设置 nearby_moment_notify）：通知页「附近」分区
+	// 的用户开关（spec api_spec_websocket.md NearbyNewMoment 推送对象）。
+	const toggleNearbyMomentNotify = () => {
+		if (!auth.isAuthenticated) {
+			requireAuth({ action: '修改附近新瞬间通知设置', run: toggleNearbyMomentNotify });
+			return;
+		}
+		nearbyMomentNotify = !nearbyMomentNotify;
+		void updateSettings({ settings: { nearby_moment_notify: nearbyMomentNotify } }).catch(() => {
+			nearbyMomentNotify = !nearbyMomentNotify;
+			showToast('设置失败，请重试', 'danger');
+		});
+	};
+
 	const toggleLocationSharing = () => {
 		if (!auth.isAuthenticated) {
 			requireAuth({ action: '修改位置共享设置', run: toggleLocationSharing });
@@ -132,6 +149,7 @@
 
 				if (settingsData) {
 					if (settingsData.location_visible !== undefined) locationSharing = settingsData.location_visible;
+					if (settingsData.nearby_moment_notify !== undefined) nearbyMomentNotify = settingsData.nearby_moment_notify;
 					if (settingsData.privacy_level !== undefined) privateProfile = settingsData.privacy_level === 'private';
 				}
 
@@ -313,6 +331,16 @@
 						{/snippet}
 						<Toggle on={notif} onToggle={toggleNotif} label="推送通知" />
 					</SettingRow>
+				<SettingRow
+					title="附近新瞬间通知"
+					description="附近有人发布新瞬间时提醒我（服务端设置，需登录）"
+					onRowClick={toggleNearbyMomentNotify}
+				>
+					{#snippet icon()}
+						<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
+					{/snippet}
+					<Toggle on={nearbyMomentNotify} onToggle={toggleNearbyMomentNotify} label="附近新瞬间通知" />
+				</SettingRow>
 				</ListContainer>
 			</SettingsSection>
 
