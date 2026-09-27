@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -24,6 +25,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -211,7 +213,13 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// - 管理员撤回任意成员消息（groups/admin/messages/recall，groupmessages 实现）
 	groups.SetBlockedTagChecker(adminModule.BlockedTagChecker())
 	groups.RecallMessageAsAdmin = func(ctx context.Context, groupID, messageID, operatorID string) error {
-		return gmModule.Service.RecallMessageAsAdmin(ctx, operatorID, groupID, messageID)
+		err := gmModule.Service.RecallMessageAsAdmin(ctx, operatorID, groupID, messageID)
+		// groupmessages 侧缺失消息返回 sentinel（其自助撤回入口同款映射 10300）：
+		// 跨模块错误翻译归装配层，对齐 spec admin recall 10300。
+		if errors.Is(err, groupmessages.ErrMessageNotFound) {
+			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "消息不存在"}
+		}
+		return err
 	}
 	return []modulekit.Module{
 		adminModule,
