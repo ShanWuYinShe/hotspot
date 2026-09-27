@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"unicode/utf8"
 
+	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/observability"
@@ -48,6 +49,10 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 			// 契约(api_spec_chat.md → private_messages/send 10400)：share_code 无效等业务冲突
 			if errors.Is(err, ErrInvalidShareCode) {
 				return httpx.Business[any](r, "Send", httpx.CodeConflict, "分享链接无效或已过期")
+			}
+			// 接收方不存在 → 10300（ensureCanSend 经 BatchGet 判定）。
+			if errors.Is(err, users.ErrUserNotFound) {
+				return httpx.Business[any](r, "Send", httpx.CodeNotFound, "用户不存在")
 			}
 			// file_id 不存在/不属于发送者/未完成上传 → 10300（对齐 moments 图片归属口径）
 			if errors.Is(err, ErrFileNotOwned) {

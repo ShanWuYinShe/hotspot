@@ -59,6 +59,29 @@ func TestHandlerSendMapsForbiddenReasons(t *testing.T) {
 	}
 }
 
+// TestHandlerSendMapsMissingTarget — 接收方不存在时 ensureCanSend 返回
+// users.ErrUserNotFound，映射为 10300（此前落到 10600）.
+func TestHandlerSendMapsMissingTarget(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	userStub := &privateMessageUserStub{ok: false}
+	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), userStub))
+
+	req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/send", strings.NewReader(`{"target_user_id":"user_missing","type":"text","content":"hello"}`)))
+	req.Header.Set("Idempotency-Key", "pm_missing_target_"+strings.Repeat("z", 40))
+	rr := httptest.NewRecorder()
+	handler.Send(rr, req)
+
+	var resp struct {
+		Code httpx.Code `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != httpx.CodeNotFound {
+		t.Fatalf("expected code httpx.CodeNotFound, got %d", resp.Code)
+	}
+}
+
 // TestHandlerSendBlockedResponseNotCachedAsSuccess — httpx.APIError 通过
 // ReplayOrStore 的 producer 路径返回时同样映射为 httpx.CodeForbidden(非 0 响应不缓存为成功)。
 func TestHandlerSendBlockedResponseNotCachedAsSuccess(t *testing.T) {

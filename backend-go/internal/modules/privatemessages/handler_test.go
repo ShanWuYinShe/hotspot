@@ -418,7 +418,12 @@ func TestPrivateMessagesListRejectsInvalidPaginationAndUnknownFields(t *testing.
 
 func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 	t.Run("send and history generic errors", func(t *testing.T) {
-		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{sendErr: errors.New("boom"), historyErr: errors.New("boom"), markAllErr: errors.New("boom")}, &privateMessageUserStub{}))
+		userStub := &privateMessageUserStub{
+			item:     users.UserItem{Relation: &users.Relationship{}},
+			ok:       true,
+			settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+		}
+		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{sendErr: errors.New("boom"), historyErr: errors.New("boom"), markAllErr: errors.New("boom")}, userStub))
 
 		sendReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/send", strings.NewReader(`{"target_user_id":"user_bob","type":"text","content":"hello"}`)))
 		sendReq.Header.Set("Idempotency-Key", "efgh1234efgh1234efgh1234efgh1234")
