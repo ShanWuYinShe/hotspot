@@ -210,3 +210,96 @@ func TestInMemoryListMyGroups_ExcludesNonMember(t *testing.T) {
 		t.Fatalf("expected empty cursor, got %s", cursor)
 	}
 }
+
+// passwordGroup 创建一个 password join_method 的群并返回其 ID，供 update 语义测试使用。
+func passwordGroup(t *testing.T, repo *InMemoryRepository, owner string, password string) string {
+	t.Helper()
+	req := validCreateReq()
+	req.JoinMethod = GroupJoinMethodPassword
+	req.Password = password
+	item, err := repo.Create(context.Background(), owner, req)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	return item.Group.GroupID
+}
+
+// TestInMemoryUpdate_ClearPasswordWithExplicitJoinMethod 回归：clear_password 与显式
+// join_method 同传时，显式 join_method 必须生效（此前无条件联动退化 direct，静默丢弃
+// 显式目标，导致 invite/approval 切换不生效）。
+func TestInMemoryUpdate_ClearPasswordWithExplicitJoinMethod(t *testing.T) {
+	repo := NewInMemoryRepository()
+	gid := passwordGroup(t, repo, "owner_1", "Pass1111")
+
+	invite := GroupJoinMethodInviteOnly
+	err := repo.Update(context.Background(), "owner_1", UpdateGroupRequest{
+		GroupID:       gid,
+		ClearPassword: &[]bool{true}[0],
+		JoinMethod:    &invite,
+	})
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+	group, ok, err := repo.Get(context.Background(), gid)
+	if err != nil || !ok {
+		t.Fatalf("Get failed: ok=%v err=%v", ok, err)
+	}
+	if group.JoinMethod != GroupJoinMethodInviteOnly {
+		t.Fatalf("expected join_method=invite, got %s", group.JoinMethod)
+	}
+	if group.HasPassword {
+		t.Fatal("expected has_password=false after clear_password")
+	}
+	if _, has := repo.passwordHashes[gid]; has {
+		t.Fatal("expected password hash deleted after clear_password")
+	}
+}
+
+// TestInMemoryUpdate_SetPasswordWithExplicitJoinMethod：设置密码 + 显式 join_method 时，
+// 显式 join_method 同样优先（密码仅作为存储凭证，不强制改写加入方式）。
+func TestInMemoryUpdate_SetPasswordWithExplicitJoinMethod(t *testing.T) {
+	repo := NewInMemoryRepository()
+	gid := passwordGroup(t, repo, "owner_1", "Pass1111")
+
+	direct := GroupJoinMethodDirect
+	err := repo.Update(context.Background(), "owner_1", UpdateGroupRequest{
+		GroupID:    gid,
+		Password:   &[]string{"NewPass9"}[0],
+		JoinMethod: &direct,
+	})
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+	group, ok, err := repo.Get(context.Background(), gid)
+	if err != nil || !ok {
+		t.Fatalf("Get failed: ok=%v err=%v", ok, err)
+	}
+	if group.JoinMethod != GroupJoinMethodDirect {
+		t.Fatalf("expected join_method=direct (explicit wins), got %s", group.JoinMethod)
+	}
+	if !group.HasPassword {
+		t.Fatal("expected has_password=true after set password")
+	}
+}
+
+// TestInMemoryUpdate_ClearPasswordAloneDefaultsDirect：保留既有联动语义——仅清密码
+// （未显式指定 join_method）时退化 direct，防止「password 群无密码」矛盾态。
+func TestInMemoryUpdate_ClearPasswordAloneDefaultsDirect(t *testing.T) {
+	repo := NewInMemoryRepository()
+	gid := passwordGroup(t, repo, "owner_1", "Pass1111")
+
+	err := repo.Update(context.Background(), "owner_1", UpdateGroupRequest{
+		GroupID:       gid,
+		ClearPassword: &[]bool{true}[0],
+	})
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+	group, ok, err := repo.Get(context.Background(), gid)
+	if err != nil || !ok {
+		t.Fatalf("Get failed: ok=%v err=%v", ok, err)
+	}
+	if group.JoinMethod != GroupJoinMethodDirect {
+		t.Fatalf("expected join_method=direct (default coupling), got %s", group.JoinMethod)
+	}
+}

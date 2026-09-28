@@ -244,8 +244,12 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 	if req.ClearPassword != nil && *req.ClearPassword {
 		item.HasPassword = false
 		delete(r.passwordHashes, req.GroupID)
-		// 清除密码即解除 password 门槛（与 PG 实现同步联动）
-		item.JoinMethod = GroupJoinMethodDirect
+		// 清除密码即解除 password 门槛（与 PG 实现同步联动）；显式 join_method 优先。
+		if req.JoinMethod != nil {
+			item.JoinMethod = *req.JoinMethod
+		} else {
+			item.JoinMethod = GroupJoinMethodDirect
+		}
 	} else if req.Password != nil && *req.Password != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
 		if err != nil {
@@ -253,7 +257,12 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 		}
 		r.passwordHashes[req.GroupID] = string(hash)
 		item.HasPassword = true
-		item.JoinMethod = GroupJoinMethodPassword
+		// 显式 join_method 优先（与 PG 实现同步联动）。
+		if req.JoinMethod != nil {
+			item.JoinMethod = *req.JoinMethod
+		} else {
+			item.JoinMethod = GroupJoinMethodPassword
+		}
 	} else if req.JoinMethod != nil {
 		item.JoinMethod = *req.JoinMethod
 	}

@@ -104,9 +104,13 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 	if req.ClearPassword != nil && *req.ClearPassword {
 		cleared := false
 		hasPassword = &cleared
-		// 清除密码即解除 password 门槛：join_method 联动退化为 direct，不留「password 群无密码」的矛盾态
-		direct := string(GroupJoinMethodDirect)
-		joinMethodOverride = &direct
+		// 清除密码即解除 password 门槛：join_method 联动退化为 direct，不留「password 群无密码」的矛盾态。
+		// 同请求显式指定 join_method 时以显式值为准（spec group.md update：join_method 为独立字段，
+		// 此前无条件联动会静默丢弃显式目标，导致 invite/approval 切换不生效）。
+		if req.JoinMethod == nil {
+			direct := string(GroupJoinMethodDirect)
+			joinMethodOverride = &direct
+		}
 		emptyHash := ""
 		passwordHash = &emptyHash
 	} else if req.Password != nil && *req.Password != "" {
@@ -118,8 +122,11 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		}
 		hashStr := string(hash)
 		passwordHash = &hashStr
-		pw := string(GroupJoinMethodPassword)
-		joinMethodOverride = &pw
+		// 设置密码默认联动 join_method=password；显式指定的 join_method 优先（同上）。
+		if req.JoinMethod == nil {
+			pw := string(GroupJoinMethodPassword)
+			joinMethodOverride = &pw
+		}
 	}
 	var locationName *string
 	var latitude *float64
