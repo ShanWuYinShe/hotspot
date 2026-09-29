@@ -11,14 +11,22 @@
 - `spec/`：API 契约的唯一权威来源（只读）。
 - `reception-bot/`：社区温度接待机器人（多人格拟真人账号：欢迎/关怀/收件箱回复），**定位为本地调试/联调用途，不做常驻服务**，按需手动启停；运行规程见 `.agents/skills/hotspot-reception-bot/SKILL.md`（唯一事实源）；`state/` 为运行时状态（git 已忽略，含口令归档文件，勿入库）。
 
+## skill 索引（改对应领域前先加载对应 skill）
+
+| skill | 管什么 |
+|---|---|
+| `hotspot-backend-migrations` | `backend-go/migrations/` 命名、幂等与向后兼容纪律 |
+| `hotspot-frontend-style` | 前端样式自查清单与交互状态契约 |
+| `hotspot-frontend-theme` | 前端主题/Token 三层架构与配色硬约束 |
+| `hotspot-frontend-routing` | 前端文件路由表与组件放置规则 |
+| `hotspot-frontend-layout` | 前端 Standard/Split 布局契约 |
+| `hotspot-harmony-ui` | 鸿蒙端设计 token、原语与跨端同步机制 |
+| `hotspot-worktree-debug` | worktree 内 compose 隔离调试、端口重映射与清理 |
+| `hotspot-reception-bot` | 接待机器人运行、人格与线上接入（运行时位置见该 skill 内说明） |
+
 ## 构建 & 验证
 
-各模块命令以子项目 `AGENTS.md` 为唯一维护处（`backend-go/AGENTS.md`、`frontend/AGENTS.md`、`harmonyapp/AGENTS.md`），此处不重复列出，避免多处同步。以下快速入口仅为速记，与子项目 `AGENTS.md` 不一致时以后者为准：
-
-```bash
-go build -C backend-go ./... && go vet -C backend-go ./... && go test -C backend-go ./...  # 后端
-bun install --cwd frontend && bun run --cwd frontend build                                 # 前端
-```
+各模块命令以子项目 `AGENTS.md` 为唯一维护处（`backend-go/AGENTS.md`、`frontend/AGENTS.md`、`harmonyapp/AGENTS.md`），此处不重复列出（速记命令曾与子项目漂移，已删除；一律以子项目为准）。
 
 ## 版本号与发布
 

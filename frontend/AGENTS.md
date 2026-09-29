@@ -109,13 +109,6 @@ bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 与正在运行的 dev server 共用该目录，可能相互干扰。需要跑 build 前先停掉 frontend
 容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
 
-## 构建
-
-```bash
-bun install --cwd frontend
-bun run --cwd frontend build   # adapter-static 产物输出到 build/
-```
-
 ## 硬约束
 
 - 调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 dev server 地址
@@ -213,11 +206,4 @@ src/
 
 ## 样式与交互状态
 
-**完整契约见 skill hotspot-frontend-style**（样式自查清单 19 条、交互状态契约、按钮 hover 两档、
-禁止双重边框、token 类名有效性自查）。要点速记：
-
-- 风格值一律落在 design token 体系，页面只消费语义类，禁止内联硬编码风格值（布局几何 px 除外）。
-- 字号 9 档（4 档自定义 token + Tailwind 默认 5 档）/ 圆角 4 档 + full / 阴影 3+2+3 档，禁止近邻档位并存与 arbitrary 值。
-- 交互反馈用既有工具类（hover-btn / scale-btn / tap-* / card-hover 等），不新发明交互类。
-- 焦点必须可见（focus-ring 或等效），禁止无替代地 outline-none。
-- **任何 UI 改动必须截图对比审查**（改前/改后、双主题、受影响断面），不允许只靠代码 diff 判断。
+**完整契约见 skill hotspot-frontend-style**（样式自查清单、交互状态契约、档位表；档位数值以根 `docs/design-system.md` 为准）。要点一句话：风格值落 token 体系（布局几何 px 除外）、档位禁止近邻并存、用既有交互工具类、焦点必须可见、UI 改动必须截图对比审查（细则见「UI 设计原则」）。
