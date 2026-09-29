@@ -96,9 +96,11 @@
 	onpointerleave={() => (pressed = false)}
 >
 	{#if imageSrc}
-		<!-- 加载占位：onload 前垫 accent 渐变（pointer-events-none 不拦行内按钮） -->
+		<!-- 加载占位：onload 前垫 accent 渐变（pointer-events-none 不拦行内按钮）。
+		     注意：装饰层不带 z-index——图片 onload 前 opacity-0 无需被覆盖，
+		     带 z 会把后渲染的 footer tray/徽章盖住（无图卡曾因此只剩占位字母） -->
 		{#if !imageLoaded}
-			<div class="surface-accent-gradient pointer-events-none absolute inset-0 z-[1] animate-pulse"></div>
+			<div class="surface-accent-gradient pointer-events-none absolute inset-0 animate-pulse"></div>
 		{/if}
 		<img
 			src={imageSrc}
@@ -109,8 +111,9 @@
 			onerror={onImageError}
 		/>
 	{:else if placeholder}
-		<!-- 装饰占位层：pointer-events-none 防止拦截 footer 行内按钮（关注等）的点击/悬停 -->
-		<div class="surface-accent-gradient pointer-events-none absolute inset-0 z-[1] flex items-center justify-center">
+		<!-- 装饰占位层：pointer-events-none 防止拦截 footer 行内按钮（关注等）的点击/悬停；
+		     同样不带 z-index——否则无图时整层盖住 footer tray 与徽章（线上实测：无图群组卡只剩占位字母） -->
+		<div class="surface-accent-gradient pointer-events-none absolute inset-0 flex items-center justify-center">
 			{@render placeholder()}
 		</div>
 	{/if}
@@ -128,7 +131,7 @@
 		</div>
 	{/if}
 	{#if onClick}
-		<!-- 卡片点击覆盖层（最后绘制，z-10 高于图片/遮罩/z-[1] 占位层/footer 非按钮区）：
+		<!-- 卡片点击覆盖层（最后绘制，z-10 高于图片/遮罩/占位层/footer 非按钮区）：
 		     真实 button 承载点击/键盘/aria，行内操作按钮经根上 auto-lift(z-20) 保持可点——
 		     根不再持 button 语义，消除 nested-interactive（button 嵌套交互子件） -->
 		<button

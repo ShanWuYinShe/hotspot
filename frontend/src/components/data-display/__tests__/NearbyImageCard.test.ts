@@ -19,6 +19,22 @@ describe('NearbyImageCard', () => {
 		expect(container.querySelector('img')).toBeNull();
 	});
 
+	it('装饰占位层不带 z-index（footer tray/徽章绘制在上）', () => {
+		// 回归防线：占位层曾带 z-[1]，无图时整层盖住 footer 与徽章——
+		// DOM/a11y 一切正常，视觉上卡片只剩占位字母（线上实测，见 GroupCarousel 无图群组卡）。
+		// jsdom 不做层叠绘制，只能靠类串断言拦截：装饰层禁止任何 z 工具类。
+		for (const props of [
+			{ imageSrc: '', placeholder: (() => null) as never },
+			{ imageSrc: 'https://example.com/a.jpg' }
+		] as never[]) {
+			const { container, unmount } = render(NearbyImageCard, { props });
+		for (const layer of Array.from(container.querySelectorAll('.surface-accent-gradient'))) {
+				expect(layer.className).not.toMatch(/(?:^|\s)z-(?:\[|\d)/);
+			}
+			unmount();
+		}
+	});
+
 	it('onClick 提供时由覆盖按钮承载点击（根不再持 button 语义）', async () => {
 		const onClick = vi.fn();
 		const { container } = render(NearbyImageCard, {
