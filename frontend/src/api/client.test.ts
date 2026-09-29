@@ -66,6 +66,23 @@ describe('10100 刷新重试', () => {
     expect(urls[1]).toContain('/public/v1/auth/refresh_token');
   });
 
+  it('刷新请求体符合 spec（client_type 必填，Web 的 refresh_token 为空）', async () => {
+    // 回归：曾发 body '{}'，服务端恒回 10000，所有 Web 会话 15 分钟静默死亡。
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 10100, message: 'auth expired' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 0, data: {} }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 0, data: { ok: true } }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await client.checkAuthStatus();
+    const refreshCall = fetchMock.mock.calls.find(([url]) => String(url).includes('refresh_token'));
+    expect(refreshCall).toBeTruthy();
+    const body = JSON.parse(String((refreshCall![1] as RequestInit).body));
+    expect(body.client_type).toBe('web');
+    expect(body.refresh_token ?? null).toBeNull();
+  });
+
   it('并发 10100 去重：多个请求共享一次刷新', async () => {
     const fetchMock = vi
       .fn()

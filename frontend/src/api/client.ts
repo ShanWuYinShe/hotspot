@@ -361,9 +361,14 @@ export async function refreshSessionToken(): Promise<RefreshOutcome> {
     refreshLock = (async (): Promise<RefreshOutcome> => {
       let res: Response;
       try {
+        // spec api_spec_public.md → RefreshTokenRequest：client_type 必填；
+        // Web 端 device_id 为 null（服务端从 device_id Cookie 读取）、
+        // refresh_token 为 null（必须为空值，走 Path 限定的 HttpOnly Cookie）。
+        // 曾发 '{}' 导致服务端恒回 10000，所有 Web 会话 15 分钟静默死亡。
         res = await fetch(`${baseUrl}${Endpoints.Auth.RefreshToken}`, {
           method: 'POST', credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }, body: '{}',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_type: 'web', device_id: null, refresh_token: null }),
         });
       } catch {
         return 'transport-error';
