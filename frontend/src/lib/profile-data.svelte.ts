@@ -18,6 +18,7 @@ import type {
 	GroupItem,
 	MomentItem
 } from '@/api/types';
+import { formatRelativeDays } from '@/lib/utils';
 
 export interface GalleryMoment {
 	id: string;
@@ -307,7 +308,8 @@ function mapGroup(item: GroupItem): MappedGroup {
 		online: item.online_members_count ?? 0,
 		desc: item.description ?? '',
 		role: role ? (ROLE_LABEL[role] ?? role) : '成员',
-		lastActive: item.last_activity_at ?? '',
+		// 最后活跃走相对时间（今天/N天前…，与粉丝列表同一文案），裸 ISO 不直接上屏。
+		lastActive: item.last_activity_at ? formatRelativeDays(daysSince(item.last_activity_at)) : '',
 		tags: item.tags ?? []
 	};
 }

@@ -95,10 +95,12 @@ const needsAuth = $derived(myGroups.needsAuth);
 								<Users class="size-3" strokeWidth={1.5} />
 								{g.members} 位成员
 							</span>
-							<span class="flex items-center gap-1">
-								<Clock class="size-3" strokeWidth={1.5} />
-								{g.lastActive}
-							</span>
+							{#if g.lastActive}
+								<span class="flex items-center gap-1">
+									<Clock class="size-3" strokeWidth={1.5} />
+									{g.lastActive}
+								</span>
+							{/if}
 						</div>
 					</div>
 				{/snippet}
