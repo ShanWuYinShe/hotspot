@@ -18,6 +18,14 @@ function writePersisted(v: boolean) {
 }
 
 /**
+ * worker.start() 最长等待：service worker 注册在异常环境（隐私模式/无痕
+ * 禁用、headless 嵌套沙盒等）下可能既不成功也不失败，hooks.client init 会
+ * 被它按住导致首屏白屏。超时后直接走既有降级（直连真实后端），与 catch
+ * 分支行为一致；正常注册远快于此时限，不受影响。
+ */
+export const MOCK_START_TIMEOUT_MS = 8000;
+
+/**
  * 应用启动时调用一次（hooks.client init，早于任何 API 请求）。
  * 读取 localStorage（可覆盖默认），启用时等待 service worker 真正就绪。
  * 返回是否启用了 mock。
@@ -31,12 +39,31 @@ export async function initMock(w: any, envDefault: boolean): Promise<boolean> {
     // calls) and Vite HMR / font / static asset requests would otherwise each
     // log a noisy "[MSW] intercepted a request without a matching request
     // handler" warning on every navigation, drowning out real gaps.
-    await worker.start({
-      onUnhandledRequest(req: { url: string }) {
-        if (req.url.includes("/api/v1/")) return "warn";
-        return "bypass";
-      },
-    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        worker.start({
+          onUnhandledRequest(req: { url: string }) {
+            if (req.url.includes("/api/v1/")) return "warn";
+            return "bypass";
+          },
+        }),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("mock worker start timeout")), MOCK_START_TIMEOUT_MS);
+        }),
+      ]);
+    } catch (err) {
+      // 超时后先尝试停掉 worker：迟到的注册成功会在首屏请求发出后中途接管，
+      // 造成 mock/真实双数据源混用；停掉后会话全程走真实后端，来源一致。
+      try {
+        await worker.stop?.();
+      } catch {
+        // 停止失败忽略：调用方 catch 同样回落直连。
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
   }
   notify();
   return enabled;
