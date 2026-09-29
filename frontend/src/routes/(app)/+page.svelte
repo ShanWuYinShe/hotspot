@@ -183,7 +183,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 						<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
 						<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
 					{/if}
-					<ActionIconButton icon={Map} label="地图" onClick={() => void goto(ROUTES.map)} variant="ghost" size={36} />
+					<ActionIconButton icon={Map} label="位置选择" onClick={() => void goto(ROUTES.map)} variant="ghost" size={36} />
 				</div>
 			{/snippet}
 		</PageHeader>
