@@ -10,6 +10,7 @@
 	import MomentCard from '@/components/moments/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/moment-feed.svelte';
 	import { openComposer } from '@/stores/composer.svelte';
+	import { auth } from '@/stores/auth.svelte';
 	import { useAccountData, useGalleryMoments, useReactedMoments, useFavoriteMoments, type GalleryMoment } from '@/lib/profile-data.svelte';
 	import { formatDateTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
@@ -34,7 +35,9 @@
 
 	const account = useAccountData();
 	const myPosts = useGalleryMoments('my');
-	const reacted = useReactedMoments();
+	// list_reacted 的 user_id 必传（spec，不回退当前用户）：显式传登录用户 id；
+	// getter 形式传入，auth 就绪前后 effect 自动重跑。
+	const reacted = useReactedMoments(() => auth.user?.user_id);
 	const savedP = useFavoriteMoments();
 
 	const postsMap = $derived({

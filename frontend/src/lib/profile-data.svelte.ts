@@ -189,7 +189,7 @@ export function useGalleryMoments(type: 'my' | 'user' = 'my', userId?: string) {
 	};
 }
 
-export function useReactedMoments(userId?: string) {
+export function useReactedMoments(getUserId?: () => string | null | undefined) {
 	let posts = $state<GalleryMoment[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
@@ -201,7 +201,16 @@ export function useReactedMoments(userId?: string) {
 		loading = true;
 		error = null;
 		needsAuth = false;
-		listUserReactedMoments(userId ?? '', { limit: 20 })
+		// list_reacted 的 user_id 必传且不回退当前用户（spec）：调用方显式给 id；
+		// 未登录（无 id）时不发请求，直接走 needsAuth——否则空串打过去是 10000。
+		const uid = getUserId?.() ?? '';
+		if (!uid) {
+			posts = [];
+			loading = false;
+			needsAuth = true;
+			return;
+		}
+		listUserReactedMoments(uid, { limit: 20 })
 			.then((res) => {
 				if (res.code === 0 && res.data) {
 					posts = res.data.items?.map(mapGalleryMoment) ?? [];
