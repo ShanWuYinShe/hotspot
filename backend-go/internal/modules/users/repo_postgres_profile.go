@@ -29,6 +29,13 @@ func (r *PostgresRepository) GetProfile(ctx context.Context, userID string) (MyP
 		return MyProfile{}, false, err
 	}
 	profile.Stats = stats
+	// 画像标签独立表：与批量/搜索路径一致在此回填，否则 get_account 等单查
+	// 永远返回空 tags（线上实测：保存成功，编辑页重载即丢失）。
+	tags, err := loadUserProfileTags(ctx, queryable, userID)
+	if err != nil {
+		return MyProfile{}, false, err
+	}
+	profile.Tags = tags
 	return profile, true, nil
 }
 
@@ -47,15 +54,29 @@ func (r *PostgresRepository) GetProfiles(ctx context.Context, userIDs []string) 
 		return nil, err
 	}
 	defer rows.Close()
+	scanned := make([]MyProfile, 0, len(userIDs))
 	for rows.Next() {
 		profile, err := scanUserProfileRow(rows)
 		if err != nil {
 			return nil, err
 		}
-		result[profile.UserID] = profile
+		scanned = append(scanned, profile)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	// 画像标签独立表：单查(GetProfile)与搜索路径一致在此回填。
+	ids := make([]string, 0, len(scanned))
+	for _, profile := range scanned {
+		ids = append(ids, profile.UserID)
+	}
+	tagsByUserID, err := loadUserProfileTagsBatch(ctx, queryable, ids)
+	if err != nil {
+		return nil, err
+	}
+	for _, profile := range scanned {
+		profile.Tags = tagsByUserID[profile.UserID]
+		result[profile.UserID] = profile
 	}
 	return result, nil
 }
