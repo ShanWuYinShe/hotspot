@@ -143,10 +143,12 @@ func scanFollowingRow(scanner interface{ Scan(...any) error }) (RelatedUserItem,
 	var presenceStatus string
 	var lastOnline time.Time
 	var sortableLastOnline time.Time
-	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
+	var remark string
+	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &presenceStatus, &lastOnline, &sortableLastOnline, &remark); err != nil {
 		return RelatedUserItem{}, time.Time{}, err
 	}
 	item.User.User.AvatarURL = types.StrPtr(avatarURL)
+	item.Remark = &remark
 	item.FollowedAt = followedAt.UTC().Format(time.RFC3339)
 	ps := UserPresenceStatus(presenceStatus)
 	item.User.PresenceStatus = &ps

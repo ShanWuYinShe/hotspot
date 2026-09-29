@@ -377,9 +377,11 @@ func (r *InMemoryRepository) ListFollowing(_ context.Context, userID string, lim
 		if relation.Following {
 			lastOnline := r.profiles[targetUserID].LastOnline
 			presence := r.profiles[targetUserID].PresenceStatus
+			remark := relation.Remark
 			item := RelatedUserItem{
 				User:       UserItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: types.StrPtr(r.profiles[targetUserID].AvatarURL)}},
 				FollowedAt: relation.FollowedAt,
+				Remark:     &remark,
 			}
 			if lastOnline != "" {
 				item.User.LastOnline = &lastOnline

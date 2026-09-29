@@ -59,8 +59,9 @@ func friendRow(uid string, at time.Time) []any {
 }
 
 // followingRow/followerRow：is_mutual 列已随 RelatedUserItem 契约变更删除。
+// following 行末带 remark 列（queryListFollowing 含 COALESCE(me.remark, ”)）。
 func followingRow(uid string, at time.Time) []any {
-	return []any{uid, "昵称" + uid, "", at, "offline", at, at}
+	return []any{uid, "昵称" + uid, "", at, "offline", at, at, "备注" + uid}
 }
 
 func followerRow(uid string, at time.Time) []any {
@@ -134,6 +135,9 @@ func TestListFollowingFollowersPostgres(t *testing.T) {
 	page, err := newUserListRepo(stub).ListFollowing(ctx, "u1", 2, "")
 	if err != nil || len(page.Items) != 2 || page.NextCursor == nil {
 		t.Fatalf("list following: %#v err=%v", page, err)
+	}
+	if page.Items[0].Remark == nil || *page.Items[0].Remark != "备注t1" {
+		t.Fatalf("following item remark: %#v", page.Items[0].Remark)
 	}
 	stub = &userListStub{rowsSeq: []persistence.Rows{&listRowsValues{rows: [][]any{followingRow("t1", now)}, scanErr: errors.New("scan")}}}
 	if _, err := newUserListRepo(stub).ListFollowing(ctx, "u1", 2, ""); err == nil {

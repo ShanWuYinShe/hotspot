@@ -293,7 +293,7 @@ ORDER BY GREATEST(me.followed_at, rev.followed_at) DESC, u.user_id ASC
 LIMIT $4`
 
 	queryListFollowing = `
-SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), me.followed_at, u.presence_status, u.last_online, COALESCE(u.last_online, NOW())
+SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), me.followed_at, u.presence_status, u.last_online, COALESCE(u.last_online, NOW()), COALESCE(me.remark, '')
 FROM user_relations me
 JOIN users u ON u.user_id = me.target_user_id
 WHERE me.user_id = $1 AND me.is_following = TRUE

@@ -177,9 +177,11 @@ func (s *Service) ListFollowing(ctx context.Context, req ListFollowingRequest) (
 		return PaginatedFollowing{}, err
 	}
 	applyPresenceVisibilityToFollowing(ctx, s.repo, result.Items)
-	for i := range result.Items {
-		// list_following 返回 RelatedUserItem。该端点不返回备注，恒为 null。
-		result.Items[i].Remark = nil
+	if !isSelf {
+		for i := range result.Items {
+			// 查他人列表 remark 恒定 null（spec api_spec_user.md RelatedUserItem.remark）。
+			result.Items[i].Remark = nil
+		}
 	}
 	return result, nil
 }

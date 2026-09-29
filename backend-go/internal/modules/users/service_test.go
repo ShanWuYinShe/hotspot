@@ -696,6 +696,46 @@ func TestServiceSetRemarkHappyPath(t *testing.T) {
 	}
 }
 
+// --- ListFollowing remark visibility (spec api_spec_user.md RelatedUserItem.remark) ---
+
+func TestServiceListFollowingRemarkSelfKeeps(t *testing.T) {
+	remark := "老A"
+	repo := &stubUserRepo{
+		exists: true,
+		following: PaginatedFollowing{Items: []RelatedUserItem{
+			{User: UserItem{User: UserInfo{UserID: "u2"}}, Remark: &remark},
+		}},
+	}
+	svc := NewServiceWithRepo(repo)
+	res, err := svc.ListFollowing(userCtx("u1"), ListFollowingRequest{UserID: "u1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(res.Items) != 1 || res.Items[0].Remark == nil || *res.Items[0].Remark != "老A" {
+		t.Fatalf("expected self following list to keep remark, got %+v", res.Items)
+	}
+}
+
+func TestServiceListFollowingRemarkOthersStripped(t *testing.T) {
+	remark := "老A"
+	repo := &stubUserRepo{
+		exists:        true,
+		settingsFound: true,
+		settings:      UserSettings{SocialListsVisible: true},
+		following: PaginatedFollowing{Items: []RelatedUserItem{
+			{User: UserItem{User: UserInfo{UserID: "u2"}}, Remark: &remark},
+		}},
+	}
+	svc := NewServiceWithRepo(repo)
+	res, err := svc.ListFollowing(userCtx("u9"), ListFollowingRequest{UserID: "u1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(res.Items) != 1 || res.Items[0].Remark != nil {
+		t.Fatalf("expected others following list to strip remark, got %+v", res.Items)
+	}
+}
+
 // --- ListBlocked ---
 
 func TestServiceListBlockedHappyPath(t *testing.T) {
