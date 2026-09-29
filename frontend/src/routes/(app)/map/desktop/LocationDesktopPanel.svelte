@@ -100,6 +100,12 @@ import { smartBack } from '@/lib/smart-back';
 			<span class="spinner size-3.5" role="status" aria-label="搜索中"></span>
 			<span class="text-sm text-text-secondary">搜索中…</span>
 		</div>
+	{:else if searchQuery.trim()}
+		<!-- 搜索终态空态：失败与零结果都落到这里（与移动端 sheet 同文案）。
+		     此前无此分支：请求完成后下拉直接消失，用户无法区分“搜完无果”与“没在搜”。 -->
+		<div class="absolute top-full left-4 right-4 z-30 mt-1 rounded-lg border border-border-default bg-surface-primary px-3.5 py-2.5 shadow-menu">
+			<EmptyState bare title="未找到匹配地点" />
+		</div>
 	{/if}
 </div>
 
