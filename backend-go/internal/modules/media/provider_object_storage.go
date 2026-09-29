@@ -25,15 +25,21 @@ const mediaPresignTTL = 15 * time.Minute
 // presign GET 读 URL 的进程内缓存（审计 perf P3-4）：同一 key 在窗口内返回
 // 同一签名 URL——(a) 免去每次 feed 渲染对每图重复的 SigV4 签名；(b) URL 跨请求
 // 稳定，客户端（浏览器磁盘缓存）命中率显著提升。签名仅是授权，不冻结对象内容，
-// 对象被覆盖后旧 URL 即取新内容，无陈旧性问题。两代轮换限容：条目存活 1–2 个
-// 窗口（远短于 GET TTL），总内存有界。PUT/HEAD 不缓存（上传与内部探测要求新鲜）。
+// 对象被覆盖后旧 URL 即取新内容，无陈旧性问题。两代轮换限容，总内存有界。
+// 条目级过期：缓存服务期不得超过签名本身有效期——此前窗口（1h）远长于读 TTL
+// （头像 5min/瞬间图按 momentReadTTL），窗口内返回已过期的 X-Amz-Expires，
+// 图片随时间全灭（线上实测）。PUT/HEAD 不缓存（上传与内部探测要求新鲜）。
 const (
 	presignCacheWindow     = time.Hour
 	presignCacheMaxEntries = 8192
+	// presignCacheSkewMargin：提前量——只服务「从容有效」的签名，避免发出去
+	// 即将过期的 URL（边界竞态下客户端刚拿到就 403）。
+	presignCacheSkewMargin = 30 * time.Second
 )
 
 type presignCacheEntry struct {
-	url string
+	url       string
+	expiresAt time.Time // 该签名可服务到的时刻（签名时刻 + ttl − margin）
 }
 
 type ObjectStorageProvider struct {
@@ -217,8 +223,8 @@ func (p *ObjectStorageProvider) PutObject(ctx context.Context, storageKey, conte
 // PresignGet returns a client-facing absolute URL that grants short-term
 // read access to the object at storageKey. The URL is signed against the
 // public (client-facing) endpoint so it is valid through the reverse proxy.
-// 读 URL 走两代缓存（审计 perf P3-4）：窗口内同 key 返回同一签名 URL，签名
-// 结果 1–2 个窗口后自然过期重签（远短于读 TTL，安全性不受影响）。
+// 读 URL 走两代缓存（审计 perf P3-4）：同 key 在签名有效期内返回同一 URL；
+// 条目过期（签名时刻 + ttl − margin）后重签——缓存服务期永不超过签名有效期。
 func (p *ObjectStorageProvider) PresignGet(ctx context.Context, storageKey string, ttl time.Duration) (string, error) {
 	cacheKey := "get:" + storageKey + ":" + ttl.String()
 	if url, ok := p.cachedPresignedURL(cacheKey); ok {
@@ -228,11 +234,12 @@ func (p *ObjectStorageProvider) PresignGet(ctx context.Context, storageKey strin
 	if err != nil {
 		return "", err
 	}
-	p.storePresignedURL(cacheKey, url)
+	p.storePresignedURL(cacheKey, url, ttl)
 	return url, nil
 }
 
-// cachedPresignedURL 查缓存并按窗口懒轮换（cur → prev，prev 丢弃）。
+// cachedPresignedURL 查缓存并按窗口懒轮换（cur → prev，prev 丢弃）；命中
+// 仅当条目仍在签名有效期内（now < expiresAt），过期条目视为未命中并重签。
 func (p *ObjectStorageProvider) cachedPresignedURL(cacheKey string) (string, bool) {
 	p.presignMu.Lock()
 	defer p.presignMu.Unlock()
@@ -246,17 +253,18 @@ func (p *ObjectStorageProvider) cachedPresignedURL(cacheKey string) (string, boo
 		p.presignCur = map[string]presignCacheEntry{}
 		p.presignRotated = now
 	}
-	if entry, ok := p.presignCur[cacheKey]; ok {
+	if entry, ok := p.presignCur[cacheKey]; ok && now.Before(entry.expiresAt) {
 		return entry.url, true
 	}
-	if entry, ok := p.presignPrev[cacheKey]; ok {
+	if entry, ok := p.presignPrev[cacheKey]; ok && now.Before(entry.expiresAt) {
 		return entry.url, true
 	}
 	return "", false
 }
 
-// storePresignedURL 写入当前代；容量满时放弃缓存（签名路径仍正确返回）。
-func (p *ObjectStorageProvider) storePresignedURL(cacheKey, url string) {
+// storePresignedURL 写入当前代并记录可服务时刻（签名时刻 + ttl − margin）；
+// 容量满时放弃缓存（签名路径仍正确返回）。
+func (p *ObjectStorageProvider) storePresignedURL(cacheKey, url string, ttl time.Duration) {
 	p.presignMu.Lock()
 	defer p.presignMu.Unlock()
 	if p.presignCur == nil {
@@ -265,7 +273,8 @@ func (p *ObjectStorageProvider) storePresignedURL(cacheKey, url string) {
 	if len(p.presignCur) >= presignCacheMaxEntries {
 		return
 	}
-	p.presignCur[cacheKey] = presignCacheEntry{url: url}
+	expiresAt := p.now().Add(ttl - presignCacheSkewMargin)
+	p.presignCur[cacheKey] = presignCacheEntry{url: url, expiresAt: expiresAt}
 }
 
 func (p *ObjectStorageProvider) presignURL(ctx context.Context, method, storageKey string, ttl time.Duration) (string, error) {

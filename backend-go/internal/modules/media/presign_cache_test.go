@@ -50,8 +50,8 @@ func TestPresignGetCacheRotatesAfterWindow(t *testing.T) {
 		t.Fatalf("PresignGet: %v", err)
 	}
 
-	// 推进 2 小时（≥1 个轮换窗口，<2 个）：上一代缓存仍服务旧 URL（条目
-	// 存活 1–2 个窗口，远短于 24h 签名有效期，安全）
+	// 推进 2 小时（≥1 个轮换窗口，<2 个）：上一代缓存仍服务旧 URL（本例用
+	// 24h 签名 TTL，条目未过期；生产读 TTL 仅 5–15min，过期条目会重签，见下）
 	clock = base.Add(2 * time.Hour)
 	stale, err := provider.PresignGet(ctx, "uploads/u1/rot.png", 24*time.Hour)
 	if err != nil {
@@ -92,6 +92,48 @@ func TestPresignPutNotCached(t *testing.T) {
 	}
 	if !strings.Contains(signed, "X-Amz-Date=20260916T120005Z") {
 		t.Fatalf("PUT presign must bypass cache (fresh X-Amz-Date): %s", signed)
+	}
+}
+
+// 短 TTL 回归：生产读签名仅 5–15min 有效，缓存窗口（1h）远长于它——条目
+// 过期后必须重签，不能拿窗口内旧签名喂给客户端（否则 X-Amz-Expires 已过，
+// 图片随时间全灭，线上实测）。
+func TestPresignGetCacheExpiresWithSignatureTTL(t *testing.T) {
+	provider := newTestProvider(t)
+	base := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
+	clock := base
+	provider.now = func() time.Time { return clock }
+	ctx := context.Background()
+
+	first, err := provider.PresignGet(ctx, "uploads/u1/short.png", 5*time.Minute)
+	if err != nil {
+		t.Fatalf("PresignGet: %v", err)
+	}
+	if !strings.Contains(first, "X-Amz-Date=20260916T120000Z") {
+		t.Fatalf("fresh sign carries sign time: %s", first)
+	}
+
+	// TTL 内（4min < 5min − margin）：缓存命中，同一 URL
+	clock = base.Add(4 * time.Minute)
+	cached, err := provider.PresignGet(ctx, "uploads/u1/short.png", 5*time.Minute)
+	if err != nil {
+		t.Fatalf("PresignGet (within TTL): %v", err)
+	}
+	if cached != first {
+		t.Fatal("URL should stay stable while signature is servable")
+	}
+
+	// TTL 耗尽后（6min，仍在 1h 轮换窗口内）：必须重签，不能返回旧签名
+	clock = base.Add(6 * time.Minute)
+	second, err := provider.PresignGet(ctx, "uploads/u1/short.png", 5*time.Minute)
+	if err != nil {
+		t.Fatalf("PresignGet (after TTL): %v", err)
+	}
+	if second == first {
+		t.Fatal("expired signature must be re-signed even within cache window")
+	}
+	if !strings.Contains(second, "X-Amz-Date=20260916T120600Z") {
+		t.Fatalf("re-sign carries fresh sign time: %s", second)
 	}
 }
 
