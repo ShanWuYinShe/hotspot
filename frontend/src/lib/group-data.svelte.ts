@@ -313,6 +313,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 		joinPending = true;
 		const next = !joined;
 		joined = next;
+		const gid = currentGid();
 		const done = (res: { code: number; message?: string; data?: unknown }) => {
 			joinPending = false;
 			if (res.code !== 0) {
@@ -329,12 +330,19 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 					pendingApplicationId = joinData.application_id ?? null;
 					showToast('申请已提交，待群主审核', 'success');
 				} else {
-					// 加入成功：乐观置 member（my_state.role 在下次 loadDetail 时以服务端为准）
+					// 加入成功：乐观置 member（my_state.role 在下次 loadDetail 时以服务端为准），
+					// 并刷新人数与名单——否则简介页计数与成员 Tab 需手动重载才更新
+					// （WS 只推 loadMembers，且自加入事件未必送达）。
 					myRole = 'member';
+					void loadDetail(gid);
+					void loadMembers(gid);
 				}
+			} else {
+				// 退出成功：同理刷新人数与名单。
+				void loadDetail(gid);
+				void loadMembers(gid);
 			}
 		};
-		const gid = currentGid();
 		if (next) {
 			void joinGroup(gid).then(done).catch(() => done(netError(undefined)));
 		} else {
