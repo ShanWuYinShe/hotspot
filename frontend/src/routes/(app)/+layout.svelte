@@ -2,14 +2,17 @@
 	import type { Snippet } from 'svelte';
 	import MainLayout from '@/components/layout/MainLayout.svelte';
 	import ConnectionBanner from '@/components/shared/ConnectionBanner.svelte';
+	import MockBadge from '@/components/shared/MockBadge.svelte';
 
 	// 主路由组外壳：MainLayout 平台分发（desktop/tablet/mobile）。
-	// ConnectionBanner（WS 断线提示）挂在最外层顶部，fixed 定位不占文档流。
+	// ConnectionBanner（WS 断线提示）挂在最外层顶部，MockBadge（dev-only 数据源提示）
+	// 挂右下角，两者 fixed 定位不占文档流。
 
 	let { children }: { children: Snippet } = $props();
 </script>
 
 <ConnectionBanner />
+<MockBadge />
 <!-- 键盘用户跳转：直接定位到路由内容滚动区（RoutedContentViewport main#main-content） -->
 <a
 	href="#main-content"
