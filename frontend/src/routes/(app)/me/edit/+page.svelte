@@ -132,7 +132,9 @@
 			showToast('已保存', 'success');
 			savedTimer = window.setTimeout(() => {
 				saved = false;
-				smartBack();
+				// 保存后走路由去 /me 而非 history.back()：后者在整页直达编辑页时经
+				// bfcache 恢复旧文档，个人页显示保存前的旧资料；路由导航必重挂重拉。
+				void goto(ROUTES.me);
 			}, 800);
 		} catch (err) {
 			// 服务端保存失败：表单级错误行内联展示（保留可重试的持久反馈）
