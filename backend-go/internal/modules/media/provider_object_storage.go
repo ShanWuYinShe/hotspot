@@ -26,9 +26,11 @@ const mediaPresignTTL = 15 * time.Minute
 // 同一签名 URL——(a) 免去每次 feed 渲染对每图重复的 SigV4 签名；(b) URL 跨请求
 // 稳定，客户端（浏览器磁盘缓存）命中率显著提升。签名仅是授权，不冻结对象内容，
 // 对象被覆盖后旧 URL 即取新内容，无陈旧性问题。两代轮换限容，总内存有界。
-// 条目级过期：缓存服务期不得超过签名本身有效期——此前窗口（1h）远长于读 TTL
-// （头像 5min/瞬间图按 momentReadTTL），窗口内返回已过期的 X-Amz-Expires，
-// 图片随时间全灭（线上实测）。PUT/HEAD 不缓存（上传与内部探测要求新鲜）。
+// 条目级过期：缓存服务期不得超过签名本身有效期——此前窗口（1h）远长于
+// 头像读 TTL（avatarReadTTL 15min），窗口内返回已过期的 X-Amz-Expires，
+// 图片随时间全灭（线上实测）。瞬间图 TTL（momentReadTTL 7d）长于窗口，
+// 不受此问题影响，但同样受条目级过期保护。PUT/HEAD 不缓存（上传与内部
+// 探测要求新鲜）。
 const (
 	presignCacheWindow     = time.Hour
 	presignCacheMaxEntries = 8192
