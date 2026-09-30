@@ -60,6 +60,10 @@ export async function initMock(w: any, envDefault: boolean): Promise<boolean> {
       } catch {
         // 停止失败忽略：调用方 catch 同样回落直连。
       }
+      // 启动失败 = 本次会话实际走真实后端：把开关状态拨回 false 并通知，
+      // 否则 isMockEnabled 仍为 true，调用方（如 MockBadge）会误报 mock 生效。
+      enabled = false;
+      notify();
       throw err;
     } finally {
       clearTimeout(timer);

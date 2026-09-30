@@ -1,6 +1,6 @@
 // initMock 启动超时：worker.start() 悬挂时不能按住首屏（hooks.client init 在等它）
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { initMock, MOCK_START_TIMEOUT_MS } from './toggle';
+import { initMock, isMockEnabled, MOCK_START_TIMEOUT_MS } from './toggle';
 
 const KEY = 'hotspot:mock-enabled';
 
@@ -36,6 +36,8 @@ describe('initMock', () => {
     await vi.advanceTimersByTimeAsync(MOCK_START_TIMEOUT_MS);
     await assertion;
     expect(w.stop).toHaveBeenCalledTimes(1);
+    // 启动失败 = 实际走真实后端：开关状态必须拨回 false，否则 MockBadge 误报。
+    expect(isMockEnabled()).toBe(false);
   });
 
   it('开关关闭时不启动 worker', async () => {
