@@ -13,12 +13,15 @@
 # 由 docker/nginx.dev.conf 在 server 块内 include。
 
 # ── WebSocket ─────────────────────────────────────────────
+# Host 用 $http_host（含端口）而非 $host：后端 upgrader 按 Origin 裸 host
+# 比对做 CSWSH 防护，$host 丢掉非标端口后（如 localhost:8888 → localhost）
+# 与 Origin 对不上，握手 403（线上实测）。与 /s3/ 同一陷阱，与 prod 同构。
 location /ws/ {
     proxy_pass http://backend;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
+    proxy_set_header Host $http_host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
