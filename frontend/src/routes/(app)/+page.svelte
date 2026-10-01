@@ -10,7 +10,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ActivityRow from '@/components/home/ActivityRow.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
-	import { auth } from '@/stores/auth.svelte';
+	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation, type DefaultLocation } from '@/lib/start-default-location';
@@ -89,7 +89,12 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	// 已关注的用户显示「已关注」（乐观切换与失败回滚由共享模块承载）。
 	const baseFollowed = (id: string) => nearbyUsers.find((u) => u.id === id)?.isFollowing ?? false;
 	const followState = createOptimisticFollow();
-	const toggleFollow = (id: string) => void followState.toggle(id, baseFollowed(id));
+	// 游客点关注先过登录门控（与 users/[userId]、nearby/people 同一 requireAuth 契约），
+	// 登录成功后自动重放；否则匿名请求注定失败，只会得到误导性的「操作失败」toast。
+	const toggleFollow = (id: string) => {
+		if (!requireAuth({ action: '关注', targetId: id, run: () => void toggleFollow(id) })) return;
+		void followState.toggle(id, baseFollowed(id));
+	};
 	// 登录态排除自己（对齐 nearby 页与鸿蒙端）：自己不该出现在「附近的人」里，
 	// 更不能对着自己的行显示「关注」。匿名无身份，全展示。
 	const visibleNearbyUsers = $derived.by(() => {
