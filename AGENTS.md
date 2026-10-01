@@ -9,6 +9,7 @@
 - `frontend/`：Svelte Web 主前端，SvelteKit 2 + Svelte 5 + TypeScript + Tailwind CSS，当前所有前端开发在此进行。
 - `harmonyapp/`：HarmonyOS ArkTS 客户端。
 - `spec/`：API 契约的唯一权威来源（只读）。
+- `reception-bot/`：社区温度接待机器人（多人格拟真人账号：欢迎/关怀/收件箱回复），**定位为本地调试/联调用途，不做常驻服务**，按需手动启停；运行规程见 `.agents/skills/hotspot-reception-bot/SKILL.md`（唯一事实源）；`state/` 为运行时状态（git 已忽略，含口令归档文件，勿入库）。
 
 ## 构建 & 验证
 
