@@ -17,7 +17,7 @@
 		wsClient
 	} from '@/lib/ws/client';
 	import type { PrivateMessageNewPayload, PrivateTypingPayload } from '@/lib/ws/types';
-	import { presence, watchPresence } from '@/stores/presence.svelte';
+	import { presence, watchPresence, seedOnline } from '@/stores/presence.svelte';
 	import { useChat, formatTime, createTypingIndicator, inRecallWindow, type ChatMessage } from '@/lib/chat.svelte';
 
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
@@ -170,7 +170,7 @@
 					derivedContact = {
 						name: u.nickname,
 						avatar: u.avatar_url ?? '',
-						online: false
+						online: res.data?.user?.presence_status === 'online'
 					};
 				}
 			})
@@ -212,6 +212,9 @@
 		const peer = peerUserId;
 		if (!peer) return;
 		const unwatch = watchPresence([peer]);
+		// 订阅只覆盖「订阅之后的变化」：订阅前已在线的对端不会再收到 UserOnline
+		// 事件（spec 无订阅时初始在线快照），用 HTTP 快照 contact.online 补初始态。
+		if (contact?.online) seedOnline([peer]);
 		return () => {
 			unwatch();
 		};

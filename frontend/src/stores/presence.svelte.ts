@@ -41,6 +41,16 @@ export function resetPresence(): void {
 }
 
 /**
+ * 用 HTTP 快照（presence_status）种子化在线集合：WS 订阅只覆盖「订阅之后的状态
+ * 变化」，订阅前已在线的对端不会再收到 UserOnline 事件（spec 无订阅时初始快照），
+ * 需调用方以列表/资料/会话接口携带的 presence 快照补初始态。只补「在线」；
+ * 离线修正仍由 UserOffline 事件驱动。
+ */
+export function seedOnline(ids: string[]): void {
+  for (const id of new Set(ids.filter(Boolean))) onlineUsers.add(id);
+}
+
+/**
  * 订阅一批用户的在线状态（去重 + 引用计数）。
  * 未连接时 setSubscriptions 仅更新本地订阅状态，重连后自动重放，安全。
  * @returns 清理函数：释放引用计数并取消订阅（调用多次幂等安全）。

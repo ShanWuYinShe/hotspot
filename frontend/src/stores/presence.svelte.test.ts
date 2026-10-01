@@ -2,7 +2,7 @@
 // 沿用 client.test.ts 的 Fake WebSocket 模式（jsdom 无原生实现）。
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { wsClient } from '@/lib/ws/client';
-import { initPresence, isOnline, onlineUsers, watchPresence } from '@/stores/presence.svelte';
+import { initPresence, isOnline, onlineUsers, seedOnline, watchPresence } from '@/stores/presence.svelte';
 
 class FakeWebSocket {
   static OPEN = 1;
@@ -135,5 +135,23 @@ describe('presence', () => {
     expect(replay.payload.items).toEqual([{ type: 'user', ids: ['u9'] }]);
 
     unwatch();
+  });
+
+  it('seedOnline 以 HTTP 快照补初始在线态；UserOffline 仍可修正', () => {
+    const off = initPresence();
+    wsClient.connect();
+    const socket = FakeWebSocket.instances[0];
+    socket.open();
+
+    // 订阅前已在线的对端收不到 UserOnline 事件（spec 无订阅时初始快照），
+    // 由调用方以 HTTP 快照（presence_status）补种子。
+    seedOnline(['u7', 'u7', '']);
+    expect(isOnline('u7')).toBe(true);
+
+    // 种子只是初始态：后续 UserOffline 事件照常修正。
+    socket.message({ type: 'UserOffline', payload: { user_id: 'u7', offline_at: '2025-01-01T00:02:00.000Z' } });
+    expect(isOnline('u7')).toBe(false);
+
+    off();
   });
 });
