@@ -20,7 +20,7 @@
 	import { formatChatListTime } from '@/lib/chat.svelte';
 	import { compareChatItems, type ChatItem } from '@/lib/chat-list';
 	import { ROUTES } from '@/lib/routes';
-	import { presence, watchPresence } from '@/stores/presence.svelte';
+	import { presence, watchPresence, seedOnline } from '@/stores/presence.svelte';
 	import { setChatUnread } from '@/stores/unread.svelte';
 	import { WS_PRIVATE_MESSAGE_EVENT, WS_GROUP_MESSAGE_EVENT } from '@/lib/ws/client';
 
@@ -77,7 +77,10 @@
 					if (!cancelled) loadError = privRes.message ?? groupRes.message ?? '加载失败';
 					return;
 				}
-				const privateChats: ChatItem[] = privData.map((c, i) => ({
+				// HTTP 快照种子化：WS 订阅只覆盖之后的变化（spec 无订阅时初始在线快照），
+			// 列表渲染的 liveChats 以 presence store 为准，需先注入快照在线态。
+			seedOnline(privData.filter((c) => c.presence_status === 'online').map((c) => c.other_user?.user_id ?? ''));
+			const privateChats: ChatItem[] = privData.map((c, i) => ({
 					id: `chat-${i}`,
 					// spec: PrivateChatItem.other_user — the peer; private messages are
 					// addressed by target_user_id (the peer's user_id), not a chat id.
