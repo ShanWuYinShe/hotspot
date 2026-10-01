@@ -284,3 +284,37 @@ func BearingDegrees(a, b Point) int {
 	}
 	return int(math.Round(bearing))
 }
+
+// CellLevelShift returns the right-shift amount that maps a leaf S2 cell ID to
+// its level-L ancestor bucket for SQL GROUP BY aggregation:
+//
+//	bucket = s2_cell_id >> CellLevelShift(level)
+//
+// groups every leaf sharing the same level-L parent. Shifts use arithmetic
+// right shift on both Go and PostgreSQL signed bigint, so leaf IDs on faces
+// 4-5 (negative as int64) still group by their true high bits.
+func CellLevelShift(level int) int {
+	return 2*(maxS2Level-level) + 1
+}
+
+// maxS2Level is the deepest S2 cell level (leaf). Kept local to avoid
+// importing s2 constants into call sites.
+const maxS2Level = 30
+
+// BucketCellToken reconstructs the S2 cell token of a level-L bucket produced
+// by grouping leaf IDs with `s2_cell_id >> CellLevelShift(level)`. The bucket
+// is the shifted integer; the dropped low bits are irrelevant, so the
+// canonical ancestor (lsb set) is rebuilt before converting to a token. The
+// int64→uint64 round-trip preserves the bit pattern for negative buckets.
+// Returns "" for out-of-range levels or an invalid reconstructed cell.
+func BucketCellToken(bucket int64, level int) string {
+	if level < 0 || level > maxS2Level {
+		return ""
+	}
+	shift := uint(CellLevelShift(level))
+	id := s2.CellID(uint64(bucket)<<shift | uint64(1)<<(shift-1))
+	if !id.IsValid() {
+		return ""
+	}
+	return id.ToToken()
+}

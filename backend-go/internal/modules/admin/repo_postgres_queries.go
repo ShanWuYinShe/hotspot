@@ -376,4 +376,85 @@ SET status = $2,
     handle_note = $5
 WHERE report_id = $1 AND status = 'pending'
 RETURNING report_id`
+	// === 统计分析（stats/geo）===
+	// 口径（spec api_spec_admin.md「统计分析（stats）API」）：平台管理视角豁免
+	// 客户端隐私过滤——用户未注销、群组未解散、动态未删除即计入，不限可见性。
+
+	// 全站存量总数：三条标量 COUNT 一次往返取回；不受时间窗影响。
+	queryAdminStatsTotals = `
+SELECT
+  (SELECT COUNT(*) FROM users WHERE is_deleted = FALSE),
+  (SELECT COUNT(*) FROM groups WHERE deleted_at IS NULL),
+  (SELECT COUNT(*) FROM moments WHERE is_deleted = FALSE)`
+
+	// 区域排名：bucket = s2_cell_id >> $2（$2 = geo.CellLevelShift(level)）把叶级
+	// cell 归到 level 层祖先桶（算术右移对 face 4/5 的负 int64 同样成立）；
+	// 三实体 UNION ALL 后按桶合并 total + 三分类 FILTER 拆分。
+	// $1 = limit、$3/$4 = 可空时间窗（各表 created_at）；s2_cell_id = 0（无效
+	// 位置）不参与地理统计。tie-breaker 取 bucket 升序保证确定性。
+	queryAdminStatsRegions = `
+SELECT t.bucket,
+       SUM(t.n)::bigint AS total,
+       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'user'), 0)::bigint AS user_n,
+       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'group'), 0)::bigint AS group_n,
+       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'moment'), 0)::bigint AS moment_n
+FROM (
+  SELECT s2_cell_id >> $2 AS bucket, COUNT(*) AS n, 'user' AS kind
+  FROM users
+  WHERE is_deleted = FALSE AND s2_cell_id <> 0
+    AND ($3::timestamptz IS NULL OR created_at >= $3)
+    AND ($4::timestamptz IS NULL OR created_at <= $4)
+  GROUP BY 1
+  UNION ALL
+  SELECT s2_cell_id >> $2, COUNT(*), 'group'
+  FROM groups
+  WHERE deleted_at IS NULL AND s2_cell_id <> 0
+    AND ($3::timestamptz IS NULL OR created_at >= $3)
+    AND ($4::timestamptz IS NULL OR created_at <= $4)
+  GROUP BY 1
+  UNION ALL
+  SELECT s2_cell_id >> $2, COUNT(*), 'moment'
+  FROM moments
+  WHERE is_deleted = FALSE AND s2_cell_id <> 0
+    AND ($3::timestamptz IS NULL OR created_at >= $3)
+    AND ($4::timestamptz IS NULL OR created_at <= $4)
+  GROUP BY 1
+) t
+GROUP BY t.bucket
+ORDER BY total DESC, t.bucket ASC
+LIMIT $1`
+
+	// 热门地点排名：location_name 精确文本聚合（同名合并，自由文本不做行政区
+	// 归一化）。口径与区域排名一致；空地名不计入地点维度（坐标仍参与区域）。
+	queryAdminStatsPlaces = `
+SELECT t.location_name,
+       SUM(t.n)::bigint AS total,
+       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'user'), 0)::bigint AS user_n,
+       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'group'), 0)::bigint AS group_n,
+       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'moment'), 0)::bigint AS moment_n
+FROM (
+  SELECT location_name, COUNT(*) AS n, 'user' AS kind
+  FROM users
+  WHERE is_deleted = FALSE AND location_name <> ''
+    AND ($2::timestamptz IS NULL OR created_at >= $2)
+    AND ($3::timestamptz IS NULL OR created_at <= $3)
+  GROUP BY 1
+  UNION ALL
+  SELECT location_name, COUNT(*), 'group'
+  FROM groups
+  WHERE deleted_at IS NULL AND location_name <> ''
+    AND ($2::timestamptz IS NULL OR created_at >= $2)
+    AND ($3::timestamptz IS NULL OR created_at <= $3)
+  GROUP BY 1
+  UNION ALL
+  SELECT location_name, COUNT(*), 'moment'
+  FROM moments
+  WHERE is_deleted = FALSE AND location_name <> ''
+    AND ($2::timestamptz IS NULL OR created_at >= $2)
+    AND ($3::timestamptz IS NULL OR created_at <= $3)
+  GROUP BY 1
+) t
+GROUP BY t.location_name
+ORDER BY total DESC, t.location_name ASC
+LIMIT $1`
 )

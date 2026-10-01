@@ -1694,6 +1694,34 @@ func TestAdmin_AppConfigGet(t *testing.T) {
 	})
 }
 
+func TestAdmin_Stats_Geo(t *testing.T) {
+	withAdminAuth(t, func(token string) {
+		var resp ApiResponse[map[string]any]
+		apiRespOK(t, "/admin/api/v1/stats/geo", map[string]any{}, &resp)
+		if resp.Data == nil {
+			t.Fatal("expected data")
+		}
+		for _, key := range []string{"generated_at", "totals", "regions", "places"} {
+			if _, ok := (*resp.Data)[key]; !ok {
+				t.Fatalf("missing %s in response", key)
+			}
+		}
+		// 层级越界 → 10000（参数必显式）。
+		var badResp ApiResponse[map[string]any]
+		apiRespOKWithCode(t, "/admin/api/v1/stats/geo", map[string]any{"level": 99}, &badResp, 10000)
+	})
+}
+
+func TestAdmin_Stats_Geo_RejectsNonAdmin(t *testing.T) {
+	userID, token := createGuestUser(t)
+	_ = userID
+	oldTok := accessToken
+	accessToken = token
+	defer func() { accessToken = oldTok }()
+	var resp ApiResponse[map[string]any]
+	apiRespOKWithCode(t, "/admin/api/v1/stats/geo", map[string]any{}, &resp, 10200)
+}
+
 func TestAdmin_UsersSearch(t *testing.T) {
 	withAdminAuth(t, func(token string) {
 		var resp ApiResponse[map[string]any]

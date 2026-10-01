@@ -95,6 +95,7 @@ func TestPlatformPermissionConstants(t *testing.T) {
 		"PermAdminGroupsWrite":        PermAdminGroupsWrite,
 		"PermAdminAuditRead":          PermAdminAuditRead,
 		"PermAdminAuditReadIP":        PermAdminAuditReadIP,
+		"PermAdminStatsRead":          PermAdminStatsRead,
 		"PermAdminSuperadmin":         PermAdminSuperadmin,
 	}
 

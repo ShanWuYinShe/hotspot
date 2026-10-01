@@ -55,6 +55,7 @@ const (
 	PermAdminGroupsWrite        = "admin.groups.write"
 	PermAdminAuditRead          = "admin.audit.read"
 	PermAdminAuditReadIP        = "admin.audit.read_ip"
+	PermAdminStatsRead          = "admin.stats.read"
 	// PermAdminSuperadmin 表示 superadmin（'*'）。
 	PermAdminSuperadmin = "*"
 )

@@ -52,4 +52,7 @@ func MountRoutes(r chi.Router, handler *Handler) {
 		announcements.Post("/update", handler.UpdateAnnouncement)
 		announcements.Post("/delete", handler.DeleteAnnouncement)
 	})
+	r.Route("/stats", func(stats chi.Router) {
+		stats.Post("/geo", handler.StatsGeo)
+	})
 }

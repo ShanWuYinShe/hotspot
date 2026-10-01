@@ -54,7 +54,7 @@
 
 | 文件 | 说明 |
 |-----|------|
-| [api_spec_admin.md](api_spec_admin.md) | 平台管理节点 /admin/api/v1（RBAC 权限管理、审计日志、服务端配置、内容审核） |
+| [api_spec_admin.md](api_spec_admin.md) | 平台管理节点 /admin/api/v1（RBAC 权限管理、审计日志、服务端配置、内容审核、地理统计分析） |
 
 ## 权威边界与冲突处理
 

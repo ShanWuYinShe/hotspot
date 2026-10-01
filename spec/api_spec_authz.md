@@ -85,6 +85,7 @@
 | `admin.groups.write` | 解散群组 |
 | `admin.audit.read` | 查看审计日志（不含 ip_address） |
 | `admin.audit.read_ip` | 查看审计日志 IP 地址（需同时具备 admin.audit.read） |
+| `admin.stats.read` | 查看平台统计分析（地理聚合排名） |
 
 **角色模型**：
 - **superadmin**：`permissions=['*']`，拥有全部权限键；仅 PII 键（`read_ip` ×2）要求显式持有
@@ -315,4 +316,4 @@
 | 164 | `/admin/api/v1/announcements/create` | admin.announcements.write | not_admin/insufficient_admin_permission | — | 幂等 |
 | 165 | `/admin/api/v1/announcements/update` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
 | 166 | `/admin/api/v1/announcements/delete` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
-
+| 167 | `/admin/api/v1/stats/geo` | admin.stats.read | not_admin/insufficient_admin_permission | — | — |

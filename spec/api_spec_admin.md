@@ -6,7 +6,7 @@
 ## 模块信息
 
 - **节点**: `/admin/api/v1`（平台管理员）
-- **命名空间**: `rbac` / `audit` / `app_config` / `users` / `groups` / `reports` / `tags` / `announcements`
+- **命名空间**: `rbac` / `audit` / `app_config` / `users` / `groups` / `reports` / `tags` / `announcements` / `stats`
 - **引用**: 
   - 基础规范：`api_spec_base.md`
   - 通用类型：`api_spec_types.md`
@@ -56,6 +56,7 @@
 | `POST /admin/api/v1/announcements/create` | 发布系统公告 | admin.announcements.write |
 | `POST /admin/api/v1/announcements/update` | 更新系统公告 | admin.announcements.write |
 | `POST /admin/api/v1/announcements/delete` | 删除系统公告 | admin.announcements.write |
+| `POST /admin/api/v1/stats/geo` | 地理统计（全站存量 + 区域/热门地点排名） | admin.stats.read |
 
 ## 类型定义
 
@@ -964,3 +965,74 @@ interface DeleteAnnouncementRequest {
 **Response**: `ApiResponse`
 
 **错误码**: `10200` `10300`
+
+---
+
+## 统计分析（stats）API
+
+### POST /admin/api/v1/stats/geo
+
+地理统计聚合快照：全站存量总数 + 区域排名（S2 网格）+ 热门地点排名（location_name 聚合）。供平台管理端从全局掌握站点数据的地理分布。
+
+- **权限**: `admin.stats.read`
+
+**统计口径（契约级）**：
+
+- 平台管理视角豁免客户端隐私过滤（见 `api_spec_authz.md`「交叉规则」）：用户未注销（`is_deleted = false`）、群组未解散（`deleted_at` 为空）、动态未删除（`is_deleted = false`）即计入，不限可见性/可搜性，封禁账号照常计入
+- 地理排名仅统计有有效位置的实体（无效位置不计入 `regions` / `places`，但计入 `totals`）
+- 区域维度基于 S2 网格祖先桶聚合（与公开地图 heatmap 同一 token 体系），**不引入行政区概念**（与 `api_spec_public.md`「地图渲染」设计理念一致）
+- 热门地点按 `location_name` 精确文本聚合（自由文本同名合并，不做行政区归一化；空地名不计入 `places`）
+- `time_range` 只作用于 `regions` / `places`（按各实体 `created_at` 过滤）；`totals` 恒为全站存量现状，不受时间窗影响
+- 一致性级别为弱一致（实时聚合快照，非预聚合表）
+
+**Request**: `AdminGeoStatsRequest`
+```typescript
+interface AdminGeoStatsRequest {
+  level: number | null;        // S2 聚合层级，[4,12]，数字越大网格越细；null = 8（约 20km，城市尺度）
+  time_range: TimeRange | null; // 参与排名实体的创建时间窗（UTC ISO 8601）；null = 不限
+  limit: number | null;        // 排名条数；0/null = 20，服务端裁剪上限 100
+}
+
+interface TimeRange {
+  start_time: string | null;   // 含边界（created_at >= start_time）
+  end_time: string | null;     // 含边界（created_at <= end_time）；同时提供时必须 start_time <= end_time
+}
+
+interface StatsEntityBreakdown {
+  user: number;                // 参与统计的用户数（恒返回真值，平台管理视角无隐私 null 化）
+  group: number;
+  moment: number;
+}
+
+interface AdminRegionRankItem {
+  cell_token: string;          // S2 cell token（与 api_spec_public.md「地图渲染」heatmap 的 S2CellToken 同体系）
+  level: number;               // 本次请求生效的 S2 层级
+  center: GeoPoint;            // 网格中心点（代表坐标，供地图落点渲染）
+  total_count: number;
+  breakdown: StatsEntityBreakdown;
+}
+
+interface AdminPlaceRankItem {
+  location_name: string;
+  total_count: number;
+  breakdown: StatsEntityBreakdown;
+}
+
+interface AdminGeoStatsTotals {
+  user: number;                // 全站未注销用户数
+  group: number;               // 全站未解散群组数
+  moment: number;              // 全站未删除动态数
+  total: number;               // 三者之和
+}
+
+interface AdminGeoStatsResponse {
+  generated_at: string;        // 统计生成时间（UTC ISO 8601）
+  totals: AdminGeoStatsTotals;
+  regions: AdminRegionRankItem[]; // 按 total_count 降序，key 升序为稳定 tie-breaker；Top-N，无分页
+  places: AdminPlaceRankItem[];   // 排序规则同上
+}
+```
+
+**Response**: `ApiResponse<AdminGeoStatsResponse>`
+
+**错误码**: `10000`（level 越界 / 时间窗倒置 / 时间格式非法 / limit 为负）`10200`

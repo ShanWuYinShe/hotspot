@@ -510,6 +510,24 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
+func (h *Handler) StatsGeo(w http.ResponseWriter, r *http.Request) {
+	var req AdminGeoStatsRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	payload, apiErr, err := h.service.StatsGeo(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w, r)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, r, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+}
+
 func (h *Handler) writeAPIError(w http.ResponseWriter, r *http.Request, err *httpx.APIError) {
 	observability.L().Warn("handler business error", "method", handlerMethodName(r), "code", err.Code, "message", err.Message, "request_id", observability.RequestIDFromContext(r.Context()))
 	if err.Data != nil {

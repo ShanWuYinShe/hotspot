@@ -29,6 +29,7 @@ const (
 	permissionGroupsWrite        = rbac.PermAdminGroupsWrite
 	permissionReportsRead        = rbac.PermAdminReportsRead
 	permissionReportsWrite       = rbac.PermAdminReportsWrite
+	permissionStatsRead          = rbac.PermAdminStatsRead
 	wildcardPermission           = rbac.PermAdminSuperadmin
 )
 
@@ -49,6 +50,7 @@ var permissionDictionary = []AdminPermissionItem{
 	{Key: "admin.groups.write", Description: "解散群组"},
 	{Key: permissionAuditRead, Description: "查看审计日志（不含 ip_address 字段）"},
 	{Key: permissionAuditReadIP, Description: "查看审计日志 IP 地址"},
+	{Key: permissionStatsRead, Description: "查看平台统计分析（地理聚合排名）"},
 }
 
 type AdminGrantUpsert struct {
