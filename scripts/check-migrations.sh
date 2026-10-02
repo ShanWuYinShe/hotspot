@@ -12,7 +12,7 @@ dupes=$(ls -1 *.sql | grep -oE '^[0-9]{3}' | sort | uniq -d)
 # 已应用顺序由字典序确定，重命名会改变全新环境的执行顺序，故只拦新增。
 dupes=$(printf '%s\n' "$dupes" | grep -v '^009$' || true)
 if [ -n "$dupes" ]; then
-  echo "!! 迁移序号重复：$dupes（新增迁移不得与既有序号重复）"
+  echo "!! 迁移序号重复：${dupes}（新增迁移不得与既有序号重复）"
   exit 1
 fi
 echo "迁移序号校验 OK"

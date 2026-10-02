@@ -52,6 +52,18 @@ RUN addgroup -S -g 101 app && adduser -S -u 100 -G app app \
 
 USER app
 
-# 每次容器启动（= 每次换镜像重建）先把卷清空再灌入新产物：静态卷自刷新，
-# 无需部署脚本再做手工 tar 拷贝；随后保持容器存活（healthcheck 依赖）。
-CMD ["sh", "-c", "rm -rf /build/* /build/.[!.]* /build/..?* 2>/dev/null; cp -r /srv/dist/. /build/ && exec sleep infinity"]
+# 每次容器启动（= 每次换镜像重建）把新版产物铺进静态卷，静态卷自刷新，无需
+# 部署脚本手工 tar 拷贝；随后保持容器存活（healthcheck 依赖）。
+#
+# 关键：不再先 rm -rf 清空卷再拷贝——nginx 只读挂载同一卷，清空到拷贝完成之间
+# 的请求会撞上「index.html 不存在」，表现为部署瞬间的白屏/404（而部署脚本的
+# 版本校验发生在拷贝完成之后，照样报成功）。改为三步安全序：
+#   1) 先同步除入口文件外的资源（同名覆盖；旧 index.html 与旧 chunk 都还在，
+#      这期间到达的请求仍由旧版本正常响应）；
+#   2) index.html / version.json 用「写临时文件 + mv」原子替换，读者不会拿到
+#      半截文件（mv 与 cp 同目录同一文件系统内为原子重命名）；
+#   3) 清理上一代遗留资源：不在本版清单内、且 mtime 超过 24h 的文件——宽限期
+#      让还停留在旧页面的客户端仍能取到旧 chunk，也保证卷不会无限增长。
+# 任一步失败（磁盘满、tar 出错）容器退出，卷内仍是上一版完整产物：宁可保持
+# 旧版本可用，也不留半新半旧的卷。
+CMD ["sh", "-c", "set -e; SRC=/srv/dist; DEST=/build; mkdir -p \"$DEST\"; ( cd \"$SRC\" && tar cf - --exclude=./index.html --exclude=./version.json . ) | ( cd \"$DEST\" && tar xf - ); if [ -f \"$SRC/version.json\" ]; then cp \"$SRC/version.json\" \"$DEST/.version.json.tmp\" && mv -f \"$DEST/.version.json.tmp\" \"$DEST/version.json\"; fi; cp \"$SRC/index.html\" \"$DEST/.index.html.tmp\" && mv -f \"$DEST/.index.html.tmp\" \"$DEST/index.html\"; ( cd \"$SRC\" && find . -type f | sed 's|^\\./||' ) > /tmp/keep.txt; find \"$DEST\" -type f -mmin +1440 | while read -r f; do rel=\"${f#$DEST/}\"; grep -qxF \"$rel\" /tmp/keep.txt || rm -f \"$f\"; done; find \"$DEST\" -type d -empty -exec rmdir {} + 2>/dev/null || true; exec sleep infinity"]

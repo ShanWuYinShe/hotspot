@@ -16,15 +16,29 @@
 #   运行中容器，探测不到时回退 hotspot-postgres-1，与 scripts/backup-postgres.sh
 #   的 CONTAINER 对应）；DEPLOY_FRONTEND_VOLUME 覆盖前端静态卷名（默认
 #   hotspot_frontend_build，更新前会幂等迁移卷属主，见下文非 root 说明）；
-#   ALERT_WEBHOOK 可选（接收 POST JSON {"text":...} 的机器人地址，同 health-check.sh），
-#   版本校验失败触发自动回滚时推送告警。
+#   DEPLOY_KEEP_IMAGES 服务器旧镜像保留个数（默认 3，0 = 不清理）；
+#   DEPLOY_LOCK_TTL_HOURS 并发锁陈旧判定小时数（默认 6）；
+#   ROLLBACK_OF=<被回滚掉的原版本> 由 scripts/rollback-production.sh 传入，只影响
+#   审计记录与告警文案；ALERT_WEBHOOK 可选（接收 POST JSON {"text":...} 的机器人
+#   地址，同 health-check.sh），版本校验失败触发自动回滚时推送告警。
+#
+# 同源：镜像取自 tag 对应的 Release 包，部署配置（compose + nginx 片段 + 采集配置）
+# 也从同一 tag 用 git archive 导出——不看工作树当前内容，保证「线上跑的就是那个
+# tag」；本地 HEAD 领先被部署 tag 时也不会把未发布的配置带上线。
+# 完整性：Release 带 <包名>.sha256 时强制校验（旧版本无该资产则告警放行）；load 后
+# 先核对镜像 OCI 标签 version/revision 与 tag/commit 一致，再动线上容器。
 # 安全网：滚动更新前自动 pg_dump（服务器 backups/ + 本机 .workwork/ 各一份），
 # 备份失败即中止部署——迁移不可逆，无快照不上线。
 # 自动回滚：更新前记录线上版本指纹；更新后版本校验失败自动重部署上一版本并
 # 告警（仅回滚镜像，不含数据——迁移不可逆，见 docs/backup-restore.md）。
+# 审计：每次部署追加一行到服务器 backups/deploy-history.log 与本机
+# .workwork/deploy-history.log（tag / commit / 上一版本 / 结果 / 操作者）。
 #
-# 回滚（服务器侧手动）：IMAGE_TAG=<旧版本> docker compose -f docker-compose.yml \
-#   -f docker-compose.prod.yml --profile prod up -d && docker restart hotspot-nginx-1
+# 回滚（推荐）：./scripts/rollback-production.sh [<旧版本>|--previous]——复用本脚本
+#   部署旧 tag，结束后同样核对线上版本指纹。手工等价命令：
+#   IMAGE_TAG=<旧版本> docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     --profile prod up -d && docker restart hotspot-nginx-1
+# 完整发布/回滚/热修复流程见 docs/release-runbook.md。
 set -euo pipefail
 
 SERVER="${SERVER:-workwork-server}"
@@ -51,6 +65,58 @@ git -C "$REPO_ROOT" merge-base --is-ancestor "$TARGET" origin/main || { echo "!!
 
 COMMIT="$(git -C "$REPO_ROOT" rev-parse "${TARGET}^{commit}")"
 echo "==> 部署版本: ${TARGET} (commit ${COMMIT:0:12})"
+
+# ── 审计与并发锁（任何变更之前）──────────────────────────────────────
+HISTORY_LOCAL="$REPO_ROOT/.workwork/deploy-history.log"
+DEPLOY_KIND="deploy"
+[ -n "${ROLLBACK_OF:-}" ] && DEPLOY_KIND="rollback"
+
+# 历史记录写不进去只告警不阻塞：审计是副产物，不该把一次成功部署判成失败。
+record_history() {
+  local result="$1" note="${2:-}" line
+  line="$(date -u +%FT%TZ) kind=${DEPLOY_KIND} tag=${TARGET} commit=${COMMIT:0:12} previous=${PREVIOUS_TAG:-none} result=${result} operator=$(whoami)@$(hostname) ${note}"
+  mkdir -p "$(dirname "$HISTORY_LOCAL")"
+  printf '%s\n' "$line" >> "$HISTORY_LOCAL"
+  ssh "$SERVER" "mkdir -p $REMOTE_DIR/backups && printf '%s\n' '$line' >> $REMOTE_DIR/backups/deploy-history.log" >/dev/null 2>&1 \
+    || echo "!! 服务器部署历史写入失败（本地已记录：${HISTORY_LOCAL}）"
+}
+
+# 服务器侧原子 mkdir 互斥：两个终端/两台机器同时部署会交错 load 与 up，结果
+# 无法预期。上次异常中断留下的锁超过 TTL 视为陈旧，显式接管并留痕。
+LOCK_DIR="$REMOTE_DIR/.deploy.lock"
+LOCK_HELD=0
+LOCK_TTL_HOURS="${DEPLOY_LOCK_TTL_HOURS:-6}"
+release_lock() {
+  if [ "$LOCK_HELD" = "1" ]; then
+    ssh "$SERVER" "rm -rf $LOCK_DIR" >/dev/null 2>&1 || true
+    LOCK_HELD=0
+  fi
+}
+acquire_lock() {
+  if ssh "$SERVER" "mkdir $LOCK_DIR 2>/dev/null"; then
+    ssh "$SERVER" "printf 'tag=%s\noperator=%s@%s\nstarted_at=%s\n' '$TARGET' \"\$(whoami)\" \"\$(hostname)\" \"\$(date -u +%FT%TZ)\" > $LOCK_DIR/info" >/dev/null 2>&1 || true
+    LOCK_HELD=1
+    trap release_lock EXIT
+    echo "==> 已获取部署锁（${LOCK_DIR}）"
+    return 0
+  fi
+  local age_h info
+  age_h="$(ssh "$SERVER" "echo \$(( ( \$(date +%s) - \$(stat -c %Y $LOCK_DIR 2>/dev/null || echo 0) ) / 3600 ))" 2>/dev/null || echo 0)"
+  info="$(ssh "$SERVER" "cat $LOCK_DIR/info 2>/dev/null || true")"
+  if [ "${age_h:-0}" -ge "$LOCK_TTL_HOURS" ]; then
+    echo "!! 检测到陈旧部署锁（已持有 ${age_h}h ≥ TTL ${LOCK_TTL_HOURS}h），接管："
+    printf '%s\n' "$info" | sed 's/^/    /'
+    ssh "$SERVER" "rm -rf $LOCK_DIR && mkdir $LOCK_DIR"
+    LOCK_HELD=1
+    trap release_lock EXIT
+    return 0
+  fi
+  echo "!! 另一个部署正在进行（锁 ${LOCK_DIR}，已持有 ${age_h}h）："
+  printf '%s\n' "$info" | sed 's/^/    /'
+  echo "   确认对方已中断后执行 ssh $SERVER 'rm -rf $LOCK_DIR' 再重试。"
+  exit 1
+}
+acquire_lock
 
 # docker-compose.prod.yml 的 `ports: !override []` 依赖 YAML merge tag（Compose v2.24+），
 # 过旧版本解析报错晦涩，提前拦下。
@@ -149,25 +215,69 @@ echo "    postgres=${DB_CONTAINER} backend=${BACKEND_CONTAINER} frontend=${FRONT
 
 echo "==> 从 GitHub Release 下载镜像包…"
 mkdir -p "$STAGING"
-( cd "$REPO_ROOT" && gh release download "$TARGET" --dir "$STAGING" --clobber --pattern 'hotspot-images-*.tar.gz' )
+( cd "$REPO_ROOT" && gh release download "$TARGET" --dir "$STAGING" --clobber \
+    --pattern 'hotspot-images-*.tar.gz' --pattern 'hotspot-images-*.tar.gz.sha256' )
 TARBALL="$STAGING/hotspot-images-$TARGET.tar.gz"
 [ -f "$TARBALL" ] || { echo "!! Release ${TARGET} 缺少镜像包（CI Release 工作流是否成功？）"; exit 1; }
 ls -lh "$TARBALL"
 
-echo "==> 同步部署配置（compose + 仓库派生 nginx 片段 + observability 采集配置，非源码）…"
+# 完整性校验：CI 为发布包生成同名 .sha256 资产。旧版本 Release 没有该资产时
+# 只告警放行（否则无法回滚到历史版本）；有资产但校验不过一律中止——损坏或
+# 被替换的镜像包上线，后果比中断一次部署严重得多。
+SHA_FILE="$STAGING/hotspot-images-$TARGET.tar.gz.sha256"
+if [ -f "$SHA_FILE" ]; then
+  if ( cd "$STAGING" && { shasum -a 256 -c "hotspot-images-$TARGET.tar.gz.sha256" >/dev/null 2>&1 \
+      || sha256sum -c "hotspot-images-$TARGET.tar.gz.sha256" >/dev/null 2>&1; } ); then
+    echo "==> 镜像包 sha256 校验通过"
+  else
+    echo "!! 镜像包 sha256 校验失败（下载损坏或资产被替换），中止部署"; exit 1
+  fi
+else
+  echo "!! 注意：Release ${TARGET} 未提供 .sha256 资产（多为旧版本发布包），跳过完整性校验"
+fi
+
+# ── 部署配置与镜像同源 ──────────────────────────────────────────────
+# 关键：配置从被部署的 tag 导出（git archive），而不是取工作树当前文件。
+# 工作树 HEAD 常常领先被部署的 tag（例如回滚到旧版本时），直接 scp 会把尚未
+# 发布的 nginx/compose 配置带上线——线上就成了「新配置 + 旧镜像」的混合体，
+# 现象难查且不可复现。
+echo "==> 从 tag ${TARGET} 导出部署配置（与镜像同源）…"
+CONFIG_STAGING="$STAGING/config"
+rm -rf "$CONFIG_STAGING"
+mkdir -p "$CONFIG_STAGING"
+CONFIG_PATHS="docker-compose.yml docker-compose.prod.yml docker/nginx.headers.inc docker/nginx.proxy.inc docker/nginx.prod-tls.conf docker/prod-server.inc docker/prometheus.yml docker/grafana-provisioning"
+ARCHIVE_PATHS=""
+for p in $CONFIG_PATHS; do
+  if git -C "$REPO_ROOT" cat-file -e "${TARGET}:${p}" 2>/dev/null; then
+    ARCHIVE_PATHS="$ARCHIVE_PATHS $p"
+  else
+    echo "    注意：tag ${TARGET} 中不存在 ${p}，跳过（旧版本可能尚未引入该文件）"
+  fi
+done
+# shellcheck disable=SC2086  # 路径列表按空格拆分传给 git archive
+git -C "$REPO_ROOT" archive "$TARGET" $ARCHIVE_PATHS | tar -x -C "$CONFIG_STAGING"
+
+echo "==> 同步部署配置（compose + nginx 片段 + observability 采集配置，非源码）…"
+SCP_LIST="$CONFIG_STAGING/docker-compose.yml $CONFIG_STAGING/docker-compose.prod.yml"
+for f in nginx.headers.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml; do
+  [ -f "$CONFIG_STAGING/docker/$f" ] && SCP_LIST="$SCP_LIST $CONFIG_STAGING/docker/$f"
+done
+[ -d "$CONFIG_STAGING/docker/grafana-provisioning" ] && SCP_LIST="$SCP_LIST $CONFIG_STAGING/docker/grafana-provisioning"
 ssh "$SERVER" "mkdir -p $REMOTE_DIR/tmp-deploy-incoming"
-scp -q -r "$REPO_ROOT/docker-compose.yml" \
-       "$REPO_ROOT/docker-compose.prod.yml" \
-       "$REPO_ROOT/docker/nginx.headers.inc" \
-       "$REPO_ROOT/docker/nginx.proxy.inc" \
-       "$REPO_ROOT/docker/nginx.prod-tls.conf" \
-       "$REPO_ROOT/docker/prod-server.inc" \
-       "$REPO_ROOT/docker/prometheus.yml" \
-       "$REPO_ROOT/docker/grafana-provisioning" \
-       "$SERVER:$REMOTE_DIR/tmp-deploy-incoming/"
-ssh "$SERVER" "cd $REMOTE_DIR && mv tmp-deploy-incoming/docker-compose.yml tmp-deploy-incoming/docker-compose.prod.yml . && \
-  mv tmp-deploy-incoming/nginx.headers.inc tmp-deploy-incoming/nginx.proxy.inc tmp-deploy-incoming/nginx.prod-tls.conf tmp-deploy-incoming/prod-server.inc tmp-deploy-incoming/prometheus.yml docker/ && \
-  rm -rf docker/grafana-provisioning && mv tmp-deploy-incoming/grafana-provisioning docker/grafana-provisioning && rmdir tmp-deploy-incoming"
+# shellcheck disable=SC2086  # 同上
+scp -q -r $SCP_LIST "$SERVER:$REMOTE_DIR/tmp-deploy-incoming/"
+
+REMOTE_MOVE="cd $REMOTE_DIR && mkdir -p docker && mv tmp-deploy-incoming/docker-compose.yml tmp-deploy-incoming/docker-compose.prod.yml ."
+for f in nginx.headers.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml; do
+  if [ -f "$CONFIG_STAGING/docker/$f" ]; then
+    REMOTE_MOVE="$REMOTE_MOVE && mv tmp-deploy-incoming/$f docker/$f"
+  fi
+done
+if [ -d "$CONFIG_STAGING/docker/grafana-provisioning" ]; then
+  REMOTE_MOVE="$REMOTE_MOVE && rm -rf docker/grafana-provisioning && mv tmp-deploy-incoming/grafana-provisioning docker/grafana-provisioning"
+fi
+REMOTE_MOVE="$REMOTE_MOVE && rmdir tmp-deploy-incoming"
+ssh "$SERVER" "$REMOTE_MOVE"
 # observability 分发说明：prometheus.yml 与 grafana-provisioning/ 是 --profile
 # observability 的 bind-mount 源，缺失会导致 up 时 prometheus/grafana 起不来，
 # 故随部署配置一并分发（grafana-provisioning 整目录替换，服务器侧无本地定制）。
@@ -177,6 +287,18 @@ ssh "$SERVER" "mkdir -p $REMOTE_DIR/tmp-deploy-incoming"
 scp -q "$TARBALL" "$SERVER:$REMOTE_DIR/tmp-deploy-incoming/hotspot-images-$TARGET.tar.gz"
 ssh "$SERVER" "docker load -i $REMOTE_DIR/tmp-deploy-incoming/hotspot-images-$TARGET.tar.gz && \
   rm -rf $REMOTE_DIR/tmp-deploy-incoming"
+
+# 加载后立刻核对 OCI 标签：version 必须等于 tag、revision 必须等于该 tag 的 commit。
+# 这一步挡住「发布包与 tag 不一致」（资产被替换、CI 打错 commit）——版本漂移在
+# 动线上容器之前暴露，比事后回滚便宜得多。
+echo "==> 核对已加载镜像的版本指纹（镜像 ↔ tag commit）…"
+for repo in hotspot-backend hotspot-frontend; do
+  ver="$(ssh "$SERVER" "docker inspect ${repo}:${TARGET} --format '{{index .Config.Labels \"org.opencontainers.image.version\"}}'" 2>/dev/null || true)"
+  rev="$(ssh "$SERVER" "docker inspect ${repo}:${TARGET} --format '{{index .Config.Labels \"org.opencontainers.image.revision\"}}'" 2>/dev/null || true)"
+  [ "$ver" = "$TARGET" ] || { echo "!! ${repo}:${TARGET} 的 version 标签为 ${ver:-<空>}，与 tag 不符，中止部署"; exit 1; }
+  [ "$rev" = "$COMMIT" ] || { echo "!! ${repo}:${TARGET} 的 revision 标签为 ${rev:-<空>}，与 ${TARGET} 的 commit ${COMMIT:0:12} 不符（发布包与 tag 不一致），中止部署"; exit 1; }
+  echo "    ${repo}: version=${ver} revision=${rev:0:12}"
+done
 
 # ── 部署前数据库备份（硬性步骤，失败即中止部署）──────────────────────
 # 新版本迁移不可逆（无 down 迁移），上线前必须先有快照：服务器本地一份 +
@@ -215,6 +337,7 @@ alert() {
 # 自动回滚：仅重部署上一版本镜像（数据不回滚——迁移不可逆，需按 runbook 评估）。
 rollback() {
   echo "!! $1"
+  record_history failed "$1"
   if [ -n "$PREVIOUS_TAG" ]; then
     echo "==> 自动回滚到 ${PREVIOUS_TAG}…"
     # --scale frontend-build=0：frontend-build 只是 build target（复用 frontend
@@ -268,9 +391,50 @@ for i in $(seq 1 12); do
   fi
   sleep 2
 done
-# 不能用循环变量 _ 判断是否走完最后一轮：_ 即 bash 特殊变量 $_，会被循环体内
+# 不能用循环变量 _ 判断是否走完最后一轮：_ 即 bash 特殊变量 ${_}，会被循环体内
 # 的命令覆盖（sleep 等），导致校验失败也不中止、部署被误报成功。
 [ -n "$frontend_ok" ] || rollback "前端静态卷版本校验未通过: ${FE:-<空>}"
 
+# 容器里的文件对 ≠ 网关服务得出去：卷属主/权限错误、nginx 指错目录、配置未生效时，
+# 前两项校验照样全绿而站点仍 404/白屏。这里从 nginx 容器内部取一次真实响应，
+# 顺带验证「网关 → 后端」链路（/healthz 由 nginx 反代到 backend）。
+echo "==> 网关侧校验（nginx 实际对外提供的静态产物与存活探针）…"
+gateway_ok=""
+for i in $(seq 1 10); do
+  GW_VERSION="$(ssh "$SERVER" "docker exec $NGINX_CONTAINER wget -qO- http://127.0.0.1/version.json" 2>/dev/null || true)"
+  GW_HEALTH="$(ssh "$SERVER" "docker exec $NGINX_CONTAINER wget -qO- http://127.0.0.1/healthz" 2>/dev/null || true)"
+  if echo "$GW_VERSION" | grep -q "\"version\": *\"$TARGET\"" && echo "$GW_HEALTH" | grep -q '"status":"ok"'; then
+    echo "✅ 网关校验通过: $(echo "$GW_VERSION" | tr -d '\n')"
+    gateway_ok=1
+    break
+  fi
+  sleep 3
+done
+[ -n "$gateway_ok" ] || rollback "网关侧校验未通过（version.json 或 /healthz 响应异常: ver=${GW_VERSION:-<空>} health=${GW_HEALTH:-<空>}）"
+
+record_history success
 rm -f "$TARBALL"
-echo "🎉 部署完成: ${TARGET} → ${SERVER}:${REMOTE_DIR}（回滚：IMAGE_TAG=<旧版本> ${COMPOSE} up -d && docker restart ${NGINX_CONTAINER}）"
+
+# ── 旧镜像回收（默认保留 3 个历史版本）──────────────────────────────
+# 每次发布都会在服务器留下两个镜像（前后端），不回收会单调增长直到磁盘告警。
+# 只删 hotspot-backend/frontend 的 v* tag，且显式跳过当前版本与上一版本
+# （回滚网需要上一版本镜像仍在）。
+KEEP_IMAGES="${DEPLOY_KEEP_IMAGES:-3}"
+if [ "$KEEP_IMAGES" -gt 0 ] 2>/dev/null; then
+  echo "==> 回收服务器旧版本镜像（保留最近 ${KEEP_IMAGES} 个历史版本 + 当前/上一版本）…"
+  ssh "$SERVER" "sh -s" <<REMOTE_PRUNE || echo "!! 旧镜像清理失败（不影响本次部署结果）"
+keep=$KEEP_IMAGES; cur='$TARGET'; prev='${PREVIOUS_TAG:-}'
+for repo in hotspot-backend hotspot-frontend; do
+  docker images --format '{{.Repository}}:{{.Tag}}' "\$repo" \
+    | grep -E "^\$repo:v[0-9]" \
+    | grep -v -E ":(\$cur|\$prev)\$" \
+    | sort -Vr | tail -n +\$((keep+1)) \
+    | xargs -r docker rmi >/dev/null 2>&1 || true
+done
+docker image prune -f >/dev/null 2>&1 || true
+REMOTE_PRUNE
+fi
+
+echo "🎉 部署完成: ${TARGET} → ${SERVER}:${REMOTE_DIR}"
+echo "   回滚：./scripts/rollback-production.sh --previous（或指定 <版本>）"
+echo "   历史：ssh $SERVER 'tail -5 $REMOTE_DIR/backups/deploy-history.log'"

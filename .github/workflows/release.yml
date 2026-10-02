@@ -6,8 +6,9 @@
 # 镜像包 → 服务器 docker load → compose up。服务器全程不接触源码、不构建，
 # 替代早期 rsync 源码到服务器构建的非常规做法。
 #
-# 触发前条件：tag 必须已在 origin/main 上（deploy 脚本会校验），且该提交的
-# CI 已跑完并全绿（首个 job 强制断言，查不到或未完成一律拒绝发布）。
+# 触发前条件：tag 形态为 vX.Y.Z、tag 指向的提交已在 origin/main 上、且该提交的
+# CI 已跑完并全绿——三条都在工作流内强制断言（tag 不合规 / 未合并 / CI 未过一律
+# 不出包）；deploy 脚本会再复核一次 tag 位置。
 # 凭据：仅内置 GITHUB_TOKEN（contents: write 用于创建 Release/上传资产）。
 
 name: Release
@@ -69,6 +70,26 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0 # 「tag 是否在 main 上」需要祖先判定，浅克隆会误判
+
+      # 发布门禁：CI 由 tags: ['v*'] 触发，任何 v 开头的 tag 都会进来——包括
+      # 误推的 v1.2、带后缀的候选 tag（deploy 脚本只接受 vX.Y.Z）或在未合并
+      # 分支提交上打的 tag。这类 tag 一旦出包，Release 页会多出无法部署的假
+      # 版本，故在此拦下。
+      - name: Assert release gate (tag format & on main)
+        run: |
+          set -eo pipefail
+          if ! [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag ${GITHUB_REF_NAME} 不是 vX.Y.Z 形态，拒绝发布"
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "::error::tag ${GITHUB_REF_NAME} 指向的提交 ${GITHUB_SHA} 不在 origin/main 上（未合并代码不得发版）"
+            exit 1
+          fi
+          echo "release gate passed: ${GITHUB_REF_NAME} @ ${GITHUB_SHA}"
 
       - name: Resolve version fingerprint
         run: |
@@ -108,7 +129,10 @@ jobs:
         run: |
           docker save "$IMAGE_BACKEND:$GIT_VERSION" "$IMAGE_FRONTEND:$GIT_VERSION" | gzip > \
             "hotspot-images-${GIT_VERSION}.tar.gz"
-          ls -lh "hotspot-images-${GIT_VERSION}.tar.gz"
+          # 校验和随包发布：部署端下载后强制校验（sha256sum 的两空格输出格式对
+          # shasum -a 256 -c 与 sha256sum -c 都兼容），挡住传输损坏与资产替换。
+          sha256sum "hotspot-images-${GIT_VERSION}.tar.gz" > "hotspot-images-${GIT_VERSION}.tar.gz.sha256"
+          ls -lh "hotspot-images-${GIT_VERSION}.tar.gz"*
 
       - name: Create GitHub Release and attach images
         env:
@@ -123,4 +147,5 @@ jobs:
             --notes "生产镜像构建产物（hotspot-backend / hotspot-frontend）。
           部署：./scripts/deploy-production.sh $GIT_VERSION
           版本指纹：version=$GIT_VERSION commit=$GIT_COMMIT built=$GIT_BUILD_TIME" \
-            "hotspot-images-${GIT_VERSION}.tar.gz"
+            "hotspot-images-${GIT_VERSION}.tar.gz" \
+            "hotspot-images-${GIT_VERSION}.tar.gz.sha256"

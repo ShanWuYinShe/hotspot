@@ -51,7 +51,7 @@ HEALTH="$(docker exec "$BACKEND_CONTAINER" curl -sf -X POST -H 'Content-Type: ap
 if echo "$HEALTH" | grep -q '"version"'; then
   echo "$(date '+%F %T') health ok: $(echo "$HEALTH" | head -c 200)"
 else
-  mark_fail "health FAIL: backend health 端点不可达或无版本字段（检查 docker logs $BACKEND_CONTAINER）"
+  mark_fail "health FAIL: backend health 端点不可达或无版本字段（检查 docker logs ${BACKEND_CONTAINER}）"
 fi
 
 # 2. 核心容器运行状态（含 nginx 网关与 frontend 静态卷容器——此前巡检不覆盖，

@@ -22,7 +22,7 @@ bun install --cwd frontend && bun run --cwd frontend build                      
 
 ## 版本号与发布
 
-版本号以 git tag 为源（流程见 `git-workflow`「版本号以 tag 为源」），版本串注入全部产物（后端 health/启动日志、前端 `/version.json` 与设置页徽标、镜像 OCI label），用于线上排障精确回溯。发布为产物分发：tag 触发 CI（`.github/workflows/release.yml`）构建镜像挂 GitHub Release，本地 `./scripts/deploy-production.sh vX.Y.Z` 下载分发到服务器 `docker load`——服务器不接触源码、不构建；鸿蒙端版本约定见 `harmonyapp/AGENTS.md`。详见 README「版本号管理与发布」。
+版本号以 git tag 为源（流程见 `git-workflow`「版本号以 tag 为源」），版本串注入全部产物（后端 health/启动日志、前端 `/version.json` 与设置页徽标、镜像 OCI label），用于线上排障精确回溯。发布为产物分发：tag 触发 CI（`.github/workflows/release.yml`，内置门禁：tag 形态 `vX.Y.Z`、必须落在 `origin/main`、该提交 CI 全绿）构建镜像并附 `.sha256` 挂 GitHub Release，本地 `./scripts/deploy-production.sh vX.Y.Z` 下载分发到服务器 `docker load`——服务器不接触源码、不构建；回滚用 `./scripts/rollback-production.sh`（复用同一链路）。鸿蒙端版本约定见 `harmonyapp/AGENTS.md`。完整流程（含热修复）见 `docs/release-runbook.md`。
 
 ### 发布门禁（硬性）：先本地 Docker 验证，再打 tag
 
@@ -38,7 +38,9 @@ bun install --cwd frontend && bun run --cwd frontend build                      
 4. 版本指纹就地核对：`docker inspect hotspot-backend:<候选版本> / hotspot-frontend:<候选版本>` 的 OCI `org.opencontainers.image.version` 必须等于候选版本、`revision` 等于本次 commit（Release 工作流同款断言，本地先跑）。
 5. 鸿蒙端人工确认（CI 不覆盖 harmonyapp）：其构建/类型检查仅存在于开发者本机 DevEco 链路（pre-commit 调 hvigor `assembleApp`，工具链缺失时告警跳过），CI 无对应 job 兜底——tag 前必须人工确认涉及 `harmonyapp/` 的改动已在本地通过 hvigor 构建（见 `harmonyapp/AGENTS.md`）。
 
-全部通过后才打 tag → 等 CI「Release」成功 → `./scripts/deploy-production.sh vX.Y.Z`（脚本会复核 tag 位置与版本指纹）。
+全部通过后才打 tag → 等 CI「Release」成功 → `./scripts/deploy-production.sh vX.Y.Z`（脚本会复核 tag 位置、发布包校验和、镜像 OCI 指纹与线上三级版本）。
+
+**热修复遵循同一门禁**：本项目 tag 必须落在 `origin/main` 上，热修同样要回合主干后打 patch tag，不存在绕过主干的旁路发布；线上先止血用 `./scripts/rollback-production.sh --previous`。流程见 `docs/release-runbook.md`。
 
 例外：纯文档/注释改动（`*.md`、代码注释）可跳过第 1、2 步；文档改动不进镜像时第 3、4 步也可跳过。
 
