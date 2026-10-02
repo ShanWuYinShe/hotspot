@@ -84,6 +84,28 @@ git branch -d <分支名>
 > 数据卷）；改用上文第 3 步的独立项目命令。
 
 
+## worktree 重映射端口下跑 E2E 集成测试（媒体用例硬编码 8888）
+
+- E2E 套件（backend-go/test/integration）里 `TestMedia_E2E_PresignUploadComplete` 与
+  `TestMedia_E2E_BatchPresignUploadComplete` **硬编码** `127.0.0.1:8888`
+  （presign 请求 Host 与 upload_url 前缀断言，2026-10-01 实测）。重映射环境
+  （NGINX_PORT=8889 等）下这两个用例**必然失败**（S3_PUBLIC_ENDPOINT 跟随
+  NGINX_PORT），属环境产物而非代码回归。
+- 处理：重映射环境跑全量时显式排除，其余用例照常全跑——
+  `go test -count=1 -skip "TestMedia_E2E_PresignUploadComplete|TestMedia_E2E_BatchPresignUploadComplete" ./test/integration/`。
+  默认端口环境（8888）不需要排除。不要为迁就重映射改 S3_PUBLIC_ENDPOINT 指 8888：
+  那会把 PUT 上传打进**主实例** seaweedfs，跨环境污染。
+- worktree 环境跑 E2E 的完整参数（backend-test 宿主端口 8084、独立测试库
+  hotspot_test 在 5433；POSTGRES_PASSWORD 从 worktree 自己的 .env 取，勿回显）：
+  ```bash
+  BACKEND_URL=http://localhost:8084 \
+  POSTGRES_DSN="postgres://postgres:<PASSWORD>@127.0.0.1:5433/hotspot_test?sslmode=disable" \
+  go test -count=1 ./test/integration/   # cwd = backend-go
+  ```
+- 真库 IT（internal/**/*_it_test.go，testdb.Open 读 POSTGRES_DSN）跑在同一
+  hotspot_test 库上：库内有 E2E 累积数据，**IT 断言不能用绝对总数**，要用
+  「播种前基线 + 增量」口径（参考 admin/repo_postgres_stats_it_test.go，2026-10-01）。
+
 ## worktree 内跑 Go 工具链：缓存必须用绝对路径重定向（含 pre-commit 门禁）
 
 在 worktree 内跑 `go build/vet/test`（含 `.husky/pre-commit` 钩子触发的门禁）时，
