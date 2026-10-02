@@ -66,6 +66,8 @@ import type {
 	AuditAction,
 	AuditTargetType,
 	AuditLogItem,
+	AdminGeoStatsResponse,
+	StatsTimeRange,
 	AppConfig,
 	UpdateAppConfigRequest,
 	UserAccountStatus,
@@ -621,6 +623,13 @@ export async function adminListAuditLogs(params?: {
 	action?: AuditAction | null; operator_id?: string | null; target_type?: AuditTargetType | null;
 	target_id?: string | null; start_time?: string | null; end_time?: string | null; pagination?: PaginationParams;
 }) { return request<PaginatedData<AuditLogItem>>(Endpoints.Admin.Audit.Fetch, params ?? {}); }
+
+// 地理统计（区域排名 + 热门地点 + 全站存量）
+export async function adminStatsGeo(params?: {
+	level?: number | null;
+	time_range?: StatsTimeRange | null;
+	limit?: number | null;
+}) { return request<AdminGeoStatsResponse>(Endpoints.Admin.Stats.Geo, params ?? {}); }
 
 // 应用配置
 export async function adminGetAppConfig()                { return request<AppConfig>(Endpoints.Admin.AppConfig.Get); }

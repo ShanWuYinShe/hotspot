@@ -230,6 +230,9 @@ export const Endpoints = {
       Update: ADMIN_PREFIX + '/announcements/update',
       Delete: ADMIN_PREFIX + '/announcements/delete',
     },
+    Stats: {
+      Geo: ADMIN_PREFIX + '/stats/geo',
+    },
   },
 
   // 匿名双版本端点：未登录时走 /public/v1，登录后走 /api/v1（由 client 层切换）

@@ -1332,6 +1332,46 @@ export interface AuditLogItem {
 	created_at: string;
 }
 
+// 地理统计（POST /admin/api/v1/stats/geo，spec api_spec_admin.md「统计分析（stats）API」）
+export interface StatsTimeRange {
+	start_time: string | null;
+	end_time: string | null;
+}
+
+export interface StatsEntityBreakdown {
+	user: number;
+	group: number;
+	moment: number;
+}
+
+export interface AdminRegionRankItem {
+	cell_token: string;
+	level: number;
+	center: { latitude: number; longitude: number };
+	total_count: number;
+	breakdown: StatsEntityBreakdown;
+}
+
+export interface AdminPlaceRankItem {
+	location_name: string;
+	total_count: number;
+	breakdown: StatsEntityBreakdown;
+}
+
+export interface AdminGeoStatsTotals {
+	user: number;
+	group: number;
+	moment: number;
+	total: number;
+}
+
+export interface AdminGeoStatsResponse {
+	generated_at: string;
+	totals: AdminGeoStatsTotals;
+	regions: AdminRegionRankItem[];
+	places: AdminPlaceRankItem[];
+}
+
 // AppConfig：完整应用配置；features/limits/contact 构成 ClientConfig 投影
 export interface UploadConfig {
 	image_max_size: number;

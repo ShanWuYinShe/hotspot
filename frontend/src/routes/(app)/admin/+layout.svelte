@@ -29,6 +29,7 @@
 
 	const MODULES = [
 		{ id: 'overview', label: '概览', href: ROUTES.admin },
+		{ id: 'stats', label: '地理统计', href: `${ROUTES.admin}/stats` },
 		{ id: 'users', label: '用户', href: `${ROUTES.admin}/users` },
 		{ id: 'groups', label: '群组', href: `${ROUTES.admin}/groups` },
 		{ id: 'reports', label: '举报', href: `${ROUTES.admin}/reports` },

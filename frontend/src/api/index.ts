@@ -43,6 +43,7 @@ export {
   adminRbacMe, adminListPermissions, adminListRoles, adminCreateRole, adminUpdateRole,
   adminDeleteRole, adminSetRolePermissions, adminListAdmins, adminAwardAdmin, adminRevokeAdmin,
   adminListAuditLogs, adminGetAppConfig, adminUpdateAppConfig,
+  adminStatsGeo,
   adminSearchUsers, adminOpenUser, adminSetUserBan,
   adminSearchGroups, adminOpenGroup, adminDismissGroup,
   adminListReports, adminJudgeReport,

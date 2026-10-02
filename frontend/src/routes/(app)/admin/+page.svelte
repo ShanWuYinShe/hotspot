@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Users, UsersRound, Flag, Tags, Megaphone, ShieldCheck, ScrollText, Settings2 } from '@lucide/svelte';
+	import { Users, UsersRound, Flag, Tags, Megaphone, ShieldCheck, ScrollText, Settings2, MapPinned } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { admin, hasAdminPermission } from '@/stores/admin.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -11,6 +11,7 @@
 	const device = $derived(platform.platform);
 
 	const MODULES = [
+		{ href: `${ROUTES.admin}/stats`, label: '地理统计', desc: '全站分布与热门地点', icon: MapPinned, perm: 'admin.stats.read' },
 		{ href: `${ROUTES.admin}/users`, label: '用户管理', desc: '搜索、封禁与解封用户', icon: Users, perm: 'admin.users.read' },
 		{ href: `${ROUTES.admin}/groups`, label: '群组管理', desc: '搜索与解散群组', icon: UsersRound, perm: 'admin.groups.read' },
 		{ href: `${ROUTES.admin}/reports`, label: '举报审核', desc: '裁决用户举报', icon: Flag, perm: 'admin.reports.read' },
