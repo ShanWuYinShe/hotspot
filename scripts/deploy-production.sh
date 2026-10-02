@@ -245,7 +245,7 @@ echo "==> 从 tag ${TARGET} 导出部署配置（与镜像同源）…"
 CONFIG_STAGING="$STAGING/config"
 rm -rf "$CONFIG_STAGING"
 mkdir -p "$CONFIG_STAGING"
-CONFIG_PATHS="docker-compose.yml docker-compose.prod.yml docker/nginx.headers.inc docker/nginx.proxy.inc docker/nginx.prod-tls.conf docker/prod-server.inc docker/prometheus.yml docker/grafana-provisioning"
+CONFIG_PATHS="docker-compose.yml docker-compose.prod.yml docker/nginx.headers.inc docker/nginx.proxy.inc docker/nginx.prod-tls.conf docker/prod-server.inc docker/prometheus.yml docker/grafana-provisioning scripts/health-check.sh scripts/backup-postgres.sh scripts/backup-seaweedfs.sh"
 ARCHIVE_PATHS=""
 for p in $CONFIG_PATHS; do
   if git -C "$REPO_ROOT" cat-file -e "${TARGET}:${p}" 2>/dev/null; then
@@ -257,12 +257,20 @@ done
 # shellcheck disable=SC2086  # 路径列表按空格拆分传给 git archive
 git -C "$REPO_ROOT" archive "$TARGET" $ARCHIVE_PATHS | tar -x -C "$CONFIG_STAGING"
 
-echo "==> 同步部署配置（compose + nginx 片段 + observability 采集配置，非源码）…"
+echo "==> 同步部署配置与运维脚本（compose + nginx 片段 + observability 采集配置 + 备份/巡检脚本，非源码）…"
 SCP_LIST="$CONFIG_STAGING/docker-compose.yml $CONFIG_STAGING/docker-compose.prod.yml"
 for f in nginx.headers.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml; do
   [ -f "$CONFIG_STAGING/docker/$f" ] && SCP_LIST="$SCP_LIST $CONFIG_STAGING/docker/$f"
 done
 [ -d "$CONFIG_STAGING/docker/grafana-provisioning" ] && SCP_LIST="$SCP_LIST $CONFIG_STAGING/docker/grafana-provisioning"
+# 服务器侧运维脚本（备份/巡检）也必须随 tag 分发：产物分发模式下服务器不再从源码
+# rsync，漏了它们就会出现「线上脚本缺失或停留在旧版本」——2026-10-02 实测：
+# health-check.sh 与 backup-seaweedfs.sh 在服务器上根本不存在（巡检从未运行），
+# backup-postgres.sh 是 9/13 的旧版（含 $VAR 紧跟中文被并入变量名的缺陷，恰恰会在
+# 检出问题时崩溃）。脚本与镜像同源，行为才可复现。
+for f in health-check.sh backup-postgres.sh backup-seaweedfs.sh; do
+  [ -f "$CONFIG_STAGING/scripts/$f" ] && SCP_LIST="$SCP_LIST $CONFIG_STAGING/scripts/$f"
+done
 ssh "$SERVER" "mkdir -p $REMOTE_DIR/tmp-deploy-incoming"
 # shellcheck disable=SC2086  # 同上
 scp -q -r $SCP_LIST "$SERVER:$REMOTE_DIR/tmp-deploy-incoming/"
@@ -276,6 +284,11 @@ done
 if [ -d "$CONFIG_STAGING/docker/grafana-provisioning" ]; then
   REMOTE_MOVE="$REMOTE_MOVE && rm -rf docker/grafana-provisioning && mv tmp-deploy-incoming/grafana-provisioning docker/grafana-provisioning"
 fi
+for f in health-check.sh backup-postgres.sh backup-seaweedfs.sh; do
+  if [ -f "$CONFIG_STAGING/scripts/$f" ]; then
+    REMOTE_MOVE="$REMOTE_MOVE && mkdir -p scripts && mv tmp-deploy-incoming/$f scripts/$f && chmod +x scripts/$f"
+  fi
+done
 REMOTE_MOVE="$REMOTE_MOVE && rmdir tmp-deploy-incoming"
 ssh "$SERVER" "$REMOTE_MOVE"
 # observability 分发说明：prometheus.yml 与 grafana-provisioning/ 是 --profile
