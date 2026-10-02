@@ -1,7 +1,7 @@
 // map/canvas 响应解析与合并逻辑测试（spec api_spec_public.md：mode 判别联合
 // + RelativeLocation）。
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { fetchMapCanvas } from './location-shared';
+import { fetchMapCanvas, canvasToListPins } from './location-shared';
 import { getMapCanvas } from '@/api';
 import type { MapCanvasResponse } from '@/api/types';
 
@@ -201,5 +201,84 @@ describe('fetchMapCanvas', () => {
 		const rejectRes = await fetchMapCanvas(CENTER, ZOOM, ['user']);
 		expect(rejectRes.mode).toBe('empty');
 		expect(rejectRes.pins).toHaveLength(0);
+	});
+
+	it('heatmap 模式下 canvasToListPins 把聚合桶投影为列表行（缩放到城市级不再空态）', async () => {
+		vi.mocked(getMapCanvas).mockResolvedValueOnce(
+			canvasOnce({
+				mode: 'heatmap',
+				heatmap: {
+					items: [
+						{
+							cell_token: '35d801',
+							level: 10,
+							location: { latitude: 35.154922, longitude: 112.682524 },
+							total_count: 54,
+							breakdown: { user: 54, group: null, moment: null }
+						},
+						{
+							cell_token: '367801',
+							level: 10,
+							location: { latitude: 35.0976, longitude: 112.6124 },
+							total_count: 34,
+							breakdown: { user: 22, group: 4, moment: 8 }
+						}
+					]
+				}
+			})
+		);
+
+		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'moment']);
+		// 契约：heatmap 不产生实体 pins（地图图钉另有热力渲染）
+		expect(result.pins).toHaveLength(0);
+
+		const rows = canvasToListPins(result);
+		expect(rows).toHaveLength(2);
+		// 聚合行必须可辨识，避免被当成真实实体跳详情
+		expect(rows.every((r) => r.isAggregate)).toBe(true);
+		// id 加前缀，防与 hotspots 实体 id 撞键
+		expect(rows[0].id).toBe('heat:35d801');
+		expect(rows[0].lat).toBe(35.154922);
+		expect(rows[0].count).toBe(54);
+		// breakdown 全为 null 的三分类不崩，且取占比最大类型（user=54 → user）
+		expect(rows[0].type).toBe('user');
+		expect(rows[0].title).toBe('54 位用户');
+		// 第二桶 user=22 为最大分类 → user（徽章配色取占比最大类型）
+		expect(rows[1].type).toBe('user');
+		expect(rows[1].title).toBe('22 位用户 · 4 个群组 · 8 条动态');
+	});
+
+	it('hotspots 模式下 canvasToListPins 原样返回实体条目（不被聚合投影污染）', async () => {
+		vi.mocked(getMapCanvas).mockResolvedValueOnce(
+			canvasOnce({
+				mode: 'hotspots',
+				hotspots: {
+					items: [
+						{
+							object_type: 'user',
+							object_id: 'u1',
+							title: '鹿鸣',
+							subtitle: null,
+							cover_url: null,
+							location: { point: { latitude: 34.26, longitude: 117.19 }, location_name: '', distance: null, bearing_degrees: null },
+							created_at: null
+						}
+					],
+					next_cursor: null
+				}
+			})
+		);
+
+		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'moment']);
+		const rows = canvasToListPins(result);
+		expect(rows).toHaveLength(1);
+		expect(rows[0].id).toBe('u1');
+		expect(rows[0].isAggregate).toBeUndefined();
+	});
+
+	it('empty 模式下 canvasToListPins 返回空列表（真实无数据仍显示空态）', async () => {
+		vi.mocked(getMapCanvas).mockResolvedValueOnce(canvasOnce({ mode: 'empty' }));
+		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'moment']);
+		expect(canvasToListPins(result)).toHaveLength(0);
 	});
 });

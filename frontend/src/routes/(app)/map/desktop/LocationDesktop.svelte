@@ -13,9 +13,10 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
-		PIN_COLORS, PIN_LABELS, PIN_TONES, fetchMapCanvas, fetchMapCanvasByViewport,
+		PIN_COLORS, PIN_LABELS, PIN_TONES, fetchMapCanvas, fetchMapCanvasByViewport, canvasToListPins,
 		type MapBounds, type MapHeatBucket
 	} from '../shared/location-shared';
+	import { MAP_MAX_ZOOM } from '../shared/map-projection';
 	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
@@ -196,8 +197,23 @@
 		};
 	});
 
-	// 图钉详情跳转：user/group/moment 分别路由到对应详情页
+	// 从聚合桶"放大看明细"时的目标级别：街区级，稳定低于服务端 50km 热力阈值
+	// （桌面视口 zoom14 跨度约 11.6km，留足余量）。
+	const AGGREGATE_DETAIL_ZOOM = 14;
+
+	// 图钉详情跳转：user/group/moment 分别路由到对应详情页。
+	// 聚合桶不是真实实体（id 形如 "heat:<cell_token>"，无对应记录），
+	// 跳详情会得到 404；改为把地图中心移到该格，让用户放大后看真实明细。
 	function openPinDetail(pin: Pin) {
+		if (pin.isAggregate) {
+			// 聚合桶是 S2 level-10 网格（格边长约 25km），"+3 级"不足以保证视口跨度
+			// 降到 50km 阈值以下（实测桌面视口 zoom14 才约 11.6km）。这里直接对齐到
+			// 能稳定拿到明细的街区级，跨过阈值后服务端切回 hotspots，列表随之变为实体。
+			mapCenter = { lat: pin.lat, lng: pin.lng };
+			mapZoom = Math.max(mapZoom, AGGREGATE_DETAIL_ZOOM);
+			selectedPin = null;
+			return;
+		}
 		if (pin.type === 'user') void goto(ROUTES.user(pin.id));
 		else if (pin.type === 'group') void goto(ROUTES.group(pin.id));
 		else void goto(ROUTES.moment(pin.id));
@@ -210,7 +226,14 @@
 	// 搜索进行中：上游（OSM 代理）偶发数秒级慢响应，无指示会让用户以为搜索失效
 	let searching = $state(false);
 	const searchResults = $derived(searchQuery.trim() ? (remoteResults ?? []) : []);
-	const nearbyPins = $derived(mapPins.filter((p) => (p.count ?? 1) === 1));
+	// 「附近」列表数据源：hotspots 用实体条目（count>1 的是地图聚类视觉，不重复出现在列表），
+	// heatmap 视口下 pins 为空，改用聚合桶投影——否则缩放到城市级时列表永远显示"附近暂无内容"，
+	// 与地图上明明有热力点自相矛盾（用户坐标并未变化，只是服务端切换了返回模式）。
+	const nearbyPins = $derived(
+		mapPins.length > 0
+			? mapPins.filter((p) => (p.count ?? 1) === 1)
+			: canvasToListPins({ mode: 'heatmap', pins: [], heatBuckets, counts: mapCounts })
+	);
 
 	createDebouncedSearch({
 		query: () => searchQuery.trim(),
@@ -426,7 +449,8 @@
 							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm shadow-raised-sm hover:shadow-raised-md"
 							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>
-							查看详情
+							<!-- 聚合桶无详情页：不能给"查看详情"（点了没反应/404），改为放大看明细 -->
+							{selectedPin?.isAggregate ? '放大地图查看' : '查看详情'}
 							<ChevronRight class="size-3.5"  strokeWidth={2} />
 						</button>
 						<button

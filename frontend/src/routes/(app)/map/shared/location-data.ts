@@ -7,6 +7,8 @@ export interface Pin {
   count?: number;
   name?: string; avatar?: string; distance?: string; online?: boolean;
   members?: number; tag?: string; title?: string; likes?: number; image?: string;
+  /** 聚合桶投影（heatmap 模式）：非真实实体，无 object_id，不可进入详情页。 */
+  isAggregate?: boolean;
 }
 
 export interface LocationResult {

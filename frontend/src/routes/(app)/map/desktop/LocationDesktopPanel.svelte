@@ -132,7 +132,9 @@ import { smartBack } from '@/lib/smart-back';
 					<ListItem
 						pressed={isSelected}
 						onClick={() => onSelectPin(pin)}
-						ariaLabel={`选择 ${pin.name || pin.title || ''}`}
+						ariaLabel={pin.isAggregate
+							? `定位到 ${pin.name || pin.title || '附近区域'}`
+							: `选择 ${pin.name || pin.title || ''}`}
 						class="flex list-row-standard items-center gap-3 px-3.5 py-3"
 					>
 					<PinMedia {pin} size={42} selected={isSelected} />
@@ -163,6 +165,9 @@ import { smartBack } from '@/lib/smart-back';
 					</div>
 					{#if isSelected}
 						<span class="inline-flex h-5 shrink-0 items-center justify-center rounded-full bg-text-on-accent px-2 text-xxs font-medium leading-none text-accent-default">已定位</span>
+					{:else if pin.isAggregate}
+						<!-- 聚合桶：该网格内对象总数。热力桶不是单个实体，箭头会误导成「可进详情」 -->
+						<span class="inline-flex h-5 shrink-0 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none" style="background:{PIN_TONES[pin.type].bg};color:{PIN_COLORS[pin.type]};">{pin.count ?? 0} 项</span>
 					{:else}
 						<ChevronRight class="size-3.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 					{/if}

@@ -109,6 +109,59 @@ function hotspotToPin(item: MapHotspotItem): Pin {
 	};
 }
 
+/** 热力桶的"附近"列表行标题（无实体明细，只能给出聚合描述）。 */
+function heatBucketTitle(counts: Partial<Record<PinType, number>>): string {
+	const parts: string[] = [];
+	if (counts.user) parts.push(`${counts.user} 位用户`);
+	if (counts.group) parts.push(`${counts.group} 个群组`);
+	if (counts.moment) parts.push(`${counts.moment} 条动态`);
+	return parts.join(' · ') || '附近内容';
+}
+
+/**
+ * 热力桶 → 列表项 Pin（列表专用，不参与地图图钉渲染）。
+ *
+ * 视口跨度大时服务端返回 heatmap（S2 网格聚合，无实体明细），此时 pins 为空。
+ * 若直接以 pins 驱动"附近"列表，就会出现"缩放到全市后附近列表说没有内容，
+ * 但地图上明明有热力点"的自相矛盾——用户坐标没变、数据也没变，只是模式切换了。
+ * 这里把每个桶投影成一行聚合条目，保证任何缩放级别下列表与地图口径一致。
+ *
+ * 注意：热力桶不是真实实体（没有 object_id），因此：
+ * - id 用 cell_token 并加前缀，避免与 hotspots 的实体 id 撞键；
+ * - type 取桶内占比最大的类型，仅用于列表行的类型徽章/配色；
+ * - 不可点击进入详情（见 Pin.isAggregate），由调用方改为定位到该格。
+ */
+function heatBucketToPin(bucket: MapHeatBucket): Pin {
+	const bd = bucket.breakdown;
+	const counts: Record<PinType, number> = {
+		user: bd?.user ?? 0,
+		group: bd?.group ?? 0,
+		moment: bd?.moment ?? 0
+	};
+	let type: PinType = 'user';
+	if (counts.group > counts[type]) type = 'group';
+	if (counts.moment > counts[type]) type = 'moment';
+	return {
+		id: `heat:${bucket.cell_token}`,
+		type,
+		lat: bucket.location.latitude,
+		lng: bucket.location.longitude,
+		name: heatBucketTitle(counts),
+		title: heatBucketTitle(counts),
+		count: bucket.total_count,
+		isAggregate: true
+	};
+}
+
+/**
+ * 列表行数据源：hotspots 用实体条目；heatmap 用聚合桶投影（见 heatBucketToPin）。
+ * 两种模式都返回非空列表，缩放不再把"附近"列表变成空态。
+ */
+export function canvasToListPins(result: MapCanvasResult): Pin[] {
+	if (result.pins.length > 0) return result.pins;
+	return result.heatBuckets.map(heatBucketToPin);
+}
+
 function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult {
 	if (res.code !== 0 || !res.data) return emptyResult();
 	const data = res.data as MapCanvasResponse;
