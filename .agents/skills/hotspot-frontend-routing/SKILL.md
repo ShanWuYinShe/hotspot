@@ -28,8 +28,8 @@ src/routes/
     messages/              # 消息列表
     messages/[peerId]/     # 私聊详情（peerId 即对端 user_id）
     messages/group/[groupId]/  # 群聊详情
-    admin/                 # 平台管理后台（/admin 布局做权限守卫 + 模块 Tab；概览 + users/groups/
-                           # reports/tags/announcements/rbac/audit/config 八模块；spec api_spec_admin.md。
+    admin/                 # 平台管理后台（/admin 布局做权限守卫 + 模块 Tab；概览 + stats/users/groups/
+                           # reports/tags/announcements/rbac/audit/config 九模块；spec api_spec_admin.md。
                            # 桌面侧栏对平台管理员条件渲染入口；/admin/* 页面路由与 /admin/api/v1 API 节点
                            # 由 nginx 分流：仅 /admin/api/v1/ 代理后端（见 docker/nginx*.conf））
     me/                    # 个人主页总览（mobile→ProfileMobile，tablet/desktop→ProfilePage）
