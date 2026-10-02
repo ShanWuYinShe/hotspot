@@ -96,6 +96,13 @@ bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 逐页截图并生成报告。输出统一在仓库根 `.workwork/browser-check/qa-<时间戳>/`
 （已 gitignore，不提交）。
 
+沙盒/受限环境（2026-10-02 实测）两个坑：
+1. 脚本按 `command -v agent-browser` 找二进制，沙盒内可能解析到绕过 wrapper 的裸
+   二进制（socket 目录不可写直接全 FAIL）——用 `AB=/Users/liyou/.local/bin/agent-browser`
+   前缀显式指到 wrapper；
+2. qa 会话与既有交互 agent-browser 会话共用 chrome-profile（SingletonLock 冲突，
+   Chrome 起不来）——跑之前先 `agent-browser close --all` 释放。
+
 `bun run build` 是 `write-version-info`（注入版本信息）+ `vite build`（不含
 `svelte-kit sync`；重建 `.svelte-kit/` 的是
 `dev`/`check` 脚本里的 `svelte-kit sync`），但会读取并写入 `.svelte-kit/` 产物，
