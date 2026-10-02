@@ -35,6 +35,7 @@
 
 	let width = $state(0);
 	let height = $state(0);
+	let containerEl: HTMLElement | null = null;
 
 	// 内部渲染中心：拖拽期间独立更新，手势结束才同步回 center prop
 	let renderCenter = $state<{ lat: number; lng: number } | null>(null);
@@ -125,13 +126,34 @@
 			activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 		}
 		if (activePointers.size >= 2) {
-			// 捏合中：距离比驱动整数级缩放（跟手 ±1 级步进，触达边界钳制）
+			// 捏合中：距离比驱动整数级缩放（跟手 ±1 级步进，触达边界钳制）。
+			// 跳级后必须以当前指距重置基准，否则 ratio 永远基于最初距离——
+			// 跨过一级后每帧继续 +1，轻捏直接飙到 maxZoom（缩放不跟手的根因）。
 			if (pinchBase > 0) {
 				const ratio = pinchDist() / pinchBase;
 				const stepLevel = Math.round(Math.log2(ratio));
 				if (stepLevel !== 0) {
 					const next = Math.max(minZoom, Math.min(maxZoom, zoom + stepLevel));
-					if (next !== zoom) zoom = next;
+					if (next !== zoom) {
+						// 以双指中点为锚（与滚轮鼠标锚同一套换算）：捏合放大的位置不漂移
+						if (activeCenter && containerEl) {
+							const pts = Array.from(activePointers.values());
+							const rect = containerEl.getBoundingClientRect();
+							const ax = (pts[0].x + pts[1].x) / 2 - rect.left;
+							const ay = (pts[0].y + pts[1].y) / 2 - rect.top;
+							const g = toTileSpace(activeCenter.lat, activeCenter.lng);
+							const worldAx = lngToWorldX(g.lng, zoom) - width / 2 + ax;
+							const worldAy = latToWorldY(g.lat, zoom) - height / 2 + ay;
+							const k = Math.pow(2, next - zoom);
+							const g1 = {
+								lat: worldYToLat(worldAy * k + height / 2 - ay, next),
+								lng: worldXToLng(worldAx * k + width / 2 - ax, next)
+							};
+							renderCenter = fromTileSpace(g1.lat, g1.lng);
+						}
+						zoom = next;
+						pinchBase = pinchDist();
+					}
 				}
 			}
 			return;
@@ -170,7 +192,7 @@
 		}
 	}
 
-	/* ── 滚轮缩放（以视口中心为锚） ── */
+	/* ── 滚轮缩放（以鼠标位置为锚） ── */
 	let wheelAcc = 0;
 	function onWheel(e: WheelEvent) {
 		e.preventDefault();
@@ -179,7 +201,26 @@
 		if (Math.abs(wheelAcc) < step) return;
 		const delta = wheelAcc > 0 ? -1 : 1;
 		wheelAcc = 0;
-		zoom = Math.max(minZoom, Math.min(maxZoom, zoom + delta));
+		const next = Math.max(minZoom, Math.min(maxZoom, zoom + delta));
+		if (next === zoom || !activeCenter || !containerEl) return;
+		// 以鼠标位置为锚（标准地图行为）：缩放前后锚点指向同一地理坐标，
+		// 否则以视口中心为锚会让「想放大的位置」随每级跳变漂移（不跟手）。
+		const rect = containerEl.getBoundingClientRect();
+		const ax = e.clientX - rect.left;
+		const ay = e.clientY - rect.top;
+		const g = toTileSpace(activeCenter.lat, activeCenter.lng);
+		const worldCx = lngToWorldX(g.lng, zoom);
+		const worldCy = latToWorldY(g.lat, zoom);
+		// 视口左上角世界坐标 → 锚点世界坐标；跳级后锚点像素坐标不变，
+		// 反推新中心 = 新锚世界坐标 − (视口半径 − 锚点视口偏移)。
+		const k = Math.pow(2, next - zoom);
+		const worldAx = worldCx - width / 2 + ax;
+		const worldAy = worldCy - height / 2 + ay;
+		const cx = worldAx * k + width / 2 - ax;
+		const cy = worldAy * k + height / 2 - ay;
+		const g1 = { lat: worldYToLat(cy, next), lng: worldXToLng(cx, next) };
+		commitCenter(fromTileSpace(g1.lat, g1.lng));
+		zoom = next;
 	}
 
 	// Svelte 5 的 onwheel 事件属性注册为 passive 监听，preventDefault 不生效
@@ -201,6 +242,7 @@
 	style="touch-action:none;cursor:{dragging ? 'grabbing' : 'grab'};background:var(--cst-surface-page);"
 	bind:clientWidth={width}
 	bind:clientHeight={height}
+	bind:this={containerEl}
 	use:wheelAction
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
@@ -221,6 +263,7 @@
 			loading="eager"
 			class="map-tile absolute"
 			style="left:{t.left}px;top:{t.top}px;width:256px;height:256px;user-select:none;"
+			onload={(e) => e.currentTarget.classList.add('loaded')}
 		/>
 	{/each}
 
@@ -233,6 +276,16 @@
 </div>
 
 <style>
+	.map-tile {
+		/* 跳级时新瓦片网络加载完成前不可见：加载完成淡入，避免整层闪变生硬。
+		   已缓存瓦片 onload 同步触发，无感。 */
+		opacity: 0;
+	}
+	/* loaded 由 onload 在运行时追加，需 :global 避免 Svelte 误判未用 */
+	.map-tile:global(.loaded) {
+		opacity: 1;
+		transition: opacity var(--cst-motion-instant) var(--cst-ease-standard);
+	}
 	/* 深色主题下底图反色适配（标准 invert+hue-rotate 手法），marker/控件不受影响 */
 	:global(.dark) .map-tile {
 		filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.7);
