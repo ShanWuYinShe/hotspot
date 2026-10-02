@@ -167,6 +167,8 @@ gh run list --workflow=release.yml --branch v1.1.11 --limit 1   # 确认触发�
 
 | 情形 | 现象 | 处置 |
 |------|------|------|
+| **CI 长期红** | main 上 CI 连续失败（含纯文档提交） | 这是**发布链路瘫痪**：Release 的 `require-ci` 门禁会拒绝在 CI 未通过的提交上出包，等于再也发不了版。必须先修 CI，不许带红发版（2026-09-27~10-02 实测：连续 14 次全红期间所有 tag 都无法发布） |
+| **gitleaks 命中** | CI Secret scan 报 leaks found | 先判断是真凭据还是测试 fixture：真凭据**必须轮换并实测失效**后才能把指纹登记进 `.gitleaksignore`（附轮换依据），禁止直接忽略；fixture 假值可直接登记。接待机器人账号口令的处置见 `reception-bot/scripts/rotate-credentials.sh` 与 `.gitleaksignore` 顶部注释 |
 | tag 推了但 CI 没触发 | Release 页没有新版本 | 每个 tag 单独推送并逐个确认（批量推超过 3 个 tag 时 GitHub 不产生 push 事件）；漏触发时删本地与远程 tag 后重推 |
 | Release 工作流失败 | Actions 红 | 修问题 → 升 patch 版本重新打 tag；**不要**移动已推送的 tag |
 | 部署提示 tag 不在 main 上 | 前置校验失败 | 该 tag 打在未合并提交上；合并进 main 后重打版本 |

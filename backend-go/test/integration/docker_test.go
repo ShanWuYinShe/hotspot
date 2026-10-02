@@ -173,6 +173,10 @@ func reqWithHost(host, method, path string, body, result any) (int, error) {
 	req.Header.Set("Idempotency-Key", fmt.Sprintf("%032x%032x", time.Now().UnixNano(), atomic.AddInt64(&idempKeySeq, 1)))
 	if host != "" {
 		req.Host = host
+		// 媒体直传 URL 的入口 origin 由后端从 Origin/Referer 提取（全局中间件
+		// media.ClientEndpointMiddleware，见 internal/modules/media/client_endpoint.go）；
+		// 只设 Host 会回退静态 S3_PUBLIC_ENDPOINT，故两者必须一起给。
+		req.Header.Set("Origin", "http://"+host)
 	}
 	if accessToken != "" {
 		req.Header.Set("Authorization", "Bearer "+accessToken)
@@ -287,6 +291,10 @@ func apiRespOKWithHost(t *testing.T, host, path string, body, result any) {
 		t.Fatalf("POST %s: code=%d message=%s", path, code, responseMessageOf(result))
 	}
 }
+
+// mediaPresignClientOrigin 是媒体 E2E 声明的「客户端入口 origin」：presign 返回的
+// 直传 URL 必须与该 origin 同源（SigV4 签名含 Host，浏览器跨源 PUT 也会被 CORS 拦）。
+const mediaPresignClientOrigin = "127.0.0.1:8888"
 
 func apiRespOKWithCode(t *testing.T, path string, body, result any, expectCode int) {
 	requireBackend(t)
@@ -1443,7 +1451,7 @@ func TestMedia_E2E_PresignUploadComplete(t *testing.T) {
 	defer func() { accessToken = oldToken }()
 
 	var presignResp ApiResponse[map[string]any]
-	apiRespOKWithHost(t, "127.0.0.1:8888", "/api/v1/media/presign_upload", map[string]any{
+	apiRespOKWithHost(t, mediaPresignClientOrigin, "/api/v1/media/presign_upload", map[string]any{
 		"files": []map[string]any{
 			{"file_name": "photo.png", "file_size": 66, "mime_type": "image/png", "category": "avatar"},
 		},
@@ -1457,8 +1465,10 @@ func TestMedia_E2E_PresignUploadComplete(t *testing.T) {
 	}
 	// 直传 URL 的 origin 跟随 presign 请求的 Host（nginx /s3/ 以 $http_host 转发，
 	// SigV4 验签依赖该一致性）；集成环境以网关 host 发起 presign，PUT 即同 URL。
-	if !strings.HasPrefix(uploadURL, "http://127.0.0.1:8888/s3/") {
-		t.Fatalf("upload_url should follow presign request host, got %s", uploadURL)
+	// 直传 URL 必须与请求入口 origin 同源，并沿用网关的 /s3 挂载前缀。
+	wantPrefix := "http://" + mediaPresignClientOrigin + "/s3/"
+	if !strings.HasPrefix(uploadURL, wantPrefix) {
+		t.Fatalf("upload_url should follow presign request origin, want prefix %s got %s", wantPrefix, uploadURL)
 	}
 
 	pngBytes := []byte{
@@ -1520,7 +1530,7 @@ func TestMedia_E2E_BatchPresignUploadComplete(t *testing.T) {
 	defer func() { accessToken = oldToken }()
 
 	var batchResp ApiResponse[map[string]any]
-	apiRespOKWithHost(t, "127.0.0.1:8888", "/api/v1/media/presign_upload", map[string]any{
+	apiRespOKWithHost(t, mediaPresignClientOrigin, "/api/v1/media/presign_upload", map[string]any{
 		"files": []map[string]any{
 			{"file_name": "a.png", "file_size": 66, "mime_type": "image/png", "category": "avatar"},
 		},
@@ -1546,8 +1556,10 @@ func TestMedia_E2E_BatchPresignUploadComplete(t *testing.T) {
 		t.Fatal("batch upload missing upload_id or upload_url")
 	}
 	// 直传 URL 的 origin 跟随 presign 请求的 Host（同单文件 E2E 断言）。
-	if !strings.HasPrefix(uploadURL, "http://127.0.0.1:8888/s3/") {
-		t.Fatalf("upload_url should follow presign request host, got %s", uploadURL)
+	// 直传 URL 必须与请求入口 origin 同源，并沿用网关的 /s3 挂载前缀。
+	wantPrefix := "http://" + mediaPresignClientOrigin + "/s3/"
+	if !strings.HasPrefix(uploadURL, wantPrefix) {
+		t.Fatalf("upload_url should follow presign request origin, want prefix %s got %s", wantPrefix, uploadURL)
 	}
 
 	pngBytes := []byte{

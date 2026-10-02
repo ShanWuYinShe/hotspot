@@ -46,3 +46,14 @@ f12638602ffd128590c7b9ba3f9876390bf6e7d1:browser-data/Default/Preferences:generi
 f12638602ffd128590c7b9ba3f9876390bf6e7d1:browser-data/Default/Secure Preferences:generic-api-key:1
 f12638602ffd128590c7b9ba3f9876390bf6e7d1:docker-compose.yml:generic-api-key:69
 f12638602ffd128590c7b9ba3f9876390bf6e7d1:docker-compose.yml:generic-api-key:78
+
+# 接待机器人账号口令误入历史(2026-10-02 处置,非误报→已轮换失效):
+# - 明文曾写在 .agents/skills/hotspot-reception-bot/SKILL.md,随两提交进历史;
+# - 2026-09-28 本地库 4 账号口令已重置为随机值,文档改为引用 gitignored 归档;
+# - 2026-10-02 再次轮换(backend-go bcrypt cost12 + 吊销全部旧会话 + 清理缓存 token),
+#   脚本 reception-bot/scripts/rotate-credentials.sh;实测历史值在本地与线上
+#   登录均返回 10100(认证失败);
+# - 当前工作树无明文(仅 reception-bot/state/reception-bot.env,0600 且已 gitignore)。
+# 保留豁免以免 CI 长期红导致 Release 门禁(require-ci)永久拒绝出包。
+0a51f95a1e4dec5e732636885d47667d0893b1ea:.agents/skills/hotspot-reception-bot/SKILL.md:generic-api-key:48
+f08ac0f8cd34b5a527561ed2571c6cc2b125bfab:.agents/skills/hotspot-reception-bot/SKILL.md:generic-api-key:35
