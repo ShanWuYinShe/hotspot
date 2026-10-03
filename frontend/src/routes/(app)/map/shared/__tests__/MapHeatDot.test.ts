@@ -51,13 +51,18 @@ describe('MapHeatDot', () => {
 		}
 	});
 
-	it('实色 accent 底 + 反色数字 + 描边，不再依赖低透明度', () => {
+	it('中性卡面 + accent 描边：既醒目又不与「实心蓝」的位置点/图钉同形同色', () => {
 		const dot = renderDot(54);
-		const style = dot.getAttribute('style') ?? '';
-		expect(style).toContain('var(--cst-accent-default)');
-		expect(style).toContain('var(--cst-text-on-accent)');
-		expect(style).toContain('var(--cst-content-on-marker)');
-		expect(style).toContain('var(--cst-marker-shadow)');
+		// jsdom 会把 style 属性规范化（冒号后补空格），比较前压掉空白
+		const style = (dot.getAttribute('style') ?? '').replace(/\s+/g, '');
+		// 卡面用 surface、文字用常规文字色：不占用任何「实心彩色」语义
+		expect(style).toContain('background:var(--cst-surface-primary)');
+		expect(style).toContain('color:var(--cst-text-primary)');
+		// accent 只用于描边（保留品牌色醒目度），不得再作填充——
+		// 填充成实心蓝圆点时，会与 --cst-marker-user 图钉和「当前位置点」混为一谈
+		expect(style).toContain('border:var(--cst-border-width-strong)solidvar(--cst-accent-default)');
+		expect(style).not.toContain('background:var(--cst-accent-default)');
+		expect(dot.className).toContain('shadow-raised-md');
 		// 旧实现靠 opacity 插值弱化，现为实色，不应再写入 opacity
 		expect(style).not.toContain('opacity:');
 	});

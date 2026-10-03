@@ -1,10 +1,16 @@
 <script lang="ts">
 	import type { MapHeatBucket, MapBounds } from './location-shared';
 
-	// 热力聚合点 — 每个 S2 网格桶渲染一个「实色圆 + 数目」的标记。
-	// 数目 = 该网格内对象总数（bucket.total_count），一眼可知这里聚合了多少内容。
-	// 此前是 0.4~0.8 透明度的纯蓝点、无任何文字，看不出它是什么（用户反馈）；
-	// 现复用图钉聚合数字的徽标语言：实色底 + 反色数字 + 描边。
+	// 热力聚合点 — 每个 S2 网格桶渲染一个「数字徽标」：显示的数目 = 该网格内
+	// 对象总数（bucket.total_count），一眼可知这里聚合了多少内容。
+	//
+	// 为何是「中性卡面 + accent 描边」而不是实心 accent 圆：
+	// 地图上实心蓝已被两个语义占用——图钉 --cst-marker-user 与 accent 同色
+	// （都是 #2E66C0），"当前位置点"也是实心蓝。而热力桶聚合的是全部类型
+	// （user/group/moment），既不对应任何单一类型色，也不该与「我在这」的位置点
+	// 混为一谈（用户反馈：两者同色分不清）。
+	// 改为白卡面 + accent 描边的数字徽标：既保留品牌色的醒目度，又与「实心蓝点」
+	// 在形体上彻底区分（空心带数字 vs 实心点）。
 
 	let { bucket, bounds }: { bucket: MapHeatBucket; bounds: MapBounds } = $props();
 
@@ -34,7 +40,7 @@
 		// 直径按数字位数分档（1-2 位 / 3 位 / 4 位）：保证数字完整显示、不贴边
 		const size = label.length <= 2 ? 28 : label.length === 3 ? 34 : 40;
 		// 层叠见 class 上的 z-10：当前位置点在视口正中心（z-index:5），
-		// 地图中心常与数据密集区重合，不抬层会出现"热力数字被定位点整个盖住"。
+		// 地图中心常与数据密集区重合，不抬层会出现「热力数字被定位点整个盖住」。
 		return `left:${x}%;top:${y}%;width:${size}px;height:${size}px;`;
 	});
 </script>
@@ -42,6 +48,6 @@
 <div
 	role="img"
 	aria-label={ariaLabel}
-	class="absolute z-10 inline-flex items-center justify-center rounded-full pointer-events-none text-xs font-semibold leading-none"
-	style="transform:translate(-50%,-50%);background:var(--cst-accent-default);color:var(--cst-text-on-accent);border:var(--cst-border-width-regular) solid var(--cst-content-on-marker);box-shadow:var(--cst-marker-shadow) var(--cst-marker-user-glow);{style}"
+	class="absolute z-10 inline-flex items-center justify-center rounded-full pointer-events-none text-xs font-semibold leading-none shadow-raised-md"
+	style="transform:translate(-50%,-50%);background:var(--cst-surface-primary);color:var(--cst-text-primary);border:var(--cst-border-width-strong) solid var(--cst-accent-default);{style}"
 >{label}</div>
