@@ -27,6 +27,16 @@ describe('MapPinMarker', () => {
 		expect(container.textContent).toContain('3');
 	});
 
+	it('按墨卡托比例定位（与 MapHeatDot 同口径）', () => {
+		const { container } = render(MapPinMarker, {
+			props: { pin, bounds, isSelected: false, onSelect: () => {} }
+		});
+		const btn = container.querySelector('button') as HTMLElement;
+		expect(btn.style.left).toBe('50%');
+		// 30.5° 在墨卡托投影中点不是线性 50%，此处为投影公式的硬编码期望值。
+		expect(btn.style.top).toBe('50.12851269994047%');
+	});
+
 	it('isSelected 时应用选中缩放与高 z-index', () => {
 		const { container } = render(MapPinMarker, {
 			props: { pin, bounds, isSelected: true, onSelect: () => {} }

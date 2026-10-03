@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Pin } from './location-data';
 	import { markerSvg, PIN_COLORS, PIN_LABELS, type MapBounds } from './location-shared';
+	import { lngToWorldX, latToWorldY } from '@/components/map/map-projection';
 
 	// 地图图钉。
 
@@ -17,8 +18,14 @@
 	} = $props();
 
 	const pos = $derived.by(() => {
-		const x = ((pin.lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * 100;
-		const y = ((bounds.maxLat - pin.lat) / (bounds.maxLat - bounds.minLat)) * 100;
+		// 与 MapHeatDot 同口径：Web Mercator 世界坐标比例（zoom 因子在比值中
+		// 约去）。大跨度视口下线性纬度与瓦片发散；城市小视口差异不可见。
+		const z = 1;
+		const xSpan = lngToWorldX(bounds.maxLng, z) - lngToWorldX(bounds.minLng, z);
+		const ySpan = latToWorldY(bounds.minLat, z) - latToWorldY(bounds.maxLat, z);
+		const x = xSpan > 0 ? ((lngToWorldX(pin.lng, z) - lngToWorldX(bounds.minLng, z)) / xSpan) * 100 : 0;
+		// y 自视口顶（maxLat，北）向下量：worldY 随纬度减小而增大（南增北减）。
+		const y = ySpan > 0 ? ((latToWorldY(pin.lat, z) - latToWorldY(bounds.maxLat, z)) / ySpan) * 100 : 0;
 		return { x, y };
 	});
 </script>
