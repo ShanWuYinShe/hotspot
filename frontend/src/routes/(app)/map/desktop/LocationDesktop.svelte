@@ -16,10 +16,11 @@
 		PIN_COLORS, PIN_LABELS, PIN_TONES, fetchMapCanvas, fetchMapCanvasByViewport, canvasToListPins,
 		aggregateDrillZoom, type MapBounds, type MapHeatBucket
 	} from '../shared/location-shared';
-	import MapCanvas from '../shared/MapCanvas.svelte';
+	import { MAP_MAX_ZOOM } from '@/components/map/map-projection';
+	import MapCanvas from '@/components/map/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
-	import MapHeatDot from '../shared/MapHeatDot.svelte';
+	import MapHeatDot from '@/components/map/MapHeatDot.svelte';
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
 	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import PinMedia from '../shared/PinMedia.svelte';

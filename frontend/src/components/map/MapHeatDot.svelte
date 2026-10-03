@@ -1,5 +1,7 @@
 <script lang="ts">
-	import type { MapHeatBucket, MapBounds } from './location-shared';
+	import type { MapHeatBucket } from '@/api/types';
+	import type { MapBounds } from './types';
+	import { lngToWorldX, latToWorldY } from './map-projection';
 
 	// 热力聚合点 — 每个 S2 网格桶渲染一个「数字徽标」：显示的数目 = 该网格内
 	// 对象总数（bucket.total_count），一眼可知这里聚合了多少内容。
@@ -44,8 +46,15 @@
 	);
 
 	const style = $derived.by(() => {
-		const x = ((bucket.location.longitude - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * 100;
-		const y = ((bounds.maxLat - bucket.location.latitude) / (bounds.maxLat - bounds.minLat)) * 100;
+		// 定位用 Web Mercator 世界坐标的比例（zoom 因子在比值中约去）：
+		// 大跨度视口（全国级）线性纬度与墨卡托发散明显，统一走投影才是
+		// 与瓦片对齐的正解；小跨度（城市级）两种算法差异不可见。
+		const z = 1;
+		const xSpan = lngToWorldX(bounds.maxLng, z) - lngToWorldX(bounds.minLng, z);
+		const ySpan = latToWorldY(bounds.minLat, z) - latToWorldY(bounds.maxLat, z);
+		const x = xSpan > 0 ? ((lngToWorldX(bucket.location.longitude, z) - lngToWorldX(bounds.minLng, z)) / xSpan) * 100 : 0;
+		// y 自视口顶（maxLat，北）向下量：worldY 随纬度减小而增大（南增北减）。
+		const y = ySpan > 0 ? ((latToWorldY(bucket.location.latitude, z) - latToWorldY(bounds.maxLat, z)) / ySpan) * 100 : 0;
 		// 直径按数字位数分档（1-2 位 / 3 位 / 4 位）：保证数字完整显示、不贴边
 		const size = label.length <= 2 ? 28 : label.length === 3 ? 34 : 40;
 		// 层叠见 class 上的 z-10：当前位置点在视口正中心（z-index:5），

@@ -1365,11 +1365,33 @@ export interface AdminGeoStatsTotals {
 	total: number;
 }
 
+export interface AdminGeoStatsTrendPoint {
+	date: string;
+	user: number;
+	group: number;
+	moment: number;
+}
+
 export interface AdminGeoStatsResponse {
 	generated_at: string;
 	totals: AdminGeoStatsTotals;
 	regions: AdminRegionRankItem[];
 	places: AdminPlaceRankItem[];
+	trends: AdminGeoStatsTrendPoint[];
+}
+
+export interface AdminGeoDrilldownItem {
+	object_id: string;
+	title: string;
+	location_name: string | null;
+	latitude: number;
+	longitude: number;
+	created_at: string;
+}
+
+export interface AdminGeoDrilldownPage {
+	items: AdminGeoDrilldownItem[];
+	next_cursor: string | null;
 }
 
 // AppConfig：完整应用配置；features/limits/contact 构成 ClientConfig 投影

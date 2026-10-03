@@ -67,6 +67,7 @@ import type {
 	AuditTargetType,
 	AuditLogItem,
 	AdminGeoStatsResponse,
+	AdminGeoDrilldownPage,
 	StatsTimeRange,
 	AppConfig,
 	UpdateAppConfigRequest,
@@ -624,12 +625,22 @@ export async function adminListAuditLogs(params?: {
 	target_id?: string | null; start_time?: string | null; end_time?: string | null; pagination?: PaginationParams;
 }) { return request<PaginatedData<AuditLogItem>>(Endpoints.Admin.Audit.Fetch, params ?? {}); }
 
-// 地理统计（区域排名 + 热门地点 + 全站存量）
+// 地理统计（区域排名 + 热门地点 + 全站存量 + 每日新增趋势）
 export async function adminStatsGeo(params?: {
 	level?: number | null;
 	time_range?: StatsTimeRange | null;
 	limit?: number | null;
+	trend_days?: number | null;
 }) { return request<AdminGeoStatsResponse>(Endpoints.Admin.Stats.Geo, params ?? {}); }
+
+// 区域下钻（网格桶内实体明细，keyset 分页）
+export async function adminStatsGeoDrilldown(params: {
+	cell_token: string;
+	level?: number | null;
+	entity_type: 'user' | 'group' | 'moment';
+	time_range?: StatsTimeRange | null;
+	pagination?: { limit?: number; cursor?: string };
+}) { return request<AdminGeoDrilldownPage>(Endpoints.Admin.Stats.Drilldown, params); }
 
 // 应用配置
 export async function adminGetAppConfig()                { return request<AppConfig>(Endpoints.Admin.AppConfig.Get); }

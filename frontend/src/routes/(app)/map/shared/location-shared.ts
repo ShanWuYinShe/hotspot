@@ -2,7 +2,7 @@
 
 import { getMapCanvas } from '@/api';
 import { formatDistance } from '@/lib/utils';
-import { MAP_MIN_ZOOM, MAP_MAX_ZOOM } from './map-projection';
+import { MAP_MIN_ZOOM, MAP_MAX_ZOOM } from '@/components/map/map-projection';
 import type {
 	Bounds,
 	MapCanvasFilter,
@@ -14,8 +14,11 @@ import type {
 } from '@/api/types';
 
 // 既有消费方（desktop/mobile/MapHeatDot）从本模块导入这些类型——
-// 统一 re-export，避免散落直接依赖 '@/api/types'。
+// 统一 re-export，避免散落直接依赖 '@/api/types'。MapBounds 已上收到
+// components/map/types.ts（跨路由地图原语），此处转出保持既有 import 兼容。
+import type { MapBounds } from '@/components/map/types';
 export type { MapCanvasFilter, MapCanvasRequest, MapCanvasResponse, MapHeatBucket, MapHotspotItem };
+export type { MapBounds };
 import type { Pin, PinType } from './location-data';
 import markerUserRaw from '@/assets/markers/marker_user.svg?raw';
 import markerGroupRaw from '@/assets/markers/marker_group.svg?raw';
@@ -44,13 +47,6 @@ export const PIN_TONES: Record<PinType, { bg: string; border: string; glow: stri
 export const PIN_LABELS: Record<PinType, string> = { user: '用户', group: '群组', moment: '瞬间' };
 export const floatBtnStyle =
 	'background:var(--cst-surface-primary);border:var(--cst-border-width-hairline) solid var(--cst-border-default);box-shadow:var(--cst-elevation-fab);';
-
-export interface MapBounds {
-	minLat: number;
-	maxLat: number;
-	minLng: number;
-	maxLng: number;
-}
 
 /** 内联渲染图钉 SVG（currentColor 主题化：容器 color 走 --cst-marker-* token，
     深底/白点保留资源固定对比色）。返回完整 <svg> 字符串供 {@html} 使用。 */

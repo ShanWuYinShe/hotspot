@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Plus, Minus } from '@lucide/svelte';
-	import { MAP_MIN_ZOOM, MAP_MAX_ZOOM } from './map-projection';
+	import { MAP_MIN_ZOOM, MAP_MAX_ZOOM } from '@/components/map/map-projection';
 
 	// 地图缩放控件（+/− 两连钮）：桌面/移动共用，位置与容器外观由调用方经
 	// class/style 透传，保持两端视觉不变。

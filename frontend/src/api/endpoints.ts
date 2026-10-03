@@ -232,6 +232,7 @@ export const Endpoints = {
     },
     Stats: {
       Geo: ADMIN_PREFIX + '/stats/geo',
+      Drilldown: ADMIN_PREFIX + '/stats/geo/drilldown',
     },
   },
 

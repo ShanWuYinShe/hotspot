@@ -10,7 +10,7 @@
 // 的坐标经 gcj02ToWgs84 反演回 WGS-84，"near" 中心先 wgs84ToGcj02 再传参；
 // OSM 全程 WGS-84 直通。逆地理只取文字地址，无坐标系歧义。
 
-import { gcj02ToWgs84, wgs84ToGcj02 } from '@/routes/(app)/map/shared/map-projection';
+import { gcj02ToWgs84, wgs84ToGcj02 } from '@/components/map/map-projection';
 import type { MapSource } from '@/stores/mapSource.svelte';
 
 export interface GeoPlace {

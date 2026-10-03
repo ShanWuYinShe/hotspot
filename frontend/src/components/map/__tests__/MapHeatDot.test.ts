@@ -37,10 +37,11 @@ describe('MapHeatDot', () => {
 		expect(renderDot(12345).textContent?.trim()).toBe('999+');
 	});
 
-	it('按桶坐标换算视口百分比并居中', () => {
+	it('按桶坐标换算视口百分比并居中（Web Mercator 比例，国家尺度不发散）', () => {
 		const dot = renderDot(5);
 		expect(dot.style.left).toBe('50%');
-		expect(dot.style.top).toBe('50%');
+		// 30.5° 在墨卡托投影中点不是线性 50%，此处为投影公式的硬编码期望值。
+		expect(dot.style.top).toBe('50.12851269994047%');
 		expect(dot.style.transform).toContain('translate(-50%,-50%)');
 	});
 

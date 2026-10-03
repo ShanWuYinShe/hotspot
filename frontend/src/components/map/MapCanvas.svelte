@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { MapBounds } from './location-shared';
+	import type { MapBounds } from './types';
 	import { lngToWorldX, latToWorldY, worldXToLng, worldYToLat, wgs84ToGcj02, gcj02ToWgs84, tilesForViewport, viewportToBounds, MAP_MIN_ZOOM, MAP_MAX_ZOOM, type TileItem } from './map-projection';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
 

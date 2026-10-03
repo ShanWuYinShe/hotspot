@@ -13,10 +13,10 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, fetchMapCanvasByViewport, aggregateDrillZoom, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
-	import MapCanvas from '../shared/MapCanvas.svelte';
+	import MapCanvas from '@/components/map/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
-	import MapHeatDot from '../shared/MapHeatDot.svelte';
+	import MapHeatDot from '@/components/map/MapHeatDot.svelte';
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
 	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
