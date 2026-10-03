@@ -301,6 +301,26 @@ func CellLevelShift(level int) int {
 // importing s2 constants into call sites.
 const maxS2Level = 30
 
+// CellTokenLevel returns the S2 level of a cell token, or -1 when the token is
+// invalid. Used to validate client-provided cell tokens at the API boundary.
+func CellTokenLevel(token string) int {
+	id := s2.CellIDFromToken(token)
+	if !id.IsValid() {
+		return -1
+	}
+	return id.Level()
+}
+
+// CellTokenLeafID returns the leaf cell ID (level 30) a token resolves to,
+// or 0 for an invalid token. Drilldown queries derive their bucket from it.
+func CellTokenLeafID(token string) int64 {
+	id := s2.CellIDFromToken(token)
+	if !id.IsValid() {
+		return 0
+	}
+	return int64(id)
+}
+
 // BucketCellToken reconstructs the S2 cell token of a level-L bucket produced
 // by grouping leaf IDs with `s2_cell_id >> CellLevelShift(level)`. The bucket
 // is the shifted integer; the dropped low bits are irrelevant, so the

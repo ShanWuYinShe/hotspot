@@ -19,6 +19,8 @@ type AdminGeoStatsRequest struct {
 	TimeRange *StatsTimeRangeParams `json:"time_range,omitempty"`
 	// Limit 排名条数；0/缺省 = 20，最大 100。
 	Limit *int `json:"limit,omitempty"`
+	// TrendDays 每日新增分布的天数 [1,90]；null/缺省/0 = 不返回趋势（trends 为空数组）。
+	TrendDays *int `json:"trend_days,omitempty"`
 }
 
 // StatsEntityBreakdown 参与统计的三类实体拆分计数（恒在、恒为真值；
@@ -56,20 +58,82 @@ type AdminPlaceRankItem struct {
 	Breakdown    StatsEntityBreakdown `json:"breakdown"`
 }
 
+// AdminGeoStatsTrendPoint 每日新增分布单点：date 为 UTC+8 日界的 YYYY-MM-DD
+// （中国站点无夏令时，固定偏移即日历日），计数按各实体 created_at 落在该日界内。
+type AdminGeoStatsTrendPoint struct {
+	Date   string `json:"date"`
+	User   int    `json:"user"`
+	Group  int    `json:"group"`
+	Moment int    `json:"moment"`
+}
+
 // AdminGeoStatsResponse 地理统计聚合快照（弱一致；无分页，恒返回 Top-N）。
+// Trends 仅在请求携带 trend_days 时有值（窗口逐日补零，无空洞），否则为空数组。
 type AdminGeoStatsResponse struct {
-	GeneratedAt string                `json:"generated_at"`
-	Totals      AdminGeoStatsTotals   `json:"totals"`
-	Regions     []AdminRegionRankItem `json:"regions"`
-	Places      []AdminPlaceRankItem  `json:"places"`
+	GeneratedAt string                    `json:"generated_at"`
+	Totals      AdminGeoStatsTotals       `json:"totals"`
+	Regions     []AdminRegionRankItem     `json:"regions"`
+	Places      []AdminPlaceRankItem      `json:"places"`
+	Trends      []AdminGeoStatsTrendPoint `json:"trends"`
+}
+
+// AdminGeoDrilldownRequest 区域下钻请求：按 cell_token + level 定位单个网格桶，
+// 返回其中指定类型实体的明细（created_at 降序 + id tie-breaker，cursor keyset）。
+type AdminGeoDrilldownRequest struct {
+	CellToken  string                `json:"cell_token"`
+	Level      *int                  `json:"level,omitempty"`
+	EntityType string                `json:"entity_type"` // 'user' | 'group' | 'moment'
+	TimeRange  *StatsTimeRangeParams `json:"time_range,omitempty"`
+	Pagination *PaginationParams     `json:"pagination,omitempty"`
+}
+
+// AdminGeoDrilldownItem 下钻明细行：title 为昵称/群名/动态描述（动态截 60 字）。
+type AdminGeoDrilldownItem struct {
+	ObjectID     string  `json:"object_id"`
+	Title        string  `json:"title"`
+	LocationName *string `json:"location_name"`
+	Latitude     float64 `json:"latitude"`
+	Longitude    float64 `json:"longitude"`
+	CreatedAt    string  `json:"created_at"`
+}
+
+// AdminGeoDrilldownPage 下钻分页响应（next_cursor 恒定 nullable，耗尽为 null）。
+type AdminGeoDrilldownPage struct {
+	Items      []AdminGeoDrilldownItem `json:"items"`
+	NextCursor *string                 `json:"next_cursor"`
+}
+
+// geoDrilldownQuery Service→Repository 的内部下钻查询参数。
+type geoDrilldownQuery struct {
+	Bucket     int64
+	Level      int
+	EntityType string // user | group | moment
+	StartTime  time.Time
+	EndTime    time.Time
+	Limit      int
+	Cursor     string
+}
+
+// geoDrilldownPage 仓储返回的一页下钻明细 + keyset 游标载荷。
+type geoDrilldownPage struct {
+	Items []AdminGeoDrilldownItem
+	Next  *geoDrilldownCursor
+}
+
+// geoDrilldownCursor keyset 游标载荷（created_at 精度 RFC3339Nano，与列精度对齐）。
+type geoDrilldownCursor struct {
+	CreatedAt time.Time `json:"created_at"`
+	ObjectID  string    `json:"object_id"`
 }
 
 // geoStatsQuery Service→Repository 的内部查询参数（Level 已校验、时间已解析）。
 type geoStatsQuery struct {
-	Level     int
-	StartTime time.Time // 零值 = 不限
-	EndTime   time.Time // 零值 = 不限
-	Limit     int
+	Level      int
+	StartTime  time.Time // 零值 = 不限
+	EndTime    time.Time // 零值 = 不限
+	Limit      int
+	TrendDays  int       // 0 = 不返回趋势
+	TrendStart time.Time // 趋势窗口起点（UTC+8 日界），TrendDays > 0 时有效
 }
 
 // geoBucketCount 一条聚合行（区域或地点维度共用）。
@@ -89,4 +153,7 @@ const (
 	statsDefaultLevel = 8
 	statsMinLevel     = 4
 	statsMaxLevel     = 12
+
+	statsTrendMinDays = 1
+	statsTrendMaxDays = 90
 )

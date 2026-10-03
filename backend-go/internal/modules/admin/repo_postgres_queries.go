@@ -457,4 +457,67 @@ FROM (
 GROUP BY t.location_name
 ORDER BY total DESC, t.location_name ASC
 LIMIT $1`
+
+	// 每日新增分布（trend_days）：created_at 按 UTC+8 日界分桶。用 + INTERVAL
+	// '8 hours' 而非 AT TIME ZONE '+08:00'——POSIX 时区串符号反转（实测 +8
+	// 得 UTC-8），区间加法无歧义；中国无夏令时，固定偏移即日历日。
+	// 窗口 [start, end) 由 Service 按 +08:00 日界换算传入。
+	// $1 = 窗口起点、$2 = 窗口终点（均 timestamptz）。
+	queryAdminStatsTrends = `
+SELECT t.day,
+       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'user'), 0)::bigint AS user_n,
+       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'group'), 0)::bigint AS group_n,
+       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'moment'), 0)::bigint AS moment_n
+FROM (
+  SELECT ((created_at + INTERVAL '8 hours')::date) AS day, COUNT(*) AS n, 'user' AS kind
+  FROM users
+  WHERE is_deleted = FALSE AND created_at >= $1 AND created_at < $2
+  GROUP BY 1
+  UNION ALL
+  SELECT ((created_at + INTERVAL '8 hours')::date), COUNT(*), 'group'
+  FROM groups
+  WHERE deleted_at IS NULL AND created_at >= $1 AND created_at < $2
+  GROUP BY 1
+  UNION ALL
+  SELECT ((created_at + INTERVAL '8 hours')::date), COUNT(*), 'moment'
+  FROM moments
+  WHERE is_deleted = FALSE AND created_at >= $1 AND created_at < $2
+  GROUP BY 1
+) t
+GROUP BY t.day
+ORDER BY t.day`
+
+	// 区域下钻明细（stats/geo/drilldown）：单网格桶内实体明细，created_at DESC +
+	// id DESC keyset。$1 = bucket、$2 = shift、$3/$4 = 可空时间窗、
+	// $5/$6 = 可空游标（行值比较；$5 IS NULL 短路守首页，避免 NULL 比较全排除）、
+	// $7 = limit。实体类型为白名单三选一，分别对应三条独立常量。
+	queryAdminStatsDrilldownUsers = `
+SELECT u.user_id, u.nickname, NULLIF(u.location_name, ''), u.latitude, u.longitude, u.created_at
+FROM users u
+WHERE u.is_deleted = FALSE AND u.s2_cell_id <> 0 AND (u.s2_cell_id >> $2) = $1
+  AND ($3::timestamptz IS NULL OR u.created_at >= $3)
+  AND ($4::timestamptz IS NULL OR u.created_at <= $4)
+  AND ($5::timestamptz IS NULL OR (u.created_at, u.user_id) < ($5, $6))
+ORDER BY u.created_at DESC, u.user_id DESC
+LIMIT $7`
+
+	queryAdminStatsDrilldownGroups = `
+SELECT g.group_id, g.name, NULLIF(g.location_name, ''), g.latitude, g.longitude, g.created_at
+FROM groups g
+WHERE g.deleted_at IS NULL AND g.s2_cell_id <> 0 AND (g.s2_cell_id >> $2) = $1
+  AND ($3::timestamptz IS NULL OR g.created_at >= $3)
+  AND ($4::timestamptz IS NULL OR g.created_at <= $4)
+  AND ($5::timestamptz IS NULL OR (g.created_at, g.group_id) < ($5, $6))
+ORDER BY g.created_at DESC, g.group_id DESC
+LIMIT $7`
+
+	queryAdminStatsDrilldownMoments = `
+SELECT m.moment_id, m.description, NULLIF(m.location_name, ''), m.latitude, m.longitude, m.created_at
+FROM moments m
+WHERE m.is_deleted = FALSE AND m.s2_cell_id <> 0 AND (m.s2_cell_id >> $2) = $1
+  AND ($3::timestamptz IS NULL OR m.created_at >= $3)
+  AND ($4::timestamptz IS NULL OR m.created_at <= $4)
+  AND ($5::timestamptz IS NULL OR (m.created_at, m.moment_id) < ($5, $6))
+ORDER BY m.created_at DESC, m.moment_id DESC
+LIMIT $7`
 )

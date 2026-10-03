@@ -317,3 +317,4 @@
 | 165 | `/admin/api/v1/announcements/update` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
 | 166 | `/admin/api/v1/announcements/delete` | admin.announcements.write | not_admin/insufficient_admin_permission | 10300 | — |
 | 167 | `/admin/api/v1/stats/geo` | admin.stats.read | not_admin/insufficient_admin_permission | — | — |
+| 168 | `/admin/api/v1/stats/geo/drilldown` | admin.stats.read | not_admin/insufficient_admin_permission | 10000 | — |

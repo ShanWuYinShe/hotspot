@@ -118,5 +118,55 @@ func TestPostgresIT_StatsGeoAggregation(t *testing.T) {
 		if placeA == nil || placeA.TotalCount != 3 {
 			t.Fatalf("windowed place A: %+v", placeA)
 		}
+
+		// === 趋势（trend_days=7）===
+		sh := time.FixedZone("UTC+8", 8*60*60)
+		nowSH := time.Now().In(sh)
+		todaySH := time.Date(nowSH.Year(), nowSH.Month(), nowSH.Day(), 0, 0, 0, 0, sh)
+		trendStart := todaySH.AddDate(0, 0, -6) // 服务端语义：TrendStart 起逐日填 TrendDays 天
+		trendResp, err := repo.StatsGeo(ctx, geoStatsQuery{Level: 8, Limit: 10, TrendDays: 7, TrendStart: trendStart})
+		if err != nil {
+			t.Fatalf("trend StatsGeo: %v", err)
+		}
+		if len(trendResp.Trends) != 7 {
+			t.Fatalf("expected 7 trend points, got %d", len(trendResp.Trends))
+		}
+		today := trendResp.Trends[6]
+		if today.Date != nowSH.Format("2006-01-02") {
+			t.Fatalf("last trend point should be today(+08): %+v", today)
+		}
+		// 种子中落在今天的：3 用户（含无位置者——趋势不限位置）+ 1 群组 +
+		// 1 现存动态（m_old 40 天前不计）。
+		if today.User != 3 || today.Moment != 1 || today.Group != 1 {
+			t.Fatalf("unexpected today trend: %+v", today)
+		}
+
+		// === 下钻（drilldown）===
+		regionAToken := regionA.CellToken
+		page, err := repo.StatsGeoDrilldown(ctx, geoDrilldownQuery{
+			Bucket: geo.CellTokenLeafID(regionAToken) >> geo.CellLevelShift(8), Level: 8,
+			EntityType: "user", Limit: 1,
+		})
+		if err != nil {
+			t.Fatalf("drilldown: %v", err)
+		}
+		if len(page.Items) != 1 || page.Next == nil {
+			t.Fatalf("expected 1 item + cursor: %+v", page)
+		}
+		firstID := page.Items[0].ObjectID
+		if firstID != "it_stats_u1" && firstID != "it_stats_u2" {
+			t.Fatalf("unexpected drilldown item: %+v", page.Items[0])
+		}
+		// 时间窗下钻：最近 7 天不含 40 天前的动态。
+		pageM, err := repo.StatsGeoDrilldown(ctx, geoDrilldownQuery{
+			Bucket: geo.CellTokenLeafID(regionAToken) >> geo.CellLevelShift(8), Level: 8,
+			EntityType: "moment", Limit: 10, StartTime: trendStart, EndTime: time.Now().UTC(),
+		})
+		if err != nil {
+			t.Fatalf("drilldown moments: %v", err)
+		}
+		if len(pageM.Items) != 1 || pageM.Items[0].ObjectID != "it_stats_m_now" {
+			t.Fatalf("unexpected windowed moment drilldown: %+v", pageM.Items)
+		}
 	})
 }

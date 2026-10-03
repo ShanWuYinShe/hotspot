@@ -56,7 +56,8 @@
 | `POST /admin/api/v1/announcements/create` | 发布系统公告 | admin.announcements.write |
 | `POST /admin/api/v1/announcements/update` | 更新系统公告 | admin.announcements.write |
 | `POST /admin/api/v1/announcements/delete` | 删除系统公告 | admin.announcements.write |
-| `POST /admin/api/v1/stats/geo` | 地理统计（全站存量 + 区域/热门地点排名） | admin.stats.read |
+| `POST /admin/api/v1/stats/geo` | 地理统计（全站存量 + 区域/热门地点排名 + 每日新增趋势） | admin.stats.read |
+| `POST /admin/api/v1/stats/geo/drilldown` | 区域下钻（网格桶内实体明细，keyset 分页） | admin.stats.read |
 
 ## 类型定义
 
@@ -991,6 +992,7 @@ interface AdminGeoStatsRequest {
   level: number | null;        // S2 聚合层级，[4,12]，数字越大网格越细；null = 8（约 20km，城市尺度）
   time_range: TimeRange | null; // 参与排名实体的创建时间窗（UTC ISO 8601）；null = 不限
   limit: number | null;        // 排名条数；0/null = 20，服务端裁剪上限 100
+  trend_days: number | null;   // 每日新增分布天数，[1,90]；null/0 = 不返回趋势
 }
 
 interface TimeRange {
@@ -1025,11 +1027,19 @@ interface AdminGeoStatsTotals {
   total: number;               // 三者之和
 }
 
+interface AdminGeoStatsTrendPoint {
+  date: string;                // YYYY-MM-DD，按 UTC+8 日界分桶（固定偏移，无夏令时）
+  user: number;                // 当日新增用户数
+  group: number;
+  moment: number;
+}
+
 interface AdminGeoStatsResponse {
   generated_at: string;        // 统计生成时间（UTC ISO 8601）
   totals: AdminGeoStatsTotals;
   regions: AdminRegionRankItem[]; // 按 total_count 降序，key 升序为稳定 tie-breaker；Top-N，无分页
   places: AdminPlaceRankItem[];   // 排序规则同上
+  trends: AdminGeoStatsTrendPoint[]; // 请求 trend_days 时为逐日补零的连续序列（含今天），否则空数组
 }
 ```
 

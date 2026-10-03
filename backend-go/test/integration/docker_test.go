@@ -1731,6 +1731,57 @@ func TestAdmin_Stats_Geo(t *testing.T) {
 		// 层级越界 → 10000（参数必显式）。
 		var badResp ApiResponse[map[string]any]
 		apiRespOKWithCode(t, "/admin/api/v1/stats/geo", map[string]any{"level": 99}, &badResp, 10000)
+
+		// 趋势：trend_days=7 → trends 恒 7 点。
+		var trendResp ApiResponse[map[string]any]
+		apiRespOK(t, "/admin/api/v1/stats/geo", map[string]any{"trend_days": 7}, &trendResp)
+		trends, ok := (*trendResp.Data)["trends"].([]any)
+		if !ok || len(trends) != 7 {
+			t.Fatalf("expected 7 trend points, got %+v", (*trendResp.Data)["trends"])
+		}
+		if _, ok := trends[0].(map[string]any)["date"].(string); !ok {
+			t.Fatalf("trend point missing date: %+v", trends[0])
+		}
+	})
+}
+
+func TestAdmin_Stats_Geo_Drilldown(t *testing.T) {
+	withAdminAuth(t, func(token string) {
+		// 管理员自己就有默认位置（guest 注册即带位置），regions 至少 1 个。
+		var statsResp ApiResponse[map[string]any]
+		apiRespOK(t, "/admin/api/v1/stats/geo", map[string]any{}, &statsResp)
+		regions, ok := (*statsResp.Data)["regions"].([]any)
+		if !ok || len(regions) == 0 {
+			t.Fatalf("expected at least 1 region, got %+v", (*statsResp.Data)["regions"])
+		}
+		region0 := regions[0].(map[string]any)
+		cellToken := region0["cell_token"].(string)
+
+		var dd ApiResponse[map[string]any]
+		apiRespOK(t, "/admin/api/v1/stats/geo/drilldown", map[string]any{
+			"cell_token": cellToken, "entity_type": "user",
+			"pagination": map[string]any{"limit": 5},
+		}, &dd)
+		items, ok := (*dd.Data)["items"].([]any)
+		if !ok {
+			t.Fatalf("expected items array, got %+v", (*dd.Data)["items"])
+		}
+		for idx, raw := range items {
+			item := raw.(map[string]any)
+			for _, key := range []string{"object_id", "title", "created_at"} {
+				if _, ok := item[key]; !ok {
+					t.Fatalf("drilldown item %d missing %s", idx, key)
+				}
+			}
+		}
+		// next_cursor 键恒在。
+		if _, ok := (*dd.Data)["next_cursor"]; !ok {
+			t.Fatal("missing next_cursor key")
+		}
+		// 非法 token / 类型白名单外 → 10000。
+		var bad ApiResponse[map[string]any]
+		apiRespOKWithCode(t, "/admin/api/v1/stats/geo/drilldown", map[string]any{"cell_token": "zz", "entity_type": "user"}, &bad, 10000)
+		apiRespOKWithCode(t, "/admin/api/v1/stats/geo/drilldown", map[string]any{"cell_token": cellToken, "entity_type": "comment"}, &bad, 10000)
 	})
 }
 

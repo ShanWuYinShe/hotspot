@@ -54,5 +54,6 @@ func MountRoutes(r chi.Router, handler *Handler) {
 	})
 	r.Route("/stats", func(stats chi.Router) {
 		stats.Post("/geo", handler.StatsGeo)
+		stats.Post("/geo/drilldown", handler.StatsGeoDrilldown)
 	})
 }

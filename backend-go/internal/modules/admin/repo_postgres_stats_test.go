@@ -17,6 +17,8 @@ type statsQueryStub struct {
 	totalsRow    []any
 	regionsRows  [][]any
 	placesRows   [][]any
+	trendsRows   [][]any
+	rowsByQuery  map[string][][]any
 	capturedArgs map[string][]any
 	queryErr     map[string]error
 }
@@ -43,6 +45,12 @@ func (s *statsQueryStub) Query(_ context.Context, query string, args ...any) (pe
 		rows = s.regionsRows
 	case queryAdminStatsPlaces:
 		rows = s.placesRows
+	case queryAdminStatsTrends:
+		rows = s.trendsRows
+	default:
+		if s.rowsByQuery != nil {
+			rows = s.rowsByQuery[query]
+		}
 	}
 	return &statsRows{values: rows}, nil
 }
@@ -62,6 +70,15 @@ func (r *statsRow) Scan(dest ...any) error {
 			*d = r.values[i].(int64)
 		case *string:
 			*d = r.values[i].(string)
+		case **string:
+			if r.values[i] == nil {
+				*d = nil
+			} else {
+				s := r.values[i].(string)
+				*d = &s
+			}
+		case *time.Time:
+			*d = r.values[i].(time.Time)
 		}
 	}
 	return nil
@@ -82,6 +99,15 @@ func (r *statsRows) Scan(dest ...any) error {
 			*d = row[i].(int64)
 		case *string:
 			*d = row[i].(string)
+		case **string:
+			if row[i] == nil {
+				*d = nil
+			} else {
+				s := row[i].(string)
+				*d = &s
+			}
+		case *time.Time:
+			*d = row[i].(time.Time)
 		}
 	}
 	r.idx++
@@ -173,5 +199,103 @@ func TestPostgresStatsGeoQueryError(t *testing.T) {
 	repo := newStatsRepoWithStub(backend)
 	if _, err := repo.StatsGeo(context.Background(), geoStatsQuery{Level: 8, Limit: 20}); err == nil {
 		t.Fatal("expected regions query error to propagate")
+	}
+}
+
+// 趋势：SQL 行 (day, user_n, group_n, moment_n) → 补零展开窗口序列。
+func TestPostgresStatsGeoTrendsMapping(t *testing.T) {
+	day := func(offsetDays int) time.Time {
+		return time.Now().UTC().AddDate(0, 0, offsetDays).Truncate(24 * time.Hour)
+	}
+	backend := &statsQueryStub{
+		totalsRow:  []any{int64(0), int64(0), int64(0)},
+		trendsRows: [][]any{{day(-1), int64(2), int64(1), int64(0)}, {day(0), int64(1), int64(0), int64(3)}},
+	}
+	repo := newStatsRepoWithStub(backend)
+	sh := time.FixedZone("UTC+8", 8*60*60)
+	nowSH := time.Now().In(sh)
+	start := time.Date(nowSH.Year(), nowSH.Month(), nowSH.Day(), 0, 0, 0, 0, sh).AddDate(0, 0, -6)
+	query := geoStatsQuery{TrendDays: 7, TrendStart: start, Level: 8, Limit: 20}
+	resp, err := repo.StatsGeo(context.Background(), query)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Trends) != 7 {
+		t.Fatalf("expected 7 points, got %d", len(resp.Trends))
+	}
+	// 倒数第 2 天（昨天）有 user=2 group=1；最后一天（今天）user=1 moment=3。
+	yesterday := resp.Trends[5]
+	if yesterday.User != 2 || yesterday.Group != 1 || yesterday.Moment != 0 {
+		t.Fatalf("unexpected yesterday: %+v", yesterday)
+	}
+	today := resp.Trends[6]
+	if today.User != 1 || today.Moment != 3 {
+		t.Fatalf("unexpected today: %+v", today)
+	}
+	// 首日补零（夹具只有昨天/今天的数据）。
+	if resp.Trends[0].User != 0 || resp.Trends[0].Group != 0 || resp.Trends[0].Moment != 0 {
+		t.Fatalf("first day should be zero-filled: %+v", resp.Trends[0])
+	}
+	// 参数顺序：trends = (start, end)。
+	args := backend.capturedArgs[queryAdminStatsTrends]
+	if len(args) != 2 || args[0] == nil || args[1] == nil {
+		t.Fatalf("unexpected trends args: %+v", args)
+	}
+}
+
+// 下钻：三查询白名单分派 + 行值游标参数 + Next 编码往返。
+func TestPostgresStatsGeoDrilldownMapping(t *testing.T) {
+	created := time.Now().UTC().Add(-time.Hour).Truncate(time.Microsecond)
+	backend := &statsQueryStub{
+		totalsRow: []any{int64(0), int64(0), int64(0)},
+		rowsByQuery: map[string][][]any{
+			queryAdminStatsDrilldownUsers: {
+				{"user_b", "用户B", "北京市朝阳区", 39.9, 116.4, created},
+				{"user_a", "用户A", nil, 39.91, 116.41, created.Add(-time.Minute)},
+			},
+		},
+	}
+	repo := newStatsRepoWithStub(backend)
+	leaf := geo.LeafCellID(geo.Point{Latitude: 39.9042, Longitude: 116.4074})
+	bucket := leaf >> geo.CellLevelShift(8)
+	page, err := repo.StatsGeoDrilldown(context.Background(), geoDrilldownQuery{
+		Bucket: bucket, Level: 8, EntityType: "user", Limit: 2,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(page.Items) != 2 || page.Next == nil {
+		t.Fatalf("unexpected page: %+v", page)
+	}
+	if page.Items[0].ObjectID != "user_b" || page.Items[0].Title != "用户B" {
+		t.Fatalf("unexpected first item: %+v", page.Items[0])
+	}
+	if page.Items[0].LocationName == nil || *page.Items[0].LocationName != "北京市朝阳区" {
+		t.Fatalf("unexpected location: %+v", page.Items[0])
+	}
+	if page.Items[1].LocationName != nil {
+		t.Fatalf("expected null location name: %+v", page.Items[1])
+	}
+	// Next 游标可解码回载荷（service 层编码字符串→repo 解码的往返由服务测试覆盖,
+	// 这里直接验证结构体）。
+	if page.Next.ObjectID != "user_a" || page.Next.CreatedAt.IsZero() {
+		t.Fatalf("unexpected cursor: %+v", page.Next)
+	}
+	// 参数顺序：(bucket, shift, start, end, cursorTime, cursorID, limit)。
+	args := backend.capturedArgs[queryAdminStatsDrilldownUsers]
+	var nilTime *time.Time
+	var nilID *string
+	if len(args) != 7 || args[0] != bucket || args[1] != geo.CellLevelShift(8) || args[2] != any(nilTime) || args[3] != any(nilTime) || args[6] != 2 {
+		t.Fatalf("unexpected drilldown args: %+v", args)
+	}
+	if args[4] != any(nilTime) || args[5] != any(nilID) {
+		t.Fatalf("first page cursor should be typed nil: %+v %+v", args[4], args[5])
+	}
+}
+
+func TestPostgresStatsGeoDrilldownInvalidEntityType(t *testing.T) {
+	repo := newStatsRepoWithStub(&statsQueryStub{totalsRow: []any{int64(0), int64(0), int64(0)}})
+	if _, err := repo.StatsGeoDrilldown(context.Background(), geoDrilldownQuery{Bucket: 1, Level: 8, EntityType: "hack", Limit: 10}); err == nil {
+		t.Fatal("expected error for non-whitelisted entity type")
 	}
 }

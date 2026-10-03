@@ -38,6 +38,8 @@ type Repository interface {
 	DeleteMoment(context.Context, string) error
 	DeleteComment(context.Context, string) error
 	AppendAuditLog(context.Context, AuditLogEntry) error
-	// StatsGeo 地理统计聚合（区域/地点排名 + 全站存量），见 service_stats.go。
+	// StatsGeo 地理统计聚合（区域/地点排名 + 全站存量 + 可选趋势），见 service_stats.go。
 	StatsGeo(context.Context, geoStatsQuery) (AdminGeoStatsResponse, error)
+	// StatsGeoDrilldown 区域下钻明细（keyset 分页），见 service_stats.go。
+	StatsGeoDrilldown(context.Context, geoDrilldownQuery) (geoDrilldownPage, error)
 }
