@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"hotspot/backend-go/internal/platform/testdb"
+	"math"
 	"testing"
 	"time"
 
@@ -215,18 +216,24 @@ func TestPostgresRepositoryAggregatesHeatmapBreakdownAndSortsByTotalCount(t *tes
 	}
 }
 
-// 回归：桶的代表坐标必须是 S2 格心，而不是桶内首条候选的坐标。
-// spec api_spec_public.md「MapHeatBucket.location」＝聚合单元的代表坐标
-// （例如 S2 单元格中心点）；此前取首条候选坐标，落位随数据遍历顺序漂移。
-func TestPostgresRepositoryHeatBucketLocationIsCellCenter(t *testing.T) {
+// 回归：桶的代表坐标必须是成员球面质心，而不是 S2 格心或首条候选坐标。
+// spec api_spec_public.md「MapHeatBucket.location」＝聚合单元的代表坐标；
+// 同一批成员在不同缩放下被分到不同层级网格时，质心能让标记稳定在数据中心
+// 附近，而格心必然随网格几何跳动。
+func TestPostgresRepositoryHeatBucketLocationUsesMemberCentroid(t *testing.T) {
 	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
-	memberLat, memberLng := 35.0, 112.0
+	center := geo.CellCenter(geo.CellTokenAtLevel(geo.Point{Latitude: 35.0, Longitude: 112.0}, 12))
+	first := geo.Point{Latitude: center.Latitude, Longitude: center.Longitude}
+	second := geo.Point{Latitude: center.Latitude + 0.00001, Longitude: center.Longitude + 0.00001}
+	if got := geo.CellTokenAtLevel(second, 12); got != geo.CellTokenAtLevel(first, 12) {
+		t.Fatalf("test setup: nearby points unexpectedly span two level-12 cells: %q vs %q", geo.CellTokenAtLevel(first, 12), got)
+	}
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
 		queryMapCanvasUsers: {
-			{"user_1", "u1", "", "same", memberLat, memberLng, base},
+			{"user_1", "u1", "", "same", first.Latitude, first.Longitude, base},
 		},
 		queryMapCanvasMoments: {
-			{"moment_1", "m1", "same", memberLat, memberLng, base},
+			{"moment_1", "m1", "same", second.Latitude, second.Longitude, base},
 		},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))
@@ -236,20 +243,26 @@ func TestPostgresRepositoryHeatBucketLocationIsCellCenter(t *testing.T) {
 		t.Fatalf("Heatmap returned error: %v", err)
 	}
 	if len(resp.Items) != 1 {
-		t.Fatalf("expected one bucket for co-located members, got %#v", resp.Items)
+		t.Fatalf("expected one bucket for nearby members, got %#v", resp.Items)
 	}
 	bucket := resp.Items[0]
+	wantLatitude := (first.Latitude + second.Latitude) / 2
+	wantLongitude := (first.Longitude + second.Longitude) / 2
+	if math.Abs(bucket.Location.Latitude-wantLatitude) > 1e-9 || math.Abs(bucket.Location.Longitude-wantLongitude) > 1e-9 {
+		t.Fatalf("expected bucket location near member centroid (%v, %v), got %v", wantLatitude, wantLongitude, bucket.Location)
+	}
+	if (bucket.Location.Latitude == first.Latitude && bucket.Location.Longitude == first.Longitude) ||
+		(bucket.Location.Latitude == second.Latitude && bucket.Location.Longitude == second.Longitude) {
+		t.Fatalf("bucket location should not snap to either member coordinate: %v", bucket.Location)
+	}
 
-	want := geo.CellCenter(bucket.CellToken)
-	if want.Latitude == 0 && want.Longitude == 0 {
-		t.Fatalf("test setup: CellCenter returned zero for token %q", bucket.CellToken)
-	}
-	if bucket.Location.Latitude != want.Latitude || bucket.Location.Longitude != want.Longitude {
-		t.Fatalf("expected bucket location at cell center %v, got %v", want, bucket.Location)
-	}
-	// level 12 格心与成员坐标必然不同：落位不应等于任一成员坐标
-	if bucket.Location.Latitude == memberLat && bucket.Location.Longitude == memberLng {
-		t.Fatalf("bucket location still equals member coordinate %v (regression)", bucket.Location)
+	// 输入顺序不得改变同一成员集合的质心：排除首条/末条候选决定落位的旧行为。
+	reversed := aggregateHeatBuckets([]mapCandidate{
+		{ObjectType: "moment", ObjectID: "m1", Location: GeoPoint{Latitude: second.Latitude, Longitude: second.Longitude}},
+		{ObjectType: "user", ObjectID: "u1", Location: GeoPoint{Latitude: first.Latitude, Longitude: first.Longitude}},
+	}, 12)
+	if len(reversed) != 1 || reversed[0].Location != bucket.Location {
+		t.Fatalf("expected order-independent centroid %v, got %#v", bucket.Location, reversed)
 	}
 }
 

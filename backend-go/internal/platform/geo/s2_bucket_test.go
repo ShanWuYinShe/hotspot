@@ -1,6 +1,9 @@
 package geo
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 // BucketCellToken 必须与 CellTokenAtLevel（内存聚合路径）对同一批点产出一致
 // 的祖先 token——SQL GROUP BY（bucket = leaf >> shift）与 Go 内存聚合是同一
@@ -32,6 +35,36 @@ func TestBucketCellTokenMatchesCellTokenAtLevel(t *testing.T) {
 				t.Errorf("level=%d token=%q: CellCenter returned zero point", level, got)
 			}
 		}
+	}
+}
+
+func TestSphericalCentroidUsesSamePoint(t *testing.T) {
+	point := Point{Latitude: 35.154922, Longitude: 112.682524}
+	got, ok := SphericalCentroid([]Point{point, point})
+	if !ok {
+		t.Fatal("expected centroid for identical points")
+	}
+	if math.Abs(got.Latitude-point.Latitude) > 1e-12 || math.Abs(got.Longitude-point.Longitude) > 1e-12 {
+		t.Fatalf("expected centroid %v, got %v", point, got)
+	}
+}
+
+func TestSphericalCentroidAcrossAntimeridian(t *testing.T) {
+	got, ok := SphericalCentroid([]Point{{Latitude: 0, Longitude: 179}, {Latitude: 0, Longitude: -179}})
+	if !ok {
+		t.Fatal("expected centroid across antimeridian")
+	}
+	if math.Abs(got.Latitude) > 1e-12 || math.Abs(math.Abs(got.Longitude)-180) > 1e-9 {
+		t.Fatalf("expected centroid near (0, ±180), got %v", got)
+	}
+}
+
+func TestSphericalCentroidRejectsEmptyAndDegenerateInput(t *testing.T) {
+	if _, ok := SphericalCentroid(nil); ok {
+		t.Fatal("expected no centroid for empty input")
+	}
+	if _, ok := SphericalCentroid([]Point{{Latitude: 0, Longitude: 0}, {Latitude: 0, Longitude: 180}}); ok {
+		t.Fatal("expected no centroid for exactly antipodal input")
 	}
 }
 

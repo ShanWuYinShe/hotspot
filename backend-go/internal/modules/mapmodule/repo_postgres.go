@@ -198,17 +198,10 @@ func newMapCandidate(objectType, id, title, subtitle, coverURL string, lat, lng 
 	}
 }
 
-// heatBucketCenter 返回聚合桶的代表坐标 = 该 S2 单元格的中心点。
-//
-// spec api_spec_public.md「MapHeatBucket.location」明确为「聚合单元的代表坐标
-// （例如 S2 单元格的中心点）」。此前直接把桶内首条候选的坐标当作代表坐标，
-// 导致热力点落位取决于数据遍历顺序（实测偏离格心 1.8~4.2km），且随数据增删
-// 漂移——前端热力点与聚合行都会落在「某个成员恰好所在的位置」而非所代表区域。
-// 取格心后落位稳定、与网格几何一致。
-//
-// token 非法时 geo.CellCenter 返回零值（几内亚湾外海），此时回退到候选坐标，
-// 避免把点画到错误位置。
-func heatBucketCenter(token string, fallback GeoPoint) GeoPoint {
+// fallbackHeatBucketCenter 只用于没有成员质心可用的占位/异常路径。
+// 真实聚合桶的代表坐标是成员球面质心（见 aggregateHeatBuckets），
+// 而不是随聚合层级变化的格心，保证同一批数据在不同缩放下指向同一数据中心。
+func fallbackHeatBucketCenter(token string, fallback GeoPoint) GeoPoint {
 	center := geo.CellCenter(token)
 	if center.Latitude == 0 && center.Longitude == 0 {
 		return fallback
@@ -218,13 +211,16 @@ func heatBucketCenter(token string, fallback GeoPoint) GeoPoint {
 
 func aggregateHeatBuckets(items []mapCandidate, level int) []MapHeatBucket {
 	byToken := map[string]*MapHeatBucket{}
+	members := map[string][]geo.Point{}
 	for _, item := range items {
-		token := geo.CellTokenAtLevel(geo.Point{Latitude: item.Location.Latitude, Longitude: item.Location.Longitude}, level)
+		point := geo.Point{Latitude: item.Location.Latitude, Longitude: item.Location.Longitude}
+		token := geo.CellTokenAtLevel(point, level)
 		bucket, ok := byToken[token]
 		if !ok {
-			bucket = &MapHeatBucket{CellToken: token, Level: level, Location: heatBucketCenter(token, item.Location), Breakdown: &MapHeatBreakdown{}}
+			bucket = &MapHeatBucket{CellToken: token, Level: level, Location: item.Location, Breakdown: &MapHeatBreakdown{}}
 			byToken[token] = bucket
 		}
+		members[token] = append(members[token], point)
 		bucket.TotalCount++
 		switch item.ObjectType {
 		case "user":
@@ -248,7 +244,10 @@ func aggregateHeatBuckets(items []mapCandidate, level int) []MapHeatBucket {
 		}
 	}
 	out := make([]MapHeatBucket, 0, len(byToken))
-	for _, bucket := range byToken {
+	for token, bucket := range byToken {
+		if center, ok := geo.SphericalCentroid(members[token]); ok {
+			bucket.Location = GeoPoint{Latitude: center.Latitude, Longitude: center.Longitude}
+		}
 		out = append(out, *bucket)
 	}
 	sort.SliceStable(out, func(i, j int) bool {

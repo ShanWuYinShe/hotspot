@@ -38,8 +38,82 @@ func TestServiceCanvasUsesHeatmapForLargeViewport(t *testing.T) {
 	if resp.Heatmap == nil || resp.Hotspots != nil {
 		t.Fatalf("expected heatmap-only response, got %#v", resp)
 	}
-	if repo.lastHeatQuery.Level != geo.SuggestedLevel(repo.lastHeatQuery.SpanMeters) {
-		t.Fatalf("expected suggested level, got %#v", repo.lastHeatQuery)
+	if repo.lastHeatQuery.Level != heatmapAggregationLevel(repo.lastHeatQuery.SpanMeters) {
+		t.Fatalf("expected heatmap aggregation level, got %#v", repo.lastHeatQuery)
+	}
+	if repo.lastHeatQuery.Level != 5 {
+		t.Fatalf("expected continental viewport to use level 5, got %d", repo.lastHeatQuery.Level)
+	}
+
+	query, err := newCanvasQuery(MapCanvasRequest{Viewport: MapViewport{Bounds: Bounds{North: 10, South: 0, East: 10, West: 0}}})
+	if err != nil {
+		t.Fatalf("newCanvasQuery returned error: %v", err)
+	}
+	if query.Level != geo.SuggestedLevel(query.SpanMeters) {
+		t.Fatalf("expected hotspots/search path to retain suggested level, got %#v", query)
+	}
+}
+
+func TestHeatmapAggregationLevelMergesNearbySmallClusters(t *testing.T) {
+	base := geo.Point{Latitude: 35.0, Longitude: 112.0}
+	parent := geo.CellTokenAtLevel(base, 6)
+	members := make([]mapCandidate, 0, 2)
+	objectIDs := []string{"merge-a", "merge-b"}
+	seenFineCells := map[string]bool{}
+	for _, dLat := range []float64{-0.4, -0.2, 0, 0.2, 0.4} {
+		for _, dLng := range []float64{-0.4, -0.2, 0, 0.2, 0.4} {
+			point := geo.Point{Latitude: base.Latitude + dLat, Longitude: base.Longitude + dLng}
+			if geo.CellTokenAtLevel(point, 6) != parent {
+				continue
+			}
+			fine := geo.CellTokenAtLevel(point, 8)
+			if seenFineCells[fine] {
+				continue
+			}
+			seenFineCells[fine] = true
+			members = append(members, mapCandidate{
+				ObjectType: "user",
+				ObjectID:   objectIDs[len(members)],
+				Location:   GeoPoint{Latitude: point.Latitude, Longitude: point.Longitude},
+			})
+			if len(members) == 2 {
+				break
+			}
+		}
+		if len(members) == 2 {
+			break
+		}
+	}
+	if len(members) != 2 {
+		t.Fatal("test setup: expected two distinct level-8 cells inside one level-6 cell")
+	}
+
+	buckets := aggregateHeatBuckets(members, heatmapAggregationLevel(600000))
+	if len(buckets) != 1 || buckets[0].TotalCount != 2 {
+		t.Fatalf("expected one merged level-6 bucket, got %#v", buckets)
+	}
+}
+
+func TestHeatmapAggregationLevelCoarsensWithViewportSpan(t *testing.T) {
+	tests := []struct {
+		span float64
+		want int
+	}{
+		{50001, 10},
+		{62500, 10},
+		{62501, 9},
+		{150000, 8},
+		{300000, 7},
+		{800000, 6},
+		{1500000, 5},
+		{3000000, 4},
+		{9000000, 2},
+		{18000000, 1},
+	}
+	for _, tt := range tests {
+		if got := heatmapAggregationLevel(tt.span); got != tt.want {
+			t.Errorf("heatmapAggregationLevel(%.0f) = %d, want %d", tt.span, got, tt.want)
+		}
 	}
 }
 

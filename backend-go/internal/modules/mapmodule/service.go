@@ -26,6 +26,9 @@ func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasRe
 		return MapCanvasResponse{}, err
 	}
 	if query.SpanMeters > heatmapViewportThresholdMeters {
+		// 聚合粒度必须随可视跨度变化：query.Level 继续沿用搜索预过滤口径，
+		// 而热力桶改用与可视尺度匹配的层级，避免大陆/全球视口仍显示城市尺度小簇。
+		query.Level = heatmapAggregationLevel(query.SpanMeters)
 		heatmap, err := s.repo.Heatmap(ctx, query)
 		if err != nil {
 			observability.L().Error("map.canvas heatmap failed", "error", err)
@@ -46,6 +49,35 @@ func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasRe
 		return MapCanvasResponse{Mode: MapCanvasModeEmpty}, nil
 	}
 	return MapCanvasResponse{Mode: MapCanvasModeHotspots, Hotspots: &hotspots}, nil
+}
+
+// heatmapAggregationLevel 根据热力视口跨度选择 S2 聚合层级。
+// 目标是让热力桶边长约占视口跨度的六分之一：相邻 S2 层级边长相差一倍，
+// 因此跨度每翻一番就降低一级。大尺度下相邻小簇会被合并到同一祖先桶；
+// 小尺度热力视口（刚超过 50km 阈值）仍使用 level 10，保持街道/城区细节。
+func heatmapAggregationLevel(spanMeters float64) int {
+	switch {
+	case spanMeters > 16000000:
+		return 1
+	case spanMeters > 8000000:
+		return 2
+	case spanMeters > 4000000:
+		return 3
+	case spanMeters > 2000000:
+		return 4
+	case spanMeters > 1000000:
+		return 5
+	case spanMeters > 500000:
+		return 6
+	case spanMeters > 250000:
+		return 7
+	case spanMeters > 125000:
+		return 8
+	case spanMeters > 62500:
+		return 9
+	default:
+		return 10
+	}
 }
 
 func newCanvasQuery(req MapCanvasRequest) (canvasQuery, error) {

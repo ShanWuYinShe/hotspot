@@ -266,6 +266,39 @@ func CellCenter(token string) Point {
 	return Point{Latitude: ll.Lat.Degrees(), Longitude: ll.Lng.Degrees()}
 }
 
+// SphericalCentroid 返回一组地理坐标的球面质心。
+//
+// 与简单的经纬度算术平均不同，它先把坐标换算成三维单位向量再平均，
+// 因此可以正确处理跨 ±180° 经线的点集。返回 false 的情况只有输入为空、
+// 全部非法，或者向量完全抵消（例如精确对跖点对）。
+func SphericalCentroid(points []Point) (Point, bool) {
+	var x, y, z float64
+	valid := 0
+	for _, p := range points {
+		if !IsValidPoint(p) {
+			continue
+		}
+		lat := p.Latitude * math.Pi / 180
+		lng := p.Longitude * math.Pi / 180
+		cosLat := math.Cos(lat)
+		x += cosLat * math.Cos(lng)
+		y += cosLat * math.Sin(lng)
+		z += math.Sin(lat)
+		valid++
+	}
+	if valid == 0 {
+		return Point{}, false
+	}
+	norm := math.Sqrt(x*x + y*y + z*z)
+	if norm < 1e-12 {
+		return Point{}, false
+	}
+	return Point{
+		Latitude:  math.Asin(math.Max(-1, math.Min(1, z/norm))) * 180 / math.Pi,
+		Longitude: math.Atan2(y, x) * 180 / math.Pi,
+	}, true
+}
+
 func DistanceMeters(a, b Point) int {
 	p1 := s2.LatLngFromDegrees(a.Latitude, a.Longitude)
 	p2 := s2.LatLngFromDegrees(b.Latitude, b.Longitude)
