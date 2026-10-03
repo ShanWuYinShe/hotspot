@@ -294,7 +294,17 @@ func apiRespOKWithHost(t *testing.T, host, path string, body, result any) {
 
 // mediaPresignClientOrigin 是媒体 E2E 声明的「客户端入口 origin」：presign 返回的
 // 直传 URL 必须与该 origin 同源（SigV4 签名含 Host，浏览器跨源 PUT 也会被 CORS 拦）。
-const mediaPresignClientOrigin = "127.0.0.1:8888"
+// 端口跟随 NGINX_PORT（默认 8888）：重映射端口起 stack 时（NGINX_PORT=8889 docker
+// compose up …）用同名变量跑测试，presign/PUT/complete 才会全部落在同一套
+// seaweedfs——origin 固定 8888 会把 PUT 打进默认端口那套栈，complete_upload
+// 在本栈查不到对象而报 10400（2026-10-03 worktree 实测）。
+var mediaPresignClientOrigin = func() string {
+	port := os.Getenv("NGINX_PORT")
+	if port == "" {
+		port = "8888"
+	}
+	return "127.0.0.1:" + port
+}()
 
 func apiRespOKWithCode(t *testing.T, path string, body, result any, expectCode int) {
 	requireBackend(t)
