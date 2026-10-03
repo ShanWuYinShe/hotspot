@@ -12,7 +12,7 @@
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, fetchMapCanvasByViewport, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
+	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, fetchMapCanvasByViewport, aggregateDrillZoom, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
 	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
@@ -269,6 +269,16 @@
 		else void goto(ROUTES.moment(pin.id));
 	}
 
+	// 聚合桶下钻：中心移到该格并放大到「整格入画」的级别——跨过 50km 阈值后
+	// 服务端切回 hotspots，地图随之变为真实实体明细。移动端 sheet 没有聚合列表，
+	// 点热力徽标是热力桶唯一的下钻入口。
+	function handleHeatSelect(bucket: MapHeatBucket) {
+		userPicked = true;
+		mapCenter = { lat: bucket.location.latitude, lng: bucket.location.longitude };
+		mapZoom = aggregateDrillZoom(mapZoom, mapBounds);
+		selectedPin = null;
+	}
+
 	const sheetStyle = $derived(
 		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;border:var(--cst-border-width-hairline) solid var(--cst-border-default);border-bottom:none;box-shadow:var(--cst-elevation-sheet);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height var(--cst-motion-spring) var(--cst-ease-bounce);'}`
 	);
@@ -290,9 +300,9 @@
 			</div>
 		</div>
 
-		<!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计） -->
+		<!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计；点徽标下钻到整格明细） -->
 		{#each heatBuckets as bucket (bucket.cell_token)}
-			<MapHeatDot {bucket} bounds={mapBounds} />
+			<MapHeatDot {bucket} bounds={mapBounds} onSelect={handleHeatSelect} />
 		{/each}
 
 		<!-- Marker pins -->

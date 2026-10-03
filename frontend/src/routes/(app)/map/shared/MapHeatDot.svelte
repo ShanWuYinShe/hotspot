@@ -12,13 +12,22 @@
 	// 改为白卡面 + accent 描边的数字徽标：既保留品牌色的醒目度，又与「实心蓝点」
 	// 在形体上彻底区分（空心带数字 vs 实心点）。
 
-	let { bucket, bounds }: { bucket: MapHeatBucket; bounds: MapBounds } = $props();
+	let {
+		bucket,
+		bounds,
+		// 点击下钻：与桌面左栏聚合行、详情浮层「放大地图查看」同口径
+		//（center + 放大到街区级）。移动端 sheet 没有聚合列表，这是唯一的下钻入口。
+		onSelect
+	}: {
+		bucket: MapHeatBucket;
+		bounds: MapBounds;
+		onSelect?: (bucket: MapHeatBucket) => void;
+	} = $props();
 
 	// 超过 999 收敛为 999+：四位数会撑破圆点，且该量级差异在缩放视图里已无意义
 	const label = $derived(bucket.total_count > 999 ? '999+' : String(bucket.total_count));
 
 	// 分类明细：与列表聚合行同一口径，用作无障碍名称。
-	// 不做悬浮提示——本元素 pointer-events:none，点击需穿透到地图画布。
 	const breakdownText = $derived(
 		[
 			bucket.breakdown?.user ? `${bucket.breakdown.user} 位用户` : '',
@@ -45,9 +54,13 @@
 	});
 </script>
 
-<div
-	role="img"
+<button
+	type="button"
 	aria-label={ariaLabel}
-	class="absolute z-10 inline-flex items-center justify-center rounded-full pointer-events-none text-xs font-semibold leading-none shadow-raised-md"
+	class="absolute z-10 inline-flex items-center justify-center rounded-full p-0 text-xs font-semibold leading-none shadow-raised-md focus-ring"
 	style="transform:translate(-50%,-50%);background:var(--cst-surface-primary);color:var(--cst-text-primary);border:var(--cst-border-width-strong) solid var(--cst-accent-default);{style}"
->{label}</div>
+	onclick={(e) => {
+		e.stopPropagation();
+		onSelect?.(bucket);
+	}}
+>{label}</button>

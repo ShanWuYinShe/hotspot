@@ -2,6 +2,7 @@
 
 import { getMapCanvas } from '@/api';
 import { formatDistance } from '@/lib/utils';
+import { MAP_MIN_ZOOM, MAP_MAX_ZOOM } from './map-projection';
 import type {
 	Bounds,
 	MapCanvasFilter,
@@ -248,6 +249,33 @@ export function mapBoundsToViewport(bounds: MapBounds): MapViewport {
 			west: bounds.minLng
 		} satisfies Bounds
 	};
+}
+
+/** 聚合桶下钻的目标跨度（米）。桶是 S2 level-10 网格（边长 ≈25km）：下钻后
+ *  视口要容纳整格成员，又要稳定低于服务端 50km 热力阈值——span > 50km 会切回
+ *  heatmap，下钻就白点了。取 20km 并向下取整后，实际跨度恒落在 [20km, 40km)，
+ *  任何屏宽/纬度都同时满足两个条件。 */
+const AGGREGATE_DRILL_SPAN_METERS = 20000;
+
+/**
+ * 聚合桶下钻的目标缩放级：从当前 zoom 与视口 bounds 换算，使下钻后视口跨度
+ * 落在 [AGGREGATE_DRILL_SPAN_METERS, 2×) 区间。
+ *
+ * 不能用固定 zoom：跨度随视口像素宽度变化（同一 zoom 下 1200px 桌面 ≈37km、
+ * 390px 移动 ≈12km）——桌面版曾用固定 14（≈11.6km）勉强可用，移动端在 14 级
+ * 只有 ~3km 跨度，整格成员根本不在画内。
+ */
+export function aggregateDrillZoom(currentZoom: number, bounds: MapBounds): number {
+	const centerLat = (bounds.minLat + bounds.maxLat) / 2;
+	const latMeters = Math.abs(bounds.maxLat - bounds.minLat) * 111000;
+	const lngMeters = Math.abs(bounds.maxLng - bounds.minLng) * 111000 * Math.cos((centerLat * Math.PI) / 180);
+	const spanMeters = Math.hypot(latMeters, lngMeters);
+	// 跨度随 zoom 每 +1 减半：span(z) = span_now × 2^(currentZoom − z)
+	const zoom = currentZoom + Math.log2(spanMeters / AGGREGATE_DRILL_SPAN_METERS);
+	const clamped = Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, Math.floor(zoom)));
+	// 只放大不缩小：徽标只在 heatmap 视口（span > 50km）出现，此时必应放大；
+	// 理论混合场景下若已在更细的视口被调到，保持现状而不是把用户拉远。
+	return Math.max(currentZoom, clamped);
 }
 
 /**

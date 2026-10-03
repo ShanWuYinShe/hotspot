@@ -1,7 +1,8 @@
-// MapHeatDot 契约测试：数目标签、定位、直径分档与 token 样式。
-import { describe, it, expect } from 'vitest';
+// MapHeatDot 契约测试：数目标签、点击下钻、定位、直径分档与 token 样式。
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import MapHeatDot from '../MapHeatDot.svelte';
+import type { MapHeatBucket } from '../location-shared';
 
 const bounds = { minLat: 30, maxLat: 31, minLng: 117, maxLng: 118 };
 
@@ -15,8 +16,14 @@ function bucketWith(total: number, breakdown: Record<string, number | null> | nu
 	} as never;
 }
 
-function renderDot(total: number, breakdown: Record<string, number | null> | null = null) {
-	const { container } = render(MapHeatDot, { props: { bucket: bucketWith(total, breakdown), bounds } });
+function renderDot(
+	total: number,
+	breakdown: Record<string, number | null> | null = null,
+	onSelect?: (bucket: MapHeatBucket) => void
+) {
+	const { container } = render(MapHeatDot, {
+		props: { bucket: bucketWith(total, breakdown), bounds, onSelect }
+	});
 	return container.firstElementChild as HTMLElement;
 }
 
@@ -84,11 +91,35 @@ describe('MapHeatDot', () => {
 	it('提供含分类明细的无障碍名称', () => {
 		const withBreakdown = renderDot(34, { user: 22, group: 4, moment: 8 });
 		expect(withBreakdown.getAttribute('aria-label')).toBe('此处聚合 34 项：22 位用户 · 4 个群组 · 8 条动态');
-		expect(withBreakdown.getAttribute('role')).toBe('img');
 	});
 
 	it('breakdown 为 null 时无障碍名称退化为总数（不出现 undefined）', () => {
 		const dot = renderDot(12, null);
 		expect(dot.getAttribute('aria-label')).toBe('此处聚合 12 项');
+	});
+
+	it('渲染为 button：可聚焦、可键盘触达（style skill 焦点可见性契约）', () => {
+		const dot = renderDot(54);
+		expect(dot.tagName).toBe('BUTTON');
+		expect(dot.getAttribute('type')).toBe('button');
+		expect(dot.className).toContain('focus-ring');
+		// 旧实现 pointer-events:none + role=img：点击穿透、无障碍读不出交互语义
+		expect(dot.className).not.toContain('pointer-events-none');
+	});
+
+	it('点击徽标触发 onSelect 并带上该桶（下钻入口）', async () => {
+		const onSelect = vi.fn();
+		const { container } = render(MapHeatDot, {
+			props: { bucket: bucketWith(34, { user: 22, group: 4, moment: 8 }), bounds, onSelect }
+		});
+		const dot = container.firstElementChild as HTMLElement;
+		await dot.click();
+		expect(onSelect).toHaveBeenCalledTimes(1);
+		expect(onSelect.mock.calls[0][0].cell_token).toBe('t');
+	});
+
+	it('未传 onSelect 时点击不抛错', () => {
+		const dot = renderDot(54);
+		expect(() => dot.click()).not.toThrow();
 	});
 });

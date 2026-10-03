@@ -14,9 +14,8 @@
 	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import {
 		PIN_COLORS, PIN_LABELS, PIN_TONES, fetchMapCanvas, fetchMapCanvasByViewport, canvasToListPins,
-		type MapBounds, type MapHeatBucket
+		aggregateDrillZoom, type MapBounds, type MapHeatBucket
 	} from '../shared/location-shared';
-	import { MAP_MAX_ZOOM } from '../shared/map-projection';
 	import MapCanvas from '../shared/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapPinMarker from '../shared/MapPinMarker.svelte';
@@ -197,21 +196,27 @@
 		};
 	});
 
-	// 从聚合桶"放大看明细"时的目标级别：街区级，稳定低于服务端 50km 热力阈值
-	// （桌面视口 zoom14 跨度约 11.6km，留足余量）。
-	const AGGREGATE_DETAIL_ZOOM = 14;
+	// 聚合桶下钻：中心移到该格并放大到「整格入画」的级别——跨过 50km 阈值后
+	// 服务端切回 hotspots，列表与地图随之变为真实实体明细。
+	function zoomToAggregate(lat: number, lng: number) {
+		userPicked = true;
+		mapCenter = { lat, lng };
+		mapZoom = aggregateDrillZoom(mapZoom, mapBounds);
+		selectedPin = null;
+	}
+
+	// 地图上的热力徽标点击（桌面/移动共用组件）：移动端 sheet 没有聚合列表，
+	// 点徽标是热力桶唯一的下钻入口。
+	function handleHeatSelect(bucket: MapHeatBucket) {
+		zoomToAggregate(bucket.location.latitude, bucket.location.longitude);
+	}
 
 	// 图钉详情跳转：user/group/moment 分别路由到对应详情页。
 	// 聚合桶不是真实实体（id 形如 "heat:<cell_token>"，无对应记录），
-	// 跳详情会得到 404；改为把地图中心移到该格，让用户放大后看真实明细。
+	// 跳详情会得到 404；改为下钻到该格看真实明细。
 	function openPinDetail(pin: Pin) {
 		if (pin.isAggregate) {
-			// 聚合桶是 S2 level-10 网格（格边长约 25km），"+3 级"不足以保证视口跨度
-			// 降到 50km 阈值以下（实测桌面视口 zoom14 才约 11.6km）。这里直接对齐到
-			// 能稳定拿到明细的街区级，跨过阈值后服务端切回 hotspots，列表随之变为实体。
-			mapCenter = { lat: pin.lat, lng: pin.lng };
-			mapZoom = Math.max(mapZoom, AGGREGATE_DETAIL_ZOOM);
-			selectedPin = null;
+			zoomToAggregate(pin.lat, pin.lng);
 			return;
 		}
 		if (pin.type === 'user') void goto(ROUTES.user(pin.id));
@@ -332,9 +337,9 @@
 			</div>
 		</div>
 
-		<!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计） -->
+		<!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计；点徽标下钻到整格明细） -->
 		{#each heatBuckets as bucket (bucket.cell_token)}
-			<MapHeatDot {bucket} bounds={mapBounds} />
+			<MapHeatDot {bucket} bounds={mapBounds} onSelect={handleHeatSelect} />
 		{/each}
 
 		<!-- Pin markers -->

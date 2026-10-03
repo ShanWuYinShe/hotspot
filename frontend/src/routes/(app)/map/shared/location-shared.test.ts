@@ -1,7 +1,8 @@
 // map/canvas 响应解析与合并逻辑测试（spec api_spec_public.md：mode 判别联合
 // + RelativeLocation）。
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { fetchMapCanvas, canvasToListPins } from './location-shared';
+import { fetchMapCanvas, canvasToListPins, aggregateDrillZoom } from './location-shared';
+import type { MapBounds } from './location-shared';
 import { getMapCanvas } from '@/api';
 import type { MapCanvasResponse } from '@/api/types';
 
@@ -280,5 +281,54 @@ describe('fetchMapCanvas', () => {
 		vi.mocked(getMapCanvas).mockResolvedValueOnce(canvasOnce({ mode: 'empty' }));
 		const result = await fetchMapCanvas(CENTER, ZOOM, ['user', 'group', 'moment']);
 		expect(canvasToListPins(result)).toHaveLength(0);
+	});
+});
+
+// 聚合桶下钻的目标缩放级：跨度必须落在 [20km, 40km)——整格（level-10 ≈25km）
+// 成员入画，且稳定低于服务端 50km 热力阈值（span > 50km 会切回 heatmap，
+// 下钻后看到的还是徽标而不是明细，等于白点）。
+describe('aggregateDrillZoom', () => {
+	const CENTER_LAT = 35.1;
+
+	function boundsAround(spanDeg: number): MapBounds {
+		return {
+			maxLat: CENTER_LAT + spanDeg / 2,
+			minLat: CENTER_LAT - spanDeg / 2,
+			maxLng: 112.61 + spanDeg / 2,
+			minLng: 112.61 - spanDeg / 2
+		};
+	}
+
+	// 与后端 ApproxViewportSpanMeters 同口径的跨度复算（米）
+	function spanMeters(b: MapBounds): number {
+		const latM = Math.abs(b.maxLat - b.minLat) * 111000;
+		const lngM = Math.abs(b.maxLng - b.minLng) * 111000 * Math.cos((((b.maxLat + b.minLat) / 2) * Math.PI) / 180);
+		return Math.hypot(latM, lngM);
+	}
+
+	it.each([
+		// [当前跨度(度), 当前 zoom] —— 物理上成立的配对：span ≈ w×360/(256×2^z)。
+		// 桌面（1200px）：6.59°@8 / 1.65°@10 / 0.82°@11
+		// 移动（390px）：2.14°@8 / 0.535°@10 / 0.268°@11
+		// 均为 heatmap 视口（span > 50km），即徽标可见的状态。
+		[6.59, 8],
+		[1.65, 10],
+		[0.82, 11],
+		[2.14, 8],
+		[0.535, 10],
+		[0.268, 11]
+	])('当前跨度 %d 度 / zoom %d：下钻后跨度 ∈ [20km, 40km) 且不缩小地图', (spanDeg, currentZoom) => {
+		const bounds = boundsAround(spanDeg);
+		const zoom = aggregateDrillZoom(currentZoom, bounds);
+		expect(zoom).toBeGreaterThanOrEqual(currentZoom);
+		expect(zoom).toBeLessThanOrEqual(19);
+		const after = spanMeters(bounds) / Math.pow(2, zoom - currentZoom);
+		expect(after).toBeGreaterThanOrEqual(20000);
+		expect(after).toBeLessThan(40000);
+	});
+
+	it('已是街区级（跨度小于目标，理论混合场景）时不缩小地图', () => {
+		const bounds = boundsAround(0.1); // ≈14km，已比目标细
+		expect(aggregateDrillZoom(16, bounds)).toBe(16);
 	});
 });
