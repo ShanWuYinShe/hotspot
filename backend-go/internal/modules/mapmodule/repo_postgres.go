@@ -198,13 +198,31 @@ func newMapCandidate(objectType, id, title, subtitle, coverURL string, lat, lng 
 	}
 }
 
+// heatBucketCenter 返回聚合桶的代表坐标 = 该 S2 单元格的中心点。
+//
+// spec api_spec_public.md「MapHeatBucket.location」明确为「聚合单元的代表坐标
+// （例如 S2 单元格的中心点）」。此前直接把桶内首条候选的坐标当作代表坐标，
+// 导致热力点落位取决于数据遍历顺序（实测偏离格心 1.8~4.2km），且随数据增删
+// 漂移——前端热力点与聚合行都会落在「某个成员恰好所在的位置」而非所代表区域。
+// 取格心后落位稳定、与网格几何一致。
+//
+// token 非法时 geo.CellCenter 返回零值（几内亚湾外海），此时回退到候选坐标，
+// 避免把点画到错误位置。
+func heatBucketCenter(token string, fallback GeoPoint) GeoPoint {
+	center := geo.CellCenter(token)
+	if center.Latitude == 0 && center.Longitude == 0 {
+		return fallback
+	}
+	return GeoPoint{Latitude: center.Latitude, Longitude: center.Longitude}
+}
+
 func aggregateHeatBuckets(items []mapCandidate, level int) []MapHeatBucket {
 	byToken := map[string]*MapHeatBucket{}
 	for _, item := range items {
 		token := geo.CellTokenAtLevel(geo.Point{Latitude: item.Location.Latitude, Longitude: item.Location.Longitude}, level)
 		bucket, ok := byToken[token]
 		if !ok {
-			bucket = &MapHeatBucket{CellToken: token, Level: level, Location: item.Location, Breakdown: &MapHeatBreakdown{}}
+			bucket = &MapHeatBucket{CellToken: token, Level: level, Location: heatBucketCenter(token, item.Location), Breakdown: &MapHeatBreakdown{}}
 			byToken[token] = bucket
 		}
 		bucket.TotalCount++

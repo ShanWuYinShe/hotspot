@@ -23,9 +23,11 @@ func (r *InMemoryRepository) Heatmap(_ context.Context, query canvasQuery) (MapH
 			break
 		}
 		items = append(items, MapHeatBucket{
-			CellToken:  token,
-			Level:      query.Level,
-			Location:   GeoPoint{Latitude: query.Center.Latitude, Longitude: query.Center.Longitude},
+			CellToken: token,
+			Level:     query.Level,
+			// 与 postgres 实现同口径：代表坐标取 S2 格心（spec api_spec_public.md
+			// 「MapHeatBucket.location」），保证双实现可互换。
+			Location:   heatBucketCenter(token, GeoPoint{Latitude: query.Center.Latitude, Longitude: query.Center.Longitude}),
 			TotalCount: 3,
 			Breakdown:  &MapHeatBreakdown{User: intPtr(1), Group: intPtr(1), Moment: intPtr(1)},
 		})

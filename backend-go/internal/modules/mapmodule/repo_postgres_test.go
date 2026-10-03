@@ -215,6 +215,44 @@ func TestPostgresRepositoryAggregatesHeatmapBreakdownAndSortsByTotalCount(t *tes
 	}
 }
 
+// 回归：桶的代表坐标必须是 S2 格心，而不是桶内首条候选的坐标。
+// spec api_spec_public.md「MapHeatBucket.location」＝聚合单元的代表坐标
+// （例如 S2 单元格中心点）；此前取首条候选坐标，落位随数据遍历顺序漂移。
+func TestPostgresRepositoryHeatBucketLocationIsCellCenter(t *testing.T) {
+	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
+	memberLat, memberLng := 35.0, 112.0
+	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
+		queryMapCanvasUsers: {
+			{"user_1", "u1", "", "same", memberLat, memberLng, base},
+		},
+		queryMapCanvasMoments: {
+			{"moment_1", "m1", "same", memberLat, memberLng, base},
+		},
+	}}
+	repo := NewPostgresRepository(newMapFactory(backend))
+
+	resp, err := repo.Heatmap(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Level: 12, DataType: "all"})
+	if err != nil {
+		t.Fatalf("Heatmap returned error: %v", err)
+	}
+	if len(resp.Items) != 1 {
+		t.Fatalf("expected one bucket for co-located members, got %#v", resp.Items)
+	}
+	bucket := resp.Items[0]
+
+	want := geo.CellCenter(bucket.CellToken)
+	if want.Latitude == 0 && want.Longitude == 0 {
+		t.Fatalf("test setup: CellCenter returned zero for token %q", bucket.CellToken)
+	}
+	if bucket.Location.Latitude != want.Latitude || bucket.Location.Longitude != want.Longitude {
+		t.Fatalf("expected bucket location at cell center %v, got %v", want, bucket.Location)
+	}
+	// level 12 格心与成员坐标必然不同：落位不应等于任一成员坐标
+	if bucket.Location.Latitude == memberLat && bucket.Location.Longitude == memberLng {
+		t.Fatalf("bucket location still equals member coordinate %v (regression)", bucket.Location)
+	}
+}
+
 func TestPostgresRepositorySortsHotspotsByDistanceThenTieBreakers(t *testing.T) {
 	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{

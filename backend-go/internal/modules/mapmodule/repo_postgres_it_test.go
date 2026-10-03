@@ -169,6 +169,12 @@ func TestPostgresIT_MapCanvas_Heatmap_S2Aggregation(t *testing.T) {
 			if bucket.CellToken == "" {
 				t.Fatal("expected non-empty cell token")
 			}
+			// 代表坐标必须是该 S2 单元格的格心（spec api_spec_public.md
+			// 「MapHeatBucket.location」），而不是桶内某个成员的实际坐标。
+			want := geo.CellCenter(bucket.CellToken)
+			if bucket.Location.Latitude != want.Latitude || bucket.Location.Longitude != want.Longitude {
+				t.Fatalf("expected bucket %s location at cell center %v, got %v", bucket.CellToken, want, bucket.Location)
+			}
 		}
 
 		if totalCount != 3 {
