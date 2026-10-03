@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import MapHeatDot from '../MapHeatDot.svelte';
-import type { MapHeatBucket } from '../location-shared';
+import type { MapHeatBucket } from '@/api/types';
 
 const bounds = { minLat: 30, maxLat: 31, minLng: 117, maxLng: 118 };
 
