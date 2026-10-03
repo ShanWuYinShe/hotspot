@@ -1045,4 +1045,44 @@ interface AdminGeoStatsResponse {
 
 **Response**: `ApiResponse<AdminGeoStatsResponse>`
 
-**错误码**: `10000`（level 越界 / 时间窗倒置 / 时间格式非法 / limit 为负）`10200`
+**错误码**: `10000`（level 越界 / 时间窗倒置 / 时间格式非法 / limit 为负 / trend_days 越界）`10200`
+
+### POST /admin/api/v1/stats/geo/drilldown
+
+区域下钻：按 S2 网格桶返回其中指定实体类型的明细列表。`cell_token` 来自 `stats/geo` 的 `regions`；服务端以 token 实际层级为准，请求携带的 `level` 必须与之相同时才接受。
+
+- **权限**: `admin.stats.read`
+
+**Request**: `AdminGeoDrilldownRequest`
+```typescript
+interface AdminGeoDrilldownRequest {
+  cell_token: string;             // 必填，合法 S2 token
+  level: number | null;           // 可选；携带时必须等于 token 实际层级
+  entity_type: 'user' | 'group' | 'moment'; // 必填
+  time_range: TimeRange | null;   // 可选，与 stats/geo 同口径
+  pagination: PaginationParams | null; // 可选；limit 默认 20、上限 100
+}
+
+interface AdminGeoDrilldownItem {
+  object_id: string;              // user_id / group_id / moment_id
+  title: string;                  // 昵称 / 群名 / 动态描述（截 60 字）
+  location_name: string | null;   // 空地名为 null
+  latitude: number;
+  longitude: number;
+  created_at: string;             // UTC ISO 8601
+}
+
+interface AdminGeoDrilldownPage {
+  items: AdminGeoDrilldownItem[];
+  next_cursor: string | null;     // 无更多数据时为 null
+}
+```
+
+**Response**: `ApiResponse<AdminGeoDrilldownPage>`
+
+**行为约束（契约级）**：
+
+- 明细按 `created_at` 降序、业务 ID 降序稳定排序；地理口径与 `stats/geo` 一致
+- `next_cursor` 恒定 nullable，客户端只透传
+
+**错误码**: `10000`（cell_token 非法 / level 与 token 不一致 / entity_type 非法 / 时间窗倒置 / 时间格式非法 / limit 为负 / cursor 非法）`10200`
