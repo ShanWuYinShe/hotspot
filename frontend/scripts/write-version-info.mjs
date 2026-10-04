@@ -10,6 +10,9 @@
 //   3. 兜底 dev，保证 version.json 始终存在、永不 404。
 //
 // 该文件由构建生成、不入库（.gitignore），随 adapter-static 从 static/ 拷入产物。
+// dev 也执行本脚本（package.json dev 首步）：每次启动刷新 build_time，
+// 避免上一次本地构建留下的陈旧指纹在开发环境误导排障；容器内无 .git
+// （bind mount 只挂 frontend/，且镜像无 git）时按优先级 3 回退 dev。
 import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -27,7 +30,10 @@ function fromEnv() {
 }
 
 function fromGit() {
-	const run = (args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+	// 容器内 bind mount 的 .git 属主与进程用户不一致会报 dubious ownership，
+	// 用 -c safe.directory=* 就地放行（仅作用于本次子进程调用）。
+	const run = (args) =>
+		execFileSync('git', ['-c', 'safe.directory=*', ...args], { cwd: root, encoding: 'utf8' }).trim();
 	try {
 		return {
 			version: run(['describe', '--tags', '--always', '--dirty']),

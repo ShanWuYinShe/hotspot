@@ -4,7 +4,7 @@
 	"version": "0.1.0",
 	"type": "module",
 	"scripts": {
-		"dev": "svelte-kit sync && vite dev --host 0.0.0.0",
+		"dev": "node scripts/write-version-info.mjs && svelte-kit sync && vite dev --host 0.0.0.0",
 		"build": "node scripts/write-version-info.mjs && vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --tsgo && bun run lint && bun run check:theme",
