@@ -75,6 +75,7 @@ import type {
 	AdminUserItem,
 	AdminGroupItem,
 	AdminReportItem,
+	ReportItem,
 	AdminTagItem,
 	AdminAnnouncementItem,
 	ReportAction,
@@ -489,6 +490,8 @@ export async function bootstrap(params?: BootstrapRequest)          { return req
 
 // Reports
 export async function createReport(params: CreateReportRequest)        { return request<ReportCreated>(Endpoints.Reports.Create, params); }
+// spec: report.md → reports/fetch（我的举报列表，keyset 分页；含处理结果 resolution）
+export async function listReports(params?: { status?: ReportStatus | null; target_type?: ReportTargetType | null; pagination?: PaginationParams }) { return request<PaginatedData<ReportItem>>(Endpoints.Reports.List, params ?? {}); }
 
 // Chat
 export async function getPrivateChats(params?: { pagination?: PaginationParams })    { return request<PaginatedData<PrivateChatItem>>(Endpoints.PrivateChats.List, params ?? {}); }

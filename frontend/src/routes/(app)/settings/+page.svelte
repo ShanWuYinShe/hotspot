@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Bell, Lock, ChevronRight, LogOut, Info, MapPin, Palette, Moon, Sun, UserRound } from '@lucide/svelte';
+	import { Bell, Flag, Lock, ChevronRight, LogOut, Info, MapPin, Palette, Moon, Sun, UserRound } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -377,6 +377,20 @@
 							<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
 						{/snippet}
 						<Toggle on={locationSharing} onToggle={toggleLocationSharing} label="位置共享" />
+					</SettingRow>
+
+					<!-- 我的举报（spec report.md → reports/fetch）：举报人查看处理进度与结果 -->
+					<SettingRow
+						title="我的举报"
+						description="查看已提交举报的处理进度与结果"
+						onRowClick={() => void goto(ROUTES.meReports)}
+					>
+						{#snippet icon()}
+							<Flag class="size-4 text-accent-default" strokeWidth={1.5} />
+						{/snippet}
+						{#snippet badge()}
+							<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.5} />
+						{/snippet}
 					</SettingRow>
 				</ListContainer>
 			</SettingsSection>

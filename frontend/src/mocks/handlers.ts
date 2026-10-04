@@ -705,6 +705,11 @@ http.post(`${API}/moments/fetch_created`, () => {
   // ── Reports ────────────────────────────────────
   // spec ReportCreated：is_duplicate 恒在（true = 幂等回放已有举报单）
   http.post(`${API}/reports/create`, () => requireMockAuth() ?? json(apiOk({ report_id: "report_1", is_duplicate: false }))),
+  http.post(`${API}/reports/fetch`, () => requireMockAuth() ?? json(paginated([
+    { report_id: "rep_1", target_type: "moment", target_id: "moment_2", reason: "spam", description: "疑似营销刷屏", status: "pending", created_at: "2026-09-08T10:00:00Z", handled_at: null, message_snapshot: null, resolution: null },
+    { report_id: "rep_2", target_type: "user", target_id: "user_lin", reason: "harassment", description: "私信骚扰", status: "resolved", created_at: "2026-09-01T09:00:00Z", handled_at: "2026-09-01T12:00:00Z", message_snapshot: null, resolution: { action: "resolve", resolved_at: "2026-09-01T12:00:00Z", note: "确认垃圾营销" } },
+    { report_id: "rep_3", target_type: "group", target_id: "group_4", reason: "misinformation", description: "群内传播不实信息", status: "dismissed", created_at: "2026-08-25T09:00:00Z", handled_at: "2026-08-26T10:00:00Z", message_snapshot: null, resolution: { action: "dismiss", resolved_at: "2026-08-26T10:00:00Z", note: "证据不足" } },
+  ]))),
 
   // ── Share（spec: api_spec_share.md share/create）──────────────
   // 幂等端点（Idempotency-Key）；share_code 为 12 位 [A-HJ-NP-Z2-9] 大写字符集。
