@@ -10,6 +10,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/textutil"
 	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
@@ -299,8 +300,9 @@ func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any) {
 		}
 	}
 	if req.Keyword != "" {
-		keywordArg := nextArg(req.Keyword)
-		builder.WriteString(fmt.Sprintf(" AND (g.name ILIKE '%%' || %s || '%%' OR g.description ILIKE '%%' || %s || '%%')", keywordArg, keywordArg))
+		// 转义 LIKE 通配符：与内存实现 strings.Contains 字面语义一致（同 moments 先例）。
+		keywordArg := nextArg(textutil.EscapeLikePattern(req.Keyword))
+		builder.WriteString(fmt.Sprintf(" AND (g.name ILIKE '%%' || %s || '%%' ESCAPE '\\' OR g.description ILIKE '%%' || %s || '%%' ESCAPE '\\')", keywordArg, keywordArg))
 	}
 	if req.Tag != "" {
 		builder.WriteString(fmt.Sprintf(" AND %s = ANY(g.tags)", nextArg(req.Tag)))

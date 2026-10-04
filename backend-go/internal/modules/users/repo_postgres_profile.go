@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/textutil"
 	"strings"
 	"time"
 
@@ -215,7 +216,9 @@ func buildSearchUsersQuery(bounds geo.Bounds, keyword, tag string, radiusFilter 
 		builder.WriteString(` AND us.location_searchable = TRUE AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE u.s2_cell_id BETWEEN t.lo AND t.hi)`)
 	}
 	if keyword != "" {
-		args = append(args, keyword)
+		// 转义 LIKE 通配符：与内存实现 strings.Contains 字面语义一致
+		// （同 moments/search 先例；下方 phoneArg 为精确 = 比对不转义）。
+		args = append(args, textutil.EscapeLikePattern(keyword))
 		kwArg := len(args)
 		// keyword 为手机号格式（纯数字）时，对 phone_searchable=true 的用户做
 		// 登录手机号精确匹配（spec user.md → users/search keyword 说明）。手机号
@@ -226,7 +229,7 @@ func buildSearchUsersQuery(bounds geo.Bounds, keyword, tag string, radiusFilter 
 			args = append(args, keyword)
 			phoneArg = len(args)
 		}
-		builder.WriteString(fmt.Sprintf(" AND ($%d = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%') OR u.bio ILIKE '%%' || $%d || '%%'", kwArg, kwArg, kwArg))
+		builder.WriteString(fmt.Sprintf(" AND ($%d = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%' ESCAPE '\\') OR u.bio ILIKE '%%' || $%d || '%%' ESCAPE '\\'", kwArg, kwArg, kwArg))
 		if phoneArg > 0 {
 			builder.WriteString(fmt.Sprintf(" OR (us.phone_searchable = TRUE AND EXISTS (SELECT 1 FROM auth_accounts aa WHERE aa.user_id = u.user_id AND aa.login_id = $%d))", phoneArg))
 		}

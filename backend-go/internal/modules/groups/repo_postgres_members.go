@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/textutil"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -127,7 +128,7 @@ func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, 
 	if !cursorJoinedAt.IsZero() {
 		cursorJoinedAtValue = cursorJoinedAt
 	}
-	rows, err := queryable.Query(ctx, querySearchGroupMembers, groupID, roleValue, keyword, cursorJoinedAtValue, cursorUserID, limit+1)
+	rows, err := queryable.Query(ctx, querySearchGroupMembers, groupID, roleValue, textutil.EscapeLikePattern(keyword), cursorJoinedAtValue, cursorUserID, limit+1)
 	if err != nil {
 		return nil, "", err
 	}

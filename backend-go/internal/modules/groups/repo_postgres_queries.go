@@ -380,7 +380,7 @@ SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), gm.role, gm.joined_at
 FROM group_members gm
 LEFT JOIN users u ON u.user_id = gm.user_id
 WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
-  AND ($3 = '' OR gm.user_id ILIKE '%' || $3 || '%' OR u.nickname ILIKE '%' || $3 || '%')
+  AND ($3 = '' OR gm.user_id ILIKE '%' || $3 || '%' ESCAPE '\' OR u.nickname ILIKE '%' || $3 || '%' ESCAPE '\')
   AND ($4::timestamptz IS NULL OR gm.joined_at > $4 OR (gm.joined_at = $4 AND gm.user_id > $5))
 ORDER BY gm.joined_at ASC, gm.user_id ASC
 LIMIT $6`

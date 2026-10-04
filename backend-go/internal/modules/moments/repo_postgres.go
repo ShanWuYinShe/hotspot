@@ -11,6 +11,7 @@ import (
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/textutil"
 	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
@@ -524,7 +525,7 @@ func queryable(ctx context.Context, factory *persistence.Factory) (persistence.Q
 }
 
 // escapeLikePattern 转义 LIKE/ILIKE 的 \、%、_ 通配符（配 ESCAPE '\'）。
+// 实现已上收 platform/textutil.EscapeLikePattern（users/groups 搜索同用）。
 func escapeLikePattern(input string) string {
-	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
-	return replacer.Replace(input)
+	return textutil.EscapeLikePattern(input)
 }
