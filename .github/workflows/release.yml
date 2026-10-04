@@ -2,9 +2,10 @@
 # 推送 v* tag 触发：构建前后端生产镜像（注入 GIT_VERSION/GIT_COMMIT/
 # GIT_BUILD_TIME 版本指纹）→ docker save 压缩 → 挂到同名 GitHub Release。
 #
-# 生产部署（本地执行 scripts/deploy-production.sh vX.Y.Z）：从 Release 下载
-# 镜像包 → 服务器 docker load → compose up。服务器全程不接触源码、不构建，
-# 替代早期 rsync 源码到服务器构建的非常规做法。
+# 生产部署（auto-deploy job 经 SSH 自动触发）：从 Release 下载镜像包 →
+# 服务器 docker load → compose up。服务器全程不接触源码、不构建，替代早期
+# rsync 源码到服务器构建的非常规做法；手动兜底仍可本地执行
+# scripts/deploy-production.sh vX.Y.Z（同一条链路）。
 #
 # 触发前条件：tag 形态为 vX.Y.Z、tag 指向的提交已在 origin/main 上、且该提交的
 # CI 已跑完并全绿——三条都在工作流内强制断言（tag 不合规 / 未合并 / CI 未过一律
@@ -145,7 +146,41 @@ jobs:
             --generate-notes \
             --title "$GIT_VERSION" \
             --notes "生产镜像构建产物（hotspot-backend / hotspot-frontend）。
-          部署：./scripts/deploy-production.sh $GIT_VERSION
+          部署：tag 即上线（auto-deploy job 经 SSH 触发服务器部署），
+          手动兜底：./scripts/deploy-production.sh $GIT_VERSION
           版本指纹：version=$GIT_VERSION commit=$GIT_COMMIT built=$GIT_BUILD_TIME" \
             "hotspot-images-${GIT_VERSION}.tar.gz" \
             "hotspot-images-${GIT_VERSION}.tar.gz.sha256"
+
+  auto-deploy:
+    name: Auto Deploy to Production
+    needs: build-push-release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0 # deploy 脚本要校验 tag 位置与工作区干净度
+      - name: Deploy over SSH
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -eo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host prod-deploy
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking yes
+            BatchMode yes
+          EOF
+          chmod 600 ~/.ssh/config
+          # deploy-production.sh 经 SERVER 走 ssh；脚本内 tag 形态/位置校验、
+          # 并发锁、备份、指纹核对、失败回滚全部保留，与手动执行同一条链路。
+          SERVER=prod-deploy ./scripts/deploy-production.sh "${GITHUB_REF_NAME}"

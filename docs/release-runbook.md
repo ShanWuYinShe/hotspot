@@ -53,7 +53,8 @@ git push origin v1.2.0
 gh run list --workflow=release.yml --branch v1.2.0 --limit 1
 gh run watch <run-id> --exit-status
 
-# 4) 部署（脚本内部流程见下）
+# 4) 部署：tag 即上线（Release 工作流 auto-deploy job 经 SSH 自动触发，
+#    与手动执行同一条脚本链路）。手动兜底（CI 失败/密钥失效时）：
 ./scripts/deploy-production.sh v1.2.0
 ```
 
