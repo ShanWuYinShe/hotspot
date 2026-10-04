@@ -19,7 +19,11 @@ REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 AB="${AB:-}"
 if [ -z "$AB" ]; then
-  if command -v agent-browser >/dev/null 2>&1; then AB="$(command -v agent-browser)";
+  # 优先用户级 wrapper（沙盒自适应：socket/profile 重定向 + Chrome 沙盒判定）。
+  # 沙盒内 command -v 可能解析到绕过 wrapper 的裸二进制，导致 socket 目录
+  # 不可写而整轮全 FAIL（2026-10-04 实测），故 wrapper 存在时先于 command -v。
+  if [ -x /Users/liyou/.local/bin/agent-browser ]; then AB=/Users/liyou/.local/bin/agent-browser;
+  elif command -v agent-browser >/dev/null 2>&1; then AB="$(command -v agent-browser)";
   elif [ -x /Users/liyou/.bun/bin/agent-browser ]; then AB=/Users/liyou/.bun/bin/agent-browser;
   else echo "找不到 agent-browser，请安装或设置 AB 环境变量"; exit 1; fi
 fi
