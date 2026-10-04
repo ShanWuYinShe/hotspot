@@ -822,6 +822,31 @@ http.post(`${API}/moments/fetch_created`, () => {
     permissions: ["*"],
     roles: [{ role_id: "role_super", name: "超级管理员" }],
   }))),
+  http.post(`${ADMIN_API}/stats/geo`, () => requireMockAuth() ?? json(apiOk({
+    generated_at: "2026-10-04T12:00:00Z",
+    totals: { user: 128, group: 24, moment: 356, total: 508 },
+    regions: [
+      { cell_token: "2b", level: 2, center: { latitude: 31.23, longitude: 121.47 }, total_count: 96, breakdown: { user: 40, group: 8, moment: 48 } },
+      { cell_token: "3c", level: 2, center: { latitude: 39.9, longitude: 116.4 }, total_count: 64, breakdown: { user: 28, group: 6, moment: 30 } },
+    ],
+    places: [
+      { location_name: "上海·外滩", total_count: 42, breakdown: { user: 15, group: 4, moment: 23 } },
+      { location_name: "北京·后海", total_count: 30, breakdown: { user: 12, group: 3, moment: 15 } },
+    ],
+    trends: [
+      { date: "2026-10-01", user: 4, group: 1, moment: 9 },
+      { date: "2026-10-02", user: 6, group: 0, moment: 12 },
+      { date: "2026-10-03", user: 5, group: 2, moment: 10 },
+      { date: "2026-10-04", user: 7, group: 1, moment: 14 },
+    ],
+  }))),
+  http.post(`${ADMIN_API}/stats/geo/drilldown`, () => requireMockAuth() ?? json(apiOk({
+    items: [
+      { object_id: "moment_1", title: "深夜的外滩", location_name: "上海·外滩", latitude: 31.23, longitude: 121.47, created_at: "2026-10-03T20:00:00Z" },
+      { object_id: "user_2", title: "游客·8k2f", location_name: "上海·外滩", latitude: 31.23, longitude: 121.47, created_at: "2026-10-02T10:00:00Z" },
+    ],
+    next_cursor: null,
+  }))),
   http.post(`${ADMIN_API}/rbac/permissions/fetch`, () => requireMockAuth() ?? json(apiOk({
     items: [
       { key: "admin.rbac.manage", description: "角色与平台管理员管理" },
