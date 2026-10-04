@@ -21,6 +21,7 @@
 #   ROLLBACK_OF=<被回滚掉的原版本> 由 scripts/rollback-production.sh 传入，只影响
 #   审计记录与告警文案；ALERT_WEBHOOK 可选（接收 POST JSON {"text":...} 的机器人
 #   地址，同 health-check.sh），版本校验失败触发自动回滚时推送告警。
+#   ALERT_MTLS_CERT/KEY 同 health-check.sh（目标为 ops-portal 网关时须持登记证书）。
 #
 # 同源：镜像取自 tag 对应的 Release 包，部署配置（compose + nginx 片段 + 采集配置）
 # 也从同一 tag 用 git archive 导出——不看工作树当前内容，保证「线上跑的就是那个
@@ -339,12 +340,21 @@ else
 fi
 
 # 告警送达（与 scripts/health-check.sh 同一约定：POST {"text": ...}）。
+# mTLS 证书默认路径同 health-check.sh（~/.webhook-caller/，ALERT_MTLS_CERT/KEY 可覆盖）。
+ALERT_MTLS_CERT="${ALERT_MTLS_CERT:-$HOME/.webhook-caller/cert.pem}"
+ALERT_MTLS_KEY="${ALERT_MTLS_KEY:-$HOME/.webhook-caller/key.pem}"
 alert() {
   [ -n "${ALERT_WEBHOOK:-}" ] || return 0
   local escaped
   escaped="$(printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')"
-  curl -sf -m 10 -H 'Content-Type: application/json' \
-    -d "{\"text\": \"$escaped\"}" "$ALERT_WEBHOOK" >/dev/null 2>&1 || echo "!! ALERT_WEBHOOK 推送失败"
+  if [ -r "$ALERT_MTLS_CERT" ] && [ -r "$ALERT_MTLS_KEY" ]; then
+    curl -sf -m 10 --cert "$ALERT_MTLS_CERT" --key "$ALERT_MTLS_KEY" \
+      -H 'Content-Type: application/json' \
+      -d "{\"text\": \"$escaped\"}" "$ALERT_WEBHOOK" >/dev/null 2>&1
+  else
+    curl -sf -m 10 -H 'Content-Type: application/json' \
+      -d "{\"text\": \"$escaped\"}" "$ALERT_WEBHOOK" >/dev/null 2>&1
+  fi || echo "!! ALERT_WEBHOOK 推送失败"
 }
 
 # 自动回滚：仅重部署上一版本镜像（数据不回滚——迁移不可逆，需按 runbook 评估）。

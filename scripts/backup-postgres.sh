@@ -16,6 +16,8 @@
 #
 # 告警：ALERT_WEBHOOK 配置为接收 POST JSON {"text":...} 的地址（同
 # health-check.sh），备份或校验失败时推送；留空 = 仅记录与退出码。
+# 目标为 ops-portal webhook 网关时须持登记证书（默认 ~/.webhook-caller/，
+# ALERT_MTLS_CERT/KEY 可覆盖；证书缺失且目标为普通机器人时照常无证推送）。
 
 set -eu
 
@@ -25,12 +27,20 @@ CONTAINER="${CONTAINER:-hotspot-postgres-1}"
 DB_USER="${DB_USER:-postgres}"
 DB_NAME="${DB_NAME:-hotspot}"
 ALERT_WEBHOOK="${ALERT_WEBHOOK:-}"
+ALERT_MTLS_CERT="${ALERT_MTLS_CERT:-$HOME/.webhook-caller/cert.pem}"
+ALERT_MTLS_KEY="${ALERT_MTLS_KEY:-$HOME/.webhook-caller/key.pem}"
 
 alert() {
 	[ -n "$ALERT_WEBHOOK" ] || return 0
 	ESCAPED="$(printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')"
-	curl -sf -m 10 -H 'Content-Type: application/json' \
-		-d "{\"text\": \"$ESCAPED\"}" "$ALERT_WEBHOOK" >/dev/null 2>&1 \
+	if [ -r "$ALERT_MTLS_CERT" ] && [ -r "$ALERT_MTLS_KEY" ]; then
+		curl -sf -m 10 --cert "$ALERT_MTLS_CERT" --key "$ALERT_MTLS_KEY" \
+			-H 'Content-Type: application/json' \
+			-d "{\"text\": \"$ESCAPED\"}" "$ALERT_WEBHOOK" >/dev/null 2>&1
+	else
+		curl -sf -m 10 -H 'Content-Type: application/json' \
+			-d "{\"text\": \"$ESCAPED\"}" "$ALERT_WEBHOOK" >/dev/null 2>&1
+	fi \
 		|| echo "$(date '+%F %T') alert webhook 推送失败"
 }
 

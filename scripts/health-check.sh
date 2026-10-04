@@ -28,6 +28,11 @@ FRONTEND_CONTAINER="${FRONTEND_CONTAINER:-hotspot-frontend-1}"
 DISK_WARN="${DISK_WARN:-80}"
 DISK_FAIL="${DISK_FAIL:-90}"
 ALERT_WEBHOOK="${ALERT_WEBHOOK:-}"
+# 目标为 ops-portal webhook 网关（POST /api/hooks/{slug}）时须持登记证书：
+# 默认取 ~/.webhook-caller/{cert,key}.pem，可用 ALERT_MTLS_CERT/KEY 覆盖；
+# 两文件齐备才追加 --cert/--key（目标是钉钉/飞书等无需证书的机器人时不受影响）。
+ALERT_MTLS_CERT="${ALERT_MTLS_CERT:-$HOME/.webhook-caller/cert.pem}"
+ALERT_MTLS_KEY="${ALERT_MTLS_KEY:-$HOME/.webhook-caller/key.pem}"
 BACKUP_DIR="${BACKUP_DIR:-$REMOTE_DIR/backups}"
 BACKUP_MAX_AGE_HOURS="${BACKUP_MAX_AGE_HOURS:-25}"
 # 证书路径：compose.prod 把服务器 $REMOTE_DIR/cert/ 挂到 nginx /etc/nginx/certs，
@@ -113,9 +118,16 @@ if [ "$fail" -ne 0 ] && [ -n "$ALERT_WEBHOOK" ]; then
   SUMMARY="$(hostname) HotSpot 巡检失败：$(printf '%b' "$fail_detail")"
   # JSON 字符串转义：反斜杠与双引号，换行压成空格
   ESCAPED="$(printf '%s' "$SUMMARY" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')"
-  curl -sf -m 10 -H 'Content-Type: application/json' \
-    -d "{\"text\": \"$ESCAPED\"}" "$ALERT_WEBHOOK" \
-    >/dev/null 2>&1 || echo "$(date '+%F %T') alert webhook 推送失败"
+  if [ -r "$ALERT_MTLS_CERT" ] && [ -r "$ALERT_MTLS_KEY" ]; then
+    curl -sf -m 10 --cert "$ALERT_MTLS_CERT" --key "$ALERT_MTLS_KEY" \
+      -H 'Content-Type: application/json' \
+      -d "{\"text\": \"$ESCAPED\"}" "$ALERT_WEBHOOK" \
+      >/dev/null 2>&1 || echo "$(date '+%F %T') alert webhook 推送失败"
+  else
+    curl -sf -m 10 -H 'Content-Type: application/json' \
+      -d "{\"text\": \"$ESCAPED\"}" "$ALERT_WEBHOOK" \
+      >/dev/null 2>&1 || echo "$(date '+%F %T') alert webhook 推送失败"
+  fi
 fi
 
 exit $fail
