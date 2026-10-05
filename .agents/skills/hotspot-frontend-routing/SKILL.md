@@ -39,6 +39,7 @@ src/routes/
     me/following/          #    /me/relationships?tab=…（单一事实源 lib/relationships.ts），
     me/fans/               #    已无 +page.svelte，不得再在此挂任何 UI
     me/relationships/      # 关系聚合页（好友/关注/粉丝三 tab，colocate RelationshipsPage）
+    me/reports/            # 我的举报（状态 Tab 筛选；colocate ReportsPage；入口在设置页「隐私与安全」）
     me/edit/               # 编辑资料
     users/[userId]/        # 用户详情
     groups/[groupId]/      # 群组详情
