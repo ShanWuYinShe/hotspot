@@ -6,8 +6,8 @@
 #   2. 已安装 agent-browser（npm i -g agent-browser && agent-browser install）
 #
 # 用法：
-#   bun run browser:qa              # 桌面 20 页
-#   bun run browser:qa:mobile       # 桌面 20 页 + 移动 5 页（390×844）
+#   bun run browser:qa              # 桌面 21 页
+#   bun run browser:qa:mobile       # 桌面 21 页 + 移动 5 页（390×844）
 #   bash scripts/browser-qa.sh --base http://localhost:8889 [--mobile] [--session name]
 #
 # 输出：<仓库根>/.workwork/browser-check/qa-<时间戳>/（screenshots/ + report.txt）
@@ -115,7 +115,7 @@ fi
 DESKTOP_PAGES=(
 	"/" "/nearby/people" "/nearby/groups" "/nearby/moments" "/notify"
 	"/messages" "/me" "/me/edit" "/settings" "/map" "/search" "/me/relationships"
-	"/me/moments" "/me/groups" "/me/friends" "/me/following" "/me/fans"
+	"/me/moments" "/me/groups" "/me/reports" "/me/friends" "/me/following" "/me/fans"
 )
 [ -n "$moment_id" ] && DESKTOP_PAGES+=("/moments/$moment_id")
 [ -n "$user_id" ] && DESKTOP_PAGES+=("/users/$user_id")
