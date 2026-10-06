@@ -10,6 +10,7 @@ import { AppRouter, LoginRouteParam } from '../router/AppRouter';
 import { API_BASE_URL, StorageKeys, WS_BASE_URL } from '../../constants/AppConstants';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
+import { TokenAssetStore } from '../storage/TokenAssetStore';
 import { InteractionStateStore } from '../state/InteractionStateStore';
 import { DeviceIdUtil } from '../util/DeviceIdUtil';
 import {
@@ -687,7 +688,7 @@ export class WebSocketService {
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
       // 重连前重新读取最新 token（可能已被 HttpUtil 的 refresh 逻辑更新）
-      const freshToken = await PreferencesUtil.get<string>(StorageKeys.ACCESS_TOKEN, '');
+      const freshToken = (await TokenAssetStore.get(TokenAssetStore.ALIAS_CURRENT_ACCESS)) ?? '';
       const tokenToUse = freshToken || this.currentToken;
 
       this.connect(tokenToUse).catch((error: Error) => {

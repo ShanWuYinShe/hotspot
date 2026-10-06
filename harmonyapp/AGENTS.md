@@ -74,14 +74,15 @@ Lint & Format: 依赖 DevEco Studio IDE 内置检查；`harmonyapp/code-linter.j
 - 禁止硬编码路径：必须通过 `core/config/ApiEndpoints.ets`
 - 统一入口：通过 `core/network/HttpUtil.ets` 的 `post()` 方法（`HttpUtil.post()` / `ApiClient`）发起请求
 - 成功判定：仅使用 `code === 0`，禁止依赖 HTTP 状态码或 `message` 字段
-- Token 自动携带：从 `PreferencesUtil` 读取，收到 `code=10100`（认证失败）时自动 refresh 并重试
+- Token 自动携带：经 `HttpUtil.getToken()`（Asset 存储）读取，收到 `code=10100`（认证失败）时自动 refresh 并重试
 - 幂等键：MUST 幂等接口以 `spec/api_spec_base.md`「必须使用幂等键的接口（MUST）」列表为准；实现中 `MUST_IDEMPOTENT_ENDPOINTS` 须与该列表同步（增删端点时需更新），自动注入 `Idempotency-Key`
 - Cursor 不透明：请求时透传 `cursor`，收到响应后将 `next_cursor` 作为下一页的 `cursor` 透传，不解析、不构造
 - RPC + JSON：仅 POST，不实现 REST 风格
 
 ## Token 与安全
 
-- Token 通过 `PreferencesUtil` 存取
+- Token 等敏感凭据（access_token、auth_data、各账号 AuthData）通过 `TokenAssetStore`（HarmonyOS Asset Store Kit，`@ohos.security.asset`）加密存储；Preferences 只存非敏感索引（多账号 user_id 列表 + current_user_id）
+- `PreferencesUtil` 仅负责非敏感键（device_id、主题、服务器地址、通知偏好等）
 - 使用 `Authorization: Bearer` 方式携带
 - 禁止解析 JWT，登录态按业务接口返回值判断
 - 错误码 `10100`（认证失败）须尝试刷新 Token 或跳转登录

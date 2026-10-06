@@ -7,56 +7,138 @@
  * - “退出登录”默认只做本地锁定：清除当前账号的 access_token/user_info，但保留 accounts 列表
  *
  * 安全语义：
+ * - 敏感数据（各账号 AuthData，含 refresh_token）存系统 Asset 存储
+ *   （TokenAssetStore，按 user_id 独立别名）；Preferences 的 AUTH_ACCOUNTS
+ *   只保存非敏感索引（user_id 列表 + current_user_id）
  * - 为避免“串数据”，切换/锁定时应清理本地消息缓存（由调用方触发）
  */
 
 import { StorageKeys } from '../../constants/AppConstants';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
+import { TokenAssetStore } from '../storage/TokenAssetStore';
 import type { AuthData } from '../types/api';
 
-interface AuthAccountsState {
+/**
+ * 多账号索引（非敏感）：仅 user_id 列表与当前活跃账号。
+ * 各账号 AuthData 的敏感内容存 Asset（见 TokenAssetStore）。
+ */
+interface AuthAccountsIndex {
   version: 1;
   current_user_id?: string;
-  accounts: Record<string, AuthData>;
+  user_ids: string[];
 }
 
-const DEFAULT_STATE: AuthAccountsState = {
+const DEFAULT_INDEX: AuthAccountsIndex = {
   version: 1,
-  accounts: {}
+  user_ids: []
 };
 
 export class AuthAccountManager {
-  private static async getState(): Promise<AuthAccountsState> {
-    const raw = await PreferencesUtil.getObject<AuthAccountsState>(StorageKeys.AUTH_ACCOUNTS);
-    if (!raw || raw.version !== 1 || !raw.accounts) {
-      const defaultState: AuthAccountsState = {
-        version: DEFAULT_STATE.version,
-        accounts: {}
+  private static async getIndex(): Promise<AuthAccountsIndex> {
+    const raw = await PreferencesUtil.getObject<AuthAccountsIndex>(StorageKeys.AUTH_ACCOUNTS);
+    if (!raw || raw.version !== 1 || !Array.isArray(raw.user_ids)) {
+      const defaultIndex: AuthAccountsIndex = {
+        version: DEFAULT_INDEX.version,
+        user_ids: []
       };
-      return defaultState;
+      return defaultIndex;
     }
     return raw;
   }
 
-  private static async setState(state: AuthAccountsState): Promise<void> {
-    await PreferencesUtil.setObject(StorageKeys.AUTH_ACCOUNTS, state);
+  private static async setIndex(index: AuthAccountsIndex): Promise<void> {
+    await PreferencesUtil.setObject(StorageKeys.AUTH_ACCOUNTS, index);
+  }
+
+  /**
+   * 把一个 user_id 并入索引列表（保持原有顺序，去重）
+   */
+  private static withUserId(index: AuthAccountsIndex, userId: string): AuthAccountsIndex {
+    const user_ids: string[] = [];
+    for (let i = 0; i < index.user_ids.length; i++) {
+      if (index.user_ids[i] !== userId) {
+        user_ids.push(index.user_ids[i]);
+      }
+    }
+    user_ids.push(userId);
+    const next: AuthAccountsIndex = {
+      version: index.version,
+      current_user_id: index.current_user_id,
+      user_ids: user_ids
+    };
+    return next;
+  }
+
+  /**
+   * 从索引列表移除一个 user_id
+   */
+  private static withoutUserId(index: AuthAccountsIndex, userId: string): AuthAccountsIndex {
+    const user_ids: string[] = [];
+    for (let i = 0; i < index.user_ids.length; i++) {
+      if (index.user_ids[i] !== userId) {
+        user_ids.push(index.user_ids[i]);
+      }
+    }
+    const next: AuthAccountsIndex = {
+      version: index.version,
+      current_user_id: index.current_user_id === userId ? undefined : index.current_user_id,
+      user_ids: user_ids
+    };
+    return next;
+  }
+
+  /**
+   * 读取单账号的 AuthData（Asset 存储，不存在返回 null）
+   */
+  private static async readAccountAuth(userId: string): Promise<AuthData | null> {
+    return TokenAssetStore.getObject<AuthData>(TokenAssetStore.accountAuthAlias(userId));
+  }
+
+  /**
+   * 写入单账号的 AuthData（Asset 存储）
+   */
+  private static async writeAccountAuth(auth: AuthData): Promise<void> {
+    await TokenAssetStore.set(TokenAssetStore.accountAuthAlias(String(auth.user_id)), JSON.stringify(auth));
+  }
+
+  /**
+   * 更新当前会话快捷键（Asset 存储）
+   */
+  private static async writeSessionKeys(auth: AuthData): Promise<void> {
+    await TokenAssetStore.set(TokenAssetStore.ALIAS_CURRENT_AUTH, JSON.stringify(auth));
+    await TokenAssetStore.set(TokenAssetStore.ALIAS_CURRENT_ACCESS, auth.access_token);
+  }
+
+  /**
+   * 清除当前会话快捷键（Asset 存储）
+   */
+  private static async clearSessionKeys(): Promise<void> {
+    await TokenAssetStore.remove(TokenAssetStore.ALIAS_CURRENT_AUTH);
+    await TokenAssetStore.remove(TokenAssetStore.ALIAS_CURRENT_ACCESS);
   }
 
   static async listAccounts(): Promise<AuthData[]> {
-    const state = await AuthAccountManager.getState();
-    return Object.values(state.accounts);
+    const index = await AuthAccountManager.getIndex();
+    const accounts: AuthData[] = [];
+    for (let i = 0; i < index.user_ids.length; i++) {
+      const auth = await AuthAccountManager.readAccountAuth(index.user_ids[i]);
+      if (auth) {
+        accounts.push(auth);
+      }
+    }
+    return accounts;
   }
 
   static async getCurrentUserId(): Promise<string | null> {
-    const state = await AuthAccountManager.getState();
-    return typeof state.current_user_id === 'string' ? state.current_user_id : null;
+    const index = await AuthAccountManager.getIndex();
+    return typeof index.current_user_id === 'string' ? index.current_user_id : null;
   }
 
   static async getCurrentAuth(): Promise<AuthData | null> {
-    const state = await AuthAccountManager.getState();
-    const currentId = typeof state.current_user_id === 'string' ? state.current_user_id : undefined;
+    const index = await AuthAccountManager.getIndex();
+    const currentId = typeof index.current_user_id === 'string' ? index.current_user_id : undefined;
     if (currentId == null) return null;
-    return state.accounts[String(currentId)] ?? null;
+    return await AuthAccountManager.readAccountAuth(String(currentId));
   }
 
   /**
@@ -65,45 +147,27 @@ export class AuthAccountManager {
    * 重新激活造成串数据。
    */
   static async upsertOnly(auth: AuthData): Promise<void> {
-    const state = await AuthAccountManager.getState();
-    const newAccounts: Record<string, AuthData> = {};
-    const accountKeys = Object.keys(state.accounts);
-    for (let i = 0; i < accountKeys.length; i++) {
-      const key = accountKeys[i];
-      newAccounts[key] = state.accounts[key];
-    }
-    newAccounts[String(auth.user_id)] = auth;
-    const newState: AuthAccountsState = {
-      version: state.version,
-      current_user_id: state.current_user_id,
-      accounts: newAccounts
-    };
-    await AuthAccountManager.setState(newState);
+    const index = await AuthAccountManager.getIndex();
+    await AuthAccountManager.writeAccountAuth(auth);
+    await AuthAccountManager.setIndex(AuthAccountManager.withUserId(index, String(auth.user_id)));
   }
 
   /**
    * 保存/更新一个账号，并将其设为当前活跃账号
-   * 同步更新当前会话键（access_token/user_info）
+   * 同步更新当前会话快捷键（access_token/当前会话 AuthData）
    */
   static async upsertAndActivate(auth: AuthData): Promise<void> {
-    const state = await AuthAccountManager.getState();
-    const newAccounts: Record<string, AuthData> = {};
-    const accountKeys = Object.keys(state.accounts);
-    for (let i = 0; i < accountKeys.length; i++) {
-      const key = accountKeys[i];
-      newAccounts[key] = state.accounts[key];
-    }
-    newAccounts[String(auth.user_id)] = auth;
-    const newState: AuthAccountsState = {
-      version: state.version,
+    await AuthAccountManager.upsertOnly(auth);
+    const index = await AuthAccountManager.getIndex();
+    const activated: AuthAccountsIndex = {
+      version: index.version,
       current_user_id: auth.user_id,
-      accounts: newAccounts
+      user_ids: index.user_ids
     };
-    await AuthAccountManager.setState(newState);
+    await AuthAccountManager.setIndex(activated);
 
-    // 维持一份“当前账号”的 user_info/access_token 作为会话快捷读取键
-    await PreferencesUtil.setObject(StorageKeys.AUTH_DATA, auth);
-    await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, auth.access_token);
+    // 维持一份“当前账号”的 AuthData/access_token 作为会话快捷读取键
+    await AuthAccountManager.writeSessionKeys(auth);
   }
 
   /**
@@ -111,19 +175,18 @@ export class AuthAccountManager {
    * 返回切换后的 auth（不存在则返回 null）
    */
   static async switchTo(userId: string): Promise<AuthData | null> {
-    const state = await AuthAccountManager.getState();
-    const next = state.accounts[String(userId)];
+    const index = await AuthAccountManager.getIndex();
+    const next = await AuthAccountManager.readAccountAuth(userId);
     if (!next) return null;
 
-    const newState: AuthAccountsState = {
-      version: state.version,
+    const newState: AuthAccountsIndex = {
+      version: index.version,
       current_user_id: userId,
-      accounts: state.accounts
+      user_ids: index.user_ids
     };
-    await AuthAccountManager.setState(newState);
+    await AuthAccountManager.setIndex(newState);
 
-    await PreferencesUtil.setObject(StorageKeys.AUTH_DATA, next);
-    await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, next.access_token);
+    await AuthAccountManager.writeSessionKeys(next);
     return next;
   }
 
@@ -131,49 +194,38 @@ export class AuthAccountManager {
    * 本地锁定当前账号：清除当前 access_token/user_info（不删除 accounts 列表）
    */
   static async lockCurrent(): Promise<void> {
-    const state = await AuthAccountManager.getState();
-    const newState: AuthAccountsState = {
-      version: state.version,
-      accounts: state.accounts
+    const index = await AuthAccountManager.getIndex();
+    const newState: AuthAccountsIndex = {
+      version: index.version,
+      user_ids: index.user_ids
     };
-    await AuthAccountManager.setState(newState);
+    await AuthAccountManager.setIndex(newState);
 
-    await PreferencesUtil.remove(StorageKeys.AUTH_DATA);
-    await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
+    await AuthAccountManager.clearSessionKeys();
   }
 
   /**
    * 删除一个账号（如果删除的是当前账号，会自动 lock）
    */
   static async removeAccount(userId: string): Promise<void> {
-    const state = await AuthAccountManager.getState();
-    const newAccounts: Record<string, AuthData> = {};
-    const accountKeys = Object.keys(state.accounts);
-    for (let i = 0; i < accountKeys.length; i++) {
-      const key = accountKeys[i];
-      if (key !== String(userId)) {
-        newAccounts[key] = state.accounts[key];
-      }
+    const index = await AuthAccountManager.getIndex();
+    // 先删该账号的 Asset 条目，不残留 refresh_token
+    await TokenAssetStore.remove(TokenAssetStore.accountAuthAlias(userId));
+    if (index.current_user_id === userId) {
+      await AuthAccountManager.clearSessionKeys();
     }
-    const newState: AuthAccountsState = {
-      version: state.version,
-      current_user_id: state.current_user_id === userId ? undefined : state.current_user_id,
-      accounts: newAccounts
-    };
-    if (state.current_user_id === userId) {
-      await PreferencesUtil.remove(StorageKeys.AUTH_DATA);
-      await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
-    }
-    await AuthAccountManager.setState(newState);
+    await AuthAccountManager.setIndex(AuthAccountManager.withoutUserId(index, userId));
   }
 
   /**
-   * 清空所有账号（危险操作）
+   * 清空所有账号（危险操作）：逐个删除各账号的 Asset 条目与会话快捷键
    */
   static async clearAllAccounts(): Promise<void> {
+    const index = await AuthAccountManager.getIndex();
+    for (let i = 0; i < index.user_ids.length; i++) {
+      await TokenAssetStore.remove(TokenAssetStore.accountAuthAlias(index.user_ids[i]));
+    }
+    await AuthAccountManager.clearSessionKeys();
     await PreferencesUtil.remove(StorageKeys.AUTH_ACCOUNTS);
-    await PreferencesUtil.remove(StorageKeys.AUTH_DATA);
-    await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
   }
 }
-

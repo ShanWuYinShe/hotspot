@@ -24,6 +24,7 @@ import { SystemSurfaceStyle, SystemUiThemeStore } from '../core/utils/SystemUiTh
 import { KEY_IS_LOGGED_IN } from '../core/state/GlobalStateManager';
 import { WebSocketService } from '../core/network/WebSocketService';
 import { PreferencesUtil } from '../core/storage/PreferencesUtil';
+import { TokenAssetStore } from '../core/storage/TokenAssetStore';
 import { StorageKeys } from '../constants/AppConstants';
 import { ApiClient } from '../core/api/ApiClient';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
@@ -567,7 +568,7 @@ export default class EntryAbility extends UIAbility {
     // 检查 WS 连接状态，断开则重连
     const ws = WebSocketService.getInstance();
     if (!ws.isConnected()) {
-      const token = await PreferencesUtil.get<string>(StorageKeys.ACCESS_TOKEN, '');
+      const token = (await TokenAssetStore.get(TokenAssetStore.ALIAS_CURRENT_ACCESS)) ?? '';
       if (token) {
         hilog.info(DOMAIN_NUMBER, TAG, '前台恢复：WS 已断开，重新连接');
         await ws.connect(token);

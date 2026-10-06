@@ -17,6 +17,7 @@ import { API_BASE_URL, StorageKeys } from '../../constants/AppConstants';
 import { ApiEndpoints } from '../config/ApiEndpoints';
 import { ApiResponse, AuthData, HealthStatus, MediaCategory, UploadedMedia } from '../types/api';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
+import { TokenAssetStore } from '../storage/TokenAssetStore';
 import { DeviceIdUtil } from '../util/DeviceIdUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ErrorCode } from '../constants/ErrorCodes';
@@ -271,7 +272,7 @@ export class HttpUtil {
    */
   static async setToken(token: string): Promise<void> {
     try {
-      await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, token);
+      await TokenAssetStore.set(TokenAssetStore.ALIAS_CURRENT_ACCESS, token);
       hilog.info(DOMAIN_NUMBER, TAG, '访问令牌已保存');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `保存访问令牌失败: ${error}`);
@@ -283,7 +284,7 @@ export class HttpUtil {
    */
   static async clearToken(): Promise<void> {
     try {
-      await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
+      await TokenAssetStore.remove(TokenAssetStore.ALIAS_CURRENT_ACCESS);
       hilog.info(DOMAIN_NUMBER, TAG, '访问令牌已清除');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `清除访问令牌失败: ${error}`);
@@ -295,7 +296,8 @@ export class HttpUtil {
    */
   static async getToken(): Promise<string> {
     try {
-      return await PreferencesUtil.get<string>(StorageKeys.ACCESS_TOKEN, '');
+      const token = await TokenAssetStore.get(TokenAssetStore.ALIAS_CURRENT_ACCESS);
+      return token ?? '';
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `获取访问令牌失败: ${error}`);
       return '';
@@ -304,7 +306,7 @@ export class HttpUtil {
 
   private static async getAuthData(): Promise<AuthData | null> {
     try {
-      return await PreferencesUtil.getObject<AuthData>(StorageKeys.AUTH_DATA);
+      return await TokenAssetStore.getObject<AuthData>(TokenAssetStore.ALIAS_CURRENT_AUTH);
     } catch {
       return null;
     }
@@ -385,8 +387,7 @@ export class HttpUtil {
             hilog.info(DOMAIN_NUMBER, TAG, 'Token 刷新成功（账号已切换，仅落库）');
             return 'ok';
           }
-          await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, newAuth.access_token);
-          await PreferencesUtil.setObject(StorageKeys.AUTH_DATA, newAuth);
+          // upsertAndActivate 内部经 Asset 存储更新该账号 AuthData 与会话快捷键
           await AuthAccountManager.upsertAndActivate(newAuth);
           hilog.info(DOMAIN_NUMBER, TAG, 'Token 刷新成功');
           return 'ok';

@@ -48,11 +48,14 @@ export interface StorageKeysType {
 
 export const StorageKeys: StorageKeysType = {
   USER_INFO: 'user_info',
+  // AUTH_DATA / ACCESS_TOKEN 敏感值已迁至 Asset 存储（TokenAssetStore）；
+  // 键名常量保留供索引/兼容引用，不再写入 Preferences 明文
   AUTH_DATA: 'auth_data',
   ACCESS_TOKEN: 'access_token',
   LOCATION_CACHE: 'location_cache',
   SERVER_BASE_URL: 'server_base_url',
-  // 多账号：保存所有账户的 AppAuthData（含 refresh_token），并记录当前活跃账号
+  // 多账号：仅保存非敏感索引（user_id 列表 + current_user_id）；
+  // 各账号 AuthData（含 refresh_token）存 Asset 存储（见 TokenAssetStore）
   AUTH_ACCOUNTS: 'auth_accounts',
   THEME_MODE: 'theme_mode',
   DARK_MODE_PREFERENCE: 'dark_mode_preference',

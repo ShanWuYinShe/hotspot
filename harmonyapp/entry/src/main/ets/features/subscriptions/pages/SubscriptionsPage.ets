@@ -14,6 +14,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemButton } from '../../../components/SystemButton';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
+import { TokenAssetStore } from '../../../core/storage/TokenAssetStore';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
@@ -103,7 +104,7 @@ export struct SubscriptionsPage {
   private async ensureAuthAndLoad(): Promise<void> {
     if (this.isDestroyed) return;
     try {
-      const token = await PreferencesUtil.get<string>(StorageKeys.ACCESS_TOKEN, '');
+      const token = (await TokenAssetStore.get(TokenAssetStore.ALIAS_CURRENT_ACCESS)) ?? '';
       if (this.isDestroyed) return;
       if (!token) {
         // 未登录时直接返回上一页（登录检测应在跳转源头完成）
