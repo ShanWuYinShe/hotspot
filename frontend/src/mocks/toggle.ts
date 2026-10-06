@@ -1,6 +1,11 @@
+import type { setupWorker } from "msw/browser";
+
 type Listener = () => void;
 
-let worker: any = null;
+/** MSW SetupWorker 实例（setupWorker 的返回类型），由 hooks.client 传入。 */
+export type MockWorker = ReturnType<typeof setupWorker>;
+
+let worker: MockWorker | null = null;
 let enabled = false;
 const listeners = new Set<Listener>();
 const STORAGE_KEY = "hotspot:mock-enabled";
@@ -30,7 +35,7 @@ export const MOCK_START_TIMEOUT_MS = 8000;
  * 读取 localStorage（可覆盖默认），启用时等待 service worker 真正就绪。
  * 返回是否启用了 mock。
  */
-export async function initMock(w: any, envDefault: boolean): Promise<boolean> {
+export async function initMock(w: MockWorker, envDefault: boolean): Promise<boolean> {
   worker = w;
   enabled = readPersisted(envDefault);
   if (enabled) {

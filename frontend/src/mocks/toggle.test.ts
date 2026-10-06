@@ -1,11 +1,12 @@
 // initMock 启动超时：worker.start() 悬挂时不能按住首屏（hooks.client init 在等它）
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { initMock, isMockEnabled, MOCK_START_TIMEOUT_MS } from './toggle';
+import { initMock, isMockEnabled, MOCK_START_TIMEOUT_MS, type MockWorker } from './toggle';
 
 const KEY = 'hotspot:mock-enabled';
 
-function fakeWorker(impl: { start?: (...args: never[]) => unknown; stop?: () => unknown }) {
-  return { start: vi.fn().mockResolvedValue(undefined), stop: vi.fn().mockResolvedValue(undefined), ...impl };
+function fakeWorker(impl: { start?: (...args: never[]) => unknown; stop?: () => unknown }): MockWorker {
+  // 仅桩 initMock 实际消费的 start/stop 两个方法，其余 SetupWorker 面以断言补齐。
+  return { start: vi.fn().mockResolvedValue(undefined), stop: vi.fn().mockResolvedValue(undefined), ...impl } as unknown as MockWorker;
 }
 
 beforeEach(() => {
