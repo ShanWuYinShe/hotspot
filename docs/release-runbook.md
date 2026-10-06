@@ -102,6 +102,8 @@ ssh workwork-server '~/hotspot/scripts/health-check.sh'              # 巡检（
 
 **回滚只回滚镜像，不回滚数据**：迁移无 down 迁移（见 `hotspot-backend-migrations` skill 的 expand-contract 纪律），回滚后线上是「旧镜像 + 新 schema」。绝大多数情况下这是安全的——迁移只加不删、旧二进制必须兼容新 schema 是硬性要求；一旦出现读写异常，按 `docs/backup-restore.md` 评估恢复。
 
+**迁移执行方式（2026-10-06 起）**：后端启动按 `schema_migrations` 版本表增量执行迁移（只跑未登记文件）。本版本表随 schema_migrations 落地的首个生产版本首次启动时，会对存量库做**一次性基线登记**（启动日志出现 `schema_migrations: legacy database baselined files=N`，属预期行为、不重放历史迁移）；此后每次发布只执行新增迁移。
+
 ### 3.4 手工回滚（脚本不可用时）
 
 ```bash
