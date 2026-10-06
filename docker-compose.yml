@@ -102,12 +102,9 @@ services:
         chown seaweed:seaweed /etc/seaweedfs/s3.json &&
         exec /entrypoint.sh server -s3 -dir=/data -s3.config=/etc/seaweedfs/s3.json
     environment:
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me}
-    volumes:
-      # 持久化上传的媒体文件。此前 /data 没有 volume，
-      # docker compose down 会丢失所有已上传的图片/视频。
-      - seaweedfs_data:/data
+      # 必填（:? 与 POSTGRES_PASSWORD 同哲学）：缺失即拒启，杜绝弱口令静默上线
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set (see .env.example)}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set (see .env.example)}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9333/dir/status || exit 1"]
       interval: 5s
@@ -152,7 +149,7 @@ services:
       # Go 软内存上限：容器 limit 1g，留 ~100MiB 给非堆分配（栈/CGO/pgx 缓冲），
       # 让 GC 在逼近上限前主动回收而非被 OOM kill。
       GOMEMLIMIT: 900MiB
-      POSTGRES_DSN: postgres://postgres:${POSTGRES_PASSWORD:-change-me}@postgres:5432/hotspot?sslmode=disable
+      POSTGRES_DSN: postgres://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (dev value postgres, see .env.example)}@postgres:5432/hotspot?sslmode=disable
       REDIS_URL: ${REDIS_URL:-redis://:${REDIS_PASSWORD:-}@redis:6379/0}
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:?AUTH_TOKEN_SECRET must be set to a high-entropy value (>=32 bytes) in production}
       APP_NAME: hotspot-backend-go
@@ -168,8 +165,8 @@ services:
       S3_FORCE_PATH_STYLE: "true"
       S3_REGION: us-east-1
       S3_BUCKET: hotspot
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set (see .env.example)}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set (see .env.example)}
       # SMTP 验证码发信（注册/忘记密码邮箱通道）。SMTP_HOST 留空 = 未接入
       # 发信网关，生产保持「验证码服务暂不可用」；配置后自动启用 SMTP 发信。
       SMTP_HOST: ${SMTP_HOST:-}
