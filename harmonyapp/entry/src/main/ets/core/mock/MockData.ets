@@ -6,6 +6,7 @@
  * 以具名常量 + 显式类型标注形式定义（对齐 core/types/api.ets 与 spec）。
  */
 
+import { ApiEndpoints } from '../config/ApiEndpoints';
 import {
   ApiResponse, PaginatedData,
   UserInfo, UserItem, UserStats, AccountInfo,
@@ -242,8 +243,8 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
     return apiOk(MOCK_AUTH);
   };
 
-  // Auth
-  if (url === '/public/v1/auth/signin') {
+  // Auth（路径一律引用 ApiEndpoints，禁止字面量——唯一路径定义处）
+  if (url === ApiEndpoints.AUTH.LOGIN) {
     switch (scenario) {
       case 'invalid-creds': return apiError(10100, '账号或密码错误');
       case 'banned': return apiError(10201, '账号已被封禁');
@@ -252,66 +253,67 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
       default: return authOk();
     }
   }
-  if (url === '/public/v1/auth/register' || url === '/public/v1/auth/guest') {
+  if (url === ApiEndpoints.AUTH.REGISTER || url === ApiEndpoints.AUTH.GUEST) {
     if (scenario === 'param-error') return apiError(10000, '');
     if (scenario === 'rate-limit') return apiError(10500, '');
     return authOk();
   }
   // 注册验证码（防枚举：无论 login_id 是否存在均成功，spec public.md）
-  if (url === '/public/v1/auth/send_register_code') {
+  if (url === ApiEndpoints.AUTH.SEND_REGISTER_CODE) {
     if (scenario === 'param-error') return apiError(10000, '');
     if (scenario === 'rate-limit') return apiError(10500, '');
     return apiOkEmpty();
   }
-  if (url === '/public/v1/auth/refresh_token') return apiOk(MOCK_AUTH);
-  if (url === '/api/v1/auth/session')
+  if (url === ApiEndpoints.AUTH.REFRESH_TOKEN) return apiOk(MOCK_AUTH);
+  if (url === ApiEndpoints.AUTH.GET_STATUS)
     // spec auth.md：session 必须有效 Token；未登录/无效 Token 返回 10100（客户端据此判定匿名态）
     return loggedIn ? apiOk(MOCK_AUTH_STATUS) : apiError(10100, 'Access Token 无效或过期');
-  if (url === '/api/v1/auth/signout') { setLoggedIn(false); return apiOkEmpty(); }
+  if (url === ApiEndpoints.AUTH.LOGOUT) { setLoggedIn(false); return apiOkEmpty(); }
 
   const guard = () => loggedIn ? null : apiError(10100, 'Access Token 无效或过期');
 
   // Users
-  if (url === '/api/v1/users/account') return guard() ?? apiOk(MOCK_ACCOUNT);
-  if (url === '/api/v1/users/open_the_door') {
+  if (url === ApiEndpoints.USER.GET_ACCOUNT) return guard() ?? apiOk(MOCK_ACCOUNT);
+  if (url === ApiEndpoints.USER.GET_DETAIL) {
     // spec user.md → open_the_door：UserProfileBundle（user 嵌套 UserItem）
     const profile: UserProfileBundle = { user: MK_USER_ITEM, recent_moments: { items: [MK_MOMENT], next_cursor: null } };
     return apiOk(profile);
   }
-  if (url === '/api/v1/users/search') return paginated([MK_USER_ITEM]);
-  if (url.startsWith('/api/v1/users/fetch_')) return guard() ?? paginated([] as UserItem[]);
+  if (url === ApiEndpoints.USER.SEARCH) return paginated([MK_USER_ITEM]);
+  const userListEndpoints: string[] = [ApiEndpoints.USER.LIST_FRIENDS, ApiEndpoints.USER.LIST_FOLLOWING, ApiEndpoints.USER.LIST_FOLLOWERS, ApiEndpoints.USER.LIST_GROUPS, ApiEndpoints.USER.LIST_MOMENTS, ApiEndpoints.USER.LIST_REACTED_MOMENTS];
+  if (userListEndpoints.indexOf(url) !== -1) return guard() ?? paginated([] as UserItem[]);
 
   // Moments
-  if (url === '/api/v1/moments/search') return paginated([MK_MOMENT]);
-  if (url === '/api/v1/moments/open_the_door') return apiOk(MK_MOMENT);
-  if (url === '/api/v1/moments/fetch_created') return guard() ?? paginated([] as MomentItem[]);
+  if (url === ApiEndpoints.MOMENT.SEARCH) return paginated([MK_MOMENT]);
+  if (url === ApiEndpoints.MOMENT.GET_DETAIL) return apiOk(MK_MOMENT);
+  if (url === ApiEndpoints.MOMENT.LIST_CREATED) return guard() ?? paginated([] as MomentItem[]);
   // 附近瞬间流（原 feed/nearby_moments 迁移；匿名可用，返回示例瞬间）
-  if (url === '/api/v1/moments/fetch_nearby') return paginated([MK_MOMENT]);
+  if (url === ApiEndpoints.MOMENT.FETCH_NEARBY) return paginated([MK_MOMENT]);
   // 关注动态（原 feed/following 迁移；依赖登录态）
-  if (url === '/api/v1/moments/fetch_following') return guard() ?? paginated([] as MomentItem[]);
+  if (url === ApiEndpoints.MOMENT.FETCH_FOLLOWING) return guard() ?? paginated([] as MomentItem[]);
 
   // Groups
-  if (url === '/api/v1/groups/search') return paginated([MK_GROUP]);
-  if (url === '/api/v1/groups/open_the_door') return apiOk(MK_GROUP);
+  if (url === ApiEndpoints.GROUP.SEARCH) return paginated([MK_GROUP]);
+  if (url === ApiEndpoints.GROUP.GET_DETAIL) return apiOk(MK_GROUP);
 
   // Chat
-  if (url === '/api/v1/private_chats/fetch') return guard() ?? paginated([] as PrivateChatItem[]);
-  if (url === '/api/v1/private_messages/fetch') return guard() ?? paginated([] as PrivateMessageItem[]);
-  if (url === '/api/v1/private_messages/send') return guard() ?? apiOk(MOCK_SENT);
+  if (url === ApiEndpoints.CHAT.PRIVATE_CHATS.LIST) return guard() ?? paginated([] as PrivateChatItem[]);
+  if (url === ApiEndpoints.CHAT.PRIVATE_MESSAGES.LIST) return guard() ?? paginated([] as PrivateMessageItem[]);
+  if (url === ApiEndpoints.CHAT.PRIVATE_MESSAGES.SEND) return guard() ?? apiOk(MOCK_SENT);
 
   // Search / Notify / System / Map
-  if (url === '/api/v1/search/suggest') return apiOk(MOCK_SUGGEST);
-  if (url === '/api/v1/notify/fetch') return guard() ?? paginated([] as NotifyItem[]);
-  if (url === '/api/v1/notify/unread_summary') return guard() ?? apiOk(MOCK_UNREAD);
-  if (url === '/public/v1/system/client_config') return apiOk(MOCK_CLIENT_CONFIG);
-  if (url === '/api/v1/system/bootstrap') return apiOk(MOCK_BOOTSTRAP);
-  if (url === '/public/v1/map/canvas') return apiOk(MOCK_MAP_CANVAS);
-  if (url === '/api/v1/reactions/set') return guard() ?? apiOkEmpty();
-  if (url === '/api/v1/reactions/fetch') return paginated(MOCK_REACTIONS);
-  if (url === '/api/v1/comments/fetch') return paginated([] as CommentItem[]);
-  if (url === '/api/v1/comments/create') return guard() ?? apiOk(MOCK_COMMENT);
+  if (url === ApiEndpoints.SEARCH.SUGGEST) return apiOk(MOCK_SUGGEST);
+  if (url === ApiEndpoints.NOTIFY.LIST) return guard() ?? paginated([] as NotifyItem[]);
+  if (url === ApiEndpoints.NOTIFY.GET_UNREAD_COUNT) return guard() ?? apiOk(MOCK_UNREAD);
+  if (url === ApiEndpoints.SYSTEM.GET_CLIENT_CONFIG) return apiOk(MOCK_CLIENT_CONFIG);
+  if (url === ApiEndpoints.SYSTEM.BOOTSTRAP) return apiOk(MOCK_BOOTSTRAP);
+  if (url === ApiEndpoints.MAP.CANVAS) return apiOk(MOCK_MAP_CANVAS);
+  if (url === ApiEndpoints.REACTIONS.SET) return guard() ?? apiOkEmpty();
+  if (url === ApiEndpoints.REACTIONS.LIST) return paginated(MOCK_REACTIONS);
+  if (url === ApiEndpoints.COMMENT.LIST) return paginated([] as CommentItem[]);
+  if (url === ApiEndpoints.COMMENT.CREATE) return guard() ?? apiOk(MOCK_COMMENT);
 
-  // Generic group write ops
+  // Generic group write ops：命名空间兜底（非端点声明，组内写操作统一空成功）
   if (url.startsWith('/api/v1/groups/')) return guard() ?? apiOkEmpty();
 
   return null;
