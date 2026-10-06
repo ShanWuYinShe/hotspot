@@ -438,6 +438,9 @@ export class WsClient {
   private handleClose(code: number): void {
     this.clearTimers();
     this.ws = null;
+    // 断连即清空在途订阅 ack：重连后本就以本地订阅状态全量重放（set 幂等），
+    // 残留条目只会让 Map 无界增长（弱网反复断连下的内存泄漏）。
+    this.pendingAcks.clear();
     // 4001 = Token 失效（spec close code 表：刷新后重连）。SessionRevoked
     // 流程已置 manualClose（会话被吊销，刷新无意义）走旧路径；纯 Token
     // 过期则刷新一次后重连，刷新失败才移交上层登出。
