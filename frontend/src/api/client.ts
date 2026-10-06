@@ -343,6 +343,15 @@ async function request<T>(
     return json;
   }
 
+  // 10500: rate limited. Per spec the response carries Retry-After (seconds);
+  // wait (capped at 10s to keep UI responsive) and retry once. 与鸿蒙端语义对齐。
+  if (json.code === 10500 && retryCount < 1) {
+    const retryAfter = Number(res.headers.get('retry-after'));
+    const waitSec = Number.isFinite(retryAfter) ? Math.min(Math.max(retryAfter, 0), 10) : 5;
+    await new Promise((resolve) => setTimeout(resolve, waitSec * 1000));
+    return request<T>(endpoint, body, extraHeaders, retryCount + 1, requestId, { ...opts, skipProactive: true });
+  }
+
   // 10100: access token invalid/expired. Try a single deduped refresh + retry.
   if (json.code === 10100 && retryCount < 1) {
     const outcome = await refreshSessionToken();

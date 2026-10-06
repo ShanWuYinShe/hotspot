@@ -47,6 +47,27 @@ describe('request envelope', () => {
     await expect(client.checkAuthStatus()).rejects.toThrow('boom');
   });
 
+  it('10500 限流按 Retry-After 等待并重试一次', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, headers: new Headers({ 'Retry-After': '0' }), json: async () => ({ code: 10500, message: '请求过于频繁' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 0, data: { ok: true } }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await client.checkAuthStatus();
+    expect(res.code).toBe(0);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('10500 重试后仍限流则透传 envelope（不无限重试）', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, headers: new Headers({ 'Retry-After': '0' }), json: async () => ({ code: 10500, message: '请求过于频繁' }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await client.checkAuthStatus();
+    expect(res.code).toBe(10500);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('网关 502 返回 HTML（非 JSON）时抛 HTTP 状态错误而非裸解析异常', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
