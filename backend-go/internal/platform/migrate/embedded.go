@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
@@ -138,12 +139,26 @@ SELECT EXISTS (
 	return nil
 }
 
+// schemaMigrationsTable 记录已应用的迁移文件名（name 为主键）。落地后：
+//   - 新库按字典序逐个执行未登记文件并登记（替代旧「全量重跑」）；
+//   - 存量库（升级前已有全部表、无版本记录）做一次性基线登记，不重放 55+ 个
+//     历史文件——历史文件虽按纪律幂等，但全量重放拖慢启动且与未来
+//     CREATE INDEX CONCURRENTLY 拆单语句迁移不兼容（见 check-migrations.sh）。
+//   - 非 Postgres 后端（测试 stub / 内存）走旧 ApplyFS 全量路径，行为不变。
+//
+// 崩溃窗口：文件执行与登记非同一事务，中断后重启会重放该文件——幂等纪律是防线
+// （与旧行为一致，未变差）。
+const schemaMigrationsDDL = `CREATE TABLE IF NOT EXISTS schema_migrations (
+  name       text PRIMARY KEY,
+  applied_at timestamptz NOT NULL DEFAULT now()
+)`
+
 func EnsureSchema(ctx context.Context, db persistence.QueryableDB, fsys fs.FS) error {
 	if err := db.Ping(ctx); err != nil {
 		return fmt.Errorf("ping postgres: %w", err)
 	}
 	return withSchemaLock(ctx, db, func() error {
-		if err := ApplyFS(ctx, db, fsys); err != nil {
+		if err := applyWithVersionTable(ctx, db, fsys); err != nil {
 			return err
 		}
 		if err := EnsureRequiredTables(ctx, db); err != nil {
@@ -151,4 +166,83 @@ func EnsureSchema(ctx context.Context, db persistence.QueryableDB, fsys fs.FS) e
 		}
 		return nil
 	})
+}
+
+// applyWithVersionTable 版本表驱动的应用逻辑。非 Postgres 后端退回全量重放。
+func applyWithVersionTable(ctx context.Context, db persistence.QueryableDB, fsys fs.FS) error {
+	pgdb, isPG := db.(*persistence.PostgresDB)
+	if !isPG || pgdb.Backend != nil {
+		return ApplyFS(ctx, db, fsys)
+	}
+	files, err := listMigrationsFS(fsys)
+	if err != nil {
+		return err
+	}
+	if err := db.Exec(ctx, schemaMigrationsDDL); err != nil {
+		return fmt.Errorf("ensure schema_migrations: %w", err)
+	}
+	applied, err := loadAppliedMigrations(ctx, db)
+	if err != nil {
+		return err
+	}
+	pending := make([]string, 0, len(files))
+	for _, name := range files {
+		if !applied[name] {
+			pending = append(pending, name)
+		}
+	}
+	// 存量库基线：从未登记过且核心表已齐 → 全部现存文件只登记不重放。
+	// 判定用 requiredTables 全量在位（半迁移状态的库不满足，落到正常执行路径
+	// 逐个补齐；EnsureRequiredTables 兜底失败会拒绝启动，交由人工处理）。
+	if len(applied) == 0 && len(pending) == len(files) {
+		if err := EnsureRequiredTables(ctx, db); err == nil {
+			for _, name := range files {
+				if err := recordMigration(ctx, db, name); err != nil {
+					return err
+				}
+			}
+			observability.L().Info("schema_migrations: legacy database baselined",
+				"files", len(files))
+			return nil
+		}
+		// required tables 不齐：视为全新/半迁移库，走正常逐文件执行。
+	}
+	for _, name := range pending {
+		blob, err := fs.ReadFile(fsys, name)
+		if err != nil {
+			return fmt.Errorf("read migration %s: %w", name, err)
+		}
+		if err := db.Exec(ctx, string(blob)); err != nil {
+			return fmt.Errorf("apply migration %s: %w", name, err)
+		}
+		if err := recordMigration(ctx, db, name); err != nil {
+			return err
+		}
+		observability.L().Info("schema_migrations: applied", "file", name)
+	}
+	return nil
+}
+
+func loadAppliedMigrations(ctx context.Context, db persistence.QueryableDB) (map[string]bool, error) {
+	rows, err := db.Query(ctx, "SELECT name FROM schema_migrations")
+	if err != nil {
+		return nil, fmt.Errorf("load schema_migrations: %w", err)
+	}
+	defer rows.Close()
+	applied := make(map[string]bool)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("scan schema_migrations: %w", err)
+		}
+		applied[name] = true
+	}
+	return applied, rows.Err()
+}
+
+func recordMigration(ctx context.Context, db persistence.QueryableDB, name string) error {
+	if err := db.Exec(ctx, "INSERT INTO schema_migrations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", name); err != nil {
+		return fmt.Errorf("record migration %s: %w", name, err)
+	}
+	return nil
 }

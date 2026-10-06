@@ -15,4 +15,4 @@ description: hotspot 后端数据库迁移纪律：文件命名与幂等要求�
 - 改列语义/回填数据用 `DO $$` 自检式幂等写法（参照 `050`），不依赖「只跑一次」。
 - 数据性一次性迁移（无法按格式判幂等的）必须用 `data_migrations` 旗标表包裹（参照 `053`）。
 - 无 down 迁移：回滚版本 = 旧镜像 + 保留新 schema，因此 schema 变更必须对旧代码向后兼容，这是唯一防线。
-- **迁移内禁止 `CREATE INDEX CONCURRENTLY`**：迁移经 pgx 简单协议（`QueryExecModeSimpleProtocol`）把整个文件作为一条消息执行，多语句文件落入 PostgreSQL 隐式事务块，CONCURRENTLY 以 25001 拒绝（2026-09-20 实测，`cmd/migrate` 与服务端 `ensureSchema` 两条路径均如此，会导致启动失败）。普通 CREATE INDEX 的 SHARE 锁会短暂阻塞读写是已知代价；要消除它需先建 `schema_migrations` 版本表并把建索引拆成单语句迁移文件（遗留项）。并发构建失败会留下 INVALID 索引且 `IF NOT EXISTS` 不会重建——启动日志见索引报错时先 DROP INVALID 索引再重启。
+- **迁移内禁止 `CREATE INDEX CONCURRENTLY`**：迁移经 pgx 简单协议（`QueryExecModeSimpleProtocol`）把整个文件作为一条消息执行，多语句文件落入 PostgreSQL 隐式事务块，CONCURRENTLY 以 25001 拒绝（2026-09-20 实测，`cmd/migrate` 与服务端 `ensureSchema` 两条路径均如此，会导致启动失败）。普通 CREATE INDEX 的 SHARE 锁会短暂阻塞读写是已知代价；`schema_migrations` 版本表已于 2026-10-06 落地（`platform/migrate` 启动时登记/跳过已应用文件；存量库一次性基线不重放），后续可把建索引拆成单语句迁移文件改用 CONCURRENTLY。并发构建失败会留下 INVALID 索引且 `IF NOT EXISTS` 不会重建——启动日志见索引报错时先 DROP INVALID 索引再重启。

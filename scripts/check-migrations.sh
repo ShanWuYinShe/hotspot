@@ -20,6 +20,5 @@ echo "迁移序号校验 OK"
 # 已知限制（2026-09-20 实测）：迁移经 pgx 简单协议整文件单消息执行，多语句
 # 文件落入 PostgreSQL 隐式事务块，CREATE INDEX CONCURRENTLY 会以 25001 拒绝
 # （cmd/migrate 与服务端 ensureSchema 两条路径均如此）。因此「建索引
-# CONCURRENTLY 避免停写」在当前迁移架构下不可行；要消除建索引停写需先做
-# schema_migrations 版本表 + 把建索引拆成单语句迁移文件（遗留项，勿直接改用
-# CONCURRENTLY——CI 单测与启动路径都会红）。
+# CONCURRENTLY 避免停写」在当前迁移架构下不可行；schema_migrations 版本表已于 2026-10-06 落地；要消除建索引停写，把
+# 建索引拆成单语句迁移文件即可改用 CONCURRENTLY。
