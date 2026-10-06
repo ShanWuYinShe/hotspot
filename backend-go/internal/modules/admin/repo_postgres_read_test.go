@@ -279,9 +279,9 @@ func (b *adminBackendStub) Exec(_ context.Context, query string, args ...any) er
 		grant := b.admins[args[0].(string)]
 		grant.RoleIDs = nil
 		b.admins[grant.UserID] = grant
-	case queryAdminInsertRole:
+	case queryAdminInsertRoles:
 		grant := b.admins[args[0].(string)]
-		grant.RoleIDs = append(grant.RoleIDs, args[1].(string))
+		grant.RoleIDs = append(grant.RoleIDs, args[1].([]string)...)
 		b.admins[grant.UserID] = grant
 	case queryAdminRevoke:
 		grant := b.admins[args[0].(string)]

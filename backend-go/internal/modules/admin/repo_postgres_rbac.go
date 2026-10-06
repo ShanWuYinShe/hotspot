@@ -274,10 +274,10 @@ func (r *PostgresRepository) GrantAdmin(ctx context.Context, grant AdminGrantUps
 		if err := txQueryable.Exec(txCtx, queryAdminReplaceRoles, grant.UserID); err != nil {
 			return err
 		}
-		for _, roleID := range grant.RoleIDs {
-			if err := txQueryable.Exec(txCtx, queryAdminInsertRole, grant.UserID, roleID, grantedAt); err != nil {
-				return err
-			}
+		// 角色批量插入（单次往返，与 moments_images 批量化同口径）；空切片经
+		// unnest 展开为空集，天然为 no-op。
+		if err := txQueryable.Exec(txCtx, queryAdminInsertRoles, grant.UserID, grant.RoleIDs, grantedAt); err != nil {
+			return err
 		}
 		return nil
 	})

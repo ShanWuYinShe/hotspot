@@ -71,9 +71,10 @@ SET grant_all_permissions = EXCLUDED.grant_all_permissions,
 DELETE FROM admin_user_roles
 WHERE user_id = $1`
 
-	queryAdminInsertRole = `
+	// 角色批量插入（单次往返）：RoleIDs 经 unnest 展开为行，替代逐条 EXEC。
+	queryAdminInsertRoles = `
 INSERT INTO admin_user_roles (user_id, role_id, created_at)
-VALUES ($1,$2,$3)`
+SELECT $1, role_id, $3 FROM unnest($2::text[]) AS t(role_id)`
 
 	queryAdminRevoke = `
 UPDATE admin_users
