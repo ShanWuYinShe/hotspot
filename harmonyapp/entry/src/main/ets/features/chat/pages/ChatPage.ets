@@ -27,6 +27,8 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
 import { ChatMessageItem, ChatMessageView } from '../components/ChatMessageItem';
+import { canRecallMessage, canAdminRecallMessage, canEditMessage, hasMessageActions } from '../components/ChatMessageRules';
+import type { ChatActionRulesInput } from '../components/ChatMessageRules';
 import { ChatActionsSheet } from '../components/ChatActionsSheet';
 import { MessageActionsSheet } from '../components/MessageActionsSheet';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
@@ -71,12 +73,10 @@ const DUPLICATE_MESSAGE_TIME_WINDOW_MS: number = 1500;
 const SEND_DUPLICATE_GUARD_WINDOW_MS: number = 1200;
 const KEYBOARD_DISMISS_NAV_GUARD_MS: number = 260;
 // 撤回时间窗（spec message_recall_window_seconds，默认 300s；服务端 10400 兜底，
-// 对齐前端 RECALL_WINDOW_MS）
-const RECALL_WINDOW_MS: number = 300000;
 const RECALLED_MESSAGE_TEXT: string = '消息已撤回';
 
-// 统一消息接口用于UI展示
-interface ChatMessage {
+// 统一消息接口用于UI展示（extends 规则输入最小集，供 ChatMessageRules 判定）
+interface ChatMessage extends ChatActionRulesInput {
   id: string;
   content: string;
   senderId: string;
@@ -1304,7 +1304,7 @@ export struct ChatPage {
                     isGroupChat: this.chatType === 'group_chat',
                     isLastSent: msg.isSelf && msg.id === this.getLastSentMessageId(),
                     timeText: this.formatMessageTime(msg.sentAt),
-                    hasActions: this.hasMessageActions(msg),
+                    hasActions: hasMessageActions(msg, this.isAdminRecallContext()),
                     onMessageClick: (view: ChatMessageView) => { this.openMessageActions(view); },
                     palette: this.getCurrentThemePalette(),
                     chatTheme: this.getChatTheme()
@@ -1656,47 +1656,21 @@ export struct ChatPage {
   }
 
   // ==================== 消息撤回/编辑（对齐前端 MessageBubble ⋮ 菜单） ====================
-
-  /** 撤回时间窗（spec message_recall_window_seconds 默认 300s；无时间戳放行，服务端兜底） */
-  private isInRecallWindow(sentAt: string): boolean {
-    if (!sentAt) {
-      return true;
-    }
-    const sentAtMs = Date.parse(sentAt);
-    if (Number.isNaN(sentAtMs)) {
-      return true;
-    }
-    return Date.now() - sentAtMs < RECALL_WINDOW_MS;
-  }
+  // 规则实现在 ../components/ChatMessageRules.ets（纯函数模块）；此处仅保留
+  // 依赖页面状态的上下文判定（群角色 / 群聊类型）。
 
   private isGroupAdminOrOwner(): boolean {
     return this.groupRole === 'owner' || this.groupRole === 'admin';
   }
 
-  /** 自己的消息：时限内可撤回（对齐前端 canRecall = sent && inRecallWindow） */
-  private canRecallMessage(msg: ChatMessage): boolean {
-    return msg.isSelf && !msg.recalled && msg.pending !== true && this.isInRecallWindow(msg.sentAt);
-  }
-
-  /** 群主/管理员撤回他人消息：无时间窗（对齐前端 recallGroupMessageAsAdmin 分支） */
-  private canAdminRecallMessage(msg: ChatMessage): boolean {
-    return this.chatType === 'group_chat' && !msg.isSelf && !msg.recalled && !msg.isSystem &&
-      this.isGroupAdminOrOwner();
-  }
-
-  /** 编辑：仅本人的文本消息且未撤回（对齐前端 canEdit = sent；spec 限定 type=text） */
-  private canEditMessage(msg: ChatMessage): boolean {
-    return msg.isSelf && !msg.recalled && msg.type === 'text' && msg.pending !== true;
-  }
-
-  private hasMessageActions(msg: ChatMessage): boolean {
-    return this.canEditMessage(msg) || this.canRecallMessage(msg) || this.canAdminRecallMessage(msg);
+  private isAdminRecallContext(): boolean {
+    return this.chatType === 'group_chat' && this.isGroupAdminOrOwner();
   }
 
   /** 气泡点击：定位原始消息并唤起操作面板 */
   private openMessageActions(view: ChatMessageView): void {
     const target = this.messages.find((m: ChatMessage) => m.id === view.id);
-    if (target === undefined || !this.hasMessageActions(target)) {
+    if (target === undefined || !hasMessageActions(target, this.isAdminRecallContext())) {
       return;
     }
     this.dismissKeyboardOnOutsideTap();
@@ -1718,7 +1692,7 @@ export struct ChatPage {
     if (msg === null) {
       return false;
     }
-    return this.canEditMessage(msg);
+    return canEditMessage(msg);
   }
 
   private isActionMessageRecallable(): boolean {
@@ -1726,7 +1700,7 @@ export struct ChatPage {
     if (msg === null) {
       return false;
     }
-    return this.canRecallMessage(msg) || this.canAdminRecallMessage(msg);
+    return canRecallMessage(msg) || canAdminRecallMessage(msg, this.isAdminRecallContext());
   }
 
   /** 本地标记撤回（HTTP 成功后先落本地，WS 回环再幂等覆盖；对齐前端 handleRecall） */
