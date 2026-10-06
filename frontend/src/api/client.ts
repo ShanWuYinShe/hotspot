@@ -294,7 +294,7 @@ async function request<T>(
     else opts.signal.addEventListener('abort', abortFromCaller, { once: true });
   }
   let res: Response;
-  let json: ApiResponse<T>;
+  let json: ApiResponse<T> | null;
   try {
     res = await fetch(url, {
       method: 'POST',
@@ -303,7 +303,13 @@ async function request<T>(
       body: body ? JSON.stringify(body) : '{}',
       signal: controller.signal,
     });
-    json = await res.json();
+    // 解析失败（网关 502/504 常回 HTML）单独兜住为 null：不能让裸 SyntaxError
+    // 吞掉下方 !res.ok 的 HTTP 状态错误分支。
+    try {
+      json = await res.json();
+    } catch {
+      json = null;
+    }
   } catch (err) {
     // 超时/取消在 fetch 层表现为 AbortError——映射为可读文案，让调用方按
     // 网络错误提示/重试，而非裸 "The operation was aborted"。
@@ -318,11 +324,15 @@ async function request<T>(
 
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
-    try { msg = (json as unknown as any).message ?? msg; } catch {}
+    msg = (json as unknown as { message?: string } | null)?.message ?? msg;
     // A non-200 transport failure is unexpected per spec (business errors come
     // back as 200 + code). Surface it; AuthContext treats a thrown request as
     // a soft failure the caller can handle.
     throw new Error(msg);
+  }
+  if (!json) {
+    // 200 但响应体不是 JSON（代理注入页/损坏响应等）——按可重试传输错误处理。
+    throw new Error('响应格式异常，请稍后重试');
   }
 
   // 10201: account banned — force-drop and show the ban screen with the message.
@@ -334,7 +344,9 @@ async function request<T>(
   // 10100: access token invalid/expired. Try a single deduped refresh + retry.
   if (json.code === 10100 && retryCount < 1) {
     const outcome = await refreshSessionToken();
-    if (outcome === 'ok') return request<T>(endpoint, body, extraHeaders, retryCount + 1, requestId, opts);
+    // skipProactive：刚刷新出的新 token knownAccessExpiresAt 未知，重试时若再走
+    // proactiveRefreshIfNeeded 会立即触发第二次无谓刷新（轮换竞态）。
+    if (outcome === 'ok') return request<T>(endpoint, body, extraHeaders, retryCount + 1, requestId, { ...opts, skipProactive: true });
     if (outcome === 'invalid') {
       // Refresh failed: notify AuthContext so it can drop to anonymous and prompt.
       emitAuthEvent('auth-failed');
