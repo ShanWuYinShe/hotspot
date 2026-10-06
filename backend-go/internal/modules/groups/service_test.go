@@ -119,8 +119,18 @@ func (r *stubGroupsRepo) Update(_ context.Context, _ string, _ UpdateGroupReques
 	return r.updateErr
 }
 func (r *stubGroupsRepo) Dismiss(_ context.Context, _ string) error { return r.dismissErr }
-func (r *stubGroupsRepo) ListMembers(_ context.Context, _ string, _ *GroupRole, _ int, _ string) ([]GroupMemberItem, string, error) {
-	return r.members, r.membersCur, r.membersErr
+func (r *stubGroupsRepo) ListMembers(_ context.Context, _ string, role *GroupRole, _ int, _ string) ([]GroupMemberItem, string, error) {
+	// 与真实双实现对齐：role 过滤在 repo 层完成。
+	items := r.members
+	if role != nil {
+		items = make([]GroupMemberItem, 0, len(r.members))
+		for _, m := range r.members {
+			if m.Role == *role {
+				items = append(items, m)
+			}
+		}
+	}
+	return items, r.membersCur, r.membersErr
 }
 func (r *stubGroupsRepo) IsMember(_ context.Context, _ string, userID string) (bool, error) {
 	if r.isMemberResult {

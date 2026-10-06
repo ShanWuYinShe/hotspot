@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+// adminNotifyListLimit 单角色一次拉取上限：owner/admin 数量级很小，正常远达不到；
+// 保留兜底上限防止异常数据拖垮广播。repo 已按 role 过滤，不存在全量截断问题。
+const adminNotifyListLimit = 100
+
 func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, application GroupApplicationItem, reason string) {
 	group, groupFound, err := s.repo.Get(ctx, application.GroupID)
 	if err != nil || !groupFound {
@@ -15,14 +19,19 @@ func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, applicati
 	}
 	applicant := s.resolveUserInfo(ctx, application.Applicant.UserID)
 	now := time.Now().UTC().Format(time.RFC3339)
-	admins, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, nil, 1000, "")
+	// 由 repo 按角色过滤（owner/admin 两次查询），替代「拉全量 1000 再内存过滤」：
+	// MaxMembers>1000 时管理员会被静默截断；role 过滤也让 SQL 走索引子集。
+	owner := GroupRoleOwner
+	admin := GroupRoleAdmin
+	ownerMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &owner, adminNotifyListLimit, "")
 	if err != nil {
 		return
 	}
-	for _, member := range admins {
-		if member.Role != GroupRoleOwner && member.Role != GroupRoleAdmin {
-			continue
-		}
+	adminMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &admin, adminNotifyListLimit, "")
+	if err != nil {
+		return
+	}
+	for _, member := range append(ownerMembers, adminMembers...) {
 		payload := map[string]any{
 			"application_id": application.ApplicationID,
 			"group_id":       group.Group.GroupID,
@@ -45,14 +54,18 @@ func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, applicati
 func (s *Service) notifyGroupApplicationExpired(ctx context.Context, group GroupItem, application GroupApplicationItem) {
 	applicant := s.resolveUserInfo(ctx, application.Applicant.UserID)
 	now := time.Now().UTC().Format(time.RFC3339)
-	admins, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, nil, 1000, "")
+	// 同上：repo 按角色过滤，避免全量截断（见 notifyGroupApplicationCancelled）。
+	owner := GroupRoleOwner
+	admin := GroupRoleAdmin
+	ownerMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &owner, adminNotifyListLimit, "")
 	if err != nil {
 		return
 	}
-	for _, member := range admins {
-		if member.Role != GroupRoleOwner && member.Role != GroupRoleAdmin {
-			continue
-		}
+	adminMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &admin, adminNotifyListLimit, "")
+	if err != nil {
+		return
+	}
+	for _, member := range append(ownerMembers, adminMembers...) {
 		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{
 			Type: realtime.EventTypeGroupApplicationExpired,
 			Payload: GroupApplicationExpiredPayload{
