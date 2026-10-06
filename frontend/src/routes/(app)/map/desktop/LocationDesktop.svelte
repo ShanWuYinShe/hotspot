@@ -173,7 +173,7 @@
 		let cancelled = false;
 		mapLoading = true;
 		mapError = null;
-		// TODO: 固定 delta 仅用于首屏，后续应接入视口 bounds（当前兜底：mapBounds 尚未就绪时用固定 0.045，hasViewport 为真时已用真实视口）
+		// 首屏无视口时用固定 delta 兜底；mapBounds 就绪后（hasViewport）走真实视口。
 		const hasViewport = bounds.maxLat !== bounds.minLat || bounds.maxLng !== bounds.minLng;
 		const request = hasViewport
 			? fetchMapCanvasByViewport({ bounds: { north: bounds.maxLat, south: bounds.minLat, east: bounds.maxLng, west: bounds.minLng } }, types)
