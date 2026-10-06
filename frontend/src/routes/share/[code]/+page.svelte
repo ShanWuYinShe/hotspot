@@ -80,9 +80,12 @@
 		{#if 'shared_location' in p}
 			<div class="flex flex-col items-center gap-2">
 				<p class="text-lg font-semibold tracking-title text-text-primary">{p.shared_location.location_name}</p>
-				<p class="text-xs tabular-nums text-text-secondary">
-					{p.shared_location.point.latitude.toFixed(5)}, {p.shared_location.point.longitude.toFixed(5)}
-				</p>
+				<!-- point 缺失（旧数据/异常 payload）时不能整页白屏，降级只展示名称 -->
+				{#if p.shared_location.point}
+					<p class="text-xs tabular-nums text-text-secondary">
+						{p.shared_location.point.latitude.toFixed(5)}, {p.shared_location.point.longitude.toFixed(5)}
+					</p>
+				{/if}
 				<p class="text-sm text-text-secondary">这是一个位置锚点分享，请在 HotSpot App 内查看</p>
 			</div>
 			<button
