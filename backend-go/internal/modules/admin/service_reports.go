@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -228,11 +229,20 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 	if err != nil {
 		return nil, err
 	}
+	// 逐条撤销但失败不中断：封禁主流程（ban state 已落库、WS 已断开）不应因
+	// 单条会话撤销失败整体报错——已断开的 WS 连接下该会话无法再使用，残留
+	// 记录由逐条 Warn 留痕便于排查；此前失败即 return 会让部分会话漏撤。
+	failedSessions := 0
 	for _, sessionID := range sessionIDs {
 		realtime.DefaultHub().CloseSession(sessionID, realtime.Event{Type: realtime.EventTypeAccountBanned, Payload: payload})
 		if err := s.repo.RevokeSession(ctx, sessionID); err != nil {
-			return nil, err
+			failedSessions++
+			observability.L().Warn("admin: revoke session after ban failed",
+				"user_id", userID, "session_id", sessionID, "error", err)
 		}
+	}
+	if failedSessions > 0 {
+		return nil, fmt.Errorf("revoke %d of %d sessions after ban failed", failedSessions, len(sessionIDs))
 	}
 	if appendAudit {
 		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.ban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("user"), TargetID: userID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.ban", "reason": strings.TrimSpace(reason), "duration_days": duration}}); err != nil {
