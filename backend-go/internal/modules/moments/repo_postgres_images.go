@@ -2,17 +2,14 @@ package moments
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
 const (
-	queryInsertMomentImage = `
-INSERT INTO moment_images (moment_id, file_id, position, created_at)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (moment_id, file_id) DO NOTHING`
-
 	queryDeleteMomentImagesByMomentID = `
 DELETE FROM moment_images
 WHERE moment_id = $1`
@@ -38,11 +35,27 @@ ORDER BY mi.moment_id, mi.position ASC`
 
 // insertMomentImages attaches the given file_ids to a moment in order. It is
 // the caller's responsibility to have already validated ownership/category.
+// 单条多 VALUES 批量插入（占位符 $N 全参数化）：此前逐条 EXEC，9 图发布要 9 次
+// 往返（发布在事务内，放大了持锁时长）。
 func insertMomentImages(ctx context.Context, queryable persistence.Queryable, momentID string, fileIDs []string, createdAt time.Time) error {
-	for position, fileID := range fileIDs {
-		if err := queryable.Exec(ctx, queryInsertMomentImage, momentID, fileID, position, createdAt); err != nil {
-			return err
+	if len(fileIDs) == 0 {
+		return nil
+	}
+	var sb strings.Builder
+	sb.WriteString("INSERT INTO moment_images (moment_id, file_id, position, created_at) VALUES ")
+	args := make([]any, 0, 3+len(fileIDs)*2)
+	args = append(args, momentID, createdAt)
+	for i := range fileIDs {
+		if i > 0 {
+			sb.WriteString(", ")
 		}
+		// $1=momentID, $2=createdAt，其后每行 (file_id, position)
+		sb.WriteString(fmt.Sprintf("($1, $%d, $%d, $2)", 3+i*2, 4+i*2))
+		args = append(args, fileIDs[i], i)
+	}
+	sb.WriteString(" ON CONFLICT (moment_id, file_id) DO NOTHING")
+	if err := queryable.Exec(ctx, sb.String(), args...); err != nil {
+		return err
 	}
 	return nil
 }
