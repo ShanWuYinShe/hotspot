@@ -195,7 +195,8 @@ src/
   stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer/toast/admin/mapSource/unread，.svelte.ts）
   lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式；ws/ 为 WebSocket
                   #   客户端封装 client.ts + types.ts）
-  api/            # API 客户端层（client.ts 零框架依赖）
+  api/            # API 客户端层（零框架依赖：client.ts 为 facade，传输核心在
+                  #   core.ts，按业务域的端点包装在 domains/*.ts——新增端点放对应域文件）
   styles/         # CSS（主题、Tailwind）
   assets/         # 静态资源（含地图图钉 SVG）
   mocks/          # MSW mock（仅 dev；toggle.ts 提供 localStorage 持久化开关）
