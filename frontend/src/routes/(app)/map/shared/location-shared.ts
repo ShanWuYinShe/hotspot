@@ -91,7 +91,13 @@ function emptyResult(): MapCanvasResult {
 }
 
 function hotspotToPin(item: MapHotspotItem): Pin {
-	const type: PinType = item.object_type as PinType;
+	// 白名单校验而非裸 as：未知 object_type（后端新增类型/异常数据）回落 user，
+	// 避免图钉取色/标签查表 undefined 静默失色。
+	const type: PinType = (['user', 'group', 'moment'] as const).includes(
+		item.object_type as PinType
+	)
+		? (item.object_type as PinType)
+		: 'user';
 	return {
 		id: item.object_id,
 		type,
