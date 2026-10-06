@@ -180,15 +180,41 @@ function normalizeCanvas(res: { code: number; data?: unknown }): MapCanvasResult
 	}
 	if (data.mode === 'hotspots' && data.hotspots.items.length) {
 		const items = data.hotspots.items;
-		// TODO(next_cursor 翻页): 当 hotspots.next_cursor !== null 时表示还有下一页，
-		// 应以 pagination: { cursor: next_cursor, limit: 100 } 循环拉取并合并 pins/counts。
-		// 当前首屏固定视口下单页足够（limit 100），与统计同页口径一致；后续接入视口交互/密集区域时补全游标翻页。
 		const counts: Record<PinType, number> = { user: 0, group: 0, moment: 0 };
 		const pins = items.map(hotspotToPin);
 		for (const p of pins) counts[p.type] += 1;
 		return { mode: 'hotspots', pins, heatBuckets: [], counts };
 	}
 	return emptyResult();
+}
+
+/** 单次请求最多追加的翻页数上限：密集区域视口理论可无限翻，3 页（300 点）已远超
+ *  画布可读密度，超出部分以「没有更多」呈现，避免视口停滞时无限串行拉取。 */
+const HOTSPOTS_MAX_PAGES = 3;
+
+async function fetchCanvasWithPaging(params: MapCanvasRequest): Promise<MapCanvasResult> {
+	let res = await getMapCanvas(params);
+	let merged = normalizeCanvas(res);
+	if (merged.mode !== 'hotspots') return merged;
+	let cursor = (res.data as MapCanvasResponse).mode === 'hotspots' ? (res.data as Extract<MapCanvasResponse, { mode: 'hotspots' }>).hotspots.next_cursor : null;
+	let pages = 1;
+	while (cursor && pages < HOTSPOTS_MAX_PAGES) {
+		res = await getMapCanvas({ ...params, pagination: { limit: 100, cursor } });
+		const next = normalizeCanvas(res);
+		if (next.mode !== 'hotspots' || next.pins.length === 0) break;
+		merged = {
+			...merged,
+			pins: [...merged.pins, ...next.pins],
+			counts: {
+				user: merged.counts.user + next.counts.user,
+				group: merged.counts.group + next.counts.group,
+				moment: merged.counts.moment + next.counts.moment
+			}
+		};
+		cursor = (res.data as Extract<MapCanvasResponse, { mode: 'hotspots' }>).hotspots.next_cursor;
+		pages += 1;
+	}
+	return merged;
 }
 
 /**
@@ -209,15 +235,15 @@ export async function fetchMapCanvasByViewport(
 	});
 	if (activeTypes.length === 3) {
 		try {
-			return normalizeCanvas(await getMapCanvas(buildParams()));
+			return await fetchCanvasWithPaging(buildParams());
 		} catch {
 			return emptyResult();
 		}
 	}
 
 	try {
-		const results = await Promise.all(activeTypes.map((t) => getMapCanvas(buildParams(t))));
-		const parts = results.map(normalizeCanvas);
+		const results = await Promise.all(activeTypes.map((t) => fetchCanvasWithPaging(buildParams(t))));
+		const parts = results;
 		const merged: MapCanvasResult = {
 			mode: 'empty',
 			pins: [],
