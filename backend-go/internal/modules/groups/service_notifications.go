@@ -15,6 +15,9 @@ const adminNotifyListLimit = 100
 func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, application GroupApplicationItem, reason string) {
 	group, groupFound, err := s.repo.Get(ctx, application.GroupID)
 	if err != nil || !groupFound {
+		if err != nil {
+			observability.L().Warn("groups.notify: load group failed", "group_id", application.GroupID, "error", err)
+		}
 		return
 	}
 	applicant := s.resolveUserInfo(ctx, application.Applicant.UserID)
@@ -25,10 +28,12 @@ func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, applicati
 	admin := GroupRoleAdmin
 	ownerMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &owner, adminNotifyListLimit, "")
 	if err != nil {
+		observability.L().Warn("groups.notify: list owner members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
 	adminMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &admin, adminNotifyListLimit, "")
 	if err != nil {
+		observability.L().Warn("groups.notify: list admin members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
 	for _, member := range append(ownerMembers, adminMembers...) {
@@ -59,10 +64,12 @@ func (s *Service) notifyGroupApplicationExpired(ctx context.Context, group Group
 	admin := GroupRoleAdmin
 	ownerMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &owner, adminNotifyListLimit, "")
 	if err != nil {
+		observability.L().Warn("groups.notify: list owner members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
 	adminMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &admin, adminNotifyListLimit, "")
 	if err != nil {
+		observability.L().Warn("groups.notify: list admin members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
 	for _, member := range append(ownerMembers, adminMembers...) {
@@ -173,14 +180,20 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 		return
 	}
 	applicant := s.resolveUserInfo(ctx, applicantUserID)
-	admins, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, nil, 1000, "")
+	// 与 cancelled/expired 通知对齐：repo 按角色过滤，避免全量截断。
+	owner := GroupRoleOwner
+	adminRole := GroupRoleAdmin
+	ownerMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &owner, adminNotifyListLimit, "")
 	if err != nil {
+		observability.L().Warn("groups.notify: list owner members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
-	for _, member := range admins {
-		if member.Role != GroupRoleOwner && member.Role != GroupRoleAdmin {
-			continue
-		}
+	adminMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &adminRole, adminNotifyListLimit, "")
+	if err != nil {
+		observability.L().Warn("groups.notify: list admin members failed", "group_id", group.Group.GroupID, "error", err)
+		return
+	}
+	for _, member := range append(ownerMembers, adminMembers...) {
 		notificationID := ""
 		if s.notifications != nil {
 			id, err := s.notifications.AppendGroupApplicationReceived(ctx, member.User.UserID, applicant, group.Group.GroupID, group.Group.Name, *applicationID, message)
