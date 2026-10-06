@@ -31,6 +31,15 @@ class UserEndpoints {
   readonly LIST_GROUPS: string = '/api/v1/users/fetch_groups';
   readonly LIST_MOMENTS: string = '/api/v1/users/fetch_moments';
   readonly LIST_REACTED_MOMENTS: string = '/api/v1/users/fetch_reacted_moments';
+  // —— 公开镜像（/public/v1，匿名可达；仅收录 spec public.md 存在对偶的端点）——
+  readonly SEARCH_PUBLIC: string = '/public/v1/users/search';
+  readonly GET_DETAIL_PUBLIC: string = '/public/v1/users/open_the_door';
+  readonly LIST_FRIENDS_PUBLIC: string = '/public/v1/users/fetch_friends';
+  readonly LIST_FOLLOWING_PUBLIC: string = '/public/v1/users/fetch_following';
+  readonly LIST_FOLLOWERS_PUBLIC: string = '/public/v1/users/fetch_followers';
+  readonly LIST_GROUPS_PUBLIC: string = '/public/v1/users/fetch_groups';
+  readonly LIST_MOMENTS_PUBLIC: string = '/public/v1/users/fetch_moments';
+  readonly LIST_REACTED_MOMENTS_PUBLIC: string = '/public/v1/users/fetch_reacted_moments';
   readonly GET_ACCOUNT: string = '/api/v1/users/account';
   readonly UPDATE_ACCOUNT: string = '/api/v1/users/update_account';
   readonly GET_SETTINGS: string = '/api/v1/users/settings';
@@ -48,6 +57,8 @@ class UserEndpoints {
 class GroupMembersEndpoints {
   readonly LIST: string = '/api/v1/groups/members/fetch';
   readonly SEARCH: string = '/api/v1/groups/members/search';
+  readonly LIST_PUBLIC: string = '/public/v1/groups/members/fetch';
+  readonly SEARCH_PUBLIC: string = '/public/v1/groups/members/search';
   readonly INVITE: string = '/api/v1/groups/admin/invites/create';
   readonly INVITES_LIST: string = '/api/v1/groups/admin/invites/fetch_sent';
   readonly INVITES_REVOKE: string = '/api/v1/groups/admin/invites/revoke';
@@ -75,6 +86,8 @@ class GroupAnnouncementsEndpoints {
 class GroupEndpoints {
   readonly SEARCH: string = '/api/v1/groups/search';
   readonly GET_DETAIL: string = '/api/v1/groups/open_the_door';
+  readonly SEARCH_PUBLIC: string = '/public/v1/groups/search';
+  readonly GET_DETAIL_PUBLIC: string = '/public/v1/groups/open_the_door';
   readonly CREATE: string = '/api/v1/groups/create';
   readonly UPDATE: string = '/api/v1/groups/admin/update';
   readonly DISMISS: string = '/api/v1/groups/admin/dismiss';
@@ -104,6 +117,9 @@ class MomentEndpoints {
   readonly LIST_CREATED: string = '/api/v1/moments/fetch_created';
   readonly FETCH_FOLLOWING: string = '/api/v1/moments/fetch_following';
   readonly FETCH_NEARBY: string = '/api/v1/moments/fetch_nearby';
+  readonly SEARCH_PUBLIC: string = '/public/v1/moments/search';
+  readonly GET_DETAIL_PUBLIC: string = '/public/v1/moments/open_the_door';
+  readonly FETCH_NEARBY_PUBLIC: string = '/public/v1/moments/fetch_nearby';
   readonly FAVORITE: string = '/api/v1/moments/set_favorite';
   readonly LIST_FAVORITES: string = '/api/v1/moments/fetch_favorites';
 }
@@ -115,6 +131,9 @@ class CommentEndpoints {
   readonly LIST: string = '/api/v1/comments/fetch';
   readonly LIST_REPLIES: string = '/api/v1/comments/fetch_replies';
   readonly GET_DETAIL: string = '/api/v1/comments/open_the_door';
+  readonly LIST_PUBLIC: string = '/public/v1/comments/fetch';
+  readonly LIST_REPLIES_PUBLIC: string = '/public/v1/comments/fetch_replies';
+  readonly GET_DETAIL_PUBLIC: string = '/public/v1/comments/open_the_door';
 }
 
 // Reactions (new namespace)
@@ -156,6 +175,7 @@ class ChatEndpoints {
 // Search
 class SearchEndpoints {
   readonly SUGGEST: string = '/api/v1/search/suggest';
+  readonly SUGGEST_PUBLIC: string = '/public/v1/search/suggest';
 }
 
 // Upload

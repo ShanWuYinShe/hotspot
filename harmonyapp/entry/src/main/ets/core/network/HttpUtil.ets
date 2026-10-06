@@ -176,26 +176,27 @@ function isTokenOptionalEndpoint(url: string): boolean {
  * （MAP.CANVAS、SHARE.GET、GROUP.ANNOUNCEMENTS.LIST）不在此表。
  */
 function buildPublicAliases(): Map<string, string> {
+  // 路径字面量全部收敛到 ApiEndpoints（*_PUBLIC 后缀常量），此处只做「登录版 → 公开版」映射。
   const m = new Map<string, string>();
-  m.set(ApiEndpoints.USER.SEARCH, '/public/v1/users/search');
-  m.set(ApiEndpoints.USER.GET_DETAIL, '/public/v1/users/open_the_door');
-  m.set(ApiEndpoints.USER.LIST_FRIENDS, '/public/v1/users/fetch_friends');
-  m.set(ApiEndpoints.USER.LIST_FOLLOWING, '/public/v1/users/fetch_following');
-  m.set(ApiEndpoints.USER.LIST_FOLLOWERS, '/public/v1/users/fetch_followers');
-  m.set(ApiEndpoints.USER.LIST_GROUPS, '/public/v1/users/fetch_groups');
-  m.set(ApiEndpoints.USER.LIST_MOMENTS, '/public/v1/users/fetch_moments');
-  m.set(ApiEndpoints.USER.LIST_REACTED_MOMENTS, '/public/v1/users/fetch_reacted_moments');
-  m.set(ApiEndpoints.GROUP.SEARCH, '/public/v1/groups/search');
-  m.set(ApiEndpoints.GROUP.GET_DETAIL, '/public/v1/groups/open_the_door');
-  m.set(ApiEndpoints.GROUP.MEMBERS.LIST, '/public/v1/groups/members/fetch');
-  m.set(ApiEndpoints.GROUP.MEMBERS.SEARCH, '/public/v1/groups/members/search');
-  m.set(ApiEndpoints.MOMENT.SEARCH, '/public/v1/moments/search');
-  m.set(ApiEndpoints.MOMENT.GET_DETAIL, '/public/v1/moments/open_the_door');
-  m.set(ApiEndpoints.MOMENT.FETCH_NEARBY, '/public/v1/moments/fetch_nearby');
-  m.set(ApiEndpoints.COMMENT.LIST, '/public/v1/comments/fetch');
-  m.set(ApiEndpoints.COMMENT.LIST_REPLIES, '/public/v1/comments/fetch_replies');
-  m.set(ApiEndpoints.COMMENT.GET_DETAIL, '/public/v1/comments/open_the_door');
-  m.set(ApiEndpoints.SEARCH.SUGGEST, '/public/v1/search/suggest');
+  m.set(ApiEndpoints.USER.SEARCH, ApiEndpoints.USER.SEARCH_PUBLIC);
+  m.set(ApiEndpoints.USER.GET_DETAIL, ApiEndpoints.USER.GET_DETAIL_PUBLIC);
+  m.set(ApiEndpoints.USER.LIST_FRIENDS, ApiEndpoints.USER.LIST_FRIENDS_PUBLIC);
+  m.set(ApiEndpoints.USER.LIST_FOLLOWING, ApiEndpoints.USER.LIST_FOLLOWING_PUBLIC);
+  m.set(ApiEndpoints.USER.LIST_FOLLOWERS, ApiEndpoints.USER.LIST_FOLLOWERS_PUBLIC);
+  m.set(ApiEndpoints.USER.LIST_GROUPS, ApiEndpoints.USER.LIST_GROUPS_PUBLIC);
+  m.set(ApiEndpoints.USER.LIST_MOMENTS, ApiEndpoints.USER.LIST_MOMENTS_PUBLIC);
+  m.set(ApiEndpoints.USER.LIST_REACTED_MOMENTS, ApiEndpoints.USER.LIST_REACTED_MOMENTS_PUBLIC);
+  m.set(ApiEndpoints.GROUP.SEARCH, ApiEndpoints.GROUP.SEARCH_PUBLIC);
+  m.set(ApiEndpoints.GROUP.GET_DETAIL, ApiEndpoints.GROUP.GET_DETAIL_PUBLIC);
+  m.set(ApiEndpoints.GROUP.MEMBERS.LIST, ApiEndpoints.GROUP.MEMBERS.LIST_PUBLIC);
+  m.set(ApiEndpoints.GROUP.MEMBERS.SEARCH, ApiEndpoints.GROUP.MEMBERS.SEARCH_PUBLIC);
+  m.set(ApiEndpoints.MOMENT.SEARCH, ApiEndpoints.MOMENT.SEARCH_PUBLIC);
+  m.set(ApiEndpoints.MOMENT.GET_DETAIL, ApiEndpoints.MOMENT.GET_DETAIL_PUBLIC);
+  m.set(ApiEndpoints.MOMENT.FETCH_NEARBY, ApiEndpoints.MOMENT.FETCH_NEARBY_PUBLIC);
+  m.set(ApiEndpoints.COMMENT.LIST, ApiEndpoints.COMMENT.LIST_PUBLIC);
+  m.set(ApiEndpoints.COMMENT.LIST_REPLIES, ApiEndpoints.COMMENT.LIST_REPLIES_PUBLIC);
+  m.set(ApiEndpoints.COMMENT.GET_DETAIL, ApiEndpoints.COMMENT.GET_DETAIL_PUBLIC);
+  m.set(ApiEndpoints.SEARCH.SUGGEST, ApiEndpoints.SEARCH.SUGGEST_PUBLIC);
   return m;
 }
 
