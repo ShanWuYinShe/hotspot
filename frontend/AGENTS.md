@@ -192,7 +192,7 @@ src/
                   #   PageViewport/RoutedContentViewport）
                   #   单路由私有组件不下沉到 components/（如 moments/ 域已清空——MomentCard
                   #   等随路由走 shared/）
-  stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer/toast，.svelte.ts）
+  stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer/toast/admin/mapSource/unread，.svelte.ts）
   lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式；ws/ 为 WebSocket
                   #   客户端封装 client.ts + types.ts）
   api/            # API 客户端层（client.ts 零框架依赖）

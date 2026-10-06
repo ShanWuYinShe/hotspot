@@ -1073,7 +1073,13 @@ export interface SearchUsersRequest {
 	pagination?: PaginationParams;
 }
 export interface UpdateSettingsRequest {
-	settings: Record<string, unknown>;
+	settings: Partial<UserSettings>;
+}
+
+// spec: api_spec_user.md → users/delete_account（confirmation 必须精确匹配
+// "DELETE_MY_ACCOUNT"，区分大小写；不匹配返回 10000）
+export interface DeleteAccountRequest {
+	confirmation: string;
 }
 
 // spec: api_spec_user.md → users/upgrade（访客升级；仅用户名型 login_id，手机号/邮箱待验证码服务）
@@ -1579,11 +1585,7 @@ export interface ShareBase {
 
 export interface ShareDetail {
 	share: ShareBase;
-	payload:
-		| { shared_user_id: string }
-		| { shared_group_id: string }
-		| { shared_moment_id: string }
-		| { shared_location: Location };
+	payload: SharePayload;
 	// 目标资源不可访问（删除/隐私变更）时为 null；分享撤销/过期整体 10300
 	preview: Record<string, unknown> | null;
 }

@@ -92,6 +92,8 @@ import type {
 	UserItem,
 	UserProfileBundle,
 	UserSettings,
+	UpdateSettingsRequest,
+	DeleteAccountRequest,
 	CreateGroupRequest,
 	MapCanvasRequest,
 	MapCanvasResponse,
@@ -426,7 +428,7 @@ export async function getAccount()                        { return request<Accou
 export async function updateAccount(params: UpdateAccountRequest)       { return request<void>(Endpoints.Users.UpdateAccount, params); }
 export async function getSettings()                       { return request<UserSettings>(Endpoints.Users.GetSettings); }
 // spec: api_spec_user.md → users/update_settings（request 为 { settings: Partial<UserSettings> }）
-export async function updateSettings(params: { settings: Partial<UserSettings> }) {
+export async function updateSettings(params: UpdateSettingsRequest) {
 	return request<void>(Endpoints.Users.UpdateSettings, params);
 }
 // spec: api_spec_user.md → users/update_location（真实位置上报：用于被他人发现/展示大致位置）。
@@ -442,7 +444,7 @@ export async function unblock(params: Omit<SetBlockRequest, 'active'>) { return 
 export async function fetchBlocked(params?: FetchBlockedRequest)   { return request<PaginatedData<BlockedUserItem>>(Endpoints.Users.ListBlocked, params ?? { pagination: null }); }
 // spec: api_spec_user.md → users/upgrade（访客绑定登录凭证升级为正式账号；返回升级后完整账户数据）
 export async function upgradeAccount(params: UpgradeAccountRequest) { return request<AccountData>(Endpoints.Users.Upgrade, params); }
-export async function deleteAccount(params: object)       { return request<void>(Endpoints.Users.DeleteAccount, params); }
+export async function deleteAccount(params: DeleteAccountRequest) { return request<void>(Endpoints.Users.DeleteAccount, params); }
 // spec: api_spec_user.md → users/open_the_door（include_recent_moments=true 时返回主页首屏聚合）
 export async function openTheDoor(userId: string, includeRecentMoments = false) {
 	return request<UserProfileBundle>(pick(Endpoints.Users.GetDetail, Endpoints.Public.Users.GetDetail), { user_id: userId, include_recent_moments: includeRecentMoments });
