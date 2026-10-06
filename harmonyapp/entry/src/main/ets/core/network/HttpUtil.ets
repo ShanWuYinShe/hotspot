@@ -411,7 +411,9 @@ export class HttpUtil {
       const now = Date.now();
       const thresholdMs = 3 * 60 * 1000; // 提前 3 分钟刷新
 
-      if (expiresAt - now < thresholdMs && expiresAt - now > 0) {
+      // 已过期（<=0）同样触发：前台恢复时 token 可能已过期，此前 >0 条件会跳过
+      // 主动刷新，只能等首个请求吃 10100 再补刷；NaN（异常时间戳）不触发。
+      if (!Number.isNaN(expiresAt) && expiresAt - now < thresholdMs) {
         hilog.info(DOMAIN_NUMBER, TAG, `Access token 将在 ${Math.round((expiresAt - now) / 1000)}s 后过期，主动刷新`);
         await HttpUtil.ensureRefreshToken();
       }
@@ -599,7 +601,10 @@ export class HttpUtil {
 
       // ── 限流：按 Retry-After 等待后重试（至多一次）──────────────
       if (isRateLimitCode(resultCode) && ctx.rateLimitRetryCount < 1) {
-        const retryAfterHeader = (response.header as Record<string, string>)?.['Retry-After'] ?? '5';
+        // 头名大小写不敏感取值：HTTP/2 下响应头统一小写（retry-after），
+        // 精确匹配 'Retry-After' 会拿不到而退默认 5s。
+        const headers = (response.header ?? {}) as Record<string, string>;
+        const retryAfterHeader = headers['Retry-After'] ?? headers['retry-after'] ?? '5';
         const retryAfterSec = parseInt(retryAfterHeader) || 5;
         hilog.warn(DOMAIN_NUMBER, TAG, `收到 10500 限流，${retryAfterSec}s 后重试`);
         await new Promise<void>((resolve) => setTimeout(resolve, retryAfterSec * 1000));
