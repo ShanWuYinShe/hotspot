@@ -60,6 +60,28 @@ export class AuthAccountManager {
   }
 
   /**
+   * 仅保存/更新一个账号（不改当前活跃账号、不写会话快捷键）。
+   * 场景：后台 token 刷新完成时用户已切到其它账号——只落库，避免把旧账号
+   * 重新激活造成串数据。
+   */
+  static async upsertOnly(auth: AuthData): Promise<void> {
+    const state = await AuthAccountManager.getState();
+    const newAccounts: Record<string, AuthData> = {};
+    const accountKeys = Object.keys(state.accounts);
+    for (let i = 0; i < accountKeys.length; i++) {
+      const key = accountKeys[i];
+      newAccounts[key] = state.accounts[key];
+    }
+    newAccounts[String(auth.user_id)] = auth;
+    const newState: AuthAccountsState = {
+      version: state.version,
+      current_user_id: state.current_user_id,
+      accounts: newAccounts
+    };
+    await AuthAccountManager.setState(newState);
+  }
+
+  /**
    * 保存/更新一个账号，并将其设为当前活跃账号
    * 同步更新当前会话键（access_token/user_info）
    */

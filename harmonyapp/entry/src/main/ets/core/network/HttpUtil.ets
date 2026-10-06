@@ -312,15 +312,17 @@ export class HttpUtil {
 
   static async clearAuthData(): Promise<void> {
     try {
-      await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
-      await PreferencesUtil.remove(StorageKeys.AUTH_DATA);
-      await AuthAccountManager.clearAllAccounts();
+      // 只锁当前账号会话（lockCurrent 内部清 token/auth_data 两个键），保留
+      // accounts 列表里的其它已保存账号——封禁/刷新失效等终态可能是误判（如
+      // 部署滚动窗口），不应一次性抹掉全部多账户；删除单个账号走
+      // AuthAccountManager.removeAccount，「清空所有账号」仅 clearAllAccounts。
+      await AuthAccountManager.lockCurrent();
     } catch {
       // ignore
     }
     // 同步重置全局状态（UI + 全局管理器）
     GlobalStateManager.getInstance().clear();
-    hilog.info(DOMAIN_NUMBER, TAG, '认证数据已清除，UI 状态已重置为未登录');
+    hilog.info(DOMAIN_NUMBER, TAG, '当前账号会话已锁定，UI 状态已重置为未登录');
   }
 
   /**
@@ -342,6 +344,9 @@ export class HttpUtil {
           hilog.warn(DOMAIN_NUMBER, TAG, '无 refresh_token，无法刷新');
           return 'invalid';
         }
+        // 竞态防护：刷新在飞期间用户可能已切换/登出账号。以发起时的 user_id
+        // 为准，成功后重读当前会话——归属变了就只落库不激活（防旧账号串数据）。
+        const refreshingUserId = authData?.user_id;
 
         const baseUrl = await HttpUtil.getBaseUrl();
         const fullUrl = `${baseUrl}${ApiEndpoints.AUTH.REFRESH_TOKEN}`;
@@ -372,6 +377,14 @@ export class HttpUtil {
 
         if (payloadRecord.code === 0 && payloadRecord.data) {
           const newAuth = payloadRecord.data as AuthData;
+          const current = await HttpUtil.getAuthData();
+          if (refreshingUserId && current?.user_id && current.user_id !== refreshingUserId) {
+            // 刷新在飞期间已切到其它账号：只更新该账号的存储，不激活、不覆盖
+            // 当前会话（此前无条件 upsertAndActivate 会把旧账号重新激活串数据）。
+            await AuthAccountManager.upsertOnly(newAuth);
+            hilog.info(DOMAIN_NUMBER, TAG, 'Token 刷新成功（账号已切换，仅落库）');
+            return 'ok';
+          }
           await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, newAuth.access_token);
           await PreferencesUtil.setObject(StorageKeys.AUTH_DATA, newAuth);
           await AuthAccountManager.upsertAndActivate(newAuth);
