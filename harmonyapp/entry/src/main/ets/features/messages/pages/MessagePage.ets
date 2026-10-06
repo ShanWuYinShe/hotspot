@@ -424,13 +424,7 @@ export struct MessagePage {
     if (a.isPinned !== b.isPinned) {
       return a.isPinned ? -1 : 1;
     }
-    // 2. 未读优先（同级内未读会话排在已读会话之前）
-    const aUnread = a.unreadCount > 0;
-    const bUnread = b.unreadCount > 0;
-    if (aUnread !== bUnread) {
-      return aUnread ? -1 : 1;
-    }
-    // 3. 按最新消息时间倒序
+    // 2. 按最新消息时间倒序（已读/未读不参与排序，避免列表位置跳动；与 Web 端一致）
     const timeDiff = b.lastTimestamp - a.lastTimestamp;
     if (timeDiff !== 0) {
       return timeDiff;
@@ -438,11 +432,7 @@ export struct MessagePage {
     if (a.type !== b.type) {
       return a.type === 'private' ? -1 : 1;
     }
-    const numberA = Number(a.id);
-    const numberB = Number(b.id);
-    if (Number.isFinite(numberA) && Number.isFinite(numberB) && numberA !== numberB) {
-      return numberA - numberB;
-    }
+    // id 是 int64 字符串，禁止 Number() 数值运算（>2^53 精度丢失），统一字符串比较
     return a.id.localeCompare(b.id);
   }
 
