@@ -7,6 +7,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { isValidUsernameLoginId, isValidNickname as isValidNicknameShared, isValidPassword as isValidPasswordShared } from '../../../core/utils/AccountValidation';
 import { interactionEventHub, InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { curves } from '@kit.ArkUI';
@@ -125,39 +126,16 @@ export struct ProfilePage {
   private webSocketService = WebSocketService.getInstance();
 
   private isValidLoginId(loginId: string): boolean {
-    const trimmed = loginId.trim();
     // spec user.md → upgrade：仅支持用户名型 login_id（手机号/邮箱需验证码服务，接入前拒绝）
-    if (trimmed.includes('@') || /^\d+$/.test(trimmed)) {
-      return false;
-    }
-    return trimmed.length >= 3 && trimmed.length <= 64;
+    return isValidUsernameLoginId(loginId);
   }
 
   private isValidNickname(nickname: string): boolean {
-    const trimmed = nickname.trim();
-    return trimmed.length >= 1 && trimmed.length <= 30;
-  }
-
-  private hasLetterAndDigit(value: string): boolean {
-    let hasLetter: boolean = false;
-    let hasDigit: boolean = false;
-    for (let i = 0; i < value.length; i++) {
-      const code = value.charCodeAt(i);
-      if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
-        hasLetter = true;
-      }
-      if (code >= 48 && code <= 57) {
-        hasDigit = true;
-      }
-      if (hasLetter && hasDigit) {
-        return true;
-      }
-    }
-    return false;
+    return isValidNicknameShared(nickname);
   }
 
   private isValidPassword(value: string): boolean {
-    return value.length >= 8 && value.length <= 128 && this.hasLetterAndDigit(value);
+    return isValidPasswordShared(value);
   }
 
   private isExternalProfileMode(): boolean {

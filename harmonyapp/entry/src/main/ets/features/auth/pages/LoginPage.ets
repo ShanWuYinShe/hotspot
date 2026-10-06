@@ -23,6 +23,7 @@ import { DeviceIdUtil } from '../../../core/util/DeviceIdUtil';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { hasLetterAndDigit as hasLetterAndDigitShared, isValidNickname as isValidNicknameShared, isValidOptionalNickname as isValidOptionalNicknameShared, isPhoneOrEmailLoginId as isPhoneOrEmailLoginIdShared, isValidPassword as isValidPasswordShared } from '../../../core/utils/AccountValidation';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -115,14 +116,12 @@ export struct LoginPage {
   }
 
   private isValidNickname(nickname: string): boolean {
-    const trimmed = nickname.trim();
-    return trimmed.length >= 1 && trimmed.length <= 30;
+    return isValidNicknameShared(nickname);
   }
 
   /** 访客昵称可选：留空合法（提交 null，服务端自动生成），非空时限 30 字符 */
   private isValidOptionalNickname(nickname: string): boolean {
-    const trimmed = nickname.trim();
-    return trimmed.length === 0 || trimmed.length <= 30;
+    return isValidOptionalNicknameShared(nickname);
   }
 
   /**
@@ -130,33 +129,11 @@ export struct LoginPage {
    * auth/register 所有权验证；用户名型 verification_code 必须不传）
    */
   private isPhoneOrEmailLoginId(loginId: string): boolean {
-    const trimmed = loginId.trim();
-    if (trimmed.includes('@')) {
-      return true;
-    }
-    return trimmed.length > 0 && /^[0-9]+$/.test(trimmed);
-  }
-
-  private hasLetterAndDigit(value: string): boolean {
-    let hasLetter: boolean = false;
-    let hasDigit: boolean = false;
-    for (let i = 0; i < value.length; i++) {
-      const code = value.charCodeAt(i);
-      if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
-        hasLetter = true;
-      }
-      if (code >= 48 && code <= 57) {
-        hasDigit = true;
-      }
-      if (hasLetter && hasDigit) {
-        return true;
-      }
-    }
-    return false;
+    return isPhoneOrEmailLoginIdShared(loginId);
   }
 
   private isValidPassword(value: string): boolean {
-    return value.length >= 8 && value.length <= 128 && this.hasLetterAndDigit(value);
+    return isValidPasswordShared(value);
   }
 
   private getHeaderTopPadding(): number {
@@ -212,7 +189,7 @@ export struct LoginPage {
       { required: true, requiredMessage: '请输入密码' },
       { minLength: 8, minLengthMessage: '密码需为 8-128 位且同时包含字母和数字' },
       { maxLength: 128, maxLengthMessage: '密码需为 8-128 位且同时包含字母和数字' },
-      { custom: (v: string) => (v && !this.hasLetterAndDigit(v) ? '密码需为 8-128 位且同时包含字母和数字' : undefined) }
+      { custom: (v: string) => (v && !hasLetterAndDigitShared(v) ? '密码需为 8-128 位且同时包含字母和数字' : undefined) }
     ]);
   }
 
@@ -232,7 +209,7 @@ export struct LoginPage {
       { required: true, requiredMessage: '请输入密码' },
       { minLength: 8, minLengthMessage: '密码需为 8-128 位且同时包含字母和数字' },
       { maxLength: 128, maxLengthMessage: '密码需为 8-128 位且同时包含字母和数字' },
-      { custom: (v: string) => (v && !this.hasLetterAndDigit(v) ? '密码需为 8-128 位且同时包含字母和数字' : undefined) }
+      { custom: (v: string) => (v && !hasLetterAndDigitShared(v) ? '密码需为 8-128 位且同时包含字母和数字' : undefined) }
     ]);
   }
 
