@@ -22,7 +22,11 @@ type Repository interface {
 	IsBanned(context.Context, string, string) (bool, error)
 	GetApplication(context.Context, string) (GroupApplicationItem, bool, error)
 	ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error)
-	JoinGroup(context.Context, string, string, *string, *string) (EnterGroupResult, error)
+	// JoinGroup password 参数已移除：密码比对是业务规则，收口在 Service
+	// （经 GetGroupPasswordHash 取哈希后 bcrypt 比对），repo 只负责入群写入。
+	JoinGroup(context.Context, string, string, *string) (EnterGroupResult, error)
+	// GetGroupPasswordHash 返回群密码 bcrypt 哈希（无密码群返回 nil, nil）。
+	GetGroupPasswordHash(context.Context, string) (*string, error)
 	CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error)
 	ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error)
 	UpdateAnnouncement(context.Context, string, UpdateGroupAnnouncementRequest) error

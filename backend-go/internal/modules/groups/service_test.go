@@ -119,6 +119,10 @@ func (r *stubGroupsRepo) Update(_ context.Context, _ string, _ UpdateGroupReques
 	return r.updateErr
 }
 func (r *stubGroupsRepo) Dismiss(_ context.Context, _ string) error { return r.dismissErr }
+func (r *stubGroupsRepo) GetGroupPasswordHash(_ context.Context, _ string) (*string, error) {
+	return nil, nil
+}
+
 func (r *stubGroupsRepo) ListMembers(_ context.Context, _ string, role *GroupRole, _ int, _ string) ([]GroupMemberItem, string, error) {
 	// 与真实双实现对齐：role 过滤在 repo 层完成。
 	items := r.members
@@ -174,7 +178,7 @@ func (r *stubGroupsRepo) SearchMembers(_ context.Context, _ string, _ string, _ 
 func (r *stubGroupsRepo) ListMyGroups(_ context.Context, _ string, _ int, _ string) ([]GroupItem, string, error) {
 	return r.myGroups, r.myGroupsCur, r.myGroupsErr
 }
-func (r *stubGroupsRepo) JoinGroup(_ context.Context, _ string, _ string, _ *string, _ *string) (EnterGroupResult, error) {
+func (r *stubGroupsRepo) JoinGroup(_ context.Context, _ string, _ string, _ *string) (EnterGroupResult, error) {
 	return r.joinResult, r.joinErr
 }
 func (r *stubGroupsRepo) CreateAnnouncement(_ context.Context, _ string, _ CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {

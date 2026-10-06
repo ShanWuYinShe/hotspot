@@ -120,11 +120,14 @@ type GroupLastMessage struct {
 }
 
 type CreateGroupRequest struct {
-	Name              string          `json:"name"`
-	Description       string          `json:"description,omitempty"`
-	AvatarFileID      string          `json:"avatar_file_id,omitempty"`
-	Tags              []string        `json:"tags,omitempty"`
-	Password          string          `json:"password,omitempty"`
+	Name         string   `json:"name"`
+	Description  string   `json:"description,omitempty"`
+	AvatarFileID string   `json:"avatar_file_id,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
+	Password     string   `json:"password,omitempty"`
+	// PasswordHash 服务端内部字段（Service 层 bcrypt 后注入；Repository 只消费
+	// 哈希，不接触明文哈希逻辑）。json:"-" 确保不出现在任何请求/响应面。
+	PasswordHash      *string         `json:"-"`
 	JoinMethod        GroupJoinMethod `json:"join_method,omitempty"`
 	RequiresApproval  *bool           `json:"requires_approval,omitempty"`
 	IsSearchable      *bool           `json:"is_searchable,omitempty"`
@@ -149,12 +152,14 @@ type SearchGroupsRequest struct {
 type GeoPoint = types.GeoPoint
 
 type UpdateGroupRequest struct {
-	GroupID           string           `json:"group_id"`
-	Name              string           `json:"name,omitempty"`
-	Description       string           `json:"description,omitempty"`
-	AvatarFileID      string           `json:"avatar_file_id,omitempty"`
-	Tags              []string         `json:"tags,omitempty"`
-	Password          *string          `json:"password,omitempty"`
+	GroupID      string   `json:"group_id"`
+	Name         string   `json:"name,omitempty"`
+	Description  string   `json:"description,omitempty"`
+	AvatarFileID string   `json:"avatar_file_id,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
+	Password     *string  `json:"password,omitempty"`
+	// PasswordHash 同 CreateGroupRequest：Service 层哈希后注入，repo 只消费。
+	PasswordHash      *string          `json:"-"`
 	ClearPassword     *bool            `json:"clear_password,omitempty"`
 	JoinMethod        *GroupJoinMethod `json:"join_method,omitempty"`
 	RequiresApproval  *bool            `json:"requires_approval,omitempty"`

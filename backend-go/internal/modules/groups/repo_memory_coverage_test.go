@@ -16,7 +16,7 @@ func TestMemoryAnnouncementAndApplicationLifecycle(t *testing.T) {
 		t.Fatalf("create group: %v", err)
 	}
 	// 成员加入
-	if _, err := repo.JoinGroup(ctx, "u2", created.Group.GroupID, nil, nil); err != nil {
+	if _, err := repo.JoinGroup(ctx, "u2", created.Group.GroupID, nil); err != nil {
 		t.Fatalf("join: %v", err)
 	}
 
@@ -136,7 +136,7 @@ func TestMemoryMySettingsAndCancelApplication(t *testing.T) {
 		t.Fatalf("non-member settings update: %v", err)
 	}
 	// 成员更新设置
-	if _, err := repo.JoinGroup(ctx, "u2", created.Group.GroupID, nil, nil); err != nil {
+	if _, err := repo.JoinGroup(ctx, "u2", created.Group.GroupID, nil); err != nil {
 		t.Fatalf("join: %v", err)
 	}
 	if err := repo.UpdatePreferences(ctx, "u2", UpdateGroupPreferencesRequest{GroupID: created.Group.GroupID, IsMuted: boolPtr(true)}); err != nil {
@@ -150,7 +150,7 @@ func TestMemoryMySettingsAndCancelApplication(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create2: %v", err)
 	}
-	joinRes, err := repo2.JoinGroup(ctx, "u2", created2.Group.GroupID, nil, nil)
+	joinRes, err := repo2.JoinGroup(ctx, "u2", created2.Group.GroupID, nil)
 	if err != nil || joinRes.Status != EnterGroupStatusPendingApproval || joinRes.ApplicationID == nil {
 		t.Fatalf("join approval group: %#v err=%v", joinRes, err)
 	}

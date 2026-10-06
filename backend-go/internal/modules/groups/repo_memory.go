@@ -12,8 +12,6 @@ import (
 	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/types"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 type inMemoryInviteRecord struct {
@@ -111,15 +109,12 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if req.RequiresApproval != nil {
 		requiresApproval = *req.RequiresApproval
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: types.StrPtr(req.AvatarFileID), MembersCount: 1}, Description: types.StrPtr(req.Description), Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocationPtr(req.Location), ViewerState: &GroupViewerState{Role: "owner", UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: &userID}
+	// 哈希由 Service 层计算后注入（PasswordHash），repo 只持久化。
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: types.StrPtr(req.AvatarFileID), MembersCount: 1}, Description: types.StrPtr(req.Description), Tags: req.Tags, HasPassword: req.PasswordHash != nil, Location: newRelativeLocationPtr(req.Location), ViewerState: &GroupViewerState{Role: "owner", UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: &userID}
 	r.groups[groupID] = item
 	r.members[groupID] = map[string]inMemoryMembership{userID: {Role: GroupRoleOwner, JoinedAt: nowRFC3339}}
-	if req.Password != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return GroupItem{}, fmt.Errorf("groups.Create: hash password: %w", err)
-		}
-		r.passwordHashes[groupID] = string(hash)
+	if req.PasswordHash != nil {
+		r.passwordHashes[groupID] = *req.PasswordHash
 	}
 	return item, nil
 }
@@ -250,12 +245,9 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 		} else {
 			item.JoinMethod = GroupJoinMethodDirect
 		}
-	} else if req.Password != nil && *req.Password != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return fmt.Errorf("groups.Update: hash password: %w", err)
-		}
-		r.passwordHashes[req.GroupID] = string(hash)
+	} else if req.PasswordHash != nil {
+		// 哈希由 Service 层计算后注入（PasswordHash），repo 只持久化。
+		r.passwordHashes[req.GroupID] = *req.PasswordHash
 		item.HasPassword = true
 		// 显式 join_method 优先（与 PG 实现同步联动）。
 		if req.JoinMethod != nil {
@@ -371,7 +363,18 @@ func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limi
 	return items, nextCursor, nil
 }
 
-func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string, password *string, message *string) (EnterGroupResult, error) {
+// GetGroupPasswordHash 返回群密码 bcrypt 哈希；无密码群返回 nil, nil。
+func (r *InMemoryRepository) GetGroupPasswordHash(_ context.Context, groupID string) (*string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	hash, ok := r.passwordHashes[groupID]
+	if !ok || hash == "" {
+		return nil, nil
+	}
+	return &hash, nil
+}
+
+func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string, message *string) (EnterGroupResult, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	group, ok := r.groups[groupID]
@@ -394,13 +397,7 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 			return EnterGroupResult{}, ErrAccessRestricted
 		}
 	}
-	// password：bcrypt 比对（与 PG 实现同语义）
-	if group.JoinMethod == GroupJoinMethodPassword {
-		storedHash, hasHash := r.passwordHashes[groupID]
-		if password == nil || *password == "" || !hasHash || bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(*password)) != nil {
-			return EnterGroupResult{}, ErrInvalidPassword
-		}
-	}
+	// password 比对已收口 Service（GetGroupPasswordHash + bcrypt）；此处不再校验。
 	// requires_approval：创建加入申请，审核通过后才算真正加入
 	if group.RequiresApproval {
 		// 自然去重：命中已有 pending 申请返回已有 application_id（与 postgres 实现一致）

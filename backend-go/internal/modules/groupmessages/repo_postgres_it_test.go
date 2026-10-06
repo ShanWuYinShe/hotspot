@@ -31,7 +31,7 @@ func createTestGroup(t *testing.T, ctx context.Context, txFactory *persistence.F
 func joinTestGroup(t *testing.T, ctx context.Context, txFactory *persistence.Factory, userID, groupID string) {
 	t.Helper()
 	groupRepo := groups.NewPostgresRepository(txFactory)
-	if _, err := groupRepo.JoinGroup(ctx, userID, groupID, nil, nil); err != nil {
+	if _, err := groupRepo.JoinGroup(ctx, userID, groupID, nil); err != nil {
 		t.Fatalf("join group: %v", err)
 	}
 }

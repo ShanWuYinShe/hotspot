@@ -102,9 +102,9 @@ func TestPostgresUpdateDismissAndExecWrappers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	// 密码字段路径
-	pwd := "secret"
-	if err := repo.Update(ctx, "u1", UpdateGroupRequest{GroupID: "group_1", Password: &pwd}); err != nil {
+	// 密码字段路径（repo 只消费 Service 注入的 PasswordHash，不再自行 bcrypt）
+	pwdHash := "$2a$10$storagedhashstoragedhashstoragedhashsto"
+	if err := repo.Update(ctx, "u1", UpdateGroupRequest{GroupID: "group_1", PasswordHash: &pwdHash}); err != nil {
 		t.Fatalf("update pwd: %v", err)
 	}
 	// Exec 错误传播
@@ -326,7 +326,7 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 		queryRow:    map[string][]any{queryGetGroup: directRow, queryLockGroupCapacity: {200, 0}},
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows},
 	}
-	res, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, nil)
+	res, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil)
 	if err != nil || res.Status != EnterGroupStatusJoined {
 		t.Fatalf("join direct: %#v err=%v", res, err)
 	}
@@ -334,18 +334,18 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 	stub = &groupFullStub{
 		queryRow: map[string][]any{queryGetGroup: directRow, queryGetGroupMembership: {"member", gTestTime, false, nil}},
 	}
-	res, err = newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, nil)
+	res, err = newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil)
 	if err != nil || res.Status != EnterGroupStatusJoined {
 		t.Fatalf("join already: %#v err=%v", res, err)
 	}
 	// 群不存在
 	stub = &groupFullStub{queryRowErr: map[string]error{queryGetGroup: pgx.ErrNoRows}}
-	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "g", nil, nil); !errors.Is(err, ErrGroupNotFound) {
+	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "g", nil); !errors.Is(err, ErrGroupNotFound) {
 		t.Fatalf("join missing group: %v", err)
 	}
 	// getGroup 其他错误
 	stub = &groupFullStub{queryRowErr: map[string]error{queryGetGroup: errors.New("boom")}}
-	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "g", nil, nil); err == nil {
+	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "g", nil); err == nil {
 		t.Fatal("join get group error must propagate")
 	}
 	// membership 查询错误
@@ -353,18 +353,20 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 		queryRow:    map[string][]any{queryGetGroup: directRow},
 		queryRowErr: map[string]error{queryGetGroupMembership: errors.New("boom")},
 	}
-	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "g", nil, nil); err == nil {
+	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "g", nil); err == nil {
 		t.Fatal("join membership error must propagate")
 	}
-	// password：缺密码 → ErrInvalidPassword
+	// password 群缺密码的 ErrInvalidPassword 校验已收口 Service 层（GetGroupPasswordHash
+	// + bcrypt，见 service 相关测试），repo JoinGroup 不再校验密码。
+	// 已是成员的 password 群 → 直接返回 Joined（不触及密码分支）。
 	inviteRow := directRow
 	inviteRow[8] = "password"
 	stub = &groupFullStub{
-		queryRow:    map[string][]any{queryGetGroup: inviteRow},
-		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows},
+		queryRow: map[string][]any{queryGetGroup: inviteRow, queryGetGroupMembership: {"member", gTestTime, false, nil}},
 	}
-	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, nil); !errors.Is(err, ErrInvalidPassword) {
-		t.Fatalf("join password missing: %v", err)
+	res, err = newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil)
+	if err != nil || res.Status != EnterGroupStatusJoined {
+		t.Fatalf("join password group already member: %#v err=%v", res, err)
 	}
 	// invite_only：无 pending 邀请 → ErrPermissionDenied
 	inviteRow = directRow
@@ -373,16 +375,15 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 		queryRow:    map[string][]any{queryGetGroup: inviteRow},
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows, queryFindPendingGroupInvite: pgx.ErrNoRows},
 	}
-	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, nil); !errors.Is(err, ErrPermissionDenied) {
+	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil); !errors.Is(err, ErrPermissionDenied) {
 		t.Fatalf("join invite-only: %v", err)
 	}
 	// requires_approval：命中已有 pending 申请 → 返回现有
-	pwd := "p"
 	stub = &groupFullStub{
 		queryRow:    map[string][]any{queryGetGroup: approvalRow, queryFindPendingGroupApplication: {"app_exist"}},
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows},
 	}
-	res, err = newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", &pwd, nil)
+	res, err = newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil)
 	if err != nil || res.Status != EnterGroupStatusPendingApproval || res.ApplicationID == nil || *res.ApplicationID != "app_exist" || res.IsNewApplication {
 		t.Fatalf("join approval existing: %#v err=%v", res, err)
 	}
@@ -391,7 +392,7 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 		queryRow:    map[string][]any{queryGetGroup: approvalRow},
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows, queryFindPendingGroupApplication: pgx.ErrNoRows},
 	}
-	res, err = newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, &pwd)
+	res, err = newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil)
 	if err != nil || res.Status != EnterGroupStatusPendingApproval || !res.IsNewApplication {
 		t.Fatalf("join approval new: %#v err=%v", res, err)
 	}
@@ -401,7 +402,7 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows, queryFindPendingGroupApplication: pgx.ErrNoRows},
 		execErrs:    map[string]error{queryInsertGroupApplication: errors.New("boom")},
 	}
-	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, nil); err == nil {
+	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil); err == nil {
 		t.Fatal("join approval insert error must propagate")
 	}
 	// direct：插入成员失败
@@ -410,7 +411,7 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 		queryRowErr: map[string]error{queryGetGroupMembership: pgx.ErrNoRows},
 		execErrs:    map[string]error{queryInsertGroupMember: errors.New("boom")},
 	}
-	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil, nil); err == nil {
+	if _, err := newGroupsFullRepo(stub).JoinGroup(ctx, "u2", "group_1", nil); err == nil {
 		t.Fatal("join insert member error must propagate")
 	}
 }

@@ -263,9 +263,9 @@ func TestInMemoryUpdate_SetPasswordWithExplicitJoinMethod(t *testing.T) {
 
 	direct := GroupJoinMethodDirect
 	err := repo.Update(context.Background(), "owner_1", UpdateGroupRequest{
-		GroupID:    gid,
-		Password:   &[]string{"NewPass9"}[0],
-		JoinMethod: &direct,
+		GroupID:      gid,
+		PasswordHash: &[]string{"$2a$10$newpass9hashnewpass9hashnewpass9ha"}[0],
+		JoinMethod:   &direct,
 	})
 	if err != nil {
 		t.Fatalf("Update failed: %v", err)

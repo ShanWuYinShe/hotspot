@@ -62,9 +62,11 @@ func TestServiceAndHandlerGetSettings(t *testing.T) {
 
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "usr_alice"})
 	res, err := repo.Create(ctxAlice, "usr_alice", CreateGroupRequest{
-		Name:             "公开设置群",
-		JoinMethod:       "password",
-		Password:         "123456",
+		Name:       "公开设置群",
+		JoinMethod: "password",
+		Password:   "123456",
+		// 直调 repo.Create（绕过 Service）需自备哈希——repo 不再 bcrypt。
+		PasswordHash:     &[]string{"$2a$10$123456123456123456123456123456123456123456"}[0],
 		RequiresApproval: boolPtr(true),
 		IsSearchable:     boolPtr(true),
 		MaxMembers:       200,

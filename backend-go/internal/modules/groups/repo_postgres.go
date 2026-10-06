@@ -13,7 +13,6 @@ import (
 	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type PostgresRepository struct {
@@ -63,14 +62,10 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		tags = []string{}
 	}
 	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: types.StrPtr(req.AvatarFileID), MembersCount: 1}, Description: types.StrPtr(req.Description), Tags: tags, HasPassword: req.Password != "", Location: newRelativeLocationPtr(req.Location), ViewerState: &GroupViewerState{Role: "owner", UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, RequiresApproval: requiresApproval, IsSearchable: isSearchable, MembersSearchable: membersSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: &userID}
+	// 哈希由 Service 层计算后注入（PasswordHash），repo 只持久化。
 	var passwordHash *string
-	if req.Password != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return GroupItem{}, fmt.Errorf("groups.CreateGroup: hash password: %w", err)
-		}
-		hashStr := string(hash)
-		passwordHash = &hashStr
+	if req.PasswordHash != nil {
+		passwordHash = req.PasswordHash
 	}
 	s2CellToken := geo.CellTokenAtLevel(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}, 14)
 	s2CellID := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
@@ -113,15 +108,11 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		}
 		emptyHash := ""
 		passwordHash = &emptyHash
-	} else if req.Password != nil && *req.Password != "" {
+	} else if req.PasswordHash != nil {
 		hasPwd := true
 		hasPassword = &hasPwd
-		hash, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return fmt.Errorf("groups.Update: hash password: %w", err)
-		}
-		hashStr := string(hash)
-		passwordHash = &hashStr
+		// 哈希由 Service 层计算后注入（PasswordHash），repo 只持久化。
+		passwordHash = req.PasswordHash
 		// 设置密码默认联动 join_method=password；显式指定的 join_method 优先（同上）。
 		if req.JoinMethod == nil {
 			pw := string(GroupJoinMethodPassword)
@@ -336,7 +327,23 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 	return items, nextCursor, nil
 }
 
-func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, groupID string, password *string, message *string) (EnterGroupResult, error) {
+// GetGroupPasswordHash 返回群密码 bcrypt 哈希；无密码群（hash 为空/NULL）返回 nil, nil。
+func (r *PostgresRepository) GetGroupPasswordHash(ctx context.Context, groupID string) (*string, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	var storedHash *string
+	if err := queryable.QueryRow(ctx, queryGetGroupPasswordHash, groupID).Scan(&storedHash); err != nil {
+		return nil, err
+	}
+	if storedHash == nil || *storedHash == "" {
+		return nil, nil
+	}
+	return storedHash, nil
+}
+
+func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, groupID string, message *string) (EnterGroupResult, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return EnterGroupResult{}, persistence.ErrNotImplemented
@@ -363,24 +370,7 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 			return EnterGroupResult{}, ErrPermissionDenied
 		}
 	}
-	// password：bcrypt 比对（密码群的真实门槛）
-	if group.JoinMethod == GroupJoinMethodPassword {
-		if password == nil || *password == "" {
-			return EnterGroupResult{}, ErrInvalidPassword
-		}
-		var storedHash *string
-		if err := queryable.QueryRow(ctx, queryGetGroupPasswordHash, groupID).Scan(&storedHash); err != nil {
-			return EnterGroupResult{}, err
-		}
-		if storedHash == nil || *storedHash == "" {
-			// 迁移语义：password 群没有已设置的密码（历史数据已统一迁移为 direct，
-			// 这里只剩管理员未重设密码的异常态）——拒绝加入而非放行
-			return EnterGroupResult{}, ErrInvalidPassword
-		}
-		if bcrypt.CompareHashAndPassword([]byte(*storedHash), []byte(*password)) != nil {
-			return EnterGroupResult{}, ErrInvalidPassword
-		}
-	}
+	// password 比对已收口 Service（GetGroupPasswordHash + bcrypt）；此处不再校验。
 	// requires_approval：创建加入申请，审核通过后才算真正加入
 	if group.RequiresApproval {
 		var existingID string

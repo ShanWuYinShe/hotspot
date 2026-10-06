@@ -3,6 +3,8 @@ package groups
 import (
 	"context"
 	"fmt"
+
+	"golang.org/x/crypto/bcrypt"
 	"hotspot/backend-go/internal/platform/types"
 	"slices"
 	"strings"
@@ -178,6 +180,17 @@ func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem
 		return GroupItem{}, err
 	}
 	req.AvatarFileID = avatarURL
+	// 密码哈希属业务规则，收口在 Service 层（repo 只持久化哈希，见 types.go
+	// PasswordHash 注释）；此前双 repo 各自 bcrypt，违反分层且重复维护。
+	if req.Password != "" {
+		hash, hashErr := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if hashErr != nil {
+			op.Fail(hashErr)
+			return GroupItem{}, fmt.Errorf("groups.Service.Create: hash password: %w", hashErr)
+		}
+		hashStr := string(hash)
+		req.PasswordHash = &hashStr
+	}
 	item, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {
 		op.Fail(err)
@@ -305,6 +318,15 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 			return avErr
 		}
 		req.AvatarFileID = avatarURL
+		if req.Password != nil && *req.Password != "" {
+			hash, hashErr := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+			if hashErr != nil {
+				op.Fail(hashErr)
+				return fmt.Errorf("groups.Service.Update: hash password: %w", hashErr)
+			}
+			hashStr := string(hash)
+			req.PasswordHash = &hashStr
+		}
 		if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
 			op.Fail(err)
 			return fmt.Errorf("groups.Service.Update: repo: %w", err)
@@ -541,7 +563,23 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 		op.Warn("invite_only not supported")
 		return EnterGroupResult{}, ErrBusinessConflict
 	}
-	result, err := s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
+	// password：bcrypt 比对收口在 Service（此前在双 repo 内重复实现）。迁移语义：
+	// password 群没有已设置的密码（历史数据已统一迁移为 direct 的异常态）——拒绝
+	// 加入而非放行。
+	if group.JoinMethod == GroupJoinMethodPassword {
+		if req.Password == nil || *req.Password == "" {
+			return EnterGroupResult{}, ErrInvalidPassword
+		}
+		storedHash, hashErr := s.repo.GetGroupPasswordHash(ctx, req.GroupID)
+		if hashErr != nil {
+			op.Fail(hashErr)
+			return EnterGroupResult{}, hashErr
+		}
+		if storedHash == nil || *storedHash == "" || bcrypt.CompareHashAndPassword([]byte(*storedHash), []byte(*req.Password)) != nil {
+			return EnterGroupResult{}, ErrInvalidPassword
+		}
+	}
+	result, err := s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Message)
 	if err != nil {
 		op.Fail(err)
 		return EnterGroupResult{}, fmt.Errorf("groups.Service.JoinGroup: repo: %w", err)

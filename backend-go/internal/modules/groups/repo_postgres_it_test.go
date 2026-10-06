@@ -122,7 +122,7 @@ func TestPostgresIT_JoinGroupAndListMembers(t *testing.T) {
 			t.Fatalf("Create: %v", err)
 		}
 
-		result, err := repo.JoinGroup(ctx, memberID, group.Group.GroupID, nil, nil)
+		result, err := repo.JoinGroup(ctx, memberID, group.Group.GroupID, nil)
 		if err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
@@ -160,7 +160,7 @@ func TestPostgresIT_LeaveGroup(t *testing.T) {
 			t.Fatalf("Create: %v", err)
 		}
 
-		if _, err := repo.JoinGroup(ctx, memberID, group.Group.GroupID, nil, nil); err != nil {
+		if _, err := repo.JoinGroup(ctx, memberID, group.Group.GroupID, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
 		if err := repo.LeaveGroup(ctx, memberID, group.Group.GroupID); err != nil {
@@ -276,7 +276,7 @@ func TestPostgresIT_SetMemberRole(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create: %v", err)
 		}
-		if _, err := repo.JoinGroup(ctx, memberID, group.Group.GroupID, nil, nil); err != nil {
+		if _, err := repo.JoinGroup(ctx, memberID, group.Group.GroupID, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
 
@@ -359,7 +359,7 @@ func TestPostgresIT_SearchMembers(t *testing.T) {
 		memberID := testdb.InsertUser(t, txFactory, "g_smem_member", "Member")
 		groupID := createTestGroup(t, ctx, repo, ownerID, "Search Member Test", GroupJoinMethodDirect)
 
-		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil, nil); err != nil {
+		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
 
@@ -387,7 +387,7 @@ func TestPostgresIT_ListMyGroups(t *testing.T) {
 		g1 := createTestGroup(t, ctx, repo, ownerID, "Group A", GroupJoinMethodDirect)
 		g2 := createTestGroup(t, ctx, repo, memberID, "Group B", GroupJoinMethodDirect)
 
-		if _, err := repo.JoinGroup(ctx, memberID, g1, nil, nil); err != nil {
+		if _, err := repo.JoinGroup(ctx, memberID, g1, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
 
@@ -492,7 +492,7 @@ func TestPostgresIT_ApplicationApproveReject(t *testing.T) {
 		}
 
 		msg := "please"
-		result, err := repo.JoinGroup(ctx, applicantID, groupID, nil, &msg)
+		result, err := repo.JoinGroup(ctx, applicantID, groupID, &msg)
 		if err != nil {
 			t.Fatalf("JoinGroup (approval): %v", err)
 		}
@@ -536,7 +536,7 @@ func TestPostgresIT_ApplicationApproveReject(t *testing.T) {
 
 		// Create a second application and reject it
 		applicant2ID := testdb.InsertUser(t, txFactory, "g_app_applicant2", "Applicant2")
-		result2, err := repo.JoinGroup(ctx, applicant2ID, groupID, nil, nil)
+		result2, err := repo.JoinGroup(ctx, applicant2ID, groupID, nil)
 		if err != nil {
 			t.Fatalf("JoinGroup (2): %v", err)
 		}
@@ -610,7 +610,7 @@ func TestPostgresIT_ApproveApplicationBannedInTx(t *testing.T) {
 			t.Fatalf("set requires_approval: %v", err)
 		}
 
-		result, err := repo.JoinGroup(ctx, applicantID, groupID, nil, nil)
+		result, err := repo.JoinGroup(ctx, applicantID, groupID, nil)
 		if err != nil {
 			t.Fatalf("JoinGroup (approval): %v", err)
 		}
@@ -672,7 +672,7 @@ func TestPostgresIT_ListMyApplicationsAndCancel(t *testing.T) {
 			t.Fatalf("set requires_approval: %v", err)
 		}
 
-		result, err := repo.JoinGroup(ctx, applicantID, groupID, nil, nil)
+		result, err := repo.JoinGroup(ctx, applicantID, groupID, nil)
 		if err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
@@ -852,7 +852,7 @@ func TestPostgresIT_MuteUnmuteMember(t *testing.T) {
 		memberID := testdb.InsertUser(t, txFactory, "g_mute_member", "Member")
 		groupID := createTestGroup(t, ctx, repo, ownerID, "Mute Test", GroupJoinMethodDirect)
 
-		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil, nil); err != nil {
+		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
 
@@ -882,7 +882,7 @@ func TestPostgresIT_BanUnbanAndListBanned(t *testing.T) {
 		badMemberID := testdb.InsertUser(t, txFactory, "g_ban_member", "Bad")
 		groupID := createTestGroup(t, ctx, repo, ownerID, "Ban Test", GroupJoinMethodDirect)
 
-		if _, err := repo.JoinGroup(ctx, badMemberID, groupID, nil, nil); err != nil {
+		if _, err := repo.JoinGroup(ctx, badMemberID, groupID, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
 
@@ -948,7 +948,7 @@ func TestPostgresIT_RemoveMember(t *testing.T) {
 		memberID := testdb.InsertUser(t, txFactory, "g_rm_member", "Member")
 		groupID := createTestGroup(t, ctx, repo, ownerID, "Remove Test", GroupJoinMethodDirect)
 
-		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil, nil); err != nil {
+		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
 
@@ -978,7 +978,7 @@ func TestPostgresIT_TransferOwnership(t *testing.T) {
 		memberID := testdb.InsertUser(t, txFactory, "g_to_member", "Member")
 		groupID := createTestGroup(t, ctx, repo, ownerID, "Transfer Test", GroupJoinMethodDirect)
 
-		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil, nil); err != nil {
+		if _, err := repo.JoinGroup(ctx, memberID, groupID, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
 
@@ -1042,7 +1042,7 @@ func TestPostgresIT_CountOwnedGroups(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create: %v", err)
 		}
-		if _, err := repo.JoinGroup(ctx, memberID, group.Group.GroupID, nil, nil); err != nil {
+		if _, err := repo.JoinGroup(ctx, memberID, group.Group.GroupID, nil); err != nil {
 			t.Fatalf("JoinGroup: %v", err)
 		}
 

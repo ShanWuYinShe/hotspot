@@ -93,7 +93,7 @@ func (r *groupErrorRepo) SearchMembers(context.Context, string, string, *GroupRo
 func (r *groupErrorRepo) ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error) {
 	return r.listMyGroupsItems, "", r.listMyGroupsErr
 }
-func (r *groupErrorRepo) JoinGroup(context.Context, string, string, *string, *string) (EnterGroupResult, error) {
+func (r *groupErrorRepo) JoinGroup(context.Context, string, string, *string) (EnterGroupResult, error) {
 	return EnterGroupResult{}, r.joinGroupErr
 }
 func (r *groupErrorRepo) CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
