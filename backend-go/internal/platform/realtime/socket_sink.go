@@ -7,6 +7,10 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 // writeTimeout is the deadline applied to each queued write by the writer
@@ -24,6 +28,15 @@ const sendQueueSize = 128
 // broadcast rate. Callers (hub deliver paths) intentionally ignore Send
 // errors, matching the previous best-effort broadcast semantics.
 var errSendQueueFull = errors.New("realtime: send queue full, event dropped")
+
+// wsDroppedEventsTotal 让队列满丢事件可观测（此前 errSendQueueFull 被广播方
+// 静默吞掉，弱网/慢消费者堆积完全不可见）。
+var wsDroppedEventsTotal = promauto.With(observability.Registry()).NewCounter(
+	prometheus.CounterOpts{
+		Name: "realtime_ws_dropped_events_total",
+		Help: "WS 出站队列满被丢弃的事件总数（按连接慢消费累计）",
+	},
+)
 
 type socketSink struct {
 	conn *websocket.Conn
@@ -68,6 +81,7 @@ func (s *socketSink) Send(event Event) error {
 	case <-s.done:
 		return errors.New("realtime: sink closed")
 	default:
+		wsDroppedEventsTotal.Inc()
 		return errSendQueueFull
 	}
 }
@@ -83,6 +97,11 @@ func (s *socketSink) writeLoop() {
 			writeErr := s.conn.WriteMessage(websocket.TextMessage, data)
 			s.mu.Unlock()
 			if writeErr != nil {
+				// 写失败即死连接：必须关闭 conn（并标记 done），否则本 goroutine
+				// 退出后 sink 滞留 Hub 注册表继续吃广播，直到读侧恰好报错才被清理。
+				// conn.Close 会让 handler 读循环立即失败，走统一断连清理路径。
+				observability.L().Warn("realtime: sink write failed, closing connection", "error", writeErr)
+				_ = s.Close()
 				return
 			}
 		}
