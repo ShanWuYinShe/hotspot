@@ -31,6 +31,10 @@ func (r *PostgresRepository) Suggest(ctx context.Context, req SearchSuggestReque
 	if prefix == "" {
 		return SearchSuggestResponse{Items: []SearchSuggestItem{}}, nil
 	}
+	// SQL 里的 ILIKE '%..%' 用 prefix 作模式：先转义 % _ \，与 users/groups
+	// 搜索口径一致（R38 同类问题——未转义时关键词里的通配符会改变匹配语义）。
+	// 计分（classifyPrefixMatch）仍用原始 prefix，保持字面匹配语义。
+	escapedPrefix := textutil.EscapeLikePattern(prefix)
 
 	// 登录视角（/api/v1）与匿名视角（/public/v1）共用实现：以 ctx 中的
 	// principal 区分。登录视角按 spec 填充 relation/social_context 与
@@ -43,28 +47,28 @@ func (r *PostgresRepository) Suggest(ctx context.Context, req SearchSuggestReque
 	allowed := normalizeSuggestTypes(req.Types)
 	items := make([]scoredSuggestItem, 0)
 	if allowed["tag"] {
-		tagItems, err := queryTagSuggestions(ctx, queryable, prefix)
+		tagItems, err := queryTagSuggestions(ctx, queryable, escapedPrefix)
 		if err != nil {
 			return SearchSuggestResponse{}, err
 		}
 		items = append(items, tagItems...)
 	}
 	if allowed["user"] {
-		userItems, err := queryUserSuggestions(ctx, queryable, viewerID, prefix, req.ReferencePoint, req.Radius)
+		userItems, err := queryUserSuggestions(ctx, queryable, viewerID, escapedPrefix, req.ReferencePoint, req.Radius)
 		if err != nil {
 			return SearchSuggestResponse{}, err
 		}
 		items = append(items, userItems...)
 	}
 	if allowed["group"] {
-		groupItems, err := queryGroupSuggestions(ctx, queryable, viewerID, prefix, req.ReferencePoint, req.Radius)
+		groupItems, err := queryGroupSuggestions(ctx, queryable, viewerID, escapedPrefix, req.ReferencePoint, req.Radius)
 		if err != nil {
 			return SearchSuggestResponse{}, err
 		}
 		items = append(items, groupItems...)
 	}
 	if allowed["moment"] {
-		momentItems, err := queryMomentSuggestions(ctx, queryable, prefix, req.ReferencePoint, req.Radius)
+		momentItems, err := queryMomentSuggestions(ctx, queryable, escapedPrefix, req.ReferencePoint, req.Radius)
 		if err != nil {
 			return SearchSuggestResponse{}, err
 		}
