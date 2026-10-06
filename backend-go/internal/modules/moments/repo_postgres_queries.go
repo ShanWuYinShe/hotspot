@@ -85,6 +85,14 @@ UPDATE moments
 SET comments_count = GREATEST(comments_count - 1, 0)
 WHERE moment_id = $1`
 
+	// reaction 计数冗余列的增减（likes_count 列语义已复活为 reactions 总数，
+	// 见 Service.AdjustReactionCount 注释）。GREATEST 钳 0 防止异常路径
+	// （如回填间隙的 unreact）把计数打成负数。
+	queryAdjustMomentReactionCount = `
+UPDATE moments
+SET likes_count = GREATEST(likes_count + $1, 0)
+WHERE moment_id = $2`
+
 	queryIncrementMomentShareCount = `
 UPDATE moments
 SET shares_count = shares_count + 1

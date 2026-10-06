@@ -129,6 +129,15 @@ func (r *PostgresRepository) DecrementCommentCount(ctx context.Context, momentID
 	return queryable.Exec(ctx, queryDecrementMomentCommentCount, momentID)
 }
 
+// AdjustReactionCount 按 delta 增减 reaction 计数冗余列（SQL 内 GREATEST 钳 0）。
+func (r *PostgresRepository) AdjustReactionCount(ctx context.Context, momentID string, delta int) error {
+	queryable, ok := queryable(ctx, r.factory)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryAdjustMomentReactionCount, delta, momentID)
+}
+
 func (r *PostgresRepository) IncrementSharesCount(ctx context.Context, momentID string) error {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
@@ -193,7 +202,7 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	for i := range items {
 		items[i].Tags = tagsByMomentID[items[i].MomentID]
 	}
-	// SQL 已按最终排序返回 keyset 页；只把多取的边界项转成下一页游标。
+	// SQL 已按最终排序返回 keyset 页；多取的第 limit+1 行仅用于探测是否有下一页。
 	var nextCursor *string
 	if len(items) > limit {
 		keyword := ""
@@ -204,9 +213,11 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 		if req.Tag != nil {
 			tag = *req.Tag
 		}
-		// popular 模式：游标分值按 Go 侧同公式衰减计算（与 searchScoreSQL 逐项对应）；
-		// 跨请求时钟推进导致的微小漂移属搜索契约声明的弱一致范畴。
-		c := encodeMomentSearchCursor(sortBy, items[limit], keyword, tag, time.Now().UTC())
+		// popular 模式：游标分值按 Go 侧同公式衰减计算（与 searchScoreSQL 逐项
+		// 对应），时钟量化到同一衰减桶（SearchDecayClock）。游标编码本页最后一项
+		// （排他 keyset：下一页谓词严格 <，从页尾项的后继开始）——编码下页首项
+		// 会让严格 < 把它自身排除造成丢项（量化时钟前被实时衰减漂移偶然遮掩）。
+		c := encodeMomentSearchCursor(sortBy, items[limit-1], keyword, tag, SearchDecayClock(time.Now().UTC()))
 		nextCursor = &c
 		items = items[:limit]
 	}
@@ -291,15 +302,19 @@ func searchScoreSQL(sortBy string, kwArg, tagArg int) string {
 	case "popular":
 		// 热度排序含时间衰减因子（spec api_spec_moment.md moments/search 排序：
 		// 「按互动热度排序（含时间衰减因子；具体衰减算法为服务端实现细节）」）。
-		// 实现：score = (点赞数 + comments_count) / POWER(发布小时龄 + 2, 1.5)，
-		// 小时龄钳制非负（防未来时间戳导致负底数幂报错）。now() 单语句内恒定，
-		// 页内排序自洽；跨请求衰减值漂移属契约声明的弱一致范畴。
+		// 实现：score = (reaction 计数冗余列 + comments_count) / POWER(发布小时龄 + 2, 1.5)，
+		// 小时龄钳制非负（防未来时间戳导致负底数幂报错）。
 		//
-		// 点赞数取 reactions 实时聚合而非 m.likes_count：likes_count 是旧「点赞」
-		// 模型遗留的冗余列，自点赞改为 reactions 表后已无任何写路径、恒为 0——
-		// 继续用它会让最主要的互动信号（点赞）对热度零贡献（审计 F-08）。
-		// 相关子查询走 reactions 主键 (target_type, target_id, user_id) 前缀，代价可控。
-		return "(((SELECT COUNT(*) FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id) + m.comments_count)::float8 / POWER(GREATEST(EXTRACT(EPOCH FROM (now() - m.created_at)) / 3600.0, 0.0) + 2.0, 1.5))"
+		// 计数用 likes_count 冗余列（语义已复活为 reactions 总数，reactions 模块
+		// set/unreact 成功后经 Service.AdjustReactionCount 增量维护，启动期
+		// ensureReactionCountColumn 差异回填自愈），替代此前的每行 reactions
+		// 聚合子查询——子查询让 cursor 谓词与 ORDER BY 各算一遍 O(候选集×聚合)。
+		//
+		// 衰减时钟量化到 15 分钟桶（floor(epoch/900)*900，与 Go 侧
+		// SearchDecayClock 对齐）：桶内所有行衰减值恒定，翻页间隔落在同一桶内时
+		// 游标分值与排序完全一致，消除此前「now() 实时衰减导致跨请求漏行/重行」
+		// 的弱一致窗口；跨桶仍可能漂移（每 15 分钟最多一次），幅度远小于实时衰减。
+		return "((m.likes_count + m.comments_count)::float8 / POWER(GREATEST((FLOOR(EXTRACT(EPOCH FROM now()) / 900.0) * 900.0 - EXTRACT(EPOCH FROM m.created_at)) / 3600.0, 0.0) + 2.0, 1.5))"
 	case "newest":
 		// 0::float8：裸整数常量会被 Postgres 当作 ORDER BY 位置引用（42P10），
 		// 必须带类型成为表达式。

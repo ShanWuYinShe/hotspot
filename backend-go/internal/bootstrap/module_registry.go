@@ -120,6 +120,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	pcModule.SetMessageReactionsSource(privateMessageReactionsSource{svc: reactionsModule.Service})
 	// reaction emoji 白名单校验依赖 AppConfig.limits.reaction_emojis
 	reactionsModule.Service.SetAppConfig(sharedAppConfig)
+	// reaction 计数冗余列维护（moments/search popular 排序的读侧加速）:
+	// set/unreact 成功后增量增减 moments 计数列，方向 reactions -> moments.Service。
+	reactionsModule.Service.SetReactionCounter(momentsModule.Service)
 	// Wire the reactions aggregator into moments/comments so MomentItem.reactions[]
 	// and CommentItem.reactions[] get filled at read time. Done after both
 	// modules exist to break the import cycle.

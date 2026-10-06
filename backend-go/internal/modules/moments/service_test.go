@@ -59,6 +59,8 @@ func (r *stubMomentRepo) ListMine(_ context.Context, _ string, _ int, _ string) 
 func (r *stubMomentRepo) Exists(_ context.Context, _ string) (bool, error) {
 	return r.exists, r.existsErr
 }
+func (r *stubMomentRepo) AdjustReactionCount(context.Context, string, int) error { return nil }
+
 func (r *stubMomentRepo) IncrementCommentCount(_ context.Context, _ string) error {
 	return r.incComment
 }

@@ -48,6 +48,10 @@ func (r *momentErrRepo) ListMine(ctx context.Context, userID string, limit int, 
 func (r *momentErrRepo) Exists(ctx context.Context, momentID string) (bool, error) {
 	return r.repo.Exists(ctx, momentID)
 }
+func (r *momentErrRepo) AdjustReactionCount(ctx context.Context, momentID string, delta int) error {
+	return r.repo.AdjustReactionCount(ctx, momentID, delta)
+}
+
 func (r *momentErrRepo) IncrementCommentCount(ctx context.Context, momentID string) error {
 	return r.repo.IncrementCommentCount(ctx, momentID)
 }

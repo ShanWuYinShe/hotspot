@@ -1011,7 +1011,9 @@ func (r *errorRepo) Delete(context.Context, string) error { return nil }
 func (r *errorRepo) ListMine(context.Context, string, int, string) (PaginatedMoments, error) {
 	return PaginatedMoments{}, nil
 }
-func (r *errorRepo) Exists(context.Context, string) (bool, error)        { return false, nil }
+func (r *errorRepo) Exists(context.Context, string) (bool, error)           { return false, nil }
+func (r *errorRepo) AdjustReactionCount(context.Context, string, int) error { return nil }
+
 func (r *errorRepo) IncrementCommentCount(context.Context, string) error { return nil }
 func (r *errorRepo) DecrementCommentCount(context.Context, string) error { return nil }
 func (r *errorRepo) IncrementSharesCount(context.Context, string) error  { return nil }

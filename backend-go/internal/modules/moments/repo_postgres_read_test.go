@@ -217,9 +217,9 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			items = append(items, item)
 		}
 		if limit >= 0 {
-			// popular 排序的点赞数改由 reactions 聚合（F-08）：此桩用
-			// LikesCount 字段模拟该聚合值，故按新 SQL 片段识别 popular。
-			popular := strings.Contains(query, "SELECT COUNT(*) FROM reactions r WHERE r.target_type = 'moment'")
+			// popular 排序的互动数来自 likes_count 计数冗余列（语义已复活为
+			// reactions 总数）：此桩用 LikesCount 字段模拟该列，按新 SQL 片段识别 popular。
+			popular := strings.Contains(query, "m.likes_count + m.comments_count") && strings.Contains(query, "POWER(")
 			sort.Slice(items, func(i, j int) bool {
 				if popular {
 					si := items[i].LikesCount + items[i].CommentsCount

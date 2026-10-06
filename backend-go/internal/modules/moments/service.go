@@ -623,6 +623,17 @@ func (s *Service) fillReactionsBatchOwnerMoment(ctx context.Context, items []Own
 	}
 }
 
+// AdjustReactionCount 供 reactions 模块在 set/unreact 成功后维护瞬间 reaction
+// 计数冗余列（bootstrap 把本 Service 以 ReactionCounter 接口注入 reactions）。
+// 计数列（likes_count，语义已复活为 reactions 总数）消除搜索 popular 排序的
+// 每行 reactions 聚合子查询。写失败仅 Warn 不阻断反应主流程：列与 reactions
+// 表的最终一致由启动期差异回填自愈（见 ensureReactionCountColumn）。
+func (s *Service) AdjustReactionCount(ctx context.Context, momentID string, delta int) {
+	if err := s.repo.AdjustReactionCount(ctx, momentID, delta); err != nil {
+		observability.L().Warn("moments.AdjustReactionCount failed", "error", err, "moment_id", momentID, "delta", delta)
+	}
+}
+
 // toOwnerMoment 将公开 MomentItem 转为拥有者视角 OwnerMomentItem（含 privacy_level）。
 func toOwnerMoment(item MomentItem) OwnerMomentItem {
 	return OwnerMomentItem{MomentItem: item, PrivacyLevel: item.PrivacyLevel}

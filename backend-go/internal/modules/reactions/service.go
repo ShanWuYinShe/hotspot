@@ -16,11 +16,19 @@ import (
 // Service orchestrates reaction reads/writes and the side effects (owner
 // notification, realtime broadcast) that follow a reaction being added.
 type Service struct {
-	repo          Repository
-	providers     map[ReactTarget]TargetProvider
-	notifications reactionNotificationWriter
-	users         actor.Provider
-	appConfig     appconfig.Source // optional; nil => emoji whitelist check skipped
+	repo            Repository
+	providers       map[ReactTarget]TargetProvider
+	notifications   reactionNotificationWriter
+	users           actor.Provider
+	appConfig       appconfig.Source // optional; nil => emoji whitelist check skipped
+	reactionCounter ReactionCounter  // optional; nil => 不维护目标计数冗余列
+}
+
+// ReactionCounter 是 reactions 成功变更后维护目标侧计数冗余列的最小接口
+// （bootstrap 把 moments.Service 注入进来，消除 moments/search popular 排序
+// 的每行 reactions 聚合子查询）。delta 可负；实现自行钳制下限。
+type ReactionCounter interface {
+	AdjustReactionCount(ctx context.Context, momentID string, delta int)
 }
 
 // NewService returns a Service suitable for tests (in-memory repo, no
@@ -50,6 +58,11 @@ func NewServiceWithDeps(repo Repository, providers []TargetProvider, notificatio
 	}
 	return &Service{repo: repo, providers: byKind, notifications: notificationWriter, users: actorProvider}
 }
+
+// SetReactionCounter wires the target-side reaction count maintainer (optional;
+// nil keeps read-side aggregation as before). Failures inside the counter are
+// logged by the implementation, not surfaced here.
+func (s *Service) SetReactionCounter(c ReactionCounter) { s.reactionCounter = c }
 
 // SetAppConfig wires the app config source whose Limits.ReactionEmojis is the
 // server-side emoji whitelist (spec api_spec_reaction.md: emoji 不在白名单返回
@@ -106,6 +119,7 @@ func (s *Service) react(ctx context.Context, req SetReactionRequest) error {
 		// Emoji unchanged: no-op per spec idempotency.
 		return nil
 	}
+	s.adjustReactionCount(ctx, req, +1)
 	s.notifyOwner(ctx, req, principal.UserID, owner, true)
 	return nil
 }
@@ -122,6 +136,7 @@ func (s *Service) unreact(ctx context.Context, req SetReactionRequest) error {
 	if !changed {
 		return nil
 	}
+	s.adjustReactionCount(ctx, req, -1)
 	// ReactionRemoved goes to the target resource's author (spec
 	// api_spec_websocket.md). Resolve the owner for the broadcast; a deleted
 	// or unresolvable target has no author to push to, and unreact itself is
@@ -149,6 +164,16 @@ func (s *Service) unreact(ctx context.Context, req SetReactionRequest) error {
 		},
 	})
 	return nil
+}
+
+// adjustReactionCount 维护目标侧计数冗余列（当前仅 moment 目标有消费方）。
+// 失败由实现记 Warn：列与 reactions 表的最终一致由启动期差异回填自愈，
+// 不阻断已成功的反应主流程。
+func (s *Service) adjustReactionCount(ctx context.Context, req SetReactionRequest, delta int) {
+	if s.reactionCounter == nil || req.TargetType != ReactTargetMoment {
+		return
+	}
+	s.reactionCounter.AdjustReactionCount(ctx, req.TargetID, delta)
 }
 
 // List returns the paginated reaction rows for one target.

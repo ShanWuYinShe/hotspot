@@ -132,6 +132,23 @@ func (r *InMemoryRepository) Exists(_ context.Context, momentID string) (bool, e
 	return ok && !item.IsDeleted, nil
 }
 
+// AdjustReactionCount 内存实现：直接增减 items 里的 LikesCount（内存实现以
+// LikesCount 承载 reaction 计数冗余列语义，与 Postgres 一致），下限钳 0。
+func (r *InMemoryRepository) AdjustReactionCount(_ context.Context, momentID string, delta int) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	item, ok := r.moments[momentID]
+	if !ok {
+		return nil // 目标已删除：unreact 到已删瞬间是合法 no-op
+	}
+	item.LikesCount += delta
+	if item.LikesCount < 0 {
+		item.LikesCount = 0
+	}
+	r.moments[momentID] = item
+	return nil
+}
+
 func (r *InMemoryRepository) IncrementCommentCount(_ context.Context, momentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -217,8 +234,9 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest,
 	if req.Tag != nil {
 		tag = *req.Tag
 	}
-	// 单次查询内取同一 now：popular 时间衰减分值页内自洽（与 SQL now() 语句级稳定对应）。
-	now := time.Now().UTC()
+	// 单次查询内取同一 now（量化到衰减桶，与 SQL FLOOR(epoch/900) 对齐）：
+	// popular 时间衰减分值页内自洽，同桶内跨请求游标稳定。
+	now := SearchDecayClock(time.Now().UTC())
 	// 最终排序与 Postgres keyset 语义一致：(score, created_at, moment_id) DESC。
 	sortMoments(items, sortBy, keyword, tag, now)
 	start := 0
@@ -247,7 +265,9 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest,
 	end := start + limit
 	var nextCursor *string
 	if end < len(items) {
-		c := encodeMomentSearchCursor(sortBy, items[end], keyword, tag, now)
+		// 游标编码本页最后一项（items[end-1]，排他 keyset：下一页谓词严格 <），
+		// 与 Postgres 端一致；编码下页首项会让严格 < 把它排除造成丢项。
+		c := encodeMomentSearchCursor(sortBy, items[end-1], keyword, tag, now)
 		nextCursor = &c
 	}
 	if end > len(items) {
