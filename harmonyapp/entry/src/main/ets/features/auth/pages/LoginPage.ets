@@ -863,7 +863,6 @@ export struct LoginPage {
           this.loadingStage = '登录成功，正在初始化…';
           this.loadingProgress = 70;
 
-          PasswordSecurityUtil.clearSensitiveString(this.password);
           await this.handleAuthSuccess(response.data, 'normal');
           this.loadingProgress = 100;
         } else {
@@ -991,8 +990,6 @@ export struct LoginPage {
           this.loadingStage = '注册成功，正在初始化…';
           this.loadingProgress = 70;
 
-          PasswordSecurityUtil.clearSensitiveString(this.registerPassword);
-          PasswordSecurityUtil.clearSensitiveString(this.registerPasswordConfirm);
           await this.handleAuthSuccess(response.data, 'normal');
           this.loadingProgress = 100;
         } else {
