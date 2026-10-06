@@ -10,28 +10,17 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { ChatThemeColors, ChatThemeManager } from '../../../core/theme/ChatTheme';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
-import { MessageType } from '../../../core/types/api';
+import { ChatMessageListItem } from './ChatMessageListUtils';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { AppRouter, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 
-/** 消息展示视图模型（与 ChatPage 的 ChatMessage 结构一致） */
-export interface ChatMessageView {
-  id: string;
-  content: string;
-  senderId: string;
+/** 消息展示视图模型（extends 列表项最小集 + 页面共享扩展，替代三处重复字段声明） */
+export interface ChatMessageView extends ChatMessageListItem {
   senderName: string;
   senderAvatar?: string;
-  type: MessageType;
-  sentAt: string;
-  isSelf: boolean;
-  isSystem: boolean;
-  /** 已撤回（渲染为「消息已撤回」，对齐前端 MessageBubble recalled 态） */
-  recalled?: boolean;
   /** 已编辑（时间行追加「· 已编辑」标记，对齐前端 editedAt） */
   edited?: boolean;
-  /** 本地乐观气泡（发送中未确认，不可撤回/编辑） */
-  pending?: boolean;
   rawData?: Object;
 }
 

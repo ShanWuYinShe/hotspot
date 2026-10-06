@@ -75,13 +75,8 @@ const KEYBOARD_DISMISS_NAV_GUARD_MS: number = 260;
 // 撤回时间窗（spec message_recall_window_seconds，默认 300s；服务端 10400 兜底，
 const RECALLED_MESSAGE_TEXT: string = '消息已撤回';
 
-// 统一消息接口用于UI展示（extends 规则输入最小集，供 ChatMessageRules 判定）
-interface ChatMessage extends ChatMessageListItem {
-  senderName: string;
-  senderAvatar?: string;
-  /** 已编辑（时间行「· 已编辑」标记，对齐前端 editedAt） */
-  edited?: boolean;
-  rawData?: Object;
+// 统一消息接口用于UI展示（直接复用 ChatMessageView：extends 列表项最小集 + 共享扩展）
+interface ChatMessage extends ChatMessageView {
 }
 
 interface ChatParams {
