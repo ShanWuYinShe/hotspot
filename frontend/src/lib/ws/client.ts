@@ -102,6 +102,13 @@ function uuid(): string {
   }
   return `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
+/** 比较 int64 decimal string 的大小（非负）：位数优先、等长字典序；不经 number 运算。 */
+function compareSeqStrings(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length !== b.length) return a.length > b.length ? 1 : -1;
+  return a > b ? 1 : -1;
+}
+
 
 export class WsClient {
   private ws: WebSocket | null = null;
@@ -510,6 +517,12 @@ export class WsClient {
   }
 
   private dispatch(type: ServerEventType, payload: unknown, serverSeq?: string): void {
+    // 事件携带 server_seq 时（resume 重放路径）推进本地基线，保持与已消费
+    // 事件对齐。seq 是 int64 decimal string：比大小用「位数优先、等长字典序」，
+    // 不经 number/BigInt 运算（跨端 int64 纪律）。
+    if (serverSeq !== undefined && compareSeqStrings(serverSeq, this.serverSeq) > 0) {
+      this.serverSeq = serverSeq;
+    }
     const set = this.handlers.get(type);
     if (set) {
       for (const h of [...set]) h(payload);
