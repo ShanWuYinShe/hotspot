@@ -28,7 +28,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
 import { ChatMessageItem, ChatMessageView } from '../components/ChatMessageItem';
 import { canRecallMessage, canAdminRecallMessage, canEditMessage, hasMessageActions } from '../components/ChatMessageRules';
-import { ChatMessageListItem, dedupeMessages, mergeMessagesById, buildMessageFingerprint, buildMessageContentSignature, formatMessageTime, formatMutedUntil, getLocalDayKey } from '../components/ChatMessageListUtils';
+import { ChatMessageListItem, dedupeMessages, mergeMessagesById, buildMessageFingerprint, buildMessageContentSignature, formatMessageTime, formatMutedUntil, getLocalDayKey, getLastSentMessageId, needsDateSeparator } from '../components/ChatMessageListUtils';
 import type { ChatActionRulesInput } from '../components/ChatMessageRules';
 import { ChatActionsSheet } from '../components/ChatActionsSheet';
 import { MessageActionsSheet } from '../components/MessageActionsSheet';
@@ -206,24 +206,10 @@ export struct ChatPage {
     return SafeAreaUtils.resolveBottomPadding(stableInset, 0, DesignConstants.SPACING.SM);
   }
 
-  /** 最后一条自己发送的消息 id（对齐前端 lastSentId 已读勾选） */
-  private getLastSentMessageId(): string {
-    for (let i = this.messages.length - 1; i >= 0; i--) {
-      if (this.messages[i].isSelf) {
-        return this.messages[i].id;
-      }
-    }
-    return '';
-  }
-
   /** 本地日期 key：用于判断两条消息是否跨天（对齐前端 groupMessagesByDay） */
-  /** 该索引消息是否需要展示日期分隔胶囊（与上一条不同日 / 首条） */
+  /** 该索引消息是否需要展示日期分隔胶囊（与上一条不同日 / 首条）——实现在 ChatMessageListUtils */
   private shouldShowDatePill(index: number): boolean {
-    const msg = this.messagesDataSource.getData(index);
-    if (!msg) return false;
-    if (index === 0) return true;
-    const prev = this.messagesDataSource.getData(index - 1);
-    return getLocalDayKey(msg.sentAt) !== getLocalDayKey(prev.sentAt);
+    return needsDateSeparator(this.messages, index);
   }
 
   private dismissKeyboardOnOutsideTap(): void {
@@ -1206,7 +1192,7 @@ export struct ChatPage {
                   ChatMessageItem({
                     msg: msg,
                     isGroupChat: this.chatType === 'group_chat',
-                    isLastSent: msg.isSelf && msg.id === this.getLastSentMessageId(),
+                    isLastSent: msg.isSelf && msg.id === getLastSentMessageId(this.messages),
                     timeText: formatMessageTime(msg.sentAt),
                     hasActions: hasMessageActions(msg, this.isAdminRecallContext()),
                     onMessageClick: (view: ChatMessageView) => { this.openMessageActions(view); },

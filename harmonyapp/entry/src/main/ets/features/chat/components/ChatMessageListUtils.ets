@@ -51,6 +51,23 @@ export function getLocalDayKey(iso: string): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
+/** 最后一条自己发送的消息 id（对齐前端 lastSentId 已读勾选） */
+export function getLastSentMessageId(messages: ChatMessageListItem[]): string {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].isSelf) {
+      return messages[i].id;
+    }
+  }
+  return '';
+}
+
+/** 该索引消息是否需要展示日期分隔胶囊（与上一条不同日 / 首条） */
+export function needsDateSeparator(messages: ChatMessageListItem[], index: number): boolean {
+  if (index < 0 || index >= messages.length) return false;
+  if (index === 0) return true;
+  return getLocalDayKey(messages[index].sentAt) !== getLocalDayKey(messages[index - 1].sentAt);
+}
+
 export function buildMessageFingerprint(message: ChatMessageListItem): string {
   const sentAtMs = Date.parse(message.sentAt);
   const normalizedSentAt = Number.isNaN(sentAtMs) ? message.sentAt : String(sentAtMs);
