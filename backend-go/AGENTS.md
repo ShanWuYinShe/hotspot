@@ -72,7 +72,7 @@ Handler -> Service -> Repository
 **完整纪律见 skill hotspot-backend-migrations**（命名与幂等、向后兼容 expand-contract、
 data_migrations 旗标、禁止 CREATE INDEX CONCURRENTLY 的原因、INVALID 索引处理）。要点速记：
 
-- migrations/NNN_描述.sql，字典序全量重跑，幂等靠 IF NOT EXISTS；序号唯一由 CI 校验。
+- migrations/NNN_描述.sql，字典序执行；`schema_migrations` 版本表记录已应用文件（新库逐个执行并登记，存量库首次启动自动一次性基线，不重放历史）——幂等仍靠 IF NOT EXISTS（版本表是 2026-10-06 落地的加速与 CONCURRENTLY 前置，非幂等替代）；序号唯一由 CI 校验。
 - **迁移必须兼容上一个已发布版本的二进制**（只加不删，废弃列跨版本再清）。
 - **禁止 CREATE INDEX CONCURRENTLY**（pgx 简单协议下整文件单消息执行会落隐式事务，报 25001 导致启动失败）。
 - 无 down 迁移；回滚 = 旧镜像 + 保留新 schema。
