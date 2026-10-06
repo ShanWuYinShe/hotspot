@@ -46,6 +46,31 @@ describe('request envelope', () => {
 
     await expect(client.checkAuthStatus()).rejects.toThrow('boom');
   });
+
+  it('网关 502 返回 HTML（非 JSON）时抛 HTTP 状态错误而非裸解析异常', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => {
+        throw new SyntaxError('Unexpected token < in JSON');
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(client.checkAuthStatus()).rejects.toThrow('HTTP 502');
+  });
+
+  it('200 但响应体非 JSON 时按可重试传输错误处理', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => {
+        throw new SyntaxError('Unexpected token < in JSON');
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(client.checkAuthStatus()).rejects.toThrow('响应格式异常');
+  });
 });
 
 describe('10100 刷新重试', () => {
