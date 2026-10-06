@@ -28,6 +28,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
 import { ChatMessageItem, ChatMessageView } from '../components/ChatMessageItem';
 import { canRecallMessage, canAdminRecallMessage, canEditMessage, hasMessageActions } from '../components/ChatMessageRules';
+import { ChatMessageListItem, dedupeMessages, mergeMessagesById, buildMessageFingerprint, buildMessageContentSignature, formatMessageTime, formatMutedUntil, getLocalDayKey } from '../components/ChatMessageListUtils';
 import type { ChatActionRulesInput } from '../components/ChatMessageRules';
 import { ChatActionsSheet } from '../components/ChatActionsSheet';
 import { MessageActionsSheet } from '../components/MessageActionsSheet';
@@ -69,27 +70,15 @@ const GROUP_TYPING_NAME_PREVIEW_LIMIT: number = 3;
 const RECONNECT_BACKFILL_THRESHOLD_MS: number = 10000;
 const SAFE_AREA_KEYBOARD_SPIKE_THRESHOLD: number = 120;
 const SAFE_AREA_SPIKE_DELTA: number = 48;
-const DUPLICATE_MESSAGE_TIME_WINDOW_MS: number = 1500;
 const SEND_DUPLICATE_GUARD_WINDOW_MS: number = 1200;
 const KEYBOARD_DISMISS_NAV_GUARD_MS: number = 260;
 // 撤回时间窗（spec message_recall_window_seconds，默认 300s；服务端 10400 兜底，
 const RECALLED_MESSAGE_TEXT: string = '消息已撤回';
 
 // 统一消息接口用于UI展示（extends 规则输入最小集，供 ChatMessageRules 判定）
-interface ChatMessage extends ChatActionRulesInput {
-  id: string;
-  content: string;
-  senderId: string;
+interface ChatMessage extends ChatMessageListItem {
   senderName: string;
   senderAvatar?: string;
-  type: MessageType;
-  sentAt: string;
-  isSelf: boolean;
-  isSystem: boolean;
-  /** 本地乐观气泡标记（发送中未确认；WS 回显后由服务端消息替换） */
-  pending?: boolean;
-  /** 已撤回（气泡渲染「消息已撤回」，对齐前端 recalled） */
-  recalled?: boolean;
   /** 已编辑（时间行「· 已编辑」标记，对齐前端 editedAt） */
   edited?: boolean;
   rawData?: Object;
@@ -217,26 +206,6 @@ export struct ChatPage {
     return SafeAreaUtils.resolveBottomPadding(stableInset, 0, DesignConstants.SPACING.SM);
   }
 
-  private formatMutedUntil(isoString: string): string {
-    const date = new Date(isoString);
-    if (Number.isNaN(date.getTime())) {
-      return isoString;
-    }
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const pad = (n: number): string => (n < 10 ? `0${n}` : `${n}`);
-    return `${pad(month)}-${pad(day)} ${pad(hours)}:${pad(minutes)}`;
-  }
-
-  private formatMessageTime(iso: string): string {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-  }
-
   /** 最后一条自己发送的消息 id（对齐前端 lastSentId 已读勾选） */
   private getLastSentMessageId(): string {
     for (let i = this.messages.length - 1; i >= 0; i--) {
@@ -248,19 +217,13 @@ export struct ChatPage {
   }
 
   /** 本地日期 key：用于判断两条消息是否跨天（对齐前端 groupMessagesByDay） */
-  private getLocalDayKey(iso: string): string {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-  }
-
   /** 该索引消息是否需要展示日期分隔胶囊（与上一条不同日 / 首条） */
   private shouldShowDatePill(index: number): boolean {
     const msg = this.messagesDataSource.getData(index);
     if (!msg) return false;
     if (index === 0) return true;
     const prev = this.messagesDataSource.getData(index - 1);
-    return this.getLocalDayKey(msg.sentAt) !== this.getLocalDayKey(prev.sentAt);
+    return getLocalDayKey(msg.sentAt) !== getLocalDayKey(prev.sentAt);
   }
 
   private dismissKeyboardOnOutsideTap(): void {
@@ -298,53 +261,6 @@ export struct ChatPage {
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, `设置键盘避让模式失败: ${JSON.stringify(error)}`);
     }
-  }
-
-  private buildMessageFingerprint(message: ChatMessage): string {
-    const sentAtMs = Date.parse(message.sentAt);
-    const normalizedSentAt = Number.isNaN(sentAtMs) ? message.sentAt : String(sentAtMs);
-    return `${message.senderId}|${message.type}|${normalizedSentAt}|${message.content}`;
-  }
-
-  private buildMessageContentSignature(message: ChatMessage): string {
-    return `${message.senderId}|${message.type}|${message.content}`;
-  }
-
-  private dedupeMessages(messages: ChatMessage[]): ChatMessage[] {
-    const seenIds: Set<string> = new Set();
-    const seenFingerprints: Set<string> = new Set();
-    const recentContentSentAt: Map<string, number> = new Map();
-    const uniqueMessages: ChatMessage[] = [];
-
-    messages.forEach((message: ChatMessage) => {
-      const normalizedId = message.id.trim();
-      if (normalizedId.length > 0) {
-        if (seenIds.has(normalizedId)) {
-          return;
-        }
-        seenIds.add(normalizedId);
-      }
-
-      const fingerprint = this.buildMessageFingerprint(message);
-      if (seenFingerprints.has(fingerprint)) {
-        return;
-      }
-
-      const sentAtMs = Date.parse(message.sentAt);
-      if (!Number.isNaN(sentAtMs)) {
-        const contentSignature = this.buildMessageContentSignature(message);
-        const previousSentAt = recentContentSentAt.get(contentSignature);
-        if (previousSentAt !== undefined &&
-          Math.abs(sentAtMs - previousSentAt) <= DUPLICATE_MESSAGE_TIME_WINDOW_MS) {
-          return;
-        }
-        recentContentSentAt.set(contentSignature, sentAtMs);
-      }
-      seenFingerprints.add(fingerprint);
-      uniqueMessages.push(message);
-    });
-
-    return uniqueMessages;
   }
 
   private onPrivateMessageNew = async (event: ServerEvent): Promise<void> => {
@@ -465,13 +381,13 @@ export struct ChatPage {
 
   private handleNewMessage(newMessage: ChatMessage) {
     const normalizedId = newMessage.id.trim();
-    const newFingerprint = this.buildMessageFingerprint(newMessage);
+    const newFingerprint = buildMessageFingerprint(newMessage);
     const duplicated = this.messages.some((item: ChatMessage) => {
       const itemId = item.id.trim();
       if (normalizedId.length > 0 && itemId === normalizedId) {
         return true;
       }
-      return this.buildMessageFingerprint(item) === newFingerprint;
+      return buildMessageFingerprint(item) === newFingerprint;
     });
     if (duplicated) {
       return;
@@ -590,7 +506,7 @@ export struct ChatPage {
         }
 
         const convertedMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
-        const newMessages = this.dedupeMessages(convertedMessages);
+        const newMessages = dedupeMessages(convertedMessages);
         this.messages = newMessages;
         this.messagesDataSource.setData(newMessages);
         this.hasMoreHistory = !!(nextCursor);
@@ -644,7 +560,7 @@ export struct ChatPage {
       }
 
       const olderMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
-      const mergedMessages = this.dedupeMessages(olderMessages.concat(this.messages));
+      const mergedMessages = dedupeMessages(olderMessages.concat(this.messages));
       const addedCount = mergedMessages.length - previousCount;
       this.messages = mergedMessages;
       this.messagesDataSource.setData(mergedMessages);
@@ -667,7 +583,7 @@ export struct ChatPage {
         const rawData = JSON.parse(item.data) as Object;
         return await this.convertMessage(rawData as PrivateMessageItem | GroupMessageItem);
       }));
-      const messages = this.dedupeMessages(cachedMapped);
+      const messages = dedupeMessages(cachedMapped);
       this.messages = messages;
       this.messagesDataSource.setData(messages);
       this.scrollToBottom();
@@ -733,18 +649,6 @@ export struct ChatPage {
     };
   }
 
-  private mergeMessagesById(currentMessages: ChatMessage[], recentMessages: ChatMessage[]): ChatMessage[] {
-    const mergedMessages = this.dedupeMessages(currentMessages.concat(recentMessages));
-    mergedMessages.sort((a: ChatMessage, b: ChatMessage) => {
-      const timeDiff = new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime();
-      if (timeDiff !== 0) {
-        return timeDiff;
-      }
-      return a.id.localeCompare(b.id);
-    });
-    return mergedMessages;
-  }
-
   private shouldBackfillAfterReconnect(): boolean {
     const disconnectDurationMs = this.webSocketService.getLastDisconnectDurationMs();
     return disconnectDurationMs > RECONNECT_BACKFILL_THRESHOLD_MS;
@@ -783,7 +687,7 @@ export struct ChatPage {
         return;
       }
       const recentMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
-      const mergedMessages = this.mergeMessagesById(this.messages, recentMessages);
+      const mergedMessages = mergeMessagesById(this.messages, recentMessages);
       this.messages = mergedMessages;
       this.messagesDataSource.setData(mergedMessages);
     } catch (error) {
@@ -1303,7 +1207,7 @@ export struct ChatPage {
                     msg: msg,
                     isGroupChat: this.chatType === 'group_chat',
                     isLastSent: msg.isSelf && msg.id === this.getLastSentMessageId(),
-                    timeText: this.formatMessageTime(msg.sentAt),
+                    timeText: formatMessageTime(msg.sentAt),
                     hasActions: hasMessageActions(msg, this.isAdminRecallContext()),
                     onMessageClick: (view: ChatMessageView) => { this.openMessageActions(view); },
                     palette: this.getCurrentThemePalette(),
@@ -1386,7 +1290,7 @@ export struct ChatPage {
               iconSize: DesignConstants.FONT.SIZE.SM,
               color: this.getCurrentThemePalette().error
             })
-          Text(this.groupMutedUntil ? `你已被禁言，解除时间：${this.formatMutedUntil(this.groupMutedUntil)}` : '你已被禁言')
+          Text(this.groupMutedUntil ? `你已被禁言，解除时间：${formatMutedUntil(this.groupMutedUntil)}` : '你已被禁言')
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getCurrentThemePalette().error)
         }
