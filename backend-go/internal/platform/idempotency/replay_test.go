@@ -203,7 +203,9 @@ func TestMiddlewareNoKeyPassesThrough(t *testing.T) {
 	}
 }
 
-func TestMiddlewareInvalidKeyPassesThrough(t *testing.T) {
+// 契约（api_spec_base.md「服务端行为」）：格式非法的非空 key 返回 22000，
+// 客户端应更换新 key 重试——静默放行会让客户端误以为请求受幂等保护。
+func TestMiddlewareInvalidKeyReturns22000(t *testing.T) {
 	store := NewInMemoryStore()
 	SetStore(store)
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
@@ -216,8 +218,18 @@ func TestMiddlewareInvalidKeyPassesThrough(t *testing.T) {
 	mw := Middleware(handler)
 	rr := httptest.NewRecorder()
 	mw.ServeHTTP(rr, req)
-	if !called {
-		t.Fatal("handler should be called when invalid idempotency key present")
+	if called {
+		t.Fatal("handler must not be called for invalid idempotency key")
+	}
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 envelope, got %d", rr.Code)
+	}
+	envelope := map[string]any{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("decode envelope: %v", err)
+	}
+	if code, _ := envelope["code"].(float64); code != 22000 {
+		t.Fatalf("expected code 22000, got %v", envelope["code"])
 	}
 }
 

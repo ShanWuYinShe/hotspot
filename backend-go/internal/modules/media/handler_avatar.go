@@ -1,6 +1,7 @@
 package media
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -20,8 +21,8 @@ func (h *Handler) ServeAvatar(w http.ResponseWriter, r *http.Request) {
 	fileID := chi.URLParam(r, "file_id")
 	readURL, err := h.service.AvatarReadURL(r.Context(), fileID)
 	if err != nil || readURL == "" {
-		if err != nil && err != ErrMediaNotOwned {
-			observability.L().Warn("media.avatar resolve failed", "method", "ServeAvatar")
+		if err != nil && !errors.Is(err, ErrMediaNotOwned) {
+			observability.L().Warn("media.avatar resolve failed", "file_id", fileID, "error", err)
 		}
 		httpx.NotFoundHandler(w, r)
 		return
