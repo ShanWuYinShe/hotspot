@@ -63,8 +63,9 @@ export class WebSocketService {
   private awaitingPong: boolean = false;
   private currentToken: string = '';
   // resume 增量恢复（spec L155-156）：上次连接的恢复令牌与服务端序号基线。
-  // CE 下发时更新，重连 Auth 时透传；disconnect 不清除（同一用户重连仍可续传，
-  // token 过期/跨用户时服务端拒绝，走全量重放兜底）。
+  // CE 下发时更新，重连 Auth 时透传；仅服务端主动断线的自动重连保留（同一会话
+  // 续传），手动 disconnect() 一并清除——resume_token 绑定旧会话，登出/切换账号
+  // 后新会话携带它属语义错误（服务端虽会拒绝并回退全量恢复，但不应发送）。
   private resumeToken: string = '';
   // server_seq 跨端为字符串（ArkTS/JS number 无法无损表示 int64，spec L330），
   // 仅保存/透传基线，不做数值运算。
@@ -131,6 +132,7 @@ export class WebSocketService {
       this.state = WebSocketState.DISCONNECTED;
       this.reconnectAttempts = 0;
       this.subscriptions = [];
+      this.resumeToken = '';
       this.currentToken = '';
       this.awaitingPong = false;
       this.lastDisconnectDurationMs = 0;
