@@ -26,7 +26,6 @@ export struct GroupApplicationRow {
           src: this.application.applicant?.avatar_url ?? '',
           name: this.application.applicant?.nickname ?? '',
           avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-          userInfo: this.application.applicant
         })
 
         Column() {

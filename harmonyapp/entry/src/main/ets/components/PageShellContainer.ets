@@ -34,8 +34,6 @@ export struct PageShellContainer {
   @Prop currentBreakpoint: BreakpointType = 'sm';
   /** 关闭横向留白（父级已自行处理 padding 时用） */
   @Prop noHorizontalPadding: boolean = false;
-  /** 顶部氛围光晕。前端无页面级光晕（ambient-glow 仅在 Hero 卡内部），默认关闭 */
-  @Prop ambientGlow: boolean = false;
   /** 是否占满父容器高度。滚动容器（Scroll/Refresh）内部必须传 false：
    *  height('100%') 会使内容高度恒等于视口，滚动范围归零、下方内容被裁剪 */
   @Prop fillHeight: boolean = true;

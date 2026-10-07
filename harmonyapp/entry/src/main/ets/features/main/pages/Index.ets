@@ -7,7 +7,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { AppRouter, LoginRouteParam } from '../../../core/router/AppRouter';
 import { common } from '@kit.AbilityKit';
 import { UIContext } from '@kit.ArkUI';
-import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
@@ -91,7 +91,6 @@ struct Index {
 
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) @Watch('onLoginStateChanged') isLoggedIn: boolean = false;
-  @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_UNREAD_COUNT) unreadCount: UnreadCount = { total_unread_count: 0 };
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -113,7 +112,6 @@ struct Index {
   @State showPerformanceDetails: boolean = false;
   @State showCreateSheet: boolean = false;
   @State isCreateTabPressed: boolean = false;
-  @State isNotifBtnPressed: boolean = false;
 
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
@@ -839,11 +837,9 @@ struct Index {
               showNotificationCenter: $showNotificationCenter,
               showPerformanceDetails: $showPerformanceDetails,
               isCreateTabPressed: $isCreateTabPressed,
-              isNotifBtnPressed: $isNotifBtnPressed,
               unreadCount: this.unreadCount.total_unread_count,
               visibleNotifications: this.visibleNotifications,
               isLoggedIn: this.isLoggedIn,
-              userType: this.userType,
               safeAreaTop: this.safeAreaTop,
               safeAreaBottom: this.safeAreaBottom,
               isTablet: this.isTablet,
@@ -856,10 +852,7 @@ struct Index {
               showNotificationCenter: $showNotificationCenter,
               showPerformanceDetails: $showPerformanceDetails,
               unreadCount: this.unreadCount.total_unread_count,
-              visibleNotifications: this.visibleNotifications,
-              isLoggedIn: this.isLoggedIn,
-              userType: this.userType,
-              currentBreakpoint: this.currentBreakpoint
+              isLoggedIn: this.isLoggedIn
             })
           }
         }

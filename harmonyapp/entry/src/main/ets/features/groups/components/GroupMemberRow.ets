@@ -29,7 +29,6 @@ export struct GroupMemberRow {
         src: this.member.user?.avatar_url ?? '',
         name: this.member.user?.nickname ?? '',
         avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-        userInfo: this.member.user
       })
 
       Column() {

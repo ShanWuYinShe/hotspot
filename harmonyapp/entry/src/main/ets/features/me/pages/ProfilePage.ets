@@ -702,7 +702,7 @@ export struct ProfilePage {
 
   build() {
     NavDestination() {
-      PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, ambientGlow: false }) {
+      PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
         Stack({ alignContent: Alignment.Top }) {
           Column() {
           if (!this.isLoggedIn && !this.isExternalProfileMode() && !this.isLoading) {

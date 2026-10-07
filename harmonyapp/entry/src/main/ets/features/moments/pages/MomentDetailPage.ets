@@ -37,7 +37,6 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
-import { KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
@@ -592,7 +591,6 @@ export struct MomentDetailPage {
           name: moment.user?.nickname ?? '未知用户',
           avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
           shape: 'circle',
-          userInfo: moment.user
         })
 
         Column({ space: DesignConstants.SPACING.XS }) {

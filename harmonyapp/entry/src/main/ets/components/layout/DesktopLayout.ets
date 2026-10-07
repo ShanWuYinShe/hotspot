@@ -12,7 +12,6 @@
  * sub-page（设置 / 通知 / 我的瞬间 / 我的群组 / 关系 等）push 全屏、自带返回。
  */
 
-import { type BreakpointType } from '../../core/responsive/Breakpoint';
 import { DesignConstants } from '../../constants/DesignConstants';
 import { DESKTOP_PRIMARY_NAV, DESKTOP_PERSONAL_NAV, type AppNavItem } from '../../constants/AppNavigation';
 import { PageNames } from '../../constants/AppConstants';
@@ -33,7 +32,6 @@ import { SystemButton } from '../SystemButton';
 import { SurfaceIconButton } from '../SurfaceIconButton';
 import { AppIcon } from '../SystemIcon';
 import { NotificationRenderer } from '../../core/services/notification/NotificationRenderer';
-import { type SmartNotification, type NotificationAction } from '../../core/services/notification/NotificationDataManager';
 import { AppRouter, LoginRouteParam } from '../../core/router/AppRouter';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../core/state/GlobalStateManager';
 import { AccountInfo } from '../../core/types/api';
@@ -54,10 +52,7 @@ export struct DesktopLayout {
 
   // 来自父组件的只读状态
   @Prop unreadCount: number = 0;
-  @Prop visibleNotifications: SmartNotification[] = [];
   @Prop isLoggedIn: boolean = false;
-  @Prop userType: string = '';
-  @Prop currentBreakpoint: BreakpointType = 'lg';
 
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';

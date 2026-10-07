@@ -243,7 +243,7 @@ export struct LoginPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true, ambientGlow: false }) {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
       Column() {
       if (this.isLoading) {
         SystemLoadingView({

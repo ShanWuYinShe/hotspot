@@ -1,5 +1,4 @@
 import { DesignConstants } from '../constants/DesignConstants';
-import { UserInfo } from '../core/types/api';
 import { UserTypeUtil } from '../core/utils/UserTypeUtil';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
@@ -20,7 +19,6 @@ export struct SystemAvatar {
   @Prop isOnline: boolean = false;
   @Prop showBorder: boolean = false;
   @Prop shape: 'circle' | 'squircle' | 'square' = 'circle';
-  @Prop userInfo: UserInfo | undefined;
   @Prop userType: string = '';
   @Prop inset: boolean = false;
   @State private imageLoadFailed: boolean = false;

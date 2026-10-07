@@ -36,7 +36,7 @@ import { SystemBadge } from '../SystemBadge';
 import { SystemButton } from '../SystemButton';
 import { AppIcon } from '../SystemIcon';
 import { LucideIcon } from '../LucideIcon';
-import { AppRouter, LoginRouteParam } from '../../core/router/AppRouter';
+import { AppRouter } from '../../core/router/AppRouter';
 import { PageNames, StorageKeys } from '../../constants/AppConstants';
 import { CreateMomentSheet } from '../../features/moments/components/CreateMomentSheet';
 
@@ -63,13 +63,11 @@ export struct PhoneLayout {
   @Link showNotificationCenter: boolean;
   @Link showPerformanceDetails: boolean;
   @Link isCreateTabPressed: boolean;
-  @Link isNotifBtnPressed: boolean;
 
   // 来自父组件的只读状态
   @Prop unreadCount: number = 0;
   @Prop visibleNotifications: SmartNotification[] = [];
   @Prop isLoggedIn: boolean = false;
-  @Prop userType: string = '';
   @Prop safeAreaBottom: number = 0;
   @Prop safeAreaTop: number = 0;
   @Prop isTablet: boolean = false;
