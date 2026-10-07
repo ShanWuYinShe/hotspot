@@ -3,12 +3,14 @@ package privatechats
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
 	"hotspot/backend-go/internal/modules/privatemessages"
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type stubChatRepo struct {
@@ -251,6 +253,40 @@ func TestServiceListReturnsChats(t *testing.T) {
 	}
 	if len(result.Items) != 2 {
 		t.Fatalf("expected 2 items, got %d", len(result.Items))
+	}
+}
+
+// spec api_spec_base.md：limit default=20、max=100。此前 List 直接采纳客户端 limit，
+// limit=100000 会一次性返回整份会话列表（越过分页语义 + 超规格外泄）。
+func TestServiceListClampsLimitToMaxPageSize(t *testing.T) {
+	now := time.Now().UTC()
+	states := make([]ChatState, 0, 150)
+	for i := 0; i < 150; i++ {
+		states = append(states, ChatState{TargetID: "u" + strconv.Itoa(i+2), CreatedAt: now.Add(-time.Duration(i) * time.Minute)})
+	}
+	repo := &stubChatRepo{states: states}
+	msgs := &stubMsgReadService{}
+	usr := &stubChatUserReader{item: defaultUserItem(), found: true, settings: defaultSettings()}
+	svc := NewServiceWithDeps(repo, msgs, usr)
+
+	result, err := svc.List(chatCtx("u1"), MyPrivateChatsRequest{Pagination: &types.PaginationParams{Limit: 100000}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Items) != types.MaxPageSize {
+		t.Fatalf("expected limit clamped to %d, got %d", types.MaxPageSize, len(result.Items))
+	}
+	if result.NextCursor == nil {
+		t.Fatal("expected next cursor after clamping")
+	}
+
+	// ≤0 走默认页
+	def, err := svc.List(chatCtx("u1"), MyPrivateChatsRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(def.Items) != types.DefaultPageSize {
+		t.Fatalf("expected default page size %d, got %d", types.DefaultPageSize, len(def.Items))
 	}
 }
 

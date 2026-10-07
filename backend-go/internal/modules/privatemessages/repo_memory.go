@@ -62,12 +62,10 @@ func (r *InMemoryRepository) History(_ context.Context, userID string, req ListP
 		}
 		return items[i].SentAt > items[j].SentAt
 	})
-	limit := 20
+	// 与 Postgres 实现同口径：limit 默认 20 / 上限 100（spec api_spec_base.md）。
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
 	cursorValue := ""
 	if req.Pagination != nil {
-		if req.Pagination.Limit > 0 {
-			limit = req.Pagination.Limit
-		}
 		cursorValue = req.Pagination.Cursor
 	}
 	cursorSentAt, cursorMessageID, err := decodeMessageCursor(cursorValue)

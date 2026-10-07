@@ -10,6 +10,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type userReader interface {
@@ -129,10 +130,9 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 		}
 		items = filtered
 	}
-	limit := 20
-	if req.Pagination != nil && req.Pagination.Limit > 0 {
-		limit = req.Pagination.Limit
-	}
+	// 统一走 types.NormalizeLimit：spec api_spec_base.md 规定 limit default=20/max=100，
+	// 此前直接采纳客户端值，limit=100000 会返回整份会话列表（超规格外泄 + 越过分页语义）。
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
 	if len(items) <= limit {
 		return PaginatedPrivateChats{Items: items}, nil
 	}

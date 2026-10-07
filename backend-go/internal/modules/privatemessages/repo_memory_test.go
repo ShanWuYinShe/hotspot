@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func TestInMemoryRepositorySendReturnsMessageSent(t *testing.T) {
@@ -21,6 +23,37 @@ func TestInMemoryRepositorySendReturnsMessageSent(t *testing.T) {
 	}
 	if result.SentAt == "" {
 		t.Fatal("expected non-empty SentAt")
+	}
+}
+
+// 内存实现必须与 Postgres 实现同口径：limit default=20 / max=100（spec api_spec_base.md）。
+// 此前直接采纳客户端 limit，配合内存仓可作为「无限分页」返回整段会话。
+func TestInMemoryRepositoryHistoryClampsLimit(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+	for i := 0; i < 150; i++ {
+		if _, err := repo.Send(ctx, "alice", "bob", SendPrivateMessageRequest{Type: "text", Content: "m"}); err != nil {
+			t.Fatalf("seed send %d: %v", i, err)
+		}
+	}
+
+	clamped, err := repo.History(ctx, "alice", ListPrivateMessagesRequest{
+		TargetUserID: "bob",
+		Pagination:   &types.PaginationParams{Limit: 100000},
+	})
+	if err != nil {
+		t.Fatalf("History returned error: %v", err)
+	}
+	if len(clamped.Items) != types.MaxPageSize {
+		t.Fatalf("expected clamp to %d, got %d", types.MaxPageSize, len(clamped.Items))
+	}
+
+	byDefault, err := repo.History(ctx, "alice", ListPrivateMessagesRequest{TargetUserID: "bob"})
+	if err != nil {
+		t.Fatalf("History returned error: %v", err)
+	}
+	if len(byDefault.Items) != types.DefaultPageSize {
+		t.Fatalf("expected default %d, got %d", types.DefaultPageSize, len(byDefault.Items))
 	}
 }
 
