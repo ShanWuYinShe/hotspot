@@ -53,6 +53,7 @@ import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { CompactStatItem, ProfileQuickAction, ProfileIntentCard, ProfileMenuItem } from '../components/ProfileContentAtoms';
 import { ProfileDataSection } from '../components/ProfileDataSection';
 import { ProfileIdentityCard } from '../components/ProfileIdentityCard';
+import { ProfileAvatarBlock, ProfileStatsRow } from '../components/ProfileHeaderAtoms';
 import { ProfileMomentGallery } from '../components/ProfileMomentGallery';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -66,11 +67,6 @@ const REMARK_MAX: number = 24;
 interface ProfilePageParams {
   userId?: string;
   user_id?: string;
-}
-
-interface StatItem {
-  label: string;
-  value: string;
 }
 
 @Preview
@@ -1318,89 +1314,23 @@ export struct ProfilePage {
   }
 
   @Builder
-  private buildProfileAvatar() {    Column() {
-      Stack({ alignContent: Alignment.BottomEnd }) {
-        // 头像
-        SystemAvatar({
-          avatarUrl: this.currentUser?.avatar_url || '',
-          name: this.currentUser?.nickname || '',
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XLARGE,
-          shape: 'circle'
-        })
-
-        // 相机按钮
-        Button() {
-          LucideIcon({
-            icon: AppIcon.CAMERA,
-            iconSize: DesignConstants.FONT.SIZE.XS2,
-            paletteRole: 'accentText'
-          })
-        }
-        .type(ButtonType.Normal)
-        .width(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
-        .height(DesignConstants.COMPONENT.STATUS_ICON_SIZE)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.getAccentBackground())
-        .border({ width: DesignConstants.BORDER_WIDTH.HEAVY, color: this.getCurrentThemePalette().pageBackground })
-                .onClick(() => this.changeAvatarDirectly())
-        .accessibilityText('更换头像')
-        .responseRegion({
-          x: -DesignConstants.SPACING.SM,
-          y: -DesignConstants.SPACING.SM,
-          width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
-          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-        })
-      }
-      .margin({ top: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.MD })
-
-      Text(this.currentUser?.nickname || '')
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-        .fontColor(this.getPrimaryTextColor())
-    }
-    .alignItems(HorizontalAlign.Center)
+  private buildProfileAvatar() {
+    ProfileAvatarBlock({
+      resolvedThemeId: this.resolvedThemeId,
+      avatarUrl: this.currentUser?.avatar_url || '',
+      nickname: this.currentUser?.nickname || '',
+      onChangeAvatar: () => this.changeAvatarDirectly()
+    })
   }
 
   @Builder
   private buildFigmaStatsRow() {
-    Row() {
-      ForEach([
-        { label: '瞬间', value: formatCount(this.myMomentsCount) },
-        { label: '关注者', value: formatCount(this.myFollowersCount) },
-        { label: '群组', value: formatCount(this.myGroupsCount) }
-      ] as StatItem[], (stat: StatItem, index: number) => {
-        Row() {
-          if (index > 0) {
-            Column()
-              .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
-              .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-              .backgroundColor(this.getSurfaceBorder())
-              .margin({ left: 0, right: 0 })
-          }
-          Column({ space: DesignConstants.SPACING.XS }) {
-            Text(stat.value)
-              .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-              .fontColor(this.getPrimaryTextColor())
-            Text(stat.label)
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.getAccentBackground())
-              .textCase(TextCase.UpperCase)
-              .letterSpacing(DesignConstants.FONT.LETTER_SPACING.FIELD)
-              .opacity(DesignConstants.OPACITY.EMPHASIZED)
-          }
-        }
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
-      }, (stat: StatItem) => stat.label)
-    }
-    .width('100%')
-    .borderRadius(DesignConstants.SHAPE.CARD)
-    .backgroundColor(this.getSurfaceBackground())
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .margin({ bottom: DesignConstants.SPACING.LG2 })
+    ProfileStatsRow({
+      resolvedThemeId: this.resolvedThemeId,
+      momentsCount: this.myMomentsCount,
+      followersCount: this.myFollowersCount,
+      groupsCount: this.myGroupsCount
+    })
   }
 
   // 我的瞬间九宫格：按列数分行（避开 ArkUI 不支持的 calc，用 Row + layoutWeight 等宽）。
