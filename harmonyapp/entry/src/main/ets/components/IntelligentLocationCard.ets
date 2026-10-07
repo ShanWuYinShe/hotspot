@@ -17,8 +17,6 @@ const TAG: string = 'IntelligentLocationCard';
 
 @Component
 export struct IntelligentLocationCard {
-  @Prop latitude: number = 0;
-  @Prop longitude: number = 0;
   @Prop locationName: string = '未知位置';
   @Prop distance: number = -1;
   @Prop altitude: number = 0; // 新增海拔属性

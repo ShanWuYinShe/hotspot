@@ -103,7 +103,6 @@ export struct ProfilePage {
   @State upgradePasswordConfirm: string = '';
   @State isUpgrading: boolean = false;
   @State hasAdminPrivileges: boolean = false;
-  @State pressedThumbKey: string = '';
   @State viewedUserId: string = '';
   @State viewedUserProfile: UserItem | null = null;
   // 仅持被查看用户的关系态（单实体定向订阅，同 UserCard 范式）

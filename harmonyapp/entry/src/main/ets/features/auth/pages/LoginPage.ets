@@ -87,7 +87,6 @@ export struct LoginPage {
   @State isBackPressed: boolean = false;
   @State isLoginBtnPressed: boolean = false;
   /** 底部链接按压态（注册/访客切换链接的按压缩放反馈） */
-  @State linkPressed: string = '';
   @State loginIdFocused: boolean = false;
   @State passwordFocused: boolean = false;
   @State registerNicknameFocused: boolean = false;

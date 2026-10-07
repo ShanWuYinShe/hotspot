@@ -655,8 +655,6 @@ export struct MomentFeedCard {
   private locationSection(): void {
     if (this.showLocationCard && this.moment.location) {
       IntelligentLocationCard({
-        latitude: this.moment.location.point.latitude,
-        longitude: this.moment.location.point.longitude,
         locationName: this.moment.location.location_name,
         distance: this.moment.location.distance ?? -1
       })

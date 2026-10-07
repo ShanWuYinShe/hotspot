@@ -38,7 +38,6 @@ export struct SystemCard {
   @Prop clickable: boolean = false;
   @Prop enableHoverEffect: boolean = false;
 
-  @Prop paddingSize: number | string = DesignConstants.SPACING.LG;
   @Prop cardBackgroundColor: ResourceColor | string = '';
   @Prop useBlur: boolean = false;
 
@@ -194,8 +193,6 @@ export struct MasonryCard {
   @BuilderParam imageContent?: () => void;
 
   @Prop cardRadius: number = DesignConstants.SHAPE.CARD;
-  @Prop shadowRadius: number = 6;
-  @Prop shadowOpacity: number = 0.04;
   @Prop clickable: boolean = false;
 
   @State isPressed: boolean = false;

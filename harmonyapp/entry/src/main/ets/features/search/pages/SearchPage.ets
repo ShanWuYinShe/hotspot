@@ -86,8 +86,6 @@ export struct SearchPage {
   private suggestTimerId: number = 0;
   @State userActionPendingIds: string[] = [];
   @State groupActionPendingIds: string[] = [];
-  @State isBackPressed: boolean = false;
-  @State isRowPressed: boolean = false;
   private isDestroyed: boolean = false;
 
   aboutToAppear(): void {
