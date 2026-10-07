@@ -191,7 +191,9 @@ export struct RelationshipHubPage {
               RelationshipListSection({
                 embedded: true,
                 emptyText: '还没有屏蔽任何用户。',
-                blocked: this.blocked
+                blocked: this.blocked,
+                // 拉黑行「解除」动作：此前组件回调无人提供，按钮点了没反应
+                unblockUserAction: (userId: string) => { this.unblock(userId); }
               })
             }
           }
