@@ -899,7 +899,12 @@ export struct ProfilePage {
           Column() {
             if (useMasterDetail(this.currentBreakpoint)) {
               // ======== 宽端（≥960）：保留垂直居中形态 ========
-              this.buildProfileAvatar()
+              ProfileAvatarBlock({
+                resolvedThemeId: this.resolvedThemeId,
+                avatarUrl: this.currentUser?.avatar_url || '',
+                nickname: this.currentUser?.nickname || '',
+                onChangeAvatar: () => { this.changeAvatarDirectly(); }
+              })
 
               if (this.currentUser?.bio) {
                 Text(this.currentUser.bio)
@@ -946,11 +951,33 @@ export struct ProfilePage {
               .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG2 })
               .onClick(() => this.startEdit())
 
-              this.buildFigmaStatsRow()
+              ProfileStatsRow({
+                resolvedThemeId: this.resolvedThemeId,
+                momentsCount: this.myMomentsCount,
+                followersCount: this.myFollowersCount,
+                groupsCount: this.myGroupsCount
+              })
             } else {
               // ======== 移动/平板：前端 ProfileMobile 形态（身份卡 + 个人数据列表） ========
-              this.buildIdentityCard()
-              this.buildProfileDataList()
+              ProfileIdentityCard({
+                resolvedThemeId: this.resolvedThemeId,
+                avatarUrl: this.currentUser?.avatar_url || '',
+                nickname: this.currentUser?.nickname || '',
+                locationName: this.currentUser?.location?.location_name || '',
+                bio: this.currentUser?.bio || '',
+                momentsCount: this.myMomentsCount,
+                followersCount: this.myFollowersCount,
+                groupsCount: this.myGroupsCount,
+                onChangeAvatar: () => { this.changeAvatarDirectly(); },
+                onEditProfile: () => { this.startEdit(); }
+              })
+              ProfileDataSection({
+                resolvedThemeId: this.resolvedThemeId,
+                myGroupsCount: this.myGroupsCount,
+                myFriendsCount: this.myFriendsCount,
+                myFollowingCount: this.myFollowingCount,
+                myFollowersCount: this.myFollowersCount
+              })
             }
 
             // 标签栏 —— 统一 TabsPillGroup；「喜欢/收藏」无数据源
@@ -1001,57 +1028,6 @@ export struct ProfilePage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
-  }
-
-  // ==================== 移动/平板身份卡（对齐前端 ProfileMobile 身份卡） ====================
-  /** 身份卡：渲染在 ProfileIdentityCard 组件（资料/计数/回调经 props 注入） */
-  @Builder
-  private buildIdentityCard() {
-    ProfileIdentityCard({
-      resolvedThemeId: this.resolvedThemeId,
-      avatarUrl: this.currentUser?.avatar_url || '',
-      nickname: this.currentUser?.nickname || '',
-      locationName: this.currentUser?.location?.location_name || '',
-      bio: this.currentUser?.bio || '',
-      momentsCount: this.myMomentsCount,
-      followersCount: this.myFollowersCount,
-      groupsCount: this.myGroupsCount,
-      onChangeAvatar: () => this.changeAvatarDirectly(),
-      onEditProfile: () => this.startEdit()
-    })
-  }
-
-  // ==================== 移动/平板「个人数据」列表（对齐前端 ProfileMobile 5 行） ====================
-  /** 个人数据分组：渲染在 ProfileDataSection 组件（计数/主题经 props 注入） */
-  @Builder
-  private buildProfileDataList() {
-    ProfileDataSection({
-      resolvedThemeId: this.resolvedThemeId,
-      myGroupsCount: this.myGroupsCount,
-      myFriendsCount: this.myFriendsCount,
-      myFollowingCount: this.myFollowingCount,
-      myFollowersCount: this.myFollowersCount
-    })
-  }
-
-  @Builder
-  private buildProfileAvatar() {
-    ProfileAvatarBlock({
-      resolvedThemeId: this.resolvedThemeId,
-      avatarUrl: this.currentUser?.avatar_url || '',
-      nickname: this.currentUser?.nickname || '',
-      onChangeAvatar: () => this.changeAvatarDirectly()
-    })
-  }
-
-  @Builder
-  private buildFigmaStatsRow() {
-    ProfileStatsRow({
-      resolvedThemeId: this.resolvedThemeId,
-      momentsCount: this.myMomentsCount,
-      followersCount: this.myFollowersCount,
-      groupsCount: this.myGroupsCount
-    })
   }
 
   // 我的瞬间九宫格：按列数分行（避开 ArkUI 不支持的 calc，用 Row + layoutWeight 等宽）。
