@@ -2,6 +2,7 @@ package cors
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -71,7 +72,10 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 				return
 			}
 
-			if cfg.AllowCredentials {
+			// "*" 与凭证的组合被 Fetch 规范禁止（浏览器会直接拒绝该响应），
+			// 且一旦有人把白名单配成 "*" 又打开凭证，就等价于「任意站点带凭证跨源」。
+			// 这里选择失败安全：通配模式下不发放凭证头，凭证只在显式白名单下生效。
+			if cfg.AllowCredentials && !allowAllOrigins {
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
 			}
 
@@ -84,7 +88,7 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 				w.Header().Set("Access-Control-Allow-Methods", allowMethods)
 				w.Header().Set("Access-Control-Allow-Headers", allowHeaders)
 				if cfg.MaxAge > 0 {
-					w.Header().Set("Access-Control-Max-Age", strings.TrimSpace(strings.Repeat(" ", 0)+intToStr(cfg.MaxAge)))
+					w.Header().Set("Access-Control-Max-Age", strconv.Itoa(cfg.MaxAge))
 				}
 				w.WriteHeader(http.StatusNoContent)
 				return
@@ -102,18 +106,4 @@ func isOriginAllowed(allowed []string, origin string) bool {
 		}
 	}
 	return false
-}
-
-func intToStr(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var buf [20]byte
-	pos := len(buf)
-	for n > 0 {
-		pos--
-		buf[pos] = byte('0' + n%10)
-		n /= 10
-	}
-	return string(buf[pos:])
 }

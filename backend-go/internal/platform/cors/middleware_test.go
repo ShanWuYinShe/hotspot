@@ -85,6 +85,23 @@ func TestPreflightHeaders(t *testing.T) {
 	}
 }
 
+// 通配 "*" + AllowCredentials：失败安全——不发放凭证头。
+// Fetch 规范本身禁止该组合（浏览器会拒绝响应），且它等价于「任意站点带凭证跨源」；
+// 显式白名单下凭证照常发放（见 TestCredentialsAndExposedHeaders）。
+func TestWildcardDoesNotEmitCredentials(t *testing.T) {
+	wildcard := serve(Config{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET"},
+		AllowCredentials: true,
+	}, "https://any.example", http.MethodGet)
+	if got := wildcard.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Fatalf("wildcard origin should still be echoed as *, got %q", got)
+	}
+	if got := wildcard.Header().Get("Access-Control-Allow-Credentials"); got != "" {
+		t.Fatalf("wildcard + credentials must not emit credentials header, got %q", got)
+	}
+}
+
 // AllowCredentials 与 ExposedHeaders 透出。
 func TestCredentialsAndExposedHeaders(t *testing.T) {
 	cfg := Config{
