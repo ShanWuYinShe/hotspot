@@ -655,6 +655,9 @@ export default class EntryAbility extends UIAbility {
       //    深色开关、登录态等持久化全部静默失效
       await this.serviceRegistry.initializeContextServices(this.context);
 
+      // 2.5 一次性清理升级前 Preferences 明文 token 残留（幂等，见 TokenAssetStore）
+      await TokenAssetStore.removeLegacyPlaintextTokens();
+
       // 3. 预加载核心服务
       await this.serviceRegistry.preloadCoreServices();
       

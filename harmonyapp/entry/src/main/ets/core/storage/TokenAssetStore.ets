@@ -15,6 +15,8 @@
 import asset from '@ohos.security.asset';
 import util from '@ohos.util';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { PreferencesUtil } from './PreferencesUtil';
+import { StorageKeys } from '../../constants/AppConstants';
 
 const DOMAIN_NUMBER: number = 0xFF37;
 const TAG: string = 'TokenAssetStore';
@@ -24,6 +26,22 @@ export class TokenAssetStore {
   static readonly ALIAS_CURRENT_ACCESS: string = 'geotalk_current_access';
   /** 当前会话 AuthData（含 refresh_token）快捷键 */
   static readonly ALIAS_CURRENT_AUTH: string = 'geotalk_current_auth';
+
+  /**
+   * 一次性清理升级前 Preferences 明文时代的 token 残留：96563d4a 迁 Asset 后
+   * 旧键（auth_data/access_token）不再被读取，但升级设备上的旧明文值不会被
+   * 自动清除，会一直留在应用沙盒内。幂等（键不存在时 remove 无害）；在
+   * PreferencesUtil.init 之后调用（EntryAbility）。
+   */
+  static async removeLegacyPlaintextTokens(): Promise<void> {
+    try {
+      await PreferencesUtil.remove(StorageKeys.AUTH_DATA);
+      await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
+      hilog.info(DOMAIN_NUMBER, TAG, 'Preferences 明文 token 残留已清理（如存在）');
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `明文 token 清理失败: ${JSON.stringify(error)}`);
+    }
+  }
 
   /** 多账号：每个账号的 AuthData 按独立别名存储 */
   static accountAuthAlias(userId: string): string {
