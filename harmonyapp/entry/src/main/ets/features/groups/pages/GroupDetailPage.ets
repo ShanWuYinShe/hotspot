@@ -2007,6 +2007,12 @@ export struct GroupDetailPage {
       dragBar: true,
       backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
+    .bindSheet($$this.showBanConfirm, this.buildBanConfirmSheet(), {
+      height: SheetSize.FIT_CONTENT,
+      showClose: false,
+      dragBar: true,
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
+    })
   }
 
   // 四宫格数据卡（对齐前端 groups/[groupId] 简介区 2×2 stats：成员/在线/距你/分类）
@@ -2402,6 +2408,54 @@ export struct GroupDetailPage {
       safeAreaBottom: this.safeAreaBottom,
       onCancel: () => { this.closeAnnouncementSheet(); },
       onSubmit: () => { this.submitAnnouncement(); }
+    })
+  }
+
+  /** 取消封禁确认（关闭面板并清空目标，避免残留状态误触） */
+  private cancelBanMember(): void {
+    this.showBanConfirm = false;
+    this.banTargetMember = null;
+  }
+
+  /** 封禁成员二次确认面板（危险操作防误触；确认后走 confirmBanMember 落库） */
+  @Builder
+  private buildBanConfirmSheet() {
+    Column({ space: DesignConstants.SPACING.LG }) {
+      Text('封禁并移出')
+        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .width('100%')
+
+      Text(`确定将「${this.banTargetMember?.user?.nickname ?? '该成员'}」封禁并移出群组？封禁后对方将无法再加入。`)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .width('100%')
+
+      Row({ space: DesignConstants.SPACING.SM }) {
+        SystemButton({
+          label: '取消',
+          variant: 'surface',
+          buttonSize: 'sheet',
+          fullWidth: true,
+          onPress: () => { this.cancelBanMember(); }
+        })
+        SystemButton({
+          label: '封禁并移出',
+          variant: 'danger',
+          buttonSize: 'sheet',
+          fullWidth: true,
+          onPress: () => { this.confirmBanMember(); }
+        })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.XXL,
+      right: DesignConstants.SPACING.XXL,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.XXL
     })
   }
 
