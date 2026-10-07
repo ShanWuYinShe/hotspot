@@ -22,20 +22,18 @@ describe('LoadMoreButton', () => {
 		expect((btn as HTMLButtonElement).disabled).toBe(true);
 	});
 
-	it('视觉形态守恒：胶囊圆角 + 次级文字色 + 无投影 + 标准 hover 文字', () => {
-		// 迁移到 ui/button secondary 的前置约束（2026-10-07 实测结论）：
-		// secondary 自带 shadow-raised-sm，而自定义 shadow token 不参与
-		// tailwind-merge 冲突消解（class 名里同时出现 shadow-raised-sm 和 shadow-none），
-		// 实测层叠顺序下 shadow-raised-sm 胜出 → 按钮会多一层投影。
-		// 因此在原语支持「去投影」之前不得迁移；本用例用 token 边界（非子串）
-		// 锁定当前形态，任何加投影/改圆角/改字色的迁移都会在这里失败。
+	it('视觉形态守恒：胶囊圆角 + 次级文字色 + 无投影 + 标准描边加深 hover', () => {
+		// 迁移到 ui/button secondary + flat 的形态契约：
+		// - 无投影（flat 裁掉 shadow-raised-sm）
+		// - 保留标准 secondary 描边加深 hover（hover:border-border-strong），
+		//   与全站描边按钮的 hover 语言对齐
 		render(LoadMoreButton, { props: { onLoad: () => {} } });
-		const cls = ` ${(screen.getByRole('button', { name: '加载更多' }) as HTMLElement).className} `;
-		for (const token of ['rounded-full', 'px-5', 'py-2', 'text-text-secondary', 'hover:text-text-primary']) {
-			expect(cls).toContain(` ${token} `);
+		const cls = ' ' + (screen.getByRole('button', { name: '加载更多' }) as HTMLElement).className + ' ';
+		for (const token of ['rounded-full', 'px-5', 'text-text-secondary', 'hover:text-text-primary', 'hover:border-border-strong']) {
+			expect(cls).toContain(' ' + token + ' ');
 		}
-		for (const token of ['rounded-md', 'h-10', 'shadow-raised-sm', 'shadow-none', 'hover:border-border-strong']) {
-			expect(cls).not.toContain(` ${token} `);
+		for (const token of ['rounded-md', 'h-10', 'shadow-raised-sm', 'shadow-none']) {
+			expect(cls).not.toContain(' ' + token + ' ');
 		}
 	});
 });

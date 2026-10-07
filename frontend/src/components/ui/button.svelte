@@ -41,6 +41,7 @@
 		variant = 'primary',
 		size = 'md',
 		loading = false,
+		flat = false,
 		class: className = '',
 		type = 'button',
 		disabled = false,
@@ -50,6 +51,11 @@
 		variant?: ButtonVariant;
 		size?: ButtonSize;
 		loading?: boolean;
+		/** true 时不带变体投影（shadow-raised-sm/-md）：用于列表内嵌的次级动作
+	 *  按钮（如 LoadMoreButton），投影语义与卡片语言冲突的场景。
+	 *  注意：shadow-raised-* 是自定义主题 token，不参与 tailwind-merge 冲突
+	 *  消解——className 里写 shadow-none 消不掉它，必须由本 prop 在源头裁剪。 */
+		flat?: boolean;
 	} = $props();
 </script>
 
@@ -58,7 +64,10 @@
 	disabled={disabled || loading}
 	class={cn(
 		'inline-flex shrink-0 cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap font-medium hover-btn focus-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint',
-		VARIANTS[variant],
+		// flat 时在源头裁掉变体投影：shadow-raised-* 是自定义主题 token，不参与
+		// tailwind-merge 的冲突消解——用 className 覆盖写 shadow-none 也消不掉
+		// （生成 stylesheet 里 raised-* 排在后面会胜出）。
+		flat ? VARIANTS[variant].replace(/\bshadow-raised-\S+/g, '').trim() : VARIANTS[variant],
 		SIZES[size],
 		loading && 'pointer-events-none opacity-soft',
 		className
