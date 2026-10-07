@@ -10,14 +10,13 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { ChatThemeColors, ChatThemeManager } from '../../../core/theme/ChatTheme';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
-import { ChatMessageListItem } from './ChatMessageListUtils';
+import { ChatMessageListItem, TypingMessageSource } from './ChatMessageListUtils';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { AppRouter, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 
 /** 消息展示视图模型（extends 列表项最小集 + 页面共享扩展，替代三处重复字段声明） */
-export interface ChatMessageView extends ChatMessageListItem {
-  senderName: string;
+export interface ChatMessageView extends ChatMessageListItem, TypingMessageSource {
   senderAvatar?: string;
   /** 已编辑（时间行追加「· 已编辑」标记，对齐前端 editedAt） */
   edited?: boolean;

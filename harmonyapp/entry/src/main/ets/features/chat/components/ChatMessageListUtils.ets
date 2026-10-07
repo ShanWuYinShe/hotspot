@@ -2,6 +2,15 @@ import { MessageType } from '../../../core/types/api';
 import { ChatActionRulesInput } from './ChatMessageRules';
 
 /**
+ * 「正在输入」提示所需的最小消息面：定位成员展示名只用 senderId + senderName。
+ * 视图模型经显式 extends 纳入（ArkTS 禁结构化类型，跨文件传参必须显式继承）。
+ */
+export interface TypingMessageSource {
+  senderId: string;
+  senderName: string;
+}
+
+/**
  * ChatMessageListUtils —— 聊天消息列表纯函数工具（去重/合并/时间格式化）。
  * 从 ChatPage 抽取：入参为消息展示模型，无状态、无 UI 依赖。
  */

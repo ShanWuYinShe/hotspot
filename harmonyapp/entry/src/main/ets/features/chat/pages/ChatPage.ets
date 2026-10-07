@@ -30,6 +30,7 @@ import { ChatMessageItem, ChatMessageView } from '../components/ChatMessageItem'
 import { DatePill } from '../components/DatePill';
 import { canRecallMessage, canAdminRecallMessage, canEditMessage, hasMessageActions } from '../components/ChatMessageRules';
 import { mapMessageById } from '../components/ChatMessageListUtils';
+import { buildGroupTypingHint } from '../components/ChatTypingRules';
 import { ChatMessageListItem, dedupeMessages, mergeMessagesById, buildMessageFingerprint, buildMessageContentSignature, formatMessageTime, formatMutedUntil, getLocalDayKey, getLastSentMessageId, needsDateSeparator } from '../components/ChatMessageListUtils';
 import type { ChatActionRulesInput } from '../components/ChatMessageRules';
 import { ChatActionsSheet } from '../components/ChatActionsSheet';
@@ -68,7 +69,6 @@ const TAG: string = 'ChatPage';
 const MESSAGE_CONTENT_MAX: number = 5000;
 const TYPING_THROTTLE_MS: number = 3000;
 const TYPING_INDICATOR_TTL_MS: number = 4500;
-const GROUP_TYPING_NAME_PREVIEW_LIMIT: number = 3;
 const RECONNECT_BACKFILL_THRESHOLD_MS: number = 10000;
 const SAFE_AREA_KEYBOARD_SPIKE_THRESHOLD: number = 120;
 const SAFE_AREA_SPIKE_DELTA: number = 48;
@@ -996,39 +996,9 @@ export struct ChatPage {
     this.groupTypingUserIds = [];
   }
 
+  /** 群聊「正在输入」提示：规则实现在 ChatTypingRules（纯函数，入参为成员列表与消息列表） */
   private groupTypingHintText(): string {
-    const count = this.groupTypingUserIds.length;
-    if (count <= 0) {
-      return '';
-    }
-    const previewCount = count > GROUP_TYPING_NAME_PREVIEW_LIMIT ? GROUP_TYPING_NAME_PREVIEW_LIMIT : count;
-    const previewNames: string[] = [];
-    for (let index = 0; index < previewCount; index++) {
-      previewNames.push(this.resolveGroupTypingDisplayName(this.groupTypingUserIds[index]));
-    }
-    if (count === 1) {
-      return `${previewNames[0]} 正在输入…`;
-    }
-    if (count <= GROUP_TYPING_NAME_PREVIEW_LIMIT) {
-      return `${previewNames.join('、')} 正在输入…`;
-    }
-    return `${previewNames.join('、')} 等 ${count} 人正在输入…`;
-  }
-
-  private resolveGroupTypingDisplayName(userId: string): string {
-    for (let index = this.messages.length - 1; index >= 0; index--) {
-      const message = this.messages[index];
-      if (!message || message.senderId !== userId) {
-        continue;
-      }
-      const nickname = message.senderName ? message.senderName.trim() : '';
-      if (nickname.length > 0) {
-        return nickname;
-      }
-    }
-    const length = userId.length;
-    const suffix = length > 4 ? userId.substring(length - 4, length) : userId;
-    return `成员${suffix}`;
+    return buildGroupTypingHint(this.groupTypingUserIds, this.messages);
   }
 
   private markAsRead(upToMessageId: string): void {
