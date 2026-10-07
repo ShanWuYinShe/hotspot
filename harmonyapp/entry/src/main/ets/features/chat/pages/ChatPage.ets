@@ -31,6 +31,7 @@ import { DatePill } from '../components/DatePill';
 import { canRecallMessage, canAdminRecallMessage, canEditMessage, hasMessageActions } from '../components/ChatMessageRules';
 import { mapMessageById } from '../components/ChatMessageListUtils';
 import { buildGroupTypingHint } from '../components/ChatTypingRules';
+import { resolveStableBottomInset, isNearBottom as isMessageListNearBottom } from '../components/ChatViewportRules';
 import { ChatMessageListItem, dedupeMessages, mergeMessagesById, buildMessageFingerprint, buildMessageContentSignature, formatMessageTime, formatMutedUntil, getLocalDayKey, getLastSentMessageId, needsDateSeparator } from '../components/ChatMessageListUtils';
 import type { ChatActionRulesInput } from '../components/ChatMessageRules';
 import { ChatActionsSheet } from '../components/ChatActionsSheet';
@@ -70,8 +71,6 @@ const MESSAGE_CONTENT_MAX: number = 5000;
 const TYPING_THROTTLE_MS: number = 3000;
 const TYPING_INDICATOR_TTL_MS: number = 4500;
 const RECONNECT_BACKFILL_THRESHOLD_MS: number = 10000;
-const SAFE_AREA_KEYBOARD_SPIKE_THRESHOLD: number = 120;
-const SAFE_AREA_SPIKE_DELTA: number = 48;
 const SEND_DUPLICATE_GUARD_WINDOW_MS: number = 1200;
 const KEYBOARD_DISMISS_NAV_GUARD_MS: number = 260;
 // 撤回时间窗（spec message_recall_window_seconds，默认 300s；服务端 10400 兜底，
@@ -183,19 +182,11 @@ export struct ChatPage {
     return AppThemeVisuals.getChatVisualStyle(this.resolvedThemeId);
   }
 
+  /** 底部安全区稳定性（键盘尖峰抑制）：规则实现在 ChatViewportRules */
   private getStableBottomInset(): number {
-    const currentInset = Math.max(0, this.safeAreaBottom);
-    if (this.stableSafeAreaBottom <= 0) {
-      this.stableSafeAreaBottom = currentInset;
-      return currentInset;
-    }
-    const isKeyboardSpike = currentInset >= SAFE_AREA_KEYBOARD_SPIKE_THRESHOLD &&
-      currentInset > this.stableSafeAreaBottom + SAFE_AREA_SPIKE_DELTA;
-    if (!isKeyboardSpike) {
-      this.stableSafeAreaBottom = currentInset;
-      return currentInset;
-    }
-    return this.stableSafeAreaBottom;
+    const next = resolveStableBottomInset(this.safeAreaBottom, this.stableSafeAreaBottom);
+    this.stableSafeAreaBottom = next;
+    return next;
   }
 
   private getComposerBottomPadding(): number {
@@ -714,9 +705,9 @@ export struct ChatPage {
   }
 
   /** 是否贴底（末尾 3 条内视为贴底）：上翻读历史时收新消息不拽回底部 */
+  /** 是否接近底部：规则实现在 ChatViewportRules（末尾 3 条以内或空列表） */
   private isNearBottom(): boolean {
-    const total = this.messages.length;
-    return total === 0 || this.firstVisibleIndex >= total - 3;
+    return isMessageListNearBottom(this.messages.length, this.firstVisibleIndex);
   }
 
   /** 悬浮钮点击：滚动到底并清除标记 */
