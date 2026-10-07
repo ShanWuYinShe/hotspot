@@ -155,6 +155,31 @@ func TestLimitRequestBodyRejectsOversize(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 }
 
+// 超限请求体应回 spec 的「请求体过大」文案（10000 示例），
+// 而不是笼统的「请求体格式错误」——后者会误导客户端提示。
+func TestDecodeStrictJSONOversizeReturnsBodyTooLarge(t *testing.T) {
+	raw := `{"name":"` + strings.Repeat("x", MaxRequestBodyBytes+1024) + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(raw))
+	req.Body = http.MaxBytesReader(httptest.NewRecorder(), req.Body, MaxRequestBodyBytes)
+	var dest struct {
+		Name string `json:"name"`
+	}
+	apiErr := DecodeStrictJSON(req, &dest)
+	if apiErr == nil || apiErr.Code != CodeInvalidRequest || apiErr.Message != "请求体过大" {
+		t.Fatalf("unexpected error: %#v", apiErr)
+	}
+}
+
+func TestRequireEmptyObjectOversizeReturnsBodyTooLarge(t *testing.T) {
+	raw := `{"pad":"` + strings.Repeat("x", MaxRequestBodyBytes+1024) + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(raw))
+	req.Body = http.MaxBytesReader(httptest.NewRecorder(), req.Body, MaxRequestBodyBytes)
+	apiErr := RequireEmptyObject(req)
+	if apiErr == nil || apiErr.Code != CodeInvalidRequest || apiErr.Message != "请求体过大" {
+		t.Fatalf("unexpected error: %#v", apiErr)
+	}
+}
+
 func TestMethodNotAllowedHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	MethodNotAllowedHandler(rr, httptest.NewRequest(http.MethodPut, "/users", nil))
