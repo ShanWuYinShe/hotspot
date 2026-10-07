@@ -54,6 +54,7 @@ import { CompactStatItem, ProfileQuickAction, ProfileIntentCard, ProfileMenuItem
 import { ProfileDataSection } from '../components/ProfileDataSection';
 import { ProfileIdentityCard } from '../components/ProfileIdentityCard';
 import { ProfileAvatarBlock, ProfileStatsRow } from '../components/ProfileHeaderAtoms';
+import { ProfileRemarkSheet } from '../components/ProfileRemarkSheet';
 import { ProfileMomentGallery } from '../components/ProfileMomentGallery';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -61,8 +62,6 @@ import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 const DOMAIN_NUMBER: number = 0xFF03;
 const TAG: string = 'ProfilePage';
 const PASSWORD_POLICY_HINT: string = '密码需为8-128位且同时包含字母和数字';
-// 备注长度上限（对齐前端 remarkDraft.slice(0, 24)）
-const REMARK_MAX: number = 24;
 
 interface ProfilePageParams {
   userId?: string;
@@ -1066,63 +1065,18 @@ export struct ProfilePage {
   }
 
   // ==================== 备注编辑半模态（对齐前端备注名称输入，仅已关注可保存） ====================
+  /** 备注半模态：渲染在 ProfileRemarkSheet 组件（草稿/保存态/回调经 props 注入） */
   @Builder
   private buildRemarkSheet() {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      Text('设置备注')
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-
-      Text(`备注${this.viewedUserProfile?.user?.nickname ?? ''}，只对你可见`)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-
-      SystemInput({
-        value: this.remarkDraft,
-        placeholder: '备注名称',
-        fontSize: DesignConstants.FONT.SIZE.MD,
-        inputHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
-        maxLength: REMARK_MAX,
-        onChange: (value: string) => { this.remarkDraft = value; }
-      })
-        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
-        .shadow(this.getCurrentThemePalette().controlShadow)
-        .borderRadius(DesignConstants.RADIUS.MD)
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-
-      Text(`${this.remarkDraft.trim().length}/${REMARK_MAX}`)
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontColor(this.getCurrentThemePalette().textTertiary)
-        .width('100%')
-        .textAlign(TextAlign.End)
-
-      Row({ space: DesignConstants.SPACING.SM }) {
-        SystemButton({
-          label: '取消',
-          variant: 'surface',
-          buttonSize: 'sheet',
-          fullWidth: true,
-          onPress: () => { this.showRemarkSheet = false; }
-        })
-        SystemButton({
-          label: '保存',
-          variant: 'primary',
-          buttonSize: 'sheet',
-          fullWidth: true,
-          loading: this.isSavingRemark,
-          disabled: !this.isViewedUserFollowing(),
-          onPress: () => { this.saveRemark(); }
-        })
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.XXL,
-      right: DesignConstants.SPACING.XXL,
-      top: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.XXL
+    ProfileRemarkSheet({
+      resolvedThemeId: this.resolvedThemeId,
+      nickname: this.viewedUserProfile?.user?.nickname ?? '',
+      draft: this.remarkDraft,
+      isSaving: this.isSavingRemark,
+      canSave: this.isViewedUserFollowing(),
+      onDraftChange: (value: string) => { this.remarkDraft = value; },
+      onCancel: () => { this.showRemarkSheet = false; },
+      onSave: () => { this.saveRemark(); }
     })
   }
 
