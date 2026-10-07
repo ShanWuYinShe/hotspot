@@ -36,6 +36,60 @@ func TestValidatePresignUploadRequest(t *testing.T) {
 	}
 }
 
+// chat_file 是唯一开放类别：必须挡住浏览器会执行脚本的 MIME（存储型 XSS）。
+// 预签名 GET 按对象 Content-Type 原样回给浏览器，在存储域名上可直接执行，
+// 这条黑名单是安全边界——此前没有任何回归用例，改动即可能静默失效。
+func TestValidatePresignUploadRequestRejectsActiveContentMime(t *testing.T) {
+	activeContent := []string{
+		"text/html",
+		"image/svg+xml",
+		"application/xhtml+xml",
+		"application/xml",
+		"text/xml",
+		"application/rss+xml",
+		// 大小写与参数不得绕过（normalizeMimeType 先解析再比对）
+		"TEXT/HTML",
+		"text/html; charset=utf-8",
+		"  text/html  ",
+	}
+	for _, mime := range activeContent {
+		req := PresignFileInput{FileName: "a.html", FileSize: 100, MimeType: mime, Category: CategoryChatFile}
+		if err := validatePresignUploadRequest(req); !errors.Is(err, ErrInvalidMediaRequest) {
+			t.Fatalf("expected active content mime %q to be rejected, got %v", mime, err)
+		}
+	}
+
+	// 同一类别下的普通附件仍应放行（黑名单不是白名单，别把整个类别封死）
+	allowed := []string{"application/pdf", "text/plain", "application/zip", "application/octet-stream"}
+	for _, mime := range allowed {
+		req := PresignFileInput{FileName: "a.bin", FileSize: 100, MimeType: mime, Category: CategoryChatFile}
+		if err := validatePresignUploadRequest(req); err != nil {
+			t.Fatalf("expected ordinary attachment mime %q to pass, got %v", mime, err)
+		}
+	}
+}
+
+// 图片/视频/音频是封闭白名单：非白名单 MIME 一律拒绝（含伪装成图片的活跃内容）。
+func TestValidatePresignUploadRequestClosedWhitelistPerCategory(t *testing.T) {
+	cases := []struct {
+		category MediaCategory
+		mime     string
+	}{
+		{CategoryAvatar, "image/svg+xml"},
+		{CategoryAvatar, "text/html"},
+		{CategoryMomentImage, "application/pdf"},
+		{CategoryChatImage, "text/html"},
+		{CategoryChatVideo, "text/html"},
+		{CategoryChatAudio, "text/html"},
+	}
+	for _, c := range cases {
+		req := PresignFileInput{FileName: "a.bin", FileSize: 100, MimeType: c.mime, Category: c.category}
+		if err := validatePresignUploadRequest(req); !errors.Is(err, ErrInvalidMediaRequest) {
+			t.Fatalf("expected %s + %q to be rejected, got %v", c.category, c.mime, err)
+		}
+	}
+}
+
 func TestServicePresignWritesPendingSession(t *testing.T) {
 	repo := NewInMemoryRepository()
 	provider := &mediaStubProvider{presignResp: PresignedUpload{UploadID: "upload_1", UploadURL: "https://storage.example.com/hotspot/uploads/u1/upload_1.png", Headers: map[string]string{"Content-Type": "image/png"}, ExpiresAt: "2026-03-30T00:00:00Z", StorageKey: "uploads/u1/upload_1.png"}}

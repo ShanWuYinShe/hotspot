@@ -302,7 +302,10 @@ func validatePresignUploadRequest(req PresignFileInput) error {
 	if strings.TrimSpace(req.MimeType) == "" {
 		return ErrInvalidMediaRequest
 	}
-	if !isMimeAllowed(req.Category, req.MimeType) {
+	// 必须先归一化再判定：带参数的 MIME（如 "text/html; charset=utf-8"）会绕过
+	// active-content 精确匹配黑名单，而该原始串会被直接写进预签名 PUT 的
+	// Content-Type，最终在存储域名上以 HTML 执行（存储型 XSS）。
+	if !isMimeAllowed(req.Category, normalizeMimeType(req.MimeType)) {
 		return ErrInvalidMediaRequest
 	}
 	if req.FileSize > maxFileSize(req.Category) {
