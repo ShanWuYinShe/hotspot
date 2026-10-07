@@ -3,7 +3,7 @@ import { curves } from '@kit.ArkUI';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AccountInfo, ApiVersionMeta, ClientConfig, SystemAnnouncementItem, UserSettings } from '../../../core/types/api';
+import { AccountInfo, ApiVersionMeta, ClientConfig, SystemAnnouncementItem } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
@@ -109,14 +109,6 @@ export struct SettingsPage {
 
   private getCurrentThemePalette(): AppThemePalette {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
-  }
-
-  private getThemePreviewColor(): string {
-    return this.getCurrentThemePalette().accentBackground;
-  }
-
-  private getThemeDisplayLabel(): string {
-    return AppThemeManager.getThemeLabel(this.themeMode);
   }
 
   private getThemeSheetPalette(): AppThemePalette {

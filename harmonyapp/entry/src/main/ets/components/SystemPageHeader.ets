@@ -121,11 +121,6 @@ export struct SystemPageHeader {
     return this.canShowBackButton() || this.leftAction !== null;
   }
 
-  private hasTrailing(): boolean {
-    // trailing BuilderParam 提供时优先；否则回落到 action/rightAction
-    return this.trailing !== undefined && this.trailing !== null;
-  }
-
   private hasRightAction(): boolean {
     return this.rightAction !== null || this.action !== null;
   }

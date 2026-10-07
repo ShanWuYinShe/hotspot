@@ -18,7 +18,6 @@ import { HttpUtil } from '../../../core/network/HttpUtil';
 import type { ServerEvent } from '../../../core/types/WebSocketTypes';
 import { PermissionManager } from '../../../core/permission/PermissionManager';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppIcon } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SmartNotificationService, NotificationEvent, CreateNotificationInput, NotificationMetadata, CreateNotificationOptions } from '../../../core/services/SmartNotificationService';
 import { NotificationSyncService } from '../../../core/services/NotificationSyncService';
@@ -29,7 +28,7 @@ import { I18nManager } from '../../../core/i18n/I18nManager';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 import { NotificationRenderer } from '../../../core/services/notification/NotificationRenderer';
-import { SmartNotification, NotificationAction } from '../../../core/services/notification/NotificationDataManager';
+import { SmartNotification } from '../../../core/services/notification/NotificationDataManager';
 import { NotificationBanner } from '../../../components/NotificationBanner';
 import { SystemButton } from '../../../components/SystemButton';
 import { TimerManager } from '../../../core/utils/TimerManager';
@@ -41,7 +40,6 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { useSidebarChrome, type BreakpointType } from '../../../core/responsive/Breakpoint';
 import { PhoneLayout } from '../../../components/layout/PhoneLayout';
 import { DesktopLayout } from '../../../components/layout/DesktopLayout';
-import { curves } from '@kit.ArkUI';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';
@@ -109,7 +107,6 @@ struct Index {
 
   @State currentTabIndex: number = 0;
   @State currentRoute: string = 'home';
-  @State previousTabIndex: number = 0;
   @State isInitialized: boolean = false;
   @State lastError: string = '';
   @State showNotificationCenter: boolean = false;
@@ -126,7 +123,6 @@ struct Index {
   private i18nManager = I18nManager.getInstance();
   private uiContext: UIContext | null = null;
   private abilityContext: common.UIAbilityContext | null = null;
-  private tabsController: TabsController = new TabsController();
   private wsNotificationsBound: boolean = false;
   private locationSyncTimerId: number = 0;
   private hasInitialLocationSynced: boolean = false;
@@ -170,18 +166,6 @@ struct Index {
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
-  }
-
-  private getBrandAccent(): string {
-    return this.getCurrentThemePalette().accentBackground;
-  }
-
-  private getBrandAccentText(): string {
-    return this.getCurrentThemePalette().accentText;
-  }
-
-  private getTabInactiveColor(): ResourceColor {
-    return this.getCurrentThemePalette().tabBarInactive;
   }
 
   aboutToDisappear() {
@@ -774,18 +758,6 @@ struct Index {
     }
   }
 
-  private handleTabChange(index: number) {
-    // "+" 按钮 (index 2) 不是真实标签，拦截并弹出创建菜单
-    if (index === 2) {
-      this.tabsController.changeIndex(this.previousTabIndex);
-      this.currentTabIndex = this.previousTabIndex;
-      this.showCreateActionSheet();
-      return;
-    }
-    this.previousTabIndex = this.currentTabIndex;
-    this.currentTabIndex = index;
-  }
-
   private showCreateActionSheet(): void {
     if (!this.isLoggedIn) {
       const loginParams = new LoginRouteParam();
@@ -898,8 +870,4 @@ struct Index {
     .opacity(this.themeFadeOpacity)
   }
 
-  /** 获取安全区域顶部内边距（状态栏高度 + 间距） */
-  private getSafeAreaTopPadding(): number {
-    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
-  }
 }

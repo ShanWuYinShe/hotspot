@@ -760,25 +760,6 @@ export struct NotificationCenter {
     .accessibilityText(`${notification.is_read ? '' : '未读'}通知：${this.buildNotificationTitle(notification)}。${this.buildNotificationMessage(notification)}`)
   }
 
-  private getFilterLabel(filter: NotificationFilterKey): string {
-    switch (filter) {
-      case 'unread':
-        return '未读';
-      case 'interaction':
-        return '互动';
-      case 'group':
-        return '群组';
-      case 'report':
-        return '举报';
-      case 'nearby':
-        return '附近';
-      case 'system':
-        return '系统';
-      default:
-        return '全部';
-    }
-  }
-
   private getUnreadCount(): number {
     let count = 0;
     for (const notif of this.visibleNotifications) {

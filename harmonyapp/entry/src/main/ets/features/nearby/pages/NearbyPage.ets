@@ -111,13 +111,6 @@ export struct NearbyPage {
     return '附近暂时没有瞬间';
   }
 
-  /** 当前段位「查看全部」去向（完整列表页，对齐前端各段路由） */
-  private routeForSection(section: number): string {
-    if (section === 0) return PageNames.NEARBY_USERS;
-    if (section === 1) return PageNames.NEARBY_GROUPS;
-    return PageNames.NEARBY_MOMENTS;
-  }
-
   /** 当前段位是否有内容（决定渲染预览流还是空态） */
   private sectionHasContent(section: number): boolean {
     if (section === 0) return this.nearbyUsers.length > 0;

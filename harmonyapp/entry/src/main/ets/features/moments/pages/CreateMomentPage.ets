@@ -146,14 +146,6 @@ export struct CreateMomentPage {
     return this.getCurrentThemePalette().borderColor;
   }
 
-  private getSoftCardShadow(): ShadowOptions {
-    return AppThemeVisuals.getSurfaceShadow(this.resolvedThemeId);
-  }
-
-  private getPrimaryButtonShadow(): ShadowOptions {
-    return AppThemeVisuals.getSurfaceShadow(this.resolvedThemeId);
-  }
-
   private addTag(): void {
     const tag = this.currentTag.trim();
     if (!tag) return;

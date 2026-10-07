@@ -10,12 +10,11 @@ import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, 
 import { isValidUsernameLoginId, isValidNickname as isValidNicknameShared, isValidPassword as isValidPasswordShared } from '../../../core/utils/AccountValidation';
 import { interactionEventHub, InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import { interactionActions } from '../../../core/state/InteractionActions';
-import { curves } from '@kit.ArkUI';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { AppRouter, ChatRouteParam, LoginRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, LoginRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { ViewedMomentThumb } from '../components/ViewedMomentThumb';
@@ -30,7 +29,7 @@ import { SystemTextArea } from '../../../components/SystemTextArea';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemDialog } from '../../../components/SystemDialog';
 import { LoginPromptView } from '../../../components/LoginPromptView';
-import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, UserSharePayload, MomentItem, FetchUserMomentsRequest } from '../../../core/types/api';
+import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, MomentItem } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -47,10 +46,9 @@ import { NfcShareService } from '../../../core/services/NfcShareService';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
-import { formatCount } from '../../../core/utils/FormatUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
-import { CompactStatItem, ProfileQuickAction, ProfileIntentCard, ProfileMenuItem } from '../components/ProfileContentAtoms';
+import { ProfileMenuItem } from '../components/ProfileContentAtoms';
 import { ProfileDataSection } from '../components/ProfileDataSection';
 import { ProfileIdentityCard } from '../components/ProfileIdentityCard';
 import { ProfileAvatarBlock, ProfileStatsRow } from '../components/ProfileHeaderAtoms';
@@ -281,25 +279,6 @@ export struct ProfilePage {
     AppRouter.push(PageNames.CHAT, params);
   }
 
-  private async shareProfileByCode(): Promise<void> {
-    const userId = this.viewedUserProfile?.user?.user_id;
-    if (!userId) return;
-    try {
-      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      const nickname = this.viewedUserProfile?.user?.nickname ?? '用户';
-      const payload: UserSharePayload = { shared_user_id: userId };
-      await ShareActionHelper.shareResource(
-        context,
-        'user',
-        payload,
-        `来认识 ${nickname}`,
-        this.viewedUserProfile?.bio ?? '快来 HotSpot 和附近的人交流吧！'
-      );
-    } catch {
-      // 用户取消分享
-    }
-  }
-
   // 被查看用户的关系态定向更新（单实体，同 UserCard 范式）
   private handleViewedUserStateUpdate(payload: Object): void {
     const state = payload as UserRelationState;
@@ -428,36 +407,8 @@ export struct ProfilePage {
     AppRouter.push(PageNames.GROUP);
   }
 
-  private openSearchPeople(): void {
-    AppRouter.push(PageNames.SEARCH);
-  }
-
-  private openSettingsCenter(): void {
-    AppRouter.push(PageNames.SETTINGS);
-  }
-
-  private openPrivacySettings(): void {
-    AppRouter.push(PageNames.PRIVACY_SETTINGS);
-  }
-
   private openRelationshipHub(): void {
     AppRouter.push(PageNames.RELATIONSHIP_HUB);
-  }
-
-  private openSafetySettings(): void {
-    AppRouter.push(PageNames.SAFETY_SETTINGS);
-  }
-
-  private openAnnouncements(): void {
-    AppRouter.push(PageNames.ANNOUNCEMENTS);
-  }
-
-  private openMyShares(): void {
-    AppRouter.push(PageNames.MY_SHARES);
-  }
-
-  private openSubscriptions(): void {
-    AppRouter.push(PageNames.SUBSCRIPTIONS);
   }
 
   private isAdminUser(): boolean {
@@ -1091,25 +1042,6 @@ export struct ProfilePage {
     })
   }
 
-  @Builder
-  private buildGuestHighlight(title: string, subtitle: string) {
-    Column({ space: DesignConstants.SPACING.XS }) {
-      Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor(this.getPrimaryTextColor())
-      Text(subtitle)
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontColor(this.getSecondaryTextColor())
-    }
-    .layoutWeight(1)
-    .alignItems(HorizontalAlign.Center)
-    .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-    .backgroundColor(this.getSurfaceSubtle())
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-  }
-
   private showCreateSheet(): void {
     // 委托父级 Index 处理创建动作（通过 AppStorage 通信）
     AppStorage.setOrCreate('triggerCreateAction', Date.now());
@@ -1385,154 +1317,6 @@ export struct ProfilePage {
   // ==================== 公共 Builder ====================
 
   @Builder
-  private UserInfoContent(): void {
-    Column({ space: DesignConstants.SPACING.XL }) {
-      Column({ space: DesignConstants.SPACING.MD }) {
-        // 身份卡头部：对齐前端 ProfileMobile —— 头像(68)+相机角标 | 昵称(xl)+位置 | 编辑资料按钮
-        Row({ space: DesignConstants.SPACING.MD }) {
-          Stack({ alignContent: Alignment.BottomEnd }) {
-            SystemAvatar({
-              avatarUrl: this.currentUser?.avatar_url || '',
-              name: this.currentUser?.nickname || '',
-              avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.PROFILE,
-              isOnline: this.currentUser?.presence_status === 'online',
-              inset: true
-            })
-            // 相机角标：accent 圆 + 白描边（对齐前端 size-6 camera badge），进编辑态
-            Row() {
-              LucideIcon({
-                icon: AppIcon.CAMERA,
-                iconSize: DesignConstants.FONT.SIZE.XS2,
-                color: this.getAccentText()
-              })
-            }
-            .width(DesignConstants.COMPONENT.AVATAR_SIZE.XXS + 2)
-            .height(DesignConstants.COMPONENT.AVATAR_SIZE.XXS + 2)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.getAccentBackground())
-            .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().pageBackground })
-            .justifyContent(FlexAlign.Center)
-            .onClick(() => this.startEdit())
-            .accessibilityText('编辑头像')
-            .responseRegion({
-              x: -DesignConstants.SPACING.SM,
-              y: -DesignConstants.SPACING.SM,
-              width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
-              height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-            })
-          }
-          .width(DesignConstants.COMPONENT.AVATAR_SIZE.PROFILE)
-          .height(DesignConstants.COMPONENT.AVATAR_SIZE.PROFILE)
-
-          Column({ space: DesignConstants.SPACING.XS }) {
-            Text(this.currentUser?.nickname || '未设置昵称')
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .fontColor(this.getPrimaryTextColor())
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-            if (this.userType === 'temp') {
-              Text('临时身份')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getWarningTextColor())
-                .maxLines(1)
-            } else if (this.isAdminUser()) {
-              Text('管理员')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getAccentBackground())
-                .maxLines(1)
-            }
-            Row({ space: DesignConstants.SPACING.XS }) {
-              LucideIcon({
-                icon: AppIcon.LOCATION,
-                iconSize: DesignConstants.FONT.SIZE.SM,
-                color: this.getAccentBackground()
-              })
-              Text(this.currentUser?.location?.location_name || '未设置位置')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getSecondaryTextColor())
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-            }
-            .alignItems(VerticalAlign.Center)
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-
-          Row({ space: DesignConstants.SPACING.SM2 }) {
-            LucideIcon({
-              icon: AppIcon.EDIT,
-              iconSize: DesignConstants.FONT.SIZE.SM,
-              color: this.getPrimaryTextColor()
-            })
-            Text('编辑资料')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .fontColor(this.getPrimaryTextColor())
-          }
-          .padding({
-            left: DesignConstants.SPACING.MD,
-            right: DesignConstants.SPACING.MD,
-            top: DesignConstants.SPACING.SM,
-            bottom: DesignConstants.SPACING.SM
-          })
-          .borderRadius(DesignConstants.RADIUS.MD)
-          .backgroundColor(this.getSurfaceBackground())
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .onClick(() => this.startEdit())
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Top)
-
-        if (this.currentUser?.bio) {
-          // 自己的资料页用第一人称占位（「这个人」是他人视角文案）
-          Text(this.currentUser.bio || '还没有填写简介，介绍一下自己吧')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .lineHeight(DesignConstants.FONT.LINE_HEIGHT.LG)
-            .fontColor(this.getSecondaryTextColor())
-            .textAlign(TextAlign.Start)
-            .maxLines(3)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .width('100%')
-            .margin({ top: DesignConstants.SPACING.MD })
-        }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-
-      // 个人数据列表（对齐前端 ProfileMobile：header + 5 行带 detail 副标题 + 计数）
-      Column() {
-        // header（对齐前端 ListContainer 头：「个人数据 / 在这里查看你的内容与关系」）
-        Column({ space: DesignConstants.SPACING.HALF }) {
-          Text('个人数据')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-            .fontColor(this.getPrimaryTextColor())
-          Text('在这里查看你的内容与关系')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getSecondaryTextColor())
-        }
-        .alignItems(HorizontalAlign.Start)
-        .width('100%')
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
-
-        ProfileMenuItem({ title: '我的瞬间', icon: AppIcon.CAMERA, value: formatCount(this.myMomentsCount), detail: '查看已发布的记录', onTap: () => this.openMyMoments(), resolvedThemeId: this.resolvedThemeId })
-        ProfileMenuItem({ title: '我的群组', icon: AppIcon.GROUP, value: formatCount(this.myGroupsCount), detail: `${formatCount(this.myGroupsCount)} 个正在参与`, onTap: () => this.openMyGroups(), resolvedThemeId: this.resolvedThemeId })
-        ProfileMenuItem({ title: '好友', icon: AppIcon.HEART, value: formatCount(this.myFriendsCount), detail: `${formatCount(this.myFriendsCount)} 位好友`, onTap: () => this.openRelationshipHub(), resolvedThemeId: this.resolvedThemeId })
-        ProfileMenuItem({ title: '关注', icon: AppIcon.PERSON, value: formatCount(this.myFollowingCount), detail: `${formatCount(this.myFollowingCount)} 人`, onTap: () => this.openRelationshipHub(), resolvedThemeId: this.resolvedThemeId })
-        ProfileMenuItem({ title: '粉丝', icon: AppIcon.COMPASS, value: formatCount(this.myFollowersCount), detail: `${formatCount(this.myFollowersCount)} 人`, onTap: () => this.openRelationshipHub(), resolvedThemeId: this.resolvedThemeId })
-      }
-      .width('100%')
-      .padding(DesignConstants.SPACING.MD)
-      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-      .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    }
-    .width('100%')
-  }
-
-  @Builder
   private EditFormContent(): void {
     Column({ space: DesignConstants.SPACING.LG }) {
       Column({ space: DesignConstants.SPACING.SM }) {
@@ -1604,19 +1388,6 @@ export struct ProfilePage {
           .enabled(!this.isLoading && !this.isAvatarUploading)
           .opacity(this.isLoading || this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.saveEdit())
-      }
-      .width('100%')
-    }
-    .width('100%')
-  }
-
-  @Builder
-  private StatsContent(): void {
-    Column() {
-      Row({ space: DesignConstants.SPACING.SM }) {
-        CompactStatItem({ icon: AppIcon.CAMERA, value: formatCount(this.myMomentsCount), label: '瞬间', onTap: () => this.openMyMoments(), resolvedThemeId: this.resolvedThemeId })
-        CompactStatItem({ icon: AppIcon.HEART, value: formatCount(this.myFollowersCount), label: '关注者', onTap: () => this.openRelationshipHub(), resolvedThemeId: this.resolvedThemeId })
-        CompactStatItem({ icon: AppIcon.GROUP, value: formatCount(this.myGroupsCount), label: '群组', onTap: () => this.openMyGroups(), resolvedThemeId: this.resolvedThemeId })
       }
       .width('100%')
     }
