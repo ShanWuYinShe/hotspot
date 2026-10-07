@@ -12,11 +12,11 @@
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, PIN_COLORS, PIN_TONES, floatBtnStyle, fetchMapCanvas, fetchMapCanvasByViewport, aggregateDrillZoom, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
+	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, floatBtnStyle, aggregateDrillZoom, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
+	import { createMapCanvasState } from '../shared/create-map-canvas-state.svelte';
 	import MapCanvas from '@/components/map/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
-	import MapPinMarker from '../shared/MapPinMarker.svelte';
-	import MapHeatDot from '@/components/map/MapHeatDot.svelte';
+	import MapOverlays from '../shared/MapOverlays.svelte';
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
 	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
@@ -136,59 +136,13 @@
 		})();
 	});
 
-	// map/canvas 数据
-	let mapPins = $state<Pin[]>([]);
-	let heatBuckets = $state<MapHeatBucket[]>([]);
-	let mapLoading = $state(true);
-	let mapError = $state<string | null>(null);
-	let mapReloadKey = $state(0);
-
-	// 重试：既重拉地图数据，也重拉中心配置——中心拿不到时只 bump mapReloadKey
-	// 会原地踏步（effect 因 !center 直接返回），重试按钮形同死的。
-	function retryLoad() {
-		centerReloadKey++;
-		mapReloadKey++;
-	}
-
-	// 视口中心/边界或筛选变化时重新拉取。依赖 stableBounds（手势/缩放结束才回写），
-	// 拖拽中的逐帧 bounds 变化只驱动图钉定位，不触发请求。
-	$effect(() => {
-		void mapReloadKey;
-		const center = mapCenter;
-		const types = [...activeFilters];
-		const bounds = mapStableBounds;
-		if (!center) {
-			// 中心未定不请求；判定完毕仍无中心就结束 loading 并给可重试提示，避免永久空转。
-			if (centerResolved) {
-				mapLoading = false;
-				mapError = '暂时无法获取位置信息';
-			}
-			return;
-		}
-		let cancelled = false;
-		mapLoading = true;
-		mapError = null;
-		// 首屏无视口时用固定 delta 兜底；mapBounds 就绪后（hasViewport）走真实视口。
-		const hasViewport = bounds.maxLat !== bounds.minLat || bounds.maxLng !== bounds.minLng;
-		const request = hasViewport
-			? fetchMapCanvasByViewport({ bounds: { north: bounds.maxLat, south: bounds.minLat, east: bounds.maxLng, west: bounds.minLng } }, types)
-			: fetchMapCanvas(center, 0.045, types);
-		void request
-			.then((r) => {
-				if (cancelled) return;
-				mapPins = r.pins;
-				heatBuckets = r.heatBuckets;
-				mapLoading = false;
-			})
-			.catch((err: unknown) => {
-				if (cancelled) return;
-				// 无 catch 时请求失败会让 mapLoading 永久卡在 true、地图一片空白
-				mapError = err instanceof Error ? err.message : '地图数据加载失败';
-				mapLoading = false;
-			});
-		return () => {
-			cancelled = true;
-		};
+	// map/canvas 数据（桌面/移动共用工厂）：图钉/热力/计数 + 加载/错误/重试
+	const mapData = createMapCanvasState({
+		getCenter: () => mapCenter,
+		getFilters: () => activeFilters,
+		getStableBounds: () => mapStableBounds,
+		isCenterResolved: () => centerResolved,
+		onRetry: () => (centerReloadKey++)
 	});
 
 	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
@@ -291,47 +245,30 @@
 	<!-- 原地点击空白由 MapCanvas onMapTap 承担（拖拽不触发）；键盘 Escape 等价收起见 svelte:window -->
 	<div style="position:absolute;inset:0;z-index:0;">
 		{#if mapCenter}
-		<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} onMapTap={handleMapTap} />
-
-		<!-- Current location pulsing dot（对齐 Figma Make：halo scale 1→1.8 / opacity 0.55→0 循环） -->
-		<div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;">
-			<div class="relative rounded-full" style="width:18px;height:18px;background:{PIN_COLORS.user};border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-shadow) {PIN_TONES.user.glow};">
-				<span class="map-pulse-halo absolute rounded-full" style="inset:-7px;background:{PIN_TONES.user.bg};border:var(--cst-border-width-hairline) solid {PIN_TONES.user.border};"></span>
-			</div>
-		</div>
-
-		<!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计；点徽标下钻到整格明细） -->
-		{#each heatBuckets as bucket (bucket.cell_token)}
-			<MapHeatDot {bucket} bounds={mapBounds} onSelect={handleHeatSelect} />
-		{/each}
-
-		<!-- Marker pins -->
-		{#each mapPins as pin (pin.id)}
-			<MapPinMarker
-				pin={pin}
-				bounds={mapBounds}
-				isSelected={selectedPin?.id === pin.id}
-				onSelect={(e) => {
-					e.stopPropagation();
-					userPicked = true;
-					selectedPin = selectedPin?.id === pin.id ? null : pin;
-					if (snap === 'min') snapTo('mid');
-				}}
-			/>
-		{/each}
+			<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} onMapTap={handleMapTap} />
 		{/if}
 
-		{#if mapLoading}
-			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-full bg-surface-primary px-3 py-1 text-xs text-text-secondary shadow-raised-sm border border-border-default" >
-				加载地图数据…
-			</div>
-		{:else if mapError}
-			<!-- 加载失败：给出原因与重试，避免空白地图被误认为「附近什么都没有」 -->
-			<div class="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full bg-surface-primary px-3 py-1.5 text-xs text-status-danger shadow-raised-sm border border-border-default" >
-				<span>{mapError}</span>
-				<button type="button" class="link-btn focus-ring rounded-sm text-accent-default" onclick={retryLoad}>重试</button>
-			</div>
-		{/if}
+		<!-- 数据覆盖层（当前位置点/热力桶/图钉/加载错误条）：桌面/移动共用组件 -->
+		<MapOverlays
+			pins={mapData.pins}
+			bounds={mapBounds}
+			heatBuckets={mapData.heatBuckets}
+			selectedPinId={selectedPin?.id ?? null}
+			loading={mapData.loading}
+			error={mapData.error}
+			showDot={!!mapCenter}
+			dotTop="46%"
+			dotPulse={true}
+			chipTopClass="top-16"
+			onSelectPin={(pin, e) => {
+				e.stopPropagation();
+				userPicked = true;
+				selectedPin = selectedPin?.id === pin.id ? null : pin;
+				if (snap === 'min') snapTo('mid');
+			}}
+			onHeatSelect={handleHeatSelect}
+			onRetry={mapData.retryLoad}
+		/>
 	</div>
 
 	<!-- ══ TOP BAR (fixed, floating over map — 对齐 Figma Make：无标题，仅返回 + 筛选) ══ -->
