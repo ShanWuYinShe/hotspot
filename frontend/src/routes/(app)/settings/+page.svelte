@@ -12,6 +12,7 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import SettingsSection from './SettingsSection.svelte';
 	import AccountSecuritySection from './AccountSecuritySection.svelte';
@@ -234,13 +235,12 @@
 								<p class="text-xs text-text-secondary mt-0.5">登录后可同步跨端偏好、个人主页与动态收藏</p>
 							</div>
 						</div>
-						<button
-							type="button"
+						<Button
+							class="h-auto shrink-0 rounded-md px-4 py-2 text-xs"
 							onclick={() => requireAuth({ action: '登录账号', run: () => { reloadKey++; } })}
-							class="hover-btn px-4 py-2 text-xs font-medium rounded-md bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md transition-colors focus-ring shrink-0"
 						>
 							登录 / 注册
-						</button>
+						</Button>
 					</div>
 				{/if}
 			</SettingsSection>
@@ -418,14 +418,14 @@
 
 					{#if auth.isAuthenticated}
 						<div class="flex justify-end pt-2">
-							<button
-								type="button"
-								class="hover-btn inline-flex items-center gap-2 px-4 py-2 rounded-md focus-ring text-xs font-medium text-status-danger hover:bg-danger-bg border border-border-default bg-surface-primary transition-colors"
+							<Button
+								variant="outline"
+								class="h-auto gap-2 rounded-md bg-surface-primary px-4 py-2 text-xs text-status-danger hover:bg-danger-bg"
 								onclick={() => (confirmLogoutOpen = true)}
 							>
 								<LogOut class="size-3.5" strokeWidth={1.75} />
 								退出登录当前账号
-							</button>
+							</Button>
 						</div>
 					{/if}
 				</div>
