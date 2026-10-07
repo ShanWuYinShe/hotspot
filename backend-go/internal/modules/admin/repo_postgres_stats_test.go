@@ -204,15 +204,19 @@ func TestPostgresStatsGeoQueryError(t *testing.T) {
 
 // 趋势：SQL 行 (day, user_n, group_n, moment_n) → 补零展开窗口序列。
 func TestPostgresStatsGeoTrendsMapping(t *testing.T) {
+	// stub 的 day 与下方 start 必须基于同一时区截断，否则跨 UTC 午夜时
+	// stub 数据会落到错误的窗口槽位（时区边界 flake）。
+	sh := time.FixedZone("UTC+8", 8*60*60)
 	day := func(offsetDays int) time.Time {
-		return time.Now().UTC().AddDate(0, 0, offsetDays).Truncate(24 * time.Hour)
+		now := time.Now().In(sh)
+		d := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, sh)
+		return d.AddDate(0, 0, offsetDays)
 	}
 	backend := &statsQueryStub{
 		totalsRow:  []any{int64(0), int64(0), int64(0)},
 		trendsRows: [][]any{{day(-1), int64(2), int64(1), int64(0)}, {day(0), int64(1), int64(0), int64(3)}},
 	}
 	repo := newStatsRepoWithStub(backend)
-	sh := time.FixedZone("UTC+8", 8*60*60)
 	nowSH := time.Now().In(sh)
 	start := time.Date(nowSH.Year(), nowSH.Month(), nowSH.Day(), 0, 0, 0, 0, sh).AddDate(0, 0, -6)
 	query := geoStatsQuery{TrendDays: 7, TrendStart: start, Level: 8, Limit: 20}
