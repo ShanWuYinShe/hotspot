@@ -27,6 +27,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
 import { ChatMessageItem, ChatMessageView } from '../components/ChatMessageItem';
+import { DatePill } from '../components/DatePill';
 import { canRecallMessage, canAdminRecallMessage, canEditMessage, hasMessageActions } from '../components/ChatMessageRules';
 import { mapMessageById } from '../components/ChatMessageListUtils';
 import { ChatMessageListItem, dedupeMessages, mergeMessagesById, buildMessageFingerprint, buildMessageContentSignature, formatMessageTime, formatMutedUntil, getLocalDayKey, getLastSentMessageId, needsDateSeparator } from '../components/ChatMessageListUtils';
@@ -1499,25 +1500,14 @@ export struct ChatPage {
   }
 
 
+  /** 日期分隔胶囊：渲染在 DatePill 组件（props 注入主题） */
   @Builder
   buildDatePill(label: string) {
-    Row() {
-      Text(label)
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
-        .padding({
-          left: DesignConstants.SPACING.MD,
-          right: DesignConstants.SPACING.MD,
-          top: DesignConstants.SPACING.XS,
-          bottom: DesignConstants.SPACING.XS
-        })
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Center)
-    .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+    DatePill({
+      label: label,
+      palette: this.getCurrentThemePalette(),
+      surfaceBorder: this.getSurfaceBorder()
+    })
   }
 
   private async submitReport(): Promise<void> {
