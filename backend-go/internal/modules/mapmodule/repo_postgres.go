@@ -111,7 +111,18 @@ func (r *PostgresRepository) Heatmap(ctx context.Context, query canvasQuery) (Ma
 		}
 	}
 	if query.DataType == "all" || query.DataType == "moment" {
-		rows, err := queryable.Query(ctx, queryHeatmapMoments, mins, maxs, shift, query.StartTime, query.EndTime)
+		// 零值时间须转 nil 指针（pgx 编码 NULL），否则 0001-01-01 会让时间窗
+		// 把全部 moments 过滤掉（与 queryMapMoments 同一口径）。
+		var startTime, endTime *time.Time
+		if !query.StartTime.IsZero() {
+			t := query.StartTime.UTC()
+			startTime = &t
+		}
+		if !query.EndTime.IsZero() {
+			t := query.EndTime.UTC()
+			endTime = &t
+		}
+		rows, err := queryable.Query(ctx, queryHeatmapMoments, mins, maxs, shift, startTime, endTime)
 		if err != nil {
 			return MapHeatCanvas{}, err
 		}
