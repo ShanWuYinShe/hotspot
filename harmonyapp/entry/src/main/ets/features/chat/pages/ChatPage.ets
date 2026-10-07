@@ -28,6 +28,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
 import { ChatMessageItem, ChatMessageView } from '../components/ChatMessageItem';
 import { canRecallMessage, canAdminRecallMessage, canEditMessage, hasMessageActions } from '../components/ChatMessageRules';
+import { mapMessageById } from '../components/ChatMessageListUtils';
 import { ChatMessageListItem, dedupeMessages, mergeMessagesById, buildMessageFingerprint, buildMessageContentSignature, formatMessageTime, formatMutedUntil, getLocalDayKey, getLastSentMessageId, needsDateSeparator } from '../components/ChatMessageListUtils';
 import type { ChatActionRulesInput } from '../components/ChatMessageRules';
 import { ChatActionsSheet } from '../components/ChatActionsSheet';
@@ -1593,24 +1594,21 @@ export struct ChatPage {
     if (!messageId) {
       return;
     }
-    this.messages = this.messages.map((m: ChatMessage): ChatMessage => {
-      if (m.id === messageId) {
-        const next: ChatMessage = {
-          id: m.id,
-          content: RECALLED_MESSAGE_TEXT,
-          senderId: m.senderId,
-          senderName: m.senderName,
-          senderAvatar: m.senderAvatar,
-          type: m.type,
-          sentAt: m.sentAt,
-          isSelf: m.isSelf,
-          isSystem: m.isSystem,
-          recalled: true,
-          rawData: m.rawData
-        };
-        return next;
-      }
-      return m;
+    this.messages = mapMessageById(this.messages, messageId, (m: ChatMessage): ChatMessage => {
+      const next: ChatMessage = {
+        id: m.id,
+        content: RECALLED_MESSAGE_TEXT,
+        senderId: m.senderId,
+        senderName: m.senderName,
+        senderAvatar: m.senderAvatar,
+        type: m.type,
+        sentAt: m.sentAt,
+        isSelf: m.isSelf,
+        isSystem: m.isSystem,
+        recalled: true,
+        rawData: m.rawData
+      };
+      return next;
     });
     this.messagesDataSource.setData(this.messages);
   }
@@ -1620,25 +1618,22 @@ export struct ChatPage {
     if (!messageId) {
       return;
     }
-    this.messages = this.messages.map((m: ChatMessage): ChatMessage => {
-      if (m.id === messageId) {
-        const next: ChatMessage = {
-          id: m.id,
-          content: content,
-          senderId: m.senderId,
-          senderName: m.senderName,
-          senderAvatar: m.senderAvatar,
-          type: m.type,
-          sentAt: m.sentAt,
-          isSelf: m.isSelf,
-          isSystem: m.isSystem,
-          recalled: m.recalled,
-          edited: true,
-          rawData: m.rawData
-        };
-        return next;
-      }
-      return m;
+    this.messages = mapMessageById(this.messages, messageId, (m: ChatMessage): ChatMessage => {
+      const next: ChatMessage = {
+        id: m.id,
+        content: content,
+        senderId: m.senderId,
+        senderName: m.senderName,
+        senderAvatar: m.senderAvatar,
+        type: m.type,
+        sentAt: m.sentAt,
+        isSelf: m.isSelf,
+        isSystem: m.isSystem,
+        recalled: m.recalled,
+        edited: true,
+        rawData: m.rawData
+      };
+      return next;
     });
     this.messagesDataSource.setData(this.messages);
   }

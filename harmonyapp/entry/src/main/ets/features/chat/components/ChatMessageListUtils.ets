@@ -116,6 +116,11 @@ export function dedupeMessages<T extends ChatMessageListItem>(messages: T[]): T[
   return uniqueMessages;
 }
 
+/** 按 id 定位并替换单条消息（返回新数组；id 不存在时原样返回） */
+export function mapMessageById<T extends ChatMessageListItem>(messages: T[], id: string, transform: (m: T) => T): T[] {
+  return messages.map((m: T): T => (m.id === id ? transform(m) : m));
+}
+
 /** 按 sentAt 升序合并两段消息（先整体去重再排序；id 为次序 tie-break） */
 export function mergeMessagesById<T extends ChatMessageListItem>(currentMessages: T[], recentMessages: T[]): T[] {
   const mergedMessages = dedupeMessages(currentMessages.concat(recentMessages));
