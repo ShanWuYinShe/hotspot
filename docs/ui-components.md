@@ -61,7 +61,8 @@
 
 ## 近重复收敛 backlog（按危害排序）
 
-1. **手写按钮**：59 个文件用 `hover-btn` 手写 `<button>`，`ui/button` 仅 10 处。
+1. **手写按钮**：58 个文件用 `hover-btn` 手写 `<button>`，`ui/button` 引用 23 个文件
+   （2026-10-08 刷新：设置页/LoadMoreButton 已迁）。
    规则：改到某文件时把该文件的简单动作按钮顺手迁 `ui/button`/`ActionIconButton`。
    约束（2026-10-07 LoadMoreButton 迁移实测）：`ui/button` secondary 自带的
    `shadow-raised-sm` 是自定义主题 token，**不参与 tailwind-merge 冲突消解**——
