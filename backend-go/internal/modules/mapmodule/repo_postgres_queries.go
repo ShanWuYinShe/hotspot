@@ -81,7 +81,7 @@ WHERE g.is_searchable = TRUE
 GROUP BY 1`
 
 	queryHeatmapMoments = `
-SELECT ((m.s2_cell_id >> $4) << $4) AS bucket_cell,
+SELECT ((m.s2_cell_id >> $3) << $3) AS bucket_cell,
        count(*) AS total,
        sum(m.latitude) AS lat_sum,
        sum(m.longitude) AS lng_sum
@@ -90,7 +90,7 @@ WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
               WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)
-  AND ($5::timestamptz IS NULL OR m.created_at >= $5)
-  AND ($6::timestamptz IS NULL OR m.created_at <= $6)
+  AND ($4::timestamptz IS NULL OR m.created_at >= $4)
+  AND ($5::timestamptz IS NULL OR m.created_at <= $5)
 GROUP BY 1`
 )
