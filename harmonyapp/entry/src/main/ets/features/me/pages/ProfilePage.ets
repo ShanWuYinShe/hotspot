@@ -51,6 +51,7 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { CompactStatItem, ProfileQuickAction, ProfileIntentCard, ProfileMenuItem } from '../components/ProfileContentAtoms';
+import { ProfileDataSection } from '../components/ProfileDataSection';
 import { ProfileMomentGallery } from '../components/ProfileMomentGallery';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -1433,109 +1434,16 @@ export struct ProfilePage {
   }
 
   // ==================== 移动/平板「个人数据」列表（对齐前端 ProfileMobile 5 行） ====================
+  /** 个人数据分组：渲染在 ProfileDataSection 组件（计数/主题经 props 注入） */
   @Builder
   private buildProfileDataList() {
-    Column() {
-      // 分组小标（对齐前端 ProfileMobile 改版：eyebrow + 副文案在列表外，列表去外框）
-      Text('个人数据')
-        .fontSize(DesignConstants.FONT.SIZE.XS2)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor(this.getSecondaryTextColor())
-        .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
-        .textCase(TextCase.UpperCase)
-        .width('100%')
-        .padding({ left: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM })
-      Text('在这里查看你的内容与关系')
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontColor(this.getSecondaryTextColor())
-        .width('100%')
-        .padding({ left: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM })
-
-      // 数据行白卡容器（表面分层：底色差 + 阴影浮起，无边框线，对齐前端 card-raised）
-      Column() {
-        this.buildProfileDataRow(AppIcon.PHOTO, '我的瞬间', '查看已发布的记录', () => {
-          AppRouter.push(PageNames.MOMENT);
-        }, true)
-        this.buildProfileDataRow(AppIcon.GROUP, '我的群组', `${formatCount(this.myGroupsCount)} 个正在参与`, () => {
-          AppRouter.push(PageNames.GROUP);
-        }, false)
-        this.buildProfileDataRow(AppIcon.PERSON, '好友', `${formatCount(this.myFriendsCount)} 位好友`, () => {
-          AppRouter.push(PageNames.RELATIONSHIP_HUB);
-        }, false)
-        this.buildProfileDataRow(AppIcon.STAR, '关注', `${formatCount(this.myFollowingCount)} 人`, () => {
-          AppRouter.push(PageNames.RELATIONSHIP_HUB);
-        }, false)
-        this.buildProfileDataRow(AppIcon.HEART, '粉丝', `${formatCount(this.myFollowersCount)} 人`, () => {
-          AppRouter.push(PageNames.RELATIONSHIP_HUB);
-        }, false)
-      }
-      .width('100%')
-      .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(DesignConstants.SHAPE.CARD)
-      .shadow(this.getCurrentThemePalette().elevatedShadow)
-      .clip(true)
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .margin({ top: DesignConstants.SPACING.LG })
-  }
-
-  @Builder
-  private buildProfileDataRow(icon: AppIcon, label: string, detail: string, onTap: () => void, divider: boolean) {
-    // 对齐前端 ProfileMobile：圆形 icon-badge(32) + 左侧两行（标题/副标题）+ 右箭头；
-    // 按压反馈统一走 Pressable（P3-1），键鼠 hover 淡填充由 hoverFill 提供
-    Pressable({
-      onPress: () => { onTap(); },
-      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW,
-      hoverFill: this.getCurrentThemePalette().accentMuted
-    }) {
-      Row({ space: DesignConstants.SPACING.MD }) {
-        Row() {
-          LucideIcon({
-            icon: icon,
-            iconSize: DesignConstants.FONT.SIZE.SM,
-            color: this.getAccentBackground()
-          })
-        }
-        .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-        .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.getCurrentThemePalette().accentMuted)
-        .justifyContent(FlexAlign.Center)
-
-        Column({ space: DesignConstants.SPACING.HALF }) {
-          Text(label)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getPrimaryTextColor())
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(detail)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getSecondaryTextColor())
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        LucideIcon({
-          icon: AppIcon.ARROW_RIGHT,
-          iconSize: DesignConstants.FONT.SIZE.SM,
-          color: this.getSecondaryTextColor()
-        })
-      }
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.LG2,
-        right: DesignConstants.SPACING.LG2,
-        top: DesignConstants.SPACING.MD3,
-        bottom: DesignConstants.SPACING.MD3
-      })
-      .border(divider ? {
-        width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
-        color: { bottom: this.getSurfaceBorder() }
-      } : { width: 0 })
-    }
+    ProfileDataSection({
+      resolvedThemeId: this.resolvedThemeId,
+      myGroupsCount: this.myGroupsCount,
+      myFriendsCount: this.myFriendsCount,
+      myFollowingCount: this.myFollowingCount,
+      myFollowersCount: this.myFollowersCount
+    })
   }
 
   @Builder
