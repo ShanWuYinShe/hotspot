@@ -52,6 +52,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { CompactStatItem, ProfileQuickAction, ProfileIntentCard, ProfileMenuItem } from '../components/ProfileContentAtoms';
 import { ProfileDataSection } from '../components/ProfileDataSection';
+import { ProfileIdentityCard } from '../components/ProfileIdentityCard';
 import { ProfileMomentGallery } from '../components/ProfileMomentGallery';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -1286,151 +1287,21 @@ export struct ProfilePage {
   }
 
   // ==================== 移动/平板身份卡（对齐前端 ProfileMobile 身份卡） ====================
+  /** 身份卡：渲染在 ProfileIdentityCard 组件（资料/计数/回调经 props 注入） */
   @Builder
   private buildIdentityCard() {
-    Column() {
-      Row({ space: DesignConstants.SPACING.MD }) {
-        Stack({ alignContent: Alignment.BottomEnd }) {
-          SystemAvatar({
-            avatarUrl: this.currentUser?.avatar_url || '',
-            name: this.currentUser?.nickname || '',
-            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.PROFILE,
-            shape: 'circle',
-            showBorder: true
-          })
-
-          // 相机角钮（24vp accent 实底，点击换头像）
-          Button() {
-            LucideIcon({
-              icon: AppIcon.CAMERA,
-              iconSize: DesignConstants.FONT.SIZE.XS2,
-              paletteRole: 'accentText'
-            })
-          }
-          .type(ButtonType.Normal)
-          .width(DesignConstants.COMPONENT.ICON_SIZE_SM)
-          .height(DesignConstants.COMPONENT.ICON_SIZE_SM)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getAccentBackground())
-          .border({
-            width: DesignConstants.BORDER_WIDTH.STRONG,
-            color: this.getCurrentThemePalette().pageBackground
-          })
-                    .onClick(() => this.changeAvatarDirectly())
-          .accessibilityText('更换头像')
-          // 触控热区：视觉 24 → 命中区 44（responseRegion 不占布局）
-          .responseRegion({
-            x: -DesignConstants.SPACING.SM,
-            y: -DesignConstants.SPACING.SM,
-            width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
-            height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-          })
-        }
-
-        Column({ space: DesignConstants.SPACING.THREE }) {
-          Text(this.currentUser?.nickname || '未命名用户')
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(this.getPrimaryTextColor())
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          if (this.currentUser?.nickname) {
-            // 对齐前端：handle 显示 @昵称（前端 ProfileMobile 用 nickname，非 user_id）
-            Text(`@${this.currentUser.nickname}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getSecondaryTextColor())
-          }
-          if (this.currentUser?.location?.location_name) {
-            Row({ space: DesignConstants.SPACING.HALF }) {
-              LucideIcon({
-                icon: AppIcon.LOCATION,
-                iconSize: DesignConstants.FONT.SIZE.XS,
-                color: this.getAccentBackground()
-              })
-              Text(this.currentUser.location.location_name)
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getSecondaryTextColor())
-            }
-            .alignItems(VerticalAlign.Center)
-          }
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        // 编辑资料描边小钮
-        Button('编辑资料')
-          .type(ButtonType.Normal)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getPrimaryTextColor())
-          .backgroundColor(this.getSurfaceBackground())
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .borderRadius(DesignConstants.SHAPE.INPUT)
-          .padding({
-            left: DesignConstants.SPACING.MD2,
-            right: DesignConstants.SPACING.MD2,
-            top: DesignConstants.SPACING.SM,
-            bottom: DesignConstants.SPACING.SM
-          })
-          .onClick(() => this.startEdit())
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Top)
-
-      if (this.currentUser?.bio) {
-        Text(this.currentUser.bio)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getSecondaryTextColor())
-          .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
-          .width('100%')
-          .margin({ top: DesignConstants.SPACING.LG })
-      } else {
-        // 对齐前端：无简介时显示占位文案（自己的资料页用第一人称）
-        Text('还没有填写简介，介绍一下自己吧')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getSecondaryTextColor())
-          .width('100%')
-          .margin({ top: DesignConstants.SPACING.LG })
-      }
-
-      // 卡底三列统计（border-t，列间留白——竖线在小屏三列里显得切割局促）
-      Row() {
-        this.buildIdentityStat('瞬间', this.myMomentsCount, 0)
-        this.buildIdentityStat('关注者', this.myFollowersCount, 1)
-        this.buildIdentityStat('群组', this.myGroupsCount, 2)
-      }
-      .width('100%')
-      .border({
-        width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE },
-        color: { top: this.getSurfaceBorder() }
-      })
-      .margin({ top: DesignConstants.SPACING.LG })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .padding(DesignConstants.SPACING.LG2)
-    .borderRadius(DesignConstants.SHAPE.CARD)
-    .backgroundColor(this.getSurfaceBackground())
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
-  }
-
-  @Builder
-  private buildIdentityStat(label: string, value: number, index: number) {
-    Row() {
-      Column({ space: DesignConstants.SPACING.HALF }) {
-        Text(formatCount(value))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getPrimaryTextColor())
-        Text(label)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getSecondaryTextColor())
-      }
-      .layoutWeight(1)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
-    }
-    .layoutWeight(1)
-    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+    ProfileIdentityCard({
+      resolvedThemeId: this.resolvedThemeId,
+      avatarUrl: this.currentUser?.avatar_url || '',
+      nickname: this.currentUser?.nickname || '',
+      locationName: this.currentUser?.location?.location_name || '',
+      bio: this.currentUser?.bio || '',
+      momentsCount: this.myMomentsCount,
+      followersCount: this.myFollowersCount,
+      groupsCount: this.myGroupsCount,
+      onChangeAvatar: () => this.changeAvatarDirectly(),
+      onEditProfile: () => this.startEdit()
+    })
   }
 
   // ==================== 移动/平板「个人数据」列表（对齐前端 ProfileMobile 5 行） ====================
