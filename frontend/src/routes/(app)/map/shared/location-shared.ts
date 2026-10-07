@@ -267,18 +267,6 @@ export async function fetchMapCanvasByViewport(
 	}
 }
 
-/** 将 MapBounds（minLat/maxLat/minLng/maxLng）转换为 spec Bounds（north/south/east/west）。 */
-export function mapBoundsToViewport(bounds: MapBounds): MapViewport {
-	return {
-		bounds: {
-			north: bounds.maxLat,
-			south: bounds.minLat,
-			east: bounds.maxLng,
-			west: bounds.minLng
-		} satisfies Bounds
-	};
-}
-
 /** 聚合桶下钻的目标跨度（米）。服务端按视口跨度选择聚合网格，桶边长随缩放变化：下钻后
  *  视口要容纳整格成员，又要稳定低于服务端 50km 热力阈值——span > 50km 会切回
  *  heatmap，下钻就白点了。取 20km 并向下取整后，实际跨度恒落在 [20km, 40km)，

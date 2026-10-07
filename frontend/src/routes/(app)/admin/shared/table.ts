@@ -28,5 +28,3 @@ export const ROW_BTN_PRIMARY = 'hover-btn tap-92 rounded-md bg-accent-default px
 /** 行内危险操作按钮 */
 export const ROW_BTN_DANGER = 'hover-btn tap-92 rounded-md border border-border-default bg-surface-primary px-2.5 py-1 text-xs font-medium text-status-danger focus-ring transition-colors hover:bg-danger-bg disabled:opacity-faint disabled:pointer-events-none';
 
-/** 无权限提示（EmptyState 之外的行内简版） */
-export const NO_PERM_NOTE = 'text-xs text-text-secondary';
