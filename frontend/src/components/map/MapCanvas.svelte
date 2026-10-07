@@ -20,6 +20,7 @@
 		zoom = $bindable(14),
 		bounds = $bindable({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 }),
 		stableBounds = $bindable({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 }),
+		gestureTransform = $bindable(''),
 		minZoom = MAP_MIN_ZOOM,
 		maxZoom = MAP_MAX_ZOOM,
 		onMapTap
@@ -28,6 +29,9 @@
 		zoom?: number;
 		bounds?: MapBounds;
 		stableBounds?: MapBounds;
+		/** 捏合手势进行中的连续缩放变换（供父级把 marker 覆盖层与瓦片层做同
+		 *  步变换，保证「跟手」时图钉与底图不脱节）；非手势期为空串。 */
+		gestureTransform?: string;
 		minZoom?: number;
 		maxZoom?: number;
 		onMapTap?: () => void;
@@ -100,10 +104,40 @@
 	// 双指捏合（移动端地图核心手势）：跟踪活动指针，两指距离比驱动逐级缩放
 	const activePointers = new Map<number, { x: number; y: number }>();
 	let pinchBase = 0;
+	// 手势开始时的整数 zoom 与连续目标：floatZoom = zoomStart + log2(累计比值)，
+	// 整数跨越时走既有锚点换算落级，剩余小数部分以 CSS scale 呈现（跟手）。
+	let zoomStart = 14;
+	let gestureOx = 0;
+	let gestureOy = 0;
+	let gestureFrac = $state(0);
 	const pinchDist = () => {
 		const pts = Array.from(activePointers.values());
 		return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
 	};
+
+	function updateGestureTransform() {
+		if (Math.abs(gestureFrac) < 0.001) {
+			gestureTransform = '';
+			return;
+		}
+		const scale = Math.pow(2, gestureFrac);
+		gestureTransform = `transform:scale(${scale});transform-origin:${gestureOx}px ${gestureOy}px;`;
+	}
+
+	// 以 gestureOx/Oy 为锚把 zoom 落到 next（可为整数级跨越；分数 k 仅在
+	// 松手吸附时出现）。锚点地理坐标在缩放前后保持同一屏幕位置。
+	function applyZoomStep(next: number) {
+		if (next === zoom || !activeCenter || !containerEl) return;
+		const g = toTileSpace(activeCenter.lat, activeCenter.lng);
+		const worldAx = lngToWorldX(g.lng, zoom) - width / 2 + gestureOx;
+		const worldAy = latToWorldY(g.lat, zoom) - height / 2 + gestureOy;
+		const k = Math.pow(2, next - zoom);
+		renderCenter = fromTileSpace(
+			worldYToLat(worldAy * k + height / 2 - gestureOy, next),
+			worldXToLng(worldAx * k + width / 2 - gestureOx, next)
+		);
+		zoom = next;
+	}
 
 	function onPointerDown(e: PointerEvent) {
 		if (!activeCenter) return;
@@ -120,6 +154,13 @@
 			dragging = false;
 			pinched = true;
 			pinchBase = pinchDist();
+			zoomStart = zoom;
+			if (containerEl) {
+				const rect = containerEl.getBoundingClientRect();
+				const pts = Array.from(activePointers.values());
+				gestureOx = (pts[0].x + pts[1].x) / 2 - rect.left;
+				gestureOy = (pts[0].y + pts[1].y) / 2 - rect.top;
+			}
 			return;
 		}
 		if (activePointers.size > 2) return;
@@ -132,35 +173,25 @@
 			activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 		}
 		if (activePointers.size >= 2) {
-			// 捏合中：距离比驱动整数级缩放（跟手 ±1 级步进，触达边界钳制）。
-			// 跳级后必须以当前指距重置基准，否则 ratio 永远基于最初距离——
-			// 跨过一级后每帧继续 +1，轻捏直接飙到 maxZoom（缩放不跟手的根因）。
+			// 捏合中：累计比值驱动「整数落级 + 连续小数缩放」。整数跨越时走锚点
+			// 换算落级（瓦片网格换级），剩余小数以 CSS scale 实时呈现——瓦片层与
+			// marker 覆盖层（父级经 gestureTransform 同步）一致缩放，视觉跟手；
+			// 松手时吸附到最近整数级。
 			if (pinchBase > 0) {
-				const ratio = pinchDist() / pinchBase;
-				const stepLevel = Math.round(Math.log2(ratio));
-				if (stepLevel !== 0) {
-					const next = Math.max(minZoom, Math.min(maxZoom, zoom + stepLevel));
-					if (next !== zoom) {
-						// 以双指中点为锚（与滚轮鼠标锚同一套换算）：捏合放大的位置不漂移
-						if (activeCenter && containerEl) {
-							const pts = Array.from(activePointers.values());
-							const rect = containerEl.getBoundingClientRect();
-							const ax = (pts[0].x + pts[1].x) / 2 - rect.left;
-							const ay = (pts[0].y + pts[1].y) / 2 - rect.top;
-							const g = toTileSpace(activeCenter.lat, activeCenter.lng);
-							const worldAx = lngToWorldX(g.lng, zoom) - width / 2 + ax;
-							const worldAy = latToWorldY(g.lat, zoom) - height / 2 + ay;
-							const k = Math.pow(2, next - zoom);
-							const g1 = {
-								lat: worldYToLat(worldAy * k + height / 2 - ay, next),
-								lng: worldXToLng(worldAx * k + width / 2 - ax, next)
-							};
-							renderCenter = fromTileSpace(g1.lat, g1.lng);
-						}
-						zoom = next;
-						pinchBase = pinchDist();
-					}
+				if (containerEl && activePointers.size === 2) {
+					const pts = Array.from(activePointers.values());
+					const rect = containerEl.getBoundingClientRect();
+					gestureOx = (pts[0].x + pts[1].x) / 2 - rect.left;
+					gestureOy = (pts[0].y + pts[1].y) / 2 - rect.top;
 				}
+				const floatTarget = Math.max(
+					minZoom,
+					Math.min(maxZoom, zoomStart + Math.log2(pinchDist() / pinchBase))
+				);
+				const intTarget = Math.round(floatTarget);
+				if (intTarget !== zoom) applyZoomStep(intTarget);
+				gestureFrac = floatTarget - zoom;
+				updateGestureTransform();
 			}
 			return;
 		}
@@ -187,12 +218,17 @@
 		}
 		pinchBase = 0;
 		if (pinched) {
-			// 捏合手势结算：把渲染中心回写 center prop（与拖拽路径的 commitCenter
-			// 同一套语义），否则 stableBounds 基于过期中心 + 新 zoom 拉数据、
-			// 父级下次回写 center 时视图弹回缩放前的位置（marker「回不去」根因）。
+			// 捏合手势结算：剩余小数部分吸附到最近整数级（分数 k 锚点换算一次
+			// 落定），然后清除连续缩放变换并把渲染中心回写 center prop（否则
+			// stableBounds 基于过期中心拉数据、视图弹回——「回不去」根因）。
 			pinched = false;
 			dragStart = null;
 			dragging = false;
+			if (gestureFrac !== 0) {
+				applyZoomStep(Math.max(minZoom, Math.min(maxZoom, Math.round(zoom + gestureFrac))));
+				gestureFrac = 0;
+				updateGestureTransform();
+			}
 			if (renderCenter) commitCenter(renderCenter);
 			return;
 		}
@@ -267,21 +303,25 @@
 	role="application"
 	aria-label="地图画布"
 >
-	{#each tiles as t (`${tileSource}/${t.z}/${t.x}/${t.y}`)}
-		<img
-			src={tileSource === 'amap'
-				? // 高德栅格瓦片浏览器直连（免 key；<img> 不受同源策略限制）。
-				  // webrd01-04 子域按坐标哈希轮换，避开单域 6 连接的浏览器并发上限。
-				  `https://webrd0${((t.x + t.y) % 4) + 1}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x=${t.x}&y=${t.y}&z=${t.z}`
-				: `/osm-tiles/${t.z}/${t.x}/${t.y}.png`}
-			alt=""
-			draggable="false"
-			loading="eager"
-			class="map-tile absolute"
-			style="left:{t.left}px;top:{t.top}px;width:256px;height:256px;user-select:none;"
-			onload={(e) => e.currentTarget.classList.add('loaded')}
-		/>
-	{/each}
+	<!-- 捏合手势中：剩余小数缩放以 CSS scale 呈现（父级把同款变换施加到
+		 marker 覆盖层），松手吸附整数级后清除。 -->
+	<div class="absolute inset-0" style={gestureTransform}>
+		{#each tiles as t (`${tileSource}/${t.z}/${t.x}/${t.y}`)}
+			<img
+				src={tileSource === 'amap'
+					? // 高德栅格瓦片浏览器直连（免 key；<img> 不受同源策略限制）。
+					  // webrd01-04 子域按坐标哈希轮换，避开单域 6 连接的浏览器并发上限。
+					  `https://webrd0${((t.x + t.y) % 4) + 1}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x=${t.x}&y=${t.y}&z=${t.z}`
+					: `/osm-tiles/${t.z}/${t.x}/${t.y}.png`}
+				alt=""
+				draggable="false"
+				loading="eager"
+				class="map-tile absolute"
+				style="left:{t.left}px;top:{t.top}px;width:256px;height:256px;user-select:none;"
+				onload={(e) => e.currentTarget.classList.add('loaded')}
+			/>
+		{/each}
+	</div>
 
 	<span
 		class="absolute bottom-1 right-2 text-xxs opacity-subtle pointer-events-none"

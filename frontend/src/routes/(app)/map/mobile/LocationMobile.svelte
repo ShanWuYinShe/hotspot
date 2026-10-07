@@ -93,6 +93,7 @@
 	let selectedPin = $state<Pin | null>(null);
 	let selectedLoc = $state<LocationResult | null>(null);
 	// 瓦片缩放级别；数据请求半径由 fetchMapCanvas 内部约定
+	// 捏合手势中的连续缩放变换（MapCanvas 回写），施加于 marker 覆盖层保持与瓦片同步
 	let mapZoom = $state(14);
 	let mapBounds = $state<MapBounds>({ minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 });
 	// 数据请求用稳定边界（手势/缩放结束才回写）；图钉/热力跟随用每帧 mapBounds
@@ -145,7 +146,8 @@
 		onRetry: () => (centerReloadKey++)
 	});
 
-	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
+		let mapGestureTransform = $state('');
+// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
 	// ── 真实地理编码搜索（高德/OSM 随地图源，经同源代理）────────────
 	// 输入防抖 300ms 后查询；服务不可用/无结果时诚实展示空态，
 	// 不回退本地演示数据（原 SEARCH_DB 兜底带虚构打卡人数，已移除）。
@@ -245,10 +247,12 @@
 	<!-- 原地点击空白由 MapCanvas onMapTap 承担（拖拽不触发）；键盘 Escape 等价收起见 svelte:window -->
 	<div style="position:absolute;inset:0;z-index:0;">
 		{#if mapCenter}
-			<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} onMapTap={handleMapTap} />
+			<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} bind:gestureTransform={mapGestureTransform} onMapTap={handleMapTap} />
 		{/if}
 
 		<!-- 数据覆盖层（当前位置点/热力桶/图钉/加载错误条）：桌面/移动共用组件 -->
+		<!-- 捏合手势中与瓦片层做同款连续缩放变换，保证图钉/热力跟手不脱节 -->
+		<div class="absolute inset-0" style={mapGestureTransform}>
 		<MapOverlays
 			pins={mapData.pins}
 			bounds={mapBounds}
@@ -269,6 +273,7 @@
 			onHeatSelect={handleHeatSelect}
 			onRetry={mapData.retryLoad}
 		/>
+		</div>
 	</div>
 
 	<!-- ══ TOP BAR (fixed, floating over map — 对齐 Figma Make：无标题，仅返回 + 筛选) ══ -->

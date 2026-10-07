@@ -224,6 +224,8 @@
 		}
 	});
 
+	// 捏合手势中的连续缩放变换（MapCanvas 回写），施加于 marker 覆盖层保持与瓦片同步
+	let mapGestureTransform = $state('');
 	// 底图视口地理边界由 MapCanvas 墨卡托换算后双向绑定（图钉/热力定位用）
 
 	function handleSelectLoc(loc: LocationResult) {
@@ -280,10 +282,12 @@
 	     筛选面板关闭由 MapFilterMenu 的 Popover 外点机制承担；Escape 清选中见 svelte:window -->
 	<div class="flex-1 relative overflow-hidden">
 		{#if mapCenter}
-			<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} onMapTap={() => (selectedPin = null)} />
+			<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} bind:gestureTransform={mapGestureTransform} onMapTap={() => (selectedPin = null)} />
 		{/if}
 
 		<!-- 数据覆盖层（当前位置点/热力桶/图钉/加载错误条）：桌面/移动共用组件 -->
+		<!-- 捏合手势中与瓦片层做同款连续缩放变换，保证图钉/热力跟手不脱节 -->
+		<div class="absolute inset-0" style={mapGestureTransform}>
 		<MapOverlays
 			pins={mapData.pins}
 			bounds={mapBounds}
@@ -304,6 +308,7 @@
 			onHeatSelect={handleHeatSelect}
 			onRetry={mapData.retryLoad}
 		/>
+		</div>
 
 		<!-- 缩放控制（右下角；画布拖拽/滚轮亦可缩放），分段控件视觉契约见 MapZoomControls -->
 		<MapZoomControls
