@@ -63,6 +63,13 @@
 
 1. **手写按钮**：59 个文件用 `hover-btn` 手写 `<button>`，`ui/button` 仅 10 处。
    规则：改到某文件时把该文件的简单动作按钮顺手迁 `ui/button`/`ActionIconButton`。
+   约束（2026-10-07 LoadMoreButton 迁移实测）：`ui/button` secondary 自带的
+   `shadow-raised-sm` 是自定义主题 token，**不参与 tailwind-merge 冲突消解**——
+   className 里写 `shadow-none` 也消不掉它，且生成 stylesheet 里它排在后面
+   （浏览器实测 computed box-shadow 落到 raised-sm）。无投影的胶囊按钮
+   （如 LoadMoreButton）在原语支持「去投影」开关之前**不得迁移**，否则静默
+   加一层投影。`LoadMoreButton.test.ts` 的「视觉形态守恒」用例已锁定当前形态
+   （token 边界匹配），任何加投影/改圆角/改字色的迁移会在此失败。
 2. **表单 Input 原语缺失**：13 个文件手写 `<input>`；应建 `forms/Input`
    （前缀图标/清除/错误态），先落登录/注册/搜索之外的高频表单。
 3. **分组卡壳已收敛**（2026-09-10）：移动端 `ProfileMobile` 的 `card-raised`
