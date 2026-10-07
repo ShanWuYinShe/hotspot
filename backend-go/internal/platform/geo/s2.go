@@ -86,6 +86,27 @@ func CellTokenAtLevel(p Point, level int) string {
 	return cellID.ToToken()
 }
 
+// ParentShift 返回把 leaf cell ID 归并到 level 层祖先的右移位数 s：
+// (cell >> s) << s 即该 cell 在 level 层的祖先 cell ID。S2 CellID 布局为
+// 3 位 face + 60 位位置 + 末位 1 标记，level 层 cell 的标记位恰在第 s 位，
+// 移位掩码后自然保留；负值（face 6/7 溢出符号位）在 Postgres 算术右移下
+// 同样成立（符号扩展位会被左移清回，仅低 s 位被清零）。
+// 供 SQL GROUP BY 直聚合计数使用（避免把全量候选行拉到 Go 再聚合）。
+func ParentShift(level int) int {
+	return 60 - 2*level
+}
+
+// CellIDCenter 返回原始 cell ID（数值形态）所在格心的经纬度。
+func CellIDCenter(id uint64) Point {
+	ll := s2.CellID(id).LatLng()
+	return Point{Latitude: ll.Lat.Degrees(), Longitude: ll.Lng.Degrees()}
+}
+
+// CellIDToken 把原始 cell ID 转为 token 串（与 CellTokenAtLevel 同一编码）。
+func CellIDToken(id uint64) string {
+	return s2.CellID(id).ToToken()
+}
+
 func CoveringTokens(b Bounds, level int, maxCells int) []string {
 	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(b.South, b.West))
 	rect = rect.AddPoint(s2.LatLngFromDegrees(b.North, b.East))

@@ -22,6 +22,8 @@ func (r RowValues) Scan(dest ...any) error {
 			*d = r.Values[i].(bool)
 		case *int:
 			*d = r.Values[i].(int)
+		case *int64:
+			*d = r.Values[i].(int64)
 		case *float64:
 			*d = r.Values[i].(float64)
 		case *time.Time:

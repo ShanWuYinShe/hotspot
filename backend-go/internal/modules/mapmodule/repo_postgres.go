@@ -43,11 +43,94 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Heatmap(ctx context.Context, query canvasQuery) (MapHeatCanvas, error) {
-	items, err := r.loadCandidates(ctx, query)
+	// SQL 直聚合（真实计数）：候选行 LIMIT 截断后到 Go 分桶会把桶计数变成
+	// 采样值——大尺度视口（候选远超 500/类）下每桶只剩个位数，用户看到的
+	// 就是「区域统计不合并」。GROUP BY S2 祖先 cell 让 COUNT 为全量真值，
+	// 结果集 ≤ 覆盖 cell 数，天然有界。
+	mins, maxs := geo.CoveringArrays(query.Bounds)
+	if len(mins) == 0 {
+		return MapHeatCanvas{}, nil
+	}
+	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return MapHeatCanvas{}, err
 	}
-	buckets := aggregateHeatBuckets(items, query.Level)
+	shift := geo.ParentShift(query.Level)
+	byToken := map[string]*MapHeatBucket{}
+	merge := func(bucket *MapHeatBucket, objectType string, total int) {
+		bucket.TotalCount += total
+		v := total
+		switch objectType {
+		case "user":
+			bucket.Breakdown.User = &v
+		case "group":
+			bucket.Breakdown.Group = &v
+		default:
+			bucket.Breakdown.Moment = &v
+		}
+	}
+	sums := map[string][3]float64{} // token -> [sumLat, sumLng, totalCount]（浮点加权质心）
+	scan := func(rows persistence.Rows, objectType string) error {
+		defer rows.Close()
+		for rows.Next() {
+			var cellID, total int64
+			var lat, lng float64
+			if err := rows.Scan(&cellID, &total, &lat, &lng); err != nil {
+				return err
+			}
+			id := uint64(cellID)
+			token := geo.CellIDToken(id)
+			bucket, ok := byToken[token]
+			if !ok {
+				bucket = &MapHeatBucket{CellToken: token, Level: query.Level, Breakdown: &MapHeatBreakdown{}}
+				byToken[token] = bucket
+			}
+			merge(bucket, objectType, int(total))
+			prev := sums[token]
+			sums[token] = [3]float64{prev[0] + lat, prev[1] + lng, prev[2] + float64(total)}
+		}
+		return rows.Err()
+	}
+
+	if query.DataType == "all" || query.DataType == "user" {
+		rows, err := queryable.Query(ctx, queryHeatmapUsers, mins, maxs, shift)
+		if err != nil {
+			return MapHeatCanvas{}, err
+		}
+		if err := scan(rows, "user"); err != nil {
+			return MapHeatCanvas{}, err
+		}
+	}
+	if query.DataType == "all" || query.DataType == "group" {
+		rows, err := queryable.Query(ctx, queryHeatmapGroups, mins, maxs, shift)
+		if err != nil {
+			return MapHeatCanvas{}, err
+		}
+		if err := scan(rows, "group"); err != nil {
+			return MapHeatCanvas{}, err
+		}
+	}
+	if query.DataType == "all" || query.DataType == "moment" {
+		rows, err := queryable.Query(ctx, queryHeatmapMoments, mins, maxs, shift, query.StartTime, query.EndTime)
+		if err != nil {
+			return MapHeatCanvas{}, err
+		}
+		if err := scan(rows, "moment"); err != nil {
+			return MapHeatCanvas{}, err
+		}
+	}
+
+	buckets := make([]MapHeatBucket, 0, len(byToken))
+	for _, b := range byToken {
+		agg := sums[b.CellToken]
+		if agg[2] > 0 {
+			// 桶代表坐标 = 成员坐标加权和 ÷ 成员数（保持既有「成员质心」契约；
+			// SQL 回传各类型 sum，跨类型按计数加权合并）
+			b.Location = types.GeoPoint{Latitude: agg[0] / agg[2], Longitude: agg[1] / agg[2]}
+		}
+		buckets = append(buckets, *b)
+	}
+	sort.SliceStable(buckets, func(i, j int) bool { return buckets[i].TotalCount > buckets[j].TotalCount })
 	return MapHeatCanvas{Items: buckets}, nil
 }
 

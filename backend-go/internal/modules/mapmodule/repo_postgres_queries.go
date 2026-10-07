@@ -46,4 +46,51 @@ WHERE m.privacy_level = 'public'
   AND ($5::timestamptz IS NULL OR m.created_at <= $5)
 ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $3`
+
+	/* ── 热力聚合（SQL 直聚合，真实计数）────────────────────────────
+	   大尺度视口下候选行远超 LIMIT 截断上限：若把截断后的候选样本拉到 Go 再
+	   分桶，桶计数是采样的（每区域只有个位数），用户看到「区域统计不合并」。
+	   改为在 SQL 里按 S2 祖先 cell GROUP BY 真实计数——结果集天然有界
+	   （≤ 覆盖 cell 数），且 COUNT 是全量真值。
+	   $1/$2 覆盖范围对、$3 = ParentShift(level) 移位数；moments 另带时间窗。 */
+
+	queryHeatmapUsers = `
+SELECT ((u.s2_cell_id >> $3) << $3) AS bucket_cell,
+       count(*) AS total,
+       sum(u.latitude) AS lat_sum,
+       sum(u.longitude) AS lng_sum
+FROM users u
+JOIN user_settings us ON us.user_id = u.user_id
+WHERE us.searchable = TRUE
+  AND u.is_deleted = FALSE
+  AND us.location_visible = TRUE
+  AND us.privacy_level = 'public'
+  AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
+              WHERE u.s2_cell_id BETWEEN t.lo AND t.hi)
+GROUP BY 1`
+
+	queryHeatmapGroups = `
+SELECT ((g.s2_cell_id >> $3) << $3) AS bucket_cell,
+       count(*) AS total,
+       sum(g.latitude) AS lat_sum,
+       sum(g.longitude) AS lng_sum
+FROM groups g
+WHERE g.is_searchable = TRUE
+  AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
+              WHERE g.s2_cell_id BETWEEN t.lo AND t.hi)
+GROUP BY 1`
+
+	queryHeatmapMoments = `
+SELECT ((m.s2_cell_id >> $4) << $4) AS bucket_cell,
+       count(*) AS total,
+       sum(m.latitude) AS lat_sum,
+       sum(m.longitude) AS lng_sum
+FROM moments m
+WHERE m.privacy_level = 'public'
+  AND m.is_deleted = FALSE
+  AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
+              WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)
+  AND ($5::timestamptz IS NULL OR m.created_at >= $5)
+  AND ($6::timestamptz IS NULL OR m.created_at <= $6)
+GROUP BY 1`
 )

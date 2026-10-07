@@ -147,15 +147,11 @@ func TestPostgresRepositoryEndTimeFiltersMomentsOnly(t *testing.T) {
 }
 
 func TestPostgresRepositoryHeatmapAppliesDataTypeFilter(t *testing.T) {
-	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
+	shift := geo.ParentShift(12)
+	leaf := geo.LeafCellID(geo.Point{Latitude: 35.0, Longitude: 112.0})
+	bucketCell := int64((uint64(leaf) >> uint(shift)) << uint(shift))
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
-		queryMapCanvasUsers: {
-			{"user_1", "u1", "", "same", 35.0, 112.0, base},
-			{"user_2", "u2", "", "same", 35.0, 112.0, base},
-		},
-		queryMapCanvasGroups: {
-			{"group_1", "g1", "", "same", 35.0, 112.0},
-		},
+		queryHeatmapUsers: {{bucketCell, int64(2), 70.0, 224.0}},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))
 
@@ -166,8 +162,11 @@ func TestPostgresRepositoryHeatmapAppliesDataTypeFilter(t *testing.T) {
 	if len(resp.Items) != 1 || resp.Items[0].TotalCount != 2 {
 		t.Fatalf("unexpected heatmap: %#v", resp.Items)
 	}
-	if resp.Items[0].Breakdown == nil || *resp.Items[0].Breakdown.User != 2 {
-		t.Fatalf("unexpected breakdown: %#v", resp.Items[0])
+	if resp.Items[0].Breakdown == nil || resp.Items[0].Breakdown.User == nil || *resp.Items[0].Breakdown.User != 2 {
+		t.Fatalf("unexpected breakdown: %#v", resp.Items[0].Breakdown)
+	}
+	if resp.Items[0].Location.Latitude != 35.0 || resp.Items[0].Location.Longitude != 112.0 {
+		t.Fatalf("unexpected location: %#v", resp.Items[0].Location)
 	}
 }
 
@@ -185,19 +184,15 @@ func TestPostgresRepositoryReturnsEmptyWhenCursorPastEnd(t *testing.T) {
 }
 
 func TestPostgresRepositoryAggregatesHeatmapBreakdownAndSortsByTotalCount(t *testing.T) {
-	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
+	shift := geo.ParentShift(12)
+	leafSame := geo.LeafCellID(geo.Point{Latitude: 35.0, Longitude: 112.0})
+	bucketSame := int64((uint64(leafSame) >> uint(shift)) << uint(shift))
+	leafFar := geo.LeafCellID(geo.Point{Latitude: 36.0, Longitude: 113.0})
+	bucketFar := int64((uint64(leafFar) >> uint(shift)) << uint(shift))
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
-		queryMapCanvasUsers: {
-			{"user_1", "u1", "", "same", 35.0, 112.0, base},
-			{"user_2", "u2", "", "same", 35.0, 112.0, base},
-		},
-		queryMapCanvasGroups: {
-			{"group_1", "g1", "", "same", 35.0, 112.0},
-		},
-		queryMapCanvasMoments: {
-			{"moment_1", "m1", "same", 35.0, 112.0, base},
-			{"moment_2", "m2", "far", 36.0, 113.0, base},
-		},
+		queryHeatmapUsers:   {{bucketSame, int64(2), 70.0, 224.0}},
+		queryHeatmapGroups:  {{bucketSame, int64(1), 35.0, 112.0}},
+		queryHeatmapMoments: {{bucketSame, int64(1), 35.0, 112.0}, {bucketFar, int64(1), 36.0, 113.0}},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))
 
@@ -208,7 +203,7 @@ func TestPostgresRepositoryAggregatesHeatmapBreakdownAndSortsByTotalCount(t *tes
 	if len(resp.Items) < 2 {
 		t.Fatalf("expected multiple buckets, got %#v", resp.Items)
 	}
-	if resp.Items[0].TotalCount != 4 || *resp.Items[0].Breakdown.User != 2 || *resp.Items[0].Breakdown.Group != 1 || *resp.Items[0].Breakdown.Moment != 1 {
+	if resp.Items[0].TotalCount != 4 || resp.Items[0].Breakdown.User == nil || *resp.Items[0].Breakdown.User != 2 || resp.Items[0].Breakdown.Group == nil || *resp.Items[0].Breakdown.Group != 1 || resp.Items[0].Breakdown.Moment == nil || *resp.Items[0].Breakdown.Moment != 1 {
 		t.Fatalf("unexpected top bucket: %#v", resp.Items[0])
 	}
 	if resp.Items[0].TotalCount < resp.Items[1].TotalCount {
@@ -221,20 +216,15 @@ func TestPostgresRepositoryAggregatesHeatmapBreakdownAndSortsByTotalCount(t *tes
 // 同一批成员在不同缩放下被分到不同层级网格时，质心能让标记稳定在数据中心
 // 附近，而格心必然随网格几何跳动。
 func TestPostgresRepositoryHeatBucketLocationUsesMemberCentroid(t *testing.T) {
-	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
 	center := geo.CellCenter(geo.CellTokenAtLevel(geo.Point{Latitude: 35.0, Longitude: 112.0}, 12))
 	first := geo.Point{Latitude: center.Latitude, Longitude: center.Longitude}
 	second := geo.Point{Latitude: center.Latitude + 0.00001, Longitude: center.Longitude + 0.00001}
-	if got := geo.CellTokenAtLevel(second, 12); got != geo.CellTokenAtLevel(first, 12) {
-		t.Fatalf("test setup: nearby points unexpectedly span two level-12 cells: %q vs %q", geo.CellTokenAtLevel(first, 12), got)
-	}
+	shift := geo.ParentShift(12)
+	leafC := geo.LeafCellID(first)
+	bucketC := int64((uint64(leafC) >> uint(shift)) << uint(shift))
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
-		queryMapCanvasUsers: {
-			{"user_1", "u1", "", "same", first.Latitude, first.Longitude, base},
-		},
-		queryMapCanvasMoments: {
-			{"moment_1", "m1", "same", second.Latitude, second.Longitude, base},
-		},
+		queryHeatmapUsers:   {{bucketC, int64(1), first.Latitude, first.Longitude}},
+		queryHeatmapMoments: {{bucketC, int64(1), second.Latitude, second.Longitude}},
 	}}
 	repo := NewPostgresRepository(newMapFactory(backend))
 
@@ -251,18 +241,8 @@ func TestPostgresRepositoryHeatBucketLocationUsesMemberCentroid(t *testing.T) {
 	if math.Abs(bucket.Location.Latitude-wantLatitude) > 1e-9 || math.Abs(bucket.Location.Longitude-wantLongitude) > 1e-9 {
 		t.Fatalf("expected bucket location near member centroid (%v, %v), got %v", wantLatitude, wantLongitude, bucket.Location)
 	}
-	if (bucket.Location.Latitude == first.Latitude && bucket.Location.Longitude == first.Longitude) ||
-		(bucket.Location.Latitude == second.Latitude && bucket.Location.Longitude == second.Longitude) {
-		t.Fatalf("bucket location should not snap to either member coordinate: %v", bucket.Location)
-	}
-
-	// 输入顺序不得改变同一成员集合的质心：排除首条/末条候选决定落位的旧行为。
-	reversed := aggregateHeatBuckets([]mapCandidate{
-		{ObjectType: "moment", ObjectID: "m1", Location: GeoPoint{Latitude: second.Latitude, Longitude: second.Longitude}},
-		{ObjectType: "user", ObjectID: "u1", Location: GeoPoint{Latitude: first.Latitude, Longitude: first.Longitude}},
-	}, 12)
-	if len(reversed) != 1 || reversed[0].Location != bucket.Location {
-		t.Fatalf("expected order-independent centroid %v, got %#v", bucket.Location, reversed)
+	if (bucket.Location.Latitude == first.Latitude && bucket.Location.Longitude == first.Longitude) || (bucket.Location.Latitude == second.Latitude && bucket.Location.Longitude == second.Longitude) {
+		t.Fatalf("bucket location should be the member centroid, not a raw member: %#v", bucket.Location)
 	}
 }
 

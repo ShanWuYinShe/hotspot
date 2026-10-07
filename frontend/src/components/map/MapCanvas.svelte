@@ -92,6 +92,11 @@
 	/* ── 拖拽平移 + 双指捏合缩放（pointer 统一鼠标/触屏） ── */
 	let dragStart: { x: number; y: number; center: { lat: number; lng: number } } | null = null;
 	let moved = false;
+	// 本轮手势是否进入过捏合：捏合路径 dragStart 恒为 null（第二指落下即清），
+	// 抬指结算必须据此与「原地点击」区分，否则捏合缩放后的中心永远不回写
+	// center prop——stableBounds（数据拉取）继续用过期中心 + 新 zoom，拉到
+	// 错误区域的图钉/热力，视图也会在父级下次回写 center 时弹回旧位置。
+	let pinched = false;
 	// 双指捏合（移动端地图核心手势）：跟踪活动指针，两指距离比驱动逐级缩放
 	const activePointers = new Map<number, { x: number; y: number }>();
 	let pinchBase = 0;
@@ -113,6 +118,7 @@
 			// 第二指落下：进入捏合，取消单指拖拽语义
 			dragStart = null;
 			dragging = false;
+			pinched = true;
 			pinchBase = pinchDist();
 			return;
 		}
@@ -180,6 +186,16 @@
 			return;
 		}
 		pinchBase = 0;
+		if (pinched) {
+			// 捏合手势结算：把渲染中心回写 center prop（与拖拽路径的 commitCenter
+			// 同一套语义），否则 stableBounds 基于过期中心 + 新 zoom 拉数据、
+			// 父级下次回写 center 时视图弹回缩放前的位置（marker「回不去」根因）。
+			pinched = false;
+			dragStart = null;
+			dragging = false;
+			if (renderCenter) commitCenter(renderCenter);
+			return;
+		}
 		if (!dragStart) return;
 		const next = renderCenter;
 		dragStart = null;
@@ -235,7 +251,7 @@
 	}
 </script>
 
-<svelte:window onpointerup={() => dragStart && onPointerUp()} />
+<svelte:window onpointerup={() => onPointerUp()} />
 
 <div
 	class="absolute inset-0 overflow-hidden select-none"
