@@ -168,6 +168,11 @@ func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "目标用户不是群成员"))
 			return
 		}
+		// 群主不受禁言：10400（spec api_spec_group.md → set_mute 群主保护）。
+		if errors.Is(err, ErrBusinessConflict) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不受禁言"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 		return
 	}
@@ -187,6 +192,11 @@ func (h *Handler) SetMemberBan(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, ErrAccessRestricted) {
 			httpx.WriteAPIError(w, r, "groups.handler", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
+			return
+		}
+		// 群主不可被封禁：10400（spec api_spec_group.md → set_ban 群主保护）。
+		if errors.Is(err, ErrBusinessConflict) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不可被封禁"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
@@ -242,6 +252,13 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, ErrTargetNotMember) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "目标用户不是群成员"))
+			return
+		}
+		// 群主不可被移除：10400 业务冲突（与 set_role 的 owner 保护同源——
+		// service 对 isGroupOwner 目标返回 ErrBusinessConflict，此前未映射
+		// 落入 10600「服务暂时不可用」，语义错误且对客户端不可理解）。
+		if errors.Is(err, ErrBusinessConflict) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不可被移除，请先转让群主身份"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))

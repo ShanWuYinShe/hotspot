@@ -44,6 +44,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			if apiErr, ok := err.(*httpx.APIError); ok {
 				return httpx.ApiResponse[any]{Code: apiErr.Code, Message: apiErr.Message, Data: &apiErr.Data}
 			}
+			// tags 含被屏蔽标签：10400（spec api_spec_group.md → groups/create
+			// 错误码「10400（tags 含被屏蔽标签）」）。此前未映射落入 10600。
+			if errors.Is(err, ErrBusinessConflict) {
+				observability.LogBusinessError(r, "Create", int(httpx.CodeConflict), "标签包含被屏蔽内容")
+				return httpx.ApiResponse[any]{Code: httpx.CodeConflict, Message: "标签包含被屏蔽内容"}
+			}
 			observability.LogServerError(r, "Create", err)
 			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
