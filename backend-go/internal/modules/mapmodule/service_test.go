@@ -117,6 +117,65 @@ func TestHeatmapAggregationLevelCoarsensWithViewportSpan(t *testing.T) {
 	}
 }
 
+func TestMergeHeatBucketsProximityMergesNeighboringCells(t *testing.T) {
+	// 两个分属不同 S2 祖先格、但质心相距远小于阈值的相邻小簇：应合并为一个桶，
+	// 计数与拆分相加，代表坐标为计数加权重心。
+	near := MapHeatBucket{
+		CellToken: "b", Level: 8, TotalCount: 1,
+		Location:  GeoPoint{Latitude: 35.000, Longitude: 112.000},
+		Breakdown: &MapHeatBreakdown{User: ptrInt(1)},
+	}
+	// ~0.009° 纬度 ≈ 1km，远小于 10km 阈值
+	far := MapHeatBucket{
+		CellToken: "a", Level: 8, TotalCount: 3,
+		Location:  GeoPoint{Latitude: 35.009, Longitude: 112.000},
+		Breakdown: &MapHeatBreakdown{Moment: ptrInt(3)},
+	}
+	out := mergeHeatBucketsProximity([]MapHeatBucket{near, far}, 10000)
+	if len(out) != 1 {
+		t.Fatalf("expected 1 merged bucket, got %d: %#v", len(out), out)
+	}
+	b := out[0]
+	if b.TotalCount != 4 {
+		t.Fatalf("expected total 4, got %d", b.TotalCount)
+	}
+	if b.Breakdown == nil || b.Breakdown.User == nil || b.Breakdown.Moment == nil || *b.Breakdown.User != 1 || *b.Breakdown.Moment != 3 {
+		t.Fatalf("unexpected breakdown: %#v", b.Breakdown)
+	}
+	// 种子是计数更高者（3 > 1），合并桶继承其 token
+	if b.CellToken != "a" {
+		t.Fatalf("expected seed token a, got %q", b.CellToken)
+	}
+	// 加权重心偏向 far（权重 3/4）
+	if !(b.Location.Latitude > 35.006 && b.Location.Latitude < 35.008) {
+		t.Fatalf("unexpected centroid latitude: %v", b.Location.Latitude)
+	}
+}
+
+func TestMergeHeatBucketsProximityKeepsDistantBuckets(t *testing.T) {
+	a := MapHeatBucket{CellToken: "a", Level: 8, TotalCount: 1, Location: GeoPoint{Latitude: 35.0, Longitude: 112.0}}
+	b := MapHeatBucket{CellToken: "b", Level: 8, TotalCount: 1, Location: GeoPoint{Latitude: 35.2, Longitude: 112.0}}
+	out := mergeHeatBucketsProximity([]MapHeatBucket{a, b}, 10000)
+	if len(out) != 2 {
+		t.Fatalf("expected 2 buckets beyond threshold, got %d", len(out))
+	}
+}
+
+func TestMergeHeatBucketsProximityNilBreakdownAndShortCircuit(t *testing.T) {
+	// 单桶直通；nil breakdown 与非 nil breakdown 合并不出错
+	a := MapHeatBucket{CellToken: "a", Level: 8, TotalCount: 2, Location: GeoPoint{Latitude: 35.0, Longitude: 112.0}}
+	b := MapHeatBucket{CellToken: "b", Level: 8, TotalCount: 1, Location: GeoPoint{Latitude: 35.001, Longitude: 112.0}, Breakdown: &MapHeatBreakdown{Group: ptrInt(1)}}
+	if got := mergeHeatBucketsProximity([]MapHeatBucket{a}, 10000); len(got) != 1 || got[0].CellToken != "a" {
+		t.Fatalf("single bucket short circuit broken: %#v", got)
+	}
+	out := mergeHeatBucketsProximity([]MapHeatBucket{a, b}, 10000)
+	if len(out) != 1 || out[0].Breakdown == nil || out[0].Breakdown.Group == nil || *out[0].Breakdown.Group != 1 {
+		t.Fatalf("nil-breakdown merge broken: %#v", out)
+	}
+}
+
+func ptrInt(v int) *int { return &v }
+
 func TestServiceCanvasUsesHotspotsForSmallViewportAndParsesFilters(t *testing.T) {
 	repo := &stubMapRepository{hotspotsResp: MapHotspotsCanvas{Items: []MapHotspotItem{{ObjectType: "user", ObjectID: "u1"}}}}
 	service := NewServiceWithRepo(repo)

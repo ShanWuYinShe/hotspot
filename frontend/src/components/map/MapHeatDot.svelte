@@ -79,7 +79,7 @@
 <button
 	type="button"
 	aria-label={ariaLabel}
-	class="absolute z-10 inline-flex items-center justify-center rounded-full p-0 text-xs font-semibold leading-none shadow-raised-md focus-ring"
+	class="pointer-events-auto absolute z-10 inline-flex items-center justify-center rounded-full p-0 text-xs font-semibold leading-none shadow-raised-md focus-ring"
 	style="transform:translate(-50%,-50%);background:var(--cst-surface-primary);color:var(--cst-text-primary);border:var(--cst-border-width-strong) solid var(--cst-accent-default);{style}"
 	onclick={(e) => {
 		e.stopPropagation();

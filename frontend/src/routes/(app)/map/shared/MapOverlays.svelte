@@ -76,7 +76,7 @@
 	</div>
 {:else if error}
 	<!-- 加载失败：给出原因与重试，避免空白地图被误认为「附近什么都没有」 -->
-	<div role="alert" class="absolute {chipTopClass} left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full bg-surface-primary px-3 py-1.5 text-xs text-status-danger shadow-raised-sm border border-border-default">
+	<div role="alert" class="pointer-events-auto absolute {chipTopClass} left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full bg-surface-primary px-3 py-1.5 text-xs text-status-danger shadow-raised-sm border border-border-default">
 		<span>{error}</span>
 		<button type="button" class="link-btn focus-ring rounded-sm text-accent-default" onclick={onRetry}>重试</button>
 	</div>

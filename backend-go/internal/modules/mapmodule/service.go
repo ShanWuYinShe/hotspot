@@ -2,6 +2,7 @@ package mapmodule
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
@@ -37,6 +38,10 @@ func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasRe
 		if len(heatmap.Items) == 0 {
 			return MapCanvasResponse{Mode: MapCanvasModeEmpty}, nil
 		}
+		// 就近合并：SQL 层按 S2 祖先格聚合后，质心彼此靠近的相邻桶（常被
+		// 格边界切开）再按距离阈值合并——目标桶边长 ≈ 视口跨度的六分之一，
+		// 与 heatmapAggregationLevel 的取级口径一致，故阈值取 SpanMeters/6。
+		heatmap.Items = mergeHeatBucketsProximity(heatmap.Items, query.SpanMeters/6)
 		return MapCanvasResponse{Mode: MapCanvasModeHeatmap, Heatmap: &heatmap}, nil
 	}
 
@@ -49,6 +54,100 @@ func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasRe
 		return MapCanvasResponse{Mode: MapCanvasModeEmpty}, nil
 	}
 	return MapCanvasResponse{Mode: MapCanvasModeHotspots, Hotspots: &hotspots}, nil
+}
+
+// mergeHeatBucketsProximity 就近合并热力桶：以桶质心为节点做贪心聚类——
+// 按（计数降序, token 升序）确定性遍历，每个未分配桶吸入其「种子桶」
+// 质心距离 ≤ thresholdMeters 的所有桶（种子质心固定不随吸收漂移，保证
+// 同一输入产出同一结果）。合并桶继承种子桶的 cell_token/level，计数与
+// 三分类拆分相加，代表坐标为全体成员的计数加权重心。相邻但分属不同
+// S2 祖先格的小簇由此合并为一个统计桶，消除格边切分的「统计数据碎片」。
+func mergeHeatBucketsProximity(items []MapHeatBucket, thresholdMeters float64) []MapHeatBucket {
+	if thresholdMeters <= 0 || len(items) <= 1 {
+		return items
+	}
+	sorted := make([]MapHeatBucket, len(items))
+	copy(sorted, items)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].TotalCount != sorted[j].TotalCount {
+			return sorted[i].TotalCount > sorted[j].TotalCount
+		}
+		return sorted[i].CellToken < sorted[j].CellToken
+	})
+	type cluster struct {
+		bucket                 MapHeatBucket
+		latSum, lngSum, weight float64
+	}
+	clusters := make([]cluster, 0, len(sorted))
+	for _, item := range sorted {
+		point := geo.Point{Latitude: item.Location.Latitude, Longitude: item.Location.Longitude}
+		merged := false
+		for ci := range clusters {
+			seed := geo.Point{Latitude: clusters[ci].bucket.Location.Latitude, Longitude: clusters[ci].bucket.Location.Longitude}
+			if float64(geo.DistanceMeters(seed, point)) <= thresholdMeters {
+				c := &clusters[ci]
+				c.bucket.TotalCount += item.TotalCount
+				c.bucket.Breakdown = mergeHeatBreakdown(c.bucket.Breakdown, item.Breakdown)
+				w := float64(item.TotalCount)
+				c.latSum += point.Latitude * w
+				c.lngSum += point.Longitude * w
+				c.weight += w
+				merged = true
+				break
+			}
+		}
+		if !merged {
+			w := float64(item.TotalCount)
+			clusters = append(clusters, cluster{
+				bucket: item,
+				latSum: point.Latitude * w,
+				lngSum: point.Longitude * w,
+				weight: w,
+			})
+		}
+	}
+	out := make([]MapHeatBucket, 0, len(clusters))
+	for _, c := range clusters {
+		b := c.bucket
+		if c.weight > 0 {
+			b.Location = GeoPoint{Latitude: c.latSum / c.weight, Longitude: c.lngSum / c.weight}
+		}
+		out = append(out, b)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].TotalCount != out[j].TotalCount {
+			return out[i].TotalCount > out[j].TotalCount
+		}
+		return out[i].CellToken < out[j].CellToken
+	})
+	return out
+}
+
+// mergeHeatBreakdown 合并三分类拆分：任一侧非 nil 的维度保留（计数相加，
+// nil 视为 0），两侧皆 nil 的维度维持 nil（对齐 spec：user/group/moment 为
+// number | null，仅 data_type 过滤出单类型时其余维度可为 null）。
+func mergeHeatBreakdown(dst, src *MapHeatBreakdown) *MapHeatBreakdown {
+	if dst == nil {
+		return src
+	}
+	if src == nil {
+		return dst
+	}
+	add := func(a, b *int) *int {
+		switch {
+		case a == nil:
+			return b
+		case b == nil:
+			return a
+		default:
+			v := *a + *b
+			return &v
+		}
+	}
+	dst.User = add(dst.User, src.User)
+	dst.Group = add(dst.Group, src.Group)
+	dst.Moment = add(dst.Moment, src.Moment)
+	return dst
 }
 
 // heatmapAggregationLevel 根据热力视口跨度选择 S2 聚合层级。

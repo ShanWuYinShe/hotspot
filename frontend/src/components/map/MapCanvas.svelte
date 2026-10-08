@@ -277,11 +277,16 @@
 
 	// Svelte 5 的 onwheel 事件属性注册为 passive 监听，preventDefault 不生效
 	//（页面会跟着滚）——滚轮缩放必须阻止默认滚动，改用非被动原生监听。
+	// 监听挂在本画布的父级（地图面板）而非画布自身：marker 覆盖层是与画布
+	// 平级的兄弟节点（pointer-events-none 放行空隙，marker 按钮仍可命中），
+	// 悬停在图钉/热力点上方滚动时事件不会经过画布——挂父级才能全面板生效
+	//（面板内除地图与 marker 外只有缩放控件，滚轮落在其上缩放亦是预期行为）。
 	function wheelAction(node: HTMLElement) {
-		node.addEventListener('wheel', onWheel, { passive: false });
+		const target = node.parentElement ?? node;
+		target.addEventListener('wheel', onWheel, { passive: false });
 		return {
 			destroy() {
-				node.removeEventListener('wheel', onWheel);
+				target.removeEventListener('wheel', onWheel);
 			}
 		};
 	}

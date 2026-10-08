@@ -252,7 +252,8 @@
 
 		<!-- 数据覆盖层（当前位置点/热力桶/图钉/加载错误条）：桌面/移动共用组件 -->
 		<!-- 捏合手势中与瓦片层做同款连续缩放变换，保证图钉/热力跟手不脱节 -->
-		<div class="absolute inset-0" style={mapGestureTransform}>
+		<!-- pointer-events-none:同桌面端——覆盖层放行真实指针事件给底层画布 -->
+<div class="pointer-events-none absolute inset-0" style={mapGestureTransform}>
 		<MapOverlays
 			pins={mapData.pins}
 			bounds={mapBounds}

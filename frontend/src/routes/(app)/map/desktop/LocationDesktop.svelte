@@ -287,7 +287,10 @@
 
 		<!-- 数据覆盖层（当前位置点/热力桶/图钉/加载错误条）：桌面/移动共用组件 -->
 		<!-- 捏合手势中与瓦片层做同款连续缩放变换，保证图钉/热力跟手不脱节 -->
-		<div class="absolute inset-0" style={mapGestureTransform}>
+		<!-- pointer-events-none:覆盖层只做视觉定位,交互放行给底层画布(拖拽/滚轮);
+	     marker 按钮自身恢复 pointer-events:auto——否则真实指针事件全被本层挡住,
+	     画布的拖拽/滚轮/点击监听收不到任何真实事件(合成事件测试测不出)。 -->
+<div class="pointer-events-none absolute inset-0" style={mapGestureTransform}>
 		<MapOverlays
 			pins={mapData.pins}
 			bounds={mapBounds}
@@ -353,7 +356,7 @@
 			<div
 				data-map-popup
 				class="bg-surface-primary"
-				style="position:absolute;bottom:20px;left:20px;right:20px;z-index:25;border-radius:var(--cst-shape-lg);padding:16px;box-shadow:var(--cst-elevation-modal);"
+				style="position:absolute;bottom:20px;left:20px;right:76px;z-index:25;border-radius:var(--cst-shape-lg);padding:16px;box-shadow:var(--cst-elevation-modal);"
 			>
 				<div class="flex items-center gap-3">
 					<PinMedia pin={selectedPin} size={52} markerWidth={26} markerHeight={35} />
