@@ -1,9 +1,13 @@
 <script lang="ts">
 	import type { Pin } from './location-data';
 	import { markerSvg, PIN_COLORS, PIN_LABELS, type MapBounds } from './location-shared';
-	import { lngToWorldX, latToWorldY } from '@/components/map/map-projection';
+	import { lngToWorldX, latToWorldY, wgs84ToGcj02 } from '@/components/map/map-projection';
+	import { mapSourceStore } from '@/stores/mapSource.svelte';
 
 	// 地图图钉。
+	// 定位口径：与 MapCanvas 同源——底图是 GCJ-02 瓦片时，图钉 WGS-84 坐标先经
+	// wgs84ToGcj02 投到瓦片空间再算视口百分比；OSM 底图恒等直通。此前漏掉这一步，
+	// 国内场景下 zoom 越大 WGS 与 GCJ 的偏差被放得越大，图钉与底图地标错位。
 
 	let {
 		pin,
@@ -17,15 +21,34 @@
 		onSelect: (event: MouseEvent) => void;
 	} = $props();
 
+	// 与 MapCanvas.toTileSpace 同源：底图 GCJ-02 时把 WGS-84 图钉先纠偏到
+	// 瓦片空间再投影；OSM 恒等。两个空间混用是「缩放越大 marker 越偏」的根因。
+	const toTileSpace = $derived(
+		mapSourceStore.source === 'amap'
+			? wgs84ToGcj02
+			: (lat: number, lng: number) => ({ lat, lng })
+	);
+
 	const pos = $derived.by(() => {
 		// 与 MapHeatDot 同口径：Web Mercator 世界坐标比例（zoom 因子在比值中
 		// 约去）。大跨度视口下线性纬度与瓦片发散；城市小视口差异不可见。
+		//
+		// 关键：bounds 与 pin 必须投到同一坐标系再算百分比。MapCanvas 对外
+		// bounds 是 WGS-84（经 gcj02ToWgs84 反演）；底图瓦片却是 GCJ-02 空间
+		// 渲染——若 pin 用 WGS-84 直接投影，国内场景下两者偏差在 zoom 放大下
+		// 被放得越来越大（marker 缩放漂移根因）。
+		//
+		// 修法：把 bounds 与 pin 一起经 toTileSpace 投到瓦片空间（GCJ-02），
+		// 同空间做墨卡托投影算百分比，与底图严格对齐。
 		const z = 1;
-		const xSpan = lngToWorldX(bounds.maxLng, z) - lngToWorldX(bounds.minLng, z);
-		const ySpan = latToWorldY(bounds.minLat, z) - latToWorldY(bounds.maxLat, z);
-		const x = xSpan > 0 ? ((lngToWorldX(pin.lng, z) - lngToWorldX(bounds.minLng, z)) / xSpan) * 100 : 0;
+		const sw = toTileSpace(bounds.minLat, bounds.minLng);
+		const ne = toTileSpace(bounds.maxLat, bounds.maxLng);
+		const tilePin = toTileSpace(pin.lat, pin.lng);
+		const xSpan = lngToWorldX(ne.lng, z) - lngToWorldX(sw.lng, z);
+		const ySpan = latToWorldY(sw.lat, z) - latToWorldY(ne.lat, z);
+		const x = xSpan > 0 ? ((lngToWorldX(tilePin.lng, z) - lngToWorldX(sw.lng, z)) / xSpan) * 100 : 0;
 		// y 自视口顶（maxLat，北）向下量：worldY 随纬度减小而增大（南增北减）。
-		const y = ySpan > 0 ? ((latToWorldY(pin.lat, z) - latToWorldY(bounds.maxLat, z)) / ySpan) * 100 : 0;
+		const y = ySpan > 0 ? ((latToWorldY(tilePin.lat, z) - latToWorldY(ne.lat, z)) / ySpan) * 100 : 0;
 		return { x, y };
 	});
 </script>

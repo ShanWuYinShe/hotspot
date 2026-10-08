@@ -1,8 +1,15 @@
-// MapHeatDot 契约测试：数目标签、点击下钻、定位、直径分档与 token 样式。
-import { describe, it, expect, vi } from 'vitest';
+// MapHeatDot 契约测试：数目标签、点击下钻、定位、直径分档、token 样式与 GCJ-02 纠偏。
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import MapHeatDot from '../MapHeatDot.svelte';
+import { setMapSource } from '@/stores/mapSource.svelte';
 import type { MapHeatBucket } from '@/api/types';
+
+// 旧测试硬编码期望值按「无纠偏」计算，统一在 OSM 源下跑；
+// 纠偏语义由新增用例显式切到 amap 覆盖。
+beforeEach(() => {
+	setMapSource('osm');
+});
 
 const bounds = { minLat: 30, maxLat: 31, minLng: 117, maxLng: 118 };
 
@@ -13,16 +20,17 @@ function bucketWith(total: number, breakdown: Record<string, number | null> | nu
 		location: { latitude: 30.5, longitude: 117.5 },
 		total_count: total,
 		breakdown
-	} as never;
+	};
 }
 
 function renderDot(
 	total: number,
 	breakdown: Record<string, number | null> | null = null,
-	onSelect?: (bucket: MapHeatBucket) => void
+	onSelect?: (bucket: MapHeatBucket) => void,
+	location: { latitude: number; longitude: number } = { latitude: 30.5, longitude: 117.5 }
 ) {
 	const { container } = render(MapHeatDot, {
-		props: { bucket: bucketWith(total, breakdown), bounds, onSelect }
+		props: { bucket: { ...bucketWith(total, breakdown), location } as never, bounds, onSelect }
 	});
 	return container.firstElementChild as HTMLElement;
 }
@@ -111,7 +119,7 @@ describe('MapHeatDot', () => {
 	it('点击徽标触发 onSelect 并带上该桶（下钻入口）', async () => {
 		const onSelect = vi.fn();
 		const { container } = render(MapHeatDot, {
-			props: { bucket: bucketWith(34, { user: 22, group: 4, moment: 8 }), bounds, onSelect }
+			props: { bucket: bucketWith(34, { user: 22, group: 4, moment: 8 }) as never, bounds, onSelect }
 		});
 		const dot = container.firstElementChild as HTMLElement;
 		await dot.click();
@@ -122,5 +130,51 @@ describe('MapHeatDot', () => {
 	it('未传 onSelect 时点击不抛错', () => {
 		const dot = renderDot(54);
 		expect(() => dot.click()).not.toThrow();
+	});
+
+	it('国内坐标：高德源走 GCJ-02 纠偏，OSM 源保持 WGS-84（两者结果不同）', () => {
+		// 与 MapPinMarker 同根因：bounds 与桶心必须同空间投影，否则国内场景下
+		// 底图瓦片（GCJ-02）与徽标（WGS-84）随 zoom 放大错位。
+		// 桶心须偏离视口中心（中心两侧 GCJ 偏移近似对称）；amap 值在切源前
+		// 快照并卸载实例——组件对 mapSource 响应式，不卸载会被同步改写。
+		setMapSource('amap');
+		const amap = render(MapHeatDot, {
+			props: {
+				bucket: { ...bucketWith(54), location: { latitude: 30.25, longitude: 117.25 } } as never,
+				bounds
+			}
+		});
+		const amapDot = amap.container.firstElementChild as HTMLElement;
+		const amapLeft = amapDot.style.left;
+		const amapTop = amapDot.style.top;
+		amap.unmount();
+
+		setMapSource('osm');
+		const osmDot = renderDot(54, null, undefined, { latitude: 30.25, longitude: 117.25 });
+
+		expect(amapLeft).not.toBe(osmDot.style.left);
+		expect(amapTop).not.toBe(osmDot.style.top);
+	});
+
+	it('境外坐标：GCJ-02 与 WGS-84 一致，两种源下结果相同', () => {
+		const abroadBounds = { minLat: 40, maxLat: 41, minLng: -74, maxLng: -73 };
+		const abroadBucket = {
+			cell_token: 'abroad',
+			level: 12,
+			location: { latitude: 40.5, longitude: -73.5 },
+			total_count: 7,
+			breakdown: null
+		} as never;
+
+		setMapSource('amap');
+		const amap = render(MapHeatDot, { props: { bucket: abroadBucket, bounds: abroadBounds } });
+		const amapDot = amap.container.firstElementChild as HTMLElement;
+
+		setMapSource('osm');
+		const osm = render(MapHeatDot, { props: { bucket: abroadBucket, bounds: abroadBounds } });
+		const osmDot = osm.container.firstElementChild as HTMLElement;
+
+		expect(amapDot.style.left).toBe(osmDot.style.left);
+		expect(amapDot.style.top).toBe(osmDot.style.top);
 	});
 });
