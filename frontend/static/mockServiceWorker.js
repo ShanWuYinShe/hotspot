@@ -98,11 +98,14 @@ addEventListener('fetch', function (event) {
 
   // 项目定制：只处理 API 请求（/api/ 与 /public/ 双版本端点，见 spec 的
   // 匿名对偶端点；匿名态客户端走 /public/v1/*，漏掉会让 mock 环境匿名浏览
-  // 直连真实后端）。其余请求（Vite HMR / 静态资源 / SvelteKit data 等）直接
+  // 直连真实后端）；/admin/api/ 平台管理节点同理——mock handlers 里注册了
+  // 完整的 /admin/api/v1 管理端 mock，漏掉这个前缀会让它们在 SW 层被放行、
+  // mock 模式下管理后台永远打到真实后端（rbac/me 10100 → 恒「无访问权限」）。
+  // 其余请求（Vite HMR / 静态资源 / SvelteKit data 等）直接
   // 走网络、完全不进入 MSW 处理链——避免无 handler 请求走 passthrough
   // （SW 内 fetch 在反代环境下可能失败，导致页面请求报 "Failed to fetch"）。
   const pathname = new URL(event.request.url).pathname
-  if (!pathname.startsWith('/api/') && !pathname.startsWith('/public/')) {
+  if (!pathname.startsWith('/api/') && !pathname.startsWith('/public/') && !pathname.startsWith('/admin/api/')) {
     return
   }
 
