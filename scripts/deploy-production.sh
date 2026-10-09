@@ -216,8 +216,14 @@ echo "    postgres=${DB_CONTAINER} backend=${BACKEND_CONTAINER} frontend=${FRONT
 
 echo "==> 从 GitHub Release 下载镜像包…"
 mkdir -p "$STAGING"
-( cd "$REPO_ROOT" && gh release download "$TARGET" --dir "$STAGING" --clobber \
-    --pattern 'hotspot-images-*.tar.gz' --pattern 'hotspot-images-*.tar.gz.sha256' )
+if [ "${DEPLOY_SKIP_DOWNLOAD:-0}" = "1" ]; then
+  # 跳过下载、复用 staging 已有镜像包（如 GitHub 直连过慢时用其他渠道预下载，
+  # 或 Billing 豁免后手工上传的资产已取回）。sha256 校验照常执行，不因跳过而放松。
+  echo "    DEPLOY_SKIP_DOWNLOAD=1：复用 $STAGING 已有镜像包"
+else
+  ( cd "$REPO_ROOT" && gh release download "$TARGET" --dir "$STAGING" --clobber \
+      --pattern 'hotspot-images-*.tar.gz' --pattern 'hotspot-images-*.tar.gz.sha256' )
+fi
 TARBALL="$STAGING/hotspot-images-$TARGET.tar.gz"
 [ -f "$TARBALL" ] || { echo "!! Release ${TARGET} 缺少镜像包（CI Release 工作流是否成功？）"; exit 1; }
 ls -lh "$TARBALL"
