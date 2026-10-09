@@ -38,7 +38,7 @@
 禁止把未经本地验证的改动打 tag 发布：在 `git tag vX.Y.Z` 之前，必须按顺序完成：
 
 1. 联调：`docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d` 全员 healthy，在 `http://localhost:8888`（nginx 网关）走通本次改动；前端改动辅以 `bun run browser:qa` 巡检（见 `frontend/AGENTS.md`）。
-2. 集成测试（后端有改动时）：`docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d backend-test`，再在 `backend-go/` 目录执行 `BACKEND_URL=http://localhost:8082 go test -count=1 ./test/integration/`（完整约定见 `backend-go/AGENTS.md`）。
+2. 集成测试（后端有改动时）：按 `backend-go/AGENTS.md`「集成测试」的约定启动 `backend-test` 并执行（命令以该文件为唯一维护处，此处不重复）。
 3. 生产镜像本地构建（与 CI Release 同构的 Dockerfile；CI 在打 tag 后才构建，本地先构建等于把失败提前；三个指纹变量必须一起传，否则 OCI version 回落为 `dev`）：
    ```bash
    GIT_VERSION=<候选版本> GIT_COMMIT=$(git rev-parse HEAD) GIT_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \

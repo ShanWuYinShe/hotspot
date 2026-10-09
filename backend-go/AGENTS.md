@@ -97,7 +97,7 @@ data_migrations 旗标、禁止 CREATE INDEX CONCURRENTLY 的原因、INVALID �
 
 ## 请求解码
 
-- 请求体必须严格解码：禁止未知字段、拒绝尾随 JSON；禁止裸用标准库 `json.NewDecoder`
+- 请求体必须严格解码：拒绝尾随 JSON；未知字段默认拒绝（`{}` 端点例外，见下条）；禁止裸用标准库 `json.NewDecoder`
 - 端点声明 Request 为 `{}` 时，必须经 `httpx.RequireEmptyObject` 校验：缺失请求体/非对象/非法 JSON 返回 `10000`；未知字段容忍（spec 已放宽，SDK/网关注入字段不硬失败）
 
 ## 认证与会话
