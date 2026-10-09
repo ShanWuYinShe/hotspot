@@ -52,11 +52,22 @@ export function wgs84ToGcj02(lat: number, lng: number): { lat: number; lng: numb
 	return { lat: lat + dLat, lng: lng + dLng };
 }
 
-/** GCJ-02 → WGS-84（一次反演，误差 ~1m，远小于渲染像素粒度）。 */
+/** GCJ-02 → WGS-84（不动点迭代反演，两轮后误差 < 1cm）。
+ *
+ *	正变换 wgs84ToGcj02 无闭式逆，一次反演残留 ~1m 系统性偏差；滚轮/捏合
+ *	每缩放一级都要经过一次 WGS↔GCJ 往返，偏差逐级同向累积（14→18 级实测
+ *	漂移约 6m，高 zoom 下约 10px、「我的位置」肉眼可见滑 off 房顶），故
+ *	必须迭代到厘米级再收敛。境外直通不变。 */
 export function gcj02ToWgs84(lat: number, lng: number): { lat: number; lng: number } {
 	if (outOfChina(lat, lng)) return { lat, lng };
-	const gcj = wgs84ToGcj02(lat, lng);
-	return { lat: lat - (gcj.lat - lat), lng: lng - (gcj.lng - lng) };
+	let wLat = lat;
+	let wLng = lng;
+	for (let i = 0; i < 2; i++) {
+		const g = wgs84ToGcj02(wLat, wLng);
+		wLat = lat - (g.lat - wLat);
+		wLng = lng - (g.lng - wLng);
+	}
+	return { lat: wLat, lng: wLng };
 }
 
 /** 经度 → 世界像素 x（zoom 级像素坐标）。 */
