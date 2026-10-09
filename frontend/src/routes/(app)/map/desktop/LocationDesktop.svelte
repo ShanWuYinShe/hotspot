@@ -52,6 +52,9 @@
 	let defaultName = $state('');
 	// 上次确认的浏览锚点（含名）：中心与其同格且逆地理缺席时，用锚点名兜底。
 	let anchorPoint = $state<{ lat: number; lng: number; name?: string } | null>(readLastLocation());
+	// 我的位置（浏览器 GPS fix，WGS-84）：蓝点按它做地理投影，不随地图中心走
+	// （语义红线：蓝点=我的位置，不是地图中心；见 MapMyLocationDot）。
+	let myLocation = $state<{ lat: number; lng: number } | null>(null);
 	// 逆地理结果（key=四位小数网格；失败记 null 免重复请求，随 centerNamenull 兜底链消化）。
 	let reverseEntry = $state<{ key: string; name: string | null } | null>(null);
 	const reverseCache = new Map<string, string | null>();
@@ -83,6 +86,7 @@
 			// 真实位置上报（users/update_location）：与是否采纳为中心无关，
 			// 上报的是「用户在哪」；失败静默，不打断交互。
 			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
+			myLocation = { lat: fix.lat, lng: fix.lng };
 			if (userPicked) return;
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 		})();
@@ -211,6 +215,7 @@
 			userPicked = true;
 			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
 			mapCenter = { lat: fix.lat, lng: fix.lng };
+			myLocation = { lat: fix.lat, lng: fix.lng };
 			writeLastLocation({ lat: fix.lat, lng: fix.lng });
 			anchorPoint = { lat: fix.lat, lng: fix.lng };
 			clearLocateDeclined();
@@ -298,8 +303,7 @@
 			selectedPinId={selectedPin?.id ?? null}
 			loading={mapData.loading}
 			error={mapData.error}
-			showDot={!!mapCenter}
-			dotTop="50%"
+			myLocation={myLocation}
 			dotPulse={false}
 			chipTopClass="top-3"
 			onSelectPin={(pin, e) => {

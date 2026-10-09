@@ -2,15 +2,17 @@
 	/**
 	 * 地图数据覆盖层（桌面/移动共用）：当前位置点、热力桶徽标、图钉标记、
 	 * 加载/错误提示条。两端差异全部走 props：
-	 * - dotTop：当前位置点垂直位置（桌面 50% / 移动 46%，Figma Make 对齐）
+	 * - myLocation：我的位置（GPS fix，WGS-84）；蓝点按地理坐标投影，随缩放/平移
+	 *   钉在同一地理点（语义红线：蓝点=我的位置，不是地图中心）
 	 * - dotPulse：移动端脉冲光环（halo scale/opacity 循环），桌面静态
 	 * - chipTopClass：提示条顶部偏移（桌面 top-3 / 移动 top-16，给顶栏让位）
 	 * 选中/下钻等交互语义由调用方传入（两端选中后的联动不同）。
 	 */
-	import { PIN_COLORS, PIN_TONES, type MapBounds, type MapHeatBucket } from './location-shared';
+	import { type MapBounds, type MapHeatBucket } from './location-shared';
 	import type { Pin } from './location-data';
 	import MapPinMarker from './MapPinMarker.svelte';
 	import MapHeatDot from '@/components/map/MapHeatDot.svelte';
+	import MapMyLocationDot from './MapMyLocationDot.svelte';
 
 	interface Props {
 		pins: Pin[];
@@ -19,8 +21,8 @@
 		selectedPinId: string | number | null;
 		loading: boolean;
 		error: string | null;
-		showDot: boolean;
-		dotTop: string;
+		/** 我的位置（WGS-84 GPS fix）；null = 尚未定位成功，不渲染蓝点 */
+		myLocation: { lat: number; lng: number } | null;
 		dotPulse: boolean;
 		chipTopClass: string;
 		onSelectPin: (pin: Pin, e: MouseEvent) => void;
@@ -35,8 +37,7 @@
 		selectedPinId,
 		loading,
 		error,
-		showDot,
-		dotTop,
+		myLocation,
 		dotPulse,
 		chipTopClass,
 		onSelectPin,
@@ -45,13 +46,9 @@
 	}: Props = $props();
 </script>
 
-{#if showDot}
-	<!-- Current location dot（移动端带脉冲光环：halo scale 1→1.8 / opacity 0.55→0 循环） -->
-	<div style="position:absolute;left:50%;top:{dotTop};transform:translate(-50%,-50%);pointer-events:none;z-index:5;">
-		<div class="relative rounded-full" style="width:18px;height:18px;background:{PIN_COLORS.user};border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-shadow) {PIN_TONES.user.glow};">
-			<span class="{dotPulse ? 'map-pulse-halo' : ''} absolute rounded-full" style="inset:{dotPulse ? '-7px' : '-8px'};background:{PIN_TONES.user.bg};border:var(--cst-border-width-hairline) solid {PIN_TONES.user.border};"></span>
-		</div>
-	</div>
+{#if myLocation}
+	<!-- 我的位置蓝点（按地理坐标投影，缩放/平移不漂移；移动端带脉冲光环） -->
+	<MapMyLocationDot lat={myLocation.lat} lng={myLocation.lng} {bounds} pulse={dotPulse} />
 {/if}
 
 <!-- Heatmap buckets（大视口 / 高密度时服务端返回热力统计；点徽标下钻到整格明细） -->

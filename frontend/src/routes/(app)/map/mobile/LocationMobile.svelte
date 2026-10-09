@@ -101,6 +101,9 @@
 	// 首屏初值取上次确认的浏览锚点（localStorage 同步可读），不等 client_config；
 	// 配置回来或自动定位成功后再校正。
 	let mapCenter = $state<{ lat: number; lng: number } | null>(readLastLocation());
+	// 我的位置（浏览器 GPS fix，WGS-84）：蓝点按它做地理投影，不随地图中心走
+	// （语义红线：蓝点=我的位置，不是地图中心；见 MapMyLocationDot）。
+	let myLocation = $state<{ lat: number; lng: number } | null>(null);
 	// 中心来源（本地锚点/服务端默认位置）是否判定完毕——用于结束首屏 loading
 	let centerResolved = $state(false);
 	// 用户是否已手动选点：自动定位结果不再抢镜头
@@ -132,6 +135,7 @@
 			if (!fix) return;
 			// 真实位置上报；失败静默，不打断交互。
 			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
+			myLocation = { lat: fix.lat, lng: fix.lng };
 			if (userPicked) return;
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 		})();
@@ -174,6 +178,7 @@
 			userPicked = true;
 			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
 			mapCenter = { lat: fix.lat, lng: fix.lng };
+			myLocation = { lat: fix.lat, lng: fix.lng };
 			writeLastLocation({ lat: fix.lat, lng: fix.lng });
 			clearLocateDeclined();
 			selectedLoc = null;
@@ -261,8 +266,7 @@
 			selectedPinId={selectedPin?.id ?? null}
 			loading={mapData.loading}
 			error={mapData.error}
-			showDot={!!mapCenter}
-			dotTop="46%"
+			myLocation={myLocation}
 			dotPulse={true}
 			chipTopClass="top-16"
 			onSelectPin={(pin, e) => {
