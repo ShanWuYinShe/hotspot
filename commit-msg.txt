@@ -1,9 +1,0 @@
-文档: 审计修正三处 AGENTS.md 不一致
-
-- backend-go: 请求解码两条相邻规则自相矛盾（未知字段禁/容），改写为
-  「默认拒绝、{} 端点例外」的精确表述
-- spec: 入口清单补漏 api_spec_auth.md（认证会话，backend-go 已引用为权威）
-- 根目录: 发布门禁第 2 步命令与 backend-go/AGENTS.md 逐字重复，违反本文件
-  「命令以子项目为唯一维护处」的自定原则，改为指针
-
-Model: glm-5.3-flash
