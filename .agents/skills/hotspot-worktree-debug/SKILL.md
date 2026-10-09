@@ -113,8 +113,8 @@ worktree 根）。后果：Go 模块缓存解压目录默认只读（0444/0555�
 正确做法——绝对路径指向主工作树共享缓存（门禁本身不降级，实测同日 build+vet+test 通过）：
 
 ```bash
-export GOCACHE=/Users/liyou/work/hotspot/.workwork/go-build
-export GOMODCACHE=/Users/liyou/work/hotspot/.workwork/go-mod
+export GOCACHE="$HOME/work/hotspot/.workwork/go-build"
+export GOMODCACHE="$HOME/work/hotspot/.workwork/go-mod"
 ```
 
 - `.husky/pre-commit` 不覆盖这两个变量、继承 shell 环境，提交前 `export` 即可让
