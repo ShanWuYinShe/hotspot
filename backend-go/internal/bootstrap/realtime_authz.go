@@ -131,13 +131,77 @@ func (a realtimeUserRepo) GetSettingsBatch(ctx context.Context, userIDs []string
 	return out, nil
 }
 
+// cachedRelPair 是 Relationship 缓存值的最小投影（关注方向；拉黑在 BlockPairKey）。
+type cachedRelPair struct {
+	Following  bool `json:"f"`
+	FollowedBy bool `json:"b"`
+}
+
 func (a realtimeUserRepo) Relationship(ctx context.Context, userID, targetUserID string) (bool, bool, bool, error) {
+	// 缓存值按【归一化后】参数序存储（RelPairKey 归一），读侧按 swapped 还原
+	// 实参方向——否则 a>b 时关注方向会翻转。
+	key := hotcache.RelPairKey(userID, targetUserID)
+	_, swapped := hotcache.BlockPairKey(userID, targetUserID) // 归一判定与 RelPairKey 同规则
+	if a.cache != nil {
+		if v, ok := a.cache.Get(ctx, key); ok {
+			var cs cachedRelPair
+			if json.Unmarshal([]byte(v), &cs) == nil {
+				if swapped {
+					return cs.FollowedBy, cs.Following, false, nil
+				}
+				return cs.Following, cs.FollowedBy, false, nil
+			}
+		}
+	}
 	relation, err := a.repo.Relationship(ctx, userID, targetUserID)
+	if err != nil {
+		return false, false, false, err
+	}
+	if a.cache != nil {
+		first, second := relation.IsFollowing, relation.IsFollowedBy
+		if swapped {
+			first, second = relation.IsFollowedBy, relation.IsFollowing
+		}
+		if cs, err := json.Marshal(cachedRelPair{Following: first, FollowedBy: second}); err == nil {
+			a.cache.Set(ctx, key, string(cs), hotcache.RelPairTTL)
+		}
+	}
 	return relation.IsFollowing, relation.IsFollowedBy, relation.IsBlocked, err
 }
 
 func (a realtimeUserRepo) BlockedEitherWay(ctx context.Context, aUserID, bUserID string) (callerBlocked, targetBlocked bool, err error) {
-	return a.repo.BlockedEitherWay(ctx, aUserID, bUserID)
+	key, swapped := hotcache.BlockPairKey(aUserID, bUserID)
+	if a.cache != nil {
+		if v, ok := a.cache.Get(ctx, key); ok {
+			mask := int(v[0] - '0')
+			first, second := mask&1 == 1, mask&2 == 2
+			if swapped {
+				callerBlocked, targetBlocked = second, first
+			} else {
+				callerBlocked, targetBlocked = first, second
+			}
+			return callerBlocked, targetBlocked, nil
+		}
+	}
+	callerBlocked, targetBlocked, err = a.repo.BlockedEitherWay(ctx, aUserID, bUserID)
+	if err != nil {
+		return false, false, err
+	}
+	if a.cache != nil {
+		first, second := callerBlocked, targetBlocked
+		if swapped {
+			first, second = targetBlocked, callerBlocked
+		}
+		mask := 0
+		if first {
+			mask |= 1
+		}
+		if second {
+			mask |= 2
+		}
+		a.cache.Set(ctx, key, string(rune('0'+mask)), hotcache.BlockPairTTL)
+	}
+	return callerBlocked, targetBlocked, nil
 }
 
 func (a realtimeGroupRepo) ListMembers(ctx context.Context, groupID string, limit int, cursor string) ([]string, string, error) {

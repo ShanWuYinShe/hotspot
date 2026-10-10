@@ -5,10 +5,21 @@ import (
 	"strings"
 	"time"
 
+	"hotspot/backend-go/internal/platform/hotcache"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/types"
 )
+
+// invalidateRelationCache 关注/拉黑变更后双向失效两对键（读侧为 realtime
+// typing 每帧判定，漏删会让新关系在 TTL 内不生效）。
+func (s *Service) invalidateRelationCache(ctx context.Context, aUserID, bUserID string) {
+	if s == nil || s.settingsCache == nil {
+		return
+	}
+	blkKey, _ := hotcache.BlockPairKey(aUserID, bUserID)
+	s.settingsCache.Delete(ctx, blkKey, hotcache.RelPairKey(aUserID, bUserID))
+}
 
 func (s *Service) Follow(ctx context.Context, targetUserID string, source FollowSource, sourceMomentID string) error {
 	op := observability.Begin("users.follow", "target_user_id", targetUserID)
@@ -97,6 +108,7 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 		realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForPrincipal})
 		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForTarget})
 	}
+	s.invalidateRelationCache(ctx, principal.UserID, targetUserID)
 	op.Complete()
 	return nil
 }
@@ -117,6 +129,7 @@ func (s *Service) Unfollow(ctx context.Context, targetUserID string) error {
 		op.Fail(err)
 		return err
 	}
+	s.invalidateRelationCache(ctx, principal.UserID, targetUserID)
 	// 不推送 self-sync 事件（关系状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	op.Complete()
 	return nil
@@ -141,6 +154,8 @@ func (s *Service) Block(ctx context.Context, targetUserID, reason string) error 
 		op.Fail(err)
 		return err
 	}
+	// 拉黑级联解除双方关注：关系与拉黑两对键都失效。
+	s.invalidateRelationCache(ctx, principal.UserID, targetUserID)
 	// 不推送 self-sync 事件（关系状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	op.Complete()
 	return nil
@@ -232,6 +247,7 @@ func (s *Service) Unblock(ctx context.Context, targetUserID string) error {
 		op.Fail(err)
 		return err
 	}
+	s.invalidateRelationCache(ctx, principal.UserID, targetUserID)
 	// 不推送 self-sync 事件（关系状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	op.Complete()
 	return nil

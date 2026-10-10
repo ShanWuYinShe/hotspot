@@ -130,3 +130,29 @@ const UserSettingsTTL = time.Minute
 func UserSettingsKey(userID string) string {
 	return "hot:uset:" + userID
 }
+
+// BlockPairTTL / RelPairTTL 双向拉黑与关注关系缓存 TTL：两者都属用户自改
+// 数据，写路径（Follow/Unfollow/Block/Unblock）双向删键，TTL 仅兜底。
+const (
+	BlockPairTTL = time.Minute
+	RelPairTTL   = time.Minute
+)
+
+// BlockPairKey 双向拉黑键（a/b 字典序归一，任一方向写失效都命中同一键）；
+// 值为 "0".."3" 位掩码，方向相对【归一化后】参数序：bit0 = 归一序第一参数
+// 拉黑第二参数，bit1 = 反向。swapped 告知调用方实参是否被交换，读侧据此
+// 把位掩码还原回实参方向。
+func BlockPairKey(aUserID, bUserID string) (key string, swapped bool) {
+	if aUserID > bUserID {
+		return "hot:blk:" + bUserID + ":" + aUserID, true
+	}
+	return "hot:blk:" + aUserID + ":" + bUserID, false
+}
+
+// RelPairKey 关注关系键（同上归一）；值为 JSON（使用方序列化）。
+func RelPairKey(aUserID, bUserID string) string {
+	if aUserID > bUserID {
+		aUserID, bUserID = bUserID, aUserID
+	}
+	return "hot:rel:" + aUserID + ":" + bUserID
+}
