@@ -82,7 +82,10 @@ func NewApp(cfg config.Config) (*App, error) {
 		logger.Info("redis not configured, idempotency running in single-instance mode")
 	}
 	idempotency.StartSweeper(rootCtx)
-	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisClient)
+	// 热数据缓存（读穿 + 写失效）：users 设置与群成员关系；单一实例贯穿模块与
+	// realtime 适配器（本地模式下失效才互通；配了 Redis 则多实例共享键）。
+	hotCache := hotcache.New(redisClient)
+	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisClient, hotCache)
 	// bridge 在下方 redisClient 块内创建（instanceID 需同时注入 resumeStore）
 	var bridge *realtime.RedisBridge
 	router := NewHTTPRouterWithLogger(modules, logger)
@@ -97,10 +100,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	userRepo := users.NewPostgresRepository(persistenceFactory)
 	groupRepo := groups.NewPostgresRepository(persistenceFactory)
 	userService := users.NewServiceWithRepo(userRepo)
-	// 群成员关系热缓存：Redis 配置时多实例共享键；未配置时各 Cache 实例退化为
-	// 进程内 map（模块侧与 realtime 侧实例不同，失效不互通，但 TTL 60s 兜底，
-	// 仅影响未配 Redis 的单机 dev 场景）。
-	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), realtimeUserRepo{repo: userRepo}, NewRealtimeGroupRepo(groupRepo, hotcache.New(redisClient)))
+	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), NewRealtimeUserRepo(userRepo, hotCache), NewRealtimeGroupRepo(groupRepo, hotCache))
 	realtimeHandler.SetActorProvider(realtimeActorProvider{svc: userService})
 	// WS 握手封禁检查：与 HTTP RequiredAuth 同源（admin repo IsBanned）、同口径（fail-open）
 	realtimeHandler.SetBanAuthorizer(realtimeBanAuthorizer{repo: adminRepo})

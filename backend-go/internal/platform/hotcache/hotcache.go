@@ -121,3 +121,12 @@ const GroupMemberTTL = time.Minute
 func GroupMemberKey(groupID, userID string) string {
 	return "hot:grp:" + groupID + ":member:" + userID
 }
+
+// UserSettingsTTL 用户设置缓存 TTL：presence 可见性/私聊许可属用户自改数据，
+// 改后写路径删键，TTL 仅兜底（他人侧 ≤TTL 感知延迟可接受）。
+const UserSettingsTTL = time.Minute
+
+// UserSettingsKey 用户设置键；值为 JSON（使用方序列化，键格式跨模块共享）。
+func UserSettingsKey(userID string) string {
+	return "hot:uset:" + userID
+}

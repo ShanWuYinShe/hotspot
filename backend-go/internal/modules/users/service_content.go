@@ -7,6 +7,7 @@ import (
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/hotcache"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -77,6 +78,10 @@ func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsReques
 	if err := s.repo.PutSettings(ctx, principal.UserID, settings); err != nil {
 		op.Fail(err)
 		return err
+	}
+	// 设置变更立即失效热缓存（realtime typing / presence 判定读同一键族）。
+	if s.settingsCache != nil {
+		s.settingsCache.Delete(ctx, hotcache.UserSettingsKey(principal.UserID))
 	}
 	// 不推送 self-sync 事件（设置状态不做跨设备实时同步，见 api_spec_index.md 预留）
 	op.Complete()

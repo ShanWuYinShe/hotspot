@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"hotspot/backend-go/internal/modules/admin"
@@ -46,7 +47,23 @@ func (a realtimeBanAuthorizer) BanDetails(ctx context.Context, userID string) (r
 // userRepo.GetSettings（一次查询），不再经全量 OpenTheDoor 取 presence。
 type realtimeActorProvider struct{ svc *users.Service }
 
-type realtimeUserRepo struct{ repo users.Repository }
+// cachedUserSettings 是 GetSettings 缓存值的最小投影（JSON 存 hotcache）。
+type cachedUserSettings struct {
+	Presence bool   `json:"p"`
+	Allow    string `json:"a"`
+	Found    bool   `json:"f"`
+}
+
+type realtimeUserRepo struct {
+	repo  users.Repository
+	cache *hotcache.Cache
+}
+
+// NewRealtimeUserRepo 构造带设置热缓存的 realtime 用户鉴权适配器
+// （typing 每帧一次 GetSettings；缓存键与 users 模块写失效共享同一格式）。
+func NewRealtimeUserRepo(repo users.Repository, cache *hotcache.Cache) realtimeUserRepo {
+	return realtimeUserRepo{repo: repo, cache: cache}
+}
 
 // realtimeGroupRepo 群成员鉴权适配器：typing 每帧都要 IsMember，经 hotcache
 // 读穿缓存（TTL 60s + groups 写路径删键）挡掉大部分 DB 往返；cache 可为 nil
@@ -79,7 +96,24 @@ func (a realtimeActorProvider) GetActorInfo(ctx context.Context, userID string) 
 }
 
 func (a realtimeUserRepo) GetSettings(ctx context.Context, userID string) (bool, string, bool, error) {
+	key := hotcache.UserSettingsKey(userID)
+	if a.cache != nil {
+		if v, ok := a.cache.Get(ctx, key); ok {
+			var cs cachedUserSettings
+			if json.Unmarshal([]byte(v), &cs) == nil {
+				return cs.Presence, cs.Allow, cs.Found, nil
+			}
+		}
+	}
 	settings, ok, err := a.repo.GetSettings(ctx, userID)
+	if err != nil {
+		return false, "", false, err
+	}
+	if a.cache != nil {
+		if cs, err := json.Marshal(cachedUserSettings{Presence: settings.PresenceVisible, Allow: string(settings.AllowPrivateChat), Found: ok}); err == nil {
+			a.cache.Set(ctx, key, string(cs), hotcache.UserSettingsTTL)
+		}
+	}
 	return settings.PresenceVisible, string(settings.AllowPrivateChat), ok, err
 }
 

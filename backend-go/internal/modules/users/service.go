@@ -13,6 +13,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
+	"hotspot/backend-go/internal/platform/hotcache"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -55,10 +56,16 @@ type Service struct {
 	// avatar_file_id 归属校验（update_account），bootstrap 注入 media 模块实现；
 	// nil 时跳过校验（与 moments.validateImageOwnership 的 nil 口径一致）。
 	avatarMedia AccountAvatarMediaResolver
+	// settingsCache 用户设置热缓存（optional; nil => 不缓存）。realtime typing
+	// 每帧读一次 GetSettings，UpdateMySettings 写路径按 UserSettingsKey 删键。
+	settingsCache *hotcache.Cache
 }
 
 // SetAvatarMediaResolver 注入 avatar_file_id 归属校验实现（bootstrap 装配）。
 func (s *Service) SetAvatarMediaResolver(r AccountAvatarMediaResolver) { s.avatarMedia = r }
+
+// SetSettingsCache 注入用户设置热缓存（bootstrap 装配；nil 保持直查）。
+func (s *Service) SetSettingsCache(c *hotcache.Cache) { s.settingsCache = c }
 
 // SetCredentialWriter 注入凭证写入实现与事务执行器（bootstrap 装配）。
 // Upgrade 在同一事务内写凭证与 user_type，二者须同时提供。

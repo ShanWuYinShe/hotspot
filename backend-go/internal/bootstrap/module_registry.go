@@ -35,7 +35,7 @@ import (
 )
 
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
-	modules, _ := BuildModulesWithRedisPinger(context.Background(), cfg, factory, nil)
+	modules, _ := BuildModulesWithRedisPinger(context.Background(), cfg, factory, nil, hotcache.New(nil))
 	return modules
 }
 
@@ -52,7 +52,7 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 // The second return value is the admin repository exposed as the platform-wide
 // ban checker (IsBanned); bootstrap hands it to the realtime handler so the WS
 // handshake enforces bans exactly like the HTTP RequiredAuth middleware.
-func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory *persistence.Factory, rdb *redis.Client) ([]modulekit.Module, admin.Repository) {
+func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory *persistence.Factory, rdb *redis.Client, hotCache *hotcache.Cache) ([]modulekit.Module, admin.Repository) {
 	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
 	ratelimit.SetSource(sharedAppConfig)
 	// 通知服务全应用单一实例：此前 moments/groups/users/admin 各自再建一份
@@ -64,6 +64,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		notificationService.StartPruneSweeper(ctx)
 	}
 	usersModule := users.NewModule(factory, sharedAppConfig, notificationService)
+	usersModule.Service.SetSettingsCache(hotCache)
 	groupsModule := groups.NewModule(factory, usersModule.Service, notificationService)
 	mediaModule := media.NewModule(cfg, factory)
 	mediaModule.Service.SetAppConfig(sharedAppConfig)
@@ -99,11 +100,8 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	shareModule := share.NewModule(factory)
 
 	gmModule := groupmessages.NewModule(factory, usersModule.Service, notificationService, shareModule.Service)
-	// 群成员关系热缓存：groups（写失效）与 groupmessages/realtime（读穿）共享
-	// 同一键族；未配 Redis 时 hotcache 退化为进程内 TTL map。
-	memberCache := hotcache.New(rdb)
-	groupsModule.Service.SetMemberCache(memberCache)
-	gmModule.Service.SetMemberCache(memberCache)
+	groupsModule.Service.SetMemberCache(hotCache)
+	gmModule.Service.SetMemberCache(hotCache)
 	// 消息撤回时间窗接线（spec chat.md：AppConfig.limits.message_recall_window_seconds）
 	gmModule.Service.SetAppConfig(sharedAppConfig)
 	pcModule := privatechats.NewModule(factory, sharedAppConfig, shareModule.Service, usersModule.Service)
