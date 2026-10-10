@@ -65,37 +65,30 @@ export struct PerformanceIndicator {
   /**
    * 设置性能监听器
    */
-  private alertTimer: number = -1;
-
   private setupPerformanceListener(): void {
-    // 使用轮询方式检查性能告警（句柄必须保存：组件销毁后 5s 轮询永续运行）
-    this.alertTimer = setInterval(() => {
+    // 告警检查并入单一 3s 轮询定时器（updateTimer）：原先 alertTimer(5s) 与
+    // updateTimer(3s) 各自轮询同一 PerformanceOptimizer 并重复 loadMetrics，
+    // 常驻布局层每 15s 刷 5 次指标。告警逻辑随指标刷新一并执行。
+  }
+
+  private stopPerformanceListener(): void {
+    // 单一定时器由 stopAutoUpdate 负责清理（告警检查已并入 updateTimer）。
+  }
+
+  /**
+   * 启动自动更新（唯一轮询入口：指标刷新 + 告警检查）
+   */
+  private startAutoUpdate(): void {
+    this.updateTimer = setInterval(() => {
+      this.loadMetrics();
       const alerts = this.performanceOptimizer.getPerformanceAlerts();
       if (alerts.length > 0) {
         const latestAlert = alerts[alerts.length - 1];
-        this.loadMetrics();
-        
         // 无障碍播报严重告警
         if (latestAlert.level === 'critical') {
           this.accessibilityManager.announceText(`严重性能告警：${latestAlert.message}`, 'high');
         }
       }
-    }, 5000); // 每5秒检查一次
-  }
-
-  private stopPerformanceListener(): void {
-    if (this.alertTimer !== -1) {
-      clearInterval(this.alertTimer);
-      this.alertTimer = -1;
-    }
-  }
-
-  /**
-   * 启动自动更新
-   */
-  private startAutoUpdate(): void {
-    this.updateTimer = setInterval(() => {
-      this.loadMetrics();
     }, 3000); // 每3秒更新一次
   }
 

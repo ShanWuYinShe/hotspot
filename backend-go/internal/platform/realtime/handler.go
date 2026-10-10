@@ -340,8 +340,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sendCloseFrame(conn, 4001, "auth failed")
 		return
 	}
-	ctx := platformauth.WithPlatform(r.Context(), detectPlatform(r, authPayload.ClientType))
-	accessCookie := readCookie(r, platformauth.AccessTokenCookieName)
+	ctx := platformauth.WithPlatform(r.Context(), platformauth.DetectPlatform(r, authPayload.ClientType))
+	accessCookie := platformauth.ReadCookie(r, platformauth.AccessTokenCookieName)
 	authorization := r.Header.Get("Authorization")
 	if authPayload.AccessToken != "" {
 		authorization = "Bearer " + authPayload.AccessToken
@@ -825,26 +825,8 @@ func (h *Handler) isGroupMember(ctx context.Context, viewerUserID, groupID strin
 	return ok
 }
 
-func detectPlatform(r *http.Request, clientType string) string {
-	if clientType != "" {
-		return clientType
-	}
-	if readCookie(r, platformauth.AccessTokenCookieName) != "" {
-		return "web"
-	}
-	if r.Header.Get("Authorization") != "" {
-		return "app"
-	}
-	return "anonymous"
-}
-
-func readCookie(r *http.Request, name string) string {
-	cookie, err := r.Cookie(name)
-	if err != nil {
-		return ""
-	}
-	return cookie.Value
-}
+// detectPlatform/readCookie 已上收 platform/auth.DetectPlatform/ReadCookie
+// 单一实现（此处曾复刻一份且 clientType 优先级语义存在漂移风险）。
 
 // generateResumeToken 生成不可预测的 opaque resume 凭证（spec L155）。crypto/rand
 // 保证不可猜测，避免攻击者伪造他人 token 续传他人事件流。

@@ -29,8 +29,8 @@ func DefaultService() *Service {
 
 func OptionalAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := WithPlatform(r.Context(), detectPlatform(r))
-		if principal, expiresAt, ok := defaultService.Load().AuthenticateRequest(ctx, r.Header.Get("Authorization"), readCookie(r, AccessTokenCookieName)); ok {
+		ctx := WithPlatform(r.Context(), DetectPlatform(r, ""))
+		if principal, expiresAt, ok := defaultService.Load().AuthenticateRequest(ctx, r.Header.Get("Authorization"), ReadCookie(r, AccessTokenCookieName)); ok {
 			ctx = WithPrincipal(ctx, principal)
 			ctx = WithAccessExpiry(ctx, expiresAt)
 			r = r.WithContext(ctx)
@@ -47,12 +47,12 @@ func OptionalAuth(next http.Handler) http.Handler {
 
 func RequiredAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := WithPlatform(r.Context(), detectPlatform(r))
+		ctx := WithPlatform(r.Context(), DetectPlatform(r, ""))
 		svc := defaultService.Load()
-		principal, expiresAt, ok := svc.AuthenticateRequest(ctx, r.Header.Get("Authorization"), readCookie(r, AccessTokenCookieName))
+		principal, expiresAt, ok := svc.AuthenticateRequest(ctx, r.Header.Get("Authorization"), ReadCookie(r, AccessTokenCookieName))
 		if !ok {
 			hasHeader := r.Header.Get("Authorization") != ""
-			hasCookie := readCookie(r, AccessTokenCookieName) != ""
+			hasCookie := ReadCookie(r, AccessTokenCookieName) != ""
 			observability.L().Info("required auth failed: invalid or expired token",
 				"method", r.Method,
 				"uri", r.URL.RequestURI(),
@@ -76,8 +76,16 @@ func RequiredAuth(next http.Handler) http.Handler {
 	})
 }
 
-func detectPlatform(r *http.Request) string {
-	if readCookie(r, AccessTokenCookieName) != "" {
+// DetectPlatform 判定请求端平台（web/app/anonymous），单一实现供 HTTP 鉴权
+// 中间件与 realtime WS 鉴权复用，防两处语义漂移。clientTypeHint 非空时信任
+// 显式声明（WS Auth payload 自报端型），否则按 access cookie / Authorization
+// 头推断——cookie 优先于 bearer：双端并存登录时 web cookie 是用户主动选择的
+// 本站会话。
+func DetectPlatform(r *http.Request, clientTypeHint string) string {
+	if clientTypeHint != "" {
+		return clientTypeHint
+	}
+	if ReadCookie(r, AccessTokenCookieName) != "" {
 		return "web"
 	}
 	if r.Header.Get("Authorization") != "" {
@@ -86,7 +94,8 @@ func detectPlatform(r *http.Request) string {
 	return "anonymous"
 }
 
-func readCookie(r *http.Request, name string) string {
+// ReadCookie 读取请求 cookie，缺失时返回空串（调用方只做存在性/值判断）。
+func ReadCookie(r *http.Request, name string) string {
 	cookie, err := r.Cookie(name)
 	if err != nil {
 		return ""
