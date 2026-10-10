@@ -514,7 +514,7 @@ export default class EntryAbility extends UIAbility {
       // 状态栏内容颜色完全由系统深浅模式决定：浅色模式用黑色图标，深色模式用白色图标
       // 不使用页面传入的 preferDarkContent，因为透明状态栏下背景已通过 $r() 自动适配深浅
       const contentUsesDarkColor = !isDark;
-      const contentColor = contentUsesDarkColor ? '#000000' : '#FFFFFF';
+      const contentColor = contentUsesDarkColor ? DesignConstants.COLOR.BLACK : DesignConstants.COLOR.WHITE;
 
       // 窗口背景色跟随深浅模式，确保任务视图下颜色正确
       mainWindow.setWindowBackgroundColor(windowBgColor);

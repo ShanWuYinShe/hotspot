@@ -449,8 +449,7 @@ func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, l
 			for i := 0; i < limit; i++ {
 				items[i].Tags = tagsByMomentID[items[i].MomentID]
 			}
-			c := cursors[limit-1]
-			return PaginatedMoments{Items: items[:limit], NextCursor: &c}, nil
+			return PaginatedMoments{Items: items[:limit], NextCursor: nextCursorOrNil(cursors[limit-1])}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {

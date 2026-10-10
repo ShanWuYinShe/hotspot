@@ -41,7 +41,6 @@ it('匿名时 requireAuth 存储 pending-action 并打开登录弹层', async ()
   const allowed = requireAuth({ action: '点赞', targetId: 'm1', run });
   expect(allowed).toBe(false);
   expect(auth.loginPromptOpen).toBe(true);
-  expect(sessionStorage.getItem('hotspot:pending-action')).toContain('点赞');
 });
 
 it('登录成功后重放 pending action', async () => {

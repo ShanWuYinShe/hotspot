@@ -92,6 +92,18 @@
 		}
 	}
 
+	// Svelte 5 的 onwheel 事件属性注册为 passive 监听，preventDefault 不生效
+	//（同 MapCanvas 已实测的结论）——滚轮缩放必须阻止默认滚动，改用非被动
+	// 原生监听（action 挂在图片元素上）。
+	function wheelAction(node: HTMLElement) {
+		node.addEventListener('wheel', onWheel, { passive: false });
+		return {
+			destroy() {
+				node.removeEventListener('wheel', onWheel);
+			}
+		};
+	}
+
 	function onWheel(e: WheelEvent) {
 		e.preventDefault();
 		originAt(e, e.currentTarget as HTMLElement);
@@ -236,7 +248,7 @@
 						draggable="false"
 						class="max-h-full max-w-full object-contain"
 						style="transform:translate({panX}px, {panY}px) scale({scale});transform-origin:{originX}% {originY}%;cursor:{dragging ? 'grabbing' : scale > 1 ? 'grab' : 'zoom-in'};transition:{dragging ? 'none' : 'transform var(--cst-motion-instant) var(--cst-ease-standard)'};"
-						onwheel={onWheel}
+						use:wheelAction
 						onpointerdown={onPointerDown}
 						onpointermove={onPointerMove}
 						onpointerup={onPointerUp}

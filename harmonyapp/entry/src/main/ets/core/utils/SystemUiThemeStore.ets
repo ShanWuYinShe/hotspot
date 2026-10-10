@@ -1,3 +1,5 @@
+import { DesignConstants } from '../../constants/DesignConstants';
+
 export interface SystemSurfaceStyle {
   baseColor: string;
   overlayOpacity?: number;
@@ -7,7 +9,7 @@ export interface SystemSurfaceStyle {
 type SystemSurfaceListener = (style: SystemSurfaceStyle) => void;
 
 const DEFAULT_SYSTEM_SURFACE_STYLE: SystemSurfaceStyle = {
-  baseColor: '#D0CBC3',
+  baseColor: DesignConstants.COLOR.SYSTEM_SURFACE_BEIGE,
   overlayOpacity: 1,
   preferDarkContent: true
 };

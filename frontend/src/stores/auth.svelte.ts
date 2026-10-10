@@ -124,6 +124,10 @@ export function initAuth(): () => void {
     bannedMessage = null;
     resetPresence();
     resetUnread();
+    // 会话失效必须连带清 admin 快照：isAdmin/permissions 与 loaded 残留会让
+    // 同一标签页随后登录的其他账号沿用上一个账号的管理员入口与权限显示
+    // （ensureAdminLoaded 因 loaded=true 永不重查）。
+    resetAdmin();
     setAuthenticated(false);
   };
   const onBanned = (e: Event) => {
@@ -135,6 +139,7 @@ export function initAuth(): () => void {
     bannedMessage = detail?.message ?? '账号已被封禁';
     resetPresence();
     resetUnread();
+    resetAdmin(); // 同 onFailed：封禁后清 admin 快照，防跨账号权限残留
   };
   window.addEventListener('auth-failed', onFailed as EventListener);
   window.addEventListener('auth-banned', onBanned as EventListener);
@@ -181,13 +186,8 @@ export function requireAuth(action: PendingAction): boolean {
     return true;
   }
   // Store the action so the login prompt can replay it on success.
-  // Persist to sessionStorage so a page refresh during login still recovers it.
-  try {
-    sessionStorage.setItem(
-      'hotspot:pending-action',
-      JSON.stringify({ action, targetId: action.targetId }),
-    );
-  } catch {}
+  // 注：不做 sessionStorage 持久化——读取/恢复逻辑从未实现，写入只会产生
+  // 永不被消费的死数据；刷新页面后重走登录流程即可重新触发动作。
   pendingAction = action;
   loginPromptOpen = true;
   return false;
@@ -196,7 +196,6 @@ export function requireAuth(action: PendingAction): boolean {
 export function closeLoginPrompt(): void {
   loginPromptOpen = false;
   pendingAction = null;
-  try { sessionStorage.removeItem('hotspot:pending-action'); } catch {}
 }
 
 /** Dismiss the ban screen; the session is already anonymous so browsing continues. */
@@ -208,7 +207,7 @@ function replayPending(): void {
   loginPromptOpen = false;
   const action = pendingAction;
   pendingAction = null;
-  try { sessionStorage.removeItem('hotspot:pending-action'); } catch {}
+
   if (action) {
     // Defer so the prompt closes before any navigation/scroll it may trigger.
     setTimeout(() => { void action.run(); }, 0);

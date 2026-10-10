@@ -212,8 +212,9 @@ LIMIT 2000`
 // ── users 模块「按作者聚合的瞬间列表」读能力（原实现位于 users repo，直查
 // moments/reactions 表；现已归位本模块，users 经 Service 接口消费）──
 const (
-	// 点赞数走 reactions 实时 COUNT（审计 F-08 收口）：likes_count 列已无任何
-	// 写路径（点赞改走 reactions 表），死列恒为 0，与 nearby/search 口径对齐。
+	// 点赞数走 reactions 实时 COUNT（审计 F-08 收口）：实时计数不受冗余列
+	// 漂移影响（AdjustReactionCount 失败仅 Warn 非事务），与 nearby/search、
+	// reacted-by 口径对齐。likes_count 冗余列仍有写路径（queryAdjustMomentReactionCount）。
 	queryListMomentsByAuthor = `
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id), m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
 FROM moments m
@@ -230,7 +231,7 @@ ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $5`
 
 	queryListReactedByUser = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, r.reacted_at
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM reactions rc WHERE rc.target_type = 'moment' AND rc.target_id = m.moment_id), m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, r.reacted_at
 FROM reactions r
 JOIN moments m ON m.moment_id = r.target_id
 LEFT JOIN users u ON u.user_id = m.user_id

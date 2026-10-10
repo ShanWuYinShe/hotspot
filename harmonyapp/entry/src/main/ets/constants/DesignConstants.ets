@@ -29,6 +29,8 @@ export interface ColorPalette {
   WHITE: string;
   TRANSPARENT: string;
   BLACK: string;
+  /** 系统窗口默认底色（未接入主题前的暖灰基底，对齐设计稿壁纸色） */
+  SYSTEM_SURFACE_BEIGE: string;
 }
 
 // ==================== 字体系统接口 ====================
@@ -438,6 +440,8 @@ const COLOR: ColorPalette = {
   WHITE: '#FFFFFF',
   TRANSPARENT: '#00000000',
   BLACK: '#000000',
+  /** 系统窗口默认底色（未接入主题前的暖灰基底，对齐设计稿壁纸色） */
+  SYSTEM_SURFACE_BEIGE: '#D0CBC3',
 };
 
 // ==================== 字体系统 ====================

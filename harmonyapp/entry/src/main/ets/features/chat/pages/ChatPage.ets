@@ -438,6 +438,7 @@ export struct ChatPage {
   }
 
   private async loadHistory() {
+    if (this.isLoading) return; // 在飞守卫：错误态重试按钮可与慢速首屏并发，避免双 setData + 双 scrollToBottom
     this.isLoading = true;
     this.errorMessage = '';
     
@@ -479,7 +480,8 @@ export struct ChatPage {
           }
         }
 
-        const convertedMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
+        const currentUserId = await AuthAccountManager.getCurrentUserId();
+        const convertedMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item, currentUserId)));
         const newMessages = dedupeMessages(convertedMessages);
         this.messages = newMessages;
         this.messagesDataSource.setData(newMessages);
@@ -503,7 +505,6 @@ export struct ChatPage {
     if (this.isLoadingMoreHistory || !this.hasMoreHistory) return;
     // 加载前记录锚点：首条可见 index（此时顶部无指示项，List index 与消息 index 一致）与当前条数
     const anchorIndex = this.firstVisibleIndex;
-    const previousCount = this.messages.length;
     this.isLoadingMoreHistory = true;
     try {
       let items: (PrivateMessageItem | GroupMessageItem)[] = [];
@@ -533,16 +534,20 @@ export struct ChatPage {
         }
       }
 
-      const olderMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
+      const currentUserId = await AuthAccountManager.getCurrentUserId();
+      const olderMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item, currentUserId)));
+      // 合并基于 fetch 后的 this.messages 快照：fetch 期间 WS 新消息会追加到
+      // 尾部，若用 fetch 前的 previousCount 计数会使 addedCount 多算、视口锚点
+      // 错位跳变（修复：按合并前后差值取「顶部前插条数」）。
       const mergedMessages = dedupeMessages(olderMessages.concat(this.messages));
-      const addedCount = mergedMessages.length - previousCount;
+      const prependedCount = mergedMessages.length - this.messages.length;
       this.messages = mergedMessages;
       this.messagesDataSource.setData(mergedMessages);
       // spec：next_cursor 为 null 表示没有更多数据
       this.hasMoreHistory = !!(nextCursor);
       this.historyNextCursor = nextCursor ?? '';
-      // setData 走 notifyDataReload 全量重建，按「旧首条可见 index + 新增条数」恢复视口锚点，避免跳变
-      this.restoreHistoryAnchor(anchorIndex, addedCount);
+      // setData 走 notifyDataReload 全量重建，按「旧首条可见 index + 前插条数」恢复视口锚点，避免跳变
+      this.restoreHistoryAnchor(anchorIndex, prependedCount);
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载更早消息失败: ${error}`);
     } finally {
@@ -581,8 +586,10 @@ export struct ChatPage {
     await this.messageCacheService.cacheMessages(this.chatId, cacheItems);
   }
 
-  private async convertMessage(item: PrivateMessageItem | GroupMessageItem): Promise<ChatMessage> {
-    const currentUserId = await AuthAccountManager.getCurrentUserId();
+  // currentUserId 允许批量调用方一次解析后透传（Preferences 读取 + JSON.parse
+  // 索引较重，逐条 await 会在批量转换时放大成 N 次重复 IO）。
+  private async convertMessage(item: PrivateMessageItem | GroupMessageItem, currentUserId?: string | null): Promise<ChatMessage> {
+    const uid = currentUserId ?? await AuthAccountManager.getCurrentUserId();
     
     let senderId: string;
     let senderName: string;
@@ -595,7 +602,7 @@ export struct ChatPage {
       senderId = msgItem.sender.user_id ?? '';
       senderName = msgItem.sender.nickname ?? '';
       senderAvatar = msgItem.sender.avatar_url;
-      isSelf = senderId === currentUserId;
+      isSelf = senderId === uid;
     } else {
       senderId = '';
       senderName = '';
@@ -660,7 +667,8 @@ export struct ChatPage {
       if (items.length === 0) {
         return;
       }
-      const recentMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
+      const currentUserId = await AuthAccountManager.getCurrentUserId();
+      const recentMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item, currentUserId)));
       const mergedMessages = mergeMessagesById(this.messages, recentMessages);
       this.messages = mergedMessages;
       this.messagesDataSource.setData(mergedMessages);

@@ -165,6 +165,9 @@ func (h *Hub) CloseSession(sessionID string, event Event) {
 // 不配合的客户端最多拖到 timeout。返回仍在注册表中的残留连接数（诊断用）。
 func (h *Hub) DrainConnections(timeout time.Duration) int {
 	deadline := time.Now().Add(timeout)
+	// 已发过关闭的 sink 不再重复关：closeWithCode/Close 在关闭中的连接上重复
+	// 写 close 帧属无必要系统调用，不配合的客户端由 deadline 统一兜底。
+	closed := make(map[FanoutSink]struct{})
 	for {
 		h.mu.RLock()
 		if len(h.sessionBySink) == 0 {
@@ -173,7 +176,9 @@ func (h *Hub) DrainConnections(timeout time.Duration) int {
 		}
 		sinks := make([]FanoutSink, 0, len(h.sessionBySink))
 		for sink := range h.sessionBySink {
-			sinks = append(sinks, sink)
+			if _, done := closed[sink]; !done {
+				sinks = append(sinks, sink)
+			}
 		}
 		h.mu.RUnlock()
 		for _, sink := range sinks {
@@ -181,9 +186,10 @@ func (h *Hub) DrainConnections(timeout time.Duration) int {
 				closeWithCode(code int, reason string) error
 			}); ok {
 				_ = ws.closeWithCode(1001, "server shutting down")
-				continue
+			} else {
+				_ = sink.Close()
 			}
-			_ = sink.Close()
+			closed[sink] = struct{}{}
 		}
 		if time.Now().After(deadline) {
 			h.mu.RLock()

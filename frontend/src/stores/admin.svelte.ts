@@ -26,10 +26,13 @@ async function fetchMe(): Promise<void> {
 			isAdmin = false;
 		}
 	} catch {
+		// 传输失败（网络抖动/后端滚动）不等同「非管理员」：不置 loaded=true，
+		// 保留下次 ensureAdminLoaded 的重查机会，避免管理入口被一次瞬时故障
+		// 永久锁死（与 auth store 区分 transport-error/invalid 的纪律一致）。
 		isAdmin = false;
-	} finally {
-		loaded = true;
+		return;
 	}
+	loaded = true;
 }
 
 /** 登录后调用一次；重复调用在 in-flight 或已成功加载时直接复用。 */

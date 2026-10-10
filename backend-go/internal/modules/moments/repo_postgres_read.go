@@ -56,13 +56,17 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 	momentIDs := make([]string, 0, limit+1)
 	cursors := make([]string, 0, limit+1)
 	for rows.Next() {
-		item, err := scanMomentRow(rows)
+		// ListMine 直接走 scanMomentRowParts 取全精度 createdAt：游标谓词是
+		// (created_at, moment_id) < cursor，created_at 列以 time.Now() 全精度
+		// 写入，若游标截断到秒（item.CreatedAt 的展示格式），同秒多条瞬间翻页
+		// 时谓词恒假、行被静默丢失（先例见 scanFavoriteMomentRow 注释）。
+		item, createdAtFull, _, err := scanMomentRowParts(rows, false)
 		if err != nil {
 			return PaginatedMoments{}, fmt.Errorf("moments.ListMine scan: %w", err)
 		}
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
-		cursors = append(cursors, encodeMomentMineCursor(item.CreatedAt, item.MomentID))
+		cursors = append(cursors, encodeMomentMineCursor(createdAtFull.UTC().Format(time.RFC3339Nano), item.MomentID))
 		if len(items) == limit+1 {
 			tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs[:limit])
 			if err != nil {
@@ -76,8 +80,7 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 				items[i].Tags = tagsByMomentID[items[i].MomentID]
 				items[i].Mentions = mentionsByMomentID[items[i].MomentID]
 			}
-			c := cursors[limit-1]
-			return PaginatedMoments{Items: items[:limit], NextCursor: &c}, nil
+			return PaginatedMoments{Items: items[:limit], NextCursor: nextCursorOrNil(cursors[limit-1])}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -99,6 +102,17 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 }
 
 const momentMineCursorNamespace = "moments.mine"
+
+// nextCursorOrNil 收口列表分页的翻页游标下发：spec 规定 next_cursor 恒定
+// nullable，游标编码失败若下发空串，客户端透传回来会被当作首页重新解码，
+// 存在整页重复拉取风险——失败时降级为 nil 并告警。
+func nextCursorOrNil(cursorValue string) *string {
+	if cursorValue == "" {
+		observability.L().Warn("moments: cursor encode failed, next_cursor downgraded to null")
+		return nil
+	}
+	return &cursorValue
+}
 
 func encodeMomentMineCursor(createdAt, momentID string) string {
 	value, err := cursor.Encode(momentMineCursorNamespace, momentInteractionCursor{At: createdAt, ID: momentID})
@@ -152,7 +166,7 @@ func (r *PostgresRepository) Exists(ctx context.Context, momentID string) (bool,
 }
 
 func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) {
-	item, _, err := scanMomentRowParts(scanner, false)
+	item, _, _, err := scanMomentRowParts(scanner, false)
 	return item, err
 }
 
@@ -161,7 +175,7 @@ func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) 
 // EXISTS(moment_favorites) 列（spec api_spec_types.md MomentItem 查看者布尔恒定），
 // 匿名查询不产生该列、不走本函数。
 func scanSearchMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) {
-	item, isFavorited, err := scanMomentRowParts(scanner, true)
+	item, _, isFavorited, err := scanMomentRowParts(scanner, true)
 	if err != nil {
 		return MomentItem{}, err
 	}
@@ -169,9 +183,12 @@ func scanSearchMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, e
 	return item, nil
 }
 
-// scanMomentRowParts 扫描 moment 基础列；withViewerState 时额外扫描尾部
-// is_favorited 布尔并原样返回（不写入 item，由调用方决定用途）。
-func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState bool) (MomentItem, bool, error) {
+// scanMomentRowParts 扫描 moment 基础列；额外返回全精度 createdAt（time.Time，
+// 列写入精度），供时间 keyset 游标以 RFC3339Nano 编码——item.CreatedAt 是
+// 截断到秒的展示格式，不得用于游标（秒截断丢同秒行，见 ListMine 注释）。
+// withViewerState 时额外扫描尾部 is_favorited 布尔并原样返回（不写入 item，
+// 由调用方决定用途）。
+func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState bool) (MomentItem, time.Time, bool, error) {
 	var item MomentItem
 	var userID, nickname, locationName, privacyLevel string
 	var createdAt time.Time
@@ -182,7 +199,7 @@ func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState
 		dest = append(dest, &isFavorited)
 	}
 	if err := scanner.Scan(dest...); err != nil {
-		return MomentItem{}, false, fmt.Errorf("moments.scanMomentRow scan: %w", err)
+		return MomentItem{}, time.Time{}, false, fmt.Errorf("moments.scanMomentRow scan: %w", err)
 	}
 	// nickname 已通过 SQL 的 COALESCE(u.nickname, '') 兜底
 	// 若 SQL 未提供 nickname（兼容性回退），降级为 userID
@@ -196,7 +213,7 @@ func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 	item.PrivacyLevel = privacyLevel
-	return item, isFavorited, nil
+	return item, createdAt.UTC(), isFavorited, nil
 }
 
 func loadMomentTags(ctx context.Context, queryable persistence.Queryable, momentIDs []string) (map[string][]string, error) {
