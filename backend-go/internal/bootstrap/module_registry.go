@@ -25,6 +25,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/hotcache"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
@@ -98,6 +99,11 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	shareModule := share.NewModule(factory)
 
 	gmModule := groupmessages.NewModule(factory, usersModule.Service, notificationService, shareModule.Service)
+	// 群成员关系热缓存：groups（写失效）与 groupmessages/realtime（读穿）共享
+	// 同一键族；未配 Redis 时 hotcache 退化为进程内 TTL map。
+	memberCache := hotcache.New(rdb)
+	groupsModule.Service.SetMemberCache(memberCache)
+	gmModule.Service.SetMemberCache(memberCache)
 	// 消息撤回时间窗接线（spec chat.md：AppConfig.limits.message_recall_window_seconds）
 	gmModule.Service.SetAppConfig(sharedAppConfig)
 	pcModule := privatechats.NewModule(factory, sharedAppConfig, shareModule.Service, usersModule.Service)

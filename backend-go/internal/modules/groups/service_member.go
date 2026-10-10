@@ -50,6 +50,8 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 	if err := s.repo.ApproveApplication(ctx, principal.UserID, req.ApplicationID); err != nil {
 		return err
 	}
+	// 申请通过即入群：失效可能存在的「非成员」防穿透缓存值。
+	s.invalidateMemberCache(ctx, group.Group.GroupID, application.Applicant.UserID)
 	s.notifyGroupApplicationAccepted(ctx, group, application)
 	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: group.Group.GroupID, User: s.resolveUserInfo(ctx, application.Applicant.UserID), Role: string(GroupRoleMember), MemberCount: group.Group.MembersCount + 1, JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
 	return nil
@@ -275,6 +277,8 @@ func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) err
 		// 封禁即时移除成员资格：强制摘除被禁用户的群订阅，防止其保持连接继续
 		// 实时收到群消息（订阅鉴权只在 SetSubscriptions 时刻生效）。
 		realtime.DefaultHub().RevokeGroupSubscription(req.UserID, req.GroupID)
+		// 封禁移除了成员资格，失效成员缓存防止 TTL 内仍被判定为成员。
+		s.invalidateMemberCache(ctx, req.GroupID, req.UserID)
 		return nil
 	}
 	return s.repo.UnbanMember(ctx, principal.UserID, UnbanMemberRequest{
@@ -351,6 +355,8 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 	})
 	// 踢出即摘除该用户的群订阅（同 SetMemberBan：防止保持连接继续收群消息）。
 	realtime.DefaultHub().RevokeGroupSubscription(req.UserID, req.GroupID)
+	// 踢出后立刻失效成员缓存：否则 TTL 内该用户仍可发消息（ensureMember 走缓存）。
+	s.invalidateMemberCache(ctx, req.GroupID, req.UserID)
 	return nil
 }
 

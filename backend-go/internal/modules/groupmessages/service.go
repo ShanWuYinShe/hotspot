@@ -9,6 +9,7 @@ import (
 	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/hotcache"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/textutil"
@@ -70,7 +71,14 @@ type Service struct {
 	// readFlusher 节流聚合 GroupMessageReadCountUpdated 推送（spec chat.md：
 	// 3-5 秒窗口最终一致，替代逐人广播）
 	readFlusher *readCountFlusher
+	// memberCache 群成员关系热缓存（optional; nil => 逐次查库）。每条群消息
+	// 发送/typing 都要过一次成员校验，成员变动低频，适合读穿缓存（TTL 60s +
+	// groups 写路径主动删键）。
+	memberCache *hotcache.Cache
 }
+
+// SetMemberCache 注入群成员关系热缓存（bootstrap 装配；nil 保持直查）。
+func (s *Service) SetMemberCache(c *hotcache.Cache) { s.memberCache = c }
 
 // SetAppConfig wires the dynamic app config source（消息撤回时间窗
 // AppConfig.limits.message_recall_window_seconds，spec chat.md）。
@@ -487,9 +495,26 @@ func (s *Service) ensureMember(ctx context.Context, groupID, userID string) erro
 	if userID == "" {
 		return ErrNotGroupMember
 	}
+	key := hotcache.GroupMemberKey(groupID, userID)
+	if s.memberCache != nil {
+		if v, ok := s.memberCache.Get(ctx, key); ok {
+			if v == "1" {
+				return nil
+			}
+			return ErrNotGroupMember
+		}
+	}
 	isMember, err := s.repo.IsMember(ctx, groupID, userID)
 	if err != nil {
 		return err
+	}
+	if s.memberCache != nil {
+		if isMember {
+			s.memberCache.Set(ctx, key, "1", hotcache.GroupMemberTTL)
+		} else {
+			// 非成员也缓存：防不存在键穿透打 DB。
+			s.memberCache.Set(ctx, key, "0", hotcache.GroupMemberTTL)
+		}
 	}
 	if !isMember {
 		return ErrNotGroupMember

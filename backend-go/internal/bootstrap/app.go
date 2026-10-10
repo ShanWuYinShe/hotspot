@@ -12,6 +12,7 @@ import (
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/hotcache"
 	"hotspot/backend-go/internal/platform/idempotency"
 	platformmigrate "hotspot/backend-go/internal/platform/migrate"
 	"hotspot/backend-go/internal/platform/modulekit"
@@ -96,7 +97,10 @@ func NewApp(cfg config.Config) (*App, error) {
 	userRepo := users.NewPostgresRepository(persistenceFactory)
 	groupRepo := groups.NewPostgresRepository(persistenceFactory)
 	userService := users.NewServiceWithRepo(userRepo)
-	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), realtimeUserRepo{repo: userRepo}, realtimeGroupRepo{repo: groupRepo})
+	// 群成员关系热缓存：Redis 配置时多实例共享键；未配置时各 Cache 实例退化为
+	// 进程内 map（模块侧与 realtime 侧实例不同，失效不互通，但 TTL 60s 兜底，
+	// 仅影响未配 Redis 的单机 dev 场景）。
+	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), realtimeUserRepo{repo: userRepo}, NewRealtimeGroupRepo(groupRepo, hotcache.New(redisClient)))
 	realtimeHandler.SetActorProvider(realtimeActorProvider{svc: userService})
 	// WS 握手封禁检查：与 HTTP RequiredAuth 同源（admin repo IsBanned）、同口径（fail-open）
 	realtimeHandler.SetBanAuthorizer(realtimeBanAuthorizer{repo: adminRepo})

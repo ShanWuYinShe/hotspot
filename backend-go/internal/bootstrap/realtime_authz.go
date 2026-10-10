@@ -10,6 +10,7 @@ import (
 	"hotspot/backend-go/internal/modules/reports"
 	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/actor"
+	"hotspot/backend-go/internal/platform/hotcache"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -47,7 +48,18 @@ type realtimeActorProvider struct{ svc *users.Service }
 
 type realtimeUserRepo struct{ repo users.Repository }
 
-type realtimeGroupRepo struct{ repo groups.Repository }
+// realtimeGroupRepo 群成员鉴权适配器：typing 每帧都要 IsMember，经 hotcache
+// 读穿缓存（TTL 60s + groups 写路径删键）挡掉大部分 DB 往返；cache 可为 nil
+// （未配 Redis 的本地降级下 hotcache 仍可用进程内 map，New 不返回 nil）。
+type realtimeGroupRepo struct {
+	repo  groups.Repository
+	cache *hotcache.Cache
+}
+
+// NewRealtimeGroupRepo 构造带成员热缓存的 realtime 群鉴权适配器。
+func NewRealtimeGroupRepo(repo groups.Repository, cache *hotcache.Cache) realtimeGroupRepo {
+	return realtimeGroupRepo{repo: repo, cache: cache}
+}
 
 // realtimePresenceWriter 把 users repo 的运行时 presence 写（WS 连接生命周期）
 // 适配到 realtime 的 presenceWriter 接口。repo 用具体类型 *users.PostgresRepository：
@@ -107,7 +119,24 @@ func (a realtimeGroupRepo) ListMembers(ctx context.Context, groupID string, limi
 }
 
 func (a realtimeGroupRepo) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
-	return a.repo.IsMember(ctx, groupID, userID)
+	key := hotcache.GroupMemberKey(groupID, userID)
+	if a.cache != nil {
+		if v, ok := a.cache.Get(ctx, key); ok {
+			return v == "1", nil
+		}
+	}
+	isMember, err := a.repo.IsMember(ctx, groupID, userID)
+	if err != nil {
+		return false, err
+	}
+	if a.cache != nil {
+		if isMember {
+			a.cache.Set(ctx, key, "1", hotcache.GroupMemberTTL)
+		} else {
+			a.cache.Set(ctx, key, "0", hotcache.GroupMemberTTL) // 防穿透
+		}
+	}
+	return isMember, nil
 }
 
 // AreMembers 批量成员判定（realtime 订阅鉴权批量路径）。

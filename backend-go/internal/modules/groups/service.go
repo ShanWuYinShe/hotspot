@@ -15,6 +15,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
+	"hotspot/backend-go/internal/platform/hotcache"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -72,6 +73,21 @@ type Service struct {
 	audit         GroupDismissAuditWriter  // optional; nil => dismiss audit is skipped
 	avatarMedia   GroupAvatarMediaResolver // optional; nil => 头像直存旧口径（内存测试路径）
 	runInTx       persistence.TxRunner     // optional; nil => Update 直跑（对齐 moments.Update：写路径包事务）
+	// memberCache 群成员关系热缓存（optional; nil => 不缓存）。成员变更路径
+	// 必须调 invalidateMemberCache：groupmessages/realtime 的发送与 typing 校验
+	// 走同一键族读穿缓存，漏删会让被移群用户在 TTL 内仍可发消息。
+	memberCache *hotcache.Cache
+}
+
+// SetMemberCache 注入群成员关系热缓存（bootstrap 装配；nil 保持直查）。
+func (s *Service) SetMemberCache(c *hotcache.Cache) { s.memberCache = c }
+
+// invalidateMemberCache 成员变更后删键（两个方向都删：加入/移除/封禁都会
+// 使既有缓存值失真）。
+func (s *Service) invalidateMemberCache(ctx context.Context, groupID, userID string) {
+	if s != nil && s.memberCache != nil {
+		s.memberCache.Delete(ctx, hotcache.GroupMemberKey(groupID, userID))
+	}
 }
 
 // SetTxRunner wires the optional transaction runner（bootstrap 注入；
@@ -584,6 +600,8 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 		op.Fail(err)
 		return EnterGroupResult{}, fmt.Errorf("groups.Service.JoinGroup: repo: %w", err)
 	}
+	// 之前可能缓存过「非成员」（防穿透值），入群成功后失效。
+	s.invalidateMemberCache(ctx, req.GroupID, principal.UserID)
 	if result.Status == EnterGroupStatusPendingApproval && result.IsNewApplication {
 		// 仅新创建的申请才通知管理员；命中已有 pending 申请（自然去重）不重复通知
 		s.notifyGroupApplicationReceived(ctx, group, principal.UserID, result.ApplicationID, req.Message)
@@ -626,6 +644,8 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 	if err := s.repo.LeaveGroup(ctx, principal.UserID, req.GroupID); err != nil {
 		return fmt.Errorf("groups.Service.LeaveGroup: repo: %w", err)
 	}
+	// 退群后立刻失效成员缓存：否则 TTL 内仍可发消息（发消息会走 ensureMember 缓存）。
+	s.invalidateMemberCache(ctx, req.GroupID, principal.UserID)
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberLeft,
 		Payload: GroupMemberLeftPayload{
