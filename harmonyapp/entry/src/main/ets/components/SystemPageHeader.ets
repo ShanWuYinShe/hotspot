@@ -75,7 +75,10 @@ export struct SystemPageHeader {
   }
 
   private getHeaderTopPadding(): number {
-    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
+    // extra 0：市面惯例是头部内容紧贴状态栏下缘（行内 MD=12 提供呼吸感）。
+    // 此前 resolveTopPadding 默认再 +SM(8)，实测返回钮距状态栏 35vp，观感「离
+    // 边缘太远」（2026-10-10 模拟器 dumpLayout 实测 206px≈62vp）。
+    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0);
   }
 
   private getBackgroundColor(): ResourceColor {

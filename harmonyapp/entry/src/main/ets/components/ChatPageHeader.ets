@@ -110,7 +110,7 @@ export struct ChatPageHeader {
       top: DesignConstants.SPACING.SM2,
       bottom: DesignConstants.SPACING.SM2
     })
-    .margin({ top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop), bottom: DesignConstants.SPACING.XS })
+    .margin({ top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0), bottom: DesignConstants.SPACING.XS })
     .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getPalette().borderColor })
     .zIndex(1)
     .onTouch((event: TouchEvent) => {

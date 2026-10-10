@@ -205,7 +205,8 @@ export struct GroupDetailPage {
 
   /** 封面返回按钮顶部安全区避让（对齐 SystemPageHeader 内聚逻辑） */
   private getHeaderTopPadding(): number {
-    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
+    // extra 0 对齐 SystemPageHeader：页头内容贴状态栏下缘（2026-10-10 布局审查）。
+    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0);
   }
 
   private getSurfaceBackground(): string {
