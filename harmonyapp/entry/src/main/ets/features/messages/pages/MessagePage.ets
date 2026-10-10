@@ -45,6 +45,7 @@ import { common } from '@kit.AbilityKit';
 import pasteboard from '@ohos.pasteboard';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
+import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
@@ -124,15 +125,18 @@ export struct MessagePage {
     return count;
   }
 
+  // 会话过滤 Tab（skill hotspot-harmony-ui 契约：列表头部「全部 / 未读 / 已读」
+  // TabsPillGroup，对齐前端 TabBar 形态；0=全部 1=未读 2=已读）
+  @State chatFilterIndex: number = 0;
+
   private applyFilter(): void {
     const keyword = this.searchKeyword.trim().toLowerCase();
-    if (keyword === '') {
-      this.filteredChatItems = this.chatItems;
-    } else {
-      this.filteredChatItems = this.chatItems.filter((item: ChatItem) =>
-        item.name.toLowerCase().indexOf(keyword) >= 0
-      );
-    }
+    this.filteredChatItems = this.chatItems.filter((item: ChatItem) => {
+      if (this.chatFilterIndex === 1 && item.unreadCount <= 0) return false;
+      if (this.chatFilterIndex === 2 && item.unreadCount > 0) return false;
+      if (keyword !== '' && item.name.toLowerCase().indexOf(keyword) < 0) return false;
+      return true;
+    });
     // 同步到 LazyForEach 数据源（虚拟化渲染的唯一数据入口）
     this.filteredChatDataSource.setData(this.filteredChatItems);
   }
@@ -711,6 +715,26 @@ export struct MessagePage {
         }
       })
       .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+
+      // 会话状态过滤（skill hotspot-harmony-ui 契约：头部「全部 / 未读 / 已读」，
+      // 对齐前端 TabBar 胶囊形态；未读 Tab 带角标计数，客户端过滤不重新请求）
+      TabsPillGroup({
+        tabs: [
+          { label: '全部' },
+          { label: '未读', count: this.getTotalUnread() },
+          { label: '已读' }
+        ] as TabItem[],
+        activeIndex: this.chatFilterIndex,
+        actions: {
+          onChange: (index: number) => {
+            if (this.chatFilterIndex !== index) {
+              this.chatFilterIndex = index;
+              this.applyFilter();
+            }
+          }
+        }
+      })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
 
       // 宽屏（master-detail）提示：当前点击会话仍 push 独立页（保持聊天功能完整）
       if (useMasterDetail(this.currentBreakpoint)) {
