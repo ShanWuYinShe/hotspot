@@ -75,6 +75,7 @@ export struct ProfilePage {
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
@@ -701,6 +702,23 @@ export struct ProfilePage {
     }
   }
 
+  // 个人中心动作行：并入「个人数据」卡（对齐前端 ProfileMobile 只保留
+  // 身份卡 + 一张列表卡的两卡结构，消除第三张悬浮菜单卡的「悬空感」）。
+  @Builder
+  private buildProfileActionRows() {
+    if (this.userType === 'temp') {
+      // 游客升级入口（设置页账号安全区也有，同功能不重复两处主路径）：
+      // me 页保留是因为游客首触最 here
+      ProfileMenuItem({ title: '升级为完整账号', icon: AppIcon.EDIT, divider: true, onTap: () => { this.showUpgradeForm = true; }, resolvedThemeId: this.resolvedThemeId })
+    }
+    ProfileMenuItem({ title: '更新位置', icon: AppIcon.LOCATION, divider: true, onTap: () => this.updateLocation(), resolvedThemeId: this.resolvedThemeId })
+    ProfileMenuItem({ title: '设置', icon: AppIcon.SETTINGS, divider: !this.isAdminUser(), onTap: () => { AppRouter.push(PageNames.SETTINGS); }, resolvedThemeId: this.resolvedThemeId })
+    if (this.isAdminUser()) {
+      ProfileMenuItem({ title: '管理员工具台', icon: AppIcon.SHIELD, divider: true, onTap: () => this.openAdminPanel(), resolvedThemeId: this.resolvedThemeId })
+    }
+    ProfileMenuItem({ title: '退出登录', icon: AppIcon.CLOSE, onTap: () => { this.showLogoutConfirm = true; }, resolvedThemeId: this.resolvedThemeId })
+  }
+
   build() {
     NavDestination() {
       PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
@@ -720,16 +738,32 @@ export struct ProfilePage {
                 showBackButton: true,
                 onBack: () => { this.cancelEdit(); }
               })
-            } else {
+            } else if (this.isExternalProfileMode()) {
               SystemPageHeader({
                 title: this.resolveHeaderTitle(),
-                titleSize: this.isExternalProfileMode() ? DesignConstants.FONT.SIZE.XL : DesignConstants.FONT.SIZE.XXL,
+                titleSize: DesignConstants.FONT.SIZE.XL,
                 titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
-                showBackButton: this.isExternalProfileMode(),
-                onBack: this.isExternalProfileMode() ? () => { AppRouter.pop(); } : undefined,
-                rightAction: (!this.isExternalProfileMode() && this.isLoggedIn)
-                  ? { icon: AppIcon.SETTINGS, onClick: () => { AppRouter.push(PageNames.SETTINGS); }, accessibilityLabel: '设置' }
-                  : undefined
+                showBackButton: true,
+                onBack: () => { AppRouter.pop(); }
+              })
+            } else {
+              // 对齐前端 ProfileMobile：个人中心页头是 eyebrow 小标（非大标题），
+              // 设置入口收在下方列表内（Web 同款契约：同页仅一处设置入口）。
+              Row() {
+                Text('个人中心')
+                  .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .padding({
+                left: DesignConstants.SPACING.SM2,
+                right: DesignConstants.SPACING.SM2,
+                // 与 SystemPageHeader 同口径：贴状态栏下缘（extra 0）
+                top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0),
+                bottom: DesignConstants.SPACING.XS
               })
             }
 
@@ -976,7 +1010,9 @@ export struct ProfilePage {
                 myGroupsCount: this.myGroupsCount,
                 myFriendsCount: this.myFriendsCount,
                 myFollowingCount: this.myFollowingCount,
-                myFollowersCount: this.myFollowersCount
+                myFollowersCount: this.myFollowersCount,
+                hasActionRows: true,
+                actionRows: () => { this.buildProfileActionRows(); }
               })
             }
 
@@ -999,24 +1035,6 @@ export struct ProfilePage {
               })
             }
 
-            // 菜单项
-            Column({ space: 0 }) {
-              if (this.userType === 'temp') {
-                // 游客升级入口（原「临时用户视图」的唯一功能，保留在菜单）
-                ProfileMenuItem({ title: '升级为完整账号', icon: AppIcon.EDIT, onTap: () => { this.showUpgradeForm = true; }, resolvedThemeId: this.resolvedThemeId })
-              }
-              ProfileMenuItem({ title: '更新位置', icon: AppIcon.LOCATION, onTap: () => this.updateLocation(), resolvedThemeId: this.resolvedThemeId })
-              ProfileMenuItem({ title: '设置', icon: AppIcon.SETTINGS, onTap: () => { AppRouter.push(PageNames.SETTINGS); }, resolvedThemeId: this.resolvedThemeId })
-              if (this.isAdminUser()) {
-                ProfileMenuItem({ title: '管理员工具台', icon: AppIcon.SHIELD, onTap: () => this.openAdminPanel(), resolvedThemeId: this.resolvedThemeId })
-              }
-              ProfileMenuItem({ title: '退出登录', icon: AppIcon.CLOSE, onTap: () => { this.showLogoutConfirm = true; }, resolvedThemeId: this.resolvedThemeId })
-            }
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.SHAPE.CARD)
-            .shadow(this.getCurrentThemePalette().elevatedShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.XL })
           }
           .alignItems(HorizontalAlign.Center)
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XL })

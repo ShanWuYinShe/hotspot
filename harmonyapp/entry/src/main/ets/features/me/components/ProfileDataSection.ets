@@ -20,6 +20,9 @@ export struct ProfileDataSection {
   @Prop myFriendsCount: number = 0;
   @Prop myFollowingCount: number = 0;
   @Prop myFollowersCount: number = 0;
+  /** 追加动作行（更新位置/升级/设置/退出登录等）：与数据行同卡拼接，顶部 hairline 分隔 */
+  @BuilderParam actionRows: () => void;
+  @Prop hasActionRows: boolean = false;
 
   @Builder
   private dataRow(icon: AppIcon, label: string, detail: string, onTap: () => void, divider: boolean) {
@@ -113,6 +116,17 @@ export struct ProfileDataSection {
         this.dataRow(AppIcon.HEART, '粉丝', `${formatCount(this.myFollowersCount)} 人`, () => {
           AppRouter.push(PageNames.RELATIONSHIP_HUB);
         }, false)
+        if (this.hasActionRows) {
+          // 动作行容器：顶部 hairline 与数据行分隔（行内各自再带底部线）
+          Column() {
+            this.actionRows()
+          }
+          .width('100%')
+          .border({
+            width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE },
+            color: { top: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor }
+          })
+        }
       }
       .width('100%')
       .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceBackground)

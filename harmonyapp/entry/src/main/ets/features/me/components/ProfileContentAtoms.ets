@@ -160,6 +160,8 @@ export struct ProfileMenuItem {
   @Prop value: string = '';
   /** 副标题描述行（对齐前端 ListItem detail，如「查看已发布的记录」） */
   @Prop detail: string = '';
+  /** 底部分隔线：多行同卡拼接时除末行外传 true（个人中心把菜单行并入个人数据卡） */
+  @Prop divider: boolean = false;
   @Prop resolvedThemeId: string = 'vibrant_light';
   @State pressed: boolean = false;
   onTap: () => void = () => {};
@@ -217,6 +219,10 @@ export struct ProfileMenuItem {
       left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
     })
+    .border(this.divider ? {
+      width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
+      color: { bottom: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor }
+    } : { width: 0 })
     .scale(this.pressed ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
     .animation({ curve: curves.springMotion(
       DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
