@@ -747,9 +747,9 @@ export struct GroupPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .cachedCount(5)
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         // 分组外框（ListGroup bordered 契约）：唯一一层白卡 + 发丝描边 + surfaceShadow；
-        // 行本身不再带卡片样式，行间靠 ListItemGroup.divider
+        // 行本身不再带卡片样式，行间靠 ListItemGroup.divider。
+        // 卡片不再自加横向外边距——横向留白只由 PageShellContainer 提供（否则卡片比页头窄 32vp）
         .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
         .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })

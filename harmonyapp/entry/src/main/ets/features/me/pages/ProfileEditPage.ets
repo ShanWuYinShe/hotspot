@@ -234,7 +234,7 @@ export struct ProfileEditPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint }) {
       Column() {
         SystemPageHeader({
           title: '编辑资料',
