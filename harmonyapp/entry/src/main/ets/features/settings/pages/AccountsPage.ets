@@ -264,26 +264,31 @@ export struct AccountsPage {
                 .justifyContent(FlexAlign.Center)
                 .alignItems(VerticalAlign.Center)
 
+                // 账号显示名与「ID: xxx」渲染的是同一个 user_id（getAccountDisplayName
+                // 直接返回 auth.user_id），此前是同一串字符重复两行。分组列表下行高必须
+                // 一致，而 30+ 字符的长 ID 在 layoutWeight 列内必然被压成省略号（只剩
+                // 「ID: …」，无信息量）。按 M3「keep item text succinct」只保留一行：
+                // 单行 + 省略号，行高恒定，右侧「切换/删除」不再被挤位。
                 Column({ space: DesignConstants.SPACING.XS }) {
-                  Row({ space: DesignConstants.SPACING.SM }) {
-                    Text(this.getAccountDisplayName(acc))
-                      .fontSize(DesignConstants.FONT.SIZE.LG)
-                      .fontColor(this.getCurrentThemePalette().textPrimary)
-                    if (this.currentUserId === acc.user_id) {
-                      Text('当前')
-                        .fontSize(DesignConstants.FONT.SIZE.SM)
-                        .fontColor(this.getCurrentThemePalette().accentText)
-                        .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                        .borderRadius(DesignConstants.SHAPE.CHIP)
-                        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
-                    }
-                  }
-                  Text(`ID: ${acc.user_id}`)
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor(this.getCurrentThemePalette().textSecondary)
+                  Text(this.getAccountDisplayName(acc))
+                    .fontSize(DesignConstants.FONT.SIZE.LG)
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
                 }
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
+
+                // 当前账号徽章：列外独立元素
+                if (this.currentUserId === acc.user_id) {
+                  Text('当前')
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .fontColor(this.getCurrentThemePalette().accentText)
+                    .backgroundColor(this.getCurrentThemePalette().accentBackground)
+                    .borderRadius(DesignConstants.SHAPE.CHIP)
+                    .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
+                    .maxLines(1)
+                }
 
                 Row({ space: DesignConstants.SPACING.SM }) {
                       if (this.currentUserId !== acc.user_id) {

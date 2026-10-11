@@ -440,7 +440,7 @@ export struct SettingsPage {
     return {
       icon: AppIcon.LOCK,
       title: '密码与会话安全',
-      subtitle: '修改密码、查看登录设备并撤销其他会话',
+      subtitle: '修改密码与登录设备管理',
       action: () => {
         if (this.requireLogin('管理密码与会话安全', PageNames.SAFETY_SETTINGS)) {
           AppRouter.push(PageNames.SAFETY_SETTINGS);

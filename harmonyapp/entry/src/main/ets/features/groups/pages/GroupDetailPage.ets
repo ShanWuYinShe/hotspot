@@ -1716,8 +1716,17 @@ export struct GroupDetailPage {
             })
             .onClick(() => this.loadGroupApplications())
           }
+          }  // 导航行分组结束
+          .divider({
+            strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+            color: this.getSurfaceBorder(),
+            startMargin: DesignConstants.SPACING.LG,
+            endMargin: DesignConstants.SPACING.LG
+          })
 
-          // 4. 操作按钮区域
+          // 4. 操作按钮区域（独立分组）：按钮是页面级主操作、不是「列表行」，
+          // 混在导航行分组里会被行分隔线上下夹住，形成「按钮被框住」的怪异观感
+          ListItemGroup() {
           ListItem() {
              Column({ space: DesignConstants.SPACING.SM }) {
                 if (this.isMember) {
@@ -1818,9 +1827,11 @@ export struct GroupDetailPage {
              }
              .padding(DesignConstants.SPACING.LG)
           }
+          }  // 操作区分组结束
 
           // Tab 2 公告（对齐前端 AnnouncementsList：标题/内容/时间/置顶徽章；
           // owner/admin 可发布/编辑/删除，对齐前端 canManageAnnouncements 门控）
+          ListItemGroup() {
           if (this.activeTab === 2) {
             if (this.canManageAnnouncements()) {
               ListItem() {
@@ -1929,13 +1940,7 @@ export struct GroupDetailPage {
               }
             }
           }
-          }  // 简介分组结束
-          .divider({
-            strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
-            color: this.getSurfaceBorder(),
-            startMargin: DesignConstants.SPACING.LG,
-            endMargin: DesignConstants.SPACING.LG
-          })
+          }  // 公告分组结束
 
         }
         .width('100%')
@@ -2071,9 +2076,11 @@ export struct GroupDetailPage {
     .alignItems(HorizontalAlign.Center)
     .layoutWeight(1)
     .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.MD)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    // 容器内子模块：用 surfaceSubtle 色阶差表达层级（M3「同层优先用色阶而非描边」），
+    // 不再叠「白底 + 白描边」（白卡里的白块看不出边界、只会显得脏）；
+    // 圆角降到 RADIUS.SM，遵守 HarmonyOS「层级正相关」（子模块圆角 < 所属容器圆角）
+    .backgroundColor(this.getSurfaceSubtle())
+    .borderRadius(DesignConstants.RADIUS.SM)
   }
 
   @Builder

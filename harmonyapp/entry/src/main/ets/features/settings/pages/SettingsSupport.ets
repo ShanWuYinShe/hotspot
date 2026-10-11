@@ -226,10 +226,12 @@ export struct SettingsEntryRow {
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         if (this.item.subtitle) {
+          // 单行 + 省略：分组列表里同组条目必须等高（若允许 2 行，长副标题会把该行
+          // 撑高一截，整组行高参差，并让行的点击热区中心偏移）
           Text(this.item.subtitle)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
-            .maxLines(2)
+            .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
       }
@@ -337,10 +339,11 @@ export struct SettingsToggleRow {
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         if (this.subtitle) {
+          // 与 SettingsEntryRow 同契约：分组内条目等高，副标题单行省略
           Text(this.subtitle)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
-            .maxLines(2)
+            .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
       }
