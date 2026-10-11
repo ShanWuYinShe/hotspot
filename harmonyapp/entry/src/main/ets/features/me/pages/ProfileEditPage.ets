@@ -373,8 +373,6 @@ export struct ProfileEditPage {
           }
           .width('100%')
           .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
             top: DesignConstants.SPACING.MD,
             bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG)
           })

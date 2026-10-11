@@ -199,8 +199,6 @@ export struct RelationshipHubPage {
           }
           .width('100%')
           .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
             top: DesignConstants.SPACING.XS,
             bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG)
           })

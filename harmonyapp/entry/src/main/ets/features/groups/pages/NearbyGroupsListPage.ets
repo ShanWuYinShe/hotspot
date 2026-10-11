@@ -320,10 +320,6 @@ export struct NearbyGroupsListPage {
                 }
               }
               .width('100%')
-              .padding({
-                left: DesignConstants.SPACING.LG,
-                right: DesignConstants.SPACING.LG
-              })
               .constraintSize({ minHeight: '100%' })
             }
             .width('100%')

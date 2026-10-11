@@ -264,7 +264,9 @@ export struct NearbyPage {
     Row() {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+        // 区块标题字重对齐前端 SectionHead（text-md font-semibold）与首页：
+        // 此前用 BOLD(700)，比首页的 SEMIBOLD(600) 更重，同类标题跨页粗细不一致
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.getCurrentThemePalette().textPrimary)
 
       Blank()

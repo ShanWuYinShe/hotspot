@@ -742,7 +742,9 @@ export struct HomePage {
 
       Row({ space: DesignConstants.SPACING.HALF }) {
         Text(linkText)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
+          // 对齐前端 SectionHead 的 action（text-xs=11）与附近页：首页此前用 SM(12)，
+          // 同一角色跨页字号不一致
+          .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(this.getPalette().accentBackground)
         LucideIcon({
           icon: AppIcon.ARROW_RIGHT,

@@ -964,10 +964,8 @@ export struct MomentDetailPage {
     .width('100%')
     .height(DesignConstants.LAYOUT.MOBILE_BOTTOM_NAV_HEIGHT)
     .alignItems(VerticalAlign.Center)
-    .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG
-    })
+    // 底栏内容与正文同一条竖线（横向留白只由容器 gutter 提供）
+    .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
   }

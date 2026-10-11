@@ -435,11 +435,7 @@ export struct MomentsFeedPage {
         }
       }
       .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        bottom: 0
-      })
+      .padding({ bottom: 0 })
       .backgroundColor(this.getCurrentThemePalette().pageBackground)
       .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
 
@@ -520,8 +516,6 @@ export struct MomentsFeedPage {
       }
       .width('100%')
       .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
         top: DesignConstants.SPACING.LG,
         bottom: DesignConstants.SPACING.SM
       })
@@ -551,8 +545,6 @@ export struct MomentsFeedPage {
             .columnsGap(DesignConstants.SPACING.LG)
             .rowsGap(DesignConstants.SPACING.LG)
             .padding({
-              left: DesignConstants.SPACING.LG,
-              right: DesignConstants.SPACING.LG,
               bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
             })
             .cachedCount(4)
@@ -623,8 +615,6 @@ export struct MomentsFeedPage {
             .textCase(TextCase.UpperCase)
             .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
             .padding({
-              left: DesignConstants.SPACING.LG,
-              right: DesignConstants.SPACING.LG,
               top: DesignConstants.SPACING.XL,
               bottom: DesignConstants.SPACING.SM
             })
@@ -655,8 +645,6 @@ export struct MomentsFeedPage {
             .width('100%')
             .alignItems(VerticalAlign.Center)
             .padding({
-              left: DesignConstants.SPACING.LG,
-              right: DesignConstants.SPACING.LG,
               top: DesignConstants.SPACING.XS,
               bottom: DesignConstants.SPACING.XS
             })
@@ -677,15 +665,18 @@ export struct MomentsFeedPage {
     Row() {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+        // 区块标题字重对齐前端 SectionHead（text-md font-semibold）与首页：
+        // 此前用 BOLD(700)，与首页/附近的 SEMIBOLD(600) 不一致
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.getCurrentThemePalette().textPrimary)
     }
     .width('100%')
+    // 区块标题：横向留白由容器 gutter 提供；标题→其内容用 SECTION_INNER_GAP(12)
+    // （对齐前端 SectionHead 的 mb-3）；此前自带 left/right LG 造成双重留白、
+    // 且 bottom 只有 XS(4)，标题与内容贴得过近
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.XS
+      bottom: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP
     })
   }
 
