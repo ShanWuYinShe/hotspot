@@ -255,7 +255,6 @@ export struct SubscriptionsPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .width('100%')
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         // 分组外框（唯一一层白卡 + 发丝描边 + surfaceShadow）；行间分隔线由
         // SubscriptionItemRow 内的 hairline Divider 承担，行本身不再自带卡片样式
         .backgroundColor(this.getCurrentThemePalette().surfaceBackground)

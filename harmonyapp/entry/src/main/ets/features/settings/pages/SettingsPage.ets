@@ -778,7 +778,7 @@ export struct SettingsPage {
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .type(ButtonType.Normal)
                     .borderRadius(DesignConstants.SHAPE.BUTTON)
-                    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+                    .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
                     .onClick(() => { this.showLogoutConfirm = true; })
                 }
               }

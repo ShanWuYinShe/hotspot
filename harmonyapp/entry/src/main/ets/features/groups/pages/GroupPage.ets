@@ -618,7 +618,6 @@ export struct GroupPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .cachedCount(5)
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
         .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })

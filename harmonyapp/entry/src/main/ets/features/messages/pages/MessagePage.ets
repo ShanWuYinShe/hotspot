@@ -751,8 +751,6 @@ export struct MessagePage {
         }
         .width('100%')
         .padding({
-          left: DesignConstants.SPACING.LG,
-          right: DesignConstants.SPACING.LG,
           top: DesignConstants.SPACING.XS,
           bottom: DesignConstants.SPACING.SM
         })
@@ -775,7 +773,7 @@ export struct MessagePage {
                   .layoutWeight(1)
                 }
                 .width('100%')
-                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+                .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
               }, (i: number) => `conv-skeleton-${i}`)
             }
             .width('100%')
@@ -801,7 +799,7 @@ export struct MessagePage {
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
-              .padding({ left: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
+              .padding({ top: DesignConstants.SPACING.SM })
             EmptyState({ icon: AppIcon.MESSAGE, message: '没有找到会话', bare: true })
               .margin({ top: DesignConstants.SPACING.XXL })
           }
@@ -840,8 +838,6 @@ export struct MessagePage {
                   .textCase(TextCase.UpperCase)
                   .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
                   .padding({
-                    left: DesignConstants.SPACING.LG,
-                    right: DesignConstants.SPACING.LG,
                     top: DesignConstants.SPACING.SM,
                     bottom: DesignConstants.SPACING.MD2
                   })
@@ -858,19 +854,17 @@ export struct MessagePage {
                   ListItem() {
                     this.buildChatItem(item)
                   }
-                  .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+                  .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                 }, (item: ChatItem) => item.id + item.type)
               }
               .width('100%')
-              .margin({
-                left: DesignConstants.SPACING.LG2,
-                right: DesignConstants.SPACING.LG2
-              })
+              // 扁平会话列表（无卡片外框）：不留自身横向外边距/行内横向内边距，
+              // 否则行内容会比页头多缩进（留白只由 PageShellContainer 提供）
               .divider({
                 strokeWidth: DesignConstants.BORDER_WIDTH.SUBPIXEL,
                 color: this.getSurfaceBorder(),
-                startMargin: DesignConstants.SPACING.LG,
-                endMargin: DesignConstants.SPACING.LG
+                startMargin: 0,
+                endMargin: 0
               })
             }
 
@@ -936,7 +930,7 @@ export struct MessagePage {
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .textCase(TextCase.UpperCase)
         .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
-        .padding({ left: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.MD2 })
+        .padding({ bottom: DesignConstants.SPACING.MD2 })
 
       Scroll() {
         Row({ space: DesignConstants.SPACING.MD }) {
@@ -967,7 +961,7 @@ export struct MessagePage {
             }
           }, (chat: ChatItem) => chat.id + chat.type)
         }
-        .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
+
       }
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
@@ -1057,8 +1051,6 @@ export struct MessagePage {
     // 常态背景由 getChatItemBackground 返回透明（对齐前端 ChatListBody 的
     // 「无外框 + divide-y 平铺列表」），不再每行自带一块圆角底色
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })

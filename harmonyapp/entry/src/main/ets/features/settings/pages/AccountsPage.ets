@@ -334,7 +334,6 @@ export struct AccountsPage {
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Off)
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         .backgroundColor(this.getSurfaceBackground())
         .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })

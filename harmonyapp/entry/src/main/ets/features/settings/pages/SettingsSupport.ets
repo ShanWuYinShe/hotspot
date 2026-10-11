@@ -290,8 +290,9 @@ export struct SettingsGroupLabel {
       .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
       .textCase(TextCase.UpperCase)
       .width('100%')
+      // 分组标题与分组卡左边缘严格对齐：横向留白只由容器 gutter 提供，
+      // 这里不再自加 left（否则标题比卡片多缩进 6vp）
       .padding({
-        left: DesignConstants.SPACING.SM2,
         top: DesignConstants.SPACING.MD2,
         bottom: DesignConstants.SPACING.SM
       })

@@ -165,7 +165,7 @@ export struct RelationshipHubPage {
             this.searchKeyword = value;
           }
         })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+          .margin({ bottom: DesignConstants.SPACING.SM })
 
         Scroll() {
           Column() {

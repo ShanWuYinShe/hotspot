@@ -1165,7 +1165,9 @@ export struct ProfilePage {
         .width('100%')
       }
       .width('100%')
-      .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL, top: DesignConstants.SPACING.XL })
+      // 升级表单无卡片外框 → 横向留白由容器 gutter 提供（此前自带 XXL 32 会叠成 52，
+      // 比页头多缩进一大截）；只保留纵向节奏
+      .padding({ top: DesignConstants.SPACING.XL })
     }
     .layoutWeight(1)
   }
