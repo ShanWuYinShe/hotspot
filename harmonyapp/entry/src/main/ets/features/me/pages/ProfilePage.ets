@@ -8,7 +8,7 @@
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { isValidUsernameLoginId, isValidNickname as isValidNicknameShared, isValidPassword as isValidPasswordShared } from '../../../core/utils/AccountValidation';
-import { interactionEventHub, InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
+import { interactionEventHub, InteractionStateStore, UserRelationState, AuthUserChangedState } from '../../../core/state/InteractionStateStore';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -280,6 +280,24 @@ export struct ProfilePage {
     AppRouter.push(PageNames.CHAT, params);
   }
 
+  // 登录/登出/切号后刷新管理员行：常驻 Tab 不会重新 mount，
+  // aboutToAppear 只在首次挂载跑一次，此处补上身份变更时的刷新。
+  // 注意：必须经箭头函数持有 this 后再订阅——hub 以裸函数调用 handler，
+  // 直接传 this.handleX 会丢绑定（实测 EventHub handler error），刷新永不执行。
+  private authUserChangedListener: (payload: Object) => void = (payload: Object): void => {
+    this.handleAuthUserChanged(payload);
+  };
+
+  private handleAuthUserChanged(payload: Object): void {
+    const state = payload as AuthUserChangedState;
+    if (!state) {
+      return;
+    }
+    // 有意不等待：后台刷新 rbac/me，结果经 @State 自动刷 UI；
+    // 方法内部全路径捕获异常，无未处理 rejection。
+    this.refreshAdminPrivileges();
+  }
+
   // 被查看用户的关系态定向更新（单实体，同 UserCard 范式）
   private handleViewedUserStateUpdate(payload: Object): void {
     const state = payload as UserRelationState;
@@ -290,8 +308,12 @@ export struct ProfilePage {
   }
 
   async aboutToAppear() {
+    // appear 即存活：常驻 Tab 被全屏页覆盖会触发 aboutToDisappear，
+    // 返回时 aboutToAppear 重跑，若不复位，后续刷新（含事件触发）将永久早退。
+    this.isDestroyed = false;
     SystemUiController.syncWithCurrentTheme();
     interactionEventHub.on('user_relation_updated', this.handleViewedUserStateUpdate);
+    interactionEventHub.on('auth_user_changed', this.authUserChangedListener);
     if (this.currentUser) {
       this.editNickname = this.currentUser.nickname;
       this.editBio = this.currentUser.bio || '';
@@ -317,6 +339,7 @@ export struct ProfilePage {
   aboutToDisappear(): void {
     this.isDestroyed = true;
     interactionEventHub.off('user_relation_updated', this.handleViewedUserStateUpdate);
+    interactionEventHub.off('auth_user_changed', this.authUserChangedListener);
     KeyboardDismissManager.getInstance().dismiss();
     try {
       NfcShareService.getInstance().clearShareData();
@@ -638,6 +661,9 @@ export struct ProfilePage {
 
       // 4. 重置 AppStorage（PersistentStorage 会自动同步到磁盘）
       this.stateManager.clear();
+      // 同步清零管理员行：clear() 经 auth_user_changed 事件触发的刷新是异步的，
+      // 先行清零避免登出瞬间残留上一账号的管理员入口。
+      this.hasAdminPrivileges = false;
 
       // 5. 跳转到首页
       AppRouter.clear();

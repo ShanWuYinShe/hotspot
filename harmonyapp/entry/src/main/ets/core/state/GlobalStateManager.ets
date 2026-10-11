@@ -13,7 +13,7 @@ import { PreferencesUtil } from '../storage/PreferencesUtil';
 import type { UserType } from '../types/api';
 import { LocationInfo } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { InteractionStateStore } from './InteractionStateStore';
+import { InteractionStateStore, interactionEventHub } from './InteractionStateStore';
 import { MessageSyncManager } from './MessageSyncManager';
 import { AppThemeManager } from '../theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, DEFAULT_THEME_MODE, KEY_RESOLVED_THEME_ID, KEY_THEME_MODE } from '../theme/AppThemeTypes';
@@ -138,6 +138,9 @@ export class GlobalStateManager {
     AppStorage.setOrCreate(KEY_CURRENT_USER, user);
     AppStorage.setOrCreate(KEY_IS_LOGGED_IN, user !== null);
     AppStorage.setOrCreate(KEY_USER_TYPE, user?.user_type || '');
+    // 登录/登出/切号后常驻 Tab 页（如个人中心）不会重新 mount，
+    // 经事件通知订阅方刷新依赖登录身份的派生状态（管理员行等）。
+    interactionEventHub.notifyAuthUserChanged(user?.user_id ?? '');
   }
 
   /**

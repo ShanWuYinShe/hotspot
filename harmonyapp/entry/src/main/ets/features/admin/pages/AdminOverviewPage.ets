@@ -9,6 +9,8 @@
 
 import { ApiClient } from '../../../core/api/ApiClient';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { ApiError } from '../../../core/network/ApiError';
+import { ErrorCode } from '../../../core/constants/ErrorCodes';
 import { curves } from '@kit.ArkUI';
 import { AdminPermissions } from '../../../core/types/api';
 import { PageShellContainer } from '../../../components/PageShellContainer';
@@ -86,8 +88,14 @@ struct AdminOverviewPage {
         this.errorMessage = getErrorMessage(resp, '无管理员权限');
       }
     } catch (e) {
-      hilog.warn(DOMAIN, TAG, `加载权限失败: ${e}`);
-      this.errorMessage = '加载权限失败，请检查网络';
+      // 10200 非管理员是业务终态（HttpUtil 以 ApiError 抛出，非传输失败），
+      // 必须与网络错误区分展示，否则“无权限”会被误导为“检查网络”。
+      if (e instanceof ApiError && e.code === ErrorCode.PERMISSION_DENIED) {
+        this.errorMessage = e.message || '无管理员权限';
+      } else {
+        hilog.warn(DOMAIN, TAG, `加载权限失败: ${e}`);
+        this.errorMessage = '加载权限失败，请检查网络';
+      }
     } finally {
       this.isLoading = false;
     }

@@ -74,7 +74,13 @@ export interface GroupMembershipState {
   my_state?: GroupMemberState;
 }
 
-export type InteractionEventType = 'moment_updated' | 'user_relation_updated' | 'group_membership_updated';
+export type InteractionEventType =
+  'moment_updated' | 'user_relation_updated' | 'group_membership_updated' | 'auth_user_changed';
+
+/** 当前登录账号变更（登录/登出/切号）：登出或匿名时 user_id 为空串 */
+export interface AuthUserChangedState {
+  user_id: string;
+}
 
 type MomentStateMap = Record<string, MomentSocialState>;
 type UserStateMap = Record<string, UserRelationState>;
@@ -143,6 +149,12 @@ export class InteractionStateStore {
 
   off(event: InteractionEventType, handler: Listener): void {
     this.eventHub.off(event, handler);
+  }
+
+  /** 当前登录账号变更（登录/登出/切号）：登出或匿名时 user_id 为空串 */
+  notifyAuthUserChanged(user_id: string): void {
+    const state: AuthUserChangedState = { user_id: user_id };
+    this.eventHub.emit('auth_user_changed', state);
   }
 
   patchMomentFromItem(moment: MomentItem): void {
