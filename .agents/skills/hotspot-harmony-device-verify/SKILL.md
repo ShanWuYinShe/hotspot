@@ -112,5 +112,40 @@ AdminOverviewPage 区分 `10200` 与网络错误。
 - **`uitest uiInput click` 坐标越界会静默点空**（不报错），必须用 bounds 中心点。
 - **登录态可直接看文件**：`/data/app/el2/100/base/com.lsyb.social/haps/entry/preferences/geotalk`
   是明文 XML（`auth_accounts` / `current_user_id` / `server_base_url`，shell 用户可读）。
-- 辅助脚本（本机）：`.workwork/scripts/ui.py`（dump/click/scroll/screenshot）、
-  `.workwork/scripts/login_flow.py`、`.workwork/scripts/verify-roles.sh`。
+`- 辅助脚本（本机）：`。
+
+
+## 沙盒下启动模拟器：用 -instancePath 重定向，不要申请放宽权限（2026-10-12 实测）
+
+**踩坑**：文件策略为 `workspace-write` 时启动模拟器会报
+
+```
+Emulator: Error opening logfile /Users/liyou/.Huawei/Emulator/deployed/Pura 90 Pro/Log//qemu.log: Operation not permitted
+```
+
+目录权限本身正常（`drwxr-xr-x`、属主是自己），返回的是 **EPERM 而非 EACCES** —— 这是
+DSH 沙盒的拒绝签名（对照：写工作区成功）。**我当时误判为「必须申请 danger-full-access」，
+并向 harness 申请了一次更宽权限，其实完全不需要**（用户当场质疑，复查后确认）。
+
+**正确做法**：`Emulator -help` 里有 `-instancePath <path>`，把实例目录重定向进工作区即可：
+
+```bash
+SRC="/Users/liyou/.Huawei/Emulator/deployed/Pura 90 Pro"
+DST="/Users/liyou/work/hotspot/.workwork/emu-instance"
+mkdir -p "$DST"
+cp -c -R "$SRC" "$DST/Pura 90 Pro"        # -c = APFS 克隆，5.6GB 近乎瞬时、不占额外空间
+# 改克隆件的 config.ini：instancePath / logPath / configPath 三处全部指向 $DST
+/Applications/DevEco-Studio.app/Contents/tools/emulator/Emulator \
+  -start "Pura 90 Pro" -instancePath "$DST"   # 注意是**父目录**，不是实例目录本身
+```
+
+要点：
+- `-instancePath` 传**父目录**；传实例目录本身会报
+  `"X" is not found. Please create the device(folder): "<path>/X"`。
+- 只读的系统镜像在 `~/Library/Huawei/Sdk/system-image/...`，沙盒**允许读**，无需搬运；
+  实例目录里只有可写 overlay（`*.qcow2`）与 `ram.bin`。
+- `config.ini` 里 `logPath` / `configPath` 默认指向 `~/Library/...`，也要一并改到工作区。
+- 克隆件与真实实例**共享同一份用户数据快照**：里面装好的 App、登录态都会带过来。
+- 收尾时删掉 `.workwork/emu-instance` 即可，真实实例不受影响。
+- **结论**：这类「工具要写 home 目录」的问题优先走「① 换目录/重定向」，能靠工具自身参数
+  解决就不要申请放宽沙盒；本机模拟器的重定向参数就是 `-instancePath`。

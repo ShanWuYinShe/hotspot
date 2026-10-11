@@ -231,6 +231,7 @@ export struct DesktopLayout {
       Row({ space: DesignConstants.SPACING.XS }) {
         SurfaceIconButton({
           icon: AppIcon.SEARCH,
+          accessibilityLabel: '搜索',
           kind: 'neutral',
           onPress: () => AppRouter.push(PageNames.SEARCH)
         })
@@ -238,18 +239,21 @@ export struct DesktopLayout {
         // 发布（brand 圆形按钮）
         SurfaceIconButton({
           icon: AppIcon.ADD,
+          accessibilityLabel: '新建',
           kind: 'primary',
           onPress: () => this.openCreate()
         })
 
         SurfaceIconButton({
           icon: AppIcon.PALETTE,
+          accessibilityLabel: '切换主题色板',
           kind: 'neutral',
           onPress: () => { this.showThemeSheet = true; }
         })
 
         SurfaceIconButton({
           icon: AppIcon.SETTINGS,
+          accessibilityLabel: '设置',
           kind: 'neutral',
           onPress: () => AppRouter.push(PageNames.SETTINGS)
         })

@@ -555,6 +555,7 @@ export struct HomePage {
         // （affa411a 为非桌面端补齐通知 Bell 快捷入口，本端同步；搜索/通知/地图三连）
         SurfaceIconButton({
           icon: AppIcon.SEARCH,
+          accessibilityLabel: '搜索',
           kind: 'neutral',
           buttonSize: 36,
           glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
@@ -563,6 +564,7 @@ export struct HomePage {
 
         SurfaceIconButton({
           icon: AppIcon.NOTIFICATION,
+          accessibilityLabel: '通知',
           kind: 'neutral',
           buttonSize: 36,
           glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
@@ -571,6 +573,7 @@ export struct HomePage {
 
         SurfaceIconButton({
           icon: AppIcon.MAP,
+          accessibilityLabel: '地图',
           kind: 'neutral',
           buttonSize: 36,
           glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,

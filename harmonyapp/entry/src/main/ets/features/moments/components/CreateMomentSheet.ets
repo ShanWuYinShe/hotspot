@@ -216,6 +216,7 @@ export struct CreateMomentSheet {
         // 关闭按钮（对齐前端 CreateSheet header 的 ActionIconButton X）
         SurfaceIconButton({
           icon: AppIcon.CLOSE,
+          accessibilityLabel: '关闭',
           kind: 'neutral',
           buttonSize: 36,
           onPress: (): void => this.onClose()

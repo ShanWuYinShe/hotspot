@@ -133,11 +133,13 @@ export struct NearbyPage {
           Row({ space: DesignConstants.SPACING.SM }) {
             SurfaceIconButton({
               icon: AppIcon.SEARCH,
+              accessibilityLabel: '搜索',
               kind: 'neutral',
               onPress: () => AppRouter.push(PageNames.SEARCH)
             })
             SurfaceIconButton({
               icon: AppIcon.MAP,
+              accessibilityLabel: '地图',
               kind: 'neutral',
               onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
             })

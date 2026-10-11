@@ -240,6 +240,7 @@ export struct SettingsEntryRow {
 
       SurfaceIconButton({
         icon: AppIcon.ARROW_RIGHT,
+        accessibilityLabel: this.item.title,
         kind: 'neutral',
         buttonSize: 28,
         glyphSize: 14,
@@ -434,6 +435,7 @@ export struct SettingsMetaCard {
 
         SurfaceIconButton({
           icon: AppIcon.REFRESH,
+          accessibilityLabel: '刷新',
           kind: 'neutral',
           buttonSize: 36,
           glyphSize: 18,
