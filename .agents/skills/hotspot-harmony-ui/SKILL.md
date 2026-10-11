@@ -60,6 +60,17 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   - 分组外框静态投影一律 `surfaceShadow`（白卡档），**禁止 `elevatedShadow`**（弹层/FAB 档）；
     行本身无投影、无边框、无圆角，只有按压填充（`surfaceSubtle`）。
   - 设置页专用分组卡 `SettingsSectionCard` 已按同一契约实现，新设置分组直接复用。
+  - **横向留白按列表形态二分（实测 2026-10-11，踩过的坑）**：容器已提供 gutter 后，
+    - **扁平列表**（无卡片外框，行直接铺在页面底色上，如消息会话列表）→ **行不得有
+      `left`/`right` padding，列表也不得有横向 `margin`**；否则行内容比页头多缩进
+      一个 gutter（实测消息页曾多 16~36vp，「消息」标题 x=73 而「最近」标签 x=109）。
+      行间分隔线用 `startMargin: 0`。
+    - **分组卡片**（`ListGroup`/`ListItemGroup` 带底色+描边+圆角，如群列表/订阅/账号管理）
+      → **卡片去掉横向外边距**（与外层内容同宽），**行内 padding 保留**（那是卡片内边距）。
+      卡片自带 `margin LG` 会让卡片比页头窄 32vp、卡内内容窄 64vp。
+    - 页面级元素（退出登录按钮、搜索框、升级表单）同样不得自加横向 padding：
+      实测个人中心升级表单自带 `XXL(32)` 叠加容器 gutter 后达 52vp。
+    - 分组标题（`SettingsGroupLabel`）也不得自加 `left`，否则比分组卡多缩进（实测 91 → 70）。
 
 ### 页面路由对齐（web → harmony）
 
