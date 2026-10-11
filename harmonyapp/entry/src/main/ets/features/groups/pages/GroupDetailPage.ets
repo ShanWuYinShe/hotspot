@@ -30,7 +30,7 @@ import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
 import {
   GroupItem,
   GroupApplicationItem,
@@ -1604,7 +1604,8 @@ export struct GroupDetailPage {
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .textAlign(TextAlign.Start)
                   .width('100%')
-                  .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
+                  // 群简介是卡片内多行正文：1.57 → 1.7（对齐前端 --leading-card）
+                  .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
               }
               Row({ space: DesignConstants.SPACING.XS }) {
                 LucideIcon({
@@ -1894,6 +1895,8 @@ export struct GroupDetailPage {
 
                     Text(item.content)
                       .fontSize(DesignConstants.FONT.SIZE.SM)
+                      // 公告正文是多行长文：用前端 --leading-copy(1.75)，此前无行高
+                      .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, DesignConstants.FONT.LINE_RATIO.COPY))
                       .fontColor(this.getCurrentThemePalette().textSecondary)
                       .width('100%')
                       .maxLines(3)

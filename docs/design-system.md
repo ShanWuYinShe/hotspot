@@ -136,7 +136,20 @@
 ### 4.2 字重 / 行高 / 字距
 
 - 字重：`FONT.WEIGHT.{REGULAR, MEDIUM, SEMIBOLD, BOLD}`（400/500/600/700）。
-- 行高：`FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}`；正文阅读 `copy 1.75` 比例外用平台默认档。
+- **行高（两种口径，多行正文一律用比例制）**：
+  - 比例制 `FONT.LINE_RATIO.{DEFAULT 1.5, CARD 1.7, COPY 1.75}` + `lineHeightFor(fontSize, ratio)`，
+    对齐前端 `theme-registry.css` 的 `--leading-*` 标尺（`card=1.7` 是前端
+    「原 1.55，阅读疲劳修复」后的值）。**多行/长文正文必须用它**：
+
+    | 语义 | 比例 | 适用 |
+    |---|---|---|
+    | `DEFAULT` | 1.5 | 基线（对齐前端 base.css 元素级 1.5） |
+    | `CARD` | 1.7 | 卡片/聊天气泡正文（前端 `--leading-card`） |
+    | `COPY` | 1.75 | 长文正文、简介、公告、动态正文（前端 `--leading-copy`） |
+
+  - 绝对档 `FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}` 只用于**单行紧凑**场景。
+    ⚠️ 绝对档与字号是解耦的：把 `LINE_HEIGHT.SM`(20) 用在 `SIZE.LG`(16) 上比值只有 1.25。
+    实测（2026-10-12）多处出现该误用，比值散落在 1.57~1.83，已统一到上表比例制。
 - 字距：`FONT.LETTER_SPACING.{EYEBROW 1.4, LABEL 1.2, FIELD 1.28, ICON_LABEL 0.6}`
   （对齐前端 tracking-eyebrow/label/field 刻度，鸿蒙按 10px 基准折算）。
 

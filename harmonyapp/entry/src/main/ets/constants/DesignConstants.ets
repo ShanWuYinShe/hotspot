@@ -56,6 +56,28 @@ export interface FontLineHeights {
   XL: number; // 26 — 大标题
 }
 
+/**
+ * 行高**比例**（对齐前端 theme-registry.css 的 --leading-* 标尺）。
+ *
+ * 多行/长文正文一律用比例制（配合 lineHeightFor），不要用上面的绝对档：
+ * 绝对档只描述「某字号的某一种用法」，比例制才能保证换字号时行高跟着走。
+ * 前端原注释：「Line-height scale — 正文行高档位。禁止 leading-[N] arbitrary 类与
+ * 内联 line-height」，其中 card=1.7 是「原 1.55，阅读疲劳修复」后的值。
+ */
+export interface FontLineRatio {
+  DEFAULT: number; // 1.5 — 基线（对齐前端 base.css 的 h1-h4/p/button 元素级 1.5）
+  CARD: number; // 1.7 — 卡片/聊天气泡正文（对齐前端 --leading-card）
+  COPY: number; // 1.75 — 长文正文（对齐前端 --leading-copy）
+}
+
+/**
+ * 按字号与比例算行高（vp）。用于多行正文，避免内联魔法数字：
+ *   .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, DesignConstants.FONT.LINE_RATIO.COPY))
+ */
+export function lineHeightFor(fontSize: number, ratio: number): number {
+  return Math.round(fontSize * ratio);
+}
+
 export interface FontLetterSpacing {
   EYEBROW: number;  // 1.4 — 分组标签/眉标（对齐前端 tracking-eyebrow 0.14em @10px）
   LABEL: number;    // 1.2 — 小标/在线标签（对齐前端 tracking-label 0.12em）
@@ -75,6 +97,8 @@ export interface FontSystem {
   SIZE: FontSizes;
   WEIGHT: FontWeights;
   LINE_HEIGHT: FontLineHeights;
+  /** 比例制行高（多行正文首选，见 FontLineRatio 注释） */
+  LINE_RATIO: FontLineRatio;
   LETTER_SPACING: FontLetterSpacing;
 }
 
@@ -491,6 +515,12 @@ const FONT: FontSystem = {
     MD: 22,
     LG: 24,
     XL: 26,
+  },
+  // 比例制行高（对齐前端 --leading-*）：多行正文用它，绝对档只用于单行紧凑场景
+  LINE_RATIO: {
+    DEFAULT: 1.5,
+    CARD: 1.7,
+    COPY: 1.75,
   },
   LETTER_SPACING: {
     EYEBROW: 1.4,

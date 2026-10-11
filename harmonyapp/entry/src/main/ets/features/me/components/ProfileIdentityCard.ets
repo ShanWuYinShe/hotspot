@@ -5,7 +5,7 @@
  * 动作回调上抛；无本地状态。
  */
 
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -141,7 +141,8 @@ export struct ProfileIdentityCard {
         Text(this.bio)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
-          .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
+          // 简介属长文：原 MD(22)/12=1.83 偏松 → 对齐前端 --leading-copy(1.75)=21
+          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, DesignConstants.FONT.LINE_RATIO.COPY))
           .width('100%')
           .margin({ top: DesignConstants.SPACING.LG })
       } else {

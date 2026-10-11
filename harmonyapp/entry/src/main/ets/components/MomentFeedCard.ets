@@ -4,7 +4,7 @@ import { interactionEventHub, MomentSocialState, isMomentLikedByReactions, sumRe
 import { SystemAvatar } from './SystemAvatar';
 import { AppIcon } from './SystemIcon';
 import { SurfaceIconButton } from './SurfaceIconButton';
-import { DesignConstants } from '../constants/DesignConstants';
+import { DesignConstants, lineHeightFor } from '../constants/DesignConstants';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { LocationUtil } from '../core/location/LocationUtil';
 import { SystemShareService } from '../core/services/SystemShareService';
@@ -278,7 +278,8 @@ export struct MomentFeedCard {
           .fontColor(this.getPalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
+          // 动态正文对齐前端 --leading-copy(1.75)：绝对档 SM(20)/12=1.67 偏紧
+          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, DesignConstants.FONT.LINE_RATIO.COPY))
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XS })
           .width('100%')
       }

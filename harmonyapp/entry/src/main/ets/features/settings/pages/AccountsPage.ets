@@ -301,9 +301,15 @@ export struct AccountsPage {
                         })
                       }
 
+                      // 行级删除用安静危险态（surface-danger：染色底 + error 文字 + 发丝描边）。
+                      // 实底 danger 保留给「最终确认」（二次确认弹窗的 confirmVariant）——
+                      // 每行一个实心红钮会在整页形成一列刺眼色块，把视线从账号名/切换
+                      // 拉到破坏性操作上：颜色最强档必须留给真正的警示（NN/g《Visual
+                      // Hierarchy》：reserve warm bright colors for warnings or errors）。
+                      // 本仓既有约定同为 surface-danger（会话/群/分享等 5 处行级危险操作）。
                       SystemButton({
                         label: '删除',
-                        variant: 'danger',
+                        variant: 'surface-danger',
                         buttonSize: 'small',
                         loading: this.deletingAccountId === acc.user_id,
                         onPress: () => {

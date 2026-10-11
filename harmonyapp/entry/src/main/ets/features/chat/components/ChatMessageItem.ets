@@ -4,7 +4,7 @@
  * 无本地状态，保持纯展示。
  */
 
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
@@ -161,6 +161,9 @@ export struct ChatMessageItem {
               // 已撤回：斜体「消息已撤回」（对齐前端 MessageBubble recalled 态）
               Text(this.msg.recalled ? '消息已撤回' : this.msg.content)
                 .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
+                // 气泡正文行高对齐前端 MessageBubble 的 leading-card(1.7)：
+                // 此前完全没设行高，长消息多行挤在一起（前端专门做过「阅读疲劳修复」）
+                .lineHeight(lineHeightFor(DesignConstants.CHAT.BUBBLE_FONT_SIZE, DesignConstants.FONT.LINE_RATIO.CARD))
                 .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText :
                   (this.msg.recalled ? this.palette.textSecondary : this.palette.textPrimary))
                 .fontStyle(this.msg.recalled === true ? FontStyle.Italic : FontStyle.Normal)

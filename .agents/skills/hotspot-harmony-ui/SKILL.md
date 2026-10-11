@@ -10,6 +10,12 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 设计 token 的**全部数值档位**（颜色/字号/间距/圆角/边框/动效/交互反馈/透明度/尺寸/阴影/模糊）、双端共享组件映射表与跨端投影契约速查的唯一权威是 [docs/design-system.md](../../../docs/design-system.md)（仓库根 docs/），改 UI 前必读。本节只保留强制规则与指针。
 
 - **禁止硬编码**：颜色一律使用 `AppThemeManager.getPaletteById(resolvedThemeId)` 的 palette token（或 `DesignConstants` 系统/图片固定色），禁止硬编码色值；字号/间距/圆角/边框/动效/透明度/尺寸一律用 `DesignConstants` 对应 token 档位，禁止裸 `fontSize(N)` / `padding({left:N})` / `width(N)` / `duration: N` / `scale(...)`；`$r('app.color.*')` 资源仅用于启动窗口等系统场景（当前 color.json 只保留 start_window_background）。
+- **行高（多行正文强制用比例制）**：`FONT.LINE_RATIO.{DEFAULT 1.5, CARD 1.7, COPY 1.75}` +
+  `lineHeightFor(fontSize, ratio)`，对齐前端 `--leading-*`（`card` 是前端「原 1.55，
+  阅读疲劳修复」后的值）。适用：聊天气泡/卡片正文 `CARD`；简介、公告、动态正文等长文 `COPY`。
+  `FONT.LINE_HEIGHT` 的绝对档（XS18/SM20/MD22/LG24/XL26）**只用于单行紧凑场景**——它与字号
+  解耦，把 `LINE_HEIGHT.SM`(20) 配 `SIZE.LG`(16) 只有 1.25 倍。实测 2026-10-12：多处
+  误用导致比值散落 1.57~1.83，且聊天气泡/群公告**完全没有行高**（长文本挤成一团）。
 - **跨端同步机制（强制）**：前端与鸿蒙共享同一套设计 token 刻度，同步由 CI 脚本强制拦截，**改两端任一 token 必须同步改另一端**：
 
   | 校验 | 脚本 | 覆盖范围 |
@@ -107,6 +113,14 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 - 通用文本操作按钮必须用 `SystemButton`（variant=primary/secondary/outline/ghost/danger，
   surface/surface-danger，size=small/default/large/sheet，支持 loading/disabled/fullWidth）；禁止手写
   `Button('文案') + backgroundColor/fontColor/height/borderRadius` 重复样式。
+- **危险操作分两档，别混用（实测 2026-10-12）**：
+  - `danger`（**实底 error 色 + 白字**）只用于**最终确认**：二次确认弹窗的
+    `SystemDialog.confirmVariant`、弹层里的确认键（如「封禁并移出」）。
+  - `surface-danger`（染色底 + error 文字 + 发丝描边，安静档）用于**行级/列表内**
+    的危险操作（账号行删除、消息/聊天操作表、退出群组、取消分享…）。
+  - 反例：账号管理页每行一个实底 `danger`，眯眼测试下整页形成一列刺眼红色块，
+    视线被破坏性操作抢走、观感像警报页。NN/g《Visual Hierarchy》：「Reserve warm bright
+    colors, like red, for warnings or errors」——最强颜色档必须留给真正的警示。
 - 通用单行输入框必须用 `SystemInput`（前缀图标/清除按钮/错误态）；登录/表单等
   密码框可用 `SystemInput({ passwordMode: true })`。
 - 已登记例外（可保留手写原生控件）：头像/图形按钮、地图全屏控件、搜索建议行、

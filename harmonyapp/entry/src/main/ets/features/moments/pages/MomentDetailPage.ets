@@ -35,7 +35,7 @@ import { EmptyState, LoadingMoreIndicator } from '../../../components/EmptyState
 import { Pressable } from '../../../components/Pressable';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -619,7 +619,8 @@ export struct MomentDetailPage {
         .width('100%')
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontColor(this.getCurrentThemePalette().textPrimary)
-        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XL)
+        // 长文正文：原 XL(26)/16=1.63 偏紧 → 对齐前端 --leading-copy(1.75)=28
+        .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.LG, DesignConstants.FONT.LINE_RATIO.COPY))
 
       if (moment.images && moment.images.length > 0) {
         Grid() {
