@@ -394,7 +394,7 @@ export struct LoginPage {
               .padding(DesignConstants.SPACING.LG)
               .backgroundColor(this.getSurfaceBackground())
               .borderRadius(DesignConstants.RADIUS.LG)
-              .shadow(this.getCurrentThemePalette().elevatedShadow)
+              .shadow(this.getCurrentThemePalette().surfaceShadow)
               .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
               .margin({ bottom: DesignConstants.SPACING.MD3 })
             }
@@ -415,7 +415,7 @@ export struct LoginPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.LG)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .shadow(this.getCurrentThemePalette().elevatedShadow)
+          .shadow(this.getCurrentThemePalette().surfaceShadow)
         }
           .width('100%')
           .height('100%')

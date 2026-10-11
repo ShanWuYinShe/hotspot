@@ -208,7 +208,7 @@ export struct LoginPromptView {
     .width('100%')
     .scrollBar(BarState.Off)
     .backgroundColor(this.getPalette().surfaceBackground)
-    .shadow(this.getPalette().elevatedShadow)
+    .shadow(this.getPalette().surfaceShadow)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
   }
 

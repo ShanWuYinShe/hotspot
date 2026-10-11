@@ -232,7 +232,12 @@ export struct SubscriptionsPage {
             this.ListHeader('通知类型')
           }
 
-          ForEach(this.items, (item: SubscriptionItem) => {
+          ForEach(this.items, (item: SubscriptionItem, index: number) => {
+            if (index > 0) {
+              ListItem() {
+                this.RowDivider()
+              }
+            }
             ListItem() {
               this.SubscriptionItemRow(item)
             }
@@ -250,8 +255,14 @@ export struct SubscriptionsPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .width('100%')
-        .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
-        .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        // 分组外框（唯一一层白卡 + 发丝描边 + surfaceShadow）；行间分隔线由
+        // SubscriptionItemRow 内的 hairline Divider 承担，行本身不再自带卡片样式
+        .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+        .shadow(this.getCurrentThemePalette().surfaceShadow)
+        .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, DesignConstants.SPACING.LG) })
       }
     }
     .width('100%')
@@ -269,8 +280,17 @@ export struct SubscriptionsPage {
     Text(title)
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .fontColor(this.getCurrentThemePalette().textSecondary)
-      .margin({ left: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
+      .margin({ left: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.MD })
       .width('100%')
+  }
+
+  /** 行间 hairline 分隔线（分组内行边界；对齐前端 ListContainer divide-y） */
+  @Builder
+  private RowDivider() {
+    Divider()
+      .strokeWidth(DesignConstants.BORDER_WIDTH.HAIRLINE)
+      .color(this.getCurrentThemePalette().borderColor)
+      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
   }
 
   @Builder
@@ -313,12 +333,8 @@ export struct SubscriptionsPage {
         .enabled(!this.savingKey || this.savingKey === String(item.key))
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .borderRadius(DesignConstants.RADIUS.LG)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .backgroundColor(this.getSurfaceBackground())
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+    // 行级卡片样式移除：外框由订阅列表容器承担，行间分隔线走 hairline
   }
 }
 

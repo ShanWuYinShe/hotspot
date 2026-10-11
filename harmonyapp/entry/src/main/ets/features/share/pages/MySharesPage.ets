@@ -290,11 +290,19 @@ export struct MySharesPage {
   @Builder
   private buildShareList() {
     List() {
-      LazyForEach(this.sharesDataSource, (share: ShareListItem) => {
-        ListItem() {
-          this.buildShareCard(share)
-        }
-      }, (share: ShareListItem) => share.share_id)
+      ListItemGroup() {
+        LazyForEach(this.sharesDataSource, (share: ShareListItem) => {
+          ListItem() {
+            this.buildShareCard(share)
+          }
+        }, (share: ShareListItem) => share.share_id)
+      }
+      .divider({
+        strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+        color: this.getSurfaceBorder(),
+        startMargin: DesignConstants.SPACING.LG,
+        endMargin: DesignConstants.SPACING.LG
+      })
 
       if (this.isLoadingMore) {
         ListItem() {
@@ -418,11 +426,8 @@ export struct MySharesPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .borderRadius(DesignConstants.RADIUS.LG)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .backgroundColor(this.getSurfaceBackground())
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .margin({ bottom: DesignConstants.SPACING.MD })
+    // 行级卡片（圆角 + elevatedShadow + 白底 + 行间距）移除：分组外框与分隔线由
+    // ListItemGroup 承担（对齐前端 ListContainer 分组列表）
   }
 
   private defaultShareTitle(share: ShareListItem): string {

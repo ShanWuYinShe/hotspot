@@ -34,9 +34,9 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { ListGroup, ListRowDivider } from '../../../components/ListGroup';
 
 @Preview
 @Component
@@ -592,11 +592,19 @@ export struct GroupPage {
         EmptyState({ icon: AppIcon.EMPTY, message: '暂无待处理邀请' }).layoutWeight(1)
       } else {
         List() {
-          LazyForEach(this.invitesDataSource, (invite: GroupInviteItem) => {
-            ListItem() {
-              this.buildMyInviteItem(invite)
-            }
-          }, (invite: GroupInviteItem) => invite.invite_id)
+          ListItemGroup() {
+            LazyForEach(this.invitesDataSource, (invite: GroupInviteItem) => {
+              ListItem() {
+                this.buildMyInviteItem(invite)
+              }
+            }, (invite: GroupInviteItem) => invite.invite_id)
+          }
+          .divider({
+            strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+            color: this.getCurrentThemePalette().borderColor,
+            startMargin: DesignConstants.SPACING.MD,
+            endMargin: DesignConstants.SPACING.MD
+          })
 
           if (this.invitesLoadingMore) {
             ListItem() {
@@ -609,6 +617,11 @@ export struct GroupPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .cachedCount(5)
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+        .shadow(this.getCurrentThemePalette().surfaceShadow)
         .onReachEnd(() => { this.loadMoreMyInvites(); })
       }
     }
@@ -679,11 +692,8 @@ export struct GroupPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .backgroundColor(this.getSurfaceBackground())
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-    .margin({ bottom: DesignConstants.SPACING.MD })
+    // 行不再自带卡片样式：分组外框/行间分隔线由 ListGroup 承担
+    // （原为每行白卡 + 圆角 + elevatedShadow，连续条目叠成一摞浮块）
   }
 
   @Builder
@@ -712,11 +722,19 @@ export struct GroupPage {
         EmptyState({ icon: AppIcon.EMPTY, message: '暂无待处理申请' }).layoutWeight(1)
       } else {
         List() {
-          LazyForEach(this.applicationsDataSource, (application: GroupApplicationItem) => {
-            ListItem() {
-              this.buildMyApplicationItem(application)
-            }
-          }, (application: GroupApplicationItem) => application.application_id)
+          ListItemGroup() {
+            LazyForEach(this.applicationsDataSource, (application: GroupApplicationItem) => {
+              ListItem() {
+                this.buildMyApplicationItem(application)
+              }
+            }, (application: GroupApplicationItem) => application.application_id)
+          }
+          .divider({
+            strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+            color: this.getCurrentThemePalette().borderColor,
+            startMargin: DesignConstants.SPACING.MD,
+            endMargin: DesignConstants.SPACING.MD
+          })
 
           if (this.applicationsLoadingMore) {
             ListItem() {
@@ -729,6 +747,13 @@ export struct GroupPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .cachedCount(5)
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        // 分组外框（ListGroup bordered 契约）：唯一一层白卡 + 发丝描边 + surfaceShadow；
+        // 行本身不再带卡片样式，行间靠 ListItemGroup.divider
+        .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+        .shadow(this.getCurrentThemePalette().surfaceShadow)
         .onReachEnd(() => { this.loadMoreMyApplications(); })
       }
     }
@@ -788,21 +813,25 @@ export struct GroupPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-    .margin({ bottom: DesignConstants.SPACING.MD })
+    // 同 buildMyInviteItem：行级卡片样式收敛到 ListGroup 容器
   }
 
   @Builder
   private buildGroupList() {
     List() {
-      LazyForEach(this.groupsDataSource, (group: GroupItem) => {
-        ListItem() {
-          this.buildGroupCard(group)
-        }
-      }, (group: GroupItem) => group.group?.group_id ?? '')
+      ListItemGroup() {
+        LazyForEach(this.groupsDataSource, (group: GroupItem) => {
+          ListItem() {
+            this.buildGroupCard(group)
+          }
+        }, (group: GroupItem) => group.group?.group_id ?? '')
+      }
+      .divider({
+        strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+        color: this.getCurrentThemePalette().borderColor,
+        startMargin: DesignConstants.SPACING.LG,
+        endMargin: DesignConstants.SPACING.LG
+      })
       if (this.isLoadingMore) {
         ListItem() {
           LoadingMoreIndicator()
@@ -897,10 +926,8 @@ export struct GroupPage {
       top: DesignConstants.SPACING.LG,
       bottom: DesignConstants.SPACING.LG
     })
-    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
-    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-    .margin({ bottom: DesignConstants.SPACING.MD })
+    // 行级卡片样式（圆角 + elevatedShadow + 白底 + 行间距）已移除：
+    // 外框与投影归分组容器，行间靠 ListItemGroup.divider
     .alignItems(VerticalAlign.Center)
     // 按压缩放（消费 pressedGroupId 状态；原状态只写不读，卡片点击零按压反馈）
     .scale(this.pressedGroupId === group.group.group_id ?

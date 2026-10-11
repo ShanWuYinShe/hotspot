@@ -875,10 +875,11 @@ export struct MomentsFeedPage {
       .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-    .shadow(this.getCurrentThemePalette().controlShadow)
+    // 静态内容卡投影收敛到 surfaceShadow（白卡档）：controlShadow 是菜单/浮层档
+    .shadow(this.getCurrentThemePalette().surfaceShadow)
     .onClick(() => { this.openGroupDetail(group); })
   }
 

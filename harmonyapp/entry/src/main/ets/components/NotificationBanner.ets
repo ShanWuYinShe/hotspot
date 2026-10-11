@@ -94,7 +94,7 @@ export struct NotificationBanner {
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-    .shadow(this.getPalette().elevatedShadow)
+    .shadow(this.getPalette().surfaceShadow)
     // 整卡按压反馈（对齐 tap-97 语义）
     .scale(this.isPressed ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :

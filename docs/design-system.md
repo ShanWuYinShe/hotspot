@@ -192,9 +192,17 @@
 | accent 实底图标钮（SurfaceIconButton primary） | `surfaceShadow` | `elevatedShadow` |
 | 未加入群组/未关注/发布等可点 accent 控件 | `surfaceShadow` | `elevatedShadow` |
 | FAB | `elevatedShadow`（对齐前端 `--cst-elevation-fab` 中性投影） | — |
-| 白卡/统计卡/徽章 | `surfaceShadow` | — |
+| 白卡/统计卡/徽章/**列表分组容器**（ListGroup / SettingsSectionCard） | `surfaceShadow` | — |
+| 列表行（分组内的行） | **无投影**（层级由分组容器 + 发丝分隔线承担） | — |
 | 选中胶囊（TabsPillGroup） | `controlShadow`（hover 增量走底色） | — |
 | 输入框聚焦 | `surfaceShadow` + 边框加深（不画光晕） | — |
+| 菜单/浮层（NotificationCenter、sheet 内浮钮） | `controlShadow` | — |
+| 静态内容卡（登录卡/表单区块/提示 banner/空态卡/骨架卡） | `surfaceShadow` | — |
+
+> **档位纪律（2026-10-11 修正）**：`elevatedShadow`（radius 24~44 / offsetY 8~12）**只允许**
+> 出现在 FAB、hover/按压抬档、以及桌面外壳（DesktopLayout 侧栏/主面板）三类场景。
+> 历史实现里 `AppThemeVisuals` 把「白卡/hero 卡/列表行/统计卡」的静态投影也取成了
+> `elevatedShadow`，是「所有页面内容都像悬浮卡片」的根因；已全部收敛到 `surfaceShadow`。
 
 ---
 
@@ -275,7 +283,8 @@
 | `shared/Avatar` | `SystemAvatar` | 头像（尺寸/形状/状态点） |
 | `forms/SearchInput` | `SearchPageHeader` / `SmartSearchComponent` | 搜索输入 |
 | `navigation/TabBar` / `NavTab` / `RailIcon` | `TabsPillGroup`（默认等宽分段；`freeWidth` 形态对齐前端胶囊行，`TabItem.count` 对齐角标） / `PhoneLayout` 底部导航 | 分类/导航 Tab |
-| `list/ListItem` / `ListContainer` | `SystemCard`（listItem 变体）/ `SettingsEntryRow` | 列表行（行级卡片禁止规则同前端） |
+| `list/ListContainer`（bordered / embedded） | `components/ListGroup`（`bordered` 开关）+ `ListRowDivider` / `ListItemGroup.divider` | 列表**分组容器**：唯一一层白卡外框 + 行间发丝分隔线；行本身禁止再叠边框/圆角/投影（同前端 ListContainer 契约） |
+| `list/ListItem` | `SettingsEntryRow` / `SettingsToggleRow` / `GroupMemberRow` 等行组件 | 列表行：只写 padding + 按压反馈，不写背景/圆角/投影 |
 | `overlays/SheetShell` / `ui/dialog` | `SystemDialog` / `bindSheet` | 弹层/抽屉 |
 | `forms/TagPill` | `TabsPillGroup` chip / `FILTER_CHIP_HEIGHT` | 标签/筛选胶囊 |
 | `data-display/EmptyState` 加载态 | `SystemLoadingView` / `Skeleton` | 加载/骨架 |

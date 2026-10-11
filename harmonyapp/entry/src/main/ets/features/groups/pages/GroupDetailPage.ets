@@ -62,6 +62,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { ListRowDivider } from '../../../components/ListGroup';
 import { ErrorCode } from '../../../core/constants/ErrorCodes';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
@@ -1581,6 +1582,9 @@ export struct GroupDetailPage {
 
         // 使用 List 布局（扁平风格）
         List() {
+          // 简介/成员/操作/公告统一收在一个分组容器里（外框 + 行间分隔线由 ListItemGroup
+          // 承担，行本身不再各自带白卡/圆角/投影）
+          ListItemGroup() {
           // Tab 0 简介区（封面已承载群名/分类，元信息行已承载成员/在线/距离；
           //    位置名以 MapPin 行展示，对齐前端 users/[userId] 位置行模式）
           if (this.activeTab === 0) {
@@ -1612,11 +1616,7 @@ export struct GroupDetailPage {
             .alignItems(HorizontalAlign.Start)
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .shadow(this.getCurrentThemePalette().elevatedShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .margin({ bottom: DesignConstants.SPACING.MD })
+          // 行级卡片样式移除：外框/分隔线由 ListItemGroup 承担
           }
 
           // 四宫格数据卡（对齐前端 groups/[groupId] 简介区 2×2 stats：成员/在线/距你/分类）
@@ -1653,11 +1653,7 @@ export struct GroupDetailPage {
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
               top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .shadow(this.getCurrentThemePalette().elevatedShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .margin({ bottom: DesignConstants.SPACING.MD })
+          // 行级卡片样式移除：外框/分隔线由 ListItemGroup 承担
           // 整卡可点（扩大热区，chevron 仅作视觉指示）+ 按压反馈（对齐 tap-97 语义）
           .scale(this.pressedEntryKey === 'members' ?
             { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
@@ -1702,11 +1698,7 @@ export struct GroupDetailPage {
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
                 top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.LG)
-            .shadow(this.getCurrentThemePalette().elevatedShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .margin({ bottom: DesignConstants.SPACING.MD })
+            // 行级卡片样式移除：外框/分隔线由 ListItemGroup 承担
             // 整卡可点（扩大热区，chevron 仅作视觉指示）+ 按压反馈（对齐 tap-97 语义）
             .scale(this.pressedEntryKey === 'applications' ?
               { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
@@ -1826,10 +1818,6 @@ export struct GroupDetailPage {
              }
              .padding(DesignConstants.SPACING.LG)
           }
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .shadow(this.getCurrentThemePalette().elevatedShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
           // Tab 2 公告（对齐前端 AnnouncementsList：标题/内容/时间/置顶徽章；
           // owner/admin 可发布/编辑/删除，对齐前端 canManageAnnouncements 门控）
@@ -1859,7 +1847,12 @@ export struct GroupDetailPage {
                   .padding({ top: DesignConstants.SPACING.XXL, bottom: DesignConstants.SPACING.XXL })
               }
             } else {
-              ForEach(this.announcements, (item: GroupAnnouncementItem) => {
+              ForEach(this.announcements, (item: GroupAnnouncementItem, index: number) => {
+                if (index > 0) {
+                  ListItem() {
+                    ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
+                  }
+                }
                 ListItem() {
                   Column({ space: DesignConstants.SPACING.XS }) {
                     Row({ space: DesignConstants.SPACING.XS }) {
@@ -1916,11 +1909,7 @@ export struct GroupDetailPage {
                   .alignItems(HorizontalAlign.Start)
                   .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
                 }
-                .backgroundColor(this.getSurfaceBackground())
-                .borderRadius(DesignConstants.RADIUS.LG)
-                .shadow(this.getCurrentThemePalette().elevatedShadow)
-                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                .margin({ bottom: DesignConstants.SPACING.MD })
+                // 行级卡片样式移除
               }, (item: GroupAnnouncementItem) => item.announcement_id)
 
               // 删除公告二次确认（危险操作统一样式，对齐前端 ConfirmDialog 语义）
@@ -1940,6 +1929,13 @@ export struct GroupDetailPage {
               }
             }
           }
+          }  // 简介分组结束
+          .divider({
+            strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+            color: this.getSurfaceBorder(),
+            startMargin: DesignConstants.SPACING.LG,
+            endMargin: DesignConstants.SPACING.LG
+          })
 
         }
         .width('100%')
@@ -1947,8 +1943,15 @@ export struct GroupDetailPage {
         .scrollBar(BarState.Off)
         .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
         .padding({
-          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
+          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, DesignConstants.SPACING.LG)
         })
+        // 分组外框（唯一一层白卡 + 发丝描边 + surfaceShadow）：行不再各自带卡片
+        .backgroundColor(this.getSurfaceBackground())
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+        .shadow(this.getCurrentThemePalette().surfaceShadow)
         .transition(
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))

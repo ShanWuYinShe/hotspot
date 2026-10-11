@@ -246,6 +246,7 @@ export struct AccountsPage {
         })
       } else {
         List() {
+          ListItemGroup() {
           ForEach(this.accounts, (acc: AuthData) => {
             ListItem() {
               Row({ space: DesignConstants.SPACING.MD }) {
@@ -310,25 +311,32 @@ export struct AccountsPage {
               .width('100%')
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.LG)
-            .shadow(this.getCurrentThemePalette().elevatedShadow)
-            // 边框只留给当前账号做 accent 选中指示；非当前账号无描边，
-            // 避免多账号时整页变成「一排框」
+            // 行级卡片样式移除（外框/分隔线由 ListItemGroup 承担）；
+            // 当前账号的 accent 选中指示改由行左侧色条表达
             .border({
-              width: this.currentUserId === acc.user_id ?
-              DesignConstants.BORDER_WIDTH.REGULAR : 0,
-              color: this.getCurrentThemePalette().accentBackground
+              width: { left: this.currentUserId === acc.user_id ? DesignConstants.BORDER_WIDTH.HEAVY : 0 },
+              color: { left: this.getCurrentThemePalette().accentBackground }
             })
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD3 })
           }, (acc: AuthData) => acc.user_id)
+          }
+          .divider({
+            strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+            color: this.getCurrentThemePalette().borderColor,
+            startMargin: DesignConstants.SPACING.LG,
+            endMargin: DesignConstants.SPACING.LG
+          })
         }
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Off)
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        .backgroundColor(this.getSurfaceBackground())
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+        .shadow(this.getCurrentThemePalette().surfaceShadow)
         .padding({
           top: DesignConstants.SPACING.SM,
-          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, DesignConstants.SPACING.SM)
         })
         .transition(
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })

@@ -71,7 +71,7 @@ export struct SystemLoadingView {
       .borderRadius(DesignConstants.SHAPE.HERO_CARD)
       .backgroundColor(this.getPalette().surfaceBackground)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
-      .shadow(this.getPalette().elevatedShadow)
+      .shadow(this.getPalette().surfaceShadow)
     }
     .width('100%')
     .height('100%')

@@ -131,7 +131,7 @@ export struct ProfileDataSection {
       .width('100%')
       .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceBackground)
       .borderRadius(DesignConstants.SHAPE.CARD)
-      .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).elevatedShadow)
+      .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceShadow)
       .clip(true)
     }
     .width('100%')

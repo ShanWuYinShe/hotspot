@@ -154,7 +154,10 @@ export class AppThemeVisuals {
       backgroundColor: palette.surfaceBackground,
       borderColor: palette.borderColor,
       borderWidth: 1,
-      shadow: palette.elevatedShadow,
+      // 白卡静态投影 = surfaceShadow（design-system.md §8.1「白卡/统计卡/徽章」登记档）。
+      // 原用 elevatedShadow（radius 24~44 / offsetY 8~12）是「所有内容都像悬浮」的根因：
+      // elevatedShadow 的登记用途只有 FAB 与 hover/按压抬档，静态白卡取它会让整屏卡片浮起。
+      shadow: palette.surfaceShadow,
       borderRadius: palette.visuals.shape.surfaceCard,
       padding: palette.visuals.metrics.cardPadding
     };
@@ -173,7 +176,8 @@ export class AppThemeVisuals {
       backgroundColor: palette.surfaceElevated,
       borderColor: palette.floatingBorderColor,
       borderWidth: 1,
-      shadow: palette.elevatedShadow,
+      // hero/弹层卡：画布契约要求「白卡 + 发丝描边，不加光晕」，静态投影同样收敛 surfaceShadow
+      shadow: palette.surfaceShadow,
       borderRadius: palette.visuals.shape.heroCard,
       padding: palette.visuals.metrics.heroPadding
     };
@@ -192,7 +196,10 @@ export class AppThemeVisuals {
       backgroundColor: palette.surfaceBackground,
       borderColor: palette.borderColor,
       borderWidth: 1,
-      shadow: palette.elevatedShadow,
+      // 列表行**不再是独立卡片**：本样式只提供圆角/内边距档位，
+      // 外框与投影由分组容器 ListGroup 统一承担（design-system.md §13 列表行契约）。
+      // 保留 surfaceShadow 仅为裸用单行卡的极端场景兜底，禁止再取 elevatedShadow。
+      shadow: palette.surfaceShadow,
       borderRadius: palette.visuals.shape.listItem,
       padding: palette.visuals.metrics.cardPadding,
       minHeight: palette.visuals.metrics.listItemMinHeight
@@ -275,7 +282,7 @@ export class AppThemeVisuals {
       backgroundColor: baseStyle.backgroundColor,
       borderColor: baseStyle.borderColor,
       borderWidth: baseStyle.borderWidth,
-      shadow: palette.elevatedShadow,
+      shadow: palette.surfaceShadow,
       borderRadius: palette.visuals.shape.heroCard,
       padding: palette.visuals.metrics.metricCardPadding,
       minHeight: palette.visuals.metrics.profileMetricMinHeight,
@@ -321,7 +328,8 @@ export class AppThemeVisuals {
         backgroundColor: palette.quickActionBackgroundColor,
         borderColor: palette.floatingBorderColor,
         borderWidth: 1,
-        shadow: palette.elevatedShadow,
+        // 个人中心快捷操作瓦片：静态白卡档（surfaceShadow），不再按弹层档浮起
+        shadow: palette.surfaceShadow,
         borderRadius: DesignConstants.SHAPE.COMPACT_CARD,
         padding: DesignConstants.SPACING.MD,
         iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM_PLUS,
@@ -332,7 +340,7 @@ export class AppThemeVisuals {
         backgroundColor: palette.surfaceElevated,
         borderColor: palette.floatingBorderColor,
         borderWidth: 1,
-        shadow: palette.elevatedShadow,
+        shadow: palette.surfaceShadow,
         borderRadius: palette.visuals.shape.heroCard,
         padding: palette.visuals.metrics.cardPadding,
         iconWrapperSize: 40,

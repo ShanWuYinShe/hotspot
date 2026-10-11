@@ -12,7 +12,6 @@ import {
   RelatedUserItem
 } from '../../../core/types/api';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemButton } from '../../../components/SystemButton';
@@ -21,6 +20,7 @@ import { SystemToggle } from '../../../components/SystemToggle';
 import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { ListGroup, ListRowDivider } from '../../../components/ListGroup';
 
 export interface SettingsEntryItem {
   icon: AppIcon;
@@ -110,16 +110,18 @@ export struct SettingsSectionCard {
           .width('100%')
       }
 
-      // 画廊白卡：surfaceBackground 白卡 + 发丝描边 + 主题投影（画布契约样板）；
-      // 分组感由卡片承担、行间仍用 hairline 分隔线
+      // 画廊白卡：surfaceBackground 白卡 + 发丝描边 + 静态投影（画布契约样板）；
+      // 分组感由容器承担、行间用 hairline 分隔线，行本身不得再叠第二层卡片。
+      // 投影用 surfaceShadow（白卡档）：原 elevatedShadow 是弹层/FAB 档，
+      // 会让每个设置分组在页面上「浮起」，与前端 ListContainer bordered 的观感不一致。
       Column({ space: 0 }) {
         this.content();
       }
       .width('100%')
       .backgroundColor(this.getPalette().surfaceBackground)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-      .borderRadius(DesignConstants.SHAPE.CARD)
-      .shadow(this.getPalette().elevatedShadow)
+      .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+      .shadow(this.getPalette().surfaceShadow)
       .clip(true)
     }
     .width('100%')
@@ -202,10 +204,6 @@ export struct SettingsEntryRow {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
-  private getListItemStyle() {
-    return AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId);
-  }
-
   build() {
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
@@ -248,8 +246,9 @@ export struct SettingsEntryRow {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD3, bottom: DesignConstants.SPACING.MD3 })
-    .backgroundColor(this.getListItemStyle().backgroundColor)
-    .borderRadius(this.getListItemStyle().borderRadius)
+    // 行只保留按压填充：分组外框与行间分隔线由 SettingsSectionCard（ListGroup 契约）承担。
+    // 原为行级白卡背景 + 圆角（getListItemCardStyle），导致「一行一张浮卡」。
+    .backgroundColor(this.isPressed ? this.getPalette().surfaceSubtle : DesignConstants.COLOR.TRANSPARENT)
     // 整行按压反馈（对齐 tap-97 语义）
     .scale(this.isPressed ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
@@ -316,10 +315,6 @@ export struct SettingsToggleRow {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
-  private getListItemStyle() {
-    return AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId);
-  }
-
   build() {
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
@@ -360,8 +355,7 @@ export struct SettingsToggleRow {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD3, bottom: DesignConstants.SPACING.MD3 })
-    .backgroundColor(this.getListItemStyle().backgroundColor)
-    .borderRadius(this.getListItemStyle().borderRadius)
+    // 同 SettingsEntryRow：行不再自带卡片背景/圆角，容器（SettingsSectionCard）承担分组框
     .onClick(() => {
       if (!this.pending) {
         this.onToggle(!this.isOn);
@@ -544,7 +538,10 @@ export struct AnnouncementSummaryCard {
       .width('100%')
 
       if (this.items.length > 0) {
-        ForEach(this.maxItems > 0 ? this.items.slice(0, this.maxItems) : this.items, (item: SystemAnnouncementItem) => {
+        ForEach(this.maxItems > 0 ? this.items.slice(0, this.maxItems) : this.items, (item: SystemAnnouncementItem, index: number) => {
+          if (index > 0) {
+            ListRowDivider({ startMargin: DesignConstants.SPACING.MD, endMargin: DesignConstants.SPACING.MD })
+          }
           Column({ space: DesignConstants.SPACING.SM2 }) {
             Row({ space: DesignConstants.SPACING.SM }) {
               Text(item.title)
@@ -577,10 +574,8 @@ export struct AnnouncementSummaryCard {
               .width('100%')
           }
           .width('100%')
-          .padding(DesignConstants.SPACING.MD)
-          .backgroundColor(this.getPalette().surfaceElevated)
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
+          .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+          // 嵌套白卡移除：条目改为「行 + 分隔线」，避免卡中卡
         }, (item: SystemAnnouncementItem) => item.announcement_id)
       }
     }
@@ -621,14 +616,15 @@ export struct SupportConfigCard {
 
       if (buildSupportLinks(this.config).length > 0) {
         Column({ space: DesignConstants.SPACING.SM }) {
-          ForEach(buildSupportLinks(this.config), (item: SupportLinkItem) => {
+          ForEach(buildSupportLinks(this.config), (item: SupportLinkItem, index: number) => {
+            if (index > 0) {
+              ListRowDivider({ startMargin: 0, endMargin: 0 })
+            }
             SettingsInfoLine({ label: item.title, value: item.value })
           }, (item: SupportLinkItem) => `${item.title}-${item.value}`)
         }
         .width('100%')
-        .padding(DesignConstants.SPACING.MD)
-        .backgroundColor(this.getPalette().surfaceElevated)
-        .borderRadius(DesignConstants.RADIUS.LG)
+        // 嵌套白卡移除：信息行改用分隔线分组
       }
     }
     .width('100%')
@@ -715,7 +711,10 @@ export struct SessionListSection {
           .fontColor(this.getPalette().textSecondary)
           .width('100%')
       } else {
-        ForEach(this.sessions, (item: SessionItem) => {
+        ForEach(this.sessions, (item: SessionItem, index: number) => {
+          if (index > 0) {
+            ListRowDivider({ startMargin: DesignConstants.SPACING.MD, endMargin: DesignConstants.SPACING.MD })
+          }
           Row({ space: DesignConstants.SPACING.MD }) {
             Column({ space: DesignConstants.SPACING.XS }) {
               Text(formatSessionLabel(item))
@@ -749,10 +748,8 @@ export struct SessionListSection {
             }
           }
           .width('100%')
-          .padding(DesignConstants.SPACING.MD)
-          .backgroundColor(this.getPalette().surfaceElevated)
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
+          .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+          // 嵌套白卡移除
         }, (item: SessionItem) => item.session_id)
       }
     }
@@ -843,9 +840,9 @@ export struct RelationshipListSection {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(this.getPalette().surfaceSubtle)
-    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+    // 关系列表行同样收敛为「行 + 分隔线」：原为每行 surfaceSubtle 圆角卡 + 描边，
+    // 连续条目会形成一叠浮块；分组感交给外层容器（ListGroup 契约）。
+    .backgroundColor(this.pressedMemberKey === userId ? this.getPalette().surfaceSubtle : DesignConstants.COLOR.TRANSPARENT)
   }
 
   build() {
@@ -891,35 +888,50 @@ export struct RelationshipListSection {
         .padding({ top: DesignConstants.SPACING.XXL, bottom: DesignConstants.SPACING.XXL })
       }
 
-      if (this.friends.length > 0) {
-        ForEach(this.friends, (item: RelatedUserItem) => {
-          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at ?? undefined)}`, item.user.presence_status === 'online')
-        }, (item: RelatedUserItem) => item.user.user.user_id)
-      }
+      // 分组容器承担外框 + 行间分隔线（ListGroup 契约），行本身不再自带卡片样式
+      ListGroup({ groupPadding: DesignConstants.SPACING.XS }) {
+        if (this.friends.length > 0) {
+          ForEach(this.friends, (item: RelatedUserItem, index: number) => {
+            if (index > 0) {
+              ListRowDivider({ startMargin: DesignConstants.SPACING.MD, endMargin: DesignConstants.SPACING.MD })
+            }
+            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at ?? undefined)}`, item.user.presence_status === 'online')
+          }, (item: RelatedUserItem) => item.user.user.user_id)
+        }
 
-      if (this.following.length > 0) {
-        ForEach(this.following, (item: RelatedUserItem) => {
-          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online')
-        }, (item: RelatedUserItem) => item.user.user.user_id)
-      }
+        if (this.following.length > 0) {
+          ForEach(this.following, (item: RelatedUserItem, index: number) => {
+            if (index > 0 || this.friends.length > 0) {
+              ListRowDivider({ startMargin: DesignConstants.SPACING.MD, endMargin: DesignConstants.SPACING.MD })
+            }
+            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online')
+          }, (item: RelatedUserItem) => item.user.user.user_id)
+        }
 
-      if (this.followers.length > 0) {
-        ForEach(this.followers, (item: RelatedUserItem) => {
-          this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注你于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online')
-        }, (item: RelatedUserItem) => item.user.user.user_id)
-      }
+        if (this.followers.length > 0) {
+          ForEach(this.followers, (item: RelatedUserItem, index: number) => {
+            if (index > 0 || this.friends.length > 0 || this.following.length > 0) {
+              ListRowDivider({ startMargin: DesignConstants.SPACING.MD, endMargin: DesignConstants.SPACING.MD })
+            }
+            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注你于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online')
+          }, (item: RelatedUserItem) => item.user.user.user_id)
+        }
 
-      if (this.blocked.length > 0) {
-        ForEach(this.blocked, (item: BlockedUserItem) => {
-          this.buildUserLine(
-            item.user.user_id,
-            item.user.nickname,
-            item.reason ? `原因：${item.reason}` : `拉黑于 ${formatDateTime(item.blocked_at)}`,
-            false,
-            '解除',
-            () => this.unblockUserAction(item.user.user_id)
-          )
-        }, (item: BlockedUserItem) => item.user.user_id)
+        if (this.blocked.length > 0) {
+          ForEach(this.blocked, (item: BlockedUserItem, index: number) => {
+            if (index > 0 || this.friends.length > 0 || this.following.length > 0 || this.followers.length > 0) {
+              ListRowDivider({ startMargin: DesignConstants.SPACING.MD, endMargin: DesignConstants.SPACING.MD })
+            }
+            this.buildUserLine(
+              item.user.user_id,
+              item.user.nickname,
+              item.reason ? `原因：${item.reason}` : `拉黑于 ${formatDateTime(item.blocked_at)}`,
+              false,
+              '解除',
+              () => this.unblockUserAction(item.user.user_id)
+            )
+          }, (item: BlockedUserItem) => item.user.user_id)
+        }
       }
     }
     .width('100%')

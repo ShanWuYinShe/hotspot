@@ -171,6 +171,6 @@ export struct ProfileIdentityCard {
     .padding(DesignConstants.SPACING.LG2)
     .borderRadius(DesignConstants.SHAPE.CARD)
     .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceBackground)
-    .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).elevatedShadow)
+    .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceShadow)
   }
 }

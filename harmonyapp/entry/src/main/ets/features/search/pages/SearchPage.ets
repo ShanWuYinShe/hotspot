@@ -16,6 +16,7 @@ import { UserRelationState, sumReactionCounts } from '../../../core/state/Intera
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { Pressable } from '../../../components/Pressable';
 import { SearchSuggestRow, SearchMomentRow } from '../components/SearchRows';
+import { ListRowDivider } from '../../../components/ListGroup';
 import { EmptyState } from '../../../components/EmptyState';
 import { SearchPageHeader } from '../../../components/SearchPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -631,7 +632,8 @@ export struct SearchPage {
         fillMode: true
       })
     } else {
-      List({ space: DesignConstants.SPACING.MD2 }) {
+      List() {
+        ListItemGroup() {
         ForEach(this.topicResults, (tag: string) => {
           ListItem() {
             Pressable({ onPress: () => this.applyKeywordAndSearch(tag) }) {
@@ -665,13 +667,17 @@ export struct SearchPage {
               }
               .width('100%')
               .padding(DesignConstants.SPACING.MD)
-              .backgroundColor(this.getSurfaceBackground())
-              .borderRadius(DesignConstants.SHAPE.CARD)
-              .shadow(this.getCurrentThemePalette().surfaceShadow)
-              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+              // 行不再自带卡片样式：分组外框与行间分隔线由 ListItemGroup 承担
             }
           }
         }, (tag: string) => `topic-${tag}`)
+        }
+        .divider({
+          strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+          color: this.getSurfaceBorder(),
+          startMargin: DesignConstants.SPACING.MD,
+          endMargin: DesignConstants.SPACING.MD
+        })
       }
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
@@ -720,7 +726,10 @@ export struct SearchPage {
               .width('100%')
               .padding(DesignConstants.SPACING.LG)
           } else {
-            ForEach(this.recentSearches, (item: string) => {
+            ForEach(this.recentSearches, (item: string, index: number) => {
+              if (index > 0) {
+                ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
+              }
               Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
                 Row({ space: DesignConstants.SPACING.MD }) {
                   LucideIcon({
@@ -752,8 +761,9 @@ export struct SearchPage {
           }
         }
         .width('100%')
+        // 分组容器（唯一一层白卡 + 发丝描边 + surfaceShadow），行间走 ListRowDivider
         .backgroundColor(this.getSurfaceBackground())
-        .borderRadius(DesignConstants.SHAPE.CARD)
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
@@ -762,6 +772,9 @@ export struct SearchPage {
         Column() {
           this.buildDiscoveryCard('正在关注')
           ForEach(this.discoveryHot.slice(0, 5), (item: string, index: number) => {
+            if (index > 0) {
+              ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
+            }
             Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
               Row({ space: DesignConstants.SPACING.MD }) {
                 Text(String(index + 1))
@@ -787,7 +800,7 @@ export struct SearchPage {
         }
         .width('100%')
         .backgroundColor(this.getSurfaceBackground())
-        .borderRadius(DesignConstants.SHAPE.CARD)
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         }
@@ -824,7 +837,7 @@ export struct SearchPage {
         }
         .width('100%')
         .backgroundColor(this.getSurfaceBackground())
-        .borderRadius(DesignConstants.SHAPE.CARD)
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         }
@@ -855,14 +868,22 @@ export struct SearchPage {
         fillMode: true
       })
     } else {
-      List({ space: DesignConstants.SPACING.MD2 }) {
-        ForEach(this.userResults, (item: UserItem) => {
-          ListItem() {
-            this.buildUserItem(item)
-          }
-        }, (item: UserItem) => {
-          const uid = item.user?.user_id ?? '';
-          return uid + '_f' + (this.userStateMap[uid]?.relation?.is_following ?? false) + '_p' + (this.userActionPendingIds.indexOf(uid) >= 0);
+      List() {
+        ListItemGroup() {
+          ForEach(this.userResults, (item: UserItem) => {
+            ListItem() {
+              this.buildUserItem(item)
+            }
+          }, (item: UserItem) => {
+            const uid = item.user?.user_id ?? '';
+            return uid + '_f' + (this.userStateMap[uid]?.relation?.is_following ?? false) + '_p' + (this.userActionPendingIds.indexOf(uid) >= 0);
+          })
+        }
+        .divider({
+          strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+          color: this.getSurfaceBorder(),
+          startMargin: DesignConstants.SPACING.MD,
+          endMargin: DesignConstants.SPACING.MD
         })
       }
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
@@ -884,16 +905,23 @@ export struct SearchPage {
       })
     } else {
       List() {
-        ForEach(this.groupResults, (item: GroupItem) => {
-          ListItem() {
-            this.buildGroupItem(item)
-          }
-        }, (item: GroupItem) => {
-          const gid = item.group?.group_id ?? '';
-          return gid + '_j' + (item.viewer_state != null) + '_p' + (this.groupActionPendingIds.indexOf(gid) >= 0);
+        ListItemGroup() {
+          ForEach(this.groupResults, (item: GroupItem) => {
+            ListItem() {
+              this.buildGroupItem(item)
+            }
+          }, (item: GroupItem) => {
+            const gid = item.group?.group_id ?? '';
+            return gid + '_j' + (item.viewer_state != null) + '_p' + (this.groupActionPendingIds.indexOf(gid) >= 0);
+          })
+        }
+        .divider({
+          strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+          color: this.getSurfaceBorder(),
+          startMargin: DesignConstants.SPACING.MD,
+          endMargin: DesignConstants.SPACING.MD
         })
       }
-      .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
       .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Off)
@@ -1059,10 +1087,8 @@ export struct SearchPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.SHAPE.CARD)
-    .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    // 行级卡片样式移除：分组外框与行间分隔线由 ListItemGroup 承担
+    // （原每行白卡 + 圆角 + 投影 + 描边，一屏结果会叠成多张浮卡）
   }
 
   @Builder
@@ -1147,10 +1173,7 @@ export struct SearchPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.SHAPE.CARD)
-    .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+    // 同 buildUserItem：行级卡片样式移除
   }
 
   @Builder
@@ -1208,7 +1231,7 @@ export struct SearchPage {
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.LG)
     .clip(true)
-    .shadow(this.getCurrentThemePalette().elevatedShadow)
+    .shadow(this.getCurrentThemePalette().surfaceShadow)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .onClick(() => {
       this.openMomentDetail(item);

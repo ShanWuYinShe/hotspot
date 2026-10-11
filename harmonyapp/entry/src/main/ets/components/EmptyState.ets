@@ -108,7 +108,7 @@ export struct EmptyState {
         : { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
       .shadow(this.bare
         ? { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 }
-        : this.getPalette().elevatedShadow)
+        : this.getPalette().surfaceShadow)
     }
     .width('100%')
     .height('100%')

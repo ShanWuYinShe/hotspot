@@ -395,7 +395,7 @@ export struct MomentFeedCard {
     .width('100%')
     .borderRadius(DesignConstants.RADIUS.LG)
     .backgroundColor(this.getPalette().surfaceBackground)
-    .shadow(this.getPalette().elevatedShadow)
+    .shadow(this.getPalette().surfaceShadow)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .scale(this.isPressed
       ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }

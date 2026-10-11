@@ -1053,7 +1053,9 @@ export struct MessagePage {
       .backgroundColor(item.unreadCount > 0 ? this.getCurrentThemePalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
     }
     .width('100%')
-    // 对齐前端 chat-list padding（10px 16px）+ radius-md
+    // 行内 padding（对齐前端 chat-list 10px/16px）；圆角只在按压/选中态出现，
+    // 常态背景由 getChatItemBackground 返回透明（对齐前端 ChatListBody 的
+    // 「无外框 + divide-y 平铺列表」），不再每行自带一块圆角底色
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,

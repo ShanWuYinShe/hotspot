@@ -446,7 +446,7 @@ export struct CreateGroupPage {
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.LG)
-            .shadow(this.getCurrentThemePalette().elevatedShadow)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
 
@@ -508,7 +508,7 @@ export struct CreateGroupPage {
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.LG)
-            .shadow(this.getCurrentThemePalette().elevatedShadow)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
 
@@ -556,7 +556,7 @@ export struct CreateGroupPage {
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.LG)
-            .shadow(this.getCurrentThemePalette().elevatedShadow)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
 
@@ -701,7 +701,7 @@ export struct CreateGroupPage {
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.LG)
-            .shadow(this.getCurrentThemePalette().elevatedShadow)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
 

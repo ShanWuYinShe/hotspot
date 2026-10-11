@@ -26,6 +26,21 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   - 安全区由 SystemPageHeader 内聚（自带 `@StorageLink('safeAreaTop')` + `expandSafeArea`），页面无需重复写。
   - 内联搜索框头部 → `SearchPageHeader`；浮动卡片+头像头部 → `ChatPageHeader`。
 - **页面内容栏（PageShellContainer）**：强制使用；档位数值（form/narrow/default/wide + feed 两档）见 design-system.md 第 12 节。
+- **列表分组容器（ListGroup，强制）**：任何「可重复的同类条目集合」（设置项、关系列表、搜索结果、群组/分享/订阅/账号列表、公告列表）一律走
+  `components/ListGroup`（`bordered` 默认 true = 开放页面区域的唯一一层分组外框卡）+ 行间
+  `ListRowDivider` / `ListItemGroup.divider`，**禁止给每一行加边框/圆角/投影**（那就是「一行一张浮卡」，
+  整屏看起来所有内容都在漂浮）。`bordered=false` 用于嵌入面板/Sheet/侧栏内的集合。
+  - 判定依据（官方规范原文）：M3 Cards guidelines「Don't force content into cards when spacing,
+    headlines, or dividers would create a simpler visual hierarchy」；M3 Lists「Use gaps for
+    contained lists / Limit dividers to uncontained lists」；Apple HIG Layout「negative space,
+    container shapes, or separator lines」三选一、HIG Materials「Don't use Liquid Glass in the
+    content layer」；HarmonyOS `ListItemGroupStyle` 默认就是 NONE（无卡片），卡片是显式开关；
+    NN/g「homogenous items → 标准竖排列表，不要卡片」。
+  - **卡片只留给「单一主题、内容异构、可独立存在」的块**：动态卡（MomentFeedCard / MomentWallCard）、
+    群组封面卡（NearbyImageCard）、统计/仪表盘块、空态卡、页面级 hero 卡。
+  - 分组外框静态投影一律 `surfaceShadow`（白卡档），**禁止 `elevatedShadow`**（弹层/FAB 档）；
+    行本身无投影、无边框、无圆角，只有按压填充（`surfaceSubtle`）。
+  - 设置页专用分组卡 `SettingsSectionCard` 已按同一契约实现，新设置分组直接复用。
 
 ### 页面路由对齐（web → harmony）
 

@@ -115,7 +115,7 @@ export struct ProfileStatsRow {
     .width('100%')
     .borderRadius(DesignConstants.SHAPE.CARD)
     .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceBackground)
-    .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).elevatedShadow)
+    .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceShadow)
     .border({
       width: DesignConstants.BORDER_WIDTH.HAIRLINE,
       color: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor
