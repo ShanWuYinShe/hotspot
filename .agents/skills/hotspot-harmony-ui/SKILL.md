@@ -30,8 +30,10 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   对齐前端 `--cst-page-gutter`）。**禁止**双重留白（容器 gutter + 页面自加 left/right padding，
   会叠成 36~40，与只用容器 gutter 的页面差 16~20vp）；**禁止**用 `noHorizontalPadding: true`
   关掉容器留白再另写一套值。`SystemPageHeader` 只带纵向节奏、不自带横向 padding。
-  - 需要全宽元素（封面图、通栏区）时用 `resolvePageGutter(this.currentBreakpoint)` 取同一 gutter 做**负 margin**
-    抵消（对齐前端 `-mx-[var(--cst-page-gutter)]`）。
+  - **通栏元素的坑（实测 2026-10-11）**：前端用 `-mx-[var(--cst-page-gutter)]` 抵消 gutter，ArkUI **不能照搬**
+    ——子元素 `width('100%')` 相对父内容盒解析，负 margin 只位移不加宽（群详情封面加左右 −20vp
+    后实测仍是 x=70..1186 / 屏宽 1256）。当前约定：封面/hero 与下方内容同宽；确需通栏要把整页改
+    `noHorizontalPadding: true` + 各区块自加 gutter（已登记例外）。
   - **症状对照**：各页正文左边缘不在同一条竖线上、滑动时内容左右边界跳动、页头标题比正文多缩进一截
     ——都是本规则被违反的表现（实测于 2026-10-11：25 个页面里同时存在 16/20/24/32 四套留白）。
 - **页面纵向节奏（强制）**：分区之间 `PAGE_SHELL.SECTION_GAP`(24) 用**底距**且**每个分区都要有（含首块）**；

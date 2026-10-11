@@ -163,9 +163,12 @@
 
 - **禁止**「容器 gutter + 页面自加 padding」双重留白——会叠成 36~40，与只用容器
   gutter 的页面差 16~20vp，各页正文左边缘不在同一条竖线上，滑动时边界跳动。
-- **禁止**用 `noHorizontalPadding: true` 关掉容器留白再另写一套值；确需全宽
-  元素（封面图、通栏区）时用 `resolvePageGutter(breakpoint)` 取同一 gutter 做
-  **负 margin** 抵消（对齐前端 `-mx-[var(--cst-page-gutter)]`）。
+- **禁止**用 `noHorizontalPadding: true` 关掉容器留白再另写一套值。
+- **通栏元素（封面图等）说明**：前端用 `-mx-[var(--cst-page-gutter)]` 抵消 gutter，
+  但 **ArkUI 不能照搬**——子元素 `width('100%')` 是相对**父内容盒**解析的，负 margin 只会
+  位移不会加宽（实测 2026-10-11：群详情封面加左右各 −20vp 后仍是 x=70..1186 / 屏宽 1256）。
+  当前约定：封面/hero 一律与下方内容同宽（收束式 hero），不做通栏；确需通栏须把该页整页改为
+  `noHorizontalPadding: true` + 各区块自加 gutter（已登记例外），或改用 `calc` 宽度。
 - `SystemPageHeader` 只带纵向节奏、**不再自带横向 padding**（此前自带 20 与
   容器 gutter 叠加，页头标题比正文多缩进一截）。
 

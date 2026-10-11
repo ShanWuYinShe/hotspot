@@ -63,7 +63,6 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { ListRowDivider } from '../../../components/ListGroup';
-import { resolvePageGutter } from '../../../components/PageShellContainer';
 import { ErrorCode } from '../../../core/constants/ErrorCodes';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
@@ -1539,16 +1538,15 @@ export struct GroupDetailPage {
           })
         }
         .width('100%')
-        // 按钮行叠在封面之上、与封面同宽 → 负 margin 抵消容器 gutter
-        .margin({
-          left: -resolvePageGutter(this.currentBreakpoint),
-          right: -resolvePageGutter(this.currentBreakpoint),
-          top: this.getHeaderTopPadding()
-        })
+        .margin({ top: this.getHeaderTopPadding() })
       }
       .width('100%')
-      // 通栏封面：负 margin 抵消容器 gutter（对齐前端 -mx-page-gutter）
-      .margin({ left: -resolvePageGutter(this.currentBreakpoint), right: -resolvePageGutter(this.currentBreakpoint) })
+      // 封面与下方 Tab/卡片同宽（都落在容器 gutter 内）。
+      // 注：这里**不能**用「负 margin 抵消 gutter」做通栏——ArkUI 下子元素
+      // width('100%') 相对父内容盒解析，负 margin 只会位移不会加宽，实测仍是
+      // 左右各内缩一个 gutter（本机 2026-10-11 实测：封面 x=70..1186 / 屏宽 1256）。
+      // 真要通栏需把本页改为 noHorizontalPadding + 各区块自加 gutter（已登记例外），
+      // 或改用 calc 宽度；当前选择与下方内容对齐的「收束式 hero」，视觉更一致。
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
