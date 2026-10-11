@@ -29,7 +29,7 @@ services:
       context: ./backend-go
       dockerfile: Dockerfile.dev
       args:
-        GO_VERSION: ${GO_VERSION:-1.26.6}
+        GO_VERSION: ${GO_VERSION:-1.26.9}
         AIR_VERSION: ${AIR_VERSION:-1.67.4}
         GOPROXY: ${GOPROXY:-https://goproxy.cn,direct}
     image: hotspot-backend-dev:latest   # dev 镜像（含 Go SDK + air，热加载）

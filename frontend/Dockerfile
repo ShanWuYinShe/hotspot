@@ -1,8 +1,13 @@
 # ── HotSpot Frontend (SvelteKit SPA) ────────────────────────────────
 # 多阶段构建：生产镜像只保留 adapter-static 产物，通过 compose 共享 volume 挂给 nginx。
 
+# 基础镜像版本:默认值以本仓 deploy/versions.env 为准,由 workwork 的
+# scripts/sync-versions.sh 按跨仓主本校验/刷写(此前用内联 :- 默认值,无法被治理)
+ARG BUN_VERSION=1.3.14
+ARG ALPINE_VERSION=3.24.1
+
 # Stage 1: Build
-FROM oven/bun:${BUN_VERSION:-1.3.14}-alpine AS build
+FROM oven/bun:${BUN_VERSION}-alpine AS build
 WORKDIR /app
 # .npmrc 指定 npmmirror 源（bun.lock 亦为 npmmirror），避免回落 npmjs.org
 COPY package.json bun.lock .npmrc ./
@@ -29,7 +34,7 @@ ENV VITE_AMAP_KEY=${VITE_AMAP_KEY:-}
 RUN bun run build
 
 # Stage 2: Minimal production image（仅持有 SPA 静态产物）
-FROM alpine:${ALPINE_VERSION:-3.24.1}
+FROM alpine:${ALPINE_VERSION}
 
 ARG GIT_VERSION=dev
 ARG GIT_COMMIT=
