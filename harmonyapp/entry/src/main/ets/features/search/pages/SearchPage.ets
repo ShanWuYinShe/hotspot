@@ -681,7 +681,7 @@ export struct SearchPage {
       }
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
       .scrollBar(BarState.Off)
     }
   }
@@ -888,7 +888,7 @@ export struct SearchPage {
       }
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
       .scrollBar(BarState.Off)
     }
   }
@@ -923,7 +923,7 @@ export struct SearchPage {
         })
       }
       .width('100%').height('100%')
-      .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
       .scrollBar(BarState.Off)
     }
   }
@@ -954,7 +954,7 @@ export struct SearchPage {
       .columnsTemplate(isDesktopForm(this.currentBreakpoint) ? '1fr 1fr 1fr' : '1fr 1fr')
       .columnsGap(DesignConstants.SPACING.MD)
       .rowsGap(DesignConstants.SPACING.MD)
-      .padding({ top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
       .cachedCount(6)
     }
   }

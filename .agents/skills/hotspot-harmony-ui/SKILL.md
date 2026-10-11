@@ -26,6 +26,23 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   - 安全区由 SystemPageHeader 内聚（自带 `@StorageLink('safeAreaTop')` + `expandSafeArea`），页面无需重复写。
   - 内联搜索框头部 → `SearchPageHeader`；浮动卡片+头像头部 → `ChatPageHeader`。
 - **页面内容栏（PageShellContainer）**：强制使用；档位数值（form/narrow/default/wide + feed 两档）见 design-system.md 第 12 节。
+- **页面横向 gutter（唯一来源，强制）**：横向留白**只能**由 `PageShellContainer` 提供（手机 20 / 平板 24 / 桌面 28，
+  对齐前端 `--cst-page-gutter`）。**禁止**双重留白（容器 gutter + 页面自加 left/right padding，
+  会叠成 36~40，与只用容器 gutter 的页面差 16~20vp）；**禁止**用 `noHorizontalPadding: true`
+  关掉容器留白再另写一套值。`SystemPageHeader` 只带纵向节奏、不自带横向 padding。
+  - 需要全宽元素（封面图、通栏区）时用 `resolvePageGutter(this.currentBreakpoint)` 取同一 gutter 做**负 margin**
+    抵消（对齐前端 `-mx-[var(--cst-page-gutter)]`）。
+  - **症状对照**：各页正文左边缘不在同一条竖线上、滑动时内容左右边界跳动、页头标题比正文多缩进一截
+    ——都是本规则被违反的表现（实测于 2026-10-11：25 个页面里同时存在 16/20/24/32 四套留白）。
+- **页面纵向节奏（强制）**：分区之间 `PAGE_SHELL.SECTION_GAP`(24) 用**底距**且**每个分区都要有（含首块）**；
+  分区标题→其内容 `PAGE_SHELL.SECTION_INNER_GAP`(12)；页头→首块 `PAGE_SHELL.PAGE_TOP_GAP`(16)。
+  - 24 : 12 = 2:1 是必需的层次比：分区之间不明显大于标题内距，标题就会飘在两块之间、整页读不出分组。
+  - 用「上距」或漏给首块加底距，会让标题上方间距随各卡片自身 padding 变化，同类标题间距不一致
+    （实测于 2026-10-11：首页三个分区底距曾混用 20/20/24，且首块统计卡完全没有底距）。
+- **页头字号档统一（强制）**：全站 `SystemPageHeader.titleSize` 统一 `FONT.SIZE.XXL`(24)
+  ——前端各页实测均为 `desktop ? 'xl'(20) : '2xl'(24)`，**无 3xl 用法**。
+  禁止顶级 Tab 页用 XXXL(30)、二级页用 XXL(24) 的分档（同机切换页面标题大小会跳动，
+  违反者实测于 2026-10-11：首页/附近曾用 XXXL）。
 - **列表分组容器（ListGroup，强制）**：任何「可重复的同类条目集合」（设置项、关系列表、搜索结果、群组/分享/订阅/账号列表、公告列表）一律走
   `components/ListGroup`（`bordered` 默认 true = 开放页面区域的唯一一层分组外框卡）+ 行间
   `ListRowDivider` / `ListItemGroup.divider`，**禁止给每一行加边框/圆角/投影**（那就是「一行一张浮卡」，

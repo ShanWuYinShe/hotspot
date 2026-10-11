@@ -248,10 +248,11 @@ export struct SystemPageHeader {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
-      // 对齐前端 PageHeader：内容列 gutter 20（ContentColumn mobile），pt-4(16) pb-3(12)
+      // 只保留纵向节奏（对齐前端 PageHeader pt-4(16) pb-3(12)）。
+      // **横向留白一律由 PageShellContainer 的 gutter 提供**：页头此前自带
+      // LG2(20) 横向 padding，与容器 gutter 叠加成 20+16=36，而正文只有 16，
+      // 导致「页头标题比正文内容多缩进一截」——同一页面内左边缘都不齐。
       .padding({
-        left: DesignConstants.SPACING.LG2,
-        right: DesignConstants.SPACING.LG2,
         top: DesignConstants.SPACING.MD,
         bottom: DesignConstants.SPACING.MD2
       })

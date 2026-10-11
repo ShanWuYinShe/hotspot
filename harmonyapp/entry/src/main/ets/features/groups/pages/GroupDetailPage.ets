@@ -63,6 +63,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { ListRowDivider } from '../../../components/ListGroup';
+import { resolvePageGutter } from '../../../components/PageShellContainer';
 import { ErrorCode } from '../../../core/constants/ErrorCodes';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
@@ -1468,6 +1469,8 @@ export struct GroupDetailPage {
       // 分享按钮用通栏 Row 右对齐，返回按钮保持 TopStart + margin。
       Stack({ alignContent: Alignment.TopStart }) {
         // 封面（accent 渐变占位 + 左下分类胶囊/群名）
+        // 通栏封面：用负 margin 抵消容器 gutter（对齐前端 -mx-page-gutter），
+        // 而不是让页面另写一层 padding——否则正文会比页头窄一截
         Stack({ alignContent: Alignment.BottomStart }) {
           Column()
             .width('100%')
@@ -1506,7 +1509,8 @@ export struct GroupDetailPage {
           }
           .alignItems(HorizontalAlign.Start)
           .width('100%')
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+          // 封面内文字沿用容器 gutter（这里不再自加，避免与容器叠加）
+          .padding({ bottom: DesignConstants.SPACING.LG })
         }
         .width('100%')
 
@@ -1535,10 +1539,16 @@ export struct GroupDetailPage {
           })
         }
         .width('100%')
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-        .margin({ top: this.getHeaderTopPadding() })
+        // 按钮行叠在封面之上、与封面同宽 → 负 margin 抵消容器 gutter
+        .margin({
+          left: -resolvePageGutter(this.currentBreakpoint),
+          right: -resolvePageGutter(this.currentBreakpoint),
+          top: this.getHeaderTopPadding()
+        })
       }
       .width('100%')
+      // 通栏封面：负 margin 抵消容器 gutter（对齐前端 -mx-page-gutter）
+      .margin({ left: -resolvePageGutter(this.currentBreakpoint), right: -resolvePageGutter(this.currentBreakpoint) })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
@@ -1578,7 +1588,7 @@ export struct GroupDetailPage {
             }
           }
         })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+          .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
 
         // 使用 List 布局（扁平风格）
         List() {
@@ -1948,8 +1958,6 @@ export struct GroupDetailPage {
         .scrollBar(BarState.Off)
         .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
         .padding({
-          left: DesignConstants.SPACING.LG,
-          right: DesignConstants.SPACING.LG,
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, DesignConstants.SPACING.LG)
         })
         // 分组外框（唯一一层白卡 + 发丝描边 + surfaceShadow）：行不再各自带卡片

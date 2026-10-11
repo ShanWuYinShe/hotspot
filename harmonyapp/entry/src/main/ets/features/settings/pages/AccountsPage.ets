@@ -205,7 +205,7 @@ export struct AccountsPage {
   build() {
     NavDestination() {
     Stack() {
-  PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+  PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint}) {
     Column() {
       // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
       SystemPageHeader({

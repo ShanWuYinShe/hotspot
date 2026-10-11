@@ -613,7 +613,7 @@ export struct MessagePage {
 
   build() {
   Stack() {
-  PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+  PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
     Column() {
       // 粘性头部 —— 对齐前端移动端 PageHeader titleSize=2xl：未读计数与「+」在标题右侧同排
       SystemPageHeader({
@@ -714,7 +714,7 @@ export struct MessagePage {
           this.applyFilter();
         }
       })
-      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+      .margin({ bottom: DesignConstants.SPACING.SM })
 
       // 会话状态过滤（skill hotspot-harmony-ui 契约：头部「全部 / 未读 / 已读」，
       // 对齐前端 TabBar 胶囊形态；未读 Tab 带角标计数，客户端过滤不重新请求）
@@ -734,7 +734,7 @@ export struct MessagePage {
           }
         }
       })
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+      .padding({ bottom: DesignConstants.SPACING.SM })
 
       // 宽屏（master-detail）提示：当前点击会话仍 push 独立页（保持聊天功能完整）
       if (useMasterDetail(this.currentBreakpoint)) {

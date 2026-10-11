@@ -76,7 +76,7 @@ export struct AnnouncementsPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         SystemPageHeader({
           title: '系统公告',
@@ -113,7 +113,7 @@ export struct AnnouncementsPage {
                 })
               }
             }
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+            .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
             }
             .width('100%')
             .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })

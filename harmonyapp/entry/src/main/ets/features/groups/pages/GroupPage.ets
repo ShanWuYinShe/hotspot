@@ -510,7 +510,8 @@ export struct GroupPage {
             Blank()
           }
           .width('100%')
-          .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.SM })
+          // 横向留白由 PageShellContainer gutter 统一提供（页头已改为不自带横向 padding）
+          .padding({ bottom: DesignConstants.SPACING.SM })
 
           // 内容区域
           if (this.isLoading) {

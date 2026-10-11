@@ -203,7 +203,7 @@ export struct NearbyUsersListPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         // 头部 —— 统一走 SystemPageHeader（返回 + 标题 24pt + 位置行副标题 + 计数 trailing，
         // 对齐前端 /nearby/people PageHeader：titleSize 2xl + MapPin 图标 + {位置} · 5km 内 + trailing N 人）
@@ -235,7 +235,7 @@ export struct NearbyUsersListPage {
           onChange: (value: string) => { this.keyword = value; },
           onSubmit: () => { this.loadUsers(true); }
         })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+          .margin({ bottom: DesignConstants.SPACING.SM })
 
         // 排序 TabsPillGroup（对齐前端 TabBar）
         TabsPillGroup({
@@ -265,7 +265,7 @@ export struct NearbyUsersListPage {
             }
           }
         })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+          .padding({ bottom: DesignConstants.SPACING.SM })
 
         // 兴趣分类 TabBar（对齐前端 nearby/people FILTER_TAGS：全部/摄影/旅行/音乐/美食/运动/阅读/艺术）
         TabsPillGroup({
@@ -281,7 +281,7 @@ export struct NearbyUsersListPage {
             }
           }
         })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+          .padding({ bottom: DesignConstants.SPACING.SM })
 
         // 内容区
         if (this.isLoading) {

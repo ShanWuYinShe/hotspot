@@ -116,7 +116,7 @@ struct AdminOverviewPage {
           title: '管理后台',
           showBackButton: true,
           onBack: () => { this.pathStack.pop(); },
-          titleSize: DesignConstants.FONT.SIZE.XL,
+          titleSize: DesignConstants.FONT.SIZE.XXL,
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM
         })
 

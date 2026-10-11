@@ -199,7 +199,7 @@ export struct NearbyGroupsListPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         // 头部 —— 统一走 SystemPageHeader（返回 + 标题 24pt + 位置行副标题 + 计数 trailing，
         // 对齐前端 /nearby/groups PageHeader：titleSize 2xl + MapPin 图标 + {位置} · 5km 内 + trailing N 个活跃群组）
@@ -231,7 +231,7 @@ export struct NearbyGroupsListPage {
           onChange: (value: string) => { this.keyword = value; },
           onSubmit: () => { this.loadGroups(true); }
         })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+          .margin({ bottom: DesignConstants.SPACING.SM })
 
         // 分类 TabsPillGroup（对齐前端 TabBar）
         TabsPillGroup({
@@ -247,7 +247,7 @@ export struct NearbyGroupsListPage {
             }
           }
         })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+          .padding({ bottom: DesignConstants.SPACING.SM })
 
         // 内容区
         if (this.isLoading) {
@@ -285,7 +285,7 @@ export struct NearbyGroupsListPage {
                     .fontColor(this.getCurrentThemePalette().online)
                 }
                 .width('100%')
-                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+                .padding({ bottom: DesignConstants.SPACING.SM })
                 .alignItems(VerticalAlign.Center)
 
                 // 移动/平板端首卡 featured 全宽精选大卡

@@ -75,7 +75,7 @@ export struct AdvancedSettingsPage {
   build() {
     NavDestination() {
     Stack() {
-  PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+  PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint}) {
     Column() {
       // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
       SystemPageHeader({
@@ -181,7 +181,7 @@ export struct AdvancedSettingsPage {
         })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     // 整行按压反馈（对齐 tap-97 语义）
     .scale(this.pressedSettingKey === title ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :

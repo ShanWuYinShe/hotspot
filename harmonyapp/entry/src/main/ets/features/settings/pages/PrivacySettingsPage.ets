@@ -146,7 +146,7 @@ export struct PrivacySettingsPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         SystemPageHeader({
           title: '隐私设置',
@@ -180,7 +180,7 @@ export struct PrivacySettingsPage {
                 }
               }
             }
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+            .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
           }
           .width('100%')
           .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })

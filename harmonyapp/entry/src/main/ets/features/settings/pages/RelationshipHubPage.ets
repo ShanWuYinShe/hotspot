@@ -115,7 +115,7 @@ export struct RelationshipHubPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         // 头部 —— 标题 24pt + 计数 trailing（对齐前端 RelationshipsPage：
         // titleSize 2xl + trailing「N 人」当前区计数）
@@ -148,7 +148,7 @@ export struct RelationshipHubPage {
             }
           }
         })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+          .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
         if (this.isLoading) {
           SystemLoadingView({ message: '加载关系数据…' })

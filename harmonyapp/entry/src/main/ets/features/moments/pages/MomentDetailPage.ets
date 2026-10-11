@@ -457,7 +457,7 @@ export struct MomentDetailPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'narrow', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+    PageShellContainer({ variant: 'narrow', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         this.buildTopBar()
         if (this.isLoading) {
@@ -520,7 +520,7 @@ export struct MomentDetailPage {
       showBackButton: true,
       onBack: () => { AppRouter.pop(); },
       // 对齐前端 moments/[momentId]：PageHeader titleSize=base(16) + font-medium
-      titleSize: DesignConstants.FONT.SIZE.LG,
+      titleSize: DesignConstants.FONT.SIZE.XXL,
       titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
       backgroundVariant: 'transparent',
       rightAction: null
@@ -853,7 +853,7 @@ export struct MomentDetailPage {
       })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+    .padding({ bottom: DesignConstants.SPACING.SM })
   }
 
   @Builder

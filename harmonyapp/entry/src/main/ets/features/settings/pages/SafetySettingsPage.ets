@@ -132,7 +132,7 @@ export struct SafetySettingsPage {
   build() {
     NavDestination() {
     Stack() {
-    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         SystemPageHeader({
           title: '密码与会话安全',
@@ -175,7 +175,7 @@ export struct SafetySettingsPage {
                 .padding(DesignConstants.SPACING.LG)
               }
             }
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+            .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
 
             Column() {
               SettingsSectionCard({ title: '登录设备' }) {
@@ -189,7 +189,7 @@ export struct SafetySettingsPage {
                 })
               }
             }
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+            .padding({ bottom: DesignConstants.SPACING.LG })
           }
           .width('100%')
           .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })

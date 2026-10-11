@@ -27,6 +27,24 @@ import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
  */
 export type PageShellVariant = 'default' | 'wide' | 'narrow' | 'form' | 'feed-narrow' | 'feed-medium';
 
+/**
+ * 页面 gutter 解析（唯一来源）：
+ * 页面内需要**全宽元素**（封面图、通栏分区）时，用本函数取同一 gutter 做负 margin 抵消
+ * （对齐前端 `-mx-[var(--cst-page-gutter)]`），而不是关掉容器留白或另写一套 padding。
+ */
+export function resolvePageGutter(breakpoint: BreakpointType): number {
+  const gutter = DesignConstants.PAGE_SHELL;
+  switch (breakpoint) {
+    case 'xs':
+    case 'sm':
+      return gutter.GUTTER_MOBILE;
+    case 'md':
+      return gutter.GUTTER_TABLET;
+    default:
+      return gutter.GUTTER_DESKTOP;
+  }
+}
+
 @Component
 export struct PageShellContainer {
   @BuilderParam content: () => void;
@@ -61,19 +79,19 @@ export struct PageShellContainer {
     }
   }
 
-  /** 横向留白：对齐前端 clamp，移动兜底 16，随视口增大 */
+  /**
+   * 横向留白：**全站唯一 gutter 来源**（对齐前端 ContentColumn 的
+   * --cst-page-gutter：移动 20 / 平板 24 / 桌面 28）。
+   *
+   * 契约（强制）：页面内部**不得**再为自己的正文加 left/right padding。
+   * 此前 8 个页面在容器已带 16 的基础上又自加 16~20，实际留白变成 32~36，
+   * 而其它页面只有 16~20 —— 各页正文左边缘不在同一条竖线上，滑动时内容
+   * 左右边界跳动，是「页面看起来不协调」的主要来源。
+   * 全宽元素（封面图、通栏列表）需要贴边时，用负 margin 抵消本 gutter
+   * （对齐前端 -mx-[var(--cst-page-gutter)]），而不是关掉本容器留白。
+   */
   private getHorizontalPadding(): number {
-    switch (this.currentBreakpoint) {
-      case 'xs':
-      case 'sm':
-        return DesignConstants.SPACING.LG; // 16
-      case 'md':
-        return DesignConstants.SPACING.LG2;
-      case 'lg':
-        return DesignConstants.SPACING.XL; // 24
-      default:
-        return DesignConstants.SPACING.XXL; // 32
-    }
+    return resolvePageGutter(this.currentBreakpoint);
   }
 
   build() {

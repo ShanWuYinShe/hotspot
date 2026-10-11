@@ -253,7 +253,7 @@ export struct MomentPage {
                   }, (i: number) => `skeleton-${i}`)
                 }
                 .width('100%')
-                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD })
+                .padding({ top: DesignConstants.SPACING.MD })
               }
             }
             .width('100%')

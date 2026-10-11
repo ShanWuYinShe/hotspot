@@ -150,6 +150,38 @@
 
 禁止组件内 `padding({left:16})` 这类裸数——用 `SPACING.LG`。1vp 级微距（top:1 等）与 0 值允许保留（对齐前端间距不强制收敛原则）。
 
+### 5.1 页面级横向 gutter（唯一来源，强制）
+
+**横向留白只能由 `PageShellContainer` 提供**，页面内不得再为自己的正文写
+`left`/`right` padding：
+
+| 断点 | gutter | 对齐前端 `--cst-page-gutter` |
+|---|---|---|
+| xs / sm（手机） | `PAGE_SHELL.GUTTER_MOBILE` = 20 | 1.25rem |
+| md（平板） | `PAGE_SHELL.GUTTER_TABLET` = 24 | 1.5rem |
+| lg+（桌面） | `PAGE_SHELL.GUTTER_DESKTOP` = 28 | 1.75rem |
+
+- **禁止**「容器 gutter + 页面自加 padding」双重留白——会叠成 36~40，与只用容器
+  gutter 的页面差 16~20vp，各页正文左边缘不在同一条竖线上，滑动时边界跳动。
+- **禁止**用 `noHorizontalPadding: true` 关掉容器留白再另写一套值；确需全宽
+  元素（封面图、通栏区）时用 `resolvePageGutter(breakpoint)` 取同一 gutter 做
+  **负 margin** 抵消（对齐前端 `-mx-[var(--cst-page-gutter)]`）。
+- `SystemPageHeader` 只带纵向节奏、**不再自带横向 padding**（此前自带 20 与
+  容器 gutter 叠加，页头标题比正文多缩进一截）。
+
+### 5.2 页面纵向节奏（强制）
+
+| 语义 | 值 | 用途 |
+|---|---|---|
+| `PAGE_SHELL.PAGE_TOP_GAP` | 16 | 页头与首个分区 |
+| `PAGE_SHELL.SECTION_GAP` | 24 | 相邻分区之间（用**底距**，含首块） |
+| `PAGE_SHELL.SECTION_INNER_GAP` | 12 | 分区标题与其内容 |
+
+- 分区之间必须**明显大于**「分区标题→其内容」（24 : 12 = 2:1），标题才在视觉上归属
+  下方内容；否则标题飘在两块之间，整页读不出分组。
+- 分区间距统一用**底距**且**每个分区都要有**（含首个分区）：用「上距」或漏给首块加
+  底距时，标题上方间距会随各卡片自身 padding 变化，同类标题间距不一致。
+
 ---
 
 ## 6. 圆角（`--radius-*` / `RADIUS` + `SHAPE`）

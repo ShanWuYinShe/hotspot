@@ -126,12 +126,17 @@ export struct SettingsPage {
     return this.themeMode === option.mode;
   }
 
+  /**
+   * 设置分组的外边距：**只给纵向节奏**，横向留白一律由 PageShellContainer gutter 提供。
+   *
+   * 分组间距（SECTION_GAP 20）必须大于分组内行间距（行内 padding 14 + 分隔线），
+   * 形成「组间疏、组内密」的层次——此前每段统一 16，与行内 14 接近，整页读起来
+   * 是一坨、分不出组。
+   */
   private getSectionMargin(top: number = 0): Padding {
     return {
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
       top: top,
-      bottom: DesignConstants.SPACING.LG
+      bottom: DesignConstants.PAGE_SHELL.SECTION_GAP
     };
   }
 
@@ -541,7 +546,7 @@ export struct SettingsPage {
 
         Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
           Scroll() {
-            PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true, fillHeight: false }) {
+            PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, fillHeight: false }) {
               Column() {
                 // === 用户卡 ===
                 this.buildUserCard()

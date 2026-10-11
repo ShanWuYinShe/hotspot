@@ -354,7 +354,7 @@ export struct MomentsFeedPage {
 
   build() {
   NavDestination() {
-  PageShellContainer({ variant: 'feed-medium', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+  PageShellContainer({ variant: 'feed-medium', currentBreakpoint: this.currentBreakpoint}) {
     Column() {
       // 粘性头部：标题(走 SystemPageHeader) + 搜索栏 + 标签栏（对齐前端 nearby/moments 页 headerContent）
       Column() {
@@ -395,7 +395,6 @@ export struct MomentsFeedPage {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         .backgroundColor(this.getCurrentThemePalette().inputBackgroundColor)
         .borderRadius(DesignConstants.SHAPE.INPUT)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
@@ -570,7 +569,7 @@ export struct MomentsFeedPage {
                 .fontColor(this.getCurrentThemePalette().textTertiary)
                 .width('100%')
                 .textAlign(TextAlign.Center)
-                .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.LG })
+                .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
             }
           }
           .width('100%')
@@ -707,7 +706,7 @@ export struct MomentsFeedPage {
           .onClick(() => AppRouter.push(PageNames.NEARBY_USERS))
       }
       .width('100%')
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+      .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
 
       SystemCard({
         cardPadding: DesignConstants.SPACING.MD,
@@ -724,7 +723,6 @@ export struct MomentsFeedPage {
         .scrollBar(BarState.Off)
       }
     }
-    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
   }
 
   @Builder
@@ -801,7 +799,7 @@ export struct MomentsFeedPage {
           .onClick(() => AppRouter.push(PageNames.NEARBY_GROUPS))
       }
       .width('100%')
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+      .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
 
       SystemCard({
         cardPadding: DesignConstants.SPACING.MD,
@@ -816,7 +814,6 @@ export struct MomentsFeedPage {
         .width('100%')
       }
     }
-    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
   }
 
   // 两列等宽群组卡片行（前端 grid-cols-2 的 ArkUI 等价：Row + layoutWeight，避开 calc）

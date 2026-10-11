@@ -406,6 +406,25 @@ export interface PageShellSystem {
   FEED_NARROW_MAX: number;
   /** feed 中栏（moments 宽平板）— 对齐 .feed-density-shell--medium 960px */
   FEED_MEDIUM_MAX: number;
+  /**
+   * 页面横向 gutter 三档（对齐前端 ContentColumn 的 --cst-page-gutter）：
+   * 移动 20 / 平板 24 / 桌面 28。**全站唯一横向留白来源**——页面内部不得再叠
+   * 自己的 left/right padding，否则会出现「容器 16 + 页面 16 = 32」的双重留白，
+   * 各页正文左边缘不在同一条竖线上，滑动时内容左右边界跳动。
+   */
+  GUTTER_MOBILE: number;
+  GUTTER_TABLET: number;
+  GUTTER_DESKTOP: number;
+  /**
+   * 页面纵向节奏（分区之间）：
+   * - SECTION: 同页相邻分区（如首页「附近的人」与「附近群组」）的间距
+   * - SECTION_INNER: 分区标题与其内容之间的间距
+   * - PAGE_TOP: 页头/首个分区与页面顶部的间距
+   * 对齐前端样板页 StandardPageLayout contentClassName="pt-4 pb-6"。
+   */
+  SECTION_GAP: number;
+  SECTION_INNER_GAP: number;
+  PAGE_TOP_GAP: number;
 }
 
 export interface DesignConstantsType {
@@ -704,6 +723,16 @@ const PAGE_SHELL: PageShellSystem = {
   SHELL_FORM_MAX: 560,
   FEED_NARROW_MAX: 640,
   FEED_MEDIUM_MAX: 960,
+  // 对齐前端 ContentColumn --cst-page-gutter（1.25rem / 1.5rem / 1.75rem）
+  GUTTER_MOBILE: 20,
+  GUTTER_TABLET: 24,
+  GUTTER_DESKTOP: 28,
+  // 纵向节奏：分区之间必须明显大于「分区标题→其内容」，
+  // 标题才会在视觉上归属下方内容（否则标题飘在两块之间，整页读不出分组）。
+  // 24 : 12 = 2:1 是移动端列表页的常用层次比。
+  SECTION_GAP: 24,        // SPACING.XL：分区之间
+  SECTION_INNER_GAP: 12,  // SPACING.MD：分区标题与其内容
+  PAGE_TOP_GAP: 16,       // SPACING.LG：页头与首个分区
 };
 
 // ==================== 透明度系统 ====================

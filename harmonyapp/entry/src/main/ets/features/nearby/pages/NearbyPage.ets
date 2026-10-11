@@ -119,13 +119,13 @@ export struct NearbyPage {
   }
 
   build() {
-    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         SystemPageHeader({
           title: '附近',
           subtitle: '5km 实时探索',
           // 顶级 Tab 页标题对齐前端 titleSize=3xl（30）+ semibold（移动端）
-          titleSize: DesignConstants.FONT.SIZE.XXXL,
+          titleSize: DesignConstants.FONT.SIZE.XXL,
           titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           backgroundVariant: 'transparent'
         }) {
@@ -154,7 +154,7 @@ export struct NearbyPage {
             }
           }
         })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+          .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
         Scroll() {
@@ -181,7 +181,7 @@ export struct NearbyPage {
               .padding({ top: DesignConstants.SPACING.XL })
             } else if (this.activeSection === 0) {
               // ═══ 段位一：附近的人（横向滑轨）═══
-              Column({ space: DesignConstants.SPACING.MD }) {
+              Column() {
                 this.buildSectionHeader('身边的新朋友', '查看全部', () => {
                   AppRouter.push(PageNames.NEARBY_USERS);
                 })
@@ -200,12 +200,11 @@ export struct NearbyPage {
                 .listDirection(Axis.Horizontal)
                 .scrollBar(BarState.Off)
                 .edgeEffect(EdgeEffect.Spring)
-                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
               }
               .width('100%')
             } else if (this.activeSection === 1) {
               // ═══ 段位二：附近群组 ═══
-              Column({ space: DesignConstants.SPACING.MD }) {
+              Column() {
                 this.buildSectionHeader('身边兴趣圈', '探索群组', () => {
                   AppRouter.push(PageNames.NEARBY_GROUPS);
                 })
@@ -215,12 +214,11 @@ export struct NearbyPage {
                     GroupCard({ group: group, featured: false })
                   }, (group: GroupItem) => group.group?.group_id ?? '')
                 }
-                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
               }
               .width('100%')
             } else {
               // ═══ 段位三：附近动态 ═══
-              Column({ space: DesignConstants.SPACING.MD }) {
+              Column() {
                 this.buildSectionHeader('周边新鲜事', '更多动态', () => {
                   AppRouter.push(PageNames.NEARBY_MOMENTS);
                 })
@@ -237,7 +235,6 @@ export struct NearbyPage {
                     })
                   }, (moment: MomentItem) => moment.moment_id)
                 }
-                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
               }
               .width('100%')
             }
@@ -287,7 +284,9 @@ export struct NearbyPage {
       .onClick(onAction)
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    // 与首页同契约：区块标题 → 其内容用 SECTION_INNER_GAP(12)，
+    // 区块之间用 SECTION_GAP(24)，保证两个页面纵向节奏一致
+    .margin({ bottom: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP })
   }
 }
 

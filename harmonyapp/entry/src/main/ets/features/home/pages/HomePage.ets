@@ -363,7 +363,9 @@ export struct HomePage {
   // ==================== UI ====================
 
   build() {
-  PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
+  // 横向留白由容器 gutter 统一提供（不再 noHorizontalPadding + 页面自加 LG2）：
+  // 首页此前用 20、列表页用 16、个人页用 32，同机滑动时各页左边缘不一致
+  PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
     Column() {
       // 粘性头部
       this.buildStickyHeader()
@@ -517,7 +519,7 @@ export struct HomePage {
     SystemPageHeader({
       title: '首页',
       subtitle: '发现周边有趣的人和事',
-      titleSize: DesignConstants.FONT.SIZE.XXXL,
+      titleSize: DesignConstants.FONT.SIZE.XXL,
       titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD
     }) {
       // trailing: 在线计数 chip + 搜索/通知/地图入口（对齐前端 PageHeader trailing）。
@@ -697,9 +699,8 @@ export struct HomePage {
     }
     .width('100%')
     // 页边距对齐前端 px-5(20)：卡本体不可贴屏幕边缘（此前 100% 宽导致边框贴边不可见）
-    .margin({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
     // 对齐前端 HeroStats 卡：py-4.5(18→LG 档) px-5(LG2) + rounded-xl(24) + raised-sm 投影
-    .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+    .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
     .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
@@ -721,6 +722,8 @@ export struct HomePage {
       }
     })
     .onClick(() => AppRouter.push(PageNames.NEARBY_USERS))
+    // 首块与后续区块同节奏：统一底距，使下一个区块标题的上方间距与其他区块一致
+    .margin({ bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
   }
 
   // ==================== 区块标题 (eyebrow) ====================
@@ -773,7 +776,9 @@ export struct HomePage {
       })
     }
     .width('100%')
-    .margin({ bottom: DesignConstants.SPACING.MD })
+    // 区块标题 → 其内容：SECTION_INNER_GAP(12)，与区块之间的 SECTION_GAP(24) 形成
+    // 2:1 层次——标题才在视觉上归属下方内容，而不是飘在两块之间
+    .margin({ bottom: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP })
   }
 
   // ==================== 附近的人 ====================
@@ -850,8 +855,9 @@ export struct HomePage {
       }
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
-    .margin({ bottom: DesignConstants.SPACING.LG2 })
+    // 区块之间统一用「底距」：下一区块标题的上方间距恒为 SECTION_GAP(24)，
+    // 不随各卡片自身 padding 变化（否则同类标题的上下间距会不一致）
+    .margin({ bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
   }
 
   // 首页人物推荐条数（对齐前端 +page.svelte：移动端仅展示前 4 位，宽屏完整列表）
@@ -1005,8 +1011,9 @@ export struct HomePage {
       }
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
-    .margin({ bottom: DesignConstants.SPACING.LG2 })
+    // 区块之间统一用「底距」：下一区块标题的上方间距恒为 SECTION_GAP(24)，
+    // 不随各卡片自身 padding 变化（否则同类标题的上下间距会不一致）
+    .margin({ bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
   }
 
   @Builder
@@ -1131,8 +1138,9 @@ export struct HomePage {
       }
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG2, right: DesignConstants.SPACING.LG2 })
-    .margin({ bottom: DesignConstants.SPACING.XL })
+    // 区块之间统一用「底距」：下一区块标题的上方间距恒为 SECTION_GAP(24)，
+    // 不随各卡片自身 padding 变化（否则同类标题的上下间距会不一致）
+    .margin({ bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
   }
 
   // 首页附近动态条数（对齐前端：移动端 3 条，宽屏完整列表）

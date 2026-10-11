@@ -767,7 +767,7 @@ export struct ProfilePage {
             } else if (this.isExternalProfileMode()) {
               SystemPageHeader({
                 title: this.resolveHeaderTitle(),
-                titleSize: DesignConstants.FONT.SIZE.XL,
+                titleSize: DesignConstants.FONT.SIZE.XXL,
                 titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
                 showBackButton: true,
                 onBack: () => { AppRouter.pop(); }
@@ -1063,7 +1063,8 @@ export struct ProfilePage {
 
           }
           .alignItems(HorizontalAlign.Center)
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XL })
+          // 横向留白统一由容器 gutter 提供，这里只保留纵向节奏
+          .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XL })
         }
         .layoutWeight(1)
         .scrollBar(BarState.Off)
