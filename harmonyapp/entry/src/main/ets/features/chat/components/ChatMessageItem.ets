@@ -92,6 +92,8 @@ export struct ChatMessageItem {
           if (!this.msg.isSelf && this.isGroupChat) {
             Text(this.msg.senderName)
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
               .fontColor(this.palette.textSecondary)
               .margin({ bottom: DesignConstants.SPACING.XS, left: DesignConstants.SPACING.XS })
           }

@@ -65,6 +65,8 @@ export struct ProfileAvatarBlock {
 
       Text(this.nickname)
         .fontSize(DesignConstants.FONT.SIZE.XL)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
     }

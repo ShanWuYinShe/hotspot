@@ -808,6 +808,8 @@ export struct RelationshipListSection {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(nickname)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         if (meta) {

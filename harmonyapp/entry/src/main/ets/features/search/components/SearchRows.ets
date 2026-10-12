@@ -94,6 +94,8 @@ export struct SearchMomentRow {
             .width('100%')
           Text(this.moment.location?.location_name ?? '')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
             .fontColor(this.palette?.textSecondary)
             .width('100%')
         }

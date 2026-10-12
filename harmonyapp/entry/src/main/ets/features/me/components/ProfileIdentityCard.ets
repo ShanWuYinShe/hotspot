@@ -96,6 +96,8 @@ export struct ProfileIdentityCard {
             // 对齐前端：handle 显示 @昵称（前端 ProfileMobile 用 nickname，非 user_id）
             Text(`@${this.nickname}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
               .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
           }
           if (this.locationName) {

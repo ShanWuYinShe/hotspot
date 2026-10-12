@@ -596,6 +596,8 @@ export struct MomentDetailPage {
         Column({ space: DesignConstants.SPACING.XS }) {
           Text(moment.user?.nickname ?? '未知用户')
             .fontSize(DesignConstants.FONT.SIZE.LG)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
 
@@ -721,6 +723,8 @@ export struct MomentDetailPage {
         Row({ space: DesignConstants.SPACING.SM }) {
           Text(comment.user?.nickname ?? '匿名')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
           Text(this.formatTime(comment.created_at))

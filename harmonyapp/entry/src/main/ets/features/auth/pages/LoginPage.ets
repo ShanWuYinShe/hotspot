@@ -564,6 +564,8 @@ export struct LoginPage {
       if (this.getRegisterNicknameError()) {
         Text(this.getRegisterNicknameError())
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
           .padding({ left: DesignConstants.SPACING.MD })
@@ -738,6 +740,8 @@ export struct LoginPage {
       if (this.getGuestNicknameError()) {
         Text(this.getGuestNicknameError())
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
           .padding({ left: DesignConstants.SPACING.MD })

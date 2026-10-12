@@ -309,6 +309,8 @@ export struct ProfileEditPage {
 
                 Text('@' + (this.currentUser?.user_id?.substring(0, 8) ?? 'user'))
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .fontColor(this.getCurrentThemePalette().textSecondary)
               }
               .alignItems(HorizontalAlign.Start)

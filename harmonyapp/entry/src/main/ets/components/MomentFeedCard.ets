@@ -449,6 +449,8 @@ export struct MomentFeedCard {
       Column({ space: DesignConstants.SPACING.HALF }) {
         Text(this.moment.user?.nickname ?? '匿名用户')
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
 

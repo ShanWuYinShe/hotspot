@@ -984,6 +984,8 @@ export struct ProfilePage {
                   })
                   Text(this.currentUser.location.location_name)
                     .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .fontColor(this.getSecondaryTextColor())
                 }
                 .margin({ top: DesignConstants.SPACING.SM })
