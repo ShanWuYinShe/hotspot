@@ -7,7 +7,7 @@
 import { WebSocketUtil } from './WebSocketUtil';
 import { HttpUtil } from './HttpUtil';
 import { AppRouter, LoginRouteParam } from '../router/AppRouter';
-import { API_BASE_URL, StorageKeys, WS_BASE_URL } from '../../constants/AppConstants';
+import { API_BASE_URL, PageNames, StorageKeys, WS_BASE_URL } from '../../constants/AppConstants';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { TokenAssetStore } from '../storage/TokenAssetStore';
@@ -154,7 +154,7 @@ export class WebSocketService {
       param.reason = reason;
       param.action = action;
       AppRouter.clear();
-      AppRouter.push('LoginPage', param);
+      AppRouter.push(PageNames.LOGIN, param);
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `强制登出失败: ${JSON.stringify(error)}`);
     }

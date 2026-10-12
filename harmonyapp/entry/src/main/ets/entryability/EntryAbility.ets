@@ -25,7 +25,7 @@ import { KEY_IS_LOGGED_IN } from '../core/state/GlobalStateManager';
 import { WebSocketService } from '../core/network/WebSocketService';
 import { PreferencesUtil } from '../core/storage/PreferencesUtil';
 import { TokenAssetStore } from '../core/storage/TokenAssetStore';
-import { StorageKeys } from '../constants/AppConstants';
+import { PageNames, StorageKeys } from '../constants/AppConstants';
 import { ApiClient } from '../core/api/ApiClient';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DarkModePreference } from '../core/theme/AppThemeTypes';
@@ -629,7 +629,8 @@ export default class EntryAbility extends UIAbility {
         hilog.info(DOMAIN_NUMBER, TAG, `Deep link share code: ${shareCode}`);
         const param = new ShareResolutionRouteParam();
         param.share_code = shareCode;
-        AppRouter.push('ShareResolutionPage', param);
+        // 走 PageNames 常量：项目规范禁止硬编码路径/路由名（全仓仅此一处曾硬编码）
+        AppRouter.push(PageNames.SHARE_RESOLUTION, param);
         return;
       }
     }

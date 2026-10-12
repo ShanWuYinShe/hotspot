@@ -13,7 +13,7 @@ import http from '@ohos.net.http';
 import request from '@ohos.request';
 import common from '@ohos.app.ability.common';
 import util from '@ohos.util';
-import { API_BASE_URL, StorageKeys } from '../../constants/AppConstants';
+import { API_BASE_URL, PageNames, StorageKeys } from '../../constants/AppConstants';
 import { ApiEndpoints } from '../config/ApiEndpoints';
 import { ApiResponse, AuthData, HealthStatus, MediaCategory, UploadedMedia } from '../types/api';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
@@ -608,7 +608,7 @@ export class HttpUtil {
         param.reason = 'banned';
         param.action = ((result as Record<string, Object>).message as string) || '账号已被封禁';
         AppRouter.clear();
-        AppRouter.push('LoginPage', param);
+        AppRouter.push(PageNames.LOGIN, param);
         ctx.failure = new ApiError('账号已被封禁', resultCode);
         return AttemptDirective.FAIL;
       }
@@ -647,7 +647,7 @@ export class HttpUtil {
         const param = new LoginRouteParam();
         param.reason = 'expired';
         AppRouter.clear();
-        AppRouter.push('LoginPage', param);
+        AppRouter.push(PageNames.LOGIN, param);
         // 不 return：落入下方匿名降级分支（原实现即如此——刷新失败的
         // 公开端点还有一次匿名重试机会）
       }
