@@ -320,7 +320,13 @@
 
 ## 13. 组件原语与跨端映射
 
-双端共享组件映射（新增/修改组件时先查此表，避免两端各自发明同类组件）：
+双端共享组件映射（新增/修改组件时先查此表，避免两端各自发明同类组件）。
+
+> **本表覆盖范围**：**业务组件**（有明确跨端对应物的）。基础原语
+> （`SystemButton` / `SystemToggle` / `SystemTextArea` / `SystemBadge` /
+> `SurfaceIconButton` / `Pressable` / `SoftDivider` / `LucideIcon` / `SystemIcon` /
+> `NativeMapComponent`）登记在 skill `hotspot-harmony-ui` 的「组件原语强制」章节，
+> 不重复列在这里。
 
 | 前端（Svelte） | 鸿蒙（ArkTS） | 说明 |
 |---|---|---|
@@ -329,18 +335,30 @@
 | `MainLayout`（desktop/mobile/tablet） | `layout/DesktopLayout` / `PhoneLayout` / `ResponsiveContainer` | 设备外壳分派 |
 | `EmptyState` | `EmptyState` | 空态（同名同契约） |
 | `shared/Avatar` | `SystemAvatar` | 头像（尺寸/形状/状态点） |
-| `forms/SearchInput` | `SearchPageHeader` / `SmartSearchComponent` | 搜索输入 |
+| `forms/SearchInput` | `SystemInput`（通用单行输入）/ `SearchPageHeader`（页头内联搜索） | 搜索输入（原表写的 `SmartSearchComponent` 已不存在，2026-10-12 修正） |
 | `navigation/TabBar` / `NavTab` / `RailIcon` | `TabsPillGroup`（默认等宽分段；`freeWidth` 形态对齐前端胶囊行，`TabItem.count` 对齐角标） / `PhoneLayout` 底部导航 | 分类/导航 Tab |
 | `list/ListContainer`（bordered / embedded） | `components/ListGroup`（`bordered` 开关）+ `ListRowDivider` / `ListItemGroup.divider` | 列表**分组容器**：唯一一层白卡外框 + 行间发丝分隔线；行本身禁止再叠边框/圆角/投影（同前端 ListContainer 契约） |
 | `list/ListItem` | `SettingsEntryRow` / `SettingsToggleRow` / `GroupMemberRow` 等行组件 | 列表行：只写 padding + 按压反馈，不写背景/圆角/投影 |
 | `overlays/SheetShell` / `ui/dialog` | `SystemDialog` / `bindSheet` | 弹层/抽屉 |
 | `forms/TagPill` | `TabsPillGroup` chip / `FILTER_CHIP_HEIGHT` | 标签/筛选胶囊 |
-| `data-display/EmptyState` 加载态 | `SystemLoadingView` / `Skeleton` | 加载/骨架 |
-| `data-display/MetricRow` / `HeroStats` | `StatSegments` | 统计段 |
+| `data-display/EmptyState` | `EmptyState` | 空列表态（同名同契约；`fillMode` 对齐前端 fill 模式） |
+| `data-display/ListEnd` | `components/ListEnd` | **分页到底收尾提示**（「没有更多了」）。分页列表内容耗尽**必须**渲染，否则用户无法区分「已到底」与「加载卡住」 |
+| `data-display/LoadError` | 无独立组件 → `EmptyState` + `actionLabel:'重试'` + `onAction` | 加载失败态。**语义等价**（同为「图标+文案+重试按钮」），故不另造组件；契约要求「失败必须展示错误并提供重试，禁止静默转空态」——实测 9 个失败分支全部满足 |
+| `data-display/InlineLoading` | 无独立组件 → `LoadingMoreIndicator`（分页）/ 行内 `LoadingProgress`（局部） | 局部加载态。分页场景一律走 `LoadingMoreIndicator`（含向上分页，如聊天「加载更早消息…」）；行内指示用 `LoadingProgress` |
+| `data-display/EmptyState` 整页加载 | `SystemLoadingView` / `Skeleton` / `SkeletonShimmer` | 整页/面板加载与列表骨架 |
+| `data-display/MetricRow` / `HeroStats` | `HomePage.buildHeroStats`（页面内 @Builder） | 统计段（原表写的 `StatSegments` 已不存在，2026-10-12 修正；目前只有首页一处消费，暂不抽独立组件） |
 | `routes/moments/shared/MomentCard` | `MomentFeedCard` | 动态卡片 |
 | `auth/LoginPromptSheet` | `LoginPromptView` | 未登录引导 |
 | `messages/ChatView` 等 | `ChatPage` / `ChatPageHeader` | 聊天界面 |
 | `routes/(app)/nearby/+page.svelte`（附近聚合） | `features/nearby/pages/NearbyPage` | 附近门户页（纯导航门户：搜索入口 + 人/群组/动态三张分区入口卡，不拉取数据，内容流在各专区页），手机/平板底栏「附近」tab |
+| `data-display/NearbyImageCard` | `components/NearbyImageCard` | 图片优先卡（3:4 图 + 覆盖层徽章），附近用户/群组卡共用 |
+| `routes/(app)/notify/+page.svelte` + `notify/shared/NotifyRow` | `components/NotificationCenter` | 通知中心（列表 + 行） |
+| `shared/ConnectionBanner`（近似） | `components/NotificationBanner` | 顶部横幅提示（前端对应为连接横幅，语义近似；鸿蒙端承载更广） |
+
+**本端特有组件（前端无对应，属平台适配，已登记）**：
+`IntelligentLocationCard`（智能位置卡）、`AnchorEntry`（浏览锚点入口）、
+`PerformanceIndicator`（性能指示器）、`SystemCard` / `MasonryCard`（通用卡与瀑布流卡）。
+这些不参与跨端同步，改动只需本端自查。
 
 ---
 
