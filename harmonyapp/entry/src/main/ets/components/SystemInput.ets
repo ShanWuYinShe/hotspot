@@ -61,6 +61,12 @@ export struct SystemInput {
     return InputType.Normal;
   }
 
+  /** 无障碍字段名：优先 placeholder（本仓输入框以 placeholder 承载字段名），
+   *  否则退化为通用「输入框」。 */
+  private getFieldLabel(): string {
+    return this.placeholder.length > 0 ? this.placeholder : '输入框';
+  }
+
   build() {
     Row() {
       if (this.showPrefixIcon) {
@@ -88,6 +94,9 @@ export struct SystemInput {
         .caretColor(this.getPalette().accentBackground)
         .enabled(!this.disabled)
         // 禁用时从无障碍树移除（对齐原生 disabled 语义）
+        // 字段名 + 错误态播报：placeholder 不等于 label（屏幕阅读器不一定播），
+        // 错误态需可听（对齐前端 aria-invalid + role="alert" 的就近错误行契约）
+        .accessibilityText(this.hasError ? `${this.getFieldLabel()}，输入有误` : this.getFieldLabel())
         .accessibilityLevel(this.disabled ? 'no' : 'auto')
     .opacity(this.disabled ? DesignConstants.OPACITY.DISABLED : 1)
         .type(this.getInputType())

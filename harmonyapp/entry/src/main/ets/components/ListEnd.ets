@@ -32,6 +32,8 @@ export struct ListEnd {
       .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textTertiary)
       .width('100%')
       .textAlign(TextAlign.Center)
+      // 状态提示需可被读屏播报（非装饰文本）
+      .accessibilityText(this.label)
       .padding({
         top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP,
         bottom: DesignConstants.PAGE_SHELL.SECTION_GAP
