@@ -178,3 +178,21 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 
 经验阈值：**≥1.35 清晰、1.2~1.35 偏弱、<1.2 过弱**。星际浅色 1.271 偏弱属跨端一致的
 既有设计（前端 `--cst-palette-border` 同值），**修要两端一起改**，不要只改鸿蒙端。
+
+
+## 「固定高度」审计的正确判据（2026-10-12 实测，避免误报/误改）
+
+本仓 skill 要求「固定高度容器（搜索框、菜单行、pill）改用最小尺寸约束，系统大字体时
+要能随内容撑高而不是截断」。据此审计全仓 **81 处** `.height(...)` 且块内含 Text 的位置，
+**逐一核实后判定为无缺口、不需要改动**。判据如下，下次别再重复怀疑：
+
+| 类别 | 例子 | 判定 |
+|---|---|---|
+| **图形容器**（只含 Icon/头像/徽章，无文字） | `EMPTY_ICON_SIZE`、`ICON_SIZE_MD`、`AVATAR_SIZE.*`、`UNREAD_BADGE_SIZE`、`LOADING_ICON_SIZE`、`DIALOG_ICON_TILE_SIZE` | ✅ **固定尺寸正确**——图形不随字体缩放，改 minHeight 反而错 |
+| **按钮 / 输入框** | `SystemButton`(BUTTON_HEIGHT*)、`SystemInput`(INPUT_HEIGHT)、`SearchPageHeader`(CHAT.INPUT_HEIGHT) | ✅ **固定高度正确**——前端同为固定高（`button.svelte` 用 `h-10`/`h-11`，全仓 `min-h-*` 仅 14 处且都是特殊场景）。控件固定高是跨端一致的既定契约 + 行业惯例，改成 minHeight 会破坏跨端一致 |
+| **可撑高容器** | `SystemTextArea`(`constraintSize({minHeight})`)、`EmptyState`(`EMPTY_FILL_MIN_HEIGHT`)、`CreateMomentSheet` 多行输入 | ✅ 已用 minHeight，正确 |
+| **热区扩展** | `TabsPillGroup`：视觉高度由内层固定、外层 `constraintSize({minHeight: MIN_HIT_TARGET})` 只扩命中区 | ✅ 正确范式，可作参考 |
+
+**审计脚本的坑**：「块内 N 行含 Text」这种粗判会把**图标容器**误报为「文本容器」
+（81 处里绝大多数是图标容器）——要按**该 height 所属元素自身**是否承载文字判断，
+不要用「附近有 Text」。
