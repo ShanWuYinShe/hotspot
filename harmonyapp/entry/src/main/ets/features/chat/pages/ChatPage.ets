@@ -38,7 +38,7 @@ import { ChatActionsSheet } from '../components/ChatActionsSheet';
 import { MessageActionsSheet } from '../components/MessageActionsSheet';
 import { ResponsiveContainer } from '../../../components/ResponsiveContainer';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { EmptyState } from '../../../components/EmptyState';
+import { EmptyState, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemDialog } from '../../../components/SystemDialog';
@@ -1131,18 +1131,13 @@ export struct ChatPage {
                         ListEnd()
           }
         }
-        // 顶部加载更多历史指示器
+        // 顶部加载更多历史指示器（向上分页）
+        // 复用 LoadingMoreIndicator 原语（它本就是「加载中 + 文案」的居中胶囊），
+        // 此前是逐字重写：Row + LoadingProgress + Text + 居中 + padding MD，
+        // 与向下分页的实现不一致（同角色两种写法）。
         if (this.isLoadingMoreHistory) {
           ListItem() {
-            Row({ space: DesignConstants.SPACING.SM }) {
-              LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-              Text('加载更早消息…')
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
-            }
-            .width('100%')
-            .justifyContent(FlexAlign.Center)
-            .padding(DesignConstants.SPACING.MD)
+            LoadingMoreIndicator({ message: '加载更早消息…' })
           }
         }
             LazyForEach(this.messagesDataSource, (msg: ChatMessage, index: number) => {
