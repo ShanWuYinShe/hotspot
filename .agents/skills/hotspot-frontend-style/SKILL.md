@@ -72,8 +72,10 @@ description: hotspot 前端样式与交互状态契约：样式自查清单 19 �
    **动态字距**（如选中态切换）用 class 三元（`{active?'tracking-x':''}`），禁止
    `style="letter-spacing:..."` 内联
 9. **行高**：禁止 `leading-[N]` arbitrary 类与内联 `line-height:N`（一律移到
-   `leading-*` 类）。优先用语义档位 `leading-card`(1.55 摘要/副标题) /
-   `leading-copy`(1.75 正文阅读) / `leading-none`(单行紧凑如数字、徽标)；
+   `leading-*` 类）。优先用语义档位 `leading-card`(1.7 卡片正文/摘要/副标题——
+   **原 1.55 已因阅读疲劳修复上调**，见 theme-registry.css `--leading-card`；
+   鸿蒙端 `FONT.LINE_RATIO.CARD = 1.7` 同步) / `leading-copy`(1.75 正文阅读) /
+   `leading-none`(单行紧凑如数字、徽标)；
    多行正文段落允许用 Tailwind 默认 `leading-5/6/7`（固定 px 行高，对可读性
    敏感、随字号变化需要不同行距，不强制收敛）。
 10. **阴影（强制，3+2+3 档）**：阴影一律用 `shadow-*` token 类或
