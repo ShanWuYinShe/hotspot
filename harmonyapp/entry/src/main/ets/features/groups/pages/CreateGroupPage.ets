@@ -14,6 +14,7 @@ import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemToggle } from '../../../components/SystemToggle';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -644,12 +645,15 @@ export struct CreateGroupPage {
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                   .layoutWeight(1)
 
-                Toggle({ type: ToggleType.Switch, isOn: this.isPasswordRequired })
-                  .selectedColor(this.getCurrentThemePalette().accentBackground)
-                  .onChange((isOn: boolean) => {
+                // 原生 Toggle 迁移为 SystemToggle 原语；label 使读屏播报「密码保护，状态」
+                SystemToggle({
+                  label: '密码保护',
+                  isOn: this.isPasswordRequired,
+                  onToggle: (isOn: boolean) => {
                     this.isPasswordRequired = isOn;
                     if (!isOn) this.groupPassword = '';
-                  })
+                  }
+                })
               }
               .width('100%')
               .padding({

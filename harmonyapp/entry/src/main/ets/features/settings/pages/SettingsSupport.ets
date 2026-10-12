@@ -667,9 +667,12 @@ export struct ToggleSettingRow {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
 
-      Toggle({ type: ToggleType.Switch, isOn: this.isOn })
-        .selectedColor(this.getPalette().accentBackground)
-        .onChange(this.onChange)
+      // 原生 Toggle 迁移为 SystemToggle 原语；label 使读屏播报「{名称}，状态」
+      SystemToggle({
+        label: this.item.title,
+        isOn: this.isOn,
+        onToggle: this.onChange
+      })
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })

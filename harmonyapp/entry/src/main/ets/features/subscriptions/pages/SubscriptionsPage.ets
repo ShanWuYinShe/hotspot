@@ -13,6 +13,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemToggle } from '../../../components/SystemToggle';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { TokenAssetStore } from '../../../core/storage/TokenAssetStore';
 import { AppRouter } from '../../../core/router/AppRouter';
@@ -324,12 +325,14 @@ export struct SubscriptionsPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
 
-      Toggle({ type: ToggleType.Switch, isOn: this.getValue(item.key) })
-        .selectedColor(this.getCurrentThemePalette().accentBackground)
-        .onChange((isOn: boolean) => {
-          this.update(item.key, isOn);
-        })
-        .enabled(!this.savingKey || this.savingKey === String(item.key))
+      // 原生 Toggle 迁移为 SystemToggle 原语（skill：改到该文件时优先迁移遗留债务）；
+      // label 使读屏播报「{名称}，已开启/已关闭」而非仅状态
+      SystemToggle({
+        label: item.title,
+        isOn: this.getValue(item.key),
+        disabled: !!this.savingKey && this.savingKey !== String(item.key),
+        onToggle: (next: boolean) => { this.update(item.key, next); }
+      })
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
