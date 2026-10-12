@@ -581,6 +581,7 @@ export struct CreateGroupPage {
                   .width(DesignConstants.LAYOUT.MIN_HIT_TARGET)
                   .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
                   .backgroundColor(this.getSurfaceSubtle())
+                  .accessibilityText('减少人数上限')
                   .enabled(this.maxMembers > GROUP_MEMBERS_MIN)
                   .onClick(() => {
                     if (this.maxMembers > GROUP_MEMBERS_MIN) this.maxMembers = Math.max(GROUP_MEMBERS_MIN, this.maxMembers - 10);

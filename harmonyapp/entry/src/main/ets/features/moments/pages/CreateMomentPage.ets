@@ -728,6 +728,8 @@ export struct CreateMomentPage {
       .borderRadius(DesignConstants.RADIUS.LG)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getOverlayBorderColor() })
       .margin({ top: DesignConstants.SPACING.HALF, right: DesignConstants.SPACING.HALF })
+      // 纯图标钮必须有无障碍描述
+      .accessibilityText('移除图片')
       .onClick(() => this.removeImage(index))
       // 触控热区：视觉 28 → 命中区 44（对齐 LAYOUT.MIN_HIT_TARGET，同类小钮同款）
       .responseRegion({

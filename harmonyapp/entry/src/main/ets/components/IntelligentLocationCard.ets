@@ -101,6 +101,8 @@ export struct IntelligentLocationCard {
         .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
         .backgroundColor(this.getPalette().accentBackground)
         .borderRadius(DesignConstants.RADIUS.XL)
+        // 纯图标钮必须有无障碍描述（skill mobile-ui-conventions）
+        .accessibilityText('查看位置详情')
         .onClick(() => {
           this.triggerHapticFeedback();
           if (this.onLocationTap) {
@@ -124,6 +126,8 @@ export struct IntelligentLocationCard {
           color: this.getPalette().accentBackground
         })
         .borderRadius(DesignConstants.RADIUS.XL)
+        // 纯图标钮必须有无障碍描述
+        .accessibilityText('导航到该位置')
         .onClick(() => {
           this.triggerHapticFeedback();
           if (this.onNavigationTap) {

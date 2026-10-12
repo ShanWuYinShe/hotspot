@@ -1321,6 +1321,9 @@ export struct ChatPage {
           }
         }
         .type(ButtonType.Circle)
+        // 纯图标钮：无障碍文案随发送态变化（skill mobile-ui-conventions 要求
+        // 动态状态文案随之变化，而不是固定一句）
+        .accessibilityText(this.isSending ? '发送中' : '发送消息')
         .stateEffect(false)
         .width(this.getChatVisualStyle().sendButton.height)
         .height(this.getChatVisualStyle().sendButton.height)
