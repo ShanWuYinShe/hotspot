@@ -66,6 +66,26 @@ export const StorageKeys: StorageKeysType = {
   SWITCH_TAB_REQUEST: 'switch_tab_request'
 };
 
+/**
+ * Preferences **库名**（不是键名——键名见上方 StorageKeys）。
+ *
+ * HarmonyOS Preferences 按「库」隔离，本项目按用途分库：
+ * - GEOTALK：业务偏好（用户信息、主题、服务器地址、浏览锚点等），PreferencesUtil 单例持有；
+ * - ANCHOR_HISTORY：浏览锚点历史，AnchorHistoryUtil 单例持有（数据量大、与业务偏好
+ *   生命周期不同，故独立分库）。
+ *
+ * 此前两处库名是散落的字面量（'geotalk' / 'anchor_history'），集中登记避免拼写漂移。
+ */
+export interface PreferenceStoresType {
+  GEOTALK: string;
+  ANCHOR_HISTORY: string;
+}
+
+export const PreferenceStores: PreferenceStoresType = {
+  GEOTALK: 'geotalk',
+  ANCHOR_HISTORY: 'anchor_history'
+};
+
 // 页面名称
 export interface PageNamesType {
   INDEX: string;

@@ -6,6 +6,7 @@
 import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { PreferenceStores } from '../../constants/AppConstants';
 
 const DOMAIN_NUMBER: number = 0xFF37;
 const TAG: string = 'PreferencesUtil';
@@ -19,7 +20,7 @@ export class PreferencesUtil {
   static async init(context: common.UIAbilityContext) {
     if (!PreferencesUtil.store) {
       try {
-        PreferencesUtil.store = await preferences.getPreferences(context, 'geotalk');
+        PreferencesUtil.store = await preferences.getPreferences(context, PreferenceStores.GEOTALK);
       } catch (error) {
         // Handle error
         hilog.error(DOMAIN_NUMBER, TAG, `Failed to get preferences: ${error}`);

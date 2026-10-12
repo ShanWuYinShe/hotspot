@@ -5,6 +5,7 @@
 
 import { preferences } from '@kit.ArkData';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { PreferenceStores } from '../../constants/AppConstants';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'AnchorHistoryUtil';
@@ -27,7 +28,7 @@ export class AnchorHistoryUtil {
   static init(context: Context): void {
     if (!AnchorHistoryUtil.prefInstance) {
       try {
-        AnchorHistoryUtil.prefInstance = preferences.getPreferencesSync(context, { name: 'anchor_history' });
+        AnchorHistoryUtil.prefInstance = preferences.getPreferencesSync(context, { name: PreferenceStores.ANCHOR_HISTORY });
       } catch {
         hilog.warn(DOMAIN_NUMBER, TAG, '初始化 Preferences 失败');
       }
