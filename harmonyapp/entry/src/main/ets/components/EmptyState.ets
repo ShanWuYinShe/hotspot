@@ -38,7 +38,7 @@ export struct EmptyState {
         if (this.bare) {
           LucideIcon({
             icon: this.icon,
-            iconSize: DesignConstants.FONT.SIZE.XXL,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
             color: this.getPalette().textSecondary
           })
           .opacity(DesignConstants.OPACITY.MUTED)
@@ -57,7 +57,7 @@ export struct EmptyState {
 
             LucideIcon({
               icon: this.icon,
-              iconSize: DesignConstants.FONT.SIZE.XXL,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
               color: this.getPalette().accentBackground
             })
             .opacity(DesignConstants.OPACITY.EMPHASIZED)

@@ -156,7 +156,7 @@ export struct MomentWallCard {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
             icon: this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART,
-            iconSize: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             color: this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary
           })
           Text(`${this.getLikeCount()}`)
@@ -179,7 +179,7 @@ export struct MomentWallCard {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
               icon: AppIcon.MESSAGE,
-              iconSize: DesignConstants.FONT.SIZE.MD,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
               color: this.getPalette().textSecondary
             })
           Text(`${this.getCommentCount()}`)
@@ -204,7 +204,7 @@ export struct MomentWallCard {
       // 收藏
       LucideIcon({
         icon: this.isFavorited() ? AppIcon.STAR_FILL : AppIcon.STAR,
-        iconSize: DesignConstants.FONT.SIZE.MD,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
         color: this.isFavorited() ? this.getPalette().accentBackground : this.getPalette().textSecondary
       })
       .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}favorite-${this.moment.moment_id}`)

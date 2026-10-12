@@ -1255,7 +1255,7 @@ export struct ChatPage {
         Button() {
           LucideIcon({
               icon: AppIcon.ADD,
-              iconSize: DesignConstants.FONT.SIZE.XL,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
               color: this.getCurrentThemePalette().textSecondary
             })
         }
@@ -1324,7 +1324,7 @@ export struct ChatPage {
           } else {
             LucideIcon({
               icon: AppIcon.SEND,
-              iconSize: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
               color: this.isSendInteractive() ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textSecondary
             })
           }
@@ -1427,7 +1427,7 @@ export struct ChatPage {
       Row({ space: DesignConstants.SPACING.XS }) {
         LucideIcon({
           icon: AppIcon.ARROW_DOWN,
-          iconSize: DesignConstants.FONT.SIZE.MD,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
           color: this.getCurrentThemePalette().accentText
         })
         Text('新消息')

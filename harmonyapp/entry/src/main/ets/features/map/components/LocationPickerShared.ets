@@ -104,7 +104,7 @@ export function TopBar(props: TopBarProps) {
     Row() {
       LucideIcon({
           icon: AppIcon.BACK,
-          iconSize: DesignConstants.FONT.SIZE.XL,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           color: resolveLocationPickerPalette(props.resolvedThemeId).textPrimary
         })
     }
@@ -119,7 +119,7 @@ export function TopBar(props: TopBarProps) {
     Row({ space: DesignConstants.SPACING.SM2 }) {
       LucideIcon({
           icon: AppIcon.FILTER,
-          iconSize: DesignConstants.FONT.SIZE.LG,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
           color: resolveLocationPickerPalette(props.resolvedThemeId).textPrimary
         })
       Text('筛选')
@@ -601,7 +601,7 @@ export struct MainPanel {
       Row({ space: DesignConstants.SPACING.SM }) {
         LucideIcon({
             icon: AppIcon.SEARCH,
-            iconSize: DesignConstants.FONT.SIZE.LG,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             color: resolveLocationPickerPalette(this.resolvedThemeId).textTertiary
           })
         Text('搜索地点、地标或坐标')
@@ -675,7 +675,7 @@ export struct MainPanel {
                       Column() {
                         LucideIcon({
                             icon: AppIcon.TIME,
-                            iconSize: DesignConstants.FONT.SIZE.LG,
+                            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
                             color: resolveLocationPickerPalette(this.resolvedThemeId).textTertiary
                           })
                       }

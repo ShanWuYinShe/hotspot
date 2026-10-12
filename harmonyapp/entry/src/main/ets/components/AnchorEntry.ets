@@ -73,7 +73,7 @@ export struct AnchorEntry {
       Row() {
         LucideIcon({
             icon: AppIcon.NEARBY,
-            iconSize: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             color: this.getPalette().accentText
           })
       }
@@ -112,7 +112,7 @@ export struct AnchorEntry {
 
       LucideIcon({
           icon: AppIcon.ARROW_RIGHT,
-          iconSize: DesignConstants.FONT.SIZE.MD,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
           color: this.getPalette().textSecondary
         })
     }

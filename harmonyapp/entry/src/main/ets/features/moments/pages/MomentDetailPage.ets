@@ -529,7 +529,7 @@ export struct MomentDetailPage {
         Row() {
           LucideIcon({
             icon: AppIcon.MORE,
-            iconSize: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             paletteRole: 'textSecondary'
           })
         }
@@ -877,7 +877,7 @@ export struct MomentDetailPage {
           Row({ space: DesignConstants.SPACING.XS }) {
             LucideIcon({
               icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
-              iconSize: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
               color: this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
             })
             Text(formatCount(this.getMomentLikesCount(moment)))
@@ -907,7 +907,7 @@ export struct MomentDetailPage {
           Row({ space: DesignConstants.SPACING.XS }) {
             LucideIcon({
               icon: AppIcon.MESSAGE,
-              iconSize: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
               color: this.getCurrentThemePalette().textSecondary
             })
             Text(formatCount(this.getCommentCount(moment)))
@@ -930,7 +930,7 @@ export struct MomentDetailPage {
           Row() {
             LucideIcon({
               icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
-              iconSize: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
               color: this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
             })
           }
@@ -950,7 +950,7 @@ export struct MomentDetailPage {
           Row() {
             LucideIcon({
               icon: AppIcon.SHARE,
-              iconSize: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
               color: this.getCurrentThemePalette().textSecondary
             })
           }

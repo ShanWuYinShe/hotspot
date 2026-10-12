@@ -1209,7 +1209,7 @@ export struct LocationPickerPage {
           Column() {
             LucideIcon({
                 icon: AppIcon.LOCATION,
-                iconSize: DesignConstants.FONT.SIZE.XL,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
                 color: this.getCurrentThemePalette().mapUser
               })
           }
@@ -1270,7 +1270,7 @@ export struct LocationPickerPage {
           Column() {
             LucideIcon({
                 icon: AppIcon.ADD,
-                iconSize: DesignConstants.FONT.SIZE.XL,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
                 color: resolveLocationPickerPalette(this.resolvedThemeId).textPrimary
               })
           }
@@ -1301,7 +1301,7 @@ export struct LocationPickerPage {
           Column() {
             LucideIcon({
                 icon: AppIcon.REMOVE,
-                iconSize: DesignConstants.FONT.SIZE.XL,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
                 color: resolveLocationPickerPalette(this.resolvedThemeId).textPrimary
               })
           }

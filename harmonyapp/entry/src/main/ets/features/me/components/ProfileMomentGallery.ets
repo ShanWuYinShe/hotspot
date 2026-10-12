@@ -79,7 +79,7 @@ export struct ProfileMomentGallery {
         Column({ space: DesignConstants.SPACING.MD }) {
           LucideIcon({
               icon: AppIcon.EMPTY,
-              iconSize: DesignConstants.FONT.SIZE.XL,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
               color: this.palette().textSecondary
             })
           .opacity(DesignConstants.OPACITY.MUTED)
@@ -104,7 +104,7 @@ export struct ProfileMomentGallery {
       Column({ space: DesignConstants.SPACING.MD }) {
         LucideIcon({
             icon: this.selectedTab === 1 ? AppIcon.HEART : AppIcon.STAR,
-            iconSize: DesignConstants.FONT.SIZE.XL,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
             color: this.palette().textSecondary
           })
         .opacity(DesignConstants.OPACITY.MUTED)

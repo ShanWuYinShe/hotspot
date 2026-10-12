@@ -209,7 +209,7 @@ export struct SettingsEntryRow {
       Row() {
         LucideIcon({
             icon: this.item.icon,
-            iconSize: DesignConstants.FONT.SIZE.LG,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             color: this.getPalette().accentBackground
           })
       }
@@ -324,7 +324,7 @@ export struct SettingsToggleRow {
       Row() {
         LucideIcon({
             icon: this.icon,
-            iconSize: DesignConstants.FONT.SIZE.LG,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             color: this.getPalette().accentBackground
           })
       }
@@ -874,7 +874,7 @@ export struct RelationshipListSection {
           Row() {
             LucideIcon({
               icon: AppIcon.GROUP,
-              iconSize: DesignConstants.FONT.SIZE.XXL,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
               paletteRole: 'textSecondary'
             })
           }

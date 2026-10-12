@@ -96,7 +96,7 @@ export struct ChatPageHeader {
         icon: AppIcon.MORE,
         kind: 'surface',
         buttonSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
-        glyphSize: DesignConstants.FONT.SIZE.MD,
+        glyphSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
         accessibilityLabel: '会话操作',
         onPress: () => {
           this.onTrailingAction();

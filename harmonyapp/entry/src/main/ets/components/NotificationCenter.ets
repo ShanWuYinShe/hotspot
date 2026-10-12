@@ -399,7 +399,7 @@ export struct NotificationCenter {
             Row() {
               LucideIcon({
                   icon: AppIcon.BACK,
-                  iconSize: DesignConstants.FONT.SIZE.LG,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
                   color: this.getPalette().textSecondary
                 })
             }
@@ -627,7 +627,7 @@ export struct NotificationCenter {
           Row() {
             LucideIcon({
               icon: this.getNotificationIcon(notification.type),
-              iconSize: DesignConstants.FONT.SIZE.XL,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
               color: this.getTypeColor(notification.type)
             })
           }

@@ -263,7 +263,7 @@ export struct LoginPage {
             // 返回钮：统一 lucide chevron-left + 按压缩放
             LucideIcon({
               icon: AppIcon.BACK,
-              iconSize: DesignConstants.FONT.SIZE.XXL,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
               paletteRole: 'textPrimary'
             })
             .onClick(() => {

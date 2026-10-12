@@ -84,7 +84,7 @@ export struct MomentFeedCard {
     Column() {
       LucideIcon({
         icon: AppIcon.PHOTO,
-        iconSize: DesignConstants.FONT.SIZE.LG,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
         color: this.getPalette().textSecondary
       })
       .opacity(DesignConstants.OPACITY.MUTED)
@@ -289,7 +289,7 @@ export struct MomentFeedCard {
             Row({ space: DesignConstants.SPACING.XS }) {
               LucideIcon({
                   icon: this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART,
-                  iconSize: DesignConstants.FONT.SIZE.MD,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                   color: this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary
                 })
               .padding(DesignConstants.SPACING.MD3)
@@ -317,7 +317,7 @@ export struct MomentFeedCard {
             Row({ space: DesignConstants.SPACING.XS }) {
               LucideIcon({
                   icon: AppIcon.MESSAGE,
-                  iconSize: DesignConstants.FONT.SIZE.MD,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                   color: this.getPalette().textSecondary
                 })
               .padding(DesignConstants.SPACING.MD3)
@@ -345,7 +345,7 @@ export struct MomentFeedCard {
           Row({ space: DesignConstants.SPACING.MD }) {
             LucideIcon({
                 icon: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? AppIcon.STAR_FILL : AppIcon.STAR,
-                iconSize: DesignConstants.FONT.SIZE.MD,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                 color: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? this.getPalette().accentBackground : this.getPalette().textSecondary
               })
             .padding(DesignConstants.SPACING.MD3)
@@ -368,7 +368,7 @@ export struct MomentFeedCard {
 
             LucideIcon({
                 icon: AppIcon.SHARE,
-                iconSize: DesignConstants.FONT.SIZE.MD,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                 color: this.getPalette().textSecondary
               })
             .padding(DesignConstants.SPACING.MD3)

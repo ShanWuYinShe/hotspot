@@ -1654,7 +1654,7 @@ export struct GroupDetailPage {
 
               LucideIcon({
                   icon: AppIcon.FORWARD,
-                  iconSize: DesignConstants.FONT.SIZE.LG,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
                   color: this.getCurrentThemePalette().textSecondary
                 })
             }
@@ -1699,7 +1699,7 @@ export struct GroupDetailPage {
 
                 LucideIcon({
                     icon: AppIcon.FORWARD,
-                    iconSize: DesignConstants.FONT.SIZE.LG,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
                     color: this.getCurrentThemePalette().textSecondary
                   })
               }

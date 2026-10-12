@@ -42,7 +42,7 @@ export struct IntelligentLocationCard {
       // 位置图标 - 使用SymbolSpan
       LucideIcon({
           icon: AppIcon.LOCATION,
-          iconSize: DesignConstants.FONT.SIZE.XXL,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
           color: this.getPalette().accentBackground
         })
 
@@ -93,7 +93,7 @@ export struct IntelligentLocationCard {
         Button({ type: ButtonType.Normal, stateEffect: true }) {
           LucideIcon({
               icon: AppIcon.INFO,
-              iconSize: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
               color: this.getPalette().accentText as ResourceColor
             })
         }
@@ -112,7 +112,7 @@ export struct IntelligentLocationCard {
         Button({ type: ButtonType.Normal, stateEffect: true }) {
           LucideIcon({
               icon: AppIcon.UP,
-              iconSize: DesignConstants.FONT.SIZE.LG,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
               color: this.getPalette().accentBackground
             })
         }

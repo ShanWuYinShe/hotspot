@@ -310,7 +310,7 @@ export struct CreateMomentSheet {
         Row({ space: DesignConstants.SPACING.MD }) {
           LucideIcon({
               icon: AppIcon.EMOJI,
-              iconSize: DesignConstants.FONT.SIZE.MD,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
               color: this.getPalette().textSecondary
             })
           Text('#')
@@ -376,7 +376,7 @@ export struct CreateMomentSheet {
             Column({ space: DesignConstants.SPACING.THREE }) {
               LucideIcon({
                   icon: AppIcon.ADD,
-                  iconSize: DesignConstants.FONT.SIZE.LG,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
                   color: this.getPalette().textSecondary
                 })
               Text('添加')

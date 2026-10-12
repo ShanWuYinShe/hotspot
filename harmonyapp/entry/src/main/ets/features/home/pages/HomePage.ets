@@ -1187,7 +1187,7 @@ export struct HomePage {
       Column() {
         LucideIcon({
           icon: this.activityIcon(index),
-          iconSize: DesignConstants.FONT.SIZE.LG,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
           color: this.activityAccent(index)
         })
       }
@@ -1216,7 +1216,7 @@ export struct HomePage {
 
       LucideIcon({
         icon: AppIcon.ARROW_RIGHT,
-        iconSize: DesignConstants.FONT.SIZE.MD,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
         paletteRole: 'textSecondary'
       })
     }

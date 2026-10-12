@@ -88,7 +88,7 @@ export struct TabsPillGroup {
         if (tab.icon) {
           LucideIcon({
             icon: tab.icon,
-            iconSize: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             color: this.isActive(index) || this.hoveredIndex === index ?
             this.getPalette().accentText : this.getPalette().tabBarInactive
           })

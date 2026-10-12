@@ -485,7 +485,7 @@ export struct SettingsPage {
 
         LucideIcon({
             icon: AppIcon.ARROW_RIGHT,
-            iconSize: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             color: this.getCurrentThemePalette().textSecondary
           })
       }
@@ -593,7 +593,7 @@ export struct SettingsPage {
                           Row() {
                             LucideIcon({
                               icon: AppIcon.MOON,
-                              iconSize: DesignConstants.FONT.SIZE.LG,
+                              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
                               color: this.getCurrentThemePalette().accentBackground
                             })
                           }

@@ -160,7 +160,7 @@ struct AdminOverviewPage {
       Row() {
         LucideIcon({
             icon: AppIcon.SHIELD,
-            iconSize: DesignConstants.FONT.SIZE.XL,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
             color: this.getPalette().accentText
           })
       }
@@ -239,7 +239,7 @@ struct AdminOverviewPage {
 
       LucideIcon({
           icon: AppIcon.ARROW_RIGHT,
-          iconSize: DesignConstants.FONT.SIZE.MD,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
           color: this.getPalette().textSecondary
         })
     }
@@ -275,7 +275,7 @@ struct AdminOverviewPage {
       Row({ space: DesignConstants.SPACING.XS }) {
         LucideIcon({
             icon: AppIcon.INFO,
-            iconSize: DesignConstants.FONT.SIZE.MD,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             color: this.getPalette().textSecondary
           })
         Text('完整管理请在 Web 端进行')

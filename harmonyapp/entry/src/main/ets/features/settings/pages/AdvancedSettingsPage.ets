@@ -176,7 +176,7 @@ export struct AdvancedSettingsPage {
 
       LucideIcon({
           icon: AppIcon.ARROW_RIGHT,
-          iconSize: DesignConstants.FONT.SIZE.MD,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
           color: this.getCurrentThemePalette().textSecondary
         })
     }

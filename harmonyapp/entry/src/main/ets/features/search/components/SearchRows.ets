@@ -60,7 +60,7 @@ export struct SearchSuggestRow {
 
         LucideIcon({
             icon: AppIcon.ARROW_RIGHT,
-            iconSize: DesignConstants.FONT.SIZE.LG,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             color: this.palette?.textSecondary
           })
       }
@@ -102,7 +102,7 @@ export struct SearchMomentRow {
 
         LucideIcon({
             icon: AppIcon.ARROW_RIGHT,
-            iconSize: DesignConstants.FONT.SIZE.LG,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             color: this.palette?.textSecondary
           })
       }

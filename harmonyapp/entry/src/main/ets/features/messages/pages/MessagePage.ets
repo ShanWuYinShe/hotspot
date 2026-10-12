@@ -640,7 +640,7 @@ export struct MessagePage {
           Row() {
             LucideIcon({
               icon: AppIcon.ADD,
-              iconSize: DesignConstants.FONT.SIZE.MD,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
               paletteRole: 'textSecondary'
             })
           }

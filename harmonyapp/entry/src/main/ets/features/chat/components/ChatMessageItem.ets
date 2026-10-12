@@ -105,7 +105,7 @@ export struct ChatMessageItem {
                   Column({ space: DesignConstants.SPACING.SM }) {
                     LucideIcon({
                       icon: AppIcon.PHOTO,
-                      iconSize: DesignConstants.FONT.SIZE.LG,
+                      iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
                       paletteRole: 'textSecondary'
                     })
                     Text('图片加载失败')

@@ -196,7 +196,7 @@ export struct DesktopLayout {
       Row({ space: DesignConstants.SPACING.SM }) {
         LucideIcon({
             icon: AppIcon.NEARBY,
-            iconSize: DesignConstants.FONT.SIZE.XL,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
             color: this.getPalette().accentBackground
           })
         Text('HotSpot')
@@ -670,7 +670,7 @@ export struct DesktopLayout {
     Row() {
       LucideIcon({
           icon: icon,
-          iconSize: DesignConstants.FONT.SIZE.XL,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           color: this.getPalette().accentBackground
         })
       Text(label)
