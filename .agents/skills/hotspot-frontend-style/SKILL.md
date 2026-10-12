@@ -214,3 +214,24 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 - **地图筛选菜单统一**：`map/shared/MapFilterMenu.svelte` 是桌面/移动唯一筛选实现
   （Popover 外点/Escape 关闭、徽章、至少一项约束、「全部显示」重置）；地图空白点击
   一律经 `MapCanvas onMapTap`（内部区分拖拽，拖动不误触），禁止父级用原生 onclick 判定。
+
+
+## 前端按钮「原语绕过」审计判据（2026-10-12 实测，避免误报）
+
+前端与鸿蒙的原语纪律**不同**：鸿蒙强制 SystemButton 原语；前端允许原生 `<button>` +
+token 类（Svelte/Tailwind 惯例），约束落在**交互反馈类**（自查清单第 7 条）。据此对全仓
+209 处原生 `<button>` 做了审计，**结论：无缺口**。合规基线（命中任一即合规）：
+
+- 反馈工具类：`hover-btn` / `hover-bg` / `hover:bg-*` / `tap-*` / `scale-btn` /
+  `focus-ring` / `focus-visible:ring-*`
+- `link-btn` 工具类（自带 transition + underline 反馈）
+- 共享常量：admin 页的 `ROW_BTN / ROW_BTN_PRIMARY / ROW_BTN_DANGER`
+  （`routes/(app)/admin/shared/table.ts`，内含完整 hover/tap/focus/disabled 四态）
+- `ListItem` 组件（列表行，第 5 条）
+
+**审计脚本的坑（本次 106/209 误报）**：
+1. 多行 button 标签被属性值里的 `=>` 提前截断（`[^>]*` 遇 `>` 即停），class 没采到；
+2. class 是常量引用（`class={ROW_BTN}`）时不含字面关键词；
+3. `link-btn` / `focus-ring` / `focus-visible` 不在关键词表里。
+→ 与鸿蒙端两轮结论一致：**启发式只产候选清单，合规判定必须人工开上下文**；
+  且**不要拿鸿蒙的原语标准套前端**——两端的「合规」定义不同。
