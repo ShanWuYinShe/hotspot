@@ -149,3 +149,28 @@ cp -c -R "$SRC" "$DST/Pura 90 Pro"        # -c = APFS 克隆，5.6GB 近乎瞬�
 - 收尾时删掉 `.workwork/emu-instance` 即可，真实实例不受影响。
 - **结论**：这类「工具要写 home 目录」的问题优先走「① 换目录/重定向」，能靠工具自身参数
   解决就不要申请放宽沙盒；本机模拟器的重定向参数就是 `-instancePath`。
+
+
+## 走查铁律：截图与 dumpLayout 必须**同一次调用**获取（2026-10-12，已踩 3 次）
+
+用截图目测判断布局位置时，**极易与 dumpLayout 的坐标不一致**——因为两次命令之间
+页面可能仍在滚动/重排（尤其是刚 fling 过、或有入场动画时）。我因此在本次会话里
+**连续 3 次误判**（都误以为「元素偏上/没生效」）：
+
+1. 动态详情长文：目测行距 62px ≠ 计算 98px，误判「行高没生效」——实际是截图与 dump
+   处于不同滚动位置，dump 取到的是被裁剪的节点高度（873px vs 1372px）。
+2. 首页空态卡片：目测「卡片偏上」，实测卡片中心 1420 vs 容器中心 1419.5，**完全居中**。
+3. 消息页「最近」标签：一次测量 x=109（误判未对齐），另一次 x=73（正确）。
+
+**正确做法**：把 dumpLayout 与 snapshot_display 放进**同一条 shell 命令**，且**先 dump
+后截图**（或先截图后 dump，但两者之间不插入任何滚动/点击）：
+
+```bash
+hdc shell uitest dumpLayout -p /data/local/tmp/x.json
+hdc shell "cat /data/local/tmp/x.json" > /tmp/x.json
+hdc shell snapshot_display -f /data/local/tmp/y.jpeg
+hdc shell "cat /data/local/tmp/y.jpeg" > shot.jpeg
+```
+
+**判定位置类问题只信 dumpLayout 的坐标**（它是布局树的真值），截图只用于看观感
+（层级/密度/配色）。两者冲突时，**以 dumpLayout 为准**，不要凭截图下结论。
