@@ -12,10 +12,11 @@ import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { formatCount } from '../../../core/utils/FormatUtil';
+import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Component
 export struct ProfileDataSection {
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @Prop myGroupsCount: number = 0;
   @Prop myFriendsCount: number = 0;
   @Prop myFollowingCount: number = 0;

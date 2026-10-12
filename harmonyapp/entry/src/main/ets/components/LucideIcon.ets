@@ -14,7 +14,7 @@
 
 import { AppIcon } from './SystemIcon';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 const DEFAULT_ICON_SIZE: number = 24;
 const DEFAULT_ICON_COLOR_SENTINEL: string = '__lucide_icon_default_color__';
@@ -40,7 +40,7 @@ export struct LucideIcon {
   @Prop paletteRole: string = '';
   @Prop overrideThemeId: string = '';
 
-  @StorageProp(KEY_RESOLVED_THEME_ID) storageThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) storageThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getEffectiveThemeId(): string {
     return this.overrideThemeId !== '' ? this.overrideThemeId : this.storageThemeId;

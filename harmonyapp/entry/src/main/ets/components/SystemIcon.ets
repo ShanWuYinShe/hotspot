@@ -5,7 +5,7 @@
 
 
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { DesignConstants } from '../constants/DesignConstants';
 
 const DEFAULT_THEME_ICON_SENTINEL: string = '__theme_icon_default__';
@@ -253,7 +253,7 @@ export struct SystemIcon {
   @Prop iconColor: string | ResourceColor = DEFAULT_THEME_ICON_SENTINEL;
   @Prop clickable: boolean = false;
   onIconClick?: () => void;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getDefaultIconColor(): string {
     return AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground;

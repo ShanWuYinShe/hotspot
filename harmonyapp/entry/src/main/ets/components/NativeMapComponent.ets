@@ -12,7 +12,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { image } from '@kit.ImageKit';
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { LucideIcon } from '../components/LucideIcon';
 
@@ -124,7 +124,7 @@ interface ClusterItemCandidate {
 @Component
 export struct NativeMapComponent {
   @Watch('onDarkModeChange') @StorageProp('isDarkMode') isDarkMode: boolean = false;
-  @Watch('onResolvedThemeIdChange') @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @Watch('onResolvedThemeIdChange') @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @Watch('onRegionChangeProp') @Prop mapRegion: MapRegion = {
     latitude: 39.9042,
     longitude: 116.4074,

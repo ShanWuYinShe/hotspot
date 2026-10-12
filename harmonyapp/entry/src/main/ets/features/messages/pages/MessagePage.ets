@@ -48,7 +48,7 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'MessagePage';
@@ -73,7 +73,7 @@ export struct MessagePage {
   @StorageLink(KEY_LAST_MESSAGE_SYNC_TIME) @Watch('onMessageSync') lastMessageSyncTime: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);

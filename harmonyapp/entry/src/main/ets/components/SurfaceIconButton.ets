@@ -1,6 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { AppThemeShadow, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { AppThemeShadow, DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { LucideIcon } from './LucideIcon';
 import { curves } from '@kit.ArkUI';
@@ -20,7 +20,7 @@ export struct SurfaceIconButton {
    *  仅限媒体浮层/hero 封面等主题色不可达的场景，常规页面禁止使用。 */
   @Prop iconColor: string | ResourceColor = '';
   onPress?: () => void;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   @State isPressed: boolean = false;
   /** hover（仅键鼠外接触发） */

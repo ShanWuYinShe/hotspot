@@ -11,10 +11,11 @@ import { LucideIcon } from '../../../components/LucideIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { formatCount } from '../../../core/utils/FormatUtil';
+import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Component
 export struct ProfileIdentityCard {
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @Prop avatarUrl: string = '';
   @Prop nickname: string = '';
   @Prop locationName: string = '';

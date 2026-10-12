@@ -18,7 +18,7 @@ import { LocationInfo } from '../../../core/location/LocationUtil';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
@@ -35,7 +35,7 @@ export struct ShareResolutionPage {
   @State shareCode: string = '';
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private isDestroyed: boolean = false;
 

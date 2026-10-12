@@ -20,7 +20,7 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 @Preview
@@ -31,7 +31,7 @@ export struct MySharesPage {
   @StorageLink(KEY_IS_LOGGED_IN) @Watch('onLoginStateChanged') isLoggedIn: boolean = false;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private sharesDataSource: BasicDataSource<ShareListItem> = new BasicDataSource<ShareListItem>([]);
   @State private shares: ShareListItem[] = [];

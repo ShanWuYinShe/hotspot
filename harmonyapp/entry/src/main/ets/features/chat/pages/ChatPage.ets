@@ -63,7 +63,7 @@ import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIC
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { ChatThemeManager } from '../../../core/theme/ChatTheme';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF09;
@@ -95,7 +95,7 @@ export struct ChatPage {
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   
   @State messages: ChatMessage[] = [];
   private messagesDataSource: BasicDataSource<ChatMessage> = new BasicDataSource<ChatMessage>([]);

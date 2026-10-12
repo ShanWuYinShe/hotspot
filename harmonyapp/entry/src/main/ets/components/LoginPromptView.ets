@@ -24,7 +24,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from './LucideIcon';
 
 const DOMAIN_NUMBER: number = 0xFF20;
@@ -52,7 +52,7 @@ export struct LoginPromptView {
   @State isQuickStarting: boolean = false;
   @State isQuickInputFocused: boolean = false;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   /** 作为独立全屏页时由调用方注入背景；嵌入场景不传则透明（让父容器背景透出）。 */
   @Prop surfaceColor: ResourceColor | null = null;
 

@@ -6,7 +6,7 @@ import { SystemToggle } from '../../../components/SystemToggle';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { GroupAnnouncementItem } from '../../../core/types/api';
 
 const ANNOUNCEMENT_TITLE_MAX: number = 50;
@@ -28,7 +28,7 @@ export struct AnnouncementEditorSheet {
   @Prop saving: boolean = false;
   onCancel: () => void = () => {};
   onSubmit: () => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @Prop safeAreaBottom: number = 0;
 
   private getCurrentThemePalette() {

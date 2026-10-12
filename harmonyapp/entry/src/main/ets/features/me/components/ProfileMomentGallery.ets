@@ -10,6 +10,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { MomentItem } from '../../../core/types/api';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Component
 export struct ProfileMomentGallery {
@@ -18,7 +19,7 @@ export struct ProfileMomentGallery {
   @Prop moments: MomentItem[] = [];
   /** 网格列数（宽屏 master-detail 3 列，窄屏 2 列，对齐前端 grid-cols-2 md:grid-cols-3） */
   @Prop columns: number = 2;
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private palette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

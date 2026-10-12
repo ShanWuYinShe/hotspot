@@ -15,7 +15,7 @@ import { PageNames, DEBUG_BUILD } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { SystemDialog } from '../../../components/SystemDialog';
 import { CacheManager } from '../../../core/cache/CacheManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
@@ -29,7 +29,7 @@ export struct AdvancedSettingsPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private pressedSettingKey: string = '';
   @State private showClearCacheDialog: boolean = false;
   @State private isClearingCache: boolean = false;

@@ -1,7 +1,7 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { BreakpointType } from '../core/responsive/Breakpoint';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
  * 页面内容栏容器（对齐前端 .page-shell + .page-pad）
@@ -55,7 +55,7 @@ export struct PageShellContainer {
   /** 是否占满父容器高度。滚动容器（Scroll/Refresh）内部必须传 false：
    *  height('100%') 会使内容高度恒等于视口，滚动范围归零、下方内容被裁剪 */
   @Prop fillHeight: boolean = true;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

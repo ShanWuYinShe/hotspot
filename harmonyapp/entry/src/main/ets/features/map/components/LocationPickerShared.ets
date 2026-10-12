@@ -20,7 +20,7 @@ import { CoordinateBounds, CoordinateConverter } from '../../../core/geo/Coordin
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
 export const DOMAIN_NUMBER: number = 0xFF13;
 export const TAG: string = 'LocationPickerPage';
@@ -91,7 +91,7 @@ export interface TopBarProps {
 }
 
 export function resolveLocationPickerPalette(themeId?: string) {
-  return AppThemeManager.getPaletteById(themeId ?? 'vibrant_light');
+  return AppThemeManager.getPaletteById(themeId ?? DEFAULT_RESOLVED_THEME_ID);
 }
 
 @Builder
@@ -303,7 +303,7 @@ export struct SearchPanel {
   onSelectHistory: (item: AnchorHistoryItem) => void = (item) => {};
   onTextChange: (value: string) => void = (value) => {};
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State cancelPressed: boolean = false;
   @State clearPressed: boolean = false;
   @State pressedRowKey: string = '';
@@ -540,7 +540,7 @@ export struct MainPanel {
   private resolveBottomInset(): number {
     return Math.max(this.safeAreaBottom, DesignConstants.SPACING.XL);
   }
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State clearPressed: boolean = false;
   @State searchEntryPressed: boolean = false;
   @State pressedRowKey: string = '';

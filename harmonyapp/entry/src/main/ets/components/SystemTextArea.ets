@@ -1,6 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
  * 通用多行输入框（对齐前端 textarea）
@@ -21,7 +21,7 @@ export struct SystemTextArea {
   onChange?: (value: string) => void;
   onFocusChange?: (focused: boolean) => void;
 
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   /** 聚焦态：边框 accent 化（对齐 SystemInput focus 契约） */
   @State isFocused: boolean = false;
 

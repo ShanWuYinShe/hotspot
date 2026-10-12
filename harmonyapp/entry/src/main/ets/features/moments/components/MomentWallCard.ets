@@ -13,7 +13,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { curves } from '@kit.ArkUI';
 import { LucideIcon } from '../../../components/LucideIcon';
 
@@ -32,7 +32,7 @@ export struct MomentWallCard {
   // 同 MomentFeedCard：仅持有本卡社交态，事件总线按 moment_id 定向更新
   //（整 Map 订阅会让任意卡片点赞引发全部墙卡重算）。
   @State private socialState: MomentSocialState | undefined = undefined;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private likePopped: boolean = false;
 
   private getPalette() {

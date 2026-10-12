@@ -5,7 +5,7 @@
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 @Component
 export struct SystemLoadingView {
@@ -14,7 +14,7 @@ export struct SystemLoadingView {
   @Prop progressType: 'indeterminate' | 'determinate' = 'indeterminate';
   @Prop maxProgress: number = 100;
   @Prop externalProgress: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

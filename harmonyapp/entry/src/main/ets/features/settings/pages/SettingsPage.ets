@@ -19,7 +19,7 @@ import { RefreshIndicator } from '../../../components/EmptyState';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { ThemeConstants } from '../../../core/theme/ThemeConstants';
-import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
+import { AppThemePalette, DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { KEY_RESOLVED_THEME_ID, KEY_THEME_MODE, KEY_DARK_MODE_PREFERENCE, ThemeOptionItem, ThemeMode, DarkModePreference } from '../../../core/theme/AppThemeTypes';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { HttpUtil } from '../../../core/network/HttpUtil';
@@ -61,7 +61,7 @@ export struct SettingsPage {
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_THEME_MODE) themeMode: ThemeMode = 'follow_system';
   @StorageLink(KEY_DARK_MODE_PREFERENCE) darkModePreference: DarkModePreference = 'auto';
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State systemMeta: ApiVersionMeta | null = null;
   @State appVersionName: string = '';
   @State systemMetaLoading: boolean = false;

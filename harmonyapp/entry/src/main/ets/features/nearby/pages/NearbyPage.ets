@@ -19,7 +19,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { UserItem, GroupItem, MomentItem, SearchUsersRequest, SearchGroupsRequest, FetchNearbyMomentsRequest } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { UserCard } from '../components/UserCard';
@@ -32,7 +32,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 @Component
 export struct NearbyPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   /** 当前段位（0 人 / 1 群组 / 2 动态），默认「附近的人」——对齐前端 /nearby → people */
   @State private activeSection: number = 0;
 

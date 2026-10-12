@@ -10,7 +10,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import { Pressable } from '../../../components/Pressable';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
 
 /**
@@ -31,7 +31,7 @@ export struct UserCard {
   // 仅持本卡关系态：整 Map 订阅会让任意用户关注动作触发全部卡重算。
   // 事件总线按 user_id 过滤定向更新（快照冷启动播种见 aboutToAppear）。
   @State private socialState: UserRelationState | undefined = undefined;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private followInFlight: boolean = false;
 
   private getPalette() {

@@ -11,7 +11,7 @@
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { ChatThemeManager } from '../core/theme/ChatTheme';
 import { AppIcon } from './SystemIcon';
 import { SystemAvatar } from './SystemAvatar';
@@ -37,7 +37,7 @@ export struct ChatPageHeader {
   onBack: () => void = () => {};
   /** 尾随操作回调（打开会话设置/操作）。 */
   onTrailingAction: () => void = () => {};
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

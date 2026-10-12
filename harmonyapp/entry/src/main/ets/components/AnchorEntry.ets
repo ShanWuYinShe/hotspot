@@ -1,6 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { KEY_BROWSE_ANCHOR } from '../core/state/GlobalStateManager';
 import { LocationInfo } from '../core/location/LocationUtil';
 import { DefaultConfig, PageNames } from '../constants/AppConstants';
@@ -30,7 +30,7 @@ export struct AnchorEntry {
   onAdjust?: () => void;
 
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State isPressed: boolean = false;
   @State isHovered: boolean = false;
 

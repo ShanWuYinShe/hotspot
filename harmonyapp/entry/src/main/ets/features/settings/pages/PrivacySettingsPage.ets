@@ -2,7 +2,7 @@ import { AppRouter } from '../../../core/router/AppRouter';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
@@ -32,7 +32,7 @@ const PRIVACY_ITEMS: SettingToggleItem[] = [
 export struct PrivacySettingsPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State settings: UserSettings | null = null;
   @State loading: boolean = false;
 

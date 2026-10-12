@@ -12,13 +12,14 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
+import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Component
 export struct CompactStatItem {
   @Prop icon: AppIcon;
   @Prop value: string = '';
   @Prop label: string = '';
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   onTap: () => void = () => {};
 
   build() {
@@ -58,7 +59,7 @@ export struct CompactStatItem {
 export struct ProfileQuickAction {
   @Prop icon: AppIcon;
   @Prop label: string = '';
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   onTap: () => void = () => {};
 
   build() {
@@ -102,7 +103,7 @@ export struct ProfileIntentCard {
   @Prop title: string = '';
   @Prop description: string = '';
   @Prop icon: AppIcon;
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   onTap: () => void = () => {};
 
   build() {
@@ -162,7 +163,7 @@ export struct ProfileMenuItem {
   @Prop detail: string = '';
   /** 底部分隔线：多行同卡拼接时除末行外传 true（个人中心把菜单行并入个人数据卡） */
   @Prop divider: boolean = false;
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State pressed: boolean = false;
   onTap: () => void = () => {};
 

@@ -36,7 +36,7 @@ import { AppRouter, LoginRouteParam } from '../../core/router/AppRouter';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../core/state/GlobalStateManager';
 import { AccountInfo } from '../../core/types/api';
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 import { SystemUiController } from '../../core/utils/SystemUiController';
 import { SystemToast } from '../SystemToast';
 import { type ThemeMode, type ThemeOptionItem } from '../../core/theme/AppThemeTypes';
@@ -55,7 +55,7 @@ export struct DesktopLayout {
   @Prop isLoggedIn: boolean = false;
 
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   @State showThemeSheet: boolean = false;
   @State logoPressed: boolean = false;

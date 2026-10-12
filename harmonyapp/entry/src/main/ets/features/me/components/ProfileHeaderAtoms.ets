@@ -11,6 +11,7 @@ import { LucideIcon } from '../../../components/LucideIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { formatCount } from '../../../core/utils/FormatUtil';
+import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 interface ProfileStatEntry {
   label: string;
@@ -19,7 +20,7 @@ interface ProfileStatEntry {
 
 @Component
 export struct ProfileAvatarBlock {
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @Prop avatarUrl: string = '';
   @Prop nickname: string = '';
   onChangeAvatar: () => void = () => {};
@@ -76,7 +77,7 @@ export struct ProfileAvatarBlock {
 
 @Component
 export struct ProfileStatsRow {
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @Prop momentsCount: number = 0;
   @Prop followersCount: number = 0;
   @Prop groupsCount: number = 0;

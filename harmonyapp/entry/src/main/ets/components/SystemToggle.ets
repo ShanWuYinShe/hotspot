@@ -1,6 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
  * SystemToggle — iOS 风格开关（对齐前端 forms/Toggle：50×28、thumb 22）。
@@ -19,7 +19,7 @@ export struct SystemToggle {
   @Prop disabled: boolean = false;
   onToggle?: (next: boolean) => void = () => {
   };
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private isPressed: boolean = false;
   @State private isHovered: boolean = false;
 

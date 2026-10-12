@@ -39,6 +39,7 @@ import { LucideIcon } from '../LucideIcon';
 import { AppRouter } from '../../core/router/AppRouter';
 import { PageNames, StorageKeys } from '../../constants/AppConstants';
 import { CreateMomentSheet } from '../../features/moments/components/CreateMomentSheet';
+import { DEFAULT_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 
 interface TabItem {
   label: string;
@@ -71,7 +72,7 @@ export struct PhoneLayout {
   @Prop safeAreaBottom: number = 0;
   @Prop safeAreaTop: number = 0;
   @Prop isTablet: boolean = false;
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   /** 实时断点（AppStorage 写入），用于在 PhoneLayout 内决策宽屏通知侧栏 */
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 

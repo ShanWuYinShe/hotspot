@@ -40,7 +40,7 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { TimerManager } from '../../../core/utils/TimerManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { LucideIcon } from '../../../components/LucideIcon';
@@ -58,7 +58,7 @@ export struct SearchPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_CLIENT_CONFIG) clientConfig: ClientConfig | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 

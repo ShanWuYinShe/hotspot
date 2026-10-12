@@ -14,7 +14,7 @@
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { AppThemeShadow, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { AppThemeShadow, DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { LucideIcon } from './LucideIcon';
 import { SurfaceIconButton } from './SurfaceIconButton';
@@ -68,7 +68,7 @@ export struct SystemPageHeader {
   @Prop backgroundVariant: HeaderBackgroundVariant = 'bar';
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @Prop surfaceColor: ResourceColor | null = null;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

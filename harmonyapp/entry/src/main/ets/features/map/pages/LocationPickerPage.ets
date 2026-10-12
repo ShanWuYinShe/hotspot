@@ -21,7 +21,7 @@ import { CoordinateBounds, CoordinateConverter } from '../../../core/geo/Coordin
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DOMAIN_NUMBER, TAG, SearchPanel, MainPanel, TopBar, FilterDropdownPanel, MapToast, resolveLocationPickerPalette, SEARCH_PANEL_HEIGHT, PANEL_SNAP_MIN, DEFAULT_GESTURE_HINT, DOUBLE_CLICK_PLACEMENT_HINT, LONG_PRESS_PLACEMENT_HINT, ANCHOR_PLACEMENT_HINT, GENERIC_PLACEMENT_HINT, MapRenderItem, ConvertedRenderItem, BoundsDelta, LocationPickerParamLike, LocationPickerMode } from '../components/LocationPickerShared';
 import { LucideIcon } from '../../../components/LucideIcon';
 @Preview
@@ -31,7 +31,7 @@ export struct LocationPickerPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   @State mapRegion: MapRegion = {
     latitude: 35.154921,

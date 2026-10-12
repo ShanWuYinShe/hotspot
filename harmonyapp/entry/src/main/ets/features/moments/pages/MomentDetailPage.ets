@@ -46,7 +46,7 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { LucideIcon } from '../../../components/LucideIcon';
 
@@ -67,7 +67,7 @@ export struct MomentDetailPage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   // 同 MomentFeedCard：仅持有本页社交态，事件总线按 moment_id 定向更新
   @State socialState: MomentSocialState | undefined = undefined;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private stateManager = GlobalStateManager.getInstance();
   private momentId: string = '';

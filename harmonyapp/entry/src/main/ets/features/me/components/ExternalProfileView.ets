@@ -15,10 +15,11 @@ import { EmptyState } from '../../../components/EmptyState';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { MomentItem } from '../../../core/types/api';
 import { ViewedMomentThumb } from './ViewedMomentThumb';
+import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Component
 export struct ExternalProfileView {
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @Prop loading: boolean = false;
   @Prop errorMessage: string = '';
   @Prop hasProfile: boolean = false;

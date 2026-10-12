@@ -7,7 +7,7 @@
 import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
+import { AppThemePalette, DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { ChatThemeColors, ChatThemeManager } from '../../../core/theme/ChatTheme';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { ChatMessageListItem, TypingMessageSource } from './ChatMessageListUtils';
@@ -30,7 +30,7 @@ export struct ChatMessageItem {
   @Prop isLastSent: boolean = false;
   /** 预格式化时间文本（HH:mm），由页面统一格式化 */
   @Prop timeText: string = '';
-  palette: AppThemePalette = AppThemeManager.getPaletteById('vibrant_light');
+  palette: AppThemePalette = AppThemeManager.getPaletteById(DEFAULT_RESOLVED_THEME_ID);
   chatTheme: ChatThemeColors = ChatThemeManager.current();
 
   /** 气泡是否可唤起操作面板（编辑/撤回；由页面按权限计算） */

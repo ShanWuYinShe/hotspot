@@ -24,7 +24,7 @@ import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../com
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 @Preview
@@ -33,7 +33,7 @@ export struct NearbyGroupsListPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 

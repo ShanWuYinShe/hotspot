@@ -60,7 +60,7 @@ import { formatCount, formatRelativeTime } from '../../../core/utils/FormatUtil'
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { ListRowDivider } from '../../../components/ListGroup';
 import { ErrorCode } from '../../../core/constants/ErrorCodes';
@@ -100,7 +100,7 @@ export struct GroupDetailPage {
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   
   private stateManager = GlobalStateManager.getInstance();
   private distributedSyncService = DistributedSyncService.getInstance();

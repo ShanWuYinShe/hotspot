@@ -1,7 +1,7 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { curves } from '@kit.ArkUI';
 
 /**
@@ -54,7 +54,7 @@ export struct SystemCard {
   @State isPressed: boolean = false;
   /** hover（仅键鼠外接触发）：enableHoverEffect 打开时边框提亮 */
   @State isHovered: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -196,7 +196,7 @@ export struct MasonryCard {
   @Prop clickable: boolean = false;
 
   @State isPressed: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

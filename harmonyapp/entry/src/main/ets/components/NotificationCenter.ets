@@ -17,7 +17,7 @@ import { curves } from '@kit.ArkUI';
 import { SmartNotificationService, NotificationEvent, SmartNotification } from '../core/services/SmartNotificationService';
 import { LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from '../components/LucideIcon';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 
@@ -39,7 +39,7 @@ class NotificationFilterOption {
 
 @Component
 export struct NotificationCenter {
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   onClose?: () => void;
   @State private visibleNotifications: NotifyItem[] = [];
   @State private selectedFilter: NotificationFilterKey = 'all';

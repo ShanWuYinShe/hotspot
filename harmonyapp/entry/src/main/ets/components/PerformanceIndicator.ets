@@ -8,7 +8,7 @@ import { SystemToast } from './SystemToast';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 interface PerformanceLevel {
   level: string;
@@ -25,7 +25,7 @@ interface MetricThresholds {
 export struct PerformanceIndicator {
   @Prop showDetails: boolean = false;
   @Prop compact: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private metrics: PerformanceMetrics | null = null;
   @State private alerts: PerformanceAlert[] = [];
   @State private isExpanded: boolean = false;

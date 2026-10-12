@@ -7,14 +7,14 @@ import { curves } from '@kit.ArkUI';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
+import { AppThemePalette, DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { LucideIcon } from '../../../components/LucideIcon';
 
 @Component
 export struct LocationResultRow {
   @Prop item: LocationInfo;
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State pressed: boolean = false;
   onSelect: (result: LocationInfo) => void = () => {};
 

@@ -8,13 +8,14 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemButton } from '../../../components/SystemButton';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 // 备注长度上限（对齐前端 remarkDraft.slice(0, 24)）
 const REMARK_MAX: number = 24;
 
 @Component
 export struct ProfileRemarkSheet {
-  @Prop resolvedThemeId: string = 'vibrant_light';
+  @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @Prop nickname: string = '';
   @Prop draft: string = '';
   @Prop isSaving: boolean = false;

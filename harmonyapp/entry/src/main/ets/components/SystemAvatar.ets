@@ -3,7 +3,7 @@ import { UserTypeUtil } from '../core/utils/UserTypeUtil';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
  * SystemAvatar - 头像组件
@@ -22,7 +22,7 @@ export struct SystemAvatar {
   @Prop userType: string = '';
   @Prop inset: boolean = false;
   @State private imageLoadFailed: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

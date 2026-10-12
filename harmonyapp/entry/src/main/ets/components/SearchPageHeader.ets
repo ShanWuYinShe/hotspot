@@ -9,7 +9,7 @@
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 import { LucideIcon } from '../components/LucideIcon';
@@ -32,7 +32,7 @@ export struct SearchPageHeader {
   /** 提交回调。 */
   onSubmit: (() => void) | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private isFocused: boolean = false;
 
   private getPalette() {

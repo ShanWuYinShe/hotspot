@@ -1,6 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppThemeVisuals, InputBorderResolution } from '../core/theme/AppThemeVisuals';
 import { AppIcon } from './SystemIcon';
 import { LucideIcon } from '../components/LucideIcon';
@@ -35,7 +35,7 @@ export struct SystemInput {
   onSubmit?: (value: string) => void;
   onFocusChange?: (focused: boolean) => void;
 
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State isFocused: boolean = false;
 
   private getPalette() {

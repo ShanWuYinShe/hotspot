@@ -21,7 +21,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { LucideIcon } from '../../../components/LucideIcon';
@@ -50,7 +50,7 @@ const ADMIN_MODULES: AdminModule[] = [
 struct AdminOverviewPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   @State permissions: string[] = [];

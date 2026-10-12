@@ -15,7 +15,7 @@ import { PageNames } from '../constants/AppConstants';
 import { SystemCard, CardVariant } from './SystemCard';
 import { IntelligentLocationCard } from './IntelligentLocationCard';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from '../components/LucideIcon';
 import { formatCardTime } from '../core/utils/FormatUtil';
 
@@ -37,7 +37,7 @@ export struct MomentFeedCard {
   // 可见卡重算；改为事件总线按 moment_id 过滤的定向更新（快照冷启动播种见
   // aboutToAppear，快照本体仍在 AppStorage 供跨页恢复）。
   @State private socialState: MomentSocialState | undefined = undefined;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private isPressed: boolean = false;
   @State private pressedActionKey: string = '';
   // 加载失败的图片 URL 集合（onError 后切换 surfaceSubtle 占位，对齐 SystemAvatar 兜底模式）

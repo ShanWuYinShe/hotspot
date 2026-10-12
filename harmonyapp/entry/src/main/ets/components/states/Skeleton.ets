@@ -19,11 +19,11 @@
 
 import { DesignConstants } from '../../constants/DesignConstants';
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 
 @Component
 export struct Skeleton {
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @Prop blockWidth: Length = '100%';
   @Prop blockHeight: Length = 16;
   @Prop cornerRadius: Length | string = DesignConstants.RADIUS.SM;

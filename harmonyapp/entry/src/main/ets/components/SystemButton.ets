@@ -1,6 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { LucideIcon } from './LucideIcon';
@@ -44,7 +44,7 @@ export struct SystemButton {
   @Prop pill: boolean = false;
   onPress?: () => void;
 
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State isPressed: boolean = false;
   /** hover（仅键鼠外接触发；onHover 在触屏设备不会触发） */
   @State isHovered: boolean = false;

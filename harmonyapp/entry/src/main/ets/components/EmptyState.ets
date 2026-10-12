@@ -7,7 +7,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { AppIcon } from './SystemIcon';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { SystemButton } from './SystemButton';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from './LucideIcon';
 
 @Reusable
@@ -25,7 +25,7 @@ export struct EmptyState {
   @Prop bare: boolean = false;
   onAction?: () => void;
 
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -127,7 +127,7 @@ export struct EmptyState {
 @Component
 export struct LoadingMoreIndicator {
   @Prop message: string = '加载更多…';
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

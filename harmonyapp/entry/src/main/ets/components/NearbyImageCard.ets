@@ -2,7 +2,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { LucideIcon } from '../components/LucideIcon';
@@ -58,7 +58,7 @@ export struct NearbyImageCard {
   @State private slideOut: boolean = false;
   @State private cardWidth: number = 0;
   @State private cardHeight: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private onImageUrlChange(): void {
     this.imageFailed = false;

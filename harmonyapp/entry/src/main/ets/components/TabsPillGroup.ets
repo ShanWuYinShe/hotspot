@@ -14,7 +14,7 @@
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID, AppThemeShadow } from '../core/theme/AppThemeTypes';
+import { AppThemeShadow, DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { LucideIcon } from './LucideIcon';
 import { curves } from '@kit.ArkUI';
@@ -42,7 +42,7 @@ export struct TabsPillGroup {
   /** 自由宽度模式：透明容器 + 自适应内容宽（对齐前端 TabBar；缺省等宽分段） */
   @Prop freeWidth: boolean = false;
   actions?: TabsPillGroupActions;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

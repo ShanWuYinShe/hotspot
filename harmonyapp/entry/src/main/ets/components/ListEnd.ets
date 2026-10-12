@@ -1,6 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
  * ListEnd —— 分页列表「已到底」收尾提示（对齐前端 components/data-display/ListEnd.svelte）。
@@ -24,7 +24,7 @@ import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 export struct ListEnd {
   /** 自定义文案（默认「没有更多了」） */
   @Prop label: string = '没有更多了';
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'vibrant_light';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   build() {
     Text(this.label)
