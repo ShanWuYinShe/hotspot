@@ -114,6 +114,9 @@ export struct TabsPillGroup {
       DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT :
       DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
       .borderRadius(DesignConstants.RADIUS.FULL)
+      // 选中态播报（对齐前端 TabBar 的 aria-pressed={isActive}）：屏幕阅读器需知道
+      // 当前哪个分类/Tab 处于选中，否则只能靠颜色猜测
+      .accessibilityText(this.isActive(index) ? `${tab.label}，已选中` : tab.label)
       .backgroundColor(this.getPillBackground(index, this.isActive(index)))
       .shadow(this.isActive(index) ? this.getPillShadow(true) : {
         radius: 0,

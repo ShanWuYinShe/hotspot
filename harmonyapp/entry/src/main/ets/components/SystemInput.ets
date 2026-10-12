@@ -87,6 +87,8 @@ export struct SystemInput {
         .placeholderFont({ size: this.fontSize })
         .caretColor(this.getPalette().accentBackground)
         .enabled(!this.disabled)
+        // 禁用时从无障碍树移除（对齐原生 disabled 语义）
+        .accessibilityLevel(this.disabled ? 'no' : 'auto')
     .opacity(this.disabled ? DesignConstants.OPACITY.DISABLED : 1)
         .type(this.getInputType())
         .maxLength(this.maxLength)

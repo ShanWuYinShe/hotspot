@@ -254,6 +254,8 @@ export struct SystemButton {
     .border({ width: this.getBorderWidth(), color: this.getHoverBorderColor() })
     .shadow(this.getShadow())
     .enabled(this.isInteractive())
+    // 禁用/加载中时从无障碍树移除（对齐原生 disabled 语义：不可聚焦、不可触发）
+    .accessibilityLevel(this.isInteractive() ? 'auto' : 'no')
     .opacity(this.disabled ? DesignConstants.OPACITY.DISABLED : 1)
     .scale(this.isPressed
       ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON }
