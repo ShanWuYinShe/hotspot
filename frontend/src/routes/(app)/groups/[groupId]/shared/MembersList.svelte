@@ -3,6 +3,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { goto } from '$app/navigation';
@@ -90,4 +91,8 @@
 	<div class="mt-4">
 		<LoadMoreButton label="加载更多成员" loading={loadingMore} onLoad={onLoadMore} />
 	</div>
+{:else if onLoadMore}
+	<!-- 四态契约「到底」：无收尾提示时用户无法区分「已到底」与「加载卡住」
+		（与 ListContainer 消费方一致，参见 data-display/ListEnd） -->
+	<ListEnd />
 {/if}
