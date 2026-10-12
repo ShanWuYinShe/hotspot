@@ -232,3 +232,19 @@ SystemToggle / TabsPillGroup / SystemInput / 设置行）的反馈机制完备�
 **审计脚本的坑**：用「onClick 所在属性链上是否出现 scale/onTouch/animation/backgroundColor」
 做启发式，误报率极高（本次 21/21 误报）——因为反馈常在**组件内部**或**由状态间接驱动**。
 要判断某处是否真缺反馈，必须**打开该组件与其使用上下文**看，不能只扫属性链。
+
+
+## 性能审计基线（2026-10-12 实测，全部无缺口）
+
+ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代码后按此回归）：
+
+| 项 | 结果 | 复核方法 |
+|---|---|---|
+| LazyForEach/ForEach 键稳定性 | **85/85 稳定** | 键函数是 ForEach 块**收尾行**的 `(item) => 表达式`；逐一核对均为稳定 ID（user_id/moment_id/session_id/图片 url）。两类含 index 的属合法：静态 tab 配置（`\`\${tab.label}-\${index}\``）、骨架占位（`conv-skeleton-\${i}`，键=字符串项自身，HomePage 的 `(_, s) => s` 同理） |
+| cachedCount | 12 处长列表全部配置（5~8） | grep cachedCount |
+| @Reusable | 18 个组件（含 MomentFeedCard/UserCard/EmptyState 等高频卡） | grep @Reusable |
+| Image 尺寸约束 | **20/20** 有 objectFit + 宽高/aspectRatio | 动态图全用 `.width('100%') + .aspectRatio() + objectFit(Cover) + alt + onError` 契约 |
+
+**审计脚本的坑（第三次验证同一规律）**：Image 约束检查报 3 处「缺尺寸」，实际都有
+`.width('100%') + .aspectRatio()` —— 脚本只认数字 `.width(N)/.height(N)`。
+启发式只产候选清单，判定必须人工开上下文；键函数要按「块收尾行」提取而非开头。
