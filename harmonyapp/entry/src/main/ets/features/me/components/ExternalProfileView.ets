@@ -96,7 +96,7 @@ export struct ExternalProfileView {
                 Row({ space: DesignConstants.SPACING.XS }) {
                   LucideIcon({
                     icon: AppIcon.LOCATION,
-                    iconSize: DesignConstants.FONT.SIZE.SM,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                     color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground
                   })
                   Text(this.locationName || '未设置位置')

@@ -208,7 +208,7 @@ export struct SystemPageHeader {
               if (this.subtitleIcon !== null) {
                 LucideIcon({
                   icon: this.subtitleIcon,
-                  iconSize: DesignConstants.FONT.SIZE.XS,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                   color: this.getPalette().accentBackground
                 })
               }

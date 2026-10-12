@@ -249,7 +249,7 @@ export struct MomentFeedCard {
             if (this.moment.location?.location_name) {
               LucideIcon({
                   icon: AppIcon.LOCATION,
-                  iconSize: DesignConstants.FONT.SIZE.XS2,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                   color: DesignConstants.COLOR.WHITE
                 })
               Text(this.moment.location.location_name)
@@ -478,7 +478,7 @@ export struct MomentFeedCard {
         Row({ space: DesignConstants.SPACING.THREE }) {
           LucideIcon({
               icon: AppIcon.LOCATION,
-              iconSize: DesignConstants.FONT.SIZE.XS,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
               color: this.getPalette().accentBackground
             })
           Text(this.moment.location.location_name)

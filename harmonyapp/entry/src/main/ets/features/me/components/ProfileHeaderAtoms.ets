@@ -39,7 +39,7 @@ export struct ProfileAvatarBlock {
         Button() {
           LucideIcon({
             icon: AppIcon.CAMERA,
-            iconSize: DesignConstants.FONT.SIZE.XS2,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             paletteRole: 'accentText'
           })
         }

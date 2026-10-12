@@ -10,6 +10,15 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 设计 token 的**全部数值档位**（颜色/字号/间距/圆角/边框/动效/交互反馈/透明度/尺寸/阴影/模糊）、双端共享组件映射表与跨端投影契约速查的唯一权威是 [docs/design-system.md](../../../docs/design-system.md)（仓库根 docs/），改 UI 前必读。本节只保留强制规则与指针。
 
 - **禁止硬编码**：颜色一律使用 `AppThemeManager.getPaletteById(resolvedThemeId)` 的 palette token（或 `DesignConstants` 系统/图片固定色），禁止硬编码色值；字号/间距/圆角/边框/动效/透明度/尺寸一律用 `DesignConstants` 对应 token 档位，禁止裸 `fontSize(N)` / `padding({left:N})` / `width(N)` / `duration: N` / `scale(...)`；`$r('app.color.*')` 资源仅用于启动窗口等系统场景（当前 color.json 只保留 start_window_background）。
+- **图标尺寸用专用刻度（强制）**：图标尺寸一律 `COMPONENT.ICON_SIZE_*`
+  （`2XS 14 / XS 16 / SM 20 / SM_PLUS 22 / MD 24 / LG 32 / EMPTY 48`），
+  **不要用 `FONT.SIZE.*` 当图标尺寸**——那是字号刻度，混用会让图标尺寸随字号变动、
+  并产生 9 种图标尺寸（实测 2026-10-12：`iconSize` 有 133 处取自 FONT.SIZE、仅 17 处用专用刻度）。
+  - **唯一例外（明示约定）**：图标**与同档文字行内并排**时（如聊天气泡的「已编辑」行、
+    群卡 meta 行的图标），允许 `iconSize: FONT.SIZE.X` 与该文字同档——这是刻意对齐，
+    不是漂移。判断口径：该处 ±14 行内存在 `fontSize(...FONT.SIZE.同档)`。
+  - 已登记未迁移：`LG_PLUS(18)` 11 处（行首图标）、`HERO(36)` 2 处（hero/地图图标）
+    ——专用刻度无 18/36，取近档会改像素，待设计定档。
 - **行高（多行正文强制用比例制）**：`FONT.LINE_RATIO.{DEFAULT 1.5, CARD 1.7, COPY 1.75}` +
   `lineHeightFor(fontSize, ratio)`，对齐前端 `--leading-*`（`card` 是前端「原 1.55，
   阅读疲劳修复」后的值）。适用：聊天气泡/卡片正文 `CARD`；简介、公告、动态正文等长文 `COPY`。

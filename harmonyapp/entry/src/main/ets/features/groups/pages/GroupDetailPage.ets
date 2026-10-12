@@ -1610,7 +1610,7 @@ export struct GroupDetailPage {
               Row({ space: DesignConstants.SPACING.XS }) {
                 LucideIcon({
                   icon: AppIcon.LOCATION,
-                  iconSize: DesignConstants.FONT.SIZE.SM,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                   color: this.getCurrentThemePalette().accentBackground
                 })
                 Text(this.groupInfo?.location?.location_name || '未知位置')
@@ -1879,7 +1879,7 @@ export struct GroupDetailPage {
                       if (item.is_pinned) {
                         LucideIcon({
                           icon: AppIcon.STAR_FILL,
-                          iconSize: DesignConstants.FONT.SIZE.SM,
+                          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                           color: this.getCurrentThemePalette().accentBackground
                         })
                       }
@@ -2284,7 +2284,7 @@ export struct GroupDetailPage {
               Row({ space: DesignConstants.SPACING.XS }) {
                 LucideIcon({
                   icon: AppIcon.WARNING,
-                  iconSize: DesignConstants.FONT.SIZE.SM,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                   color: this.getCurrentThemePalette().error
                 })
                 Text('危险区')

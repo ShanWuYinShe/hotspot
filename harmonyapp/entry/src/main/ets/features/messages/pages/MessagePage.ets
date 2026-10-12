@@ -741,7 +741,7 @@ export struct MessagePage {
         Row({ space: DesignConstants.SPACING.SM }) {
           LucideIcon({
             icon: AppIcon.INFO,
-            iconSize: DesignConstants.FONT.SIZE.SM,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             paletteRole: 'textSecondary'
           })
           Text('宽屏模式：点击左侧会话将在新页面打开聊天窗口')

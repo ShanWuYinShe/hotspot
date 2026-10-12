@@ -683,7 +683,7 @@ export struct MomentDetailPage {
           Row({ space: DesignConstants.SPACING.XS }) {
             LucideIcon({
                 icon: AppIcon.LOCATION,
-                iconSize: DesignConstants.FONT.SIZE.SM,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                 color: this.getCurrentThemePalette().textSecondary
               })
             Text(moment.location.location_name)
@@ -745,7 +745,7 @@ export struct MomentDetailPage {
             Row({ space: DesignConstants.SPACING.XS }) {
               LucideIcon({
                 icon: this.isCommentLiked(comment) ? AppIcon.HEART_FILL : AppIcon.HEART,
-                iconSize: DesignConstants.FONT.SIZE.SM,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                 color: this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
               })
               Text(formatCount(this.getCommentLikesCount(comment)))

@@ -37,7 +37,7 @@ export struct ProfileDataSection {
         Row() {
           LucideIcon({
             icon: icon,
-            iconSize: DesignConstants.FONT.SIZE.SM,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground
           })
         }
@@ -64,7 +64,7 @@ export struct ProfileDataSection {
 
         LucideIcon({
           icon: AppIcon.ARROW_RIGHT,
-          iconSize: DesignConstants.FONT.SIZE.SM,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
           color: AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary
         })
       }

@@ -1239,7 +1239,7 @@ export struct ChatPage {
         Row({ space: DesignConstants.SPACING.XS }) {
           LucideIcon({
               icon: AppIcon.WARNING,
-              iconSize: DesignConstants.FONT.SIZE.SM,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
               color: this.getCurrentThemePalette().error
             })
           Text(this.groupMutedUntil ? `你已被禁言，解除时间：${formatMutedUntil(this.groupMutedUntil)}` : '你已被禁言')

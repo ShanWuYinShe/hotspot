@@ -149,7 +149,7 @@ export struct GroupCard {
     if (this.isPrivate()) {
       LucideIcon({
           icon: AppIcon.LOCK,
-          iconSize: DesignConstants.FONT.SIZE.XS2,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
           color: this.getPalette().textSecondary
         })
       .margin({ left: DesignConstants.SPACING.HALF })
@@ -174,7 +174,7 @@ export struct GroupCard {
       Row({ space: DesignConstants.SPACING.SM }) {
         LucideIcon({
             icon: AppIcon.GROUP,
-            iconSize: DesignConstants.FONT.SIZE.XS2,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             color: this.getPalette().textSecondary
           })
         Text(`${this.formatMembers()} 人`)
@@ -295,7 +295,7 @@ export struct GroupCard {
           Row({ space: DesignConstants.SPACING.HALF }) {
             LucideIcon({
                 icon: AppIcon.TIME,
-                iconSize: DesignConstants.FONT.SIZE.XS2,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                 color: this.getPalette().online
               })
             Text(this.getActivityText())

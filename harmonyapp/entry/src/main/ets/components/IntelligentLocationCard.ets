@@ -61,7 +61,7 @@ export struct IntelligentLocationCard {
               Row({ space: DesignConstants.SPACING.XS }) {
                 LucideIcon({
                     icon: AppIcon.SEND,
-                    iconSize: DesignConstants.FONT.SIZE.SM,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                     color: this.getPalette().textSecondary
                   })
                 Text(LocationUtil.formatDistance(this.distance))

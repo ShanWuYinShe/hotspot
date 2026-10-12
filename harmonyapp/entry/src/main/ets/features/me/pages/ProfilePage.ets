@@ -979,7 +979,7 @@ export struct ProfilePage {
                 Row({ space: DesignConstants.SPACING.XS }) {
                   LucideIcon({
                     icon: AppIcon.LOCATION,
-                    iconSize: DesignConstants.FONT.SIZE.XS,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                     color: this.getAccentBackground()
                   })
                   Text(this.currentUser.location.location_name)
@@ -993,7 +993,7 @@ export struct ProfilePage {
                 Row({ space: DesignConstants.SPACING.SM2 }) {
                   LucideIcon({
                     icon: AppIcon.EDIT,
-                    iconSize: DesignConstants.FONT.SIZE.SM,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                     color: this.getSecondaryTextColor()
                   })
                   Text('编辑资料')

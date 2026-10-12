@@ -252,7 +252,7 @@ export struct CreateMomentSheet {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
               icon: AppIcon.LOCATION,
-              iconSize: DesignConstants.FONT.SIZE.XS2,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
               color: this.getPalette().textSecondary
             })
           Text(this.localLocation?.locationName || '当前浏览位置')
@@ -358,7 +358,7 @@ export struct CreateMomentSheet {
               Row() {
                 LucideIcon({
                     icon: AppIcon.CLOSE,
-                    iconSize: DesignConstants.FONT.SIZE.XS,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                     color: DesignConstants.COLOR.WHITE
                   })
               }
@@ -505,7 +505,7 @@ export struct CreateMomentSheet {
     Column({ space: DesignConstants.SPACING.HALF }) {
       LucideIcon({
           icon: icon,
-          iconSize: DesignConstants.FONT.SIZE.SM,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
           color: this.audience === level ? this.getPalette().accentBackground : this.getPalette().textSecondary
         })
       Text(title)

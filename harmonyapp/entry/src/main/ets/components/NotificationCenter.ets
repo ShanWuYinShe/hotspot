@@ -643,7 +643,7 @@ export struct NotificationCenter {
           Row() {
             LucideIcon({
               icon: this.getNotificationIcon(notification.type),
-              iconSize: DesignConstants.FONT.SIZE.XS,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
               color: this.getPalette().accentText
             })
           }

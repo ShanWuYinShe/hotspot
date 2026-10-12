@@ -143,7 +143,7 @@ export struct AnchorEntry {
     Row() {
       LucideIcon({
           icon: AppIcon.LOCATION,
-          iconSize: DesignConstants.FONT.SIZE.SM,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
           color: this.getPalette().accentBackground
         })
       Text(this.getDisplayName())

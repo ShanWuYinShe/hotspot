@@ -1214,7 +1214,7 @@ export struct SearchPage {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
               icon: AppIcon.HEART,
-              iconSize: DesignConstants.FONT.SIZE.XS,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
               color: this.getCurrentThemePalette().textTertiary
             })
           Text(formatCount(sumReactionCounts(item.reactions)))

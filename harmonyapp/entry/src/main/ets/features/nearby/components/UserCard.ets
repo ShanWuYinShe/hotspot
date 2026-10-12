@@ -111,7 +111,7 @@ export struct UserCard {
       Row() {
         LucideIcon({
           icon: this.isFollowing() ? AppIcon.CHECK : AppIcon.ADD,
-          iconSize: DesignConstants.FONT.SIZE.SM,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
           color: this.isFollowing() ? this.getPalette().accentText : DesignConstants.COLOR.WHITE
         })
       }
@@ -152,7 +152,7 @@ export struct UserCard {
         if (this.isFollowing()) {
           LucideIcon({
             icon: AppIcon.CHECK,
-            iconSize: DesignConstants.FONT.SIZE.XS,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
             paletteRole: 'textSecondary'
           })
           Text('已关注')

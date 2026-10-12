@@ -131,7 +131,7 @@ export struct MomentWallCard {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
               icon: AppIcon.LOCATION,
-              iconSize: DesignConstants.FONT.SIZE.XS2,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
               color: this.getPalette().textSecondary
             })
           Text(this.moment.location.location_name)
