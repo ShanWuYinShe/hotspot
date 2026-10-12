@@ -142,8 +142,8 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   | `SurfaceIconButton` | 纯图标按钮；视觉尺寸可小，**热区必须 `max(视觉, MIN_HIT_TARGET)`**，且**必传 `accessibilityLabel`** |
   | `Pressable` | 通用可按压容器（统一 spring 按压反馈 + 缩放 token） |
   | `SoftDivider` | 发丝分隔线（对齐前端 divide 线） |
-  | `LucideIcon` | 业务图标（`AppIcon` 枚举 → Lucide 字形）；尺寸用 `ICON_SIZE_*` 刻度 |
-  | `SystemIcon` | 系统符号图标（`SymbolGlyph` / `sys.symbol.*`），图标名集中在 `AppIcon` 枚举 |
+  | `LucideIcon` | 业务图标统一渲染（**组件名是历史遗留**——旧 lucide SVG 方案已废，现渲染 `SymbolSpan` + `sys.symbol.*`，与 SystemIcon 同机制；API 多 `paletteRole` 语义色角色）；尺寸用 `ICON_SIZE_*` 刻度 |
+  | `SystemIcon` | 系统符号图标（`SymbolSpan` / `sys.symbol.*`），`AppIcon` 枚举定义处；API 直传 color |
   | `NativeMapComponent` | 原生地图组件（平台特有，前端无对应） |
 - 已登记例外（可保留手写原生控件）：头像/图形按钮、地图全屏控件、搜索建议行、
   动态卡片内嵌操作、主题色板 swatch、扫描/贴纸等特殊控件。存量页面中的手写
