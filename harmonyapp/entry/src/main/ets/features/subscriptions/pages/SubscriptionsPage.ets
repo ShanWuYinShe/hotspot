@@ -298,7 +298,7 @@ export struct SubscriptionsPage {
       Row() {
         LucideIcon({
             icon: item.icon,
-            iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             color: this.getCurrentThemePalette().accentBackground
           })
       }

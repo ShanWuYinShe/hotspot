@@ -441,7 +441,7 @@ export struct SearchPanel {
                       Column() {
                         LucideIcon({
                             icon: AppIcon.TIME,
-                            iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
+                            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
                             color: resolveLocationPickerPalette(this.resolvedThemeId).textSecondary
                           })
                       }

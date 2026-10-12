@@ -432,7 +432,7 @@ export struct DesktopLayout {
       Row() {
         LucideIcon({
             icon: AppIcon.SHIELD,
-            iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             color: this.getPalette().textSecondary
           })
         Text('管理后台')
@@ -504,7 +504,7 @@ export struct DesktopLayout {
     Row() {
       LucideIcon({
           icon: item.icon,
-          iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
           color: this.isItemActive(item) ? this.getPalette().accentBackground : this.getPalette().textSecondary
         })
       Text(item.label)

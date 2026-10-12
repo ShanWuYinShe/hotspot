@@ -215,7 +215,7 @@ struct AdminOverviewPage {
       Row() {
         LucideIcon({
             icon: m.icon,
-            iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             color: this.getPalette().accentBackground
           })
       }

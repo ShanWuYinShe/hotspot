@@ -63,7 +63,7 @@ export struct GroupMemberRow {
       if (this.showMenu) {
         LucideIcon({
             icon: AppIcon.MORE,
-            iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             color: this.palette?.textSecondary
           })
         .padding(DesignConstants.SPACING.SM)

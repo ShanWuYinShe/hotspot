@@ -936,7 +936,7 @@ export struct NativeMapComponent {
         Column({ space: DesignConstants.SPACING.MD }) {
           LucideIcon({
               icon: AppIcon.MAP,
-              iconSize: DesignConstants.FONT.SIZE.HERO,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_LG,
               color: AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary
             })
 

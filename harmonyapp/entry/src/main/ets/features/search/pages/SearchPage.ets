@@ -641,7 +641,7 @@ export struct SearchPage {
                 Row() {
                   LucideIcon({
                       icon: AppIcon.CHART,
-                      iconSize: DesignConstants.FONT.SIZE.LG_PLUS,
+                      iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
                       color: this.getCurrentThemePalette().accentBackground
                     })
                 }
