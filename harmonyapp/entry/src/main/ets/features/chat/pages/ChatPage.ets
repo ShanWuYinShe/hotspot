@@ -1017,7 +1017,8 @@ export struct ChatPage {
         }
         GlobalStateManager.getInstance().notifyMessageSync();
       } catch (e) {
-        // ignore
+        // 已读上报 best-effort：失败不阻塞用户，但留痕便于排障（角标不清零类反馈）
+        hilog.warn(DOMAIN_NUMBER, TAG, `已读上报失败: ${JSON.stringify(e)}`);
       }
     })();
   }

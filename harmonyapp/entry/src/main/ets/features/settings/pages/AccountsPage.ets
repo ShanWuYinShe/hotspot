@@ -6,6 +6,7 @@
  * - 支持删除账号
  */
 
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
@@ -167,8 +168,9 @@ export struct AccountsPage {
       this.ws.disconnect();
       try {
         await this.ws.connect(next.access_token);
-      } catch {
-        // ignore
+      } catch (e) {
+        // 静默但留痕：自动重连会兜底，但「切号后收不到消息」排障需要这条日志
+        hilog.warn(0xFF37, 'AccountsPage', `切换账号后 WS 重连失败: ${JSON.stringify(e)}`);
       }
 
       SystemToast.showSuccess(`已切换到：${next.user_id}`, this.getUIContext());
