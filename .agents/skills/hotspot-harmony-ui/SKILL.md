@@ -132,6 +132,19 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
     colors, like red, for warnings or errors」——最强颜色档必须留给真正的警示。
 - 通用单行输入框必须用 `SystemInput`（前缀图标/清除按钮/错误态）；登录/表单等
   密码框可用 `SystemInput({ passwordMode: true })`。
+- **其余基础原语清单（唯一登记处，docs/design-system.md 第 13 节引用此处）**：
+
+  | 原语 | 用途 / 关键约束 |
+  |---|---|
+  | `SystemTextArea` | 多行输入；高度用 `constraintSize({ minHeight })`，**不要固定 height** |
+  | `SystemToggle` | 开关；视觉 50×28 固定，外层透明容器扩热区到 `MIN_HIT_TARGET` |
+  | `SystemBadge` | 计数/状态徽章（含未读角标） |
+  | `SurfaceIconButton` | 纯图标按钮；视觉尺寸可小，**热区必须 `max(视觉, MIN_HIT_TARGET)`**，且**必传 `accessibilityLabel`** |
+  | `Pressable` | 通用可按压容器（统一 spring 按压反馈 + 缩放 token） |
+  | `SoftDivider` | 发丝分隔线（对齐前端 divide 线） |
+  | `LucideIcon` | 业务图标（`AppIcon` 枚举 → Lucide 字形）；尺寸用 `ICON_SIZE_*` 刻度 |
+  | `SystemIcon` | 系统符号图标（`SymbolGlyph` / `sys.symbol.*`），图标名集中在 `AppIcon` 枚举 |
+  | `NativeMapComponent` | 原生地图组件（平台特有，前端无对应） |
 - 已登记例外（可保留手写原生控件）：头像/图形按钮、地图全屏控件、搜索建议行、
   动态卡片内嵌操作、主题色板 swatch、扫描/贴纸等特殊控件。存量页面中的手写
   Button/TextInput 属遗留债务，改到该文件时优先迁移为原语。当前存量例外清单：

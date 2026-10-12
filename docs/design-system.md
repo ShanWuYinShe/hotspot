@@ -381,5 +381,8 @@
 - 明暗切换：鸿蒙 `DarkModePreference` 三档（auto/light/dark），web 端可手动切换；
   主题族（vibrant/forest/inkwash）两端可选集一致。
 - 布局几何（width/height/gap 的 px）：非主题风格，不受 token 约束。
-- 主题选择器 swatch：静态展示目标主题 accent，保留字面 hex（vibrant `#2E66C0` / forest `#3D7A55`），须与 themes 同步。
+- 主题选择器 swatch：静态展示目标主题 accent。**当前实现已改为引用 token**
+  （`ThemeConstants.VIBRANT_LIGHT_COLORS.accentBackground` 等，见 `SettingsPage` 主题卡），
+  不再写字面 hex —— 此处曾描述为「保留字面 hex」，2026-10-12 核对代码后修正。
+  对应值 vibrant `#2E66C0` / forest `#3D7A55`（见 `ThemeConstants`），须与 themes 同步。
 - `figma_neu` 主题：鸿蒙存量兼容项，非双端对齐目标。
