@@ -141,3 +141,40 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   - SettingsPage「退出登录」（50vp 透明底定制）、DebugPanel 调试按钮；
   - ChatPage 隐藏键盘失焦占位 `Button('')`、LocationPicker 搜索栏内置 searchButton；
   - ProfileEditPage 多行简介输入辅助、ChatPage 输入栏（含发送钮 `Button('发送')` 属已登记例外 — 需 ChatTheme/getChatVisualStyle 定制动效与 isSendInteractive 动态态，见 ChatPage.ets 顶部“聊天发送钮属已登记例外”注释）、CreateGroupPage 人数步进输入。
+
+
+## 主题/深色验收：量化口径与实测基线（2026-10-12 实测）
+
+改主题、改颜色、或做深色验收时，**不要只看截图感觉**，用下面的量化口径跑一遍：
+
+### 1) 文字对比度（WCAG 2.x）
+取 `ThemeConstants.ets` 每个主题块的 `pageBackground / surfaceBackground / textPrimary / textSecondary / textTertiary`，
+按 WCAG 相对亮度公式算比值，正文要求 **≥4.5:1**。本机实测基线（3 主题 × 2 明暗，全部达标）：
+
+| 主题·模式 | primary | secondary | tertiary |
+|---|---|---|---|
+| 清野 浅/深 | 15.31 / 15.24 | 7.50 / 8.84 | 5.12 / 5.04 |
+| 星际 浅/深 | 14.12 / 16.19 | 5.41 / 8.93 | 4.74 / 5.35 |
+| 水墨 浅/深 | 12.84 / 13.99 | 4.82 / 7.02 | **4.68** / 5.20 |
+
+最低值是水墨浅色的 tertiary 4.68 —— **改任何 text/bg token 后必须重跑，低于 4.5 即回归**。
+
+### 2) 卡片与页面底色的层次：**不要用「底色明度差」判断**
+前端 `semantic.css` 已明文规定：`--cst-surface-page` 是唯一整层底色，
+**层级只靠「白卡 + 发丝描边 + 主题投影」表达**。因此清野主题下
+`pageBackground == surfaceBackground`（浅色深色都是 `#F6F7F3` / `#161A16`）**是刻意设计，不是缺陷**，
+不要为了「拉开层次」去改底色（会破坏跨端色彩校验）。
+
+### 3) 深色下的层级靠**加亮的描边**承载
+`ThemeConstants.ets` 注释原文：「深色下黑阴影对比弱，卡片抬升改用更亮的描边承载
+（border 单独加亮），阴影只做轻微加深」。`borderColor` 是 `#AARRGGBB`，
+验收时要算**与底色合成后**的颜色再求对比度（不能只看 alpha）。实测基线：
+
+| 主题·模式 | 描边合成后 vs 底色 |
+|---|---|
+| 清野 浅 / 深 | 1.511 / 1.476 |
+| 星际 浅 / 深 | **1.271（偏弱）** / 1.414 |
+| 水墨 浅 / 深 | 1.463 / 1.553 |
+
+经验阈值：**≥1.35 清晰、1.2~1.35 偏弱、<1.2 过弱**。星际浅色 1.271 偏弱属跨端一致的
+既有设计（前端 `--cst-palette-border` 同值），**修要两端一起改**，不要只改鸿蒙端。
