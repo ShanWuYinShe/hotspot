@@ -126,6 +126,7 @@ export struct AnnouncementEditorSheet {
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .layoutWeight(1)
             SystemToggle({
+              label: '置顶公告',
               isOn: this.pinned,
               onToggle: (next: boolean) => { this.pinned = next; }
             })

@@ -2247,6 +2247,7 @@ export struct GroupDetailPage {
               .layoutWeight(1)
 
               SystemToggle({
+                label: '私密群组',
                 isOn: this.editGroupPrivate,
                 onToggle: (next: boolean) => { this.editGroupPrivate = next; }
               })
@@ -2266,6 +2267,7 @@ export struct GroupDetailPage {
               .layoutWeight(1)
 
               SystemToggle({
+                label: '入群需审核',
                 isOn: this.editGroupRequiresApproval,
                 onToggle: (next: boolean) => { this.editGroupRequiresApproval = next; }
               })

@@ -17,6 +17,12 @@ import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/
 export struct SystemToggle {
   @Prop isOn: boolean = false;
   @Prop disabled: boolean = false;
+  /**
+   * 开关的**名称**（如「推送通知」）。屏幕阅读器读到开关时的播报为
+   * 「{label}，已开启 / 已关闭」——只播状态会让用户不知道开的是什么。
+   * 未传时退化为「开关，已开启/已关闭」。
+   */
+  @Prop label: string = '开关';
   onToggle?: (next: boolean) => void = () => {
   };
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
@@ -124,7 +130,9 @@ export struct SystemToggle {
       }
       this.isHovered = isHover;
     })
-    .accessibilityText(this.isOn ? '已开启' : '已关闭')
+    // 名称 + 状态：只播状态无法让用户知道开关作用（对齐 iOS/Android 的
+    // switch 播报惯例「标签, 开/关」）
+    .accessibilityText(`${this.label}，${this.isOn ? '已开启' : '已关闭'}`)
     .accessibilityLevel(this.disabled ? 'no' : 'auto')
   }
 }

@@ -353,6 +353,8 @@ export struct SettingsToggleRow {
       .alignItems(HorizontalAlign.Start)
 
       SystemToggle({
+        // 开关名称：无此则屏幕阅读器只播「已开启」，用户不知道开的是什么
+        label: this.title,
         isOn: this.isOn,
         disabled: this.pending,
         onToggle: (next: boolean) => { this.onToggle(next); }
