@@ -209,3 +209,26 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 **审计脚本的坑**：「块内 N 行含 Text」这种粗判会把**图标容器**误报为「文本容器」
 （81 处里绝大多数是图标容器）——要按**该 height 所属元素自身**是否承载文字判断，
 不要用「附近有 Text」。
+
+
+## 交互反馈审计的判据（2026-10-12 实测，避免误报/误改）
+
+项目原则要求「交互状态一眼可辨：hover / focus / active / disabled 四态差异长在元素本体上」。
+按「可点元素链上是否有反馈」做全仓审计，得到 21 处候选，**逐一核实后判定全部为误报**——
+
+原因：按压反馈**不一定写在 onClick 所在的那条属性链上**。以下都是合法承载方式：
+
+| 承载方式 | 例子 | 说明 |
+|---|---|---|
+| **组件内部承载** | `SystemCard({ clickable: true })` 外层再 `.onClick` | 卡片组件内部用 `isPressed` → `SCALE_PRESSED_CARD` + spring 动画 |
+| **状态驱动的样式** | `TabsPillGroup` 的 `.onClick` 只 dispatch | 反馈由 `hoveredIndex` / 选中态驱动背景与缩放（13 处相关代码） |
+| **属性开关** | `SystemIcon` 的 `clickable` | 反馈由使用方通过该开关启用 |
+| **聚焦态代替按压态** | `SystemInput` | 输入框交互靠 focus border 表达，**不需要**按压缩放 |
+| **父级行承载** | 设置行的 `.onClick` | 行组件统一提供按压填充（`surfaceSubtle`） |
+
+**结论：本仓交互原语（Pressable / SystemButton / SystemCard / SurfaceIconButton /
+SystemToggle / TabsPillGroup / SystemInput / 设置行）的反馈机制完备，无需补齐。**
+
+**审计脚本的坑**：用「onClick 所在属性链上是否出现 scale/onTouch/animation/backgroundColor」
+做启发式，误报率极高（本次 21/21 误报）——因为反馈常在**组件内部**或**由状态间接驱动**。
+要判断某处是否真缺反馈，必须**打开该组件与其使用上下文**看，不能只扫属性链。
