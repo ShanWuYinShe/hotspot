@@ -62,7 +62,8 @@
 ## 近重复收敛 backlog（按危害排序）
 
 1. **手写按钮**：58 个文件用 `hover-btn` 手写 `<button>`，`ui/button` 引用 23 个文件
-   （2026-10-08 刷新：设置页/LoadMoreButton 已迁）。
+   （2026-10-08 刷新：设置页/LoadMoreButton 已迁；**2026-10-12 复核：60 / 24**，
+   统计口径 `grep -rl` 全 src *.svelte）。
    规则：改到某文件时把该文件的简单动作按钮顺手迁 `ui/button`/`ActionIconButton`。
    约束（2026-10-07 LoadMoreButton 迁移实测）：`ui/button` secondary 自带的
    `shadow-raised-sm` 是自定义主题 token，**不参与 tailwind-merge 冲突消解**——
@@ -73,6 +74,11 @@
    （token 边界匹配），任何加投影/改圆角/改字色的迁移会在此失败。
 2. **表单 Input 原语缺失**：13 个文件手写 `<input>`；应建 `forms/Input`
    （前缀图标/清除/错误态），先落登录/注册/搜索之外的高频表单。
+   **2026-10-12 复核：消费方增长到 20 个文件**（扣除 ImagePicker/SearchInput 两个
+   原语自身后约 18 个）——admin 六页与群组系列弹层（CreateGroupSheet/InviteMembersSheet/
+   GroupSettingsSheet/GroupAnnouncementDialog）为新增消费方，建原语时优先覆盖这批。
+   多数已用 `input-surface` 类承载样式（样式半边合规），缺的是**行为半边**
+   （清除按钮/错误态播报，同鸿蒙 SystemInput 契约）。
 3. **分组卡壳已收敛**（2026-09-10）：移动端 `ProfileMobile` 的 `card-raised`
    已改为与桌面 `ProfilePage` 一致的「白卡 + 发丝描边 + 主题投影」
    （`rounded-lg border border-border-default bg-surface-primary shadow-raised-sm`）；
