@@ -89,7 +89,7 @@ PhoneLayout 的 `TabContent() { ProfilePage() }` 常驻挂载，**登录/切号�
 动作行顺序：升级行在最前（仅 temp），然后 更新位置 → 设置 → [管理员工具台] → 退出登录。
 管理员行点击落到「管理后台」概览页（`PageNames.ADMIN_OVERVIEW`）。
 
-## 已发现缺陷（2026-10-11，未修，复现步骤可用）
+## 曾发现的缺陷（**已修复**：217abdc6；复现步骤保留作回归用例）
 
 1. **同 mount 登录管理员后无管理员行**：先点过「我的」再登录管理员，该行不出现，
    切到首页再切回也不恢复（TabContent 常驻，不重新 mount）。根因见上「关键前提」。
@@ -98,9 +98,15 @@ PhoneLayout 的 `TabContent() { ProfilePage() }` 常驻挂载，**登录/切号�
    当网络错误展示（`AdminOverviewPage.ets:90` → “加载权限失败，请检查网络”），文案误导。
    根因同 1：`logout()` 未重置 `hasAdminPrivileges`。
 
-修复方向：ProfilePage 订阅登录态变化（`@Watch(KEY_IS_LOGGED_IN)` 或
-`@Watch(KEY_USER_TYPE)`）重新 `refreshAdminPrivileges()`，并在 `logout()` 里清零该状态；
+修复方向：ProfilePage 订阅登录态变化重新 `refreshAdminPrivileges()`，登出清零该状态；
 AdminOverviewPage 区分 `10200` 与网络错误。
+
+**修复落地核实（2026-10-12，读码确认三条全在）**：
+1. ProfilePage 经 `interactionEventHub.on('auth_user_changed')` 触发 `refreshAdminPrivileges()`
+   （ProfilePage.ets:316 → :298），登录/切号不再依赖组件重挂载；
+2. `hasAdminPrivileges` 在刷新起点（:444）、错误路径（:459）、登出（:666）三处清零；
+3. AdminOverviewPage 对 `10200` 按「非管理员业务终态」处理，不再当网络错误（:91 注释）。
+回归时按上面复现步骤重跑一遍即可。
 
 ## 本机实测踩坑（补充通用 skill）
 
