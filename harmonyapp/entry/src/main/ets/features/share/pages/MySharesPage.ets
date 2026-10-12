@@ -5,6 +5,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { ShareListItem, FetchCreatedSharesRequest, ShareType } from '../../../core/types/api';
 import { DefaultConfig, PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { ListEnd } from '../../../components/ListEnd';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
@@ -307,6 +308,10 @@ export struct MySharesPage {
       if (this.isLoadingMore) {
         ListItem() {
           LoadingMoreIndicator()
+        }
+      } else if (!this.hasMore && this.shares.length > 0) {
+        ListItem() {
+          ListEnd()
         }
       }
     }

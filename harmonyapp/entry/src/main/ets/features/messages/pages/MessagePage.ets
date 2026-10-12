@@ -34,6 +34,7 @@ import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -93,6 +94,12 @@ export struct MessagePage {
   private groupHasMore: boolean = false;
   private groupNextCursor: string = '';
   @State isLoadingMore: boolean = false;
+  /**
+   * 列表是否还有更多（供 UI 判断是否显示「没有更多了」收尾提示）。
+   * privateHasMore / groupHasMore 是普通成员（非 @State），在 build 中读取不会触发刷新，
+   * 因此单独镜像一个 @State；每次分页响应后同步（见 loadPrivateChats / loadGroupChats）。
+   */
+  @State listHasMore: boolean = true;
   @State deletingChatKeys: string[] = [];
   @State showDeleteChatConfirm: boolean = false;
   @State pendingDeleteChat: ChatItem | null = null;
@@ -282,6 +289,7 @@ export struct MessagePage {
         const items = response.data?.items ?? [];
         this.privateHasMore = !!(response.data?.next_cursor);
         this.privateNextCursor = response.data?.next_cursor ?? '';
+        this.syncListHasMore();
         return items
           .filter((item: PrivateChatItem) => item.other_user?.user_id)
           .map((item: PrivateChatItem): ChatItem => {
@@ -315,6 +323,7 @@ export struct MessagePage {
         const items = response.data?.items ?? [];
         this.groupHasMore = !!(response.data?.next_cursor);
         this.groupNextCursor = response.data?.next_cursor ?? '';
+        this.syncListHasMore();
         return items
           .filter((item: GroupItem) => item.group?.group_id)
           .map((item: GroupItem): ChatItem => {
@@ -338,6 +347,11 @@ export struct MessagePage {
       hilog.error(DOMAIN_NUMBER, TAG, '加载群聊失败');
       return [];
     }
+  }
+
+  /** 同步「是否还有更多」到 @State（供 ListEnd 判断） */
+  private syncListHasMore(): void {
+    this.listHasMore = this.privateHasMore || this.groupHasMore;
   }
 
   private async loadMore(): Promise<void> {
@@ -872,6 +886,11 @@ export struct MessagePage {
               ListItem() {
                 LoadingMoreIndicator()
                   .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+              }
+            } else if (!this.listHasMore && this.chatListDataSource.totalCount() > 0) {
+              // 到底收尾提示：区分「已到底」与「加载卡住」（前端四态契约的 ListEnd）
+              ListItem() {
+                ListEnd()
               }
             }
           }

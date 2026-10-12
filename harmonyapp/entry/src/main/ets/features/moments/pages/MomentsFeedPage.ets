@@ -29,6 +29,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
 import { MomentWallCard } from '../components/MomentWallCard';
@@ -556,12 +557,7 @@ export struct MomentsFeedPage {
             if (this.hasMore) {
               LoadingMoreIndicator()
             } else {
-              Text('没有更多了')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getCurrentThemePalette().textTertiary)
-                .width('100%')
-                .textAlign(TextAlign.Center)
-                .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
+              ListEnd()
             }
           }
           .width('100%')

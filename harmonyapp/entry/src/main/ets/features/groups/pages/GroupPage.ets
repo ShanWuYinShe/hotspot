@@ -24,6 +24,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { ListEnd } from '../../../components/ListEnd';
 import { curves } from '@kit.ArkUI';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -835,6 +836,10 @@ export struct GroupPage {
       if (this.isLoadingMore) {
         ListItem() {
           LoadingMoreIndicator()
+        }
+      } else if (!this.hasMore && this.groups.length > 0) {
+        ListItem() {
+          ListEnd()
         }
       }
     }

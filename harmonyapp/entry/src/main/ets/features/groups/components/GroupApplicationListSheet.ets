@@ -2,6 +2,8 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
+import { LoadingMoreIndicator } from '../../../components/EmptyState';
+import { ListEnd } from '../../../components/ListEnd';
 import { GroupApplicationRow } from './GroupApplicationRow';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
@@ -21,6 +23,7 @@ export struct GroupApplicationListSheet {
   @Prop isLoadingApplications: boolean = false;
   @Prop applicationsErrorMessage: string = '';
   @Prop applicationsLoadingMore: boolean = false;
+  @Prop applicationsHasMore: boolean = false;
   @Prop safeAreaBottom: number = 0;
   applicationsDataSource: BasicDataSource<GroupApplicationItem> = new BasicDataSource<GroupApplicationItem>([]);
   onRetryLoad: () => void = () => {};
@@ -80,17 +83,15 @@ export struct GroupApplicationListSheet {
             }
           }, (application: GroupApplicationItem) => application.application_id)
 
+          // 分页状态条：加载中原语 + 到底 ListEnd（原为手写 LoadingProgress + 「加载更多…」，
+          // 样式与其它页不一致；四态契约要求「到底」有明确收尾）
           if (this.applicationsLoadingMore) {
             ListItem() {
-              Row({ space: DesignConstants.SPACING.SM }) {
-                LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-                Text('加载更多…')
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Center)
-              .padding(DesignConstants.SPACING.MD)
+              LoadingMoreIndicator()
+            }
+          } else if (!this.applicationsHasMore && this.applications.length > 0) {
+            ListItem() {
+              ListEnd()
             }
           }
         }

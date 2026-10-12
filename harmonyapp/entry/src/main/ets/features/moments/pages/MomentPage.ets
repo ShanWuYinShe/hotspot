@@ -18,6 +18,7 @@ import { SystemPageHeader, PageHeaderAction } from '../../../components/SystemPa
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { ListEnd } from '../../../components/ListEnd';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -319,6 +320,11 @@ export struct MomentPage {
       if (this.isLoadingMore) {
         ListItem() {
           LoadingMoreIndicator()
+        }
+      } else if (!this.hasMore && this.momentsDataSource.totalCount() > 0) {
+        // 到底提示：区分「已到底」与「加载卡住」（前端四态契约的 ListEnd）
+        ListItem() {
+          ListEnd()
         }
       }
     }

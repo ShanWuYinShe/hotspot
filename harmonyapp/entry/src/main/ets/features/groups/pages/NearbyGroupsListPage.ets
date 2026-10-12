@@ -17,6 +17,7 @@ import { GroupCard } from '../components/GroupCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemInput } from '../../../components/SystemInput';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
@@ -311,12 +312,7 @@ export struct NearbyGroupsListPage {
                 if (this.hasMore) {
                   LoadingMoreIndicator()
                 } else {
-                  Text('没有更多了')
-                    .fontSize(DesignConstants.FONT.SIZE.XS)
-                    .fontColor(this.getCurrentThemePalette().textTertiary)
-                    .width('100%')
-                    .textAlign(TextAlign.Center)
-                    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.LG })
+                                    ListEnd()
                 }
               }
               .width('100%')

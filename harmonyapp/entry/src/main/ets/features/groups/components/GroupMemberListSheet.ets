@@ -2,6 +2,8 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
+import { LoadingMoreIndicator } from '../../../components/EmptyState';
+import { ListEnd } from '../../../components/ListEnd';
 import { GroupMemberRow } from './GroupMemberRow';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
@@ -22,6 +24,7 @@ export struct GroupMemberListSheet {
   @Prop isLoadingMembers: boolean = false;
   @Prop membersErrorMessage: string = '';
   @Prop membersLoadingMore: boolean = false;
+  @Prop membersHasMore: boolean = false;
   @Prop safeAreaBottom: number = 0;
   membersDataSource: BasicDataSource<GroupMemberItem> = new BasicDataSource<GroupMemberItem>([]);
   onRetryLoad: () => void = () => {};
@@ -85,17 +88,15 @@ export struct GroupMemberListSheet {
               })
             }
           }, (member: GroupMemberItem) => member.user?.user_id ?? member.joined_at ?? '')
+          // 分页状态条：加载中原语 + 到底 ListEnd（原为手写 LoadingProgress + 「加载更多…」，
+          // 样式与其它页不一致；四态契约要求「到底」有明确收尾）
           if (this.membersLoadingMore) {
             ListItem() {
-              Row({ space: DesignConstants.SPACING.SM }) {
-                LoadingProgress().width(DesignConstants.COMPONENT.LOADING_ICON_SIZE).height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-                Text('加载更多…')
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Center)
-              .padding(DesignConstants.SPACING.MD)
+              LoadingMoreIndicator()
+            }
+          } else if (!this.membersHasMore && this.members.length > 0) {
+            ListItem() {
+              ListEnd()
             }
           }
         }

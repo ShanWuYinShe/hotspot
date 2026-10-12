@@ -43,6 +43,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemDialog } from '../../../components/SystemDialog';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SoftDivider } from '../../../components/SoftDivider';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -1127,12 +1128,7 @@ export struct ChatPage {
         // 列表头部：没有更早历史时展示（语义=顶端收尾，原误置列表尾部）
         if (!this.hasMoreHistory) {
           ListItem() {
-            Text('没有更多了')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textTertiary)
-              .width('100%')
-              .textAlign(TextAlign.Center)
-              .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XS })
+                        ListEnd()
           }
         }
         // 顶部加载更多历史指示器
