@@ -342,7 +342,7 @@ export struct LocationPickerPage {
     }
     if (this.panelHeight > PANEL_SNAP_MIN) {
       this.getUIContext().animateTo(
-        { duration: DesignConstants.ANIMATION.DURATION_250, curve: curves.springMotion(0.6, 0.9) },
+        { duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: curves.springMotion(DesignConstants.INTERACTION.SPRING_RESPONSE_PANEL, DesignConstants.INTERACTION.SPRING_DAMPING_PANEL) },
         () => { this.panelHeight = PANEL_SNAP_MIN; }
       );
     }
@@ -435,7 +435,7 @@ export struct LocationPickerPage {
     this.overlappingPanelItems = [];
     this.searchText = '';
     this.searchResults = [];
-    this.getUIContext().animateTo({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }, () => {
+    this.getUIContext().animateTo({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }, () => {
       this.showSearchBar = true;
     });
     setTimeout(() => {
@@ -457,7 +457,7 @@ export struct LocationPickerPage {
     if (collapseToMin) {
       setTimeout(() => {
         this.getUIContext().animateTo(
-          { duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: curves.springMotion(0.6, 0.9) },
+          { duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: curves.springMotion(DesignConstants.INTERACTION.SPRING_RESPONSE_PANEL, DesignConstants.INTERACTION.SPRING_DAMPING_PANEL) },
           () => { this.panelHeight = PANEL_SNAP_MIN; }
         );
       }, 350);
@@ -1199,7 +1199,7 @@ export struct LocationPickerPage {
           .zIndex(50)
           .transition(
             TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHORT, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_250, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
         }
 

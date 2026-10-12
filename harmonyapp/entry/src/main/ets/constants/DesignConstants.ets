@@ -150,10 +150,6 @@ export interface AnimationSystem {
   DURATION_CONTENT_SWITCH: number;
   /** bottom-sheet 转场统一时长（全应用 320ms，原散落魔法数收敛） */
   DURATION_SHEET: number;
-  /** 面板/筛选过渡（250ms） */
-  DURATION_250: number;
-  /** 弹层高度过渡（280ms） */
-  DURATION_280: number;
   /** 轻量反馈/入场（150ms） */
   DURATION_FAST: number;
   /** 脉冲/shimmer 循环周期（1500ms） */
@@ -194,6 +190,13 @@ export interface InteractionSystem {
   SPRING_RESPONSE_TAB: number;
   /** 弹簧动画 dampingFraction（标签切换） */
   SPRING_DAMPING_TAB: number;
+  /**
+   * 弹簧动画 response / dampingFraction（面板吸附与高度过渡）。
+   * 此前是散在地图位置选择器 3 处的裸值 `curves.springMotion(0.6, 0.9)`，
+   * 与 PRESS(0.3/0.85)、TAB(0.4/0.75) 并列的第 3 套参数，提为语义 token。
+   */
+  SPRING_RESPONSE_PANEL: number;
+  SPRING_DAMPING_PANEL: number;
 }
 
 // ==================== 透明度系统接口 ====================
@@ -608,8 +611,6 @@ const ANIMATION: AnimationSystem = {
   DURATION_MEDIUM: 300,
   DURATION_CONTENT_SWITCH: 400,
   DURATION_SHEET: 320,
-  DURATION_250: 250,
-  DURATION_280: 280,
   DURATION_FAST: 150,
   DURATION_SLOW: 1500,
   DURATION_STAGGER_DELAY: 150,
@@ -634,6 +635,8 @@ const INTERACTION: InteractionSystem = {
   SPRING_DAMPING_PRESS: 0.85,
   SPRING_RESPONSE_TAB: 0.4,
   SPRING_DAMPING_TAB: 0.75,
+  SPRING_RESPONSE_PANEL: 0.6,
+  SPRING_DAMPING_PANEL: 0.9,
 };
 
 // ==================== 组件特定常量 ====================

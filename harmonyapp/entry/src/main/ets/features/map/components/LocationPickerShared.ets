@@ -279,8 +279,8 @@ export function MapToast(props: MapToastProps) {
       .position({ top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, 76), left: 20, right: 20 })
       .hitTestBehavior(HitTestMode.Default)
       .transition(
-        TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_280, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-          .combine(TransitionEffect.move(TransitionEdge.TOP).animation({ duration: DesignConstants.ANIMATION.DURATION_280, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+        TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+          .combine(TransitionEffect.move(TransitionEdge.TOP).animation({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
       )
   }
 }
@@ -563,7 +563,7 @@ export struct MainPanel {
       }
     }
     this.getUIContext().animateTo(
-      { duration: DesignConstants.ANIMATION.DURATION_250, curve: curves.springMotion(0.6, 0.9) },
+      { duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: curves.springMotion(DesignConstants.INTERACTION.SPRING_RESPONSE_PANEL, DesignConstants.INTERACTION.SPRING_DAMPING_PANEL) },
       () => { this.panelHeight = target; }
     );
   }

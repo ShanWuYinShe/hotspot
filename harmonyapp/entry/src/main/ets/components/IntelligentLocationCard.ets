@@ -148,7 +148,7 @@ export struct IntelligentLocationCard {
       this.cardElevation = isHover ? DesignConstants.INTERACTION.HOVER_ELEVATION : DesignConstants.INTERACTION.HOVER_ELEVATION_REST;
     })
     .animation({
-      duration: DesignConstants.ANIMATION.DURATION_250,
+      duration: DesignConstants.ANIMATION.DURATION_MEDIUM,
       curve: DesignConstants.ANIMATION.CURVE_EASE_IN_OUT
     })
     .gesture(
