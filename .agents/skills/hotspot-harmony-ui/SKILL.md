@@ -244,6 +244,7 @@ ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代�
 | cachedCount | 12 处长列表全部配置（5~8） | grep cachedCount |
 | @Reusable | 18 个组件（含 MomentFeedCard/UserCard/EmptyState 等高频卡） | grep @Reusable |
 | Image 尺寸约束 | **20/20** 有 objectFit + 宽高/aspectRatio | 动态图全用 `.width('100%') + .aspectRatio() + objectFit(Cover) + alt + onError` 契约 |
+| 事件生命周期 | **9/9 组件 on/off 配对完整**（2026-10-12 补测） | interactionEventHub 订阅组件 4 个 + ChatPage 9on/9off + ProfilePage 双事件双注销 + NativeMapComponent（清定时器/清聚合层/**release 全部 PixelMap**）；地图监听挂组件自有 controller 随组件销毁。新增订阅时必须在 aboutToDisappear 注销同 handler 引用 |
 
 **审计脚本的坑（第三次验证同一规律）**：Image 约束检查报 3 处「缺尺寸」，实际都有
 `.width('100%') + .aspectRatio()` —— 脚本只认数字 `.width(N)/.height(N)`。
