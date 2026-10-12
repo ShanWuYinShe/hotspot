@@ -5,10 +5,6 @@
       "value": "HotSpot - A location-based social app"
     },
     {
-      "name": "app_description",
-      "value": "A location-based social app"
-    },
-    {
       "name": "EntryAbility_desc",
       "value": "HotSpot - Location-based social"
     },
@@ -29,112 +25,8 @@
       "value": "We need vibration permission for haptic feedback"
     },
     {
-      "name": "auth_login",
-      "value": "Sign In"
-    },
-    {
-      "name": "auth_temp_user",
-      "value": "Guest"
-    },
-    {
-      "name": "auth_nickname_placeholder",
-      "value": "Enter a nickname"
-    },
-    {
-      "name": "auth_start_experience",
-      "value": "Get started"
-    },
-    {
-      "name": "auth_temp_user_desc",
-      "value": "Create a guest account and try the app without signing up"
-    },
-    {
-      "name": "auth_login_id_placeholder",
-      "value": "Enter email or phone number"
-    },
-    {
-      "name": "auth_password_placeholder",
-      "value": "Enter your password"
-    },
-    {
-      "name": "auth_login_btn",
-      "value": "Sign In"
-    },
-    {
-      "name": "auth_register_not_supported",
-      "value": "Sign-up is not supported yet. Please use a guest account."
-    },
-    {
-      "name": "auth_login_success",
-      "value": "Signed in successfully"
-    },
-    {
-      "name": "auth_register_failed",
-      "value": "Sign-up failed"
-    },
-    {
-      "name": "auth_login_failed",
-      "value": "Sign-in failed"
-    },
-    {
       "name": "common_loading",
       "value": "Loading..."
-    },
-    {
-      "name": "common_success",
-      "value": "Success"
-    },
-    {
-      "name": "common_error",
-      "value": "Error"
-    },
-    {
-      "name": "common_more",
-      "value": "More"
-    },
-    {
-      "name": "common_info",
-      "value": "Info"
-    },
-    {
-      "name": "common_next",
-      "value": "Next"
-    },
-    {
-      "name": "tabs_group",
-      "value": "Groups"
-    },
-    {
-      "name": "tabs_message",
-      "value": "Messages"
-    },
-    {
-      "name": "tabs_moment",
-      "value": "Moments"
-    },
-    {
-      "name": "tabs_map",
-      "value": "Map"
-    },
-    {
-      "name": "tabs_profile",
-      "value": "Me"
-    },
-    {
-      "name": "settings_notification",
-      "value": "Notification settings"
-    },
-    {
-      "name": "settings_about",
-      "value": "About"
-    },
-    {
-      "name": "error_location_unavailable",
-      "value": "Location unavailable"
-    },
-    {
-      "name": "error_network_error",
-      "value": "Network error"
     },
     {
       "name": "distributed_sync_reason",

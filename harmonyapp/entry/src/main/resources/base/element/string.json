@@ -5,10 +5,6 @@
       "value": "GeoTalk - 基于地理位置的社交应用"
     },
     {
-      "name": "app_description",
-      "value": "基于地理位置的社交应用"
-    },
-    {
       "name": "EntryAbility_desc",
       "value": "GeoTalk - 地理位置社交"
     },
@@ -29,112 +25,8 @@
       "value": "需要震动权限以提供触觉反馈"
     },
     {
-      "name": "auth_login",
-      "value": "登录"
-    },
-    {
-      "name": "auth_temp_user",
-      "value": "临时用户"
-    },
-    {
-      "name": "auth_nickname_placeholder",
-      "value": "请输入昵称"
-    },
-    {
-      "name": "auth_start_experience",
-      "value": "开始体验"
-    },
-    {
-      "name": "auth_temp_user_desc",
-      "value": "创建临时账户，无需注册即可体验"
-    },
-    {
-      "name": "auth_login_id_placeholder",
-      "value": "请输入邮箱或手机号"
-    },
-    {
-      "name": "auth_password_placeholder",
-      "value": "请输入密码"
-    },
-    {
-      "name": "auth_login_btn",
-      "value": "登录"
-    },
-    {
-      "name": "auth_register_not_supported",
-      "value": "暂不支持注册，请使用临时账户体验"
-    },
-    {
-      "name": "auth_login_success",
-      "value": "登录成功"
-    },
-    {
-      "name": "auth_register_failed",
-      "value": "注册失败"
-    },
-    {
-      "name": "auth_login_failed",
-      "value": "登录失败"
-    },
-    {
       "name": "common_loading",
       "value": "加载中..."
-    },
-    {
-      "name": "common_success",
-      "value": "成功"
-    },
-    {
-      "name": "common_error",
-      "value": "错误"
-    },
-    {
-      "name": "common_more",
-      "value": "更多"
-    },
-    {
-      "name": "common_info",
-      "value": "信息"
-    },
-    {
-      "name": "common_next",
-      "value": "下一步"
-    },
-    {
-      "name": "tabs_group",
-      "value": "群组"
-    },
-    {
-      "name": "tabs_message",
-      "value": "消息"
-    },
-    {
-      "name": "tabs_moment",
-      "value": "瞬间"
-    },
-    {
-      "name": "tabs_map",
-      "value": "地图"
-    },
-    {
-      "name": "tabs_profile",
-      "value": "我的"
-    },
-    {
-      "name": "settings_notification",
-      "value": "通知设置"
-    },
-    {
-      "name": "settings_about",
-      "value": "关于我们"
-    },
-    {
-      "name": "error_location_unavailable",
-      "value": "位置不可用"
-    },
-    {
-      "name": "error_network_error",
-      "value": "网络错误"
     },
     {
       "name": "distributed_sync_reason",
