@@ -37,7 +37,7 @@
 | `ui/button` | 表单与主 CTA 按钮 |
 | `navigation/ActionIconButton` | 图标按钮（ghost/outline） |
 | `hover-btn` / `scale-btn`（utilities） | 行内文字/图标动作的 hover/tap CSS 语言 |
-| `forms/SearchInput` / `forms/Input` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语。`forms/Input`（2026-10-12 新增）：单行输入，受控 value+onChange；`label`/`labelSnippet`（tracking-field 档位或自定义行）与 input 以 id 关联；`prefix` snippet 前缀图标；`clearable` 清除钮；**错误态三件套** `hasError`+`errorText`→ aria-invalid + aria-describedby + role="alert" 就近错误行（样式由 input-surface 的 :has(aria-invalid) 承担）。padding 由调用方 class 提供（同 SearchInput 约定，如 `rounded-md px-4 py-3`）。契约对齐鸿蒙 `SystemInput` |
+| `forms/SearchInput` / `forms/Input` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语。`forms/Input`（2026-10-12 新增）：单行输入，受控 value+onChange；`label`/`labelSnippet`（tracking-field 档位或自定义行）与 input 以 id 关联；`prefix` snippet 前缀图标；`clearable` 清除钮；**错误态三件套** `hasError`+`errorText`→ aria-invalid + aria-describedby + role="alert" 就近错误行（样式由 input-surface 的 :has(aria-invalid) 承担）。padding 由调用方 class 提供（同 SearchInput 约定，如 `rounded-md px-4 py-3`）；另支持 `compact` 形态（input-surface 直贴 input，无包裹/label/prefix/清除，紧凑位专用）。契约对齐鸿蒙 `SystemInput` |
 | `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`） |
 | `overlays/SheetShell`、`ui/dialog`、`ui/popover`、`ui/dropdown-menu` | 弹层体系 |
 | `overlays/MenuPanel` | 弹出菜单面板唯一实现（标题 + 选项行 + 可选底部动作；容器走 `ui/popover` Content）。已有：地图源菜单、地图筛选菜单。新菜单只传数据，不复制行结构 |
@@ -74,6 +74,7 @@
    （token 边界匹配），任何加投影/改圆角/改字色的迁移会在此失败。
  2. **表单 Input 原语**：**已落地（2026-10-12）**——`forms/Input` 建成（10 个契约测试），
     首个消费方 `me/edit` 昵称输入已迁移（登录态截图对比审查通过）。
+    确认码输入亦已迁（compact 形态，2026-10-12，运行时截图验证通过）——me/edit 全页输入原语化。
     **其余消费方评估后保留手写（2026-10-12 全量盘点）**：剩余 20 处 input 全部是
     **compact 变体**（`input-surface` 直贴 input，admin 六页/群组弹层 ×3/安全设置 ×6/
     map 面板 ×2）+ 应保持原生的 file/checkbox。compact 迁移收益≈0：样式半边已合规、
