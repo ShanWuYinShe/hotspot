@@ -756,8 +756,10 @@ const PAGE_SHELL: PageShellSystem = {
   SHELL_FORM_MAX: 560,
   FEED_NARROW_MAX: 640,
   FEED_MEDIUM_MAX: 960,
-  // 对齐前端 ContentColumn --cst-page-gutter（1.25rem / 1.5rem / 1.75rem）
-  GUTTER_MOBILE: 20,
+  // 对齐前端 ContentColumn --cst-page-gutter（1rem / 1.5rem / 1.75rem）
+  // GUTTER_MOBILE 16：2026-10-13 由 20 收紧，对齐 iOS inset grouped 16pt / Material 16dp
+  // 主流下限（两端同步：前端 --cst-page-gutter 1rem）
+  GUTTER_MOBILE: 16,
   GUTTER_TABLET: 24,
   GUTTER_DESKTOP: 28,
   // 纵向节奏：分区之间必须明显大于「分区标题→其内容」，

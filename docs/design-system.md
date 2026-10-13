@@ -170,7 +170,7 @@
 
 | 断点 | gutter | 对齐前端 `--cst-page-gutter` |
 |---|---|---|
-| xs / sm（手机） | `PAGE_SHELL.GUTTER_MOBILE` = 20 | 1.25rem |
+| xs / sm（手机） | `PAGE_SHELL.GUTTER_MOBILE` = 16 | 1rem |
 | md（平板） | `PAGE_SHELL.GUTTER_TABLET` = 24 | 1.5rem |
 | lg+（桌面） | `PAGE_SHELL.GUTTER_DESKTOP` = 28 | 1.75rem |
 
@@ -316,7 +316,7 @@
 - 其他布局尺寸：`BACK_BUTTON_SIZE 40` / `MIN_HIT_TARGET 44`（触控热区底线，见 skill
   `mobile-ui-conventions`：官方底线 ≥40vp、推荐 46）/ `UNREAD_BADGE_SIZE 20` /
   `COVER_HEIGHT 220` / `NICKNAME_MAX_WIDTH 56` / `LOGIN_CARD_MAX_WIDTH 400`
-- **页面横向 gutter 与纵向节奏**：`PAGE_SHELL.{GUTTER_MOBILE 20, GUTTER_TABLET 24,
+- **页面横向 gutter 与纵向节奏**：`PAGE_SHELL.{GUTTER_MOBILE 16, GUTTER_TABLET 24,
   GUTTER_DESKTOP 28}` 与 `PAGE_SHELL.{SECTION_GAP 24, SECTION_INNER_GAP 12,
   PAGE_TOP_GAP 16}` —— **语义与强制规则见第 5.1 / 5.2 节**，此处仅登记存在，
   数值不重复维护（两处重复必漂移）

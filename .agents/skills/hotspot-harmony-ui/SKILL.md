@@ -41,8 +41,9 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   - 安全区由 SystemPageHeader 内聚（自带 `@StorageLink('safeAreaTop')` + `expandSafeArea`），页面无需重复写。
   - 内联搜索框头部 → `SearchPageHeader`；浮动卡片+头像头部 → `ChatPageHeader`。
 - **页面内容栏（PageShellContainer）**：强制使用；档位数值（form/narrow/default/wide + feed 两档）见 design-system.md 第 12 节。
-- **页面横向 gutter（唯一来源，强制）**：横向留白**只能**由 `PageShellContainer` 提供（手机 20 / 平板 24 / 桌面 28，
-  对齐前端 `--cst-page-gutter`）。**禁止**双重留白（容器 gutter + 页面自加 left/right padding，
+- **页面横向 gutter（唯一来源，强制）**：横向留白**只能**由 `PageShellContainer` 提供（手机 16 / 平板 24 / 桌面 28，
+  对齐前端 `--cst-page-gutter`；2026-10-13 手机档由 20 收紧至 16，对齐 iOS inset grouped 16pt /
+  Material 16dp 主流下限，两端同步）。**禁止**双重留白（容器 gutter + 页面自加 left/right padding，
   会叠成 36~40，与只用容器 gutter 的页面差 16~20vp）；**禁止**用 `noHorizontalPadding: true`
   关掉容器留白再另写一套值。`SystemPageHeader` 只带纵向节奏、不自带横向 padding。
   - **通栏元素的坑（实测 2026-10-11）**：前端用 `-mx-[var(--cst-page-gutter)]` 抵消 gutter，ArkUI **不能照搬**

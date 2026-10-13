@@ -92,7 +92,9 @@
 
 /* ── Responsive page-content contract ──────────────────────────────── */
 :root {
-  --cst-page-gutter: 1.25rem;
+  /* 16px：对齐 iOS inset grouped 16pt / Material 16dp 主流下限
+     （2026-10-13 由 1.25rem 收紧，两端同步：鸿蒙 GUTTER_MOBILE=16） */
+  --cst-page-gutter: 1rem;
   --cst-page-content-max: 100%;
 }
 @media (min-width: 600px) {
