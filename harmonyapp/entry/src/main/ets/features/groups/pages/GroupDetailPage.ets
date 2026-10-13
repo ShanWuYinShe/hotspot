@@ -2049,6 +2049,8 @@ export struct GroupDetailPage {
       .width('100%')
     }
     .width('100%')
+    // 与卡内位置行的 LG(16) 对齐：瓦片原先 0 内边距贴卡缘（实拍反馈「紧贴边缘」）
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
   }
 
   private formatOnlineCount(): string {

@@ -167,6 +167,10 @@ export struct TabsPillGroup {
     })
     // 触控热区：外层 Column 透明，constraintSize 只扩命中区（胶囊视觉高度由内层 Row 固定）
     .constraintSize({ minHeight: DesignConstants.LAYOUT.MIN_HIT_TARGET })
+    // 热区 Column 高于视觉胶囊（44 > 32），必须垂直居中——否则胶囊贴 Column 顶、
+    // 热区空隙全落在下方，视觉上「分段内容靠上不居中」（实拍：群组详情 tabs）
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
   }
 
   build() {
