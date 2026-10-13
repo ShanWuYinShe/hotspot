@@ -73,13 +73,14 @@
    加一层投影。`LoadMoreButton.test.ts` 的「视觉形态守恒」用例已锁定当前形态
    （token 边界匹配），任何加投影/改圆角/改字色的迁移会在此失败。
  2. **表单 Input 原语**：**已落地（2026-10-12）**——`forms/Input` 建成（10 个契约测试），
-    首个消费方 `me/edit` 昵称输入已迁移（截图对比审查通过：labelSnippet 保留图标行、
-    padding 经 class 还原）。**待迁移消费方**（改到时顺手迁）：admin 六页、
-    群组系列弹层（CreateGroupSheet/InviteMembersSheet/GroupSettingsSheet/
-    GroupAnnouncementDialog）、AccountSecuritySection、map 两端面板；
-    另 `me/edit` 注销确认码是 compact 变体（`input-surface` 直贴 input + `py-2`），
-    需原语支持 size 变体后再迁。多数消费方已用 `input-surface`（样式半边合规），
-    迁移主要补**行为半边**（清除按钮/错误态播报，同鸿蒙 SystemInput 契约）。
+    首个消费方 `me/edit` 昵称输入已迁移（登录态截图对比审查通过）。
+    **其余消费方评估后保留手写（2026-10-12 全量盘点）**：剩余 20 处 input 全部是
+    **compact 变体**（`input-surface` 直贴 input，admin 六页/群组弹层 ×3/安全设置 ×6/
+    map 面板 ×2）+ 应保持原生的 file/checkbox。compact 迁移收益≈0：样式半边已合规、
+    表单无错误态需求，迁移只改写 markup 不增行为，反有回归风险。策略改为：
+    ① wrapper 型新表单一律用 `forms/Input`；② compact 消费方改到该文件且有新增行为需求
+    （如清除钮/错误播报）时，先给原语加 compact/size 变体再迁；
+    ③ AccountSecuritySection 密码簇若要补 AuthForm 式显隐切换，属 UX 增强需设计确认。
 3. **分组卡壳已收敛**（2026-09-10）：移动端 `ProfileMobile` 的 `card-raised`
    已改为与桌面 `ProfilePage` 一致的「白卡 + 发丝描边 + 主题投影」
    （`rounded-lg border border-border-default bg-surface-primary shadow-raised-sm`）；
