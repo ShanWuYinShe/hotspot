@@ -30,6 +30,7 @@ import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
+import pasteboard from '@ohos.pasteboard';
 import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
 import {
   GroupItem,
@@ -1618,8 +1619,23 @@ export struct GroupDetailPage {
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
+                // 交互暗示（用户重设计：位置行需可交互 affordance）：
+                // 鸿蒙端暂无地图详情路由，先提供「复制位置名」真实功能 + 尾随箭头
+                LucideIcon({
+                  icon: AppIcon.FORWARD,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+                  color: this.getCurrentThemePalette().textSecondary
+                })
               }
               .alignItems(VerticalAlign.Center)
+              .onClick(() => {
+                const name = this.groupInfo?.location?.location_name;
+                if (!name) return;
+                const data = pasteboard.createData('text/plain', name);
+                pasteboard.getSystemPasteboard().setData(data);
+                SystemToast.showSuccess(`位置已复制：${name}`, this.getUIContext());
+              })
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start)
@@ -2071,7 +2087,9 @@ export struct GroupDetailPage {
 
   @Builder
   private StatsCell(value: string, label: string) {
-    Column({ space: DesignConstants.SPACING.THREE }) {
+    // 按用户重设计方案：去瓦片盒（surfaceSubtle 底+圆角），纯「数值+标签」列
+    // 直接落在卡面上，留足呼吸感（数值 XL 半粗 / 标签 XS 次要色，间距放宽）
+    Column({ space: DesignConstants.SPACING.SM }) {
       Text(value)
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
@@ -2086,11 +2104,6 @@ export struct GroupDetailPage {
     .alignItems(HorizontalAlign.Center)
     .layoutWeight(1)
     .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    // 容器内子模块：用 surfaceSubtle 色阶差表达层级（M3「同层优先用色阶而非描边」），
-    // 不再叠「白底 + 白描边」（白卡里的白块看不出边界、只会显得脏）；
-    // 圆角降到 RADIUS.SM，遵守 HarmonyOS「层级正相关」（子模块圆角 < 所属容器圆角）
-    .backgroundColor(this.getSurfaceSubtle())
-    .borderRadius(DesignConstants.RADIUS.SM)
   }
 
   @Builder
