@@ -41,7 +41,7 @@
 		disabled={pending || disabled}
 		class="hover-btn hit-slop tap-92 flex size-9 shrink-0 items-center justify-center rounded-full focus-ring disabled:pointer-events-none disabled:opacity-faint {active
 			? 'border border-border-strong bg-transparent text-text-secondary hover:bg-interactive-hover'
-			: 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
+			: 'bg-accent-bg text-accent-default border border-transparent hover:border-accent-border'}"
 		onclick={(e) => {
 			e.stopPropagation();
 			onToggle(e);
@@ -56,7 +56,7 @@
 {:else}
 	<Button
 		type="button"
-		variant={active ? 'outline' : 'primary'}
+		variant={active ? 'outline' : 'surface-accent'}
 		size={size === 'block' ? 'lg' : 'sm'}
 		disabled={pending || disabled}
 		class="hit-slop tap-92 rounded-full gap-1

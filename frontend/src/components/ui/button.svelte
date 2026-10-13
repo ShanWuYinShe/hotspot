@@ -5,13 +5,14 @@
 
 	// Button — 全站统一按钮原语（components/ui）。
 	// variant：primary（accent 实底）/ secondary（面板描边）/ outline（透明描边）/
-	//          ghost（透明）/ danger（状态色实底）。
+	//          ghost（透明）/ danger（状态色实底）/ surface-accent（accent 淡底 Tonal：
+	//          列表次级动作，实体蓝让位全局主流程——对齐鸿蒙 surface-accent 同名变体）。
 	// size：sm=32 / md=40 / lg=44 高度，字号与内边距对齐既有页面按钮。
 	// loading：显示统一 spinner + aria-busy，并阻止重复提交。
 	// 焦点环由 focus-ring 统一提供；hover/tap 由 hover-btn 承载。
 	// 调用方 className 经 tailwind-merge 合并，可覆盖圆角/宽度等布局类。
 
-	type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+	type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'surface-accent';
 	type ButtonSize = 'sm' | 'md' | 'lg';
 
 	// hover 反馈走组件级 token（全局 button hover 填充只兜底透明裸按钮）：
@@ -27,7 +28,10 @@
 	// text-text-on-status——后者是 online/warning 实底的文字位（vibrant light 下为深字，
 	// 落在加深后的 danger 实底 #C81E4E 上对比度不足）。与各确认按钮
 	//（enabled:bg-status-danger + text-text-on-accent）保持一致，对齐鸿蒙 danger 实底统一白字。
-		danger: 'bg-status-danger text-text-on-accent shadow-raised-sm hover:shadow-raised-md'
+		danger: 'bg-status-danger text-text-on-accent shadow-raised-sm hover:shadow-raised-md',
+	// surface-accent Tonal：accent 淡底 + accent 字；hover 走描边加深（同 secondary/
+	// outline 档），无边投影（列表内嵌次级动作，quiet 语义）
+		'surface-accent': 'bg-accent-bg text-accent-default border border-transparent hover:border-accent-border'
 	};
 
 	const SIZES: Record<ButtonSize, string> = {
