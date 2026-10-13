@@ -267,3 +267,26 @@ ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代�
 
 选中的明暗分段 pill 在深色下均为「亮 accent 底 + 深 accent 文字」——与静态对比度基线
 （第 1 节）一致。头像游客色不随主题变（身份色独立于主题 accent，业界惯例，非缺陷）。
+
+## ArkUI 布局陷阱（实拍确认，2026-10-13）
+
+两个真实踩过的渲染坑，都会造成「观感与代码意图不符」：
+
+### 1. `.border()` 写在 `.borderRadius()` 之后会重置圆角为直角
+
+- 现象：同一对并排按钮，无 border 的呈胶囊（borderRadius=999 生效），带 hairline border 的
+  呈直角矩形——尽管两者引用同一个 borderRadius 值（SHAPE.BUTTON=RADIUS.FULL）。
+- 根因：ArkUI 属性后设覆盖先设；`.border({width,color})` 自带的 radius 字段未显式给出
+  时按 0 生效，把先前 `.borderRadius()` 的值覆盖掉。
+- 修复：**`.border()` 一律写在 `.borderRadius()` 之前**（后设的 borderRadius 覆盖 border）。
+- 排查工具：`.workwork/global-border-scan.py`（扫「.border( 紧随 .borderRadius(」模式，
+  全仓曾报 66 处——是否真有视觉影响需逐例核实，部分元素本意即直角）。
+- 实拍案例：ProfilePage 升级表单「取消」直角 vs「确认升级」胶囊（commit d05aaacc）。
+
+### 2. Scroll 内容短于视口时默认垂直居中
+
+- 现象：短表单在 `Scroll{...}.layoutWeight(1)` 里「飘」在页中段，页头下方出现大空隙
+  （实measured：Scroll 高 597vp、内容 289vp，上下各留 154vp）。
+- 根因：Scroll 对小于滚动区的内容默认居中对齐。
+- 修复：表单类 Scroll 一律补 `.align(Alignment.Top)`（commit 1ae09938，升级表单）。
+- 排查：dump 里 Scroll bounds 与其内容 Column bounds 的 y1 不一致即为居中。
