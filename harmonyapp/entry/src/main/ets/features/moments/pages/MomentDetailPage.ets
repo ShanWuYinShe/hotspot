@@ -847,10 +847,11 @@ export struct MomentDetailPage {
 
       // 发送评论：primary accent 实底；空文案/发送中走组件内聚 disabled 态
       //（替代旧外挂 .enabled/.opacity 与双态底色切换）
+      // 按钮尺寸与输入框同高（Gemini 审查：发送钮 36 低于输入框 42 未对齐）
       SurfaceIconButton({
         icon: AppIcon.SEND,
         kind: 'primary',
-        buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+        buttonSize: DesignConstants.COMPONENT.INPUT_HEIGHT,
         glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
         disabled: this.commentText.trim().length === 0 || this.commentSending,
         accessibilityLabel: '发送评论',
