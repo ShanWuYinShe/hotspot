@@ -185,7 +185,7 @@ export struct MomentFeedCard {
   @Builder
   private buildPostCard(): void {
     Column() {
-      Stack() {
+      Stack({ alignContent: Alignment.TopStart }) {
         if (this.moment.images && this.moment.images.length > 0) {
           if (this.isImageFailed(this.moment.images[0].url)) {
             Column() {
@@ -210,14 +210,7 @@ export struct MomentFeedCard {
             .backgroundColor(this.getPalette().surfaceSubtle)
         }
 
-        Column()
-          .width('100%')
-          .height('100%')
-          .linearGradient({
-            direction: GradientDirection.Bottom,
-            colors: [[DesignConstants.COLOR.IMAGE_OVERLAY_START, 0], [DesignConstants.COLOR.IMAGE_OVERLAY_END, 1]]
-          })
-
+        // 标签 chip 锁定图上左上（对齐前端 absolute top-2.5 left-2.5）
         Column() {
           if (this.moment.tags && this.moment.tags.length > 0) {
             Text(this.moment.tags[0])
@@ -227,50 +220,51 @@ export struct MomentFeedCard {
               .borderRadius(DesignConstants.RADIUS.FULL)
               .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
           }
-
-          Blank()
-
-          Row({ space: DesignConstants.SPACING.SM2 }) {
-            SystemAvatar({
-              avatarUrl: this.moment.user?.avatar_url ?? '',
-              name: this.moment.user?.nickname ?? '',
-              avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-              shape: 'circle'
-            })
-
-            Text(this.moment.user?.nickname ?? '')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .fontColor(DesignConstants.COLOR.WHITE)
-              .layoutWeight(1)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-            if (this.moment.location?.location_name) {
-              LucideIcon({
-                  icon: AppIcon.LOCATION,
-                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                  color: DesignConstants.COLOR.WHITE
-                })
-              Text(this.moment.location.location_name)
-                .fontSize(DesignConstants.FONT.SIZE.XS2)
-                .fontColor(DesignConstants.COLOR.WHITE)
-                .opacity(DesignConstants.OPACITY.EMPHASIZED)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-            }
-          }
-          .width('100%')
-          .alignItems(VerticalAlign.Center)
-          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
         }
-        .width('100%')
-        .height('100%')
-        .padding({ left: 0, right: 0, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
+        .alignItems(HorizontalAlign.Start)
+        .margin({ left: DesignConstants.SPACING.SM2, top: DesignConstants.SPACING.SM2 })
       }
       .width('100%')
       .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
       .clip(true)
+
+      // 图下信息 footer（对齐前端 MomentCard footer：作者行/正文/动作栏；
+      // 移除原白字覆盖层——深色图上白字可读性差且与前端结构漂移，Gemini 审查项）
+      Row({ space: DesignConstants.SPACING.SM2 }) {
+        SystemAvatar({
+          avatarUrl: this.moment.user?.avatar_url ?? '',
+          name: this.moment.user?.nickname ?? '',
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+          shape: 'circle'
+        })
+
+        Text(this.moment.user?.nickname ?? '')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+          .fontColor(this.getPalette().textPrimary)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        if (this.moment.location?.location_name) {
+          Row({ space: DesignConstants.SPACING.HALF }) {
+            LucideIcon({
+                icon: AppIcon.LOCATION,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+                color: this.getPalette().textSecondary
+              })
+            Text(this.moment.location.location_name)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .fontColor(this.getPalette().textSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          .alignItems(VerticalAlign.Center)
+        }
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD2 })
 
       if (this.moment.description) {
         Text(this.moment.description)
