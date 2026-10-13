@@ -1,18 +1,24 @@
 /**
- * ProfileDataSection —— 个人中心「个人数据」分组（分组小标 + 卡片化数据行）。
+ * ProfileDataSection —— 个人中心「个人数据」分组（分组小标 + ListGroup 数据行）。
  * 从 ProfilePage.buildProfileDataList/buildProfileDataRow 抽取；计数经 props 注入，
  * 主题按 resolvedThemeId 自解析（与 ProfileContentAtoms 同规），行内导航走 AppRouter；无本地状态。
+ * 2026-10-13：手写卡片容器与行内底部 hairline 迁移为 ListGroup + ListRowDivider 原语
+ * （对齐 HarmonyOS 列表规范：分隔线内缩对齐文字起始处，卡片圆角 COMPACT_CARD=16 列表容器档）。
  */
 
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { Pressable } from '../../../components/Pressable';
+import { ListGroup, ListRowDivider } from '../../../components/ListGroup';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+
+/** 数据行文字起始缩进：行内边距 LG2(20) + 圆形徽标 XS(32) + 行间距 MD(12) */
+const DIVIDER_INSET: number = 64;
 
 @Component
 export struct ProfileDataSection {
@@ -21,12 +27,12 @@ export struct ProfileDataSection {
   @Prop myFriendsCount: number = 0;
   @Prop myFollowingCount: number = 0;
   @Prop myFollowersCount: number = 0;
-  /** 追加动作行（更新位置/升级/设置/退出登录等）：与数据行同卡拼接，顶部 hairline 分隔 */
+  /** 追加动作行（升级/设置/退出登录等）：与数据行同卡拼接，行间 ListRowDivider 分隔 */
   @BuilderParam actionRows: () => void;
   @Prop hasActionRows: boolean = false;
 
   @Builder
-  private dataRow(icon: AppIcon, label: string, detail: string, onTap: () => void, divider: boolean) {
+  private dataRow(icon: AppIcon, label: string, detail: string, onTap: () => void) {
     // 对齐前端 ProfileMobile：圆形 icon-badge(32) + 左侧两行（标题/副标题）+ 右箭头；
     // 按压反馈统一走 Pressable（P3-1），键鼠 hover 淡填充由 hoverFill 提供
     Pressable({
@@ -76,10 +82,6 @@ export struct ProfileDataSection {
         top: DesignConstants.SPACING.MD3,
         bottom: DesignConstants.SPACING.MD3
       })
-      .border(divider ? {
-        width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
-        color: { bottom: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor }
-      } : { width: 0 })
     }
   }
 
@@ -100,40 +102,35 @@ export struct ProfileDataSection {
         .width('100%')
         .padding({ left: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM })
 
-      // 数据行白卡容器（表面分层：底色差 + 阴影浮起，无边框线，对齐前端 card-raised）
-      Column() {
+      // 列表容器原语（对齐 HarmonyOS 列表规范：单卡 + 行间内缩分隔线）
+      ListGroup() {
         this.dataRow(AppIcon.PHOTO, '我的瞬间', '查看已发布的记录', () => {
           AppRouter.push(PageNames.MOMENT);
-        }, true)
+        })
+        ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
         this.dataRow(AppIcon.GROUP, '我的群组', `${formatCount(this.myGroupsCount)} 个正在参与`, () => {
           AppRouter.push(PageNames.GROUP);
-        }, false)
+        })
+        ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
         this.dataRow(AppIcon.PERSON, '好友', `${formatCount(this.myFriendsCount)} 位好友`, () => {
           AppRouter.push(PageNames.RELATIONSHIP_HUB);
-        }, false)
+        })
+        ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
         this.dataRow(AppIcon.STAR, '关注', `${formatCount(this.myFollowingCount)} 人`, () => {
           AppRouter.push(PageNames.RELATIONSHIP_HUB);
-        }, false)
+        })
+        ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
         this.dataRow(AppIcon.HEART, '粉丝', `${formatCount(this.myFollowersCount)} 人`, () => {
           AppRouter.push(PageNames.RELATIONSHIP_HUB);
-        }, false)
+        })
         if (this.hasActionRows) {
-          // 动作行容器：顶部 hairline 与数据行分隔（行内各自再带底部线）
+          ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
           Column() {
             this.actionRows()
           }
           .width('100%')
-          .border({
-            width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE },
-            color: { top: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor }
-          })
         }
       }
-      .width('100%')
-      .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceBackground)
-      .borderRadius(DesignConstants.SHAPE.CARD)
-      .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceShadow)
-      .clip(true)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
