@@ -81,6 +81,8 @@ export struct MomentDetailPage {
   @State favoritePending: boolean = false;
   @State comments: CommentItem[] = [];
   @State commentText: string = '';
+  /** 正在回复的目标评论（null = 发顶层评论）；回复发送带 parent_id（Gemini 审查：回复展示与发送补齐） */
+  @State replyTarget: CommentItem | null = null;
   @State commentsLoading: boolean = false;
   @State commentsError: string = '';
   @State commentSending: boolean = false;
@@ -177,6 +179,25 @@ export struct MomentDetailPage {
     }
   }
 
+  /** 拉取各顶层评论的子回复并按「父后紧跟回复」重排（对齐前端两级评论展示；
+   *  Gemini 审查：次级回复需要缩进与引导线，前提是回复先被展示） */
+  private async loadAllReplies(): Promise<void> {
+    const parents = this.comments.filter((c: CommentItem) => c.replies_count > 0);
+    if (parents.length === 0) return;
+    const responses = await Promise.all(parents.map((p: CommentItem) =>
+      ApiClient.getReplies({ comment_id: p.comment_id }).catch(() => null)));
+    const merged: CommentItem[] = [];
+    this.comments.forEach((c: CommentItem) => {
+      merged.push(c);
+      const res = responses[parents.findIndex((p: CommentItem) => p.comment_id === c.comment_id)];
+      if (res && res.code === 0 && res.data) {
+        (res.data.items ?? []).filter((r: CommentItem) => !r.is_deleted)
+          .forEach((r: CommentItem) => merged.push(r));
+      }
+    });
+    this.comments = merged;
+  }
+
   private async loadComments(): Promise<void> {
     if (this.isDestroyed || !this.momentId) return;
     this.commentsLoading = true;
@@ -189,6 +210,7 @@ export struct MomentDetailPage {
       if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
         this.comments = (response.data.items ?? []).filter((c: CommentItem) => !c.is_deleted);
+        await this.loadAllReplies();
       }
     } catch (_) {
       // 加载失败显式提示：空列表会掩盖网络错误（「还没评论」误导）
@@ -212,11 +234,12 @@ export struct MomentDetailPage {
       nickname: this.currentUser.nickname ?? '',
       avatar_url: this.currentUser.avatar_url ?? ''
     };
+    const parentId = this.replyTarget?.comment_id ?? null;
     const tempComment: CommentItem = {
       comment_id: tempId,
       user: user,
       content: content,
-      parent_id: null,
+      parent_id: parentId,
       mentions: [],
       created_at: new Date().toISOString(),
       replies_count: 0,
@@ -224,10 +247,18 @@ export struct MomentDetailPage {
       reactions: [],
       top_replies: []
     };
-    this.comments = [...this.comments, tempComment];
+    // 回复就近插入父评论后（顶层评论追加尾部），并清回复目标
+    const parentIdx = parentId ? this.comments.findIndex((c: CommentItem) => c.comment_id === parentId) : -1;
+    if (parentIdx >= 0) {
+      const next = [...this.comments];
+      next.splice(parentIdx + 1, 0, tempComment);
+      this.comments = next;
+    } else {
+      this.comments = [...this.comments, tempComment];
+    }
     this.commentText = '';
     try {
-      const request: CreateCommentRequest = { moment_id: this.momentId, content: content };
+      const request: CreateCommentRequest = { moment_id: this.momentId, content: content, parent_id: parentId ?? undefined, mentions: [] };
       const response = await ApiClient.createComment(request);
       if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
@@ -235,6 +266,7 @@ export struct MomentDetailPage {
           c.comment_id === tempId ? response.data as CommentItem : c
         );
         this.commentAdditions += 1;
+        this.replyTarget = null;
       } else {
         this.comments = this.comments.filter((c: CommentItem) => c.comment_id !== tempId);
         SystemToast.showError(getErrorMessage(response, '评论失败'), this.getUIContext());
@@ -431,8 +463,9 @@ export struct MomentDetailPage {
    * 评论回复：输入栏置 @对方 并滚动到评论区（对齐前端 replyTo：
    * input = `@${user} ` + commentInputEl.focus()；鸿蒙端以滚动到输入栏替代聚焦）。
    */
-  private replyToComment(userName: string): void {
-    this.commentText = `@${userName} `;
+  private replyToComment(comment: CommentItem): void {
+    this.replyTarget = comment;
+    this.commentText = `@${comment.user?.nickname ?? ''} `;
     this.contentScroller.scrollEdge(Edge.Bottom);
   }
 
@@ -713,6 +746,14 @@ export struct MomentDetailPage {
   @Builder
   private buildCommentRow(comment: CommentItem) {
     Row({ space: DesignConstants.SPACING.MD }) {
+      // 次级回复：左侧微灰竖线 + 缩进（Gemini 审查规格：24px 左边距 + 竖线引导层级）
+      if (comment.parent_id) {
+        Column()
+          .width(DesignConstants.BORDER_WIDTH.REGULAR)
+          .height('100%')
+          .backgroundColor(this.getCurrentThemePalette().borderColor)
+          .margin({ left: DesignConstants.SPACING.MD })
+      }
       SystemAvatar({
         avatarUrl: comment.user?.avatar_url ?? '',
         name: comment.user?.nickname ?? '匿名',
@@ -769,7 +810,7 @@ export struct MomentDetailPage {
               top: DesignConstants.SPACING.SM2,
               bottom: DesignConstants.SPACING.SM2
             })
-            .onClick(() => { this.replyToComment(comment.user?.nickname ?? ''); })
+            .onClick(() => { this.replyToComment(comment); })
             .accessibilityText('回复评论')
             .responseRegion({
               x: 0,
@@ -833,10 +874,27 @@ export struct MomentDetailPage {
 
   @Builder
   private buildCommentInput() {
+    Column({ space: DesignConstants.SPACING.SM2 }) {
+      // 回复目标指示条（可取消；对齐前端 replyTo 的可视化反馈）
+      if (this.replyTarget) {
+        Row({ space: DesignConstants.SPACING.SM2 }) {
+          Text(`正在回复 @${this.replyTarget.user?.nickname ?? ''}`)
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .layoutWeight(1)
+            .maxLines(1)
+          Text('取消')
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontColor(this.getCurrentThemePalette().accentBackground)
+            .onClick(() => { this.replyTarget = null; })
+            .accessibilityText('取消回复')
+        }
+        .width('100%')
+      }
     Row({ space: DesignConstants.SPACING.SM }) {
       SystemInput({
         value: this.commentText,
-        placeholder: '写下你的评论…',
+        placeholder: this.replyTarget ? `回复 @${this.replyTarget.user?.nickname ?? ''}…` : '写下你的评论…',
         showPrefixIcon: false,
         inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
         onChange: (value: string) => {
@@ -860,6 +918,7 @@ export struct MomentDetailPage {
     }
     .width('100%')
     .padding({ bottom: DesignConstants.SPACING.SM })
+    }
   }
 
   @Builder
