@@ -238,7 +238,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 					</button>
 				</div>
 
-				<div class="mt-6">
+				<div>
 					<NearbyUserRows
 						users={visibleNearbyUsers}
 						isFollowed={(id) => followState.isFollowed(id, baseFollowed(id))}
