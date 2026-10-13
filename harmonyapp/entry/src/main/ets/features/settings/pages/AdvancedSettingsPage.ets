@@ -84,7 +84,6 @@ export struct AdvancedSettingsPage {
         titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
-        titleAlign: TextAlign.Center,
         backgroundVariant: 'transparent'
       })
 

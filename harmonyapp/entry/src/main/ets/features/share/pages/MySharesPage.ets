@@ -222,7 +222,6 @@ export struct MySharesPage {
         titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
-        titleAlign: TextAlign.Center,
       })
 
       if (!this.isLoggedIn) {

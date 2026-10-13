@@ -356,8 +356,7 @@ export struct CreateGroupPage {
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
-          titleAlign: TextAlign.Center,
-          backgroundVariant: 'transparent'
+            backgroundVariant: 'transparent'
         })
 
         // 表单内容

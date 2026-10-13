@@ -198,7 +198,6 @@ export struct SubscriptionsPage {
         titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
-        titleAlign: TextAlign.Center,
         backgroundVariant: 'transparent'
       })
 
@@ -305,7 +304,7 @@ export struct SubscriptionsPage {
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
-      .borderRadius(DesignConstants.RADIUS.MD)
+      .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getSurfaceSubtle())
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)

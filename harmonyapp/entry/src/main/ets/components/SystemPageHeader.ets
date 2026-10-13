@@ -7,7 +7,7 @@
  * 扩展 API（向后兼容 7 个旧消费者）：
  *   subtitle          标题下副文本（未读数/标语/计数）
  *   trailing          @BuilderParam 任意尾随内容（位置 chip/多按钮簇/头像），优先级高于 action/rightAction
- *   titleAlign        标题对齐（默认 Start；GroupDetailPage 需 Center）
+ *   titleAlign        标题对齐（默认 Start，全站统一左对齐；Center 变体保留给 hero 封面页，2026-10-13 起标准二级页不再使用）
  *   titleSize/Weight  可覆盖（如 XL/LG/XXL 等 FONT.SIZE 档位）
  *   backgroundVariant 'bar'(默认全宽底栏) | 'transparent'(透明) | 'card'(浮动圆角卡)
  */

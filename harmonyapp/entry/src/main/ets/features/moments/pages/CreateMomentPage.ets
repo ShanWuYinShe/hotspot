@@ -367,7 +367,6 @@ export struct CreateMomentPage {
         titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
-        titleAlign: TextAlign.Center,
         backgroundVariant: 'transparent',
         action: {
           label: this.isEditMode ? '保存' : '发布',
