@@ -37,7 +37,7 @@
 | `ui/button` | 表单与主 CTA 按钮 |
 | `navigation/ActionIconButton` | 图标按钮（ghost/outline） |
 | `hover-btn` / `scale-btn`（utilities） | 行内文字/图标动作的 hover/tap CSS 语言 |
-| `forms/SearchInput` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语 |
+| `forms/SearchInput` / `forms/Input` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语。`forms/Input`（2026-10-12 新增）：单行输入，受控 value+onChange；`label`/`labelSnippet`（tracking-field 档位或自定义行）与 input 以 id 关联；`prefix` snippet 前缀图标；`clearable` 清除钮；**错误态三件套** `hasError`+`errorText`→ aria-invalid + aria-describedby + role="alert" 就近错误行（样式由 input-surface 的 :has(aria-invalid) 承担）。padding 由调用方 class 提供（同 SearchInput 约定，如 `rounded-md px-4 py-3`）。契约对齐鸿蒙 `SystemInput` |
 | `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`） |
 | `overlays/SheetShell`、`ui/dialog`、`ui/popover`、`ui/dropdown-menu` | 弹层体系 |
 | `overlays/MenuPanel` | 弹出菜单面板唯一实现（标题 + 选项行 + 可选底部动作；容器走 `ui/popover` Content）。已有：地图源菜单、地图筛选菜单。新菜单只传数据，不复制行结构 |
@@ -72,13 +72,14 @@
    （如 LoadMoreButton）在原语支持「去投影」开关之前**不得迁移**，否则静默
    加一层投影。`LoadMoreButton.test.ts` 的「视觉形态守恒」用例已锁定当前形态
    （token 边界匹配），任何加投影/改圆角/改字色的迁移会在此失败。
-2. **表单 Input 原语缺失**：13 个文件手写 `<input>`；应建 `forms/Input`
-   （前缀图标/清除/错误态），先落登录/注册/搜索之外的高频表单。
-   **2026-10-12 复核：消费方增长到 20 个文件**（扣除 ImagePicker/SearchInput 两个
-   原语自身后约 18 个）——admin 六页与群组系列弹层（CreateGroupSheet/InviteMembersSheet/
-   GroupSettingsSheet/GroupAnnouncementDialog）为新增消费方，建原语时优先覆盖这批。
-   多数已用 `input-surface` 类承载样式（样式半边合规），缺的是**行为半边**
-   （清除按钮/错误态播报，同鸿蒙 SystemInput 契约）。
+ 2. **表单 Input 原语**：**已落地（2026-10-12）**——`forms/Input` 建成（10 个契约测试），
+    首个消费方 `me/edit` 昵称输入已迁移（截图对比审查通过：labelSnippet 保留图标行、
+    padding 经 class 还原）。**待迁移消费方**（改到时顺手迁）：admin 六页、
+    群组系列弹层（CreateGroupSheet/InviteMembersSheet/GroupSettingsSheet/
+    GroupAnnouncementDialog）、AccountSecuritySection、map 两端面板；
+    另 `me/edit` 注销确认码是 compact 变体（`input-surface` 直贴 input + `py-2`），
+    需原语支持 size 变体后再迁。多数消费方已用 `input-surface`（样式半边合规），
+    迁移主要补**行为半边**（清除按钮/错误态播报，同鸿蒙 SystemInput 契约）。
 3. **分组卡壳已收敛**（2026-09-10）：移动端 `ProfileMobile` 的 `card-raised`
    已改为与桌面 `ProfilePage` 一致的「白卡 + 发丝描边 + 主题投影」
    （`rounded-lg border border-border-default bg-surface-primary shadow-raised-sm`）；

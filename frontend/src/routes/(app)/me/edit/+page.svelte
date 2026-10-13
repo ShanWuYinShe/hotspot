@@ -13,6 +13,7 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
+	import Input from '@/components/forms/Input.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { getAccount, updateAccount, deleteAccount , netError } from '@/api';
@@ -260,31 +261,28 @@
 	</div>
 
 	<!-- Form fields — spec: nickname, bio, tags are the only user-editable profile fields. -->
-	<div class="flex flex-col gap-1.5">
-		<div class="flex items-center gap-1.5">
-			<User class="size-3.5 text-accent-default"   strokeWidth={1.75} />
-			<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-nickname">昵称</label>
-		</div>
-		<div class="px-4 py-3 rounded-md input-surface">
-			<input
-				id="edit-nickname"
-				bind:value={nickname}
-				oninput={(e) => {
-					nickname = e.currentTarget.value.slice(0, 30);
-					// 输入即清除 inline 错误（对齐 AuthForm clearFieldError）
-					if (nicknameError) nicknameError = null;
-					if (formError) formError = null;
-				}}
-				placeholder="你的名字"
-				aria-invalid={nicknameError ? 'true' : undefined}
-				aria-describedby={nicknameError ? 'edit-nickname-error' : undefined}
-				class="w-full bg-transparent text-sm"
-			/>
-		</div>
-		{#if nicknameError}
-			<p id="edit-nickname-error" class="text-xs text-status-danger" role="alert">{nicknameError}</p>
-		{/if}
-	</div>
+	<!-- 昵称：迁移至 forms/Input 原语（ui-components.md backlog #2 首个消费方）。 -->
+	<Input
+		id="edit-nickname"
+		value={nickname}
+		onChange={(v) => {
+			nickname = v.slice(0, 30);
+			// 输入即清除 inline 错误（对齐 AuthForm clearFieldError）
+			if (nicknameError) nicknameError = null;
+			if (formError) formError = null;
+		}}
+		placeholder="你的名字"
+		hasError={!!nicknameError}
+		errorText={nicknameError ?? undefined}
+		inputClass="w-full"
+	>
+		{#snippet labelSnippet()}
+			<div class="flex items-center gap-1.5">
+				<User class="size-3.5 text-accent-default" strokeWidth={1.75} />
+				<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-nickname">昵称</label>
+			</div>
+		{/snippet}
+	</Input>
 
 	<div class="flex flex-col gap-1.5">
 		<div class="flex items-center gap-1.5">
