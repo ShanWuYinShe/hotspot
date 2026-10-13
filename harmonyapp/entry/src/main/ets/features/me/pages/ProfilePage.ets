@@ -1016,9 +1016,10 @@ export struct ProfilePage {
               .type(ButtonType.Normal)
               .width('100%')
               .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
+              // .border 先于 .borderRadius：ArkUI 后设属性覆盖先设，border 写在后面会重置圆角
+              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
               .borderRadius(DesignConstants.SHAPE.BUTTON)
               .backgroundColor(this.getSurfaceBackground())
-              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
               .shadow(this.getCurrentThemePalette().controlShadow)
               .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG2 })
               .onClick(() => this.startEdit())
@@ -1155,9 +1156,10 @@ export struct ProfilePage {
             .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
             .layoutWeight(1)
             .height(this.getProfileVisualStyle().secondaryButton.height)
+            // .border 先于 .borderRadius：border 写在后面会把圆角重置为直角（实拍确认）
+            .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
             .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
             .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
-            .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
             .enabled(!this.isUpgrading)
             .opacity(this.isUpgrading ? DesignConstants.OPACITY.LOADING : 1)
             .onClick(() => {
@@ -1248,8 +1250,9 @@ export struct ProfilePage {
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
           .fontColor(this.getPrimaryTextColor())
           .layoutWeight(1)
-          .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+          // .border 先于 .borderRadius（同升级表单取消，避免圆角被重置）
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+          .borderRadius(this.getProfileVisualStyle().card.borderRadius)
           .enabled(!this.isLoading && !this.isAvatarUploading)
           .opacity(this.isLoading || this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.cancelEdit())
