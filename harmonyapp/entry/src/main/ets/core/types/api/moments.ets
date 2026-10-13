@@ -72,6 +72,11 @@ export interface CreateCommentRequest {
   mentions?: string[];
 }
 
+export interface ListCommentRepliesRequest {
+  comment_id: string;
+  pagination: PaginationParams | null;
+}
+
 export interface DeleteCommentRequest {
   comment_id: string;
 }

@@ -385,7 +385,8 @@ export struct MomentFeedCard {
       }
       .width('100%')
       .justifyContent(FlexAlign.SpaceBetween)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.MD })
+      // 三面 16px 统一（Gemini delta ①：卡片左/右/下保护性留白，动作栏不贴边）
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.LG })
     }
     .width('100%')
     .borderRadius(DesignConstants.RADIUS.LG)
