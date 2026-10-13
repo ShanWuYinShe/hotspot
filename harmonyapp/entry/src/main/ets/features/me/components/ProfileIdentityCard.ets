@@ -29,13 +29,15 @@ export struct ProfileIdentityCard {
   @Builder
   private statItem(label: string, value: number) {
     Row() {
-      Column({ space: DesignConstants.SPACING.HALF }) {
+      // Gemini 审查（2026-10-14）：数值与标签层级拉不开——数字升 XL(20)+SEMIBOLD
+    // （与群组详情 StatsCell 同款统计字阶，跨页统一），标签升 SM(12) 次要色
+    Column({ space: DesignConstants.SPACING.XS }) {
         Text(formatCount(value))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
           .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
         Text(label)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
       }
       .layoutWeight(1)

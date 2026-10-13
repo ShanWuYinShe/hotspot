@@ -1065,7 +1065,8 @@ export struct SearchPage {
       Row({ space: DesignConstants.SPACING.SM }) {
         SystemButton({
           label: this.isUserFollowing(item.user?.user_id ?? '') ? '已关注' : '关注',
-          variant: this.isUserFollowing(item.user?.user_id ?? '') ? 'outline' : 'primary',
+          // Tonal 化（Gemini 审查：列表次级动作不用实体蓝）
+          variant: this.isUserFollowing(item.user?.user_id ?? '') ? 'outline' : 'surface-accent',
           buttonSize: 'small',
           loading: this.isUserActionPending(item.user?.user_id ?? ''),
           onPress: () => { this.toggleFollow(item); }

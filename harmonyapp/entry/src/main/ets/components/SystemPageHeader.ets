@@ -66,6 +66,8 @@ export struct SystemPageHeader {
   @Prop titleWeight: number = DesignConstants.FONT.WEIGHT.SEMIBOLD;
   /** 背景变体：bar(默认全宽底栏) / transparent / card(浮动圆角卡)。 */
   @Prop backgroundVariant: HeaderBackgroundVariant = 'bar';
+  /** 滚动态（页面接滚动态传入）：静止无边线与页面融合，滚动后恢复边线并出现投影。 */
+  @Prop elevated: boolean = false;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @Prop surfaceColor: ResourceColor | null = null;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
@@ -93,6 +95,11 @@ export struct SystemPageHeader {
   }
 
   private getHeaderShadow(): AppThemeShadow {
+    // 滚动态（elevated）出现表面投影：Gemini 审查「静止时分割线显生硬，应改为
+    // 滑动时以 elevation 区分层级」——prop 由页面接滚动态传入
+    if (this.elevated) {
+      return this.getPalette().surfaceShadow;
+    }
     // card 变体用表面阴影；其余归零（bar 靠底边线分隔，transparent 无边无影）
     if (this.backgroundVariant === 'card') {
       return this.getPalette().surfaceShadow;
@@ -102,6 +109,10 @@ export struct SystemPageHeader {
 
   private getHeaderBorderColor(): ResourceColor {
     if (this.backgroundVariant === 'transparent' || this.backgroundVariant === 'card') {
+      return DesignConstants.COLOR.TRANSPARENT;
+    }
+    // 静止时无边线（与页面画布融合）；滚动态（elevated）恢复边界线
+    if (!this.elevated) {
       return DesignConstants.COLOR.TRANSPARENT;
     }
     // 对齐前端 border-bottom: hairline solid var(--cst-border-default)

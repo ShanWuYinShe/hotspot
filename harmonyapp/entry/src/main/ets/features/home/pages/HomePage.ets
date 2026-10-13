@@ -82,6 +82,8 @@ export struct HomePage {
   @State groupActionPendingIds: string[] = [];
   @State viewAllPressedIndex: number = -1;
   @State locationCardPressed: boolean = false;
+  /** 粘性头部滚动态：静止无边线（与画布融合），滚动后恢复边线 + 投影（Gemini 审查项） */
+  @State headerElevated: boolean = false;
   @State pressedUserKey: string = '';
   @State pressedMomentKey: string = '';
   @State isRefreshing: boolean = false;
@@ -507,6 +509,10 @@ export struct HomePage {
       .layoutWeight(1)
       .scrollBar(BarState.Off)
       .align(Alignment.TopStart)
+      .onDidScroll((xOffset: number, yOffset: number) => {
+        // 粘性头部滚动态：滚动 > 4vp 出现投影与边线，回顶恢复融合（Gemini 审查项）
+        this.headerElevated = yOffset > 4;
+      })
     }
   }
 
@@ -520,7 +526,8 @@ export struct HomePage {
       title: '首页',
       subtitle: '发现周边有趣的人和事',
       titleSize: DesignConstants.FONT.SIZE.XXL,
-      titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD
+      titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
+      elevated: this.headerElevated
     }) {
       // trailing: 在线计数 chip + 搜索/通知/地图入口（对齐前端 PageHeader trailing）。
       // 溢出优先级（对齐前端弹性契约）：trailing 簇 flexShrink(0) 锁定不被压缩，
@@ -925,7 +932,9 @@ export struct HomePage {
 
       SystemButton({
         label: this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '关注',
-        variant: this.isUserFollowing(user.user?.user_id ?? '') ? 'outline' : 'primary',
+        // Tonal 化（Gemini 审查：列表次级动作不用实体蓝，实体蓝留给全局主流程）：
+        // 未关注 surface-accent（accentMuted 底 + accent 字），已关注 outline
+        variant: this.isUserFollowing(user.user?.user_id ?? '') ? 'outline' : 'surface-accent',
         buttonSize: 'small',
         disabled: this.isUserActionPending(user.user?.user_id ?? ''),
         onPress: () => { this.followUser(user); }

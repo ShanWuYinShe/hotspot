@@ -633,7 +633,8 @@ export struct MomentsFeedPage {
 
               SystemButton({
                 label: this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '关注',
-                variant: this.isUserFollowing(user.user?.user_id ?? '') ? 'outline' : 'primary',
+                // Tonal 化（Gemini 审查：列表次级动作不用实体蓝）
+                variant: this.isUserFollowing(user.user?.user_id ?? '') ? 'outline' : 'surface-accent',
                 buttonSize: 'compact',
                 onPress: () => { this.followUser(user); }
               })

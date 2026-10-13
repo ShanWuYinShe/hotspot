@@ -112,7 +112,9 @@ export struct UserCard {
         LucideIcon({
           icon: this.isFollowing() ? AppIcon.CHECK : AppIcon.ADD,
           iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-          color: this.isFollowing() ? this.getPalette().accentText : DesignConstants.COLOR.WHITE
+          // Tonal 化（Gemini 审查：实体蓝泛滥，关注为列表次级动作）：
+          // 未关注 = accentMuted 底 + accentText 图标，实体蓝让位全局主流程
+          color: this.getPalette().accentText
         })
       }
       .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}follow-${this.getUserId()}`)
@@ -120,13 +122,10 @@ export struct UserCard {
       .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor(this.isFollowing() ?
-        this.getPalette().accentMuted :
-        this.getPalette().accentBackground)
+      .backgroundColor(this.getPalette().accentMuted)
       .border(this.isFollowing() ?
-        { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground } :
+        { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor } :
         { width: 0 })
-      .shadow(this.isFollowing() ? undefined : this.getPalette().surfaceShadow)
       .accessibilityText(this.isFollowing() ?
         `取消关注 ${this.user.user?.nickname ?? ''}` :
         `关注 ${this.user.user?.nickname ?? ''}`)
@@ -170,11 +169,11 @@ export struct UserCard {
       .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
       .justifyContent(FlexAlign.Center)
       .borderRadius(DesignConstants.SHAPE.INPUT)
-      .backgroundColor(this.isFollowing() ? this.getPalette().surfaceSubtle : this.getPalette().accentBackground)
+      // Tonal 化（Gemini 审查：同圆形钮，未关注 accentMuted 底 + accentText 字）
+      .backgroundColor(this.isFollowing() ? this.getPalette().surfaceSubtle : this.getPalette().accentMuted)
       .border(this.isFollowing() ?
         { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor } :
         { width: 0 })
-      .shadow(this.isFollowing() ? { radius: 0, color: DesignConstants.COLOR.TRANSPARENT, offsetX: 0, offsetY: 0 } : this.getPalette().surfaceShadow)
       .accessibilityText(this.isFollowing() ?
         `取消关注 ${this.user.user?.nickname ?? ''}` :
         `关注 ${this.user.user?.nickname ?? ''}`)
