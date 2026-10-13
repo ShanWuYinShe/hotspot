@@ -703,8 +703,10 @@ export struct SearchPage {
       }
     }
     .width('100%')
-    // 横向留白由 PageShellContainer gutter 提供（此前与容器 gutter 叠加成 36）
+    // 左右内边距与卡内正文（LG=16）对齐：页面 gutter 只管卡片外留白，管不到卡内标题
     .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.LG,
       bottom: DesignConstants.SPACING.MD
     })
