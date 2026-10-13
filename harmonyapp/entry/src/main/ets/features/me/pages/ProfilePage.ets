@@ -964,6 +964,8 @@ export struct ProfilePage {
         }
         .layoutWeight(1)
         .scrollBar(BarState.Off)
+        // 同升级表单：内容短于视口时 Scroll 默认居中，表单一律顶部对齐
+        .align(Alignment.Top)
       } else {
         Scroll() {
           Column() {
