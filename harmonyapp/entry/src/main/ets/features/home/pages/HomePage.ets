@@ -666,11 +666,12 @@ export struct HomePage {
         .alignItems(HorizontalAlign.Center)
         .layoutWeight(1)
 
-        // 分割竖线
+        // 分割竖线（Gemini 审查：缩短至 16 + 降不透明度退居幕后）
         Column()
           .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
-          .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+          .height(DesignConstants.SPACING.LG)
           .backgroundColor(this.getPalette().borderColor)
+          .opacity(DesignConstants.OPACITY.MUTED)
 
         // 活动中（对齐前端 heroStats.active = moments.length）
         Column({ space: DesignConstants.SPACING.SM2 }) {
@@ -685,11 +686,12 @@ export struct HomePage {
         .alignItems(HorizontalAlign.Center)
         .layoutWeight(1)
 
-        // 分割竖线
+        // 分割竖线（Gemini 审查：缩短至 16 + 降不透明度退居幕后）
         Column()
           .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
-          .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+          .height(DesignConstants.SPACING.LG)
           .backgroundColor(this.getPalette().borderColor)
+          .opacity(DesignConstants.OPACITY.MUTED)
 
         // 在线
         Column({ space: DesignConstants.SPACING.SM2 }) {
