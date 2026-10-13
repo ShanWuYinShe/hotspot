@@ -359,7 +359,7 @@
 | `routes/moments/shared/MomentCard` | `MomentFeedCard` | 动态卡片 |
 | `auth/LoginPromptSheet` | `LoginPromptView` | 未登录引导 |
 | `messages/ChatView` 等 | `ChatPage` / `ChatPageHeader` | 聊天界面 |
-| `routes/(app)/nearby/+page.svelte`（附近聚合） | `features/nearby/pages/NearbyPage` | 附近门户页（纯导航门户：搜索入口 + 人/群组/动态三张分区入口卡，不拉取数据，内容流在各专区页），手机/平板底栏「附近」tab |
+| `routes/(app)/nearby/+page.svelte`（附近聚合） | `features/nearby/pages/NearbyPage` | 附近聚合页（tab 式：附近的人/附近群组/附近动态三分区，各分区拉取并渲染内容； 2026-10-13 更新描述——原「纯导航门户」描述已过期）。手机/平板底栏「附近」tab |
 | `data-display/NearbyImageCard` | `components/NearbyImageCard` | 图片优先卡（3:4 图 + 覆盖层徽章），附近用户/群组卡共用 |
 | `routes/(app)/notify/+page.svelte` + `notify/shared/NotifyRow` | `components/NotificationCenter` | 通知中心（列表 + 行） |
 | `shared/ConnectionBanner`（近似） | `components/NotificationBanner` | 顶部横幅提示（前端对应为连接横幅，语义近似；鸿蒙端承载更广） |
