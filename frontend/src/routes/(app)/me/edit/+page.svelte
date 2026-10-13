@@ -349,13 +349,16 @@
 		{#if deleteConfirmOpen}
 			<div class="flex flex-col gap-2.5 rounded-md border border-border-default bg-surface-primary p-4">
 				<p class="text-sm text-text-primary">删除不可恢复，请输入 <code class="font-mono text-xs text-status-danger">DELETE_MY_ACCOUNT</code> 确认：</p>
-				<input
+				<!-- 注销确认码：compact 形态（input-surface 直贴 input 的紧凑位） -->
+				<Input
+					compact
 					type="text"
-					bind:value={deleteConfirmText}
+					value={deleteConfirmText}
+					onChange={(v) => (deleteConfirmText = v)}
 					placeholder="DELETE_MY_ACCOUNT"
 					autocomplete="off"
-					aria-label="注销确认码"
-					class="w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary"
+					ariaLabel="注销确认码"
+					inputClass="w-full px-3 py-2"
 				/>
 				<div class="flex justify-end gap-2">
 					<Button type="button" variant="secondary" size="sm" onclick={() => (deleteConfirmOpen = false)}>

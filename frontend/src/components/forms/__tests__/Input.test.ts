@@ -78,3 +78,29 @@ describe('Input', () => {
 		expect(input.disabled).toBe(true);
 	});
 });
+
+describe('Input compact 形态', () => {
+	it('compact：input-surface 直贴 input，无包裹容器', () => {
+		const { container } = render(Input, {
+			props: {
+				value: 'DELETE_MY_ACCOUNT',
+				onChange: () => {},
+				compact: true,
+				ariaLabel: '注销确认码',
+				inputClass: 'w-full px-3 py-2'
+			}
+		});
+		const input = screen.getByLabelText('注销确认码') as HTMLInputElement;
+		expect(input.className).toContain('input-surface');
+		expect(container.querySelector('label')).toBeNull();
+		expect(container.querySelector('button')).toBeNull();
+	});
+
+	it('compact：错误行仍渲染在 input 之后', () => {
+		render(Input, {
+			props: { value: '', onChange: () => {}, compact: true, hasError: true, errorText: '不匹配' }
+		});
+		expect(screen.getByRole('alert').textContent).toBe('不匹配');
+	});
+});
+

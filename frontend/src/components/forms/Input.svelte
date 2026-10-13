@@ -46,6 +46,12 @@
 		inputClass = '',
 		/** 外层容器额外 class */
 		class: className = '',
+		/**
+		 * compact 形态：input-surface 直贴 input（无包裹容器/label/prefix/清除钮），
+		 * 完整样式（含 padding）由 inputClass 提供。用于注销确认码等紧凑位；
+		 * 错误行仍会渲染在 input 之后。
+		 */
+		compact = false,
 		onEnter
 	}: {
 		value?: string;
@@ -57,6 +63,7 @@
 		id?: string;
 		prefix?: Snippet;
 		clearable?: boolean;
+		compact?: boolean;
 		hasError?: boolean;
 		errorText?: string;
 		disabled?: boolean;
@@ -78,15 +85,9 @@
 	const errorId = $derived(`${inputId}-error`);
 </script>
 
-<div class="flex flex-col gap-1.5">
-	{#if label}
-		<label for={inputId} class="text-xs font-medium tracking-field text-text-secondary">{label}</label>
-	{:else if labelSnippet}
-		{@render labelSnippet()}
-	{/if}
-	<span class={cn('flex items-center gap-2 input-surface rounded-md', className)}>
-		{@render prefix?.()}
-		<!-- 聚焦态由外层 input-surface:focus-within 整框承担（见 utilities.css），内层不画自身焦点框 -->
+{#if compact}
+		<!-- compact：input-surface 直贴 input，完整样式（含 padding）由 inputClass 提供；
+		     错误行渲染在 input 之后 -->
 		<input
 			id={inputId}
 			{type}
@@ -105,23 +106,57 @@
 			onkeydown={(e) => {
 				if (e.key === 'Enter') onEnter?.(value);
 			}}
-			class={cn('min-w-0 flex-1 bg-transparent text-text-primary', textClass, inputClass)}
+			class={cn('input-surface rounded-md text-text-primary', textClass, inputClass)}
 		/>
-		{#if clearable && value && !disabled}
-			<button
-				type="button"
-				aria-label="清空"
-				class="shrink-0 rounded-full p-0.5 text-text-secondary hover:text-text-primary focus-ring"
-				onclick={() => {
-					value = '';
-					onChange?.('');
-				}}
-			>
-				<X size={14} />
-			</button>
+		{#if hasError && errorText}
+			<p id={errorId} class="text-xs text-status-danger" role="alert">{errorText}</p>
 		{/if}
-	</span>
-	{#if hasError && errorText}
-		<p id={errorId} class="text-xs text-status-danger" role="alert">{errorText}</p>
-	{/if}
-</div>
+{:else}
+	<div class="flex flex-col gap-1.5">
+		{#if label}
+			<label for={inputId} class="text-xs font-medium tracking-field text-text-secondary">{label}</label>
+		{:else if labelSnippet}
+			{@render labelSnippet()}
+		{/if}
+		<span class={cn('flex items-center gap-2 input-surface rounded-md', className)}>
+			{@render prefix?.()}
+			<!-- 聚焦态由外层 input-surface:focus-within 整框承担（见 utilities.css），内层不画自身焦点框 -->
+			<input
+				id={inputId}
+				{type}
+				{placeholder}
+				{disabled}
+				{autocomplete}
+				{inputmode}
+				{min}
+				{max}
+				{maxlength}
+				aria-label={ariaLabel}
+				aria-invalid={hasError ? 'true' : undefined}
+				aria-describedby={hasError && errorText ? errorId : undefined}
+				bind:value
+				oninput={(e) => onChange?.(e.currentTarget.value)}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') onEnter?.(value);
+				}}
+				class={cn('min-w-0 flex-1 bg-transparent text-text-primary', textClass, inputClass)}
+			/>
+			{#if clearable && value && !disabled}
+				<button
+					type="button"
+					aria-label="清空"
+					class="shrink-0 rounded-full p-0.5 text-text-secondary hover:text-text-primary focus-ring"
+					onclick={() => {
+						value = '';
+						onChange?.('');
+					}}
+				>
+					<X size={14} />
+				</button>
+			{/if}
+		</span>
+		{#if hasError && errorText}
+			<p id={errorId} class="text-xs text-status-danger" role="alert">{errorText}</p>
+		{/if}
+	</div>
+{/if}
