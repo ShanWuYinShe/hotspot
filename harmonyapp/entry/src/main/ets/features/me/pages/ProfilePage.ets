@@ -772,6 +772,16 @@ export struct ProfilePage {
                 showBackButton: true,
                 onBack: () => { AppRouter.pop(); }
               })
+            } else if (this.showUpgradeForm) {
+              // 升级态：与编辑态同规格的页头（返回 = 取消升级），
+              // 否则此聚焦任务页没有返回钮、且顶部空洞
+              SystemPageHeader({
+                title: '升级为完整账号',
+                titleSize: DesignConstants.FONT.SIZE.XXL,
+                titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+                showBackButton: true,
+                onBack: () => { this.cancelUpgrade(); }
+              })
             } else {
               // 对齐前端 ProfileMobile：个人中心页头是 eyebrow 小标（非大标题），
               // 设置入口收在下方列表内（Web 同款契约：同页仅一处设置入口）。
@@ -1087,16 +1097,18 @@ export struct ProfilePage {
 
 
   // ==================== 升级表单界面 ====================
+  /** 取消升级：关表单并清空输入（页头返回与「取消」按钮共用） */
+  private cancelUpgrade(): void {
+    this.showUpgradeForm = false;
+    this.upgradeLoginId = '';
+    this.upgradePassword = '';
+    this.upgradePasswordConfirm = '';
+  }
+
   @Builder
   private buildUpgradeFormView() {
     Scroll() {
       Column({ space: DesignConstants.SPACING.LG }) {
-        Text('升级为完整账号')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor(this.getPrimaryTextColor())
-          .alignSelf(ItemAlign.Start)
-
         Text('设置用户名与密码后，临时账号将升级为完整账号，所有数据都会保留。')
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getSecondaryTextColor())
@@ -1149,7 +1161,7 @@ export struct ProfilePage {
             .enabled(!this.isUpgrading)
             .opacity(this.isUpgrading ? DesignConstants.OPACITY.LOADING : 1)
             .onClick(() => {
-              this.showUpgradeForm = false;
+              this.cancelUpgrade();
             })
 
           Button(this.isUpgrading ? '升级中…' : '确认升级')
@@ -1172,6 +1184,9 @@ export struct ProfilePage {
       .padding({ top: DesignConstants.SPACING.XL })
     }
     .layoutWeight(1)
+    // 内容短于视口时 Scroll 默认垂直居中——表单会飘在页中段，
+    // 页头下方留出大空隙；表单一律顶部对齐
+    .align(Alignment.Top)
   }
 
   // ==================== 公共 Builder ====================
