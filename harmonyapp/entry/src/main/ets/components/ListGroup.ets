@@ -51,12 +51,9 @@ export struct ListGroup {
     .padding(this.groupPadding)
     .backgroundColor(this.bordered ? this.getPalette().surfaceBackground : DesignConstants.COLOR.TRANSPARENT)
     .borderRadius(this.bordered ? DesignConstants.SHAPE.COMPACT_CARD : 0)
-    .border({
-      width: this.bordered ? DesignConstants.BORDER_WIDTH.HAIRLINE : 0,
-      color: this.getPalette().borderColor
-    })
-    // 分组卡静态投影 = surfaceShadow（白卡档）；禁止用 elevatedShadow（弹层/FAB 档），
-    // 否则分组卡在页面上「浮起」——正是本次要消除的观感。
+    // 无描边（2026-10-14 按用户反馈移除）：深色下发丝描边呈「裁剪线」观感，
+    // 卡片层级一律靠 底色阶差 + surfaceShadow 表达（M3「同层用色阶而非描边」，
+    // 与 GroupDetailPage StatsCell 的既有注释同原则）。行间分隔线不受影响。
     // bordered=false（嵌入面板/Sheet）时不画外框也不画投影，只保留行间分隔线。
     .shadow(this.bordered ? this.getPalette().surfaceShadow : DesignConstants.SHADOW.SMALL)
     .clip(true)

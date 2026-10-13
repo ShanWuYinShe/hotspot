@@ -1961,10 +1961,9 @@ export struct GroupDetailPage {
         .padding({
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, DesignConstants.SPACING.LG)
         })
-        // 分组外框（唯一一层白卡 + 发丝描边 + surfaceShadow）：行不再各自带卡片
+        // 分组卡（surfaceShadow 表达层级；描边已按用户反馈移除——深色下呈裁剪线观感）
         .backgroundColor(this.getSurfaceBackground())
         .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .transition(
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -2168,7 +2167,6 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('群组名称')
@@ -2200,7 +2198,6 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('群组描述')
@@ -2227,7 +2224,6 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
           // 群设置扩展（对齐前端 GroupSettingsSheet：私密群组 / 新人需审核）
           Column({ space: DesignConstants.SPACING.MD }) {
@@ -2280,7 +2276,6 @@ export struct GroupDetailPage {
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(this.getCurrentThemePalette().controlShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
           // 危险区（仅群主）：转让群主 / 解散群组（对齐前端 GroupSettingsSheet 危险区）
           if (this.isOwnerRole()) {
