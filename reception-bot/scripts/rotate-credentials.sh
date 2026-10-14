@@ -35,10 +35,9 @@ STATE_DIR="$(dirname "$ENVFILE")"
 WORK=".workwork/rotate-bot-$$"
 HELPER="backend-go/tmp-pwhash"
 mkdir -p "$WORK"; chmod 700 "$WORK"
-# 受限/沙盒环境里 ~/Library/Caches/go-build 可能不可写（报 operation not permitted）：
-# 把 Go 构建缓存重定向到工作区内，避免 bcrypt 生成步骤无声失败。
-export GOCACHE="${GOCACHE:-$(pwd)/.workwork/gocache}"
-mkdir -p "$GOCACHE"
+# Go 构建缓存默认写 ~/Library/Caches/go-build：本机已由 DSH sandbox-extra-roots 插件
+# 放行（2026-10-14 实测可写），直接构建即可；未配插件的机器如报 operation not
+# permitted，可临时 export GOCACHE=<工作区内目录> 兜底（bcrypt 生成步骤曾无声失败的坑）。
 
 cleanup() { rm -rf "$WORK" "$HELPER"; }
 restore_db() {
