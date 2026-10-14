@@ -4,7 +4,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_LOCATION_PICK_RESULT } from '../../../core/state/GlobalStateManager';
-import { LocationInfo } from '../../../core/location/LocationUtil';
+import { LocationInfo, isValidLocation } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
@@ -103,11 +103,14 @@ export struct CreateGroupPage {
   }
 
   /**
-   * 初始化默认位置：优先浏览锚点 → 当前定位。
+   * 初始化默认位置：优先浏览锚点 → 当前定位（均须通过 isValidLocation 校验，
+   * 防止 (0,0) 缺省锚点把群组建到几内亚湾，UI 走查实测「距你 12443km」）。
    * 浏览锚点是用户正在浏览的区域中心，更符合用户创建群组的意图。
    */
   private initDefaultLocation(): void {
-    const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+    const anchorOk = isValidLocation(this.browseAnchor) ? this.browseAnchor : null;
+    const curOk = isValidLocation(this.currentLocation) ? this.currentLocation : null;
+    const refLoc: LocationInfo | null = anchorOk ?? curOk;
     if (refLoc) {
       this.localLocation = {
         latitude: refLoc.latitude,

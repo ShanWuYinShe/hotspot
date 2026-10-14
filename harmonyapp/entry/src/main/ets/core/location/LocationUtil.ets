@@ -44,6 +44,32 @@ export interface AddressInfo {
 export type LocationCallback = (location: LocationInfo) => void;
 
 /**
+ * 判定一个位置是否「真实可用」：(0,0)（几内亚湾，GPS 无定位/模拟器默认值）
+ * 与超出经纬度合法范围的值都视为无效。
+ *
+ * 背景（UI 走查实测 2026-10-15）：模拟器无定位时 initBrowseAnchorIfNeeded 会把
+ * (0,0) 写成浏览锚点，创建群组继承该锚点后群详情显示「距你 12443km」。
+ * 所有「把某个 LocationInfo 当作有效锚点/默认位置」的路径都应先过此校验。
+ */
+export function isValidLocation(loc: LocationInfo | null | undefined): boolean {
+  if (!loc) {
+    return false;
+  }
+  const latitude = loc.latitude;
+  const longitude = loc.longitude;
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    return false;
+  }
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return false;
+  }
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return false;
+  }
+  return !(latitude === 0 && longitude === 0);
+}
+
+/**
  * 位置工具类
  */
 export class LocationUtil {

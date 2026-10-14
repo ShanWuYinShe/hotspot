@@ -8,7 +8,7 @@ import { AppRouter, LoginRouteParam } from '../../../core/router/AppRouter';
 import { common } from '@kit.AbilityKit';
 import { UIContext } from '@kit.ArkUI';
 import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
-import { LocationInfo } from '../../../core/location/LocationUtil';
+import { LocationInfo, isValidLocation } from '../../../core/location/LocationUtil';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
@@ -355,11 +355,16 @@ struct Index {
 
   /**
    * 首次定位后，若浏览锚点尚未设置，则将当前位置（WGS84 → GCJ02）设为初始浏览锚点。
-   * 已有锚点（用户手动选择或持久化恢复）时不覆盖。
+   * 已有锚点（用户手动选择或持久化恢复）时不覆盖；无定位/默认 (0,0) 视为无效不设锚
+   * （UI 走查实测：模拟器无定位时曾把 (0,0) 写成锚点，创建群组继承后「距你 12443km」）。
    */
   private initBrowseAnchorIfNeeded(wgs84Location: LocationInfo): void {
     const currentAnchor = AppStorage.get<LocationInfo | null>(KEY_BROWSE_ANCHOR);
     if (currentAnchor) return;
+    if (!isValidLocation(wgs84Location)) {
+      hilog.warn(DOMAIN_NUMBER, TAG, '定位无效(缺省/0,0)，跳过初始浏览锚点设置');
+      return;
+    }
 
     const anchor: LocationInfo = {
       latitude: wgs84Location.latitude,

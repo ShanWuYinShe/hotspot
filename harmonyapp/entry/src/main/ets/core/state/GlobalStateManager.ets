@@ -11,7 +11,7 @@
 import { AccountInfo, ClientConfig, AppLimits } from '../types/api';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import type { UserType } from '../types/api';
-import { LocationInfo } from '../location/LocationUtil';
+import { LocationInfo, isValidLocation } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { InteractionStateStore, interactionEventHub } from './InteractionStateStore';
 import { MessageSyncManager } from './MessageSyncManager';
@@ -238,12 +238,17 @@ export class GlobalStateManager {
     }
   }
 
-  /** 启动时恢复持久化的浏览锚点 */
+  /** 启动时恢复持久化的浏览锚点（无效数据如 (0,0) 缺省值直接丢弃并清持久化） */
   static async restoreBrowseAnchor(): Promise<void> {
     try {
       const saved = await PreferencesUtil.getObject<PersistedBrowseAnchor>(BROWSE_ANCHOR_PREF_KEY);
       if (saved && typeof saved.latitude === 'number' && typeof saved.longitude === 'number') {
         const loc: LocationInfo = { latitude: saved.latitude, longitude: saved.longitude, locationName: saved.locationName ?? '' };
+        if (!isValidLocation(loc)) {
+          hilog.warn(DOMAIN_NUMBER, TAG, '持久化浏览锚点无效(如 (0,0))，丢弃');
+          PreferencesUtil.remove(BROWSE_ANCHOR_PREF_KEY).catch(() => {});
+          return;
+        }
         AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, loc);
       }
     } catch {
