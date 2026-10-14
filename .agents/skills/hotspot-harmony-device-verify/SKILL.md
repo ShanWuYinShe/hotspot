@@ -127,19 +127,22 @@ AdminOverviewPage 区分 `10200` 与网络错误。
 `- 辅助脚本（本机）：`。
 
 
-## 沙盒下启动模拟器：用 -instancePath 重定向，不要申请放宽权限（2026-10-12 实测）
+## 沙盒下启动模拟器：已可直启（2026-10-14 插件放行实测）
 
-**踩坑**：文件策略为 `workspace-write` 时启动模拟器会报
+**`~/.Huawei/Emulator/deployed` 已由 DSH sandbox-extra-roots 插件放行**（2026-10-14 晚实测：
+`workspace-write` 下 `Emulator -start` 约 10s 就绪、`hdc list targets` 出现 `127.0.0.1:5555`、
+`*.qcow2` 正常写入实例目录），直接 `Emulator -start <实例名>` 即可，无需任何重定向。
+`-stop` 可能 hang，清场用 `pkill -9 -f Emulator`。
+
+历史方案（未配插件的机器适用，2026-10-12 实测）：放行前直启报
 
 ```
 Emulator: Error opening logfile /Users/liyou/.Huawei/Emulator/deployed/Pura 90 Pro/Log//qemu.log: Operation not permitted
 ```
 
 目录权限本身正常（`drwxr-xr-x`、属主是自己），返回的是 **EPERM 而非 EACCES** —— 这是
-DSH 沙盒的拒绝签名（对照：写工作区成功）。**我当时误判为「必须申请 danger-full-access」，
-并向 harness 申请了一次更宽权限，其实完全不需要**（用户当场质疑，复查后确认）。
-
-**正确做法**：`Emulator -help` 里有 `-instancePath <path>`，把实例目录重定向进工作区即可：
+DSH 沙盒的拒绝签名（对照：写工作区成功）。当时曾误判「必须申请 danger-full-access」，
+其实用 `-instancePath <path>` 把实例目录重定向进工作区即可：
 
 ```bash
 SRC="/Users/liyou/.Huawei/Emulator/deployed/Pura 90 Pro"
@@ -151,7 +154,7 @@ cp -c -R "$SRC" "$DST/Pura 90 Pro"        # -c = APFS 克隆，5.6GB 近乎瞬�
   -start "Pura 90 Pro" -instancePath "$DST"   # 注意是**父目录**，不是实例目录本身
 ```
 
-要点：
+要点（历史）：
 - `-instancePath` 传**父目录**；传实例目录本身会报
   `"X" is not found. Please create the device(folder): "<path>/X"`。
 - 只读的系统镜像在 `~/Library/Huawei/Sdk/system-image/...`，沙盒**允许读**，无需搬运；
@@ -159,8 +162,8 @@ cp -c -R "$SRC" "$DST/Pura 90 Pro"        # -c = APFS 克隆，5.6GB 近乎瞬�
 - `config.ini` 里 `logPath` / `configPath` 默认指向 `~/Library/...`，也要一并改到工作区。
 - 克隆件与真实实例**共享同一份用户数据快照**：里面装好的 App、登录态都会带过来。
 - 收尾时删掉 `.workwork/emu-instance` 即可，真实实例不受影响。
-- **结论**：这类「工具要写 home 目录」的问题优先走「① 换目录/重定向」，能靠工具自身参数
-  解决就不要申请放宽沙盒；本机模拟器的重定向参数就是 `-instancePath`。
+- **结论（2026-10-14 更新）**：这类「工具要写 home 目录」的问题**优先查 sandbox-extra-roots
+  放行清单**（放行即直启），其次才是换目录/重定向；模拟器场景已由放行直启取代 `-instancePath`。
 
 
 ## 走查铁律：截图与 dumpLayout 必须**同一次调用**获取（2026-10-12，已踩 3 次）

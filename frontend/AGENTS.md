@@ -99,7 +99,8 @@ bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 沙盒/受限环境（2026-10-02 实测）两个坑：
 1. 脚本按 `command -v agent-browser` 找二进制，沙盒内可能解析到绕过 wrapper 的裸
    二进制（socket 目录不可写直接全 FAIL）——用 `AB=~/.local/bin/agent-browser`
-   前缀显式指到 wrapper；
+   前缀显式指到 wrapper；被拦后按现行方案对该命令申请 `danger-full-access`
+   （2026-10-14 起提权原生启动，插件有意不放行 `~/.agent-browser`）；
 2. qa 会话与既有交互 agent-browser 会话共用 chrome-profile（SingletonLock 冲突，
    Chrome 起不来）——跑之前先 `agent-browser close --all` 释放。
 

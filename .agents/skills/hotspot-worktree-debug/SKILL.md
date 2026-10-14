@@ -102,23 +102,24 @@ git branch -d <分支名>
   hotspot_test 库上：库内有 E2E 累积数据，**IT 断言不能用绝对总数**，要用
   「播种前基线 + 增量」口径（参考 admin/repo_postgres_stats_it_test.go，2026-10-01）。
 
-## worktree 内跑 Go 工具链：缓存必须用绝对路径重定向（含 pre-commit 门禁）
+## worktree 内跑 Go 工具链（2026-10-14 起无需重定向缓存，含 pre-commit 门禁）
 
-在 worktree 内跑 `go build/vet/test`（含 `.husky/pre-commit` 钩子触发的门禁）时，
-`GOCACHE`/`GOMODCACHE` 若用 `$PWD/.workwork/...` 相对路径重定向，缓存会落在
-**该 worktree 内部**（实测 2026-09-25：pre-commit 在 worktree 根执行，`$PWD` 即
-worktree 根）。后果：Go 模块缓存解压目录默认只读（0444/0555），`git worktree remove`
-报 Permission denied，目录删不掉。
+**`~/Library/Caches/go-build` 与 `~/go` 已由 DSH sandbox-extra-roots 插件放行（2026-10-14
+逐项实测可写）**，worktree 内 `go build/vet/test`（含 `.husky/pre-commit` 钩子触发的门禁）
+直接跑即可，不要再 `export GOCACHE/GOMODCACHE`。
 
-正确做法——绝对路径指向主工作树共享缓存（门禁本身不降级，实测同日 build+vet+test 通过）：
+历史坑（未配插件的机器仍适用，2026-09-25 实测）：用 `$PWD/.workwork/...` **相对路径**重定向时，
+缓存落在该 worktree 内部（pre-commit 在 worktree 根执行，`$PWD` 即 worktree 根）；Go 模块
+缓存解压目录默认只读（0444/0555），`git worktree remove` 报 Permission denied，目录删不掉。
+当时正确做法——绝对路径指向主工作树共享缓存（门禁本身不降级，实测同日 build+vet+test 通过）：
 
 ```bash
 export GOCACHE="$HOME/work/hotspot/.workwork/go-build"
 export GOMODCACHE="$HOME/work/hotspot/.workwork/go-mod"
 ```
 
-- `.husky/pre-commit` 不覆盖这两个变量、继承 shell 环境，提交前 `export` 即可让
-  门禁在沙盒/受限环境跑通。
+- `.husky/pre-commit` 不覆盖这两个变量、继承 shell 环境，未配插件的机器提交前 `export` 即可让
+  门禁跑通。
 - 已踩坑的 worktree 目录删除被挡时：
   `chmod -R u+w .worktrees/<分支名> && rm -rf .worktrees/<分支名>`
   （`git worktree list` 已注销、仅剩目录时无需再跑 `git worktree remove`）。
