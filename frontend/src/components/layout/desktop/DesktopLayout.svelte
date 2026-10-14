@@ -186,7 +186,8 @@
 				class="header-action"
 			/>
 
-			<ActionIconButton icon={Bell} label="通知" badge={unread.notify} onClick={() => guardNav('查看通知', ROUTES.notify)} variant="ghost" size={36} class="header-action" />
+			<!-- 当前在通知页时铃铛 accent 高亮（Gemini UI 审查：顶栏入口缺当前页选中态） -->
+			<ActionIconButton icon={Bell} label="通知" badge={unread.notify} tone={pathname === ROUTES.notify ? 'accent' : 'muted'} onClick={() => guardNav('查看通知', ROUTES.notify)} variant="ghost" size={36} class="header-action" />
 
 			<AppearanceMenu />
 

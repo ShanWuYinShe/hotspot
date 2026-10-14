@@ -32,10 +32,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// 同页多标签形态易把三份不同数据耦合到一起）；搜索/地图收敛为 header
 	// 右上角工具入口，跨段切换走桌面侧栏、移动底部导航（附近→默认段）与首页三分流。
 
-	const SORT_OPTIONS = ['距离', '在线', '共同好友'];
+	// 「共同好友」排序依赖登录态的 mutual 计数，访客恒为 0 无意义，登录后才展示
+	// （Gemini UI 审查：未登录顶栏「登录」与可用「共同好友」并存矛盾）。
+	const sortOptions = $derived(auth.user ? ['距离', '在线', '共同好友'] : ['距离', '在线']);
 	const FILTER_TAGS = ['全部', '摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术'];
 
 	let sort = $state('距离');
+	// 登出后 sort 可能残留「共同好友」，此时 TabBar 无匹配项，回落到「距离」
+	const effectiveSort = $derived(sortOptions.includes(sort) ? sort : '距离');
 	let tagFilter = $state('全部');
 	let followedIds = $state<Set<string>>(new Set());
 	let visibleCount = $state(12);
@@ -246,7 +250,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{#snippet below()}
 				<!-- 排序：sticky header 内只保留排序；标签过滤放正文首行 -->
 				<div class="mt-3 pb-2">
-					<TabBar items={SORT_OPTIONS.map((o) => ({ id: o, label: o }))} value={sort} onChange={(id) => (sort = id)} />
+					<TabBar items={sortOptions.map((o) => ({ id: o, label: o }))} value={effectiveSort} onChange={(id) => (sort = id)} />
 				</div>
 			{/snippet}
 		</PageHeader>
