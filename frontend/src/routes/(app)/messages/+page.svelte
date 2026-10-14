@@ -8,6 +8,7 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import OnlineStrip from './shared/OnlineStrip.svelte';
 	import ChatListBody from './shared/ChatListBody.svelte';
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
@@ -241,6 +242,12 @@
 
 
 {#if useSplitPane}
+	<!-- 未登录：不分栏，通栏单一登录引导（Gemini UI 审查：双栏各自空态+引导互相矛盾且重复） -->
+	{#if needsAuth}
+	<div class="content-mode-wide flex h-full items-center justify-center">
+		<NeedsAuthNotice title="登录后查看" description="登录后即可查看和发起会话" />
+	</div>
+	{:else}
 	<!-- ═══ Desktop / Tablet Messages — split pane (list left + chat right) ═══ -->
 	<!-- h-full：RoutedContentViewport 内容链提供显式高度，分栏固定视口高、左栏列表内部独立滚动；平板/桌面画布均撑满。 -->
 	<div class="content-mode-wide flex h-full">
@@ -254,6 +261,7 @@
 				     全项目唯一一处 ! 覆盖，勿仿照。 -->
 				<PageHeader title="消息" class="!bg-surface-primary" contentClassName="px-4">
 					{#snippet trailing()}
+						{#if !needsAuth}
 						<button
 							type="button"
 							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-sm size-9"
@@ -265,11 +273,14 @@
 						>
 							<Plus class="size-4 text-text-secondary" strokeWidth={1.5} />
 						</button>
+						{/if}
 					{/snippet}
 					{#snippet below()}
+						{#if !needsAuth}
 						<div class="mt-3">
 							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="px-3 py-2" textClass="text-sm" />
 						</div>
+						{/if}
 					{/snippet}
 				</PageHeader>
 			</div>
@@ -350,6 +361,7 @@
 			</Dialog.Content>
 		</Dialog.Root>
 	</div>
+	{/if}
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
 	<div class="flex flex-col flex-1 min-h-full bg-surface-primary">

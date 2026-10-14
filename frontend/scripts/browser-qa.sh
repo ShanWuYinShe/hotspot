@@ -94,7 +94,7 @@ run_pages() {
 		ab wait --load networkidle >/dev/null 2>&1
 		echo "=== $label $path ===" | tee -a "$REPORT"
 		ab eval "$audit_js" 2>&1 | tee -a "$REPORT"
-		ab screenshot "$OUT/screenshots/$(printf '%02d' "$idx")-${path//\//_}.png" 2>&1 | tail -1
+		ab screenshot "$OUT/screenshots/$(printf '%02d' "$idx")-${label}-${path//\//_}.png" 2>&1 | tail -1
 	done
 }
 

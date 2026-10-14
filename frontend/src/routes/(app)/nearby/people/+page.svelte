@@ -227,7 +227,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
 		<PageHeader
-			title="附近"
+			title="附近的人"
 			subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
@@ -239,7 +239,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{#snippet trailing()}
 				<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
 				<div class="flex items-center gap-2">
-					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} />
+					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} class={device === 'desktop' ? 'hidden' : ''} />
 					<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
 				</div>
 			{/snippet}

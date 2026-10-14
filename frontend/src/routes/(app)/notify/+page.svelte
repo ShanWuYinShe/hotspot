@@ -349,10 +349,12 @@ const markSingleRead = (id: string) => {
 				</div>
 			{/snippet}
 			{#snippet below()}
-				<!-- 分类过滤统一走 TabBar（胶囊） -->
-				<div class="mt-3">
-					<TabBar items={FILTER_TABS.map((t) => ({ id: t.id, label: t.label }))} value={filter} onChange={(id) => (filter = id)} />
-				</div>
+				<!-- 分类过滤统一走 TabBar（胶囊）；未登录无通知数据，筛选无意义直接隐藏（Gemini UI 审查：未登录态矛盾） -->
+				{#if !needsAuth}
+					<div class="mt-3">
+						<TabBar items={FILTER_TABS.map((t) => ({ id: t.id, label: t.label }))} value={filter} onChange={(id) => (filter = id)} />
+					</div>
+				{/if}
 			{/snippet}
 		</PageHeader>
 	{/snippet}
@@ -448,6 +450,8 @@ const markSingleRead = (id: string) => {
 
 	{#snippet rail()}
 
+		<!-- 未登录隐藏统计侧栏（Gemini UI 审查：未登录显示「0 条未读」与筛选矛盾） -->
+		{#if !needsAuth}
 		<div>
 			<RailSection title="今日概览">
 				<div class="flex items-baseline gap-1.5 mb-3">
@@ -499,5 +503,6 @@ const markSingleRead = (id: string) => {
 			</RailSection>
 			{/if}
 		</div>
+		{/if}
 	{/snippet}
 </SplitPageLayout>
