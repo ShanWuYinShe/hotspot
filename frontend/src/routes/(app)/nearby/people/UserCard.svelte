@@ -68,20 +68,19 @@
 
 	{#snippet footer()}
 		<div class="px-3 pt-2.5 pb-2.5">
-			<div class="flex items-center justify-between gap-2">
-				<div class="min-w-0">
-					<p class="flex items-center gap-1.5 truncate text-text-primary text-sm font-semibold">
-						<span class="truncate">{user.name}</span>
-					</p>
-					<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>
-				</div>
-				{#if user.isOnline}
-					<!-- 行内状态点统一 8px 档（审查 M3：9px 近邻异档归并） -->
-					<span
-						class="shrink-0 rounded-full size-2 ring-2 ring-surface-card-menu bg-status-online"
-						title="在线"
-					></span>
-				{/if}
+			<div>
+				<!-- 在线点紧贴昵称右侧（Gemini UI 审查：原 justify-between 把绿点推到行尾，
+				     与昵称视觉割裂）；行内状态点统一 8px 档（审查 M3：9px 近邻异档归并） -->
+				<p class="flex items-center gap-1.5 truncate text-text-primary text-sm font-semibold">
+					<span class="truncate">{user.name}</span>
+					{#if user.isOnline}
+						<span
+							class="shrink-0 rounded-full size-2 ring-2 ring-surface-card-menu bg-status-online"
+							title="在线"
+						></span>
+					{/if}
+				</p>
+				<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>
 			</div>
 			<div class="mt-2 flex items-center justify-between gap-2">
 				{#if user.tag}
