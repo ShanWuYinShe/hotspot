@@ -9,8 +9,8 @@ ARG ALPINE_VERSION=3.24.1
 # Stage 1: Build
 FROM oven/bun:${BUN_VERSION}-alpine AS build
 WORKDIR /app
-# .npmrc 指定 npmmirror 源（bun.lock 亦为 npmmirror），避免回落 npmjs.org
-COPY package.json bun.lock .npmrc ./
+# 依赖下载地址以 bun.lock 的 resolved URL 为准(npmjs 官方源)
+COPY package.json bun.lock ./
 # package.json 的 prepare 脚本在 bun install 时执行，必须先于源码拷贝到位；
 # 容器内无 git，脚本会按其兼容性约定静默跳过
 COPY scripts/setup-git-hooks.sh ./scripts/
