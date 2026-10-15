@@ -227,10 +227,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					<span class="text-status-online font-medium text-xs">{filtered.length} 个活跃 · {formatCount(totalOnline)} 人正在群聊</span>
 				</div>
 			{#if isDesktop || isTablet}
-				<!-- 精选卡用 GroupCard featured（对齐 Figma），其余用普通网格卡；保留 BSP 布局（决策） -->
+				<!-- 精选卡用 GroupCard featured 横排（图片左 40%,r03:纵排大卡吃首屏）；其余 BSP 网格 -->
 				{#if featured}
 					<div class="mb-5">
-						<GroupCard featured group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+						<GroupCard featured horizontal group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
 				<BspCardCanvas

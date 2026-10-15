@@ -16,7 +16,8 @@
 		pendingApproval = false,
 		onToggle,
 		onOpen,
-		featured = false
+		featured = false,
+		horizontal = false
 	}: {
 		group: Group;
 		/** 加入/退出请求进行中（JoinButton 禁点防重复提交） */
@@ -26,6 +27,8 @@
 		onToggle: () => void;
 		onOpen: () => void;
 		featured?: boolean;
+		/** 横排精选(桌面,图片左 40% + 内容右;r03 精选卡过高吃首屏) */
+		horizontal?: boolean;
 	} = $props();
 </script>
 
@@ -33,7 +36,8 @@
 	imageSrc={group.banner}
 	imageAlt={group.name}
 	onClick={onOpen}
-	class={featured ? 'rounded-md min-h-85' : 'rounded-md aspect-[3/4]'}
+	horizontal={featured && horizontal}
+	class={featured ? (horizontal ? 'rounded-md min-h-56' : 'rounded-md min-h-85') : 'rounded-md aspect-[3/4]'}
 >
 	{#snippet placeholder()}
 		<span class="text-accent-default {featured ? 'text-4xl' : 'text-3xl'} font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
@@ -65,7 +69,7 @@
 
 	{#snippet footer()}
 		{#if featured}
-			<div class="p-4">
+			<div class="p-4 h-full flex flex-col justify-center">
 				<p class="text-text-primary text-lg font-semibold">{group.name}</p>
 				<p class="truncate text-text-secondary text-xs mt-1">{group.desc}</p>
 				<div class="mt-3 flex items-center gap-3">

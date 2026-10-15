@@ -32,7 +32,8 @@
 		placeholder,
 		footer,
 		children,
-		class: className = ''
+		class: className = '',
+		horizontal = false
 	}: {
 		imageSrc: string;
 		imageAlt?: string;
@@ -43,7 +44,12 @@
 		footer?: Snippet;
 		children?: Snippet;
 		class?: string;
+		/** 横排变体：图片占左侧 40%,footer tray 变右侧内容面板(r03 精选卡横排) */
+		horizontal?: boolean;
 	} = $props();
+
+	// 图片/遮罩/占位层的覆盖盒：纵排=整卡,横排=左列
+	const imageBox = $derived(horizontal ? 'absolute inset-y-0 left-0 w-2/5' : 'absolute inset-0');
 
 	// hover 与内容卡（SectionGroups/SectionMoments）统一走 card-hover 抬升语言
 	// （投影+上浮，forest 纸面微染+边框），图片微缩放由 .card-hover:hover
@@ -100,32 +106,34 @@
 		     注意：装饰层不带 z-index——图片 onload 前 opacity-0 无需被覆盖，
 		     带 z 会把后渲染的 footer tray/徽章盖住（无图卡曾因此只剩占位字母） -->
 		{#if !imageLoaded}
-			<div class="surface-accent-gradient pointer-events-none absolute inset-0 animate-pulse"></div>
+			<div class="surface-accent-gradient pointer-events-none {imageBox} animate-pulse"></div>
 		{/if}
 		<img
 			src={imageSrc}
 			alt={imageAlt}
 			loading="lazy"
-			class="image-hover-frame__image absolute inset-0 h-full w-full object-cover will-change-transform transition-opacity duration-standard {imageLoaded ? 'opacity-100' : 'opacity-0'}"
+			class="image-hover-frame__image {imageBox} object-cover will-change-transform transition-opacity duration-standard {imageLoaded ? 'opacity-100' : 'opacity-0'}"
 			onload={() => (imageLoaded = true)}
 			onerror={onImageError}
 		/>
 	{:else if placeholder}
 		<!-- 装饰占位层：pointer-events-none 防止拦截 footer 行内按钮（关注等）的点击/悬停；
 		     同样不带 z-index——否则无图时整层盖住 footer tray 与徽章（线上实测：无图群组卡只剩占位字母） -->
-		<div class="surface-accent-gradient pointer-events-none absolute inset-0 flex items-center justify-center">
+		<div class="surface-accent-gradient pointer-events-none {imageBox} flex items-center justify-center">
 			{@render placeholder()}
 		</div>
 	{/if}
 	{#if imageSrc}
-		<div class="pointer-events-none absolute inset-0" style="background:var(--cst-surface-media-scrim-card);"></div>
+		<div class="pointer-events-none {imageBox}" style="background:var(--cst-surface-media-scrim-card);"></div>
 	{/if}
 	{#if children}
 		{@render children()}
 	{/if}
 	{#if footer}
 		<div
-			class="absolute inset-x-0 bottom-0 border-t border-border-card-menu bg-surface-card-menu"
+			class={horizontal
+				? 'absolute inset-y-0 right-0 left-2/5 flex flex-col justify-center border-l border-border-card-menu bg-surface-card-menu'
+				: 'absolute inset-x-0 bottom-0 border-t border-border-card-menu bg-surface-card-menu'}
 		>
 			{@render footer()}
 		</div>
