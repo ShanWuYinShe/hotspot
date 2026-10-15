@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Bell, ChevronRight, Search, Radar, Map } from '@lucide/svelte';
+	import { Bell, Search, Radar, Map } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import HeroStats from '@/components/home/HeroStats.svelte';
@@ -219,34 +219,26 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 				{@render heroColumn(moments, false)}
 			</div>
 
-			<!-- Right: full nearby-users list -->
+			<!-- Right: full nearby-users list（标题统一 SectionHead 语言,r01:与「附近活动」字号一致;
+			     双列卡片网格消除单列行过宽与底部空旷） -->
 			<div>
-				<div class="flex items-end justify-between mb-5">
-					<div>
-						<span class="eyebrow">附近的人</span>
-						<p class="text-xs mt-1 text-text-secondary">
-							{heroLocationName ? `${heroLocationName} · 5km 内` : '5km 内 · 实时更新'}
-						</p>
-					</div>
-					<button
-						type="button"
-						class="hover-btn tap-92 flex items-center gap-0.5 focus-ring surface-ghost rounded-full px-2 py-0.5 text-accent-default"
-						onclick={() => void goto(ROUTES.nearbyPeople)}
-					>
-						<span class="text-xs">查看全部</span>
-						<ChevronRight class="size-3.5"  strokeWidth={1.5} />
-					</button>
-				</div>
-
-				<div>
-					<NearbyUserRows
-						users={visibleNearbyUsers}
-						isFollowed={(id) => followState.isFollowed(id, baseFollowed(id))}
-						isPending={(id) => followState.isPending(id)}
-						onToggle={toggleFollow}
-						emptyHint={nearbyFilterHint}
+				<div class="mb-5">
+					<SectionHead
+						title="附近的人"
+						subtitle={heroLocationName ? `${heroLocationName} · 5km 内` : '5km 内 · 实时更新'}
+						action="查看全部"
+						onAction={() => void goto(ROUTES.nearbyPeople)}
 					/>
 				</div>
+
+				<NearbyUserRows
+					users={visibleNearbyUsers}
+					isFollowed={(id) => followState.isFollowed(id, baseFollowed(id))}
+					isPending={(id) => followState.isPending(id)}
+					onToggle={toggleFollow}
+					emptyHint={nearbyFilterHint}
+					columns={2}
+				/>
 			</div>
 		</div>
 	{:else}

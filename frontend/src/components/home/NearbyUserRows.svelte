@@ -16,7 +16,8 @@
 		isFollowed,
 		isPending,
 		onToggle,
-		emptyHint
+		emptyHint,
+		columns = 1
 	}: {
 		users: NearbyUser[];
 		/** 该用户当前是否已关注（乐观态由父级的共享关注状态承载） */
@@ -26,6 +27,8 @@
 		onToggle: (id: string) => void;
 		/** 空态补充说明（如「正在按「南天门」5km 范围筛选」），缺省不渲染。 */
 		emptyHint?: string;
+		/** 2 = 卡片双列网格（桌面右栏，r01：单列行过宽拉扯关注按钮距离）；缺省单列行列表 */
+		columns?: 1 | 2;
 	} = $props();
 </script>
 
@@ -41,6 +44,37 @@
 			<Users size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
 		{/snippet}
 	</EmptyState>
+{:else if columns === 2}
+	<!-- 双列卡片网格（对齐 SectionFriends 好友网格模式）：桌面右栏用，单列行过宽 -->
+	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+		{#each users as u (u.id)}
+			{@const followed = isFollowed(u.id)}
+			<div class="rounded-lg border border-border-default bg-surface-primary shadow-raised-sm transition-colors hover:border-accent-default">
+				<UserCardRow name={u.name} avatar={u.avatar} tone="card">
+					{#snippet avatarBadge()}
+						{#if u.isOnline}
+							<OnlineDot size="md" />
+						{/if}
+					{/snippet}
+					{#snippet subtitle()}
+						{@const hasTag = Boolean(u.tag)}
+						{@const hasDistance = Boolean(u.distance)}
+						{#if hasTag || hasDistance}
+							<p class="mt-1 flex items-center gap-1.5 text-xxs">
+								{#if hasTag}<span class="text-accent-default">#{u.tag}</span>{/if}
+								{#if hasTag && hasDistance}<span class="opacity-muted text-text-secondary">·</span>{/if}
+								{#if hasDistance}<span class="text-text-secondary">{u.distance}</span>{/if}
+							</p>
+						{/if}
+					{/snippet}
+					{#snippet actions()}
+						{@const pending = isPending?.(u.id) ?? false}
+						<FollowButton active={followed} pending={pending} onToggle={() => onToggle(u.id)} />
+					{/snippet}
+				</UserCardRow>
+			</div>
+		{/each}
+	</div>
 {:else}
 		<ListContainer bordered>
 	{#each users as u (u.id)}
