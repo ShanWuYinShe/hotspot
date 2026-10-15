@@ -4,6 +4,7 @@
 	// 独立于 (app) 分组：落地页不要求登录、不挂导航 chrome（目标页自身再按需引导登录）。
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { Link2Off, RotateCw } from '@lucide/svelte';
 	import { openShareDoor } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import type { ShareDetail } from '@/api/types';
@@ -11,6 +12,8 @@
 	let { params }: { params: { code: string } } = $props();
 
 	let phase = $state<'loading' | 'done' | 'error'>('loading');
+	// 网络异常态的「重试」入口：递增触发重新解析（r83）
+	let retryKey = $state(0);
 	let errorMessage = $state('');
 	let detail = $state<ShareDetail | null>(null);
 
@@ -24,6 +27,7 @@
 
 	$effect(() => {
 		const code = (page.params.code ?? '').trim();
+		void retryKey; // 网络异常重试触发重新解析（r83）
 		if (!code) {
 			phase = 'error';
 			errorMessage = '分享链接无效';
@@ -67,14 +71,30 @@
 	{#if phase === 'loading'}
 		<p class="text-md text-text-secondary" role="status">正在解析分享…</p>
 	{:else if phase === 'error'}
+		<!-- 错误图标增强视觉焦点(r83:内容单一集中中部) -->
+		<Link2Off class="size-10 text-text-secondary opacity-subtle" strokeWidth={1.5} aria-hidden="true" />
 		<p class="text-2xl font-semibold tracking-title text-text-primary">{errorMessage}</p>
-		<button
-			type="button"
-			onclick={() => goto(ROUTES.home, { replaceState: true })}
-			class="rounded-full bg-accent-soft px-5 py-2 text-sm font-medium text-accent-default outline-none transition-colors hover:bg-interactive-active focus-visible:ring-2 focus-visible:ring-accent-default"
-		>
-			前往 HotSpot
-		</button>
+		<!-- 副说明补充容错语境(r83:强化引导与容错) -->
+		<p class="text-xs text-text-secondary">链接可能已过期或被删除，也可稍后重试</p>
+		<div class="flex items-center gap-2">
+			{#if errorMessage.includes('网络')}
+				<button
+					type="button"
+					onclick={() => (retryKey += 1)}
+					class="flex items-center gap-1.5 rounded-full border border-border-default px-5 py-2 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
+				>
+					<RotateCw class="size-3.5" strokeWidth={1.75} aria-hidden="true" />
+					重试
+				</button>
+			{/if}
+			<button
+				type="button"
+				onclick={() => goto(ROUTES.home, { replaceState: true })}
+				class="rounded-full bg-accent-soft px-5 py-2 text-sm font-medium text-accent-default outline-none transition-colors hover:bg-interactive-active focus-visible:ring-2 focus-visible:ring-accent-default"
+			>
+				前往 HotSpot
+			</button>
+		</div>
 	{:else if detail}
 		{@const p = detail.payload}
 		{#if 'shared_location' in p}
