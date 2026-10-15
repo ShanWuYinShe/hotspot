@@ -13,8 +13,8 @@ export const TH = 'px-4 py-2.5 text-left text-xs font-medium text-text-secondary
 /** 行（hover 走整档 --cst-interactive-hover；/50 属透明度越档，见 AGENTS.md 交互状态契约） */
 export const TR = 'border-b border-border-default last:border-b-0 hover:bg-interactive-hover transition-colors';
 
-/** 单元格 */
-export const TD = 'px-4 py-2.5 align-middle text-text-primary whitespace-nowrap';
+/** 单元格（py-3 = 行高 ~48px，r59：信息拥挤单行间距偏紧；全后台表格统一） */
+export const TD = 'px-4 py-3 align-middle text-text-primary whitespace-nowrap';
 
 /** 操作列容器 */
 export const TD_ACTIONS = `${TD} text-right`;
