@@ -5,7 +5,6 @@
 import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
@@ -22,7 +21,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		count,
 		countSuffix = '',
 		headerNote,
-		search,
 		stats,
 		filters,
 		filterValue,
@@ -44,7 +42,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		count: number;
 		countSuffix?: string;
 		headerNote?: string;
-		search?: { value: string; placeholder: string; onChange: (v: string) => void };
 		stats?: MetricItem[];
 		filters?: SectionFilter[];
 		filterValue?: string;
@@ -93,13 +90,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</header>
 	{/if}
 
-	{#if search && !needsAuth}
-		<!-- Search — 通栏（与下方卡片栅格左右缘对齐）；未登录隐藏（Gemini 审查 r12-r18：登录引导与不可用控件并存） -->
-		<div class="w-full pt-4 pb-2">
-			<SearchInput value={search.value} onChange={search.onChange} placeholder={search.placeholder} class="px-3 py-2" />
-		</div>
-	{/if}
-
+		<!-- Search 已上提至聚合页头部行（tabs 左 + 搜索右限宽，固定头部高度，消除
+		     切 tab 时搜索行独占一行的纵向跳动，Gemini 审查 r12-r18） -->
 	{#if stats && !needsAuth}
 		<!-- Stats row — flat joined cells -->
 		<div class="py-3">

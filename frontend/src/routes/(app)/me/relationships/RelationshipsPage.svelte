@@ -9,6 +9,7 @@
 	import SectionFans from '@/components/profile/SectionFans.svelte';
 	import SectionBlocked from '@/components/profile/SectionBlocked.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { ROUTES } from '@/lib/routes';
@@ -37,6 +38,8 @@
 
 	// getter 对象解构会拿到非响应式快照，$derived 桥接
 	const rel = useRelationships();
+	// 关系分区搜索词：页头行统一持有并下发四段（r12-r18 头部统一）
+	let relSearch = $state('');
 	const friends = $derived(rel.friends);
 	const following = $derived(rel.following);
 	const followers = $derived(rel.followers);
@@ -81,9 +84,20 @@
 			{/if}
 		{/snippet}
 		{#snippet below()}
-			<!-- TabBar 作为 below 首元素需带上间距（对齐 nearby/moments 样板 below 首元素 mt-3） -->
-			<div class="mt-3">
+			<!-- TabBar 作为 below 首元素需带上间距（对齐 nearby/moments 样板 below 首元素 mt-3）；
+			     登录态搜索并入同一行右端限宽（r12-r18：固定头部高度,消除搜索独占一行的纵向跳动） -->
+			<div class="mt-3 flex items-center justify-between gap-4">
 				{@render relTabBar()}
+				{#if auth.isAuthenticated}
+					<div class="w-72 shrink-0">
+						<SearchInput
+							value={relSearch}
+							onChange={(v) => (relSearch = v)}
+							placeholder={activeTab === 'friends' ? '搜索好友…' : activeTab === 'following' ? '搜索关注…' : activeTab === 'fans' ? '搜索粉丝…' : '搜索黑名单…'}
+							class="px-3 py-2"
+						/>
+					</div>
+				{/if}
 			</div>
 		{/snippet}
 	</PageHeader>
@@ -118,12 +132,12 @@
 	{/snippet}
 
 	{#if activeTab === 'friends'}
-		<SectionFriends embedded />
+		<SectionFriends embedded searchQ={relSearch} />
 	{:else if activeTab === 'following'}
-		<SectionFollowing embedded {followState} />
+		<SectionFollowing embedded {followState} searchQ={relSearch} />
 	{:else if activeTab === 'fans'}
-		<SectionFans embedded {followState} />
+		<SectionFans embedded {followState} searchQ={relSearch} />
 	{:else}
-		<SectionBlocked embedded />
+		<SectionBlocked embedded searchQ={relSearch} />
 	{/if}
 </StandardPageLayout>

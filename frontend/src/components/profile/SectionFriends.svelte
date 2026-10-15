@@ -10,9 +10,7 @@
 
 	// 好友分区：ProfileUserSection 骨架 + UserCardRow 行。
 
-	let { embedded = false }: { embedded?: boolean } = $props();
-
-	let searchQ = $state('');
+	let { embedded = false, searchQ = '' }: { embedded?: boolean; searchQ?: string } = $props();
 	let activeFilter = $state<'all' | 'online' | 'offline'>('all');
 
 	// getter 对象解构会拿到非响应式快照，$derived 桥接
@@ -40,7 +38,6 @@
 	count={friends.length}
 	countSuffix=" 位好友"
 	{embedded}
-	search={{ value: searchQ, onChange: (v) => (searchQ = v), placeholder: '搜索好友…' }}
 	filters={FILTERS}
 	filterValue={activeFilter}
 	onFilter={(id) => (activeFilter = id as 'all' | 'online' | 'offline')}

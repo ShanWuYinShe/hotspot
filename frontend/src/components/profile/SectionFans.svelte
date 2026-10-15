@@ -15,7 +15,7 @@ import { formatRelativeDays } from '@/lib/utils';
 
 	// followState 由调用方（关系聚合页）注入共享，跨 tab 切换保持一致；
 	// 独立使用时回退本地实例（行为不变）。
-	let { embedded = false, followState = createOptimisticFollow() }: { embedded?: boolean; followState?: OptimisticFollow } = $props();
+	let { embedded = false, followState = createOptimisticFollow(), searchQ = '' }: { embedded?: boolean; followState?: OptimisticFollow; searchQ?: string } = $props();
 
 	let fanFilter = $state<'all' | 'mutual' | 'pending'>('all');
 
@@ -34,12 +34,15 @@ import { formatRelativeDays } from '@/lib/utils';
 	};
 
 	const filtered = $derived(
-		followers.filter((f) => {
-			const isMutual = isMutualWith(f);
-			if (fanFilter === 'mutual') return isMutual;
-			if (fanFilter === 'pending') return !isMutual;
-			return true;
-		})
+		followers
+			.filter((f) => {
+				const isMutual = isMutualWith(f);
+				if (fanFilter === 'mutual') return isMutual;
+				if (fanFilter === 'pending') return !isMutual;
+				return true;
+			})
+			// 搜索词过滤（r12-r18 头部统一：四段一致支持搜索）
+			.filter((f) => searchQ === '' || f.name.toLowerCase().includes(searchQ.toLowerCase()))
 	);
 	const mutualCount = $derived(followers.filter((f) => isMutualWith(f)).length);
 	const pendingCount = $derived(followers.length - mutualCount);

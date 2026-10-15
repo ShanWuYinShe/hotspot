@@ -19,15 +19,13 @@
 		blockedAt: string;
 	}
 
-	let { embedded = false }: { embedded?: boolean } = $props();
+	let { embedded = false, searchQ = '' }: { embedded?: boolean; searchQ?: string } = $props();
 
 	let rows = $state<BlockedRow[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let needsAuth = $state(false);
 	let reloadKey = $state(0);
-
-	let searchQ = $state('');
 	const filtered = $derived(
 		rows.filter((r) => searchQ === '' || r.name.toLowerCase().includes(searchQ.toLowerCase()))
 	);
@@ -97,7 +95,6 @@
 	count={rows.length}
 	countSuffix=" 人"
 	{embedded}
-	search={{ value: searchQ, onChange: (v) => (searchQ = v), placeholder: '搜索黑名单…' }}
 	emptyTitle="黑名单为空"
 	emptyDescription="在用户主页「更多操作」中拉黑的用户会出现在这里。"
 	emptyIcon={ShieldBan}

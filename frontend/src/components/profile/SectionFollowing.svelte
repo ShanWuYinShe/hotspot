@@ -14,7 +14,7 @@ import UserCardRow from '@/components/profile/UserCardRow.svelte';
 
 	// followState 由调用方（关系聚合页）注入共享，tab 内切换即时同步行与计数；
 	// 独立使用时回退本地实例（行为不变）。
-	let { embedded = false, followState = createOptimisticFollow() }: { embedded?: boolean; followState?: OptimisticFollow } = $props();
+	let { embedded = false, followState = createOptimisticFollow(), searchQ = '' }: { embedded?: boolean; followState?: OptimisticFollow; searchQ?: string } = $props();
 
 	let followingFilter = $state<'all' | 'mutual'>('all');
 
@@ -35,7 +35,12 @@ import UserCardRow from '@/components/profile/UserCardRow.svelte';
 		if (r.ok && !r.followed) showToast(`已取消关注 ${name}`, 'success');
 	};
 
-	const filtered = $derived(followingFilter === 'mutual' ? visibleFollowing.filter((f) => f.isMutual) : visibleFollowing);
+	// 搜索词过滤（r12-r18 头部统一：四段一致支持搜索）
+	const filtered = $derived(
+		(visibleFollowing.filter((f) => (followingFilter === 'mutual' ? f.isMutual : true))).filter((f) =>
+			searchQ === '' || f.name.toLowerCase().includes(searchQ.toLowerCase())
+		)
+	);
 
 	const FILTERS: SectionFilter[] = [
 		{ id: 'all', label: '全部' },
