@@ -73,9 +73,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-text-primary text-sm">{title}</span>
-					<span class="inline-flex h-5 items-center justify-center rounded-full bg-accent-default px-2 text-xxs font-medium leading-none text-text-on-accent">
-						{count}{countSuffix}
-					</span>
+					{#if !needsAuth}
+						<span class="inline-flex h-5 items-center justify-center rounded-full bg-accent-default px-2 text-xxs font-medium leading-none text-text-on-accent">
+							{count}{countSuffix}
+						</span>
+					{/if}
 				</div>
 				{#if subtitle}
 					<p class="mt-1 text-text-secondary text-xs">{subtitle}</p>
@@ -91,21 +93,21 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</header>
 	{/if}
 
-	{#if search}
-		<!-- Search — 通栏（与下方卡片栅格左右缘对齐） -->
+	{#if search && !needsAuth}
+		<!-- Search — 通栏（与下方卡片栅格左右缘对齐）；未登录隐藏（Gemini 审查 r12-r18：登录引导与不可用控件并存） -->
 		<div class="w-full pt-4 pb-2">
 			<SearchInput value={search.value} onChange={search.onChange} placeholder={search.placeholder} class="px-3 py-2" />
 		</div>
 	{/if}
 
-	{#if stats}
+	{#if stats && !needsAuth}
 		<!-- Stats row — flat joined cells -->
 		<div class="py-3">
 			<MetricRow items={stats} />
 		</div>
 	{/if}
 
-	{#if filters && !embedded}
+	{#if filters && !embedded && !needsAuth}
 		<!-- Filter tabs — 分类/筛选一律 TabBar（与 nearby/people|groups、search 一致），
 		     TagPill 只用于表单内标签与多选 chips；embedded（聚合页）时页面级 tab 已存在，不再双层嵌套 -->
 		<div class="pt-3 pb-3">

@@ -29,7 +29,9 @@ const needsAuth = $derived(myGroups.needsAuth);
 </script>
 
 <!-- 搜索 + 统计行（对齐 Figma SectionGroups header）。
-     纯内容组件：顶部间距由外层 ContentColumn 的 pt-4 承担，不自建 pt 避免双重叠加。 -->
+     纯内容组件：顶部间距由外层 ContentColumn 的 pt-4 承担，不自建 pt 避免双重叠加。
+     未登录隐藏（Gemini 审查 r14：登录引导与不可用控件并存）。 -->
+{#if !needsAuth}
 <div class="pb-3">
 	<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="px-3.5 py-2.5" />
 	<div class="mt-3 flex items-center justify-between">
@@ -40,6 +42,7 @@ const needsAuth = $derived(myGroups.needsAuth);
 		</div>
 	</div>
 </div>
+{/if}
 
 <!-- 统一群组卡片网格：对齐全站图片优先 NearbyImageCard 原语与响应式多列布局 -->
 {#if loading}
