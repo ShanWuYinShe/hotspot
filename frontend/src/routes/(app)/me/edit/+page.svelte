@@ -188,6 +188,8 @@
 	{#snippet header()}
 		<PageHeader title="编辑资料" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 	{#snippet trailing()}
+		<!-- 未登录隐藏保存(主区已是登录引导,顶栏悬挂保存按钮属不可用控件;Gemini 审查 r08) -->
+		{#if !needsAuth}
 		<Button
 			type="button"
 			variant={saved ? 'secondary' : 'primary'}
@@ -202,6 +204,7 @@
 			{/if}
 			{saved ? '已保存' : '保存'}
 		</Button>
+		{/if}
 	{/snippet}
 	</PageHeader>
 {/snippet}

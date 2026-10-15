@@ -226,9 +226,12 @@ export const mockMoments = Array.from({ length: 24 }, (_, i) => {
     created_at: isoDaysAgo(45 + i),
     comments_count: 2 + (i % 4),
     shares_count: 0,
-    reactions: [{ emoji: "👍", count: 30 + ((i * 37) % 160), reacted_by_me: i % 3 === 0 }],
+    // 种子不预置「我」的互动(reacted_by_me/is_favorited=false):访客会话无互动态,
+    // 登录用户的互动走 reactions/set + favorites 接口的 handler 流程(此前访客
+    // 会看到已激活的点赞/收藏,Gemini 审查 r19)
+    reactions: [{ emoji: "👍", count: 30 + ((i * 37) % 160), reacted_by_me: false }],
     location: { point: { latitude: 34.26 + i * 0.002, longitude: 117.18 + i * 0.003 }, location_name: ["植物园", "市中心", "老街手冲馆", "云龙湖", "彭城广场", "汉文化景区"][i % 6], distance: 300 + i * 200, bearing_degrees: (i * 47) % 360 },
-    is_favorited: i % 4 === 0,
+    is_favorited: false,
     is_deleted: false,
     // spec：recommendation 为 RecommendationType | null（Feed 场景之外为 null）
     recommendation: (["nearby", null, null] as const)[i % 3],
