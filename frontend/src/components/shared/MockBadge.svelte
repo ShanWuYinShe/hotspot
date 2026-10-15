@@ -6,6 +6,8 @@
 	// 视觉提示，多次把联调中的人误导（mock 用户/内容当成真数据排查半天）。
 	// 仅 dev 构建渲染（import.meta.env.DEV），生产包无此节点；开关经 toggle
 	// 订阅实时跟随（设置页/调试切换后 reload 即现）。
+	// 位置：移动端左下——右下角与「加入」等转化按钮重叠（Gemini UI 审查 r62/r73；
+	// pointer-events-none 只保证可点不保证不遮字）；桌面维持右下。
 	let mockOn = $state(false);
 	$effect(() => {
 		mockOn = isMockEnabled();
@@ -16,7 +18,7 @@
 
 {#if show}
 	<div
-		class="pointer-events-none fixed right-4 bottom-24 z-[var(--cst-z-toast)] md:bottom-6"
+		class="pointer-events-none fixed left-4 bottom-24 z-[var(--cst-z-toast)] md:left-auto md:right-4 md:bottom-6"
 		role="status"
 		aria-label="当前页面数据来自本地 Mock，非真实后端"
 	>
