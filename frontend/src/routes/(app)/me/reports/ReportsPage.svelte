@@ -10,6 +10,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import { listReports } from '@/api/client';
 	import type { ReportItem, ReportStatus } from '@/api/types';
@@ -71,6 +72,7 @@
 	let loading = $state(true);
 	let loadingMore = $state(false);
 	let loadError = $state<string | null>(null);
+	let needsAuth = $state(false);
 	let reloadKey = $state(0);
 
 	// status 过滤参数：all → 不传；其余 tab 直传对应状态
@@ -83,9 +85,17 @@
 		async function fetchData() {
 			loading = true;
 			loadError = null;
+			needsAuth = false;
 			try {
 				const res = await listReports({ status: statusParam, pagination: { limit: 20 } });
 				if (cancelled) return;
+				if (res.code === 10100) {
+					// 未登录：给登录引导而非裸技术报错（对齐 notify/messages 鉴权表现）
+					needsAuth = true;
+					items = [];
+					nextCursor = null;
+					return;
+				}
 				if (res.code !== 0) {
 					loadError = res.message ?? '加载失败，请稍后重试';
 					items = [];
@@ -146,11 +156,13 @@
 			onBack={() => smartBack(ROUTES.me)}
 		>
 			{#snippet trailing()}
-				{#if !loading && !loadError}
+				{#if !loading && !loadError && !needsAuth}
 					<span class="text-text-secondary text-xs" aria-live="polite">{items.length} 条</span>
 				{/if}
 			{/snippet}
 			{#snippet below()}
+				<!-- 未登录隐藏状态标签（Gemini UI 审查 r15：未登录展示不可用控件与其余个人子页鉴权表现不一） -->
+				{#if !needsAuth}
 				<div class="mt-3">
 					<TabBar
 						items={TABS}
@@ -158,12 +170,18 @@
 						onChange={(id) => switchTab(id)}
 					/>
 				</div>
+				{/if}
 			{/snippet}
 		</PageHeader>
 	{/snippet}
 
 	{#if loading}
 		<InlineLoading label="加载举报记录…" />
+	{:else if needsAuth}
+		<!-- 10100 未登录：登录引导而非接口报错（r15：与其余个人子页鉴权表现一致） -->
+		<div class="flex min-h-[40vh] items-center justify-center">
+			<NeedsAuthNotice title="登录后查看" description="你提交的举报与处理进度会在这里同步。" />
+		</div>
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else if items.length === 0}
