@@ -255,11 +255,19 @@ export struct NearbyGroupsListPage {
           SystemLoadingView({ message: '正在加载附近的群组…' })
             .layoutWeight(1)
         } else if (!this.hasAnyData() && this.errorMessage) {
+          // 错误分流动作：位置不可用属「重试不可解」死路（同 r70/r15 模式），
+          // 引导直达位置设置页；其余错误维持重试
           EmptyState({
             icon: AppIcon.WARNING,
             message: this.errorMessage,
-            actionLabel: '重试',
-            onAction: () => { this.loadGroups(); }
+            actionLabel: this.errorMessage.includes('位置信息不可用') ? '去设置位置' : '重试',
+            onAction: (): void => {
+              if (this.errorMessage.includes('位置信息不可用')) {
+                AppRouter.push(PageNames.LOCATION_PICKER);
+              } else {
+                this.loadGroups();
+              }
+            }
           })
             .layoutWeight(1)
         } else if (!this.hasAnyData()) {
