@@ -368,7 +368,9 @@
 		<!-- 同上：登记例外（surface-primary 面板实底，见左栏说明）。 -->
 		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} subtitleSize="sm">
 			{#snippet trailing()}
-				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排 -->
+				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排；
+				     未登录隐藏无效控件（对齐桌面分栏守卫；Gemini UI 审查 r24） -->
+				{#if !needsAuth}
 				<div class="flex items-center gap-2">
 					{#if totalUnread > 0}
 						<span class="text-text-secondary text-xs">{totalUnread} 条未读</span>
@@ -387,12 +389,15 @@
 						<Plus class="size-4 text-text-secondary" strokeWidth={1.5} />
 					</button>
 				</div>
+				{/if}
 			{/snippet}
 			{#snippet below()}
-				<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile） -->
+				<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile）；未登录隐藏（r24） -->
+				{#if !needsAuth}
 				<div class="mt-3">
 					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-md px-4 py-2.5" />
 				</div>
+				{/if}
 			{/snippet}
 		</PageHeader>
 
@@ -403,9 +408,11 @@
 				</div>
 			{/if}
 
+			{#if !needsAuth}
 			<div class="px-4 mt-3 mb-1.5">
 				<p class="eyebrow">最近</p>
 			</div>
+			{/if}
 
 			<ChatListBody
 				chats={filtered}
