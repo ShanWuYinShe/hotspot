@@ -114,10 +114,30 @@ export struct DebugPanel {
               Text('系统状态')
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-              
-              Text(`WebSocket: ${this.webSocketService.isConnected() ? '已连接' : '未连接'}`)
-              Text(`User ID: ${this.currentUserId || 'N/A'}`)
-              Text(`Token: ${this.currentUser ? '有 Token' : '无 Token'}`)
+
+              // 键值两端对齐;未连接用警示色强化状态感知(Gemini 审查 r33)
+              Row() {
+                Text('WebSocket').fontColor(this.getCurrentThemePalette().textSecondary)
+                Blank()
+                Text(this.webSocketService.isConnected() ? '已连接' : '未连接')
+                  .fontColor(this.webSocketService.isConnected()
+                    ? this.getCurrentThemePalette().textPrimary
+                    : this.getCurrentThemePalette().error)
+              }
+              .width('100%')
+              Row() {
+                Text('User ID').fontColor(this.getCurrentThemePalette().textSecondary)
+                Blank()
+                Text(this.currentUserId || 'N/A').maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+              }
+              .width('100%')
+              Row() {
+                Text('Token').fontColor(this.getCurrentThemePalette().textSecondary)
+                Blank()
+                Text(this.currentUser ? '有 Token' : '无 Token')
+              }
+              .width('100%')
             }
             .alignItems(HorizontalAlign.Start)
             .width('100%')
