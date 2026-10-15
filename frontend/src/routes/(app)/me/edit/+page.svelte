@@ -212,7 +212,7 @@
 	{#if loading}
 	<InlineLoading label="加载资料…" />
 	{:else if needsAuth}
-	<NeedsAuthNotice title="登录后查看" description="登录后即可编辑你的资料" />
+	<NeedsAuthNotice title="登录后编辑" description="登录后即可编辑你的资料" />
 	{:else if loadError}
 	<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}

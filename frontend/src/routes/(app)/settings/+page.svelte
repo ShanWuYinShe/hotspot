@@ -291,7 +291,8 @@
 			</SettingsSection>
 
 			<!-- Section 3: 地图与位置 -->
-			<SettingsSection title="地图与位置" description="选择地图页使用的底图源。高德瓦片浏览器直连（免密钥，GCJ-02）；OpenStreetMap 经站点同源代理加载。">
+			<!-- 底图坐标系（GCJ-02/WGS-84）属开发契约，面向用户只描述体验差异，不暴露术语 -->
+			<SettingsSection title="地图与位置" description="选择地图页使用的底图：高德地图（国内坐标，免密钥，位置显示更贴合）或 OpenStreetMap（国际坐标，经本站中转加载）。">
 				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-sm overflow-hidden">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
 						<div class="flex items-center gap-3">
@@ -359,7 +360,7 @@
 				<ListContainer bordered inset>
 					<SettingRow
 						title="私密账号"
-						description="开启后仅关注者可查看你的主页与生活瞬间"
+						description="开启后仅关注者可查看你的主页与生活瞬间（服务端设置，需登录）"
 						onRowClick={togglePrivateProfile}
 					>
 						{#snippet icon()}
@@ -370,7 +371,7 @@
 
 					<SettingRow
 						title="位置共享"
-						description="允许附近用户在发现雷达和地图中感知到你"
+						description="允许附近用户在发现雷达和地图中感知到你（服务端设置，需登录）"
 						onRowClick={toggleLocationSharing}
 					>
 						{#snippet icon()}
