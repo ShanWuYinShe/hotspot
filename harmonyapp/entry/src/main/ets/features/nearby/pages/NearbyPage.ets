@@ -172,12 +172,13 @@ export struct NearbyPage {
               })
               .width('100%')
             } else if (!this.sectionHasContent(this.activeSection)) {
-              // 空态引导动作（P2-5）：发动态是点亮附近区域的主路径，三段空态共用
+              // 空态引导动作（P2-5）：按段位给语义一致的 CTA——群组段直达创建群组，
+              // 人/动态段引导发动态点亮区域（r45：群组空态配「去发动态」语义不闭环）
               EmptyState({
                 title: this.emptyTitleForSection(this.activeSection),
-                message: '成为第一个点亮这片区域的人吧！',
-                actionLabel: '去发动态',
-                onAction: () => AppRouter.push(PageNames.CREATE_MOMENT)
+                message: this.activeSection === 1 ? '成为第一个创建群组的人吧！' : '成为第一个点亮这片区域的人吧！',
+                actionLabel: this.activeSection === 1 ? '创建群组' : '去发动态',
+                onAction: () => AppRouter.push(this.activeSection === 1 ? PageNames.CREATE_GROUP : PageNames.CREATE_MOMENT)
               })
               .width('100%')
               .padding({ top: DesignConstants.SPACING.XL })
