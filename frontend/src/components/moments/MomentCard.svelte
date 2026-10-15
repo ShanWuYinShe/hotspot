@@ -49,7 +49,9 @@
 
 	<!-- Tag chip：标准居中胶囊，严格锁定 h-5 与 leading-none 避免行高继承膨胀偏心 -->
 	{#if item.tag}
-		<span class="absolute top-2.5 left-2.5 z-[2] inline-flex h-5 items-center justify-center rounded-full bg-accent-default px-2.5 text-xxs font-medium leading-none text-text-on-accent shadow-raised-sm">
+		<!-- Tag chip：毛玻璃底与卡片徽章语言统一（Gemini 审查 r04：降噪，亮蓝让位核心交互），
+	     严格锁定 h-5 与 leading-none 避免行高继承膨胀偏心 -->
+		<span class="absolute top-2.5 left-2.5 z-[2] inline-flex h-5 items-center justify-center rounded-full bg-surface-overlay-strong px-2.5 text-xxs font-medium leading-none text-content-inverse" style="backdrop-filter:blur(var(--cst-blur-sm));">
 			{item.tag}
 		</span>
 	{/if}
