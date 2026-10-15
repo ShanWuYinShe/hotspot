@@ -31,7 +31,8 @@
 	     一张几乎空白的浮起卡会放大页面的空洞感 -->
 	<section aria-label="最近搜索">
 		<div class="flex items-center justify-between">
-			<h2 class="eyebrow">最近搜索</h2>
+			<!-- 标题图标与「热门话题」Flame 对称（Gemini 审查 r11） -->
+			<h2 class="eyebrow flex items-center gap-1.5"><Clock class="size-3.5 text-accent-default" strokeWidth={1.75} />最近搜索</h2>
 			{#if recent.length > 0}
 				<button
 					type="button"
