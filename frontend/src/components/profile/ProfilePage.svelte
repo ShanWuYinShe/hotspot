@@ -87,8 +87,8 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 			     外观控制不进身份卡：桌面顶栏已有常驻「外观设置」，其余设备走设置页
 			     「外观与显示」，避免与同屏「设置」按钮形成同一功能两条路径。 -->
 			<PageHeader
-				title="个人总览"
-				subtitle="你的公开资料、内容与关系的入口。"
+				title="个人中心"
+				subtitle="你的公开资料、内容与关系的入口"
 				titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			/>
 		{/snippet}
