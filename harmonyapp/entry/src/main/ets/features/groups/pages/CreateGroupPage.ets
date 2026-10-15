@@ -476,28 +476,24 @@ export struct CreateGroupPage {
                 .alignItems(HorizontalAlign.Start)
 
                 Row({ space: DesignConstants.SPACING.SM }) {
-                  Button(this.groupAvatarPreviewUrl.length > 0 ? '重选' : '选择')
-                    .type(ButtonType.Normal)
-                    .backgroundColor(this.getSurfaceSubtle())
-                    .fontColor(this.getCurrentThemePalette().accentBackground)
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .borderRadius(DesignConstants.RADIUS.LG)
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                    .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
-                    .enabled(!this.isCreating && !this.isGroupAvatarUploading)
-                    .onClick(() => this.selectGroupAvatar())
+                  // 卡片内次级动作统一 SystemButton surface-accent 胶囊（r78：与「选点/刷新」同原语，
+                  // 消除直角矩形与胶囊混用）
+                  SystemButton({
+                    label: this.groupAvatarPreviewUrl.length > 0 ? '重选' : '选择',
+                    variant: 'surface-accent',
+                    buttonSize: 'small',
+                    disabled: this.isCreating || this.isGroupAvatarUploading,
+                    onPress: () => { this.selectGroupAvatar(); }
+                  })
 
                   if (this.groupAvatarPreviewUrl.length > 0) {
-                    Button('移除')
-                      .type(ButtonType.Normal)
-                      .backgroundColor(this.getSurfaceSubtle())
-                      .fontColor(this.getCurrentThemePalette().textSecondary)
-                      .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .borderRadius(DesignConstants.RADIUS.LG)
-                      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_LG)
-                      .enabled(!this.isCreating && !this.isGroupAvatarUploading)
-                      .onClick(() => this.clearGroupAvatarSelection())
+                    SystemButton({
+                      label: '移除',
+                      variant: 'surface-accent',
+                      buttonSize: 'small',
+                      disabled: this.isCreating || this.isGroupAvatarUploading,
+                      onPress: () => { this.clearGroupAvatarSelection(); }
+                    })
                   }
                 }
               }
@@ -711,29 +707,38 @@ export struct CreateGroupPage {
             .shadow(this.getCurrentThemePalette().surfaceShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD3 })
-
-            // 提交按钮
-            SystemButton({
-              label: '立即创建',
-              variant: 'primary',
-              buttonSize: 'large',
-              pill: true,
-              fullWidth: true,
-              disabled: this.isCreating,
-              onPress: () => { this.createGroup(); }
-            })
-              .margin({ top: DesignConstants.SPACING.SM })
           }
           .padding({
             left: DesignConstants.SPACING.LG,
             right: DesignConstants.SPACING.LG,
             top: DesignConstants.SPACING.SM,
-            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, 48, 0)
+            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, 16, 0)
           })
         }
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+
+        // 吸底提交入口：常驻视口底部，长表单无需滚动到末尾即可提交
+        // （Gemini UI 审查 r78：首屏缺失提交入口，操作闭环断裂）
+        Column() {
+          SystemButton({
+            label: '立即创建',
+            variant: 'primary',
+            buttonSize: 'large',
+            pill: true,
+            fullWidth: true,
+            disabled: this.isCreating,
+            onPress: () => { this.createGroup(); }
+          })
+        }
+        .width('100%')
+        .padding({
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
+          top: DesignConstants.SPACING.SM,
+          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, 12, 0)
+        })
       }
       .width('100%')
       .height('100%')

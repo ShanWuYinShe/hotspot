@@ -97,7 +97,9 @@
 					return;
 				}
 				if (res.code !== 0) {
-					loadError = res.message ?? '加载失败，请稍后重试';
+					// 不向用户透出「Access Token」等技术术语（r70）：鉴权类改通俗文案
+					const msg = res.message ?? '加载失败，请稍后重试';
+					loadError = /token|令牌/i.test(msg) ? '登录状态已过期，请重新登录' : msg;
 					items = [];
 					nextCursor = null;
 					return;
@@ -137,6 +139,12 @@
 		}
 	}
 
+	// 鉴权失效类报错（token 过期/术语型 message）：与 10100 同走登录引导，
+	// 避免「重试」死循环（Gemini UI 审查 r70——过期后点重试依然失败）
+	const authExpired = $derived(
+		needsAuth || (loadError !== null && /token|令牌|重新登录|登录状态/i.test(loadError))
+	);
+
 	const switchTab = (tab: string) => {
 		if (tab === activeTab) return;
 		void goto(tab === 'all' ? ROUTES.meReports : `${ROUTES.meReports}?tab=${tab}`);
@@ -156,13 +164,13 @@
 			onBack={() => smartBack(ROUTES.me)}
 		>
 			{#snippet trailing()}
-				{#if !loading && !loadError && !needsAuth}
+				{#if !loading && !loadError && !authExpired}
 					<span class="text-text-secondary text-xs" aria-live="polite">{items.length} 条</span>
 				{/if}
 			{/snippet}
 			{#snippet below()}
-				<!-- 未登录隐藏状态标签（Gemini UI 审查 r15：未登录展示不可用控件与其余个人子页鉴权表现不一） -->
-				{#if !needsAuth}
+				<!-- 未登录/鉴权失效隐藏状态标签（Gemini UI 审查 r15/r70：展示不可用控件与其余个人子页鉴权表现不一） -->
+				{#if !authExpired}
 				<div class="mt-3">
 					<TabBar
 						items={TABS}
@@ -181,6 +189,14 @@
 		<!-- 10100 未登录：登录引导而非接口报错（r15：与其余个人子页鉴权表现一致） -->
 		<div class="flex min-h-[40vh] items-center justify-center">
 			<NeedsAuthNotice title="登录后查看" description="你提交的举报与处理进度会在这里同步。" />
+		</div>
+	{:else if authExpired && loadError}
+		<!-- token 过期：去登录而非死循环重试（r70） -->
+		<div class="flex min-h-[40vh] items-center justify-center">
+			<NeedsAuthNotice
+				title="登录状态已过期"
+				description="你的登录状态已失效，重新登录后即可继续查看举报与处理进度。"
+			/>
 		</div>
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
