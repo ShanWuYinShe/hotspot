@@ -250,21 +250,29 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				</div>
 			{/snippet}
 			{#snippet below()}
-				<!-- 排序：sticky header 内只保留排序；标签过滤放正文首行 -->
+				<!-- 排序：sticky header 内只保留排序；标签过滤放正文首行。
+				     桌面端排序并入正文分类行右端合并单行（r02：双行筛选+分割线吃首屏），移动/平板维持 -->
+				{#if device !== 'desktop'}
 				<div class="mt-3 pb-2">
 					<TabBar items={sortOptions.map((o) => ({ id: o, label: o }))} value={effectiveSort} onChange={(id) => (sort = id)} />
 				</div>
+				{/if}
 			{/snippet}
 		</PageHeader>
 	{/snippet}
 
-	<div class="mb-4">
+	<div class="mb-4 flex items-center justify-between gap-4">
 		<TabBar
 			items={FILTER_TAGS.map((t) => ({ id: t, label: t }))}
 			value={tagFilter}
 			onChange={(id) => (tagFilter = id)}
 			class={device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto pr-1'}
 		/>
+		{#if device === 'desktop'}
+			<div class="shrink-0">
+				<TabBar items={sortOptions.map((o) => ({ id: o, label: o }))} value={effectiveSort} onChange={(id) => (sort = id)} />
+			</div>
+		{/if}
 	</div>
 
 		<div class={isTablet ? 'grid gap-6' : ''}>

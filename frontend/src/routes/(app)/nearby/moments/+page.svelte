@@ -334,9 +334,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			</div>
 		{/snippet}
 		{#snippet below()}
+			<!-- 桌面端 feed Tab 并入正文分类行右端合并单行（r04：双行筛选吃首屏）；移动/平板维持吸顶 -->
+			{#if device !== 'desktop'}
 			<div class="mt-3 pb-2">
 				{@render tabBar()}
 			</div>
+			{/if}
 		{/snippet}
 	</PageHeader>
 {/snippet}
@@ -403,8 +406,13 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		{@render feedHeader()}
 	{/snippet}
 
-	<div class="mb-5">
+	<div class="mb-5 flex items-center justify-between gap-4">
 		{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto pr-1')}
+		{#if device === 'desktop'}
+			<div class="shrink-0">
+				{@render tabBar()}
+			</div>
+		{/if}
 	</div>
 
 	{#if isFollowing
