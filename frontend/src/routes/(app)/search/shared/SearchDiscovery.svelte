@@ -28,40 +28,37 @@
 
 <div class="mt-5">
 	<!-- 最近搜索：页面直出（eyebrow 小标 + 行动），无卡片壳——空态/少内容时
-	     一张几乎空白的浮起卡会放大页面的空洞感 -->
+	     一张几乎空白的浮起卡会放大页面的空洞感。
+	     无记录时整块隐藏（Gemini 审查 r11：干瘪的「暂无记录」文案无信息量），
+	     首次搜索后自然出现 -->
+	{#if recent.length > 0}
 	<section aria-label="最近搜索">
 		<div class="flex items-center justify-between">
 			<!-- 标题图标与「热门话题」Flame 对称（Gemini 审查 r11） -->
 			<h2 class="eyebrow flex items-center gap-1.5"><Clock class="size-3.5 text-accent-default" strokeWidth={1.75} />最近搜索</h2>
-			{#if recent.length > 0}
-				<button
-					type="button"
-					onclick={onClear}
-					class="link-btn -my-1 px-2 py-1 text-xs text-accent-default"
-				>
-					清除
-				</button>
-			{/if}
+			<button
+				type="button"
+				onclick={onClear}
+				class="link-btn -my-1 px-2 py-1 text-xs text-accent-default"
+			>
+				清除
+			</button>
 		</div>
-		{#if recent.length > 0}
-			<ListContainer bordered class="mt-2.5">
-				{#each recent as item (item)}
-					<ListItem
-						onClick={() => onChoose(item)}
-						ariaLabel={`重新搜索 ${item}`}
-						class="flex items-center gap-3 px-4 py-3"
-					>
-						<Clock class="size-4 text-text-secondary" strokeWidth={1.75} />
-						<span class="flex-1 text-sm text-text-primary">{item}</span>
-						<ArrowUpRight class="size-4 text-text-secondary" strokeWidth={1.75} />
-					</ListItem>
-				{/each}
-			</ListContainer>
-		{:else}
-			<!-- 紧凑空态：一行引导文案，不占视觉重量 -->
-			<p class="mt-3 text-sm text-text-secondary opacity-soft">暂无搜索记录，输入关键词开始探索。</p>
-		{/if}
+		<ListContainer bordered class="mt-2.5">
+			{#each recent as item (item)}
+				<ListItem
+					onClick={() => onChoose(item)}
+					ariaLabel={`重新搜索 ${item}`}
+					class="flex items-center gap-3 px-4 py-3"
+				>
+					<Clock class="size-4 text-text-secondary" strokeWidth={1.75} />
+					<span class="flex-1 text-sm text-text-primary">{item}</span>
+					<ArrowUpRight class="size-4 text-text-secondary" strokeWidth={1.75} />
+				</ListItem>
+			{/each}
+		</ListContainer>
 	</section>
+	{/if}
 
 	{#if hotTopics.length > 0}
 		<!-- 热门话题：热门动态 tags 聚合，点击即搜 -->

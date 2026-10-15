@@ -36,8 +36,10 @@
 
 	const TOP_NAV: NavItem[] = [
 		{ id: 'home', icon: Home, label: '首页', path: ROUTES.home },
-		{ id: 'nearby-people', icon: Users, label: '附近的人', path: ROUTES.nearbyPeople },
-		{ id: 'nearby-groups', icon: UserRound, label: '附近群组', path: ROUTES.nearbyGroups },
+		// 图标对齐鸿蒙 DESKTOP_PRIMARY_NAV 唯一性方案(AppNavigation.ets):
+		// 附近的人=person 单人 / 附近群组=person_2 双人(原两图标互换,群组类目错用单人;r14)
+		{ id: 'nearby-people', icon: UserRound, label: '附近的人', path: ROUTES.nearbyPeople },
+		{ id: 'nearby-groups', icon: Users, label: '附近群组', path: ROUTES.nearbyGroups },
 		{ id: 'nearby-moments', icon: Rss, label: '附近瞬间', path: ROUTES.nearbyMoments }
 	];
 

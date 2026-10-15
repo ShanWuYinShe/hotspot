@@ -14,11 +14,12 @@ describe('SearchDiscovery', () => {
 		expect(screen.getByText('回龙窝')).toBeTruthy();
 	});
 
-	it('空最近搜索显示提示文案', () => {
+	it('空最近搜索隐藏整个区块（r11：干瘪空态文案无信息量）', () => {
 		render(SearchDiscovery, {
 			props: { recent: [], onChoose: () => {}, onChooseTopic: () => {}, onClear: () => {} }
 		});
-		expect(screen.getByText('暂无搜索记录，输入关键词开始探索。')).toBeTruthy();
+		expect(screen.queryByText('最近搜索')).toBeNull();
+		expect(screen.queryByLabelText('最近搜索')).toBeNull();
 	});
 
 	it('点击最近搜索项触发 onChoose、清除触发 onClear', async () => {
