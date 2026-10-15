@@ -1,4 +1,5 @@
 import { AppRouter } from '../../../core/router/AppRouter';
+import { PageNames } from '../../../constants/AppConstants';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -173,18 +174,24 @@ export struct RelationshipHubPage {
               RelationshipListSection({
                 embedded: true,
                 emptyText: this.searchKeyword.length === 0 ? '暂时还没有好友。' : '没有符合条件的好友。',
+                emptyActionLabel: this.searchKeyword.length === 0 ? '去发现好友' : '',
+                emptyAction: (): void => { AppRouter.push(PageNames.NEARBY_USERS); },
                 friends: this.filterUsers(this.friends)
               })
             } else if (this.activeRelTab === 1) {
               RelationshipListSection({
                 embedded: true,
                 emptyText: this.searchKeyword.length === 0 ? '还没有关注任何人。' : '没有符合条件的关注。',
+                emptyActionLabel: this.searchKeyword.length === 0 ? '去发现好友' : '',
+                emptyAction: (): void => { AppRouter.push(PageNames.NEARBY_USERS); },
                 following: this.filterUsers(this.following)
               })
             } else if (this.activeRelTab === 2) {
               RelationshipListSection({
                 embedded: true,
                 emptyText: this.searchKeyword.length === 0 ? '还没有粉丝。' : '没有符合条件的粉丝。',
+                emptyActionLabel: this.searchKeyword.length === 0 ? '去发现好友' : '',
+                emptyAction: (): void => { AppRouter.push(PageNames.NEARBY_USERS); },
                 followers: this.filterUsers(this.followers)
               })
             } else {

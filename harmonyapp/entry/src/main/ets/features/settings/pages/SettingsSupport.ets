@@ -779,6 +779,9 @@ export struct RelationshipListSection {
   @Prop title: string = '';
   @Prop subtitle: string = '';
   @Prop emptyText: string = '';
+  /** 空态引导 CTA（r37：仅文案无下一步路径易流失），可选 */
+  @Prop emptyActionLabel: string = '';
+  emptyAction?: () => void = undefined;
   /** embedded 模式（对齐前端 ProfileUserSection embedded）：隐藏 section header，仅渲染内容区 */
   @Prop embedded: boolean = false;
   @Prop friends: RelatedUserItem[] = [];
@@ -900,6 +903,17 @@ export struct RelationshipListSection {
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(this.getPalette().textSecondary)
             .textAlign(TextAlign.Center)
+
+          if ((this.emptyActionLabel ?? '').length > 0 && this.emptyAction) {
+            SystemButton({
+              label: this.emptyActionLabel,
+              variant: 'primary',
+              buttonSize: 'default',
+              onPress: () => {
+                this.emptyAction?.();
+              }
+            })
+          }
         }
         .width('100%')
         .alignItems(HorizontalAlign.Center)

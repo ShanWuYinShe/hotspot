@@ -525,6 +525,10 @@ export struct NotificationCenter {
             Text('暂无通知')
               .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor(this.getPalette().textSecondary)
+            // 空态指引（r39）：告知接收范围可在应用内调整
+            Text('可在「设置-通知偏好」调整要接收的通知')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getPalette().textTertiary)
           }
           .width('100%')
           .height('100%')

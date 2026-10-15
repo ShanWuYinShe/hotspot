@@ -263,9 +263,12 @@ export struct NearbyGroupsListPage {
           })
             .layoutWeight(1)
         } else if (!this.hasAnyData()) {
+          // 空态引导（r41/r42）：仅静态文本无下一步路径，补「创建群组」直达
           EmptyState({
             icon: AppIcon.GROUP,
-            message: '附近暂无群组，可稍后再来或调整浏览位置'
+            message: '附近暂无群组，可稍后再来或调整浏览位置',
+            actionLabel: '创建群组',
+            onAction: () => { AppRouter.push(PageNames.CREATE_GROUP); }
           })
             .layoutWeight(1)
         } else {
