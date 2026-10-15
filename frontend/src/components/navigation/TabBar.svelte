@@ -2,6 +2,9 @@
 	import type { Component } from 'svelte';
 
 	// TabBar — 胶囊分类/分段 Tab 栏（对齐鸿蒙 TabsPillGroup 分段式视觉，全站统一）。
+// 选中态语言：pills 筛选胶囊用 accent-soft 淡底 + accent 字（弱高亮，亮 accent 实底
+// 收给主按钮，避免筛选态与主操作抢焦点——Gemini UI 审查 r07/r11-r19 多轮共识）；
+// segmented 分段控制器保持 accent 实底浮起胶囊（系统级分段，区别于内容筛选）。
 	// 支持两种形态（对齐鸿蒙 TabsPillGroup）：
 	// - variant="pills"（默认，流式胶囊导航）：透明容器，横向滚动，选项带 gap-1.5 安全呼吸间距，杜绝贴边粘连。
 	// - variant="segmented"（系统级分段控制器）：surface-subtle 浅色底轨容器 + ring-1 ring-border-default + p-1 内距，
@@ -65,7 +68,7 @@
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
 				class="tab-item flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm focus-ring transition-colors duration-standard {isActive
-					? 'font-medium bg-accent-default text-text-on-accent shadow-raised-sm'
+					? 'font-medium bg-accent-soft text-accent-default'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
 				{#if tab.icon}

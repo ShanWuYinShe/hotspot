@@ -61,6 +61,21 @@
 	 *  消解——className 里写 shadow-none 消不掉它，必须由本 prop 在源头裁剪。 */
 		flat?: boolean;
 	} = $props();
+
+	// 禁用/加载中的 primary：accent 实底叠加 opacity-faint 会渲染成低对比
+	// 「蓝底暗字」（Gemini UI 审查 r08），改为中性弱化——subtle 底 + 次级字、
+	// 去投影，再叠全局 opacity-faint；其余变体维持原 opacity-faint 语言。
+	const off = $derived(disabled || loading);
+	const variantCls = $derived(
+		off && variant === 'primary'
+			? VARIANTS.primary
+					.replace('bg-accent-default', 'bg-surface-subtle')
+					.replace('text-text-on-accent', 'text-text-secondary')
+					.replace(/\bshadow-raised-\S+/g, '')
+					.trim()
+			: flat
+				? VARIANTS[variant].replace(/\bshadow-raised-\S+/g, '').trim()
+				: VARIANTS[variant]);
 </script>
 
 <button
@@ -70,8 +85,8 @@
 		'inline-flex shrink-0 cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap font-medium hover-btn focus-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint',
 		// flat 时在源头裁掉变体投影：shadow-raised-* 是自定义主题 token，不参与
 		// tailwind-merge 的冲突消解——用 className 覆盖写 shadow-none 也消不掉
-		// （生成 stylesheet 里 raised-* 排在后面会胜出）。
-		flat ? VARIANTS[variant].replace(/\bshadow-raised-\S+/g, '').trim() : VARIANTS[variant],
+		// （生成 stylesheet 里 raised-* 排在后面会胜出）。禁用 primary 同理在源头替换。
+		variantCls,
 		SIZES[size],
 		loading && 'pointer-events-none opacity-soft',
 		className

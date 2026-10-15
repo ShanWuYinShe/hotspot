@@ -3,18 +3,19 @@
  * 两种形态：
  * - 默认（segmented）：等宽分段 + surfaceSubtle 灰底槽（系统分段控件视觉）
  * - freeWidth：透明容器 + 自适应内容宽左对齐（对齐前端 TabBar 胶囊行，
- *   激活项 accent 实底胶囊 + glow，未激活项透明 + 次要色文字）
+ *   激活项 accentMuted 淡底胶囊 + accentText 字（soft 弱高亮，亮 accent 实底
+ *   收给主按钮，避免筛选态与主操作抢焦点），未激活项透明 + 次要色文字）
  *
  * 交互契约（四态）：
  * - 按压差异：选中胶囊按压 = 底色加深（active 加深反馈）；未选中按压 = SCALE_PRESSED_PILL 缩放
- * - hover（仅键鼠外接触发）：选中 = accentShadow 增强；未选中 = 淡底填充 + 主文字色预览
+ * - hover（仅键鼠外接触发）：选中 = accentText 字已表达，无底色增量；未选中 = surfaceSubtle 淡底预览
  * - 触控热区：胶囊视觉高度不变，外层透明命中区扩到 LAYOUT.MIN_HIT_TARGET
  * - ForEach key 只含 label-index（拼 activeIndex 会导致切换激活时全部胶囊销毁重建、打断位移动画）
  */
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { AppThemeShadow, DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { LucideIcon } from './LucideIcon';
 import { curves } from '@kit.ArkUI';
@@ -59,23 +60,15 @@ export struct TabsPillGroup {
     }
   }
 
-  /** 胶囊底色：选中 hover 保持 accent 实底（阴影增强表达，见下方 shadow 分支）；
-   *  未选中 hover = accentMuted 淡底（「将选中」预览） */
+  /** 胶囊底色：选中 = accentMuted 淡底（soft 弱高亮，对齐前端 TabBar 选中态——
+   *  亮 accent 实底收给主按钮）；未选中 hover = surfaceSubtle 淡底（「将选中」预览，
+   *  与选中态同语言不同档，避免 hover 即选中） */
   private getPillBackground(index: number, isActiveTab: boolean): ResourceColor {
     const palette = this.getPalette();
     if (isActiveTab) {
-      return palette.accentBackground;
+      return palette.accentMuted;
     }
-    return this.hoveredIndex === index ? palette.accentMuted : DesignConstants.COLOR.TRANSPARENT;
-  }
-
-  /** 选中胶囊投影：对齐前端 TabBar——选中 accent 实底胶囊无彩色光晕，
-   *  hover 增量由底色分支表达（未选中淡底预览），阴影保持中性 control 抬升 */
-  private getPillShadow(isActiveTab: boolean): AppThemeShadow {
-    if (isActiveTab) {
-      return this.getPalette().controlShadow;
-    }
-    return new AppThemeShadow(0, DesignConstants.COLOR.TRANSPARENT, 0, 0);
+    return this.hoveredIndex === index ? palette.surfaceSubtle : DesignConstants.COLOR.TRANSPARENT;
   }
 
   @Builder
@@ -118,12 +111,6 @@ export struct TabsPillGroup {
       // 当前哪个分类/Tab 处于选中，否则只能靠颜色猜测
       .accessibilityText(this.isActive(index) ? `${tab.label}，已选中` : tab.label)
       .backgroundColor(this.getPillBackground(index, this.isActive(index)))
-      .shadow(this.isActive(index) ? this.getPillShadow(true) : {
-        radius: 0,
-        color: DesignConstants.COLOR.TRANSPARENT,
-        offsetX: 0,
-        offsetY: 0
-      })
       .animation({
         curve: curves.springMotion(
           DesignConstants.INTERACTION.SPRING_RESPONSE_TAB,
