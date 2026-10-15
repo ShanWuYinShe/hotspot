@@ -8,6 +8,7 @@
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
+	import * as Dialog from '@/components/ui/dialog';
 	import { TABLE_WRAP, TABLE, TH, TR, TD } from '../shared/table';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -47,15 +48,30 @@
 	];
 	let action = $state('');
 	let targetType = $state('');
+	// 操作者/时间范围筛选（r59：时效追溯与安全排查高频;spec FetchAuditLogsRequest 全量支持）
+	let operatorId = $state('');
+	// 详情全文弹层（r59：详情列截断生硬→点击展开完整内容）
+	let detailTarget = $state<AuditLogItem | null>(null);
+	let startDate = $state('');
+	let endDate = $state('');
+
+	const toIso = (d: string, endOfDay: boolean): string | null => {
+		if (!d) return null;
+		const dt = new Date(endOfDay ? `${d}T23:59:59` : `${d}T00:00:00`);
+		return isNaN(dt.getTime()) ? null : dt.toISOString();
+	};
 
 	const list = createAdminList<AuditLogItem>(
 		(cursor, limit) =>
 			adminListAuditLogs({
 				action: (action || null) as AuditAction | null,
 				target_type: (targetType || null) as AuditTargetType | null,
+				operator_id: operatorId.trim() || null,
+				start_time: toIso(startDate, false),
+				end_time: toIso(endDate, true),
 				pagination: { limit, cursor }
 			}),
-		() => `${action}|${targetType}`
+		() => `${action}|${targetType}|${operatorId}|${startDate}|${endDate}`
 	);
 
 	const detailsText = (d: unknown): string => {
@@ -76,7 +92,7 @@
 	<EmptyState title="无访问权限" description="需要 admin.audit.read 权限" />
 {:else}
 	<div class="flex flex-col gap-4">
-		<div class="flex flex-col gap-3 sm:flex-row">
+		<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
 			<select bind:value={action} class="input-surface rounded-md px-3 py-2 text-xs text-text-primary" aria-label="动作">
 				{#each ACTIONS as a (a.value)}
 					<option value={a.value}>{a.label}</option>
@@ -87,6 +103,15 @@
 					<option value={t.value}>{t.label}</option>
 				{/each}
 			</select>
+			<input
+				bind:value={operatorId}
+				class="input-surface w-56 rounded-md px-3 py-2 text-xs text-text-primary"
+				placeholder="操作者 user_id…"
+				aria-label="操作者 ID"
+			/>
+			<input bind:value={startDate} type="date" class="input-surface rounded-md px-3 py-2 text-xs text-text-primary" aria-label="开始日期" />
+			<span class="text-xxs text-text-secondary self-center">至</span>
+			<input bind:value={endDate} type="date" class="input-surface rounded-md px-3 py-2 text-xs text-text-primary" aria-label="结束日期" />
 			{#if !canReadIp}
 				<span class="text-xxs self-center text-text-secondary">IP 字段需 admin.audit.read_ip 权限</span>
 			{/if}
@@ -117,13 +142,37 @@
 						{#each list.items as log (log.log_id)}
 							<tr class={TR}>
 								<td class={TD}>{formatDateTime(log.created_at)}</td>
-								<td class={TD}>{log.operator?.nickname ?? '—'}</td>
+								<td class={TD}>
+									{#if log.operator}
+										<!-- 点击操作者=按其 user_id 筛选（r59 关联追溯） -->
+										<button
+											type="button"
+											class="link-btn hit-slop focus-ring text-xs"
+											title="筛选该操作者的日志"
+											onclick={() => (operatorId = log.operator.user_id)}
+										>
+											{log.operator.nickname}
+										</button>
+									{:else}
+										—
+									{/if}
+								</td>
 								<td class={TD}><span class="font-mono text-xs">{log.action}</span></td>
 								<td class={TD}>
 									<span class="text-xs text-text-secondary">{log.target_type}</span>
 									{#if log.target_name}<span class="ml-1">{log.target_name}</span>{:else}<span class="ml-1 font-mono text-xs text-text-secondary">{log.target_id}</span>{/if}
 								</td>
-								<td class={`${TD} max-w-72 truncate`} title={detailsText(log.details)}>{detailsText(log.details)}</td>
+								<td class={TD}>
+									<!-- 截断 + 点击弹窗看全文（r59：生硬截断→可展开） -->
+									<button
+										type="button"
+										class="link-btn focus-ring max-w-72 truncate text-left"
+										title={detailsText(log.details)}
+										onclick={() => (detailTarget = log)}
+									>
+										{detailsText(log.details)}
+									</button>
+								</td>
 								<td class={TD}>{log.ip_location ?? '—'}</td>
 								{#if canReadIp}<td class={TD}>{log.ip_address ?? '—'}</td>{/if}
 								<td class={TD}>{log.device_summary ?? '—'}</td>
@@ -141,3 +190,21 @@
 		{/if}
 	</div>
 {/if}
+
+<!-- 详情全文弹层（r59：详情列截断→点击展开完整内容） -->
+<Dialog.Root
+	open={detailTarget !== null}
+	onOpenChange={(next) => (next ? undefined : (detailTarget = null))}
+>
+	<Dialog.Content class="max-w-120 p-0">
+		<div class="px-5 pt-6 pb-5">
+			<Dialog.Title class="text-base font-semibold tracking-title text-text-primary">
+				{detailTarget ? `${detailTarget.action} · ${formatDateTime(detailTarget.created_at)}` : ''}
+			</Dialog.Title>
+			{#if detailTarget?.operator}
+				<p class="mt-1 text-xs text-text-secondary">操作者：{detailTarget.operator.nickname}（{detailTarget.operator.user_id}）</p>
+			{/if}
+			<pre class="mt-4 max-h-96 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed whitespace-pre-wrap break-all text-text-secondary">{detailTarget ? JSON.stringify(detailTarget.details, null, 2) : ''}</pre>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
