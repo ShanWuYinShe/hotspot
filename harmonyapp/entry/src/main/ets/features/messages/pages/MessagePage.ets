@@ -652,8 +652,9 @@ export struct MessagePage {
           }
 
           Row() {
+            // r77：与底部导航中央「+」(全局发布)拉开差异，用撰写笔表意「发起会话」
             LucideIcon({
-              icon: AppIcon.ADD,
+              icon: AppIcon.EDIT,
               iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
               paletteRole: 'textSecondary'
             })
