@@ -49,8 +49,12 @@
 		<!-- 左上：分类（毛玻璃底与「本周精选」/距离徽章同语言，亮蓝实底让位核心按钮；Gemini 审查 r03） -->
 		<span class="absolute top-2.5 left-2.5 z-[2] inline-flex h-5 items-center justify-center rounded-full bg-surface-overlay-strong px-2.5 text-xxs font-medium leading-none text-content-inverse" style="backdrop-filter:blur(var(--cst-blur-sm));">{group.category}</span>
 
-		<!-- 右上：隐私 -->
-		<span class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full size-5 bg-surface-overlay-strong"  >
+		<!-- 右上：隐私（锁/球图标表意不明，补悬停与读屏文案；Gemini 审查 r03） -->
+		<span
+			class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full size-5 bg-surface-overlay-strong"
+			title={group.privacy === 'private' ? '私密群组' : group.requiresApproval ? '加入需管理员审核' : '公开群组'}
+			aria-label={group.privacy === 'private' ? '私密群组' : group.requiresApproval ? '加入需管理员审核' : '公开群组'}
+		>
 			{#if group.privacy === 'private'}
 				<Lock size={10} color="var(--cst-content-inverse)" />
 			{:else}

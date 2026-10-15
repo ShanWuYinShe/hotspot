@@ -9,6 +9,8 @@ export interface Group {
 	/** 展示用首标签类目；筛选走全量 tags（首标签之外同样可命中） */
 	category: string;
 	tags: string[];
+	/** 加入是否需管理员审核（GroupItem.requires_approval；锁徽章悬停提示用，r03） */
+	requiresApproval: boolean;
 	members: number;
 	online: number;
 	distance: string;
@@ -28,6 +30,7 @@ export function mapGroup(item: GroupItem): Group {
 		banner: g.avatar_url ?? '',
 		category: (item.tags?.[0] ?? '') || '同城',
 		tags: item.tags ?? [],
+		requiresApproval: item.requires_approval,
 		members: g.members_count,
 		online: item.online_members_count ?? 0,
 		distance: formatDistance(item.location?.distance),

@@ -20,6 +20,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { smartBack } from '@/lib/smart-back';
+	import { NEARBY_CATEGORIES } from '../shared/categories';
 	import {
 		getPeopleProgress,
 		setPeopleProgress,
@@ -35,7 +36,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// 「共同好友」排序依赖登录态的 mutual 计数，访客恒为 0 无意义，登录后才展示
 	// （Gemini UI 审查：未登录顶栏「登录」与可用「共同好友」并存矛盾）。
 	const sortOptions = $derived(auth.user ? ['距离', '在线', '共同好友'] : ['距离', '在线']);
-	const FILTER_TAGS = ['全部', '摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术'];
+	// 词库统一:原「运动/艺术」在标签池无数据选中必空(对齐 NEARBY_CATEGORIES;Gemini 审查 r03/r04)
+	const FILTER_TAGS = NEARBY_CATEGORIES;
 
 	let sort = $state('距离');
 	// 登出后 sort 可能残留「共同好友」，此时 TabBar 无匹配项，回落到「距离」

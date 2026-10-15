@@ -5,6 +5,8 @@ export type PinType = "user" | "group" | "moment";
 export interface Pin {
   id: string | number; type: PinType; lat: number; lng: number;
   count?: number;
+  /** 原始距离(米):「附近」列表按距离升序排序用;undefined = 无参考点/聚合桶 */
+  distanceMeters?: number;
   name?: string; avatar?: string; distance?: string; online?: boolean;
   members?: number; tag?: string; title?: string; likes?: number; image?: string;
   /** 聚合桶投影（heatmap 模式）：非真实实体，无 object_id，不可进入详情页。 */

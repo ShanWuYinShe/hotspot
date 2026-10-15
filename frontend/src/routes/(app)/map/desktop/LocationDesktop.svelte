@@ -191,9 +191,14 @@
 	// heatmap 视口下 pins 为空，改用聚合桶投影——否则缩放到城市级时列表永远显示"附近暂无内容"，
 	// 与地图上明明有热力点自相矛盾（用户坐标并未变化，只是服务端切换了返回模式）。
 	const nearbyPins = $derived(
-		mapData.pins.length > 0
-			? mapData.pins.filter((p) => (p.count ?? 1) === 1)
-			: canvasToListPins({ mode: 'heatmap', pins: [], heatBuckets: mapData.heatBuckets, counts: mapData.counts })
+		(
+			mapData.pins.length > 0
+				? mapData.pins.filter((p) => (p.count ?? 1) === 1)
+				: canvasToListPins({ mode: 'heatmap', pins: [], heatBuckets: mapData.heatBuckets, counts: mapData.counts })
+		)
+			// 距离升序(后端已算好 distanceMeters;无距离的聚合桶排最后;Gemini 审查 r10:
+			// 「1.2km 下突现 400m」乱序)
+			.toSorted((a, b) => (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity))
 	);
 
 	createDebouncedSearch({

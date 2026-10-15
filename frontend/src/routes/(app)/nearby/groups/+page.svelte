@@ -17,6 +17,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import GroupCard from './shared/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
+	import { NEARBY_CATEGORIES } from '../shared/categories';
 	import { searchGroups, joinGroup, leaveGroup, cancelGroupApplication, listMyApplications, netError } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -25,7 +26,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// 附近群组（/nearby/groups）：独立路由页。分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙；
 	// 按名字找群走全局搜索（header 右上角搜索入口）。
 
-	const CATEGORIES = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
+	// 词库统一:与附近的人共用一套分类(原「游戏」无数据;Gemini 审查 r03/r04)
+	const CATEGORIES = NEARBY_CATEGORIES;
 
 	let activeCategory = $state('全部');
 	let groups = $state<Group[]>([]);
