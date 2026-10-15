@@ -32,7 +32,8 @@
 	];
 	const severityBadge: Record<AnnounceSeverity, string> = {
 		info: 'bg-surface-subtle text-text-secondary',
-		warning: 'bg-accent-soft text-accent-default',
+		// 警告归位 warning 族而非 accent（r57：语义色各归其位,亮 accent 收给主操作）
+		warning: 'bg-status-warning-bg text-status-warning',
 		error: 'bg-danger-bg text-status-danger'
 	};
 

@@ -133,7 +133,8 @@
 								<td class={`${TD} max-w-56 truncate`} title={r.description ?? r.message_snapshot?.snapshot_content ?? ''}>{r.description ?? r.message_snapshot?.snapshot_content ?? '—'}</td>
 								<td class={TD}>{r.reporter?.nickname ?? '—'}</td>
 								<td class={TD}>
-									<span class="badge {r.status === 'pending' ? 'bg-accent-soft text-accent-default' : r.status === 'resolved' ? 'bg-surface-subtle text-text-secondary' : 'bg-surface-subtle text-text-secondary'}">
+									<!-- 已确认=已妥当处置走 success(online) 族,与已驳回中性灰区分（r55） -->
+									<span class="badge {r.status === 'pending' ? 'bg-accent-soft text-accent-default' : r.status === 'resolved' ? 'bg-status-online-bg text-status-online' : 'bg-surface-subtle text-text-secondary'}">
 										{r.status === 'pending' ? '待处理' : r.status === 'resolved' ? '已确认' : '已驳回'}
 									</span>
 								</td>

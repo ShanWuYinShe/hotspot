@@ -248,7 +248,7 @@
 										{#if r.permissions.includes('*')}
 											<span class="badge bg-accent-soft text-accent-default">全部权限</span>
 										{:else}
-											<span class="text-xs text-text-secondary">{r.permissions.length} 项</span>
+											<span class="badge bg-surface-subtle text-text-secondary">{r.permissions.length} 项</span>
 										{/if}
 									</td>
 									<td class={TD_ACTIONS}>
@@ -303,7 +303,7 @@
 										{#if a.permissions.includes('*')}
 											<span class="badge bg-accent-soft text-accent-default">superadmin</span>
 										{:else}
-											<span class="text-xs text-text-secondary">{a.permissions.length} 项</span>
+											<span class="badge bg-surface-subtle text-text-secondary">{a.permissions.length} 项</span>
 										{/if}
 									</td>
 									<td class={TD}>{a.roles.map((r) => r.name).join('、') || '—'}</td>
