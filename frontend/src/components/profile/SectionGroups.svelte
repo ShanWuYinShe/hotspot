@@ -36,8 +36,11 @@ const needsAuth = $derived(myGroups.needsAuth);
 	<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="px-3.5 py-2.5" />
 	<div class="mt-3 flex items-center justify-between">
 		<p class="text-sm text-text-secondary">共 {groups.length} 个群组</p>
-		<div class="flex items-center gap-1.5 text-sm text-status-online">
-			<span class="rounded-full size-1.5 bg-status-online"></span>
+		<!-- 零在线弱化为次要灰、不亮绿点( Gemini 审查 r14:零数据高亮绿造成视觉误导 ) -->
+		<div class="flex items-center gap-1.5 text-sm {totalOnline > 0 ? 'text-status-online' : 'text-text-secondary'}">
+			{#if totalOnline > 0}
+				<span class="rounded-full size-1.5 bg-status-online"></span>
+			{/if}
 			{totalOnline} 人在线
 		</div>
 	</div>

@@ -65,18 +65,23 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		let cancelled = false;
 		void Promise.all([
 			fetchNearbyMoments({ pagination: { limit: 3 } }).catch(() => netError(null)),
-			searchMoments({ sort_by: 'popular', pagination: { limit: 3 } }).catch(() => netError(null))
+			searchMoments({ sort_by: 'popular', pagination: { limit: 4 } }).catch(() => netError(null))
 		]).then(([nearbyRes, relatedRes]) => {
 			if (cancelled) return;
 			const nearbyItems = nearbyRes.code === 0 ? nearbyRes.data?.items ?? [] : [];
 			const relatedItems = relatedRes.code === 0 ? relatedRes.data?.items ?? [] : [];
 			nearbyNow = toNearbyRailRows(nearbyItems);
-			relatedMoments = relatedItems.map((m) => ({
-				id: m.moment_id,
-				title: m.description ?? '',
-				meta: `${m.user?.nickname ?? ''} · ${(m.reactions ?? []).reduce((sum, r) => sum + r.count, 0)} 赞`,
-				image: m.images?.[0]?.url ?? ''
-			}));
+			// 「更多动态」剔除当前帖( Gemini 审查 r19:重复推荐正在看的帖子 );
+			// 多拉一条补偿过滤损耗,展示仍截 3 条
+			relatedMoments = relatedItems
+				.filter((m) => m.moment_id !== params.momentId)
+				.slice(0, 3)
+				.map((m) => ({
+					id: m.moment_id,
+					title: m.description ?? '',
+					meta: `${m.user?.nickname ?? ''} · ${(m.reactions ?? []).reduce((sum, r) => sum + r.count, 0)} 赞`,
+					image: m.images?.[0]?.url ?? ''
+				}));
 		});
 		return () => {
 			cancelled = true;
