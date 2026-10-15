@@ -807,17 +807,17 @@ export struct MessagePage {
         )
       } else if (!this.hasData) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          // 空会话对齐前端：裸气泡图标 + muted「没有找到会话」（无卡片容器）
-          Column() {
-            Text('最近')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .width('100%')
-              .padding({ top: DesignConstants.SPACING.SM })
-            EmptyState({ icon: AppIcon.MESSAGE, message: '没有找到会话', bare: true })
-              .margin({ top: DesignConstants.SPACING.XXL })
-          }
-          .width('100%')
+          // 空会话态（r48/r77）：不再悬挂「最近」标；「没有找到会话」是搜索无结果
+          // 语义，误用于初始空列表——改「暂无消息」+「去附近看看」CTA 破冰
+          // （对齐前端 bare 空态契约：裸图标 + muted 文案 + 主按钮）
+          EmptyState({
+            icon: AppIcon.MESSAGE,
+            title: '暂无消息',
+            message: '到附近认识新朋友，开始你们的第一个会话吧',
+            actionLabel: '去附近看看',
+            onAction: () => AppRouter.push(PageNames.NEARBY),
+            bare: true
+          })
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true, true); })
