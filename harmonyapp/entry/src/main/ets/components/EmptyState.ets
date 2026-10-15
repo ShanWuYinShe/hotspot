@@ -33,7 +33,9 @@ export struct EmptyState {
 
   build() {
     Column() {
-      Column({ space: DesignConstants.SPACING.LG }) {
+      // 卡内呼吸感：非 bare 空态图标-文案-按钮间距提档到 XL（r45：层级紧凑、
+      // 视觉重心偏低）；bare 列表内空态保持 LG 紧凑
+      Column({ space: this.bare ? DesignConstants.SPACING.LG : DesignConstants.SPACING.XL }) {
         // bare：无圆形容器，图标直接渲染 + muted 文案（对齐前端 EmptyState bare 契约）
         if (this.bare) {
           LucideIcon({
