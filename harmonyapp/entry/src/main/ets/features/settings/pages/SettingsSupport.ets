@@ -131,6 +131,9 @@ export struct SettingsSectionCard {
 /** 分组内行间 hairline 分隔线（对齐前端 ListContainer embedded divide-y）。 */
 @Component
 export struct SettingsRowDivider {
+  /** 行内分隔线内缩（iOS inset grouped 语言）：默认 0 全宽；与行 padding 同值时起点对齐文字 */
+  @Prop startMargin: number = 0;
+  @Prop endMargin: number = 0;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
@@ -138,9 +141,11 @@ export struct SettingsRowDivider {
   }
 
   build() {
+    // Divider 无 startMargin/endMargin（那是 ListRowDivider 的参数），用通用 margin 内缩
     Divider()
       .strokeWidth(DesignConstants.BORDER_WIDTH.HAIRLINE)
       .color(this.getPalette().borderColor)
+      .margin({ left: this.startMargin, right: this.endMargin })
   }
 }
 

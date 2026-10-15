@@ -123,6 +123,8 @@ export enum AppIcon {
 
   // 调试和开发图标
   DEBUG = 'sys.symbol.spanner',
+  /** 复制（双文档叠加；sys.symbol.doc_text_on_doc_text，已核实于 SDK sysResource 符号清单 2026-10-15） */
+  COPY = 'sys.symbol.doc_text_on_doc_text',
   CODE = 'sys.symbol.doc_text',
   BUG = 'sys.symbol.exclamationmark',
 
