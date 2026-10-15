@@ -61,8 +61,9 @@ import { formatRelativeDays } from '@/lib/utils';
 	{embedded}
 	stats={[
 		{ label: '总粉丝', value: followers.length },
-		{ label: '互相关注', value: mutualCount, tone: 'positive' },
-		{ label: '待回关', value: pendingCount, tone: 'warning' }
+		// 零值弱化:无互相关注/待回关时不亮状态色(对齐 4428f3ad 零在线弱化;Gemini 审查 r18)
+		{ label: '互相关注', value: mutualCount, tone: mutualCount > 0 ? 'positive' : undefined },
+		{ label: '待回关', value: pendingCount, tone: pendingCount > 0 ? 'warning' : undefined }
 	]}
 	filters={FILTERS}
 	filterValue={fanFilter}

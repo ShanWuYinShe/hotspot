@@ -2,6 +2,7 @@
 	import { ChevronRight, Coffee, Music, Users, Star } from '@lucide/svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import type { MomentItem } from '@/api/types';
+	import { formatDistance, formatRelativeDays } from '@/lib/utils';
 
 	// 附近动态行（首页「附近活动」区共用）：色块 icon + title/sub + chevron。
 	// 图标/配色按 index 轮换（与 Figma HomePage 活动列表契约一致）。
@@ -26,6 +27,17 @@
 	const Icon = $derived(ICONS[index % ICONS.length]);
 	const color = $derived(COLORS[index % COLORS.length]);
 	const bg = $derived(BGS[index % BGS.length]);
+
+	// meta 行补实时距离与相对时间(数据已下发未映射;Gemini 审查 r01:活动项缺决策信息)
+	const distanceLabel = $derived(formatDistance(moment.location?.distance));
+	const timeLabel = $derived.by(() => {
+		const t = Date.parse(moment.created_at ?? '');
+		if (Number.isNaN(t)) return '';
+		return formatRelativeDays(Math.max(0, Math.floor((Date.now() - t) / 86_400_000)));
+	});
+	const metaLine = $derived(
+		[moment.location?.location_name ?? '', distanceLabel, timeLabel].filter(Boolean).join(' · ')
+	);
 </script>
 
 <ListItem
@@ -41,7 +53,7 @@
 	</div>
 	<div class="flex-1 min-w-0">
 		<p class="text-sm text-text-primary"  >{moment.description}</p>
-		<p class="text-xs mt-px text-text-secondary"  >{moment.location?.location_name ?? ''}</p>
+		<p class="text-xs mt-px text-text-secondary"  >{metaLine}</p>
 	</div>
 	<ChevronRight class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
 </ListItem>

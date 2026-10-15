@@ -19,7 +19,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/moment-feed.svelte';
 	import { fetchFollowingMoments, fetchNearbyMoments, netError } from '@/api';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
-	import { formatDateTime } from '@/lib/utils';
+	import { formatDateTime, formatDistance } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 	import { smartBack } from '@/lib/smart-back';
 	import {
@@ -63,7 +63,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			id: m.moment_id ?? `local-${i + 1}`,
 			user: m.user?.nickname ?? '',
 			avatar: m.user?.avatar_url ?? '',
-			location: m.location?.location_name ?? '',
+			// 位置拼实时距离(distance 已下发未映射;Gemini 审查 r04:卡片补时空信息)
+			location: [m.location?.location_name, formatDistance(m.location?.distance)].filter(Boolean).join(' · '),
 			tag: m.tags?.[0] ?? '',
 			tags: m.tags ?? [],
 			content: m.description ?? '',

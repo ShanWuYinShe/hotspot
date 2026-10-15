@@ -199,10 +199,11 @@
 			{#snippet below()}
 				<!-- 搜索框随 sticky header 吸顶（对齐 nearby/moments 样板 below 结构） -->
 				<div class="mt-3 mb-2.5">
+					<!-- 占位词与全站术语对齐:瞬间(非动态)并补群组维度(Gemini 审查 r11) -->
 					<SearchInput
 						value={query}
 						onChange={(v) => { searchTag = null; query = v; }}
-						placeholder="搜索用户、动态、地点或话题"
+						placeholder="搜索用户、瞬间、群组、地点或话题"
 						autofocus
 						onEnter={(v) => v.trim() && remember(v.trim())}
 						class="px-4 py-2.5 rounded-md"

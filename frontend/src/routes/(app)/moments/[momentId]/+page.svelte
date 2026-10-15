@@ -497,13 +497,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let commentInputEl = $state<HTMLInputElement | null>(null);
 </script>
 <svelte:head>
-	<title>动态详情 · HotSpot</title>
+	<title>瞬间详情 · HotSpot</title>
 </svelte:head>
 
 
 <SplitPageLayout contentClassName="animate-fade-in pt-4 pb-28">
 	{#snippet header()}
-		<PageHeader title="动态详情" titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} onBack={() => smartBack()}>
+		<!-- 命名对齐全站术语「瞬间」(左栏/搜索/设置均用瞬间;Gemini 审查 r19) -->
+		<PageHeader title="瞬间详情" titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} onBack={() => smartBack()}>
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">

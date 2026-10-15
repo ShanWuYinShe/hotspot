@@ -12,6 +12,7 @@
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { ROUTES } from '@/lib/routes';
+	import { auth } from '@/stores/auth.svelte';
 	import {
 		DEFAULT_RELATIONSHIP_TAB,
 		isRelationshipTab,
@@ -73,8 +74,9 @@
 		onBack={() => smartBack(ROUTES.me)}
 	>
 		{#snippet trailing()}
-			<!-- 黑名单计数在 SectionBlocked 内自持（避免页头重复请求），此处仅统计关系 tab -->
-			{#if activeTab !== 'blocked'}
+			<!-- 黑名单计数在 SectionBlocked 内自持（避免页头重复请求），此处仅统计关系 tab；
+			     零计数不显示（未登录「0 人」是无效信息，Gemini 审查 r12） -->
+			{#if activeTab !== 'blocked' && activeCount > 0}
 				<span class="text-text-secondary text-xs" aria-live="polite">{activeCount} 人</span>
 			{/if}
 		{/snippet}
@@ -92,7 +94,16 @@
 		items={TABS.map((t) => ({
 			id: t.id,
 			label: t.label,
-			count: t.id === 'friends' ? friends.length : t.id === 'following' ? followingCount : t.id === 'fans' ? followers.length : undefined
+			// 未登录不显示 0 计数（无效信息；登录后的真实 0 由分区空态表达，Gemini 审查 r12）
+			count: auth.isAuthenticated
+				? t.id === 'friends'
+					? friends.length
+					: t.id === 'following'
+						? followingCount
+						: t.id === 'fans'
+							? followers.length
+							: undefined
+				: undefined
 		}))}
 		value={activeTab}
 		onChange={(id) => switchTab(id as RelationshipTab)}

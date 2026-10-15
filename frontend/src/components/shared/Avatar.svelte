@@ -17,6 +17,7 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { UserRound } from '@lucide/svelte';
 
 	// Avatar — 用户/群组头像统一展示组件。
 	// 包装元素持有 border-radius + outline + overflow:hidden，徽标作为子元素
@@ -58,7 +59,8 @@
 
 	const px = $derived(typeof size === 'number' ? size : AVATAR_SIZES[size]);
 	const showImage = $derived(Boolean(src) && !hasError);
-	const initial = $derived((name || '?').slice(0, 1));
+	// 无名字时不再显示「?」占位——由人形图标兜底(语义更明,访客评论头像等场景;Gemini 审查 r19)
+	const initial = $derived((name ?? '').trim().slice(0, 1));
 	const borderRadius = $derived(shape === 'circle' ? '9999px' : `${Math.round(px * 0.28)}px`);
 </script>
 
@@ -68,12 +70,16 @@
 >
 	{#if showImage}
 		<img src={src} loading="lazy" decoding="async" alt={name ?? ''} class="h-full w-full object-cover" onerror={() => (hasError = true)} />
-	{:else}
+	{:else if initial}
 		<span
 			class="flex h-full w-full items-center justify-center text-text-secondary bg-accent-bg"
 			style="font-size:{Math.round(px * 0.42)}px;"
 		>
 			{initial}
+		</span>
+	{:else}
+		<span class="flex h-full w-full items-center justify-center text-text-secondary bg-accent-bg">
+			<UserRound class="size-1/2" strokeWidth={1.5} aria-hidden="true" />
 		</span>
 	{/if}
 	{#if badge}

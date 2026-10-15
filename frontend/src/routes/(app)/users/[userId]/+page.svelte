@@ -6,7 +6,7 @@
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
-import { formatCount } from '@/lib/utils';
+import { formatCount, formatDistance } from '@/lib/utils';
 import FollowButton from '@/components/ui/FollowButton.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
@@ -87,7 +87,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					user = {
 						name: u.user.nickname,
 						bio: u.bio ?? '',
-						location: u.location?.location_name ?? '',
+						// 位置旁拼实时距离(后端 RelativeLocation.distance 已下发未映射;Gemini 审查 r20)
+						location: [u.location?.location_name, formatDistance(u.location?.distance)].filter(Boolean).join(' · '),
 						avatar: u.user.avatar_url ?? '',
 						followers: s?.followers_count ?? 0,
 						following: s?.following_count ?? 0,
