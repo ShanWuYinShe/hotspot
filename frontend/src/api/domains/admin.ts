@@ -90,7 +90,10 @@ export async function adminDismissGroup(params: { group_id: string; reason: stri
 // 举报审核
 export async function adminListReports(params?: {
 	status?: ReportStatus | null; target_type?: ReportTargetType | null; pagination?: PaginationParams;
-}) { return request<PaginatedData<AdminReportItem>>(Endpoints.Admin.Reports.Fetch, params ?? {}); }
+}) {
+	// total：带 status 过滤时后端返回该状态总数（不受分页影响），供「待处理」角标；否则 null
+	return request<PaginatedData<AdminReportItem> & { total: number | null }>(Endpoints.Admin.Reports.Fetch, params ?? {});
+}
 export async function adminJudgeReport(params: { report_id: string; action: ReportAction; note: string | null; ban_duration_days: number | null }) { return request<void>(Endpoints.Admin.Reports.Judge, params); }
 
 // 标签管理

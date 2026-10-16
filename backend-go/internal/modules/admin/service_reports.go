@@ -28,6 +28,11 @@ func (s *Service) SearchReports(ctx context.Context, req AdminReportListRequest)
 		return PaginatedAdminReports{}, nil, err
 	}
 	resp := PaginatedAdminReports{Items: page.Items}
+	// 「待处理」角标等计数场景：status 过滤时透出该状态总数（AdminReportsPage.total）
+	if req.Status != "" {
+		total := int64(page.Total)
+		resp.Total = &total
+	}
 	if page.Next != nil {
 		c := encodeAdminReportCursor(*page.Next)
 		resp.NextCursor = &c

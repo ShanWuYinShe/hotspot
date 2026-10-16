@@ -937,12 +937,24 @@ http.post(`${API}/moments/fetch_created`, () => {
   http.post(`${ADMIN_API}/groups/open_the_door`, () => requireMockAuth() ?? json(apiError(10300, "资源不存在"))),
   http.post(`${ADMIN_API}/groups/dismiss`, () => requireMockAuth() ?? json(apiOk(null))),
 
-  http.post(`${ADMIN_API}/reports/fetch`, () => requireMockAuth() ?? json(paginated([
-    { report_id: "rep_1", target_type: "moment", target_id: "moment_2", reason: "spam", description: "疑似营销刷屏", status: "pending", created_at: "2026-09-08T10:00:00Z", handled_at: null, message_snapshot: null, resolution: null, reporter: mockUsers[2], handled_by: null, handle_note: null },
-    { report_id: "rep_2", target_type: "user", target_id: "user_lin", reason: "harassment", description: "私信骚扰", status: "resolved", created_at: "2026-09-01T09:00:00Z", handled_at: "2026-09-01T12:00:00Z", message_snapshot: null, resolution: { action: "resolve", resolved_at: "2026-09-01T12:00:00Z", note: "确认垃圾营销" }, reporter: mockUsers[3], handled_by: mockUsers[0], handle_note: "确认垃圾营销" },
-    { report_id: "rep_3", target_type: "comment", target_id: "comment_7", reason: "hate_speech", description: null, status: "pending", created_at: "2026-09-07T20:00:00Z", handled_at: null, message_snapshot: null, resolution: null, reporter: mockUsers[4], handled_by: null, handle_note: null },
-    { report_id: "rep_4", target_type: "group", target_id: "group_4", reason: "misinformation", description: "群内传播不实信息", status: "dismissed", created_at: "2026-08-25T09:00:00Z", handled_at: "2026-08-26T10:00:00Z", message_snapshot: null, resolution: { action: "dismiss", resolved_at: "2026-08-26T10:00:00Z", note: "证据不足" }, reporter: mockUsers[5], handled_by: mockUsers[1], handle_note: "证据不足" },
-  ]))),
+  http.post(`${ADMIN_API}/reports/fetch`, async ({ request }) => {
+    const authed = requireMockAuth();
+    if (authed) return authed;
+    const items = [
+      { report_id: "rep_1", target_type: "moment", target_id: "moment_2", reason: "spam", description: "疑似营销刷屏", status: "pending", created_at: "2026-09-08T10:00:00Z", handled_at: null, message_snapshot: null, resolution: null, reporter: mockUsers[2], handled_by: null, handle_note: null },
+      { report_id: "rep_2", target_type: "user", target_id: "user_lin", reason: "harassment", description: "私信骚扰", status: "resolved", created_at: "2026-09-01T09:00:00Z", handled_at: "2026-09-01T12:00:00Z", message_snapshot: null, resolution: { action: "resolve", resolved_at: "2026-09-01T12:00:00Z", note: "确认垃圾营销" }, reporter: mockUsers[3], handled_by: mockUsers[0], handle_note: "确认垃圾营销" },
+      { report_id: "rep_3", target_type: "comment", target_id: "comment_7", reason: "hate_speech", description: null, status: "pending", created_at: "2026-09-07T20:00:00Z", handled_at: null, message_snapshot: null, resolution: null, reporter: mockUsers[4], handled_by: null, handle_note: null },
+      { report_id: "rep_4", target_type: "group", target_id: "group_4", reason: "misinformation", description: "群内传播不实信息", status: "dismissed", created_at: "2026-08-25T09:00:00Z", handled_at: "2026-08-26T10:00:00Z", message_snapshot: null, resolution: { action: "dismiss", resolved_at: "2026-08-26T10:00:00Z", note: "证据不足" }, reporter: mockUsers[5], handled_by: mockUsers[1], handle_note: "证据不足" },
+    ]
+    const body = (await request.json().catch(() => ({}))) as { status?: string | null };
+    // 契约镜像（AdminReportsPage.total）：带 status 过滤时返回该状态总数，否则 null。
+    // 注意 paginated() 返回的是 apiOk 完整 envelope，total 必须加进 data 内层。
+    const page = paginated(items);
+    return json({
+      ...page,
+      data: { ...page.data, total: body.status ? items.filter((r) => r.status === body.status).length : null }
+    });
+  }),
   http.post(`${ADMIN_API}/reports/judge`, () => requireMockAuth() ?? json(apiOk(null))),
 
   http.post(`${ADMIN_API}/tags/search`, () => requireMockAuth() ?? json(paginated([

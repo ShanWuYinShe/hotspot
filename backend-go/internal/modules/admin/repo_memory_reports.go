@@ -68,7 +68,8 @@ func (r *InMemoryRepository) SearchReports(_ context.Context, req AdminReportLis
 	}
 	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
 	paged, hasMore := limitPageItems(filtered, limit)
-	page := adminReportPage{Items: append(make([]AdminReportItem, 0, len(paged)), paged...)}
+	// Total = 过滤后、分页前的命中总数（与 postgres 实现同口径）
+	page := adminReportPage{Items: append(make([]AdminReportItem, 0, len(paged)), paged...), Total: len(filtered)}
 	if hasMore {
 		last := paged[len(paged)-1]
 		page.Next = &adminReportCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), ReportID: last.ReportID}

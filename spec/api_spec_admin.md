@@ -763,12 +763,18 @@ interface FetchAdminReportsRequest {
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<AdminReportItem>>`
+**Response**: `ApiResponse<AdminReportsPage>`
 ```typescript
 interface AdminReportItem extends ReportItem {
   reporter: UserInfo;
   handled_by: UserInfo | null;
   handle_note: string | null;
+}
+
+interface AdminReportsPage extends PaginatedData<AdminReportItem> {
+  // 带 status 过滤时恒返回：该状态举报总数（不受分页窗口影响），供管理端
+  // 「待处理」角标等计数场景；status 为 null 时恒为 null（向后兼容新增字段）。
+  total: number | null;
 }
 ```
 

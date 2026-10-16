@@ -203,6 +203,9 @@ type adminReportCursor struct {
 type adminReportPage struct {
 	Items []AdminReportItem
 	Next  *adminReportCursor
+	// Total 过滤后（分页前）的命中总数：供「待处理」角标等计数场景
+	// （spec api_spec_admin.md AdminReportsPage.total，status 过滤时由 Service 透出）。
+	Total int
 }
 
 type UserBanState struct {

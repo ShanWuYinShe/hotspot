@@ -3,6 +3,7 @@
 	import { Users, UsersRound, Flag, Tags, Megaphone, ShieldCheck, ScrollText, Settings2, MapPinned } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { admin, hasAdminPermission } from '@/stores/admin.svelte';
+	import { adminListReports } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
 	// 平台管理概览：当前管理员身份（角色 + 权限键）+ 模块入口卡片网格。
@@ -23,6 +24,18 @@
 	];
 
 	const isSuper = $derived(admin.permissions.includes('*'));
+
+	// 举报审核「待处理」角标（UI 复审 C1）：reports/fetch(status=pending, limit=1) 的
+	// total（不受分页窗口影响）；失败或无权限时不渲染（诚实降级，不留死徽标）。
+	let pendingReports = $state<number | null>(null);
+	$effect(() => {
+		if (!hasAdminPermission('admin.reports.read')) return;
+		void adminListReports({ status: 'pending', target_type: null, pagination: { limit: 1 } })
+			.then((res) => {
+				if (res.code === 0 && res.data) pendingReports = res.data.total;
+			})
+			.catch(() => {});
+	});
 </script>
 
 <svelte:head>
@@ -74,7 +87,12 @@
 					<m.icon class="size-4.5 text-accent-default" strokeWidth={1.75} />
 				</span>
 				<span>
-					<span class="block text-sm font-medium text-text-primary">{m.label}</span>
+					<span class="flex items-center gap-1.5">
+						<span class="block text-sm font-medium text-text-primary">{m.label}</span>
+						{#if m.href === `${ROUTES.admin}/reports` && pendingReports}
+							<span class="inline-flex h-5 items-center justify-center leading-none rounded-full bg-status-warning-bg text-status-warning px-2 text-xxs font-medium">待处理 {pendingReports}</span>
+						{/if}
+					</span>
 					<span class="mt-0.5 block text-xs text-text-secondary">{allowed ? m.desc : '无访问权限'}</span>
 				</span>
 			</button>

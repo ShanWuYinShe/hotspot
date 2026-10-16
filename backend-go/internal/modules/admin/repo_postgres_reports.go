@@ -57,7 +57,8 @@ func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportL
 		filtered = append(filtered, item)
 	}
 	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
-	page := adminReportPage{Items: make([]AdminReportItem, 0, limit)}
+	// Total = 过滤后、分页前的命中总数（与 items 同口径，含 target_type 过滤）
+	page := adminReportPage{Items: make([]AdminReportItem, 0, limit), Total: len(filtered)}
 	for idx, item := range filtered {
 		if idx >= limit {
 			page.Next = &adminReportCursor{CreatedAt: timeFromRFC3339(item.CreatedAt), ReportID: item.ReportID}
