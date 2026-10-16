@@ -39,7 +39,7 @@
 	<title>管理概览 · HotSpot</title>
 </svelte:head>
 
-<div class="flex flex-col gap-5 max-w-5xl">
+<div class="mx-auto flex w-full max-w-5xl flex-col gap-4">
 	<!-- 身份卡：当前平台管理员 -->
 	<section class="rounded-lg border border-border-default bg-surface-primary p-5 shadow-raised-sm" aria-label="管理员身份">
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -67,7 +67,7 @@
 	</section>
 
 	<!-- 模块入口卡片 -->
-	<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-label="管理模块">
+	<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-label="管理模块">
 		{#each MODULES as m (m.href)}
 			{@const allowed = hasAdminPermission(m.perm)}
 			<button

@@ -8,6 +8,7 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import OnlineStrip from './shared/OnlineStrip.svelte';
 	import ChatListBody from './shared/ChatListBody.svelte';
@@ -321,6 +322,10 @@
 					<EmptyState title="选择一个会话" description="从左侧选择一个会话开始聊天" class="h-full justify-center py-0!">
 						{#snippet icon()}
 							<MessageSquareDashed class="size-9 opacity-muted text-text-secondary" strokeWidth={1.5} />
+						{/snippet}
+						{#snippet action()}
+							<!-- 空状态动线闭环（第二轮审查 t7）：不选会话也能直接发起新聊天 -->
+							<Button type="button" size="md" onclick={() => { newChatTab = 'chat'; showNewChat = true; }}>发起新聊天</Button>
 						{/snippet}
 					</EmptyState>
 				</div>

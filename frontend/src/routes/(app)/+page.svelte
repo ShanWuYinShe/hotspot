@@ -135,9 +135,10 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	</ListContainer>
 {/snippet}
 
-{#snippet heroColumn(momentItems: MomentItem[], withMoreAction: boolean)}
+{#snippet heroColumn(momentItems: MomentItem[], withMoreAction: boolean, showGroups = true)}
 	<!-- Hero 统计 + 附近活动 + 群组轮播：移动/桌面双布局共用，
-	     活动列表条数与「更多」入口经参数区分 -->
+	     活动列表条数与「更多」入口经参数区分；桌面把群组轮播挪到右栏底部
+	     平衡双栏重心（第二轮审查 r90），故 showGroups 由桌面传入 false -->
 	<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={heroLocationName} />
 	<!-- 大纲页密度：无内容时整段隐藏（标题+空框），专区经导航/更多入口可达 -->
 	{#if momentItems.length > 0}
@@ -146,7 +147,9 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 			{@render momentRows(momentItems, (id) => void goto(ROUTES.moment(id)))}
 		</div>
 	{/if}
-	<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
+	{#if showGroups}
+		<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
+	{/if}
 {/snippet}
 
 {#snippet homeContent()}
@@ -216,7 +219,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 		<div class="grid min-h-full grid-cols-[21.25rem_minmax(0,1fr)] gap-6">
 			<!-- Left: hero + activity + groups (340px)，与移动端共用 heroColumn（全量动态、无「更多」入口） -->
 			<div class="flex flex-col gap-6 border-r border-border-default pr-6">
-				{@render heroColumn(moments, false)}
+				{@render heroColumn(moments, false, false)}
 			</div>
 
 			<!-- Right: full nearby-users list（标题统一 SectionHead 语言,r01:与「附近活动」字号一致;
@@ -239,6 +242,10 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 					emptyHint={nearbyFilterHint}
 					columns={2}
 				/>
+				<!-- 右栏底部群组轮播：平衡双栏重心（第二轮审查 r90），移动/平板仍走左栏 -->
+				<div class="mt-6">
+					<GroupCarousel groups={nearbyGroups} onSeeAll={() => void goto(ROUTES.nearbyGroups)} />
+				</div>
 			</div>
 		</div>
 	{:else}

@@ -199,12 +199,12 @@
 </svelte:head>
 
 
-<StandardPageLayout contentClassName="animate-fade-in mx-auto w-full max-w-3xl pt-4 pb-6">
+<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6" contentMaxWidth={768}>
 	{#snippet header()}
 		<PageHeader title="搜索" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 			{#snippet below()}
 				<!-- 搜索框随 sticky header 吸顶（对齐 nearby/moments 样板 below 结构） -->
-				<div class="mt-3 mb-2.5">
+				<div class="mx-auto w-full max-w-3xl mt-3 mb-2.5">
 					<!-- 占位词与全站术语对齐:瞬间(非动态)并补群组维度(Gemini 审查 r11) -->
 					<SearchInput
 						value={query}
