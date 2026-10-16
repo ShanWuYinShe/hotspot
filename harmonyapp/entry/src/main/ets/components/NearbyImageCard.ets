@@ -175,22 +175,21 @@ export struct NearbyImageCard {
           ] as [ResourceColor, number][]
         })
 
-      Text(this.getPlaceholderInitial())
-        .fontSize(this.getPlaceholderFontSize())
-        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-        .fontColor(AppThemeVisuals.withAlpha(this.getPalette().accentBackground, 0.9))
+      // 占位对齐前端 NearbyImageCard.svelte:accent-soft 圆(size-16)内 text-3xl 半粗首字母,
+      // 固定尺寸不随卡片放大(原自适应大字在图片位喧宾夺主,UI 审查 D7)
+      Column() {
+        Text(this.getPlaceholderInitial())
+          .fontSize(DesignConstants.FONT.SIZE.XXXL)
+          .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+          .fontColor(this.getPalette().accentText)
+      }
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getPalette().accentMuted)
     }
     .width('100%')
     .height('100%')
-  }
-
-  /** 占位首字随卡片尺寸自适应（固定字号在大卡上存在感不足、小卡上溢出） */
-  private getPlaceholderFontSize(): number {
-    const base = Math.min(this.cardWidth, this.cardHeight > 0 ? this.cardHeight : this.cardWidth);
-    if (base <= 0) {
-      return DesignConstants.FONT.SIZE.XXL;
-    }
-    return Math.max(DesignConstants.FONT.SIZE.XL, Math.min(base * 0.3, 72));
   }
 
   @Builder

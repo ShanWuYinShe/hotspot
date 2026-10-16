@@ -72,16 +72,18 @@ export struct SystemAvatar {
             this.imageLoadFailed = true;
           })
       } else {
+        // 无图占位对齐前端 Avatar.svelte:accentMuted 底 + textSecondary 单首字母
+        // (0.42×尺寸)。不再用高饱和色块白字——大尺寸时是廉价感主要来源(UI 审查 D7)
         Flex({ justifyContent: FlexAlign.Center, alignItems: ItemAlign.Center }) {
           Text(this.getInitials(this.name))
-            .fontSize(this.avatarSize * 0.4)
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(DesignConstants.COLOR.WHITE)
+            .fontSize(this.avatarSize * 0.42)
+            .fontWeight(DesignConstants.FONT.WEIGHT.REGULAR)
+            .fontColor(this.getPalette().textSecondary)
             .textAlign(TextAlign.Center)
         }
         .width(this.avatarSize)
         .height(this.avatarSize)
-        .backgroundColor(this.generateAvatarColor(this.name))
+        .backgroundColor(this.getPalette().accentMuted)
         .borderRadius(this.avatarSize / 2)
         .clip(true)
         .border(this.getBorderOptions())
@@ -128,29 +130,9 @@ export struct SystemAvatar {
   }
 
   private getInitials(name: string): string {
+    // 对齐前端 Avatar.svelte:仅取首字符(原双字符+白字已随占位克制化移除)
     if (!name) return '?';
-    return name.substring(0, 2).toUpperCase();
-  }
-
-  private generateAvatarColor(name: string): ResourceColor {
-    // 底色限定饱和色族（accent/在线/地图标记色）：文字恒为白（见下方 fontColor），
-    // 原候选含 surfaceSubtle 等浅表面色，白字落在浅底上几乎不可读
-    const p = this.getPalette();
-    if (!name) return p.accentBackground;
-
-    const colors: ResourceColor[] = [
-      p.accentBackground,
-      p.online,
-      p.mapGroup,
-      p.mapMoment
-    ];
-
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-
-    const index = Math.abs(hash % colors.length);
-    return colors[index];
+    return name.substring(0, 1).toUpperCase();
   }
 }
+

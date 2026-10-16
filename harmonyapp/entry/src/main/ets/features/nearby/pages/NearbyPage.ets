@@ -45,6 +45,15 @@ export struct NearbyPage {
 
   private static readonly SECTION_TABS: string[] = ['附近的人', '附近群组', '附近动态'];
 
+  /** 附近的人双列卡墙行分块（对齐前端 nearby/people 2 列网格；行分块避开 Grid 嵌 Scroll 高度测量） */
+  private getChunkedNearbyUsers(): UserItem[][] {
+    const rows: UserItem[][] = [];
+    for (let i = 0; i < this.nearbyUsers.length; i += 2) {
+      rows.push(this.nearbyUsers.slice(i, i + 2));
+    }
+    return rows;
+  }
+
   async aboutToAppear() {
     await this.loadData();
   }
@@ -183,26 +192,25 @@ export struct NearbyPage {
               .width('100%')
               .padding({ top: DesignConstants.SPACING.XL })
             } else if (this.activeSection === 0) {
-              // ═══ 段位一：附近的人（横向滑轨）═══
-              Column() {
+              // ═══ 段位一：附近的人（图片优先双列卡墙，对齐前端 nearby/people 2 列网格）═══
+              Column({ space: DesignConstants.SPACING.LG }) {
                 this.buildSectionHeader('身边的新朋友', '查看全部', () => {
                   AppRouter.push(PageNames.NEARBY_USERS);
                 })
 
-                List({ space: DesignConstants.SPACING.MD }) {
-                  ForEach(this.nearbyUsers, (user: UserItem) => {
-                    ListItem() {
+                ForEach(this.getChunkedNearbyUsers(), (rowUsers: UserItem[], rowIndex: number) => {
+                  Row({ space: DesignConstants.SPACING.LG }) {
+                    ForEach(rowUsers, (user: UserItem) => {
                       Column() {
-                        // compact 竖排白卡（本端门户横滑卡，宽度见 NEARBY_USER_CARD_WIDTH 注释）
-                        UserCard({ user: user, mode: 'compact' })
+                        // portrait 3:4 图片卡（与查看全部页 NearbyUsersListPage 同卡同契约）
+                        UserCard({ user: user })
                       }
-                      .width(DesignConstants.COMPONENT.NEARBY_USER_CARD_WIDTH)
-                    }
-                  }, (user: UserItem) => user.user?.user_id ?? '')
-                }
-                .listDirection(Axis.Horizontal)
-                .scrollBar(BarState.Off)
-                .edgeEffect(EdgeEffect.Spring)
+                      .layoutWeight(1)
+                    }, (user: UserItem) => user.user?.user_id ?? '')
+                  }
+                  .width('100%')
+                  .alignItems(VerticalAlign.Top)
+                }, (rowUsers: UserItem[], rowIndex: number) => `nearby-user-row-${rowIndex}`)
               }
               .width('100%')
             } else if (this.activeSection === 1) {
