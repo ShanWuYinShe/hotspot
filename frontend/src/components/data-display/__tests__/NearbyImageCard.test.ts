@@ -35,6 +35,28 @@ describe('NearbyImageCard', () => {
 		}
 	});
 
+	it('图片盒显式 w/h 拉满(替换元素仅 inset 全拉锚不拉伸)', () => {
+		// 回归防线:abs 定位的 img 在 width/height:auto 时按固有尺寸渲染(CSS2 §10.3.7),
+		// inset-0 拉不开、object-cover 无从生效——mock 小图在卡片内露底/错裁(线上实测)。
+		// jsdom 不做布局,按本文件既有惯例以类串断言拦截:纵横两变体的 img 都必须
+		// 带显式高度/宽度档(h-full + w-full / w-2/5)。
+		const { container, unmount } = render(NearbyImageCard, {
+			props: { imageSrc: 'https://example.com/a.jpg' }
+		});
+		const cls = container.querySelector('img')?.className ?? '';
+		expect(cls).toContain('h-full');
+		expect(cls).toContain('w-full');
+		unmount();
+
+		const horizontal = render(NearbyImageCard, {
+			props: { imageSrc: 'https://example.com/a.jpg', horizontal: true }
+		});
+		const hCls = horizontal.container.querySelector('img')?.className ?? '';
+		expect(hCls).toContain('h-full');
+		expect(hCls).toContain('w-2/5');
+		horizontal.unmount();
+	});
+
 	it('onClick 提供时由覆盖按钮承载点击（根不再持 button 语义）', async () => {
 		const onClick = vi.fn();
 		const { container } = render(NearbyImageCard, {

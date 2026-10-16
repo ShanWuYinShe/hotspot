@@ -48,8 +48,14 @@
 		horizontal?: boolean;
 	} = $props();
 
-	// 图片/遮罩/占位层的覆盖盒：纵排=整卡,横排=左列
-	const imageBox = $derived(horizontal ? 'absolute inset-y-0 left-0 w-2/5' : 'absolute inset-0');
+	// 图片/遮罩/占位层的覆盖盒：纵排=整卡,横排=左列。
+	// w/h 必须显式拉满:abs 定位的替换元素(img)在 width/height:auto 时按固有尺寸渲染
+	// (CSS2 §10.3.7),inset 全拉锚不开——小图按原尺寸露底、大图按固有比例错裁
+	// (线上实测 200px mock 图在卡片内四周露黑边),object-cover 只有盒子尺寸
+	// 确定后才有裁剪意义;装饰 div 是非替换元素,同值无害
+	const imageBox = $derived(
+		horizontal ? 'absolute left-0 top-0 h-full w-2/5' : 'absolute left-0 top-0 h-full w-full'
+	);
 
 	// hover 与内容卡（SectionGroups/SectionMoments）统一走 card-hover 抬升语言
 	// （投影+上浮，forest 纸面微染+边框），图片微缩放由 .card-hover:hover
