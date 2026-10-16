@@ -2,6 +2,8 @@
 	import { MessageCircle } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import MessageBubble from '@/components/messages/MessageBubble.svelte';
 	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { inRecallWindow, type ChatController, type ChatMessage } from '@/lib/chat.svelte';
@@ -40,6 +42,18 @@
 		</EmptyState>
 	{:else}
 		<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
+			{#if chat.loadingMoreFailed}
+				<!-- 分页失败可见化（layout 第 6 条）：轻量重试入口，不遮蔽已加载消息 -->
+				<div class="flex items-center justify-center gap-2 py-3 text-xs text-text-secondary">
+					<span>更早的消息加载失败</span>
+					<button type="button" class="link-btn" onclick={() => void chat.loadMore()}>重试</button>
+				</div>
+			{:else if chat.loadingMore}
+				<InlineLoading label="加载更早消息…" class="py-3" />
+			{:else if !chat.hasMore}
+				<!-- 历史耗尽：ListEnd 收尾（layout 第 6 条），区分「已到顶」与「卡住」 -->
+				<ListEnd />
+			{/if}
 			{#each chat.dateGroups as group (group.label)}
 				<ChatDatePill label={group.label} />
 				{#each group.messages as msg (msg.id)}

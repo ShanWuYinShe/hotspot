@@ -152,8 +152,10 @@ export function useChat(opts: UseChatOptions) {
 	let sendError = $state('');
 	let scrollEl = $state<HTMLDivElement | null>(null);
 	// --- 历史分页(契约:游标分页,next_cursor 缺失即无更多) ---
-	let nextCursor: string | null = null;
-	let loadingMore = false;
+	// $state：加载中/失败/到底三态要暴露给视图做指示（layout 第 6 条），须可响应。
+	let nextCursor = $state<string | null>(null);
+	let loadingMore = $state(false);
+	let loadingMoreFailed = $state(false);
 
 	// --- typing 发送状态（契约：客户端不超过 3 秒发一次；服务端权威节流）---
 	let lastTypingSentAt = 0;
@@ -179,6 +181,7 @@ export function useChat(opts: UseChatOptions) {
 			loadError = true;
 		}
 		loadingMore = false;
+		loadingMoreFailed = false;
 		loading = false;
 		// 标记已读；幂等语义，失败静默不打扰会话浏览。
 		opts.markRead();
@@ -304,6 +307,7 @@ export function useChat(opts: UseChatOptions) {
 	async function loadMore() {
 		if (loadingMore || !nextCursor) return;
 		loadingMore = true;
+		loadingMoreFailed = false;
 		const target = opts.targetId();
 		const el = scrollEl;
 		const prevHeight = el?.scrollHeight ?? 0;
@@ -312,7 +316,11 @@ export function useChat(opts: UseChatOptions) {
 		// 会话已切换则丢弃结果(竞态保护)
 		if (opts.targetId() !== target) return;
 		loadingMore = false;
-		if (!res) return;
+		// 失败可见化（layout 第 6 条：禁止静默转「无更多」），由消息区渲染重试入口。
+		if (!res) {
+			loadingMoreFailed = true;
+			return;
+		}
 		messages = [...res.messages.slice().reverse(), ...messages];
 		nextCursor = res.next_cursor ?? null;
 		// 新内容插在顶部:把可视位置下移新内容高度
@@ -439,6 +447,16 @@ export function useChat(opts: UseChatOptions) {
 		get loadError() {
 			return loadError;
 		},
+		get loadingMore() {
+			return loadingMore;
+		},
+		get loadingMoreFailed() {
+			return loadingMoreFailed;
+		},
+		get hasMore() {
+			return nextCursor !== null;
+		},
+		loadMore,
 		reload: loadInitial,
 		get sending() {
 			return sending;

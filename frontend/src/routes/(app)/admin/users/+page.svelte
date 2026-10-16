@@ -187,8 +187,8 @@
 				</label>
 				{#if banTarget?.status !== 'banned'}
 					<label class="flex flex-col gap-1.5">
-						<span class="text-xs text-text-secondary">封禁天数（留空或 0 = 永久）</span>
-						<input type="number" min={0} bind:value={banDays} class="input-surface rounded-md px-3 py-2 text-sm text-text-primary" />
+						<span class="text-xs text-text-secondary">封禁天数（留空 = 永久封禁）</span>
+						<input type="number" min={1} bind:value={banDays} class="input-surface rounded-md px-3 py-2 text-sm text-text-primary" />
 					</label>
 				{/if}
 			</div>

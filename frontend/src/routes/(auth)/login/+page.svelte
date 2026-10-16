@@ -31,7 +31,7 @@
 		<div class="flex items-center justify-center rounded-full size-11 shadow-raised-sm bg-accent-default text-text-on-accent">
 			<Leaf class="size-5"  strokeWidth={1.75} />
 		</div>
-		<p class="mt-6 eyebrow font-medium text-accent-default">HotSpot</p>
+		<p class="mt-6 text-xxs uppercase tracking-eyebrow font-medium text-accent-default">HotSpot</p>
 		<h1 class="mt-2 text-2xl font-medium tracking-title text-text-primary">{HEADINGS[mode].title}</h1>
 		<p class="mt-2 text-sm leading-6 text-text-secondary">{HEADINGS[mode].subtitle}</p>
 
