@@ -254,3 +254,21 @@ Lucide strokeWidth 实测分布（86×1.5 / 82×1.75 / 48×2 / 13×2.5 / 3×2.2 
 **跨端说明**：harmonyapp 用系统符号（sys.symbol.*，线宽由 HarmonyOS 设计定，无
 strokeWidth 参数）——两端无法字面统一线宽，以「同尺寸视觉重量相当」为准；前端
 新增图标按上表选档，禁止再引入第五档。
+
+## 替换元素绝对定位必须显式 w/h 拉满（2026-10-17 实测）
+
+**坑**：`<img>` 等替换元素 `position:absolute` + `inset-0`（含 `inset-y-0`/`inset-x-0`）
+**拉不开**——CSS2 §10.3.7：abs 定位替换元素 `width/height:auto` 时按固有尺寸渲染，
+left/right 锚定不参与拉伸；`object-cover` 因此无从裁剪。表现为小图按原尺寸在卡片内
+露底、大图按固有比例错裁；且大图恰好溢出时被 `overflow-hidden` 裁得「看起来正常」，
+同页面只有小图露馅，极难肉眼归因。装饰 div 是非替换元素，inset 全拉锚有效——同一
+原语里 div 正常、img 露底更迷惑（NearbyImageCard 线上实例：mock 200px 图在
+226px 卡片内四周露黑边，computed style 的 position/inset/objectFit 全部"正确"）。
+
+**规则**：图片优先卡片原语里，abs 定位的 img 一律显式 `h-full w-full`（横排局部列
+如 `h-full w-2/5`），不靠 inset 拉伸；inset 全拉锚仅用于非替换装饰层。
+
+**验证**：jsdom 不做布局，svelte-check 与既有单测无感——类串断言拦回归
+（`NearbyImageCard.test.ts`「图片盒显式 w/h 拉满」用例），最终以浏览器实测
+`img.getBoundingClientRect()` 对比卡片 rect 为准（修前 200x298-in-226x301，修后
+99%w/99%h；附近的人/附近群组两页、明暗两主题截图复核通过）。
