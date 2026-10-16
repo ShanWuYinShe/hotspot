@@ -250,7 +250,7 @@
 				src={contact?.avatar}
 				name={peerName}
 				size={compact ? 24 : 36}
-				style="border:var(--cst-border-width-regular) solid var(--cst-border-default);box-shadow:var(--shadow-raised-sm);"
+				class="border-regular border-border-default shadow-raised-sm"
 			>
 				{#snippet badge()}
 					{#if onlineNow}

@@ -10,17 +10,17 @@ describe('MessageBubble', () => {
 		expect(screen.getByText('10:24')).toBeTruthy();
 	});
 
-	it('sent=true 使用发送方形态（右对齐 + accent）', () => {
+	it('sent=true 使用发送方形态（右对齐 + accent，昵称列布局）', () => {
 		const { container } = render(MessageBubble, { props: { text: '周末见', sent: true, time: '10:24' } });
 		const wrapper = container.firstElementChild as HTMLElement;
-		expect(wrapper.className).toContain('justify-end');
+		expect(wrapper.className).toContain('items-end');
 		expect(container.querySelector('.bg-accent-default')).not.toBeNull();
 	});
 
-	it('sent=false 使用接收方形态（左对齐 + 表面）', () => {
+	it('sent=false 使用接收方形态（左对齐 + 表面，昵称列布局）', () => {
 		const { container } = render(MessageBubble, { props: { text: '收到', sent: false, time: '10:25' } });
 		const wrapper = container.firstElementChild as HTMLElement;
-		expect(wrapper.className).toContain('justify-start');
+		expect(wrapper.className).toContain('items-start');
 		expect(container.querySelector('.bg-surface-primary')).not.toBeNull();
 	});
 

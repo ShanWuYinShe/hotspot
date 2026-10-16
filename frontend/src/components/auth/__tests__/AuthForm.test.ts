@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import AuthForm from '../AuthForm.svelte';
 import { login, register, guest } from '@/stores/auth.svelte';
-import { requestPasswordReset, resetPassword, sendRegisterCode } from '@/api';
+import { requestPasswordReset, resetPassword, sendRegisterCode, getClientConfig } from '@/api';
 
 vi.mock('@/stores/auth.svelte', () => ({
 	login: vi.fn(),
@@ -14,7 +14,8 @@ vi.mock('@/stores/auth.svelte', () => ({
 vi.mock('@/api', () => ({
 	requestPasswordReset: vi.fn(),
 	resetPassword: vi.fn(),
-	sendRegisterCode: vi.fn()
+	sendRegisterCode: vi.fn(),
+	getClientConfig: vi.fn()
 }));
 
 describe('AuthForm', () => {
@@ -29,6 +30,10 @@ describe('AuthForm', () => {
 		vi.mocked(register).mockResolvedValue({ code: 0, data: {} });
 		vi.mocked(guest).mockResolvedValue({ code: 0, data: {} });
 		vi.mocked(sendRegisterCode).mockResolvedValue({ code: 0, data: undefined });
+		vi.mocked(getClientConfig).mockResolvedValue({
+			code: 0,
+			data: { contact: { terms_of_service_url: '', privacy_policy_url: '' } }
+		} as never);
 	});
 
 	it('空提交显示逐字段错误', async () => {

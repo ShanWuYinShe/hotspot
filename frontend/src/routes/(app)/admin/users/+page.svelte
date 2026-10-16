@@ -92,7 +92,7 @@
 	<EmptyState title="无访问权限" description="需要 admin.users.read 权限" />
 {:else}
 	<div class="flex flex-col gap-4">
-		<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+		<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
 			<div class="w-full max-w-80">
 				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索用户…" class="px-4 py-2.5 rounded-md" />
 			</div>

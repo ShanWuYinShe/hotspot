@@ -70,7 +70,7 @@
 	};
 </script>
 
-<div class="group animate-fade-in flex {sent ? 'justify-end' : 'justify-start'}">
+<div class="group animate-fade-in flex flex-col {sent ? 'items-end' : 'items-start'}">
 	{#if !sent && senderName}
 		<p class="mb-0.5 text-xxs text-text-secondary px-1">{senderName}</p>
 	{/if}

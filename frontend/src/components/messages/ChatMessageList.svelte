@@ -25,11 +25,10 @@
 	} = $props();
 </script>
 
-<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
+<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="mx-auto w-full max-w-3xl flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
 	{#if chat.loading}
-		<div class="flex h-full items-center justify-center" role="status" aria-label="加载中">
-			<div class="spinner size-7"></div>
-		</div>
+		<!-- 加载态统一 InlineLoading（全站三态标配，不再自绘 spinner） -->
+		<InlineLoading label="加载消息…" class="h-full justify-center" />
 	{:else if chat.loadError}
 		<!-- 错误态统一 LoadError（与全站一致），不再各页手搓文案 + 按钮 -->
 		<LoadError message="消息加载失败，请检查网络后重试" onRetry={() => void chat.reload()} class="h-full" />

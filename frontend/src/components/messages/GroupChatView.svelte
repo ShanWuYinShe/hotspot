@@ -213,7 +213,7 @@
 			<Avatar
 				src={groupAvatar}
 				name={groupName}
-				size={compact ? 34 : 38}
+				size={compact ? 'sm' : 'md'}
 				shape="rounded"
 				class="border-regular border-border-default shadow-raised-sm"
 			/>

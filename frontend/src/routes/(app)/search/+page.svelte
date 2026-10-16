@@ -199,7 +199,7 @@
 </svelte:head>
 
 
-<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
+<StandardPageLayout contentClassName="animate-fade-in mx-auto w-full max-w-3xl pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader title="搜索" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 			{#snippet below()}

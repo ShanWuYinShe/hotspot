@@ -210,7 +210,7 @@
 	{:else}
 		<div class="flex flex-col divide-y divide-border-default max-w-5xl">
 			<!-- Section 1: 账号与身份 -->
-			<SettingsSection title="账号信息" description="当前登录的账号信息。" class="first:pt-4">
+			<SettingsSection title="账号信息" description="当前登录的账号信息" class="first:pt-4">
 				{#if auth.isAuthenticated}
 					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
 						<div class="flex items-center gap-3.5 min-w-0">
@@ -246,7 +246,7 @@
 			</SettingsSection>
 
 			<!-- Section 2: 外观与显示 -->
-			<SettingsSection title="外观与显示" description="自定义界面的视觉色彩与深浅模式，全局即时生效。">
+			<SettingsSection title="外观与显示" description="自定义界面的视觉色彩与深浅模式，全局即时生效">
 				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-sm overflow-hidden">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
 						<div class="flex items-center gap-3">
@@ -292,7 +292,7 @@
 
 			<!-- Section 3: 地图与位置 -->
 			<!-- 底图坐标系（GCJ-02/WGS-84）属开发契约，面向用户只描述体验差异，不暴露术语 -->
-			<SettingsSection title="地图与位置" description="选择地图页使用的底图：高德地图（国内坐标，免密钥，位置显示更贴合）或 OpenStreetMap（国际坐标，经本站中转加载）。">
+			<SettingsSection title="地图与位置" description="选择地图页使用的底图：高德地图（国内坐标，免密钥，位置显示更贴合）或 OpenStreetMap（国际坐标，经本站中转加载）">
 				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-sm overflow-hidden">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
 						<div class="flex items-center gap-3">
@@ -315,7 +315,7 @@
 			</SettingsSection>
 
 			<!-- Section 4: 通知偏好 -->
-			<SettingsSection title="通知偏好" description="管理新消息、互动提及与关注动态的系统提醒方式。">
+			<SettingsSection title="通知偏好" description="管理新消息、互动提及与关注动态的系统提醒方式">
 				<ListContainer bordered inset>
 					<SettingRow
 						title="推送通知"

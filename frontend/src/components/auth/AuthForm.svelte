@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from '@lucide/svelte';
 	import { login, register, guest } from '@/stores/auth.svelte';
-	import { requestPasswordReset, resetPassword, sendRegisterCode } from '@/api';
+	import { requestPasswordReset, resetPassword, sendRegisterCode, getClientConfig } from '@/api';
 	import Button from '@/components/ui/button.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import {
@@ -56,6 +56,19 @@
 	let newPassword = $state('');
 	let resetLoginId = $state('');
 	let showPassword = $state(false);
+	// 条款链接：消费后台可配置的 terms/privacy url（第二轮审查 r85；未配置时降级纯文本）
+	let termsUrl = $state('');
+	let privacyUrl = $state('');
+	$effect(() => {
+		void getClientConfig()
+			.then((res) => {
+				if (res.code === 0 && res.data) {
+					termsUrl = res.data.contact.terms_of_service_url || '';
+					privacyUrl = res.data.contact.privacy_policy_url || '';
+				}
+			})
+			.catch(() => {});
+	});
 	let submitting = $state(false);
 	let error = $state<string | null>(null);
 	let fieldErrors = $state<FieldErrors>({});
@@ -225,7 +238,7 @@
 >
 	{#if mode === 'register' || mode === 'guest'}
 		<label class="flex flex-col gap-1.5" for="auth-field-nickname">
-			<span class="text-xs tracking-field text-text-secondary" >昵称</span>
+			<span class="text-xs font-medium tracking-field text-text-secondary">昵称</span>
 			<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 				<input
 					id="auth-field-nickname"
@@ -278,7 +291,7 @@
 				<!-- 验证码：登录验证码模式（发送接口暂未开放）或注册手机号/邮箱型（所有权验证）；
 				     注册型与密码共存（注册始终需要密码），登录验证码模式替代密码 -->
 				<label class="flex flex-col gap-1.5" for="auth-field-code">
-					<span class="text-xs tracking-field text-text-secondary" >验证码</span>
+					<span class="text-xs font-medium tracking-field text-text-secondary">验证码</span>
 					<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 						<input
 							id="auth-field-code"
@@ -300,9 +313,9 @@
 				</label>
 				<Button
 					type="button"
-					variant="secondary"
+					variant="surface-accent"
 					size="lg"
-					class="w-full bg-accent-bg"
+					class="w-full"
 					disabled={needsRegisterCode && (codeCountdown > 0 || sendingCode)}
 					onclick={() => {
 						if (needsRegisterCode) void sendRegisterCodeAndCountdown();
@@ -356,7 +369,7 @@
 
 	{#if mode === 'forgot' || mode === 'reset'}
 		<label class="flex flex-col gap-1.5" for="auth-field-resetLoginId">
-			<span class="text-xs tracking-field text-text-secondary" >账号</span>
+			<span class="text-xs font-medium tracking-field text-text-secondary">账号</span>
 			<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 				<input
 					id="auth-field-resetLoginId"
@@ -378,7 +391,7 @@
 		</label>
 		{#if mode === 'reset'}
 			<label class="flex flex-col gap-1.5" for="auth-field-code">
-				<span class="text-xs tracking-field text-text-secondary" >验证码</span>
+				<span class="text-xs font-medium tracking-field text-text-secondary">验证码</span>
 				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 					<input
 						id="auth-field-code"
@@ -399,7 +412,7 @@
 				{/if}
 			</label>
 			<label class="flex flex-col gap-1.5" for="auth-field-newPassword">
-				<span class="text-xs tracking-field text-text-secondary" >新密码</span>
+				<span class="text-xs font-medium tracking-field text-text-secondary">新密码</span>
 				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
 					<input
 						id="auth-field-newPassword"
@@ -455,7 +468,12 @@
 	{#if mode === 'login' && !compact}
 		<!-- 微信登录暂未开放：按本组件「不展示不可用选项」原则不下发点了必报错的死按钮，
 		     原「其他方式」分隔线随微信按钮一并移除，仅保留条款行 -->
-		<p class="mt-5 text-center text-xs leading-5 text-text-secondary">登录即表示你同意服务条款与隐私政策。</p>
+		<p class="mt-5 text-center text-xs leading-5 text-text-secondary">
+			登录即表示你同意
+			{#if termsUrl}<a href={termsUrl} target="_blank" rel="noopener" class="link-btn text-accent-default">服务条款</a>{:else}服务条款{/if}
+			与
+			{#if privacyUrl}<a href={privacyUrl} target="_blank" rel="noopener" class="link-btn text-accent-default">隐私政策</a>{:else}隐私政策{/if}。
+		</p>
 	{/if}
 
 	<!-- Mode switcher -->
@@ -473,7 +491,7 @@
 				忘记密码
 			</button>
 		{/if}
-		{#if mode === 'forgot' || mode === 'reset'}
+		{#if mode === 'forgot' || mode === 'reset' || mode === 'guest'}
 			<button type="button" onclick={() => switchMode('login')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
 				返回登录
 			</button>

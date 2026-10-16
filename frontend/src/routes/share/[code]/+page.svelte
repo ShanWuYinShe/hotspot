@@ -4,7 +4,7 @@
 	// 独立于 (app) 分组：落地页不要求登录、不挂导航 chrome（目标页自身再按需引导登录）。
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Link2Off, RotateCw } from '@lucide/svelte';
+	import { Leaf, Link2Off, RotateCw } from '@lucide/svelte';
 	import { openShareDoor } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import type { ShareDetail } from '@/api/types';
@@ -67,6 +67,9 @@
 </svelte:head>
 
 <div class="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-page px-6 text-center">
+	<div class="flex size-11 items-center justify-center rounded-full bg-accent-default text-text-on-accent shadow-raised-sm">
+		<Leaf class="size-5" strokeWidth={1.75} aria-hidden="true" />
+	</div>
 	<p class="eyebrow">HotSpot</p>
 	{#if phase === 'loading'}
 		<p class="text-md text-text-secondary" role="status">正在解析分享…</p>
@@ -75,7 +78,7 @@
 		<Link2Off class="size-10 text-text-secondary opacity-subtle" strokeWidth={1.5} aria-hidden="true" />
 		<p class="text-2xl font-semibold tracking-title text-text-primary">{errorMessage}</p>
 		<!-- 副说明补充容错语境(r83:强化引导与容错) -->
-		<p class="text-xs text-text-secondary">链接可能已过期或被删除，也可稍后重试</p>
+		<p class="text-xs text-text-secondary">{errorMessage.includes('网络') ? '网络不稳定，可稍后重试' : '链接可能已被删除，或地址有误'}</p>
 		<div class="flex items-center gap-2">
 			{#if errorMessage.includes('网络')}
 				<button
@@ -90,7 +93,7 @@
 			<button
 				type="button"
 				onclick={() => goto(ROUTES.home, { replaceState: true })}
-				class="rounded-full bg-accent-soft px-5 py-2 text-sm font-medium text-accent-default outline-none transition-colors hover:bg-interactive-active focus-visible:ring-2 focus-visible:ring-accent-default"
+				class="rounded-full bg-accent-default px-5 py-2 text-sm font-medium text-text-on-accent outline-none shadow-raised-sm transition-colors hover:shadow-raised-md focus-visible:ring-2 focus-visible:ring-accent-default"
 			>
 				前往 HotSpot
 			</button>
@@ -111,7 +114,7 @@
 			<button
 				type="button"
 				onclick={() => goto(ROUTES.map, { replaceState: true })}
-				class="rounded-full bg-accent-soft px-5 py-2 text-sm font-medium text-accent-default outline-none transition-colors hover:bg-interactive-active focus-visible:ring-2 focus-visible:ring-accent-default"
+				class="rounded-full bg-accent-default px-5 py-2 text-sm font-medium text-text-on-accent outline-none shadow-raised-sm transition-colors hover:shadow-raised-md focus-visible:ring-2 focus-visible:ring-accent-default"
 			>
 				打开地图
 			</button>

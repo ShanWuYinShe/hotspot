@@ -10,7 +10,7 @@
 	<p class="px-4 pb-1.5 text-status-danger text-xs">{chat.sendError}</p>
 {/if}
 <div
-	class="shrink-0 flex items-center gap-2.5 bg-surface-chat border-t border-border-default px-4 pt-3"
+	class="mx-auto w-full max-w-3xl shrink-0 flex items-center gap-2.5 bg-surface-chat border-t border-border-default px-4 pt-3"
 	style="padding-bottom:max(0.75rem, env(safe-area-inset-bottom));"
 >
 

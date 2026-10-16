@@ -1,15 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Users, UsersRound, Flag, Tags, Megaphone, ShieldCheck, ScrollText, Settings2, MapPinned } from '@lucide/svelte';
-	import { platform } from '@/stores/platform.svelte';
+	import { Users, UsersRound, Flag, Tags, Megaphone, ShieldCheck, KeyRound, ScrollText, Settings2, MapPinned } from '@lucide/svelte';
 	import { admin, hasAdminPermission } from '@/stores/admin.svelte';
 	import { adminListReports } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 
 	// 平台管理概览：当前管理员身份（角色 + 权限键）+ 模块入口卡片网格。
 	// 无对应 read 权限的模块降级为禁用态（与后端权限键一一对应）。
-
-	const device = $derived(platform.platform);
 
 	const MODULES = [
 		{ href: `${ROUTES.admin}/stats`, label: '地理统计', desc: '全站分布与热门地点', icon: MapPinned, perm: 'admin.stats.read' },
@@ -18,7 +15,7 @@
 		{ href: `${ROUTES.admin}/reports`, label: '举报审核', desc: '裁决用户举报', icon: Flag, perm: 'admin.reports.read' },
 		{ href: `${ROUTES.admin}/tags`, label: '标签管理', desc: '屏蔽与恢复标签', icon: Tags, perm: 'admin.tags.read' },
 		{ href: `${ROUTES.admin}/announcements`, label: '系统公告', desc: '发布与管理公告', icon: Megaphone, perm: 'admin.announcements.read' },
-		{ href: `${ROUTES.admin}/rbac`, label: '角色权限', desc: 'RBAC 角色与管理员', icon: ShieldCheck, perm: 'admin.rbac.manage' },
+		{ href: `${ROUTES.admin}/rbac`, label: '角色权限', desc: 'RBAC 角色与管理员', icon: KeyRound, perm: 'admin.rbac.manage' },
 		{ href: `${ROUTES.admin}/audit`, label: '审计日志', desc: '平台操作留痕查询', icon: ScrollText, perm: 'admin.audit.read' },
 		{ href: `${ROUTES.admin}/config`, label: '系统配置', desc: '应用配置与功能开关', icon: Settings2, perm: 'admin.app_config.read' }
 	];
@@ -59,9 +56,6 @@
 					</p>
 				</div>
 			</div>
-			{#if device === 'desktop'}
-				<span class="badge bg-accent-soft text-accent-default">/admin/api/v1</span>
-			{/if}
 		</div>
 		{#if !isSuper && admin.permissions.length > 0}
 			<div class="mt-3 flex flex-wrap gap-1.5">
@@ -73,7 +67,7 @@
 	</section>
 
 	<!-- 模块入口卡片 -->
-	<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" aria-label="管理模块">
+	<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-label="管理模块">
 		{#each MODULES as m (m.href)}
 			{@const allowed = hasAdminPermission(m.perm)}
 			<button
