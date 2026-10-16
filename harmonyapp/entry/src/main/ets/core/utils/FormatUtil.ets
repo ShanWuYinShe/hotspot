@@ -104,6 +104,26 @@ export function formatDateTime(dateTime: string | undefined): string {
 }
 
 /**
+ * 详情页相对时间（动态详情作者行/评论行，Gemini UI 审查：完整时间戳冗长）：
+ * 今天→HH:mm / 昨天→"昨天 HH:mm" / 同年→M月D日 HH:mm / 跨年→YYYY年M月D日。
+ * 对齐前端 lib/utils formatMomentTime（跨端同步：文案与粒度逐字一致）。
+ */
+export function formatDetailTime(dateTime: string | undefined): string {
+  if (!dateTime) return '';
+  const date = new Date(dateTime);
+  if (Number.isNaN(date.getTime())) return '';
+  const now = new Date();
+  const startOfDay = (x: Date): number => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const dayDiff = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+  const hhMm = formatHhMm(date);
+  if (dayDiff === 0) return hhMm;
+  const monthDay = `${date.getMonth() + 1}月${date.getDate()}日`;
+  if (dayDiff === 1) return `昨天 ${hhMm}`;
+  if (date.getFullYear() === now.getFullYear()) return `${monthDay} ${hhMm}`;
+  return `${date.getFullYear()}年${monthDay}`;
+}
+
+/**
  * 卡片时间（会话/动态卡片）：今天→HH:mm / 昨天→"昨天" / 同年→MM-DD /
  * 跨年→YYYY-MM-DD。统一 MomentFeedCard 与 MessagePage 逐字重复的手写实现，
  * 跨年分支不再走 toLocaleDateString（美式日期回归）。

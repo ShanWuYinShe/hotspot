@@ -27,7 +27,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			user: c.user?.nickname ?? '',
 			avatar: c.user?.avatar_url ?? '',
 			text: c.content ?? '',
-			time: formatDateTime(c.created_at),
+			time: formatMomentTime(c.created_at),
 			likes: (c.reactions || []).reduce((sum, rx) => sum + (rx.count ?? 0), 0),
 			liked: (c.reactions || []).some((rx) => rx.reacted_by_me),
 			isDeleted: c.is_deleted,
@@ -44,7 +44,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { getMomentDetail, listComments, listCommentReplies, setReaction, createComment, deleteComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments , netError } from '@/api';
-	import { formatDateTime } from '@/lib/utils';
+	import { formatMomentTime } from '@/lib/utils';
 	import { smartBack } from '@/lib/smart-back';
 	import { copyShareLink } from '@/lib/share';
 	import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
@@ -169,7 +169,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						location: detailData.location?.location_name ?? '',
 						images: (detailData.images ?? []).map((im) => im.url).filter(Boolean),
 						content: detailData.description ?? '',
-						time: formatDateTime(detailData.created_at),
+						time: formatMomentTime(detailData.created_at),
 						likes: (detailData.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 						tag: detailData.tags?.[0] ?? '',
 						comments: []

@@ -45,3 +45,23 @@ export function formatRelativeDays(daysAgo: number): string {
 	if (daysAgo <= 7) return `${daysAgo}天前`;
 	return `${Math.floor(daysAgo / 7)}周前`;
 }
+
+/**
+ * 详情页相对时间（动态详情作者行/评论行，Gemini UI 审查：完整时间戳冗长）：
+ * 今天→HH:mm / 昨天→"昨天 HH:mm" / 同年→M月D日 HH:mm / 跨年→YYYY年M月D日。
+ * 对齐鸿蒙 FormatUtil.formatDetailTime（跨端同步：文案与粒度逐字一致）。
+ */
+export function formatMomentTime(iso?: string | null): string {
+	if (!iso) return '';
+	const d = new Date(iso);
+	if (isNaN(d.getTime())) return '';
+	const now = new Date();
+	const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+	const dayDiff = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+	const hhMm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+	if (dayDiff === 0) return hhMm;
+	const monthDay = `${d.getMonth() + 1}月${d.getDate()}日`;
+	if (dayDiff === 1) return `昨天 ${hhMm}`;
+	if (d.getFullYear() === now.getFullYear()) return `${monthDay} ${hhMm}`;
+	return `${d.getFullYear()}年${monthDay}`;
+}

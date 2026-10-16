@@ -4,7 +4,7 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
-import { formatDateTime } from '../../../core/utils/FormatUtil';
+import { formatDetailTime } from '../../../core/utils/FormatUtil';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
@@ -135,8 +135,9 @@ export struct MomentDetailPage {
   }
 
   private formatTime(timeStr: string): string {
-    // 统一收敛 FormatUtil（YYYY-MM-DD HH:mm，对齐前端格式）。
-    return formatDateTime(timeStr);
+    // 详情语境相对粒度（今天/昨天/M月D日…，Gemini UI 审查：完整时间戳冗长），
+    // 对齐前端 lib/utils formatMomentTime，跨端文案逐字一致。
+    return formatDetailTime(timeStr);
   }
 
 
@@ -504,7 +505,8 @@ export struct MomentDetailPage {
           })
         } else {
           Scroll(this.contentScroller) {
-            Column() {
+            // 正文区与评论区两分区：SECTION_GAP(24) 纵向节奏（页面纵向节奏契约）
+            Column({ space: DesignConstants.PAGE_SHELL.SECTION_GAP }) {
               this.buildMomentContent(this.moment as MomentItem)
               this.buildCommentsSection()
             }
@@ -727,6 +729,7 @@ export struct MomentDetailPage {
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
+          .width('100%')
           .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         }
       }
@@ -735,7 +738,8 @@ export struct MomentDetailPage {
       // 计数（更醒目且可直接操作），保留一处即可。
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
+    // 横向留白唯一来源是 PageShellContainer gutter：去掉此处 padding(LG) 双重留白
+    // （此前正文比页头标题多缩进 16vp，正文左边缘与全页不对齐——双重留白契约）
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -831,8 +835,9 @@ export struct MomentDetailPage {
   @Builder
   private buildCommentsSection() {
     Column({ space: DesignConstants.SPACING.MD }) {
+      // 分区标题提级 SM→MD（Gemini UI 审查：与评论正文字号同档层级不清）
       Text(`评论 ${formatCount(this.getCommentCount(this.moment as MomentItem))}`)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .width('100%')
@@ -868,7 +873,7 @@ export struct MomentDetailPage {
       }
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
+    // 同上：横向留白唯一来源是容器 gutter，去掉双重 padding
     .alignItems(HorizontalAlign.Start)
   }
 

@@ -241,8 +241,8 @@
 	</div>
 	{/if}
 
-	<!-- Comments -->
-	<p class="eyebrow mt-4 mb-3" id="moment-comments">
+	<!-- Comments：分区标题提级（Gemini UI 审查：eyebrow 小标与评论正文字号同档层级不清） -->
+	<p class="text-sm font-medium text-text-primary mt-5 mb-3" id="moment-comments">
 		评论 · {commentCount}
 	</p>
 	{#if comments.length === 0}
@@ -276,7 +276,7 @@
 						<!-- 软删除占位（spec: api_spec_comment.md comments/delete）：内容清空，回复保留 -->
 						<p class="text-text-secondary text-sm mt-0.5 leading-relaxed italic">该评论已删除</p>
 					{:else}
-					<p class="text-text-secondary text-sm mt-0.5 leading-relaxed">{c.text}</p>
+					<p class="text-text-primary text-sm mt-0.5 leading-relaxed">{c.text}</p>
 					<div class="flex items-center gap-3 mt-1.5">
 						<button
 							type="button"
@@ -307,7 +307,7 @@
 							<!-- 非本人评论可举报（spec: api_spec_report.md，目标属于当前用户时服务端 10400） -->
 							<button
 								type="button"
-								class="hover-action hit-slop focus-ring text-text-secondary text-xs"
+								class="hover-action hit-slop desktop-reveal focus-ring text-text-secondary text-xs"
 								aria-label={`举报 ${c.user} 的评论`}
 								onclick={() => onReportComment(c.id)}
 							>举报</button>
@@ -341,7 +341,7 @@
 										{#if r.isDeleted}
 											<p class="text-text-secondary text-sm mt-0.5 leading-relaxed italic">该评论已删除</p>
 										{:else}
-											<p class="text-text-secondary text-sm mt-0.5 leading-relaxed">{r.text}</p>
+											<p class="text-text-primary text-sm mt-0.5 leading-relaxed">{r.text}</p>
 										{/if}
 										{#if !r.isDeleted}
 											<div class="flex items-center gap-3 mt-1">
