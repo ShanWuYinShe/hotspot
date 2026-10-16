@@ -214,6 +214,7 @@ export struct PhotoPreviewPage {
           .fontColor(DesignConstants.COLOR.MEDIA_CHROME_TEXT)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .accessibilityText(`第 ${this.currentIndex + 1} 张，共 ${this.images.length} 张`)
           .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)
           .padding({
             left: DesignConstants.SPACING.LG,

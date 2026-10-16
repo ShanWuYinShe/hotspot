@@ -198,7 +198,8 @@ export struct MomentPage {
 
   build() {
     NavDestination() {
-      PageShellContainer({ variant: 'narrow', currentBreakpoint: this.currentBreakpoint }) {
+      // moments 专用 feed 档（PageShellContainer 档位语义，替代通用 narrow）
+      PageShellContainer({ variant: 'feed-narrow', currentBreakpoint: this.currentBreakpoint }) {
         Column() {
           // 标题栏 —— 统一走 SystemPageHeader（透明背景 + 发布 action）
           SystemPageHeader({
@@ -253,6 +254,7 @@ export struct MomentPage {
                     .borderRadius(DesignConstants.SHAPE.CARD)
                   }, (i: number) => `skeleton-${i}`)
                 }
+                .accessibilityText('正在加载我的瞬间')
                 .width('100%')
                 .padding({ top: DesignConstants.SPACING.MD })
               }
@@ -264,6 +266,7 @@ export struct MomentPage {
               icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试',
               onAction: () => { this.isLoading = true; this.loadNearbyMoments(true); }
             })
+              .layoutWeight(1)
               .transition(
                 TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
                   .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
@@ -272,6 +275,7 @@ export struct MomentPage {
             Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
               EmptyState({ icon: AppIcon.CAMERA, message: '还没有发布过瞬间\n快来分享第一个吧！' })
             }
+            .layoutWeight(1)
             .onRefreshing(() => { this.loadNearbyMoments(true); })
             .transition(
               TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })

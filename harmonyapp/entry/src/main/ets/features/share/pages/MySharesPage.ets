@@ -317,9 +317,8 @@ export struct MySharesPage {
     .divider({ strokeWidth: 0 })
     .width('100%')
     .cachedCount(5)
+    // 左右留白由 PageShellContainer gutter 承担（SKILL:44-48），List 不再自加横向外边距
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.SM,
       bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.SM, DesignConstants.SPACING.SM)
     })
@@ -376,6 +375,7 @@ export struct MySharesPage {
           .objectFit(ImageFit.Cover)
           .borderRadius(DesignConstants.RADIUS.LG)
           .backgroundColor(this.getSurfaceSubtle())
+          .accessibilityText('分享内容封面图')
       }
 
       Column({ space: DesignConstants.SPACING.XS }) {

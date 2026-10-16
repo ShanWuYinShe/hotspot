@@ -602,8 +602,8 @@ export struct NotificationCenter {
   private buildGroupHeader(label: string) {
     Row({ space: DesignConstants.SPACING.SM }) {
       Row()
-        .width(DesignConstants.SPACING.SM2)
-        .height(DesignConstants.SPACING.SM2)
+        .width(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
+        .height(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(this.getPalette().accentBackground)
       Text(label)

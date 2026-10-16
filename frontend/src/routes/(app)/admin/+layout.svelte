@@ -4,7 +4,8 @@
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { admin, ensureAdminLoaded } from '@/stores/admin.svelte';
+	import { admin, ensureAdminLoaded, hasAdminPermission } from '@/stores/admin.svelte';
+	import { adminListReports } from '@/api';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -25,6 +26,17 @@
 
 	$effect(() => {
 		if (auth.status === 'authenticated') ensureAdminLoaded();
+	});
+
+	// 举报 Tab 计数（第二轮审查 r89：切换子页不丢待办感知）：与概览卡同源 reports/fetch total
+	let pendingReports = $state<number | null>(null);
+	$effect(() => {
+		if (auth.status !== 'authenticated' || !admin.isAdmin || !hasAdminPermission('admin.reports.read')) return;
+		void adminListReports({ status: 'pending', target_type: null, pagination: { limit: 1 } })
+			.then((res) => {
+				if (res.code === 0 && res.data) pendingReports = res.data.total;
+			})
+			.catch(() => {});
 	});
 
 	const MODULES = [
@@ -62,7 +74,7 @@
 				{#if admin.isAdmin}
 					<div class="mt-3 overflow-x-auto pr-1">
 						<TabBar
-							items={MODULES.map((m) => ({ id: m.id, label: m.label }))}
+							items={MODULES.map((m) => ({ id: m.id, label: m.label, count: m.id === 'reports' && pendingReports ? pendingReports : undefined }))}
 							value={activeId}
 							onChange={(id) => {
 								const target = MODULES.find((m) => m.id === id);

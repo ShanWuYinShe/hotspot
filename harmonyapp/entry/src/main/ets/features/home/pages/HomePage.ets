@@ -539,8 +539,8 @@ export struct HomePage {
         if (this.getOnlineCount() > 0) {
           Row({ space: DesignConstants.SPACING.XS }) {
             Row()
-              .width(DesignConstants.SPACING.SM2)
-              .height(DesignConstants.SPACING.SM2)
+              .width(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
+              .height(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getPalette().online)
 

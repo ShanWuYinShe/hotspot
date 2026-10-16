@@ -532,6 +532,7 @@ export struct GroupPage {
             Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
               EmptyState({ icon: AppIcon.GROUP, message: '还没有加入任何群组\n去附近发现感兴趣的小组吧！' })
             }
+            .layoutWeight(1)
             .onRefreshing(() => { this.loadMyGroups(true); })
             .transition(
               TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -541,6 +542,7 @@ export struct GroupPage {
             Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
               this.buildGroupList()
             }
+            .layoutWeight(1)
             .layoutWeight(1)
             .onRefreshing(() => { this.loadMyGroups(true); })
             .transition(
@@ -619,10 +621,7 @@ export struct GroupPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .cachedCount(5)
-        .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-        .shadow(this.getCurrentThemePalette().surfaceShadow)
+        // Sheet 内集合按 ListGroup bordered=false 契约：无外框投影，行间分隔线承担分组
         .onReachEnd(() => { this.loadMoreMyInvites(); })
       }
     }
@@ -748,13 +747,8 @@ export struct GroupPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .cachedCount(5)
-        // 分组外框（ListGroup bordered 契约）：唯一一层白卡 + 发丝描边 + surfaceShadow；
-        // 行本身不再带卡片样式，行间靠 ListItemGroup.divider。
-        // 卡片不再自加横向外边距——横向留白只由 PageShellContainer 提供（否则卡片比页头窄 32vp）
-        .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-        .shadow(this.getCurrentThemePalette().surfaceShadow)
+        // Sheet 内集合按 ListGroup bordered=false 契约：无外框投影，行间分隔线承担分组；
+        // 横向留白只由 PageShellContainer 提供
         .onReachEnd(() => { this.loadMoreMyApplications(); })
       }
     }
@@ -882,8 +876,8 @@ export struct GroupPage {
             // 在线人数（对齐前端 SectionGroups「N 人在线」语义，用 online 状态色）
             Row({ space: DesignConstants.SPACING.XS }) {
               Row()
-                .width(DesignConstants.SPACING.SM2)
-                .height(DesignConstants.SPACING.SM2)
+                .width(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
+                .height(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .backgroundColor(this.getCurrentThemePalette().online)
               Text(`${group.online_members_count} 在线`)

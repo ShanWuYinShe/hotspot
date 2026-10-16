@@ -48,7 +48,6 @@
 	const getInitialMode = () => initialMode;
 	let mode = $state<AuthMode>(getInitialMode());
 	// 登录方式（对齐 Figma Make LoginPage 双 tab：验证码登录/密码登录）
-	let method = $state<'code' | 'password'>('password');
 	let loginId = $state('');
 	let password = $state('');
 	let nickname = $state('');
@@ -136,7 +135,7 @@
 	function validate(): FieldErrors {
 		return validateAuthFields({
 			mode,
-			method,
+			method: 'password' as const,
 			loginId,
 			password,
 			nickname,
@@ -176,14 +175,7 @@
 		submitting = true;
 		try {
 			let res;
-			if (mode === 'login') {
-				if (method === 'code') {
-					// 验证码登录接口待后端提供（spec 暂无），UI 对齐 Figma Make 先行
-					error = '验证码登录暂未开放，请使用密码登录';
-					return;
-				}
-				res = await login({ login_id: loginId, password });
-			}
+			if (mode === 'login') res = await login({ login_id: loginId, password });
 			else if (mode === 'register') res = await register({ login_id: loginId, nickname, password, code: needsRegisterCode ? code.trim() : null });
 			else if (mode === 'guest') res = await guest({ nickname: nickname.trim() || null });
 			else if (mode === 'forgot') {
@@ -261,10 +253,8 @@
 	{/if}
 
 	{#if mode === 'login' || mode === 'register'}
-		{#if mode === 'login'}
-			<!-- 登录方式选择：验证码登录接口 spec 暂无、后端未提供——不展示不可用选项，
-			     避免用户填完表单才被告知「暂未开放」（业务态不可伪装成可用功能） -->
-		{/if}
+		<!-- 验证码登录接口 spec 暂无：不展示不可用选项（业务态不可伪装成可用功能）；
+		     仅注册手机号/邮箱型需验证码（所有权验证），与密码共存 -->
 		<label class="flex flex-col gap-1.5" for="auth-field-loginId">
 			<span class="text-xs font-medium tracking-field text-text-secondary">手机号、邮箱或账号</span>
 			<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
@@ -287,7 +277,7 @@
 				<p id="auth-field-loginId-error" class="text-xs text-status-danger"  role="alert">{fieldErrors.loginId}</p>
 			{/if}
 		</label>
-			{#if (mode === 'login' && method === 'code') || needsRegisterCode}
+			{#if needsRegisterCode}
 				<!-- 验证码：登录验证码模式（发送接口暂未开放）或注册手机号/邮箱型（所有权验证）；
 				     注册型与密码共存（注册始终需要密码），登录验证码模式替代密码 -->
 				<label class="flex flex-col gap-1.5" for="auth-field-code">
@@ -316,11 +306,8 @@
 					variant="surface-accent"
 					size="lg"
 					class="w-full"
-					disabled={needsRegisterCode && (codeCountdown > 0 || sendingCode)}
-					onclick={() => {
-						if (needsRegisterCode) void sendRegisterCodeAndCountdown();
-						else error = '验证码发送功能即将开放，请使用密码登录';
-					}}
+					disabled={codeCountdown > 0 || sendingCode}
+					onclick={() => void sendRegisterCodeAndCountdown()}
 				>
 					{#if needsRegisterCode}
 						{sendingCode ? '发送中…' : codeCountdown > 0 ? `${codeCountdown}s 后重发` : '发送验证码'}
@@ -329,7 +316,7 @@
 					{/if}
 				</Button>
 			{/if}
-			{#if (mode === 'login' && method === 'password') || mode === 'register'}
+			{#if mode === 'login' || mode === 'register'}
 			<label class="flex flex-col gap-1.5" for="auth-field-password">
 				<span class="text-xs font-medium tracking-field text-text-secondary">密码</span>
 				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >

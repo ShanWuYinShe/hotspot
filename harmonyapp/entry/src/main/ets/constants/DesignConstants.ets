@@ -303,6 +303,8 @@ export interface ComponentConstants {
   ICON_SIZE_LG: number;
   /** 空态大图标（48，错误/空态插画级图标；独立 ICON 刻度） */
   ICON_SIZE_EMPTY: number;
+  /** 状态指示点（6，在线/分组小圆点） */
+  INDICATOR_DOT_SIZE: number;
   /** 骨架屏卡片高度（100） */
   SKELETON_CARD_HEIGHT: number;
   /** 骨架屏媒体块高度（180，瞬间卡图片占位） */
@@ -689,6 +691,8 @@ const COMPONENT: ComponentConstants = {
   ICON_SIZE_SM_PLUS: 22,
   ICON_SIZE_LG: 32,
   ICON_SIZE_EMPTY: 48,
+  /** 状态指示点（6，在线/分组小圆点） */
+  INDICATOR_DOT_SIZE: 6,
   SKELETON_CARD_HEIGHT: 100,
   /** 骨架屏媒体块高度（180，瞬间卡图片占位） */
   SKELETON_MEDIA_HEIGHT: 180,
