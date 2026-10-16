@@ -14,13 +14,17 @@ description: hotspot 鸿蒙端模拟器实测流程：用 hdc + uitest 在 DevEc
 | bundleName | `com.lsyb.social` |
 | 入口 Ability | `EntryAbility` |
 | 应用日志域 | `A0FF` 前缀（`grep A0FF` 抓 app 日志） |
-| 模拟器调试后端地址 | `http://10.0.2.2:8888`（SLIRP 用户态 NAT，实测可达） |
+| 模拟器调试后端地址 | `http://127.0.0.1:8888`（hdc rport 反向转发，见下） |
 | 后端 dev 网关 | 宿主 `http://127.0.0.1:8888`（nginx） |
 | 测试库 | postgres 容器 `hotspot-postgres-1`，库 `hotspot`，用户 `postgres` |
 
-**AppConstants.ets 注释里写的 `127.0.0.1:8888 + hdc rport` 在本机模拟器上不通**：
-设备侧 8888 已被占用，`hdc rport tcp:8888 tcp:8888` 报 `[Fail]TCP Port listen failed at 8888`。
-本机模拟器走 `10.0.2.2:8888`（Preferences 里 `server_base_url` 也是这个值）。
+**调试后端地址（2026-10-17 实测更正）**：AppConstants.ets 现行代码统一
+`http://127.0.0.1:8888 + hdc 反向转发`（模拟器 `hdc -t 127.0.0.1:5555 rport tcp:8888 tcp:8888`，
+真机 USB `fport`）。模拟器重启后转发条目不会自动恢复，装机前先设好，并以
+`hdc fport ls` 出现 `[Reverse]` 条目为准；app 内请求实测 HTTP 200 / code=0（63ms）。
+旧记录「设备侧 8888 被占、rport 报 listen failed、走 10.0.2.2」已不复现
+（用户级 harmony-device-debug 2026-10-16 同步更正）；`http://10.0.2.2:8888`
+保留为 rport 失效时的备选直连（SLIRP 用户态 NAT）。
 
 ## 测试账号（本地 dev 库）
 
