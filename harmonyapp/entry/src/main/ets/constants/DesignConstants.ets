@@ -396,7 +396,7 @@ export interface LayoutSystem {
   MOBILE_BOTTOM_NAV_HEIGHT: number;
   /** 平板浮动玻璃药丸底栏最大宽度（对齐前端 --cst-tablet-dock-max 680px） */
   TABLET_NAV_MAX_WIDTH: number;
-  /** 中央发布 FAB 尺寸（对齐前端 52x52） */
+  /** 中央发布 FAB 尺寸（对齐前端 MobilePortrait size-12 = 48，2026-10-17 实测核正：原注释 52 为过时值） */
   FAB_SIZE: number;
   /** 圆形图标按钮尺寸（对齐前端 36px，移动端可放大到 38px） */
   ICON_BUTTON_SIZE: number;
@@ -737,7 +737,7 @@ const LAYOUT: LayoutSystem = {
   RIGHT_SIDEBAR_WIDTH: 220,
   MOBILE_BOTTOM_NAV_HEIGHT: 56,
   TABLET_NAV_MAX_WIDTH: 680,
-  FAB_SIZE: 52,
+  FAB_SIZE: 48,
   ICON_BUTTON_SIZE: 36,
   BACK_BUTTON_SIZE: 40,
   MIN_HIT_TARGET: 44,
