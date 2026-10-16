@@ -17,7 +17,9 @@
 		onToggle,
 		onOpen,
 		featured = false,
-		horizontal = false
+		horizontal = false,
+		cardWidth = 0,
+		cardHeight = 0,
 	}: {
 		group: Group;
 		/** 加入/退出请求进行中（JoinButton 禁点防重复提交） */
@@ -29,14 +31,26 @@
 		featured?: boolean;
 		/** 横排精选(桌面,图片左 40% + 内容右;r03 精选卡过高吃首屏) */
 		horizontal?: boolean;
+		/** BSP 格子实际宽度（autoLandscape 判定用） */
+		cardWidth?: number;
+		/** BSP 格子实际高度 */
+		cardHeight?: number;
 	} = $props();
+
+	// 高格子自动横排（Gemini UI 审查：图片铺满 + 信息沉底的结构在大格子里会让 footer
+	// 滚出首屏，观感为「卡片没有信息」）：横格（宽>高）且高过首屏一半（420px）时
+	// 切「图左 40% + 信息右面板」，信息保持视线高度；矮格与竖格维持竖向叠加
+	//（竖格横排会使 40% 图列过窄）。
+	const autoLandscape = $derived(
+		Boolean(cardWidth && cardHeight && cardWidth > cardHeight && cardHeight > 420)
+	);
 </script>
 
 <NearbyImageCard
 	imageSrc={group.banner}
 	imageAlt={group.name}
 	onClick={onOpen}
-	horizontal={featured && horizontal}
+	horizontal={featured ? horizontal : autoLandscape}
 	class={featured ? (horizontal ? 'rounded-md min-h-56' : 'rounded-md min-h-85') : 'rounded-md aspect-[4/3]'}
 >
 	{#snippet placeholder()}

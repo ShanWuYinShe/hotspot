@@ -28,7 +28,7 @@
 		hasMore = false
 	}: {
 		items: T[];
-		renderItem: Snippet<[T, number]>;
+		renderItem: Snippet<[T, number, BspRect]>;
 		class?: string;
 		/** Clear space between cards. 24px protects the shared card hover lift and scale. */
 		gap?: number;
@@ -342,7 +342,7 @@
 		>
 			{#if isVisible}
 				{#if !isPlaceholder && item !== undefined}
-					{@render renderItem(item, index)}
+					{@render renderItem(item, index, rect)}
 				{:else if isPlaceholder}
 					<!-- 补位格：无对应卡片，渲染空骨架保持满铺轮廓（不重复用户） -->
 					<div
