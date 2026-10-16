@@ -37,7 +37,7 @@
 	imageAlt={group.name}
 	onClick={onOpen}
 	horizontal={featured && horizontal}
-	class={featured ? (horizontal ? 'rounded-md min-h-56' : 'rounded-md min-h-85') : 'rounded-md aspect-[3/4]'}
+	class={featured ? (horizontal ? 'rounded-md min-h-56' : 'rounded-md min-h-85') : 'rounded-md aspect-[4/3]'}
 >
 	{#snippet placeholder()}
 		<span class="text-accent-default {featured ? 'text-4xl' : 'text-3xl'} font-semibold">{Array.from(group.name)[0] ?? '群'}</span>

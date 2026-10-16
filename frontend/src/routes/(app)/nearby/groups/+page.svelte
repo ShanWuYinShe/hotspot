@@ -7,7 +7,6 @@ import { formatCount } from '@/lib/utils';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { readLastLocation } from '@/lib/map-auto-locate';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -227,28 +226,19 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					<span class="text-status-online font-medium text-xs">{filtered.length} 个活跃 · {formatCount(totalOnline)} 人正在群聊</span>
 				</div>
 			{#if isDesktop || isTablet}
-				<!-- 精选卡用 GroupCard featured 横排（图片左 40%,r03:纵排大卡吃首屏）；其余 BSP 网格 -->
-				{#if featured}
-					<div class="mb-5">
-						<GroupCard featured horizontal group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
-					</div>
-				{/if}
-				<BspCardCanvas
-					items={rest.slice(0, visibleCount - 1)}
-					gap={14}
-					minRatio={0.68}
-					maxRatio={1.48}
-					minCardWidth={160}
-					minCardHeight={210}
-					minCanvasHeight={420}
-					ariaLabel="附近群组的不规则满铺布局"
-					hasMore={visibleCount < filtered.length}
-					onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
-				>
-					{#snippet renderItem(group: Group, index: number)}
-						<GroupCard group={group} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
-					{/snippet}
-				</BspCardCanvas>
+			<!-- 精选卡用 GroupCard featured 横排（图片左 40%,r03:纵排大卡吃首屏）；
+			     其余规整网格——群组是信息卡（名称/人数/加入按钮需常驻可见），
+			     BSP 满铺墙的大格子会让沉底 footer 滚出首屏，观感为「卡片没有信息」 -->
+			{#if featured}
+				<div class="mb-5">
+					<GroupCard featured horizontal group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+				</div>
+			{/if}
+			<div class="grid grid-cols-2 md:grid-cols-3 gap-3.5">
+				{#each rest as group (group.id)}
+					<GroupCard group={group} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
+				{/each}
+			</div>
 			{:else}
 				{#if featured}
 					<div class="mb-5">
