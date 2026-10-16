@@ -254,7 +254,8 @@ export class ThemeConstants {
 
   static readonly VIBRANT_DARK_COLORS: ColorConfig = {
     pageBackground: '#0B1424',
-    surfaceBackground: '#111D31',
+    // 卡面提档对齐前端 vibrant dark（UI 复审 D2 token 级微调，#111D31→#152134）
+    surfaceBackground: '#152134',
     surfaceSubtle: '#14243A',
     surfaceElevated: '#16273C',
     borderColor: '#2E88B7FF',

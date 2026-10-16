@@ -173,7 +173,9 @@
 /* ═══ Vibrant Dark ═══ */
 .vibrant.dark {
   /* ── 原始色板 --cst-palette-* ── */
-  --cst-palette-bg: #111D31;
+  /* 卡面提档（UI 复审 D2 token 级微调）：#111D31→#152134，深色下卡片与画布
+     (#0B1424) 的底色阶差加大、层级更清晰；亮度阶仍低于 subtle/elevated，阶梯不变 */
+  --cst-palette-bg: #152134;
   --cst-palette-page-bg: #0B1424;
   --cst-palette-chat-bg: #0D1726;
   --cst-palette-text: #E8F1FF;
