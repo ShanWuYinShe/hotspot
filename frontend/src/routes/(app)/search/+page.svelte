@@ -9,6 +9,9 @@
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
+	import { goto } from '$app/navigation';
+	import { ROUTES } from '@/lib/routes';
+	import type { MomentItem } from '@/api/types';
 
 	// 搜索页：最近搜索（localStorage）、热门搜索、推荐话题、全部/用户/动态/话题 Tab。
 	// 对齐 Figma Make SearchPage：卡片使用 surface-primary + border 的 token 类，
@@ -41,6 +44,8 @@
 	// 发现态热门话题：moments/search 热门模式取热门动态 tags 聚合（与 home-feed 同源）；
 	// 无数据时不渲染区块（诚实空态原则），失败静默。
 	let hotTopics = $state<string[]>([]);
+	// 同一热门响应的动态条目复用（此前只取 tags 即丢弃）：取前 3 条进「热门动态」区块
+	let hotMoments = $state<MomentItem[]>([]);
 
 	const device = $derived(platform.platform);
 
@@ -82,6 +87,7 @@
 					}
 				}
 				hotTopics = list.slice(0, 10);
+				hotMoments = (res.data.items ?? []).slice(0, 3);
 			})
 			.catch(() => {});
 		return () => {
@@ -217,7 +223,15 @@
 		<LoadError message={searchError} onRetry={() => void doSearch(keyword)} />
 	{:else if !keyword}
 		<!-- 无查询发现态：最近搜索 + 热门话题（无数据时 SearchDiscovery 内部不渲染该区块） -->
-		<SearchDiscovery recent={recent} hotTopics={hotTopics} onChoose={choose} onChooseTopic={chooseTopic} onClear={() => (recent = [])} />
+		<SearchDiscovery
+			recent={recent}
+			hotTopics={hotTopics}
+			hotMoments={hotMoments}
+			onChoose={choose}
+			onChooseTopic={chooseTopic}
+			onOpenMoment={(id) => void goto(ROUTES.moment(id))}
+			onClear={() => (recent = [])}
+		/>
 	{:else}
 		<!-- 有查询结果态（对齐 Figma）；输入联想（相关话题）作为顶部快速入口 -->
 		<SearchResults

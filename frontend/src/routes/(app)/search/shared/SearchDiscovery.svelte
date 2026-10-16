@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { Clock, ArrowUpRight, Flame } from '@lucide/svelte';
+	import { Clock, ArrowUpRight, Flame, TrendingUp } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
+	import ActivityRow from '@/components/home/ActivityRow.svelte';
+	import type { MomentItem } from '@/api/types';
 
 	// 搜索页「无查询发现态」：最近搜索 + 热门话题。
 	// 热门话题来自 moments/search 热门模式的 tags 聚合（页面传入）；无数据时
@@ -12,16 +14,22 @@
 	let {
 		recent,
 		hotTopics = [],
+		hotMoments = [],
 		onChoose,
 		onChooseTopic,
+		onOpenMoment,
 		onClear
 	}: {
 		recent: string[];
 		/** 热门话题（为空时不渲染区块） */
 		hotTopics?: string[];
+		/** 热门动态（为空时不渲染区块）：发现态本就拉取的热门响应复用，零额外请求 */
+		hotMoments?: MomentItem[];
 		onChoose: (value: string) => void;
 		/** 热门话题点击：按 tag 语义搜索（moments/search tag 参数），与关键词搜索分流 */
 		onChooseTopic: (value: string) => void;
+		/** 热门动态点击：跳动态详情 */
+		onOpenMoment: (momentId: string) => void;
 		onClear: () => void;
 	} = $props();
 </script>
@@ -72,6 +80,21 @@
 					<TagPill onClick={() => onChooseTopic(topic)}>#{topic}</TagPill>
 				{/each}
 			</div>
+		</section>
+	{/if}
+
+	{#if hotMoments.length > 0}
+		<!-- 热门动态：复用发现态已拉取的热门响应（C2 轻量充实），行原语与首页附近活动一致 -->
+		<section aria-label="热门动态" class="mt-6">
+			<div class="flex items-center gap-1.5">
+				<TrendingUp class="size-3.5 text-accent-default" strokeWidth={1.75} />
+				<h2 class="eyebrow">热门动态</h2>
+			</div>
+			<ListContainer bordered class="mt-3">
+				{#each hotMoments as m, i (m.moment_id)}
+					<ActivityRow moment={m} index={i} onClick={() => onOpenMoment(m.moment_id)} />
+				{/each}
+			</ListContainer>
 		</section>
 	{/if}
 </div>
