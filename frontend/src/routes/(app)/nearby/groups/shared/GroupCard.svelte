@@ -42,7 +42,9 @@
 	// 切「图左 40% + 信息右面板」，信息保持视线高度；矮格与竖格维持竖向叠加
 	//（竖格横排会使 40% 图列过窄）。
 	const autoLandscape = $derived(
-		Boolean(cardWidth && cardHeight && cardWidth > cardHeight && cardHeight > 420)
+		// 任意方向,格子高过首屏一半即横排:竖格 40% 图列呈竖构图窄条,
+		// 类似放大版列表行——可读性优先于满铺沉浸感
+		Boolean(cardWidth && cardHeight && cardHeight > 420)
 	);
 </script>
 
