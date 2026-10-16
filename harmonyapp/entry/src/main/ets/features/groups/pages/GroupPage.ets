@@ -620,8 +620,8 @@ export struct GroupPage {
         .scrollBar(BarState.Off)
         .cachedCount(5)
         .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .onReachEnd(() => { this.loadMoreMyInvites(); })
       }
@@ -752,8 +752,8 @@ export struct GroupPage {
         // 行本身不再带卡片样式，行间靠 ListItemGroup.divider。
         // 卡片不再自加横向外边距——横向留白只由 PageShellContainer 提供（否则卡片比页头窄 32vp）
         .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .onReachEnd(() => { this.loadMoreMyApplications(); })
       }

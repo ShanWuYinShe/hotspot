@@ -4,7 +4,7 @@ import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { ShareListItem, FetchCreatedSharesRequest, ShareType } from '../../../core/types/api';
 import { DefaultConfig, PageNames } from '../../../constants/AppConstants';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -363,6 +363,8 @@ export struct MySharesPage {
         Text(share.preview.subtitle)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor(this.getCurrentThemePalette().textSecondary)
+          // 多行副标题走比例制行高（SKILL:22-27）
+          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }

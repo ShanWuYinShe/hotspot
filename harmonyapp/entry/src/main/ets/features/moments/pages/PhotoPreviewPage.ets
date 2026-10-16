@@ -221,9 +221,9 @@ export struct PhotoPreviewPage {
             top: DesignConstants.SPACING.SM,
             bottom: DesignConstants.SPACING.SM
           })
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
           .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.SMALL) // 扁平设计无投影（对齐 SHADOW 全零契约）
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)

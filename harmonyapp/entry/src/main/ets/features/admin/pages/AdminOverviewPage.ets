@@ -18,7 +18,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemToast } from '../../../components/SystemToast';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
@@ -131,7 +131,7 @@ struct AdminOverviewPage {
           }).layoutWeight(1)
         } else {
           Scroll() {
-            PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint }) {
+            PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, fillHeight: false }) {
               Column({ space: DesignConstants.SPACING.LG }) {
                 this.buildPermissionCard()
                 this.buildModuleSection()
@@ -143,6 +143,8 @@ struct AdminOverviewPage {
           }
           .layoutWeight(1)
           .scrollBar(BarState.Off)
+          // 短内容顶对齐：Scroll 对小于视口的内容默认居中（SKILL:286-291）
+          .align(Alignment.Top)
         }
       }
       .width('100%')
@@ -185,8 +187,8 @@ struct AdminOverviewPage {
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor(this.getPalette().surfaceBackground)
-    .borderRadius(DesignConstants.SHAPE.CARD)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+    .borderRadius(DesignConstants.SHAPE.CARD)
     .alignItems(VerticalAlign.Center)
   }
 
@@ -246,8 +248,8 @@ struct AdminOverviewPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getPalette().surfaceBackground)
-    .borderRadius(DesignConstants.SHAPE.CARD)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+    .borderRadius(DesignConstants.SHAPE.CARD)
     .alignItems(VerticalAlign.Center)
     // 按压反馈（对齐侧栏管理后台行 tap-97 语义）
     .scale(this.pressedModuleKey === m.title ?
@@ -286,7 +288,8 @@ struct AdminOverviewPage {
       Text('移动端提供概览与引导。表格化的批量管理、角色配置、审计查询等复杂操作，请在电脑端访问 Web 管理后台以获得最佳体验。')
         .fontSize(DesignConstants.FONT.SIZE.XS) // 11
         .fontColor(this.getPalette().textSecondary)
-        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
+        // 多行正文走比例制行高（SKILL:22-27），绝对档仅限单行紧凑场景
+        .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, DesignConstants.FONT.LINE_RATIO.COPY))
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

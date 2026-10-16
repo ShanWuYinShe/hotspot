@@ -244,7 +244,7 @@ export struct MomentPage {
                       }
                       .width('100%')
 
-                      Skeleton({ blockWidth: '100%', blockHeight: 180, cornerRadius: DesignConstants.SHAPE.CARD })
+                      Skeleton({ blockWidth: '100%', blockHeight: DesignConstants.COMPONENT.SKELETON_MEDIA_HEIGHT, cornerRadius: DesignConstants.SHAPE.CARD })
                       Skeleton({ blockWidth: '90%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
                     }
                     .width('100%')

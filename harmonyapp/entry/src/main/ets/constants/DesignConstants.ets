@@ -305,6 +305,8 @@ export interface ComponentConstants {
   ICON_SIZE_EMPTY: number;
   /** 骨架屏卡片高度（100） */
   SKELETON_CARD_HEIGHT: number;
+  /** 骨架屏媒体块高度（180，瞬间卡图片占位） */
+  SKELETON_MEDIA_HEIGHT: number;
   /** 内容占位区高度（120，加载/空态占位） */
   PLACEHOLDER_AREA_HEIGHT: number;
   /** 大图占位高度（110，创建页图片区） */
@@ -688,6 +690,8 @@ const COMPONENT: ComponentConstants = {
   ICON_SIZE_LG: 32,
   ICON_SIZE_EMPTY: 48,
   SKELETON_CARD_HEIGHT: 100,
+  /** 骨架屏媒体块高度（180，瞬间卡图片占位） */
+  SKELETON_MEDIA_HEIGHT: 180,
   PLACEHOLDER_AREA_HEIGHT: 120,
   IMAGE_PLACEHOLDER_HEIGHT: 110,
   /** 照片缩略图尺寸（80，CreateMomentSheet 图片选择器网格） */
