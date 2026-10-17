@@ -500,8 +500,8 @@ export struct SearchPage {
                 { label: '全部' } as TabItem,
                 { label: this.tabLabel('用户', this.userResults.length) } as TabItem,
                 { label: this.tabLabel('动态', this.momentResults.length) } as TabItem,
-                { label: this.tabLabel('话题', this.topicResults.length) } as TabItem,
-                { label: this.tabLabel('群组', this.groupResults.length) } as TabItem
+                { label: this.tabLabel('群组', this.groupResults.length) } as TabItem,
+                { label: this.tabLabel('话题', this.topicResults.length) } as TabItem
               ],
               activeIndex: this.currentIndex,
               actions: {
@@ -573,50 +573,162 @@ export struct SearchPage {
     })
   }
 
+  /**
+   * 结果分组卡头（对齐前端 SearchResults section 头）：
+   * `flex items-center gap-2 border-b border-border-default px-4 py-3`
+   * + 图标 size-4 accent + 标题 text-sm(12) font-medium text-text-primary。
+   * 前端「全部」结果是「每组一张圆角描边卡」，组内行不再各自成卡。
+   */
+  @Builder
+  buildResultGroupHeader(icon: AppIcon, title: string) {
+    Row({ space: DesignConstants.SPACING.SM2 }) {
+      LucideIcon({
+        icon: icon,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        paletteRole: 'accent'
+      })
+      Text(title)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD,
+      bottom: DesignConstants.SPACING.MD
+    })
+    .border({
+      width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
+      color: { bottom: this.getSurfaceBorder() }
+    })
+  }
+
   @Builder
   AllResultList() {
-    if (this.hasSearched && this.userResults.length === 0 && this.momentResults.length === 0 && this.groupResults.length === 0) {
+    // 对齐前端：hasResults = 任意一组非空（话题也算）
+    if (this.hasSearched && this.userResults.length === 0 && this.momentResults.length === 0 &&
+        this.groupResults.length === 0 && this.topicResults.length === 0) {
       EmptyState({
         icon: AppIcon.SEARCH,
-        title: '未找到相关内容',
-        message: '尝试其他关键词',
+        title: `没有找到“${this.keyword.trim()}”`,
+        message: '换个关键词再试试。',
         bare: true,
         fillMode: true
       })
     } else {
-      List({ space: DesignConstants.SPACING.MD2 }) {
+      List({ space: DesignConstants.SPACING.LG }) {
         if (this.userResults.length > 0) {
-          ListItem() { this.buildAllSectionLabel('用户') }
-          ForEach(this.userResults.slice(0, 3), (item: UserItem) => {
-            ListItem() { this.buildUserItem(item) }
-          }, (item: UserItem) => `all-user-${item.user?.user_id ?? ''}`)
+          ListItem() {
+            Column() {
+              this.buildResultGroupHeader(AppIcon.PERSON, '用户')
+              ForEach(this.userResults, (item: UserItem, index: number) => {
+                this.buildUserItem(item)
+                // 仅行间分隔，末行不画（对齐前端 divide-y：末行底部无线，避免卡片内嵌一圈线）
+                if (index < this.userResults.length - 1) {
+                  ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
+                }
+              }, (item: UserItem) => `all-user-${item.user?.user_id ?? ''}`)
+            }
+            .width('100%')
+            .backgroundColor(this.getSurfaceBackground())
+            .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+            .clip(true)
+          }
         }
 
         if (this.momentResults.length > 0) {
-          ListItem() { this.buildAllSectionLabel('动态') }
-          ForEach(this.momentResults.slice(0, 3), (moment: MomentItem) => {
-            ListItem() {
-              SearchMomentRow({
-                moment: moment,
-                palette: this.getCurrentThemePalette(),
-                surfaceBackground: this.getSurfaceBackground(),
-                surfaceBorder: this.getSurfaceBorder(),
-                onPress: () => this.openMomentDetail(moment)
-              })
+          ListItem() {
+            Column() {
+              this.buildResultGroupHeader(AppIcon.PHOTO, '动态')
+              ForEach(this.momentResults, (moment: MomentItem, index: number) => {
+                SearchMomentRow({
+                  moment: moment,
+                  palette: this.getCurrentThemePalette(),
+                  surfaceBackground: this.getSurfaceBackground(),
+                  surfaceBorder: this.getSurfaceBorder(),
+                  framed: false,
+                  onPress: () => this.openMomentDetail(moment)
+                })
+                if (index < this.momentResults.length - 1) {
+                  ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
+                }
+              }, (moment: MomentItem) => `all-moment-${moment.moment_id}`)
             }
-          }, (moment: MomentItem) => `all-moment-${moment.moment_id}`)
+            .width('100%')
+            .backgroundColor(this.getSurfaceBackground())
+            .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+            .clip(true)
+          }
         }
 
         if (this.groupResults.length > 0) {
-          ListItem() { this.buildAllSectionLabel('群组') }
-          ForEach(this.groupResults.slice(0, 3), (group: GroupItem) => {
-            ListItem() { this.buildGroupItem(group) }
-          }, (group: GroupItem) => `all-group-${group.group?.group_id ?? ''}`)
+          ListItem() {
+            Column() {
+              this.buildResultGroupHeader(AppIcon.GROUP, '群组')
+              ForEach(this.groupResults, (group: GroupItem, index: number) => {
+                this.buildGroupItem(group)
+                if (index < this.groupResults.length - 1) {
+                  ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
+                }
+              }, (group: GroupItem) => `all-group-${group.group?.group_id ?? ''}`)
+            }
+            .width('100%')
+            .backgroundColor(this.getSurfaceBackground())
+            .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+            .clip(true)
+          }
+        }
+
+        if (this.topicResults.length > 0) {
+          ListItem() {
+            Column() {
+              this.buildResultGroupHeader(AppIcon.SEARCH, '话题')
+              ForEach(this.topicResults, (tag: string) => {
+                Row({ space: DesignConstants.SPACING.MD }) {
+                  Text(`#${tag}`)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
+                    .layoutWeight(1)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  LucideIcon({
+                    icon: AppIcon.ARROW_UP,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+                    color: this.getCurrentThemePalette().textSecondary
+                  })
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                .padding({
+                  left: DesignConstants.SPACING.LG,
+                  right: DesignConstants.SPACING.LG,
+                  top: DesignConstants.SPACING.MD3,
+                  bottom: DesignConstants.SPACING.MD3
+                })
+                .onClick(() => { this.applyKeywordAndSearch(tag); })
+              }, (tag: string) => `all-topic-${tag}`)
+            }
+            .width('100%')
+            .backgroundColor(this.getSurfaceBackground())
+            .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+            .clip(true)
+          }
         }
       }
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+      .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
       .scrollBar(BarState.Off)
     }
   }

@@ -80,6 +80,9 @@ export struct SearchMomentRow {
   palette: AppThemePalette | null = null;
   surfaceBackground: string = '';
   surfaceBorder: string | Resource = '';
+  /** true = 自带卡片外框（独立使用）；false = 无框行（嵌在分组卡里，对齐前端
+   *  SearchResults 的「一组一张卡 + 组内行无框」结构） */
+  @Prop framed: boolean = true;
   onPress: () => void = () => {};
 
   build() {
@@ -109,11 +112,11 @@ export struct SearchMomentRow {
           })
       }
       .width('100%')
-      .padding(DesignConstants.SPACING.MD)
-      .backgroundColor(this.surfaceBackground)
-      .borderRadius(DesignConstants.SHAPE.CARD)
-      .shadow(this.palette?.surfaceShadow)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.surfaceBorder })
+      .padding(this.framed ? DesignConstants.SPACING.MD : DesignConstants.SPACING.MD3)
+      .backgroundColor(this.framed ? this.surfaceBackground : DesignConstants.COLOR.TRANSPARENT)
+      .borderRadius(this.framed ? DesignConstants.SHAPE.CARD : 0)
+      .shadow(this.framed ? this.palette?.surfaceShadow : DesignConstants.SHADOW.SMALL)
+      .border(this.framed ? { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.surfaceBorder } : { width: 0 })
     }
   }
 }
