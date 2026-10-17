@@ -3,12 +3,12 @@
  * 两种形态：
  * - 默认（segmented）：等宽分段 + surfaceSubtle 灰底槽（系统分段控件视觉）
  * - freeWidth：透明容器 + 自适应内容宽左对齐（对齐前端 TabBar 胶囊行，
- *   激活项 accentMuted 淡底胶囊 + accentText 字（soft 弱高亮，亮 accent 实底
+ *   激活项 accentMuted 淡底胶囊 + textPrimary 字（soft 弱高亮，亮 accent 实底
  *   收给主按钮，避免筛选态与主操作抢焦点），未激活项透明 + 次要色文字）
  *
  * 交互契约（四态）：
  * - 按压差异：选中胶囊按压 = 底色加深（active 加深反馈）；未选中按压 = SCALE_PRESSED_PILL 缩放
- * - hover（仅键鼠外接触发）：选中 = accentText 字已表达，无底色增量；未选中 = surfaceSubtle 淡底预览
+ * - hover（仅键鼠外接触发）：选中 = textPrimary 字已表达，无底色增量；未选中 = surfaceSubtle 淡底预览
  * - 触控热区：胶囊视觉高度不变，外层透明命中区扩到 LAYOUT.MIN_HIT_TARGET
  * - ForEach key 只含 label-index（拼 activeIndex 会导致切换激活时全部胶囊销毁重建、打断位移动画）
  */
@@ -71,6 +71,23 @@ export struct TabsPillGroup {
     return this.hoveredIndex === index ? palette.surfaceSubtle : DesignConstants.COLOR.TRANSPARENT;
   }
 
+  /**
+   * 胶囊文字/图标色。
+   *
+   * 关键：选中态底色是 accentMuted（**淡色底**），前景必须是 textPrimary / accentBackground，
+   * 不能用 accentText——accentText 的语义是「accentBackground 亮实底上的反色前景」
+   * （深色主题 #071426），配到 accentMuted 深蓝底（#182943）上对比度极低，
+   * 实测「距离 / 全部」等选中胶囊文字几乎不可见（附近页排序/筛选行整排看不清）。
+   */
+  private getPillForeground(index: number, isActiveTab: boolean): ResourceColor {
+    const palette = this.getPalette();
+    if (isActiveTab) {
+      return palette.textPrimary;
+    }
+    // 未选中：hover 的时候底色会变 surfaceSubtle，文字随之提亮
+    return this.hoveredIndex === index ? palette.textPrimary : palette.tabBarInactive;
+  }
+
   @Builder
   private buildTab(tab: TabItem, index: number) {
     // 激活态必须在 builder 体内内联经 this.isActive(index) 读取（不可作按值参数传入）：
@@ -82,21 +99,19 @@ export struct TabsPillGroup {
           LucideIcon({
             icon: tab.icon,
             iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-            color: this.isActive(index) || this.hoveredIndex === index ?
-            this.getPalette().accentText : this.getPalette().tabBarInactive
+            color: this.getPillForeground(index, this.isActive(index))
           })
         }
 
         Text(tab.label)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(this.isActive(index) ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
-          .fontColor(this.isActive(index) || this.hoveredIndex === index ?
-          this.getPalette().accentText : this.getPalette().tabBarInactive)
+          .fontColor(this.getPillForeground(index, this.isActive(index)))
 
         if (tab.count !== undefined && tab.count > 0) {
           Text(`${tab.count}`)
             .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .fontColor(this.isActive(index) ? this.getPalette().accentText : this.getPalette().tabBarInactive)
+            .fontColor(this.getPillForeground(index, this.isActive(index)))
             .opacity(this.isActive(index) ? DesignConstants.OPACITY.SUBTLE : DesignConstants.OPACITY.EMPHASIZED)
         }
       }
