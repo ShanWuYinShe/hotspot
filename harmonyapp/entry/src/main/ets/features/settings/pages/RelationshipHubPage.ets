@@ -162,7 +162,7 @@ export struct RelationshipHubPage {
           placeholder: '搜索昵称、备注…',
           prefixIcon: AppIcon.SEARCH,
           showPrefixIcon: true,
-          inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
+          inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
           onChange: (value: string) => {
             this.searchKeyword = value;
           }

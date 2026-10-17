@@ -80,7 +80,16 @@ export struct NearbyUsersListPage {
   }
 
   aboutToAppear() {
-    this.loadUsers();
+    // 首次加载不能在 aboutToAppear 里同步发起：@StorageLink(browseAnchor/currentLocation)
+    // 的绑定晚于该生命周期，此刻读到的还是默认 null，getReferencePoint() 返回 null →
+    // 页面直接落到「位置信息不可用，请在首页选择浏览位置」错误态（实测稳定复现，
+    // 点一次「重试」即恢复，因为那时绑定已完成）。
+    // 延后到下一帧，等 AppStorage 同步完成后再取锚点。
+    setTimeout(() => {
+      if (!this.isDestroyed) {
+        this.loadUsers();
+      }
+    }, 0);
   }
 
   aboutToDisappear() {
@@ -227,6 +236,8 @@ export struct NearbyUsersListPage {
         }
 
         // 排序 TabsPillGroup（对齐前端 TabBar；web 移动端该页无内嵌搜索框，搜索走 header 图标）
+        // 页头与首行内容之间补 PAGE_TOP_GAP(16)：对齐前端 /nearby/people
+        // （header 底 122.8 → 首个 pill 行 138.8，间距 16）；原实现紧贴页头分隔线（间距 0）
         Scroll() {
         TabsPillGroup({
           tabs: [{ label: '距离' }, { label: '在线' }, { label: '共同好友' }],
@@ -263,6 +274,7 @@ export struct NearbyUsersListPage {
         .scrollBar(BarState.Off)
         .align(Alignment.Start)
         .width('100%')
+        .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP })
 
 
 

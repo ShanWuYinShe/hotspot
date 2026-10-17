@@ -80,7 +80,13 @@ export struct NearbyGroupsListPage {
   }
 
   aboutToAppear() {
-    this.loadGroups();
+    // 同 NearbyUsersListPage：@StorageLink(browseAnchor/currentLocation) 绑定晚于
+    // aboutToAppear，同步发请求会读到 null 锚点而落到「位置信息不可用」错误态。
+    setTimeout(() => {
+      if (!this.isDestroyed) {
+        this.loadGroups();
+      }
+    }, 0);
   }
 
   aboutToDisappear() {
@@ -229,7 +235,7 @@ export struct NearbyGroupsListPage {
           placeholder: '搜索群组',
           prefixIcon: AppIcon.SEARCH,
           showPrefixIcon: true,
-          inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
+          inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
           onChange: (value: string) => { this.keyword = value; },
           onSubmit: () => { this.loadGroups(true); }
         })
