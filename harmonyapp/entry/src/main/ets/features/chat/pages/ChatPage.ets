@@ -101,6 +101,10 @@ export struct ChatPage {
   private messagesDataSource: BasicDataSource<ChatMessage> = new BasicDataSource<ChatMessage>([]);
   @State inputText: string = '';
   @State isLoading: boolean = true;
+  /** loadHistory 在飞标志：与 UI 的 isLoading 分离——isLoading 初始即为 true（首屏
+   * 加载态），不能当在飞判据，否则首次进入直接 return、聊天永远卡在「加载消息…」
+   * （ff9ee4fb 引入的回归，模拟器实测 10-18） */
+  private loadHistoryInFlight: boolean = false;
   @State errorMessage: string = '';
   @State isSending: boolean = false;
   @State isAddPressed: boolean = false;
@@ -442,7 +446,8 @@ export struct ChatPage {
   }
 
   private async loadHistory() {
-    if (this.isLoading) return; // 在飞守卫：错误态重试按钮可与慢速首屏并发，避免双 setData + 双 scrollToBottom
+    if (this.loadHistoryInFlight) return; // 在飞守卫：错误态重试按钮可与慢速首屏并发，避免双 setData + 双 scrollToBottom
+    this.loadHistoryInFlight = true;
     this.isLoading = true;
     this.errorMessage = '';
     
@@ -511,6 +516,7 @@ export struct ChatPage {
         this.errorMessage = '加载消息失败';
       }
     } finally {
+      this.loadHistoryInFlight = false;
       this.isLoading = false;
     }
   }

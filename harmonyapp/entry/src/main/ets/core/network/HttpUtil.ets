@@ -565,6 +565,13 @@ export class HttpUtil {
       // （实测：账号密码正确却提示「登录已过期」）。
       const isAuthEndpoint = ctx.url === ApiEndpoints.AUTH.LOGIN || ctx.url === ApiEndpoints.AUTH.REFRESH_TOKEN;
       ctx.isAuthEndpoint = isAuthEndpoint;
+      // 登录/刷新/访客是预会话端点，**永不携带 Authorization**：设备上残留的旧
+      // token 会把登录请求本身变成 10100（后端先校验请求头再验凭据），
+      // 用户看到的是「登录已过期」而非真实的凭据错误
+      // （实测：curl 无认证头同凭据返回 code=0，app 带残留头同请求返回 10100）。
+      if (isAuthEndpoint) {
+        ctx.omitAuthHeader = true;
+      }
       if (ctx.hasAuthHeader && !ctx.retried && !isAuthEndpoint) {
         await HttpUtil.proactiveRefreshIfNeeded();
       }
