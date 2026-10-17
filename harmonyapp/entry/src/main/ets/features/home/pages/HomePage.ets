@@ -657,7 +657,7 @@ export struct HomePage {
         Column({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${this.users.length}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD) // 对齐前端 font-semibold(600)
             .fontColor(this.getPalette().textPrimary)
           Text('人附近')
             .fontSize(DesignConstants.FONT.SIZE.XS2) // 10 对齐前端 text-xxs
@@ -665,11 +665,12 @@ export struct HomePage {
         }
         .alignItems(HorizontalAlign.Center)
         .layoutWeight(1)
+        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
 
         // 分割竖线（Gemini 审查：缩短至 16 + 降不透明度退居幕后）
         Column()
           .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
-          .height(DesignConstants.SPACING.LG)
+          .height(40) // 对齐前端 gap-px 网格线(随统计格内容高,40=数字24+标签11+间距6)
           .backgroundColor(this.getPalette().borderColor)
           .opacity(DesignConstants.OPACITY.MUTED)
 
@@ -677,7 +678,7 @@ export struct HomePage {
         Column({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${this.moments.length}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD) // 对齐前端 font-semibold(600)
             .fontColor(this.getPalette().textPrimary)
           Text('动态')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
@@ -685,11 +686,12 @@ export struct HomePage {
         }
         .alignItems(HorizontalAlign.Center)
         .layoutWeight(1)
+        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
 
         // 分割竖线（Gemini 审查：缩短至 16 + 降不透明度退居幕后）
         Column()
           .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
-          .height(DesignConstants.SPACING.LG)
+          .height(40) // 对齐前端 gap-px 网格线(随统计格内容高,40=数字24+标签11+间距6)
           .backgroundColor(this.getPalette().borderColor)
           .opacity(DesignConstants.OPACITY.MUTED)
 
@@ -697,7 +699,7 @@ export struct HomePage {
         Column({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${this.getOnlineCount()}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD) // 对齐前端 font-semibold(600)
             .fontColor(this.getPalette().textPrimary)
           Text('在线')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
@@ -705,14 +707,20 @@ export struct HomePage {
         }
         .alignItems(HorizontalAlign.Center)
         .layoutWeight(1)
+        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
       }
       .width('100%')
       .margin({ top: DesignConstants.SPACING.LG })
     }
     .width('100%')
     // 页边距对齐前端 px-5(20)：卡本体不可贴屏幕边缘（此前 100% 宽导致边框贴边不可见）
-    // 对齐前端 HeroStats 卡：py-4.5(18→LG 档) px-5(LG2) + rounded-xl(24) + raised-sm 投影
-    .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+    // 对齐前端 HeroStats 卡：py-4.5(18, 布局几何豁免) px-5(LG2=20) + rounded-xl(24) + raised-sm 投影
+    .padding({
+      top: 18,
+      bottom: 18,
+      left: DesignConstants.SPACING.LG2,
+      right: DesignConstants.SPACING.LG2
+    })
     .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
@@ -1211,12 +1219,12 @@ export struct HomePage {
 
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(moment.description || '分享了一条动态')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontSize(DesignConstants.FONT.SIZE.SM) // 对齐前端 ActivityRow text-sm=12
           .fontColor(this.getPalette().textPrimary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(moment.location?.location_name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontSize(DesignConstants.FONT.SIZE.XS) // 对齐前端 text-xs=11
           .fontColor(this.getPalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
