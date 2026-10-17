@@ -34,9 +34,10 @@ export struct ListEnd {
       .textAlign(TextAlign.Center)
       // 状态提示需可被读屏播报（非装饰文本）
       .accessibilityText(this.label)
+      // 对齐前端 ListEnd：py-6（上下各 24）
       .padding({
-        top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP,
-        bottom: DesignConstants.PAGE_SHELL.SECTION_GAP
+        top: DesignConstants.SPACING.XL,
+        bottom: DesignConstants.SPACING.XL
       })
   }
 }

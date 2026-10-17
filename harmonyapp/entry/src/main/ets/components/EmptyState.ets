@@ -148,11 +148,10 @@ export struct LoadingMoreIndicator {
     }
     .width('100%')
     .justifyContent(FlexAlign.Center)
-    .padding(DesignConstants.SPACING.MD)
-    .borderRadius(DesignConstants.SHAPE.CHIP)
-    .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
-    .shadow(this.getPalette().surfaceShadow)
+    // 对齐前端 InlineLoading：列表内的加载态是「居中 spinner + 次要色文案」，
+    // 不带卡片底色/描边/投影——原实现是一条带浮起投影的胶囊条，
+    // 在列表底部与周围内容格格不入（附近的人/群组页尤其明显）
+    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .accessibilityText(this.message)
   }
 }

@@ -186,8 +186,9 @@ export struct NearbyImageCard {
           .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
           .fontColor(this.getPalette().accentBackground)
       }
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+      // web 占位圆 size-16 = 64vp（原 48 偏小，首字母显得局促）
+      .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+      .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.getPalette().accentMuted)
     }
