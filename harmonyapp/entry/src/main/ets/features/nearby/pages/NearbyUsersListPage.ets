@@ -225,22 +225,10 @@ export struct NearbyUsersListPage {
           }
         }
 
-        // 搜索栏（对齐前端 /users/nearby 搜索框；SystemInput 自带 16 圆角 + hairline
-        // 边框，外层不得再叠 border——否则圆角输入框外套直角框形成双重外框）
-        SystemInput({
-          value: this.keyword,
-          placeholder: '搜索附近用户',
-          prefixIcon: AppIcon.SEARCH,
-          showPrefixIcon: true,
-          inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
-          onChange: (value: string) => { this.keyword = value; },
-          onSubmit: () => { this.loadUsers(true); }
-        })
-          .margin({ bottom: DesignConstants.SPACING.SM })
-
-        // 排序 TabsPillGroup（对齐前端 TabBar）
+        // 排序 TabsPillGroup（对齐前端 TabBar；web 移动端该页无内嵌搜索框，搜索走 header 图标）
         TabsPillGroup({
           tabs: [{ label: '距离' }, { label: '在线' }, { label: '共同好友' }],
+          // 对齐前端 nearby/people：紧凑 pill 行（自然宽度左对齐、无灰底槽）
           activeIndex: this.onlineOnly ? 1 : (this.activeSort === 'relevance' ? 2 : 0),
           actions: {
             onChange: (index: number) => {
@@ -268,9 +256,11 @@ export struct NearbyUsersListPage {
         })
           .padding({ bottom: DesignConstants.SPACING.SM })
 
+
         // 兴趣分类 TabBar（对齐前端 nearby/people FILTER_TAGS：全部/摄影/旅行/音乐/美食/运动/阅读/艺术）
         TabsPillGroup({
           tabs: NearbyUsersListPage.FILTER_TAGS.map((label: string): TabItem => ({ label })),
+          // 对齐前端：紧凑 pill 行（自然宽度左对齐、无灰底槽）
           activeIndex: NearbyUsersListPage.FILTER_TAGS.indexOf(this.activeTag),
           actions: {
             onChange: (index: number) => {
@@ -283,6 +273,7 @@ export struct NearbyUsersListPage {
           }
         })
           .padding({ bottom: DesignConstants.SPACING.SM })
+
 
         // 内容区
         if (this.isLoading) {

@@ -150,7 +150,7 @@ export struct UserCard {
         // 在线点紧贴昵称右侧（对齐前端 nearby/people/UserCard：name+dot 同行左对齐）
         Row({ space: DesignConstants.SPACING.SM }) {
           Text(this.user.user?.nickname ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontSize(DesignConstants.FONT.SIZE.XS2) // 对齐前端 nearby/people 卡片名 text-xxs(10)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().textPrimary)
             .maxLines(1)

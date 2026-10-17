@@ -20,7 +20,9 @@
 import { HomePage } from '../../features/home/pages/HomePage';
 import { MessagePage } from '../../features/messages/pages/MessagePage';
 import { ProfilePage } from '../../features/me/pages/ProfilePage';
-import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
+// 附近一级 Tab 直挂「附近的人」列表页（对齐前端：/nearby 307→/nearby/people，
+// 聚合门户已删除；群组/动态为独立页面，从首页「更多」进入，与 web 移动端入口一致）
+import { NearbyUsersListPage } from '../../features/nearby/pages/NearbyUsersListPage';
 import { LoginPromptView } from '../LoginPromptView';
 import { type BreakpointType, isWideForm } from '../../core/responsive/Breakpoint';
 import { NotificationCenter } from '../NotificationCenter';
@@ -124,7 +126,7 @@ export struct PhoneLayout {
         // 主体：Tabs + 5 TabContent（Nearby / Discover / Create / Message / Profile）
         Tabs({ barPosition: BarPosition.End, controller: this.tabsController, index: this.currentTabIndex }) {
           TabContent() { HomePage() }.tabBar(this.TabBarBuilder(0))
-          TabContent() { NearbyPage() }.tabBar(this.TabBarBuilder(1))
+          TabContent() { NearbyUsersListPage() }.tabBar(this.TabBarBuilder(1))
           TabContent() { Column() {} }.tabBar(this.CreateTabBuilder())
           TabContent() {
             if (this.isLoggedIn) {
