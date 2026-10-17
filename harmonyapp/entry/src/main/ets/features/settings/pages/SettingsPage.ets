@@ -300,6 +300,27 @@ export struct SettingsPage {
     ]);
   }
 
+  /** 服务端版本状态文案（原 SettingsMetaCard 的状态机，现压成一行 subtitle） */
+  private getServerStatusText(): string {
+    if (this.systemMetaLoading) {
+      return '检查中…';
+    }
+    if (this.systemMetaError) {
+      return '状态未知';
+    }
+    if (!this.systemMeta) {
+      return '未获取';
+    }
+    switch (this.systemMeta.status) {
+      case 'deprecated':
+        return '建议升级';
+      case 'sunset':
+        return '维护中';
+      default:
+        return '正常';
+    }
+  }
+
   private async loadSystemMeta(force: boolean = false): Promise<void> {
     if (this.systemMetaLoading && !force) {
       return;
@@ -667,6 +688,7 @@ export struct SettingsPage {
                         top: DesignConstants.SPACING.MD,
                         bottom: DesignConstants.SPACING.MD
                       })
+                      SettingsRowDivider()
                       SettingsEntryRow({ item: {
                         icon: AppIcon.STAR_FILL,
                         title: '更多外观模式',
@@ -793,44 +815,128 @@ export struct SettingsPage {
                   label: '系统与关于',
                   description: '客户端版本及当前设备会话状态。'
                 })
+                // 对齐前端 Section 7「系统与关于」：一张关于卡（图标 + 名称/描述 + 版本徽标）
+                // + 卡内状态行，而不是「三张各自带 LG 大标题的子卡」——后者同页出现
+                // 两套区块标题（GroupLabel 是 text-sm semibold，子卡是 16/medium），
+                // 且卡中卡边界模糊。
                 Column() {
                   SettingsSectionCard() {
                     Column() {
-                      SettingsMetaCard({
-                        meta: this.systemMeta,
-                        loading: this.systemMetaLoading,
-                        error: this.systemMetaError,
-                        lastChecked: this.systemMetaLastChecked,
-                        refreshAction: () => {
+                      // 关于卡头
+                      Row({ space: DesignConstants.SPACING.MD }) {
+                        Row() {
+                          LucideIcon({
+                            icon: AppIcon.INFO,
+                            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+                            paletteRole: 'accent'
+                          })
+                        }
+                        .width(DesignConstants.COMPONENT.ICON_SIZE_MD + DesignConstants.SPACING.MD)
+                        .height(DesignConstants.COMPONENT.ICON_SIZE_MD + DesignConstants.SPACING.MD)
+                        .borderRadius(DesignConstants.RADIUS.FULL)
+                        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+                        .justifyContent(FlexAlign.Center)
+
+                        Column({ space: DesignConstants.SPACING.XS }) {
+                          Text('关于 HotSpot')
+                            .fontSize(DesignConstants.FONT.SIZE.SM)
+                            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                            .fontColor(this.getCurrentThemePalette().textPrimary)
+                          Text('基于地理位置的实时社交与社区发现应用')
+                            .fontSize(DesignConstants.FONT.SIZE.XS)
+                            .fontColor(this.getCurrentThemePalette().textSecondary)
+                            .maxLines(2)
+                            .textOverflow({ overflow: TextOverflow.Ellipsis })
+                        }
+                        .alignItems(HorizontalAlign.Start)
+                        .layoutWeight(1)
+
+                        Text(this.appVersionName || '…')
+                          .fontSize(DesignConstants.FONT.SIZE.XS)
+                          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                          .fontColor(this.getCurrentThemePalette().textSecondary)
+                          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+                          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+                          .borderRadius(DesignConstants.SHAPE.CHIP)
+                          .padding({
+                            left: DesignConstants.SPACING.SM,
+                            right: DesignConstants.SPACING.SM,
+                            top: DesignConstants.SPACING.HALF,
+                            bottom: DesignConstants.SPACING.HALF
+                          })
+                      }
+                      .width('100%')
+                      .alignItems(VerticalAlign.Center)
+                      .padding(DesignConstants.SPACING.LG)
+
+                      SettingsRowDivider()
+
+                      // 服务端状态行（原 SettingsMetaCard 的大标题卡降为行）
+                      SettingsEntryRow({ item: {
+                        icon: AppIcon.REFRESH,
+                        title: '服务端状态',
+                        subtitle: this.systemMeta === null
+                          ? (this.systemMetaLoading ? '检查中…' : '未获取')
+                          : `${this.getServerStatusText()} · ${this.appVersionName ? 'v' + this.appVersionName : ''}`,
+                        action: () => {
                           this.loadSystemMeta(true);
                           this.loadAnnouncements(true);
                         }
-                      })
+                      } })
+                      SettingsRowDivider()
+                      // 系统公告（复用公告页卡片，保留「全部查看」入口）
                       AnnouncementSummaryCard({
                         items: this.announcements,
+                        embedded: true,
                         openAll: () => {
                           const params = new AnnouncementsRouteParam();
                           params.items = this.announcements as Object[];
                           AppRouter.push(PageNames.ANNOUNCEMENTS, params);
                         }
                       })
-                      SupportConfigCard({ config: this.clientConfig })
+                      SettingsRowDivider()
+                      SupportConfigCard({ config: this.clientConfig, embedded: true })
                     }
                   }
                 }
                 .padding(this.getSectionMargin(0))
 
+                // 退出登录：对齐前端「描边按钮 + danger 文字」，居中右对齐于区块下方，
+                // 不再是一条通栏无边框红字（无边界、层级含糊）
                 if (this.isLoggedIn) {
-                  Button('退出登录')
-                    .width('100%')
-                    .height(DesignConstants.COMPONENT.LOGOUT_BUTTON_HEIGHT)
-                    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-                    .fontColor(this.getCurrentThemePalette().error)
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
+                  Row() {
+                    Button() {
+                      Row({ space: DesignConstants.SPACING.SM2 }) {
+                        LucideIcon({
+                          icon: AppIcon.BACK,
+                          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+                          color: this.getCurrentThemePalette().error
+                        })
+                        Text('退出登录当前账号')
+                          .fontSize(DesignConstants.FONT.SIZE.XS)
+                          .fontColor(this.getCurrentThemePalette().error)
+                      }
+                      .alignItems(VerticalAlign.Center)
+                    }
                     .type(ButtonType.Normal)
+                    .height('auto')
+                    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
                     .borderRadius(DesignConstants.SHAPE.BUTTON)
-                    .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+                    .padding({
+                      left: DesignConstants.SPACING.LG,
+                      right: DesignConstants.SPACING.LG,
+                      top: DesignConstants.SPACING.SM,
+                      bottom: DesignConstants.SPACING.SM
+                    })
                     .onClick(() => { this.showLogoutConfirm = true; })
+                  }
+                  .width('100%')
+                  .justifyContent(FlexAlign.End)
+                  .padding({
+                    top: DesignConstants.SPACING.LG,
+                    bottom: DesignConstants.SPACING.XXL
+                  })
                 }
               }
               .width('100%')

@@ -1213,8 +1213,8 @@ export struct LocationPickerPage {
                 color: this.getCurrentThemePalette().mapUser
               })
           }
-          .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-          .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+          .width(DesignConstants.LAYOUT.FAB_SIZE)
+          .height(DesignConstants.LAYOUT.FAB_SIZE)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.LG)
@@ -1238,13 +1238,15 @@ export struct LocationPickerPage {
           .onClick(() => { this.locateUser(); })
 
           Column() {
+            // 图标宽高取同一档（原先 width 用 ICON_SIZE_SM、height 误用按钮高度 token
+            // ACTION_BUTTON_HEIGHT(42)，20×42 会把钉图纵向拉伸变形）
             Image($rawfile('marker_center_pin.svg'))
               .width(DesignConstants.COMPONENT.ICON_SIZE_SM)
-              .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
+              .height(DesignConstants.COMPONENT.ICON_SIZE_SM)
               .objectFit(ImageFit.Contain)
           }
-          .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-          .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+          .width(DesignConstants.LAYOUT.FAB_SIZE)
+          .height(DesignConstants.LAYOUT.FAB_SIZE)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.LG)
@@ -1274,8 +1276,8 @@ export struct LocationPickerPage {
                 color: resolveLocationPickerPalette(this.resolvedThemeId).textPrimary
               })
           }
-          .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-          .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+          .width(DesignConstants.LAYOUT.FAB_SIZE)
+          .height(DesignConstants.LAYOUT.FAB_SIZE)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.LG)
@@ -1305,8 +1307,8 @@ export struct LocationPickerPage {
                 color: resolveLocationPickerPalette(this.resolvedThemeId).textPrimary
               })
           }
-          .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-          .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+          .width(DesignConstants.LAYOUT.FAB_SIZE)
+          .height(DesignConstants.LAYOUT.FAB_SIZE)
           .justifyContent(FlexAlign.Center)
            .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.LG)

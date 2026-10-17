@@ -112,7 +112,11 @@ export function TopBar(props: TopBarProps) {
     .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
     .justifyContent(FlexAlign.Center)
     .borderRadius(DesignConstants.RADIUS.FULL)
-    .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle)
+    // 与筛选钮统一：surface 底 + 发丝边 + 投影（原 surfaceSubtle 无边框，
+    // 同一行两个控件视觉语言不一致）
+    .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
+    .shadow(DesignConstants.SHADOW.SMALL)
     // 按压缩放（顶层 @Builder 无组件状态，用 scale 类工具不可行；最少补 opacity 按压反馈）
     .onClick(props.onBack)
 
@@ -127,11 +131,14 @@ export function TopBar(props: TopBarProps) {
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
     }
-    .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
+    // 与左侧返回钮同高（SMALL_PLUS 44）——原先 40 高，同一行两个浮层控件顶边/底边都不齐
+    .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
     .padding({
       left: DesignConstants.SPACING.MD,
       right: DesignConstants.SPACING.MD
     })
+    // 同一行的两个浮层控件统一视觉语言：surface 底 + 发丝边 + 投影
+    // （原先返回钮无边框、筛选钮有边框，层级读起来像两个不同层）
     .backgroundColor(props.filterOpen
       ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
       : resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
@@ -507,7 +514,10 @@ export struct SearchPanel {
       .layoutWeight(1)
       .width('100%')
     }
-    .height(SEARCH_PANEL_HEIGHT + this.safeAreaBottom)
+    // 面板高度按内容自适应（原有固定 height(440) + padding 是 border-box：
+    // 内容区被压到 440-16-safeArea，搜索框会顶到面板上沿（实测仅 0.8vp）。
+    // 改用 minHeight 保证「搜索态还有历史/结果」时不塌，内容少时自然收缩。
+    .constraintSize({ minHeight: DesignConstants.COMPONENT.INPUT_HEIGHT + DesignConstants.SPACING.LG * 2 + this.safeAreaBottom })
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,

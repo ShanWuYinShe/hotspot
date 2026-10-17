@@ -520,6 +520,8 @@ export struct AnnouncementSummaryCard {
   @Prop items: SystemAnnouncementItem[] = [];
   @Prop maxItems: number = 2;
   @Prop showOpenAll: boolean = true;
+  /** true = 被外层 SettingsSectionCard 包裹（自身不再加 padding，避免卡中卡双层留白） */
+  @Prop embedded: boolean = false;
   openAll: () => void = () => {};
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
@@ -542,12 +544,14 @@ export struct AnnouncementSummaryCard {
     Column({ space: DesignConstants.SPACING.MD }) {
       Row() {
         Column({ space: DesignConstants.SPACING.XS }) {
+          // 与外层区块标题（SettingsGroupLabel: text-sm semibold）拉开层级但不再用
+          // 16/medium 的「第二套区块标题」——卡内标题统一 text-sm medium + text-xs 描述
           Text('系统公告')
-            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
           Text(this.items.length > 0 ? '查看最近平台通知与维护提醒' : '当前暂无系统公告')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
         }
         .layoutWeight(1)
@@ -607,13 +611,19 @@ export struct AnnouncementSummaryCard {
       }
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
+    // embedded：被 SettingsSectionCard 包裹时左右留白由行本身承担，
+    // 这里去掉整卡 padding，避免「卡中卡」双层留白
+    .padding(this.embedded
+      ? { top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD }
+      : DesignConstants.SPACING.LG)
   }
 }
 
 @Component
 export struct SupportConfigCard {
   @Prop config: ClientConfig | null = null;
+  /** true = 被外层 SettingsSectionCard 包裹（自身去掉整卡 padding，避免卡中卡） */
+  @Prop embedded: boolean = false;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
@@ -623,7 +633,7 @@ export struct SupportConfigCard {
   build() {
     Column({ space: DesignConstants.SPACING.MD }) {
       Text('支持与服务信息')
-        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().textPrimary)
         .width('100%')
@@ -655,7 +665,9 @@ export struct SupportConfigCard {
       }
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
+    .padding(this.embedded
+      ? { top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD }
+      : DesignConstants.SPACING.LG)
   }
 }
 
