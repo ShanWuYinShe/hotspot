@@ -120,6 +120,8 @@ class RequestContext {
   hasAuthHeader: boolean = false;
   isMustIdempotent: boolean = false;
   idempotencyKey: string = '';
+  /** 登录/刷新端点标记（performAttempt 写入；重试判定据此跳过 10100 刷新重试） */
+  isAuthEndpoint: boolean = false;
 
   // 终态载荷：DONE 时为成功响应，FAIL 时为待抛 ApiError
   result?: Object;
@@ -562,6 +564,7 @@ export class HttpUtil {
       // signin 前先跑一次 refresh，refresh 失败即 clearAuthData 并污染登录流程
       // （实测：账号密码正确却提示「登录已过期」）。
       const isAuthEndpoint = ctx.url === ApiEndpoints.AUTH.LOGIN || ctx.url === ApiEndpoints.AUTH.REFRESH_TOKEN;
+      ctx.isAuthEndpoint = isAuthEndpoint;
       if (ctx.hasAuthHeader && !ctx.retried && !isAuthEndpoint) {
         await HttpUtil.proactiveRefreshIfNeeded();
       }
@@ -631,7 +634,11 @@ export class HttpUtil {
       }
 
       // ── 认证失败：刷新 token 后重试（至多一次，键保持 sticky）────
-      if (!ctx.retried && ctx.hasAuthHeader && isAuthErrorCode(resultCode)) {
+      // 认证端点（登录/刷新）**不参与** 10100 刷新重试：signin 返回 10100 的语义是
+      // 凭据错误/账号不存在，刷新旧 token 毫无意义——且「刷新成功后再试一次登录」
+      // 会让登录尝试翻倍，实测直接加速触发服务端 10500 登录限流（900s），
+      // 真实「凭据错误」错误也被第二次限流响应掩盖。与 2129ccd8（跳过主动刷新）同一根因的被动路径。
+      if (!ctx.retried && ctx.hasAuthHeader && !ctx.isAuthEndpoint && isAuthErrorCode(resultCode)) {
         hilog.info(DOMAIN_NUMBER, TAG, '收到 10100 认证失败，尝试刷新 token');
         const outcome = await HttpUtil.ensureRefreshToken();
         if (outcome === 'ok') {
