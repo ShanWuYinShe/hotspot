@@ -117,10 +117,10 @@ export struct TabsPillGroup {
         )
       })
     }
-    // 自由宽度模式：水平 padding 由外层承载，使胶囊收缩到内容宽
+    // 自由宽度模式：水平 padding 承载胶囊内距（对齐前端 px-3.5=14），使胶囊收缩到内容宽
     .padding({
-      left: this.freeWidth ? DesignConstants.SPACING.LG : 0,
-      right: this.freeWidth ? DesignConstants.SPACING.LG : 0
+      left: this.freeWidth ? DesignConstants.SPACING.MD3 : 0,
+      right: this.freeWidth ? DesignConstants.SPACING.MD3 : 0
     })
     // 等宽分段用 layoutWeight(1)；自由宽度收缩到内容宽
     .layoutWeight(this.freeWidth ? 0 : 1)
@@ -165,7 +165,9 @@ export struct TabsPillGroup {
         this.buildTab(tab, index)
       }, (tab: TabItem, index: number) => `${tab.label}-${index}`)
     }
-    .width('100%')
+    // 自由宽度不设 width：由内容撑开（外层可套 Scroll 横向滚动，对齐前端 overflow-x-auto 胶囊行）；
+    // 等宽分段占满容器
+    .width(this.freeWidth ? undefined : '100%')
     // 自由宽度模式：透明容器、无灰底槽、无内边距（对齐前端 TabBar 容器）
     .padding(this.freeWidth ? 0 : DesignConstants.SPACING.THREE)
     .borderRadius(this.freeWidth ? 0 : DesignConstants.RADIUS.FULL)
