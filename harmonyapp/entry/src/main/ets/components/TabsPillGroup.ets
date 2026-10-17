@@ -102,7 +102,10 @@ export struct TabsPillGroup {
       }
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
-      .width('100%')
+      // 自由宽度：内层 Row 不设宽，由 label 文本撑开（设 100% 会依赖容器宽形成循环，
+      // 导致胶囊被拉满——此前 3 次滚动容器尝试失败的真正原因）；
+      // 等宽分段：占满各自 layoutWeight 份额
+      .width(this.freeWidth ? undefined : '100%')
       // 两态统一 30 档：对齐前端 TabBar pill(py-1.5+text ≈ 28-32)，原分段 34 为近邻异档
       .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
       .borderRadius(DesignConstants.RADIUS.FULL)

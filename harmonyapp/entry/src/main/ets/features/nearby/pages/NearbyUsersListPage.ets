@@ -226,6 +226,7 @@ export struct NearbyUsersListPage {
         }
 
         // 排序 TabsPillGroup（对齐前端 TabBar；web 移动端该页无内嵌搜索框，搜索走 header 图标）
+        Scroll() {
         TabsPillGroup({
           tabs: [{ label: '距离' }, { label: '在线' }, { label: '共同好友' }],
           freeWidth: true,
@@ -256,10 +257,16 @@ export struct NearbyUsersListPage {
           }
         })
           .padding({ bottom: DesignConstants.SPACING.SM })
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .align(Alignment.Start)
+        .width('100%')
 
 
 
         // 兴趣分类 TabBar（对齐前端 nearby/people FILTER_TAGS：全部/摄影/旅行/音乐/美食/运动/阅读/艺术）
+        Scroll() {
         TabsPillGroup({
           tabs: NearbyUsersListPage.FILTER_TAGS.map((label: string): TabItem => ({ label })),
           freeWidth: true,
@@ -276,6 +283,11 @@ export struct NearbyUsersListPage {
           }
         })
           .padding({ bottom: DesignConstants.SPACING.SM })
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .align(Alignment.Start)
+        .width('100%')
 
 
 
