@@ -118,6 +118,9 @@ export struct ChatPage {
   @State targetAvatar: string = '';
   @State targetPresenceText: string = '';
   @State targetPresenceOnline: boolean = false;
+  /** 群聊页头数据（对齐前端 GroupChatView：头像 + 副文本「N 位成员」） */
+  @State groupAvatarUrl: string = '';
+  @State groupMembersCount: number = 0;
   @State isGroupServerMuted: boolean = false;
   @State groupMutedUntil: string = '';
   /** 单条消息操作面板（编辑/撤回，对齐前端 MessageBubble ⋮ 菜单） */
@@ -475,6 +478,16 @@ export struct ChatPage {
               this.isGroupServerMuted = groupResp.data.viewer_state.is_muted;
               this.groupMutedUntil = groupResp.data.viewer_state.muted_until ?? '';
               this.groupRole = groupResp.data.viewer_state.role;
+            }
+            // 群名/头像/成员数 → 页头（对齐前端 GroupChatView：副文本「N 位成员」，
+            // 群名以详情接口为准，路由参数里的会话名可能滞后）
+            if (groupResp.code === 0 && groupResp.data?.group) {
+              const groupInfo = groupResp.data.group;
+              if (groupInfo.name && groupInfo.name !== this.title) {
+                this.title = groupInfo.name;
+              }
+              this.groupAvatarUrl = groupInfo.avatar_url ?? '';
+              this.groupMembersCount = groupInfo.members_count ?? 0;
             }
           } catch (e) {
             hilog.warn(DOMAIN_NUMBER, TAG, `加载群组禁言状态失败: ${JSON.stringify(e)}`);
@@ -1070,15 +1083,26 @@ export struct ChatPage {
     Stack() {
     ResponsiveContainer({ fill: true }) {
     Column() {
-      // 头部 —— 统一走 ChatPageHeader（浮动卡片 + 返回 + 头像 + 标题 + 信息操作）
+      // 头部 —— 统一走 ChatPageHeader（浮动卡片 + 返回 + 头像 + 标题 + 信息操作；
+      // 群聊对齐前端 GroupChatView：群头像圆角方 + 「N 位成员」副文本 + 头部点击进群详情）
       ChatPageHeader({
         title: this.title,
         showAvatar: this.chatType === 'private_chat',
         targetAvatar: this.targetAvatar ?? '',
         presenceText: this.chatType === 'private_chat' ? this.targetPresenceText : '',
         presenceOnline: this.targetPresenceOnline,
+        isGroup: this.chatType === 'group_chat',
+        groupAvatar: this.groupAvatarUrl,
+        membersCount: this.groupMembersCount,
+        typingHint: this.groupTypingHintText(),
+        showTrailing: this.chatType !== 'group_chat',
         onBack: () => this.handleBackNavigation(),
-        onTrailingAction: () => this.openConversationActions()
+        onTrailingAction: () => this.openConversationActions(),
+        onOpenGroupDetail: () => {
+          const groupParam = new GroupDetailRouteParam();
+          groupParam.groupId = this.chatId;
+          AppRouter.push(PageNames.GROUP_DETAIL, groupParam);
+        }
       })
 
       if (this.isLoading) {

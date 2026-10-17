@@ -42,7 +42,8 @@ import {
   SettableGroupRole,
   UpdateGroupRequest,
   AdminBannedMemberItem,
-  UserItem
+  UserItem,
+  CreateReportRequest
 } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
@@ -176,6 +177,10 @@ export struct GroupDetailPage {
   @State isLoadingTransferCandidates: boolean = false;
   // 封禁管理（对齐前端 banned 子 Tab：名单 + 解封）
   @State showBannedListSheet: boolean = false;
+  /** 更多操作 sheet + 举报确认（对齐前端「更多操作」bottom sheet：封面右上角 ⋯） */
+  @State showGroupMoreSheet: boolean = false;
+  @State showGroupReportConfirm: boolean = false;
+  @State groupReportSubmitting: boolean = false;
   @State bannedMembers: AdminBannedMemberItem[] = [];
   @State isLoadingBannedMembers: boolean = false;
   /** 封禁二次确认目标（危险操作防误触，对齐前端 MemberActionSheet ban 语义） */
@@ -1530,14 +1535,16 @@ export struct GroupDetailPage {
             onPress: () => { AppRouter.pop(); }
           })
           Blank()
+          // web 群详情封面右上角是「更多操作」(MoreHorizontal overlay) —— 内含举报群组；
+          // 原「分享」在前端群详情页不存在（分享入口在群分享码/我的分享）
           SurfaceIconButton({
-            icon: AppIcon.SHARE,
+            icon: AppIcon.MORE,
             kind: 'neutral',
             buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
             glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             iconColor: DesignConstants.COLOR.WHITE,
-            accessibilityLabel: '分享群组',
-            onPress: () => { this.shareGroup(); }
+            accessibilityLabel: '更多操作',
+            onPress: () => { this.showGroupMoreSheet = true; }
           })
         }
         .width('100%')
@@ -2055,6 +2062,12 @@ export struct GroupDetailPage {
       dragBar: true,
       backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
+    .bindSheet($$this.showGroupMoreSheet, this.buildGroupMoreSheet(), {
+      height: SheetSize.FIT_CONTENT,
+      showClose: false,
+      dragBar: true,
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
+    })
   }
 
   // 四宫格数据卡（对齐前端 groups/[groupId] 简介区 2×2 stats：成员/在线/距你/分类）
@@ -2481,6 +2494,79 @@ export struct GroupDetailPage {
   }
 
   /** 封禁成员二次确认面板（危险操作防误触；确认后走 confirmBanMember 落库） */
+  /** 更多操作 sheet（对齐前端「更多操作」bottom sheet：眉标 + 群名 + 举报群组） */
+  @Builder
+  private buildGroupMoreSheet() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Row({ space: DesignConstants.SPACING.HALF }) {
+        Text('更多操作')
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+          .textCase(TextCase.UpperCase)
+      }
+      .width('100%')
+
+      Text(this.groupInfo?.group?.name ?? '群组')
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .width('100%')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      SystemButton({
+        label: '举报群组',
+        variant: 'surface-danger',
+        buttonSize: 'sheet',
+        fullWidth: true,
+        onPress: () => {
+          this.showGroupMoreSheet = false;
+          this.showGroupReportConfirm = true;
+        }
+      })
+
+      SystemButton({
+        label: '关闭',
+        variant: 'surface-accent',
+        buttonSize: 'sheet',
+        fullWidth: true,
+        onPress: () => { this.showGroupMoreSheet = false; }
+      })
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.XL
+    })
+  }
+
+  /** 举报确认（对齐聊天页举报范式：SystemDialog danger 确认 → createReport） */
+  private async submitGroupReport(): Promise<void> {
+    if (this.groupReportSubmitting) {
+      return;
+    }
+    this.groupReportSubmitting = true;
+    try {
+      const reportReq: CreateReportRequest = {
+        target_type: 'group',
+        target_id: this.groupInfo?.group?.group_id ?? '',
+        reason: 'other',
+        description: '来自群详情页面的举报'
+      };
+      await ApiClient.createReport(reportReq);
+      SystemToast.show('举报已提交', this.getUIContext());
+    } catch {
+      SystemToast.showError('举报提交失败', this.getUIContext());
+    } finally {
+      this.groupReportSubmitting = false;
+    }
+  }
+
   @Builder
   private buildBanConfirmSheet() {
     Column({ space: DesignConstants.SPACING.LG }) {

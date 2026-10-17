@@ -33,6 +33,20 @@ export struct ChatPageHeader {
   @Prop presenceText: string = '';
   /** 对端是否在线（决定副文本颜色）。 */
   @Prop presenceOnline: boolean = false;
+  /**
+   * 群聊模式（对齐前端 GroupChatView 头部）：
+   * - 头像用群头像（圆角方 shape=squircle，对应 web shape="rounded"）
+   * - 副文本 = 「正在输入…」提示（accent 色）/「N 位成员」/「群聊」
+   * - 头像 + 标题整体可点进群详情（web avatar-entry button）
+   */
+  @Prop isGroup: boolean = false;
+  @Prop groupAvatar: string = '';
+  @Prop membersCount: number = 0;
+  /** 群聊「正在输入」提示文本；非空时副文本切 accent 色。 */
+  @Prop typingHint: string = '';
+  onOpenGroupDetail: () => void = () => {};
+  /** 是否显示尾随操作钮（web GroupChatView 无尾随按钮，群聊入口收敛到头部）。 */
+  @Prop showTrailing: boolean = true;
   /** 返回回调。 */
   onBack: () => void = () => {};
   /** 尾随操作回调（打开会话设置/操作）。 */
@@ -60,27 +74,37 @@ export struct ChatPageHeader {
           }
         })
 
-        if (this.showAvatar) {
+        if (this.isGroup || this.showAvatar) {
           SystemAvatar({
-            avatarUrl: this.targetAvatar,
+            avatarUrl: this.isGroup ? this.groupAvatar : this.targetAvatar,
             name: this.title,
             avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-            shape: 'circle'
+            // 群聊头像圆角方（web shape="rounded"）；私聊保持圆形
+            shape: this.isGroup ? 'squircle' : 'circle'
           })
             .margin({ left: DesignConstants.SPACING.XS })
         }
 
-        // 标题 + 在线状态副文本（对齐前端 ChatPageHeader：名字 sm medium + presence xs）
+        // 标题 + 状态副文本（对齐前端：私聊 = 名字 medium + presence xs；
+        // 群聊 = GroupChatView：头像+标题整体可点进群详情，副文本「N 位成员」/输入中提示）
         Column() {
           Text(this.title)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontWeight(this.isGroup ? DesignConstants.FONT.WEIGHT.REGULAR : DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          if (this.presenceText.length > 0) {
+          if (this.isGroup) {
+            Text(this.typingHint.length > 0 ? this.typingHint :
+              (this.membersCount > 0 ? `${this.membersCount} 位成员` : '群聊'))
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.typingHint.length > 0 ?
+                this.getPalette().accentBackground : this.getPalette().textSecondary)
+              .maxLines(1)
+          } else if (this.presenceText.length > 0) {
             Text(this.presenceText)
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              // 前端 presence 为 text-xs(11)；原 XS2(10) 为近邻档漂移
+              .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.presenceOnline ? this.getPalette().online : this.getPalette().textSecondary)
               .maxLines(1)
           }
@@ -88,20 +112,29 @@ export struct ChatPageHeader {
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
         .margin({ left: DesignConstants.SPACING.SM })
+        // 群聊：头像+标题整体进群详情（web avatar-entry）
+        .onClick(() => {
+          if (this.isGroup) {
+            this.onOpenGroupDetail();
+          }
+        })
+        .accessibilityText(this.isGroup ? `查看群「${this.title}」详情` : '')
       }
       .layoutWeight(1)
 
-      // 尾随：会话操作 ghost 圆钮（对齐前端 trailing ghost 动作组）
-      SurfaceIconButton({
-        icon: AppIcon.MORE,
-        kind: 'surface',
-        buttonSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
-        glyphSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-        accessibilityLabel: '会话操作',
-        onPress: () => {
-          this.onTrailingAction();
-        }
-      })
+      // 尾随：会话操作 ghost 圆钮（私聊保留；群聊 web 无尾随按钮——入口已收敛到头部）
+      if (this.showTrailing) {
+        SurfaceIconButton({
+          icon: AppIcon.MORE,
+          kind: 'surface',
+          buttonSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+          accessibilityLabel: '会话操作',
+          onPress: () => {
+            this.onTrailingAction();
+          }
+        })
+      }
     }
     .width('100%')
     .padding({

@@ -62,6 +62,8 @@ export enum AppIcon {
   GROUP = 'sys.symbol.person_2',
   /** 关注（对齐前端 lucide UserPlus；系统符号 person_badge_plus） */
   PERSON_ADD = 'sys.symbol.person_badge_plus',
+  /** 举报（对齐前端 lucide Flag；系统符号 flag） */
+  FLAG = 'sys.symbol.flag',
 
   // 内容类型图标
   COFFEE = 'sys.symbol.cup',
@@ -177,6 +179,7 @@ export const AppIconMap: Map<AppIcon, string> = new Map<AppIcon, string>([
   [AppIcon.PERSON, 'person'],
   [AppIcon.GROUP, 'person_2'],
   [AppIcon.PERSON_ADD, 'person_badge_plus'],
+  [AppIcon.FLAG, 'flag'],
   [AppIcon.HEART, 'heart'],
   [AppIcon.HEART_FILL, 'heart_fill'],
   [AppIcon.STAR, 'star'],
