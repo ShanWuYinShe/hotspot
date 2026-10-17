@@ -115,6 +115,7 @@ export interface PageNamesType {
   SHARE_RESOLUTION: string;
   PROFILE_EDIT: string;
   NEARBY_USERS: string;
+  MY_REPORTS: string;
   NEARBY_GROUPS: string;
   NEARBY: string;
   NEARBY_MOMENTS: string;
@@ -149,6 +150,7 @@ export const PageNames: PageNamesType = {
   SHARE_RESOLUTION: 'ShareResolutionPage',
   PROFILE_EDIT: 'ProfileEditPage',
   NEARBY_USERS: 'NearbyUsersListPage',
+  MY_REPORTS: 'MyReportsPage',
   NEARBY_GROUPS: 'NearbyGroupsListPage',
   NEARBY: 'NearbyPage',
   NEARBY_MOMENTS: 'MomentsFeedPage',

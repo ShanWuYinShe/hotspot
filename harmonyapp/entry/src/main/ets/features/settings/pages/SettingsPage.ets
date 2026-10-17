@@ -445,6 +445,16 @@ export struct SettingsPage {
             AppRouter.push(PageNames.RELATIONSHIP_HUB);
           }
         }
+      },
+      {
+        icon: AppIcon.FLAG,
+        title: '我的举报',
+        subtitle: '查看已提交举报的处理进度与结果',
+        action: () => {
+          if (this.requireLogin('查看我的举报', PageNames.MY_REPORTS)) {
+            AppRouter.push(PageNames.MY_REPORTS);
+          }
+        }
       }
     ];
   }

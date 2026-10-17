@@ -1559,6 +1559,21 @@ export struct GroupDetailPage {
       // 或改用 calc 宽度；当前选择与下方内容对齐的「收束式 hero」，视觉更一致。
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
+      // 举报确认弹窗（更多操作 sheet → 举报群组；danger 确认，对齐 ChatPage 举报范式）。
+      // 挂在常驻 Stack 上：任何 tab / 加载态下都可用（更多 sheet 入口在封面右上角）。
+      SystemDialog({
+        visible: this.showGroupReportConfirm,
+        title: '举报群组',
+        description: '将对该群组提交举报，我们会尽快审核处理',
+        confirmText: '提交举报',
+        confirmVariant: 'danger',
+        onCancel: () => { this.showGroupReportConfirm = false; },
+        onConfirm: () => {
+          this.showGroupReportConfirm = false;
+          this.submitGroupReport();
+        }
+      })
+
       if (this.isLoading) {
         SystemLoadingView({ message: '加载群组信息中…' })
           .layoutWeight(1)

@@ -121,6 +121,11 @@
       "buildFunction": "ProfileEditPageBuilder"
     },
     {
+      "name": "MyReportsPage",
+      "pageSourceFile": "src/main/ets/features/me/pages/MyReportsPage.ets",
+      "buildFunction": "MyReportsPageBuilder"
+    },
+    {
       "name": "NearbyUsersListPage",
       "pageSourceFile": "src/main/ets/features/nearby/pages/NearbyUsersListPage.ets",
       "buildFunction": "NearbyUsersListPageBuilder"
