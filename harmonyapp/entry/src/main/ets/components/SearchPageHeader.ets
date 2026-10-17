@@ -66,7 +66,8 @@ export struct SearchPageHeader {
 
   @Builder
   private SearchInputRow() {
-    Row({ space: DesignConstants.SPACING.SM }) {
+    // 对齐前端 SearchInput：gap-2.5(10) + 框高 39.14 → SEARCH_INPUT_HEIGHT
+    Row({ space: DesignConstants.SPACING.MD2 }) {
       LucideIcon({
           icon: AppIcon.SEARCH,
           iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
@@ -75,7 +76,7 @@ export struct SearchPageHeader {
 
       TextInput({ placeholder: this.placeholder, text: this.keyword })
         .layoutWeight(1)
-        .height(DesignConstants.CHAT.INPUT_HEIGHT)
+        .height(DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT)
         // 完全透明化：消除 TextInput 系统主题默认背景/圆角溢出
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .background(DesignConstants.COLOR.TRANSPARENT)
@@ -109,7 +110,7 @@ export struct SearchPageHeader {
           }
         })
     }
-    .height(DesignConstants.CHAT.INPUT_HEIGHT)
+    .height(DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT)
     .borderRadius(DesignConstants.SHAPE.INPUT)
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .backgroundColor(this.getSurfaceBackground())

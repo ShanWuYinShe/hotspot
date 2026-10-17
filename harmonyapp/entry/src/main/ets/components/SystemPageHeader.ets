@@ -53,6 +53,9 @@ export struct SystemPageHeader {
   onBack: (() => void) | null = null;
   leftAction: IconAction | null = null;
   rightAction: IconAction | null = null;
+  /** 页面在页头下方自带内容（如搜索框）：页头底部留白转由该内容自行承担，
+   *  对齐前端 PageHeader「below 存在时 pt-4(16) pb-0 + below 自带 pb-3.5(14)」的节奏。 */
+  @Prop hasBelowContent: boolean = false;
   /** 任意尾随内容（@BuilderParam，可选）。提供时优先于 action/rightAction。 */
   @BuilderParam trailing?: () => void;
   /** 副标题前置图标（可选；对齐前端 PageHeader subtitleIcon，如附近页 MapPin 位置行）。
@@ -108,14 +111,13 @@ export struct SystemPageHeader {
   }
 
   private getHeaderBorderColor(): ResourceColor {
-    if (this.backgroundVariant === 'transparent' || this.backgroundVariant === 'card') {
+    if (this.backgroundVariant === 'card') {
       return DesignConstants.COLOR.TRANSPARENT;
     }
-    // 静止时无边线（与页面画布融合）；滚动态（elevated）恢复边界线
-    if (!this.elevated) {
-      return DesignConstants.COLOR.TRANSPARENT;
-    }
-    // 对齐前端 border-bottom: hairline solid var(--cst-border-default)
+    // 对齐前端 PageHeader：任何页面头部在任何状态都画 border-bottom hairline
+    // （2026-10-17 逐像素实测 9 个移动端页面：头部最后一行像素均比画布亮，
+    //  如 /messages y=117 是 rgb(42,60,89)、画布 rgb(21,33,52)）。
+    // 此前 transparent 变体完全不画线、bar 变体仅在滚动态画线，与前端不一致。
     return this.getPalette().borderColor;
   }
 
@@ -209,6 +211,8 @@ export struct SystemPageHeader {
           Text(this.title)
             .fontSize(this.titleSize)
             .fontWeight(this.titleWeight)
+            // leading-none：前端标题行高恒等于字号，行盒不被字体默认行高撑高
+            .lineHeight(this.titleSize)
             .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -259,13 +263,14 @@ export struct SystemPageHeader {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
-      // 只保留纵向节奏（对齐前端 PageHeader pt-4(16) pb-3(12)）。
+      // 只保留纵向节奏（对齐前端 PageHeader）：无 below 时 pt-4.5/pb-4.5(18/18)，
+      // 有 below（页面自带搜索框等）时 pt-4(16) 且底部留白交给该内容承担。
       // **横向留白一律由 PageShellContainer 的 gutter 提供**：页头此前自带
       // LG2(20) 横向 padding，与容器 gutter 叠加成 20+16=36，而正文只有 16，
       // 导致「页头标题比正文内容多缩进一截」——同一页面内左边缘都不齐。
       .padding({
-        top: DesignConstants.SPACING.MD,
-        bottom: DesignConstants.SPACING.MD2
+        top: this.hasBelowContent ? DesignConstants.SPACING.LG : DesignConstants.SPACING.LG_PLUS,
+        bottom: this.hasBelowContent ? 0 : DesignConstants.SPACING.LG_PLUS
       })
     }
     .width('100%')

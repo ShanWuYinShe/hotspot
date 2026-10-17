@@ -113,6 +113,7 @@ export interface SpacingSystem {
   MD: number;
   MD3: number; // 14 — 12 与 16 之间的微步（表单字段间距）
   LG: number;
+  LG_PLUS: number; // 18 — 前端 4.5 档（页头上下留白 pt-4.5/pb-4.5）
   LG2: number; // 20 — 16 与 24 之间的微步（弹层/分组间距）
   XL: number;
   XXL: number;
@@ -239,6 +240,8 @@ export interface AvatarSizes {
   /** 44 — 通知行/会话列表头像（对齐前端 size-11） */
   SMALL_PLUS: number;
   MEDIUM: number;
+  /** 52 — 在线条头像外框（对齐前端 OnlineStrip lg：2 描边 + 2 间隙 + 44 头像） */
+  ONLINE_STRIP: number;
   LARGE: number;
   XLARGE: number;
 }
@@ -247,6 +250,11 @@ export interface ComponentConstants {
   AVATAR_SIZE: AvatarSizes;
   BUTTON_HEIGHT: number;
   INPUT_HEIGHT: number;
+  /** 搜索输入框高度（39，对齐前端 SearchInput 移动端实测 39.14 = py-2.5+行高+border） */
+  SEARCH_INPUT_HEIGHT: number;
+  /** 在线角标固定档（对齐前端 OnlineDot sizeMap：sm 8 / md 10 / lg 12） */
+  ONLINE_DOT_MD: number;
+  ONLINE_DOT_LG: number;
   /** 紧凑操作按钮（通知操作/角标按钮 28） */
   ACTION_BUTTON_HEIGHT: number;
   /** 中等操作按钮（详情页操作行 40） */
@@ -550,6 +558,8 @@ const SPACING: SpacingSystem = {
   MD: 12,
   MD3: 14,
   LG: 16,
+  /** 18 = 前端 4.5 档（pt-4.5/pb-4.5）：页头上下留白与前端 PageHeader 同档 */
+  LG_PLUS: 18,
   LG2: 20,
   XL: 24,
   XXL: 32,
@@ -656,11 +666,17 @@ const COMPONENT: ComponentConstants = {
     SMALL: 40,
     SMALL_PLUS: 44,
     MEDIUM: 48,
+    /** 52 — 在线条头像外框（对齐前端 OnlineStrip lg：2 描边 + 2 间隙 + 44 头像） */
+    ONLINE_STRIP: 52,
     LARGE: 80,
     XLARGE: 96,
   },
   BUTTON_HEIGHT: 42,
   INPUT_HEIGHT: 42,
+  SEARCH_INPUT_HEIGHT: 39,
+  // 对齐前端 OnlineDot sizeMap（含 2vp 描边在内：md 10 / lg 12）
+  ONLINE_DOT_MD: 10,
+  ONLINE_DOT_LG: 12,
   ACTION_BUTTON_HEIGHT: 28,
   ACTION_BUTTON_HEIGHT_MD: 40,
   ACTION_BUTTON_HEIGHT_LG: 34,

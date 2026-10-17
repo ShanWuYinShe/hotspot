@@ -4,6 +4,9 @@
  * 主题按 resolvedThemeId 自解析（与 ProfileContentAtoms 同规），行内导航走 AppRouter；无本地状态。
  * 2026-10-13：手写卡片容器与行内底部 hairline 迁移为 ListGroup + ListRowDivider 原语
  * （对齐 HarmonyOS 列表规范：分隔线内缩对齐文字起始处，卡片圆角 COMPACT_CARD=16 列表容器档）。
+ * 2026-10-17 移动端对齐：本区块只保留前端 ProfileMobile 的 5 行「个人数据」，
+ *   端侧动作行（更新位置/升级账号/管理员工具台）改由 ProfilePage 另起端侧分组承载；
+ *   行图标 14→16（前端 size-4）、分组小标左内边距 6→4（前端 px-1）。
  */
 
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -27,9 +30,6 @@ export struct ProfileDataSection {
   @Prop myFriendsCount: number = 0;
   @Prop myFollowingCount: number = 0;
   @Prop myFollowersCount: number = 0;
-  /** 追加动作行（升级/设置/退出登录等）：与数据行同卡拼接，行间 ListRowDivider 分隔 */
-  @BuilderParam actionRows: () => void;
-  @Prop hasActionRows: boolean = false;
 
   @Builder
   private dataRow(icon: AppIcon, label: string, detail: string, onTap: () => void) {
@@ -44,7 +44,8 @@ export struct ProfileDataSection {
         Row() {
           LucideIcon({
             icon: icon,
-            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            // 前端行内 icon-badge：容器 size-8(32) + 图标 size-4(16)
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
             color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground
           })
         }
@@ -71,7 +72,7 @@ export struct ProfileDataSection {
 
         LucideIcon({
           icon: AppIcon.ARROW_RIGHT,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
           color: AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary
         })
       }
@@ -95,12 +96,12 @@ export struct ProfileDataSection {
         .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
         .textCase(TextCase.UpperCase)
         .width('100%')
-        .padding({ left: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM })
+        .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })
       Text('在这里查看你的内容与关系')
         .fontSize(DesignConstants.FONT.SIZE.XS)
         .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
         .width('100%')
-        .padding({ left: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM })
+        .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })
 
       // 列表容器原语（对齐 HarmonyOS 列表规范：单卡 + 行间内缩分隔线）
       ListGroup() {
@@ -123,17 +124,11 @@ export struct ProfileDataSection {
         this.dataRow(AppIcon.HEART, '粉丝', `${formatCount(this.myFollowersCount)} 人`, () => {
           AppRouter.push(PageNames.RELATIONSHIP_HUB);
         })
-        if (this.hasActionRows) {
-          ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
-          Column() {
-            this.actionRows()
-          }
-          .width('100%')
-        }
       }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
-    .margin({ top: DesignConstants.SPACING.LG })
+    // 前端「个人数据」分组 mt-5(20)
+    .margin({ top: DesignConstants.SPACING.LG2 })
   }
 }

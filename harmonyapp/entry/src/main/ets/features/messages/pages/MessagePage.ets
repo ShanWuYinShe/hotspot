@@ -33,8 +33,7 @@ import { SystemDialog } from '../../../components/SystemDialog';
 import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
-import { DesignConstants } from '../../../constants/DesignConstants';
-import { ListEnd } from '../../../components/ListEnd';
+import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -46,7 +45,6 @@ import { common } from '@kit.AbilityKit';
 import pasteboard from '@ohos.pasteboard';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
-import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
@@ -94,12 +92,6 @@ export struct MessagePage {
   private groupHasMore: boolean = false;
   private groupNextCursor: string = '';
   @State isLoadingMore: boolean = false;
-  /**
-   * 列表是否还有更多（供 UI 判断是否显示「没有更多了」收尾提示）。
-   * privateHasMore / groupHasMore 是普通成员（非 @State），在 build 中读取不会触发刷新，
-   * 因此单独镜像一个 @State；每次分页响应后同步（见 loadPrivateChats / loadGroupChats）。
-   */
-  @State listHasMore: boolean = true;
   @State deletingChatKeys: string[] = [];
   @State showDeleteChatConfirm: boolean = false;
   @State pendingDeleteChat: ChatItem | null = null;
@@ -132,15 +124,11 @@ export struct MessagePage {
     return count;
   }
 
-  // 会话过滤 Tab（skill hotspot-harmony-ui 契约：列表头部「全部 / 未读 / 已读」
-  // TabsPillGroup，对齐前端 TabBar 形态；0=全部 1=未读 2=已读）
-  @State chatFilterIndex: number = 0;
-
+  // 会话过滤：仅按关键词。对齐前端消息页——前端没有「全部 / 未读 / 已读」分档，
+  // 排序由服务端负责（置顶 > 未读 > 已读），客户端只做搜索过滤。
   private applyFilter(): void {
     const keyword = this.searchKeyword.trim().toLowerCase();
     this.filteredChatItems = this.chatItems.filter((item: ChatItem) => {
-      if (this.chatFilterIndex === 1 && item.unreadCount <= 0) return false;
-      if (this.chatFilterIndex === 2 && item.unreadCount > 0) return false;
       if (keyword !== '' && item.name.toLowerCase().indexOf(keyword) < 0) return false;
       return true;
     });
@@ -289,7 +277,6 @@ export struct MessagePage {
         const items = response.data?.items ?? [];
         this.privateHasMore = !!(response.data?.next_cursor);
         this.privateNextCursor = response.data?.next_cursor ?? '';
-        this.syncListHasMore();
         return items
           .filter((item: PrivateChatItem) => item.other_user?.user_id)
           .map((item: PrivateChatItem): ChatItem => {
@@ -323,7 +310,6 @@ export struct MessagePage {
         const items = response.data?.items ?? [];
         this.groupHasMore = !!(response.data?.next_cursor);
         this.groupNextCursor = response.data?.next_cursor ?? '';
-        this.syncListHasMore();
         return items
           .filter((item: GroupItem) => item.group?.group_id)
           .map((item: GroupItem): ChatItem => {
@@ -347,11 +333,6 @@ export struct MessagePage {
       hilog.error(DOMAIN_NUMBER, TAG, '加载群聊失败');
       return [];
     }
-  }
-
-  /** 同步「是否还有更多」到 @State（供 ListEnd 判断） */
-  private syncListHasMore(): void {
-    this.listHasMore = this.privateHasMore || this.groupHasMore;
   }
 
   private async loadMore(): Promise<void> {
@@ -633,29 +614,34 @@ export struct MessagePage {
       SystemPageHeader({
         title: '消息',
         titleSize: DesignConstants.FONT.SIZE.XXL,
-        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+        titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
+        // 搜索框在页头下方：页头底部留白转由搜索框承担（对齐前端 PageHeader below）
+        hasBelowContent: true,
         backgroundVariant: 'transparent'
       }) {
         // trailing: 未读计数 + 添加(菜单)（对齐前端移动端 trailing：N 条未读 / 全部已读 + Plus ghost）；
         // 无会话时状态文本整体隐藏（空列表上「全部已读」无意义）
-        Row({ space: DesignConstants.SPACING.MD2 }) {
+        // 对齐前端 trailing：flex gap-2(8) + 未读计数 + 圆钮
+        Row({ space: DesignConstants.SPACING.SM }) {
           if (this.chatItems.length > 0) {
             if (this.getTotalUnread() > 0) {
               Text(`${this.getTotalUnread()} 条未读`)
                 .fontSize(DesignConstants.FONT.SIZE.XS)
                 .fontColor(this.getCurrentThemePalette().textSecondary)
             } else {
+              // 对齐前端：全部已读用在线色（text-status-online），不是次色
               Text('全部已读')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getCurrentThemePalette().textSecondary)
+                .fontColor(this.getCurrentThemePalette().online)
             }
           }
 
           Row() {
-            // r77：与底部导航中央「+」(全局发布)拉开差异，用撰写笔表意「发起会话」
+            // 对齐前端「发起新会话」圆钮：Plus 16 + 次色（前端消息页 header 与底栏发布
+            // FAB 同样都用 Plus，不再用撰写笔区分）
             LucideIcon({
-              icon: AppIcon.EDIT,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+              icon: AppIcon.ADD,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
               paletteRole: 'textSecondary'
             })
           }
@@ -663,8 +649,11 @@ export struct MessagePage {
           .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .justifyContent(FlexAlign.Center)
           .borderRadius(DesignConstants.RADIUS.FULL)
-          // 对齐前端 surface-flat 圆钮（size-9 浅底圆形 + 次色 Plus）
-          .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+          // 对齐前端 surface 圆钮：size-9 + hairline 描边 + surface-primary 底 + raised 投影
+          // （鸿蒙阴影 token 归零为扁平风，凸起语义由描边承担）
+          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+          .shadow(this.getCurrentThemePalette().surfaceShadow)
           .responseRegion({
             x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
             y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
@@ -723,33 +712,14 @@ export struct MessagePage {
         placeholder: '搜索会话…',
         prefixIcon: AppIcon.SEARCH,
         showPrefixIcon: true,
-        inputHeight: DesignConstants.COMPONENT.INPUT_HEIGHT,
+        inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
         onChange: (value: string) => {
           this.searchKeyword = value;
           this.applyFilter();
         }
       })
-      .margin({ bottom: DesignConstants.SPACING.SM })
-
-      // 会话状态过滤（skill hotspot-harmony-ui 契约：头部「全部 / 未读 / 已读」，
-      // 对齐前端 TabBar 胶囊形态；未读 Tab 带角标计数，客户端过滤不重新请求）
-      TabsPillGroup({
-        tabs: [
-          { label: '全部' },
-          { label: '未读', count: this.getTotalUnread() },
-          { label: '已读' }
-        ] as TabItem[],
-        activeIndex: this.chatFilterIndex,
-        actions: {
-          onChange: (index: number) => {
-            if (this.chatFilterIndex !== index) {
-              this.chatFilterIndex = index;
-              this.applyFilter();
-            }
-          }
-        }
-      })
-      .padding({ bottom: DesignConstants.SPACING.SM })
+      // 对齐前端：搜索框距标题行 mt-3(12)、距页头下缘 pb-3.5(14)
+      .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD3 })
 
       // 宽屏（master-detail）提示：当前点击会话仍 push 独立页（保持聊天功能完整）
       if (useMasterDetail(this.currentBreakpoint)) {
@@ -852,8 +822,12 @@ export struct MessagePage {
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .textCase(TextCase.UpperCase)
                   .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+                  // 行高按前端全局 line-height:1.5 锁 15vp（10×1.5）；不锁则 ArkUI 默认行盒
+                  // 只有 ~11.6vp，整段比前端矮 3.4vp
+                  .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS2, DesignConstants.FONT.LINE_RATIO.DEFAULT))
+                  // 对齐前端「最近」小标：px-4 mt-3 mb-1.5 + 列表 mt-1（横向留白由 PageShellContainer 提供）
                   .padding({
-                    top: DesignConstants.SPACING.SM,
+                    top: DesignConstants.SPACING.MD,
                     bottom: DesignConstants.SPACING.MD2
                   })
               }
@@ -869,7 +843,6 @@ export struct MessagePage {
                   ListItem() {
                     this.buildChatItem(item)
                   }
-                  .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                 }, (item: ChatItem) => item.id + item.type)
               }
               .width('100%')
@@ -887,11 +860,6 @@ export struct MessagePage {
               ListItem() {
                 LoadingMoreIndicator()
                   .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-              }
-            } else if (!this.listHasMore && this.chatListDataSource.totalCount() > 0) {
-              // 到底收尾提示：区分「已到底」与「加载卡住」（前端四态契约的 ListEnd）
-              ListItem() {
-                ListEnd()
               }
             }
           }
@@ -950,25 +918,34 @@ export struct MessagePage {
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .textCase(TextCase.UpperCase)
         .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+        .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS2, DesignConstants.FONT.LINE_RATIO.DEFAULT))
         .padding({ bottom: DesignConstants.SPACING.MD2 })
 
       Scroll() {
-        Row({ space: DesignConstants.SPACING.MD }) {
+        Row({ space: DesignConstants.SPACING.LG }) {
           ForEach(this.getOnlineChats(), (chat: ChatItem) => {
             Pressable({ onPress: () => {
               this.enterChat(chat);
             } }) {
               Column({ space: DesignConstants.SPACING.SM2 }) {
-                // 48px 头像 + accent 描边环；在线点由 SystemAvatar 内建（isOnline）
-                SystemAvatar({
-                  avatarUrl: chat.avatarUrl,
-                  name: chat.name,
-                  avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
-                  shape: 'circle',
-                  isOnline: true
-                })
-                .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().accentBackground })
+                // 对齐前端 OnlineStrip(lg)：52 外框 = 2 描边 + 2 间隙 + 44 头像
+                // （前端 Avatar size=52 + padding:2px + border-width-strong）
+                Column() {
+                  SystemAvatar({
+                    avatarUrl: chat.avatarUrl,
+                    name: chat.name,
+                    avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+                    shape: 'circle',
+                    isOnline: true,
+                    onlineDotSize: DesignConstants.COMPONENT.ONLINE_DOT_LG
+                  })
+                }
+                .width(DesignConstants.COMPONENT.AVATAR_SIZE.ONLINE_STRIP)
+                .height(DesignConstants.COMPONENT.AVATAR_SIZE.ONLINE_STRIP)
                 .borderRadius(DesignConstants.RADIUS.FULL)
+                .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getCurrentThemePalette().accentBackground })
+                .padding(DesignConstants.SPACING.HALF)
+                .justifyContent(FlexAlign.Center)
 
                 Text(chat.name)
                   .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -985,10 +962,13 @@ export struct MessagePage {
       }
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
-      .constraintSize({ maxHeight: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM + DesignConstants.SPACING.MD3 })
+      // 不设 maxHeight：条目高 = 52 头像 + gap 6 + 昵称行高 15 ≈ 73（对齐前端
+      // 76.66），旧值 62 会把昵称裁掉
+      .padding({ bottom: DesignConstants.SPACING.XS })
     }
     .width('100%')
-    .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.MD })
+    // 对齐前端 OnlineStrip 外层 px-4 pt-2 与 strip 自身 mb-4（横向留白由 PageShellContainer 提供）
+    .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
   }
 
   // 私聊对端在线（群聊无 presence 语义，恒 false；对齐前端 ChatListItem online 点）
@@ -999,23 +979,24 @@ export struct MessagePage {
 
   @Builder
   buildChatItem(item: ChatItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      // 头像 44 + hairline 描边 + 在线角标（对齐前端 ChatListItem 契约）
+    // 对齐前端 ChatListItem（移动端）：gap-3.5(14) + px-4 py-3 行
+    Row({ space: DesignConstants.SPACING.MD3 }) {
+      // 头像 44（对齐前端 ChatListItem：Avatar size=44 无描边、私聊/群聊同为圆形；
+      // 选中态的描边由 ListItem 负责，这里不额外画环）+ 在线角标 10（OnlineDot md）
       SystemAvatar({
         avatarUrl: item.avatarUrl,
         name: item.name,
         avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
-        shape: item.type === 'group' ? 'squircle' : 'circle',
-        isOnline: this.isChatOnline(item)
+        shape: 'circle',
+        isOnline: this.isChatOnline(item),
+        onlineDotSize: DesignConstants.COMPONENT.ONLINE_DOT_MD
       })
-      .border({ width: DesignConstants.BORDER_WIDTH.REGULAR, color: this.getCurrentThemePalette().borderColor })
-      .borderRadius(DesignConstants.RADIUS.FULL)
 
       Column({ space: DesignConstants.SPACING.HALF }) {
         Row() {
           Text(item.name)
-            .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-body
-            .fontWeight(DesignConstants.FONT.WEIGHT.REGULAR)
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-sm
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM) // 对齐前端 font-medium
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .layoutWeight(1)
             .maxLines(1)
@@ -1028,7 +1009,7 @@ export struct MessagePage {
         .width('100%')
 
         Row() {
-          Text(item.lastMessage || '')
+          Text(item.lastMessage || '暂无消息')
             .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs 预览
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
@@ -1038,7 +1019,7 @@ export struct MessagePage {
           if (item.isPinned) {
             LucideIcon({
               icon: AppIcon.PIN_FILL,
-              iconSize: 12,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS, // 14 对齐前端 size-3.5
               paletteRole: 'accent'
             })
               .margin({ left: DesignConstants.SPACING.XS })

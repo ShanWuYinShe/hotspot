@@ -17,6 +17,9 @@ export struct SystemAvatar {
   @Prop name: string = '';
   @Prop avatarSize: number = 40;
   @Prop isOnline: boolean = false;
+  /** 在线角标尺寸（对齐前端 OnlineDot sizeMap：sm 8 / md 10 / lg 12）；
+   *  0 = 按头像尺寸自适应（avatarSize*0.28，旧行为，大头像场景保留） */
+  @Prop onlineDotSize: number = 0;
   @Prop showBorder: boolean = false;
   @Prop shape: 'circle' | 'squircle' | 'square' = 'circle';
   @Prop userType: string = '';
@@ -40,6 +43,10 @@ export struct SystemAvatar {
       color: this.getPalette().surfaceBackground
     };
     return borderOptions;
+  }
+
+  private getOnlineDotSize(): number {
+    return this.onlineDotSize > 0 ? this.onlineDotSize : this.avatarSize * 0.28;
   }
 
   private getAvatarShadow(): ShadowOptions {
@@ -90,14 +97,15 @@ export struct SystemAvatar {
       }
 
       if (this.isOnline) {
+        // 对齐前端 OnlineDot：absolute bottom-0 right-0 贴角（无负外扩）+ 固定档尺寸
+        // + border-strong/surface-primary 描边把角标与头像图分开
         Row()
-          .width(this.avatarSize * 0.28)
-          .height(this.avatarSize * 0.28)
+          .width(this.getOnlineDotSize())
+          .height(this.getOnlineDotSize())
           .backgroundColor(this.getPalette().online)
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .border(this.getBorderOptions())
+          .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().surfaceBackground })
           .shadow(this.getPalette().controlShadow)
-          .margin({ bottom: -1, right: -1 })
       } else if (this.userType && UserTypeUtil.isTempUser(this.userType)) {
         Text('临时')
           .fontSize(this.avatarSize * 0.25)

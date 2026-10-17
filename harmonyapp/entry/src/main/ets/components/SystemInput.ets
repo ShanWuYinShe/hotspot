@@ -75,7 +75,8 @@ export struct SystemInput {
             iconSize: this.fontSize + 2,
             color: this.getPalette().textSecondary
           })
-        .margin({ right: DesignConstants.SPACING.SM })
+        // 对齐前端 SearchInput 的 gap-2.5(10)：图标与输入文字间距 10vp（实测前端 33→57 即 10）
+        .margin({ right: DesignConstants.SPACING.MD2 })
       }
 
       TextInput({ placeholder: this.placeholder, text: this.value })

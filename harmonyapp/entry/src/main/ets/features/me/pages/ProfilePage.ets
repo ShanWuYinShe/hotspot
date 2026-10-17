@@ -27,7 +27,6 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { SystemDialog } from '../../../components/SystemDialog';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, MomentItem } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -38,7 +37,6 @@ import { LucideIcon } from '../../../components/LucideIcon';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
-import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
@@ -48,13 +46,13 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
+import { ListGroup } from '../../../components/ListGroup';
 import { ProfileMenuItem } from '../components/ProfileContentAtoms';
 import { ProfileDataSection } from '../components/ProfileDataSection';
 import { ProfileIdentityCard } from '../components/ProfileIdentityCard';
 import { ProfileAvatarBlock, ProfileStatsRow } from '../components/ProfileHeaderAtoms';
 import { ProfileRemarkSheet } from '../components/ProfileRemarkSheet';
 import { ExternalProfileView } from '../components/ExternalProfileView';
-import { ProfileMomentGallery } from '../components/ProfileMomentGallery';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
@@ -88,15 +86,12 @@ export struct ProfilePage {
   @State editAvatarLocalUri: string = '';
   @State editAvatarFileId: string = '';
   @State isAvatarUploading: boolean = false;
-  @State showLogoutConfirm: boolean = false;
   @State isLoading: boolean = false;
   @State myMomentsCount: number = 0;
   @State myGroupsCount: number = 0;
   @State myFriendsCount: number = 0;
-  @State myMoments: MomentItem[] = [];
   @State myFollowersCount: number = 0;
   @State myFollowingCount: number = 0;
-  @State selectedTab: number = 0;
   // 快速体验弹窗
   // 升级表单
   @State showUpgradeForm: boolean = false;
@@ -332,7 +327,6 @@ export struct ProfilePage {
       }
     }
     await this.loadUserStats();
-    await this.loadMyMoments();
     await this.refreshAdminPrivileges();
   }
 
@@ -398,27 +392,6 @@ export struct ProfilePage {
       this.myFriendsCount = this.currentUser.stats.friends_count || 0;
       this.myFollowersCount = this.currentUser.stats.followers_count || 0;
       this.myFollowingCount = this.currentUser.stats.following_count || 0;
-    }
-  }
-
-  private async loadMyMoments(): Promise<void> {
-    if (!this.isLoggedIn || !this.currentUser) {
-      return;
-    }
-    try {
-      const response = await ApiClient.getUserMoments({
-        user_id: this.currentUser.user_id,
-        pagination: { limit: 9 }
-      });
-      if (response.code === 0) {
-        const items: MomentItem[] = response.data?.items ?? [];
-        this.myMoments = items.filter((m: MomentItem) => {
-          const imgs = m.images;
-          return imgs !== undefined && imgs !== null && imgs.length > 0;
-        });
-      }
-    } catch (error) {
-      // 静默失败，画廊降级为空占位
     }
   }
 
@@ -728,21 +701,21 @@ export struct ProfilePage {
     }
   }
 
-  // 个人中心动作行：并入「个人数据」卡（对齐前端 ProfileMobile 只保留
-  // 身份卡 + 一张列表卡的两卡结构，消除第三张悬浮菜单卡的「悬空感」）。
+  // 端侧补充分组（前端 ProfileMobile 无对应区块）：位置上报 / 临时账号升级 / 管理员工具台。
+  // 前端位置由浏览器地理定位自动上报、无临时账号形态、亦无移动端管理台入口，故三项属端侧独有；
+  // 2026-10-17 移动端对齐：从「个人数据」卡拆出单列一组（保持个人数据卡 = 前端 5 行契约），
+  // 设置入口上移身份卡操作行、退出登录移至设置页（P0-4：全端单入口，本组不再承载导航与登出）。
   @Builder
-  private buildProfileActionRows() {
-    if (this.userType === 'temp') {
-      // 游客升级入口（设置页账号安全区也有，同功能不重复两处主路径）：
-      // me 页保留是因为游客首触最 here
-      ProfileMenuItem({ title: '升级为完整账号', icon: AppIcon.EDIT, divider: true, onTap: () => { this.showUpgradeForm = true; }, resolvedThemeId: this.resolvedThemeId })
+  private buildAppOnlyActionRows() {
+    ListGroup() {
+      if (this.userType === 'temp') {
+        ProfileMenuItem({ title: '升级为完整账号', icon: AppIcon.EDIT, divider: true, onTap: () => { this.showUpgradeForm = true; }, resolvedThemeId: this.resolvedThemeId })
+      }
+      ProfileMenuItem({ title: '更新位置', icon: AppIcon.LOCATION, divider: this.isAdminUser(), onTap: () => this.updateLocation(), resolvedThemeId: this.resolvedThemeId })
+      if (this.isAdminUser()) {
+        ProfileMenuItem({ title: '管理员工具台', icon: AppIcon.SHIELD, onTap: () => this.openAdminPanel(), resolvedThemeId: this.resolvedThemeId })
+      }
     }
-    ProfileMenuItem({ title: '更新位置', icon: AppIcon.LOCATION, divider: true, onTap: () => this.updateLocation(), resolvedThemeId: this.resolvedThemeId })
-    ProfileMenuItem({ title: '设置', icon: AppIcon.SETTINGS, divider: !this.isAdminUser(), onTap: () => { AppRouter.push(PageNames.SETTINGS); }, resolvedThemeId: this.resolvedThemeId })
-    if (this.isAdminUser()) {
-      ProfileMenuItem({ title: '管理员工具台', icon: AppIcon.SHIELD, divider: true, onTap: () => this.openAdminPanel(), resolvedThemeId: this.resolvedThemeId })
-    }
-    ProfileMenuItem({ title: '退出登录', icon: AppIcon.CLOSE, onTap: () => { this.showLogoutConfirm = true; }, resolvedThemeId: this.resolvedThemeId })
   }
 
   build() {
@@ -783,8 +756,10 @@ export struct ProfilePage {
                 onBack: () => { this.cancelUpgrade(); }
               })
             } else {
-              // 对齐前端 ProfileMobile：个人中心页头是 eyebrow 小标（非大标题），
-              // 设置入口收在下方列表内（Web 同款契约：同页仅一处设置入口）。
+              // 对齐前端 ProfileMobile 页头条：eyebrow 小标 + 底部发丝分隔线（bg-surface-page）。
+              // 横向留白由 PageShellContainer gutter 提供，页头不再额外缩进 —— 原 left/right SM2(6)
+              // 会让「个人中心」比正文多缩进 6，违反页头与内容对齐；下内边距对齐前端 py-3(12)。
+              // 设置入口上移身份卡操作行（Web 同款契约：同页仅一处设置入口）。
               Row() {
                 Text('个人中心')
                   .fontSize(DesignConstants.FONT.SIZE.XS2)
@@ -795,11 +770,13 @@ export struct ProfilePage {
               .width('100%')
               .alignItems(VerticalAlign.Center)
               .padding({
-                left: DesignConstants.SPACING.SM2,
-                right: DesignConstants.SPACING.SM2,
                 // 与 SystemPageHeader 同口径：贴状态栏下缘（extra 0）
                 top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0),
-                bottom: DesignConstants.SPACING.XS
+                bottom: DesignConstants.SPACING.MD
+              })
+              .border({
+                width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
+                color: { bottom: this.getCurrentThemePalette().borderColor }
               })
             }
 
@@ -849,19 +826,7 @@ export struct ProfilePage {
         .height('100%')
         .constraintSize({ maxWidth: useMasterDetail(this.currentBreakpoint) ? 720 : '100%' })
 
-        // 退出登录二次确认（危险操作统一样式：danger 确认键）
-        SystemDialog({
-          visible: this.showLogoutConfirm,
-          title: '退出登录',
-          description: '退出后需要重新登录',
-          confirmText: '退出登录',
-          confirmVariant: 'danger',
-          onCancel: () => { this.showLogoutConfirm = false; },
-          onConfirm: () => {
-            this.showLogoutConfirm = false;
-            this.logout();
-          }
-        })
+        // 退出登录已按 P0-4 收敛到设置页（全端单入口），本页不再承载确认弹窗
       }
       .width('100%')
       .height('100%')
@@ -1043,43 +1008,49 @@ export struct ProfilePage {
                 momentsCount: this.myMomentsCount,
                 followersCount: this.myFollowersCount,
                 groupsCount: this.myGroupsCount,
-                onChangeAvatar: () => { this.changeAvatarDirectly(); },
-                onEditProfile: () => { this.startEdit(); }
+                onEditProfile: () => { this.startEdit(); },
+                onOpenSettings: () => { AppRouter.push(PageNames.SETTINGS); }
               })
+              // 个人数据：只保留前端 ProfileMobile 的 5 行（我的瞬间/我的群组/好友/关注/粉丝）
               ProfileDataSection({
                 resolvedThemeId: this.resolvedThemeId,
                 myGroupsCount: this.myGroupsCount,
                 myFriendsCount: this.myFriendsCount,
                 myFollowingCount: this.myFollowingCount,
-                myFollowersCount: this.myFollowersCount,
-                hasActionRows: true,
-                actionRows: () => { this.buildProfileActionRows(); }
+                myFollowersCount: this.myFollowersCount
               })
+              // 端侧补充分组：见 buildAppOnlyActionRows 注释（前端无对应区块）
+              Column() {
+                Text('账号与位置')
+                  .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
+                  .textCase(TextCase.UpperCase)
+                  .width('100%')
+                  .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })
+                Text('端侧独有：同步当前位置、账号升级与管理入口')
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .width('100%')
+                  .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })
+                this.buildAppOnlyActionRows()
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start)
+              .margin({ top: DesignConstants.PAGE_SHELL.SECTION_GAP })
             }
 
-            // 标签栏 —— 统一 TabsPillGroup；「喜欢/收藏」无数据源
-            // （spec UserProfileBundle 仅 recent_moments），移除恒空假 tab。
-            // 无瞬间时不渲染 pill+画廊：单 tab 悬浮在个人数据卡下方视觉上像错位元素
-            if (this.myMoments.length > 0) {
-              TabsPillGroup({
-                tabs: [{ label: '帖子' }],
-                activeIndex: 0
-              })
-                .margin({ bottom: DesignConstants.SPACING.MD })
-
-              // 画廊 (根据选中的 tab 展示不同内容)
-              ProfileMomentGallery({
-                selectedTab: 0,
-                moments: this.myMoments,
-                columns: this.getMomentColumns(),
-                resolvedThemeId: this.resolvedThemeId
-              })
-            }
+            // 2026-10-17 移动端对齐：移除「帖子」Tab + 我的瞬间画廊。
+            // 前端 ProfileMobile 只有「身份卡 + 个人数据列表」两卡（无 Tab/画廊），
+            // 端侧画廊是 app 独有形态；且「喜欢/收藏」无数据源（spec UserProfileBundle
+            // 仅 recent_moments），单 tab 悬浮在数据卡下方视觉上像错位元素。
 
           }
           .alignItems(HorizontalAlign.Center)
           // 横向留白统一由容器 gutter 提供，这里只保留纵向节奏
-          .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XL })
+          // （顶部 PAGE_TOP_GAP(16) 对齐前端 pt-4：卡片顶边距页头分隔线 16）
+          .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.SPACING.XL })
         }
         .layoutWeight(1)
         .scrollBar(BarState.Off)
@@ -1088,12 +1059,6 @@ export struct ProfilePage {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
-  }
-
-  // 我的瞬间九宫格：按列数分行（避开 ArkUI 不支持的 calc，用 Row + layoutWeight 等宽）。
-  // 列数随断点变化：宽屏(master-detail) 3 列，窄屏 2 列（对齐前端 grid-cols-2 md:grid-cols-3）。
-  private getMomentColumns(): number {
-    return useMasterDetail(this.currentBreakpoint) ? 3 : 2;
   }
 
 
