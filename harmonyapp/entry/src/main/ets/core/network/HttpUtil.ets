@@ -557,8 +557,12 @@ export class HttpUtil {
     try {
       ctx.hasAuthHeader = !ctx.omitAuthHeader && !!(await HttpUtil.getToken());
 
-      // 主动刷新：如果 token 即将过期，先刷新再发请求
-      if (ctx.hasAuthHeader && !ctx.retried) {
+      // 主动刷新：如果 token 即将过期，先刷新再发请求。
+      // 认证端点（登录/刷新）本身不触发主动刷新——设备上残留的过期 token 会让
+      // signin 前先跑一次 refresh，refresh 失败即 clearAuthData 并污染登录流程
+      // （实测：账号密码正确却提示「登录已过期」）。
+      const isAuthEndpoint = ctx.url === ApiEndpoints.AUTH.LOGIN || ctx.url === ApiEndpoints.AUTH.REFRESH_TOKEN;
+      if (ctx.hasAuthHeader && !ctx.retried && !isAuthEndpoint) {
         await HttpUtil.proactiveRefreshIfNeeded();
       }
 
