@@ -67,6 +67,19 @@ ON CONFLICT (user_id) DO UPDATE SET grant_all_permissions = TRUE, revoked_at = N
 5. **断言**：`uitest dumpLayout -p /data/local/tmp/ui.json` 后逐节点取 text，判断
    「升级为完整账号」/「管理员工具台」/「设置」/「退出登录」是否存在。
 6. **截图**：`snapshot_display -f /data/local/tmp/x.jpeg` → `hdc shell "cat …" > local.jpeg`。
+7. **设置浏览锚点（2026-10-17 实测）**：首页空态点「设置浏览位置」进地图选择器后——
+   - 放锚点用 `uitest uiInput longClick <x> <y>`（长按放置；单击无效，双击是地图缩放）。
+     长按即写 `anchor_history` 偏好并触发逆地理解析；
+   - 再点「设为浏览锚点」确认。**锚点模式确认后不关页**（toast「浏览锚点已设置」），
+     需自己返回首页——切 Tab 前注意先返回，否则 Tab 点击落空；
+   - 模拟器**系统地理编码无数据**：地点搜索（geocodeMultiple 走系统 geocoder）
+     对任何关键词都返回「未找到该地点」，且锚点名只会是「未知位置」——这是模拟器
+     环境限制，真机不受影响；历史锚点持久化在偏好文件 `anchor_history`。
+   - 快速体验游客的锚点与会话态（AppStorage）**冷启动即清**，重装(-r)保留偏好但
+     锚点需重新设置；暗色等偏好（dark_mode_preference）在 `geotalk` 偏好文件中持久化。
+8. **密度/尺寸标定**：本机模拟器（Pura 90 Pro 实例）密度 ≈3.917（1256px / ≈320vp 逻辑宽），
+   dump bounds 换算 vp 用 3.917，不要想当然用 3.25（2026-10-17 实测，曾因密度误算
+   误判骨架卡/空态过大）。
 
 ## 关键前提：验证角色行必须在「我的」Tab 首次挂载前登录
 
