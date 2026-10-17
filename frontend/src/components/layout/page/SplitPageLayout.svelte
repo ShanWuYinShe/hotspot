@@ -33,6 +33,8 @@
 	} = $props();
 
 	const isDesktop = $derived(platform.platform === 'desktop');
+	/** 移动端固定底栏高度：滚动内容据此补内距，末条内容不被底栏遮挡 */
+	let footerHeight = $state(0);
 </script>
 
 <section data-split-page-layout class="flex h-full min-h-full w-full flex-col">
@@ -62,14 +64,22 @@
 			<!-- 移动端 header 吸顶（滚动时内容上探，避免固定 header 常驻挤压内容区） -->
 			<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
 		{/if}
-		<div class="min-h-0 flex-1">
+		<div class="min-h-0 flex-1" style={footerHeight > 0 ? `padding-bottom:${footerHeight}px` : undefined}>
 			<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
 				{@render children()}
 			</ContentColumn>
 		</div>
 		{#if footer}
-			<!-- sticky bottom：内容在 shell 滚动时操作条仍常驻视口底（拇指热区） -->
-			<div class="sticky bottom-0 shrink-0">{@render footer()}</div>
+			<!-- 固定底栏（拇指热区）：真机键盘弹出时 position:sticky 会滞留在半屏
+			     （iOS Safari 键盘收起后不回流，实机复现）——改用 fixed + 内容补偿内距，
+			     配合 app.html 的 interactive-widget=resizes-content，键盘弹出时布局
+			     视口收缩、底栏始终浮在键盘上方 -->
+			<div
+				class="fixed inset-x-0 bottom-0 z-[var(--cst-z-sticky)] shrink-0 pb-[env(safe-area-inset-bottom)]"
+				bind:clientHeight={footerHeight}
+			>
+				{@render footer()}
+			</div>
 		{/if}
 	{/if}
 </section>

@@ -23,3 +23,4 @@ Thumbs.db
 
 # AI tools (shared rule)
 .workwork/
+.svelte-check/
