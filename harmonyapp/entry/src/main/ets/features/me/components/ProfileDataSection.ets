@@ -9,7 +9,7 @@
  *   行图标 14→16（前端 size-4）、分组小标左内边距 6→4（前端 px-1）。
  */
 
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { Pressable } from '../../../components/Pressable';
@@ -58,11 +58,13 @@ export struct ProfileDataSection {
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text(label)
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
           Text(detail)
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -91,6 +93,7 @@ export struct ProfileDataSection {
       // 分组小标（对齐前端 ProfileMobile 改版：eyebrow + 副文案在列表外，列表去外框）
       Text('个人数据')
         .fontSize(DesignConstants.FONT.SIZE.XS2)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
         .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
@@ -99,6 +102,7 @@ export struct ProfileDataSection {
         .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })
       Text('在这里查看你的内容与关系')
         .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
         .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
         .width('100%')
         .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })

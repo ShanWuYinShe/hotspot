@@ -16,7 +16,7 @@
  * 动作回调上抛；无本地状态。
  */
 
-import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -43,10 +43,13 @@ export struct ProfileIdentityCard {
       // 数值 text-2xl(24)+SEMIBOLD、标签 text-xs(11)：对齐前端 ProfileMobile 统计条
       Text(formatCount(value))
         .fontSize(DesignConstants.FONT.SIZE.XXL)
+        // 前端 text-2xl(24) 行高 32；ArkUI 默认只有 ≈28，统计条会矮一截
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
       Text(label)
         .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
         .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
     }
     .layoutWeight(1)
@@ -67,6 +70,7 @@ export struct ProfileIdentityCard {
         })
         Text(label)
           .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
       }
@@ -105,6 +109,8 @@ export struct ProfileIdentityCard {
         Column({ space: DesignConstants.SPACING.THREE }) {
           Text(this.nickname || '未设置昵称')
             .fontSize(DesignConstants.FONT.SIZE.XL)
+            // 前端 text-xl(20) 行高 28（Tailwind 20×1.4）；ArkUI 默认只有 ≈23.5
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
             .maxLines(1)
@@ -113,6 +119,7 @@ export struct ProfileIdentityCard {
             // 对齐前端：handle 显示 @昵称（前端 ProfileMobile 用 nickname，非 user_id）
             Text(`@${this.nickname}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
@@ -125,6 +132,7 @@ export struct ProfileIdentityCard {
             })
             Text(this.locationName || '未设置位置')
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })

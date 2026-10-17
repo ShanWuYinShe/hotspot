@@ -118,6 +118,60 @@ for (const [cssKey, arkKey] of Object.entries(RADIUS_MAP)) {
 	}
 }
 
+// ── 行高档位：前端 text-* 各档的实际行高 与 鸿蒙 textLineHeight() 必须一致 ──
+//
+// 前端每档 text-* 都自带行高（Tailwind v4 默认比例，项目只覆写了 font-size），
+// 而 ArkUI Text 不设 lineHeight 时行盒 ≈ 字号 × 1.17——文本盒系统性比前端矮约 15%，
+// 是「看着差不多但细看不一样」的主因。鸿蒙无法继承 DOM 行高，必须在
+// textLineHeight() 里显式列同一组值，本段守住该映射不漂移。
+//
+// 比例 = Tailwind 原生该档 line-height ÷ 原生 font-size：
+//   xs  16/12=1.3333   sm 20/14=1.4286   lg 28/18=1.5556   xl 28/20=1.4
+//   2xl 32/24=1.3333   3xl 36/30=1.2
+// 项目新增档（xxs 10 / md 14）未配行高，走 base.css 元素级 1.5。
+const TAILWIND_LH_RATIO = {
+	xxs: 1.5,
+	xs: 1 / 0.75,
+	sm: 1.25 / 0.875,
+	md: 1.5,
+	lg: 1.75 / 1.125,
+	xl: 1.75 / 1.25,
+	'2xl': 2 / 1.5,
+	'3xl': 2.25 / 1.875
+};
+
+const lhFnMatch = ets.match(/export function textLineHeight\([^)]*\)[^{]*\{([\s\S]*?)\n\}/);
+const arkLineHeights = {};
+if (!lhFnMatch) {
+	problems.push('DesignConstants.ets 未找到 textLineHeight()（跨端行高契约缺失）');
+} else {
+	for (const m of lhFnMatch[1].matchAll(/case\s+([\d.]+):\s*\n?\s*return\s+([\d.]+)/g)) {
+		arkLineHeights[Number(m[1])] = Number(m[2]);
+	}
+	if (Object.keys(arkLineHeights).length === 0) {
+		problems.push('textLineHeight() 未解析到任何 case 档位（拆分失败？）');
+	}
+}
+
+let lhChecked = 0;
+for (const [cssKey, arkKey] of Object.entries(FONT_MAP)) {
+	const size = cssFontSizes[cssKey];
+	const ratio = TAILWIND_LH_RATIO[cssKey];
+	if (size === undefined || ratio === undefined) continue;
+	const expected = Math.round(size * ratio);
+	const actual = arkLineHeights[size];
+	if (actual === undefined) {
+		problems.push(`textLineHeight() 缺少字号 ${size} 档（对应前端 text-${cssKey}）`);
+		continue;
+	}
+	lhChecked++;
+	if (actual !== expected) {
+		problems.push(
+			`行高漂移：前端 text-${cssKey}(${size}px) 行高 = ${size}×${ratio.toFixed(4)} = ${(size * ratio).toFixed(2)} → ${expected}，鸿蒙 textLineHeight(${size}) = ${actual}`
+		);
+	}
+}
+
 if (problems.length > 0) {
 	console.error('跨端设计刻度不一致（frontend theme-registry ↔ harmonyapp DesignConstants）：');
 	for (const p of problems) console.error(`  - ${p}`);

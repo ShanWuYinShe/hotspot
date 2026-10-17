@@ -78,6 +78,53 @@ export function lineHeightFor(fontSize: number, ratio: number): number {
   return Math.round(fontSize * ratio);
 }
 
+/**
+ * 各字号档的「默认行高比」——对齐前端 Tailwind 默认行高（跨端刻度的行高半边）。
+ *
+ * 背景：前端每个 text-* 工具类都自带行高（Tailwind v4 默认值），而 ArkUI Text
+ * 不设 lineHeight 时行盒 ≈ 字号 × 1.17（实测 12→14.0 / 11→13.0 / 20→24.0），
+ * 导致 app 文本盒系统性比前端矮约 15%，整页纵向节奏偏紧（实测我的页资料卡
+ * 267vp vs 前端 282.19vp 即由此累积）。
+ *
+ * 数值来源：frontend/src/styles/theme/theme-registry.css 覆写了字号，
+ * 行高沿用 Tailwind 默认比例（实测 11px→14.67、12px→17.14、14px→21、
+ * 10px→15，与下表逐一吻合）：
+ *   text-xxs 10 × 1.5    = 15
+ *   text-xs  11 × 1.3333 = 14.67
+ *   text-sm  12 × 1.4286 = 17.14
+ *   text-md  14 × 1.5    = 21
+ *   text-lg  16 × 1.5556 = 24.89
+ *   text-xl  20 × 1.4    = 28
+ *   text-2xl 24 × 1.3333 = 32
+ *   text-3xl 30 × 1.2    = 36
+ *
+ * 用法：单行/普通文本用 textLineHeight(size)；多行长文仍用 lineHeightFor(size, COPY)。
+ */
+export function textLineHeight(fontSize: number): number {
+  switch (fontSize) {
+    case 10:
+      return 15;
+    case 11:
+      return 15;
+    case 12:
+      return 17;
+    case 14:
+      return 21;
+    case 16:
+      return 25;
+    case 18:
+      return 28;
+    case 20:
+      return 28;
+    case 24:
+      return 32;
+    case 30:
+      return 36;
+    default:
+      return Math.round(fontSize * 1.5);
+  }
+}
+
 export interface FontLetterSpacing {
   EYEBROW: number;  // 1.4 — 分组标签/眉标（对齐前端 tracking-eyebrow 0.14em @10px）
   LABEL: number;    // 1.2 — 小标/在线标签（对齐前端 tracking-label 0.12em）
