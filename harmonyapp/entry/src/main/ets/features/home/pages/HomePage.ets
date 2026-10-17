@@ -566,7 +566,6 @@ export struct HomePage {
           accessibilityLabel: '搜索',
           kind: 'neutral',
           buttonSize: 36,
-          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           onPress: () => AppRouter.push(PageNames.SEARCH)
         })
 
@@ -575,7 +574,6 @@ export struct HomePage {
           accessibilityLabel: '通知',
           kind: 'neutral',
           buttonSize: 36,
-          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           onPress: () => AppStorage.setOrCreate<boolean>('openNotificationCenter', true)
         })
 
@@ -584,7 +582,6 @@ export struct HomePage {
           accessibilityLabel: '地图',
           kind: 'neutral',
           buttonSize: 36,
-          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
         })
       }

@@ -71,6 +71,14 @@ export struct SystemPageHeader {
   @Prop backgroundVariant: HeaderBackgroundVariant = 'bar';
   /** 滚动态（页面接滚动态传入）：静止无边线与页面融合，滚动后恢复边线并出现投影。 */
   @Prop elevated: boolean = false;
+  /**
+   * 是否绘制页头底部分隔线（默认 true）。
+   * 前端 PageHeader 的 `below`（搜索框/胶囊 Tab 行）在**页头区块内部**，分隔线画在
+   * below 之下；本组件因只有单一 @BuilderParam（ArkTS 尾随闭包约束）无法内联 below，
+   * 需要「标题 + Tab 行 + 一条线」的页面改为：showDivider=false + 外层 Column 统画底线。
+   * 不传时行为与历史一致（每个页头都有一条发丝线）。
+   */
+  @Prop showDivider: boolean = true;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @Prop surfaceColor: ResourceColor | null = null;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
@@ -111,7 +119,7 @@ export struct SystemPageHeader {
   }
 
   private getHeaderBorderColor(): ResourceColor {
-    if (this.backgroundVariant === 'card') {
+    if (this.backgroundVariant === 'card' || !this.showDivider) {
       return DesignConstants.COLOR.TRANSPARENT;
     }
     // 对齐前端 PageHeader：任何页面头部在任何状态都画 border-bottom hairline

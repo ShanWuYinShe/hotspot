@@ -668,7 +668,6 @@ export struct MomentFeedCard {
           SurfaceIconButton({
             icon: this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART,
             kind: 'neutral',
-            glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
             iconColor: this.isLikedByMe()
               ? this.getPalette().accentBackground
               : this.getPalette().textSecondary,
@@ -684,7 +683,6 @@ export struct MomentFeedCard {
           SurfaceIconButton({
             icon: AppIcon.MESSAGE,
             kind: 'neutral',
-            glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
             iconColor: this.getPalette().textSecondary,
             accessibilityLabel: '查看评论',
             onPress: () => this.openMomentDetail(this.moment)
@@ -701,7 +699,6 @@ export struct MomentFeedCard {
         SurfaceIconButton({
           icon: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? AppIcon.STAR_FILL : AppIcon.STAR,
           kind: 'neutral',
-          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           iconColor: this.getMomentState()?.is_favorited ?? this.moment.is_favorited
             ? this.getPalette().accentBackground
             : this.getPalette().textSecondary,
@@ -711,7 +708,6 @@ export struct MomentFeedCard {
         SurfaceIconButton({
           icon: AppIcon.SHARE,
           kind: 'neutral',
-          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
           iconColor: this.getPalette().textSecondary,
           accessibilityLabel: '分享动态',
           onPress: () => this.shareMoment(this.moment)

@@ -237,7 +237,8 @@ export struct GroupCard {
     Column({ space: DesignConstants.SPACING.XS }) {
       Row() {
         Text(this.group.group?.name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.LG)
+          // 前端 featured 群名 text-lg = 18px（本端 18 档是 LG_PLUS；LG=16 是平台适配档）
+          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
           .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
           .fontColor(this.getPalette().textPrimary)
           .maxLines(1)
@@ -344,11 +345,16 @@ export struct GroupCard {
       NearbyImageCard({
         imageUrl: this.group.group?.avatar_url ?? '',
         imageAlt: this.group.group?.name ?? '',
-        cardAspectRatio: 0.75,
+        // 前端 nearby/groups/shared/GroupCard 非精选卡是 **aspect-[4/3] 横版**
+        // （实测 web 171×128.25）；此前沿用 0.75 竖版（与 UserCard 混用），
+        // 同一行两张卡比 web 高一截，栅格节奏整体错位。
+        cardAspectRatio: 4 / 3,
         placeholderText: this.group.group?.name ?? '',
         badgeText: this.getCategory(),
         badgeShape: 'pill',
-        badgeVariant: 'accent',
+        // 分类胶囊走 glass（图上毛玻璃），对齐前端：accent 实底收给主按钮，
+        // 卡片角标用弱对比玻璃底，避免每张卡一个高饱和色块
+        badgeVariant: 'glass',
         badgeAlign: 'topLeft',
         onPress: () => this.openGroupDetail()
       }) {

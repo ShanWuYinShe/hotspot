@@ -21,7 +21,10 @@ import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/
 import { LucideIcon } from '../components/LucideIcon';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 
-type NotificationFilterKey = 'all' | 'unread' | 'interaction' | 'group' | 'report' | 'nearby' | 'system';
+// 过滤维度对齐前端 /notify FILTER_TABS（全部/点赞/关注/评论/附近）：
+// 按「语义类型」分栏，而非「业务域」——域分组（互动/群组/举报/系统）是桌面 Rail 的视角，
+// 移动端 TabBar 只给 5 项，两端信息架构必须一致。
+type NotificationFilterKey = 'all' | 'reaction' | 'follow' | 'comment' | 'nearby';
 
 interface GroupedNotification {
   label: string;
@@ -59,12 +62,11 @@ export struct NotificationCenter {
   private smartNotificationService = SmartNotificationService.getInstance();
   private filterOptions: NotificationFilterOption[] = [
     new NotificationFilterOption('all', '全部'),
-    new NotificationFilterOption('unread', '未读'),
-    new NotificationFilterOption('interaction', '互动'),
-    new NotificationFilterOption('group', '群组'),
-    new NotificationFilterOption('report', '举报'),
-    new NotificationFilterOption('nearby', '附近'),
-    new NotificationFilterOption('system', '系统')
+    // 点赞语义 = reaction_added（契约已删 moment_liked），Tab 文案对齐前端「点赞」
+    new NotificationFilterOption('reaction', '点赞'),
+    new NotificationFilterOption('follow', '关注'),
+    new NotificationFilterOption('comment', '评论'),
+    new NotificationFilterOption('nearby', '附近')
   ];
 
   private syncListener: (() => void) | null = null;
@@ -187,9 +189,7 @@ export struct NotificationCenter {
     const items = this.syncService.getNotifications();
     let filtered = items;
 
-    if (this.selectedFilter === 'unread') {
-      filtered = items.filter(item => !item.is_read);
-    } else if (this.selectedFilter !== 'all') {
+    if (this.selectedFilter !== 'all') {
       filtered = items.filter(item => this.mapTypeToCategory(item.type) === this.selectedFilter);
     }
 
@@ -774,14 +774,17 @@ export struct NotificationCenter {
     return count;
   }
 
+  /** 语义分类 → 主色（对齐前端 TYPE_CONFIG 的 color 角色）：
+   *  reaction=statusDanger（点赞爱心红）、follow=accent、comment=markerUser、nearby=statusOnline */
   private getTypeColor(type: string): string {
     switch (this.mapTypeToCategory(type as NotifyType)) {
-      case 'interaction':
+      case 'reaction':
+        return this.getPalette().error;
+      case 'comment':
         return this.getPalette().accentBackground;
-      case 'group':
-        return this.getPalette().success;
-      case 'system':
-        return this.getPalette().warning;
+      case 'nearby':
+        return this.getPalette().online;
+      case 'follow':
       default:
         return this.getPalette().accentBackground;
     }
@@ -789,13 +792,10 @@ export struct NotificationCenter {
 
   private getSoftStatusColor(type: string): string {
     switch (this.mapTypeToCategory(type as NotifyType)) {
-      case 'interaction':
-        // 互动（点赞/评论）非告警，淡底用 info（与 getTypeColor 的 accent 映射语义一致）
-        return AppThemeManager.getSoftStatusBackground('info');
-      case 'group':
+      case 'reaction':
+        return AppThemeManager.getSoftStatusBackground('danger');
+      case 'nearby':
         return AppThemeManager.getSoftStatusBackground('success');
-      case 'system':
-        return AppThemeManager.getSoftStatusBackground('warning');
       default:
         return AppThemeManager.getSoftStatusBackground('info');
     }
@@ -905,14 +905,17 @@ export struct NotificationCenter {
     }
   }
 
+  /** 语义分类 → 图标（对齐前端 TYPE_CONFIG：Heart / UserPlus / MessageCircle / MapPin） */
   private getNotificationIcon(type: NotifyType): AppIcon {
     switch (this.mapTypeToCategory(type)) {
-      case 'interaction':
+      case 'reaction':
+        return AppIcon.HEART;
+      case 'follow':
+        return AppIcon.PERSON_ADD;
+      case 'comment':
         return AppIcon.MESSAGE;
-      case 'group':
-        return AppIcon.GROUP;
-      case 'system':
-        return AppIcon.INFO;
+      case 'nearby':
+        return AppIcon.LOCATION;
       default:
         return AppIcon.NOTIFICATION;
     }
@@ -937,31 +940,31 @@ export struct NotificationCenter {
     return '有人';
   }
 
+  /**
+   * 后端 NotifyType → 语义分类键。
+   * 与前端 frontend/src/routes/(app)/notify/shared/notify-data.ts 的
+   * NOTIFY_TYPE_TO_CATEGORY 逐条一致（含群相关通知归入「评论」、举报/公告归入默认档）：
+   * 两端同一后端事件在两端的过滤维度必须落在同一格，否则同一个通知在 web 与 app 里
+   * 会被归到不同 Tab，用户切端后找不到刚看过的通知。
+   */
   private mapTypeToCategory(type: NotifyType): NotificationFilterKey {
     switch (type) {
-      // 社交（关注/互关）并入互动：单通道筛选，无独立 social 分类
+      case 'reaction_added':
+        return 'reaction';
       case 'new_follower':
       case 'mutual_follow':
+        return 'follow';
       case 'moment_commented':
       case 'comment_reply':
       case 'mentioned':
-      case 'reaction_added':
-        return 'interaction';
-      case 'group_invite_received':
+      // 群内被提及：前端归一为 comment（评论语义），不是群组域
       case 'group_mentioned':
-      case 'group_application_received':
-      case 'group_application_accepted':
-      case 'group_application_rejected':
-        return 'group';
-      case 'report_resolved':
-      case 'report_dismissed':
-        return 'report';
+        return 'comment';
       case 'nearby_new_moment':
         return 'nearby';
-      case 'system_announcement':
-        return 'system';
       default:
-        return 'interaction';
+        // group_* / report_* / system_announcement 等无独立 Tab，归入「全部」
+        return 'all';
     }
   }
 }

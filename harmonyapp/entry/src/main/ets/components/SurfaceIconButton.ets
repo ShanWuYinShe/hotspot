@@ -12,7 +12,14 @@ export struct SurfaceIconButton {
   @Prop icon: AppIcon = AppIcon.BACK;
   @Prop kind: SurfaceIconButtonKind = 'primary';
   @Prop buttonSize: number = DesignConstants.LAYOUT.ICON_BUTTON_SIZE; // 36
-  @Prop glyphSize: number = DesignConstants.COMPONENT.ICON_SIZE_XS; // 16
+  /**
+   * 图标视觉尺寸。**0 = 按按钮尺寸自动推导**（缺省推荐）：
+   * 前端 ActionIconButton 契约是 `<Icon size={Math.round(size * 0.42)} />`，
+   * 即 42 钮配 18、36 钮配 15。此前本组件默认 16 且多处调用传 ICON_SIZE_SM(20)，
+   * 20/36 ≈ 56% 的图标占比明显重于前端的 42%，页头图标看起来「比标题还抢眼」
+   * （2026-10-17 截图复核）。显式传值仅在需要刻意放大/缩小时使用。
+   */
+  @Prop glyphSize: number = 0;
   @Prop disabled: boolean = false;
   /** 无障碍语义描述（图标钮无文字，读屏依赖此标签，如全局返回钮「返回」） */
   @Prop accessibilityLabel: string = '';
@@ -25,6 +32,14 @@ export struct SurfaceIconButton {
   @State isPressed: boolean = false;
   /** hover（仅键鼠外接触发） */
   @State isHovered: boolean = false;
+
+  /** 图标尺寸：显式值优先；否则按按钮尺寸 × 0.42（对齐前端 ActionIconButton 契约） */
+  private getGlyphSize(): number {
+    if (this.glyphSize > 0) {
+      return this.glyphSize;
+    }
+    return Math.round(this.buttonSize * DesignConstants.COMPONENT.ICON_GLYPH_RATIO);
+  }
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -95,7 +110,7 @@ export struct SurfaceIconButton {
       Button() {
         LucideIcon({
           icon: this.icon,
-          iconSize: this.glyphSize,
+          iconSize: this.getGlyphSize(),
           color: this.getIconColor()
         })
       }

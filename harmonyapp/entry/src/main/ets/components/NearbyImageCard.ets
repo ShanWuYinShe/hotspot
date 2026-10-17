@@ -175,13 +175,16 @@ export struct NearbyImageCard {
           ] as [ResourceColor, number][]
         })
 
-      // 占位对齐前端 NearbyImageCard.svelte:accent-soft 圆(size-16)内 text-3xl 半粗首字母,
-      // 固定尺寸不随卡片放大(原自适应大字在图片位喧宾夺主,UI 审查 D7)
+      // 占位对齐前端 NearbyImageCard.svelte：accent-soft 圆(size-16)内 text-3xl 半粗首字母，
+      // 固定尺寸不随卡片放大（原自适应大字在图片位喧宾夺主，UI 审查 D7）。
+      // 前景色：**淡底（accentSoft/accentMuted）上的文字必须用 accent 本色**——
+      // accentText 的语义是「accent 亮实底上的反色前景」（深色主题 #071426），
+      // 配到同主题 accentMuted 深蓝底（#182943）上对比度约 1.2:1，首字母几乎不可见。
       Column() {
         Text(this.getPlaceholderInitial())
           .fontSize(DesignConstants.FONT.SIZE.XXXL)
           .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-          .fontColor(this.getPalette().accentText)
+          .fontColor(this.getPalette().accentBackground)
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
       .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)

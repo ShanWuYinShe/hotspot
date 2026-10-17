@@ -4,7 +4,7 @@ import { UserRelationState, interactionEventHub} from '../../../core/state/Inter
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
@@ -102,33 +102,41 @@ export struct UserCard {
     // 尾随闭包后不可链式属性）
     Pressable({
       onPress: () => this.toggleFollow(),
-      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
+      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON,
+      // 行内小控件不得撑满整行：fillWidth 缺省 true，会把 28vp 圆形关注钮的
+      // 按压容器拉成整行宽（卡片里看起来是一条通栏底色块，且热区覆盖整行）
+      fillWidth: false
     }) {
       Row() {
         LucideIcon({
-          icon: this.isFollowing() ? AppIcon.CHECK : AppIcon.ADD,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-          // Tonal 化（Gemini 审查：实体蓝泛滥，关注为列表次级动作）：
-          // 未关注 = accentMuted 底 + accentText 图标，实体蓝让位全局主流程
-          color: this.getPalette().accentText
+          // 图标语义对齐前端 FollowButton(iconOnly)：未关注 UserPlus、已关注 Check
+          icon: this.isFollowing() ? AppIcon.CHECK : AppIcon.PERSON_ADD,
+          // web FollowButton iconOnly：图标 size-4(16)
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+          color: this.isFollowing() ? this.getPalette().textSecondary : this.getPalette().accentBackground
         })
       }
       .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}follow-${this.getUserId()}`)
-      .width(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
-      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
+      // web：size-9 = 36vp 圆钮（28vp 偏小，与 16vp 图标比例不匹配）
+      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor(this.getPalette().accentMuted)
-      .border(this.isFollowing() ?
-        { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor } :
-        { width: 0 })
+      // 未关注 = accent-soft 淡底、无描边；已关注 = 透明底 + 强描边（web outline 变体）
+      .backgroundColor(this.isFollowing() ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().accentMuted)
+      // 前端 outline 变体用 border-strong；本端调色板只有 borderColor 一档，
+      // 用 accent 本色描边表达「已关注」的强化档（避免与未关注态仅靠底色区分）
+      .border({
+        width: this.isFollowing() ? DesignConstants.BORDER_WIDTH.HAIRLINE : 0,
+        color: this.getPalette().accentBackground
+      })
       .accessibilityText(this.isFollowing() ?
         `取消关注 ${this.user.user?.nickname ?? ''}` :
         `关注 ${this.user.user?.nickname ?? ''}`)
-      // 触控热区：视觉 28vp，responseRegion 外扩到 44vp（不占布局）
+      // 触控热区：视觉 36vp，responseRegion 外扩到 44vp（不占布局）
       .responseRegion({
-        x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
-        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
+        x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
         width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
         height: DesignConstants.LAYOUT.MIN_HIT_TARGET
       })
@@ -148,19 +156,24 @@ export struct UserCard {
     }) {
       Column({ space: DesignConstants.SPACING.THREE }) {
         // 在线点紧贴昵称右侧（对齐前端 nearby/people/UserCard：name+dot 同行左对齐）
-        Row({ space: DesignConstants.SPACING.SM }) {
+        // web：名称 truncate 后**在线点紧跟其右**（不是被顶到行尾）——
+        // 原 layoutWeight(1) 把点推到卡片右缘，与前端「绿点贴着昵称」的语义不符
+        Row({ space: DesignConstants.SPACING.SM2 }) {
           Text(this.user.user?.nickname ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.XS2) // 对齐前端 nearby/people 卡片名 text-xxs(10)
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 对齐前端 nearby/people 卡片名 text-sm（项目口径 12px）
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .layoutWeight(1)
+            .flexShrink(1)
 
           if (this.isOnline()) {
+            // 前端 nearby/people：size-2(8) + ring-2；本端统一 ONLINE_DOT_MD(10，含 2vp 描边)
             Row()
-              .width(DesignConstants.SPACING.MD2)
-              .height(DesignConstants.SPACING.MD2)
+              .flexShrink(0)
+              .width(DesignConstants.COMPONENT.ONLINE_DOT_MD)
+              .height(DesignConstants.COMPONENT.ONLINE_DOT_MD)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(this.getPalette().online)
               .border({
@@ -174,7 +187,8 @@ export struct UserCard {
 
         if (this.user.bio) {
           Text(this.user.bio)
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .fontSize(DesignConstants.FONT.SIZE.XS2) // 对齐前端次要行 text-xxs(10)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
             .fontColor(this.getPalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })

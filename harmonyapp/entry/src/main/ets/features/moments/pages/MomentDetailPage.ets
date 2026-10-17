@@ -665,7 +665,8 @@ export struct MomentDetailPage {
           LucideIcon({
             icon: AppIcon.LOCATION,
             iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
-            color: this.getCurrentThemePalette().accentText
+            // 淡底（accentMuted）上的图形用 accent 本色；accentText 仅用于亮实底
+            color: this.getCurrentThemePalette().accentBackground
           })
           Text(`来自 ${moment.location.location_name} 的动态`)
             .fontSize(DesignConstants.FONT.SIZE.XS)

@@ -357,6 +357,8 @@ export interface ComponentConstants {
   ICON_SIZE_LG: number;
   /** 空态大图标（48，错误/空态插画级图标；独立 ICON 刻度） */
   ICON_SIZE_EMPTY: number;
+  /** 圆形图标钮的图标占比（对齐前端 ActionIconButton：round(buttonSize × 0.42)） */
+  ICON_GLYPH_RATIO: number;
   /** 状态指示点（6，在线/分组小圆点） */
   INDICATOR_DOT_SIZE: number;
   /** 骨架屏卡片高度（100） */
@@ -754,6 +756,8 @@ const COMPONENT: ComponentConstants = {
   ICON_SIZE_SM_PLUS: 22,
   ICON_SIZE_LG: 32,
   ICON_SIZE_EMPTY: 48,
+  /** 圆形图标钮的图标占比：42vp 钮 → 18、36vp 钮 → 15（前端 ActionIconButton 同口径） */
+  ICON_GLYPH_RATIO: 0.42,
   /** 状态指示点（6，在线/分组小圆点） */
   INDICATOR_DOT_SIZE: 6,
   SKELETON_CARD_HEIGHT: 100,

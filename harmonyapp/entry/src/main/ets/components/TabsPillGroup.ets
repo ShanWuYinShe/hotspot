@@ -39,7 +39,8 @@ export struct TabsPillGroup {
   @State hoveredIndex: number = -1;
   @Prop tabs: TabItem[] = [];
   @Prop activeIndex: number = 0;
-  @Prop gap: number = DesignConstants.SPACING.XS;
+  /** 胶囊间距：对齐前端 TabBar 容器 gap-1.5(6px)（原 XS(4) 偏紧） */
+  @Prop gap: number = DesignConstants.SPACING.SM2;
   /** 自由宽度模式：透明容器 + 自适应内容宽（对齐前端 TabBar；缺省等宽分段） */
   @Prop freeWidth: boolean = false;
   actions?: TabsPillGroupActions;
@@ -82,7 +83,11 @@ export struct TabsPillGroup {
   private getPillForeground(index: number, isActiveTab: boolean): ResourceColor {
     const palette = this.getPalette();
     if (isActiveTab) {
-      return palette.textPrimary;
+      // 对齐前端 TabBar 选中项：accent-soft 淡底 + **text-accent-default**（accent 本色文字）。
+      // 早期误用 accentText（accent 亮实底上的反色前景）导致近乎不可见；改用
+      // textPrimary 又偏离了前端「选中项是蓝色文字」的视觉层级。accent 本色的
+      // 对比度实测 5.7:1（#69A8FF on #182943，深色 vibrant），达标且与 web 一致。
+      return palette.accentBackground;
     }
     // 未选中：hover 的时候底色会变 surfaceSubtle，文字随之提亮
     return this.hoveredIndex === index ? palette.textPrimary : palette.tabBarInactive;
@@ -121,6 +126,13 @@ export struct TabsPillGroup {
       // 导致胶囊被拉满——此前 3 次滚动容器尝试失败的真正原因）；
       // 等宽分段：占满各自 layoutWeight 份额
       .width(this.freeWidth ? undefined : '100%')
+      // 自由宽度态的水平内距必须落在**胶囊本体**（本 Row，其上有 borderRadius/背景色），
+      // 对齐前端 TabBar pill 的 px-3.5(14)；写在外层 Column 上会让胶囊退化成
+      // 「与文字等宽的色块」并把整颗胶囊相对 gutter 右移 14vp（实测附近页 pill 就这样变形）
+      .padding({
+        left: this.freeWidth ? DesignConstants.SPACING.MD3 : 0,
+        right: this.freeWidth ? DesignConstants.SPACING.MD3 : 0
+      })
       // 两态统一 30 档：对齐前端 TabBar pill(py-1.5+text ≈ 28-32)，原分段 34 为近邻异档
       .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
       .borderRadius(DesignConstants.RADIUS.FULL)
@@ -135,11 +147,9 @@ export struct TabsPillGroup {
         )
       })
     }
-    // 自由宽度模式：水平 padding 承载胶囊内距（对齐前端 px-3.5=14），使胶囊收缩到内容宽
-    .padding({
-      left: this.freeWidth ? DesignConstants.SPACING.MD3 : 0,
-      right: this.freeWidth ? DesignConstants.SPACING.MD3 : 0
-    })
+    // 外壳（热区壳）不得带水平 padding：内距已在胶囊本体内表达，
+    // 否则胶囊会相对页面 gutter 右移一截（对齐前端 TabBar 容器无内距的契约）
+    .padding(0)
     // 等宽分段用 layoutWeight(1)；自由宽度收缩到内容宽
     .layoutWeight(this.freeWidth ? 0 : 1)
     // 按压差异：选中胶囊按压不再缩放（底色已表达选中），未选中按压缩放（「将选中」预览）
@@ -169,8 +179,20 @@ export struct TabsPillGroup {
         this.dispatchChange(index);
       }
     })
-    // 触控热区：外层 Column 透明，constraintSize 只扩命中区（胶囊视觉高度由内层 Row 固定）
-    .constraintSize({ minHeight: DesignConstants.LAYOUT.MIN_HIT_TARGET })
+    // 触控热区：视觉高度由内层 Row 固定。
+    // - 分段模式：外壳用 constraintSize 撑到 44，胶囊垂直居中（容器本身有灰底槽，撑高无副作用）
+    // - 自由宽度模式（紧凑胶囊行）：**布局高度保持胶囊视觉高 30**，命中区改用 responseRegion
+    //   纵向外扩到 44。否则外壳高 44 会把页面里所有 `padding: 12/8` 的间距顶出 7vp，
+    //   实测附近页「排序行→分隔线」比前端多出约 14vp，页头整体偏高。
+    .constraintSize({ minHeight: this.freeWidth ? undefined : DesignConstants.LAYOUT.MIN_HIT_TARGET })
+    .responseRegion(this.freeWidth ? {
+      x: 0,
+      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT) / 2,
+      width: '100%',
+      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+    } : {
+      x: 0, y: 0, width: '100%', height: '100%'
+    })
     // 热区 Column 高于视觉胶囊（44 > 32），必须垂直居中——否则胶囊贴 Column 顶、
     // 热区空隙全落在下方，视觉上「分段内容靠上不居中」（实拍：群组详情 tabs）
     .justifyContent(FlexAlign.Center)

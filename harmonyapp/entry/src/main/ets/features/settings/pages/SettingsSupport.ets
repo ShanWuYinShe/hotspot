@@ -182,8 +182,10 @@ export struct SettingsThemeSegmentCard {
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        // 选中态底色是 accentMuted（淡底 + accent 描边），文字必须用 accent 本色
+        // （accentText 是 accent 亮实底上的反色前景，配淡底会不可读）
         .fontColor(this.selected ?
-          this.getPalette().accentText :
+          this.getPalette().accentBackground :
           this.getPalette().textSecondary)
     }
     .layoutWeight(1)

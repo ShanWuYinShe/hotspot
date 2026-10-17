@@ -15,13 +15,13 @@ import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { GroupItem, GeoPoint, SearchGroupsRequest } from '../../../core/types/api';
 import { GroupCard } from '../components/GroupCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { SystemInput } from '../../../components/SystemInput';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
@@ -44,9 +44,11 @@ export struct NearbyGroupsListPage {
   @State hasMore: boolean = false;
   @State nextCursor: string = '';
   @State errorMessage: string = '';
-  @State keyword: string = '';
   @State activeTag: string = '全部';
-  private readonly TAGS: string[] = ['全部', '摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏'];
+  // 附近域统一分类词库（对齐前端 nearby/shared/categories.ts NEARBY_CATEGORIES：
+  // 全部/摄影/户外/旅行/音乐/美食/阅读/健身 —— 附近的人与附近群组共用同一套，
+  // 此前两端词库割裂：本端群组用「游戏」、人用「运动/艺术」，前端均无对应项，选中必空结果）
+  private readonly TAGS: string[] = ['全部', '摄影', '户外', '旅行', '音乐', '美食', '阅读', '健身'];
   private isDestroyed: boolean = false;
 
   private getCurrentThemePalette() {
@@ -112,7 +114,6 @@ export struct NearbyGroupsListPage {
         reference_point: ref,
         radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: 'distance',
-        keyword: this.keyword || undefined,
         tag: (this.activeTag !== '全部' ? this.activeTag : undefined) as string | undefined,
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
@@ -145,8 +146,7 @@ export struct NearbyGroupsListPage {
         reference_point: ref,
         radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: 'distance',
-        // 翻页必须透传当前生效的筛选条件，否则翻页后 keyword/tag 筛选失效
-        keyword: this.keyword || undefined,
+        // 翻页必须透传当前生效的筛选条件，否则翻页后 tag 筛选失效
         tag: (this.activeTag !== '全部' ? this.activeTag : undefined) as string | undefined,
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
@@ -208,8 +208,8 @@ export struct NearbyGroupsListPage {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
-        // 头部 —— 统一走 SystemPageHeader（返回 + 标题 24pt + 位置行副标题 + 计数 trailing，
-        // 对齐前端 /nearby/groups PageHeader：titleSize 2xl + MapPin 图标 + {位置} · 5km 内 + trailing N 个活跃群组）
+        // ── 页头区块（对齐前端 PageHeader：标题行 + `below` 分类胶囊行，分隔线画在 below 之下）──
+        Column() {
         SystemPageHeader({
           title: '附近群组',
           subtitle: this.getLocationSubtitle(),
@@ -218,32 +218,35 @@ export struct NearbyGroupsListPage {
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
-          backgroundVariant: 'transparent'
+          backgroundVariant: 'transparent',
+          hasBelowContent: true,
+          showDivider: false
         }) {
-          if (this.hasAnyData()) {
-            Text(`${this.groups.length} 个活跃群组`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-              .fontColor(this.getCurrentThemePalette().textSecondary)
+          // trailing：搜索/地图两个页面级工具入口（对齐前端 /nearby/groups PageHeader
+          // trailing，搜索在移动端显示、桌面隐藏；本端统一显示）
+          Row({ space: DesignConstants.SPACING.SM }) {
+            SurfaceIconButton({
+              icon: AppIcon.SEARCH,
+              accessibilityLabel: '搜索',
+              kind: 'neutral',
+              buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+              onPress: () => AppRouter.push(PageNames.SEARCH)
+            })
+            SurfaceIconButton({
+              icon: AppIcon.MAP,
+              accessibilityLabel: '地图浏览',
+              kind: 'neutral',
+              buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+              onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
+            })
           }
         }
 
-        // 搜索栏（对齐前端 /groups/nearby；SystemInput 自带 16 圆角 + hairline
-        // 边框，外层不得再叠 border——否则圆角输入框外套直角框形成双重外框）
-        SystemInput({
-          value: this.keyword,
-          placeholder: '搜索群组',
-          prefixIcon: AppIcon.SEARCH,
-          showPrefixIcon: true,
-          inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
-          onChange: (value: string) => { this.keyword = value; },
-          onSubmit: () => { this.loadGroups(true); }
-        })
-          .margin({ bottom: DesignConstants.SPACING.SM })
-
-        // 分类 TabsPillGroup（对齐前端 TabBar）
+        // 分类胶囊行 = 页头 below（前端 header 内 mt-3 pb-2 的 TabBar；紧凑横向滚动胶囊）
+        Scroll() {
         TabsPillGroup({
           tabs: this.TAGS.map((tag: string) => ({ label: tag } as TabItem)),
+          freeWidth: true,
           activeIndex: Math.max(0, this.TAGS.indexOf(this.activeTag)),
           actions: {
             onChange: (index: number) => {
@@ -255,8 +258,21 @@ export struct NearbyGroupsListPage {
             }
           }
         })
-          .padding({ bottom: DesignConstants.SPACING.SM })
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .align(Alignment.Start)
+        .width('100%')
+        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+        }
+        .width('100%')
+        .padding({ bottom: DesignConstants.SPACING.MD3 })
+        .border({
+          width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
+          color: this.getCurrentThemePalette().borderColor
+        })
 
+        // ── 正文（对齐前端内容列 pt-4 pb-6）──
         // 内容区
         if (this.isLoading) {
           SystemLoadingView({ message: '正在加载附近的群组…' })
@@ -290,7 +306,8 @@ export struct NearbyGroupsListPage {
           Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
             Scroll() {
               Column() {
-                // section header（对齐前端：eyebrow「此刻附近群组」+ status-online trailing）
+                // section header（对齐前端：eyebrow「此刻附近群组」+ status-online trailing，
+                // 前端内容列 pt-4(16)、眉标行 mb-3(12)）
                 Row() {
                   Text('此刻附近群组')
                     .fontSize(DesignConstants.FONT.SIZE.XS2)
@@ -306,13 +323,14 @@ export struct NearbyGroupsListPage {
                     .fontColor(this.getCurrentThemePalette().online)
                 }
                 .width('100%')
-                .padding({ bottom: DesignConstants.SPACING.SM })
                 .alignItems(VerticalAlign.Center)
+                // 眉标行 → 精选卡 12（前端 mb-3）
+                .margin({ bottom: DesignConstants.SPACING.MD })
 
-                // 移动/平板端首卡 featured 全宽精选大卡
+                // 移动/平板端首卡 featured 全宽精选大卡（前端 mb-5=20）
                 if (this.getFeaturedGroup()) {
                   GroupCard({ group: this.getFeaturedGroup() as GroupItem, featured: true })
-                    .margin({ bottom: DesignConstants.SPACING.LG })
+                    .margin({ bottom: DesignConstants.SPACING.LG2 })
                 }
 
                 // 2/3 列图片卡墙
@@ -336,6 +354,8 @@ export struct NearbyGroupsListPage {
                 }
               }
               .width('100%')
+              // 内容列顶距 16（对齐前端 StandardPageLayout pt-4）
+              .padding({ top: DesignConstants.SPACING.LG })
               .constraintSize({ minHeight: '100%' })
             }
             .width('100%')

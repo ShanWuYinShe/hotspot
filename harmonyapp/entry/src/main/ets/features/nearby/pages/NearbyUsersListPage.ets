@@ -22,6 +22,7 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
@@ -49,10 +50,11 @@ export struct NearbyUsersListPage {
   // 「在线」tab：users/search 接口无在线筛选/排序参数，但 UserItem 带 presence_status，
   // 因此「在线」为客户端过滤开关（不改变服务端 sort_by）
   @State onlineOnly: boolean = false;
-  /** 兴趣分类筛选（对齐前端 nearby/people FILTER_TAGS：全部/摄影/旅行/音乐/美食/运动/阅读/艺术） */
+  // 附近域统一分类词库（对齐前端 nearby/shared/categories.ts NEARBY_CATEGORIES：
+  // 全部/摄影/户外/旅行/音乐/美食/阅读/健身 —— 附近的人与附近群组共用同一套，
+  // 此前两端词库割裂：本端群组用「游戏」、人用「运动/艺术」，前端均无对应项，选中必空结果）
   @State activeTag: string = '全部';
-  /** 兴趣分类常量（前端 8 档，全量对齐） */
-  private static readonly FILTER_TAGS: string[] = ['全部', '摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术'];
+  private static readonly FILTER_TAGS: string[] = ['全部', '摄影', '户外', '旅行', '音乐', '美食', '阅读', '健身'];
   private usersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   private isDestroyed: boolean = false;
   private loadVersion: number = 0;
@@ -215,9 +217,13 @@ export struct NearbyUsersListPage {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
-        // 头部 —— 统一走 SystemPageHeader（返回 + 标题 24pt + 位置行副标题 + 计数 trailing，
-        // 对齐前端 /nearby/people PageHeader：titleSize 2xl + MapPin 图标 + {位置} · 5km 内 + trailing N 人）
+        // ── 页头区块（对齐前端 PageHeader：标题行 + `below` 排序胶囊行，分隔线画在 below 之下）──
+        // web /nearby/people 的 header 高 122.8 = pt-4(16) + 标题行 42.66 + mt-3(12) + 胶囊行 29.14
+        //   + pb-2(8) + pb-3.5(14) + 1px 线；排序胶囊属于页头、筛选胶囊属于正文。
+        Column() {
         SystemPageHeader({
+          // 页头自身不再画底部分隔线（由本区块统一画在排序行之下），
+          // 且底部留白交给排序行承担 —— 对齐前端 PageHeader hasBelow 契约
           title: '附近的人',
           subtitle: this.getLocationSubtitle(),
           subtitleIcon: AppIcon.LOCATION,
@@ -225,19 +231,32 @@ export struct NearbyUsersListPage {
           titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
-          backgroundVariant: 'transparent'
+          backgroundVariant: 'transparent',
+          hasBelowContent: true,
+          showDivider: false
         }) {
-          if (this.hasAnyData()) {
-            Text(`${this.users.length} 人`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-              .fontColor(this.getCurrentThemePalette().textSecondary)
+          // trailing：搜索/地图两个页面级工具入口（对齐前端 /nearby/people PageHeader
+          // trailing —— ActionIconButton Search + Map，均 36vp 幽灵钮、gap 8）。
+          // 计数（N 人）前端移动端不在 header 尾部，是正文里的统计；此处不再挤占标题行。
+          Row({ space: DesignConstants.SPACING.SM }) {
+            SurfaceIconButton({
+              icon: AppIcon.SEARCH,
+              accessibilityLabel: '搜索',
+              kind: 'neutral',
+              buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+              onPress: () => AppRouter.push(PageNames.SEARCH)
+            })
+            SurfaceIconButton({
+              icon: AppIcon.MAP,
+              accessibilityLabel: '地图浏览',
+              kind: 'neutral',
+              buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+              onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
+            })
           }
         }
 
-        // 排序 TabsPillGroup（对齐前端 TabBar；web 移动端该页无内嵌搜索框，搜索走 header 图标）
-        // 页头与首行内容之间补 PAGE_TOP_GAP(16)：对齐前端 /nearby/people
-        // （header 底 122.8 → 首个 pill 行 138.8，间距 16）；原实现紧贴页头分隔线（间距 0）
+        // 排序胶囊行 = 页头 below（前端 header 内 mt-3 pb-2 的 TabBar，属于 header 高度的一部分）
         Scroll() {
         TabsPillGroup({
           tabs: [{ label: '距离' }, { label: '在线' }, { label: '共同好友' }],
@@ -268,17 +287,24 @@ export struct NearbyUsersListPage {
             }
           }
         })
-          .padding({ bottom: DesignConstants.SPACING.SM })
         }
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off)
         .align(Alignment.Start)
         .width('100%')
-        .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP })
+        // below 行内距：上 12(mt-3)、下 8(pb-2)；区块再补 14(pb-3.5)
+        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+        }
+        .width('100%')
+        .padding({ bottom: DesignConstants.SPACING.MD3 })
+        // 页头区块底部发丝线（对齐前端 header border-bottom：线在 below 之下）
+        .border({
+          width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
+          color: this.getSurfaceBorder()
+        })
 
-
-
-        // 兴趣分类 TabBar（对齐前端 nearby/people FILTER_TAGS：全部/摄影/旅行/音乐/美食/运动/阅读/艺术）
+        // ── 正文（对齐前端内容列 pt-4 pb-6）──
+        // 兴趣分类胶囊行（前端：正文首行 mb-4 的 TabBar，随内容滚动，不在 header 内）
         Scroll() {
         TabsPillGroup({
           tabs: NearbyUsersListPage.FILTER_TAGS.map((label: string): TabItem => ({ label })),
@@ -295,14 +321,13 @@ export struct NearbyUsersListPage {
             }
           }
         })
-          .padding({ bottom: DesignConstants.SPACING.SM })
         }
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off)
         .align(Alignment.Start)
         .width('100%')
-
-
+        // 前端内容列 pt-4(16) → 筛选行；筛选行 mb-4(16) → 网格
+        .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
 
         // 内容区
         if (this.isLoading) {
