@@ -2,7 +2,7 @@ import { GlobalStateManager, KEY_CLIENT_CONFIG, KEY_CURRENT_USER, KEY_IS_LOGGED_
 import { curves } from '@kit.ArkUI';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AccountInfo, ApiVersionMeta, ClientConfig, SystemAnnouncementItem } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
@@ -516,12 +516,14 @@ export struct SettingsPage {
         Column({ space: DesignConstants.SPACING.THREE }) {
           Text(this.currentUser?.nickname ?? '未命名用户')
             .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
           Text(this.currentUser?.email || (this.userType === 'temp' ? '游客身份 · 未绑定邮箱' : '未绑定邮箱'))
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -546,6 +548,7 @@ export struct SettingsPage {
       Row({ space: DesignConstants.SPACING.MD }) {
         Text('登录后同步你的设置与资料')
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .layoutWeight(1)
 
@@ -656,10 +659,12 @@ export struct SettingsPage {
                           Column({ space: DesignConstants.SPACING.XS }) {
                             Text('明暗模式')
                               .fontSize(DesignConstants.FONT.SIZE.MD)
+                              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                               .fontColor(this.getCurrentThemePalette().textPrimary)
                             Text('浅色/深色手动锁定，或跟随系统')
                               .fontSize(DesignConstants.FONT.SIZE.XS)
+                              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                               .fontColor(this.getCurrentThemePalette().textSecondary)
                               .maxLines(2)
                               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -840,10 +845,12 @@ export struct SettingsPage {
                         Column({ space: DesignConstants.SPACING.XS }) {
                           Text('关于 HotSpot')
                             .fontSize(DesignConstants.FONT.SIZE.SM)
+                            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                             .fontColor(this.getCurrentThemePalette().textPrimary)
                           Text('基于地理位置的实时社交与社区发现应用')
                             .fontSize(DesignConstants.FONT.SIZE.XS)
+                            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                             .fontColor(this.getCurrentThemePalette().textSecondary)
                             .maxLines(2)
                             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -853,6 +860,7 @@ export struct SettingsPage {
 
                         Text(this.appVersionName || '…')
                           .fontSize(DesignConstants.FONT.SIZE.XS)
+                          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                           .fontColor(this.getCurrentThemePalette().textSecondary)
                           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
@@ -914,6 +922,7 @@ export struct SettingsPage {
                         })
                         Text('退出登录当前账号')
                           .fontSize(DesignConstants.FONT.SIZE.XS)
+                          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                           .fontColor(this.getCurrentThemePalette().error)
                       }
                       .alignItems(VerticalAlign.Center)
@@ -991,11 +1000,13 @@ export struct SettingsPage {
     Column({ space: DesignConstants.SPACING.LG }) {
       Text('外观主题')
         .fontSize(DesignConstants.FONT.SIZE.XL)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
         .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(this.getThemeSheetPalette().textPrimary)
 
       Text('切换整体观感，预览卡片、按钮与底栏风格。')
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontColor(this.getThemeSheetPalette().textSecondary)
         .textAlign(TextAlign.Center)
 
@@ -1023,10 +1034,12 @@ export struct SettingsPage {
         Column({ space: DesignConstants.SPACING.XS }) {
           Text(option.label)
             .fontSize(DesignConstants.FONT.SIZE.LG)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getThemeOptionPalette(option).textPrimary)
           Text(option.description)
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getThemeOptionPalette(option).textSecondary)
         }
         .layoutWeight(1)
@@ -1034,6 +1047,7 @@ export struct SettingsPage {
 
         Text(this.isThemeOptionActive(option) ? '当前使用' : '点击切换')
           .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           .fontColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentText : this.getThemeOptionPalette(option).accentBackground)
           .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
           .backgroundColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).surfaceSubtle)

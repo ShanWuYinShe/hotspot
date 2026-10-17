@@ -3,7 +3,7 @@
  * 支持手势缩放、滑动切换
  */
 
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -72,9 +72,11 @@ export struct PhotoPreviewPage {
                 Text('图片加载失败')
                   .fontColor(DesignConstants.COLOR.MEDIA_CHROME_TEXT)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                 Text('请检查网络后退出重进')
                   .fontColor(DesignConstants.COLOR.MEDIA_CHROME_TEXT)
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                   .margin({ top: DesignConstants.SPACING.SM })
                   .opacity(0.7)
               }
@@ -213,6 +215,7 @@ export struct PhotoPreviewPage {
         Text(`${this.currentIndex + 1} / ${this.images.length}`)
           .fontColor(DesignConstants.COLOR.MEDIA_CHROME_TEXT)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .accessibilityText(`第 ${this.currentIndex + 1} 张，共 ${this.images.length} 张`)
           .backgroundColor(DesignConstants.COLOR.OVERLAY_STRONG)

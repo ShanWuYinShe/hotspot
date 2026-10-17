@@ -33,7 +33,7 @@ import { SystemDialog } from '../../../components/SystemDialog';
 import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
-import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -627,11 +627,13 @@ export struct MessagePage {
             if (this.getTotalUnread() > 0) {
               Text(`${this.getTotalUnread()} 条未读`)
                 .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                 .fontColor(this.getCurrentThemePalette().textSecondary)
             } else {
               // 对齐前端：全部已读用在线色（text-status-online），不是次色
               Text('全部已读')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                 .fontColor(this.getCurrentThemePalette().online)
             }
           }
@@ -731,6 +733,7 @@ export struct MessagePage {
           })
           Text('宽屏模式：点击左侧会话将在新页面打开聊天窗口')
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .layoutWeight(1)
         }
@@ -949,6 +952,7 @@ export struct MessagePage {
 
                 Text(chat.name)
                   .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -996,6 +1000,7 @@ export struct MessagePage {
         Row() {
           Text(item.name)
             .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-sm
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM) // 对齐前端 font-medium
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .layoutWeight(1)
@@ -1004,6 +1009,7 @@ export struct MessagePage {
 
           Text(this.formatTime(item.lastTime))
             .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-caption
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
@@ -1011,6 +1017,7 @@ export struct MessagePage {
         Row() {
           Text(item.lastMessage || '暂无消息')
             .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs 预览
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })

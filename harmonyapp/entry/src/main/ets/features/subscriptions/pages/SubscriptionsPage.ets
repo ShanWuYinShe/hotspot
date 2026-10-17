@@ -7,7 +7,7 @@
 import { StorageKeys, PageNames } from '../../../constants/AppConstants';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
@@ -212,6 +212,7 @@ export struct SubscriptionsPage {
               Column({ space: DesignConstants.SPACING.SM }) {
                 Text('加载失败，当前展示默认偏好')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                 SystemButton({
                   label: '重试',
@@ -247,6 +248,7 @@ export struct SubscriptionsPage {
           ListItem() {
             Text('本页开关仅保存在当前设备，不影响实际收到的通知（通知仍以服务端推送为准）。待服务端通知偏好协议落地后，将自动同步到所有设备。')
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
           }
@@ -278,6 +280,7 @@ export struct SubscriptionsPage {
   private ListHeader(title: string) {
     Text(title)
       .fontSize(DesignConstants.FONT.SIZE.MD)
+      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
       .fontColor(this.getCurrentThemePalette().textSecondary)
       .margin({ left: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.MD })
       .width('100%')
@@ -312,11 +315,13 @@ export struct SubscriptionsPage {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(item.title)
           .fontSize(DesignConstants.FONT.SIZE.LG)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(item.description)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })

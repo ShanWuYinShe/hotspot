@@ -2,7 +2,7 @@
  * 调试面板
  */
 
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemCard } from '../../../components/SystemCard';
@@ -75,6 +75,7 @@ export struct DebugPanel {
   private SectionLabel(label: string) {
     Text(label)
       .fontSize(DesignConstants.FONT.SIZE.XS2)
+      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
       .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
       .fontColor(this.getCurrentThemePalette().textSecondary)
       .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
@@ -101,6 +102,7 @@ export struct DebugPanel {
 
         Text('调试面板')
           .fontSize(DesignConstants.FONT.SIZE.XXL)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
@@ -202,6 +204,7 @@ export struct DebugPanel {
           Row({ space: DesignConstants.SPACING.SM }) {
             Text('日志')
               .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
@@ -225,6 +228,7 @@ export struct DebugPanel {
               ListItem() {
                 Text(log)
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                   .fontFamily('Monospace')
                   .width('100%')
               }

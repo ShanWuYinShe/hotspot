@@ -24,7 +24,7 @@ import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { hasLetterAndDigit as hasLetterAndDigitShared, isValidNickname as isValidNicknameShared, isValidOptionalNickname as isValidOptionalNicknameShared, isPhoneOrEmailLoginId as isPhoneOrEmailLoginIdShared, isValidPassword as isValidPasswordShared } from '../../../core/utils/AccountValidation';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -321,6 +321,7 @@ export struct LoginPage {
 
             Text('热点')
               .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
               .fontColor(this.getCurrentThemePalette().accentBackground)
               .textCase(TextCase.UpperCase)
               .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
@@ -328,6 +329,7 @@ export struct LoginPage {
 
             Text('回来看看附近的故事。')
               .fontSize(DesignConstants.FONT.SIZE.XXL)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .letterSpacing(DesignConstants.FONT.LETTER_SPACING.TITLE)
@@ -336,6 +338,7 @@ export struct LoginPage {
 
             Text('使用手机号、邮箱或账号登录。')
               .fontSize(DesignConstants.FONT.SIZE.MD)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .textAlign(TextAlign.Center)
               .margin({ top: DesignConstants.SPACING.XS })
@@ -480,6 +483,7 @@ export struct LoginPage {
       if (this.getLoginIdError()) {
         Text(this.getLoginIdError())
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
           .padding({ left: DesignConstants.SPACING.MD })
@@ -504,6 +508,7 @@ export struct LoginPage {
       if (this.getPasswordError()) {
         Text(this.getPasswordError())
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
           .padding({ left: DesignConstants.SPACING.MD })
@@ -564,6 +569,7 @@ export struct LoginPage {
       if (this.getRegisterNicknameError()) {
         Text(this.getRegisterNicknameError())
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontColor(this.getCurrentThemePalette().error)
@@ -589,6 +595,7 @@ export struct LoginPage {
       if (this.getRegisterLoginIdError()) {
         Text(this.getRegisterLoginIdError())
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
           .padding({ left: DesignConstants.SPACING.MD })
@@ -598,6 +605,7 @@ export struct LoginPage {
       if (this.needsRegisterVerificationCode()) {
         Text('手机号 / 邮箱需验证码验证所有权；改用纯用户名注册则无需验证码')
           .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .width('100%')
         Row({ space: DesignConstants.SPACING.SM }) {
@@ -634,6 +642,7 @@ export struct LoginPage {
         if (this.getRegisterVerificationCodeError()) {
           Text(this.getRegisterVerificationCodeError())
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().error)
             .width('100%')
             .padding({ left: DesignConstants.SPACING.MD })
@@ -659,6 +668,7 @@ export struct LoginPage {
       if (this.getRegisterPasswordError()) {
         Text(this.getRegisterPasswordError())
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
           .padding({ left: DesignConstants.SPACING.MD })
@@ -683,6 +693,7 @@ export struct LoginPage {
       if (this.getRegisterPasswordConfirmError()) {
         Text(this.getRegisterPasswordConfirmError())
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().error)
           .width('100%')
           .padding({ left: DesignConstants.SPACING.MD })
@@ -715,6 +726,7 @@ export struct LoginPage {
     Column({ space: DesignConstants.SPACING.LG }) {
       Text('访客模式可快速体验，部分功能受限。昵称可留空，系统将自动生成。')
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .width('100%')
         .padding(DesignConstants.SPACING.MD)
@@ -740,6 +752,7 @@ export struct LoginPage {
       if (this.getGuestNicknameError()) {
         Text(this.getGuestNicknameError())
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontColor(this.getCurrentThemePalette().error)
@@ -758,6 +771,7 @@ export struct LoginPage {
 
       Text('随时可在「登录」或「注册」升级为正式账号')
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .textAlign(TextAlign.Center)
     }

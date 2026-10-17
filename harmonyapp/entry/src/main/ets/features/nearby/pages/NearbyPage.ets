@@ -17,7 +17,7 @@ import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppRouter, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { AppIcon } from '../../../components/SystemIcon';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { UserItem, GroupItem, MomentItem, SearchUsersRequest, SearchGroupsRequest, FetchNearbyMomentsRequest } from '../../../core/types/api';
@@ -275,6 +275,7 @@ export struct NearbyPage {
     Row() {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
         // 区块标题字重对齐前端 SectionHead（text-md font-semibold）与首页：
         // 此前用 BOLD(700)，比首页的 SEMIBOLD(600) 更重，同类标题跨页粗细不一致
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
@@ -285,6 +286,7 @@ export struct NearbyPage {
       Row({ space: DesignConstants.SPACING.XS }) {
         Text(actionText)
           .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           // 页面底色上的链接用 accent 本色（accentText 是「accent 底上的文字色」，
           // 深色主题下为近黑色，直接落在深色页面上不可读）
           .fontColor(this.getCurrentThemePalette().accentBackground)

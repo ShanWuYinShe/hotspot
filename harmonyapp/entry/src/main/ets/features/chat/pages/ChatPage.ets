@@ -42,7 +42,7 @@ import { EmptyState, LoadingMoreIndicator } from '../../../components/EmptyState
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemDialog } from '../../../components/SystemDialog';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SoftDivider } from '../../../components/SoftDivider';
@@ -1201,6 +1201,7 @@ export struct ChatPage {
         Row() {
           Text('对方正在输入…')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
@@ -1215,6 +1216,7 @@ export struct ChatPage {
         Row() {
           Text(this.groupTypingHintText())
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
@@ -1236,6 +1238,7 @@ export struct ChatPage {
             })
           Text(this.groupMutedUntil ? `你已被禁言，解除时间：${formatMutedUntil(this.groupMutedUntil)}` : '你已被禁言')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().error)
         }
         .width('100%')
@@ -1427,6 +1430,7 @@ export struct ChatPage {
         })
         Text('新消息')
           .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           .fontColor(this.getCurrentThemePalette().accentText)
       }
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })

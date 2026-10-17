@@ -18,7 +18,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemToast } from '../../../components/SystemToast';
-import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
@@ -175,10 +175,12 @@ struct AdminOverviewPage {
       Column({ space: DesignConstants.SPACING.HALF }) {
         Text(this.isSuperAdmin ? '超级管理员' : '管理员')
           .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG_PLUS))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         Text(`拥有 ${this.permissions.length} 项管理权限`)
           .fontSize(DesignConstants.FONT.SIZE.SM) // 12
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getPalette().textSecondary)
       }
       .alignItems(HorizontalAlign.Start)
@@ -197,6 +199,7 @@ struct AdminOverviewPage {
     Column({ space: DesignConstants.SPACING.SM }) {
       Text('管理模块')
         .fontSize(DesignConstants.FONT.SIZE.XS2) // 10
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().textSecondary)
         .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
@@ -230,10 +233,12 @@ struct AdminOverviewPage {
       Column({ space: DesignConstants.SPACING.HALF }) {
         Text(m.title)
           .fontSize(DesignConstants.FONT.SIZE.SM) // 12
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         Text(m.desc)
           .fontSize(DesignConstants.FONT.SIZE.XS) // 11
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           .fontColor(this.getPalette().textSecondary)
       }
       .alignItems(HorizontalAlign.Start)
@@ -282,6 +287,7 @@ struct AdminOverviewPage {
           })
         Text('完整管理请在 Web 端进行')
           .fontSize(DesignConstants.FONT.SIZE.SM) // 12
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
       }

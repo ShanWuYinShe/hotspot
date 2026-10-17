@@ -35,7 +35,7 @@ import { EmptyState, LoadingMoreIndicator } from '../../../components/EmptyState
 import { Pressable } from '../../../components/Pressable';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
-import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -644,6 +644,7 @@ export struct MomentDetailPage {
           if (moment.images.length > 1) {
             Text(`共 ${moment.images.length} 张`)
               .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(DesignConstants.COLOR.WHITE)
               .backgroundColor(this.getCurrentThemePalette().overlayStrong)
@@ -668,6 +669,7 @@ export struct MomentDetailPage {
           })
           Text(`来自 ${moment.location.location_name} 的动态`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
@@ -705,6 +707,7 @@ export struct MomentDetailPage {
             ForEach(moment.tags, (tag: string, index: number) => {
               Text(`#${tag}`)
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
                 .fontColor(this.getCurrentThemePalette().accentText)
                 .backgroundColor(this.getCurrentThemePalette().accentBackground)
                 .padding({
@@ -736,6 +739,7 @@ export struct MomentDetailPage {
           Column() {
             Text(moment.user?.nickname ?? '未知用户')
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
@@ -751,6 +755,7 @@ export struct MomentDetailPage {
                 })
                 Text(moment.location.location_name)
                   .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -773,6 +778,7 @@ export struct MomentDetailPage {
 
           Text(this.formatTime(moment.created_at))
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
@@ -829,17 +835,20 @@ export struct MomentDetailPage {
         Row({ space: DesignConstants.SPACING.SM }) {
           Text(comment.user?.nickname ?? '匿名')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
           Text(this.formatTime(comment.created_at))
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
         Text(comment.content)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .width('100%')
           .textAlign(TextAlign.Start)
@@ -860,6 +869,7 @@ export struct MomentDetailPage {
               })
               Text(formatCount(this.getCommentLikesCount(comment)))
                 .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                 .fontColor(this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
             }
             .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
@@ -868,6 +878,7 @@ export struct MomentDetailPage {
 
           Text('回复')
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .padding({
               left: DesignConstants.SPACING.SM,
@@ -899,6 +910,7 @@ export struct MomentDetailPage {
       // 分区标题（对齐前端 MomentPostBody：text-sm=12 + font-medium + mt-5 mb-3）
       Text(`评论 · ${formatCount(this.getCommentCount(this.moment as MomentItem))}`)
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .width('100%')
@@ -950,11 +962,13 @@ export struct MomentDetailPage {
         Row({ space: DesignConstants.SPACING.SM2 }) {
           Text(`正在回复 @${this.replyTarget.user?.nickname ?? ''}`)
             .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .layoutWeight(1)
             .maxLines(1)
           Text('取消')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
             .fontColor(this.getCurrentThemePalette().accentBackground)
             .onClick(() => { this.replyTarget = null; })
             .accessibilityText('取消回复')
@@ -1023,6 +1037,7 @@ export struct MomentDetailPage {
             })
             Text(formatCount(this.getMomentLikesCount(moment)))
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
               .scale(this.likePop ?
                 { x: DesignConstants.INTERACTION.SCALE_LIKE_POP, y: DesignConstants.INTERACTION.SCALE_LIKE_POP } :
@@ -1053,6 +1068,7 @@ export struct MomentDetailPage {
             })
             Text(formatCount(this.getCommentCount(moment)))
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
           .width('100%')

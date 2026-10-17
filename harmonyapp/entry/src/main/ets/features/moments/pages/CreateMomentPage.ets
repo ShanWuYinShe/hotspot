@@ -16,7 +16,7 @@ import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { SystemCard } from '../../../components/SystemCard';
 import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint, PrivacyLevel } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -402,12 +402,14 @@ export struct CreateMomentPage {
               Row() {
                 Text('添加图片')
                   .fontSize(DesignConstants.FONT.SIZE.LG)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                   .layoutWeight(1)
 
                 Text(`${this.imageUrls.length}/9`)
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
               }
               .width('100%')
@@ -417,6 +419,7 @@ export struct CreateMomentPage {
               if (this.isEditMode && this.existingImageUrls.length > 0) {
                 Text('已有图片')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .margin({ top: DesignConstants.SPACING.SM })
 
@@ -439,6 +442,7 @@ export struct CreateMomentPage {
 
               Text('编辑暂不支持修改图片；如需调整，请删除该瞬间后重新发布')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                 .fontColor(this.getCurrentThemePalette().textSecondary)
                 .margin({ bottom: DesignConstants.SPACING.MD })
 
@@ -462,6 +466,7 @@ export struct CreateMomentPage {
                           })
                         Text('相册')
                           .fontSize(DesignConstants.FONT.SIZE.XS)
+                          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                           .fontColor(this.getCurrentThemePalette().textSecondary)
                       }
                     }
@@ -487,6 +492,7 @@ export struct CreateMomentPage {
                           })
                         Text('拍照')
                           .fontSize(DesignConstants.FONT.SIZE.XS)
+                          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                           .fontColor(this.getCurrentThemePalette().textSecondary)
                       }
                     }
@@ -516,6 +522,7 @@ export struct CreateMomentPage {
             Column() {
               Text('添加标签')
                 .fontSize(DesignConstants.FONT.SIZE.LG)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
                 .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                 .fontColor(this.getCurrentThemePalette().textPrimary)
                 .width('100%')
@@ -566,6 +573,7 @@ export struct CreateMomentPage {
               Row() {
                 Text('位置信息')
                   .fontSize(DesignConstants.FONT.SIZE.LG)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                   .layoutWeight(1)
@@ -599,6 +607,7 @@ export struct CreateMomentPage {
 
                   Text(this.localLocation.locationName)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                     .layoutWeight(1)
                     .maxLines(2)
@@ -613,6 +622,7 @@ export struct CreateMomentPage {
               } else {
                 Text('正在获取位置信息…')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
                   .textAlign(TextAlign.Center)
@@ -679,6 +689,7 @@ export struct CreateMomentPage {
     Row() {
       Text(`#${tag}`)
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontColor(this.getCurrentThemePalette().accentBackground)
 
       SurfaceIconButton({

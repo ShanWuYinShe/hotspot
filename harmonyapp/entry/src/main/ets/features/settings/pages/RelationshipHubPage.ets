@@ -4,7 +4,7 @@ import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -130,6 +130,7 @@ export struct RelationshipHubPage {
           if (this.getActiveTabCount() > 0) {
             Text(`${this.getActiveTabCount()} 人`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(this.getPalette().textSecondary)
           }
         }

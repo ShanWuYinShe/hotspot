@@ -20,7 +20,7 @@ import { SystemTextArea } from '../../../components/SystemTextArea';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SoftDivider } from '../../../components/SoftDivider';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
 import { validateField, FieldRule } from '../../../core/util/FormValidator';
 import { CreateGroupRequest, GeoPoint } from '../../../core/types/api';
@@ -371,6 +371,7 @@ export struct CreateGroupPage {
               Column() {
                 Text('群组名称')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
                   .margin({ bottom: DesignConstants.SPACING.XS })
@@ -393,6 +394,7 @@ export struct CreateGroupPage {
                 if (this.getGroupNameError()) {
                   Text(this.getGroupNameError())
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                     .fontColor(this.getCurrentThemePalette().error)
                     .width('100%')
                     .margin({ top: DesignConstants.SPACING.XS })
@@ -410,6 +412,7 @@ export struct CreateGroupPage {
               Column() {
                 Text('群组描述')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
                   .margin({ bottom: DesignConstants.SPACING.XS })
@@ -436,6 +439,7 @@ export struct CreateGroupPage {
                 if (this.getGroupDescriptionError()) {
                   Text(this.getGroupDescriptionError())
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                     .fontColor(this.getCurrentThemePalette().error)
                     .width('100%')
                     .margin({ top: DesignConstants.SPACING.XS })
@@ -467,9 +471,11 @@ export struct CreateGroupPage {
                 Column({ space: DesignConstants.SPACING.XS }) {
                   Text('建议使用清晰、易识别的头像')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                   Text(this.isGroupAvatarUploading ? '群头像上传中…' : '未设置时将使用默认群头像')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                     .fontColor(this.getCurrentThemePalette().textSecondary)
                 }
                 .layoutWeight(1)
@@ -519,12 +525,14 @@ export struct CreateGroupPage {
                   if (this.localLocation) {
                     Text(this.localLocation.locationName)
                       .fontSize(DesignConstants.FONT.SIZE.MD)
+                      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                       .fontColor(this.getCurrentThemePalette().textPrimary)
                       .maxLines(2)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                   } else {
                     Text('正在获取位置…')
                       .fontSize(DesignConstants.FONT.SIZE.MD)
+                      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                       .fontColor(this.getCurrentThemePalette().textSecondary)
                   }
                 }
@@ -565,6 +573,7 @@ export struct CreateGroupPage {
               Row() {
                 Text('最大成员数')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                   .layoutWeight(1)
 
@@ -592,6 +601,7 @@ export struct CreateGroupPage {
                     .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
                     .textAlign(TextAlign.Center)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                     .backgroundColor(this.getSurfaceSubtle())
                     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(this.maxMembersFocused, false).borderColor })
@@ -640,6 +650,7 @@ export struct CreateGroupPage {
               Row() {
                 Text('密码保护')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                   .layoutWeight(1)
 
@@ -666,6 +677,7 @@ export struct CreateGroupPage {
                 Column() {
                   Text('群组密码')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                     .fontColor(this.getCurrentThemePalette().textSecondary)
                     .width('100%')
                     .margin({ bottom: DesignConstants.SPACING.XS })
@@ -690,6 +702,7 @@ export struct CreateGroupPage {
                   if (this.getGroupPasswordError()) {
                     Text(this.getGroupPasswordError())
                       .fontSize(DesignConstants.FONT.SIZE.SM)
+                      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                       .fontColor(this.getCurrentThemePalette().error)
                       .width('100%')
                       .margin({ top: DesignConstants.SPACING.XS })
@@ -766,6 +779,7 @@ export struct CreateGroupPage {
   SectionHeader(title: string) {
     Text(title)
       .fontSize(DesignConstants.FONT.SIZE.SM)
+      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
       .fontColor(this.getCurrentThemePalette().textSecondary)
       .margin({ bottom: -DesignConstants.SPACING.XS })
   }

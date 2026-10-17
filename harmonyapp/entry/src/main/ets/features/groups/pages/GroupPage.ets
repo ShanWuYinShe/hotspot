@@ -23,7 +23,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { curves } from '@kit.ArkUI';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -576,12 +576,14 @@ export struct GroupPage {
       Row() {
         Text('我的群邀请')
           .fontSize(DesignConstants.FONT.SIZE.XL)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Text(`${this.myInvites.length} 条`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%')
@@ -644,18 +646,21 @@ export struct GroupPage {
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text(invite.group?.name ?? '群组')
             .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
           Text(`邀请人：${invite.inviter?.nickname ?? '未知用户'}`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
           if (invite.message) {
             Text(invite.message)
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -702,12 +707,14 @@ export struct GroupPage {
       Row() {
         Text('我的入群申请')
           .fontSize(DesignConstants.FONT.SIZE.XL)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Text(`${this.myApplications.length} 条`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%')
@@ -771,6 +778,7 @@ export struct GroupPage {
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text('群组申请')
             .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
@@ -778,12 +786,14 @@ export struct GroupPage {
           if (application.message) {
             Text(application.message)
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           Text(`申请时间：${formatDateTime(application.created_at)}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -862,6 +872,7 @@ export struct GroupPage {
       Column({ space: DesignConstants.SPACING.HALF }) {
         Text(group.group.name)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
@@ -870,6 +881,7 @@ export struct GroupPage {
         Row({ space: DesignConstants.SPACING.SM }) {
           Text(`${formatCount(group.group.members_count)}人`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textSecondary)
 
           if (group.online_members_count !== undefined && group.online_members_count !== null && group.online_members_count > 0) {
@@ -882,6 +894,7 @@ export struct GroupPage {
                 .backgroundColor(this.getCurrentThemePalette().online)
               Text(`${group.online_members_count} 在线`)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                 .fontColor(this.getCurrentThemePalette().online)
             }
             .alignItems(VerticalAlign.Center)
@@ -890,6 +903,7 @@ export struct GroupPage {
           if (group.location?.distance !== undefined && group.location?.distance !== null) {
             Text(LocationUtil.formatDistance(group.location.distance))
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
         }
@@ -897,6 +911,7 @@ export struct GroupPage {
         if (group.description) {
           Text(group.description)
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })

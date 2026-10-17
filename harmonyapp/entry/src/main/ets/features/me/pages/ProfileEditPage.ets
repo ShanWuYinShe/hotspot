@@ -8,7 +8,7 @@ import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemToast } from '../../../components/SystemToast';
@@ -304,11 +304,13 @@ export struct ProfileEditPage {
               Column({ space: DesignConstants.SPACING.HALF }) {
                 Text(this.nickname || (this.currentUser?.nickname ?? ''))
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor(this.getCurrentThemePalette().textPrimary)
 
                 Text('@' + (this.currentUser?.user_id?.substring(0, 8) ?? 'user'))
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -332,12 +334,14 @@ export struct ProfileEditPage {
               Row({ space: DesignConstants.SPACING.XS }) {
                 Text('兴趣标签')
                   .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .textCase(TextCase.UpperCase)
                   .letterSpacing(DesignConstants.FONT.LETTER_SPACING.FIELD)
 
                 Text('(' + this.tags.length + '/' + MAX_TAGS + ')')
                   .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                   .fontColor(this.getCurrentThemePalette().textTertiary)
               }
               .width('100%')
@@ -425,6 +429,7 @@ export struct ProfileEditPage {
           })
         Text(label)
           .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           .fontColor(this.getCurrentThemePalette().textSecondary)
           .textCase(TextCase.UpperCase)
           .letterSpacing(DesignConstants.FONT.LETTER_SPACING.FIELD)
@@ -435,6 +440,7 @@ export struct ProfileEditPage {
         if (multiline) {
           TextArea({ placeholder: placeholder, text: value })
             .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .placeholderColor(this.getCurrentThemePalette().textTertiary)
             .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
@@ -448,6 +454,7 @@ export struct ProfileEditPage {
         } else {
           TextInput({ placeholder: placeholder, text: value })
             .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .placeholderColor(this.getCurrentThemePalette().textTertiary)
             .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
@@ -464,6 +471,7 @@ export struct ProfileEditPage {
           // 计数变色阈值 127/150 对齐前端 me/edit（bio.length > 127 起 accent 色）
           Text(value.length + '/' + maxLen)
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(value.length > MAX_BIO - 23
               ? this.getCurrentThemePalette().accentBackground
               : this.getCurrentThemePalette().textTertiary)
@@ -475,6 +483,7 @@ export struct ProfileEditPage {
         if (error.length > 0) {
           Text(error)
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().error)
             .width('100%')
             .margin({ top: DesignConstants.SPACING.XS })

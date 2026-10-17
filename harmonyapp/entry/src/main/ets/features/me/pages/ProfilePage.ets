@@ -31,7 +31,7 @@ import { LoginPromptView } from '../../../components/LoginPromptView';
 import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, MomentItem } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { EmptyState } from '../../../components/EmptyState';
@@ -763,6 +763,7 @@ export struct ProfilePage {
               Row() {
                 Text('个人中心')
                   .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
@@ -961,6 +962,7 @@ export struct ProfilePage {
                   })
                   Text(this.currentUser.location.location_name)
                     .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .fontColor(this.getSecondaryTextColor())
@@ -977,6 +979,7 @@ export struct ProfilePage {
                   })
                   Text('编辑资料')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                     .fontColor(this.getSecondaryTextColor())
                 }
               }
@@ -1023,6 +1026,7 @@ export struct ProfilePage {
               Column() {
                 Text('账号与位置')
                   .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
@@ -1031,6 +1035,7 @@ export struct ProfilePage {
                   .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })
                 Text('端侧独有：同步当前位置、账号升级与管理入口')
                   .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
                   .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })
@@ -1079,6 +1084,7 @@ export struct ProfilePage {
       Column({ space: DesignConstants.SPACING.LG }) {
         Text('设置用户名与密码后，临时账号将升级为完整账号，所有数据都会保留。')
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontColor(this.getSecondaryTextColor())
 
         SystemInput({
@@ -1182,10 +1188,12 @@ export struct ProfilePage {
         if (this.isAvatarUploading) {
           Text('头像上传中…')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getSecondaryTextColor())
         } else {
           Text('点击头像更换')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getSecondaryTextColor())
         }
       }

@@ -25,7 +25,7 @@ import { CacheManager } from '../../../core/cache/CacheManager';
 import { NotificationCenter } from '../../../components/NotificationCenter';
 import { PerformanceIndicator } from '../../../components/PerformanceIndicator';
 import { I18nManager } from '../../../core/i18n/I18nManager';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 import { NotificationRenderer } from '../../../core/services/notification/NotificationRenderer';
 import { SmartNotification } from '../../../core/services/notification/NotificationDataManager';
@@ -789,6 +789,7 @@ struct Index {
 
           Text($r('app.string.common_loading'))
             .fontSize(DesignConstants.FONT.SIZE.LG)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .margin({ top: DesignConstants.SPACING.LG })
         }
@@ -805,10 +806,12 @@ struct Index {
         Column({ space: DesignConstants.SPACING.LG }) {
           Text('应用初始化失败')
             .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG_PLUS))
             .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
           Text(this.lastError)
             .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
             .constraintSize({ maxWidth: 280 })

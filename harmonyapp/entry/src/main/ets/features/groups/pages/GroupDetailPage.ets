@@ -31,7 +31,7 @@ import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
 import pasteboard from '@ohos.pasteboard';
-import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import {
   GroupItem,
   GroupApplicationItem,
@@ -1492,6 +1492,7 @@ export struct GroupDetailPage {
               // 玻璃分类徽章（对齐前端 bg-surface-glass-badge + backdrop-blur-sm）
               Text(`#${this.groupInfo.tags[0]}`)
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
                 .fontColor(DesignConstants.COLOR.WHITE)
                 .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                 .borderRadius(DesignConstants.RADIUS.FULL)
@@ -1501,6 +1502,7 @@ export struct GroupDetailPage {
             if (this.groupInfo?.group?.name) {
               Text(this.groupInfo.group.name)
                 .fontSize(DesignConstants.FONT.SIZE.XXL)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
                 .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                 .fontColor(DesignConstants.COLOR.WHITE)
                 .maxLines(1)
@@ -1616,6 +1618,7 @@ export struct GroupDetailPage {
                 })
                 Text(this.groupInfo?.location?.location_name || '未知位置')
                   .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1658,10 +1661,12 @@ export struct GroupDetailPage {
               Column() {
                  Text('群组成员')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                  Text(`${formatCount(this.groupInfo?.group?.members_count)} 名成员`)
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .margin({ top: DesignConstants.SPACING.HALF })
               }
@@ -1703,10 +1708,12 @@ export struct GroupDetailPage {
                 Column() {
                   Text('入群申请')
                     .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                     .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                   Text('处理待审核的入群请求')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                     .fontColor(this.getCurrentThemePalette().textSecondary)
                     .margin({ top: DesignConstants.SPACING.HALF })
                 }
@@ -1901,6 +1908,7 @@ export struct GroupDetailPage {
                       }
                       Text(item.title)
                         .fontSize(DesignConstants.FONT.SIZE.MD)
+                        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                         .fontColor(this.getCurrentThemePalette().textPrimary)
                         .maxLines(1)
@@ -1920,6 +1928,7 @@ export struct GroupDetailPage {
 
                     Text(formatRelativeTime(item.created_at))
                       .fontSize(DesignConstants.FONT.SIZE.XS)
+                      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                       .fontColor(this.getCurrentThemePalette().textTertiary)
                       .width('100%')
 
@@ -2092,12 +2101,14 @@ export struct GroupDetailPage {
     Column({ space: DesignConstants.SPACING.SM }) {
       Text(value)
         .fontSize(DesignConstants.FONT.SIZE.XL)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
       Text(label)
         .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
         .fontColor(this.getCurrentThemePalette().textSecondary)
     }
     .justifyContent(FlexAlign.Center)
@@ -2112,6 +2123,7 @@ export struct GroupDetailPage {
       Row({ space: DesignConstants.SPACING.SM }) {
         Text('编辑群组信息')
           .fontSize(DesignConstants.FONT.SIZE.XL)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
@@ -2142,6 +2154,7 @@ export struct GroupDetailPage {
           Column({ space: DesignConstants.SPACING.MD }) {
             Text('群组头像')
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
 
@@ -2160,6 +2173,7 @@ export struct GroupDetailPage {
               Column({ space: DesignConstants.SPACING.SM }) {
                 Text(this.isEditGroupAvatarUploading ? '头像上传中…' : '点击头像可重新选择')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
 
                 if (this.editGroupAvatarLocalUri) {
@@ -2184,6 +2198,7 @@ export struct GroupDetailPage {
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('群组名称')
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
 
@@ -2203,6 +2218,7 @@ export struct GroupDetailPage {
 
             Text(`${this.editGroupName.trim().length}/${GROUP_NAME_MAX}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(this.getCurrentThemePalette().textTertiary)
               .width('100%')
               .textAlign(TextAlign.End)
@@ -2215,6 +2231,7 @@ export struct GroupDetailPage {
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('群组描述')
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
 
@@ -2229,6 +2246,7 @@ export struct GroupDetailPage {
 
             Text(`${this.editGroupDescription.trim().length}/${GROUP_DESCRIPTION_MAX}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(this.getCurrentThemePalette().textTertiary)
               .width('100%')
               .textAlign(TextAlign.End)
@@ -2242,6 +2260,7 @@ export struct GroupDetailPage {
           Column({ space: DesignConstants.SPACING.MD }) {
             Text('入群设置')
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
 
@@ -2249,9 +2268,11 @@ export struct GroupDetailPage {
               Column({ space: DesignConstants.SPACING.HALF }) {
                 Text(this.editGroupPrivate ? '私密群组' : '公开群组')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                 Text(this.editGroupPrivate ? '仅受邀请的人可加入' : '所有人都可以找到并加入')
                   .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
               }
               .alignItems(HorizontalAlign.Start)
@@ -2269,9 +2290,11 @@ export struct GroupDetailPage {
               Column({ space: DesignConstants.SPACING.HALF }) {
                 Text('新人需审核')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                 Text(this.editGroupRequiresApproval ? '申请需群主/管理员审核通过后加入' : '申请后直接加入')
                   .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
               }
               .alignItems(HorizontalAlign.Start)
@@ -2301,6 +2324,7 @@ export struct GroupDetailPage {
                 })
                 Text('危险区')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor(this.getCurrentThemePalette().error)
               }
@@ -2311,6 +2335,7 @@ export struct GroupDetailPage {
                 Row() {
                   Text('转让群主')
                     .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                     .layoutWeight(1)
                   SystemButton({
@@ -2326,11 +2351,13 @@ export struct GroupDetailPage {
                   if (this.isLoadingTransferCandidates) {
                     Text('成员加载中…')
                       .fontSize(DesignConstants.FONT.SIZE.SM)
+                      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                       .fontColor(this.getCurrentThemePalette().textSecondary)
                       .width('100%')
                   } else if (this.transferCandidates.length === 0) {
                     Text('群内暂无其他成员可转让')
                       .fontSize(DesignConstants.FONT.SIZE.SM)
+                      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                       .fontColor(this.getCurrentThemePalette().textSecondary)
                       .width('100%')
                   } else {
@@ -2338,12 +2365,14 @@ export struct GroupDetailPage {
                       Row({ space: DesignConstants.SPACING.SM }) {
                         Text(member.user?.nickname ?? '')
                           .fontSize(DesignConstants.FONT.SIZE.SM)
+                          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                           .fontColor(this.getCurrentThemePalette().textPrimary)
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
                           .layoutWeight(1)
                         Text(this.getRoleShortText(member.role))
                           .fontSize(DesignConstants.FONT.SIZE.XS)
+                          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                           .fontColor(this.getCurrentThemePalette().textSecondary)
                         SystemButton({
                           label: '转让',
@@ -2363,10 +2392,12 @@ export struct GroupDetailPage {
               Column({ space: DesignConstants.SPACING.SM }) {
                 Text('解散群组')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                   .width('100%')
                 Text('解散后不可恢复，所有成员将被移出')
                   .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                   .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
                 SystemButton({
@@ -2455,12 +2486,14 @@ export struct GroupDetailPage {
     Column({ space: DesignConstants.SPACING.LG }) {
       Text('封禁并移出')
         .fontSize(DesignConstants.FONT.SIZE.XL)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
         .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .width('100%')
 
       Text(`确定将「${this.banTargetMember?.user?.nickname ?? '该成员'}」封禁并移出群组？封禁后对方将无法再加入。`)
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .width('100%')
 
@@ -2498,11 +2531,13 @@ export struct GroupDetailPage {
       Row() {
         Text('邀请成员入群')
           .fontSize(DesignConstants.FONT.SIZE.XL)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
         Text(`${this.inviteSelectedIds.length} 人已选`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%')
@@ -2556,6 +2591,7 @@ export struct GroupDetailPage {
                 })
                 Text(user.user?.nickname ?? '')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -2605,11 +2641,13 @@ export struct GroupDetailPage {
       Row() {
         Text('封禁名单')
           .fontSize(DesignConstants.FONT.SIZE.XL)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
         Text(`${this.bannedMembers.length} 人`)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%')
@@ -2643,12 +2681,14 @@ export struct GroupDetailPage {
                 Column({ space: DesignConstants.SPACING.HALF }) {
                   Text(banned.user?.nickname ?? '')
                     .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   if (banned.reason !== null && banned.reason !== undefined && banned.reason.length > 0) {
                     Text(`原因：${banned.reason}`)
                       .fontSize(DesignConstants.FONT.SIZE.XS)
+                      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                       .fontColor(this.getCurrentThemePalette().textSecondary)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })

@@ -16,7 +16,7 @@ import { GroupItem, GeoPoint, SearchGroupsRequest } from '../../../core/types/ap
 import { GroupCard } from '../components/GroupCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemInput } from '../../../components/SystemInput';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -217,6 +217,7 @@ export struct NearbyGroupsListPage {
           if (this.hasAnyData()) {
             Text(`${this.groups.length} 个活跃群组`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
         }
@@ -287,6 +288,7 @@ export struct NearbyGroupsListPage {
                 Row() {
                   Text('此刻附近群组')
                     .fontSize(DesignConstants.FONT.SIZE.XS2)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
                     .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                     .fontColor(this.getCurrentThemePalette().textSecondary)
                     .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
@@ -294,6 +296,7 @@ export struct NearbyGroupsListPage {
                   Blank()
                   Text(`${this.getOnlineTotalCount()} 人正在群聊`)
                     .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                     .fontColor(this.getCurrentThemePalette().online)
                 }
                 .width('100%')

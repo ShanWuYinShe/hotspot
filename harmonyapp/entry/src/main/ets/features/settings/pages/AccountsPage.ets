@@ -22,7 +22,7 @@ import { SystemButton } from '../../../components/SystemButton';
 import { SystemDialog } from '../../../components/SystemDialog';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter } from '../../../core/router/AppRouter';
@@ -273,6 +273,7 @@ export struct AccountsPage {
                 Column({ space: DesignConstants.SPACING.XS }) {
                   Text(this.getAccountDisplayName(acc))
                     .fontSize(DesignConstants.FONT.SIZE.LG)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -284,6 +285,7 @@ export struct AccountsPage {
                 if (this.currentUserId === acc.user_id) {
                   Text('当前')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                     .fontColor(this.getCurrentThemePalette().accentText)
                     .backgroundColor(this.getCurrentThemePalette().accentBackground)
                     .borderRadius(DesignConstants.SHAPE.CHIP)

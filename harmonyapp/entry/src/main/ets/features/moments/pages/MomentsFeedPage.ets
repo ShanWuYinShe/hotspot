@@ -28,7 +28,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
@@ -377,6 +377,7 @@ export struct MomentsFeedPage {
               `${this.getVisibleMoments().length}+ 条内容` :
               `${this.getVisibleMoments().length} 条内容`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
         }
@@ -390,6 +391,7 @@ export struct MomentsFeedPage {
             })
           Text('搜索用户、动态、地点或话题')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .layoutWeight(1)
             .maxLines(1)
@@ -512,6 +514,7 @@ export struct MomentsFeedPage {
       Row() {
         Text(this.getMomentsSectionTitle())
           .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18，对齐前端 page-title
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG_PLUS))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
       }
@@ -606,6 +609,7 @@ export struct MomentsFeedPage {
         Column() {
           Text('活跃用户')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .textCase(TextCase.UpperCase)
@@ -625,6 +629,7 @@ export struct MomentsFeedPage {
               })
               Text(user.user?.nickname ?? '')
                 .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-meta
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                 .fontColor(this.getCurrentThemePalette().textPrimary)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -662,6 +667,7 @@ export struct MomentsFeedPage {
     Row() {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
         // 区块标题字重对齐前端 SectionHead（text-md font-semibold）与首页：
         // 此前用 BOLD(700)，与首页/附近的 SEMIBOLD(600) 不一致
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
@@ -685,11 +691,13 @@ export struct MomentsFeedPage {
       Row() {
         Text('推荐用户')
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
         Text('查看全部')
           .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           .fontColor(this.getCurrentThemePalette().accentBackground)
           .onClick(() => AppRouter.push(PageNames.NEARBY_USERS))
       }
@@ -730,6 +738,7 @@ export struct MomentsFeedPage {
             Row() {
               Text(LocationUtil.formatDistance(user.location.distance))
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
                 .fontColor(this.getCurrentThemePalette().accentText)
             }
             .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
@@ -745,6 +754,7 @@ export struct MomentsFeedPage {
 
       Text(user.user?.nickname ?? '')
         .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -778,11 +788,13 @@ export struct MomentsFeedPage {
       Row() {
         Text('推荐群组')
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
         Text('查看全部')
           .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           .fontColor(this.getCurrentThemePalette().accentBackground)
           .onClick(() => AppRouter.push(PageNames.NEARBY_GROUPS))
       }
@@ -840,6 +852,7 @@ export struct MomentsFeedPage {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(group.group?.name ?? '')
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
@@ -848,10 +861,12 @@ export struct MomentsFeedPage {
         Row({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${group.group?.members_count ?? 0} 人`)
             .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
             .fontColor(this.getCurrentThemePalette().textSecondary)
           if (group.location?.distance !== undefined && group.location?.distance !== null) {
             Text(LocationUtil.formatDistance(group.location.distance))
               .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
               .fontColor(this.getCurrentThemePalette().accentBackground)
           }
         }

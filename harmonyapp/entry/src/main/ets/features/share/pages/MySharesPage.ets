@@ -4,7 +4,7 @@ import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { ShareListItem, FetchCreatedSharesRequest, ShareType } from '../../../core/types/api';
 import { DefaultConfig, PageNames } from '../../../constants/AppConstants';
-import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -333,6 +333,7 @@ export struct MySharesPage {
         Column({ space: DesignConstants.SPACING.XS }) {
           Text(share.preview?.title ?? this.defaultShareTitle(share))
             .fontSize(DesignConstants.FONT.SIZE.LG)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
@@ -340,12 +341,14 @@ export struct MySharesPage {
 
           Text(`分享代码 ${share.share_code}`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .layoutWeight(1)
 
         Text(this.shareStatusText(share))
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.shareStatusColor(share))
           .backgroundColor(this.shareStatusBackground(share))
@@ -381,14 +384,17 @@ export struct MySharesPage {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(`类型：${this.formatShareType(share.share_type)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textSecondary)
 
         Text(`创建：${this.formatDate(share.created_at)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textSecondary)
 
         Text(`有效期：${this.formatExpiration(share.expires_at)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .padding({
@@ -404,10 +410,12 @@ export struct MySharesPage {
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text('分享状态')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textSecondary)
 
           Text(share.is_revoked ? '已停止对外访问' : '对外链接可用')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textPrimary)
         }
         .layoutWeight(1)
@@ -426,6 +434,7 @@ export struct MySharesPage {
         } else {
           Text('已撤销')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textTertiary)
         }
       }

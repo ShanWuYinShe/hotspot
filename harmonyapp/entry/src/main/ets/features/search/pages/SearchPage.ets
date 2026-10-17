@@ -23,7 +23,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppThemeVisuals, InputBorderResolution } from '../../../core/theme/AppThemeVisuals';
 import { AppIcon } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -559,6 +559,7 @@ export struct SearchPage {
     Row() {
       Text(label)
         .fontSize(DesignConstants.FONT.SIZE.XS2)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .textCase(TextCase.UpperCase)
@@ -589,6 +590,7 @@ export struct SearchPage {
       })
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getCurrentThemePalette().textPrimary)
     }
@@ -696,6 +698,7 @@ export struct SearchPage {
                 Row({ space: DesignConstants.SPACING.MD }) {
                   Text(`#${tag}`)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                     .layoutWeight(1)
                     .maxLines(1)
@@ -765,6 +768,7 @@ export struct SearchPage {
 
                 Text(`#${tag}`)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                   .maxLines(1)
@@ -803,12 +807,14 @@ export struct SearchPage {
     Row() {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .layoutWeight(1)
       if (trailing) {
         Text('清除')
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().accentBackground)
           .padding(DesignConstants.SPACING.MD)
           .onClick(trailing)
@@ -835,6 +841,7 @@ export struct SearchPage {
           if (this.recentSearches.length === 0) {
             Text('还没有搜索记录。')
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
               .padding(DesignConstants.SPACING.LG)
@@ -852,6 +859,7 @@ export struct SearchPage {
                     })
                   Text(item)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                     .fontColor(this.getCurrentThemePalette().textPrimary)
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -892,10 +900,12 @@ export struct SearchPage {
               Row({ space: DesignConstants.SPACING.MD }) {
                 Text(String(index + 1))
                   .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                   .fontColor(this.getCurrentThemePalette().accentBackground)
                   .width(DesignConstants.SPACING.LG)
                 Text(item)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -926,6 +936,7 @@ export struct SearchPage {
             ForEach(this.discoveryTopics, (topic: string) => {
               Text(`#${topic}`)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                 .fontColor(this.getCurrentThemePalette().textPrimary)
                 .backgroundColor(this.getSurfaceSubtle())
                 .padding({
@@ -1110,6 +1121,7 @@ export struct SearchPage {
           Column({ space: DesignConstants.SPACING.HALF }) {
             Text(item.user?.nickname ?? '')
               .fontSize(DesignConstants.FONT.SIZE.MD)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
@@ -1118,6 +1130,7 @@ export struct SearchPage {
             if (item.presence_status === 'online') {
               Text('在线')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                 .fontColor(this.getCurrentThemePalette().accentBackground)
             }
           }
@@ -1164,6 +1177,7 @@ export struct SearchPage {
           ForEach(item.tags.slice(0, 3), (tag: string) => {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.THREE, bottom: DesignConstants.SPACING.THREE })
               .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
@@ -1218,12 +1232,14 @@ export struct SearchPage {
           Column({ space: DesignConstants.SPACING.HALF }) {
             Text(item.group?.name ?? '')
               .fontSize(DesignConstants.FONT.SIZE.MD)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
             Text(`${formatCount(item.group?.members_count)} 人`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
           .alignItems(HorizontalAlign.Start)
@@ -1301,6 +1317,7 @@ export struct SearchPage {
         Column() {
           Text(item.description.substring(0, 60))
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(4)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1321,6 +1338,7 @@ export struct SearchPage {
 
         Text(item.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .layoutWeight(1)
@@ -1334,6 +1352,7 @@ export struct SearchPage {
             })
           Text(formatCount(sumReactionCounts(item.reactions)))
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textTertiary)
         }
       }

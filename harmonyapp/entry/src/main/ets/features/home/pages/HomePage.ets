@@ -27,7 +27,7 @@ import { SystemButton } from '../../../components/SystemButton';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import { interactionActions } from '../../../core/state/InteractionActions';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
@@ -546,6 +546,7 @@ export struct HomePage {
 
             Text(`${this.getOnlineCount()} 在线`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getPalette().textSecondary)
               .maxLines(1)
@@ -622,11 +623,13 @@ export struct HomePage {
           Column() {
             Text('实时附近')
               .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-sm
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .fontColor(this.getPalette().textPrimary)
             // 副标题：定位名 · 范围 · 更新节奏（对齐前端 HeroStats rangeLabel）
             Text(this.getHeroRangeLabel())
               .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(this.getPalette().textSecondary)
               .margin({ top: 1 })
               .maxLines(1)
@@ -657,10 +660,12 @@ export struct HomePage {
         Column({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${this.users.length}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD) // 对齐前端 font-semibold(600)
             .fontColor(this.getPalette().textPrimary)
           Text('人附近')
             .fontSize(DesignConstants.FONT.SIZE.XS2) // 10 对齐前端 text-xxs
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
             .fontColor(this.getPalette().textSecondary)
         }
         .alignItems(HorizontalAlign.Center)
@@ -678,10 +683,12 @@ export struct HomePage {
         Column({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${this.moments.length}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD) // 对齐前端 font-semibold(600)
             .fontColor(this.getPalette().textPrimary)
           Text('动态')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
             .fontColor(this.getPalette().textSecondary)
         }
         .alignItems(HorizontalAlign.Center)
@@ -699,10 +706,12 @@ export struct HomePage {
         Column({ space: DesignConstants.SPACING.SM2 }) {
           Text(`${this.getOnlineCount()}`)
             .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD) // 对齐前端 font-semibold(600)
             .fontColor(this.getPalette().textPrimary)
           Text('在线')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
             .fontColor(this.getPalette().textSecondary)
         }
         .alignItems(HorizontalAlign.Center)
@@ -755,6 +764,7 @@ export struct HomePage {
     Row() {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.getPalette().textPrimary)
 
@@ -765,6 +775,7 @@ export struct HomePage {
           // 对齐前端 SectionHead 的 action（text-xs=11）与附近页：首页此前用 SM(12)，
           // 同一角色跨页字号不一致
           .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           .fontColor(this.getPalette().accentBackground)
         LucideIcon({
           icon: AppIcon.ARROW_RIGHT,
@@ -913,6 +924,7 @@ export struct HomePage {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(user.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 UserCardRow text-sm
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontWeight(DesignConstants.FONT.WEIGHT.REGULAR)
           .fontColor(this.getPalette().textPrimary)
           .maxLines(1)
@@ -923,15 +935,18 @@ export struct HomePage {
           if (user.tags && user.tags.length > 0) {
             Text(`#${user.tags[0]}`)
               .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
               .fontColor(this.getPalette().accentBackground)
             Text('·')
               .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
               .opacity(DesignConstants.OPACITY.MUTED)
               .fontColor(this.getPalette().textSecondary)
           }
           if (user.location?.distance !== undefined && user.location?.distance !== null) {
             Text(LocationUtil.formatDistance(user.location.distance))
               .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
               .fontColor(this.getPalette().textSecondary)
           }
         }
@@ -996,6 +1011,7 @@ export struct HomePage {
       } else if (!this.groupsLoading && this.groups.length === 0) {
         Text('附近暂时没有活跃的群组。')
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getPalette().textSecondary)
           .width('100%')
           .margin({ top: DesignConstants.SPACING.HALF })
@@ -1068,6 +1084,7 @@ export struct HomePage {
           Column({ space: DesignConstants.SPACING.THREE }) {
             Text(group.group?.name ?? '')
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
               .fontColor(this.getPalette().textPrimary)
               .maxLines(1)
@@ -1077,10 +1094,12 @@ export struct HomePage {
             Row({ space: DesignConstants.SPACING.SM }) {
               Text(`${formatCount(group.group?.members_count ?? 0)} 人`)
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
                 .fontColor(this.getPalette().textSecondary)
               if (group.location?.distance !== undefined && group.location?.distance !== null) {
                 Text(LocationUtil.formatDistance(group.location.distance))
                   .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
                   .fontColor(this.getPalette().accentBackground)
               }
             }
@@ -1140,6 +1159,7 @@ export struct HomePage {
       } else if (!this.momentsLoading && this.moments.length === 0) {
         Text('附近暂时没有动态，去发布第一条吧。')
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getPalette().textSecondary)
           .width('100%')
           .margin({ top: DesignConstants.SPACING.HALF })
@@ -1220,11 +1240,13 @@ export struct HomePage {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(moment.description || '分享了一条动态')
           .fontSize(DesignConstants.FONT.SIZE.SM) // 对齐前端 ActivityRow text-sm=12
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getPalette().textPrimary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(moment.location?.location_name ?? '')
           .fontSize(DesignConstants.FONT.SIZE.XS) // 对齐前端 text-xs=11
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           .fontColor(this.getPalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1238,6 +1260,9 @@ export struct HomePage {
         iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
         paletteRole: 'textSecondary'
       })
+        // 标题折行时（行高对齐前端 17 后更易两行）文字与 chevron 会贴在一起，
+        // 补一个左间距把两者分开
+        .margin({ left: DesignConstants.SPACING.SM2 })
     }
     .width('100%')
     // 白卡容器内行：px-3 py-2.5（对齐前端 ActivityRow ListItem px-4 py-3 扣除容器 p-1.5）

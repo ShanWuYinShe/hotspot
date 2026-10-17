@@ -1,5 +1,5 @@
 import { AppIcon } from '../../../components/SystemIcon';
-import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
 import {
   ApiVersionMeta,
@@ -105,6 +105,7 @@ export struct SettingsSectionCard {
       if (this.title.length > 0) {
         Text(this.title)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textSecondary)
           .width('100%')
@@ -179,6 +180,7 @@ export struct SettingsThemeSegmentCard {
 
       Text(this.label)
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.selected ?
           this.getPalette().accentText :
@@ -228,6 +230,7 @@ export struct SettingsEntryRow {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(this.item.title)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         if (this.item.subtitle) {
@@ -235,6 +238,7 @@ export struct SettingsEntryRow {
           // 撑高一截，整组行高参差，并让行的点击热区中心偏移）
           Text(this.item.subtitle)
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getPalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -297,6 +301,7 @@ export struct SettingsGroupLabel {
     Column({ space: 0 }) {
       Text(this.label)
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.getPalette().textPrimary)
         .width('100%')
@@ -357,12 +362,14 @@ export struct SettingsToggleRow {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(this.title)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         if (this.subtitle) {
           // 与 SettingsEntryRow 同契约：分组内条目等高，副标题单行省略
           Text(this.subtitle)
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getPalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -437,10 +444,12 @@ export struct SettingsMetaCard {
         Column({ space: DesignConstants.SPACING.XS }) {
           Text('系统版本状态')
             .fontSize(DesignConstants.FONT.SIZE.LG)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
           Text(this.meta?.status === 'sunset' ? '可能影响正常使用' : '与服务端版本保持同步')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getPalette().textSecondary)
         }
         .layoutWeight(1)
@@ -448,6 +457,7 @@ export struct SettingsMetaCard {
 
         Text(this.getStatusText())
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
           .backgroundColor(this.getStatusBackground())
@@ -470,6 +480,7 @@ export struct SettingsMetaCard {
           LoadingProgress().width(DesignConstants.SPACING.LG).height(DesignConstants.SPACING.LG).color(this.getPalette().accentBackground)
           Text('正在获取版本信息…')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getPalette().textSecondary)
         }
       } else {
@@ -482,6 +493,7 @@ export struct SettingsMetaCard {
       if (this.error) {
         Text(this.error)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getPalette().accentBackground)
       }
     }
@@ -504,10 +516,12 @@ export struct SettingsInfoLine {
     Row({ space: DesignConstants.SPACING.MD }) {
       Text(this.label)
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontColor(this.getPalette().textSecondary)
         .layoutWeight(1)
       Text(this.value)
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontColor(this.getPalette().textPrimary)
         .textAlign(TextAlign.End)
     }
@@ -548,10 +562,12 @@ export struct AnnouncementSummaryCard {
           // 16/medium 的「第二套区块标题」——卡内标题统一 text-sm medium + text-xs 描述
           Text('系统公告')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
           Text(this.items.length > 0 ? '查看最近平台通知与维护提醒' : '当前暂无系统公告')
             .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getPalette().textSecondary)
         }
         .layoutWeight(1)
@@ -577,6 +593,7 @@ export struct AnnouncementSummaryCard {
             Row({ space: DesignConstants.SPACING.SM }) {
               Text(item.title)
                 .fontSize(DesignConstants.FONT.SIZE.MD)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                 .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                 .fontColor(this.getPalette().textPrimary)
                 .layoutWeight(1)
@@ -584,6 +601,7 @@ export struct AnnouncementSummaryCard {
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
               Text(item.severity === 'error' ? '重要' : item.severity === 'warning' ? '提醒' : '通知')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                 .fontColor(this.getSeverityColor(item.severity))
                 .backgroundColor(this.getPalette().surfaceSubtle)
                 .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
@@ -601,6 +619,7 @@ export struct AnnouncementSummaryCard {
 
             Text(formatDateTime(item.created_at))
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(this.getPalette().textTertiary)
               .width('100%')
           }
@@ -634,6 +653,7 @@ export struct SupportConfigCard {
     Column({ space: DesignConstants.SPACING.MD }) {
       Text('支持与服务信息')
         .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
         .fontColor(this.getPalette().textPrimary)
         .width('100%')
@@ -647,6 +667,7 @@ export struct SupportConfigCard {
       } else {
         Text('客户端公开配置尚未加载。')
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getPalette().textSecondary)
           .width('100%')
       }
@@ -687,10 +708,12 @@ export struct ToggleSettingRow {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(this.item.title)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         Text(this.item.subtitle)
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getPalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -727,10 +750,12 @@ export struct SessionListSection {
         Column({ space: DesignConstants.SPACING.XS }) {
           Text('当前会话')
             .fontSize(DesignConstants.FONT.SIZE.LG)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
           Text('查看已登录设备，并可撤销其他会话。')
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getPalette().textSecondary)
         }
         .layoutWeight(1)
@@ -750,6 +775,7 @@ export struct SessionListSection {
       if (this.sessions.length === 0) {
         Text('暂无会话信息')
           .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getPalette().textSecondary)
           .width('100%')
       } else {
@@ -761,13 +787,16 @@ export struct SessionListSection {
             Column({ space: DesignConstants.SPACING.XS }) {
               Text(formatSessionLabel(item))
                 .fontSize(DesignConstants.FONT.SIZE.MD)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                 .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                 .fontColor(this.getPalette().textPrimary)
               Text(`创建于 ${formatDateTime(item.created_at)}`)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                 .fontColor(this.getPalette().textSecondary)
               Text(`最近活跃 ${formatDateTime(item.last_active_at)}`)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                 .fontColor(this.getPalette().textSecondary)
             }
             .layoutWeight(1)
@@ -783,6 +812,7 @@ export struct SessionListSection {
             } else {
               Text('当前')
                 .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                 .fontColor(this.getPalette().accentBackground)
                 .backgroundColor(this.getPalette().surfaceSubtle)
                 .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
@@ -847,6 +877,7 @@ export struct RelationshipListSection {
       Column({ space: DesignConstants.SPACING.XS }) {
         Text(nickname)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
@@ -854,6 +885,7 @@ export struct RelationshipListSection {
         if (meta) {
           Text(meta)
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getPalette().textSecondary)
         }
       }
@@ -898,12 +930,14 @@ export struct RelationshipListSection {
       if (!this.embedded) {
         Text(this.title)
           .fontSize(DesignConstants.FONT.SIZE.LG)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
           .width('100%')
         if (this.subtitle) {
           Text(this.subtitle)
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getPalette().textSecondary)
             .width('100%')
         }
@@ -927,6 +961,7 @@ export struct RelationshipListSection {
 
           Text(this.emptyText)
             .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontColor(this.getPalette().textSecondary)
             .textAlign(TextAlign.Center)
 

@@ -15,7 +15,7 @@ import { UserItem, GeoPoint, SearchUsersRequest } from '../../../core/types/api'
 import { UserCard } from '../components/UserCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemInput } from '../../../components/SystemInput';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -221,6 +221,7 @@ export struct NearbyUsersListPage {
           if (this.hasAnyData()) {
             Text(`${this.users.length} 人`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(this.getCurrentThemePalette().textSecondary)
           }
         }

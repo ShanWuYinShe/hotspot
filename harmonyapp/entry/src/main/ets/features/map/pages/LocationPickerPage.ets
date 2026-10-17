@@ -9,7 +9,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
 import { LocationResultRow } from '../components/LocationResultRow';
 import { Pressable } from '../../../components/Pressable';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -1095,11 +1095,13 @@ export struct LocationPickerPage {
               Row() {
                 Text(`该位置有 ${this.overlappingPanelItems.length} 个内容`)
                   .fontSize(DesignConstants.FONT.SIZE.LG)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG))
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
                   .layoutWeight(1)
                 Text('关闭')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                   .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
                   .scale(this.closePanelPressed
                     ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW }
@@ -1132,6 +1134,7 @@ export struct LocationPickerPage {
                       Column({ space: DesignConstants.SPACING.HALF }) {
                         Text(item.entity ? item.entity.title : '')
                           .fontSize(DesignConstants.FONT.SIZE.MD)
+                          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
                           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                           .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
                           .maxLines(1)
@@ -1139,6 +1142,7 @@ export struct LocationPickerPage {
                         if (item.entity && item.entity.subtitle) {
                           Text(item.entity.subtitle)
                             .fontSize(DesignConstants.FONT.SIZE.SM)
+                            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                             .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
                             .maxLines(1)
                             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1149,6 +1153,7 @@ export struct LocationPickerPage {
 
                       Text(this.getItemTypeLabel(item.type))
                         .fontSize(DesignConstants.FONT.SIZE.XS)
+                        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                         .fontColor(this.getTypeColor(item.type))
                         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                         .borderRadius(DesignConstants.RADIUS.SM)
