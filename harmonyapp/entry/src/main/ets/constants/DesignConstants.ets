@@ -264,6 +264,8 @@ export interface ComponentConstants {
   BUTTON_HEIGHT_SM: number;
   /** 筛选 chip 高度（30） */
   FILTER_CHIP_HEIGHT: number;
+  /** 瞬间详情封面高度（220，对齐前端 --cst-cover-height-lg 的 clamp 下限 13.75rem=220） */
+  MOMENT_COVER_HEIGHT: number;
   /** 状态图标尺寸（28，定位/通知 banner） */
   STATUS_ICON_SIZE: number;
   /** 加载指示图标尺寸（20） */
@@ -666,6 +668,7 @@ const COMPONENT: ComponentConstants = {
   BUTTON_HEIGHT_LG: 48,
   BUTTON_HEIGHT_SM: 36,
   FILTER_CHIP_HEIGHT: 30,
+  MOMENT_COVER_HEIGHT: 220,
   STATUS_ICON_SIZE: 28,
   LOADING_ICON_SIZE: 20,
   EMPTY_ICON_SIZE: 64,
