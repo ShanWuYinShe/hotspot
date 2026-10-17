@@ -77,6 +77,9 @@ export struct SettingsPage {
   // 用户偏好开关（对齐前端 settings：私密账号 / 位置共享 / 推送通知 / 深色）
   @State privacyPrivate: boolean = false;
   @State locationVisible: boolean = true;
+  /** 附近新瞬间通知（服务端设置 nearby_moment_notify，需登录；默认 false 按 spec） */
+  @State nearbyMomentNotify: boolean = false;
+  @State nearbyMomentNotifyPending: boolean = false;
   @State pushNotifyEnabled: boolean = true;
   @State privacyPending: boolean = false;
   @State locationPending: boolean = false;
@@ -168,6 +171,7 @@ export struct SettingsPage {
       }
       this.privacyPrivate = response.data.privacy_level === 'private';
       this.locationVisible = response.data.location_visible;
+      this.nearbyMomentNotify = response.data.nearby_moment_notify;
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, `加载用户设置失败: ${JSON.stringify(error)}`);
     }
@@ -212,6 +216,27 @@ export struct SettingsPage {
       SystemToast.showWarning('设置失败，请稍后重试', this.getUIContext());
     } finally {
       this.locationPending = false;
+    }
+  }
+
+  private async toggleNearbyMomentNotify(next: boolean): Promise<void> {
+    if (!this.requireLogin('管理通知偏好', PageNames.PRIVACY_SETTINGS)) {
+      return;
+    }
+    const snapshot = this.nearbyMomentNotify;
+    this.nearbyMomentNotify = next;
+    this.nearbyMomentNotifyPending = true;
+    try {
+      const response = await ApiClient.updateSettings({ settings: { nearby_moment_notify: next } });
+      if (response.code !== 0) {
+        throw new Error(response.message || 'update failed');
+      }
+      SystemToast.show(next ? '已开启附近新瞬间通知' : '已关闭附近新瞬间通知', this.getUIContext());
+    } catch (error) {
+      this.nearbyMomentNotify = snapshot;
+      SystemToast.showWarning('设置失败，请稍后重试', this.getUIContext());
+    } finally {
+      this.nearbyMomentNotifyPending = false;
     }
   }
 
@@ -552,7 +577,10 @@ export struct SettingsPage {
                 this.buildUserCard()
 
                 // === 外观 ===
-                SettingsGroupLabel({ label: '外观' })
+                SettingsGroupLabel({
+                  label: '外观与显示',
+                  description: '自定义界面的视觉色彩与深浅模式，全局即时生效'
+                })
                 Column() {
                   SettingsSectionCard() {
                     Column() {
@@ -651,16 +679,30 @@ export struct SettingsPage {
                 .padding(this.getSectionMargin(0))
 
                 // === 通知 ===
-                SettingsGroupLabel({ label: '通知' })
+                SettingsGroupLabel({
+                  label: '通知偏好',
+                  description: '管理新消息、互动提及与关注动态的系统提醒方式'
+                })
                 Column() {
                   SettingsSectionCard() {
                     Column() {
                       SettingsToggleRow({
                         icon: AppIcon.NOTIFICATION,
                         title: '推送通知',
-                        subtitle: '当前设备提醒总开关（本地偏好）',
+                        subtitle: '消息、提及与新动态提醒（仅本机）',
                         isOn: this.pushNotifyEnabled,
                         onToggle: (next: boolean) => { this.togglePushNotify(next); }
+                      })
+                      SettingsRowDivider()
+                      // 对齐前端「附近新瞬间通知」（服务端设置，需登录）：
+                      // 与推送通知同列时必须区分「仅本机」与服务端同步项
+                      SettingsToggleRow({
+                        icon: AppIcon.LOCATION,
+                        title: '附近新瞬间通知',
+                        subtitle: '附近有人发布新瞬间时提醒我（服务端设置，需登录）',
+                        isOn: this.nearbyMomentNotify,
+                        pending: this.nearbyMomentNotifyPending,
+                        onToggle: (next: boolean) => { this.toggleNearbyMomentNotify(next); }
                       })
                       SettingsRowDivider()
                       ForEach(this.buildSystemEntries(), (item: SettingsEntryItem, index: number) => {
@@ -675,7 +717,10 @@ export struct SettingsPage {
                 .padding(this.getSectionMargin(0))
 
                 // === 隐私与安全 ===
-                SettingsGroupLabel({ label: '隐私与安全' })
+                SettingsGroupLabel({
+                  label: '隐私与安全',
+                  description: '控制个人公开主页以及地理位置在附近雷达中的可见性。'
+                })
                 Column() {
                   SettingsSectionCard() {
                     Column() {
@@ -711,7 +756,10 @@ export struct SettingsPage {
                 .padding(this.getSectionMargin(0))
 
                 // === 通用 ===
-                SettingsGroupLabel({ label: '通用' })
+                SettingsGroupLabel({
+                  label: '通用',
+                  description: '应用语言、缓存与设备级偏好设置'
+                })
                 Column() {
                   SettingsSectionCard() {
                     Column() {
@@ -741,7 +789,10 @@ export struct SettingsPage {
                 .padding(this.getSectionMargin(0))
 
                 // === 平台信息（本端补充运维卡，前端无对应分组） ===
-                SettingsGroupLabel({ label: '平台信息' })
+                SettingsGroupLabel({
+                  label: '系统与关于',
+                  description: '客户端版本及当前设备会话状态。'
+                })
                 Column() {
                   SettingsSectionCard() {
                     Column() {

@@ -1,5 +1,5 @@
 import { AppIcon } from '../../../components/SystemIcon';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
 import {
   ApiVersionMeta,
@@ -277,11 +277,16 @@ export struct SettingsEntryRow {
 }
 
 /**
- * 设置分组 eyebrow 小标（对齐前端 settings 页分组标题：卡外小标 + letterSpacing）。
+ * 设置区块标题（对齐前端 settings/SettingsSection.svelte 左标题栏）：
+ *   <h2 class="text-sm font-semibold text-text-primary">标题</h2>
+ *   <p class="text-xs text-text-secondary mt-1 leading-relaxed">描述</p>
+ * 原实现是 uppercase eyebrow（10/medium/0.12em 字距）且无描述，四项都与前端不同。
  */
 @Component
 export struct SettingsGroupLabel {
   @Prop label: string = '';
+  /** 区块描述（前端 SettingsSection.description，text-xs + mt-1 + leading-relaxed 1.625） */
+  @Prop description: string = '';
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
@@ -289,19 +294,28 @@ export struct SettingsGroupLabel {
   }
 
   build() {
-    Text(this.label)
-      .fontSize(DesignConstants.FONT.SIZE.XS2)
-      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-      .fontColor(this.getPalette().textSecondary)
-      .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
-      .textCase(TextCase.UpperCase)
-      .width('100%')
-      // 分组标题与分组卡左边缘严格对齐：横向留白只由容器 gutter 提供，
-      // 这里不再自加 left（否则标题比卡片多缩进 6vp）
-      .padding({
-        top: DesignConstants.SPACING.MD2,
-        bottom: DesignConstants.SPACING.SM
-      })
+    Column({ space: 0 }) {
+      Text(this.label)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPalette().textPrimary)
+        .width('100%')
+      if (this.description.length > 0) {
+        Text(this.description)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getPalette().textSecondary)
+          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, 1.625))
+          .width('100%')
+          .margin({ top: DesignConstants.SPACING.XS })
+      }
+    }
+    .alignItems(HorizontalAlign.Start)
+    .width('100%')
+    // 分组标题与分组卡左边缘严格对齐：横向留白只由容器 gutter 提供
+    .padding({
+      top: DesignConstants.SPACING.MD2,
+      bottom: DesignConstants.SPACING.SM
+    })
   }
 }
 
