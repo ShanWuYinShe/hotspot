@@ -163,7 +163,7 @@ export struct HomePage {
         this.momentsError = getErrorMessage(response, '加载失败');
       }
     } catch {
-      this.momentsError = '加载附近动态失败';
+      this.momentsError = '加载附近瞬间失败';
     } finally {
       this.momentsLoading = false;
     }
@@ -1154,7 +1154,7 @@ export struct HomePage {
         }
         .width('100%')
       } else if (!this.momentsLoading && this.moments.length === 0) {
-        Text('附近暂时没有动态，去发布第一条吧。')
+        Text('附近暂时没有瞬间，去发布第一条吧。')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getPalette().textSecondary)

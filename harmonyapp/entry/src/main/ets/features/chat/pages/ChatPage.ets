@@ -107,7 +107,6 @@ export struct ChatPage {
   private loadHistoryInFlight: boolean = false;
   @State errorMessage: string = '';
   @State isSending: boolean = false;
-  @State isAddPressed: boolean = false;
   @State isSendPressed: boolean = false;
   @State isInputFocused: boolean = false;
   @State isOtherUserTyping: boolean = false;
@@ -754,54 +753,7 @@ export struct ChatPage {
     }, 100);
   }
 
-  private async pickAttachment(): Promise<void> {
-    // 禁言期间/发送中不允许发图（对齐 isSendInteractive 禁用契约；原实现仅守卫文字发送）
-    if (this.isGroupServerMuted || this.isSending) {
-      if (this.isGroupServerMuted) {
-        SystemToast.show('你已被禁言', this.getUIContext());
-      }
-      return;
-    }
-    try {
-      const context = AppStorage.get<common.UIAbilityContext>('context');
-      if (!context) return;
-      const uris = await MediaServiceManager.selectImages(context, 1);
-      if (uris.length === 0) return;
 
-      this.isSending = true;
-      SystemToast.show('图片上传中…', this.getUIContext());
-
-      const category: MediaCategory = 'chat_image';
-      const uploaded = await ApiClient.uploadFile(context, uris[0], category);
-
-      if (this.chatType === 'private_chat') {
-        const targetUserId = this.targetId;
-        if (!targetUserId) {
-          SystemToast.showError('无法获取目标用户ID', this.getUIContext());
-          return;
-        }
-        const request: SendPrivateMessageRequest = {
-          target_user_id: targetUserId,
-          type: 'image',
-          file_id: uploaded.file_id
-        };
-        await ApiClient.sendPrivateMessage(request);
-      } else {
-        const request: SendGroupMessageRequest = {
-          group_id: this.chatId,
-          type: 'image',
-          file_id: uploaded.file_id
-        };
-        await ApiClient.sendGroupMessage(request);
-      }
-      this.scrollToBottom();
-    } catch (e) {
-      hilog.info(DOMAIN_NUMBER, TAG, `图片发送失败: ${e}`);
-      SystemToast.showError('图片发送失败', this.getUIContext());
-    } finally {
-      this.isSending = false;
-    }
-  }
 
   private openConversationActions(): void {
     if (this.isInputFocused) {
@@ -1276,42 +1228,9 @@ export struct ChatPage {
         .justifyContent(FlexAlign.Center)
       }
 
+      // 对齐前端 ChatInputBar：仅输入框 + 发送钮，无「添加图片」钮
+      // （web 私聊/群聊输入栏均无图片入口；图片消息为 app 单端功能，git 历史可恢复）
       Row() {
-        Button() {
-          LucideIcon({
-              icon: AppIcon.ADD,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
-              color: this.getCurrentThemePalette().textSecondary
-            })
-        }
-        .type(ButtonType.Circle)
-        .stateEffect(false)
-        .width(DesignConstants.LAYOUT.MIN_HIT_TARGET)
-        .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
-        .backgroundColor(this.getChatTheme().inputFieldBg)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .shadow(this.getChatVisualStyle().input.shadow)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
-        .margin({ right: DesignConstants.SPACING.SM })
-        .accessibilityText('添加图片')
-        .scale(this.isAddPressed ?
-          { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-          { x: 1, y: 1 })
-        .animation({
-          curve: curves.springMotion(
-            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-          )
-        })
-        .onTouch((event: TouchEvent) => {
-          if (event.type === TouchType.Down) {
-            this.isAddPressed = true;
-          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-            this.isAddPressed = false;
-          }
-        })
-        .onClick(() => this.pickAttachment())
-
         TextInput({ text: this.inputText, placeholder: '发送消息…' })
           .layoutWeight(1)
           .maxLength(MESSAGE_CONTENT_MAX)
