@@ -34,7 +34,7 @@
 		if (notif.href) void goto(notif.href);
 	}}
 	ariaLabel={`通知：${notif.user.name}${notif.text}`}
-	class="flex items-center gap-3.5 px-4 py-3"
+	class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3"
 >
 	<!-- Avatar + icon badge -->
 	<div class="relative shrink-0">
@@ -63,8 +63,9 @@
 		<p class="text-text-secondary text-xs mt-0.5">{notif.time}</p>
 	</div>
 
-	<!-- Moment thumb or unread dot -->
-	<div class="flex items-center gap-2 shrink-0">
+	<!-- Moment thumb or unread dot；邀请行窄屏时动作组换行到第二行，
+	     避免把正文挤成省略号、时间被拆行 -->
+	<div class="flex items-center gap-2 shrink-0 {notif.inviteId ? 'w-full justify-end sm:w-auto' : ''}">
 		{#if notif.inviteId}
 			<!-- 入群邀请操作：行内接受/拒绝（stopPropagation 避免触发行已读） -->
 			<button

@@ -369,24 +369,27 @@ const markSingleRead = (id: string) => {
 					</div>
 					<ListContainer bordered class="mb-5">
 						{#each invites as inv (inv.invite_id)}
-							<div class="flex items-center gap-3.5 px-3 py-3.5">
+							<div class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-3 py-3.5">
 								<Avatar src={inv.group.avatar_url} name={inv.group.name} size="lg" shape="rounded" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{inv.group.name}</span>
-									<span class="text-xs text-text-secondary">{inv.inviter.nickname} 邀请你 · {formatDateTime(inv.created_at)}</span>
+									<span class="block truncate text-xs text-text-secondary">{inv.inviter.nickname} 邀请你 · {formatDateTime(inv.created_at)}</span>
 								</span>
-								<button
-									type="button"
-									onclick={() => void handleAcceptInvite(inv.invite_id)}
-									disabled={invitePending.has(inv.invite_id)}
-									class="hover-btn rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint"
-								>接受</button>
-								<button
-									type="button"
-									onclick={() => void handleRejectInvite(inv.invite_id)}
-									disabled={invitePending.has(inv.invite_id)}
-									class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint"
-								>拒绝</button>
+								<!-- 窄屏动作组独占第二行，日期/时间不再被按钮挤到折行 -->
+								<div class="flex w-full items-center justify-end gap-2 sm:w-auto">
+									<button
+										type="button"
+										onclick={() => void handleAcceptInvite(inv.invite_id)}
+										disabled={invitePending.has(inv.invite_id)}
+										class="hover-btn rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint"
+									>接受</button>
+									<button
+										type="button"
+										onclick={() => void handleRejectInvite(inv.invite_id)}
+										disabled={invitePending.has(inv.invite_id)}
+										class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint"
+									>拒绝</button>
+								</div>
 							</div>
 						{/each}
 					</ListContainer>

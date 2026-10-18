@@ -9,6 +9,7 @@
 	import Toggle from '@/components/forms/Toggle.svelte';
 	import SettingRow from '@/components/forms/SettingRow.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -192,7 +193,7 @@
 	<title>设置 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-16">
+<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
 		<PageHeader
 			title="设置"
@@ -211,44 +212,44 @@
 		<div class="flex flex-col divide-y divide-border-default max-w-5xl">
 			<!-- Section 1: 账号与身份 -->
 			<SettingsSection title="账号信息" description="当前登录的账号信息" class="first:pt-4">
-				{#if auth.isAuthenticated}
-					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
-						<div class="flex items-center gap-3.5 min-w-0">
+				<!-- 卡片壳统一交 ListContainer bordered（与下方通知/隐私分组同语言），
+				     不再为单行信息手写白卡 -->
+				<ListContainer bordered inset>
+					{#if auth.isAuthenticated}
+						<ListItem class="flex items-center gap-3.5 px-4 py-3.5">
 							<Avatar class="border-2 border-surface-primary shrink-0" src={accountAvatar} name={accountName} size="lg" />
-							<div class="min-w-0">
+							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-2">
 									<p class="text-sm font-semibold text-text-primary truncate">{accountName || '用户'}</p>
-									<span class="text-xxs px-2 py-0.5 rounded-full bg-accent-soft text-accent-default font-medium">已登录</span>
+									<span class="badge bg-accent-soft text-accent-default">已登录</span>
 								</div>
 								<p class="text-xs text-text-secondary mt-0.5 truncate">{accountEmail || '未绑定邮箱'}</p>
 							</div>
-						</div>
-					</div>
-				{:else}
-					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
-						<div class="flex items-center gap-3.5 min-w-0">
+						</ListItem>
+					{:else}
+						<ListItem class="flex items-center gap-3.5 px-4 py-3.5">
 							<div class="flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent-default shrink-0">
 								<UserRound class="size-5" strokeWidth={1.5} />
 							</div>
-							<div class="min-w-0">
+							<div class="min-w-0 flex-1">
 								<p class="text-sm font-semibold text-text-primary">访客浏览中</p>
 								<p class="text-xs text-text-secondary mt-0.5">登录后可同步跨端偏好、个人主页与动态收藏</p>
 							</div>
-						</div>
-						<Button
-							class="h-auto shrink-0 rounded-md px-4 py-2 text-xs"
-							onclick={() => requireAuth({ action: '登录账号', run: () => { reloadKey++; } })}
-						>
-							登录 / 注册
-						</Button>
-					</div>
-				{/if}
+							<Button
+								class="h-auto shrink-0 rounded-md px-4 py-2 text-xs"
+								onclick={() => requireAuth({ action: '登录账号', run: () => { reloadKey++; } })}
+							>
+								登录 / 注册
+							</Button>
+						</ListItem>
+					{/if}
+				</ListContainer>
 			</SettingsSection>
 
 			<!-- Section 2: 外观与显示 -->
 			<SettingsSection title="外观与显示" description="自定义界面的视觉色彩与深浅模式，全局即时生效">
-				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-sm overflow-hidden">
-					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+				<ListContainer bordered inset>
+					<ListItem class="flex flex-col justify-between gap-3 px-4 py-3.5 sm:flex-row sm:items-center">
 						<div class="flex items-center gap-3">
 							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
 								<Palette class="size-4 text-accent-default" strokeWidth={1.5} />
@@ -264,9 +265,9 @@
 							value={theme.theme}
 							onChange={(id) => setTheme(id as AppTheme)}
 						/>
-					</div>
+					</ListItem>
 
-					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+					<ListItem class="flex flex-col justify-between gap-3 px-4 py-3.5 sm:flex-row sm:items-center">
 						<div class="flex items-center gap-3">
 							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
 								{#if theme.isDark}
@@ -286,15 +287,15 @@
 							value={theme.colorScheme}
 							onChange={(id) => setColorScheme(id as ColorSchemeMode)}
 						/>
-					</div>
-				</div>
+					</ListItem>
+				</ListContainer>
 			</SettingsSection>
 
 			<!-- Section 3: 地图与位置 -->
 			<!-- 底图坐标系（GCJ-02/WGS-84）属开发契约，面向用户只描述体验差异，不暴露术语 -->
 			<SettingsSection title="地图与位置" description="选择地图页使用的底图：高德地图（国内坐标，免密钥，位置显示更贴合）或 OpenStreetMap（国际坐标，经本站中转加载）">
-				<div class="rounded-lg border border-border-default bg-surface-primary divide-y divide-border-default shadow-raised-sm overflow-hidden">
-					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+				<ListContainer bordered inset>
+					<ListItem class="flex flex-col justify-between gap-3 px-4 py-3.5 sm:flex-row sm:items-center">
 						<div class="flex items-center gap-3">
 							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
 								<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
@@ -310,8 +311,8 @@
 							value={mapSourceStore.source}
 							onChange={(id) => setMapSource(id as MapSource)}
 						/>
-					</div>
-				</div>
+					</ListItem>
+				</ListContainer>
 			</SettingsSection>
 
 			<!-- Section 4: 通知偏好 -->
@@ -399,23 +400,25 @@
 			<!-- Section 7: 系统与关于 -->
 			<SettingsSection title="系统与关于" description="客户端版本及当前设备会话状态。">
 				<div class="flex flex-col gap-3">
-					<div class="flex items-center justify-between rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
-						<div class="flex items-center gap-3">
-							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
-								<Info class="size-4 text-accent-default" strokeWidth={1.5} />
+					<ListContainer bordered inset>
+						<ListItem class="flex items-center justify-between gap-3 px-4 py-3.5">
+							<div class="flex items-center gap-3">
+								<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
+									<Info class="size-4 text-accent-default" strokeWidth={1.5} />
+								</div>
+								<div>
+									<p class="text-sm font-medium text-text-primary">关于 HotSpot</p>
+									<p class="text-xs text-text-secondary">基于地理位置的实时社交与社区发现应用</p>
+								</div>
 							</div>
-							<div>
-								<p class="text-sm font-medium text-text-primary">关于 HotSpot</p>
-								<p class="text-xs text-text-secondary">基于地理位置的实时社交与社区发现应用</p>
+							<div class="flex flex-col items-end gap-0.5">
+								<span class="badge text-xs font-mono font-medium border border-border-default bg-transparent text-text-secondary">{buildInfo.info?.version ?? '…'}</span>
+								{#if shortCommit}
+									<span class="text-xxs font-mono text-text-secondary">构建 {shortCommit}</span>
+								{/if}
 							</div>
-						</div>
-						<div class="flex flex-col items-end gap-0.5">
-							<span class="badge text-xs font-mono font-medium border border-border-default bg-transparent text-text-secondary">{buildInfo.info?.version ?? '…'}</span>
-							{#if shortCommit}
-								<span class="text-xxs font-mono text-text-secondary">构建 {shortCommit}</span>
-							{/if}
-						</div>
-					</div>
+						</ListItem>
+					</ListContainer>
 
 					{#if auth.isAuthenticated}
 						<div class="flex justify-end pt-2">

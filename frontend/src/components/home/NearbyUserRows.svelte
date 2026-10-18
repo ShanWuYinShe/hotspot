@@ -49,8 +49,8 @@
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		{#each users as u (u.id)}
 			{@const followed = isFollowed(u.id)}
-			<div class="rounded-lg border border-border-default bg-surface-primary shadow-raised-sm transition-colors hover:border-accent-default">
-				<UserCardRow name={u.name} avatar={u.avatar} tone="card">
+			<!-- 卡壳由 tone="card" 的 ListItem 承担；外层再包手写卡会造成双描边/双投影（卡片套卡片） -->
+			<UserCardRow name={u.name} avatar={u.avatar} tone="card">
 					{#snippet avatarBadge()}
 						{#if u.isOnline}
 							<OnlineDot size="md" />
@@ -71,8 +71,7 @@
 						{@const pending = isPending?.(u.id) ?? false}
 						<FollowButton active={followed} pending={pending} onToggle={() => onToggle(u.id)} />
 					{/snippet}
-				</UserCardRow>
-			</div>
+			</UserCardRow>
 		{/each}
 	</div>
 {:else}

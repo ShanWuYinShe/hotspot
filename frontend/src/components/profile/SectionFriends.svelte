@@ -54,7 +54,7 @@
 		<UserCardRow
 			name={f.name}
 			avatar={f.avatar}
-			tone={embedded ? 'card' : 'row'}
+			tone="row"
 			onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
 			ariaLabel={`查看 ${f.name} 的主页`}
 		>
@@ -70,7 +70,7 @@
 				     关注/粉丝两个分区同样只保留一个行内动作，三 tab 模式一致。 -->
 				<button
 					type="button"
-					class="hover-btn tap-92 hit-slop flex shrink-0 items-center justify-center gap-1 rounded-full bg-accent-default px-2.5 py-1.5 text-sm text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring"
+					class="hover-btn tap-92 hit-slop flex shrink-0 items-center justify-center gap-1 rounded-full border border-border-default px-2.5 py-1.5 text-xs text-text-primary focus-ring hover:bg-accent-soft"
 					onclick={(e) => {
 						e.stopPropagation();
 						void goto(ROUTES.message(f.id));

@@ -11,7 +11,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	// ProfileUserSection — 个人主页用户列表分区骨架（好友/关注/粉丝三 Section 共用）。
 	// 统一：可选 header（标题+计数+副标题+右上角）、搜索框、统计行、筛选 pill 栏、
-	// 双模列表容器（embedded 卡片网格 / 非 embedded 连接列表行）、空态。
+	// 连接列表行（embedded 与非 embedded 同语言）、空态。
 	// 行渲染由 children snippet 注入（item 透传），数据源与动作差异留在各 Section。
 	// 纯内容组件：滚动与 gutter 由外层 StandardPageLayout/ContentColumn 承担，不自建容器。
 
@@ -111,55 +111,30 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</div>
 	{/if}
 
-	{#if embedded}
-		<!-- Card grid（relationships 聚合页 embedded 模式）
-		     尾部留白由页面 contentClassName 统一承担，分区内不叠 pb -->
-		<div class="grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-			{#if loading}
-				<div class="col-span-full"><InlineLoading class="py-16" label="加载中…" /></div>
-			{:else if needsAuth}
-				<NeedsAuthNotice title="登录后查看" description="登录后即可查看你的好友与关注关系" />
-			{:else if error}
-				<div class="col-span-full">
-					<LoadError message={error} onRetry={onRetry} />
-				</div>
-			{:else if items.length === 0}
-				<div class="col-span-full">
-					<EmptyState title={emptyTitle} description={emptyDescription}>
-						{#snippet icon()}
-							<emptyIcon size={18}></emptyIcon>
-						{/snippet}
-					</EmptyState>
-				</div>
-			{:else}
+	<!-- 列表区：embedded（聚合页）与独立分区页统一为连接列表行——同一语义的简单
+	     关系行不再拆成一张张独立卡（卡片碎片化），与消息/通知的行语言一致。
+	     embedded 时页面级 tab 已存在，分区内不重复渲染 header/filter；
+	     尾部留白由页面 contentClassName 统一承担，分区内不叠 pb。 -->
+	<div>
+		{#if loading}
+			<InlineLoading class="py-16" label="加载中…" />
+		{:else if needsAuth}
+			<NeedsAuthNotice title="登录后查看" description="登录后即可查看你的好友与关注关系" />
+		{:else if error}
+			<LoadError message={error} onRetry={onRetry} />
+		{:else if items.length === 0}
+			<EmptyState title={emptyTitle} description={emptyDescription}>
+				{#snippet icon()}
+					<emptyIcon size={18}></emptyIcon>
+				{/snippet}
+			</EmptyState>
+		{:else}
+			<!-- 桌面全宽行会让行尾动作离名字过远（扫描距离），列表限宽到阅读列 -->
+			<ListContainer bordered class="max-w-3xl">
 				{#each items as item (item.id)}
 					{@render children(item)}
 				{/each}
-			{/if}
-		</div>
-	{:else}
-		<!-- Bordered list（独立分区页）
-		     尾部留白由页面 contentClassName 统一承担，分区内不叠 pb -->
-		<div>
-			{#if loading}
-				<InlineLoading class="py-16" label="加载中…" />
-			{:else if needsAuth}
-				<NeedsAuthNotice title="登录后查看" description="登录后即可查看你的好友与关注关系" />
-			{:else if error}
-				<LoadError message={error} onRetry={onRetry} />
-			{:else if items.length === 0}
-				<EmptyState title={emptyTitle} description={emptyDescription}>
-					{#snippet icon()}
-						<emptyIcon size={18}></emptyIcon>
-					{/snippet}
-				</EmptyState>
-			{:else}
-				<ListContainer bordered>
-					{#each items as item (item.id)}
-						{@render children(item)}
-					{/each}
-				</ListContainer>
-			{/if}
-		</div>
-	{/if}
+			</ListContainer>
+		{/if}
+	</div>
 </div>

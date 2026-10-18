@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Users, UsersRound, Flag, Tags, Megaphone, ShieldCheck, KeyRound, ScrollText, Settings2, MapPinned } from '@lucide/svelte';
+	import { Users, UsersRound, Flag, Tags, Megaphone, ShieldCheck, KeyRound, ScrollText, Settings2, MapPinned, ChevronRight } from '@lucide/svelte';
+	import { platform } from '@/stores/platform.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 	import { admin, hasAdminPermission } from '@/stores/admin.svelte';
 	import { adminListReports } from '@/api';
 	import { ROUTES } from '@/lib/routes';
@@ -21,6 +24,9 @@
 	];
 
 	const isSuper = $derived(admin.permissions.includes('*'));
+	// 移动端模块入口用行式列表（图标左 + 文案中 + chevron 右），一屏可见 8 个；
+	// 平板/桌面保留卡片网格（信息密度足够，卡片是更好的视觉分组）。
+	const isMobile = $derived(platform.platform === 'mobile');
 
 	// 举报审核「待处理」角标（UI 复审 C1）：reports/fetch(status=pending, limit=1) 的
 	// total（不受分页窗口影响）；失败或无权限时不渲染（诚实降级，不留死徽标）。
@@ -66,30 +72,61 @@
 		{/if}
 	</section>
 
-	<!-- 模块入口卡片 -->
-	<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-label="管理模块">
-		{#each MODULES as m (m.href)}
-			{@const allowed = hasAdminPermission(m.perm)}
-			<button
-				type="button"
-				disabled={!allowed}
-				onclick={() => void goto(m.href)}
-				title={allowed ? m.label : '无对应权限'}
-				class="hover-btn flex flex-col items-start gap-2 rounded-lg border border-border-default bg-surface-primary p-4 text-left shadow-raised-sm focus-ring transition-all disabled:opacity-faint disabled:pointer-events-none {allowed ? 'hover:border-accent-default' : ''}"
-			>
-				<span class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
-					<m.icon class="size-4.5 text-accent-default" strokeWidth={1.75} />
-				</span>
-				<span>
-					<span class="flex items-center gap-1.5">
-						<span class="block text-sm font-medium text-text-primary">{m.label}</span>
-						{#if m.href === `${ROUTES.admin}/reports` && pendingReports}
-							<span class="inline-flex h-5 items-center justify-center leading-none rounded-full bg-status-warning-bg text-status-warning px-2 text-xxs font-medium">待处理 {pendingReports}</span>
-						{/if}
+	<!-- 模块入口：移动端行式列表（同「我的」数据入口的密度与语言），平板/桌面卡片网格 -->
+	{#if isMobile}
+		<section aria-label="管理模块">
+			<ListContainer bordered inset>
+				{#each MODULES as m (m.href)}
+					{@const allowed = hasAdminPermission(m.perm)}
+					<ListItem
+						onClick={allowed ? () => void goto(m.href) : undefined}
+						ariaLabel={m.label}
+						class="px-4 py-3 {allowed ? '' : 'opacity-faint pointer-events-none'}"
+					>
+						<span class="flex items-center gap-3">
+							<span class="flex size-9 shrink-0 items-center justify-center rounded-full icon-badge">
+								<m.icon class="size-4.5 text-accent-default" strokeWidth={1.75} />
+							</span>
+							<span class="min-w-0 flex-1">
+								<span class="flex items-center gap-1.5">
+									<span class="block truncate text-sm font-medium text-text-primary">{m.label}</span>
+									{#if m.href === `${ROUTES.admin}/reports` && pendingReports}
+										<span class="inline-flex h-5 items-center justify-center leading-none rounded-full bg-status-warning-bg text-status-warning px-2 text-xxs font-medium">待处理 {pendingReports}</span>
+									{/if}
+								</span>
+								<span class="mt-0.5 block truncate text-xs text-text-secondary">{allowed ? m.desc : '无访问权限'}</span>
+							</span>
+							<ChevronRight class="size-4 shrink-0 text-text-secondary opacity-subtle" strokeWidth={1.5} />
+						</span>
+					</ListItem>
+				{/each}
+			</ListContainer>
+		</section>
+	{:else}
+		<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-label="管理模块">
+			{#each MODULES as m (m.href)}
+				{@const allowed = hasAdminPermission(m.perm)}
+				<button
+					type="button"
+					disabled={!allowed}
+					onclick={() => void goto(m.href)}
+					title={allowed ? m.label : '无对应权限'}
+					class="hover-btn flex flex-col items-start gap-2 rounded-lg border border-border-default bg-surface-primary p-4 text-left shadow-raised-sm focus-ring transition-all disabled:opacity-faint disabled:pointer-events-none {allowed ? 'hover:border-accent-default' : ''}"
+				>
+					<span class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
+						<m.icon class="size-4.5 text-accent-default" strokeWidth={1.75} />
 					</span>
-					<span class="mt-0.5 block text-xs text-text-secondary">{allowed ? m.desc : '无访问权限'}</span>
-				</span>
-			</button>
-		{/each}
-	</section>
+					<span>
+						<span class="flex items-center gap-1.5">
+							<span class="block text-sm font-medium text-text-primary">{m.label}</span>
+							{#if m.href === `${ROUTES.admin}/reports` && pendingReports}
+								<span class="inline-flex h-5 items-center justify-center leading-none rounded-full bg-status-warning-bg text-status-warning px-2 text-xxs font-medium">待处理 {pendingReports}</span>
+							{/if}
+						</span>
+						<span class="mt-0.5 block text-xs text-text-secondary">{allowed ? m.desc : '无访问权限'}</span>
+					</span>
+				</button>
+			{/each}
+		</section>
+	{/if}
 </div>

@@ -207,9 +207,9 @@
 			description="在动态、评论或聊天中遇到违规内容时，可通过「举报」提交，处理结果会在这里同步。"
 		/>
 	{:else}
-		<ListContainer bordered ariaLabel="举报记录列表">
+		<ListContainer bordered class="divide-y divide-border-subtle/40" ariaLabel="举报记录列表">
 			{#each items as item (item.report_id)}
-				<ListItem ariaLabel={`${STATUS_LABELS[item.status]}：举报${TARGET_LABELS[item.target_type]}`}>
+				<ListItem class="px-3 py-3" ariaLabel={`${STATUS_LABELS[item.status]}：举报${TARGET_LABELS[item.target_type]}`}>
 					<div class="flex min-w-0 flex-1 flex-col gap-1 py-1">
 						<div class="flex items-center gap-2">
 							<span class="text-sm font-medium text-text-primary truncate">
@@ -253,9 +253,10 @@
 						{/if}
 					</div>
 				</ListItem>
-			{:else}
-				<ListEnd />
 			{/if}
 		</ListContainer>
+		{#if !nextCursor}
+			<ListEnd />
+		{/if}
 	{/if}
 </StandardPageLayout>

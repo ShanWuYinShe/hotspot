@@ -70,7 +70,7 @@ import UserCardRow from '@/components/profile/UserCardRow.svelte';
 		<UserCardRow
 			name={f.name}
 			avatar={f.avatar}
-			tone={embedded ? 'card' : 'row'}
+			tone="row"
 			onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
 			ariaLabel={`查看 ${f.name} 的主页`}
 

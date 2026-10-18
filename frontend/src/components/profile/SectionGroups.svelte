@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { platform } from '@/stores/platform.svelte';
 	import { Users, ChevronRight, Clock, Shield } from '@lucide/svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -12,8 +13,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 我的群组分区（对齐 Figma Make ProfileSections SectionGroups）。
-	// 横向媒体卡布局：固定宽左侧 banner + 右侧详情列（avatar+name+chevron+desc+members+lastActive），min-h 148px。
-	// 纯内容组件：滚动与 gutter 由外层 StandardPageLayout/ContentColumn 承担，不自建容器。
+	// 手机为横向紧凑卡（图左 40% + 信息右，h-32）：2 个群不再独占整屏；
+	// 平板/桌面为 4:3 图片卡网格。纯内容组件：滚动与 gutter 由外层
+	// StandardPageLayout/ContentColumn 承担，不自建容器。
+
+	const device = $derived(platform.platform);
+	const isMobile = $derived(device === 'mobile');
 
 	let searchQ = $state('');
 
@@ -58,7 +63,8 @@ const needsAuth = $derived(myGroups.needsAuth);
 				imageSrc={g.banner || g.avatar}
 				imageAlt={g.name}
 				onClick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
-				class="aspect-[4/3] rounded-md"
+				horizontal={isMobile}
+				class={isMobile ? 'h-32 rounded-md' : 'aspect-[4/3] rounded-md'}
 			>
 				{#snippet placeholder()}
 					<span class="text-accent-default text-3xl font-semibold">{Array.from(g.name)[0] ?? '群'}</span>
@@ -75,14 +81,16 @@ const needsAuth = $derived(myGroups.needsAuth);
 					{g.role}
 				</div>
 
-				<!-- 右上：在线人数徽章 -->
-				<div
-					class="absolute top-2.5 right-2.5 z-[2] inline-flex h-5 items-center justify-center gap-1 px-2.5 rounded-full bg-surface-overlay-strong text-content-inverse text-xxs font-medium leading-none"
-					style="backdrop-filter:blur(var(--cst-blur-sm));"
-				>
-					<span class="rounded-full size-1.5 bg-status-online"></span>
-					<span>{g.online} 在线</span>
-				</div>
+				<!-- 右上：在线人数徽章（手机横向卡的信息面板占满右半，移至 footer meta 行） -->
+				{#if !isMobile}
+					<div
+						class="absolute top-2.5 right-2.5 z-[2] inline-flex h-5 items-center justify-center gap-1 px-2.5 rounded-full bg-surface-overlay-strong text-content-inverse text-xxs font-medium leading-none"
+						style="backdrop-filter:blur(var(--cst-blur-sm));"
+					>
+						<span class="rounded-full size-1.5 bg-status-online"></span>
+						<span>{g.online} 在线</span>
+					</div>
+				{/if}
 
 				{#snippet footer()}
 					<div class="px-3 pb-2.5 pt-2.5">
@@ -93,12 +101,17 @@ const needsAuth = $derived(myGroups.needsAuth);
 						{#if g.desc}
 							<p class="mt-1 truncate text-xs text-text-secondary">{g.desc}</p>
 						{/if}
-						<div class="mt-2 flex items-center justify-between text-xxs text-text-secondary">
+						<div class="mt-2 flex items-center justify-between gap-2 text-xxs text-text-secondary">
 							<span class="flex items-center gap-1">
 								<Users class="size-3" strokeWidth={1.5} />
 								{g.members} 位成员
 							</span>
-							{#if g.lastActive}
+							{#if isMobile}
+								<span class="flex items-center gap-1">
+									<span class="rounded-full size-1.5 bg-status-online"></span>
+									{g.online} 在线
+								</span>
+							{:else if g.lastActive}
 								<span class="flex items-center gap-1">
 									<Clock class="size-3" strokeWidth={1.5} />
 									{g.lastActive}
