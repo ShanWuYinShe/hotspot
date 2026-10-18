@@ -35,6 +35,8 @@
 	let nickname = $state('');
 	let bio = $state('');
 	let tags = $state<Set<string>>(new Set());
+	// 不在固定选项表内的既有标签（见模板注释）
+	const extraTags = $derived([...tags].filter((t) => !TAG_OPTIONS.includes(t)));
 	// gender 为 null 时保存不携带该字段（updateAccount 为 patch 语义，undefined = 保持不变）
 	let gender = $state<Gender | null>(null);
 	let saved = $state(false);
@@ -335,6 +337,15 @@
 				{@const active = tags.has(t)}
 				{@const disabled = !active && tags.size >= 5}
 				<TagPill active={active} onClick={() => toggleTag(t)} disabled={disabled}>
+					#{t}
+				</TagPill>
+			{/each}
+			<!-- 账号上已有的、但不在本页 12 项固定选项里的标签（后端标签字典可大于前端选项表，
+			     如 mock 的「咖啡」）：必须一并渲染，否则图例按 tags.size 计数、而胶囊只显示
+			     子集，出现「(3/5) 却只有 2 个高亮」且该标签无法取消（全站复审 s3 P1-2）。
+			     这些标签恒为已选中态，点击即移除。 -->
+			{#each extraTags as t (t)}
+				<TagPill active onClick={() => toggleTag(t)}>
 					#{t}
 				</TagPill>
 			{/each}
