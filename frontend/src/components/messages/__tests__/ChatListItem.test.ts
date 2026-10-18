@@ -51,4 +51,22 @@ describe('ChatListItem', () => {
 		render(ChatListItem, { props: { chat: { ...chat, isPinned: true }, onClick: () => {}, onTogglePin: () => {} } });
 		expect(screen.getByRole('button', { name: '取消置顶' })).toBeTruthy();
 	});
+	// 回归守卫（全站复审 s2-01）：移动端没有 hover，置顶/免打扰/删除三个快捷钮都靠
+	// hover 显现或 md:flex 才出现 → 移动端此前只能「取消」不能「新增」。行内「更多」
+	// 是移动端唯一入口，必须可点且不触发行点击；桌面端不渲染（避免与 hover 钮重复）。
+	it('传 onMore 时渲染「更多操作」按钮，点击回调且不触发行点击', async () => {
+		const onClick = vi.fn();
+		const onMore = vi.fn();
+		render(ChatListItem, { props: { chat, onClick, onMore } });
+		const btn = screen.getByRole('button', { name: `${chat.name} 的更多操作` });
+		expect(btn.className).toContain('md:hidden');
+		await fireEvent.click(btn);
+		expect(onMore).toHaveBeenCalledTimes(1);
+		expect(onClick).not.toHaveBeenCalled();
+	});
+
+	it('不传 onMore 时不渲染「更多操作」按钮', () => {
+		render(ChatListItem, { props: { chat, onClick: () => {} } });
+		expect(screen.queryByRole('button', { name: `${chat.name} 的更多操作` })).toBeNull();
+	});
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Pin, BellOff, Trash2 } from '@lucide/svelte';
+	import { Pin, BellOff, Trash2, MoreHorizontal } from '@lucide/svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
@@ -26,6 +26,7 @@
 		isSelected = false,
 		onClick,
 		onTogglePin,
+		onMore,
 		onToggleMute,
 		onDelete,
 		compact = false
@@ -34,6 +35,8 @@
 		isSelected?: boolean;
 		onClick: () => void;
 		onTogglePin?: () => void;
+		/** 移动端行内「更多」：打开会话操作弹层（置顶/免打扰/删除在移动端原本不可达） */
+		onMore?: () => void;
 		onToggleMute?: () => void;
 		onDelete?: () => void;
 		compact?: boolean;
@@ -167,6 +170,25 @@
 					>
 						{chat.unread}
 					</span>
+				{/if}
+				{#if onMore}
+					<!-- 移动端「更多」：置顶/免打扰/删除在移动端无 hover 显现的入口，
+					     此前只能「取消」不能「新增」（全站复审 s2-01）。桌面端不渲染，
+					     避免与 hover 快捷钮重复。 -->
+					<button
+						type="button"
+						class="hover-btn scale-btn hit-slop focus-ring flex shrink-0 items-center justify-center rounded-full p-1 md:hidden {isSelected
+							? 'text-text-on-accent'
+							: 'text-text-secondary'}"
+						aria-label={`${chat.name} 的更多操作`}
+						title="更多操作"
+						onclick={(e) => {
+							e.stopPropagation();
+							onMore();
+						}}
+					>
+						<MoreHorizontal class="size-3.5" strokeWidth={2} />
+					</button>
 				{/if}
 			</span>
 		</span>

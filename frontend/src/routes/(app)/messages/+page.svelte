@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Plus, MessageSquareDashed } from '@lucide/svelte';
+	import { Plus, MessageSquareDashed, Pin, BellOff, Trash2, X } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
@@ -9,6 +9,7 @@
 	import ChatView from '@/components/messages/ChatView.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Button from '@/components/ui/button.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import OnlineStrip from './shared/OnlineStrip.svelte';
 	import ChatListBody from './shared/ChatListBody.svelte';
@@ -218,6 +219,8 @@
 			.finally(() => (deleteTarget = null));
 	};
 	let deleteTarget = $state<ChatItem | null>(null);
+	// 移动端会话操作弹层目标（s2-01：置顶/免打扰/删除在移动端原本无入口）
+	let moreTarget = $state<ChatItem | null>(null);
 
 	// 渲染用实时在线判定：WS 推送优先，HTTP 快照（chat.online）仅兜底
 	const liveChats = $derived(
@@ -307,6 +310,7 @@
 				onTogglePin={togglePin}
 				onToggleMute={toggleMute}
 				onDelete={(chat) => (deleteTarget = chat)}
+				onMore={(chat) => (moreTarget = chat)}
 				{selectedId}
 				compact
 				fill
@@ -437,6 +441,7 @@
 				onTogglePin={togglePin}
 				onToggleMute={toggleMute}
 				onDelete={(chat) => (deleteTarget = chat)}
+				onMore={(chat) => (moreTarget = chat)}
 			/>
 		</div>
 
@@ -466,6 +471,73 @@
 {/if}
 
 <!-- 删除会话确认（危险操作防误触；仅删除自己视角的私聊会话，对方不受影响） -->
+<!-- 移动端会话操作（s2-01）：置顶/免打扰/删除在移动端没有 hover 显现入口，
+     此前只能「取消」不能「新增」。形态走全站「更多操作」族的底部浮动卡
+     （与用户详情页更多操作同语言）；删除仍交给下方 ConfirmDialog 二次确认。 -->
+<Dialog.Root open={!!moreTarget} onOpenChange={(next) => (next ? undefined : (moreTarget = null))}>
+	<Dialog.Content
+		side="bottom"
+		class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl p-5"
+		aria-label={moreTarget ? `${moreTarget.name} 的会话操作` : '会话操作'}
+		style="box-shadow:var(--cst-elevation-modal);"
+	>
+		{#if moreTarget}
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="eyebrow">会话操作</p>
+					<p class="mt-1 text-md text-text-primary">{moreTarget.name}</p>
+				</div>
+				<ActionIconButton icon={X} label="关闭" onClick={() => (moreTarget = null)} />
+			</div>
+			<div class="mt-4 flex flex-col gap-2">
+				<Button
+					type="button"
+					variant="secondary"
+					size="lg"
+					class="w-full justify-start"
+					onclick={() => {
+						const chat = moreTarget;
+						moreTarget = null;
+						if (chat) togglePin(chat);
+					}}
+				>
+					<Pin class="size-4" strokeWidth={1.75} />
+					{moreTarget.isPinned ? '取消置顶' : '置顶会话'}
+				</Button>
+				<Button
+					type="button"
+					variant="secondary"
+					size="lg"
+					class="w-full justify-start"
+					onclick={() => {
+						const chat = moreTarget;
+						moreTarget = null;
+						if (chat) toggleMute(chat);
+					}}
+				>
+					<BellOff class="size-4" strokeWidth={1.75} />
+					{moreTarget.isMuted ? '关闭免打扰' : '开启免打扰'}
+				</Button>
+				{#if moreTarget.kind !== 'group'}
+					<Button
+						type="button"
+						variant="secondary"
+						size="lg"
+						class="w-full justify-start text-status-danger"
+						onclick={() => {
+							deleteTarget = moreTarget;
+							moreTarget = null;
+						}}
+					>
+						<Trash2 class="size-4" strokeWidth={1.75} />
+						删除会话
+					</Button>
+				{/if}
+			</div>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
+
 <ConfirmDialog
 	open={deleteTarget !== null}
 	title={`删除与「${deleteTarget?.name ?? ''}」的会话？`}
