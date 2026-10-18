@@ -93,28 +93,33 @@
 	<EmptyState title="无访问权限" description="需要 admin.audit.read 权限" />
 {:else}
 	<div class="flex flex-col gap-4">
-		<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-			<select bind:value={action} class="input-surface rounded-md px-3 py-2 text-xs text-text-primary" aria-label="动作">
+		<!-- 筛选区：移动端两列网格（原为 5 个控件竖向堆叠，实测 241px，把表格推到 y=389，
+		     首屏只剩半张表；全站复审 S4-09）。网格化后同屏可见的控件数不变，仅省竖向空间。
+		     日期两件套用 sm:contents 在桌面端还原为父级 flex 的普通子项。 -->
+		<div class="grid grid-cols-2 gap-2.5 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+			<select bind:value={action} class="input-surface w-full rounded-md px-3 py-2 text-xs text-text-primary sm:w-auto" aria-label="动作">
 				{#each ACTIONS as a (a.value)}
 					<option value={a.value}>{a.label}</option>
 				{/each}
 			</select>
-			<select bind:value={targetType} class="input-surface rounded-md px-3 py-2 text-xs text-text-primary" aria-label="目标类型">
+			<select bind:value={targetType} class="input-surface w-full rounded-md px-3 py-2 text-xs text-text-primary sm:w-auto" aria-label="目标类型">
 				{#each TARGET_TYPES as t (t.value)}
 					<option value={t.value}>{t.label}</option>
 				{/each}
 			</select>
 			<input
 				bind:value={operatorId}
-				class="input-surface w-56 rounded-md px-3 py-2 text-xs text-text-primary"
+				class="input-surface col-span-2 w-full rounded-md px-3 py-2 text-xs text-text-primary sm:col-span-1 sm:w-56"
 				placeholder="操作者 user_id…"
 				aria-label="操作者 ID"
 			/>
-			<input bind:value={startDate} type="date" class="input-surface rounded-md px-3 py-2 text-xs text-text-primary" aria-label="开始日期" />
-			<span class="text-xxs text-text-secondary self-center">至</span>
-			<input bind:value={endDate} type="date" class="input-surface rounded-md px-3 py-2 text-xs text-text-primary" aria-label="结束日期" />
+			<div class="col-span-2 flex items-center gap-2 sm:contents">
+				<input bind:value={startDate} type="date" class="input-surface min-w-0 flex-1 rounded-md px-3 py-2 text-xs text-text-primary sm:flex-none" aria-label="开始日期" />
+				<span class="text-xxs text-text-secondary shrink-0 sm:self-center">至</span>
+				<input bind:value={endDate} type="date" class="input-surface min-w-0 flex-1 rounded-md px-3 py-2 text-xs text-text-primary sm:flex-none" aria-label="结束日期" />
+			</div>
 			{#if !canReadIp}
-				<span class="text-xxs self-center text-text-secondary">IP 字段需 admin.audit.read_ip 权限</span>
+				<span class="col-span-2 text-xxs text-text-secondary sm:self-center">IP 字段需 admin.audit.read_ip 权限</span>
 			{/if}
 		</div>
 
