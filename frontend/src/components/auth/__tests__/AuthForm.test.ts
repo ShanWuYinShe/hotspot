@@ -112,4 +112,17 @@ describe('AuthForm', () => {
 		await fireEvent.click(screen.getByRole('button', { name: '显示密码' }));
 		expect((screen.getByLabelText('密码') as HTMLInputElement).type).toBe('text');
 	});
+
+	// 回归守卫（走查 F1）：/login 的卡片文案取自 onModeChange 回传的 mode。内部 forgot→reset
+	// 步骤迁移若只改内部 mode 而不通知宿主，表单已进入「账号+验证码+新密码」而页头仍停在
+	// 「找回你的账号。/ 我们会发送验证码。」。
+	it('忘记密码发送成功后回调 onModeChange(reset)', async () => {
+		vi.mocked(requestPasswordReset).mockResolvedValue({ code: 0, data: undefined } as never);
+		const onModeChange = vi.fn();
+		render(AuthForm, { props: { onModeChange } });
+		await fireEvent.click(screen.getByRole('button', { name: '忘记密码' }));
+		await fireEvent.input(screen.getByPlaceholderText('注册时的手机号 / 邮箱'), { target: { value: '13800000000' } });
+		await fireEvent.click(screen.getByRole('button', { name: '发送验证码' }));
+		await waitFor(() => expect(onModeChange).toHaveBeenCalledWith('reset'));
+	});
 });

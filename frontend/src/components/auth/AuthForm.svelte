@@ -182,7 +182,13 @@
 				res = await requestPasswordReset({ login_id: resetLoginId, client_type: 'web' });
 				if (res.code === 0) {
 					// Spec: always returns success (anti-enumeration) → move to reset step.
+					// 内部步骤迁移必须同步 notify 宿主：/login 的页头文案取自 onModeChange
+					// 回传的 mode，此前直接改 mode 会漏通知，导致表单已进入「账号+验证码+
+					// 新密码」而卡片仍写「找回你的账号。／我们会发送验证码。」（走查 F1）。
+					// 不走 switchMode 是因其会 reset() 清空字段，而 reset 步骤需要保留
+					// resetLoginId 才能提交。
 					mode = 'reset';
+					onModeChange?.('reset');
 					submitting = false;
 					return;
 				}
