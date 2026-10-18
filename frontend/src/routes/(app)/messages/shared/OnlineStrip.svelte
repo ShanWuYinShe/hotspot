@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import { scrollFade } from '@/lib/scroll-fade';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import type { ChatItem } from '@/lib/chat-list';
 
@@ -23,7 +24,7 @@
 <div class="{isLarge ? 'mb-4' : 'shrink-0 px-4 py-2.5 border-b border-border-default'}">
 	<!-- 分组小标统一 eyebrow（tracking-eyebrow 0.14em），与全站一致 -->
 	<p class="eyebrow {isLarge ? 'mb-2.5' : 'mb-2'}">在线</p>
-	<div class="flex overflow-x-auto no-scrollbar {isLarge ? 'gap-4 pb-1 pr-1' : 'gap-3 pr-1'}">
+	<div class="flex overflow-x-auto no-scrollbar {isLarge ? 'gap-4 pb-1 pr-1' : 'gap-3 pr-1'}" use:scrollFade>
 		{#each chats as c (c.id)}
 			<button
 				type="button"

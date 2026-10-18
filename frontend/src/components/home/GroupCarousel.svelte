@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { scrollFade } from '@/lib/scroll-fade';
 	import { MapPin, Users, Lock, Globe } from '@lucide/svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
@@ -34,7 +35,7 @@
 {#if groups.length > 0}
 <div>
 	<SectionHead title="附近群组" action="更多" onAction={onSeeAll} />
-	<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2 pr-1">
+	<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2 pr-1" use:scrollFade>
 		{#each groups as g (g.id)}
 			<NearbyImageCard
 				imageSrc={g.banner}

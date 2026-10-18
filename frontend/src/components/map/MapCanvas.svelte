@@ -328,9 +328,12 @@
 		{/each}
 	</div>
 
+	<!-- 版权/来源标注：原为 opacity-subtle + text-secondary 直接压瓦片，像素实测最差
+	     1.00（光底）、2.11（暗底），达标像素 0%——标注必须可读（来源合规）。
+	     改用 media-scrim-strong（0.55 黑）+ content-inverse，任意瓦片底色下白字 ≥4.9:1；
+	     与全站压图徽标同语言。pointer-events-none 保持不变（不干预地图交互）。 -->
 	<span
-		class="absolute bottom-1 right-2 text-xxs opacity-subtle pointer-events-none"
-		style="color:var(--cst-text-secondary);"
+		class="absolute bottom-1 right-2 inline-flex items-center justify-center rounded-sm bg-surface-media-scrim-strong px-1.5 py-0.5 text-xxs leading-none text-content-inverse pointer-events-none"
 	>
 		{tileSource === 'amap' ? '© 高德地图' : '© OpenStreetMap contributors'}
 	</span>
