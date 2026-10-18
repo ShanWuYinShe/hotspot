@@ -245,7 +245,7 @@ export class ThemeConstants {
     error: '#C81E4E',
     info: '#2B5EB2',
     mapUser: '#2B5EB2',
-    mapGroup: '#0B7A56',
+    mapGroup: '#0B7653',
     mapMoment: '#C2470B',
     dangerSoft: '#F7E2EA',
     // warningSoft = warning 13% 预合成叠 page-bg（随 warning 加深同步复算）
