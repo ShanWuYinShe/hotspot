@@ -97,7 +97,9 @@ export function useAccountData() {
 					nickname = d.nickname ?? '';
 					bio = d.bio ?? '';
 					locationName = d.location?.location_name ?? '';
-					handle = d.nickname ? `@${d.nickname.replace(/\s/g, '_')}` : '';
+					// handle 用 user_id（稳定账号标识）：此前由昵称派生，既与紧邻的 h1 昵称重复，
+					// 又会随改名而变、且与 /me/edit 的 @user_id、关系行的 @remark/@user_id 三口径不一（s3 P1-3）。
+					handle = d.user_id ? `@${d.user_id}` : '';
 					stats = d.stats ?? stats;
 				} else if (res.code === 10100) {
 					needsAuth = true;
