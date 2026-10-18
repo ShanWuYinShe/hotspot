@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 	isOnline: vi.fn(() => false),
 	getGroupDetail: vi.fn(),
 	getGroupMessages: vi.fn(),
+	getGroupMembers: vi.fn(() => Promise.resolve({ code: 0, data: { items: [{ user: { user_id: 'user_2', nickname: '阿禾' } }, { user: { user_id: 'user_3', nickname: '野原' } }], next_cursor: null } })),
 	sendGroupMessage: vi.fn(),
 	markGroupRead: vi.fn(),
 	wsClient: {
@@ -34,6 +35,7 @@ vi.mock('@/stores/presence.svelte', () => ({
 vi.mock('@/api', () => ({
 	getGroupDetail: mocks.getGroupDetail,
 	getGroupMessages: mocks.getGroupMessages,
+	getGroupMembers: mocks.getGroupMembers,
 	sendGroupMessage: mocks.sendGroupMessage,
 	markGroupRead: mocks.markGroupRead
 }));
@@ -111,6 +113,36 @@ describe('GroupChatView', () => {
 				content: '大家好'
 			});
 			expect(screen.getAllByText('大家好').length).toBeGreaterThan(0);
+		});
+	});
+
+	// 回归守卫（全站复审 s2-08）：群聊 @ 提及 —— 输入 `@` 触发成员浮层，选中后发送
+	// 必须在 group_messages/send 上带 mentions（spec api_spec_chat.md:135）。
+	it('输入 @ 选中成员后发送携带 mentions', async () => {
+		renderGroup();
+		// 等群成员加载完成（提及候选来自 getGroupMembers 的异步返回）
+		await waitFor(() => expect(mocks.getGroupMembers).toHaveBeenCalled());
+		const input = screen.getByLabelText('消息输入框') as HTMLInputElement;
+		// 模拟真实键入：先落值再把光标放到末尾（jsdom 不会随程序化赋值移动光标）
+		input.value = '@';
+		input.setSelectionRange(1, 1);
+		await fireEvent.input(input);
+		// 浮层出现并列出成员
+		const listbox = await screen.findByRole('listbox', { name: '提及群成员' });
+		expect(listbox).toBeTruthy();
+		expect(screen.getByText('阿禾')).toBeTruthy();
+
+		// 选中第一个候选 → 输入框插入 `@阿禾 `
+		await fireEvent.mouseDown(screen.getByText('阿禾'));
+		expect(input.value).toBe('@阿禾 ');
+
+		// 补正文后回车发送
+		await fireEvent.input(input, { target: { value: '@阿禾 看这个' } });
+		await fireEvent.keyDown(input, { key: 'Enter' });
+		await waitFor(() => {
+			expect(mocks.sendGroupMessage).toHaveBeenCalledWith(
+				expect.objectContaining({ group_id: 'group_1', content: '@阿禾 看这个', mentions: ['user_2'] })
+			);
 		});
 	});
 

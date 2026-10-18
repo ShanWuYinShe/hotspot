@@ -65,7 +65,7 @@ describe('useChat', () => {
 		expect(h.chat!.inputVal).toBe('  在吗  ');
 		await h.chat!.handleSend();
 		await vi.waitFor(() => {
-			expect(sendMessage).toHaveBeenCalledWith('在吗');
+			expect(sendMessage).toHaveBeenCalledWith('在吗', undefined);
 			expect(h.chat!.messages.some((m) => m.id === 'm2' && m.text === '在吗' && m.sent)).toBe(true);
 			expect(h.chat!.sendError).toBe('');
 		});

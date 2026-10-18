@@ -8,7 +8,7 @@
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { getGroupDetail, getGroupMessages, sendGroupMessage, markGroupRead, recallGroupMessage, recallGroupMessageAsAdmin, updateGroupMessage } from '@/api';
+	import { getGroupDetail, getGroupMessages, getGroupMembers, sendGroupMessage, markGroupRead, recallGroupMessage, recallGroupMessageAsAdmin, updateGroupMessage } from '@/api';
 	import { WS_GROUP_MESSAGE_EVENT, WS_GROUP_MESSAGE_UPDATE_EVENT, wsClient } from '@/lib/ws/client';
 	import type { UserInfo } from '@/lib/ws/types';
 	import { useChat, formatTime, createTypingIndicator, inRecallWindow, type ChatMessage } from '@/lib/chat.svelte';
@@ -67,6 +67,27 @@
 		};
 	});
 
+	// @ 提及候选（spec api_spec_chat.md:135 → group_messages/send 的 mentions）：取群成员首屏
+	// （limit 100 = 分页上限）；失败静默——提及浮层是增强，不应影响聊天主流程。
+	let mentionCandidates = $state<{ id: string; name: string }[]>([]);
+	$effect(() => {
+		const gid = groupId;
+		if (!gid) return;
+		let cancelled = false;
+		getGroupMembers(gid, { limit: 100 })
+			.then((res) => {
+				if (cancelled || res.code !== 0 || !res.data) return;
+				mentionCandidates = (res.data.items ?? []).map((m) => ({
+					id: m.user.user_id,
+					name: m.user.nickname || m.user.user_id
+				}));
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	});
+
 	const chat = useChat({
 		targetId: () => groupId,
 		loadHistory: async (cursor) => {
@@ -97,8 +118,14 @@
 			// spec: group_messages/mark_read (scope='group') 标记该群全部已读;幂等语义,失败静默。
 			void markGroupRead({ scope: 'group', group_id: groupId }).catch(() => {});
 		},
-		sendMessage: async (text) => {
-			const res = await sendGroupMessage({ group_id: groupId, type: 'text', content: text });
+		sendMessage: async (text, mentions) => {
+			// mentions 仅非空时下发（spec: 未传字段保持语义；空数组会显式表达「无提及」）
+			const res = await sendGroupMessage({
+				group_id: groupId,
+				type: 'text',
+				content: text,
+				...(mentions?.length ? { mentions } : {})
+			});
 			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
 			// 后端 message 已是面向用户的 curated 文案（如禁言/封禁原因），优先直显。
 			return { code: res.code, error: res.message || '消息发送失败' };
@@ -250,7 +277,7 @@
 		<ChatMessageList {chat} canRecall={canRecallMessage} showSenderNames onReport={(id) => (reportMessageId = id)} />
 
 		<!-- Input bar -->
-		<ChatInputBar {chat} />
+		<ChatInputBar {chat} {mentionCandidates} />
 	{/if}
 </div>
 

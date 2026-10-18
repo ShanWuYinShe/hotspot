@@ -55,7 +55,7 @@ export interface UseChatOptions {
 	/** 标记会话已读（幂等语义，失败静默）。加载成功后调用。 */
 	markRead: () => void;
 	/** 发送文本消息；失败返回非 0 code（可携带 error 文案），成功返回服务端 message_id 替换 temp id。 */
-	sendMessage: (text: string) => Promise<SendResult>;
+	sendMessage: (text: string, mentions?: string[]) => Promise<SendResult>;
 	/** 发送侧 typing 信号（未连接时实现方静默丢弃）。 */
 	sendTypingSignal: (isTyping: boolean) => void;
 	/** WS 新消息事件名（window event）。 */
@@ -358,7 +358,7 @@ export function useChat(opts: UseChatOptions) {
 		}
 	}
 
-	const handleSend = async () => {
+	const handleSend = async (mentions?: string[]) => {
 		const text = inputVal.trim();
 		if (!text || sending || !opts.targetId()) return;
 		inputVal = '';
@@ -371,7 +371,7 @@ export function useChat(opts: UseChatOptions) {
 			{ id: tempId, text, sent: true, time: formatTime(new Date().toISOString()), sentAt: new Date().toISOString() }
 		];
 		try {
-			const res = await opts.sendMessage(text);
+			const res = await opts.sendMessage(text, mentions);
 			if (res.code !== 0) {
 				// Roll back the optimistic message on failure.
 				messages = messages.filter((m) => m.id !== tempId);
