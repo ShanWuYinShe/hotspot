@@ -248,10 +248,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						class="mt-2 w-full input-surface rounded-md px-3 py-2.5 text-sm text-text-primary"
 					/>
 				</label>
-			<button
+			<Button
 				type="button"
+				variant="secondary"
 				disabled={!followed || savingRemark}
-				class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-border-default py-2.5 text-sm text-text-primary hover:bg-accent-soft focus-ring disabled:opacity-muted"
+				class="mt-2 w-full"
 				onclick={async () => {
 					if (!followed) return;
 					savingRemark = true;
@@ -273,21 +274,23 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			>
 				<PencilLine size={14} />
 				{savingRemark ? '保存中…' : '保存备注'}
-			</button>
+			</Button>
 			{#if !followed}
 				<p class="mt-1 text-xs text-text-secondary">关注对方后可设备注</p>
 			{/if}
-				<button
+				<Button
 					type="button"
-					class="hover-btn mt-2 flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm text-status-danger outline-none hover:bg-danger-bg focus-visible:ring-2 focus-visible:ring-status-danger"
+					variant="ghost"
+					class="mt-2 w-full text-status-danger hover:bg-danger-bg"
 					onclick={() => (blocked ? (confirmUnblockOpen = true) : (confirmBlockOpen = true))}
 				>
 					<UserX size={14} />
 					{blocked ? '解除屏蔽' : '屏蔽用户'}
-				</button>
-				<button
+				</Button>
+				<Button
 					type="button"
-					class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm text-text-secondary focus-ring"
+					variant="ghost"
+					class="mt-1 w-full text-text-secondary"
 					onclick={() => (reportOpen = !reportOpen)}
 					aria-expanded={reportOpen}
 				>
@@ -298,17 +301,18 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						<Flag size={14} />
 						{reportOpen ? '收起理由' : '举报用户'}
 					{/if}
-				</button>
+				</Button>
 				{#if reportOpen && !reportSent}
 					<div class="mt-2 flex flex-col gap-1.5" aria-label="举报理由">
 						{#each REPORT_REASONS as r (r.id)}
 							{@const selected = reportReason === r.id}
-							<!-- 选中/未选中 hover 差异化（四态契约）：未选中 hover 淡底预览、选中 hover 加深 -->
+							<!-- 选中/未选中 hover 差异化（四态契约）：未选中 hover 淡底预览、选中 hover 加深。
+							     选项行圆角归并 md 档（原 rounded-sm 与同弹层内按钮 12/16 两档并存） -->
 							<button
 								type="button"
 								aria-pressed={selected}
 								onclick={() => (reportReason = r.id)}
-								class="hover-btn flex items-center justify-between rounded-sm border px-3 py-2 text-left text-sm transition-colors duration-rapid ease-standard focus-ring
+								class="hover-btn flex items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors duration-rapid ease-standard focus-ring
 									{selected
 									? 'border-accent-border bg-accent-soft text-accent-default hover:bg-interactive-active'
 									: 'border-border-default text-text-secondary hover:bg-interactive-hover'}"
@@ -317,14 +321,15 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 								{#if selected}<Check class="size-3.5" strokeWidth={2.5} />{/if}
 							</button>
 						{/each}
-						<button
+						<Button
 							type="button"
+							variant="outline"
+							class="mt-1 w-full text-status-danger hover:bg-danger-bg"
 							disabled={reportPending}
 							onclick={() => void submitReport()}
-							class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-full border border-border-default py-2.5 text-sm font-medium text-status-danger focus-ring hover:bg-danger-bg disabled:pointer-events-none disabled:opacity-faint"
 						>
 							{reportPending ? '提交中…' : '提交举报'}
-						</button>
+						</Button>
 					</div>
 				{/if}
 		</Dialog.Content>
@@ -405,7 +410,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					<div class="flex shrink-0 gap-2 pb-1">
 						<button
 							type="button"
-							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-2 text-xs text-text-secondary shadow-raised-sm hover:bg-accent-soft focus-ring disabled:cursor-not-allowed disabled:opacity-muted"
+							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-1.5 text-xs text-text-secondary shadow-raised-sm hover:bg-accent-soft focus-ring disabled:cursor-not-allowed disabled:opacity-muted"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>
@@ -512,15 +517,18 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				class="flex gap-3 border-t border-border-default px-4 pt-2.5"
 				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));-webkit-backdrop-filter:blur(var(--cst-blur-md));padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
 			>
-				<button
+				<!-- 私信次级动作走 Button lg（原 rounded-xl 破档归并 md；两派契约见 style skill） -->
+				<Button
 					type="button"
-					class="hover-btn tap-92 flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border-default bg-surface-primary text-sm text-text-secondary shadow-raised-sm hover:bg-accent-soft focus-ring disabled:opacity-muted"
+					variant="secondary"
+					size="lg"
+					class="flex-1"
 					disabled={blocked}
 					onclick={() => !blocked && void goto(ROUTES.message(uid))}
 				>
-					<MessageCircle class="size-4"  strokeWidth={1.75} />
+					<MessageCircle class="size-4" strokeWidth={1.75} />
 					私信
-				</button>
+				</Button>
 				<FollowButton active={followed} disabled={blocked} size="block" onToggle={() => toggleFollow()} />
 			</div>
 		{/if}

@@ -34,7 +34,7 @@
 ### 按钮 / 输入 / 导航 / 弹层 / 反馈
 | 原语 | 职责 |
 |---|---|
-| `ui/button` | 表单与主 CTA 按钮 |
+| `ui/button` | 全部动作按钮的唯一壳（表单/CTA/弹层确认/详情动作区；`ui/FollowButton` 等复合钮经它派生） |
 | `navigation/ActionIconButton` | 图标按钮（ghost/outline） |
 | `hover-btn` / `scale-btn`（utilities） | 行内文字/图标动作的 hover/tap CSS 语言 |
 | `forms/SearchInput` / `forms/Input` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语。`forms/Input`（2026-10-12 新增）：单行输入，受控 value+onChange；`label`/`labelSnippet`（tracking-field 档位或自定义行）与 input 以 id 关联；`prefix` snippet 前缀图标；`clearable` 清除钮；**错误态三件套** `hasError`+`errorText`→ aria-invalid + aria-describedby + role="alert" 就近错误行（样式由 input-surface 的 :has(aria-invalid) 承担）。padding 由调用方 class 提供（同 SearchInput 约定，如 `rounded-md px-4 py-3`）；另支持 `compact` 形态（input-surface 直贴 input，无包裹/label/prefix/清除，紧凑位专用）。契约对齐鸿蒙 `SystemInput` |
@@ -48,6 +48,22 @@
 > 失败 `LoadError` / 已到底 `ListEnd`（文案「没有更多了」）。分页与无限滚动列表
 > 在内容耗尽时必须渲染 `ListEnd`——「加载更多」按钮消失而无收尾提示，用户无法
 > 区分「已到底」与「加载卡住」。
+
+### 按钮语言两派契约（2026-10-18 登记，审计 C1 收敛）
+
+动作按钮只有两种被允许的形态，**按场景分派、同页同场景不得混用**；两种形态都必须
+经由 `ui/button` 原语（含其派生 `ui/FollowButton`），禁止绕过原语手写描边/实底钮：
+
+| 派别 | 形态 | 适用场景 | 例 |
+|---|---|---|---|
+| A 页面级动作（默认） | `rounded-md`(16px) + `text-sm`，高度档 sm 32 / md 40 / lg 44 | 表单提交、弹层确认、详情页动作区、移动端动作条、错误页动作 | 登录/保存/举报提交/屏蔽/加入群组/私信动作条 |
+| B 行内关系 chip | `rounded-full` + `text-xs`，`px-3.5 py-1.5`（行内）/ `px-4 py-2`（详情宽位） | 卡片/列表行内的关系与轻量动作（嵌在内容里的小动作） | 关注/加入/接受/拒绝/私聊入口 chip |
+
+- 圆角禁档：动作按钮不得使用 `rounded-sm`(12)/`rounded-lg`(20)/`rounded-xl`(24)；
+  圆形图标钮走 `ActionIconButton`/`size-* rounded-full`。导航项、菜单行、Toast、
+  图片格等非动作控件按各自组件语言，不套本契约。
+- 卡片/面板**内嵌**的次级动作钮用 `flat` 去投影（投影语义归容器，见 `ui/button` 注释）。
+- 链接跳转用 `<a>` 时沿用派 A 的原语类语言（如错误页「返回首页」），不自造第三种形态。
 
 ### 内容卡封面比例档（2026-10-18 登记）
 

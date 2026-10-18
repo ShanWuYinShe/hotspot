@@ -5,10 +5,10 @@
 	// FollowButton — 关注/已关注切换的唯一实现（审计 P1-6：此前 6 种手写写法）。
 	// 复用 ui/button 原语：未关注 = primary（accent 实底），已关注 = outline 变体
 	// 覆写 accent 文字（JoinButton 同款两态范式）。pending 禁点防重复提交。
-	// size：
-	//   pill     列表行动作位 pill（px-3.5 py-1.5 text-xs）；
-	//   wide     详情页宽按钮（px-4 py-2 text-xs，桌面/平板动作区）；
-	//   block    移动端动作条（h-11 flex-1 text-sm）。
+	// size（两派契约：胶囊只属于行内 chip 形态，页面级动作条归 md 派，见 style skill）：
+	//   pill     列表行动作位胶囊 chip（rounded-full px-3.5 py-1.5 text-xs）；
+	//   wide     详情页宽胶囊 chip（rounded-full px-4 py-2 text-xs，桌面/平板动作区）；
+	//   block    移动端动作条（h-11 flex-1 text-sm，rounded-md——原 rounded-xl 破档已归并）。
 	// iconOnly  空间受限行的纯图标圆钮（nearby 卡片）。
 	// labelActive/labelInactive 允许语义定制（互关/回关），默认 关注/已关注。
 	let {
@@ -59,10 +59,10 @@
 		variant={active ? 'outline' : 'surface-accent'}
 		size={size === 'block' ? 'lg' : 'sm'}
 		disabled={pending || disabled}
-		class="hit-slop tap-92 rounded-full gap-1
-			{size === 'pill' ? 'px-3.5 py-1.5 text-xs' : ''}
-			{size === 'wide' ? 'px-4 py-2 text-xs' : ''}
-			{size === 'block' ? 'h-11 flex-1 rounded-xl' : ''}
+		class="hit-slop tap-92 gap-1
+			{size === 'pill' ? 'rounded-full px-3.5 py-1.5 text-xs' : ''}
+			{size === 'wide' ? 'rounded-full px-4 py-2 text-xs' : ''}
+			{size === 'block' ? 'h-11 flex-1' : ''}
 			{active
 			? 'border-accent-default bg-surface-primary text-accent-default hover:bg-accent-soft'
 			: 'font-semibold'}

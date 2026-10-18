@@ -14,6 +14,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import GroupAnnouncementDialog from '@/components/groups/GroupAnnouncementDialog.svelte';
 	import MembersList from './shared/MembersList.svelte';
@@ -366,53 +367,56 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 		<!-- 桌面右栏用卡片承载；移动/平板（<lg 单列）去掉外框，避免「卡片套两个大按钮」的双重边框 -->
 		<aside class="flex h-fit flex-col gap-3 lg:rounded-lg lg:border lg:border-border-default lg:bg-surface-primary lg:p-4">
-			<!-- 已加入态 hover 只变底（不换字色，单信号 feedback） -->
-			<button
-				type="button"
-				class="hover-btn w-full rounded-full border px-4 py-3 text-sm font-medium focus-ring {gd.joined ? 'border-accent-border text-accent-default hover:bg-interactive-hover' : 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'}"
-				onclick={() => {
-							if (gd.joinPendingApproval) {
-								void gd.cancelJoinApplication();
-								return;
-							}
-							if (gd.joined && gd.myRole === 'owner') {
-								// 群主直接退群必被拒（10400）：预防式引导先转让，而非弹确认后再失败
-								showToast('群主需先转让群主身份（群管理 → 转让群主）', 'danger');
-								return;
-							}
-							gd.joined ? (leaveConfirmOpen = true) : gd.toggleJoin();
-						}}
-			>
-				{#if gd.joinPendingApproval}
-					<span class="flex items-center justify-center gap-1.5">
-						<Check size={15} />
-						审核中 · 点击取消
-					</span>
-				{:else if gd.joined}
-					<span class="flex items-center justify-center gap-1.5">
-						<Check size={15} />
-						已加入 · 点击退出
-					</span>
-				{:else}
-					加入群组
-				{/if}
-			</button>
+			<!-- 已加入态 hover 只变底（不换字色，单信号 feedback）。
+			     动作条三钮走 Button lg（原页面级胶囊大钮归并 md 派，两派契约见 style skill）；
+			     卡内次级钮 flat 去投影（投影语义归容器）。 -->
+			{#if gd.joined}
+				<Button
+					type="button"
+					variant="secondary"
+					size="lg"
+					flat
+					class="w-full border-accent-border text-accent-default hover:bg-interactive-hover hover:border-accent-border"
+					onclick={() => {
+						if (gd.joinPendingApproval) {
+							void gd.cancelJoinApplication();
+							return;
+						}
+						if (gd.joined && gd.myRole === 'owner') {
+							// 群主直接退群必被拒（10400）：预防式引导先转让，而非弹确认后再失败
+							showToast('群主需先转让群主身份（群管理 → 转让群主）', 'danger');
+							return;
+						}
+						gd.joined ? (leaveConfirmOpen = true) : gd.toggleJoin();
+					}}
+				>
+					{#if gd.joinPendingApproval}
+						<span class="flex items-center justify-center gap-1.5">
+							<Check size={15} />
+							审核中 · 点击取消
+						</span>
+					{:else}
+						<span class="flex items-center justify-center gap-1.5">
+							<Check size={15} />
+							已加入 · 点击退出
+						</span>
+					{/if}
+				</Button>
+			{:else}
+				<Button type="button" variant="primary" size="lg" class="w-full" onclick={() => gd.toggleJoin()}>加入群组</Button>
+			{/if}
 				{#if gd.joined && (gd.myRole === 'owner' || gd.myRole === 'admin')}
 					<!-- 角色门控：仅群主/管理员可见的管理入口（群设置编辑；转让/解散为批次 4d） -->
-					<button
-						type="button"
-						onclick={() => (settingsOpen = true)}
-						class="hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-border-default px-4 py-3 text-sm text-text-primary focus-ring"
-					>
+					<Button type="button" variant="secondary" size="lg" flat class="w-full" onclick={() => (settingsOpen = true)}>
 						<Settings size={15} />
 						群管理
-					</button>
+					</Button>
 				{/if}
 			{#if gd.joined}
-				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="hover-btn flex w-full items-center justify-center gap-2 rounded-full bg-accent-default px-4 py-3 text-sm font-medium text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring">
+				<Button type="button" variant="primary" size="lg" class="w-full" onclick={() => void goto(ROUTES.groupMessage(params.groupId))}>
 					<MessageCircle size={15} />
 					打开群聊
-				</button>
+				</Button>
 			{:else}
 				<p class="px-2 text-center text-xs leading-5 text-text-secondary">
 					<Bell size={13} class="mr-1 inline" />
@@ -459,14 +463,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} />
 		</div>
 		{#if canReportGroup}
-			<button
-				type="button"
-				class="hover-btn mt-4 flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm text-status-danger outline-none hover:bg-danger-bg focus-visible:ring-2 focus-visible:ring-status-danger"
-				onclick={() => { moreOpen = false; reportOpen = true; }}
-			>
+			<Button type="button" variant="ghost" class="mt-4 w-full text-status-danger hover:bg-danger-bg" onclick={() => { moreOpen = false; reportOpen = true; }}>
 				<Flag size={14} />
 				举报群组
-			</button>
+			</Button>
 		{/if}
 	</Dialog.Content>
 </Dialog.Root>

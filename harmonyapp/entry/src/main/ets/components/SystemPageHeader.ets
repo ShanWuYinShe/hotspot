@@ -154,7 +154,7 @@ export struct SystemPageHeader {
     SurfaceIconButton({
       icon: action.icon,
       kind: action.kind ?? 'neutral',
-      // 右侧图标钮与返回钮同尺寸（BACK_BUTTON_SIZE 40），页头左右视觉重量对称
+      // 右侧图标钮与返回钮同尺寸（BACK_BUTTON_SIZE 42，对齐前端页面级返回键 42 档），页头左右视觉重量对称
       buttonSize: action.size ?? DesignConstants.LAYOUT.BACK_BUTTON_SIZE,
       glyphSize: action.iconSize ?? 20,
       disabled: action.disabled ?? false,

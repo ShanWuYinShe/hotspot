@@ -6,6 +6,7 @@
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import { auth, refreshUser } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import {
@@ -229,14 +230,16 @@
 						{/each}
 					</ListContainer>
 					{#if otherSessions.length > 0}
-						<button
+						<Button
 							type="button"
-							class="hover-btn flex w-full items-center justify-center gap-1.5 rounded-sm border border-border-default py-2 text-xs text-status-danger focus-ring hover:bg-danger-bg"
+							variant="outline"
+							size="sm"
+							class="w-full text-status-danger hover:bg-danger-bg"
 							onclick={() => (revokeAllOpen = true)}
 						>
 							<ShieldCheck class="size-3.5" strokeWidth={1.75} />
 							下线其他全部设备（{otherSessions.length}）
-						</button>
+						</Button>
 					{/if}
 				{/if}
 			</div>
@@ -296,13 +299,9 @@
 					{#if upgradeError}
 						<p class="text-xs text-status-danger" role="alert">{upgradeError}</p>
 					{/if}
-					<button
-						type="submit"
-						disabled={upgradeSaving}
-						class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-accent-default py-2.5 text-sm font-medium text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring disabled:opacity-muted"
-					>
+					<Button type="submit" disabled={upgradeSaving} class="mt-1 w-full">
 						{upgradeSaving ? '升级中…' : '完成升级'}
-					</button>
+					</Button>
 				</form>
 			{/if}
 		{/snippet}

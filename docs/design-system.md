@@ -334,7 +334,9 @@
   LABEL_WIDTH 60, HOME_COLUMN_WIDTH 420, FILTER_PANEL_WIDTH 180}`（GLOW_BLOB_* 光晕尺寸已随 glow 体系删除）
   > `TABLET_NAV_MAX_WIDTH` 文档曾写 520，与代码（680）及前端 `--cst-tablet-dock-max: 42.5rem`(680px)
   > 不一致，2026-10-12 核对代码后修正为 680。
-- 其他布局尺寸：`BACK_BUTTON_SIZE 40` / `MIN_HIT_TARGET 44`（触控热区底线，见 skill
+- 其他布局尺寸：`BACK_BUTTON_SIZE 42`（文档曾写 40，2026-10-18 核对
+  `DesignConstants.ets LAYOUT.BACK_BUTTON_SIZE=42` 与前端批次 3「页面级返回键统一 42」
+  后修正；`SystemPageHeader` 内一处过期注释「40」同批修正）/ `MIN_HIT_TARGET 44`（触控热区底线，见 skill
   `mobile-ui-conventions`：官方底线 ≥40vp、推荐 46）/ `UNREAD_BADGE_SIZE 20` /
   `COVER_HEIGHT 220` / `NICKNAME_MAX_WIDTH 56` / `LOGIN_CARD_MAX_WIDTH 400`
 - **页面横向 gutter 与纵向节奏**：`PAGE_SHELL.{GUTTER_MOBILE 16, GUTTER_TABLET 24,

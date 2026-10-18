@@ -272,3 +272,38 @@ left/right 锚定不参与拉伸；`object-cover` 因此无从裁剪。表现为
 （`NearbyImageCard.test.ts`「图片盒显式 w/h 拉满」用例），最终以浏览器实测
 `img.getBoundingClientRect()` 对比卡片 rect 为准（修前 200x298-in-226x301，修后
 99%w/99%h；附近的人/附近群组两页、明暗两主题截图复核通过）。
+
+## 按钮语言两派契约（2026-10-18 审计 C1 收敛沉淀）
+
+动作按钮只有两种允许形态，**按场景分派、同页同场景不得混用**，全部经由 `ui/button`
+原语（含派生 `ui/FollowButton`），禁止绕过原语手写描边/实底动作钮：
+
+- **派 A 页面级动作（默认）**：`rounded-md`(16) + `text-sm`，高度档 sm 32 / md 40 / lg 44
+  （表单提交、弹层确认、详情动作区、移动动作条、错误页动作）。
+- **派 B 行内关系 chip**：`rounded-full` + `text-xs`，`px-3.5 py-1.5`（行内）/
+  `px-4 py-2`（详情宽位）（关注/加入/接受/私聊入口等嵌在内容里的小动作）。
+- 圆角禁档：动作按钮禁 `rounded-sm`(12)/`rounded-lg`(20)/`rounded-xl`(24)；圆形图标钮走
+  `ActionIconButton`/`size-* rounded-full`。导航项/菜单行/Toast/图片格等非动作控件按各自
+  组件语言，不套本契约。
+- 卡片/面板**内嵌**次级动作钮用 `flat` 去投影（投影语义归容器）。
+- 完整表格与示例见 `docs/ui-components.md`「按钮语言两派契约」。
+
+**批次 6 落地**（同页混用清零）：`+error.svelte` 三颗自写胶囊 → Button；
+`users/[userId]` 动作区 rounded-sm×3/full/xl → Button（ghost 红字用
+`variant="ghost" + text-status-danger hover:bg-danger-bg` 覆写）；`groups/[groupId]`
+移动动作条胶囊大钮 ×3 → Button lg（卡内次级钮 flat）；`AccountSecuritySection`
+rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-md
+（胶囊只保留给 pill/wide）。
+
+## 组件级档位约定（批次 3–5 审查沉淀，2026-10-18 登记）
+
+| 约定 | 值 | 两端口径 |
+|---|---|---|
+| 页面级返回键 | 42px + `hit-slop`（`ActionIconButton` 承载；标准页隐藏、详情页显示） | 两端一致：鸿蒙 `DesignConstants.LAYOUT.BACK_BUTTON_SIZE = 42`（曾发现 docs 写 40，已修正） |
+| 分区标题 | 14px semibold（`text-md` 档）；`eyebrow` 仅限微型分组标（11px uppercase + tracking） | 14px = 既有 `text-md` ↔ 鸿蒙 `FONT.SIZE.MD=14`，跨端刻度脚本已约束 |
+| bare 空态源图标 | 24px；非 bare 圆形容器默认 64（`NeedsAuth` 64 容器为登记例外） | 两端一致：鸿蒙 `EmptyState` 用 `ICON_SIZE_MD=24` / `EMPTY_ICON_SIZE=64` |
+| 横屏壳一级导航 | 固定 5 slot：首页 / 附近 / 发布(FAB) / 消息 / 我的 | Web 壳契约（鸿蒙端布局独立，不套用） |
+| admin 表格移动端列裁剪 | 低优先级列 `max-sm:hidden`（600px = platform 移动/平板阈值），只留主体/关键状态/操作三类列；共享常量 `admin/shared/table.ts` 的 `TH_SECONDARY`/`TD_SECONDARY` | Web admin 专属模式（鸿蒙 admin 为卡片页） |
+
+> 登记原则：数值档位本身走既有 token 刻度（不新增档位）；本表只登记「组件级用法
+> 契约」。两端口径经源码逐项核对（DesignConstants / EmptyState / SystemPageHeader）。
