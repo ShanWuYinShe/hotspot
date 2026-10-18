@@ -20,26 +20,32 @@
   --cst-palette-chat-bg: #EDF3FC;
   --cst-palette-text: #16233A;
   --cst-palette-text-muted: #52647F;
-  /* accent 加深（#3578D4→#2E66C0）确保浅色下白字对比度 ≥4.5:1（原 4.39 不达标） */
-  --cst-palette-accent-primary: #2E66C0;
+  /* accent 两次加深：#3578D4→#2E66C0 解决白字压实底（4.39→5.56）；
+     #2E66C0→#2B5EB2 解决 accent 文本压 accent 淡底（4.35→最差 4.72 ≥4.5，全站复审 C2）。
+     透明度派生（border/accent-soft/hover）必须随主色同步改十进制 RGB，否则色相漂移 */
+  --cst-palette-accent-primary: #2B5EB2;
   --cst-palette-glow: rgba(0, 0, 0, 0);
   --cst-palette-shadow-light: rgba(255, 255, 255, 1);
   --cst-palette-shadow-dark: rgba(0, 0, 0, 0.08);
-  --cst-palette-border: rgba(46, 102, 192, 0.18);
-  --cst-palette-border-pressed: rgba(46, 102, 192, 0.32);
-  --cst-palette-accent-soft: rgba(46, 102, 192, 0.10);
-  --cst-palette-accent-soft-border: rgba(46, 102, 192, 0.28);
-  --cst-palette-hover: rgba(46, 102, 192, 0.10);
-  --cst-palette-active-hover: rgba(46, 102, 192, 0.16);
+  --cst-palette-border: rgba(43, 94, 178, 0.18);
+  --cst-palette-border-pressed: rgba(43, 94, 178, 0.32);
+  --cst-palette-accent-soft: rgba(43, 94, 178, 0.10);
+  --cst-palette-accent-soft-border: rgba(43, 94, 178, 0.28);
+  --cst-palette-hover: rgba(43, 94, 178, 0.10);
+  --cst-palette-active-hover: rgba(43, 94, 178, 0.16);
   --cst-palette-on-accent: #FFFFFF;
-  --cst-palette-online: #14B8A6;
+  /* online 校准（#14B8A6→#0D6A62）：原值压在线淡底仅 2.21、压白底 2.49（<4.5）；
+     与 forest/inkwash 浅色本就使用深色系的做法对齐（全站复审 C3） */
+  --cst-palette-online: #0D6A62;
   /* danger 加深（#F43F5E→#C81E4E）：原值配白字 3.67、配深字 4.28 均不达 4.5；
      加深后白字 5.60，danger 实底统一白字（对齐 harmonyapp error，同值经跨端校验锁定） */
   --cst-palette-hot: #C81E4E;
-  /* warning 加深（#F59E0B→#B45309）：浅色下小字 warning 文本对比度 2.1→5.0
-     （≥4.5，对齐 forest/inkwash 同类校准；同值经跨端校验锁定 harmonyapp warning） */
-  --cst-palette-warning: #B45309;
-  --cst-palette-map-user: #2E66C0;
+  /* warning 两次加深：#F59E0B→#B45309 解决「压白底」（2.1→5.02）；
+     #B45309→#9C4708 解决「压 warning 淡底」（4.21→最差 4.72 ≥4.5，全站复审 S4-08）。
+     注意实底色仅用于状态圆点（无文字），故不存在深字压实底的反向约束。
+     同值经跨端校验锁定 harmonyapp warning */
+  --cst-palette-warning: #9C4708;
+  --cst-palette-map-user: #2B5EB2;
   /* 图钉主色校准：确保白字 --cst-content-on-marker 对比度 ≥4.5（原 #10B981/#F97316 过浅） */
   --cst-palette-map-group: #0B7A56;
   --cst-palette-map-moment: #C2470B;

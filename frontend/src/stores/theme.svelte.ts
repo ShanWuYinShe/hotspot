@@ -34,7 +34,7 @@ export const COLOR_SCHEME_OPTIONS = [
  * icon 为主题图标的单一来源（settings 页 TabBar 消费），禁止在页面里按 id 硬编码映射。
  */
 export const THEME_OPTIONS = [
-	{ id: 'vibrant', label: '星际', note: '冷色玻璃', icon: Palette, swatch: '#2E66C0' },
+	{ id: 'vibrant', label: '星际', note: '冷色玻璃', icon: Palette, swatch: '#2B5EB2' },
 	{ id: 'forest', label: '清野', note: '自然纸面', icon: Trees, swatch: '#3D7A55' },
 	{ id: 'inkwash', label: '水墨', note: '宣纸墨韵', icon: Brush, swatch: '#A63A2E' }
 ] as const;

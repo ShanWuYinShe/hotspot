@@ -53,12 +53,12 @@
 | `page-bg` / `bg` | `#F7FAFF` | `#0B1424` | `#F6F7F3` | `#161A16` |
 | `text` | `#16233A` | `#E8F1FF` | `#152219` | `#E8F1E9` |
 | `text-muted` | `#52647F` | `#A5B6CE` | `#3F5547` | `#A8BDAE` |
-| `accent-primary` | `#2E66C0` | `#69A8FF` | `#3D7A55` | `#52B878` |
+| `accent-primary` | `#2B5EB2` | `#69A8FF` | `#3D7A55` | `#52B878` |
 | `on-accent` | `#FFFFFF` | `#071426` | `#FFFFFF` | `#0C1911` |
-| `online` | `#14B8A6` | `#37C99A` | `#3D7A55` | `#52B878` |
-| `hot`（危险） | `#F43F5E` | `#FB7185` | `#B4543E` | `#D97C5A` |
-| `warning` | `#F59E0B` | `#FBBF24` | `#8A6A2F` | `#C4A75A` |
-| `map-user` | `#2E66C0` | `#69A8FF` | `#3D7A55` | `#52B878` |
+| `online` | `#0D6A62` | `#37C99A` | `#3D7A55` | `#52B878` |
+| `hot`（危险） | `#C81E4E` | `#FB7185` | `#B4543E` | `#D97C5A` |
+| `warning` | `#9C4708` | `#FBBF24` | `#8A6A2F` | `#C4A75A` |
+| `map-user` | `#2B5EB2` | `#69A8FF` | `#3D7A55` | `#52B878` |
 | `map-group` | `#0B7A56` | `#34D399` | `#4A703F` | `#88B85A` |
 | `map-moment` | `#C2470B` | `#FB923C` | `#8A6426` | `#C4A75A` |
 
@@ -416,5 +416,5 @@
 - 主题选择器 swatch：静态展示目标主题 accent。**当前实现已改为引用 token**
   （`ThemeConstants.VIBRANT_LIGHT_COLORS.accentBackground` 等，见 `SettingsPage` 主题卡），
   不再写字面 hex —— 此处曾描述为「保留字面 hex」，2026-10-12 核对代码后修正。
-  对应值 vibrant `#2E66C0` / forest `#3D7A55`（见 `ThemeConstants`），须与 themes 同步。
+  对应值 vibrant `#2B5EB2` / forest `#3D7A55`（见 `ThemeConstants`），须与 themes 同步。
 - `figma_neu` 主题：鸿蒙存量兼容项，非双端对齐目标。

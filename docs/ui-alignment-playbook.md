@@ -25,7 +25,7 @@
   覆盖 14 组直比映射 + 合成色规则（accent-soft/active 指示器预合成）。
 - **透明色陷阱**（防线演进的核心教训）：
   - 前端大量用 `rgba()` / `color-mix()` 表达「accent N% 叠加底色」；客户端常量只能写**预合成不透明 hex**。
-    公式：`blend = round(fg×a + bg×(1−a))`，例：accent #2E66C0 @0.13 over #F7FAFF = `#DDE7F7`。
+    公式：`blend = round(fg×a + bg×(1−a))`，例：accent #2B5EB2 @0.13 over #F7FAFF = `#DCE6F5`。
   - ArkTS 8 位 hex 是 **`#AARRGGBB`**（alpha 前置），与 CSS 的 `#RRGGBBAA` 相反——校验脚本与
     人眼 review 都要先换算通道，否则「看着一样」实际不同（本次抓出 `#00800000` 全透明遮罩 ×3 处）。
 - 字号/间距档位：客户端 `DesignConstants` 全档注释必须标注前端对应值
