@@ -110,6 +110,10 @@
 									<!-- 限宽截断：移动端该表实测仅剩 1px 余量（tableW 356 / wrap 358，全站复审
 									     S4-24），标签名变长即溢出；截断后表格宽度不再随标签名无限增长 -->
 									<span class="badge max-w-32 truncate bg-accent-soft text-accent-default">#{t.name}</span>
+									{#if t.is_blocked}
+										<!-- 已屏蔽态必须可见：否则与正常标签无从区分（全站复审 s4-22 的根因） -->
+										<span class="badge bg-danger-bg text-status-danger ring-1 ring-status-danger-border">已屏蔽</span>
+									{/if}
 								</td>
 								<td class={TD}>{t.usage_count}</td>
 								<td class={TD_SECONDARY}>{formatDateTime(t.created_at)}</td>
@@ -135,23 +139,35 @@
 	<Dialog.Root open={banTarget !== null} onOpenChange={(next) => (next ? undefined : (banTarget = null))}>
 		<Dialog.Content class="max-w-90 p-0">
 			<div class="px-5 pt-6 pb-4">
-				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">屏蔽标签 #{banTarget?.name}？</Dialog.Title>
+				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">
+					{banTarget?.is_blocked ? `解除屏蔽 #${banTarget?.name}？` : `屏蔽标签 #${banTarget?.name}？`}
+				</Dialog.Title>
 				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">
-					软屏蔽：该标签不再可被新建/搜索命中，历史数据保留不变。
+					{banTarget?.is_blocked
+						? '解除后该标签恢复可被新建/搜索命中；历史引用不受影响。'
+						: '软屏蔽：该标签不再可被新建/搜索命中，历史数据保留不变。'}
 				</Dialog.Description>
+				{#if !banTarget?.is_blocked}
 				<label class="mt-4 flex items-start gap-2.5 rounded-md border border-status-danger-border bg-danger-bg p-3">
 					<input type="checkbox" bind:checked={hardDelete} class="mt-0.5" />
 					<span class="text-xs leading-relaxed text-text-primary">
 						物理删除（不可逆）：从所有历史引用中移除该标签，删除后同名标签视为新标签可重新创建。
 					</span>
 				</label>
+				{/if}
 			</div>
+			<!-- 动作按当前态渲染（全站复审 s4-22）：此前「解除屏蔽」无条件出现，在正常标签上
+			     点它会发 no-op 请求并提示成功（spec tags/set_ban 对未屏蔽标签解屏蔽返回成功），
+			     误导操作者；现按 is_blocked 只给适用动作。 -->
 			<div class="flex justify-end gap-2 px-5 pb-5">
 				<Button type="button" variant="secondary" size="md" onclick={() => (banTarget = null)}>取消</Button>
-				<Button type="button" variant="secondary" size="md" disabled={pending} onclick={() => void unbanCurrent()}>解除屏蔽</Button>
-				<Button type="button" variant={hardDelete ? 'danger' : 'primary'} size="md" loading={pending} onclick={() => void submitBan(true)}>
-					{hardDelete ? '物理删除' : '确认屏蔽'}
-				</Button>
+				{#if banTarget?.is_blocked}
+					<Button type="button" variant="primary" size="md" loading={pending} onclick={() => void unbanCurrent()}>确认解除屏蔽</Button>
+				{:else}
+					<Button type="button" variant={hardDelete ? 'danger' : 'primary'} size="md" loading={pending} onclick={() => void submitBan(true)}>
+						{hardDelete ? '物理删除' : '确认屏蔽'}
+					</Button>
+				{/if}
 			</div>
 		</Dialog.Content>
 	</Dialog.Root>

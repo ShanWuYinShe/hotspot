@@ -178,6 +178,8 @@ type AdminTagItem struct {
 	Name       string `json:"name"`
 	UsageCount int    `json:"usage_count"`
 	CreatedAt  string `json:"created_at"`
+	// IsBlocked：标签是否已被软屏蔽（spec api_spec_admin.md tags/search）
+	IsBlocked bool `json:"is_blocked"`
 }
 
 type PaginatedAdminTags struct {

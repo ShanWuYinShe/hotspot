@@ -35,8 +35,9 @@ func (s *InMemoryModerationStore) SearchTags(_ context.Context, filter TagSearch
 	items := make([]TagRecord, 0, len(s.tags))
 	keyword := strings.ToLower(strings.TrimSpace(filter.Keyword))
 	for _, item := range s.tags {
+		// 已屏蔽标签仍返回，但带 is_blocked 标记（与 Postgres 实现同口径）
 		if _, blocked := s.blockedTags[item.Name]; blocked {
-			continue
+			item.IsBlocked = true
 		}
 		if keyword != "" && !strings.Contains(strings.ToLower(item.Name), keyword) {
 			continue

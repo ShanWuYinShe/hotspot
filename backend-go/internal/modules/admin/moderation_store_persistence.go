@@ -50,7 +50,7 @@ func (s *PersistenceModerationStore) SearchTags(ctx context.Context, filter TagS
 	items := make([]TagRecord, 0, limit+1)
 	for rows.Next() {
 		var item TagRecord
-		if err := rows.Scan(&item.Name, &item.UsageCount, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.Name, &item.UsageCount, &item.CreatedAt, &item.IsBlocked); err != nil {
 			return TagPage{}, err
 		}
 		item.CreatedAt = item.CreatedAt.UTC()

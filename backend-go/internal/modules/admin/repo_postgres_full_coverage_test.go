@@ -554,7 +554,8 @@ func TestAdminModerationStorePersistence(t *testing.T) {
 	ctx := context.Background()
 	// SearchTags：分页 + cursor
 	store := newAdminFullStore(&adminFullStub{queryRows: map[string][][]any{querySearchTags: {
-		{"tag3", 3, aTestTime}, {"tag2", 2, aTestTime}, {"tag1", 1, aTestTime},
+		// 第 4 列为 is_blocked（spec tags/search：已屏蔽标签仍返回并带标记）
+		{"tag3", 3, aTestTime, false}, {"tag2", 2, aTestTime, true}, {"tag1", 1, aTestTime, false},
 	}}})
 	page, err := store.SearchTags(ctx, TagSearchFilter{Keyword: "tag", Limit: 2, Cursor: &tagCursor{Name: "tag1", UsageCount: 1, CreatedAt: aTestTime}})
 	if err != nil || len(page.Items) != 2 {
@@ -562,7 +563,7 @@ func TestAdminModerationStorePersistence(t *testing.T) {
 	}
 	// 无 cursor → Next
 	store = newAdminFullStore(&adminFullStub{queryRows: map[string][][]any{querySearchTags: {
-		{"tag3", 3, aTestTime}, {"tag2", 2, aTestTime}, {"tag1", 1, aTestTime},
+		{"tag3", 3, aTestTime, false}, {"tag2", 2, aTestTime, true}, {"tag1", 1, aTestTime, false},
 	}}})
 	page, err = store.SearchTags(ctx, TagSearchFilter{Keyword: " tag ", Limit: 2})
 	if err != nil || len(page.Items) != 2 || page.Next == nil {
@@ -575,7 +576,7 @@ func TestAdminModerationStorePersistence(t *testing.T) {
 	}
 	// rows.Err
 	store = newAdminFullStore(&adminFullStub{queryCustomRows: map[string]persistence.Rows{
-		querySearchTags: &adminRowsErrValues{rows: [][]any{{"tag1", 1, aTestTime}}, err: errors.New("tail")},
+		querySearchTags: &adminRowsErrValues{rows: [][]any{{"tag1", 1, aTestTime, false}}, err: errors.New("tail")},
 	}})
 	if _, err := store.SearchTags(ctx, TagSearchFilter{}); err == nil {
 		t.Fatal("search tags tail error must propagate")

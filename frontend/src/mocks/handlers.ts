@@ -190,6 +190,16 @@ function authFormScenarioError() {
   }
 }
 
+/** 标签管理 mock 状态（可被 set_ban 修改，供 dev 联调屏蔽/解屏蔽闭环） */
+const mockAdminTags = [
+  { name: "摄影", usage_count: 128, tag_id: "tag_1", created_at: "2026-01-01T00:00:00Z", is_blocked: false },
+  { name: "旅行", usage_count: 96, tag_id: "tag_2", created_at: "2026-01-01T00:00:00Z", is_blocked: false },
+  { name: "音乐", usage_count: 74, tag_id: "tag_3", created_at: "2026-01-01T00:00:00Z", is_blocked: false },
+  { name: "美食", usage_count: 65, tag_id: "tag_4", created_at: "2026-01-01T00:00:00Z", is_blocked: false },
+  { name: "刷单", usage_count: 12, tag_id: "tag_5", created_at: "2026-06-01T00:00:00Z", is_blocked: true },
+  { name: "代开发票", usage_count: 3, tag_id: "tag_6", created_at: "2026-06-15T00:00:00Z", is_blocked: false },
+];
+
 export const handlers = [
   // ── Auth ───────────────────────────────────────────
   http.post(`${PUBLIC_API}/auth/signin`, () => loginScenarioError() ?? authOkResponse()),
@@ -957,15 +967,17 @@ http.post(`${API}/moments/fetch_created`, () => {
   }),
   http.post(`${ADMIN_API}/reports/judge`, () => requireMockAuth() ?? json(apiOk(null))),
 
-  http.post(`${ADMIN_API}/tags/search`, () => requireMockAuth() ?? json(paginated([
-    { name: "摄影", usage_count: 128, tag_id: "tag_1", created_at: "2026-01-01T00:00:00Z" },
-    { name: "旅行", usage_count: 96, tag_id: "tag_2", created_at: "2026-01-01T00:00:00Z" },
-    { name: "音乐", usage_count: 74, tag_id: "tag_3", created_at: "2026-01-01T00:00:00Z" },
-    { name: "美食", usage_count: 65, tag_id: "tag_4", created_at: "2026-01-01T00:00:00Z" },
-    { name: "刷单", usage_count: 12, tag_id: "tag_5", created_at: "2026-06-01T00:00:00Z" },
-    { name: "代开发票", usage_count: 3, tag_id: "tag_6", created_at: "2026-06-15T00:00:00Z" },
-  ]))),
-  http.post(`${ADMIN_API}/tags/set_ban`, () => requireMockAuth() ?? json(apiOk(null))),
+  // 标签管理列表：**包含已屏蔽标签**并带 is_blocked（spec tags/search「屏蔽标签的可见性」），
+  // 「刷单」预置为已屏蔽，便于联调「解除屏蔽」流程；set_ban 真正改这份状态（有状态 mock）。
+  http.post(`${ADMIN_API}/tags/search`, () => requireMockAuth() ?? json(paginated(mockAdminTags.map((t) => ({ ...t }))))),
+  http.post(`${ADMIN_API}/tags/set_ban`, async ({ request }) => {
+    const unauthorized = requireMockAuth();
+    if (unauthorized) return unauthorized;
+    const body = (await request.json()) as { name?: string; active?: boolean } | null;
+    const target = mockAdminTags.find((t) => t.name === body?.name);
+    if (target) target.is_blocked = body?.active === true;
+    return json(apiOk(null));
+  }),
 
   http.post(`${ADMIN_API}/announcements/fetch`, () => requireMockAuth() ?? json(paginated([
     { announcement_id: "ann_2", title: "社区规范更新", content: "《社区规范》 v2.1 已生效，请留意点赞与评论的新约定。", severity: "warning", action_url: "https://hotspot.app/terms", created_at: "2026-08-20T10:00:00Z", created_by: mockUsers[0], send_push: true, push_sent_at: "2026-08-20T10:05:00Z", view_count: 1520 },

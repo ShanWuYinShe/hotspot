@@ -13,6 +13,9 @@ type TagRecord struct {
 	Name       string
 	UsageCount int
 	CreatedAt  time.Time
+	// IsBlocked 标记该标签是否在 admin_blocked_tags 中（软屏蔽）。管理端据此
+	// 渲染「屏蔽 / 解除屏蔽」中的适用动作（spec tags/search is_blocked）。
+	IsBlocked bool
 }
 
 type TagPage struct {

@@ -34,7 +34,7 @@ func (s *Service) SearchTags(ctx context.Context, req AdminTagSearchRequest) (Pa
 	}
 	resp := PaginatedAdminTags{Items: make([]AdminTagItem, 0, len(page.Items))}
 	for _, item := range page.Items {
-		resp.Items = append(resp.Items, AdminTagItem{TagID: "tag_" + item.Name, Name: item.Name, UsageCount: item.UsageCount, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339)})
+		resp.Items = append(resp.Items, AdminTagItem{TagID: "tag_" + item.Name, Name: item.Name, UsageCount: item.UsageCount, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339), IsBlocked: item.IsBlocked})
 	}
 	if page.Next != nil {
 		c := encodeTagCursor(*page.Next)

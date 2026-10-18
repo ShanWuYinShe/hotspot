@@ -737,7 +737,10 @@ func TestSearchTagsAndSetTagBan(t *testing.T) {
 	searchAfterRR := httptest.NewRecorder()
 	handler.SearchTags(searchAfterRR, searchAfterReq)
 	searchAfterResp := decodeResponse[PaginatedAdminTags](t, searchAfterRR)
-	if searchAfterResp.Code != 0 || searchAfterResp.Data == nil || len(searchAfterResp.Data.Items) != 0 {
+	// 契约（spec tags/search「屏蔽标签的可见性」）：屏蔽后标签**仍出现在列表**，
+	// 只是带 is_blocked=true —— 若从列表排除，管理端将无法再选中它解屏蔽。
+	if searchAfterResp.Code != 0 || searchAfterResp.Data == nil || len(searchAfterResp.Data.Items) != 1 ||
+		searchAfterResp.Data.Items[0].Name != "hotspot" || !searchAfterResp.Data.Items[0].IsBlocked {
 		t.Fatalf("unexpected search-after-ban response: %#v", searchAfterResp)
 	}
 
@@ -762,7 +765,8 @@ func TestSearchTagsAndSetTagBan(t *testing.T) {
 	searchUnbanRR := httptest.NewRecorder()
 	handler.SearchTags(searchUnbanRR, searchUnbanReq)
 	searchUnbanResp := decodeResponse[PaginatedAdminTags](t, searchUnbanRR)
-	if searchUnbanResp.Code != 0 || searchUnbanResp.Data == nil || len(searchUnbanResp.Data.Items) != 1 {
+	if searchUnbanResp.Code != 0 || searchUnbanResp.Data == nil || len(searchUnbanResp.Data.Items) != 1 ||
+		searchUnbanResp.Data.Items[0].IsBlocked {
 		t.Fatalf("unexpected search-after-unban response: %#v", searchUnbanResp)
 	}
 

@@ -826,6 +826,9 @@ interface JudgeAdminReportRequest {
 
 - **权限**: `admin.tags.read`
 - **排序**: 默认按照 `usage_count DESC` 排序，数值相同以 `name ASC` 作为稳定 tie-breaker；一致性级别为弱一致。
+- **屏蔽标签的可见性（重要）**：结果**包含已被屏蔽的标签**（`is_blocked=true`），因为本端点是标签管理的唯一列表入口——
+  若把已屏蔽标签排除在结果外，管理端将无法再选中它执行解屏蔽（屏蔽成为不可逆的单向操作）。
+  已屏蔽标签的历史引用保留（软屏蔽），故 `usage_count` 仍为其真实引用数。
 
 **Request**: `SearchAdminTagsRequest`
 ```typescript
@@ -841,6 +844,8 @@ interface SearchAdminTagsRequest {
 interface AdminTagItem extends TagItem {
   tag_id: string;        // 标签唯一标识（内部存储标识，仅用于展示/审计关联，不参与删除寻址）
   created_at: string;
+  is_blocked: boolean;   // 是否已被屏蔽（软屏蔽：不再可被新建/搜索命中，历史引用保留）；
+                         // 管理端据此只渲染当前适用的动作（屏蔽 / 解除屏蔽）
 }
 ```
 

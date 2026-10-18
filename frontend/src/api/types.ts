@@ -1533,6 +1533,9 @@ export interface AdminReportItem extends ReportItem {
 export interface AdminTagItem extends TagItem {
 	tag_id: string;
 	created_at: string;
+	/** 是否已被软屏蔽（spec api_spec_admin.md tags/search）：管理端据此渲染
+	 *  「屏蔽 / 解除屏蔽」中当前适用的动作；列表**包含**已屏蔽标签。 */
+	is_blocked: boolean;
 }
 
 export interface SystemAnnouncementItem {
