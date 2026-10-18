@@ -213,3 +213,69 @@ hdc shell "cat /data/local/tmp/y.jpeg" > shot.jpeg
 回到「个人中心需要登录」态，需重新 快速体验 → 开始体验。走查批次尽量在同一
 时效窗口内完成；「开始体验」按钮坐标每次以 dump 定位（弹层出现位置稳定在
 y≈2358，但勿硬编码——曾在 2255 点空）。
+
+## 模拟器环境坑（2026-10-18 实测，走查「登录 → 附近群组 → 加入」链路时连撞）
+
+### 1. 实例目录又被沙盒拦（skill 上文「已放行直启」的说法已过期）
+
+`Emulator -start "Pura 90 Pro"` 报
+`Error opening logfile /Users/liyou/.Huawei/Emulator/deployed/Pura 90 Pro/Log//qemu.log: Operation not permitted`
+且**进程直接没起来**（`pgrep -f Emulator` 为空）——但 hdc 可能仍留 `127.0.0.1:5555 Offline` 僵尸条目，
+别把它当"模拟器在启动中"等下去。实测实例目录 `touch` 也是 `Operation not permitted`。
+
+解法即上文历史方案（`cp -c -R` 克隆实例到 `.workwork/emu-instance` + 改 config.ini 三处路径 +
+`-start <名> -instancePath <父目录>`），2026-10-18 复测有效，约 25s 起、`hdc list targets -v` 见 Connected。
+
+### 2. 热启动快照会带回上次会话的 8888 反向转发（rport 建不上）
+
+克隆实例 `isHotBoot=true`，RAM 快照里 `hdcd` 仍持有上次会话 rport 的监听：
+
+- `hdc rport tcp:8888 tcp:8888` → `[Fail]TCP Port listen failed at 8888`
+- `hdc shell "netstat -tlnp | grep 8888"` → `127.0.0.1:8888 LISTEN`（占用者就是 `hdcd` PID 992）
+- 该残留监听**不再转发**：app 打 127.0.0.1:8888 会 15s 超时（hilog 里 `tcpConnE:115`、`lastRecvE:0`）
+
+**解法（实测）**：`hdc shell reboot` → 等 `Connected` → 再 `rport tcp:8888 tcp:8888` 即 OK
+（冷启动清掉残留套接字）。别用 `rport tcp:8899 tcp:8888` 绕——app 的 `DEV_SERVER` 固定
+`http://127.0.0.1:8888`，且 `server_base_url` 偏好**没有 UI 写入入口**、shell 非 root 改不了
+app 沙箱内的 preferences 文件（属主是 app uid，权限 660）。
+
+连通性判据（设备内无 curl）：app 起来后
+`hdc shell "hilog -x | grep A0FF08 | grep -E '响应 code|请求成功'"` 出现 `响应 code=0 (55ms)` 即通。
+
+### 3. 重启后 Asset Store 可能「file operation failed」→ 卸载重装即恢复
+
+`hdc shell reboot` 后 app 读 token 报
+`TokenAssetStore: Failed to get asset geotalk_current_access: Error: The file operation failed.`
+（区别于正常的 `The asset is not found.`）。
+`hdc uninstall com.lsyb.social` + `install` 后恢复正常（错误回到 `not found` 常态）。
+
+### 4. 本机模拟器**无法走通登录链路**（阻断端上验证的硬限制，2026-10-18）
+
+- 点击「登录 / 注册」或「快速体验」后页面**全白**：`dumpLayout` 只有状态栏 5 个节点，
+  截图只有状态栏 + 返回箭头；`LoginPage.build()` 本身无渲染门控，属渲染层失败。
+- 首页/消息 Tab 等**常驻 Tab 页正常**（文本节点齐全、网络 200）；**推入式页面（登录、地图选择器）白屏**。
+- 同期日志：`智能服务初始化失败: Error: 初始化分布式同步服务失败: {"code":15100003}` 每 10s 重试；
+  定位恒失败 `3301100 The location switch is off`（`locationhub/FenceExtension CONNECT_ABILITY_FAILED`）。
+
+→ **结论**：该实例上「登录 → 进附近群组 → 点加入」链路不可达，需要真机（`hdc tconn`）或换/修复模拟器实例
+再补端上验证。别在此环境里反复重试登录页。
+
+### 5. 无定位也能造出「附近群组」验证数据（本轮实用技巧）
+
+app 的 `browse_anchor` 为 (0,0) 时启动即被丢弃（日志「持久化浏览锚点无效(如 (0,0))，丢弃」），
+回退 `currentLocation`；模拟器定位关闭 → reference_point 为 null。
+而 `groups/search` **不走**第 3 级默认位置兜底（实测无 reference_point 时返回 0 条），
+需命中第 2 级：`POST /api/v1/users/update_location`（仅 `/api/v1` 登录请求命中本环）。
+
+```bash
+# 1) 给走查账号注入位置（服务端默认位置：35.154922, 112.682524「南天门」）
+curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"location":{"point":{"latitude":35.154922,"longitude":112.682524},"location_name":"南天门"}}'
+# 2) 用另一账号在该坐标建群（Idempotency-Key 必须是 {UUID}-{13位ms}-{8位随机}，见 spec/api_spec_base.md）
+#    → 之后 app（登录同账号、无锚点）的附近群组即可看到这些群，距离 0m
+```
+
+已按此造好两个走查群：**走查群A-改前**（`group_553935e9eada256e4091f266`）、
+**走查群B-改后**（`group_2fa2449f039e11f8845d5e80`），均为 `uitest_admin` 所有、`direct` 入群、
+位于默认位置；uitest_a 未加入，可直接用于「加入态刷新」的端上复核。
