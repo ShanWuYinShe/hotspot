@@ -109,17 +109,19 @@
      单图保持全幅封面；多图改为网格（首图全幅 + 其余 3 列网格，点击任一张打开大图查看器）。 -->
 {#if cover}
 	<div class="relative overflow-hidden -mx-page-gutter h-cover-height-lg">
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-		<img
-			src={cover}
-			alt="动态图片"
-			class="w-full h-full object-cover cursor-zoom-in"
+		<!-- 打开大图必须是可聚焦控件：此前是 <img onclick>（无 role/tabindex/键盘路径/焦点环，
+		     键盘与读屏用户无法打开大图，全站复审 s2-11）。改 button 包裹，图片自身不再承接交互。 -->
+		<button
+			type="button"
+			class="block h-full w-full cursor-zoom-in focus-ring"
+			aria-label="查看大图"
 			onclick={() => {
 				viewerIndex = 0;
 				viewerOpen = true;
 			}}
-		/>
+		>
+			<img src={cover} alt="动态图片" class="w-full h-full object-cover" />
+		</button>
 		{#if moment.images.length > 1}
 			<button
 				type="button"
@@ -137,18 +139,17 @@
 	{#if moment.images.length > 1}
 		<div class="mt-0.5 grid grid-cols-3 gap-0.5">
 			{#each moment.images.slice(1) as img, i (img + i)}
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-				<img
-					src={img}
-					alt={`动态图片 ${i + 2}`}
-					loading="lazy"
-					class="aspect-square w-full object-cover cursor-zoom-in"
+				<button
+					type="button"
+					class="aspect-square w-full overflow-hidden focus-ring"
+					aria-label={`查看第 ${i + 2} 张图片`}
 					onclick={() => {
 						viewerIndex = i + 1;
 						viewerOpen = true;
 					}}
-				/>
+				>
+					<img src={img} alt="动态图片" class="aspect-square w-full object-cover cursor-zoom-in" />
+				</button>
 			{/each}
 		</div>
 	{/if}

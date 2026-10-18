@@ -65,14 +65,24 @@
 					<Avatar src={item.avatar} name={item.user} size="xs" style="border:var(--cst-border-width-regular) solid var(--cst-border-card-menu);" />
 					<span class="truncate text-sm text-text-primary font-semibold">{item.user || '匿名用户'}</span>
 				{/if}
-				{#if item.location}
-					<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-xxs text-text-secondary">
-						<MapPin class="size-2.5 shrink-0 text-text-secondary" strokeWidth={1.5} />
-						{item.location}
-					</span>
-				{:else if item.time}
-					<span class="ml-auto flex min-w-0 items-center gap-0.5 truncate text-xxs text-text-secondary">
-						{item.time}
+				<!-- 位置与时间并列渲染（全站复审 s3 P2-7）：此前 time 只在「无位置」的
+				     {:else if} 兜底分支里，而个人中心的 location 又兜了账号位置 →
+				     location 恒真、发布时间永不渲染。两者都是有效元信息，改为同时展示：
+				     位置可截断、时间不压缩（tabular-nums 对齐）。 -->
+				{#if item.location || item.time}
+					<span class="ml-auto flex min-w-0 items-center gap-1 text-xxs text-text-secondary">
+						{#if item.location}
+							<span class="flex min-w-0 items-center gap-0.5 truncate">
+								<MapPin class="size-2.5 shrink-0" strokeWidth={1.5} />
+								{item.location}
+							</span>
+						{/if}
+						{#if item.location && item.time}
+							<span class="opacity-dim" aria-hidden="true">·</span>
+						{/if}
+						{#if item.time}
+							<span class="shrink-0 tabular-nums">{item.time}</span>
+						{/if}
 					</span>
 				{/if}
 			</div>

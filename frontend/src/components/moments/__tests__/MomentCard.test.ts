@@ -45,4 +45,36 @@ describe('MomentCard', () => {
 		// 评论计数点击进入动态详情（评论区在详情页内）
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
+	// 回归守卫（全站复审 s3 P2-7）：时间此前只在「无位置」的 {:else if} 兜底分支里，
+	// 而个人中心给 location 兜了账号位置 → 发布时间永不渲染。位置与时间必须同时可见。
+	// 注：上面的 item 是 `as never`，不能 spread，这里显式构造。
+	const cardItem = (extra: Record<string, unknown>) =>
+		({
+			id: 'm1',
+			tag: '城市',
+			user: '鹿鸣',
+			avatar: '',
+			location: '回龙窝',
+			content: '城市里那些安静的角落',
+			image: '',
+			images: [],
+			likes: 12,
+			comments: 3,
+			...extra
+		}) as never;
+
+	it('位置与时间同时存在时两者都渲染', () => {
+		render(MomentCard, {
+			props: { item: cardItem({ time: '2026-09-03 23:59' }), liked: false, saved: false, onLike: () => {}, onSave: () => {} }
+		});
+		expect(screen.getByText('回龙窝')).toBeTruthy();
+		expect(screen.getByText('2026-09-03 23:59')).toBeTruthy();
+	});
+
+	it('无位置时仍单独渲染时间（兜底语义保留）', () => {
+		render(MomentCard, {
+			props: { item: cardItem({ location: '', time: '2026-09-03 23:59' }), liked: false, saved: false, onLike: () => {}, onSave: () => {} }
+		});
+		expect(screen.getByText('2026-09-03 23:59')).toBeTruthy();
+	});
 });

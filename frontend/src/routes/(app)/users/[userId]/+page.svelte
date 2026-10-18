@@ -14,6 +14,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import { openTheDoor, follow, block, createReport, setRemark , netError } from '@/api';
+	import { auth } from '@/stores/auth.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
@@ -66,6 +67,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let shareCopied = $state(false);
 
 	const uid = $derived(params.userId ?? '');
+
+	// 自己看自己（mock 登录用户即 user_lumos）：此前仍显示「私信/关注/更多操作」，
+	// 甚至能把「关注」点成功、把「备注」写到自己头上（全站复审 s2-19）。
+	// 自己的资料页不发关系动作——改资料走 /me/edit（入口在个人中心）。
+	const isSelf = $derived(!!uid && auth.user?.user_id === uid);
 
 	$effect(() => {
 		void reloadKey;
@@ -380,14 +386,16 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} size={42} />
 		<div class="flex gap-2">
 			<ActionIconButton icon={Share2} label={shareCopied ? '链接已复制' : '分享资料'} onClick={copyProfileLink} />
-			<ActionIconButton
-				icon={MoreHorizontal}
-				label="更多操作"
-				onClick={() => {
-					remarkDraft = remark;
-					moreOpen = true;
-				}}
-			/>
+			{#if !isSelf}
+				<ActionIconButton
+					icon={MoreHorizontal}
+					label="更多操作"
+					onClick={() => {
+						remarkDraft = remark;
+						moreOpen = true;
+					}}
+				/>
+			{/if}
 		</div>
 	</div>
 
@@ -407,7 +415,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					</div>
 
 					<!-- Action buttons（桌面/平板在头像旁；移动端下沉为底部操作条，见 footer snippet） -->
-					{#if platform.platform !== 'mobile'}
+					{#if platform.platform !== 'mobile' && !isSelf}
 					<div class="flex shrink-0 gap-2 pb-1">
 						<button
 							type="button"
@@ -513,7 +521,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	<!-- 移动端底部操作条：主操作（私信/关注）下沉拇指热区，桌面/平板使用头部按钮 -->
 	{#snippet footer()}
-		{#if platform.platform === 'mobile' && !blocked}
+		{#if platform.platform === 'mobile' && !blocked && !isSelf}
 			<div
 				class="flex gap-3 border-t border-border-default px-4 pt-2.5"
 				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));-webkit-backdrop-filter:blur(var(--cst-blur-md));padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
