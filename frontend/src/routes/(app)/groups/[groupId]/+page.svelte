@@ -256,7 +256,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = true)} variant="overlay" tone="inverse" />
 		</div>
 		<div class="absolute bottom-5 left-6 right-6">
-			<span class="inline-flex h-6 items-center justify-center rounded-full bg-surface-glass-badge px-2.5 text-xs font-medium leading-none text-content-inverse backdrop-blur-[var(--cst-blur-sm)]">{gd.detail.category}</span>
+			<span class="inline-flex h-6 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2.5 text-xs font-medium leading-none text-content-inverse backdrop-blur-[var(--cst-blur-sm)]"><!-- 分类胶囊底色用 media-scrim-strong（0.55 黑）而非 glass-badge（0.18 白）：
+			     白字压 0.18 白玻璃在亮封面区实测仅 4.16:1（需 4.5，84.9% 字形像素不达标），
+					且与 GroupCard/SectionGroups/MomentCard 的深色遮罩语言一致 -->
+				{gd.detail.category}</span>
 			<h1 class="mt-3 text-2xl md:text-3xl font-medium tracking-title text-content-inverse">{gd.detail.name}</h1>
 		</div>
 	</div>
