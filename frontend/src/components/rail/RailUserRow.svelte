@@ -19,10 +19,13 @@
 	} = $props();
 </script>
 
-<div class="flex items-center gap-2.5 rounded-sm {onClick ? 'hover-bg cursor-pointer' : ''}">
+<!-- hover 底色挂在**可点元素本体**上，不挂到含 trailing 动作的行容器：挂容器会让高亮吞掉
+     trailing（如动态详情「作者」行的「私信」pill），与之形成「12px 圆角矩形 + full 圆角 pill」
+     的同心嵌套，且两者同为 accent 系近似透明度会叠成脏色（2026-10-18 实测反馈）。 -->
+<div class="flex items-center gap-2.5">
 	<button
 		type="button"
-		class="tap-97 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-sm focus-ring {onClick ? '' : 'cursor-default focus-visible:outline-none'}"
+		class="tap-97 flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-sm focus-ring {onClick ? 'hover-bg cursor-pointer' : 'cursor-default focus-visible:outline-none'}"
 		disabled={!onClick}
 		onclick={onClick}
 	>

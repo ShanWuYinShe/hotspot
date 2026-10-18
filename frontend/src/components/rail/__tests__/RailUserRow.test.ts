@@ -26,4 +26,21 @@ describe('RailUserRow', () => {
 		await fireEvent.click(screen.getByRole('button'));
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
+
+	// 回归守卫：hover 底色必须长在可点元素本体上。曾挂在行容器上，导致 trailing 动作
+	//（动态详情「作者」行的「私信」pill）被高亮吞掉，形成圆角嵌套 + 同色叠加的脏效果。
+	it('hover 底色归属于可点元素本体，不写在行容器上', () => {
+		render(RailUserRow, { props: { avatar: 'x', name: '鹿鸣', onClick: vi.fn() } });
+		const btn = screen.getByRole('button');
+		expect(btn.className).toContain('hover-bg');
+		expect(btn.className).toContain('cursor-pointer');
+		expect(btn.parentElement?.className ?? '').not.toContain('hover-bg');
+	});
+
+	it('不可点击的行不出现任何 hover 底色', () => {
+		render(RailUserRow, { props: { avatar: 'x', name: '鹿鸣' } });
+		const btn = screen.getByRole('button');
+		expect(btn.className).not.toContain('hover-bg');
+		expect(btn.parentElement?.className ?? '').not.toContain('hover-bg');
+	});
 });
