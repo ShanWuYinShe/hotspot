@@ -6,6 +6,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import MetricRow from '@/components/data-display/MetricRow.svelte';
 import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
@@ -113,16 +114,9 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					</button>
 				</div>
 			</div>
-			<!-- 统计横条：仅保留顶部分隔线，列间用留白（竖线在小屏三列里显得切割局促）。
-			     数字 display 化（大号粗体 + 紧字距），对齐 Figma stats 模式 -->
-			<div class="grid grid-cols-3 border-t border-border-default">
-				{#each statsList as stat}
-					<div class="px-4 py-3.5 text-center">
-						<p class="text-2xl font-semibold tabular-nums tracking-tight text-text-primary">{stat.value}</p>
-						<p class="mt-0.5 text-xs text-text-secondary">{stat.label}</p>
-					</div>
-				{/each}
-			</div>
+			<!-- 统计横条：复用 MetricRow 原语（与桌面 ProfilePage / 用户详情同一实现，
+			     原自绘 24px 数字与全站 20px 指标档漂移） -->
+			<MetricRow class="border-t border-border-default" items={statsList.map((s) => ({ label: s.label, value: s.value }))} />
 		</section>
 
 		<!-- 个人数据 5 行链接（唯一分组卡 ListContainer bordered：内缩圆角行） -->

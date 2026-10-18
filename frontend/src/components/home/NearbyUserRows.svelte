@@ -41,7 +41,7 @@
 		description={emptyHint}
 	>
 		{#snippet icon()}
-			<Users size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
+			<Users size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
 		{/snippet}
 	</EmptyState>
 {:else if columns === 2}

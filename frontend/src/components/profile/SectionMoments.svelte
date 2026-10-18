@@ -108,7 +108,7 @@
 		<!-- 空态 -->
 		<EmptyState title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。">
 			{#snippet icon()}
-				<Grid3X3 size={20} />
+				<Grid3X3 size={24} />
 			{/snippet}
 			{#snippet action()}
 				{#if activeTab === 'posts'}

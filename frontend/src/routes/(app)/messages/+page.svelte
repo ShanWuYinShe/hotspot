@@ -280,7 +280,7 @@
 					{#snippet below()}
 						{#if !needsAuth}
 						<div class="mt-3">
-							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="px-3 py-2" textClass="text-sm" />
+							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="px-3 py-2.5" textClass="text-sm" />
 						</div>
 						{/if}
 					{/snippet}
@@ -372,7 +372,8 @@
 	<!-- ═══ Mobile Messages ═══ -->
 	<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
 		<!-- 同上：登记例外（surface-primary 面板实底，见左栏说明）。 -->
-		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} subtitleSize="sm">
+		<!-- gutter 走 --cst-page-gutter token（移动 16px）；页头/正文不再硬编码 px-4 -->
+		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'}>
 			{#snippet trailing()}
 				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排；
 				     未登录隐藏无效控件（对齐桌面分栏守卫；Gemini UI 审查 r24） -->
@@ -381,7 +382,8 @@
 					{#if totalUnread > 0}
 						<span class="text-text-secondary text-xs">{totalUnread} 条未读</span>
 					{:else}
-						<span class="text-status-online text-xs">全部已读</span>
+						<!-- 全零态用中性灰（status-online 绿是「在线」语义，不作正向文案） -->
+						<span class="text-text-secondary text-xs">全部已读</span>
 					{/if}
 					<button
 						type="button"
@@ -407,15 +409,15 @@
 			{/snippet}
 		</PageHeader>
 
-		<div class="animate-fade-in flex flex-col flex-1 pb-8 bg-surface-primary">
+		<div class="animate-fade-in flex flex-col flex-1 pb-6 bg-surface-primary">
 			{#if onlineChats.length > 0}
-				<div class="px-4 pt-2">
+				<div class="px-[var(--cst-page-gutter)] pt-2">
 					<OnlineStrip chats={onlineChats} onSelect={(c) => void goto(ROUTES.message(c.peerUserId || c.id))} />
 				</div>
 			{/if}
 
 			{#if !needsAuth}
-			<div class="px-4 mt-3 mb-1.5">
+			<div class="px-[var(--cst-page-gutter)] mt-3 mb-1.5">
 				<p class="eyebrow">最近</p>
 			</div>
 			{/if}

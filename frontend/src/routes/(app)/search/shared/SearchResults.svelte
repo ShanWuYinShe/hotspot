@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Search as SearchIcon, Users, FileText, Hash, ArrowUpRight } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
@@ -12,6 +13,8 @@
 
 	// 搜索页「有查询结果态」：Tab 栏 + 用户/动态/话题结果组。
 	// 页面私有组件（colocate），由 search/+page.svelte 渲染。
+	// 结果组外壳（卡片 + 图标组头 + 连接列表）由 resultGroup snippet 统一承载
+	// （此前 4 组逐字复制同一段壳，任何样式调整要改 4 处）。
 
 	export type TabType = 'all' | 'people' | 'posts' | 'groups' | 'topics';
 
@@ -101,22 +104,25 @@
 		<InlineLoading label="搜索中…" />
 	{:else if !hasResults || tabEmpty}
 		<!-- 空态统一 EmptyState（对齐全局空态契约） -->
-		<EmptyState iconSize={56} title={`没有找到“${query}”`} description="换个关键词再试试。">
+		<EmptyState title={`没有找到“${query}”`} description="换个关键词再试试。">
 			{#snippet icon()}
-				<SearchIcon class="size-5.5 text-text-secondary" strokeWidth={1.5} />
+				<SearchIcon class="size-6 text-text-secondary" strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
 	{:else}
+		{#snippet resultGroup(title: string, Icon: typeof Users, rows: Snippet)}
+			<section class="overflow-hidden rounded-lg border border-border-default bg-surface-primary">
+				<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
+					<Icon class="size-4 text-accent-default" strokeWidth={1.75} />
+					<h2 class="text-md font-semibold text-text-primary">{title}</h2>
+				</div>
+				{@render rows()}
+			</section>
+		{/snippet}
 		<div class="mt-5 grid gap-5 xl:grid-cols-2">
 			{#if (tab === 'all' || tab === 'people') && results.users.length > 0}
 				<!-- 用户结果组 -->
-				<section
-					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
-				>
-					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
-						<Users class="size-4 text-accent-default" strokeWidth={1.75} />
-						<h2 class="text-md font-semibold text-text-primary">用户</h2>
-					</div>
+				{#snippet userRows()}
 					<ListContainer>
 						{#each results.users as person (person.user_id)}
 							<ListItem
@@ -135,18 +141,13 @@
 							</ListItem>
 						{/each}
 					</ListContainer>
-				</section>
+				{/snippet}
+				{@render resultGroup('用户', Users, userRows)}
 			{/if}
 
 			{#if (tab === 'all' || tab === 'posts') && results.moments.length > 0}
 				<!-- 动态结果组（补缩略图，对齐 Figma size-10 image） -->
-				<section
-					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
-				>
-					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
-						<FileText class="size-4 text-accent-default" strokeWidth={1.75} />
-						<h2 class="text-md font-semibold text-text-primary">动态</h2>
-					</div>
+				{#snippet momentRows()}
 					<ListContainer>
 						{#each results.moments as moment (moment.moment_id)}
 							<ListItem
@@ -174,18 +175,13 @@
 							</ListItem>
 						{/each}
 					</ListContainer>
-				</section>
+				{/snippet}
+				{@render resultGroup('动态', FileText, momentRows)}
 			{/if}
 
 			{#if (tab === 'all' || tab === 'groups') && results.groups.length > 0}
 				<!-- 群组结果组（复用用户组同款行语言：Avatar 圆角区分群组 + ArrowUpRight） -->
-				<section
-					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
-				>
-					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
-						<Users class="size-4 text-accent-default" strokeWidth={1.75} />
-						<h2 class="text-md font-semibold text-text-primary">群组</h2>
-					</div>
+				{#snippet groupRows()}
 					<ListContainer>
 						{#each results.groups as group (group.group_id)}
 							<ListItem
@@ -204,18 +200,13 @@
 							</ListItem>
 						{/each}
 					</ListContainer>
-				</section>
+				{/snippet}
+				{@render resultGroup('群组', Users, groupRows)}
 			{/if}
 
 			{#if (tab === 'all' || tab === 'topics') && results.topics.length > 0}
 				<!-- 话题结果组 -->
-				<section
-					class="overflow-hidden rounded-lg border border-border-default bg-surface-primary"
-				>
-					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
-						<Hash class="size-4 text-accent-default" strokeWidth={1.75} />
-						<h2 class="text-md font-semibold text-text-primary">话题</h2>
-					</div>
+				{#snippet topicRows()}
 					<ListContainer>
 						{#each results.topics as topic (topic)}
 							<ListItem
@@ -229,7 +220,8 @@
 							</ListItem>
 						{/each}
 					</ListContainer>
-				</section>
+				{/snippet}
+				{@render resultGroup('话题', Hash, topicRows)}
 			{/if}
 		</div>
 	{/if}

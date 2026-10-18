@@ -94,7 +94,7 @@
 							value={relSearch}
 							onChange={(v) => (relSearch = v)}
 							placeholder={activeTab === 'friends' ? '搜索好友…' : activeTab === 'following' ? '搜索关注…' : activeTab === 'fans' ? '搜索粉丝…' : '搜索黑名单…'}
-							class="px-3 py-2"
+							class="px-3 py-2.5"
 						/>
 					</div>
 				{/if}

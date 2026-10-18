@@ -288,7 +288,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						description={anchor ? '正在按你设置的浏览位置筛选 5km 范围。' : undefined}
 					>
 						{#snippet icon()}
-							<Users size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
+							<Users size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
 						{/snippet}
 						{#snippet action()}
 							{#if anchor}

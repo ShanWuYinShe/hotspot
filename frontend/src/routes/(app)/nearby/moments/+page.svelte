@@ -382,7 +382,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<!-- 关注流空态：与「附近无内容」区分，指引用户先去关注 -->
 			<EmptyState title="关注的人还没有发布动态" description="去附近的人页关注感兴趣的用户，动态会出现在这里。">
 				{#snippet icon()}
-					<Sparkles size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
+					<Sparkles size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
 				{/snippet}
 			</EmptyState>
 		{/if}
@@ -393,7 +393,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	{:else}
 		<EmptyState title="附近暂时没有瞬间">
 			{#snippet icon()}
-				<Sparkles size={28} color="var(--cst-text-secondary)" class="opacity-subtle" />
+				<Sparkles size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
 			{/snippet}
 		</EmptyState>
 	{/if}

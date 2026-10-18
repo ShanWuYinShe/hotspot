@@ -280,18 +280,13 @@
 		inputClass="w-full"
 	>
 		{#snippet labelSnippet()}
-			<div class="flex items-center gap-1.5">
-				<User class="size-3.5 text-accent-default" strokeWidth={1.75} />
-				<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-nickname">昵称</label>
-			</div>
+			<!-- 字段标签不带图标：与「性别/兴趣标签」legend 同语言（同表单不混两种标签结构） -->
+			<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-nickname">昵称</label>
 		{/snippet}
 	</Input>
 
 	<div class="flex flex-col gap-1.5">
-		<div class="flex items-center gap-1.5">
-			<FileText class="size-3.5 text-accent-default"   strokeWidth={1.75} />
-			<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-bio">个人简介</label>
-		</div>
+		<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-bio">个人简介</label>
 		<div class="px-4 py-3 rounded-md input-surface">
 			<div>
 				<textarea

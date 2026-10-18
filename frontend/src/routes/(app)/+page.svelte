@@ -143,7 +143,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	<!-- 大纲页密度：无内容时整段隐藏（标题+空框），专区经导航/更多入口可达 -->
 	{#if momentItems.length > 0}
 		<div>
-			<SectionHead title="附近活动" action={withMoreAction ? '更多' : undefined} onAction={() => void goto(ROUTES.nearbyMoments)} />
+			<SectionHead title="附近活动" action={withMoreAction ? '查看全部' : undefined} onAction={() => void goto(ROUTES.nearbyMoments)} />
 			{@render momentRows(momentItems, (id) => void goto(ROUTES.moment(id)))}
 		</div>
 	{/if}
@@ -176,7 +176,7 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 	>
 	{#snippet header()}
 		<!-- ═══ 首页 — 统一 PageHeader（三端同标题；附近内容拆分到 /nearby 聚合页）═══ -->
-		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '2xl'} subtitle="发现周边有趣的人和事" subtitleSize={device === 'desktop' ? 'xs' : 'sm'} sticky>
+		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '2xl'} subtitle="发现周边有趣的人和事" sticky>
 			{#snippet trailing()}
 				<!-- trailing 簇锁定不收缩：chip 单行不折行（whitespace-nowrap + leading-none，
 				     徽标排版契约），窄屏下由标题副标题先截断让位，操作钮与在线计数始终完整。 -->

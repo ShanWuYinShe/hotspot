@@ -270,7 +270,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		{:else}
 			<EmptyState bare title="没有找到相关群组">
 				{#snippet icon()}
-					<Users size={40} color="var(--cst-text-secondary)" class="opacity-subtle" />
+					<Users size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
 				{/snippet}
 			</EmptyState>
 		{/if}

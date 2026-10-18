@@ -24,7 +24,7 @@ import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import { setNotifyUnread, unread as globalUnread } from '@/stores/unread.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
-	import { formatDateTime } from '@/lib/utils';
+	import { formatMomentTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 	import { relationshipsHref } from '@/lib/relationships';
 	import { follow } from '@/api';
@@ -185,7 +185,7 @@ const FILTER_TABS = [
 				// 归一化为语义键，使图标/计数/分区过滤都能命中 TYPE_CONFIG。
 				type: normalizeNotifType(n.type ?? 'reaction_added'),
 				read: n.is_read ?? false,
-				time: formatDateTime(n.created_at),
+				time: formatMomentTime(n.created_at),
 				user: { id: actor.user_id ?? '', name: actor.nickname ?? '', avatar: actor.avatar_url ?? '' },
 				text,
 				momentImage: n.payload?.moment_summary?.cover_url ?? undefined,
@@ -373,7 +373,7 @@ const markSingleRead = (id: string) => {
 								<Avatar src={inv.group.avatar_url} name={inv.group.name} size="lg" shape="rounded" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{inv.group.name}</span>
-									<span class="block truncate text-xs text-text-secondary">{inv.inviter.nickname} 邀请你 · {formatDateTime(inv.created_at)}</span>
+									<span class="block truncate text-xs text-text-secondary">{inv.inviter.nickname} 邀请你 · {formatMomentTime(inv.created_at)}</span>
 								</span>
 								<!-- 窄屏动作组独占第二行，日期/时间不再被按钮挤到折行 -->
 								<div class="flex w-full items-center justify-end gap-2 sm:w-auto">
@@ -458,7 +458,7 @@ const markSingleRead = (id: string) => {
 		<div>
 			<RailSection title="今日概览">
 				<div class="flex items-baseline gap-1.5 mb-3">
-					<span class="text-text-primary text-3xl font-semibold leading-none">{unread}</span>
+					<span class="text-text-primary text-2xl font-semibold leading-none">{unread}</span>
 					<span class="text-text-secondary text-xs">条未读 · 共 {notifies.length} 条</span>
 				</div>
 				<div class="flex flex-col gap-2">

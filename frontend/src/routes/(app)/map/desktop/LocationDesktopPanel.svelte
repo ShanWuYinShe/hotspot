@@ -177,7 +177,7 @@ import { smartBack } from '@/lib/smart-back';
 		{:else}
 			<EmptyState bare title="附近暂无内容，放大或移动地图后刷新">
 				{#snippet icon()}
-					<MapPin class="size-5.5 opacity-faint text-text-secondary" strokeWidth={1.5} />
+					<MapPin class="size-6 opacity-faint text-text-secondary" strokeWidth={1.5} />
 				{/snippet}
 			</EmptyState>
 		{/if}
