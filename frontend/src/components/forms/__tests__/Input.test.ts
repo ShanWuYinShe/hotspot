@@ -104,3 +104,22 @@ describe('Input compact 形态', () => {
 	});
 });
 
+describe('Input 默认内边距（防塌陷回归）', () => {
+	// 审计发现：原语无默认 padding，调用方只传 inputClass="w-full" 时整框塌成 19px
+	// （/me/edit 昵称字段实测 356×17.1、padding 0），偏离 INPUT_HEIGHT 42 且低于 24px 触控下限。
+	it('非 compact 形态默认带 px-4 py-3', () => {
+		const { container } = render(Input, { props: { value: '', onChange: () => {}, ariaLabel: '昵称' } });
+		const surface = container.querySelector('.input-surface') as HTMLElement;
+		expect(surface.className).toContain('px-4');
+		expect(surface.className).toContain('py-3');
+	});
+
+	it('调用方 className 可覆盖默认内边距（tailwind-merge）', () => {
+		const { container } = render(Input, {
+			props: { value: '', onChange: () => {}, ariaLabel: '昵称', class: 'py-2' }
+		});
+		const surface = container.querySelector('.input-surface') as HTMLElement;
+		expect(surface.className).toContain('py-2');
+		expect(surface.className).not.toContain('py-3');
+	});
+});

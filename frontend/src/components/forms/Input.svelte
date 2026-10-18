@@ -118,7 +118,12 @@
 		{:else if labelSnippet}
 			{@render labelSnippet()}
 		{/if}
-		<span class={cn('flex items-center gap-2 input-surface rounded-md', className)}>
+		<!-- 默认内边距不可省：input-surface 只提供底色/描边/聚焦态，不含 padding。
+		     曾因原语无默认档、调用方漏传 className 而整框塌成 19px（/me/edit 昵称字段实测
+		     356×17.1、padding 0），既偏离 INPUT_HEIGHT 42 契约，也低于 24px 触控下限。
+		     默认取 px-4 py-3：与同表单「个人简介」（input-surface px-4 py-3）及登录表单
+		     实测 43.1px 同档；调用方仍可用 className 覆盖（cn 走 tailwind-merge）。 -->
+		<span class={cn('flex items-center gap-2 input-surface rounded-md px-4 py-3', className)}>
 			{@render prefix?.()}
 			<!-- 聚焦态由外层 input-surface:focus-within 整框承担（见 utilities.css），内层不画自身焦点框 -->
 			<input
