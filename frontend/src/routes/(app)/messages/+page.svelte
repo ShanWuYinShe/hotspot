@@ -246,8 +246,13 @@
 {#if useSplitPane}
 	<!-- 未登录：不分栏，通栏单一登录引导（Gemini UI 审查：双栏各自空态+引导互相矛盾且重复） -->
 	{#if needsAuth}
-	<div class="content-mode-wide flex h-full items-center justify-center">
-		<NeedsAuthNotice title="登录后查看" description="登录后即可查看和发起会话" />
+	<!-- 访客态补页头：此前分栏分支直接渲染 NeedsAuthNotice，桌面/平板访客整页没有
+	     PageHeader/无 h1，与移动端（有「消息」页头）不一致（全站复审 s2-15）。 -->
+	<div class="content-mode-wide flex h-full flex-col">
+		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} />
+		<div class="flex flex-1 items-center justify-center">
+			<NeedsAuthNotice title="登录后查看" description="登录后即可查看和发起会话" />
+		</div>
 	</div>
 	{:else}
 	<!-- ═══ Desktop / Tablet Messages — split pane (list left + chat right) ═══ -->
