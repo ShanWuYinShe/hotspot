@@ -259,6 +259,37 @@ export const mockNotifies = [
   { notify_id: "notif_8", type: "group_application_rejected", is_read: true, created_at: "2026-07-25T20:00:00Z", payload: { type: "group_application_rejected", group_id: mockGroups[1].group.group_id, group_name: mockGroups[1].group.name, application_id: "appl_1", rejected_by: mockUsers[3], reason: "名额已满" } },
 ];
 
+/** 通知未读汇总（spec NotifyUnreadSummary）——**由 mockNotifies 推导**，不硬编码。
+ *  此前 bootstrap 与 notify/unread_summary 都写死 total: 3，而列表里实有 5 条未读，
+ *  导致全站复审 s2-03 报「铃铛 3 / 页头 5 条未读」同屏不一致——那是 mock 自相矛盾
+ *  造出的假信号（真实后端两处必然同源）。 */
+export const mockNotifyUnreadSummary = (() => {
+	const by_type: Record<'social' | 'interaction' | 'group' | 'report' | 'nearby' | 'system', number> = {
+		social: 0, interaction: 0, group: 0, report: 0, nearby: 0, system: 0
+	};
+	const bucket: Record<string, keyof typeof by_type> = {
+		new_follower: 'social',
+		mutual_follow: 'social',
+		reaction_added: 'interaction',
+		moment_commented: 'interaction',
+		comment_replied: 'interaction',
+		group_invite_received: 'group',
+		group_application_rejected: 'group',
+		group_application_approved: 'group',
+		nearby_new_moment: 'nearby',
+		system_announcement: 'system',
+		report_result: 'report'
+	};
+	let total = 0;
+	for (const n of mockNotifies) {
+		if (n.is_read) continue;
+		total++;
+		const b = bucket[n.type];
+		if (b) by_type[b]++;
+	}
+	return { total, by_type };
+})();
+
 // ── Chats (spec PrivateChatItem: nested other_user: UserInfo) ──
 export const mockChats = [
   { other_user: mockUsers[1], presence_status: "online", unread_count: 2, is_muted: false, is_pinned: true, last_activity_at: "2026-07-26T14:30:00Z", can_message: true, last_message: { message_id: "m1", content: "周末一起去植物园吗？", type: "text", sender: mockUsers[1], sent_at: "2026-07-26T14:30:00Z" } },

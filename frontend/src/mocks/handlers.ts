@@ -2,7 +2,7 @@ import { http, HttpResponse, type JsonBodyType } from "msw";
 import {
   apiOk, apiError, paginated,
   mockUsers, mockAccount, mockSettings,
-  mockMoments, mockGroups, mockNotifies, mockChats,
+  mockMoments, mockGroups, mockNotifies, mockNotifyUnreadSummary, mockChats,
   mockFriends, mockFollowing, mockFollowers,
   mockUserItem, relativeLocation,
   getMockAuthScenario, setMockLoggedIn, isMockLoggedIn,
@@ -670,13 +670,13 @@ http.post(`${API}/moments/fetch_created`, () => {
       defaults: { default_location: { point: { latitude: 34.2604, longitude: 117.1855 }, location_name: "徐州" }, default_user_avatar_url: "", default_group_avatar_url: "" },
     },
     profile: mockAccount,
-    unread_summary: { notify_total: 3, notify_by_type: { social: 1, interaction: 1, group: 1, report: 0, nearby: 0, system: 0 }, private_chat_unread_count: 2, group_chat_unread_count: 1, total_badge: 6 },
+    unread_summary: { notify_total: mockNotifyUnreadSummary.total, notify_by_type: mockNotifyUnreadSummary.by_type, private_chat_unread_count: 2, group_chat_unread_count: 1, total_badge: mockNotifyUnreadSummary.total + 2 + 1 },
   }), request)),
 
   // ── Notify ─────────────────────────────────────
   // All notify endpoints are auth-required.
   http.post(`${API}/notify/fetch`, () => requireMockAuth() ?? json(paginated(mockNotifies))),
-  http.post(`${API}/notify/unread_summary`, () => requireMockAuth() ?? json(apiOk({ total: 3, by_type: { social: 1, interaction: 1, group: 1, report: 0, nearby: 0, system: 0 } }))),
+  http.post(`${API}/notify/unread_summary`, () => requireMockAuth() ?? json(apiOk(mockNotifyUnreadSummary))),
   http.post(`${API}/notify/mark_read`, () => requireMockAuth() ?? json(apiOk(null))),
 
   // ── Map ────────────────────────────────────────
