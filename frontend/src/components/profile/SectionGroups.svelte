@@ -32,15 +32,15 @@ const needsAuth = $derived(myGroups.needsAuth);
      纯内容组件：顶部间距由外层 ContentColumn 的 pt-4 承担，不自建 pt 避免双重叠加。
      未登录隐藏（Gemini 审查 r14：登录引导与不可用控件并存）。 -->
 {#if !needsAuth}
-<!-- 统计(左) + 搜索(右限宽)同行,消除搜索独占一行的头部跳动(同 relationships r12-r18 头部统一) -->
-<div class="pb-3 flex items-center justify-between gap-4">
+<!-- 统计(左) + 搜索(右限宽)：桌面同行；移动端搜索独占一行（固定 w-72 同行在 390 视口横向溢出被裁） -->
+<div class="pb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
 	<p class="text-sm text-text-secondary shrink-0">共 {groups.length} 个群组<span class="mx-2 text-border-strong">·</span><!-- 零在线弱化为次要灰、不亮绿点( Gemini 审查 r14:零数据高亮绿造成视觉误导 ) --><span class="inline-flex items-center gap-1.5 {totalOnline > 0 ? 'text-status-online' : 'text-text-secondary'}">
 		{#if totalOnline > 0}
 			<span class="rounded-full size-1.5 bg-status-online"></span>
 		{/if}
 		{totalOnline} 人在线
 	</span></p>
-	<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="w-72 shrink-0 px-3 py-2" />
+	<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="w-full px-3 py-2 sm:w-72 sm:shrink-0" />
 </div>
 {/if}
 

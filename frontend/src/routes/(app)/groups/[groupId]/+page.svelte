@@ -7,6 +7,7 @@ import { formatCount } from '@/lib/utils';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
@@ -273,25 +274,17 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				<div class="py-6 flex flex-col gap-6">
 					<p class="max-w-3xl text-sm leading-7 text-text-secondary">{gd.detail.description || '这个群还没有填写简介。'}</p>
 
-					<!-- 群组档案：数字档案 + 兴趣标签，填充简介页信息密度 -->
-					<div class="grid grid-cols-2 gap-3 max-w-3xl sm:grid-cols-4">
-						<div class="rounded-lg border border-border-default bg-surface-primary p-3.5">
-							<p class="text-xl font-semibold text-text-primary">{formatCount(gd.detail.members)}</p>
-							<p class="mt-0.5 text-xs text-text-secondary">成员</p>
-						</div>
-						<div class="rounded-lg border border-border-default bg-surface-primary p-3.5">
-							<p class="text-xl font-semibold text-status-online">{gd.detail.online}</p>
-							<p class="mt-0.5 text-xs text-text-secondary">在线</p>
-						</div>
-						<div class="rounded-lg border border-border-default bg-surface-primary p-3.5">
-							<p class="text-xl font-semibold text-text-primary">{gd.detail.distance || '—'}</p>
-							<p class="mt-0.5 text-xs text-text-secondary">距你</p>
-						</div>
-						<div class="rounded-lg border border-border-default bg-surface-primary p-3.5">
-							<p class="text-xl font-semibold text-text-primary">{gd.detail.category || '—'}</p>
-							<p class="mt-0.5 text-xs text-text-secondary">分类</p>
-						</div>
-					</div>
+					<!-- 群组档案：指标统一走 MetricRow 单卡（原 4 张独立小卡 = 4 套边框/间距，
+					     与用户详情、桌面个人中心的指标行语言不一致） -->
+					<MetricRow
+						class="max-w-3xl"
+						items={[
+							{ label: '成员', value: formatCount(gd.detail.members) },
+							{ label: '在线', value: gd.detail.online, tone: 'positive' },
+							{ label: '距你', value: gd.detail.distance || '—' },
+							{ label: '分类', value: gd.detail.category || '—' }
+						]}
+					/>
 
 					{#if gd.members.length > 0}
 						<!-- 成员预览：头像堆叠 + 成员数，引导到成员 Tab -->
@@ -371,7 +364,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{/if}
 		</main>
 
-		<aside class="flex h-fit flex-col gap-3 rounded-lg border border-border-default bg-surface-primary p-4">
+		<!-- 桌面右栏用卡片承载；移动/平板（<lg 单列）去掉外框，避免「卡片套两个大按钮」的双重边框 -->
+		<aside class="flex h-fit flex-col gap-3 lg:rounded-lg lg:border lg:border-border-default lg:bg-surface-primary lg:p-4">
 			<!-- 已加入态 hover 只变底（不换字色，单信号 feedback） -->
 			<button
 				type="button"
@@ -415,7 +409,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					</button>
 				{/if}
 			{#if gd.joined}
-				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="hover-btn flex w-full items-center justify-center gap-2 rounded-full border border-border-default px-4 py-3 text-sm text-text-primary focus-ring">
+				<button type="button" onclick={() => void goto(ROUTES.groupMessage(params.groupId))} class="hover-btn flex w-full items-center justify-center gap-2 rounded-full bg-accent-default px-4 py-3 text-sm font-medium text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring">
 					<MessageCircle size={15} />
 					打开群聊
 				</button>

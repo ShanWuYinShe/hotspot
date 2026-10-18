@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { CalendarDays, Grid3X3, Sparkles } from '@lucide/svelte';
+	import { CalendarDays, Grid3X3 } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -57,10 +57,11 @@
 		else savedP.retry();
 	};
 
-	const activeMeta: Record<Tab, { label: string; description: string; note: string }> = {
-		posts: { label: '已发布', description: '把正在发生的事，留成可回看的片段。', note: '已发布记录' },
-		liked: { label: '喜欢', description: '被光线、路途和陌生叙事打动的瞬间。', note: '最近收藏的灵感' },
-		saved: { label: '收藏', description: '留给以后慢慢打开的城市线索。', note: '可随时继续整理' }
+	// 分区工具的计数/尾注文案；页面标题与描述由外层 PageHeader 承担，不在内容区重复。
+	const activeMeta: Record<Tab, { label: string; note: string }> = {
+		posts: { label: '已发布', note: '已发布记录' },
+		liked: { label: '喜欢', note: '最近收藏的灵感' },
+		saved: { label: '收藏', note: '可随时继续整理' }
 	};
 	const tabItems: Array<{ id: Tab; label: string; count: number }> = $derived([
 		{ id: 'posts', label: '发布', count: (myPosts.posts || []).length },
@@ -118,39 +119,20 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<!-- 统一的页面头部：纯中文、层级分明、呼吸感充足 -->
-		<header class="border-b border-border-default pb-6">
-			<div class="flex flex-wrap items-end justify-between gap-5">
-				<div>
-					<div class="flex items-center gap-1.5 text-xs font-medium text-accent-default">
-						<Sparkles class="size-3.5" />
-						<span>影像记录</span>
-					</div>
-					<h2 class="mt-2 text-2xl lg:text-3xl font-semibold tracking-tight text-text-primary">我的瞬间</h2>
-					<p class="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary">{activeMeta[activeTab].description}</p>
-				</div>
-				<div class="flex items-center gap-5 border-l border-border-default pl-5">
-					<div>
-						<p class="font-mono text-2xl font-semibold leading-none text-text-primary">{archive.length}</p>
-						<p class="mt-1.5 text-xs text-text-secondary">{activeMeta[activeTab].label}</p>
-					</div>
-				</div>
+		<!-- 分区工具行：分类 Tab + 记录计数。页面标题由外层 PageHeader 唯一提供
+		     （同族 /me/groups 无内容区大标题；此处曾重复渲染同名 h2 并吃掉首屏 1/3）。 -->
+		<div class="flex flex-wrap items-center justify-between gap-3 border-b border-border-default pb-4">
+			<div class="min-w-0 flex-1" aria-label="瞬间分类">
+				<TabBar items={tabItems.map((t) => ({ id: t.id, label: t.label, count: t.count }))} value={activeTab} onChange={(id) => setActiveTab(id as Tab)} />
 			</div>
-
-			<!-- 分类 Tab 统一走 TabBar（胶囊） -->
-			<div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-				<div class="min-w-0 flex-1" aria-label="瞬间分类">
-					<TabBar items={tabItems.map((t) => ({ id: t.id, label: t.label, count: t.count }))} value={activeTab} onChange={(id) => setActiveTab(id as Tab)} />
-				</div>
-				<div class="flex items-center gap-1.5 text-xs text-text-secondary">
-					<CalendarDays class="size-3.5 text-accent-default" strokeWidth={1.75} />
-					<span>{activeTab === 'posts' ? `共 ${archive.length} 则记录` : activeMeta[activeTab].note}</span>
-				</div>
+			<div class="flex items-center gap-1.5 text-xs text-text-secondary">
+				<CalendarDays class="size-3.5 text-accent-default" strokeWidth={1.75} />
+				<span>{activeTab === 'posts' ? `共 ${archive.length} 则记录` : activeMeta[activeTab].note}</span>
 			</div>
-		</header>
+		</div>
 
 		<!-- 规整动态网格：与 nearby/moments 完全对齐的 1~3 列对称网格，所有卡片统一复用 MomentCard -->
-		<div class="pt-6">
+		<div class="pt-4">
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 				{#each interactions.items as item (item.id)}
 					{#if item.is_deleted}

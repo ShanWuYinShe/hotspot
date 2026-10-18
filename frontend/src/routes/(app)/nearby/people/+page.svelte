@@ -19,7 +19,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { formatDistance } from '@/lib/utils';
 	import { showToast } from '@/stores/toast.svelte';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
-	import { smartBack } from '@/lib/smart-back';
 	import { NEARBY_CATEGORIES } from '../shared/categories';
 	import {
 		getPeopleProgress,
@@ -237,7 +236,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
-			onBack={() => smartBack()}
 		>
 			{#snippet subtitleIcon()}
 				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />

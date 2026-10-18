@@ -22,7 +22,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { searchGroups, joinGroup, leaveGroup, cancelGroupApplication, listMyApplications, netError } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
-	import { smartBack } from '@/lib/smart-back';
 
 	// 附近群组（/nearby/groups）：独立路由页。分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙；
 	// 按名字找群走全局搜索（header 右上角搜索入口）。
@@ -196,7 +195,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
 				sticky
 				titleSize={device === 'desktop' ? 'xl' : '2xl'}
-				onBack={() => smartBack()}
 			>
 				{#snippet subtitleIcon()}
 					<MapPin class="size-2.5 text-accent-default"   strokeWidth={1.75} />
@@ -227,7 +225,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					<span class="eyebrow">此刻附近群组</span>
 					<span class="text-status-online font-medium text-xs">{filtered.length} 个活跃 · {formatCount(totalOnline)} 人正在群聊</span>
 				</div>
-			{#if isDesktop || isTablet}
+			{#if (isDesktop || isTablet) && rest.length > 3}
 			<!-- 精选卡用 GroupCard featured 横排（图片左 40%,r03:纵排大卡吃首屏）；
 			     其余 BSP 满铺墙（高格子自动横排：图左 40% + 信息右面板），
 			     信息沉底观感由 GroupCard autoLandscape 兜底（横格>420px 自动切横排） -->
@@ -255,10 +253,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{:else}
 				{#if featured}
 					<div class="mb-5">
-						<GroupCard featured group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+						<GroupCard featured horizontal={isDesktop || isTablet} group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
-				<div class="grid grid-cols-2 gap-4">
+				<div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
 					{#each rest as group (group.id)}
 						<GroupCard group={group} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 					{/each}

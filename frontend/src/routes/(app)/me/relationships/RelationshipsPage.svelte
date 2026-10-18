@@ -85,11 +85,11 @@
 		{/snippet}
 		{#snippet below()}
 			<!-- TabBar 作为 below 首元素需带上间距（对齐 nearby/moments 样板 below 首元素 mt-3）；
-			     登录态搜索并入同一行右端限宽（r12-r18：固定头部高度,消除搜索独占一行的纵向跳动） -->
-			<div class="mt-3 flex items-center justify-between gap-4">
-				{@render relTabBar()}
+			     桌面登录态搜索并入同一行右端限宽；移动端分行（固定 w-72 同行会把 4 段 TabBar 挤到只剩 1 个） -->
+			<div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+				<div class="min-w-0 sm:flex-1">{@render relTabBar()}</div>
 				{#if auth.isAuthenticated}
-					<div class="w-72 shrink-0">
+					<div class="w-full sm:w-72 sm:shrink-0">
 						<SearchInput
 							value={relSearch}
 							onChange={(v) => (relSearch = v)}

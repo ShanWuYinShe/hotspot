@@ -21,7 +21,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { formatDateTime, formatDistance } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
-	import { smartBack } from '@/lib/smart-back';
 	import {
 		getMomentsProgress,
 		setMomentsProgress,
@@ -321,7 +320,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
 		sticky
 		titleSize={device === 'desktop' ? 'xl' : '2xl'}
-		onBack={() => smartBack()}
 	>
 		{#snippet subtitleIcon()}
 			<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
