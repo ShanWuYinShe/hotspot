@@ -287,7 +287,7 @@
 				<!-- Back -->
 				<button
 					type="button"
-					class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
+					class="hover-btn hit-slop flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
 					style="{floatBtnStyle}"
 					aria-label="返回"
 					onclick={() => smartBack()}
@@ -313,7 +313,7 @@
 			type="button"
 			aria-label={locate.locating ? '正在定位…' : '回到我的位置'}
 			title="回到我的位置"
-			class="hover-btn flex items-center justify-center rounded-full focus-ring circle-hover size-10.5 disabled:pointer-events-none disabled:opacity-faint"
+			class="hover-btn hit-slop flex items-center justify-center rounded-full focus-ring circle-hover size-10.5 disabled:pointer-events-none disabled:opacity-faint"
 			style="{floatBtnStyle}"
 			disabled={locate.locating}
 			onclick={() => void locate.locate()}

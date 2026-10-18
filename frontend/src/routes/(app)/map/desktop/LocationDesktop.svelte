@@ -341,7 +341,7 @@
 			<MapSourceSwitch align="end" />
 			<button
 				type="button"
-				class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring size-10 disabled:pointer-events-none disabled:opacity-faint"
+				class="hover-btn hit-slop scale-btn flex items-center justify-center rounded-full focus-ring size-10 disabled:pointer-events-none disabled:opacity-faint"
 				style="background:var(--cst-surface-primary);color:var(--cst-text-primary);border:var(--cst-border-width-hairline) solid var(--cst-border-default);box-shadow:var(--cst-elevation-fab);"
 				aria-label={locate.locating ? '正在定位…' : '定位到当前位置'}
 				title="定位到当前位置"

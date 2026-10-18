@@ -28,7 +28,7 @@
 	<div bind:this={anchorEl} style="display:inline-block;">
 		<button
 			type="button"
-			class="hover-btn flex items-center justify-center rounded-full focus-ring {size === 'md' ? 'size-10.5' : 'size-10'}"
+			class="hover-btn hit-slop flex items-center justify-center rounded-full focus-ring {size === 'md' ? 'size-10.5' : 'size-10'}"
 			style="background:var(--cst-surface-primary);color:var(--cst-text-primary);border:var(--cst-border-width-hairline) solid var(--cst-border-default);box-shadow:var(--cst-elevation-fab);"
 			aria-label="切换地图源（当前：{MAP_SOURCE_OPTIONS.find((o) => o.id === mapSourceStore.source)?.label}）"
 			aria-expanded={open}

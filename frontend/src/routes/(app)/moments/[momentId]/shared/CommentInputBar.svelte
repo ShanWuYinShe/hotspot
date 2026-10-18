@@ -35,7 +35,7 @@
 	</div>
 	<button
 		type="button"
-		class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default focus-ring shrink-0 size-9 transition-all duration-standard ease-standard
+		class="hover-btn hit-slop scale-btn flex items-center justify-center rounded-full border border-border-default focus-ring shrink-0 size-9 transition-all duration-standard ease-standard
 			{input.trim() ? 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md' : 'bg-surface-primary text-text-secondary shadow-raised-sm'}"
 		onclick={() => onSend()}
 		aria-label="发送评论"

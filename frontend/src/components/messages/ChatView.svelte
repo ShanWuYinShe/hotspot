@@ -232,7 +232,7 @@
 		{#if showBackButton}
 			<button
 				type="button"
-				class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-10.5 shrink-0 shadow-raised-sm focus-ring"
+				class="hover-btn hit-slop scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-10.5 shrink-0 shadow-raised-sm focus-ring"
 				onclick={onBack}
 				aria-label="返回"
 			>

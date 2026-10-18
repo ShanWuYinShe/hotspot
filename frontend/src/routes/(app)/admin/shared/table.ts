@@ -28,11 +28,11 @@ export const TH_SECONDARY = `${TH} max-sm:hidden`;
 export const TD_SECONDARY = `${TD} max-sm:hidden`;
 
 /** 行内操作按钮（次级描边） */
-export const ROW_BTN = 'hover-btn tap-92 rounded-md border border-border-default bg-surface-primary px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-interactive-hover disabled:opacity-faint disabled:pointer-events-none';
+export const ROW_BTN = 'hover-btn hit-slop tap-92 rounded-md border border-border-default bg-surface-primary px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-interactive-hover disabled:opacity-faint disabled:pointer-events-none';
 
 /** 行内主操作按钮（accent 填充） */
-export const ROW_BTN_PRIMARY = 'hover-btn tap-92 rounded-md bg-accent-default px-2.5 py-1 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring transition-colors hover:shadow-raised-md disabled:opacity-faint disabled:pointer-events-none';
+export const ROW_BTN_PRIMARY = 'hover-btn hit-slop tap-92 rounded-md bg-accent-default px-2.5 py-1 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring transition-colors hover:shadow-raised-md disabled:opacity-faint disabled:pointer-events-none';
 
 /** 行内危险操作按钮 */
-export const ROW_BTN_DANGER = 'hover-btn tap-92 rounded-md border border-border-default bg-surface-primary px-2.5 py-1 text-xs font-medium text-status-danger focus-ring transition-colors hover:bg-danger-bg disabled:opacity-faint disabled:pointer-events-none';
+export const ROW_BTN_DANGER = 'hover-btn hit-slop tap-92 rounded-md border border-border-default bg-surface-primary px-2.5 py-1 text-xs font-medium text-status-danger focus-ring transition-colors hover:bg-danger-bg disabled:opacity-faint disabled:pointer-events-none';
 

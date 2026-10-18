@@ -271,7 +271,7 @@
 						{#if !needsAuth}
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-sm size-9"
+							class="hover-btn hit-slop scale-btn flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-sm size-9"
 							onclick={() => {
 								newChatTab = 'chat';
 								showNewChat = true;

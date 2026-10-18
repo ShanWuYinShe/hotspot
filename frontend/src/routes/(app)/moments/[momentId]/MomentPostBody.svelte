@@ -257,7 +257,7 @@
 			<div class="flex gap-3">
 				<button
 					type="button"
-					class="hover-btn shrink-0 rounded-full focus-ring"
+					class="hover-btn hit-slop shrink-0 rounded-full focus-ring"
 					aria-label={`查看${c.user}的个人主页`}
 					onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
 				>
@@ -267,7 +267,7 @@
 					<div class="flex items-baseline gap-2">
 						<button
 							type="button"
-							class="link-btn text-text-primary text-sm focus-ring rounded-sm"
+							class="link-btn hit-slop text-text-primary text-sm focus-ring rounded-sm"
 							onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
 						>{c.user}</button>
 						<span class="text-text-secondary text-xs">{c.time}</span>
@@ -320,7 +320,7 @@
 								<div class="flex gap-2.5">
 									<button
 										type="button"
-										class="hover-btn shrink-0 rounded-full focus-ring"
+										class="hover-btn hit-slop shrink-0 rounded-full focus-ring"
 										aria-label={`查看${r.user}的个人主页`}
 										onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
 									>
@@ -330,7 +330,7 @@
 										<div class="flex items-baseline gap-2">
 											<button
 												type="button"
-												class="link-btn text-text-primary text-sm focus-ring rounded-sm"
+												class="link-btn hit-slop text-text-primary text-sm focus-ring rounded-sm"
 												onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
 											>{r.user}</button>
 											{#if !r.isDeleted}
