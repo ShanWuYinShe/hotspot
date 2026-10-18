@@ -379,7 +379,7 @@
 							{/if}
 						</div>
 						<div class="flex items-center gap-2 mt-1 flex-wrap">
-							<span class="text-xs" style="padding:1px 7px;border-radius:var(--cst-shape-sm);background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};">
+							<span class="text-xs" style="padding:1px 6px;border-radius:var(--cst-shape-sm);background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};">
 								{PIN_LABELS[selectedPin.type]}
 							</span>
 							{#if selectedPin.tag}

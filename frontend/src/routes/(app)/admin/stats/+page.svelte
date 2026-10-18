@@ -5,6 +5,7 @@
 	import { hasAdminPermission } from '@/stores/admin.svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
@@ -220,27 +221,20 @@
 	<EmptyState title="无访问权限" description="需要 admin.stats.read 权限" />
 {:else}
 	<div class="flex flex-col gap-4 max-w-5xl">
-		<!-- 全站存量 -->
-		<section aria-label="全站存量" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+		<!-- 全站存量：指标统一走 MetricRow 单卡（原 4 张独立小卡 = 4 套边框/间距） -->
+		<section aria-label="全站存量">
 			{#if data}
-				<div class="rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
-					<p class="text-xs text-text-secondary">用户</p>
-					<p class="mt-1 text-xl font-semibold text-text-primary leading-none">{fmt(data.totals.user)}</p>
-				</div>
-				<div class="rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
-					<p class="text-xs text-text-secondary">群组</p>
-					<p class="mt-1 text-xl font-semibold text-text-primary leading-none">{fmt(data.totals.group)}</p>
-				</div>
-				<div class="rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
-					<p class="text-xs text-text-secondary">动态</p>
-					<p class="mt-1 text-xl font-semibold text-text-primary leading-none">{fmt(data.totals.moment)}</p>
-				</div>
-				<div class="rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
-					<p class="text-xs text-text-secondary">合计</p>
-					<p class="mt-1 text-xl font-semibold text-accent-default leading-none">{fmt(data.totals.total)}</p>
-				</div>
+				<MetricRow
+					class="max-w-3xl"
+					items={[
+						{ label: '用户', value: fmt(data.totals.user) },
+						{ label: '群组', value: fmt(data.totals.group) },
+						{ label: '动态', value: fmt(data.totals.moment) },
+						{ label: '合计', value: fmt(data.totals.total), tone: 'accent' }
+					]}
+				/>
 			{:else if loading}
-				<div class="col-span-2 sm:col-span-4"><InlineLoading label="统计中…" /></div>
+				<InlineLoading label="统计中…" />
 			{/if}
 		</section>
 

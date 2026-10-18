@@ -96,7 +96,7 @@
 				class="pointer-events-none fixed left-0 top-1/2 -translate-y-1/2 z-[var(--cst-z-toast)] flex items-center gap-1.5 rounded-r-full bg-surface-primary/95 px-2.5 py-3 shadow-raised-lg border-y border-r border-border-default transition-all duration-rapid"
 				style={`transform: translate3d(${Math.min(swipeDistance * 0.35, 20)}px, -50%, 0); opacity: ${Math.min(swipeDistance / 40, 1)};`}
 			>
-				<ArrowLeft class="size-4 text-accent-default" strokeWidth={2.25} />
+				<ArrowLeft class="size-4 text-accent-default" strokeWidth={2} />
 				{#if swipeDistance >= 60}
 					<span class="text-xs font-medium text-text-primary pr-1">松开返回</span>
 				{/if}

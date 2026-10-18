@@ -60,7 +60,7 @@
 			<button
 				type="button"
 				onclick={onClose}
-				class="flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
+				class="hit-slop flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
 				aria-label="关闭"
 			>
 				<X size={15} />

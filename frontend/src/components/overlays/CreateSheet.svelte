@@ -135,9 +135,9 @@
 		<div class="flex items-center justify-between gap-4">
 			<div class="min-w-0">
 				<p class="eyebrow">附近动态</p>
-				<h1 id="create-composer-title" class="mt-1 text-xl font-medium leading-none tracking-title text-text-primary">
+				<h2 id="create-composer-title" class="mt-1 text-xl font-medium leading-none tracking-title text-text-primary">
 					记录此刻
-				</h1>
+				</h2>
 			</div>
 			<div class="flex items-center gap-2">
 				<button
@@ -186,7 +186,7 @@
 							type="button"
 							onclick={() => appendText('✨')}
 							aria-label="添加心情"
-							class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default text-text-secondary hover:bg-interactive-hover"
+							class="hit-slop flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default text-text-secondary hover:bg-interactive-hover"
 					>
 						<Smile size={16} strokeWidth={1.5} />
 					</button>
@@ -195,7 +195,7 @@
 						onclick={toggleTopic}
 						aria-label="添加话题"
 						aria-pressed={topicActive}
-						class="flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {topicActive
+						class="hit-slop flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {topicActive
 							? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
 							: 'text-text-secondary hover:bg-interactive-hover'}"
 					>

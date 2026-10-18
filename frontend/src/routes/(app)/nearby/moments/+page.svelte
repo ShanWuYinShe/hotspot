@@ -356,11 +356,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 <!-- ═══ 热门 tag 列表（scrollable / flex-wrap 由调用处 className 决定，对齐 Figma TagChips）═══ -->
 {#snippet tagChips(className: string)}
-	<!-- 标签过滤统一走 TabBar（再次点击已激活项可取消筛选） -->
+	<!-- 标签过滤统一走 TabBar：行首「全部」为默认态（与附近的人/群组筛选语言一致），
+	     再次点击已激活标签可取消回「全部」 -->
 	<TabBar
-		items={tags.map((t) => ({ id: t, label: t }))}
+		items={[{ id: '', label: '全部' }, ...tags.map((t) => ({ id: t, label: t }))]}
 		value={activeTag ?? ''}
-		onChange={(id) => (activeTag = activeTag === id ? null : id)}
+		onChange={(id) => (activeTag = id === '' || activeTag === id ? null : id)}
 		class={className}
 	/>
 {/snippet}

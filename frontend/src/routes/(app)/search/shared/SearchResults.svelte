@@ -115,7 +115,7 @@
 				>
 					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
 						<Users class="size-4 text-accent-default" strokeWidth={1.75} />
-						<h2 class="text-sm font-medium text-text-primary">用户</h2>
+						<h2 class="text-md font-semibold text-text-primary">用户</h2>
 					</div>
 					<ListContainer>
 						{#each results.users as person (person.user_id)}
@@ -145,7 +145,7 @@
 				>
 					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
 						<FileText class="size-4 text-accent-default" strokeWidth={1.75} />
-						<h2 class="text-sm font-medium text-text-primary">动态</h2>
+						<h2 class="text-md font-semibold text-text-primary">动态</h2>
 					</div>
 					<ListContainer>
 						{#each results.moments as moment (moment.moment_id)}
@@ -184,7 +184,7 @@
 				>
 					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
 						<Users class="size-4 text-accent-default" strokeWidth={1.75} />
-						<h2 class="text-sm font-medium text-text-primary">群组</h2>
+						<h2 class="text-md font-semibold text-text-primary">群组</h2>
 					</div>
 					<ListContainer>
 						{#each results.groups as group (group.group_id)}
@@ -214,7 +214,7 @@
 				>
 					<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
 						<Hash class="size-4 text-accent-default" strokeWidth={1.75} />
-						<h2 class="text-sm font-medium text-text-primary">话题</h2>
+						<h2 class="text-md font-semibold text-text-primary">话题</h2>
 					</div>
 					<ListContainer>
 						{#each results.topics as topic (topic)}

@@ -5,7 +5,7 @@
 	// 布局组件（layout/page）。
 	// ContentColumn — 标准路由页面唯一的外层宽度与 gutter 管理者。
 	// 对齐 Figma Make layout/page/ContentColumn 契约：
-	//   - mx-auto + px-[var(--cst-page-gutter)]（移动 20px / 平板 24px / 桌面 28px 三档响应式）
+	//   - mx-auto + px-[var(--cst-page-gutter)]（移动 16px / 平板 24px / 桌面 28px 三档响应式）
 	//   - 默认 maxWidth = var(--cst-page-content-max)（100%），不设默认窄列；
 	//     仅真正的阅读/详情列才传 maxWidth，不得用窄宽度来摆放标准页面。
 	//

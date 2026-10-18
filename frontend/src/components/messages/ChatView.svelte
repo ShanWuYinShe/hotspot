@@ -232,11 +232,11 @@
 		{#if showBackButton}
 			<button
 				type="button"
-				class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shrink-0 shadow-raised-sm focus-ring"
+				class="hover-btn scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-10.5 shrink-0 shadow-raised-sm focus-ring"
 				onclick={onBack}
 				aria-label="返回"
 			>
-				<ArrowLeft class="size-4 text-text-secondary"   strokeWidth={1.5} />
+				<ArrowLeft class="size-4.5 text-text-secondary"   strokeWidth={1.5} />
 			</button>
 		{/if}
 

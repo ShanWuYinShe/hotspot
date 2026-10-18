@@ -93,7 +93,7 @@
 			</div>
 			<button
 				type="button"
-				class="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
+				class="hit-slop flex h-8 w-8 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
 				onclick={onClose}
 				aria-label="关闭"
 			>

@@ -240,7 +240,7 @@
 			<Avatar src={avatar} name={nickname} size="xl" shape="rounded" class="border-heavy border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
 			<button
 				type="button"
-				class="hover-btn absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm hover:shadow-raised-md"
+				class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm hover:shadow-raised-md"
 				aria-label="更换头像"
 				disabled={uploadingAvatar}
 				onclick={() => avatarInput?.click()}

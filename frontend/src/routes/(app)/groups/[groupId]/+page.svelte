@@ -241,7 +241,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		     与 NearbyImageCard 的 --cst-surface-media-scrim-card 用法一致） -->
 		<div class="absolute inset-0" style="background:var(--cst-surface-cover-scrim);"></div>
 		<div class="absolute left-5 top-4">
-			<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} variant="overlay" tone="inverse" />
+			<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} variant="overlay" tone="inverse" size={42} />
 		</div>
 		<div class="absolute right-5 top-4">
 			<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = true)} variant="overlay" tone="inverse" />

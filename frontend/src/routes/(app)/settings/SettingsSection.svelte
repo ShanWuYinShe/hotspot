@@ -20,7 +20,7 @@
 
 <div class="grid grid-cols-1 gap-4 py-6 min-[768px]:grid-cols-[200px_minmax(0,1fr)] min-[768px]:gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10 {className}">
 	<div>
-		<h2 class="text-sm font-semibold text-text-primary">{title}</h2>
+		<h2 class="text-md font-semibold text-text-primary">{title}</h2>
 		<p class="text-xs text-text-secondary mt-1 leading-relaxed">
 			{description}
 		</p>

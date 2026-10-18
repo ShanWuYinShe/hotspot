@@ -261,7 +261,7 @@
 				     契约不同），PageHeader 的 page-header-solid 外壳感知底色（移动端
 				     =surface-page）在此会与列表面板错配，故用 ! 覆盖为面板同色。
 				     全项目唯一一处 ! 覆盖，勿仿照。 -->
-				<PageHeader title="消息" class="!bg-surface-primary" contentClassName="px-4">
+				<PageHeader title="消息" class="!bg-surface-primary" contentClassName="px-4" titleSize="xl">
 					{#snippet trailing()}
 						{#if !needsAuth}
 						<button
