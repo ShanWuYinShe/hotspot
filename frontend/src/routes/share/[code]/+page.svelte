@@ -6,6 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { Leaf, Link2Off, RotateCw } from '@lucide/svelte';
 	import { openShareDoor } from '@/api';
+	import Button from '@/components/ui/button.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import type { ShareDetail } from '@/api/types';
 
@@ -66,7 +67,8 @@
 	<title>分享落地 · HotSpot</title>
 </svelte:head>
 
-<div class="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-page px-6 text-center">
+<!-- 本路由独立于 (app) 分组：外层没有 main 地标，需自备（走查 s3：全站唯一无 <main> 的路由） -->
+<main id="main-content" class="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-page px-6 text-center">
 	<div class="flex size-11 items-center justify-center rounded-full bg-accent-default text-text-on-accent shadow-raised-sm">
 		<Leaf class="size-5" strokeWidth={1.75} aria-hidden="true" />
 	</div>
@@ -76,33 +78,23 @@
 	{:else if phase === 'error'}
 		<!-- 错误图标增强视觉焦点(r83:内容单一集中中部) -->
 		<Link2Off class="size-10 text-text-secondary opacity-subtle" strokeWidth={1.5} aria-hidden="true" />
-		<p class="text-2xl font-semibold tracking-title text-text-primary">{errorMessage}</p>
+		<h1 class="text-2xl font-semibold tracking-title text-text-primary">{errorMessage}</h1>
 		<!-- 副说明补充容错语境(r83:强化引导与容错) -->
 		<p class="text-xs text-text-secondary">{errorMessage.includes('网络') ? '网络不稳定，可稍后重试' : '链接可能已被删除，或地址有误'}</p>
 		<div class="flex items-center gap-2">
 			{#if errorMessage.includes('网络')}
-				<button
-					type="button"
-					onclick={() => (retryKey += 1)}
-					class="flex items-center gap-1.5 rounded-full border border-border-default px-5 py-2 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
-				>
+				<Button variant="secondary" onclick={() => (retryKey += 1)}>
 					<RotateCw class="size-3.5" strokeWidth={1.75} aria-hidden="true" />
 					重试
-				</button>
+				</Button>
 			{/if}
-			<button
-				type="button"
-				onclick={() => goto(ROUTES.home, { replaceState: true })}
-				class="rounded-full bg-accent-default px-5 py-2 text-sm font-medium text-text-on-accent outline-none shadow-raised-sm transition-colors hover:shadow-raised-md focus-visible:ring-2 focus-visible:ring-accent-default"
-			>
-				前往 HotSpot
-			</button>
+			<Button variant="primary" onclick={() => goto(ROUTES.home, { replaceState: true })}>前往 HotSpot</Button>
 		</div>
 	{:else if detail}
 		{@const p = detail.payload}
 		{#if 'shared_location' in p}
 			<div class="flex flex-col items-center gap-2">
-				<p class="text-lg font-semibold tracking-title text-text-primary">{p.shared_location.location_name}</p>
+				<h1 class="text-lg font-semibold tracking-title text-text-primary">{p.shared_location.location_name}</h1>
 				<!-- point 缺失（旧数据/异常 payload）时不能整页白屏，降级只展示名称 -->
 				{#if p.shared_location.point}
 					<p class="text-xs tabular-nums text-text-secondary">
@@ -111,15 +103,9 @@
 				{/if}
 				<p class="text-sm text-text-secondary">这是一个位置锚点分享，请在 HotSpot App 内查看</p>
 			</div>
-			<button
-				type="button"
-				onclick={() => goto(ROUTES.map, { replaceState: true })}
-				class="rounded-full bg-accent-default px-5 py-2 text-sm font-medium text-text-on-accent outline-none shadow-raised-sm transition-colors hover:shadow-raised-md focus-visible:ring-2 focus-visible:ring-accent-default"
-			>
-				打开地图
-			</button>
+			<Button variant="primary" onclick={() => goto(ROUTES.map, { replaceState: true })}>打开地图</Button>
 		{:else}
 			<p class="text-md text-text-secondary" role="status">正在跳转…</p>
 		{/if}
 	{/if}
-</div>
+</main>

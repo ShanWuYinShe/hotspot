@@ -41,4 +41,14 @@ describe('share 落地页', () => {
 		});
 		expect(goto).not.toHaveBeenCalled();
 	});
+
+	// 回归守卫（走查 s3）：本路由独立于 (app) 分组，必须自备 main 地标；错误态主文案
+	// 必须是 h1（原为 text-2xl 的 <p>，页面因此全站唯一「无 main 且无 h1」）。
+	it('错误态具备 main#main-content 地标与 h1', async () => {
+		vi.mocked(openShareDoor).mockResolvedValue({ code: 10300, message: '分享不存在' } as never);
+		const { container } = render(SharePage, { props: { params: { code: 'ABC234567890' } } });
+		await waitFor(() => expect(screen.getByText('分享不存在或已过期')).toBeTruthy());
+		expect(container.querySelector('main#main-content')).toBeTruthy();
+		expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('分享不存在或已过期');
+	});
 });
