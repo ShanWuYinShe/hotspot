@@ -13,12 +13,13 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
-	import { openTheDoor, follow, block, createReport, setRemark , netError } from '@/api';
+	import { openTheDoor, follow, block, setRemark , netError } from '@/api';
 	import { auth } from '@/stores/auth.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
+	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
@@ -63,7 +64,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let remark = $state('');
 	let remarkDraft = $state('');
 	let savingRemark = $state(false);
-	let reportSent = $state(false);
 	let shareCopied = $state(false);
 
 	const uid = $derived(params.userId ?? '');
@@ -183,36 +183,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		}
 	};
 
-	// 举报理由（api types ReportReason 枚举取常用四档；harassment 骚扰 / impersonation 冒充他人）
-	const REPORT_REASONS = [
-		{ id: 'spam', label: '垃圾信息' },
-		{ id: 'harassment', label: '骚扰攻击' },
-		{ id: 'impersonation', label: '冒充他人' },
-		{ id: 'other', label: '其他' }
-	] as const;
-	let reportReason = $state<(typeof REPORT_REASONS)[number]['id']>('spam');
-	let reportPending = $state(false);
+	// 举报弹层开合（理由选择/提交/提示均由 ReportDialog 内部承担，本页不再自写提交逻辑）
 	let reportOpen = $state(false);
-
-	const submitReport = async () => {
-		if (reportPending) return;
-		if (!requireAuth({ action: '举报', targetId: uid, run: () => void submitReport() })) return;
-		reportPending = true;
-		try {
-			const res = await createReport({ target_type: 'user', target_id: uid, reason: reportReason });
-			if (res.code === 0) {
-				reportSent = true;
-				showToast('举报已记录，感谢你的反馈', 'success');
-				moreOpen = false;
-			} else {
-				showToast(res.message || '举报失败', 'danger');
-			}
-		} catch {
-			showToast('举报失败，请重试', 'danger');
-		} finally {
-			reportPending = false;
-		}
-	};
 
 	// 分享：share/create 生成分享码并复制 /share/[code] 落地链接；
 	// 创建失败（匿名/网络异常）降级为复制页面原始链接（lib/share 统一降级链）。
@@ -294,53 +266,31 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					<UserX size={14} />
 					{blocked ? '解除屏蔽' : '屏蔽用户'}
 				</Button>
+				<!-- 举报：走全站统一 ReportDialog（理由选择 + 提交 + 提示都在原语内），
+				     此前本页手写了一套「举报理由手风琴 + 提交钮」嵌在更多操作弹层里，
+				     与 ChatView/动态详情/群详情用的 ReportDialog 形态不一致（全站复审 s2-14）。 -->
 				<Button
 					type="button"
 					variant="ghost"
 					class="mt-1 w-full text-text-secondary"
-					onclick={() => (reportOpen = !reportOpen)}
-					aria-expanded={reportOpen}
+					onclick={() => {
+						moreOpen = false;
+						reportOpen = true;
+					}}
 				>
-					{#if reportSent}
-						<Check size={14} />
-						举报已记录
-					{:else}
-						<Flag size={14} />
-						{reportOpen ? '收起理由' : '举报用户'}
-					{/if}
+					<Flag size={14} />
+					举报用户
 				</Button>
-				{#if reportOpen && !reportSent}
-					<div class="mt-2 flex flex-col gap-1.5" aria-label="举报理由">
-						{#each REPORT_REASONS as r (r.id)}
-							{@const selected = reportReason === r.id}
-							<!-- 选中/未选中 hover 差异化（四态契约）：未选中 hover 淡底预览、选中 hover 加深。
-							     选项行圆角归并 md 档（原 rounded-sm 与同弹层内按钮 12/16 两档并存） -->
-							<button
-								type="button"
-								aria-pressed={selected}
-								onclick={() => (reportReason = r.id)}
-								class="hover-btn flex items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors duration-rapid ease-standard focus-ring
-									{selected
-									? 'border-accent-border bg-accent-soft text-accent-default hover:bg-interactive-active'
-									: 'border-border-default text-text-secondary hover:bg-interactive-hover'}"
-							>
-								{r.label}
-								{#if selected}<Check class="size-3.5" strokeWidth={2.5} />{/if}
-							</button>
-						{/each}
-						<Button
-							type="button"
-							variant="outline"
-							class="mt-1 w-full text-status-danger hover:bg-danger-bg"
-							disabled={reportPending}
-							onclick={() => void submitReport()}
-						>
-							{reportPending ? '提交中…' : '提交举报'}
-						</Button>
-					</div>
-				{/if}
 		</Dialog.Content>
 	</Dialog.Root>
+
+	<ReportDialog
+		open={reportOpen}
+		targetType="user"
+		targetId={uid}
+		targetLabel={user.name}
+		onClose={() => (reportOpen = false)}
+	/>
 
 	<!-- 屏蔽/解除屏蔽二次确认（destructive 操作防误触） -->
 	<!-- 破坏性操作二次确认：走全站唯一确认原语 ConfirmDialog（此前手写 Dialog 内容结构，

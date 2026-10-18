@@ -224,15 +224,19 @@
 		<!-- 无封面数据时的占位底：主题 token 承载（vibrant 渐变 / forest 纸面纯色），页面只引用；
 		     上传能力开放前「更换横幅」收敛为图标按钮（禁用态） -->
 		<div class="absolute inset-0" style="background:var(--cst-surface-cover-placeholder);"></div>
+		<!-- 禁用必须可见可解释：原来只有 32px 图标钮 + title（触屏看不到 title，用户只见到
+		     一个点了没反应的相机），照 CreateGroupSheet「添加封面图片 / 即将开放」的既有模式，
+		     把「暂未开放」写在按钮上（全站复审 s3 P2-6）。 -->
 		<button
 			type="button"
-			class="hover-btn banner-hit absolute top-3 right-3 flex items-center justify-center rounded-full focus-ring bg-surface-overlay-strong text-content-inverse hover:opacity-hover size-8 disabled:opacity-muted"
+			class="hover-btn absolute top-3 right-3 flex h-8 items-center justify-center gap-1.5 rounded-full px-2.5 focus-ring bg-surface-overlay-strong text-content-inverse disabled:opacity-muted"
 			style="backdrop-filter:blur(var(--cst-blur-md));"
 			disabled
+			aria-disabled="true"
 			title="更换横幅（暂未开放）"
-			aria-label="更换横幅（暂未开放）"
 		>
-			<Camera class="size-4"  strokeWidth={1.75} />
+			<Camera class="size-4" strokeWidth={1.75} />
+			<span class="text-xxs leading-none">暂未开放</span>
 		</button>
 	</div>
 
@@ -402,13 +406,3 @@
 	{/if}
 </StandardPageLayout>
 
-<style>
-	/* 横幅更换钮是 absolute 定位：不能用 .hit-slop（它自带 position:relative；本项目
-	   utilities.css 在 tailwindcss 之后导入、同 @layer 后者胜，会把 absolute 压掉——
-	   同日 MapPinMarker 已实测：17 个 marker 只剩 12 个落在容器内）。只补伪元素、不碰 position。 */
-	.banner-hit::before {
-		content: '';
-		position: absolute;
-		inset: -6px;
-	}
-</style>

@@ -272,7 +272,7 @@
 			<!-- 每日新增趋势 -->
 			{#if trendDays > 0 && data.trends.length > 0}
 				<section aria-label="每日新增趋势" class="flex flex-col gap-2">
-					<h2 class="text-sm font-medium text-text-primary">每日新增（近 {trendDays} 天 · UTC+8 日界）</h2>
+					<h2 class="text-md font-semibold text-text-primary">每日新增（近 {trendDays} 天 · UTC+8 日界）</h2>
 					<div class="rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
 						<div class="flex items-end gap-1 h-28" role="img" aria-label="每日新增柱状图">
 							{#each data.trends as p (p.date)}
@@ -296,7 +296,7 @@
 
 			<!-- 区域落点地图 -->
 			<section aria-label="区域分布图" class="flex flex-col gap-2">
-				<h2 class="text-sm font-medium text-text-primary">区域分布（网格中心落点 · 数字为聚合量）</h2>
+				<h2 class="text-md font-semibold text-text-primary">区域分布（网格中心落点 · 数字为聚合量）</h2>
 				<div class="relative rounded-lg overflow-hidden border border-border-default shadow-raised-sm" style="height: 320px;">
 					<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} />
 					{#each data.regions as r (r.cell_token)}
@@ -311,7 +311,7 @@
 
 			<!-- 区域排名 -->
 			<section aria-label="区域排名" class="flex flex-col gap-2">
-				<h2 class="text-sm font-medium text-text-primary">区域排名（S2 网格 · {LEVELS.find((l) => Number(l.id) === level)?.label ?? level}）<span class="ml-2 text-xs font-normal text-text-secondary">点击“明细”查看该网格</span></h2>
+				<h2 class="text-md font-semibold text-text-primary">区域排名（S2 网格 · {LEVELS.find((l) => Number(l.id) === level)?.label ?? level}）<span class="ml-2 text-xs font-normal text-text-secondary">点击“明细”查看该网格</span></h2>
 				{#if data.regions.length === 0}
 					<EmptyState title="暂无地理数据" description="当前筛选条件下没有带位置的数据" />
 				{:else}
@@ -405,7 +405,7 @@
 
 			<!-- 热门地点 -->
 			<section aria-label="热门地点" class="flex flex-col gap-2">
-				<h2 class="text-sm font-medium text-text-primary">热门地点（按地点名聚合）</h2>
+				<h2 class="text-md font-semibold text-text-primary">热门地点（按地点名聚合）</h2>
 				{#if data.places.length === 0}
 					<EmptyState title="暂无地点数据" description="当前筛选条件下没有非空地点名" />
 				{:else}
