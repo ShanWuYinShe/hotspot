@@ -12,6 +12,7 @@
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN_DANGER } from '../shared/table';
+	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 群组管理：按名称搜索 + 解散（reason 仅入审计日志，不推送给成员）。
@@ -65,7 +66,7 @@
 		{:else if list.count === 0}
 			<EmptyState title="没有匹配的群组" />
 		{:else}
-			<div class={TABLE_WRAP}>
+			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
 						<tr>

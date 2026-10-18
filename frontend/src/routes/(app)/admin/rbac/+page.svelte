@@ -10,6 +10,7 @@
 	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER, ROW_BTN_PRIMARY } from '../shared/table';
+	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 角色权限（RBAC）：角色 CRUD + 权限设置（权限字典多选）+ 平台管理员授予/撤销。
@@ -226,7 +227,7 @@
 			{:else if rolesError}
 				<LoadError message={rolesError} onRetry={() => void loadRoles()} />
 			{:else}
-				<div class={TABLE_WRAP}>
+				<div class={TABLE_WRAP} use:scrollFade>
 					<table class={TABLE}>
 						<thead>
 							<tr>
@@ -281,7 +282,7 @@
 			{:else if adminsError}
 				<LoadError message={adminsError} onRetry={() => void loadAdmins()} />
 			{:else}
-				<div class={TABLE_WRAP}>
+				<div class={TABLE_WRAP} use:scrollFade>
 					<table class={TABLE}>
 						<thead>
 							<tr>

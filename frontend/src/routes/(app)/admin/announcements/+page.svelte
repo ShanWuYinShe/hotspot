@@ -13,6 +13,7 @@
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER, ROW_BTN_PRIMARY } from '../shared/table';
+	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 系统公告管理：列表 + 发布/编辑/删除。create 为契约幂等端点（client 层自动携带 Idempotency-Key）。
@@ -134,7 +135,7 @@
 		{:else if list.count === 0}
 			<EmptyState title="还没有系统公告" />
 		{:else}
-			<div class={TABLE_WRAP}>
+			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
 						<tr>

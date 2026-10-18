@@ -10,6 +10,7 @@
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY } from '../shared/table';
+	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 审计日志：动作/目标类型过滤；ip_address 仅 admin.audit.read_ip 权限可见（不足为 null）。
@@ -124,7 +125,7 @@
 		{:else if list.count === 0}
 			<EmptyState title="没有匹配的日志" />
 		{:else}
-			<div class={TABLE_WRAP}>
+			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
 						<tr>

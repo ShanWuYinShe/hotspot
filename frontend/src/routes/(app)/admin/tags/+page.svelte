@@ -13,6 +13,7 @@
 	import Button from '@/components/ui/button.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER } from '../shared/table';
+	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 标签管理：模糊搜索 + 软屏蔽 / 解屏蔽；物理删除（hard_delete）为高危不可逆，需显式勾选。
@@ -92,7 +93,7 @@
 		{:else if list.count === 0}
 			<EmptyState title="没有匹配的标签" />
 		{:else}
-			<div class={TABLE_WRAP}>
+			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
 						<tr>

@@ -13,6 +13,7 @@
 	import Button from '@/components/ui/button.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN_PRIMARY } from '../shared/table';
+	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 举报审核：状态/类型过滤 + 裁决（resolve 确认 / dismiss 驳回）。
@@ -109,7 +110,7 @@
 		{:else if list.count === 0}
 			<EmptyState title="没有匹配的举报" />
 		{:else}
-			<div class={TABLE_WRAP}>
+			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
 						<tr>

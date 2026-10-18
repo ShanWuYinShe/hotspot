@@ -15,6 +15,7 @@
 	import MapHeatDot from '@/components/map/MapHeatDot.svelte';
 	import type { MapBounds } from '@/components/map/types';
 	import { TABLE_WRAP, TABLE, TH, TR, TD } from '../shared/table';
+	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 地理统计：全站存量 + 每日新增趋势 + S2 网格区域排名（可下钻明细）+
@@ -314,7 +315,7 @@
 				{#if data.regions.length === 0}
 					<EmptyState title="暂无地理数据" description="当前筛选条件下没有带位置的数据" />
 				{:else}
-					<div class={TABLE_WRAP}>
+					<div class={TABLE_WRAP} use:scrollFade>
 						<table class={TABLE}>
 							<thead>
 								<tr>
@@ -408,7 +409,7 @@
 				{#if data.places.length === 0}
 					<EmptyState title="暂无地点数据" description="当前筛选条件下没有非空地点名" />
 				{:else}
-					<div class={TABLE_WRAP}>
+					<div class={TABLE_WRAP} use:scrollFade>
 						<table class={TABLE}>
 							<thead>
 								<tr>
