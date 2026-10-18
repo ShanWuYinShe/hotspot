@@ -29,6 +29,31 @@
 		variant?: 'pills' | 'segmented';
 		class?: string;
 	} = $props();
+
+	// 横向滚动渐隐提示（全站复审 C1）：后台 10 页的模块导航在 390px 下藏 328px，
+	// 5 个入口默认不可见且原本无任何提示（no-scrollbar 连滚动条都隐掉了）。
+	// 这里按真实溢出状态在两个方向分别加渐隐类，不改变单行布局与信息密度。
+	let pillsEl = $state<HTMLDivElement | null>(null);
+	let edges = $state({ left: false, right: false });
+	const syncEdges = () => {
+		const el = pillsEl;
+		if (!el) return;
+		const max = el.scrollWidth - el.clientWidth;
+		edges = { left: el.scrollLeft > 2, right: max - el.scrollLeft > 2 };
+	};
+	$effect(() => {
+		if (!pillsEl) return;
+		syncEdges();
+		if (typeof ResizeObserver === 'undefined') return;   // jsdom 无 RO
+		const ro = new ResizeObserver(syncEdges);
+		ro.observe(pillsEl);
+		return () => ro.disconnect();
+	});
+	$effect(() => {
+		void items.length;
+		void value;
+		queueMicrotask(syncEdges);
+	});
 </script>
 
 {#if variant === 'segmented'}
@@ -60,7 +85,12 @@
 		{/each}
 	</div>
 {:else}
-	<div data-tab-bar class="no-scrollbar flex items-center gap-1.5 overflow-x-auto {className}">
+	<div
+		data-tab-bar
+		bind:this={pillsEl}
+		onscroll={syncEdges}
+		class="no-scrollbar flex items-center gap-1.5 overflow-x-auto {edges.left ? 'scroll-fade-left' : ''} {edges.right ? 'scroll-fade-right' : ''} {className}"
+	>
 		{#each items as tab}
 			{@const isActive = value === tab.id}
 			<button

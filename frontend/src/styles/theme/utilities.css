@@ -315,6 +315,23 @@
     .header-action:hover { transform: scale(1.18); transition-duration: var(--cst-motion-rapid), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy), var(--cst-motion-snappy); background-color: var(--cst-interactive-hover-fill); }
   }
 
+  /*── 横向滚动渐隐提示（C1）──────────────────────────────────────────
+     内容溢出时在被裁一侧渐隐，提示「还有内容可滑」。用 mask 做几何裁剪（#000 是
+     mask 的 alpha 通道、不是渲染颜色，故不涉配色 token）；类由 TabBar 的溢出状态
+     驱动，只在真正溢出的一侧加类 —— 到头了仍渐隐会变成假提示。 */
+  .scroll-fade-right {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+  }
+  .scroll-fade-left {
+    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 26px), transparent);
+    mask-image: linear-gradient(to left, #000 calc(100% - 26px), transparent);
+  }
+  .scroll-fade-left.scroll-fade-right {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 26px, #000 calc(100% - 26px), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 26px, #000 calc(100% - 26px), transparent);
+  }
+
   /* 悬停背景（bgHover）：直接复用 --cst-interactive-hover-fill token（= --cst-palette-hover，
      每主题/暗色已精确定义：vibrant 10%/15%、forest 12%/18%），与全局 button hover
      填充一致，避免硬编码 color-mix 与 token 漂移。仅 fine pointer 生效。 */

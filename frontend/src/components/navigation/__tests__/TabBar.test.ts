@@ -1,6 +1,7 @@
 // TabBar 契约测试：下划线分类 Tab 的 aria-pressed、指示条与切换回调。
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import TabBar, { type TabItem } from '../TabBar.svelte';
 
 const items: TabItem[] = [
@@ -44,3 +45,43 @@ describe('TabBar', () => {
 	});
 });
 
+// 回归守卫（全站复审 C1）：后台模块导航在 390px 下藏 328px，原先无任何「还有内容」提示。
+// 溢出侧加渐隐类、非溢出侧不加；滚到末尾后右侧渐隐消失（避免假提示）。
+describe('TabBar 横向滚动渐隐提示', () => {
+	const mockScroll = (el: HTMLElement, { sw, cw, sl }: { sw: number; cw: number; sl: number }) => {
+		Object.defineProperty(el, 'scrollWidth', { value: sw, configurable: true });
+		Object.defineProperty(el, 'clientWidth', { value: cw, configurable: true });
+		Object.defineProperty(el, 'scrollLeft', { value: sl, writable: true, configurable: true });
+	};
+
+	it('内容溢出时右侧加渐隐类；滚到末尾后消失', async () => {
+		const { container } = render(TabBar, {
+			props: { items: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], value: 'a', onChange: () => {} }
+		});
+		const el = container.querySelector('[data-tab-bar]') as HTMLElement;
+		mockScroll(el, { sw: 682, cw: 354, sl: 0 });
+		el.dispatchEvent(new Event('scroll'));
+		await tick();
+		expect(el.className).toContain('scroll-fade-right');
+		expect(el.className).not.toContain('scroll-fade-left');
+
+		// 滚到末尾：右侧无更多内容 → 右侧渐隐消失、左侧出现
+		mockScroll(el, { sw: 682, cw: 354, sl: 328 });
+		el.dispatchEvent(new Event('scroll'));
+		await tick();
+		expect(el.className).not.toContain('scroll-fade-right');
+		expect(el.className).toContain('scroll-fade-left');
+	});
+
+	it('内容不溢出时两侧都不加渐隐类', async () => {
+		const { container } = render(TabBar, {
+			props: { items: [{ id: 'a', label: 'A' }], value: 'a', onChange: () => {} }
+		});
+		const el = container.querySelector('[data-tab-bar]') as HTMLElement;
+		mockScroll(el, { sw: 300, cw: 300, sl: 0 });
+		el.dispatchEvent(new Event('scroll'));
+		await tick();
+		expect(el.className).not.toContain('scroll-fade-right');
+		expect(el.className).not.toContain('scroll-fade-left');
+	});
+});
