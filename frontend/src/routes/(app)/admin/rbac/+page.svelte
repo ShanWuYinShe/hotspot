@@ -21,6 +21,34 @@
 
 	// ── 角色 ──
 	let permissions = $state<AdminPermissionItem[]>([]);
+
+	// 权限域分组（全站复审 S4-32）：字典 16 个键形如 `admin.<域>.<动作>`，原弹层是一列
+	// 扁平复选框（17 项含 `*`），扫读成本高且看不出权限边界。按域分组并给中文域标题，
+	// 域名与后台模块名对齐（与 +layout 的 MODULES 同一套叫法）。
+	const PERM_GROUP_LABELS: Record<string, string> = {
+		users: '用户管理',
+		groups: '群组管理',
+		reports: '举报审核',
+		tags: '标签管理',
+		announcements: '系统公告',
+		rbac: '角色权限',
+		audit: '审计日志',
+		app_config: '系统配置'
+	};
+	const permGroups = $derived.by(() => {
+		const order: string[] = [];
+		const byDomain = new Map<string, AdminPermissionItem[]>();
+		for (const p of permissions) {
+			const seg = p.key.split('.');
+			const domain = seg.length >= 3 ? seg[1] : seg[0];
+			if (!byDomain.has(domain)) {
+				byDomain.set(domain, []);
+				order.push(domain);
+			}
+			byDomain.get(domain)!.push(p);
+		}
+		return order.map((d) => ({ domain: d, label: PERM_GROUP_LABELS[d] ?? d, items: byDomain.get(d)! }));
+	});
 	let roles = $state<AdminRoleItem[]>([]);
 	let rolesLoading = $state(true);
 	let rolesError = $state<string | null>(null);
@@ -357,14 +385,18 @@
 							<span class="font-mono text-xs">*</span>（全部权限）
 						</label>
 					{/if}
-					{#each permissions as p (p.key)}
-						<label class="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-interactive-hover" title={p.description}>
-							<input type="checkbox" class="mt-0.5" checked={permDraft.has(p.key)} onchange={() => togglePerm(p.key)} />
-							<span class="min-w-0">
-								<span class="block font-mono text-xs text-text-primary">{p.key}</span>
-								<span class="block truncate text-xxs text-text-secondary">{p.description}</span>
-							</span>
-						</label>
+					{#each permGroups as g (g.domain)}
+						<!-- 组标题跨两列（sm 下网格），组内项按域聚集；用 eyebrow 档与全站分组标题一致 -->
+						<p class="eyebrow col-span-full mt-2 first:mt-0">{g.label}</p>
+						{#each g.items as p (p.key)}
+							<label class="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-interactive-hover" title={p.description}>
+								<input type="checkbox" class="mt-0.5" checked={permDraft.has(p.key)} onchange={() => togglePerm(p.key)} />
+								<span class="min-w-0">
+									<span class="block font-mono text-xs text-text-primary">{p.key}</span>
+									<span class="block truncate text-xxs text-text-secondary">{p.description}</span>
+								</span>
+							</label>
+						{/each}
 					{/each}
 				</div>
 			</div>

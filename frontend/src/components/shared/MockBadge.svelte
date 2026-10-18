@@ -23,12 +23,15 @@
 		role="status"
 		aria-label="当前页面数据来自本地 Mock，非真实后端"
 	>
+		<!-- 默认只显示图标（24px 圆点），桌面 hover/focus 才展开「Mock 数据」文字：
+		     原为常驻文字徽标（约 90×24），在移动端与弹层/列表正文叠压（全站复审
+		     S4-05 / s3 P2-10）；信息不丢——aria-label/title 始终带完整说明。 -->
 		<div
 			title="开发联调提示：当前页面数据来自本地 Mock，非真实后端"
-			class="inline-flex items-center justify-center leading-none gap-1.5 h-6 px-2.5 rounded-full border border-status-warning-border bg-surface-primary/95 text-xxs font-medium text-status-warning shadow-raised-md backdrop-blur-md"
+			class="group inline-flex items-center justify-center leading-none gap-1.5 h-6 w-6 px-0 md:w-auto md:px-2.5 rounded-full border border-status-warning-border bg-surface-primary/95 text-xxs font-medium text-status-warning shadow-raised-md backdrop-blur-md transition-all duration-standard md:group-hover:px-2.5"
 		>
 			<FlaskConical class="size-3 shrink-0" strokeWidth={2.2} />
-			<span>Mock 数据</span>
+			<span class="hidden md:inline max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-standard group-hover:max-w-20 group-hover:opacity-100">Mock 数据</span>
 		</div>
 	</div>
 {/if}
