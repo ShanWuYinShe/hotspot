@@ -17,7 +17,8 @@
   --cst-palette-page-bg: #F5F2EA;
   --cst-palette-chat-bg: #F1EDE3;
   --cst-palette-text: #2B2A26;
-  --cst-palette-text-muted: #6E6A60;
+  /* text-muted 加深（#6E6A60→#6B675D）：原值压 surface-subtle 合成底 4.41（<4.5） */
+  --cst-palette-text-muted: #6B675D;
   --cst-palette-accent-primary: #A63A2E;
   --cst-palette-glow: rgba(0, 0, 0, 0);
   --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
@@ -31,7 +32,8 @@
   --cst-palette-on-accent: #FFFFFF;
   --cst-palette-online: #3F7256;
   --cst-palette-hot: #9E2140;
-  --cst-palette-warning: #8F7026;
+  /* warning 加深（#8F7026→#7F6422）：原值压 warning 淡底 3.83（<4.5） */
+  --cst-palette-warning: #7F6422;
   --cst-palette-map-user: #A63A2E;
   --cst-palette-map-group: #4A7048;
   --cst-palette-map-moment: #8A6426;
@@ -206,21 +208,23 @@
   --cst-palette-chat-bg: #1D2022;
   --cst-palette-text: #EAE6DA;
   --cst-palette-text-muted: #A8A49A;
-  --cst-palette-accent-primary: #D07763;
-  --cst-palette-glow: rgba(208, 119, 99, 0.20);
+  /* accent 提亮（#D07763→#DF7F6A）：深色下原值压 accent 淡底仅 4.10（<4.5）；
+     提亮后压淡底 4.66，且深字压实底 5.54→6.29（双向都变好）。透明度派生同步改 RGB */
+  --cst-palette-accent-primary: #DF7F6A;
+  --cst-palette-glow: rgba(223, 127, 106, 0.20);
   --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
   --cst-palette-shadow-dark: rgba(0, 0, 0, 0.60);
   --cst-palette-border: rgba(234, 230, 218, 0.16);
   --cst-palette-border-pressed: rgba(234, 230, 218, 0.28);
-  --cst-palette-accent-soft: rgba(208, 119, 99, 0.12);
-  --cst-palette-accent-soft-border: rgba(208, 119, 99, 0.30);
-  --cst-palette-hover: rgba(208, 119, 99, 0.18);
-  --cst-palette-active-hover: rgba(208, 119, 99, 0.24);
+  --cst-palette-accent-soft: rgba(223, 127, 106, 0.12);
+  --cst-palette-accent-soft-border: rgba(223, 127, 106, 0.30);
+  --cst-palette-hover: rgba(223, 127, 106, 0.18);
+  --cst-palette-active-hover: rgba(223, 127, 106, 0.24);
   --cst-palette-on-accent: #1F1512;
   --cst-palette-online: #82B297;
   --cst-palette-hot: #DE8496;
   --cst-palette-warning: #D6A54E;
-  --cst-palette-map-user: #D07763;
+  --cst-palette-map-user: #DF7F6A;
   --cst-palette-map-group: #7FA88B;
   --cst-palette-map-moment: #C89B5A;
   --cst-palette-overlay-strong: rgba(0, 0, 0, 0.58);

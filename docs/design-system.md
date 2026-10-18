@@ -53,12 +53,12 @@
 | `page-bg` / `bg` | `#F7FAFF` | `#0B1424` | `#F6F7F3` | `#161A16` |
 | `text` | `#16233A` | `#E8F1FF` | `#152219` | `#E8F1E9` |
 | `text-muted` | `#52647F` | `#A5B6CE` | `#3F5547` | `#A8BDAE` |
-| `accent-primary` | `#2B5EB2` | `#69A8FF` | `#3D7A55` | `#52B878` |
+| `accent-primary` | `#2B5EB2` | `#69A8FF` | `#39714F` | `#52B878` |
 | `on-accent` | `#FFFFFF` | `#071426` | `#FFFFFF` | `#0C1911` |
-| `online` | `#0D6A62` | `#37C99A` | `#3D7A55` | `#52B878` |
-| `hot`（危险） | `#C81E4E` | `#FB7185` | `#B4543E` | `#D97C5A` |
-| `warning` | `#9C4708` | `#FBBF24` | `#8A6A2F` | `#C4A75A` |
-| `map-user` | `#2B5EB2` | `#69A8FF` | `#3D7A55` | `#52B878` |
+| `online` | `#0D6A62` | `#37C99A` | `#39714F` | `#52B878` |
+| `hot`（危险） | `#C81E4E` | `#FB7185` | `#A04B37` | `#D97C5A` |
+| `warning` | `#9C4708` | `#FBBF24` | `#7E602B` | `#C4A75A` |
+| `map-user` | `#2B5EB2` | `#69A8FF` | `#39714F` | `#52B878` |
 | `map-group` | `#0B7A56` | `#34D399` | `#4A703F` | `#88B85A` |
 | `map-moment` | `#C2470B` | `#FB923C` | `#8A6426` | `#C4A75A` |
 

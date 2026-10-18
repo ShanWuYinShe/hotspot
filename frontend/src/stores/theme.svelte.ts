@@ -35,7 +35,7 @@ export const COLOR_SCHEME_OPTIONS = [
  */
 export const THEME_OPTIONS = [
 	{ id: 'vibrant', label: '星际', note: '冷色玻璃', icon: Palette, swatch: '#2B5EB2' },
-	{ id: 'forest', label: '清野', note: '自然纸面', icon: Trees, swatch: '#3D7A55' },
+	{ id: 'forest', label: '清野', note: '自然纸面', icon: Trees, swatch: '#39714F' },
 	{ id: 'inkwash', label: '水墨', note: '宣纸墨韵', icon: Brush, swatch: '#A63A2E' }
 ] as const;
 

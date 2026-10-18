@@ -16,24 +16,28 @@
   --cst-palette-chat-bg: #F2F3F2;
   --cst-palette-text: #152219;
   --cst-palette-text-muted: #3F5547;
-  --cst-palette-accent-primary: #3D7A55;
+  /* accent 加深（#3D7A55→#39714F）：原值压 accent 淡底仅 4.13（<4.5，全站复审 C2 同族，
+     补审 forest 时发现）；加深后压淡底 4.65、白字压实底 5.11→5.76。透明度派生同步改 RGB */
+  --cst-palette-accent-primary: #39714F;
   --cst-palette-glow: rgba(0, 0, 0, 0);
   --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
   --cst-palette-shadow-dark: rgba(0, 0, 0, 0.0);
   --cst-palette-border: rgba(42, 73, 52, 0.24);
   --cst-palette-border-pressed: rgba(42, 73, 52, 0.38);
-  --cst-palette-accent-soft: rgba(61, 122, 85, 0.11);
-  --cst-palette-accent-soft-border: rgba(61, 122, 85, 0.30);
-  --cst-palette-hover: rgba(61, 122, 85, 0.12);
-  --cst-palette-active-hover: rgba(61, 122, 85, 0.17);
+  --cst-palette-accent-soft: rgba(57, 113, 79, 0.11);
+  --cst-palette-accent-soft-border: rgba(57, 113, 79, 0.30);
+  --cst-palette-hover: rgba(57, 113, 79, 0.12);
+  --cst-palette-active-hover: rgba(57, 113, 79, 0.17);
   --cst-palette-on-accent: #FFFFFF;
-  --cst-palette-online: #3D7A55;
+  --cst-palette-online: #39714F;
   /* danger 独立于 warning：forest 原 danger 误用暖棕与 warning 混淆，改为低饱和陶土红，
      保证错误/删除等危险语义可辨识（浅色白字对比度 ≥4.5:1） */
-  --cst-palette-hot: #B4543E;
-  /* warning 加深（#9A7A35→#8A6A2F）确保浅色下白字对比度 ≥4.5:1（原 4.03 不达标） */
-  --cst-palette-warning: #8A6A2F;
-  --cst-palette-map-user: #3D7A55;
+  /* danger 加深（#B4543E→#A04B37）：原值压 danger 淡底 3.90（<4.5） */
+  --cst-palette-hot: #A04B37;
+  /* warning 两次加深：#9A7A35→#8A6A2F 解决白字压实底（4.03→5.02）；
+     #8A6A2F→#7E602B 解决压 warning 淡底（4.02→4.68） */
+  --cst-palette-warning: #7E602B;
+  --cst-palette-map-user: #39714F;
   /* 图钉主色校准：确保白字 --cst-content-on-marker 对比度 ≥4.5（原 #638B46/#A57C38 过浅） */
   --cst-palette-map-group: #4A703F;
   --cst-palette-map-moment: #8A6426;
