@@ -1,5 +1,6 @@
 import { GroupItem } from '../../../core/types/api';
 import { interactionActions } from '../../../core/state/InteractionActions';
+import { interactionEventHub, GroupMemberState, GroupMembershipState } from '../../../core/state/InteractionStateStore';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { AppRouter, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
@@ -17,7 +18,9 @@ import { SystemDialog } from '../../../components/SystemDialog';
  * featured=false：3:4 网格卡（左上分类胶囊 + 群名/成员/距离/活动行 + 加入 pill）；
  * featured=true：全宽精选大卡（「本周精选」玻璃徽章 + 大号 footer）。
  * 成员头像堆叠前端使用群内好友头像列表，本端契约仅有 friends_in_group 计数，
- * 降级为成员数文本。加入/退出走 InteractionActions 乐观更新。
+ * 降级为成员数文本。加入/退出走 InteractionActions 乐观更新（写 InteractionStateStore
+ * 并发 group_membership_updated 事件），本卡订阅该事件刷新加入态——viewer_state 只是
+ * 搜索响应的静态快照，加入后不会自动更新。
  */
 @Reusable
 @Component
@@ -25,6 +28,32 @@ export struct GroupCard {
   @Prop group: GroupItem;
   @Prop featured: boolean = false;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+
+  // 加入态（对齐 UserCard / MomentFeedCard 的 store 订阅范式）：
+  // 事件到达本群时写入 @State 触发重渲染，真值判定见 hasJoined()。
+  @State private memberState: GroupMemberState | undefined = undefined;
+  /** memberState 归属的群 id：@Reusable 复用不重放 aboutToAppear，@State 可能仍属于
+   *  上一个群，故仅在与当前群 id 一致时才采信，否则现查 store / 回退响应快照。 */
+  private memberStateGroupId: string = '';
+
+  aboutToAppear(): void {
+    this.memberState = interactionEventHub.getGroupState(this.getGroupId())?.my_state;
+    this.memberStateGroupId = this.getGroupId();
+    interactionEventHub.on('group_membership_updated', this.handleGroupMembershipUpdate);
+  }
+
+  aboutToDisappear(): void {
+    interactionEventHub.off('group_membership_updated', this.handleGroupMembershipUpdate);
+  }
+
+  // 原型方法引用保证 on/off 拿到同一函数实例（对齐 UserCard / MomentFeedCard 范式）
+  private handleGroupMembershipUpdate(payload: Object): void {
+    const state = payload as GroupMembershipState;
+    if (state && state.group_id === this.getGroupId()) {
+      this.memberState = state.my_state;
+      this.memberStateGroupId = state.group_id;
+    }
+  }
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -35,6 +64,19 @@ export struct GroupCard {
   }
 
   private hasJoined(): boolean {
+    const groupId = this.getGroupId();
+    // ① 本卡 @State：事件已按 group_id 定向写入本群（加入/退出是乐观更新，
+    //    InteractionActions 首发写 store 并广播），@State 变更即触发重渲染。
+    if (this.memberStateGroupId === groupId && this.memberState) {
+      return this.memberState.is_member === true;
+    }
+    // ② 现查 store：@Reusable 复用不重放 aboutToAppear/@State 可能仍属于上一个群，
+    //    组件晚建（store 先于卡片写入）时也走这一级；store 是乐观更新的单一事实源。
+    const live = interactionEventHub.getGroupState(groupId)?.my_state;
+    if (live) {
+      return live.is_member === true;
+    }
+    // ③ 兜底：搜索响应的 viewer_state 静态快照（加入后不会自动刷新，故仅作最后一级）
     return this.group.viewer_state !== null && this.group.viewer_state !== undefined;
   }
 
