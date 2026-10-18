@@ -144,7 +144,7 @@
 							<th scope="col" class={TH_SECONDARY}>浏览</th>
 							<th scope="col" class={TH_SECONDARY}>推送</th>
 							<th scope="col" class={TH_SECONDARY}>发布时间</th>
-							<th scope="col" class={TH}></th>
+							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 						</tr>
 					</thead>
 					<tbody>

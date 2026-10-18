@@ -99,7 +99,7 @@
 							<th scope="col" class={TH}>标签</th>
 							<th scope="col" class={TH}>使用次数</th>
 							<th scope="col" class={TH_SECONDARY}>创建时间</th>
-							<th scope="col" class={TH}></th>
+							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 						</tr>
 					</thead>
 					<tbody>

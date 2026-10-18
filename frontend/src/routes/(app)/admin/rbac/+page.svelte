@@ -233,7 +233,7 @@
 								<th scope="col" class={TH}>角色</th>
 								<th scope="col" class={TH}>描述</th>
 								<th scope="col" class={TH}>权限</th>
-								<th scope="col" class={TH}></th>
+								<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -289,7 +289,7 @@
 								<th scope="col" class={TH}>权限</th>
 								<th scope="col" class={TH}>角色</th>
 								<th scope="col" class={TH}>授权时间</th>
-								<th scope="col" class={TH}></th>
+								<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 							</tr>
 						</thead>
 						<tbody>

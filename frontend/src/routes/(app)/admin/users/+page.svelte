@@ -127,7 +127,7 @@
 							<th scope="col" class={TH_SECONDARY}>邮箱</th>
 							<th scope="col" class={TH_SECONDARY}>注册时间</th>
 							<th scope="col" class={TH_SECONDARY}>最后活跃</th>
-							<th scope="col" class={TH}></th>
+							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 						</tr>
 					</thead>
 					<tbody>

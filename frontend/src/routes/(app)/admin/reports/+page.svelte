@@ -119,7 +119,7 @@
 							<th scope="col" class={TH_SECONDARY}>举报人</th>
 							<th scope="col" class={TH}>状态</th>
 							<th scope="col" class={TH_SECONDARY}>时间</th>
-							<th scope="col" class={TH}></th>
+							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 						</tr>
 					</thead>
 					<tbody>

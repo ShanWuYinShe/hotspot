@@ -73,7 +73,7 @@
 							<th scope="col" class={TH}>群主</th>
 							<th scope="col" class={TH}>成员数</th>
 							<th scope="col" class={TH_SECONDARY}>创建时间</th>
-							<th scope="col" class={TH}></th>
+							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 						</tr>
 					</thead>
 					<tbody>
