@@ -17,6 +17,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
@@ -282,7 +283,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					type="button"
 					variant="ghost"
 					class="mt-2 w-full text-status-danger hover:bg-danger-bg"
-					onclick={() => (blocked ? (confirmUnblockOpen = true) : (confirmBlockOpen = true))}
+					onclick={() => { moreOpen = false; if (blocked) confirmUnblockOpen = true; else confirmBlockOpen = true; }}
 				>
 					<UserX size={14} />
 					{blocked ? '解除屏蔽' : '屏蔽用户'}
@@ -336,36 +337,36 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	</Dialog.Root>
 
 	<!-- 屏蔽/解除屏蔽二次确认（destructive 操作防误触） -->
-	<Dialog.Root bind:open={confirmBlockOpen}>
-		<Dialog.Content class="max-w-90 p-0">
-			<div class="px-5 pt-6 pb-4">
-				<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-danger-bg text-status-danger ring-1 ring-status-danger-border">
-					<UserX class="size-5" />
-				</div>
-				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">屏蔽该用户？</Dialog.Title>
-				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">屏蔽后将无法收到对方消息与动态，且自动取消关注。</Dialog.Description>
-			</div>
-			<div class="flex flex-col gap-2 px-5 pb-5">
-				<Button type="button" variant="danger" size="lg" class="w-full" onclick={() => { confirmBlockOpen = false; void toggleBlock(); }}>屏蔽</Button>
-				<Button type="button" variant="secondary" size="lg" class="w-full" onclick={() => (confirmBlockOpen = false)}>取消</Button>
-			</div>
-		</Dialog.Content>
-	</Dialog.Root>
-	<Dialog.Root bind:open={confirmUnblockOpen}>
-		<Dialog.Content class="max-w-90 p-0">
-			<div class="px-5 pt-6 pb-4">
-				<div class="mb-3.5 flex size-10 items-center justify-center rounded-full bg-accent-soft text-accent-default ring-1 ring-accent-border">
-					<Check class="size-5" />
-				</div>
-				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">解除屏蔽？</Dialog.Title>
-				<Dialog.Description class="mt-1 text-sm text-text-secondary leading-relaxed">解除后可以重新关注对方并接收其动态。</Dialog.Description>
-			</div>
-			<div class="flex flex-col gap-2 px-5 pb-5">
-				<Button type="button" variant="primary" size="lg" class="w-full" onclick={() => { confirmUnblockOpen = false; void toggleBlock(); }}>解除屏蔽</Button>
-				<Button type="button" variant="secondary" size="lg" class="w-full" onclick={() => (confirmUnblockOpen = false)}>取消</Button>
-			</div>
-		</Dialog.Content>
-	</Dialog.Root>
+	<!-- 破坏性操作二次确认：走全站唯一确认原语 ConfirmDialog（此前手写 Dialog 内容结构，
+	     与其它确认弹层形态不一致，全站复审 C7） -->
+	<ConfirmDialog
+		open={confirmBlockOpen}
+		tone="danger"
+		icon={UserX}
+		title="屏蔽该用户？"
+		description="屏蔽后将无法收到对方消息与动态，且自动取消关注。"
+		confirmLabel="屏蔽"
+		layout="stacked"
+		onCancel={() => (confirmBlockOpen = false)}
+		onConfirm={() => {
+			confirmBlockOpen = false;
+			void toggleBlock();
+		}}
+	/>
+	<ConfirmDialog
+		open={confirmUnblockOpen}
+		tone="neutral"
+		icon={Check}
+		title="解除屏蔽？"
+		description="解除后可以重新关注对方并接收其动态。"
+		confirmLabel="解除屏蔽"
+		layout="stacked"
+		onCancel={() => (confirmUnblockOpen = false)}
+		onConfirm={() => {
+			confirmUnblockOpen = false;
+			void toggleBlock();
+		}}
+	/>
 
 <SplitPageLayout contentClassName="animate-fade-in pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}">
 	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
