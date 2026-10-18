@@ -101,4 +101,24 @@ describe('SearchDiscovery', () => {
 		expect(screen.queryByText('人物推荐')).toBeNull();
 		expect(screen.queryByLabelText('人物推荐')).toBeNull();
 	});
+
+	// 回归守卫：两个行内文字动作（清除/查看全部）实测仅 22.7px 高，低于 WCAG 2.5.8 的
+	// 24px 下限；必须带 hit-slop 扩热区（与首页 SectionHead 同名钮写法一致）。
+	it('行内动作「清除/查看全部」带 hit-slop 扩热区', () => {
+		render(SearchDiscovery, {
+			props: {
+				recent: ['回龙窝'],
+				hotUsers: [{ id: 'u1', name: '鹿鸣', avatar: '', tag: '摄影', distance: '300m', isOnline: true }],
+				onChoose: () => {},
+				onChooseTopic: () => {},
+				onOpenMoment: () => {},
+				onOpenUser: () => {},
+				onSeeAllUsers: () => {},
+				onClear: () => {}
+			}
+		});
+		for (const name of ['清除', '查看全部']) {
+			expect(screen.getByRole('button', { name }).className).toContain('hit-slop');
+		}
+	});
 });
