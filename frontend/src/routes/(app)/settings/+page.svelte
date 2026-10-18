@@ -179,6 +179,9 @@
 		mapSourceStore.source === 'amap' ? '高德瓦片，国内街巷细节丰富' : 'OpenStreetMap，全球开源数据'
 	);
 
+	// 当前主题的风格说明（THEME_OPTIONS.note：store 提供但此前页面未消费，s3 P2-5）
+	const themeNote = $derived(THEME_OPTIONS.find((t) => t.id === theme.theme)?.note ?? '');
+
 	// 明暗三档描述（跟随系统/浅色/深色，与 TabBar 选择同步）
 	const colorSchemeDesc = $derived(
 		theme.colorScheme === 'auto' ? '跟随系统外观' : theme.colorScheme === 'dark' ? '当前使用深色外观' : '当前使用浅色外观'
@@ -256,12 +259,14 @@
 							</div>
 							<div>
 								<p class="text-sm font-medium text-text-primary">应用主题</p>
-								<p class="text-xs text-text-secondary">选择全局视觉色彩风格</p>
+								<p class="text-xs text-text-secondary">
+									选择全局视觉色彩风格{#if themeNote} · {themeNote}{/if}
+								</p>
 							</div>
 						</div>
 						<TabBar
 							variant="segmented"
-							items={THEME_OPTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.icon }))}
+							items={THEME_OPTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.icon, swatch: t.swatch }))}
 							value={theme.theme}
 							onChange={(id) => setTheme(id as AppTheme)}
 						/>

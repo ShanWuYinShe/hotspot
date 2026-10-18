@@ -107,7 +107,9 @@
 						{#each list.items as t (t.tag_id)}
 							<tr class={TR}>
 								<td class={TD}>
-									<span class="badge bg-accent-soft text-accent-default">#{t.name}</span>
+									<!-- 限宽截断：移动端该表实测仅剩 1px 余量（tableW 356 / wrap 358，全站复审
+									     S4-24），标签名变长即溢出；截断后表格宽度不再随标签名无限增长 -->
+									<span class="badge max-w-32 truncate bg-accent-soft text-accent-default">#{t.name}</span>
 								</td>
 								<td class={TD}>{t.usage_count}</td>
 								<td class={TD_SECONDARY}>{formatDateTime(t.created_at)}</td>

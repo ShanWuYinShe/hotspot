@@ -15,7 +15,9 @@
 	// 用 data-tab-bar 标记，全局 button:hover 规则据此排除（导航 Tab 不应触发实色按压填充），
 	// 改用极轻背景 + 胶囊圆角的 subtle hover（见 utilities.css 的 .tab-item 规则）。
 
-	export type TabItem = { id: string; label: string; count?: number; icon?: Component };
+	export type TabItem = { id: string; label: string; count?: number; icon?: Component;
+		/** 主题/色板选择器用：标签前的色点（值来自 THEME_OPTIONS.swatch）。 */
+		swatch?: string };
 
 	let {
 		items,
@@ -53,7 +55,15 @@
 					? 'font-medium bg-accent-default text-text-on-accent shadow-raised-sm'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
-				{#if tab.icon}
+				{#if tab.swatch}
+					<!-- 主题色板点：让用户在选择前就看到各主题的主色（全站复审 s3 P2-5：
+					     THEME_OPTIONS 提供了 swatch，此前页面未消费） -->
+					<span
+						class="size-3 shrink-0 rounded-full ring-1 ring-border-default"
+						style="background:{tab.swatch};"
+						aria-hidden="true"
+					></span>
+				{:else if tab.icon}
 					<tab.icon class="size-3.5 shrink-0" strokeWidth={isActive ? 2 : 1.5} />
 				{/if}
 				<span class="truncate">{tab.label}</span>
