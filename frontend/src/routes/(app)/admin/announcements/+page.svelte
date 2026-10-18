@@ -12,7 +12,7 @@
 	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER, ROW_BTN_PRIMARY } from '../shared/table';
+	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER, ROW_BTN_PRIMARY } from '../shared/table';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 系统公告管理：列表 + 发布/编辑/删除。create 为契约幂等端点（client 层自动携带 Idempotency-Key）。
@@ -141,9 +141,9 @@
 							<th scope="col" class={TH}>标题</th>
 							<th scope="col" class={TH}>级别</th>
 							<th scope="col" class={TH}>发布人</th>
-							<th scope="col" class={TH}>浏览</th>
-							<th scope="col" class={TH}>推送</th>
-							<th scope="col" class={TH}>发布时间</th>
+							<th scope="col" class={TH_SECONDARY}>浏览</th>
+							<th scope="col" class={TH_SECONDARY}>推送</th>
+							<th scope="col" class={TH_SECONDARY}>发布时间</th>
 							<th scope="col" class={TH}></th>
 						</tr>
 					</thead>
@@ -153,9 +153,9 @@
 								<td class={`${TD} max-w-64 truncate`} title={a.content}>{a.title}</td>
 								<td class={TD}><span class="badge {severityBadge[a.severity]}">{SEVERITIES.find((s) => s.value === a.severity)?.label}</span></td>
 								<td class={TD}>{a.created_by?.nickname ?? '—'}</td>
-								<td class={TD}>{a.view_count}</td>
-								<td class={TD}>{a.send_push ? (a.push_sent_at ? '已推送' : '待推送') : '—'}</td>
-								<td class={TD}>{formatDateTime(a.created_at)}</td>
+								<td class={TD_SECONDARY}>{a.view_count}</td>
+								<td class={TD_SECONDARY}>{a.send_push ? (a.push_sent_at ? '已推送' : '待推送') : '—'}</td>
+								<td class={TD_SECONDARY}>{formatDateTime(a.created_at)}</td>
 								<td class={TD_ACTIONS}>
 									{#if canWrite}
 										<span class="flex justify-end gap-1.5">

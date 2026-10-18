@@ -12,7 +12,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER } from '../shared/table';
+	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER } from '../shared/table';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 标签管理：模糊搜索 + 软屏蔽 / 解屏蔽；物理删除（hard_delete）为高危不可逆，需显式勾选。
@@ -98,7 +98,7 @@
 						<tr>
 							<th scope="col" class={TH}>标签</th>
 							<th scope="col" class={TH}>使用次数</th>
-							<th scope="col" class={TH}>创建时间</th>
+							<th scope="col" class={TH_SECONDARY}>创建时间</th>
 							<th scope="col" class={TH}></th>
 						</tr>
 					</thead>
@@ -109,7 +109,7 @@
 									<span class="badge bg-accent-soft text-accent-default">#{t.name}</span>
 								</td>
 								<td class={TD}>{t.usage_count}</td>
-								<td class={TD}>{formatDateTime(t.created_at)}</td>
+								<td class={TD_SECONDARY}>{formatDateTime(t.created_at)}</td>
 								<td class={TD_ACTIONS}>
 									{#if canWrite}
 										<button type="button" class={ROW_BTN} onclick={() => openBan(t)}>状态管理</button>

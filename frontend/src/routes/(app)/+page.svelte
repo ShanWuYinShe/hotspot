@@ -217,9 +217,11 @@ import { createOptimisticFollow } from '@/lib/relationships.svelte';
 		<!-- min-h-full：让双列行至少撑满正文列（flex-1 已撑满视口剩余），左列
 			 border-r 分割线随之贯穿到页底，短内容时不再像中途截断。 -->
 		<div class="grid min-h-full grid-cols-[21.25rem_minmax(0,1fr)] gap-6">
-			<!-- Left: hero + activity + groups (340px)，与移动端共用 heroColumn（全量动态、无「更多」入口） -->
+			<!-- Left: hero + activity + groups (340px)，与移动端共用 heroColumn。
+		     活动限长 6 条 + 「查看全部」：全量渲染时左栏比右栏（用户网格+群组轮播）
+		     长出约一屏（审查 P1-4 残留），限长后双栏重心平衡，溢出内容由入口承接。 -->
 			<div class="flex flex-col gap-6 border-r border-border-default pr-6">
-				{@render heroColumn(moments, false, false)}
+				{@render heroColumn(moments.slice(0, 6), true, false)}
 			</div>
 
 			<!-- Right: full nearby-users list（标题统一 SectionHead 语言,r01:与「附近活动」字号一致;

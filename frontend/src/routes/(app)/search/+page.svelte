@@ -5,12 +5,13 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import { searchUsers, searchMoments, searchGroups, searchSuggest , netError } from '@/api';
-	import SearchDiscovery from './shared/SearchDiscovery.svelte';
+	import SearchDiscovery, { type DiscoveryUser } from './shared/SearchDiscovery.svelte';
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
+	import { formatDistance } from '@/lib/utils';
 	import type { MomentItem } from '@/api/types';
 
 	// 搜索页：最近搜索（localStorage）、热门搜索、推荐话题、全部/用户/动态/话题 Tab。
@@ -46,6 +47,9 @@
 	let hotTopics = $state<string[]>([]);
 	// 同一热门响应的动态条目复用（此前只取 tags 即丢弃）：取前 3 条进「热门动态」区块
 	let hotMoments = $state<MomentItem[]>([]);
+	// 人物推荐：users/search 距离排序前 3（补发现态下半屏空白，P1-16）；字段映射
+	// 与 home-feed 的 NearbyUser 同口径（tag/距离/在线态）。失败静默、无数据不渲染。
+	let hotUsers = $state<DiscoveryUser[]>([]);
 
 	const device = $derived(platform.platform);
 
@@ -88,6 +92,22 @@
 				}
 				hotTopics = list.slice(0, 10);
 				hotMoments = (res.data.items ?? []).slice(0, 3);
+			})
+			.catch(() => {});
+		// 人物推荐：距离排序（不带 reference_point 走服务端默认位置，与首页无锚点
+		// 回退同口径）；限 3 条（服务端/mock 对 limit 的裁剪口径不一，客户端显式
+		// 切片兜底）；仅发现态消费，失败静默。
+		void searchUsers({ radius: 5000, sort_by: 'distance', pagination: { limit: 3 } })
+			.then((res) => {
+				if (cancelled || res.code !== 0 || !res.data) return;
+				hotUsers = (res.data.items ?? []).slice(0, 3).map((u) => ({
+					id: u.user?.user_id ?? '',
+					name: u.user?.nickname ?? '',
+					avatar: u.user?.avatar_url ?? '',
+					tag: u.tags?.[0] ?? '',
+					distance: formatDistance(u.location?.distance),
+					isOnline: u.presence_status === 'online'
+				}));
 			})
 			.catch(() => {});
 		return () => {
@@ -222,14 +242,17 @@
 	{#if searchError}
 		<LoadError message={searchError} onRetry={() => void doSearch(keyword)} />
 	{:else if !keyword}
-		<!-- 无查询发现态：最近搜索 + 热门话题（无数据时 SearchDiscovery 内部不渲染该区块） -->
+		<!-- 无查询发现态：最近搜索 + 热门话题 + 人物推荐 + 热门动态（无数据时各区块内部不渲染） -->
 		<SearchDiscovery
 			recent={recent}
 			hotTopics={hotTopics}
 			hotMoments={hotMoments}
+			hotUsers={hotUsers}
 			onChoose={choose}
 			onChooseTopic={chooseTopic}
 			onOpenMoment={(id) => void goto(ROUTES.moment(id))}
+			onOpenUser={(id) => void goto(ROUTES.user(id))}
+			onSeeAllUsers={() => void goto(ROUTES.nearbyPeople)}
 			onClear={() => (recent = [])}
 		/>
 	{:else}

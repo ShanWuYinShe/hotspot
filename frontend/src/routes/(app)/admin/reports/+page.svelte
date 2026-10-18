@@ -12,7 +12,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN_PRIMARY } from '../shared/table';
+	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN_PRIMARY } from '../shared/table';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 举报审核：状态/类型过滤 + 裁决（resolve 确认 / dismiss 驳回）。
@@ -115,10 +115,10 @@
 						<tr>
 							<th scope="col" class={TH}>目标</th>
 							<th scope="col" class={TH}>原因</th>
-							<th scope="col" class={TH}>描述</th>
-							<th scope="col" class={TH}>举报人</th>
+							<th scope="col" class={TH_SECONDARY}>描述</th>
+							<th scope="col" class={TH_SECONDARY}>举报人</th>
 							<th scope="col" class={TH}>状态</th>
-							<th scope="col" class={TH}>时间</th>
+							<th scope="col" class={TH_SECONDARY}>时间</th>
 							<th scope="col" class={TH}></th>
 						</tr>
 					</thead>
@@ -130,15 +130,15 @@
 									<span class="ml-1.5 text-xs text-text-secondary font-mono">{r.target_id}</span>
 								</td>
 								<td class={TD}>{r.reason}</td>
-								<td class={`${TD} max-w-56 truncate`} title={r.description ?? r.message_snapshot?.snapshot_content ?? ''}>{r.description ?? r.message_snapshot?.snapshot_content ?? '—'}</td>
-								<td class={TD}>{r.reporter?.nickname ?? '—'}</td>
+								<td class={`${TD_SECONDARY} max-w-56 truncate`} title={r.description ?? r.message_snapshot?.snapshot_content ?? ''}>{r.description ?? r.message_snapshot?.snapshot_content ?? '—'}</td>
+								<td class={TD_SECONDARY}>{r.reporter?.nickname ?? '—'}</td>
 								<td class={TD}>
 									<!-- 已确认=已妥当处置走 success(online) 族,与已驳回中性灰区分（r55） -->
 									<span class="badge {r.status === 'pending' ? 'bg-accent-soft text-accent-default' : r.status === 'resolved' ? 'bg-status-online-bg text-status-online' : 'bg-surface-subtle text-text-secondary'}">
 										{r.status === 'pending' ? '待处理' : r.status === 'resolved' ? '已确认' : '已驳回'}
 									</span>
 								</td>
-								<td class={TD}>{formatDateTime(r.created_at)}</td>
+								<td class={TD_SECONDARY}>{formatDateTime(r.created_at)}</td>
 								<td class={TD_ACTIONS}>
 									{#if canWrite && r.status === 'pending'}
 										<button type="button" class={ROW_BTN_PRIMARY} onclick={() => openJudge(r)}>裁决</button>

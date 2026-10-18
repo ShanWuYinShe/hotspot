@@ -11,7 +11,7 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN_DANGER } from '../shared/table';
+	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN_DANGER } from '../shared/table';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 群组管理：按名称搜索 + 解散（reason 仅入审计日志，不推送给成员）。
@@ -72,7 +72,7 @@
 							<th scope="col" class={TH}>群组</th>
 							<th scope="col" class={TH}>群主</th>
 							<th scope="col" class={TH}>成员数</th>
-							<th scope="col" class={TH}>创建时间</th>
+							<th scope="col" class={TH_SECONDARY}>创建时间</th>
 							<th scope="col" class={TH}></th>
 						</tr>
 					</thead>
@@ -87,7 +87,7 @@
 								</td>
 								<td class={TD}>{g.owner?.nickname ?? '—'}</td>
 								<td class={TD}>{g.group.members_count}</td>
-								<td class={TD}>{formatDateTime(g.created_at)}</td>
+								<td class={TD_SECONDARY}>{formatDateTime(g.created_at)}</td>
 								<td class={TD_ACTIONS}>
 									{#if canWrite}
 										<button

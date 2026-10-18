@@ -19,6 +19,14 @@ export const TD = 'px-4 py-3 align-middle text-text-primary whitespace-nowrap';
 /** 操作列容器 */
 export const TD_ACTIONS = `${TD} text-right`;
 
+/** 移动端低优先级列（<sm=600px 隐藏，恢复点与 platform 移动/平板阈值同刻度）：
+ *  仅保留「主体 / 关键状态 / 操作」三类列，其余细节列手机上藏进横向滚动外的空间，
+ *  免去 7-8 列表格在 390px 下的反复横扫；平板（≥sm）起整表恢复。 */
+export const TH_SECONDARY = `${TH} max-sm:hidden`;
+
+/** 同 TH_SECONDARY 的数据单元格 */
+export const TD_SECONDARY = `${TD} max-sm:hidden`;
+
 /** 行内操作按钮（次级描边） */
 export const ROW_BTN = 'hover-btn tap-92 rounded-md border border-border-default bg-surface-primary px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-interactive-hover disabled:opacity-faint disabled:pointer-events-none';
 

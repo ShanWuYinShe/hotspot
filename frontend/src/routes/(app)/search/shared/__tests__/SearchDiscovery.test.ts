@@ -8,7 +8,7 @@ import SearchDiscovery from '../SearchDiscovery.svelte';
 describe('SearchDiscovery', () => {
 	it('渲染最近搜索区域', () => {
 		render(SearchDiscovery, {
-			props: { recent: ['回龙窝'], onChoose: () => {}, onChooseTopic: () => {}, onOpenMoment: () => {}, onClear: () => {} }
+			props: { recent: ['回龙窝'], onChoose: () => {}, onChooseTopic: () => {}, onOpenMoment: () => {}, onOpenUser: () => {}, onSeeAllUsers: () => {}, onClear: () => {} }
 		});
 		expect(screen.getByText('最近搜索')).toBeTruthy();
 		expect(screen.getByText('回龙窝')).toBeTruthy();
@@ -16,7 +16,7 @@ describe('SearchDiscovery', () => {
 
 	it('空最近搜索隐藏整个区块（r11：干瘪空态文案无信息量）', () => {
 		render(SearchDiscovery, {
-			props: { recent: [], onChoose: () => {}, onChooseTopic: () => {}, onOpenMoment: () => {}, onClear: () => {} }
+			props: { recent: [], onChoose: () => {}, onChooseTopic: () => {}, onOpenMoment: () => {}, onOpenUser: () => {}, onSeeAllUsers: () => {}, onClear: () => {} }
 		});
 		expect(screen.queryByText('最近搜索')).toBeNull();
 		expect(screen.queryByLabelText('最近搜索')).toBeNull();
@@ -26,7 +26,7 @@ describe('SearchDiscovery', () => {
 		const onChoose = vi.fn();
 		const onClear = vi.fn();
 		render(SearchDiscovery, {
-			props: { recent: ['回龙窝'], onChoose, onChooseTopic: () => {}, onOpenMoment: () => {}, onClear }
+			props: { recent: ['回龙窝'], onChoose, onChooseTopic: () => {}, onOpenMoment: () => {}, onOpenUser: () => {}, onSeeAllUsers: () => {}, onClear }
 		});
 		await fireEvent.click(screen.getByRole('button', { name: '重新搜索 回龙窝' }));
 		expect(onChoose).toHaveBeenCalledWith('回龙窝');
@@ -37,7 +37,7 @@ describe('SearchDiscovery', () => {
 	it('渲染热门话题并触发 onChooseTopic（tag 语义搜索分流）', async () => {
 		const onChooseTopic = vi.fn();
 		render(SearchDiscovery, {
-			props: { recent: [], hotTopics: ['松弛'], onChoose: () => {}, onChooseTopic, onOpenMoment: () => {}, onClear: () => {} }
+			props: { recent: [], hotTopics: ['松弛'], onChoose: () => {}, onChooseTopic, onOpenMoment: () => {}, onOpenUser: () => {}, onSeeAllUsers: () => {}, onClear: () => {} }
 		});
 		expect(screen.getByText('热门话题')).toBeTruthy();
 		await fireEvent.click(screen.getByRole('button', { name: '#松弛' }));
@@ -55,11 +55,50 @@ describe('SearchDiscovery', () => {
 				onChoose: () => {},
 				onChooseTopic: () => {},
 				onOpenMoment,
+				onOpenUser: () => {},
+				onSeeAllUsers: () => {},
 				onClear: () => {}
 			}
 		});
 		expect(screen.getByText('热门动态')).toBeTruthy();
 		await fireEvent.click(screen.getByRole('button', { name: '周末市集' }));
 		expect(onOpenMoment).toHaveBeenCalledWith('m1');
+	});
+
+	it('人物推荐区块：渲染行并整行点击走 onOpenUser（资料页导航）', async () => {
+		const onOpenUser = vi.fn();
+		render(SearchDiscovery, {
+			props: {
+				recent: [],
+				hotUsers: [
+					{ id: 'u1', name: '林小满', avatar: '', tag: '摄影', distance: '1.2km', isOnline: true }
+				],
+				onChoose: () => {},
+				onChooseTopic: () => {},
+				onOpenMoment: () => {},
+				onOpenUser,
+				onSeeAllUsers: () => {},
+				onClear: () => {}
+			}
+		});
+		expect(screen.getByText('人物推荐')).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: '查看 林小满 的资料' }));
+		expect(onOpenUser).toHaveBeenCalledWith('u1');
+	});
+
+	it('无推荐用户时人物推荐区块不渲染（诚实空态）', () => {
+		render(SearchDiscovery, {
+			props: {
+				recent: [],
+				onChoose: () => {},
+				onChooseTopic: () => {},
+				onOpenMoment: () => {},
+				onOpenUser: () => {},
+				onSeeAllUsers: () => {},
+				onClear: () => {}
+			}
+		});
+		expect(screen.queryByText('人物推荐')).toBeNull();
+		expect(screen.queryByLabelText('人物推荐')).toBeNull();
 	});
 });

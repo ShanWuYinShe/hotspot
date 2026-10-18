@@ -9,7 +9,7 @@
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import { TABLE_WRAP, TABLE, TH, TR, TD } from '../shared/table';
+	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY } from '../shared/table';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 审计日志：动作/目标类型过滤；ip_address 仅 admin.audit.read_ip 权限可见（不足为 null）。
@@ -132,10 +132,10 @@
 							<th scope="col" class={TH}>操作者</th>
 							<th scope="col" class={TH}>动作</th>
 							<th scope="col" class={TH}>目标</th>
-							<th scope="col" class={TH}>详情</th>
-							<th scope="col" class={TH}>IP 位置</th>
-							{#if canReadIp}<th scope="col" class={TH}>IP 地址</th>{/if}
-							<th scope="col" class={TH}>设备</th>
+							<th scope="col" class={TH_SECONDARY}>详情</th>
+							<th scope="col" class={TH_SECONDARY}>IP 位置</th>
+							{#if canReadIp}<th scope="col" class={TH_SECONDARY}>IP 地址</th>{/if}
+							<th scope="col" class={TH_SECONDARY}>设备</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -162,7 +162,7 @@
 									<span class="text-xs text-text-secondary">{log.target_type}</span>
 									{#if log.target_name}<span class="ml-1">{log.target_name}</span>{:else}<span class="ml-1 font-mono text-xs text-text-secondary">{log.target_id}</span>{/if}
 								</td>
-								<td class={TD}>
+								<td class={TD_SECONDARY}>
 									<!-- 截断 + 点击弹窗看全文（r59：生硬截断→可展开） -->
 									<button
 										type="button"
@@ -173,9 +173,9 @@
 										{detailsText(log.details)}
 									</button>
 								</td>
-								<td class={TD}>{log.ip_location ?? '—'}</td>
-								{#if canReadIp}<td class={TD}>{log.ip_address ?? '—'}</td>{/if}
-								<td class={TD}>{log.device_summary ?? '—'}</td>
+								<td class={TD_SECONDARY}>{log.ip_location ?? '—'}</td>
+								{#if canReadIp}<td class={TD_SECONDARY}>{log.ip_address ?? '—'}</td>{/if}
+								<td class={TD_SECONDARY}>{log.device_summary ?? '—'}</td>
 							</tr>
 						{/each}
 					</tbody>
