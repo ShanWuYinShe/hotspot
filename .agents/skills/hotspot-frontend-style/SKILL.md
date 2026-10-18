@@ -143,6 +143,12 @@ description: hotspot 前端样式与交互状态契约：样式自查清单 19 �
     `focus-visible:ring-2 focus-visible:ring-accent-default`；**禁止无替代地使用
     `outline-none`**（Tailwind v4 的 `outline-none` 会压掉 base.css 的全局按钮轮廓）。
     图标按钮必须同时提供 `aria-label`；紧凑图标按钮（<44px）叠加 `hit-slop` 扩展触控热区
+    ⚠️ **`hit-slop` 不能用在绝对定位元素上**（2026-10-18 实测）：它自带 `position: relative`，
+    而 `styles/theme/utilities.css` 在 `tailwindcss` 之后导入、同 `@layer utilities` 同权重下
+    后者胜 → 会把 `absolute` 压成 `relative`。地图图钉（`MapPinMarker`，`absolute` +
+    `translate(-50%,-100%)` 地理投影）加 `.hit-slop` 后实测 17 个 marker 只剩 12 个仍落在
+    覆盖层内、坐标整体错位（投影失效）。此类元素改用**只补伪元素、不碰 position** 的等价写法：
+    `.marker-hit::before { content: ''; position: absolute; inset: -6px; }`（见 `MapPinMarker.svelte`）。
 17. **减弱动效（强制）**：新增加载/装饰动画必须考虑 `prefers-reduced-motion`；
     utilities.css 已提供全局降级（动画瞬时化、`map-pulse-halo` 停用、
     spinner 放慢），不得绕过
