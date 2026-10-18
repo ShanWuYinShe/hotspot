@@ -39,7 +39,8 @@ const needsAuth = $derived(myGroups.needsAuth);
 {#if !needsAuth}
 <!-- 统计(左) + 搜索(右限宽)：桌面同行；移动端搜索独占一行（固定 w-72 同行在 390 视口横向溢出被裁） -->
 <div class="pb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-	<p class="text-sm text-text-secondary shrink-0">共 {groups.length} 个群组<span class="mx-2 text-border-strong">·</span><!-- 零在线弱化为次要灰、不亮绿点( Gemini 审查 r14:零数据高亮绿造成视觉误导 ) --><span class="inline-flex items-center gap-1.5 {totalOnline > 0 ? 'text-status-online' : 'text-text-secondary'}">
+	<p class="text-sm text-text-secondary shrink-0">共 {groups.length} 个群组<!-- 分隔符原用 text-border-strong（border 色 token 当正文色，s3 P2-1）→ 文字色 + 弱化 -->
+	<span class="mx-2 text-text-secondary opacity-dim" aria-hidden="true">·</span><!-- 零在线弱化为次要灰、不亮绿点( Gemini 审查 r14:零数据高亮绿造成视觉误导 ) --><span class="inline-flex items-center gap-1.5 {totalOnline > 0 ? 'text-status-online' : 'text-text-secondary'}">
 		{#if totalOnline > 0}
 			<span class="rounded-full size-1.5 bg-status-online"></span>
 		{/if}

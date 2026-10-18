@@ -410,9 +410,11 @@ const markSingleRead = (id: string) => {
 				{/if}
 
 				{#if readGroup.length > 0}
-					<!-- 较早分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
+					<!-- 已读分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make）。
+					     标题原为「较早」但分组条件是 `n.read`（点开一条今日通知即被归入本组）——
+					     文案与数据不符，全站复审 s2-18；改为与数据一致。 -->
 					<div class="mb-3 flex h-5 items-center gap-2 {unreadGroup.length > 0 ? 'mt-5' : ''}">
-						<p class="eyebrow">较早</p>
+						<p class="eyebrow">已读</p>
 						<span aria-hidden="true" class="h-px flex-1 bg-border-default"></span>
 					</div>
 					<ListContainer bordered>
@@ -456,7 +458,10 @@ const markSingleRead = (id: string) => {
 		<!-- 未登录隐藏统计侧栏（Gemini UI 审查：未登录显示「0 条未读」与筛选矛盾） -->
 		{#if !needsAuth}
 		<div>
-			<RailSection title="今日概览">
+			<!-- 标题原为「今日概览」，但计数口径是「未读 + 全部通知条数」（含非今日数据）→
+			     文案与数据不符（s2-17）。侧栏概览刻意不随 TabBar 过滤（见下方类型概览注释），
+			     故标题改为与口径一致。 -->
+			<RailSection title="通知概览">
 				<div class="flex items-baseline gap-1.5 mb-3">
 					<span class="text-text-primary text-2xl font-semibold leading-none">{unread}</span>
 					<span class="text-text-secondary text-xs">条未读 · 共 {notifies.length} 条</span>
