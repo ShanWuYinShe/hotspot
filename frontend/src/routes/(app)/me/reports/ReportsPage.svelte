@@ -14,7 +14,7 @@
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import { listReports } from '@/api/client';
 	import type { ReportItem, ReportStatus } from '@/api/types';
-	import { formatDateTime } from '@/lib/utils';
+	import { formatMomentTime } from '@/lib/utils';
 	import { smartBack } from '@/lib/smart-back';
 	import { ROUTES } from '@/lib/routes';
 
@@ -234,8 +234,10 @@
 									: ''}
 							</p>
 						{/if}
-						<p class="text-xxs text-text-secondary opacity-dim">
-							{formatDateTime(item.created_at)}
+						<!-- 时间行：原为 text-xxs(10px) + opacity-dim 且用绝对时间戳，与全站
+						     时间戳档位（11px）与相对时间口径都不一致（全站复审 s3 P2-9）。 -->
+						<p class="text-xs text-text-secondary">
+							{formatMomentTime(item.created_at)}
 						</p>
 					</div>
 				</ListItem>

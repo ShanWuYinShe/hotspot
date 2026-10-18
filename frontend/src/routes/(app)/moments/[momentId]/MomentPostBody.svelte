@@ -242,10 +242,12 @@
 	</div>
 	{/if}
 
-	<!-- Comments：分区标题提级（Gemini UI 审查：eyebrow 小标与评论正文字号同档层级不清） -->
-	<p class="text-sm font-medium text-text-primary mt-5 mb-3" id="moment-comments">
+	<!-- 评论分区标题：走真实标题层级（h2）+ skill 登记的分区标题档位
+	     （14px semibold = text-md），此前是 12px/500 的 <p>，页面无 h2（全站复审 s2-09）。
+	     id 保留：详情锚点 #moment-comments 依赖它。 -->
+	<h2 class="mt-5 mb-3 text-md font-semibold text-text-primary" id="moment-comments">
 		评论 · {commentCount}
-	</p>
+	</h2>
 	{#if comments.length === 0}
 		<EmptyState bare title="还没有评论" description="来说点什么吧">
 			{#snippet icon()}

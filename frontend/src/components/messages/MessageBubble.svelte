@@ -72,7 +72,7 @@
 
 <div class="group animate-fade-in flex flex-col {sent ? 'items-end' : 'items-start'}">
 	{#if !sent && senderName}
-		<p class="mb-0.5 text-xxs text-text-secondary px-1">{senderName}</p>
+		<p class="mb-0.5 text-xs text-text-secondary px-1">{senderName}</p>
 	{/if}
 	<div
 		class="max-w-chat-bubble px-3.5 py-2.5 {sent
@@ -123,7 +123,7 @@
 				{recalled ? '消息已撤回' : text}
 			</p>
 			<p
-				class="mt-1 flex items-center gap-0.75 text-xxs {sent
+				class="mt-1 flex items-center gap-0.75 text-xs {sent
 					? 'justify-end text-text-on-accent opacity-soft'
 					: 'justify-start text-text-secondary'}"
 			>
