@@ -225,7 +225,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					<span class="eyebrow">此刻附近群组</span>
 					<span class="text-status-online font-medium text-xs">{filtered.length} 个活跃 · {formatCount(totalOnline)} 人正在群聊</span>
 				</div>
-			{#if (isDesktop || isTablet) && rest.length > 3}
+			{#if isDesktop && rest.length > 3}
 			<!-- 精选卡用 GroupCard featured 横排（图片左 40%,r03:纵排大卡吃首屏）；
 			     其余 BSP 满铺墙（高格子自动横排：图左 40% + 信息右面板），
 			     信息沉底观感由 GroupCard autoLandscape 兜底（横格>420px 自动切横排） -->
@@ -256,6 +256,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						<GroupCard featured horizontal={isDesktop || isTablet} group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
+				<!-- 手机/平板：规整 2 列（平板 BSP 会出 1 窄 + 2 宽 的尺寸落差与底部参差）；
+				     桌面保持「精选卡 + BSP 满铺墙」 -->
 				<div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
 					{#each rest as group (group.id)}
 						<GroupCard group={group} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />

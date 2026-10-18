@@ -418,7 +418,24 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		: loading || loadError || !filtered.length}
 		{@render feedState()}
 	{:else}
-		<!-- BSP 瓦片墙（所有项进统一网格，无首项 hero；列数随平台：桌面 3 / 平板 2 / 移动 2） -->
+		{#if device === 'mobile'}
+			<!-- 手机：规整 2 列 4:3 网格。BSP 满铺在 390 视口会产出近方形大卡（一屏一卡），
+			     且与「我的瞬间」同内容不同比例；手机改用统一 4:3 内容卡，平板/桌面保留 BSP。 -->
+			<div class="grid grid-cols-2 gap-4">
+				{#each filtered.slice(0, visibleCount) as item (item.id)}
+					<MomentCard
+						item={item}
+						liked={item.liked}
+						saved={item.saved}
+						onLike={() => void interactions.toggleLike(item.id)}
+						onSave={() => void interactions.toggleSave(item.id)}
+						onClick={() => openMoment(item.id)}
+						onCommentClick={() => openMoment(item.id, true)}
+					/>
+				{/each}
+			</div>
+		{:else}
+		<!-- BSP 瓦片墙（平板/桌面；无首项 hero，列数随平台：桌面 3 / 平板 2） -->
 		<BspCardCanvas
 			items={filtered.slice(0, visibleCount)}
 			gap={14}
@@ -443,6 +460,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			/>
 		{/snippet}
 		</BspCardCanvas>
+		{/if}
 		{#if showListEnd}
 			<ListEnd />
 		{/if}

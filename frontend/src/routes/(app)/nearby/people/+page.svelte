@@ -303,7 +303,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						{/snippet}
 					</EmptyState>
 				{:else}
-					<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+					<div class="grid gap-4 {isTablet ? 'grid-cols-3' : 'grid-cols-2'} lg:grid-cols-4">
 						{#each list.slice(0, visibleCount) as user (user.id)}
 							<UserCard
 								{user}

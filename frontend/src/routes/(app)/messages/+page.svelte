@@ -233,8 +233,9 @@
 	$effect(() => {
 		setChatUnread(totalUnread);
 	});
-	// 分栏阈值：桌面或所有平板端（≥600px）全面启用 Master-Detail 双栏分栏，彻底消灭单列拉伸与空白
-	const useSplitPane = $derived(platform.platform === 'desktop' || platform.platform === 'tablet');
+	// 分栏阈值：仅桌面启用 Master-Detail；平板（820 级）分栏后右半屏空态占屏 60%+，
+	// 改为单栏列表（点开会话再进详情），与移动端同一信息密度。
+	const useSplitPane = $derived(platform.platform === 'desktop');
 	const selectedChat = $derived(liveChats.find((c) => c.id === selectedId));
 </script>
 <svelte:head>
