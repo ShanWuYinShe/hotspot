@@ -143,6 +143,29 @@ description: hotspot 前端样式与交互状态契约：样式自查清单 19 �
     `focus-visible:ring-2 focus-visible:ring-accent-default`；**禁止无替代地使用
     `outline-none`**（Tailwind v4 的 `outline-none` 会压掉 base.css 的全局按钮轮廓）。
     图标按钮必须同时提供 `aria-label`；紧凑图标按钮（<44px）叠加 `hit-slop` 扩展触控热区
+
+## 压图文字的对比度必须像素级实测，且测量区取「字形区」而非「元素矩形」
+
+自动指标（getComputedStyle 取色）对压在图片上的文字**不可信**——它拿到的是父级
+不透明度叠加值而非图片像素，只能把这类元素单列（hotspot 审计脚本即按
+`contrastOverMedia` 分类，不计入 AA 结论）。要判定就得实测像素：
+
+1. 找到候选元素 → 用 `document.createRange(); selectNodeContents(el)` 取**文字节点自身的
+   `getBoundingClientRect()`**；
+2. 截图该矩形 → 把元素 `style.color='transparent'`（**只改颜色，保布局**）→ 再截同一矩形，
+   得到「纯背景」像素；
+3. 逐像素算 `contrast(文字色 over 背景像素, 背景像素)`，取 min 与 P5；文字带 alpha 时
+   逐像素合成 `eff = fg*a + bg*(1-a)` 后再算。
+
+**关键坑（2026-10-18 实测，会得出完全相反的结论）**：测量区若用**元素矩形**（含 padding），
+padding 下根本没有字形、那里是胶囊圆角外的原图像素，会把最差比压到 1.0–4.0 造成假阴性。
+同一批 176 个候选：用元素矩形 → 15 处「不达标」（6 组）；改用字形区 → **仅 1 处**
+（`/groups/group_1` 分类胶囊，白字压 `glass-badge` 0.18 白玻璃底，实测 4.16/需 4.5，
+84.9% 字形像素不达标）。修复后同法复测：4.16 → 14.18、达标像素 13.3% → 100%。
+
+压图徽标一律用**深色遮罩**（`bg-surface-media-scrim-strong` = 0.55 黑，白字在纯白底上
+仍有 ~4.9:1），不要用浅色玻璃底 + 白字（`glass-badge` 0.18 白），那是结构性不达标。
+
     ⚠️ **`hit-slop` 不能用在绝对定位元素上**（2026-10-18 实测）：它自带 `position: relative`，
     而 `styles/theme/utilities.css` 在 `tailwindcss` 之后导入、同 `@layer utilities` 同权重下
     后者胜 → 会把 `absolute` 压成 `relative`。地图图钉（`MapPinMarker`，`absolute` +
