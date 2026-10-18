@@ -11,7 +11,7 @@ import { formatDateLabel } from '../../../core/utils/FormatUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { ApiError } from '../../../core/network/ApiError';
 import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
-import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, FetchPrivateMessagesRequest, FetchGroupMessagesRequest, MarkPrivateReadRequest, MarkGroupReadRequest, OpenUserDoorRequest, CreateReportRequest, MediaCategory } from '../../../core/types/api';
+import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, GroupMemberItem, SendPrivateMessageRequest, SendGroupMessageRequest, FetchPrivateMessagesRequest, FetchGroupMessagesRequest, MarkPrivateReadRequest, MarkGroupReadRequest, OpenUserDoorRequest, CreateReportRequest, MediaCategory } from '../../../core/types/api';
 import type {
   ServerEvent,
   PrivateMessageNewEvent,
@@ -24,6 +24,7 @@ import type {
   GroupTypingEvent
 } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
+import { Pressable } from '../../../components/Pressable';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
 import { ChatMessageItem, ChatMessageView } from '../components/ChatMessageItem';
@@ -81,6 +82,12 @@ const RECALLED_MESSAGE_TEXT: string = '消息已撤回';
 interface ChatMessage extends ChatMessageView {
 }
 
+/** 群聊 @ 提及候选（对齐前端 ChatInputBar 的 mentionCandidates） */
+interface MentionCandidate {
+  id: string;
+  name: string;
+}
+
 interface ChatParams {
   chatId: string;
   chatType: 'private_chat' | 'group_chat';
@@ -100,6 +107,11 @@ export struct ChatPage {
   @State messages: ChatMessage[] = [];
   private messagesDataSource: BasicDataSource<ChatMessage> = new BasicDataSource<ChatMessage>([]);
   @State inputText: string = '';
+
+  // @ 提及（对齐前端 s2-08：输入 `@` 弹成员浮层，发送时透传 mentions）
+  @State private mentionCandidates: MentionCandidate[] = [];
+  @State private mentionOpen: boolean = false;
+  @State private mentionQuery: string = '';
   @State isLoading: boolean = true;
   /** loadHistory 在飞标志：与 UI 的 isLoading 分离——isLoading 初始即为 true（首屏
    * 加载态），不能当在飞判据，否则首次进入直接 return、聊天永远卡在「加载消息…」
@@ -493,6 +505,25 @@ export struct ChatPage {
               this.groupAvatarUrl = groupInfo.avatar_url ?? '';
               this.groupMembersCount = groupInfo.members_count ?? 0;
             }
+            // @ 提及候选：群成员首屏（limit 100 = 分页上限）；失败静默——提及是增强，
+            // 不应影响聊天主流程（对齐前端 GroupChatView 的 getGroupMembers 处理）
+            try {
+              const memResp = await ApiClient.getGroupMembers({
+                group_id: this.chatId,
+                pagination: { limit: 100 }
+              });
+              if (memResp.code === 0 && memResp.data?.items) {
+                this.mentionCandidates = memResp.data.items.map((m: GroupMemberItem) => {
+                  const cand: MentionCandidate = {
+                    id: m.user.user_id,
+                    name: m.user.nickname && m.user.nickname.length > 0 ? m.user.nickname : m.user.user_id
+                  };
+                  return cand;
+                });
+              }
+            } catch (e) {
+              hilog.warn(DOMAIN_NUMBER, TAG, `加载群成员（提及候选）失败: ${JSON.stringify(e)}`);
+            }
           } catch (e) {
             hilog.warn(DOMAIN_NUMBER, TAG, `加载群组禁言状态失败: ${JSON.stringify(e)}`);
           }
@@ -779,6 +810,90 @@ export struct ChatPage {
     return !this.isSending && this.inputText.trim().length > 0 && !this.isGroupServerMuted;
   }
 
+  /** 当前匹配的提及候选（最多 6 条，对齐前端 MENTION_MAX） */
+  private filteredMentionCandidates(): MentionCandidate[] {
+    const q: string = this.mentionQuery.toLowerCase();
+    const out: MentionCandidate[] = [];
+    for (const c of this.mentionCandidates) {
+      if (c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q)) {
+        out.push(c);
+        if (out.length >= 6) {
+          break;
+        }
+      }
+    }
+    return out;
+  }
+
+  /** 输入变化时同步 `@查询` 状态（按整串尾部判定，与前端的光标兜底口径一致） */
+  private syncMention(value: string): void {
+    if (this.mentionCandidates.length === 0) {
+      this.mentionOpen = false;
+      return;
+    }
+    const m = /(?:^|\s)@([^\s@]*)$/.exec(value);
+    if (m) {
+      this.mentionQuery = m[1];
+      this.mentionOpen = this.filteredMentionCandidates().length > 0;
+    } else {
+      this.mentionQuery = '';
+      this.mentionOpen = false;
+    }
+  }
+
+  /** 选中成员：把尾部 `@查询` 替换为 `@昵称 `（对齐前端 applyMention） */
+  private applyMention(name: string): void {
+    this.inputText = this.inputText.replace(/(^|\s)@([^\s@]*)$/, `$1@${name} `);
+    this.mentionQuery = '';
+    this.mentionOpen = false;
+  }
+
+  /** 发送时把文本里仍存在的 @昵称 映射回 user_id（去重、上限 20，spec mentions 上限） */
+  private collectMentions(text: string): string[] {
+    const ids: string[] = [];
+    for (const c of this.mentionCandidates) {
+      if (text.includes(`@${c.name}`) && !ids.includes(c.id)) {
+        ids.push(c.id);
+      }
+    }
+    return ids.slice(0, 20);
+  }
+
+  @Builder
+  mentionPanel() {
+    Column() {
+      ForEach(this.filteredMentionCandidates(), (c: MentionCandidate) => {
+        Pressable({
+          onPress: () => {
+            this.applyMention(c.name);
+          },
+          hoverFill: this.getCurrentThemePalette().surfaceSubtle
+        }) {
+          Row({ space: DesignConstants.SPACING.SM }) {
+            Text(c.name)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+              .fontColor(this.getCurrentThemePalette().textPrimary)
+              .layoutWeight(1)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            Text(c.id)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .fontColor(this.getCurrentThemePalette().textTertiary)
+          }
+          .width('100%')
+          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+        }
+      }, (c: MentionCandidate) => c.id)
+    }
+    .width('100%')
+    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+    .borderRadius(DesignConstants.RADIUS.MD)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+    .clip(true)
+    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XS })
+  }
+
   private async sendMessage() {
     if (this.isSending) {
       return;
@@ -824,11 +939,17 @@ export struct ChatPage {
         };
         await ApiClient.sendPrivateMessage(request);
       } else {
+        // @ 提及：文本里仍存在的 @昵称 映射回 user_id（对齐前端与 spec
+        // api_spec_chat.md:135 —— 仅非空时下发 mentions）
+        const mentions: string[] = this.collectMentions(content);
         const request: SendGroupMessageRequest = {
           group_id: this.chatId,
           type: 'text',
           content: content
         };
+        if (mentions.length > 0) {
+          request.mentions = mentions;
+        }
         await ApiClient.sendGroupMessage(request);
       }
 
@@ -1228,6 +1349,11 @@ export struct ChatPage {
         .justifyContent(FlexAlign.Center)
       }
 
+      // @ 提及浮层（对齐前端 ChatInputBar：输入 `@` 触发，选中插入 `@昵称 `）
+      if (this.mentionOpen) {
+        this.mentionPanel()
+      }
+
       // 对齐前端 ChatInputBar：仅输入框 + 发送钮，无「添加图片」钮
       // （web 私聊/群聊输入栏均无图片入口；图片消息为 app 单端功能，git 历史可恢复）
       Row() {
@@ -1243,6 +1369,7 @@ export struct ChatPage {
           .padding({ left: this.getChatVisualStyle().input.horizontalPadding, right: this.getChatVisualStyle().input.horizontalPadding })
           .onChange((value) => {
             this.inputText = value;
+            this.syncMention(value);
             this.handleTypingInput(value);
           })
           .onFocus(() => {
