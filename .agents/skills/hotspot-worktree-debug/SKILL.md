@@ -147,3 +147,25 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --force-rec
 
 重建后 `nginx -t` 与 `docker compose ps` healthy 再验。曾致 fixer 改完 `proxy_cookie_flags`
 后反复验证失败，排查半天才定位到挂载悬空（教训来源：dev 网关剥凭证 Cookie Secure 修复）。
+
+
+## worktree 内跑鸿蒙 hvigor（2026-10-18 实测，DSH 沙盒环境）
+
+DevEco hvigor 默认把项目缓存写到 `~/.hvigor/project_caches/`，hvigorw wrapper 启动
+阶段还会经 npm 拉 pnpm（写 `~/.npm`）——DSH workspace-write 沙盒下两者均 EPERM
+（报错形如 `EPERM: operation not permitted, mkdir '/Users/liyou/.hvigor/...'`，
+看似构建错误实为沙盒拦截）。按「重定向优先」用工具自身配置面解决，不提权：
+
+```bash
+# cwd = worktree 根；目录需先建好（.workwork/ 已 gitignore）
+mkdir -p .workwork/hvigor-home .workwork/npm-cache
+export HVIGOR_USER_HOME="$PWD/.workwork/hvigor-home"   # hvigor 缓存根（须绝对路径）
+export npm_config_cache="$PWD/.workwork/npm-cache"     # wrapper 内 npm 缓存
+# JAVA_HOME / DEVECO_SDK_HOME / PATH 按 harmonyapp/AGENTS.md「构建 & 测试」节照常 export
+```
+
+- **pre-commit 钩子内的 hvigor 走同一套变量**：钩子继承当前 shell 环境，commit 前
+  先 `export` 上述变量再 `git commit`，harmonyapp 门禁即可通过（批次 6 提交实测
+  TYPE CHECK SUCCESSFUL + BUILD SUCCESSFUL，门禁全绿）。
+- worktree 清理时 `.workwork/` 随目录一并删除，无残留。
+- 纪律同全局：这是②「工具自身配置面」方案，实测有效，不要再为此申请提权。
