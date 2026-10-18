@@ -166,7 +166,7 @@
 									<!-- 截断 + 点击弹窗看全文（r59：生硬截断→可展开） -->
 									<button
 										type="button"
-										class="link-btn focus-ring max-w-72 truncate text-left"
+										class="link-btn hit-slop focus-ring max-w-72 truncate text-left"
 										title={detailsText(log.details)}
 										onclick={() => (detailTarget = log)}
 									>
