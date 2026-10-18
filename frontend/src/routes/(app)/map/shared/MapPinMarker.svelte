@@ -55,7 +55,7 @@
 
 <button
 	type="button"
-	class="pointer-events-auto absolute focus-ring"
+	class="pointer-events-auto absolute focus-ring marker-hit"
 	style="left:{pos.x}%;top:{pos.y}%;transform:translate(-50%, -100%) scale({isSelected ? 1.32 : 1});z-index:{isSelected ? 30 : 10};transition:transform var(--cst-motion-standard) var(--cst-ease-bounce);background:transparent;"
 	aria-label={pin.name || PIN_LABELS[pin.type]}
 	onclick={onSelect}
@@ -78,3 +78,16 @@
 		></span>
 	{/if}
 </button>
+
+<style>
+	/* marker 热区扩展：与 .hit-slop 同机制（::before inset:-6px），但**不能直接用 .hit-slop**——
+	   它自带 position:relative，而本项目 styles/theme/utilities.css 在 tailwindcss 之后导入、
+	   同 @layer utilities 同权重下后者胜，会把 marker 的 absolute 压成 relative：
+	   2026-10-18 实测 17 个 marker 只剩 12 个仍落在覆盖层内、地理投影失效。
+	   这里只补伪元素、不碰 position，定位与 translate(-50%,-100%) 锚点均不受影响。 */
+	.marker-hit::before {
+		content: '';
+		position: absolute;
+		inset: -6px;
+	}
+</style>
