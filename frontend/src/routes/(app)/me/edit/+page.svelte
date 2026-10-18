@@ -226,10 +226,12 @@
 		<div class="absolute inset-0" style="background:var(--cst-surface-cover-placeholder);"></div>
 		<!-- 禁用必须可见可解释：原来只有 32px 图标钮 + title（触屏看不到 title，用户只见到
 		     一个点了没反应的相机），照 CreateGroupSheet「添加封面图片 / 即将开放」的既有模式，
-		     把「暂未开放」写在按钮上（全站复审 s3 P2-6）。 -->
+		     把「暂未开放」写在按钮上（全站复审 s3 P2-6）。
+	     底色用 media-scrim-strong（0.55 黑）而非 overlay-strong（vibrant 浅色仅 0.52）：
+	     白字压 overlay-strong 在浅色封面底实测仅 3.62–3.92（<4.5），换 scrim 后 ≥4.9。 -->
 		<button
 			type="button"
-			class="hover-btn absolute top-3 right-3 flex h-8 items-center justify-center gap-1.5 rounded-full px-2.5 focus-ring bg-surface-overlay-strong text-content-inverse disabled:opacity-muted"
+			class="hover-btn absolute top-3 right-3 flex h-8 items-center justify-center gap-1.5 rounded-full px-2.5 focus-ring bg-surface-media-scrim-strong text-content-inverse disabled:opacity-muted"
 			style="backdrop-filter:blur(var(--cst-blur-md));"
 			disabled
 			aria-disabled="true"
