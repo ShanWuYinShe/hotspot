@@ -27,7 +27,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { useGroupDetail } from '@/lib/group-data.svelte';
 	import { formatDateTime } from '@/lib/utils';
 	import { onlineUsers, presence, watchPresence } from '@/stores/presence.svelte';
-	import { auth } from '@/stores/auth.svelte';
+	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { setGroupMemberRole, setGroupMemberMute, banGroupMember, removeGroupMember } from '@/api';
 	import MemberActionSheet from '@/components/groups/MemberActionSheet.svelte';
 	import InviteMembersSheet from '@/components/groups/InviteMembersSheet.svelte';
@@ -147,6 +147,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		const res = await gd.dismissGroup();
 		if (res.code === 0) showToast('群组已解散', 'success');
 		return res;
+	};
+
+	// 加入群组是写操作：访客必须先登录。此前直接调 toggleJoin 会打到 groups/enter
+	// 拿到 10100「Access Token 无效或过期」技术错误 toast，而同页的关注/点赞等都弹
+	// 登录层（全站复审 s2-02）。requireAuth 会存下 pending action，登录成功后自动重放。
+	const requestJoin = () => {
+		if (!requireAuth({ action: '加入群组', targetId: params.groupId, run: () => requestJoin() })) return;
+		gd.toggleJoin();
 	};
 
 	// 退出群组需确认（危险操作确认范式，参照删除公告 Dialog）；加入无需确认
@@ -387,7 +395,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 							showToast('群主需先转让群主身份（群管理 → 转让群主）', 'danger');
 							return;
 						}
-						gd.joined ? (leaveConfirmOpen = true) : gd.toggleJoin();
+						gd.joined ? (leaveConfirmOpen = true) : requestJoin();
 					}}
 				>
 					{#if gd.joinPendingApproval}
@@ -403,7 +411,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					{/if}
 				</Button>
 			{:else}
-				<Button type="button" variant="primary" size="lg" class="w-full" onclick={() => gd.toggleJoin()}>加入群组</Button>
+				<Button type="button" variant="primary" size="lg" class="w-full" onclick={requestJoin}>加入群组</Button>
 			{/if}
 				{#if gd.joined && (gd.myRole === 'owner' || gd.myRole === 'admin')}
 					<!-- 角色门控：仅群主/管理员可见的管理入口（群设置编辑；转让/解散为批次 4d） -->

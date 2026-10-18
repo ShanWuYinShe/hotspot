@@ -19,6 +19,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import GroupCard from './shared/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
 	import { NEARBY_CATEGORIES } from '../shared/categories';
+	import { requireAuth } from '@/stores/auth.svelte';
 	import { searchGroups, joinGroup, leaveGroup, cancelGroupApplication, listMyApplications, netError } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -179,6 +180,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			leaveTarget = group;
 			return;
 		}
+		// 加入是写操作：访客先登录（登录成功后自动重放），避免直接拿到 10100 技术错误（s2-02）
+		if (!requireAuth({ action: '加入群组', targetId: id, run: () => toggleJoin(id) })) return;
 		applyJoin(id, true);
 	};
 </script>
