@@ -83,5 +83,8 @@ worktree 内调试同样通过 Docker Compose，与主工作树自动隔离。
 - **int64 跨端序列化统一为字符串**：JS（Svelte）与 ArkTS 的 number 是 IEEE754 double，无法无损表示 Go int64（安全整数上限 2^53）。凡 spec 定义 string、后端为 int64 的字段（如 WS `server_seq`），后端 JSON tag 必须加 `,string` 下发字符串；前端/harmonyapp 类型保持 string 仅透传/去重、不做数值运算。禁止以「后端实际下发数字」为由把客户端类型改成 number——正确修法是后端序列化为字符串。
 - Docker Compose 统一管理：运行时服务（postgres、redis、seaweedfs、backend、frontend、nginx）统一通过 `docker compose` 编排启动/停止；不得混用宿主机进程与容器，也不允许单独启动某个运行时服务绕过 compose。静态检查（`bun run check/test/build`、Go 单测等不依赖服务间协作的命令）可在宿主机执行。
 - **改动生效闭环**：代码改动合并到主分支后，若主环境 Docker 容器在运行，必须主动重启相关容器，确保最新效果立即可见（命令与健康检查见 skill `hotspot-worktree-debug`）。
+- **环境类结论必须可复现，否则视为未验证假设**：在 skill / 文档 / 对话里写下「本机不可验证」「必须真机」「环境限制」「某页面白屏」这类结论时，必须同时给出**验证日期 + 复现步骤**；沿用别人（或上一轮自己）写下的环境结论前，**先证伪一次**。
+  - 本项目真实教训：一条陈旧的「推入式页面白屏、必须真机」结论被沿用多轮，掩盖了一个真 bug（ArkUI 裸 `{ }` 块 → `layoutWeight` 失效 → 内容区全空），直到端上截图才暴露。
+  - 推论：判定「页面是否正常」一律以**截图**为准；`dumpLayout` 的节点数只能证明"有无渲染"，页头正常而内容区全空时它同样有文本，会被误判为正常页。
 - 范围外的问题记到 `.workwork/` 或如实告知用户，不擅自扩大改动面。
 
