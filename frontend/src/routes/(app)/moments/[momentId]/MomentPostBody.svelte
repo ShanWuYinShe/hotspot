@@ -283,7 +283,7 @@
 					<div class="flex items-center gap-3 mt-1.5">
 						<button
 							type="button"
-							class="hover-action hit-slop flex items-center gap-1 focus-ring {c.liked ? 'text-accent-default' : 'text-text-secondary'}"
+							class="hover-action hit-slop -my-2 flex items-center gap-1 py-2 focus-ring {c.liked ? 'text-accent-default' : 'text-text-secondary'}"
 							aria-label={c.liked ? '取消点赞评论' : '点赞评论'}
 							aria-pressed={c.liked}
 							onclick={() => onToggleCommentLike(c.id)}
@@ -295,14 +295,14 @@
 						</button>
 						<button
 							type="button"
-							class="hover-action hit-slop focus-ring text-text-secondary text-xs"
+							class="hover-action hit-slop -my-2 py-2 focus-ring text-text-secondary text-xs"
 							onclick={() => onReply(c.user, c.id)}
 						>回复</button>
 						{#if c.userId && c.userId === auth.user?.user_id}
 							<!-- 本人评论可删除（spec: api_spec_comment.md comments/delete，仅作者） -->
 							<button
 								type="button"
-								class="hover-action hit-slop focus-ring text-text-secondary text-xs"
+								class="hover-action hit-slop -my-2 py-2 focus-ring text-text-secondary text-xs"
 								aria-label="删除我的评论"
 								onclick={() => onDeleteComment(c.id)}
 							>删除</button>
@@ -310,7 +310,7 @@
 							<!-- 非本人评论可举报（spec: api_spec_report.md，目标属于当前用户时服务端 10400） -->
 							<button
 								type="button"
-								class="hover-action hit-slop desktop-reveal focus-ring text-text-secondary text-xs"
+								class="hover-action hit-slop -my-2 py-2 desktop-reveal focus-ring text-text-secondary text-xs"
 								aria-label={`举报 ${c.user} 的评论`}
 								onclick={() => onReportComment(c.id)}
 							>举报</button>
@@ -350,7 +350,7 @@
 											<div class="flex items-center gap-3 mt-1">
 												<button
 													type="button"
-													class="hover-action hit-slop focus-ring text-text-secondary text-xs"
+													class="hover-action hit-slop -my-2 py-2 focus-ring text-text-secondary text-xs"
 													onclick={() => onReply(r.user, c.id)}
 												>回复</button>
 											</div>

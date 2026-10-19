@@ -99,7 +99,7 @@
 				<div class="flex gap-3.5">
 					<button
 						type="button"
-						class="hover-action hit-slop flex items-center gap-1.5 focus-ring {liked
+						class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring {liked
 							? 'text-accent-default'
 							: 'text-text-secondary hover:text-accent-default'}"
 						aria-label={liked ? '取消点赞' : '点赞'}
@@ -117,7 +117,7 @@
 					<!-- 评论计数：可点进入动态详情（评论区在详情页内） -->
 					<button
 						type="button"
-						class="hover-action hit-slop flex items-center gap-1.5 focus-ring text-text-secondary"
+						class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring text-text-secondary"
 						aria-label="查看评论"
 						onclick={(e) => {
 							e.stopPropagation();
@@ -131,7 +131,7 @@
 				<div class="flex gap-3">
 					<button
 						type="button"
-						class="hover-action hit-slop focus-ring {saved
+						class="hover-action hit-slop -my-2 py-2 focus-ring {saved
 							? 'text-accent-default'
 							: 'text-text-secondary hover:text-accent-default'}"
 						aria-label={saved ? '取消收藏' : '收藏'}
