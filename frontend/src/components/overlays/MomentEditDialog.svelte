@@ -4,6 +4,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import { X, Lock, MapPin } from '@lucide/svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { updateMoment } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
@@ -129,32 +130,20 @@
 			{#if privacy === null}
 				<p class="px-2 pb-2 text-xs text-text-secondary">可见性获取中，稍候可修改；现在保存将保持当前设置</p>
 			{/if}
-			<div class="grid grid-cols-2 gap-1">
-				<button
-					type="button"
-					aria-pressed={privacy === 'public'}
-					disabled={privacy === null}
-					onclick={() => (privacy = 'public')}
-					class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-50 {privacy === 'public'
-						? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
-						: 'text-text-secondary hover:bg-interactive-hover'}"
-				>
-					<MapPin size={14} strokeWidth={privacy === 'public' ? 2 : 1.5} />
-					<span class="truncate text-xxs font-medium">公开可见</span>
-				</button>
-				<button
-					type="button"
-					aria-pressed={privacy === 'private'}
-					disabled={privacy === null}
-					onclick={() => (privacy = 'private')}
-					class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default disabled:cursor-not-allowed disabled:opacity-50 {privacy === 'private'
-						? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
-						: 'text-text-secondary hover:bg-interactive-hover'}"
-				>
-					<Lock size={14} strokeWidth={privacy === 'private' ? 2 : 1.5} />
-					<span class="truncate text-xxs font-medium">仅自己</span>
-				</button>
-			</div>
+			<!-- 分段选择器（对齐鸿蒙发布页「可见范围」的既有形态）：此前是两列自绘按钮，
+			     实测 148×49（3:1 扁条）配 text-xxs 标签——既扁得难看，也不像"选择器"，
+			     且移动端热区只有视觉高度。改用注册原语 TabBar segmented：内容居中、
+			     text-xs 可读、移动端 py-2.5 + .hit-slop-y 达 44px 触控下限。 -->
+			<TabBar
+				variant="segmented"
+				items={[
+					{ id: 'public', label: '公开可见', icon: MapPin },
+					{ id: 'private', label: '仅自己', icon: Lock }
+				]}
+				value={privacy ?? 'public'}
+				disabled={privacy === null}
+				onChange={(id) => (privacy = id as 'public' | 'private')}
+			/>
 		</section>
 
 		<footer class="mt-5 flex items-center justify-end gap-3">

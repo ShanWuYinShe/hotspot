@@ -43,6 +43,18 @@
     inset: -6px;
   }
 
+  /* 纵向热区扩展：横向相邻的紧凑控件（筛选胶囊、分段控制器）不能用 .hit-slop——
+     其水平 -6px 会与相邻项重叠，命中判定落到 DOM 靠后的那颗上。移动端这些胶囊
+     视觉高 32~40px，纵向各扩 6px 即达 44px 触控下限（mobile-ui-conventions 契约）。 */
+  .hit-slop-y {
+    position: relative;
+  }
+  .hit-slop-y::before {
+    content: "";
+    position: absolute;
+    inset: -6px 0;
+  }
+
   /* Sticky page header — consistent across Messages, Nearby, Notifications etc. */
   .sticky-header {
     position: sticky;

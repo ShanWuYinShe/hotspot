@@ -24,12 +24,15 @@
 		value,
 		onChange,
 		variant = 'pills',
+		disabled = false,
 		class: className = ''
 	}: {
 		items: TabItem[];
 		value: string;
 		onChange: (id: string) => void;
 		variant?: 'pills' | 'segmented';
+		/** 整体禁用（如「可见性探测中」：选择器可读但不可改）。 */
+		disabled?: boolean;
 		class?: string;
 	} = $props();
 
@@ -48,10 +51,11 @@
 			     本组件无 tabpanel 关联与方向键导航，role=tab 是残缺实现） -->
 			<button
 				type="button"
+				disabled={disabled}
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
 				data-active={isActive ? 'true' : undefined}
-				class="tab-item flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs focus-ring transition-all duration-standard {isActive
+				class="tab-item hit-slop-y flex items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-xs focus-ring transition-all duration-standard disabled:cursor-not-allowed disabled:opacity-dim lg:py-1.5 {isActive
 					? 'font-medium bg-accent-default text-text-on-accent shadow-raised-sm'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
@@ -83,9 +87,10 @@
 			{@const isActive = value === tab.id}
 			<button
 				type="button"
+				disabled={disabled}
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
-				class="tab-item flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm focus-ring transition-colors duration-standard {isActive
+				class="tab-item hit-slop-y flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2.5 text-sm focus-ring transition-colors duration-standard disabled:cursor-not-allowed disabled:opacity-dim lg:py-1.5 {isActive
 					? 'font-medium bg-accent-soft text-accent-default'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
