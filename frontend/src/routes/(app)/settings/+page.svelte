@@ -429,7 +429,7 @@
 						<div class="flex justify-end pt-2">
 							<Button
 								variant="outline"
-								class="h-auto gap-2 rounded-md bg-surface-primary px-4 py-2 text-xs text-status-danger hover:bg-danger-bg"
+								class="hover-btn hit-slop h-auto gap-2 rounded-md bg-surface-primary px-4 py-2 text-xs text-status-danger hover:bg-danger-bg"
 								onclick={() => (confirmLogoutOpen = true)}
 							>
 								<LogOut class="size-3.5" strokeWidth={1.75} />

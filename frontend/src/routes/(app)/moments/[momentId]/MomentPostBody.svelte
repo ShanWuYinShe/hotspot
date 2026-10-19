@@ -270,7 +270,7 @@
 					<div class="flex items-baseline gap-2">
 						<button
 							type="button"
-							class="link-btn hit-slop text-text-primary text-sm focus-ring rounded-sm"
+							class="link-btn hit-slop -my-2 py-2 text-text-primary text-sm focus-ring rounded-sm"
 							onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
 						>{c.user}</button>
 						<span class="text-text-secondary text-xs">{c.time}</span>
@@ -333,7 +333,7 @@
 										<div class="flex items-baseline gap-2">
 											<button
 												type="button"
-												class="link-btn hit-slop text-text-primary text-sm focus-ring rounded-sm"
+												class="link-btn hit-slop -my-2 py-2 text-text-primary text-sm focus-ring rounded-sm"
 												onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
 											>{r.user}</button>
 											{#if !r.isDeleted}
