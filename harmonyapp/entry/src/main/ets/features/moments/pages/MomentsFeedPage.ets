@@ -330,17 +330,17 @@ export struct MomentsFeedPage {
         .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
           .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))
       } else {
-        // 下拉刷新由 buildMomentFeed 内包 WaterFlow 的 Refresh 承担
-        {
-          // 单栏瀑布墙（宽屏与移动同款）：右栏「活跃用户/热门话题」随「热门」tab 移除——
-          // 推荐用户/群组属发现语义，归首页「发现」段与附近枢纽；本页只做地理流。
-          // ======== 移动端单栏布局（对齐前端 !isDesktop 分支） ========
-          Column() {
-            this.buildMomentFeed()
-          }
-          .width('100%')
-          .layoutWeight(1)
+        // 下拉刷新由 buildMomentFeed 内包 WaterFlow 的 Refresh 承担。
+        // 单栏瀑布墙（宽屏与移动同款）：右栏「活跃用户/热门话题」随「热门」tab 移除——
+        // 推荐用户/群组属发现语义，归首页「发现」段与附近枢纽；本页只做地理流。
+        // 注意：这里**不能**用裸 `{ }` 块包裹（2026-10-19 端上实测缺陷）：ArkUI 的块不是
+        // 容器，内部的 layoutWeight(1) 不会生效，Column 高度塌陷 → WaterFlow 高度为 0 →
+        // 页头计数正常但一条内容都不渲染（表现为"内容区全空"）。
+        Column() {
+          this.buildMomentFeed()
         }
+        .width('100%')
+        .layoutWeight(1)
       }
     }
     .width('100%')
