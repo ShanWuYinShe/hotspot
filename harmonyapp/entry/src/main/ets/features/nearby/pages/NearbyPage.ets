@@ -15,6 +15,9 @@ import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { AppRouter, MomentDetailRouteParam } from '../../../core/router/AppRouter';
+import { curves } from '@kit.ArkUI';
+import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
+import type { LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
@@ -42,6 +45,10 @@ export struct NearbyPage {
   @State private isLoading: boolean = true;
   @State private loadError: string = '';
   @State private isRefreshing: boolean = false;
+  /** 统计卡（2026-10-19 由首页迁来）：位置与按压态 */
+  @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
+  @State private locationCardPressed: boolean = false;
 
   private static readonly SECTION_TABS: string[] = ['附近的人', '附近群组', '附近动态'];
 
@@ -170,6 +177,10 @@ export struct NearbyPage {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
         Scroll() {
           Column({ space: DesignConstants.SPACING.LG }) {
+            // 统计卡：统计属地理轴，跟「附近」走（2026-10-19 由首页迁来，对齐 web 枢纽页）
+            if (!this.isLoading && this.loadError === '') {
+              this.buildHeroStats()
+            }
             if (this.isLoading) {
               SystemLoadingView({ message: '正在探索周边…' })
                 .width('100%')
@@ -268,6 +279,182 @@ export struct NearbyPage {
       .width('100%')
       .height('100%')
     }
+  }
+
+  /** 统计卡的在线人数（枢纽已加载的用户里在线者） */
+  private getOnlineCount(): number {
+    if (!this.nearbyUsers || this.nearbyUsers.length === 0) return 0;
+    let count: number = 0;
+    for (const u of this.nearbyUsers) {
+      if (u.presence_status === 'online') count += 1;
+    }
+    return count;
+  }
+
+  private getHeroRangeLabel(): string {
+    const locationName = this.browseAnchor?.locationName ?? this.currentLocation?.locationName ?? '';
+    return locationName ? `${locationName} · 5km 内 · 持续更新` : '5km 内 · 持续更新';
+  }
+
+  @Builder
+  private buildHeroStats() {
+    // 实时附近统计卡（对齐前端 HeroStats.svelte 当前实现：白卡 + 发丝描边 + raised 投影，
+    // 无 ambient 光晕——前端 09-07 去炫光治理已删除 glow 层，本端同步删除）
+    Column() {
+      // Header row：图标 + 标题/范围 + 右箭头
+      // 弹性契约（对齐前端 HeroStats）：左侧文本簇 layoutWeight(1) 先收缩，
+      // 右箭头 flexShrink(0) 锁定；定位名过长时副标题单行省略，不顶出箭头。
+      // （此前靠 Blank 撑开，文本簇无宽度约束，副标题 maxLines(1) 的省略永远触发不了，
+      // 长定位名会把箭头顶出卡外——对齐前端同款问题。）
+      Row() {
+        Row({ space: DesignConstants.SPACING.SM2 }) {
+          // brand 圆形图标（对齐前端 size-9.5 圆 + accent 实底，无投影）
+          Row() {
+            LucideIcon({
+              icon: AppIcon.NEARBY,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
+              paletteRole: 'accentText'
+            })
+          }
+          .width(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
+          .height(DesignConstants.COMPONENT.BRAND_ICON_SIZE)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getCurrentThemePalette().accentBackground)
+          .justifyContent(FlexAlign.Center)
+
+          Column() {
+            Text('实时附近')
+              .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-sm
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+              .fontColor(this.getCurrentThemePalette().textPrimary)
+            // 副标题：定位名 · 范围 · 更新节奏（对齐前端 HeroStats rangeLabel）
+            Text(this.getHeroRangeLabel())
+              .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+              .margin({ top: 1 })
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+        }
+        .alignItems(VerticalAlign.Center)
+        .layoutWeight(1)
+
+        Text() {
+          LucideIcon({
+            icon: AppIcon.ARROW_RIGHT,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+            paletteRole: 'textSecondary'
+          })
+        }
+        .flexShrink(0)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      // Stats grid：三段统计 + 竖分割线（对齐前端 bg-border-default gap-px 网格语义）
+      // 数字统一 text-2xl(24) bold，对齐前端 display 化 stats（0d528548）
+      Row({ space: DesignConstants.SPACING.MD }) {
+        // 人附近（对齐前端：显示实际返回条数，limit 12）
+        Column({ space: DesignConstants.SPACING.SM2 }) {
+          Text(`${this.nearbyUsers.length}`)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD) // 对齐前端 font-semibold(600)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+          Text('人附近')
+            .fontSize(DesignConstants.FONT.SIZE.XS2) // 10 对齐前端 text-xxs
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+        }
+        .alignItems(HorizontalAlign.Center)
+        .layoutWeight(1)
+        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+
+        // 分割竖线（Gemini 审查：缩短至 16 + 降不透明度退居幕后）
+        Column()
+          .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
+          .height(40) // 对齐前端 gap-px 网格线(随统计格内容高,40=数字24+标签11+间距6)
+          .backgroundColor(this.getCurrentThemePalette().borderColor)
+          .opacity(DesignConstants.OPACITY.MUTED)
+
+        // 活动中（对齐前端 heroStats.active = moments.length）
+        Column({ space: DesignConstants.SPACING.SM2 }) {
+          Text(`${this.nearbyMoments.length}`)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD) // 对齐前端 font-semibold(600)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+          Text('动态')
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+        }
+        .alignItems(HorizontalAlign.Center)
+        .layoutWeight(1)
+        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+
+        // 分割竖线（Gemini 审查：缩短至 16 + 降不透明度退居幕后）
+        Column()
+          .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
+          .height(40) // 对齐前端 gap-px 网格线(随统计格内容高,40=数字24+标签11+间距6)
+          .backgroundColor(this.getCurrentThemePalette().borderColor)
+          .opacity(DesignConstants.OPACITY.MUTED)
+
+        // 在线
+        Column({ space: DesignConstants.SPACING.SM2 }) {
+          Text(`${this.getOnlineCount()}`)
+            .fontSize(DesignConstants.FONT.SIZE.XXL)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD) // 对齐前端 font-semibold(600)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+          Text('在线')
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+        }
+        .alignItems(HorizontalAlign.Center)
+        .layoutWeight(1)
+        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+      }
+      .width('100%')
+      .margin({ top: DesignConstants.SPACING.LG })
+    }
+    .width('100%')
+    // 页边距对齐前端 px-5(20)：卡本体不可贴屏幕边缘（此前 100% 宽导致边框贴边不可见）
+    // 对齐前端 HeroStats 卡：py-4.5(18, 布局几何豁免) px-5(LG2=20) + rounded-xl(24) + raised-sm 投影
+    .padding({
+      top: 18,
+      bottom: 18,
+      left: DesignConstants.SPACING.LG2,
+      right: DesignConstants.SPACING.LG2
+    })
+    .borderRadius(DesignConstants.SHAPE.HERO_CARD)
+    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+    .shadow(this.getCurrentThemePalette().surfaceShadow)
+    .scale(this.locationCardPressed
+      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
+      : { x: 1, y: 1 })
+    .animation({
+      curve: curves.springMotion(
+        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+      )
+    })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.locationCardPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.locationCardPressed = false;
+      }
+    })
+    .onClick(() => AppRouter.push(PageNames.NEARBY_USERS))
+    // 首块与后续区块同节奏：统一底距，使下一个区块标题的上方间距与其他区块一致
+    .margin({ bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
   }
 
   @Builder
