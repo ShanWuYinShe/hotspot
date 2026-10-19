@@ -122,12 +122,13 @@
 					</button>
 				{/if}
 				{#if onToggleMute}
-					<!-- 免打扰开关：开启时常显（与 Pin 高亮同语义），未开启 desktop-reveal 显现 -->
+					<!-- 免打扰开关：**仅桌面 hover/focus 显现**（2026-10-20 UI 审查）。
+					     移动端此前「已静音」时常显 → 与未读徽标、⋯ 挤成右端三件套；
+					     静音状态已由名字旁的 BellOff 指示器表达，切换入口在 ⋯ 菜单里（开启/关闭免打扰），
+					     所以移动端不需要这枚常显按钮。 -->
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop focus-ring {chat.isMuted
-							? 'flex shrink-0 items-center justify-center rounded-full p-1'
-							: 'desktop-reveal hidden shrink-0 items-center justify-center rounded-full p-1 md:flex'} {isSelected
+						class="hover-btn scale-btn hit-slop desktop-reveal hidden shrink-0 items-center justify-center rounded-full p-1 focus-ring md:flex {isSelected
 							? 'text-text-on-accent'
 							: chat.isMuted
 								? 'text-accent-default'

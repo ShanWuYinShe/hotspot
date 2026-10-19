@@ -21,24 +21,24 @@
 	const isLarge = $derived(variant === 'lg');
 </script>
 
-<div class="{isLarge ? 'mb-4' : 'shrink-0 px-4 py-2.5 border-b border-border-default'}">
+<div class="{isLarge ? 'mb-3' : 'shrink-0 px-4 py-2.5 border-b border-border-default'}">
 	<!-- 分组小标统一 eyebrow（tracking-eyebrow 0.14em），与全站一致 -->
 	<p class="eyebrow {isLarge ? 'mb-2.5' : 'mb-2'}">在线</p>
-	<div class="flex overflow-x-auto no-scrollbar {isLarge ? 'gap-4 pb-1 pr-1' : 'gap-3 pr-1'}" use:scrollFade>
+	<div class="flex overflow-x-auto no-scrollbar {isLarge ? 'gap-3 pb-1 pr-1' : 'gap-3 pr-1'}" use:scrollFade>
 		{#each chats as c (c.id)}
 			<button
 				type="button"
-				class="avatar-entry tap-92 flex flex-col items-center shrink-0 cursor-pointer {isLarge ? 'gap-1.5' : 'gap-1'}"
+				class="avatar-entry tap-92 flex flex-col items-center shrink-0 cursor-pointer {isLarge ? 'gap-1' : 'gap-1'}"
 				onclick={() => onSelect(c)}
 			>
 				<div class="relative">
 					<Avatar
 						src={c.avatar}
 						name={c.name}
-						size={isLarge ? 52 : 36}
+						size={isLarge ? 44 : 36}
 						class="border"
 						style={isLarge
-							? 'padding:2px;border-color:var(--cst-accent-default);border-width:var(--cst-border-width-strong);'
+							? 'border-color:var(--cst-accent-default);border-width:var(--cst-border-width-regular);'
 							: `border-color:${selectedId === c.id ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};border-width:${selectedId === c.id ? 'var(--cst-border-width-strong)' : 'var(--cst-border-width-regular)'};`}
 					/>
 					<OnlineDot size={isLarge ? 'lg' : 'sm'} />

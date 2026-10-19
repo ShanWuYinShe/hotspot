@@ -284,19 +284,22 @@ export struct CreateMomentSheet {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
-      // 正在发布徽章（对齐前端：accent-soft 底 + accent 描边 + accent 蓝字）
-      Text('正在发布')
-        .fontSize(DesignConstants.FONT.SIZE.XS2)
-        .fontColor(this.getPalette().accentBackground)
-        .backgroundColor(this.getPalette().accentMuted)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground })
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .padding({
-          left: DesignConstants.SPACING.SM2,
-          right: DesignConstants.SPACING.SM2,
-          top: DesignConstants.SPACING.HALF,
-          bottom: DesignConstants.SPACING.HALF
-        })
+      // 发布中徽章：**仅在真正发布时出现**（对齐 web CreateSheet 的 `{#if submitting}`）。
+      // 此前是无条件渲染的「正在发布」，用户刚打开发布 Sheet 就看到"正在发布"，语义错误。
+      if (this.isPublishing) {
+        Text(this.publishingMessage || '正在发布…')
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontColor(this.getPalette().accentBackground)
+          .backgroundColor(this.getPalette().accentMuted)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground })
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .padding({
+            left: DesignConstants.SPACING.SM2,
+            right: DesignConstants.SPACING.SM2,
+            top: DesignConstants.SPACING.HALF,
+            bottom: DesignConstants.SPACING.HALF
+          })
+      }
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
