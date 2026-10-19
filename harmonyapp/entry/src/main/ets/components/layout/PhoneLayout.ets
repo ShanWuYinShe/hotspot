@@ -21,11 +21,11 @@ import { HomePage } from '../../features/home/pages/HomePage';
 import { MessagePage } from '../../features/messages/pages/MessagePage';
 import { ProfilePage } from '../../features/me/pages/ProfilePage';
 // 附近一级 Tab 落点：NearbyPage 枢纽页（对齐 web /nearby）。
-// 2026-10-19 信息架构调整（两端同步进行中）：web 将 /nearby 从 307 跳转改为枢纽页、
-// 首页改为「关注/发现」双轴；鸿蒙端本次先把 Tab 落点切到已有的 NearbyPage 枢纽。
-// 【仍未对齐】HomePage 目前仍是「热门瞬间 + 附近用户/群组」聚合（与 web 旧首页同形），
-// 待改为「关注/发现」双轴；另 web 枢纽用分区（人/瞬间/群组三段平铺），本端 NearbyPage
-// 用 TabsPillGroup 段位——表现形态差异待统一。
+// 2026-10-19 信息架构调整（两端已同步）：web 将 /nearby 从 307 跳转改为枢纽页、
+// 首页改为「关注/发现」双轴；本端同步——Tab 落点 → NearbyPage 枢纽；
+// HomePage → 「关注/发现」双轴（附近用户/群组区块移出首页，统计卡迁到枢纽页）。
+// 【仍未对齐】① MomentsFeedPage 仍带「热门/周边/关注」三 Tab（web 侧已收敛为纯地理流）；
+// ② 枢纽表现形态：web 用分区平铺（人/瞬间/群组三段同屏），本端用 TabsPillGroup 段位。
 import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { LoginPromptView } from '../LoginPromptView';
 import { type BreakpointType, isWideForm } from '../../core/responsive/Breakpoint';
