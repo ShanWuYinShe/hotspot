@@ -84,7 +84,7 @@
 					{#if onTogglePin}
 						<button
 							type="button"
-							class="hover-btn scale-btn hit-slop focus-ring flex shrink-0 items-center justify-center rounded-full p-1 {isSelected ? 'text-text-on-accent' : 'text-accent-default'}"
+							class="hover-btn scale-btn hit-slop -m-2 focus-ring flex shrink-0 items-center justify-center rounded-full p-2 {isSelected ? 'text-text-on-accent' : 'text-accent-default'}"
 							aria-label="取消置顶"
 							title="取消置顶"
 							onclick={(e) => {
