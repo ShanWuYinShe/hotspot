@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import { Map as MapIcon, MapPin, Search, Sparkles } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { readLastLocation } from '@/lib/map-auto-locate';
@@ -17,8 +15,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import MomentCard from '@/components/moments/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/moment-feed.svelte';
-	import { fetchFollowingMoments, fetchNearbyMoments, netError } from '@/api';
-	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
+	import { fetchNearbyMoments, netError } from '@/api';
 	import { formatDateTime, formatDistance } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 	import {
@@ -28,14 +25,13 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		feedProgressKey
 	} from '@/lib/moments-feed-progress.svelte';
 
-	// 附近动态（/nearby/moments）：独立路由页。
-	// BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）；人/群组/动态三段各为
-	// 独立页面，不再共用段位导航 Tabs；搜索/地图收敛为 header 右上角工具入口。
-
-	// 「周边」= 按距离排序的默认流（nearby feed）；原「附近」与一级 Tab 同名嵌套
-	// 易歧义，改用项目既有语汇「周边」。旧深链 ?tab=附近 经 normalizeTab 兼容映射。
-	const TABS = ['热门', '周边', '关注'];
-	const TAB_ALIASES: Record<string, string> = { 附近: '周边' };
+	// 附近瞬间（/nearby/moments）：**纯地理轴**页面（按距离排序的 nearby feed）。
+	// BSP 卡片墙（桌面 3 列 / 平板 2 列 / 移动 2 列）；搜索/地图收敛为 header 右上角工具入口。
+	//
+	// 2026-10-19 信息架构调整：本页原有的「热门 / 周边 / 关注」三个分类 Tab 已移除——
+	// 热门（算法轴）与关注（关系轴）迁到首页的两个段（首页「发现」/「关注」），
+	// 一个表面只承担一条轴；地理叶子页再挂非地理流会让同一批内容出现在两处。
+	// 标签筛选（tagChips）保留，仍是本页的筛选维度。
 
 	let apiFeedItems = $state<FeedItem[]>([]);
 	let tags = $state<string[]>([]);
@@ -157,8 +153,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	});
 
 	// 三端共用的过滤逻辑（收敛到单处实现）
-	// tab 支持深链：?tab= 初始化（刷新/分享保留分类），切换写回 URL
-	let activeTab = $state(initTabFromUrl());
 	let activeTag = $state<string | null>(null);
 	// 已加载集合内的渲染切片（cursor 耗尽后 loadMore 推进此值）
 	const INITIAL_VISIBLE = 12;
@@ -168,15 +162,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// 失败不推进（loadingMore 复位后下次触发自然重试），避免静默丢页。
 	async function handleLoadMore() {
 		if (loadingMore) return;
-		if (isFollowing) {
-			// 关注流：服务端 cursor 翻页；cursor 耗尽后推进已加载集合内的渲染切片
-			if (followingCursor) {
-				await loadFollowing(false);
-			} else {
-				visibleCount = Math.min(visibleCount + 8, filtered.length);
-			}
-			return;
-		}
 		if (nextCursor) {
 			loadingMore = true;
 			try {
@@ -211,96 +196,17 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		void goto(focusComments ? `${ROUTES.moment(id)}?focus=comments` : ROUTES.moment(id));
 	}
 
-	// ── 关注流（moments/fetch_following，登录态接口）──
-	// 独立数据源 + 独立加载态：访客（10100）是正常业务态，走 NeedsAuthNotice
-	// 登录引导而非 LoadError（契约见 NeedsAuthNotice 组件注释）。
-	const isFollowing = $derived(activeTab === '关注');
-	let followingItems = $state<FeedItem[]>([]);
-	let followingCursor = $state('');
-	let followingLoading = $state(false);
-	let followingError = $state<string | null>(null);
-	let followingNeedsAuth = $state(false);
-	// 已成功拉过首页：切走再切回不重拉（刷新入口 = LoadError 重试 / 重新进入页面）
-	let followingLoaded = $state(false);
-
-	async function loadFollowing(reset: boolean) {
-		if (followingLoading) return;
-		followingLoading = true;
-		if (reset) {
-			followingCursor = '';
-			followingError = null;
-			followingNeedsAuth = false;
-		}
-		try {
-			const res = await fetchFollowingMoments({
-				pagination: followingCursor
-					? { limit: PAGE_LIMIT, cursor: followingCursor }
-					: { limit: PAGE_LIMIT }
-			});
-			if (res.code === 10100) {
-				followingNeedsAuth = true;
-				return;
-			}
-			if (res.code !== 0 || !res.data) {
-				followingError = res.message ?? '加载失败，请稍后重试';
-				return;
-			}
-			const fresh = (res.data.items || []).map(mapMoment);
-			if (followingCursor) {
-				const known = new Set(followingItems.map((i) => i.id));
-				followingItems = [...followingItems, ...fresh.filter((i) => !known.has(i.id))];
-				// 翻页追加后推进渲染切片，与附近流的「每页多看 8 张」节奏一致
-				visibleCount = Math.min(visibleCount + 8, followingItems.length);
-			} else {
-				followingItems = fresh;
-				visibleCount = INITIAL_VISIBLE;
-			}
-			followingCursor = res.data.next_cursor ?? '';
-			followingLoaded = true;
-		} catch {
-			followingError = '加载失败，请稍后重试';
-		} finally {
-			followingLoading = false;
-		}
-	}
-
-	// 首次切到「关注」再拉取（保持「热门/周边」首刷不受登录态影响）；
-	// untrack：loadFollowing 内部读写的 cursor/loading 是 fetch 状态，不应成为本 effect 依赖
-	$effect(() => {
-		if (isFollowing && !followingLoaded && !followingLoading) {
-			void untrack(() => loadFollowing(true));
-		}
-	});
-
-	function initTabFromUrl(): string {
-		const t = page.url.searchParams.get('tab') ?? '';
-		const normalized = TAB_ALIASES[t] ?? t;
-		return TABS.includes(normalized) ? normalized : '热门';
-	}
-
-	// 传入 getter 而非数组快照：items 需随当前 Tab 数据源（附近流/关注流）更新，
-	// 点赞/收藏的乐观更新与回滚作用于当前展示的列表
-	const interactions = createFeedInteractions(() => (isFollowing ? followingItems : apiFeedItems));
+	// 传入 getter 而非数组快照：点赞/收藏的乐观更新与回滚作用于当前展示的列表
+	const interactions = createFeedInteractions(() => apiFeedItems);
 
 	const filtered = $derived.by(() => {
 		// 标签按全量匹配：首标签之外同样可命中（此前只比 tags[0]）。
-		let items = interactions.items.filter((i) => !activeTag || i.tags.includes(activeTag));
-		// 分类 Tab 过滤：热门=按热度排序；周边=距离序（接口默认序）；关注=时间序（接口默认序）
-		if (activeTab === '热门') items = [...items].sort((a, b) => b.likes - a.likes);
-		return items;
+		return interactions.items.filter((i) => !activeTag || i.tags.includes(activeTag));
 	});
 
-	// 列表到底收尾（ListEnd）与哨兵续载（hasMore）按当前 Tab 的翻页状态判定
-	const showListEnd = $derived(
-		isFollowing
-			? followingLoaded && !followingLoading && !followingError && !followingNeedsAuth && !followingCursor
-			: !loadingMore && visibleCount >= filtered.length && !nextCursor
-	);
-	const feedHasMore = $derived(
-		isFollowing
-			? followingLoading || Boolean(followingCursor)
-			: loadingMore || visibleCount < filtered.length || Boolean(nextCursor)
-	);
+	// 列表到底收尾（ListEnd）与哨兵续载（hasMore）
+	const showListEnd = $derived(!loadingMore && visibleCount >= filtered.length && !nextCursor);
+	const feedHasMore = $derived(loadingMore || visibleCount < filtered.length || Boolean(nextCursor));
 
 	const device = $derived(platform.platform);
 	const gridColumns = $derived(device === 'mobile' ? 2 : device === 'tablet' ? 2 : 3);
@@ -309,7 +215,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	const minCanvasHeight = $derived(device === 'mobile' ? 440 : 520);
 </script>
 <svelte:head>
-	<title>附近动态 · HotSpot</title>
+	<!-- 与 PageHeader 一致：页头是「附近瞬间」，「附近动态」是旧名（同类不一致见 s4-28 复核口径） -->
+	<title>附近瞬间 · HotSpot</title>
 </svelte:head>
 
 
@@ -331,27 +238,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
 			</div>
 		{/snippet}
-		{#snippet below()}
-			<!-- 桌面端 feed Tab 并入正文分类行右端合并单行（r04：双行筛选吃首屏）；移动/平板维持吸顶 -->
-			{#if device !== 'desktop'}
-			<div class="mt-3 pb-2">
-				{@render tabBar()}
-			</div>
-			{/if}
-		{/snippet}
 	</PageHeader>
-{/snippet}
-
-<!-- ═══ 分类 Tab 栏（胶囊样式，随 header 吸顶）═══ -->
-{#snippet tabBar()}
-	<TabBar
-		items={TABS.map((t) => ({ id: t, label: t }))}
-		value={activeTab}
-		onChange={(id) => {
-			activeTab = id;
-			void goto(`${ROUTES.nearbyMoments}?tab=${encodeURIComponent(id)}`);
-		}}
-	/>
 {/snippet}
 
 <!-- ═══ 热门 tag 列表（scrollable / flex-wrap 由调用处 className 决定，对齐 Figma TagChips）═══ -->
@@ -366,27 +253,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	/>
 {/snippet}
 
-<!-- ═══ 加载中 / 空列表状态（关注流四态独立：登录引导 / 错误重试 / 空态区分）═══ -->
+<!-- ═══ 加载中 / 空列表状态 ═══ -->
 {#snippet feedState()}
-	{#if isFollowing}
-		{#if followingLoading && !followingItems.length}
-			<InlineLoading label="加载关注动态…" />
-		{:else if followingNeedsAuth}
-			<NeedsAuthNotice
-				title="登录后查看关注动态"
-				description="登录后即可查看你关注的人发布的瞬间"
-			/>
-		{:else if followingError}
-			<LoadError message={followingError} onRetry={() => void loadFollowing(true)} />
-		{:else}
-			<!-- 关注流空态：与「附近无内容」区分，指引用户先去关注 -->
-			<EmptyState title="关注的人还没有发布动态" description="去附近的人页关注感兴趣的用户，动态会出现在这里。">
-				{#snippet icon()}
-					<Sparkles size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
-				{/snippet}
-			</EmptyState>
-		{/if}
-	{:else if loading}
+	{#if loading}
 		<InlineLoading label="加载附近动态…" />
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => { clearMomentsProgress(); reloadKey++; }} />
@@ -405,18 +274,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		{@render feedHeader()}
 	{/snippet}
 
-	<div class="mb-5 flex items-center justify-between gap-4">
+	<div class="mb-5">
 		{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto pr-1')}
-		{#if device === 'desktop'}
-			<div class="shrink-0">
-				{@render tabBar()}
-			</div>
-		{/if}
 	</div>
 
-	{#if isFollowing
-		? (followingLoading && !followingItems.length) || followingNeedsAuth || followingError || !filtered.length
-		: loading || loadError || !filtered.length}
+	{#if loading || loadError || !filtered.length}
 		{@render feedState()}
 	{:else}
 		{#if device === 'mobile'}

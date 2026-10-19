@@ -20,12 +20,13 @@
 import { HomePage } from '../../features/home/pages/HomePage';
 import { MessagePage } from '../../features/messages/pages/MessagePage';
 import { ProfilePage } from '../../features/me/pages/ProfilePage';
-// 附近一级 Tab 直挂「附近的人」列表页。
-// 【两端暂不一致，待同步】web 于 2026-10-19 做了信息架构调整：/nearby 改为「附近」枢纽页
-// （Hero 统计 + 人/瞬间/群组三段分区，各段「查看全部」进叶子页），首页改为热门发现轴、
-// 不再承载附近内容。鸿蒙端尚未跟进（仍直挂附近的人、首页仍为附近聚合），
-// 跟进时按 web 同款分区结构落地，避免两端语义长期分叉。
-import { NearbyUsersListPage } from '../../features/nearby/pages/NearbyUsersListPage';
+// 附近一级 Tab 落点：NearbyPage 枢纽页（对齐 web /nearby）。
+// 2026-10-19 信息架构调整（两端同步进行中）：web 将 /nearby 从 307 跳转改为枢纽页、
+// 首页改为「关注/发现」双轴；鸿蒙端本次先把 Tab 落点切到已有的 NearbyPage 枢纽。
+// 【仍未对齐】HomePage 目前仍是「热门瞬间 + 附近用户/群组」聚合（与 web 旧首页同形），
+// 待改为「关注/发现」双轴；另 web 枢纽用分区（人/瞬间/群组三段平铺），本端 NearbyPage
+// 用 TabsPillGroup 段位——表现形态差异待统一。
+import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { LoginPromptView } from '../LoginPromptView';
 import { type BreakpointType, isWideForm } from '../../core/responsive/Breakpoint';
 import { NotificationCenter } from '../NotificationCenter';
@@ -129,7 +130,10 @@ export struct PhoneLayout {
         // 主体：Tabs + 5 TabContent（Nearby / Discover / Create / Message / Profile）
         Tabs({ barPosition: BarPosition.End, controller: this.tabsController, index: this.currentTabIndex }) {
           TabContent() { HomePage() }.tabBar(this.TabBarBuilder(0))
-          TabContent() { NearbyUsersListPage() }.tabBar(this.TabBarBuilder(1))
+          // 附近一级 Tab 落点：枢纽页（人/群组/瞬间预览 + 查看全部），对齐 web /nearby。
+          // 2026-10-19 IA 调整：此前直挂 NearbyUsersListPage，导致一级 Tab 的语义比落点窄
+          // （点「附近」只看到人）。三个完整列表页仍是叶子页，从枢纽「查看全部」进入。
+          TabContent() { NearbyPage() }.tabBar(this.TabBarBuilder(1))
           TabContent() { Column() {} }.tabBar(this.CreateTabBuilder())
           TabContent() {
             if (this.isLoggedIn) {
