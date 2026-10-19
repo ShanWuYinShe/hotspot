@@ -5,6 +5,8 @@
 	import type { FeedItem } from './moment-feed.svelte';
 
 	// MomentCard — 全站统一动态卡片：基于 NearbyImageCard 图片优先原语。
+	// 卡片比例由调用方按列宽传（2 列窄卡用 3:4 竖版，1 列/桌面用 4:3）：
+	// 图片是整卡背景、底部托盘叠在上面，卡太矮时托盘会吃掉 70%+ 的图片（2026-10-20 实测 171×128 卡）。
 	// 标签/作者/正文/操作栏统一渲染，适用于 nearby/moments 与 me/moments 等所有场景。
 	let {
 		item,
@@ -89,7 +91,7 @@
 
 			<!-- 正文：单行或双行省略 -->
 			{#if item.content}
-				<p class="mt-1 line-clamp-1 leading-card text-xs text-text-secondary">
+				<p class="mt-1 line-clamp-2 leading-card text-xs text-text-secondary">
 					{item.content}
 				</p>
 			{/if}

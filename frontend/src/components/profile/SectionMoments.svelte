@@ -12,7 +12,7 @@
 	import { openComposer } from '@/stores/composer.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { useAccountData, useGalleryMoments, useReactedMoments, useFavoriteMoments, type GalleryMoment } from '@/lib/profile-data.svelte';
-	import { formatDateTime } from '@/lib/utils';
+	import { formatCardTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 
 	// 我的瞬间分区：与 nearby/moments 全面统一视觉语言。
@@ -83,7 +83,7 @@
 			image: m.img || '',
 			likes: m.likes || 0,
 			comments: m.comments || 0,
-			time: m.created_at ? formatDateTime(m.created_at) : '',
+			time: m.created_at ? formatCardTime(m.created_at) : '',
 			liked: m.liked ?? (activeTab === 'liked'),
 			saved: m.saved ?? (activeTab === 'saved'),
 			likeEmoji: '👍'

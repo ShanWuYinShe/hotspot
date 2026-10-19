@@ -7,7 +7,7 @@
 
 import { getGroupDetail, getGroupMembers, getGroupAnnouncements, joinGroup, leaveGroup, createGroupAnnouncement, updateGroupAnnouncement, deleteGroupAnnouncement, listSentGroupInvites, revokeSentGroupInvite, listBannedGroupMembers, unbanGroupMember, updateGroup, listGroupApplications, approveGroupApplication, rejectGroupApplication, transferGroupOwnership, dismissGroup as dismissGroupApi, listMyApplications, cancelGroupApplication, listAdminGroupMembers, netError } from '@/api';
 import { wsClient } from '@/lib/ws/client';
-import { formatDistance, formatDateTime } from '@/lib/utils';
+import { formatDistance, formatCardTime } from '@/lib/utils';
 import { showToast } from '@/stores/toast.svelte';
 import type { GroupRole, GroupSentInviteItem, AdminBannedMemberItem, GroupItem, UpdateGroupRequest, GroupApplicationItem, GroupMemberItem } from '@/api/types';
 
@@ -238,7 +238,7 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 					id: a.announcement_id,
 					title: a.title ?? '',
 					body: a.content ?? '',
-					time: formatDateTime(a.created_at),
+					time: formatCardTime(a.created_at),
 					isPinned: Boolean(a.is_pinned)
 				}));
 			}

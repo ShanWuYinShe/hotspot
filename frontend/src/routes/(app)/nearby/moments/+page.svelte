@@ -16,7 +16,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import MomentCard from '@/components/moments/MomentCard.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/moment-feed.svelte';
 	import { fetchNearbyMoments, netError } from '@/api';
-	import { formatDateTime, formatDistance } from '@/lib/utils';
+	import { formatCardTime, formatDistance } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 	import {
 		getMomentsProgress,
@@ -66,7 +66,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			image: m.images?.[0]?.url ?? '',
 			likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 			comments: m.comments_count ?? 0,
-			time: formatDateTime(m.created_at),
+			time: formatCardTime(m.created_at),
 			liked: Boolean(mine),
 			saved: Boolean(m.is_favorited),
 			likeEmoji: mine?.emoji ?? '👍'
@@ -287,7 +287,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			     且与「我的瞬间」同内容不同比例；手机改用统一 4:3 内容卡，平板/桌面保留 BSP。 -->
 			<div class="grid grid-cols-2 gap-4">
 				{#each filtered.slice(0, visibleCount) as item (item.id)}
+					<!-- 手机两列窄卡用 3:4 竖版：4:3 时卡高仅 ~128px，底部托盘吃掉 70%+ 图片 -->
 					<MomentCard
+						class="aspect-[3/4] rounded-md"
 						item={item}
 						liked={item.liked}
 						saved={item.saved}

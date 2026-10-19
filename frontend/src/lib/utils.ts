@@ -51,6 +51,25 @@ export function formatRelativeDays(daysAgo: number): string {
  * 今天→HH:mm / 昨天→"昨天 HH:mm" / 同年→M月D日 HH:mm / 跨年→YYYY年M月D日。
  * 对齐鸿蒙 FormatUtil.formatDetailTime（跨端同步：文案与粒度逐字一致）。
  */
+/**
+ * 卡片时间（网格卡片作者行用）：宽卡片才承受得起完整时间戳。
+ * 今天→HH:mm / 昨天→"昨天" / 同年→"M月D日" / 跨年→"YYYY年M月D日"。
+ * 详情页仍用 formatMomentTime（带 HH:mm，信息更全）。
+ */
+export function formatCardTime(iso?: string | null): string {
+	if (!iso) return '';
+	const d = new Date(iso);
+	if (isNaN(d.getTime())) return '';
+	const now = new Date();
+	const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+	const dayDiff = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+	if (dayDiff === 0) return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+	if (dayDiff === 1) return '昨天';
+	const monthDay = `${d.getMonth() + 1}月${d.getDate()}日`;
+	if (d.getFullYear() === now.getFullYear()) return monthDay;
+	return `${d.getFullYear()}年${monthDay}`;
+}
+
 export function formatMomentTime(iso?: string | null): string {
 	if (!iso) return '';
 	const d = new Date(iso);
