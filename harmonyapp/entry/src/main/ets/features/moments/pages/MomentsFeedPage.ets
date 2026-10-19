@@ -15,9 +15,9 @@ import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import {
-  UserItem, GroupItem, MomentItem,
-  SearchUsersRequest, SearchGroupsRequest, CreateReportRequest, Relationship, GeoPoint, PaginationParams,
-  SearchMomentsRequest, FetchFollowingMomentsRequest, FetchNearbyMomentsRequest,
+  MomentItem,
+  GeoPoint, PaginationParams,
+  FetchNearbyMomentsRequest,
   ApiResponse, PaginatedData
 } from '../../../core/types/api';
 import { curves } from '@kit.ArkUI';
@@ -71,9 +71,6 @@ export struct MomentsFeedPage {
 
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
-  @State recommendedUsers: UserItem[] = [];
-  private recommendedUsersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
-  @State recommendedGroups: GroupItem[] = [];
   @State hotMoments: MomentItem[] = [];
   private hotMomentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
   private interactionStore = InteractionStateStore.getInstance();
@@ -83,17 +80,14 @@ export struct MomentsFeedPage {
   @State isLoadingMore: boolean = false;
   @State hasMore: boolean = false;
   @State nextCursor: string = '';
-  @State userActionPendingIds: string[] = [];
-  @State activeTab: string = '周边';
   @State activeTag: string = '';
   /** 动态 tag 列表（从前 N 条 moment.tags 聚合去重，对齐前端 moments tagsList 派生模式） */
   @State hotTags: string[] = [];
 
   // 2026-10-19 信息架构调整（与 web 同口径）：本页是**地理叶子页**，只承担「周边」流——
-  // 分类切换器已移除（默认即「周边」）；「热门」（算法轴）与「关注」（关系轴）归首页两个段。
-  // TODO(待收尾)：`activeTab` 的「热门/关注」分支与其推荐用户/群组、桌面右栏代码仍在，
-  // 属不可达代码；清除它们需较大结构调整，且本机无模拟器可做视觉验证，
-  // 故本轮先收敛入口（用户可见的重复已消除），分支清理留待能在模拟器上走查时一并做。
+  // 分类切换器、「热门/关注」数据分支、推荐用户/群组与桌面右栏均已移除；
+  // 「热门」（算法轴）与「关注」（关系轴）归首页两个段（首页「发现」/「关注」）。
+  // 标签药片（hotTags）保留为筛选维度。
 
   /** 位置行副标题（对齐前端 nearby/moments subtitle：{locationName} · 5km 内 / 5km 内） */
   private getLocationSubtitle(): string {
@@ -134,10 +128,6 @@ export struct MomentsFeedPage {
     this.hotMomentsDataSource.setData(this.getVisibleMoments());
   }
 
-  private isUserActionPending(userId: string): boolean {
-    return this.userActionPendingIds.indexOf(userId) >= 0;
-  }
-
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
     await this.loadData();
@@ -156,56 +146,30 @@ export struct MomentsFeedPage {
   }
 
   private hasAnyData(): boolean {
-    return this.recommendedUsers.length > 0 ||
-      this.recommendedGroups.length > 0 || this.hotMoments.length > 0;
+    return this.hotMoments.length > 0;
   }
 
-  private async loadFeedMoments(source: string): Promise<void> {
+  /** 唯一数据源：附近瞬间（moments/fetch_nearby，距离序；reference_point 可选） */
+  private async loadNearbyFeed(): Promise<void> {
     const version = this.loadVersion;
     const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
     // 契约：reference_point 可选，无定位时不传（服务端按回退链解析），不再用 0,0 兜底
     const refPoint: GeoPoint | undefined = refLoc ? { latitude: refLoc.latitude, longitude: refLoc.longitude } : undefined;
-    const pagination: PaginationParams = { limit: 20 };
-
-    if (source === 'following') {
-      const request: FetchFollowingMomentsRequest = {
-        reference_point: refPoint,
-        pagination: pagination
-      };
-      const response = await LoadingUtil.withMinimumTime(() => ApiClient.fetchFollowingMoments(request));
-      if (this.isDestroyed || version !== this.loadVersion) return;
-      if (response.code === 0) {
-        this.hotMoments = response.data?.items ?? [];
-        this.storeCursor(response);
-        this.deriveHotTags();
-        this.hotMomentsDataSource.setData(this.getVisibleMoments());
-        this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
-        this.recommendedUsers = [];
-        this.recommendedGroups = [];
-        this.recommendedUsersDataSource.setData([]);
-      } else if (!this.hasAnyData()) {
-        this.errorMessage = getErrorMessage(response, '加载失败');
-      }
-    } else {
-      const request: FetchNearbyMomentsRequest = {
-        reference_point: refPoint,
-        radius: DefaultConfig.NEARBY_RADIUS,
-        pagination: pagination
-      };
-      const response = await LoadingUtil.withMinimumTime(() => ApiClient.fetchNearbyMoments(request));
-      if (this.isDestroyed || version !== this.loadVersion) return;
-      if (response.code === 0) {
-        this.hotMoments = response.data?.items ?? [];
-        this.storeCursor(response);
-        this.deriveHotTags();
-        this.hotMomentsDataSource.setData(this.getVisibleMoments());
-        this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
-        this.recommendedUsers = [];
-        this.recommendedGroups = [];
-        this.recommendedUsersDataSource.setData([]);
-      } else if (!this.hasAnyData()) {
-        this.errorMessage = getErrorMessage(response, '加载失败');
-      }
+    const request: FetchNearbyMomentsRequest = {
+      reference_point: refPoint,
+      radius: DefaultConfig.NEARBY_RADIUS,
+      pagination: { limit: 20 }
+    };
+    const response = await LoadingUtil.withMinimumTime(() => ApiClient.fetchNearbyMoments(request));
+    if (this.isDestroyed || version !== this.loadVersion) return;
+    if (response.code === 0) {
+      this.hotMoments = response.data?.items ?? [];
+      this.storeCursor(response);
+      this.deriveHotTags();
+      this.hotMomentsDataSource.setData(this.getVisibleMoments());
+      this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
+    } else if (!this.hasAnyData()) {
+      this.errorMessage = getErrorMessage(response, '加载附近瞬间失败');
     }
   }
 
@@ -224,21 +188,12 @@ export struct MomentsFeedPage {
       const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
       const refPoint: GeoPoint | undefined = refLoc ? { latitude: refLoc.latitude, longitude: refLoc.longitude } : undefined;
       const pagination: PaginationParams = { limit: 20, cursor: this.nextCursor };
-      let response: ApiResponse<PaginatedData<MomentItem>>;
-      if (this.activeTab === '关注') {
-        const request: FetchFollowingMomentsRequest = { reference_point: refPoint, pagination: pagination };
-        response = await ApiClient.fetchFollowingMoments(request);
-      } else if (this.activeTab === '周边') {
-        const request: FetchNearbyMomentsRequest = {
-          reference_point: refPoint,
-          radius: DefaultConfig.NEARBY_RADIUS,
-          pagination: pagination
-        };
-        response = await ApiClient.fetchNearbyMoments(request);
-      } else {
-        const request: SearchMomentsRequest = { sort_by: 'popular', pagination: pagination };
-        response = await ApiClient.searchMoments(request);
-      }
+      const request: FetchNearbyMomentsRequest = {
+        reference_point: refPoint,
+        radius: DefaultConfig.NEARBY_RADIUS,
+        pagination: pagination
+      };
+      const response: ApiResponse<PaginatedData<MomentItem>> = await ApiClient.fetchNearbyMoments(request);
       if (this.isDestroyed || version !== this.loadVersion) return;
       if (response.code === 0) {
         // 按 moment_id 去重后追加，避免游标边界重复项打崩 LazyForEach 键
@@ -258,13 +213,8 @@ export struct MomentsFeedPage {
   }
 
   private getMomentsSectionTitle(): string {
-    if (this.activeTab === '关注') {
-      return '关注的动态';
-    }
-    if (this.activeTab === '周边') {
-      return '周边动态';
-    }
-    return '热门动态';
+    // 本页只承担地理流（原先随 tab 切换三套标题，tab 已移除）
+    return '周边动态';
   }
 
   /** 数据加载版本号：快速切 tab 时旧响应不覆盖新 tab 内容 */
@@ -278,75 +228,11 @@ export struct MomentsFeedPage {
     this.hasMore = false;
     this.nextCursor = '';
     try {
-      if (this.activeTab === '关注' || this.activeTab === '周边') {
-        await this.loadFeedMoments(this.activeTab === '关注' ? 'following' : 'nearby');
-        return;
-      }
-      // 热门内容不依赖位置，推荐用户需要位置
-      const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
-      // spec：热门模式走 moments/search 的 sort_by='popular'（原 feed/trending 收口）
-      const trendingRequest: SearchMomentsRequest = { sort_by: 'popular', pagination: { limit: 20 } };
-      const trendingPromise = ApiClient.searchMoments(trendingRequest);
-
-      if (refLoc) {
-        const usersRequest: SearchUsersRequest = {
-          reference_point: { latitude: refLoc.latitude, longitude: refLoc.longitude },
-          radius: DefaultConfig.NEARBY_RADIUS,
-          pagination: { limit: 10 }
-        };
-        const groupsRequest: SearchGroupsRequest = {
-          reference_point: { latitude: refLoc.latitude, longitude: refLoc.longitude },
-          radius: DefaultConfig.NEARBY_RADIUS,
-          sort_by: 'popular',
-          pagination: { limit: 6 }
-        };
-        const results = await LoadingUtil.withMinimumTime(() =>
-          Promise.all([trendingPromise, ApiClient.searchUsers(usersRequest), ApiClient.searchGroups(groupsRequest)])
-        );
-        if (this.isDestroyed || version !== this.loadVersion) return;
-        const usersResponse = results[1];
-        if (usersResponse.code === 0) {
-          const items = usersResponse.data?.items ?? [];
-          const me = GlobalStateManager.getInstance().getCurrentUser();
-          const myId = me?.user_id;
-          const validUsersAll = items.filter((u: UserItem) => u.user?.user_id);
-          this.recommendedUsers = typeof myId === 'string'
-            ? validUsersAll.filter((u: UserItem) => u.user.user_id !== myId)
-            : validUsersAll;
-          this.recommendedUsersDataSource.setData(this.recommendedUsers);
-        }
-        const groupsResponse = results[2];
-        if (groupsResponse.code === 0) {
-          this.recommendedGroups = groupsResponse.data?.items ?? [];
-        }
-        const trendingResponse = results[0];
-        if (trendingResponse.code === 0) {
-          this.hotMoments = trendingResponse.data?.items ?? [];
-          this.storeCursor(trendingResponse);
-          this.deriveHotTags();
-          this.hotMomentsDataSource.setData(this.getVisibleMoments());
-          this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
-        }
-        if (usersResponse.code !== 0 && trendingResponse.code !== 0 && !this.hasAnyData()) {
-          this.errorMessage = getErrorMessage(trendingResponse, getErrorMessage(usersResponse, '加载附近动态失败'));
-        }
-      } else {
-        const trendingResponse = await LoadingUtil.withMinimumTime(() => trendingPromise);
-        if (this.isDestroyed) return;
-        if (trendingResponse.code === 0) {
-          this.hotMoments = trendingResponse.data?.items ?? [];
-          this.storeCursor(trendingResponse);
-          this.deriveHotTags();
-          this.hotMomentsDataSource.setData(this.getVisibleMoments());
-          this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
-        } else if (!this.hasAnyData()) {
-          this.errorMessage = getErrorMessage(trendingResponse, '加载附近动态失败');
-        }
-      }
+      await this.loadNearbyFeed();
     } catch {
-      hilog.error(DOMAIN_NUMBER, TAG, '加载附近动态失败');
+      hilog.error(DOMAIN_NUMBER, TAG, '加载附近瞬间失败');
       if (!this.hasAnyData()) {
-        this.errorMessage = '加载附近动态失败';
+        this.errorMessage = '加载附近瞬间失败';
       }
     } finally {
       this.isLoading = false;
@@ -445,37 +331,11 @@ export struct MomentsFeedPage {
           .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))
       } else {
         // 下拉刷新由 buildMomentFeed 内包 WaterFlow 的 Refresh 承担
-        if (useMasterDetail(this.currentBreakpoint)) {
-          // ======== 宽屏两栏布局（master-detail，对齐前端 useMasterDetail） ========
-          Row() {
-            // 左栏：动态瀑布墙（WaterFlow 自滚；tag 筛选走头部 hotTags TabsPillGroup）
-            Column() {
-              this.buildMomentFeed()
-            }
-            .width('100%')
-            .layoutWeight(1)
-
-            // 右栏：热门话题 + 活跃用户（对齐前端 rightSidebar，宽 220vp + border-left）
-            Column() {
-              this.buildRightSidebar()
-            }
-            .width(DesignConstants.LAYOUT.RIGHT_SIDEBAR_WIDTH)
-            .height('100%')
-            .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-            .border({ width: { left: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
-          }
-          .layoutWeight(1)
-          .width('100%')
-        } else {
+        {
+          // 单栏瀑布墙（宽屏与移动同款）：右栏「活跃用户/热门话题」随「热门」tab 移除——
+          // 推荐用户/群组属发现语义，归首页「发现」段与附近枢纽；本页只做地理流。
           // ======== 移动端单栏布局（对齐前端 !isDesktop 分支） ========
           Column() {
-            // 推荐用户/群组（有数据才渲染；横向滚动卡片，独立于瀑布流滚动）
-            if (this.recommendedUsers.length > 0) {
-              this.buildRecommendedUsersSection()
-            }
-            if (this.recommendedGroups.length > 0) {
-              this.buildRecommendedGroupsSection()
-            }
             this.buildMomentFeed()
           }
           .width('100%')
@@ -585,357 +445,6 @@ export struct MomentsFeedPage {
     return isDesktopForm(this.currentBreakpoint) ? 3 : 2;
   }
 
-  // ==================== 右侧栏（桌面端，对齐前端 rightSidebar） ====================
-  @Builder
-  buildRightSidebar() {
-    Column() {
-      // 活跃用户（对齐前端 active users：eyebrow + 列表项）
-      if (this.recommendedUsers.length > 0) {
-        Column() {
-          Text('活跃用户')
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .textCase(TextCase.UpperCase)
-            .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
-            .padding({
-              top: DesignConstants.SPACING.XL,
-              bottom: DesignConstants.SPACING.SM
-            })
-
-          ForEach(this.recommendedUsers.slice(0, 5), (user: UserItem) => {
-            Row() {
-              SystemAvatar({
-                avatarUrl: user.user?.avatar_url ?? '',
-                name: user.user?.nickname ?? '',
-                avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
-                shape: 'circle'
-              })
-              Text(user.user?.nickname ?? '')
-                .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-meta
-                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-                .fontColor(this.getCurrentThemePalette().textPrimary)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .layoutWeight(1)
-                .margin({ left: DesignConstants.SPACING.SM })
-
-              SystemButton({
-                label: this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '关注',
-                // Tonal 化（Gemini 审查：列表次级动作不用实体蓝）
-                variant: this.isUserFollowing(user.user?.user_id ?? '') ? 'outline' : 'surface-accent',
-                buttonSize: 'compact',
-                onPress: () => { this.followUser(user); }
-              })
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Center)
-            .padding({
-              top: DesignConstants.SPACING.XS,
-              bottom: DesignConstants.SPACING.XS
-            })
-          }, (user: UserItem) => user.user?.user_id ?? '')
-        }
-        .width('100%')
-      }
-
-      Blank().layoutWeight(1)
-    }
-    .width('100%')
-    .height('100%')
-  }
-
-  // ==================== section 标题 ====================
-  @Builder
-  buildSectionHeader(title: string) {
-    Row() {
-      Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-        // 区块标题字重对齐前端 SectionHead（text-md font-semibold）与首页：
-        // 此前用 BOLD(700)，与首页/附近的 SEMIBOLD(600) 不一致
-        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-    }
-    .width('100%')
-    // 区块标题：横向留白由容器 gutter 提供；标题→其内容用 SECTION_INNER_GAP(12)
-    // （对齐前端 SectionHead 的 mb-3）；此前自带 left/right LG 造成双重留白、
-    // 且 bottom 只有 XS(4)，标题与内容贴得过近
-    .padding({
-      top: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP
-    })
-  }
-
-  // ==================== 推荐用户横向滚动 ====================
-  @Builder
-  buildRecommendedUsersSection() {
-    Column() {
-      // 区块标题（对齐前端 SectionHead：标题 + 查看全部跳附近的人专区）
-      Row() {
-        Text('推荐用户')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-        Text('查看全部')
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-          .fontColor(this.getCurrentThemePalette().accentBackground)
-          .onClick(() => AppRouter.push(PageNames.NEARBY_USERS))
-      }
-      .width('100%')
-      .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
-
-      SystemCard({
-        cardPadding: DesignConstants.SPACING.MD,
-        variant: CardVariant.OUTLINED
-      }) {
-        Scroll() {
-          Row({ space: DesignConstants.SPACING.MD3 }) {
-            ForEach(this.recommendedUsers.slice(0, 10), (user: UserItem) => {
-              this.buildUserCard(user)
-            }, (user: UserItem) => user.user?.user_id ?? '')
-          }
-        }
-        .scrollable(ScrollDirection.Horizontal)
-        .scrollBar(BarState.Off)
-      }
-    }
-  }
-
-  @Builder
-  buildUserCard(user: UserItem) {
-    Column({ space: DesignConstants.SPACING.SM2 }) {
-      Stack({ alignContent: Alignment.Center }) {
-        SystemAvatar({
-          avatarUrl: user.user?.avatar_url ?? '',
-          name: user.user?.nickname ?? '',
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
-          shape: 'squircle'
-        })
-
-        // 距离徽标：贴头像左下角（用 alignContent 取代硬编码坐标）
-        if (user.location?.distance !== undefined && user.location?.distance !== null) {
-          Stack({ alignContent: Alignment.BottomStart }) {
-            Row() {
-              Text(LocationUtil.formatDistance(user.location.distance))
-                .fontSize(DesignConstants.FONT.SIZE.XS2)
-                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-                .fontColor(this.getCurrentThemePalette().accentText)
-            }
-            .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.getCurrentThemePalette().accentBackground)
-          }
-          .width('100%')
-          .height('100%')
-        }
-      }
-      .width(DesignConstants.LAYOUT.LABEL_WIDTH)
-      .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
-
-      Text(user.user?.nickname ?? '')
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .constraintSize({ maxWidth: 60 })
-    }
-    .alignItems(HorizontalAlign.Center)
-    .scale(this.userRowPressed
-      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW, y: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW }
-      : { x: 1, y: 1 })
-    .animation({
-      curve: curves.springMotion(
-        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-      )
-    })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.userRowPressed = true;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.userRowPressed = false;
-      }
-    })
-    .onClick(() => { this.openUserProfile(user); })
-  }
-
-  // ==================== 推荐群组网格 ====================
-  @Builder
-  buildRecommendedGroupsSection() {
-    Column() {
-      // 区块标题（对齐前端 SectionHead：标题 + 查看全部跳附近群组专区）
-      Row() {
-        Text('推荐群组')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .layoutWeight(1)
-        Text('查看全部')
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-          .fontColor(this.getCurrentThemePalette().accentBackground)
-          .onClick(() => AppRouter.push(PageNames.NEARBY_GROUPS))
-      }
-      .width('100%')
-      .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
-
-      SystemCard({
-        cardPadding: DesignConstants.SPACING.MD,
-        variant: CardVariant.OUTLINED
-      }) {
-        Column({ space: DesignConstants.SPACING.MD }) {
-          this.buildGroupRow(this.recommendedGroups.slice(0, 2))
-          if (this.recommendedGroups.length > 2) {
-            this.buildGroupRow(this.recommendedGroups.slice(2, 4))
-          }
-        }
-        .width('100%')
-      }
-    }
-  }
-
-  // 两列等宽群组卡片行（前端 grid-cols-2 的 ArkUI 等价：Row + layoutWeight，避开 calc）
-  @Builder
-  buildGroupRow(items: GroupItem[]) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      ForEach(items, (group: GroupItem) => {
-        Column() {
-          this.buildGroupCard(group)
-        }
-        .layoutWeight(1)
-      }, (group: GroupItem) => group.group?.group_id ?? '')
-      if (items.length === 1) {
-        Column().layoutWeight(1)
-      }
-    }
-    .width('100%')
-  }
-
-  @Builder
-  buildGroupCard(group: GroupItem) {
-    Column() {
-      Row() {
-        LucideIcon({
-            icon: AppIcon.GROUP,
-            iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
-            color: this.getCurrentThemePalette().accentBackground
-          })
-      }
-      .width('100%')
-      .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
-      .justifyContent(FlexAlign.Center)
-      .backgroundColor(this.getCurrentThemePalette().accentMuted)
-      .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
-
-      Column({ space: DesignConstants.SPACING.XS }) {
-        Text(group.group?.name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Row({ space: DesignConstants.SPACING.SM2 }) {
-          Text(`${group.group?.members_count ?? 0} 人`)
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-          if (group.location?.distance !== undefined && group.location?.distance !== null) {
-            Text(LocationUtil.formatDistance(group.location.distance))
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-              .fontColor(this.getCurrentThemePalette().accentBackground)
-          }
-        }
-      }
-      .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.MD2 })
-      .alignItems(HorizontalAlign.Start)
-    }
-    .width('100%')
-    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-    // 静态内容卡投影收敛到 surfaceShadow（白卡档）：controlShadow 是菜单/浮层档
-    .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .onClick(() => { this.openGroupDetail(group); })
-  }
-
-  // ==================== 操作 ====================
-  private async followUser(user: UserItem): Promise<void> {
-    if (!user.user?.user_id) return;
-    const userId = user.user.user_id;
-    if (this.isUserActionPending(userId)) return;
-    this.setUserActionPending(userId, true);
-    try {
-      const isFollowing = this.isUserFollowing(userId);
-      const success = await interactionActions.setFollowUser(userId, !isFollowing, '关注用户');
-      if (success) {
-        this.patchRecommendedUserFollowing(userId, !isFollowing);
-        SystemToast.showSuccess(isFollowing ? '已取消关注' : '已关注', this.getUIContext());
-      } else {
-        SystemToast.showError('操作失败', this.getUIContext());
-      }
-    } finally {
-      this.setUserActionPending(userId, false);
-    }
-  }
-
-  private isUserFollowing(userId: string): boolean {
-    const state = this.userStateMap[userId];
-    if (state?.relation) {
-      return state.relation.is_following;
-    }
-    return false;
-  }
-
-  private ensureUserRelation(user: UserItem): Relationship {
-    if (!user.relation) {
-      const relation: Relationship = {
-        is_following: false,
-        is_followed_by: false,
-        is_blocked: false
-      };
-      user.relation = relation;
-    }
-    return user.relation;
-  }
-
-  private patchRecommendedUserFollowing(userId: string, isFollowing: boolean): void {
-    const users = this.recommendedUsers;
-    for (let i = 0; i < users.length; i++) {
-      if ((users[i].user?.user_id ?? '') !== userId) {
-        continue;
-      }
-      const relation = this.ensureUserRelation(users[i]);
-      relation.is_following = isFollowing;
-      break;
-    }
-    this.recommendedUsers = users;
-    this.recommendedUsersDataSource.setData(users);
-  }
-
-  private setUserActionPending(userId: string, pending: boolean): void {
-    const next: string[] = [];
-    for (let i = 0; i < this.userActionPendingIds.length; i++) {
-      const id = this.userActionPendingIds[i];
-      if (id !== userId) {
-        next.push(id);
-      }
-    }
-    if (pending) {
-      next.push(userId);
-    }
-    this.userActionPendingIds = next;
-  }
-
   private openMomentDetail(moment: MomentItem): void {
     if (!moment.moment_id) return;
     const params = new MomentDetailRouteParam();
@@ -951,85 +460,6 @@ export struct MomentsFeedPage {
     previewParams.index = index;
     AppRouter.push(PageNames.PHOTO_PREVIEW, previewParams);
   }
-
-  private openUserProfile(user: UserItem): void {
-    const userId = user.user?.user_id;
-    if (!userId) {
-      return;
-    }
-    const params = new ProfileRouteParam();
-    params.userId = userId;
-    AppRouter.push(PageNames.PROFILE, params);
-  }
-
-  private openGroupDetail(group: GroupItem): void {
-    const groupId = group.group?.group_id;
-    if (!groupId) return;
-    const params = new GroupDetailRouteParam();
-    params.groupId = groupId;
-    AppRouter.push(PageNames.GROUP_DETAIL, params);
-  }
-
-  private startPrivateChat(user: UserItem): void {
-    if (!this.isLoggedIn) {
-      SystemToast.showWarning('请先登录后再发起私聊', this.getUIContext());
-      const loginParams = new LoginRouteParam();
-      loginParams.reason = 'action_required';
-      loginParams.action = '发起私聊';
-      AppRouter.push(PageNames.LOGIN, loginParams);
-      return;
-    }
-    const userId = user.user?.user_id;
-    if (!userId) return;
-    const params = new ChatRouteParam();
-    params.chatId = userId;
-    params.chatType = 'private_chat';
-    params.targetId = userId;
-    params.title = user.user?.nickname ?? '私聊';
-    AppRouter.push(PageNames.CHAT, params);
-  }
-
-  private async reportUser(user: UserItem): Promise<void> {
-    if (!this.isLoggedIn) {
-      SystemToast.showWarning('请先登录后再举报', this.getUIContext());
-      const loginParams = new LoginRouteParam();
-      loginParams.reason = 'action_required';
-      loginParams.action = '举报用户';
-      AppRouter.push(PageNames.LOGIN, loginParams);
-      return;
-    }
-    const userId = user.user?.user_id;
-    if (!userId) return;
-    try {
-      const req: CreateReportRequest = {
-        target_type: 'user',
-        target_id: userId,
-        reason: 'other'
-      };
-      const response = await ApiClient.createReport(req);
-      if (response.code === 0) {
-        SystemToast.showSuccess('举报已提交', this.getUIContext());
-      } else {
-        SystemToast.showError(getErrorMessage(response, '举报失败'), this.getUIContext());
-      }
-    } catch {
-      SystemToast.showError('举报失败', this.getUIContext());
-    }
-  }
-
-  private async copyText(text: string, successText: string): Promise<void> {
-    if (!text) return;
-    try {
-      const systemPasteboard = pasteboard.getSystemPasteboard();
-      const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text);
-      await systemPasteboard.setData(pasteData);
-      SystemToast.show(successText, this.getUIContext());
-    } catch {
-      SystemToast.showError('复制失败', this.getUIContext());
-    }
-  }
-
-
 }
 
 @Builder
