@@ -16,6 +16,7 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { curves } from '@kit.ArkUI';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { MomentDraftStore } from '../state/MomentDraftStore';
 
 const DOMAIN_NUMBER: number = 0xFF28;
 const TAG: string = 'CreateMomentSheet';
@@ -54,8 +55,15 @@ export struct CreateMomentSheet {
   @State private isPublishing: boolean = false;
   @State private publishingMessage: string = '';
   @State private localLocation: LocationInfo | null = null;
+  /** 草稿持久化（组件外单例）：Sheet 卸载/切走后重开仍在，发布成功才清空 */
+  private draftStore: MomentDraftStore = MomentDraftStore.getInstance();
 
   aboutToAppear(): void {
+    // 回填未发布草稿（对齐 web composer store：弹层关闭不丢稿）
+    this.description = this.draftStore.description;
+    this.imageUrls = this.draftStore.imageUrls;
+    this.selectedMoods = this.draftStore.moods;
+    this.audience = this.draftStore.audience;
     const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
     if (refLoc) {
       this.localLocation = {
@@ -74,6 +82,11 @@ export struct CreateMomentSheet {
     return !this.isPublishing && this.description.trim().length > 0 && this.localLocation !== null;
   }
 
+  /** 字段变更即写透草稿（字符串/短数组，开销可忽略；不依赖卸载回调，避免切路由不触发） */
+  private persistDraft(): void {
+    this.draftStore.save(this.description, this.imageUrls, this.selectedMoods, this.audience);
+  }
+
   private toggleMood(mood: string): void {
     const index = this.selectedMoods.indexOf(mood);
     if (index >= 0) {
@@ -81,6 +94,7 @@ export struct CreateMomentSheet {
     } else {
       this.selectedMoods = this.selectedMoods.concat([mood]);
     }
+    this.persistDraft();
   }
 
   private async selectImages(): Promise<void> {
@@ -93,6 +107,7 @@ export struct CreateMomentSheet {
       const selected = await MediaServiceManager.selectImages(context, 9 - this.imageUrls.length);
       if (selected.length > 0) {
         this.imageUrls = this.imageUrls.concat(selected);
+        this.persistDraft();
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `选择图片失败: ${JSON.stringify(error)}`);
@@ -102,6 +117,7 @@ export struct CreateMomentSheet {
 
   private removeImage(index: number): void {
     this.imageUrls = this.imageUrls.filter((_item: string, i: number) => i !== index);
+    this.persistDraft();
   }
 
   private async publish(): Promise<void> {
@@ -154,6 +170,8 @@ export struct CreateMomentSheet {
       };
       const response = await ApiClient.createMoment(request);
       if (response.code === 0) {
+        // 发布成功才清空草稿（与 web clearDraft 对应）
+        this.draftStore.clear();
         SystemToast.showSuccess('瞬间发布成功', this.getUIContext());
         this.onClose();
       } else {
@@ -292,6 +310,7 @@ export struct CreateMomentSheet {
         .onChange((value: string) => {
           this.description = value.length > DESCRIPTION_MAX_LENGTH ?
             value.substring(0, DESCRIPTION_MAX_LENGTH) : value;
+          this.persistDraft();
         })
         .maxLength(DESCRIPTION_MAX_LENGTH)
         .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -541,6 +560,7 @@ export struct CreateMomentSheet {
     })
     .onClick(() => {
       this.audience = level;
+      this.persistDraft();
     })
   }
 
