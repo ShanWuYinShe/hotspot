@@ -1,5 +1,5 @@
 /**
- * 附近动态页面
+ * 附近瞬间页面（术语与 web 统一：spec 权威术语为「生活瞬间」；原「附近动态」已改名）
  * 展示热门话题、推荐用户、热门瞬间
  */
 
@@ -249,7 +249,7 @@ export struct MomentsFeedPage {
         // 标题行 —— 统一走 SystemPageHeader（标题 24pt + 位置行副标题 + 内容数 trailing，
         // 对齐前端 nearby/moments PageHeader：titleSize 2xl + MapPin 图标 + {位置} · 5km 内）
         SystemPageHeader({
-          title: '附近动态',
+          title: '附近瞬间',
           subtitle: this.getLocationSubtitle(),
           subtitleIcon: AppIcon.LOCATION,
           titleSize: DesignConstants.FONT.SIZE.XXL,
@@ -315,7 +315,7 @@ export struct MomentsFeedPage {
 
       // 内容区
       if (this.isLoading) {
-        SystemLoadingView({ message: '正在加载附近动态…' })
+        SystemLoadingView({ message: '正在加载附近瞬间…' })
           .layoutWeight(1)
           .transition(TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))

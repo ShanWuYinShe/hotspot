@@ -2,7 +2,7 @@
  * NearbyPage — 附近板块段位容器（对齐前端 /nearby 三段内容页 IA）
  *
  * 结构（2026-10-19 起与 web /nearby 一致）：header（附近 + 搜索/地图）+ 统计卡
- * + **三段分区平铺**（附近的人 / 附近群组 / 附近动态，各带「查看全部」入口进叶子页
+ * + **三段分区平铺**（附近的人 / 附近群组 / 附近瞬间，各带「查看全部」入口进叶子页
  * NearbyUsersListPage / NearbyGroupsListPage / MomentsFeedPage）。
  * 原先用 TabsPillGroup 段位一次只显示一段，与 web 的区块平铺形态不一致
  * （web 决策：枢纽是"总览"，三段同屏可一眼扫完；且叶子页各自已带筛选胶囊，
@@ -222,7 +222,7 @@ export struct NearbyPage {
                 .width('100%')
               }
 
-              // ═══ 分区三：附近动态（预览前 3 条）═══
+              // ═══ 分区三：附近瞬间（预览前 3 条）═══
               if (this.nearbyMoments.length > 0) {
                 Column() {
                   this.buildSectionHeader('周边新鲜事', '更多动态', () => {

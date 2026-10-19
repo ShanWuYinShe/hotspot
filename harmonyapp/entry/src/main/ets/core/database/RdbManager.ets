@@ -66,7 +66,7 @@ export class RdbManager {
   // 索引：覆盖高频查询路径，避免数据量增长后全表扫描。
   // - messages: 按 chat_id 等值 + sent_at 排序（会话消息列表）
   // - chats: 按 last_time 倒序（会话列表）
-  // - moments: 按 created_at 倒序（动态流）、user_id（个人主页）
+  // - moments: 按 created_at 倒序（瞬间流）、user_id（个人主页）
   private readonly SQL_CREATE_INDEX_MESSAGES_CHAT =
     'CREATE INDEX IF NOT EXISTS idx_messages_chat_sent ON messages(chat_id, sent_at)';
   private readonly SQL_CREATE_INDEX_CHATS_TIME =

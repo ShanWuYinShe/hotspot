@@ -20,7 +20,7 @@ export function formatCount(count: number | undefined): string {
 }
 
 /**
- * 格式化相对时间（用于动态、消息等时间显示）
+ * 格式化相对时间（用于瞬间、消息等时间显示）
  * - < 1min: "刚刚"
  * - < 1h: "N分钟前"
  * - < 1d: "N小时前"
@@ -104,7 +104,7 @@ export function formatDateTime(dateTime: string | undefined): string {
 }
 
 /**
- * 详情页相对时间（动态详情作者行/评论行，Gemini UI 审查：完整时间戳冗长）：
+ * 详情页相对时间（瞬间详情作者行/评论行，Gemini UI 审查：完整时间戳冗长）：
  * 今天→HH:mm / 昨天→"昨天 HH:mm" / 同年→M月D日 HH:mm / 跨年→YYYY年M月D日。
  * 对齐前端 lib/utils formatMomentTime（跨端同步：文案与粒度逐字一致）。
  */

@@ -33,7 +33,7 @@ const TAG: string = 'LoginPromptView';
 @Reusable
 @Component
 export struct LoginPromptView {
-  /** 主标题，如 "附近动态需要登录" */
+  /** 主标题，如 "附近瞬间需要登录" */
   @Prop title: string = '此功能需要登录';
   /** 副标题说明 */
   @Prop subtitle: string = '登录后即可查看完整内容';

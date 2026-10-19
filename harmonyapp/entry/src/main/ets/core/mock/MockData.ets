@@ -82,7 +82,7 @@ const MK_REACTION: Reaction = { emoji: '👍', count: 0, reacted_by_me: false };
 
 const MK_MOMENT: MomentItem = {
   moment_id: 'm1',
-  description: '示例动态',
+  description: '示例瞬间',
   images: [],
   tags: [],
   mentions: [],
@@ -289,7 +289,7 @@ export function getCannedResponse(url: string, loggedIn: boolean, scenario: stri
   if (url === ApiEndpoints.MOMENT.LIST_CREATED) return guard() ?? paginated([] as MomentItem[]);
   // 附近瞬间流（原 feed/nearby_moments 迁移；匿名可用，返回示例瞬间）
   if (url === ApiEndpoints.MOMENT.FETCH_NEARBY) return paginated([MK_MOMENT]);
-  // 关注动态（原 feed/following 迁移；依赖登录态）
+  // 关注流（原 feed/following 迁移；依赖登录态）
   if (url === ApiEndpoints.MOMENT.FETCH_FOLLOWING) return guard() ?? paginated([] as MomentItem[]);
 
   // Groups

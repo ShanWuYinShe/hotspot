@@ -46,7 +46,7 @@ export interface FetchCreatedMomentsRequest {
   pagination?: PaginationParams;
 }
 
-// 关注动态：我关注的人发布的瞬间（spec moment.md → moments/fetch_following，原 feed/following 迁移）
+// 关注流：我关注的人发布的瞬间（spec moment.md → moments/fetch_following，原 feed/following 迁移）
 export interface FetchFollowingMomentsRequest {
   reference_point?: GeoPoint;
   pagination?: PaginationParams;

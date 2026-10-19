@@ -26,7 +26,7 @@ const MOOD_PRESETS: string[] = ['松弛', '漫游', '咖啡', '展览', '自然'
 const DESCRIPTION_MAX_LENGTH: number = 280;
 
 /**
- * 发动态底部 Sheet（对齐前端 CreateSheet）：拖拽把手 + eyebrow「附近动态」+
+ * 发瞬间底部 Sheet（对齐前端 CreateSheet）：拖拽把手 + eyebrow「附近瞬间」+
  * 标题「记录此刻」+ 右上「创建群组」切换 pill；身份行、正文卡（280 上限 +
  * n/280 计数）、80×80 照片选择、氛围 TagPill 六枚、可见范围图标卡（契约
  * PrivacyLevel 仅 public/private 两档：「附近可见 / 仅自己」）、footer 发布 pill。
@@ -183,7 +183,7 @@ export struct CreateMomentSheet {
 
       Row() {
         Column({ space: DesignConstants.SPACING.THREE }) {
-          Text('附近动态')
+          Text('附近瞬间')
             .fontSize(DesignConstants.FONT.SIZE.XS2)
             .fontColor(this.getPalette().textSecondary)
             .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
@@ -492,7 +492,7 @@ export struct CreateMomentSheet {
   /** 可见范围当前 hint（对齐前端 activeAudience.hint 文案） */
   private resolveAudienceHint(): string {
     if (this.audience === 'nearby') {
-      return '进入附近动态';
+      return '进入附近瞬间';
     }
     if (this.audience === 'friends') {
       return '仅自己可见';
