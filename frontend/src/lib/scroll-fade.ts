@@ -21,10 +21,21 @@ export function scrollFade(node: HTMLElement) {
 	sync();
 	node.addEventListener('scroll', sync, { passive: true });
 	// ResizeObserver 在 jsdom 下不存在（组件测试环境）
+	//
+	// 观察**两侧**：
+	// - 容器自身尺寸变化（视口旋转、栅格列数变化）；
+	// - **子内容变化**（MutationObserver）——这是实测踩过的坑：标签/筛选胶囊多为异步
+	//   拉取后填充，内容变长时**容器尺寸不变**，只观察容器不会触发 → 溢出却无提示
+	//   （全站复审收尾回归在 /nearby/moments 移动端抓到：溢出 46px、提示缺失）。
 	let ro: ResizeObserver | undefined;
 	if (typeof ResizeObserver !== 'undefined') {
 		ro = new ResizeObserver(sync);
 		ro.observe(node);
+	}
+	let mo: MutationObserver | undefined;
+	if (typeof MutationObserver !== 'undefined') {
+		mo = new MutationObserver(sync);
+		mo.observe(node, { childList: true, subtree: true, characterData: true });
 	}
 
 	return {
@@ -34,6 +45,7 @@ export function scrollFade(node: HTMLElement) {
 		destroy() {
 			node.removeEventListener('scroll', sync);
 			ro?.disconnect();
+			mo?.disconnect();
 		}
 	};
 }

@@ -275,7 +275,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	{/snippet}
 
 	<div class="mb-5">
-		{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto pr-1')}
+		<!-- TabBar 自身已含 overflow-x-auto，此处不再重复声明（重复类名会让排查困惑） -->
+		{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'pr-1')}
 	</div>
 
 	{#if loading || loadError || !filtered.length}
