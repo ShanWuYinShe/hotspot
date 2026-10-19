@@ -53,8 +53,9 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 	]);
 
 	const ENTRY_ITEMS = $derived<{ section: ProfileSection; title: string; description: string; icon: typeof Users }[]>([
-		{ section: 'moments', title: '我的瞬间', description: '查看已发布的记录', icon: Sparkles },
-		{ section: 'groups', title: '我的群组', description: `${stats.groups_count} 个正在参与`, icon: UsersRound },
+		// 副标题统一为「量词 + 数字」，与移动端 ProfileMobile 同口径（2026-10-19 UI 审查）
+		{ section: 'moments', title: '我的瞬间', description: `${stats.moments_count} 条`, icon: Sparkles },
+		{ section: 'groups', title: '我的群组', description: `${stats.groups_count} 个`, icon: UsersRound },
 		{ section: 'relationships', title: '关系', description: `好友 ${stats.friends_count} · 关注 ${stats.following_count} · 粉丝 ${stats.followers_count}`, icon: Users }
 	]);
 

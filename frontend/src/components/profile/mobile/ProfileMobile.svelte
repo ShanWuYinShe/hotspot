@@ -31,10 +31,12 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	const retry = account.retry;
 
 	const DATA_ITEMS = $derived<{ id: string; href: string; label: string; detail: string; icon: typeof ImageIcon }[]>([
-		{ id: 'moments', href: ME_SECTION_PATHS.moments, label: '我的瞬间', detail: '查看已发布的记录', icon: ImageIcon },
-		{ id: 'groups', href: ME_SECTION_PATHS.groups, label: '我的群组', detail: `${stats.groups_count} 个正在参与`, icon: Users },
+		// 副标题统一为「量词 + 数字」（2026-10-19 UI 审查）：原先第二行是动词短语（"查看已发布的
+		// 记录"）、好友行又重复标题（"好友 / 6 位好友"），五行读起来不成体系。
+		{ id: 'moments', href: ME_SECTION_PATHS.moments, label: '我的瞬间', detail: `${stats.moments_count} 条`, icon: ImageIcon },
+		{ id: 'groups', href: ME_SECTION_PATHS.groups, label: '我的群组', detail: `${stats.groups_count} 个`, icon: Users },
 		// 好友/关注/粉丝直接深链到关系聚合页的对应 tab——不再各自维护一条独立路由
-		{ id: 'friends', href: relationshipsHref('friends'), label: '好友', detail: `${stats.friends_count} 位好友`, icon: Heart },
+		{ id: 'friends', href: relationshipsHref('friends'), label: '好友', detail: `${stats.friends_count} 位`, icon: Heart },
 		{ id: 'following', href: relationshipsHref('following'), label: '关注', detail: `${stats.following_count} 人`, icon: UserPlus },
 		{ id: 'fans', href: relationshipsHref('fans'), label: '粉丝', detail: `${stats.followers_count} 人`, icon: UserCheck }
 	]);

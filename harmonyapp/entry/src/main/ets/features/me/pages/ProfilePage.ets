@@ -1017,6 +1017,7 @@ export struct ProfilePage {
               // 个人数据：只保留前端 ProfileMobile 的 5 行（我的瞬间/我的群组/好友/关注/粉丝）
               ProfileDataSection({
                 resolvedThemeId: this.resolvedThemeId,
+                myMomentsCount: this.myMomentsCount,
                 myGroupsCount: this.myGroupsCount,
                 myFriendsCount: this.myFriendsCount,
                 myFollowingCount: this.myFollowingCount,

@@ -272,9 +272,12 @@
 				<PageHeader title="消息" class="!bg-surface-primary" contentClassName="px-4" titleSize="xl">
 					{#snippet trailing()}
 						{#if !needsAuth}
+						<!-- 带文字标签（2026-10-19 UI 审查）：全站底栏中央是「+ 发布瞬间」FAB，
+						     本页头部若也用纯「+」图标，同屏会出现两个「+」做两件事、语义无法区分。
+						     加「新会话」文字后一眼可辨；高度仍 h-9，与页头对齐。 -->
 						<button
 							type="button"
-							class="hover-btn hit-slop scale-btn flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-sm size-9"
+							class="hover-btn hit-slop scale-btn flex h-9 items-center justify-center gap-1 rounded-full border border-border-default bg-surface-primary px-3 shadow-raised-sm focus-ring"
 							onclick={() => {
 								newChatTab = 'chat';
 								showNewChat = true;
@@ -282,6 +285,7 @@
 							aria-label="发起新会话"
 						>
 							<Plus class="size-4 text-text-secondary" strokeWidth={1.5} />
+							<span class="text-xs font-medium text-text-primary">新会话</span>
 						</button>
 						{/if}
 					{/snippet}

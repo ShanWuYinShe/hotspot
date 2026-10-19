@@ -26,6 +26,7 @@ const DIVIDER_INSET: number = 64;
 @Component
 export struct ProfileDataSection {
   @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+  @Prop myMomentsCount: number = 0;
   @Prop myGroupsCount: number = 0;
   @Prop myFriendsCount: number = 0;
   @Prop myFollowingCount: number = 0;
@@ -108,16 +109,18 @@ export struct ProfileDataSection {
         .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })
 
       // 列表容器原语（对齐 HarmonyOS 列表规范：单卡 + 行间内缩分隔线）
+      // 副标题统一为「量词 + 数字」（2026-10-19 UI 审查，与 web ProfileMobile/ProfilePage 同口径）：
+      // 原先「我的瞬间」行是动词短语、好友行重复标题，五行不成体系。
       ListGroup() {
-        this.dataRow(AppIcon.PHOTO, '我的瞬间', '查看已发布的记录', () => {
+        this.dataRow(AppIcon.PHOTO, '我的瞬间', `${formatCount(this.myMomentsCount)} 条`, () => {
           AppRouter.push(PageNames.MOMENT);
         })
         ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
-        this.dataRow(AppIcon.GROUP, '我的群组', `${formatCount(this.myGroupsCount)} 个正在参与`, () => {
+        this.dataRow(AppIcon.GROUP, '我的群组', `${formatCount(this.myGroupsCount)} 个`, () => {
           AppRouter.push(PageNames.GROUP);
         })
         ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
-        this.dataRow(AppIcon.PERSON, '好友', `${formatCount(this.myFriendsCount)} 位好友`, () => {
+        this.dataRow(AppIcon.PERSON, '好友', `${formatCount(this.myFriendsCount)} 位`, () => {
           AppRouter.push(PageNames.RELATIONSHIP_HUB);
         })
         ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
