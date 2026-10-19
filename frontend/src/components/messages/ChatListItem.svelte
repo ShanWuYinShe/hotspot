@@ -177,7 +177,7 @@
 					     避免与 hover 快捷钮重复。 -->
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop -m-1.5 focus-ring flex shrink-0 items-center justify-center rounded-full p-1.5 md:hidden {isSelected
+						class="hover-btn scale-btn hit-slop -m-2 focus-ring flex shrink-0 items-center justify-center rounded-full p-2 md:hidden {isSelected
 							? 'text-text-on-accent'
 							: 'text-text-secondary'}"
 						aria-label={`${chat.name} 的更多操作`}
