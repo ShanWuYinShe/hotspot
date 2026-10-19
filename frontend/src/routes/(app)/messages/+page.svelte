@@ -398,9 +398,11 @@
 						<!-- 全零态用中性灰（status-online 绿是「在线」语义，不作正向文案） -->
 						<span class="text-text-secondary text-xs">全部已读</span>
 					{/if}
+					<!-- 移动端单栏页头（本分支）：与底栏中央「+ 发布瞬间」FAB 同屏，
+					     纯「+」图标会与之语义混同，故加「新会话」文字标签（同分栏分支口径）。 -->
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop flex items-center justify-center rounded-full focus-ring border border-border-default bg-surface-primary shadow-raised-sm size-9"
+						class="hover-btn hit-slop scale-btn flex h-9 items-center justify-center gap-1 rounded-full border border-border-default bg-surface-primary px-3 shadow-raised-sm focus-ring"
 						onclick={() => {
 							newChatTab = 'chat';
 							showNewChat = true;
@@ -408,6 +410,7 @@
 						aria-label="发起新会话"
 					>
 						<Plus class="size-4 text-text-secondary" strokeWidth={1.5} />
+						<span class="text-xs font-medium text-text-primary">新会话</span>
 					</button>
 				</div>
 				{/if}
