@@ -72,7 +72,8 @@ export function isSubPagePath(pathname: string) {
 export function isPrimaryRouteActive(pathname: string, target: string) {
   // 首页是唯一聚合 tab：只对自身路径高亮，不包含其子页面。
   if (target === ROUTES.home) return pathname === target;
-  // 「附近」一级 tab：聚合门户与 people/groups/moments 三个分区子页统一高亮。
+  // 「附近」一级 tab：/nearby 枢纽页与其 people/groups/moments 三个叶子页统一高亮
+  // （2026-10-19 起 /nearby 不再是 307 跳转，本身即枢纽页）。
   if (target === ROUTES.nearby) return pathname === target || pathname.startsWith(`${target}/`);
   return (
     pathname === target ||
@@ -82,7 +83,7 @@ export function isPrimaryRouteActive(pathname: string, target: string) {
 }
 
 export type DesktopNavId =
-  | "home" | "nearby-people" | "nearby-groups" | "nearby-moments"
+  | "home" | "nearby" | "nearby-people" | "nearby-groups" | "nearby-moments"
   | "messages" | "moments" | "my-groups"
   | "relationships"
   | "admin";
@@ -98,6 +99,8 @@ export function getDesktopNavId(pathname: string, search = ""): DesktopNavId | n
   if (pathname === ROUTES.home) return "home";
   if (pathname === ROUTES.admin || pathname.startsWith(`${ROUTES.admin}/`)) return "admin";
   if (pathname === ROUTES.messages || pathname.startsWith(`${ROUTES.messages}/`)) return "messages";
+  // /nearby 为「附近」总览页（2026-10-19 起不再是 307 跳转）；三个子页各自亮各自项
+  if (pathname === ROUTES.nearby) return "nearby";
   if (pathname === ROUTES.nearbyGroups) return "nearby-groups";
   if (pathname === ROUTES.nearbyPeople) return "nearby-people";
   if (pathname === ROUTES.nearbyMoments) return "nearby-moments";

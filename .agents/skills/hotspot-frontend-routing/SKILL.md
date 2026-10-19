@@ -19,8 +19,10 @@ src/routes/
                                # 见 backend-go/AGENTS.md「路由与协议」的 /share/{code} 登记例外）
   (app)/
     +layout.svelte         # MainLayout 外壳（桌面/平板/移动/横屏四端分派）
-    +page.svelte           # 首页（hero/动态/群组/用户；三端统一标题）
-    nearby/+page.ts        # /nearby 落点：307 重定向到 /nearby/people（语义由“附近的人”承接）
+    +page.svelte           # 首页 = 发现（moments/search 热门模式，spec 定位“发现页首屏”）
+    nearby/+page.svelte    # 「附近」枢纽页（地理轴唯一归属：Hero 统计 + 人/瞬间/群组三段分区，
+                           # 各段“查看全部”进下方三个叶子页；2026-10-19 起不再是 307 跳转）
+    nearby/shared/NearbyHubSections.svelte  # 枢纽三段分区（纯展示，用例锁预览条数与入口）
     nearby/people/         # 附近的人
     nearby/groups/         # 附近的组
     nearby/moments/        # 附近时刻（页面样板结构权威基准）

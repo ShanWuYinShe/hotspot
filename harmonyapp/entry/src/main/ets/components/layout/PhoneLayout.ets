@@ -20,8 +20,11 @@
 import { HomePage } from '../../features/home/pages/HomePage';
 import { MessagePage } from '../../features/messages/pages/MessagePage';
 import { ProfilePage } from '../../features/me/pages/ProfilePage';
-// 附近一级 Tab 直挂「附近的人」列表页（对齐前端：/nearby 307→/nearby/people，
-// 聚合门户已删除；群组/动态为独立页面，从首页「更多」进入，与 web 移动端入口一致）
+// 附近一级 Tab 直挂「附近的人」列表页。
+// 【两端暂不一致，待同步】web 于 2026-10-19 做了信息架构调整：/nearby 改为「附近」枢纽页
+// （Hero 统计 + 人/瞬间/群组三段分区，各段「查看全部」进叶子页），首页改为热门发现轴、
+// 不再承载附近内容。鸿蒙端尚未跟进（仍直挂附近的人、首页仍为附近聚合），
+// 跟进时按 web 同款分区结构落地，避免两端语义长期分叉。
 import { NearbyUsersListPage } from '../../features/nearby/pages/NearbyUsersListPage';
 import { LoginPromptView } from '../LoginPromptView';
 import { type BreakpointType, isWideForm } from '../../core/responsive/Breakpoint';

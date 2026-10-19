@@ -12,7 +12,7 @@
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// 移动横屏：紧凑左栏（无状态栏），全高内容 + 右侧滑入发布面板。
-	// 「附近」是一级 Tab（/nearby 307 → /nearby/people），竖屏/平板均含此 slot，
+	// 「附近」是一级 Tab（落点 /nearby 枢纽页），竖屏/平板均含此 slot，
 	// 横屏同样保留——三端一级导航集合一致（2026-10-18 审查 P2-9）。
 
 	let { children }: { children: Snippet } = $props();
