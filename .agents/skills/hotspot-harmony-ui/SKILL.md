@@ -290,3 +290,12 @@ ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代�
 - 根因：Scroll 对小于滚动区的内容默认居中对齐。
 - 修复：表单类 Scroll 一律补 `.align(Alignment.Top)`（commit 1ae09938，升级表单）。
 - 排查：dump 里 Scroll bounds 与其内容 Column bounds 的 y1 不一致即为居中。
+
+## 已知布局坑（2026-10-19 端上实测）
+
+- **裸 `{ }` 块不是容器**：在 `if/else` 分支里用裸块包裹布局（如把两栏 `if` 简化成
+  `else { { Column() {...}.layoutWeight(1) } }`）时，块内 `.layoutWeight()` **不生效**，
+  容器高度塌陷 → 内部 `WaterFlow`/`List` 高度为 0 → **页头（标题/计数/筛选）正常但内容一条不渲染**。
+  类型检查与编译都不会报错，必须端上或预览器确认。修法：删掉裸块，容器直接作为分支体。
+- 自查口径：任何"改完结构后内容区空白"的问题，先看分支体是不是裸块、`.layoutWeight()`
+  是否直接挂在**容器组件**上（Column/Row/List/WaterFlow）。

@@ -295,10 +295,19 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 1. **首启会弹定位权限框**：文本「允许"GeoTalk"访问你的位置？」，「仅使用期间允许」
    中心 ≈ `(628,1964)`（bounds `[432,1931][824,1997]`）。不处理会挡住所有页面断言
    （dump 只有弹窗节点）。授权后不影响后续 Tab 走查（模拟器定位本身仍不可用）。
-2. **推入式页面白屏会把应用"粘"在空白页**：点推入页（如附近动态「更多动态」）后 dump 仅
-   状态栏 5 个节点；此后按 Back 或再次 `aa start` **仍停在该空白页**（不会自愈）。
-   恢复办法：`aa force-stop com.lsyb.social` → `aa start -b com.lsyb.social -a EntryAbility`
-   （冷启回到 Tab 页，实测可复现）。**结论不变**：推入式页面在本模拟器上不可验证。
+2. **偶发"整页空白"是应用瞬时坏状态，不是模拟器限制（2026-10-19 更正）**：
+   曾观察到点推入页后 dump 仅剩状态栏节点、且按 Back / 再 `aa start` 不自愈；
+   **但 2026-10-19 实测推入式页面完全可以验证**——冷启动（`aa force-stop` + `aa start`）后
+   瞬间详情页、附近瞬间页均正常渲染（前者 31 节点、后者 52 节点，截图正常）。
+   因此早先"推入式页面在本模拟器不可验证、必须真机"的结论**作废**：
+   - 遇到整页空白先 `aa force-stop com.lsyb.social` → `aa start -b com.lsyb.social -a EntryAbility`；
+   - 空白也可能是**应用自身 bug**（见下条），务必用 `snapshot_display` 截图确认，
+     **不要只看 dumpLayout**：页头渲染正常、内容区空白时 dump 仍会出现页头文本，
+     只看"有没有节点/节点数"容易误判为"页面正常"。
+3. **页面只渲染页头、内容区全空 → 先查 ArkUI 裸 `{ }` 块**（2026-10-19 hotspot 实战）：
+   ArkUI 的裸 `{ ... }` 不是容器，块内 `.layoutWeight(1)` 不生效 → 容器高度塌陷 →
+   内部 WaterFlow/List 高度为 0 → 页头计数正常但一条内容都不渲染。修法是删掉裸块、
+   让容器直接作为分支体。**判定手法**：dump 节点数（本例页头 10 节点 → 修复后 52 节点）。
 3. **rport 流程再次确认**：热启动快照会残留 8888 监听 → `hdc rport` 报
    `TCP Port listen failed`；`hdc shell reboot`（约 42s 重新 Connected）后 rport **OK**，
    app 日志 `A0FF08 HttpUtil: 响应 code=0`，端上数据正常加载。
