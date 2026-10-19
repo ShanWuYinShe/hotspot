@@ -254,6 +254,19 @@ app 沙箱内的 preferences 文件（属主是 app uid，权限 660）。
 （区别于正常的 `The asset is not found.`）。
 `hdc uninstall com.lsyb.social` + `install` 后恢复正常（错误回到 `not found` 常态）。
 
+**2026-10-19 补充（同族故障的更强形态，重装/重启均未恢复）**：
+- 症状：`TokenAssetStore … Error: **The cryptography operation failed.**`（读 token 时）；
+  `uninstall` + `install` 后错误变成**持续** `The asset is not found.`；`hdc shell reboot` 亦不恢复。
+- 影响面：**所有需认证的请求全线 `code=10100`**——实测登录本身成功（`signin` 367ms ✓），
+  但随后的 `POST /admin/api/v1/rbac/me` 因 `getToken()` 读不到 Asset 而 401 →
+  管理入口不渲染、需登录的页面拿不到数据。**游客态流程不受影响**（走 public 端点）。
+- 排查手法：`hilog -x | grep -iE 'TokenAssetStore|rbac|code=10100'`——看到
+  `TokenAssetStore … not found/cryptography` 紧接 `响应 code=10100` 即可判定是 Asset 故障，
+  不是账号权限或后端问题（同一账号 `curl /admin/api/v1/rbac/me` 返回 `permissions:["*"]` ✓）。
+- **未结论（按项目规则不写成"环境限制"）**：尚未验证「换全新实例/清 app 数据/DevEco 里重装」
+  能否恢复；也未确认是实例快照损坏还是模拟器 Asset Store 在本次长会话后进入坏状态。
+  下次需要管理后台走查时先试：清 app 数据（`bm clean -n com.lsyb.social -d`）→ 冷启 → 登录 → 立刻查 `rbac/me`。
+
 ### 4. 登录与推入式页面：**可以验证**（2026-10-18 的"白屏 / 不可达"结论已作废，2026-10-19 复验）
 
 2026-10-18 曾记录「点登录/快速体验后全白、推入式页面白屏 → 登录链路不可达、需要真机」。
