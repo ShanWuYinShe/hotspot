@@ -1,14 +1,19 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Bell, Search, Compass, ArrowRight, Sparkles } from '@lucide/svelte';
+	import { Bell, Search, Compass, ArrowRight, Sparkles, Users, TrendingUp } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import type { MomentItem } from '@/api/types';
-	import { searchMoments } from '@/api';
+	import { searchMoments, fetchFollowingMoments, listFollowing } from '@/api';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ActivityRow from '@/components/home/ActivityRow.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
+	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
+	import Button from '@/components/ui/button.svelte';
+	import { resolveHomeSegment, resolveFollowingEmpty, type HomeFeedSegment } from '@/components/home/home-feed-mode';
+	import { auth } from '@/stores/auth.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
@@ -17,85 +22,171 @@
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 
-	// ═══ 首页「发现」（2026-10-19 信息架构调整）═══
-	// 三个 Tab 各占一条轴，杜绝内容重复：
-	//   首页 = 算法轴（无输入的热门发现）——spec api_spec_moment.md:64 明确
-	//          「无输入的热门发现（发现页首屏）由 moments/search 的热门模式承担」，
-	//          并声明该端点「不承担附近发现职责」；
-	//   附近 = 地理轴（附近的人/群组/瞬间，5km）——见 routes/(app)/nearby/+page.svelte；
-	//   关注流 = 关系轴（moments/fetch_following），后续独立接入（当前未上）。
-	// 调整前首页的三个数据源全是 5km 地理查询（附近瞬间/用户/群组），事实上是「附近」
-	// 的聚合页，而「附近」Tab 只落其中一段——重复由此而来。
-	// 首页对零社交关系的新用户同样有内容：热门模式无输入条件、无需关系与位置，
-	// 且经 pick(私有/公开) 走匿名版（spec api_spec_public.md:700）。
+	// ═══ 首页 = 关系轴（关注）+ 算法轴（发现）（2026-10-19 信息架构调整 · Step 2）═══
+	// 三条轴各占一个 Tab，内容不重复：
+	//   首页「关注」= moments/fetch_following（我关注的人的最新动态，需登录）
+	//   首页「发现」= moments/search 热门模式（spec api_spec_moment.md:64「发现页首屏」，匿名可用）
+	//   附近「地理」= /nearby 枢纽页（人/群组/瞬间，5km）
+	// 默认段与关注段空态由 components/home/home-feed-mode.ts 的纯函数决定（含冷启动矩阵，
+	// 已用用例锁定）：未登录/零关系 → 发现；有关注 → 关注。
 
 	const PAGE_SIZE = 20;
-
-	let moments = $state<MomentItem[]>([]);
-	let loading = $state(true);
-	let loadingMore = $state(false);
-	let error = $state<string | null>(null);
-	let nextCursor = $state<string | null>(null);
-	let reloadKey = $state(0);
 	const device = $derived(platform.platform);
-	const hasMore = $derived(Boolean(nextCursor));
 
-	$effect(() => {
-		void reloadKey;
-		let cancelled = false;
-		async function fetchFirstPage() {
+	// 段选择：首屏判定一次，此后完全由用户切换控制（不被后续计数变化翻动）。
+	// auth.user 是精简结构（user_id/nickname/avatar_url/user_type，见 stores/auth.svelte.ts），
+	// **不含 following_count**，故关注数由 users/fetch_following 探测（limit:1 足够分辨零与非零），
+	// 与关注流首屏并发拉取——判定在加载态内完成，用户不会看到「先关注后跳发现」的翻动。
+	let segment = $state<HomeFeedSegment>('discover');
+	let followingCount = $state<number | null>(null);
+	let booting = $state(true);
+
+	// 两个流共用一条分页管线（cursor 不透明，只透传；spec api_spec_base.md）
+	function createMomentPager(
+		fetchPage: (cursor: string | null) => Promise<{ items: MomentItem[]; nextCursor: string | null }>
+	) {
+		let items = $state<MomentItem[]>([]);
+		let loading = $state(false);
+		let loadingMore = $state(false);
+		let error = $state<string | null>(null);
+		let nextCursor = $state<string | null>(null);
+		let loaded = $state(false);
+
+		async function load() {
+			if (loading) return;
+			loading = true;
+			error = null;
 			try {
-				loading = true;
-				error = null;
-				const res = await searchMoments({ sort_by: 'popular', pagination: { limit: PAGE_SIZE } });
-				if (cancelled) return;
-				if (res.code !== 0) {
-					error = res.message || '加载失败';
-					return;
-				}
-				moments = res.data?.items ?? [];
-				nextCursor = res.data?.next_cursor ?? null;
+				const page = await fetchPage(null);
+				items = page.items;
+				nextCursor = page.nextCursor;
+				loaded = true;
 			} catch (e) {
-				if (!cancelled) error = e instanceof Error ? e.message : '加载失败';
+				error = e instanceof Error ? e.message : '加载失败';
 			} finally {
-				if (!cancelled) loading = false;
+				loading = false;
 			}
 		}
-		void fetchFirstPage();
+
+		async function loadMore() {
+			if (loadingMore || !nextCursor) return;
+			loadingMore = true;
+			try {
+				const page = await fetchPage(nextCursor);
+				const seen = new Set(items.map((m) => m.moment_id));
+				items = [...items, ...page.items.filter((m) => !seen.has(m.moment_id))];
+				nextCursor = page.nextCursor;
+			} catch (e) {
+				error = e instanceof Error ? e.message : '加载失败';
+			} finally {
+				loadingMore = false;
+			}
+		}
+
+		function reset() {
+			items = [];
+			nextCursor = null;
+			loaded = false;
+			error = null;
+		}
+
+		/** 首屏已由外部并发取回时直接注入（避免同一请求发两次） */
+		function prime(newItems: MomentItem[], newCursor: string | null) {
+			items = newItems;
+			nextCursor = newCursor;
+			loaded = true;
+			error = null;
+		}
+
+		return {
+			get items() { return items; },
+			get loading() { return loading; },
+			get loadingMore() { return loadingMore; },
+			get error() { return error; },
+			get loaded() { return loaded; },
+			get hasMore() { return Boolean(nextCursor); },
+			load,
+			loadMore,
+			reset,
+			prime
+		};
+	}
+
+	const paged = (res: { code: number; message?: string; data?: { items?: MomentItem[]; next_cursor?: string | null } | null }) => {
+		if (res.code !== 0) throw new Error(res.message || '加载失败');
+		return { items: res.data?.items ?? [], nextCursor: res.data?.next_cursor ?? null };
+	};
+
+	const discover = createMomentPager(async (cursor) =>
+		paged(await searchMoments({ sort_by: 'popular', pagination: { limit: PAGE_SIZE, ...(cursor ? { cursor } : {}) } }))
+	);
+	const following = createMomentPager(async (cursor) =>
+		paged(await fetchFollowingMoments({ pagination: { limit: PAGE_SIZE, ...(cursor ? { cursor } : {}) } }))
+	);
+
+	// 首屏：未登录直接进「发现」；已登录则并发探测（关注流首屏 + 关注数）后判默认段
+	$effect(() => {
+		if (!booting) return;
+		if (auth.status === 'loading') return;
+		const uid = auth.user?.user_id;
+		if (auth.status !== 'authenticated' || !uid) {
+			segment = resolveHomeSegment(false, 0);
+			booting = false;
+			return;
+		}
+		let cancelled = false;
+		void (async () => {
+			try {
+				const [feedRes, followRes] = await Promise.all([
+					fetchFollowingMoments({ pagination: { limit: PAGE_SIZE } }),
+					listFollowing({ user_id: uid, pagination: { limit: 1 } })
+				]);
+				if (cancelled) return;
+				const page = paged(feedRes);
+				following.prime(page.items, page.nextCursor);
+				followingCount = followRes.code === 0 ? (followRes.data?.items?.length ?? 0) : 0;
+				segment = resolveHomeSegment(true, followingCount);
+			} catch {
+				// 探测失败不阻塞首页：退回发现轴（关注段仍可手动进入）
+				if (!cancelled) segment = 'discover';
+			} finally {
+				if (!cancelled) booting = false;
+			}
+		})();
 		return () => {
 			cancelled = true;
 		};
 	});
 
-	// 真分页：cursor 不透明，只透传（spec api_spec_base.md）
-	const loadMore = async () => {
-		if (loadingMore || !nextCursor) return;
-		loadingMore = true;
-		try {
-			const res = await searchMoments({
-				sort_by: 'popular',
-				pagination: { limit: PAGE_SIZE, cursor: nextCursor }
-			});
-			if (res.code !== 0) {
-				error = res.message || '加载失败';
-				return;
-			}
-			const incoming = res.data?.items ?? [];
-			const seen = new Set(moments.map((m) => m.moment_id));
-			moments = [...moments, ...incoming.filter((m) => !seen.has(m.moment_id))];
-			nextCursor = res.data?.next_cursor ?? null;
-		} catch (e) {
-			error = e instanceof Error ? e.message : '加载失败';
-		} finally {
-			loadingMore = false;
-		}
-	};
+	// 懒加载：切到某段才拉该段数据（关注段首屏已由上面的并发探测注入）
+	$effect(() => {
+		if (segment === 'discover' && !discover.loaded && !discover.loading) void discover.load();
+	});
+	$effect(() => {
+		if (segment !== 'following' || auth.status !== 'authenticated') return;
+		if (!following.loaded && !following.loading) void following.load();
+	});
+
+	const followingEmpty = $derived(resolveFollowingEmpty(followingCount));
 </script>
 <svelte:head>
 	<title>首页 · HotSpot</title>
 </svelte:head>
 
-<!-- ═══ 附近入口卡：地理轴内容的唯一入口（首页不再重复附近列表）═══ -->
+{#snippet momentRows(pager: ReturnType<typeof createMomentPager>)}
+	<ListContainer bordered>
+		{#each pager.items as moment, i (moment.moment_id)}
+			<!-- 非地理轴（关系流/全站热榜）不显示「距离」：全局内容配「300m」会误导为身边内容 -->
+			<ActivityRow {moment} index={i} showDistance={false} onClick={() => void goto(ROUTES.moment(moment.moment_id))} />
+		{/each}
+	</ListContainer>
+	{#if pager.hasMore}
+		<LoadMoreButton loading={pager.loadingMore} onLoad={() => void pager.loadMore()} />
+	{:else}
+		<ListEnd />
+	{/if}
+{/snippet}
+
 {#snippet nearbyEntry()}
 	<button
 		type="button"
@@ -109,15 +200,29 @@
 			<span class="block text-sm font-medium text-text-primary">看看附近</span>
 			<span class="block truncate text-xs text-text-secondary">附近的人 · 群组 · 瞬间，5km 内</span>
 		</span>
-		<!-- 箭头用既有语义类（text-text-tertiary 未注册，Tailwind v4 会静默失效）-->
 		<ArrowRight class="size-4 shrink-0 text-text-secondary" strokeWidth={1.75} />
 	</button>
 {/snippet}
 
 <StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-5 pt-4 pb-16">
 	{#snippet header()}
-		<!-- 三端统一页头。副标题去掉「周边」——那属于「附近」轴（2026-10-19 IA 调整） -->
-		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '2xl'} subtitle="发现有趣的人和事" sticky>
+		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '2xl'} subtitle="关注与发现" sticky>
+			{#snippet below()}
+				<!-- 系统级分段控制器（TabBar segmented 原语）：关系轴 / 算法轴切换 -->
+				<div class="mt-3 pb-2">
+					<div class="w-full max-w-72">
+						<TabBar
+							variant="segmented"
+							items={[
+								{ id: 'following', label: '关注', icon: Users },
+								{ id: 'discover', label: '发现', icon: TrendingUp }
+							]}
+							value={segment}
+							onChange={(id) => (segment = id as HomeFeedSegment)}
+						/>
+					</div>
+				</div>
+			{/snippet}
 			{#snippet trailing()}
 				<div class="flex shrink-0 items-center gap-2">
 					{#if device !== 'desktop'}
@@ -129,32 +234,55 @@
 		</PageHeader>
 	{/snippet}
 
-	{#if loading}
-		<InlineLoading label="加载热门内容…" />
-	{:else if error}
-		<LoadError message={error} onRetry={() => reloadKey++} />
-	{:else}
-		{@render nearbyEntry()}
-		{#if moments.length === 0}
-			<EmptyState title="暂时还没有热门内容" description="去附近看看，或者发布第一条动态。">
+	{#if booting}
+		<InlineLoading label="加载首页…" />
+	{:else if segment === 'following'}
+		{#if auth.status !== 'authenticated'}
+			<NeedsAuthNotice title="登录后查看关注动态" description="关注的人发布的新动态会出现在这里" />
+		{:else if following.loading}
+			<InlineLoading label="加载关注动态…" />
+		{:else if following.error}
+			<LoadError message={following.error} onRetry={() => { following.reset(); }} />
+		{:else if following.items.length === 0}
+			<!-- 空态按 following_count 分流：零关系与「有关注但没人更新」都返回空数组，
+			     文案不能混用（见 home-feed-mode.ts 的用例锁定） -->
+			<EmptyState title={followingEmpty.title} description={followingEmpty.description}>
 				{#snippet icon()}
-					<Sparkles class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+					<Users class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+				{/snippet}
+				{#snippet action()}
+					<Button
+						type="button"
+						variant="primary"
+						size="md"
+						onclick={() => (followingEmpty.kind === 'no-relations' ? void goto(ROUTES.nearby) : (segment = 'discover'))}
+					>
+						{followingEmpty.actionLabel}
+					</Button>
 				{/snippet}
 			</EmptyState>
 		{:else}
-			<div>
-				<SectionHead title="热门动态" subtitle="全站热度 · 实时更新" />
-				<ListContainer bordered>
-					{#each moments as moment, i (moment.moment_id)}
-						<ActivityRow {moment} index={i} onClick={() => void goto(ROUTES.moment(moment.moment_id))} />
-					{/each}
-				</ListContainer>
-				{#if hasMore}
-					<LoadMoreButton loading={loadingMore} onLoad={() => void loadMore()} />
-				{:else}
-					<ListEnd />
-				{/if}
-			</div>
+			{@render momentRows(following)}
+		{/if}
+	{:else}
+		{#if discover.loading}
+			<InlineLoading label="加载热门内容…" />
+		{:else if discover.error}
+			<LoadError message={discover.error} onRetry={() => discover.reset()} />
+		{:else}
+			{@render nearbyEntry()}
+			{#if discover.items.length === 0}
+				<EmptyState title="暂时还没有热门内容" description="去附近看看，或者发布第一条动态。">
+					{#snippet icon()}
+						<Sparkles class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+					{/snippet}
+				</EmptyState>
+			{:else}
+				<div>
+					<SectionHead title="热门动态" subtitle="全站热度 · 实时更新" />
+					{@render momentRows(discover)}
+				</div>
+			{/if}
 		{/if}
 	{/if}
 </StandardPageLayout>

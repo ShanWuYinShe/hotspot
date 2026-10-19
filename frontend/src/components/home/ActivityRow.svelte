@@ -22,14 +22,23 @@
 		'var(--cst-status-danger-bg)'
 	] as const;
 
-	let { moment, index, onClick }: { moment: MomentItem; index: number; onClick: () => void } = $props();
+	// showDistance：行内 meta 是否带「距离」。
+	// 附近轴（附近瞬间/附近活动/搜索发现态的附近语义）需要它；**非地理轴**（首页「关注」关系流、
+	// 首页「发现」全站热榜）不需要——全局热榜配「300m」会让用户误以为是身边内容。
+	// 默认 true 保持既有调用方行为不变。
+	let {
+		moment,
+		index,
+		onClick,
+		showDistance = true
+	}: { moment: MomentItem; index: number; onClick: () => void; showDistance?: boolean } = $props();
 
 	const Icon = $derived(ICONS[index % ICONS.length]);
 	const color = $derived(COLORS[index % COLORS.length]);
 	const bg = $derived(BGS[index % BGS.length]);
 
 	// meta 行补实时距离与相对时间(数据已下发未映射;Gemini 审查 r01:活动项缺决策信息)
-	const distanceLabel = $derived(formatDistance(moment.location?.distance));
+	const distanceLabel = $derived(showDistance ? formatDistance(moment.location?.distance) : '');
 	const timeLabel = $derived.by(() => {
 		const t = Date.parse(moment.created_at ?? '');
 		if (Number.isNaN(t)) return '';
