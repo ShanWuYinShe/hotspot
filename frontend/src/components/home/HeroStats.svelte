@@ -51,7 +51,7 @@ import { formatCount } from '@/lib/utils';
 			</div>
 			<div class="flex flex-col items-center justify-center py-3 bg-surface-primary">
 				<span class="text-2xl font-semibold leading-none tracking-tight tabular-nums text-text-primary" >{formatCount(stats.active)}</span>
-				<span class="text-xxs mt-1.5 text-text-secondary"  >动态</span>
+				<span class="text-xxs mt-1.5 text-text-secondary"  >瞬间</span>
 			</div>
 			<div class="flex flex-col items-center justify-center py-3 bg-surface-primary">
 				<span class="text-2xl font-semibold leading-none tracking-tight tabular-nums text-text-primary" >{formatCount(stats.online)}</span>

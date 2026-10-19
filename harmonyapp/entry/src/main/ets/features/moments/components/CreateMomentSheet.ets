@@ -558,7 +558,7 @@ export struct CreateMomentSheet {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text(this.isPublishing ? '发布中…' : '发布动态')
+      Text(this.isPublishing ? '发布中…' : '发布瞬间')
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.canPublish() ?

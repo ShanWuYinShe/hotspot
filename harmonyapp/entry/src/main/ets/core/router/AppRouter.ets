@@ -31,7 +31,7 @@ export class GroupDetailRouteParam {
   groupId: string = '';
 }
 
-/** 动态详情页参数 */
+/** 瞬间详情页参数 */
 export class MomentDetailRouteParam {
   momentId: string = '';
 }

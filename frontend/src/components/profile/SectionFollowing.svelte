@@ -50,7 +50,7 @@ import UserCardRow from '@/components/profile/UserCardRow.svelte';
 
 <ProfileUserSection
 	title="关注"
-	subtitle="你主动订阅的动态与创作者"
+	subtitle="你主动订阅的瞬间与创作者"
 	count={visibleCount}
 	countSuffix=" 人"
 	{embedded}

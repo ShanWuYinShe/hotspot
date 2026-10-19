@@ -23,7 +23,7 @@ export function resolveHomeSegment(isLoggedIn: boolean, followingCount: number):
 /**
  * 「关注」段空态文案。
  * 关键点：接口在「零关系」与「有关注但没人更新」两种情况下都返回空数组，
- * **只有关注计数能把它们分开**——对零关系用户说「你关注的人还没发动态」是错的。
+ * **只有关注计数能把它们分开**——对零关系用户说「你关注的人还没发瞬间」是错的。
  */
 export interface FollowingEmptyCopy {
   /** true = 还没关注任何人（引导去关注）；false = 有关注但没更新（引导去发现） */
@@ -44,7 +44,7 @@ export function resolveFollowingEmpty(followingCount: number): FollowingEmptyCop
   }
   return {
     noRelations: false,
-    title: '你关注的人还没发新动态',
+    title: '你关注的人还没发新瞬间',
     message: '过一会儿再来看看，或者先逛逛发现里的热门内容。',
     actionLabel: '去发现看看'
   };

@@ -186,7 +186,7 @@
 						openComposer();
 						return;
 					}
-					requireAuth({ action: '发布动态', run: openComposer });
+					requireAuth({ action: '发布瞬间', run: openComposer });
 				}}
 				variant="ghost"
 				size={36}

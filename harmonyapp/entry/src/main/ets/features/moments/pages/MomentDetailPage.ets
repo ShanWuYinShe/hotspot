@@ -170,10 +170,10 @@ export struct MomentDetailPage {
         this.socialState = interactionEventHub.getMomentState(response.data.moment_id);
         this.loadComments();
       } else {
-        this.errorMessage = getErrorMessage(response, '加载动态详情失败');
+        this.errorMessage = getErrorMessage(response, '加载瞬间详情失败');
       }
     } catch (error) {
-      this.errorMessage = '加载动态详情失败';
+      this.errorMessage = '加载瞬间详情失败';
       hilog.error(DOMAIN_NUMBER, TAG, `loadMomentDetail failed: ${JSON.stringify(error)}`);
     } finally {
       this.isLoading = false;

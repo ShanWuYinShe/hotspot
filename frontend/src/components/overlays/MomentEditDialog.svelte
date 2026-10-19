@@ -66,7 +66,7 @@
 			if (res.code === 0) {
 				onUpdated({ description: text.trim(), tags: Array.from(selectedTags), privacy_level: privacy });
 				onClose();
-				showToast('动态已更新', 'success');
+				showToast('瞬间已更新', 'success');
 				// 编辑内容/可见性已变：附近 feed 会话缓存立即失效，避免 5 分钟内展示旧数据。
 				clearMomentsProgress();
 			} else {
@@ -84,11 +84,11 @@
 	<Dialog.Content
 		side="center"
 		class="max-w-md p-5"
-		aria-label="编辑动态"
+		aria-label="编辑瞬间"
 	>
 		<div class="flex items-center justify-between">
 			<div>
-				<p class="eyebrow">编辑动态</p>
+				<p class="eyebrow">编辑瞬间</p>
 				<p class="mt-1 text-md text-text-primary">修改内容、氛围与可见范围</p>
 			</div>
 			<button
@@ -107,7 +107,7 @@
 				oninput={(e) => (text = e.currentTarget.value.slice(0, 500))}
 				placeholder="写下此刻发生的事…"
 				class="min-h-24 w-full resize-none bg-transparent text-sm leading-7 text-text-primary placeholder:text-text-secondary"
-				aria-label="动态内容"
+				aria-label="瞬间内容"
 			></textarea>
 			<div class="mt-2 flex items-center justify-end border-t border-border-default pt-2">
 				<span class="text-xs tabular-nums text-text-secondary">{text.length}/500</span>

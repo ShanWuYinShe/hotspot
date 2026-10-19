@@ -37,13 +37,13 @@ export function resolveFollowingEmpty(
 		return {
 			kind: 'no-relations',
 			title: '还没有关注任何人',
-			description: '关注几个附近的人，他们的动态会出现在这里。',
+			description: '关注几个附近的人，他们的瞬间会出现在这里。',
 			actionLabel: '去附近看看'
 		};
 	}
 	return {
 		kind: 'no-activity',
-		title: '你关注的人还没发新动态',
+		title: '你关注的人还没发新瞬间',
 		description: '过一会儿再来看看，或者先逛逛发现里的热门内容。',
 		actionLabel: '去发现看看'
 	};

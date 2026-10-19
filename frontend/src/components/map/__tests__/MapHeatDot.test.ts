@@ -99,7 +99,7 @@ describe('MapHeatDot', () => {
 
 	it('提供含分类明细的无障碍名称', () => {
 		const withBreakdown = renderDot(34, { user: 22, group: 4, moment: 8 });
-		expect(withBreakdown.getAttribute('aria-label')).toBe('此处聚合 34 项：22 位用户 · 4 个群组 · 8 条动态');
+		expect(withBreakdown.getAttribute('aria-label')).toBe('此处聚合 34 项：22 位用户 · 4 个群组 · 8 条瞬间');
 	});
 
 	it('breakdown 为 null 时无障碍名称退化为总数（不出现 undefined）', () => {

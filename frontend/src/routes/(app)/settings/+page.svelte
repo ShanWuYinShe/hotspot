@@ -236,7 +236,7 @@
 							</div>
 							<div class="min-w-0 flex-1">
 								<p class="text-sm font-semibold text-text-primary">访客浏览中</p>
-								<p class="text-xs text-text-secondary mt-0.5">登录后可同步跨端偏好、个人主页与动态收藏</p>
+								<p class="text-xs text-text-secondary mt-0.5">登录后可同步跨端偏好、个人主页与瞬间收藏</p>
 							</div>
 							<Button
 								class="h-auto shrink-0 rounded-md px-4 py-2 text-xs"
@@ -321,7 +321,7 @@
 			</SettingsSection>
 
 			<!-- Section 4: 通知偏好 -->
-			<SettingsSection title="通知偏好" description="管理新消息、互动提及与关注动态的系统提醒方式">
+			<SettingsSection title="通知偏好" description="管理新消息、互动提及与关注流的系统提醒方式">
 				<ListContainer bordered inset>
 					<SettingRow
 						title="推送通知"

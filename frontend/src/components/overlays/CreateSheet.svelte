@@ -30,7 +30,7 @@
 	// 「好友可见」选项后端并无对应档位（会静默存成仅自己，好友看不到），在服务端
 	// 补齐 friends 档之前必须摘掉，不能假装提供该能力。
 	const AUDIENCES: { id: 'nearby' | 'private'; label: string; hint: string; icon: Component }[] = [
-		{ id: 'nearby', label: '附近可见', hint: '进入附近动态', icon: MapPin },
+		{ id: 'nearby', label: '附近可见', hint: '进入附近瞬间', icon: MapPin },
 		{ id: 'private', label: '仅自己', hint: '保存在我的瞬间', icon: Lock }
 	];
 
@@ -134,7 +134,7 @@
 		</div>
 		<div class="flex items-center justify-between gap-4">
 			<div class="min-w-0">
-				<p class="eyebrow">附近动态</p>
+				<p class="eyebrow">附近瞬间</p>
 				<h2 id="create-composer-title" class="mt-1 text-xl font-medium leading-none tracking-title text-text-primary">
 					记录此刻
 				</h2>
@@ -178,7 +178,7 @@
 					oninput={(e) => (draft.text = e.currentTarget.value.slice(0, 280))}
 					placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
 					class="min-h-30.5 w-full resize-none bg-transparent text-sm leading-7 text-text-primary placeholder:text-text-secondary"
-					aria-label="动态内容"
+					aria-label="瞬间内容"
 				></textarea>
 				<div class="mt-3 flex items-center justify-between border-t border-border-default pt-3">
 					<div class="flex items-center gap-1">
@@ -265,11 +265,11 @@
 			</p>
 		</div>
 		<Button type="submit" size="md" disabled={!canPublish} class="rounded-full px-5">
-			{submitStatus || '发布动态'}
+			{submitStatus || '发布瞬间'}
 		</Button>
 	</footer>
 </form>
 {:else}
-	<!-- 创建群组 surface（对齐 Figma Make CreateSheet 的 surface 切换；可返回发布动态） -->
+	<!-- 创建群组 surface（对齐 Figma Make CreateSheet 的 surface 切换；可返回发布瞬间） -->
 	<CreateGroupSheet onClose={onClose} onBack={() => (surface = 'moment')} />
 {/if}

@@ -35,7 +35,7 @@
 		[
 			bucket.breakdown?.user ? `${bucket.breakdown.user} 位用户` : '',
 			bucket.breakdown?.group ? `${bucket.breakdown.group} 个群组` : '',
-			bucket.breakdown?.moment ? `${bucket.breakdown.moment} 条动态` : ''
+			bucket.breakdown?.moment ? `${bucket.breakdown.moment} 条瞬间` : ''
 		]
 			.filter(Boolean)
 			.join(' · ')

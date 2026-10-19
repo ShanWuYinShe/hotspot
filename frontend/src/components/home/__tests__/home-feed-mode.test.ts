@@ -37,7 +37,7 @@ describe('resolveFollowingEmpty（关注段空态）', () => {
 	it('有关注但无新内容 → 空态文案换一套，动作指向发现', () => {
 		const s = resolveFollowingEmpty(5);
 		expect(s.kind).toBe('no-activity');
-		expect(s.title).toContain('还没发新动态');
+		expect(s.title).toContain('还没发新瞬间');
 		expect(s.actionLabel).toBe('去发现看看');
 	});
 

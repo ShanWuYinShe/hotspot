@@ -647,7 +647,7 @@ export struct DesktopLayout {
         .fontColor(this.getPalette().textPrimary)
         .margin({ top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.LG })
 
-      this.CreateSheetItem(AppIcon.PHOTO, '发布动态', () => {
+      this.CreateSheetItem(AppIcon.PHOTO, '发布瞬间', () => {
         this.showCreateSheet = false;
         AppRouter.push(PageNames.CREATE_MOMENT);
       })

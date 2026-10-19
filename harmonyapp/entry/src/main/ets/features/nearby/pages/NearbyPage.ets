@@ -175,7 +175,7 @@ export struct NearbyPage {
               EmptyState({
                 title: '附近还没有内容',
                 message: '去发布第一条动态，或到附近的人认识新朋友。',
-                actionLabel: '去发动态',
+                actionLabel: '去发瞬间',
                 onAction: () => AppRouter.push(PageNames.CREATE_MOMENT)
               })
               .width('100%')
