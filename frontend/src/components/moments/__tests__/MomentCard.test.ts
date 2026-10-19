@@ -17,16 +17,18 @@ const item = {
 } as never;
 
 describe('MomentCard', () => {
-	it('渲染标签/作者/位置/正文/点赞评论数', () => {
+	it('渲染标签/作者/正文/点赞评论数（卡片不渲染位置）', () => {
 		render(MomentCard, {
 			props: { item, liked: false, saved: false, onLike: () => {}, onSave: () => {} }
 		});
 		expect(screen.getByText('城市')).toBeTruthy();
 		expect(screen.getByText('鹿鸣')).toBeTruthy();
-		expect(screen.getByText('回龙窝')).toBeTruthy();
 		expect(screen.getByText('城市里那些安静的角落')).toBeTruthy();
 		expect(screen.getByText('12')).toBeTruthy();
 		expect(screen.getByText('3')).toBeTruthy();
+		// 2026-10-20 契约变更：手机两列卡宽 171px，位置+时间会把昵称挤成 1 个字，
+		// 卡片只保留时间；位置由详情页承载。此处断言"位置不出现在卡片上"。
+		expect(screen.queryByText('回龙窝')).toBeNull();
 	});
 
 	it('点击点赞/评论/收藏按钮触发回调', async () => {
@@ -63,18 +65,18 @@ describe('MomentCard', () => {
 			...extra
 		}) as never;
 
-	it('位置与时间同时存在时两者都渲染', () => {
+	it('位置与时间同时存在时，卡片只渲染时间', () => {
 		render(MomentCard, {
-			props: { item: cardItem({ time: '2026-09-03 23:59' }), liked: false, saved: false, onLike: () => {}, onSave: () => {} }
+			props: { item: cardItem({ time: '9月3日' }), liked: false, saved: false, onLike: () => {}, onSave: () => {} }
 		});
-		expect(screen.getByText('回龙窝')).toBeTruthy();
-		expect(screen.getByText('2026-09-03 23:59')).toBeTruthy();
+		expect(screen.getByText('9月3日')).toBeTruthy();
+		expect(screen.queryByText('回龙窝')).toBeNull();
 	});
 
-	it('无位置时仍单独渲染时间（兜底语义保留）', () => {
+	it('无位置时仍渲染时间（时间独立于位置）', () => {
 		render(MomentCard, {
-			props: { item: cardItem({ location: '', time: '2026-09-03 23:59' }), liked: false, saved: false, onLike: () => {}, onSave: () => {} }
+			props: { item: cardItem({ location: '', time: '9月3日' }), liked: false, saved: false, onLike: () => {}, onSave: () => {} }
 		});
-		expect(screen.getByText('2026-09-03 23:59')).toBeTruthy();
+		expect(screen.getByText('9月3日')).toBeTruthy();
 	});
 });

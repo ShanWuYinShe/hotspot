@@ -65,27 +65,14 @@
 			<div class="flex min-w-0 items-center gap-2">
 				{#if item.avatar || item.user}
 					<Avatar src={item.avatar} name={item.user} size="xs" style="border:var(--cst-border-width-regular) solid var(--cst-border-card-menu);" />
-					<span class="truncate text-sm text-text-primary font-semibold">{item.user || '匿名用户'}</span>
+					<span class="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary">{item.user || '匿名用户'}</span>
 				{/if}
-				<!-- 位置与时间并列渲染（全站复审 s3 P2-7）：此前 time 只在「无位置」的
-				     {:else if} 兜底分支里，而个人中心的 location 又兜了账号位置 →
-				     location 恒真、发布时间永不渲染。两者都是有效元信息，改为同时展示：
-				     位置可截断、时间不压缩（tabular-nums 对齐）。 -->
-				{#if item.location || item.time}
-					<span class="ml-auto flex min-w-0 items-center gap-1 text-xxs text-text-secondary">
-						{#if item.location}
-							<span class="flex min-w-0 items-center gap-0.5 truncate">
-								<MapPin class="size-2.5 shrink-0" strokeWidth={1.5} />
-								{item.location}
-							</span>
-						{/if}
-						{#if item.location && item.time}
-							<span class="opacity-dim" aria-hidden="true">·</span>
-						{/if}
-						{#if item.time}
-							<span class="shrink-0 tabular-nums">{item.time}</span>
-						{/if}
-					</span>
+				<!-- 时间靠右（tabular-nums 对齐）。
+				     **卡片不再渲染位置**（2026-10-20 用户审查）：手机两列卡宽 171px，
+				     位置+时间会把昵称挤成 1 个字（"鹿鸣"→"鹿…"）。卡片已有分类标签与时间，
+				     位置是详情页信息；归属行留给昵称，昵称才排得开。 -->
+				{#if item.time}
+					<span class="ml-auto shrink-0 text-xxs tabular-nums text-text-secondary">{item.time}</span>
 				{/if}
 			</div>
 
