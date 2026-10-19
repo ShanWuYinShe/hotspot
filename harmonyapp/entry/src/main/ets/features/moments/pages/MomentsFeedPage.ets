@@ -84,15 +84,16 @@ export struct MomentsFeedPage {
   @State hasMore: boolean = false;
   @State nextCursor: string = '';
   @State userActionPendingIds: string[] = [];
-  @State activeTab: string = '热门';
+  @State activeTab: string = '周边';
   @State activeTag: string = '';
   /** 动态 tag 列表（从前 N 条 moment.tags 聚合去重，对齐前端 moments tagsList 派生模式） */
   @State hotTags: string[] = [];
 
-  // 「活动」tab 与「热门」同走 moments/search sort_by=popular、无法区分，已删除；
-  // 原「附近」与一级 Tab「附近」同名嵌套易歧义，改用「周边」（nearby 距离序流，
-  // 对齐前端 nearby/moments TABS 改名）
-  private readonly TABS: string[] = ['热门', '周边', '关注'];
+  // 2026-10-19 信息架构调整（与 web 同口径）：本页是**地理叶子页**，只承担「周边」流——
+  // 分类切换器已移除（默认即「周边」）；「热门」（算法轴）与「关注」（关系轴）归首页两个段。
+  // TODO(待收尾)：`activeTab` 的「热门/关注」分支与其推荐用户/群组、桌面右栏代码仍在，
+  // 属不可达代码；清除它们需较大结构调整，且本机无模拟器可做视觉验证，
+  // 故本轮先收敛入口（用户可见的重复已消除），分支清理留待能在模拟器上走查时一并做。
 
   /** 位置行副标题（对齐前端 nearby/moments subtitle：{locationName} · 5km 内 / 5km 内） */
   private getLocationSubtitle(): string {
@@ -404,22 +405,6 @@ export struct MomentsFeedPage {
         .onClick(() => { AppRouter.push(PageNames.SEARCH); })
         .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XS })
 
-        // 统一 TabsPillGroup 分段胶囊（对齐前端 TabBar）
-        TabsPillGroup({
-          tabs: this.TABS.map((tab: string) => ({ label: tab } as TabItem)),
-          activeIndex: Math.max(0, this.TABS.indexOf(this.activeTab)),
-          actions: {
-            onChange: (index: number) => {
-              const tab = this.TABS[index];
-              if (tab && tab !== this.activeTab) {
-                this.activeTab = tab;
-                // 标签药片基于当前数据集的 tags 生成，切换数据源时重置过滤
-                this.activeTag = '';
-                this.loadData(true);
-              }
-            }
-          }
-        })
         // 动态 tag 药片（对齐前端 nearby/moments tags 药片栏；hotTags 由 hotMoments 派生）
         if (this.hotTags.length > 0) {
           TabsPillGroup({
