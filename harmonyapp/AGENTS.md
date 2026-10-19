@@ -37,6 +37,20 @@ PATH=$JAVA_HOME/bin:$PATH
 
 > 当前 hvigor 版本无 `assembleHap` 任务（旧文档废弃，调用报 `Task 'assembleHap' was not found`）；类型检查在 assembleApp 启动时自动执行（首行 `TYPE CHECK SUCCESSFUL`），完整验证统一用 assembleApp。
 
+**提交时的 hvigor 门禁（2026-10-19 实测）**：repo root 的 pre-commit 钩子会对 `harmonyapp/` 改动跑 hvigor
+`assembleApp`（工具链缺失时告警跳过）。在沙盒/受限环境里提交时，hvigor 默认把项目缓存写到 `~/.hvigor`
+（home 不可写）→ 报 `EPERM: ... mkdir '/Users/<me>/.hvigor/project_caches/<hash>/...'` 并
+`==> [pre-commit] 门禁失败，提交已拦截`。**这不是 Git 问题**：把下面三个变量与 commit 写在**同一条 shell**
+（每个 bash 调用是新 shell，上一次 export 不保留）即可通过：
+
+```bash
+export HVIGOR_USER_HOME="$PWD/.workwork/hvigor-home" npm_config_cache="$PWD/.workwork/npm-cache"
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk
+mkdir -p "$HVIGOR_USER_HOME" "$npm_config_cache"
+git commit ...   # 同一 shell 内
+```
+
 如果修正 `DEVECO_SDK_HOME` / `JAVA_HOME` 后仍复用旧环境，先运行 `$NODE $HVIGOR --stop-daemon`，再重新构建。
 
 Lint & Format: 依赖 DevEco Studio IDE 内置检查；`harmonyapp/code-linter.json5`（本模块根）是 codelinter 的规则配置（性能/TS 语法/安全规则集），命令行批量检查可配合 codelinter CLI 使用。
