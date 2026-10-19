@@ -17,13 +17,16 @@
 		isActive,
 		onClick,
 		collapsed = false,
-		badge = 0
+		badge = 0,
+		sub = false
 	}: {
 		item: { icon: Component; label: string };
 		isActive: boolean;
 		onClick: () => void;
 		collapsed?: boolean;
 		badge?: number;
+		/** 二级项（如「附近的人/群组/瞬间」）：缩进 + 更小图标与字号，表达从属层级 */
+		sub?: boolean;
 	} = $props();
 
 	const Icon = $derived(item.icon);
@@ -51,7 +54,7 @@
 
 <button
 	type="button"
-	class="tap-97 relative flex h-10 w-full items-center rounded-sm focus-ring text-left {collapsed ? 'justify-center' : ''}"
+	class="tap-97 relative flex h-10 w-full items-center rounded-sm focus-ring text-left {collapsed ? 'justify-center' : ''} {sub && !collapsed ? 'pl-4' : ''}"
 	style="background:{hoverBg};color:{isActive || showHover ? 'var(--cst-text-primary)' : 'var(--cst-text-secondary)'};transition:background var(--cst-motion-rapid) var(--cst-ease-standard), color var(--cst-motion-rapid) var(--cst-ease-standard), transform var(--cst-motion-instant) var(--cst-ease-standard);"
 	aria-current={isActive ? 'page' : undefined}
 	data-active={isActive ? 'true' : undefined}
@@ -67,9 +70,9 @@
 		class="rounded-full {isActive || showHover ? 'opacity-hover' : 'opacity-none'}"
 		style="position:absolute;left:4px;top:50%;width:3px;height:{indicatorH}px;margin-top:{indicatorH ? -8 : 0}px;background:var(--cst-accent-default);transition:height var(--cst-motion-snappy) var(--cst-ease-standard), opacity var(--cst-motion-snappy) var(--cst-ease-standard), margin-top var(--cst-motion-snappy) var(--cst-ease-standard);pointer-events:none;"
 	></span>
-	<span class="relative flex size-10 shrink-0 items-center justify-center">
+	<span class="relative flex {sub ? 'size-8' : 'size-10'} shrink-0 items-center justify-center">
 		<Icon
-			class="size-4.5"
+			class={sub ? 'size-3.5' : 'size-4.5'}
 			style="color:{isActive || showHover ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color var(--cst-motion-rapid) var(--cst-ease-standard);"
 			strokeWidth={isActive ? 2 : 1.5}
 		/>
@@ -82,7 +85,7 @@
 		{/if}
 	</span>
 	<span
-		class="overflow-hidden whitespace-nowrap text-md transition-[max-width,opacity,margin] duration-standard ease-standard {collapsed ? 'ml-0 max-w-0 opacity-none' : 'ml-1.5 max-w-full opacity-full'} {isActive ? 'font-medium' : 'font-normal'}"
+		class="overflow-hidden whitespace-nowrap {sub ? 'text-sm' : 'text-md'} transition-[max-width,opacity,margin] duration-standard ease-standard {collapsed ? 'ml-0 max-w-0 opacity-none' : 'ml-1.5 max-w-full opacity-full'} {isActive ? 'font-medium' : 'font-normal'}"
 	>
 		{item.label}
 	</span>

@@ -241,8 +241,16 @@
 			<div class="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
 				<!-- Section 1: 发现导航 -->
 				<div class="flex flex-col gap-1">
+					<!-- 「附近的人/群组/瞬间」是「附近」枢纽的二级项：用 sub 表达从属层级
+					     （缩进 + 更小图标/字号）。保留直达入口，但视觉上不再与一级项平级。 -->
 					{#each TOP_NAV as item (item.id)}
-						<SidebarNavItem {item} isActive={activeNavId === item.id} onClick={() => handleNavClick(item)} collapsed={isSidebarCollapsed} />
+						<SidebarNavItem
+							{item}
+							isActive={activeNavId === item.id}
+							onClick={() => handleNavClick(item)}
+							collapsed={isSidebarCollapsed}
+							sub={item.id.startsWith('nearby-')}
+						/>
 					{/each}
 				</div>
 
