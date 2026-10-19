@@ -263,9 +263,19 @@ app 沙箱内的 preferences 文件（属主是 app uid，权限 660）。
 - 排查手法：`hilog -x | grep -iE 'TokenAssetStore|rbac|code=10100'`——看到
   `TokenAssetStore … not found/cryptography` 紧接 `响应 code=10100` 即可判定是 Asset 故障，
   不是账号权限或后端问题（同一账号 `curl /admin/api/v1/rbac/me` 返回 `permissions:["*"]` ✓）。
-- **未结论（按项目规则不写成"环境限制"）**：尚未验证「换全新实例/清 app 数据/DevEco 里重装」
-  能否恢复；也未确认是实例快照损坏还是模拟器 Asset Store 在本次长会话后进入坏状态。
-  下次需要管理后台走查时先试：清 app 数据（`bm clean -n com.lsyb.social -d`）→ 冷启 → 登录 → 立刻查 `rbac/me`。
+- **修法已验证（2026-10-20）**：
+  - `bm clean -n com.lsyb.social -d`（清 app 数据）+ 冷启 + 登录 → **无效**，登录后紧跟的认证请求仍 `code=10100`；
+  - **重新克隆模拟器实例有效**：`pkill -9 -f Emulator` → 删工作区克隆 → 从
+    `~/.Huawei/Emulator/deployed/<实例名>` 重新 `cp -c -R` → 重写 `config.ini` 的
+    `configPath`/`logPath`/`instancePath` 指向工作区 → `Emulator -start <name> -instancePath <工作区>` →
+    `hdc shell reboot` 后重设 rport。**验证**：TokenAssetStore 无报错、登录后认证请求全部 `code=0` ✓。
+  - 结论：坏的是**旧克隆实例的系统状态**（Asset/HUKS 层），与 app 数据无关，也不是"模拟器不支持"。
+
+- **同轮新观察（未结论，下次复现/证伪）**：在新克隆上仍遇到两类 app 侧不稳定——
+  ① 登录态不跨冷启动保留（冷启后回游客态，需重新登录）；
+  ② 偶发启动即落在推入式「瞬间详情」页、以及点击导航后被切回桌面（launcher）。
+  两项目前只有单次观察、缺复现步骤，**不当作环境限制**；需要管理后台走查时按
+  「冷启 → 消息页登录 → **首次**挂载我的」执行，且每步都要 dump 校验当前页（别盲点坐标）。
 
 ### 4. 登录与推入式页面：**可以验证**（2026-10-18 的"白屏 / 不可达"结论已作废，2026-10-19 复验）
 
