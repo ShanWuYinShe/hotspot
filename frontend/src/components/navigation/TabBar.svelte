@@ -81,7 +81,7 @@
 	<div
 		data-tab-bar
 		use:scrollFade
-		class="no-scrollbar flex items-center gap-1.5 overflow-x-auto {className}"
+		class="no-scrollbar flex items-center gap-1.5 overflow-x-auto py-1 {className}"
 	>
 		{#each items as tab}
 			{@const isActive = value === tab.id}
@@ -90,7 +90,7 @@
 				disabled={disabled}
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
-				class="tab-item hit-slop-y flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2.5 text-sm focus-ring transition-colors duration-standard disabled:cursor-not-allowed disabled:opacity-dim lg:py-1.5 {isActive
+				class="tab-item hit-slop-y flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-3 text-sm focus-ring transition-colors duration-standard disabled:cursor-not-allowed disabled:opacity-dim lg:py-1.5 {isActive
 					? 'font-medium bg-accent-soft text-accent-default'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
