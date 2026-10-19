@@ -37,8 +37,9 @@
 | `ui/button` | 全部动作按钮的唯一壳（表单/CTA/弹层确认/详情动作区；`ui/FollowButton` 等复合钮经它派生） |
 | `navigation/ActionIconButton` | 图标按钮（ghost/outline） |
 | `hover-btn` / `scale-btn`（utilities） | 行内文字/图标动作的 hover/tap CSS 语言 |
+| `hit-slop` / `hit-slop-y`（utilities） | 紧凑控件的触控热区扩展（视觉尺寸不变）。`hit-slop` 四周各 6px，用于图标按钮等**孤立**控件；`hit-slop-y`（2026-10-19 新增）只扩纵向，用于**横向相邻**的紧凑控件（筛选胶囊、分段控制器）——前者的水平 6px 会与相邻项重叠，命中落到 DOM 靠后那颗。注意：两者都靠 `::before` 绝对定位，**会被祖先的 `overflow` 裁剪**，横滚容器需留出纵向 padding（TabBar 的 `py-1` 即为此） |
 | `forms/SearchInput` / `forms/Input` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语。`forms/Input`（2026-10-12 新增）：单行输入，受控 value+onChange；`label`/`labelSnippet`（tracking-field 档位或自定义行）与 input 以 id 关联；`prefix` snippet 前缀图标；`clearable` 清除钮；**错误态三件套** `hasError`+`errorText`→ aria-invalid + aria-describedby + role="alert" 就近错误行（样式由 input-surface 的 :has(aria-invalid) 承担）。padding 由调用方 class 提供（同 SearchInput 约定，如 `rounded-md px-4 py-3`）；另支持 `compact` 形态（input-surface 直贴 input，无包裹/label/prefix/清除，紧凑位专用）。契约对齐鸿蒙 `SystemInput` |
-| `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`） |
+| `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`）。两个变体：`pills`（筛选/分类，可横滚）与 `segmented`（二选一/系统级分段，等宽轨道）。`disabled`（2026-10-19 新增）整体禁用并置灰，表达「可读但不可改」（如瞬间可见性探测中）；**移动端触控高度**：按钮 `py-3`（视觉 41px）+ 滚动根 `py-1` + `.hit-slop-y` → 有效 ≈49px，桌面 `lg:py-1.5` 保持紧凑 |
 | `overlays/SheetShell`、`ui/dialog`、`ui/popover`、`ui/dropdown-menu` | 弹层体系 |
 | `overlays/MenuPanel` | 弹出菜单面板唯一实现（标题 + 选项行 + 可选底部动作；容器走 `ui/popover` Content）。已有：地图源菜单、地图筛选菜单。新菜单只传数据，不复制行结构 |
 | `data-display/EmptyState` / `InlineLoading` / `LoadError` / `ListEnd`、`overlays/ToastViewport`、`shared/ConnectionBanner` | 状态反馈 |
