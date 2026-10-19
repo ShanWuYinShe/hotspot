@@ -84,7 +84,7 @@
 					{#if onTogglePin}
 						<button
 							type="button"
-							class="hover-btn scale-btn hit-slop -m-2 focus-ring flex shrink-0 items-center justify-center rounded-full p-2 {isSelected ? 'text-text-on-accent' : 'text-accent-default'}"
+							class="hover-btn scale-btn hit-slop -m-2.5 focus-ring flex shrink-0 items-center justify-center rounded-full p-2.5 {isSelected ? 'text-text-on-accent' : 'text-accent-default'}"
 							aria-label="取消置顶"
 							title="取消置顶"
 							onclick={(e) => {
@@ -177,7 +177,7 @@
 					     避免与 hover 快捷钮重复。 -->
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop -m-2 focus-ring flex shrink-0 items-center justify-center rounded-full p-2 md:hidden {isSelected
+						class="hover-btn scale-btn hit-slop -m-2.5 focus-ring flex shrink-0 items-center justify-center rounded-full p-2.5 md:hidden {isSelected
 							? 'text-text-on-accent'
 							: 'text-text-secondary'}"
 						aria-label={`${chat.name} 的更多操作`}

@@ -196,7 +196,7 @@
 		<div class="flex gap-4">
 			<button
 				type="button"
-				class="hover-action hit-slop flex items-center gap-1.5 focus-ring {liked ? 'text-accent-default' : 'text-text-secondary'}"
+				class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring {liked ? 'text-accent-default' : 'text-text-secondary'}"
 				aria-label={liked ? '取消点赞' : '点赞'}
 				aria-pressed={liked}
 				onclick={onToggleLike}
@@ -208,7 +208,7 @@
 			</button>
 			<button
 				type="button"
-				class="hover-action hit-slop flex items-center gap-1.5 focus-ring text-text-secondary"
+				class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring text-text-secondary"
 				aria-label="查看评论"
 				onclick={onCommentClick}
 			>
@@ -219,7 +219,7 @@
 		<div class="flex gap-3">
 			<button
 				type="button"
-				class="hover-action hit-slop flex items-center gap-1.5 focus-ring {saved ? 'text-accent-default' : 'text-text-secondary'}"
+				class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring {saved ? 'text-accent-default' : 'text-text-secondary'}"
 				aria-label={saved ? '取消收藏' : '收藏'}
 				aria-pressed={saved}
 				onclick={onToggleSave}
@@ -230,7 +230,7 @@
 				type="button"
 				onclick={onShare}
 				aria-label={shareStatus === 'failed' ? '复制动态链接失败' : '复制动态链接'}
-				class="hover-action hit-slop flex items-center focus-ring {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
+				class="hover-action hit-slop -my-2 flex items-center py-2 focus-ring {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
 			>
 				{#if shareStatus === 'copied'}
 					<Check class="size-5"  strokeWidth={1.75} />
@@ -270,7 +270,7 @@
 					<div class="flex items-baseline gap-2">
 						<button
 							type="button"
-							class="link-btn hit-slop -my-2 py-2 text-text-primary text-sm focus-ring rounded-sm"
+							class="link-btn hit-slop -my-2.5 py-2.5 text-text-primary text-sm focus-ring rounded-sm"
 							onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
 						>{c.user}</button>
 						<span class="text-text-secondary text-xs">{c.time}</span>
@@ -283,7 +283,7 @@
 					<div class="flex items-center gap-3 mt-1.5">
 						<button
 							type="button"
-							class="hover-action hit-slop -my-2 flex items-center gap-1 py-2 focus-ring {c.liked ? 'text-accent-default' : 'text-text-secondary'}"
+							class="hover-action hit-slop -my-2.5 flex items-center gap-1 py-2.5 focus-ring {c.liked ? 'text-accent-default' : 'text-text-secondary'}"
 							aria-label={c.liked ? '取消点赞评论' : '点赞评论'}
 							aria-pressed={c.liked}
 							onclick={() => onToggleCommentLike(c.id)}
@@ -295,14 +295,14 @@
 						</button>
 						<button
 							type="button"
-							class="hover-action hit-slop -my-2 py-2 focus-ring text-text-secondary text-xs"
+							class="hover-action hit-slop -my-2.5 py-2.5 focus-ring text-text-secondary text-xs"
 							onclick={() => onReply(c.user, c.id)}
 						>回复</button>
 						{#if c.userId && c.userId === auth.user?.user_id}
 							<!-- 本人评论可删除（spec: api_spec_comment.md comments/delete，仅作者） -->
 							<button
 								type="button"
-								class="hover-action hit-slop -my-2 py-2 focus-ring text-text-secondary text-xs"
+								class="hover-action hit-slop -my-2.5 py-2.5 focus-ring text-text-secondary text-xs"
 								aria-label="删除我的评论"
 								onclick={() => onDeleteComment(c.id)}
 							>删除</button>
@@ -310,7 +310,7 @@
 							<!-- 非本人评论可举报（spec: api_spec_report.md，目标属于当前用户时服务端 10400） -->
 							<button
 								type="button"
-								class="hover-action hit-slop -my-2 py-2 desktop-reveal focus-ring text-text-secondary text-xs"
+								class="hover-action hit-slop -my-2.5 py-2.5 desktop-reveal focus-ring text-text-secondary text-xs"
 								aria-label={`举报 ${c.user} 的评论`}
 								onclick={() => onReportComment(c.id)}
 							>举报</button>
@@ -333,7 +333,7 @@
 										<div class="flex items-baseline gap-2">
 											<button
 												type="button"
-												class="link-btn hit-slop -my-2 py-2 text-text-primary text-sm focus-ring rounded-sm"
+												class="link-btn hit-slop -my-2.5 py-2.5 text-text-primary text-sm focus-ring rounded-sm"
 												onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
 											>{r.user}</button>
 											{#if !r.isDeleted}
@@ -350,7 +350,7 @@
 											<div class="flex items-center gap-3 mt-1">
 												<button
 													type="button"
-													class="hover-action hit-slop -my-2 py-2 focus-ring text-text-secondary text-xs"
+													class="hover-action hit-slop -my-2.5 py-2.5 focus-ring text-text-secondary text-xs"
 													onclick={() => onReply(r.user, c.id)}
 												>回复</button>
 											</div>
