@@ -232,6 +232,9 @@ export const mockMoments = Array.from({ length: 24 }, (_, i) => {
     reactions: [{ emoji: "👍", count: 30 + ((i * 37) % 160), reacted_by_me: false }],
     location: { point: { latitude: 34.26 + i * 0.002, longitude: 117.18 + i * 0.003 }, location_name: ["植物园", "市中心", "老街手冲馆", "云龙湖", "彭城广场", "汉文化景区"][i % 6], distance: 300 + i * 200, bearing_degrees: (i * 47) % 360 },
     is_favorited: false,
+    // 契约字段（spec MomentItem.author_relation）：让 mock 与真接口同形，
+    // 种子数据标前两条为「我关注的人」，便于本地验证卡片「已关注」标注。
+    author_relation: i < 2 ? { is_following: true, is_followed_by: false } : { is_following: false, is_followed_by: false },
     is_deleted: false,
     // spec：recommendation 为 RecommendationType | null（Feed 场景之外为 null）
     recommendation: (["nearby", null, null] as const)[i % 3],
