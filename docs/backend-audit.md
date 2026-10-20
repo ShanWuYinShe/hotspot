@@ -25,3 +25,21 @@
 - Redis 命令超时：dial 500ms、read/write 1s —— **有意 fail-slow**，避免 Redis 故障放大到热路径；
 - 本地热读接口（nearby/search/groups）：约 3ms，当前量级不需要读缓存；
 - 批量查询：反应数、关注关系等已走 batch 接口，无 N+1 聚合。
+
+## 附：用 curl 造真实流量做性能观察（2026-10-21 实测）
+
+排查/验证指标时经常需要真实 DB 流量，踩过的路径坑记录在此：
+
+- **节点前缀**：匿名 `/public/v1`、注册用户 `/api/v1`、群管理 `/api/v1/groups/admin`、
+  平台管理 `/admin/api/v1`（前端 `src/api/endpoints.ts` 是权威对照）。
+- **所有业务端点只接受 POST**：GET 返回 `{"code":10000,"message":"请求方法不被支持"}`。
+- **登录**：`POST /public/v1/auth/signin`，body `{"login_id","password","client_type":"web","device_id"}`；
+  web 客户端 token 走 **cookie**（响应 `data` 里没有 access_token）→ curl 必须
+  `-c cookies.txt` 保存、后续 `-b cookies.txt` 带上。否则受保护端点返回
+  `{"code":10100,"message":"Access Token 无效或过期"}`。
+- **分页**：`PaginationParams = { limit?, cursor? }`（默认 20，最大 100）。
+- **`moments/fetch_nearby` 等"流"端点还需位置参数**（reference point），只传 `{limit}` 会得到
+  `参数错误` —— 造流量时优先用 `moments/search`（热门模式）这类参数简单的端点。
+- **注意**：前端 `bun run browser:qa` 走 **MSW mock**，**不产生后端流量**，不能拿它压后端或验证 SQL 性能。
+- **慢查询观察**：`SLOW_QUERY_THRESHOLD=10ms docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d backend`
+  → 打接口 → `docker compose ... logs backend | grep "slow query"`（日志含 duration/sql/err）。
