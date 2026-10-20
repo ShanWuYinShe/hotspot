@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -65,6 +66,10 @@ type Config struct {
 	// 需按实例数下调以免撞上 Postgres max_connections（默认 100）。
 	PostgresMaxConns int
 	PostgresMinConns int
+	// SlowQueryThreshold 是慢查询日志阈值（SLOW_QUERY_THRESHOLD，Go duration 字符串，
+	// 默认 200ms；<=0 关闭）。超阈值的 SQL 会以 WARN 级日志输出耗时与语句，
+	// 用于线上定位热点查询，不需要常开 pprof。
+	SlowQueryThreshold time.Duration
 	// NotifyPruneEnabled 控制是否启动通知后台清理（NOTIFY_PRUNE_ENABLED）：
 	// 每 24h 物理删除「已读且创建超 90 天」的通知，防止 notifications 表无限
 	// 增长（删除口径保守，见 notify repo.PruneReadBefore）。默认开启。
@@ -118,6 +123,7 @@ func Load() Config {
 		// 下已逼近 Postgres 默认 max_connections=100，需要按实例数下调。
 		PostgresMaxConns:      envIntOrDefault("POSTGRES_MAX_CONNS", defaultPostgresMaxConns),
 		PostgresMinConns:      envIntOrDefault("POSTGRES_MIN_CONNS", defaultPostgresMinConns),
+		SlowQueryThreshold:    envDurationOrDefault("SLOW_QUERY_THRESHOLD", 200*time.Millisecond),
 		NotifyPruneEnabled:    envBoolOrDefault("NOTIFY_PRUNE_ENABLED", true),
 		AdminBootstrapUserID:  os.Getenv("ADMIN_BOOTSTRAP_USER_ID"),
 		RetentionSweepEnabled: envBoolOrDefault("RETENTION_SWEEP_ENABLED", true),
@@ -167,6 +173,20 @@ func envIntOrDefault(key string, fallback int) int {
 	}
 	v, err := strconv.Atoi(raw)
 	if err != nil || v <= 0 {
+		return fallback
+	}
+	return v
+}
+
+// envDurationOrDefault 解析 Go duration 字符串（如 "200ms"、"1.5s"）；
+// 空/非法返回 fallback。允许 <=0（调用方可据此显式关闭功能）。
+func envDurationOrDefault(key string, fallback time.Duration) time.Duration {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return fallback
+	}
+	v, err := time.ParseDuration(raw)
+	if err != nil {
 		return fallback
 	}
 	return v

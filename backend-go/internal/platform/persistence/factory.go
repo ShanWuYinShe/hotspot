@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/observability"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -31,6 +32,15 @@ func NewFactory(cfg config.Config) *Factory {
 			panic(fmt.Sprintf("parse postgres DSN: %v", err))
 		}
 		poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+		// 慢查询日志：超阈值 SQL 以 WARN 输出「耗时 + 语句」，用于线上定位热点查询
+		// （无需常开 pprof）。阈值由 SLOW_QUERY_THRESHOLD 配置，<=0 关闭。
+		poolConfig.ConnConfig.Tracer = NewSlowQueryTracer(cfg.SlowQueryThreshold, func(sql string, dur time.Duration, err error) {
+			observability.L().Warn("slow query",
+				"duration", dur.String(),
+				"sql", sql,
+				"err", err,
+			)
+		})
 		// Pool sizing（pgx 默认 MaxConns=4 对生产偏低）。默认值与 env 覆盖
 		// 集中在 config 包：POSTGRES_MAX_CONNS / POSTGRES_MIN_CONNS。
 		// 多实例部署时各实例独立持池，需按实例数下调以免撞上 Postgres
