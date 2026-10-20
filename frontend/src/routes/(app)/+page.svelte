@@ -206,21 +206,22 @@
 
 <StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-5 pt-4 pb-16">
 	{#snippet header()}
-		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '2xl'} subtitle="关注与发现" sticky>
+		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '2xl'} sticky>
 			{#snippet below()}
-				<!-- 系统级分段控制器（TabBar segmented 原语）：关系轴 / 算法轴切换 -->
-				<div class="mt-3 pb-2">
-					<div class="w-full max-w-72">
-						<TabBar
-							variant="segmented"
-							items={[
-								{ id: 'following', label: '关注', icon: Users },
-								{ id: 'discover', label: '发现', icon: TrendingUp }
-							]}
-							value={segment}
-							onChange={(id) => (segment = id as HomeFeedSegment)}
-						/>
-					</div>
+				<!-- 页级两态切换用全宽下划线 TabBar（2026-10-20 用户审查）：
+				     此前的 288px 浮动胶囊在窄屏上视觉过重、与页头留白打架；
+				     固定胶囊换成"全宽等分 + 2px accent 滑动下划线"，无轨道无图标。
+				     副标题「关注与发现」与两侧标签重复，一并去掉。 -->
+				<div class="mt-2">
+					<TabBar
+						variant="underline"
+						items={[
+							{ id: 'following', label: '关注' },
+							{ id: 'discover', label: '发现' }
+						]}
+						value={segment}
+						onChange={(id) => (segment = id as HomeFeedSegment)}
+					/>
 				</div>
 			{/snippet}
 			{#snippet trailing()}
