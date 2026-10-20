@@ -32,7 +32,7 @@ import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 @Component
 export struct NearbyUsersListPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
-  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
+  @StorageLink(KEY_BROWSE_ANCHOR) @Watch('onBrowseAnchorChanged') browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -79,6 +79,17 @@ export struct NearbyUsersListPage {
   private getLocationSubtitle(): string {
     const name = (this.browseAnchor ?? this.currentLocation)?.locationName ?? '';
     return name.length > 0 ? `${name} · 5km 内` : '5km 内';
+  }
+
+  /**
+   * 浏览锚点变化 → 若当前处于「未选位置」错误态则自动重载。
+   * 场景：错误态点「去设置位置」→ 选点页设锚点 → 返回仍是错误页（此前必须退出再进）。
+   * 用 @Watch 而非 onPageShow：本项目导航走 AppRouter，页面生命周期回调不触发（实测）。
+   */
+  onBrowseAnchorChanged(): void {
+    if (this.errorMessage.includes('位置信息不可用') && this.getReferencePoint()) {
+      void this.loadUsers();
+    }
   }
 
   aboutToAppear() {
