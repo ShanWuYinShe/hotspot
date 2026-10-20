@@ -76,7 +76,7 @@ export struct AnnouncementsPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint}) {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         SystemPageHeader({
           title: '系统公告',

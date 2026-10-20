@@ -116,7 +116,7 @@ export struct RelationshipHubPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint}) {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         // 头部 —— 标题 24pt + 计数 trailing（对齐前端 RelationshipsPage：
         // titleSize 2xl + trailing「N 人」当前区计数）

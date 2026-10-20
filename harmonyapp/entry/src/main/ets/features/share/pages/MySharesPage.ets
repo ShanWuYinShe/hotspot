@@ -213,7 +213,7 @@ export struct MySharesPage {
   build() {
     NavDestination() {
     Stack() {
-  PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint}) {
+  PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
     Column() {
       // 头部 —— 统一走 SystemPageHeader（居中标题 + 返回）
       SystemPageHeader({

@@ -189,7 +189,7 @@ export struct SubscriptionsPage {
 
   build() {
     NavDestination() {
-  PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint}) {
+  PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
     Column() {
       // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
       SystemPageHeader({

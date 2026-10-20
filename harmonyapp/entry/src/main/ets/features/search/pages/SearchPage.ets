@@ -436,7 +436,7 @@ export struct SearchPage {
 
   build() {
     NavDestination() {
-    PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint }) {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
       Column() {
         // Search header —— 统一走 SearchPageHeader（返回 + 内联搜索框）
         SearchPageHeader({

@@ -131,7 +131,7 @@ struct AdminOverviewPage {
           }).layoutWeight(1)
         } else {
           Scroll() {
-            PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, fillHeight: false }) {
+            PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, fillHeight: false }) {
               Column({ space: DesignConstants.SPACING.LG }) {
                 this.buildPermissionCard()
                 this.buildModuleSection()
