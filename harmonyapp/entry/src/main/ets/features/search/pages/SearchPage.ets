@@ -835,17 +835,11 @@ export struct SearchPage {
   DiscoveryView() {
     Scroll() {
       Column({ space: DesignConstants.SPACING.LG }) {
-        // 最近搜索
-        Column() {
-          this.buildDiscoveryCard('最近搜索', () => this.clearRecentSearches())
-          if (this.recentSearches.length === 0) {
-            Text('还没有搜索记录。')
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .width('100%')
-              .padding(DesignConstants.SPACING.LG)
-          } else {
+        // 最近搜索：**无记录时整卡不渲染**（对齐 web SearchDiscovery：空卡片只是占位噪音，
+        // 端上实测会占掉约 1/6 屏却只有一行「还没有搜索记录。」——2026-10-21 走查）。
+        if (this.recentSearches.length > 0) {
+          Column() {
+            this.buildDiscoveryCard('最近搜索', () => this.clearRecentSearches())
             ForEach(this.recentSearches, (item: string, index: number) => {
               if (index > 0) {
                 ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
@@ -853,10 +847,10 @@ export struct SearchPage {
               Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
                 Row({ space: DesignConstants.SPACING.MD }) {
                   LucideIcon({
-                      icon: AppIcon.TIME,
-                      iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                      color: this.getCurrentThemePalette().textSecondary
-                    })
+                    icon: AppIcon.TIME,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+                    color: this.getCurrentThemePalette().textSecondary
+                  })
                   Text(item)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
@@ -865,10 +859,10 @@ export struct SearchPage {
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .layoutWeight(1)
                   LucideIcon({
-                      icon: AppIcon.ARROW_RIGHT,
-                      iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                      color: this.getCurrentThemePalette().textSecondary
-                    })
+                    icon: AppIcon.ARROW_RIGHT,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+                    color: this.getCurrentThemePalette().textSecondary
+                  })
                 }
                 .width('100%')
                 .padding({
@@ -880,13 +874,12 @@ export struct SearchPage {
               }
             }, (item: string) => `recent-${item}`)
           }
+          .width('100%')
+          .backgroundColor(this.getSurfaceBackground())
+          .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+          .shadow(this.getCurrentThemePalette().surfaceShadow)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
         }
-        .width('100%')
-        // 分组容器（唯一一层白卡 + 发丝描边 + surfaceShadow），行间走 ListRowDivider
-        .backgroundColor(this.getSurfaceBackground())
-        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-        .shadow(this.getCurrentThemePalette().surfaceShadow)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
         // 热门话题（唯一列表）：此前还有一张「正在关注」编号卡，与这里同源重复，已删除
         // （2026-10-20 端上走查：两卡内容完全相同 #夜色/#新标签）。取不到热门 tags 时不渲染。
