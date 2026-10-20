@@ -21,6 +21,29 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
   ```
   `backend-test` 为独立测试后端（`APP_ENV=test` 跳过限流 + 独立 `hotspot_test` 数据库，见 `docker-compose.dev.yml`），不污染 dev 主库。
 
+## 性能：PGO（Profile-Guided Optimization）
+
+Go 1.21+ 支持用真实生产 profile 做编译器优化（官方口径 **2–14%**，零代码改动）。
+本仓库的采集方式：
+
+```bash
+# 前提：线上/准生产实例开启 PPROF_ADDR（localhost 绑定）且有真实流量
+./scripts/collect-pgo.sh            # 采 60s CPU profile → backend-go/cmd/server/default.pgo
+git add backend-go/cmd/server/default.pgo
+go build ./cmd/server               # Go 自动发现同目录 default.pgo
+```
+
+**纪律**
+
+- **必须用生产/准生产流量采集**：dev 环境热点分布不同，dev profile 编译可能反而变慢，
+  本仓库不提交 dev 采集的 profile；
+- 生效验证用对照构建（`go build -pgo=off` vs 默认）+ 线上 P95/QPS 对比，或 benchmark + benchstat；
+- profile 会随版本漂移，大版本前重采一次。
+
+**已完成的其他性能基线**（2026-10-21 实测，避免重复排查）：pprof 端点已存在、pgx 连接池
+MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 500ms/1s 为有意 fail-slow、
+本地热读接口 ~3ms —— 当前量级不需要读缓存。
+
 ## Dev 容器（热加载）
 
 - dev 模式后端跑 `Dockerfile.dev`（基于 `golang:1.26.6-alpine` + air），源码挂载 + air 监听 `.go`/`.toml` 变化自动重编译重启，改 Go 代码无需重启容器；`.air.toml` 配置编译/输出路径（`tmp/` 由 compose 卷隔离）。
