@@ -189,7 +189,9 @@
 	{#snippet header()}
 		<!-- 无可见标题：只留右侧搜索/通知两个动作，内容直接开头的「沉浸流」（2026-10-20 用户审查：
 		     不要标题块、不要切换器；用户只需看内容，不需要被告知"当前在看哪个流"）。 -->
-		<div class="flex items-center justify-between pt-3 pb-1">
+		<div class="flex items-center justify-end pt-3 pb-1">
+			<!-- sr-only 的 h1 是绝对定位（不占位），所以这里用它当首个 flex 子项时
+			     justify-between 会把动作推到左边——直接右对齐 -->
 			<h1 class="sr-only">首页</h1>
 			<div class="flex items-center gap-2">
 				{#if device !== 'desktop'}
