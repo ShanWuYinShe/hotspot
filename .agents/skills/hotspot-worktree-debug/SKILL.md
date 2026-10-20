@@ -169,3 +169,17 @@ export npm_config_cache="$PWD/.workwork/npm-cache"     # wrapper 内 npm 缓存
   TYPE CHECK SUCCESSFUL + BUILD SUCCESSFUL，门禁全绿）。
 - worktree 清理时 `.workwork/` 随目录一并删除，无残留。
 - 纪律同全局：这是②「工具自身配置面」方案，实测有效，不要再为此申请提权。
+
+## worktree 内的**后端**改动无法用主环境验证（2026-10-20 实测）
+
+dev 的 backend 容器把**主工作树**目录挂进容器（`docker inspect hotspot-backend-1` 可见
+`/Users/<me>/work/hotspot/backend-go -> /src`）+ `air` 热重载。因此：
+
+- 在 `.worktrees/<id>/backend-go` 里改了代码、`docker compose up -d --build backend` 甚至重启容器，
+  **容器里跑的仍是主工作树的旧代码**——接口行为完全不变，很容易误判"改动没生效/逻辑写错"；
+- 正确顺序：**先把后端改动合并进 `main`**（`git merge --ff-only`），主环境容器热重载后
+  再 `docker compose restart backend nginx` 并验证（重建容器后 nginx 上游 DNS 可能过期，502 时一并重启 nginx）；
+- 或者在本 worktree 起独立 compose（见上文端口重映射），但注意 dev 端口会与主环境冲突；
+- 判断"容器看的是哪份源码"：`docker inspect <backend container> --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'`。
+
+同类坑：沙盒里跑 `go build`/`go test` 需重定向 `GOCACHE`/`GOTMPDIR` 到工作区（见 `sandbox-adaptation`）。
