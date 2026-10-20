@@ -25,7 +25,7 @@
 	} = $props();
 </script>
 
-<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="mx-auto w-full max-w-3xl flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
+<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="mx-auto w-full max-w-3xl lg:max-w-5xl flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
 	{#if chat.loading}
 		<!-- 加载态统一 InlineLoading（全站三态标配，不再自绘 spinner） -->
 		<InlineLoading label="加载消息…" class="h-full justify-center" />

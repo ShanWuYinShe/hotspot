@@ -228,7 +228,7 @@
 	<p class="sr-only" aria-live="polite">{lastIncoming ? `新消息：${lastIncoming.text}` : ''}</p>
 	<!-- Header -->
 	<div class="shrink-0 border-b border-border-default bg-surface-chat px-4 {compact ? 'h-13' : 'h-15'}">
-		<div class="mx-auto flex h-full w-full max-w-3xl items-center gap-3">
+		<div class="mx-auto flex h-full w-full max-w-3xl items-center gap-3 lg:max-w-5xl">
 		{#if showBackButton}
 			<button
 				type="button"
