@@ -239,7 +239,7 @@
 {#if !canManage}
 	<EmptyState title="无访问权限" description="需要 admin.rbac.manage 权限" />
 {:else}
-	<div class="flex flex-col gap-8 max-w-5xl">
+	<div class="mx-auto flex w-full max-w-5xl flex-col gap-8">
 		<!-- 角色管理 -->
 		<section class="flex flex-col gap-4">
 			<div class="flex items-center justify-between">

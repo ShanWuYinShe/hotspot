@@ -221,7 +221,7 @@
 {#if !canRead}
 	<EmptyState title="无访问权限" description="需要 admin.stats.read 权限" />
 {:else}
-	<div class="flex flex-col gap-4 max-w-5xl">
+	<div class="mx-auto flex w-full max-w-5xl flex-col gap-4">
 		<!-- 全站存量：指标统一走 MetricRow 单卡（原 4 张独立小卡 = 4 套边框/间距） -->
 		<section aria-label="全站存量">
 			{#if data}
