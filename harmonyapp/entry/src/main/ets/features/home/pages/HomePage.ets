@@ -1,13 +1,12 @@
 /**
- * HomePage — 首页「关注 / 发现」双轴（2026-10-19 信息架构调整，对齐 web 首页）
+ * HomePage — 纯内容流（2026-10-20，对齐 web 首页）
  *
- * 背景：此前首页是「热门瞬间 + 附近用户 + 附近群组」聚合，事实上与「附近」重复
- * （web 同形问题已修）。调整后三条轴各占一个表面，内容不再重复：
- *   首页「关注」= moments/fetch_following（关系轴，需登录）
- *   首页「发现」= moments/search 热门模式（算法轴；spec：无输入的热门发现承接发现页首屏）
- *   附近        = NearbyPage 枢纽（地理轴：人 / 群组 / 瞬间）
- * 默认段与「关注」段空态由 HomeFeedMode 的纯函数决定（含冷启动矩阵，与 web 同口径）。
- * 附近用户/群组及其关注、入群交互随区块移出首页，由附近枢纽与叶子页承担。
+ * 用户审查结论：「不需要标题块，直接就显示内容；没必要让用户专门去关注当前看的内容是什么」。
+ * 因此本页**没有标题、没有 tab、没有分组小标题**，就是一条流：
+ *   - 关系流（moments/fetch_following，需登录）在前 —— 与你最相关的内容优先；
+ *   - 发现流（moments/search 热门，匿名可用）续后，按 moment_id 去重；
+ *   - 附近用户/群组及其关注、入群交互由附近枢纽与叶子页承担。
+ * 视觉上无标题，但 ArkUI 的页面语义由路由与 accessibilityText 承担（不做伪 h1）。
  */
 
 import { PageShellContainer } from '../../../components/PageShellContainer';
@@ -16,10 +15,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { MomentItem, SearchMomentsRequest, FetchFollowingMomentsRequest } from '../../../core/types/api';
-import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
-import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
-import { LoginPromptView } from '../../../components/LoginPromptView';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -32,12 +28,6 @@ import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { curves } from '@kit.ArkUI';
-import {
-  HomeFeedSegment,
-  resolveHomeSegment,
-  resolveFollowingEmpty,
-  FollowingEmptyCopy
-} from '../HomeFeedMode';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'HomePage';
@@ -53,22 +43,15 @@ export struct HomePage {
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
-  /** 当前段：关注 / 发现 */
-  @State activeSegment: HomeFeedSegment = 'discover';
-  /** 发现段（热门） */
+  /** 发现流（热门，匿名可用） */
   @State moments: MomentItem[] = [];
-  /** 关注段 */
+  /** 关系流（我关注的人，需登录） */
   @State followingMoments: MomentItem[] = [];
   @State momentsLoading: boolean = true;
   @State followingLoading: boolean = false;
   @State momentsError: string = '';
   @State followingError: string = '';
-  /** 关注数（-1 = 尚未探测）；只为「零关系」与「有关注但没更新」的空态分流 */
-  @State followingCount: number = -1;
-  /** 首屏判定期间显示加载态，避免「先关注后跳发现」的段位翻动 */
-  @State segmentReady: boolean = false;
 
-  @State headerElevated: boolean = false;
   /** 「查看全部」链接的按下态索引（-1 = 无；对齐前端 link 按压反馈） */
   @State viewAllPressedIndex: number = -1;
   @State pressedMomentKey: string = '';
@@ -82,8 +65,11 @@ export struct HomePage {
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
+    // 一条流 = 关系流 + 发现流：两者并行加载，渲染时关系流在前、发现流去重续后
     this.loadDiscoverMoments();
-    this.bootstrapSegment();
+    if (this.isLoggedIn) {
+      this.loadFollowingMoments();
+    }
   }
 
   aboutToDisappear() {
@@ -135,70 +121,32 @@ export struct HomePage {
     }
   }
 
-  /**
-   * 首屏判定默认段：未登录直接进「发现」；已登录则先取关注流首屏 + 关注数探测
-   * （users/fetch_following limit:1，足够分辨零与非零），判定在加载态内完成。
-   * 用顺序 await 而非 Promise.all 解构：ArkTS 对异构元组解构支持有限。
-   */
-  private async bootstrapSegment(): Promise<void> {
-    if (!this.isLoggedIn) {
-      this.activeSegment = resolveHomeSegment(false, 0);
-      this.segmentReady = true;
-      return;
-    }
-    this.followingLoading = true;
-    try {
-      const request: FetchFollowingMomentsRequest = { pagination: { limit: FEED_PAGE_SIZE } };
-      const response = await ApiClient.fetchFollowingMoments(request);
-      if (this.isDestroyed) return;
-      if (response.code === 0) {
-        this.followingMoments = (response.data?.items ?? []).filter((m: MomentItem) => m.moment_id && m.user);
-      } else {
-        this.followingError = getErrorMessage(response, '加载失败');
-      }
-      const followRes = await ApiClient.getFollowingList({ pagination: { limit: 1 } });
-      if (this.isDestroyed) return;
-      this.followingCount = followRes.code === 0 ? (followRes.data?.items?.length ?? 0) : 0;
-      this.activeSegment = resolveHomeSegment(true, this.followingCount);
-    } catch {
-      // 探测失败不阻塞首页：退回发现轴（关注段仍可手动进入）
-      this.activeSegment = 'discover';
-    } finally {
-      if (!this.isDestroyed) {
-        this.followingLoading = false;
-        this.segmentReady = true;
-      }
-    }
-  }
-
   private openMomentDetail(moment: MomentItem): void {
     const params = new MomentDetailRouteParam();
     params.momentId = moment.moment_id;
     AppRouter.push(PageNames.MOMENT_DETAIL, params);
   }
 
-  private segmentLoading(): boolean {
-    return this.activeSegment === 'following' ? this.followingLoading : this.momentsLoading;
+  private feedLoading(): boolean {
+    return this.momentsLoading || this.followingLoading;
   }
 
-  private segmentError(): string {
-    return this.activeSegment === 'following' ? this.followingError : this.momentsError;
+  private feedError(): string {
+    return this.momentsError.length > 0 ? this.momentsError : this.followingError;
   }
 
-  private reloadSegment(): void {
-    if (this.activeSegment === 'following') {
+  private reloadFeed(): void {
+    this.loadDiscoverMoments();
+    if (this.isLoggedIn) {
       this.loadFollowingMoments();
-    } else {
-      this.loadDiscoverMoments();
     }
   }
 
   private async refreshHome(): Promise<void> {
     try {
-      if (this.activeSegment === 'following') {
+      await this.loadDiscoverMoments();
+      if (this.isLoggedIn) {
         await this.loadFollowingMoments();
-      } else {
-        await this.loadDiscoverMoments();
       }
     } finally {
       this.isRefreshing = false;
@@ -216,34 +164,18 @@ export struct HomePage {
         // 整页下拉刷新：Refresh 包内容区（sticky header 保持粘性在外）
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           Column() {
-            // 段位切换常驻（空态/错误态下也可切换，避免被状态困住）
-            this.buildSegmentSwitcher()
-
-            if (!this.segmentReady) {
+            // 一条流：关系流在前、发现流去重续后；无标题、无切换器、无分组小标题
+            if (this.feedLoading() && this.displayedMoments().length === 0) {
               SystemLoadingView({ message: '正在加载…' })
                 .width('100%')
-            } else if (this.activeSegment === 'following' && !this.isLoggedIn) {
-              // 关注流无匿名版：未登录是正常业务态，走登录引导而非错误态
-              LoginPromptView({
-                title: '登录后查看关注动态',
-                subtitle: '关注的人发布的动态会出现在这里',
-                icon: AppIcon.PERSON,
-                loginAction: '查看关注动态'
-              })
-                .width('100%')
-            } else if (this.segmentLoading()) {
-              SystemLoadingView({
-                message: this.activeSegment === 'following' ? '正在加载关注动态…' : '正在加载热门内容…'
-              })
-                .width('100%')
-            } else if (this.segmentError().length > 0) {
+            } else if (this.feedError().length > 0 && this.displayedMoments().length === 0) {
               EmptyState({
                 icon: AppIcon.WARNING,
                 title: '内容加载失败',
-                message: this.segmentError(),
+                message: this.feedError(),
                 fillMode: true,
                 actionLabel: '重试',
-                onAction: () => { this.reloadSegment(); }
+                onAction: () => { this.reloadFeed(); }
               })
             } else if (this.displayedMoments().length === 0) {
               this.buildEmptyState()
@@ -263,78 +195,24 @@ export struct HomePage {
     }
   }
 
-  /** 段位切换（对齐 web 首页 TabBar segmented：关注 / 发现） */
-  @Builder
-  private buildSegmentSwitcher() {
-    TabsPillGroup({
-      tabs: [{ label: '关注' } as TabItem, { label: '发现' } as TabItem],
-      activeIndex: this.activeSegment === 'following' ? 0 : 1,
-      actions: {
-        onChange: (index: number) => {
-          const next: HomeFeedSegment = index === 0 ? 'following' : 'discover';
-          if (next === this.activeSegment) return;
-          this.activeSegment = next;
-          // 懒加载：切到「关注」首次进入时补拉（首屏已由 bootstrapSegment 拉过）
-          if (next === 'following' && this.isLoggedIn && this.followingMoments.length === 0
-            && this.followingError.length === 0 && !this.followingLoading) {
-            this.loadFollowingMoments();
-          }
-        }
-      }
-    })
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: DesignConstants.SPACING.SM,
-        bottom: DesignConstants.SPACING.XS
-      })
-  }
-
-  /** 空态：关注段按关注计数分流（见 HomeFeedMode），发现段为通用空态 */
+  /** 空态：两个流都为空时才出现（一条流的通用空态） */
   @Builder
   private buildEmptyState() {
-    if (this.activeSegment === 'following' && this.isLoggedIn) {
-      EmptyState({
-        icon: AppIcon.PERSON,
-        title: resolveFollowingEmpty(this.followingCount).title,
-        message: resolveFollowingEmpty(this.followingCount).message,
-        fillMode: true,
-        actionLabel: resolveFollowingEmpty(this.followingCount).actionLabel,
-        onAction: () => {
-          const copy: FollowingEmptyCopy = resolveFollowingEmpty(this.followingCount);
-          if (copy.noRelations) {
-            AppRouter.push(PageNames.NEARBY);
-          } else {
-            this.activeSegment = 'discover';
-          }
-        }
-      })
-    } else {
-      EmptyState({
-        icon: AppIcon.NEARBY,
-        title: '暂时还没有热门内容',
-        message: '去附近看看，或者发布第一条动态。',
-        fillMode: true,
-        actionLabel: '去附近看看',
-        onAction: () => AppRouter.push(PageNames.NEARBY)
-      })
-    }
+    EmptyState({
+      icon: AppIcon.NEARBY,
+      title: '还没有内容',
+      message: '去附近看看，或者发布第一条动态。',
+      fillMode: true,
+      actionLabel: '去附近看看',
+      onAction: () => AppRouter.push(PageNames.NEARBY)
+    })
   }
 
-  /** 当前段的动态列表（复用既有活动行原语，与「附近瞬间」行样式一致） */
+  /** 一条流的动态列表（复用既有活动行原语，与「附近瞬间」行样式一致；无分组小标题） */
   @Builder
   private buildFeed() {
     Scroll() {
       Column({ space: DesignConstants.SPACING.LG }) {
-        this.buildSectionHeader(
-          this.activeSegment === 'following' ? '关注动态' : '热门动态',
-          this.activeSegment === 'following' ? '附近' : '更多',
-          0,
-          () => {
-            AppRouter.push(this.activeSegment === 'following' ? PageNames.NEARBY : PageNames.NEARBY_MOMENTS);
-          }
-        )
         Column() {
           ForEach(this.homeActivityRows(), (moment: MomentItem, index: number) => {
             this.buildActivityRow(moment, index)
@@ -348,28 +226,12 @@ export struct HomePage {
     .layoutWeight(1)
     .scrollBar(BarState.Off)
     .align(Alignment.TopStart)
-    .onDidScroll((xOffset: number, yOffset: number) => {
-      // 粘性头部滚动态：滚动 > 4vp 出现投影与边线，回顶恢复融合
-      this.headerElevated = yOffset > 4;
-    })
   }
 
   @Builder
   private buildStickyHeader() {
-    // 统一走 SystemPageHeader（标题 + 副标题 + 位置 chip trailing）；
-    // 顶级 Tab 页标题对齐前端 titleSize=3xl（30）+ semibold（移动端，+page.svelte）
-    SystemPageHeader({
-      title: '首页',
-      subtitle: '关注与发现',
-      titleSize: DesignConstants.FONT.SIZE.XXL,
-      titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
-      elevated: this.headerElevated
-    }) {
-      // trailing: 在线计数 chip + 搜索/通知/地图入口（对齐前端 PageHeader trailing）。
-      // 溢出优先级（对齐前端弹性契约）：trailing 簇 flexShrink(0) 锁定不被压缩，
-      // 窄屏下由标题副标题先省略让位（SystemPageHeader 内 Text 已 maxLines(1)+Ellipsis），
-      // chip 文本同样 maxLines(1) 单行不折行——此前 trailing 无收缩保护，
-      // 窄屏下 chip 会被压折行（对齐前端 360px 下「4 在线」折成两行的同款问题）。
+    // 无可见标题：只留右侧搜索/通知/地图三个动作，内容直接开头（对齐 web 首页 2026-10-20）
+    Row() {
       Row({ space: DesignConstants.SPACING.SM2 }) {
         // 搜索/通知/地图入口：中性（透明底 + 主文字色图标），对齐前端 PageHeader trailing
         // （affa411a 为非桌面端补齐通知 Bell 快捷入口，本端同步；搜索/通知/地图三连）
@@ -399,6 +261,14 @@ export struct HomePage {
       }
       .flexShrink(0)
     }
+    .width('100%')
+    .justifyContent(FlexAlign.End)
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.SM,
+      bottom: DesignConstants.SPACING.XS
+    })
   }
 
   // ==================== 地图卡片 ====================
@@ -460,11 +330,26 @@ export struct HomePage {
     .margin({ bottom: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP })
   }
 
-  // ==================== 附近的人 ====================
+  // ==================== 一条流 ====================
 
-  /** 当前段的数据（关注 / 发现） */
+  /**
+   * 一条流的数据：关系流（我关注的人）在前，发现流按 moment_id 去重续后。
+   * 两个流各自失败不影响另一条：任一为空就只展示另一条。
+   */
   private displayedMoments(): MomentItem[] {
-    return this.activeSegment === 'following' ? this.followingMoments : this.moments;
+    const merged: MomentItem[] = [];
+    const seen: Set<string> = new Set<string>();
+    for (const m of this.followingMoments) {
+      if (seen.has(m.moment_id)) continue;
+      seen.add(m.moment_id);
+      merged.push(m);
+    }
+    for (const m of this.moments) {
+      if (seen.has(m.moment_id)) continue;
+      seen.add(m.moment_id);
+      merged.push(m);
+    }
+    return merged;
   }
 
   private homeActivityRows(): MomentItem[] {
