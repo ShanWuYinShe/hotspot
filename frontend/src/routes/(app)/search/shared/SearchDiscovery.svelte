@@ -58,7 +58,11 @@
 	} = $props();
 </script>
 
-<div class="mt-5">
+<!-- 宽屏双列：左（最近搜索 / 热门话题 / 人物推荐）+ 右（热门动态）。
+     此前全部单列堆在内容列里，宽屏时内容只占中间一条、右侧大片空白（用户截图反馈）。
+     窄屏自动回落单列，顺序与原先一致。 -->
+<div class="mt-5 grid gap-x-8 xl:grid-cols-2">
+<div>
 	<!-- 最近搜索：页面直出（eyebrow 小标 + 行动），无卡片壳——空态/少内容时
 	     一张几乎空白的浮起卡会放大页面的空洞感。
 	     无记录时整块隐藏（Gemini 审查 r11：干瘪的「暂无记录」文案无信息量），
@@ -158,9 +162,11 @@
 		</section>
 	{/if}
 
+	</div>
+	<div class="mt-6 xl:mt-0">
 	{#if hotMoments.length > 0}
 		<!-- 热门动态：复用发现态已拉取的热门响应（C2 轻量充实），行原语与首页附近活动一致 -->
-		<section aria-label="热门动态" class="mt-6">
+		<section aria-label="热门动态">
 			<div class="flex items-center gap-1.5">
 				<TrendingUp class="size-3.5 text-accent-default" strokeWidth={1.75} />
 				<h2 class="eyebrow">热门动态</h2>
@@ -172,4 +178,5 @@
 			</ListContainer>
 		</section>
 	{/if}
+	</div>
 </div>

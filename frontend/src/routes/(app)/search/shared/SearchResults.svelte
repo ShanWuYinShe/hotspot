@@ -82,7 +82,7 @@
 	);
 </script>
 
-<section class="mt-5" aria-label="搜索结果">
+<section class="mt-5 mx-auto w-full max-w-4xl" aria-label="搜索结果">
 	<!-- 分类 Tab 统一走 TabBar（胶囊）；count 结构化透传，不做 label 反解析 -->
 	<TabBar
 		items={tabs}

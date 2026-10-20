@@ -40,10 +40,9 @@
 		// 附近的人=person 单人 / 附近群组=person_2 双人(原两图标互换,群组类目错用单人;r14)
 		// 「附近」总览（2026-10-19 信息架构调整：附近内容从首页迁出，枢纽页落地 /nearby）。
 		// 三个子页入口保留在下方，桌面不削减既有直达能力。
-		{ id: 'nearby', icon: Compass, label: '附近', path: ROUTES.nearby },
-		{ id: 'nearby-people', icon: UserRound, label: '附近的人', path: ROUTES.nearbyPeople },
-		{ id: 'nearby-groups', icon: Users, label: '附近群组', path: ROUTES.nearbyGroups },
-		{ id: 'nearby-moments', icon: Rss, label: '附近瞬间', path: ROUTES.nearbyMoments }
+		// 「附近」只保留枢纽一项：三个子页（人/群组/瞬间）由枢纽页的「查看全部」入口承担，
+		// 侧栏再列一遍既重复又拥挤（2026-10-20 用户审查）。子页路由仍高亮本项（见 getDesktopNavId）。
+		{ id: 'nearby', icon: Compass, label: '附近', path: ROUTES.nearby }
 	];
 
 	const PERSONAL_NAV: NavItem[] = [
@@ -241,15 +240,12 @@
 			<div class="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
 				<!-- Section 1: 发现导航 -->
 				<div class="flex flex-col gap-1">
-					<!-- 「附近的人/群组/瞬间」是「附近」枢纽的二级项：用 sub 表达从属层级
-					     （缩进 + 更小图标/字号）。保留直达入口，但视觉上不再与一级项平级。 -->
 					{#each TOP_NAV as item (item.id)}
 						<SidebarNavItem
 							{item}
 							isActive={activeNavId === item.id}
 							onClick={() => handleNavClick(item)}
 							collapsed={isSidebarCollapsed}
-							sub={item.id.startsWith('nearby-')}
 						/>
 					{/each}
 				</div>
