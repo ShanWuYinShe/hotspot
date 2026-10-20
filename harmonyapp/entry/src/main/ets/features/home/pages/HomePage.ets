@@ -232,6 +232,9 @@ export struct HomePage {
   private buildStickyHeader() {
     // 无可见标题：只留右侧搜索/通知/地图三个动作，内容直接开头（对齐 web 首页 2026-10-20）
     Row() {
+      // Blank 撑开把动作推到右侧（`justifyContent(FlexAlign.End)` 在 PageShellContainer
+      // 的内容列里未生效，实测动作居中；Blank 是 ArkUI 更稳的写法）
+      Blank()
       Row({ space: DesignConstants.SPACING.SM2 }) {
         // 搜索/通知/地图入口：中性（透明底 + 主文字色图标），对齐前端 PageHeader trailing
         // （affa411a 为非桌面端补齐通知 Bell 快捷入口，本端同步；搜索/通知/地图三连）
@@ -262,11 +265,11 @@ export struct HomePage {
       .flexShrink(0)
     }
     .width('100%')
-    .justifyContent(FlexAlign.End)
+    // 安全区：页头此前由 SystemPageHeader 承担 immersive 的顶部内缩，换成自绘 Row 后
+    // 必须自己补 safeAreaTop，否则动作图标压在状态栏上（2026-10-20 端上实测）。
+    // 横向留白由 PageShellContainer 的 gutter 统一提供（此处再加会双重内缩）。
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.SM,
+      top: this.safeAreaTop + DesignConstants.SPACING.SM,
       bottom: DesignConstants.SPACING.XS
     })
   }
