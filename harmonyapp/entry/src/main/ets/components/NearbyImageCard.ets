@@ -180,17 +180,23 @@ export struct NearbyImageCard {
       // 前景色：**淡底（accentSoft/accentMuted）上的文字必须用 accent 本色**——
       // accentText 的语义是「accent 亮实底上的反色前景」（深色主题 #071426），
       // 配到同主题 accentMuted 深蓝底（#182943）上对比度约 1.2:1，首字母几乎不可见。
-      Column() {
-        Text(this.getPlaceholderInitial())
-          .fontSize(DesignConstants.FONT.SIZE.XXXL)
-          .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-          .fontColor(this.getPalette().accentBackground)
+      //
+      // `placeholderText` 为空时**不画占位圆**：调用方用空值表达"这张卡没有可展示的图片、
+      // 只要渐变底"（如无封面的精选群卡）。否则会画出 '?' 圆，在矮卡上还会被底部托盘裁切
+      // （2026-10-21 端上实测）。
+      if (this.placeholderText) {
+        Column() {
+          Text(this.getPlaceholderInitial())
+            .fontSize(DesignConstants.FONT.SIZE.XXXL)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getPalette().accentBackground)
+        }
+        // web 占位圆 size-16 = 64vp（原 48 偏小，首字母显得局促）
+        .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+        .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getPalette().accentMuted)
       }
-      // web 占位圆 size-16 = 64vp（原 48 偏小，首字母显得局促）
-      .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
-      .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getPalette().accentMuted)
     }
     .width('100%')
     .height('100%')

@@ -339,6 +339,8 @@ export interface ComponentConstants {
   ACTIVITY_ICON_TILE_SIZE: number;
   /** 附近群组 featured 精选全宽卡高度（对齐前端 min-h-85=340px） */
   GROUP_FEATURED_HEIGHT: number;
+  /** 精选卡**无封面图**时的降高（只留渐变条 + 信息，不再画占位圆） */
+  GROUP_FEATURED_HEIGHT_NO_COVER: number;
   /** 通知中心加载空态区域高度（200） */
   LOADING_AREA_HEIGHT: number;
   /** 空态 fillMode 最小高度 */
@@ -745,6 +747,7 @@ const COMPONENT: ComponentConstants = {
   ACTIVITY_ICON_TILE_SIZE: 34,
   /** 附近群组 featured 精选全宽卡高度（对齐前端 min-h-85=340px） */
   GROUP_FEATURED_HEIGHT: 340,
+  GROUP_FEATURED_HEIGHT_NO_COVER: 168,
   LOADING_AREA_HEIGHT: 200,
   /** 空态 fillMode 最小高度（对齐前端页面级空态撑高） */
   EMPTY_FILL_MIN_HEIGHT: 420,

@@ -372,8 +372,14 @@ export struct GroupCard {
       NearbyImageCard({
         imageUrl: this.group.group?.avatar_url ?? '',
         imageAlt: this.group.group?.name ?? '',
-        fixedHeight: DesignConstants.COMPONENT.GROUP_FEATURED_HEIGHT,
-        placeholderText: this.group.group?.name ?? '',
+        // 无封面时：降高 + **不传 placeholderText**（NearbyImageCard 在该字段为空时不画占位圆，
+        // 否则圆会被 footer 压住裁切——2026-10-21 端上实测）。留一条紧凑渐变条即可。
+        fixedHeight: (this.group.group?.avatar_url ?? '').length > 0
+          ? DesignConstants.COMPONENT.GROUP_FEATURED_HEIGHT
+          : DesignConstants.COMPONENT.GROUP_FEATURED_HEIGHT_NO_COVER,
+        placeholderText: (this.group.group?.avatar_url ?? '').length > 0
+          ? (this.group.group?.name ?? '')
+          : '',
         badgeText: '本周精选',
         badgeIcon: AppIcon.STAR,
         badgeShape: 'pill',
