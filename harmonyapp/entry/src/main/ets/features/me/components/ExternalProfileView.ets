@@ -148,8 +148,18 @@ export struct ExternalProfileView {
             .width('100%')
             .margin({ top: DesignConstants.SPACING.SM })
 
-            // 近期瞬间九宫格
-            if (this.moments.length > 0) {
+            // 近期瞬间九宫格（无瞬间时给空态，避免内容区整片空白——2026-10-20 端上走查实测
+            // 0 瞬间用户的页面出现大段空白、没有任何说明，看起来像页面坏了）
+            if (this.moments.length === 0) {
+              Column() {
+                Text('TA 还没有发布瞬间')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
+              }
+              .width('100%')
+              .padding({ top: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.LG2 })
+              .alignItems(HorizontalAlign.Center)
+            } else {
               Column({ space: DesignConstants.SPACING.SM }) {
                 Text('近期瞬间')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
