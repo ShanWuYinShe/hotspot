@@ -299,3 +299,20 @@ ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代�
   类型检查与编译都不会报错，必须端上或预览器确认。修法：删掉裸块，容器直接作为分支体。
 - 自查口径：任何"改完结构后内容区空白"的问题，先看分支体是不是裸块、`.layoutWeight()`
   是否直接挂在**容器组件**上（Column/Row/List/WaterFlow）。
+
+## PageShellContainer 档位选择（2026-10-20 排查）
+
+宽度已统一收口在 `PageShellContainer`（禁止页面各自 `maxWidth`，架构正确），但**档位要按内容类型选**，
+选错会在平板/桌面只占中间一条：
+
+| 档位 | 宽度 | 适用 |
+|---|---|---|
+| `form` | 560 | 表单/创建/设置单项（登录、发布瞬间、建群、编辑资料、设置各页）|
+| `narrow` | 720 | 阅读型详情（瞬间详情）|
+| `feed-narrow` | 640 | 单条内容页 |
+| `feed-medium` | 960 | 内容墙/流（附近瞬间列表）|
+| `default` | 1180 | 信息流/列表/枢纽/仪表盘（首页、消息、附近、群组、搜索、管理后台概览、订阅、公告、我的分享…）|
+| `wide` | 1320 | 大表格/管理后台宽页 |
+
+2026-10-20 修正：`SearchPage`、`AdminOverviewPage`、`MySharesPage`、`SubscriptionsPage`、
+`AnnouncementsPage`、`RelationshipHubPage` 由 `form` 改为 `default`（它们不是表单）。
