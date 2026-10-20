@@ -337,8 +337,16 @@ export struct NearbyUsersListPage {
           EmptyState({
             icon: AppIcon.WARNING,
             message: this.errorMessage,
-            actionLabel: '重试',
-            onAction: () => { this.loadUsers(); }
+            // 「位置信息不可用」的根因是用户没选浏览位置，重试只会再次失败 —— 引导去选位置。
+            // 与 NearbyGroupsListPage 同一判断（此前两个列表页对同一原因给了不同引导，2026-10-21 端上走查）。
+            actionLabel: this.errorMessage.includes('位置信息不可用') ? '去设置位置' : '重试',
+            onAction: () => {
+              if (this.errorMessage.includes('位置信息不可用')) {
+                AppRouter.push(PageNames.LOCATION_PICKER);
+              } else {
+                this.loadUsers();
+              }
+            }
           })
             .layoutWeight(1)
         } else if (!this.hasAnyData()) {
