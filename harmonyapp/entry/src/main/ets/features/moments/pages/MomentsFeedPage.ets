@@ -431,8 +431,10 @@ export struct MomentsFeedPage {
           EmptyState({
             icon: AppIcon.RECOMMEND,
             message: '附近暂时没有瞬间',
-            actionLabel: '刷新',
-            onAction: () => { this.loadData(true); }
+            // 「刷新」对"这片区域暂时没人发"帮助有限；直接给发布入口，对齐 web 空态的引导
+            // 文案「去附近看看，或者发布第一条动态」（2026-10-21 端上走查）。
+            actionLabel: '发布瞬间',
+            onAction: () => { AppRouter.push(PageNames.CREATE_MOMENT); }
           })
             .layoutWeight(1)
         }
