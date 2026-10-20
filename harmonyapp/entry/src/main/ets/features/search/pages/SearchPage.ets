@@ -76,7 +76,7 @@ export struct SearchPage {
   @State topicResults: string[] = [];
   /** 无查询发现态（对齐前端 SearchDiscovery）：最近搜索 / 热门搜索 / 推荐话题 */
   @State recentSearches: string[] = [];
-  @State discoveryHot: string[] = [];
+
   @State discoveryTopics: string[] = [];
 
   private readonly RECENT_SEARCHES_KEY: string = 'search_recent';
@@ -253,7 +253,7 @@ export struct SearchPage {
       if (this.isDestroyed) {
         return;
       }
-      this.discoveryHot = tags.slice(0, 5);
+
       this.discoveryTopics = tags;
     } catch (_) {
       // 取不到则不填充，卡片按空隐藏
@@ -888,50 +888,11 @@ export struct SearchPage {
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
-        // 正在关注（热门搜索）：取不到热门 tags 时不渲染该卡（不留死区块）
-        if (this.discoveryHot.length > 0) {
-        Column() {
-          this.buildDiscoveryCard('正在关注')
-          ForEach(this.discoveryHot.slice(0, 5), (item: string, index: number) => {
-            if (index > 0) {
-              ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
-            }
-            Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
-              Row({ space: DesignConstants.SPACING.MD }) {
-                Text(String(index + 1))
-                  .fontSize(DesignConstants.FONT.SIZE.XS)
-                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-                  .fontColor(this.getCurrentThemePalette().accentBackground)
-                  .width(DesignConstants.SPACING.LG)
-                Text(item)
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-                  .fontColor(this.getCurrentThemePalette().textPrimary)
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .layoutWeight(1)
-              }
-              .width('100%')
-              .padding({
-                left: DesignConstants.SPACING.LG,
-                right: DesignConstants.SPACING.LG,
-                top: DesignConstants.SPACING.MD,
-                bottom: DesignConstants.SPACING.MD
-              })
-            }
-          }, (item: string) => `hot-${item}`)
-        }
-        .width('100%')
-        .backgroundColor(this.getSurfaceBackground())
-        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-        .shadow(this.getCurrentThemePalette().surfaceShadow)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-        }
-
-        // 推荐话题：取不到热门 tags 时不渲染该卡（不留死区块）
+        // 热门话题（唯一列表）：此前还有一张「正在关注」编号卡，与这里同源重复，已删除
+        // （2026-10-20 端上走查：两卡内容完全相同 #夜色/#新标签）。取不到热门 tags 时不渲染。
         if (this.discoveryTopics.length > 0) {
         Column() {
-          this.buildDiscoveryCard('推荐话题')
+          this.buildDiscoveryCard('热门话题')
           Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
             ForEach(this.discoveryTopics, (topic: string) => {
               Text(`#${topic}`)
