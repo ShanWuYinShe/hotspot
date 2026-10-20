@@ -213,8 +213,11 @@
 				     固定胶囊换成"全宽等分 + 2px accent 滑动下划线"，无轨道无图标。
 				     副标题「关注与发现」与两侧标签重复，一并去掉。 -->
 				<div class="mt-2">
+					<!-- 手机全宽（用户要求"标签栏全宽"）；桌面内容列很宽，全宽会把两项拉到两端，
+					     故 md+ 收窄到 320px 保持"正常 tab 条"的密度 -->
 					<TabBar
 						variant="underline"
+						class="md:max-w-xs"
 						items={[
 							{ id: 'following', label: '关注' },
 							{ id: 'discover', label: '发现' }
