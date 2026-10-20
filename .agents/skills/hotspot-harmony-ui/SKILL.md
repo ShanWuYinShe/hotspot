@@ -316,3 +316,28 @@ ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代�
 
 2026-10-20 修正：`SearchPage`、`AdminOverviewPage`、`MySharesPage`、`SubscriptionsPage`、
 `AnnouncementsPage`、`RelationshipHubPage` 由 `form` 改为 `default`（它们不是表单）。
+
+## 设计 token 对照 HarmonyOS 官方规范（2026-10-21 审计）
+
+依据华为官方 UX/UI 规范（鸿蒙设计规范文档，经 DeepSeek 官方 tools/search 检索、tools/fetch 取原文核实）：
+系统通用圆角 **16vp**；卡片之间间距 **12vp**；卡片内主标题 **16sp** / 副标题 **12sp**（90% / 60% 不透明度）；
+默认鸿蒙黑体，单页不超过 2 种字体；卡片内最大字号 **24**。
+
+本项目 `DesignConstants` 对照结果：
+
+| 官方项 | 官方值 | 本项目 | 结论 |
+|---|---|---|---|
+| 卡片之间间距 | 12vp | `SPACING.MD = 12`（实测枢纽/首页卡片列 `space: SPACING.MD`） | ✅ 一致 |
+| 系统通用圆角 | 16vp | `RADIUS.MD = 16`（`COMPACT_CARD` / `INPUT` 用它） | ✅ 一致 |
+| 卡片主标题 | 16sp | `FONT.SIZE.LG = 16` | ✅ 有对应档 |
+| 卡片副标题 | 12sp | `FONT.SIZE.SM = 12` | ✅ 有对应档 |
+| 卡片内最大字号 | 24 | `XXL = 24`；更大的 `XXXL 30` / `HERO 36` 只用于页面级标题 | ✅ 限界内 |
+
+**已登记的有意偏差（跨端统一，非缺陷）**
+
+1. **普通卡片圆角 20vp**（`SHAPE.CARD = RADIUS.LG`）而官方通用 16vp —— 对齐前端 `rounded-lg = 20`
+   跨端一致优先；紧凑卡/输入框仍用 16 与官方一致。
+2. **正文字号 14**（`FONT.SIZE.MD`）小于官方正文量级 16 —— 对齐前端 `text-md = 14`；
+   展示型标题仍走 20/24/30/36 档。
+
+新增页面/组件必须从现有档位取值，不得引入近邻档（13/15/18/22/28 已归并过一轮）。
