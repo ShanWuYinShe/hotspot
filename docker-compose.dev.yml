@@ -50,6 +50,9 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       SMTP_FROM: "HotSpot <noreply@chaoset.local>"
+      # dev 默认 50ms 就记账慢查询：本地数据量小，超过 50ms 基本就是查询写坏了或漏了索引。
+      # 需要临时观察更细的慢查询时：SLOW_QUERY_THRESHOLD=1ms docker compose ... up -d backend
+      SLOW_QUERY_THRESHOLD: ${SLOW_QUERY_THRESHOLD:-50ms}
     # 覆盖 base healthcheck：air 首次全量编译较慢，放宽启动窗口
     # 契约要求空 Request 也必须传 JSON 对象；unhealthy 时 HTTP 仍为 200（code=10600），必须校验响应内容
     healthcheck:
