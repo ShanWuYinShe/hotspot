@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { Inbox } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 
 	let {
@@ -38,14 +39,18 @@
 	</div>
 {:else}
 	<div class={cn('flex flex-col items-center justify-center py-20 gap-3', className)}>
-		{#if icon}
-			<div
-				class="flex items-center justify-center rounded-full border border-border-default shadow-raised-sm"
-				style="width:{iconSize}px;height:{iconSize}px;"
-			>
+		<div
+			class="flex items-center justify-center rounded-full border border-border-default shadow-raised-sm"
+			style="width:{iconSize}px;height:{iconSize}px;"
+		>
+			{#if icon}
 				{@render icon()}
-			</div>
-		{/if}
+			{:else}
+				<!-- 默认图标：多数调用方只传标题，此前会退化成纯文字空态；
+				     有图标的空态更容易被识别为"这里本来就没有内容"而不是"加载失败"。 -->
+				<Inbox class="size-6 text-text-secondary" strokeWidth={1.5} />
+			{/if}
+		</div>
 		<p class="text-text-primary text-sm font-medium">{title}</p>
 		{#if description}
 			<p class="text-text-secondary text-center max-w-xs text-sm leading-relaxed">{description}</p>

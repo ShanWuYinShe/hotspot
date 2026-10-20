@@ -10,6 +10,12 @@ describe('EmptyState', () => {
 		expect(screen.getByText('去打个招呼吧')).toBeTruthy();
 	});
 
+	it('未传 icon 时也渲染默认图标圆形容器', () => {
+		const { container } = render(EmptyState, { props: { title: '暂无内容' } });
+		expect(container.querySelector('.rounded-full')).not.toBeNull();
+		expect(container.querySelector('.lucide-inbox')).not.toBeNull();
+	});
+
 	it('bare 模式无图标圆形容器', () => {
 		const { container } = render(EmptyState, {
 			props: { title: '空', bare: true, iconSize: 72 }
