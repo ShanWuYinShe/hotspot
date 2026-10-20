@@ -381,13 +381,13 @@ const markSingleRead = (id: string) => {
 										type="button"
 										onclick={() => void handleAcceptInvite(inv.invite_id)}
 										disabled={invitePending.has(inv.invite_id)}
-										class="hover-btn rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint"
+										class="hover-btn inline-flex h-7 items-center rounded-full bg-accent-default px-3 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint"
 									>接受</button>
 									<button
 										type="button"
 										onclick={() => void handleRejectInvite(inv.invite_id)}
 										disabled={invitePending.has(inv.invite_id)}
-										class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint"
+										class="hover-btn inline-flex h-7 items-center rounded-full border border-border-default px-3 text-xs text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint"
 									>拒绝</button>
 								</div>
 							</div>
