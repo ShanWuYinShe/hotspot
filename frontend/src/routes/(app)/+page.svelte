@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Bell, Search, Compass, ArrowRight, Sparkles, Users, TrendingUp } from '@lucide/svelte';
+	import { Bell, Search, Compass, ArrowRight, Sparkles } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import type { MomentItem } from '@/api/types';
@@ -9,13 +9,8 @@
 	import ActivityRow from '@/components/home/ActivityRow.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
-	import TabBar from '@/components/navigation/TabBar.svelte';
-	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
-	import Button from '@/components/ui/button.svelte';
-	import { resolveHomeSegment, resolveFollowingEmpty, type HomeFeedSegment } from '@/components/home/home-feed-mode';
 	import { auth } from '@/stores/auth.svelte';
 	import { ROUTES } from '@/lib/routes';
-	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -33,12 +28,6 @@
 	const PAGE_SIZE = 20;
 	const device = $derived(platform.platform);
 
-	// 段选择：首屏判定一次，此后完全由用户切换控制（不被后续计数变化翻动）。
-	// auth.user 是精简结构（user_id/nickname/avatar_url/user_type，见 stores/auth.svelte.ts），
-	// **不含 following_count**，故关注数由 users/fetch_following 探测（limit:1 足够分辨零与非零），
-	// 与关注流首屏并发拉取——判定在加载态内完成，用户不会看到「先关注后跳发现」的翻动。
-	let segment = $state<HomeFeedSegment>('discover');
-	let followingCount = $state<number | null>(null);
 	let booting = $state(true);
 
 	// 两个流共用一条分页管线（cursor 不透明，只透传；spec api_spec_base.md）
@@ -124,65 +113,57 @@
 		paged(await fetchFollowingMoments({ pagination: { limit: PAGE_SIZE, ...(cursor ? { cursor } : {}) } }))
 	);
 
-	// 首屏：未登录直接进「发现」；已登录则并发探测（关注流首屏 + 关注数）后判默认段
+	// 首屏：一条流 = 关系流（需登录）+ 发现流（匿名可用），两个 pager 并行加载。
+	// 没有任何"默认段"判定——用户不需要知道自己在看哪个流（2026-10-20）。
 	$effect(() => {
 		if (!booting) return;
 		if (auth.status === 'loading') return;
 		const uid = auth.user?.user_id;
 		if (auth.status !== 'authenticated' || !uid) {
-			segment = resolveHomeSegment(false, 0);
 			booting = false;
 			return;
 		}
 		let cancelled = false;
 		void (async () => {
-			try {
-				const [feedRes, followRes] = await Promise.all([
-					fetchFollowingMoments({ pagination: { limit: PAGE_SIZE } }),
-					listFollowing({ user_id: uid, pagination: { limit: 1 } })
-				]);
-				if (cancelled) return;
-				const page = paged(feedRes);
-				following.prime(page.items, page.nextCursor);
-				followingCount = followRes.code === 0 ? (followRes.data?.items?.length ?? 0) : 0;
-				segment = resolveHomeSegment(true, followingCount);
-			} catch {
-				// 探测失败不阻塞首页：退回发现轴（关注段仍可手动进入）
-				if (!cancelled) segment = 'discover';
-			} finally {
-				if (!cancelled) booting = false;
-			}
+			await following.load();
+			if (!cancelled) booting = false;
 		})();
 		return () => {
 			cancelled = true;
 		};
 	});
 
-	// 懒加载：切到某段才拉该段数据（关注段首屏已由上面的并发探测注入）
+	// 发现流：登录与否都加载（热门内容匿名可读），与关注流并行
 	$effect(() => {
-		if (segment === 'discover' && !discover.loaded && !discover.loading) void discover.load();
+		if (!discover.loaded && !discover.loading) void discover.load();
 	});
+
+	// 关注流（未登录不请求）
 	$effect(() => {
-		if (segment !== 'following' || auth.status !== 'authenticated') return;
+		if (auth.status !== 'authenticated') return;
 		if (!following.loaded && !following.loading) void following.load();
 	});
 
-	const followingEmpty = $derived(resolveFollowingEmpty(followingCount));
+	// 关注流已出现的 moment_id：发现流渲染时去重，避免同一条重复出现
+	const followingIds = $derived(new Set(following.items.map((m) => m.moment_id)));
 </script>
 <svelte:head>
 	<title>首页 · HotSpot</title>
 </svelte:head>
 
-{#snippet momentRows(pager: ReturnType<typeof createMomentPager>)}
+{#snippet momentRows(pager: ReturnType<typeof createMomentPager>, exclude?: Set<string>)}
+	{@const rows = exclude ? pager.items.filter((m) => !exclude.has(m.moment_id)) : pager.items}
+	{#if rows.length > 0}
 	<ListContainer bordered>
-		{#each pager.items as moment, i (moment.moment_id)}
+		{#each rows as moment, i (moment.moment_id)}
 			<!-- 非地理轴（关系流/全站热榜）不显示「距离」：全局内容配「300m」会误导为身边内容 -->
 			<ActivityRow {moment} index={i} showDistance={false} onClick={() => void goto(ROUTES.moment(moment.moment_id))} />
 		{/each}
 	</ListContainer>
+	{/if}
 	{#if pager.hasMore}
 		<LoadMoreButton loading={pager.loadingMore} onLoad={() => void pager.loadMore()} />
-	{:else}
+	{:else if rows.length > 0}
 		<ListEnd />
 	{/if}
 {/snippet}
@@ -206,87 +187,48 @@
 
 <StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-5 pt-4 pb-16">
 	{#snippet header()}
-		<PageHeader title="首页" titleSize={device === 'desktop' ? 'xl' : '2xl'} sticky>
-			{#snippet below()}
-				<!-- 页级两态切换用全宽下划线 TabBar（2026-10-20 用户审查）：
-				     此前的 288px 浮动胶囊在窄屏上视觉过重、与页头留白打架；
-				     固定胶囊换成"全宽等分 + 2px accent 滑动下划线"，无轨道无图标。
-				     副标题「关注与发现」与两侧标签重复，一并去掉。 -->
-				<div class="mt-2">
-					<!-- 手机全宽（用户要求"标签栏全宽"）；桌面内容列很宽，全宽会把两项拉到两端，
-					     故 md+ 收窄到 320px 保持"正常 tab 条"的密度 -->
-					<TabBar
-						variant="underline"
-						class="md:max-w-xs"
-						items={[
-							{ id: 'following', label: '关注' },
-							{ id: 'discover', label: '发现' }
-						]}
-						value={segment}
-						onChange={(id) => (segment = id as HomeFeedSegment)}
-					/>
-				</div>
-			{/snippet}
-			{#snippet trailing()}
-				<div class="flex shrink-0 items-center gap-2">
-					{#if device !== 'desktop'}
-						<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
-						<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
-					{/if}
-				</div>
-			{/snippet}
-		</PageHeader>
+		<!-- 无可见标题：只留右侧搜索/通知两个动作，内容直接开头的「沉浸流」（2026-10-20 用户审查：
+		     不要标题块、不要切换器；用户只需看内容，不需要被告知"当前在看哪个流"）。 -->
+		<div class="flex items-center justify-between pt-3 pb-1">
+			<h1 class="sr-only">首页</h1>
+			<div class="flex items-center gap-2">
+				{#if device !== 'desktop'}
+					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
+					<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
+				{/if}
+			</div>
+		</div>
 	{/snippet}
 
 	{#if booting}
-		<InlineLoading label="加载首页…" />
-	{:else if segment === 'following'}
-		{#if auth.status !== 'authenticated'}
-			<NeedsAuthNotice title="登录后查看关注动态" description="关注的人发布的新动态会出现在这里" />
-		{:else if following.loading}
-			<InlineLoading label="加载关注动态…" />
-		{:else if following.error}
-			<LoadError message={following.error} onRetry={() => { following.reset(); }} />
-		{:else if following.items.length === 0}
-			<!-- 空态按 following_count 分流：零关系与「有关注但没人更新」都返回空数组，
-			     文案不能混用（见 home-feed-mode.ts 的用例锁定） -->
-			<EmptyState title={followingEmpty.title} description={followingEmpty.description}>
-				{#snippet icon()}
-					<Users class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
-				{/snippet}
-				{#snippet action()}
-					<Button
-						type="button"
-						variant="primary"
-						size="md"
-						onclick={() => (followingEmpty.kind === 'no-relations' ? void goto(ROUTES.nearby) : (segment = 'discover'))}
-					>
-						{followingEmpty.actionLabel}
-					</Button>
-				{/snippet}
-			</EmptyState>
-		{:else}
-			{@render momentRows(following)}
-		{/if}
+		<InlineLoading label="加载中…" />
 	{:else}
-		{#if discover.loading}
-			<InlineLoading label="加载热门内容…" />
-		{:else if discover.error}
-			<LoadError message={discover.error} onRetry={() => discover.reset()} />
-		{:else}
-			{@render nearbyEntry()}
-			{#if discover.items.length === 0}
-				<EmptyState title="暂时还没有热门内容" description="去附近看看，或者发布第一条动态。">
-					{#snippet icon()}
-						<Sparkles class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
-					{/snippet}
-				</EmptyState>
-			{:else}
-				<div>
-					<SectionHead title="热门动态" subtitle="全站热度 · 实时更新" />
-					{@render momentRows(discover)}
-				</div>
+		<!-- 关系流（需登录）在前：与你最相关的内容优先，不加任何分组标题 -->
+		{#if auth.status === 'authenticated'}
+			{#if following.error}
+				<LoadError message={following.error} onRetry={() => following.reset()} />
+			{:else if following.loading}
+				<InlineLoading label="加载中…" />
+			{:else if following.items.length > 0}
+				{@render momentRows(following)}
 			{/if}
 		{/if}
+
+		<!-- 发现流续后（按 moment_id 去重） -->
+		{#if discover.error}
+			<LoadError message={discover.error} onRetry={() => discover.reset()} />
+		{:else if discover.loading}
+			<InlineLoading label="加载内容…" />
+		{:else if discover.items.length > 0}
+			{@render momentRows(discover, followingIds)}
+		{:else if !following.loading && following.items.length === 0}
+			<EmptyState title="还没有内容" description="去附近看看，或者发布第一条动态。">
+				{#snippet icon()}
+					<Sparkles class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+				{/snippet}
+			</EmptyState>
+		{/if}
+
+		{@render nearbyEntry()}
 	{/if}
 </StandardPageLayout>
