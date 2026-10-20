@@ -43,3 +43,15 @@
 - **注意**：前端 `bun run browser:qa` 走 **MSW mock**，**不产生后端流量**，不能拿它压后端或验证 SQL 性能。
 - **慢查询观察**：`SLOW_QUERY_THRESHOLD=10ms docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d backend`
   → 打接口 → `docker compose ... logs backend | grep "slow query"`（日志含 duration/sql/err）。
+
+## 慢查询实测结论（2026-10-21，真实流量）
+
+用本仓库的慢查询日志（`SLOW_QUERY_THRESHOLD`）在真实流量下扫了一遍读路径：
+
+- 流量：web cookie 登录后，打 `moments/search`（popular/newest/keyword 三种）、
+  `moments/fetch_created`、`groups/search`、`users/search` 各 10 轮，其中 `limit=100`；
+- **10ms 阈值：0 条慢查询**；
+- **5ms 阈值：0 条慢查询**。
+
+结论：本地 dev 数据量下，**读路径查询全部 < 5ms**，未发现需要加索引或缓存的慢查询。
+后续数据量上来后，按同法把阈值降到 5–10ms 复测即可定位热点 SQL（日志会打出完整语句与耗时）。
