@@ -376,3 +376,14 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 **纪律**：`keyEvent Back` 只有在 **IME/安全键盘打开时**才安全（只关键盘）；键盘未开时它等于导航后退，
 连按两次会退出应用（实测）。每次 Back 后都要 dump 校验页面没变。
+
+## 走查脚本（避免每次从零写，坑已内置）
+
+`scripts/walk.py`（本 skill 目录下）提供最小工具集：`dump()/nodes()/texts()/find()/inputs()/buttons()/
+tap()/input_text()/fling()/back()/snapshot()`，可直接 import 复用；也可命令行快速点击：
+
+```bash
+python3 .agents/skills/hotspot-harmony-device-verify/scripts/walk.py 附近
+```
+
+脚本注释里固化了本文所有坑（坐标取自 dump、每步校验、Back 只在键盘打开时按、安全键盘、按钮在折叠线下先 fling）。
