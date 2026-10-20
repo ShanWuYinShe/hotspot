@@ -706,8 +706,10 @@ export struct SettingsPage {
                       SettingsRowDivider()
                       SettingsEntryRow({ item: {
                         icon: AppIcon.STAR_FILL,
-                        title: '更多外观模式',
-                        subtitle: '跟随系统 / 星际 / 清野 / 水墨（大图预览）',
+                        // 该入口打开的是**大图预览**选主题的面板，而不是"还有更多主题"（主题共 3 套 + 跟随系统）；
+                        // 「更多外观模式」会让人以为有未展示的主题，改成如实的「主题预览」。
+                        title: '主题预览',
+                        subtitle: '大图预览后选择 · 跟随系统 / 星际 / 清野 / 水墨',
                         action: () => { this.showThemeSheet = true; }
                       } })
                     }

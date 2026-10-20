@@ -242,7 +242,9 @@ export struct SettingsEntryRow {
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getPalette().textSecondary)
-            .maxLines(1)
+            // 副标题允许两行：单行 + ellipsis 会把「消息、提及与新动态提醒（仅本机）」截成「（…」，
+            // 括号只露一半比直接断行更难看（2026-10-21 端上走查）。
+            .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
       }
@@ -373,7 +375,8 @@ export struct SettingsToggleRow {
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getPalette().textSecondary)
-            .maxLines(1)
+            // 与 SettingsEntryRow 一致：副标题允许两行，避免「（仅本机）」这类括号被截成「（…」
+            .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
       }
