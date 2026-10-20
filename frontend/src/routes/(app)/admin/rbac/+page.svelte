@@ -244,7 +244,7 @@
 		<section class="flex flex-col gap-4">
 			<div class="flex items-center justify-between">
 				<div>
-					<h2 class="text-sm font-semibold text-text-primary">角色</h2>
+					<h2 class="text-md font-semibold text-text-primary">角色</h2>
 					<p class="mt-1 text-xs text-text-secondary">角色绑定权限键，授予平台管理员时选择角色。</p>
 				</div>
 				<button type="button" class={ROW_BTN_PRIMARY} onclick={openCreate}>新建角色</button>
@@ -299,7 +299,7 @@
 		<section class="flex flex-col gap-4">
 			<div class="flex items-center justify-between">
 				<div>
-					<h2 class="text-sm font-semibold text-text-primary">平台管理员</h2>
+					<h2 class="text-md font-semibold text-text-primary">平台管理员</h2>
 					<p class="mt-1 text-xs text-text-secondary">按最近授权时间排序；撤销 superadmin 仅 superadmin 可执行。</p>
 				</div>
 				<button type="button" class={ROW_BTN_PRIMARY} onclick={openAward}>授予管理员</button>

@@ -144,7 +144,7 @@
 		<section class={SECTION_CARD} aria-label="功能开关">
 			<div class="flex items-center justify-between">
 				<div>
-					<h2 class="text-sm font-semibold text-text-primary">功能开关</h2>
+					<h2 class="text-md font-semibold text-text-primary">功能开关</h2>
 					<p class="mt-1 text-xs text-text-secondary">客户端可见（ClientConfig 投影），保存后全端生效。</p>
 				</div>
 			</div>
@@ -162,7 +162,7 @@
 		<section class={SECTION_CARD} aria-label="应用限制">
 			<div class="flex items-center justify-between">
 				<div>
-					<h2 class="text-sm font-semibold text-text-primary">应用限制</h2>
+					<h2 class="text-md font-semibold text-text-primary">应用限制</h2>
 					<p class="mt-1 text-xs text-text-secondary">数值上限类配置（正整数）。</p>
 				</div>
 			</div>
@@ -182,7 +182,7 @@
 		<section class={SECTION_CARD} aria-label="联系信息">
 			<div class="flex items-center justify-between">
 				<div>
-					<h2 class="text-sm font-semibold text-text-primary">联系与合规</h2>
+					<h2 class="text-md font-semibold text-text-primary">联系与合规</h2>
 					<p class="mt-1 text-xs text-text-secondary">support_email 须为有效 Email，*_url 须为有效 URL（服务端校验）。</p>
 				</div>
 			</div>
@@ -198,7 +198,7 @@
 
 		<!-- 仅服务端 sections：只读展示 -->
 		<section class={SECTION_CARD} aria-label="服务端配置（只读）">
-			<h2 class="text-sm font-semibold text-text-primary">服务端运行参数（只读）</h2>
+			<h2 class="text-md font-semibold text-text-primary">服务端运行参数（只读）</h2>
 			<p class="mt-1 text-xs text-text-secondary">upload / defaults / rate_limits / response_defaults——修改走 app_config/update API（Patch 语义）。</p>
 			<pre class="mt-3 max-h-80 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed text-text-secondary">{JSON.stringify({ upload: config.upload, defaults: config.defaults, rate_limits: config.rate_limits, response_defaults: config.response_defaults }, null, 2)}</pre>
 		</section>
