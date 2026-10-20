@@ -48,8 +48,9 @@
 				? 'var(--cst-surface-navigation-hover)'
 				: 'transparent'
 	);
-	// 指示条：hover 预览与选中常驻共用同一根（高度驱动），位移过渡自然衔接
-	const indicatorH = $derived(isActive || showHover ? 16 : 0);
+	// 指示条**只属于选中态**（2026-10-20 用户截图：hover 项与选中项都有指示条 + accent 文字，
+	// 视觉上像"两项同时选中"）。hover 只保留底色预览，选中才有 accent 指示条与 accent 图标。
+	const indicatorH = $derived(isActive ? 16 : 0);
 </script>
 
 <button
@@ -73,7 +74,7 @@
 	<span class="relative flex {sub ? 'size-8' : 'size-10'} shrink-0 items-center justify-center">
 		<Icon
 			class={sub ? 'size-3.5' : 'size-4.5'}
-			style="color:{isActive || showHover ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color var(--cst-motion-rapid) var(--cst-ease-standard);"
+			style="color:{isActive ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color var(--cst-motion-rapid) var(--cst-ease-standard);"
 			strokeWidth={isActive ? 2 : 1.5}
 		/>
 		<!-- 折叠态：数字放不下，退化为图标右上角小圆点（accent 实底，与展开态徽标同源） -->
