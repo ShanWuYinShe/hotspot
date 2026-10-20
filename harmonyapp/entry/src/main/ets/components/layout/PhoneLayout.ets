@@ -86,6 +86,12 @@ export struct PhoneLayout {
   /** 当前按下的底部导航 Tab 索引（-1 表示无），用于按下缩放反馈，对齐前端 hover-btn:active */
   @State pressedTabIndex: number = -1;
   @State private tabletFabPressed: boolean = false;
+  /**
+   * 编辑资料态隐藏底栏：编辑资料是「我的」页内的 isEditing 状态（不是 push 页），
+   * 底栏在编辑期间一直可见 —— 用户切 tab 会丢失草稿（2026-10-21 端上走查）。
+   * 由 ProfilePage 在进入/退出编辑时通过 AppStorage 写入。
+   */
+  @StorageLink('hideMainTabBar') hideMainTabBar: boolean = false;
   /** 路由页切 tab 一次性信号（设置页「个人资料」等）：≥0 为目标 tab，消费后复位 -1 */
   @StorageLink(StorageKeys.SWITCH_TAB_REQUEST) @Watch('onSwitchTabRequest') switchTabRequest: number = -1;
 
@@ -157,7 +163,7 @@ export struct PhoneLayout {
           }.tabBar(this.TabBarBuilder(3))
           TabContent() { ProfilePage() }.tabBar(this.TabBarBuilder(4))
         }
-        .barHeight(this.isTablet ? 0 : DesignConstants.LAYOUT.MOBILE_BOTTOM_NAV_HEIGHT)
+        .barHeight(this.isTablet || this.hideMainTabBar ? 0 : DesignConstants.LAYOUT.MOBILE_BOTTOM_NAV_HEIGHT)
         .scrollable(false)
         .barMode(BarMode.Fixed)
         .divider({ strokeWidth: 0, color: DesignConstants.COLOR.TRANSPARENT, startMargin: 0, endMargin: 0 })

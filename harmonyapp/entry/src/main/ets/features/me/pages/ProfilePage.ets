@@ -331,6 +331,8 @@ export struct ProfilePage {
   }
 
   aboutToDisappear(): void {
+    // 兜底：被全屏页覆盖/切走时不让底栏保持隐藏
+    AppStorage.setOrCreate('hideMainTabBar', false);
     this.isDestroyed = true;
     interactionEventHub.off('user_relation_updated', this.handleViewedUserStateUpdate);
     interactionEventHub.off('auth_user_changed', this.authUserChangedListener);
@@ -450,6 +452,8 @@ export struct ProfilePage {
       this.editAvatarLocalUri = '';
       this.editAvatarFileId = '';
       this.isEditing = true;
+      // 编辑期间隐藏底栏：防止切 tab 丢草稿（见 PhoneLayout 同名状态注释）
+      AppStorage.setOrCreate('hideMainTabBar', true);
     }
   }
 
@@ -458,6 +462,7 @@ export struct ProfilePage {
     this.editAvatarFileId = '';
     this.editAvatarPreviewUrl = this.currentUser?.avatar_url || '';
     this.isEditing = false;
+    AppStorage.setOrCreate('hideMainTabBar', false);
   }
 
   private async selectAvatarForEdit(): Promise<void> {
@@ -582,6 +587,7 @@ export struct ProfilePage {
         this.editAvatarLocalUri = '';
         this.editAvatarFileId = '';
         this.isEditing = false;
+        AppStorage.setOrCreate('hideMainTabBar', false);
         SystemToast.showSuccess('资料更新成功', this.getUIContext());
       }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
