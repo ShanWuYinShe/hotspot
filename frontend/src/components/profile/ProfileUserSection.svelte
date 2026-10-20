@@ -129,8 +129,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				{/snippet}
 			</EmptyState>
 		{:else}
-			<!-- 桌面全宽行会让行尾动作离名字过远（扫描距离），列表限宽到阅读列 -->
-			<ListContainer bordered class="max-w-3xl">
+			<!-- 桌面全宽行会让行尾动作离名字过远（扫描距离），列表限宽到阅读列；
+			     但必须**居中**：限宽 + 左对齐会在宽屏上把 300+px 空白全堆在右侧，
+			     观感上就是"内容没适配剩余空间"（2026-10-21 截图复核 /me/relationships）。 -->
+			<ListContainer bordered class="mx-auto max-w-3xl">
 				{#each items as item (item.id)}
 					{@render children(item)}
 				{/each}
