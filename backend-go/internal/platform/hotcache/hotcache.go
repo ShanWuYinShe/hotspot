@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
+	"hotspot/backend-go/internal/platform/worker"
 )
 
 const localSweepInterval = time.Minute
@@ -35,7 +37,11 @@ func New(rdb *redis.Client) *Cache {
 	c := &Cache{rdb: rdb}
 	if rdb == nil {
 		c.stop = make(chan struct{})
-		go func() {
+		// 用 worker.GoRestartable 而非裸 go func：清扫循环一旦 panic，裸 goroutine 会把
+		// **整个进程**带走（Go 默认行为）；即使只 recover 也会让清扫永久停转，本地 TTL map
+		// 就永远不再被清理、内存单调增长。GoRestartable 会记录堆栈并以指数退避重启。
+		// （ctx 由 c.stop 表达，不涉及外部 WaitGroup 生命周期，符合该 helper 的契约。）
+		worker.GoRestartable("hotcache-local-sweep", func() {
 			ticker := time.NewTicker(localSweepInterval)
 			defer ticker.Stop()
 			for {
@@ -52,7 +58,7 @@ func New(rdb *redis.Client) *Cache {
 					})
 				}
 			}
-		}()
+		})
 	}
 	return c
 }
