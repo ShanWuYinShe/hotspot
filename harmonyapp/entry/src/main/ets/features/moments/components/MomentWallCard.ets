@@ -11,6 +11,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
+import { formatCardTime } from '../../../core/utils/FormatUtil';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
@@ -27,6 +28,9 @@ import { LucideIcon } from '../../../components/LucideIcon';
 @Component
 export struct MomentWallCard {
   @Prop moment: MomentItem;
+  /** 卡片宽高比（宽/高）：2 列窄墙用 0.75（3:4），3 列用 1.333（4:3）。
+   *  2026-10-20：此前写死 1.333，手机 2 列时卡高仅 ~128px、底部托盘吃掉 70%+ 图片。 */
+  @Prop cardAspectRatio: number = 1.333;
   onOpenDetail?: (moment: MomentItem) => void;
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
   // 同 MomentFeedCard：仅持有本卡社交态，事件总线按 moment_id 定向更新
@@ -127,21 +131,14 @@ export struct MomentWallCard {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
 
-      if (this.moment.location?.location_name) {
-        Row({ space: DesignConstants.SPACING.HALF }) {
-          LucideIcon({
-              icon: AppIcon.LOCATION,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-              color: this.getPalette().textSecondary
-            })
-          Text(this.moment.location.location_name)
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .fontColor(this.getPalette().textSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .alignItems(VerticalAlign.Center)
-        .constraintSize({ maxWidth: '50%' })
+      // 归属行只留时间（2026-10-20 跨端一致，对齐 web MomentCard）：卡片窄，
+      // 位置+时间会把昵称挤成 1 个字；位置属于详情页信息。
+      if (formatCardTime(this.moment.created_at).length > 0) {
+        Text(formatCardTime(this.moment.created_at))
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontColor(this.getPalette().textSecondary)
+          .maxLines(1)
+          .flexShrink(0)
       }
     }
     .width('100%')
@@ -227,7 +224,7 @@ export struct MomentWallCard {
     NearbyImageCard({
       imageUrl: this.getCoverUrl(),
       imageAlt: this.getPrimaryTag() || this.moment.description || this.moment.user?.nickname || '',
-      cardAspectRatio: 1.333,
+      cardAspectRatio: this.cardAspectRatio,
       placeholderText: this.moment.user?.nickname ?? '',
       badgeText: this.getPrimaryTag(),
       badgeShape: 'pill',

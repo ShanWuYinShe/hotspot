@@ -124,8 +124,9 @@ export function formatDetailTime(dateTime: string | undefined): string {
 }
 
 /**
- * 卡片时间（会话/动态卡片）：今天→HH:mm / 昨天→"昨天" / 同年→MM-DD /
- * 跨年→YYYY-MM-DD。统一 MomentFeedCard 与 MessagePage 逐字重复的手写实现，
+ * 卡片时间（会话/动态卡片）：今天→HH:mm / 昨天→"昨天" / 同年→M月D日 /
+ * 跨年→YYYY年M月D日（2026-10-20 起与 web `formatCardTime` 逐字一致）。
+ * 统一 MomentFeedCard 与 MessagePage 逐字重复的手写实现，
  * 跨年分支不再走 toLocaleDateString（美式日期回归）。
  */
 export function formatCardTime(iso: string): string {
@@ -141,12 +142,12 @@ export function formatCardTime(iso: string): string {
   if (time.toDateString() === yesterday.toDateString()) {
     return '昨天';
   }
-  const month = (time.getMonth() + 1).toString().padStart(2, '0');
-  const day = time.getDate().toString().padStart(2, '0');
+  // 与 web `formatCardTime` 逐字对齐（2026-10-20 跨端一致性）：同年 M月D日、跨年 YYYY年M月D日
+  const monthDay = `${time.getMonth() + 1}月${time.getDate()}日`;
   if (time.getFullYear() === now.getFullYear()) {
-    return `${month}-${day}`;
+    return monthDay;
   }
-  return `${time.getFullYear()}-${month}-${day}`;
+  return `${time.getFullYear()}年${monthDay}`;
 }
 
 function formatHhMm(date: Date): string {

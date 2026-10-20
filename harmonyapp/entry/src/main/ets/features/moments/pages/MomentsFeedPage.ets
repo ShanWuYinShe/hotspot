@@ -380,6 +380,8 @@ export struct MomentsFeedPage {
                 FlowItem() {
                   MomentWallCard({
                     moment: moment,
+                    // 2 列窄墙用 3:4 竖版（对齐 web 移动端）；3 列用 4:3
+                    cardAspectRatio: this.getWallColumns() === 2 ? 0.75 : 1.333,
                     onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
                     onImagePreview: (momentId: string, images: string[], index: number) => {
                       this.previewImage(momentId, images, index);
