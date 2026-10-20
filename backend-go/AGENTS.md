@@ -21,6 +21,11 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
   ```
   `backend-test` 为独立测试后端（`APP_ENV=test` 跳过限流 + 独立 `hotspot_test` 数据库，见 `docker-compose.dev.yml`），不污染 dev 主库。
 
+## 潜在问题审计
+
+静态审计清单与结论（goroutine panic、context 泄漏、连接/事务、忽略错误、SQL 注入、无界查询）
+见 `docs/backend-audit.md`。**已确认无问题的项不必重复排查**；新发现请更新该文档。
+
 ## 性能：PGO（Profile-Guided Optimization）
 
 Go 1.21+ 支持用真实生产 profile 做编译器优化（官方口径 **2–14%**，零代码改动）。
