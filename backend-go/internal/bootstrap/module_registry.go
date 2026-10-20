@@ -34,6 +34,24 @@ import (
 	"hotspot/backend-go/internal/platform/types"
 )
 
+// momentsFollowRelationReader 把 users 模块的双向关系批量查询适配成 moments 的
+// FollowRelationReader（跨模块视图类型转换集中在此，避免任一模块依赖另一模块的类型）。
+type momentsFollowRelationReader struct {
+	users *users.Service
+}
+
+func (r momentsFollowRelationReader) AuthorRelations(ctx context.Context, viewerID string, authorIDs []string) (map[string]moments.UserRelationView, error) {
+	rels, err := r.users.RelationshipBatch(ctx, viewerID, authorIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]moments.UserRelationView, len(rels))
+	for id, rel := range rels {
+		out[id] = moments.UserRelationView{IsFollowing: rel.IsFollowing, IsFollowedBy: rel.IsFollowedBy}
+	}
+	return out, nil
+}
+
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
 	modules, _ := BuildModulesWithRedisPinger(context.Background(), cfg, factory, nil, hotcache.New(nil))
 	return modules
@@ -131,6 +149,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// and CommentItem.reactions[] get filled at read time. Done after both
 	// modules exist to break the import cycle.
 	momentsModule.Service.SetReactionAggregator(momentReactionAggregator{reactions: reactionsModule.Service})
+	// 首页/附近卡片上的「已关注」标注：查看者 → 作者的双向关系（spec MomentItem.author_relation）。
+	// 关系数据归 users 模块所有，经适配器转成 moments 侧的视图类型（同样为避免 import 循环）。
+	momentsModule.Service.SetFollowRelationReader(momentsFollowRelationReader{users: usersModule.Service})
 	momentsModule.CommentsService().SetReactionAggregator(commentReactionAggregator{reactions: reactionsModule.Service})
 	// 评论拉黑拦截（spec api_spec_authz.md comments/create：黑名单 → 10200 + blocked_by_user）。
 	// fn 签名无 ctx，此处用独立超时上下文单查双向拉黑表；查询出错向上返回错误

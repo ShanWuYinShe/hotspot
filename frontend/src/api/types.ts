@@ -477,6 +477,9 @@ export interface MomentItem {
 	user: UserInfo;
 	location: RelativeLocation | null;
 	is_favorited: boolean; // 恒定布尔：匿名/未收藏为 false
+	// 查看者→作者的双向关注关系（spec MomentItem.author_relation）：匿名/未登录恒 null。
+	// 可选声明：访客走 public 端点，响应里没有该键（PublicMomentItem 不含查看者字段）。
+	author_relation?: { is_following: boolean; is_followed_by: boolean } | null;
 	recommendation: RecommendationType | null; // Feed 场景返回（推荐理由）；非 Feed 场景为 null
 	is_deleted: boolean; // 软删除标记；true 时 description 为空，客户端展示"内容已删除"占位
 }

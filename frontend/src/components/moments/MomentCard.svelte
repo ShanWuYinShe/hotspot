@@ -66,6 +66,11 @@
 				{#if item.avatar || item.user}
 					<Avatar src={item.avatar} name={item.user} size="xs" style="border:var(--cst-border-width-regular) solid var(--cst-border-card-menu);" />
 					<span class="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary">{item.user || '匿名用户'}</span>
+				<!-- 关系标注（spec MomentItem.author_relation）：只标"我关注了 TA"这一种正向关系，
+				     未关注不标（不制造"未关注"的噪音）。极小号次级色，不做胶囊。 -->
+				{#if item.authorRelation === true}
+					<span class="shrink-0 text-xxs text-text-secondary">已关注</span>
+				{/if}
 				{/if}
 				<!-- 时间靠右（tabular-nums 对齐）。
 				     **卡片不再渲染位置**（2026-10-20 用户审查）：手机两列卡宽 171px，

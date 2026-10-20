@@ -67,6 +67,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 			comments: m.comments_count ?? 0,
 			time: formatCardTime(m.created_at),
+			authorRelation: m.author_relation?.is_following ?? false,
 			liked: Boolean(mine),
 			saved: Boolean(m.is_favorited),
 			likeEmoji: mine?.emoji ?? '👍'

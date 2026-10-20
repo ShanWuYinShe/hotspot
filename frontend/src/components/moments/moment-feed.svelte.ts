@@ -12,6 +12,8 @@ export interface FeedItem {
 	user: string;
 	avatar: string;
 	location: string;
+	/** 我是否关注了作者（来自 spec MomentItem.author_relation；匿名/缺省为 false）。 */
+	authorRelation?: boolean;
 	/** 展示用首标签；筛选走全量 tags（首标签之外同样可命中） */
 	tag: string;
 	tags: string[];

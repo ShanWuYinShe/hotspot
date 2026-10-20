@@ -144,6 +144,15 @@ export interface MomentItem {
   location: RelativeLocation | null;
   is_favorited: boolean;
   recommendation: RecommendationType | null;
+  /** 查看者→作者的双向关注关系（spec MomentItem.author_relation）：匿名/未登录为 null。
+   *  可选声明：访客走 public 端点，响应里没有该键。 */
+  author_relation?: UserRelationView | null;
+}
+
+/** 瞬间作者关系视图（spec MomentItem.author_relation）。 */
+export interface UserRelationView {
+  is_following: boolean;
+  is_followed_by: boolean;
 }
 
 // 4. 消息 (Message)

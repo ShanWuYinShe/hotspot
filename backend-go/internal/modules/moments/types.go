@@ -73,6 +73,16 @@ type MomentImage struct {
 // MomentItem 是瞬间的公开固定形状（spec api_spec_types.md MomentItem）。
 // 拥有者专属字段 privacy_level 不在此类型（见 OwnerMomentItem）；
 // privacy_level 仅作 repo 内部存储/过滤载体，json:"-" 保证不对外输出。
+// UserRelationView 查看者 ↔ 作者的双向关注关系（spec api_spec_moment.md：
+// MomentItem.author_relation，**查看者字段**）。
+//   - 登录视角填充；匿名/未登录恒 null（与 is_favorited 同口径：查看者字段只进登录版）。
+//   - 采用 MomentItem 上的扁平字段而非嵌入 user：user 是跨模块共享的 UserInfo，
+//     往里加查看者字段会污染访客版与其它模块的响应形状。
+type UserRelationView struct {
+	IsFollowing  bool `json:"is_following"`
+	IsFollowedBy bool `json:"is_followed_by"`
+}
+
 type MomentItem struct {
 	MomentID    string        `json:"moment_id"`
 	Description string        `json:"description"`
@@ -91,6 +101,9 @@ type MomentItem struct {
 	Location *Location `json:"location"`
 	// is_favorited 恒定布尔（spec MomentItem）：匿名/未收藏为 false，恒输出。
 	IsFavorited bool `json:"is_favorited"`
+	// author_relation 查看者→作者的双向关注关系（spec MomentItem.author_relation）：
+	// 登录视角填充，匿名/未登录/未注入读取器时恒 null（与 recommendation 同构，恒定键）。
+	AuthorRelation *UserRelationView `json:"author_relation"`
 	// Reactions 表情反应聚合（spec MomentItem reactions: 空数组 = 无反应）。
 	Reactions []Reaction `json:"reactions"`
 	// recommendation 恒定存在（spec api_spec_types.md MomentItem：Feed 场景返回推荐

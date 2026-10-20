@@ -178,7 +178,8 @@ interface PublicRelatedUserItem {
   followed_back_at: string | null;
 }
 
-// 瞬间公开类型（MomentItem 去 is_favorited / recommendation；reactions 用 PublicReaction）
+// 瞬间公开类型（MomentItem 去 is_favorited / recommendation / author_relation；reactions 用 PublicReaction）
+// 说明：author_relation 与 is_favorited 同为查看者字段，匿名视角恒无此语义 → 公开类型不包含。
 interface PublicMomentItem {
   moment_id: string;
   description: string;         // 软删除时为空字符串，客户端展示"内容已删除"占位

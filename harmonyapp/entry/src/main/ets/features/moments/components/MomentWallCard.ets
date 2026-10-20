@@ -131,6 +131,16 @@ export struct MomentWallCard {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
 
+      // 关系标注（spec MomentItem.author_relation）：只标"我关注了 TA"，未关注不标。
+      // 极小号次级色文字，不做胶囊（避免在窄卡上制造第二个视觉焦点）。
+      if (this.moment.author_relation?.is_following === true) {
+        Text('已关注')
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .fontColor(this.getPalette().textSecondary)
+          .maxLines(1)
+          .flexShrink(0)
+      }
+
       // 归属行只留时间（2026-10-20 跨端一致，对齐 web MomentCard）：卡片窄，
       // 位置+时间会把昵称挤成 1 个字；位置属于详情页信息。
       if (formatCardTime(this.moment.created_at).length > 0) {

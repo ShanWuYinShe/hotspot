@@ -400,6 +400,11 @@ interface MomentItem {
   // === 查看者布尔（恒定布尔） ===
   is_favorited: boolean;       // 当前用户是否收藏；未收藏为 false
 
+  // 查看者→作者的双向关注关系（**查看者字段，恒定 nullable**）：
+  // null = 匿名/未登录，或作者 id 缺失。登录视角下反馈"这张卡是不是我关注的人发的"。
+  // 注意：不内嵌到 user（UserInfo 是跨模块共享形状，含查看者字段会污染访客版与其它模块响应）。
+  author_relation: { is_following: boolean; is_followed_by: boolean } | null;
+
   // Feed 场景返回（推荐理由）；非 Feed 场景为 null
   recommendation: RecommendationType | null;
 

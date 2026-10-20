@@ -29,8 +29,9 @@ type Service struct {
 	images        ImageResolver
 	appConfig     appconfig.Source
 	runInTx       persistence.TxRunner
-	reactions     ReactionAggregator // optional; nil => reactions[] not filled
-	locations     LocationProvider   // optional; nil => reference_point 回退链跳过用户最近位置一级
+	reactions     ReactionAggregator   // optional; nil => reactions[] not filled
+	relations     FollowRelationReader // optional; nil => author_relation stays null
+	locations     LocationProvider     // optional; nil => reference_point 回退链跳过用户最近位置一级
 	// blockChecker 可选注入：caller 与瞬间作者间双向拉黑判定（对齐 comments 的
 	// 依赖倒置模式，bootstrap 统一接线）。nil（dev/test 默认）时跳过拉黑检查。
 	blockChecker func(callerID, authorID string) (bool, error)
@@ -52,6 +53,13 @@ func (s *Service) SetNearbyNotifyPublisher(p NearbyNotifyPublisher) { s.nearbyNo
 // @auth-only reacted_by_me flag (empty for anonymous).
 type ReactionAggregator interface {
 	AggregateMoments(ctx context.Context, momentIDs []string, viewerID string) (map[string][]Reaction, error)
+}
+
+// FollowRelationReader 批量读取「查看者 → 作者」的双向关注关系。
+// 由 bootstrap 注入（与 ReactionAggregator 同模式，打破模块循环）；
+// 未注入时 author_relation 恒 null（例如内存 repo 的单元测试）。
+type FollowRelationReader interface {
+	AuthorRelations(ctx context.Context, viewerID string, authorIDs []string) (map[string]UserRelationView, error)
 }
 
 type momentNotificationWriter interface {
@@ -189,6 +197,7 @@ func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem,
 	}
 	s.hydrateImages(ctx, &item)
 	s.fillReactions(ctx, &item, principal.UserID)
+	s.fillAuthorRelation(ctx, &item, principal.UserID)
 	return item, true, nil
 }
 
@@ -323,6 +332,7 @@ func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (Paginat
 	}
 	s.hydrateImagesBatch(ctx, result.Items)
 	s.fillReactionsBatch(ctx, result.Items, viewerUserID(ctx))
+	s.fillAuthorRelations(ctx, result.Items, viewerUserID(ctx))
 	return result, nil
 }
 
@@ -496,6 +506,7 @@ func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (Pa
 	}
 	s.hydrateImagesBatch(ctx, result.Items)
 	s.fillReactionsBatch(ctx, result.Items, principal.UserID)
+	s.fillAuthorRelations(ctx, result.Items, principal.UserID)
 	return result, nil
 }
 
@@ -593,6 +604,55 @@ func (s *Service) fillReactionsBatch(ctx context.Context, items []MomentItem, vi
 	for i := range items {
 		items[i].Reactions = reactionsFor(byID[items[i].MomentID])
 	}
+}
+
+// SetFollowRelationReader wires the follow-relation reader (bootstrap 注入).
+func (s *Service) SetFollowRelationReader(r FollowRelationReader) { s.relations = r }
+
+// fillAuthorRelations 批量填充 MomentItem.author_relation（一次查询，按作者去重）。
+// 仅登录视角（viewerID 非空）填充；读取器缺失或出错时保持 null —— UI 只是少一个
+// "已关注"标注，绝不因此让列表失败。
+func (s *Service) fillAuthorRelations(ctx context.Context, items []MomentItem, viewerID string) {
+	if len(items) == 0 || viewerID == "" || s.relations == nil {
+		return
+	}
+	seen := make(map[string]struct{}, len(items))
+	authorIDs := make([]string, 0, len(items))
+	for i := range items {
+		id := items[i].User.UserID
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		authorIDs = append(authorIDs, id)
+	}
+	if len(authorIDs) == 0 {
+		return
+	}
+	byID, err := s.relations.AuthorRelations(ctx, viewerID, authorIDs)
+	if err != nil {
+		observability.L().Warn("moments.fillAuthorRelations failed", "error", err)
+		return
+	}
+	for i := range items {
+		if rel, ok := byID[items[i].User.UserID]; ok {
+			r := rel
+			items[i].AuthorRelation = &r
+		}
+	}
+}
+
+// fillAuthorRelation 单条版本（详情出口）。
+func (s *Service) fillAuthorRelation(ctx context.Context, item *MomentItem, viewerID string) {
+	if item == nil {
+		return
+	}
+	items := []MomentItem{*item}
+	s.fillAuthorRelations(ctx, items, viewerID)
+	*item = items[0]
 }
 
 // fillReactionsBatchOwnerMoment populates OwnerMomentItem.reactions[] for a list.
