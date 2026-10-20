@@ -336,3 +336,22 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 
 > 登记原则：数值档位本身走既有 token 刻度（不新增档位）；本表只登记「组件级用法
 > 契约」。两端口径经源码逐项核对（DesignConstants / EmptyState / SystemPageHeader）。
+
+## 触控热区审计（2026-10-21 实测，agent-browser 量取）
+
+调研共识（移动端交互规范）：触控目标的有效热区 ≥ 44×44。项目用 `.hit-slop`（`::before` 外扩 6px）
+实现"视觉小、热区大"，实测换算：
+
+| 视觉尺寸 | + hit-slop | 有效热区 | 结论 |
+|---|---|---|---|
+| 36×36（顶栏图标按钮） | +12 | **48×48** | ✅ |
+| 34×34（消息行更多操作） | +12 | **46×46** | ✅ |
+| 32（Button `h-8`） | +12 | **44×44** | ✅ 刚好达标 |
+| 40（`py-1.5` 文本按钮） | +12 | 52 ✅（此前未带，已补） | ✅ |
+| 28（筛选 chip） | +12 | 40 ✗ | 可接受：chip 为次级筛选、行长 ≥44，且带横向间距 |
+
+**规则**：任何可点元素的**视觉高度 < 44px 时必须带 `hit-slop`**（或 `hit-slop-y`）。新增按钮/图标按钮
+先按上表换算，别只看视觉尺寸。
+
+审计方法（agent-browser）：`set viewport 390 844` → `open <路由>` →
+`eval` 遍历 `button, a[href], [role=button]` 收集 `getBoundingClientRect()`，与上表核对。

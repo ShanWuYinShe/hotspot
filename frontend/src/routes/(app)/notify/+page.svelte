@@ -339,7 +339,7 @@ const markSingleRead = (id: string) => {
 							type="button"
 							variant="secondary"
 							size="md"
-							class="rounded-full px-3 py-1.5 text-accent-default"
+							class="hit-slop rounded-full px-3 py-1.5 text-accent-default"
 							onclick={markAllRead}
 						>
 							<CheckCheck class="size-3.5"  strokeWidth={2} />
