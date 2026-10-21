@@ -101,19 +101,26 @@ description: hotspot 前端样式与交互状态契约：样式自查清单 19 �
     （`{active?'font-semibold':'font-normal'}`）
 12. **页面纵向间距（强制）**：正文 `contentClassName` 收敛到样板 `/nearby/moments`
     的约定值，禁止 `py-5`/`py-6`/`py-7 lg:py-8` 等散乱值：
-    - 标准 header 页：`contentClassName="pt-4 pb-6"`（顶 padding 由 header `pt-4`
-      承接，正文上下 `pt-4 pb-6`）
+    - 标准 header 页：`contentClassName="pt-4 pb-6"`（页顶 16 由页头自身内距承接，
+      正文上下 `pt-4 pb-6`）
     - 长表单页（settings、me/edit）：`pt-4 pb-10`（尾部加大留白）
     - 封面型页（无标准 header，顶由封面承担）：`pb-6`
     - 资料总览长内容页（ProfilePage 总览）：`pt-6 pb-8`（呼吸型变体）
+    - 移动端固定底部操作条补净空：`pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}`
+      （users/[userId]、moments/[momentId]）
     - 状态/空态区：`py-20`（样板 `feedState` + `EmptyState` 内置）
-    **header 内 ContentColumn** 统一 `pt-4 pb-0`（顶留白、底不留白，below 区自带头部
-    间距）；`below` snippet 首元素必须 `mt-3`（与样板一致，见页面布局契约第 2 条）。
+    **页面级/区块级间距三档（12/16/24）的落地口径见 skill `hotspot-frontend-layout`
+    「纵向节奏 → 前端落地口径」**（根容器 `gap-4`、区块间 24、标题→内容 12，
+    且间距只允许单侧提供）。
+    **`PageHeader` 内部 ContentColumn 的上下内距由组件派生**（有 below：`pt-4 pb-3.5`；
+    无 below：`pt-4.5 pb-4.5`），属页头组件内部构图，**页面不要再传 `contentClassName`
+    覆盖**（唯一例外是已登记的窄列面板）；`below` snippet 首元素必须 `mt-3`（与样板一致，
+    见页面布局契约第 2 条）。
     **窄列特例**（不进 `--cst-page-gutter`，用 `px-4`（16px）压缩 gutter，已登记例外，
     其他窄列场景需在 AGENTS.md 补登记）：
-    - 桌面消息分栏左栏（`w-75`=300px）
+    - 桌面消息分栏左栏（`w-80`=320px）
     - 桌面地图左侧面板（`w-85`=340px，`LocationDesktopPanel`：PageHeader 传
-      `contentClassName="px-4 pt-4 pb-0"`，搜索/Tab/列表/确认区统一 `px-4`）
+      `contentClassName="px-4"`，搜索/Tab/列表/确认区统一 `px-4`）
     **布局尺寸 token**（layout.css 定义，禁止组件内裸数字）：
     `--cst-desktop-sidebar-width`（224px 展开）/ `--cst-desktop-sidebar-collapsed`（72px 折叠）/
     `--cst-tablet-dock-max`（680px 平板 Dock）/ `--cst-cover-height`（clamp 220→340px 封面）/
