@@ -169,7 +169,10 @@ export struct NearbyPage {
               EmptyState({
                 bare: true,
                 title: this.loadError,
-                message: '下拉或稍后重试'
+                message: '下拉或稍后重试',
+                // 错误态必须给出可点的下一步（2026-10-21 端上走查：此前只有文字提示，无重试入口）
+                actionLabel: '重试',
+                onAction: () => { void this.loadData(); }
               })
               .width('100%')
             } else if (!this.hasAnyNearbyData()) {
