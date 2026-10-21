@@ -43,6 +43,11 @@ export struct TabsPillGroup {
   @Prop gap: number = DesignConstants.SPACING.SM2;
   /** 自由宽度模式：透明容器 + 自适应内容宽（对齐前端 TabBar；缺省等宽分段） */
   @Prop freeWidth: boolean = false;
+  /**
+   * pillFill：让**视觉胶囊**填满分段槽高度（默认胶囊按文字内容高，在 44vp 外壳里显得又小又飘）。
+   * 用于登录模式切换这类"轨道明显比胶囊高"的场景；默认关闭以免影响其它使用处的既有间距。
+   */
+  @Prop pillFill: boolean = false;
   actions?: TabsPillGroupActions;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
@@ -133,8 +138,9 @@ export struct TabsPillGroup {
         left: this.freeWidth ? DesignConstants.SPACING.MD3 : 0,
         right: this.freeWidth ? DesignConstants.SPACING.MD3 : 0
       })
-      // 两态统一 30 档：对齐前端 TabBar pill(py-1.5+text ≈ 28-32)，原分段 34 为近邻异档
-      .height(DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
+      // 两态统一 30 档：对齐前端 TabBar pill(py-1.5+text ≈ 28-32)，原分段 34 为近邻异档。
+      // pillFill（登录页等）：胶囊改填满分段槽的 44vp，避免在灰底轨道里显得又小又飘
+      .height(this.pillFill ? DesignConstants.LAYOUT.MIN_HIT_TARGET : DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT)
       .borderRadius(DesignConstants.RADIUS.FULL)
       // 选中态播报（对齐前端 TabBar 的 aria-pressed={isActive}）：屏幕阅读器需知道
       // 当前哪个分类/Tab 处于选中，否则只能靠颜色猜测

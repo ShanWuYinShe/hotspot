@@ -350,6 +350,8 @@ export struct LoginPage {
 
           // 模式切换标签（统一 TabsPillGroup）
           TabsPillGroup({
+            // 胶囊填满分段槽：默认胶囊只包文字，在灰底轨道里显得偏小、像没垂直居中（录屏反馈）
+            pillFill: true,
             tabs: [{ label: '登录' }, { label: '注册' }, { label: '访客' }],
             activeIndex: Math.max(0, ['login', 'register', 'guest'].indexOf(this.loginMode)),
             actions: {
