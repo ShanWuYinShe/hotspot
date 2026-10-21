@@ -482,14 +482,23 @@ export struct LoginPage {
         }
       })
 
-      if (this.getLoginIdError()) {
-        Text(this.getLoginIdError())
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-          .fontColor(this.getCurrentThemePalette().error)
-          .width('100%')
-          .padding({ left: DesignConstants.SPACING.MD })
+      // 错误提示**常驻槽位**（固定高度，无错时留空）：
+      // 此前是 `if (err) { Text }` 条件渲染，导致两个 SystemInput 之间的子节点结构在提交
+      // （失焦 → touched → 错误提示出现）时变化；ArkUI 按位置复用组件，会把两个输入框的
+      // 内部文本/onChange 回调串位 —— 端上表现为「提交瞬间账号框变成密码值、校验报密码策略、
+      // 请求根本不发」。结构恒定后即不再串位（2026-10-21 复现与修复）。
+      Column() {
+        if (this.getLoginIdError()) {
+          Text(this.getLoginIdError())
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            .fontColor(this.getCurrentThemePalette().error)
+            .width('100%')
+            .padding({ left: DesignConstants.SPACING.MD })
+        }
       }
+      .width('100%')
+      .height(textLineHeight(DesignConstants.FONT.SIZE.SM))
 
       SystemInput({
         value: this.password,
@@ -507,14 +516,19 @@ export struct LoginPage {
         }
       })
 
-      if (this.getPasswordError()) {
-        Text(this.getPasswordError())
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-          .fontColor(this.getCurrentThemePalette().error)
-          .width('100%')
-          .padding({ left: DesignConstants.SPACING.MD })
+      // 同上：密码错误提示也用常驻槽位，保证两个输入框与按钮之间的结构恒定
+      Column() {
+        if (this.getPasswordError()) {
+          Text(this.getPasswordError())
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            .fontColor(this.getCurrentThemePalette().error)
+            .width('100%')
+            .padding({ left: DesignConstants.SPACING.MD })
+        }
       }
+      .width('100%')
+      .height(textLineHeight(DesignConstants.FONT.SIZE.SM))
 
       SystemButton({
         label: '登录',
