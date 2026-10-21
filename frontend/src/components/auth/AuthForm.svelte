@@ -252,9 +252,9 @@
 					
 				/>
 			</span>
-			{#if fieldErrors.nickname}
-				<p id="auth-field-nickname-error" class="text-xs text-status-danger"  role="alert">{fieldErrors.nickname}</p>
-			{/if}
+			<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
+             统一预留固定高度（2026-10-21 录屏分析）。 -->
+<p id="auth-field-nickname-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.nickname ?? ''}</p>
 		</label>
 	{/if}
 
@@ -279,9 +279,9 @@
 					
 				/>
 			</span>
-			{#if fieldErrors.loginId}
-				<p id="auth-field-loginId-error" class="text-xs text-status-danger"  role="alert">{fieldErrors.loginId}</p>
-			{/if}
+			<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
+             统一预留固定高度（2026-10-21 录屏分析）。 -->
+<p id="auth-field-loginId-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.loginId ?? ''}</p>
 		</label>
 			{#if needsRegisterCode}
 				<!-- 验证码：登录验证码模式（发送接口暂未开放）或注册手机号/邮箱型（所有权验证）；
@@ -303,9 +303,9 @@
 
 						/>
 					</span>
-					{#if fieldErrors.code}
-						<p id="auth-field-code-error" class="text-xs text-status-danger" role="alert">{fieldErrors.code}</p>
-					{/if}
+					<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
+             统一预留固定高度（2026-10-21 录屏分析）。 -->
+<p id="auth-field-code-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.code ?? ''}</p>
 				</label>
 				<Button
 					type="button"
@@ -353,9 +353,9 @@
 						{/if}
 					</button>
 				</span>
-				{#if fieldErrors.password}
-					<p id="auth-field-password-error" class="text-xs text-status-danger"  role="alert">{fieldErrors.password}</p>
-				{/if}
+				<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
+             统一预留固定高度（2026-10-21 录屏分析）。 -->
+<p id="auth-field-password-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.password ?? ''}</p>
 			</label>
 		{/if}
 	{/if}
@@ -378,9 +378,9 @@
 					
 				/>
 			</span>
-			{#if fieldErrors.resetLoginId}
-				<p id="auth-field-resetLoginId-error" class="text-xs text-status-danger"  role="alert">{fieldErrors.resetLoginId}</p>
-			{/if}
+			<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
+             统一预留固定高度（2026-10-21 录屏分析）。 -->
+<p id="auth-field-resetLoginId-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.resetLoginId ?? ''}</p>
 		</label>
 		{#if mode === 'reset'}
 			<label class="flex flex-col gap-1.5" for="auth-field-code">
@@ -400,9 +400,9 @@
 						
 					/>
 				</span>
-				{#if fieldErrors.code}
-					<p id="auth-field-code-error" class="text-xs text-status-danger"  role="alert">{fieldErrors.code}</p>
-				{/if}
+				<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
+             统一预留固定高度（2026-10-21 录屏分析）。 -->
+<p id="auth-field-code-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.code ?? ''}</p>
 			</label>
 			<label class="flex flex-col gap-1.5" for="auth-field-newPassword">
 				<span class="text-xs font-medium tracking-field text-text-secondary">新密码</span>
@@ -433,16 +433,16 @@
 						{/if}
 					</button>
 				</span>
-				{#if fieldErrors.newPassword}
-					<p id="auth-field-newPassword-error" class="text-xs text-status-danger"  role="alert">{fieldErrors.newPassword}</p>
-				{/if}
+				<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
+             统一预留固定高度（2026-10-21 录屏分析）。 -->
+<p id="auth-field-newPassword-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.newPassword ?? ''}</p>
 			</label>
 		{/if}
 	{/if}
 
-	{#if error}
-		<p class="text-xs text-status-danger"   role="alert">{error}</p>
-	{/if}
+	<!-- 表单级错误同样常驻占位：此前条件渲染，提示一出现就把下方「登录」按钮顶下去，
+	     与字段错误叠加后表现为按钮上下跳（2026-10-21 录屏分析）。 -->
+	<p class="text-xs text-status-danger min-h-4" role="alert">{error ?? ''}</p>
 
 	<Button
 		type="submit"
