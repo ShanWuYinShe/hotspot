@@ -144,6 +144,18 @@ AdminOverviewPage 区分 `10200` 与网络错误。
 `- 辅助脚本（本机）：`。
 
 
+## 模拟器连不上 dev 后端时（2026-10-21 实测）
+
+现象：App 停在「加载中…」或各页报「加载…失败」，而宿主 `docker compose ps` 全 healthy、
+`curl localhost:8888/healthz` 正常。原因不在后端：
+
+- App 的开发接口常量是 `DEV_SERVER = 'http://127.0.0.1:8888'`（`constants/AppConstants.ets`），
+  在模拟器里 `127.0.0.1` 指模拟器自身，到达不了宿主；
+- `hdc -t 127.0.0.1:5555 rport tcp:8888 tcp:8888` 实测被拒（`TCP Port listen failed at 8888`）；
+- 可用做法：把 `DEV_SERVER` 临时改成 `http://10.0.2.2:8888`（QEMU 宿主别名，模拟器内
+  `ping 10.0.2.2` 通）→ 构建安装 → 验证完**还原常量、不提交**（worktree 内改动，验证后删 worktree）；
+- 排查顺序：先 `ping 10.0.2.2`（通=模拟器网络没问题）→ 再看常量值 → 最后才怀疑后端。
+
 ## 沙盒下启动模拟器：已可直启（2026-10-14 插件放行实测）
 
 > **状态提醒（2026-10-18/19 实测）**：本条只保证 `~/.Huawei/Emulator/deployed`（实例镜像）可写；
