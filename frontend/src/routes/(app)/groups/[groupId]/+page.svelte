@@ -318,8 +318,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				</div>
 				{:else if tab === 'members'}
 					{#if canManageMembers}
-						<!-- 成员 Tab 子区（owner/admin）：成员 / 申请审批 / 邀请管理 / 封禁名单 -->
-						<div class="mt-4 pb-3 border-b border-border-default">
+						<!-- 成员 Tab 子区（owner/admin）：成员 / 申请审批 / 邀请管理 / 封禁名单。
+						     Tab 栏（带 border-b）→ 下一块统一 24（与「简介」内容 pt-6 同口径），
+						     子 Tab 栏自身距主 Tab 栏也是 24，避免同页两种 tab→内容间距。 -->
+						<div class="mt-6 pb-3 border-b border-border-default">
 							<TabBar
 								items={[
 									{ id: 'members', label: '成员' },

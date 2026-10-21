@@ -23,9 +23,10 @@
 </script>
 
 {#if applications.length === 0}
-	<EmptyState bare title="暂无待处理的申请" class="mt-4" />
+	<!-- 子 Tab 栏→内容统一 24（空态与列表同值，切换子 Tab 不跳） -->
+	<EmptyState bare title="暂无待处理的申请" class="mt-6" />
 {:else}
-<ListContainer bordered class="mt-4">
+<ListContainer bordered class="mt-6">
 	{#each applications as app (app.application_id)}
 		<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${app.applicant.nickname} 的入群申请`}>
 			<Avatar src={app.applicant.avatar_url ?? undefined} name={app.applicant.nickname} size="lg" />

@@ -509,8 +509,8 @@ export struct MomentDetailPage {
           })
         } else {
           Scroll(this.contentScroller) {
-            // 正文区与评论区：间距由评论区自身 margin-top(20, 对齐前端 mt-5) 承担，
-            // 不再叠加 SECTION_GAP（否则 24+20=44，与前端不一致）
+            // 正文区与评论区：间距由评论区自身 margin-top(24, 对齐前端 mt-6) 承担，
+            // 不再叠加 SECTION_GAP（否则 24+24=48，与前端不一致）
             Column() {
               this.buildMomentContent(this.moment as MomentItem)
               Column() {
@@ -909,11 +909,12 @@ export struct MomentDetailPage {
   @Builder
   private buildCommentsSection() {
     Column({ space: DesignConstants.SPACING.MD }) {
-      // 分区标题（对齐前端 MomentPostBody：text-sm=12 + font-medium + mt-5 mb-3）
+      // 分区标题（对齐前端 MomentPostBody h2：text-md=14 + semibold + mt-6 mb-3，
+      // 见 skill hotspot-harmony-ui 的「分区标题 14px semibold」登记）
       Text(`评论 · ${formatCount(this.getCommentCount(this.moment as MomentItem))}`)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .width('100%')
 
@@ -951,8 +952,8 @@ export struct MomentDetailPage {
       }
     }
     .width('100%')
-    // 对齐前端：正文→评论区标题 mt-5(20)；横向留白由页面 gutter 包装层提供
-    .margin({ top: DesignConstants.SPACING.LG })
+    // 对齐前端：正文→评论区标题 mt-6(24)；横向留白由页面 gutter 包装层提供
+    .margin({ top: DesignConstants.SPACING.XL })
     .alignItems(HorizontalAlign.Start)
   }
 
