@@ -14,6 +14,12 @@ export struct SystemLoadingView {
   @Prop progressType: 'indeterminate' | 'determinate' = 'indeterminate';
   @Prop maxProgress: number = 100;
   @Prop externalProgress: number = 0;
+  /**
+   * card：是否画「圆角卡片 + 图标徽章」外框。默认 **false（无卡）** —— 页面级加载态应与页面
+   * 背景一体，而不是在屏幕中间悬浮一张卡片（2026-10-21 端上反馈：加载框很丑、和 UI 不是一体）。
+   * 只有浮层/媒体之上的局促场景才需要传 true。
+   */
+  @Prop card: boolean = false;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
@@ -25,13 +31,21 @@ export struct SystemLoadingView {
       Column({ space: DesignConstants.SPACING.MD }) {
         if (this.showProgress) {
           Stack() {
+            // 无卡形态不画圆形徽章：加载图标直接落在页面上（与无卡错误态一致）
             Column()
               .width(DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE)
               .height(DesignConstants.COMPONENT.LOADING_CONTAINER_SIZE)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getPalette().surfaceBackground)
-              .shadow(this.getPalette().controlShadow)
-              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
+              .backgroundColor(this.card ? this.getPalette().surfaceBackground : DesignConstants.COLOR.TRANSPARENT)
+              .shadow(this.card ? this.getPalette().controlShadow : {
+                radius: 0,
+                color: DesignConstants.COLOR.TRANSPARENT,
+                offsetX: 0,
+                offsetY: 0
+              })
+              .border(this.card
+                ? { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor }
+                : { width: 0 })
 
             if (this.progressType === 'determinate') {
               Progress({
@@ -67,16 +81,23 @@ export struct SystemLoadingView {
             .textAlign(TextAlign.Center)
         }
       }
-      .padding(DesignConstants.SPACING.XXL)
-      .borderRadius(DesignConstants.SHAPE.HERO_CARD)
-      .backgroundColor(this.getPalette().surfaceBackground)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
-      .shadow(this.getPalette().surfaceShadow)
+      .padding(this.card ? DesignConstants.SPACING.XXL : 0)
+      .borderRadius(this.card ? DesignConstants.SHAPE.HERO_CARD : 0)
+      .backgroundColor(this.card ? this.getPalette().surfaceBackground : DesignConstants.COLOR.TRANSPARENT)
+      .border(this.card
+        ? { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor }
+        : { width: 0 })
+      .shadow(this.card ? this.getPalette().surfaceShadow : {
+        radius: 0,
+        color: DesignConstants.COLOR.TRANSPARENT,
+        offsetX: 0,
+        offsetY: 0
+      })
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(this.getPalette().pageBackground)
+    .backgroundColor(this.card ? this.getPalette().pageBackground : DesignConstants.COLOR.TRANSPARENT)
     .padding(DesignConstants.SPACING.XXL)
     .accessibilityText(this.message)
   }
