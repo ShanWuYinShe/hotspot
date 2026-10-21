@@ -169,14 +169,18 @@ export struct HomePage {
               SystemLoadingView({ message: '正在加载…' })
                 .width('100%')
             } else if (this.feedError().length > 0 && this.displayedMoments().length === 0) {
+              // 内联错误态（非整页居中大卡片）：单条流加载失败属"单请求失败"，
+              // 应保持页面上下文、就近给出重试；整页阻断态只留给"整页不可用"
+              // （2026-10-21 端上反馈 + 空态设计调研结论）。
               EmptyState({
                 icon: AppIcon.WARNING,
                 title: '内容加载失败',
                 message: this.feedError(),
-                fillMode: true,
+                bare: true,
                 actionLabel: '重试',
                 onAction: () => { this.reloadFeed(); }
               })
+              .padding({ top: DesignConstants.SPACING.XXL })
             } else if (this.displayedMoments().length === 0) {
               this.buildEmptyState()
             } else {
@@ -198,14 +202,16 @@ export struct HomePage {
   /** 空态：两个流都为空时才出现（一条流的通用空态） */
   @Builder
   private buildEmptyState() {
+    // 同理：空态也用无卡内联形态，避免整页一张大卡悬在中间
     EmptyState({
       icon: AppIcon.NEARBY,
       title: '还没有内容',
       message: '去附近看看，或者发布第一条动态。',
-      fillMode: true,
+      bare: true,
       actionLabel: '去附近看看',
       onAction: () => AppRouter.push(PageNames.NEARBY)
     })
+    .padding({ top: DesignConstants.SPACING.XXL })
   }
 
   /** 一条流的动态列表（复用既有活动行原语，与「附近瞬间」行样式一致；无分组小标题） */
@@ -241,7 +247,8 @@ export struct HomePage {
         SurfaceIconButton({
           icon: AppIcon.SEARCH,
           accessibilityLabel: '搜索',
-          kind: 'neutral',
+          // surface：表面底 + hairline 描边，对齐 web 的 .action-icon-btn（此前透明底显得又小又散）
+          kind: 'surface',
           buttonSize: 36,
           onPress: () => AppRouter.push(PageNames.SEARCH)
         })
@@ -249,7 +256,8 @@ export struct HomePage {
         SurfaceIconButton({
           icon: AppIcon.NOTIFICATION,
           accessibilityLabel: '通知',
-          kind: 'neutral',
+          // surface：表面底 + hairline 描边，对齐 web 的 .action-icon-btn（此前透明底显得又小又散）
+          kind: 'surface',
           buttonSize: 36,
           onPress: () => AppStorage.setOrCreate<boolean>('openNotificationCenter', true)
         })
@@ -257,7 +265,8 @@ export struct HomePage {
         SurfaceIconButton({
           icon: AppIcon.MAP,
           accessibilityLabel: '地图',
-          kind: 'neutral',
+          // surface：表面底 + hairline 描边，对齐 web 的 .action-icon-btn（此前透明底显得又小又散）
+          kind: 'surface',
           buttonSize: 36,
           onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
         })
