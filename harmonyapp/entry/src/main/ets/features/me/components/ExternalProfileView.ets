@@ -188,8 +188,8 @@ export struct ExternalProfileView {
           .width('100%')
           .justifyContent(FlexAlign.Start)
           .padding({
-            left: DesignConstants.SPACING.LG2,
-            right: DesignConstants.SPACING.LG2,
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
             top: DesignConstants.SPACING.MD,
             bottom: DesignConstants.SPACING.LG
           })
@@ -230,8 +230,8 @@ export struct ExternalProfileView {
         }
         .width('100%')
         .padding({
-          left: DesignConstants.SPACING.LG2,
-          right: DesignConstants.SPACING.LG2,
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
           top: DesignConstants.SPACING.MD,
           bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
         })

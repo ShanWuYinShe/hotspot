@@ -221,8 +221,8 @@ export struct CreateMomentSheet {
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground })
           .borderRadius(DesignConstants.RADIUS.FULL)
           .padding({
-            left: DesignConstants.SPACING.MD2,
-            right: DesignConstants.SPACING.MD2,
+            left: DesignConstants.SPACING.MD,
+            right: DesignConstants.SPACING.MD,
             top: DesignConstants.SPACING.THREE,
             bottom: DesignConstants.SPACING.THREE
           })
@@ -596,8 +596,8 @@ export struct CreateMomentSheet {
         })
         .borderRadius(DesignConstants.RADIUS.FULL)
         .padding({
-          left: DesignConstants.SPACING.LG2,
-          right: DesignConstants.SPACING.LG2,
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
           top: DesignConstants.SPACING.SM2,
           bottom: DesignConstants.SPACING.SM2
         })

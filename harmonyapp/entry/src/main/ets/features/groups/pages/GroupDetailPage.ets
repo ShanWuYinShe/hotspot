@@ -1499,7 +1499,7 @@ export struct GroupDetailPage {
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
                 .fontColor(DesignConstants.COLOR.WHITE)
-                .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+                .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .backgroundBlurStyle(BlurStyle.Thin)
                 .backgroundColor(AppThemeVisuals.withAlpha(DesignConstants.COLOR.BLACK, 0.25))

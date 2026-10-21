@@ -610,7 +610,7 @@ export struct MomentFeedCard {
             .borderRadius(DesignConstants.RADIUS.FULL)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
             .backgroundColor(DesignConstants.COLOR.IMAGE_BADGE_BG)
-            .margin({ right: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
+            .margin({ right: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
         }
       }
       .width('100%')

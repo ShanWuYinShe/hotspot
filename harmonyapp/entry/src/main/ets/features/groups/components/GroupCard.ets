@@ -169,8 +169,8 @@ export struct GroupCard {
           { width: 0 })
         .borderRadius(DesignConstants.RADIUS.FULL)
         .padding({
-          left: DesignConstants.SPACING.MD2,
-          right: DesignConstants.SPACING.MD2,
+          left: DesignConstants.SPACING.MD,
+          right: DesignConstants.SPACING.MD,
           top: DesignConstants.SPACING.THREE,
           bottom: DesignConstants.SPACING.THREE
         })

@@ -713,8 +713,8 @@ export struct MomentDetailPage {
                 .fontColor(this.getCurrentThemePalette().accentText)
                 .backgroundColor(this.getCurrentThemePalette().accentBackground)
                 .padding({
-                  left: DesignConstants.SPACING.MD2,
-                  right: DesignConstants.SPACING.MD2,
+                  left: DesignConstants.SPACING.MD,
+                  right: DesignConstants.SPACING.MD,
                   top: DesignConstants.SPACING.XS,
                   bottom: DesignConstants.SPACING.XS
                 })

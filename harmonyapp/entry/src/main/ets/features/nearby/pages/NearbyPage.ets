@@ -419,8 +419,8 @@ export struct NearbyPage {
     .padding({
       top: 18,
       bottom: 18,
-      left: DesignConstants.SPACING.LG2,
-      right: DesignConstants.SPACING.LG2
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG
     })
     .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)

@@ -140,8 +140,8 @@ export struct SearchPageHeader {
       }
       .width('100%')
       .padding({
-        left: DesignConstants.SPACING.LG2,
-        right: DesignConstants.SPACING.LG2,
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0),
         bottom: DesignConstants.SPACING.MD
       })

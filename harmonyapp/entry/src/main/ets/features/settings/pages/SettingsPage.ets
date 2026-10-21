@@ -1061,7 +1061,7 @@ export struct SettingsPage {
           .fontSize(DesignConstants.FONT.SIZE.XS)
           .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
           .fontColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentText : this.getThemeOptionPalette(option).accentBackground)
-          .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
           .backgroundColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).surfaceSubtle)
           .borderRadius(DesignConstants.SHAPE.CHIP)
       }

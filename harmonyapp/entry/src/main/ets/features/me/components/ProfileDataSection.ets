@@ -81,8 +81,8 @@ export struct ProfileDataSection {
       }
       .width('100%')
       .padding({
-        left: DesignConstants.SPACING.LG2,
-        right: DesignConstants.SPACING.LG2,
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
         top: DesignConstants.SPACING.LG,
         bottom: DesignConstants.SPACING.LG
       })
