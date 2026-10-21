@@ -122,6 +122,7 @@ export struct ShareResolutionPage {
             .layoutWeight(1)
         } else {
           EmptyState({
+            bare: true,
             icon: AppIcon.WARNING,
             message: this.errorMessage,
             actionLabel: '返回首页',

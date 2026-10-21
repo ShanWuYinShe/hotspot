@@ -346,6 +346,7 @@ export struct NearbyUsersListPage {
             .layoutWeight(1)
         } else if (!this.hasAnyData() && this.errorMessage) {
           EmptyState({
+            bare: true,
             icon: AppIcon.WARNING,
             message: this.errorMessage,
             // 「位置信息不可用」的根因是用户没选浏览位置，重试只会再次失败 —— 引导去选位置。
@@ -362,6 +363,7 @@ export struct NearbyUsersListPage {
             .layoutWeight(1)
         } else if (!this.hasAnyData()) {
           EmptyState({
+            bare: true,
             icon: AppIcon.COMPASS,
             title: '附近暂无其他用户',
             message: '可稍后再来，或发布一条动态让附近的人发现你',

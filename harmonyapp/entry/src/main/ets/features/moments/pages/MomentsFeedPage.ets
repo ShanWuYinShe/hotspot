@@ -321,6 +321,7 @@ export struct MomentsFeedPage {
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })))
       } else if (!this.hasAnyData() && this.errorMessage) {
         EmptyState({
+          bare: true,
           icon: AppIcon.WARNING,
           message: this.errorMessage,
           actionLabel: '重试',
@@ -421,6 +422,7 @@ export struct MomentsFeedPage {
         if (this.activeTag) {
           // 标签过滤后为空：提供「查看全部」退出过滤
           EmptyState({
+            bare: true,
             icon: AppIcon.RECOMMEND,
             message: `「${this.activeTag}」标签下暂时没有动态`,
             actionLabel: '查看全部',
@@ -429,6 +431,7 @@ export struct MomentsFeedPage {
             .layoutWeight(1)
         } else {
           EmptyState({
+            bare: true,
             icon: AppIcon.RECOMMEND,
             message: '附近暂时没有瞬间',
             // 「刷新」对"这片区域暂时没人发"帮助有限；直接给发布入口，对齐 web 空态的引导

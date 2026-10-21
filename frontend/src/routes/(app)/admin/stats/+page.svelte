@@ -219,7 +219,7 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.stats.read 权限" />
+	<EmptyState title="无访问权限" description="需要 admin.stats.read 权限" bare />
 {:else}
 	<div class="mx-auto flex w-full max-w-5xl flex-col gap-4">
 		<!-- 全站存量：指标统一走 MetricRow 单卡（原 4 张独立小卡 = 4 套边框/间距） -->
@@ -313,7 +313,7 @@
 			<section aria-label="区域排名" class="flex flex-col gap-2">
 				<h2 class="text-md font-semibold text-text-primary">区域排名（S2 网格 · {LEVELS.find((l) => Number(l.id) === level)?.label ?? level}）<span class="ml-2 text-xs font-normal text-text-secondary">点击“明细”查看该网格</span></h2>
 				{#if data.regions.length === 0}
-					<EmptyState title="暂无地理数据" description="当前筛选条件下没有带位置的数据" />
+					<EmptyState title="暂无地理数据" description="当前筛选条件下没有带位置的数据" bare />
 				{:else}
 					<div class={TABLE_WRAP} use:scrollFade>
 						<table class={TABLE}>
@@ -376,7 +376,7 @@
 					{:else if drillError}
 						<LoadError message={drillError} onRetry={() => void loadDrill(false)} />
 					{:else if drillItems.length === 0}
-						<EmptyState title="该网格暂无此类数据" />
+						<EmptyState title="该网格暂无此类数据" bare />
 					{:else}
 						<div class="flex flex-col">
 							{#each drillItems as item (item.object_id + item.created_at)}
@@ -407,7 +407,7 @@
 			<section aria-label="热门地点" class="flex flex-col gap-2">
 				<h2 class="text-md font-semibold text-text-primary">热门地点（按地点名聚合）</h2>
 				{#if data.places.length === 0}
-					<EmptyState title="暂无地点数据" description="当前筛选条件下没有非空地点名" />
+					<EmptyState title="暂无地点数据" description="当前筛选条件下没有非空地点名" bare />
 				{:else}
 					<div class={TABLE_WRAP} use:scrollFade>
 						<table class={TABLE}>

@@ -291,6 +291,7 @@ export struct NearbyGroupsListPage {
           // 错误分流动作：位置不可用属「重试不可解」死路（同 r70/r15 模式），
           // 引导直达位置设置页；其余错误维持重试
           EmptyState({
+            bare: true,
             icon: AppIcon.WARNING,
             message: this.errorMessage,
             actionLabel: this.errorMessage.includes('位置信息不可用') ? '去设置位置' : '重试',
@@ -306,6 +307,7 @@ export struct NearbyGroupsListPage {
         } else if (!this.hasAnyData()) {
           // 空态引导（r41/r42）：仅静态文本无下一步路径，补「创建群组」直达
           EmptyState({
+            bare: true,
             icon: AppIcon.GROUP,
             message: '附近暂无群组，可稍后再来或调整浏览位置',
             actionLabel: '创建群组',

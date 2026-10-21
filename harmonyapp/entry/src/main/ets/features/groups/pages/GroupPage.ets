@@ -522,7 +522,8 @@ export struct GroupPage {
                   .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
               )
           } else if (this.errorMessage && this.groups.length === 0) {
-            EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadMyGroups(); } })
+            EmptyState({
+          bare: true, icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadMyGroups(); } })
               .layoutWeight(1)
               .transition(
                 TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -530,7 +531,8 @@ export struct GroupPage {
               )
           } else if (this.groups.length === 0) {
             Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-              EmptyState({ icon: AppIcon.GROUP, message: '还没有加入任何群组\n去附近发现感兴趣的小组吧！' })
+              EmptyState({
+          bare: true, icon: AppIcon.GROUP, message: '还没有加入任何群组\n去附近发现感兴趣的小组吧！' })
             }
             .layoutWeight(1)
             .onRefreshing(() => { this.loadMyGroups(true); })
@@ -592,10 +594,12 @@ export struct GroupPage {
       if (this.invitesLoading && this.myInvites.length === 0) {
         SystemLoadingView({ message: '加载邀请中…' }).layoutWeight(1)
       } else if (this.myInvites.length === 0 && this.invitesError) {
-        EmptyState({ icon: AppIcon.WARNING, message: this.invitesError, actionLabel: '重试', onAction: () => this.loadMyInvites() })
+        EmptyState({
+          bare: true, icon: AppIcon.WARNING, message: this.invitesError, actionLabel: '重试', onAction: () => this.loadMyInvites() })
           .layoutWeight(1)
       } else if (this.myInvites.length === 0) {
-        EmptyState({ icon: AppIcon.EMPTY, message: '暂无待处理邀请' }).layoutWeight(1)
+        EmptyState({
+          bare: true, icon: AppIcon.EMPTY, message: '暂无待处理邀请' }).layoutWeight(1)
       } else {
         List() {
           ListItemGroup() {
@@ -723,10 +727,12 @@ export struct GroupPage {
       if (this.applicationsLoading && this.myApplications.length === 0) {
         SystemLoadingView({ message: '加载申请中…' }).layoutWeight(1)
       } else if (this.myApplications.length === 0 && this.applicationsError) {
-        EmptyState({ icon: AppIcon.WARNING, message: this.applicationsError, actionLabel: '重试', onAction: () => this.loadMyApplications() })
+        EmptyState({
+          bare: true, icon: AppIcon.WARNING, message: this.applicationsError, actionLabel: '重试', onAction: () => this.loadMyApplications() })
           .layoutWeight(1)
       } else if (this.myApplications.length === 0) {
-        EmptyState({ icon: AppIcon.EMPTY, message: '暂无待处理申请' }).layoutWeight(1)
+        EmptyState({
+          bare: true, icon: AppIcon.EMPTY, message: '暂无待处理申请' }).layoutWeight(1)
       } else {
         List() {
           ListItemGroup() {

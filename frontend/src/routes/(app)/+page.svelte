@@ -224,7 +224,7 @@
 		{:else if discover.items.length > 0}
 			{@render momentRows(discover, followingIds)}
 		{:else if !following.loading && following.items.length === 0}
-			<EmptyState title="还没有内容" description="去附近看看，或者发布第一条动态。">
+			<EmptyState title="还没有内容" description="去附近看看，或者发布第一条动态。" bare>
 				{#snippet icon()}
 					<Sparkles class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 				{/snippet}

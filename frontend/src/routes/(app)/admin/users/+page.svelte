@@ -90,7 +90,7 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.users.read 权限" />
+	<EmptyState title="无访问权限" description="需要 admin.users.read 权限" bare />
 {:else}
 	<div class="flex flex-col gap-4">
 		<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -116,7 +116,7 @@
 		{:else if list.error}
 			<LoadError message={list.error} onRetry={list.reload} />
 		{:else if list.count === 0}
-			<EmptyState title="没有匹配的用户" />
+			<EmptyState title="没有匹配的用户" bare />
 		{:else}
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>

@@ -238,6 +238,7 @@ export struct MySharesPage {
           .layoutWeight(1)
       } else if (this.errorMessage && this.shares.length === 0) {
         EmptyState({
+          bare: true,
           icon: AppIcon.WARNING,
           message: this.errorMessage,
           actionLabel: '重试',
@@ -246,7 +247,8 @@ export struct MySharesPage {
           .layoutWeight(1)
       } else if (this.shares.length === 0) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          EmptyState({ icon: AppIcon.SHARE, message: '暂无分享记录\n创建分享后即可在这里管理' })
+          EmptyState({
+          bare: true, icon: AppIcon.SHARE, message: '暂无分享记录\n创建分享后即可在这里管理' })
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.refreshShares(); })

@@ -124,6 +124,7 @@ struct AdminOverviewPage {
           SystemLoadingView({ message: '加载管理权限…' }).layoutWeight(1)
         } else if (this.errorMessage.length > 0 && this.permissions.length === 0) {
           EmptyState({
+            bare: true,
             icon: AppIcon.SHIELD,
             message: this.errorMessage,
             actionLabel: '重试',

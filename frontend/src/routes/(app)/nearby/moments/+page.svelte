@@ -261,7 +261,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => { clearMomentsProgress(); reloadKey++; }} />
 	{:else}
-		<EmptyState title="附近暂时没有瞬间">
+		<EmptyState title="附近暂时没有瞬间" bare>
 			{#snippet icon()}
 				<Sparkles size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
 			{/snippet}

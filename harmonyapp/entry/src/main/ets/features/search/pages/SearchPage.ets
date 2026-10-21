@@ -485,6 +485,7 @@ export struct SearchPage {
             if (this.searchError.length > 0) {
               // 搜索失败内联错误态（P2-4）：EmptyState + 重试动作，替代纯 toast
               EmptyState({
+                bare: true,
                 icon: AppIcon.WARNING,
                 title: '搜索失败',
                 message: this.searchError,

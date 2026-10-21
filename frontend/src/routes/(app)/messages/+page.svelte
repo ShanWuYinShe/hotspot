@@ -333,7 +333,7 @@
 				</div>
 			{:else}
 				<div class="h-full flex items-center justify-center">
-					<EmptyState title="选择一个会话" description="从左侧选择一个会话开始聊天" class="h-full justify-center py-0!">
+					<EmptyState title="选择一个会话" description="从左侧选择一个会话开始聊天" class="h-full justify-center py-0!" bare>
 						{#snippet icon()}
 							<MessageSquareDashed class="size-9 opacity-muted text-text-secondary" strokeWidth={1.5} />
 						{/snippet}

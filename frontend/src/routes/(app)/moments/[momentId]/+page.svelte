@@ -547,7 +547,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else if !moment.id}
-		<EmptyState title="动态不存在" description="这条动态可能已被删除或没有权限查看。">
+		<EmptyState title="动态不存在" description="这条动态可能已被删除或没有权限查看。" bare>
 			{#snippet icon()}
 				<MoreHorizontal class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 			{/snippet}

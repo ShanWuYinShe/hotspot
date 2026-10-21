@@ -104,7 +104,7 @@
 		<InlineLoading label="搜索中…" />
 	{:else if !hasResults || tabEmpty}
 		<!-- 空态统一 EmptyState（对齐全局空态契约） -->
-		<EmptyState title={`没有找到“${query}”`} description="换个关键词再试试。">
+		<EmptyState title={`没有找到“${query}”`} description="换个关键词再试试。" bare>
 			{#snippet icon()}
 				<SearchIcon class="size-6 text-text-secondary" strokeWidth={1.5} />
 			{/snippet}

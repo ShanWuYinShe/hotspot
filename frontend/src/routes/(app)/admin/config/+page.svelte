@@ -129,7 +129,7 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.app_config.read 权限" />
+	<EmptyState title="无访问权限" description="需要 admin.app_config.read 权限" bare />
 {:else if loading}
 	<InlineLoading label="加载应用配置…" />
 {:else if error}

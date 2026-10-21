@@ -62,6 +62,7 @@ export struct GroupApplicationListSheet {
         SystemLoadingView({ message: '加载入群申请中…' }).layoutWeight(1)
       } else if (this.applications.length === 0 && this.applicationsErrorMessage) {
         EmptyState({
+          bare: true,
           icon: AppIcon.WARNING,
           title: this.applicationsErrorMessage,
           actionLabel: '重试',

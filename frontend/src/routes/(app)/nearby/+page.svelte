@@ -157,7 +157,7 @@
 	{:else if error}
 		<LoadError message={error} onRetry={() => reloadKey++} />
 	{:else if moments.length === 0 && visibleNearbyUsers.length === 0 && nearbyGroups.length === 0}
-		<EmptyState title="附近还没有内容" description="去发布第一条动态，或换个位置看看。">
+		<EmptyState title="附近还没有内容" description="去发布第一条动态，或换个位置看看。" bare>
 			{#snippet icon()}
 				<MapPin class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 			{/snippet}

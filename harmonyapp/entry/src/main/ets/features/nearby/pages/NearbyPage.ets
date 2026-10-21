@@ -167,12 +167,14 @@ export struct NearbyPage {
                 .padding({ top: DesignConstants.SPACING.XL })
             } else if (this.loadError !== '') {
               EmptyState({
+                bare: true,
                 title: this.loadError,
                 message: '下拉或稍后重试'
               })
               .width('100%')
             } else if (!this.hasAnyNearbyData()) {
               EmptyState({
+                bare: true,
                 title: '附近还没有内容',
                 message: '去发布第一条动态，或到附近的人认识新朋友。',
                 actionLabel: '去发瞬间',

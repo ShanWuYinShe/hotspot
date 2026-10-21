@@ -123,7 +123,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		{:else if error}
 			<LoadError message={error} onRetry={onRetry} />
 		{:else if items.length === 0}
-			<EmptyState title={emptyTitle} description={emptyDescription}>
+			<EmptyState title={emptyTitle} description={emptyDescription} bare>
 				{#snippet icon()}
 					<emptyIcon size={24}></emptyIcon>
 				{/snippet}

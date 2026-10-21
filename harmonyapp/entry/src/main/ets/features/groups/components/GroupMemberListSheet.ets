@@ -66,6 +66,7 @@ export struct GroupMemberListSheet {
         SystemLoadingView({ message: '加载成员列表中…' }).layoutWeight(1)
       } else if (this.members.length === 0 && this.membersErrorMessage) {
         EmptyState({
+          bare: true,
           icon: AppIcon.WARNING,
           title: this.membersErrorMessage,
           actionLabel: '重试',

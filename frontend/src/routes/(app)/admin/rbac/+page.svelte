@@ -237,7 +237,7 @@
 </svelte:head>
 
 {#if !canManage}
-	<EmptyState title="无访问权限" description="需要 admin.rbac.manage 权限" />
+	<EmptyState title="无访问权限" description="需要 admin.rbac.manage 权限" bare />
 {:else}
 	<div class="mx-auto flex w-full max-w-5xl flex-col gap-8">
 		<!-- 角色管理 -->

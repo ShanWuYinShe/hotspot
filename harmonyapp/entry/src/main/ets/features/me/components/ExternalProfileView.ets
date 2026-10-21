@@ -62,6 +62,7 @@ export struct ExternalProfileView {
         .layoutWeight(1)
     } else if (this.errorMessage.length > 0 || !this.hasProfile) {
       EmptyState({
+        bare: true,
         icon: AppIcon.WARNING,
         message: this.errorMessage.length > 0 ? this.errorMessage : '未找到该用户',
         actionLabel: '重试',

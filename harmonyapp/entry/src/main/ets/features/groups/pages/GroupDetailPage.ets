@@ -1583,6 +1583,7 @@ export struct GroupDetailPage {
           )
       } else if (this.errorMessage) {
         EmptyState({
+          bare: true,
           icon: AppIcon.WARNING,
           title: this.errorMessage,
           actionLabel: '重试',
@@ -2664,6 +2665,7 @@ export struct GroupDetailPage {
       } else if (this.inviteSearchError.length > 0) {
         Column() {
           EmptyState({
+            bare: true,
             icon: AppIcon.WARNING,
             title: this.inviteSearchError,
             actionLabel: '重试',

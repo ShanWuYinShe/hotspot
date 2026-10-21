@@ -263,6 +263,7 @@ export struct MomentPage {
             .layoutWeight(1)
           } else if (!this.hasData && this.errorMessage) {
             EmptyState({
+              bare: true,
               icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试',
               onAction: () => { this.isLoading = true; this.loadNearbyMoments(true); }
             })
@@ -273,7 +274,8 @@ export struct MomentPage {
               )
           } else if (!this.hasData) {
             Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-              EmptyState({ icon: AppIcon.CAMERA, message: '还没有发布过瞬间\n快来分享第一个吧！' })
+              EmptyState({
+          bare: true, icon: AppIcon.CAMERA, message: '还没有发布过瞬间\n快来分享第一个吧！' })
             }
             .layoutWeight(1)
             .onRefreshing(() => { this.loadNearbyMoments(true); })

@@ -501,6 +501,7 @@ export struct MomentDetailPage {
           SystemLoadingView({ message: '正在加载瞬间详情…' })
         } else if (!this.moment) {
           EmptyState({
+            bare: true,
             icon: AppIcon.WARNING,
             message: this.errorMessage || '动态不存在或已被删除',
             actionLabel: '重试',

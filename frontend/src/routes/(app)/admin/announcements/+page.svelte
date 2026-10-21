@@ -119,7 +119,7 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.announcements.read 权限" />
+	<EmptyState title="无访问权限" description="需要 admin.announcements.read 权限" bare />
 {:else}
 	<div class="flex flex-col gap-4">
 		{#if canWrite}
@@ -133,7 +133,7 @@
 		{:else if list.error}
 			<LoadError message={list.error} onRetry={list.reload} />
 		{:else if list.count === 0}
-			<EmptyState title="还没有系统公告" />
+			<EmptyState title="还没有系统公告" bare />
 		{:else}
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>

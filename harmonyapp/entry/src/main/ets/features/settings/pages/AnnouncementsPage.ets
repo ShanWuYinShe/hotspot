@@ -93,6 +93,7 @@ export struct AnnouncementsPage {
             .width('100%')
         } else if (!this.loading && this.announcements.length === 0) {
           EmptyState({
+            bare: true,
             icon: AppIcon.NOTIFICATION,
             message: '暂无系统公告',
             actionLabel: '刷新',

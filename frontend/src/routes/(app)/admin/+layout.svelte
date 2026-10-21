@@ -94,7 +94,7 @@
 	{:else if !admin.loaded}
 		<InlineLoading label="校验平台管理员权限…" />
 	{:else if !admin.isAdmin}
-		<EmptyState title="无访问权限" description="当前账号不是平台管理员，如需权限请联系超级管理员。">
+		<EmptyState title="无访问权限" description="当前账号不是平台管理员，如需权限请联系超级管理员。" bare>
 			{#snippet icon()}
 				<Shield class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 			{/snippet}

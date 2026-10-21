@@ -90,7 +90,7 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.audit.read 权限" />
+	<EmptyState title="无访问权限" description="需要 admin.audit.read 权限" bare />
 {:else}
 	<div class="flex flex-col gap-4">
 		<!-- 筛选区：移动端两列网格（原为 5 个控件竖向堆叠，实测 241px，把表格推到 y=389，
@@ -128,7 +128,7 @@
 		{:else if list.error}
 			<LoadError message={list.error} onRetry={list.reload} />
 		{:else if list.count === 0}
-			<EmptyState title="没有匹配的日志" />
+			<EmptyState title="没有匹配的日志" bare />
 		{:else}
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>

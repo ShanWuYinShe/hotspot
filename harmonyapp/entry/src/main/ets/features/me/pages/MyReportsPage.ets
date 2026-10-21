@@ -203,6 +203,7 @@ export struct MyReportsPage {
             .layoutWeight(1)
         } else if (this.reports.length === 0 && this.errorMessage) {
           EmptyState({
+            bare: true,
             icon: AppIcon.WARNING,
             message: this.errorMessage,
             actionLabel: '重试',
@@ -211,6 +212,7 @@ export struct MyReportsPage {
             .layoutWeight(1)
         } else if (this.reports.length === 0) {
           EmptyState({
+            bare: true,
             icon: AppIcon.EMPTY,
             title: '暂无举报记录',
             message: '在动态、评论或聊天中遇到违规内容时，可通过「举报」提交，处理结果会在这里同步。',

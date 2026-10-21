@@ -1198,6 +1198,7 @@ export struct ChatPage {
           )
       } else if (this.messages.length === 0 && this.errorMessage) {
         EmptyState({
+          bare: true,
           icon: AppIcon.WARNING,
           message: this.errorMessage,
           actionLabel: '重试',
@@ -1216,6 +1217,7 @@ export struct ChatPage {
           )
       } else if (this.messages.length === 0) {
         EmptyState({
+          bare: true,
           icon: AppIcon.MESSAGE,
           title: '暂无消息',
           message: '发送一条消息开始聊天吧',

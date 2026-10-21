@@ -771,7 +771,8 @@ export struct MessagePage {
         .layoutWeight(1)
       } else if (!this.hasData && this.errorMessage) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadData(true); } })
+          EmptyState({
+          bare: true, icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadData(true); } })
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true, true); })
