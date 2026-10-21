@@ -260,8 +260,8 @@ export struct MomentWallCard {
       .padding({
         left: DesignConstants.SPACING.MD,
         right: DesignConstants.SPACING.MD,
-        top: DesignConstants.SPACING.MD2,
-        bottom: DesignConstants.SPACING.MD2
+        top: DesignConstants.SPACING.MD,
+        bottom: DesignConstants.SPACING.MD
       })
     }
   }

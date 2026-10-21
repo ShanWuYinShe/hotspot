@@ -55,7 +55,7 @@ export struct ProfileIdentityCard {
     .layoutWeight(1)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .padding({ top: DesignConstants.SPACING.MD3, bottom: DesignConstants.SPACING.MD3 })
+    .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
   }
 
   /** 卡内操作行按钮：前端 border + bg-surface-primary + rounded-md + shadow-raised-sm + text-xs(11) + icon 14 */

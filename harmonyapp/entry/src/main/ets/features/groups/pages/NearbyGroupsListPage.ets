@@ -276,7 +276,7 @@ export struct NearbyGroupsListPage {
         .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
         }
         .width('100%')
-        .padding({ bottom: DesignConstants.SPACING.MD3 })
+        .padding({ bottom: DesignConstants.SPACING.LG })
         .border({
           width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
           color: this.getCurrentThemePalette().borderColor
@@ -342,7 +342,7 @@ export struct NearbyGroupsListPage {
                 // 移动/平板端首卡 featured 全宽精选大卡（前端 mb-5=20）
                 if (this.getFeaturedGroup()) {
                   GroupCard({ group: this.getFeaturedGroup() as GroupItem, featured: true })
-                    .margin({ bottom: DesignConstants.SPACING.LG2 })
+                    .margin({ bottom: DesignConstants.SPACING.LG })
                 }
 
                 // 2/3 列图片卡墙

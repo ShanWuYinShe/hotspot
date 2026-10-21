@@ -394,7 +394,7 @@ export struct CreateMomentPage {
           }
         }
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-        .margin({ bottom: DesignConstants.SPACING.MD3 })
+        .margin({ bottom: DesignConstants.SPACING.LG })
 
         ListItem() {
           SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
@@ -515,7 +515,7 @@ export struct CreateMomentPage {
           }
         }
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-        .margin({ bottom: DesignConstants.SPACING.MD3 })
+        .margin({ bottom: DesignConstants.SPACING.LG })
 
         ListItem() {
           SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
@@ -565,7 +565,7 @@ export struct CreateMomentPage {
           }
         }
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-        .margin({ bottom: DesignConstants.SPACING.MD3 })
+        .margin({ bottom: DesignConstants.SPACING.LG })
 
         ListItem() {
           SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {

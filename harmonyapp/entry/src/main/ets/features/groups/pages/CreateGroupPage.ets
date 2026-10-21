@@ -455,7 +455,7 @@ export struct CreateGroupPage {
             .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .margin({ bottom: DesignConstants.SPACING.MD3 })
+            .margin({ bottom: DesignConstants.SPACING.LG })
 
             // 群组头像
             this.SectionHeader('群组头像')
@@ -515,7 +515,7 @@ export struct CreateGroupPage {
             .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .margin({ bottom: DesignConstants.SPACING.MD3 })
+            .margin({ bottom: DesignConstants.SPACING.LG })
 
             // 位置信息
             this.SectionHeader('位置信息')
@@ -565,7 +565,7 @@ export struct CreateGroupPage {
             .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .margin({ bottom: DesignConstants.SPACING.MD3 })
+            .margin({ bottom: DesignConstants.SPACING.LG })
 
             // 隐私与限制
             this.SectionHeader('隐私与限制')
@@ -719,7 +719,7 @@ export struct CreateGroupPage {
             .borderRadius(DesignConstants.RADIUS.LG)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .margin({ bottom: DesignConstants.SPACING.MD3 })
+            .margin({ bottom: DesignConstants.SPACING.LG })
           }
           .padding({
             left: DesignConstants.SPACING.LG,

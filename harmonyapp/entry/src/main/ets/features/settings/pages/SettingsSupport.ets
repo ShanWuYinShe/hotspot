@@ -261,7 +261,7 @@ export struct SettingsEntryRow {
       })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD3, bottom: DesignConstants.SPACING.MD3 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
     // 行只保留按压填充：分组外框与行间分隔线由 SettingsSectionCard（ListGroup 契约）承担。
     // 原为行级白卡背景 + 圆角（getListItemCardStyle），导致「一行一张浮卡」。
     .backgroundColor(this.isPressed ? this.getPalette().surfaceSubtle : DesignConstants.COLOR.TRANSPARENT)
@@ -322,7 +322,7 @@ export struct SettingsGroupLabel {
     .width('100%')
     // 分组标题与分组卡左边缘严格对齐：横向留白只由容器 gutter 提供
     .padding({
-      top: DesignConstants.SPACING.MD2,
+      top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.SM
     })
   }
@@ -392,7 +392,7 @@ export struct SettingsToggleRow {
       })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD3, bottom: DesignConstants.SPACING.MD3 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
     // 同 SettingsEntryRow：行不再自带卡片背景/圆角，容器（SettingsSectionCard）承担分组框
     .onClick(() => {
       if (!this.pending) {

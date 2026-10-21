@@ -715,8 +715,8 @@ export struct SearchPage {
                 .padding({
                   left: DesignConstants.SPACING.LG,
                   right: DesignConstants.SPACING.LG,
-                  top: DesignConstants.SPACING.MD3,
-                  bottom: DesignConstants.SPACING.MD3
+                  top: DesignConstants.SPACING.LG,
+                  bottom: DesignConstants.SPACING.LG
                 })
                 .onClick(() => { this.applyKeywordAndSearch(tag); })
               }, (tag: string) => `all-topic-${tag}`)

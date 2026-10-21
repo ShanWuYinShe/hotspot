@@ -264,7 +264,7 @@ export struct MomentFeedCard {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD2 })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD })
 
       if (this.moment.description) {
         Text(this.moment.description)
@@ -610,7 +610,7 @@ export struct MomentFeedCard {
             .borderRadius(DesignConstants.RADIUS.FULL)
             .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
             .backgroundColor(DesignConstants.COLOR.IMAGE_BADGE_BG)
-            .margin({ right: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
+            .margin({ right: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD })
         }
       }
       .width('100%')

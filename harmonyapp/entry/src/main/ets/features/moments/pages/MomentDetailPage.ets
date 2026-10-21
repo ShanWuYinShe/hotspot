@@ -952,7 +952,7 @@ export struct MomentDetailPage {
     }
     .width('100%')
     // 对齐前端：正文→评论区标题 mt-5(20)；横向留白由页面 gutter 包装层提供
-    .margin({ top: DesignConstants.SPACING.LG2 })
+    .margin({ top: DesignConstants.SPACING.LG })
     .alignItems(HorizontalAlign.Start)
   }
 

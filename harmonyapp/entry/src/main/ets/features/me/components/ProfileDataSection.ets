@@ -83,8 +83,8 @@ export struct ProfileDataSection {
       .padding({
         left: DesignConstants.SPACING.LG2,
         right: DesignConstants.SPACING.LG2,
-        top: DesignConstants.SPACING.MD3,
-        bottom: DesignConstants.SPACING.MD3
+        top: DesignConstants.SPACING.LG,
+        bottom: DesignConstants.SPACING.LG
       })
     }
   }
@@ -136,6 +136,6 @@ export struct ProfileDataSection {
     .width('100%')
     .alignItems(HorizontalAlign.Start)
     // 前端「个人数据」分组 mt-5(20)
-    .margin({ top: DesignConstants.SPACING.LG2 })
+    .margin({ top: DesignConstants.SPACING.LG })
   }
 }

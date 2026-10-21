@@ -490,7 +490,7 @@ export struct ProfileEditPage {
         }
       }
       .width('100%')
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD2, bottom: DesignConstants.SPACING.MD2 })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
       .backgroundColor(this.getSurfaceSubtle())
       .borderRadius(DesignConstants.SHAPE.INPUT)
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.fieldBorder(focused, error.length > 0).borderColor })

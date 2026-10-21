@@ -401,7 +401,7 @@ export struct LoginPage {
               .borderRadius(DesignConstants.RADIUS.LG)
               .shadow(this.getCurrentThemePalette().surfaceShadow)
               .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-              .margin({ bottom: DesignConstants.SPACING.MD3 })
+              .margin({ bottom: DesignConstants.SPACING.LG })
             }
             .width('100%')
             .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL,

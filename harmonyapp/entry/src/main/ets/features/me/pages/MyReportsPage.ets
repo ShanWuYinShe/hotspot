@@ -191,7 +191,7 @@ export struct MyReportsPage {
         .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
         }
         .width('100%')
-        .padding({ bottom: DesignConstants.SPACING.MD3 })
+        .padding({ bottom: DesignConstants.SPACING.LG })
         .border({
           width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
           color: this.getCurrentThemePalette().borderColor

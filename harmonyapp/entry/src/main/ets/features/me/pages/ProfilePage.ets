@@ -997,7 +997,7 @@ export struct ProfilePage {
               .borderRadius(DesignConstants.SHAPE.BUTTON)
               .backgroundColor(this.getSurfaceBackground())
               .shadow(this.getCurrentThemePalette().controlShadow)
-              .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG2 })
+              .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
               .onClick(() => this.startEdit())
 
               ProfileStatsRow({

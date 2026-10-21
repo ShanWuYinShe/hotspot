@@ -158,7 +158,7 @@ export struct ExternalProfileView {
                   .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
               }
               .width('100%')
-              .padding({ top: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.LG2 })
+              .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
               .alignItems(HorizontalAlign.Center)
             } else {
               Column({ space: DesignConstants.SPACING.SM }) {

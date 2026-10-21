@@ -721,7 +721,7 @@ export struct MessagePage {
         }
       })
       // 对齐前端：搜索框距标题行 mt-3(12)、距页头下缘 pb-3.5(14)
-      .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD3 })
+      .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.LG })
 
       // 宽屏（master-detail）提示：当前点击会话仍 push 独立页（保持聊天功能完整）
       if (useMasterDetail(this.currentBreakpoint)) {
@@ -832,7 +832,7 @@ export struct MessagePage {
                   // 对齐前端「最近」小标：px-4 mt-3 mb-1.5 + 列表 mt-1（横向留白由 PageShellContainer 提供）
                   .padding({
                     top: DesignConstants.SPACING.MD,
-                    bottom: DesignConstants.SPACING.MD2
+                    bottom: DesignConstants.SPACING.MD
                   })
               }
             }
@@ -923,7 +923,7 @@ export struct MessagePage {
         .textCase(TextCase.UpperCase)
         .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
         .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS2, DesignConstants.FONT.LINE_RATIO.DEFAULT))
-        .padding({ bottom: DesignConstants.SPACING.MD2 })
+        .padding({ bottom: DesignConstants.SPACING.MD })
 
       Scroll() {
         Row({ space: DesignConstants.SPACING.LG }) {

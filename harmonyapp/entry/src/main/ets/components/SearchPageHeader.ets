@@ -143,7 +143,7 @@ export struct SearchPageHeader {
         left: DesignConstants.SPACING.LG2,
         right: DesignConstants.SPACING.LG2,
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0),
-        bottom: DesignConstants.SPACING.MD2
+        bottom: DesignConstants.SPACING.MD
       })
       .backgroundColor(this.getPalette().pageBackground)
       .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getPalette().borderColor })

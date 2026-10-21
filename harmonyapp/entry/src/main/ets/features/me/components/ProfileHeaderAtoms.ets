@@ -62,7 +62,7 @@ export struct ProfileAvatarBlock {
           height: DesignConstants.LAYOUT.MIN_HIT_TARGET
         })
       }
-      .margin({ top: DesignConstants.SPACING.LG2, bottom: DesignConstants.SPACING.MD })
+      .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD })
 
       Text(this.nickname)
         .fontSize(DesignConstants.FONT.SIZE.XL)
@@ -123,6 +123,6 @@ export struct ProfileStatsRow {
       width: DesignConstants.BORDER_WIDTH.HAIRLINE,
       color: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor
     })
-    .margin({ bottom: DesignConstants.SPACING.LG2 })
+    .margin({ bottom: DesignConstants.SPACING.LG })
   }
 }

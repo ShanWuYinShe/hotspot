@@ -307,7 +307,7 @@ export struct NearbyUsersListPage {
         .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
         }
         .width('100%')
-        .padding({ bottom: DesignConstants.SPACING.MD3 })
+        .padding({ bottom: DesignConstants.SPACING.LG })
         // 页头区块底部发丝线（对齐前端 header border-bottom：线在 below 之下）
         .border({
           width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
