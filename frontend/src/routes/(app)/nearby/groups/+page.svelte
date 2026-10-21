@@ -233,7 +233,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			     其余 BSP 满铺墙（高格子自动横排：图左 40% + 信息右面板），
 			     信息沉底观感由 GroupCard autoLandscape 兜底（横格>420px 自动切横排） -->
 			{#if featured}
-				<div class="mb-5">
+				<div class="mb-6">
 					<GroupCard featured horizontal group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 				</div>
 			{/if}
@@ -255,7 +255,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			</BspCardCanvas>
 			{:else}
 				{#if featured}
-					<div class="mb-5">
+					<div class="mb-6">
 						<GroupCard featured horizontal={isDesktop || isTablet} group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}

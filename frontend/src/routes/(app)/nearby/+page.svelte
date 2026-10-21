@@ -125,7 +125,9 @@
 	<title>附近 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-5 pt-4 pb-16">
+<!-- 页面根容器：直接承载 HeroStats + 三个带标题分区（人/瞬间/群组），按 RULES §2 例外用
+     分区间距 24（gap-6）；页底留白只由 contentClassName pb-6 提供 -->
+<StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-6 pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			title="附近"

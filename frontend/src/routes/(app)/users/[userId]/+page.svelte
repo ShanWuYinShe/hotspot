@@ -349,8 +349,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</div>
 	</div>
 
-	<!-- Avatar + 身份（gutter 由 SplitPageLayout 提供） -->
-	<div class="mt-5 flex flex-col pb-5">
+	<!-- Avatar + 身份（gutter 由 SplitPageLayout 提供）。
+	     页头操作行→正文资料块 16（页顶留白）；正文块之间 24；页底留白只由 contentClassName 的底内距提供，此处不再叠加底距 -->
+	<div class="mt-4 flex flex-col">
 				<div class="flex items-end justify-between gap-4">
 					<div class="flex min-w-0 items-center gap-4">
 						<div class="relative shrink-0">
@@ -383,15 +384,15 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				</div>
 
 			{#if blocked}
-				<div class="mt-5 flex items-center gap-2 rounded-sm ring-1 ring-status-danger-border bg-danger-bg px-3 py-2 text-sm text-status-danger">
+				<div class="mt-6 flex items-center gap-2 rounded-sm ring-1 ring-status-danger-border bg-danger-bg px-3 py-2 text-sm text-status-danger">
 					<UserX size={14} />
 					你已屏蔽此用户；关注和私信已停用。
 				</div>
 			{/if}
-			<p class="mt-5 max-w-115 text-sm leading-6 text-text-secondary">{user.bio || '这个人还没有填写简介。'}</p>
+			<p class="mt-6 max-w-115 text-sm leading-6 text-text-secondary">{user.bio || '这个人还没有填写简介。'}</p>
 
 			<!-- 位置 + 标签 -->
-			<div class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+			<div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
 				{#if user.location}
 					<span class="flex items-center gap-1.5 text-text-secondary text-sm">
 						<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
@@ -419,7 +420,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	<!-- Gallery（spec UserProfileBundle 仅含 recent_moments，无喜欢/收藏流）。
 	     整格跳转动态详情（大图查看在详情页内）。 -->
 	{#if user.galleryMoments.length > 0}
-		<div class="mt-5 grid grid-cols-3 gap-1.5">
+		<div class="mt-6 grid grid-cols-3 gap-1.5">
 			{#each user.galleryMoments as g, i (g.id)}
 				<button
 					type="button"

@@ -131,7 +131,9 @@
 			</div>
 		</div>
 
-		<!-- 规整动态网格：与 nearby/moments 完全对齐的 1~3 列对称网格，所有卡片统一复用 MomentCard -->
+		<!-- 规整动态网格：与 nearby/moments 完全对齐的 1~3 列对称网格，所有卡片统一复用 MomentCard。
+		     工具行 pb-4（分隔线上侧 16）与此处 pt-4（分隔线下侧 16）分居 border-b 两侧，
+		     是对称留白而非 mt+mb 双倍叠加，格子距卡片内容保持 16。 -->
 		<div class="pt-4">
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 				{#each interactions.items as item (item.id)}

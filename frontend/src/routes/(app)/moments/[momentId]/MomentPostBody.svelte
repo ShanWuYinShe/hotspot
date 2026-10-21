@@ -165,7 +165,9 @@
 	</div>
 {/if}
 
-<div class="pt-4 pb-3">
+<!-- 正文块：顶距 16（封面/标签→正文，区块内元素间距）；页底留白只由页面 contentClassName 的底内距提供，
+     此处不再叠加 12（否则 12+24=36 双底距） -->
+<div class="pt-4">
 	<!-- Author -->
 	<div class="flex items-center gap-3 mb-3">
 		<button
@@ -245,7 +247,7 @@
 	<!-- 评论分区标题：走真实标题层级（h2）+ skill 登记的分区标题档位
 	     （14px semibold = text-md），此前是 12px/500 的 <p>，页面无 h2（全站复审 s2-09）。
 	     id 保留：详情锚点 #moment-comments 依赖它。 -->
-	<h2 class="mt-5 mb-3 text-md font-semibold text-text-primary" id="moment-comments">
+	<h2 class="mt-6 mb-3 text-md font-semibold text-text-primary" id="moment-comments">
 		评论 · {commentCount}
 	</h2>
 	{#if comments.length === 0}

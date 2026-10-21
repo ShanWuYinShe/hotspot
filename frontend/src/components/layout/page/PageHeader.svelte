@@ -56,7 +56,8 @@
 		subtitleSize?: 'xxs' | 'xs' | 'sm' | 'md';
 		glass?: boolean;
 		class?: string;
-		/** 内部 ContentColumn 的 className（默认 pt-4 pb-3，对齐样板 nearby/moments；传其他值可覆盖） */
+		/** 内部 ContentColumn 的 className（默认由 headerPadding 派生：有 below 时 pt-4 pb-3.5、
+		    无 below 时 pt-4.5 pb-4.5；仅已登记的窄列特例传值覆盖） */
 		contentClassName?: string;
 	} = $props();
 

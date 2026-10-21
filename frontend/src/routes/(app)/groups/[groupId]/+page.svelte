@@ -264,13 +264,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</div>
 	</div>
 
-	<div class="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+	<div class="grid gap-y-6 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-8">
 		<main class="min-w-0">
 			<!-- 元信息（成员/在线/距你）不再在此重复展示：简介 tab 四宫格数据卡承载
 			     同一份数据（大版优先），与鸿蒙 GroupDetailPage 保持一致 -->
 
-			<!-- 分类 Tab（统一 TabBar 胶囊样式；pb-3 让胶囊与 border-b 分离，对齐 PageHeader below 约定） -->
-			<div class="mt-4 pb-3 border-b border-border-default">
+			<!-- 分类 Tab（统一 TabBar 胶囊样式；底部 12 让胶囊与 border-b 分离，对齐 PageHeader below 约定）
+			     顶距只由根 grid 的上内距提供（24），此处不再叠加 16（否则 24+16=40 双倍间距） -->
+			<div class="pb-3 border-b border-border-default">
 				<TabBar
 					items={[
 						{ id: 'overview', label: '简介' },
@@ -283,7 +284,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			</div>
 
 			{#if tab === 'overview'}
-				<div class="py-6 flex flex-col gap-6">
+				<div class="pt-6 flex flex-col gap-6">
 					<p class="max-w-3xl text-sm leading-7 text-text-secondary">{gd.detail.description || '这个群还没有填写简介。'}</p>
 
 					<!-- 群组档案：指标统一走 MetricRow 单卡（原 4 张独立小卡 = 4 套边框/间距，

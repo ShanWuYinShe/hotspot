@@ -185,7 +185,8 @@
 	</button>
 {/snippet}
 
-<StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-5 pt-4 pb-16">
+<!-- 页面根容器（无带标题分区，属单一信息流）：gap 16；页底留白只由 contentClassName pb-6 提供 -->
+<StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-4 pt-4 pb-6">
 	{#snippet header()}
 		<!-- 无可见标题：只留右侧搜索/通知两个动作，内容直接开头的「沉浸流」（2026-10-20 用户审查：
 		     不要标题块、不要切换器；用户只需看内容，不需要被告知"当前在看哪个流"）。 -->

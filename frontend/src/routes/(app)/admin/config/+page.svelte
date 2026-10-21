@@ -135,7 +135,7 @@
 {:else if error}
 	<LoadError message={error} onRetry={() => void load()} />
 {:else if config && features && limits && contact}
-	<div class="mx-auto flex w-full max-w-5xl flex-col gap-5">
+	<div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
 		{#if config.updated_at}
 			<p class="text-xs text-text-secondary">最后更新：{formatDateTime(config.updated_at)}{config.updated_by_user_id ? ` · ${config.updated_by_user_id}` : ''}</p>
 		{/if}

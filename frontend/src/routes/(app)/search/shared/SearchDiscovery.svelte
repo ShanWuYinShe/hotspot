@@ -61,9 +61,12 @@
 <!-- 宽屏双列：左（最近搜索 / 热门话题 / 人物推荐）+ 右（热门动态）。
      此前全部单列堆在内容列里，宽屏时内容只占中间一条、右侧大片空白（用户截图反馈）。
      窄屏自动回落单列，顺序与原先一致。断点用 `lg`（项目自定义 lg=1280 / xl=1536，
-     1397px 常见笔记本宽度只到 lg）。 -->
-<div class="mt-5 grid gap-x-8 lg:grid-cols-2">
-<div>
+     1397px 常见笔记本宽度只到 lg）。
+     纵向节奏（Round 9）：页顶留白只由页面 contentClassName pt-4 提供（原根顶距 20 与它重复，
+     已删）；分区之间 24 = 左列 `flex flex-col gap-6` + 移动端列间 `gap-y-6`（父 gap 单侧提供，
+     不再用子块顶距——否则首个渲染的分区会多叠一层顶距）。 -->
+<div class="grid gap-y-6 gap-x-8 lg:grid-cols-2">
+<div class="flex flex-col gap-6">
 	<!-- 最近搜索：页面直出（eyebrow 小标 + 行动），无卡片壳——空态/少内容时
 	     一张几乎空白的浮起卡会放大页面的空洞感。
 	     无记录时整块隐藏（Gemini 审查 r11：干瘪的「暂无记录」文案无信息量），
@@ -81,7 +84,7 @@
 				清除
 			</button>
 		</div>
-		<ListContainer bordered class="mt-2.5">
+		<ListContainer bordered class="mt-3">
 			{#each recent as item (item)}
 				<ListItem
 					onClick={() => onChoose(item)}
@@ -99,7 +102,7 @@
 
 	{#if hotTopics.length > 0}
 		<!-- 热门话题：热门动态 tags 聚合，点击即搜 -->
-		<section aria-label="热门话题" class="mt-6">
+		<section aria-label="热门话题">
 			<div class="flex items-center gap-1.5">
 				<Flame class="size-3.5 text-accent-default" strokeWidth={1.75} />
 				<h2 class="eyebrow">热门话题</h2>
@@ -116,7 +119,7 @@
 		<!-- 人物推荐：users/search 距离排序前 3（补发现态下半屏空白，P1-16）；
 		     行原语与首页附近用户行同语言（头像角标 + #tag · 距离副标题），尾部
 		     ArrowUpRight 与本页最近搜索/结果行导航语义一致 -->
-		<section aria-label="人物推荐" class="mt-6">
+		<section aria-label="人物推荐">
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-1.5">
 					<Users class="size-3.5 text-accent-default" strokeWidth={1.75} />
@@ -130,7 +133,7 @@
 					查看全部
 				</button>
 			</div>
-			<ListContainer bordered class="mt-2.5">
+			<ListContainer bordered class="mt-3">
 				{#each hotUsers as u (u.id)}
 					<UserCardRow
 						name={u.name}
@@ -164,8 +167,8 @@
 	{/if}
 
 	</div>
-	<div class="mt-6 lg:mt-0">
 	{#if hotMoments.length > 0}
+	<div>
 		<!-- 热门动态：复用发现态已拉取的热门响应（C2 轻量充实），行原语与首页附近活动一致 -->
 		<section aria-label="热门动态">
 			<div class="flex items-center gap-1.5">
@@ -178,6 +181,6 @@
 				{/each}
 			</ListContainer>
 		</section>
-	{/if}
 	</div>
+	{/if}
 </div>

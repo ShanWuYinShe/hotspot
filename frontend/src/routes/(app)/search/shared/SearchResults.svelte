@@ -82,7 +82,9 @@
 	);
 </script>
 
-<section class="mt-5 mx-auto w-full max-w-4xl" aria-label="搜索结果">
+<!-- 纵向节奏（Round 9）：页顶留白只由页面 contentClassName pt-4 提供（原根顶距 20 与它重复，已删）；
+     过滤区（TabBar/相关话题）→ 首个结果组 16；结果组之间 24（grid 纵向 gap-y-6，横向列距原样保留） -->
+<section class="mx-auto w-full max-w-4xl" aria-label="搜索结果">
 	<!-- 分类 Tab 统一走 TabBar（胶囊）；count 结构化透传，不做 label 反解析 -->
 	<TabBar
 		items={tabs}
@@ -119,7 +121,7 @@
 				{@render rows()}
 			</section>
 		{/snippet}
-		<div class="mt-5 grid gap-5 xl:grid-cols-2">
+		<div class="mt-4 grid gap-y-6 gap-x-5 xl:grid-cols-2">
 			{#if (tab === 'all' || tab === 'people') && results.users.length > 0}
 				<!-- 用户结果组 -->
 				{#snippet userRows()}

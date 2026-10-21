@@ -275,7 +275,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		{@render feedHeader()}
 	{/snippet}
 
-	<div class="mb-5">
+	<!-- 过滤 TabBar 是页头附属工具区（布局契约要求 Tab 置于 header 附近），到首块内容按常规 16 -->
+	<div class="mb-4">
 		<!-- TabBar 自身已含 overflow-x-auto，此处不再重复声明（重复类名会让排查困惑） -->
 		{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'pr-1')}
 	</div>

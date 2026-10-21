@@ -101,8 +101,10 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 		{:else if error}
 			<LoadError message={error} onRetry={retry} />
 		{:else}
-			<!-- 身份卡 + 居中统计（同一张卡，指标复用 MetricRow 原语） -->
-			<section class="mt-6 overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="公开个人资料">
+			<!-- 身份卡 + 居中统计（同一张卡，指标复用 MetricRow 原语）。
+			     页顶留白由 contentClassName 的 pt-6（呼吸型变体）单侧承担，首块不再叠 mt；
+			     与下方双栏的区块间距 24 由本块 mb-6 单侧提供。 -->
+			<section class="mb-6 overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="公开个人资料">
 				<div class="flex items-start gap-5 p-6">
 					<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0" />
 					<div class="min-w-0 pt-1">
@@ -138,8 +140,9 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 				<MetricRow items={metricItems} class="border-t border-border-default" />
 			</section>
 
-			<!-- 双栏：我的内容入口 + 资料状态 -->
-			<div class="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
+			<!-- 双栏：我的内容入口 + 资料状态（分区间距由上方身份卡 mb-6 单侧提供）。
+			     桌面双栏列距 20 属纯横向列距，按 RULES 保留。 -->
+			<div class="grid gap-x-5 gap-y-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
 				<section class="rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="我的内容">
 					<div class="border-b border-border-default px-6 py-4">
 						<h2 class="text-md font-semibold text-text-primary">我的内容</h2>

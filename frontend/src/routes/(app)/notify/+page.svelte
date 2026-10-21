@@ -359,7 +359,10 @@ const markSingleRead = (id: string) => {
 		</PageHeader>
 	{/snippet}
 
-	<!-- List：每个分组一个连接列表表面（List bordered 契约；heading 在列表外） -->
+	<!-- List：每个分组一个连接列表表面（List bordered 契约；heading 在列表外）。
+	     纵向节奏（Round 9）：无根容器 → 分区间距由各列表块自身底距 mb-6 单侧提供；
+	     已读分组标题不再叠条件上距（原上距 20 + 上一列表底距 20 叠成 40 双倍间距，RULES §4 点名要修）；
+	     页底留白只由 contentClassName pb-6 提供 -->
 	<div class="flex flex-col">
 				{#if invites.length > 0}
 					<!-- 入群邀请待办区块（listMyInvites 补拉路径；接受/拒绝后移除） -->
@@ -367,7 +370,7 @@ const markSingleRead = (id: string) => {
 						<span class="eyebrow">入群邀请</span>
 						<span class="badge text-accent-default bg-accent-soft">{invites.length}</span>
 					</div>
-					<ListContainer bordered class="mb-5">
+					<ListContainer bordered class="mb-6">
 						{#each invites as inv (inv.invite_id)}
 							<div class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-3 py-3.5">
 								<Avatar src={inv.group.avatar_url} name={inv.group.name} size="lg" shape="rounded" />
@@ -402,7 +405,7 @@ const markSingleRead = (id: string) => {
 						<p class="eyebrow">新消息</p>
 						<span class="badge text-accent-default bg-accent-soft">{unreadGroup.length}</span>
 					</div>
-					<ListContainer bordered class="mb-5">
+					<ListContainer bordered class="mb-6">
 						{#each unreadGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
@@ -413,7 +416,7 @@ const markSingleRead = (id: string) => {
 					<!-- 已读分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make）。
 					     标题原为「较早」但分组条件是 `n.read`（点开一条今日通知即被归入本组）——
 					     文案与数据不符，全站复审 s2-18；改为与数据一致。 -->
-					<div class="mb-3 flex h-5 items-center gap-2 {unreadGroup.length > 0 ? 'mt-5' : ''}">
+					<div class="mb-3 flex h-5 items-center gap-2">
 						<p class="eyebrow">已读</p>
 						<span aria-hidden="true" class="h-px flex-1 bg-border-default"></span>
 					</div>
@@ -425,7 +428,9 @@ const markSingleRead = (id: string) => {
 				{/if}
 
 				{#if !loading && nextCursor !== null}
-					<div class="mt-5">
+					<!-- 已读列表不带底距（其后接 ListEnd 时由 ListEnd 自带 py 收尾）：仅当它是上方紧邻块时补 24，
+					     其余情况由上一区块 mb-6 提供，避免 mt+mb 双叠 -->
+					<div class={readGroup.length > 0 ? 'mt-6' : ''}>
 						<LoadMoreButton label="加载更早通知" loading={loadingMore} onLoad={() => void loadMoreNotifs()} />
 					</div>
 				{:else if filtered.length > 0 && !loadError && nextCursor === null}

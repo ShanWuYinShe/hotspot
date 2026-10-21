@@ -71,7 +71,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		<!-- 身份卡（compact）：头像复用 Avatar，统计横条居中（对齐桌面 MetricRow 原语）。
 		     卡片壳与桌面 ProfilePage 统一为「白卡 + 发丝描边 + 主题投影」语言
 		     （原 card-raised 纯投影，两端不一致）。 -->
-		<section class="rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="个人资料">
+		<section class="mb-6 rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="个人资料">
 			<div class="p-5">
 				<div class="flex items-start justify-between gap-5">
 					<div class="flex min-w-0 items-center gap-4">
@@ -121,10 +121,11 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			<MetricRow class="border-t border-border-default" items={statsList.map((s) => ({ label: s.label, value: s.value }))} />
 		</section>
 
-		<!-- 个人数据 5 行链接（唯一分组卡 ListContainer bordered：内缩圆角行） -->
-		<div class="mt-5">
-			<p class="eyebrow px-1 mb-2">个人数据</p>
-			<p class="px-1 mb-2 text-xs text-text-secondary">在这里查看你的内容与关系</p>
+		<!-- 个人数据 5 行链接（唯一分组卡 ListContainer bordered：内缩圆角行）。
+		     与身份卡的区块间距 24 由上方身份卡 mb-6 单侧提供；区块标题→内容 12（mb-3）。 -->
+		<div>
+			<p class="eyebrow px-1 mb-3">个人数据</p>
+			<p class="px-1 mb-3 text-xs text-text-secondary">在这里查看你的内容与关系</p>
 			<ListContainer bordered ariaLabel="个人数据">
 			{#each DATA_ITEMS as item (item.id)}
 				<ListItem

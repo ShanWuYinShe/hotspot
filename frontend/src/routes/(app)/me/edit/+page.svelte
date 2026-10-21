@@ -218,7 +218,7 @@
 	{:else if loadError}
 	<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
-	<div class="animate-fade-in mx-auto flex w-full max-w-3xl flex-col gap-5">
+	<div class="animate-fade-in mx-auto flex w-full max-w-3xl flex-col gap-4">
 	<!-- Avatar section -->
 	<div class="relative rounded-xl overflow-hidden h-cover-height-sm">
 		<!-- 无封面数据时的占位底：主题 token 承载（vibrant 渐变 / forest 纸面纯色），页面只引用；
@@ -358,8 +358,8 @@
 		</div>
 	</fieldset>
 
-	<!-- Danger zone -->
-	<div class="mt-3">
+	<!-- Danger zone（间距由根容器 gap-4 单侧提供，不再叠 mt 造成 28 双倍间距） -->
+	<div>
 		<p class="eyebrow mb-3">账号</p>
 		{#if deleteConfirmOpen}
 			<div class="flex flex-col gap-2.5 rounded-md border border-border-default bg-surface-primary p-4">

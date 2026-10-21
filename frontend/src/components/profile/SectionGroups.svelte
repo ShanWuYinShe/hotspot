@@ -38,7 +38,7 @@ const needsAuth = $derived(myGroups.needsAuth);
      未登录隐藏（Gemini 审查 r14：登录引导与不可用控件并存）。 -->
 {#if !needsAuth}
 <!-- 统计(左) + 搜索(右限宽)：桌面同行；移动端搜索独占一行（固定 w-72 同行在 390 视口横向溢出被裁） -->
-<div class="pb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+<div class="pb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
 	<p class="text-sm text-text-secondary shrink-0">共 {groups.length} 个群组<!-- 分隔符原用 text-border-strong（border 色 token 当正文色，s3 P2-1）→ 文字色 + 弱化 -->
 	<span class="mx-2 text-text-secondary opacity-dim" aria-hidden="true">·</span><!-- 零在线弱化为次要灰、不亮绿点( Gemini 审查 r14:零数据高亮绿造成视觉误导 ) --><span class="inline-flex items-center gap-1.5 {totalOnline > 0 ? 'text-status-online' : 'text-text-secondary'}">
 		{#if totalOnline > 0}
@@ -50,7 +50,8 @@ const needsAuth = $derived(myGroups.needsAuth);
 </div>
 {/if}
 
-<!-- 统一群组卡片网格：对齐全站图片优先 NearbyImageCard 原语与响应式多列布局 -->
+<!-- 统一群组卡片网格：对齐全站图片优先 NearbyImageCard 原语与响应式多列布局。
+     与下方入群申请区块的间距由后者的 mt-6 单侧提供，网格不再叠 pb（否则叠加成 48）。 -->
 {#if loading}
 	<InlineLoading class="py-16" label="加载我的群组…" />
 {:else if needsAuth}
@@ -58,7 +59,7 @@ const needsAuth = $derived(myGroups.needsAuth);
 {:else if error}
 	<LoadError message={error} onRetry={retry} />
 {:else if filtered.length > 0}
-	<div class="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 lg:grid-cols-3">
+	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 		{#each filtered as g (g.id)}
 			<NearbyImageCard
 				imageSrc={g.banner || g.avatar}

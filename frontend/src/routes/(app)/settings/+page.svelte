@@ -214,7 +214,7 @@
 	{:else}
 		<div class="flex flex-col divide-y divide-border-default max-w-5xl">
 			<!-- Section 1: 账号与身份 -->
-			<SettingsSection title="账号信息" description="当前登录的账号信息" class="first:pt-4">
+			<SettingsSection title="账号信息" description="当前登录的账号信息" class="first:pt-0">
 				<!-- 卡片壳统一交 ListContainer bordered（与下方通知/隐私分组同语言），
 				     不再为单行信息手写白卡 -->
 				<ListContainer bordered inset>
@@ -403,8 +403,8 @@
 			</SettingsSection>
 
 			<!-- Section 7: 系统与关于 -->
-			<SettingsSection title="系统与关于" description="客户端版本及当前设备会话状态。">
-				<div class="flex flex-col gap-3">
+			<SettingsSection title="系统与关于" description="客户端版本及当前设备会话状态。" class="last:pb-0">
+				<div class="flex flex-col gap-4">
 					<ListContainer bordered inset>
 						<ListItem class="flex items-center justify-between gap-3 px-4 py-3.5">
 							<div class="flex items-center gap-3">
@@ -426,7 +426,7 @@
 					</ListContainer>
 
 					{#if auth.isAuthenticated}
-						<div class="flex justify-end pt-2">
+						<div class="flex justify-end">
 							<Button
 								variant="outline"
 								class="hover-btn hit-slop h-auto gap-2 rounded-md bg-surface-primary px-4 py-2 text-xs text-status-danger hover:bg-danger-bg"
