@@ -67,7 +67,7 @@ export struct SearchPageHeader {
   @Builder
   private SearchInputRow() {
     // 对齐前端 SearchInput：gap-2.5(10) + 框高 39.14 → SEARCH_INPUT_HEIGHT
-    Row({ space: DesignConstants.SPACING.MD2 }) {
+    Row({ space: DesignConstants.SPACING.MD }) {
       LucideIcon({
           icon: AppIcon.SEARCH,
           iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,

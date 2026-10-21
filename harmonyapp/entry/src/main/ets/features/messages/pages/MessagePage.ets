@@ -985,7 +985,7 @@ export struct MessagePage {
   @Builder
   buildChatItem(item: ChatItem) {
     // 对齐前端 ChatListItem（移动端）：gap-3.5(14) + px-4 py-3 行
-    Row({ space: DesignConstants.SPACING.MD3 }) {
+    Row({ space: DesignConstants.SPACING.LG }) {
       // 头像 44（对齐前端 ChatListItem：Avatar size=44 无描边、私聊/群聊同为圆形；
       // 选中态的描边由 ListItem 负责，这里不额外画环）+ 在线角标 10（OnlineDot md）
       SystemAvatar({

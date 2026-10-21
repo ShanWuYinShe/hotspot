@@ -617,7 +617,7 @@ export struct NotificationCenter {
 
   @Builder
   private buildNotifyItem(notification: NotifyItem) {
-    Row({ space: DesignConstants.SPACING.MD3 }) {
+    Row({ space: DesignConstants.SPACING.LG }) {
       // 头像 + 类型图标徽章
       Stack({ alignContent: Alignment.Center }) {
         if (notification.payload?.actor?.avatar_url) {

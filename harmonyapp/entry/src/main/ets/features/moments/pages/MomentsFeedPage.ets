@@ -270,7 +270,7 @@ export struct MomentsFeedPage {
         }
 
         // 搜索栏（对齐前端：search icon + input + clear button）
-        Row({ space: DesignConstants.SPACING.MD2 }) {
+        Row({ space: DesignConstants.SPACING.MD }) {
           LucideIcon({
               icon: AppIcon.SEARCH,
               iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,

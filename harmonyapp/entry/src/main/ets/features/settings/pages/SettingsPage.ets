@@ -1083,7 +1083,7 @@ export struct SettingsPage {
               .borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.borderRadius)
               .backgroundColor(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.backgroundColor)
 
-            Row({ space: DesignConstants.SPACING.MD2 }) {
+            Row({ space: DesignConstants.SPACING.MD }) {
               Blank().layoutWeight(1).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD).borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).tileRadius).backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
               Blank().layoutWeight(1).height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD).borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).tileRadius).backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
             }

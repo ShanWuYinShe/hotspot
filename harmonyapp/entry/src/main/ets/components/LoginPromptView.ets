@@ -61,7 +61,7 @@ export struct LoginPromptView {
   }
 
   build() {
-    Column({ space: DesignConstants.SPACING.LG2 }) {
+    Column({ space: DesignConstants.SPACING.LG }) {
       // 图标（accent 淡底圆容器 + 主题色 glyph + 光晕，对齐前端 EmptyState 柔和 accent 图标）。
       // 容器放大到 AVATAR_LARGE(80) + 用 AppThemeVisuals 派生的更明亮 accent-soft 背景（vibrant light
       // 主题下 #E2EAF8 实色与页面 #F7FAFF 太接近，导致空态图标区"灰暗没层次"；加深到

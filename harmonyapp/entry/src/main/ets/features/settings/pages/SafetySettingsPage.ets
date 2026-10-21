@@ -146,7 +146,7 @@ export struct SafetySettingsPage {
           Column({ space: 0 }) {
             Column() {
               SettingsSectionCard({ title: '修改密码' }) {
-                Column({ space: DesignConstants.SPACING.MD }) {
+                Column({ space: DesignConstants.SPACING.LG }) {
                   SystemInput({
                     value: this.oldPassword,
                     placeholder: '当前密码',

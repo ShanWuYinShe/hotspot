@@ -298,7 +298,7 @@ export struct GroupCard {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
 
-      Row({ space: DesignConstants.SPACING.MD2 }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
               icon: AppIcon.GROUP,
