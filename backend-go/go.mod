@@ -33,6 +33,6 @@ require (
 	github.com/redis/go-redis/v9 v9.22.0
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 	golang.org/x/text v0.42.0 // indirect
 )
