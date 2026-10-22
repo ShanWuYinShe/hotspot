@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import {
 		Home, Users, Rss, MessageCircle, Bell, ImageIcon,
-		Heart, Search, Settings, Plus, Navigation2, UserRound, PanelLeftClose, PanelLeftOpen, Shield, Compass
+		Heart, Search, Settings, Plus, Navigation2, UserRound, PanelLeftClose, PanelLeftOpen, Shield
 	} from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
@@ -39,11 +39,13 @@
 		{ id: 'home', icon: Home, label: '首页', path: ROUTES.home },
 		// 图标对齐鸿蒙 DESKTOP_PRIMARY_NAV 唯一性方案(AppNavigation.ets):
 		// 附近的人=person 单人 / 附近群组=person_2 双人(原两图标互换,群组类目错用单人;r14)
-		// 「附近」总览（2026-10-19 信息架构调整：附近内容从首页迁出，枢纽页落地 /nearby）。
-		// 三个子页入口保留在下方，桌面不削减既有直达能力。
-		// 「附近」只保留枢纽一项：三个子页（人/群组/瞬间）由枢纽页的「查看全部」入口承担，
-		// 侧栏再列一遍既重复又拥挤（2026-10-20 用户审查）。子页路由仍高亮本项（见 getDesktopNavId）。
-		{ id: 'nearby', icon: Compass, label: '附近', path: ROUTES.nearby }
+		// 「附近」域（2026-10-22 用户审查调整）：侧栏不再只给一个总览项，直接拆成
+		// 人/群组/动态三个直达入口——桌面端最常用的是这三个叶子页，少一次枢纽页跳转。
+		// 枢纽页 /nearby 仍可从首页「看看附近」等入口进入（侧栏不再占位，不点亮任何项）。
+		// 图标对齐移动端/鸿蒙语义：单人=附近的人、双人=附近的群组、图片=附近的动态。
+		{ id: 'nearby-people', icon: UserRound, label: '附近的人', path: ROUTES.nearbyPeople },
+		{ id: 'nearby-groups', icon: Users, label: '附近的群组', path: ROUTES.nearbyGroups },
+		{ id: 'nearby-moments', icon: ImageIcon, label: '附近的动态', path: ROUTES.nearbyMoments }
 	];
 
 	const PERSONAL_NAV: NavItem[] = [

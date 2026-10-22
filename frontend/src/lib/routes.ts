@@ -83,7 +83,7 @@ export function isPrimaryRouteActive(pathname: string, target: string) {
 }
 
 export type DesktopNavId =
-  | "home" | "nearby" | "nearby-people" | "nearby-groups" | "nearby-moments"
+  | "home" | "nearby-people" | "nearby-groups" | "nearby-moments"
   | "messages" | "moments" | "my-groups"
   | "relationships"
   | "admin";
@@ -99,13 +99,12 @@ export function getDesktopNavId(pathname: string, search = ""): DesktopNavId | n
   if (pathname === ROUTES.home) return "home";
   if (pathname === ROUTES.admin || pathname.startsWith(`${ROUTES.admin}/`)) return "admin";
   if (pathname === ROUTES.messages || pathname.startsWith(`${ROUTES.messages}/`)) return "messages";
-  // /nearby 为「附近」总览页（2026-10-19 起不再是 307 跳转）；三个子页各自亮各自项
-  // 「附近」只保留枢纽一项（2026-10-20）：三个子页（人/群组/瞬间）不再单独列在侧栏，
-  // 访问子页时高亮父项「附近」——侧栏表达"在哪个域"，不表达"在域的哪个叶子"。
-  if (pathname === ROUTES.nearby) return "nearby";
-  if (pathname === ROUTES.nearbyGroups) return "nearby";
-  if (pathname === ROUTES.nearbyPeople) return "nearby";
-  if (pathname === ROUTES.nearbyMoments) return "nearby";
+  // 「附近」域（2026-10-22 调整）：侧栏改为人/群组/动态三个直达入口，三个子页各自高亮
+  // 各自项；枢纽页 /nearby 不再占侧栏项（从首页「看看附近」等入口进入），不点亮任何项。
+  if (pathname === ROUTES.nearbyPeople) return "nearby-people";
+  if (pathname === ROUTES.nearbyGroups) return "nearby-groups";
+  if (pathname === ROUTES.nearbyMoments) return "nearby-moments";
+  if (pathname === ROUTES.nearby) return null;
 
   if (pathname.startsWith(`${ROUTES.me}/`)) {
     const section = pathname.slice(`${ROUTES.me}/`.length);
