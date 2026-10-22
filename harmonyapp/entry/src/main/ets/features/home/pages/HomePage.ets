@@ -214,24 +214,27 @@ export struct HomePage {
     .padding({ top: DesignConstants.SPACING.XXL })
   }
 
-  /** 一条流的动态列表（复用既有活动行原语，与「附近瞬间」行样式一致；无分组小标题） */
+  /**
+   * 一条流的动态列表（复用既有活动行原语，与「附近瞬间」行样式一致；无分组小标题）
+   *
+   * 用 List 而不是 Scroll+Column：Refresh 下拉时容器高度会随指示器区域变化，
+   * Scroll 包裹动态 ForEach 在高度连续变化下会重排失稳（端上实测出现过行错位/文字残影），
+   * List 自带子项布局与复用，刷新/高度变化时行位置稳定。
+   */
   @Builder
   private buildFeed() {
-    Scroll() {
-      Column({ space: DesignConstants.SPACING.LG }) {
-        Column() {
-          ForEach(this.homeActivityRows(), (moment: MomentItem, index: number) => {
-            this.buildActivityRow(moment, index)
-          }, (moment: MomentItem) => moment.moment_id)
+    // 行间距由活动行自身的上下 padding 承担（与原 Column 布局一致，避免 List 再叠 space 导致节奏变松）
+    List() {
+      ForEach(this.homeActivityRows(), (moment: MomentItem, index: number) => {
+        ListItem() {
+          this.buildActivityRow(moment, index)
         }
-        .width('100%')
-      }
-      .width('100%')
-      .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
+      }, (moment: MomentItem) => moment.moment_id)
     }
     .layoutWeight(1)
+    .width('100%')
+    .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
     .scrollBar(BarState.Off)
-    .align(Alignment.TopStart)
   }
 
   @Builder

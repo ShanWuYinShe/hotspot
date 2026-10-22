@@ -174,6 +174,10 @@ export function RefreshIndicator() {
       .fontColor(AppThemeManager.getSafeCurrentPalette().textSecondary)
   }
   .width('100%')
+  // 固定指示器高度（布局几何，属非主题风格）：Refresh 的刷新区会随下拉距离增高，
+  // 若 builder 不锁高度，内容会在整个刷新区里垂直居中——大幅下拉时 spinner 会漂到
+  // 空白区中间，看起来像页面塌了一块。锁高后指示器始终贴在刷新区顶部（页头下方）。
+  .height(DesignConstants.LAYOUT.MIN_HIT_TARGET + DesignConstants.SPACING.MD)
   .justifyContent(FlexAlign.Center)
   .padding(DesignConstants.SPACING.SM)
   .accessibilityText('正在刷新')
