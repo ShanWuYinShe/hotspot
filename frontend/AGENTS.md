@@ -26,7 +26,13 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
   （默认同源）；`mocks/toggle.ts` 的 `onUnhandledRequest` 对非 `/api/v1/` 请求
   直接 `bypass`——只拦截 API 流量，页面/静态资源不受 mock 影响，`/api/v1/`
   未匹配的请求才 `warn`。mock 开关经 localStorage `hotspot:mock-enabled`
-  持久化（`toggleMock()` 切换后 reload））
+  持久化（`toggleMock()` 切换后 reload））。
+  **MSW 无法下发 HttpOnly Cookie**：浏览器端 MSW 会把 mock 响应里的 `Set-Cookie`
+  逐条用 `document.cookie` 转发（`forwardResponseCookies`），同名 HttpOnly Cookie
+  已存在时会被 Chrome 全部拒绝并在控制台刷「已有 HTTP-Only Cookie …已拒绝 Cookie」。
+  因此 mock 认证态只用 localStorage 旗标（`isMockLoggedIn`）表达，**不要在 mock
+  handler 里为 token 设置 `Set-Cookie`**；只有 bootstrap 的 `device_id`（非 HttpOnly、
+  按 spec）可以下发。
 
 ## 开发模式：必须通过 Docker Compose + Nginx 网关
 
