@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Button from '@/components/ui/button.svelte';
+	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
 </script>
 
 <svelte:head>
 	<title>{page.status === 404 ? '页面不存在' : '出错了'} · HotSpot</title>
 </svelte:head>
 
-<div class="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-page p-6 text-center">
+<div class="relative isolate flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-page p-6 text-center">
+	<!-- 氛围画布：错误页整屏留白大，主题世界层兜底视觉密度 -->
+	<AmbientBackdrop />
 	<!-- 字重收敛到 normal/medium/semibold 三档：bold 原全站仅此与地图计数徽章两处，
 	     且用途（大号/小号数字强调）与 semibold 完全重合，故归并到 semibold。
 	     状态码是整页唯一语义标题（h1），保证错误页也有可读的标题层级。 -->

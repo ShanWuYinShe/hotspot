@@ -11,6 +11,7 @@
 	import { initPlatform } from '@/stores/platform.svelte';
 	import AuthGate from '@/components/auth/AuthGate.svelte';
 	import BootSplash from '@/components/shared/BootSplash.svelte';
+	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
 	import ToastViewport from '@/components/overlays/ToastViewport.svelte';
 
 	let { children }: { children: Snippet } = $props();
@@ -51,7 +52,8 @@
 {:else}
 	<!-- 启动占位：logo 基座 SVG 动画（BootSplash，reduced-motion 由全局规则降级），
 	     避免未解析 auth 时页面闪错数据 -->
-	<div class="fixed inset-0 grid place-items-center bg-surface-page">
+	<div class="fixed inset-0 isolate grid place-items-center overflow-hidden bg-surface-page">
+		<AmbientBackdrop />
 		<BootSplash />
 	</div>
 {/if}

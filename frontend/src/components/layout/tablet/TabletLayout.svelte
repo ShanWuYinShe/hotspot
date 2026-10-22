@@ -11,6 +11,7 @@
 	
 	import NavTab from '@/components/layout/mobile/NavTab.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
+	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// 平板布局（对齐 Figma Make TabletLayout 契约）：
@@ -41,12 +42,16 @@
 	<!-- RoutedContentViewport 是三端唯一的路由内容与滚动承载区。
 	     地图/消息为全画布页：禁用滚动，canvas 固定视口高度。
 	     宽平板浮动 Dock 悬于内容之上，画布需预留底部净空。 -->
-	<RoutedContentViewport
-		contentClassName="tablet-page-canvas {pathname === ROUTES.map ? 'h-full' : ''} {isWide ? 'pb-28' : ''}"
-		style={(pathname === ROUTES.map || pathname === ROUTES.messages) ? 'overflow:hidden;' : undefined}
-	>
-		{@render children()}
-	</RoutedContentViewport>
+	<div class="relative isolate flex flex-1 min-h-0 flex-col overflow-hidden">
+		<!-- 氛围画布固定在外壳内容区（不随路由滚动） -->
+		<AmbientBackdrop />
+		<RoutedContentViewport
+			contentClassName="tablet-page-canvas {pathname === ROUTES.map ? 'h-full' : ''} {isWide ? 'pb-28' : ''}"
+			style={(pathname === ROUTES.map || pathname === ROUTES.messages) ? 'overflow:hidden;' : undefined}
+		>
+			{@render children()}
+		</RoutedContentViewport>
+	</div>
 
 	<!-- Compact tablet: edge-attached bar; wide tablet: centred floating Dock -->
 	{#if !isSubPage}

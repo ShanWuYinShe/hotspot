@@ -11,6 +11,7 @@
 	
 	import NavTab from '@/components/layout/mobile/NavTab.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
+	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// MobilePortrait — 移动竖屏壳：状态栏 + 内容区 + 底部 4 Tab 导航（中央 FAB + 发布 Sheet）。
@@ -104,7 +105,9 @@
 			</div>
 		{/if}
 
-		<div class="flex-1 min-h-0 overflow-hidden">
+		<div class="relative isolate flex-1 min-h-0 overflow-hidden">
+			<!-- 氛围画布固定在外壳内容区（不随路由滚动） -->
+			<AmbientBackdrop />
 			<RoutedContentViewport>{@render children()}</RoutedContentViewport>
 		</div>
 

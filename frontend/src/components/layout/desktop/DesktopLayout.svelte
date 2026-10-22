@@ -20,6 +20,7 @@
 	import SidebarNavItem from '@/components/layout/desktop/SidebarNavItem.svelte';
 	import LocationCard from '@/components/layout/desktop/LocationCard.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
+	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
 	import { ROUTES, ME_SECTION_PATHS, getDesktopNavId, type DesktopNavId } from '@/lib/routes';
 	import imgHotSpot from '@/assets/hotspot-logo.png';
 
@@ -296,6 +297,8 @@
 		<!-- Main Content Card — RoutedContentViewport 是唯一滚动 owner（desktopPane 激活 sticky-header surface-page 强制规则）。
 		     全画布页（消息分栏 / 地图探索）禁用滚动，画布固定视口高度。 -->
 		<div class="desktop-main-panel flex-1 min-w-0 overflow-hidden rounded-lg border border-border-default transition-colors duration-gentle">
+			<!-- 氛围画布固定在外壳内容区（不随路由滚动）：z-index:-1 压在面板白底之上、内容之下 -->
+			<AmbientBackdrop />
 			<RoutedContentViewport
 				desktopPane
 				class="desktop-main-scroll"

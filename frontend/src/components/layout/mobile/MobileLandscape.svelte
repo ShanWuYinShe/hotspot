@@ -9,6 +9,7 @@
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
 	import RailIcon from '@/components/layout/mobile/RailIcon.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
+	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
 	// 移动横屏：紧凑左栏（无状态栏），全高内容 + 右侧滑入发布面板。
@@ -73,9 +74,13 @@
 		</aside>
 	{/if}
 
-	<RoutedContentViewport class="shrink-0">
-		{@render children()}
-	</RoutedContentViewport>
+	<div class="relative isolate flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+		<!-- 氛围画布固定在外壳内容区（不随路由滚动） -->
+		<AmbientBackdrop />
+		<RoutedContentViewport>
+			{@render children()}
+		</RoutedContentViewport>
+	</div>
 
 	<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
 		<Dialog.Content

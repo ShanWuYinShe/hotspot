@@ -7,6 +7,8 @@
 	// 对齐 Figma Make layout/page/PageViewport：
 	//   - 仅承载页面画布，绝不设置裁剪 overflow（滚动由三端 shell 独占）
 	//   - h-full min-h-full w-full，让子页面撑满 RoutedContentViewport 的内容区
+	//   - 底色透明：画布底色由外壳提供（桌面白浮卡 / 移动·平板 surface-page），
+	//     氛围画布挂在外壳内容区，装饰层不会随页面滚动
 	//
 	// ┌──────────────── 应用壳 ────────────────┐
 	// │ 导航 / 侧栏 / 底部栏                         │

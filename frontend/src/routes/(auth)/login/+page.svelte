@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Leaf } from '@lucide/svelte';
 	import AuthForm from '@/components/auth/AuthForm.svelte';
+	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import type { AuthMode } from '@/lib/auth-validation';
 
@@ -25,7 +26,9 @@
 </svelte:head>
 
 
-<div class="flex min-h-dvh justify-center bg-surface-page px-5 py-10">
+<div class="relative isolate flex min-h-dvh justify-center bg-surface-page px-5 py-10">
+	<!-- 氛围画布：认证页整屏留白大，用主题世界层（星尘/等高线/墨山）补足空荡感 -->
+	<AmbientBackdrop />
 	<!-- my-auto 替代 items-center：卡片高于视口时容器被撑开、整页可滚动（flex 居中溢出会硬裁底部） -->
 	<section class="my-auto w-full max-w-100 border border-border-default rounded-lg p-6 sm:p-8 bg-surface-primary shadow-raised-md">
 		<div class="flex items-center justify-center rounded-full size-11 shadow-raised-sm bg-accent-default text-text-on-accent">

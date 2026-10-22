@@ -92,6 +92,22 @@
   --cst-marker-moment-border: color-mix(in srgb, var(--cst-palette-map-moment) 24%, transparent);
   --cst-marker-moment-glow: color-mix(in srgb, var(--cst-palette-map-moment) 45%, transparent);
 
+  /* ── 氛围画布（Ambient canvas：星尘 / 星座 / 轨道环）──────────────────
+     仅供 PageViewport 装饰层（z-index:-1）消费；alpha 压得很低，保证正文对比度
+     不被底纹干扰。dark 同名 token 在 .vibrant.dark 提亮一档。 */
+  --cst-ambient-glow-1: color-mix(in srgb, var(--cst-palette-accent-primary) 10%, transparent);
+  --cst-ambient-glow-2: color-mix(in srgb, var(--cst-palette-online) 8%, transparent);
+  --cst-ambient-sky: color-mix(in srgb, var(--cst-palette-accent-primary) 5%, transparent);
+  --cst-ambient-line: color-mix(in srgb, var(--cst-palette-accent-primary) 22%, transparent);
+  --cst-ambient-dot: color-mix(in srgb, var(--cst-palette-accent-primary) 60%, transparent);
+  --cst-ambient-sun: transparent;
+  --cst-ambient-ink-1: color-mix(in srgb, var(--cst-palette-accent-primary) 10%, transparent);
+  --cst-ambient-ink-2: color-mix(in srgb, var(--cst-palette-accent-primary) 7%, transparent);
+  --cst-ambient-ink-3: color-mix(in srgb, var(--cst-palette-accent-primary) 4.5%, transparent);
+  --cst-ambient-emblem: color-mix(in srgb, var(--cst-palette-accent-primary) 24%, transparent);
+  --cst-ambient-horizon: color-mix(in srgb, var(--cst-palette-accent-primary) 6%, transparent);
+  --cst-ambient-vignette: color-mix(in srgb, var(--cst-palette-text) 5%, transparent);
+
   /* ── shadcn 桥接（仅 base.css @apply 消费的 4 个；其余 token 无引用，见 shadcn.css）── */
   --cst-background: var(--cst-surface-primary);
   --cst-foreground: var(--cst-text-primary);
@@ -243,6 +259,20 @@
   --cst-marker-moment-bg: color-mix(in srgb, var(--cst-palette-map-moment) 14%, transparent);
   --cst-marker-moment-border: color-mix(in srgb, var(--cst-palette-map-moment) 30%, transparent);
   --cst-marker-moment-glow: color-mix(in srgb, var(--cst-palette-map-moment) 50%, transparent);
+
+  /* ── 氛围画布（dark：深底上提亮一档，星尘/连线才可见）── */
+  --cst-ambient-glow-1: color-mix(in srgb, var(--cst-palette-accent-primary) 14%, transparent);
+  --cst-ambient-glow-2: color-mix(in srgb, var(--cst-palette-online) 10%, transparent);
+  --cst-ambient-sky: color-mix(in srgb, var(--cst-palette-accent-primary) 7%, transparent);
+  --cst-ambient-line: color-mix(in srgb, var(--cst-palette-accent-primary) 28%, transparent);
+  --cst-ambient-dot: color-mix(in srgb, var(--cst-palette-accent-primary) 72%, transparent);
+  --cst-ambient-sun: transparent;
+  --cst-ambient-ink-1: color-mix(in srgb, var(--cst-palette-accent-primary) 12%, transparent);
+  --cst-ambient-ink-2: color-mix(in srgb, var(--cst-palette-accent-primary) 9%, transparent);
+  --cst-ambient-ink-3: color-mix(in srgb, var(--cst-palette-accent-primary) 6%, transparent);
+  --cst-ambient-emblem: color-mix(in srgb, var(--cst-palette-accent-primary) 30%, transparent);
+  --cst-ambient-horizon: color-mix(in srgb, var(--cst-palette-accent-primary) 9%, transparent);
+  --cst-ambient-vignette: rgba(0, 0, 0, 0.34);
 
   /* ── shadcn 桥接（dark，同上）── */
   --cst-background: var(--cst-surface-primary);

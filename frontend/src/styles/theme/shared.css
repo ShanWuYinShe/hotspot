@@ -48,6 +48,10 @@
   --cst-motion-spinner: 700ms;
   --cst-motion-pulse: 2400ms;
   --cst-motion-reduced: 1400ms;
+  /* 氛围画布（ambient）超长循环：天光漂移 / 星尘明灭 / 薄雾流动。
+     只在装饰层使用；reduced-motion 下整层停用动画。 */
+  --cst-motion-ambient: 24000ms;
+  --cst-motion-ambient-slow: 36000ms;
   --cst-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   /* 弹簧曲线（overshoot）：FAB、toggle 滑块、地图标记放大、sheet 拖拽回弹等
      「有弹性」的入场/位移反馈。禁止组件内联 cubic-bezier 字面量。 */
