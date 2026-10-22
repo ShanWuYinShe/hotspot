@@ -35,6 +35,16 @@
   分区标题 12/medium→**14/semibold**（对齐前端 `text-md` + semibold）；端上实测正文→评论标题
   间距 61px→93px（+8vp，密度 3.917），标题行高 67px→82px。
 - **状态页垂直位置（Round 10 产品决策）**：维持**页面内居中**，不改「靠上 1/3」。
+- **氛围画布（Round 11，页面「不空荡」改造）**：内容稀疏/空态页补主题化世界感背景，
+  唯一实现 `components/layout/ambient/AmbientBackdrop.svelte`，挂在四端外壳内容区
+  （桌面/平板/移动竖屏/移动横屏，固定不随路由滚动；`PageViewport` 底色透明以透出装饰层）、
+  登录页、错误页、启动占位（与 BootSplash 组合成游戏加载画面观感）。
+  四层结构：天光/地平线光源 → 地平线雾 → 主题世界世界（vibrant 星尘+星座+轨道环+城市天际线 /
+  forest 等高线+暖阳+树林剪影 / inkwash 墨山+朱砂圆相+飞白墨点）→ 暗角；
+  装饰层 `z-index:-1`、`aria-hidden`、`pointer-events:none`，不引入第二整层底色。
+  12 个 `--cst-ambient-*` token（三主题 × 明暗，随主题/明暗自动适配），
+  超长循环动效 24s/36s 且 reduced-motion 停用；背景常驻形成纵深感。
+  规范见 `docs/design-system.md` 第 16 节；调浓淡只改 token alpha，无需改组件。
 - **卡片圆角跨端（Round 10 核对）**：交接文档原记「鸿蒙 20 / 前端 12」**不成立**——两端普通卡片
   都是 20（鸿蒙 `SHAPE.CARD=RADIUS.LG` / 前端 `rounded-lg`），紧凑卡与列表容器都是 16
   （`COMPACT_CARD` / `rounded-md`），12 是图标块/小控件档（`ICON_TILE` / `rounded-sm`）。
@@ -47,8 +57,14 @@
 
 ## 待做（按优先级）
 
-暂无阻塞项（Round 10 已清空原 1-3 项：登录复验通过 / 状态页位置决策为居中 / 卡片圆角已一致）。
-下一轮可从下方「遗留观察」中挑，或按产品新反馈立项。
+1. **鸿蒙端氛围画布同步（Round 11 遗留，需单独立项）**：前端已落地三主题世界层背景；
+   鸿蒙需 ArkUI 装饰层（渐变 + 自定义绘制/图片）与三主题 `--cst-ambient-*` 等价 token 评审，
+   注意 ArkTS 侧预合成色约束（见 `check-cross-platform-colors.mjs` 的合成规则）。
+2. **页面级场景化空态（可选增强）**：当前只有全局世界层；若希望超大空态（/me 访客、
+   消息访客、搜索初始态）更有「游戏引导感」，可加中心徽记/信标 spotlight（需新原语评审，
+   避免与 EmptyState 契约冲突）。
+3. **氛围浓淡评审**：世界层透明度集中在 `themes/*.css` 的 `--cst-ambient-*`（12 个），
+   产品/用户若觉得过淡或过浓，改 token alpha 即可，无需动组件。
 
 ## 遗留观察（已评估，保留现状；非缺陷）
 

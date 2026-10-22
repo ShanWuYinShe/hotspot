@@ -56,6 +56,13 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token、配色硬
   桌面白色），sticky glass 仍走 `surface-nav-glass`。
   唯一例外：聊天页独立画布 `--cst-surface-chat`（= chat-bg，微差于页面画布，
   对齐鸿蒙 `chatBackground`），仅聊天页根/头部/输入条使用。
+- **氛围画布（Ambient canvas，2026-10-22 起）**：内容稀疏/空态页用主题化装饰层补纵深，
+  唯一实现 `components/layout/ambient/AmbientBackdrop.svelte`（由 `PageViewport`、认证页、
+  错误页、启动占位统一挂载，页面禁止自建第二套背景装饰）。装饰层是**透明渐变/图形叠加**，
+  不引入第二整层底色，因此不违反上方画布契约；它必须 `aria-hidden` + `pointer-events:none`
+  + `z-index:-1`（容器 `relative isolate`）。色值走 `themes/*.css` 的 `--cst-ambient-*`
+  全套 token（三主题 × 明暗；新增主题必须补齐，`check-theme-parity` 强制），
+  完整分层/主题语言/边界见 `docs/design-system.md` 第 16 节。
 - **数据层禁止携带颜色**：mock 数据/API 响应只返回语义标识（tag/type/category），
   不得包含 `color`/`bg` 等展示字段；视觉色由前端按语义键映射到 token
   （参照 `notify/shared/notify-data.ts` 的 `TYPE_CONFIG` 语义键

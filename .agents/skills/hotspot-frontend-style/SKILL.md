@@ -200,6 +200,13 @@ padding 下根本没有字形、那里是胶囊圆角外的原图像素，会把
       语义，**不套全站 token**——它们在各自 `position:relative` 容器内独立成层，
       与全站 z-index 刻度无语义对应。地图组件内部的 `z-index:0~50` 内联属此类
       （地图外层 `overflow:hidden` 形成独立 stacking context）
+20. **背景装饰层（氛围画布）**：页面不允许自造背景纹理/插画；全站唯一实现是
+    `components/layout/ambient/AmbientBackdrop.svelte`（PageViewport 等处已挂载，
+    新页面自动继承）。若确需在组件内加装饰层，必须同时满足：
+    `aria-hidden="true"` + `pointer-events:none` + 父容器 `relative isolate` + 自身
+    `z-index:-1`（或明确的局部相对层）、颜色只用 `--cst-ambient-*` / 既有 token、
+    动效走 `transform/opacity` 且 reduced-motion 停用。完整规范见
+    `docs/design-system.md` 第 16 节。
 
 ### 交互状态契约（现状即规范，改动前先对齐）
 

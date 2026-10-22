@@ -13,6 +13,7 @@
 | `layout/MainLayout` → desktop/tablet/mobile 三壳 | 设备分派、侧栏/底栏/顶栏 |
 | `layout/page/RoutedContentViewport` | 三端唯一滚动 owner（`data-desktop-main`） |
 | `layout/page/PageViewport` | 路由画布（`data-page-viewport`） |
+| `layout/ambient/AmbientBackdrop` | 页面氛围画布（三主题世界层装饰，`z-index:-1`，由 PageViewport/认证页/错误页/启动占位统一挂载） |
 | `layout/page/StandardPageLayout` / `SplitPageLayout` / `ContentColumn` | 页面骨架与内容栏档位 |
 | `layout/page/PageHeader` | 唯一页面头部（sticky/搜索/ below 插槽） |
 
