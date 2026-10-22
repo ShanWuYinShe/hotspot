@@ -354,7 +354,7 @@ jobs:
       # 生产镜像可构建性机器门禁：此前 Dockerfile 只在打 tag 后的 Release 才
       # 首次构建，构建参数/层次错误要到发布阶段才暴露。GHA 缓存层复用把增量
       # 成本压到可接受范围。
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: build backend image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
