@@ -143,21 +143,17 @@ function requireMockAuth(): ReturnType<typeof json> | null {
 }
 
 /**
- * Build the auth success response. The web client authenticates via HttpOnly
- * cookies (spec), so data is {} and tokens ride Set-Cookie. MSW sets them so
- * the cookie-based client behaves like the real backend.
+ * Build the auth success response. Web 端 token 走服务端 HttpOnly Cookie；但浏览器端
+ * MSW 无法下发 HttpOnly——它会把自己响应里的 Set-Cookie 逐条通过 document.cookie 转发，
+ * 遇到浏览器里已存在的同名 HttpOnly Cookie（上一次真实后端登录留下的）时会被 Chrome
+ * 全部拒绝，控制台刷「已有 HTTP-Only Cookie …已拒绝 Cookie “access_token”」。
+ * mock 的登录态本来就完全由 localStorage 旗标（isMockLoggedIn）驱动，token Cookie 对
+ * mock 流程没有作用，因此不再下发 token Set-Cookie（device_id Cookie 不受影响）。
  */
 function authOkResponse() {
   setMockLoggedIn(true);
-  // Web: AuthTokenPairWeb = { client_type: 'web' }（判别字段）；tokens in HttpOnly cookies (same names as spec).
-  return HttpResponse.json(apiOk({ client_type: 'web' }), {
-    headers: {
-      "Set-Cookie": [
-        "access_token=mock-jwt; Path=/; HttpOnly; SameSite=Strict",
-        "refresh_token=mock-refresh; Path=/public/v1/auth/refresh_token; HttpOnly; SameSite=Strict",
-      ].join(", "),
-    },
-  });
+  // Web: AuthTokenPairWeb = { client_type: 'web' }（判别字段）；token 由真实后端 Set-Cookie 下发。
+  return HttpResponse.json(apiOk({ client_type: 'web' }));
 }
 
 /**
@@ -215,15 +211,9 @@ export const handlers = [
   }),
   http.post(`${API}/auth/signout`, () => {
     setMockLoggedIn(false);
-    // Spec: clear both auth cookies with Max-Age=0 (device_id is NOT cleared).
-    return HttpResponse.json(apiOk(null), {
-      headers: {
-        "Set-Cookie": [
-          "access_token=; Path=/; Max-Age=0",
-          "refresh_token=; Path=/public/v1/auth/refresh_token; Max-Age=0",
-        ].join(", "),
-      },
-    });
+    // mock 不下发 token Cookie，也没有可清的 token Cookie；真实后端的登出清理由服务端
+    // Set-Cookie（Max-Age=0）完成。device_id 按 spec 不清除。
+    return HttpResponse.json(apiOk(null));
   }),
   // 刷新与 mock 登录态一致：未登录（无有效 refresh cookie）按 spec 返回 10100，
   // 避免 client 的自动刷新把登出状态“复活”成登录态。
