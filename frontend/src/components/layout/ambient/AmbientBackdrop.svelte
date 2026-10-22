@@ -18,6 +18,16 @@
 	 */
 	import { theme } from '@/stores/theme.svelte';
 
+	/**
+	 * canvas：完整世界层（主内容区，默认）；
+	 * chrome：轻量天光版（桌面顶栏/侧栏），只铺天光与边光、不画世界层，
+	 *         让导航 chrome 与主内容共享同一环境光而不抢内容。
+	 */
+	let {
+		variant = 'canvas',
+		orientation = 'h'
+	}: { variant?: 'canvas' | 'chrome'; orientation?: 'h' | 'v' } = $props();
+
 	interface Star {
 		x: number;
 		y: number;
@@ -148,17 +158,26 @@
 	const world = $derived(theme.theme);
 </script>
 
-<div class="ambient-backdrop" aria-hidden="true">
+<div
+	class="ambient-backdrop"
+	class:ambient-backdrop--chrome={variant === 'chrome'}
+	class:ambient-backdrop--chrome-h={variant === 'chrome' && orientation === 'h'}
+	class:ambient-backdrop--chrome-v={variant === 'chrome' && orientation === 'v'}
+	aria-hidden="true"
+>
 	<div class="ambient-stage">
 		<div class="ambient-layer ambient-sky"></div>
-		{#if world === 'forest'}
+		{#if variant === 'canvas' && world === 'forest'}
 			<div class="ambient-sun"></div>
 		{/if}
 		<div class="ambient-layer ambient-glow ambient-glow--a"></div>
 		<div class="ambient-layer ambient-glow ambient-glow--b"></div>
-		<div class="ambient-layer ambient-horizon"></div>
 
-		{#if world === 'vibrant'}
+		{#if variant === 'canvas'}
+			<div class="ambient-layer ambient-horizon"></div>
+		{/if}
+
+		{#if variant === 'canvas' && world === 'vibrant'}
 			<!-- 星际：星尘 + 星座 + 轨道环 + 城市天际线 -->
 			<svg
 				class="ambient-world ambient-world--vibrant"
@@ -192,7 +211,7 @@
 					<path d={SKYLINE_NEAR} />
 				</g>
 			</svg>
-		{:else if world === 'forest'}
+		{:else if variant === 'canvas' && world === 'forest'}
 			<!-- 清野：等高线地形 + 针叶林剪影 -->
 			<svg
 				class="ambient-world ambient-world--forest"
@@ -216,7 +235,7 @@
 					<path d={TREES_NEAR} />
 				</g>
 			</svg>
-		{:else}
+		{:else if variant === 'canvas'}
 			<!-- 水墨：三段墨山 + 朱砂圆相 + 墨点 -->
 			<svg
 				class="ambient-world ambient-world--inkwash"
@@ -260,6 +279,8 @@
 			</svg>
 		{/if}
 
-		<div class="ambient-layer ambient-vignette"></div>
+		{#if variant === 'canvas'}
+			<div class="ambient-layer ambient-vignette"></div>
+		{/if}
 	</div>
 </div>

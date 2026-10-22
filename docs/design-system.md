@@ -455,9 +455,11 @@
 ### 16.3 挂载点（全站统一，页面不得自建）
 
 - **外壳内容区**：`DesktopLayout`（`.desktop-main-panel` 内）、`TabletLayout`、
-  `MobilePortrait`、`MobileLandscape` 各自内容区各挂一次——氛围层固定于可见内容区，
-  **不随路由滚动**；`PageViewport` 底色改为透明以透出装饰层（画布底色由外壳提供：
-  桌面白浮卡 / 移动·平板 `surface-page`）；
+  `MobilePortrait`、`MobileLandscape` 各自内容区各挂一次（canvas 完整版）——氛围层固定于
+  可见内容区，**不随路由滚动**；`PageViewport` 底色改为透明以透出装饰层（画布底色由外壳
+  提供：桌面白浮卡 / 移动·平板 `surface-page`）；
+- **桌面导航 chrome**（轻量版）：`DesktopLayout` 顶栏（52px）与左侧栏各挂一次
+  `variant="chrome"`——只铺天光/边光，不画世界层与暗角，让导航与主内容共享同一环境光；
 - 认证页（`routes/(auth)/login`）、错误页（`routes/+error.svelte`）；
 - 启动占位（根布局 BootSplash 外层）：开屏即「世界 + 徽记」，接近游戏加载画面。
 
@@ -472,6 +474,8 @@
 - 不允许页面内手写第二套背景装饰（新页面自动继承画布；确需场景化空态时另立组件评审）；
 - 动效只用 `transform` / `opacity` 合成动画，循环时长走 `--cst-motion-ambient*`（24s/36s）；
   `prefers-reduced-motion: reduce` 下全部停用；
+- `variant="chrome"` 只允许天光/边光（不得画世界层/剪影/暗角），用于顶栏、侧栏这类
+  窄而高的导航 chrome；主内容区必须用默认 canvas 变体；
 - **不引入第二整层底色**：装饰层是透明渐变/图形叠加，不改变「`--cst-surface-page` 是唯一
   整层底色」契约（见第 3 节与 `hotspot-frontend-theme` skill）；
 - 世界层固定在外壳内容区（不随路由滚动），形成纵深视差；全画布页（消息分栏 / 地图）

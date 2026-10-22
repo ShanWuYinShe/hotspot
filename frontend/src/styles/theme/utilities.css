@@ -448,6 +448,32 @@
   .ambient-vignette {
     background: radial-gradient(135% 115% at 50% -8%, transparent 52%, var(--cst-ambient-vignette) 100%);
   }
+
+  /* 桌面顶栏/侧栏的轻量天光（chrome 变体）：只铺方向性天光，不画世界层/暗角/动效，
+     让导航 chrome 与主内容区共享同一环境光，同时保持导航可读性。
+     用线性渐变而非径向：顶栏（h）/侧栏（v）这类窄条容器里，径向会在容器边缘
+     露出明显的弧形色带；线性光带更干净。 */
+  .ambient-backdrop--chrome { opacity: 0.6; }
+  .ambient-backdrop--chrome .ambient-sky,
+  .ambient-backdrop--chrome .ambient-vignette {
+    display: none;
+  }
+  .ambient-backdrop--chrome .ambient-glow--a,
+  .ambient-backdrop--chrome .ambient-glow--b {
+    animation: none;
+  }
+  .ambient-backdrop--chrome-h .ambient-glow--a {
+    background: linear-gradient(90deg, var(--cst-ambient-glow-1) 0%, transparent 40%);
+  }
+  .ambient-backdrop--chrome-h .ambient-glow--b {
+    background: linear-gradient(270deg, var(--cst-ambient-glow-2) 0%, transparent 44%);
+  }
+  .ambient-backdrop--chrome-v .ambient-glow--a {
+    background: linear-gradient(180deg, var(--cst-ambient-glow-1) 0%, transparent 32%);
+  }
+  .ambient-backdrop--chrome-v .ambient-glow--b {
+    background: linear-gradient(0deg, var(--cst-ambient-glow-2) 0%, transparent 36%);
+  }
   .ambient-stars {
     color: var(--cst-ambient-dot);
     animation: ambient-twinkle var(--cst-motion-ambient-slow) var(--cst-ease-standard) infinite;

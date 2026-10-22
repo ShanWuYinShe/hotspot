@@ -38,7 +38,8 @@
 - **氛围画布（Round 11，页面「不空荡」改造）**：内容稀疏/空态页补主题化世界感背景，
   唯一实现 `components/layout/ambient/AmbientBackdrop.svelte`，挂在四端外壳内容区
   （桌面/平板/移动竖屏/移动横屏，固定不随路由滚动；`PageViewport` 底色透明以透出装饰层）、
-  登录页、错误页、启动占位（与 BootSplash 组合成游戏加载画面观感）。
+  登录页、错误页、启动占位（与 BootSplash 组合成游戏加载画面观感）；桌面顶栏/侧栏使用
+  `variant="chrome"` 轻量天光版（只铺天光不画世界层），整窗共享同一环境光。
   四层结构：天光/地平线光源 → 地平线雾 → 主题世界世界（vibrant 星尘+星座+轨道环+城市天际线 /
   forest 等高线+暖阳+树林剪影 / inkwash 墨山+朱砂圆相+飞白墨点）→ 暗角；
   装饰层 `z-index:-1`、`aria-hidden`、`pointer-events:none`，不引入第二整层底色。

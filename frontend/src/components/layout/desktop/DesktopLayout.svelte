@@ -111,6 +111,8 @@
 		class="relative z-[var(--cst-z-chrome)] shrink-0 flex items-center border-b border-border-default bg-surface-primary px-5 gap-2"
 		style="height:var(--cst-desktop-header-height);"
 	>
+		<!-- 轻量氛围天光：让导航 chrome 与主内容共享同一环境光（不画世界层） -->
+		<AmbientBackdrop variant="chrome" orientation="h" />
 		<!-- Logo / 侧边栏开关：展开态分开（Logo 回首页 + 独立收起钮），折叠态
 		     「同一坑位」二合一——默认显示 Logo，hover 原位淡入展开图标，点击展开。
 		     Logo hover 不再套整片灰胶囊（hover-btn rounded-full 在图文组合上显笨重），
@@ -234,9 +236,11 @@
 	<div class="desktop-workspace relative z-0 flex flex-1 overflow-hidden" >
 		<!-- Sidebar (224px expanded / 72px collapsed, fixed width) -->
 		<aside
-			class="relative flex flex-col shrink-0 overflow-hidden box-border rounded-lg border border-border-default bg-surface-primary shadow-raised-sm transition-[width,box-shadow] duration-standard ease-standard"
+			class="relative isolate flex flex-col shrink-0 overflow-hidden box-border rounded-lg border border-border-default bg-surface-primary shadow-raised-sm transition-[width,box-shadow] duration-standard ease-standard"
 			style="width:{isSidebarCollapsed ? 'var(--cst-desktop-sidebar-collapsed)' : 'var(--cst-desktop-sidebar-width)'};padding:0.75rem;"
 		>
+			<!-- 轻量氛围天光：与顶栏/主内容同一环境光（不画世界层） -->
+			<AmbientBackdrop variant="chrome" orientation="v" />
 			<!-- Scrollable nav region — takes all available space -->
 			<div class="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
 				<!-- Section 1: 发现导航 -->
