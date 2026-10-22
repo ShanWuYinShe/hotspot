@@ -42,10 +42,10 @@
 		// 「附近」域（2026-10-22 用户审查调整）：侧栏不再只给一个总览项，直接拆成
 		// 人/群组/动态三个直达入口——桌面端最常用的是这三个叶子页，少一次枢纽页跳转。
 		// 枢纽页 /nearby 仍可从首页「看看附近」等入口进入（侧栏不再占位，不点亮任何项）。
-		// 图标对齐移动端/鸿蒙语义：单人=附近的人、双人=附近的群组、图片=附近的动态。
+		// 图标对齐移动端/鸿蒙语义：单人=附近的人、双人=附近的群组、图片=附近瞬间。
 		{ id: 'nearby-people', icon: UserRound, label: '附近的人', path: ROUTES.nearbyPeople },
 		{ id: 'nearby-groups', icon: Users, label: '附近的群组', path: ROUTES.nearbyGroups },
-		{ id: 'nearby-moments', icon: ImageIcon, label: '附近的动态', path: ROUTES.nearbyMoments }
+		{ id: 'nearby-moments', icon: ImageIcon, label: '附近瞬间', path: ROUTES.nearbyMoments }
 	];
 
 	const PERSONAL_NAV: NavItem[] = [

@@ -388,7 +388,7 @@
 		<!-- gutter 走 --cst-page-gutter token（移动 16px）；页头/正文不再硬编码 px-4 -->
 		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'}>
 			{#snippet trailing()}
-				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「新会话」同排；
+				<!-- 未读计数统一在标题右侧（对齐首页/附近瞬间样板），与「新会话」同排；
 				     未登录隐藏无效控件（对齐桌面分栏守卫；Gemini UI 审查 r24） -->
 				{#if !needsAuth}
 				<div class="flex items-center gap-2">

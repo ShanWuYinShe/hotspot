@@ -83,7 +83,7 @@ export type ServerEventType =
   // 举报
   | 'ReportResolved'
   | 'ReportDismissed'
-  // 附近动态
+  // 附近瞬间
   | 'NearbyNewMoment'
   // 用户
   | 'UserProfileUpdated'

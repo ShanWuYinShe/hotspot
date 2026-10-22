@@ -27,7 +27,7 @@
 ### 卡片（CSS 卡语言 + 一个内容卡原语）
 | 原语 | 职责 |
 |---|---|
-| `data-display/NearbyImageCard` | 图片优先内容卡**唯一实现**（附近动态/附近的人/附近群组/首页轮播/群组详情） |
+| `data-display/NearbyImageCard` | 图片优先内容卡**唯一实现**（附近瞬间/附近的人/附近群组/首页轮播/群组详情） |
 | `card-hover`（utilities） | 可点击卡片唯一 hover 语言：投影抬升 + `--cst-hover-lift`（vibrant）/ 纸面微染+边框（forest） |
 | `card-raised` / `surface-hero` / `ListItem tone=card` | 静态卡片语言（白底 + 投影/描边），禁止再发明第四种 |
 | `image-hover-frame` | 相册小方格专用（照片墙缩略图），内容卡不得使用 |

@@ -4,7 +4,7 @@
 	import type { MomentItem } from '@/api/types';
 	import { formatDistance, formatRelativeDays } from '@/lib/utils';
 
-	// 附近动态行（首页「附近活动」区共用）：色块 icon + title/sub + chevron。
+	// 附近瞬间行（首页「附近活动」区共用）：色块 icon + title/sub + chevron。
 	// 图标/配色按 index 轮换（与 Figma HomePage 活动列表契约一致）。
 	// onClick 携带 moment_id 交给页面导航到 /moments/[momentId]。
 

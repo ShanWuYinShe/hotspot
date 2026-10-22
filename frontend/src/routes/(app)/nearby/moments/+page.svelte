@@ -216,7 +216,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	const minCanvasHeight = $derived(device === 'mobile' ? 440 : 520);
 </script>
 <svelte:head>
-	<!-- 与 PageHeader 一致：页头是「附近瞬间」，「附近动态」是旧名（同类不一致见 s4-28 复核口径） -->
+	<!-- 术语统一：全站用「瞬间」，「附近动态」是旧名；页头/导航/空态/加载态保持一致 -->
 	<title>附近瞬间 · HotSpot</title>
 </svelte:head>
 
@@ -257,7 +257,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 <!-- ═══ 加载中 / 空列表状态 ═══ -->
 {#snippet feedState()}
 	{#if loading}
-		<InlineLoading label="加载附近动态…" />
+		<InlineLoading label="加载附近瞬间…" />
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => { clearMomentsProgress(); reloadKey++; }} />
 	{:else}
@@ -312,7 +312,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			minCardWidth={minCardWidth}
 			minCardHeight={minCardHeight}
 			minCanvasHeight={minCanvasHeight}
-			ariaLabel="附近动态的不规则满铺布局"
+			ariaLabel="附近瞬间的不规则满铺布局"
 			hasMore={feedHasMore}
 			onLoadMore={() => void handleLoadMore()}
 		>

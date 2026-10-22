@@ -331,7 +331,7 @@ const markSingleRead = (id: string) => {
 			onBack={() => smartBack()}
 		>
 			{#snippet trailing()}
-				<!-- 未读计数统一在标题右侧（对齐首页/附近动态样板），与「全部已读」同排 -->
+				<!-- 未读计数统一在标题右侧（对齐首页/附近瞬间样板），与「全部已读」同排 -->
 				<div class="flex items-center gap-2">
 					{#if unread > 0}
 						<span class="text-text-secondary text-xs">{unread} 条未读</span>
