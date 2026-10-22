@@ -5,7 +5,8 @@
 	// 桌面侧栏导航项：
 	// - 选中态：accent-soft 淡底 + accent 图标 + 常驻左侧指示条（克制的「当前位」表达，
 	//   替代旧实心 accent 块——大面积实底在窄侧栏里过重）
-	// - hover（未选中）：surface-navigation-hover 背景 + 主题文字色 + 左侧细指示条
+	// - hover（未选中）：surface-navigation-hover 淡底 + 图标/文字升到 text-primary
+	//   （不出现 accent 指示条，避免与选中态混淆）
 	// - hover（选中）：底色加深一档（interactive-active）——选中行 hover 仍有可感知增量
 	// - 行高固定 40px；图标列固定 40px 居中，折叠时文字随侧栏宽度同步收起
 	//   （max-width/opacity/margin 过渡与 aside 宽度过渡同时长，避免图标位移跳变）
@@ -71,7 +72,7 @@
 	<span class="relative flex size-10 shrink-0 items-center justify-center">
 		<Icon
 			class="size-4.5"
-			style="color:{isActive ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color var(--cst-motion-rapid) var(--cst-ease-standard);"
+			style="color:{isActive ? 'var(--cst-accent-default)' : showHover ? 'var(--cst-text-primary)' : 'var(--cst-text-secondary)'};transition:color var(--cst-motion-rapid) var(--cst-ease-standard);"
 			strokeWidth={isActive ? 2 : 1.5}
 		/>
 		<!-- 折叠态：数字放不下，退化为图标右上角小圆点（accent 实底，与展开态徽标同源） -->

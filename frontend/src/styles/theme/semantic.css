@@ -85,7 +85,12 @@
   --cst-navigation-content: var(--cst-content-secondary);
   --cst-navigation-content-active: var(--cst-accent-default);
   --cst-navigation-active-indicator: var(--cst-accent-default);
-  --cst-surface-navigation-hover: var(--cst-surface-hover);
+  /* 桌面侧栏导航 hover：侧栏 chrome 氛围天光本身带 accent 淡染，沿用 7% accent 混底
+     （--cst-surface-hover）与天光同色系、叠上去几乎不可辨。改为中性「正文色混底」
+     （text-primary 9%）：在浅色是中性灰、深色自动变亮灰，与 accent 选中态
+     （accent-soft + accent 图标/指示条）明确区分；配合 SidebarNavItem 的图标/文字
+     同升一档，hover 一眼可辨。 */
+  --cst-surface-navigation-hover: color-mix(in srgb, var(--cst-text-primary) 9%, var(--cst-surface-primary));
   --cst-elevation-side-sheet: -8px 0 40px rgba(0, 0, 0, 0.22);
   --cst-border-subtle: var(--cst-border-default);
   --cst-interactive-hover-fill: var(--cst-interactive-hover);
