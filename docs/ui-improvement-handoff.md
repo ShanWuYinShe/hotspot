@@ -46,6 +46,17 @@
   12 个 `--cst-ambient-*` token（三主题 × 明暗，随主题/明暗自动适配），
   超长循环动效 24s/36s 且 reduced-motion 停用；背景常驻形成纵深感。
   规范见 `docs/design-system.md` 第 16 节；调浓淡只改 token alpha，无需改组件。
+- **桌面侧栏「附近」拆分（2026-10-22 用户审查）**：桌面侧栏由单项「附近」改为
+  附近的人 / 附近的群组 / 附近的动态 三个直达入口（`nearby-people/groups/moments`），
+  三个叶子各自高亮；枢纽页 `/nearby` 不再占侧栏项、不点亮任何项（仍可从首页
+  「看看附近」进入）。移动/平板底栏 IA 不变（仍落枢纽页、统一高亮「附近」）。
+  鸿蒙桌面侧栏本就有三项（附近瞬间/附近的人/附近的群组），两端桌面 IA 由此对齐；
+  文案差异（web「附近的动态」vs 页面标题/鸿蒙「附近瞬间」）待用户确认统一口径。
+- **桌面侧栏导航 hover 修复（2026-10-22）**：chrome 氛围天光给侧栏叠了 accent 淡染，
+  原 hover（accent 7% 混底）与静息底同色系、几乎不可辨。改为中性「正文色 9% 混底」
+  （`--cst-surface-navigation-hover`），hover 时图标/文字同步升到 `text-primary`；
+  实测 hover 底色差：浅色 ≈15 RGB（改前 8）、深色 ≈13 RGB（改前 3-5）、
+  inkwash 浅色 ≈15 RGB（改前 4-9）。
 - **卡片圆角跨端（Round 10 核对）**：交接文档原记「鸿蒙 20 / 前端 12」**不成立**——两端普通卡片
   都是 20（鸿蒙 `SHAPE.CARD=RADIUS.LG` / 前端 `rounded-lg`），紧凑卡与列表容器都是 16
   （`COMPACT_CARD` / `rounded-md`），12 是图标块/小控件档（`ICON_TILE` / `rounded-sm`）。

@@ -98,9 +98,9 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 - 底栏 4 tab：首页 / 附近 / 消息 / 我的（`PhoneLayout` TAB_ITEMS + `AppNavigation.BOTTOM_TABS`，
   与前端 `routes/(app)/+page.svelte`、`/nearby` 聚合页对齐）。
 - 桌面侧边栏：首页 / 附近瞬间（moments tab）/ 附近的人 / 附近群组 + 消息 / 通知 overlay /
-  我的瞬间 / 我的群组 / 关系（对齐前端 desktop nav 的 home / nearby-moments /
-  nearby-people / nearby-groups / messages / notifications / moments / my-groups /
-  relationships）。
+  我的瞬间 / 我的群组 / 关系（对齐前端 desktop nav：home / nearby-people / nearby-groups /
+  nearby-moments——2026-10-22 web 侧栏已拆为三个邻近入口——messages / moments /
+  my-groups / relationships；web 通知走顶栏铃铛，不在侧栏）。
 - 消息列表：排序 = 置顶优先 → 最新一条消息时间倒序（`last_message.sent_at` 优先，
   回退 `last_activity_at`），已读/未读不参与排序；列表头部有「全部 / 未读 / 已读」过滤
   （`TabsPillGroup`，对齐前端 messages 页 TabBar）；点击未读会话后徽章立即清零。
