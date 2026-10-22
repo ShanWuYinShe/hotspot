@@ -461,6 +461,20 @@
   .ambient-scene--near { color: var(--cst-ambient-ink-1); }
   .ambient-enso,
   .ambient-ink-dots { color: var(--cst-ambient-emblem); }
+  /* 窄屏（手机）构图修正：世界层按 xMidYMid slice 裁切时，右侧母题（星际轨道环/
+     星座、水墨朱砂圆相）会落在可视区外。手机档把母题平移到画面中部并缩小，
+     保持「世界感」又不依赖宽屏取景。 */
+  @media (max-width: 640px) {
+    .ambient-world--vibrant .ambient-orbit {
+      transform: translate(36px, 87px) scale(0.6);
+    }
+    .ambient-world--vibrant .ambient-constellation {
+      transform: translate(320px, 180px) scale(0.6);
+    }
+    .ambient-world--inkwash .ambient-enso {
+      transform: translate(-41px, 85px) scale(0.66);
+    }
+  }
   @keyframes ambient-drift {
     0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
     50% { transform: translate3d(1.4%, -1%, 0) scale(1.05); }

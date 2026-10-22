@@ -87,9 +87,9 @@
   --cst-ambient-line: color-mix(in srgb, var(--cst-palette-text) 16%, transparent);
   --cst-ambient-dot: color-mix(in srgb, var(--cst-palette-text) 32%, transparent);
   --cst-ambient-sun: transparent;
-  --cst-ambient-ink-1: color-mix(in srgb, var(--cst-palette-text) 7%, transparent);
-  --cst-ambient-ink-2: color-mix(in srgb, var(--cst-palette-text) 5%, transparent);
-  --cst-ambient-ink-3: color-mix(in srgb, var(--cst-palette-text) 3.5%, transparent);
+  --cst-ambient-ink-1: color-mix(in srgb, var(--cst-palette-text) 9%, transparent);
+  --cst-ambient-ink-2: color-mix(in srgb, var(--cst-palette-text) 6.5%, transparent);
+  --cst-ambient-ink-3: color-mix(in srgb, var(--cst-palette-text) 4.5%, transparent);
   --cst-ambient-emblem: color-mix(in srgb, var(--cst-palette-accent-primary) 26%, transparent);
   --cst-ambient-horizon: color-mix(in srgb, var(--cst-palette-text) 4%, transparent);
   --cst-ambient-vignette: color-mix(in srgb, var(--cst-palette-text) 5%, transparent);
@@ -289,9 +289,9 @@
   --cst-ambient-line: color-mix(in srgb, var(--cst-palette-text) 20%, transparent);
   --cst-ambient-dot: color-mix(in srgb, var(--cst-palette-text) 40%, transparent);
   --cst-ambient-sun: transparent;
-  --cst-ambient-ink-1: color-mix(in srgb, var(--cst-palette-text) 7%, transparent);
-  --cst-ambient-ink-2: color-mix(in srgb, var(--cst-palette-text) 5%, transparent);
-  --cst-ambient-ink-3: color-mix(in srgb, var(--cst-palette-text) 3.5%, transparent);
+  --cst-ambient-ink-1: color-mix(in srgb, var(--cst-palette-text) 9%, transparent);
+  --cst-ambient-ink-2: color-mix(in srgb, var(--cst-palette-text) 6.5%, transparent);
+  --cst-ambient-ink-3: color-mix(in srgb, var(--cst-palette-text) 4.5%, transparent);
   --cst-ambient-emblem: color-mix(in srgb, var(--cst-palette-accent-primary) 30%, transparent);
   --cst-ambient-horizon: color-mix(in srgb, var(--cst-palette-text) 6%, transparent);
   --cst-ambient-vignette: rgba(0, 0, 0, 0.36);
