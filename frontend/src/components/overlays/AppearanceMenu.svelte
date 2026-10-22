@@ -68,10 +68,11 @@
 
 	const resetLoggedOut = async () => {
 		const { setMockLoggedIn } = await import('@/mocks/data');
-		// Clear the mock session cookies + state, then reload so auth store
-		// re-checks status and renders the anonymous UI.
-		document.cookie = 'access_token=; Path=/; Max-Age=0';
-		document.cookie = 'refresh_token=; Path=/; Max-Age=0';
+		// 只重置 mock 登录态，再 reload 让 auth store 重新判定。
+		// 注意：access_token / refresh_token 是服务端下发的 HttpOnly Cookie，JS 无法读取、
+		// 也无法删除——此前这里用 document.cookie 试图清 Cookie，被 Chrome 全部拒绝并在
+		// console 刷「已有 HTTP-Only Cookie …已拒绝 Cookie “access_token”」。真实登出应走
+		// /auth/signout（服务端 Set-Cookie Max-Age=0）；mock 态由 localStorage 旗标控制。
 		setMockLoggedIn(false);
 		window.location.reload();
 	};
