@@ -14,8 +14,14 @@ import (
 // 所有实例共享计数，重启不丢锁定状态。
 //
 // 键语义（与 inMemoryLoginTracker 阈值一致）：
-//   - 键 auth:loginfail:<login_id>，值 = 失败次数，TTL = defaultLockDuration
-//   - 累计失败 >= defaultMaxFailures 即锁定；锁定到期 = 键 TTL 自然过期
+//   - 键 auth:loginfail:<login_id>，值 = 失败次数
+//   - 未达阈值时每次失败滑动续期 TTL = defaultLockDuration：计数仅在
+//     「静默满 defaultLockDuration」后衰减（对齐 inMemory 的
+//     loginCounterDecay），窗口内连续失败持续累计直至锁定；
+//   - 累计失败达到 defaultMaxFailures 的那一次重设 TTL = defaultLockDuration，
+//     即锁定窗口自「触发锁定的时刻」起算（对齐 inMemory 的
+//     lockUntil = now + defaultLockDuration；此前 TTL 自首次失败起算，
+//     慢速攻击下实际锁期可被压缩到分钟级）；
 //   - 已锁定后继续失败不重置 TTL（对齐 inMemory 的「不重置计时器」）
 type RedisLoginTracker struct {
 	rdb *redis.Client
@@ -42,11 +48,15 @@ func (t *RedisLoginTracker) Check(ctx context.Context, loginID string) error {
 	return nil
 }
 
-// recordFailedScript：原子 INCR + 首次失败设置窗口 TTL。
-// KEYS[1]=计数键; ARGV[1]=窗口毫秒。已锁定的键继续累计但不重置 TTL。
+// recordFailedScript：原子 INCR + TTL 管理。
+// KEYS[1]=计数键; ARGV[1]=窗口毫秒; ARGV[2]=锁定阈值。
+//   - v <= 阈值：每次失败滑动续期 TTL（计数衰减 = 静默满窗口，与 inMemory
+//     的 loginCounterDecay 同语义）；
+//   - v == 阈值：锁定触发，TTL 重设为完整窗口（锁期自触发时刻起算）；
+//   - v > 阈值：已锁定，不重置 TTL（不延长锁期）。
 var recordFailedScript = redis.NewScript(`
 local v = redis.call('INCR', KEYS[1])
-if v == 1 then
+if v <= tonumber(ARGV[2]) then
 	redis.call('PEXPIRE', KEYS[1], ARGV[1])
 end
 return v
@@ -54,7 +64,7 @@ return v
 
 func (t *RedisLoginTracker) RecordFailed(ctx context.Context, loginID string) {
 	err := recordFailedScript.Run(ctx, t.rdb, []string{redisLoginTrackerKey(loginID)},
-		defaultLockDuration.Milliseconds()).Err()
+		defaultLockDuration.Milliseconds(), defaultMaxFailures).Err()
 	if err != nil {
 		observability.L().Warn("login tracker redis record failed", "err", err)
 	}

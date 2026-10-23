@@ -28,20 +28,33 @@ func (p *AppConfigProvider) GetAppConfig(ctx context.Context) (AdminAppConfig, e
 }
 
 func (p *AppConfigProvider) UpdateAppConfig(ctx context.Context, updatedByUserID string, apply func(AdminAppConfig) (AdminAppConfig, *httpx.APIError)) (AdminAppConfig, *httpx.APIError, error) {
-	current := adminAppConfigFromSource(p.source.Get(ctx))
-	next, apiErr := apply(current)
-	if apiErr != nil {
+	// 先对当前快照跑一次校验：apply 内的校验全部是绝对值校验（正数/非空/
+	// 枚举），不依赖现有配置取值——失败在触碰 Update 写路径前直接拒绝，
+	// 避免无效请求也把 payload 原样写库（PersistenceSource.Update 无条件
+	// upsert，会把 updated_at 一并顶新）。
+	if _, apiErr := apply(adminAppConfigFromSource(p.source.Get(ctx))); apiErr != nil {
 		return AdminAppConfig{}, apiErr, nil
 	}
-	next.UpdatedByUserID = &updatedByUserID
-	if next.UpdatedAt == nil || *next.UpdatedAt == "" {
-		updatedAt := time.Now().UTC().Format(time.RFC3339)
-		next.UpdatedAt = &updatedAt
-	}
+	var applyErr *httpx.APIError
 	updated, err := p.source.Update(ctx, func(cur appconfig.AppConfig) appconfig.AppConfig {
-		merged := sourceAppConfigFromAdmin(next)
-		return merged
+		// 增量合并必须在 Update 回调内基于传入的最新 cur 进行：此前这里
+		// 写回的是 Get 时刻的整份旧快照，两个管理员并发改不同分区时后写
+		// 者会把先写者的改动整份回滚（审查 P1-4）。
+		next, apiErr := apply(adminAppConfigFromSource(cur))
+		if apiErr != nil {
+			// 理论不可达（校验已在上方完成，且均为绝对值校验）；
+			// 防御性回退：原样返回 cur，不落任何改动。
+			applyErr = apiErr
+			return cur
+		}
+		now := time.Now().UTC().Format(time.RFC3339)
+		next.UpdatedAt = &now
+		next.UpdatedByUserID = &updatedByUserID
+		return sourceAppConfigFromAdmin(next)
 	})
+	if applyErr != nil {
+		return AdminAppConfig{}, applyErr, nil
+	}
 	if err != nil {
 		return AdminAppConfig{}, nil, err
 	}

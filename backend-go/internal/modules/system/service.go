@@ -2,8 +2,10 @@ package system
 
 import (
 	"context"
+	"fmt"
 
 	"hotspot/backend-go/internal/platform/appconfig"
+	"hotspot/backend-go/internal/platform/buildinfo"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -63,11 +65,10 @@ func (s *Service) GetClientConfig(ctx context.Context) ClientConfig {
 }
 
 func (s *Service) Bootstrap(ctx context.Context, bootstrapResolver BootstrapResolver) BootstrapData {
-	bootstrapVersion := s.repo.GetMeta(ctx).Version
 	meta := s.GetMeta(ctx)
 	clientConfig := s.GetClientConfig(ctx)
 	bd := BootstrapData{
-		BootstrapVersion: bootstrapVersion,
+		BootstrapVersion: s.bootstrapVersion(ctx),
 		Meta:             &meta,
 		ClientConfig:     &clientConfig,
 	}
@@ -80,6 +81,27 @@ func (s *Service) Bootstrap(ctx context.Context, bootstrapResolver BootstrapReso
 		}
 	}
 	return bd
+}
+
+// bootstrapVersion 组装客户端缓存版本（spec api_spec_system.md 缓存契约：
+// 「bootstrap_version 由服务端在平台管理员修改 AppConfig 或发布新版本/
+// 公告时主动递增」）。三个维度任一变化即整体变化：
+//   - buildinfo.Version：发布新版本；
+//   - AppConfig.UpdatedAt（Provider.AppConfigVersion）：管理员修改配置；
+//   - 公告域指纹（Repository.AnnouncementsVersion）：发布/修改/删除公告。
+//
+// profile/unread_summary 为用户私有数据，不参与版本计算（spec 明示
+// 「bootstrap_version 不因用户资料/未读数变化而递增」）。此前实现恒取
+// 静态 meta.Version（永为 v1、永不变化），客户端接入 If-None-Match 后
+// 缓存将永不失效（审查 P1-2）。单一维度查询失败记 Warn 并降级为空串
+// 参与拼接（其余两个维度仍能触发失效）。
+func (s *Service) bootstrapVersion(ctx context.Context) string {
+	annVersion, err := s.repo.AnnouncementsVersion(ctx)
+	if err != nil {
+		observability.L().Warn("system.bootstrap announcements version query failed", "error", err)
+		annVersion = ""
+	}
+	return fmt.Sprintf("%s:%s:%s", buildinfo.Version, s.provider.AppConfigVersion(ctx), annVersion)
 }
 
 func (s *Service) GetBootstrapResolver() BootstrapResolver  { return s.bootstrap }

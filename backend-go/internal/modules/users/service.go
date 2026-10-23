@@ -123,47 +123,44 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 	if err != nil {
 		return err
 	}
-	profile, ok, err := s.repo.GetProfile(ctx, principal.UserID)
-	if err != nil {
-		op.Fail(err)
-		return err
-	}
-	if !ok {
-		profile = s.defaultProfile(ctx, principal.UserID)
-	}
+	// 列级增量更新（审查 P1-3）：只写请求携带的列，替代此前「读全量→改→
+	// 全量回写」——后者并发更新（如 update_location/update_account 交错）
+	// 会互相丢写，且用读取时刻的快照覆写 presence_status/last_online。
+	var patch ProfilePatch
 	if req.Nickname != nil {
 		// 契约（spec api_spec_base.md「通用字段约束」）：nickname 1-30 字符。
 		if n := utf8.RuneCountInString(*req.Nickname); n < 1 || n > 30 {
 			return ErrInvalidProfileField
 		}
-		profile.Nickname = *req.Nickname
+		patch.Nickname = req.Nickname
 	}
 	if req.AvatarFileID != nil {
 		// 归属校验（spec api_spec_user.md update_account 错误码 10300）：
 		// avatar_file_id 须来自当前用户已完成上传的 avatar 类媒体；空字符串
 		// 表示清除头像，不校验。校验实现未接线时跳过（对齐 moments
 		// validateImageOwnership 的 nil 口径，bootstrap 恒注入）。
-		if *req.AvatarFileID == "" || s.avatarMedia == nil {
-			// 空串（清除头像，不校验）或校验实现未接线（测试口径，对齐
-			// moments validateImageOwnership 的 nil 口径）：原样赋值，不转换。
-			profile.AvatarURL = *req.AvatarFileID
-		} else {
+		avatarURL := ""
+		if *req.AvatarFileID != "" && s.avatarMedia != nil {
 			if err := s.avatarMedia.ResolveAvatarImage(ctx, *req.AvatarFileID, principal.UserID); err != nil {
 				observability.L().Warn("users.update_account avatar denied", "error", err, "user_id", principal.UserID)
 				return ErrAvatarNotOwned
 			}
 			// avatar_url 存稳定代理路径而非裸 file_id：此前直存 file_id，客户端
 			// <img src>/Image() 拿到无效相对路径，全站头像坏图（线上实测）。
-			profile.AvatarURL = s.avatarMedia.AvatarPublicPath(*req.AvatarFileID)
+			avatarURL = s.avatarMedia.AvatarPublicPath(*req.AvatarFileID)
+		} else if *req.AvatarFileID != "" {
+			avatarURL = *req.AvatarFileID
 		}
+		patch.AvatarURL = &avatarURL
 	}
 	if req.Bio != nil {
 		// 契约：bio 0-500 字符（空串=清除）。不设上限会被塞 ~1MB 并在主页回显放大。
 		if utf8.RuneCountInString(*req.Bio) > 500 {
 			return ErrInvalidProfileField
 		}
-		profile.Bio = *req.Bio
+		patch.Bio = req.Bio
 	}
+	var tags *[]string
 	if req.Tags != nil {
 		// 契约（spec api_spec_base.md）：每个标签 1-30 字符，最多 10 个。
 		if len(*req.Tags) > 10 {
@@ -181,7 +178,8 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		} else if len(blocked) > 0 {
 			return ErrBlockedTag
 		}
-		profile.Tags = *req.Tags
+		copied := *req.Tags
+		tags = &copied
 	}
 	if req.Gender != nil {
 		// 契约（spec api_spec_user.md）：gender ∈ male/female/other；空串=清除。
@@ -190,11 +188,27 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		default:
 			return ErrInvalidProfileField
 		}
-		profile.Gender = *req.Gender
+		gender := string(*req.Gender)
+		patch.Gender = &gender
 	}
-	if err := s.repo.PutProfile(ctx, profile); err != nil {
+	if !patch.hasColumns() && tags == nil {
+		// 未携带任何字段：no-op 成功（契约语义为「未提供的字段不修改」）。
+		op.Complete()
+		return nil
+	}
+	found, err := s.repo.UpdateProfile(ctx, principal.UserID, patch, tags)
+	if err != nil {
 		op.Fail(err)
 		return err
+	}
+	if !found {
+		// 行不存在（罕见：注册即建档）：退回默认建档路径，行为与旧实现一致。
+		profile := s.defaultProfile(ctx, principal.UserID)
+		applyProfilePatch(&profile, patch, tags)
+		if err := s.repo.PutProfile(ctx, profile); err != nil {
+			op.Fail(err)
+			return err
+		}
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	event := realtime.Event{
@@ -208,6 +222,25 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 	realtime.DefaultHub().BroadcastToUserSubscribers(principal.UserID, event)
 	op.Complete()
 	return nil
+}
+
+// applyProfilePatch 把列级 patch 应用到内存画像（仅默认建档路径使用）。
+func applyProfilePatch(profile *MyProfile, patch ProfilePatch, tags *[]string) {
+	if patch.Nickname != nil {
+		profile.Nickname = *patch.Nickname
+	}
+	if patch.AvatarURL != nil {
+		profile.AvatarURL = *patch.AvatarURL
+	}
+	if patch.Bio != nil {
+		profile.Bio = *patch.Bio
+	}
+	if patch.Gender != nil {
+		profile.Gender = Gender(*patch.Gender)
+	}
+	if tags != nil {
+		profile.Tags = *tags
+	}
 }
 
 func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (PaginatedUsers, error) {
@@ -366,18 +399,21 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 	if err != nil {
 		return err
 	}
-	profile, ok, err := s.repo.GetProfile(ctx, principal.UserID)
+	// 位置列级更新（审查 P1-3）：只写位置四列，不再全量回写——全量路径
+	// 与 update_account 并发时互相丢写，且会用快照覆写 presence 状态。
+	found, err := s.repo.UpdateProfileLocation(ctx, principal.UserID, req.Location)
 	if err != nil {
 		op.Fail(err)
 		return err
 	}
-	if !ok {
-		profile = s.defaultProfile(ctx, principal.UserID)
-	}
-	profile.Location = req.Location
-	if err := s.repo.PutProfile(ctx, profile); err != nil {
-		op.Fail(err)
-		return err
+	if !found {
+		// 行不存在：默认建档（行为与旧实现一致）。
+		profile := s.defaultProfile(ctx, principal.UserID)
+		profile.Location = req.Location
+		if err := s.repo.PutProfile(ctx, profile); err != nil {
+			op.Fail(err)
+			return err
+		}
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	event := realtime.Event{

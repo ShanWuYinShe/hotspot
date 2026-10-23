@@ -9,6 +9,10 @@ import (
 type Provider interface {
 	GetClientConfig(context.Context) ClientConfig
 	GetSystemAnnouncementsCount(context.Context) int
+	// AppConfigVersion 返回 AppConfig 的版本指纹（如 updated_at）：管理员
+	// 每次修改配置都会变化，供 bootstrap_version 组装缓存失效信号
+	//（spec api_spec_system.md 缓存契约：修改 AppConfig 时递增）。
+	AppConfigVersion(context.Context) string
 }
 
 type BootstrapResolver interface {
@@ -75,4 +79,11 @@ func (p *AppConfigProvider) GetSystemAnnouncementsCount(ctx context.Context) int
 		return 10
 	}
 	return cfg.ResponseDefaults.SystemAnnouncementsCount
+}
+
+// AppConfigVersion 以 AppConfig.UpdatedAt 为指纹：PersistenceSource 每次
+// Update 都会顶新该时间戳（platform/appconfig/source.go），未加载/静态
+// 源为空串（该维度恒定，不影响其余维度的失效检测）。
+func (p *AppConfigProvider) AppConfigVersion(ctx context.Context) string {
+	return p.source.Get(ctx).UpdatedAt
 }

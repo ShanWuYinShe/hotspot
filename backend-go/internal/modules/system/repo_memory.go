@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hotspot/backend-go/internal/platform/types"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +16,9 @@ type InMemoryRepository struct {
 	announcements map[string]AnnouncementRecord
 	// seq 保证同纳秒内连续创建的 ID 不碰撞（UnixNano 时间戳在快速循环下会重复）。
 	seq uint64
+	// version 公告域变更指纹（AnnouncementsVersion）：任何创建/修改/删除
+	// 都递增。内存记录无 updated_at 字段，用计数器等价表达「域已变更」。
+	version uint64
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -27,6 +31,12 @@ func (r *InMemoryRepository) GetMeta(context.Context) ApiVersionMeta {
 
 func (r *InMemoryRepository) Health(context.Context) (int, string, *HealthStatus) {
 	return 0, "", &HealthStatus{Status: SystemHealthHealthy, Timestamp: time.Now().UTC().Format(time.RFC3339)}
+}
+
+func (r *InMemoryRepository) AnnouncementsVersion(_ context.Context) (string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return strconv.FormatUint(r.version, 10), nil
 }
 
 func (r *InMemoryRepository) ListAnnouncements(_ context.Context, limit int) ([]AnnouncementRecord, error) {
@@ -101,6 +111,7 @@ func (r *InMemoryRepository) CreateAnnouncement(_ context.Context, input Announc
 		pushSentAt := now
 		item.PushSentAt = &pushSentAt
 	}
+	r.version++
 	r.announcements[item.AnnouncementID] = item
 	return cloneAnnouncementRecord(item), nil
 }
@@ -124,6 +135,7 @@ func (r *InMemoryRepository) UpdateAnnouncement(_ context.Context, input Announc
 	if input.ActionURL != nil {
 		item.ActionURL = strings.TrimSpace(*input.ActionURL)
 	}
+	r.version++
 	r.announcements[input.AnnouncementID] = item
 	return cloneAnnouncementRecord(item), nil
 }
@@ -140,6 +152,7 @@ func (r *InMemoryRepository) DeleteAnnouncement(_ context.Context, announcementI
 	}
 	now := time.Now().UTC()
 	item.DeletedAt = &now
+	r.version++
 	r.announcements[announcementID] = item
 	return nil
 }

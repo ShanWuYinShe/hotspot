@@ -9,17 +9,21 @@ import (
 )
 
 type stubRepo struct {
-	meta        ApiVersionMeta
-	healthCode  httpx.Code
-	healthMsg   string
-	health      *HealthStatus
-	announces   []AnnouncementRecord
-	announceErr error
+	meta                 ApiVersionMeta
+	healthCode           httpx.Code
+	healthMsg            string
+	health               *HealthStatus
+	announces            []AnnouncementRecord
+	announceErr          error
+	announcementsVersion string
 }
 
 func (r *stubRepo) GetMeta(_ context.Context) ApiVersionMeta { return r.meta }
 func (r *stubRepo) Health(_ context.Context) (int, string, *HealthStatus) {
 	return int(r.healthCode), r.healthMsg, r.health
+}
+func (r *stubRepo) AnnouncementsVersion(_ context.Context) (string, error) {
+	return r.announcementsVersion, nil
 }
 func (r *stubRepo) ListAnnouncements(_ context.Context, _ int) ([]AnnouncementRecord, error) {
 	return r.announces, r.announceErr
@@ -41,6 +45,7 @@ func (r *stubRepo) DeleteAnnouncement(_ context.Context, _ string) error { retur
 type stubProvider struct {
 	config        ClientConfig
 	announceCount int
+	configVersion string
 }
 
 func (p *stubProvider) GetClientConfig(_ context.Context) ClientConfig { return p.config }
@@ -50,6 +55,8 @@ func (p *stubProvider) GetSystemAnnouncementsCount(_ context.Context) int {
 	}
 	return p.announceCount
 }
+
+func (p *stubProvider) AppConfigVersion(_ context.Context) string { return p.configVersion }
 
 func TestServiceGetMetaDelegates(t *testing.T) {
 	expected := ApiVersionMeta{Version: "v2", Status: ApiVersionStatusDeprecated}

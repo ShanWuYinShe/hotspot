@@ -55,6 +55,32 @@ func TestRedisLoginTrackerLockoutSemantics(t *testing.T) {
 	}
 }
 
+// 审查 P1-6 防回归：锁定窗口自「触发锁定的那次失败」起算，而非自首次
+// 失败起算——慢速攻击（首次失败后临近 TTL 才打满阈值）下实际锁期不得
+// 被压缩到分钟级。此前脚本仅在 v==1 时设置 TTL，第 5 次失败发生在
+// t0+14min 时键只剩 ~1min 寿命。
+func TestRedisLoginTrackerLockWindowFromTrigger(t *testing.T) {
+	tracker, mr := newTestRedisTracker(t)
+	ctx := context.Background()
+
+	for i := 0; i < defaultMaxFailures-1; i++ {
+		tracker.RecordFailed(ctx, "slow@example.com")
+	}
+	// 滑动续期：窗口内每次失败都把 TTL 拉满，计数不衰减。
+	if got := mr.TTL(redisLoginTrackerKey("slow@example.com")); got < defaultLockDuration-time.Minute {
+		t.Fatalf("expected counter TTL refreshed on each failure, got %v", got)
+	}
+	// 首次失败后 14 分钟才打出锁定阈值：TTL 必须重设为完整锁定窗口。
+	mr.FastForward(defaultLockDuration - time.Minute)
+	tracker.RecordFailed(ctx, "slow@example.com")
+	if got := mr.TTL(redisLoginTrackerKey("slow@example.com")); got <= defaultLockDuration-time.Minute {
+		t.Fatalf("expected full lock window from trigger moment, got %v", got)
+	}
+	if err := tracker.Check(ctx, "slow@example.com"); !errors.Is(err, ErrAccountLocked) {
+		t.Fatalf("expected ErrAccountLocked at threshold, got %v", err)
+	}
+}
+
 func TestRedisLoginTrackerTTLExpiresLock(t *testing.T) {
 	tracker, mr := newTestRedisTracker(t)
 	ctx := context.Background()

@@ -77,10 +77,12 @@ func (h *Handler) Bootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 	bootstrapResolver := h.service.GetBootstrapResolver()
 	bd := h.service.Bootstrap(r.Context(), bootstrapResolver)
-	// 缓存契约（spec system.md → bootstrap）：客户端带 If-None-Match 且版本未变化时，
-	// 返回精简响应（仅 bootstrap_version，meta/client_config/profile/unread_summary 省略，客户端用缓存）。
+	// 缓存契约（spec system.md → bootstrap）：客户端带 If-None-Match 且版本
+	// 未变化时返回精简响应——仅省略公共段 meta/client_config（客户端用
+	// 缓存）；profile/unread_summary 为用户私有数据、无缓存语义，命中时
+	// 仍恒返回最新值（见 BootstrapCacheHitData 注释，审查 P1-2）。
 	if etag := r.Header.Get("If-None-Match"); etag != "" && etag == bd.BootstrapVersion {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Success(BootstrapCacheHitData{BootstrapVersion: bd.BootstrapVersion}))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Success(BootstrapCacheHitData{BootstrapVersion: bd.BootstrapVersion, Profile: bd.Profile, UnreadSummary: bd.UnreadSummary}))
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(bd))

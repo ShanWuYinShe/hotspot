@@ -19,39 +19,44 @@ func (r *PostgresRepository) ListAuditLogs(ctx context.Context, filter AuditLogF
 	if apiErr != nil {
 		return auditLogPage{}, apiErr
 	}
-	rows, err := queryable.Query(ctx, queryAuditList)
+	limit := types.NormalizeLimit(filter.Pagination.Limit)
+	// 过滤 + keyset + LIMIT 全部下推 SQL（审查 P1-1：此前无 WHERE 无 LIMIT，
+	// 全表物化后在 Go 里过滤/翻页——审计表随管理操作只增不减，列表页
+	// O(全表)）。时间过滤与游标谓词口径与原 Go 实现一致（start/end 闭区间）。
+	var cursorAt, cursorLogID any
+	if filter.Pagination.Cursor != "" {
+		cursorAt, cursorLogID = cursor.CreatedAt.UTC(), cursor.LogID
+	}
+	var startTime, endTime any
+	if filter.StartTime != nil {
+		startTime = filter.StartTime.UTC()
+	}
+	if filter.EndTime != nil {
+		endTime = filter.EndTime.UTC()
+	}
+	rows, err := queryable.Query(ctx, queryAuditList,
+		string(filter.Action), filter.OperatorID, string(filter.TargetType), filter.TargetID,
+		startTime, endTime, cursorAt, cursorLogID, limit+1)
 	if err != nil {
 		return auditLogPage{}, err
 	}
 	defer rows.Close()
-	limit := types.NormalizeLimit(filter.Pagination.Limit)
-	page := auditLogPage{Items: make([]AuditLogItem, 0, limit)}
-	seenCursor := filter.Pagination.Cursor == ""
+	items := make([]AuditLogItem, 0, limit+1)
 	for rows.Next() {
 		entry, err := scanAuditEntry(rows)
 		if err != nil {
 			return auditLogPage{}, err
 		}
-		if !matchAuditFilter(entry, filter) {
-			continue
-		}
-		if !seenCursor {
-			if entry.CreatedAt.After(cursor.CreatedAt) {
-				continue
-			}
-			if entry.CreatedAt.Equal(cursor.CreatedAt) && entry.LogID >= cursor.LogID {
-				continue
-			}
-			seenCursor = true
-		}
-		if len(page.Items) >= limit {
-			page.Next = &auditCursor{CreatedAt: entry.CreatedAt, LogID: entry.LogID}
-			break
-		}
-		page.Items = append(page.Items, auditLogItemFromEntry(entry, includeIPAddress))
+		items = append(items, auditLogItemFromEntry(entry, includeIPAddress))
 	}
 	if err := rows.Err(); err != nil {
 		return auditLogPage{}, err
+	}
+	page := auditLogPage{Items: items}
+	if len(items) > limit {
+		page.Items = items[:limit]
+		last := page.Items[limit-1]
+		page.Next = &auditCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), LogID: last.LogID}
 	}
 	return page, nil
 }

@@ -165,6 +165,7 @@ func (r *staticRepo) GetMeta(context.Context) ApiVersionMeta {
 func (r *staticRepo) Health(context.Context) (int, string, *HealthStatus) {
 	return 0, "", &HealthStatus{Status: SystemHealthHealthy, Timestamp: time.Now().UTC().Format(time.RFC3339)}
 }
+func (r *staticRepo) AnnouncementsVersion(context.Context) (string, error) { return "", nil }
 func (r *staticRepo) ListAnnouncements(context.Context, int) ([]AnnouncementRecord, error) {
 	if r.err != nil {
 		return nil, r.err
@@ -189,6 +190,7 @@ type fixedProvider struct{ count int }
 
 func (p fixedProvider) GetClientConfig(context.Context) ClientConfig    { return ClientConfig{} }
 func (p fixedProvider) GetSystemAnnouncementsCount(context.Context) int { return p.count }
+func (p fixedProvider) AppConfigVersion(context.Context) string         { return "" }
 
 func TestListAnnouncementsReturnsRepoData(t *testing.T) {
 	repo := &staticRepo{items: []AnnouncementRecord{{

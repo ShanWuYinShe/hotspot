@@ -22,12 +22,23 @@ func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportL
 	if !ok {
 		return adminReportPage{}, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryAdminSearchReports, string(req.Status), string(req.TargetType))
+	cursorRaw := types.PaginationCursor(req.Pagination)
+	cursor, apiErr := decodeAdminReportCursor(cursorRaw)
+	if apiErr != nil {
+		return adminReportPage{}, apiErr
+	}
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
+	// keyset 谓词与 LIMIT 下推 SQL（审查 P1-1），limit+1 探测下一页。
+	var cursorAt, cursorID any
+	if cursorRaw != "" {
+		cursorAt, cursorID = cursor.CreatedAt.UTC(), cursor.ReportID
+	}
+	rows, err := queryable.Query(ctx, queryAdminSearchReports, string(req.Status), string(req.TargetType), cursorAt, cursorID, limit+1)
 	if err != nil {
 		return adminReportPage{}, err
 	}
 	defer rows.Close()
-	items := make([]AdminReportItem, 0)
+	items := make([]AdminReportItem, 0, limit+1)
 	for rows.Next() {
 		record, err := scanAdminReportRow(rows, false)
 		if err != nil {
@@ -38,33 +49,21 @@ func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportL
 	if err := rows.Err(); err != nil {
 		return adminReportPage{}, err
 	}
-	cursorRaw := types.PaginationCursor(req.Pagination)
-	cursor, apiErr := decodeAdminReportCursor(cursorRaw)
-	if apiErr != nil {
-		return adminReportPage{}, apiErr
+	page := adminReportPage{Items: items}
+	if len(items) > limit {
+		page.Items = items[:limit]
+		last := page.Items[limit-1]
+		page.Next = &adminReportCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), ReportID: last.ReportID}
 	}
-	filtered := make([]AdminReportItem, 0, len(items))
-	for _, item := range items {
-		if cursorRaw != "" {
-			createdAt := timeFromRFC3339(item.CreatedAt)
-			if createdAt.After(cursor.CreatedAt) {
-				continue
-			}
-			if createdAt.Equal(cursor.CreatedAt) && item.ReportID >= cursor.ReportID {
-				continue
-			}
+	// Total = 过滤后、分页前的命中总数（「待处理」角标，spec AdminReportsPage.
+	// total）。仅 service 会透出的场景（带 status 过滤）才跑独立 COUNT，避免
+	// 每次翻页都全表计数。
+	if req.Status != "" {
+		var total int
+		if err := queryable.QueryRow(ctx, queryAdminCountReports, string(req.Status), string(req.TargetType)).Scan(&total); err != nil {
+			return adminReportPage{}, err
 		}
-		filtered = append(filtered, item)
-	}
-	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
-	// Total = 过滤后、分页前的命中总数（与 items 同口径，含 target_type 过滤）
-	page := adminReportPage{Items: make([]AdminReportItem, 0, limit), Total: len(filtered)}
-	for idx, item := range filtered {
-		if idx >= limit {
-			page.Next = &adminReportCursor{CreatedAt: timeFromRFC3339(item.CreatedAt), ReportID: item.ReportID}
-			break
-		}
-		page.Items = append(page.Items, item)
+		page.Total = total
 	}
 	return page, nil
 }

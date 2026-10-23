@@ -3,6 +3,7 @@ package reports
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -152,6 +153,18 @@ func TestServiceCreateRejectsDescriptionTooLong(t *testing.T) {
 	_, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeUser, TargetID: "u2", Reason: ReportReasonSpam, Description: types.StrPtr(string(longDesc))})
 	if err == nil {
 		t.Fatal("expected error for too long description")
+	}
+}
+
+// 审查 P1-7 防回归：description 上限按字符（rune）计，不按字节——
+// 400 个汉字（1200 字节）在 spec 的 0-1000 字符内，必须放行。
+func TestServiceCreateAcceptsCJKDescriptionWithinRuneLimit(t *testing.T) {
+	service := NewServiceWithRepo(&stubRepo{ownerFound: true, created: ReportCreated{ReportID: "r1"}})
+	if _, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeUser, TargetID: "u2", Reason: ReportReasonSpam, Description: types.StrPtr(strings.Repeat("举", 400))}); err != nil {
+		t.Fatalf("expected CJK description within 1000 runes accepted, got %v", err)
+	}
+	if _, err := service.Create(ctxWithUser("u1"), CreateReportRequest{TargetType: ReportTargetTypeUser, TargetID: "u2", Reason: ReportReasonSpam, Description: types.StrPtr(strings.Repeat("报", 1001))}); err == nil {
+		t.Fatal("expected error for 1001-rune description")
 	}
 }
 

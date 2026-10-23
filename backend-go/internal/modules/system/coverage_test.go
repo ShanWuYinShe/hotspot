@@ -170,6 +170,90 @@ func TestBootstrapHandlerCarriesResolverData(t *testing.T) {
 	}
 }
 
+// 审查 P1-2 防回归：bootstrap_version 必须随「发布公告」递增——此前恒取
+// 静态 meta.Version（永为 v1），客户端接入 If-None-Match 后缓存永不失效。
+func TestBootstrapVersionReflectsAnnouncementChanges(t *testing.T) {
+	repo := NewInMemoryRepository()
+	svc := NewServiceWithDeps(repo, NewAppConfigProvider(appconfig.NewStaticSource(config.Load())))
+	before := svc.Bootstrap(context.Background(), nil).BootstrapVersion
+	if _, err := repo.CreateAnnouncement(context.Background(), AnnouncementCreateInput{
+		Actor: AnnouncementActor{UserID: "admin"}, Title: "t", Content: "c", Severity: AnnounceLevelInfo,
+	}); err != nil {
+		t.Fatalf("create announcement: %v", err)
+	}
+	after := svc.Bootstrap(context.Background(), nil).BootstrapVersion
+	if before == "" || after == "" || before == after {
+		t.Fatalf("expected bootstrap_version to change on announcement publish, before=%q after=%q", before, after)
+	}
+}
+
+// 审查 P1-2 防回归：bootstrap_version 必须随「管理员修改 AppConfig」递增。
+func TestBootstrapVersionReflectsAppConfigChanges(t *testing.T) {
+	repo := NewInMemoryRepository()
+	v1 := NewServiceWithDeps(repo, &stubProvider{configVersion: "2026-10-23T10:00:00Z"}).Bootstrap(context.Background(), nil).BootstrapVersion
+	v2 := NewServiceWithDeps(repo, &stubProvider{configVersion: "2026-10-23T11:00:00Z"}).Bootstrap(context.Background(), nil).BootstrapVersion
+	if v1 == "" || v1 == v2 {
+		t.Fatalf("expected bootstrap_version to change on AppConfig update, v1=%q v2=%q", v1, v2)
+	}
+}
+
+// 审查 P1-2 防回归：缓存命中响应只省略公共段 meta/client_config；
+// profile/unread_summary 为用户私有数据，命中时仍恒返回最新值
+// （spec api_spec_system.md 缓存契约 prose；命中判定 = 键不存在）。
+func TestBootstrapHandlerCacheHitKeepsPrivateSections(t *testing.T) {
+	svc := NewService(appconfig.NewStaticSource(config.Load()))
+	svc.SetBootstrapResolver(fakeBootstrapResolver{
+		profile: map[string]any{"user_id": "u1"},
+		found:   true,
+		summary: UnreadSummary{NotifyTotal: 2},
+	})
+	handler := NewHandler(svc)
+
+	first := httptest.NewRecorder()
+	handler.Bootstrap(first, httptest.NewRequest(http.MethodPost, "/bootstrap", strings.NewReader(`{}`)))
+	var firstResp struct {
+		Data struct {
+			BootstrapVersion string `json:"bootstrap_version"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(first.Body).Decode(&firstResp); err != nil {
+		t.Fatalf("decode first response: %v", err)
+	}
+	if firstResp.Data.BootstrapVersion == "" {
+		t.Fatal("expected non-empty bootstrap_version")
+	}
+
+	hit := httptest.NewRequest(http.MethodPost, "/bootstrap", strings.NewReader(`{}`))
+	hit.Header.Set("If-None-Match", firstResp.Data.BootstrapVersion)
+	hitRR := httptest.NewRecorder()
+	handler.Bootstrap(hitRR, hit)
+
+	var resp struct {
+		Code httpx.Code                 `json:"code"`
+		Data map[string]json.RawMessage `json:"data"`
+	}
+	if err := json.NewDecoder(hitRR.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode hit response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code=0 on cache hit, got %d", resp.Code)
+	}
+	for _, key := range []string{"meta", "client_config"} {
+		if raw, ok := resp.Data[key]; ok {
+			t.Fatalf("public section %q must be omitted on cache hit, got %s", key, string(raw))
+		}
+	}
+	for _, key := range []string{"profile", "unread_summary"} {
+		raw, ok := resp.Data[key]
+		if !ok {
+			t.Fatalf("private section %q must stay present on cache hit", key)
+		}
+		if string(raw) == "null" {
+			t.Fatalf("private section %q must carry fresh value on cache hit, got null", key)
+		}
+	}
+}
+
 func TestGetClientConfigRejectsNonEmptyBody(t *testing.T) {
 	handler := NewHandler(NewService(appconfig.NewStaticSource(config.Load())))
 	req := httptest.NewRequest(http.MethodPost, "/get_client_config", strings.NewReader(`[1,2]`))

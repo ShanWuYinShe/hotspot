@@ -83,6 +83,34 @@ func (r *stubUserRepo) GetProfile(_ context.Context, _ string) (MyProfile, bool,
 	return r.profile, r.profileFound, r.profileErr
 }
 
+func (r *stubUserRepo) UpdateProfile(_ context.Context, userID string, patch ProfilePatch, tags *[]string) (bool, error) {
+	if !r.profileFound {
+		return false, nil
+	}
+	profile := r.profile
+	applyProfilePatch(&profile, patch, tags)
+	r.profile = profile
+	return true, nil
+}
+
+func (r *stubUserRepo) UpdateProfileLocation(_ context.Context, userID string, loc Location) (bool, error) {
+	if !r.profileFound {
+		return false, nil
+	}
+	profile := r.profile
+	profile.Location = loc
+	r.profile = profile
+	return true, nil
+}
+
+func (r *stubUserRepo) UpdateSettings(_ context.Context, _ string, patch PartialUserSettings) (bool, error) {
+	if !r.settingsFound {
+		return false, nil
+	}
+	applySettingsPatch(&r.settings, patch)
+	return true, nil
+}
+
 func (r *stubUserRepo) GetProfiles(_ context.Context, userIDs []string) (map[string]MyProfile, error) {
 	if r.profilesErr != nil {
 		return nil, r.profilesErr

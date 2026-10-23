@@ -54,6 +54,19 @@ func (r *PostgresRepository) GetMeta(ctx context.Context) ApiVersionMeta {
 	return ApiVersionMeta{Version: "v1", Status: ApiVersionStatusActive}
 }
 
+// AnnouncementsVersion 公告域变更指纹（queryAnnouncementsVersion）。
+func (r *PostgresRepository) AnnouncementsVersion(ctx context.Context) (string, error) {
+	queryable, err := r.queryable(ctx)
+	if err != nil {
+		return "", err
+	}
+	var version string
+	if err := queryable.QueryRow(ctx, queryAnnouncementsVersion).Scan(&version); err != nil {
+		return "", err
+	}
+	return version, nil
+}
+
 // Health probes the dependencies the service actually depends on (Postgres and,
 // when configured, Redis) and reports status per spec: code=0 covers healthy
 // and degraded; code=10600 (CodeInternalUnavailable) means unhealthy. Postgres

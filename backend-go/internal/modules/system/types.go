@@ -120,10 +120,16 @@ type BootstrapData struct {
 	UnreadSummary    *UnreadSummary  `json:"unread_summary"` // 恒定 nullable：匿名时为 null
 }
 
-// BootstrapCacheHitData 缓存命中时的精简响应（仅 bootstrap_version，
-// meta/client_config/profile/unread_summary 由客户端用缓存）。
+// BootstrapCacheHitData 缓存命中时的精简响应：meta/client_config 为公共
+// 数据，命中时整体省略（客户端用缓存）；profile/unread_summary 为用户
+// 私有数据、无缓存语义，命中时仍恒返回最新值（spec api_spec_system.md
+// 缓存契约——spec 类型定义处的「命中时同样省略」注释与该 prose 冲突，
+// 以更明确且带设计论证的 prose 为准：否则登录态客户端命中缓存后将拿
+// 不到任何私有数据，聚合端点失去意义，审查 P1-2）。
 type BootstrapCacheHitData struct {
-	BootstrapVersion string `json:"bootstrap_version"`
+	BootstrapVersion string         `json:"bootstrap_version"`
+	Profile          any            `json:"profile"`        // 恒定 nullable：匿名时为 null
+	UnreadSummary    *UnreadSummary `json:"unread_summary"` // 恒定 nullable：匿名时为 null
 }
 
 type UnreadSummary struct {

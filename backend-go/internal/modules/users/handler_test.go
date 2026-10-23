@@ -120,6 +120,15 @@ func (invalidCursorRepo) CommonGroupCount(context.Context, string, string) (int,
 	return 0, nil
 }
 func (invalidCursorRepo) UserExists(context.Context, string) (bool, error) { return false, nil }
+func (invalidCursorRepo) UpdateProfile(context.Context, string, ProfilePatch, *[]string) (bool, error) {
+	return false, nil
+}
+func (invalidCursorRepo) UpdateProfileLocation(context.Context, string, Location) (bool, error) {
+	return false, nil
+}
+func (invalidCursorRepo) UpdateSettings(context.Context, string, PartialUserSettings) (bool, error) {
+	return false, nil
+}
 
 func (r *userErrorRepo) GetProfile(context.Context, string) (MyProfile, bool, error) {
 	return MyProfile{}, false, r.getProfileErr
@@ -194,6 +203,15 @@ func (r *userErrorRepo) CommonGroupCount(context.Context, string, string) (int, 
 }
 func (r *userErrorRepo) UserExists(context.Context, string) (bool, error) {
 	return r.exists, nil
+}
+func (r *userErrorRepo) UpdateProfile(context.Context, string, ProfilePatch, *[]string) (bool, error) {
+	return false, r.putProfileErr
+}
+func (r *userErrorRepo) UpdateProfileLocation(context.Context, string, Location) (bool, error) {
+	return false, r.putProfileErr
+}
+func (r *userErrorRepo) UpdateSettings(context.Context, string, PartialUserSettings) (bool, error) {
+	return false, r.putSettingsErr
 }
 
 func TestGetMyProfileReturnsCurrentUser(t *testing.T) {

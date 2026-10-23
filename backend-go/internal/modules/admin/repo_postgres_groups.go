@@ -16,12 +16,23 @@ func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSea
 	if !ok {
 		return adminGroupPage{}, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryAdminSearchGroups, req.GroupID, req.Name, req.OwnerID)
+	cursorRaw := types.PaginationCursor(req.Pagination)
+	cursor, apiErr := decodeAdminGroupCursor(cursorRaw)
+	if apiErr != nil {
+		return adminGroupPage{}, apiErr
+	}
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
+	// keyset 谓词与 LIMIT 下推 SQL（审查 P1-1，同 SearchUsers）。
+	var cursorAt, cursorID any
+	if cursorRaw != "" {
+		cursorAt, cursorID = cursor.CreatedAt.UTC(), cursor.GroupID
+	}
+	rows, err := queryable.Query(ctx, queryAdminSearchGroups, req.GroupID, req.Name, req.OwnerID, cursorAt, cursorID, limit+1)
 	if err != nil {
 		return adminGroupPage{}, err
 	}
 	defer rows.Close()
-	items := make([]AdminGroupItem, 0)
+	items := make([]AdminGroupItem, 0, limit+1)
 	for rows.Next() {
 		item, err := scanAdminGroupRow(rows)
 		if err != nil {
@@ -32,32 +43,11 @@ func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSea
 	if err := rows.Err(); err != nil {
 		return adminGroupPage{}, err
 	}
-	cursorRaw := types.PaginationCursor(req.Pagination)
-	cursor, apiErr := decodeAdminGroupCursor(cursorRaw)
-	if apiErr != nil {
-		return adminGroupPage{}, apiErr
-	}
-	filtered := make([]AdminGroupItem, 0, len(items))
-	for _, item := range items {
-		if cursorRaw != "" {
-			createdAt := timeFromRFC3339(item.CreatedAt)
-			if createdAt.After(cursor.CreatedAt) {
-				continue
-			}
-			if createdAt.Equal(cursor.CreatedAt) && item.Group.GroupID <= cursor.GroupID {
-				continue
-			}
-		}
-		filtered = append(filtered, item)
-	}
-	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
-	page := adminGroupPage{Items: make([]AdminGroupItem, 0, limit)}
-	for idx, item := range filtered {
-		if idx >= limit {
-			page.Next = &adminGroupCursor{CreatedAt: timeFromRFC3339(item.CreatedAt), GroupID: item.Group.GroupID}
-			break
-		}
-		page.Items = append(page.Items, item)
+	page := adminGroupPage{Items: items}
+	if len(items) > limit {
+		page.Items = items[:limit]
+		last := page.Items[limit-1]
+		page.Next = &adminGroupCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), GroupID: last.Group.GroupID}
 	}
 	return page, nil
 }

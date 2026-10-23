@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
@@ -97,6 +99,170 @@ func (r *PostgresRepository) execInTx(ctx context.Context, sql string, arg any) 
 	}
 	return queryable.Exec(ctx, sql, arg)
 }
+
+// hasColumns 报告 patch 是否携带任一列级更新。
+func (p ProfilePatch) hasColumns() bool {
+	return p.Nickname != nil || p.AvatarURL != nil || p.Bio != nil || p.Gender != nil
+}
+
+// buildUpdateProfileSQL 构造列级 UPDATE（AGENTS「SQL 构造」：动态列名走
+// 固定白名单 if 链，值全部 $N 参数化，禁止用户输入进列名）。
+func buildUpdateProfileSQL(userID string, patch ProfilePatch) (string, []any) {
+	sets := make([]string, 0, 4)
+	args := []any{userID}
+	add := func(column string, value any) {
+		args = append(args, value)
+		sets = append(sets, column+" = $"+strconv.Itoa(len(args)))
+	}
+	if patch.Nickname != nil {
+		add("nickname", *patch.Nickname)
+	}
+	if patch.AvatarURL != nil {
+		add("avatar_url", *patch.AvatarURL)
+	}
+	if patch.Bio != nil {
+		add("bio", *patch.Bio)
+	}
+	if patch.Gender != nil {
+		add("gender", *patch.Gender)
+	}
+	return "UPDATE users SET " + strings.Join(sets, ", ") + " WHERE user_id = $1 RETURNING 1", args
+}
+
+// UpdateProfile 增量更新资料（审查 P1-3）：列级 UPDATE 只写请求携带的列，
+// tags 在同一事务内整组替换；行不存在时返回 found=false（调用方走默认
+// 建档路径）。tags-only 更新没有列级 UPDATE 可携带 RETURNING，先做一次
+// 存在性探测。
+func (r *PostgresRepository) UpdateProfile(ctx context.Context, userID string, patch ProfilePatch, tags *[]string) (bool, error) {
+	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
+		return false, persistence.ErrNotImplemented
+	}
+	if !patch.hasColumns() {
+		exists, err := r.UserExists(ctx, userID)
+		if err != nil {
+			return false, err
+		}
+		if !exists {
+			return false, nil
+		}
+	}
+	rowMissing := false
+	err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		queryable, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		if patch.hasColumns() {
+			var one int
+			updateSQL, updateArgs := buildUpdateProfileSQL(userID, patch)
+			if err := queryable.QueryRow(txCtx, updateSQL, updateArgs...).Scan(&one); err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					rowMissing = true
+					return nil
+				}
+				return err
+			}
+		}
+		if tags == nil {
+			return nil
+		}
+		if err := queryable.Exec(txCtx, queryReplaceUserProfileTags, userID); err != nil {
+			return err
+		}
+		if len(*tags) == 0 {
+			return nil
+		}
+		return queryable.Exec(txCtx, queryInsertUserProfileTagsBatch, userID, *tags)
+	})
+	if err != nil {
+		return false, err
+	}
+	return !rowMissing, nil
+}
+
+// UpdateProfileLocation 只更新位置四列（含 s2_cell_id 重算），不触碰
+// presence/last_online 等运行时列（queryUpdatePresenceStatus 是其唯一
+// 运行时写点；此前全量回写会把 online 回写成 offline，审查 P1-3）。
+func (r *PostgresRepository) UpdateProfileLocation(ctx context.Context, userID string, loc Location) (bool, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return false, persistence.ErrNotImplemented
+	}
+	s2CellID := geo.LeafCellID(geo.Point{Latitude: loc.Point.Latitude, Longitude: loc.Point.Longitude})
+	var one int
+	if err := queryable.QueryRow(ctx, queryUpdateProfileLocation, userID, loc.LocationName, loc.Point.Latitude, loc.Point.Longitude, s2CellID).Scan(&one); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// buildUpdateSettingsSQL 构造设置列级 UPDATE（列名固定白名单 if 链，
+// 值全部 $N 参数化）。空 patch 返回 ok=false。
+func buildUpdateSettingsSQL(userID string, patch PartialUserSettings) (string, []any, bool) {
+	sets := make([]string, 0, 14)
+	args := []any{userID}
+	addStr := func(column string, value *string) {
+		if value == nil {
+			return
+		}
+		args = append(args, *value)
+		sets = append(sets, column+" = $"+strconv.Itoa(len(args)))
+	}
+	addBool := func(column string, value *bool) {
+		if value == nil {
+			return
+		}
+		args = append(args, *value)
+		sets = append(sets, column+" = $"+strconv.Itoa(len(args)))
+	}
+	addStr("privacy_level", patch.PrivacyLevel)
+	addBool("location_visible", patch.LocationVisible)
+	addBool("presence_visible", patch.PresenceVisible)
+	addBool("social_lists_visible", patch.SocialListsVisible)
+	addBool("groups_visible", patch.GroupsVisible)
+	addBool("reacted_moments_visible", patch.ReactedMomentsVisible)
+	addBool("stats_visible", patch.StatsVisible)
+	addBool("allow_follow", patch.AllowFollow)
+	if patch.AllowPrivateChat != nil {
+		args = append(args, string(*patch.AllowPrivateChat))
+		sets = append(sets, "allow_private_chat = $"+strconv.Itoa(len(args)))
+	}
+	addBool("searchable", patch.Searchable)
+	addBool("phone_searchable", patch.PhoneSearchable)
+	addBool("nickname_searchable", patch.NicknameSearchable)
+	addBool("location_searchable", patch.LocationSearchable)
+	addBool("nearby_moment_notify", patch.NearbyMomentNotify)
+	if len(sets) == 0 {
+		return "", nil, false
+	}
+	return "UPDATE user_settings SET " + strings.Join(sets, ", ") + " WHERE user_id = $1 RETURNING 1", args, true
+}
+
+// UpdateSettings 增量更新设置（审查 P1-3）：只写 patch 携带的列。设置行
+// 不存在时返回 found=false（调用方按默认值建档）。空 patch 直接成功
+// （无需触碰库，语义与「未提供字段不修改」一致）。
+func (r *PostgresRepository) UpdateSettings(ctx context.Context, userID string, patch PartialUserSettings) (bool, error) {
+	sql, args, ok := buildUpdateSettingsSQL(userID, patch)
+	if !ok {
+		return true, nil
+	}
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return false, persistence.ErrNotImplemented
+	}
+	var one int
+	if err := queryable.QueryRow(ctx, sql, args...).Scan(&one); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func (r *PostgresRepository) PutSettings(ctx context.Context, userID string, settings UserSettings) error {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {

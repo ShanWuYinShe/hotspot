@@ -1,6 +1,13 @@
 package system
 
 const (
+	// queryAnnouncementsVersion 公告域变更指纹：create/update/delete 都会
+	// 顶新 updated_at（见 queryInsertAnnouncement/queryUpdateAnnouncement/
+	// queryDeleteAnnouncement），MAX 即可覆盖三类变更。
+	queryAnnouncementsVersion = `
+SELECT COALESCE(MAX(updated_at)::text, '')
+FROM system_announcements`
+
 	queryListPublicAnnouncements = `
 SELECT sa.announcement_id,
        sa.title,

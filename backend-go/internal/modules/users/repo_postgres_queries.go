@@ -43,6 +43,10 @@ INSERT INTO user_profile_tags (user_id, tag_name)
 SELECT $1, tag FROM unnest($2::text[]) AS tag
 ON CONFLICT (user_id, tag_name) DO NOTHING`
 
+	// presence_status/last_online 不参与 ON CONFLICT 的 UPDATE SET（插入路径
+	// 仍写初始值）：运行时 presence 由 WS 生命周期维护
+	//（queryUpdatePresenceStatus 是唯一运行时写点），全量 upsert 若覆写这两列，
+	// 会把读取时刻的快照（可能已过期）回写覆盖 online 状态（审查 P1-3）。
 	queryUpsertUserProfile = `
 INSERT INTO users (user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, presence_status, last_online, created_at, s2_cell_id)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::timestamptz,$14::timestamptz,$15)
@@ -57,9 +61,18 @@ phone = EXCLUDED.phone,
 location_name = EXCLUDED.location_name,
 latitude = EXCLUDED.latitude,
 longitude = EXCLUDED.longitude,
-presence_status = EXCLUDED.presence_status,
-last_online = EXCLUDED.last_online,
 s2_cell_id = EXCLUDED.s2_cell_id`
+
+	// queryUpdateProfileLocation 位置列级更新（UpdateProfileLocation）：
+	// 只写位置四列，不携带 presence 等运行时列。
+	queryUpdateProfileLocation = `
+UPDATE users
+SET location_name = $2,
+    latitude = $3,
+    longitude = $4,
+    s2_cell_id = $5
+WHERE user_id = $1
+RETURNING 1`
 
 	// 账户删除匿名化（spec api_spec_user.md「数据保留策略」）：users 行保留
 	// （user_id 关联不断、内容因不触发级联而保留），昵称/头像等替换为占位，

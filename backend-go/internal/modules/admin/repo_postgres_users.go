@@ -43,12 +43,24 @@ func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearc
 	if !ok {
 		return adminUserPage{}, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryAdminSearchUsers, req.UserID, req.Nickname, req.LoginID, string(req.Status), string(req.UserType))
+	cursorRaw := types.PaginationCursor(req.Pagination)
+	cursor, apiErr := decodeAdminUserCursor(cursorRaw)
+	if apiErr != nil {
+		return adminUserPage{}, apiErr
+	}
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
+	// keyset 谓词与 LIMIT 下推 SQL（审查 P1-1）：limit+1 探测行判断是否还有
+	// 下一页，不再全量物化后在 Go 里过滤/截页。
+	var cursorAt, cursorID any
+	if cursorRaw != "" {
+		cursorAt, cursorID = cursor.CreatedAt.UTC(), cursor.UserID
+	}
+	rows, err := queryable.Query(ctx, queryAdminSearchUsers, req.UserID, req.Nickname, req.LoginID, string(req.Status), string(req.UserType), cursorAt, cursorID, limit+1)
 	if err != nil {
 		return adminUserPage{}, err
 	}
 	defer rows.Close()
-	items := make([]AdminUserItem, 0)
+	items := make([]AdminUserItem, 0, limit+1)
 	for rows.Next() {
 		item, err := scanAdminUserRow(rows)
 		if err != nil {
@@ -59,32 +71,11 @@ func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearc
 	if err := rows.Err(); err != nil {
 		return adminUserPage{}, err
 	}
-	cursorRaw := types.PaginationCursor(req.Pagination)
-	cursor, apiErr := decodeAdminUserCursor(cursorRaw)
-	if apiErr != nil {
-		return adminUserPage{}, apiErr
-	}
-	filtered := make([]AdminUserItem, 0, len(items))
-	for _, item := range items {
-		if cursorRaw != "" {
-			createdAt := timeFromRFC3339(item.CreatedAt)
-			if createdAt.After(cursor.CreatedAt) {
-				continue
-			}
-			if createdAt.Equal(cursor.CreatedAt) && item.User.UserID <= cursor.UserID {
-				continue
-			}
-		}
-		filtered = append(filtered, item)
-	}
-	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
-	page := adminUserPage{Items: make([]AdminUserItem, 0, limit)}
-	for idx, item := range filtered {
-		if idx >= limit {
-			page.Next = &adminUserCursor{CreatedAt: timeFromRFC3339(item.CreatedAt), UserID: item.User.UserID}
-			break
-		}
-		page.Items = append(page.Items, item)
+	page := adminUserPage{Items: items}
+	if len(items) > limit {
+		page.Items = items[:limit]
+		last := page.Items[limit-1]
+		page.Next = &adminUserCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), UserID: last.User.UserID}
 	}
 	return page, nil
 }

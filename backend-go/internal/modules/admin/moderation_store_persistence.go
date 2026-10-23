@@ -2,7 +2,9 @@ package admin
 
 import (
 	"context"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
@@ -144,7 +146,12 @@ func (s *PersistenceModerationStore) DeleteAnnouncement(ctx context.Context, ann
 	return s.system.DeleteAnnouncement(ctx, announcementID)
 }
 
-type inMemoryModerationStoreSystemAdapter struct{ repo *InMemoryModerationStore }
+type inMemoryModerationStoreSystemAdapter struct {
+	repo *InMemoryModerationStore
+	// version 公告域变更指纹（system.Repository.AnnouncementsVersion）：
+	// 内存 store 无 updated_at，用原子计数等价表达「域已变更」。
+	version atomic.Uint64
+}
 
 func NewInMemoryModerationStoreSystemAdapter() systemmodule.Repository {
 	store := NewInMemoryModerationStore()
@@ -153,6 +160,10 @@ func NewInMemoryModerationStoreSystemAdapter() systemmodule.Repository {
 
 func (a *inMemoryModerationStoreSystemAdapter) GetMeta(ctx context.Context) systemmodule.ApiVersionMeta {
 	return systemmodule.ApiVersionMeta{Version: "v1", Status: systemmodule.ApiVersionStatusActive}
+}
+
+func (a *inMemoryModerationStoreSystemAdapter) AnnouncementsVersion(context.Context) (string, error) {
+	return strconv.FormatUint(a.version.Load(), 10), nil
 }
 
 func (a *inMemoryModerationStoreSystemAdapter) Health(ctx context.Context) (int, string, *systemmodule.HealthStatus) {
@@ -174,14 +185,17 @@ func (a *inMemoryModerationStoreSystemAdapter) GetAnnouncement(ctx context.Conte
 }
 
 func (a *inMemoryModerationStoreSystemAdapter) CreateAnnouncement(ctx context.Context, input systemmodule.AnnouncementCreateInput) (systemmodule.AnnouncementRecord, error) {
+	a.version.Add(1)
 	return a.repo.CreateAnnouncement(ctx, input)
 }
 
 func (a *inMemoryModerationStoreSystemAdapter) UpdateAnnouncement(ctx context.Context, input systemmodule.AnnouncementUpdateInput) (systemmodule.AnnouncementRecord, error) {
+	a.version.Add(1)
 	return a.repo.UpdateAnnouncement(ctx, input)
 }
 
 func (a *inMemoryModerationStoreSystemAdapter) DeleteAnnouncement(ctx context.Context, announcementID string) error {
+	a.version.Add(1)
 	return a.repo.DeleteAnnouncement(ctx, announcementID)
 }
 

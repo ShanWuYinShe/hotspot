@@ -37,12 +37,20 @@ type loginLockEntry struct {
 	failures  int
 	lockedAt  time.Time
 	lockUntil time.Time
+	// lastFailedAt 最近一次计失败的时刻：未锁定条目的计数衰减依据
+	//（见 loginCounterDecay），锁定条目不使用。
+	lastFailedAt time.Time
 }
 
 const (
 	defaultMaxFailures    = 5
 	defaultLockDuration   = 15 * time.Minute
 	defaultTrackerCleanup = 10 * time.Minute
+	// loginCounterDecay 未锁定条目的失败计数衰减窗口：静默（无新失败）
+	// 达该窗口后计数作废。窗口内连续失败会持续累计直至锁定——若按
+	// sweeper 周期无差别清扫，攻击者以「每周期失败 max-1 次」的节奏可
+	// 永不触发锁定（审查 P1-5），故只清「静默期已过」的条目。
+	loginCounterDecay = defaultLockDuration
 )
 
 // inMemoryLoginTracker is a simple in-memory failed-login tracker.
@@ -98,6 +106,7 @@ func (t *inMemoryLoginTracker) RecordFailed(_ context.Context, loginID string) {
 		return
 	}
 	entry.failures++
+	entry.lastFailedAt = now
 	if entry.failures >= defaultMaxFailures {
 		entry.lockedAt = now
 		entry.lockUntil = now.Add(defaultLockDuration)
@@ -120,14 +129,30 @@ func (t *inMemoryLoginTracker) sweep(ctx context.Context) {
 		case <-t.stopCh:
 			return
 		case <-ticker.C:
-			t.mu.Lock()
-			now := time.Now()
-			for id, entry := range t.entries {
-				if now.After(entry.lockUntil) {
-					delete(t.entries, id)
-				}
+			t.sweepOnce(time.Now())
+		}
+	}
+}
+
+// sweepOnce 清扫过期条目（与 Check 的惰性清理同口径，供周期 sweeper 与测试复用）：
+//   - 已锁定且锁期已过：锁定解除，计数随之作废（下次失败从零计）；
+//   - 从未锁定且静默已达 loginCounterDecay：计数衰减作废；
+//   - 锁定中的条目一律保留（清扫周期短于锁期时不得提前释放）。
+//
+// 此前条件是裸的 now.After(entry.lockUntil)，未锁定条目的零值 lockUntil
+// 恒满足，等于每轮清光所有部分计数——「每 10 分钟失败 4 次」即可永不锁定。
+func (t *inMemoryLoginTracker) sweepOnce(now time.Time) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for id, entry := range t.entries {
+		if !entry.lockUntil.IsZero() {
+			if now.After(entry.lockUntil) {
+				delete(t.entries, id)
 			}
-			t.mu.Unlock()
+			continue
+		}
+		if !entry.lastFailedAt.IsZero() && now.Sub(entry.lastFailedAt) >= loginCounterDecay {
+			delete(t.entries, id)
 		}
 	}
 }

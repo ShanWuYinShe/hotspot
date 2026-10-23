@@ -211,28 +211,6 @@ func scanAuditEntry(rows persistence.Rows) (AuditLogEntry, error) {
 	return getAuditEntryByRow(rows)
 }
 
-func matchAuditFilter(entry AuditLogEntry, filter AuditLogFilter) bool {
-	if filter.Action != "" && entry.Action != filter.Action {
-		return false
-	}
-	if filter.OperatorID != "" && entry.Operator.UserID != filter.OperatorID {
-		return false
-	}
-	if filter.TargetType != "" && entry.TargetType != filter.TargetType {
-		return false
-	}
-	if filter.TargetID != "" && entry.TargetID != filter.TargetID {
-		return false
-	}
-	if filter.StartTime != nil && entry.CreatedAt.Before(*filter.StartTime) {
-		return false
-	}
-	if filter.EndTime != nil && entry.CreatedAt.After(*filter.EndTime) {
-		return false
-	}
-	return true
-}
-
 type adminUserRow struct {
 	UserID            string
 	Nickname          string

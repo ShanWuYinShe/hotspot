@@ -126,10 +126,22 @@ WHERE user_id = $1`
 INSERT INTO admin_audit_logs (log_id, action, operator_id, operator_name, operator_avatar_url, target_type, target_id, target_name, details_json, ip_location, ip_address, device_summary, created_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`
 
+	// queryAuditList 过滤 + keyset 分页全部下推 SQL（审查 P1-1：此前无 WHERE
+	// 无 LIMIT 全量物化后在 Go 里过滤/翻页，审计表只增不减，列表页 O(全表)）。
+	// 谓词与排序 (created_at DESC, log_id DESC) 对齐：下一页 = created_at < 游标
+	// OR (相等 AND log_id < 游标)；start/end 闭区间（与原 matchAuditFilter 口径一致）。
 	queryAuditList = `
 SELECT log_id, action, operator_id, operator_name, COALESCE(operator_avatar_url, ''), target_type, target_id, COALESCE(target_name, ''), COALESCE(details_json, '{}'), COALESCE(ip_location, ''), COALESCE(ip_address, ''), COALESCE(device_summary, ''), created_at
 FROM admin_audit_logs
-ORDER BY created_at DESC, log_id DESC`
+WHERE ($1 = '' OR action = $1)
+  AND ($2 = '' OR operator_id = $2)
+  AND ($3 = '' OR target_type = $3)
+  AND ($4 = '' OR target_id = $4)
+  AND ($5::timestamptz IS NULL OR created_at >= $5)
+  AND ($6::timestamptz IS NULL OR created_at <= $6)
+  AND ($7::timestamptz IS NULL OR created_at < $7 OR (created_at = $7 AND log_id < $8))
+ORDER BY created_at DESC, log_id DESC
+LIMIT $9`
 
 	// AdminUserItem 读取（spec api_spec_admin.md）：banned_until = 封禁到期时间
 	// （banned_at + duration；null = 未封禁/永久封禁），privacy_level 来自
@@ -168,7 +180,12 @@ WHERE ($1 = '' OR u.user_id = $1)
   AND ($3 = '' OR lower(COALESCE(a.login_id, '')) LIKE '%' || lower($3) || '%')
   AND ($4 = '' OR COALESCE(u.status, 'normal') = $4)
   AND ($5 = '' OR u.user_type = $5)
-ORDER BY u.created_at DESC, u.user_id ASC`
+  AND ($6::timestamptz IS NULL OR u.created_at < $6 OR (u.created_at = $6 AND u.user_id > $7))
+ORDER BY u.created_at DESC, u.user_id ASC
+LIMIT $8`
+	// keyset 谓词（$6/$7）与排序 (created_at DESC, user_id ASC) 对齐：下一页 =
+	// created_at < 游标 OR (相等 AND user_id > 游标)。LIMIT $8 = 页大小+1 探测行
+	//（审查 P1-1：此前无 LIMIT 全量物化后内存分页，users 增长后单请求拖全表）。
 	queryAdminGetUser = `
 SELECT u.user_id,
        u.nickname,
@@ -253,7 +270,11 @@ WHERE g.deleted_at IS NULL
   AND ($1 = '' OR g.group_id = $1)
   AND ($2 = '' OR lower(g.name) LIKE '%' || lower($2) || '%')
   AND ($3 = '' OR COALESCE(g.owner_id, '') = $3)
-ORDER BY g.created_at DESC, g.group_id ASC`
+  AND ($4::timestamptz IS NULL OR g.created_at < $4 OR (g.created_at = $4 AND g.group_id > $5))
+ORDER BY g.created_at DESC, g.group_id ASC
+LIMIT $6`
+	// keyset 谓词（$4/$5）与排序 (created_at DESC, group_id ASC) 对齐，LIMIT $6
+	// = 页大小+1 探测行（审查 P1-1：同 queryAdminSearchUsers）。
 	queryAdminGetGroup = `
 SELECT g.group_id,
        g.name,
@@ -327,7 +348,20 @@ JOIN users reporter ON reporter.user_id = r.creator_user_id
 LEFT JOIN users handler ON handler.user_id = r.handled_by_user_id
 WHERE ($1 = '' OR r.status = $1)
   AND ($2 = '' OR r.target_type = $2)
-ORDER BY r.created_at DESC, r.report_id DESC`
+  AND ($3::timestamptz IS NULL OR r.created_at < $3 OR (r.created_at = $3 AND r.report_id < $4))
+ORDER BY r.created_at DESC, r.report_id DESC
+LIMIT $5`
+	// keyset 谓词（$3/$4）与排序 (created_at DESC, report_id DESC) 对齐：下一页 =
+	// created_at < 游标 OR (相等 AND report_id < 游标)。LIMIT $5 = 页大小+1 探测行
+	//（审查 P1-1：此前无 LIMIT 全量物化，Total 亦依赖全表扫描）。
+
+	// queryAdminCountReports 带 status 过滤时的命中总数（「待处理」角标，spec
+	// api_spec_admin.md AdminReportsPage.total）：分页下推 SQL 后独立 COUNT 取回。
+	queryAdminCountReports = `
+SELECT COUNT(*)
+FROM reports
+WHERE ($1 = '' OR status = $1)
+  AND ($2 = '' OR target_type = $2)`
 	queryAdminGetReportHandleRecord = `
 SELECT r.report_id,
        r.target_type,

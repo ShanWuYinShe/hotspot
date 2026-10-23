@@ -3,6 +3,7 @@ package reports
 import (
 	"context"
 	"errors"
+	"unicode/utf8"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
@@ -41,7 +42,10 @@ func (s *Service) SetMessageSnapshotSource(src MessageSnapshotSource) { s.messag
 
 func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCreated, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if !isValidReportTargetType(req.TargetType) || !isValidReportReason(req.Reason) || req.TargetID == "" || (req.Description != nil && len(*req.Description) > 1000) {
+	// description 0-1000 字符（spec api_spec_report.md）：按 rune 计——
+	// 此前 len() 是字节数，中文（3 字节/字）超过 333 字即被误拒 10000
+	//（审查 P1-7；同仓 users 模块对 nickname/bio 均按 rune 计）。
+	if !isValidReportTargetType(req.TargetType) || !isValidReportReason(req.Reason) || req.TargetID == "" || (req.Description != nil && utf8.RuneCountInString(*req.Description) > 1000) {
 		return ReportCreated{}, ErrInvalidRequest
 	}
 	if req.TargetType == ReportTargetTypeUser && req.TargetID == principal.UserID {

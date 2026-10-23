@@ -100,8 +100,70 @@ func (r *InMemoryRepository) MutualFriends(_ context.Context, viewerID, targetID
 func (r *InMemoryRepository) PutProfile(_ context.Context, profile MyProfile) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	// 与 PG 版 queryUpsertUserProfile「ON CONFLICT 不覆写 presence」同口径
+	//（审查 P1-3）：运行时 presence 由 WS 生命周期维护，全量覆盖写不得
+	// 用调用方读取时刻的快照回滚它。
+	if existing, ok := r.profiles[profile.UserID]; ok {
+		profile.PresenceStatus = existing.PresenceStatus
+		profile.LastOnline = existing.LastOnline
+	}
 	r.profiles[profile.UserID] = profile
 	return nil
+}
+
+// UpdateProfile 增量更新资料（与 PG 版语义对齐，审查 P1-3）：只写 patch
+// 中非 nil 的列，tags 非 nil 时整组替换；行不存在返回 false。
+func (r *InMemoryRepository) UpdateProfile(_ context.Context, userID string, patch ProfilePatch, tags *[]string) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	profile, ok := r.profiles[userID]
+	if !ok {
+		return false, nil
+	}
+	if patch.Nickname != nil {
+		profile.Nickname = *patch.Nickname
+	}
+	if patch.AvatarURL != nil {
+		profile.AvatarURL = *patch.AvatarURL
+	}
+	if patch.Bio != nil {
+		profile.Bio = *patch.Bio
+	}
+	if patch.Gender != nil {
+		profile.Gender = Gender(*patch.Gender)
+	}
+	if tags != nil {
+		profile.Tags = *tags
+	}
+	r.profiles[userID] = profile
+	return true, nil
+}
+
+// UpdateProfileLocation 位置列级更新（与 PG 版语义对齐）。
+func (r *InMemoryRepository) UpdateProfileLocation(_ context.Context, userID string, loc Location) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	profile, ok := r.profiles[userID]
+	if !ok {
+		return false, nil
+	}
+	profile.Location = loc
+	r.profiles[userID] = profile
+	return true, nil
+}
+
+// UpdateSettings 增量更新设置（与 PG 版语义对齐）：只写 patch 中非 nil
+// 的列；设置行不存在返回 false。空 patch 不触碰存储。
+func (r *InMemoryRepository) UpdateSettings(_ context.Context, userID string, patch PartialUserSettings) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	settings, ok := r.settings[userID]
+	if !ok {
+		return false, nil
+	}
+	applySettingsPatch(&settings, patch)
+	r.settings[userID] = settings
+	return true, nil
 }
 
 // DeleteProfile 账户删除匿名化（与 postgres 实现一致）：users 行保留并置占位

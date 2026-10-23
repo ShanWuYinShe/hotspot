@@ -66,18 +66,22 @@ func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsReques
 	if req.Settings.AllowPrivateChat != nil && !req.Settings.AllowPrivateChat.Valid() {
 		return fmt.Errorf("%w: allow_private_chat", ErrInvalidRequest)
 	}
-	settings, ok, err := s.repo.GetSettings(ctx, principal.UserID)
+	// 列级增量更新（审查 P1-3）：只写请求携带的列——此前「读全量→patch→
+	// 全量回写」在两次并发 update_settings 交错时后写者会用旧快照覆盖
+	// 先写者刚改的其它字段。
+	found, err := s.repo.UpdateSettings(ctx, principal.UserID, req.Settings)
 	if err != nil {
 		op.Fail(err)
 		return err
 	}
-	if !ok {
-		settings = defaultSettings()
-	}
-	applySettingsPatch(&settings, req.Settings)
-	if err := s.repo.PutSettings(ctx, principal.UserID, settings); err != nil {
-		op.Fail(err)
-		return err
+	if !found {
+		// 设置行不存在（从未保存过）：按默认值建档后再套用 patch。
+		settings := defaultSettings()
+		applySettingsPatch(&settings, req.Settings)
+		if err := s.repo.PutSettings(ctx, principal.UserID, settings); err != nil {
+			op.Fail(err)
+			return err
+		}
 	}
 	// 设置变更立即失效热缓存（realtime typing / presence 判定读同一键族）。
 	if s.settingsCache != nil {

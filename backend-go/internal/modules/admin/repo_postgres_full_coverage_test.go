@@ -220,7 +220,8 @@ func TestAdminRepoAuditLogs(t *testing.T) {
 	if page.Items[0].Details == nil || page.Items[0].IPAddress == nil {
 		t.Fatalf("audit item fields: %#v", page.Items[0])
 	}
-	// filter 全部命中 + cursor 路径（keyset：只保留 LogID < cursor 的条目）
+	// filter + cursor 路径：过滤与 keyset 谓词已下推 SQL（审查 P1-1），桩返回
+	// 的即「SQL 过滤后」的行——此处验证过滤参数被正确透传且结果按 limit 截页。
 	cursorToken := encodeAuditCursor(auditCursor{CreatedAt: aTestTime, LogID: "audit_2"})
 	start := aTestTime.Add(-time.Hour)
 	end := aTestTime.Add(time.Hour)
@@ -230,7 +231,7 @@ func TestAdminRepoAuditLogs(t *testing.T) {
 		StartTime: &start, EndTime: &end,
 		Pagination: types.PaginationParams{Limit: 10, Cursor: cursorToken},
 	}, false)
-	if err != nil || len(page.Items) != 1 {
+	if err != nil || len(page.Items) != 2 || page.Next != nil {
 		t.Fatalf("list audit filtered: %#v err=%v", page, err)
 	}
 	// 无效 cursor
@@ -459,13 +460,17 @@ func TestAdminRepoGroups(t *testing.T) {
 
 func TestAdminRepoReports(t *testing.T) {
 	ctx := context.Background()
-	// SearchReports：正常 + 分页（keyset：只保留 ReportID < cursor 的条目）
+	// SearchReports：正常 + 分页（keyset 已下推 SQL；带 status 过滤时另跑
+	// queryAdminCountReports 取命中总数——「待处理」角标，spec total 字段）。
 	reportCursor := encodeAdminReportCursor(adminReportCursor{CreatedAt: aTestTime, ReportID: "r3"})
-	stub := &adminFullStub{queryRows: map[string][][]any{queryAdminSearchReports: {adminReportRowVals16("r3"), adminReportRowVals16("r2"), adminReportRowVals16("r1")}}}
+	stub := &adminFullStub{
+		queryRows: map[string][][]any{queryAdminSearchReports: {adminReportRowVals16("r3"), adminReportRowVals16("r2"), adminReportRowVals16("r1")}},
+		queryRow:  map[string][]any{queryAdminCountReports: {3}},
+	}
 	page, err := newAdminFullRepo(stub).SearchReports(ctx, AdminReportListRequest{
 		Status: ReportStatusPending, Pagination: &types.PaginationParams{Limit: 2, Cursor: reportCursor},
 	})
-	if err != nil || len(page.Items) != 2 {
+	if err != nil || len(page.Items) != 2 || page.Total != 3 {
 		t.Fatalf("search reports: %#v err=%v", page, err)
 	}
 	// 无 cursor → Next
