@@ -20,7 +20,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
-import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
+import { EmptyState } from '../../../components/EmptyState';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -56,6 +56,8 @@ export struct HomePage {
   @State viewAllPressedIndex: number = -1;
   @State pressedMomentKey: string = '';
   @State isRefreshing: boolean = false;
+  /** 当前下拉位移（vp）：仅用于刷新指示器渐显，避免指示器在刷新区很小时被裁成半截 */
+  @State pullOffset: number = 0;
 
   private isDestroyed: boolean = false;
 
@@ -162,7 +164,7 @@ export struct HomePage {
         this.buildStickyHeader()
 
         // 整页下拉刷新：Refresh 包内容区（sticky header 保持粘性在外）
-        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+        Refresh({ refreshing: $$this.isRefreshing, builder: this.buildHomeRefreshIndicator }) {
           Column() {
             // 一条流：关系流在前、发现流去重续后；无标题、无切换器、无分组小标题
             if (this.feedLoading() && this.displayedMoments().length === 0) {
@@ -192,11 +194,42 @@ export struct HomePage {
         }
         .width('100%')
         .layoutWeight(1)
+        .onOffsetChange((offset: number) => {
+          this.pullOffset = offset;
+        })
         .onRefreshing(() => { this.refreshHome(); })
       }
       .width('100%')
       .height('100%')
     }
+  }
+
+  /**
+   * 首页下拉刷新指示器（页面级 builder，需要读 pullOffset/isRefreshing）。
+   * 全局 RefreshIndicator 是固定高度 + 常显文案：刷新区还很小的时候文案会被裁成半截，
+   * 看起来像渲染坏了。这里改成：下拉阶段只显示 spinner，并按位移渐显；进入刷新态后再补
+   * 「正在刷新…」文案，避免任何半截裁切。
+   */
+  @Builder
+  private buildHomeRefreshIndicator() {
+    Row() {
+      LoadingProgress()
+        .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+        .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
+        .color(this.getPalette().accentBackground)
+        .accessibilityText('正在刷新')
+      if (this.isRefreshing) {
+        Text('正在刷新…')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .margin({ left: DesignConstants.SPACING.SM })
+          .fontColor(this.getPalette().textSecondary)
+      }
+    }
+    .width('100%')
+    .height(DesignConstants.LAYOUT.MIN_HIT_TARGET + DesignConstants.SPACING.MD)
+    .justifyContent(FlexAlign.Center)
+    .opacity(this.isRefreshing ? 1 : Math.min(1, this.pullOffset / 48))
+    .accessibilityText('正在刷新')
   }
 
   /** 空态：两个流都为空时才出现（一条流的通用空态） */
