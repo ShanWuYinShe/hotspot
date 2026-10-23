@@ -12,13 +12,21 @@ const (
 	UPDATE comments SET is_deleted = TRUE, content = ''
 	WHERE comment_id = $1`
 
+	// 软删 + 父评论 replies_count 递减 + 命中标志，单条 SQL 原子完成。
+	// deleted CTE 带 is_deleted = FALSE 守卫：并发重复 Delete 时第二次 0 行
+	// RETURNING → deleted=false、replies_count 不再递减（此前守卫缺失，service
+	// 层「Get 检查→软删」的 TOCTOU 窗口内双发执行会双重递减，且该计数无自愈
+	// 机制）。调用方以 deleted=false 为准跳过 moments.comments_count 递减。
 	querySoftDeleteReplyAndDecrementParent = `
 	WITH deleted AS (
-		UPDATE comments SET is_deleted = TRUE, content = '' WHERE comment_id = $1
+		UPDATE comments SET is_deleted = TRUE, content = ''
+		WHERE comment_id = $1 AND is_deleted = FALSE
 		RETURNING parent_id
+	), decremented AS (
+		UPDATE comments SET replies_count = GREATEST(replies_count - 1, 0)
+		WHERE comment_id IN (SELECT parent_id FROM deleted WHERE parent_id IS NOT NULL AND parent_id != '')
 	)
-	UPDATE comments SET replies_count = GREATEST(replies_count - 1, 0)
-	WHERE comment_id IN (SELECT parent_id FROM deleted WHERE parent_id IS NOT NULL AND parent_id != '')`
+	SELECT EXISTS(SELECT 1 FROM deleted) AS deleted`
 
 	queryListComments = `
 		SELECT c.comment_id, c.user_id, COALESCE(u.nickname, c.user_id), COALESCE(c.parent_id, ''), c.content, c.created_at, c.likes_count, c.replies_count, c.is_deleted

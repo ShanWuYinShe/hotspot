@@ -132,16 +132,19 @@ func (r *PostgresRepository) ListReactedByUser(ctx context.Context, userID, view
 	momentIDs := make([]string, 0, limit+1)
 	cursors := make([]string, 0, limit+1)
 	for rows.Next() {
+		// is_favorited 由 SQL 尾列 EXISTS(moment_favorites) 按查看者实查（spec
+		// api_spec_types.md MomentItem：当前用户是否收藏）；favorited_at 仅
+		// fetch_favorites 的 FavoritedMomentItem 语义，本端点不填充。
 		item, reactedAt, err := scanUserReactedMomentRow(rows)
 		if err != nil {
 			return PaginatedMoments{}, err
 		}
-		// 已反应列表：对查看者本人而言必然已收藏（spec api_spec_moment.md → moments/list_reacted）
-		item.IsFavorited = true
-		item.FavoritedAt = reactedAt
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
-		cursors = append(cursors, encodeMomentsByUserCursor(reactedAt, item.MomentID))
+		// 游标携带 reacted_at 全精度（RFC3339Nano）：列由 time.Now().UTC() 全精度
+		// 写入且 upsert 切换 emoji 会刷新，秒截断会让同秒行在翻页中静默丢失
+		// （AGENTS 分页纪律，fetch_favorites 修复先例）。
+		cursors = append(cursors, encodeMomentsByUserCursor(reactedAt.UTC().Format(time.RFC3339Nano), item.MomentID))
 		if len(items) == limit+1 {
 			tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs[:limit])
 			if err != nil {
@@ -188,13 +191,15 @@ func scanUserMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, err
 	return item, nil
 }
 
-func scanUserReactedMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, string, error) {
+// scanUserReactedMomentRow 扫描 queryListReactedByUser 行（含尾列 is_favorited），
+// 返回全精度 reactedAt（time.Time，游标编码用，不得用秒精度展示格式）。
+func scanUserReactedMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, time.Time, error) {
 	var item MomentItem
 	var userID, nickname, locationName, privacyLevel string
 	var latitude, longitude float64
 	var createdAt, reactedAt time.Time
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &reactedAt); err != nil {
-		return MomentItem{}, "", err
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &reactedAt, &item.IsFavorited); err != nil {
+		return MomentItem{}, time.Time{}, err
 	}
 	if nickname == "" {
 		nickname = userID
@@ -206,5 +211,5 @@ func scanUserReactedMomentRow(scanner interface{ Scan(...any) error }) (MomentIt
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 	item.PrivacyLevel = privacyLevel
-	return item, reactedAt.UTC().Format(time.RFC3339), nil
+	return item, reactedAt.UTC(), nil
 }

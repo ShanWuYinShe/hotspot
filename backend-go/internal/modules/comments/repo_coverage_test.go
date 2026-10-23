@@ -52,8 +52,8 @@ func TestMemoryGetCommentSoftDelete(t *testing.T) {
 	if err != nil || !found || got.Content != "hi" {
 		t.Fatalf("get: %#v found=%v err=%v", got, found, err)
 	}
-	if err := repo.SoftDelete(ctx, item.CommentID); err != nil {
-		t.Fatalf("soft delete: %v", err)
+	if deleted, err := repo.SoftDelete(ctx, item.CommentID); err != nil || !deleted {
+		t.Fatalf("soft delete: deleted=%v err=%v", deleted, err)
 	}
 	got, found, err = repo.Get(ctx, item.CommentID)
 	if err != nil || !found || got.Content != "" {
@@ -61,10 +61,29 @@ func TestMemoryGetCommentSoftDelete(t *testing.T) {
 	}
 }
 
+// 防回归（P1-5）：并发/重复 Delete 的双重递减防线——第二次软删返回
+// (false, nil)，service 据此跳过 moment.comments_count 递减。
+func TestMemorySoftDeleteSecondCallReturnsFalse(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+	item, err := repo.Create(ctx, "u1", CreateCommentRequest{MomentID: "m1", Content: "hi"})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	deleted, err := repo.SoftDelete(ctx, item.CommentID)
+	if err != nil || !deleted {
+		t.Fatalf("first soft delete: deleted=%v err=%v", deleted, err)
+	}
+	deleted, err = repo.SoftDelete(ctx, item.CommentID)
+	if err != nil || deleted {
+		t.Fatalf("second soft delete must be a no-op: deleted=%v err=%v", deleted, err)
+	}
+}
+
 func TestPostgresCommentRepoNotConfigured(t *testing.T) {
 	repo := NewPostgresRepository(persistence.NewFactory(config.Config{}))
 	ctx := context.Background()
-	if err := repo.SoftDelete(ctx, "c1"); err != persistence.ErrNotImplemented {
+	if _, err := repo.SoftDelete(ctx, "c1"); err != persistence.ErrNotImplemented {
 		t.Fatalf("soft delete: %v", err)
 	}
 	if _, err := repo.ListTopRepliesByParentIDs(ctx, []string{"c1"}, 2); err != persistence.ErrNotImplemented {
@@ -89,7 +108,7 @@ func TestCommentsConstructorsWire(t *testing.T) {
 func TestCommentsPersistenceRepoDelegates(t *testing.T) {
 	repo := NewPostgresRepository(persistence.NewFactory(config.Config{}))
 	ctx := context.Background()
-	if err := repo.SoftDelete(ctx, "c1"); err != persistence.ErrNotImplemented {
+	if _, err := repo.SoftDelete(ctx, "c1"); err != persistence.ErrNotImplemented {
 		t.Fatalf("soft delete: %v", err)
 	}
 	if _, err := repo.ListTopRepliesByParentIDs(ctx, []string{"c1"}, 2); err != persistence.ErrNotImplemented {

@@ -41,6 +41,26 @@ func TestMomentsByUserCursorRoundTripUsesReactedAt(t *testing.T) {
 	}
 }
 
+// 防回归（P1-2）：queryUpdateMoment 必须带 owner + 未软删守卫并 RETURNING
+// （0 行命中 → ErrNoRows → 10300），owner 判定不得退回仅依赖 service 预检。
+func TestQueryUpdateMomentGuardsOwnerAndSoftDeleted(t *testing.T) {
+	if !containsOrdered(queryUpdateMoment, "WHERE moment_id = $1 AND user_id = $2 AND is_deleted = FALSE") {
+		t.Fatal("queryUpdateMoment lost owner/soft-delete guard")
+	}
+	if !containsOrdered(queryUpdateMoment, "RETURNING moment_id") {
+		t.Fatal("queryUpdateMoment must RETURNING for hit detection")
+	}
+}
+
+// 防回归（P1-1）：list_reacted 的 is_favorited 必须来自 moment_favorites 实查
+// （EXISTS 尾列），不得回退到硬编码 true（spec：当前用户是否收藏，与
+// reaction 无关）。
+func TestQueryListReactedByUserResolvesFavoriteState(t *testing.T) {
+	if !containsOrdered(queryListReactedByUser, "EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $2)") {
+		t.Fatal("queryListReactedByUser must resolve is_favorited from moment_favorites")
+	}
+}
+
 func containsOrdered(haystack, needle string) bool {
 	return len(haystack) >= len(needle) && (func() bool {
 		for i := 0; i+len(needle) <= len(haystack); i++ {

@@ -53,19 +53,14 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 			return fmt.Errorf("moments.Create: insert moment: %w", err)
 		}
 		tags := normalizeMomentTags(req.Tags)
-		allowed, err := filterAllowedMomentTags(txCtx, txQueryable, tags)
+		// blocked tag 校验收口在 insertMomentTags 内（与 Update 同一口径）：
+		// 含被屏蔽标签 → ErrBlockedTag（10400）整体回滚；顺带消除此前
+		// filterAllowedMomentTags 在本事务内的重复执行。
+		allowed, err := insertMomentTags(txCtx, txQueryable, momentID, tags, now)
 		if err != nil {
-			return fmt.Errorf("moments.Create: filter tags: %w", err)
-		}
-		if len(allowed) != len(tags) {
-			// 请求 tags 含被屏蔽标签 → 10400（spec api_spec_moment.md create 错误码）。
-			// 整个事务回滚，不允许“部分允许 tag 落库”的半屏蔽语义。
-			return ErrBlockedTag
-		}
-		allowedTags = allowed
-		if err := insertMomentTags(txCtx, txQueryable, momentID, tags, now); err != nil {
 			return fmt.Errorf("moments.Create: insert tags: %w", err)
 		}
+		allowedTags = allowed
 		if err := replaceMomentMentions(txCtx, txQueryable, momentID, normalizedMentions, now); err != nil {
 			return fmt.Errorf("moments.Create: insert mentions: %w", err)
 		}
@@ -355,14 +350,23 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := q.Exec(txCtx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr, s2CellID); err != nil {
+		// queryUpdateMoment 带 owner + 未软删条件并 RETURNING：非作者/已软删
+		// （含 service 预检后的并发软删窗口）0 行命中 → ErrMomentNotFound（10300），
+		// 不再把检查-使用窗口内的已删瞬间静默更新成功。
+		var updatedID string
+		if err := q.QueryRow(txCtx, queryUpdateMoment, req.MomentID, userID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr, s2CellID).Scan(&updatedID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrMomentNotFound
+			}
 			return fmt.Errorf("moments.Update: update moment: %w", err)
 		}
 		if req.Tags != nil {
 			if err := q.Exec(txCtx, queryDeleteMomentTagsByMomentID, req.MomentID); err != nil {
 				return fmt.Errorf("moments.Update: delete tags: %w", err)
 			}
-			if err := insertMomentTags(txCtx, q, req.MomentID, req.Tags, time.Now().UTC()); err != nil {
+			// blocked tag 校验收口在 insertMomentTags（与 Create 同口径）：
+			// 含被屏蔽标签 → ErrBlockedTag → 整个事务回滚（10400）。
+			if _, err := insertMomentTags(txCtx, q, req.MomentID, req.Tags, time.Now().UTC()); err != nil {
 				return fmt.Errorf("moments.Update: insert tags: %w", err)
 			}
 		}

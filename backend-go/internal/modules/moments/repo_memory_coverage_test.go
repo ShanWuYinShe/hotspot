@@ -2,9 +2,50 @@ package moments
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
+
+// 防回归（P1-2）：已软删瞬间按不存在处理，Update 不得把软删行静默改回
+// （此前 Update 不检查 IsDeleted，软删时清空的 description 可被复活落库）。
+func TestMemoryUpdateSoftDeletedMomentReturnsNotFound(t *testing.T) {
+	repo := NewInMemoryRepository()
+	ctx := context.Background()
+	created, err := repo.Create(ctx, "u1", CreateMomentRequest{Description: "hi"})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := repo.Delete(ctx, created.MomentID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	edited := "edited"
+	if err := repo.Update(ctx, "u1", UpdateMomentRequest{Description: &edited}); !errors.Is(err, ErrMomentNotFound) {
+		t.Fatalf("update on soft-deleted moment should be ErrMomentNotFound, got %v", err)
+	}
+}
+
+// 防回归（P1-3）：Update 的 blocked tag 口径对齐 Create（含被屏蔽标签整体
+// 拒绝 ErrBlockedTag），且拒绝时不留下「tags 已删未插回」的半更新状态。
+func TestMemoryUpdateBlockedTagRejected(t *testing.T) {
+	repo := NewInMemoryRepository()
+	repo.SetBlockedTags("bad_tag")
+	ctx := context.Background()
+	created, err := repo.Create(ctx, "u1", CreateMomentRequest{Description: "hi", Tags: []string{"good"}})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := repo.Update(ctx, "u1", UpdateMomentRequest{MomentID: created.MomentID, Tags: []string{"good", "bad_tag"}}); !errors.Is(err, ErrBlockedTag) {
+		t.Fatalf("update with blocked tag should be ErrBlockedTag, got %v", err)
+	}
+	got, found, err := repo.Get(ctx, created.MomentID)
+	if err != nil || !found {
+		t.Fatalf("get after rejected update: found=%v err=%v", found, err)
+	}
+	if len(got.Tags) != 1 || got.Tags[0] != "good" {
+		t.Fatalf("tags should be untouched on rejected update, got %#v", got.Tags)
+	}
+}
 
 func TestMemoryMomentCountersAndFavorites(t *testing.T) {
 	repo := NewInMemoryRepository()

@@ -67,15 +67,18 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	}, nil
 }
 
-func (r *PostgresRepository) SoftDelete(ctx context.Context, commentID string) error {
+// SoftDelete 原子软删 + 父评论计数递减，返回是否实际命中（deleted=false =
+// 并发下已被删除或本就不存在，幂等 no-op，调用方据此跳过 moment 计数递减）。
+func (r *PostgresRepository) SoftDelete(ctx context.Context, commentID string) (bool, error) {
 	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
-		return persistence.ErrNotImplemented
+		return false, persistence.ErrNotImplemented
 	}
-	if err := queryable.Exec(ctx, querySoftDeleteReplyAndDecrementParent, commentID); err != nil {
-		return fmt.Errorf("comments.SoftDelete exec: %w", err)
+	var deleted bool
+	if err := queryable.QueryRow(ctx, querySoftDeleteReplyAndDecrementParent, commentID).Scan(&deleted); err != nil {
+		return false, fmt.Errorf("comments.SoftDelete exec: %w", err)
 	}
-	return nil
+	return deleted, nil
 }
 
 func (r *PostgresRepository) List(ctx context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {

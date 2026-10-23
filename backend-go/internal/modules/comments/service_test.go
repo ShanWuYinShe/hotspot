@@ -438,7 +438,7 @@ func TestCreateReplyToSoftDeletedParentReturnsCommentNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create parent: %v", err)
 	}
-	if err := repo.SoftDelete(context.Background(), parent.CommentID); err != nil {
+	if _, err := repo.SoftDelete(context.Background(), parent.CommentID); err != nil {
 		t.Fatalf("soft delete parent: %v", err)
 	}
 	_, err = service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_1", ParentID: parent.CommentID, Content: "reply"})

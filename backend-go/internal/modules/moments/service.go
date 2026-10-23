@@ -348,6 +348,12 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMom
 	if item.User.UserID != principal.UserID {
 		return OwnerMomentItem{}, ErrPermissionDenied
 	}
+	// 已软删瞬间按不存在处理（spec api_spec_moment.md「删除语义」：删除后其余
+	// 场景按 10300）——此前 Update 不检查，已删瞬间可被成功编辑并把软删时清空
+	// 的 description 复活落库。
+	if item.IsDeleted {
+		return OwnerMomentItem{}, ErrMomentNotFound
+	}
 	// 同 Create：请求侧 location 剥离服务端计算的相对位置字段（spec api_spec_types.md）。
 	if req.Location != nil {
 		req.Location.Distance = nil
@@ -386,10 +392,15 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMom
 			return OwnerMomentItem{}, fmt.Errorf("moments.Service.Update: repo: %w", err)
 		}
 	}
-	updated, _, err := s.repo.Get(ctx, req.MomentID)
+	updated, ok, err := s.repo.Get(ctx, req.MomentID)
 	if err != nil {
 		observability.L().Error("moments.update reload failed", "error", err, "moment_id", req.MomentID)
 		return OwnerMomentItem{}, err
+	}
+	// 提交与重载之间瞬间被并发删除/不可达时按不存在返回，而非把零值
+	// MomentItem 当成功响应下发。
+	if !ok {
+		return OwnerMomentItem{}, ErrMomentNotFound
 	}
 	// 仅对本次编辑新增的 mention 通知：编辑前已存在的 mention 不重复推送。
 	previousMentions := make(map[string]struct{}, len(item.Mentions))

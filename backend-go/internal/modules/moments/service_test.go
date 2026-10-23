@@ -3,6 +3,7 @@ package moments
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -641,11 +642,42 @@ func TestServiceCreateSkipsNearbyNotifyWithoutLocation(t *testing.T) {
 	}
 }
 
+// 防回归：目标数超过 nearbyNotifyMaxTargets 时必须截断——附近通知在
+// moments/create 请求路径上同步串行发布，无上限时密集区域的创建延迟随
+// 目标数线性放大（P1-4）。
+func TestServiceCreateNearbyNotifyTruncatesTargets(t *testing.T) {
+	created := ownedMoment()
+	created.PrivacyLevel = "public"
+	created.User = UserInfo{UserID: "u1", Nickname: "作者"}
+	repo := &stubMomentRepo{created: created}
+
+	many := make([]NearbyNotifyTarget, nearbyNotifyMaxTargets+50)
+	for i := range many {
+		many[i] = NearbyNotifyTarget{UserID: fmt.Sprintf("u%03d", i)}
+	}
+	published := 0
+	svc := NewServiceWithDeps(repo, &stubNotifyWriter{}, nil)
+	svc.SetNearbyNotifyTargetsReader(func(ctx context.Context, lat, lng float64, radius int, exclude string) ([]NearbyNotifyTarget, error) {
+		return many, nil
+	})
+	svc.SetNearbyNotifyPublisher(stubNearbyPublisher{onPublish: func(string) { published++ }})
+
+	if _, err := svc.Create(momentCtx("u1"), CreateMomentRequest{
+		Description: "nearby",
+		Location:    &Location{Point: types.GeoPoint{Latitude: 35.0976, Longitude: 112.6124}},
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if published != nearbyNotifyMaxTargets {
+		t.Fatalf("扇出应截断到 %d, got %d", nearbyNotifyMaxTargets, published)
+	}
+}
+
 type stubNearbyPublisher struct {
 	onPublish func(targetUserID string)
 }
 
-func (s stubNearbyPublisher) PublishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error {
+func (s stubNearbyPublisher) PublishNearbyNewMomentPreChecked(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error {
 	if s.onPublish != nil {
 		s.onPublish(targetUserID)
 	}

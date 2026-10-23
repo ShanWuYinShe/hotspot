@@ -33,8 +33,8 @@ func TestCommentReactionProviderRejectsSoftDeletedComment(t *testing.T) {
 		t.Fatalf("owner = %q, want user_alice", got.OwnerUserID)
 	}
 
-	// 软删后：按不存在处理
-	if err := repo.SoftDelete(ctx, created.CommentID); err != nil {
+	// 软删后：按不存在处理（SoftDelete 现返回是否命中，防并发双递减）
+	if _, err := repo.SoftDelete(ctx, created.CommentID); err != nil {
 		t.Fatalf("soft delete: %v", err)
 	}
 	if _, ok, err := provider.Resolve(ctx, created.CommentID); err != nil || ok {

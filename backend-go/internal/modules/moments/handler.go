@@ -185,6 +185,13 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "Update", httpx.CodeNotFound, "图片不存在或不属于当前用户")
 			return
 		}
+		if errors.Is(err, ErrBlockedTag) {
+			// tags 含被屏蔽标签 → 10400：update 的 tags 替换与 create 同族校验
+			//（spec api_spec_moment.md create 错误码；此前 Update 静默丢弃被屏蔽
+			// tag 且返回成功，与 Create 整体拒绝的口径不一致）。
+			httpx.WriteBusinessError(w, r, "Update", httpx.CodeConflict, "标签包含被屏蔽的内容")
+			return
+		}
 		httpx.WriteAPIError(w, r, "Update", err)
 		return
 	}

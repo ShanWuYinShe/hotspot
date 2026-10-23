@@ -97,16 +97,18 @@ func (r *InMemoryRepository) Create(ctx context.Context, userID string, req Crea
 	return item, nil
 }
 
-func (r *InMemoryRepository) SoftDelete(_ context.Context, commentID string) error {
+// SoftDelete 返回是否实际命中（与 Postgres 实现同契约：已删/不存在 →
+// (false, nil)，调用方据此跳过 moment 计数递减）。
+func (r *InMemoryRepository) SoftDelete(_ context.Context, commentID string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	item, ok := r.byID[commentID]
 	if !ok {
-		return nil
+		return false, nil
 	}
 	// Already soft-deleted — no-op
 	if item.IsDeleted {
-		return nil
+		return false, nil
 	}
 	// Soft delete: mark as deleted, clear content
 	item.IsDeleted = true
@@ -131,7 +133,7 @@ func (r *InMemoryRepository) SoftDelete(_ context.Context, commentID string) err
 			r.byID[*item.ParentID] = parent
 		}
 	}
-	return nil
+	return true, nil
 }
 
 func (r *InMemoryRepository) List(_ context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {

@@ -282,9 +282,16 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 	// 软删与计数递减同一事务（数据治理审计：两步此前独立执行且递减失败仅
 	// Warn，moments.comment_count 漂移不可自愈；创建路径已同款事务）。
 	// 递减在此成为事务内失败即整体回滚，不再吞错。
+	// 递减以软删实际命中为条件（deleted=false = 并发下已被删除）：上方
+	// 「Get 检查 IsDeleted」与软删之间存在 TOCTOU 窗口，两个并发 Delete 都
+	// 会走到这里，无条件递减会把 moment.comments_count 双重扣减。
 	deleteAll := func(txCtx context.Context) error {
-		if err := s.repo.SoftDelete(txCtx, req.CommentID); err != nil {
+		deleted, err := s.repo.SoftDelete(txCtx, req.CommentID)
+		if err != nil {
 			return err
+		}
+		if !deleted {
+			return nil
 		}
 		return s.moments.DecrementCommentCount(txCtx, comment.MomentID)
 	}

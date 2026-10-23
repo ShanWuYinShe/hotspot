@@ -63,6 +63,18 @@ func (r *InMemoryRepository) SetFollow(viewerID, targetID string) {
 	r.followGraph[viewerID][targetID] = true
 }
 
+// momentTagsBlocked 报告归一化后的 tags 是否含被屏蔽标签（生产走
+// admin_blocked_tags 表；内存实现以 SetBlockedTags 注入，Create/Update
+// 共用同一口径——Update 此前不检查，与 Create/PG 实现三方漂移）。
+func (r *InMemoryRepository) momentTagsBlocked(tags []string) bool {
+	for _, tag := range normalizeMomentTags(tags) {
+		if _, blocked := r.blockedTags[tag]; blocked {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateMomentRequest) (MomentItem, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -73,10 +85,8 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if privacy == "" {
 		privacy = "public"
 	}
-	for _, tag := range normalizeMomentTags(req.Tags) {
-		if _, blocked := r.blockedTags[tag]; blocked {
-			return MomentItem{}, ErrBlockedTag
-		}
+	if r.momentTagsBlocked(req.Tags) {
+		return MomentItem{}, ErrBlockedTag
 	}
 	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: normalizeMomentMentions(req.Mentions), CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: req.Location, PrivacyLevel: privacy, IsFavorited: false}
 	r.moments[momentID] = item
@@ -289,6 +299,16 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 	}
 	if item.User.UserID != userID {
 		return ErrPermissionDenied
+	}
+	// 已软删瞬间按不存在处理（spec api_spec_moment.md「删除语义」：删除后
+	// 其余场景按 10300；对齐 PG 实现的 is_deleted=FALSE 条件）。
+	if item.IsDeleted {
+		return ErrMomentNotFound
+	}
+	// tags 为 patch 语义：显式传数组（含空数组=清空）才校验；blocked tag
+	// 口径对齐 Create（整体拒绝，静默丢弃是半屏蔽语义）。
+	if req.Tags != nil && r.momentTagsBlocked(req.Tags) {
+		return ErrBlockedTag
 	}
 	if req.Description != nil {
 		item.Description = *req.Description
@@ -611,6 +631,14 @@ func (r *InMemoryRepository) ListReactedByUser(_ context.Context, userID, viewer
 		}
 		if item.PrivacyLevel == "private" && viewerUserID != item.User.UserID && viewerUserID != userID {
 			continue
+		}
+		// is_favorited = 查看者是否收藏（spec api_spec_types.md MomentItem），
+		// 与 reaction 无关；匿名 viewer（空串）恒 false——对齐 PG 尾列 EXISTS。
+		item.IsFavorited = false
+		if viewerUserID != "" {
+			if userFavs, ok := r.favorites[viewerUserID]; ok {
+				_, item.IsFavorited = userFavs[item.MomentID]
+			}
 		}
 		items = append(items, item)
 	}

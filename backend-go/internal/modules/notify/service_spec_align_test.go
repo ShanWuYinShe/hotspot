@@ -410,6 +410,27 @@ func TestPublishNearbyNewMomentProviderErrorPropagates(t *testing.T) {
 	}
 }
 
+// PreChecked 变体跳过逐目标 settings 检查：调用方（moments 创建链路）的
+// 目标查询已按 nearby_moment_notify=TRUE 过滤，逐目标再查一次 user_settings
+// 是请求路径上的纯冗余往返（P1-4）。即使 provider 报告关闭也照常落库推送。
+func TestPublishNearbyNewMomentPreCheckedSkipsSettingsLookup(t *testing.T) {
+	repo := &notifyListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	service.SetNearbyNotifyProvider(nearbyNotifyProviderStub{enabled: false})
+	sink := withTestHub(t)
+	realtime.DefaultHub().RegisterUser("user_nearby", "sess_1", sink)
+
+	if err := service.PublishNearbyNewMomentPreChecked(context.Background(), "user_nearby", "user_actor", "moment_42", 120, types.UserInfo{UserID: "user_actor"}, types.MomentSummary{MomentID: "moment_42"}); err != nil {
+		t.Fatalf("publish pre-checked: %v", err)
+	}
+	if len(repo.appended) != 1 {
+		t.Fatalf("pre-checked should append without settings lookup, got %d", len(repo.appended))
+	}
+	if len(sink.events) != 1 || sink.events[0].Type != realtime.EventTypeNearbyNewMoment {
+		t.Fatalf("expected nearby event, got %#v", sink.events)
+	}
+}
+
 // --- 通知类型白名单(normalizeNotifyType) ---
 
 func TestNormalizeNotifyTypeAcceptsAllSpecTypes(t *testing.T) {

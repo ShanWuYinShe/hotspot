@@ -525,7 +525,21 @@ func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementIte
 }
 
 func (s *Service) PublishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error {
-	if s.nearbyNotifyProvider != nil {
+	return s.publishNearbyNewMoment(ctx, targetUserID, actorID, momentID, distance, actorPayload, momentSummaryPayload, true)
+}
+
+// PublishNearbyNewMomentPreChecked 发布附近新瞬间通知，跳过目标用户的
+// nearby_moment_notify 设置检查。供 moments 的创建链路使用：该链路的目标
+// 查询（users queryNearbyMomentNotifyTargets）已按 `us.nearby_moment_notify
+// = TRUE` 过滤，逐目标再查一次 settings 是纯冗余往返（N 目标 = N 次多余
+// 查询，且发生在 moments/create 的请求路径上）。调用方必须自行保证目标
+// 已开启该开关。
+func (s *Service) PublishNearbyNewMomentPreChecked(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error {
+	return s.publishNearbyNewMoment(ctx, targetUserID, actorID, momentID, distance, actorPayload, momentSummaryPayload, false)
+}
+
+func (s *Service) publishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary, checkSettings bool) error {
+	if checkSettings && s.nearbyNotifyProvider != nil {
 		enabled, err := s.nearbyNotifyProvider.IsNearbyMomentNotifyEnabled(ctx, targetUserID)
 		if err != nil {
 			observability.L().Error("notifys.publish_nearby_new_moment settings check failed", "error", err)

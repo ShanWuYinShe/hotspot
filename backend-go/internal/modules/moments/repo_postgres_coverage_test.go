@@ -9,11 +9,14 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-// momentExecStub 提供 Exec + QueryRow stub。
+// momentExecStub 提供 Exec + QueryRow stub。rowValues 供 QueryRow 路径
+// （如 queryUpdateMoment 的 RETURNING 命中）；tagRows 供
+// queryFilterAllowedMomentTags 返回白名单 tag 行（空 = 全部被屏蔽）。
 type momentExecStub struct {
 	execErr   error
 	execs     int
 	rowValues []any
+	tagRows   [][]any
 }
 
 func (s *momentExecStub) Exec(_ context.Context, _ string, _ ...any) error {
@@ -25,7 +28,10 @@ func (s *momentExecStub) QueryRow(_ context.Context, _ string, _ ...any) persist
 	return momentRow{values: s.rowValues}
 }
 
-func (s *momentExecStub) Query(_ context.Context, _ string, _ ...any) (persistence.Rows, error) {
+func (s *momentExecStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
+	if query == queryFilterAllowedMomentTags {
+		return &rowsValues{rows: s.tagRows}, nil
+	}
 	return &persistence.InMemoryRows{}, nil
 }
 
@@ -119,11 +125,12 @@ var errMomentFake = errors.New("fake moment db error")
 var errMomentNoRows = errors.New("no rows")
 
 func TestPostgresMomentUpdateBranches(t *testing.T) {
-	backend := &momentExecStub{}
+	backend := &momentExecStub{rowValues: []any{"m1"}, tagRows: [][]any{{"美食"}}}
 	repo := NewPostgresRepository(newMomentFactory(backend))
 	ctx := context.Background()
 
-	// 纯文本更新（无 tags/mentions/images）
+	// 纯文本更新（无 tags/mentions/images）——queryUpdateMoment 走 QueryRow
+	// RETURNING，rowValues 提供命中行。
 	desc := "new"
 	req := UpdateMomentRequest{MomentID: "m1", Description: &desc}
 	if err := repo.Update(ctx, "u1", req); err != nil {
@@ -144,5 +151,16 @@ func TestPostgresMomentUpdateBranches(t *testing.T) {
 	}
 	if backend.execs < 5 {
 		t.Fatalf("expected multiple writes, got %d", backend.execs)
+	}
+}
+
+// 防回归（P1-3）：Update 含被屏蔽标签时整体拒绝 ErrBlockedTag（与 Create
+// 同口径），不得静默丢弃后返回成功。
+func TestPostgresMomentUpdateBlockedTagRejected(t *testing.T) {
+	backend := &momentExecStub{rowValues: []any{"m1"}, tagRows: nil} // filter 无白名单行
+	repo := NewPostgresRepository(newMomentFactory(backend))
+	req := UpdateMomentRequest{MomentID: "m1", Tags: []string{"blocked_tag"}}
+	if err := repo.Update(context.Background(), "u1", req); !errors.Is(err, ErrBlockedTag) {
+		t.Fatalf("update with blocked tag should be ErrBlockedTag, got %v", err)
 	}
 }

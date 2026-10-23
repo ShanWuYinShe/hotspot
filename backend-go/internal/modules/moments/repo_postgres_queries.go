@@ -98,15 +98,20 @@ UPDATE moments
 SET shares_count = shares_count + 1
 WHERE moment_id = $1`
 
+	// 仅作者且未软删的瞬间可编辑（spec api_spec_moment.md update：仅作者；
+	// 删除语义——删除后其余场景按不存在处理 10300）。owner/软删条件在 SQL 内
+	// 收口（service 层预检之外的纵深防御），RETURNING moment_id 供调用方以
+	// ErrNoRows 判定未命中（检查-使用窗口内被并发软删/删除）。
 	queryUpdateMoment = `
 UPDATE moments
-SET description = COALESCE($2, description),
-    privacy_level = COALESCE($3, privacy_level),
-    location_name = COALESCE($4, location_name),
-    latitude      = COALESCE($5, latitude),
-    longitude     = COALESCE($6, longitude),
-    s2_cell_id    = COALESCE($7, s2_cell_id)
-WHERE moment_id = $1`
+SET description = COALESCE($3, description),
+    privacy_level = COALESCE($4, privacy_level),
+    location_name = COALESCE($5, location_name),
+    latitude      = COALESCE($6, latitude),
+    longitude     = COALESCE($7, longitude),
+    s2_cell_id    = COALESCE($8, s2_cell_id)
+WHERE moment_id = $1 AND user_id = $2 AND is_deleted = FALSE
+RETURNING moment_id`
 
 	queryDeleteMoment = `
 UPDATE moments
@@ -230,8 +235,15 @@ WHERE m.user_id = $1
 ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $5`
 
+	// 尾列 EXISTS(moment_favorites) 承载查看者 is_favorited（spec
+	// api_spec_types.md MomentItem：当前用户是否收藏——与 reaction 无关，
+	// 此前硬编码 true 属语义错位）；匿名 viewer（$2=''）EXISTS 恒 false，
+	// 与 buildSearchMomentsQuery 同模式。reacted_at 为 upsert 切换 emoji 时
+	// 会刷新的「最近反应时刻」（spec：last_reacted_at 排序），列以 time.Time
+	// 全精度写入——游标必须以 RFC3339Nano 编码（AGENTS 分页纪律）。
 	queryListReactedByUser = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM reactions rc WHERE rc.target_type = 'moment' AND rc.target_id = m.moment_id), m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, r.reacted_at
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM reactions rc WHERE rc.target_type = 'moment' AND rc.target_id = m.moment_id), m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, r.reacted_at,
+       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $2)
 FROM reactions r
 JOIN moments m ON m.moment_id = r.target_id
 LEFT JOIN users u ON u.user_id = m.user_id

@@ -71,17 +71,26 @@ func filterAllowedMomentTags(ctx context.Context, queryable persistence.Queryabl
 	return allowed, nil
 }
 
-func insertMomentTags(ctx context.Context, queryable persistence.Queryable, momentID string, tags []string, createdAt time.Time) error {
+// insertMomentTags 过滤被屏蔽标签后逐条落库，返回实际落库的 allowed 集合。
+// blocked tag 口径收口于此（Create 与 Update 共用）：请求含被屏蔽标签时整体
+// 返回 ErrBlockedTag（→ 10400，spec api_spec_moment.md create 错误码；update
+// 的 tags 替换与 create 同族校验），由外层事务回滚，不允许「部分允许 tag
+// 落库」的半屏蔽语义——此前 Update 路径静默丢弃被屏蔽 tag、Create 却整体
+// 拒绝，同一校验两种口径。
+func insertMomentTags(ctx context.Context, queryable persistence.Queryable, momentID string, tags []string, createdAt time.Time) ([]string, error) {
 	allowed, err := filterAllowedMomentTags(ctx, queryable, tags)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	if len(allowed) != len(tags) {
+		return nil, ErrBlockedTag
 	}
 	for _, tag := range allowed {
 		if err := queryable.Exec(ctx, queryInsertMomentTagAssignment, momentID, tag, createdAt); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return allowed, nil
 }
 
 func replaceMomentMentions(ctx context.Context, queryable persistence.Queryable, momentID string, mentions []string, createdAt time.Time) error {

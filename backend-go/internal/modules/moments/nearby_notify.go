@@ -21,13 +21,22 @@ type NearbyNotifyTarget struct {
 type NearbyNotifyTargetsFn func(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string) ([]NearbyNotifyTarget, error)
 
 // NearbyNotifyPublisher 发布附近新瞬间通知（notify 模块实现：
-// PublishNearbyNewMoment 落库通知 + WS 推送 NearbyNewMoment）。
+// PublishNearbyNewMomentPreChecked 落库通知 + WS 推送 NearbyNewMoment；
+// PreChecked 变体跳过逐目标 settings 检查——本链路的目标查询已按开关过滤）。
 type NearbyNotifyPublisher interface {
-	PublishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error
+	PublishNearbyNewMomentPreChecked(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error
 }
 
 // nearbyNotifyRadiusMeters 「附近」半径：与首页实时附近（5km 内）口径一致。
 const nearbyNotifyRadiusMeters = 5000
+
+// nearbyNotifyMaxTargets 单次创建的附近通知扇出上限。spec 未定义该数值
+// （api_spec_websocket.md NearbyNewMoment：推送给配置开启的用户，节流等
+// 细节为服务端实现），此处为防止 moments/create 请求路径延迟随目标数线性
+// 放大而设的防线（每个目标 = 1 次通知落库 + 1 次 WS 广播，且当前为同步
+// 串行发布）；量级参照 mentions 上限 20 的防放大先例，取 200 兼顾附近
+// 通知的到达面。超出部分静默截断（通知为尽力而为语义）。
+const nearbyNotifyMaxTargets = 200
 
 // notifyNearbyNewMoment 在带位置的瞬间创建成功后，向开启通知的附近用户推送。
 // 各目标失败不阻断主流程（通知为尽力而为）；无位置/未接线/无目标时静默跳过。
@@ -40,9 +49,14 @@ func (s *Service) notifyNearbyNewMoment(ctx context.Context, authorID, momentID 
 		observability.L().Warn("moments.nearby_notify targets failed", "error", err)
 		return
 	}
+	// 目标查询（users 侧）无 LIMIT，密集区域可能返回大量目标；截断到
+	// nearbyNotifyMaxTargets，防止 create 请求路径同步串行发布的延迟线性放大。
+	if len(targets) > nearbyNotifyMaxTargets {
+		targets = targets[:nearbyNotifyMaxTargets]
+	}
 	for _, t := range targets {
 		distance := haversineMeters(lat, lng, t.Latitude, t.Longitude)
-		if err := s.nearbyNotifyPublisher.PublishNearbyNewMoment(ctx, t.UserID, authorID, momentID, int(math.Round(distance)), actor, summary); err != nil {
+		if err := s.nearbyNotifyPublisher.PublishNearbyNewMomentPreChecked(ctx, t.UserID, authorID, momentID, int(math.Round(distance)), actor, summary); err != nil {
 			observability.L().Warn("moments.nearby_notify publish failed", "error", err, "target", t.UserID)
 		}
 	}
