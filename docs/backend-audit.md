@@ -70,12 +70,38 @@
   嵌套事务防池死锁、XFF 右遍历解析、trusted proxy 配置；
 - 业务域：token 轮换与会话撤销竞态、RBAC、幂等三项保证、注销链路等（详见分报告）。
 
+## P2 批次修复（2026-10-23 第二轮）
+
+第一轮 P0/P1 修完后，按各域报告的 P2 清单又修了 26 项高价值问题（5 个提交）：
+
+- **安全/校验**：媒体/share 类型消息统一 5000 字 content 上限（堵住 type=image +
+  合法 file_id + ~1MB content 的广播绕过）；moments open_the_door 补双向拉黑；
+  comments Create 拉黑检查 fail-open→fail-closed；media WebP 元数据清洗（纯 Go
+  RIFF chunk 解析删 EXIF/XMP，零新依赖）；privacy_level 枚举校验；验证码投递
+  失败不再假成功；Register 昵称 TrimSpace。
+- **数据正确性**：公告 CreatedBy 昵称、入群 WS member_count 权威重读、
+  fetch_joined 未读排除已撤回、moments Update 坐标精度、search (0,0) 哨兵、
+  reactions 批量聚合排序、haversine 双实现收敛、notify prune 复合主键分批、
+  幂等回放重发 Set-Cookie（web 注册重试不再丢会话，已端到端验证）。
+- **无界/性能/契约**：群公告列表 LIMIT、UpdateAnnouncement 直查、群搜索游标
+  精度、StatsGeoDrilldown 幽灵游标、UserExists 吞错、Refresh 日志级别、
+  privatemessages 错误映射、reports seq 竞态、users memory search 过滤。
+- **网关**：nginx（基线 + 生产 prod-tls）加 `set_real_ip_from`(CF 全部回源网段)
+  + `real_ip_header CF-Connecting-IP`——limit_req 改按真实客户端 IP 计数，不再
+  按 CF 边缘 IP 共享桶误伤同 POP 用户。
+- **清理**：删死代码 3 文件 + 若干死链（-398 行）、cursor 解码去重、itoa64 手写
+  替换；顺带修复 main 上「queryListFollowing/Followers SQL 已摘列但 scan 仍旧
+  列数」的存量 bug（真 PG 下会 scan 报错）。
+
+**部署拓扑已确认（2026-10-23，站长）**：全部流量必经 Cloudflare 回源，源站
+mTLS origin-pull + CF 网段 allow/deny——故 CF-Connecting-IP 由 CF 强制设置、
+后端信任 CF 头是正确口径（**不要清洗该头**）；此前「源站可直连伪造 IP」的
+担忧不成立，nginx 侧只需 real_ip 还原供 limit_req/X-Real-IP 使用。
+
 **遗留观察项**（不紧急，记录在案）：
-- CF 前置部署假设未闭环：nginx 未清洗 CF-Connecting-IP 且无 real_ip 还原/CF 白名单
-  （源站可直连时可伪造 IP 绕过限流；limit_req 按 CF 边缘 IP 计数）——需结合线上
-  防火墙策略决策后修（涉及 docker/nginx.conf 与 requestmeta 信任模型）；
 - ratelimit classifyRoute 与 resourceguard guardRules 两份硬编码路由元数据清单存在
   新端点漂移风险（建议后续收敛为模块注册时声明）；
-- 双实现（repo_memory/repo_postgres）漂移是本项目最大 bug 温床（本轮修了 10+ 处），
-  建议为高频变更模块补「双实现契约一致性」对比测试。
+- 双实现（repo_memory/repo_postgres）漂移是本项目最大 bug 温床（本轮修了 20+ 处），
+  建议为高频变更模块补「双实现契约一致性」对比测试；
+- P2 剩余项（各域报告里未修的约定/架构类）与 OBS 项存档于 `.workwork/backend-review/`。
 
