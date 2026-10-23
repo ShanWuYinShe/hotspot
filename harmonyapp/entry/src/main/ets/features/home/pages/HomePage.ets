@@ -20,41 +20,19 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
-import { EmptyState } from '../../../components/EmptyState';
+import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
+import { Pressable } from '../../../components/Pressable';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
-import { ComponentContent, curves } from '@kit.ArkUI';
+import { curves } from '@kit.ArkUI';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'HomePage';
 
-/**
- * 刷新态内容（供 Refresh.refreshingContent 使用）。
- * 必须用 refreshingContent 而不是 builder：builder 在刷新过程中会被反复销毁/重建
- * （ArkUI 文档明确建议 API 12+ 用 refreshingContent），端上表现为刷新时内容上下抖动。
- */
-@Builder
-export function HomeRefreshingIndicator() {
-  Row() {
-    LoadingProgress()
-      .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
-      .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
-      .color(AppThemeManager.getSafeCurrentPalette().accentBackground)
-      .accessibilityText('正在刷新')
-    Text('正在刷新…')
-      .fontSize(DesignConstants.FONT.SIZE.MD)
-      .margin({ left: DesignConstants.SPACING.SM })
-      .fontColor(AppThemeManager.getSafeCurrentPalette().textSecondary)
-  }
-  .width('100%')
-  .height(DesignConstants.LAYOUT.MIN_HIT_TARGET + DesignConstants.SPACING.MD)
-  .justifyContent(FlexAlign.Center)
-  .accessibilityText('正在刷新')
-}
 /** 每段首屏条数（对齐 web PAGE_SIZE=20 的首屏语义；本端暂不做无限续载） */
 const FEED_PAGE_SIZE: number = 20;
 
@@ -78,19 +56,15 @@ export struct HomePage {
 
   /** 「查看全部」链接的按下态索引（-1 = 无；对齐前端 link 按压反馈） */
   @State viewAllPressedIndex: number = -1;
-  @State pressedMomentKey: string = '';
   @State isRefreshing: boolean = false;
 
   private isDestroyed: boolean = false;
-  /** 刷新态内容：ComponentContent 稳定复用，避免 builder 在刷新过程中反复重建导致抖动 */
-  private refreshingContent: ComponentContent<Object> | undefined = undefined;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
   async aboutToAppear() {
-    this.refreshingContent = new ComponentContent(this.getUIContext(), wrapBuilder(HomeRefreshingIndicator));
     SystemUiController.syncWithCurrentTheme();
     // 一条流 = 关系流 + 发现流：两者并行加载，渲染时关系流在前、发现流去重续后
     this.loadDiscoverMoments();
@@ -189,12 +163,13 @@ export struct HomePage {
         this.buildStickyHeader()
 
         // 整页下拉刷新：Refresh 包内容区（sticky header 保持粘性在外）
-        // Refresh 的直接子组件就是滚动容器（List / Scroll）：
-        // 不要套一层固定高度的 Column 再放 List——端上实测下拉/刷新时会出现内容双影与抖动
-        // （外层高度连续变化 + List 虚拟化重排叠加）。与消息页/公告页结构保持一致。
+        // 关键配置：
+        // 1. builder: RefreshIndicator 保证全周期使用同一固定高度指示器（无跳变）
+        // 2. pullToRefresh(false) 强制松手才刷新，彻底消除下拉位移超过阈值时系统吸附回弹与手指拖拽的冲突（鬼畜晃动根因）
+        // 3. refreshOffset(64) 明确触发阈值
         Refresh({
           refreshing: $$this.isRefreshing,
-          refreshingContent: this.refreshingContent
+          builder: RefreshIndicator
         }) {
           if (this.feedLoading() && this.displayedMoments().length === 0) {
             Column() {
@@ -234,6 +209,8 @@ export struct HomePage {
         }
         .width('100%')
         .layoutWeight(1)
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => { this.refreshHome(); })
       }
       .width('100%')
@@ -266,6 +243,7 @@ export struct HomePage {
   @Builder
   private buildFeed() {
     // 行间距由活动行自身的上下 padding 承担（与原 Column 布局一致，避免 List 再叠 space 导致节奏变松）
+    // edgeEffect(EdgeEffect.None)：禁用 List 自身弹簧，由外层 Refresh 统一托管弹性，杜绝手势双重弹性冲突
     List() {
       ForEach(this.homeActivityRows(), (moment: MomentItem, index: number) => {
         ListItem() {
@@ -275,6 +253,7 @@ export struct HomePage {
     }
     .width('100%')
     .height('100%')
+    .edgeEffect(EdgeEffect.None)
     .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
     .scrollBar(BarState.Off)
   }
@@ -442,67 +421,53 @@ export struct HomePage {
 
   @Builder
   private buildActivityRow(moment: MomentItem, index: number) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      Column() {
+    Pressable({ onPress: () => this.openMomentDetail(moment) }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        Column() {
+          LucideIcon({
+            icon: this.activityIcon(index),
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+            color: this.activityAccent(index)
+          })
+        }
+        // 对齐前端 ActivityRow size-8.5(34px) 图标圆底
+        .width(DesignConstants.COMPONENT.ACTIVITY_ICON_TILE_SIZE)
+        .height(DesignConstants.COMPONENT.ACTIVITY_ICON_TILE_SIZE)
+        .borderRadius(DesignConstants.RADIUS.SM)
+        .backgroundColor(this.activitySoftBg(index))
+        .justifyContent(FlexAlign.Center)
+
+        Column({ space: DesignConstants.SPACING.XS }) {
+          Text(moment.description || '分享了一条动态')
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 对齐前端 ActivityRow text-sm=12
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            .fontColor(this.getPalette().textPrimary)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(moment.location?.location_name ?? '')
+            .fontSize(DesignConstants.FONT.SIZE.XS) // 对齐前端 text-xs=11
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+            .fontColor(this.getPalette().textSecondary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 1 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
         LucideIcon({
-          icon: this.activityIcon(index),
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-          color: this.activityAccent(index)
+          icon: AppIcon.ARROW_RIGHT,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+          paletteRole: 'textSecondary'
         })
+          // 标题折行时（行高对齐前端 17 后更易两行）文字与 chevron 会贴在一起，
+          // 补一个左间距把两者分开
+          .margin({ left: DesignConstants.SPACING.SM2 })
       }
-      // 对齐前端 ActivityRow size-8.5(34px) 图标圆底
-      .width(DesignConstants.COMPONENT.ACTIVITY_ICON_TILE_SIZE)
-      .height(DesignConstants.COMPONENT.ACTIVITY_ICON_TILE_SIZE)
-      .borderRadius(DesignConstants.RADIUS.SM)
-      .backgroundColor(this.activitySoftBg(index))
-      .justifyContent(FlexAlign.Center)
-
-      Column({ space: DesignConstants.SPACING.XS }) {
-        Text(moment.description || '分享了一条动态')
-          .fontSize(DesignConstants.FONT.SIZE.SM) // 对齐前端 ActivityRow text-sm=12
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-          .fontColor(this.getPalette().textPrimary)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(moment.location?.location_name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.XS) // 对齐前端 text-xs=11
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-          .fontColor(this.getPalette().textSecondary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 1 })
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-
-      LucideIcon({
-        icon: AppIcon.ARROW_RIGHT,
-        iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-        paletteRole: 'textSecondary'
-      })
-        // 标题折行时（行高对齐前端 17 后更易两行）文字与 chevron 会贴在一起，
-        // 补一个左间距把两者分开
-        .margin({ left: DesignConstants.SPACING.SM2 })
+      .width('100%')
+      // 白卡容器内行：px-3 py-2.5（对齐前端 ActivityRow ListItem px-4 py-3 扣除容器 p-1.5）
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     }
-    .width('100%')
-    // 白卡容器内行：px-3 py-2.5（对齐前端 ActivityRow ListItem px-4 py-3 扣除容器 p-1.5）
-    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-    // 整行按压反馈（对齐 tap-97 语义）
-    .scale(this.pressedMomentKey === moment.moment_id ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-      { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(
-      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-    ) })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedMomentKey = moment.moment_id;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedMomentKey = '';
-      }
-    })
-    .onClick(() => this.openMomentDetail(moment))
   }
 }
 

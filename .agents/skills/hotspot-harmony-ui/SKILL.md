@@ -291,30 +291,31 @@ ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代�
 - 修复：表单类 Scroll 一律补 `.align(Alignment.Top)`（commit 1ae09938，升级表单）。
 - 排查：dump 里 Scroll bounds 与其内容 Column bounds 的 y1 不一致即为居中。
 
-### 3. Refresh 内容区结构与自定义指示器（2026-10-22 端上实测，首页下拉刷新）
+### 3. Refresh 内容区结构与防抖动契约（2026-10-23 端上实测，彻底消除下拉刷新鬼畜晃动）
 
+- **必须显式配置 `.pullToRefresh(false)`（强制松手才刷新，晃动最核心根因）**：
+  ArkUI NEXT (API 12+) 的 `Refresh` 属性 `pullToRefresh` 默认值为 `true`！
+  这意味着一旦下拉位移超过 `refreshOffset`（默认 64vp），**不等用户手指松开，系统便立即启动刷新并执行吸附回弹动画**！
+  若用户手指仍在向下拉拽，**用户的触控向下拉伸与系统的吸附回弹动画在同一时刻发生剧烈对抗**（手指拉下→系统弹回→手指拉下→系统弹回），
+  形成每秒数十次的高频振荡（俗称「鬼畜晃动」）。
+  **修法**：必须显式配置 `.pullToRefresh(false)`，恢复标准移动端手势（下拉松手后才发起刷新），手指触摸期间绝对不自动吸附打断。
+- **嵌套滚动容器必须设置 `.edgeEffect(EdgeEffect.None)`**：
+  `List` 默认带有 `EdgeEffect.Spring`。当嵌套在 `Refresh` 内时，两个弹性阻尼系统同时响应垂直手势，产生双重弹簧手势竞争。
+  必须在内层 `List` 上显式设置 `.edgeEffect(EdgeEffect.None)`，弹性完全由外层 `Refresh` 单一容器统一接管。
+- **自定义刷新指示器统一使用全局锁高的 `builder: RefreshIndicator`**：
+  `EmptyState.ets` 导出的 `RefreshIndicator` 锁高 56vp（`MIN_HIT_TARGET + MD`）。
+  不要只传 `refreshingContent` 而缺省 `builder`：未配 `builder` 时，下拉阶段系统使用默认圆圈指示器，
+  进入刷新态才突变为自定义内容，两套指示器高度和布局在树中交替挂载，造成高度突变跳动。全站统一使用 `builder: RefreshIndicator`。
+- **列表项必须使用 `Pressable` 原语，禁止在行上写 `onTouch` 修改页面级 `@State`**：
+  在 `ListItem` 上手动写 `.onTouch` 修改父组件 `@State`，会在手指按下和滑动被 List 拦截为 Cancel 时频繁触发布局重算。
+  按压反馈统一收敛在 `Pressable` 内部，保持页面状态无抖动。
 - **列表页的 Refresh 内容区用 `List`，不要用 `Scroll{ Column{...} }`**：Refresh 下拉时
-  内容区高度会随指示器区域连续变化，Scroll 包裹动态 ForEach 在该过程中会重排失稳，
-  端上实拍出现行错位/文字残影（同一行副标题叠两层）；改 `List` 后行布局稳定。
+  内容区高度会随指示器区域连续变化，Scroll 包裹动态 ForEach 在该过程中会重排失稳；改 `List` 后行布局稳定。
   注意 `List` 的行距不要再用 `space`（活动行自带上下 padding，叠 space 会让节奏变松）。
-- **自定义刷新指示器 builder 必须锁高度**（固定高度属布局几何，允许 px/vp 常量）：
-  `Refresh` 的刷新区会随下拉距离增高，builder 不锁高度时内容会在刷新区里垂直居中——
-  大幅下拉时 spinner 漂到空白区中间、刷新结束后内容被推下约 1/3 屏，看起来像页面塌了一块。
-  锁高（如 52vp）后指示器始终贴在刷新区顶部，刷新态只占指示器高度，不再有大空白。
-- **刷新态内容用 `refreshingContent`（ComponentContent），不要用 `builder`**：ArkUI 文档明确
-  builder 在刷新过程中会被反复销毁/重建（API 12+ 建议改用 refreshingContent），端上实拍
-  表现为刷新指示器文字/内容高频抖动；同时**不要同时传 builder 与 refreshingContent**，
-  实测两者并存时刷新区高度会在两套布局间跳变。下拉阶段可不显示文字（刷新区过小时会被裁切），
-  刷新态由 refreshingContent 稳定承载。
-- **Refresh 的直接子组件应是滚动容器（List/Scroll）**：不要在 Refresh 里再套一层
-  `height('100%')` 的 Column 再放 List——外层高度随刷新位移连续变化，会与 List 虚拟化
-  重排叠加出现内容双影/抖动；与消息页、公告页结构保持一致。
 - **不要在 `Refresh.onOffsetChange` 里逐帧写 `@State`**（例如记录位移做渐显动画）：
-  状态更新会触发整页重建 → Refresh 重新计算位移 → 再次回调，形成反馈环；
-  端上实拍表现为下拉过程中内容上下高频抖动（每 50ms 交替位移 100~200px，俗称「鬼畜抖动」）。
-  需要随位移变化的视觉，用无状态写法（只区分 isRefreshing 两态）或把动画限制在 builder 内部。
+  状态更新会触发整页重建 → Refresh 重新计算位移 → 再次回调，形成反馈环。
 - 判定口径：端上连续截图（`snapshot_display` 循环）抓「下拉中 / 松手后 / 刷新中」三态，
-  看 spinner 相对页头的位置与内容行是否错位；不要只截静态终态。
+  看 spinner 相对页头的位置与内容行位移序列是否单调；不要只截静态终态。
 
 ## 已知布局坑（2026-10-19 端上实测）
 

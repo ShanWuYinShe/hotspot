@@ -4,19 +4,12 @@
  */
 
 import { DEBUG } from 'BuildProfile';
+import { deviceInfo } from '@kit.BasicServicesKit';
 
-// API 配置：根据构建模式自动切换
-// debug  → 开发服务器（docker compose 的 nginx 网关，端口 = .env NGINX_PORT 默认 8888）
+// API 配置：根据构建模式与设备类型自动切换
+// debug  → 开发服务器（模拟器直通 10.0.2.2:8888；真机直通局域网宿主 IP 192.168.0.100:8888）
 // release → 正式域名（与 Web 网关同域同构；api 子域未建 DNS，禁止引用）
-// 模拟器与真机统一走 127.0.0.1:8888 + hdc 反向转发（等价 adb reverse，不依赖
-// SLIRP NAT——实测部分模拟器实例 10.0.2.2 用户态 NAT 不可达或延迟极高）：
-// - 模拟器：`hdc -t 127.0.0.1:5555 rport tcp:8888 tcp:8888`
-// - 真机：`hdc -t <设备序列号> fport tcp:8888 tcp:8888`（USB 反向转发）
-// 开发环境默认指向 QEMU 宿主别名 10.0.2.2：
-// - 模拟器里 127.0.0.1 指模拟器自身，**到达不了宿主**，此前导致所有页面停在加载/错误态；
-// - 真机同样用不了 127.0.0.1，需要改成本机 LAN IP（DebugPanel 可覆盖，见 PreferencesUtil 的 SERVER_BASE_URL）；
-// - 宿主 nginx 监听 0.0.0.0:8888，模拟器内 `ping 10.0.2.2` 实测可达（2026-10-21 验证）。
-const DEV_SERVER = 'http://10.0.2.2:8888';
+const DEV_SERVER = deviceInfo.productModel === 'emulator' ? 'http://10.0.2.2:8888' : 'http://192.168.0.100:8888';
 const PROD_SERVER = 'https://chaoset.com';
 
 export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;
@@ -24,7 +17,7 @@ export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;
 // Web 端站点入口（nginx 网关同域服务前端静态页），分享链接指向此域名。
 // 路径与 Web 路由表保持一致：/users/:id、/groups/:id、/moments/:id、/share/:code
 // （frontend/src/lib/routes.ts）。debug 走本地网关，dev compose 同样服务 Web 前端。
-const DEV_WEB_SERVER = 'http://127.0.0.1:8888';
+const DEV_WEB_SERVER = deviceInfo.productModel === 'emulator' ? 'http://10.0.2.2:8888' : 'http://192.168.0.100:8888';
 const PROD_WEB_SERVER = 'https://chaoset.com';
 
 export const WEB_BASE_URL: string = DEBUG ? DEV_WEB_SERVER : PROD_WEB_SERVER;
