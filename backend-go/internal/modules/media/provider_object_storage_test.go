@@ -44,8 +44,11 @@ func TestObjectStorageProviderPresignBuildsSignedPutURL(t *testing.T) {
 	if resp.Headers["Content-Type"] != "image/png" {
 		t.Fatalf("unexpected content type header: %#v", resp.Headers)
 	}
-	if resp.Headers["Content-MD5"] != "d41d8cd98f00b204e9800998ecf8427e" {
-		t.Fatalf("unexpected content md5 header: %#v", resp.Headers)
+	// Content-MD5 必须是标准 base64(16B digest)：API 入参是 hex
+	//（d41d8cd9... 为空串的 MD5），下发 header 归一为 base64——此前直接下发
+	// hex，SeaweedFS 宽松可用但严格 S3 后端会拒绝（审查 P2-14）。
+	if want := "1B2M2Y8AsgTpgAmY7PhCfg=="; resp.Headers["Content-MD5"] != want {
+		t.Fatalf("unexpected content md5 header: %#v (want %q)", resp.Headers, want)
 	}
 	if resp.ExpiresAt != "2026-03-30T08:15:00Z" {
 		t.Fatalf("unexpected expires at: %s", resp.ExpiresAt)

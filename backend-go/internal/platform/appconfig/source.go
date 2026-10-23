@@ -261,10 +261,13 @@ func defaultConfig(runtime config.Config) AppConfig {
 			OfficialWebsite:   runtime.OfficialWebsiteURL,
 		},
 		Upload: UploadConfig{
-			ImageMaxSize:      10 * 1024 * 1024,
-			VideoMaxSize:      100 * 1024 * 1024,
-			AudioMaxSize:      20 * 1024 * 1024,
-			FileMaxSize:       50 * 1024 * 1024,
+			ImageMaxSize: 10 * 1024 * 1024,
+			VideoMaxSize: 100 * 1024 * 1024,
+			AudioMaxSize: 20 * 1024 * 1024,
+			FileMaxSize:  50 * 1024 * 1024,
+			// 与 media 迁移前的硬编码值一致：默认行为不变，仅变为可配置。
+			AvatarMaxSize:     5 * 1024 * 1024,
+			ChatFileMaxSize:   100 * 1024 * 1024,
 			AllowedImageTypes: []string{"image/jpeg", "image/png", "image/webp"},
 			AllowedVideoTypes: []string{"video/mp4", "video/quicktime"},
 		},

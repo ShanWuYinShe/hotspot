@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
+	"crypto/md5"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -349,9 +351,24 @@ func (p *ObjectStorageProvider) presignPutObjectURL(ctx context.Context, storage
 	expiresAt := p.now().UTC().Add(mediaPresignTTL)
 	headers := map[string]string{"Content-Type": mimeType}
 	if md5Value != "" {
-		headers["Content-MD5"] = md5Value
+		// Content-MD5 的 HTTP/S3 标准形态是 base64(16 字节 digest)，而 API 契约
+		//（media/presign_upload 的 md5 字段）用 32 字符 hex——此前直接把 hex 当
+		// header 下发，SeaweedFS 宽松不校验故可用，换严格 S3 后端/开启校验后
+		// 全部带 md5 的直传会失败。这里归一为标准 base64：客户端拿 header 原样
+		// 使用，服务端只保证形态正确。非 32 hex 的输入按原值透传（兼容存量调用）。
+		headers["Content-MD5"] = contentMD5HeaderValue(md5Value)
 	}
 	return uploadURL, headers, expiresAt, nil
+}
+
+// contentMD5HeaderValue 把 32 字符 hex 摘要转成 RFC 3230 / S3 的 base64 形态；
+// 输入不是合法 hex 时原样返回（不阻断，交给存储端判定）。
+func contentMD5HeaderValue(value string) string {
+	decoded, err := hex.DecodeString(value)
+	if err != nil || len(decoded) != md5.Size {
+		return value
+	}
+	return base64.StdEncoding.EncodeToString(decoded)
 }
 
 func (p *ObjectStorageProvider) internalEndpoint(context.Context) (*url.URL, bool, error) {

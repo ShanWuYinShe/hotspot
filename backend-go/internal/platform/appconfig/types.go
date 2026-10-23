@@ -50,10 +50,18 @@ type Contact struct {
 }
 
 type UploadConfig struct {
-	ImageMaxSize      int      `json:"image_max_size"`
-	VideoMaxSize      int      `json:"video_max_size"`
-	AudioMaxSize      int      `json:"audio_max_size"`
-	FileMaxSize       int      `json:"file_max_size"`
+	ImageMaxSize int `json:"image_max_size"`
+	VideoMaxSize int `json:"video_max_size"`
+	AudioMaxSize int `json:"audio_max_size"`
+	FileMaxSize  int `json:"file_max_size"`
+	// AvatarMaxSize / ChatFileMaxSize 是头像类与聊天文件类的独立上限
+	//（审查 P2-23：media 模块此前把 5MB/100MB 硬编码在代码里，与其余四类
+	// 走 AppConfig 形成「同类参数两种来源」）。新增字段而非复用 image/file：
+	// avatar 历史上限 5MB（低于图片 10MB）、chat file 历史上限 100MB（高于
+	// file 50MB），复用会改变既有行为；存量配置无该字段 → 零值 → media
+	// 回退到同值常量，行为不变。
+	AvatarMaxSize     int      `json:"avatar_max_size"`
+	ChatFileMaxSize   int      `json:"chat_file_max_size"`
 	AllowedImageTypes []string `json:"allowed_image_types"`
 	AllowedVideoTypes []string `json:"allowed_video_types"`
 }

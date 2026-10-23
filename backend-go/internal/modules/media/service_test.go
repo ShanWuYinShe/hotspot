@@ -9,6 +9,13 @@ import (
 	"hotspot/backend-go/internal/platform/idempotency"
 )
 
+// callValidate 用「AppConfig 未接线」的兜底上限调用校验：这些用例只关注
+// 校验维度（MIME/文件名/MD5），大小上限另有用例覆盖；兜底值即迁移前的
+// 硬编码值，断言语义不变。
+func callValidate(req PresignFileInput) error {
+	return validatePresignUploadRequest(req, (&Service{}).maxFileSize(req.Category))
+}
+
 func mediaContextWithUserAndKey(userID, key string) context.Context {
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: userID})
 	if key != "" {
@@ -19,7 +26,7 @@ func mediaContextWithUserAndKey(userID, key string) context.Context {
 
 func TestValidatePresignUploadRequest(t *testing.T) {
 	valid := PresignFileInput{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar, MD5: "d41d8cd98f00b204e9800998ecf8427e"}
-	if err := validatePresignUploadRequest(valid); err != nil {
+	if err := callValidate(valid); err != nil {
 		t.Fatalf("expected valid request, got %v", err)
 	}
 	cases := []PresignFileInput{
@@ -30,7 +37,7 @@ func TestValidatePresignUploadRequest(t *testing.T) {
 		{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: CategoryAvatar, MD5: "bad-md5"},
 	}
 	for _, c := range cases {
-		if err := validatePresignUploadRequest(c); !errors.Is(err, ErrInvalidMediaRequest) {
+		if err := callValidate(c); !errors.Is(err, ErrInvalidMediaRequest) {
 			t.Fatalf("expected invalid request for %#v, got %v", c, err)
 		}
 	}
@@ -54,7 +61,7 @@ func TestValidatePresignUploadRequestRejectsActiveContentMime(t *testing.T) {
 	}
 	for _, mime := range activeContent {
 		req := PresignFileInput{FileName: "a.html", FileSize: 100, MimeType: mime, Category: CategoryChatFile}
-		if err := validatePresignUploadRequest(req); !errors.Is(err, ErrInvalidMediaRequest) {
+		if err := callValidate(req); !errors.Is(err, ErrInvalidMediaRequest) {
 			t.Fatalf("expected active content mime %q to be rejected, got %v", mime, err)
 		}
 	}
@@ -63,7 +70,7 @@ func TestValidatePresignUploadRequestRejectsActiveContentMime(t *testing.T) {
 	allowed := []string{"application/pdf", "text/plain", "application/zip", "application/octet-stream"}
 	for _, mime := range allowed {
 		req := PresignFileInput{FileName: "a.bin", FileSize: 100, MimeType: mime, Category: CategoryChatFile}
-		if err := validatePresignUploadRequest(req); err != nil {
+		if err := callValidate(req); err != nil {
 			t.Fatalf("expected ordinary attachment mime %q to pass, got %v", mime, err)
 		}
 	}
@@ -84,7 +91,7 @@ func TestValidatePresignUploadRequestClosedWhitelistPerCategory(t *testing.T) {
 	}
 	for _, c := range cases {
 		req := PresignFileInput{FileName: "a.bin", FileSize: 100, MimeType: c.mime, Category: c.category}
-		if err := validatePresignUploadRequest(req); !errors.Is(err, ErrInvalidMediaRequest) {
+		if err := callValidate(req); !errors.Is(err, ErrInvalidMediaRequest) {
 			t.Fatalf("expected %s + %q to be rejected, got %v", c.category, c.mime, err)
 		}
 	}

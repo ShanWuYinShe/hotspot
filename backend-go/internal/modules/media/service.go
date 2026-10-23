@@ -72,7 +72,7 @@ func (s *Service) Presign(ctx context.Context, req PresignFileInput) (PresignedU
 	if !ok || principal.UserID == "" {
 		return PresignedUpload{}, ErrInvalidMediaRequest
 	}
-	if err := validatePresignUploadRequest(req); err != nil {
+	if err := validatePresignUploadRequest(req, s.maxFileSize(req.Category)); err != nil {
 		return PresignedUpload{}, err
 	}
 	upload, err := s.provider.Presign(ctx, req, principal.UserID)
@@ -104,7 +104,7 @@ func (s *Service) BatchPresign(ctx context.Context, files []PresignFileInput) (P
 		return PresignedUploads{}, ErrInvalidMediaRequest
 	}
 	for _, file := range files {
-		if err := validatePresignUploadRequest(file); err != nil {
+		if err := validatePresignUploadRequest(file, s.maxFileSize(file.Category)); err != nil {
 			return PresignedUploads{}, err
 		}
 	}
@@ -289,7 +289,10 @@ func (s *Service) PresignGet(ctx context.Context, storageKey string, ttl time.Du
 	return s.provider.PresignGet(ctx, storageKey, ttl)
 }
 
-func validatePresignUploadRequest(req PresignFileInput) error {
+// validatePresignUploadRequest 校验直传预签名请求。maxSize 由调用方按
+// Service.maxFileSize(category) 传入——AppConfig 注入在 Service 上，自由函数
+// 无法直接读取。
+func validatePresignUploadRequest(req PresignFileInput, maxSize int) error {
 	if strings.TrimSpace(req.FileName) == "" || len(req.FileName) > 255 {
 		return ErrInvalidMediaRequest
 	}
@@ -308,7 +311,7 @@ func validatePresignUploadRequest(req PresignFileInput) error {
 	if !isMimeAllowed(req.Category, normalizeMimeType(req.MimeType)) {
 		return ErrInvalidMediaRequest
 	}
-	if req.FileSize > maxFileSize(req.Category) {
+	if req.FileSize > maxSize {
 		return ErrInvalidMediaRequest
 	}
 	if req.MD5 != "" {
@@ -359,18 +362,42 @@ func isActiveContentMime(mime string) bool {
 	}
 }
 
-func maxFileSize(category MediaCategory) int {
+// 各类别的兜底上限（AppConfig 未接线或字段为 0 时使用）；数值与迁移前的
+// 硬编码常量完全一致，保证存量配置（无 avatar/chat_file 新字段）行为不变。
+const (
+	defaultAvatarMaxSize   = 5 * 1024 * 1024
+	defaultImageMaxSize    = 10 * 1024 * 1024
+	defaultVideoMaxSize    = 100 * 1024 * 1024
+	defaultAudioMaxSize    = 20 * 1024 * 1024
+	defaultChatFileMaxSize = 100 * 1024 * 1024
+)
+
+// maxFileSize 返回类别的上传大小上限。上限统一从 AppConfig.Upload 读取
+// （AGENTS「配置」节：应用限制禁止硬编码），字段为 0/未接线时回退同值常量。
+// 审查 P2-23：此前六类全部硬编码，与同文件 BatchLimitFor 走 AppConfig
+// 形成「同类参数两种来源」，调整上限需要发版。
+func (s *Service) maxFileSize(category MediaCategory) int {
+	var upload appconfig.UploadConfig
+	if s.appConfig != nil {
+		upload = s.appConfig.Get(context.Background()).Upload
+	}
+	pick := func(configured, fallback int) int {
+		if configured > 0 {
+			return configured
+		}
+		return fallback
+	}
 	switch category {
 	case CategoryAvatar, CategoryGroupAvatar:
-		return 5 * 1024 * 1024
+		return pick(upload.AvatarMaxSize, defaultAvatarMaxSize)
 	case CategoryMomentImage, CategoryChatImage:
-		return 10 * 1024 * 1024
+		return pick(upload.ImageMaxSize, defaultImageMaxSize)
 	case CategoryChatVideo:
-		return 100 * 1024 * 1024
+		return pick(upload.VideoMaxSize, defaultVideoMaxSize)
 	case CategoryChatAudio:
-		return 20 * 1024 * 1024
+		return pick(upload.AudioMaxSize, defaultAudioMaxSize)
 	case CategoryChatFile:
-		return 100 * 1024 * 1024
+		return pick(upload.ChatFileMaxSize, defaultChatFileMaxSize)
 	default:
 		return 0
 	}

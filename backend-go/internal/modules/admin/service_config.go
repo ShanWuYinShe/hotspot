@@ -125,6 +125,18 @@ func applyUploadConfigPatch(target *AdminUploadConfig, patch PartialUploadConfig
 		}
 		target.FileMaxSize = *patch.FileMaxSize
 	}
+	if patch.AvatarMaxSize != nil {
+		if *patch.AvatarMaxSize <= 0 {
+			return httpx.InvalidRequest("参数错误")
+		}
+		target.AvatarMaxSize = *patch.AvatarMaxSize
+	}
+	if patch.ChatFileMaxSize != nil {
+		if *patch.ChatFileMaxSize <= 0 {
+			return httpx.InvalidRequest("参数错误")
+		}
+		target.ChatFileMaxSize = *patch.ChatFileMaxSize
+	}
 	if patch.AllowedImageTypes != nil {
 		target.AllowedImageTypes = sortAndUniqueStrings(patch.AllowedImageTypes)
 	}

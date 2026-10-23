@@ -9,6 +9,8 @@ type AdminUploadConfig struct {
 	VideoMaxSize      int      `json:"video_max_size"`
 	AudioMaxSize      int      `json:"audio_max_size"`
 	FileMaxSize       int      `json:"file_max_size"`
+	AvatarMaxSize     int      `json:"avatar_max_size"`
+	ChatFileMaxSize   int      `json:"chat_file_max_size"`
 	AllowedImageTypes []string `json:"allowed_image_types"`
 	AllowedVideoTypes []string `json:"allowed_video_types"`
 }
@@ -109,6 +111,8 @@ type PartialUploadConfig struct {
 	VideoMaxSize      *int     `json:"video_max_size,omitempty"`
 	AudioMaxSize      *int     `json:"audio_max_size,omitempty"`
 	FileMaxSize       *int     `json:"file_max_size,omitempty"`
+	AvatarMaxSize     *int     `json:"avatar_max_size,omitempty"`
+	ChatFileMaxSize   *int     `json:"chat_file_max_size,omitempty"`
 	AllowedImageTypes []string `json:"allowed_image_types,omitempty"`
 	AllowedVideoTypes []string `json:"allowed_video_types,omitempty"`
 }
