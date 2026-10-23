@@ -71,12 +71,16 @@ GROUP BY r.emoji
 ORDER BY cnt DESC, r.emoji ASC`
 
 	// queryAggregateReactionsBatch is the multi-target form, used by feed/list
-	// to avoid N+1. Returns one row per (target_id, emoji).
+	// to avoid N+1. Returns one row per (target_id, emoji). ORDER BY 必须与
+	// 单目标版同口径（组内 cnt DESC, emoji ASC）：聚合行序即调用方按行序
+	// append 的 MomentItem/CommentItem.reactions 顺序，无排序时跨请求
+	// 顺序不稳定、UI 抖动（此前单目标版有排序、批量版缺失）。
 	queryAggregateReactionsBatch = `
 SELECT r.target_id, r.emoji, COUNT(*) AS cnt, BOOL_OR(r.user_id = $3) AS reacted_by_me
 FROM reactions r
 WHERE r.target_type = $1 AND r.target_id = ANY($2::text[])
-GROUP BY r.target_id, r.emoji`
+GROUP BY r.target_id, r.emoji
+ORDER BY r.target_id, cnt DESC, r.emoji ASC`
 
 	// queryListReactedTargets returns target_ids the user reacted to, newest
 	// first. Backed by idx_reactions_user_reacted_at. Cursor is

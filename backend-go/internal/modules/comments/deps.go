@@ -12,7 +12,6 @@ type MomentNotificationContext struct {
 }
 
 type MomentProvider interface {
-	Exists(context.Context, string) (bool, error)
 	CheckCommentable(context.Context, string) (found bool, canComment bool, err error)
 	// IsReactionTargetVisible 判定瞬间对 viewer 可见（软删/private 统一不可见）。
 	// 评论读路径（List/open_the_door）复用它做可见性校验，防止知道 moment_id

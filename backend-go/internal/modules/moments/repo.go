@@ -11,7 +11,6 @@ type Repository interface {
 	Update(context.Context, string, UpdateMomentRequest) error
 	Delete(context.Context, string) error
 	ListMine(context.Context, string, int, string) (PaginatedMoments, error)
-	Exists(context.Context, string) (bool, error)
 	IncrementCommentCount(context.Context, string) error
 	DecrementCommentCount(context.Context, string) error
 	// AdjustReactionCount 维护瞬间 reaction 计数冗余列（delta 可负，下限钳 0）。

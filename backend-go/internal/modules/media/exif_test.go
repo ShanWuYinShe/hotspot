@@ -30,6 +30,63 @@ func buildTestJPEG(withEXIF bool) []byte {
 	return out
 }
 
+// buildTestWebP 构造最小 RIFF/WebP 容器：VP8L 图像 chunk + 可选的
+// EXIF chunk（奇数长度，验证 pad 处理）与 XMP chunk。
+func buildTestWebP(withMetadata bool) []byte {
+	chunk := func(fourCC string, payload []byte) []byte {
+		head := make([]byte, 8)
+		copy(head[0:4], fourCC)
+		binary.LittleEndian.PutUint32(head[4:8], uint32(len(payload)))
+		out := append(head, payload...)
+		if len(payload)%2 == 1 {
+			out = append(out, 0) // RIFF 奇数字节 pad
+		}
+		return out
+	}
+	body := chunk("VP8L", []byte("\x2f\x00\x00\x00\x00-image-bytes"))
+	if withMetadata {
+		body = append(body, chunk("EXIF", []byte("Exif-GPS-GPS"))...) // 奇数长度 → 带 pad
+		body = append(body, chunk("XMP ", []byte("<x:xmpmeta/>"))...)
+	}
+	header := make([]byte, 12)
+	copy(header[0:4], "RIFF")
+	binary.LittleEndian.PutUint32(header[4:8], uint32(len(body)+4))
+	copy(header[8:12], "WEBP")
+	return append(header, body...)
+}
+
+// 防回归（P2-13）：WebP 的 EXIF/XMP chunk 必须被清洗（GPS 载体），图像
+// chunk 保留，RIFF 头大小字段改写；无元数据 chunk 时原样返回。
+func TestStripWebPMetadataRemovesEXIFAndXMP(t *testing.T) {
+	withMeta := buildTestWebP(true)
+	cleaned, changed, err := stripImageMetadata(withMeta)
+	if err != nil {
+		t.Fatalf("strip webp: %v", err)
+	}
+	if !changed {
+		t.Fatal("expected EXIF/XMP chunks to be removed")
+	}
+	if bytes.Contains(cleaned, []byte("Exif-GPS-GPS")) || bytes.Contains(cleaned, []byte("x:xmpmeta")) {
+		t.Fatal("metadata payload still present after scrub")
+	}
+	if !bytes.Contains(cleaned, []byte("image-bytes")) {
+		t.Fatal("image chunk must be preserved")
+	}
+	if got := binary.LittleEndian.Uint32(cleaned[4:8]); got != uint32(len(cleaned)-8) {
+		t.Fatalf("RIFF header size must be rewritten: got %d want %d", got, len(cleaned)-8)
+	}
+
+	cleanMeta, changed, err := stripImageMetadata(buildTestWebP(false))
+	if err != nil || changed || !bytes.Equal(cleanMeta, buildTestWebP(false)) {
+		t.Fatalf("clean webp should pass through: changed=%v err=%v", changed, err)
+	}
+
+	// 截断容器（chunk 头越界）→ 解析错误（fail-open 由调用方处理）。
+	if _, _, err := stripImageMetadata(withMeta[:len(withMeta)-6]); err == nil {
+		t.Fatal("truncated webp should fail parsing")
+	}
+}
+
 func TestStripJPEGMetadataRemovesEXIFKeepsStructure(t *testing.T) {
 	withEXIF := buildTestJPEG(true)
 	cleaned, changed, err := stripImageMetadata(withEXIF)

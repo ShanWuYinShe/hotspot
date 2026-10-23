@@ -2,8 +2,8 @@ package moments
 
 import (
 	"context"
-	"math"
 
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -55,20 +55,12 @@ func (s *Service) notifyNearbyNewMoment(ctx context.Context, authorID, momentID 
 		targets = targets[:nearbyNotifyMaxTargets]
 	}
 	for _, t := range targets {
-		distance := haversineMeters(lat, lng, t.Latitude, t.Longitude)
-		if err := s.nearbyNotifyPublisher.PublishNearbyNewMomentPreChecked(ctx, t.UserID, authorID, momentID, int(math.Round(distance)), actor, summary); err != nil {
+		// 距离统一走 platform/geo（与地图/发现流同口径）：本地 haversine
+		// 实现（半径 6371008.8m）与 geo.DistanceMeters（s2 系，6371000m）
+		// 双实现漂移，收敛为单一来源（P2-22）。
+		distance := geo.DistanceMeters(geo.Point{Latitude: lat, Longitude: lng}, geo.Point{Latitude: t.Latitude, Longitude: t.Longitude})
+		if err := s.nearbyNotifyPublisher.PublishNearbyNewMomentPreChecked(ctx, t.UserID, authorID, momentID, distance, actor, summary); err != nil {
 			observability.L().Warn("moments.nearby_notify publish failed", "error", err, "target", t.UserID)
 		}
 	}
-}
-
-// haversineMeters 两点球面距离（米）。半径 6371008.8m（IUGG 平均半径）。
-func haversineMeters(lat1, lng1, lat2, lng2 float64) float64 {
-	const earthRadius = 6371008.8
-	rad := math.Pi / 180
-	dLat := (lat2 - lat1) * rad
-	dLng := (lng2 - lng1) * rad
-	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
-		math.Cos(lat1*rad)*math.Cos(lat2*rad)*math.Sin(dLng/2)*math.Sin(dLng/2)
-	return 2 * earthRadius * math.Asin(math.Min(1, math.Sqrt(a)))
 }

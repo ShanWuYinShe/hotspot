@@ -135,13 +135,6 @@ func (r *InMemoryRepository) ListMine(_ context.Context, userID string, limit in
 	return result, nil
 }
 
-func (r *InMemoryRepository) Exists(_ context.Context, momentID string) (bool, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	item, ok := r.moments[momentID]
-	return ok && !item.IsDeleted, nil
-}
-
 // AdjustReactionCount 内存实现：直接增减 items 里的 LikesCount（内存实现以
 // LikesCount 承载 reaction 计数冗余列语义，与 Postgres 一致），下限钳 0。
 func (r *InMemoryRepository) AdjustReactionCount(_ context.Context, momentID string, delta int) error {

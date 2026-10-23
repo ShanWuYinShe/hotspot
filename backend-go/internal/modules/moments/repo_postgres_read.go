@@ -160,11 +160,6 @@ func (r *PostgresRepository) LoadMyState(ctx context.Context, momentID, userID s
 	return &MyMomentState{IsFavorited: isFavorited}
 }
 
-func (r *PostgresRepository) Exists(ctx context.Context, momentID string) (bool, error) {
-	_, ok, err := r.Get(ctx, momentID)
-	return ok, err
-}
-
 func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) {
 	item, _, _, err := scanMomentRowParts(scanner, false)
 	return item, err

@@ -32,14 +32,16 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
-	// reference_point 可选:缺失时由 service 按回退链解析(见 api_spec_types.md)
-	var point GeoPoint
+	// reference_point 可选:缺失时由 service 按回退链解析(见 api_spec_types.md)。
+	// 以指针传递「是否传入」，(0,0) 等合法坐标不会被误判为未传（P2-11）。
+	var point *GeoPoint
 	if body.ReferencePoint != nil && body.ReferencePoint.Latitude != nil && body.ReferencePoint.Longitude != nil {
-		point = GeoPoint{Latitude: *body.ReferencePoint.Latitude, Longitude: *body.ReferencePoint.Longitude}
-		if !isValidGeoPoint(point) {
+		p := GeoPoint{Latitude: *body.ReferencePoint.Latitude, Longitude: *body.ReferencePoint.Longitude}
+		if !isValidGeoPoint(p) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
+		point = &p
 	}
 	if body.Radius != 0 && body.Radius < 100 {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))

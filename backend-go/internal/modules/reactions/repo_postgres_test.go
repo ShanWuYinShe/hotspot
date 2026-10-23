@@ -3,12 +3,23 @@ package reactions
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
+
+// TestAggregateReactionsBatchKeepsPerTargetOrdering 防回归（P2-21）：批量
+// 聚合的行序即调用方按行序 append 的 reactions 顺序，必须与单目标版同口径
+// （组内 cnt DESC, emoji ASC），缺失时 MomentItem/CommentItem.reactions 的
+// 显示顺序跨请求不稳定。
+func TestAggregateReactionsBatchKeepsPerTargetOrdering(t *testing.T) {
+	if !strings.Contains(queryAggregateReactionsBatch, "ORDER BY r.target_id, cnt DESC, r.emoji ASC") {
+		t.Fatal("queryAggregateReactionsBatch must keep per-target ordering (cnt DESC, emoji ASC)")
+	}
+}
 
 // reactionRowStub 是最小可用的 Query/QueryRow stub，按查询串返回预设行。
 type reactionRowStub struct {

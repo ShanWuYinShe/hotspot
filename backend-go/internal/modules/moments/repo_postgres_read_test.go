@@ -373,10 +373,6 @@ func TestPostgresRepositoryReadsQueryableDB(t *testing.T) {
 	if err != nil || !ok || item.MomentID != "moment_1" || item.Description != "hello" {
 		t.Fatalf("unexpected item: %#v ok=%v err=%v", item, ok, err)
 	}
-	exists, err := repo.Exists(context.Background(), "moment_1")
-	if err != nil || !exists {
-		t.Fatalf("unexpected exists result: exists=%v err=%v", exists, err)
-	}
 	list, err := repo.ListMine(context.Background(), "user_alice", 20, "")
 	if err != nil || len(list.Items) != 1 || list.Items[0].MomentID != "moment_1" {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
@@ -431,13 +427,6 @@ func TestPostgresRepositoryGetReturnsNotFoundOnNoRows(t *testing.T) {
 	}
 	if ok {
 		t.Fatal("expected not found")
-	}
-	exists, err := repo.Exists(context.Background(), "missing")
-	if err != nil {
-		t.Fatalf("expected nil error from exists, got %v", err)
-	}
-	if exists {
-		t.Fatal("expected missing moment to report exists=false")
 	}
 }
 

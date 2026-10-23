@@ -380,28 +380,6 @@ func TestServiceUnfavoritePropagatesRepoError(t *testing.T) {
 
 // ---------- C) 辅助函数 ----------
 
-func TestServiceExistsDelegates(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{exists: true})
-	ok, err := svc.Exists(context.Background(), "m1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !ok {
-		t.Fatal("expected true")
-	}
-}
-
-func TestServiceExistsPropagatesError(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{existsErr: errors.New("boom")})
-	_, err := svc.Exists(context.Background(), "m1")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if err.Error() != "boom" {
-		t.Fatalf("expected boom, got %v", err)
-	}
-}
-
 func TestServiceIncrementCommentCountDelegates(t *testing.T) {
 	svc := NewServiceWithRepo(&stubMomentRepo{})
 	err := svc.IncrementCommentCount(context.Background(), "m1")

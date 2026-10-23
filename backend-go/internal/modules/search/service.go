@@ -49,8 +49,10 @@ func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
 func (s *Service) SetLocationProvider(lp LocationProvider) { s.locations = lp }
 
 func (s *Service) Suggest(ctx context.Context, req SearchSuggestRequest) (SearchSuggestResponse, error) {
-	// reference_point 缺失时回退到 default_location(见 api_spec_types.md)
-	req.ReferencePoint = s.resolveReferencePoint(ctx, req.ReferencePoint)
+	// reference_point 可选（指针语义）：nil=未传走回退链；回退链解析结果
+	// 恒有值（default_location 兜底），下游无需再判空。
+	resolved := s.resolveReferencePoint(ctx, req.ReferencePoint)
+	req.ReferencePoint = &resolved
 	req.Radius = normalizeSuggestRadius(s.appConfig.Get(ctx).Limits.SearchRadiusMax, req.Radius)
 	resp, err := s.repo.Suggest(ctx, req)
 	if err != nil {
@@ -75,11 +77,13 @@ func normalizeSuggestRadius(configMax, radius int) int {
 	return radius
 }
 
-// resolveReferencePoint:reference_point 缺失(零值)时按回退链解析
+// resolveReferencePoint 按「是否传入」（指针 nil 判定）走回退链
 // (api_spec_types.md):显式传参 → 已登录用户最近位置 → default_location。
-func (s *Service) resolveReferencePoint(ctx context.Context, ref GeoPoint) GeoPoint {
-	if ref.Latitude != 0 || ref.Longitude != 0 {
-		return ref
+// 此前以 (0,0) 零值哨兵判「未传」，赤道/本初子午线交点这一合法显式
+// 坐标会被误吞进回退链（moments Create 已修同款问题，P2-11 对齐）。
+func (s *Service) resolveReferencePoint(ctx context.Context, ref *GeoPoint) GeoPoint {
+	if ref != nil {
+		return *ref
 	}
 	// 回退 2:已登录用户的最近位置
 	if principal, ok := platformauth.PrincipalFromContext(ctx); ok && principal.UserID != "" && s.locations != nil {

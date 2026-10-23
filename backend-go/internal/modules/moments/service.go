@@ -190,6 +190,18 @@ func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem,
 	if item.PrivacyLevel == "private" && !isOwner {
 		return MomentItem{}, false, nil
 	}
+	// 双向拉黑按不可见处理（spec api_spec_authz.md「隐私拒绝」：被拉黑 →
+	// 10300，先于授权判定，open_the_door 的鉴权列即「可见性过滤」）：feed/
+	// search/fetch_nearby/交互路径均已过滤，详情直达路径不得成为击穿拉黑、
+	// 直读对方瞬间全文与图片的旁路。拉黑查询失败 fail-closed（对齐
+	// IsReactionTargetVisible 口径）。
+	blocked, err := s.blockedEitherWay(principal.UserID, item.User.UserID)
+	if err != nil {
+		return MomentItem{}, false, err
+	}
+	if blocked {
+		return MomentItem{}, false, nil
+	}
 	if principal.UserID != "" {
 		if st := s.repo.LoadMyState(ctx, momentID, principal.UserID); st != nil {
 			item.IsFavorited = st.IsFavorited
@@ -246,10 +258,6 @@ func (s *Service) ListCreated(ctx context.Context, req ListCreatedMomentsRequest
 	}
 	s.fillReactionsBatchOwnerMoment(ctx, items, principal.UserID)
 	return PaginatedOwnerMoments{Items: items, NextCursor: result.NextCursor}, nil
-}
-
-func (s *Service) Exists(ctx context.Context, momentID string) (bool, error) {
-	return s.repo.Exists(ctx, momentID)
 }
 
 // SetBlockChecker 注入 caller↔作者双向拉黑判定（依赖倒置：moments 不直接

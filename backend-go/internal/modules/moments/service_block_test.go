@@ -61,6 +61,32 @@ func TestBlockEitherWayBlocksFavorite(t *testing.T) {
 	}
 }
 
+// TestBlockEitherWayBlocksOpenTheDoor 验证瞬间详情直达路径的双向拉黑拦截
+// （P2-1）：拉黑双方经 open_the_door 互不可见（按不存在处理，spec
+// api_spec_authz.md「隐私拒绝」→10300），详情不得成为击穿拉黑直读对方
+// 瞬间全文与图片的旁路。
+func TestBlockEitherWayBlocksOpenTheDoor(t *testing.T) {
+	f := newBlockServiceFixture()
+	moment := f.createMoment(t, "author_1", "hello")
+
+	f.blocks["viewer_1|author_1"] = true
+	item, ok, err := f.svc.OpenTheDoor(ctxAs("viewer_1"), moment.MomentID)
+	if err != nil || ok || item.MomentID != "" {
+		t.Fatalf("拉黑关系下详情应按不存在处理, got item=%#v ok=%v err=%v", item, ok, err)
+	}
+
+	delete(f.blocks, "viewer_1|author_1")
+	item, ok, err = f.svc.OpenTheDoor(ctxAs("viewer_1"), moment.MomentID)
+	if err != nil || !ok || item.MomentID != moment.MomentID {
+		t.Fatalf("无拉黑关系详情应可见, got item=%#v ok=%v err=%v", item, ok, err)
+	}
+
+	// 作者本人不受影响。
+	if _, ok, err := f.svc.OpenTheDoor(ctxAs("author_1"), moment.MomentID); err != nil || !ok {
+		t.Fatalf("作者本人详情应可见, ok=%v err=%v", ok, err)
+	}
+}
+
 // TestBlockEitherWayBlocksReactionTarget 验证 reaction 目标可见性在双向拉黑下
 // 返回不可见（reactions 创建被拒，不再向对方触发通知）。
 func TestBlockEitherWayBlocksReactionTarget(t *testing.T) {

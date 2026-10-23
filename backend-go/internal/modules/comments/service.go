@@ -591,7 +591,15 @@ func (s *Service) ensureMomentCommentable(ctx context.Context, momentID string) 
 		if p, ok := platformauth.PrincipalFromContext(ctx); ok {
 			caller = p.UserID
 		}
-		if mc, ok, err := s.moments.NotificationContext(ctx, momentID); err == nil && ok {
+		mc, found, err := s.moments.NotificationContext(ctx, momentID)
+		if err != nil {
+			// fail-closed：拉黑判定依赖作者身份，查询失败时宁可拒绝评论
+			//（统一 10600），与下方 blockChecks 失败的口径一致——此前
+			// err==nil 才继续会让 DB 抖动窗口内被拉黑用户继续评论。
+			observability.L().Error("comments.block_check author resolve failed", "error", err, "moment_id", momentID)
+			return err
+		}
+		if found {
 			author = mc.UserID
 		}
 		if author != "" && caller != "" {
@@ -612,18 +620,6 @@ func (s *Service) ensureMomentCommentable(ctx context.Context, momentID string) 
 				return ErrCommentBlockingUser
 			}
 		}
-	}
-	return nil
-}
-
-func (s *Service) ensureMomentExists(ctx context.Context, momentID string) error {
-	exists, err := s.moments.Exists(ctx, momentID)
-	if err != nil {
-		observability.L().Error("comments.ensure_moment_exists failed", "error", err, "moment_id", momentID)
-		return err
-	}
-	if !exists {
-		return ErrMomentNotFound
 	}
 	return nil
 }

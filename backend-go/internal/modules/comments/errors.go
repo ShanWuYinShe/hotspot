@@ -3,9 +3,8 @@ package comments
 import "errors"
 
 var (
-	ErrCommentNotFound    = errors.New("评论不存在")
-	ErrPermissionDenied   = errors.New("权限不足")
-	ErrMomentNoPermission = errors.New("comments: no permission to comment on this moment")
+	ErrCommentNotFound  = errors.New("评论不存在")
+	ErrPermissionDenied = errors.New("权限不足")
 	// ErrCommentPrivacyDenied：瞬间作者限制评论（spec comment create → 10200 + privacy_setting）。
 	ErrCommentPrivacyDenied = errors.New("comments: moment author restricts commenting")
 	// ErrCommentBlockedByUser：被瞬间作者拉黑（spec comment create → 10200 + blocked_by_user）。

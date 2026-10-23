@@ -79,7 +79,7 @@ func TestPostgresRepositoryFiltersUnknownTypesAsAll(t *testing.T) {
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
-	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"weird"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"weird"}, ReferencePoint: &GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestPostgresRepositoryAppliesTypeFilter(t *testing.T) {
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
-	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: &GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestPostgresRepositoryHonorsNicknameSearchableOnlyForNickname(t *testing.T)
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
-	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: &GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestPostgresRepositoryRanksExactBeforePrefixBeforeContains(t *testing.T) {
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
-	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"tag"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"tag"}, ReferencePoint: &GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestPostgresRepositoryUsesDistanceBeforePopularityWhenMatchRankTies(t *test
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
-	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"group"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"group"}, ReferencePoint: &GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestPostgresRepositoryAppliesRadiusFilter(t *testing.T) {
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
-	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}, Radius: 2000})
+	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: &GeoPoint{Latitude: 35.0, Longitude: 112.0}, Radius: 2000})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestPostgresRepositoryDedupesSameTypeSameID(t *testing.T) {
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
-	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"tag"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"tag"}, ReferencePoint: &GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestPostgresRepositoryReturnsRepositoryError(t *testing.T) {
 	backend := &searchBackendStub{queryErrs: map[string]error{querySearchSuggestTags: persistence.ErrNotImplemented}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
-	_, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"tag"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	_, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"tag"}, ReferencePoint: &GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -251,7 +251,7 @@ func TestPostgresRepositoryNullsFieldsHiddenByVisibilitySwitches(t *testing.T) {
 	}}
 	repo := NewPostgresRepository(newSearchFactory(backend))
 
-	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: &GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}

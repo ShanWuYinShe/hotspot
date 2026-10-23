@@ -52,9 +52,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			if errors.Is(err, ErrCommentBlockingUser) {
 				return httpx.BusinessForbidden(r, "Create", httpx.ReasonBlockedByUser, "你已拉黑该用户")
 			}
-			if errors.Is(err, ErrMomentNoPermission) {
-				return httpx.BusinessForbidden(r, "Create", httpx.ReasonPrivacySetting, "权限不足")
-			}
 			observability.LogServerError(r, "Create", err)
 			return httpx.ApiResponse[any]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}

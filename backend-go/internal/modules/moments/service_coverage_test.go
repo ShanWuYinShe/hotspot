@@ -84,42 +84,6 @@ func TestMemoryFetchMomentImageRows(t *testing.T) {
 	}
 }
 
-func TestStoreCreateGetListMine(t *testing.T) {
-	s := NewStore()
-	if s == nil {
-		t.Fatal("NewStore must return a store")
-	}
-	item := s.Create("u1", CreateMomentRequest{Description: "hi"})
-	if item.MomentID == "" || item.PrivacyLevel != "public" {
-		t.Fatalf("create: %#v", item)
-	}
-	private := s.Create("u1", CreateMomentRequest{Description: "private", PrivacyLevel: "private"})
-	if private.PrivacyLevel != "private" {
-		t.Fatalf("private: %#v", private)
-	}
-	got, ok := s.Get(item.MomentID)
-	if !ok || got.MomentID != item.MomentID {
-		t.Fatalf("get: %#v ok=%v", got, ok)
-	}
-	if _, ok := s.Get("missing"); ok {
-		t.Fatal("missing moment must not be found")
-	}
-	mine := s.ListMine("u1")
-	if len(mine.Items) != 2 {
-		t.Fatalf("list mine: %d items", len(mine.Items))
-	}
-	if other := s.ListMine("u2"); len(other.Items) != 0 {
-		t.Fatalf("other user: %d items", len(other.Items))
-	}
-	s.IncrementCommentCount(item.MomentID)
-	updated, _ := s.Get(item.MomentID)
-	if updated.CommentsCount != 1 {
-		t.Fatalf("increment: %d", updated.CommentsCount)
-	}
-	// 不存在的 moment 增量 no-op
-	s.IncrementCommentCount("missing")
-}
-
 func TestViewerUserIDHelper(t *testing.T) {
 	if got := viewerUserID(context.Background()); got != "" {
 		t.Fatalf("anonymous: %q", got)

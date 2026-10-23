@@ -20,11 +20,25 @@ func (r *stubRepository) Suggest(_ context.Context, req SearchSuggestRequest) (S
 	return r.response, r.err
 }
 
+// 防回归（P2-11）：显式传入 (0,0)（赤道/本初子午线交点，合法坐标）必须
+// 原样生效，不得被零值哨兵误判为「未传」而吞进回退链。
+func TestSuggestExplicitZeroReferencePointIsKept(t *testing.T) {
+	repo := &stubRepository{response: SearchSuggestResponse{Items: []SearchSuggestItem{}}}
+	service := NewServiceWithRepo(repo)
+
+	if _, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: &GeoPoint{Latitude: 0, Longitude: 0}}); err != nil {
+		t.Fatalf("Suggest returned error: %v", err)
+	}
+	if repo.lastReq.ReferencePoint == nil || repo.lastReq.ReferencePoint.Latitude != 0 || repo.lastReq.ReferencePoint.Longitude != 0 {
+		t.Fatalf("explicit (0,0) reference point must be kept verbatim, got %#v", repo.lastReq.ReferencePoint)
+	}
+}
+
 func TestServiceSuggestDelegatesToRepository(t *testing.T) {
 	repo := &stubRepository{response: SearchSuggestResponse{Items: []SearchSuggestItem{{Type: "tag", Payload: map[string]any{"name": "hot"}}}}}
 	service := NewServiceWithRepo(repo)
 
-	result, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}, Radius: 150})
+	result, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}, Radius: 150})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -39,7 +53,7 @@ func TestServiceSuggestDelegatesToRepository(t *testing.T) {
 func TestServiceSuggestReturnsRepositoryError(t *testing.T) {
 	service := NewServiceWithRepo(&stubRepository{err: errors.New("boom")})
 
-	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}})
+	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -49,7 +63,7 @@ func TestServiceSuggestAppliesDefaultRadius(t *testing.T) {
 	repo := &stubRepository{}
 	service := NewServiceWithRepo(repo)
 
-	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}})
+	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -67,7 +81,7 @@ func TestServiceSuggestClampsRadiusToAppConfigLimit(t *testing.T) {
 	})
 	service := NewServiceWithSource(repo, source)
 
-	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}, Radius: 5000})
+	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}, Radius: 5000})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -80,7 +94,7 @@ func TestServiceSuggestClampsRadiusToDefaultSpecMax(t *testing.T) {
 	repo := &stubRepository{}
 	service := NewServiceWithRepo(repo)
 
-	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}, Radius: 50001})
+	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}, Radius: 50001})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -96,7 +110,7 @@ func TestServiceSuggestAppliesResponseDefaultLimit(t *testing.T) {
 		return cfg
 	})
 	service := NewServiceWithSource(&stubRepository{response: SearchSuggestResponse{Items: []SearchSuggestItem{{Type: "tag", Payload: map[string]any{"name": "hot"}}, {Type: "user", Payload: map[string]any{"user_id": "u1"}}}}}, source)
-	result, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}})
+	result, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
@@ -109,7 +123,7 @@ func TestServiceSuggestPreservesTypeSelection(t *testing.T) {
 	repo := &stubRepository{}
 	service := NewServiceWithRepo(repo)
 
-	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}, Types: []string{"user", "group"}})
+	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}, Types: []string{"user", "group"}})
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}

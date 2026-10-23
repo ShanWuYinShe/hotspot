@@ -45,9 +45,6 @@ func (r *momentErrRepo) ListMine(ctx context.Context, userID string, limit int, 
 	}
 	return r.repo.ListMine(ctx, userID, limit, cursor)
 }
-func (r *momentErrRepo) Exists(ctx context.Context, momentID string) (bool, error) {
-	return r.repo.Exists(ctx, momentID)
-}
 func (r *momentErrRepo) AdjustReactionCount(ctx context.Context, momentID string, delta int) error {
 	return r.repo.AdjustReactionCount(ctx, momentID, delta)
 }

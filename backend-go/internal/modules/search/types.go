@@ -7,10 +7,13 @@ type GeoPoint = types.GeoPoint
 type RelativeLocation = types.RelativeLocation
 
 type SearchSuggestRequest struct {
-	Prefix         string   `json:"prefix"`
-	ReferencePoint GeoPoint `json:"reference_point"`
-	Types          []string `json:"types,omitempty"`
-	Radius         int      `json:"radius,omitempty"`
+	Prefix string `json:"prefix"`
+	// ReferencePoint 指针语义表达「是否传入」：nil=未传（service 走回退链）；
+	// 显式传入 (0,0) 等合法坐标不得被零值哨兵误判为未传（对齐 moments 的
+	// 修法，spec api_spec_types.md「reference_point 解析规则」）。
+	ReferencePoint *GeoPoint `json:"reference_point"`
+	Types          []string  `json:"types,omitempty"`
+	Radius         int       `json:"radius,omitempty"`
 }
 
 type UserSuggestItem struct {

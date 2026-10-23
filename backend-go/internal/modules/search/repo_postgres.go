@@ -43,6 +43,12 @@ func (r *PostgresRepository) Suggest(ctx context.Context, req SearchSuggestReque
 	if principal, ok := platformauth.PrincipalFromContext(ctx); ok {
 		viewerID = principal.UserID
 	}
+	// ReferencePoint 已是指针语义：service 侧回退链解析后恒非 nil，此处
+	// 解引用为值供各子查询传参；直接调用 repo 的场景防御性取零值。
+	reference := GeoPoint{}
+	if req.ReferencePoint != nil {
+		reference = *req.ReferencePoint
+	}
 
 	allowed := normalizeSuggestTypes(req.Types)
 	items := make([]scoredSuggestItem, 0)
@@ -54,21 +60,21 @@ func (r *PostgresRepository) Suggest(ctx context.Context, req SearchSuggestReque
 		items = append(items, tagItems...)
 	}
 	if allowed["user"] {
-		userItems, err := queryUserSuggestions(ctx, queryable, viewerID, escapedPrefix, req.ReferencePoint, req.Radius)
+		userItems, err := queryUserSuggestions(ctx, queryable, viewerID, escapedPrefix, reference, req.Radius)
 		if err != nil {
 			return SearchSuggestResponse{}, err
 		}
 		items = append(items, userItems...)
 	}
 	if allowed["group"] {
-		groupItems, err := queryGroupSuggestions(ctx, queryable, viewerID, escapedPrefix, req.ReferencePoint, req.Radius)
+		groupItems, err := queryGroupSuggestions(ctx, queryable, viewerID, escapedPrefix, reference, req.Radius)
 		if err != nil {
 			return SearchSuggestResponse{}, err
 		}
 		items = append(items, groupItems...)
 	}
 	if allowed["moment"] {
-		momentItems, err := queryMomentSuggestions(ctx, queryable, escapedPrefix, req.ReferencePoint, req.Radius)
+		momentItems, err := queryMomentSuggestions(ctx, queryable, escapedPrefix, reference, req.Radius)
 		if err != nil {
 			return SearchSuggestResponse{}, err
 		}

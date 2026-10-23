@@ -106,15 +106,12 @@ func TestMemoryMomentCountersAndFavorites(t *testing.T) {
 	}
 }
 
-func TestMemoryMomentDeleteAndExists(t *testing.T) {
+func TestMemoryMomentDeleteIdempotent(t *testing.T) {
 	repo := NewInMemoryRepository()
 	ctx := context.Background()
 	created, err := repo.Create(ctx, "u1", CreateMomentRequest{Description: "hi"})
 	if err != nil {
 		t.Fatalf("create: %v", err)
-	}
-	if ok, err := repo.Exists(ctx, created.MomentID); err != nil || !ok {
-		t.Fatalf("exists: %v err=%v", ok, err)
 	}
 	if err := repo.Delete(ctx, created.MomentID); err != nil {
 		t.Fatalf("delete: %v", err)
@@ -122,9 +119,6 @@ func TestMemoryMomentDeleteAndExists(t *testing.T) {
 	// 软删除幂等：重复删除返回成功（与 Postgres UPDATE 语义一致）。
 	if err := repo.Delete(ctx, created.MomentID); err != nil {
 		t.Fatalf("double delete: expected idempotent success, got %v", err)
-	}
-	if ok, _ := repo.Exists(ctx, created.MomentID); ok {
-		t.Fatal("deleted moment must not exist")
 	}
 	// 软删除语义（spec api_spec_moment.md「删除语义」）：记录保留为占位项。
 	item, ok, _ := repo.Get(ctx, created.MomentID)
@@ -178,9 +172,6 @@ func TestMemoryDeleteKeepsSoftDeletedPlaceholders(t *testing.T) {
 		if it.MomentID == created.MomentID {
 			t.Fatal("soft-deleted moment must be filtered from search")
 		}
-	}
-	if ok, _ := repo.Exists(ctx, created.MomentID); ok {
-		t.Fatal("soft-deleted moment must not exist for interactions")
 	}
 }
 

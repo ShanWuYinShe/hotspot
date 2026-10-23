@@ -63,10 +63,13 @@ WHERE user_id = $1 AND is_read = FALSE`
 	// （后台 prune sweeper 专用，见 Service.StartPruneSweeper）。notifications
 	// 无 updated_at 列，以 created_at 近似已读年龄（保守：只会少删）。
 	// 子查询 LIMIT 封顶单事务体量，防存量积压时长事务持锁 + WAL 尖刺（审查 M-4）。
+	// IN 谓词必须用复合主键 (notification_id, user_id)：主键已非 notification_id
+	// 单列（050 迁移），单列 IN 会因子查询返回重复 id 使一条 fanout >LIMIT 的
+	// 公告一次性全删（N 行），分批封顶失效（P2-7）。
 	queryPruneReadNotifysBatch = `
 DELETE FROM notifications
-WHERE notification_id IN (
-  SELECT notification_id FROM notifications
+WHERE (notification_id, user_id) IN (
+  SELECT notification_id, user_id FROM notifications
   WHERE is_read = TRUE AND created_at < $1
   LIMIT $2
 )

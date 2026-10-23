@@ -429,6 +429,26 @@ func TestCreateReplyToMissingParentReturnsCommentNotFound(t *testing.T) {
 	}
 }
 
+// 防回归（P2-9）：拉黑判定所需的作者上下文（NotificationContext）查询
+// 失败时 fail-closed 拒绝评论（10600），与 blockChecks 失败口径一致——
+// 此前静默跳过拉黑检查，DB 抖动窗口内被拉黑用户可继续评论。
+func TestCreateFailsClosedWhenAuthorContextResolveFails(t *testing.T) {
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{
+		commentableFound: true,
+		commentable:      true,
+		notificationErr:  errors.New("db down"),
+	}
+	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service.SetBlockChecker(func(callerID, authorID string) (bool, bool, error) {
+		return false, false, nil
+	})
+	_, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_1", Content: "hi"})
+	if err == nil {
+		t.Fatal("expected fail-closed error when author context resolve fails")
+	}
+}
+
 // 已软删评论按不存在处理：不允许对已删除评论继续回复。
 func TestCreateReplyToSoftDeletedParentReturnsCommentNotFound(t *testing.T) {
 	repo := NewInMemoryRepository()

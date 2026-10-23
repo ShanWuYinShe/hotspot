@@ -26,10 +26,6 @@ type failingMomentCounter struct {
 	failErr error
 }
 
-func (c *failingMomentCounter) Exists(ctx context.Context, momentID string) (bool, error) {
-	return c.repo.Exists(ctx, momentID)
-}
-
 func (c *failingMomentCounter) CheckCommentable(ctx context.Context, momentID string) (bool, bool, error) {
 	_, ok, err := c.repo.Get(ctx, momentID)
 	if err != nil || !ok {

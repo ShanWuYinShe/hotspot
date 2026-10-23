@@ -332,15 +332,17 @@ func searchScoreSQL(sortBy string, kwArg, tagArg int) string {
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdateMomentRequest) error {
-	var locationName, latStr, lngStr *string
+	var locationName *string
+	var lat, lng *float64
 	var s2CellID *int64
 	if req.Location != nil {
 		locationName = &req.Location.LocationName
-		s := fmt.Sprintf("%f", req.Location.Point.Latitude)
-		latStr = &s
-		s2 := fmt.Sprintf("%f", req.Location.Point.Longitude)
-		lngStr = &s2
-		id := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
+		// 坐标以 float64 原值参数化（与 Create 同口径）：此前先 %f 转字符串
+		// 引入 ~0.11m 量化截断，落库坐标与按原始 float 计算的 s2_cell_id
+		// 错位（编辑位置后索引与坐标不一致）。
+		latValue, lngValue := req.Location.Point.Latitude, req.Location.Point.Longitude
+		lat, lng = &latValue, &lngValue
+		id := geo.LeafCellID(geo.Point{Latitude: latValue, Longitude: lngValue})
 		s2CellID = &id
 	}
 	// update + tags/mentions/images 替换包进同一事务：中途失败不会留下
@@ -354,7 +356,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 		// （含 service 预检后的并发软删窗口）0 行命中 → ErrMomentNotFound（10300），
 		// 不再把检查-使用窗口内的已删瞬间静默更新成功。
 		var updatedID string
-		if err := q.QueryRow(txCtx, queryUpdateMoment, req.MomentID, userID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr, s2CellID).Scan(&updatedID); err != nil {
+		if err := q.QueryRow(txCtx, queryUpdateMoment, req.MomentID, userID, req.Description, req.PrivacyLevel, locationName, lat, lng, s2CellID).Scan(&updatedID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrMomentNotFound
 			}
