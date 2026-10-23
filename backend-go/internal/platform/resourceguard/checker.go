@@ -8,17 +8,20 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/routemeta"
 	"hotspot/backend-go/internal/platform/worker"
 
 	"github.com/jackc/pgx/v5"
 )
 
-type ResourceKind string
+// ResourceKind 以类型别名 re-export platform/routemeta 的定义：守卫规则表
+// 集中在 routemeta，Checker 接口与调用方保持原有类型与常量名不变。
+type ResourceKind = routemeta.ResourceKind
 
 const (
-	ResourceUser   ResourceKind = "user"
-	ResourceGroup  ResourceKind = "group"
-	ResourceMoment ResourceKind = "moment"
+	ResourceUser   = routemeta.ResourceUser
+	ResourceGroup  = routemeta.ResourceGroup
+	ResourceMoment = routemeta.ResourceMoment
 )
 
 type Checker interface {

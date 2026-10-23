@@ -12,20 +12,9 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-func walkRouteList(routes []chi.Route, prefix string, out *[]string) {
-	for _, rt := range routes {
-		full := prefix + rt.Pattern
-		if rt.SubRoutes != nil {
-			walkRouteList(rt.SubRoutes.Routes(), full, out)
-			continue
-		}
-		// chi 挂载层贡献 "/*" 分隔符，收敛为具体路径（/admin/api/v1/announcements/create）
-		clean := strings.ReplaceAll(full, "/*", "")
-		*out = append(*out, clean)
-	}
-}
-
 // TestDumpAllRoutes 打印全部已注册路由（API 审计用：spec 端点 vs 实现全量比对）。
+// 路由枚举复用生产侧 collectRoutePatterns（与启动审计同一实现，避免两份
+// walk 逻辑各自漂移）。
 func TestDumpAllRoutes(t *testing.T) {
 	cfg := config.Config{
 		S3Endpoint:       "http://seaweedfs:8333",
@@ -40,9 +29,7 @@ func TestDumpAllRoutes(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *chi.Mux, got %T", router)
 	}
-	var out []string
-	walkRouteList(mux.Routes(), "", &out)
-	lines := strings.Join(out, "\n") + "\n"
+	lines := strings.Join(collectRoutePatterns(mux), "\n") + "\n"
 	os.WriteFile("/tmp/backend_routes_dump.txt", []byte(lines), 0o644)
 	fmt.Print(lines)
 }

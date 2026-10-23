@@ -3,65 +3,19 @@ package resourceguard
 import (
 	"bytes"
 	"encoding/json"
-	"io"
-	"net/http"
-	"strings"
-
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/routemeta"
+	"io"
+	"net/http"
 )
 
 const maxGuardBodyBytes = 64 << 10
 
-type guardRule struct {
-	suffix string
-	refs   []guardRef
-}
-
-type guardRef struct {
-	field string
-	kind  ResourceKind
-}
-
-var guardRules = []guardRule{
-	{suffix: "/api/v1/users/open_the_door", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
-	{suffix: "/api/v1/users/fetch_groups", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
-	{suffix: "/api/v1/users/fetch_moments", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
-	{suffix: "/api/v1/users/fetch_reacted_moments", refs: []guardRef{{field: "user_id", kind: ResourceUser}}},
-	{suffix: "/api/v1/groups/open_the_door", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/members/fetch", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/members/search", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	// 群管理端点实际挂在 /groups/admin/* 子树（modules/groups/module.go）；
-	// 旧规则 /groups/update、/groups/dismiss 从未匹配（HasSuffix 不命中，死配置）。
-	// 全量对齐 admin 子树携带 group_id 的端点：资源存在性预检 + 404 语义统一。
-	{suffix: "/api/v1/groups/admin/update", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/settings", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/invites/create", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/invites/fetch_sent", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/invites/revoke", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/members/fetch", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/members/set_role", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/members/set_mute", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/members/set_ban", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/members/fetch_banned", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/members/remove", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/applications/fetch", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/applications/approve", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/applications/reject", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/announcements/create", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/announcements/update", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/announcements/delete", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/messages/recall", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/dismiss", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/admin/transfer_ownership", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/groups/enter", refs: []guardRef{{field: "group_id", kind: ResourceGroup}}},
-	{suffix: "/api/v1/moments/open_the_door", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
-	{suffix: "/api/v1/moments/update", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
-	{suffix: "/api/v1/moments/delete", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
-	{suffix: "/api/v1/moments/set_favorite", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
-	{suffix: "/api/v1/comments/fetch", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
-	{suffix: "/api/v1/comments/create", refs: []guardRef{{field: "moment_id", kind: ResourceMoment}}},
-}
+// 路由元数据（守卫规则表）统一声明在 platform/routemeta（审查 P2-架构）；
+// 本包只做请求体解析与存在性预检。类型别名保持既有调用点不变。
+type guardRule = routemeta.GuardRule
+type guardRef = routemeta.GuardRef
 
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -104,12 +58,7 @@ type resolvedRef struct {
 }
 
 func matchGuardRule(path string) (guardRule, bool) {
-	for _, rule := range guardRules {
-		if strings.HasSuffix(path, rule.suffix) {
-			return rule, true
-		}
-	}
-	return guardRule{}, false
+	return routemeta.MatchGuard(path)
 }
 
 func extractRefs(r *http.Request, rule guardRule) ([]resolvedRef, *http.Request) {
@@ -128,9 +77,9 @@ func extractRefs(r *http.Request, rule guardRule) ([]resolvedRef, *http.Request)
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return nil, cloned
 	}
-	refs := make([]resolvedRef, 0, len(rule.refs))
-	for _, spec := range rule.refs {
-		raw, ok := payload[spec.field]
+	refs := make([]resolvedRef, 0, len(rule.Refs))
+	for _, spec := range rule.Refs {
+		raw, ok := payload[spec.Field]
 		if !ok {
 			continue
 		}
@@ -138,7 +87,7 @@ func extractRefs(r *http.Request, rule guardRule) ([]resolvedRef, *http.Request)
 		if err := json.Unmarshal(raw, &id); err != nil || id == "" {
 			continue
 		}
-		refs = append(refs, resolvedRef{kind: spec.kind, id: id})
+		refs = append(refs, resolvedRef{kind: spec.Kind, id: id})
 	}
 	return refs, cloned
 }

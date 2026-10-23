@@ -116,9 +116,23 @@ mTLS origin-pull + CF 网段 allow/deny——故 CF-Connecting-IP 由 CF 强制�
   「落库」错误注释；mapmodule/search 内存 stub 显式声明「非语义等价、禁止用于
   降级/生产路径」（已核实生产不可达）。
 
+## P2 第四批修复（2026-10-23/24，性能/架构）
+
+- **性能往返**（2026-10-23）：moments 标签写入逐条 Exec 改单条多值 INSERT；
+  moments.Get 由 3 次往返（主查询+tags+mentions）合并为 1 次（LATERAL
+  ARRAY_AGG，排序与共享 loader 同口径）；media Complete 由 Get→UPDATE→Get
+  三次往返改为条件 UPDATE ... RETURNING 单往返（幂等语义不变，仅未命中时
+  回读一次区分不存在/并发已完成）。
+- **路由元数据收敛**（2026-10-24）：限流读/写分类（原 ratelimit.classifyRoute）
+  与资源守卫规则（原 resourceguard.guardRules）合并为唯一来源
+  `internal/platform/routemeta`；新增 `AuditRoutes` 双向审计——已挂载路由必须
+  被限流分类覆盖、每条守卫规则必须命中至少一条路由。审计在启动时以 Warn
+  暴露漂移，并由 `bootstrap/route_metadata_test.go` 在 CI 硬断言（当前 172 条
+  路由全绿）。**审计首次运行即发现真实缺口：`/api/v1/reactions/{fetch,set}`
+  从未被分类，限流中间件对未识别路径直接返回空规则集 → 该模块此前完全没有
+  限流**，已补分类并加回归用例。
+
 **遗留观察项**（不紧急，记录在案）：
-- ratelimit classifyRoute 与 resourceguard guardRules 两份硬编码路由元数据清单存在
-  新端点漂移风险（建议后续收敛为模块注册时声明）；
 - 双实现（repo_memory/repo_postgres）漂移是本项目最大 bug 温床（三轮共修 25+ 处），
   建议为高频变更模块补「双实现契约一致性」对比测试；
 - **未修的已知限制**（需产品/架构决策，非缺陷）：
@@ -128,6 +142,5 @@ mTLS origin-pull + CF 网段 allow/deny——故 CF-Connecting-IP 由 CF 强制�
   2. auth 的验证码 TTL、登录锁定阈值仍为代码常量（迁 AppConfig 需同步前端管理页）；
   3. privatechats List 仍在 service 层全量拉取后内存排序（keyset 下推依赖
      last_activity_at 冗余列，改动面较大）；
-  4. moments.Get 三次往返、media Complete 的 Exec+Get 冗余等小优化未做；
 - P2 剩余项（各域报告里未修的约定/架构类）与 OBS 项存档于 `.workwork/backend-review/`。
 

@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -14,6 +15,7 @@ import (
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/ratelimit"
+	"hotspot/backend-go/internal/platform/routemeta"
 )
 
 func NewHTTPRouter(modules []modulekit.Module) http.Handler {
@@ -69,7 +71,43 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) htt
 		}
 	}
 	r.Mount("/public/v1", publicRouter)
+	// 路由元数据一致性审计（审查 P2-架构）：限流分类与资源守卫规则统一声明
+	// 在 platform/routemeta，此处对「已挂载路由 ↔ 元数据声明」做双向校验并
+	// 以 Warn 暴露漂移（新端点漏分类 / 守卫规则成了永不命中的死配置）。
+	// CI 侧由 bootstrap/route_metadata_test.go 升级为硬断言。
+	if audit := routemeta.AuditRoutes(collectRoutePatterns(r)); !audit.OK() {
+		warn := observability.L().Warn
+		if logger != nil {
+			warn = logger.Warn
+		}
+		if len(audit.Unclassified) > 0 {
+			warn("route metadata: 路由缺少限流分类", "paths", audit.Unclassified)
+		}
+		if len(audit.DeadGuardRules) > 0 {
+			warn("route metadata: 资源守卫规则未命中任何路由（死配置）", "suffixes", audit.DeadGuardRules)
+		}
+	}
 	return r
+}
+
+// collectRoutePatterns 枚举 chi 路由树，返回收敛后的完整路径（如
+// /api/v1/moments/create）。Mount 贡献的 "/*" 分隔符会被去掉；GET /share/{code}
+// 这类带参数的路径保持原样。
+func collectRoutePatterns(r *chi.Mux) []string {
+	var out []string
+	var walk func(routes []chi.Route, prefix string)
+	walk = func(routes []chi.Route, prefix string) {
+		for _, rt := range routes {
+			full := prefix + rt.Pattern
+			if rt.SubRoutes != nil {
+				walk(rt.SubRoutes.Routes(), full)
+				continue
+			}
+			out = append(out, strings.ReplaceAll(full, "/*", ""))
+		}
+	}
+	walk(r.Routes(), "")
+	return out
 }
 
 // healthzProbe 存活探针（全站约定 GET /healthz）

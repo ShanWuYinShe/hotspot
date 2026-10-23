@@ -16,6 +16,7 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/requestmeta"
+	"hotspot/backend-go/internal/platform/routemeta"
 	"hotspot/backend-go/internal/platform/worker"
 )
 
@@ -368,69 +369,12 @@ func appendAuthRules(rules *[]rule, path, ip string, cfg appconfig.RateLimitConf
 	}
 }
 
+// classifyRoute 限流分类薄适配：路由元数据统一声明在 platform/routemeta
+// （审查 P2-架构：此前分类逻辑硬编码在本包，与 resourceguard 守卫规则两份
+// 清单互不相干、易漂移）。行为与原实现逐条一致。
 func classifyRoute(path string) (routeClass, bool) {
-	switch {
-	case strings.HasPrefix(path, "/public/v1/"):
-		// 匿名节点（spec api_spec_public.md）：认证入口在 appendAuthRules 已按 IP
-		// 处理并提前返回；其余端点全部只读，按 IP 维度限流（无 principal）。
-		return routeClass{readOnly: true}, true
-	case strings.HasPrefix(path, "/admin/api/v1/"):
-		return routeClass{adminOnly: true, readOnly: isAdminReadPath(path)}, true
-	case strings.HasPrefix(path, "/api/v1/system/"):
-		return routeClass{readOnly: true}, true
-	case strings.HasPrefix(path, "/api/v1/search/"):
-		return routeClass{readOnly: true}, true
-	case strings.HasPrefix(path, "/api/v1/auth/"):
-		return routeClass{readOnly: isAuthReadPath(path)}, true
-	case strings.HasPrefix(path, "/api/v1/media/"):
-		return routeClass{readOnly: false}, true
-	case strings.HasPrefix(path, "/api/v1/reports/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/fetch")}, true
-	case strings.HasPrefix(path, "/api/v1/moments/"):
-		return routeClass{readOnly: !strings.HasSuffix(path, "/create")}, true
-	case strings.HasPrefix(path, "/api/v1/comments/"):
-		return routeClass{readOnly: !strings.HasSuffix(path, "/create")}, true
-	case strings.HasPrefix(path, "/api/v1/groups/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/search") || strings.HasSuffix(path, "/open_the_door") || strings.HasSuffix(path, "/fetch_joined") || strings.HasSuffix(path, "/fetch_submitted") || strings.HasSuffix(path, "/fetch_received") || strings.HasSuffix(path, "/fetch_sent") || strings.HasSuffix(path, "/fetch_banned")}, true
-	case strings.HasPrefix(path, "/api/v1/users/"):
-		return routeClass{readOnly: isUsersReadPath(path)}, true
-	case strings.HasPrefix(path, "/api/v1/private_chats/"):
-		return routeClass{readOnly: true}, true
-	case strings.HasPrefix(path, "/api/v1/private_messages/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/fetch")}, true
-	case strings.HasPrefix(path, "/api/v1/group_messages/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/fetch")}, true
-	case strings.HasPrefix(path, "/api/v1/notify/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/fetch") || strings.HasSuffix(path, "/unread_summary")}, true
-	case strings.HasPrefix(path, "/api/v1/share/"):
-		return routeClass{readOnly: strings.HasSuffix(path, "/fetch_created")}, true
-	case strings.HasPrefix(path, "/api/v1/map/"):
-		return routeClass{readOnly: true}, true
-	default:
-		return routeClass{}, false
-	}
-}
-
-func isAuthReadPath(path string) bool {
-	switch path {
-	case "/api/v1/auth/session", "/api/v1/auth/fetch_sessions":
-		return true
-	default:
-		return false
-	}
-}
-
-func isAdminReadPath(path string) bool {
-	return strings.Contains(path, "/get") || strings.Contains(path, "/list") || strings.Contains(path, "/search") || strings.Contains(path, "/open_the_door")
-}
-
-func isUsersReadPath(path string) bool {
-	switch path {
-	case "/api/v1/users/search", "/api/v1/users/open_the_door", "/api/v1/users/account", "/api/v1/users/settings", "/api/v1/users/fetch_blocked":
-		return true
-	default:
-		return false
-	}
+	cls, ok := routemeta.ClassifyPath(path)
+	return routeClass{readOnly: cls.ReadOnly, adminOnly: cls.AdminOnly}, ok
 }
 
 func subjectKey(ip string, principal platformauth.Principal, hasPrincipal bool) string {
