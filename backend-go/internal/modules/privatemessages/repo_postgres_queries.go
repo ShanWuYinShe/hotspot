@@ -154,6 +154,23 @@ const (
 		FROM media_upload_sessions
 		WHERE file_id = $1 AND status = 'completed' AND user_id = $2`
 
+	// queryMediaFilesByIDs 批量取消息媒体元数据（History/LastByChatKeys 回填，
+	// 审查 P1-7）：键集合与 groupmessages 侧 queryGroupMediaFilesByIDs 一致
+	//（spec MessageMedia 8 字段恒定 nullable，url=storage_key）。历史行面向
+	// 会话双方可见，不做 owner 过滤；仅回填 completed 文件。
+	queryMediaFilesByIDs = `
+		SELECT file_id,
+		       storage_key,
+		       COALESCE(file_name, ''),
+		       declared_file_size,
+		       COALESCE(declared_mime_type, ''),
+		       COALESCE(thumbnail_url, ''),
+		       width,
+		       height,
+		       duration
+		FROM media_upload_sessions
+		WHERE file_id = ANY($1) AND status = 'completed'`
+
 	queryPrivateMessageExists = `
 		SELECT sender_user_id
 		FROM private_messages

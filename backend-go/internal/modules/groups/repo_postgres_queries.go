@@ -147,6 +147,10 @@ WHERE ga.group_id = $1 AND ($2 = '' OR ga.status = $2)
 ORDER BY ga.created_at DESC, ga.application_id DESC
 LIMIT $5`
 
+	// keyset (created_at DESC, application_id DESC) + LIMIT：此前无 LIMIT 无
+	// keyset，repo 实现全量返回、忽略调用方 limit/cursor（审查 P1-2，违反
+	// AGENTS.md 分页约定且无界）。谓词与 queryListMyInvites 同构；created_at
+	// 写入为 time.Now().UTC() 全精度，游标以 RFC3339Nano 编码，精度对齐。
 	queryListMyGroupApplications = `
 SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
        (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = ga.group_id) AS members_count,
@@ -155,7 +159,9 @@ FROM group_applications ga
 JOIN groups g ON g.group_id = ga.group_id
 LEFT JOIN users au ON au.user_id = ga.applicant_user_id
 WHERE ga.applicant_user_id = $1 AND ($2 = '' OR ga.status = $2)
-ORDER BY ga.created_at DESC, ga.application_id DESC`
+  AND ($3::timestamptz IS NULL OR ga.created_at < $3 OR (ga.created_at = $3 AND ga.application_id < $4))
+ORDER BY ga.created_at DESC, ga.application_id DESC
+LIMIT $5`
 
 	// RETURNING + pending 守卫：状态流转仅对 pending 生效；并发/重复处理时
 	// 0 行命中返回 ErrNoRows，repo 据此返回 ErrAlreadyProcessed（防
@@ -323,6 +329,22 @@ UPDATE group_members
 SET role = $3
 WHERE group_id = $1 AND user_id = $2 AND role = 'owner'`
 
+	// TransferOwnership 专用 RETURNING 变体（审查 P1-4）：行数可校验，0 行
+	// 命中（调用者已非 owner / 新 owner 已非成员的并发窗口）时回滚整个转让，
+	// 不再静默穿过——否则会造出「owner_id 指向非成员、群内无 owner 行」的
+	// 孤儿死态（无人可 Dismiss/Transfer/SetRole）。
+	queryDemoteGroupOwnerRoleReturning = `
+UPDATE group_members
+SET role = $3
+WHERE group_id = $1 AND user_id = $2 AND role = 'owner'
+RETURNING user_id`
+
+	queryPromoteNewOwnerRoleReturning = `
+UPDATE group_members
+SET role = $3
+WHERE group_id = $1 AND user_id = $2 AND role <> 'owner'
+RETURNING user_id`
+
 	queryMuteGroupMember = `
 UPDATE group_members
 SET is_muted = TRUE, muted_until = $3
@@ -344,13 +366,19 @@ WHERE group_id = $1 AND user_id = $2`
 
 	// 被封禁者与操作者昵称经 users 表解析（此前占位填 user_id，封禁名单
 	// 直接展示裸 id；与申请/邀请列表的 LEFT JOIN 口径对齐）。
+	// keyset (banned_at DESC, user_id ASC) + LIMIT：此前无 LIMIT 无 keyset，
+	// repo 实现忽略调用方 limit/cursor 全量返回（审查 P1-3）。user_id 谓词取
+	// 「大于」与 ASC 排序方向一致；banned_at 写入为 time.Now().UTC() 全精度，
+	// 游标以 RFC3339Nano 编码，精度对齐。
 	queryListGroupBans = `
 SELECT gb.user_id, COALESCE(bu.nickname, ''), gb.banned_at, gb.reason, gb.banned_by_user_id, COALESCE(ou.nickname, '')
 FROM group_bans gb
 LEFT JOIN users bu ON bu.user_id = gb.user_id
 LEFT JOIN users ou ON ou.user_id = gb.banned_by_user_id
 WHERE gb.group_id = $1
-ORDER BY gb.banned_at DESC, gb.user_id ASC`
+  AND ($2::timestamptz IS NULL OR gb.banned_at < $2 OR (gb.banned_at = $2 AND gb.user_id > $3))
+ORDER BY gb.banned_at DESC, gb.user_id ASC
+LIMIT $4`
 
 	queryIsGroupBanned = `
 SELECT 1 FROM group_bans WHERE group_id = $1 AND user_id = $2`
@@ -387,11 +415,17 @@ LIMIT $6`
 
 	// queryListGroupsByUser 是 users 模块「某用户的群组列表」聚合读（原实现位于
 	// users repo，直查 groups/group_members 表；现已归位本模块，users 经 Service
-	// 接口消费）。
+	// 接口消费）。members_count 经 LATERAL 逐行计数（同 queryListMyGroupsBase
+	// 先例：外层 keyset 已把行集限定为当前页，LATERAL 只跑页大小次数）——
+	// 此前 scan 侧硬编码 1，users/fetch_groups 对外 members_count 恒为错误
+	// 占位值（审查 P1-5）。
 	queryListGroupsByUser = `
-SELECT g.group_id, g.name, COALESCE(g.avatar_url, ''), COALESCE(g.description, ''), g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.is_searchable, g.max_members, gm.joined_at
+SELECT g.group_id, g.name, COALESCE(g.avatar_url, ''), COALESCE(g.description, ''), g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.is_searchable, g.max_members, COALESCE(mem.members_count, 0), gm.joined_at
 FROM group_members gm
 JOIN groups g ON g.group_id = gm.group_id
+LEFT JOIN LATERAL (
+    SELECT COUNT(*)::int AS members_count FROM group_members gm2 WHERE gm2.group_id = g.group_id
+) mem ON TRUE
 WHERE gm.user_id = $1 AND g.deleted_at IS NULL AND g.is_searchable = TRUE
   AND (
     $2::timestamptz IS NULL

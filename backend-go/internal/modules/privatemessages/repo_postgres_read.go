@@ -77,6 +77,8 @@ func (r *PostgresRepository) LastByChatKeys(ctx context.Context, userID string, 
 	}
 	defer rows.Close()
 	result := make(map[string]PrivateMessageItem, len(chatKeys))
+	// fileIDByChatKey 供循环后单次批量回填媒体元数据（审查 P1-7）。
+	fileIDByChatKey := make(map[string]string, len(chatKeys))
 	for rows.Next() {
 		var chatKey string
 		var item PrivateMessageItem
@@ -89,11 +91,65 @@ func (r *PostgresRepository) LastByChatKeys(ctx context.Context, userID string, 
 		item.Sender.Nickname = senderNickname
 		item.Sender.AvatarURL = types.StrPtr(senderAvatar)
 		if fileID != "" {
-			item.Media = &MessageMedia{URL: fileID}
+			fileIDByChatKey[chatKey] = fileID
 		}
 		result[chatKey] = item
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// 批量回填（url=storage_key + 完整契约字段，对齐 WS/群聊口径；未命中
+	// 的 file_id 为历史脏数据，保持 media 为 nil）。
+	if len(fileIDByChatKey) > 0 {
+		fileIDs := make([]string, 0, len(fileIDByChatKey))
+		for _, fileID := range fileIDByChatKey {
+			fileIDs = append(fileIDs, fileID)
+		}
+		mediaByFileID, err := r.mediaByFileIDs(ctx, queryable, fileIDs)
+		if err != nil {
+			return nil, err
+		}
+		for chatKey, fileID := range fileIDByChatKey {
+			if media, ok := mediaByFileID[fileID]; ok {
+				item := result[chatKey]
+				item.Media = &media
+				result[chatKey] = item
+			}
+		}
+	}
+	return result, nil
+}
+
+// mediaByFileIDs 批量取私聊消息媒体元数据（单次往返，queryMediaFilesByIDs）：
+// 键集合与 spec MessageMedia 8 字段一致、url=storage_key——对齐 groupmessages
+// 侧同款实现与私聊 WS 负载口径。此前 HTTP 历史/会话列表直填裸 file_id 且缺
+// 7 个契约字段（审查 P1-7）。
+func (r *PostgresRepository) mediaByFileIDs(ctx context.Context, queryable persistence.Queryable, fileIDs []string) (map[string]MessageMedia, error) {
+	rows, err := queryable.Query(ctx, queryMediaFilesByIDs, fileIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	mediaByFileID := make(map[string]MessageMedia, len(fileIDs))
+	for rows.Next() {
+		var fileID, storageKey, fileName, mimeType, thumbnailURL string
+		var fileSize int
+		var width, height, duration *int
+		if err := rows.Scan(&fileID, &storageKey, &fileName, &fileSize, &mimeType, &thumbnailURL, &width, &height, &duration); err != nil {
+			return nil, err
+		}
+		mediaByFileID[fileID] = MessageMedia{
+			URL:          storageKey,
+			ThumbnailURL: types.StrPtr(thumbnailURL),
+			FileName:     types.StrPtr(fileName),
+			FileSize:     &fileSize,
+			Duration:     duration,
+			Width:        width,
+			Height:       height,
+			MimeType:     types.StrPtr(mimeType),
+		}
+	}
+	return mediaByFileID, rows.Err()
 }
 
 // UnreadCountsByChatKeys 批量取各会话未读数（单条 GROUP BY 往返）。
@@ -161,6 +217,11 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 	}
 	defer rows.Close()
 	items := []PrivateMessageItem{}
+	// fileIDsByIndex 与 items 同步索引：媒体元数据循环后单次批量回填（审查
+	// P1-7），避免逐条查询；语义与 WS media 负载一致（url=storage_key，8 键
+	// 恒定 nullable）。
+	fileIDsByIndex := make([]string, 0, limit+1)
+	fileIDs := make([]string, 0, limit+1)
 	for rows.Next() {
 		var item PrivateMessageItem
 		var fileID string
@@ -179,8 +240,9 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 		}
 		item.Sender.Nickname = senderNickname
 		item.Sender.AvatarURL = types.StrPtr(senderAvatar)
+		fileIDsByIndex = append(fileIDsByIndex, fileID)
 		if fileID != "" {
-			item.Media = &MessageMedia{URL: fileID}
+			fileIDs = append(fileIDs, fileID)
 		}
 		if replyMessageID != "" {
 			item.ReplyTo = &MessageBrief{MessageID: replyMessageID, Type: replyType, Content: types.StrPtr(replyContent), ShareCode: types.StrPtr(replyShareCode), Sender: UserInfo{UserID: replySenderUserID, Nickname: replySenderNickname, AvatarURL: types.StrPtr(replySenderAvatar)}, SentAt: replySentAt}
@@ -189,6 +251,19 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedMessages{}, err
+	}
+	// 页面级一次批量回填媒体元数据（url=storage_key + 完整契约字段；未命中
+	// 的 file_id 为历史脏数据，保持 media 为 nil 由客户端占位兜底）。
+	if len(fileIDs) > 0 {
+		mediaByFileID, err := r.mediaByFileIDs(ctx, queryable, fileIDs)
+		if err != nil {
+			return PaginatedMessages{}, err
+		}
+		for i := range items {
+			if media, ok := mediaByFileID[fileIDsByIndex[i]]; ok {
+				items[i].Media = &media
+			}
+		}
 	}
 	if len(items) <= limit {
 		return PaginatedMessages{Items: items}, nil

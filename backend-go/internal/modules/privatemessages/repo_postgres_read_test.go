@@ -45,6 +45,11 @@ type privateMessageBackendStub struct {
 	readStates map[string]map[string]privateMessageReadState
 	execErrs   map[string]error
 	queryErrs  map[string]error
+	// mediaSessions 模拟 media_upload_sessions 批量回填（审查 P1-7）：
+	// file_id -> 9 列行（file_id/storage_key/file_name/file_size/mime_type/
+	// thumbnail_url/width/height/duration）。未播种的 file_id 回空行
+	//（历史脏数据口径：media 保持 nil）。
+	mediaSessions map[string][]any
 }
 
 func (b *privateMessageBackendStub) Ping(context.Context) error { return nil }
@@ -336,6 +341,16 @@ func (b *privateMessageBackendStub) Query(_ context.Context, query string, args 
 		}
 		return &testdb.RowsValues{Rows: rows}, nil
 	}
+	if query == queryMediaFilesByIDs {
+		fileIDs := args[0].([]string)
+		mediaRows := make([][]any, 0, len(fileIDs))
+		for _, fileID := range fileIDs {
+			if row, ok := b.mediaSessions[fileID]; ok {
+				mediaRows = append(mediaRows, row)
+			}
+		}
+		return &testdb.RowsValues{Rows: mediaRows}, nil
+	}
 	return &persistence.InMemoryRows{}, nil
 }
 
@@ -400,6 +415,7 @@ func TestPostgresRepositorySendHistoryRecentAndLast(t *testing.T) {
 
 func TestPostgresRepositoryHistorySupportsMediaReplyAndPagination(t *testing.T) {
 	chatKey := conversationKey("user_alice", "user_bob")
+	width, height := 800, 600
 	backend := &privateMessageBackendStub{
 		items: map[string][]privateMessageStubRecord{
 			chatKey: {
@@ -411,6 +427,11 @@ func TestPostgresRepositoryHistorySupportsMediaReplyAndPagination(t *testing.T) 
 		readStates: map[string]map[string]privateMessageReadState{},
 		execErrs:   map[string]error{},
 		queryErrs:  map[string]error{},
+		mediaSessions: map[string][]any{
+			// 审查 P1-7：media 经 media_upload_sessions 批量回填，
+			// url=storage_key + 完整契约字段（对齐 WS/群聊口径）。
+			"file_1": {"file_1", "media/storage/file_1.png", "file_1.png", 1024, "image/png", "media/thumb/file_1.png", &width, &height, (*int)(nil)},
+		},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
@@ -423,8 +444,13 @@ func TestPostgresRepositoryHistorySupportsMediaReplyAndPagination(t *testing.T) 
 	if len(history.Items) != 2 || history.NextCursor == nil {
 		t.Fatalf("unexpected paginated history: %#v", history)
 	}
-	if history.Items[1].Media == nil || history.Items[1].Media.URL != "file_1" {
-		t.Fatalf("expected media payload, got %#v", history.Items[1])
+	if history.Items[1].Media == nil || history.Items[1].Media.URL != "media/storage/file_1.png" {
+		t.Fatalf("expected media payload with storage_key url, got %#v", history.Items[1].Media)
+	}
+	if history.Items[1].Media.MimeType == nil || *history.Items[1].Media.MimeType != "image/png" ||
+		history.Items[1].Media.FileSize == nil || *history.Items[1].Media.FileSize != 1024 ||
+		history.Items[1].Media.Width == nil || *history.Items[1].Media.Width != 800 {
+		t.Fatalf("expected full media contract fields, got %#v", history.Items[1].Media)
 	}
 	if history.Items[1].ReplyTo == nil || history.Items[1].ReplyTo.MessageID != "pm_1" {
 		t.Fatalf("expected reply_to payload, got %#v", history.Items[1])

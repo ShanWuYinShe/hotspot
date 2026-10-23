@@ -446,21 +446,22 @@ func (r *InMemoryRepository) UpdatePreferences(_ context.Context, userID string,
 }
 
 func (r *InMemoryRepository) LeaveGroup(_ context.Context, userID string, groupID string) error {
-	_ = userID
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	group, ok := r.groups[groupID]
 	if !ok {
 		return ErrGroupNotFound
 	}
-	if group.ViewerState == nil {
-		return ErrNotMember
+	// 对齐 PG 语义（repo_postgres.go LeaveGroup：DELETE WHERE group_id+user_id，
+	// 0 行命中静默成功，成员资格/owner 判定在 service）：从成员表移除并同步
+	// 成员计数。此前只清空存储项上的 ViewerState——cloneGroupForUser 的
+	// ViewerState 恒按 members map 重建，该写法是无效操作，退群后
+	// IsMember/ListMembers/MembersCount 仍把用户算作成员（审查 P1-6）。
+	if members, ok := r.members[groupID]; ok {
+		delete(members, userID)
+		group.Group.MembersCount = len(members)
+		r.groups[groupID] = group
 	}
-	if group.ViewerState.Role == GroupRoleOwner {
-		return ErrAccessRestricted
-	}
-	group.ViewerState = nil
-	r.groups[groupID] = group
 	return nil
 }
 

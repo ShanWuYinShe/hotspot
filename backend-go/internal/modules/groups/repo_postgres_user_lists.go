@@ -90,8 +90,9 @@ func scanGroupByUserRow(scanner interface{ Scan(...any) error }) (GroupItem, tim
 	var item GroupItem
 	var locationName, joinMethod, description string
 	var latitude, longitude float64
+	var membersCount int
 	var joinedAt time.Time
-	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &joinedAt); err != nil {
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &membersCount, &joinedAt); err != nil {
 		return GroupItem{}, time.Time{}, err
 	}
 	location := Location{Point: struct {
@@ -101,7 +102,9 @@ func scanGroupByUserRow(scanner interface{ Scan(...any) error }) (GroupItem, tim
 	item.Description = types.StrPtr(description)
 	item.Location = &location
 	item.JoinMethod = GroupJoinMethod(joinMethod)
-	item.Group.MembersCount = 1
+	// SQL 已带回真实成员计数（审查 P1-5）：此前硬编码 1，users/fetch_groups
+	// 对外 members_count 恒为占位错误值。
+	item.Group.MembersCount = membersCount
 	return item, joinedAt.UTC(), nil
 }
 

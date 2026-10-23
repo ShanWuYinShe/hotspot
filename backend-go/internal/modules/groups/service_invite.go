@@ -63,6 +63,10 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 	if err := s.repo.AcceptInvite(ctx, principal.UserID, req.InviteID); err != nil {
 		return err
 	}
+	// 接受邀请即入群：失效可能存在的「非成员」防穿透缓存值（对齐 JoinGroup/
+	// ApproveApplication 两条入群路径——groupmessages/realtime 的发送与订阅
+	// 校验走同一键族读穿缓存，漏删会让受邀者在 TTL 内仍被判非成员）。
+	s.invalidateMemberCache(ctx, invite.Group.GroupID, principal.UserID)
 	s.notifyGroupInviteAccepted(ctx, invite, principal.UserID)
 	realtime.DefaultHub().BroadcastToGroup(invite.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: invite.Group.GroupID, User: s.resolveUserInfo(ctx, principal.UserID), Role: string(GroupRoleMember), MemberCount: invite.Group.MembersCount + 1, JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
 	return nil

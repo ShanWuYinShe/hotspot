@@ -624,13 +624,32 @@ func TestPostgresApproveAcceptTxAndInviteMember(t *testing.T) {
 
 func TestPostgresTransferOwnershipAndNilHelpers(t *testing.T) {
 	ctx := context.Background()
-	repo := newGroupsFullRepo(&groupFullStub{})
+	// 正常转让：降级/提升两步 RETURNING 均命中一行（审查 P1-4 行数校验）。
+	repo := newGroupsFullRepo(&groupFullStub{queryRow: map[string][]any{
+		queryDemoteGroupOwnerRoleReturning: {"u1"},
+		queryPromoteNewOwnerRoleReturning:  {"u2"},
+	}})
 	if err := repo.TransferOwnership(ctx, "u1", TransferOwnershipRequest{GroupID: "g", NewOwnerID: "u2"}); err != nil {
 		t.Fatalf("transfer: %v", err)
 	}
-	stub := &groupFullStub{execErrs: map[string]error{queryUpdateGroupMemberRole: errors.New("boom")}}
+	// DB 错误必须传播（错误路径随 RETURNING 查询迁移）。
+	stub := &groupFullStub{queryRowErr: map[string]error{queryPromoteNewOwnerRoleReturning: errors.New("boom")}}
 	if err := newGroupsFullRepo(stub).TransferOwnership(ctx, "u1", TransferOwnershipRequest{GroupID: "g", NewOwnerID: "u2"}); err == nil {
 		t.Fatal("transfer exec error must propagate")
+	}
+	// 降级 0 行（调用者已不持有 owner：并发转让/降级）→ 权限不足拒绝。
+	stub = &groupFullStub{queryRowErr: map[string]error{queryDemoteGroupOwnerRoleReturning: pgx.ErrNoRows}}
+	if err := newGroupsFullRepo(stub).TransferOwnership(ctx, "u1", TransferOwnershipRequest{GroupID: "g", NewOwnerID: "u2"}); err != ErrAccessRestricted {
+		t.Fatalf("transfer demote 0-row: expected ErrAccessRestricted, got %v", err)
+	}
+	// 提升 0 行（新 owner 在 IsMember 检查后退群的并发窗口）→ 目标非成员
+	// 拒绝并回滚，不再静默造出 owner_id 指向非成员的孤儿群。
+	stub = &groupFullStub{
+		queryRow:    map[string][]any{queryDemoteGroupOwnerRoleReturning: {"u1"}},
+		queryRowErr: map[string]error{queryPromoteNewOwnerRoleReturning: pgx.ErrNoRows},
+	}
+	if err := newGroupsFullRepo(stub).TransferOwnership(ctx, "u1", TransferOwnershipRequest{GroupID: "g", NewOwnerID: "u2"}); err != ErrTargetNotMember {
+		t.Fatalf("transfer promote 0-row: expected ErrTargetNotMember, got %v", err)
 	}
 
 	// nil helper 函数

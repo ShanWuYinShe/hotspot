@@ -54,12 +54,19 @@ func TestMemoryAnnouncementAndApplicationLifecycle(t *testing.T) {
 	if err := repo.MuteMember(ctx, "u1", MuteMemberRequest{GroupID: created.Group.GroupID, UserID: "u2", Active: true, DurationMinutes: 60}); err != nil {
 		t.Fatalf("mute: %v", err)
 	}
-	// 退出群：内存 repo 的 ViewerState 恒为 owner 状态，任何成员退出都返回 ErrAccessRestricted
-	if err := repo.LeaveGroup(ctx, "u2", created.Group.GroupID); err != ErrAccessRestricted {
-		t.Fatalf("leave non-owner: expected access restricted, got %v", err)
+	// 退出群（审查 P1-6，对齐 PG 语义）：repo 层删除成员记录、0 行静默
+	// 成功，成员资格/owner 判定在 service——此前内存实现只清无效的
+	// ViewerState，退群后 IsMember 仍为 true。
+	if err := repo.LeaveGroup(ctx, "u2", created.Group.GroupID); err != nil {
+		t.Fatalf("leave non-owner: %v", err)
 	}
-	if err := repo.LeaveGroup(ctx, "u1", created.Group.GroupID); err != ErrAccessRestricted {
-		t.Fatalf("leave owner: expected access restricted, got %v", err)
+	if isMember, _ := repo.IsMember(ctx, created.Group.GroupID, "u2"); isMember {
+		t.Fatal("leave non-owner: membership must be removed")
+	}
+	// owner 退群在 repo 层同样成功（PG DELETE 无角色守卫，owner 保护在
+	// service.LeaveGroup）。
+	if err := repo.LeaveGroup(ctx, "u1", created.Group.GroupID); err != nil {
+		t.Fatalf("leave owner: %v", err)
 	}
 	if err := repo.LeaveGroup(ctx, "u1", "missing"); err != ErrGroupNotFound {
 		t.Fatalf("leave missing group: expected not found, got %v", err)

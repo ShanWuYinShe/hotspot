@@ -223,12 +223,23 @@ func (r *PostgresRepository) ListBannedMembers(ctx context.Context, groupID stri
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryListGroupBans, groupID)
+	// keyset 游标消费 + limit+1 探测下一页（对齐同文件 ListMembers；此前
+	// 忽略 limit/cursor 全量返回，next_cursor 恒 null——审查 P1-3）。
+	cursorBannedAt, cursorUserID, err := decodeGroupPageCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	var cursorBannedAtValue any
+	if !cursorBannedAt.IsZero() {
+		cursorBannedAtValue = cursorBannedAt
+	}
+	rows, err := queryable.Query(ctx, queryListGroupBans, groupID, cursorBannedAtValue, cursorUserID, limit+1)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
-	items := make([]AdminBannedMemberItem, 0)
+	items := make([]AdminBannedMemberItem, 0, limit+1)
+	bannedAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item AdminBannedMemberItem
 		var bannedAt time.Time
@@ -245,11 +256,16 @@ func (r *PostgresRepository) ListBannedMembers(ctx context.Context, groupID stri
 			item.BannedBy = &UserInfo{UserID: *bannedByUserID, Nickname: bannedByNickname}
 		}
 		items = append(items, item)
+		bannedAts = append(bannedAts, bannedAt)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, "", err
 	}
-	return items, "", nil
+	if len(items) <= limit {
+		return items, "", nil
+	}
+	next := encodeGroupPageCursor(bannedAts[limit-1], items[limit-1].User.UserID)
+	return items[:limit], next, nil
 }
 
 // IsBanned reports whether the user is banned from the group (join-time check, C.3).
@@ -282,18 +298,32 @@ func (r *PostgresRepository) TransferOwnership(ctx context.Context, userID strin
 		return persistence.ErrNotImplemented
 	}
 	// 降级旧 owner + 提升新 owner + 更新 owner_id 三步包进同一事务：
-	// 第三步失败不会留下 owner_id 与角色不一致的状态。
+	// 任一步失败整体回滚，不留半途状态。
 	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
 		txQueryable, ok := persistence.QueryableForTx(txCtx, r.factory)
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
 		// 降旧 owner 走专用守卫（仅 role='owner' 行可降）：queryUpdateGroupMemberRole
-		// 的 role <> 'owner' 守卫会挡住这条合法变更。
-		if err := txQueryable.Exec(txCtx, queryDemoteGroupOwnerRole, req.GroupID, userID, string(GroupRoleAdmin)); err != nil {
+		// 的 role <> 'owner' 守卫会挡住这条合法变更。RETURNING + 行数校验
+		//（审查 P1-4）：0 行 = 调用者已不持有 owner（并发转让），按权限不足
+		// 拒绝并回滚，而非静默继续。
+		var demoted string
+		if err := txQueryable.QueryRow(txCtx, queryDemoteGroupOwnerRoleReturning, req.GroupID, userID, string(GroupRoleAdmin)).Scan(&demoted); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrAccessRestricted
+			}
 			return err
 		}
-		if err := txQueryable.Exec(txCtx, queryUpdateGroupMemberRole, req.GroupID, req.NewOwnerID, string(GroupRoleOwner)); err != nil {
+		// 提升新 owner 同样校验行数：service 的 IsMember 检查与事务执行之间
+		// 新 owner 可能已退群（并发 TOCTOU），0 行命中时按「目标不是群成员」
+		// 拒绝并回滚——否则旧 owner 已降级、新 owner 提升落空、第三步仍把
+		// owner_id 指向非成员，群进入无 owner 死态。
+		var promoted string
+		if err := txQueryable.QueryRow(txCtx, queryPromoteNewOwnerRoleReturning, req.GroupID, req.NewOwnerID, string(GroupRoleOwner)).Scan(&promoted); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrTargetNotMember
+			}
 			return err
 		}
 		return txQueryable.Exec(txCtx, queryUpdateGroupOwner, req.GroupID, req.NewOwnerID)

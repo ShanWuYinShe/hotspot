@@ -149,12 +149,23 @@ func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID stri
 	if status != nil {
 		statusValue = string(*status)
 	}
-	rows, err := queryable.Query(ctx, queryListMyGroupApplications, userID, statusValue)
+	// keyset 游标消费 + limit+1 探测下一页（对齐同文件 ListApplications；
+	// 此前忽略 limit/cursor 全量返回，next_cursor 恒 null——审查 P1-2）。
+	cursorCreatedAt, cursorApplicationID, err := decodeGroupPageCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	var cursorCreatedAtValue any
+	if !cursorCreatedAt.IsZero() {
+		cursorCreatedAtValue = cursorCreatedAt
+	}
+	rows, err := queryable.Query(ctx, queryListMyGroupApplications, userID, statusValue, cursorCreatedAtValue, cursorApplicationID, limit+1)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
-	items := make([]GroupApplicationItem, 0)
+	items := make([]GroupApplicationItem, 0, limit+1)
+	createdAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupApplicationItem
 		var groupID, groupName, groupAvatar, applicantUserID, applicantNickname, message, statusText string
@@ -178,11 +189,16 @@ func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID stri
 			item.HandledAt = &value
 		}
 		items = append(items, item)
+		createdAts = append(createdAts, createdAt)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, "", err
 	}
-	return items, "", nil
+	if len(items) <= limit {
+		return items, "", nil
+	}
+	next := encodeGroupPageCursor(createdAts[limit-1], items[limit-1].ApplicationID)
+	return items[:limit], next, nil
 }
 
 func (r *PostgresRepository) CancelApplication(ctx context.Context, applicationID string) error {
