@@ -148,8 +148,24 @@ func queryTagSuggestions(ctx context.Context, queryable persistence.Queryable, p
 	return items, nil
 }
 
+// suggestGeoFilter 返回 suggest 的 S2 预过滤区间（[lo,hi] 数组对）。
+// radius<=0 或参考坐标非法时返回 nil：SQL 侧按「数组为空 → 不做地理过滤」
+// 处理。S2 覆盖是半径圆的包围盒超集，仅作 DB 粗筛，精确距离过滤仍在 Go 层
+// （distanceFrom + radius 比较）→ 不会产生假阴性。
+func suggestGeoFilter(reference GeoPoint, radius int) (mins, maxs []int64) {
+	if radius <= 0 {
+		return nil, nil
+	}
+	point := geo.Point{Latitude: reference.Latitude, Longitude: reference.Longitude}
+	if !geo.IsValidPoint(point) {
+		return nil, nil
+	}
+	return geo.CoveringArrays(geo.BoundsAround(point, radius))
+}
+
 func queryUserSuggestions(ctx context.Context, queryable persistence.Queryable, viewerID, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
-	rows, err := queryable.Query(ctx, querySearchSuggestUsers, prefix, maxSuggestRows)
+	coverMins, coverMaxs := suggestGeoFilter(reference, radius)
+	rows, err := queryable.Query(ctx, querySearchSuggestUsers, prefix, maxSuggestRows, coverMins, coverMaxs)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +298,8 @@ func presenceStatusPtr(raw string) string {
 }
 
 func queryGroupSuggestions(ctx context.Context, queryable persistence.Queryable, viewerID, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
-	rows, err := queryable.Query(ctx, querySearchSuggestGroups, prefix, maxSuggestRows)
+	coverMins, coverMaxs := suggestGeoFilter(reference, radius)
+	rows, err := queryable.Query(ctx, querySearchSuggestGroups, prefix, maxSuggestRows, coverMins, coverMaxs)
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +361,8 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.Queryable,
 }
 
 func queryMomentSuggestions(ctx context.Context, queryable persistence.Queryable, prefix string, reference GeoPoint, radius int) ([]scoredSuggestItem, error) {
-	rows, err := queryable.Query(ctx, querySearchSuggestMoments, prefix, maxSuggestRows)
+	coverMins, coverMaxs := suggestGeoFilter(reference, radius)
+	rows, err := queryable.Query(ctx, querySearchSuggestMoments, prefix, maxSuggestRows, coverMins, coverMaxs)
 	if err != nil {
 		return nil, err
 	}

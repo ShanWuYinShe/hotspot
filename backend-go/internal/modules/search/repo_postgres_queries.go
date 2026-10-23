@@ -48,6 +48,14 @@ FROM (
         u.nickname ILIKE '%' || $1 || '%'
         OR (us.nickname_searchable = TRUE AND u.bio ILIKE '%' || $1 || '%')
       )
+      -- S2 粗筛（审查 P2-10）：此前先 LIMIT 再在 Go 侧按 radius 过滤，小半径下
+      -- 候选被无关行占满导致结果系统性偏少；且无 ORDER BY 时 LIMIT 行集任意。
+      -- 覆盖区间为空数组表示不做地理过滤（radius 未启用/坐标非法）。
+      -- S2 覆盖是半径圆的包围盒超集，精确距离过滤仍在 Go 层 → 无假阴性。
+      AND (COALESCE(cardinality($3::bigint[]), 0) = 0
+           OR EXISTS (SELECT 1 FROM unnest($3::bigint[], $4::bigint[]) AS t(lo, hi)
+                      WHERE u.s2_cell_id BETWEEN t.lo AND t.hi))
+    ORDER BY u.user_id
     LIMIT $2
 ) u
 LEFT JOIN LATERAL (
@@ -97,9 +105,14 @@ LEFT JOIN group_members gm ON gm.group_id = g.group_id
 WHERE g.deleted_at IS NULL
   AND g.is_searchable = TRUE
   AND g.name ILIKE '%' || $1 || '%'
+  -- S2 粗筛 + 确定性排序，动机同 querySearchSuggestUsers（审查 P2-10）。
+  AND (COALESCE(cardinality($3::bigint[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM unnest($3::bigint[], $4::bigint[]) AS t(lo, hi)
+                  WHERE g.s2_cell_id BETWEEN t.lo AND t.hi))
 GROUP BY g.group_id, g.name, g.avatar_url, g.description, g.location_name, g.latitude, g.longitude,
          g.join_method, g.requires_approval, g.tags, g.next_activity_at, g.is_searchable, g.max_members, g.created_at, g.owner_id,
          onc.online_members_count
+ORDER BY g.group_id
 LIMIT $2`
 
 	// popularity 的点赞数取 reactions 实时聚合：likes_count 自点赞改为 reactions
@@ -132,7 +145,12 @@ LEFT JOIN LATERAL (
 WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE
   AND m.description ILIKE '%' || $1 || '%'
-ORDER BY popularity DESC
+  -- S2 粗筛，动机同 querySearchSuggestUsers（审查 P2-10）；tie-breaker 保证
+  -- popularity 相同时的行序确定（弱一致契约要求稳定 tie-breaker）。
+  AND (COALESCE(cardinality($3::bigint[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM unnest($3::bigint[], $4::bigint[]) AS t(lo, hi)
+                  WHERE m.s2_cell_id BETWEEN t.lo AND t.hi))
+ORDER BY popularity DESC, m.moment_id
 LIMIT $2`
 
 	// querySuggestViewerRelations 批量取查看者对建议用户的关注/拉黑正向边与
