@@ -14,6 +14,7 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/hotcache"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/idgen"
 	platformmigrate "hotspot/backend-go/internal/platform/migrate"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
@@ -112,9 +113,11 @@ func NewApp(cfg config.Config) (*App, error) {
 	// Hub/Handler 的 resumeStore 为 nil，退化为全量重放（spec L161）。
 	// instanceID 提前生成并同时注入 resumeStore 与 bridge（审计 perf P1-4）：
 	// 组合脚本发布的信封以 origin 标记本实例，bridge 靠它跳过自收消息——
-	// 两处 origin 不一致会导致本实例重复投递，必须同源。
+	// 两处 origin 不一致会导致本实例重复投递，必须同源。用 idgen 随机后缀
+	// 而非 UnixNano：时间戳在克隆 VM/时钟回拨下可重复，两实例同 ID 时 bridge
+	// 会互相把对方消息当自收消息丢弃（跨实例事件静默丢失）。
 	if redisClient != nil {
-		instanceID := fmt.Sprintf("hs-%d", time.Now().UnixNano())
+		instanceID := idgen.MustWithPrefix("hs-")
 		resumeStore := realtime.NewRedisResumeStore(redisClient, time.Duration(cfg.ResumeTTLSeconds)*time.Second, instanceID)
 		realtime.DefaultHub().SetResumeStore(resumeStore)
 		realtimeHandler.SetResumeStore(resumeStore)

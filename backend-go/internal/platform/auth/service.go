@@ -109,6 +109,21 @@ func (s *Service) storeBan(userID string, banned bool) {
 	s.banCache[userID] = banCacheEntry{banned: banned, expires: time.Now().Add(banCacheTTL)}
 }
 
+// sweepBanCache 物理删除已过期的封禁缓存条目。cachedBan 读到过期条目时按
+// miss 处理但不会删除——每个经过认证的用户都会在 map 里留下条目，长驻
+// 进程下条目数单调增长（上界=历史认证用户数）。由 auth sweeper 周期调用
+// （与 ratelimit/idempotency 的 map 清扫同模式），条目量级为用户数、清理
+// 开销可忽略。
+func (s *Service) sweepBanCache(now time.Time) {
+	s.banCacheMu.Lock()
+	defer s.banCacheMu.Unlock()
+	for userID, entry := range s.banCache {
+		if now.After(entry.expires) {
+			delete(s.banCache, userID)
+		}
+	}
+}
+
 type AuthResult struct {
 	Principal      Principal
 	AccessToken    string

@@ -45,11 +45,20 @@ type PersistenceSource struct {
 	loadErr         error
 	lastLoadFailure time.Time
 	loadedCfg       AppConfig
+	// lastLoadSuccess 支撑成功后的周期性重载（reloadTTL）：此前成功加载一次后
+	// 永不再查 DB，「配置变更即时生效」只在本进程 Update 时成立——多实例
+	// 部署下其它实例永不感知 admin 写入 DB 的配置变更。
+	lastLoadSuccess time.Time
 }
 
 // loadRetryBackoff 控制失败后的重试节奏：首次失败后按此间隔退避重试，避免
 // 每次请求都打 DB。
 const loadRetryBackoff = 30 * time.Second
+
+// reloadTTL 是成功加载后的重查间隔：让「AppConfig 变更即时生效」的承诺
+// （AGENTS「配置」节）在多实例部署下同样成立——其它实例最迟一个 TTL 内
+// 感知写入 DB 的新配置。每 TTL 一次 QueryRow，开销可忽略。
+const reloadTTL = 30 * time.Second
 
 type memoryStore struct {
 	mu  sync.RWMutex
@@ -132,6 +141,12 @@ func (s *PersistenceSource) ensureLoaded(ctx context.Context) {
 	// 加载失败按退避重试（此前 Once 语义下失败永不重试）。
 	if s.loadErr != nil && time.Since(s.lastLoadFailure) >= loadRetryBackoff {
 		s.tryLoad(ctx)
+		return
+	}
+	// 成功后周期性重载：多实例部署下感知其它实例/admin 写入 DB 的配置变更
+	//（此前成功一次后永不再查，「即时生效」仅单实例语义）。
+	if s.loadErr == nil && time.Since(s.lastLoadSuccess) >= reloadTTL {
+		s.tryLoad(ctx)
 	}
 }
 
@@ -146,6 +161,9 @@ func (s *PersistenceSource) tryLoad(ctx context.Context) {
 			return
 		}
 		s.loadErr = nil
+		// 行不存在（新库）也算一次成功加载：记录 lastLoadSuccess，避免
+		// 每次请求都因「无行」重查 DB。
+		s.lastLoadSuccess = time.Now()
 		if ok {
 			s.loadedCfg = cfg
 			s.fallback.Set(cfg)

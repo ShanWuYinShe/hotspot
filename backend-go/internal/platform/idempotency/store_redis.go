@@ -34,8 +34,17 @@ func unmarshalRecord(b string) (Record, bool) {
 	return r, true
 }
 
+// redisCallCtx 是幂等存储每次 Redis 调用的显式超时（对齐 ratelimit/resume
+// 的 2s 模式）：此前用裸 context.Background()，仅靠 client 级超时兜底，
+// 与其它共享 Redis 的模块超时语义不一致。
+func redisCallCtx() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 2*time.Second)
+}
+
 func (s *RedisStore) Get(scope, key string) (Record, bool) {
-	b, err := s.rdb.Get(context.Background(), redisKey(scope, key)).Result()
+	ctx, cancel := redisCallCtx()
+	defer cancel()
+	b, err := s.rdb.Get(ctx, redisKey(scope, key)).Result()
 	if err != nil {
 		return Record{}, false
 	}
@@ -43,7 +52,8 @@ func (s *RedisStore) Get(scope, key string) (Record, bool) {
 }
 
 func (s *RedisStore) Reserve(scope, key string, expiresAt time.Time) (Record, bool) {
-	ctx := context.Background()
+	ctx, cancel := redisCallCtx()
+	defer cancel()
 	k := redisKey(scope, key)
 	ttl := time.Until(expiresAt)
 	if ttl <= 0 {
@@ -99,10 +109,14 @@ func (s *RedisStore) Save(record Record) {
 	if ttl <= 0 {
 		ttl = time.Minute
 	}
-	_ = saveCompletedScript.Run(context.Background(), s.rdb, []string{redisKey(record.Scope, record.Key)},
+	ctx, cancel := redisCallCtx()
+	defer cancel()
+	_ = saveCompletedScript.Run(ctx, s.rdb, []string{redisKey(record.Scope, record.Key)},
 		payload, ttl.Milliseconds()).Err()
 }
 
 func (s *RedisStore) Delete(scope, key string) {
-	s.rdb.Del(context.Background(), redisKey(scope, key))
+	ctx, cancel := redisCallCtx()
+	defer cancel()
+	s.rdb.Del(ctx, redisKey(scope, key))
 }

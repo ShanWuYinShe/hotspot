@@ -64,10 +64,11 @@ func StartSweeper(ctx context.Context) {
 	worker.GoRestartable("ratelimit.sweeper", func() { sweepStores(sweepCtx) })
 }
 
-// StopSweeper cancels the background sweeper if one is running and blocks
-// briefly until it has exited (by re-locking after cancel). Intended for tests
-// that want a clean teardown; production relies on cancelling the app root
-// context passed to StartSweeper.
+// StopSweeper cancels the background sweeper if one is running. It returns
+// without waiting for the goroutine to observe the cancellation; a Stop→Start
+// sequence may therefore briefly run two sweepers (cleanup is idempotent, so
+// this is harmless). Intended for tests that want a clean teardown; production
+// relies on cancelling the app root context passed to StartSweeper.
 func StopSweeper() {
 	sweeperMu.Lock()
 	if sweeperCancel == nil {

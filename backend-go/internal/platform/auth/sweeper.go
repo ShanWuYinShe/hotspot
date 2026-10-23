@@ -77,6 +77,7 @@ func sweepDefaultStores(now time.Time) {
 	if svc == nil {
 		return
 	}
+	svc.sweepBanCache(now)
 	if s, ok := svc.sessions.(*InMemorySessionStore); ok {
 		s.Sweep(now)
 	}
