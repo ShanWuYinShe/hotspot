@@ -838,12 +838,23 @@ func (s *Service) notifyMentionUserIDs(ctx context.Context, actorUserID string, 
 	_ = group.Wait()
 }
 
+// momentDeleteBroadcastFanoutCap 限制单次删除向收藏者广播的数量上限。
+// 收藏量在热门瞬间上可达成千上万：ListFavoriteUserIDs 无 LIMIT 会把这些行
+// 全量载入内存，并在请求路径上逐个广播（审查 P2-17）。该通知属尽力而为
+// （客户端下次拉收藏列表即自愈），超出上限按截断处理并记 Warn 便于观测。
+const momentDeleteBroadcastFanoutCap = 2000
+
 // broadcastMomentDeletedToFavorites 推送 MomentDeleted 给收藏该瞬间的用户
 // （spec api_spec_websocket.md：瞬间被软删除时收藏者据此更新收藏列表为"已删除"占位）。
 func (s *Service) broadcastMomentDeletedToFavorites(ctx context.Context, momentID, exceptUserID, deletedAt string) error {
 	userIDs, err := s.repo.ListFavoriteUserIDs(ctx, momentID)
 	if err != nil {
 		return err
+	}
+	if len(userIDs) > momentDeleteBroadcastFanoutCap {
+		observability.L().Warn("moments.delete: favorite fanout truncated",
+			"moment_id", momentID, "total", len(userIDs), "cap", momentDeleteBroadcastFanoutCap)
+		userIDs = userIDs[:momentDeleteBroadcastFanoutCap]
 	}
 	for _, userID := range userIDs {
 		if userID == exceptUserID {

@@ -86,8 +86,9 @@ func (s *Service) RejectInvite(ctx context.Context, req RejectInviteRequest) err
 		return ErrInviteExpired
 	}
 	if inviteExpired(invite) {
-		// 惰性过期检测:邀请已超 expires_at,将 pending 置 revoked,推送
-		// GroupInviteExpired 事件并落库 group_invite_revoked 通知(revoked_by 省略)。
+		// 惰性过期检测:邀请已超 expires_at,将 pending 置 revoked,并推送
+		// GroupInviteExpired WS 事件（瞬态通知，不落库——契约 NotifyType
+		// union 无 group_invite_revoked）。
 		if err := s.repo.RevokeInvite(ctx, invite.Group.GroupID, req.InviteID); err != nil {
 			return err
 		}

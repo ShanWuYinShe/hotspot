@@ -53,9 +53,9 @@ func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, applicati
 	}
 }
 
-// notifyGroupApplicationExpired persists group_application_cancelled
-// notifications (applicant present, no reason) and pushes
-// GroupApplicationExpired events to the group admins.
+// notifyGroupApplicationExpired pushes GroupApplicationExpired WS events to the
+// group admins. 不落库：契约 NotifyType union 无 group_application_cancelled，
+// 过期属瞬态事件（此前注释声称落库，与实现不符，审查 P2-6 已订正）。
 func (s *Service) notifyGroupApplicationExpired(ctx context.Context, group GroupItem, application GroupApplicationItem) {
 	applicant := s.resolveUserInfo(ctx, application.Applicant.UserID)
 	now := time.Now().UTC().Format(time.RFC3339)

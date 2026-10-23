@@ -171,7 +171,11 @@ func bucket(notifyType string) string {
 		return "social"
 	case "moment_commented", "comment_reply", "mentioned", "reaction_added":
 		return "interaction"
-	case "group_invite_received", "group_invite_revoked", "group_invite_rejected", "group_invite_accepted", "group_application_received", "group_application_cancelled", "group_application_accepted", "group_application_rejected":
+	// 只列 spec NotifyType union 内的 group 类类型（api_spec_types.md 的
+	// NotifyCategory 映射段）。此前还包含 group_invite_revoked / _rejected /
+	// _accepted / group_application_cancelled —— 这些既不在契约 union 内，也没有
+	// 任何落库方（邀请/申请过期只广播 WS 事件），属死分支，已删（审查 P2-6）。
+	case "group_invite_received", "group_application_received", "group_application_accepted", "group_application_rejected":
 		return "group"
 	case "report_resolved", "report_dismissed":
 		return "report"
