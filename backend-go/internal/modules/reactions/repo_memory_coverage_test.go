@@ -153,8 +153,8 @@ type reactionErrorRepo struct {
 	setErr error
 }
 
-func (r *reactionErrorRepo) React(context.Context, ReactTarget, string, string, string) (bool, error) {
-	return false, r.setErr
+func (r *reactionErrorRepo) React(context.Context, ReactTarget, string, string, string) (ReactionOutcome, error) {
+	return ReactionUnchanged, r.setErr
 }
 func (r *reactionErrorRepo) Unreact(context.Context, ReactTarget, string, string) (bool, error) {
 	return false, r.setErr

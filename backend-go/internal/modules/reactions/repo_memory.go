@@ -35,7 +35,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{reactions: make(map[targetKey]map[string]reactEntry)}
 }
 
-func (r *InMemoryRepository) React(ctx context.Context, targetType ReactTarget, targetID, userID, emoji string) (bool, error) {
+func (r *InMemoryRepository) React(ctx context.Context, targetType ReactTarget, targetID, userID, emoji string) (ReactionOutcome, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	key := targetKey{targetType, targetID}
@@ -44,7 +44,11 @@ func (r *InMemoryRepository) React(ctx context.Context, targetType ReactTarget, 
 	}
 	existing, ok := r.reactions[key][userID]
 	if ok && existing.emoji == emoji {
-		return false, nil
+		return ReactionUnchanged, nil
+	}
+	outcome := ReactionInserted
+	if ok {
+		outcome = ReactionSwitched
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	r.reactions[key][userID] = reactEntry{userID: userID, nickname: userID, emoji: emoji, reactedAt: now}
@@ -70,7 +74,7 @@ func (r *InMemoryRepository) React(ctx context.Context, targetType ReactTarget, 
 			}
 		})
 	}
-	return true, nil
+	return outcome, nil
 }
 
 func (r *InMemoryRepository) Unreact(ctx context.Context, targetType ReactTarget, targetID, userID string) (bool, error) {

@@ -134,26 +134,32 @@ func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, 
 	return record.Item, true, nil
 }
 
-func (r *PostgresRepository) RecallGroupMessage(ctx context.Context, messageID string) error {
-	queryable, ok := r.queryable(ctx)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	if err := queryable.Exec(ctx, "UPDATE group_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE", messageID); err != nil {
-		return err
-	}
-	return nil
+// 撤回按消息表拆两条 SQL 常量（hit=false 表示该表无此消息或已撤回）。
+// Queryable.Exec 不返回受影响行数，用 UPDATE...RETURNING + EXISTS 计数，
+// 模式同 SweepRetention。
+const (
+	queryRecallGroupMessage   = "WITH upd AS (UPDATE group_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE RETURNING 1) SELECT EXISTS (SELECT 1 FROM upd)"
+	queryRecallPrivateMessage = "WITH upd AS (UPDATE private_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE RETURNING 1) SELECT EXISTS (SELECT 1 FROM upd)"
+)
+
+func (r *PostgresRepository) RecallGroupMessage(ctx context.Context, messageID string) (bool, error) {
+	return r.recallMessage(ctx, queryRecallGroupMessage, messageID)
 }
 
-func (r *PostgresRepository) RecallPrivateMessage(ctx context.Context, messageID string) error {
+func (r *PostgresRepository) RecallPrivateMessage(ctx context.Context, messageID string) (bool, error) {
+	return r.recallMessage(ctx, queryRecallPrivateMessage, messageID)
+}
+
+func (r *PostgresRepository) recallMessage(ctx context.Context, query, messageID string) (bool, error) {
 	queryable, ok := r.queryable(ctx)
 	if !ok {
-		return persistence.ErrNotImplemented
+		return false, persistence.ErrNotImplemented
 	}
-	if err := queryable.Exec(ctx, "UPDATE private_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE", messageID); err != nil {
-		return err
+	var hit bool
+	if err := queryable.QueryRow(ctx, query, messageID).Scan(&hit); err != nil {
+		return false, err
 	}
-	return nil
+	return hit, nil
 }
 
 // DeleteMoment 裁决执行的内容删除：与 moments 模块自身删除路径一致（spec

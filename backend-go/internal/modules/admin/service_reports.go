@@ -95,9 +95,21 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 				return apiErr, err
 			}
 		case ReportTargetTypeMessage:
-			if err := s.repo.RecallGroupMessage(ctx, record.Item.TargetID); err != nil {
-				if err := s.repo.RecallPrivateMessage(ctx, record.Item.TargetID); err != nil {
+			// 消息表 group/private 分离且举报记录不区分来源：先试群表，
+			// 未命中再试私聊表。两表都未命中（消息已删除/已撤回）时内容
+			// 已不可见，记 Warn 后继续裁决流程，不阻断。
+			groupHit, err := s.repo.RecallGroupMessage(ctx, record.Item.TargetID)
+			if err != nil {
+				return nil, err
+			}
+			if !groupHit {
+				privateHit, err := s.repo.RecallPrivateMessage(ctx, record.Item.TargetID)
+				if err != nil {
 					return nil, err
+				}
+				if !privateHit {
+					observability.L().Warn("report resolve: message not found in either table, already removed?",
+						"message_id", record.Item.TargetID, "report_id", req.ReportID)
 				}
 			}
 			if apiErr, err := s.banReportedUser(ctx, actor, record.TargetUser.UserID, note, req.BanDurationDays); apiErr != nil || err != nil {

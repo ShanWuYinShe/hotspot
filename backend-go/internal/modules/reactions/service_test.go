@@ -328,3 +328,65 @@ func decodePayload(t *testing.T, p any) map[string]any {
 	}
 	return m
 }
+
+// TestSetReactSwitchKeepsCount 防回归（P0 修复）：切换 emoji 是 UPDATE 而非
+// 再插入——总数口径的计数列只在 ReactionInserted 时 +1；切换不调计数，
+// 同 emoji 重放无任何副作用。此前 PG 实现的 CTE 缺 UPDATE 分支，切换不落库
+// 却报 changed=true，likes_count 可被无限虚增、通知 emoji 与库内实态不符。
+func TestSetReactSwitchKeepsCount(t *testing.T) {
+	provider := stubTargetProvider{
+		kind:   ReactTargetMoment,
+		exists: map[string]bool{"m1": true},
+		owners: map[string]string{"m1": "owner_alice"},
+	}
+	repo := NewInMemoryRepository()
+	notifier := &recordingNotifier{}
+	svc := NewServiceWithDeps(repo, []TargetProvider{provider}, notifier, nil)
+
+	var mu sync.Mutex
+	var deltas []int
+	svc.SetReactionCounter(countRecorder{mu: &mu, deltas: &deltas})
+
+	ctx := ctxWithUser("u1")
+	set := func(emoji string) error {
+		return svc.Set(ctx, SetReactionRequest{TargetType: ReactTargetMoment, TargetID: "m1", Emoji: emoji, Active: true})
+	}
+	if err := set("\U0001F44D"); err != nil {
+		t.Fatalf("set thumbs-up: %v", err)
+	}
+	if err := set("\u2764\uFE0F"); err != nil {
+		t.Fatalf("switch to heart: %v", err)
+	}
+	if err := set("\u2764\uFE0F"); err != nil {
+		t.Fatalf("replay heart: %v", err)
+	}
+
+	mu.Lock()
+	got := append([]int(nil), deltas...)
+	mu.Unlock()
+	if len(got) != 1 || got[0] != 1 {
+		t.Fatalf("counter deltas = %v, want exactly [+1] (insert once; switch/replay keep count)", got)
+	}
+	if n := len(notifier.reactionAddedCalls); n != 2 {
+		t.Fatalf("notifications = %d, want 2 (insert + switch; replay is silent)", n)
+	}
+	// 库内实态：切换后唯一 reaction 必须是新 emoji（此前 PG 不落库，库内停留旧值）。
+	reactions, err := repo.Aggregate(ctx, ReactTargetMoment, "m1", "u1")
+	if err != nil || len(reactions) != 1 {
+		t.Fatalf("aggregate: %v %v", reactions, err)
+	}
+	if reactions[0].Emoji != "\u2764\uFE0F" || reactions[0].Count != 1 {
+		t.Fatalf("stored reaction = %+v, want single heart", reactions[0])
+	}
+}
+
+type countRecorder struct {
+	mu     *sync.Mutex
+	deltas *[]int
+}
+
+func (c countRecorder) AdjustReactionCount(_ context.Context, _ string, delta int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	*c.deltas = append(*c.deltas, delta)
+}

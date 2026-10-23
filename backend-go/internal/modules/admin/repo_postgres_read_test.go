@@ -174,13 +174,13 @@ func (r *adminFallbackRepo) HandleReport(context.Context, string, ReportAction, 
 	r.used = true
 	return AdminReportItem{}, false, nil
 }
-func (r *adminFallbackRepo) RecallGroupMessage(context.Context, string) error {
+func (r *adminFallbackRepo) RecallGroupMessage(context.Context, string) (bool, error) {
 	r.used = true
-	return nil
+	return true, nil
 }
-func (r *adminFallbackRepo) RecallPrivateMessage(context.Context, string) error {
+func (r *adminFallbackRepo) RecallPrivateMessage(context.Context, string) (bool, error) {
 	r.used = true
-	return nil
+	return true, nil
 }
 func (r *adminFallbackRepo) DeleteMoment(context.Context, string) error {
 	r.used = true

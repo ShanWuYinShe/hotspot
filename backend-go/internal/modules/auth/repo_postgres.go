@@ -46,7 +46,7 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := queryable.Exec(txCtx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", params.LoginID, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
+		if err := queryable.Exec(txCtx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", nullIfEmpty(params.Email), nullIfEmpty(params.Phone), params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
 			execErr = err
 			return err
 		}
@@ -419,6 +419,15 @@ func (r *PostgresRepository) latestPasswordResetByLoginID(ctx context.Context, q
 
 func (r *PostgresRepository) queryable(ctx context.Context) (persistence.Queryable, bool) {
 	return persistence.RepoQueryable(ctx, r.factory)
+}
+
+// nullIfEmpty 把空串映射为 SQL NULL（users.email/phone 等可空列：login_id
+// 类型不对应时按 spec 保持 NULL 而非空串）。
+func nullIfEmpty(v string) any {
+	if v == "" {
+		return nil
+	}
+	return v
 }
 
 func (r accountRecord) withDerivedFields() accountRecord {

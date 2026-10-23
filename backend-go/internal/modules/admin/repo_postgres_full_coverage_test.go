@@ -531,21 +531,28 @@ func TestAdminRepoRecallDeleteContent(t *testing.T) {
 	cases := []struct {
 		name string
 		call func(repo *PostgresRepository) error
-		exec string
+		ok   *adminFullStub
+		fail *adminFullStub
 	}{
-		{"recall group", func(r *PostgresRepository) error { return r.RecallGroupMessage(ctx, "m1") }, "UPDATE group_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE"},
-		{"recall private", func(r *PostgresRepository) error { return r.RecallPrivateMessage(ctx, "m1") }, "UPDATE private_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE"},
+		// recall 走 QueryRow 计数（hit 布尔），错误注入用 queryRowErr
+		{"recall group", func(r *PostgresRepository) error { _, err := r.RecallGroupMessage(ctx, "m1"); return err },
+			&adminFullStub{queryRow: map[string][]any{queryRecallGroupMessage: {true}}},
+			&adminFullStub{queryRowErr: map[string]error{queryRecallGroupMessage: errors.New("boom")}}},
+		{"recall private", func(r *PostgresRepository) error { _, err := r.RecallPrivateMessage(ctx, "m1"); return err },
+			&adminFullStub{queryRow: map[string][]any{queryRecallPrivateMessage: {true}}},
+			&adminFullStub{queryRowErr: map[string]error{queryRecallPrivateMessage: errors.New("boom")}}},
 		// 裁决删除为软删除（spec api_spec_moment.md「删除语义」/api_spec_comment.md）
-		{"delete moment", func(r *PostgresRepository) error { return r.DeleteMoment(ctx, "m1") }, queryAdminSoftDeleteMoment},
-		{"delete comment", func(r *PostgresRepository) error { return r.DeleteComment(ctx, "c1") }, queryAdminSoftDeleteComment},
+		{"delete moment", func(r *PostgresRepository) error { return r.DeleteMoment(ctx, "m1") },
+			&adminFullStub{}, &adminFullStub{execErrs: map[string]error{queryAdminSoftDeleteMoment: errors.New("boom")}}},
+		{"delete comment", func(r *PostgresRepository) error { return r.DeleteComment(ctx, "c1") },
+			&adminFullStub{}, &adminFullStub{execErrs: map[string]error{queryAdminSoftDeleteComment: errors.New("boom")}}},
 	}
 	for _, tc := range cases {
-		if err := tc.call(newAdminFullRepo(&adminFullStub{})); err != nil {
+		if err := tc.call(newAdminFullRepo(tc.ok)); err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
-		stub := &adminFullStub{execErrs: map[string]error{tc.exec: errors.New("boom")}}
-		if err := tc.call(newAdminFullRepo(stub)); err == nil {
-			t.Fatalf("%s exec error must propagate", tc.name)
+		if err := tc.call(newAdminFullRepo(tc.fail)); err == nil {
+			t.Fatalf("%s error must propagate", tc.name)
 		}
 	}
 }

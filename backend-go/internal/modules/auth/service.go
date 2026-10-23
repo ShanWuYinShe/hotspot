@@ -216,6 +216,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platfo
 			return platformauth.AuthResult{}, err
 		}
 	}
+	registerEmail, registerPhone := loginIDContact(req.LoginID)
 	account, err := s.repo.Register(ctx, RegisterParams{
 		LoginID:          req.LoginID,
 		Nickname:         req.Nickname,
@@ -223,6 +224,8 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platfo
 		Defaults:         s.profileDefaults(ctx),
 		RegisterIP:       meta.IPAddress,
 		RegisterLocation: meta.IPLocation,
+		Email:            registerEmail,
+		Phone:            registerPhone,
 	})
 	if err != nil {
 		observability.L().Error("service error",

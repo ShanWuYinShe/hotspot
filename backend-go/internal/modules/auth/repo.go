@@ -27,6 +27,11 @@ type RegisterParams struct {
 	Defaults         ProfileDefaults
 	RegisterIP       string
 	RegisterLocation string
+	// Email/Phone 按 login_id 类型回填的联系方式（spec api_spec_user.md
+	// UserItem：邮箱型回填 email、手机号型回填 phone，其余两者皆空 → NULL）。
+	// 由 Service 层经 loginIDContact 判定填入；repo 不再做类型判断。
+	Email string
+	Phone string
 }
 
 type GuestParams struct {

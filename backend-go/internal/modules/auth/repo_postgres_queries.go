@@ -8,7 +8,7 @@ VALUES ($1, $2, $3, $4, $5)`
 WHERE login_id = $1`
 
 	queryInsertUserProfile = `INSERT INTO users (user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, s2_cell_id, presence_status, last_online, created_at, register_ip, register_location, last_login_ip, last_login_location)
-VALUES ($1, $2, $3, $4, '', '', $5, '', $6, $7, $8, $9, 'online', $10, $11, $12, $13, $14, $15)`
+VALUES ($1, $2, $3, $4, '', '', $5, $6, $7, $8, $9, $10, 'online', $11, $12, $13, $14, $15, $16)`
 
 	queryDeleteUserProfileByUserID = `DELETE FROM users
 WHERE user_id = $1`

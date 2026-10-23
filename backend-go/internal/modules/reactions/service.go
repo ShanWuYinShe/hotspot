@@ -110,16 +110,20 @@ func (s *Service) react(ctx context.Context, req SetReactionRequest) error {
 	if !targetExists {
 		return ErrReactionTargetNotFound
 	}
-	changed, err := s.repo.React(ctx, req.TargetType, req.TargetID, principal.UserID, req.Emoji)
+	outcome, err := s.repo.React(ctx, req.TargetType, req.TargetID, principal.UserID, req.Emoji)
 	if err != nil {
 		observability.L().Error("reactions.react repo failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)
 		return err
 	}
-	if !changed {
+	switch outcome {
+	case ReactionUnchanged:
 		// Emoji unchanged: no-op per spec idempotency.
 		return nil
+	case ReactionInserted:
+		// 新增行：总数口径的计数列 +1。切换 emoji 不改变总数，不调计数
+		//（此前 changed bool 无法区分二者，切换也 +1，计数列可被无限虚增）。
+		s.adjustReactionCount(ctx, req, +1)
 	}
-	s.adjustReactionCount(ctx, req, +1)
 	s.notifyOwner(ctx, req, principal.UserID, owner, true)
 	return nil
 }

@@ -119,28 +119,30 @@ func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, ac
 	return cloneAdminReportItem(record.Item), true, nil
 }
 
-func (r *InMemoryRepository) RecallGroupMessage(_ context.Context, messageID string) error {
+// RecallGroupMessage/RecallPrivateMessage 返回是否真实撤回（未命中或已
+// 撤回返回 false，对齐 PG 实现的 is_recalled = FALSE 条件）。
+func (r *InMemoryRepository) RecallGroupMessage(_ context.Context, messageID string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	msg, ok := r.groupMessages[messageID]
-	if !ok {
-		return nil
+	if !ok || msg.Recalled {
+		return false, nil
 	}
 	msg.Recalled = true
 	r.groupMessages[messageID] = msg
-	return nil
+	return true, nil
 }
 
-func (r *InMemoryRepository) RecallPrivateMessage(_ context.Context, messageID string) error {
+func (r *InMemoryRepository) RecallPrivateMessage(_ context.Context, messageID string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	msg, ok := r.privateMessages[messageID]
-	if !ok {
-		return nil
+	if !ok || msg.Recalled {
+		return false, nil
 	}
 	msg.Recalled = true
 	r.privateMessages[messageID] = msg
-	return nil
+	return true, nil
 }
 
 // DeleteMoment 裁决内容删除（内存对齐 postgres 软删除，spec api_spec_moment.md

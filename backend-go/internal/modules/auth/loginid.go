@@ -57,6 +57,21 @@ func isPhoneOrEmailLoginID(loginID string) bool {
 	return kind == loginIDKindPhone || kind == loginIDKindEmail
 }
 
+// loginIDContact 回填注册用户的 email/phone（spec api_spec_user.md UserItem：
+// email 仅在 login_id 为邮箱型时回填、phone 仅在手机号型时回填，其余类型保持
+// NULL——此前实现把 login_id 无条件写入 email 列，用户名/手机号型注册会得到
+// email="alice" / email="13800..." 的错误数据）。空串表示不回填（repo 层转 NULL）。
+func loginIDContact(loginID string) (email, phone string) {
+	switch classifyLoginID(loginID) {
+	case loginIDKindEmail:
+		return loginID, ""
+	case loginIDKindPhone:
+		return "", loginID
+	default:
+		return "", ""
+	}
+}
+
 // guestNicknameSuffixChars 默认昵称随机后缀字符集（小写字母 + 数字，36^4 组合）。
 const guestNicknameSuffixChars = "abcdefghijklmnopqrstuvwxyz0123456789"
 

@@ -99,18 +99,26 @@ func newReactionFactory(backend persistence.Queryable) *persistence.Factory {
 }
 
 func TestPostgresReactAndUnreact(t *testing.T) {
+	// queryUpsertReaction 现按 SQL 内分支返回 inserted/switched/unchanged
+	// 三态字符串，repo 映射为 ReactionOutcome。stub 逐态覆盖映射逻辑。
+	for _, tc := range []struct {
+		sqlResult string
+		want      ReactionOutcome
+	}{
+		{"inserted", ReactionInserted},
+		{"switched", ReactionSwitched},
+		{"unchanged", ReactionUnchanged},
+	} {
+		backend := &reactionRowStub{rowValues: []any{tc.sqlResult}}
+		repo := NewPostgresRepository(newReactionFactory(backend))
+		outcome, err := repo.React(context.Background(), ReactTargetMoment, "moment_1", "u1", "👍")
+		if err != nil || outcome != tc.want {
+			t.Fatalf("react(%s): outcome=%v err=%v", tc.sqlResult, outcome, err)
+		}
+	}
+
 	backend := &reactionRowStub{rowValues: []any{true}}
 	repo := NewPostgresRepository(newReactionFactory(backend))
-
-	changed, err := repo.React(context.Background(), ReactTargetMoment, "moment_1", "u1", "👍")
-	if err != nil || !changed {
-		t.Fatalf("react: changed=%v err=%v", changed, err)
-	}
-	changed, err = repo.React(context.Background(), ReactTargetMoment, "moment_1", "u1", "👍")
-	if err != nil || !changed {
-		t.Fatalf("second react should report changed, got %v %v", changed, err)
-	}
-
 	deleted, err := repo.Unreact(context.Background(), ReactTargetMoment, "moment_1", "u1")
 	if err != nil || !deleted {
 		t.Fatalf("unreact: deleted=%v err=%v", deleted, err)

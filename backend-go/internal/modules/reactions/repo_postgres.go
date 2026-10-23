@@ -20,17 +20,24 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
 
-func (r *PostgresRepository) React(ctx context.Context, targetType ReactTarget, targetID, userID, emoji string) (bool, error) {
+func (r *PostgresRepository) React(ctx context.Context, targetType ReactTarget, targetID, userID, emoji string) (ReactionOutcome, error) {
 	q, ok := queryable(ctx, r.factory)
 	if !ok {
-		return false, persistence.ErrNotImplemented
+		return ReactionUnchanged, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	var changed bool
-	if err := q.QueryRow(ctx, queryUpsertReaction, string(targetType), targetID, userID, emoji, now).Scan(&changed); err != nil {
-		return false, fmt.Errorf("reactions.React: %w", err)
+	var outcome string
+	if err := q.QueryRow(ctx, queryUpsertReaction, string(targetType), targetID, userID, emoji, now).Scan(&outcome); err != nil {
+		return ReactionUnchanged, fmt.Errorf("reactions.React: %w", err)
 	}
-	return changed, nil
+	switch outcome {
+	case "inserted":
+		return ReactionInserted, nil
+	case "switched":
+		return ReactionSwitched, nil
+	default:
+		return ReactionUnchanged, nil
+	}
 }
 
 func (r *PostgresRepository) Unreact(ctx context.Context, targetType ReactTarget, targetID, userID string) (bool, error) {

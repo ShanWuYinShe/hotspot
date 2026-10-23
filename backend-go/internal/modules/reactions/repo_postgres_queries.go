@@ -2,13 +2,24 @@ package reactions
 
 const (
 	// queryUpsertReaction inserts a reaction row or, when the caller already has
-	// one for this target, updates the emoji/reacted_at in place (spec set
-	// semantics: switching emoji is an update, not an insert). We learn whether
-	// the row materially changed via the returned changed flag.
+	// one for this target, switches the emoji in place (spec set semantics:
+	// switching emoji is an update, not an insert). Returns one of
+	// inserted/switched/unchanged so the caller can keep count columns honest:
+	// only an insert bumps the total-reaction count; a switch keeps it.
+	// ins 与 upd 互斥（前者要求无 existing 行，后者要求有且 emoji 不同），
+	// 并发下靠 (target_type, target_id, user_id) 唯一约束 + ON CONFLICT DO
+	// NOTHING 收敛为单次生效。
 	queryUpsertReaction = `
 WITH existing AS (
   SELECT emoji FROM reactions
   WHERE target_type = $1 AND target_id = $2 AND user_id = $3
+),
+upd AS (
+  UPDATE reactions
+  SET emoji = $4, reacted_at = $5
+  WHERE target_type = $1 AND target_id = $2 AND user_id = $3
+    AND (SELECT emoji FROM existing) IS DISTINCT FROM $4
+  RETURNING emoji
 ),
 ins AS (
   INSERT INTO reactions (target_type, target_id, user_id, emoji, reacted_at)
@@ -17,12 +28,11 @@ ins AS (
   ON CONFLICT (target_type, target_id, user_id) DO NOTHING
   RETURNING emoji
 )
-SELECT
-  -- changed=true when a brand-new row was inserted, or when the existing
-  -- emoji differs from the one we are setting.
-  (EXISTS (SELECT 1 FROM ins))
-  OR (NOT EXISTS (SELECT 1 FROM ins) AND (SELECT emoji FROM existing) IS DISTINCT FROM $4)
-  AS changed`
+SELECT CASE
+  WHEN EXISTS (SELECT 1 FROM ins) THEN 'inserted'
+  WHEN EXISTS (SELECT 1 FROM upd) THEN 'switched'
+  ELSE 'unchanged'
+END AS outcome`
 
 	// queryDeleteReactionWithFlag removes the caller's row and reports whether a
 	// row was actually deleted. deleted=false means there was nothing to remove
