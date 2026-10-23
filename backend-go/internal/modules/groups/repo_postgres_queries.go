@@ -295,21 +295,25 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	//   该列表挂匿名端点 /public/v1/groups/announcements/fetch，此前无界）。
 	//   置顶优先的排序不变，截断只影响超长尾部。
 	// 每群公告数量上限（AppConfig 决策）本轮不加，登记待后续。
+	// 所有列带 a. 前缀：LEFT JOIN users 后 created_at/group_id 等列名在两张表
+	// 都存在，未限定会被 PG 判为 ambiguous（真实库集成测试可捕获，stub 单测不能）。
 	queryListGroupAnnouncements = `
-SELECT announcement_id, group_id, title, content, created_by_user_id, COALESCE(u.nickname, created_by_user_id), is_pinned, created_at
-FROM group_announcements
-LEFT JOIN users u ON u.user_id = group_announcements.created_by_user_id
-WHERE group_id = $1 AND deleted_at IS NULL
-ORDER BY is_pinned DESC, created_at DESC, announcement_id DESC
+SELECT a.announcement_id, a.group_id, a.title, a.content, a.created_by_user_id,
+       COALESCE(u.nickname, a.created_by_user_id), a.is_pinned, a.created_at
+FROM group_announcements a
+LEFT JOIN users u ON u.user_id = a.created_by_user_id
+WHERE a.group_id = $1 AND a.deleted_at IS NULL
+ORDER BY a.is_pinned DESC, a.created_at DESC, a.announcement_id DESC
 LIMIT 50`
 
 	// GetAnnouncement 直查（审查 P2-2）：UpdateAnnouncement 更新后取回完整
 	// 对象用，归属双键（IDOR 防护与 update/delete 同口径），昵称同 List 解析。
 	queryGetGroupAnnouncement = `
-SELECT announcement_id, group_id, title, content, created_by_user_id, COALESCE(u.nickname, created_by_user_id), is_pinned, created_at
-FROM group_announcements
-LEFT JOIN users u ON u.user_id = group_announcements.created_by_user_id
-WHERE announcement_id = $1 AND group_id = $2 AND deleted_at IS NULL`
+SELECT a.announcement_id, a.group_id, a.title, a.content, a.created_by_user_id,
+       COALESCE(u.nickname, a.created_by_user_id), a.is_pinned, a.created_at
+FROM group_announcements a
+LEFT JOIN users u ON u.user_id = a.created_by_user_id
+WHERE a.announcement_id = $1 AND a.group_id = $2 AND a.deleted_at IS NULL`
 
 	// 公告更新/删除带归属双键：groupID 是授权锚点，仅按全局唯一
 	// announcement_id 定位会让 A 群管理员操作 B 群公告（IDOR）。

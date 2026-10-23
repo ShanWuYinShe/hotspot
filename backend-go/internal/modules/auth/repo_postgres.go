@@ -117,7 +117,9 @@ func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := txQueryable.Exec(txCtx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", "", params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
+		// 游客无 login_id 凭证，email/phone 恒为 NULL（与 Register 的类型回填
+		// 口径一致：queryInsertUserProfile 的第 6/7 参为 email/phone）。
+		if err := txQueryable.Exec(txCtx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", nil, nil, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
 			return fmt.Errorf("auth.CreateGuest: profile insert: %w", err)
 		}
 		if err := txQueryable.Exec(txCtx, queryUpsertUserSettings, userID); err != nil {

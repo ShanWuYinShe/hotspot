@@ -91,10 +91,20 @@ func TestPostgresRepositoryCreateGuestRollsBackProfileWhenSettingsWriteFails(t *
 	if backend.execs[0] != queryInsertUserProfile || backend.execs[1] != queryUpsertUserSettings {
 		t.Fatalf("unexpected exec order: %#v", backend.execs)
 	}
-	if got := backend.execArgs[0][11]; got != "203.0.113.10" {
+	// 索引随 queryInsertUserProfile 的参数布局（0 基）：0 userID / 1 nickname /
+	// 2 avatar / 3 user_type / 4 email / 5 phone / 6 location_name / 7 lat /
+	// 8 lng / 9 s2 / 10 last_online / 11 created_at / 12 register_ip /
+	// 13 register_location / 14 last_login_ip / 15 last_login_location。
+	if got := backend.execArgs[0][4]; got != nil {
+		t.Fatalf("guest email must stay NULL, got %v", got)
+	}
+	if got := backend.execArgs[0][5]; got != nil {
+		t.Fatalf("guest phone must stay NULL, got %v", got)
+	}
+	if got := backend.execArgs[0][12]; got != "203.0.113.10" {
 		t.Fatalf("unexpected register ip arg: %v", got)
 	}
-	if got := backend.execArgs[0][12]; got != "US" {
+	if got := backend.execArgs[0][13]; got != "US" {
 		t.Fatalf("unexpected register location arg: %v", got)
 	}
 }
