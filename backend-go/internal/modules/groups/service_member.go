@@ -53,7 +53,8 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 	// 申请通过即入群：失效可能存在的「非成员」防穿透缓存值。
 	s.invalidateMemberCache(ctx, group.Group.GroupID, application.Applicant.UserID)
 	s.notifyGroupApplicationAccepted(ctx, group, application)
-	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: group.Group.GroupID, User: s.resolveUserInfo(ctx, application.Applicant.UserID), Role: string(GroupRoleMember), MemberCount: group.Group.MembersCount + 1, JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
+	// member_count 用审批入群后的权威计数（审查 P2-5，快照+1 在并发下失真）。
+	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: group.Group.GroupID, User: s.resolveUserInfo(ctx, application.Applicant.UserID), Role: string(GroupRoleMember), MemberCount: s.memberCountAfterMutation(ctx, group.Group.GroupID, group.Group.MembersCount+1), JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
 	return nil
 }
 

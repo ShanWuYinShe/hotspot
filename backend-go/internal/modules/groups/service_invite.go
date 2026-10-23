@@ -68,7 +68,8 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 	// 校验走同一键族读穿缓存，漏删会让受邀者在 TTL 内仍被判非成员）。
 	s.invalidateMemberCache(ctx, invite.Group.GroupID, principal.UserID)
 	s.notifyGroupInviteAccepted(ctx, invite, principal.UserID)
-	realtime.DefaultHub().BroadcastToGroup(invite.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: invite.Group.GroupID, User: s.resolveUserInfo(ctx, principal.UserID), Role: string(GroupRoleMember), MemberCount: invite.Group.MembersCount + 1, JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
+	// member_count 用受邀入群后的权威计数（审查 P2-5，快照+1 在并发下失真）。
+	realtime.DefaultHub().BroadcastToGroup(invite.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: invite.Group.GroupID, User: s.resolveUserInfo(ctx, principal.UserID), Role: string(GroupRoleMember), MemberCount: s.memberCountAfterMutation(ctx, invite.Group.GroupID, invite.Group.MembersCount+1), JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
 	return nil
 }
 

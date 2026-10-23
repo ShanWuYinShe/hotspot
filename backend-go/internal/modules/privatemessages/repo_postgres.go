@@ -67,7 +67,12 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 	}
 	meta, err := r.getMessageMetaImpl(ctx, req.MessageID)
 	if err != nil {
-		return MessageEventMeta{}, ErrMessageNotFound
+		// 仅 ErrNoRows 映射为不存在（审查 P2-10，对齐群聊 lookupMessageMetaFull）：
+		// 此前把连接故障等真实 DB 错误也吞成 10404「消息不存在」，误导排障。
+		if errors.Is(err, pgx.ErrNoRows) {
+			return MessageEventMeta{}, ErrMessageNotFound
+		}
+		return MessageEventMeta{}, err
 	}
 	if meta.SenderUserID != userID {
 		return MessageEventMeta{}, ErrMessagePermissionDenied
@@ -92,7 +97,11 @@ func (r *PostgresRepository) Recall(ctx context.Context, userID string, window t
 	}
 	meta, err := r.getMessageMetaImpl(ctx, req.MessageID)
 	if err != nil {
-		return MessageEventMeta{}, ErrMessageNotFound
+		// 同 Update：仅 ErrNoRows 映射不存在，其余原样上抛走 10600（审查 P2-10）。
+		if errors.Is(err, pgx.ErrNoRows) {
+			return MessageEventMeta{}, ErrMessageNotFound
+		}
+		return MessageEventMeta{}, err
 	}
 	if meta.SenderUserID != userID {
 		return MessageEventMeta{}, ErrMessagePermissionDenied

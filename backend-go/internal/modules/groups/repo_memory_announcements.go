@@ -45,6 +45,18 @@ func (r *InMemoryRepository) ListAnnouncements(_ context.Context, groupID string
 	return items, nil
 }
 
+// GetAnnouncement 按归属双键直查（repo.go 接口；审查 P2-2，与 PG 实现对齐：
+// 跨群归属按不存在处理，不泄漏其它群公告存在性）。
+func (r *InMemoryRepository) GetAnnouncement(_ context.Context, groupID, announcementID string) (GroupAnnouncementItem, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	item, ok := r.announcements[announcementID]
+	if !ok || item.GroupID != groupID {
+		return GroupAnnouncementItem{}, false, nil
+	}
+	return item, true, nil
+}
+
 func (r *InMemoryRepository) UpdateAnnouncement(_ context.Context, groupID string, req UpdateGroupAnnouncementRequest) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

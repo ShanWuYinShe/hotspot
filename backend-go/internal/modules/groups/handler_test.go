@@ -102,6 +102,14 @@ func (r *groupErrorRepo) CreateAnnouncement(context.Context, string, CreateGroup
 func (r *groupErrorRepo) ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error) {
 	return r.announceItems, r.listAnnouncementsErr
 }
+func (r *groupErrorRepo) GetAnnouncement(_ context.Context, _, announcementID string) (GroupAnnouncementItem, bool, error) {
+	for _, item := range r.announceItems {
+		if item.AnnouncementID == announcementID {
+			return item, true, nil
+		}
+	}
+	return GroupAnnouncementItem{}, false, r.listAnnouncementsErr
+}
 func (r *groupErrorRepo) UpdateAnnouncement(context.Context, string, UpdateGroupAnnouncementRequest) error {
 	return r.updateAnnouncementErr
 }

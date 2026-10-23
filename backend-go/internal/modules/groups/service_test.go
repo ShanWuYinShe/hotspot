@@ -187,6 +187,17 @@ func (r *stubGroupsRepo) CreateAnnouncement(_ context.Context, _ string, _ Creat
 func (r *stubGroupsRepo) ListAnnouncements(_ context.Context, _ string) ([]GroupAnnouncementItem, error) {
 	return r.announceItems, r.announceErr
 }
+
+// GetAnnouncement 桩：按 ID 在 announceItems 中查找（Update 后直查路径，
+// 审查 P2-2）；未命中 found=false。
+func (r *stubGroupsRepo) GetAnnouncement(_ context.Context, _, announcementID string) (GroupAnnouncementItem, bool, error) {
+	for _, item := range r.announceItems {
+		if item.AnnouncementID == announcementID {
+			return item, true, nil
+		}
+	}
+	return GroupAnnouncementItem{}, false, r.announceErr
+}
 func (r *stubGroupsRepo) UpdateAnnouncement(_ context.Context, _ string, _ UpdateGroupAnnouncementRequest) error {
 	return r.updateAnnErr
 }

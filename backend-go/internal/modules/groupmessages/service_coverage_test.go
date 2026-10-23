@@ -307,4 +307,16 @@ func TestHandlerSendValidation(t *testing.T) {
 	if isValidSendRequest(SendGroupMessageRequest{Type: "unknown"}) {
 		t.Fatal("unknown type should be invalid")
 	}
+	// 7. 媒体/share 类型携带超长 content 同样无效（审查 P2-4，对齐 Update
+	// 路径防绕过：此前仅 text 校验长度，type=image + 合法 file_id + 超长
+	// content 可绕过 5000 字契约入库并广播给全群）。
+	if isValidSendRequest(SendGroupMessageRequest{Type: "image", FileID: "f1", Content: longContent}) {
+		t.Fatal("image with overlength content should be invalid")
+	}
+	if isValidSendRequest(SendGroupMessageRequest{Type: "share", ShareCode: "sc123", Content: longContent}) {
+		t.Fatal("share with overlength content should be invalid")
+	}
+	if !isValidSendRequest(SendGroupMessageRequest{Type: "image", FileID: "f1", Content: "图片说明"}) {
+		t.Fatal("image with short optional content should be valid")
+	}
 }

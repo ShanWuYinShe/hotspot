@@ -212,7 +212,13 @@ func searchCursorForGroupItem(item GroupItem, meta groupSearchMeta, sortBy strin
 		Distance:     meta.Distance,
 		MembersCount: item.Group.MembersCount,
 		NameMatch:    meta.NameMatch,
-		CreatedAt:    groupCreatedAt(item).Format(time.RFC3339),
+		// RFC3339Nano 全精度（审查 P2-1，AGENTS.md「写入精度 × 游标精度 ×
+		// 谓词一致」）：groups.created_at 为 time.Now().UTC() 全精度，秒级截断
+		// 的游标在 fallback 过滤（cursor 项不在候选集时，matchesSearchCursor
+		// 以 Before 谓词重定位）会把同一秒内早于 cursor 的行静默丢弃。
+		// 注：搜索游标仍为明文 base64 JSON（与全站 AES-GCM codec 双轨），
+		// 收敛到统一 codec 是中期项，不在本轮改动范围。
+		CreatedAt: groupCreatedAt(item).Format(time.RFC3339Nano),
 	}
 }
 

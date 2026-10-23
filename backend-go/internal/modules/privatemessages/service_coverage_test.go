@@ -2,6 +2,7 @@ package privatemessages
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -158,4 +159,29 @@ func TestServiceBuildHelpersAndRuntime(t *testing.T) {
 
 func pmAuthCtx(userID string) context.Context {
 	return platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: userID, SessionID: "sess_" + userID})
+}
+
+// TestIsValidSendRequestContentCapAllTypes 防回归（审查 P2-4，对齐群聊侧
+// 与 Update 路径）：content 长度上限对所有消息类型生效，此前媒体/share
+// 类型不校验，可携带超长 content 绕过 5000 字契约入库并广播给对端。
+func TestIsValidSendRequestContentCapAllTypes(t *testing.T) {
+	longContent := strings.Repeat("a", messageContentMaxRunes+1)
+	if isValidSendRequest(SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: longContent}) {
+		t.Fatal("overlength text content should be invalid")
+	}
+	if isValidSendRequest(SendPrivateMessageRequest{TargetUserID: "u2", Type: "image", FileID: "f1", Content: longContent}) {
+		t.Fatal("image with overlength content should be invalid")
+	}
+	if isValidSendRequest(SendPrivateMessageRequest{TargetUserID: "u2", Type: "share", ShareCode: "sc1", Content: longContent}) {
+		t.Fatal("share with overlength content should be invalid")
+	}
+	if !isValidSendRequest(SendPrivateMessageRequest{TargetUserID: "u2", Type: "image", FileID: "f1", Content: "图片说明"}) {
+		t.Fatal("image with short optional content should be valid")
+	}
+	if !isValidSendRequest(SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: "hello"}) {
+		t.Fatal("valid text should be valid")
+	}
+	if isValidSendRequest(SendPrivateMessageRequest{TargetUserID: "u2", Type: "text", Content: ""}) {
+		t.Fatal("empty text content should be invalid")
+	}
 }

@@ -242,6 +242,10 @@ const messageContentMaxRunes = 5000
 const mentionsMaxCount = 20
 
 // 需要 share_code。此前不校验，text 空 content、share 空 share_code 都能发出。
+// content 长度上限对所有类型生效（审查 P2-4，对齐 Update 路径的同款防绕过）：
+// 媒体/share 类型此前不校验，type=image + 合法 file_id + 超长 content 可绕过
+// 5000 字契约，随消息入库并广播给全群（全局请求体 1MiB 上限只封顶了体量）。
+// 仅 text 要求 content 非空；媒体类型的可选 content 同受长度约束。
 func isValidSendRequest(req SendGroupMessageRequest) bool {
 	if req.Type == "" {
 		return false
@@ -249,9 +253,12 @@ func isValidSendRequest(req SendGroupMessageRequest) bool {
 	if len(req.Mentions) > mentionsMaxCount {
 		return false
 	}
+	if utf8.RuneCountInString(req.Content) > messageContentMaxRunes {
+		return false
+	}
 	switch req.Type {
 	case "text":
-		return req.Content != "" && utf8.RuneCountInString(req.Content) <= messageContentMaxRunes
+		return req.Content != ""
 	case "image", "video", "audio", "file":
 		return req.FileID != ""
 	case "share":

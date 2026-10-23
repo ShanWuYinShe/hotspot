@@ -28,6 +28,9 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnounc
 		op.Fail(err)
 		return GroupAnnouncementItem{}, err
 	}
+	// created_by 昵称统一在 service 解析（审查 P2-3）：repo 侧（尤其 PG 插入
+	// 路径）不回查 users 表，此前响应里 Nickname 恒为裸 user_id。
+	item.CreatedBy = s.resolveUserInfo(ctx, principal.UserID)
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupAnnouncementCreated,
 		Payload: GroupAnnouncementCreatedPayload{
@@ -67,17 +70,16 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateGroupAnnounc
 	if err := s.repo.UpdateAnnouncement(ctx, req.GroupID, req); err != nil {
 		return GroupAnnouncementItem{}, err
 	}
-	// 内容类更新返回更新后完整对象（spec api_spec_base.md「设计规范」）
-	items, err := s.repo.ListAnnouncements(ctx, req.GroupID)
+	// 内容类更新返回更新后完整对象（spec api_spec_base.md「设计规范」）：
+	// 归属双键直查替代全量 List 再线性扫描找回单条（审查 P2-2）。
+	item, found, err := s.repo.GetAnnouncement(ctx, req.GroupID, req.AnnouncementID)
 	if err != nil {
 		return GroupAnnouncementItem{}, err
 	}
-	for _, item := range items {
-		if item.AnnouncementID == req.AnnouncementID {
-			return item, nil
-		}
+	if !found {
+		return GroupAnnouncementItem{}, ErrAnnouncementNotFound
 	}
-	return GroupAnnouncementItem{}, ErrAnnouncementNotFound
+	return item, nil
 }
 
 func (s *Service) DeleteAnnouncement(ctx context.Context, req DeleteGroupAnnouncementRequest) error {

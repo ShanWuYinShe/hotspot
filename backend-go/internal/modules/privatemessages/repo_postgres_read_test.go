@@ -45,6 +45,8 @@ type privateMessageBackendStub struct {
 	readStates map[string]map[string]privateMessageReadState
 	execErrs   map[string]error
 	queryErrs  map[string]error
+	// queryRowErr 按 SQL 常量注入 QueryRow 错误（审查 P2-10 测试用）。
+	queryRowErr map[string]error
 	// mediaSessions 模拟 media_upload_sessions 批量回填（审查 P1-7）：
 	// file_id -> 9 列行（file_id/storage_key/file_name/file_size/mime_type/
 	// thumbnail_url/width/height/duration）。未播种的 file_id 回空行
@@ -185,6 +187,9 @@ func (b *privateMessageBackendStub) Exec(_ context.Context, query string, args .
 }
 
 func (b *privateMessageBackendStub) QueryRow(_ context.Context, query string, args ...any) persistence.Row {
+	if err := b.queryRowErr[query]; err != nil {
+		return testdb.RowValues{Err: err}
+	}
 	switch query {
 	case queryPrivateMessageReadStateByMessage:
 		chatKey := args[0].(string)
@@ -203,6 +208,9 @@ func (b *privateMessageBackendStub) QueryRow(_ context.Context, query string, ar
 				}
 			}
 		}
+		// 对齐真实 PG：消息缺失 = ErrNoRows（此前落到兜底 ErrNotImplemented，
+		// 靠 repo 的「任意错误→NotFound」吞错映射才表现为不存在，审查 P2-10）。
+		return testdb.RowValues{Err: pgx.ErrNoRows}
 	case queryUpdatePrivateMessage:
 		// 模拟 is_recalled = FALSE 守卫 + RETURNING：未撤回的消息更新并返回
 		// 一行，已撤回的 0 行（ErrNoRows）。
@@ -624,5 +632,42 @@ func TestPostgresRepositoryUnreadCountUsesViewerReadState(t *testing.T) {
 	}
 	if count != 1 {
 		t.Fatalf("expected unread count 1, got %d", count)
+	}
+}
+
+// TestPostgresUpdateRecallMapOnlyNoRowsToNotFound 防回归（审查 P2-10，对齐
+// 群聊 lookupMessageMetaFull）：Update/Recall 的元数据读取仅把 pgx.ErrNoRows
+// 映射为 ErrMessageNotFound；连接故障等真实 DB 错误必须原样上抛（走 10600
+// 路径），此前一律吞成 10404「消息不存在」误导排障。
+func TestPostgresUpdateRecallMapOnlyNoRowsToNotFound(t *testing.T) {
+	newRepo := func(stub *privateMessageBackendStub) *PostgresRepository {
+		factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+		factory.DB.(*persistence.PostgresDB).Backend = stub
+		return NewPostgresRepository(factory)
+	}
+
+	// 消息缺失（ErrNoRows）→ ErrMessageNotFound。
+	empty := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, readStates: map[string]map[string]privateMessageReadState{}}
+	repo := newRepo(empty)
+	if _, err := repo.Update(context.Background(), "u1", UpdatePrivateMessageRequest{MessageID: "pm_missing", Content: "x"}); err != ErrMessageNotFound {
+		t.Fatalf("update missing: expected ErrMessageNotFound, got %v", err)
+	}
+	if _, err := repo.Recall(context.Background(), "u1", 2*time.Minute, RecallPrivateMessageRequest{MessageID: "pm_missing"}); err != ErrMessageNotFound {
+		t.Fatalf("recall missing: expected ErrMessageNotFound, got %v", err)
+	}
+
+	// DB 错误 → 原样上抛（不再是 ErrMessageNotFound）。
+	boom := errors.New("db connection reset")
+	failing := &privateMessageBackendStub{
+		items:       map[string][]privateMessageStubRecord{},
+		readStates:  map[string]map[string]privateMessageReadState{},
+		queryRowErr: map[string]error{queryGetPrivateMessageMeta: boom},
+	}
+	repo = newRepo(failing)
+	if _, err := repo.Update(context.Background(), "u1", UpdatePrivateMessageRequest{MessageID: "pm_1", Content: "x"}); !errors.Is(err, boom) {
+		t.Fatalf("update db error must propagate, got %v", err)
+	}
+	if _, err := repo.Recall(context.Background(), "u1", 2*time.Minute, RecallPrivateMessageRequest{MessageID: "pm_1"}); !errors.Is(err, boom) {
+		t.Fatalf("recall db error must propagate, got %v", err)
 	}
 }

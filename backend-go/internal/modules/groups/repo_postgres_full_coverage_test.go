@@ -418,8 +418,10 @@ func TestPostgresJoinGroupBranches(t *testing.T) {
 
 func TestPostgresAnnouncementLifecycle(t *testing.T) {
 	ctx := context.Background()
+	// 8 列对齐 queryListGroupAnnouncements/queryGetGroupAnnouncement（审查
+	// P2-3：第 6 列为 LEFT JOIN users 解析的 created_by 昵称）。
 	annRow := func(id string) []any {
-		return []any{id, "group_1", "标题", "内容", "u1", true, gTestTime}
+		return []any{id, "group_1", "标题", "内容", "u1", "创建者昵称", true, gTestTime}
 	}
 
 	// Create
@@ -434,15 +436,29 @@ func TestPostgresAnnouncementLifecycle(t *testing.T) {
 		t.Fatal("create announcement exec error must propagate")
 	}
 
-	// List：2 行
+	// List：2 行（昵称列已解析，审查 P2-3）
 	stub = &groupFullStub{queryRows: map[string][][]any{queryListGroupAnnouncements: {annRow("a1"), annRow("a2")}}}
 	items, err := newGroupsFullRepo(stub).ListAnnouncements(ctx, "group_1")
 	if err != nil || len(items) != 2 || !items[0].IsPinned || items[0].CreatedAt == "" {
 		t.Fatalf("list announcements: %#v err=%v", items, err)
 	}
+	if items[0].CreatedBy.UserID != "u1" || items[0].CreatedBy.Nickname != "创建者昵称" {
+		t.Fatalf("list announcements created_by: %#v", items[0].CreatedBy)
+	}
 	stub = &groupFullStub{queryRowsErr: map[string]error{queryListGroupAnnouncements: errors.New("boom")}}
 	if _, err := newGroupsFullRepo(stub).ListAnnouncements(ctx, "group_1"); err == nil {
 		t.Fatal("list announcements query error must propagate")
+	}
+
+	// GetAnnouncement（审查 P2-2）：命中与未命中（ErrNoRows → found=false）。
+	stub = &groupFullStub{queryRow: map[string][]any{queryGetGroupAnnouncement: annRow("a1")}}
+	item, found, err := newGroupsFullRepo(stub).GetAnnouncement(ctx, "group_1", "a1")
+	if err != nil || !found || item.AnnouncementID != "a1" || item.CreatedBy.Nickname != "创建者昵称" {
+		t.Fatalf("get announcement: %#v found=%v err=%v", item, found, err)
+	}
+	stub = &groupFullStub{queryRowErr: map[string]error{queryGetGroupAnnouncement: pgx.ErrNoRows}}
+	if _, found, err := newGroupsFullRepo(stub).GetAnnouncement(ctx, "group_1", "missing"); err != nil || found {
+		t.Fatalf("get announcement missing: found=%v err=%v", found, err)
 	}
 
 	// Update（全字段 + nil 字段）
@@ -721,7 +737,7 @@ func TestPostgresRowsErrPaths(t *testing.T) {
 		row  []any
 		call func(repo *PostgresRepository) error
 	}{
-		{queryListGroupAnnouncements, []any{"a1", "g", "t", "c", "u1", false, gTestTime},
+		{queryListGroupAnnouncements, []any{"a1", "g", "t", "c", "u1", "昵称", false, gTestTime},
 			func(r *PostgresRepository) error { _, err := r.ListAnnouncements(ctx, "g"); return err }},
 		{queryListGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "申请人", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListApplications(ctx, "g", nil, 20, ""); return err }},

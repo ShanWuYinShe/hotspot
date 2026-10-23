@@ -76,9 +76,13 @@ LIMIT $5`
 		       COALESCE(mem.members_count, 0),
 		       (SELECT COUNT(*)::int FROM group_members gm JOIN users u ON u.user_id = gm.user_id WHERE gm.group_id = g.group_id AND u.presence_status = 'online') AS online_members_count,
 		       gm.role, gm.joined_at, gm.is_muted, gm.muted_until, gm.is_pinned,
+		       -- 未读数排除已撤回消息（审查 P2-6，对齐私聊 queryUnread-
+		       -- PrivateMessageCount 口径）：撤回消息晚于已读游标时会被永久
+		       -- 计入未读，客户端徽标多计且不会自愈。
 		       COALESCE((
 		         SELECT COUNT(*) FROM group_messages m
 		         WHERE m.group_id = g.group_id
+		           AND m.is_recalled = FALSE
 		           AND (grs.last_read_sent_at IS NULL OR m.sent_at > grs.last_read_sent_at)
 		       ), 0) AS unread_count,
 		       lm.message_id, lm.type, lm.content, lm.sender_user_id, lm.sender_nickname, lm.sender_avatar_url, lm.sent_at
@@ -284,11 +288,28 @@ WHERE group_id = $1`
 INSERT INTO group_announcements (announcement_id, group_id, title, content, created_by_user_id, is_pinned, created_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
+	// 公告列表（审查 P2-2/P2-3）：
+	// - created_by 昵称经 users 表 LEFT JOIN 解析（此前占位填裸 user_id，
+	//   公告列表直接展示内部 ID，与申请/邀请/封禁列表口径漂移）；
+	// - 尾部 LIMIT 50 为硬上限（与 announcementsListHardCap 常量同步维护；
+	//   该列表挂匿名端点 /public/v1/groups/announcements/fetch，此前无界）。
+	//   置顶优先的排序不变，截断只影响超长尾部。
+	// 每群公告数量上限（AppConfig 决策）本轮不加，登记待后续。
 	queryListGroupAnnouncements = `
-SELECT announcement_id, group_id, title, content, created_by_user_id, is_pinned, created_at
+SELECT announcement_id, group_id, title, content, created_by_user_id, COALESCE(u.nickname, created_by_user_id), is_pinned, created_at
 FROM group_announcements
+LEFT JOIN users u ON u.user_id = group_announcements.created_by_user_id
 WHERE group_id = $1 AND deleted_at IS NULL
-ORDER BY is_pinned DESC, created_at DESC, announcement_id DESC`
+ORDER BY is_pinned DESC, created_at DESC, announcement_id DESC
+LIMIT 50`
+
+	// GetAnnouncement 直查（审查 P2-2）：UpdateAnnouncement 更新后取回完整
+	// 对象用，归属双键（IDOR 防护与 update/delete 同口径），昵称同 List 解析。
+	queryGetGroupAnnouncement = `
+SELECT announcement_id, group_id, title, content, created_by_user_id, COALESCE(u.nickname, created_by_user_id), is_pinned, created_at
+FROM group_announcements
+LEFT JOIN users u ON u.user_id = group_announcements.created_by_user_id
+WHERE announcement_id = $1 AND group_id = $2 AND deleted_at IS NULL`
 
 	// 公告更新/删除带归属双键：groupID 是授权锚点，仅按全局唯一
 	// announcement_id 定位会让 A 群管理员操作 B 群公告（IDOR）。

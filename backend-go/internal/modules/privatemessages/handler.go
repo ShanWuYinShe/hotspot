@@ -194,13 +194,19 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 // messageContentMaxRunes 契约级上限（api_spec_base.md 字段校验约束：content(message) 1-5000 字符）。
 const messageContentMaxRunes = 5000
 
+// content 长度上限对所有类型生效（审查 P2-4，对齐 Update 路径与群聊侧）：
+// 媒体/share 类型此前不校验，可携带超长 content 绕过 5000 字契约入库并
+// 广播给对端。仅 text 要求 content 非空；媒体类型的可选 content 同受约束。
 func isValidSendRequest(req SendPrivateMessageRequest) bool {
 	if req.TargetUserID == "" || req.Type == "" {
 		return false
 	}
+	if utf8.RuneCountInString(req.Content) > messageContentMaxRunes {
+		return false
+	}
 	switch req.Type {
 	case "text":
-		return req.Content != "" && utf8.RuneCountInString(req.Content) <= messageContentMaxRunes
+		return req.Content != ""
 	case "image", "video", "audio", "file":
 		return req.FileID != ""
 	case "share":

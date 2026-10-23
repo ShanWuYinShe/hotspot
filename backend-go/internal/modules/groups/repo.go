@@ -29,6 +29,10 @@ type Repository interface {
 	GetGroupPasswordHash(context.Context, string) (*string, error)
 	CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error)
 	ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error)
+	// GetAnnouncement 按归属双键（group_id + announcement_id）直查单条公告。
+	// UpdateAnnouncement 更新后取回完整对象用它，替代全量 List 再线性扫描
+	// 找回单条（审查 P2-2）。不存在/跨群归属时 found=false。
+	GetAnnouncement(ctx context.Context, groupID, announcementID string) (item GroupAnnouncementItem, found bool, err error)
 	UpdateAnnouncement(context.Context, string, UpdateGroupAnnouncementRequest) error
 	DeleteAnnouncement(context.Context, string, string) error
 	ListApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error)
