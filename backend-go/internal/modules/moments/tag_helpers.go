@@ -2,6 +2,7 @@ package moments
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -85,10 +86,27 @@ func insertMomentTags(ctx context.Context, queryable persistence.Queryable, mome
 	if len(allowed) != len(tags) {
 		return nil, ErrBlockedTag
 	}
-	for _, tag := range allowed {
-		if err := queryable.Exec(ctx, queryInsertMomentTagAssignment, momentID, tag, createdAt); err != nil {
-			return nil, err
+	if len(allowed) == 0 {
+		return nil, nil
+	}
+	// 单条多值 INSERT 替代逐 tag Exec：此前 ≤10 个标签 = 事务内 ≤10 次往返
+	// （审查 P2-15，参照 insertMomentImages 的批量写法）。ON CONFLICT 与
+	// 逐条写入的幂等语义一致（moment_tags 主键 (moment_id, tag_name)）。
+	var sb strings.Builder
+	sb.WriteString("INSERT INTO moment_tags (moment_id, tag_name, created_at) VALUES ")
+	args := make([]any, 0, 2+len(allowed))
+	args = append(args, momentID, createdAt)
+	for i, tag := range allowed {
+		if i > 0 {
+			sb.WriteString(", ")
 		}
+		// $1=momentID, $2=createdAt，其后每个 tag 一个占位符
+		sb.WriteString(fmt.Sprintf("($1, $%d, $2)", i+3))
+		args = append(args, tag)
+	}
+	sb.WriteString(" ON CONFLICT (moment_id, tag_name) DO NOTHING")
+	if err := queryable.Exec(ctx, sb.String(), args...); err != nil {
+		return nil, err
 	}
 	return allowed, nil
 }

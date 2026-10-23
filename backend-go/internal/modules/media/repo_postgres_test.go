@@ -95,6 +95,8 @@ func TestPostgresRepositoryGetAndCompleteUpload(t *testing.T) {
 	completedAt := time.Date(2026, 3, 30, 1, 0, 0, 0, time.UTC)
 	backend := &mediaBackendStub{queryRows: map[string]mediaRowValues{
 		queryGetUploadSession: {values: []any{"upload_1", "u1", "uploads/u1/upload_1.png", "a.png", 100, "image/png", CategoryAvatar, "", "completed", "file_1", 100, "image/png", "", 0, 0, 0, "key_1", createdAt, completedAt}},
+		// Complete 改为条件 UPDATE ... RETURNING upload_id 单往返（审查 P2-19）。
+		queryCompleteUploadSession: {values: []any{"upload_1"}},
 	}}
 	repo := NewPostgresRepository(newMediaFactory(backend))
 
@@ -108,12 +110,12 @@ func TestPostgresRepositoryGetAndCompleteUpload(t *testing.T) {
 	if !upload.Completed || upload.File.FileID != "file_1" || upload.CompletedIdempotencyKey != "key_1" {
 		t.Fatalf("unexpected upload: %#v", upload)
 	}
-	completed, ok, err := repo.Complete(context.Background(), "upload_1", UploadedMedia{FileID: "file_1", FileSize: 100, MimeType: "image/png"}, "key_1")
+	ok, err = repo.Complete(context.Background(), "upload_1", UploadedMedia{FileID: "file_1", FileSize: 100, MimeType: "image/png"}, "key_1")
 	if err != nil || !ok {
 		t.Fatalf("Complete returned ok=%v err=%v", ok, err)
 	}
-	if completed.File.FileID != "file_1" {
-		t.Fatalf("unexpected completed upload: %#v", completed)
+	if len(backend.queryCalls) == 0 || backend.queryCalls[len(backend.queryCalls)-1] != queryCompleteUploadSession {
+		t.Fatalf("Complete must use the conditional RETURNING update, calls=%v", backend.queryCalls)
 	}
 }
 
@@ -127,12 +129,16 @@ func TestPostgresRepositoryGetReturnsFalseOnNoRows(t *testing.T) {
 }
 
 func TestPostgresRepositoryPropagatesExecErrors(t *testing.T) {
-	backend := &mediaBackendStub{execErrs: map[string]error{queryInsertUploadSession: errors.New("insert boom"), queryCompleteUploadSession: errors.New("complete boom")}}
+	backend := &mediaBackendStub{
+		execErrs:   map[string]error{queryInsertUploadSession: errors.New("insert boom")},
+		queryRows:  map[string]mediaRowValues{queryCompleteUploadSession: {err: errors.New("complete boom")}},
+		queryCalls: nil,
+	}
 	repo := NewPostgresRepository(newMediaFactory(backend))
 	if err := repo.Save(context.Background(), pendingUpload{UploadID: "upload_1"}); err == nil {
 		t.Fatal("expected insert error")
 	}
-	if _, _, err := repo.Complete(context.Background(), "upload_1", UploadedMedia{FileID: "file_1", FileSize: 100, MimeType: "image/png"}, "key_1"); err == nil {
+	if _, err := repo.Complete(context.Background(), "upload_1", UploadedMedia{FileID: "file_1", FileSize: 100, MimeType: "image/png"}, "key_1"); err == nil {
 		t.Fatal("expected complete error")
 	}
 }

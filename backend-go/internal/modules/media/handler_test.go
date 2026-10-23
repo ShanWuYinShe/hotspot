@@ -31,8 +31,8 @@ func (r *mediaErrorRepo) ListStaleUploads(context.Context, time.Time, int) ([]pe
 }
 func (r *mediaErrorRepo) DeleteUploadRow(context.Context, string) error { return nil }
 
-func (r *mediaErrorRepo) Complete(context.Context, string, UploadedMedia, string) (pendingUpload, bool, error) {
-	return pendingUpload{}, false, r.completeErr
+func (r *mediaErrorRepo) Complete(context.Context, string, UploadedMedia, string) (bool, error) {
+	return false, r.completeErr
 }
 func (r *mediaErrorRepo) ResolveByFileIDs(context.Context, []string, string, MediaCategory) (map[string]MediaAsset, error) {
 	return nil, r.getErr

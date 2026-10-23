@@ -31,19 +31,23 @@ func (r *InMemoryRepository) Get(ctx context.Context, uploadID string) (pendingU
 	return upload, ok, nil
 }
 
-func (r *InMemoryRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, idempotencyKey string) (pendingUpload, bool, error) {
+func (r *InMemoryRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, idempotencyKey string) (bool, error) {
 	_ = ctx
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	upload, ok := r.uploads[uploadID]
 	if !ok {
-		return pendingUpload{}, false, nil
+		return false, nil
+	}
+	// 与 PG 实现的 status <> 'completed' 守卫同口径：已完成的会话不重复改写。
+	if upload.Completed {
+		return false, nil
 	}
 	upload.Completed = true
 	upload.File = file
 	upload.CompletedIdempotencyKey = idempotencyKey
 	r.uploads[uploadID] = upload
-	return upload, true, nil
+	return true, nil
 }
 
 func (r *InMemoryRepository) ResolveByFileIDs(_ context.Context, fileIDs []string, userID string, category MediaCategory) (map[string]MediaAsset, error) {

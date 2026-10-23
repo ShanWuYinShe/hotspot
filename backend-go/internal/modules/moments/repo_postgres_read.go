@@ -17,23 +17,14 @@ func (r *PostgresRepository) Get(ctx context.Context, momentID string) (MomentIt
 	if !ok {
 		return MomentItem{}, false, persistence.ErrNotImplemented
 	}
-	item, err := scanMomentRow(queryable.QueryRow(ctx, queryGetMoment, momentID))
+	// 单次往返取齐基础列 + tags + mentions（审查 P2-16）；此前 3 次往返。
+	item, err := scanMomentRowWithAssociations(queryable.QueryRow(ctx, queryGetMoment, momentID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return MomentItem{}, false, nil
 		}
 		return MomentItem{}, false, fmt.Errorf("moments.Get scan: %w", err)
 	}
-	tagsByMomentID, err := loadMomentTags(ctx, queryable, []string{momentID})
-	if err != nil {
-		return MomentItem{}, false, fmt.Errorf("moments.Get tags: %w", err)
-	}
-	item.Tags = tagsByMomentID[momentID]
-	mentionsByMomentID, err := loadMomentMentions(ctx, queryable, []string{momentID})
-	if err != nil {
-		return MomentItem{}, false, fmt.Errorf("moments.Get mentions: %w", err)
-	}
-	item.Mentions = mentionsByMomentID[momentID]
 	return item, true, nil
 }
 
@@ -196,6 +187,13 @@ func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState
 	if err := scanner.Scan(dest...); err != nil {
 		return MomentItem{}, time.Time{}, false, fmt.Errorf("moments.scanMomentRow scan: %w", err)
 	}
+	item = momentItemFromRow(item, userID, nickname, createdAt, latitude, longitude, locationName, privacyLevel)
+	return item, createdAt.UTC(), isFavorited, nil
+}
+
+// momentItemFromRow 把已扫描的基础列填充为 MomentItem（scanMomentRowParts 与
+// scanMomentRowWithAssociations 共用，避免两处展示字段口径漂移）。
+func momentItemFromRow(item MomentItem, userID, nickname string, createdAt time.Time, latitude, longitude float64, locationName, privacyLevel string) MomentItem {
 	// nickname 已通过 SQL 的 COALESCE(u.nickname, '') 兜底
 	// 若 SQL 未提供 nickname（兼容性回退），降级为 userID
 	if nickname == "" {
@@ -208,7 +206,25 @@ func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 	item.PrivacyLevel = privacyLevel
-	return item, createdAt.UTC(), isFavorited, nil
+	return item
+}
+
+// scanMomentRowWithAssociations 扫描 queryGetMoment 的行：基础列 + tags +
+// mentions（两个 LATERAL 的 ARRAY_AGG 列）。对应详情单条读取路径。
+func scanMomentRowWithAssociations(scanner interface{ Scan(...any) error }) (MomentItem, error) {
+	var item MomentItem
+	var userID, nickname, locationName, privacyLevel string
+	var createdAt time.Time
+	var latitude, longitude float64
+	var tags, mentions []string
+	dest := []any{&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted, &tags, &mentions}
+	if err := scanner.Scan(dest...); err != nil {
+		return MomentItem{}, fmt.Errorf("moments.scanMomentRowWithAssociations scan: %w", err)
+	}
+	item = momentItemFromRow(item, userID, nickname, createdAt, latitude, longitude, locationName, privacyLevel)
+	item.Tags = tags
+	item.Mentions = mentions
+	return item, nil
 }
 
 func loadMomentTags(ctx context.Context, queryable persistence.Queryable, momentIDs []string) (map[string][]string, error) {

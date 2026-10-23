@@ -228,22 +228,30 @@ func (s *Service) CommitComplete(ctx context.Context, uploadID string, file Uplo
 	if !ok || principal.UserID == "" {
 		return UploadedMedia{}, ErrInvalidMediaRequest
 	}
-	// 并发/重复提交下已完成直接返回既有映射（与 PrepareComplete 的幂等口径一致）。
-	if upload, found, err := s.repo.Get(ctx, uploadID); err != nil {
-		observability.L().Error("media.complete get failed", "error", err, "upload_id", uploadID)
-		return UploadedMedia{}, err
-	} else if found && upload.Completed {
-		return upload.File, nil
-	}
-	completed, ok, err := s.repo.Complete(ctx, uploadID, file, idempotency.KeyFromContext(ctx))
+	// 单次往返：条件 UPDATE（status <> 'completed'）成功即返回——file 元数据
+	// 由 PrepareComplete 校验后传入，正是本次写入库的值（审查 P2-19：此前
+	// 先 Get 判幂等、UPDATE 后再 Get 回读，每文件 3 次往返）。
+	updated, err := s.repo.Complete(ctx, uploadID, file, idempotency.KeyFromContext(ctx))
 	if err != nil {
 		observability.L().Error("media.complete save failed", "error", err, "upload_id", uploadID)
 		return UploadedMedia{}, err
 	}
-	if !ok {
+	if updated {
+		return file, nil
+	}
+	// 未更新：会话不存在，或已被并发/重复请求完成——回读一次区分并保持幂等。
+	upload, found, err := s.repo.Get(ctx, uploadID)
+	if err != nil {
+		observability.L().Error("media.complete get failed", "error", err, "upload_id", uploadID)
+		return UploadedMedia{}, err
+	}
+	if !found {
 		return UploadedMedia{}, ErrUploadNotFound
 	}
-	return completed.File, nil
+	if upload.Completed {
+		return upload.File, nil
+	}
+	return UploadedMedia{}, ErrUploadNotFound
 }
 
 // ResolveMomentImages resolves the given file_ids to their stored media assets,

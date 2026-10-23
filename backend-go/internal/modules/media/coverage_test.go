@@ -31,9 +31,9 @@ func (r *mediaErrRepo) ListStaleUploads(context.Context, time.Time, int) ([]pend
 }
 func (r *mediaErrRepo) DeleteUploadRow(context.Context, string) error { return nil }
 
-func (r *mediaErrRepo) Complete(ctx context.Context, uploadID string, media UploadedMedia, storageKey string) (pendingUpload, bool, error) {
+func (r *mediaErrRepo) Complete(ctx context.Context, uploadID string, media UploadedMedia, storageKey string) (bool, error) {
 	if r.err != nil {
-		return pendingUpload{}, false, r.err
+		return false, r.err
 	}
 	return r.repo.Complete(ctx, uploadID, media, storageKey)
 }

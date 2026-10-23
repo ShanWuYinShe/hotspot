@@ -6,10 +6,27 @@ SELECT COALESCE(nickname, '')
 FROM users
 WHERE user_id = $1`
 
+	// queryGetMoment 一次往返取齐 moment + tags + mentions（审查 P2-16：此前
+	// 详情路径 3 次往返——主查询 + loadMomentTags + loadMomentMentions）。
+	// 两个 LATERAL 的 ARRAY_AGG 排序与共享 loader（tag_name ASC /
+	// mentioned_user_id ASC）一致，避免详情与列表两条路径的 tag/mention 顺序
+	// 出现口径差异。
 	queryGetMoment = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted,
+       COALESCE(t.tags, '{}'),
+       COALESCE(mn.mentions, '{}')
 FROM moments m
 LEFT JOIN users u ON u.user_id = m.user_id
+LEFT JOIN LATERAL (
+    SELECT ARRAY_AGG(mt.tag_name ORDER BY mt.tag_name) AS tags
+    FROM moment_tags mt
+    WHERE mt.moment_id = m.moment_id
+) t ON TRUE
+LEFT JOIN LATERAL (
+    SELECT ARRAY_AGG(mm.mentioned_user_id ORDER BY mm.mentioned_user_id) AS mentions
+    FROM moment_mentions mm
+    WHERE mm.moment_id = m.moment_id
+) mn ON TRUE
 WHERE m.moment_id = $1`
 
 	queryListMyMoments = `

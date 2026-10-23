@@ -142,7 +142,7 @@ func TestInMemoryRepositoryResolveAndMetaMethods(t *testing.T) {
 		t.Fatalf("save: %v", err)
 	}
 	completed := UploadedMedia{FileID: "file_resolve", FileSize: 100, MimeType: "image/png"}
-	if _, found, err := repo.Complete(context.Background(), "upload_resolve", completed, ""); err != nil || !found {
+	if found, err := repo.Complete(context.Background(), "upload_resolve", completed, ""); err != nil || !found {
 		t.Fatalf("complete: found=%v err=%v", found, err)
 	}
 
@@ -172,7 +172,7 @@ func TestServiceResolveMomentImagesAndAvatar(t *testing.T) {
 	if err := repo.Save(context.Background(), pendingUpload{UploadID: "upload_rm", UserID: "u1", StorageKey: "uploads/u1/rm.png", FileName: "r.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryMomentImage}); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	if _, found, err := repo.Complete(context.Background(), "upload_rm", UploadedMedia{FileID: "file_rm", FileSize: 100, MimeType: "image/png"}, ""); err != nil || !found {
+	if found, err := repo.Complete(context.Background(), "upload_rm", UploadedMedia{FileID: "file_rm", FileSize: 100, MimeType: "image/png"}, ""); err != nil || !found {
 		t.Fatalf("complete: found=%v err=%v", found, err)
 	}
 	assets, err := svc.ResolveMomentImages(context.Background(), []string{"file_rm"}, "u1")

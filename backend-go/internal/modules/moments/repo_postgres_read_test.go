@@ -50,6 +50,14 @@ func (r rowValues) Scan(dest ...any) error {
 				}
 				*d = parsed
 			}
+		case *[]string:
+			// Get 合并查询的 tags/mentions 是 text[] 列（stub 里存 []string / nil）。
+			switch v := r.values[i].(type) {
+			case []string:
+				*d = v
+			case nil:
+				*d = nil
+			}
 		}
 	}
 	return nil
@@ -86,6 +94,18 @@ func newBackendStub() *backendStub {
 func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 	if err := b.execErrs[query]; err != nil {
 		return err
+	}
+	// 标签写入已批量化为动态多值 INSERT（审查 P2-15），无法按常量精确匹配；
+	// 前缀识别后 args = [$1 momentID, $2 createdAt, tag...]。
+	if strings.HasPrefix(query, "INSERT INTO moment_tags (moment_id, tag_name, created_at) VALUES ") {
+		momentID := args[0].(string)
+		item := b.moments[momentID]
+		for _, raw := range args[2:] {
+			item.Tags = append(item.Tags, raw.(string))
+		}
+		sort.Strings(item.Tags)
+		b.moments[momentID] = item
+		return nil
 	}
 	switch query {
 	case queryInsertMoment:
@@ -172,7 +192,8 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 		if !ok {
 			return rowValues{err: pgx.ErrNoRows}
 		}
-		return rowValues{values: []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted}}
+		// queryGetMoment 合并了 tags/mentions 两个 ARRAY_AGG 列（审查 P2-16）。
+		return rowValues{values: []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted, item.Tags, item.Mentions}}
 	default:
 		return rowValues{err: persistence.ErrNotImplemented}
 	}

@@ -101,13 +101,14 @@ func (r *PostgresRepository) Get(ctx context.Context, uploadID string) (pendingU
 	return result, true, nil
 }
 
-func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, idempotencyKey string) (pendingUpload, bool, error) {
+func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, idempotencyKey string) (bool, error) {
 	queryable, err := r.queryable(ctx)
 	if err != nil {
-		return pendingUpload{}, false, err
+		return false, err
 	}
 	completedAt := time.Now().UTC()
-	if err := queryable.Exec(ctx, queryCompleteUploadSession,
+	var returnedID string
+	if err := queryable.QueryRow(ctx, queryCompleteUploadSession,
 		uploadID,
 		"completed",
 		file.FileID,
@@ -119,10 +120,14 @@ func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file
 		nullableInt(file.Height),
 		idempotencyKey,
 		completedAt,
-	); err != nil {
-		return pendingUpload{}, false, err
+	).Scan(&returnedID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// 会话不存在，或已被其它请求完成（状态守卫 0 行）
+			return false, nil
+		}
+		return false, err
 	}
-	return r.Get(ctx, uploadID)
+	return true, nil
 }
 
 func (r *PostgresRepository) ResolveByFileIDs(ctx context.Context, fileIDs []string, userID string, category MediaCategory) (map[string]MediaAsset, error) {

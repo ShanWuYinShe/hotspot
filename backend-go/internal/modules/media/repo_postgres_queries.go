@@ -60,6 +60,9 @@ SELECT upload_id,
 FROM media_upload_sessions
 WHERE upload_id = $1`
 
+	// queryCompleteUploadSession 条件更新（已 completed 的行不再改写的幂等保障）
+	// 并用 RETURNING 判断是否命中（审查 P2-19：此前 UPDATE 后再 Get 一次拿结果，
+	// 每文件 2 次往返；调用方本已持有待写入的 file 元数据）。
 	queryCompleteUploadSession = `
 UPDATE media_upload_sessions
 SET status = $2,
@@ -72,7 +75,8 @@ SET status = $2,
     height = $9,
     completed_idempotency_key = $10,
     completed_at = $11
-WHERE upload_id = $1`
+WHERE upload_id = $1 AND status <> 'completed'
+RETURNING upload_id`
 
 	queryResolveByFileIDs = `
 SELECT file_id,

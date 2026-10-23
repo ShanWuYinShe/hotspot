@@ -24,7 +24,9 @@ type pendingUpload struct {
 type Repository interface {
 	Save(context.Context, pendingUpload) error
 	Get(context.Context, string) (pendingUpload, bool, error)
-	Complete(context.Context, string, UploadedMedia, string) (pendingUpload, bool, error)
+	// Complete 把上传会话置为 completed；updated=false 表示未更新（会话不存在或
+	// 已被并发请求完成）。调用方已持有 file 元数据，无需再读回整行。
+	Complete(ctx context.Context, uploadID string, file UploadedMedia, idempotencyKey string) (updated bool, err error)
 	// ListStaleUploads 返回超过保留期仍未完成的上传会话（retention.go GC 入口）。
 	ListStaleUploads(context.Context, time.Time, int) ([]pendingUpload, error)
 	// DeleteUploadRow 按 upload_id 删除会话行（GC 第二步，对象删除成功后）。
