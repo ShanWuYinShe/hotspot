@@ -3,7 +3,6 @@ package admin
 import (
 	"context"
 	"errors"
-	"fmt"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -258,13 +257,18 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 				"user_id", userID, "session_id", sessionID, "error", err)
 		}
 	}
-	if failedSessions > 0 {
-		return nil, fmt.Errorf("revoke %d of %d sessions after ban failed", failedSessions, len(sessionIDs))
-	}
+	// 审计先于「会话撤销失败」判定落库（审查 P2-8）：封禁状态已生效，spec
+	// 要求「封禁操作均记录审计日志」——此前失败分支 return 在 appendAudit 之前，
+	// 部分会话撤销失败会导致封禁无审计、且返回 10600 诱导管理员重试（重复封禁/
+	// 重复审计）。撤销失败降级为 Warn（逐条已留痕），不阻断封禁结果。
 	if appendAudit {
 		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.ban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("user"), TargetID: userID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.ban", "reason": strings.TrimSpace(reason), "duration_days": duration}}); err != nil {
 			return nil, err
 		}
+	}
+	if failedSessions > 0 {
+		observability.L().Warn("admin: ban applied but some sessions not revoked",
+			"user_id", userID, "failed", failedSessions, "total", len(sessionIDs))
 	}
 	return nil, nil
 }

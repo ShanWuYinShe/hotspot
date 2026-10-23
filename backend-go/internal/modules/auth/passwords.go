@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"sync"
 	"sync/atomic"
 
 	"hotspot/backend-go/internal/platform/config"
@@ -53,6 +54,37 @@ func hashPassword(password string) (string, error) {
 
 func verifyPassword(storedHash, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password)) == nil
+}
+
+// timingEqualizationHash 是「账号不存在」分支做等长 bcrypt 比对用的固定哈希
+// （审查 P2-5：时延侧信道）。响应体已防枚举（凭据错误与账号不存在同响应），
+// 但账号不存在时若直接返回，省掉约 100ms+ 的 bcrypt 计算，攻击者可据耗时
+// 探测账号是否存在。该哈希按当前 cost 惰性生成并缓存（cost 只在启动期
+// 配置，常量成本下缓存安全；cost 变更时 nextCost 标记重建）。
+var (
+	timingHashMu    sync.Mutex
+	timingHashValue string
+	timingHashCost  int32
+	timingHashDummy = "timing-equalization-dummy-password"
+)
+
+// equalizeVerifyTiming 在「账号不存在」分支执行一次与真实校验同代价的 bcrypt
+// 比对，抹平时延差异。生成哈希失败时静默跳过（不影响登录语义）。
+func equalizeVerifyTiming(password string) {
+	cost := int32(hashCost.Load())
+	timingHashMu.Lock()
+	if timingHashValue == "" || timingHashCost != cost {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(timingHashDummy), int(cost))
+		if err != nil {
+			timingHashMu.Unlock()
+			return
+		}
+		timingHashValue = string(hashed)
+		timingHashCost = cost
+	}
+	stored := timingHashValue
+	timingHashMu.Unlock()
+	_ = bcrypt.CompareHashAndPassword([]byte(stored), []byte(password))
 }
 
 // generateUserID delegates to the shared idgen package so that user IDs and

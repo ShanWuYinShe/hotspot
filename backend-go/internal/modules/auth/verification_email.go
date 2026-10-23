@@ -23,6 +23,12 @@ import (
 
 const smtpDialTimeout = 15 * time.Second
 
+// smtpSessionTimeout 是单次 SMTP 会话（含 STARTTLS/AUTH/MAIL/RCPT/DATA/QUIT）
+// 的整体 deadline（审查 P2-4）：此前只有 dial 有超时，认证后的协议交互无
+// deadline——慢/坏网关可把请求 goroutine 无限挂住（HTTP WriteTimeout 不杀
+// handler），持续占用连接与内存。
+const smtpSessionTimeout = 20 * time.Second
+
 // ErrSMSChannelUnavailable：短信通道未接网关。对外复用与配置缺失一致的
 // 业务错误码（10600 验证码服务暂不可用），不向客户端泄露细节。
 var ErrSMSChannelUnavailable = errors.New("auth: sms gateway not configured")
@@ -76,11 +82,23 @@ func (s *smtpVerificationSender) dial(ctx context.Context) (*smtp.Client, error)
 		if err != nil {
 			return nil, fmt.Errorf("auth: smtp tls dial: %w", err)
 		}
+		// 整体会话 deadline（见 smtpSessionTimeout 注释）：未设为单次协议交互
+		// 兜底，避免坏网关挂住 goroutine。
+		if err := conn.SetDeadline(time.Now().Add(smtpSessionTimeout)); err != nil {
+			_ = conn.Close()
+			return nil, fmt.Errorf("auth: smtp set deadline: %w", err)
+		}
 		return smtp.NewClient(conn, host)
 	}
 	conn, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("auth: smtp dial: %w", err)
+	}
+	// 同 465 分支：deadline 设在底层 TCP conn 上，后续 STARTTLS 包出的
+	// tls.Conn 仍继承该 deadline。
+	if err := conn.SetDeadline(time.Now().Add(smtpSessionTimeout)); err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("auth: smtp set deadline: %w", err)
 	}
 	c, err := smtp.NewClient(conn, host)
 	if err != nil {

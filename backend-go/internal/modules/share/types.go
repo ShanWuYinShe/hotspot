@@ -1,12 +1,11 @@
 package share
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"strings"
 	"time"
 
+	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/types"
 )
 
@@ -180,21 +179,22 @@ func normalizeSharePagination(p *PaginationParams) (int, string) {
 	return limit, strings.TrimSpace(p.Cursor)
 }
 
-func encodeShareCursor(cursor shareCursor) string {
-	payload, _ := json.Marshal(cursor)
-	return base64.RawURLEncoding.EncodeToString(payload)
+// shareCursorCodec 是分页游标的统一加密封装（platform/cursor，AES-GCM +
+// 命名空间）。审查 P2-12：此前本模块是全仓唯一用裸 base64(JSON) 的游标——
+// 客户端可解码甚至手工伪造 (created_at, share_id) 游标，违反 AGENTS 分页
+// 纪律「cursor 不透明」。命名空间隔离保证与其它模块游标不可互换。
+var shareCursorCodec = cursor.NewCodec("share")
+
+func encodeShareCursor(cursor shareCursor) (string, error) {
+	return shareCursorCodec.Encode(cursor)
 }
 
-func decodeShareCursor(cursor string) (*shareCursor, error) {
-	if strings.TrimSpace(cursor) == "" {
+func decodeShareCursor(raw string) (*shareCursor, error) {
+	if strings.TrimSpace(raw) == "" {
 		return nil, nil
 	}
-	decoded, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil {
-		return nil, ErrInvalidShareRequest
-	}
 	var parsed shareCursor
-	if err := json.Unmarshal(decoded, &parsed); err != nil {
+	if err := shareCursorCodec.Decode(strings.TrimSpace(raw), &parsed); err != nil {
 		return nil, ErrInvalidShareRequest
 	}
 	if parsed.CreatedAt == "" || parsed.ShareID == "" {

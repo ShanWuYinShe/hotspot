@@ -123,7 +123,10 @@ func (r *PostgresRepository) List(ctx context.Context, query listSharesQuery) (P
 	page := PaginatedShares{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
-		c := encodeShareCursor(shareCursor{CreatedAt: last.CreatedAt, ShareID: last.ShareID})
+		c, err := encodeShareCursor(shareCursor{CreatedAt: last.CreatedAt, ShareID: last.ShareID})
+		if err != nil {
+			return PaginatedShares{}, err
+		}
 		page.NextCursor = &c
 		items = items[:query.Limit]
 	}

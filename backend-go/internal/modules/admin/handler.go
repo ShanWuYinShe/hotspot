@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -22,7 +21,7 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.GetMe(r.Context())
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -39,7 +38,7 @@ func (h *Handler) ListPermissions(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.ListPermissions(r.Context())
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -56,7 +55,7 @@ func (h *Handler) ListRoles(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.ListRoles(r.Context())
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -74,7 +73,7 @@ func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.CreateRole(withRequest(r.Context(), r), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -92,7 +91,7 @@ func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.UpdateRole(withRequest(r.Context(), r), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -110,7 +109,7 @@ func (h *Handler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.DeleteRole(withRequest(r.Context(), r), req.RoleID)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -128,7 +127,7 @@ func (h *Handler) SetRolePermissions(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.SetRolePermissions(withRequest(r.Context(), r), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -146,7 +145,7 @@ func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.ListAdmins(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -164,7 +163,7 @@ func (h *Handler) GrantAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.GrantAdmin(withRequest(r.Context(), r), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -182,7 +181,7 @@ func (h *Handler) RevokeAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.RevokeAdmin(withRequest(r.Context(), r), req.UserID)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -200,7 +199,7 @@ func (h *Handler) ListAuditLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.ListAuditLogs(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -218,7 +217,7 @@ func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.SearchUsers(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -236,7 +235,7 @@ func (h *Handler) OpenAdminUser(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.OpenAdminUser(r.Context(), req.UserID)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -254,7 +253,7 @@ func (h *Handler) SetUserBan(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.SetUserBan(withRequest(r.Context(), r), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -272,7 +271,7 @@ func (h *Handler) SearchGroups(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.SearchGroups(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -290,7 +289,7 @@ func (h *Handler) OpenAdminGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.OpenAdminGroup(r.Context(), req.GroupID)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -308,7 +307,7 @@ func (h *Handler) DismissGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.DismissGroup(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -326,7 +325,7 @@ func (h *Handler) SearchReports(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.SearchReports(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -344,7 +343,7 @@ func (h *Handler) HandleReport(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.HandleReport(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -361,7 +360,7 @@ func (h *Handler) GetAppConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.GetAppConfig(r.Context())
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -379,7 +378,7 @@ func (h *Handler) UpdateAppConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.UpdateAppConfig(withRequest(r.Context(), r), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -397,7 +396,7 @@ func (h *Handler) SearchTags(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.SearchTags(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -418,7 +417,7 @@ func (h *Handler) SetTagBan(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.SetTagBan(withRequest(r.Context(), r), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -436,7 +435,7 @@ func (h *Handler) ListAdminAnnouncements(w http.ResponseWriter, r *http.Request)
 	}
 	payload, apiErr, err := h.service.ListAdminAnnouncements(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -481,7 +480,7 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.UpdateAnnouncement(withRequest(r.Context(), r), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -500,7 +499,7 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	}
 	apiErr, err := h.service.DeleteAnnouncement(withRequest(r.Context(), r), req.AnnouncementID)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -518,7 +517,7 @@ func (h *Handler) StatsGeo(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.StatsGeo(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -536,7 +535,7 @@ func (h *Handler) StatsGeoDrilldown(w http.ResponseWriter, r *http.Request) {
 	}
 	payload, apiErr, err := h.service.StatsGeoDrilldown(r.Context(), req)
 	if err != nil {
-		h.writeUnavailable(w, r)
+		h.writeUnavailable(w, r, err)
 		return
 	}
 	if apiErr != nil {
@@ -555,12 +554,13 @@ func (h *Handler) writeAPIError(w http.ResponseWriter, r *http.Request, err *htt
 	httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 }
 
-func (h *Handler) writeUnavailable(w http.ResponseWriter, r *http.Request) {
-	observability.L().Error("handler error", "method", handlerMethodName(r), "error", errHandlerUnavailable, "request_id", observability.RequestIDFromContext(r.Context()))
+// writeUnavailable 统一 10600 出口。err 为底层真实错误（审查 P2-10：此前签名
+// 不收 err，日志只记合成 sentinel，DB/基础设施故障的根因不入日志，排障时只能
+// 看到「服务暂时不可用」）。对外响应仍不透传内部细节（spec 禁止）。
+func (h *Handler) writeUnavailable(w http.ResponseWriter, r *http.Request, err error) {
+	observability.L().Error("handler error", "method", handlerMethodName(r), "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
 	httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
 }
-
-var errHandlerUnavailable = errors.New("服务暂时不可用")
 
 func handlerMethodName(r *http.Request) string {
 	rctx := chi.RouteContext(r.Context())

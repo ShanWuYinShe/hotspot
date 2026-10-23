@@ -139,7 +139,13 @@ func (r *PostgresRepository) Authenticate(ctx context.Context, loginID, password
 	if err != nil {
 		return Account{}, fmt.Errorf("auth.Authenticate: %w", err)
 	}
-	if !found || !verifyPassword(record.PasswordHash, password) {
+	if !found {
+		// 账号不存在：做一次同代价的 bcrypt 比对，抹平与「密码错误」分支的
+		// 时延差异（审查 P2-5 时延侧信道；响应体两者同为 ErrInvalidCredentials）。
+		equalizeVerifyTiming(password)
+		return Account{}, ErrInvalidCredentials
+	}
+	if !verifyPassword(record.PasswordHash, password) {
 		return Account{}, ErrInvalidCredentials
 	}
 	return record.Account, nil
@@ -164,6 +170,9 @@ func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID st
 	if _, found, err := r.accountByLoginID(ctx, queryable, loginID); err != nil {
 		return "", fmt.Errorf("auth.CreatePasswordReset: account lookup: %w", err)
 	} else if !found {
+		// 账号不存在：与 Authenticate 同口径做一次等代价 bcrypt 比对
+		//（审查 P2-5 时延侧信道），响应体已按防枚举统一成功。
+		equalizeVerifyTiming("")
 		return "", nil
 	}
 	requestID, err := generateUserID()
