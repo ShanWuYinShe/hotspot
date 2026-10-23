@@ -17,6 +17,16 @@ const RefreshRotationGrace = 30 * time.Second
 // rotated_to IS NULL 守卫 0 行命中）。调用方应重读 store 走宽限期分支。
 var ErrRefreshRotationConflict = errors.New("refresh token already rotated concurrently")
 
+// token 生命周期内的预期业务拒绝 sentinel（消息与原 errors.New 字面量一致，
+// 仅收敛为可 errors.Is 识别的导出值）：调用方据此区分业务失败（Warn 级
+// 日志）与基础设施故障（Error 级），避免自然到期的刷新刷屏 Error 日志。
+var (
+	ErrInvalidRefreshToken   = errors.New("invalid refresh token")
+	ErrExpiredRefreshToken   = errors.New("expired refresh token")
+	ErrRevokedSession        = errors.New("revoked session")
+	ErrRotationWindowExpired = errors.New("expired refresh rotation window")
+)
+
 // SessionIDForRefreshToken 只读解析 refresh token 对应的会话（不轮换、不产生
 // 副作用），供设备绑定等预校验前置于 RefreshSession：不匹配的请求应在轮换前
 // 被拒绝，否则伪造参数也能触发一次 token 轮换并把旧 token 推入宽限期。
@@ -49,16 +59,16 @@ func (s *Service) RefreshSession(ctx context.Context, refreshToken string) (Auth
 		return AuthResult{}, err
 	}
 	if !ok {
-		return AuthResult{}, errors.New("invalid refresh token")
+		return AuthResult{}, ErrInvalidRefreshToken
 	}
 	now := time.Now().UTC()
 	if now.After(session.ExpiresAt) {
-		return AuthResult{}, errors.New("expired refresh token")
+		return AuthResult{}, ErrExpiredRefreshToken
 	}
 	if storedSession, ok, err := s.sessions.Get(ctx, session.SessionID); err != nil {
 		return AuthResult{}, err
 	} else if !ok || storedSession.RevokedAt != nil {
-		return AuthResult{}, errors.New("revoked session")
+		return AuthResult{}, ErrRevokedSession
 	}
 	if session.RotatedTo != "" {
 		return s.resultFromRotated(ctx, session, now)
@@ -97,7 +107,7 @@ func (s *Service) RefreshSession(ctx context.Context, refreshToken string) (Auth
 				return AuthResult{}, err
 			}
 			if !ok || rotated.RotatedTo == "" {
-				return AuthResult{}, errors.New("invalid refresh token")
+				return AuthResult{}, ErrInvalidRefreshToken
 			}
 			return s.resultFromRotated(ctx, rotated, now)
 		}
@@ -126,7 +136,7 @@ func (s *Service) resultFromRotated(ctx context.Context, session RefreshSession,
 		}
 		observability.L().Warn("refresh token reuse detected, session chain revoked",
 			"user_id", session.UserID, "session_id", session.SessionID)
-		return AuthResult{}, errors.New("expired refresh rotation window")
+		return AuthResult{}, ErrRotationWindowExpired
 	}
 	rotated, ok, err := s.refreshes.Get(ctx, session.RotatedTo)
 	if err != nil {
@@ -143,10 +153,10 @@ func (s *Service) resultFromRotated(ctx context.Context, session RefreshSession,
 	if decErr != nil || gracePlaintext == "" {
 		observability.L().Warn("refresh grace escrow decrypt failed",
 			"user_id", session.UserID, "session_id", session.SessionID, "error", decErr)
-		return AuthResult{}, errors.New("invalid refresh token")
+		return AuthResult{}, ErrInvalidRefreshToken
 	}
 	if !ok {
-		return AuthResult{}, errors.New("invalid refresh token")
+		return AuthResult{}, ErrInvalidRefreshToken
 	}
 	accessToken, accessExp, err := s.tokens.MintAccessToken(rotated.UserID, rotated.SessionID, s.accessTTL)
 	if err != nil {

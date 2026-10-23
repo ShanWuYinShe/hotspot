@@ -118,10 +118,9 @@ func scanFriendRow(scanner interface{ Scan(...any) error }) (RelatedUserItem, ti
 	var avatarURL string
 	var presenceStatus string
 	var lastOnline time.Time
-	var sortableLastOnline time.Time
 	var followedAt, followedBackAt time.Time
 	var remark string
-	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &presenceStatus, &lastOnline, &sortableLastOnline, &remark, &followedAt, &followedBackAt); err != nil {
+	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &presenceStatus, &lastOnline, &remark, &followedAt, &followedBackAt); err != nil {
 		return RelatedUserItem{}, time.Time{}, err
 	}
 	item.User.User.AvatarURL = types.StrPtr(avatarURL)
@@ -142,9 +141,8 @@ func scanFollowingRow(scanner interface{ Scan(...any) error }) (RelatedUserItem,
 	var followedAt time.Time
 	var presenceStatus string
 	var lastOnline time.Time
-	var sortableLastOnline time.Time
 	var remark string
-	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &presenceStatus, &lastOnline, &sortableLastOnline, &remark); err != nil {
+	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &presenceStatus, &lastOnline, &remark); err != nil {
 		return RelatedUserItem{}, time.Time{}, err
 	}
 	item.User.User.AvatarURL = types.StrPtr(avatarURL)
@@ -163,8 +161,7 @@ func scanFollowerRow(scanner interface{ Scan(...any) error }) (RelatedUserItem, 
 	var followedAt time.Time
 	var presenceStatus string
 	var lastOnline time.Time
-	var sortableLastOnline time.Time
-	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &presenceStatus, &lastOnline, &sortableLastOnline); err != nil {
+	if err := scanner.Scan(&item.User.User.UserID, &item.User.User.Nickname, &avatarURL, &followedAt, &presenceStatus, &lastOnline); err != nil {
 		return RelatedUserItem{}, time.Time{}, err
 	}
 	item.User.User.AvatarURL = types.StrPtr(avatarURL)

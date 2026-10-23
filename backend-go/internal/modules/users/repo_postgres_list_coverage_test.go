@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"hotspot/backend-go/internal/platform/testdb"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -54,18 +57,21 @@ func (r *listRowsValues) Scan(dest ...any) error {
 func (r *listRowsValues) Close() error { return nil }
 func (r *listRowsValues) Err() error   { return r.err }
 
+// 行值与 queryListFriends/Following/Followers 的当前列序对齐：sortable-
+// LastOnline 列（COALESCE(u.last_online, NOW())）已随死列清理删除（审查
+// P2-25；该列此前扫描进局部变量后从未使用，且 main 上 SQL/scan 已错位）。
 func friendRow(uid string, at time.Time) []any {
-	return []any{uid, "昵称" + uid, "", "online", at, at, "", at.Add(-time.Hour), at.Add(-time.Minute)}
+	return []any{uid, "昵称" + uid, "", "online", at, "", at.Add(-time.Hour), at.Add(-time.Minute)}
 }
 
 // followingRow/followerRow：is_mutual 列已随 RelatedUserItem 契约变更删除。
 // following 行末带 remark 列（queryListFollowing 含 COALESCE(me.remark, ”)）。
 func followingRow(uid string, at time.Time) []any {
-	return []any{uid, "昵称" + uid, "", at, "offline", at, at, "备注" + uid}
+	return []any{uid, "昵称" + uid, "", at, "offline", at, "备注" + uid}
 }
 
 func followerRow(uid string, at time.Time) []any {
-	return []any{uid, "昵称" + uid, "", at, "offline", at, at}
+	return []any{uid, "昵称" + uid, "", at, "offline", at}
 }
 
 func groupRow(gid string, at time.Time) []any {
@@ -260,11 +266,18 @@ func TestUserExistsPostgres(t *testing.T) {
 	if err != nil || !exists {
 		t.Fatalf("user exists: %v err=%v", exists, err)
 	}
-	// 查无此行 → false, nil
-	repo = newUserListRepo(&userListStub{row: userRelRow{values: nil}})
+	// 查无此行 → false, nil（真实 pgx 零行返回 pgx.ErrNoRows；P2-1 后仅
+	// 该 sentinel 映射为不存在，其余错误上抛）。
+	repo = newUserListRepo(&userListStub{row: userRelRow{err: pgx.ErrNoRows}})
 	exists, err = repo.UserExists(ctx, "u1")
 	if err != nil || exists {
 		t.Fatalf("user missing: %v err=%v", exists, err)
+	}
+	// 审查 P2-1 防回归：基础设施错误（非 ErrNoRows）必须原样上抛——此前
+	// 任何错误都被当作「用户不存在」，DB 抖动会让业务端点大面积 404。
+	repo = newUserListRepo(&userListStub{row: userRelRow{err: errors.New("db down")}})
+	if _, err := repo.UserExists(ctx, "u1"); err == nil || !strings.Contains(err.Error(), "db down") {
+		t.Fatalf("infra error must propagate, got %v", err)
 	}
 }
 

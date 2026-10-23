@@ -66,6 +66,13 @@ func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsReques
 	if req.Settings.AllowPrivateChat != nil && !req.Settings.AllowPrivateChat.Valid() {
 		return fmt.Errorf("%w: allow_private_chat", ErrInvalidRequest)
 	}
+	// 枚举校验（审查 P2-19）：privacy_level ∈ public/private（spec
+	// api_spec_types.md PrivacyLevel）。非法值一旦落库是 fail-closed——
+	// 搜索侧谓词 privacy_level='public' 不命中，用户会从搜索结果中直接
+	// 消失且无任何报错，客户端还无法自救（读取后再写回仍是坏值）。
+	if req.Settings.PrivacyLevel != nil && *req.Settings.PrivacyLevel != "public" && *req.Settings.PrivacyLevel != "private" {
+		return fmt.Errorf("%w: privacy_level", ErrInvalidRequest)
+	}
 	// 列级增量更新（审查 P1-3）：只写请求携带的列——此前「读全量→patch→
 	// 全量回写」在两次并发 update_settings 交错时后写者会用旧快照覆盖
 	// 先写者刚改的其它字段。
@@ -156,7 +163,7 @@ func (s *Service) ListFriends(ctx context.Context, req ListFriendsRequest) (Pagi
 	if err != nil {
 		return PaginatedFriends{}, err
 	}
-	applyPresenceVisibilityToFriends(ctx, s.repo, result.Items)
+	applyPresenceVisibility(ctx, s.repo, result.Items)
 	if !isSelf {
 		for i := range result.Items {
 			// 查他人列表 remark 恒定 null（spec api_spec_user.md RelatedUserItem.remark）。
@@ -185,7 +192,7 @@ func (s *Service) ListFollowing(ctx context.Context, req ListFollowingRequest) (
 	if err != nil {
 		return PaginatedFollowing{}, err
 	}
-	applyPresenceVisibilityToFollowing(ctx, s.repo, result.Items)
+	applyPresenceVisibility(ctx, s.repo, result.Items)
 	if !isSelf {
 		for i := range result.Items {
 			// 查他人列表 remark 恒定 null（spec api_spec_user.md RelatedUserItem.remark）。
@@ -214,7 +221,7 @@ func (s *Service) ListFollowers(ctx context.Context, req ListFollowersRequest) (
 	if err != nil {
 		return PaginatedFollowers{}, err
 	}
-	applyPresenceVisibilityToFollowers(ctx, s.repo, result.Items)
+	applyPresenceVisibility(ctx, s.repo, result.Items)
 	for i := range result.Items {
 		// list_followers 返回 RelatedUserItem。该端点不返回备注，恒为 null。
 		result.Items[i].Remark = nil

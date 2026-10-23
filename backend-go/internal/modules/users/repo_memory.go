@@ -228,11 +228,22 @@ func (r *InMemoryRepository) SearchProfiles(_ context.Context, req SearchUsersRe
 	tag := strings.ToLower(strings.TrimSpace(req.Tag))
 	items := make([]searchProfileCandidate, 0, len(r.profiles))
 	for _, profile := range r.profiles {
+		// 对齐 PG 版 SQL 谓词（审查 P2-14）：u.is_deleted = FALSE——注销
+		// 用户的 settings 已删（走默认 Searchable=true），此前内存版会把
+		// 「已注销用户」占位行继续搜出来。
+		if profile.IsDeleted {
+			continue
+		}
 		settings, ok := r.settings[profile.UserID]
 		if !ok {
 			settings = defaultSettings()
 		}
 		if !settings.Searchable {
+			continue
+		}
+		// 对齐 PG 版谓词 us.privacy_level = 'public'：非公开用户不出现在
+		// 搜索结果（PG 版在 repo_postgres_profile.go 的 SQL 中过滤）。
+		if settings.PrivacyLevel != "" && settings.PrivacyLevel != "public" {
 			continue
 		}
 		// location_searchable：仅位置/半径维度过滤；keyword/tag 维度不受影响

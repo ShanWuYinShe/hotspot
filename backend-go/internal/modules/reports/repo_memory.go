@@ -33,11 +33,13 @@ func NewInMemoryRepository() *InMemoryRepository {
 
 func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateReportRequest, messageSnapshot *ReportSnapshot) (ReportCreated, error) {
 	now := time.Now().UTC()
+	// seq 自增必须在锁内（审查 P2-12）：此前在 mu.Lock 之外，并发 Create
+	// 是 data race（-race 可捕，且可能生成重复 ID）。
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.seq++
 	report := ReportItem{ReportID: fmt.Sprintf("report_%d_%d", now.UnixNano(), r.seq), TargetType: req.TargetType, TargetID: req.TargetID, Reason: req.Reason, Description: req.Description, Status: ReportStatusPending, CreatedAt: now.Format(time.RFC3339), MessageSnapshot: messageSnapshot}
-	r.mu.Lock()
 	r.reports[userID] = append(r.reports[userID], report)
-	r.mu.Unlock()
 	return ReportCreated{ReportID: report.ReportID}, nil
 }
 

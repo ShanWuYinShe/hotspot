@@ -253,9 +253,12 @@ func TestPostgresStatsGeoDrilldownMapping(t *testing.T) {
 	backend := &statsQueryStub{
 		totalsRow: []any{int64(0), int64(0), int64(0)},
 		rowsByQuery: map[string][][]any{
+			// limit+1 探测（审查 P2-11）：第 limit+1 行仅用于判断「还有下一页」，
+			// 不进本页——stub 按「SQL 会返回的行」供数。
 			queryAdminStatsDrilldownUsers: {
 				{"user_b", "用户B", "北京市朝阳区", 39.9, 116.4, created},
 				{"user_a", "用户A", nil, 39.91, 116.41, created.Add(-time.Minute)},
+				{"user_probe", "探测行", nil, 39.92, 116.42, created.Add(-2 * time.Minute)},
 			},
 		},
 	}
@@ -289,11 +292,37 @@ func TestPostgresStatsGeoDrilldownMapping(t *testing.T) {
 	args := backend.capturedArgs[queryAdminStatsDrilldownUsers]
 	var nilTime *time.Time
 	var nilID *string
-	if len(args) != 7 || args[0] != bucket || args[1] != geo.CellLevelShift(8) || args[2] != any(nilTime) || args[3] != any(nilTime) || args[6] != 2 {
+	if len(args) != 7 || args[0] != bucket || args[1] != geo.CellLevelShift(8) || args[2] != any(nilTime) || args[3] != any(nilTime) || args[6] != 3 {
 		t.Fatalf("unexpected drilldown args: %+v", args)
 	}
 	if args[4] != any(nilTime) || args[5] != any(nilID) {
 		t.Fatalf("first page cursor should be typed nil: %+v %+v", args[4], args[5])
+	}
+}
+
+// 审查 P2-11 防回归：桶内条数恰好等于 limit 时，探测行不存在 →
+// next_cursor 必须为 null（此前「满页即发」会产出翻到空页的幽灵游标，
+// 违反「无更多数据 next_cursor=null」契约）。
+func TestPostgresStatsGeoDrilldownExactPageHasNoNextCursor(t *testing.T) {
+	created := time.Now().UTC().Add(-time.Hour).Truncate(time.Microsecond)
+	backend := &statsQueryStub{
+		totalsRow: []any{int64(0), int64(0), int64(0)},
+		rowsByQuery: map[string][][]any{
+			queryAdminStatsDrilldownUsers: {
+				{"user_b", "用户B", nil, 39.9, 116.4, created},
+				{"user_a", "用户A", nil, 39.91, 116.41, created.Add(-time.Minute)},
+			},
+		},
+	}
+	repo := newStatsRepoWithStub(backend)
+	page, err := repo.StatsGeoDrilldown(context.Background(), geoDrilldownQuery{
+		Bucket: 1, Level: 8, EntityType: "user", Limit: 2,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(page.Items) != 2 || page.Next != nil {
+		t.Fatalf("exact-page must yield nil next_cursor: items=%d next=%+v", len(page.Items), page.Next)
 	}
 }
 

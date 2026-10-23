@@ -54,6 +54,9 @@ func TestIsValidAuthLoginID(t *testing.T) {
 
 func TestHandlerSendRegisterCodeHappyPath(t *testing.T) {
 	handler := newTestHandler()
+	// P2-3 后投递失败不再被吞：testConfig 的 AppEnv 为空 → production-like
+	// → 默认 noop 网关（恒失败）。happy-path 用例须显式注入可用投递通道。
+	handler.service.codeSender = &logVerificationSender{}
 	req := httptest.NewRequest(http.MethodPost, "/send_register_code", strings.NewReader(`{"login_id":"13800138000","client_type":"app"}`))
 	rr := httptest.NewRecorder()
 	handler.SendRegisterCode(rr, req)
@@ -89,6 +92,8 @@ func TestServiceSendRegisterCodeAntiEnumeration(t *testing.T) {
 	}
 	cfg := testConfig()
 	svc := NewServiceWithSource(context.Background(), platformauth.NewService(cfg), repo, cfg, appconfig.NewStaticSource(cfg))
+	// P2-3 后 noop 网关（production-like 默认）投递失败会透传，注入可用通道。
+	svc.codeSender = &logVerificationSender{}
 
 	for _, loginID := range []string{"13800138000", "13900139000"} {
 		if err := svc.SendRegisterCode(context.Background(), SendRegisterCodeRequest{LoginID: loginID, ClientType: ClientTypeApp}); err != nil {
@@ -175,6 +180,8 @@ func TestServiceRegisterWithCodeEndToEnd(t *testing.T) {
 	repo := NewInMemoryRepository()
 	cfg := testConfig()
 	svc := NewServiceWithSource(context.Background(), platformauth.NewService(cfg), repo, cfg, appconfig.NewStaticSource(cfg))
+	// P2-3 后 noop 网关（production-like 默认）投递失败会透传，注入可用通道。
+	svc.codeSender = &logVerificationSender{}
 	ctx := context.Background()
 	if err := svc.SendRegisterCode(ctx, SendRegisterCodeRequest{LoginID: "a@b.com", ClientType: ClientTypeApp}); err != nil {
 		t.Fatalf("send code: %v", err)

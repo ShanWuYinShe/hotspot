@@ -30,11 +30,6 @@ ORDER BY user_id, tag_name ASC`
 	queryReplaceUserProfileTags = `
 DELETE FROM user_profile_tags WHERE user_id = $1`
 
-	queryInsertUserProfileTag = `
-INSERT INTO user_profile_tags (user_id, tag_name)
-VALUES ($1, $2)
-ON CONFLICT (user_id, tag_name) DO NOTHING`
-
 	// queryInsertUserProfileTagsBatch inserts all tags for a user in one round
 	// trip via unnest, replacing the previous per-tag loop. Used inside the
 	// PutProfile transaction.
@@ -291,8 +286,10 @@ WHERE b.user_id = $1 AND b.is_blocked = TRUE
 ORDER BY b.blocked_at DESC, b.target_user_id ASC
 LIMIT $4`
 
+	// sortableLastOnline 列（COALESCE(u.last_online, NOW())）已摘除：扫描进
+	// 局部变量后从未使用（审查 P2-25 死代码，还省一次列求值）。
 	queryListFriends = `
-SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.presence_status, u.last_online, COALESCE(u.last_online, NOW()), COALESCE(me.remark, ''), me.followed_at, GREATEST(me.followed_at, rev.followed_at)
+SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.presence_status, u.last_online, COALESCE(me.remark, ''), me.followed_at, GREATEST(me.followed_at, rev.followed_at)
 FROM user_relations me
 JOIN user_relations rev ON rev.user_id = me.target_user_id AND rev.target_user_id = me.user_id AND rev.is_following = TRUE
 JOIN users u ON u.user_id = me.target_user_id
@@ -306,7 +303,7 @@ ORDER BY GREATEST(me.followed_at, rev.followed_at) DESC, u.user_id ASC
 LIMIT $4`
 
 	queryListFollowing = `
-SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), me.followed_at, u.presence_status, u.last_online, COALESCE(u.last_online, NOW()), COALESCE(me.remark, '')
+SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), me.followed_at, u.presence_status, u.last_online, COALESCE(me.remark, '')
 FROM user_relations me
 JOIN users u ON u.user_id = me.target_user_id
 WHERE me.user_id = $1 AND me.is_following = TRUE
@@ -319,7 +316,7 @@ ORDER BY me.followed_at DESC, u.user_id ASC
 LIMIT $4`
 
 	queryListFollowers = `
-SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), me.followed_at, u.presence_status, u.last_online, COALESCE(u.last_online, NOW())
+SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), me.followed_at, u.presence_status, u.last_online
 FROM user_relations me
 JOIN users u ON u.user_id = me.user_id
 WHERE me.target_user_id = $1 AND me.is_following = TRUE

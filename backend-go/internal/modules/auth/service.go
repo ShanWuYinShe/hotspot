@@ -306,11 +306,17 @@ func (s *Service) SendRegisterCode(ctx context.Context, req SendRegisterCodeRequ
 		return fmt.Errorf("auth.Service.SendRegisterCode: repo: %w", err)
 	}
 	if sendErr := s.codeSender.SendVerification(ctx, req.LoginID, detectChannel(req.LoginID), code); sendErr != nil {
+		// 投递失败必须向客户端透传（审查 P2-3）：生产未配 SMTP/SMS 网关时
+		// 此前只 Warn 后仍返回成功——用户收到「已发送」却永远等不到验证码，
+		// ErrVerificationServiceUnavailable→10600 的映射成为不可达死路径。
+		// 防枚举不受影响：投递能力对同一时刻的所有 login_id 一致（网关级
+		// 状态，与账号是否存在无关），统一成功/失败无存在性侧信道。
 		observability.L().Warn("verification code delivery failed for register",
 			"method", "SendRegisterCode",
 			"login_id", observability.Redact(req.LoginID),
 			"error", sendErr,
 		)
+		return fmt.Errorf("auth.Service.SendRegisterCode: deliver: %w", sendErr)
 	}
 	return nil
 }
@@ -473,11 +479,26 @@ func (s *Service) Refresh(ctx context.Context, req RefreshTokenRequest, deviceID
 	}
 	result, err := s.auth.RefreshSession(ctx, refreshToken)
 	if err != nil {
-		observability.L().Error("service error",
-			"method", "Refresh",
-			"error", err,
-			"elapsed_ms", time.Since(startedAt).Milliseconds(),
-		)
+		// token 生命周期内的预期拒绝（无效/过期/会话已撤销/宽限窗外复用）
+		// 是正常业务态——30 天到期换新、他端登出后刷新都会走到这里，按日志
+		// 约定降为 Warn；仅基础设施故障（DB/存储/加密错误）保留 Error
+		//（审查 P2-2：此前统一 Error，Error 日志被自然到期的刷新刷屏，淹没
+		// 真实故障告警）。客户端口径不变：handler 统一映射 10100。
+		if errors.Is(err, platformauth.ErrInvalidRefreshToken) ||
+			errors.Is(err, platformauth.ErrExpiredRefreshToken) ||
+			errors.Is(err, platformauth.ErrRevokedSession) ||
+			errors.Is(err, platformauth.ErrRotationWindowExpired) {
+			observability.L().Warn("refresh rejected: token lifecycle",
+				"method", "Refresh",
+				"error", err,
+			)
+		} else {
+			observability.L().Error("service error",
+				"method", "Refresh",
+				"error", err,
+				"elapsed_ms", time.Since(startedAt).Milliseconds(),
+			)
+		}
 		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Refresh: %w", err)
 	}
 	if deviceID != "" {
@@ -564,11 +585,18 @@ func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordR
 		return nil
 	}
 	if sendErr := s.codeSender.SendVerification(ctx, req.LoginID, detectChannel(req.LoginID), code); sendErr != nil {
+		// 投递失败透传（审查 P2-3，同 SendRegisterCode）。防枚举权衡：
+		// 本端点只有已存在的账号会走到投递，网关故障期确实形成「存在→
+		// 10600 / 不存在→成功」的差异——但该差异仅在网关整体故障（全局
+		// outage、运维可观测，非攻击者可控状态）下出现，且此时静默假成功
+		// 更糟：所有找回密码的用户无任何信号地卡死。正常网关下两端同为
+		// 成功，无存在性侧信道。
 		observability.L().Warn("verification code delivery failed for password reset",
 			"method", "RequestPasswordReset",
 			"login_id", observability.Redact(req.LoginID),
 			"error", sendErr,
 		)
+		return fmt.Errorf("auth.Service.RequestPasswordReset: deliver: %w", sendErr)
 	}
 	return nil
 }

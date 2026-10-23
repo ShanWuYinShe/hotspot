@@ -177,7 +177,11 @@ func (r *PostgresRepository) StatsGeoDrilldown(ctx context.Context, query geoDri
 		cursorID = &id
 	}
 	start, end := nullableTimeRange(query.StartTime, query.EndTime)
-	rows, err := queryable.Query(ctx, sql, query.Bucket, geo.CellLevelShift(query.Level), start, end, cursorTime, cursorID, query.Limit)
+	// limit+1 探测行（审查 P2-11，对齐 users/reports 模式）：此前 SQL 取
+	// 恰好 limit 行且「满页即发 next_cursor」——桶内条数恰为 limit 时会发出
+	// 幽灵 next_cursor，客户端翻下一页拿到空页（违反「无更多数据
+	// next_cursor=null」契约）。
+	rows, err := queryable.Query(ctx, sql, query.Bucket, geo.CellLevelShift(query.Level), start, end, cursorTime, cursorID, query.Limit+1)
 	if err != nil {
 		return geoDrilldownPage{}, err
 	}
@@ -203,8 +207,9 @@ func (r *PostgresRepository) StatsGeoDrilldown(ctx context.Context, query geoDri
 	if err := rows.Err(); err != nil {
 		return geoDrilldownPage{}, err
 	}
-	if len(page.Items) == query.Limit && query.Limit > 0 {
-		last := page.Items[len(page.Items)-1]
+	if len(page.Items) > query.Limit && query.Limit > 0 {
+		page.Items = page.Items[:query.Limit]
+		last := page.Items[query.Limit-1]
 		t, err := time.Parse(time.RFC3339, last.CreatedAt)
 		if err != nil {
 			return geoDrilldownPage{}, err

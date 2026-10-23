@@ -418,7 +418,13 @@ func (r *PostgresRepository) UserExists(ctx context.Context, userID string) (boo
 	}
 	var one int
 	if err := queryable.QueryRow(ctx, queryUserExists, userID).Scan(&one); err != nil {
-		return false, nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		// 基础设施错误原样上抛（审查 P2-1）：此前任何错误都被当作
+		//「用户不存在」，DB 抖动会让 follow/list_* 大面积返回 404
+		// 而非 10600，故障被业务语义掩盖。
+		return false, err
 	}
 	return true, nil
 }

@@ -3,8 +3,6 @@ package system
 import (
 	"context"
 	"hotspot/backend-go/internal/platform/types"
-
-	"hotspot/backend-go/internal/platform/persistence"
 )
 
 func (r *PostgresRepository) ListAnnouncements(ctx context.Context, limit int) ([]AnnouncementRecord, error) {
@@ -73,5 +71,3 @@ func (r *PostgresRepository) SearchAnnouncements(ctx context.Context, filter Ann
 	}
 	return page, nil
 }
-
-var _ persistence.QueryableDB

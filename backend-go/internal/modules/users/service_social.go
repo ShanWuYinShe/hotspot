@@ -365,34 +365,10 @@ func intersectTags(left, right []string) []string {
 	return common
 }
 
-func minInt(a, b int) int {
-	if a <= b {
-		return a
-	}
-	return b
-}
-
-func applyPresenceVisibilityToFriends(ctx context.Context, repo Repository, items []RelatedUserItem) {
-	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.User.UserID })
-	for i := range items {
-		if hidden[items[i].User.User.UserID] {
-			items[i].User.PresenceStatus = nil
-			items[i].User.LastOnline = nil
-		}
-	}
-}
-
-func applyPresenceVisibilityToFollowing(ctx context.Context, repo Repository, items []RelatedUserItem) {
-	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.User.UserID })
-	for i := range items {
-		if hidden[items[i].User.User.UserID] {
-			items[i].User.PresenceStatus = nil
-			items[i].User.LastOnline = nil
-		}
-	}
-}
-
-func applyPresenceVisibilityToFollowers(ctx context.Context, repo Repository, items []RelatedUserItem) {
+// applyPresenceVisibility 按 presence_visible 隐藏列表项的在线状态
+// （审查 P2-25：Friends/Following/Followers 三个列表原是三份逐字相同的
+// 实现，收敛为一个；行为不变——设置读取失败或无设置行时保持可见）。
+func applyPresenceVisibility(ctx context.Context, repo Repository, items []RelatedUserItem) {
 	hidden := hiddenPresenceUserIDs(ctx, repo, len(items), func(i int) string { return items[i].User.User.UserID })
 	for i := range items {
 		if hidden[items[i].User.User.UserID] {

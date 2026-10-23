@@ -53,6 +53,9 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	// nickname/password 通用字段约束（spec api_spec_base.md「通用字段约束」）：
 	// nickname 1-30 字符；password 8-128 字符且至少含字母和数字。
+	// 昵称先 TrimSpace 再校验/落库（审查 P2-21）：与 Guest 端点同口径——
+	// 此前 Register 原样校验，30 个纯空格可通过并原样入库。
+	req.Nickname = strings.TrimSpace(req.Nickname)
 	if !isValidNickname(req.Nickname) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
@@ -445,9 +448,8 @@ func sessionMetaFromRequest(r *http.Request, clientType ClientType, deviceID str
 		IPAddress:  requestmeta.ClientIP(r),
 		IPLocation: requestmeta.ClientCountry(r),
 	}
-	if r == nil {
-		return meta
-	}
+	// r 的 nil 检查已删（审查 P2-26）：上方 ClientIP/ClientCountry 早已解引用
+	// r，该分支恒假（调用方全部传 http.Handler 的 *Request，非 nil）。
 	ua := strings.TrimSpace(r.Header.Get("User-Agent"))
 	if len(ua) > 120 {
 		ua = ua[:120]
