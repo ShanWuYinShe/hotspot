@@ -196,6 +196,8 @@ export struct NearbyImageCard {
         .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(this.getPalette().accentMuted)
+        // 视觉居中于上方可见图片区（避开底部托盘遮挡）
+        .margin({ bottom: DesignConstants.SPACING.XXL * 2 })
       }
     }
     .width('100%')

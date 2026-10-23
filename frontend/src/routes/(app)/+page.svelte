@@ -188,11 +188,13 @@
 <!-- 页面根容器（无带标题分区，属单一信息流）：gap 16；页底留白只由 contentClassName pb-6 提供 -->
 <StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-4 pt-4 pb-6">
 	{#snippet header()}
-		<!-- 无可见标题：只留右侧搜索/通知两个动作，内容直接开头的「沉浸流」（2026-10-20 用户审查：
-		     不要标题块、不要切换器；用户只需看内容，不需要被告知"当前在看哪个流"）。 -->
-		<div class="flex items-center justify-end pt-3 pb-1">
-			<!-- sr-only 的 h1 是绝对定位（不占位），所以这里用它当首个 flex 子项时
-			     justify-between 会把动作推到左边——直接右对齐 -->
+		<!-- 沉浸流顶栏：非桌面端左侧呈现品牌字标锚点，右侧为搜索/通知快捷动作 -->
+		<div class="flex items-center justify-between pt-3 pb-1">
+			<div class="flex items-center gap-1.5">
+				{#if device !== 'desktop'}
+					<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
+				{/if}
+			</div>
 			<h1 class="sr-only">首页</h1>
 			<div class="flex items-center gap-2">
 				{#if device !== 'desktop'}

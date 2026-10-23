@@ -4,7 +4,7 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
-import { formatDetailTime } from '../../../core/utils/FormatUtil';
+import { formatDetailTime, cleanPlainText } from '../../../core/utils/FormatUtil';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
@@ -524,11 +524,9 @@ export struct MomentDetailPage {
           .width('100%')
           .align(Alignment.TopStart)
 
-          this.buildActionBar(this.moment as MomentItem)
-          Column() {
-            this.buildCommentInput()
+          if (this.moment) {
+            this.buildUnifiedBottomBar(this.moment as MomentItem)
           }
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         }
       }
       .width('100%')
@@ -787,7 +785,7 @@ export struct MomentDetailPage {
         .alignItems(VerticalAlign.Center)
 
         // 正文（web text-sm=12 + leading-copy；作者行 mb-3=12 用 margin-top 表达）
-        Text(moment.description)
+        Text(cleanPlainText(moment.description))
           .width('100%')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getCurrentThemePalette().textPrimary)
@@ -848,7 +846,7 @@ export struct MomentDetailPage {
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
-        Text(comment.content)
+        Text(cleanPlainText(comment.content))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textPrimary)
@@ -958,8 +956,13 @@ export struct MomentDetailPage {
   }
 
   @Builder
-  private buildCommentInput() {
-    Column({ space: DesignConstants.SPACING.SM2 }) {
+  /**
+   * 紧凑单行互动操作条（融合输入栏与社交动作）：
+   * 未输入文字时左侧单行输入框、右侧点赞/收藏/分享图标；
+   * 输入文字时右侧动态让位给「发送」按钮，释放超过 50vp 垂直浏览高度。
+   */
+  private buildUnifiedBottomBar(moment: MomentItem) {
+    Column() {
       // 回复目标指示条（可取消；对齐前端 replyTo 的可视化反馈）
       if (this.replyTarget) {
         Row({ space: DesignConstants.SPACING.SM2 }) {
@@ -977,153 +980,106 @@ export struct MomentDetailPage {
             .accessibilityText('取消回复')
         }
         .width('100%')
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS })
       }
-    Row({ space: DesignConstants.SPACING.SM }) {
-      // 当前用户头像(对齐前端 CommentInputBar:Avatar md + 输入框 + 发送钮)
-      SystemAvatar({
-        avatarUrl: this.stateManager.getCurrentUser()?.avatar_url ?? '',
-        name: this.stateManager.getCurrentUser()?.nickname ?? '',
-        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-        shape: 'circle'
-      })
-      SystemInput({
-        value: this.commentText,
-        placeholder: this.replyTarget ? `回复 @${this.replyTarget.user?.nickname ?? ''}…` : '写下你的评论…',
-        showPrefixIcon: false,
-        inputHeight: 38, // 对齐前端 CommentInputBar h-9.5(38)（布局几何豁免）
-        onChange: (value: string) => {
-          this.commentText = value;
-        }
-      })
+
+      Row({ space: DesignConstants.SPACING.SM }) {
+        // 单行输入条（占主要宽度）
+        SystemInput({
+          value: this.commentText,
+          placeholder: this.replyTarget ? `回复 @${this.replyTarget.user?.nickname ?? ''}…` : '说点什么…',
+          showPrefixIcon: false,
+          inputHeight: 36,
+          onChange: (value: string) => {
+            this.commentText = value;
+          }
+        })
         .layoutWeight(1)
 
-      // 发送评论：primary accent 实底；空文案/发送中走组件内聚 disabled 态
-      //（替代旧外挂 .enabled/.opacity 与双态底色切换）
-      // 按钮尺寸与输入框同高（Gemini 审查：发送钮 36 低于输入框 42 未对齐）
-      SurfaceIconButton({
-        icon: AppIcon.SEND,
-        kind: 'primary',
-        buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE, // 对齐前端发送钮 size-9(36)
-        glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-        disabled: this.commentText.trim().length === 0 || this.commentSending,
-        accessibilityLabel: '发送评论',
-        onPress: () => { this.sendComment(); }
-      })
+        // 输入内容时显示发送按钮；无内容时显示互动操作（赞/藏/享）
+        if (this.commentText.trim().length > 0) {
+          SurfaceIconButton({
+            icon: AppIcon.SEND,
+            kind: 'primary',
+            buttonSize: 36,
+            glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+            disabled: this.commentSending,
+            accessibilityLabel: '发送评论',
+            onPress: () => { this.sendComment(); }
+          })
+        } else {
+          Row({ space: DesignConstants.SPACING.XS }) {
+            // 点赞
+            Row() {
+              Pressable({
+                onPress: () => { this.toggleLike(); },
+                pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
+              }) {
+                Row({ space: DesignConstants.SPACING.HALF }) {
+                  LucideIcon({
+                    icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
+                    color: this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+                  })
+                  if (this.getMomentLikesCount(moment) > 0) {
+                    Text(formatCount(this.getMomentLikesCount(moment)))
+                      .fontSize(DesignConstants.FONT.SIZE.XS)
+                      .fontColor(this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+                  }
+                }
+                .height(36)
+                .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS })
+                .alignItems(VerticalAlign.Center)
+              }
+            }
+            .accessibilityText(this.isMomentLiked(moment) ? '取消点赞' : '点赞')
+
+            // 收藏
+            Row() {
+              Pressable({
+                onPress: () => { this.toggleFavorite(); },
+                pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
+              }) {
+                Row() {
+                  LucideIcon({
+                    icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
+                    color: this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+                  })
+                }
+                .height(36)
+                .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS })
+                .alignItems(VerticalAlign.Center)
+              }
+            }
+            .accessibilityText(this.isMomentFavorited(moment) ? '取消收藏' : '收藏')
+
+            // 分享
+            Row() {
+              Pressable({
+                onPress: () => { this.shareMoment(); },
+                pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
+              }) {
+                Row() {
+                  LucideIcon({
+                    icon: AppIcon.SHARE,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
+                    color: this.getCurrentThemePalette().textSecondary
+                  })
+                }
+                .height(36)
+                .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS })
+                .alignItems(VerticalAlign.Center)
+              }
+            }
+            .accessibilityText('分享动态')
+          }
+        }
+      }
+      .width('100%')
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     }
     .width('100%')
-    .padding({ bottom: DesignConstants.SPACING.SM })
-    }
-  }
-
-  @Builder
-  /**
-   * 移动端互动操作条（对齐前端 moments/[momentId] footer：四键图标 + 计数，
-   * 44pt 拇指热区等分；图标与计数水平并排（同动态卡片操作行），保证四键
-   * 图标基线一致；点赞/评论带计数，收藏/分享纯图标；激活态 accent 色）。
-   */
-  private buildActionBar(moment: MomentItem) {
-    // 四键按压反馈统一走 Pressable（P3-1，springMotion 手感）；likePending/
-    // favoritePending 保留防重入语义，按压视觉不再由手写 scale 承担
-    Row() {
-      // 点赞（Heart + 计数，liked 时 accent）；外层 Row 承载等分布局与读屏文案
-      // （自定义组件尾随闭包后不可链式属性，Pressable 属性全部走构造参数）
-      Row() {
-        Pressable({
-          onPress: () => { this.toggleLike(); },
-          pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
-        }) {
-          Row({ space: DesignConstants.SPACING.XS }) {
-            LucideIcon({
-              icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM, // 对齐前端 size-5(20)
-              color: this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
-            })
-            Text(formatCount(this.getMomentLikesCount(moment)))
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-              .fontColor(this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
-              .scale(this.likePop ?
-                { x: DesignConstants.INTERACTION.SCALE_LIKE_POP, y: DesignConstants.INTERACTION.SCALE_LIKE_POP } :
-                { x: 1, y: 1 })
-              .animation({
-                duration: DesignConstants.ANIMATION.DURATION_FAST,
-                curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
-              })
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-        }
-      }
-      .layoutWeight(1)
-      .accessibilityText(this.isMomentLiked(moment) ? '取消点赞' : '点赞')
-
-      // 评论（MessageCircle + 计数，点击滚动到评论区并聚焦输入栏）
-      Row() {
-        Pressable({
-          onPress: () => { this.contentScroller.scrollEdge(Edge.Bottom); },
-          pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
-        }) {
-          Row({ space: DesignConstants.SPACING.XS }) {
-            LucideIcon({
-              icon: AppIcon.MESSAGE,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM, // 对齐前端 size-5(20)
-              color: this.getCurrentThemePalette().textSecondary
-            })
-            Text(formatCount(this.getCommentCount(moment)))
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-        }
-      }
-      .layoutWeight(1)
-      .accessibilityText('查看评论')
-
-      // 收藏（Bookmark，saved 时 accent）
-      Row() {
-        Pressable({
-          onPress: () => { this.toggleFavorite(); },
-          pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
-        }) {
-          Row() {
-            LucideIcon({
-              icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM, // 对齐前端 size-5(20)
-              color: this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
-            })
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-        }
-      }
-      .layoutWeight(1)
-      .accessibilityText(this.isMomentFavorited(moment) ? '取消收藏' : '收藏')
-
-      // 分享（Share）
-      Row() {
-        Pressable({
-          onPress: () => { this.shareMoment(); },
-          pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
-        }) {
-          Row() {
-            LucideIcon({
-              icon: AppIcon.SHARE,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM, // 对齐前端 size-5(20)
-              color: this.getCurrentThemePalette().textSecondary
-            })
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-        }
-      }
-      .layoutWeight(1)
-      .accessibilityText('分享动态')
-    }
-    .width('100%')
-    .height(48) // 对齐前端 h-12
-    .alignItems(VerticalAlign.Center)
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
   }

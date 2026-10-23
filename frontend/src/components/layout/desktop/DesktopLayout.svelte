@@ -64,7 +64,11 @@
 	const searchString = $derived(page.url.search.slice(1));
 	const showCreate = $derived(composer.composerOpen);
 	// 全画布页面（消息分栏 / 地图探索）：主区域不滚动，画布固定为视口高度
-	const isFullCanvas = $derived(([ROUTES.messages, ROUTES.map] as string[]).includes(pathname));
+	const isFullCanvas = $derived(
+		pathname === ROUTES.map ||
+		pathname === ROUTES.messages ||
+		pathname.startsWith(`${ROUTES.messages}/`)
+	);
 
 	/* rail 高亮只反映「当前路由真实归属的 rail 项」：utility/detail 路由
 	   （/search、/settings、/notify、无 from 的详情页等）解析为 null 时

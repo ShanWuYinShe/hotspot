@@ -17,7 +17,7 @@ import { IntelligentLocationCard } from './IntelligentLocationCard';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from '../components/LucideIcon';
-import { formatCardTime } from '../core/utils/FormatUtil';
+import { formatCardTime, cleanPlainText } from '../core/utils/FormatUtil';
 
 @Reusable
 @Component
@@ -267,7 +267,7 @@ export struct MomentFeedCard {
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD })
 
       if (this.moment.description) {
-        Text(this.moment.description)
+        Text(cleanPlainText(this.moment.description))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().textSecondary)
           .maxLines(2)
@@ -497,12 +497,12 @@ export struct MomentFeedCard {
   @Builder
   private textSection(): void {
     if (this.textMaxLines === 0) {
-      Text(this.moment.description)
+      Text(cleanPlainText(this.moment.description))
         .fontSize(this.textFontSize)
         .fontColor(this.getPalette().textPrimary)
         .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
     } else {
-      Text(this.moment.description)
+      Text(cleanPlainText(this.moment.description))
         .fontSize(this.textFontSize)
         .fontColor(this.getPalette().textPrimary)
         .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)

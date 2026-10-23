@@ -11,6 +11,7 @@ import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { MomentItem } from '../../../core/types/api';
+import { cleanPlainText } from '../../../core/utils/FormatUtil';
 
 @Component
 export struct ViewedMomentThumb {
@@ -28,7 +29,7 @@ export struct ViewedMomentThumb {
           .borderRadius(DesignConstants.RADIUS.LG)
       } else {
         Column() {
-          Text(this.moment.description)
+          Text(cleanPlainText(this.moment.description))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.palette?.textSecondary)
             .maxLines(2)

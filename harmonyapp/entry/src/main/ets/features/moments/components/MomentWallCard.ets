@@ -11,7 +11,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
-import { formatCardTime } from '../../../core/utils/FormatUtil';
+import { formatCardTime, cleanPlainText } from '../../../core/utils/FormatUtil';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
@@ -246,7 +246,7 @@ export struct MomentWallCard {
         this.buildAuthorRow()
 
         if (this.moment.description) {
-          Text(this.moment.description)
+          Text(cleanPlainText(this.moment.description))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
             .maxLines(1)

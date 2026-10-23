@@ -260,10 +260,23 @@ export struct HomePage {
 
   @Builder
   private buildStickyHeader() {
-    // 无可见标题：只留右侧搜索/通知/地图三个动作，内容直接开头（对齐 web 首页 2026-10-20）
+    // 沉浸流顶栏：左侧品牌字标锚点，右侧搜索/通知/地图动作，平衡首屏视觉重心
     Row() {
-      // Blank 撑开把动作推到右侧（`justifyContent(FlexAlign.End)` 在 PageShellContainer
-      // 的内容列里未生效，实测动作居中；Blank 是 ArkUI 更稳的写法）
+      Row({ space: DesignConstants.SPACING.XS }) {
+        LucideIcon({
+          icon: AppIcon.NEARBY,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
+          color: this.getPalette().accentBackground
+        })
+        Text('HotSpot')
+          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+          .fontColor(this.getPalette().textPrimary)
+      }
+      .alignItems(VerticalAlign.Center)
+      .accessibilityText('HotSpot 首页')
+
+      // Blank 撑开使左右两端对称锚定
       Blank()
       Row({ space: DesignConstants.SPACING.SM2 }) {
         // 搜索/通知/地图入口：中性（透明底 + 主文字色图标），对齐前端 PageHeader trailing

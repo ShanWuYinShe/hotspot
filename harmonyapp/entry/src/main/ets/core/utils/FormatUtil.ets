@@ -153,3 +153,23 @@ export function formatCardTime(iso: string): string {
 function formatHhMm(date: Date): string {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
+
+/**
+ * 清洗纯文本内容（用于瞬间描述、评论等展示）：
+ * 剥除 HTML 标签、转义常见 HTML 实体、规整首尾多余空白，
+ * 防止未脱敏内容或抓取文本在端上直接暴露 <b>、<div> 等裸标签。
+ */
+export function cleanPlainText(text: string | undefined | null): string {
+  if (!text) return '';
+  let cleaned = text.replace(/<[^>]+>/g, '');
+  cleaned = cleaned
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+  return cleaned.trim();
+}
+

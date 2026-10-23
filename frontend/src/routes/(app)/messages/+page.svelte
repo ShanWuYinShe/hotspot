@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { Plus, MessageSquareDashed, Pin, BellOff, Trash2, X } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
@@ -152,9 +153,19 @@
 	// 会话 id：私聊为数字索引/chat id，群聊为字符串 group_id。
 	let selectedId = $state<number | string | null>(null);
 
+	const queryPeer = $derived(page.url.searchParams.get('peer'));
+	const queryGroup = $derived(page.url.searchParams.get('group'));
+
 	// 选中会话：设置选中 id + 立即清零本地未读 + 自然重排归位 + 调 markRead API。
 	const selectChat = (chat: ChatItem) => {
 		if (selectedId !== chat.id) selectedId = chat.id;
+		if (useSplitPane) {
+			const targetParam = chat.kind === 'group' ? `group=${encodeURIComponent(String(chat.id))}` : `peer=${encodeURIComponent(chat.peerUserId || String(chat.id))}`;
+			const currentParam = chat.kind === 'group' ? (queryGroup ? `group=${queryGroup}` : '') : (queryPeer ? `peer=${queryPeer}` : '');
+			if (targetParam !== currentParam) {
+				void goto(`?${targetParam}`, { replaceState: true, noScroll: true, keepFocus: true });
+			}
+		}
 		if (chat.unread > 0) {
 			chats = chats.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c)).sort(compareChatItems);
 			// spec: private_messages/mark_read(scope=session) / group_messages/mark_read(scope=group)；
@@ -239,7 +250,30 @@
 	// 分栏阈值：仅桌面启用 Master-Detail；平板（820 级）分栏后右半屏空态占屏 60%+，
 	// 改为单栏列表（点开会话再进详情），与移动端同一信息密度。
 	const useSplitPane = $derived(platform.platform === 'desktop');
-	const selectedChat = $derived(liveChats.find((c) => c.id === selectedId));
+	const selectedChat = $derived(
+		liveChats.find((c) => {
+			if (selectedId !== null && c.id === selectedId) return true;
+			if (queryGroup && c.kind === 'group' && String(c.id) === queryGroup) return true;
+			if (queryPeer && c.kind !== 'group' && (c.peerUserId === queryPeer || String(c.id) === queryPeer)) return true;
+			return false;
+		})
+	);
+
+	// 桌面端深链参数（?peer=... 或 ?group=...）自动对齐选中行
+	$effect(() => {
+		if (!useSplitPane) return;
+		if (queryGroup) {
+			const found = liveChats.find((c) => c.kind === 'group' && String(c.id) === queryGroup);
+			if (found && selectedId !== found.id) {
+				selectedId = found.id;
+			}
+		} else if (queryPeer) {
+			const found = liveChats.find((c) => c.kind !== 'group' && (c.peerUserId === queryPeer || String(c.id) === queryPeer));
+			if (found && selectedId !== found.id) {
+				selectedId = found.id;
+			}
+		}
+	});
 </script>
 <svelte:head>
 	<title>消息 · HotSpot</title>
@@ -323,13 +357,18 @@
 
 		<!-- Right: chat view or empty state（底色与面板统一，中间由发丝边框清晰划分） -->
 		<div class="flex-1 overflow-hidden bg-surface-primary">
-			{#if selectedId !== null && selectedChat}
+			{#if queryGroup || (selectedChat && selectedChat.kind === 'group')}
 				<div class="h-full">
-					{#if selectedChat.kind === 'group'}
-						<GroupChatView groupId={selectedChat.id} compact showBackButton={false} />
-					{:else}
-						<ChatView peerUserId={selectedChat.peerUserId} compact contact={{ name: selectedChat.name, avatar: selectedChat.avatar, online: selectedChat.online }} showBackButton={false} />
-					{/if}
+					<GroupChatView groupId={queryGroup || String(selectedChat?.id ?? '')} compact showBackButton={false} />
+				</div>
+			{:else if queryPeer || (selectedChat && selectedChat.kind !== 'group')}
+				<div class="h-full">
+					<ChatView
+						peerUserId={queryPeer || selectedChat?.peerUserId || String(selectedChat?.id ?? '')}
+						compact
+						contact={selectedChat ? { name: selectedChat.name, avatar: selectedChat.avatar, online: selectedChat.online } : undefined}
+						showBackButton={false}
+					/>
 				</div>
 			{:else}
 				<div class="h-full flex items-center justify-center">

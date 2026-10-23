@@ -10,6 +10,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { Pressable } from '../../../components/Pressable';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { MomentItem } from '../../../core/types/api';
+import { cleanPlainText } from '../../../core/utils/FormatUtil';
 import { LucideIcon } from '../../../components/LucideIcon';
 
 export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
@@ -89,7 +90,7 @@ export struct SearchMomentRow {
     Pressable({ onPress: () => { this.onPress(); } }) {
       Row() {
         Column({ space: DesignConstants.SPACING.XS }) {
-          Text(this.moment.description)
+          Text(cleanPlainText(this.moment.description))
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(this.palette?.textPrimary)
             .maxLines(2)
