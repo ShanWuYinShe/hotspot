@@ -3,6 +3,7 @@ package ratelimit
 import (
 	"context"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -102,7 +103,7 @@ return {0, 0}
 
 func redisFixedWindow(ctx context.Context, rdb *redis.Client, key string, now time.Time, limit int, window time.Duration) (int, bool, error) {
 	windowStart := now.Truncate(window)
-	res, err := fixedWindowScript.Run(ctx, rdb, []string{key + "::" + itoa64(windowStart.UnixMilli())},
+	res, err := fixedWindowScript.Run(ctx, rdb, []string{key + "::" + strconv.FormatInt(windowStart.UnixMilli(), 10)},
 		windowStart.UnixMilli(), window.Milliseconds(), limit, now.UnixMilli()).Slice()
 	if err != nil {
 		return 0, false, err
@@ -165,28 +166,6 @@ func parseScriptResult(res []any) (int, bool, error) {
 		retry = 1
 	}
 	return retry, true, nil
-}
-
-func itoa64(v int64) string {
-	if v == 0 {
-		return "0"
-	}
-	neg := v < 0
-	if neg {
-		v = -v
-	}
-	var buf [20]byte
-	i := len(buf)
-	for v > 0 {
-		i--
-		buf[i] = byte('0' + v%10)
-		v /= 10
-	}
-	if neg {
-		i--
-		buf[i] = '-'
-	}
-	return string(buf[i:])
 }
 
 // errUnexpectedScriptResult 表示 Redis 脚本返回了非契约形状的结果。

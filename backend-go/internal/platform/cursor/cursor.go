@@ -82,23 +82,12 @@ func (c *Codec) Encode(payload any) (string, error) {
 // Decode reverses Encode, writing the decrypted JSON into out. An empty
 // input returns nil (no cursor) without touching out.
 func (c *Codec) Decode(value string, out any) error {
-	if value == "" {
+	payload, err := c.decrypt(value)
+	if err != nil {
+		return err
+	}
+	if payload == nil {
 		return nil
-	}
-	if err := c.ensure(); err != nil {
-		return ErrInvalidCursor
-	}
-	blob, err := base64.RawURLEncoding.DecodeString(value)
-	if err != nil {
-		return ErrInvalidCursor
-	}
-	if len(blob) < c.nonceSize {
-		return ErrInvalidCursor
-	}
-	nonce, ciphertext := blob[:c.nonceSize], blob[c.nonceSize:]
-	payload, err := c.gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return ErrInvalidCursor
 	}
 	if err := json.Unmarshal(payload, out); err != nil {
 		return ErrInvalidCursor
@@ -108,25 +97,39 @@ func (c *Codec) Decode(value string, out any) error {
 
 // DecodeString reverses EncodeString.
 func (c *Codec) DecodeString(value string) (string, error) {
-	if value == "" {
+	payload, err := c.decrypt(value)
+	if err != nil {
+		return "", err
+	}
+	if payload == nil {
 		return "", nil
 	}
+	return string(payload), nil
+}
+
+// decrypt 是 Decode/DecodeString 共用的解密通道：base64 解码 + AES-GCM
+// Open。nil,nil 表示空输入（无游标，调用方按各自空值语义处理）；其余错误
+// 统一归为 ErrInvalidCursor（此前两函数各复制一份同构实现，改校验要同步两处）。
+func (c *Codec) decrypt(value string) ([]byte, error) {
+	if value == "" {
+		return nil, nil
+	}
 	if err := c.ensure(); err != nil {
-		return "", ErrInvalidCursor
+		return nil, ErrInvalidCursor
 	}
 	blob, err := base64.RawURLEncoding.DecodeString(value)
 	if err != nil {
-		return "", ErrInvalidCursor
+		return nil, ErrInvalidCursor
 	}
 	if len(blob) < c.nonceSize {
-		return "", ErrInvalidCursor
+		return nil, ErrInvalidCursor
 	}
 	nonce, ciphertext := blob[:c.nonceSize], blob[c.nonceSize:]
 	payload, err := c.gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return "", ErrInvalidCursor
+		return nil, ErrInvalidCursor
 	}
-	return string(payload), nil
+	return payload, nil
 }
 
 // codecCache memoises Codec instances by namespace so that the package-level
