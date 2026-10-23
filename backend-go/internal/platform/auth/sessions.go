@@ -4,10 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 )
+
+// deviceIssueLockIndex 把 (userID, deviceID) 映射到分片锁（FNV-1a，无需
+// 全局 map 与额外锁；同键必然同分片）。
+func deviceIssueLockIndex(userID, deviceID string) uint32 {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(userID))
+	_, _ = h.Write([]byte{0})
+	_, _ = h.Write([]byte(deviceID))
+	return h.Sum32() % deviceIssueLockStripes
+}
 
 // IssueSessionEvictingDevice 为新登录签发会话，并保证「同一设备仅一个活跃
 // 会话」（审计未修限制 1 的 TOCTOU 修复）。
@@ -17,6 +28,14 @@ import (
 // token 仍可轮转。现在改为「先插入（由迁移 057 的部分唯一索引兜底），冲突则
 // 撤销该设备旧会话后重试」，数据库约束保证最终至多一个活跃会话。
 func (s *Service) IssueSessionEvictingDevice(ctx context.Context, userID string, meta SessionMeta) (AuthResult, error) {
+	// 同进程内按 (user_id, device_id) 串行化：唯一索引负责跨实例正确性，这把
+	// 分片锁消除同实例内多个登录请求「撤销→重试」互相踩踏导致的空闲窗口
+	// （极端情况下重试耗尽会留下 0 个活跃会话）。仅逐出路径加锁，普通并发
+	// 登录（不同设备）不受影响。
+	lock := &s.deviceIssueLocks[deviceIssueLockIndex(userID, meta.DeviceID)]
+	lock.Lock()
+	defer lock.Unlock()
+
 	const maxAttempts = 2
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		result, err := s.IssueSessionWithMeta(ctx, userID, meta)

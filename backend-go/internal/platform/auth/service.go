@@ -35,7 +35,15 @@ type Service struct {
 	// 新链 token 明文，并发刷新败者在宽限期内凭此换回。nil 时（理论上不可达，
 	// config.Validate 强制非空 secret）宽限期冲突路径按无效处理。
 	escrow *TokenEscrow
+	// deviceIssueLocks 按 (user_id, device_id) 分片串行化设备逐出式签发。
+	// 唯一索引保证跨实例的正确性，但同进程内高并发登录时「撤销→重试」仍可能
+	// 连续互相踩踏，极端情况下重试耗尽留下 0 个活跃会话。分片锁把单实例内的
+	// 逐出串行化，使并发登录稳定收敛为「恰好一个活跃会话」；多实例仍由数据库
+	// 约束 + 重试兜底。
+	deviceIssueLocks [deviceIssueLockStripes]sync.Mutex
 }
+
+const deviceIssueLockStripes = 64
 
 // SetBanChecker injects a ban checker (typically the admin module's
 // repository). Once wired, RequiredAuth rejects banned users with httpx.CodeAccountBanned.
