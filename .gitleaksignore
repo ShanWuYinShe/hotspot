@@ -61,3 +61,8 @@ f08ac0f8cd34b5a527561ed2571c6cc2b125bfab:.agents/skills/hotspot-reception-bot/SK
 # CI Infra job 的 compose config 校验哑值（非真实凭证；f0b8614e 误报 generic-api-key，
 # 值已在 78e42c9b 改长避免误报，但该 blob 已进历史无法重写）
 f0b8614e4119a86955ec3e11c74b2b3de1ab3681:.github/workflows/ci.yml:generic-api-key:89
+# 2026-10-23: scripts/verify-backend-ci.sh 的本地测试 JWT 占位值——与 ci.yml 已在
+# 本清单豁免的 ci-test-secret-key-* 同为测试哑值（非服务凭据）。该文件已改为
+# 运行时随机生成密钥，仅历史提交 f94692ee 需要豁免。
+f94692ee1502198e4c646b214232f8be6c0db5d9:scripts/verify-backend-ci.sh:generic-api-key:85
+f94692ee1502198e4c646b214232f8be6c0db5d9:scripts/verify-backend-ci.sh:generic-api-key:86

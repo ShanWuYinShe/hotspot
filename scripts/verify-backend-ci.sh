@@ -76,14 +76,19 @@ awk '/^ok .*coverage: [0-9.]+% of statements/ {
 PG_PASSWORD=$(grep -E "^POSTGRES_PASSWORD=" "$COMPOSE_ROOT/.env" 2>/dev/null | head -1 | cut -d= -f2- || true)
 PG_PASSWORD=${PG_PASSWORD:-postgres}
 
+# 本地测试用 JWT 密钥：运行时随机生成（>=32 字节），不在仓库写任何看起来像
+# 凭据的字面量——gitleaks 会对含 secret/key 词根的长字面量告警（CI Secret scan
+# 全历史扫描，2026-10-23 实测踩到）。可用环境变量 AUTH_TOKEN_SECRET 覆盖。
+VERIFY_AUTH_SECRET=${AUTH_TOKEN_SECRET:-$(printf 'verify-local-%s' "$(openssl rand -hex 24)")}
+
 if [ "$WITH_DB" = "1" ]; then
   step "真实库仓库集成测试（TestPostgresIT，库 hotspot_it）"
   DB=hotspot_it
   "${COMPOSE[@]}" exec -T postgres psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$DB'" | grep -q 1 \
     || "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "CREATE DATABASE $DB"
   DSN="postgres://postgres:$PG_PASSWORD@localhost:5432/$DB?sslmode=disable"
-  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="ci-test-secret-key-at-least-32-bytes-long" go run ./cmd/migrate >/dev/null )
-  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="ci-test-secret-key-at-least-32-bytes-long" go test -count=1 -run "TestPostgresIT" ./internal/modules/... )
+  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go run ./cmd/migrate >/dev/null )
+  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go test -count=1 -run "TestPostgresIT" ./internal/modules/... )
 fi
 
 if [ "$WITH_E2E" = "1" ]; then
