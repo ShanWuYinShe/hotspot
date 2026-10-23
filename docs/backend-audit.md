@@ -98,10 +98,36 @@ mTLS origin-pull + CF 网段 allow/deny——故 CF-Connecting-IP 由 CF 强制�
 后端信任 CF 头是正确口径（**不要清洗该头**）；此前「源站可直连伪造 IP」的
 担忧不成立，nginx 侧只需 real_ip 还原供 limit_req/X-Real-IP 使用。
 
+## P2 第三批修复（2026-10-23，安全/正确性/配置类）
+
+- **安全**：账号存在性时延侧信道（Authenticate/CreatePasswordReset 的
+  not-found 分支不做 bcrypt，攻击者可据耗时枚举账号）→ 补等代价 dummy 比对；
+  share 游标由裸 base64(JSON) 改为 platform/cursor 的 AES-GCM（此前可解码/伪造
+  (created_at, share_id)）；SMTP 会话补整体 deadline（此前仅 dial 超时，坏网关
+  可挂住 handler goroutine）。
+- **正确性**：share 撤销幂等分裂统一（按 code 撤销已 revoked 分享此前 404）；
+  banUser 审计先于「会话撤销失败」判定落库（spec 要求封禁必审计）；admin 10600
+  日志补真实 err（28 处，此前只记合成 sentinel，根因不入日志）。
+- **配置**：media 六类上传大小上限从硬编码改为 AppConfig.Upload 驱动（新增
+  AvatarMaxSize/ChatFileMaxSize 两字段保持默认行为不变，admin 侧可调）；
+  Content-MD5 下发归一为标准 base64（此前是 hex，严格 S3 后端会拒绝）。
+- **性能/口径**：moment 删除向收藏者广播加 2000 上限（此前无界全量载入 +
+  请求路径逐个广播）；notify 内存分桶删除契约外死类型并订正 groups 三处
+  「落库」错误注释；mapmodule/search 内存 stub 显式声明「非语义等价、禁止用于
+  降级/生产路径」（已核实生产不可达）。
+
 **遗留观察项**（不紧急，记录在案）：
 - ratelimit classifyRoute 与 resourceguard guardRules 两份硬编码路由元数据清单存在
   新端点漂移风险（建议后续收敛为模块注册时声明）；
-- 双实现（repo_memory/repo_postgres）漂移是本项目最大 bug 温床（本轮修了 20+ 处），
+- 双实现（repo_memory/repo_postgres）漂移是本项目最大 bug 温床（三轮共修 25+ 处），
   建议为高频变更模块补「双实现契约一致性」对比测试；
+- **未修的已知限制**（需产品/架构决策，非缺陷）：
+  1. Login/Guest 的同设备逐出为「先撤销旧会话再建新会话」，两请求严格并发时仍
+     可能留下两个活跃会话——彻底修需要 auth_sessions 上的部分唯一索引
+     (user_id, device_id) WHERE revoked_at IS NULL，涉及存量数据去重迁移，未做；
+  2. auth 的验证码 TTL、登录锁定阈值仍为代码常量（迁 AppConfig 需同步前端管理页）；
+  3. privatechats List 仍在 service 层全量拉取后内存排序（keyset 下推依赖
+     last_activity_at 冗余列，改动面较大）；
+  4. moments.Get 三次往返、media Complete 的 Exec+Get 冗余等小优化未做；
 - P2 剩余项（各域报告里未修的约定/架构类）与 OBS 项存档于 `.workwork/backend-review/`。
 
