@@ -46,6 +46,13 @@
   12 个 `--cst-ambient-*` token（三主题 × 明暗，随主题/明暗自动适配），
   超长循环动效 24s/36s 且 reduced-motion 停用；背景常驻形成纵深感。
   规范见 `docs/design-system.md` 第 16 节；调浓淡只改 token alpha，无需改组件。
+- **鸿蒙首页下拉刷新抖动第三轮（2026-10-23）**：用户反馈前两版仍有抖动。端上 60fps
+  屏幕录制逐帧分析（内容区行投影互相关 + 指示器亮行重心）定位：抖动集中在刷新指示器与
+  列表顶部，根因是 Refresh 用 builder 时刷新过程反复重建自定义组件（ArkUI 文档建议
+  API 12+ 用 refreshingContent），且 builder 与 refreshingContent 并存会让刷新区高度在
+  两套布局间跳变。修复：刷新态改用 `refreshingContent`（ComponentContent 稳定复用）、
+  移除 builder、Refresh 直接子组件改为 List/Scroll（不再套固定高度 Column）。同时保留
+  前两轮修复（List 行布局、去掉 onOffsetChange 逐帧状态）。契约写入 harmony-ui skill。
 - **鸿蒙首页下拉刷新「鬼畜抖动」修复（2026-10-23 用户二次反馈）**：上一版为做指示器
   渐显在 `onOffsetChange` 里逐帧写 `@State`，触发「状态更新 → 整页重建 → offset 重算」
   反馈环；录屏逐帧量化显示下拉时内容每 50ms 交替位移 100~200px（上下抖动）。修复：

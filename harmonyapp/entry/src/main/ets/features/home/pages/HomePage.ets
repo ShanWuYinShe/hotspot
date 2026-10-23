@@ -27,10 +27,34 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
-import { curves } from '@kit.ArkUI';
+import { ComponentContent, curves } from '@kit.ArkUI';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'HomePage';
+
+/**
+ * 刷新态内容（供 Refresh.refreshingContent 使用）。
+ * 必须用 refreshingContent 而不是 builder：builder 在刷新过程中会被反复销毁/重建
+ * （ArkUI 文档明确建议 API 12+ 用 refreshingContent），端上表现为刷新时内容上下抖动。
+ */
+@Builder
+export function HomeRefreshingIndicator() {
+  Row() {
+    LoadingProgress()
+      .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+      .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
+      .color(AppThemeManager.getSafeCurrentPalette().accentBackground)
+      .accessibilityText('正在刷新')
+    Text('正在刷新…')
+      .fontSize(DesignConstants.FONT.SIZE.MD)
+      .margin({ left: DesignConstants.SPACING.SM })
+      .fontColor(AppThemeManager.getSafeCurrentPalette().textSecondary)
+  }
+  .width('100%')
+  .height(DesignConstants.LAYOUT.MIN_HIT_TARGET + DesignConstants.SPACING.MD)
+  .justifyContent(FlexAlign.Center)
+  .accessibilityText('正在刷新')
+}
 /** 每段首屏条数（对齐 web PAGE_SIZE=20 的首屏语义；本端暂不做无限续载） */
 const FEED_PAGE_SIZE: number = 20;
 
@@ -58,12 +82,15 @@ export struct HomePage {
   @State isRefreshing: boolean = false;
 
   private isDestroyed: boolean = false;
+  /** 刷新态内容：ComponentContent 稳定复用，避免 builder 在刷新过程中反复重建导致抖动 */
+  private refreshingContent: ComponentContent<Object> | undefined = undefined;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
   async aboutToAppear() {
+    this.refreshingContent = new ComponentContent(this.getUIContext(), wrapBuilder(HomeRefreshingIndicator));
     SystemUiController.syncWithCurrentTheme();
     // 一条流 = 关系流 + 发现流：两者并行加载，渲染时关系流在前、发现流去重续后
     this.loadDiscoverMoments();
@@ -162,16 +189,23 @@ export struct HomePage {
         this.buildStickyHeader()
 
         // 整页下拉刷新：Refresh 包内容区（sticky header 保持粘性在外）
-        Refresh({ refreshing: $$this.isRefreshing, builder: this.buildHomeRefreshIndicator }) {
-          Column() {
-            // 一条流：关系流在前、发现流去重续后；无标题、无切换器、无分组小标题
-            if (this.feedLoading() && this.displayedMoments().length === 0) {
+        // Refresh 的直接子组件就是滚动容器（List / Scroll）：
+        // 不要套一层固定高度的 Column 再放 List——端上实测下拉/刷新时会出现内容双影与抖动
+        // （外层高度连续变化 + List 虚拟化重排叠加）。与消息页/公告页结构保持一致。
+        Refresh({
+          refreshing: $$this.isRefreshing,
+          refreshingContent: this.refreshingContent
+        }) {
+          if (this.feedLoading() && this.displayedMoments().length === 0) {
+            Column() {
               SystemLoadingView({ message: '正在加载…' })
                 .width('100%')
-            } else if (this.feedError().length > 0 && this.displayedMoments().length === 0) {
-              // 内联错误态（非整页居中大卡片）：单条流加载失败属"单请求失败"，
-              // 应保持页面上下文、就近给出重试；整页阻断态只留给"整页不可用"
-              // （2026-10-21 端上反馈 + 空态设计调研结论）。
+            }
+            .width('100%')
+            .height('100%')
+            .justifyContent(FlexAlign.Center)
+          } else if (this.feedError().length > 0 && this.displayedMoments().length === 0) {
+            Scroll() {
               EmptyState({
                 icon: AppIcon.WARNING,
                 title: '内容加载失败',
@@ -181,14 +215,22 @@ export struct HomePage {
                 onAction: () => { this.reloadFeed(); }
               })
               .padding({ top: DesignConstants.SPACING.XXL })
-            } else if (this.displayedMoments().length === 0) {
-              this.buildEmptyState()
-            } else {
-              this.buildFeed()
             }
+            .width('100%')
+            .height('100%')
+            .align(Alignment.Top)
+            .scrollBar(BarState.Off)
+          } else if (this.displayedMoments().length === 0) {
+            Scroll() {
+              this.buildEmptyState()
+            }
+            .width('100%')
+            .height('100%')
+            .align(Alignment.Top)
+            .scrollBar(BarState.Off)
+          } else {
+            this.buildFeed()
           }
-          .width('100%')
-          .height('100%')
         }
         .width('100%')
         .layoutWeight(1)
@@ -197,34 +239,6 @@ export struct HomePage {
       .width('100%')
       .height('100%')
     }
-  }
-
-  /**
-   * 首页下拉刷新指示器（页面级 builder，需要读 isRefreshing）。
-   * 下拉阶段只显示 spinner（此时刷新区可能还很小，不显示文案就不会出现半截文字）；
-   * 进入刷新态后再补「正在刷新…」文案。
-   * 注意：不要在这里/Refresh 上按帧更新任何 @State（如 onOffsetChange 记录位移）——
-   * 端上实测会形成「状态更新 → 整页重建 → offset 变化」反馈，下拉时内容上下抖动。
-   */
-  @Builder
-  private buildHomeRefreshIndicator() {
-    Row() {
-      LoadingProgress()
-        .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
-        .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
-        .color(this.getPalette().accentBackground)
-        .accessibilityText('正在刷新')
-      if (this.isRefreshing) {
-        Text('正在刷新…')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .margin({ left: DesignConstants.SPACING.SM })
-          .fontColor(this.getPalette().textSecondary)
-      }
-    }
-    .width('100%')
-    .height(DesignConstants.LAYOUT.MIN_HIT_TARGET + DesignConstants.SPACING.MD)
-    .justifyContent(FlexAlign.Center)
-    .accessibilityText('正在刷新')
   }
 
   /** 空态：两个流都为空时才出现（一条流的通用空态） */
@@ -259,8 +273,8 @@ export struct HomePage {
         }
       }, (moment: MomentItem) => moment.moment_id)
     }
-    .layoutWeight(1)
     .width('100%')
+    .height('100%')
     .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
     .scrollBar(BarState.Off)
   }

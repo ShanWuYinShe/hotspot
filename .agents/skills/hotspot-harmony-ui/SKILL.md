@@ -301,6 +301,14 @@ ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代�
   `Refresh` 的刷新区会随下拉距离增高，builder 不锁高度时内容会在刷新区里垂直居中——
   大幅下拉时 spinner 漂到空白区中间、刷新结束后内容被推下约 1/3 屏，看起来像页面塌了一块。
   锁高（如 52vp）后指示器始终贴在刷新区顶部，刷新态只占指示器高度，不再有大空白。
+- **刷新态内容用 `refreshingContent`（ComponentContent），不要用 `builder`**：ArkUI 文档明确
+  builder 在刷新过程中会被反复销毁/重建（API 12+ 建议改用 refreshingContent），端上实拍
+  表现为刷新指示器文字/内容高频抖动；同时**不要同时传 builder 与 refreshingContent**，
+  实测两者并存时刷新区高度会在两套布局间跳变。下拉阶段可不显示文字（刷新区过小时会被裁切），
+  刷新态由 refreshingContent 稳定承载。
+- **Refresh 的直接子组件应是滚动容器（List/Scroll）**：不要在 Refresh 里再套一层
+  `height('100%')` 的 Column 再放 List——外层高度随刷新位移连续变化，会与 List 虚拟化
+  重排叠加出现内容双影/抖动；与消息页、公告页结构保持一致。
 - **不要在 `Refresh.onOffsetChange` 里逐帧写 `@State`**（例如记录位移做渐显动画）：
   状态更新会触发整页重建 → Refresh 重新计算位移 → 再次回调，形成反馈环；
   端上实拍表现为下拉过程中内容上下高频抖动（每 50ms 交替位移 100~200px，俗称「鬼畜抖动」）。
