@@ -399,6 +399,10 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
 		}
+		if errors.Is(err, ErrAnnouncementNotFound) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "公告不存在"))
+			return
+		}
 		if errors.Is(err, ErrAccessRestricted) {
 			httpx.WriteAPIError(w, r, "DeleteAnnouncement", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return

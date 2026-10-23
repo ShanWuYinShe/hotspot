@@ -33,22 +33,33 @@ func (r *InMemoryRepository) ListMembers(_ context.Context, groupID string, role
 			items[i].User.Nickname = group.Group.Name + " Owner"
 		}
 	}
-	// 消费游标：跳过 (JoinedAt, UserID) <= cursor 的项
+	// 消费游标：跳过 (JoinedAt, UserID) <= cursor 的项。游标与 PG 共用
+	// groupPageCursorCodec（审查 P2-8-5：此前明文 joinedAt:userID 与 PG 的
+	// AES-GCM 游标互不兼容，且 RFC3339 时间串自带冒号无法可靠拆分）。
 	if cursor != "" {
-		if parts := strings.SplitN(cursor, ":", 2); len(parts) == 2 {
-			cursorAt, cursorUID := parts[0], parts[1]
-			start := 0
-			for i, item := range items {
-				if item.JoinedAt > cursorAt || (item.JoinedAt == cursorAt && item.User.UserID > cursorUID) {
-					break
-				}
-				start = i + 1
-			}
-			items = items[start:]
+		cursorAt, cursorUID, err := decodeGroupPageCursor(cursor)
+		if err != nil {
+			return nil, "", err
 		}
+		start := 0
+		for i, item := range items {
+			itemAt, err := time.Parse(time.RFC3339Nano, item.JoinedAt)
+			if err != nil {
+				return nil, "", err
+			}
+			if itemAt.After(cursorAt) || (itemAt.Equal(cursorAt) && item.User.UserID > cursorUID) {
+				break
+			}
+			start = i + 1
+		}
+		items = items[start:]
 	}
 	if len(items) > limit {
-		return items[:limit], items[limit-1].JoinedAt + ":" + items[limit-1].User.UserID, nil
+		lastAt, err := time.Parse(time.RFC3339Nano, items[limit-1].JoinedAt)
+		if err != nil {
+			return nil, "", err
+		}
+		return items[:limit], encodeGroupPageCursor(lastAt, items[limit-1].User.UserID), nil
 	}
 	return items, "", nil
 }
@@ -82,8 +93,32 @@ func (r *InMemoryRepository) ListAdminMembers(_ context.Context, groupID string,
 		return items[i].JoinedAt < items[j].JoinedAt
 	})
 	limit = types.NormalizeLimit(limit)
+	// 管理端成员列表此前完全忽略游标（审查 P2-8-5），补 keyset 消费与
+	// 共享 codec（与 ListMembers 同序同口径）。
+	if cursor != "" {
+		cursorAt, cursorUID, err := decodeGroupPageCursor(cursor)
+		if err != nil {
+			return nil, "", err
+		}
+		start := 0
+		for i, item := range items {
+			itemAt, err := time.Parse(time.RFC3339Nano, item.JoinedAt)
+			if err != nil {
+				return nil, "", err
+			}
+			if itemAt.After(cursorAt) || (itemAt.Equal(cursorAt) && item.User.UserID > cursorUID) {
+				break
+			}
+			start = i + 1
+		}
+		items = items[start:]
+	}
 	if len(items) > limit {
-		return items[:limit], items[limit-1].JoinedAt + ":" + items[limit-1].User.UserID, nil
+		lastAt, err := time.Parse(time.RFC3339Nano, items[limit-1].JoinedAt)
+		if err != nil {
+			return nil, "", err
+		}
+		return items[:limit], encodeGroupPageCursor(lastAt, items[limit-1].User.UserID), nil
 	}
 	return items, "", nil
 }
@@ -135,9 +170,15 @@ func (r *InMemoryRepository) SearchMembers(ctx context.Context, groupID string, 
 	if err != nil {
 		return nil, "", err
 	}
+	// 与 PG 版 ILIKE 子串匹配同口径（审查 P2-8-7）：此前内存版仅精确匹配
+	// （nickname==keyword），单测在内存实现下断言「按关键词搜索」会掩盖生产
+	// 的子串匹配行为。PG 侧 ILIKE 默认大小写不敏感，这里同步 lower 比较。
+	keyword = strings.ToLower(strings.TrimSpace(keyword))
 	filtered := make([]GroupMemberItem, 0, len(items))
 	for _, item := range items {
-		if keyword == "" || item.User.Nickname == keyword || item.User.UserID == keyword {
+		if keyword == "" ||
+			strings.Contains(strings.ToLower(item.User.Nickname), keyword) ||
+			strings.Contains(strings.ToLower(item.User.UserID), keyword) {
 			filtered = append(filtered, item)
 		}
 	}
@@ -292,23 +333,33 @@ func (r *InMemoryRepository) ListBannedMembers(_ context.Context, groupID string
 		return items[i].BannedAt > items[j].BannedAt
 	})
 	limit = types.NormalizeLimit(limit)
-	// 消费游标：跳过 (BannedAt, UserID) >= cursor 的项（DESC 序）
+	// 消费游标：跳过 (BannedAt, UserID) >= cursor 的项（DESC 序）。
+	// 游标与 PG 共用 groupPageCursorCodec（审查 P2-8-5）。
 	if cursor != "" {
-		if parts := strings.SplitN(cursor, ":", 2); len(parts) == 2 {
-			cursorAt, cursorUID := parts[0], parts[1]
-			start := 0
-			for i, item := range items {
-				if item.BannedAt < cursorAt || (item.BannedAt == cursorAt && item.User.UserID > cursorUID) {
-					break
-				}
-				start = i + 1
-			}
-			items = items[start:]
+		cursorAt, cursorUID, err := decodeGroupPageCursor(cursor)
+		if err != nil {
+			return nil, "", err
 		}
+		start := 0
+		for i, item := range items {
+			itemAt, err := time.Parse(time.RFC3339Nano, item.BannedAt)
+			if err != nil {
+				return nil, "", err
+			}
+			if itemAt.Before(cursorAt) || (itemAt.Equal(cursorAt) && item.User.UserID > cursorUID) {
+				break
+			}
+			start = i + 1
+		}
+		items = items[start:]
 	}
 	if len(items) > limit {
 		last := items[limit-1]
-		return items[:limit], last.BannedAt + ":" + last.User.UserID, nil
+		lastAt, err := time.Parse(time.RFC3339Nano, last.BannedAt)
+		if err != nil {
+			return nil, "", err
+		}
+		return items[:limit], encodeGroupPageCursor(lastAt, last.User.UserID), nil
 	}
 	return items, "", nil
 }

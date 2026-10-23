@@ -41,6 +41,36 @@ func (r *InMemoryRepository) ListMyInvites(_ context.Context, userID string, sta
 		}
 		return items[i].CreatedAt > items[j].CreatedAt
 	})
+	// 分页（审查 P2-8-6）与游标编码（审查 P2-8-5）：与 PG 共用
+	// groupPageCursorCodec——此前内存版是明文 createdAt:id，与 PG 的 AES-GCM
+	// 游标互不兼容，且 RFC3339 时间串自带冒号无法可靠拆分。
+	if cursor != "" {
+		cursorAt, cursorID, err := decodeGroupPageCursor(cursor)
+		if err != nil {
+			return nil, "", err
+		}
+		start := 0
+		for i, item := range items {
+			itemAt, err := time.Parse(time.RFC3339Nano, item.CreatedAt)
+			if err != nil {
+				return nil, "", err
+			}
+			// 列表按 created_at DESC, id DESC：跳过游标及之前的项，遇到严格
+			// 更小的 (created_at, id) 即下一页起点。
+			if itemAt.Before(cursorAt) || (itemAt.Equal(cursorAt) && item.InviteID < cursorID) {
+				break
+			}
+			start = i + 1
+		}
+		items = items[start:]
+	}
+	if len(items) > limit {
+		lastAt, err := time.Parse(time.RFC3339Nano, items[limit-1].CreatedAt)
+		if err != nil {
+			return nil, "", err
+		}
+		return items[:limit], encodeGroupPageCursor(lastAt, items[limit-1].InviteID), nil
+	}
 	return items, "", nil
 }
 
@@ -54,13 +84,16 @@ func (r *InMemoryRepository) AcceptInvite(_ context.Context, userID string, invi
 	if record.Status != ApplicationStatusPending {
 		return ErrInviteExpired
 	}
-	record.Status = ApplicationStatusAccepted
-	now := time.Now().UTC().Format(time.RFC3339)
-	record.RespondedAt = &now
-	r.invites[inviteID] = record
+	// 容量检查必须在状态变更之前（审查 P2-8-1）：此前先置 accepted 再查容量，
+	// 群满返回 ErrGroupFull 时邀请已被污染成「已接受但人没入群」，与 PG 事务
+	// 内的顺序（容量→状态→插成员）不一致。
 	if group, ok := r.groups[record.GroupID]; ok && group.MaxMembers > 0 && len(r.members[record.GroupID]) >= group.MaxMembers {
 		return ErrGroupFull
 	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	record.Status = ApplicationStatusAccepted
+	record.RespondedAt = &now
+	r.invites[inviteID] = record
 	if r.members[record.GroupID] == nil {
 		r.members[record.GroupID] = make(map[string]inMemoryMembership)
 	}
@@ -140,6 +173,36 @@ func (r *InMemoryRepository) ListSentInvites(_ context.Context, groupID string, 
 		}
 		return items[i].CreatedAt > items[j].CreatedAt
 	})
+	// 分页（审查 P2-8-6）与游标编码（审查 P2-8-5）：与 PG 共用
+	// groupPageCursorCodec——此前内存版是明文 createdAt:id，与 PG 的 AES-GCM
+	// 游标互不兼容，且 RFC3339 时间串自带冒号无法可靠拆分。
+	if cursor != "" {
+		cursorAt, cursorID, err := decodeGroupPageCursor(cursor)
+		if err != nil {
+			return nil, "", err
+		}
+		start := 0
+		for i, item := range items {
+			itemAt, err := time.Parse(time.RFC3339Nano, item.CreatedAt)
+			if err != nil {
+				return nil, "", err
+			}
+			// 列表按 created_at DESC, id DESC：跳过游标及之前的项，遇到严格
+			// 更小的 (created_at, id) 即下一页起点。
+			if itemAt.Before(cursorAt) || (itemAt.Equal(cursorAt) && item.InviteID < cursorID) {
+				break
+			}
+			start = i + 1
+		}
+		items = items[start:]
+	}
+	if len(items) > limit {
+		lastAt, err := time.Parse(time.RFC3339Nano, items[limit-1].CreatedAt)
+		if err != nil {
+			return nil, "", err
+		}
+		return items[:limit], encodeGroupPageCursor(lastAt, items[limit-1].InviteID), nil
+	}
 	return items, "", nil
 }
 

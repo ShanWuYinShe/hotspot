@@ -164,9 +164,10 @@ func TestPostgresUpdateDismissAndExecWrappers(t *testing.T) {
 	}
 	// 状态流转类 UPDATE 现带 RETURNING（pending 守卫），QueryRow 需返回一行。
 	returningStub := &groupFullStub{queryRow: map[string][]any{
-		queryUpdateGroupApplication: {"a1"},
-		queryUpdateGroupInvite:      {"i1"},
-		queryRevokeGroupInvite:      {"i1"},
+		queryUpdateGroupApplication:  {"a1"},
+		queryUpdateGroupInvite:       {"i1"},
+		queryRevokeGroupInvite:       {"i1"},
+		queryDeleteGroupAnnouncement: {"a1"},
 	}}
 	for _, tc := range execCases {
 		if err := tc.call(newGroupsFullRepo(returningStub)); err != nil {
@@ -461,15 +462,24 @@ func TestPostgresAnnouncementLifecycle(t *testing.T) {
 		t.Fatalf("get announcement missing: found=%v err=%v", found, err)
 	}
 
-	// Update（全字段 + nil 字段）
+	// Update（全字段 + nil 字段）：条件 UPDATE ... RETURNING，桩需返回一行。
 	title := "新标题"
-	stub = &groupFullStub{}
+	stub = &groupFullStub{queryRow: map[string][]any{queryUpdateGroupAnnouncement: {"a1"}}}
 	if err := newGroupsFullRepo(stub).UpdateAnnouncement(ctx, "group_1", UpdateGroupAnnouncementRequest{AnnouncementID: "a1", Title: &title}); err != nil {
 		t.Fatalf("update announcement: %v", err)
 	}
-	stub = &groupFullStub{execErrs: map[string]error{queryUpdateGroupAnnouncement: errors.New("boom")}}
+	stub = &groupFullStub{queryRowErr: map[string]error{queryUpdateGroupAnnouncement: errors.New("boom")}}
 	if err := newGroupsFullRepo(stub).UpdateAnnouncement(ctx, "g", UpdateGroupAnnouncementRequest{AnnouncementID: "a1"}); err == nil {
-		t.Fatal("update announcement exec error must propagate")
+		t.Fatal("update announcement error must propagate")
+	}
+	// 0 行命中（不存在/跨群）→ ErrAnnouncementNotFound（与内存实现对齐）。
+	stub = &groupFullStub{queryRowErr: map[string]error{queryUpdateGroupAnnouncement: pgx.ErrNoRows}}
+	if err := newGroupsFullRepo(stub).UpdateAnnouncement(ctx, "g", UpdateGroupAnnouncementRequest{AnnouncementID: "missing"}); !errors.Is(err, ErrAnnouncementNotFound) {
+		t.Fatalf("update missing announcement: %v", err)
+	}
+	stub = &groupFullStub{queryRowErr: map[string]error{queryDeleteGroupAnnouncement: pgx.ErrNoRows}}
+	if err := newGroupsFullRepo(stub).DeleteAnnouncement(ctx, "g", "missing"); !errors.Is(err, ErrAnnouncementNotFound) {
+		t.Fatalf("delete missing announcement: %v", err)
 	}
 }
 

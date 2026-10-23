@@ -299,6 +299,14 @@ func (r *InMemoryRepository) Dismiss(_ context.Context, groupID string) error {
 			delete(r.applications, applicationID)
 		}
 	}
+	// 与 PG Dismiss 的六表清理对齐（审查 P2-8-3）：此前漏清 banned 与
+	// announcements，解散后用同 ID 重建群会读到幽灵封禁/公告。
+	delete(r.banned, groupID)
+	for announcementID, announcement := range r.announcements {
+		if announcement.GroupID == groupID {
+			delete(r.announcements, announcementID)
+		}
+	}
 	return nil
 }
 

@@ -111,7 +111,16 @@ func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, groupID str
 	}
 	now := time.Now().UTC()
 	// group_id 双键匹配（IDOR 防护，见 queryUpdateGroupAnnouncement 注释）。
-	return queryable.Exec(ctx, queryUpdateGroupAnnouncement, req.AnnouncementID, nilOrString(derefStringPtr(req.Title)), nilOrString(derefStringPtr(req.Content)), req.IsPinned, now, groupID)
+	// RETURNING 0 行 = 公告不存在/跨群/已删除 → 与内存实现统一返回
+	// ErrAnnouncementNotFound（handler 映射 404 语义，审查 P2-8-4）。
+	var updatedID string
+	if err := queryable.QueryRow(ctx, queryUpdateGroupAnnouncement, req.AnnouncementID, nilOrString(derefStringPtr(req.Title)), nilOrString(derefStringPtr(req.Content)), req.IsPinned, now, groupID).Scan(&updatedID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrAnnouncementNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, groupID string, announcementID string) error {
@@ -119,5 +128,12 @@ func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, groupID str
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryDeleteGroupAnnouncement, announcementID, time.Now().UTC(), groupID)
+	var deletedID string
+	if err := queryable.QueryRow(ctx, queryDeleteGroupAnnouncement, announcementID, time.Now().UTC(), groupID).Scan(&deletedID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrAnnouncementNotFound
+		}
+		return err
+	}
+	return nil
 }

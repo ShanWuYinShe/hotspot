@@ -72,14 +72,16 @@ func (r *InMemoryRepository) ApproveApplication(_ context.Context, approverID, a
 			return ErrBannedInGroup
 		}
 	}
-	record.Status = ApplicationStatusAccepted
-	now := time.Now().UTC().Format(time.RFC3339)
-	record.HandledAt = &now
-	record.HandledBy = &UserInfo{UserID: approverID, Nickname: approverID}
-	r.applications[applicationID] = record
+	// 容量检查前置（审查 P2-8-1）：避免「申请已通过但人没入群」的半提交态，
+	// 与 PG 事务顺序（容量→状态→插成员）一致。
 	if group, ok := r.groups[record.GroupID]; ok && group.MaxMembers > 0 && len(r.members[record.GroupID]) >= group.MaxMembers {
 		return ErrGroupFull
 	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	record.Status = ApplicationStatusAccepted
+	record.HandledAt = &now
+	record.HandledBy = &UserInfo{UserID: approverID, Nickname: approverID}
+	r.applications[applicationID] = record
 	if r.members[record.GroupID] == nil {
 		r.members[record.GroupID] = make(map[string]inMemoryMembership)
 	}
@@ -101,12 +103,13 @@ func (r *InMemoryRepository) RejectApplication(_ context.Context, applicationID 
 	if record.Status != ApplicationStatusPending {
 		return ErrAlreadyProcessed
 	}
+	// 拒绝原因不入 message：PG 的 queryUpdateGroupApplication 只更新状态/处理人，
+	// 从不覆盖申请人的原始留言（审查 P2-8-2，此前内存实现把留言替换成拒绝理由，
+	// 列表回读时原始留言丢失）。
 	record.Status = ApplicationStatusRejected
 	now := time.Now().UTC().Format(time.RFC3339)
 	record.HandledAt = &now
-	if reason != nil {
-		record.Message = reason
-	}
+	_ = reason
 	r.applications[applicationID] = record
 	return nil
 }
@@ -131,6 +134,35 @@ func (r *InMemoryRepository) ListMyApplications(_ context.Context, userID string
 		}
 		return items[i].CreatedAt > items[j].CreatedAt
 	})
+	// 分页参数此前被忽略（审查 P2-8-6），对齐 PG 的 keyset 语义（明文
+	// createdAt:id 游标，与同模块 ListMembers 约定一致）。
+	// 分页（审查 P2-8-6）与游标编码（审查 P2-8-5）：与 PG 共用
+	// groupPageCursorCodec（此前明文 createdAt:id 与 PG 的 AES-GCM 游标互不兼容）。
+	if cursor != "" {
+		cursorAt, cursorID, err := decodeGroupPageCursor(cursor)
+		if err != nil {
+			return nil, "", err
+		}
+		start := 0
+		for i, item := range items {
+			itemAt, err := time.Parse(time.RFC3339Nano, item.CreatedAt)
+			if err != nil {
+				return nil, "", err
+			}
+			if itemAt.Before(cursorAt) || (itemAt.Equal(cursorAt) && item.ApplicationID < cursorID) {
+				break
+			}
+			start = i + 1
+		}
+		items = items[start:]
+	}
+	if len(items) > limit {
+		lastAt, err := time.Parse(time.RFC3339Nano, items[limit-1].CreatedAt)
+		if err != nil {
+			return nil, "", err
+		}
+		return items[:limit], encodeGroupPageCursor(lastAt, items[limit-1].ApplicationID), nil
+	}
 	return items, "", nil
 }
 

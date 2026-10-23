@@ -317,18 +317,23 @@ WHERE a.announcement_id = $1 AND a.group_id = $2 AND a.deleted_at IS NULL`
 
 	// 公告更新/删除带归属双键：groupID 是授权锚点，仅按全局唯一
 	// announcement_id 定位会让 A 群管理员操作 B 群公告（IDOR）。
+	// RETURNING 用于判定 0 行命中（审查 P2-8-4）：此前 Exec 不查行数，PG 对
+	// 不存在/跨群公告静默成功，而内存实现返回 ErrAnnouncementNotFound，
+	// handler 的 not-found 分支在内存/降级路径之外永远走不到。
 	queryUpdateGroupAnnouncement = `
 UPDATE group_announcements
 SET title = COALESCE($2, title),
     content = COALESCE($3, content),
     is_pinned = COALESCE($4, is_pinned),
     updated_at = $5
-WHERE announcement_id = $1 AND group_id = $6 AND deleted_at IS NULL`
+WHERE announcement_id = $1 AND group_id = $6 AND deleted_at IS NULL
+RETURNING announcement_id`
 
 	queryDeleteGroupAnnouncement = `
 UPDATE group_announcements
 SET deleted_at = $2
-WHERE announcement_id = $1 AND group_id = $3 AND deleted_at IS NULL`
+WHERE announcement_id = $1 AND group_id = $3 AND deleted_at IS NULL
+RETURNING announcement_id`
 
 	queryUpdateGroupMemberSettings = `
 UPDATE group_members

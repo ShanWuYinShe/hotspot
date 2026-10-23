@@ -132,9 +132,38 @@ mTLS origin-pull + CF 网段 allow/deny——故 CF-Connecting-IP 由 CF 强制�
   从未被分类，限流中间件对未识别路径直接返回空规则集 → 该模块此前完全没有
   限流**，已补分类并加回归用例。
 
+## P2 第五批修复（2026-10-24，内存实现漂移）
+
+内存实现是「DB 未配置时优雅降级」的生产路径（不是纯测试桩），本批把 chat 域
+报告的 P2-8 剩余项与 user-admin 的报告项收敛（均附回归测试）：
+
+- **半提交状态**：`AcceptInvite`/`ApproveApplication` 先置 accepted 再查容量，
+  群满返回 `ErrGroupFull` 时状态已被污染（「已接受但人没入群」）→ 容量检查
+  前置，对齐 PG 事务顺序；
+- **数据覆盖**：`RejectApplication` 用拒绝原因覆盖申请人原始留言（PG 不碰
+  message）→ 不再覆盖；
+- **清理残留**：`Dismiss` 漏清 banned/announcements（PG 六表全清，同 ID 重建群
+  会读到幽灵数据）→ 补齐；
+- **错误映射**：公告 Update/Delete 在 PG 侧 0 行命中静默成功、内存侧返回
+  `ErrAnnouncementNotFound`，而 handler 的 not-found 分支缺失（降级路径落 10600）
+  → PG 改条件 UPDATE/`RETURNING` 0 行映射 not-found，handler 补分支，两实现统一；
+- **游标不兼容**：内存版成员/邀请/申请列表游标是明文 `时间:id`，与 PG 的 AES-GCM
+  游标互不兼容，且 RFC3339 时间串自带冒号无法可靠拆分（分页静默错页）→ 统一改用
+  共享 `groupPageCursorCodec`；`ListAdminMembers` 此前完全忽略游标，补 keyset 消费；
+- **分页参数被忽略**：内存版 `ListMyInvites`/`ListSentInvites`/`ListApplications`
+  全量返回且 next_cursor 恒空 → 补 limit 裁剪与游标；
+- **搜索语义**：`SearchMembers` 内存版仅精确匹配，PG 是 ILIKE 子串 → 同步为
+  大小写不敏感子串匹配；
+- **并发守卫**：admin 内存 `HandleReport` 无 pending 守卫（PG 有 `WHERE status=
+  'pending'` + `errReportAlreadyHandled`），降级路径可重复执行解散/封禁副作用
+  → 补守卫；
+
+本轮同时确认 user-admin P2-14（内存 `SearchProfiles` 漏过滤 is_deleted/
+privacy_level）在早前批次已修复，补记于此。
+
 **遗留观察项**（不紧急，记录在案）：
-- 双实现（repo_memory/repo_postgres）漂移是本项目最大 bug 温床（三轮共修 25+ 处），
-  建议为高频变更模块补「双实现契约一致性」对比测试；
+- 双实现（repo_memory/repo_postgres）漂移仍是本项目最大 bug 温床（四轮共修 35+ 处）；
+  本批起 drift 修复均附内存实现回归测试，但跨实现「同输入同输出」对比测试基建仍缺；
 - **未修的已知限制**（需产品/架构决策，非缺陷）：
   1. Login/Guest 的同设备逐出为「先撤销旧会话再建新会话」，两请求严格并发时仍
      可能留下两个活跃会话——彻底修需要 auth_sessions 上的部分唯一索引

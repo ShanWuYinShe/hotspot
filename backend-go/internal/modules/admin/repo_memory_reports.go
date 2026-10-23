@@ -94,6 +94,13 @@ func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, ac
 	if !ok {
 		return AdminReportItem{}, false, nil
 	}
+	// pending 守卫（审查 P2-16）：PG 版是 queryAdminHandleReport 的
+	// WHERE status='pending' + 0 行映射 errReportAlreadyHandled，并发裁决
+	// 只有一方命中。内存版此前任意状态都可重复处理——降级路径下双重执行
+	// 解散/封禁等副作用，且单测无法覆盖该并发语义。
+	if record.Item.Status != ReportStatusPending {
+		return AdminReportItem{}, false, errReportAlreadyHandled
+	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	switch action {
 	case ReportActionResolve:
