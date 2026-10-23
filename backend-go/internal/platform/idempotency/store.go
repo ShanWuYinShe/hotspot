@@ -31,6 +31,12 @@ type Record struct {
 	// BodyHash 是请求体的 SHA-256（幂等上下文一致性校验，spec api_spec_errors.md
 	// 22000「幂等上下文不匹配」）。存量记录为空时跳过比对（灰度兼容）。
 	BodyHash string `json:"body_hash,omitempty"`
+	// Headers 是 producer 在写响应体前设置的、需要在回放时原样重发的响应头。
+	// 当前只保留 Set-Cookie：web 端 register/guest 的会话 cookie 由 producer
+	// 在闭包内下发，而回放命中时 producer 不执行——不重发会让「网络超时后用
+	// 同一 Idempotency-Key 重试」的客户端拿到 code=0 却没有会话（账号已建但
+	// 处于未登录态）。存量记录为空 → 回放不补头（灰度兼容）。
+	Headers map[string][]string `json:"headers,omitempty"`
 }
 
 type Store interface {

@@ -15,6 +15,17 @@ import (
 	"hotspot/backend-go/internal/platform/requestmeta"
 )
 
+// idempotentResponseHeaders 提取 producer 已写入、需要在回放时重发的响应头。
+// 只保留 Set-Cookie（会话下发）：其余头（Content-Type 等）由本次响应自行生成，
+// 缓存重发反而可能过期或冲突。返回 nil 表示无此类头。
+func idempotentResponseHeaders(h http.Header) map[string][]string {
+	cookies := h.Values("Set-Cookie")
+	if len(cookies) == 0 {
+		return nil
+	}
+	return map[string][]string{"Set-Cookie": append([]string(nil), cookies...)}
+}
+
 // hashRequestBody 计算请求体指纹（SHA-256）。仅在携带 Idempotency-Key 时调用，
 // 请求体此前已被 LimitRequestBody 中间件封顶（1MiB），缓冲内存有界。
 func hashRequestBody(body []byte) string {
@@ -96,6 +107,13 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeIdempotencyConflict, "幂等上下文不匹配"))
 				return true
 			}
+			// 重发首次响应设置的会话类响应头（Set-Cookie）：producer 在回放
+			// 路径不执行，不补发会让 web 客户端「重试成功但没有会话」。
+			for name, values := range existing.Headers {
+				for _, value := range values {
+					w.Header().Add(name, value)
+				}
+			}
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(existing.Response)
@@ -125,7 +143,7 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 		return true
 	}
 	blob, _ := json.Marshal(payload)
-	store.Save(Record{Key: scopedKey, Scope: scope, Status: StatusCompleted, Response: append(blob, '\n'), ExpiresAt: expiresAt, BodyHash: bodyHash})
+	store.Save(Record{Key: scopedKey, Scope: scope, Status: StatusCompleted, Response: append(blob, '\n'), ExpiresAt: expiresAt, BodyHash: bodyHash, Headers: idempotentResponseHeaders(w.Header())})
 	httpx.WriteJSON(w, http.StatusOK, payload)
 	return true
 }

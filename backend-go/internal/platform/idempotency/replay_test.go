@@ -43,6 +43,49 @@ func TestReplayOrStoreCachesResponse(t *testing.T) {
 	}
 }
 
+// TestReplayOrStoreReplaysSetCookie 防回归（审查 P2-6）：web 端 register/guest
+// 的会话 cookie 由 producer 在闭包内下发（SetAuthCookies），回放命中时 producer
+// 不执行——若不缓存并重发 Set-Cookie，网络超时后用同一 Idempotency-Key 重试的
+// 客户端会拿到 code=0 但没有会话（账号已建却处于未登录态）。
+func TestReplayOrStoreReplaysSetCookie(t *testing.T) {
+	store := NewInMemoryStore()
+	SetStore(store)
+	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
+	req = req.WithContext(WithKey(req.Context(), "cookiereplay1234567890abcdef1234"))
+
+	rr1 := httptest.NewRecorder()
+	producerCalls := 0
+	ReplayOrStore(rr1, req, "auth/register", func() httpx.ApiResponse[dummyResult] {
+		producerCalls++
+		http.SetCookie(rr1, &http.Cookie{Name: "access_token", Value: "tok-1", Path: "/", HttpOnly: true})
+		http.SetCookie(rr1, &http.Cookie{Name: "refresh_token", Value: "ref-1", Path: "/public/v1/auth/refresh_token", HttpOnly: true})
+		return httpx.Success(dummyResult{Value: "ok"})
+	})
+	if producerCalls != 1 {
+		t.Fatalf("first call: producer runs once, got %d", producerCalls)
+	}
+
+	rr2 := httptest.NewRecorder()
+	ReplayOrStore(rr2, req, "auth/register", func() httpx.ApiResponse[dummyResult] {
+		producerCalls++
+		return httpx.Success(dummyResult{Value: "should-not-run"})
+	})
+	if producerCalls != 1 {
+		t.Fatalf("replay: producer must not run again, got %d calls", producerCalls)
+	}
+	cookies := rr2.Result().Cookies()
+	if len(cookies) != 2 {
+		t.Fatalf("replay must re-emit both Set-Cookie headers, got %d: %+v", len(cookies), cookies)
+	}
+	got := map[string]string{}
+	for _, c := range cookies {
+		got[c.Name] = c.Value
+	}
+	if got["access_token"] != "tok-1" || got["refresh_token"] != "ref-1" {
+		t.Fatalf("replayed cookies wrong: %+v", got)
+	}
+}
+
 func TestReplayOrStoreEmptyKeyExecutesProducer(t *testing.T) {
 	store := NewInMemoryStore()
 	SetStore(store)
