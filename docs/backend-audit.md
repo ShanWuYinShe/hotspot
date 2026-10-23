@@ -192,4 +192,23 @@ privacy_level）在早前批次已修复，补记于此。
   2. privatechats List 仍在 service 层全量拉取后内存排序（keyset 下推依赖
      last_activity_at 冗余列，改动面较大）；
 - P2 剩余项（各域报告里未修的约定/架构类）与 OBS 项存档于 `.workwork/backend-review/`。
+## P2 第七批修复（2026-10-24，正确性/分层小项）
+
+- **users 内存游标 keyset 语义**（P2-15）：内存实现四个列表（拉黑/好友/关注/粉丝）
+  的游标定位此前要求游标行仍在列表中，游标行被删除（取关/解封）时返回空页且
+  静默成功；PG 是 keyset 谓词，游标行消失后仍应继续翻页。改为按「DESC by
+  (at, id)」比较定位（与 PG 谓词同序），非法游标统一返回 `ErrInvalidCursor`
+  （handler → 10400，与 PG 一致）。
+- **admin 角色审计快照直查**（P2-23）：`findRole` 此前 `ListRoles` 全量扫描 +
+  线性查找，角色数增长后每次角色写操作 O(全表)。新增 `Repository.GetRole(roleID)`
+  直查（PG 复用既有 `getRoleByID` 单行 + 权限批量，内存实现同口径），service
+  改用它；补双实现回归测试。
+- **报告快照复核**：user-admin 报告中的多数项（UserExists 吞错误、Refresh 日志
+  级别、privacy_level 枚举、StatsGeoDrilldown 幽灵游标、AccountData nullable 等）
+  在早前批次已修复（代码内有「审查 P2-x」标记），本批逐条确认后不再重复。
+- **内存实现定位澄清**：各业务模块构造时统一使用 `NewPostgresRepository(factory)`，
+  未配置 DB 时方法返回 `ErrNotImplemented`，**不存在生产降级到内存实现的路径**；
+  内存实现仅服务于单测。因此 auth 内存 `Register` 未 mirror PG 的三表写入属测试
+  夹具语义差异（无生产影响），不再按缺陷修复——若要覆盖，需为 auth/user 模块引入
+  共享内存后端（跨模块内存存储），成本高于收益，记录为已知限制。
 

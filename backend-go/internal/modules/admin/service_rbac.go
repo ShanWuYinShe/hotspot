@@ -330,17 +330,10 @@ func (s *Service) RevokeAdmin(ctx context.Context, userID string) (*httpx.APIErr
 	return nil, nil
 }
 
+// findRole 按 role_id 直查（审查 P2-23）：此前 ListRoles 全量扫描 + 线性
+// 查找，角色数增长后每次角色写操作的审计快照都是 O(全表)。
 func (s *Service) findRole(ctx context.Context, roleID string) (AdminRoleItem, bool, error) {
-	roles, err := s.repo.ListRoles(ctx)
-	if err != nil {
-		return AdminRoleItem{}, false, err
-	}
-	for _, role := range roles {
-		if role.RoleID == roleID {
-			return role, true, nil
-		}
-	}
-	return AdminRoleItem{}, false, nil
+	return s.repo.GetRole(ctx, roleID)
 }
 
 func diffStrings(current, previous []string) []string {

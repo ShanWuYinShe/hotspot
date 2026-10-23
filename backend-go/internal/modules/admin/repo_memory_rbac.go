@@ -43,6 +43,19 @@ func (r *InMemoryRepository) ListPermissions(context.Context) ([]AdminPermission
 	return items, nil
 }
 
+// GetRole 按 role_id 直查（与 PG 同口径：未删除角色，权限已排序去重）。
+func (r *InMemoryRepository) GetRole(_ context.Context, roleID string) (AdminRoleItem, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	record, ok := r.roles[roleID]
+	if !ok || record.deleted {
+		return AdminRoleItem{}, false, nil
+	}
+	item := record.item
+	item.Permissions = sortAndUniqueStrings(item.Permissions)
+	return item, true, nil
+}
+
 func (r *InMemoryRepository) ListRoles(context.Context) ([]AdminRoleItem, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

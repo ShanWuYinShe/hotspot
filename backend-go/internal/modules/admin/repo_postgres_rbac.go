@@ -2,13 +2,13 @@ package admin
 
 import (
 	"context"
-	"hotspot/backend-go/internal/platform/idgen"
-	"hotspot/backend-go/internal/platform/types"
 	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 func (r *PostgresRepository) GetActor(ctx context.Context, userID string) (AdminActor, bool, error) {
@@ -63,6 +63,23 @@ func (r *PostgresRepository) ListRoles(ctx context.Context) ([]AdminRoleItem, er
 		return nil, err
 	}
 	return items, nil
+}
+
+// GetRole 按 role_id 直查（未删除角色）；不存在/已软删返回 found=false。
+// 复用 getRoleByID（单行 + 权限批量），避免 ListRoles 全量扫描（审查 P2-23）。
+func (r *PostgresRepository) GetRole(ctx context.Context, roleID string) (AdminRoleItem, bool, error) {
+	queryable, ok := r.queryable(ctx)
+	if !ok {
+		return AdminRoleItem{}, false, persistence.ErrNotImplemented
+	}
+	record, found, err := r.getRoleByID(ctx, queryable, roleID)
+	if err != nil || !found {
+		return AdminRoleItem{}, found, err
+	}
+	if record.deleted {
+		return AdminRoleItem{}, false, nil
+	}
+	return record.item, true, nil
 }
 
 func (r *PostgresRepository) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest) (AdminRoleItem, error) {

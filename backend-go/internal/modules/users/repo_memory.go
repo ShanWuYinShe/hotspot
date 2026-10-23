@@ -383,7 +383,7 @@ func (r *InMemoryRepository) ListBlocked(_ context.Context, userID string, limit
 		}
 		return items[i].BlockedAt > items[j].BlockedAt
 	})
-	return paginateBlocked(items, limit, cursor), nil
+	return paginateBlocked(items, limit, cursor)
 }
 
 func (r *InMemoryRepository) Relationship(_ context.Context, userID, targetUserID string) (Relationship, error) {
@@ -440,7 +440,7 @@ func (r *InMemoryRepository) ListFriends(_ context.Context, userID string, limit
 		}
 		return *items[i].FollowedBackAt > *items[j].FollowedBackAt
 	})
-	return paginateFriends(items, limit, cursor), nil
+	return paginateFriends(items, limit, cursor)
 }
 func (r *InMemoryRepository) ListFollowing(_ context.Context, userID string, limit int, cursor string) (PaginatedFollowing, error) {
 	r.mu.RLock()
@@ -469,7 +469,7 @@ func (r *InMemoryRepository) ListFollowing(_ context.Context, userID string, lim
 		}
 		return items[i].FollowedAt > items[j].FollowedAt
 	})
-	return paginateFollowing(items, limit, cursor), nil
+	return paginateFollowing(items, limit, cursor)
 }
 func (r *InMemoryRepository) ListFollowers(_ context.Context, userID string, limit int, cursor string) (PaginatedFollowers, error) {
 	r.mu.RLock()
@@ -497,7 +497,7 @@ func (r *InMemoryRepository) ListFollowers(_ context.Context, userID string, lim
 		}
 		return items[i].FollowedAt > items[j].FollowedAt
 	})
-	return paginateFollowers(items, limit, cursor), nil
+	return paginateFollowers(items, limit, cursor)
 }
 func (r *InMemoryRepository) UserExists(_ context.Context, userID string) (bool, error) {
 	r.mu.RLock()
@@ -542,11 +542,11 @@ func containsFold(items []string, target string) bool {
 	return false
 }
 
-func paginateBlocked(items []BlockedUserItem, limit int, cursor string) PaginatedBlockedUsers {
+func paginateBlocked(items []BlockedUserItem, limit int, cursor string) (PaginatedBlockedUsers, error) {
 	limit = types.NormalizeLimit(limit)
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].BlockedAt, items[i].User.UserID }, len(items))
-	if !ok {
-		return PaginatedBlockedUsers{}
+	start, err := userListCursorStart(cursor, func(i int) (string, string) { return items[i].BlockedAt, items[i].User.UserID }, len(items))
+	if err != nil {
+		return PaginatedBlockedUsers{}, err
 	}
 	end := start + limit
 	if end > len(items) {
@@ -557,19 +557,19 @@ func paginateBlocked(items []BlockedUserItem, limit int, cursor string) Paginate
 		c := encodeUserMomentCursor(items[end-1].BlockedAt, items[end-1].User.UserID)
 		resp.NextCursor = &c
 	}
-	return resp
+	return resp, nil
 }
-func paginateFriends(items []RelatedUserItem, limit int, cursor string) PaginatedFriends {
+func paginateFriends(items []RelatedUserItem, limit int, cursor string) (PaginatedFriends, error) {
 	limit = types.NormalizeLimit(limit)
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) {
+	start, err := userListCursorStart(cursor, func(i int) (string, string) {
 		at := ""
 		if items[i].FollowedBackAt != nil {
 			at = *items[i].FollowedBackAt
 		}
 		return at, items[i].User.User.UserID
 	}, len(items))
-	if !ok {
-		return PaginatedFriends{}
+	if err != nil {
+		return PaginatedFriends{}, err
 	}
 	end := start + limit
 	if end > len(items) {
@@ -580,13 +580,13 @@ func paginateFriends(items []RelatedUserItem, limit int, cursor string) Paginate
 		c := encodeUserMomentCursor(*items[end-1].FollowedBackAt, items[end-1].User.User.UserID)
 		resp.NextCursor = &c
 	}
-	return resp
+	return resp, nil
 }
-func paginateFollowing(items []RelatedUserItem, limit int, cursor string) PaginatedFollowing {
+func paginateFollowing(items []RelatedUserItem, limit int, cursor string) (PaginatedFollowing, error) {
 	limit = types.NormalizeLimit(limit)
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.User.UserID }, len(items))
-	if !ok {
-		return PaginatedFollowing{}
+	start, err := userListCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.User.UserID }, len(items))
+	if err != nil {
+		return PaginatedFollowing{}, err
 	}
 	end := start + limit
 	if end > len(items) {
@@ -597,13 +597,13 @@ func paginateFollowing(items []RelatedUserItem, limit int, cursor string) Pagina
 		c := encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.User.UserID)
 		resp.NextCursor = &c
 	}
-	return resp
+	return resp, nil
 }
-func paginateFollowers(items []RelatedUserItem, limit int, cursor string) PaginatedFollowers {
+func paginateFollowers(items []RelatedUserItem, limit int, cursor string) (PaginatedFollowers, error) {
 	limit = types.NormalizeLimit(limit)
-	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.User.UserID }, len(items))
-	if !ok {
-		return PaginatedFollowers{}
+	start, err := userListCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.User.UserID }, len(items))
+	if err != nil {
+		return PaginatedFollowers{}, err
 	}
 	end := start + limit
 	if end > len(items) {
@@ -614,29 +614,38 @@ func paginateFollowers(items []RelatedUserItem, limit int, cursor string) Pagina
 		c := encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.User.UserID)
 		resp.NextCursor = &c
 	}
-	return resp
+	return resp, nil
 }
 
-func findUserCursorStart(cursor string, keyAt func(i int) (string, string), length int) (int, bool) {
+// userListCursorStart 计算 keyset 起点（列表统一按 (at, id) DESC 排序）。
+//
+// 审查 P2-15：此前要求游标行仍在列表中（精确匹配），游标行被删除（取关/解封
+// 等）时直接返回空页且静默成功——PG 是 keyset 谓词，游标行消失后仍应继续翻页；
+// 无效游标在 PG 侧返回 ErrInvalidCursor（handler → 10400），内存版也统一。
+func userListCursorStart(cursor string, keyAt func(i int) (string, string), length int) (int, error) {
 	if cursor == "" {
-		return 0, true
+		return 0, nil
 	}
 	decodedAt, decodedID, err := decodeUserMomentCursor(cursor)
 	if err != nil {
-		return 0, false
+		return 0, err
 	}
-	parsedAt, ok := decodedAt.(time.Time)
+	needleAt, ok := decodedAt.(time.Time)
 	if !ok {
-		return 0, false
+		return 0, ErrInvalidCursor
 	}
-	needleAt := parsedAt.UTC().Format(time.RFC3339)
 	for i := 0; i < length; i++ {
-		itemAt, itemID := keyAt(i)
-		if itemAt == needleAt && itemID == decodedID {
-			return i + 1, true
+		itemAtRaw, itemID := keyAt(i)
+		itemAt, parseErr := time.Parse(time.RFC3339Nano, itemAtRaw)
+		if parseErr != nil {
+			continue
+		}
+		// DESC（时间降序 + ID 升序）：第一条严格排在游标之后的项即下一页起点。
+		if itemAt.Before(needleAt) || (itemAt.Equal(needleAt) && itemID > decodedID) {
+			return i, nil
 		}
 	}
-	return 0, false
+	return length, nil
 }
 
 type searchProfileCandidate struct {

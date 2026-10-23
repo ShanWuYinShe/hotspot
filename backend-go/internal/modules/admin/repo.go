@@ -7,6 +7,9 @@ type Repository interface {
 	IsAdmin(context.Context, string) (bool, error)
 	ListPermissions(context.Context) ([]AdminPermissionItem, error)
 	ListRoles(context.Context) ([]AdminRoleItem, error)
+	// GetRole 按 role_id 直查（审查 P2-23）：角色写操作的审计快照用它，避免
+	// ListRoles 全量扫描 + 线性查找。
+	GetRole(ctx context.Context, roleID string) (AdminRoleItem, bool, error)
 	CreateRole(context.Context, AdminRbacRoleCreateRequest) (AdminRoleItem, error)
 	UpdateRole(context.Context, AdminRbacRoleUpdateRequest) error
 	DeleteRole(context.Context, string) error
