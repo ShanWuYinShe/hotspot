@@ -112,7 +112,13 @@ func (s *PersistenceSource) Get(ctx context.Context) AppConfig {
 }
 
 func (s *PersistenceSource) Update(ctx context.Context, apply func(AppConfig) AppConfig) (AppConfig, error) {
-	s.ensureLoaded(ctx)
+	// 读-改-写全程持 loadMu：ensureLoaded 与 apply/fallback.Set 原子化。
+	// 此前 Update 只在入口 ensureLoaded（单独临界区），两个并发 Update 各自
+	// Get 到旧快照、后写者把先写者的字段改动整体回滚（丢更新）。admin 改
+	// 配置为低频路径，锁内做一次 DB upsert 的开销可忽略。
+	s.loadMu.Lock()
+	defer s.loadMu.Unlock()
+	s.ensureLoadedLocked(ctx)
 	current := s.fallback.Get()
 	next := cloneConfig(apply(current))
 	updatedAt := time.Now().UTC().Format(time.RFC3339)
@@ -133,6 +139,12 @@ func (s *PersistenceSource) Update(ctx context.Context, apply func(AppConfig) Ap
 func (s *PersistenceSource) ensureLoaded(ctx context.Context) {
 	s.loadMu.Lock()
 	defer s.loadMu.Unlock()
+	s.ensureLoadedLocked(ctx)
+}
+
+// ensureLoadedLocked 完成实际的加载/重载判定；调用方必须持有 loadMu
+// （Get 经 ensureLoaded 进入；Update 直接复用以保持读-改-写原子）。
+func (s *PersistenceSource) ensureLoadedLocked(ctx context.Context) {
 	if !s.loadAttempted {
 		s.loadAttempted = true
 		s.tryLoad(ctx)
