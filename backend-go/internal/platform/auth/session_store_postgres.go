@@ -8,6 +8,7 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type PostgresSessionStore struct {
@@ -27,7 +28,26 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session SessionRecord) 
 	if !ok {
 		return s.fallback.Save(ctx, session)
 	}
-	return queryable.Exec(ctx, queryUpsertSession, session.SessionID, session.UserID, session.CreatedAt, session.LastActiveAt, session.RevokedAt, session.DeviceType, session.DeviceName, session.IPAddress, session.IPLocation, session.DeviceID)
+	err := queryable.Exec(ctx, queryUpsertSession, session.SessionID, session.UserID, session.CreatedAt, session.LastActiveAt, session.RevokedAt, session.DeviceType, session.DeviceName, session.IPAddress, session.IPLocation, session.DeviceID)
+	if isDeviceSessionConflict(err) {
+		// 同一设备已有活跃会话（迁移 057 的部分唯一索引）：交给上层撤销后重试，
+		// 而不是把 23505 当成 500 抛给客户端。
+		return ErrDeviceSessionConflict
+	}
+	return err
+}
+
+// isDeviceSessionConflict 判定唯一索引冲突（23505 + 约束名）。只认本迁移的
+// 约束名，避免把其它唯一冲突误判成设备会话冲突。
+func isDeviceSessionConflict(err error) bool {
+	if err == nil {
+		return false
+	}
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	return pgErr.Code == "23505" && pgErr.ConstraintName == "uq_auth_sessions_active_device"
 }
 
 func (s *PostgresSessionStore) Touch(ctx context.Context, sessionID string) error {

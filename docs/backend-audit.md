@@ -161,15 +161,35 @@ mTLS origin-pull + CF 网段 allow/deny——故 CF-Connecting-IP 由 CF 强制�
 本轮同时确认 user-admin P2-14（内存 `SearchProfiles` 漏过滤 is_deleted/
 privacy_level）在早前批次已修复，补记于此。
 
+## P2 第六批修复（2026-10-24，设备逐出 TOCTOU）
+
+原 Login/Guest 的设备逐出是「先 RevokeByUserDevice 再 IssueSession」两步：同一
+设备的两个登录请求严格并发时可双双通过撤销检查、各自插入新会话——同一设备留下
+两个活跃会话，旧会话的 refresh token 仍可轮转，与「单设备登录即逐出」语义冲突
+（旧审计「未修限制 1」）。
+
+修法（迁移 057 + 应用层重试）：
+- auth_sessions 增加部分唯一索引 uq_auth_sessions_active_device：
+  (user_id, device_id) WHERE revoked_at IS NULL AND device_id <> ''；迁移内先做
+  一次性去重（每组保留最新会话，仅置 revoked_at 不删行），索引用普通
+  CREATE INDEX（迁移禁 CONCURRENTLY），幂等可重复执行；
+- 平台层 PostgresSessionStore.Save 识别该约束的 23505 → 返回
+  ErrDeviceSessionConflict（内存实现同步同语义，降级路径也能暴露竞态）；
+- 新增 Service.IssueSessionEvictingDevice：先插新会话，冲突则撤销该设备旧会话后
+  重试（最多 2 次），由数据库约束保证最终至多一个活跃会话；
+- Login/Guest 改为「快照旧会话 → 逐出式签发 → 关闭被逐出会话的 WS 连接」，
+  原「先撤销再签发」的两步窗口消除。
+
+验证：单测覆盖内存唯一性、逐出后仅剩一个活跃会话、8 并发登录最终恰好一个、
+空 device_id 不参与约束；真实库 IT 断言索引存在 + 第二次插入被拦 + 逐出流程
+收敛为 1 个活跃会话。
+
 **遗留观察项**（不紧急，记录在案）：
 - 双实现（repo_memory/repo_postgres）漂移仍是本项目最大 bug 温床（四轮共修 35+ 处）；
   本批起 drift 修复均附内存实现回归测试，但跨实现「同输入同输出」对比测试基建仍缺；
 - **未修的已知限制**（需产品/架构决策，非缺陷）：
-  1. Login/Guest 的同设备逐出为「先撤销旧会话再建新会话」，两请求严格并发时仍
-     可能留下两个活跃会话——彻底修需要 auth_sessions 上的部分唯一索引
-     (user_id, device_id) WHERE revoked_at IS NULL，涉及存量数据去重迁移，未做；
-  2. auth 的验证码 TTL、登录锁定阈值仍为代码常量（迁 AppConfig 需同步前端管理页）；
-  3. privatechats List 仍在 service 层全量拉取后内存排序（keyset 下推依赖
+  1. auth 的验证码 TTL、登录锁定阈值仍为代码常量（迁 AppConfig 需同步前端管理页）；
+  2. privatechats List 仍在 service 层全量拉取后内存排序（keyset 下推依赖
      last_activity_at 冗余列，改动面较大）；
 - P2 剩余项（各域报告里未修的约定/架构类）与 OBS 项存档于 `.workwork/backend-review/`。
 

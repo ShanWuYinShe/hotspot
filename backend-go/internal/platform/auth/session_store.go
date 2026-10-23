@@ -45,6 +45,19 @@ func NewInMemorySessionStore() *InMemorySessionStore {
 func (s *InMemorySessionStore) Save(_ context.Context, session SessionRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// 与 PG 的部分唯一索引（迁移 057）同语义：同一 (user_id, device_id) 至多
+	// 一个活跃会话；空 device_id 不参与约束。内存实现是 DB 未配置时的降级
+	// 路径，必须同样能暴露 TOCTOU 失败，否则降级模式测试会掩盖竞态。
+	if session.DeviceID != "" && session.RevokedAt == nil {
+		for id, existing := range s.items {
+			if id == session.SessionID {
+				continue
+			}
+			if existing.UserID == session.UserID && existing.DeviceID == session.DeviceID && existing.RevokedAt == nil {
+				return ErrDeviceSessionConflict
+			}
+		}
+	}
 	s.items[session.SessionID] = session
 	return nil
 }

@@ -2,10 +2,38 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 )
+
+// IssueSessionEvictingDevice 为新登录签发会话，并保证「同一设备仅一个活跃
+// 会话」（审计未修限制 1 的 TOCTOU 修复）。
+//
+// 旧实现是「先 RevokeByUserDevice 再 IssueSession」两步：两个并发登录请求可
+// 双双通过撤销检查后各自插入会话，同一设备留下两个活跃会话，旧会话的 refresh
+// token 仍可轮转。现在改为「先插入（由迁移 057 的部分唯一索引兜底），冲突则
+// 撤销该设备旧会话后重试」，数据库约束保证最终至多一个活跃会话。
+func (s *Service) IssueSessionEvictingDevice(ctx context.Context, userID string, meta SessionMeta) (AuthResult, error) {
+	const maxAttempts = 2
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		result, err := s.IssueSessionWithMeta(ctx, userID, meta)
+		if err == nil {
+			return result, nil
+		}
+		if !errors.Is(err, ErrDeviceSessionConflict) {
+			return AuthResult{}, err
+		}
+		// 本设备已有活跃会话：撤销后重试。并发对手可能刚插入了新会话，
+		// 第二轮同样会被索引拦截并再次撤销，最坏情况下返回冲突由调用方报错。
+		if _, revokeErr := s.RevokeByUserDevice(ctx, userID, meta.DeviceID); revokeErr != nil {
+			return AuthResult{}, fmt.Errorf("auth: evict device sessions: %w", revokeErr)
+		}
+	}
+	return AuthResult{}, ErrDeviceSessionConflict
+}
 
 func (s *Service) GetSession(ctx context.Context, sessionID string) (SessionRecord, bool, error) {
 	return s.sessions.Get(ctx, sessionID)

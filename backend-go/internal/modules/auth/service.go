@@ -376,20 +376,16 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 		)
 		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Login: update meta: %w", err)
 	}
+	// 设备逐出改为「先插新会话，冲突则由平台层撤销旧会话重试」（TOCTOU 修复，
+	// 见 IssueSessionEvictingDevice 注释）。撤销后旧会话不再出现在活跃列表，
+	// 故先快照需要关闭的 WS 连接，成功后再逐个关闭。
+	evictedSessionIDs := make([]string, 0, 1)
 	for _, session := range s.auth.ListSessions(ctx, account.UserID, "") {
 		if session.DeviceID == meta.DeviceID && meta.DeviceID != "" {
-			realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent("device_evicted"))
+			evictedSessionIDs = append(evictedSessionIDs, session.SessionID)
 		}
 	}
-	if _, err := s.auth.RevokeByUserDevice(ctx, account.UserID, meta.DeviceID); err != nil {
-		observability.L().Warn("login device eviction failed",
-			"method", "Login",
-			"user_id", account.UserID,
-			"device_id", meta.DeviceID,
-			"error", err,
-		)
-	}
-	result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
+	result, err := s.auth.IssueSessionEvictingDevice(ctx, account.UserID, meta)
 	if err != nil {
 		observability.L().Error("service error",
 			"method", "Login",
@@ -397,6 +393,11 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
 		)
 		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Login: issue session: %w", err)
+	}
+	for _, sessionID := range evictedSessionIDs {
+		if sessionID != result.Principal.SessionID {
+			realtime.DefaultHub().CloseSession(sessionID, sessionRevokedEvent("device_evicted"))
+		}
 	}
 	return result, nil
 }
@@ -429,20 +430,14 @@ func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth
 		)
 		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Guest: repo: %w", err)
 	}
+	// 同 Login：先快照旧会话用于关 WS，再插入新会话（冲突时自动逐出后重试）。
+	evictedSessionIDs := make([]string, 0, 1)
 	for _, session := range s.auth.ListSessions(ctx, account.UserID, "") {
 		if session.DeviceID == meta.DeviceID && meta.DeviceID != "" {
-			realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent("device_evicted"))
+			evictedSessionIDs = append(evictedSessionIDs, session.SessionID)
 		}
 	}
-	if _, err := s.auth.RevokeByUserDevice(ctx, account.UserID, meta.DeviceID); err != nil {
-		observability.L().Warn("guest device eviction failed",
-			"method", "Guest",
-			"user_id", account.UserID,
-			"device_id", meta.DeviceID,
-			"error", err,
-		)
-	}
-	result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
+	result, err := s.auth.IssueSessionEvictingDevice(ctx, account.UserID, meta)
 	if err != nil {
 		observability.L().Error("service error",
 			"method", "Guest",
@@ -450,6 +445,11 @@ func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
 		)
 		return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Guest: issue session: %w", err)
+	}
+	for _, sessionID := range evictedSessionIDs {
+		if sessionID != result.Principal.SessionID {
+			realtime.DefaultHub().CloseSession(sessionID, sessionRevokedEvent("device_evicted"))
+		}
 	}
 	resourceguard.RecordUser(ctx, account.UserID)
 	return result, nil
