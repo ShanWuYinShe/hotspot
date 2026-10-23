@@ -21,6 +21,27 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
   ```
   `backend-test` 为独立测试后端（`APP_ENV=test` 跳过限流 + 独立 `hotspot_test` 数据库，见 `docker-compose.dev.yml`），不污染 dev 主库。
 
+### 推送前门禁（硬性）：`./scripts/verify-backend-ci.sh`
+
+`go test -short` **不覆盖** CI 的以下检查，历史上多次「本地绿、CI 红」均源于此
+（2026-10-23 连续 4 个提交因真实库 SQL/参数错误红灯）：
+
+- `-race` 数据竞争 + `internal/modules` 每包覆盖率 **≥70%** 门禁；
+- `TestPostgresIT` 真实库仓库集成测试（会暴露 SQL 列歧义、参数个数不符等
+  stub 单测无法发现的问题——**改任何 repo SQL 后必须跑**）；
+- HTTP 全链路集成（`test/integration`，~100 用例，需 compose dev 栈）。
+
+**推送前**按改动范围至少跑：
+
+```bash
+./scripts/verify-backend-ci.sh              # 静态 + race + 覆盖率（默认）
+./scripts/verify-backend-ci.sh --with-db    # 改了 SQL/repo 时追加真实库 IT
+./scripts/verify-backend-ci.sh --all        # 全量（含 E2E 与 govulncheck）
+```
+
+脚本与 `.github/workflows/ci.yml` 的 backend / backend-integration job 逐条对齐；
+worktree 内执行时 DB/E2E 阶段自动回落到主工作树 compose（验证主树源码）。
+
 ## 潜在问题审计
 
 静态审计清单与结论（goroutine panic、context 泄漏、连接/事务、忽略错误、SQL 注入、无界查询）
