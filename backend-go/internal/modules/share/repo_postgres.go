@@ -87,6 +87,24 @@ func (r *PostgresRepository) Revoke(ctx context.Context, cmd revokeShareCommand)
 	return nil
 }
 
+// ResolveShareIDByCode 按分享码解析 share_id（不过滤 revoked/expired），
+// 供撤销幂等使用：按 code 重复撤销应幂等成功，而不是被 Get 的不可用判定
+// 变成 404（审查 P2-8）。
+func (r *PostgresRepository) ResolveShareIDByCode(ctx context.Context, shareCode string) (string, bool, error) {
+	queryable, err := r.queryable(ctx)
+	if err != nil {
+		return "", false, err
+	}
+	var shareID string
+	if err := queryable.QueryRow(ctx, queryResolveShareIDByCode, shareCode).Scan(&shareID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return shareID, true, nil
+}
+
 func (r *PostgresRepository) queryable(ctx context.Context) (persistence.Queryable, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {

@@ -20,6 +20,16 @@ func (r *shareStubRepo) Create(_ context.Context, cmd createShareCommand) (Share
 	r.createCmd = cmd
 	return ShareCreated{ShareID: "share_1", ShareCode: "ABCDEFGHJKLM"}, r.err
 }
+
+// ResolveShareIDByCode 撤销幂等路径的桩：默认把 share_code 映射为同值
+// share_id（Get 桩被置为 not found 时仍可定位到分享，模拟「已 revoked」）。
+func (r *shareStubRepo) ResolveShareIDByCode(_ context.Context, shareCode string) (string, bool, error) {
+	if shareCode == "" {
+		return "", false, nil
+	}
+	return "share_" + shareCode, true, nil
+}
+
 func (r *shareStubRepo) Get(_ context.Context, query getShareQuery) (ShareDetail, error) {
 	r.getQuery = query
 	return ShareDetail{}, r.err
@@ -78,6 +88,22 @@ func TestServiceListNormalizesPagination(t *testing.T) {
 	}
 	if repo.listQuery.CreatorUserID != "u1" || repo.listQuery.ShareType != ShareTypeUser || repo.listQuery.Limit != defaultShareListLimit {
 		t.Fatalf("unexpected list query: %#v", repo.listQuery)
+	}
+}
+
+// TestServiceRevokeByCodeIsIdempotentForRevokedShare 防回归（审查 P2-8）：
+// 按 share_code 撤销已撤销/已过期的分享必须幂等成功。此前走 repo.Get，而
+// Get 把 revoked 统一映射为 ErrShareNotFound → 返回 404，与按 share_id 的
+// 幂等口径分裂。桩里 Get 恒返回 not found，ResolveShareIDByCode 仍能定位，
+// 断言请求到达 Revoke 且无错误。
+func TestServiceRevokeByCodeIsIdempotentForRevokedShare(t *testing.T) {
+	repo := &shareStubRepo{}
+	service := NewServiceWithRepo(repo)
+	if err := service.Revoke(shareContextWithUser("u1"), RevokeShareRequest{ShareCode: "abcdefgh"}); err != nil {
+		t.Fatalf("revoke by code of revoked share must be idempotent, got %v", err)
+	}
+	if repo.revokeCmd.ShareID != "share_abcdefgh" {
+		t.Fatalf("unexpected revoke command: %#v", repo.revokeCmd)
 	}
 }
 

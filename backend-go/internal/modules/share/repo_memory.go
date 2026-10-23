@@ -69,6 +69,15 @@ func (r *InMemoryRepository) Create(_ context.Context, cmd createShareCommand) (
 	}
 }
 
+// ResolveShareIDByCode 按分享码解析 share_id（不过滤 revoked/expired），
+// 语义对齐 PG 实现（撤销幂等）。
+func (r *InMemoryRepository) ResolveShareIDByCode(_ context.Context, shareCode string) (string, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	shareID, ok := r.byCode[shareCode]
+	return shareID, ok, nil
+}
+
 func (r *InMemoryRepository) Get(_ context.Context, query getShareQuery) (ShareDetail, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

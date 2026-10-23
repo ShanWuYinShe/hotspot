@@ -102,12 +102,18 @@ func (s *Service) Revoke(ctx context.Context, req RevokeShareRequest) error {
 		return ErrInvalidShareRequest
 	}
 	if shareID == "" {
-		detail, err := s.repo.Get(ctx, getShareQuery{ShareCode: shareCode})
+		// 按分享码定位（不过滤 revoked/expired）：撤销已撤销/已过期的分享应
+		// 幂等成功，与按 share_id 撤销的口径一致（审查 P2-8 幂等分裂——此前
+		// 走 Get，revoked 被映射为不存在 → 返回 404）。
+		resolved, found, err := s.repo.ResolveShareIDByCode(ctx, shareCode)
 		if err != nil {
 			observability.L().Error("share.revoke resolve by code failed", "error", err, "share_code", observability.Redact(shareCode))
 			return err
 		}
-		shareID = detail.Share.ShareID
+		if !found {
+			return ErrShareNotFound
+		}
+		shareID = resolved
 	}
 	cmd := revokeShareCommand{CreatorUserID: principal.UserID, ShareID: shareID}
 	if err := s.repo.Revoke(ctx, cmd); err != nil {

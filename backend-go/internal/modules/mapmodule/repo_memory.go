@@ -1,5 +1,11 @@
 package mapmodule
 
+// 本文件是**测试专用占位实现，不保证语义等价**（审查 P2-26）：
+// Heatmap/Hotspots 返回按 S2 覆盖生成的固定形状数据，而非真实聚合结果。
+// module.go 的装配恒使用 NewPostgresRepository，DB 未配置时也不会降级到
+// 本实现（无降级路径），故生产不可达；它的存在仅为让不依赖 DB 的单元测试
+// 能构造 Service。禁止在任何降级/生产路径引用——需要真实语义请扩展 Postgres
+// 实现的测试桩（persistence.Queryable 注入）而不是本类型。
 import (
 	"context"
 	"fmt"

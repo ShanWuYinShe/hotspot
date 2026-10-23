@@ -25,6 +25,13 @@ type shareErrorRepo struct {
 func (r *shareErrorRepo) Create(context.Context, createShareCommand) (ShareCreated, error) {
 	return ShareCreated{}, r.createErr
 }
+func (r *shareErrorRepo) ResolveShareIDByCode(context.Context, string) (string, bool, error) {
+	if r.getErr != nil {
+		return "", false, r.getErr
+	}
+	return "", false, nil
+}
+
 func (r *shareErrorRepo) Get(context.Context, getShareQuery) (ShareDetail, error) {
 	return ShareDetail{}, r.getErr
 }

@@ -1,5 +1,9 @@
 package search
 
+// 本文件是**测试专用占位实现，不保证语义等价**（审查 P2-26）：返回固定
+// 捏造条目用于构造不依赖 DB 的单元测试，不做真实检索/分页/隐私过滤。
+// module.go 的装配恒使用 NewPostgresRepository（DB 未配置时也无降级到本
+// 实现的路径），故生产不可达。禁止在降级/生产路径引用。
 import "context"
 
 type InMemoryRepository struct{}

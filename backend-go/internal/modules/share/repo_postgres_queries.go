@@ -25,6 +25,10 @@ const (
 	FROM shares
 	WHERE share_id = $1`
 
+	// queryResolveShareIDByCode 只取 share_id，不过滤 is_revoked / expires_at：
+	// 撤销幂等需要定位到「已不可用」的分享（见 Repository.ResolveShareIDByCode）。
+	queryResolveShareIDByCode = `SELECT share_id FROM shares WHERE share_code = $1`
+
 	queryListShares = `
 	SELECT share_id,
 	       share_code,
