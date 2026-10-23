@@ -32,8 +32,17 @@ func (r *stubChatRepo) GetOrCreate(_ context.Context, _, _ string) (time.Time, e
 	}
 	return r.createdAt, r.createErr
 }
-func (r *stubChatRepo) List(_ context.Context, _ string, _ ListOptions) ([]ChatState, string, error) {
-	return r.states, r.listCursor, r.listErr
+func (r *stubChatRepo) List(_ context.Context, _ string, opts ListOptions) ([]ChatState, string, error) {
+	if r.listErr != nil {
+		return nil, "", r.listErr
+	}
+	// 服务层不再自行分页（审查 P2-7 下推后）：桩复用与内存实现相同的分页
+	// helper，保证 service 级用例仍能覆盖 limit 裁剪/游标语义。
+	if r.listCursor != "" {
+		return r.states, r.listCursor, nil
+	}
+	items, next := paginateChatStates(r.states, opts)
+	return items, next, nil
 }
 func (r *stubChatRepo) GetState(_ context.Context, _, _ string) (ChatState, error) {
 	return r.state, r.stateErr

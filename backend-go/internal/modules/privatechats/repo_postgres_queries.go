@@ -11,6 +11,15 @@ const (
 	FROM private_chats
 	WHERE chat_key = $1`
 
+	// queryListPrivateChats 会话列表 keyset 分页（审查 P2-7：此前每次请求全量
+	// 拉取用户全部会话 + 全量批量聚合，翻页成本恒为 O(全量)）。
+	//
+	// 排序键与契约一致：is_pinned DESC, last_activity_at DESC, target_user_id ASC。
+	// last_activity 取「最近可见消息 sent_at」（LATERAL 走
+	// idx_private_messages_chat_key_sent_at 倒序取 1 行），无消息时回退 chat
+	// created_at——与 buildChats 用 LastByChatKeys(boundaries=visible_since) 的口径
+	// 一致。已删除且窗口内无消息的会话在 SQL 里直接排除（等价 buildChats 的跳过
+	// 逻辑），并 JOIN users 过滤已注销目标，避免分页出现空页。
 	queryListPrivateChats = `
 	SELECT pc.chat_key,
 	       CASE WHEN pc.user_a_id = $1 THEN pc.user_b_id ELSE pc.user_a_id END AS target_user_id,
@@ -18,11 +27,34 @@ const (
 	       COALESCE(pcs.is_muted, FALSE),
 	       COALESCE(pcs.is_pinned, FALSE),
 	       pcs.visible_since,
-	       pcs.deleted_at
+	       pcs.deleted_at,
+	       COALESCE(lm.last_sent_at, pc.created_at) AS last_activity_at
 	FROM private_chats pc
 	LEFT JOIN private_chat_user_state pcs
 	  ON pcs.chat_key = pc.chat_key AND pcs.user_id = $1
-	WHERE pc.user_a_id = $1 OR pc.user_b_id = $1`
+	LEFT JOIN LATERAL (
+	    SELECT m.sent_at AS last_sent_at
+	    FROM private_messages m
+	    WHERE m.chat_key = pc.chat_key
+	      AND (pcs.visible_since IS NULL OR m.sent_at >= pcs.visible_since)
+	    ORDER BY m.sent_at DESC
+	    LIMIT 1
+	) lm ON TRUE
+	JOIN users u
+	  ON u.user_id = (CASE WHEN pc.user_a_id = $1 THEN pc.user_b_id ELSE pc.user_a_id END)
+	 AND u.is_deleted = FALSE
+	WHERE (pc.user_a_id = $1 OR pc.user_b_id = $1)
+	  AND NOT (pcs.deleted_at IS NOT NULL AND lm.last_sent_at IS NULL)
+	  AND ($2::boolean IS NULL
+	       OR COALESCE(pcs.is_pinned, FALSE) < $2
+	       OR (COALESCE(pcs.is_pinned, FALSE) = $2
+	           AND (COALESCE(lm.last_sent_at, pc.created_at) < $3::timestamptz
+	                OR (COALESCE(lm.last_sent_at, pc.created_at) = $3::timestamptz
+	                    AND (CASE WHEN pc.user_a_id = $1 THEN pc.user_b_id ELSE pc.user_a_id END) > $4))))
+	ORDER BY COALESCE(pcs.is_pinned, FALSE) DESC,
+	         last_activity_at DESC,
+	         target_user_id ASC
+	LIMIT $5`
 
 	queryGetPrivateChatState = `
 	SELECT pc.chat_key,

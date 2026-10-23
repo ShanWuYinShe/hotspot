@@ -128,7 +128,8 @@ func (b *privateChatBackendStub) Query(_ context.Context, query string, args ...
 			if b.states != nil && b.states[record.ChatKey] != nil {
 				state = b.states[record.ChatKey][userID]
 			}
-			rows = append(rows, []any{record.ChatKey, targetID, record.CreatedAt, state.IsMuted, state.IsPinned, state.VisibleSince, state.DeletedAt})
+			// 第 8 列 last_activity_at（LATERAL 最近消息时间，桩用创建时间模拟）。
+			rows = append(rows, []any{record.ChatKey, targetID, record.CreatedAt, state.IsMuted, state.IsPinned, state.VisibleSince, state.DeletedAt, record.CreatedAt})
 		}
 		return &testdb.RowsValues{Rows: rows}, nil
 	}

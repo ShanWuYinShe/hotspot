@@ -2,8 +2,11 @@ package privatechats
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
+
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type memoryChatState struct {
@@ -36,7 +39,7 @@ func (r *InMemoryRepository) GetOrCreate(_ context.Context, userID, targetUserID
 	r.chats[k] = &memoryChatState{createdAt: now, users: map[string]ChatState{userID: {ChatKey: k, TargetID: targetUserID, CreatedAt: now}, targetUserID: {ChatKey: k, TargetID: userID, CreatedAt: now}}}
 	return now, nil
 }
-func (r *InMemoryRepository) List(_ context.Context, userID string, _ ListOptions) ([]ChatState, string, error) {
+func (r *InMemoryRepository) List(_ context.Context, userID string, opts ListOptions) ([]ChatState, string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]ChatState, 0)
@@ -45,7 +48,8 @@ func (r *InMemoryRepository) List(_ context.Context, userID string, _ ListOption
 			out = append(out, cloneChatState(state))
 		}
 	}
-	return out, "", nil
+	items, next := paginateChatStates(out, opts)
+	return items, next, nil
 }
 
 func (r *InMemoryRepository) GetState(_ context.Context, userID, targetUserID string) (ChatState, error) {
@@ -127,4 +131,56 @@ func cloneChatState(state ChatState) ChatState {
 		cloned.DeletedAt = &ts
 	}
 	return cloned
+}
+
+// paginateChatStates 会话列表 keyset 分页（审查 P2-7）：与 PG SQL 同序
+// （is_pinned DESC, last_activity DESC, target_id ASC），供内存实现与测试桩复用，
+// 避免两套分页逻辑漂移。内存侧的 last_activity 在无消息表时回退 created_at。
+func paginateChatStates(states []ChatState, opts ListOptions) ([]ChatState, string) {
+	limit := types.NormalizeLimit(opts.Limit)
+	items := make([]ChatState, 0, len(states))
+	for _, state := range states {
+		if state.LastActivityAt.IsZero() {
+			state.LastActivityAt = state.CreatedAt
+		}
+		items = append(items, state)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].IsPinned != items[j].IsPinned {
+			return items[i].IsPinned
+		}
+		if !items[i].LastActivityAt.Equal(items[j].LastActivityAt) {
+			return items[i].LastActivityAt.After(items[j].LastActivityAt)
+		}
+		return items[i].TargetID < items[j].TargetID
+	})
+	cursorPinned, cursorAt, cursorTargetID, err := decodeChatCursor(opts.Cursor)
+	if err != nil {
+		return nil, ""
+	}
+	if !cursorAt.IsZero() {
+		start := 0
+		for i, state := range items {
+			// 跳过游标及之前的项：pinned 更大，或同 pinned 且 activity 更新；
+			// 同 (pinned, activity) 时 target 更小者在前。
+			if state.IsPinned != cursorPinned {
+				if !state.IsPinned && cursorPinned {
+					break
+				}
+				start = i + 1
+				continue
+			}
+			if state.LastActivityAt.Before(cursorAt) || (state.LastActivityAt.Equal(cursorAt) && state.TargetID > cursorTargetID) {
+				break
+			}
+			start = i + 1
+		}
+		items = items[start:]
+	}
+	if len(items) > limit {
+		last := items[limit-1]
+		next := encodeChatCursor(last.IsPinned, last.LastActivityAt.UTC().Format(time.RFC3339Nano), last.TargetID)
+		return items[:limit], next
+	}
+	return items, ""
 }

@@ -6,13 +6,16 @@ import (
 )
 
 type ChatState struct {
-	ChatKey      string
-	TargetID     string
-	CreatedAt    time.Time
-	IsMuted      bool
-	IsPinned     bool
-	VisibleSince *time.Time
-	DeletedAt    *time.Time
+	ChatKey   string
+	TargetID  string
+	CreatedAt time.Time
+	// LastActivityAt 最近可见消息时间（无消息时回退为 CreatedAt）。列表排序
+	// 键，分页下推后由 SQL 的 LATERAL 计算并返回（审查 P2-7）。
+	LastActivityAt time.Time
+	IsMuted        bool
+	IsPinned       bool
+	VisibleSince   *time.Time
+	DeletedAt      *time.Time
 }
 
 type UpdateChatSettings struct {

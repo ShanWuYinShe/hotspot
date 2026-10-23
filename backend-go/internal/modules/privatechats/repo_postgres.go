@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 type PostgresRepository struct {
@@ -38,14 +39,32 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, opts ListO
 	if !ok {
 		return nil, "", persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryListPrivateChats, userID)
+	// keyset 分页下推（审查 P2-7）：游标编解码收口在 Repository 层，
+	// limit+1 探测下一页，SQL 侧按 (is_pinned DESC, last_activity DESC,
+	// target_id ASC) 排序并 LIMIT。
+	limit := types.NormalizeLimit(opts.Limit)
+	cursorPinned, cursorAt, cursorTargetID, err := decodeChatCursor(opts.Cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	var pinned *bool
+	var at *time.Time
+	var targetIDArg *string
+	if !cursorAt.IsZero() {
+		pinnedValue := cursorPinned
+		pinned = &pinnedValue
+		atValue := cursorAt.UTC()
+		at = &atValue
+		targetIDArg = &cursorTargetID
+	}
+	rows, err := queryable.Query(ctx, queryListPrivateChats, userID, pinned, at, targetIDArg, limit+1)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
-	items := make([]ChatState, 0)
+	items := make([]ChatState, 0, limit+1)
 	for rows.Next() {
-		state, err := scanChatState(rows)
+		state, err := scanChatStateWithActivity(rows)
 		if err != nil {
 			return nil, "", err
 		}
@@ -53,6 +72,12 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, opts ListO
 	}
 	if err := rows.Err(); err != nil {
 		return nil, "", err
+	}
+	if len(items) > limit {
+		items = items[:limit]
+		last := items[limit-1]
+		next := encodeChatCursor(last.IsPinned, last.LastActivityAt.UTC().Format(time.RFC3339Nano), last.TargetID)
+		return items, next, nil
 	}
 	return items, "", nil
 }
@@ -146,11 +171,22 @@ func orderedChatUsers(a, b string) (string, string) {
 	return b, a
 }
 
-func scanChatState(scanner interface{ Scan(...any) error }) (ChatState, error) {
+// scanChatStateWithActivity 在基础列尾部多扫 last_activity_at（列表分页查询
+// 的 SQL 尾部列），供排序/游标使用。
+func scanChatStateWithActivity(scanner interface{ Scan(...any) error }) (ChatState, error) {
+	state, err := scanChatState(scanner, true)
+	return state, err
+}
+
+func scanChatState(scanner interface{ Scan(...any) error }, withActivity ...bool) (ChatState, error) {
 	var state ChatState
 	var visibleSince *time.Time
 	var deletedAt *time.Time
-	if err := scanner.Scan(&state.ChatKey, &state.TargetID, &state.CreatedAt, &state.IsMuted, &state.IsPinned, &visibleSince, &deletedAt); err != nil {
+	dest := []any{&state.ChatKey, &state.TargetID, &state.CreatedAt, &state.IsMuted, &state.IsPinned, &visibleSince, &deletedAt}
+	if len(withActivity) > 0 && withActivity[0] {
+		dest = append(dest, &state.LastActivityAt)
+	}
+	if err := scanner.Scan(dest...); err != nil {
 		return ChatState{}, err
 	}
 	if visibleSince != nil {

@@ -184,14 +184,6 @@ privacy_level）在早前批次已修复，补记于此。
 空 device_id 不参与约束；真实库 IT 断言索引存在 + 第二次插入被拦 + 逐出流程
 收敛为 1 个活跃会话。
 
-**遗留观察项**（不紧急，记录在案）：
-- 双实现（repo_memory/repo_postgres）漂移仍是本项目最大 bug 温床（四轮共修 35+ 处）；
-  本批起 drift 修复均附内存实现回归测试，但跨实现「同输入同输出」对比测试基建仍缺；
-- **未修的已知限制**（需产品/架构决策，非缺陷）：
-  1. auth 的验证码 TTL、登录锁定阈值仍为代码常量（迁 AppConfig 需同步前端管理页）；
-  2. privatechats List 仍在 service 层全量拉取后内存排序（keyset 下推依赖
-     last_activity_at 冗余列，改动面较大）；
-- P2 剩余项（各域报告里未修的约定/架构类）与 OBS 项存档于 `.workwork/backend-review/`。
 ## P2 第七批修复（2026-10-24，正确性/分层小项）
 
 - **users 内存游标 keyset 语义**（P2-15）：内存实现四个列表（拉黑/好友/关注/粉丝）
@@ -212,3 +204,37 @@ privacy_level）在早前批次已修复，补记于此。
   夹具语义差异（无生产影响），不再按缺陷修复——若要覆盖，需为 auth/user 模块引入
   共享内存后端（跨模块内存存储），成本高于收益，记录为已知限制。
 
+## P2 第八批修复（2026-10-24，privatechats 列表分页下推）
+
+**问题**（chat 域 P2-7）：`List` 每次请求全量拉取用户全部会话，再在 service 层对
+全量 chatKeys 做 3 次批量聚合（末条消息/未读数/目标上下文）并内存排序裁剪——
+翻页成本恒为 O(全量)，且游标编解码越层（应在 Repository）。
+
+**修法**（不新增冗余列，利用既有 `idx_private_messages_chat_key_sent_at`）：
+- `Repository.List` 接收 `ListOptions{Limit, Cursor}`，SQL 侧完成排序 + keyset
+  + `LIMIT limit+1` 探测：`is_pinned DESC, last_activity_at DESC, target_id ASC`；
+  last_activity 由 LATERAL 取「最近可见消息 sent_at」（按该用户 visible_since
+  过滤），无消息回退 chat created_at——与 `buildChats` 原口径一致；
+- 已删除且窗口内无可见消息的会话在 SQL 内排除（等价原 buildChats 跳过逻辑），
+  JOIN users 过滤已注销目标，避免分页空页；
+- 游标编解码移入 Repository 层（`decodeChatCursor`/`encodeChatCursor`），service
+  只透传 limit/cursor 并拿到下一页游标；内存实现与测试桩共用
+  `paginateChatStates` helper，保持同一套 keyset 语义；
+- `buildChats` 的批量聚合只处理当前页（≤100 个 chatKey），单页成本从 O(全量)
+  降为 O(页大小)。
+
+**已知差异**：内存实现不持有消息表（消息在 privatemessages 模块），无消息时间可
+用，`last_activity` 回退 chat created_at；内存实现仅服务单测，PG（生产/E2E）由
+真实库 IT 覆盖排序/分页/置顶/删除过滤/非法游标全场景。
+
+**验证**：新增 `TestPostgresIT_ListPrivateChatsKeysetPagination`（真实库：按消息
+时间排序、跨页 keyset、置顶优先、已删除无消息排除、非法游标 10400 语义）。
+
+**遗留观察项**（不紧急，记录在案）：
+- 双实现（repo_memory/repo_postgres）漂移仍是本项目最大 bug 温床（四轮共修 35+ 处）；
+  本批起 drift 修复均附内存实现回归测试，但跨实现「同输入同输出」对比测试基建仍缺；
+- 双实现对比缺口示例：privatechats 内存实现无法复现「最近消息时间」排序（见上），
+  后续若引入跨模块共享内存后端可一并解决；
+- **未修的已知限制**（需产品/架构决策，非缺陷）：
+  1. auth 的验证码 TTL、登录锁定阈值仍为代码常量（迁 AppConfig 需同步前端管理页）；
+- P2 剩余项（各域报告里未修的约定/架构类）与 OBS 项存档于 `.workwork/backend-review/`。

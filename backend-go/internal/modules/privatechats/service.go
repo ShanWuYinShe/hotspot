@@ -2,7 +2,6 @@ package privatechats
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"hotspot/backend-go/internal/modules/privatemessages"
@@ -79,7 +78,14 @@ func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLi
 }
 func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (PaginatedPrivateChats, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	states, _, err := s.repo.List(ctx, principal.UserID, ListOptions{})
+	// 分页下推（审查 P2-7）：排序/游标/limit 全部在 Repository 层完成，
+	// 这里只取当前页的会话状态再批量组装（此前每次请求全量拉取 + 全量聚合）。
+	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
+	cursor := ""
+	if req.Pagination != nil {
+		cursor = req.Pagination.Cursor
+	}
+	states, nextCursor, err := s.repo.List(ctx, principal.UserID, ListOptions{Limit: limit, Cursor: cursor})
 	if err != nil {
 		observability.L().Error("privatechats.list failed", "error", err)
 		return PaginatedPrivateChats{}, err
@@ -88,57 +94,11 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 	if err != nil {
 		return PaginatedPrivateChats{}, err
 	}
-	// 排序键用解析后的时间值而非 RFC3339Nano 字符串：变长小数秒格式下
-	// 字典序与时间序相反（"12:00:00Z" > "12:00:00.5Z"），同秒会话会错序。
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].IsPinned != items[j].IsPinned {
-			return items[i].IsPinned
-		}
-		ati, _ := time.Parse(time.RFC3339Nano, items[i].LastActivityAt)
-		atj, _ := time.Parse(time.RFC3339Nano, items[j].LastActivityAt)
-		if !ati.Equal(atj) {
-			return ati.After(atj)
-		}
-		return items[i].OtherUser.UserID < items[j].OtherUser.UserID
-	})
-	cursor := ""
-	if req.Pagination != nil {
-		cursor = req.Pagination.Cursor
+	resp := PaginatedPrivateChats{Items: items}
+	if nextCursor != "" {
+		resp.NextCursor = &nextCursor
 	}
-	cursorPinned, cursorAt, cursorUserID, err := decodeChatCursor(cursor)
-	if err != nil {
-		return PaginatedPrivateChats{}, err
-	}
-	if !cursorAt.IsZero() {
-		filtered := make([]PrivateChatItem, 0, len(items))
-		for _, item := range items {
-			lastActivityAt, parseErr := time.Parse(time.RFC3339Nano, item.LastActivityAt)
-			if parseErr != nil {
-				continue
-			}
-			// 与排序键严格同序：置顶区整体在前，游标落在置顶区时仅当本条
-			// 也置顶才参与时间比较，非置顶区同理，避免跨区过滤掉可达会话。
-			if item.IsPinned != cursorPinned {
-				if !item.IsPinned {
-					filtered = append(filtered, item)
-				}
-				continue
-			}
-			if lastActivityAt.Before(cursorAt) || (lastActivityAt.Equal(cursorAt) && item.OtherUser.UserID > cursorUserID) {
-				filtered = append(filtered, item)
-			}
-		}
-		items = filtered
-	}
-	// 统一走 types.NormalizeLimit：spec api_spec_base.md 规定 limit default=20/max=100，
-	// 此前直接采纳客户端值，limit=100000 会返回整份会话列表（超规格外泄 + 越过分页语义）。
-	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
-	if len(items) <= limit {
-		return PaginatedPrivateChats{Items: items}, nil
-	}
-	next := items[limit-1]
-	c := encodeChatCursor(next.IsPinned, next.LastActivityAt, next.OtherUser.UserID)
-	return PaginatedPrivateChats{Items: items[:limit], NextCursor: &c}, nil
+	return resp, nil
 }
 
 func (s *Service) UpdateSettings(ctx context.Context, req UpdatePrivateChatSettingsRequest) error {
@@ -224,6 +184,15 @@ func (s *Service) buildChats(ctx context.Context, userID string, states []ChatSt
 	return items, nil
 }
 
+// chatLastActivityAt 会话最近活跃时间：优先用 Repository 计算值（SQL 的
+// LATERAL 最近可见消息 / 内存实现回退创建时间），零值时回退创建时间。
+func chatLastActivityAt(state ChatState) string {
+	if !state.LastActivityAt.IsZero() {
+		return state.LastActivityAt.UTC().Format(time.RFC3339Nano)
+	}
+	return state.CreatedAt.UTC().Format(time.RFC3339Nano)
+}
+
 // assembleChat 由批量取回的数据纯内存组装单个会话项，权限判定与
 // can_message/blocked_reason 口径见行内注释（契约 api_spec_chat.md）。
 func (s *Service) assembleChat(userID string, state ChatState, target users.ChatTargetContext, last *privatemessages.PrivateMessageItem, unreadCount int) PrivateChatItem {
@@ -232,7 +201,7 @@ func (s *Service) assembleChat(userID string, state ChatState, target users.Chat
 		UnreadCount:    unreadCount,
 		IsMuted:        state.IsMuted,
 		IsPinned:       state.IsPinned,
-		LastActivityAt: state.CreatedAt.UTC().Format(time.RFC3339Nano),
+		LastActivityAt: chatLastActivityAt(state),
 		CreatedAt:      func() *string { c := state.CreatedAt.UTC().Format(time.RFC3339Nano); return &c }(),
 		CanMessage:     true,
 	}
