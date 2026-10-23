@@ -56,8 +56,6 @@ export struct HomePage {
   @State viewAllPressedIndex: number = -1;
   @State pressedMomentKey: string = '';
   @State isRefreshing: boolean = false;
-  /** 当前下拉位移（vp）：仅用于刷新指示器渐显，避免指示器在刷新区很小时被裁成半截 */
-  @State pullOffset: number = 0;
 
   private isDestroyed: boolean = false;
 
@@ -194,9 +192,6 @@ export struct HomePage {
         }
         .width('100%')
         .layoutWeight(1)
-        .onOffsetChange((offset: number) => {
-          this.pullOffset = offset;
-        })
         .onRefreshing(() => { this.refreshHome(); })
       }
       .width('100%')
@@ -205,10 +200,11 @@ export struct HomePage {
   }
 
   /**
-   * 首页下拉刷新指示器（页面级 builder，需要读 pullOffset/isRefreshing）。
-   * 全局 RefreshIndicator 是固定高度 + 常显文案：刷新区还很小的时候文案会被裁成半截，
-   * 看起来像渲染坏了。这里改成：下拉阶段只显示 spinner，并按位移渐显；进入刷新态后再补
-   * 「正在刷新…」文案，避免任何半截裁切。
+   * 首页下拉刷新指示器（页面级 builder，需要读 isRefreshing）。
+   * 下拉阶段只显示 spinner（此时刷新区可能还很小，不显示文案就不会出现半截文字）；
+   * 进入刷新态后再补「正在刷新…」文案。
+   * 注意：不要在这里/Refresh 上按帧更新任何 @State（如 onOffsetChange 记录位移）——
+   * 端上实测会形成「状态更新 → 整页重建 → offset 变化」反馈，下拉时内容上下抖动。
    */
   @Builder
   private buildHomeRefreshIndicator() {
@@ -228,7 +224,6 @@ export struct HomePage {
     .width('100%')
     .height(DesignConstants.LAYOUT.MIN_HIT_TARGET + DesignConstants.SPACING.MD)
     .justifyContent(FlexAlign.Center)
-    .opacity(this.isRefreshing ? 1 : Math.min(1, this.pullOffset / 48))
     .accessibilityText('正在刷新')
   }
 
