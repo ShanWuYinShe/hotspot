@@ -41,8 +41,7 @@ func (r *stubChatRepo) List(_ context.Context, _ string, opts ListOptions) ([]Ch
 	if r.listCursor != "" {
 		return r.states, r.listCursor, nil
 	}
-	items, next := paginateChatStates(r.states, opts)
-	return items, next, nil
+	return paginateChatStates(r.states, opts)
 }
 func (r *stubChatRepo) GetState(_ context.Context, _, _ string) (ChatState, error) {
 	return r.state, r.stateErr

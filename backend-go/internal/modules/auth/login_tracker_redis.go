@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"errors"
+	"sync"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -24,10 +26,31 @@ import (
 //     慢速攻击下实际锁期可被压缩到分钟级）；
 //   - 已锁定后继续失败不重置 TTL（对齐 inMemory 的「不重置计时器」）
 type RedisLoginTracker struct {
-	rdb *redis.Client
+	rdb    *redis.Client
+	mu     sync.RWMutex
+	limits loginTrackerLimits
 }
 
-func NewRedisLoginTracker(rdb *redis.Client) *RedisLoginTracker { return &RedisLoginTracker{rdb: rdb} }
+func NewRedisLoginTracker(rdb *redis.Client) *RedisLoginTracker {
+	return &RedisLoginTracker{
+		rdb:    rdb,
+		limits: normalizeLoginTrackerLimits(defaultMaxFailures, defaultLockDuration),
+	}
+}
+
+// SetLimits 更新爆破阈值与锁期（Service 每次登录前按 AppConfig.Auth 调用）。
+func (t *RedisLoginTracker) SetLimits(maxFailures int, lockDuration time.Duration) {
+	limits := normalizeLoginTrackerLimits(maxFailures, lockDuration)
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.limits = limits
+}
+
+func (t *RedisLoginTracker) currentLimits() loginTrackerLimits {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.limits
+}
 
 func redisLoginTrackerKey(loginID string) string { return "auth:loginfail:" + loginID }
 
@@ -42,7 +65,7 @@ func (t *RedisLoginTracker) Check(ctx context.Context, loginID string) error {
 		observability.L().Warn("login tracker redis unavailable, failing open", "err", err)
 		return nil
 	}
-	if v >= defaultMaxFailures {
+	if v >= t.currentLimits().effectiveMaxFailures {
 		return ErrAccountLocked
 	}
 	return nil
@@ -63,8 +86,9 @@ return v
 `)
 
 func (t *RedisLoginTracker) RecordFailed(ctx context.Context, loginID string) {
+	limits := t.currentLimits()
 	err := recordFailedScript.Run(ctx, t.rdb, []string{redisLoginTrackerKey(loginID)},
-		defaultLockDuration.Milliseconds(), defaultMaxFailures).Err()
+		limits.effectiveLockDuration.Milliseconds(), limits.effectiveMaxFailures).Err()
 	if err != nil {
 		observability.L().Warn("login tracker redis record failed", "err", err)
 	}

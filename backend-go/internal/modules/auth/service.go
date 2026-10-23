@@ -30,6 +30,25 @@ type FailedLoginTracker interface {
 	RecordFailed(ctx context.Context, loginID string)
 	// Clear resets the counter for loginID (called on successful login).
 	Clear(ctx context.Context, loginID string)
+	// SetLimits 更新爆破阈值与锁期。Service 在每次登录前按 AppConfig.Auth
+	// 调用（运行期可调）；实现未设置时使用迁移前的默认常量，行为不变。
+	SetLimits(maxFailures int, lockDuration time.Duration)
+}
+
+// loginTrackerLimits 归一化后的 tracker 阈值。
+type loginTrackerLimits struct {
+	effectiveMaxFailures  int
+	effectiveLockDuration time.Duration
+}
+
+func normalizeLoginTrackerLimits(maxFailures int, lockDuration time.Duration) loginTrackerLimits {
+	if maxFailures <= 0 {
+		maxFailures = defaultMaxFailures
+	}
+	if lockDuration <= 0 {
+		lockDuration = defaultLockDuration
+	}
+	return loginTrackerLimits{effectiveMaxFailures: maxFailures, effectiveLockDuration: lockDuration}
 }
 
 // loginLockEntry records the state of a locked account.
@@ -58,13 +77,22 @@ const (
 type inMemoryLoginTracker struct {
 	mu       sync.Mutex
 	entries  map[string]*loginLockEntry
+	limits   loginTrackerLimits
 	stopOnce sync.Once
 	stopCh   chan struct{}
+}
+
+func (t *inMemoryLoginTracker) SetLimits(maxFailures int, lockDuration time.Duration) {
+	limits := normalizeLoginTrackerLimits(maxFailures, lockDuration)
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.limits = limits
 }
 
 func newInMemoryLoginTracker(ctx context.Context) *inMemoryLoginTracker {
 	t := &inMemoryLoginTracker{
 		entries: make(map[string]*loginLockEntry),
+		limits:  normalizeLoginTrackerLimits(defaultMaxFailures, defaultLockDuration),
 		stopCh:  make(chan struct{}),
 	}
 	// Bind the sweeper to ctx so it exits when the app root context is
@@ -107,9 +135,9 @@ func (t *inMemoryLoginTracker) RecordFailed(_ context.Context, loginID string) {
 	}
 	entry.failures++
 	entry.lastFailedAt = now
-	if entry.failures >= defaultMaxFailures {
+	if entry.failures >= t.limits.effectiveMaxFailures {
 		entry.lockedAt = now
-		entry.lockUntil = now.Add(defaultLockDuration)
+		entry.lockUntil = now.Add(t.limits.effectiveLockDuration)
 	}
 }
 
@@ -151,7 +179,9 @@ func (t *inMemoryLoginTracker) sweepOnce(now time.Time) {
 			}
 			continue
 		}
-		if !entry.lastFailedAt.IsZero() && now.Sub(entry.lastFailedAt) >= loginCounterDecay {
+		// 衰减窗口 = 当前锁期（与迁移前 loginCounterDecay = defaultLockDuration
+		// 同语义），随 AppConfig 动态变化。
+		if !entry.lastFailedAt.IsZero() && now.Sub(entry.lastFailedAt) >= t.limits.effectiveLockDuration {
 			delete(t.entries, id)
 		}
 	}
@@ -288,7 +318,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platfo
 // auth/send_register_code）。防枚举：无论 login_id 是否已被注册均返回成功；
 // 已占用的 login_id 对应验证码不生效（注册时先撞唯一约束 10400）。
 func (s *Service) SendRegisterCode(ctx context.Context, req SendRegisterCodeRequest) error {
-	code, err := s.repo.CreateRegisterCode(ctx, req.LoginID, time.Now().UTC().Add(10*time.Minute))
+	code, err := s.repo.CreateRegisterCode(ctx, req.LoginID, time.Now().UTC().Add(s.verificationCodeTTL(ctx)))
 	if err != nil {
 		// 发送节流是预期业务限流：直接透传（apiErrorFrom 映射 10500 + Retry-After），
 		// 不与基础设施错误混记 Error。
@@ -323,6 +353,8 @@ func (s *Service) SendRegisterCode(ctx context.Context, req SendRegisterCodeRequ
 
 func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
+
+	s.syncLoginTrackerLimits(ctx)
 
 	// Check brute-force lockout before even hashing the password.
 	if err := s.loginTracker.Check(ctx, req.LoginID); err != nil {
@@ -400,6 +432,24 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 		}
 	}
 	return result, nil
+}
+
+// authConfig 返回补齐默认值后的认证参数（AppConfig.Auth；零值回退常量）。
+func (s *Service) authConfig(ctx context.Context) appconfig.AuthConfig {
+	return s.appConfig.Get(ctx).Auth.Effective()
+}
+
+// verificationCodeTTL 验证码有效期（注册码与密码重置共用）。
+func (s *Service) verificationCodeTTL(ctx context.Context) time.Duration {
+	return time.Duration(s.authConfig(ctx).VerificationCodeTTLMinutes) * time.Minute
+}
+
+// syncLoginTrackerLimits 把 AppConfig.Auth 的爆破阈值/锁期同步到 tracker
+// （审查遗留项：此前是代码常量，运行期不可调）。内存与 Redis 实现都按配置
+// 生效，未配置时回退默认常量（行为与迁移前一致）。
+func (s *Service) syncLoginTrackerLimits(ctx context.Context) {
+	cfg := s.authConfig(ctx)
+	s.loginTracker.SetLimits(cfg.LoginLockoutThreshold, time.Duration(cfg.LoginLockoutMinutes)*time.Minute)
 }
 
 func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
@@ -570,7 +620,7 @@ func (s *Service) RevokeSession(ctx context.Context, req RevokeSessionRequest) e
 }
 
 func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordResetRequest) error {
-	code, err := s.repo.CreatePasswordReset(ctx, req.LoginID, time.Now().UTC().Add(10*time.Minute))
+	code, err := s.repo.CreatePasswordReset(ctx, req.LoginID, time.Now().UTC().Add(s.verificationCodeTTL(ctx)))
 	if errors.Is(err, ErrPasswordResetThrottled) {
 		return nil
 	}

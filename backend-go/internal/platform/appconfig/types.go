@@ -42,6 +42,39 @@ type Limits struct {
 	GroupApplicationTTLHours   int      `json:"group_application_ttl_hours"`
 }
 
+// AuthConfig 认证安全运行参数（审查遗留项：验证码 TTL 与登录锁定阈值此前是
+// auth 模块代码常量，调参需重新发布）。零值字段由 Effective 回退默认值，
+// 存量配置无 auth section 时行为与迁移前完全一致。
+type AuthConfig struct {
+	// VerificationCodeTTLMinutes 注册/重置密码验证码有效期（分钟）。
+	VerificationCodeTTLMinutes int `json:"verification_code_ttl_minutes"`
+	// LoginLockoutThreshold 连续登录失败达到该次数即锁定账号。
+	LoginLockoutThreshold int `json:"login_lockout_threshold"`
+	// LoginLockoutMinutes 锁定时长（分钟）；同时作为失败计数衰减窗口
+	//（与迁移前「衰减窗口 = 锁期」的语义一致）。
+	LoginLockoutMinutes int `json:"login_lockout_minutes"`
+}
+
+const (
+	DefaultVerificationCodeTTLMinutes = 10
+	DefaultLoginLockoutThreshold      = 5
+	DefaultLoginLockoutMinutes        = 15
+)
+
+// Effective 返回补齐默认值后的认证参数。
+func (c AuthConfig) Effective() AuthConfig {
+	if c.VerificationCodeTTLMinutes <= 0 {
+		c.VerificationCodeTTLMinutes = DefaultVerificationCodeTTLMinutes
+	}
+	if c.LoginLockoutThreshold <= 0 {
+		c.LoginLockoutThreshold = DefaultLoginLockoutThreshold
+	}
+	if c.LoginLockoutMinutes <= 0 {
+		c.LoginLockoutMinutes = DefaultLoginLockoutMinutes
+	}
+	return c
+}
+
 type Contact struct {
 	SupportEmail      string `json:"support_email"`
 	PrivacyPolicyURL  string `json:"privacy_policy_url"`
@@ -111,6 +144,7 @@ type AppConfig struct {
 	Defaults         Defaults         `json:"defaults"`
 	RateLimits       RateLimitConfig  `json:"rate_limits"`
 	ResponseDefaults ResponseDefaults `json:"response_defaults"`
+	Auth             AuthConfig       `json:"auth"`
 	UpdatedAt        string           `json:"updated_at,omitempty"`
 	UpdatedByUserID  string           `json:"updated_by_user_id,omitempty"`
 }

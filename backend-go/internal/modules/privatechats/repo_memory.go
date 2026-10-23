@@ -48,8 +48,7 @@ func (r *InMemoryRepository) List(_ context.Context, userID string, opts ListOpt
 			out = append(out, cloneChatState(state))
 		}
 	}
-	items, next := paginateChatStates(out, opts)
-	return items, next, nil
+	return paginateChatStates(out, opts)
 }
 
 func (r *InMemoryRepository) GetState(_ context.Context, userID, targetUserID string) (ChatState, error) {
@@ -136,7 +135,7 @@ func cloneChatState(state ChatState) ChatState {
 // paginateChatStates 会话列表 keyset 分页（审查 P2-7）：与 PG SQL 同序
 // （is_pinned DESC, last_activity DESC, target_id ASC），供内存实现与测试桩复用，
 // 避免两套分页逻辑漂移。内存侧的 last_activity 在无消息表时回退 created_at。
-func paginateChatStates(states []ChatState, opts ListOptions) ([]ChatState, string) {
+func paginateChatStates(states []ChatState, opts ListOptions) ([]ChatState, string, error) {
 	limit := types.NormalizeLimit(opts.Limit)
 	items := make([]ChatState, 0, len(states))
 	for _, state := range states {
@@ -156,7 +155,7 @@ func paginateChatStates(states []ChatState, opts ListOptions) ([]ChatState, stri
 	})
 	cursorPinned, cursorAt, cursorTargetID, err := decodeChatCursor(opts.Cursor)
 	if err != nil {
-		return nil, ""
+		return nil, "", err
 	}
 	if !cursorAt.IsZero() {
 		start := 0
@@ -180,7 +179,7 @@ func paginateChatStates(states []ChatState, opts ListOptions) ([]ChatState, stri
 	if len(items) > limit {
 		last := items[limit-1]
 		next := encodeChatCursor(last.IsPinned, last.LastActivityAt.UTC().Format(time.RFC3339Nano), last.TargetID)
-		return items[:limit], next
+		return items[:limit], next, nil
 	}
-	return items, ""
+	return items, "", nil
 }

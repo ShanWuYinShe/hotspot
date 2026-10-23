@@ -89,6 +89,32 @@ func initPool(t *testing.T, dsn string) *pgxpool.Pool {
 	return pool
 }
 
+// BeginScope 打开一个测试事务并返回 txFactory 与回滚清理函数。与 TxScope 的
+// 区别：调用方自己控制事务生命周期，适合「先建实现、再跑多个用例、最后统一
+// 回滚」的契约测试（见 ContractImpl）。
+func BeginScope(t *testing.T) (*persistence.Factory, func()) {
+	t.Helper()
+	pool := testPool
+	if pool == nil {
+		t.Fatal("testdb: pool not initialized, call Open first")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		cancel()
+		t.Fatalf("begin tx: %v", err)
+	}
+	factory := &persistence.Factory{
+		Config: persistence.Config{PostgresDSN: testDSN},
+		DB:     &txWrapper{tx: tx},
+	}
+	cleanup := func() {
+		_ = tx.Rollback(context.Background())
+		cancel()
+	}
+	return factory, cleanup
+}
+
 func TxScope(t *testing.T, factory *persistence.Factory, fn func(ctx context.Context, txFactory *persistence.Factory)) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

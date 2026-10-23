@@ -230,11 +230,36 @@ privacy_level）在早前批次已修复，补记于此。
 **验证**：新增 `TestPostgresIT_ListPrivateChatsKeysetPagination`（真实库：按消息
 时间排序、跨页 keyset、置顶优先、已删除无消息排除、非法游标 10400 语义）。
 
+
+## P2 第九批修复（2026-10-24，双实现契约测试基建 + auth 参数配置化）
+
+**双实现契约一致性测试基建**（审查遗留项：repo_memory/repo_postgres 漂移是
+本项目最大 bug 温床，此前每次修漂移都是一次性用例，缺固定范式）：
+- `platform/testdb` 新增 `RunContract` / `ContractImpl` / `ContractCase`：同一组
+  用例分别跑内存实现与真实库实现（每个用例独立实例 + 事务回滚隔离），失败
+  输出「实现名/用例名」以区分「两实现漂移」与「共同 bug」；
+- 新增 `testdb.BeginScope`：调用方自行控制测试事务生命周期（契约测试需要
+  「先建实现、跑多用例、统一回滚」）；
+- 首个接入方：`privatechats/list_contract_test.go`（7 条契约：空列表、创建后
+  可见、GetOrCreate 幂等、分页稳定不重不漏、limit 裁剪、置顶优先、非法游标）。
+  **首跑即抓到一处真实漂移**：内存实现把非法游标吞成空页（PG 返回
+  `ErrInvalidCursor`），已修正为两实现同语义。
+
+**auth 阈值迁 AppConfig**（审查未修限制）：`AppConfig` 新增 `auth` section
+（`verification_code_ttl_minutes` / `login_lockout_threshold` /
+`login_lockout_minutes`，`Effective()` 对零值回退迁移前常量 10 分钟 / 5 次 /
+15 分钟，存量配置行为不变）；auth 模块每次登录前把阈值同步到 tracker（内存与
+Redis 实现都按配置生效、失败计数衰减窗口随锁期变化），验证码 TTL 也从配置读取。
+**遗留依赖**：`spec/api_spec_admin.md` 的 `app_config/update` 未定义 auth section，
+按「spec 为契约唯一来源」纪律本轮不改管理端接口——后端已支持 DB AppConfig 读取，
+后续在 spec 增补该 section 后接管理页即可（需产品确认默认值与可调范围）。
+
 **遗留观察项**（不紧急，记录在案）：
-- 双实现（repo_memory/repo_postgres）漂移仍是本项目最大 bug 温床（四轮共修 35+ 处）；
-  本批起 drift 修复均附内存实现回归测试，但跨实现「同输入同输出」对比测试基建仍缺；
-- 双实现对比缺口示例：privatechats 内存实现无法复现「最近消息时间」排序（见上），
-  后续若引入跨模块共享内存后端可一并解决；
+- 契约测试基建已就位，但仅 privatechats 接入；后续对 notify/groups/users 等高频
+  漂移模块逐步补契约用例（优先覆盖分页/错误映射/状态流转三类）；
+- 双实现对比缺口示例：privatechats 内存实现无法复现「最近消息时间」排序（消息在
+  privatemessages 模块，内存实现无跨模块存储），后续若引入共享内存后端可解决；
 - **未修的已知限制**（需产品/架构决策，非缺陷）：
-  1. auth 的验证码 TTL、登录锁定阈值仍为代码常量（迁 AppConfig 需同步前端管理页）；
+  1. auth 的验证码 TTL、登录锁定阈值已支持 AppConfig 读取，但管理后台入口依赖
+     spec 增补 auth section（见上）；
 - P2 剩余项（各域报告里未修的约定/架构类）与 OBS 项存档于 `.workwork/backend-review/`。
