@@ -240,9 +240,9 @@ func TestPostgresStatsGeoTrendsMapping(t *testing.T) {
 	if resp.Trends[0].User != 0 || resp.Trends[0].Group != 0 || resp.Trends[0].Moment != 0 {
 		t.Fatalf("first day should be zero-filled: %+v", resp.Trends[0])
 	}
-	// 参数顺序：trends = (start, end)。
+	// 参数：上界固定为 SQL 内 now()（数据库时钟），只传 TrendStart 下界。
 	args := backend.capturedArgs[queryAdminStatsTrends]
-	if len(args) != 2 || args[0] == nil || args[1] == nil {
+	if len(args) != 1 || args[0] == nil {
 		t.Fatalf("unexpected trends args: %+v", args)
 	}
 }

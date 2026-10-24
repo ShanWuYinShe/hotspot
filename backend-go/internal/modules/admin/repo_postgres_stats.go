@@ -128,8 +128,10 @@ func fillTrendDays(rows map[string]geoBucketCount, start time.Time, days int) []
 
 // statsTrends 查询每日新增分布（窗口 [TrendStart, now)）并补零展开。
 func (r *PostgresRepository) statsTrends(ctx context.Context, queryable persistence.Queryable, query geoStatsQuery) ([]AdminGeoStatsTrendPoint, error) {
-	end := time.Now().UTC()
-	rows, err := queryable.Query(ctx, queryAdminStatsTrends, query.TrendStart, end)
+	// 上界用数据库时钟（SQL 内 now()），不用 Go time.Now()：容器时钟偏移时
+	// 刚写入的 created_at（DB 时钟）可能晚于 Go 时钟的 now，导致「今日」计数
+	// 被静默排除（实测 Postgres 比宿主机快 ~200ms 即复现）。
+	rows, err := queryable.Query(ctx, queryAdminStatsTrends, query.TrendStart)
 	if err != nil {
 		return nil, err
 	}

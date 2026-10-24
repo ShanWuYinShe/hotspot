@@ -506,17 +506,17 @@ SELECT t.day,
 FROM (
   SELECT ((created_at + INTERVAL '8 hours')::date) AS day, COUNT(*) AS n, 'user' AS kind
   FROM users
-  WHERE is_deleted = FALSE AND created_at >= $1 AND created_at < $2
+  WHERE is_deleted = FALSE AND created_at >= $1 AND created_at <= now()
   GROUP BY 1
   UNION ALL
   SELECT ((created_at + INTERVAL '8 hours')::date), COUNT(*), 'group'
   FROM groups
-  WHERE deleted_at IS NULL AND created_at >= $1 AND created_at < $2
+  WHERE deleted_at IS NULL AND created_at >= $1 AND created_at <= now()
   GROUP BY 1
   UNION ALL
   SELECT ((created_at + INTERVAL '8 hours')::date), COUNT(*), 'moment'
   FROM moments
-  WHERE is_deleted = FALSE AND created_at >= $1 AND created_at < $2
+  WHERE is_deleted = FALSE AND created_at >= $1 AND created_at <= now()
   GROUP BY 1
 ) t
 GROUP BY t.day
