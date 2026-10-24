@@ -1183,3 +1183,32 @@ OrbStack 重启后更常见）：
 
 测试：更新 stub 用例（SQL 直接产出 7 行、参数为天数）；`TestPostgresIT_StatsGeoAggregation`
 连续 5 次通过（含今日趋势、空日补零、时间窗断言）。
+
+## 发版前同级验收（2026-10-25 02:05，第 33 轮）
+
+在最近一轮代码改动（`6d19a7bb`，趋势统计窗口下沉 SQL）之后，重新执行**全量验收**，
+确认 main 处于可交付状态：
+
+### 一、`verify-backend-ci.sh --all`（全绿）
+
+| 阶段 | 结果 |
+|---|---|
+| 静态（vet/staticcheck/gofmt） | 通过 |
+| `-race` + `internal/modules` 每包覆盖率 ≥70% | 通过 |
+| 真实库 IT（`-p 1` 串行）+ 双实现契约 | 通过 |
+| HTTP 全链路 E2E（`test/integration`） | 通过（6.1s） |
+| govulncheck（CI 固定 v1.8.0） | **No vulnerabilities found**（可达漏洞 0） |
+| 总结果 | **ALL CHECKS PASSED** |
+
+### 二、dev 运行态
+
+- 7 容器 healthy；`/healthz` → `code=0, status=ok`；
+- `/metrics`：`go_goroutines 22`、`pgxpool_total_conns 2 / idle 2 / acquiring 0`（无饱和）；
+- backend 日志 error 级共 2 条，**时间戳均为 2026-10-23T14:17Z**（旧容器重启前保留的历史日志，
+  内容为当时已修复的 `auth.CreateGuest` profile insert 参数问题）；当前版本无新的 error 级日志。
+
+### 三、结论
+
+最近 5 轮（28–32）的代码改动（趋势统计时钟修复、resourceguard 清扫测试、附近通知 LIMIT、
+spec 澄清、依赖/迁移核验）在合并后均通过 ---all 全量验收，main 与 origin 同步；
+可作为下一次发版 tag 前的本地验证基线。
