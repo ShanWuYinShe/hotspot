@@ -208,4 +208,24 @@ describe('ChatView', () => {
 		const newer = screen.getByText('你好，最近怎么样？');
 		expect(older.compareDocumentPosition(newer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 	});
+
+	it('接收其它设备同步发送的自己消息', async () => {
+		renderChat();
+		await waitFor(() => expect(screen.getAllByText('你好，最近怎么样？').length).toBeGreaterThan(0));
+
+		// 模拟用户在移动端向 user_sophia 发送一条私聊
+		window.dispatchEvent(
+			new CustomEvent('test:private-new', {
+				detail: {
+					message_id: 'mOtherDevice',
+					target_user_id: 'user_sophia',
+					sender: { user_id: 'me', nickname: '我' },
+					type: 'text',
+					content: '来自手机端的消息',
+					sent_at: '2026-08-09T10:05:00Z'
+				}
+			})
+		);
+		await waitFor(() => expect(screen.getAllByText('来自手机端的消息').length).toBeGreaterThan(0));
+	});
 });

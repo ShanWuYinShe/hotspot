@@ -534,6 +534,8 @@ export struct NotificationCenter {
           .height('100%')
           .justifyContent(FlexAlign.Center)
         }
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => {
           if (!this.isRefreshing) {
             this.isRefreshing = true;
@@ -563,12 +565,15 @@ export struct NotificationCenter {
               }
             }
           }
+          .edgeEffect(EdgeEffect.None)
           .scrollBar(BarState.Off)
           .width('100%')
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
           .onReachEnd(() => this.loadMoreNotifications())
         }
         .layoutWeight(1)
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => {
           if (!this.isRefreshing) {
             this.isRefreshing = true;

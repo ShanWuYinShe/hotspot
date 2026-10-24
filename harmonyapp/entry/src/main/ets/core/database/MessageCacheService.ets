@@ -89,11 +89,12 @@ export class MessageCacheService {
     const store = this.rdbManager.getStore();
     if (!store) return [];
 
+    let resultSet: relationalStore.ResultSet | null = null;
     try {
       const predicates = new relationalStore.RdbPredicates('chats');
       predicates.orderByDesc('last_time'); // 按时间倒序
       
-      const resultSet = await store.query(predicates);
+      resultSet = await store.query(predicates);
       const items: ChatCacheItem[] = [];
 
       while (resultSet.goToNextRow()) {
@@ -108,12 +109,14 @@ export class MessageCacheService {
           data: resultSet.getString(resultSet.getColumnIndex('json_data'))
         });
       }
-      
-      resultSet.close();
       return items;
     } catch (err) {
       hilog.error(DOMAIN_NUMBER, TAG, `Get cached chat list failed: ${JSON.stringify(err)}`);
       return [];
+    } finally {
+      if (resultSet) {
+        resultSet.close();
+      }
     }
   }
 
@@ -187,12 +190,13 @@ export class MessageCacheService {
     const store = this.rdbManager.getStore();
     if (!store) return [];
 
+    let resultSet: relationalStore.ResultSet | null = null;
     try {
       const predicates = new relationalStore.RdbPredicates('messages');
       predicates.equalTo('chat_id', chatId);
       predicates.orderByDesc('sent_at'); // 倒序取出，方便UI显示时反转
       
-      const resultSet = await store.query(predicates);
+      resultSet = await store.query(predicates);
       const items: MessageCacheItem[] = [];
 
       while (resultSet.goToNextRow()) {
@@ -206,12 +210,14 @@ export class MessageCacheService {
           data: resultSet.getString(resultSet.getColumnIndex('json_data'))
         });
       }
-      
-      resultSet.close();
       return items;
     } catch (err) {
       hilog.error(DOMAIN_NUMBER, TAG, `Get cached messages failed: ${JSON.stringify(err)}`);
       return [];
+    } finally {
+      if (resultSet) {
+        resultSet.close();
+      }
     }
   }
 

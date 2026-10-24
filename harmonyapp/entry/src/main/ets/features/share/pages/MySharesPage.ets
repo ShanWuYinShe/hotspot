@@ -251,12 +251,16 @@ export struct MySharesPage {
           bare: true, icon: AppIcon.SHARE, message: '暂无分享记录\n创建分享后即可在这里管理' })
         }
         .layoutWeight(1)
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => { this.refreshShares(); })
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           this.buildShareList()
         }
         .layoutWeight(1)
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => { this.refreshShares(); })
       }
     }
@@ -318,6 +322,7 @@ export struct MySharesPage {
     }
     .divider({ strokeWidth: 0 })
     .width('100%')
+    .edgeEffect(EdgeEffect.None)
     .cachedCount(5)
     // 左右留白由 PageShellContainer gutter 承担（SKILL:44-48），List 不再自加横向外边距
     .padding({

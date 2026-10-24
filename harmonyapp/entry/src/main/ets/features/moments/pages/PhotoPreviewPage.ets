@@ -48,6 +48,10 @@ export struct PhotoPreviewPage {
     });
   }
 
+  aboutToDisappear(): void {
+    SystemUiController.syncWithCurrentTheme();
+  }
+
   build() {
     NavDestination() {
     Stack() {

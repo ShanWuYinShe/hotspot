@@ -248,11 +248,14 @@ export struct MyReportsPage {
               .constraintSize({ minHeight: '100%' })
             }
             .scrollable(ScrollDirection.Vertical)
+            .edgeEffect(EdgeEffect.None)
             .scrollBar(BarState.Off)
             .width('100%')
             .layoutWeight(1)
           }
           .layoutWeight(1)
+          .pullToRefresh(false)
+          .refreshOffset(64)
           .onRefreshing(() => { this.loadReports(true); })
         }
       }

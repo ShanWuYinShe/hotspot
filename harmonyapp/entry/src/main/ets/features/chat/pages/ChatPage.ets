@@ -1265,7 +1265,7 @@ export struct ChatPage {
                 }
                 .width('100%')
               }
-            }, (msg: ChatMessage) => msg.id)
+            }, (msg: ChatMessage) => `${msg.id}_${msg.content}_${msg.edited ? 1 : 0}_${msg.recalled ? 1 : 0}_${msg.pending ? 1 : 0}`)
 
       }
       .scrollBar(BarState.Off)

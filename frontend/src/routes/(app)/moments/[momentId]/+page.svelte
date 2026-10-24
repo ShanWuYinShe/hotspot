@@ -191,25 +191,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						tags: detailData.tags ?? [],
 						privacy_level: null
 					};
-					// privacy_level 属拥有者数据（OwnerMomentItem），不在公开详情类型 MomentItem 中：
-					// 拥有者编辑前经 moments/fetch_created 取回实际可见性（视角分离）。
-					// 探测完成前保持 null，编辑弹窗会禁用可见性修改并按「保持原值」提交。
-					if (detailData.user?.user_id === auth.user?.user_id) {
-						void (async () => {
-							let cursor: string | null = null;
-							for (let i = 0; i < 10; i++) {
-								const ownRes: Awaited<ReturnType<typeof listMyMoments>> | null = await listMyMoments({ pagination: { limit: 100, cursor: cursor ?? undefined } }).catch(() => null);
-								if (!ownRes || ownRes.code !== 0 || !ownRes.data) break;
-								const found = ownRes.data.items.find((m) => m.moment_id === momentId);
-								if (found) {
-									momentRaw = { ...momentRaw, privacy_level: found.privacy_level };
-									break;
-								}
-								cursor = ownRes.data.next_cursor;
-								if (!cursor) break;
-							}
-						})();
-					}
+					// privacy_level 属拥有者数据（OwnerMomentItem），不在公开详情类型 MomentItem 中；
+					// 仅在拥有者打开编辑弹窗时按需惰性探测，避免首屏盲拉多页数据造成网络浪费。
 				}
 
 				if (commentsData) {
@@ -483,6 +466,27 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		momentRaw = updated;
 	};
 
+	const openEditDialog = async () => {
+		editOpen = true;
+		moreOpen = false;
+		if (isAuthor && momentRaw.privacy_level === null) {
+			try {
+				let cursor: string | null = null;
+				for (let i = 0; i < 2; i++) {
+					const ownRes: Awaited<ReturnType<typeof listMyMoments>> | null = await listMyMoments({ pagination: { limit: 20, cursor: cursor ?? undefined } }).catch(() => null);
+					if (!ownRes || ownRes.code !== 0 || !ownRes.data) break;
+					const found = ownRes.data.items.find((m) => m.moment_id === momentId);
+					if (found) {
+						momentRaw = { ...momentRaw, privacy_level: found.privacy_level };
+						break;
+					}
+					cursor = ownRes.data.next_cursor;
+					if (!cursor) break;
+				}
+			} catch {}
+		}
+	};
+
 	// 分享：share/create 生成分享码并复制 /share/[code] 落地链接；
 	// 创建失败（匿名/网络异常）降级为复制页面原始链接（lib/share 统一降级链）。
 	const copyMomentLink = async () => {
@@ -516,7 +520,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 								复制链接
 							</DropdownMenu.Item>
 							{#if isAuthor}
-								<DropdownMenu.Item onSelect={() => { editOpen = true; moreOpen = false; }}>
+								<DropdownMenu.Item onSelect={() => void openEditDialog()}>
 									<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
 									编辑动态
 								</DropdownMenu.Item>

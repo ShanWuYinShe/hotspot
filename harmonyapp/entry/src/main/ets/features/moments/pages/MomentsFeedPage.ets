@@ -400,6 +400,7 @@ export struct MomentsFeedPage {
               bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
             })
             .cachedCount(4)
+            .edgeEffect(EdgeEffect.None)
             .scrollBar(BarState.Off)
             // 触底加载更多（cursor 分页，P2-3：突破首屏 20 条封顶）
             .onReachEnd(() => { this.loadMoreMoments(); })
@@ -416,6 +417,8 @@ export struct MomentsFeedPage {
         }
         .width('100%')
         .layoutWeight(1)
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => { this.loadData(true); })
       } else {
         // 空态（对齐前端 EmptyState：图标 + 文案）

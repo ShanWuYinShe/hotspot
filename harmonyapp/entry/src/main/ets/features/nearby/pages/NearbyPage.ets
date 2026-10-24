@@ -62,8 +62,15 @@ export struct NearbyPage {
     return rows;
   }
 
+  private isDestroyed: boolean = false;
+
   async aboutToAppear() {
+    this.isDestroyed = false;
     await this.loadData();
+  }
+
+  aboutToDisappear() {
+    this.isDestroyed = true;
   }
 
   /** 下拉刷新（P2-1：错误文案承诺了「下拉重试」，此前页面无 Refresh） */
@@ -71,7 +78,9 @@ export struct NearbyPage {
     try {
       await this.loadData();
     } finally {
-      this.isRefreshing = false;
+      if (!this.isDestroyed) {
+        this.isRefreshing = false;
+      }
     }
   }
 
@@ -87,6 +96,7 @@ export struct NearbyPage {
         ApiClient.searchGroups(groupsReq).catch(() => null),
         ApiClient.fetchNearbyMoments(momentsReq).catch(() => null)
       ]);
+      if (this.isDestroyed) return;
       const usersRes = results[0];
       const groupsRes = results[1];
       const momentsRes = results[2];
@@ -107,9 +117,13 @@ export struct NearbyPage {
         }
       }
     } catch (e) {
-      this.loadError = '网络异常，请稍后重试';
+      if (!this.isDestroyed) {
+        this.loadError = '网络异常，请稍后重试';
+      }
     } finally {
-      this.isLoading = false;
+      if (!this.isDestroyed) {
+        this.isLoading = false;
+      }
     }
   }
 
@@ -259,11 +273,13 @@ export struct NearbyPage {
         .width('100%')
         .height('100%')
         .scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.Spring)
+        .edgeEffect(EdgeEffect.None)
         .align(Alignment.Top)
         }
         .width('100%')
         .layoutWeight(1)
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => { this.refreshNearby(); })
       }
       .width('100%')

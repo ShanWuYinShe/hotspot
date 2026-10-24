@@ -88,11 +88,12 @@ export class MomentCacheService {
     const store = this.rdbManager.getStore();
     if (!store) return [];
 
+    let resultSet: relationalStore.ResultSet | null = null;
     try {
       const predicates = new relationalStore.RdbPredicates('moments');
       predicates.orderByDesc('created_at'); 
       
-      const resultSet = await store.query(predicates);
+      resultSet = await store.query(predicates);
       const items: MomentItem[] = [];
 
       while (resultSet.goToNextRow()) {
@@ -107,12 +108,14 @@ export class MomentCacheService {
           }
         }
       }
-      
-      resultSet.close();
       return items;
     } catch (err) {
       hilog.error(DOMAIN_NUMBER, TAG, `Get cached moments failed: ${JSON.stringify(err)}`);
       return [];
+    } finally {
+      if (resultSet) {
+        resultSet.close();
+      }
     }
   }
 

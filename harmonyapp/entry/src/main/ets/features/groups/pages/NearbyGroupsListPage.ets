@@ -377,6 +377,8 @@ export struct NearbyGroupsListPage {
             .edgeEffect(EdgeEffect.None)
           }
           .layoutWeight(1)
+          .pullToRefresh(false)
+          .refreshOffset(64)
           .onRefreshing(() => { this.loadGroups(true); })
         }
       }

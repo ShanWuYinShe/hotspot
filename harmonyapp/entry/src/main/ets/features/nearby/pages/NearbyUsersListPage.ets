@@ -386,6 +386,7 @@ export struct NearbyUsersListPage {
               .columnsGap(DesignConstants.SPACING.LG)
               .rowsGap(DesignConstants.SPACING.LG)
               .cachedCount(4)
+              .edgeEffect(EdgeEffect.None)
               .scrollBar(BarState.Off)
               .onReachEnd(() => { this.loadMoreUsers(); })
 
@@ -400,6 +401,8 @@ export struct NearbyUsersListPage {
             .height('100%')
           }
           .layoutWeight(1)
+          .pullToRefresh(false)
+          .refreshOffset(64)
           .onRefreshing(() => { this.loadUsers(true); })
         }
       }

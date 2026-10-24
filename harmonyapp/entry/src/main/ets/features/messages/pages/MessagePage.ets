@@ -775,6 +775,8 @@ export struct MessagePage {
           bare: true, icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadData(true); } })
         }
         .layoutWeight(1)
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => { this.loadData(true, true); })
         .transition(
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -795,6 +797,8 @@ export struct MessagePage {
           })
         }
         .layoutWeight(1)
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => { this.loadData(true, true); })
         .transition(
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -872,12 +876,14 @@ export struct MessagePage {
             bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
           })
           .scrollBar(BarState.Off)
-          .edgeEffect(EdgeEffect.Spring)
+          .edgeEffect(EdgeEffect.None)
           // 与 ChatPage 会话/消息列表同档预加载
           .cachedCount(8)
           .onReachEnd(() => { this.loadMore(); })
         }
         .layoutWeight(1)
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => { this.loadData(true, true); })
         .transition(
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })

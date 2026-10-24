@@ -124,14 +124,15 @@
 		wsNewMessage: (e) => {
 			const payload = (e as CustomEvent<PrivateMessageNewPayload>).detail;
 			if (!payload || payload.target_user_id !== peerUserId) return null;
-			// 自己发送的消息跳过（乐观追加 + HTTP 回执已处理）
-			if (payload.sender?.user_id === meId) return null;
 			const id = payload.message_id ?? '';
 			if (!id) return null;
-			// 会话有新消息即视为已读（与加载行为一致）
-			void markPrivateRead({ scope: 'session', target_user_id: peerUserId }).catch(() => {});
+			// 按 message_id 去重：本标签页发送的消息在 HTTP 回执后已替换为真实 id，
+			// WS 推送到达时自然去重；其它设备/标签页发出的消息则被正确同步显示。
+			const sent = payload.sender?.user_id === meId;
+			// 收到对端新消息即视为已读（与加载行为一致）
+			if (!sent) void markPrivateRead({ scope: 'session', target_user_id: peerUserId }).catch(() => {});
 			// sentAt 供 useChat 按服务端时间保持正序（resume 回放/实时交错不乱序）
-			return { id, text: payload.content ?? '', sent: false, time: formatTime(payload.sent_at), sentAt: payload.sent_at };
+			return { id, text: payload.content ?? '', sent, time: formatTime(payload.sent_at), sentAt: payload.sent_at };
 		},
 		wsMessageUpdate: (e) => {
 			const detail = (e as CustomEvent<{ type: 'edited' | 'recalled' | 'read'; payload: PrivateMessageNewPayload }>).detail;

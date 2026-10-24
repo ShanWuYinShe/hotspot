@@ -119,8 +119,11 @@ export struct AnnouncementsPage {
             .width('100%')
             .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
           }
+            .edgeEffect(EdgeEffect.None)
             .scrollBar(BarState.Off)
         }
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => {
           this.refreshing = true;
           this.loadAnnouncements(true);

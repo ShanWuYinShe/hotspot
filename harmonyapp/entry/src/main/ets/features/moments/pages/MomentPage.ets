@@ -278,6 +278,8 @@ export struct MomentPage {
           bare: true, icon: AppIcon.CAMERA, message: '还没有发布过瞬间\n快来分享第一个吧！' })
             }
             .layoutWeight(1)
+            .pullToRefresh(false)
+            .refreshOffset(64)
             .onRefreshing(() => { this.loadNearbyMoments(true); })
             .transition(
               TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -288,6 +290,8 @@ export struct MomentPage {
               this.buildMomentList()
             }
             .layoutWeight(1)
+            .pullToRefresh(false)
+            .refreshOffset(64)
             .onRefreshing(() => { this.loadNearbyMoments(true); })
             .transition(
               TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -336,6 +340,7 @@ export struct MomentPage {
     }
     .divider({ strokeWidth: 0 })
     .width('100%')
+    .edgeEffect(EdgeEffect.None)
     // 横向留白由外层 PageShellContainer 统一提供，这里不再叠加（否则双重 16vp 缩进）
     .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
     .scrollBar(BarState.Off)

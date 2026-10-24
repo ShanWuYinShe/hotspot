@@ -963,9 +963,12 @@ export struct SettingsPage {
               .width('100%')
             }
           }
+          .edgeEffect(EdgeEffect.None)
           .scrollBar(BarState.Off)
           .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
         }
+        .pullToRefresh(false)
+        .refreshOffset(64)
         .onRefreshing(() => {
           if (!this.metaRefreshing) {
             this.metaRefreshing = true;

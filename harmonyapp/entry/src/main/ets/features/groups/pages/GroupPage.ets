@@ -535,6 +535,8 @@ export struct GroupPage {
           bare: true, icon: AppIcon.GROUP, message: '还没有加入任何群组\n去附近发现感兴趣的小组吧！' })
             }
             .layoutWeight(1)
+            .pullToRefresh(false)
+            .refreshOffset(64)
             .onRefreshing(() => { this.loadMyGroups(true); })
             .transition(
               TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -545,7 +547,8 @@ export struct GroupPage {
               this.buildGroupList()
             }
             .layoutWeight(1)
-            .layoutWeight(1)
+            .pullToRefresh(false)
+            .refreshOffset(64)
             .onRefreshing(() => { this.loadMyGroups(true); })
             .transition(
               TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
@@ -855,6 +858,7 @@ export struct GroupPage {
     }
     .divider({ strokeWidth: 0 })
     .width('100%')
+    .edgeEffect(EdgeEffect.None)
     // 横向留白由外层 PageShellContainer 统一提供，这里不再叠加（否则双重 16vp 缩进）
     .padding({
       top: DesignConstants.SPACING.SM,
