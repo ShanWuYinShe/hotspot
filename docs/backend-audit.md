@@ -491,3 +491,20 @@ keyset 分页、搜索（关键词大小写不敏感 + 标签过滤 + 隐私/删
   （事务回滚隔离）**；只有实现路径本身无法在单连接事务下执行时才退化为 pool + 显式清理，
   并在用例注释说明原因。moments 读路径的「rows 未关闭即嵌套查询」已修复（先 `rows.Close()`），
   因此 moments 契约测试已回归事务隔离。
+
+## 双实现契约测试第九批（2026-10-24，admin 审计日志）
+
+`TestAdminAuditLogContract` 接入契约基建，覆盖审计日志：排序（created_at DESC + log_id
+DESC tie-break）、四类字段过滤（action/operator_id/target_type/target_id，含组合与无命中）、
+时间区间闭区间（两端边界值均命中）、keyset 分页不重不漏、`includeIPAddress` 开关只影响
+`ip_address`（`ip_location` 恒可见）、details 与 nullable 字段回环、非法游标 → 10000。
+
+**抓到 1 处漂移（内存实现）**：
+
+- 内存 `ListAuditLogs` 的 `next` 游标取「第 limit+1 条」（下一页首条）而非「本页最后一条」，
+  而解码谓词是严格排他 `(created_at, log_id) < 游标` → 下一页把游标项自身排除，
+  **每个分页边界静默丢一条记录**（5 条数据 limit=2 只能翻出 4 条）。已改为取本页最后一条，
+  与 PG `queryAuditList` 的 `(created_at, log_id) < ($7,$8)` 语义一致。
+
+注：内存实现构造函数会预置 2 条演示审计数据，契约用例在 New 中清空（仅测试代码），
+不影响生产（PG 为空表启动）。

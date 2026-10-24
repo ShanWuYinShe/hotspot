@@ -17,25 +17,31 @@ func (r *InMemoryRepository) ListAuditLogs(_ context.Context, filter AuditLogFil
 		return auditLogPage{}, apiErr
 	}
 	logs := r.filteredAuditLogsLocked(filter)
-	limit := types.NormalizeLimit(filter.Pagination.Limit)
-	page := auditLogPage{Items: make([]AuditLogItem, 0, limit)}
-	seenCursor := filter.Pagination.Cursor == ""
-	for _, entry := range logs {
-		if !seenCursor {
+	// keyset 游标（created_at, log_id）严格向后（DESC），与 PG queryAuditList 同语义。
+	if cursor.LogID != "" {
+		filtered := make([]AuditLogEntry, 0, len(logs))
+		for _, entry := range logs {
 			if entry.CreatedAt.After(cursor.CreatedAt) {
 				continue
 			}
 			if entry.CreatedAt.Equal(cursor.CreatedAt) && entry.LogID >= cursor.LogID {
 				continue
 			}
-			seenCursor = true
+			filtered = append(filtered, entry)
 		}
-		item := auditLogItemFromEntry(entry, includeIPAddress)
-		if len(page.Items) >= limit {
-			page.Next = &auditCursor{CreatedAt: entry.CreatedAt, LogID: entry.LogID}
+		logs = filtered
+	}
+	limit := types.NormalizeLimit(filter.Pagination.Limit)
+	page := auditLogPage{Items: make([]AuditLogItem, 0, limit)}
+	for i, entry := range logs {
+		if i >= limit {
+			// 下一页游标取本页最后一条（排他 keyset），与 PG 一致。此前取第 limit+1
+			// 条作游标，下一页把它自身排除 → 每页边界丢一行（契约测试发现）。
+			last := logs[limit-1]
+			page.Next = &auditCursor{CreatedAt: last.CreatedAt, LogID: last.LogID}
 			break
 		}
-		page.Items = append(page.Items, item)
+		page.Items = append(page.Items, auditLogItemFromEntry(entry, includeIPAddress))
 	}
 	return page, nil
 }
