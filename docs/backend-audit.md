@@ -1317,3 +1317,26 @@ CONCURRENTLY）只会在 CI 之外或线上启动时才暴露。
 **回滚兼容性说明（057）**：最后一个发版 tag `v1.3.2` 已包含 001–056 及对应代码，回滚到
 `v1.3.2` 不受影响；057（设备会话唯一索引）为 tag 之后新增，旧二进制顺序登录仍先撤旧再插新
 （不会撞索引），仅**并发登录竞态**会收到 23505（迁移注释已登记为部署切换期可接受）。
+
+## 静态分析层：staticcheck SA 接入门禁/CI（2026-10-25，第 38 轮）
+
+此前门禁与 CI 的静态检查只有 `gofmt` + `go vet`（`govulncheck` 只覆盖漏洞符号），
+没有 staticcheck。本轮用固定版本 `2026.2.2` 跑 `-checks 'SA*'`（correctness 规则）：
+
+- **生产代码（非 _test）零发现**；
+- 测试代码共 20 条，逐条修复后清零，其中两条暴露了「测试实际没测到东西」：
+  1. `auth/api_errors_coverage_test.go` 声称验证「%w 包装的 APIError 能解包」，实际只是把
+     `errors.New` 的返回值覆盖成一个裸 `*APIError`（SA4006/SA4017）——改成真正的
+     `fmt.Errorf("...: %w", &httpx.APIError{...})`，锁住 `apiErrorFrom` 的 `errors.As` 路径；
+  2. `mapmodule/repo_memory_test.go` 的 Heatmap 位置断言是**空分支**（`if lat==0 && lng==0`
+     里只有一个空 `if`，SA9003）——改为非零坐标断言，真正覆盖 Location 字段；
+  另修复：多处测试把 `nil` 当 `context.Context` 传（SA1012，改 `context.Background()`）、
+  `repo_postgres_read_test` 未使用的 `argIndex`（SA4006）、integration helper 中永远不可达的
+  两个 `*ApiResponse[T]` case（SA4020，所有泛型实例均满足先前的 `codeGetter`）。
+
+**接入方式**：`scripts/verify-backend-ci.sh` 在 `go vet` 后新增 staticcheck 步骤（缺失时
+`go install ...@2026.2.2`，与 govulncheck 同模式）；`.github/workflows/ci.yml` backend job 同步新增
+步骤。版本固定避免 @latest 漂移；规则暂限 `SA*`（correctness），风格类/未使用测试辅助
+（U1000 等）不阻塞。
+
+验证：`staticcheck -checks 'SA*' ./...` 0 输出；门禁 `ALL CHECKS PASSED`；CI 通过。

@@ -1,6 +1,7 @@
 package mapmodule
 
 import (
+	"context"
 	"testing"
 
 	"hotspot/backend-go/internal/platform/geo"
@@ -21,7 +22,7 @@ func newTestCanvasQuery(level int) canvasQuery {
 func TestInMemoryRepositoryHeatmapReturnsBuckets(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	result, err := repo.Heatmap(nil, newTestCanvasQuery(8))
+	result, err := repo.Heatmap(context.Background(), newTestCanvasQuery(8))
 	if err != nil {
 		t.Fatalf("Heatmap returned error: %v", err)
 	}
@@ -39,7 +40,7 @@ func TestInMemoryRepositoryHeatmapReturnsBuckets(t *testing.T) {
 func TestInMemoryRepositoryHeatmapAtHighLevel(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	result, err := repo.Heatmap(nil, newTestCanvasQuery(15))
+	result, err := repo.Heatmap(context.Background(), newTestCanvasQuery(15))
 	if err != nil {
 		t.Fatalf("Heatmap returned error: %v", err)
 	}
@@ -51,7 +52,7 @@ func TestInMemoryRepositoryHeatmapAtHighLevel(t *testing.T) {
 func TestInMemoryRepositoryHeatmapHasBreakdown(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	result, err := repo.Heatmap(nil, newTestCanvasQuery(8))
+	result, err := repo.Heatmap(context.Background(), newTestCanvasQuery(8))
 	if err != nil {
 		t.Fatalf("Heatmap returned error: %v", err)
 	}
@@ -66,20 +67,19 @@ func TestInMemoryRepositoryHeatmapHasBreakdown(t *testing.T) {
 func TestInMemoryRepositoryHeatmapHasLocation(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	result, err := repo.Heatmap(nil, newTestCanvasQuery(8))
+	result, err := repo.Heatmap(context.Background(), newTestCanvasQuery(8))
 	if err != nil {
 		t.Fatalf("Heatmap returned error: %v", err)
 	}
 	if result.Items[0].Location.Latitude == 0 && result.Items[0].Location.Longitude == 0 {
-		if result.Items[0].Location.Latitude == 0 {
-		}
+		t.Fatal("expected heatmap location with non-zero coordinates")
 	}
 }
 
 func TestInMemoryRepositoryHotspotsReturnsHotspot(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	result, err := repo.Hotspots(nil, newTestCanvasQuery(8))
+	result, err := repo.Hotspots(context.Background(), newTestCanvasQuery(8))
 	if err != nil {
 		t.Fatalf("Hotspots returned error: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestInMemoryRepositoryHotspotsReturnsHotspot(t *testing.T) {
 func TestInMemoryRepositoryHotspotsHasLocation(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	result, err := repo.Hotspots(nil, newTestCanvasQuery(8))
+	result, err := repo.Hotspots(context.Background(), newTestCanvasQuery(8))
 	if err != nil {
 		t.Fatalf("Hotspots returned error: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestInMemoryRepositoryHotspotsHasLocation(t *testing.T) {
 func TestInMemoryRepositoryHotspotsHasDistanceMeters(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	result, err := repo.Hotspots(nil, newTestCanvasQuery(8))
+	result, err := repo.Hotspots(context.Background(), newTestCanvasQuery(8))
 	if err != nil {
 		t.Fatalf("Hotspots returned error: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestInMemoryRepositoryHotspotsHasDistanceMeters(t *testing.T) {
 func TestInMemoryRepositoryHotspotsHasCreatedAt(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	result, err := repo.Hotspots(nil, newTestCanvasQuery(8))
+	result, err := repo.Hotspots(context.Background(), newTestCanvasQuery(8))
 	if err != nil {
 		t.Fatalf("Hotspots returned error: %v", err)
 	}
@@ -136,8 +136,8 @@ func TestInMemoryRepositoryHotspotsHasCreatedAt(t *testing.T) {
 func TestInMemoryRepositoryHeatmapAndHotspotsIndependent(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	heatResult, heatErr := repo.Heatmap(nil, newTestCanvasQuery(8))
-	spotResult, spotErr := repo.Hotspots(nil, newTestCanvasQuery(10))
+	heatResult, heatErr := repo.Heatmap(context.Background(), newTestCanvasQuery(8))
+	spotResult, spotErr := repo.Hotspots(context.Background(), newTestCanvasQuery(10))
 
 	if heatErr != nil || spotErr != nil {
 		t.Fatalf("Heatmap err=%v Hotspots err=%v", heatErr, spotErr)

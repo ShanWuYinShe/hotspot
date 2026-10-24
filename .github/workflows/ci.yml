@@ -49,6 +49,12 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
           cd backend-go && "$(go env GOPATH)/bin/govulncheck" ./...
+      # staticcheck SA 规则（correctness）：go vet 覆盖不到的解包/未使用值/
+      # nil Context/不可达分支等；版本固定避免 @latest 漂移。本地门禁同款。
+      - name: staticcheck (SA rules)
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@2026.2.2
+          cd backend-go && "$(go env GOPATH)/bin/staticcheck" -checks 'SA*' ./...
       - name: check migration numbering
         run: ./scripts/check-migrations.sh
       # -race：数据竞争在单测并发场景下才能暴露（如 media retention sweeper

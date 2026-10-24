@@ -608,7 +608,7 @@ func TestProfileDefaultsUseAppConfigSource(t *testing.T) {
 	cfg := config.Config{AuthTokenSecret: "test-secret", DefaultUserAvatar: "legacy-avatar"}
 	repo := NewInMemoryRepository()
 	source := appconfig.NewStaticSource(cfg)
-	_, _ = source.Update(nil, func(current appconfig.AppConfig) appconfig.AppConfig {
+	_, _ = source.Update(context.Background(), func(current appconfig.AppConfig) appconfig.AppConfig {
 		current.Defaults.DefaultUserAvatar = "appconfig-avatar"
 		current.Defaults.DefaultLocation.LocationName = "测试位置"
 		current.Defaults.DefaultLocation.Point.Latitude = 1.23

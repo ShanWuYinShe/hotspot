@@ -26,7 +26,7 @@ func newTestSource(apply func(*appconfig.AppConfig)) appconfig.Source {
 	if apply == nil {
 		return cfg
 	}
-	_, _ = cfg.Update(nil, func(current appconfig.AppConfig) appconfig.AppConfig {
+	_, _ = cfg.Update(context.Background(), func(current appconfig.AppConfig) appconfig.AppConfig {
 		apply(&current)
 		return current
 	})

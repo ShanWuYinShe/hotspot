@@ -189,7 +189,7 @@ func TestServiceFetchNearbyRadiusCappedByConfig(t *testing.T) {
 	}
 	// 显式大 radius 仍受 search_radius_max=10000 裁剪
 	source := appconfig.NewStaticSource(config.Config{})
-	_, _ = source.Update(nil, func(current appconfig.AppConfig) appconfig.AppConfig {
+	_, _ = source.Update(context.Background(), func(current appconfig.AppConfig) appconfig.AppConfig {
 		current.Limits.SearchRadiusMax = 10000
 		return current
 	})

@@ -205,19 +205,16 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 	}
 	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level =") {
 		// 全球搜索（spec moment.md → moments/search 收口）：无 S2 半径子句，keyword 从 $1 起
-		argIndex := 0
 		var keywordStr string
-		if len(args) > argIndex {
-			if s, ok := args[argIndex].(string); ok {
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
 				keywordStr = s
-				argIndex++
 			}
 		}
 		var tagFilter string
-		if len(args) > argIndex {
-			if s, ok := args[argIndex].(string); ok {
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
 				tagFilter = s
-				argIndex++
 			}
 		}
 		// popular 模式在 LIMIT 前多绑定一个 int64 衰减时钟参数（epoch 秒），

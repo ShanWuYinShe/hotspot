@@ -445,7 +445,7 @@ func TestRealtimeSubscriptionLimit(t *testing.T) {
 func TestRealtimeSubscriptionRateLimit(t *testing.T) {
 	SetDefaultHub(NewHub())
 	source := appconfig.NewStaticSource(config.Config{})
-	_, _ = source.Update(nil, func(cfg appconfig.AppConfig) appconfig.AppConfig {
+	_, _ = source.Update(context.Background(), func(cfg appconfig.AppConfig) appconfig.AppConfig {
 		cfg.RateLimits.WSSubscribePerSecond = 1
 		return cfg
 	})

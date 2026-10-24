@@ -53,6 +53,12 @@ fi
 step "go vet"
 go vet -C "$BACKEND" ./...
 
+step "staticcheck (SA 规则，CI 固定 2026.2.2)"
+if ! command -v staticcheck >/dev/null 2>&1; then
+  go install honnef.co/go/tools/cmd/staticcheck@2026.2.2
+fi
+( cd "$BACKEND" && "$(go env GOPATH)/bin/staticcheck" -checks 'SA*' ./... )
+
 if [ "$WITH_VULN" = "1" ]; then
   step "govulncheck (CI 固定 v1.8.0)"
   if ! command -v govulncheck >/dev/null 2>&1; then go install golang.org/x/vuln/cmd/govulncheck@v1.8.0; fi

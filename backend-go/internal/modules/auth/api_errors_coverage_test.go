@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -40,9 +41,8 @@ func TestAPIErrorMappingCoversAllBranches(t *testing.T) {
 	if apiErr == nil || apiErr.Code != httpx.CodeNotFound {
 		t.Fatalf("expected passthrough, got %#v", apiErr)
 	}
-	// 包装的 APIError 也能解包
-	wrapped := errors.New("inner")
-	wrapped = &httpx.APIError{Code: httpx.CodeConflict, Message: "inner"}
+	// 包装的 APIError 也能解包（fmt.Errorf %w 后 errors.As 仍命中同一 APIError）
+	wrapped := fmt.Errorf("wrap: %w", &httpx.APIError{Code: httpx.CodeConflict, Message: "inner"})
 	apiErr = apiErrorFrom(wrapped)
 	if apiErr == nil || apiErr.Code != httpx.CodeConflict {
 		t.Fatalf("expected wrapped passthrough, got %#v", apiErr)

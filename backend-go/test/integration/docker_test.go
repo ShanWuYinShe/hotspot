@@ -223,11 +223,8 @@ func responseCodeOf(result any) (int, bool) {
 	}
 	switch r := result.(type) {
 	case codeGetter:
+		// 所有 *ApiResponse[T] 均实现 codeGetter（值接收者方法提升到指针方法集）。
 		return r.responseCode(), true
-	case *ApiResponse[any]:
-		return int(r.Code), true
-	case *ApiResponse[map[string]any]:
-		return int(r.Code), true
 	}
 	// 兜底：反射读取 Code 字段（覆盖其余元素类型的 ApiResponse[T]）。
 	v := reflect.ValueOf(result)
