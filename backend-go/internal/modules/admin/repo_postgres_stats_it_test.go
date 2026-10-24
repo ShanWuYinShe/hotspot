@@ -23,6 +23,13 @@ func TestPostgresIT_StatsGeoAggregation(t *testing.T) {
 			t.Fatal("no tx queryable")
 		}
 		repo := NewPostgresRepository(txFactory)
+		// 时间断言一律以数据库时钟为基准：Go 进程与 Postgres/容器时钟可能存在偏移，
+		// 用 time.Now() 作窗口上界会把「DB 时钟略快」时刚播种的 NOW() 行静默排除，
+		// 造成 windowed region 偶发为空的假红灯（2026-10-24 实测于 OrbStack 重启后）。
+		var dbNow time.Time
+		if err := q.QueryRow(ctx, "SELECT now()").Scan(&dbNow); err != nil {
+			t.Fatalf("query db clock: %v", err)
+		}
 		// 播种前基线（存量不受本测试影响，仅作增量参照）。
 		base, err := repo.StatsGeo(ctx, geoStatsQuery{Level: 8, Limit: 10})
 		if err != nil {
@@ -101,7 +108,7 @@ func TestPostgresIT_StatsGeoAggregation(t *testing.T) {
 		}
 
 		// 时间窗（最近 7 天）：40 天前动态被排除；totals 不受时间窗影响。
-		windowEnd := time.Now().UTC()
+		windowEnd := dbNow.UTC()
 		windowStart := windowEnd.AddDate(0, 0, -7)
 		resp, err = repo.StatsGeo(ctx, geoStatsQuery{Level: 8, Limit: 100, StartTime: windowStart, EndTime: windowEnd})
 		if err != nil {
@@ -121,7 +128,7 @@ func TestPostgresIT_StatsGeoAggregation(t *testing.T) {
 
 		// === 趋势（trend_days=7）===
 		sh := time.FixedZone("UTC+8", 8*60*60)
-		nowSH := time.Now().In(sh)
+		nowSH := dbNow.In(sh)
 		todaySH := time.Date(nowSH.Year(), nowSH.Month(), nowSH.Day(), 0, 0, 0, 0, sh)
 		trendStart := todaySH.AddDate(0, 0, -6) // 服务端语义：TrendStart 起逐日填 TrendDays 天
 		trendResp, err := repo.StatsGeo(ctx, geoStatsQuery{Level: 8, Limit: 10, TrendDays: 7, TrendStart: trendStart})
@@ -160,7 +167,7 @@ func TestPostgresIT_StatsGeoAggregation(t *testing.T) {
 		// 时间窗下钻：最近 7 天不含 40 天前的动态。
 		pageM, err := repo.StatsGeoDrilldown(ctx, geoDrilldownQuery{
 			Bucket: geo.CellTokenLeafID(regionAToken) >> geo.CellLevelShift(8), Level: 8,
-			EntityType: "moment", Limit: 10, StartTime: trendStart, EndTime: time.Now().UTC(),
+			EntityType: "moment", Limit: 10, StartTime: trendStart, EndTime: dbNow.UTC(),
 		})
 		if err != nil {
 			t.Fatalf("drilldown moments: %v", err)

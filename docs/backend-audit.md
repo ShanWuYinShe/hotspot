@@ -896,3 +896,26 @@ retention 均为纯内聚循环；realtime typing sweeper 与 redis bridge 因�
 必须用 `worker.Go`（源码注释已说明，bridge 已有 Close 幂等测试）。
 
 包覆盖率 23.8% → **100%**。
+
+## 统计 IT 假红灯：容器时钟偏移（2026-10-25，第 22 轮追加）
+
+门禁 `--with-db` 曾失败于 `admin.TestPostgresIT_StatsGeoAggregation`：
+`windowed A region: <nil>`（时间窗内区域 A 消失）。单测/整包/循环 20 次均无法复现。
+
+**根因**：容器（OrbStack 重启后）与宿主机存在**毫秒级时钟偏移**，实测同一时刻：
+
+```
+host  : 2026-10-24T16:18:23.370Z
+postgres: 2026-10-24 16:18:23.571   # 快 ~200ms
+```
+
+测试用 Go `time.Now()` 作为窗口上界 `windowEnd`，而种子行的 `created_at = NOW()` 取 Postgres
+时钟；DB 时钟略快时刚播种的行满足 `created_at > windowEnd`，被时间窗查询排除，
+区域/地点聚合为空 → 假红灯。此前同一测试还曾以「today trend 多 1」形式失败，同源。
+
+**修复**：该测试所有时间基准改用**数据库时钟**（`SELECT now()` 取 `dbNow`）：时间窗上下界、
+趋势「今天」计算、下钻窗口上界全部以 `dbNow` 为准——种子的 `NOW()` 与断言同一时钟源，
+彻底消除偏移影响。
+
+**纪律**：凡断言「DB 写入时间落在窗口内」的真库测试，窗口边界必须用数据库时钟（或留足
+偏移余量），不能混用 Go `time.Now()` 与 `NOW()`。
