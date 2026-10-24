@@ -1120,3 +1120,26 @@ postgres: 2026-10-24 16:18:23.571   # 快 ~200ms
 | 4 | reactions 游标不透明性 | 无需改 spec：`api_spec_base.md` 已规定 cursor 不透明、客户端仅透传；实现已统一 AES-GCM 游标 |
 
 本轮无代码改动；spec 为文档改动，按项目例外跳过本地 DB/E2E（CI 全量仍会执行）。
+
+## Go 时钟 vs 数据库时钟边界审计（2026-10-25，第 30 轮）
+
+第 28 轮修复了趋势统计「Go 时钟作 SQL 上界」的真实缺陷后，对全仓做同类扫描并分类收口：
+
+**方法**：列出所有生产代码 `time.Now()` 使用点与 SQL 时间谓词，按「时间写入源 × 比较源」分类。
+
+| 类别 | 代表位置 | 一致性 | 结论 |
+|---|---|---|---|
+| 时间由 Go 写入、由 Go 比较 | auth 会话/验证码过期、groups 邀请/公告过期、admin 封禁到期（`state.Expired(time.Now())`） | 自洽（同一时钟源） | 无风险 |
+| 时间由 DB 写入、由 SQL 比较 | read_state、群成员禁言（`muted_until > NOW()`）、趋势统计（第 28 轮改为 SQL `now()`）、DB 侧默认值比较 | 自洽 | 无风险 |
+| 时间由 DB 写入、由 **Go** 比较（残余） | ① 保留期清理（auth 7/30 天、media 7 天）：Go `now` 作 cutoff；② 时间窗类列表（moments 24h/7d、admin 报表由客户端传时间范围）；③ 趋势统计**下界** `TrendStart`（服务层 Go 计算本地日锚点） | 毫秒级偏差 | ① 保留期以天计，±200ms 无影响；② 窗口以小时/天计，边界偏差无业务影响；③ 仅在「Go 与 DB 分处本地午夜两侧」的 ~200ms 窗口内可使趋势首日锚点错一天（且只影响该瞬间新写入的行），量级可忽略——已在文档记录，如未来引入 DB 时钟注入再彻底消除 |
+| 已修 | 趋势统计**上界**（`created_at < time.Now()`） | 曾真实少计「今日」 | 第 28 轮改为 `created_at <= now()`（`3f9cccb9`） |
+
+**观测方法**（可复现）：容器时钟与宿主机可能短暂偏移（2026-10-25 实测 Postgres 比宿主机快约 200ms，
+OrbStack 重启后更常见）：
+`date -u +%Y-%m-%dT%H:%M:%S.%NZ` vs
+`docker compose exec -T postgres psql -U postgres -tAc "select now() at time zone 'UTC'"`。
+
+**纪律**：
+1. 真库测试断言「DB 写入时间落在窗口内」时必须用数据库时钟（第 22 轮已修 `TestPostgresIT_StatsGeoAggregation`）；
+2. 生产代码中用「另一时钟」被比较的列必须评估边界；毫秒级且窗口≥小时的偏差可接受，日/秒级边界的必须同源；
+3. 跨容器比较时间时优先 SQL 内 `now()`，避免把 Go 时钟经参数传入作为 DB 行的时间边界。
