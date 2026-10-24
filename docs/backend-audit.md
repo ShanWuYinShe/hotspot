@@ -1290,3 +1290,30 @@ moment_tags 逐条 INSERT 会放大写放大）。新增 `tagsMaxRunes=30` 与 `
 
 测试：moments 标签边界/搜索 keyword+tag 超长（handler）、users/groups 搜索超长、
 群成员上限边界（=cap 通过、>cap 拒绝）、Service 接线。
+
+## 迁移 expand-contract 守卫（2026-10-25，第 37 轮）
+
+审计迁移纪律时确认：`scripts/check-migrations.sh` 此前只校验**序号唯一**，
+`AGENTS.md`/迁移 skill 里的「禁止 CREATE INDEX CONCURRENTLY」「迁移必须兼容上一发布版本
+二进制」只是文字纪律、无机器校验——一次疏忽（DROP/RENAME 列、SET NOT NULL、TYPE 变更、
+CONCURRENTLY）只会在 CI 之外或线上启动时才暴露。
+
+本轮把纪律升级为 CI 硬校验（`scripts/check-migrations.sh` 在 backend job 与本地门禁
+`verify-backend-ci.sh` 均执行）：
+
+1. **禁止 CREATE INDEX CONCURRENTLY**（全量文件）：当前迁移架构整文件单消息执行会落
+   隐式事务并以 25001 拒绝；提示拆分单语句迁移文件的做法；
+2. **新增迁移（序号 >= 058）禁止破坏性 DDL**：`DROP COLUMN/TABLE/CONSTRAINT`、
+   `RENAME COLUMN`、`SET NOT NULL`、`ALTER COLUMN ... TYPE`。理由：发布回滚 = 旧镜像 +
+   保留新 schema，上述 DDL 会让旧二进制读不到列/写不进去；正确做法是 expand-contract
+   两阶段（先加新列双写兼容，跨版本再清理）。
+3. 匹配前剥离 `--` 行注释，避免把说明文字当 DDL；历史文件（042 列改名、050 主键重建等
+   已发布迁移）作为白名单不回改。
+
+验证（三种场景实跑）：当前迁移树 → OK；临时 `058_breaking.sql`（DROP COLUMN）→ 失败并
+提示 expand-contract；临时 `058_conc.sql`（CONCURRENTLY）→ 失败；删除后再次 OK。
+迁移 skill 同步补充「CI 强制」说明。
+
+**回滚兼容性说明（057）**：最后一个发版 tag `v1.3.2` 已包含 001–056 及对应代码，回滚到
+`v1.3.2` 不受影响；057（设备会话唯一索引）为 tag 之后新增，旧二进制顺序登录仍先撤旧再插新
+（不会撞索引），仅**并发登录竞态**会收到 23505（迁移注释已登记为部署切换期可接受）。

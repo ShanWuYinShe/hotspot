@@ -12,6 +12,7 @@ description: hotspot 后端数据库迁移纪律：文件命名与幂等要求�
 **向后兼容纪律（硬性）**：迁移必须兼容「上一个已发布版本」的二进制——发布是无停机产物替换，旧版后端会短暂与新 schema 共存：
 
 - 只加不删：新迁移内不 DROP/RENAME 仍在被上一版本读写的列与表；废弃列先停止写入，跨一个版本再清理（expand-contract 两阶段）。
+  - **CI 强制**（2026-10-25 起）：`scripts/check-migrations.sh` 对序号 >= 058 的新迁移扫描 `DROP COLUMN/TABLE/CONSTRAINT`、`RENAME COLUMN`、`SET NOT NULL`、`ALTER COLUMN ... TYPE`，命中即让 backend job 失败并提示 expand-contract 做法；`CREATE INDEX CONCURRENTLY` 对全量历史文件适用。历史迁移（含 042 的列改名、050 的主键重建）为已发布白名单，不回改。
 - 改列语义/回填数据用 `DO $$` 自检式幂等写法（参照 `050`），不依赖「只跑一次」。
 - 数据性一次性迁移（无法按格式判幂等的）必须用 `data_migrations` 旗标表包裹（参照 `053`）。
 - 无 down 迁移：回滚版本 = 旧镜像 + 保留新 schema，因此 schema 变更必须对旧代码向后兼容，这是唯一防线。
