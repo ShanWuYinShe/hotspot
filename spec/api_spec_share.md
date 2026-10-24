@@ -120,6 +120,12 @@ interface ShareListItem {
 }
 ```
 
+**不可用分享的列表呈现（过期与撤销同口径）**：`expires_at` 已过（服务端以当前时间判定）的分享在
+`fetch_created` 列表中与主动撤销的分享呈现一致——`is_revoked = true` 且 `preview = null`，
+`expires_at` 保留原值供客户端展示过期时间；服务端不返回过期分享的预览内容。因此
+`is_revoked = true` 表示「该分享当前不可用（已撤销或已过期）」，客户端无需也无法区分二者；
+`is_revoked = false` 时 `preview` 恒非 null。
+
 ---
 
 ### POST /api/v1/share/revoke

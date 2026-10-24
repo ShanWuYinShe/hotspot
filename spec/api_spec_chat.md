@@ -139,7 +139,7 @@ interface GroupMessageItem {
   edited_at: string | null;
   recalled_at: string | null;  // 非 null 即表示已撤回
 
-  read_count: number | null;  // 已读人数（最终一致）；null = 不适用（system 消息/已撤回消息）
+  read_count: number | null;  // 已读人数（最终一致）；null = 不适用（system 消息/已撤回消息；消息不存在时不会出现在列表/事件中）
   reactions: Reaction[];  // 表情反应聚合（空数组 = 无反应）
 }
 ```

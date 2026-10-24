@@ -33,6 +33,11 @@
 
 > **防惊群**：`bootstrap_version` 变更会让所有客户端同时 miss 缓存并全量重拉，客户端应加随机 jitter 延迟后刷新，避免集中请求。`meta`/`client_config` 为公共数据可做 CDN 缓存；`profile`/`unread_summary` 为用户私有数据，不可缓存。
 
+> **实现口径（非强制算法）**：`bootstrap_version` 只要求「相关维度变化时值必然变化、不变化时可不变」，
+> 客户端**只做字符串相等比较**（If-None-Match 原样回传），禁止解析为数字/时间戳。服务端可以把它实现为
+> 单调指纹（如「构建版本 + AppConfig 更新时间 + 公告域最大 updated_at」的组合），不要求严格递增的整数；
+> 同一事务内多次修改 config/公告时指纹可能相同属实现细节，客户端按「相等即命中」处理即可。
+
 **Request**: `BootstrapRequest`
 ```typescript
 interface BootstrapRequest {
