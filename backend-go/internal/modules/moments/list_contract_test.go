@@ -6,13 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"fmt"
-	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/testdb"
-	"sync/atomic"
 )
-
-var momentsContractSeq int64
 
 // momentsContractState 契约用例上下文：PG 侧 moments/moment_tags/moment_mentions/
 // moment_favorites 依赖 users 外键；内存实现无需预置用户。
@@ -40,29 +35,15 @@ func TestMomentsRepositoryContract(t *testing.T) {
 			Name: "postgres",
 			New: func(t *testing.T) (Repository, momentsContractState, func()) {
 				testdb.SkipIfShort(t)
-				factory := testdb.Open(t)
-				seq := atomic.AddInt64(&momentsContractSeq, 1)
-				authorID := fmt.Sprintf("%s_%d", author, seq)
-				viewerID := fmt.Sprintf("%s_%d", viewer, seq)
-				testdb.InsertUser(t, factory, authorID, "nick_"+authorID)
-				testdb.InsertUser(t, factory, viewerID, "nick_"+viewerID)
-				// pool 模式无事务包裹：用例结束显式清理本用例产生的行（含子表）。
-				cleanup := func() {
-					qdb, ok := factory.DB.(persistence.QueryableDB)
-					if !ok {
-						return
-					}
-					bg := context.Background()
-					users := []string{authorID, viewerID}
-					_ = qdb.Exec(bg, "DELETE FROM moment_favorites WHERE user_id = ANY($1::text[]) OR moment_id IN (SELECT moment_id FROM moments WHERE user_id = $2)", users, authorID)
-					_ = qdb.Exec(bg, "DELETE FROM moment_likes WHERE user_id = ANY($1::text[]) OR moment_id IN (SELECT moment_id FROM moments WHERE user_id = $2)", users, authorID)
-					_ = qdb.Exec(bg, "DELETE FROM moment_tags WHERE moment_id IN (SELECT moment_id FROM moments WHERE user_id = $1)", authorID)
-					_ = qdb.Exec(bg, "DELETE FROM moment_mentions WHERE moment_id IN (SELECT moment_id FROM moments WHERE user_id = $1)", authorID)
-					_ = qdb.Exec(bg, "DELETE FROM moment_images WHERE moment_id IN (SELECT moment_id FROM moments WHERE user_id = $1)", authorID)
-					_ = qdb.Exec(bg, "DELETE FROM moments WHERE user_id = $1", authorID)
-					_ = qdb.Exec(bg, "DELETE FROM users WHERE user_id = ANY($1::text[])", users)
-				}
-				return NewPostgresRepository(factory), momentsContractState{ctx: context.Background(), author: authorID, viewer: viewerID}, cleanup
+				testdb.Open(t)
+				// 事务 scope 隔离：池直写会在包并行执行期间污染其它包的真实库测试
+				//（admin StatsGeo 等基于全库基线+增量断言；2026-10-24 门禁实测失败）。
+				// moments 读路径曾在 rows 未关闭时发嵌套查询（已修：先 rows.Close()），
+				// 因此可在单连接事务下正常执行。
+				txFactory, cleanup := testdb.BeginScope(t)
+				testdb.InsertUser(t, txFactory, author, "nick_"+author)
+				testdb.InsertUser(t, txFactory, viewer, "nick_"+viewer)
+				return NewPostgresRepository(txFactory), momentsContractState{ctx: context.Background(), author: author, viewer: viewer}, cleanup
 			},
 		},
 	}

@@ -481,3 +481,13 @@ keyset 分页、搜索（关键词大小写不敏感 + 标签过滤 + 隐私/删
 3. 已知结构限制（非缺陷）：user/group/moment 类型的 preview 依赖跨模块真值（用户目录/
    目标表），内存实现天然无法对齐（如 creator nickname 回退 user_id、preview 只用 ID）
    → 契约测试只覆盖 location 类型；该限制与既有 `groups`/`moments` 内存实现同类。
+
+### 契约测试 PG 实现的事务隔离纪律（2026-10-24 门禁实测）
+
+- `go test ./internal/modules/...` 默认**跨包并行**执行；契约测试的 PG 实现若用 pool 直写
+  （而非 BeginScope 事务回滚），测试行会在并行窗口内被其它包的全库断言看到——
+  `admin` 的 `TestPostgresIT_StatsGeoAggregation`（基线+增量 totals 断言）即被 moments
+  契约测试的 pool 直写触发偶发失败。**纪律：契约测试 PG 实现默认用 `testdb.BeginScope`
+  （事务回滚隔离）**；只有实现路径本身无法在单连接事务下执行时才退化为 pool + 显式清理，
+  并在用例注释说明原因。moments 读路径的「rows 未关闭即嵌套查询」已修复（先 `rows.Close()`），
+  因此 moments 契约测试已回归事务隔离。
