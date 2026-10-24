@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { adminGetAppConfig, adminUpdateAppConfig } from '@/api';
-	import type { AppConfig, ContactInfo, FeatureSwitches, AppLimits } from '@/api/types';
+	import type { AppConfig, AuthConfig, ContactInfo, FeatureSwitches, AppLimits } from '@/api/types';
 	import { hasAdminPermission } from '@/stores/admin.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -11,7 +11,8 @@
 
 	// 系统配置：按 section Patch 更新（spec api_spec_admin.md）。
 	// UI 覆盖客户端可见三项（features/limits/contact，构成 ClientConfig 投影）；
-	// 仅服务端的 upload/defaults/rate_limits/response_defaults/auth 以只读 JSON 展示（写入仍可经 API 扩展）。
+	// 认证安全参数（auth：验证码 TTL / 登录锁定阈值）提供编辑表单；
+	// 其余仅服务端 sections（upload/defaults/rate_limits/response_defaults）以只读 JSON 展示。
 
 	const canRead = $derived(hasAdminPermission('admin.app_config.read'));
 	const canWrite = $derived(hasAdminPermission('admin.app_config.write'));
@@ -25,6 +26,7 @@
 	let features = $state<FeatureSwitches | null>(null);
 	let limits = $state<AppLimits | null>(null);
 	let contact = $state<ContactInfo | null>(null);
+	let auth = $state<AuthConfig | null>(null);
 
 	async function load() {
 		loading = true;
@@ -35,7 +37,8 @@
 			features = { ...res.data.features };
 			limits = { ...res.data.limits, reaction_emojis: [...res.data.limits.reaction_emojis] };
 			contact = { ...res.data.contact };
-			snapshot = JSON.stringify({ features, limits, contact });
+			auth = { ...res.data.auth };
+			snapshot = JSON.stringify({ features, limits, contact, auth });
 		} else {
 			error = res.message ?? '加载失败';
 		}
@@ -45,10 +48,10 @@
 		if (canRead) void load();
 	});
 
-	// 脏检测基线：load 成功后的三段序列化快照（r60：全局「保存更改/重置」取代各卡散落保存）
+	// 脏检测基线：load 成功后的四段序列化快照（r60：全局「保存更改/重置」取代各卡散落保存）
 	let snapshot = $state('');
 
-	type ConfigSection = 'features' | 'limits' | 'contact';
+	type ConfigSection = 'features' | 'limits' | 'contact' | 'auth';
 	const dirtySections = $derived.by<ConfigSection[]>(() => {
 		if (!snapshot) return [];
 		try {
@@ -57,6 +60,7 @@
 			if (JSON.stringify(features) !== JSON.stringify(s.features)) out.push('features');
 			if (JSON.stringify(limits) !== JSON.stringify(s.limits)) out.push('limits');
 			if (JSON.stringify(contact) !== JSON.stringify(s.contact)) out.push('contact');
+			if (JSON.stringify(auth) !== JSON.stringify(s.auth)) out.push('auth');
 			return out;
 		} catch {
 			return [];
@@ -64,23 +68,34 @@
 	});
 	const hasDirty = $derived(dirtySections.length > 0);
 
+	// 认证安全参数服务端要求正整数（spec api_spec_admin.md「应用配置子类型定义」）
+	const authInvalid = $derived(
+		auth ? Object.values(auth).some((v) => !Number.isInteger(v) || v <= 0) : false
+	);
+
 	const resetEdits = () => {
 		if (!config) return;
 		features = { ...config.features };
 		limits = { ...config.limits, reaction_emojis: [...config.limits.reaction_emojis] };
 		contact = { ...config.contact };
+		auth = { ...config.auth };
 	};
 
 	// 全局保存：仅逐个提交脏 section（API 为按 section Patch 语义）
 	const saveDirty = async () => {
 		if (pending || !config) return;
+		if (dirtySections.includes('auth') && authInvalid) {
+			showToast('认证安全参数须为正整数', 'danger');
+			return;
+		}
 		pending = 'all';
 		try {
 			for (const section of dirtySections) {
 				const body =
 					section === 'features' ? { features }
 					: section === 'limits' ? { limits }
-					: { contact };
+					: section === 'contact' ? { contact }
+					: { auth };
 				const res = await adminUpdateAppConfig(body);
 				if (res.code !== 0) throw new Error(res.message || '保存失败');
 			}
@@ -116,6 +131,12 @@
 		group_invite_ttl_hours: '群邀请有效时长（小时）',
 		group_application_ttl_hours: '入群申请有效时长（小时）'
 	};
+	// 认证安全参数（auth section，spec api_spec_admin.md AppConfig.auth）
+	const AUTH_LABELS: Record<string, string> = {
+		verification_code_ttl_minutes: '验证码有效期（分钟）',
+		login_lockout_threshold: '登录失败锁定阈值（次）',
+		login_lockout_minutes: '锁定时长（分钟，同时为失败计数衰减窗口）'
+	};
 	const CONTACT_LABELS: Record<string, string> = {
 		support_email: '客服邮箱',
 		privacy_policy_url: '隐私政策链接',
@@ -134,7 +155,7 @@
 	<InlineLoading label="加载应用配置…" />
 {:else if error}
 	<LoadError message={error} onRetry={() => void load()} />
-{:else if config && features && limits && contact}
+{:else if config && features && limits && contact && auth}
 	<div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
 		{#if config.updated_at}
 			<p class="text-xs text-text-secondary">最后更新：{formatDateTime(config.updated_at)}{config.updated_by_user_id ? ` · ${config.updated_by_user_id}` : ''}</p>
@@ -196,11 +217,29 @@
 			</div>
 		</section>
 
+		<!-- 认证安全 -->
+		<section class={SECTION_CARD} aria-label="认证安全">
+			<div class="flex items-center justify-between">
+				<div>
+					<h2 class="text-md font-semibold text-text-primary">认证安全</h2>
+					<p class="mt-1 text-xs text-text-secondary">验证码有效期与登录爆破锁定参数（正整数），保存后即时生效。</p>
+				</div>
+			</div>
+			<div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+				{#each Object.keys(AUTH_LABELS) as key (key)}
+					<label class="flex flex-col gap-1">
+						<span class={LABEL}>{AUTH_LABELS[key]}</span>
+						<input type="number" min={1} step={1} bind:value={auth[key as keyof AuthConfig]} disabled={!canWrite} class={INPUT} />
+					</label>
+				{/each}
+			</div>
+		</section>
+
 		<!-- 仅服务端 sections：只读展示 -->
 		<section class={SECTION_CARD} aria-label="服务端配置（只读）">
 			<h2 class="text-md font-semibold text-text-primary">服务端运行参数（只读）</h2>
-			<p class="mt-1 text-xs text-text-secondary">upload / defaults / rate_limits / response_defaults / auth——修改走 app_config/update API（Patch 语义）。</p>
-			<pre class="mt-3 max-h-80 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed text-text-secondary">{JSON.stringify({ upload: config.upload, defaults: config.defaults, rate_limits: config.rate_limits, response_defaults: config.response_defaults, auth: config.auth }, null, 2)}</pre>
+			<p class="mt-1 text-xs text-text-secondary">upload / defaults / rate_limits / response_defaults——修改走 app_config/update API（Patch 语义）。</p>
+			<pre class="mt-3 max-h-80 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed text-text-secondary">{JSON.stringify({ upload: config.upload, defaults: config.defaults, rate_limits: config.rate_limits, response_defaults: config.response_defaults }, null, 2)}</pre>
 		</section>
 
 		<!-- 全局保存栏：仅存在未保存修改时出现（r60：卡内散落保存收敛为全局「保存更改/重置」） -->
