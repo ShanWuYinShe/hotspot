@@ -796,3 +796,20 @@ Redis 调用 context 带超时。此前 `RedisStore`（生产多实例必经路�
 
 **审计方法沉淀**：跨实现/跨部署拓扑的语义必须用同一组行为用例验证；「TTL 到期删除」
 与「惰性过期 + 墓碑」是两种不同语义，后者才能稳定返回 22001。
+
+## 幂等回放全链路回归测试（2026-10-24，第 19 轮）
+
+上一轮修复了 Redis 后端「过期即删键 → 旧 key 静默重新执行」的问题，但测试只覆盖到
+`RedisStore` 单层；生产多实例的真实路径是「HTTP 中间件 `ReplayOrStore` + `RedisStore`」
+组合，而既有 `replay_test.go` 只用 `InMemoryStore`。
+
+新增 `internal/platform/idempotency/replay_redis_test.go`（miniredis，`-race`）：
+
+1. 首次请求执行 producer 并缓存响应；相同 key+请求体第二次命中完成态记录：producer
+   不执行、回放首次响应体、**重发 Set-Cookie**（会话下发链路）；
+2. 同一 key 换请求体 → `22000`（幂等上下文不匹配），不得回放首次响应；
+3. 预置一条 `ExpiresAt` 已过的记录（模拟 24h 前写入）→ 同一 key 重试返回 `22001`，
+   **不得重新执行**（锁定上一轮修复的契约；TTL 粒度用直接预置过期时间，避免测试等待）；
+4. producer panic → 回滚 processing 记录 → 同一 key 可立即重新执行（不返回 22002）。
+
+该组合此前无任何测试；本轮补齐后，幂等「单实例/多实例」两条生产路径均有全链路回归。
