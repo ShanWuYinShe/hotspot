@@ -34,6 +34,7 @@ type App struct {
 	persistence *persistence.Factory
 	bridge      *realtime.RedisBridge
 	realtime    *realtime.Handler
+	hotCache    *hotcache.Cache
 	rootCtx     context.Context
 	rootCancel  context.CancelFunc
 }
@@ -136,6 +137,7 @@ func NewApp(cfg config.Config) (*App, error) {
 		bridge:      bridge,
 		realtime:    realtimeHandler,
 		rootCtx:     rootCtx,
+		hotCache:    hotCache,
 		rootCancel:  rootCancel,
 	}, nil
 }
@@ -167,6 +169,11 @@ func (a *App) Shutdown() {
 	// goroutines (e.g. the ratelimit store sweeper).
 	if a.rootCancel != nil {
 		a.rootCancel()
+	}
+	// 热数据缓存的本地清扫协程由 c.stop 控制（不随 rootCtx）：必须显式关闭，
+	// 否则优雅停机后 goroutine 仍存活（进程退出才回收），双重 Close 已改为幂等。
+	if a.hotCache != nil {
+		a.hotCache.Close()
 	}
 	// Close the Postgres pool too — otherwise a graceful shutdown leaks the
 	// pool and its connections until process exit.

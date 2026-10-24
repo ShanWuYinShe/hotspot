@@ -919,3 +919,21 @@ postgres: 2026-10-24 16:18:23.571   # 快 ~200ms
 
 **纪律**：凡断言「DB 写入时间落在窗口内」的真库测试，窗口边界必须用数据库时钟（或留足
 偏移余量），不能混用 Go `time.Now()` 与 `NOW()`。
+
+## 热缓存生命周期加固（2026-10-25，第 23 轮）
+
+`hotcache.Cache` 在无 Redis 时启动本地 TTL 清扫协程（`GoRestartable`），此前后台生命周期
+有两处缺口：
+
+1. **`Close` 不幂等**：实现直接 `close(c.stop)`，二次调用 panic（close of closed channel）。
+   `Close` 在优雅停机路径（App.Shutdown）与测试 cleanup 都可能被调用，重复清理不应崩溃；
+   改为 `sync.Once` 幂等，并补测试（重复 Close、Close 后 Get/Set/Delete 不 panic、nil 安全）。
+2. **App 停机未关闭清扫协程**：`NewApp` 创建 hotCache 后未保存在 App、`Shutdown` 也未 Close，
+   本地模式（未配 Redis）优雅停机后 sweeper goroutine 仍存活到进程退出。现在 App 持有
+   `hotCache` 并在 `Shutdown` 中（WS 排空/worker 停止之后、DB 池关闭之前）显式 Close。
+
+附带：测试辅助 `BuildModules()` 每次调用都 `hotcache.New(nil)`，会为每个测试构建泄漏一个
+清扫协程；改为传 nil 缓存（`*Cache` 的 nil 接收者方法均为 no-op miss），生产路径不受影响。
+
+审计方法沉淀：**后台资源（goroutine/ticker/连接）的 Close 必须幂等**，且必须在 App.Shutdown
+（或对应所有者）显式释放——不能依赖进程退出；测试辅助构建函数不应启动长驻后台循环。

@@ -30,6 +30,9 @@ type Cache struct {
 	rdb   *redis.Client
 	local sync.Map // key -> localEntry（仅 rdb == nil 时使用）
 	stop  chan struct{}
+	// closeOnce 保证 Close 幂等：Close 会被 App.Shutdown 与测试 cleanup 等多次调用，
+	// 裸 close(stop) 二次调用会 panic（close of closed channel）。
+	closeOnce sync.Once
 }
 
 // New 创建缓存：rdb 非 nil 用 Redis；否则用进程内 TTL map（带周期清扫）。
@@ -65,9 +68,10 @@ func New(rdb *redis.Client) *Cache {
 
 // Close 释放后台资源（本地模式清扫协程）。nil 安全。
 func (c *Cache) Close() {
-	if c != nil && c.stop != nil {
-		close(c.stop)
+	if c == nil || c.stop == nil {
+		return
 	}
+	c.closeOnce.Do(func() { close(c.stop) })
 }
 
 // Get 返回键值与命中标记。Redis 错误按 miss 处理（fail-open）。

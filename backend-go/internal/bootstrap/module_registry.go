@@ -53,7 +53,9 @@ func (r momentsFollowRelationReader) AuthorRelations(ctx context.Context, viewer
 }
 
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
-	modules, _ := BuildModulesWithRedisPinger(context.Background(), cfg, factory, nil, hotcache.New(nil))
+	// 传 nil 缓存（*hotcache.Cache 的 nil 接收者方法均为 no-op miss）：测试辅助构建
+	// 不应创建带本地清扫协程的缓存实例，否则每次 BuildModules 都泄漏一个后台 goroutine。
+	modules, _ := BuildModulesWithRedisPinger(context.Background(), cfg, factory, nil, nil)
 	return modules
 }
 
