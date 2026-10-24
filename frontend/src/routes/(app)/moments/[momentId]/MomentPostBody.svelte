@@ -108,7 +108,7 @@
 <!-- Post images（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 users 详情一致）。
      单图保持全幅封面；多图改为网格（首图全幅 + 其余 3 列网格，点击任一张打开大图查看器）。 -->
 {#if cover}
-	<div class="relative overflow-hidden -mx-page-gutter h-cover-height-lg">
+	<div class="relative overflow-hidden rounded-2xl border border-border-default shadow-raised-sm h-cover-height-lg bg-surface-subtle">
 		<!-- 打开大图必须是可聚焦控件：此前是 <img onclick>（无 role/tabindex/键盘路径/焦点环，
 		     键盘与读屏用户无法打开大图，全站复审 s2-11）。改 button 包裹，图片自身不再承接交互。 -->
 		<button
@@ -125,7 +125,7 @@
 		{#if moment.images.length > 1}
 			<button
 				type="button"
-				class="hover-btn absolute right-3 bottom-3 inline-flex h-5 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2.5 text-xxs font-medium leading-none text-content-inverse hover:opacity-hover focus-ring"
+				class="hover-btn absolute right-3 bottom-3 inline-flex h-6 items-center justify-center rounded-full bg-surface-media-scrim-strong px-3 text-xxs font-medium leading-none text-content-inverse hover:opacity-hover focus-ring shadow-xs"
 				aria-label={`查看全部 ${moment.images.length} 张图片`}
 				onclick={() => {
 					viewerIndex = 0;
@@ -137,118 +137,117 @@
 		{/if}
 	</div>
 	{#if moment.images.length > 1}
-		<div class="mt-0.5 grid grid-cols-3 gap-0.5">
+		<div class="mt-2.5 grid grid-cols-3 gap-2">
 			{#each moment.images.slice(1) as img, i (img + i)}
 				<button
 					type="button"
-					class="aspect-square w-full overflow-hidden focus-ring"
+					class="aspect-square w-full overflow-hidden rounded-xl border border-border-subtle/40 focus-ring shadow-xs"
 					aria-label={`查看第 ${i + 2} 张图片`}
 					onclick={() => {
 						viewerIndex = i + 1;
 						viewerOpen = true;
 					}}
 				>
-					<img src={img} alt="动态图片" class="aspect-square w-full object-cover cursor-zoom-in" />
+					<img src={img} alt="动态图片" class="aspect-square w-full object-cover cursor-zoom-in hover:scale-105 transition-transform" />
 				</button>
 			{/each}
 		</div>
 	{/if}
 {:else}
-	<div class="relative flex flex-col items-center justify-center gap-2 overflow-hidden -mx-page-gutter bg-accent-bg h-cover-height-lg">
+	<div class="relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-border-default bg-accent-bg shadow-raised-sm h-cover-height-lg">
 		<MapPin size={28} class="text-accent-default" strokeWidth={1.5} />
 		<span class="text-text-secondary text-xs">来自 {moment.location || '附近'} 的动态</span>
 	</div>
 {/if}
 {#if moment.tag}
-	<div class="mt-3 inline-flex px-2.5 py-0.5 rounded-full bg-accent-default shadow-raised-sm" >
-		<span class="text-text-on-accent text-xxs">#{moment.tag}</span>
+	<div class="mt-3.5 inline-flex px-3 py-1 rounded-full bg-accent-soft text-accent-default border border-accent-border/50 shadow-xs" >
+		<span class="text-xs font-medium">#{moment.tag}</span>
 	</div>
 {/if}
 
-<!-- 正文块：顶距 16（封面/标签→正文，区块内元素间距）；页底留白只由页面 contentClassName 的底内距提供，
-     此处不再叠加 12（否则 12+24=36 双底距） -->
-<div class="pt-4">
+<!-- 正文块：独立岛屿卡片封装，画廊式质感 -->
+<div class="mt-4 p-5 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm">
 	<!-- Author -->
-	<div class="flex items-center gap-3 mb-3">
+	<div class="flex items-center gap-3 mb-3.5">
 		<button
 			type="button"
-			class="hover-btn size-11 shrink-0 cursor-pointer rounded-full border-2 border-accent-default bg-transparent p-0 overflow-hidden hover:opacity-hover focus-ring focus-visible:ring-offset-surface-primary"
+			class="hover-btn size-11 shrink-0 cursor-pointer rounded-full border-2 border-accent-default/40 bg-transparent p-0 overflow-hidden hover:opacity-hover focus-ring focus-visible:ring-offset-surface-primary shadow-xs"
 			aria-label={`查看${moment.user}的个人主页`}
 			onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
 		>
 			<Avatar src={moment.avatar} name={moment.user} size="lg" />
 		</button>
-		<div class="flex-1">
-			<p class="text-text-primary text-sm">{moment.user}</p>
-			<div class="flex items-center gap-1.5">
-				<MapPin class="size-2.5 text-accent-default"   strokeWidth={1.5} />
-				<span class="text-text-secondary text-xs">{moment.location}</span>
+		<div class="flex-1 min-w-0">
+			<p class="text-text-primary text-sm font-semibold truncate">{moment.user}</p>
+			<div class="flex items-center gap-1.5 mt-0.5">
+				<MapPin class="size-3 text-accent-default" strokeWidth={1.75} />
+				<span class="text-text-secondary text-xs truncate">{moment.location || '附近'}</span>
 			</div>
 		</div>
-		<span class="text-text-secondary text-xs">{moment.time}</span>
+		<span class="text-text-secondary text-xs shrink-0">{moment.time}</span>
 	</div>
 
 	<!-- Content -->
-	<p class="text-text-primary text-sm leading-copy">{moment.content}</p>
+	<p class="text-text-primary text-sm leading-relaxed whitespace-pre-wrap break-words">{moment.content}</p>
 
-	<!-- Actions（对齐交互契约：行内小图标动作用 hover-action——hover 1.20/按下 0.94）。
-	     移动端互动已下沉为页面底部操作条（SplitPageLayout footer），内容区只读 -->
+	<!-- Actions（对齐交互契约：行内小图标动作） -->
 	{#if platform.platform !== 'mobile'}
-	<div class="flex items-center justify-between py-3 border-t border-border-default border-b border-border-default" >
-		<div class="flex gap-4">
+	<div class="mt-4 flex items-center justify-between pt-3.5 border-t border-border-subtle/40" >
+		<div class="flex gap-5">
 			<button
 				type="button"
-				class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring {liked ? 'text-accent-default' : 'text-text-secondary'}"
+				class="hover-action hit-slop flex items-center gap-1.5 py-1 focus-ring transition-colors {liked ? 'text-status-danger' : 'text-text-secondary hover:text-status-danger'}"
 				aria-label={liked ? '取消点赞' : '点赞'}
 				aria-pressed={liked}
 				onclick={onToggleLike}
 			>
-				<Heart class="size-5"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
+				<Heart class="size-4.5" strokeWidth={1.75} fill={liked ? 'currentColor' : 'none'} />
 				{#key likeCount}
-					<span class="count-pop text-sm">{likeCount}</span>
+					<span class="count-pop text-xs font-medium">{likeCount}</span>
 				{/key}
 			</button>
 			<button
 				type="button"
-				class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring text-text-secondary"
+				class="hover-action hit-slop flex items-center gap-1.5 py-1 focus-ring text-text-secondary hover:text-accent-default transition-colors"
 				aria-label="查看评论"
 				onclick={onCommentClick}
 			>
-				<MessageCircle class="size-5"  strokeWidth={1.5} />
-				<span class="text-sm">{commentCount}</span>
+				<MessageCircle class="size-4.5" strokeWidth={1.75} />
+				<span class="text-xs font-medium">{commentCount}</span>
 			</button>
 		</div>
 		<div class="flex gap-3">
 			<button
 				type="button"
-				class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring {saved ? 'text-accent-default' : 'text-text-secondary'}"
+				class="hover-action hit-slop flex items-center gap-1.5 py-1 focus-ring transition-colors {saved ? 'text-accent-default' : 'text-text-secondary hover:text-accent-default'}"
 				aria-label={saved ? '取消收藏' : '收藏'}
 				aria-pressed={saved}
 				onclick={onToggleSave}
 			>
-				<Bookmark class="size-5"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
+				<Bookmark class="size-4.5" strokeWidth={1.75} fill={saved ? 'currentColor' : 'none'} />
 			</button>
 			<button
 				type="button"
 				onclick={onShare}
 				aria-label={shareStatus === 'failed' ? '复制动态链接失败' : '复制动态链接'}
-				class="hover-action hit-slop -my-2 flex items-center py-2 focus-ring {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
+				class="hover-action hit-slop flex items-center py-1 focus-ring transition-colors {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary hover:text-accent-default'}"
 			>
 				{#if shareStatus === 'copied'}
-					<Check class="size-5"  strokeWidth={1.75} />
+					<Check class="size-4.5" strokeWidth={2} />
 				{:else}
-					<Share2 class="size-5"  strokeWidth={1.5} />
+					<Share2 class="size-4.5" strokeWidth={1.75} />
 				{/if}
 			</button>
 		</div>
 	</div>
 	{/if}
+</div>
 
-	<!-- 评论分区标题：走真实标题层级（h2）+ skill 登记的分区标题档位
-	     （14px semibold = text-md），此前是 12px/500 的 <p>，页面无 h2（全站复审 s2-09）。
-	     id 保留：详情锚点 #moment-comments 依赖它。 -->
-	<h2 class="mt-6 mb-3 text-md font-semibold text-text-primary" id="moment-comments">
-		评论 · {commentCount}
+<!-- 评论分区：独立讨论岛屿卡片 -->
+<div class="mt-6 p-5 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm" id="moment-comments">
+	<h2 class="mb-4 text-sm font-semibold text-text-primary flex items-center gap-2">
+		<span>评论讨论</span>
+		<span class="text-xs font-normal text-text-secondary bg-surface-subtle px-2 py-0.5 rounded-full">{commentCount}</span>
 	</h2>
 	{#if comments.length === 0}
 		<EmptyState bare title="还没有评论" description="来说点什么吧">
@@ -257,9 +256,9 @@
 			{/snippet}
 		</EmptyState>
 	{/if}
-	<div class="flex flex-col gap-4">
+	<div class="flex flex-col divide-y divide-border-subtle/30">
 		{#each comments as c (c.id)}
-			<div class="flex gap-3">
+			<div class="flex gap-3 py-3.5 first:pt-0 last:pb-0">
 				<button
 					type="button"
 					class="hover-btn hit-slop shrink-0 rounded-full focus-ring"

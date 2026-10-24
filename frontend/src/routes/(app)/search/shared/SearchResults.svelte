@@ -125,7 +125,7 @@
 			{#if (tab === 'all' || tab === 'people') && results.users.length > 0}
 				<!-- 用户结果组 -->
 				{#snippet userRows()}
-					<ListContainer>
+					<ListContainer bordered class="rounded-2xl shadow-raised-sm overflow-hidden">
 						{#each results.users as person (person.user_id)}
 							<ListItem
 								onClick={() => void goto(ROUTES.user(person.user_id))}
@@ -150,7 +150,7 @@
 			{#if (tab === 'all' || tab === 'posts') && results.moments.length > 0}
 				<!-- 动态结果组（补缩略图，对齐 Figma size-10 image） -->
 				{#snippet momentRows()}
-					<ListContainer>
+					<ListContainer bordered class="rounded-2xl shadow-raised-sm overflow-hidden">
 						{#each results.moments as moment (moment.moment_id)}
 							<ListItem
 								onClick={() => void goto(ROUTES.moment(moment.moment_id))}
@@ -184,7 +184,7 @@
 			{#if (tab === 'all' || tab === 'groups') && results.groups.length > 0}
 				<!-- 群组结果组（复用用户组同款行语言：Avatar 圆角区分群组 + ArrowUpRight） -->
 				{#snippet groupRows()}
-					<ListContainer>
+					<ListContainer bordered class="rounded-2xl shadow-raised-sm overflow-hidden">
 						{#each results.groups as group (group.group_id)}
 							<ListItem
 								onClick={() => void goto(ROUTES.group(group.group_id))}
@@ -209,7 +209,7 @@
 			{#if (tab === 'all' || tab === 'topics') && results.topics.length > 0}
 				<!-- 话题结果组 -->
 				{#snippet topicRows()}
-					<ListContainer>
+					<ListContainer bordered class="rounded-2xl shadow-raised-sm overflow-hidden">
 						{#each results.topics as topic (topic)}
 							<ListItem
 								onClick={() => onChoose(topic)}

@@ -28,22 +28,16 @@
 
 <button
 	type="button"
-	class="hover-btn nav-tab relative flex flex-col items-center justify-center rounded-lg pt-2.5 pb-2 gap-1 focus-ring select-none w-full min-w-0
+	class="hover-btn nav-tab relative flex flex-col items-center justify-center rounded-xl py-2 gap-1 focus-ring select-none w-full min-w-0 transition-transform active:scale-95 duration-rapid
 		{isActive ? '' : 'hover:bg-interactive-hover'}"
-	aria-label={label}	aria-current={isActive ? 'page' : undefined}
+	aria-label={label}
+	aria-current={isActive ? 'page' : undefined}
 	onclick={onClick}
 >
-	{#if isActive}
-		<div
-			class="absolute rounded-lg transition-[opacity] duration-standard"
-			style="inset:4px 6px;background:var(--cst-navigation-active-indicator);opacity:var(--cst-opacity-active);"
-		></div>
-	{/if}
-
-	<div class="flex items-center justify-center relative z-1">
+	<div class="flex items-center justify-center relative transition-transform duration-standard {isActive ? 'scale-105' : 'scale-100'}">
 		<Icon
 			style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);"
-			strokeWidth={isActive ? 2 : 1.5}
+			strokeWidth={isActive ? 2.25 : 1.5}
 		/>
 		{#if count > 0}
 			<span class="absolute -right-2.5 -top-1.5">
@@ -52,7 +46,7 @@
 		{/if}
 	</div>
 	<span
-		class="text-xs leading-none relative z-1 {isActive ? 'font-semibold' : 'font-normal'}"
+		class="text-xs leading-none relative {isActive ? 'font-semibold' : 'font-normal'}"
 		style="color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);"
 	>
 		{label}

@@ -84,7 +84,7 @@
 				清除
 			</button>
 		</div>
-		<ListContainer class="mt-3 divide-y divide-border-subtle/30">
+		<ListContainer bordered class="mt-3 rounded-2xl shadow-raised-sm overflow-hidden">
 			{#each recent as item (item)}
 				<ListItem
 					onClick={() => onChoose(item)}
@@ -101,16 +101,18 @@
 	{/if}
 
 	{#if hotTopics.length > 0}
-		<!-- 热门话题：热门动态 tags 聚合，点击即搜 -->
+		<!-- 热门话题：杂志感 Bento 探索卡，点击即搜 -->
 		<section aria-label="热门话题">
-			<div class="flex items-center gap-1.5">
+			<div class="flex items-center gap-1.5 mb-2.5">
 				<Flame class="size-3.5 text-accent-default" strokeWidth={1.75} />
 				<h2 class="eyebrow">热门话题</h2>
 			</div>
-			<div class="mt-3 flex flex-wrap gap-2">
-				{#each hotTopics as topic (topic)}
-					<TagPill onClick={() => onChooseTopic(topic)}>#{topic}</TagPill>
-				{/each}
+			<div class="p-3.5 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm">
+				<div class="flex flex-wrap gap-2">
+					{#each hotTopics as topic (topic)}
+						<TagPill onClick={() => onChooseTopic(topic)}>#{topic}</TagPill>
+					{/each}
+				</div>
 			</div>
 		</section>
 	{/if}
@@ -120,7 +122,7 @@
 		     行原语与首页附近用户行同语言（头像角标 + #tag · 距离副标题），尾部
 		     ArrowUpRight 与本页最近搜索/结果行导航语义一致 -->
 		<section aria-label="人物推荐">
-			<div class="flex items-center justify-between">
+			<div class="flex items-center justify-between mb-2.5">
 				<div class="flex items-center gap-1.5">
 					<Users class="size-3.5 text-accent-default" strokeWidth={1.75} />
 					<h2 class="eyebrow">人物推荐</h2>
@@ -133,7 +135,7 @@
 					查看全部
 				</button>
 			</div>
-			<ListContainer class="mt-3 divide-y divide-border-subtle/30">
+			<ListContainer bordered class="mt-3 rounded-2xl shadow-raised-sm overflow-hidden">
 				{#each hotUsers as u (u.id)}
 					<UserCardRow
 						name={u.name}
@@ -171,11 +173,11 @@
 	<div>
 		<!-- 热门动态：复用发现态已拉取的热门响应（C2 轻量充实），行原语与首页附近活动一致 -->
 		<section aria-label="热门动态">
-			<div class="flex items-center gap-1.5">
+			<div class="flex items-center gap-1.5 mb-2.5">
 				<TrendingUp class="size-3.5 text-accent-default" strokeWidth={1.75} />
 				<h2 class="eyebrow">热门动态</h2>
 			</div>
-			<ListContainer class="mt-3">
+			<ListContainer bordered class="mt-3 rounded-2xl shadow-raised-sm overflow-hidden">
 				{#each hotMoments as m (m.moment_id)}
 					<HomeFeedItem moment={m} showDistance={false} onClick={() => onOpenMoment(m.moment_id)} />
 				{/each}
