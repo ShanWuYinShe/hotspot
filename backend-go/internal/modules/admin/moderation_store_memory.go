@@ -59,14 +59,12 @@ func (s *InMemoryModerationStore) SearchTags(_ context.Context, filter TagSearch
 		return items[i].UsageCount > items[j].UsageCount
 	})
 	limit := normalizeCursorLimit(filter.Limit)
-	page := TagPage{Items: make([]TagRecord, 0, limit)}
-	for idx, item := range items {
-		if idx >= limit {
-			cursor := tagCursor{Name: item.Name, UsageCount: item.UsageCount, CreatedAt: item.CreatedAt}
-			page.Next = &cursor
-			break
-		}
-		page.Items = append(page.Items, item)
+	page := TagPage{Items: items}
+	if len(items) > limit {
+		page.Items = items[:limit]
+		// 下一页游标取本页最后一条（排他 keyset，与 Postgres 实现同口径）。
+		last := page.Items[limit-1]
+		page.Next = &tagCursor{Name: last.Name, UsageCount: last.UsageCount, CreatedAt: last.CreatedAt}
 	}
 	return page, nil
 }
@@ -128,14 +126,12 @@ func (s *InMemoryModerationStore) SearchAnnouncements(_ context.Context, filter 
 		return items[i].CreatedAt.After(items[j].CreatedAt)
 	})
 	limit := normalizeCursorLimit(filter.Limit)
-	page := systemmodule.AnnouncementPage{Items: make([]systemmodule.AnnouncementRecord, 0, limit)}
-	for idx, item := range items {
-		if idx >= limit {
-			cursor := systemmodule.AnnouncementCursor{CreatedAt: item.CreatedAt, AnnouncementID: item.AnnouncementID}
-			page.Next = &cursor
-			break
-		}
-		page.Items = append(page.Items, item)
+	page := systemmodule.AnnouncementPage{Items: items}
+	if len(items) > limit {
+		page.Items = items[:limit]
+		// 下一页游标取本页最后一条（排他 keyset，与 system/postgres 实现同口径）。
+		last := page.Items[limit-1]
+		page.Next = &systemmodule.AnnouncementCursor{CreatedAt: last.CreatedAt, AnnouncementID: last.AnnouncementID}
 	}
 	return page, nil
 }

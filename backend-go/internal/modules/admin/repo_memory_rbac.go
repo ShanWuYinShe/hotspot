@@ -209,12 +209,17 @@ func (r *InMemoryRepository) ListAdmins(_ context.Context, pagination Pagination
 	page := adminListPage{Items: make([]AdminOperatorItem, 0, limit)}
 	for idx, grant := range filtered {
 		if idx >= limit {
-			page.Next = &adminCursor{GrantedAt: grant.grantedAt, UserID: grant.userID}
 			break
 		}
 		actor, _, _ := r.actorFromRecordLocked(grant)
 		user, _ := r.lookupUserLocked(grant.userID)
 		page.Items = append(page.Items, AdminOperatorItem{User: user, GrantedAt: grant.grantedAt.UTC().Format(time.RFC3339), Permissions: cloneStrings(actor.Permissions), Roles: append([]AdminRoleBasic(nil), actor.Roles...)})
+	}
+	if len(filtered) > limit {
+		// 下一页游标取本页最后一条（排他 keyset）；此前取第 limit+1 条作游标，
+		// 下一页把它自身排除 → 每个分页边界丢一个管理员。
+		last := filtered[limit-1]
+		page.Next = &adminCursor{GrantedAt: last.grantedAt, UserID: last.userID}
 	}
 	return page, nil
 }

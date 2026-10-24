@@ -588,3 +588,22 @@ emoji 刷新 reacted_at（列表重排）、聚合（计数/排序/reacted_by_me
 已改为按 `parseReactionTime` 解析后的 `time.Time` 比较（同秒 tie-break 仍按 ID 降序）。
 
 教训：时间字段一律按解析后的时间比较，禁止对 RFC3339Nano 变长字符串做字典序比较。
+
+## 分页游标缺陷全场扫描（2026-10-24）
+
+在 reactions 契约测试抓到「next 游标取下一页首条 + 严格排他谓词 → 每页边界丢一行」后，
+按两类代码特征对全部双实现做了一次全场扫描：`idx >= limit` 早退分支、`page.Next =` 赋值点。
+新发现 **另外 5 处同族缺陷**（此前未覆盖的列表）：
+
+- `admin` 标签管理列表 `SearchTags`：Postgres 版（SQL `HAVING COUNT(*) < $2 OR (= AND name > $3)`）
+  与内存版（`usageCount > cursor.usageCount` / 相等时 `name <= cursor.name`）均把第 limit+1 条
+  当游标 → 每个分页边界丢一个标签；
+- `admin` 内存版公告检索 `SearchAnnouncements`（无 DB 降级路径）同缺陷；
+- `admin` RBAC 管理员列表 `ListAdmins`：内存版与 Postgres 版（先全量加载再 Go 过滤）同缺陷，
+  每页边界丢一个管理员。
+
+均已改为「游标取本页最后一条」，并新增 `pagination_contract_test.go` 锁定不变量：翻页必须能
+枚举全部行、不重不漏（覆盖内存/真实库标签列表、内存公告列表、内存 RBAC 管理员列表）。
+
+**审计方法沉淀**：新增/修改列表分页后，用 `grep -n 'idx >= limit\|page.Next ='` 复核游标
+取值来源；游标必须是**本页最后一条**，不能是第 limit+1 条（严格排他谓词会把它自身排除）。

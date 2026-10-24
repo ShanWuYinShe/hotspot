@@ -61,14 +61,13 @@ func (s *PersistenceModerationStore) SearchTags(ctx context.Context, filter TagS
 	if err := rows.Err(); err != nil {
 		return TagPage{}, err
 	}
-	page := TagPage{Items: make([]TagRecord, 0, limit)}
-	for idx, item := range items {
-		if idx >= limit {
-			cursor := tagCursor{Name: item.Name, UsageCount: item.UsageCount, CreatedAt: item.CreatedAt}
-			page.Next = &cursor
-			break
-		}
-		page.Items = append(page.Items, item)
+	page := TagPage{Items: items}
+	if len(items) > limit {
+		page.Items = items[:limit]
+		// 下一页游标取本页最后一条（排他 keyset）；此前取第 limit+1 条（下一页首条），
+		// 下一页会把它自身排除 → 每个分页边界丢一个标签。
+		last := page.Items[limit-1]
+		page.Next = &tagCursor{Name: last.Name, UsageCount: last.UsageCount, CreatedAt: last.CreatedAt}
 	}
 	return page, nil
 }

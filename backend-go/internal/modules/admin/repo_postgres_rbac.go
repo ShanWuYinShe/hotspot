@@ -247,10 +247,14 @@ func (r *PostgresRepository) ListAdmins(ctx context.Context, pagination Paginati
 	page := adminListPage{Items: make([]AdminOperatorItem, 0, limit)}
 	for idx, record := range filtered {
 		if idx >= limit {
-			page.Next = &adminCursor{GrantedAt: record.GrantedAt, UserID: record.User.UserID}
 			break
 		}
 		page.Items = append(page.Items, AdminOperatorItem{User: record.User, GrantedAt: record.GrantedAt.UTC().Format(time.RFC3339), Permissions: record.permissionsForResponse(), Roles: record.rolesForResponse()})
+	}
+	if len(filtered) > limit {
+		// 下一页游标取本页最后一条（排他 keyset，与内存实现同口径）。
+		last := filtered[limit-1]
+		page.Next = &adminCursor{GrantedAt: last.GrantedAt, UserID: last.User.UserID}
 	}
 	return page, nil
 }
