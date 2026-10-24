@@ -975,3 +975,71 @@ postgres: 2026-10-24 16:18:23.571   # 快 ~200ms
 
 审计方法沉淀：请求路径上的 fanout/候选查询，上限必须下沉到 SQL；`LIMIT NULL` 可安全表达
 「不限制」而无需动态拼接 SQL。
+
+## 第 18–26 轮补充审计结论（2026-10-25）
+
+> 本文第 17 轮曾收敛「审计总览」；本节补齐其后 9 轮的结论，并把两个系统性扫描
+> （无 LIMIT SELECT、外键索引）的结论固化，避免后续重复排查。
+
+### 一、新增生产修复（第 18–26 轮）
+
+| # | 问题 | 影响 | 提交 |
+|---|---|---|---|
+| 1 | 幂等 Redis 后端记录 TTL = 业务有效期，到期即删键 | 多实例部署下旧 Idempotency-Key 重试被静默「重新执行」；单实例返回 22001。修复：过期墓碑窗口 + 惰性过期判断 | `f5ac1771` |
+| 2 | 附近新瞬间通知目标查询无 LIMIT | moments 创建同步路径先把 5km 内全部候选用户载入内存再截断（扇出上限 200），密集区域内存/耗时随用户密度线性增长。修复：limit 下沉 SQL（`LIMIT NULL` 表达不限制） | `3b732677` |
+| 3 | hotcache.Close 非幂等、App 停机未关闭本地清扫协程 | 重复清理 panic（close of closed channel）；无 Redis 模式优雅停机后 sweeper goroutine 存活到进程退出。修复：sync.Once + App.Shutdown 释放 + 测试辅助构建不再泄漏 sweeper | `52512951` |
+
+### 二、测试基建/CI 修复（非产品缺陷，但影响门禁可信度）
+
+| # | 问题 | 修复 |
+|---|---|---|
+| 1 | 真实库集成测试按包并行，跨包提交的 fixture 污染统计断言（`admin.TestPostgresIT_StatsGeoAggregation` 偶发红灯） | 门禁与 CI 的 DB 阶段统一 `go test -p 1`（共享真实库必须串行）——`bfcd2d50` |
+| 2 | 统计 IT 混用 Go 时钟与 DB `NOW()`：容器时钟偏移（实测 PG 快 ~200ms）导致时间窗误排除刚播种行 | 测试时间基准统一用 `SELECT now()` —— `8b867e09` |
+
+### 三、系统性扫描结论（可视为已收口，不需重复排查）
+
+**1. 无 LIMIT 的 SELECT 全量扫描（2026-10-25）**
+对 `internal/modules/*/repo_postgres*.go` 全部查询常量静态扫描：115 条 SELECT 无 `LIMIT`，
+逐条分类：
+- 单行主键/唯一键查询（Get/Exists/Lookup 等）——有界；
+- `COUNT`/`EXISTS`/`MAX` 聚合——结果集 1 行；
+- `ANY($n)` 输入有界（批次、订阅上限、成员资格、ID 列表由 service 裁剪）——有界；
+- admin 列表/成员列表等规模有界项（管理员数量、群成员上限 `max_members`）——当前可接受，
+  已在「已知残留」记录；
+- **真·请求路径全量读**：仅 `users.queryNearbyMomentNotifyTargets` 一处，已修复（第 26 轮）。
+结论：请求路径上的「先全量读再截断」模式已收口；新增 fanout/候选查询时上限必须下沉 SQL
+（`LIMIT NULL` 可表达「不限制」，无需动态拼 SQL）。
+
+**2. 外键列索引扫描（2026-10-25）**
+解析迁移中全部 64 个外键，与索引/PK 前导列比对；未发现「被查询谓词使用但无前导索引」的外键：
+- 无索引者（comments.user_id、comment_likes.user_id、group_bans.user_id、reports.handled_by_user_id 等）
+  **均不出现在查询谓词**中；用户删除走「匿名化」而非级联删（`038_users_anonymize_delete`），
+  级联扫描不存在；
+- group_bans/read_state 等有 `(group_id, user_id)` 复合主键覆盖前导列；
+- moments/moment_tags/moment_mentions 的 `moment_id` 由复合主键覆盖前导列。
+结论：当前不需要新增索引；后续若新增「按 user_id 列评论/点赞」类查询，需同时补前导索引。
+
+### 四、平台/后台测试资产补充（第 18–26 轮）
+
+- `idempotency`：RedisStore 单测 + 「回放中间件 + Redis」全链路（22001/22000/Set-Cookie/panic 回滚）；
+- `realtime`：RedisBridge 跨实例 fanout 全链路（五频道/ origin 跳过 / revoke·groupdrop / 容错 / Close）；
+  RedisResumeStore 边界（负 seq 钳制、重复 groupID 去重、脏 Stream、损坏 state、宕机降级）；
+- `worker`：GoRestartable 重启/退避封顶/干净返回停止，包覆盖率 100%；
+- `hotcache`：Close 幂等、Close 后数据面可用；
+- 保留期清理：auth `SweepRetention` 真实库语义、media GC「对象删除失败保留行待重试」；
+- 管理后台：统计 IT 时钟基准修复；契约测试新增分页不变量用例。
+
+### 五、已知残留更新
+
+- （已解决）admin 统计 IT 跨包污染——改为串行；时钟漂移——改用 DB 时钟；
+- （新增记录）`notify.StopPruneSweeper` 仅测试使用，不等待在飞的 `pruneOnce`（其使用独立 1min
+  超时 ctx）；生产无停止调用，影响可忽略；
+- 其余残留项（search/mapmodule 内存占位、reports/groupmessages 跨模块注入、platform/auth 直连池、
+  admin 全量列表）维持第 17 轮总览的评估。
+
+### 六、结论
+
+第 18–26 轮未发现新的大类问题：主要收获为 2 处生产修复（幂等过期语义、附近通知全量读）、
+1 处生命周期加固（hotcache），以及 2 处会让门禁「假红/假绿」的测试基建问题；
+配合前面 17 轮，后端在「双实现语义一致、请求路径有界、清理可重试、停机可释放、门禁与 CI 同构」
+五个维度已达到可交付状态。剩余待办仅为 spec 歧义确认（4 项）与可选的生产语义补测。
