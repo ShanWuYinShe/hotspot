@@ -1043,3 +1043,37 @@ postgres: 2026-10-24 16:18:23.571   # 快 ~200ms
 1 处生命周期加固（hotcache），以及 2 处会让门禁「假红/假绿」的测试基建问题；
 配合前面 17 轮，后端在「双实现语义一致、请求路径有界、清理可重试、停机可释放、门禁与 CI 同构」
 五个维度已达到可交付状态。剩余待办仅为 spec 歧义确认（4 项）与可选的生产语义补测。
+
+## 全量门禁 + 运行态核验（2026-10-25，第 27 轮）
+
+在 main（`19f95ab2`）执行发版前同级核验：`./scripts/verify-backend-ci.sh --all`
+（静态 + race + 覆盖率 + 真实库 IT + E2E + govulncheck），并做 dev compose 运行态检查。
+
+### 一、全量门禁结果
+
+- 静态：`go vet`/`staticcheck` 干净；`gofmt` 无差异；
+- `-race` + `internal/modules` 覆盖率 ≥70%：通过；
+- 真实库 IT（`-p 1` 串行）+ 双实现契约测试：通过；
+- HTTP 全链路 E2E（`test/integration`）：通过；
+- `govulncheck`（CI 固定 v1.8.0）：**No vulnerabilities found**——代码直接调用路径 0 个可达漏洞；
+  依赖模块有 1 个漏洞，但代码不调用（不可达）。
+- 结论：`ALL CHECKS PASSED`。
+
+### 二、dev 运行态核验（2026-10-25 01:04 +08）
+
+- 7 个容器全部 healthy（nginx/backend/frontend/postgres/redis/seaweedfs/mailpit）；
+- `/healthz` 返回 `code=0, status=ok`；
+- `/metrics`（仅 compose 网络，`:8081/metrics`）正常输出：`go_goroutines 21`、
+  `pgxpool_total_conns 2 / idle 2 / acquiring 0`（无连接池饱和）、`empty_acquire_total 1`
+  （启动至今仅 1 次等待连接，符合低频 dev 流量）、HTTP 计数器按 route 维度正常；
+- backend 近 2 小时无 error 级日志；warn 仅两类预期噪声：
+  1. `ws: auth failed, token invalid` 每 1–2 秒一次——来源是**本机遗留的 HeadlessChrome QA
+     标签页**（旧会话/过期 token 自动重连）经 nginx 反复握手，非后端缺陷；该重连受 WS 握手
+     限流约束，不会放大为资源问题；
+  2. Postgres `duplicate key ... uq_auth_sessions_active_device` / `auth_accounts_pkey`——
+     并发登录设备逐出与重复注册的**预期唯一约束冲突**，业务层已按设计处理（不是未捕获异常）。
+- 结论：运行态健康，无新发现问题；可作为后续发版前的本地核验基线。
+
+### 三、说明
+
+- 本轮为核验类工作，未改代码；上述结论在下一版发版前可直接复用（若涉及 SQL/依赖变更需重跑）。
