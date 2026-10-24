@@ -19,50 +19,54 @@
 	} = $props();
 </script>
 
-{#if moment.user}
-<RailSection title="作者">
-	<RailUserRow avatar={moment.avatar} name={moment.user} sub={moment.location} onClick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}>
-		{#snippet trailing()}
-			<button
-				type="button"
-				class="hover-btn hit-slop shrink-0 rounded-full border border-accent-border bg-accent-soft px-3 py-1.5 text-xs text-accent-default focus-ring hover:bg-interactive-active hover:text-text-primary"
-				onclick={(e) => {
-					e.stopPropagation();
-					if (moment.authorId) void goto(ROUTES.message(moment.authorId));
-				}}
-			>
-				私信
-			</button>
-		{/snippet}
-	</RailUserRow>
-</RailSection>
-{/if}
+<div class="flex flex-col gap-6">
+	{#if moment.user}
+		<RailSection title="作者" variant="bare">
+			<RailUserRow avatar={moment.avatar} name={moment.user} sub={moment.location} onClick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}>
+				{#snippet trailing()}
+					<button
+						type="button"
+						class="hover-btn hit-slop shrink-0 rounded-full border border-accent-border bg-accent-soft px-3 py-1.5 text-xs text-accent-default focus-ring hover:bg-interactive-active hover:text-text-primary"
+						onclick={(e) => {
+							e.stopPropagation();
+							if (moment.authorId) void goto(ROUTES.message(moment.authorId));
+						}}
+					>
+						私信
+					</button>
+				{/snippet}
+			</RailUserRow>
+		</RailSection>
+	{/if}
 
-{#if moment.location}
-<RailSection title="相关位置">
-	<RailLocationMini name={moment.location} />
-</RailSection>
-{/if}
+	{#if moment.location}
+		<div class="h-px bg-border-subtle/40"></div>
+		<RailSection title="相关位置" variant="bare">
+			<RailLocationMini name={moment.location} />
+		</RailSection>
+	{/if}
 
-<!-- 此刻附近（moments/fetch_nearby） -->
-{#if nearbyNow.length > 0}
-<RailSection title="此刻附近" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)}>
-	<div class="flex flex-col gap-3">
-		{#each nearbyNow as u (u.id)}
-			<RailUserRow avatar={u.avatar} name={u.name} sub={u.sub} onClick={() => { if (u.id) void goto(ROUTES.user(u.id)); }} />
-		{/each}
-	</div>
-</RailSection>
+	<!-- 此刻附近（moments/fetch_nearby） -->
+	{#if nearbyNow.length > 0}
+		<div class="h-px bg-border-subtle/40"></div>
+		<RailSection title="此刻附近" variant="bare" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)}>
+			<div class="flex flex-col gap-3">
+				{#each nearbyNow as u (u.id)}
+					<RailUserRow avatar={u.avatar} name={u.name} sub={u.sub} onClick={() => { if (u.id) void goto(ROUTES.user(u.id)); }} />
+				{/each}
+			</div>
+		</RailSection>
+	{/if}
 
-{/if}
-
-<!-- 更多动态（moments/search） -->
-{#if relatedMoments.length > 0}
-<RailSection title="更多动态" action="发现" onAction={() => void goto(ROUTES.nearbyMoments)}>
-	<div class="flex flex-col gap-3">
-		{#each relatedMoments as p (p.id)}
-			<RailMomentThumb image={p.image} title={p.title} meta={p.meta} onClick={() => void goto(ROUTES.moment(p.id))} />
-		{/each}
-	</div>
-</RailSection>
-{/if}
+	<!-- 更多动态（moments/search） -->
+	{#if relatedMoments.length > 0}
+		<div class="h-px bg-border-subtle/40"></div>
+		<RailSection title="更多动态" variant="bare" action="发现" onAction={() => void goto(ROUTES.nearbyMoments)}>
+			<div class="flex flex-col gap-3">
+				{#each relatedMoments as p (p.id)}
+					<RailMomentThumb image={p.image} title={p.title} meta={p.meta} onClick={() => void goto(ROUTES.moment(p.id))} />
+				{/each}
+			</div>
+		</RailSection>
+	{/if}
+</div>

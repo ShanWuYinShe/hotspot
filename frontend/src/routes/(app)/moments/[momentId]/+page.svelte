@@ -631,11 +631,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		{/if}
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
 		{#if replyTarget}
-			<div class="mx-6 mb-1 flex items-center justify-between rounded-md border border-border-default bg-surface-subtle px-3 py-1.5">
-				<p class="truncate text-xs text-text-secondary">回复 @{replyTarget.user}</p>
+			<div class="mx-4 mb-1.5 flex items-center justify-between rounded-lg border border-border-subtle/70 bg-surface-subtle/80 px-3 py-1.5 backdrop-blur-xs">
+				<p class="truncate text-xs text-text-secondary font-medium">回复 @{replyTarget.user}</p>
 				<button
 					type="button"
-					class="link-btn shrink-0 text-xs text-text-secondary"
+					class="link-btn shrink-0 text-xs text-accent-default hover:underline"
 					onclick={cancelReply}
 				>取消回复</button>
 			</div>
