@@ -84,7 +84,7 @@
 				清除
 			</button>
 		</div>
-		<ListContainer bordered class="mt-3 rounded-2xl shadow-raised-sm overflow-hidden">
+		<ListContainer bordered class="mt-3 rounded-2xl border-border-subtle/50 shadow-xs overflow-hidden">
 			{#each recent as item (item)}
 				<ListItem
 					onClick={() => onChoose(item)}
@@ -101,18 +101,16 @@
 	{/if}
 
 	{#if hotTopics.length > 0}
-		<!-- 热门话题：杂志感 Bento 探索卡，点击即搜 -->
+		<!-- 热门话题：无界流式标签云，点击即搜，告别生硬方框束缚 -->
 		<section aria-label="热门话题">
 			<div class="flex items-center gap-1.5 mb-2.5">
 				<Flame class="size-3.5 text-accent-default" strokeWidth={1.75} />
 				<h2 class="eyebrow">热门话题</h2>
 			</div>
-			<div class="p-3.5 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm">
-				<div class="flex flex-wrap gap-2">
-					{#each hotTopics as topic (topic)}
-						<TagPill onClick={() => onChooseTopic(topic)}>#{topic}</TagPill>
-					{/each}
-				</div>
+			<div class="flex flex-wrap gap-2 pt-1">
+				{#each hotTopics as topic (topic)}
+					<TagPill onClick={() => onChooseTopic(topic)}>#{topic}</TagPill>
+				{/each}
 			</div>
 		</section>
 	{/if}
@@ -135,7 +133,7 @@
 					查看全部
 				</button>
 			</div>
-			<ListContainer bordered class="mt-3 rounded-2xl shadow-raised-sm overflow-hidden">
+			<ListContainer bordered class="mt-3 rounded-2xl border-border-subtle/50 shadow-xs overflow-hidden">
 				{#each hotUsers as u (u.id)}
 					<UserCardRow
 						name={u.name}
@@ -171,17 +169,17 @@
 	</div>
 	{#if hotMoments.length > 0}
 	<div>
-		<!-- 热门动态：复用发现态已拉取的热门响应（C2 轻量充实），行原语与首页附近活动一致 -->
+		<!-- 热门动态：独立画廊卡片流，消除外层大框嵌套 -->
 		<section aria-label="热门动态">
 			<div class="flex items-center gap-1.5 mb-2.5">
 				<TrendingUp class="size-3.5 text-accent-default" strokeWidth={1.75} />
 				<h2 class="eyebrow">热门动态</h2>
 			</div>
-			<ListContainer bordered class="mt-3 rounded-2xl shadow-raised-sm overflow-hidden">
+			<div class="flex flex-col gap-3.5 sm:gap-4 mt-2">
 				{#each hotMoments as m (m.moment_id)}
 					<HomeFeedItem moment={m} showDistance={false} onClick={() => onOpenMoment(m.moment_id)} />
 				{/each}
-			</ListContainer>
+			</div>
 		</section>
 	</div>
 	{/if}

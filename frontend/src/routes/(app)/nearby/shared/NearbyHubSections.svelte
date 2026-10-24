@@ -3,7 +3,6 @@
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
-	import ListContainer from '@/components/list/ListContainer.svelte';
 	import type { MomentItem } from '@/api/types';
 	import type { NearbyUser } from '@/components/home/nearby-users';
 
@@ -60,7 +59,7 @@
 {#if moments.length > 0}
 	<div data-hub-section="moments">
 		<SectionHead title="附近瞬间" action="查看全部" onAction={onSeeAllMoments} />
-		<ListContainer bordered class="shadow-raised-sm rounded-2xl overflow-hidden">
+		<div class="flex flex-col gap-3.5 sm:gap-4 mt-2">
 			{#each moments.slice(0, momentPreview) as moment (moment.moment_id)}
 				<HomeFeedItem
 					{moment}
@@ -68,7 +67,7 @@
 					onClick={() => onOpenMoment(moment.moment_id)}
 				/>
 			{/each}
-		</ListContainer>
+		</div>
 	</div>
 {/if}
 

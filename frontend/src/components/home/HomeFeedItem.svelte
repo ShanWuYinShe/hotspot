@@ -5,6 +5,7 @@
 	import type { MomentItem } from '@/api/types';
 	import { formatDistance, formatRelativeDays } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
+	import { showToast } from '@/stores/toast.svelte';
 
 	// ═══ 现代社交 Feed 项（HomeFeedItem）═══
 	// 两种形态：
@@ -97,6 +98,7 @@
 			}).catch(() => {});
 		} else {
 			void navigator.clipboard?.writeText(window.location.origin + ROUTES.moment(moment.moment_id));
+			showToast('动态链接已复制到剪贴板', 'success');
 		}
 	}
 </script>
@@ -121,7 +123,7 @@
 			<div class="flex items-center gap-3 min-w-0">
 				<button
 					type="button"
-					class="hover-action hit-slop shrink-0 rounded-full focus-ring cursor-pointer"
+					class="hover-action hit-slop shrink-0 rounded-full focus-ring cursor-pointer ring-1 ring-border-subtle/40 active:scale-95 transition-transform"
 					aria-label={`查看${moment.user?.nickname ?? '作者'}的个人主页`}
 					onclick={handleUserClick}
 				>

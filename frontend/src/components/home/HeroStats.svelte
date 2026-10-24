@@ -22,7 +22,7 @@ import { formatCount } from '@/lib/utils';
 
 	<button
 		type="button"
-		class="group hover-btn tap-97 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm hover:border-accent-default/50 hover:shadow-raised-md cursor-pointer overflow-hidden text-left w-full py-4.5 px-5 transition-all"
+		class="group hover-btn tap-97 rounded-2xl border border-border-subtle/50 bg-surface-primary shadow-xs hover:border-accent-default/30 hover:shadow-raised-sm cursor-pointer overflow-hidden text-left w-full py-4.5 px-5 transition-all"
 		aria-label="查看附近的人"
 		onclick={onExplore}
 	>
@@ -51,17 +51,17 @@ import { formatCount } from '@/lib/utils';
 			<ChevronRight class="size-4 shrink-0 text-text-secondary transition-transform duration-rapid group-hover:translate-x-0.5 group-hover:text-accent-default" strokeWidth={1.5} />
 		</div>
 
-		<!-- Stats row：现代通透微卡，告别生硬表格切线 -->
+		<!-- Stats row：现代通透 Bento 指标列，告别生硬方框与切线 -->
 		<div class="grid grid-cols-3 mt-4 gap-2">
-			<div class="flex flex-col items-center justify-center py-2.5 rounded-xl bg-surface-subtle/60 border border-border-subtle/30 transition-colors group-hover:bg-surface-subtle">
+			<div class="flex flex-col items-center justify-center py-2.5 rounded-xl bg-surface-subtle/50 transition-colors group-hover:bg-surface-subtle/80">
 				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary">{formatCount(stats.nearby)}</span>
 				<span class="text-xxs mt-1.5 text-text-secondary">人附近</span>
 			</div>
-			<div class="flex flex-col items-center justify-center py-2.5 rounded-xl bg-surface-subtle/60 border border-border-subtle/30 transition-colors group-hover:bg-surface-subtle">
+			<div class="flex flex-col items-center justify-center py-2.5 rounded-xl bg-surface-subtle/50 transition-colors group-hover:bg-surface-subtle/80">
 				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary">{formatCount(stats.active)}</span>
 				<span class="text-xxs mt-1.5 text-text-secondary">瞬间</span>
 			</div>
-			<div class="flex flex-col items-center justify-center py-2.5 rounded-xl bg-surface-subtle/60 border border-border-subtle/30 transition-colors group-hover:bg-surface-subtle">
+			<div class="flex flex-col items-center justify-center py-2.5 rounded-xl bg-surface-subtle/50 transition-colors group-hover:bg-surface-subtle/80">
 				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary">{formatCount(stats.online)}</span>
 				<span class="text-xxs mt-1.5 text-text-secondary">在线</span>
 			</div>
