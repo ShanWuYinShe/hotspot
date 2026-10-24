@@ -22,40 +22,48 @@ import { formatCount } from '@/lib/utils';
 
 	<button
 		type="button"
-		class="hover-btn tap-97 rounded-xl border border-border-default bg-surface-primary shadow-raised-sm hover:border-accent-default hover:shadow-raised-md cursor-pointer overflow-hidden text-left w-full py-4.5 px-5"
+		class="group hover-btn tap-97 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm hover:border-accent-default/50 hover:shadow-raised-md cursor-pointer overflow-hidden text-left w-full py-4.5 px-5 transition-all"
 		aria-label="查看附近的人"
 		onclick={onExplore}
 	>
 		<!-- 标题行弹性契约（对齐 PageHeader）：左侧文本簇 flex-1 min-w-0 先收缩，
 		     右箭头 shrink-0 锁定；定位名过长时副标题单行截断，不顶出箭头、不贴卡边裁字。 -->
 		<div class="flex items-center justify-between gap-2">
-			<div class="flex min-w-0 flex-1 items-center gap-2.5">
-				<div class="flex shrink-0 items-center justify-center rounded-full bg-accent-default size-9.5">
-					<Radar class="size-4.5 text-text-on-accent"   strokeWidth={2} />
+			<div class="flex min-w-0 flex-1 items-center gap-3">
+				<!-- 雷达声纳声波呼吸环动效 -->
+				<div class="relative flex shrink-0 items-center justify-center rounded-full bg-accent-default size-10 shadow-sm">
+					<span class="absolute inset-0 rounded-full bg-accent-default/30 animate-ping"></span>
+					<Radar class="relative size-5 text-text-on-accent transition-transform duration-standard group-hover:scale-110" strokeWidth={2} />
 				</div>
 				<div class="min-w-0">
-					<p class="text-sm font-medium text-text-primary" >实时附近</p>
-					<p class="text-xs mt-px truncate text-text-secondary"  >
+					<div class="flex items-center gap-2">
+						<p class="text-sm font-semibold text-text-primary">实时附近</p>
+						<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-status-online/10 text-status-online text-xxs font-medium">
+							<span class="size-1.5 rounded-full bg-status-online animate-pulse"></span>
+							实时雷达
+						</span>
+					</div>
+					<p class="text-xs mt-0.5 truncate text-text-secondary">
 						{rangeLabel}
 					</p>
 				</div>
 			</div>
-			<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.5} />
+			<ChevronRight class="size-4 shrink-0 text-text-secondary transition-transform duration-rapid group-hover:translate-x-0.5 group-hover:text-accent-default" strokeWidth={1.5} />
 		</div>
 
-		<!-- Stats row：display 数字（大号粗体 + 紧字距），对齐 Figma stats 模式 -->
-		<div class="grid grid-cols-3 mt-4 bg-border-default gap-px rounded-md overflow-hidden">
-			<div class="flex flex-col items-center justify-center py-3 bg-surface-primary">
-				<span class="text-2xl font-semibold leading-none tracking-tight tabular-nums text-text-primary" >{formatCount(stats.nearby)}</span>
-				<span class="text-xxs mt-1.5 text-text-secondary"  >人附近</span>
+		<!-- Stats row：现代通透微卡，告别生硬表格切线 -->
+		<div class="grid grid-cols-3 mt-4 gap-2">
+			<div class="flex flex-col items-center justify-center py-2.5 rounded-xl bg-surface-subtle/60 border border-border-subtle/30 transition-colors group-hover:bg-surface-subtle">
+				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary">{formatCount(stats.nearby)}</span>
+				<span class="text-xxs mt-1.5 text-text-secondary">人附近</span>
 			</div>
-			<div class="flex flex-col items-center justify-center py-3 bg-surface-primary">
-				<span class="text-2xl font-semibold leading-none tracking-tight tabular-nums text-text-primary" >{formatCount(stats.active)}</span>
-				<span class="text-xxs mt-1.5 text-text-secondary"  >瞬间</span>
+			<div class="flex flex-col items-center justify-center py-2.5 rounded-xl bg-surface-subtle/60 border border-border-subtle/30 transition-colors group-hover:bg-surface-subtle">
+				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary">{formatCount(stats.active)}</span>
+				<span class="text-xxs mt-1.5 text-text-secondary">瞬间</span>
 			</div>
-			<div class="flex flex-col items-center justify-center py-3 bg-surface-primary">
-				<span class="text-2xl font-semibold leading-none tracking-tight tabular-nums text-text-primary" >{formatCount(stats.online)}</span>
-				<span class="text-xxs mt-1.5 text-text-secondary"  >在线</span>
+			<div class="flex flex-col items-center justify-center py-2.5 rounded-xl bg-surface-subtle/60 border border-border-subtle/30 transition-colors group-hover:bg-surface-subtle">
+				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary">{formatCount(stats.online)}</span>
+				<span class="text-xxs mt-1.5 text-text-secondary">在线</span>
 			</div>
 		</div>
 	</button>

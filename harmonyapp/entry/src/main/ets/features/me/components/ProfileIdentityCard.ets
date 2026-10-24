@@ -83,7 +83,7 @@ export struct ProfileIdentityCard {
       width: DesignConstants.BORDER_WIDTH.HAIRLINE,
       color: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor
     })
-    .borderRadius(DesignConstants.SHAPE.INPUT)
+    .borderRadius(DesignConstants.SHAPE.BUTTON)
     .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).controlShadow)
     .padding({
       left: DesignConstants.SPACING.MD,
@@ -181,7 +181,7 @@ export struct ProfileIdentityCard {
     .width('100%')
     .alignItems(HorizontalAlign.Start)
     .padding(DesignConstants.SPACING.LG2)
-    .borderRadius(DesignConstants.SHAPE.CARD)
+    .borderRadius(DesignConstants.SHAPE.HERO_CARD)
     .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceBackground)
     // 前端卡片壳：白卡 + 发丝描边 + 主题投影（原端侧只有投影，缺描边）
     .border({

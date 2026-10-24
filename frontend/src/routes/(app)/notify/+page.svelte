@@ -372,12 +372,12 @@ const markSingleRead = (id: string) => {
 						<span class="eyebrow">入群邀请</span>
 						<span class="badge text-accent-default bg-accent-soft">{invites.length}</span>
 					</div>
-					<ListContainer class="mb-6 divide-y divide-border-subtle/30">
+					<ListContainer bordered class="mb-6 shadow-raised-sm rounded-2xl">
 						{#each invites as inv (inv.invite_id)}
 							<div class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-3 py-3.5">
 								<Avatar src={inv.group.avatar_url} name={inv.group.name} size="lg" shape="rounded" />
 								<span class="min-w-0 flex-1">
-									<span class="block truncate text-sm text-text-primary">{inv.group.name}</span>
+									<span class="block truncate text-sm font-medium text-text-primary">{inv.group.name}</span>
 									<span class="block truncate text-xs text-text-secondary">{inv.inviter.nickname} 邀请你 · {formatMomentTime(inv.created_at)}</span>
 								</span>
 								<!-- 窄屏动作组独占第二行，日期/时间不再被按钮挤到折行 -->
@@ -386,13 +386,13 @@ const markSingleRead = (id: string) => {
 										type="button"
 										onclick={() => void handleAcceptInvite(inv.invite_id)}
 										disabled={invitePending.has(inv.invite_id)}
-										class="hover-btn inline-flex h-7 items-center rounded-full bg-accent-default px-3 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint"
+										class="hover-btn inline-flex h-7 items-center rounded-full bg-accent-default px-3 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
 									>接受</button>
 									<button
 										type="button"
 										onclick={() => void handleRejectInvite(inv.invite_id)}
 										disabled={invitePending.has(inv.invite_id)}
-										class="hover-btn inline-flex h-7 items-center rounded-full border border-border-default px-3 text-xs text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint"
+										class="hover-btn inline-flex h-7 items-center rounded-full border border-border-default px-3 text-xs text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
 									>拒绝</button>
 								</div>
 							</div>
@@ -403,11 +403,11 @@ const markSingleRead = (id: string) => {
 				{#if unreadGroup.length > 0}
 					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2">
-						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full bg-accent-default" ></span>
+						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full bg-accent-default shadow-[0_0_6px_var(--cst-accent-default)] animate-pulse" ></span>
 						<p class="eyebrow">新消息</p>
 						<span class="badge text-accent-default bg-accent-soft">{unreadGroup.length}</span>
 					</div>
-					<ListContainer class="mb-6 divide-y divide-border-subtle/30">
+					<ListContainer bordered class="mb-6 shadow-raised-sm rounded-2xl">
 						{#each unreadGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
@@ -415,14 +415,12 @@ const markSingleRead = (id: string) => {
 				{/if}
 
 				{#if readGroup.length > 0}
-					<!-- 已读分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make）。
-					     标题原为「较早」但分组条件是 `n.read`（点开一条今日通知即被归入本组）——
-					     文案与数据不符，全站复审 s2-18；改为与数据一致。 -->
+					<!-- 已读分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
 					<div class="mb-3 flex h-5 items-center gap-2">
 						<p class="eyebrow">已读</p>
 						<span aria-hidden="true" class="h-px flex-1 bg-border-default"></span>
 					</div>
-					<ListContainer class="divide-y divide-border-subtle/30">
+					<ListContainer bordered class="shadow-raised-sm rounded-2xl">
 						{#each readGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}

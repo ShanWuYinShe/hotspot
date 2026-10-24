@@ -17,6 +17,8 @@
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
+	import imgHotSpot from '@/assets/hotspot-logo.png';
 
 	// ═══ 首页 = 社交动态流（为你推荐 · 正在关注）═══
 	// 采用成熟现代社区（Twitter/Threads/即刻）的社交动态流设计语言：
@@ -165,35 +167,24 @@
 </svelte:head>
 
 {#snippet feedTabs()}
-	<!-- 顶部 Tab 分段器（为你推荐 / 正在关注） -->
-	<div class="flex items-center gap-6 border-b border-border-subtle/30 px-4 sm:px-5 bg-surface-primary sticky top-0 z-10">
-		<button
-			type="button"
-			class="relative py-3 text-sm transition-colors focus-ring cursor-pointer {activeTab === 'discover' ? 'text-text-primary font-semibold' : 'text-text-secondary hover:text-text-primary font-medium'}"
-			onclick={() => { activeTab = 'discover'; }}
-		>
-			为你推荐
-			{#if activeTab === 'discover'}
-				<span class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent-default"></span>
-			{/if}
-		</button>
-		<button
-			type="button"
-			class="relative py-3 text-sm transition-colors focus-ring cursor-pointer {activeTab === 'following' ? 'text-text-primary font-semibold' : 'text-text-secondary hover:text-text-primary font-medium'}"
-			onclick={() => { activeTab = 'following'; }}
-		>
-			正在关注
-			{#if activeTab === 'following'}
-				<span class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent-default"></span>
-			{/if}
-		</button>
+	<!-- 顶部 Tab 栏：采用规范的 TabBar underline 变体，带平滑滑动下划线与吸顶毛玻璃质感 -->
+	<div class="px-4 sm:px-5 bg-surface-primary/95 backdrop-blur-md sticky top-0 z-10 border-b border-border-subtle/30">
+		<TabBar
+			variant="underline"
+			items={[
+				{ id: 'discover', label: '为你推荐' },
+				{ id: 'following', label: '正在关注' }
+			]}
+			value={activeTab}
+			onChange={(id) => { activeTab = id as FeedTab; }}
+		/>
 	</div>
 {/snippet}
 
 {#snippet nearbyBanner()}
 	<button
 		type="button"
-		class="hover-btn group flex w-full items-center gap-3.5 rounded-xl border border-border-default bg-surface-primary px-4 py-3.5 text-left focus-ring transition mt-4 hover:border-accent-default/40 hover:shadow-raised-sm"
+		class="hover-btn group flex w-full items-center gap-3.5 rounded-2xl border border-border-default bg-surface-primary px-4 py-3.5 text-left focus-ring transition mt-4 hover:border-accent-default/40 hover:shadow-raised-sm"
 		onclick={() => void goto(ROUTES.nearby)}
 	>
 		<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
@@ -216,9 +207,10 @@
 	>
 		{#snippet header()}
 			{#if device !== 'desktop'}
-				<!-- 移动端顶栏：品牌锚点 + 快捷动作 -->
-				<div class="flex items-center justify-between px-4 pt-3 pb-2 bg-surface-primary border-b border-border-subtle/30">
+				<!-- 移动端顶栏：品牌 Logo + 品牌锚点 + 快捷动作 -->
+				<div class="flex items-center justify-between px-4 pt-3 pb-2.5 bg-surface-primary/95 backdrop-blur-md border-b border-border-subtle/30 sticky top-0 z-20">
 					<div class="flex items-center gap-2">
+						<img src={imgHotSpot} alt="HotSpot" class="size-6 rounded-full object-cover shadow-xs" />
 						<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
 					</div>
 					<h1 class="sr-only">首页</h1>
@@ -235,7 +227,7 @@
 
 		<!-- 关注流未登录态：温馨引导登录卡片 -->
 		{#if activeTab === 'following' && auth.status !== 'authenticated'}
-			<div class="mx-4 my-8 rounded-xl border border-border-default bg-surface-subtle p-6 text-center">
+			<div class="mx-4 my-8 rounded-2xl border border-border-default bg-surface-subtle p-6 text-center shadow-raised-sm">
 				<div class="mx-auto flex size-12 items-center justify-center rounded-full bg-accent-soft text-accent-default mb-3">
 					<Users class="size-6" strokeWidth={1.75} />
 				</div>
@@ -245,7 +237,7 @@
 				</p>
 				<button
 					type="button"
-					class="hover-btn mt-4 inline-flex items-center gap-1.5 rounded-lg bg-accent-default px-4 py-2 text-xs font-medium text-text-on-accent focus-ring transition shadow-raised-sm"
+					class="hover-btn mt-4 inline-flex items-center gap-1.5 rounded-full bg-accent-default px-5 py-2 text-xs font-medium text-text-on-accent focus-ring transition shadow-raised-sm"
 					onclick={() => void goto(ROUTES.login)}
 				>
 					<LogIn class="size-3.5" />
@@ -257,16 +249,18 @@
 		{:else if currentError && currentItems.length === 0}
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
 		{:else if currentItems.length > 0}
-			<!-- 高质感平铺社区 Feed 流 -->
-			<ListContainer>
-				{#each currentItems as moment (moment.moment_id)}
-					<HomeFeedItem
-						{moment}
-						showDistance={false}
-						onClick={() => void goto(ROUTES.moment(moment.moment_id))}
-					/>
-				{/each}
-			</ListContainer>
+			<!-- 高质感社区 Feed 流：岛屿卡片容器，统一全站审美 -->
+			<div class="px-3 sm:px-0 pt-3">
+				<ListContainer bordered class="rounded-2xl shadow-raised-sm overflow-hidden">
+					{#each currentItems as moment (moment.moment_id)}
+						<HomeFeedItem
+							{moment}
+							showDistance={false}
+							onClick={() => void goto(ROUTES.moment(moment.moment_id))}
+						/>
+					{/each}
+				</ListContainer>
+			</div>
 
 			{#if hasMore}
 				<div class="mt-4 flex justify-center px-4">

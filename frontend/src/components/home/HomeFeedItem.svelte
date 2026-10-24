@@ -96,7 +96,7 @@
 </script>
 
 <div
-	class="group relative flex items-start gap-3 sm:gap-3.5 px-4 py-3.5 sm:px-5 hover:bg-surface-subtle transition-colors cursor-pointer border-b border-border-subtle/30"
+	class="group relative flex items-start gap-3 sm:gap-3.5 px-4 py-4 sm:px-5 hover:bg-surface-subtle/70 transition-colors cursor-pointer border-b border-border-subtle/30"
 	role="button"
 	tabindex="0"
 	onclick={onClick}
@@ -178,18 +178,18 @@
 		{#if moment.images && moment.images.length > 0}
 			<div class="mt-2.5">
 				{#if moment.images.length === 1}
-					<div class="overflow-hidden rounded-lg border border-border-subtle/40 max-h-[260px] max-w-[420px] bg-surface-subtle">
+					<div class="overflow-hidden rounded-xl border border-border-subtle/40 max-h-[280px] max-w-[420px] bg-surface-subtle shadow-xs">
 						<img
 							src={moment.images[0].url}
 							alt="动态配图"
 							loading="lazy"
-							class="w-full h-full object-cover max-h-[260px] hover:scale-[1.01] transition-transform"
+							class="w-full h-full object-cover max-h-[280px] hover:scale-[1.01] transition-transform"
 						/>
 					</div>
 				{:else if moment.images.length <= 4}
 					<div class="grid grid-cols-2 gap-1.5 max-w-[420px]">
 						{#each moment.images.slice(0, 4) as img, idx (img.url + idx)}
-							<div class="aspect-square overflow-hidden rounded-md border border-border-subtle/30 bg-surface-subtle">
+							<div class="aspect-square overflow-hidden rounded-xl border border-border-subtle/30 bg-surface-subtle shadow-xs">
 								<img
 									src={img.url}
 									alt={`动态配图 ${idx + 1}`}
@@ -202,7 +202,7 @@
 				{:else}
 					<div class="grid grid-cols-3 gap-1.5 max-w-[460px]">
 						{#each moment.images.slice(0, 9) as img, idx (img.url + idx)}
-							<div class="aspect-square overflow-hidden rounded-md border border-border-subtle/30 bg-surface-subtle">
+							<div class="aspect-square overflow-hidden rounded-xl border border-border-subtle/30 bg-surface-subtle shadow-xs">
 								<img
 									src={img.url}
 									alt={`动态配图 ${idx + 1}`}

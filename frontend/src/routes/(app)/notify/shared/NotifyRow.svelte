@@ -34,13 +34,13 @@
 		if (notif.href) void goto(notif.href);
 	}}
 	ariaLabel={`通知：${notif.user.name}${notif.text}`}
-	class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3"
+	class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3.5 transition-colors {notif.read ? '' : 'bg-accent-soft/15'}"
 >
 	<!-- Avatar + icon badge -->
 	<div class="relative shrink-0">
 		{#if notif.user.avatar}
-			<div class="rounded-full overflow-hidden size-11" >
-		<img src={notif.user.avatar} alt={notif.user.name} loading="lazy" class="w-full h-full object-cover" />
+			<div class="rounded-full overflow-hidden size-11 ring-1 ring-border-subtle/50">
+				<img src={notif.user.avatar} alt={notif.user.name} loading="lazy" class="w-full h-full object-cover" />
 			</div>
 		{:else}
 			<div class="rounded-full flex items-center justify-center size-11" style="background:{cfg.bg};">
@@ -48,8 +48,8 @@
 			</div>
 		{/if}
 		{#if notif.user.avatar}
-			<div class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full size-4.5" style="background:{cfg.color};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);">
-				<cfg.icon class="size-2.5 text-text-on-accent"   strokeWidth={2.5} />
+			<div class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full size-4.5 shadow-xs" style="background:{cfg.color};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);">
+				<cfg.icon class="size-2.5 text-text-on-accent" strokeWidth={2.5} />
 			</div>
 		{/if}
 	</div>
@@ -57,7 +57,7 @@
 	<!-- Text -->
 	<div class="flex-1 min-w-0">
 		<p class="truncate text-text-primary text-sm">
-			<span class="{notif.read ? 'font-normal text-text-secondary' : 'font-medium text-text-primary'}">{notif.user.name}</span>
+			<span class="{notif.read ? 'font-normal text-text-secondary' : 'font-semibold text-text-primary'}">{notif.user.name}</span>
 			{' '}{notif.text}
 		</p>
 		<p class="text-text-secondary text-xs mt-0.5">{notif.time}</p>
@@ -65,32 +65,32 @@
 
 	<!-- Moment thumb or unread dot；邀请行窄屏时动作组换行到第二行，
 	     避免把正文挤成省略号、时间被拆行 -->
-	<div class="flex items-center gap-2 shrink-0 {notif.inviteId ? 'w-full justify-end sm:w-auto' : ''}">
+	<div class="flex items-center gap-2.5 shrink-0 {notif.inviteId ? 'w-full justify-end sm:w-auto' : ''}">
 		{#if notif.inviteId}
 			<!-- 入群邀请操作：行内接受/拒绝（stopPropagation 避免触发行已读） -->
 			<button
 				type="button"
 				onclick={(e) => { e.stopPropagation(); onAccept?.(notif.inviteId!); }}
 				disabled={actionPending}
-				class="hover-btn hit-slop rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint"
+				class="hover-btn hit-slop rounded-full bg-accent-default px-3.5 py-1.5 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
 			>接受</button>
 			<button
 				type="button"
 				onclick={(e) => { e.stopPropagation(); onReject?.(notif.inviteId!); }}
 				disabled={actionPending}
-				class="hover-btn hit-slop rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint"
+				class="hover-btn hit-slop rounded-full border border-border-default px-3.5 py-1.5 text-xs text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
 			>拒绝</button>
 		{/if}
 		{#if notif.momentImage}
-			<div class="rounded-sm overflow-hidden size-9.5" >
-		<img src={notif.momentImage} alt="" loading="lazy" class="w-full h-full object-cover" />
+			<div class="rounded-lg overflow-hidden size-10 border border-border-subtle/50 shadow-xs">
+				<img src={notif.momentImage} alt="" loading="lazy" class="w-full h-full object-cover" />
 			</div>
 		{/if}
 		{#if !notif.read}
-			<!-- 未读指示：accent 描边小圈（克制，与 status-online 实心点语义区分） -->
+			<!-- 未读指示：实心微蓝呼吸光点，高质感辨识 -->
 			<div
-				class="rounded-full size-2.5"
-				style="border:var(--cst-border-width-hairline) solid var(--cst-accent-default);"
+				class="rounded-full size-2 bg-accent-default shadow-[0_0_6px_var(--cst-accent-default)] animate-pulse"
+				aria-label="未读"
 			></div>
 		{/if}
 	</div>

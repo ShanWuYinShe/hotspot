@@ -6,6 +6,9 @@ import { svelteTesting } from '@testing-library/svelte/vite';
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), svelteTesting()],
 	server: {
+		fs: {
+			allow: ['..', '/Users/liyou/work/hotspot']
+		},
 		// 经 nginx 网关访问时 Host header 是 OrbStack 的本地域名，不放行会被 Vite 的
 		// host 校验拒绝（403「Blocked request. This host ... is not allowed」）。
 		// 用前导点的 `.orb.local` 而不是写死单个主机名——同一个 nginx 容器在 OrbStack

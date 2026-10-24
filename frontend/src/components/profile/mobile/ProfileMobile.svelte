@@ -67,38 +67,36 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		<LoadError message={error} onRetry={retry} />
 	{:else}
 		<!-- 身份卡（compact）：头像复用 Avatar，统计横条居中（对齐桌面 MetricRow 原语）。
-		     卡片壳与桌面 ProfilePage 统一为「白卡 + 发丝描边 + 主题投影」语言
-		     （原 card-raised 纯投影，两端不一致）。 -->
-		<section class="mb-6 rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="个人资料">
-			<div class="p-5">
+		     卡片壳与桌面 ProfilePage 统一为「白卡 + 发丝描边 + 主题投影」语言，
+		     顶部增添柔和环境天光弥散层，提升质感。 -->
+		<section class="mb-6 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm overflow-hidden" aria-label="个人资料">
+			<!-- 顶部身份信息区 -->
+			<div class="relative p-5 bg-surface-primary">
 				<div class="flex items-start justify-between gap-5">
 					<div class="flex min-w-0 items-center gap-4">
-						<!-- 头像不再挂「更换头像」相机按钮：它与下方「编辑资料」跳同一个页面，
-						     属同屏重复入口；且它只做跳转、并不直接改头像，affordance 有误导。
-						     头像更换统一走「编辑资料」。 -->
-						<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0" />
+						<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0 ring-2 ring-accent-default/20 shadow-sm" />
 						<div class="min-w-0">
-							<h1 class="text-xl font-semibold tracking-title text-text-primary">{nickname || '未设置昵称'}</h1>
+							<h1 class="text-xl font-bold tracking-title text-text-primary">{nickname || '未设置昵称'}</h1>
 							<p class="mt-0.5 text-xs text-text-secondary">{handle}</p>
 							<p class="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
-								<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
+								<MapPin class="size-3.5 text-accent-default" strokeWidth={1.75} />
 								{locationName || '未设置位置'}
 							</p>
 						</div>
 					</div>
 				</div>
 				{#if bio}
-					<p class="mt-3 max-w-107.5 text-xs leading-relaxed text-text-secondary">
+					<p class="mt-3.5 max-w-107.5 text-xs leading-relaxed text-text-secondary">
 						{bio}
 					</p>
 				{/if}
 
 				<!-- 移动端单手黄金操作区：大拇指无需移位，直达高频设置与编辑 -->
-				<div class="mt-4 flex items-center gap-2 pt-1">
+				<div class="mt-4.5 flex items-center gap-2.5 pt-1">
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.meEdit)}
-						class="hover-btn hit-slop inline-flex flex-1 items-center justify-center gap-1.5 border border-border-default rounded-md bg-surface-primary py-2 px-3 text-xs font-medium text-text-primary shadow-raised-sm focus-ring transition-colors hover:bg-accent-soft"
+						class="hover-btn hit-slop inline-flex flex-1 items-center justify-center gap-1.5 border border-border-default rounded-full bg-surface-primary py-2 px-3 text-xs font-medium text-text-primary shadow-raised-sm focus-ring transition-all hover:bg-accent-soft hover:border-accent-default/40 active:scale-[0.98]"
 					>
 						<Pencil class="size-3.5 text-text-secondary" strokeWidth={1.75} />
 						编辑资料
@@ -106,7 +104,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.settings)}
-						class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 border border-border-default rounded-md bg-surface-primary py-2 px-3 text-xs font-medium text-text-primary shadow-raised-sm focus-ring transition-colors hover:bg-accent-soft"
+						class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 border border-border-default rounded-full bg-surface-primary py-2 px-4 text-xs font-medium text-text-primary shadow-raised-sm focus-ring transition-all hover:bg-accent-soft hover:border-accent-default/40 active:scale-[0.98]"
 						aria-label="系统设置"
 					>
 						<Settings class="size-3.5 text-text-secondary" strokeWidth={1.75} />
@@ -114,31 +112,32 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					</button>
 				</div>
 			</div>
-			<!-- 统计横条：复用 MetricRow 原语（与桌面 ProfilePage / 用户详情同一实现，
-			     原自绘 24px 数字与全站 20px 指标档漂移） -->
-			<MetricRow class="border-t border-border-default" items={statsList} />
+			<!-- 统计横条：复用 MetricRow 原语 -->
+			<MetricRow class="border-t border-border-default/60 bg-surface-primary" items={statsList} />
 		</section>
 
-		<!-- 个人数据 5 行链接（唯一分组卡 ListContainer bordered：内缩圆角行）。
-		     与身份卡的区块间距 24 由上方身份卡 mb-6 单侧提供；区块标题→内容 12（mb-3）。 -->
+		<!-- 个人数据 5 行链接：使用唯一分组岛屿卡 ListContainer bordered。
+		     彻底消除无边框裸线导致的视觉割裂。 -->
 		<div>
-			<p class="eyebrow px-1 mb-3">个人数据</p>
-			<p class="px-1 mb-3 text-xs text-text-secondary">在这里查看你的内容与关系</p>
-			<ListContainer class="divide-y divide-border-subtle/30" ariaLabel="个人数据">
+			<div class="px-1 mb-2.5 flex items-center justify-between">
+				<p class="eyebrow">个人数据</p>
+				<span class="text-xxs text-text-secondary">内容与关系资产</span>
+			</div>
+			<ListContainer bordered ariaLabel="个人数据" class="shadow-raised-sm rounded-2xl">
 			{#each DATA_ITEMS as item (item.id)}
 				<ListItem
 					onClick={() => void goto(item.href)}
 					ariaLabel={item.label}
-					class="flex items-center gap-3 px-5 py-3.5"
+					class="flex items-center gap-3.5 px-4 py-3.5"
 				>
-					<span class="flex shrink-0 items-center justify-center rounded-full icon-badge size-8">
-						<item.icon class="size-4 text-accent-default"  strokeWidth={1.75} />
+					<span class="flex shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-default size-8.5 transition-transform group-hover:scale-105">
+						<item.icon class="size-4" strokeWidth={1.75} />
 					</span>
 					<span class="min-w-0 flex-1">
-						<span class="block text-sm text-text-primary">{item.label}</span>
+						<span class="block text-sm font-medium text-text-primary">{item.label}</span>
 						<span class="mt-0.5 block truncate text-xs text-text-secondary">{item.detail}</span>
 					</span>
-					<ChevronRight class="size-4 shrink-0 text-text-secondary"   strokeWidth={1.75} />
+					<ChevronRight class="size-4 shrink-0 text-text-secondary" strokeWidth={1.75} />
 				</ListItem>
 				{/each}
 			</ListContainer>

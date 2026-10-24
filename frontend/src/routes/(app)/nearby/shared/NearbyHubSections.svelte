@@ -60,7 +60,7 @@
 {#if moments.length > 0}
 	<div data-hub-section="moments">
 		<SectionHead title="附近瞬间" action="查看全部" onAction={onSeeAllMoments} />
-		<ListContainer>
+		<ListContainer bordered class="shadow-raised-sm rounded-2xl overflow-hidden">
 			{#each moments.slice(0, momentPreview) as moment (moment.moment_id)}
 				<HomeFeedItem
 					{moment}
