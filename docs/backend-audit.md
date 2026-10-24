@@ -1167,3 +1167,19 @@ OrbStack 重启后更常见）：
 - public schema 表数 45，与迁移定义的业务表一致（含内部表 `schema_migrations`/`data_migrations`）。
 
 结论：依赖与迁移两个「长期运行才暴露」的卫生面均干净，无需改动；后续发版前可直接复跑上述命令。
+
+## 趋势统计窗口完全下沉 SQL（2026-10-25，第 32 轮）
+
+第 28 轮已把趋势上界改为数据库时钟，但**下界锚点**（`TrendStart`）仍由服务层用 Go 时钟计算，
+在「Go 与 DB 分处本地午夜两侧」的毫秒窗口仍可能错位（已记录为可忽略残余）。本轮彻底消除：
+
+- `queryAdminStatsTrends` 改为在 SQL 内生成完整日期序列：
+  `days AS (SELECT generate_series((now() AT TIME ZONE 'Asia/Shanghai')::date - ($1-1), now()::date, '1 day'))`，
+  `agg` 侧仅按 `created_at <= now()` 过滤并按 UTC+8 自然日分组，LEFT JOIN 后空日补零；
+- 参数只剩窗口天数（`$1`，服务层已保证 7–30）；上界、下界、时区锚点全部来自数据库时钟；
+- `statsTrends` 不再做 Go 侧补零（`fillTrendDays` 保留给内存实现共用），逐行映射返回；
+- 效果：PG 生产实现不再混用 Go 时钟，admin 趋势统计在容器时钟偏移下仍严谨；内存实现维持原口径
+  （单测/无 DB 模式，正常时钟下与 PG 一致）。
+
+测试：更新 stub 用例（SQL 直接产出 7 行、参数为天数）；`TestPostgresIT_StatsGeoAggregation`
+连续 5 次通过（含今日趋势、空日补零、时间窗断言）。

@@ -212,9 +212,21 @@ func TestPostgresStatsGeoTrendsMapping(t *testing.T) {
 		d := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, sh)
 		return d.AddDate(0, 0, offsetDays)
 	}
+	// SQL 直接产出完整日期序列（空日补零），stub 需返回 7 行。
+	trendRows := make([][]any, 0, 7)
+	for i := -6; i <= 0; i++ {
+		switch i {
+		case -1:
+			trendRows = append(trendRows, []any{day(i), int64(2), int64(1), int64(0)})
+		case 0:
+			trendRows = append(trendRows, []any{day(i), int64(1), int64(0), int64(3)})
+		default:
+			trendRows = append(trendRows, []any{day(i), int64(0), int64(0), int64(0)})
+		}
+	}
 	backend := &statsQueryStub{
 		totalsRow:  []any{int64(0), int64(0), int64(0)},
-		trendsRows: [][]any{{day(-1), int64(2), int64(1), int64(0)}, {day(0), int64(1), int64(0), int64(3)}},
+		trendsRows: trendRows,
 	}
 	repo := newStatsRepoWithStub(backend)
 	nowSH := time.Now().In(sh)
@@ -240,9 +252,9 @@ func TestPostgresStatsGeoTrendsMapping(t *testing.T) {
 	if resp.Trends[0].User != 0 || resp.Trends[0].Group != 0 || resp.Trends[0].Moment != 0 {
 		t.Fatalf("first day should be zero-filled: %+v", resp.Trends[0])
 	}
-	// 参数：上界固定为 SQL 内 now()（数据库时钟），只传 TrendStart 下界。
+	// 参数：只传窗口天数；日期序列与上界均在 SQL 内基于数据库时钟生成。
 	args := backend.capturedArgs[queryAdminStatsTrends]
-	if len(args) != 1 || args[0] == nil {
+	if len(args) != 1 || args[0] != 7 {
 		t.Fatalf("unexpected trends args: %+v", args)
 	}
 }

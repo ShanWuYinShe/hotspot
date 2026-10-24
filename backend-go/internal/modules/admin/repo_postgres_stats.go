@@ -114,44 +114,39 @@ func decodeGeoDrilldownCursor(raw string) (geoDrilldownCursor, *httpx.APIError) 
 }
 
 // fillTrendDays 把查询结果补零展开为连续日序列（TrendStart 起、UTC+8 日界）。
-func fillTrendDays(rows map[string]geoBucketCount, start time.Time, days int) []AdminGeoStatsTrendPoint {
-	sh := time.FixedZone("UTC+8", 8*60*60)
-	out := make([]AdminGeoStatsTrendPoint, 0, days)
-	dayStart := time.Date(start.In(sh).Year(), start.In(sh).Month(), start.In(sh).Day(), 0, 0, 0, 0, sh)
-	for i := 0; i < days; i++ {
-		key := dayStart.AddDate(0, 0, i).Format("2006-01-02")
-		b := rows[key]
-		out = append(out, AdminGeoStatsTrendPoint{Date: key, User: b.User, Group: b.Group, Moment: b.Moment})
-	}
-	return out
-}
-
-// statsTrends 查询每日新增分布（窗口 [TrendStart, now)）并补零展开。
+// statsTrends 查询每日新增分布：窗口天数与日期序列全部在 SQL 内基于数据库时钟
+// （now()，UTC+8 自然日）生成，避免 Go/DB 时钟偏移在本地午夜附近错位；返回行
+// 已按日升序且空日补零，无需 Go 侧再展开。
 func (r *PostgresRepository) statsTrends(ctx context.Context, queryable persistence.Queryable, query geoStatsQuery) ([]AdminGeoStatsTrendPoint, error) {
-	// 上界用数据库时钟（SQL 内 now()），不用 Go time.Now()：容器时钟偏移时
-	// 刚写入的 created_at（DB 时钟）可能晚于 Go 时钟的 now，导致「今日」计数
-	// 被静默排除（实测 Postgres 比宿主机快 ~200ms 即复现）。
-	rows, err := queryable.Query(ctx, queryAdminStatsTrends, query.TrendStart)
+	days := query.TrendDays
+	if days <= 0 {
+		days = 7
+	}
+	rows, err := queryable.Query(ctx, queryAdminStatsTrends, days)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	byDay := map[string]geoBucketCount{}
+	out := make([]AdminGeoStatsTrendPoint, 0, days)
 	for rows.Next() {
 		var day time.Time
 		var userN, groupN, momentN int64
 		if err := rows.Scan(&day, &userN, &groupN, &momentN); err != nil {
 			return nil, err
 		}
-		byDay[day.Format("2006-01-02")] = geoBucketCount{User: int(userN), Group: int(groupN), Moment: int(momentN)}
+		out = append(out, AdminGeoStatsTrendPoint{
+			Date:   day.Format("2006-01-02"),
+			User:   int(userN),
+			Group:  int(groupN),
+			Moment: int(momentN),
+		})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	return fillTrendDays(byDay, query.TrendStart, query.TrendDays), nil
+	return out, nil
 }
 
-// StatsGeoDrilldown 区域下钻：单网格桶内指定类型实体明细（keyset 分页）。
 func (r *PostgresRepository) StatsGeoDrilldown(ctx context.Context, query geoDrilldownQuery) (geoDrilldownPage, error) {
 	queryable, ok := r.queryable(ctx)
 	if !ok {
@@ -233,4 +228,19 @@ func nullableTimeRange(start, end time.Time) (*time.Time, *time.Time) {
 		e = &t
 	}
 	return s, e
+}
+
+// fillTrendDays 把「日期 → 计数」映射按 start 起逐日展开为固定长度序列（空日补零）。
+// PG 实现现已由 SQL 直接产出完整日期序列；内存实现（repo_memory_stats.go）仍复用它，
+// 两者在正常时钟下口径一致（日期按 UTC+8 自然日）。
+func fillTrendDays(rows map[string]geoBucketCount, start time.Time, days int) []AdminGeoStatsTrendPoint {
+	sh := time.FixedZone("UTC+8", 8*60*60)
+	out := make([]AdminGeoStatsTrendPoint, 0, days)
+	dayStart := time.Date(start.In(sh).Year(), start.In(sh).Month(), start.In(sh).Day(), 0, 0, 0, 0, sh)
+	for i := 0; i < days; i++ {
+		key := dayStart.AddDate(0, 0, i).Format("2006-01-02")
+		b := rows[key]
+		out = append(out, AdminGeoStatsTrendPoint{Date: key, User: b.User, Group: b.Group, Moment: b.Moment})
+	}
+	return out
 }

@@ -497,30 +497,38 @@ LIMIT $1`
 	// '8 hours' 而非 AT TIME ZONE '+08:00'——POSIX 时区串符号反转（实测 +8
 	// 得 UTC-8），区间加法无歧义；中国无夏令时，固定偏移即日历日。
 	// 窗口 [start, end) 由 Service 按 +08:00 日界换算传入。
-	// $1 = 窗口起点、$2 = 窗口终点（均 timestamptz）。
+	// $1 = 窗口天数（int，服务端已按 7-30 校验）；日期序列与上界均由数据库时钟生成。
 	queryAdminStatsTrends = `
-SELECT t.day,
-       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'user'), 0)::bigint AS user_n,
-       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'group'), 0)::bigint AS group_n,
-       COALESCE(SUM(t.n) FILTER (WHERE t.kind = 'moment'), 0)::bigint AS moment_n
-FROM (
+WITH days AS (
+  SELECT generate_series(
+    ((now() AT TIME ZONE 'Asia/Shanghai')::date - ($1::int - 1)),
+    ((now() AT TIME ZONE 'Asia/Shanghai')::date),
+    interval '1 day'
+  )::date AS day
+), agg AS (
   SELECT ((created_at + INTERVAL '8 hours')::date) AS day, COUNT(*) AS n, 'user' AS kind
   FROM users
-  WHERE is_deleted = FALSE AND created_at >= $1 AND created_at <= now()
+  WHERE is_deleted = FALSE AND created_at <= now()
   GROUP BY 1
   UNION ALL
   SELECT ((created_at + INTERVAL '8 hours')::date), COUNT(*), 'group'
   FROM groups
-  WHERE deleted_at IS NULL AND created_at >= $1 AND created_at <= now()
+  WHERE deleted_at IS NULL AND created_at <= now()
   GROUP BY 1
   UNION ALL
   SELECT ((created_at + INTERVAL '8 hours')::date), COUNT(*), 'moment'
   FROM moments
-  WHERE is_deleted = FALSE AND created_at >= $1 AND created_at <= now()
+  WHERE is_deleted = FALSE AND created_at <= now()
   GROUP BY 1
-) t
-GROUP BY t.day
-ORDER BY t.day`
+)
+SELECT days.day,
+       COALESCE(SUM(agg.n) FILTER (WHERE agg.kind = 'user'), 0)::bigint AS user_n,
+       COALESCE(SUM(agg.n) FILTER (WHERE agg.kind = 'group'), 0)::bigint AS group_n,
+       COALESCE(SUM(agg.n) FILTER (WHERE agg.kind = 'moment'), 0)::bigint AS moment_n
+FROM days
+LEFT JOIN agg ON agg.day = days.day
+GROUP BY days.day
+ORDER BY days.day`
 
 	// 区域下钻明细（stats/geo/drilldown）：单网格桶内实体明细，created_at DESC +
 	// id DESC keyset。$1 = bucket、$2 = shift、$3/$4 = 可空时间窗、
