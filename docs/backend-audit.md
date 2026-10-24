@@ -832,3 +832,30 @@ Redis 调用 context 带超时。此前 `RedisStore`（生产多实例必经路�
 测试要点沉淀：Pub/Sub 订阅建立是异步的，跨实例断言需先发心跳事件直到收到再清零计数
 （并等待管道排空，避免心跳尾巴污染「恰好一次」断言）；同实例发布不会经 bridge 回流，
 验证「其它实例 → 本实例」必须用第三个 origin 或对端 bridge 发布。
+
+## RedisResumeStore 边界/降级专项 + 两处防御性加固（2026-10-24，第 21 轮）
+
+`RedisResumeStore` 是断线续传（resume）的正确性底座，正常路径已有测试；本轮补边界与
+故障语义（`resume_store_edge_test.go`，miniredis + `-race`）：
+
+1. 空库 `LastSeq=0`/`Replay=nil`；user 流与 group 流交错写入共享同一全局 seq 且严格单调；
+2. 回放窗口：`fromSeq=0` 全量按 seq 升序归并、不泄漏其它用户事件；`fromSeq=第 N 条` 只回放
+   后续；`fromSeq` 为最新值 → nil；
+3. 脏 Stream entry（缺 `e` 字段/非法 JSON）被跳过，合法事件仍回放且 seq 正确；
+4. 损坏 state JSON / 空 token / 不存在 token 均按「无状态」处理（回退全量，不 panic）；
+5. Redis 宕机：Record/RecordGroup/RecordAndPublish/Replay/LastSeq/SaveState/LoadState
+   全部降级（0/false/nil），不阻塞、不 panic；
+6. `Close` 不关闭共享 `*redis.Client`（生命周期归 bootstrap），Close 后仍可用；
+7. `origin` 为空时 `Record*AndPublish` 返回 false（不支持跨实例发布），但普通 `Record` 正常。
+
+**测试暴露并修复的两处防御性缺陷**（`RedisResumeStore.Replay`）：
+
+1. **负 `fromSeq`**：`XRANGE` 以 `fromSeq+1` 作为起始 Stream ID，负值会生成非法 ID，
+   每个流报错并整体降级为空回放（日志噪声 + 语义丢失）。正常状态不会为负，但旧格式/
+   损坏 resume 状态可能出现；钳到 0（从头回放）保持语义正确；
+2. **重复 groupID**：`groupIDs` 来自客户端订阅快照（`SetSubscriptions` 的 items），重复 ID
+   会让同一 Stream 被 `XRANGE` 两次 → 回放事件重复（客户端需按 `server_seq` 去重才不重复
+   渲染）。回放前按首个出现顺序去重。
+
+（注：重复订阅的同类问题也可能出现在实时广播注册表；handler 侧若未去重，同一连接可能
+收到重复群事件——本轮未改动，记录为后续观察项。）

@@ -216,6 +216,12 @@ func (s *RedisResumeStore) recordAndPublishInto(streamKey, channel string, event
 // INCR 保证同一 seq 只写入一个流，故归并结果严格递增。groupIDs 上限由订阅上限
 // （spec：group ≤ 100）约束，resume 为低频操作，k ≤ 101 的归并可接受。
 func (s *RedisResumeStore) Replay(userID string, groupIDs []string, fromSeq int64) []Event {
+	// 防御：fromSeq 来自服务端持久化的 resume 状态，正常非负；旧格式/损坏状态若
+	// 携带负值，XRANGE 会以非法 Stream ID 报错并让整个回放降级为空。钳到 0（从头
+	// 回放）既保持语义正确，也避免每个流刷一条错误日志。
+	if fromSeq < 0 {
+		fromSeq = 0
+	}
 	if userID == "" {
 		return nil
 	}
@@ -224,10 +230,18 @@ func (s *RedisResumeStore) Replay(userID string, groupIDs []string, fromSeq int6
 	start := fmt.Sprintf("%d", fromSeq+1)
 	keys := make([]string, 0, len(groupIDs)+1)
 	keys = append(keys, s.streamKey(userID))
+	// 去重：groupIDs 来自客户端订阅快照（SetSubscriptions items），重复 ID 会导致
+	// 同一 Stream 被 XRANGE 两次、回放事件重复。按首个出现顺序去重即可（归并只依赖 seq）。
+	seen := make(map[string]struct{}, len(groupIDs))
 	for _, gid := range groupIDs {
-		if gid != "" {
-			keys = append(keys, s.groupStreamKey(gid))
+		if gid == "" {
+			continue
 		}
+		if _, ok := seen[gid]; ok {
+			continue
+		}
+		seen[gid] = struct{}{}
+		keys = append(keys, s.groupStreamKey(gid))
 	}
 	pipe := s.rdb.Pipeline()
 	cmds := make([]*redis.XMessageSliceCmd, len(keys))
