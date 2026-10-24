@@ -571,7 +571,7 @@ func TestServiceCreateNotifiesNearbyUsers(t *testing.T) {
 	repo := &stubMomentRepo{created: created}
 
 	var targetsCalls int
-	targetsFn := func(ctx context.Context, lat, lng float64, radius int, exclude string) ([]NearbyNotifyTarget, error) {
+	targetsFn := func(ctx context.Context, lat, lng float64, radius int, exclude string, limit int) ([]NearbyNotifyTarget, error) {
 		targetsCalls++
 		if exclude != "u1" {
 			t.Fatalf("exclude 应为作者 u1, got %q", exclude)
@@ -609,7 +609,7 @@ func TestServiceCreateSkipsNearbyNotifyWithoutLocation(t *testing.T) {
 
 	targetsCalls := 0
 	svc := NewServiceWithDeps(repo, &stubNotifyWriter{}, nil)
-	svc.SetNearbyNotifyTargetsReader(func(ctx context.Context, lat, lng float64, radius int, exclude string) ([]NearbyNotifyTarget, error) {
+	svc.SetNearbyNotifyTargetsReader(func(ctx context.Context, lat, lng float64, radius int, exclude string, limit int) ([]NearbyNotifyTarget, error) {
 		targetsCalls++
 		return nil, nil
 	})
@@ -638,7 +638,7 @@ func TestServiceCreateNearbyNotifyTruncatesTargets(t *testing.T) {
 	}
 	published := 0
 	svc := NewServiceWithDeps(repo, &stubNotifyWriter{}, nil)
-	svc.SetNearbyNotifyTargetsReader(func(ctx context.Context, lat, lng float64, radius int, exclude string) ([]NearbyNotifyTarget, error) {
+	svc.SetNearbyNotifyTargetsReader(func(ctx context.Context, lat, lng float64, radius int, exclude string, limit int) ([]NearbyNotifyTarget, error) {
 		return many, nil
 	})
 	svc.SetNearbyNotifyPublisher(stubNearbyPublisher{onPublish: func(string) { published++ }})

@@ -102,8 +102,8 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// 目标查询（users 侧 nearby_moment_notify 开启者）+ 通知发布（notify 侧
 	// 落库 + WS 推送）。users.NearbyNotifyTarget → moments.NearbyNotifyTarget
 	// 在接线处转换，避免模块间类型耦合。
-	momentsModule.Service.SetNearbyNotifyTargetsReader(func(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string) ([]moments.NearbyNotifyTarget, error) {
-		targets, err := usersModule.Service.NearbyMomentNotifyTargets(ctx, centerLat, centerLng, radiusMeters, excludeUserID)
+	momentsModule.Service.SetNearbyNotifyTargetsReader(func(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string, limit int) ([]moments.NearbyNotifyTarget, error) {
+		targets, err := usersModule.Service.NearbyMomentNotifyTargets(ctx, centerLat, centerLng, radiusMeters, excludeUserID, limit)
 		if err != nil {
 			return nil, err
 		}

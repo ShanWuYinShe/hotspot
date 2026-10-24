@@ -439,7 +439,7 @@ func nowRFC3339() string {
 
 // NearbyMomentNotifyTargets 实现见 repo.go 接口注释；SQL 见
 // repo_postgres_queries.go queryNearbyMomentNotifyTargets（包围盒预过滤）。
-func (r *PostgresRepository) NearbyMomentNotifyTargets(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string) ([]NearbyNotifyTarget, error) {
+func (r *PostgresRepository) NearbyMomentNotifyTargets(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string, limit int) ([]NearbyNotifyTarget, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
@@ -447,9 +447,15 @@ func (r *PostgresRepository) NearbyMomentNotifyTargets(ctx context.Context, cent
 	latDelta := float64(radiusMeters) / 111320.0
 	// 中纬度经度收缩按 cos(纬度) 精确收缩（Go 1.21+ 内建 max）。
 	lngDelta := float64(radiusMeters) / (111320.0 * max(0.05, math.Cos(centerLat*math.Pi/180.0)))
+	// limit<=0 传 NULL（`LIMIT NULL` = 不限制）；调用方（moments 创建链路）传扇出上限，
+	// 由 SQL 侧限量，避免密集区域把全部候选行载入内存。
+	var limitArg any
+	if limit > 0 {
+		limitArg = limit
+	}
 	rows, err := queryable.Query(ctx, queryNearbyMomentNotifyTargets,
 		excludeUserID, centerLat-latDelta, centerLat+latDelta,
-		centerLng-lngDelta, centerLng+lngDelta)
+		centerLng-lngDelta, centerLng+lngDelta, limitArg)
 	if err != nil {
 		return nil, err
 	}

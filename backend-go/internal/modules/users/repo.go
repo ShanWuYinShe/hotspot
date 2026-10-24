@@ -63,6 +63,8 @@ type Repository interface {
 	// NearbyMomentNotifyTargets 返回以 (centerLat, centerLng) 为中心、
 	// radiusMeters 半径内、开启了 nearby_moment_notify 且带有最新位置的用户
 	//（排除 excludeUserID，通常为瞬间作者）。供 moments 附近新瞬间通知用。
-	NearbyMomentNotifyTargets(context.Context, float64, float64, int, string) ([]NearbyNotifyTarget, error)
+	// limit <= 0 表示不限制；调用方（moments 创建链路）传扇出上限，SQL 侧 LIMIT 保证
+	// 密集区域不会把全部候选行载入内存（此前仅靠调用方截断，行已全量读入）。
+	NearbyMomentNotifyTargets(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string, limit int) ([]NearbyNotifyTarget, error)
 	UserExists(context.Context, string) (bool, error)
 }

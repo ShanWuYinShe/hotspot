@@ -400,6 +400,6 @@ func applySettingsPatch(settings *UserSettings, patch PartialUserSettings) {
 // NearbyMomentNotifyTargets 查询附近开启了「附近新瞬间通知」的用户
 // （服务 moments 的附近新瞬间通知链）。委托 repo（postgres 包围盒 /
 // memory 遍历），精确距离由调用方计算。
-func (s *Service) NearbyMomentNotifyTargets(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string) ([]NearbyNotifyTarget, error) {
-	return s.repo.NearbyMomentNotifyTargets(ctx, centerLat, centerLng, radiusMeters, excludeUserID)
+func (s *Service) NearbyMomentNotifyTargets(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string, limit int) ([]NearbyNotifyTarget, error) {
+	return s.repo.NearbyMomentNotifyTargets(ctx, centerLat, centerLng, radiusMeters, excludeUserID, limit)
 }

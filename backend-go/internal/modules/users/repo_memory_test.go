@@ -144,6 +144,7 @@ func TestRepoNearbyMomentNotifyTargetsFilters(t *testing.T) {
 		"u3": {35.0980, 112.6130, false, false},
 		"u4": {40.0000, 116.0000, true, false},
 		"u5": {35.0980, 112.6130, true, true},
+		"u6": {35.0982, 112.6132, true, false},
 	}
 	for uid, u := range usersIn {
 		p := MyProfile{UserID: uid, IsDeleted: u.deleted}
@@ -157,7 +158,7 @@ func TestRepoNearbyMomentNotifyTargetsFilters(t *testing.T) {
 		}
 	}
 
-	targets, err := repo.NearbyMomentNotifyTargets(ctx, 35.0976, 112.6124, 5000, "u1")
+	targets, err := repo.NearbyMomentNotifyTargets(ctx, 35.0976, 112.6124, 5000, "u1", 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -165,7 +166,12 @@ func TestRepoNearbyMomentNotifyTargetsFilters(t *testing.T) {
 	for _, t := range targets {
 		gots[t.UserID] = true
 	}
-	if len(targets) != 1 || !gots["u2"] {
-		t.Fatalf("应只返回 u2, got %#v", gots)
+	if len(targets) != 2 || !gots["u2"] || !gots["u6"] {
+		t.Fatalf("应返回圈内开启通知的 u2/u6, got %#v", gots)
+	}
+	// limit 由 repo 侧限量（moments 创建链路传扇出上限），不再先全量读再截断。
+	limited, err := repo.NearbyMomentNotifyTargets(ctx, 35.0976, 112.6124, 5000, "u1", 1)
+	if err != nil || len(limited) != 1 {
+		t.Fatalf("limit=1 targets = %d err=%v, want 1", len(limited), err)
 	}
 }

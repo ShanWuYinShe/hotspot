@@ -18,7 +18,7 @@ type NearbyNotifyTarget struct {
 
 // NearbyNotifyTargetsFn 查询开启「附近新瞬间通知」且带最新位置的用户
 // （users 模块实现）。
-type NearbyNotifyTargetsFn func(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string) ([]NearbyNotifyTarget, error)
+type NearbyNotifyTargetsFn func(ctx context.Context, centerLat, centerLng float64, radiusMeters int, excludeUserID string, limit int) ([]NearbyNotifyTarget, error)
 
 // NearbyNotifyPublisher 发布附近新瞬间通知（notify 模块实现：
 // PublishNearbyNewMomentPreChecked 落库通知 + WS 推送 NearbyNewMoment；
@@ -44,7 +44,8 @@ func (s *Service) notifyNearbyNewMoment(ctx context.Context, authorID, momentID 
 	if s.nearbyNotifyPublisher == nil || s.nearbyNotifyTargets == nil {
 		return
 	}
-	targets, err := s.nearbyNotifyTargets(ctx, lat, lng, nearbyNotifyRadiusMeters, authorID)
+	// limit 由 repo 侧 SQL 限量：目标查询不再先把全部候选行读入内存再截断。
+	targets, err := s.nearbyNotifyTargets(ctx, lat, lng, nearbyNotifyRadiusMeters, authorID, nearbyNotifyMaxTargets)
 	if err != nil {
 		observability.L().Warn("moments.nearby_notify targets failed", "error", err)
 		return

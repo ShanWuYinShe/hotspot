@@ -178,7 +178,8 @@ WHERE us.nearby_moment_notify = TRUE
   AND u.user_id <> $1
   AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL
   AND u.latitude BETWEEN $2 AND $3
-  AND u.longitude BETWEEN $4 AND $5`
+  AND u.longitude BETWEEN $4 AND $5
+LIMIT $6::bigint`
 
 	// 关系操作的条件更新：每个操作只写自己的字段，避免 read-modify-write
 	// 的 lost update（并发 Follow+Block 互相覆盖对方字段）。

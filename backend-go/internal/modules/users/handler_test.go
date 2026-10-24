@@ -117,7 +117,7 @@ func (invalidCursorRepo) ListFriends(context.Context, string, int, string) (Pagi
 func (invalidCursorRepo) ListFollowing(context.Context, string, int, string) (PaginatedFollowing, error) {
 	return PaginatedFollowing{}, nil
 }
-func (invalidCursorRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string) ([]NearbyNotifyTarget, error) {
+func (invalidCursorRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string, int) ([]NearbyNotifyTarget, error) {
 	return nil, ErrInvalidCursor
 }
 
@@ -1576,6 +1576,6 @@ func (r *userErrorRepo) CountCommonGroups(context.Context, string, string) (int,
 	return 0, errors.New("boom")
 }
 
-func (r *userErrorRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string) ([]NearbyNotifyTarget, error) {
+func (r *userErrorRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string, int) ([]NearbyNotifyTarget, error) {
 	return nil, ErrInvalidRequest
 }

@@ -956,3 +956,22 @@ postgres: 2026-10-24 16:18:23.571   # 快 ~200ms
 审计方法沉淀：清理/GC 类代码的正确性必须覆盖「失败保留（可重试）」与「幂等重跑」两个
 分支，而不是只测成功删除；删除顺序应保证不会产生无法回收的孤儿（对象先删、行后删，
 失败保留行）。
+
+## 附近新瞬间通知目标查询下沉 LIMIT（2026-10-25，第 25 轮）
+
+`moments.notifyNearbyNewMoment` 在瞬间创建（同步请求路径）时向「5km 内开启附近通知」
+的用户推送。此前 `users.queryNearbyMomentNotifyTargets` **无 LIMIT**：调用方先全量读入内存、
+再截断到扇出上限 200。密集区域（如市中心 5km 内数万用户）意味着每次创建瞬间都要把全部
+候选行载入内存，内存与查询耗时随用户密度线性增长——与第 16 轮收藏者 fanout 同类的
+「先全量读再截断」缺陷。
+
+修复：`NearbyMomentNotifyTargets` 增加 `limit` 参数（`limit<=0` = 不限制），PG 查询以
+`LIMIT $6::bigint`（NULL = 不限制）在数据库侧限量，内存实现按 limit 提前 break；moments
+创建链路传 `nearbyNotifyMaxTargets`（200），调用方仍保留防御性截断。
+
+测试：
+- users 内存单测扩展：圈内开启通知用户数 + limit=1 限量；
+- 新增真实库 IT：limit=0 不限制、limit=1 SQL 限量、作者排除与圈外/未开启过滤语义一致。
+
+审计方法沉淀：请求路径上的 fanout/候选查询，上限必须下沉到 SQL；`LIMIT NULL` 可安全表达
+「不限制」而无需动态拼接 SQL。

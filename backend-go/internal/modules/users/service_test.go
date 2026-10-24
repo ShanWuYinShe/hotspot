@@ -998,6 +998,6 @@ func TestServiceSettingsForIsReadOnly(t *testing.T) {
 	}
 }
 
-func (r *stubUserRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string) ([]NearbyNotifyTarget, error) {
+func (r *stubUserRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string, int) ([]NearbyNotifyTarget, error) {
 	return nil, nil
 }
