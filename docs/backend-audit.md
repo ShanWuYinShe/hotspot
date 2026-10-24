@@ -626,3 +626,23 @@ Save/Get 回环、Rotate 链接旧 token（RotatedTo/GraceUntil/GraceTokenEnc/ne
 事务（见「事务上下文」残留项），故契约测试用 pool + 用例级唯一 ID + 显式清理（refresh →
 session → user）。已知差异（有意保留，记录备查）：内存实现 Get 对过期/空闲会话做惰性过期
 （降级模式防内存增长），PG 依赖 sweeper 与调用方过期判断；两者在正常 TTL 内行为一致。
+
+## 双实现契约测试第十四批（2026-10-24，media 上传会话）
+
+`TestMediaRepositoryContract` 接入契约基建，覆盖：pending 会话 Save/Get 字段回环、
+Complete 状态机（一次性完成、最终元数据/幂等键/完成时间落库、二次完成不改写）、
+`ResolveByFileIDs`（owner + category + completed 三重过滤、缺失/空输入）、
+`CompletedFileMetaByID`（不限定 owner、未完成/不存在不可读）、`ListStaleUploads` 保留期 GC
+（只列未完成、created_at 升序、limit）与 `DeleteUploadRow`（幂等、不得删已完成会话）、
+Save upsert 基本字段覆盖。
+
+**抓到 4 处内存漂移（均为降级模式语义/数据安全相关）**：
+
+1. 内存 `Complete` 未写 `CompletedAt`（PG 写 `completed_at`）→ 完成态审计字段在内存模式恒空；
+2. 内存 `CompletedFileMetaByID` 以 upload_id 充当 file_id → 两者不同值时   举报快照等跨模块读取在内存模式恒查不到；改为按完成态 `File.FileID` 查找；
+3. 内存 `ListStaleUploads` 按 map 随机序并提前 break（PG 为 `ORDER BY created_at ASC LIMIT`）   → GC 处理顺序与批次不稳定；改为按 created_at 升序 + tie-break upload_id；
+4. 内存 `DeleteUploadRow` 无条件删除（PG `WHERE status <> 'completed'`）→ 保留期 GC 在内存模式   可能误删已完成上传（业务数据）；改为只删未完成会话。
+
+配套更新：`internal/bootstrap/reports_media_source_test.go` 的种子 helper 改为按完成态
+`File.FileID`（服务真实生成的 file_id，与 upload_id 不同）查找，替换原先「按 upload_id 查找」
+的旧约定——原约定正是内存实现 bug 的镜像，修复后一并纠正测试。

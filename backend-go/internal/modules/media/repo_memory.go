@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
 )
@@ -46,6 +47,9 @@ func (r *InMemoryRepository) Complete(ctx context.Context, uploadID string, file
 	upload.Completed = true
 	upload.File = file
 	upload.CompletedIdempotencyKey = idempotencyKey
+	// PG queryCompleteUploadSession 同时写 completed_at；内存实现此前漏写，
+	// 导致完成态会话的审计字段在降级模式下恒为空（契约测试发现）。
+	upload.CompletedAt = time.Now().UTC().Format(time.RFC3339)
 	r.uploads[uploadID] = upload
 	return true, nil
 }
@@ -82,22 +86,28 @@ func (r *InMemoryRepository) ResolveByFileIDs(_ context.Context, fileIDs []strin
 
 // CompletedFileMetaByID 在内存实现里按 uploadID 复用已完成上传的元数据
 // （测试桩场景：file_id 与 upload_id 同值约定）。
-func (r *InMemoryRepository) CompletedFileMetaByID(ctx context.Context, fileID string) (FileMeta, bool, error) {
-	upload, ok, err := r.Get(ctx, fileID)
-	if err != nil || !ok || !upload.Completed {
-		return FileMeta{}, false, err
+func (r *InMemoryRepository) CompletedFileMetaByID(_ context.Context, fileID string) (FileMeta, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	// 与 PG 同键：按完成态的 file_id 查找（此前以 upload_id 充当 file_id，
+	// 两者不同值时内存实现恒查不到；契约测试发现）。
+	for _, upload := range r.uploads {
+		if !upload.Completed || upload.File.FileID != fileID {
+			continue
+		}
+		return FileMeta{
+			Category:     upload.Category,
+			StorageKey:   upload.StorageKey,
+			ThumbnailURL: upload.File.ThumbnailURL,
+			Width:        upload.File.Width,
+			Height:       upload.File.Height,
+			MimeType:     upload.File.MimeType,
+			FileName:     upload.FileName,
+			FileSize:     upload.File.FileSize,
+			Duration:     upload.File.Duration,
+		}, true, nil
 	}
-	return FileMeta{
-		Category:     upload.Category,
-		StorageKey:   upload.StorageKey,
-		ThumbnailURL: upload.File.ThumbnailURL,
-		Width:        upload.File.Width,
-		Height:       upload.File.Height,
-		MimeType:     upload.File.MimeType,
-		FileName:     upload.FileName,
-		FileSize:     upload.File.FileSize,
-		Duration:     upload.File.Duration,
-	}, true, nil
+	return FileMeta{}, false, nil
 }
 
 func (r *InMemoryRepository) ListStaleUploads(_ context.Context, cutoff time.Time, limit int) ([]pendingUpload, error) {
@@ -113,9 +123,17 @@ func (r *InMemoryRepository) ListStaleUploads(_ context.Context, cutoff time.Tim
 			continue
 		}
 		items = append(items, item)
-		if len(items) >= limit {
-			break
+	}
+	// 与 PG queryListStaleUploads（ORDER BY created_at ASC LIMIT $2）同序：
+	// 旧行优先处理；此前按 map 随机序并提前 break，GC 顺序与批次不稳定。
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].CreatedAt == items[j].CreatedAt {
+			return items[i].UploadID < items[j].UploadID
 		}
+		return items[i].CreatedAt < items[j].CreatedAt
+	})
+	if limit > 0 && len(items) > limit {
+		items = items[:limit]
 	}
 	return items, nil
 }
@@ -123,6 +141,11 @@ func (r *InMemoryRepository) ListStaleUploads(_ context.Context, cutoff time.Tim
 func (r *InMemoryRepository) DeleteUploadRow(_ context.Context, uploadID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	// 与 PG queryDeleteUploadRow（WHERE status <> 'completed'）同口径：保留期 GC
+	// 只清理未完成会话，已完成上传是业务数据，不能被 GC 误删（内存实现此前无条件删除）。
+	if upload, ok := r.uploads[uploadID]; ok && upload.Completed {
+		return nil
+	}
 	delete(r.uploads, uploadID)
 	return nil
 }

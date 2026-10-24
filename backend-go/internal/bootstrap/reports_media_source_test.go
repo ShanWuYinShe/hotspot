@@ -46,9 +46,8 @@ func (p *stubMediaProvider) GetObject(context.Context, string) ([]byte, error) {
 func (p *stubMediaProvider) PutObject(context.Context, string, string, []byte) error { return nil }
 
 // 走真实 Presign → Complete 流程构造完成态上传（chat_file 类别：无魔数嗅探/EXIF 清洗）。
-// 返回服务、完成态 FileMeta 与 uploadID。注意：内存仓 CompletedFileMetaByID
-// 实际按 uploadID 键查找（与 Postgres 的 file_id 查找口径不一致，见
-// repo_memory.go Get），因此查找键必须用 uploadID。
+// 返回服务、完成态 FileMeta 与 file_id（CompletedFileMetaByID 以完成态 File.FileID
+// 为键；upload_id 与 file_id 是不同值）。
 func seedCompletedUpload(t *testing.T, ctx context.Context) (*media.Service, media.FileMeta, string) {
 	t.Helper()
 	repo := media.NewInMemoryRepository()
@@ -66,11 +65,15 @@ func seedCompletedUpload(t *testing.T, ctx context.Context) (*media.Service, med
 	if _, err := svc.Complete(ctx, resp.UploadID); err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	fm, found, err := repo.CompletedFileMetaByID(ctx, resp.UploadID)
+	completed, found, err := repo.Get(ctx, resp.UploadID)
+	if err != nil || !found || !completed.Completed || completed.File.FileID == "" {
+		t.Fatalf("expected completed upload, found=%v err=%v record=%#v", found, err, completed)
+	}
+	fm, found, err := repo.CompletedFileMetaByID(ctx, completed.File.FileID)
 	if err != nil || !found {
 		t.Fatalf("expected completed file meta, found=%v err=%v", found, err)
 	}
-	return svc, fm, resp.UploadID
+	return svc, fm, completed.File.FileID
 }
 
 func TestReportsMediaSourceMapsAllFields(t *testing.T) {
