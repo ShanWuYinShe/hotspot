@@ -112,6 +112,10 @@ func (r *InMemoryRepository) UnreadCount(_ context.Context, userID string) (Unre
 			result.ByType.Interaction++
 		case "group":
 			result.ByType.Group++
+		case "report":
+			result.ByType.Report++
+		case "nearby":
+			result.ByType.Nearby++
 		case "system":
 			result.ByType.System++
 		}

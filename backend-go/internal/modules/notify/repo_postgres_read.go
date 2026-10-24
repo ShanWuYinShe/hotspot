@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -32,9 +33,14 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notify
 	for rows.Next() {
 		var item NotifyItem
 		var payloadJSON string
-		if err := rows.Scan(&item.NotifyID, &item.Type, &item.IsRead, &item.CreatedAt, &payloadJSON); err != nil {
+		// created_at 列为 TIMESTAMPTZ：pgx 简单协议文本格式下直接扫进 string 会得到
+		// PostgreSQL 风格 "2006-01-02 15:04:05+00"，不符合契约「UTC ISO 8601」。
+		// 先扫 time.Time 再统一格式化为 RFC3339（审查：契约测试基建第二接入方发现）。
+		var createdAt time.Time
+		if err := rows.Scan(&item.NotifyID, &item.Type, &item.IsRead, &createdAt, &payloadJSON); err != nil {
 			return PaginatedNotify{}, err
 		}
+		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		if payloadJSON != "" {
 			if err := json.Unmarshal([]byte(payloadJSON), &item.Payload); err != nil {
 				return PaginatedNotify{}, err

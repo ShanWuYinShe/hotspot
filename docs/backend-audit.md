@@ -302,3 +302,21 @@ Redis 实现都按配置生效、失败计数衰减窗口随锁期变化），�
 
 **验证**：`gofmt` / `go vet` / `go test -short ./...`；`./scripts/verify-backend-ci.sh
 --with-db`；前端 `bun run check`（svelte-check + eslint + 主题/跨端一致性检查）全绿。
+
+
+## 双实现契约测试第二批（2026-10-24，notify）
+
+契约测试基建（`testdb.RunContract` + `BeginScope`）第二个接入方：notify 列表/未读/已读。
+
+- 新增 `TestNotifyRepositoryContract`：同一组用例跑内存实现与真实库实现，覆盖落库后
+  可读（payload type 归一化）、排序（`created_at DESC, notify_id DESC`）、keyset 分页
+  不重不漏、`type`/`is_read` 过滤、六类未读计数、已读语义（ids/all + 跨用户隔离）、
+  非法游标（`ErrInvalidNotifyRequest`）。**首跑抓到两处真实漂移**：
+  1. 内存实现 `UnreadCount` 只累加 social/interaction/group/system，
+     `report_resolved`/`report_dismissed` 与 `nearby_new_moment` 只计入 Total、
+     ByType 恒 0（PG 正确）→ 补齐 report/nearby 分支；
+  2. 真实库 `List` 把 TIMESTAMPTZ 直接扫进 string，返回 PostgreSQL 风格
+     `2026-10-24 09:18:41+00`，违反契约「UTC ISO 8601」→ 改为扫 `time.Time` 后统一
+     `Format(time.RFC3339)`（游标编码随之规范，SQL `$4::timestamptz` 仍可解析）。
+- 后续接入优先级：groups（成员/申请列表）、users（关系列表）——均属分页 + 状态流转
+  高频漂移面。
