@@ -63,7 +63,11 @@ func (r *PostgresRepository) SearchAnnouncements(ctx context.Context, filter Ann
 	page := AnnouncementPage{Items: make([]AnnouncementRecord, 0, limit)}
 	for idx, item := range items {
 		if idx >= limit {
-			cursor := AnnouncementCursor{CreatedAt: item.CreatedAt, AnnouncementID: item.AnnouncementID}
+			// 下一页游标取本页最后一条（排他 keyset：(created_at, announcement_id) <
+			// 游标）。此前取第 limit+1 条（下一页首条），下一页会把它自身排除 →
+			// 每个分页边界静默丢一条公告（生产后台检索翻页少数据）。
+			last := items[limit-1]
+			cursor := AnnouncementCursor{CreatedAt: last.CreatedAt, AnnouncementID: last.AnnouncementID}
 			page.Next = &cursor
 			break
 		}

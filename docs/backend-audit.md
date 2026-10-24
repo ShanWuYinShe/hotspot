@@ -508,3 +508,21 @@ DESC tie-break）、四类字段过滤（action/operator_id/target_type/target_i
 
 注：内存实现构造函数会预置 2 条演示审计数据，契约用例在 New 中清空（仅测试代码），
 不影响生产（PG 为空表启动）。
+
+## 双实现契约测试第十批（2026-10-24，system 公告）
+
+`TestSystemAnnouncementContract` 接入契约基建，覆盖：创建/读取字段回环、公开列表（倒序、
+limit、软删过滤）、后台检索（severity 过滤、keyset 分页不重不漏、含已删记录）、编辑 patch
+与已删/不存在哨兵、删除幂等（重复删除成功、缺失报错）、`AnnouncementsVersion` 在
+创建/编辑/删除后均变化。
+
+**抓到 1 处生产缺陷 + 1 处内存漂移**：
+
+1. **PG 与管理后台线上表现：公告检索分页每页边界丢一条**。`SearchAnnouncements` 把 `Next`
+   游标设为「第 limit+1 条（下一页首条）」，而 SQL 谓词是严格排他
+   `(created_at, announcement_id) < 游标` → 下一页把游标项自身排除。内存实现同构（复制了
+   同一写法）。已同时改为取**本页最后一条**作游标（与 audit 日志、moments 等列表的正确
+   写法一致）。影响：管理后台公告列表翻页时每页少一条、第 N 页后数据不一致。
+2. 内存 repo 在 Create/Update 时对 title/content/action_url 做 `TrimSpace`，PG 原样持久化
+   → 契约定型为「repo 只负责持久化，裁剪属 service 职责」（admin service 已 TrimSpace）；
+   移除内存 repo 的裁剪，两实现一致。

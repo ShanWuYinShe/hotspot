@@ -6,7 +6,6 @@ import (
 	"hotspot/backend-go/internal/platform/types"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -72,7 +71,10 @@ func (r *InMemoryRepository) SearchAnnouncements(_ context.Context, filter Annou
 	page := AnnouncementPage{Items: make([]AnnouncementRecord, 0, limit)}
 	for idx, item := range filtered {
 		if idx >= limit {
-			cursor := AnnouncementCursor{CreatedAt: item.CreatedAt, AnnouncementID: item.AnnouncementID}
+			// 下一页游标取本页最后一条（排他 keyset），与 PG 一致。此前取第 limit+1 条
+			//（下一页首条）作游标，下一页把它自身排除 → 每个分页边界丢一条公告。
+			last := filtered[limit-1]
+			cursor := AnnouncementCursor{CreatedAt: last.CreatedAt, AnnouncementID: last.AnnouncementID}
 			page.Next = &cursor
 			break
 		}
@@ -98,10 +100,10 @@ func (r *InMemoryRepository) CreateAnnouncement(_ context.Context, input Announc
 	r.seq++
 	item := AnnouncementRecord{
 		AnnouncementID: fmt.Sprintf("ann_%d_%d", now.UnixNano(), r.seq),
-		Title:          strings.TrimSpace(input.Title),
-		Content:        strings.TrimSpace(input.Content),
+		Title:          input.Title,
+		Content:        input.Content,
 		Severity:       input.Severity,
-		ActionURL:      strings.TrimSpace(input.ActionURL),
+		ActionURL:      input.ActionURL,
 		CreatedAt:      now,
 		CreatedBy:      input.Actor,
 		SendPush:       input.SendPush,
@@ -124,16 +126,16 @@ func (r *InMemoryRepository) UpdateAnnouncement(_ context.Context, input Announc
 		return AnnouncementRecord{}, errAnnouncementNotFound
 	}
 	if input.Title != nil {
-		item.Title = strings.TrimSpace(*input.Title)
+		item.Title = *input.Title
 	}
 	if input.Content != nil {
-		item.Content = strings.TrimSpace(*input.Content)
+		item.Content = *input.Content
 	}
 	if input.Severity != nil {
 		item.Severity = *input.Severity
 	}
 	if input.ActionURL != nil {
-		item.ActionURL = strings.TrimSpace(*input.ActionURL)
+		item.ActionURL = *input.ActionURL
 	}
 	r.version++
 	r.announcements[input.AnnouncementID] = item
