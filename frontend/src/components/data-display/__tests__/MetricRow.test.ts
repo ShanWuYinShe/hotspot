@@ -1,6 +1,6 @@
-// MetricRow 契约测试：标签/值渲染、tone 类、列数。
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+// MetricRow 契约测试：标签/值渲染、tone 类、列数与点击交互。
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import MetricRow from '../MetricRow.svelte';
 
 describe('MetricRow', () => {
@@ -38,5 +38,21 @@ describe('MetricRow', () => {
 		});
 		const dl = container.querySelector('dl') as HTMLElement;
 		expect(dl.style.gridTemplateColumns).toContain('repeat(3');
+	});
+
+	it('item 带有 onClick 时赋予可点击交互并响应点击', async () => {
+		const handleClick = vi.fn();
+		render(MetricRow, {
+			props: {
+				items: [
+					{ label: '动态', value: 10, onClick: handleClick },
+					{ label: '粉丝', value: 20 }
+				]
+			}
+		});
+		const clickableItem = screen.getByRole('button');
+		expect(clickableItem).toBeTruthy();
+		await fireEvent.click(clickableItem);
+		expect(handleClick).toHaveBeenCalledTimes(1);
 	});
 });

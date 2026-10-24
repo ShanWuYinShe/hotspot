@@ -188,21 +188,19 @@
 <!-- 页面根容器（无带标题分区，属单一信息流）：gap 16；页底留白只由 contentClassName pb-6 提供 -->
 <StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-4 pt-4 pb-6">
 	{#snippet header()}
-		<!-- 沉浸流顶栏：非桌面端左侧呈现品牌字标锚点，右侧为搜索/通知快捷动作 -->
-		<div class="flex items-center justify-between pt-3 pb-1">
-			<div class="flex items-center gap-1.5">
-				{#if device !== 'desktop'}
+		{#if device !== 'desktop'}
+			<!-- 沉浸流顶栏：非桌面端左侧呈现品牌字标锚点，右侧为搜索/通知快捷动作 -->
+			<div class="flex items-center justify-between pt-3 pb-1">
+				<div class="flex items-center gap-1.5">
 					<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
-				{/if}
-			</div>
-			<h1 class="sr-only">首页</h1>
-			<div class="flex items-center gap-2">
-				{#if device !== 'desktop'}
+				</div>
+				<h1 class="sr-only">首页</h1>
+				<div class="flex items-center gap-2">
 					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
 					<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
-				{/if}
+				</div>
 			</div>
-		</div>
+		{/if}
 	{/snippet}
 
 	{#if booting}

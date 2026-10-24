@@ -47,9 +47,9 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 	const device = $derived(platform.platform);
 
 	const metricItems = $derived([
-		{ label: '瞬间', value: stats.moments_count },
-		{ label: '关注者', value: stats.followers_count },
-		{ label: '群组', value: stats.groups_count }
+		{ label: '瞬间', value: stats.moments_count, onClick: () => void goto(ME_SECTION_PATHS.moments) },
+		{ label: '关注者', value: stats.followers_count, onClick: () => void goto(ME_SECTION_PATHS.relationships) },
+		{ label: '群组', value: stats.groups_count, onClick: () => void goto(ME_SECTION_PATHS.groups) }
 	]);
 
 	const ENTRY_ITEMS = $derived<{ section: ProfileSection; title: string; description: string; icon: typeof Users }[]>([

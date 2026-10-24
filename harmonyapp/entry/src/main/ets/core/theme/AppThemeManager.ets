@@ -225,8 +225,8 @@ const DEFAULT_CLEAN_LIGHT = buildPalette(
 
 const DEFAULT_CLEAN_DARK = buildPalette(
   'default_clean_dark',
-  '当前默认',
-  '清爽、干净、通用',
+  '清野',
+  '自然纸面、森林绿强调',
   ThemeConstants.DEFAULT_CLEAN_DARK_COLORS,
   ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK,
   DEFAULT_CLEAN_DARK_VISUALS,

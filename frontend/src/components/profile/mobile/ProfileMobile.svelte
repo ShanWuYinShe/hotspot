@@ -41,10 +41,10 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		{ id: 'fans', href: relationshipsHref('fans'), label: '粉丝', detail: `${stats.followers_count} 人`, icon: UserCheck }
 	]);
 
-	const statsList = $derived<{ label: string; value: number }[]>([
-		{ label: '瞬间', value: stats.moments_count },
-		{ label: '关注者', value: stats.followers_count },
-		{ label: '群组', value: stats.groups_count }
+	const statsList = $derived<{ label: string; value: number; onClick: () => void }[]>([
+		{ label: '瞬间', value: stats.moments_count, onClick: () => void goto(ME_SECTION_PATHS.moments) },
+		{ label: '关注者', value: stats.followers_count, onClick: () => void goto(relationshipsHref('fans')) },
+		{ label: '群组', value: stats.groups_count, onClick: () => void goto(ME_SECTION_PATHS.groups) }
 	]);
 </script>
 
@@ -118,7 +118,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 			</div>
 			<!-- 统计横条：复用 MetricRow 原语（与桌面 ProfilePage / 用户详情同一实现，
 			     原自绘 24px 数字与全站 20px 指标档漂移） -->
-			<MetricRow class="border-t border-border-default" items={statsList.map((s) => ({ label: s.label, value: s.value }))} />
+			<MetricRow class="border-t border-border-default" items={statsList} />
 		</section>
 
 		<!-- 个人数据 5 行链接（唯一分组卡 ListContainer bordered：内缩圆角行）。
