@@ -187,7 +187,7 @@ jobs:
       - name: test real postgres repository integration
         run: |
           cd backend-go
-          go test -v -count=1 -run 'TestPostgresIT' ./internal/modules/...
+          go test -v -count=1 -run 'TestPostgresIT|Contract' ./internal/modules/...
 
       # ── HTTP 全链路集成（docker_test.go ~90 用例）─────────────────
       # 此前本 job 只跑 repo 级测试：docker_test 的 TestMain 在无 BACKEND_URL

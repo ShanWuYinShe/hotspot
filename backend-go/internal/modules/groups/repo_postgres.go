@@ -195,7 +195,7 @@ func (r *PostgresRepository) AreMembers(ctx context.Context, groupIDs []string, 
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryGetGroupMemberships, userID, groupIDs)
+	rows, err := queryable.Query(ctx, queryAreGroupMembers, userID, groupIDs)
 	if err != nil {
 		return nil, err
 	}

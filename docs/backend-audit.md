@@ -359,3 +359,31 @@ Redis 实现都按配置生效、失败计数衰减窗口随锁期变化），�
 用例准备说明：两实现预置数据等价（PG 用 `testdb.InsertUser`（presence=online）+
 UPDATE avatar，内存用 `PutProfile` 对齐 nickname/avatar/presence/last_online），
 分页断言只校验「不重不漏 + 页大小」，不绑定同秒并列顺序。
+
+## 双实现契约测试第四批（2026-10-24，groups）
+
+`TestGroupsRepositoryContract` 接入契约基建，覆盖：建群/owner 成员种子、入群与成员列表
+keyset 分页（role 过滤）、需审批入群的 pending 申请去重、invite_only 拒绝直加、
+公告 pinned 优先 + 默认/硬上限截断、禁言/封禁/解封状态机、退群与「我的群组」、
+共同群聊计数、非法游标。
+
+**抓到 2 处真实问题**：
+
+1. **生产缺陷：`AreMembers` 在真实库必然报错**（`repo_postgres.go`）。该批量成员判定
+   复用了 `queryGetGroupMemberships`（SELECT 5 列）却只 `rows.Scan(&groupID)` 一个目标，
+   pgx 直接返回「number of field descriptions must equal number of destinations, got 5 and 1」。
+   WS 订阅批量鉴权（`groupAllowedBatch`，单次最多 100 个群）因此**静默回退逐条 IsMember**，
+   批量优化从未生效，订阅延迟与 DB 往返被放大。修复：新增专用单列查询
+   `queryAreGroupMembers`（只取 group_id），语义不变。
+2. **内存实现 `CountCommonGroups` 漂移**：基于 `groupsByUser` 测试数据而非 memberships
+   计算，经真实 Create/Join 流程后恒返回 0（PG 为成员交集）→ 改为按成员关系交集计算，
+   已解散群由 groups 表缺失隐式排除。
+
+**联动修正**：内存 `CountCommonGroups` 改为成员语义后，users 模块两处依赖
+`SeedGroupsByUser` 夹具的 handler 测试（共同群计数）失效——改为经真实建群 + 入群流程
+预置成员关系（新增 `seedCommonGroup` helper），`SeedGroupsByUser` 保留给 `ListGroupsByUser`
+聚合场景。
+
+**门禁覆盖修正**：契约测试的真实库半区此前不在 `-run TestPostgresIT` 正则内，CI 与
+`scripts/verify-backend-ci.sh` 均改为 `-run "TestPostgresIT|Contract"`，避免此类回归
+只在手工命令里验证。

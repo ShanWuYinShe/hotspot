@@ -41,6 +41,16 @@ SELECT group_id, role, joined_at, is_muted, muted_until
 FROM group_members
 WHERE user_id = $1 AND group_id = ANY($2)`
 
+	// queryAreGroupMembers 是 AreMembers 的专用投影（只取 group_id）：
+	// 此前复用 queryGetGroupMemberships（5 列：group_id/role/joined_at/is_muted/
+	// muted_until）却只 Scan 一个目标，pgx 在真实库报
+	// 「number of field descriptions must equal number of destinations, got 5 and 1」，
+	// 导致 WS 群订阅批量鉴权全量失败（契约测试发现，2026-10-24）。
+	queryAreGroupMembers = `
+SELECT group_id
+FROM group_members
+WHERE user_id = $1 AND group_id = ANY($2)`
+
 	queryCountGroupMembers = `
 SELECT COUNT(*)
 FROM group_members

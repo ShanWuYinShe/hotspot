@@ -82,13 +82,13 @@ PG_PASSWORD=${PG_PASSWORD:-postgres}
 VERIFY_AUTH_SECRET=${AUTH_TOKEN_SECRET:-$(printf 'verify-local-%s' "$(openssl rand -hex 24)")}
 
 if [ "$WITH_DB" = "1" ]; then
-  step "真实库仓库集成测试（TestPostgresIT，库 hotspot_it）"
+  step "真实库仓库集成测试（TestPostgresIT + 双实现契约测试，库 hotspot_it）"
   DB=hotspot_it
   "${COMPOSE[@]}" exec -T postgres psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$DB'" | grep -q 1 \
     || "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "CREATE DATABASE $DB"
   DSN="postgres://postgres:$PG_PASSWORD@localhost:5432/$DB?sslmode=disable"
   ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go run ./cmd/migrate >/dev/null )
-  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go test -count=1 -run "TestPostgresIT" ./internal/modules/... )
+  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go test -count=1 -run "TestPostgresIT|Contract" ./internal/modules/... )
 fi
 
 if [ "$WITH_E2E" = "1" ]; then

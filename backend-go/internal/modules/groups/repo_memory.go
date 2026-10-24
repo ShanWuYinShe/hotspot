@@ -495,23 +495,20 @@ func (r *InMemoryRepository) ListGroupsByUser(_ context.Context, userID string, 
 	return PaginatedGroups{Items: items}, nil
 }
 
-// CountCommonGroups 基于 groupsByUser 测试数据计算共同群组数。
+// CountCommonGroups 按成员关系计算两个用户的共同群组数（与 PG
+// queryCountCommonGroups 的 memberships 交集同语义；已解散群由 groups 表缺失隐式排除）。
+// 契约测试发现：此前基于 groupsByUser 测试数据计算，真实 Create/Join 后恒返回 0。
 func (r *InMemoryRepository) CountCommonGroups(_ context.Context, viewerUserID, targetUserID string) (int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	targetSet := make(map[string]struct{}, len(r.groupsByUser[targetUserID]))
-	for _, item := range r.groupsByUser[targetUserID] {
-		targetSet[item.Group.GroupID] = struct{}{}
-	}
 	count := 0
-	seen := make(map[string]struct{})
-	for _, item := range r.groupsByUser[viewerUserID] {
-		groupID := item.Group.GroupID
-		if _, ok := seen[groupID]; ok {
+	for groupID, members := range r.members {
+		if _, ok := r.groups[groupID]; !ok {
 			continue
 		}
-		seen[groupID] = struct{}{}
-		if _, ok := targetSet[groupID]; ok {
+		_, viewerIn := members[viewerUserID]
+		_, targetIn := members[targetUserID]
+		if viewerIn && targetIn {
 			count++
 		}
 	}

@@ -21,6 +21,20 @@ import (
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
+// seedCommonGroup 通过真实建群 + 入群流程预置「共同群」测试数据。
+// groups.CountCommonGroups 已按成员关系（与 PG 同语义）计算，
+// SeedGroupsByUser 只服务 ListGroupsByUser 的聚合场景。
+func seedCommonGroup(t *testing.T, repo *groups.InMemoryRepository, ownerID, memberID, name string, searchable bool) {
+	t.Helper()
+	group, err := repo.Create(context.Background(), ownerID, grouptypes.CreateGroupRequest{Name: name, IsSearchable: &searchable})
+	if err != nil {
+		t.Fatalf("seed common group create: %v", err)
+	}
+	if _, err := repo.JoinGroup(context.Background(), memberID, group.Group.GroupID, nil); err != nil {
+		t.Fatalf("seed common group join: %v", err)
+	}
+}
+
 type testRealtimeSink struct{ events []realtime.Event }
 
 func (s *testRealtimeSink) Send(e realtime.Event) error { s.events = append(s.events, e); return nil }
@@ -342,8 +356,7 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 		t.Fatalf("put charlie profile: %v", err)
 	}
 	groupsRepo := groups.NewInMemoryRepository()
-	groupsRepo.SeedGroupsByUser("user_alice", []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_common", Name: "Common Group"}}})
-	groupsRepo.SeedGroupsByUser("user_bob", []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_common", Name: "Common Group"}}})
+	seedCommonGroup(t, groupsRepo, "user_alice", "user_bob", "Common Group", true)
 	groupsSvc := groups.NewServiceWithRepo(groupsRepo)
 	momentsSvc := moments.NewServiceWithRepo(moments.NewInMemoryRepository())
 	service.SetContentProviders(groupsSvc, momentsSvc)
@@ -709,8 +722,7 @@ func TestOpenTheDoorCountsNonSearchableCommonGroups(t *testing.T) {
 		t.Fatalf("put bob profile: %v", err)
 	}
 	groupsRepo := groups.NewInMemoryRepository()
-	groupsRepo.SeedGroupsByUser("user_alice", []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_private", Name: "Private Group"}, IsSearchable: false}})
-	groupsRepo.SeedGroupsByUser("user_bob", []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_private", Name: "Private Group"}, IsSearchable: false}})
+	seedCommonGroup(t, groupsRepo, "user_alice", "user_bob", "Private Group", false)
 	groupsSvc := groups.NewServiceWithRepo(groupsRepo)
 	momentsSvc := moments.NewServiceWithRepo(moments.NewInMemoryRepository())
 	service.SetContentProviders(groupsSvc, momentsSvc)
