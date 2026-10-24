@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Heart, MessageCircle, Share2, MapPin, Sparkles } from '@lucide/svelte';
+	import { Heart, MessageCircle, Bookmark, Share2, MapPin, Sparkles } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import type { MomentItem } from '@/api/types';
 	import { formatDistance, formatRelativeDays } from '@/lib/utils';
@@ -238,7 +238,7 @@
 
 		<!-- 底部轻量交互操作条 -->
 		<div class="mt-3.5 pt-3 border-t border-border-subtle/40 flex items-center justify-between text-text-secondary">
-			<div class="flex items-center gap-6 sm:gap-8">
+			<div class="flex items-center gap-6 sm:gap-7">
 				<!-- 点赞 -->
 				<div
 					class="hover-action hit-slop flex items-center gap-1.5 text-xs focus-ring transition-colors {hasLiked ? 'text-status-danger' : 'hover:text-status-danger'}"
@@ -258,6 +258,17 @@
 				>
 					<MessageCircle class="size-4 shrink-0" strokeWidth={1.75} />
 					<span class="font-medium">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
+				</div>
+
+				<!-- 收藏 -->
+				<div
+					class="hover-action hit-slop flex items-center gap-1.5 text-xs focus-ring transition-colors {moment.is_favorited ? 'text-accent-default' : 'hover:text-accent-default'}"
+					aria-label={moment.is_favorited ? '已收藏' : '收藏'}
+				>
+					<Bookmark
+						class="size-4 shrink-0 transition-transform active:scale-125 {moment.is_favorited ? 'fill-accent-default text-accent-default' : ''}"
+						strokeWidth={1.75}
+					/>
 				</div>
 			</div>
 

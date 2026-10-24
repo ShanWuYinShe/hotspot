@@ -208,23 +208,38 @@
 	>
 		{#snippet header()}
 			{#if device !== 'desktop'}
-				<!-- 移动端顶栏：品牌 Logo + 品牌锚点 + 快捷动作 -->
-				<div class="flex items-center justify-between px-4 pt-3 pb-2.5 bg-surface-primary/95 backdrop-blur-md border-b border-border-subtle/30 sticky top-0 z-20">
-					<div class="flex items-center gap-2">
-						<img src={imgHotSpot} alt="HotSpot" class="size-6.5 rounded-full object-cover shadow-xs" />
-						<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
+				<!-- 移动端顶栏：品牌 Logo + 快捷动作 + 分段 Tab 一体化（单一吸顶容器，杜绝双重边框） -->
+				<div class="bg-surface-primary/95 backdrop-blur-md border-b border-border-subtle/30 sticky top-0 z-20">
+					<div class="flex items-center justify-between px-4 pt-3 pb-1">
+						<div class="flex items-center gap-2">
+							<img src={imgHotSpot} alt="HotSpot" class="size-6.5 rounded-full object-cover shadow-xs" />
+							<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
+						</div>
+						<h1 class="sr-only">首页</h1>
+						<div class="flex items-center gap-1">
+							<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
+							<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
+						</div>
 					</div>
-					<h1 class="sr-only">首页</h1>
-					<div class="flex items-center gap-1">
-						<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
-						<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
+					<div class="max-w-[260px] mx-auto px-4">
+						<TabBar
+							variant="underline"
+							items={[
+								{ id: 'discover', label: '为你推荐' },
+								{ id: 'following', label: '正在关注' }
+							]}
+							value={activeTab}
+							onChange={(id) => { activeTab = id as FeedTab; }}
+						/>
 					</div>
 				</div>
 			{/if}
 		{/snippet}
 
-		<!-- 无论桌面或移动端，顶部均展现清晰的流分段器 -->
-		{@render feedTabs()}
+		{#if device === 'desktop'}
+			<!-- 桌面端居中 Tab 栏 -->
+			{@render feedTabs()}
+		{/if}
 
 		<!-- 关注流未登录态：温馨引导登录卡片 -->
 		{#if activeTab === 'following' && auth.status !== 'authenticated'}
@@ -295,9 +310,9 @@
 				<!-- 活跃邻居推荐 -->
 				{#if activeNeighbors.length > 0}
 					<RailSection title="活跃邻居">
-						<div class="flex flex-col divide-y divide-border-subtle/30 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm overflow-hidden">
+						<div class="flex flex-col divide-y divide-border-subtle/30">
 							{#each activeNeighbors as neighbor (neighbor.userId)}
-								<div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-subtle transition-colors">
+								<div class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
 									<Avatar src={neighbor.avatarUrl} name={neighbor.nickname} size="sm" />
 									<div class="min-w-0 flex-1">
 										<button
@@ -326,17 +341,17 @@
 
 				<!-- 社区热议话题 -->
 				<RailSection title="社区热议">
-					<div class="flex flex-col divide-y divide-border-subtle/30 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm overflow-hidden">
+					<div class="flex flex-col divide-y divide-border-subtle/30">
 						{#each trendingTopics as topic (topic.tag)}
 							<button
 								type="button"
-								class="hover-btn flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-surface-subtle focus-ring"
+								class="hover-btn flex w-full items-center justify-between py-2 text-left transition hover:text-accent-default focus-ring first:pt-0 last:pb-0"
 								onclick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
 							>
 								<div class="min-w-0 flex-1">
 									<div class="flex items-center gap-1.5">
 										<TrendingUp class="size-3 text-accent-default shrink-0" strokeWidth={1.75} />
-										<span class="text-xs font-medium text-text-primary truncate">#{topic.tag}</span>
+										<span class="text-xs font-medium text-text-primary truncate hover:text-accent-default">#{topic.tag}</span>
 									</div>
 									<span class="text-xxs text-text-secondary truncate block mt-0.5 pl-4.5">{topic.desc}</span>
 								</div>
@@ -350,14 +365,14 @@
 				<RailSection title="探索雷达">
 					<button
 						type="button"
-						class="hover-btn group flex w-full items-center gap-3.5 rounded-2xl border border-border-default bg-surface-primary p-3.5 text-left transition hover:border-accent-default/40 hover:shadow-raised-sm shadow-raised-sm focus-ring"
+						class="hover-btn group flex w-full items-center gap-3 text-left transition focus-ring"
 						onclick={() => void goto(ROUTES.nearby)}
 					>
 						<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
 							<Compass class="size-4.5" strokeWidth={1.75} />
 						</span>
 						<div class="min-w-0 flex-1">
-							<span class="block text-xs font-semibold text-text-primary">发现身边 5km</span>
+							<span class="block text-xs font-semibold text-text-primary group-hover:text-accent-default transition-colors">发现身边 5km</span>
 							<span class="block truncate text-xxs text-text-secondary mt-0.5">人 · 群组 · 动态三合一雷达</span>
 						</div>
 						<ExternalLink class="size-3.5 text-text-secondary shrink-0 group-hover:text-accent-default" />
