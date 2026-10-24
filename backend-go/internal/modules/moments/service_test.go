@@ -84,7 +84,7 @@ func (r *stubMomentRepo) ListFavorites(_ context.Context, _ string, _ int, _ str
 	return r.favRes, r.favListErr
 }
 
-func (r *stubMomentRepo) ListFavoriteUserIDs(_ context.Context, _ string) ([]string, error) {
+func (r *stubMomentRepo) ListFavoriteUserIDs(_ context.Context, _ string, _ int) ([]string, error) {
 	return nil, nil
 }
 

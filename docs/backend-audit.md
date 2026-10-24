@@ -673,3 +673,18 @@ GetMessageForReply/GetGroupName、撤回后 MessageGroupID 按不存在处理而
 配套：新增 `SeedMember(groupID, userID, joinedAt)` 供契约测试/降级模式注入成员（生产成员权威
 在 groups 模块的 group_members 表，内存实现无法跨模块读取，与 reports.TargetOwner 同类
 已知限制）；更新既有内存单测（预置成员、缺失消息计数 0）。
+
+## 无界 fanout 查询收口（2026-10-24，moments 收藏者广播）
+
+`moments/broadcastMomentDeletedToFavorites` 在删除瞬间时向收藏者广播 `MomentDeleted`。
+此前审查（P2-17）已在 service 层对广播数量做上限（2000）截断，但 **repo 的
+`ListFavoriteUserIDs` 无 LIMIT**：热门瞬间（收藏数万级）在截断前仍会把全部
+`moment_favorites` 行读进内存，请求路径上的内存与查询耗时随收藏量线性增长。
+
+修复：`Repository.ListFavoriteUserIDs` 增加 `limit` 参数（`limit<=0` = 不限制），SQL 以
+`LIMIT $2`（NULL = 不限制）在数据库侧限量；service 传 `cap+1` 以判断是否发生截断并记
+Warn。契约测试新增「收藏者列表遵守 fanout 上限」用例（limit=1/10/0 三种语义），双实现
+（内存 break / PG SQL LIMIT）一致。
+
+**审计方法沉淀**：审查「先全量读再截断」的 fanout 路径时，上限必须下沉到 repo/SQL；
+在 service 层截断只能保护后续广播次数，不能保护数据库读取与内存。

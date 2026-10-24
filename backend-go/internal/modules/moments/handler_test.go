@@ -1018,7 +1018,7 @@ func (r *errorRepo) Unfavorite(context.Context, string, string) error    { retur
 func (r *errorRepo) ListFavorites(context.Context, string, int, string) (PaginatedMoments, error) {
 	return PaginatedMoments{}, nil
 }
-func (r *errorRepo) ListFavoriteUserIDs(context.Context, string) ([]string, error) {
+func (r *errorRepo) ListFavoriteUserIDs(context.Context, string, int) ([]string, error) {
 	return nil, nil
 }
 func (r *errorRepo) LoadMyState(context.Context, string, string) *MyMomentState { return nil }

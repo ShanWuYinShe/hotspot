@@ -12,9 +12,10 @@ import (
 // momentsContractState 契约用例上下文：PG 侧 moments/moment_tags/moment_mentions/
 // moment_favorites 依赖 users 外键；内存实现无需预置用户。
 type momentsContractState struct {
-	ctx    context.Context
-	author string
-	viewer string
+	ctx     context.Context
+	author  string
+	viewer  string
+	viewer2 string
 }
 
 // TestMomentsRepositoryContract 接入双实现契约一致性基建：
@@ -23,12 +24,13 @@ type momentsContractState struct {
 func TestMomentsRepositoryContract(t *testing.T) {
 	author := "it_moments_contract_author"
 	viewer := "it_moments_contract_viewer"
+	viewer2 := "it_moments_contract_viewer2"
 
 	impls := []testdb.ContractImpl[Repository, momentsContractState]{
 		{
 			Name: "memory",
 			New: func(t *testing.T) (Repository, momentsContractState, func()) {
-				return NewInMemoryRepository(), momentsContractState{ctx: context.Background(), author: author, viewer: viewer}, nil
+				return NewInMemoryRepository(), momentsContractState{ctx: context.Background(), author: author, viewer: viewer, viewer2: viewer2}, nil
 			},
 		},
 		{
@@ -43,7 +45,8 @@ func TestMomentsRepositoryContract(t *testing.T) {
 				txFactory, cleanup := testdb.BeginScope(t)
 				testdb.InsertUser(t, txFactory, author, "nick_"+author)
 				testdb.InsertUser(t, txFactory, viewer, "nick_"+viewer)
-				return NewPostgresRepository(txFactory), momentsContractState{ctx: context.Background(), author: author, viewer: viewer}, cleanup
+				testdb.InsertUser(t, txFactory, viewer2, "nick_"+viewer2)
+				return NewPostgresRepository(txFactory), momentsContractState{ctx: context.Background(), author: author, viewer: viewer, viewer2: viewer2}, cleanup
 			},
 		},
 	}
@@ -224,7 +227,7 @@ func TestMomentsRepositoryContract(t *testing.T) {
 				if !favorites.Items[0].IsFavorited || favorites.Items[0].FavoritedAt == "" {
 					t.Fatalf("favorite state = %#v", favorites.Items[0])
 				}
-				userIDs, err := repo.ListFavoriteUserIDs(state.ctx, item.MomentID)
+				userIDs, err := repo.ListFavoriteUserIDs(state.ctx, item.MomentID, 10)
 				if err != nil {
 					t.Fatalf("favorite user ids: %v", err)
 				}
@@ -406,6 +409,43 @@ func TestMomentsRepositoryContract(t *testing.T) {
 				}
 				if err := repo.Delete(state.ctx, "moment_missing"); !errors.Is(err, ErrMomentNotFound) {
 					t.Fatalf("delete missing err = %v, want ErrMomentNotFound", err)
+				}
+			},
+		},
+		{
+			Name: "favorite user ids honor the fanout limit",
+			Run: func(t *testing.T, repo Repository, state momentsContractState) {
+				item := create(t, repo, state, CreateMomentRequest{Description: "fanout"})
+				for _, userID := range []string{state.viewer, state.viewer2} {
+					if err := repo.Favorite(state.ctx, userID, item.MomentID); err != nil {
+						t.Fatalf("favorite %s: %v", userID, err)
+					}
+				}
+				// 删除瞬间的收藏者广播由调用方传 fanout 上限：repo 必须真正限制行数，
+				// 否则热门瞬间仍会把全部收藏行读进内存（审查 P2-17）。
+				limited, err := repo.ListFavoriteUserIDs(state.ctx, item.MomentID, 1)
+				if err != nil {
+					t.Fatalf("limited ids: %v", err)
+				}
+				if len(limited) != 1 {
+					t.Fatalf("limited ids = %v, want 1", limited)
+				}
+				if limited[0] != state.viewer && limited[0] != state.viewer2 {
+					t.Fatalf("unexpected favorite user id: %q", limited[0])
+				}
+				all, err := repo.ListFavoriteUserIDs(state.ctx, item.MomentID, 10)
+				if err != nil {
+					t.Fatalf("all ids: %v", err)
+				}
+				if len(all) != 2 {
+					t.Fatalf("all ids = %v, want 2", all)
+				}
+				unlimited, err := repo.ListFavoriteUserIDs(state.ctx, item.MomentID, 0)
+				if err != nil {
+					t.Fatalf("unlimited ids: %v", err)
+				}
+				if len(unlimited) != 2 {
+					t.Fatalf("unlimited ids = %v, want 2", unlimited)
 				}
 			},
 		},

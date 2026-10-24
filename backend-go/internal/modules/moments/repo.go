@@ -23,7 +23,10 @@ type Repository interface {
 	ListFavorites(context.Context, string, int, string) (PaginatedMoments, error)
 	// ListFavoriteUserIDs returns the user IDs who favorited the given moment
 	// (used to fan out MomentDeleted to favoriters, spec api_spec_websocket.md).
-	ListFavoriteUserIDs(context.Context, string) ([]string, error)
+	// ListFavoriteUserIDs 返回收藏该瞬间的 user_id（最多 limit 条；limit<=0 表示不限制）。
+	// 删除瞬间的收藏者广播属尽力而为，由调用方传入上限，避免热门瞬间全量载入内存
+	// （审查 P2-17：此前 repo 无 LIMIT，service 截断前已把全部行读进内存）。
+	ListFavoriteUserIDs(ctx context.Context, momentID string, limit int) ([]string, error)
 	LoadMyState(context.Context, string, string) *MyMomentState
 	// FetchMomentImageRows loads ordered image rows for the given moment IDs
 	// (used by the service-layer image hydration helper).

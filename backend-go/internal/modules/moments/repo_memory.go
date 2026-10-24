@@ -465,22 +465,21 @@ func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, lim
 	return PaginatedMoments{Items: items, NextCursor: nextCursor}, nil
 }
 
-func (r *InMemoryRepository) ListFavoriteUserIDs(_ context.Context, momentID string) ([]string, error) {
+func (r *InMemoryRepository) ListFavoriteUserIDs(_ context.Context, momentID string, limit int) ([]string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var userIDs []string
+	userIDs := make([]string, 0)
 	for userID, favs := range r.favorites {
 		if _, fav := favs[momentID]; fav {
 			userIDs = append(userIDs, userID)
+			if limit > 0 && len(userIDs) >= limit {
+				break
+			}
 		}
 	}
 	return userIDs, nil
 }
 
-// sortMoments sorts a slice of MomentItem in place by the shared keyset tuple
-// (score, created_at, moment_id) in descending order. SQL 与内存实现共用
-// momentSearchScore，避免翻页语义漂移；now 为本次查询的统一时钟
-// （popular 时间衰减分值的计算基准，与 SQL now() 语句级稳定对应）。
 func sortMoments(items []MomentItem, sortBy string, keyword, tag string, now time.Time) {
 	sort.SliceStable(items, func(i, j int) bool {
 		si := momentSearchScore(items[i], sortBy, keyword, tag, now)

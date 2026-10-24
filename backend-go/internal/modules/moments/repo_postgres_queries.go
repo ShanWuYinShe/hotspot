@@ -152,10 +152,12 @@ ON CONFLICT (user_id, moment_id) DO NOTHING`
 DELETE FROM moment_favorites
 WHERE user_id = $1 AND moment_id = $2`
 
+	// queryListMomentFavoriteUserIDs 带 LIMIT：调用方传 fanout 上限（NULL = 不限制）。
 	queryListMomentFavoriteUserIDs = `
-SELECT user_id
-FROM moment_favorites
-WHERE moment_id = $1`
+	SELECT user_id
+	FROM moment_favorites
+	WHERE moment_id = $1
+	LIMIT $2`
 
 	queryListFavoriteMoments = `
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted, mf.favorited_at

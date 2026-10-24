@@ -67,8 +67,8 @@ func (r *momentErrRepo) Unfavorite(ctx context.Context, userID string, momentID 
 func (r *momentErrRepo) ListFavorites(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
 	return r.repo.ListFavorites(ctx, userID, limit, cursor)
 }
-func (r *momentErrRepo) ListFavoriteUserIDs(ctx context.Context, momentID string) ([]string, error) {
-	return r.repo.ListFavoriteUserIDs(ctx, momentID)
+func (r *momentErrRepo) ListFavoriteUserIDs(ctx context.Context, momentID string, limit int) ([]string, error) {
+	return r.repo.ListFavoriteUserIDs(ctx, momentID, limit)
 }
 func (r *momentErrRepo) LoadMyState(ctx context.Context, momentID, userID string) *MyMomentState {
 	return r.repo.LoadMyState(ctx, momentID, userID)

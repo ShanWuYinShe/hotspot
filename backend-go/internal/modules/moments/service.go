@@ -855,7 +855,8 @@ const momentDeleteBroadcastFanoutCap = 2000
 // broadcastMomentDeletedToFavorites 推送 MomentDeleted 给收藏该瞬间的用户
 // （spec api_spec_websocket.md：瞬间被软删除时收藏者据此更新收藏列表为"已删除"占位）。
 func (s *Service) broadcastMomentDeletedToFavorites(ctx context.Context, momentID, exceptUserID, deletedAt string) error {
-	userIDs, err := s.repo.ListFavoriteUserIDs(ctx, momentID)
+	// 多取 1 条用于判断是否发生截断，repo 侧 LIMIT 保证热门瞬间不会全量载入。
+	userIDs, err := s.repo.ListFavoriteUserIDs(ctx, momentID, momentDeleteBroadcastFanoutCap+1)
 	if err != nil {
 		return err
 	}

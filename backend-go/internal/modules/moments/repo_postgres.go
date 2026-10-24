@@ -489,17 +489,22 @@ func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, l
 	return PaginatedMoments{Items: items}, nil
 }
 
-func (r *PostgresRepository) ListFavoriteUserIDs(ctx context.Context, momentID string) ([]string, error) {
+func (r *PostgresRepository) ListFavoriteUserIDs(ctx context.Context, momentID string, limit int) ([]string, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryListMomentFavoriteUserIDs, momentID)
+	// limit<=0 时传 NULL → PostgreSQL `LIMIT NULL` 表示不限制。
+	var limitArg any
+	if limit > 0 {
+		limitArg = limit
+	}
+	rows, err := queryable.Query(ctx, queryListMomentFavoriteUserIDs, momentID, limitArg)
 	if err != nil {
 		return nil, fmt.Errorf("moments.ListFavoriteUserIDs query: %w", err)
 	}
 	defer rows.Close()
-	var userIDs []string
+	userIDs := make([]string, 0, minInt(limit, 64))
 	for rows.Next() {
 		var userID string
 		if err := rows.Scan(&userID); err != nil {
@@ -516,6 +521,16 @@ func (r *PostgresRepository) ListFavoriteUserIDs(ctx context.Context, momentID s
 type momentInteractionCursor struct {
 	At string `json:"at"`
 	ID string `json:"id"`
+}
+
+func minInt(a, b int) int {
+	if a > 0 && a < b {
+		return a
+	}
+	if a > 0 {
+		return a
+	}
+	return b
 }
 
 func normalizeMomentInteractionLimit(limit int) int {
