@@ -1340,3 +1340,23 @@ CONCURRENTLY）只会在 CI 之外或线上启动时才暴露。
 （U1000 等）不阻塞。
 
 验证：`staticcheck -checks 'SA*' ./...` 0 输出；门禁 `ALL CHECKS PASSED`；CI 通过。
+
+## 不可信输入 fuzz 覆盖（2026-10-25，第 39 轮）
+
+审计「客户端完全可控输入」的解析面时，为 5 个高风险入口新增 Go fuzz 目标（种子随普通 `go test`
+在 CI 执行，`-fuzz` 可按需长跑）：
+
+| 目标 | 契约 |
+|---|---|
+| `cursor.FuzzDecodeNeverPanics` | 游标（AES-GCM + base64 + JSON 解包）任意字节输入不 panic，错误只能是 `ErrInvalidCursor` |
+| `cursor.FuzzDecodeStringNeverPanics` | 同上（DecodeString 共用 decrypt 通道） |
+| `httpx.FuzzDecodeStrictJSON` | 请求体任意字节：不 panic；失败必须是 10000（含「请求体过大」分支不误判为格式错误） |
+| `httpx.FuzzRequireEmptyObject` | 空对象端点：容忍未知字段，拒绝非对象/坏 JSON，任意输入不 panic |
+| `idempotency.FuzzRequireKey` | `Idempotency-Key` 任意 header：不 panic；成功时 context 键与 header 一致，失败码只能是 10000/22002 |
+
+本地实跑（2026-10-25）：`-fuzztime=10~15s` 五个目标全部 PASS，累计约 **570 万次执行**、0 panic；
+发现的 interesting 输入留在 Go 本地 fuzz cache，不进仓库。
+
+意义：这些入口此前只有手写单测（固定样本），fuzz 覆盖了畸形长度/字节/JSON 边界，防止未来改动
+引入 panic（进程级 500 或 DoS）。CI 目前只跑种子（成本可忽略），需要深挖时本地执行：
+`go test -run='^$' -fuzz='FuzzDecodeNeverPanics$' -fuzztime=30s ./internal/platform/cursor/`。
