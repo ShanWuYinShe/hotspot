@@ -37,9 +37,16 @@ func Go(name string, fn func()) {
 // 契约：fn 不得自带 Add/Done、WaitGroup 等外部生命周期计数——panic 重启会
 // 二次触发 Done（负计数 panic）并破坏 Wait 语义（realtime 的 typing sweeper
 // 与 redis bridge 即因此必须用 Go）。适用于纯内聚状态的循环（ticker sweeper）。
+// restartBackoffInitial/Max 是 GoRestartable 的退避参数。提为包级变量仅为让测试
+// 用毫秒级退避验证「panic 重启/指数退避/干净返回停止」，生产路径不修改。
+var (
+	restartBackoffInitial = time.Second
+	restartBackoffMax     = 30 * time.Second
+)
+
 func GoRestartable(name string, fn func()) {
 	go func() {
-		backoff := time.Second
+		backoff := restartBackoffInitial
 		for {
 			crashed := runRecovered(name, fn)
 			if !crashed {
@@ -47,8 +54,8 @@ func GoRestartable(name string, fn func()) {
 			}
 			time.Sleep(backoff)
 			backoff *= 2
-			if backoff > 30*time.Second {
-				backoff = 30 * time.Second
+			if backoff > restartBackoffMax {
+				backoff = restartBackoffMax
 			}
 		}
 	}()

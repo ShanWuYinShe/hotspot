@@ -877,3 +877,22 @@ Redis 调用 context 带超时。此前 `RedisStore`（生产多实例必经路�
 
 **纪律沉淀**：共享外部状态（同一数据库/Redis 实例）的测试套件不要按包并行；
 要么各包用事务回滚隔离（BeginScope），要么显式串行（`-p 1`），两者不能混用后仍假设互不影响。
+
+## worker 后台常驻循环测试补齐（2026-10-24，第 22 轮）
+
+`internal/platform/worker` 是全仓库后台循环的统一启动器（panic 不击穿进程），此前
+`GoRestartable` 的重启/退避/停机行为无测试（包覆盖率 23.8%）。
+
+新增 `worker_restart_test.go`：
+
+1. panic 后按退避重启、干净返回后**不得再重启**（否则长驻 worker 停机路径变忙循环）；
+2. 指数退避与封顶（max < 2×initial 时取封顶值）；
+3. `runRecovered` 正确上报 crashed；
+4. 退避参数提为包级变量（默认 1s/30s 不变）仅为测试注入毫秒级退避，生产路径不修改。
+
+顺带核查全部 `GoRestartable` 使用点的契约（fn 不得持外部 WaitGroup/Add-Done）：auth sweeper、
+idempotency sweeper、resourceguard、ratelimit、hotcache、notify prune、auth retention、media
+retention 均为纯内聚循环；realtime typing sweeper 与 redis bridge 因自带 `wg.Done`/`done.Done`
+必须用 `worker.Go`（源码注释已说明，bridge 已有 Close 幂等测试）。
+
+包覆盖率 23.8% → **100%**。
