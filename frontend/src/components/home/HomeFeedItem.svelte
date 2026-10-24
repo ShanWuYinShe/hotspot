@@ -13,11 +13,13 @@
 	let {
 		moment,
 		onClick,
-		showDistance = false
+		showDistance = false,
+		ariaLabel
 	}: {
 		moment: MomentItem;
 		onClick?: () => void;
 		showDistance?: boolean;
+		ariaLabel?: string;
 	} = $props();
 
 	// 格式化相对时间（优先小时/分钟，超出 24h 回退 formatRelativeDays）
@@ -104,7 +106,7 @@
 			onClick?.();
 		}
 	}}
-	aria-label={`查看${moment.user?.nickname ?? '用户'}的瞬间详情`}
+	aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
 >
 	<!-- 左侧：作者头像 -->
 	<div class="shrink-0 pt-0.5">

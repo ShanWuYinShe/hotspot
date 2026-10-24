@@ -2,7 +2,7 @@
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
-	import ActivityRow from '@/components/home/ActivityRow.svelte';
+	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import type { MomentItem } from '@/api/types';
 	import type { NearbyUser } from '@/components/home/nearby-users';
@@ -60,9 +60,13 @@
 {#if moments.length > 0}
 	<div data-hub-section="moments">
 		<SectionHead title="附近瞬间" action="查看全部" onAction={onSeeAllMoments} />
-		<ListContainer class="divide-y divide-border-subtle/30">
-			{#each moments.slice(0, momentPreview) as moment, i (moment.moment_id)}
-				<ActivityRow {moment} index={i} onClick={() => onOpenMoment(moment.moment_id)} />
+		<ListContainer>
+			{#each moments.slice(0, momentPreview) as moment (moment.moment_id)}
+				<HomeFeedItem
+					{moment}
+					showDistance={true}
+					onClick={() => onOpenMoment(moment.moment_id)}
+				/>
 			{/each}
 		</ListContainer>
 	</div>

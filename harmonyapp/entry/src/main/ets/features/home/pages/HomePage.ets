@@ -29,6 +29,8 @@ import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { curves } from '@kit.ArkUI';
+import { MomentFeedCard } from '../../../components/MomentFeedCard';
+import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'HomePage';
@@ -57,6 +59,13 @@ export struct HomePage {
   @State momentsError: string = '';
   @State followingError: string = '';
 
+  /** 分段流：0 = 为你推荐, 1 = 正在关注 */
+  @State private activeTab: number = 0;
+  private readonly feedTabs: TabItem[] = [
+    { label: '为你推荐' },
+    { label: '正在关注' }
+  ];
+
   /** 「查看全部」链接的按下态索引（-1 = 无；对齐前端 link 按压反馈） */
   @State viewAllPressedIndex: number = -1;
   @State isRefreshing: boolean = false;
@@ -77,6 +86,27 @@ export struct HomePage {
       merged.push(m);
     }
     this.cachedDisplayedMoments = merged;
+  }
+
+  private currentTabMoments(): MomentItem[] {
+    if (this.activeTab === 1) {
+      return this.followingMoments;
+    }
+    return this.moments;
+  }
+
+  private isTabLoading(): boolean {
+    if (this.activeTab === 1) {
+      return this.followingLoading;
+    }
+    return this.momentsLoading;
+  }
+
+  private currentTabError(): string {
+    if (this.activeTab === 1) {
+      return this.followingError;
+    }
+    return this.momentsError;
   }
 
   private getPalette() {
@@ -182,6 +212,22 @@ export struct HomePage {
       Column() {
         this.buildStickyHeader()
 
+        // 分段切换：为你推荐 / 正在关注
+        Row() {
+          TabsPillGroup({
+            tabs: this.feedTabs,
+            activeIndex: this.activeTab,
+            freeWidth: true,
+            actions: {
+              onChange: (index: number) => {
+                this.activeTab = index;
+              }
+            }
+          })
+        }
+        .width('100%')
+        .padding({ bottom: DesignConstants.SPACING.XS })
+
         // 整页下拉刷新：Refresh 包内容区（sticky header 保持粘性在外）
         // 关键配置：
         // 1. builder: RefreshIndicator 保证全周期使用同一固定高度指示器（无跳变）
@@ -191,7 +237,15 @@ export struct HomePage {
           refreshing: $$this.isRefreshing,
           builder: RefreshIndicator
         }) {
-          if (this.feedLoading() && this.displayedMoments().length === 0) {
+          if (this.activeTab === 1 && !this.isLoggedIn) {
+            Scroll() {
+              this.buildLoginPrompt()
+            }
+            .width('100%')
+            .height('100%')
+            .align(Alignment.Top)
+            .scrollBar(BarState.Off)
+          } else if (this.isTabLoading() && this.currentTabMoments().length === 0) {
             Column() {
               SystemLoadingView({ message: '正在加载…' })
                 .width('100%')
@@ -199,12 +253,12 @@ export struct HomePage {
             .width('100%')
             .height('100%')
             .justifyContent(FlexAlign.Center)
-          } else if (this.feedError().length > 0 && this.displayedMoments().length === 0) {
+          } else if (this.currentTabError().length > 0 && this.currentTabMoments().length === 0) {
             Scroll() {
               EmptyState({
                 icon: AppIcon.WARNING,
                 title: '内容加载失败',
-                message: this.feedError(),
+                message: this.currentTabError(),
                 bare: true,
                 actionLabel: '重试',
                 onAction: () => { this.reloadFeed(); }
@@ -215,7 +269,7 @@ export struct HomePage {
             .height('100%')
             .align(Alignment.Top)
             .scrollBar(BarState.Off)
-          } else if (this.displayedMoments().length === 0) {
+          } else if (this.currentTabMoments().length === 0) {
             Scroll() {
               this.buildEmptyState()
             }
@@ -238,43 +292,79 @@ export struct HomePage {
     }
   }
 
-  /** 空态：两个流都为空时才出现（一条流的通用空态） */
+  /** 关注流未登录引导卡片 */
+  @Builder
+  private buildLoginPrompt() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      LucideIcon({
+        icon: AppIcon.PERSON,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_LG,
+        color: this.getPalette().accentBackground
+      })
+      Text('登录后查看关注动态')
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPalette().textPrimary)
+      Text('关注同频的好友与活跃邻居，即时获取 TA 们的最新瞬间与生活记录。')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor(this.getPalette().textSecondary)
+        .textAlign(TextAlign.Center)
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      Button('立即登录')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor(this.getPalette().accentText)
+        .backgroundColor(this.getPalette().accentBackground)
+        .borderRadius(DesignConstants.RADIUS.MD)
+        .height(36)
+        .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
+        .onClick(() => AppRouter.push(PageNames.LOGIN))
+    }
+    .width('100%')
+    .padding({ top: DesignConstants.SPACING.XXL })
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  /** 空态：分段感知友好文案 */
   @Builder
   private buildEmptyState() {
-    // 同理：空态也用无卡内联形态，避免整页一张大卡悬在中间
     EmptyState({
       icon: AppIcon.NEARBY,
-      title: '还没有内容',
-      message: '去附近看看，或者发布第一条动态。',
+      title: this.activeTab === 1 ? '暂无关注动态' : '还没有内容',
+      message: this.activeTab === 1 ? '去「为你推荐」发现更多有趣的人，或去附近看看身边正在发生什么。' : '去附近看看，或者发布第一条动态。',
       bare: true,
-      actionLabel: '去附近看看',
-      onAction: () => AppRouter.push(PageNames.NEARBY)
+      actionLabel: this.activeTab === 1 ? '去看看推荐' : '去附近看看',
+      onAction: () => {
+        if (this.activeTab === 1) {
+          this.activeTab = 0;
+        } else {
+          AppRouter.push(PageNames.NEARBY);
+        }
+      }
     })
     .padding({ top: DesignConstants.SPACING.XXL })
   }
 
-  /**
-   * 一条流的动态列表（复用既有活动行原语，与「附近瞬间」行样式一致；无分组小标题）
-   *
-   * 用 List 而不是 Scroll+Column：Refresh 下拉时容器高度会随指示器区域变化，
-   * Scroll 包裹动态 ForEach 在高度连续变化下会重排失稳（端上实测出现过行错位/文字残影），
-   * List 自带子项布局与复用，刷新/高度变化时行位置稳定。
-   */
+  /** 动态列表：全面采用高质感富媒体社交卡片（MomentFeedCard） */
   @Builder
   private buildFeed() {
-    // 行间距由活动行自身的上下 padding 承担（与原 Column 布局一致，避免 List 再叠 space 导致节奏变松）
-    // edgeEffect(EdgeEffect.None)：禁用 List 自身弹簧，由外层 Refresh 统一托管弹性，杜绝手势双重弹性冲突
-    List() {
-      ForEach(this.homeActivityRows(), (moment: MomentItem, index: number) => {
+    List({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP }) {
+      ForEach(this.currentTabMoments(), (moment: MomentItem) => {
         ListItem() {
-          this.buildActivityRow(moment, index)
+          MomentFeedCard({
+            moment: moment,
+            variant: 'default',
+            showTags: true,
+            showTime: true,
+            textMaxLines: 3,
+            onOpenDetail: (m: MomentItem) => this.openMomentDetail(m)
+          })
         }
       }, (moment: MomentItem) => moment.moment_id)
     }
     .width('100%')
     .height('100%')
     .edgeEffect(EdgeEffect.None)
-    .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
+    .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XL })
     .scrollBar(BarState.Off)
   }
 
@@ -408,88 +498,6 @@ export struct HomePage {
    */
   private displayedMoments(): MomentItem[] {
     return this.cachedDisplayedMoments;
-  }
-
-  private homeActivityRows(): MomentItem[] {
-    return this.displayedMoments();
-  }
-
-  // 活动行配色轮换（对齐前端 ActivityRow ICONS/COLORS/BGS 四档循环）：
-  // [warning+咖啡, accent+音乐, marker-group+人群, danger+星标]，淡底全部走 token。
-  private activityAccent(index: number): string {
-    const accents: string[] = [
-      this.getPalette().warning,
-      this.getPalette().accentBackground,
-      this.getPalette().mapGroup,
-      this.getPalette().error
-    ];
-    return accents[index % 4];
-  }
-
-  private activitySoftBg(index: number): string {
-    const bgs: string[] = [
-      this.getPalette().warningSoft,
-      this.getPalette().accentMuted,
-      AppThemeVisuals.withAlpha(this.getPalette().mapGroup, 0.12),
-      this.getPalette().dangerSoft
-    ];
-    return bgs[index % 4];
-  }
-
-  private activityIcon(index: number): AppIcon {
-    const icons: AppIcon[] = [AppIcon.COFFEE, AppIcon.MUSIC, AppIcon.GROUP, AppIcon.STAR];
-    return icons[index % 4];
-  }
-
-  @Builder
-  private buildActivityRow(moment: MomentItem, index: number) {
-    Pressable({ onPress: () => this.openMomentDetail(moment) }) {
-      Row({ space: DesignConstants.SPACING.MD }) {
-        Column() {
-          LucideIcon({
-            icon: this.activityIcon(index),
-            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-            color: this.activityAccent(index)
-          })
-        }
-        // 对齐前端 ActivityRow size-8.5(34px) 图标圆底
-        .width(DesignConstants.COMPONENT.ACTIVITY_ICON_TILE_SIZE)
-        .height(DesignConstants.COMPONENT.ACTIVITY_ICON_TILE_SIZE)
-        .borderRadius(DesignConstants.RADIUS.SM)
-        .backgroundColor(this.activitySoftBg(index))
-        .justifyContent(FlexAlign.Center)
-
-        Column({ space: DesignConstants.SPACING.XS }) {
-          Text(moment.description || '分享了一条动态')
-            .fontSize(DesignConstants.FONT.SIZE.SM) // 对齐前端 ActivityRow text-sm=12
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-            .fontColor(this.getPalette().textPrimary)
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(moment.location?.location_name ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.XS) // 对齐前端 text-xs=11
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-            .fontColor(this.getPalette().textSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .margin({ top: 1 })
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        LucideIcon({
-          icon: AppIcon.ARROW_RIGHT,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-          paletteRole: 'textSecondary'
-        })
-          // 标题折行时（行高对齐前端 17 后更易两行）文字与 chevron 会贴在一起，
-          // 补一个左间距把两者分开
-          .margin({ left: DesignConstants.SPACING.SM2 })
-      }
-      .width('100%')
-      // 白卡容器内行：px-3 py-2.5（对齐前端 ActivityRow ListItem px-4 py-3 扣除容器 p-1.5）
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-    }
   }
 }
 

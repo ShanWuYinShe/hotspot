@@ -3,7 +3,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
-	import ActivityRow from '@/components/home/ActivityRow.svelte';
+	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import type { MomentItem } from '@/api/types';
@@ -175,9 +175,9 @@
 				<TrendingUp class="size-3.5 text-accent-default" strokeWidth={1.75} />
 				<h2 class="eyebrow">热门动态</h2>
 			</div>
-			<ListContainer class="mt-3 divide-y divide-border-subtle/30">
-				{#each hotMoments as m, i (m.moment_id)}
-					<ActivityRow moment={m} index={i} onClick={() => onOpenMoment(m.moment_id)} />
+			<ListContainer class="mt-3">
+				{#each hotMoments as m (m.moment_id)}
+					<HomeFeedItem moment={m} showDistance={false} onClick={() => onOpenMoment(m.moment_id)} />
 				{/each}
 			</ListContainer>
 		</section>
