@@ -42,8 +42,8 @@ HotSpot 采用「**同一用户在同一设备上只有一个活跃 session**」
 - 客户端**不得**自造或预测 device_id（App 端虽本地生成，但一经生成即稳定，禁止为绕过驱逐而轮换）
 
 **驱逐规则**：
-- `signin` / `register` / `guest` / `reset_password`（自动登录）成功时，若 `(user_id, device_id)` 已有活跃 session，服务端立即将旧 session 的 access_token + refresh_token 写入黑名单，并向旧 session 的在线 WebSocket 连接推送 `SessionRevoked` 事件（见 `api_spec_websocket.md`），新 session 取而代之
-- 驱逐写入黑名单**立即生效**，refresh 的 30 秒宽限期**不覆盖显式驱逐**（见 `refresh_token` 的「驱逐优先于宽限」）
+- `signin` / `register` / `guest` / `reset_password`（自动登录）成功时，若 `(user_id, device_id)` 已有活跃 session，服务端立即撤销旧 session（access_token + refresh_token 立即失效），并向旧 session 的在线 WebSocket 连接推送 `SessionRevoked` 事件（见 `api_spec_websocket.md`），新 session 取而代之
+- 驱逐撤销**立即生效**，refresh 的 30 秒宽限期**不覆盖显式驱逐**（见 `refresh_token` 的「驱逐优先于宽限」）
 
 **跨设备共存**：用户可在多个设备（手机、平板、Web）同时登录，各自 `device_id` 不同、互不驱逐。`/api/v1/auth/fetch_sessions` 返回所有活跃设备的 session 列表。
 
@@ -63,9 +63,9 @@ HotSpot 采用「**同一用户在同一设备上只有一个活跃 session**」
 // App：access_token/refresh_token 出现在 body，客户端负责安全存储
 // 
 // JWT 设计原则：
-// - JWT (access_token) 中只存储不可变信息：user_id
+// - JWT (access_token) 中只存储不可变信息：user_id 与 session_id
 // - 可变信息（nickname、头像等）应通过 /api/v1/users/account 获取
-// - Token 失效通过黑名单机制实现（登出/撤销时写入黑名单，直至过期）
+// - Token 失效通过会话撤销实现（登出/撤销/驱逐后该 session 立即失效）
 
 // 判别字段：client_type 标明投递形态，客户端按类型分支解析（app 取 token 字段，web 取 Cookie）
 interface AuthTokenPairApp {
@@ -362,11 +362,9 @@ interface SigninRequest {
 
 **Response**: `ApiResponse<AuthTokenPair>`
 
-**单设备单会话驱逐**：登录成功时，服务端查找 `(user_id, device_id)` 已有的活跃 session，若存在则立即将其 access_token + refresh_token 写入黑名单（沿用 `change_password` 机制），并向被驱逐设备的在线 WebSocket 连接推送 `SessionRevoked` 事件（见 `api_spec_websocket.md`）。新 session 取代旧 session。
+**单设备单会话驱逐**：登录成功时，服务端查找 `(user_id, device_id)` 已有的活跃 session，若存在则立即撤销该 session（沿用 `change_password` 的会话撤销机制），并向被驱逐设备的在线 WebSocket 连接推送 `SessionRevoked` 事件（见 `api_spec_websocket.md`）。新 session 取代旧 session。
 
-**安全说明**：用户不存在和密码错误统一返回 `10100`（认证失败），不区分具体原因，防止账号枚举攻击。
-
-**错误码**: `10100`
+**安全说明**：用户不存在和密码错误统一返回 `10100`（认证失败，隐含码），不区分具体原因，防止账号枚举攻击。
 
 ---
 
@@ -409,7 +407,7 @@ interface GuestRequest {
 - 设计目的：解决多标签页/多并发请求同时触发刷新的竞态问题
 - 客户端侧建议：使用刷新锁（mutex），同一时刻仅允许一个刷新请求执行
 
-**驱逐优先于宽限（契约级）**：宽限期仅容忍"并发刷新竞态"。若旧 session 是被「单设备单会话驱逐」显式写入黑名单的（如同设备重新登录），则黑名单立即生效，**30 秒宽限不覆盖显式驱逐**——旧 session 的任何请求（含宽限期内 refresh）立即失败为 `10100`。
+**驱逐优先于宽限（契约级）**：宽限期仅容忍"并发刷新竞态"。若旧 session 是被「单设备单会话驱逐」显式撤销的（如同设备重新登录），则该撤销立即生效，**30 秒宽限不覆盖显式驱逐**——旧 session 的任何请求（含宽限期内 refresh）立即失败为 `10100`。
 
 **client_type 约束**（服务端按 `refresh_token` 值是否非空判定）：
 - `client_type='web'`：`refresh_token` 值必须为空——推荐缺省该键，显式传 `null` 亦可接受；传非空字符串则请求失败（`10000`）
@@ -425,8 +423,6 @@ interface RefreshTokenRequest {
 ```
 
 **Response**: `ApiResponse<AuthTokenPair>`
-
-**错误码**: `10100`
 
 ---
 
@@ -462,7 +458,7 @@ interface ForgotPasswordRequest {
 
 **安全说明**：
 - 重置密码成功后，服务端自动吊销该账号所有现有会话（与 `change_password` 一致）
-- 所有被吊销会话的 token 写入黑名单
+- 所有被吊销的会话立即失效（服务端校验 session 状态）
 - 被吊销设备的 WebSocket 连接会收到 `SessionRevoked`（`reason='password_changed'`，与 `change_password` 一致，见 `api_spec_websocket.md`）后被服务端主动断开
 - 重置成功后自动登录：按 `(user_id, device_id)` 建立新会话；若该设备已有活跃会话则立即驱逐（与 `signin` 的驱逐规则一致）
 
@@ -888,7 +884,7 @@ interface PublicOpenGroupDoorRequest {
 interface FetchGroupAnnouncementsRequest {
   group_id: string;
 }
-// 返回条数由 AppConfig.response_defaults.group_announcements_count 控制
+// 返回条数由 AppConfig.response_defaults.group_announcements_count 控制（默认 10，硬上限 50）
 ```
 
 **Response**: `ApiResponse<GroupAnnouncementList>`

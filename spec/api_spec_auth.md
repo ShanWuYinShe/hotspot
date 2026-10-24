@@ -42,7 +42,7 @@ Token 投递策略（`AuthTokenPair`、Web Cookie / App Header）与单设备单
 
 - **节点**: /api/v1（必须有效 Token）
 
-**失效规则**：登出会将当前 access_token 与 refresh_token 写入黑名单，直至过期。
+**失效规则**：登出会撤销当前会话（session），该会话的 access_token 与 refresh_token 立即失效。
 
 **Request**: `SignoutRequest`
 ```typescript
@@ -108,7 +108,7 @@ interface ChangePasswordRequest {
 
 **安全说明**：
 - 修改密码成功后，服务端自动吊销当前会话之外的所有其他活跃会话
-- 所有被吊销会话的 token 写入黑名单
+- 所有被吊销的会话立即失效（服务端校验 session 状态）
 - 被吊销设备的 WebSocket 连接收到 `SessionRevoked`（`reason='password_changed'`）事件后被服务端主动断开（见 `api_spec_websocket.md`）
 
 **错误码**: `10401`（旧密码错误）
@@ -120,6 +120,7 @@ interface ChangePasswordRequest {
 获取活跃会话列表。
 
 - **节点**: /api/v1
+- **排序**: 当前会话置顶，其余按 `last_active_at` 倒序，`session_id ASC` 作为稳定 tie-breaker；非分页列表（返回全部活跃会话）；一致性级别为强一致
 
 **Request**: `FetchSessionsRequest`
 ```typescript
@@ -158,7 +159,7 @@ interface SessionItem {
 - **节点**: /api/v1
 
 **安全说明**：
-- 撤销操作会将对应会话的 token 写入黑名单，直至过期
+- 撤销操作使对应会话立即失效（会话撤销，非黑名单）
 - 不允许撤销当前会话（使用 `signout` 代替），返回 `10400`
 - 被撤销会话关联的在线 WebSocket 连接会收到 `SessionRevoked` 事件后断开
 
@@ -183,7 +184,7 @@ interface RevokeSessionRequest {
 
 **安全说明**：
 - 当前会话（发起请求的会话）不会被撤销
-- 所有被撤销会话的 token 都会写入黑名单
+- 所有被撤销的会话立即失效
 - 操作不可逆，被撤销的设备需要重新登录；每个被撤销会话的在线连接收到 `SessionRevoked` 后断开
 
 **Request**: `RevokeOtherSessionsRequest`

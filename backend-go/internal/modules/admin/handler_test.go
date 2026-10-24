@@ -1383,6 +1383,45 @@ func TestUpdateAppConfigRejectsEmptySections(t *testing.T) {
 	}
 }
 
+// TestUpdateAppConfigAuthSection 防回归（spec api_spec_admin.md AppConfig.auth）：
+// 认证安全参数 section 可读可写、默认值正确、非正整数被拒。
+func TestUpdateAppConfigAuthSection(t *testing.T) {
+	handler, _ := newTestHandlerWithStore()
+
+	getReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/get", strings.NewReader(`{}`)), "admin", true)
+	getRR := httptest.NewRecorder()
+	handler.GetAppConfig(getRR, getReq)
+	getResp := decodeResponse[AdminAppConfig](t, getRR)
+	if getResp.Code != 0 || getResp.Data == nil {
+		t.Fatalf("unexpected get response: %#v", getResp)
+	}
+	if getResp.Data.Auth.VerificationCodeTTLMinutes != 10 || getResp.Data.Auth.LoginLockoutThreshold != 5 || getResp.Data.Auth.LoginLockoutMinutes != 15 {
+		t.Fatalf("unexpected default auth config: %+v", getResp.Data.Auth)
+	}
+
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update", strings.NewReader(`{"auth":{"verification_code_ttl_minutes":5,"login_lockout_threshold":3,"login_lockout_minutes":30}}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateAppConfig(updateRR, updateReq)
+	if resp := decodeResponse[struct{}](t, updateRR); resp.Code != 0 {
+		t.Fatalf("unexpected update response: %#v", resp)
+	}
+
+	getAgainRR := httptest.NewRecorder()
+	getAgainReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/get", strings.NewReader(`{}`)), "admin", true)
+	handler.GetAppConfig(getAgainRR, getAgainReq)
+	getAgain := decodeResponse[AdminAppConfig](t, getAgainRR)
+	if getAgain.Data == nil || getAgain.Data.Auth.VerificationCodeTTLMinutes != 5 || getAgain.Data.Auth.LoginLockoutThreshold != 3 || getAgain.Data.Auth.LoginLockoutMinutes != 30 {
+		t.Fatalf("auth config not persisted: %#v", getAgain.Data)
+	}
+
+	badReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update", strings.NewReader(`{"auth":{"login_lockout_threshold":0}}`)), "admin", true)
+	badRR := httptest.NewRecorder()
+	handler.UpdateAppConfig(badRR, badReq)
+	if resp := decodeResponse[struct{}](t, badRR); resp.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("expected 10000 for non-positive auth value, got %#v", resp)
+	}
+}
+
 func TestUpdateAppConfigRejectsInvalidValue(t *testing.T) {
 	handler := newTestHandler()
 	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update", strings.NewReader(`{"upload":{"image_max_size":0}}`)), "admin", true)

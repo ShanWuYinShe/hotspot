@@ -327,6 +327,11 @@ func defaultConfig(runtime config.Config) AppConfig {
 			CommentTopRepliesCount:   3,
 			UserProfileMomentsCount:  6,
 		},
+		Auth: AuthConfig{
+			VerificationCodeTTLMinutes: DefaultVerificationCodeTTLMinutes,
+			LoginLockoutThreshold:      DefaultLoginLockoutThreshold,
+			LoginLockoutMinutes:        DefaultLoginLockoutMinutes,
+		},
 	}
 }
 

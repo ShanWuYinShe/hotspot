@@ -1409,6 +1409,8 @@ export interface UploadConfig {
 	video_max_size: number;
 	audio_max_size: number;
 	file_max_size: number;
+	avatar_max_size: number;
+	chat_file_max_size: number;
 	allowed_image_types: string[];
 	allowed_video_types: string[];
 }
@@ -1435,17 +1437,25 @@ export interface RateLimitConfig {
 	reports_create_per_hour: number;
 	upload_presign_per_hour: number;
 	ws_subscribe_per_second: number;
+	ws_handshake_per_minute: number;
 	admin_read_per_minute: number;
 	admin_write_per_minute: number;
 }
 
 export interface ResponseDefaults {
 	search_suggest_count: number;
+	hot_moments_count: number;
 	chat_recent_messages_count: number;
 	group_announcements_count: number;
 	system_announcements_count: number;
 	comment_top_replies_count: number;
 	user_profile_moments_count: number;
+}
+
+export interface AuthConfig {
+	verification_code_ttl_minutes: number;
+	login_lockout_threshold: number;
+	login_lockout_minutes: number;
 }
 
 export interface AppConfig {
@@ -1456,6 +1466,7 @@ export interface AppConfig {
 	defaults: ContentDefaults;
 	rate_limits: RateLimitConfig;
 	response_defaults: ResponseDefaults;
+	auth: AuthConfig;
 	updated_at: string | null;
 	updated_by_user_id: string | null;
 }
@@ -1470,6 +1481,7 @@ export interface UpdateAppConfigRequest {
 	} | null;
 	rate_limits?: Partial<RateLimitConfig> | null;
 	response_defaults?: Partial<ResponseDefaults> | null;
+	auth?: Partial<AuthConfig> | null;
 	features?: Partial<FeatureSwitches> | null;
 	limits?: Partial<AppLimits> | null;
 	contact?: Partial<ContactInfo> | null;

@@ -291,7 +291,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	// 公告列表（审查 P2-2/P2-3）：
 	// - created_by 昵称经 users 表 LEFT JOIN 解析（此前占位填裸 user_id，
 	//   公告列表直接展示内部 ID，与申请/邀请/封禁列表口径漂移）；
-	// - 尾部 LIMIT 50 为硬上限（与 announcementsListHardCap 常量同步维护；
+	// - 尾部 LIMIT $2 由 Repository 传入（service 取 AppConfig 默认条数，
+	//   repo 侧裁剪到 announcementsListHardCap 硬上限）；
 	//   该列表挂匿名端点 /public/v1/groups/announcements/fetch，此前无界）。
 	//   置顶优先的排序不变，截断只影响超长尾部。
 	// 每群公告数量上限（AppConfig 决策）本轮不加，登记待后续。
@@ -304,7 +305,7 @@ FROM group_announcements a
 LEFT JOIN users u ON u.user_id = a.created_by_user_id
 WHERE a.group_id = $1 AND a.deleted_at IS NULL
 ORDER BY a.is_pinned DESC, a.created_at DESC, a.announcement_id DESC
-LIMIT 50`
+LIMIT $2`
 
 	// GetAnnouncement 直查（审查 P2-2）：UpdateAnnouncement 更新后取回完整
 	// 对象用，归属双键（IDOR 防护与 update/delete 同口径），昵称同 List 解析。

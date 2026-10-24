@@ -99,7 +99,7 @@ func (r *groupErrorRepo) JoinGroup(context.Context, string, string, *string) (En
 func (r *groupErrorRepo) CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
 	return GroupAnnouncementItem{}, r.createAnnouncementErr
 }
-func (r *groupErrorRepo) ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error) {
+func (r *groupErrorRepo) ListAnnouncements(context.Context, string, int) ([]GroupAnnouncementItem, error) {
 	return r.announceItems, r.listAnnouncementsErr
 }
 func (r *groupErrorRepo) GetAnnouncement(_ context.Context, _, announcementID string) (GroupAnnouncementItem, bool, error) {

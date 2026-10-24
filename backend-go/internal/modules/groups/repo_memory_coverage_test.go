@@ -25,11 +25,11 @@ func TestMemoryAnnouncementAndApplicationLifecycle(t *testing.T) {
 	if err != nil || ann.AnnouncementID == "" {
 		t.Fatalf("create announcement: %#v err=%v", ann, err)
 	}
-	anns, err := repo.ListAnnouncements(ctx, created.Group.GroupID)
+	anns, err := repo.ListAnnouncements(ctx, created.Group.GroupID, 10)
 	if err != nil {
 		t.Fatalf("list announcements: %#v err=%v", anns, err)
 	}
-	if _, err := repo.ListAnnouncements(ctx, "missing"); err != ErrGroupNotFound {
+	if _, err := repo.ListAnnouncements(ctx, "missing", 10); err != ErrGroupNotFound {
 		t.Fatalf("list announcements missing group: expected not found, got %v", err)
 	}
 	title := "更新"

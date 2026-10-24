@@ -3,6 +3,7 @@ package groups
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"time"
 )
@@ -30,17 +31,37 @@ func (r *InMemoryRepository) CreateAnnouncement(_ context.Context, creatorID str
 	return item, nil
 }
 
-func (r *InMemoryRepository) ListAnnouncements(_ context.Context, groupID string) ([]GroupAnnouncementItem, error) {
+func (r *InMemoryRepository) ListAnnouncements(_ context.Context, groupID string, limit int) ([]GroupAnnouncementItem, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if _, ok := r.groups[groupID]; !ok {
 		return nil, ErrGroupNotFound
 	}
+	// 与 PG 同序（is_pinned DESC, created_at DESC, announcement_id DESC）并按
+	// AppConfig 条数截断，避免内存实现返回无序全量列表造成测试/行为漂移。
 	items := make([]GroupAnnouncementItem, 0)
 	for _, item := range r.announcements {
 		if item.GroupID == groupID {
 			items = append(items, item)
 		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].IsPinned != items[j].IsPinned {
+			return items[i].IsPinned
+		}
+		if items[i].CreatedAt != items[j].CreatedAt {
+			return items[i].CreatedAt > items[j].CreatedAt
+		}
+		return items[i].AnnouncementID > items[j].AnnouncementID
+	})
+	if limit <= 0 {
+		limit = announcementsListDefaultCount
+	}
+	if limit > announcementsListHardCap {
+		limit = announcementsListHardCap
+	}
+	if len(items) > limit {
+		items = items[:limit]
 	}
 	return items, nil
 }

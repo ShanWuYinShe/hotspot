@@ -28,7 +28,7 @@ type Repository interface {
 	// GetGroupPasswordHash 返回群密码 bcrypt 哈希（无密码群返回 nil, nil）。
 	GetGroupPasswordHash(context.Context, string) (*string, error)
 	CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error)
-	ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error)
+	ListAnnouncements(context.Context, string, int) ([]GroupAnnouncementItem, error) // limit<=0 取默认 10，>50 截断硬上限
 	// GetAnnouncement 按归属双键（group_id + announcement_id）直查单条公告。
 	// UpdateAnnouncement 更新后取回完整对象用它，替代全量 List 再线性扫描
 	// 找回单条（审查 P2-2）。不存在/跨群归属时 found=false。

@@ -433,7 +433,7 @@ func TestPostgresIT_CreateListUpdateDeleteAnnouncement(t *testing.T) {
 			t.Fatal("expected non-empty announcement id")
 		}
 
-		items, err := repo.ListAnnouncements(ctx, groupID)
+		items, err := repo.ListAnnouncements(ctx, groupID, 50)
 		if err != nil {
 			t.Fatalf("ListAnnouncements: %v", err)
 		}
@@ -454,7 +454,7 @@ func TestPostgresIT_CreateListUpdateDeleteAnnouncement(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("UpdateAnnouncement: %v", err)
 		}
-		items, err = repo.ListAnnouncements(ctx, groupID)
+		items, err = repo.ListAnnouncements(ctx, groupID, 50)
 		if err != nil {
 			t.Fatalf("ListAnnouncements (post update): %v", err)
 		}
@@ -468,7 +468,7 @@ func TestPostgresIT_CreateListUpdateDeleteAnnouncement(t *testing.T) {
 		if err := repo.DeleteAnnouncement(ctx, groupID, created.AnnouncementID); err != nil {
 			t.Fatalf("DeleteAnnouncement: %v", err)
 		}
-		items, err = repo.ListAnnouncements(ctx, groupID)
+		items, err = repo.ListAnnouncements(ctx, groupID, 50)
 		if err != nil {
 			t.Fatalf("ListAnnouncements (post delete): %v", err)
 		}

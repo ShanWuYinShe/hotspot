@@ -228,7 +228,7 @@ interface MessageMedia extends MediaAsset {
 interface UserInfo {
   user_id: string;
   nickname: string;
-  avatar_url: string | null;  // null = 未设置头像（客户端使用默认头像）
+  avatar_url: string | null;  // null = 未设置头像（客户端使用默认头像）；否则为可直接展示的 URL（头像类为 /public/v1/media/avatars/<file_id> 代理相对路径，见 api_spec_media.md「媒体读取」）
 }
 ```
 

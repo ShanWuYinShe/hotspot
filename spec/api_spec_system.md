@@ -51,7 +51,7 @@ interface BootstrapData {
   meta?: ApiVersionMeta;                   // 同 /public/v1/system/meta 响应
   client_config?: ClientConfig;            // 同 /public/v1/system/client_config 响应
 
-  // === 登录态字段（未命中时必填且恒非 null；命中时同样省略） ===
+  // === 登录态字段（未命中时必填且恒非 null；命中时同样恒返回，不省略） ===
   profile?: AccountData;                   // 同 users/account（AccountData 定义于 api_spec_user.md）
   unread_summary?: UnreadSummary;          // 未读摘要（聚合私聊/群聊/通知）
 }

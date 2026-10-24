@@ -16,7 +16,12 @@ import (
 // 再放大读取。50 覆盖置顶+常规公告的正常规模；置顶优先排序下截断只影响
 // 超长尾部。SQL 侧以字面量写入 queryListGroupAnnouncements 尾部（LIMIT 不能
 // 参数化），两处同步维护。每群创建数量上限需 AppConfig 决策，本轮登记不加。
-const announcementsListHardCap = 50
+const (
+	announcementsListHardCap = 50
+	// announcementsListDefaultCount 未显式配置时的默认条数（与
+	// AppConfig.ResponseDefaults.GroupAnnouncementsCount 默认值一致）。
+	announcementsListDefaultCount = 10
+)
 
 func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, creatorID string, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
@@ -46,14 +51,20 @@ func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, creatorID s
 	}, nil
 }
 
-func (r *PostgresRepository) ListAnnouncements(ctx context.Context, groupID string) ([]GroupAnnouncementItem, error) {
+func (r *PostgresRepository) ListAnnouncements(ctx context.Context, groupID string, limit int) ([]GroupAnnouncementItem, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}
-	// 硬上限见 queryListGroupAnnouncements 尾部 LIMIT（审查 P2-2，与
-	// announcementsListHardCap 常量同步维护）。
-	rows, err := queryable.Query(ctx, queryListGroupAnnouncements, groupID)
+	// 条数来自 AppConfig.ResponseDefaults.GroupAnnouncementsCount（service 传入），
+	// 这里做兜底与硬上限裁剪（审查 P2-2：匿名端点必须有界）。
+	if limit <= 0 {
+		limit = announcementsListDefaultCount
+	}
+	if limit > announcementsListHardCap {
+		limit = announcementsListHardCap
+	}
+	rows, err := queryable.Query(ctx, queryListGroupAnnouncements, groupID, limit)
 	if err != nil {
 		return nil, err
 	}

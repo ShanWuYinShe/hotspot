@@ -62,6 +62,12 @@ type AdminResponseDefaults struct {
 	UserProfileMomentsCount  int `json:"user_profile_moments_count"`
 }
 
+type AdminAuthConfig struct {
+	VerificationCodeTTLMinutes int `json:"verification_code_ttl_minutes"`
+	LoginLockoutThreshold      int `json:"login_lockout_threshold"`
+	LoginLockoutMinutes        int `json:"login_lockout_minutes"`
+}
+
 type AdminAppConfig struct {
 	Features         FeatureSwitches       `json:"features"`
 	Limits           AppLimits             `json:"limits"`
@@ -70,6 +76,7 @@ type AdminAppConfig struct {
 	Defaults         ContentDefaults       `json:"defaults"`
 	RateLimits       AdminRateLimitConfig  `json:"rate_limits"`
 	ResponseDefaults AdminResponseDefaults `json:"response_defaults"`
+	Auth             AdminAuthConfig       `json:"auth"`
 	UpdatedAt        *string               `json:"updated_at"`
 	UpdatedByUserID  *string               `json:"updated_by_user_id"`
 }
@@ -79,6 +86,7 @@ type UpdateAppConfigRequest struct {
 	Defaults         *UpdateDefaultsPayload   `json:"defaults,omitempty"`
 	RateLimits       *PartialRateLimitConfig  `json:"rate_limits,omitempty"`
 	ResponseDefaults *PartialResponseDefaults `json:"response_defaults,omitempty"`
+	Auth             *PartialAuthConfig       `json:"auth,omitempty"`
 	Features         *PartialFeatureSwitches  `json:"features,omitempty"`
 	Limits           *PartialAppLimits        `json:"limits,omitempty"`
 	Contact          *PartialContactInfo      `json:"contact,omitempty"`
@@ -115,6 +123,13 @@ type PartialUploadConfig struct {
 	ChatFileMaxSize   *int     `json:"chat_file_max_size,omitempty"`
 	AllowedImageTypes []string `json:"allowed_image_types,omitempty"`
 	AllowedVideoTypes []string `json:"allowed_video_types,omitempty"`
+}
+
+// PartialAuthConfig 认证安全参数的部分更新（spec api_spec_admin.md「应用配置子类型定义」）。
+type PartialAuthConfig struct {
+	VerificationCodeTTLMinutes *int `json:"verification_code_ttl_minutes,omitempty"`
+	LoginLockoutThreshold      *int `json:"login_lockout_threshold,omitempty"`
+	LoginLockoutMinutes        *int `json:"login_lockout_minutes,omitempty"`
 }
 
 type PartialLocation struct {

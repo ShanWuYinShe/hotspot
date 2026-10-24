@@ -82,6 +82,7 @@ interface SearchMomentsRequest {
 // - keyword/tag 均缺省且显式传 sort_by='popular' 时进入「热门模式」（无输入条件的热门瞬间，
 //   承接发现页首屏，原 feed/trending 的能力归宿）
 // - 热门模式下 keyword/tag 必须缺省（与输入条件互斥，同传视为参数冲突 10000）
+// - 热门模式未显式传 pagination.limit 时默认条数 = AppConfig.response_defaults.hot_moments_count（默认 20，服务端上限 100）
 // 搜索为全局匹配（不受位置过滤）；附近发现请使用 moments/fetch_nearby
 ```
 

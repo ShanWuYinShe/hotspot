@@ -250,16 +250,55 @@ privacy_level）在早前批次已修复，补记于此。
 `login_lockout_minutes`，`Effective()` 对零值回退迁移前常量 10 分钟 / 5 次 /
 15 分钟，存量配置行为不变）；auth 模块每次登录前把阈值同步到 tracker（内存与
 Redis 实现都按配置生效、失败计数衰减窗口随锁期变化），验证码 TTL 也从配置读取。
-**遗留依赖**：`spec/api_spec_admin.md` 的 `app_config/update` 未定义 auth section，
-按「spec 为契约唯一来源」纪律本轮不改管理端接口——后端已支持 DB AppConfig 读取，
-后续在 spec 增补该 section 后接管理页即可（需产品确认默认值与可调范围）。
+**遗留依赖（已在「P0 契约缺口修复」批次解决）**：`spec/api_spec_admin.md` 的
+`app_config/update` 原先未定义 auth section；用户授权改契约后已补入 spec 并接通
+管理端 API（见下节）。
 
 **遗留观察项**（不紧急，记录在案）：
 - 契约测试基建已就位，但仅 privatechats 接入；后续对 notify/groups/users 等高频
   漂移模块逐步补契约用例（优先覆盖分页/错误映射/状态流转三类）；
 - 双实现对比缺口示例：privatechats 内存实现无法复现「最近消息时间」排序（消息在
   privatemessages 模块，内存实现无跨模块存储），后续若引入共享内存后端可解决；
-- **未修的已知限制**（需产品/架构决策，非缺陷）：
-  1. auth 的验证码 TTL、登录锁定阈值已支持 AppConfig 读取，但管理后台入口依赖
-     spec 增补 auth section（见上）；
 - P2 剩余项（各域报告里未修的约定/架构类）与 OBS 项存档于 `.workwork/backend-review/`。
+
+
+## P0 契约缺口修复（2026-10-24，spec 审查落地）
+
+对 `spec/` 全量审查（23 文件 / 8871 行，含实现与 Web/Harmony 交叉核对）后，按用户授权
+同步修正契约与实现缺口；完整审查报告存档 `.workwork/spec-review/REPORT.md`。
+
+**契约修正（P0/P1/P2）**：
+- **bootstrap 缓存命中口径统一**：命中仅省略公共段 `meta`/`client_config`，私有段
+  `profile`/`unread_summary` 恒返回（base 与 system.md 三处矛盾说法收敛为与实现一致）；
+- **媒体读取契约补齐**：新增 `GET /public/v1/media/avatars/{file_id}`（匿名 302 代理）
+  与「媒体读取」章节；`*_url` 规则放宽为「绝对 URL 或 `/public/v1/...` 代理相对路径」，
+  与实现（avatar_url 存相对路径）及客户端解析方式对齐；补充 md5 = 32 位十六进制定义；
+- **Token 失效语义改写**：删除「黑名单机制」实现描述，统一为**会话撤销、立即生效**
+  （base/auth/public/authz 共 10+ 处）；JWT 载荷说明补 `session_id`；
+- **tie-breaker 规则放宽**：删除「方向必须与主序一致」强制句（与 chat/reaction/group/admin
+  等 7 个既有端点及实现冲突），改为「必须全序且游标谓词同序」；
+- **计数器一致性**：删除「异步累计（队列+定时刷新）」机制描述（实现为同步更新，机制
+  本不属契约），保留最终一致与客户端约束；
+- **Idempotency-Key 格式**：由强制 `{client_id}-{timestamp_ms}-{random}` / 57-63 字符
+  改为不透明 32-64 字符 + 推荐结构（服务端只校验长度与字符集；Web/Harmony 均把
+  client_id 截断到 24 字符，实际约 51 字符）；
+- **限流/配置字段补齐**：`ws_handshake_per_minute`（IP 握手限流）入 base 限流表与
+  `RateLimitConfig`；`avatar_max_size`/`chat_file_max_size` 入 `UploadConfig`；
+  `hot_moments_count` 入 `ResponseDefaults`；
+- **非 RPC GET 例外登记**：`/healthz`、`/public/v1/media/avatars/{file_id}`、
+  `/share/{code}`（爬虫 og 落地页，share.md 补说明）、`/metrics`；
+- **文档纪律清理**：5 处端点错误码重复列隐含码（10000/10100）移除；`auth/fetch_sessions`
+  补排序声明；CF IP 校验改为「部署拓扑保证」；WS 心跳改为固定值（30/10/90 秒）；
+  authz 中「黑名单」歧义改为「拉黑关系」。
+
+**实现对齐（配置缺口 + 空配置消费）**：
+- **admin `app_config` 新增 `auth` section**：可读可写（Patch），默认 10/5/15 分钟/次，
+  非正整数返回 10000；spec 已同步，管理页以只读 JSON 展示；
+- **`response_defaults.group_announcements_count` 真正生效**：groups 公告列表条数改由该
+  配置驱动（默认 10，repo 硬上限 50），内存实现同步排序（is_pinned/created_at/id）；
+- **`response_defaults.hot_moments_count` 真正生效**：`moments/search` 热门模式未显式
+  传 limit 时默认取该配置（默认 20，上限 100）；
+- 补单测：admin auth section 读写/校验、groups 公告条数、moments 热门条数。
+
+**验证**：`gofmt` / `go vet` / `go test -short ./...`；`./scripts/verify-backend-ci.sh
+--with-db`；前端 `bun run check`（svelte-check + eslint + 主题/跨端一致性检查）全绿。

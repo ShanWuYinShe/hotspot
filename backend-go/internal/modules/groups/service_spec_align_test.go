@@ -93,10 +93,16 @@ func (p actorProviderStub) GetActorInfo(context.Context, string) (actor.Info, er
 }
 
 // appConfigStub 模拟 app config 源(用于 applicationExpired 的 TTL 覆盖)。
-type appConfigStub struct{ ttlHours int }
+type appConfigStub struct {
+	ttlHours          int
+	announcementCount int
+}
 
 func (s appConfigStub) Get(context.Context) appconfig.AppConfig {
-	return appconfig.AppConfig{Limits: appconfig.Limits{GroupApplicationTTLHours: s.ttlHours}}
+	return appconfig.AppConfig{
+		Limits:           appconfig.Limits{GroupApplicationTTLHours: s.ttlHours},
+		ResponseDefaults: appconfig.ResponseDefaults{GroupAnnouncementsCount: s.announcementCount},
+	}
 }
 
 // withTestHub 安装独立 hub,测试结束后恢复原默认 hub。

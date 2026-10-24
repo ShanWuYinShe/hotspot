@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"testing"
 
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -27,6 +28,7 @@ type stubMomentRepo struct {
 	unfavErr    error
 	searchRes   PaginatedMoments
 	searchErr   error
+	lastSearch  SearchMomentsRequest // Search 收到的请求（用例断言默认 limit 用）
 	favRes      PaginatedMoments
 	favListErr  error
 	incComment  error
@@ -47,7 +49,8 @@ func (r *stubMomentRepo) Get(_ context.Context, _ string) (MomentItem, bool, err
 	}
 	return r.getResult, r.getFound, r.getErr
 }
-func (r *stubMomentRepo) Search(_ context.Context, _ SearchMomentsRequest, _ string) (PaginatedMoments, error) {
+func (r *stubMomentRepo) Search(_ context.Context, req SearchMomentsRequest, _ string) (PaginatedMoments, error) {
+	r.lastSearch = req
 	return r.searchRes, r.searchErr
 }
 func (r *stubMomentRepo) Update(_ context.Context, _ string, _ UpdateMomentRequest) error {
@@ -660,4 +663,42 @@ func (s stubNearbyPublisher) PublishNearbyNewMomentPreChecked(ctx context.Contex
 		s.onPublish(targetUserID)
 	}
 	return nil
+}
+
+// momentsAppConfigStub 可控 AppConfig 源（热门条数用例）。
+type momentsAppConfigStub struct{ cfg appconfig.AppConfig }
+
+func (s momentsAppConfigStub) Get(context.Context) appconfig.AppConfig { return s.cfg }
+
+// TestServiceSearchPopularDefaultsToConfiguredHotMomentsCount 防回归（P1-5）：
+// sort_by='popular' 未显式传 pagination.limit 时，默认条数取
+// AppConfig.response_defaults.hot_moments_count；显式 limit 不被覆盖。
+func TestServiceSearchPopularDefaultsToConfiguredHotMomentsCount(t *testing.T) {
+	repo := &stubMomentRepo{}
+	svc := NewServiceWithDepsAndImagesAndConfig(repo, nil, nil, nil, momentsAppConfigStub{cfg: appconfig.AppConfig{
+		ResponseDefaults: appconfig.ResponseDefaults{HotMomentsCount: 7},
+	}}, nil)
+
+	if _, err := svc.Search(context.Background(), SearchMomentsRequest{SortBy: "popular"}); err != nil {
+		t.Fatalf("search popular: %v", err)
+	}
+	if repo.lastSearch.Pagination == nil || repo.lastSearch.Pagination.Limit != 7 {
+		t.Fatalf("expected default limit 7 from AppConfig, got %+v", repo.lastSearch.Pagination)
+	}
+
+	// 显式 limit 优先，不被配置覆盖。
+	if _, err := svc.Search(context.Background(), SearchMomentsRequest{SortBy: "popular", Pagination: &types.PaginationParams{Limit: 3}}); err != nil {
+		t.Fatalf("search popular explicit limit: %v", err)
+	}
+	if repo.lastSearch.Pagination == nil || repo.lastSearch.Pagination.Limit != 3 {
+		t.Fatalf("explicit limit must win, got %+v", repo.lastSearch.Pagination)
+	}
+
+	// 非 popular 模式不注入默认值。
+	if _, err := svc.Search(context.Background(), SearchMomentsRequest{SortBy: "newest"}); err != nil {
+		t.Fatalf("search newest: %v", err)
+	}
+	if repo.lastSearch.Pagination != nil {
+		t.Fatalf("non-popular mode must not inject pagination, got %+v", repo.lastSearch.Pagination)
+	}
 }

@@ -51,7 +51,7 @@
 | `chat_audio` | audio/mpeg, audio/aac, audio/ogg | 20MB | 聊天语音 |
 | `chat_file` | 见下方黑名单约束 | 100MB | 聊天文件 |
 
-> **限制优先级（契约级）**：上表的大小上限与 MIME 白名单为契约硬上限/权威白名单。管理员经 `AppConfig.upload`（见 `api_spec_admin.md`）配置的四档全局值**只能收紧、不能放宽**——实际生效大小上限 = min(对应四档全局值, 上表该分类上限)；MIME 白名单不因平台配置而放宽。
+> **限制优先级（契约级）**：上表的大小上限与 MIME 白名单为契约硬上限/权威白名单。管理员经 `AppConfig.upload`（见 `api_spec_admin.md`）配置的大小上限**只能收紧、不能放宽**——实际生效大小上限 = min(AppConfig.upload 对应档位值, 上表该分类上限)。档位对应关系：`avatar`/`group_avatar` → `avatar_max_size`；`chat_file` → `chat_file_max_size`；其余分类按 image/video/audio/file 四档。MIME 白名单不因平台配置而放宽。
 
 ### chat_file 安全约束（黑名单）
 
@@ -85,7 +85,7 @@ interface PresignFileInput {
   file_size: number;
   mime_type: string;
   category: MediaCategory;
-  md5: string | null;   // 文件内容 MD5（可选，服务端用于校验完整性）
+  md5: string | null;   // 文件内容 MD5：32 位十六进制（大小写不敏感）；可选，服务端转发给对象存储做完整性校验
 }
 
 interface PresignUploadRequest {
@@ -107,7 +107,7 @@ interface PresignedUploads {
 }
 ```
 
-**参数校验**（不合法返回 10000）：category 非法、mime_type 与 category 不匹配、file_size 超限、file_name 为空或超长、md5 格式非法、files 为空数组。
+**参数校验**（不合法返回 10000，隐含码）：category 非法、mime_type 与 category 不匹配、file_size 超限、file_name 为空或超长、md5 非 32 位十六进制、files 为空数组。
 
 **原子语义**：任一文件校验失败则整批失败（不部分预签名）；每个文件独立获得 `upload_url`，客户端可并发直传。
 
@@ -153,3 +153,26 @@ interface CompletedUploads {
 **原子语义**：任一 `upload_id` 校验失败则整批失败，不部分完成。
 
 **幂等语义（自然去重键）**：`upload_id` 与 `file_id` 的映射在首次 complete 成功后持久化。重复传入已完成的 `upload_ids` 返回相同的 `file_id` 与元数据（等价成功），不报错。
+
+## 媒体读取（契约级）
+
+上传完成后，业务响应中的媒体 URL 按以下规则下发（客户端不拼接/构造存储地址）：
+
+| 资源 | 字段 | 形态 |
+|------|------|------|
+| 用户/群组头像 | `avatar_url` | 服务端代理相对路径 `/public/v1/media/avatars/<file_id>`（见下节）；按当前 API origin 拼接后加载 |
+| 其他媒体（瞬间图片、聊天文件等） | `url` / `thumbnail_url` / `cover_url` | 可直接访问的 URL（绝对 URL 或站点相对路径，规则见 `api_spec_base.md`「端点形态」） |
+
+- 头像 URL 稳定不变：更换头像后旧 `file_id` 由服务端回收，客户端无需本地缓存失效处理，重新拉取资料即可
+- 非头像媒体的读 URL 可能带时效签名；**客户端不得持久化签名 URL**，以业务响应最近一次下发的值为准
+- 更换存储域名/迁移存储不改变契约：客户端始终按响应下发的 URL 展示
+
+### GET /public/v1/media/avatars/{file_id}
+
+匿名头像代理端点（登记的非 RPC 例外，见 `api_spec_base.md`「端点形态」），供 `<img>` 等直接加载，避免头像 URL 暴露存储域名与签名参数。
+
+- **节点**: /public/v1（纯匿名，不解析 Token）
+- **方法**: GET（非 RPC，不使用 envelope）
+- **行为**: 校验 `file_id` 属于头像类（`avatar`/`group_avatar`）且已完成上传 → `302` 跳转到短时签名读 URL；不存在/未完成/非头像类 → `404`（不区分原因，不泄露文件存在性）
+- **缓存**: 302 响应可被浏览器/CDN 缓存；目标签名 URL 有效期 15 分钟，过期后重新请求本端点即可获得新签名
+- **错误处理**: 非 2xx/3xx 由客户端按图片加载失败处理；本端点不参与 RPC 错误码/envelope 语义

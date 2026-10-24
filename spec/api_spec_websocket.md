@@ -185,10 +185,10 @@ HTTP API 返回的数据可能与 WebSocket 推送的事件重复（resume 续�
 | Pong 超时 | `ping_timeout` | 客户端发送 `Ping` 后等待 `Pong` 的超时时间（秒） |
 | 服务端超时 | - | 服务端内部配置，3 倍心跳间隔未收到任何消息则断开连接 |
 
-**参考值**（实际以服务端配置为准）：
+**固定值**（契约级：客户端必须使用 `ConnectionEstablished.config` 下发值，禁止硬编码；服务端当前实现固定为下列值）：
 - `ping_interval`: 30 秒
 - `ping_timeout`: 10 秒
-- 服务端超时：90 秒
+- 服务端超时：3 倍心跳间隔（90 秒）未收到任何消息则断开
 
 ### Ping/Pong 事件格式
 

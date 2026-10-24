@@ -11,7 +11,7 @@
 
 	// 系统配置：按 section Patch 更新（spec api_spec_admin.md）。
 	// UI 覆盖客户端可见三项（features/limits/contact，构成 ClientConfig 投影）；
-	// 仅服务端的 upload/defaults/rate_limits/response_defaults 以只读 JSON 展示（写入仍可经 API 扩展）。
+	// 仅服务端的 upload/defaults/rate_limits/response_defaults/auth 以只读 JSON 展示（写入仍可经 API 扩展）。
 
 	const canRead = $derived(hasAdminPermission('admin.app_config.read'));
 	const canWrite = $derived(hasAdminPermission('admin.app_config.write'));
@@ -199,8 +199,8 @@
 		<!-- 仅服务端 sections：只读展示 -->
 		<section class={SECTION_CARD} aria-label="服务端配置（只读）">
 			<h2 class="text-md font-semibold text-text-primary">服务端运行参数（只读）</h2>
-			<p class="mt-1 text-xs text-text-secondary">upload / defaults / rate_limits / response_defaults——修改走 app_config/update API（Patch 语义）。</p>
-			<pre class="mt-3 max-h-80 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed text-text-secondary">{JSON.stringify({ upload: config.upload, defaults: config.defaults, rate_limits: config.rate_limits, response_defaults: config.response_defaults }, null, 2)}</pre>
+			<p class="mt-1 text-xs text-text-secondary">upload / defaults / rate_limits / response_defaults / auth——修改走 app_config/update API（Patch 语义）。</p>
+			<pre class="mt-3 max-h-80 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed text-text-secondary">{JSON.stringify({ upload: config.upload, defaults: config.defaults, rate_limits: config.rate_limits, response_defaults: config.response_defaults, auth: config.auth }, null, 2)}</pre>
 		</section>
 
 		<!-- 全局保存栏：仅存在未保存修改时出现（r60：卡内散落保存收敛为全局「保存更改/重置」） -->

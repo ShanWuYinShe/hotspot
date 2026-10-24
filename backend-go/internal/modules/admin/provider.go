@@ -153,6 +153,11 @@ func adminAppConfigFromSource(cfg appconfig.AppConfig) AdminAppConfig {
 			CommentTopRepliesCount:   cfg.ResponseDefaults.CommentTopRepliesCount,
 			UserProfileMomentsCount:  cfg.ResponseDefaults.UserProfileMomentsCount,
 		},
+		Auth: AdminAuthConfig{
+			VerificationCodeTTLMinutes: cfg.Auth.VerificationCodeTTLMinutes,
+			LoginLockoutThreshold:      cfg.Auth.LoginLockoutThreshold,
+			LoginLockoutMinutes:        cfg.Auth.LoginLockoutMinutes,
+		},
 		UpdatedAt:       types.StrPtr(cfg.UpdatedAt),
 		UpdatedByUserID: types.StrPtr(cfg.UpdatedByUserID),
 	}
@@ -249,6 +254,11 @@ func sourceAppConfigFromAdmin(cfg AdminAppConfig) appconfig.AppConfig {
 			SystemAnnouncementsCount: cfg.ResponseDefaults.SystemAnnouncementsCount,
 			CommentTopRepliesCount:   cfg.ResponseDefaults.CommentTopRepliesCount,
 			UserProfileMomentsCount:  cfg.ResponseDefaults.UserProfileMomentsCount,
+		},
+		Auth: appconfig.AuthConfig{
+			VerificationCodeTTLMinutes: cfg.Auth.VerificationCodeTTLMinutes,
+			LoginLockoutThreshold:      cfg.Auth.LoginLockoutThreshold,
+			LoginLockoutMinutes:        cfg.Auth.LoginLockoutMinutes,
 		},
 		UpdatedAt:       strDeref(cfg.UpdatedAt),
 		UpdatedByUserID: strDeref(cfg.UpdatedByUserID),

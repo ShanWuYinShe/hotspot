@@ -50,10 +50,12 @@ type stubGroupsRepo struct {
 
 	announceItems []GroupAnnouncementItem
 	announceErr   error
-	createAnnItem GroupAnnouncementItem
-	createAnnErr  error
-	updateAnnErr  error
-	deleteAnnErr  error
+	// lastAnnouncementsLimit ListAnnouncements 收到的条数（断言 AppConfig 生效）
+	lastAnnouncementsLimit int
+	createAnnItem          GroupAnnouncementItem
+	createAnnErr           error
+	updateAnnErr           error
+	deleteAnnErr           error
 
 	apps       []GroupApplicationItem
 	appsCur    string
@@ -184,7 +186,8 @@ func (r *stubGroupsRepo) JoinGroup(_ context.Context, _ string, _ string, _ *str
 func (r *stubGroupsRepo) CreateAnnouncement(_ context.Context, _ string, _ CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
 	return r.createAnnItem, r.createAnnErr
 }
-func (r *stubGroupsRepo) ListAnnouncements(_ context.Context, _ string) ([]GroupAnnouncementItem, error) {
+func (r *stubGroupsRepo) ListAnnouncements(_ context.Context, _ string, limit int) ([]GroupAnnouncementItem, error) {
+	r.lastAnnouncementsLimit = limit
 	return r.announceItems, r.announceErr
 }
 
@@ -660,6 +663,30 @@ func TestServiceCreateAnnouncementHappyPath(t *testing.T) {
 	}
 	if item.AnnouncementID != "ann1" {
 		t.Fatalf("expected ann1, got %s", item.AnnouncementID)
+	}
+}
+
+// TestServiceListAnnouncementsUsesConfiguredLimit 防回归（P1-5）：公告列表条数
+// 来自 AppConfig.response_defaults.group_announcements_count（此前该配置无人消费）。
+func TestServiceListAnnouncementsUsesConfiguredLimit(t *testing.T) {
+	repo := &stubGroupsRepo{announceItems: []GroupAnnouncementItem{{AnnouncementID: "ann1"}}}
+	svc := NewServiceWithRepo(repo)
+	svc.SetAppConfig(appConfigStub{announcementCount: 3})
+	if _, err := svc.ListAnnouncements(context.Background(), GroupAnnouncementsRequest{GroupID: "g1"}); err != nil {
+		t.Fatalf("list announcements: %v", err)
+	}
+	if repo.lastAnnouncementsLimit != 3 {
+		t.Fatalf("expected configured limit 3, got %d", repo.lastAnnouncementsLimit)
+	}
+
+	// 未配置时回退默认 10。
+	repo = &stubGroupsRepo{announceItems: []GroupAnnouncementItem{{AnnouncementID: "ann1"}}}
+	svc = NewServiceWithRepo(repo)
+	if _, err := svc.ListAnnouncements(context.Background(), GroupAnnouncementsRequest{GroupID: "g1"}); err != nil {
+		t.Fatalf("list announcements (default): %v", err)
+	}
+	if repo.lastAnnouncementsLimit != 10 {
+		t.Fatalf("expected default limit 10, got %d", repo.lastAnnouncementsLimit)
 	}
 }
 

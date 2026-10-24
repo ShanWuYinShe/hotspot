@@ -439,7 +439,7 @@ func TestPostgresAnnouncementLifecycle(t *testing.T) {
 
 	// List：2 行（昵称列已解析，审查 P2-3）
 	stub = &groupFullStub{queryRows: map[string][][]any{queryListGroupAnnouncements: {annRow("a1"), annRow("a2")}}}
-	items, err := newGroupsFullRepo(stub).ListAnnouncements(ctx, "group_1")
+	items, err := newGroupsFullRepo(stub).ListAnnouncements(ctx, "group_1", 10)
 	if err != nil || len(items) != 2 || !items[0].IsPinned || items[0].CreatedAt == "" {
 		t.Fatalf("list announcements: %#v err=%v", items, err)
 	}
@@ -447,7 +447,7 @@ func TestPostgresAnnouncementLifecycle(t *testing.T) {
 		t.Fatalf("list announcements created_by: %#v", items[0].CreatedBy)
 	}
 	stub = &groupFullStub{queryRowsErr: map[string]error{queryListGroupAnnouncements: errors.New("boom")}}
-	if _, err := newGroupsFullRepo(stub).ListAnnouncements(ctx, "group_1"); err == nil {
+	if _, err := newGroupsFullRepo(stub).ListAnnouncements(ctx, "group_1", 10); err == nil {
 		t.Fatal("list announcements query error must propagate")
 	}
 
@@ -748,7 +748,7 @@ func TestPostgresRowsErrPaths(t *testing.T) {
 		call func(repo *PostgresRepository) error
 	}{
 		{queryListGroupAnnouncements, []any{"a1", "g", "t", "c", "u1", "昵称", false, gTestTime},
-			func(r *PostgresRepository) error { _, err := r.ListAnnouncements(ctx, "g"); return err }},
+			func(r *PostgresRepository) error { _, err := r.ListAnnouncements(ctx, "g", 10); return err }},
 		{queryListGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "申请人", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListApplications(ctx, "g", nil, 20, ""); return err }},
 		{queryListMyGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "申请人", "", "pending", gTestTime, nil, nil},

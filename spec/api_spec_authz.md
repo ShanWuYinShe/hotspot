@@ -139,7 +139,7 @@
 | 2 | `/public/v1/auth/send_register_code` | —（防枚举，无论 login_id 是否存在均成功） | — | — | — |
 | 3 | `/public/v1/auth/signin` | — | — | 10100（防枚举） | — |
 | 4 | `/public/v1/auth/guest` | — | — | — | 幂等 |
-| 5 | `/public/v1/auth/refresh_token` | 凭证特例（refresh 归属+黑名单） | — | 10100 | — |
+| 5 | `/public/v1/auth/refresh_token` | 凭证特例（refresh 归属+会话撤销） | — | 10100 | — |
 | 6 | `/public/v1/auth/forgot_password` | — | — | 限流 | — |
 | 7 | `/public/v1/auth/reset_password` | 一次性验证码 | — | 10300 | 自然去重 |
 | 8 | `/public/v1/users/search` | searchable 系列过滤 | — | — | — |
@@ -212,7 +212,7 @@
 | 70 | `/api/v1/moments/fetch_favorites` | self | — | — | — |
 | 71 | `/api/v1/moments/fetch_following` | —（self 的关注集合过滤） | — | — | — |
 | 72 | `/api/v1/moments/fetch_nearby` | 可见性过滤（登录视角） | — | — | — |
-| 73 | `/api/v1/comments/create` | 评论限制+黑名单 | privacy_setting/blocked_by_user | 10300 | 幂等 |
+| 73 | `/api/v1/comments/create` | 评论限制+拉黑关系 | privacy_setting/blocked_by_user | 10300 | 幂等 |
 | 74 | `/api/v1/comments/delete` | owner | not_resource_owner | 10200/10300 | — |
 | 75 | `/api/v1/comments/fetch` | 可见性过滤（登录视角） | — | 10300 | — |
 | 76 | `/api/v1/comments/fetch_replies` | 可见性过滤（登录视角） | — | 10300 | — |
@@ -223,7 +223,7 @@
 | 81 | `/api/v1/private_chats/open_the_door` | 对方 ChatPerm | privacy_setting | 10300 | — |
 | 82 | `/api/v1/private_chats/update_preferences` | part | — | 10300 | no-op |
 | 83 | `/api/v1/private_chats/delete` | self | — | 10300 | — |
-| 84 | `/api/v1/private_messages/send` | part+ChatPerm/黑名单/配额 | blocked_by_user/privacy_setting/stranger_quota_exceeded | 10300/10400 | 幂等 |
+| 84 | `/api/v1/private_messages/send` | part+ChatPerm/拉黑关系/配额 | blocked_by_user/privacy_setting/stranger_quota_exceeded | 10300/10400 | 幂等 |
 | 85 | `/api/v1/private_messages/fetch` | part | — | 10300 | — |
 | 86 | `/api/v1/private_messages/update` | owner | not_resource_owner | 10300/10400(非文本/已撤回) | — |
 | 87 | `/api/v1/private_messages/recall` | owner | not_resource_owner | 10300/10400(超时) | — |

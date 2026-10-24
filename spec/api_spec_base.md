@@ -100,7 +100,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 - **资源域单复数规则**：可数实体资源域用复数（users / moments / comments / reactions / groups / private_chats / private_messages / group_messages / reports）；服务域、动作域与不可数概念域用单数（auth / search / map / share / media / notify / system）。禁止混用（如 `shares/`、`moment/`）
 - 全小写 snake_case；ID 字段显式 `xxx_id` 命名（禁止裸 `id`）；所有 `xxx_id` 字段在 API 层统一为 `string`
 - 两态参数统一 `active: boolean`（true=执行/开启，false=撤销/关闭）
-- 所有 `*_url` 字段的值必须为**完整的绝对 URL**（含协议和域名），客户端无需拼接 base URL
+- 所有 `*_url` 字段的值必须为**可直接用于展示/下载的 URL**：优先返回完整绝对 URL（含协议和域名）；服务端代理类资源允许返回以 `/public/v1/` 开头的站内相对路径（如头像 `/public/v1/media/avatars/<file_id>`），客户端按当前 API origin 拼接后使用（两类形态的判定见 `api_spec_media.md`「媒体读取」）
 
 ### 权威动词表
 
@@ -248,7 +248,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 | 节点 | Token 处理 | 语义 |
 |------|-----------|------|
 | `/public/v1/*` | **完全不解析**（Cookie/Header 中的 Token 一律忽略） | 纯匿名视角：仅返回公开数据，响应形状与调用者是否恰好持有 Token 无关 |
-| `/api/v1/*` | 必须携带有效 access_token | 缺少/无效/黑名单 → `10100`；封禁 → `10201` |
+| `/api/v1/*` | 必须携带有效 access_token | 缺少/无效/已撤销 → `10100`；封禁 → `10201` |
 | `/admin/api/v1/*` | 必须携带有效 access_token + 平台管理员身份 | 未认证 → `10100`；非平台管理员 → `10200` + `not_admin`；细粒度权限见 `api_spec_authz.md` |
 | `auth/refresh_token`（凭证特例） | 以请求体中的 refresh_token 为凭证 | 无效/过期/被撤销 → `10100`。该端点位于 `/public/v1`，但凭证语义独立于节点匿名语义 |
 
@@ -258,9 +258,10 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 - 目标 ID 一律必传（禁止「缺省 = 当前用户」的身份缺省语义）；拉取自己的数据时客户端显式传入自己的 ID
 - Web 端通过 Cookie 自动携带，无需前端代码手动处理；App 端在每个请求的 Header 中手动添加 `Authorization` 字段（`/public/v1` 请求可不携带）
 
-**黑名单规则（契约级）**：
-- access_token/refresh_token 的失效通过黑名单机制实现（登出/撤销即写入黑名单）
-- 服务端验证 Token 时必须检查黑名单；黑名单条目有效期不得短于 Token 过期时间
+**会话撤销规则（契约级）**：
+- 失效机制为**会话撤销**（session revocation）：不存在独立的 token 黑名单，登出/撤销/驱逐会把对应 session 标记为已撤销
+- 服务端每次校验 access_token 时必须同时校验其 session 仍有效；refresh_token 轮转/撤销同理
+- 会话撤销**立即生效**（被驱逐会话的 refresh 宽限期不覆盖显式驱逐，见 `api_spec_public.md`「单设备单会话模型」）；客户端收到 `10100` 后按刷新/重新登录流程处理
 
 
 ---
@@ -296,6 +297,15 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 4. **组合优于层级**：通过组合基础类型构建复杂对象，避免深层层级链
 
 **端点风格（契约级）**：HotSpot 对外 HTTP API 仅允许使用 POST；对象存储直传的 PUT/POST 仅发生在存储服务域名上。理由：动作型社交产品 + 统一 envelope + 显式动词端点已完全覆盖语义，REST 风格不会带来额外收益，反而引入 HTTP 方法与状态码的语义分叉。
+
+**登记的非 RPC 例外**（不属于 `/api` RPC 面，不使用 POST + envelope）：
+
+| 端点 | 说明 |
+|------|------|
+| `GET /healthz` | 无鉴权存活探针（见「节点与路径架构」） |
+| `GET /public/v1/media/avatars/{file_id}` | 匿名头像代理：302 到短时签名读 URL（见 `api_spec_media.md`） |
+| `GET /share/{code}` | 链接预览爬虫的 HTML 落地页（og 标签；真实用户走 SPA 路由，见 `api_spec_share.md`） |
+| `GET /metrics` | Prometheus 指标，仅内网可达、不属对外契约 |
 
 ### 设计规范
 
@@ -344,7 +354,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
   - 隐私受控字段（presence_status / last_online_at / location / stats 等）：恒在，null 表达隐藏/不适用；null 不泄露「隐藏 vs 不存在」差异
   - 查看者状态字段（relation / viewer_state / remark 等）：恒在，null 表达不适用（无关系/非成员）；查看者字段仅存在于登录视角类型（`/api/v1`、`/admin/api/v1`），public 节点类型不含这些字段
   - 查看者布尔字段：恒为布尔（如 `reacted_by_me` 恒返回，未反应时为 false）
-  - **显式例外 — bootstrap 缓存命中**：`system/bootstrap` 与 `public/v1/system/bootstrap` 在 `If-None-Match` 命中时返回仅含 `bootstrap_version` 的精简响应，其余键整体省略（服务端以独立精简类型实现）；命中判定为「键不存在」而非 `=== null`
+  - **显式例外 — bootstrap 缓存命中**：`system/bootstrap` 与 `public/v1/system/bootstrap` 在 `If-None-Match` 命中时返回精简响应：**仅省略公共段 `meta`/`client_config`**（客户端用缓存）；登录态私有段 `profile`/`unread_summary` 无缓存语义、命中时也恒返回最新值。命中判定为「键不存在」而非 `=== null`
 - `next_cursor`：恒在，`next_cursor: string | null`（null 表示没有更多数据）
 - 每个 nullable 字段的 null 语义必须在类型注释中写明
 - `@auth-only`/`@owner-only`/`@group-admin-only`/`@member-only`/`@participant-only` 注解**全量废除**
@@ -456,7 +466,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 - 每个列表接口必须声明默认排序主序、稳定 tie-breaker、以及一致性级别（强一致/弱一致）
 - 时间类列表必须提供稳定 tie-breaker（使用资源主键）
 - 地理相关列表必须以服务端计算的 `distance` 作为主序，客户端不得本地计算或重排
-- **tie-breaker 方向与主序方向一致**（时间倒序列表用资源主键 `DESC`，正序列表用 `ASC`），保证倒序翻页（最新在前）时游标语义自然、跨端点一致
+- **tie-breaker 只要求全序与游标一致**：tie-breaker 与主序字段组合必须是全序（推荐资源主键），keyset 游标谓词必须与声明顺序严格同序；方向（ASC/DESC）不作跨端点强制，按各端点声明执行
 
 #### 去重（契约级）
 
@@ -466,9 +476,8 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 所有 `*_count` 字段（如 `comments_count`、`shares_count`、`members_count`、`followers_count`、`reaction.count`、`read_count` 等）均为**最终一致**，非强一致实时值：
 
-- **更新策略**：服务端采用异步累计（写入队列 + 定时刷新到主存储 + 缓存），容忍秒级到分钟级延迟
 - **客户端约束**：不得用于精确对账；不得在收到互动事件后立即期望本地 count +1 与服务端一致；不得轮询 count 字段
-- **精度**：服务端保证最终收敛（无互动时 count 稳定），但不保证任意时刻与底层数据完全一致
+- **精度**：服务端保证最终收敛（无互动时 count 稳定），但不保证任意时刻与底层数据完全一致；具体的更新时机与实现机制属服务端细节，契约不规定
 
 ### 密码安全
 
@@ -486,6 +495,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 | 业务写操作（动态/评论/举报） | 用户 | 滑动窗口 | 各不同 | `moments_create_per_minute` 等 |
 | 文件上传 presign | 用户（按 files 内文件数计） | 滑动窗口 | 100次/小时 | `upload_presign_per_hour` |
 | WebSocket 订阅 | 连接 | 固定窗口 | 10次/秒 | `ws_subscribe_per_second` |
+| WebSocket 握手（升级请求） | IP | 固定窗口 | 60次/分钟 | `ws_handshake_per_minute` |
 | 平台管理查询（/admin/api/v1 读） | 用户 | 令牌桶 | 100次/分钟 | `admin_read_per_minute` |
 | 平台管理写（/admin/api/v1 写） | 用户 | 滑动窗口 | 30次/分钟 | `admin_write_per_minute` |
 | 全局限流（所有请求兜底） | IP+用户 | 固定窗口 | 服务端配置 | `global_per_hour` |
@@ -504,7 +514,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 | 3 | `X-Forwarded-For` | 最后手段，取第一个非内网 IP |
 
 **实现要求**：
-- 后端必须校验请求确实来自 Cloudflare IP 段，防止绕过 CDN 直连并伪造 `CF-Connecting-IP`
+- 必须保证后端只接受来自 Cloudflare 的流量（本项目由网关 `set_real_ip_from` + 源站 mTLS 保证），防止绕过 CDN 直连并伪造 `CF-Connecting-IP`；该要求属部署拓扑约束，不要求应用层再实现 CF 段校验
 - 若所有 header 均缺失，回退到连接源 IP（仅开发/测试环境）
 - `CF-IPCountry` header 可用于地理位置级别的异常检测
 
@@ -551,8 +561,9 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 #### Idempotency-Key 格式
 
 - **Header 名称**：`Idempotency-Key`
-- **格式**：`{client_id}-{timestamp_ms}-{random}`，其中 `client_id` 为设备标识（即 `DeviceId`，UUID v4 含连字符）、`timestamp_ms` 为 13 位毫秒时间戳、`random` 为 6-12 位随机串（`client_id` 为 36 字符 UUID 时整体 57-63 字符）
+- **形态**：不透明字符串，只要求下方两条硬约束；结构不作强制
 - **长度**：32-64 字符；**字符集**：`[a-zA-Z0-9-_]`
+- **推荐（非强制）**：`{client_id}-{timestamp_ms}-{random}`（设备标识 + 毫秒时间戳 + 随机串），便于排障时定位来源设备
 - **要求**：同一用户对同一接口的同一次重试必须复用同一个 `Idempotency-Key`
 
 #### 服务端行为（契约级）

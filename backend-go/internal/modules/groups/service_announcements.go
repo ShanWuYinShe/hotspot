@@ -47,7 +47,15 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnounc
 
 func (s *Service) ListAnnouncements(ctx context.Context, req GroupAnnouncementsRequest) ([]GroupAnnouncementItem, error) {
 	op := observability.Begin("groups.list_announcements", "group_id", req.GroupID)
-	items, err := s.repo.ListAnnouncements(ctx, req.GroupID)
+	// 条数来自 AppConfig.response_defaults.group_announcements_count
+	//（spec api_spec_group.md announcements/fetch：默认 10、硬上限 50）。
+	limit := 10
+	if s.appConfig != nil {
+		if configured := s.appConfig.Get(ctx).ResponseDefaults.GroupAnnouncementsCount; configured > 0 {
+			limit = configured
+		}
+	}
+	items, err := s.repo.ListAnnouncements(ctx, req.GroupID, limit)
 	if err != nil {
 		op.Fail(err)
 		return nil, err

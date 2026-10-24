@@ -461,6 +461,7 @@ interface AppConfig {
   defaults: ContentDefaults;
   rate_limits: RateLimitConfig;
   response_defaults: ResponseDefaults;
+  auth: AuthConfig;                // 认证安全参数（验证码 TTL / 登录锁定）
   // === 元数据 ===
   updated_at: string | null;
   updated_by_user_id: string | null;
@@ -487,6 +488,7 @@ interface UpdateAppConfigRequest {
   defaults: AppConfigDefaultsPatch | null;           // 内容默认值（可单独更新子字段）
   rate_limits: Partial<RateLimitConfig> | null;      // 频率限制（动态生效，无需重启；所有值须为正整数）
   response_defaults: Partial<ResponseDefaults> | null;  // 响应默认值（所有值须为正整数）
+  auth: Partial<AuthConfig> | null;                  // 认证安全参数（动态生效；所有值须为正整数）
   // === 客户端可见（构成 ClientConfig，通过 /public/v1/system/client_config 暴露）===
   features: Partial<FeatureSwitches> | null;         // 功能开关
   limits: Partial<AppLimits> | null;                 // 应用限制
@@ -505,7 +507,7 @@ interface AppConfigDefaultsPatch {
 **Response**: `ApiResponse`
 
 **验证规则**：
-- `rate_limits` / `response_defaults` 的数值字段必须为正整数
+- `rate_limits` / `response_defaults` / `auth` 的数值字段必须为正整数
 - `contact` 的 `support_email` 须为有效 Email、`*_url` 须为有效 URL
 
 **错误码**: `10200`（not_admin / insufficient_admin_permission）
@@ -518,14 +520,17 @@ interface AppConfigDefaultsPatch {
 
 ```typescript
 interface UploadConfig {
-  // 注：本配置为 image/video/audio/file 四档的全局限制；各分类（avatar/moment_image/chat_video 等）的
+  // 注：本配置为全局上传上限；各分类（avatar/moment_image/chat_video 等）的
   // 具体 MIME 白名单与大小上限以 api_spec_media.md「分类限制」表为契约权威。
-  // 优先级（契约级）：实际生效大小上限 = min(本配置对应四档全局值, media.md 该分类上限)——平台配置只能收紧、不能放宽；
-  // MIME 白名单以 media.md 分类表为准，不因本配置放宽
+  // 优先级（契约级）：实际生效大小上限 = min(本配置对应档位值, media.md 该分类上限)——平台配置只能收紧、不能放宽；
+  // MIME 白名单以 media.md 分类表为准，不因本配置放宽。
+  // 档位对应：avatar/group_avatar → avatar_max_size；chat_file → chat_file_max_size；其余按 image/video/audio/file 四档
   image_max_size: number;
   video_max_size: number;
   audio_max_size: number;
   file_max_size: number;
+  avatar_max_size: number;      // 头像类全局上限（字节），默认 5MB
+  chat_file_max_size: number;   // 聊天文件类全局上限（字节），默认 100MB
   allowed_image_types: string[];
   allowed_video_types: string[];
 }
@@ -559,6 +564,8 @@ interface RateLimitConfig {
   upload_presign_per_hour: number;
   // WebSocket 订阅（连接维度，固定窗口）
   ws_subscribe_per_second: number;
+  // WebSocket 握手升级请求（IP 维度，固定窗口，默认 60 次/分钟）
+  ws_handshake_per_minute: number;
   // 平台管理（用户维度）
   admin_read_per_minute: number;
   admin_write_per_minute: number;
@@ -566,11 +573,19 @@ interface RateLimitConfig {
 
 interface ResponseDefaults {
   search_suggest_count: number;       // 搜索建议返回条数，默认 5
+  hot_moments_count: number;          // 热门瞬间（sort_by='popular'）返回条数，默认 20
   chat_recent_messages_count: number; // open_the_door 返回的最近消息条数，默认 20
   group_announcements_count: number;  // 群公告列表返回条数，默认 10
   system_announcements_count: number; // 系统公告列表返回条数，默认 10
   comment_top_replies_count: number;  // 顶层评论内嵌的前 N 条回复，默认 3
   user_profile_moments_count: number; // users/open_the_door（include_recent_moments=true）返回的近期瞬间条数，默认 6
+}
+
+interface AuthConfig {
+  // 认证安全参数（动态生效，无需重启；所有值须为正整数）
+  verification_code_ttl_minutes: number; // 注册/密码重置验证码有效期（分钟），默认 10
+  login_lockout_threshold: number;       // 连续登录失败锁定阈值（次），默认 5
+  login_lockout_minutes: number;         // 锁定时长（分钟），默认 15；同时作为失败计数衰减窗口
 }
 ```
 
@@ -1056,7 +1071,9 @@ interface AdminGeoStatsResponse {
 
 **Response**: `ApiResponse<AdminGeoStatsResponse>`
 
-**错误码**: `10000`（level 越界 / 时间窗倒置 / 时间格式非法 / limit 为负 / trend_days 越界）`10200`
+**参数校验**（不合法返回 `10000`，隐含码）：level 越界 / 时间窗倒置 / 时间格式非法 / limit 为负 / trend_days 越界
+
+**错误码**: `10200`
 
 ### POST /admin/api/v1/stats/geo/drilldown
 
@@ -1096,4 +1113,6 @@ interface AdminGeoDrilldownPage {
 - 明细按 `created_at` 降序、业务 ID 降序稳定排序；地理口径与 `stats/geo` 一致
 - `next_cursor` 恒定 nullable，客户端只透传
 
-**错误码**: `10000`（cell_token 非法 / level 与 token 不一致 / entity_type 非法 / 时间窗倒置 / 时间格式非法 / limit 为负 / cursor 非法）`10200`
+**参数校验**（不合法返回 `10000`，隐含码）：cell_token 非法 / level 与 token 不一致 / entity_type 非法 / 时间窗倒置 / 时间格式非法 / limit 为负 / cursor 非法
+
+**错误码**: `10200`

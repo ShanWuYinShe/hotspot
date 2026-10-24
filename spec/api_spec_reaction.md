@@ -56,7 +56,7 @@ interface SetReactionRequest {
 
 **WS 推送**：成功后触发 `ReactionAdded` / `ReactionRemoved` 事件（服务端统一推送、不做自反应判断，客户端自行过滤自反应场景，见 `api_spec_websocket.md`）；`ReactionAdded` 落库 `reaction_added` 通知（自反应不落库）。
 
-**错误码**: `10000`（emoji 不在白名单） `10300`
+**错误码**: `10300`
 
 ---
 

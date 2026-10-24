@@ -49,7 +49,7 @@ func (s *Service) UpdateAppConfig(ctx context.Context, req UpdateAppConfigReques
 		return apiErr, err
 	}
 	// At least one section must be provided
-	if req.Upload == nil && req.Defaults == nil && req.RateLimits == nil && req.ResponseDefaults == nil && req.Features == nil && req.Limits == nil && req.Contact == nil {
+	if req.Upload == nil && req.Defaults == nil && req.RateLimits == nil && req.ResponseDefaults == nil && req.Auth == nil && req.Features == nil && req.Limits == nil && req.Contact == nil {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
 	before, err := s.provider.GetAppConfig(ctx)
@@ -74,6 +74,11 @@ func (s *Service) UpdateAppConfig(ctx context.Context, req UpdateAppConfigReques
 		}
 		if req.ResponseDefaults != nil {
 			if err := applyResponseDefaultsPatch(&cfg.ResponseDefaults, *req.ResponseDefaults); err != nil {
+				return AdminAppConfig{}, err
+			}
+		}
+		if req.Auth != nil {
+			if err := applyAuthConfigPatch(&cfg.Auth, *req.Auth); err != nil {
 				return AdminAppConfig{}, err
 			}
 		}
@@ -142,6 +147,28 @@ func applyUploadConfigPatch(target *AdminUploadConfig, patch PartialUploadConfig
 	}
 	if patch.AllowedVideoTypes != nil {
 		target.AllowedVideoTypes = sortAndUniqueStrings(patch.AllowedVideoTypes)
+	}
+	return nil
+}
+
+// applyAuthConfigPatch 认证安全参数 Patch（spec api_spec_admin.md：所有值须为正整数）。
+func applyAuthConfigPatch(target *AdminAuthConfig, patch PartialAuthConfig) *httpx.APIError {
+	for _, field := range []struct {
+		name  string
+		value *int
+		set   func(int)
+	}{
+		{"verification_code_ttl_minutes", patch.VerificationCodeTTLMinutes, func(v int) { target.VerificationCodeTTLMinutes = v }},
+		{"login_lockout_threshold", patch.LoginLockoutThreshold, func(v int) { target.LoginLockoutThreshold = v }},
+		{"login_lockout_minutes", patch.LoginLockoutMinutes, func(v int) { target.LoginLockoutMinutes = v }},
+	} {
+		if field.value == nil {
+			continue
+		}
+		if *field.value <= 0 {
+			return httpx.InvalidRequest("参数错误: " + field.name)
+		}
+		field.set(*field.value)
 	}
 	return nil
 }

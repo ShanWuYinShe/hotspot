@@ -334,6 +334,14 @@ func (s *Service) IncrementSharesCount(ctx context.Context, momentID string) err
 }
 
 func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
+	// 热门模式（sort_by='popular'）的默认条数来自
+	// AppConfig.response_defaults.hot_moments_count（spec api_spec_moment.md
+	// 「热门模式」：默认 20、上限 100）。客户端显式传 limit 时不覆盖。
+	if req.SortBy == "popular" && (req.Pagination == nil || req.Pagination.Limit <= 0) && s.appConfig != nil {
+		if configured := s.appConfig.Get(ctx).ResponseDefaults.HotMomentsCount; configured > 0 {
+			req.Pagination = &types.PaginationParams{Limit: configured}
+		}
+	}
 	result, err := s.repo.Search(ctx, req, viewerUserID(ctx))
 	if err != nil {
 		return result, err
