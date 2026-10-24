@@ -264,9 +264,9 @@ func TestInMemoryListReactedTargetsCursor(t *testing.T) {
 	if err != nil || len(ids2) != 1 || next2 != "" {
 		t.Fatalf("second page: %#v next=%q err=%v", ids2, next2, err)
 	}
-	// 游标不匹配时从头开始（分页库常见语义）
-	ids3, _, err := repo.ListReactedTargets(ctx, ReactTargetMoment, "u1", 2, "no-such-target")
-	if err != nil || len(ids3) != 2 {
-		t.Fatalf("unknown cursor should restart from head: %#v err=%v", ids3, err)
+	// 游标格式非法时与 PG 一致返回 ErrInvalidCursor（此前内存实现静默从头开始，
+	// 客户端把无效游标当有效游标时两实现行为不同）。
+	if _, _, err := repo.ListReactedTargets(ctx, ReactTargetMoment, "u1", 2, "no-such-target"); !errors.Is(err, ErrInvalidCursor) {
+		t.Fatalf("unknown cursor err = %v, want ErrInvalidCursor", err)
 	}
 }

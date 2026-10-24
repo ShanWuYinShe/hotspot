@@ -558,3 +558,23 @@ session/refresh store 仍直接用池：前者为启动期/无事务路径，后
 
 该契约测试同时验证本轮事务上下文修复：reports repo 现在可在 `testdb.BeginScope` 事务内
 读写（此前直连连接池，契约测试无法事务隔离）。
+
+## 双实现契约测试第十二批（2026-10-24，reactions）
+
+`TestReactionsRepositoryContract` 接入契约基建，覆盖：React 三态（inserted/switched/
+unchanged）、Unreact 幂等与不存在 no-op、点赞列表（倒序/emoji 过滤/keyset 分页）、切换
+emoji 刷新 reacted_at（列表重排）、聚合（计数/排序/reacted_by_me 匿名与登录视角/目标隔离）、
+`AggregateBatch` 与逐目标聚合等价（含空批与缺失目标）、`ListReactedTargets` 分页/时间倒序/
+类型隔离/无效游标。
+
+**抓到 1 处生产缺陷 + 2 处内存漂移**：
+
+1. **PG `ListReactedTargets` 分页每页边界丢一个目标（生产缺陷）**：游标取的是第 `limit+1`
+   行（下一页首条）而非本页最后一条，配 strict `<` 谓词 → `users/fetch_reacted_moments`
+   翻页每页少一条（尾页可能直接为空）。已改为取本页最后一条；
+2. 内存 `ListReactions`/`ListReactedTargets` 用**明文 user_id / target_id 作游标**且对非法
+   游标静默从头开始；PG 为 AES-GCM 不透明游标 + `ErrInvalidCursor`。已改为同一套
+   encode/decode helper、`(reacted_at, id)` 严格 keyset 谓词、非法游标返回哨兵；同步更新
+   旧单测期望（此前断言「未知游标从头开始」）；
+3. 内存 `reacted_at` 秒级精度（PG 为 RFC3339Nano）→ 对齐纳秒，避免响应精度与游标精度
+   低于真实库。

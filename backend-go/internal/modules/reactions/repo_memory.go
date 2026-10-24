@@ -50,7 +50,9 @@ func (r *InMemoryRepository) React(ctx context.Context, targetType ReactTarget, 
 	if ok {
 		outcome = ReactionSwitched
 	}
-	now := time.Now().UTC().Format(time.RFC3339)
+	// 与 PG 一致使用纳秒精度（此前秒级截断：同秒多行排序/游标与 PG 行为不同，
+	// 且响应 reacted_at 精度低于真实库）。
+	now := time.Now().UTC().Format(time.RFC3339Nano)
 	r.reactions[key][userID] = reactEntry{userID: userID, nickname: userID, emoji: emoji, reactedAt: now}
 	// Enroll undo so a transaction rollback reverts the change.
 	if tx, ok := persistence.MemoryTxFromContext(ctx); ok {
@@ -109,33 +111,40 @@ func (r *InMemoryRepository) ListReactions(_ context.Context, targetType ReactTa
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	limit = normalizeReactionLimit(limit)
+	// 游标与 PG 同编码（AES-GCM 不透明，(reacted_at, user_id) keyset）：此前用
+	// 明文 user_id 且不校验格式，与 PG 的 ErrInvalidCursor 语义不一致。
+	cursorAt, cursorUserID, err := decodeListCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
 	entries := r.entriesSorted(targetType, targetID)
-	if emoji != "" {
-		filtered := entries[:0]
-		for _, e := range entries {
-			if e.emoji == emoji {
-				filtered = append(filtered, e)
+	filtered := make([]reactEntry, 0, len(entries))
+	for _, e := range entries {
+		if emoji != "" && e.emoji != emoji {
+			continue
+		}
+		if cursorAt != nil {
+			at, ok := cursorAt.(time.Time)
+			if !ok {
+				return nil, "", ErrInvalidCursor
+			}
+			reactedAt := parseReactionTime(e.reactedAt)
+			if reactedAt.After(at) {
+				continue
+			}
+			if reactedAt.Equal(at) && e.userID >= cursorUserID {
+				continue
 			}
 		}
-		entries = filtered
+		filtered = append(filtered, e)
 	}
-	start := 0
-	if cursor != "" {
-		for i, e := range entries {
-			if e.userID == cursor {
-				start = i + 1
-				break
-			}
-		}
+	page := filtered
+	nextCursor := ""
+	if len(filtered) > limit {
+		page = filtered[:limit]
+		last := page[limit-1]
+		nextCursor = encodeListCursor(last.reactedAt, last.userID)
 	}
-	if start >= len(entries) {
-		return []ReactionItem{}, "", nil
-	}
-	end := len(entries)
-	if start+limit < end {
-		end = start + limit
-	}
-	page := entries[start:end]
 	items := make([]ReactionItem, 0, len(page))
 	for _, e := range page {
 		items = append(items, ReactionItem{
@@ -144,13 +153,8 @@ func (r *InMemoryRepository) ListReactions(_ context.Context, targetType ReactTa
 			ReactedAt: e.reactedAt,
 		})
 	}
-	var nextCursor string
-	if end < len(entries) {
-		nextCursor = page[len(page)-1].userID
-	}
 	return items, nextCursor, nil
 }
-
 func (r *InMemoryRepository) Aggregate(_ context.Context, targetType ReactTarget, targetID, viewerID string) ([]Reaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -204,6 +208,10 @@ func (r *InMemoryRepository) ListReactedTargets(_ context.Context, targetType Re
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	limit = normalizeReactionLimit(limit)
+	cursorAt, cursorTargetID, err := decodeTargetCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
 	type rec struct {
 		targetID  string
 		reactedAt string
@@ -223,36 +231,36 @@ func (r *InMemoryRepository) ListReactedTargets(_ context.Context, targetType Re
 		}
 		return all[i].reactedAt > all[j].reactedAt
 	})
-	start := 0
-	if cursor != "" {
-		for i, e := range all {
-			if e.targetID == cursor {
-				start = i + 1
-				break
+	filtered := make([]rec, 0, len(all))
+	for _, e := range all {
+		if cursorAt != nil {
+			at, ok := cursorAt.(time.Time)
+			if !ok {
+				return nil, "", ErrInvalidCursor
+			}
+			reactedAt := parseReactionTime(e.reactedAt)
+			if reactedAt.After(at) {
+				continue
+			}
+			if reactedAt.Equal(at) && e.targetID >= cursorTargetID {
+				continue
 			}
 		}
+		filtered = append(filtered, e)
 	}
-	if start >= len(all) {
-		return []string{}, "", nil
+	page := filtered
+	nextCursor := ""
+	if len(filtered) > limit {
+		page = filtered[:limit]
+		last := page[limit-1]
+		nextCursor = encodeTargetCursor(parseReactionTime(last.reactedAt), last.targetID)
 	}
-	end := len(all)
-	if start+limit < end {
-		end = start + limit
-	}
-	page := all[start:end]
 	ids := make([]string, 0, len(page))
 	for _, e := range page {
 		ids = append(ids, e.targetID)
 	}
-	var nextCursor string
-	if end < len(all) {
-		nextCursor = page[len(page)-1].targetID
-	}
 	return ids, nextCursor, nil
 }
-
-// entriesSorted returns all reaction entries for a target, sorted newest-first
-// with userID DESC tie-break (matching the postgres ordering).
 func (r *InMemoryRepository) entriesSorted(targetType ReactTarget, targetID string) []reactEntry {
 	src := r.reactions[targetKey{targetType, targetID}]
 	out := make([]reactEntry, 0, len(src))
@@ -270,3 +278,12 @@ func (r *InMemoryRepository) entriesSorted(targetType ReactTarget, targetID stri
 
 // compile-time assertion that InMemoryRepository satisfies Repository.
 var _ Repository = (*InMemoryRepository)(nil)
+
+// parseReactionTime 容错解析内存记录的 RFC3339 时间串（失败返回零值，仅用于游标键）。
+func parseReactionTime(value string) time.Time {
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return time.Time{}
+	}
+	return parsed.UTC()
+}

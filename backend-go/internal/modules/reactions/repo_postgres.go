@@ -165,30 +165,39 @@ func (r *PostgresRepository) ListReactedTargets(ctx context.Context, targetType 
 		return nil, "", fmt.Errorf("reactions.ListReactedTargets: %w", err)
 	}
 	defer rows.Close()
-	ids := make([]string, 0, limit+1)
-	var lastAt time.Time
-	var lastID string
+	type reactedTargetRow struct {
+		id string
+		at time.Time
+	}
+	items := make([]reactedTargetRow, 0, limit+1)
 	for rows.Next() {
-		var id string
-		var at time.Time
-		if err := rows.Scan(&id, &at); err != nil {
+		var item reactedTargetRow
+		if err := rows.Scan(&item.id, &item.at); err != nil {
 			return nil, "", fmt.Errorf("reactions.ListReactedTargets scan: %w", err)
 		}
-		ids = append(ids, id)
-		lastAt, lastID = at, id
+		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, "", fmt.Errorf("reactions.ListReactedTargets rows: %w", err)
 	}
-	if len(ids) > limit {
-		return ids[:limit], encodeTargetCursor(lastAt, lastID), nil
+	if len(items) > limit {
+		// 游标取本页最后一条（排他 keyset），与 ListReactions 一致。此前累计
+		// 全部行（含第 limit+1 条）作为游标，下一页会把游标项自身排除 →
+		// users/fetch_reacted_moments 每页边界丢一个目标。
+		ids := make([]string, 0, limit)
+		for i := 0; i < limit; i++ {
+			ids = append(ids, items[i].id)
+		}
+		last := items[limit-1]
+		return ids, encodeTargetCursor(last.at, last.id), nil
+	}
+	ids := make([]string, 0, len(items))
+	for _, item := range items {
+		ids = append(ids, item.id)
 	}
 	return ids, "", nil
 }
 
-// queryable resolves the Queryable to use for this request: an in-flight
-// transaction bound to ctx when present, otherwise the shared pool. Returns
-// ok=false when persistence is not configured (in-memory mode).
 func queryable(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
 	return persistence.RepoQueryable(ctx, factory)
 }
