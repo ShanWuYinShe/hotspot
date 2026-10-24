@@ -414,3 +414,23 @@ keyset 分页不重不漏、`Recent` limit 下推与 `Last`、未读数与已读
 
 用例准备：PG 侧 `testdb.InsertUser` 预置三用户，内存侧无需用户表；批量读用例按调用方
 约定只校验本人会话 key（PG 与内存的批量 SQL/实现都不校验参与者，由调用方保证）。
+
+## 双实现契约测试第六批（2026-10-24，comments）
+
+`TestCommentsRepositoryContract` 接入契约基建，覆盖：创建与顶层列表、回复递增
+`replies_count`、软删（回复/顶层，含重复删除幂等与父计数只减一次）、顶层与回复
+keyset 分页不重不漏、批量取每父最新回复。
+
+**抓到 1 处生产缺陷 + 1 组内存漂移**：
+
+1. **生产缺陷：`comments/create` 返回的回复对象 `parent_id` 恒为 null**。PG 版
+   `Create` 落库时正确写入 parent_id，但返回的 `CommentItem` 漏填该字段；内存版有填。
+   客户端创建回复后无法直接据响应串接回复（需再拉一次列表）。已修复返回投影。
+2. 内存实现列表游标与 PG 不兼容：`List`/`ListReplies` 用**明文 comment_id** 作游标
+   （PG 为 AES-GCM 不透明 `(at,id)` keyset），非法游标被静默忽略（PG 返回
+   `ErrInvalidCursor`）；同时列表读取 moment 索引里的**创建时副本**，回复/软删后
+   `replies_count`、`content`/`is_deleted` 陈旧。修复：复用 `encode/decodeCommentCursor`
+   实现同语义 keyset（顶层 DESC、回复 ASC），读取以 `byID` 为真值来源，非法游标统一
+   报错。
+
+**测试基建**：新增 `testdb.InsertMoment`（comments 等依赖 moments 外键的用例前置数据）。

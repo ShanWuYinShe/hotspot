@@ -56,8 +56,13 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if nickname == "" {
 		nickname = userID
 	}
+	parentIDPtr := (*string)(nil)
+	if req.ParentID != "" {
+		parentIDPtr = &req.ParentID
+	}
 	return CommentItem{
 		CommentID:    commentID,
+		ParentID:     parentIDPtr,
 		MomentID:     req.MomentID,
 		User:         UserInfo{UserID: userID, Nickname: nickname},
 		Content:      req.Content,

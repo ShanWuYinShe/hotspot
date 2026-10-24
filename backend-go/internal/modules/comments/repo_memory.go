@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
-	"hotspot/backend-go/internal/platform/types"
 )
 
 type InMemoryRepository struct {
@@ -139,9 +138,17 @@ func (r *InMemoryRepository) SoftDelete(_ context.Context, commentID string) (bo
 func (r *InMemoryRepository) List(_ context.Context, momentID string, limit int, cursor string) (PaginatedComments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var items []CommentItem
-	for _, item := range r.comments[momentID] {
-		if item.ParentID == nil {
+	cursorAt, cursorID, err := decodeCommentCursor(cursor)
+	if err != nil {
+		return PaginatedComments{}, err
+	}
+	// 以 byID 为真值来源（评论被回复/软删后，moment 索引里的副本会过期）。
+	items := make([]CommentItem, 0)
+	for _, stored := range r.comments[momentID] {
+		if stored.ParentID != nil {
+			continue
+		}
+		if item, ok := r.byID[stored.CommentID]; ok {
 			items = append(items, item)
 		}
 	}
@@ -151,20 +158,26 @@ func (r *InMemoryRepository) List(_ context.Context, momentID string, limit int,
 		}
 		return items[i].CreatedAt > items[j].CreatedAt
 	})
-	if cursor != "" {
-		for i, item := range items {
-			if item.CommentID == cursor {
-				items = items[i+1:]
-				break
+	if cursorID != "" {
+		needle, ok := cursorAt.(time.Time)
+		if !ok {
+			return PaginatedComments{}, ErrInvalidCursor
+		}
+		filtered := make([]CommentItem, 0, len(items))
+		for _, item := range items {
+			at, parseErr := time.Parse(time.RFC3339Nano, item.CreatedAt)
+			if parseErr != nil {
+				continue
+			}
+			if at.Before(needle) || (at.Equal(needle) && item.CommentID < cursorID) {
+				filtered = append(filtered, item)
 			}
 		}
+		items = filtered
 	}
-	limit = types.NormalizeLimit(limit)
-	if limit > types.MaxPageSize {
-		limit = types.MaxPageSize
-	}
+	limit = normalizeCommentLimit(limit)
 	if len(items) > limit {
-		c := items[limit-1].CommentID
+		c := encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)
 		return PaginatedComments{Items: items[:limit], NextCursor: &c}, nil
 	}
 	return PaginatedComments{Items: items}, nil
@@ -180,9 +193,12 @@ func (r *InMemoryRepository) Get(_ context.Context, commentID string) (CommentIt
 func (r *InMemoryRepository) ListReplies(_ context.Context, commentID string, limit int, cursor string) (PaginatedComments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	childIDs := r.byParent[commentID]
-	items := make([]CommentItem, 0, len(childIDs))
-	for _, id := range childIDs {
+	cursorAt, cursorID, err := decodeCommentCursor(cursor)
+	if err != nil {
+		return PaginatedComments{}, err
+	}
+	items := make([]CommentItem, 0, len(r.byParent[commentID]))
+	for _, id := range r.byParent[commentID] {
 		if item, ok := r.byID[id]; ok {
 			items = append(items, item)
 		}
@@ -193,34 +209,31 @@ func (r *InMemoryRepository) ListReplies(_ context.Context, commentID string, li
 		}
 		return items[i].CreatedAt < items[j].CreatedAt
 	})
-	start := 0
-	if cursor != "" {
-		for i, item := range items {
-			if item.CommentID == cursor {
-				start = i + 1
-				break
+	if cursorID != "" {
+		needle, ok := cursorAt.(time.Time)
+		if !ok {
+			return PaginatedComments{}, ErrInvalidCursor
+		}
+		filtered := make([]CommentItem, 0, len(items))
+		for _, item := range items {
+			at, parseErr := time.Parse(time.RFC3339Nano, item.CreatedAt)
+			if parseErr != nil {
+				continue
+			}
+			if at.After(needle) || (at.Equal(needle) && item.CommentID > cursorID) {
+				filtered = append(filtered, item)
 			}
 		}
+		items = filtered
 	}
-	if start >= len(items) {
-		return PaginatedComments{Items: []CommentItem{}}, nil
+	limit = normalizeCommentLimit(limit)
+	if len(items) > limit {
+		c := encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)
+		return PaginatedComments{Items: items[:limit], NextCursor: &c}, nil
 	}
-	end := len(items)
-	if limit > 0 && start+limit < end {
-		end = start + limit
-	}
-	page := items[start:end]
-	var nextCursor *string
-	if end < len(items) {
-		c := page[len(page)-1].CommentID
-		nextCursor = &c
-	}
-	return PaginatedComments{Items: page, NextCursor: nextCursor}, nil
+	return PaginatedComments{Items: items}, nil
 }
 
-// ListTopRepliesByParentIDs returns up to `limit` newest replies per parent in
-// one pass (single lock acquisition), mirroring the Postgres batch query so the
-// service can avoid an N+1 of ListReplies calls.
 func (r *InMemoryRepository) ListTopRepliesByParentIDs(_ context.Context, parentIDs []string, limit int) (map[string][]CommentItem, error) {
 	result := make(map[string][]CommentItem, len(parentIDs))
 	if limit <= 0 {

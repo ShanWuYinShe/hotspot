@@ -155,3 +155,21 @@ func InsertUser(t *testing.T, factory *persistence.Factory, userID, nickname str
 	}
 	return userID
 }
+
+// InsertMoment 插入一条最小可用的瞬间行（供 comments 等依赖 moments 外键的
+// 契约测试/集成测试构造前置数据）。
+const queryInsertTestMoment = `INSERT INTO moments (moment_id, user_id, description, created_at, location_name, latitude, longitude, privacy_level, s2_cell_id)
+VALUES ($1, $2, $3, $4, '', 0, 0, 'public', 0)`
+
+func InsertMoment(t *testing.T, factory *persistence.Factory, momentID, userID string) string {
+	t.Helper()
+	qdb, ok := factory.DB.(persistence.QueryableDB)
+	if !ok {
+		t.Fatal("factory.DB is not QueryableDB")
+	}
+	edges := time.Now().UTC().Format(time.RFC3339)
+	if err := qdb.Exec(context.Background(), queryInsertTestMoment, momentID, userID, "test moment", edges); err != nil {
+		t.Fatalf("insert test moment %s: %v", momentID, err)
+	}
+	return momentID
+}
