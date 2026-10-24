@@ -102,9 +102,9 @@
 </script>
 
 {#if variant === 'card'}
-	<!-- 独立画廊岛屿卡片：现代顶级社交卡片架构 -->
+	<!-- 独立画廊岛屿卡片：现代顶级社交卡片架构（去除厚重硬框与多层嵌套，以柔和微边界与呼吸感留白呈现） -->
 	<div
-		class="group rounded-2xl border border-border-default bg-surface-primary p-4 sm:p-5 shadow-raised-sm hover:shadow-raised-md hover:border-accent-default/30 transition-all duration-standard flex flex-col cursor-pointer"
+		class="group rounded-2xl border border-border-subtle/50 bg-surface-primary p-4 sm:p-5 shadow-xs hover:shadow-raised-sm hover:border-border-default/80 transition-all duration-standard flex flex-col cursor-pointer"
 		role="button"
 		tabindex="0"
 		onclick={onClick}
@@ -160,9 +160,9 @@
 				</div>
 			</div>
 
-			<!-- 位置微标签 -->
+			<!-- 位置微标签：纯净胶囊，消除多余内层边框与阴影 -->
 			{#if locationText}
-				<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-subtle text-text-secondary text-xs max-w-[140px] sm:max-w-[180px] shrink-0 truncate border border-border-subtle/30 shadow-xs">
+				<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-subtle/70 text-text-secondary text-xs max-w-[140px] sm:max-w-[180px] shrink-0 truncate">
 					<MapPin class="size-3 text-accent-default shrink-0" strokeWidth={1.5} />
 					<span class="truncate">{locationText}</span>
 					{#if distanceLabel}
@@ -179,11 +179,11 @@
 			</p>
 		{/if}
 
-		<!-- 配图展示：舒展大图与网格 -->
+		<!-- 配图展示：舒展大图与网格（去除多余内嵌套边框与阴影，让摄影画面纯净舒展） -->
 		{#if moment.images && moment.images.length > 0}
 			<div class="mt-3 overflow-hidden rounded-xl">
 				{#if moment.images.length === 1}
-					<div class="overflow-hidden rounded-xl border border-border-subtle/40 bg-surface-subtle shadow-xs max-h-[380px] sm:max-h-[440px] flex items-center justify-center">
+					<div class="overflow-hidden rounded-xl bg-surface-subtle max-h-[380px] sm:max-h-[440px] flex items-center justify-center">
 						<img
 							src={moment.images[0].url}
 							alt="动态配图"
@@ -194,7 +194,7 @@
 				{:else if moment.images.length <= 4}
 					<div class="grid grid-cols-2 gap-2">
 						{#each moment.images.slice(0, 4) as img, idx (img.url + idx)}
-							<div class="aspect-square overflow-hidden rounded-xl border border-border-subtle/30 bg-surface-subtle shadow-xs">
+							<div class="aspect-square overflow-hidden rounded-xl bg-surface-subtle">
 								<img
 									src={img.url}
 									alt={`动态配图 ${idx + 1}`}
@@ -207,7 +207,7 @@
 				{:else}
 					<div class="grid grid-cols-3 gap-2">
 						{#each moment.images.slice(0, 9) as img, idx (img.url + idx)}
-							<div class="aspect-square overflow-hidden rounded-xl border border-border-subtle/30 bg-surface-subtle shadow-xs">
+							<div class="aspect-square overflow-hidden rounded-xl bg-surface-subtle">
 								<img
 									src={img.url}
 									alt={`动态配图 ${idx + 1}`}
@@ -236,8 +236,8 @@
 			</div>
 		{/if}
 
-		<!-- 底部轻量交互操作条 -->
-		<div class="mt-3.5 pt-3 border-t border-border-subtle/40 flex items-center justify-between text-text-secondary">
+		<!-- 底部轻量交互操作条：去除生硬横切边框线，依靠优雅呼吸留白自然延展 -->
+		<div class="mt-4 pt-1 flex items-center justify-between text-text-secondary">
 			<div class="flex items-center gap-6 sm:gap-7">
 				<!-- 点赞 -->
 				<div

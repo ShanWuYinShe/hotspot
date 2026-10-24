@@ -187,7 +187,7 @@
 {#snippet nearbyBanner()}
 	<button
 		type="button"
-		class="hover-btn group flex w-full items-center gap-3.5 rounded-2xl border border-border-default bg-surface-primary px-4 py-4 text-left focus-ring transition mt-4 hover:border-accent-default/40 hover:shadow-raised-md shadow-raised-sm"
+		class="hover-btn group flex w-full items-center gap-3.5 rounded-2xl border border-border-subtle/50 bg-surface-primary/80 backdrop-blur-xs px-4 py-4 text-left focus-ring transition mt-4 hover:border-accent-default/30 hover:shadow-raised-sm shadow-xs"
 		onclick={() => void goto(ROUTES.nearby)}
 	>
 		<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
@@ -247,7 +247,7 @@
 
 		<!-- 关注流未登录态：温馨引导登录卡片 -->
 		{#if activeTab === 'following' && auth.status !== 'authenticated'}
-			<div class="mx-4 my-8 rounded-2xl border border-border-default bg-surface-subtle p-6 text-center shadow-raised-sm">
+			<div class="mx-4 my-8 rounded-2xl border border-border-subtle/50 bg-surface-subtle/60 p-6 text-center shadow-xs">
 				<div class="mx-auto flex size-12 items-center justify-center rounded-full bg-accent-soft text-accent-default mb-3">
 					<Users class="size-6" strokeWidth={1.75} />
 				</div>
@@ -270,7 +270,7 @@
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
 		{:else if currentItems.length > 0}
 			<!-- 高质感社区 Feed 流：独立画廊岛屿卡片流 -->
-			<div class="flex flex-col gap-3.5 sm:gap-4.5 px-3.5 sm:px-0 pt-3.5">
+			<div class="flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2">
 				{#each currentItems as moment (moment.moment_id)}
 					<HomeFeedItem
 						{moment}
@@ -309,11 +309,11 @@
 		{/if}
 
 		{#snippet rail()}
-			<!-- 桌面端右侧 Rail 辅助区：活跃邻居 + 社区热议话题 -->
-			<div class="flex flex-col gap-4">
+			<!-- 桌面端右侧 Rail 辅助区：去框化纯净现代侧栏，彻底告别多个小灰盒嵌套堆叠 -->
+			<div class="flex flex-col gap-5 py-2">
 				<!-- 活跃邻居推荐 -->
 				{#if activeNeighbors.length > 0}
-					<RailSection title="活跃邻居">
+					<RailSection title="活跃邻居" variant="bare">
 						<div class="flex flex-col divide-y divide-border-subtle/30">
 							{#each activeNeighbors as neighbor (neighbor.userId)}
 								<div class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
@@ -343,8 +343,11 @@
 					</RailSection>
 				{/if}
 
+				<!-- 分隔微线：在小节之间提供极其克制温润的界限，而非大白框 -->
+				<div class="h-px bg-border-subtle/40 -mx-1"></div>
+
 				<!-- 社区热议话题 -->
-				<RailSection title="社区热议">
+				<RailSection title="社区热议" variant="bare">
 					<div class="flex flex-col divide-y divide-border-subtle/30">
 						{#each trendingTopics as topic (topic.tag)}
 							<button
@@ -365,11 +368,13 @@
 					</div>
 				</RailSection>
 
+				<div class="h-px bg-border-subtle/40 -mx-1"></div>
+
 				<!-- 快捷探索周边 -->
-				<RailSection title="探索雷达">
+				<RailSection title="探索雷达" variant="bare">
 					<button
 						type="button"
-						class="hover-btn group flex w-full items-center gap-3 text-left transition focus-ring"
+						class="hover-btn group flex w-full items-center gap-3 text-left transition focus-ring rounded-xl p-2 -mx-2 hover:bg-surface-subtle/60"
 						onclick={() => void goto(ROUTES.nearby)}
 					>
 						<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
