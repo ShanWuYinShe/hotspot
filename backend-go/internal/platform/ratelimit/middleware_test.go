@@ -79,6 +79,29 @@ func TestSearchRateLimitUsesUserWhenAuthenticated(t *testing.T) {
 	}
 }
 
+// 爬虫 OG 落地页此前未被限流分类覆盖（classifyRules 对未识别路径返回 nil，
+// 挂在该路由上的 Middleware 实际空转）：随机 share code 可无限枚举并放大 DB 查询。
+// 现按 IP 复用 probe 桶（SearchPerMinute）计量。
+func TestShareOGCrawlerRateLimitByIP(t *testing.T) {
+	resetStores()
+	SetSource(newTestSource(func(cfg *appconfig.AppConfig) {
+		cfg.RateLimits.GlobalPerHour = 0
+		cfg.RateLimits.SearchPerMinute = 1
+	}))
+	handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "ok", http.StatusOK)
+	}))
+	for i := 0; i < 2; i++ {
+		req := httptest.NewRequest(http.MethodGet, "/share/abc123456", nil)
+		req.Header.Set("CF-Connecting-IP", "3.3.3.3")
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		if i == 1 && testdb.DecodeAPICode(t, rr) != httpx.CodeRateLimited {
+			t.Fatal("expected crawler OG page probe limit")
+		}
+	}
+}
+
 func TestAdminReadWriteUseDifferentLimits(t *testing.T) {
 	resetStores()
 	SetSource(newTestSource(func(cfg *appconfig.AppConfig) {

@@ -303,6 +303,16 @@ func classifyRules(r *http.Request, cfg appconfig.RateLimitConfig) []rule {
 		}
 		return rules
 	}
+	if strings.HasPrefix(path, "/share/") {
+		// 分享链接爬虫落地页（GET /share/{code}，share/og.go）：匿名按 share code
+		// 解析，与 open_the_door 同属「存在性探测」面——随机 code 枚举会直接放大
+		// 数据库查询，故复用 probe 桶（SearchPerMinute）按 IP 计量。
+		key := subjectKey(ip, principal, hasPrincipal)
+		if key != "" && cfg.SearchPerMinute > 0 {
+			rules = append(rules, rule{name: "probe_per_minute", strategy: "token_bucket", limit: cfg.SearchPerMinute, window: time.Minute, scope: subjectScope(ip, principal, hasPrincipal), key: key})
+		}
+		return rules
+	}
 	if !route.readOnly {
 		key := subjectKey(ip, principal, hasPrincipal)
 		if key != "" && cfg.WritePerMinute > 0 {

@@ -46,6 +46,8 @@ func TestClassifyPath(t *testing.T) {
 		{"/api/v1/notify/mark_read", false, false, true},
 		{"/api/v1/share/fetch_created", true, false, true},
 		{"/api/v1/share/create", false, false, true},
+		// 爬虫 OG 落地页：匿名只读（限流走 probe 桶，见 ratelimit 测试）
+		{"/share/abc123456", true, false, true},
 		{"/api/v1/map/markers", true, false, true},
 		// 审计补漏项：此前未分类 → 无限流（429 桶缺失）
 		{"/api/v1/reactions/fetch", true, false, true},

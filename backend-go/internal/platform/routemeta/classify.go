@@ -19,6 +19,11 @@ func ClassifyPath(path string) (RouteClass, bool) {
 		// 匿名节点（spec api_spec_public.md）：认证入口在 appendAuthRules 已按 IP
 		// 处理并提前返回；其余端点全部只读，按 IP 维度限流（无 principal）。
 		return RouteClass{ReadOnly: true}, true
+	case strings.HasPrefix(path, "/share/"):
+		// 分享链接爬虫落地页（GET /share/{code}，登记例外见 share/og.go）：匿名只读。
+		// 归入读分类后由 ratelimit 统一按 IP 计量（见 ratelimit 的 probe 桶），
+		// 避免随机 share code 枚举放大数据库查询。
+		return RouteClass{ReadOnly: true}, true
 	case strings.HasPrefix(path, "/admin/api/v1/"):
 		return RouteClass{AdminOnly: true, ReadOnly: isAdminReadPath(path)}, true
 	case strings.HasPrefix(path, "/api/v1/system/"):

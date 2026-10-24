@@ -1212,3 +1212,26 @@ OrbStack 重启后更常见）：
 最近 5 轮（28–32）的代码改动（趋势统计时钟修复、resourceguard 清扫测试、附近通知 LIMIT、
 spec 澄清、依赖/迁移核验）在合并后均通过 ---all 全量验收，main 与 origin 同步；
 可作为下一次发版 tag 前的本地验证基线。
+
+## 分享爬虫 OG 落地页纳入限流（2026-10-25，第 34 轮）
+
+审计发现 **GET /share/{code}（爬虫 OG 落地页）实际没有限流**：
+
+- 该路由挂了 `ratelimit.Middleware`，但限流中间件依赖 `routemeta.ClassifyPath` 选择规则桶，
+  而 `/share/{code}` 被登记为例外、**未参与分类** → `classifyRules` 对未识别路径返回 nil，
+  中间件空转；
+- 结果是匿名的 `GET /share/{code}` 每次请求直接查库解析 share code（不存在也查），
+  可被伪造爬虫 UA 的脚本用随机 code 无限枚举，放大数据库查询（与 open_the_door 同类探测面，
+  后者已有 probe 桶防枚举）。
+
+修复（最小改动，复用既有机制）：
+
+1. `platform/routemeta/classify.go` 为 `/share/` 前缀增加只读分类；
+2. `platform/ratelimit/middleware.go` 对 `/share/` 复用 **probe 桶**（`SearchPerMinute`，
+   默认 60/min/IP，与 open_the_door 同一致的「存在性探测」语义），并同时受全局 IP 小时桶约束；
+3. 测试：`routemeta.TestClassifyPath` 增加 `/share/abc123456` 分类用例；
+   `ratelimit.TestShareOGCrawlerRateLimitByIP` 锁定第 2 次同 IP 请求返回 10800（限流）。
+
+安全性说明：OG 页本身输出已全量 `html.EscapeString`（本轮同时复核：title/description/cover/链接
+均转义，无 XSS）；JWT（HS256 强校验 + 必须含 exp）、Cookie（HttpOnly/Secure/SameSite）、
+SQL 动态拼接（仅占位符序号/白名单表达式，用户值全部参数化且 LIKE 通配符已转义）复核无问题。
