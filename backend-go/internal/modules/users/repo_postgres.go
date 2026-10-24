@@ -90,7 +90,7 @@ func (r *PostgresRepository) DeleteProfile(ctx context.Context, userID string) e
 }
 
 func (r *PostgresRepository) execInTx(ctx context.Context, sql string, arg any) error {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -360,7 +360,7 @@ func (r *PostgresRepository) CheckBlockedTags(ctx context.Context, tags []string
 	if len(tags) == 0 {
 		return nil, nil
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, persistence.ErrNotImplemented
 	}

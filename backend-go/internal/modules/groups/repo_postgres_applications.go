@@ -217,7 +217,7 @@ func (r *PostgresRepository) CancelApplication(ctx context.Context, applicationI
 }
 
 func (r *PostgresRepository) loadApplication(ctx context.Context, applicationID string) (GroupApplicationItem, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return GroupApplicationItem{}, persistence.ErrNotImplemented
 	}

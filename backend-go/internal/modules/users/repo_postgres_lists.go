@@ -9,7 +9,7 @@ import (
 )
 
 func listFriendsPostgres(ctx context.Context, factory *persistence.Factory, userID string, limit int, cursor string) (PaginatedFriends, error) {
-	queryable, ok := factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, factory)
 	if !ok {
 		return PaginatedFriends{}, persistence.ErrNotImplemented
 	}
@@ -44,7 +44,7 @@ func listFriendsPostgres(ctx context.Context, factory *persistence.Factory, user
 }
 
 func listFollowingPostgres(ctx context.Context, factory *persistence.Factory, userID string, limit int, cursor string) (PaginatedFollowing, error) {
-	queryable, ok := factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, factory)
 	if !ok {
 		return PaginatedFollowing{}, persistence.ErrNotImplemented
 	}
@@ -79,7 +79,7 @@ func listFollowingPostgres(ctx context.Context, factory *persistence.Factory, us
 }
 
 func listFollowersPostgres(ctx context.Context, factory *persistence.Factory, userID string, limit int, cursor string) (PaginatedFollowers, error) {
-	queryable, ok := factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, factory)
 	if !ok {
 		return PaginatedFollowers{}, persistence.ErrNotImplemented
 	}

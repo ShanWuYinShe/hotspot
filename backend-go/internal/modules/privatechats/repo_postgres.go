@@ -141,7 +141,7 @@ func (r *PostgresRepository) DeleteForUser(ctx context.Context, userID, targetUs
 }
 
 func (r *PostgresRepository) upsertStateImpl(ctx context.Context, userID string, state ChatState) error {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
@@ -157,7 +157,7 @@ func (r *PostgresRepository) upsertStateImpl(ctx context.Context, userID string,
 }
 
 func (r *PostgresRepository) getStateImpl(ctx context.Context, userID, targetUserID string) (ChatState, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return ChatState{}, persistence.ErrNotImplemented
 	}

@@ -172,12 +172,9 @@ type privateMessageMeta struct {
 }
 
 func (r *PostgresRepository) getMessageMetaImpl(ctx context.Context, messageID string) (privateMessageMeta, error) {
-	// Prefer the tx-bound queryable so the reply-to read is consistent with
-	// the surrounding transaction; fall back to the pool otherwise.
-	queryable, ok := persistence.QueryableFromContext(ctx)
-	if !ok {
-		queryable, ok = r.factory.DB.(persistence.QueryableDB)
-	}
+	// 事务感知：优先取 ctx 中的 tx queryable（reply-to 读取需与所在事务一致），
+	// 无事务时回落到连接池（persistence.RepoQueryable 统一语义）。
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return privateMessageMeta{}, persistence.ErrNotImplemented
 	}
@@ -196,7 +193,7 @@ func stringOrNil(value string) any {
 }
 
 func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID, viewerUserID string) (map[string]any, bool, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, false, persistence.ErrNotImplemented
 	}
@@ -221,7 +218,7 @@ func (r *PostgresRepository) GetMessageForReply(ctx context.Context, messageID, 
 }
 
 func (r *PostgresRepository) GetMediaForMessage(ctx context.Context, fileID, ownerUserID string) (map[string]any, bool, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return nil, false, persistence.ErrNotImplemented
 	}
@@ -251,7 +248,7 @@ func orderedUsers(a, b string) (string, string) {
 }
 
 func (r *PostgresRepository) MessageParticipants(ctx context.Context, messageID string) (string, string, bool, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return "", "", false, persistence.ErrNotImplemented
 	}
@@ -267,7 +264,7 @@ func (r *PostgresRepository) MessageParticipants(ctx context.Context, messageID 
 }
 
 func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string) (bool, string, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return false, "", persistence.ErrNotImplemented
 	}
@@ -286,7 +283,7 @@ func (r *PostgresRepository) MessageExists(ctx context.Context, messageID string
 // 依据，spec api_spec_types.md ReportSnapshot：服务端生成，管理员审核基于
 // 快照，不直接查询私聊消息库）。target_chat_id 为相对发送者的会话对方。
 func (r *PostgresRepository) GetMessageReportSnapshot(ctx context.Context, messageID string) (MessageReportSnapshot, bool, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return MessageReportSnapshot{}, false, persistence.ErrNotImplemented
 	}

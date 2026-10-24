@@ -526,3 +526,35 @@ limit、软删过滤）、后台检索（severity 过滤、keyset 分页不重�
 2. 内存 repo 在 Create/Update 时对 title/content/action_url 做 `TrimSpace`，PG 原样持久化
    → 契约定型为「repo 只负责持久化，裁剪属 service 职责」（admin service 已 TrimSpace）；
    移除内存 repo 的裁剪，两实现一致。
+
+## Repository 事务上下文一致性审计（2026-10-24）
+
+Repository 双实现约定：凡可能被事务包裹的读写必须经 `persistence.RepoQueryable(ctx, factory)`
+（或 `QueryableForTx`）取 queryable —— ctx 携带事务时复用该事务连接，否则回落连接池。
+审计发现 **6 个模块共 20 处直接 `factory.DB.(persistence.QueryableDB)`**，绕过事务上下文：
+
+- `reports`：Create/FindExistingReport/TargetOwner；
+- `groups`：loadInvite/loadApplication（AcceptInvite/AcceptApplication 事务内调用）；
+- `privatechats`：upsertStateImpl/getStateImpl（UpsertState 等事务包装内）；
+- `privatemessages`：GetMessageForReply/GetMediaForMessage/getMessageMetaImpl；
+- `users`：listFriends/listFollowing/listFollowers/listBlocked + execInTx；
+- `groupmessages`：lookupMessageMetaFull。
+
+**风险**：事务内读走池 → 读不到本事务刚写入的行（read-your-writes 失效，快照不一致）；
+事务内写走池 → **写操作逃出事务**（回滚后仍生效，原子性被破坏；对持有行锁的事务还可能造成
+自锁/等待）。生产上这些代码路径兜底可用（池连接能写成功），但事务语义名存实亡。
+
+已全部改为 `persistence.RepoQueryable(ctx, factory)`；`privatemessages.getMessageMetaImpl` 原先
+手写「ctx 优先、池回落」也统一收口到同一 helper。bootstrap/app.go 与 platform/auth 的
+session/refresh store 仍直接用池：前者为启动期/无事务路径，后者调用链在事务外；若后续纳入
+`RunInTransaction` 需一并改造（已记录）。
+
+## 双实现契约测试第十一批（2026-10-24，reports）
+
+`TestReportsRepositoryContract` 接入契约基建，覆盖：创建/列表回环（含消息举报快照
+`message_snapshot` 冻结存储、非消息举报为空）、`status` / `target_type` 过滤、keyset 分页
+不重不漏、非法游标 → 10000、`FindExistingReport` 去重键按（举报人, 目标类型, 目标 ID）
+隔离、`TargetOwner` 对 user/moment 真实目标解析与缺失/未知类型回落。
+
+该契约测试同时验证本轮事务上下文修复：reports repo 现在可在 `testdb.BeginScope` 事务内
+读写（此前直连连接池，契约测试无法事务隔离）。

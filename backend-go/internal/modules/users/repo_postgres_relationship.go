@@ -166,7 +166,7 @@ func (r *PostgresRepository) getRelationFields(ctx context.Context, userID, targ
 }
 
 func listBlockedUsersPostgres(ctx context.Context, factory *persistence.Factory, userID string, limit int, cursor string) (PaginatedBlockedUsers, error) {
-	queryable, ok := factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, factory)
 	if !ok {
 		return PaginatedBlockedUsers{}, persistence.ErrNotImplemented
 	}

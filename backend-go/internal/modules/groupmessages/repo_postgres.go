@@ -252,7 +252,7 @@ func (r *PostgresRepository) LatestMessageID(ctx context.Context, groupID string
 }
 
 func (r *PostgresRepository) lookupMessageMetaFull(ctx context.Context, messageID string) (groupID, senderUserID, msgType string, isRecalled bool, sentAt string, err error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return "", "", "", false, "", persistence.ErrNotImplemented
 	}

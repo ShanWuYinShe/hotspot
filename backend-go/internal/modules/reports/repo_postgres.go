@@ -22,7 +22,7 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateReportRequest, messageSnapshot *ReportSnapshot) (ReportCreated, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return ReportCreated{}, persistence.ErrNotImplemented
 	}
@@ -50,7 +50,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 }
 
 func (r *PostgresRepository) FindExistingReport(ctx context.Context, userID string, targetType ReportTargetType, targetID string) (string, bool, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return "", false, persistence.ErrNotImplemented
 	}
@@ -65,7 +65,7 @@ func (r *PostgresRepository) FindExistingReport(ctx context.Context, userID stri
 }
 
 func (r *PostgresRepository) TargetOwner(ctx context.Context, targetType ReportTargetType, targetID string) (string, bool, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return "", false, persistence.ErrNotImplemented
 	}

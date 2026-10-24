@@ -248,7 +248,7 @@ func (r *PostgresRepository) GetInvite(ctx context.Context, inviteID string) (Gr
 }
 
 func (r *PostgresRepository) loadInvite(ctx context.Context, inviteID string) (GroupInviteItem, error) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return GroupInviteItem{}, persistence.ErrNotImplemented
 	}
