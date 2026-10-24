@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Bell, Search, Compass, ArrowRight, Sparkles } from '@lucide/svelte';
+	import { Bell, Search, Compass, ArrowRight, Sparkles, Users, MessageCircle } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import type { MomentItem } from '@/api/types';
@@ -12,7 +12,8 @@
 	import { auth } from '@/stores/auth.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
+	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
+	import RailSection from '@/components/rail/RailSection.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -114,7 +115,6 @@
 	);
 
 	// 首屏：一条流 = 关系流（需登录）+ 发现流（匿名可用），两个 pager 并行加载。
-	// 没有任何"默认段"判定——用户不需要知道自己在看哪个流（2026-10-20）。
 	$effect(() => {
 		if (!booting) return;
 		if (auth.status === 'loading') return;
@@ -144,34 +144,50 @@
 		if (!following.loaded && !following.loading) void following.load();
 	});
 
-	// 关注流已出现的 moment_id：发现流渲染时去重，避免同一条重复出现
-	const followingIds = $derived(new Set(following.items.map((m) => m.moment_id)));
+	// ═══ 真正的单一流合并（关系流在前，发现流按 moment_id 去重续后）═══
+	const feedMoments = $derived.by(() => {
+		const list: MomentItem[] = [];
+		const seen = new Set<string>();
+		if (auth.status === 'authenticated') {
+			for (const m of following.items) {
+				if (!seen.has(m.moment_id)) {
+					seen.add(m.moment_id);
+					list.push(m);
+				}
+			}
+		}
+		for (const m of discover.items) {
+			if (!seen.has(m.moment_id)) {
+				seen.add(m.moment_id);
+				list.push(m);
+			}
+		}
+		return list;
+	});
+
+	const feedError = $derived(following.error ?? discover.error);
+	const feedLoading = $derived(booting || (feedMoments.length === 0 && (following.loading || discover.loading)));
+	const hasMoreFeed = $derived(
+		auth.status === 'authenticated' && following.hasMore ? true : discover.hasMore
+	);
+	const loadingMoreFeed = $derived(following.loadingMore || discover.loadingMore);
+
+	async function loadMoreFeed() {
+		if (auth.status === 'authenticated' && following.hasMore) {
+			await following.loadMore();
+		} else if (discover.hasMore) {
+			await discover.loadMore();
+		}
+	}
 </script>
 <svelte:head>
 	<title>首页 · HotSpot</title>
 </svelte:head>
 
-{#snippet momentRows(pager: ReturnType<typeof createMomentPager>, exclude?: Set<string>)}
-	{@const rows = exclude ? pager.items.filter((m) => !exclude.has(m.moment_id)) : pager.items}
-	{#if rows.length > 0}
-	<ListContainer class="divide-y divide-border-subtle/30">
-		{#each rows as moment, i (moment.moment_id)}
-			<!-- 非地理轴（关系流/全站热榜）不显示「距离」：全局内容配「300m」会误导为身边内容 -->
-			<ActivityRow {moment} index={i} showDistance={false} onClick={() => void goto(ROUTES.moment(moment.moment_id))} />
-		{/each}
-	</ListContainer>
-	{/if}
-	{#if pager.hasMore}
-		<LoadMoreButton loading={pager.loadingMore} onLoad={() => void pager.loadMore()} />
-	{:else if rows.length > 0}
-		<ListEnd />
-	{/if}
-{/snippet}
-
 {#snippet nearbyEntry()}
 	<button
 		type="button"
-		class="card-hover flex w-full items-center gap-3 rounded-lg border border-border-default bg-surface-primary px-4 py-3 text-left focus-ring"
+		class="hover-btn card-hover flex w-full items-center gap-3 rounded-lg border border-border-default bg-surface-primary px-4 py-3 text-left focus-ring transition mt-4"
 		onclick={() => void goto(ROUTES.nearby)}
 	>
 		<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft">
@@ -185,53 +201,112 @@
 	</button>
 {/snippet}
 
-<!-- 页面根容器（无带标题分区，属单一信息流）：gap 16；页底留白只由 contentClassName pb-6 提供 -->
-<StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-4 pt-4 pb-6">
-	{#snippet header()}
-		{#if device !== 'desktop'}
-			<!-- 沉浸流顶栏：非桌面端左侧呈现品牌字标锚点，右侧为搜索/通知快捷动作 -->
-			<div class="flex items-center justify-between pt-3 pb-1">
-				<div class="flex items-center gap-1.5">
-					<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
+<!-- 桌面采用 SplitPageLayout（主内容区限制在 640px 黄金阅读宽度 + 右侧 Rail 辅助区）
+     移动端铺上 bg-surface-primary，与消息页保持 100% 纯白通透质感 -->
+<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
+	<SplitPageLayout
+		contentMaxWidth="640px"
+		contentClassName="animate-fade-in flex flex-col gap-4 pt-3 pb-8"
+	>
+		{#snippet header()}
+			{#if device !== 'desktop'}
+				<!-- 移动端顶栏：左侧品牌字标锚点，右侧为搜索/通知快捷动作 -->
+				<div class="flex items-center justify-between px-[var(--cst-page-gutter)] pt-3 pb-2 bg-surface-primary border-b border-border-subtle/30">
+					<div class="flex items-center gap-1.5">
+						<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
+					</div>
+					<h1 class="sr-only">首页</h1>
+					<div class="flex items-center gap-2">
+						<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
+						<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
+					</div>
 				</div>
-				<h1 class="sr-only">首页</h1>
-				<div class="flex items-center gap-2">
-					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
-					<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
-				</div>
-			</div>
-		{/if}
-	{/snippet}
-
-	{#if booting}
-		<InlineLoading label="加载中…" />
-	{:else}
-		<!-- 关系流（需登录）在前：与你最相关的内容优先，不加任何分组标题 -->
-		{#if auth.status === 'authenticated'}
-			{#if following.error}
-				<LoadError message={following.error} onRetry={() => following.reset()} />
-			{:else if following.loading}
-				<InlineLoading label="加载中…" />
-			{:else if following.items.length > 0}
-				{@render momentRows(following)}
 			{/if}
-		{/if}
+		{/snippet}
 
-		<!-- 发现流续后（按 moment_id 去重） -->
-		{#if discover.error}
-			<LoadError message={discover.error} onRetry={() => discover.reset()} />
-		{:else if discover.loading}
-			<InlineLoading label="加载内容…" />
-		{:else if discover.items.length > 0}
-			{@render momentRows(discover, followingIds)}
-		{:else if !following.loading && following.items.length === 0}
-			<EmptyState title="还没有内容" description="去附近看看，或者发布第一条动态。" bare>
+		{#if feedLoading}
+			<InlineLoading label="加载动态中…" class="py-12" />
+		{:else if feedError && feedMoments.length === 0}
+			<LoadError message={feedError} onRetry={() => { following.reset(); discover.reset(); }} />
+		{:else if feedMoments.length > 0}
+			<!-- 单一连续平铺流：消除任何中间“没有更多了”和断裂卡片 -->
+			<ListContainer class="divide-y divide-border-subtle/30">
+				{#each feedMoments as moment, i (moment.moment_id)}
+					<ActivityRow {moment} index={i} showDistance={false} onClick={() => void goto(ROUTES.moment(moment.moment_id))} />
+				{/each}
+			</ListContainer>
+
+			{#if hasMoreFeed}
+				<div class="mt-2 flex justify-center">
+					<LoadMoreButton loading={loadingMoreFeed} onLoad={() => void loadMoreFeed()} />
+				</div>
+			{:else}
+				<ListEnd class="py-3" />
+			{/if}
+
+			{@render nearbyEntry()}
+		{:else}
+			<EmptyState title="还没有内容" description="去附近看看，或者发布第一条动态。" bare class="py-16">
 				{#snippet icon()}
 					<Sparkles class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 				{/snippet}
 			</EmptyState>
+
+			{@render nearbyEntry()}
 		{/if}
 
-		{@render nearbyEntry()}
-	{/if}
-</StandardPageLayout>
+		{#snippet rail()}
+			<!-- 桌面端右侧 Rail 辅助区：探索社区快捷入口，平衡主内容区视觉重心 -->
+			<div class="flex flex-col gap-4">
+				<RailSection title="探索社区">
+					<div class="flex flex-col gap-2">
+						<button
+							type="button"
+							class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary px-3.5 py-2.5 text-left transition focus-ring"
+							onclick={() => void goto(ROUTES.nearbyPeople)}
+						>
+							<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft">
+								<Users class="size-4 text-accent-default" strokeWidth={1.75} />
+							</span>
+							<div class="min-w-0 flex-1">
+								<span class="block text-sm font-medium text-text-primary">附近的人</span>
+								<span class="block truncate text-xs text-text-secondary">发现身边的真实伙伴</span>
+							</div>
+							<ArrowRight class="size-3.5 text-text-secondary shrink-0" />
+						</button>
+
+						<button
+							type="button"
+							class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary px-3.5 py-2.5 text-left transition focus-ring"
+							onclick={() => void goto(ROUTES.nearbyGroups)}
+						>
+							<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft">
+								<MessageCircle class="size-4 text-accent-default" strokeWidth={1.75} />
+							</span>
+							<div class="min-w-0 flex-1">
+								<span class="block text-sm font-medium text-text-primary">附近的群组</span>
+								<span class="block truncate text-xs text-text-secondary">加入同频兴趣圈子</span>
+							</div>
+							<ArrowRight class="size-3.5 text-text-secondary shrink-0" />
+						</button>
+
+						<button
+							type="button"
+							class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary px-3.5 py-2.5 text-left transition focus-ring"
+							onclick={() => void goto(ROUTES.nearbyMoments)}
+						>
+							<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft">
+								<Compass class="size-4 text-accent-default" strokeWidth={1.75} />
+							</span>
+							<div class="min-w-0 flex-1">
+								<span class="block text-sm font-medium text-text-primary">附近瞬间</span>
+								<span class="block truncate text-xs text-text-secondary">看看身边正在发生什么</span>
+							</div>
+							<ArrowRight class="size-3.5 text-text-secondary shrink-0" />
+						</button>
+					</div>
+				</RailSection>
+			</div>
+		{/snippet}
+	</SplitPageLayout>
+</div>

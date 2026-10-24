@@ -223,9 +223,10 @@
 </svelte:head>
 
 
+<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
-		<PageHeader title="搜索" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
+		<PageHeader title="搜索" class="!bg-surface-primary" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 			{#snippet below()}
 				<!-- 搜索框随 sticky header 吸顶（对齐 nearby/moments 样板 below 结构） -->
 				<div class="mx-auto w-full max-w-3xl mt-3 mb-2.5">
@@ -274,3 +275,4 @@
 		/>
 	{/if}
 </StandardPageLayout>
+</div>

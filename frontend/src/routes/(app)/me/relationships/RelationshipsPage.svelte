@@ -72,6 +72,7 @@
 {#snippet relHeader()}
 	<PageHeader
 		title="关系"
+		class="!bg-surface-primary"
 		sticky
 		titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		onBack={() => smartBack(ROUTES.me)}
@@ -126,6 +127,7 @@
 
 <!-- ═══ 样板 layout：StandardPageLayout（sticky header + ContentColumn 全宽 gutter）═══
      Section 组件为纯内容（不自建 gutter），gutter 由 ContentColumn 统一提供。 -->
+<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		{@render relHeader()}
@@ -141,3 +143,4 @@
 		<SectionBlocked embedded searchQ={relSearch} />
 	{/if}
 </StandardPageLayout>
+</div>

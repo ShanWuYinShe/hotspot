@@ -322,10 +322,12 @@ const markSingleRead = (id: string) => {
 </svelte:head>
 
 
+<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
 <SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			title="通知"
+			class="!bg-surface-primary"
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			onBack={() => smartBack()}
@@ -518,3 +520,4 @@ const markSingleRead = (id: string) => {
 		{/if}
 	{/snippet}
 </SplitPageLayout>
+</div>

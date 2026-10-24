@@ -48,17 +48,15 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	]);
 </script>
 
+<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
 <StandardPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
-		<!-- 资料页眉（eyebrow；底色对齐标准 PageHeader 的 surface-page）。
-			     不在此放设置/外观入口——它们统一收在下方身份卡的拇指操作区，
-			     同一页只保留一处设置入口；外观走设置页「外观与显示」，
-			     避免与「设置」按钮形成同一功能两条路径。 -->
-			<div class="border-b border-border-default bg-surface-page" >
-				<ContentColumn class="flex items-center justify-between py-3">
-					<p class="eyebrow">个人中心</p>
-				</ContentColumn>
-			</div>
+		<!-- 资料页眉（eyebrow；底色对齐消息页实底 surface-primary）。 -->
+		<div class="border-b border-border-default bg-surface-primary" >
+			<ContentColumn class="flex items-center justify-between py-3">
+				<p class="eyebrow">个人中心</p>
+			</ContentColumn>
+		</div>
 	{/snippet}
 
 	{#if loading}
@@ -147,3 +145,4 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		</div>
 	{/if}
 </StandardPageLayout>
+</div>
