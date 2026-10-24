@@ -1265,3 +1265,28 @@ DB 列均为 TEXT，不拦超长值；1MiB 请求体上限内，单个字段可�
    `keyword` 未校验 1-100 上限；
 2. `AppConfig.limits.max_group_members`（平台可调的群成员上限）在 groups 创建/更新时未强制，
    须确认「超平台上限应拒绝还是静默裁剪」后修（涉及客户端 `max_members` 可选项口径）。
+
+## 契约长度校验缺口收尾：标签/搜索关键字/群成员上限（2026-10-25，第 36 轮）
+
+接第 35 轮（群组文本长度）继续处理同轮记录的相邻缺口：
+
+### 1. moments 标签逐条长度
+此前只校验 tags 数量（≤10），单个标签可无限长（违反 base「每个标签 1-30 字符」，且
+moment_tags 逐条 INSERT 会放大写放大）。新增 `tagsMaxRunes=30` 与 `ErrInvalidTag`：
+`ensureTagsLimit` 同时校验数量与逐条 `1-30`（rune），Create/Update 映射 10000。
+
+### 2. 搜索关键字/标签长度上限（keyword 1-100、tag 1-30）
+- `moments/search`：keyword/tag rune 上限；
+- `users/search`：keyword/tag rune 上限；
+- `groups/search`：keyword/tag rune 上限；
+- `groups/members/search`：keyword rune 上限；
+超限统一 10000（此前超长 keyword 直接进入 ILIKE 查询与服务端内存排序）。
+
+### 3. 平台群成员上限 `AppConfig.limits.max_group_members` 落地
+此前该配置只在 ClientConfig 下发、**服务端从未强制**：用户可创建 `max_members` 高达 2000
+的群，突破平台默认 500 的运行参数。现在 create/update 显式 `max_members` 超过平台上限
+（`>0` 时）返回 10000；未携带（0=默认）保持服务端默认值不变。语义取「拒绝」而非静默裁剪：
+静默改小会让客户端展示与实际不一致，显式拒绝更符合「参数必显式」纪律。
+
+测试：moments 标签边界/搜索 keyword+tag 超长（handler）、users/groups 搜索超长、
+群成员上限边界（=cap 通过、>cap 拒绝）、Service 接线。

@@ -179,7 +179,7 @@ func (s *Service) resolveGroupAvatarInput(ctx context.Context, fileID, userID, o
 func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem, error) {
 	op := observability.Begin("groups.create")
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if apiErr := validateCreateGroupRequest(req); apiErr != nil {
+	if apiErr := validateCreateGroupRequest(req, s.groupMembersCap(ctx)); apiErr != nil {
 		op.Warn("invalid request", "reason", apiErr.Message)
 		return GroupItem{}, apiErr
 	}
@@ -308,7 +308,7 @@ func (s *Service) resolveReferencePoint(ctx context.Context) GeoPoint {
 func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem, error) {
 	op := observability.Begin("groups.update", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if apiErr := validateUpdateGroupRequest(req); apiErr != nil {
+	if apiErr := validateUpdateGroupRequest(req, s.groupMembersCap(ctx)); apiErr != nil {
 		op.Warn("invalid request", "reason", apiErr.Message)
 		return GroupItem{}, apiErr
 	}

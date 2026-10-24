@@ -265,6 +265,8 @@ func TestSearchGroupsValidation(t *testing.T) {
 		{name: "missing criteria", body: `{"reference_point":{"latitude":31.2,"longitude":121.5}}`},
 		{name: "radius out of range", body: `{"radius":99,"reference_point":{"latitude":31.2,"longitude":121.5}}`},
 		{name: "invalid sort", body: `{"keyword":"abc","sort_by":"random","reference_point":{"latitude":31.2,"longitude":121.5}}`},
+		{name: "keyword too long", body: `{"keyword":"` + strings.Repeat("a", 101) + `","reference_point":{"latitude":31.2,"longitude":121.5}}`},
+		{name: "tag too long", body: `{"tag":"` + strings.Repeat("a", 31) + `","reference_point":{"latitude":31.2,"longitude":121.5}}`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -747,6 +749,7 @@ func TestSearchMembersHandlerValidation(t *testing.T) {
 	}{
 		{name: "missing group_id", body: `{"keyword":"alice"}`},
 		{name: "missing keyword", body: `{"group_id":"g1"}`},
+		{name: "keyword too long", body: `{"group_id":"g1","keyword":"` + strings.Repeat("a", 101) + `"}`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

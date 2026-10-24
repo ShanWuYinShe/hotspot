@@ -1,6 +1,7 @@
 package groups
 
 import (
+	"context"
 	"unicode/utf8"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -72,17 +73,30 @@ func validateGroupPassword(password *string) *httpx.APIError {
 	return nil
 }
 
-func validateGroupMaxMembers(maxMembers int) *httpx.APIError {
+// validateGroupMaxMembers 校验单群成员上限：契约 2-2000，且不得超过平台
+// AppConfig.limits.max_group_members（0 = 未配置，视为不额外限制）。
+func validateGroupMaxMembers(maxMembers, platformCap int) *httpx.APIError {
 	if maxMembers == 0 {
 		return nil // 0 = 使用服务端默认值
 	}
 	if maxMembers < groupMaxMembersMin || maxMembers > groupMaxMembersMax {
 		return invalidGroupField()
 	}
+	if platformCap > 0 && maxMembers > platformCap {
+		return invalidGroupField()
+	}
 	return nil
 }
 
-func validateCreateGroupRequest(req CreateGroupRequest) *httpx.APIError {
+// groupMembersCap 返回平台可调的群成员上限（AppConfig.limits.max_group_members）。
+func (s *Service) groupMembersCap(ctx context.Context) int {
+	if s.appConfig == nil {
+		return 0
+	}
+	return s.appConfig.Get(ctx).Limits.MaxGroupMembers
+}
+
+func validateCreateGroupRequest(req CreateGroupRequest, platformCap int) *httpx.APIError {
 	name := req.Name
 	description := req.Description
 	locationName := req.Location.LocationName
@@ -92,10 +106,10 @@ func validateCreateGroupRequest(req CreateGroupRequest) *httpx.APIError {
 	if apiErr := validateGroupPassword(&req.Password); apiErr != nil {
 		return apiErr
 	}
-	return validateGroupMaxMembers(req.MaxMembers)
+	return validateGroupMaxMembers(req.MaxMembers, platformCap)
 }
 
-func validateUpdateGroupRequest(req UpdateGroupRequest) *httpx.APIError {
+func validateUpdateGroupRequest(req UpdateGroupRequest, platformCap int) *httpx.APIError {
 	var name, description, locationName *string
 	if req.Name != "" {
 		name = &req.Name
@@ -117,7 +131,7 @@ func validateUpdateGroupRequest(req UpdateGroupRequest) *httpx.APIError {
 		return apiErr
 	}
 	if req.MaxMembers != nil {
-		return validateGroupMaxMembers(*req.MaxMembers)
+		return validateGroupMaxMembers(*req.MaxMembers, platformCap)
 	}
 	return nil
 }

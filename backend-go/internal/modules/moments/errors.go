@@ -14,7 +14,9 @@ var (
 	// ErrTooManyTags：tags 数量超过 api_spec_base.md 字段校验约束上限 10（spec 10000）。
 	// 不限制会让单条请求放大为数千次 tag 逐条 INSERT。
 	ErrTooManyTags = errors.New("moments: tags exceed max count")
-	ErrBlockedTag  = errors.New("moments: tags contain a blocked tag")
+	// ErrInvalidTag：单个 tag 为空或超过 30 字符（spec api_spec_base.md 字段约束）。
+	ErrInvalidTag = errors.New("moments: invalid tag")
+	ErrBlockedTag = errors.New("moments: tags contain a blocked tag")
 	// ErrInvalidFetchRequest 发现流（fetch_following/fetch_nearby）请求非法：
 	// 未登录访问 fetch_following、reference_point 坐标非法等。
 	ErrInvalidFetchRequest = errors.New("moments: invalid fetch request")

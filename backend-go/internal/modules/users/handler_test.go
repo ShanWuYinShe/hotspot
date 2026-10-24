@@ -1579,3 +1579,26 @@ func (r *userErrorRepo) CountCommonGroups(context.Context, string, string) (int,
 func (r *userErrorRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string, int) ([]NearbyNotifyTarget, error) {
 	return nil, ErrInvalidRequest
 }
+
+// 契约（api_spec_base.md「搜索与地理约束」）：keyword 1-100、tag 1-30 字符。
+func TestSearchRejectsOversizeKeywordAndTag(t *testing.T) {
+	handler := NewHandler(NewService())
+	cases := []string{
+		"{\"keyword\":\"" + strings.Repeat("a", 101) + "\"}",
+		"{\"tag\":\"" + strings.Repeat("a", 31) + "\"}",
+	}
+	for _, body := range cases {
+		req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(body))
+		rr := httptest.NewRecorder()
+		handler.Search(rr, req)
+		var resp struct {
+			Code httpx.Code `json:"code"`
+		}
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Code != httpx.CodeInvalidRequest {
+			t.Fatalf("expected 10000 for %s, got %d", body, resp.Code)
+		}
+	}
+}

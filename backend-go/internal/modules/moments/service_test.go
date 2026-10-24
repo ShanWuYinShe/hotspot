@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"hotspot/backend-go/internal/platform/appconfig"
@@ -700,5 +701,21 @@ func TestServiceSearchPopularDefaultsToConfiguredHotMomentsCount(t *testing.T) {
 	}
 	if repo.lastSearch.Pagination != nil {
 		t.Fatalf("non-popular mode must not inject pagination, got %+v", repo.lastSearch.Pagination)
+	}
+}
+
+// 契约（api_spec_base.md）：每个标签 1-30 字符（此前只校验数量）。
+func TestEnsureTagsLimitRejectsInvalidTag(t *testing.T) {
+	if err := ensureTagsLimit([]string{"正常标签"}); err != nil {
+		t.Fatalf("valid tag rejected: %v", err)
+	}
+	if err := ensureTagsLimit([]string{strings.Repeat("标", 31)}); !errors.Is(err, ErrInvalidTag) {
+		t.Fatalf("over-long tag: got %v, want ErrInvalidTag", err)
+	}
+	if err := ensureTagsLimit([]string{""}); !errors.Is(err, ErrInvalidTag) {
+		t.Fatalf("empty tag: got %v, want ErrInvalidTag", err)
+	}
+	if err := ensureTagsLimit(make([]string, 11)); !errors.Is(err, ErrTooManyTags) {
+		t.Fatalf("too many tags: got %v, want ErrTooManyTags", err)
 	}
 }

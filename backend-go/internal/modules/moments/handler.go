@@ -3,6 +3,7 @@ package moments
 import (
 	"errors"
 	"net/http"
+	"unicode/utf8"
 
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
@@ -52,6 +53,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeInvalidRequest, "内容超过长度限制")
 			case errors.Is(err, ErrTooManyTags):
 				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeInvalidRequest, "tags 数量超过上限")
+			case errors.Is(err, ErrInvalidTag):
+				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeInvalidRequest, "标签长度不合法")
 			case errors.Is(err, ErrTooManyMentions):
 				return httpx.Business[OwnerMomentItem](r, "Create", httpx.CodeInvalidRequest, "mentions 数量超过上限")
 			case errors.Is(err, ErrTooManyImages):
@@ -119,6 +122,19 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	// 热门模式（spec moment.md → moments/search）：keyword/tag 均缺省且显式传
 	// sort_by='popular' 时进入（承接原 feed/trending 的发现页首屏能力）；
 	// 热门模式与输入条件互斥（同传 10000），三者全缺省仍 10000。
+	// 契约（api_spec_base.md「搜索与地理约束」）：keyword 1-100 字符、tag 1-30 字符。
+	if req.Keyword != nil && *req.Keyword != "" {
+		if n := utf8.RuneCountInString(*req.Keyword); n > 100 {
+			httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
+			return
+		}
+	}
+	if req.Tag != nil && *req.Tag != "" {
+		if n := utf8.RuneCountInString(*req.Tag); n > 30 {
+			httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
+			return
+		}
+	}
 	keywordProvided := req.Keyword != nil && *req.Keyword != ""
 	tagProvided := req.Tag != nil && *req.Tag != ""
 	if req.SortBy == "popular" && (keywordProvided || tagProvided) {
@@ -173,6 +189,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, ErrTooManyTags) {
 			httpx.WriteInvalidRequest(w, r, "Update", "tags 数量超过上限")
+			return
+		}
+		if errors.Is(err, ErrInvalidTag) {
+			httpx.WriteInvalidRequest(w, r, "Update", "标签长度不合法")
 			return
 		}
 		if errors.Is(err, ErrTooManyImages) {

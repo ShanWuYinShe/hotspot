@@ -123,10 +123,18 @@ func ensureMentionsLimit(mentions []string) error {
 // tags 逐条 INSERT，不限制会让单条请求放大为数千次写。
 const tagsMaxCount = 10
 
-// ensureTagsLimit 校验 tags 数量上限；Create 与 Update 共用。
+// tagsMaxRunes 单个标签长度上限（spec api_spec_base.md：每个标签 1-30 字符）。
+const tagsMaxRunes = 30
+
+// ensureTagsLimit 校验 tags 数量与逐条长度；Create 与 Update 共用。
 func ensureTagsLimit(tags []string) error {
 	if len(tags) > tagsMaxCount {
 		return ErrTooManyTags
+	}
+	for _, tag := range tags {
+		if n := utf8.RuneCountInString(tag); n < 1 || n > tagsMaxRunes {
+			return ErrInvalidTag
+		}
 	}
 	return nil
 }

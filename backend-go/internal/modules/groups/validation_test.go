@@ -18,7 +18,7 @@ func TestValidateCreateGroupRequestBounds(t *testing.T) {
 		return Location{LocationName: "南天门", Point: GeoPoint{Latitude: 35.1, Longitude: 112.6}}
 	}
 	valid := CreateGroupRequest{Name: "登山队", Location: validLocation()}
-	if apiErr := validateCreateGroupRequest(valid); apiErr != nil {
+	if apiErr := validateCreateGroupRequest(valid, 0); apiErr != nil {
 		t.Fatalf("minimal request should pass: %v", apiErr)
 	}
 
@@ -37,13 +37,22 @@ func TestValidateCreateGroupRequestBounds(t *testing.T) {
 		{"人数上限", CreateGroupRequest{Name: "g", MaxMembers: groupMaxMembersMax + 1, Location: validLocation()}},
 	}
 	for _, tc := range cases {
-		if apiErr := validateCreateGroupRequest(tc.req); apiErr == nil {
+		if apiErr := validateCreateGroupRequest(tc.req, 0); apiErr == nil {
 			t.Fatalf("%s: expected invalid", tc.name)
 		}
 	}
 
+	// 平台上限（AppConfig.limits.max_group_members，默认 500）：显式超过平台上限
+	// 的 max_members 必须拒绝，即使仍在契约 2-2000 内。
+	if apiErr := validateCreateGroupRequest(CreateGroupRequest{Name: "g", MaxMembers: 600, Location: validLocation()}, 500); apiErr == nil {
+		t.Fatal("max_members over platform cap should be rejected")
+	}
+	if apiErr := validateCreateGroupRequest(CreateGroupRequest{Name: "g", MaxMembers: 500, Location: validLocation()}, 500); apiErr != nil {
+		t.Fatalf("max_members equal to platform cap should pass: %v", apiErr)
+	}
+
 	// 边界值合法：名 50 / 描述 500 / 标签 10 个各 30 / 地点 100 / 密码 8 与 32 /
-	// 人数 2 与 2000。
+	// 人数 2 与 2000（平台上限传 0 = 不额外限制）。
 	boundary := CreateGroupRequest{
 		Name:        repeatRunes(groupNameMaxRunes),
 		Description: repeatRunes(groupDescriptionMaxRunes),
@@ -52,13 +61,13 @@ func TestValidateCreateGroupRequestBounds(t *testing.T) {
 		MaxMembers:  groupMaxMembersMax,
 		Location:    Location{LocationName: repeatRunes(groupLocationNameMaxRunes), Point: GeoPoint{Latitude: 35.1, Longitude: 112.6}},
 	}
-	if apiErr := validateCreateGroupRequest(boundary); apiErr != nil {
+	if apiErr := validateCreateGroupRequest(boundary, 0); apiErr != nil {
 		t.Fatalf("boundary request should pass: %v", apiErr)
 	}
 }
 
 func TestValidateUpdateGroupRequestBounds(t *testing.T) {
-	if apiErr := validateUpdateGroupRequest(UpdateGroupRequest{GroupID: "g1"}); apiErr != nil {
+	if apiErr := validateUpdateGroupRequest(UpdateGroupRequest{GroupID: "g1"}, 0); apiErr != nil {
 		t.Fatalf("empty update should pass: %v", apiErr)
 	}
 	cases := []struct {
@@ -72,7 +81,7 @@ func TestValidateUpdateGroupRequestBounds(t *testing.T) {
 		{"人数非法", UpdateGroupRequest{GroupID: "g1", MaxMembers: groupIntPtr(1)}},
 	}
 	for _, tc := range cases {
-		if apiErr := validateUpdateGroupRequest(tc.req); apiErr == nil {
+		if apiErr := validateUpdateGroupRequest(tc.req, 0); apiErr == nil {
 			t.Fatalf("%s: expected invalid", tc.name)
 		}
 	}
@@ -82,7 +91,7 @@ func TestValidateUpdateGroupRequestBounds(t *testing.T) {
 	okMax := groupMaxMembersMin
 	if apiErr := validateUpdateGroupRequest(UpdateGroupRequest{
 		GroupID: "g1", Name: okName, Description: okDesc, Password: &okPwd, MaxMembers: &okMax,
-	}); apiErr != nil {
+	}, 0); apiErr != nil {
 		t.Fatalf("boundary update should pass: %v", apiErr)
 	}
 }

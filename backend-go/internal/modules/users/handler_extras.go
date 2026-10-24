@@ -3,6 +3,7 @@ package users
 import (
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
@@ -15,6 +16,15 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Keyword == "" && req.Tag == "" && req.Radius == nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		return
+	}
+	// 契约（api_spec_base.md「搜索与地理约束」）：keyword 1-100 字符、tag 1-30 字符。
+	if n := utf8.RuneCountInString(req.Keyword); n > 100 {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		return
+	}
+	if n := utf8.RuneCountInString(req.Tag); n > 30 {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 		return
 	}
