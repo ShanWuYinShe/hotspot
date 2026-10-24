@@ -166,17 +166,19 @@
 </svelte:head>
 
 {#snippet feedTabs()}
-	<!-- 顶部 Tab 栏：居中紧凑对齐，滑动下划线与吸顶毛玻璃质感 -->
-	<div class="px-4 sm:px-5 bg-surface-primary/90 backdrop-blur-md sticky top-0 z-10 border-b border-border-subtle/30">
-		<div class="max-w-[280px] mx-auto">
+	<!-- 顶部 Tab 栏：居中悬浮胶囊分段器（Floating Island Segmented Control），彻底消除直角长条与生硬底线 -->
+	<div class="sticky top-0 z-20 pt-2.5 pb-2 flex justify-center pointer-events-none">
+		<div class="pointer-events-auto rounded-full bg-surface-primary/90 backdrop-blur-md shadow-raised-sm border border-border-default/80 p-0.5">
 			<TabBar
-				variant="underline"
+				variant="segmented"
+				size="md"
 				items={[
 					{ id: 'discover', label: '为你推荐' },
 					{ id: 'following', label: '正在关注' }
 				]}
 				value={activeTab}
 				onChange={(id) => { activeTab = id as FeedTab; }}
+				class="min-w-[240px] bg-transparent ring-0"
 			/>
 		</div>
 	</div>
@@ -208,9 +210,9 @@
 	>
 		{#snippet header()}
 			{#if device !== 'desktop'}
-				<!-- 移动端顶栏：品牌 Logo + 快捷动作 + 分段 Tab 一体化（单一吸顶容器，杜绝双重边框） -->
-				<div class="bg-surface-primary/95 backdrop-blur-md border-b border-border-subtle/30 sticky top-0 z-20">
-					<div class="flex items-center justify-between px-4 pt-3 pb-1">
+				<!-- 移动端顶栏：品牌 Logo + 快捷动作 + 居中胶囊分段器一体化（告别生硬下划线与单调布局） -->
+				<div class="bg-surface-primary/95 backdrop-blur-md border-b border-border-subtle/30 sticky top-0 z-20 pb-2.5">
+					<div class="flex items-center justify-between px-4 pt-3 pb-1.5">
 						<div class="flex items-center gap-2">
 							<img src={imgHotSpot} alt="HotSpot" class="size-6.5 rounded-full object-cover shadow-xs" />
 							<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
@@ -221,15 +223,17 @@
 							<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
 						</div>
 					</div>
-					<div class="max-w-[260px] mx-auto px-4">
+					<div class="flex justify-center px-4">
 						<TabBar
-							variant="underline"
+							variant="segmented"
+							size="sm"
 							items={[
 								{ id: 'discover', label: '为你推荐' },
 								{ id: 'following', label: '正在关注' }
 							]}
 							value={activeTab}
 							onChange={(id) => { activeTab = id as FeedTab; }}
+							class="w-full max-w-[220px]"
 						/>
 					</div>
 				</div>
