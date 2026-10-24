@@ -344,3 +344,18 @@ Redis 实现都按配置生效、失败计数衰减窗口随锁期变化），�
   ORDER BY、keyset 谓词与游标编码三者同源，SQL 不再出现 `now()`。
   跨桶翻页（>15 分钟）仍有设计内的弱一致窗口，但同一次请求内绝对一致。
 - 回归：SQL 形状断言改为「无 now() + 时钟作为绑定参数且位于 LIMIT 前」。
+
+## 双实现契约测试第三批（2026-10-24，users）
+
+`TestUsersRelationshipContract` 接入契约基建：同一组用例跑内存实现与真实库实现，
+覆盖关注幂等（changed 语义）、关注/粉丝列表、好友列表（`followed_back_at`）、
+取关清边、拉黑级联（双向解关 + 拉黑列表字段）、`BlockedEitherWay`、
+`RelationshipBatch` 与单个查询一致、following keyset 分页不重不漏、非法游标。
+
+**首跑抓到 1 处真实漂移并修复**：内存版 `ListBlocked` 只填 `user_id`/`nickname`，
+漏掉头像（PG 版 `queryListBlockedUsers` 返回 `avatar_url`），导致同一数据在内存实现
+（单测/无 DB 场景）与真实库下 API 字段不一致——补齐 `AvatarURL` 映射。
+
+用例准备说明：两实现预置数据等价（PG 用 `testdb.InsertUser`（presence=online）+
+UPDATE avatar，内存用 `PutProfile` 对齐 nickname/avatar/presence/last_online），
+分页断言只校验「不重不漏 + 页大小」，不绑定同秒并列顺序。

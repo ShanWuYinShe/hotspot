@@ -374,7 +374,13 @@ func (r *InMemoryRepository) ListBlocked(_ context.Context, userID string, limit
 	items := make([]BlockedUserItem, 0)
 	for targetUserID, relation := range r.relations[userID] {
 		if relation.Blocked {
-			items = append(items, BlockedUserItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID)}, BlockedAt: relation.BlockedAt, Reason: types.StrPtr(relation.BlockReason)})
+			// 与 PG 版 queryListBlockedUsers 同口径：昵称/头像随用户行返回
+			//（契约测试发现内存版此前漏填 avatar_url，与真实库列不一致）。
+			items = append(items, BlockedUserItem{
+				User:      UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: types.StrPtr(r.profiles[targetUserID].AvatarURL)},
+				BlockedAt: relation.BlockedAt,
+				Reason:    types.StrPtr(relation.BlockReason),
+			})
 		}
 	}
 	sort.Slice(items, func(i, j int) bool {
