@@ -226,10 +226,11 @@ func (r *InMemoryRepository) ListReactedTargets(_ context.Context, targetType Re
 		}
 	}
 	sort.Slice(all, func(i, j int) bool {
-		if all[i].reactedAt == all[j].reactedAt {
+		ti, tj := parseReactionTime(all[i].reactedAt), parseReactionTime(all[j].reactedAt)
+		if ti.Equal(tj) {
 			return all[i].targetID > all[j].targetID
 		}
-		return all[i].reactedAt > all[j].reactedAt
+		return ti.After(tj)
 	})
 	filtered := make([]rec, 0, len(all))
 	for _, e := range all {
@@ -268,10 +269,13 @@ func (r *InMemoryRepository) entriesSorted(targetType ReactTarget, targetID stri
 		out = append(out, e)
 	}
 	sort.Slice(out, func(i, j int) bool {
-		if out[i].reactedAt == out[j].reactedAt {
+		// RFC3339Nano 的小数位数可变（去尾零），字符串字典序与时间序不一致；
+		// 必须按解析后的时间比较（否则同秒相近值排序错乱 → 游标翻页重叠/丢行）。
+		ti, tj := parseReactionTime(out[i].reactedAt), parseReactionTime(out[j].reactedAt)
+		if ti.Equal(tj) {
 			return out[i].userID > out[j].userID
 		}
-		return out[i].reactedAt > out[j].reactedAt
+		return ti.After(tj)
 	})
 	return out
 }
