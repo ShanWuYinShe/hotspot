@@ -88,7 +88,9 @@ if [ "$WITH_DB" = "1" ]; then
     || "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "CREATE DATABASE $DB"
   DSN="postgres://postgres:$PG_PASSWORD@localhost:5432/$DB?sslmode=disable"
   ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go run ./cmd/migrate >/dev/null )
-  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go test -count=1 -run "TestPostgresIT|Contract" ./internal/modules/... )
+  # -p 1：各包串行。真实库是共享数据库，IT 测试会提交 fixture 行（BeginScope 之外的
+  # 用例），并行包会让「统计类」断言（如 admin 今日新增）采到其它包的行而偶发红灯。
+  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go test -p 1 -count=1 -run "TestPostgresIT|Contract" ./internal/modules/... )
 fi
 
 if [ "$WITH_E2E" = "1" ]; then

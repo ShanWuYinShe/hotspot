@@ -859,3 +859,21 @@ Redis 调用 context 带超时。此前 `RedisStore`（生产多实例必经路�
 
 （注：重复订阅的同类问题也可能出现在实时广播注册表；handler 侧若未去重，同一连接可能
 收到重复群事件——本轮未改动，记录为后续观察项。）
+
+## CI 真实库集成测试串行化（2026-10-24，第 21 轮追加）
+
+**现象**：main 推送后 CI `Go Backend (Postgres Integration)` 偶发红灯，失败断言：
+
+`admin.TestPostgresIT_StatsGeoAggregation` → `unexpected today trend: {Date:…, User:4, Group:1, Moment:1}`。
+
+**根因**：该 job 用 `go test ... ./internal/modules/...`，默认**按包并行**；各模块的
+`TestPostgresIT` 会通过连接池**提交** fixture 行（事务隔离只覆盖用 `testdb.BeginScope`
+的契约测试，IT 测试仍是直接建数据）。admin 统计测试断言「今日新增 = 基线 + 本用例插入量」，
+并行包在基线之后插入的行会被计入，导致偶发不一致。此前本地门禁多次通过属运气。
+
+**修复**：共享真实库的测试必须串行——`go test -p 1` 同时加到
+`scripts/verify-backend-ci.sh`（本地门禁，与 CI 对齐）与 `.github/workflows/ci.yml`
+的 DB 集成步骤，并注释说明原因。
+
+**纪律沉淀**：共享外部状态（同一数据库/Redis 实例）的测试套件不要按包并行；
+要么各包用事务回滚隔离（BeginScope），要么显式串行（`-p 1`），两者不能混用后仍假设互不影响。
