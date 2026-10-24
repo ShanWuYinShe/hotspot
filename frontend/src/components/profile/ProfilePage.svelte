@@ -104,47 +104,47 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 			<!-- 身份卡 + 居中统计（同一张卡，指标复用 MetricRow 原语）。
 			     页顶留白由 contentClassName 的 pt-6（呼吸型变体）单侧承担，首块不再叠 mt；
 			     与下方双栏的区块间距 24 由本块 mb-6 单侧提供。 -->
-			<section class="mb-6 overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="公开个人资料">
+			<section class="mb-6 overflow-hidden rounded-2xl border border-border-subtle/60 bg-surface-primary shadow-raised-sm" aria-label="公开个人资料">
 				<div class="flex items-start gap-5 p-6">
-					<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0" />
+					<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0 ring-2 ring-accent-default/20 shadow-xs" />
 					<div class="min-w-0 pt-1">
-						<h2 class="text-2xl font-medium tracking-title text-text-primary">{nickname || '未设置昵称'}</h2>
+						<h2 class="text-2xl font-bold tracking-title text-text-primary">{nickname || '未设置昵称'}</h2>
 						<p class="mt-1 text-sm text-text-secondary">{handle}</p>
-						<p class="mt-4 max-w-115 text-sm leading-6 text-text-secondary">{bio || '这个人还没有填写简介。'}</p>
+						<p class="mt-3.5 max-w-115 text-sm leading-relaxed text-text-secondary">{bio || '这个人还没有填写简介。'}</p>
 						<p class="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">
-							<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
+							<MapPin class="size-3.5 text-accent-default" strokeWidth={1.75} />
 							{locationName || '未设置位置'}
 						</p>
 					</div>
 				</div>
-				<!-- 单手黄金操作区：拇指自然易达，告别天花板长距离伸展 -->
+				<!-- 黄金操作区：圆润胶囊形态，亲和高雅 -->
 				<div class="flex items-center gap-2.5 px-6 pb-5 pt-1">
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.meEdit)}
-						class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-md border border-border-default bg-surface-primary py-2 px-5 text-sm font-medium text-text-primary shadow-raised-sm focus-ring transition-colors hover:bg-accent-soft"
+						class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-full border border-border-subtle/80 bg-surface-primary py-2 px-5 text-sm font-medium text-text-primary shadow-xs focus-ring transition-all hover:bg-accent-soft hover:border-accent-border/60 hover:text-accent-default active:scale-[0.98]"
 					>
-						<Pencil class="size-4 text-text-secondary" strokeWidth={1.75} />
+						<Pencil class="size-3.5 text-text-secondary group-hover:text-accent-default" strokeWidth={1.75} />
 						编辑资料
 					</button>
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.settings)}
-						class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-md border border-border-default bg-surface-primary py-2 px-3.5 text-sm font-medium text-text-primary shadow-raised-sm focus-ring transition-colors hover:bg-accent-soft"
+						class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-full border border-border-subtle/80 bg-surface-primary py-2 px-4 text-sm font-medium text-text-primary shadow-xs focus-ring transition-all hover:bg-accent-soft hover:border-accent-border/60 hover:text-accent-default active:scale-[0.98]"
 						aria-label="系统设置"
 					>
-						<Settings class="size-4 text-text-secondary" strokeWidth={1.75} />
+						<Settings class="size-3.5 text-text-secondary group-hover:text-accent-default" strokeWidth={1.75} />
 						<span class="hidden sm:inline text-xs">设置</span>
 					</button>
 				</div>
-				<MetricRow items={metricItems} class="border-t border-border-default" />
+				<MetricRow items={metricItems} class="border-t border-border-subtle/50" />
 			</section>
 
 			<!-- 双栏：我的内容入口 + 资料状态（分区间距由上方身份卡 mb-6 单侧提供）。
 			     桌面双栏列距 20 属纯横向列距，按 RULES 保留。 -->
 			<div class="grid gap-x-5 gap-y-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-				<section class="rounded-lg border border-border-default bg-surface-primary shadow-raised-sm" aria-label="我的内容">
-					<div class="border-b border-border-default px-6 py-4">
+				<section class="rounded-2xl border border-border-subtle/60 bg-surface-primary shadow-raised-sm overflow-hidden" aria-label="我的内容">
+					<div class="px-6 pt-5 pb-2">
 						<h2 class="text-md font-semibold text-text-primary">我的内容</h2>
 						<p class="mt-1 text-xs text-text-secondary">你的瞬间、群组与社交关系都在这里。</p>
 					</div>
@@ -153,34 +153,34 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 							<button
 								type="button"
 								onclick={() => void goto(ME_SECTION_PATHS[item.section])}
-								class="hover-btn flex w-full items-center gap-3.5 rounded-md p-3 text-left focus-ring hover:bg-interactive-hover"
+								class="hover-btn flex w-full items-center gap-3.5 rounded-xl p-3 text-left focus-ring transition-colors hover:bg-interactive-hover"
 							>
-								<span class="flex shrink-0 items-center justify-center rounded-full icon-badge size-9">
-									<item.icon class="size-4.5 text-accent-default"  strokeWidth={1.75} />
+								<span class="flex shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-default size-9.5 transition-transform group-hover:scale-105">
+									<item.icon class="size-4.5" strokeWidth={1.75} />
 								</span>
 								<span class="min-w-0 flex-1">
 									<span class="block text-sm font-medium text-text-primary">{item.title}</span>
 									<span class="mt-0.5 block truncate text-xs text-text-secondary">{item.description}</span>
 								</span>
-								<ChevronRight class="size-4 text-text-secondary opacity-subtle" strokeWidth={1.5} />
+								<ChevronRight class="size-4 text-text-secondary opacity-subtle transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
 							</button>
 						{/each}
 					</div>
 				</section>
 
 				<!-- 资料状态 -->
-				<aside class="self-start rounded-lg border border-border-default bg-surface-primary p-5 shadow-raised-sm" aria-label="资料状态">
+				<aside class="self-start rounded-2xl border border-border-subtle/60 bg-surface-primary p-6 shadow-raised-sm" aria-label="资料状态">
 					<div class="flex items-center justify-between">
 						<h2 class="text-md font-semibold text-text-primary">资料状态</h2>
-						<ShieldCheck class="size-4 text-accent-default"   strokeWidth={1.75} />
+						<span class="flex items-center justify-center size-7 rounded-full bg-accent-soft text-accent-default">
+							<ShieldCheck class="size-4" strokeWidth={1.75} />
+						</span>
 					</div>
-					<p class="mt-2 text-xs leading-5 text-text-secondary">你的基础资料已完善，可随时在编辑页更新。</p>
-					<div class="mt-5 h-1.5 overflow-hidden rounded-full bg-border-default">
-						<div class="h-full rounded-full bg-accent-default" style="width:{filledCount * 20}%;"></div>
+					<p class="mt-2 text-xs leading-relaxed text-text-secondary">你的基础资料已完善，可随时在编辑页更新。</p>
+					<div class="mt-5 h-2 overflow-hidden rounded-full bg-surface-subtle border border-border-subtle/40">
+						<div class="h-full rounded-full bg-accent-default transition-all duration-standard" style="width:{filledCount * 20}%;"></div>
 					</div>
-					<p class="mt-2 text-xs text-text-secondary">{filledCount} 项基础资料已填写</p>
-					<!-- 此处原有一个「账号与隐私设置」按钮，与身份卡操作区的「设置」同目标同屏，
-					     属重复入口，已移除；设置统一走身份卡操作区。 -->
+					<p class="mt-2.5 text-xs text-text-secondary font-medium">{filledCount} 项基础资料已填写</p>
 				</aside>
 			</div>
 		{/if}
