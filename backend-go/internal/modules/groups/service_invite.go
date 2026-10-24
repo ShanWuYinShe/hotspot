@@ -116,6 +116,9 @@ func inviteExpired(invite GroupInviteItem) bool {
 
 func (s *Service) InviteMember(ctx context.Context, req InviteMemberRequest) (Invitation, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if apiErr := validateGroupMessage(req.Message); apiErr != nil {
+		return Invitation{}, apiErr
+	}
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if !ok {
 		if err != nil {

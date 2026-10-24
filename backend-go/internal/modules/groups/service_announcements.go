@@ -10,6 +10,10 @@ import (
 func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
 	op := observability.Begin("groups.create_announcement", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if apiErr := validateGroupAnnouncementContent(&req.Title, &req.Content); apiErr != nil {
+		op.Warn("invalid request", "reason", apiErr.Message)
+		return GroupAnnouncementItem{}, apiErr
+	}
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
 		op.Fail(err)
@@ -65,6 +69,9 @@ func (s *Service) ListAnnouncements(ctx context.Context, req GroupAnnouncementsR
 }
 
 func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
+	if apiErr := validateGroupAnnouncementContent(req.Title, req.Content); apiErr != nil {
+		return GroupAnnouncementItem{}, apiErr
+	}
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
 		return GroupAnnouncementItem{}, err

@@ -1235,3 +1235,33 @@ spec 澄清、依赖/迁移核验）在合并后均通过 ---all 全量验收，
 安全性说明：OG 页本身输出已全量 `html.EscapeString`（本轮同时复核：title/description/cover/链接
 均转义，无 XSS）；JWT（HS256 强校验 + 必须含 exp）、Cookie（HttpOnly/Secure/SameSite）、
 SQL 动态拼接（仅占位符序号/白名单表达式，用户值全部参数化且 LIKE 通配符已转义）复核无问题。
+
+## 群组模块文本长度校验补全（2026-10-25，第 35 轮）
+
+审计「契约字段约束 ↔ 实现校验」时发现：**群组模块除非空外没有任何长度上限校验**。
+DB 列均为 TEXT，不拦超长值；1MiB 请求体上限内，单个字段可写入接近 1MiB 的群名/描述/
+公告，列表与详情响应随之放大（存储 + 带宽放大），并直接违反契约（`api_spec_base.md`
+「通用字段约束 / 群组字段约束 / 公告字段约束」）。
+
+修复：新增 `groups/validation.go`，在 Service 入口（与 moments/comments 的长度校验同层）
+按 **rune 计数** 校验并返回 10000：
+
+| 字段 | 约束（spec） | 落点 |
+|---|---|---|
+| `name` | 1-50 字符 | create/update（非空仍由 Handler 校验，Service 兜底上限） |
+| `description` | 0-500 | create/update |
+| `tags` | 最多 10 个、每个 1-30 | create/update |
+| `location.location_name` | 0-100 | create/update |
+| `password`（群密码） | 8-32 | create/update（空=不设置） |
+| `max_members` | 2-2000（0=默认） | create/update |
+| 公告 `title` / `content` | 1-100 / 1-5000 | announcements create/update |
+| 邀请/申请附言 `message` | 0-200 | invites/create、join_group |
+
+测试：新增 `validation_test.go` 覆盖各字段边界（含中文按 rune 计数）、公告/附言边界，
+并用 nil repo 的 Service 验证「校验先于任何 DB 访问」（返回 10000 而非 panic/10600）。
+
+**同轮发现的相邻缺口（记录，后续轮次处理）**：
+1. moments `tags` 只校验数量（≤10），未校验每个标签 1-30 字符；moments/users/groups 的搜索
+   `keyword` 未校验 1-100 上限；
+2. `AppConfig.limits.max_group_members`（平台可调的群成员上限）在 groups 创建/更新时未强制，
+   须确认「超平台上限应拒绝还是静默裁剪」后修（涉及客户端 `max_members` 可选项口径）。

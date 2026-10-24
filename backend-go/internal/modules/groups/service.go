@@ -179,6 +179,10 @@ func (s *Service) resolveGroupAvatarInput(ctx context.Context, fileID, userID, o
 func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem, error) {
 	op := observability.Begin("groups.create")
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if apiErr := validateCreateGroupRequest(req); apiErr != nil {
+		op.Warn("invalid request", "reason", apiErr.Message)
+		return GroupItem{}, apiErr
+	}
 	// C.4：tags 含被屏蔽标签 → 10400（经注入的 BlockedTagChecker；未注入时跳过）
 	if blockedTagChecker != nil {
 		for _, tag := range req.Tags {
@@ -304,6 +308,10 @@ func (s *Service) resolveReferencePoint(ctx context.Context) GeoPoint {
 func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem, error) {
 	op := observability.Begin("groups.update", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if apiErr := validateUpdateGroupRequest(req); apiErr != nil {
+		op.Warn("invalid request", "reason", apiErr.Message)
+		return GroupItem{}, apiErr
+	}
 
 	// 读-改-再读包进同一事务：Get(前)/Update/Get(后) 不在同一快照时，并发
 	// 更新会让 updated_fields/广播 payload 拼出两版字段（对齐 moments.Update
@@ -551,6 +559,9 @@ func (s *Service) ListMyGroups(ctx context.Context, req MyGroupsRequest) ([]Grou
 }
 
 func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGroupResult, error) {
+	if apiErr := validateGroupMessage(req.Message); apiErr != nil {
+		return EnterGroupResult{}, apiErr
+	}
 	op := observability.Begin("groups.join_group", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
