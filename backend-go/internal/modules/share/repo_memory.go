@@ -144,6 +144,8 @@ func (r *InMemoryRepository) List(_ context.Context, query listSharesQuery) (Pag
 		if err != nil && !errors.Is(err, ErrShareNotFound) {
 			return PaginatedShares{}, err
 		}
+		// 列表口径：过期与撤销都视为不可用（与 PG 实现一致，is_revoked 置 true 且清空 preview；
+		// spec 未单独定义 expired 的列表呈现，两实现按同一口径收敛，避免客户端两套判空）。
 		item := ShareListItem{ShareID: record.ShareID, ShareCode: record.ShareCode, ShareType: record.ShareType, CreatedAt: record.CreatedAt, ExpiresAt: types.StrPtr(record.ExpiresAt), IsRevoked: record.IsRevoked || isExpired(record.ExpiresAt), Preview: preview}
 		if item.IsRevoked {
 			item.Preview = nil

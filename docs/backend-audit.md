@@ -461,3 +461,23 @@ keyset 分页、搜索（关键词大小写不敏感 + 标签过滤 + 隐私/删
 
 另记录一处 repos 层语义差异（经 service 预检后不可达）：非作者 `Update` 内存返回
 `ErrPermissionDenied`、PG 因 `WHERE user_id` 0 行返回 `ErrMomentNotFound`；契约用例接受两者。
+
+## 双实现契约测试第八批（2026-10-24，share）
+
+`TestShareRepositoryContract` 接入契约基建，覆盖 location 类型分享：创建/读取回环
+（分享码字符集与长度、creator、payload、preview、created_at）、分享码唯一性、未知码
+10404、过期分享（open_the_door 不可用但解析接口可命中且列表呈现）、撤销（幂等/归属校验/
+列表与 preview 抑制）、`我的分享` 分页不重不漏与游标校验、创建者隔离。
+
+**本轮结论**：
+
+1. 未发现生产缺陷；确认两实现的一致口径：**过期分享在「我的分享」列表里呈现为
+   `is_revoked=true` 且 `preview=null`**（PG 显式后处理，内存实现同步），`is_revoked`
+   由此同时承担「撤销」与「过期」两种不可用状态。
+2. **spec 歧义（观察项）**：`spec/api_spec_share.md` 的 `ShareListItem.is_revoked` 只
+   定义为撤销状态，未说明 expired 的列表呈现；客户端无法从列表区分「已撤销」与
+   「已过期」。当前实现口径一致且不影响 open_the_door 语义（过期/撤销统一 10300），
+   建议 spec 补一句列表口径说明（本轮未擅自改 spec）。
+3. 已知结构限制（非缺陷）：user/group/moment 类型的 preview 依赖跨模块真值（用户目录/
+   目标表），内存实现天然无法对齐（如 creator nickname 回退 user_id、preview 只用 ID）
+   → 契约测试只覆盖 location 类型；该限制与既有 `groups`/`moments` 内存实现同类。
