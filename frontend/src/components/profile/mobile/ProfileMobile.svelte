@@ -126,7 +126,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		<div>
 			<p class="eyebrow px-1 mb-3">个人数据</p>
 			<p class="px-1 mb-3 text-xs text-text-secondary">在这里查看你的内容与关系</p>
-			<ListContainer bordered ariaLabel="个人数据">
+			<ListContainer class="divide-y divide-border-subtle/30" ariaLabel="个人数据">
 			{#each DATA_ITEMS as item (item.id)}
 				<ListItem
 					onClick={() => void goto(item.href)}

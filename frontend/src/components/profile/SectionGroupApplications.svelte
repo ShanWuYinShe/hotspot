@@ -82,7 +82,7 @@
 	{#if items.length > 0}
 		<section class="mt-6" aria-label="我的入群申请">
 			<p class="eyebrow mb-3">我的入群申请</p>
-			<ListContainer bordered>
+			<ListContainer class="divide-y divide-border-subtle/30">
 				{#each items as a (a.application_id)}
 					{@const meta = STATUS_META[a.status]}
 					<div class="flex items-center gap-3 px-4 py-3">

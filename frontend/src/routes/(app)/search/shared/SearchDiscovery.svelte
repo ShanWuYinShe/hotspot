@@ -84,7 +84,7 @@
 				清除
 			</button>
 		</div>
-		<ListContainer bordered class="mt-3">
+		<ListContainer class="mt-3 divide-y divide-border-subtle/30">
 			{#each recent as item (item)}
 				<ListItem
 					onClick={() => onChoose(item)}
@@ -133,7 +133,7 @@
 					查看全部
 				</button>
 			</div>
-			<ListContainer bordered class="mt-3">
+			<ListContainer class="mt-3 divide-y divide-border-subtle/30">
 				{#each hotUsers as u (u.id)}
 					<UserCardRow
 						name={u.name}
@@ -175,7 +175,7 @@
 				<TrendingUp class="size-3.5 text-accent-default" strokeWidth={1.75} />
 				<h2 class="eyebrow">热门动态</h2>
 			</div>
-			<ListContainer bordered class="mt-3">
+			<ListContainer class="mt-3 divide-y divide-border-subtle/30">
 				{#each hotMoments as m, i (m.moment_id)}
 					<ActivityRow moment={m} index={i} onClick={() => onOpenMoment(m.moment_id)} />
 				{/each}

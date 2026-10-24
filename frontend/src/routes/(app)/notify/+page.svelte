@@ -370,7 +370,7 @@ const markSingleRead = (id: string) => {
 						<span class="eyebrow">入群邀请</span>
 						<span class="badge text-accent-default bg-accent-soft">{invites.length}</span>
 					</div>
-					<ListContainer bordered class="mb-6">
+					<ListContainer class="mb-6 divide-y divide-border-subtle/30">
 						{#each invites as inv (inv.invite_id)}
 							<div class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-3 py-3.5">
 								<Avatar src={inv.group.avatar_url} name={inv.group.name} size="lg" shape="rounded" />
@@ -405,7 +405,7 @@ const markSingleRead = (id: string) => {
 						<p class="eyebrow">新消息</p>
 						<span class="badge text-accent-default bg-accent-soft">{unreadGroup.length}</span>
 					</div>
-					<ListContainer bordered class="mb-6">
+					<ListContainer class="mb-6 divide-y divide-border-subtle/30">
 						{#each unreadGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
@@ -420,7 +420,7 @@ const markSingleRead = (id: string) => {
 						<p class="eyebrow">已读</p>
 						<span aria-hidden="true" class="h-px flex-1 bg-border-default"></span>
 					</div>
-					<ListContainer bordered>
+					<ListContainer class="divide-y divide-border-subtle/30">
 						{#each readGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}

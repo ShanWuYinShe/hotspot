@@ -128,8 +128,7 @@
 
 				<p class="eyebrow mb-2">联系人</p>
 				{#if filteredContacts.length > 0}
-					<!-- 联系人集合用一张 bordered 列表卡（行间 1px 分隔），不用逐行独立卡 -->
-					<ListContainer bordered ariaLabel="联系人">
+					<ListContainer class="divide-y divide-border-subtle/30" ariaLabel="联系人">
 						{#each filteredContacts as c (c.id)}
 							<ListItem
 								onClick={() => {

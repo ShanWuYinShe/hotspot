@@ -57,7 +57,7 @@
 <!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框。
      首块距（子 Tab 栏→内容）统一 24：有「添加成员」行时它承担 24，列表与它内部 16；
      无管理权限时列表自己承担 24。 -->
-<ListContainer bordered class={canManageMembers ? 'mt-4' : 'mt-6'}>
+<ListContainer class={canManageMembers ? 'mt-4 divide-y divide-border-subtle/30' : 'mt-6 divide-y divide-border-subtle/30'}>
 	{#each members as member (member.id)}
 		<ListItem
 			onClick={() => {

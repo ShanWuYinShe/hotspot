@@ -113,10 +113,10 @@
 		</EmptyState>
 	{:else}
 		{#snippet resultGroup(title: string, Icon: typeof Users, rows: Snippet)}
-			<section class="overflow-hidden rounded-lg border border-border-default bg-surface-primary">
-				<div class="flex items-center gap-2 border-b border-border-default px-4 py-3">
+			<section class="flex flex-col">
+				<div class="flex items-center gap-2 pb-2">
 					<Icon class="size-4 text-accent-default" strokeWidth={1.75} />
-					<h2 class="text-md font-semibold text-text-primary">{title}</h2>
+					<h2 class="text-sm font-semibold text-text-primary">{title}</h2>
 				</div>
 				{@render rows()}
 			</section>

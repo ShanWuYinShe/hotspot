@@ -31,7 +31,7 @@
 	{/if}
 </div>
 <!-- 空旷内容区 → List bordered（有边框列表契约） -->
-<ListContainer bordered class="mt-4">
+<ListContainer class="mt-4 divide-y divide-border-subtle/30">
 	{#each announcements as item (item.id)}
 		<ListItem class="flex flex-col items-start px-4 py-4" ariaLabel={item.title}>
 			<div class="flex items-center gap-1.5 pr-16">

@@ -20,7 +20,7 @@
 </script>
 
 <!-- 子 Tab 栏→内容统一 24 -->
-<ListContainer bordered class="mt-6">
+<ListContainer class="mt-6 divide-y divide-border-subtle/30">
 	{#each invites as inv (inv.invite_id)}
 		<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${inv.invitee.nickname} 的入群邀请`}>
 			<Avatar src={inv.invitee.avatar_url ?? undefined} name={inv.invitee.nickname} size="lg" />

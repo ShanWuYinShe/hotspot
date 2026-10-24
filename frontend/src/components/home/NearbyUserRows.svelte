@@ -75,7 +75,7 @@
 		{/each}
 	</div>
 {:else}
-		<ListContainer bordered>
+		<ListContainer class="divide-y divide-border-subtle/30">
 	{#each users as u (u.id)}
 		{@const followed = isFollowed(u.id)}
 		<UserCardRow name={u.name} avatar={u.avatar}>

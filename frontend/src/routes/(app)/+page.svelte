@@ -154,7 +154,7 @@
 {#snippet momentRows(pager: ReturnType<typeof createMomentPager>, exclude?: Set<string>)}
 	{@const rows = exclude ? pager.items.filter((m) => !exclude.has(m.moment_id)) : pager.items}
 	{#if rows.length > 0}
-	<ListContainer bordered>
+	<ListContainer class="divide-y divide-border-subtle/30">
 		{#each rows as moment, i (moment.moment_id)}
 			<!-- 非地理轴（关系流/全站热榜）不显示「距离」：全局内容配「300m」会误导为身边内容 -->
 			<ActivityRow {moment} index={i} showDistance={false} onClick={() => void goto(ROUTES.moment(moment.moment_id))} />

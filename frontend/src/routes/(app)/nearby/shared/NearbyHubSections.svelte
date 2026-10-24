@@ -60,7 +60,7 @@
 {#if moments.length > 0}
 	<div data-hub-section="moments">
 		<SectionHead title="附近瞬间" action="查看全部" onAction={onSeeAllMoments} />
-		<ListContainer bordered>
+		<ListContainer class="divide-y divide-border-subtle/30">
 			{#each moments.slice(0, momentPreview) as moment, i (moment.moment_id)}
 				<ActivityRow {moment} index={i} onClick={() => onOpenMoment(moment.moment_id)} />
 			{/each}
