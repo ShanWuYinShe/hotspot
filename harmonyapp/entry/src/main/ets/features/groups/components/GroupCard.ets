@@ -46,14 +46,13 @@ export struct GroupCard {
     interactionEventHub.off('group_membership_updated', this.handleGroupMembershipUpdate);
   }
 
-  // 原型方法引用保证 on/off 拿到同一函数实例（对齐 UserCard / MomentFeedCard 范式）
-  private handleGroupMembershipUpdate(payload: Object): void {
+  private handleGroupMembershipUpdate = (payload: Object): void => {
     const state = payload as GroupMembershipState;
     if (state && state.group_id === this.getGroupId()) {
       this.memberState = state.my_state;
       this.memberStateGroupId = state.group_id;
     }
-  }
+  };
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

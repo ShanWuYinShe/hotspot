@@ -67,13 +67,13 @@ export struct MomentFeedCard {
     interactionEventHub.off('moment_updated', this.handleMomentStateUpdate);
   }
 
-  // 原型方法引用保证 on/off 拿到同一函数实例
-  private handleMomentStateUpdate(payload: Object): void {
+  // 实例级箭头函数：绑定当前实例 this，且各卡片实例在 Set 中独立，防止 off 互相误伤
+  private handleMomentStateUpdate = (payload: Object): void => {
     const state = payload as MomentSocialState;
     if (state && state.moment_id === this.moment.moment_id) {
       this.socialState = state;
     }
-  }
+  };
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

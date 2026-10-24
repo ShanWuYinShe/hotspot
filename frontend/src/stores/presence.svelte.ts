@@ -67,7 +67,10 @@ export function watchPresence(ids: string[]): () => void {
     wsClient.setSubscriptions('subscribe', [{ type: 'user', ids: added }]);
   }
 
+  let cleaned = false;
   return () => {
+    if (cleaned) return;
+    cleaned = true;
     const released: string[] = [];
     for (const id of unique) {
       const count = (watching.get(id) ?? 0) - 1;

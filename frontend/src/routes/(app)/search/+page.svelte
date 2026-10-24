@@ -54,7 +54,11 @@
 	const device = $derived(platform.platform);
 
 	$effect(() => {
-		localStorage.setItem('search_recent', JSON.stringify(recent));
+		try {
+			localStorage.setItem('search_recent', JSON.stringify(recent));
+		} catch {
+			// Safari 无痕模式或配额超限时不崩溃
+		}
 	});
 
 	const keyword = $derived(query.trim().toLowerCase());

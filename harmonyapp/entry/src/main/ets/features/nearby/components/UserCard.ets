@@ -47,12 +47,12 @@ export struct UserCard {
     interactionEventHub.off('user_relation_updated', this.handleUserStateUpdate);
   }
 
-  private handleUserStateUpdate(payload: Object): void {
+  private handleUserStateUpdate = (payload: Object): void => {
     const state = payload as UserRelationState;
     if (state && state.user_id === this.getUserId()) {
       this.socialState = state;
     }
-  }
+  };
 
   private getUserId(): string {
     return this.user.user?.user_id ?? '';

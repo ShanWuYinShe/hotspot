@@ -56,12 +56,12 @@ export struct MomentWallCard {
     interactionEventHub.off('moment_updated', this.handleMomentStateUpdate);
   }
 
-  private handleMomentStateUpdate(payload: Object): void {
+  private handleMomentStateUpdate = (payload: Object): void => {
     const state = payload as MomentSocialState;
     if (state && state.moment_id === this.moment.moment_id) {
       this.socialState = state;
     }
-  }
+  };
 
   private isLikedByMe(): boolean {
     const state = this.getMomentState();

@@ -294,13 +294,13 @@ export struct ProfilePage {
   }
 
   // 被查看用户的关系态定向更新（单实体，同 UserCard 范式）
-  private handleViewedUserStateUpdate(payload: Object): void {
+  private handleViewedUserStateUpdate = (payload: Object): void => {
     const state = payload as UserRelationState;
     const uid = this.viewedUserProfile?.user?.user_id ?? '';
     if (state && uid && state.user_id === uid) {
       this.viewedUserRelation = state;
     }
-  }
+  };
 
   async aboutToAppear() {
     // appear 即存活：常驻 Tab 被全屏页覆盖会触发 aboutToDisappear，

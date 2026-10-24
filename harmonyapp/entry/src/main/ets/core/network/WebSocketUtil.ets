@@ -118,8 +118,9 @@ export class WebSocketUtil {
 
   /**
    * 断开连接
+   * @param clearHandlers 是否同时清空事件处理器（默认保留，保证重连后消息路由不丢失）
    */
-  disconnect(): void {
+  disconnect(clearHandlers: boolean = false): void {
     if (this.ws) {
       try {
         this.ws.close();
@@ -128,9 +129,11 @@ export class WebSocketUtil {
       }
       this.ws = null;
     }
-    this.rawMessageHandler = null;
-    this.closeHandler = null;
-    this.errorHandler = null;
+    if (clearHandlers) {
+      this.rawMessageHandler = null;
+      this.closeHandler = null;
+      this.errorHandler = null;
+    }
   }
 
   /**

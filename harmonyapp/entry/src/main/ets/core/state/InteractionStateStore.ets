@@ -91,6 +91,10 @@ type Listener = (payload: Object) => void;
 class InteractionEventHub {
   private listeners: Map<InteractionEventType, Set<Listener>> = new Map();
 
+  clear(): void {
+    this.listeners.clear();
+  }
+
   on(event: InteractionEventType, handler: Listener): void {
     const existing = this.listeners.get(event) || new Set<Listener>();
     existing.add(handler);
@@ -141,6 +145,14 @@ export class InteractionStateStore {
 
   static getInstance(): InteractionStateStore {
     return InteractionStateStore.instance;
+  }
+
+  /** 清空内存状态与监听器（登出/会话失效时调用，防止跨账号残留） */
+  clearAll(): void {
+    AppStorage.setOrCreate(KEY_MOMENT_STATE, {} as MomentStateMap);
+    AppStorage.setOrCreate(KEY_USER_STATE, {} as UserStateMap);
+    AppStorage.setOrCreate(KEY_GROUP_STATE, {} as GroupStateMap);
+    this.eventHub.clear();
   }
 
   on(event: InteractionEventType, handler: Listener): void {

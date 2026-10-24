@@ -111,12 +111,12 @@ export struct MomentDetailPage {
   }
 
   // momentId 在 onReady 才赋值，过滤条件同时覆盖加载前/后两种时序
-  private handleMomentStateUpdate(payload: Object): void {
+  private handleMomentStateUpdate = (payload: Object): void => {
     const state = payload as MomentSocialState;
     if (state && (state.moment_id === this.momentId || (this.moment !== null && state.moment_id === this.moment.moment_id))) {
       this.socialState = state;
     }
-  }
+  };
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);

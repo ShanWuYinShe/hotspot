@@ -118,6 +118,7 @@ class RequestContext {
 
   // 单次尝试内的派生状态（performAttempt 写入，重试判定读取）
   hasAuthHeader: boolean = false;
+  sentToken: string = '';
   isMustIdempotent: boolean = false;
   idempotencyKey: string = '';
   /** 登录/刷新端点标记（performAttempt 写入；重试判定据此跳过 10100 刷新重试） */
@@ -576,6 +577,9 @@ export class HttpUtil {
         await HttpUtil.proactiveRefreshIfNeeded();
       }
 
+      ctx.sentToken = !ctx.omitAuthHeader ? ((await HttpUtil.getToken()) || '') : '';
+      ctx.hasAuthHeader = !ctx.omitAuthHeader && !!ctx.sentToken;
+
       ctx.isMustIdempotent = MUST_IDEMPOTENT_ENDPOINTS.includes(ctx.url);
       ctx.idempotencyKey = ctx.isMustIdempotent
         ? (ctx.forcedIdempotencyKey || generateIdempotencyKey())
@@ -647,6 +651,17 @@ export class HttpUtil {
       // 真实「凭据错误」错误也被第二次限流响应掩盖。与 2129ccd8（跳过主动刷新）同一根因的被动路径。
       if (!ctx.retried && ctx.hasAuthHeader && !ctx.isAuthEndpoint && isAuthErrorCode(resultCode)) {
         hilog.info(DOMAIN_NUMBER, TAG, '收到 10100 认证失败，尝试刷新 token');
+
+        // 并发竞态防护：如果在此请求在飞期间并发请求已成功刷新了 token，
+        // 则本地 token 已经更新，直接使用新 token 重试，避免冗余重复刷新。
+        const currentToken = await HttpUtil.getToken();
+        if (currentToken && ctx.sentToken && currentToken !== ctx.sentToken) {
+          hilog.info(DOMAIN_NUMBER, TAG, 'Token 已被并发请求刷新，直接使用新 token 重试');
+          ctx.retried = true;
+          ctx.forcedIdempotencyKey = ctx.idempotencyKey;
+          return AttemptDirective.RETRY;
+        }
+
         const outcome = await HttpUtil.ensureRefreshToken();
         if (outcome === 'ok') {
           ctx.retried = true;

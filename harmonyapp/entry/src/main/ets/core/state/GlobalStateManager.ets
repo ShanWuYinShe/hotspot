@@ -15,6 +15,8 @@ import { LocationInfo, isValidLocation } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { InteractionStateStore, interactionEventHub } from './InteractionStateStore';
 import { MessageSyncManager } from './MessageSyncManager';
+import { MessageCacheService } from '../database/MessageCacheService';
+import { MomentCacheService } from '../database/MomentCacheService';
 import { AppThemeManager } from '../theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, DEFAULT_THEME_MODE, KEY_RESOLVED_THEME_ID, KEY_THEME_MODE } from '../theme/AppThemeTypes';
 
@@ -265,6 +267,9 @@ export class GlobalStateManager {
     GlobalStateManager.setBrowseAnchor(null);
     AppStorage.setOrCreate<LocationInfo | null>(KEY_LOCATION_PICK_RESULT, null);
     MessageSyncManager.getInstance().destroy();
+    InteractionStateStore.getInstance().clearAll();
+    MessageCacheService.getInstance().clearAll().catch(() => {});
+    MomentCacheService.getInstance().clearAll().catch(() => {});
     hilog.info(DOMAIN_NUMBER, TAG, 'GlobalStateManager 状态已重置');
   }
 }
