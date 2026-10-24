@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Bell, Search, Compass, ArrowRight, Sparkles, Users, MessageCircle } from '@lucide/svelte';
+	import { Bell, Search, Compass, ArrowRight, Sparkles, TrendingUp, Users, LogIn, ExternalLink } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
-	import SectionHead from '@/components/home/SectionHead.svelte';
 	import type { MomentItem } from '@/api/types';
-	import { searchMoments, fetchFollowingMoments, listFollowing } from '@/api';
+	import { searchMoments, fetchFollowingMoments } from '@/api';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-	import ActivityRow from '@/components/home/ActivityRow.svelte';
+	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -17,21 +16,21 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 
-	// ═══ 首页 = 关系轴（关注）+ 算法轴（发现）（2026-10-19 信息架构调整 · Step 2）═══
-	// 三条轴各占一个 Tab，内容不重复：
-	//   首页「关注」= moments/fetch_following（我关注的人的最新动态，需登录）
-	//   首页「发现」= moments/search 热门模式（spec api_spec_moment.md:64「发现页首屏」，匿名可用）
-	//   附近「地理」= /nearby 枢纽页（人/群组/瞬间，5km）
-	// 默认段与关注段空态由 components/home/home-feed-mode.ts 的纯函数决定（含冷启动矩阵，
-	// 已用用例锁定）：未登录/零关系 → 发现；有关注 → 关注。
+	// ═══ 首页 = 社交动态流（为你推荐 · 正在关注）═══
+	// 采用成熟现代社区（Twitter/Threads/即刻）的社交动态流设计语言：
+	// 左侧作者头像 + 右侧完整社交实体（昵称/时间/位置/正文/图集/标签/互动栏）。
+	// 桌面端采用 SplitPageLayout（640px 黄金阅读流 + 右侧活跃邻居/热议话题）。
+	// 移动端全宽平铺，顶栏品牌字标 + 分段切换，纯白极简通透。
 
 	const PAGE_SIZE = 20;
 	const device = $derived(platform.platform);
 
+	type FeedTab = 'discover' | 'following';
+	let activeTab = $state<FeedTab>('discover');
 	let booting = $state(true);
 
-	// 两个流共用一条分页管线（cursor 不透明，只透传；spec api_spec_base.md）
 	function createMomentPager(
 		fetchPage: (cursor: string | null) => Promise<{ items: MomentItem[]; nextCursor: string | null }>
 	) {
@@ -80,14 +79,6 @@
 			error = null;
 		}
 
-		/** 首屏已由外部并发取回时直接注入（避免同一请求发两次） */
-		function prime(newItems: MomentItem[], newCursor: string | null) {
-			items = newItems;
-			nextCursor = newCursor;
-			loaded = true;
-			error = null;
-		}
-
 		return {
 			get items() { return items; },
 			get loading() { return loading; },
@@ -97,8 +88,7 @@
 			get hasMore() { return Boolean(nextCursor); },
 			load,
 			loadMore,
-			reset,
-			prime
+			reset
 		};
 	}
 
@@ -110,113 +100,129 @@
 	const discover = createMomentPager(async (cursor) =>
 		paged(await searchMoments({ sort_by: 'popular', pagination: { limit: PAGE_SIZE, ...(cursor ? { cursor } : {}) } }))
 	);
+
 	const following = createMomentPager(async (cursor) =>
 		paged(await fetchFollowingMoments({ pagination: { limit: PAGE_SIZE, ...(cursor ? { cursor } : {}) } }))
 	);
 
-	// 首屏：一条流 = 关系流（需登录）+ 发现流（匿名可用），两个 pager 并行加载。
+	// 发现流：全局预加载
 	$effect(() => {
-		if (!booting) return;
-		if (auth.status === 'loading') return;
-		const uid = auth.user?.user_id;
-		if (auth.status !== 'authenticated' || !uid) {
-			booting = false;
-			return;
+		if (!discover.loaded && !discover.loading) {
+			void discover.load().finally(() => {
+				booting = false;
+			});
 		}
-		let cancelled = false;
-		void (async () => {
-			await following.load();
-			if (!cancelled) booting = false;
-		})();
-		return () => {
-			cancelled = true;
-		};
 	});
 
-	// 发现流：登录与否都加载（热门内容匿名可读），与关注流并行
+	// 关注流：登录用户加载
 	$effect(() => {
-		if (!discover.loaded && !discover.loading) void discover.load();
-	});
-
-	// 关注流（未登录不请求）
-	$effect(() => {
-		if (auth.status !== 'authenticated') return;
-		if (!following.loaded && !following.loading) void following.load();
-	});
-
-	// ═══ 真正的单一流合并（关系流在前，发现流按 moment_id 去重续后）═══
-	const feedMoments = $derived.by(() => {
-		const list: MomentItem[] = [];
-		const seen = new Set<string>();
 		if (auth.status === 'authenticated') {
-			for (const m of following.items) {
-				if (!seen.has(m.moment_id)) {
-					seen.add(m.moment_id);
-					list.push(m);
-				}
+			if (!following.loaded && !following.loading) {
+				void following.load();
 			}
 		}
+	});
+
+	// 当前激活 Tab 对应的数据与加载状态
+	const currentPager = $derived(activeTab === 'discover' ? discover : following);
+	const currentItems = $derived(currentPager.items);
+	const currentLoading = $derived(booting || (currentItems.length === 0 && currentPager.loading));
+	const currentError = $derived(currentPager.error);
+	const hasMore = $derived(currentPager.hasMore);
+	const loadingMore = $derived(currentPager.loadingMore);
+
+	// 从发现流中智能提取活跃邻居（去重展示至多 3 位）
+	const activeNeighbors = $derived.by(() => {
+		const seen = new Set<string>();
+		const list: { userId: string; nickname: string; avatarUrl: string | null; location?: string }[] = [];
 		for (const m of discover.items) {
-			if (!seen.has(m.moment_id)) {
-				seen.add(m.moment_id);
-				list.push(m);
+			if (m.user?.user_id && !seen.has(m.user.user_id) && m.user.user_id !== auth.user?.user_id) {
+				seen.add(m.user.user_id);
+				list.push({
+					userId: m.user.user_id,
+					nickname: m.user.nickname,
+					avatarUrl: m.user.avatar_url,
+					location: m.location?.location_name ?? undefined
+				});
+				if (list.length >= 3) break;
 			}
 		}
 		return list;
 	});
 
-	const feedError = $derived(following.error ?? discover.error);
-	const feedLoading = $derived(booting || (feedMoments.length === 0 && (following.loading || discover.loading)));
-	const hasMoreFeed = $derived(
-		auth.status === 'authenticated' && following.hasMore ? true : discover.hasMore
-	);
-	const loadingMoreFeed = $derived(following.loadingMore || discover.loadingMore);
-
-	async function loadMoreFeed() {
-		if (auth.status === 'authenticated' && following.hasMore) {
-			await following.loadMore();
-		} else if (discover.hasMore) {
-			await discover.loadMore();
-		}
-	}
+	// 社区精选热议话题（带瞬间计数与搜索入口）
+	const trendingTopics = [
+		{ tag: '周末去哪儿', count: 32, desc: '周末好去处灵感分享' },
+		{ tag: '老街咖啡香', count: 24, desc: '寻访城市角落的特调' },
+		{ tag: '云龙湖夜跑', count: 18, desc: '一起出发，用脚步丈量夜色' },
+		{ tag: '徐州历史漫步', count: 15, desc: '古城砖瓦间的岁月温度' },
+		{ tag: '宝藏小店', count: 11, desc: '街头巷尾的惊喜发现' }
+	];
 </script>
+
 <svelte:head>
 	<title>首页 · HotSpot</title>
 </svelte:head>
 
-{#snippet nearbyEntry()}
+{#snippet feedTabs()}
+	<!-- 顶部 Tab 分段器（为你推荐 / 正在关注） -->
+	<div class="flex items-center gap-6 border-b border-border-subtle/30 px-4 sm:px-5 bg-surface-primary sticky top-0 z-10">
+		<button
+			type="button"
+			class="relative py-3 text-sm transition-colors focus-ring cursor-pointer {activeTab === 'discover' ? 'text-text-primary font-semibold' : 'text-text-secondary hover:text-text-primary font-medium'}"
+			onclick={() => { activeTab = 'discover'; }}
+		>
+			为你推荐
+			{#if activeTab === 'discover'}
+				<span class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent-default"></span>
+			{/if}
+		</button>
+		<button
+			type="button"
+			class="relative py-3 text-sm transition-colors focus-ring cursor-pointer {activeTab === 'following' ? 'text-text-primary font-semibold' : 'text-text-secondary hover:text-text-primary font-medium'}"
+			onclick={() => { activeTab = 'following'; }}
+		>
+			正在关注
+			{#if activeTab === 'following'}
+				<span class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent-default"></span>
+			{/if}
+		</button>
+	</div>
+{/snippet}
+
+{#snippet nearbyBanner()}
 	<button
 		type="button"
-		class="hover-btn card-hover flex w-full items-center gap-3 rounded-lg border border-border-default bg-surface-primary px-4 py-3 text-left focus-ring transition mt-4"
+		class="hover-btn group flex w-full items-center gap-3.5 rounded-xl border border-border-default bg-surface-primary px-4 py-3.5 text-left focus-ring transition mt-4 hover:border-accent-default/40 hover:shadow-raised-sm"
 		onclick={() => void goto(ROUTES.nearby)}
 	>
-		<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft">
-			<Compass class="size-4.5 text-accent-default" strokeWidth={1.75} />
+		<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
+			<Compass class="size-5" strokeWidth={1.75} />
 		</span>
-		<span class="min-w-0 flex-1">
-			<span class="block text-sm font-medium text-text-primary">看看附近</span>
-			<span class="block truncate text-xs text-text-secondary">附近的人 · 群组 · 瞬间，5km 内</span>
-		</span>
-		<ArrowRight class="size-4 shrink-0 text-text-secondary" strokeWidth={1.75} />
+		<div class="min-w-0 flex-1">
+			<div class="flex items-center gap-1.5">
+				<span class="text-sm font-semibold text-text-primary">看看附近正在发生什么</span>
+			</div>
+			<p class="truncate text-xs text-text-secondary mt-0.5">附近的人 · 群组 · 瞬间，5km 内实时雷达</p>
+		</div>
+		<ArrowRight class="size-4 shrink-0 text-text-secondary transition-transform group-hover:translate-x-0.5 group-hover:text-accent-default" strokeWidth={1.75} />
 	</button>
 {/snippet}
 
-<!-- 桌面采用 SplitPageLayout（主内容区限制在 640px 黄金阅读宽度 + 右侧 Rail 辅助区）
-     移动端铺上 bg-surface-primary，与消息页保持 100% 纯白通透质感 -->
 <div class="flex flex-col flex-1 min-h-full bg-surface-primary">
 	<SplitPageLayout
 		contentMaxWidth="640px"
-		contentClassName="animate-fade-in flex flex-col gap-4 pt-3 pb-8"
+		contentClassName="animate-fade-in flex flex-col pt-0 pb-8"
 	>
 		{#snippet header()}
 			{#if device !== 'desktop'}
-				<!-- 移动端顶栏：左侧品牌字标锚点，右侧为搜索/通知快捷动作 -->
-				<div class="flex items-center justify-between px-[var(--cst-page-gutter)] pt-3 pb-2 bg-surface-primary border-b border-border-subtle/30">
-					<div class="flex items-center gap-1.5">
+				<!-- 移动端顶栏：品牌锚点 + 快捷动作 -->
+				<div class="flex items-center justify-between px-4 pt-3 pb-2 bg-surface-primary border-b border-border-subtle/30">
+					<div class="flex items-center gap-2">
 						<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
 					</div>
 					<h1 class="sr-only">首页</h1>
-					<div class="flex items-center gap-2">
+					<div class="flex items-center gap-1">
 						<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
 						<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
 					</div>
@@ -224,87 +230,145 @@
 			{/if}
 		{/snippet}
 
-		{#if feedLoading}
-			<InlineLoading label="加载动态中…" class="py-12" />
-		{:else if feedError && feedMoments.length === 0}
-			<LoadError message={feedError} onRetry={() => { following.reset(); discover.reset(); }} />
-		{:else if feedMoments.length > 0}
-			<!-- 单一连续平铺流：消除任何中间“没有更多了”和断裂卡片 -->
-			<ListContainer class="divide-y divide-border-subtle/30">
-				{#each feedMoments as moment, i (moment.moment_id)}
-					<ActivityRow {moment} index={i} showDistance={false} onClick={() => void goto(ROUTES.moment(moment.moment_id))} />
+		<!-- 无论桌面或移动端，顶部均展现清晰的流分段器 -->
+		{@render feedTabs()}
+
+		<!-- 关注流未登录态：温馨引导登录卡片 -->
+		{#if activeTab === 'following' && auth.status !== 'authenticated'}
+			<div class="mx-4 my-8 rounded-xl border border-border-default bg-surface-subtle p-6 text-center">
+				<div class="mx-auto flex size-12 items-center justify-center rounded-full bg-accent-soft text-accent-default mb-3">
+					<Users class="size-6" strokeWidth={1.75} />
+				</div>
+				<h2 class="text-base font-semibold text-text-primary">登录后查看关注动态</h2>
+				<p class="mt-1 text-xs text-text-secondary max-w-sm mx-auto">
+					关注同频的好友与活跃邻居，即时获取 TA 们的最新瞬间与生活记录。
+				</p>
+				<button
+					type="button"
+					class="hover-btn mt-4 inline-flex items-center gap-1.5 rounded-lg bg-accent-default px-4 py-2 text-xs font-medium text-text-on-accent focus-ring transition shadow-raised-sm"
+					onclick={() => void goto(ROUTES.login)}
+				>
+					<LogIn class="size-3.5" />
+					<span>立即登录</span>
+				</button>
+			</div>
+		{:else if currentLoading}
+			<InlineLoading label="加载动态中…" class="py-16" />
+		{:else if currentError && currentItems.length === 0}
+			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
+		{:else if currentItems.length > 0}
+			<!-- 高质感平铺社区 Feed 流 -->
+			<ListContainer>
+				{#each currentItems as moment (moment.moment_id)}
+					<HomeFeedItem
+						{moment}
+						showDistance={false}
+						onClick={() => void goto(ROUTES.moment(moment.moment_id))}
+					/>
 				{/each}
 			</ListContainer>
 
-			{#if hasMoreFeed}
-				<div class="mt-2 flex justify-center">
-					<LoadMoreButton loading={loadingMoreFeed} onLoad={() => void loadMoreFeed()} />
+			{#if hasMore}
+				<div class="mt-4 flex justify-center px-4">
+					<LoadMoreButton loading={loadingMore} onLoad={() => void currentPager.loadMore()} />
 				</div>
 			{:else}
-				<ListEnd class="py-3" />
+				<ListEnd class="py-4" />
 			{/if}
 
-			{@render nearbyEntry()}
+			<div class="px-4">
+				{@render nearbyBanner()}
+			</div>
 		{:else}
-			<EmptyState title="还没有内容" description="去附近看看，或者发布第一条动态。" bare class="py-16">
+			<EmptyState
+				title={activeTab === 'following' ? '暂无关注动态' : '还没有动态'}
+				description={activeTab === 'following' ? '去「为你推荐」发现更多有趣的人，或去附近看看身边正在发生什么。' : '去附近看看，或者发布属于你的第一条瞬间。'}
+				bare
+				class="py-16"
+			>
 				{#snippet icon()}
 					<Sparkles class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 				{/snippet}
 			</EmptyState>
 
-			{@render nearbyEntry()}
+			<div class="px-4">
+				{@render nearbyBanner()}
+			</div>
 		{/if}
 
 		{#snippet rail()}
-			<!-- 桌面端右侧 Rail 辅助区：探索社区快捷入口，平衡主内容区视觉重心 -->
+			<!-- 桌面端右侧 Rail 辅助区：活跃邻居 + 社区热议话题 -->
 			<div class="flex flex-col gap-4">
-				<RailSection title="探索社区">
-					<div class="flex flex-col gap-2">
-						<button
-							type="button"
-							class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary px-3.5 py-2.5 text-left transition focus-ring"
-							onclick={() => void goto(ROUTES.nearbyPeople)}
-						>
-							<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft">
-								<Users class="size-4 text-accent-default" strokeWidth={1.75} />
-							</span>
-							<div class="min-w-0 flex-1">
-								<span class="block text-sm font-medium text-text-primary">附近的人</span>
-								<span class="block truncate text-xs text-text-secondary">发现身边的真实伙伴</span>
-							</div>
-							<ArrowRight class="size-3.5 text-text-secondary shrink-0" />
-						</button>
+				<!-- 活跃邻居推荐 -->
+				{#if activeNeighbors.length > 0}
+					<RailSection title="活跃邻居">
+						<div class="flex flex-col divide-y divide-border-subtle/30 rounded-lg border border-border-default bg-surface-primary overflow-hidden">
+							{#each activeNeighbors as neighbor (neighbor.userId)}
+								<div class="flex items-center gap-3 px-3.5 py-3 hover:bg-surface-subtle transition-colors">
+									<Avatar src={neighbor.avatarUrl} name={neighbor.nickname} size="sm" />
+									<div class="min-w-0 flex-1">
+										<button
+											type="button"
+											class="text-left text-xs font-semibold text-text-primary hover:text-accent-default hover:underline transition-colors truncate block w-full"
+											onclick={() => void goto(ROUTES.user(neighbor.userId))}
+										>
+											{neighbor.nickname}
+										</button>
+										{#if neighbor.location}
+											<span class="text-xxs text-text-secondary truncate block mt-0.5">{neighbor.location}</span>
+										{/if}
+									</div>
+									<button
+										type="button"
+										class="hover-btn shrink-0 rounded-md border border-border-default bg-surface-primary px-2.5 py-1 text-xxs font-medium text-text-primary hover:border-accent-default hover:text-accent-default focus-ring transition"
+										onclick={() => void goto(ROUTES.user(neighbor.userId))}
+									>
+										查看
+									</button>
+								</div>
+							{/each}
+						</div>
+					</RailSection>
+				{/if}
 
-						<button
-							type="button"
-							class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary px-3.5 py-2.5 text-left transition focus-ring"
-							onclick={() => void goto(ROUTES.nearbyGroups)}
-						>
-							<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft">
-								<MessageCircle class="size-4 text-accent-default" strokeWidth={1.75} />
-							</span>
-							<div class="min-w-0 flex-1">
-								<span class="block text-sm font-medium text-text-primary">附近的群组</span>
-								<span class="block truncate text-xs text-text-secondary">加入同频兴趣圈子</span>
-							</div>
-							<ArrowRight class="size-3.5 text-text-secondary shrink-0" />
-						</button>
-
-						<button
-							type="button"
-							class="hover-btn flex w-full items-center gap-3 rounded-md border border-border-default bg-surface-primary px-3.5 py-2.5 text-left transition focus-ring"
-							onclick={() => void goto(ROUTES.nearbyMoments)}
-						>
-							<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft">
-								<Compass class="size-4 text-accent-default" strokeWidth={1.75} />
-							</span>
-							<div class="min-w-0 flex-1">
-								<span class="block text-sm font-medium text-text-primary">附近瞬间</span>
-								<span class="block truncate text-xs text-text-secondary">看看身边正在发生什么</span>
-							</div>
-							<ArrowRight class="size-3.5 text-text-secondary shrink-0" />
-						</button>
+				<!-- 社区热议话题 -->
+				<RailSection title="社区热议">
+					<div class="flex flex-col divide-y divide-border-subtle/30 rounded-lg border border-border-default bg-surface-primary overflow-hidden">
+						{#each trendingTopics as topic (topic.tag)}
+							<button
+								type="button"
+								class="hover-btn flex w-full items-center justify-between px-3.5 py-2.5 text-left transition hover:bg-surface-subtle focus-ring"
+								onclick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
+							>
+								<div class="min-w-0 flex-1">
+									<div class="flex items-center gap-1.5">
+										<TrendingUp class="size-3 text-accent-default shrink-0" strokeWidth={1.75} />
+										<span class="text-xs font-medium text-text-primary truncate">#{topic.tag}</span>
+									</div>
+									<span class="text-xxs text-text-secondary truncate block mt-0.5 pl-4.5">{topic.desc}</span>
+								</div>
+								<span class="text-xxs text-text-secondary tabular-nums shrink-0 ml-2">{topic.count} 条</span>
+							</button>
+						{/each}
 					</div>
+				</RailSection>
+
+				<!-- 快捷探索周边 -->
+				<RailSection title="探索雷达">
+					<button
+						type="button"
+						class="hover-btn group flex w-full items-center gap-3 rounded-lg border border-border-default bg-surface-primary p-3 text-left transition hover:border-accent-default/40 hover:shadow-raised-sm focus-ring"
+						onclick={() => void goto(ROUTES.nearby)}
+					>
+						<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
+							<Compass class="size-4" strokeWidth={1.75} />
+						</span>
+						<div class="min-w-0 flex-1">
+							<span class="block text-xs font-medium text-text-primary">发现身边 5km</span>
+							<span class="block truncate text-xxs text-text-secondary mt-0.5">人 · 群组 · 动态三合一雷达</span>
+						</div>
+						<ExternalLink class="size-3 text-text-secondary shrink-0 group-hover:text-accent-default" />
+					</button>
 				</RailSection>
 			</div>
 		{/snippet}
