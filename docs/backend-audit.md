@@ -646,3 +646,30 @@ Save upsert 基本字段覆盖。
 配套更新：`internal/bootstrap/reports_media_source_test.go` 的种子 helper 改为按完成态
 `File.FileID`（服务真实生成的 file_id，与 upload_id 不同）查找，替换原先「按 upload_id 查找」
 的旧约定——原约定正是内存实现 bug 的镜像，修复后一并纠正测试。
+
+## 双实现契约测试第十五批（2026-10-24，groupmessages 群消息核心）
+
+`TestGroupMessagesRepositoryContract` 接入契约基建，覆盖：发送 + 历史 keyset 分页（倒序/
+不重不漏/非法游标）、编辑（所有者/文本/未撤回三重守卫，edited_at 回填）、撤回（时间窗
+内成功、重复撤回 10300 族、window<=0 禁用、负数窗口、`RecallAsAdmin` 绕过窗口并写
+recalled_by）、**已读位点与已读计数**（重复标记不重复计数、后加入成员不覆盖更早消息、
+`MarkAllRead` 返回用户成员群、非成员 up_to=10300 / 无 up_to=no-op、不存在消息计数为 0）、
+成员过滤（IsMember/FilterMemberIDs）、辅助查询（MessageExists/MessageGroupID/LookupMessageMeta/
+GetMessageForReply/GetGroupName、撤回后 MessageGroupID 按不存在处理而其余仍可读真值）、
+举报快照读取。
+
+**抓到 5 处内存漂移（已读语义为主，影响测试与无 DB 降级模式）**：
+
+1. **已读计数按次数累加而非按用户位点**：同一用户重复 `MarkAsRead` 会重复计数，PG 用
+   `group_message_read_state` 每用户一行去重；改为内存维护 per-user 已读位点（含单调前进
+   守卫）并按 PG 口径动态计数（`last_read_sent_at >= 消息 sent_at` 且 `joined_at <= 消息
+   sent_at`）；
+2. 内存 `MarkAsRead` 无成员校验：up_to 路径此前任意用户均可成功，PG JOIN `group_members`
+   非成员 0 行 → 10300；改为一致（无 up_to 的非成员为 no-op 成功，同 PG upsert 0 行）；
+3. 内存 `MarkAllRead` 返回「有消息的全部群」（含用户不在的群），PG 返回用户所在群；已改；
+4. 内存 `GetReadCount` 对不存在消息返回 10300，PG COUNT 查询返回 0；已改；
+5. 历史列表对已撤回消息回填 read_count，PG 口径恒 null（不适用）；已改。
+
+配套：新增 `SeedMember(groupID, userID, joinedAt)` 供契约测试/降级模式注入成员（生产成员权威
+在 groups 模块的 group_members 表，内存实现无法跨模块读取，与 reports.TargetOwner 同类
+已知限制）；更新既有内存单测（预置成员、缺失消息计数 0）。

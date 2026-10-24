@@ -11,10 +11,15 @@ import (
 )
 
 type InMemoryRepository struct {
-	mu         sync.RWMutex
-	items      map[string][]GroupMessageItem
-	readCount  map[string]map[string]int // groupID -> messageID -> count
-	groupNames map[string]string         // groupID -> name（测试可注入）
+	mu    sync.RWMutex
+	items map[string][]GroupMessageItem
+	// readState 记录每个成员在某群的已读位点（groupID -> userID -> 位点），
+	// 已读计数按位点动态计算（PG 同口径：last_read_sent_at >= 消息 sent_at
+	// 且 joined_at <= 消息 sent_at），而非每次 mark 累加计数器。
+	readState map[string]map[string]readPosition
+	// memberJoined 记录成员加入时间（count 口径需要 joined_at <= sent_at）。
+	memberJoined map[string]map[string]time.Time
+	groupNames   map[string]string // groupID -> name（测试可注入）
 	// members 记录已发送过消息的成员（发送即视为成员，测试可预置）。
 	members map[string]map[string]bool
 	// mutedUntil 记录群成员的禁言截止时间（groupID::userID → RFC3339），
@@ -27,11 +32,12 @@ type InMemoryRepository struct {
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		items:      make(map[string][]GroupMessageItem),
-		readCount:  make(map[string]map[string]int),
-		groupNames: make(map[string]string),
-		members:    make(map[string]map[string]bool),
-		mutedUntil: make(map[string]string),
+		items:        make(map[string][]GroupMessageItem),
+		readState:    make(map[string]map[string]readPosition),
+		memberJoined: make(map[string]map[string]time.Time),
+		groupNames:   make(map[string]string),
+		members:      make(map[string]map[string]bool),
+		mutedUntil:   make(map[string]string),
 	}
 }
 
@@ -75,6 +81,12 @@ func (r *InMemoryRepository) Send(_ context.Context, req SendGroupMessageRequest
 		r.members[req.GroupID] = make(map[string]bool)
 	}
 	r.members[req.GroupID][req.SenderUserID] = true
+	if r.memberJoined[req.GroupID] == nil {
+		r.memberJoined[req.GroupID] = make(map[string]time.Time)
+	}
+	if _, ok := r.memberJoined[req.GroupID][req.SenderUserID]; !ok {
+		r.memberJoined[req.GroupID][req.SenderUserID] = now
+	}
 	r.mu.Unlock()
 	return MessageSentResult{MessageID: msg.MessageID, SentAt: msg.SentAt}, nil
 }
@@ -115,9 +127,12 @@ func (r *InMemoryRepository) History(_ context.Context, groupID string, paginati
 	}
 
 	for i := range items {
-		if count, ok := r.readCount[groupID][items[i].MessageID]; ok {
-			items[i].ReadCount = &count
+		if items[i].RecalledAt != nil {
+			// 已撤回消息 read_count 恒 null（spec：null = 不适用）。
+			continue
 		}
+		count := r.countReadersLocked(groupID, items[i])
+		items[i].ReadCount = &count
 	}
 	if len(items) <= limit {
 		return PaginatedGroupMessages{Items: items}, nil
@@ -244,89 +259,95 @@ func (r *InMemoryRepository) RecallAsAdmin(_ context.Context, messageID, operato
 	return MessageEventMeta{GroupID: groupID, MessageID: messageID, SentAt: msg.SentAt}, nil
 }
 
-func (r *InMemoryRepository) MarkAsRead(_ context.Context, _ string, req MarkGroupMessagesReadRequest) error {
+func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req MarkGroupMessagesReadRequest) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	messages, ok := r.items[req.GroupID]
-	if !ok {
+	if !r.members[req.GroupID][userID] {
+		// PG 的 up_to 查询 JOIN group_members：非成员 0 行 → 10300；无 up_to 的
+		// 批量 upsert WHERE members.user_id = $1 → 0 行，属于成功 no-op。
+		if req.UpToMessageID == "" {
+			return nil
+		}
 		return ErrMessageNotFound
 	}
-
 	if req.UpToMessageID == "" {
-		for _, msg := range messages {
-			r.markMessageRead(req.GroupID, msg.MessageID)
+		latest, ok := r.latestMessageLocked(req.GroupID)
+		if !ok {
+			return nil
 		}
+		sentAt, err := time.Parse(time.RFC3339Nano, latest.SentAt)
+		if err != nil {
+			return nil
+		}
+		r.upsertReadPositionLocked(req.GroupID, userID, latest.MessageID, sentAt)
 		return nil
 	}
-
-	var targetTime string
-	found := false
-	for _, msg := range messages {
-		if msg.MessageID == req.UpToMessageID {
-			targetTime = msg.SentAt
-			found = true
-			break
+	for _, msg := range r.items[req.GroupID] {
+		if msg.MessageID != req.UpToMessageID {
+			continue
 		}
-	}
-	if !found {
-		return ErrMessageNotFound
-	}
-
-	for _, msg := range messages {
-		if msg.SentAt <= targetTime {
-			r.markMessageRead(req.GroupID, msg.MessageID)
+		sentAt, err := time.Parse(time.RFC3339Nano, msg.SentAt)
+		if err != nil {
+			return ErrMessageNotFound
 		}
+		r.upsertReadPositionLocked(req.GroupID, userID, msg.MessageID, sentAt)
+		return nil
 	}
-	return nil
+	return ErrMessageNotFound
 }
-
-func (r *InMemoryRepository) MarkAllRead(_ context.Context, _ string) ([]string, error) {
+func (r *InMemoryRepository) MarkAllRead(_ context.Context, userID string) ([]string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	groupIDs := make([]string, 0, len(r.items))
-	for groupID, messages := range r.items {
-		groupIDs = append(groupIDs, groupID)
-		for _, msg := range messages {
-			r.markMessageRead(groupID, msg.MessageID)
+	// PG 返回 DISTINCT group_members.group_id（用户所在全部群，含暂无消息的群）；
+	// 此前返回「有消息的全部群」，把非成员群也算进去了（契约测试发现）。
+	groupIDs := make([]string, 0, len(r.members))
+	for groupID, members := range r.members {
+		if !members[userID] {
+			continue
 		}
+		groupIDs = append(groupIDs, groupID)
+		latest, ok := r.latestMessageLocked(groupID)
+		if !ok {
+			continue
+		}
+		sentAt, err := time.Parse(time.RFC3339Nano, latest.SentAt)
+		if err != nil {
+			continue
+		}
+		r.upsertReadPositionLocked(groupID, userID, latest.MessageID, sentAt)
 	}
+	sort.Strings(groupIDs)
 	return groupIDs, nil
 }
-
 func (r *InMemoryRepository) GetReadCount(_ context.Context, groupID string, messageID string) (int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	if _, ok := r.items[groupID]; !ok {
-		return 0, ErrMessageNotFound
-	}
 	for _, msg := range r.items[groupID] {
 		if msg.MessageID == messageID {
-			return r.readCount[groupID][messageID], nil
+			return r.countReadersLocked(groupID, msg), nil
 		}
 	}
-	return 0, ErrMessageNotFound
+	// PG 单条查询对不存在消息返回 COUNT=0（标量子查询 NULL → 条件不成立），
+	// 不是 10300；此前内存实现返回 ErrMessageNotFound（契约测试发现）。
+	return 0, nil
 }
-
-// GetReadCounts 批量版（单进程直接循环，无往返成本）；不存在的消息缺席。
 func (r *InMemoryRepository) GetReadCounts(_ context.Context, groupID string, messageIDs []string) (map[string]int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	counts := make(map[string]int, len(messageIDs))
-	known := make(map[string]struct{}, len(r.items[groupID]))
+	byID := make(map[string]GroupMessageItem, len(r.items[groupID]))
 	for _, msg := range r.items[groupID] {
-		known[msg.MessageID] = struct{}{}
+		byID[msg.MessageID] = msg
 	}
 	for _, id := range messageIDs {
-		if _, ok := known[id]; !ok {
+		msg, ok := byID[id]
+		if !ok {
 			continue
 		}
-		counts[id] = r.readCount[groupID][id]
+		counts[id] = r.countReadersLocked(groupID, msg)
 	}
 	return counts, nil
 }
-
 func (r *InMemoryRepository) LatestMessageID(_ context.Context, groupID string) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -386,13 +407,90 @@ func (r *InMemoryRepository) SetMemberMuted(groupID, userID, mutedUntil string) 
 	r.mutedUntil[groupID+"::"+userID] = mutedUntil
 }
 
-func (r *InMemoryRepository) markMessageRead(groupID, messageID string) {
-	if r.readCount[groupID] == nil {
-		r.readCount[groupID] = make(map[string]int)
-	}
-	r.readCount[groupID][messageID]++
+// readPosition 是成员在某群的已读位点（PG group_message_read_state 的内存等价）。
+type readPosition struct {
+	messageID string
+	sentAt    time.Time
 }
 
+func readPositionAfter(a, b readPosition) bool {
+	if a.sentAt.Equal(b.sentAt) {
+		return a.messageID > b.messageID
+	}
+	return a.sentAt.After(b.sentAt)
+}
+
+// upsertReadPositionLocked 只在位点前进时写入（PG upsert 的
+// last_read_sent_at/ID 比较守卫），避免迟到的旧 up_to 把已读位点回退。
+func (r *InMemoryRepository) upsertReadPositionLocked(groupID, userID, messageID string, sentAt time.Time) {
+	if r.readState[groupID] == nil {
+		r.readState[groupID] = make(map[string]readPosition)
+	}
+	next := readPosition{messageID: messageID, sentAt: sentAt}
+	if cur, ok := r.readState[groupID][userID]; ok && !readPositionAfter(next, cur) {
+		return
+	}
+	r.readState[groupID][userID] = next
+}
+
+func (r *InMemoryRepository) latestMessageLocked(groupID string) (GroupMessageItem, bool) {
+	messages := r.items[groupID]
+	if len(messages) == 0 {
+		return GroupMessageItem{}, false
+	}
+	latest := messages[0]
+	for _, msg := range messages[1:] {
+		if readPositionAfter(readPosition{messageID: msg.MessageID, sentAt: parseSentAt(msg.SentAt)}, readPosition{messageID: latest.MessageID, sentAt: parseSentAt(latest.SentAt)}) {
+			latest = msg
+		}
+	}
+	return latest, true
+}
+
+func parseSentAt(value string) time.Time {
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return time.Time{}
+	}
+	return parsed.UTC()
+}
+
+// countReadersLocked 按 PG queryGroupMessageReadCounts 口径计算已读成员数：
+// 成员 joined_at <= 消息 sent_at 且 last_read_sent_at >= 消息 sent_at。
+func (r *InMemoryRepository) countReadersLocked(groupID string, msg GroupMessageItem) int {
+	msgAt := parseSentAt(msg.SentAt)
+	if msgAt.IsZero() {
+		return 0
+	}
+	count := 0
+	for userID := range r.members[groupID] {
+		joinedAt := r.memberJoined[groupID][userID]
+		if joinedAt.IsZero() || joinedAt.After(msgAt) {
+			continue
+		}
+		pos, ok := r.readState[groupID][userID]
+		if !ok || pos.sentAt.Before(msgAt) {
+			continue
+		}
+		count++
+	}
+	return count
+}
+
+// SeedMember 供测试/降级模式预置群成员（生产成员权威在 groups 模块的
+// group_members 表；内存实现无法跨模块读取，仅测试注入）。
+func (r *InMemoryRepository) SeedMember(groupID, userID string, joinedAt time.Time) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.members[groupID] == nil {
+		r.members[groupID] = make(map[string]bool)
+	}
+	if r.memberJoined[groupID] == nil {
+		r.memberJoined[groupID] = make(map[string]time.Time)
+	}
+	r.members[groupID][userID] = true
+	r.memberJoined[groupID][userID] = joinedAt.UTC()
+}
 func (r *InMemoryRepository) GetMessageForReply(_ context.Context, messageID string) (*MessageBrief, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

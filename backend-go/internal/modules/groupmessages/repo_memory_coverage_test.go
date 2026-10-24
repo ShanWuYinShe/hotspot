@@ -77,6 +77,8 @@ func TestMemoryMarkReadAndUnreadCounts(t *testing.T) {
 	repo.Send(ctx, SendGroupMessageRequest{GroupID: "g1", SenderUserID: "u1", Type: "text", Content: "m1"})
 	sent2, _ := repo.Send(ctx, SendGroupMessageRequest{GroupID: "g1", SenderUserID: "u1", Type: "text", Content: "m2"})
 
+	// 已读语义要求成员身份（PG JOIN group_members）：预置 u2 为成员。
+	repo.SeedMember("g1", "u2", time.Now().UTC().Add(-time.Minute))
 	if err := repo.MarkAsRead(ctx, "u2", MarkGroupMessagesReadRequest{GroupID: "g1", UpToMessageID: sent2.MessageID}); err != nil {
 		t.Fatalf("mark as read: %v", err)
 	}
@@ -177,6 +179,8 @@ func TestMemoryGetReadCountsBatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("send 2: %v", err)
 	}
+	// 已读语义要求成员身份（PG JOIN group_members）：预置 u2 为成员。
+	repo.SeedMember("g1", "u2", time.Now().UTC().Add(-time.Minute))
 	if err := repo.MarkAsRead(context.Background(), "u2", MarkGroupMessagesReadRequest{GroupID: "g1", UpToMessageID: s1.MessageID}); err != nil {
 		t.Fatalf("mark read: %v", err)
 	}

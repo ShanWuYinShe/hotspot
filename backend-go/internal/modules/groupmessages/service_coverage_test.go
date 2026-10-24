@@ -16,8 +16,9 @@ func TestMemoryRecallAsAdminAndAuxLookups(t *testing.T) {
 	ctx := context.Background()
 
 	// 空群：GetReadCount / LatestMessageID 报 not found
-	if _, err := repo.GetReadCount(ctx, "g1", "m1"); err != ErrMessageNotFound {
-		t.Fatalf("empty read count: %v", err)
+	// 不存在的消息：PG COUNT 查询返回 0 而非 10300（契约测试发现）。
+	if count, err := repo.GetReadCount(ctx, "g1", "m1"); err != nil || count != 0 {
+		t.Fatalf("empty read count: %d err=%v", count, err)
 	}
 	if _, err := repo.LatestMessageID(ctx, "g1"); err != ErrMessageNotFound {
 		t.Fatalf("empty latest: %v", err)
@@ -40,9 +41,9 @@ func TestMemoryRecallAsAdminAndAuxLookups(t *testing.T) {
 	if n, err := repo.GetReadCount(ctx, "g1", first.MessageID); err != nil || n != 0 {
 		t.Fatalf("read count: %d err=%v", n, err)
 	}
-	// 群存在但消息不存在 → not found
-	if _, err := repo.GetReadCount(ctx, "g1", "missing"); err != ErrMessageNotFound {
-		t.Fatalf("read count missing message: %v", err)
+	// 群存在但消息不存在：PG COUNT 查询同样返回 0（不是 10300）。
+	if count, err := repo.GetReadCount(ctx, "g1", "missing"); err != nil || count != 0 {
+		t.Fatalf("read count missing message: %d err=%v", count, err)
 	}
 
 	// FilterMemberIDs：只保留真实成员
