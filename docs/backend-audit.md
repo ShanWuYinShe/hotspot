@@ -1143,3 +1143,27 @@ OrbStack 重启后更常见）：
 1. 真库测试断言「DB 写入时间落在窗口内」时必须用数据库时钟（第 22 轮已修 `TestPostgresIT_StatsGeoAggregation`）；
 2. 生产代码中用「另一时钟」被比较的列必须评估边界；毫秒级且窗口≥小时的偏差可接受，日/秒级边界的必须同源；
 3. 跨容器比较时间时优先 SQL 内 `now()`，避免把 Go 时钟经参数传入作为 DB 行的时间边界。
+
+## 依赖与迁移卫生核验（2026-10-25，第 31 轮）
+
+### 一、Go 模块卫生
+
+- `go mod verify`：**all modules verified**（本地模块缓存内容与 go.sum 一致，无篡改/缺失）；
+- `go mod tidy -diff`：**空 diff**（go.mod/go.sum 已是最小闭包，无多余 require、无缺失 checksum）；
+- 11 个直接依赖全部被实际 import（`go mod why -m` 逐个核对：chi、jwt、golang/geo、gorilla/websocket、
+  pgx、prometheus client、go-redis、zap、x/crypto/bcrypt、x/sync/errgroup、miniredis 测试用）；
+- 无可清理的未使用依赖。
+
+**环境事实（非缺陷）**：本机 Go `1.27.3`，CI 固定 `1.26.10`（`go.mod` `go 1.26.0`）。本地工具链比 CI 新，
+可能掩盖只在新版标准库/语言特性下可编译的写法；因此本轮**没有**把 `go mod tidy -diff` 加入 CI 门禁
+（跨工具链版本可能产生 go.mod 文本漂移导致假红灯），保留为本地/发版前人工检查项。若需要 CI 化，
+应先统一本地与 CI 的 Go patch 版本（以 `workwork/versions.env` 为准）。
+
+### 二、迁移与库结构卫生（库 `hotspot_it`）
+
+- 迁移文件数 = `schema_migrations` 记录数 = **49**（无漏登记/无重复执行）；
+- `go run ./cmd/migrate` 连续执行两次均成功（幂等）；第二次无任何变更；
+- `pg_index` 中 **invalid 索引数 = 0**（无 `CREATE INDEX CONCURRENTLY` 残留的 INVALID 索引）；
+- public schema 表数 45，与迁移定义的业务表一致（含内部表 `schema_migrations`/`data_migrations`）。
+
+结论：依赖与迁移两个「长期运行才暴露」的卫生面均干净，无需改动；后续发版前可直接复跑上述命令。
