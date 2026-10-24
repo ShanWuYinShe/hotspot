@@ -99,15 +99,22 @@ func TestMemorySearchPopularCursorPaginationNoDupNoSkip(t *testing.T) {
 // 的分桶时间衰减（15 分钟桶，无每行 reactions 子查询）；登录查看者追加
 // EXISTS(moment_favorites) 尾列，匿名查询不含该列；keyset 谓词以 float8 比较。
 func TestBuildSearchMomentsQueryPopularDecayAndViewerState(t *testing.T) {
-	sql, args := buildSearchMomentsQuery(nil, nil, "popular", 21, nil, "viewer_1")
+	decayClock := SearchDecayClock(time.Now().UTC())
+	sql, args := buildSearchMomentsQuery(nil, nil, "popular", 21, nil, "viewer_1", decayClock)
 	if !strings.Contains(sql, "m.likes_count + m.comments_count") || !strings.Contains(sql, "POWER(") {
 		t.Fatalf("popular score must use the materialized count column and embed time-decay POWER expression: %s", sql)
 	}
 	if strings.Contains(sql, "SELECT COUNT(*) FROM reactions r WHERE r.target_type = 'moment'") {
 		t.Fatalf("popular score must not run a per-row reactions subquery (materialized column): %s", sql)
 	}
-	if !strings.Contains(sql, "FLOOR(EXTRACT(EPOCH FROM now()) / 900.0) * 900.0") {
-		t.Fatalf("decay clock must be quantized to the 15-minute bucket: %s", sql)
+	if strings.Contains(sql, "now()") {
+		t.Fatalf("decay clock must be passed as a parameter, not SQL now(): %s", sql)
+	}
+	if !strings.Contains(sql, "FLOOR($") || !strings.Contains(sql, "::float8 / 900.0) * 900.0") {
+		t.Fatalf("decay clock must be quantized to the 15-minute bucket via bound parameter: %s", sql)
+	}
+	if len(args) < 3 || args[len(args)-2] != decayClock.Unix() {
+		t.Fatalf("decay clock must be bound as the query arg before LIMIT, got %#v", args)
 	}
 	if !strings.Contains(sql, "GREATEST(") {
 		t.Fatalf("decay hours must be clamped non-negative: %s", sql)
@@ -121,7 +128,7 @@ func TestBuildSearchMomentsQueryPopularDecayAndViewerState(t *testing.T) {
 
 	// 带游标：谓词首元素按 float8 比较（衰减分值为浮点）
 	decoded := &momentSearchCursor{Sort: "popular", Score: 1.25, At: "2026-01-01T00:00:00Z", ID: "moment_9"}
-	sqlCursor, _ := buildSearchMomentsQuery(nil, nil, "popular", 21, decoded, "")
+	sqlCursor, _ := buildSearchMomentsQuery(nil, nil, "popular", 21, decoded, "", decayClock)
 	if !strings.Contains(sqlCursor, "< ($") || !strings.Contains(sqlCursor, "::float8") {
 		t.Fatalf("keyset predicate must compare decayed score as float8: %s", sqlCursor)
 	}

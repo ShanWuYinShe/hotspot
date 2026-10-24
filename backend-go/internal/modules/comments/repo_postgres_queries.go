@@ -68,7 +68,4 @@ const (
 
 	queryIncrementCommentRepliesCount = `
 	UPDATE comments SET replies_count = replies_count + 1 WHERE comment_id = $1`
-
-	queryDecrementCommentRepliesCount = `
-	UPDATE comments SET replies_count = GREATEST(replies_count - 1, 0) WHERE comment_id = $1`
 )

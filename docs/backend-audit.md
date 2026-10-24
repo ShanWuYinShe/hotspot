@@ -320,3 +320,27 @@ Redis 实现都按配置生效、失败计数衰减窗口随锁期变化），�
      `Format(time.RFC3339)`（游标编码随之规范，SQL `$4::timestamptz` 仍可解析）。
 - 后续接入优先级：groups（成员/申请列表）、users（关系列表）——均属分页 + 状态流转
   高频漂移面。
+
+## 静态分析清零 + 热门搜索时钟一致性（2026-10-24，第十批）
+
+### 工具化审计（首次纳入 staticcheck / govulncheck）
+
+- `staticcheck ./...`：生产代码 7 处死代码（U1000），全部清理：
+  - `comments/repo_postgres_queries.go` 旧递减语句（已被「软删+父评论递减」单条原子 SQL 取代）；
+  - `groups/repo_postgres_queries.go` 旧在线成员计数（已由列表 LATERAL 子查询取代）、
+    旧群主降级语句（已被 TransferOwnership 的 RETURNING 变体取代）；
+  - `reactions/repo_postgres.go` 未使用 sentinel、`users/handler.go` 未使用泛型错误响应、
+    `resourceguard/middleware.go` 未使用类型别名、`admin/types.go` 未使用转换函数。
+  测试文件中的 U1000/S1011 等风格告警属测试基建噪音，未纳入门禁（不引入新工具链依赖）。
+- `govulncheck ./...`：**代码可达漏洞 0**；依赖树仅 1 条不可达漏洞（不调用），无需处理。
+
+### 修复：moments/search popular 分页时钟源不一致（真实缺陷）
+
+- **问题**：popular 排序分值的衰减时钟在 SQL 里用数据库 `now()`（量化到 15 分钟桶），
+  而 Go 侧编码游标时用**应用进程时钟**（`SearchDecayClock(time.Now())`）。两者跨桶边界
+  （或应用/数据库时钟偏差）时，游标携带的分值与下一页 SQL 排序分值不一致，
+  keyset 谓词 `(score, created_at, moment_id) < (...)` 会漏行或重行。
+- **修复**：衰减时钟在 `Search()` 内取一次，量化后作为 SQL 参数（epoch 秒）下传；
+  ORDER BY、keyset 谓词与游标编码三者同源，SQL 不再出现 `now()`。
+  跨桶翻页（>15 分钟）仍有设计内的弱一致窗口，但同一次请求内绝对一致。
+- 回归：SQL 形状断言改为「无 now() + 时钟作为绑定参数且位于 LIMIT 前」。

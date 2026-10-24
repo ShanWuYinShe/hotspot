@@ -106,12 +106,6 @@ LIMIT $5`
 	) lm ON TRUE
 WHERE gm.user_id = $1 AND g.deleted_at IS NULL`
 
-	queryCountOnlineGroupMembers = `
-SELECT COUNT(*)
-FROM group_members gm
-JOIN users u ON u.user_id = gm.user_id
-WHERE gm.group_id = $1 AND u.presence_status = 'online'`
-
 	queryInsertGroupMember = `
 INSERT INTO group_members (group_id, user_id, role, joined_at)
 VALUES ($1, $2, $3, $4)
@@ -353,12 +347,6 @@ WHERE group_id = $1 AND user_id = $2`
 UPDATE group_members
 SET role = $3
 WHERE group_id = $1 AND user_id = $2 AND role <> 'owner'`
-
-	// 转让群主第一步专用：仅当行当前是 owner 才降级，防误伤普通成员。
-	queryDemoteGroupOwnerRole = `
-UPDATE group_members
-SET role = $3
-WHERE group_id = $1 AND user_id = $2 AND role = 'owner'`
 
 	// TransferOwnership 专用 RETURNING 变体（审查 P1-4）：行数可校验，0 行
 	// 命中（调用者已非 owner / 新 owner 已非成员的并发窗口）时回滚整个转让，

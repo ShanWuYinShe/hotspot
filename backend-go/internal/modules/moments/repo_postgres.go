@@ -161,7 +161,11 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
-	sql, args := buildSearchMomentsQuery(req.Keyword, req.Tag, sortBy, limit+1, searchCursor, viewerID)
+	// 衰减时钟在此取一次并作为 SQL 参数下传：排序与游标编码必须使用**同一个**
+	// 时钟值。此前 SQL 用数据库 now()、Go 用进程时钟，两者跨 15 分钟桶边界
+	// （或存在时钟偏差）时游标分值与实际排序分值不一致，popular 翻页会漏行/重行。
+	decayClock := SearchDecayClock(time.Now().UTC())
+	sql, args := buildSearchMomentsQuery(req.Keyword, req.Tag, sortBy, limit+1, searchCursor, viewerID, decayClock)
 	if sql == "" {
 		return PaginatedMoments{}, nil
 	}
@@ -212,7 +216,7 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 		// 对应），时钟量化到同一衰减桶（SearchDecayClock）。游标编码本页最后一项
 		// （排他 keyset：下一页谓词严格 <，从页尾项的后继开始）——编码下页首项
 		// 会让严格 < 把它自身排除造成丢项（量化时钟前被实时衰减漂移偶然遮掩）。
-		c := encodeMomentSearchCursor(sortBy, items[limit-1], keyword, tag, SearchDecayClock(time.Now().UTC()))
+		c := encodeMomentSearchCursor(sortBy, items[limit-1], keyword, tag, decayClock)
 		nextCursor = &c
 		items = items[:limit]
 	}
@@ -239,7 +243,7 @@ func paginationCursor(p *PaginationParams) string {
 // （spec api_spec_types.md MomentItem；与 fetch_nearby/fetch_following 同模式）。
 //
 // SQL 直接输出最终序，游标按最终序继续，翻页不重不漏。
-func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit int, after *momentSearchCursor, viewerID string) (string, []any) {
+func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit int, after *momentSearchCursor, viewerID string, decayClock time.Time) (string, []any) {
 	args := make([]any, 0, 8)
 	var builder strings.Builder
 	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted`)
@@ -274,7 +278,14 @@ func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit 
 		builder.WriteString(fmt.Sprintf(" AND m.moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $%d)", len(args)))
 	}
 
-	scoreExpr := searchScoreSQL(sortBy, kwArg, tagArg)
+	// popular 的衰减时钟作为参数绑定（而非 SQL 内 now()）：保证同一次查询的
+	// ORDER BY 与 keyset 谓词使用同一时钟，且与 Go 侧游标分值完全同源。
+	clockArg := 0
+	if normalizeMomentSearchSort(sortBy) == "popular" {
+		args = append(args, decayClock.Unix())
+		clockArg = len(args)
+	}
+	scoreExpr := searchScoreSQL(sortBy, kwArg, tagArg, clockArg)
 	if after != nil {
 		args = append(args, after.Score, after.At, after.ID)
 		n := len(args)
@@ -292,7 +303,7 @@ func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit 
 // searchScoreSQL returns the SQL expression for the selected sort score. It
 // intentionally mirrors momentSearchScore so memory and Postgres paginate with
 // the same tuple semantics.
-func searchScoreSQL(sortBy string, kwArg, tagArg int) string {
+func searchScoreSQL(sortBy string, kwArg, tagArg, clockArg int) string {
 	switch normalizeMomentSearchSort(sortBy) {
 	case "popular":
 		// 热度排序含时间衰减因子（spec api_spec_moment.md moments/search 排序：
@@ -305,11 +316,12 @@ func searchScoreSQL(sortBy string, kwArg, tagArg int) string {
 		// ensureReactionCountColumn 差异回填自愈），替代此前的每行 reactions
 		// 聚合子查询——子查询让 cursor 谓词与 ORDER BY 各算一遍 O(候选集×聚合)。
 		//
-		// 衰减时钟量化到 15 分钟桶（floor(epoch/900)*900，与 Go 侧
-		// SearchDecayClock 对齐）：桶内所有行衰减值恒定，翻页间隔落在同一桶内时
-		// 游标分值与排序完全一致，消除此前「now() 实时衰减导致跨请求漏行/重行」
-		// 的弱一致窗口；跨桶仍可能漂移（每 15 分钟最多一次），幅度远小于实时衰减。
-		return "((m.likes_count + m.comments_count)::float8 / POWER(GREATEST((FLOOR(EXTRACT(EPOCH FROM now()) / 900.0) * 900.0 - EXTRACT(EPOCH FROM m.created_at)) / 3600.0, 0.0) + 2.0, 1.5))"
+		// 衰减时钟由调用方（Search）量化到 15 分钟桶后经 $clockArg 传入（epoch
+		// 秒），SQL 不再使用 now()：ORDER BY 与 keyset 谓词、Go 游标编码三者严格
+		// 使用同一时钟值。跨桶翻页（15 分钟以上）仍可能有弱一致漂移，但幅度远
+		// 小于实时衰减；同一次查询内（含游标谓词）绝对一致。
+		// clockArg>0 由 buildSearchMomentsQuery 保证。
+		return fmt.Sprintf("((m.likes_count + m.comments_count)::float8 / POWER(GREATEST((FLOOR($%d::float8 / 900.0) * 900.0 - EXTRACT(EPOCH FROM m.created_at)) / 3600.0, 0.0) + 2.0, 1.5))", clockArg)
 	case "newest":
 		// 0::float8：裸整数常量会被 Postgres 当作 ORDER BY 位置引用（42P10），
 		// 必须带类型成为表达式。

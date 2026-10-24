@@ -117,8 +117,3 @@ func apiErrorFromService(err error) *httpx.APIError {
 		return &httpx.APIError{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 	}
 }
-
-func errorResponse[T any](err error) httpx.ApiResponse[T] {
-	apiErr := apiErrorFromService(err)
-	return httpx.ApiResponse[T]{Code: apiErr.Code, Message: apiErr.Message}
-}

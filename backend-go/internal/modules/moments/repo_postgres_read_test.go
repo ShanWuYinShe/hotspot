@@ -220,9 +220,13 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 				argIndex++
 			}
 		}
+		// popular 模式在 LIMIT 前多绑定一个 int64 衰减时钟参数（epoch 秒），
+		// 按位置取 int 会类型断言 panic；limit 恒为最后一个参数。
 		limit := -1
-		if strings.Contains(query, " LIMIT $") && len(args) > argIndex {
-			limit = args[argIndex].(int)
+		if strings.Contains(query, " LIMIT $") && len(args) > 0 {
+			if v, ok := args[len(args)-1].(int); ok {
+				limit = v
+			}
 		}
 		items := make([]MomentItem, 0)
 		for _, item := range b.moments {

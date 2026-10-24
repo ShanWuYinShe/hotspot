@@ -2,7 +2,6 @@ package reactions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -271,7 +270,3 @@ func decodeTargetCursor(cursorValue string) (any, string, error) {
 	}
 	return at.UTC(), c.ID, nil
 }
-
-// errRepoNotConfigured is returned by helpers when a code path expects a repo
-// that wasn't wired (kept for symmetry with other modules).
-var errRepoNotConfigured = errors.New("reactions: repository not configured")

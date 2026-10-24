@@ -13,7 +13,8 @@ const momentSearchCursorNamespace = "moments.search"
 // searchDecayBucket 是 popular 热度衰减时钟的量化粒度：衰减时钟取
 // floor(epoch/bucket)*bucket（UTC 绝对对齐），桶内排序/游标分值恒定，
 // 使 popular 分页在同一桶内严格一致（消除实时衰减的跨请求漂移窗口）。
-// 与 searchScoreSQL 里的 FLOOR(EXTRACT(EPOCH FROM now())/900.0)*900 对齐。
+// 与 searchScoreSQL 里参数化的 FLOOR($clock/900)*900 对齐（$clock 由 Search
+// 传入同一量化时钟，SQL 不使用 now()）。
 const searchDecayBucket = 15 * time.Minute
 
 // SearchDecayClock 把查询时钟量化到衰减桶：排序、游标编码、内存打分
@@ -49,7 +50,8 @@ func normalizeMomentSearchSort(sortBy string) string {
 //	score = (reaction 计数列 + comments_count) / POWER(发布小时龄 + 2, 1.5)
 //
 // 与 searchScoreSQL 的 Postgres 表达式逐项对应；now 由调用方在单次查询内取同一
-// 量化值（SearchDecayClock），保证页内排序自洽且同桶内跨请求游标稳定。
+// 量化值（SearchDecayClock），并作为 SQL 参数下传，保证排序、游标谓词与游标编码
+// 三者同源。
 func momentSearchScore(item MomentItem, sortBy, keyword, tag string, now time.Time) float64 {
 	switch normalizeMomentSearchSort(sortBy) {
 	case "popular":

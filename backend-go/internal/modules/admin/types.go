@@ -1,12 +1,10 @@
 package admin
 
 import (
-	"time"
-
-	reportsmodule "hotspot/backend-go/internal/modules/reports"
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/types"
+	"time"
 )
 
 type UserInfo = usersmodule.UserInfo
@@ -232,21 +230,4 @@ func (s UserBanState) Expired(now time.Time) bool {
 type reportHandleRecord struct {
 	Item       AdminReportItem
 	TargetUser usersmodule.UserInfo
-}
-
-func reportItemFromModule(item reportsmodule.ReportItem, reporter usersmodule.UserInfo, handledBy *usersmodule.UserInfo, handleNote string) AdminReportItem {
-	return AdminReportItem{
-		ReportID:        item.ReportID,
-		TargetType:      ReportTargetType(item.TargetType),
-		TargetID:        item.TargetID,
-		Reason:          string(item.Reason),
-		Description:     item.Description,
-		Status:          ReportStatus(item.Status),
-		CreatedAt:       item.CreatedAt,
-		Reporter:        reporter,
-		HandledBy:       handledBy,
-		HandleNote:      types.StrPtr(handleNote),
-		MessageSnapshot: item.MessageSnapshot,
-		Resolution:      item.Resolution,
-	}
 }

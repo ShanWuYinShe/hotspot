@@ -15,7 +15,6 @@ const maxGuardBodyBytes = 64 << 10
 // 路由元数据（守卫规则表）统一声明在 platform/routemeta（审查 P2-架构）；
 // 本包只做请求体解析与存在性预检。类型别名保持既有调用点不变。
 type guardRule = routemeta.GuardRule
-type guardRef = routemeta.GuardRef
 
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
