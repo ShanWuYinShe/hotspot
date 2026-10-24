@@ -69,6 +69,10 @@ const (
 		   OR (EXCLUDED.last_read_sent_at = private_chat_read_state.last_read_sent_at
 		       AND EXCLUDED.last_read_message_id > private_chat_read_state.last_read_message_id)`
 
+	// queryMarkAllPrivateMessagesReadForChat 标记会话全部已读，并返回被推进到的最新
+	// 消息 id/sent_at：WS PrivateMessageRead.payload.up_to_message_id 为必填字符串
+	// （spec api_spec_websocket.md），此前该分支返回空 meta，对端收不到可用的已读位点。
+	// 末尾 SELECT 始终返回 latest 行（upsert 的 WHERE 只控制游标是否前进）。
 	queryMarkAllPrivateMessagesReadForChat = `
 		WITH latest AS (
 		  SELECT pm.message_id, pm.sent_at
@@ -76,18 +80,23 @@ const (
 		  WHERE pm.chat_key = $1
 		  ORDER BY pm.sent_at DESC, pm.message_id DESC
 		  LIMIT 1
+		), upsert AS (
+		  INSERT INTO private_chat_read_state (chat_key, user_id, last_read_message_id, last_read_sent_at, updated_at)
+		  SELECT $1, $2, latest.message_id, latest.sent_at, NOW()
+		  FROM latest
+		  ON CONFLICT (chat_key, user_id) DO UPDATE
+		  SET last_read_message_id = EXCLUDED.last_read_message_id,
+		      last_read_sent_at = EXCLUDED.last_read_sent_at,
+		      updated_at = NOW()
+		  WHERE private_chat_read_state.last_read_sent_at IS NULL
+		     OR EXCLUDED.last_read_sent_at > private_chat_read_state.last_read_sent_at
+		     OR (EXCLUDED.last_read_sent_at = private_chat_read_state.last_read_sent_at
+		         AND EXCLUDED.last_read_message_id > private_chat_read_state.last_read_message_id)
+		  RETURNING 1
 		)
-		INSERT INTO private_chat_read_state (chat_key, user_id, last_read_message_id, last_read_sent_at, updated_at)
-		SELECT $1, $2, latest.message_id, latest.sent_at, NOW()
-		FROM latest
-		ON CONFLICT (chat_key, user_id) DO UPDATE
-		SET last_read_message_id = EXCLUDED.last_read_message_id,
-		    last_read_sent_at = EXCLUDED.last_read_sent_at,
-		    updated_at = NOW()
-		WHERE private_chat_read_state.last_read_sent_at IS NULL
-		   OR EXCLUDED.last_read_sent_at > private_chat_read_state.last_read_sent_at
-		   OR (EXCLUDED.last_read_sent_at = private_chat_read_state.last_read_sent_at
-		       AND EXCLUDED.last_read_message_id > private_chat_read_state.last_read_message_id)`
+		SELECT COALESCE(latest.message_id, ''),
+		       COALESCE(TO_CHAR(latest.sent_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), '')
+		FROM latest`
 
 	queryMarkAllPrivateMessagesRead = `
 		WITH latest AS (

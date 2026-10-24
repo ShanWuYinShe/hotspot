@@ -387,3 +387,30 @@ keyset 分页（role 过滤）、需审批入群的 pending 申请去重、invit
 **门禁覆盖修正**：契约测试的真实库半区此前不在 `-run TestPostgresIT` 正则内，CI 与
 `scripts/verify-backend-ci.sh` 均改为 `-run "TestPostgresIT|Contract"`，避免此类回归
 只在手工命令里验证。
+
+## 双实现契约测试第五批（2026-10-24，privatemessages）
+
+`TestPrivateMessagesRepositoryContract` 接入契约基建，覆盖：发送/双方历史视角、
+keyset 分页不重不漏、`Recent` limit 下推与 `Last`、未读数与已读游标（up_to /
+无 up_to / 只前进 / 跨会话 10300）、`is_read` 双方视角、撤回不计未读、非法 reply_to、
+批量读（`LastByChatKeys`/`UnreadCountsByChatKeys`）与单查一致、`CountMessagesByTarget`。
+
+**抓到 1 处生产缺陷 + 5 处内存漂移**：
+
+1. **生产缺陷：`MarkAsRead`（无 `up_to_message_id`）返回空位点**。PG 分支只执行
+   mark-all SQL 后返回 `MessageEventMeta{TargetUserID}`，`message_id`/`sent_at` 为空；
+   service 据此广播 WS `PrivateMessageRead`，而契约该事件 `up_to_message_id` 为必填
+   字符串（spec api_spec_websocket.md）→ 对端拿不到已读位点。修复：SQL 末尾
+   `SELECT` 返回被推进到的最新消息 id/sent_at（upsert 仍只前进），repo 返回完整 meta。
+2. 内存 `Recent` 经 `History` 默认 20 条窗口截断，`limit>20` 时静默少返回 → 直接基于
+   会话快照过滤 + 截断；
+3. 内存 `UnreadCount` 未排除已撤回消息（PG `is_recalled = FALSE`）→ 补齐；
+4. 内存 `MarkAsRead` 允许已读游标回退（再次标记更早消息会回退游标/未读反弹）→ 与 PG
+   upsert 的只前进守卫对齐；
+5. 内存历史 `is_read` 恒 false（发送方永远看不到对方已读；接收方看自己收到的消息也非
+   已读）→ 按 PG `queryPrivateMessagesHistory` 的 CASE 语义在读取时计算；
+6. 内存 `Send` 对非法 `reply_to_message_id` 静默忽略（PG 返回 `ErrMessageNotFound`）
+   → 补齐校验。
+
+用例准备：PG 侧 `testdb.InsertUser` 预置三用户，内存侧无需用户表；批量读用例按调用方
+约定只校验本人会话 key（PG 与内存的批量 SQL/实现都不校验参与者，由调用方保证）。

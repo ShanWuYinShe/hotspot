@@ -135,10 +135,15 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 	}
 	chatKey := conversationKey(userID, req.TargetUserID)
 	if req.UpToMessageID == "" {
-		if err := queryable.Exec(ctx, queryMarkAllPrivateMessagesReadForChat, chatKey, userID); err != nil {
+		var latestMessageID, latestSentAt string
+		if err := queryable.QueryRow(ctx, queryMarkAllPrivateMessagesReadForChat, chatKey, userID).Scan(&latestMessageID, &latestSentAt); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				// 空会话：无消息可标记，返回空位点（与内存实现一致）。
+				return MessageEventMeta{TargetUserID: req.TargetUserID}, nil
+			}
 			return MessageEventMeta{}, err
 		}
-		return MessageEventMeta{TargetUserID: req.TargetUserID}, nil
+		return MessageEventMeta{TargetUserID: req.TargetUserID, MessageID: latestMessageID, SentAt: latestSentAt}, nil
 	}
 	var sentAt time.Time
 	var messageID string

@@ -37,23 +37,34 @@ func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID stri
 	if req.FileID != "" {
 		msg.Media = &MessageMedia{URL: req.FileID}
 	}
+	key := conversationKey(senderID, targetUserID)
 	if req.ReplyToMessageID != "" {
-		for _, item := range r.messages[conversationKey(senderID, targetUserID)] {
+		found := false
+		for _, item := range r.messages[key] {
 			if item.MessageID == req.ReplyToMessageID {
 				reply := MessageBrief{MessageID: item.MessageID, Type: item.Type, Content: item.Content, ShareCode: item.ShareCode, Sender: item.Sender, SentAt: item.SentAt}
 				msg.ReplyTo = &reply
+				found = true
 				break
 			}
 		}
+		// 与 PG 实现同口径：回复目标不存在或不属于本会话 → ErrMessageNotFound
+		//（契约测试发现内存版此前静默忽略非法 reply_to）。
+		if !found {
+			return MessageSentResult{}, ErrMessageNotFound
+		}
 	}
-	key := conversationKey(senderID, targetUserID)
 	r.messages[key] = append(r.messages[key], msg)
 	return MessageSentResult{MessageID: msg.MessageID, SentAt: msg.SentAt}, nil
 }
-func (r *InMemoryRepository) History(_ context.Context, userID string, req ListPrivateMessagesRequest) (PaginatedMessages, error) {
-	targetUserID := req.TargetUserID
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+
+// listConversationLocked 返回 (sent_at, message_id) 降序的会话消息副本，并按查看者
+// 计算 is_read（对齐 PG queryPrivateMessagesHistory）：
+//   - 对方发来的消息：查看即视为已读；
+//   - 自己发出的消息：取决于对方（targetUserID）的已读游标。
+//
+// 调用方必须持有读锁。
+func (r *InMemoryRepository) listConversationLocked(userID, targetUserID string) []PrivateMessageItem {
 	key := conversationKey(userID, targetUserID)
 	items := append([]PrivateMessageItem(nil), r.messages[key]...)
 	sort.Slice(items, func(i, j int) bool {
@@ -62,7 +73,34 @@ func (r *InMemoryRepository) History(_ context.Context, userID string, req ListP
 		}
 		return items[i].SentAt > items[j].SentAt
 	})
-	// 与 Postgres 实现同口径：limit 默认 20 / 上限 100（spec api_spec_base.md）。
+	readCursorID := ""
+	if r.readCursor[key] != nil {
+		readCursorID = r.readCursor[key][targetUserID]
+	}
+	readCursorSentAt := ""
+	if readCursorID != "" {
+		for _, item := range r.messages[key] {
+			if item.MessageID == readCursorID {
+				readCursorSentAt = item.SentAt
+				break
+			}
+		}
+	}
+	for i := range items {
+		if items[i].Sender.UserID != userID {
+			items[i].IsRead = true
+			continue
+		}
+		items[i].IsRead = readCursorSentAt != "" && (items[i].SentAt < readCursorSentAt ||
+			(items[i].SentAt == readCursorSentAt && items[i].MessageID <= readCursorID))
+	}
+	return items
+}
+
+func (r *InMemoryRepository) History(_ context.Context, userID string, req ListPrivateMessagesRequest) (PaginatedMessages, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := r.listConversationLocked(userID, req.TargetUserID)
 	limit := types.NormalizeLimit(types.PaginationLimit(req.Pagination))
 	cursorValue := ""
 	if req.Pagination != nil {
@@ -75,7 +113,7 @@ func (r *InMemoryRepository) History(_ context.Context, userID string, req ListP
 	if !cursorSentAt.IsZero() {
 		filtered := make([]PrivateMessageItem, 0, len(items))
 		for _, item := range items {
-			sentAt, parseErr := time.Parse("2006-01-02T15:04:05.000000000Z", item.SentAt)
+			sentAt, parseErr := time.Parse(time.RFC3339Nano, item.SentAt)
 			if parseErr != nil {
 				continue
 			}
@@ -92,27 +130,28 @@ func (r *InMemoryRepository) History(_ context.Context, userID string, req ListP
 	c := encodeMessageCursor(next.SentAt, next.MessageID)
 	return PaginatedMessages{Items: items[:limit], NextCursor: &c}, nil
 }
-func (r *InMemoryRepository) Recent(ctx context.Context, userID, targetUserID string, limit int, deletedAfter *time.Time) (PaginatedMessages, error) {
-	history, err := r.History(ctx, userID, ListPrivateMessagesRequest{TargetUserID: targetUserID})
-	if err != nil {
-		return PaginatedMessages{}, err
-	}
+
+func (r *InMemoryRepository) Recent(_ context.Context, userID, targetUserID string, limit int, deletedAfter *time.Time) (PaginatedMessages, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := r.listConversationLocked(userID, targetUserID)
 	if deletedAfter != nil {
-		filtered := history.Items[:0]
-		for _, item := range history.Items {
-			sentAt, err := time.Parse("2006-01-02T15:04:05.000000000Z", item.SentAt)
+		filtered := items[:0]
+		for _, item := range items {
+			sentAt, err := time.Parse(time.RFC3339Nano, item.SentAt)
 			if err == nil && !sentAt.After(*deletedAfter) {
 				continue
 			}
 			filtered = append(filtered, item)
 		}
-		history.Items = filtered
+		items = filtered
 	}
-	if limit > 0 && len(history.Items) > limit {
-		history.Items = history.Items[:limit]
+	if limit > 0 && len(items) > limit {
+		items = items[:limit]
 	}
-	return history, nil
+	return PaginatedMessages{Items: items}, nil
 }
+
 func (r *InMemoryRepository) Last(ctx context.Context, userID, targetUserID string, deletedAfter *time.Time) (*PrivateMessageItem, error) {
 	recent, err := r.Recent(ctx, userID, targetUserID, 1, deletedAfter)
 	if err != nil {
@@ -172,6 +211,8 @@ func (r *InMemoryRepository) UnreadCountsByChatKeys(ctx context.Context, userID 
 
 // targetOfChatKey 从确定性 chat_key 反解对方 user_id（chat_key = 较小 id + ":" +
 // 较大 id，与 conversationKey 同规则；user_id 由 idgen 生成不含分隔符）。
+// 批量读（LastByChatKeys/UnreadCountsByChatKeys）与 PG 实现一样由调用方保证传入
+// 的是本人会话；此处只做 chat_key 反解。
 func targetOfChatKey(chatKey, userID string) (string, bool) {
 	for _, target := range strings.Split(chatKey, ":") {
 		if target != "" && target != userID {
@@ -201,6 +242,10 @@ func (r *InMemoryRepository) UnreadCount(_ context.Context, userID, targetUserID
 	count := 0
 	for _, item := range r.messages[key] {
 		if item.Sender.UserID == userID {
+			continue
+		}
+		// 撤回消息不计未读（对齐 PG queryUnreadPrivateMessageCount 的 is_recalled = FALSE）。
+		if item.RecalledAt != nil {
 			continue
 		}
 		if deletedAfter != nil {
@@ -279,24 +324,38 @@ func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req Ma
 	defer r.mu.Unlock()
 	key := conversationKey(userID, req.TargetUserID)
 	msgs := r.messages[key]
-	if req.UpToMessageID != "" {
-		found := false
-		for i := range msgs {
-			if msgs[i].MessageID == req.UpToMessageID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return MessageEventMeta{}, ErrMessageNotFound
-		}
-	}
 	if r.readCursor[key] == nil {
 		r.readCursor[key] = map[string]string{}
 	}
+	currentID := r.readCursor[key][userID]
+	currentSentAt := ""
+	if currentID != "" {
+		for _, item := range msgs {
+			if item.MessageID == currentID {
+				currentSentAt = item.SentAt
+				break
+			}
+		}
+	}
 	if req.UpToMessageID != "" {
-		r.readCursor[key][userID] = req.UpToMessageID
-		return MessageEventMeta{TargetUserID: req.TargetUserID, MessageID: req.UpToMessageID}, nil
+		var target *PrivateMessageItem
+		for i := range msgs {
+			if msgs[i].MessageID == req.UpToMessageID {
+				target = &msgs[i]
+				break
+			}
+		}
+		if target == nil {
+			return MessageEventMeta{}, ErrMessageNotFound
+		}
+		// 已读游标只前进（对齐 PG queryUpsertPrivateMessageReadState 的 WHERE 守卫）：
+		// 标记更早消息不得回退游标、不得增加未读数。
+		advance := currentSentAt == "" || target.SentAt > currentSentAt ||
+			(target.SentAt == currentSentAt && target.MessageID > currentID)
+		if advance {
+			r.readCursor[key][userID] = target.MessageID
+		}
+		return MessageEventMeta{TargetUserID: req.TargetUserID, MessageID: target.MessageID, SentAt: target.SentAt}, nil
 	}
 	latestMessageID := ""
 	latestSentAt := ""
@@ -307,7 +366,11 @@ func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req Ma
 		}
 	}
 	if latestMessageID != "" {
-		r.readCursor[key][userID] = latestMessageID
+		advance := currentSentAt == "" || latestSentAt > currentSentAt ||
+			(latestSentAt == currentSentAt && latestMessageID > currentID)
+		if advance {
+			r.readCursor[key][userID] = latestMessageID
+		}
 	}
 	return MessageEventMeta{TargetUserID: req.TargetUserID, MessageID: latestMessageID, SentAt: latestSentAt}, nil
 }
