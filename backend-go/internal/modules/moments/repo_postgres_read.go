@@ -59,6 +59,9 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 		momentIDs = append(momentIDs, item.MomentID)
 		cursors = append(cursors, encodeMomentMineCursor(createdAtFull.UTC().Format(time.RFC3339Nano), item.MomentID))
 		if len(items) == limit+1 {
+			// 显式关闭 rows 再发嵌套查询：tx/单连接场景下未关闭的 rows 会让
+			// loadMomentTags 报「conn busy」（生产读路径走 pool 多连接才侥幸不炸）。
+			rows.Close()
 			tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs[:limit])
 			if err != nil {
 				return PaginatedMoments{}, fmt.Errorf("moments.ListMine tags: %w", err)

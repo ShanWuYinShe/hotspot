@@ -130,10 +130,13 @@ SET description = COALESCE($3, description),
 WHERE moment_id = $1 AND user_id = $2 AND is_deleted = FALSE
 RETURNING moment_id`
 
+	// queryDeleteMoment 带 RETURNING：0 行命中（不存在）→ repo 返回 ErrMomentNotFound，
+	// 与内存实现一致（此前 Exec 丢弃行数，删除不存在瞬间静默成功）。
 	queryDeleteMoment = `
-UPDATE moments
-SET is_deleted = TRUE, description = ''
-WHERE moment_id = $1`
+	UPDATE moments
+	SET is_deleted = TRUE, description = ''
+	WHERE moment_id = $1
+	RETURNING moment_id`
 
 	queryCheckMomentFavorite = `
 SELECT 1

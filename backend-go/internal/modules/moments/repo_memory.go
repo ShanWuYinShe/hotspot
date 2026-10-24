@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -104,39 +103,47 @@ func (r *InMemoryRepository) Get(_ context.Context, momentID string) (MomentItem
 func (r *InMemoryRepository) ListMine(_ context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	limit = types.NormalizeLimit(limit)
-	if limit > types.MaxPageSize {
-		limit = types.MaxPageSize
+	limit = normalizeMomentInteractionLimit(limit)
+	// 游标与 PG 同编码（AES-GCM 不透明，携带纳秒时间 + id），排序同 SQL：
+	// created_at DESC, moment_id DESC keyset。
+	cursorAt, cursorMomentID, err := decodeMomentMineCursor(cursor)
+	if err != nil {
+		return PaginatedMoments{}, err
 	}
-	ids := append([]string(nil), r.byUser[userID]...)
-	sort.Slice(ids, func(i, j int) bool { return ids[i] > ids[j] })
-	startIdx := 0
-	if cursor != "" {
-		for i, id := range ids {
-			if id == cursor {
-				startIdx = i + 1
-				break
-			}
+	items := make([]MomentItem, 0, len(r.byUser[userID]))
+	for _, momentID := range r.byUser[userID] {
+		if item, ok := r.moments[momentID]; ok {
+			items = append(items, item)
 		}
 	}
-	endIdx := startIdx + limit
-	if endIdx > len(ids) {
-		endIdx = len(ids)
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].CreatedAt == items[j].CreatedAt {
+			return items[i].MomentID > items[j].MomentID
+		}
+		return items[i].CreatedAt > items[j].CreatedAt
+	})
+	if parsedAt, ok := cursorAt.(time.Time); ok {
+		filtered := make([]MomentItem, 0, len(items))
+		for _, item := range items {
+			at, parseErr := time.Parse(time.RFC3339Nano, item.CreatedAt)
+			if parseErr != nil {
+				continue
+			}
+			if at.Before(parsedAt) || (at.Equal(parsedAt) && item.MomentID < cursorMomentID) {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
 	}
-	items := make([]MomentItem, 0, limit)
-	for _, id := range ids[startIdx:endIdx] {
-		items = append(items, r.moments[id])
+	var nextCursor *string
+	if len(items) > limit {
+		c := encodeMomentMineCursor(items[limit-1].CreatedAt, items[limit-1].MomentID)
+		nextCursor = &c
+		items = items[:limit]
 	}
-	result := PaginatedMoments{Items: items}
-	if endIdx < len(ids) && len(items) > 0 {
-		c := items[len(items)-1].MomentID
-		result.NextCursor = &c
-	}
-	return result, nil
+	return PaginatedMoments{Items: items, NextCursor: nextCursor}, nil
 }
 
-// AdjustReactionCount 内存实现：直接增减 items 里的 LikesCount（内存实现以
-// LikesCount 承载 reaction 计数冗余列语义，与 Postgres 一致），下限钳 0。
 func (r *InMemoryRepository) AdjustReactionCount(_ context.Context, momentID string, delta int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -200,7 +207,7 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest,
 			continue
 		}
 		if req.Keyword != nil && *req.Keyword != "" {
-			if !strings.Contains(m.Description, *req.Keyword) {
+			if !containsFold(m.Description, *req.Keyword) {
 				continue
 			}
 		}

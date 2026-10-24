@@ -122,3 +122,12 @@ func replaceMomentMentions(ctx context.Context, queryable persistence.Queryable,
 	}
 	return nil
 }
+
+// containsFold 是大小写不敏感子串判定：与 Postgres 的 ILIKE '%kw%' 语义对齐
+// （契约测试发现内存实现此前用 strings.Contains 区分大小写，搜索命中集与真实库不同）。
+func containsFold(haystack, needle string) bool {
+	if needle == "" {
+		return true
+	}
+	return strings.Contains(strings.ToLower(haystack), strings.ToLower(needle))
+}

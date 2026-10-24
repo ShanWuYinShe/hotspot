@@ -69,7 +69,7 @@ func momentSearchScore(item MomentItem, sortBy, keyword, tag string, now time.Ti
 		return 0
 	default:
 		score := float64(0)
-		if keyword != "" && strings.Contains(item.Description, keyword) {
+		if keyword != "" && containsFold(item.Description, keyword) {
 			score++
 		}
 		if tag != "" && containsTag(item.Tags, tag) {

@@ -63,7 +63,7 @@ func newMomentFactory(backend persistence.Queryable) *persistence.Factory {
 }
 
 func TestPostgresMomentCountersAndFavorites(t *testing.T) {
-	backend := &momentExecStub{}
+	backend := &momentExecStub{rowValues: []any{"m1"}} // Delete 走 RETURNING QueryRow
 	repo := NewPostgresRepository(newMomentFactory(backend))
 	ctx := context.Background()
 
@@ -85,7 +85,7 @@ func TestPostgresMomentCountersAndFavorites(t *testing.T) {
 	if err := repo.Delete(ctx, "m1"); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
-	if backend.execs < 6 {
+	if backend.execs < 5 { // Delete 改为 QueryRow(RETURNING)，不再计入 Exec
 		t.Fatalf("expected writes, got %d", backend.execs)
 	}
 

@@ -403,7 +403,11 @@ func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error 
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	if err := queryable.Exec(ctx, queryDeleteMoment, momentID); err != nil {
+	var deletedID string
+	if err := queryable.QueryRow(ctx, queryDeleteMoment, momentID).Scan(&deletedID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrMomentNotFound
+		}
 		return fmt.Errorf("moments.Delete: %w", err)
 	}
 	return nil
@@ -460,6 +464,8 @@ func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, l
 		// 解码侧 time.Parse(RFC3339Nano) 兼容秒/纳秒两种历史格式，老游标仍有效。
 		cursors = append(cursors, encodeMomentFavoriteCursor(favoritedAt.UTC().Format(time.RFC3339Nano), item.MomentID))
 		if len(items) == limit+1 {
+			// 显式关闭 rows 再发嵌套查询（同 ListMine：tx/单连接下未关闭 rows 会 conn busy）。
+			rows.Close()
 			tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs[:limit])
 			if err != nil {
 				return PaginatedMoments{}, err

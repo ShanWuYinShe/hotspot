@@ -434,3 +434,30 @@ keyset 分页不重不漏、批量取每父最新回复。
    报错。
 
 **测试基建**：新增 `testdb.InsertMoment`（comments 等依赖 moments 外键的用例前置数据）。
+
+## 双实现契约测试第七批（2026-10-24，moments）
+
+`TestMomentsRepositoryContract` 接入契约基建，覆盖：创建/读取字段回环、我的瞬间
+keyset 分页、搜索（关键词大小写不敏感 + 标签过滤 + 隐私/删除排除 + 查看者收藏态）、
+收藏生命周期（幂等/取消/占位项/分页）、计数维护（评论/分享/reaction 钳 0）、
+编辑 patch 语义、软删语义（含删除不存在瞬间）。
+
+**抓到 3 处漂移 + 1 处潜在连接使用缺陷**：
+
+1. 内存 `ListMine` 用**明文 moment_id** 游标（PG 为 AES-GCM 不透明 `(at,id)` keyset），
+   且按 id 字符串排序而非 `(created_at, moment_id)`；改为复用 `encode/decodeMomentMineCursor`
+   与 SQL 同序 keyset；
+2. 内存搜索关键词判定 `strings.Contains` **区分大小写**（PG 为 `ILIKE` 不敏感），搜索
+   命中集与真实库不同；抽取 `containsFold` 同时用于过滤与 relevance 打分，与 SQL 对齐；
+3. PG `Delete` 丢弃 Exec 行数，删除不存在瞬间静默成功（内存返回 `ErrMomentNotFound`）→
+   SQL 加 `RETURNING` 并经 QueryRow 判定，0 行返回 `ErrMomentNotFound`；
+4. **潜在连接使用缺陷**：PG `ListMine`/`ListFavorites` 在 rows 未关闭时发起嵌套查询
+   （loadMomentTags/Mentions）。生产读路径走 pool 多连接掩盖了问题，但在事务/单连接场景
+   直接报 `conn busy`（契约测试在 tx scope 下复现）→ 早退分支先 `rows.Close()` 再嵌套查询。
+
+**测试基建说明**：moments PG 实现存在上述「rows 未关闭时嵌套查询」形态，契约测试的 PG
+实现改用 pool（`testdb.Open`）+ 用例级唯一用户 id + 显式清理（子表 → moments → users），
+而非 `BeginScope` 事务包裹；清理逻辑可作为后续大模块契约测试的模板。
+
+另记录一处 repos 层语义差异（经 service 预检后不可达）：非作者 `Update` 内存返回
+`ErrPermissionDenied`、PG 因 `WHERE user_id` 0 行返回 `ErrMomentNotFound`；契约用例接受两者。
