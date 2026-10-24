@@ -264,7 +264,7 @@ async function proactiveRefreshIfNeeded(): Promise<void> {
 /** 默认请求超时：挂起请求不再让页面 spinner 永久停留（上传走 XHR 独立通道不受此限）。 */
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 
-interface RequestOptions {
+export interface RequestOptions {
 	/** 外部中止信号（如页面卸载/竞态清理）；与内部超时任一触发即中止请求。 */
 	signal?: AbortSignal;
 	/** 覆盖默认超时（ms）。 */

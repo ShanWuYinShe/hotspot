@@ -68,7 +68,7 @@
 	// 空查询不调 suggest（spec 空串会 10000），发现态只保留最近搜索。
 	createDebouncedSearch({
 		query: () => keyword,
-		fetch: (prefix) => searchSuggest({ prefix, reference_point: null, types: ['tag'], radius: null }),
+		fetch: (prefix, signal) => searchSuggest({ prefix, reference_point: null, types: ['tag'], radius: null }, { signal }),
 		apply: (res) => {
 			const suggest = res as unknown as { code: number; data?: { items?: Array<{ payload?: { name?: string } }> } | null };
 			const items = suggest.code === 0 ? suggest.data?.items ?? [] : [];
@@ -80,10 +80,10 @@
 
 	// 发现态热门话题：只拉一次（无查询时展示，有查询时不打扰结果态）
 	$effect(() => {
-		let cancelled = false;
-		void searchMoments({ sort_by: 'popular', pagination: { limit: 12 } })
+		const controller = new AbortController();
+		void searchMoments({ sort_by: 'popular', pagination: { limit: 12 } }, { signal: controller.signal })
 			.then((res) => {
-				if (cancelled || res.code !== 0 || !res.data) return;
+				if (controller.signal.aborted || res.code !== 0 || !res.data) return;
 				const seen = new Set<string>();
 				const list: string[] = [];
 				for (const m of res.data.items ?? []) {
@@ -101,9 +101,9 @@
 		// 人物推荐：距离排序（不带 reference_point 走服务端默认位置，与首页无锚点
 		// 回退同口径）；限 3 条（服务端/mock 对 limit 的裁剪口径不一，客户端显式
 		// 切片兜底）；仅发现态消费，失败静默。
-		void searchUsers({ radius: 5000, sort_by: 'distance', pagination: { limit: 3 } })
+		void searchUsers({ radius: 5000, sort_by: 'distance', pagination: { limit: 3 } }, { signal: controller.signal })
 			.then((res) => {
-				if (cancelled || res.code !== 0 || !res.data) return;
+				if (controller.signal.aborted || res.code !== 0 || !res.data) return;
 				hotUsers = (res.data.items ?? []).slice(0, 3).map((u) => ({
 					id: u.user?.user_id ?? '',
 					name: u.user?.nickname ?? '',
@@ -115,11 +115,11 @@
 			})
 			.catch(() => {});
 		return () => {
-			cancelled = true;
+			controller.abort();
 		};
 	});
 
-	async function doSearch(term: string) {
+	async function doSearch(term: string, signal?: AbortSignal) {
 		const seq = ++searchSeq;
 		searchError = null;
 		if (!term) {
@@ -129,9 +129,9 @@
 		loading = true;
 		try {
 			const [usersRes, momentsRes, groupsRes] = await Promise.all([
-				searchUsers({ keyword: term }).catch(() => netError({ items: [] })),
-				searchMoments(searchTag ? { tag: searchTag } : { keyword: term }).catch(() => netError({ items: [] })),
-				searchGroups({ keyword: term }).catch(() => netError({ items: [] }))
+				searchUsers({ keyword: term }, { signal }).catch(() => netError({ items: [] })),
+				searchMoments(searchTag ? { tag: searchTag } : { keyword: term }, { signal }).catch(() => netError({ items: [] })),
+				searchGroups({ keyword: term }, { signal }).catch(() => netError({ items: [] }))
 			]);
 			const rawUsers = usersRes.code === 0 ? usersRes.data?.items : undefined;
 			const rawMoments = momentsRes.code === 0 ? momentsRes.data?.items : undefined;
@@ -180,7 +180,7 @@
 	// 行为微调：清空关键词由「防抖到期后清空结果」改为立即清空（输入框已空时旧结果不应滞留）。
 	createDebouncedSearch({
 		query: () => keyword,
-		fetch: (term) => doSearch(term).then(() => undefined),
+		fetch: (term, signal) => doSearch(term, signal).then(() => undefined),
 		apply: () => {},
 		clear: () => void doSearch('')
 	});

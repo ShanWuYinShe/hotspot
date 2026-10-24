@@ -22,6 +22,8 @@
 </svelte:head>
 
 
-<div class="flex flex-col" style="height:100%;background-color:var(--cst-surface-chat);">
-	<ChatView peerUserId={params.peerId ?? ''} showBackButton onBack={() => smartBack()} />
-</div>
+{#if platform.platform !== 'desktop'}
+	<div class="flex flex-col" style="height:100%;background-color:var(--cst-surface-chat);">
+		<ChatView peerUserId={params.peerId ?? ''} showBackButton onBack={() => smartBack()} />
+	</div>
+{/if}

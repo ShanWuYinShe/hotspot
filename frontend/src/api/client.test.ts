@@ -277,3 +277,23 @@ describe('10201 封禁事件', () => {
     window.removeEventListener('auth-banned', onBanned);
   });
 });
+
+describe('RequestOptions signal 取消机制', () => {
+  it('外部 signal 中止时抛出「请求已取消」可读错误', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    client.setApiBaseUrl(BASE);
+
+    await expect(client.searchUsers({ keyword: 'test' }, { signal: controller.signal })).rejects.toThrow('请求已取消');
+  });
+
+  it('searchSuggest 支持透传 signal', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    client.setApiBaseUrl(BASE);
+
+    await expect(
+      client.searchSuggest({ prefix: 'tag', reference_point: null, types: ['tag'], radius: null }, { signal: controller.signal })
+    ).rejects.toThrow('请求已取消');
+  });
+});

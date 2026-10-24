@@ -1,6 +1,6 @@
 // 自动拆分自 client.ts（refactor/api-client-split）：按业务域组织的端点包装。
 // 传输核心（request/刷新/幂等键/双版本 pick）见 ../core.ts。
-import { request, newIdempotencyKey, pick } from '../core';
+import { request, newIdempotencyKey, pick, type RequestOptions } from '../core';
 import { Endpoints } from '@/api/endpoints';
 import type {
 	GroupAnnouncementItem,
@@ -69,7 +69,7 @@ export async function getGroupAnnouncements(groupId: string) {
 }
 
 // Groups admin（spec: api_spec_group.md → 群组管理：搜索/更新/解散/转让/申请/邀请/成员/公告）
-export async function searchGroups(params: SearchGroupsRequest) { return request<PaginatedData<GroupItem>>(pick(Endpoints.Groups.Search, Endpoints.Public.Groups.Search), params); }
+export async function searchGroups(params: SearchGroupsRequest, opts?: RequestOptions) { return request<PaginatedData<GroupItem>>(pick(Endpoints.Groups.Search, Endpoints.Public.Groups.Search), params, {}, 0, undefined, opts); }
 export async function updateGroup(params: UpdateGroupRequest) { return request<GroupItem>(Endpoints.Groups.Admin.Update, params); }
 export async function dismissGroup(params: DismissGroupRequest) { return request<void>(Endpoints.Groups.Admin.Dismiss, params); }
 export async function transferGroupOwnership(params: TransferOwnershipRequest) { return request<void>(Endpoints.Groups.Admin.TransferOwnership, params); }

@@ -46,9 +46,12 @@ export struct HomePage {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   /** 发现流（热门，匿名可用） */
+  @Watch('onMomentsChanged')
   @State moments: MomentItem[] = [];
   /** 关系流（我关注的人，需登录） */
+  @Watch('onMomentsChanged')
   @State followingMoments: MomentItem[] = [];
+  @State private cachedDisplayedMoments: MomentItem[] = [];
   @State momentsLoading: boolean = true;
   @State followingLoading: boolean = false;
   @State momentsError: string = '';
@@ -60,12 +63,29 @@ export struct HomePage {
 
   private isDestroyed: boolean = false;
 
+  private onMomentsChanged(): void {
+    const merged: MomentItem[] = [];
+    const seen: Set<string> = new Set<string>();
+    for (const m of this.followingMoments) {
+      if (seen.has(m.moment_id)) continue;
+      seen.add(m.moment_id);
+      merged.push(m);
+    }
+    for (const m of this.moments) {
+      if (seen.has(m.moment_id)) continue;
+      seen.add(m.moment_id);
+      merged.push(m);
+    }
+    this.cachedDisplayedMoments = merged;
+  }
+
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
+    this.onMomentsChanged();
     // 一条流 = 关系流 + 发现流：两者并行加载，渲染时关系流在前、发现流去重续后
     this.loadDiscoverMoments();
     if (this.isLoggedIn) {
@@ -384,21 +404,10 @@ export struct HomePage {
   /**
    * 一条流的数据：关系流（我关注的人）在前，发现流按 moment_id 去重续后。
    * 两个流各自失败不影响另一条：任一为空就只展示另一条。
+   * 使用 cachedDisplayedMoments 响应式缓存，避免 build() 周期内 4 次重复遍历与数组分配。
    */
   private displayedMoments(): MomentItem[] {
-    const merged: MomentItem[] = [];
-    const seen: Set<string> = new Set<string>();
-    for (const m of this.followingMoments) {
-      if (seen.has(m.moment_id)) continue;
-      seen.add(m.moment_id);
-      merged.push(m);
-    }
-    for (const m of this.moments) {
-      if (seen.has(m.moment_id)) continue;
-      seen.add(m.moment_id);
-      merged.push(m);
-    }
-    return merged;
+    return this.cachedDisplayedMoments;
   }
 
   private homeActivityRows(): MomentItem[] {
