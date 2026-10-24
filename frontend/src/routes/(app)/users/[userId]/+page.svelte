@@ -143,7 +143,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		if (!requireAuth({ action: '关注', targetId: uid, run: () => void toggleFollow() })) return;
 		const next = !followed;
 		const prevFollowed = followed;
+		const prevFollowers = user.followers;
 		followed = next;
+		user.followers = Math.max(0, user.followers + (next ? 1 : -1));
 		followPending = true;
 		try {
 			// spec: follow/unfollow uses user_id + active boolean.
@@ -151,6 +153,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			if (res.code !== 0) throw new Error(res.message || '操作失败');
 		} catch (err) {
 			followed = prevFollowed;
+			user.followers = prevFollowers;
 			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
 		} finally {
 			followPending = false;
@@ -166,7 +169,11 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		const next = !blocked;
 		const prevBlocked = blocked;
 		const prevFollowed = followed;
+		const prevFollowers = user.followers;
 		blocked = next;
+		if (next && followed) {
+			user.followers = Math.max(0, user.followers - 1);
+		}
 		followed = false;
 		moreOpen = false;
 		blockPending = true;
@@ -177,6 +184,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		} catch (err) {
 			blocked = prevBlocked;
 			followed = prevFollowed;
+			user.followers = prevFollowers;
 			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
 		} finally {
 			blockPending = false;

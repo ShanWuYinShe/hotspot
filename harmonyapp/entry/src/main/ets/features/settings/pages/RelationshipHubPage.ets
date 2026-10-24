@@ -81,20 +81,31 @@ export struct RelationshipHubPage {
     this.isLoading = true;
     try {
       const results = await Promise.all([
-        ApiClient.getFriendsList({ pagination: { limit: 20 } }),
-        ApiClient.getFollowingList({ pagination: { limit: 20 } }),
-        ApiClient.getFollowersList({ pagination: { limit: 20 } }),
-        ApiClient.getBlockedList({ pagination: { limit: 20 } })
+        ApiClient.getFriendsList({ pagination: { limit: 20 } }).catch(() => null),
+        ApiClient.getFollowingList({ pagination: { limit: 20 } }).catch(() => null),
+        ApiClient.getFollowersList({ pagination: { limit: 20 } }).catch(() => null),
+        ApiClient.getBlockedList({ pagination: { limit: 20 } }).catch(() => null)
       ]);
       if (this.isDestroyed) return;
-      this.friends = results[0].data?.items ?? [];
-      this.following = results[1].data?.items ?? [];
-      this.followers = results[2].data?.items ?? [];
-      this.blocked = results[3].data?.items ?? [];
+      const friendsRes = results[0];
+      const followingRes = results[1];
+      const followersRes = results[2];
+      const blockedRes = results[3];
+
+      if (friendsRes?.data?.items) this.friends = friendsRes.data.items;
+      if (followingRes?.data?.items) this.following = followingRes.data.items;
+      if (followersRes?.data?.items) this.followers = followersRes.data.items;
+      if (blockedRes?.data?.items) this.blocked = blockedRes.data.items;
+
+      if (!friendsRes && !followingRes && !followersRes && !blockedRes) {
+        SystemToast.showError('加载关系数据失败', this.getUIContext());
+      }
     } catch (_) {
       SystemToast.showError('加载关系数据失败', this.getUIContext());
     } finally {
-      this.isLoading = false;
+      if (!this.isDestroyed) {
+        this.isLoading = false;
+      }
     }
   }
 

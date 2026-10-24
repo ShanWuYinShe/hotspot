@@ -20,7 +20,7 @@ export class RdbManager {
   private readonly SQL_CREATE_TABLE_MOMENTS = `
     CREATE TABLE IF NOT EXISTS moments (
       id TEXT PRIMARY KEY,
-      user_id INTEGER,
+      user_id TEXT,
       nickname TEXT,
       avatar_url TEXT,
       description TEXT,

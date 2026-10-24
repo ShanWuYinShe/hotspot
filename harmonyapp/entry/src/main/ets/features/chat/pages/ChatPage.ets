@@ -104,8 +104,14 @@ export struct ChatPage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   
+  @Watch('onMessagesChanged')
   @State messages: ChatMessage[] = [];
+  @State private lastSentMessageId: string = '';
   private messagesDataSource: BasicDataSource<ChatMessage> = new BasicDataSource<ChatMessage>([]);
+
+  private onMessagesChanged(): void {
+    this.lastSentMessageId = getLastSentMessageId(this.messages);
+  }
   @State inputText: string = '';
 
   // @ 提及（对齐前端 s2-08：输入 `@` 弹成员浮层，发送时透传 mentions）
@@ -1255,7 +1261,7 @@ export struct ChatPage {
                   ChatMessageItem({
                     msg: msg,
                     isGroupChat: this.chatType === 'group_chat',
-                    isLastSent: msg.isSelf && msg.id === getLastSentMessageId(this.messages),
+                    isLastSent: msg.isSelf && msg.id === this.lastSentMessageId,
                     timeText: formatMessageTime(msg.sentAt),
                     hasActions: hasMessageActions(msg, this.isAdminRecallContext()),
                     onMessageClick: (view: ChatMessageView) => { this.openMessageActions(view); },

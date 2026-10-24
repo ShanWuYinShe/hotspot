@@ -169,7 +169,9 @@ export function cleanPlainText(text: string | undefined | null): string {
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_m: string, code: string): string => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m: string, hex: string): string => String.fromCharCode(parseInt(hex, 16)));
   return cleaned.trim();
 }
 
