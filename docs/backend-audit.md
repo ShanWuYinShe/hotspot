@@ -2,6 +2,103 @@
 
 一次性静态审计 + 代码走查结论。**本文列出的项已确认无问题，除非相关代码大改，不必重复排查**；
 新发现的问题请更新本文并注明日期。
+## 审计总览（第 17 轮，2026-10-24）
+
+本文件为逐次审计的追加记录（约 690 行）。本节汇总**当前整体结论**，便于一次性 review；
+细节与证据仍以各分节为准。
+
+### 一、方法与证据链
+
+- **静态**：`go vet` 全仓干净；`staticcheck` 生产代码 0 findings（测试代码噪声不计入门禁）；
+  `govulncheck` 可达漏洞 0。
+- **门禁**：`./scripts/verify-backend-ci.sh`（默认 / `--with-db` / `--with-e2e` / `--all`），
+  与 `.github/workflows/ci.yml` 逐条对齐；审计期间每个提交都跑过 `--with-db`，合并后跑
+  `--with-e2e`，主线 CI 全绿。
+- **双实现契约测试基建**（`testdb.RunContract`）：同一批用例同时跑**内存实现**与**真实库实现**
+  （`hotspot_it`，事务隔离），专门抓「两套实现语义漂移」与「只在真实库暴露的 SQL 缺陷」。
+  已接入 **15 批**：privatechats、notify、users、groups、privatemessages、comments、moments、
+  share、admin（审计日志 + 分页不变量）、system、reports、reactions、platform/auth 存储、
+  media、groupmessages。
+- **流程**：worktree 开发 → 契约测试/修复 → `--with-db` 门禁 → ff-only 合并 → `--with-e2e` →
+  推送 main → CI 绿 → worktree/分支清理；每轮结论追加到本文件。
+
+### 二、生产缺陷（真实库/线上路径）已修复
+
+| # | 缺陷 | 影响 | 提交 |
+|---|---|---|---|
+| 1 | groups `AreMembers` SQL 返回 5 列却只 Scan 1 列 | 真实库必报错（feeds 批量成员判定不可用） | `c6d8a7dd` |
+| 2 | privatemessages `MarkAsRead` 无 `up_to` 时返回空位点 | 已读事件负载缺 message_id/sent_at | `adc80f4b` |
+| 3 | comments `Create` 回复响应 `parent_id` 恒 null | 回复层级信息丢失 | `1a214fba` |
+| 4 | system 公告检索分页游标取「下一页首条」 | **每页边界丢一条公告** | `34b0588e` |
+| 5 | reactions 点赞目标列表分页同族缺陷 | **每页边界丢一个点赞目标** | `95fbb1a2` |
+| 6 | admin 标签/RBAC 管理员列表分页同族缺陷 | **每页边界丢一条** | `a88d64da` |
+| 7 | Repository 事务上下文绕过（6 模块 20 处直连池） | 事务内读写逃逸：写回滚不生效/读不到本事务写入 | `a85b3c8f` |
+| 8 | moments 收藏者 fanout 查询无 LIMIT | 热门瞬间删除时全量收藏行载入内存（内存放大） | `df493a19` |
+| 9 | （此前批次）P0/P1/P2 系列 | 见本文件「全面代码审查」「P2 批次」等分节 | 各节 |
+
+### 三、内存降级实现的语义漂移（已修复）
+
+内存实现用于单测/无 DB 降级，语义漂移不直接影响线上，但会让单测与 E2E 掩盖真实行为。
+已修复的主要漂移（按模块，均为契约测试发现）：
+
+| 模块 | 漂移（示例） | 提交 |
+|---|---|---|
+| notify | 未读分类口径、时间格式 | `2c43ab1c` |
+| users | 拉黑列表缺 avatar_url；游标格式/keyset | `cbe33876` 等 |
+| groups | 成员判定/共同群计数/批量成员游标 | `c6d8a7dd`、`ff030d64` |
+| privatemessages | 已读位点、消息顺序/召回、无效游标 | `adc80f4b` |
+| comments | 内存游标非 keyset、回复层级 | `1a214fba` |
+| moments | ListMine 明文游标、搜索大小写、软删/计数语义 | `235d7c55` |
+| admin | 审计日志/标签/RBAC 管理员分页边界丢行、内存 seed 数据 | `9911d6ba`、`a88d64da` |
+| system | repo 层不该做 trim、版本指纹 | `34b0588e` |
+| reactions | 明文游标+不校验、reacted_at 秒精度、RFC3339Nano 变长字符串字典序排序 | `95fbb1a2`、`f820f991` |
+| platform/auth | 刷新令牌 Rotate 对不存在旧 token 未返回冲突 | `43de30d7` |
+| media | 完成时间缺失、file_id/upload_id 混淆、GC 顺序、GC 误删已完成 | `8bea94b4` |
+| groupmessages | 已读计数重复累加、MarkAsRead 无成员校验、MarkAllRead 群范围、缺失消息计数、撤回消息 read_count | `fd3cf83f` |
+
+另有系统性「分页游标取下一页首条」缺陷全场扫描（本轮之后又发现 5 处，见
+「分页游标缺陷全场扫描」节），审计方法已沉淀：游标必须取**本页最后一条**。
+
+### 四、spec 歧义 / 待产品确认（实现已按双实现一致口径收敛）
+
+| # | 歧义点 | 当前实现口径 | 建议 |
+|---|---|---|---|
+| 1 | share「我的分享」列表的 `is_revoked`：spec 只定义为撤销状态，未定义 expired 的列表呈现 | 过期与撤销在列表中均呈现 `is_revoked=true`、`preview=null`（PG/内存一致；open_the_door 统一 10300） | spec 补一句 expired 列表口径 |
+| 2 | groupmessages `GetReadCount` 对不存在消息的行为 spec 未定义 | PG COUNT 语义返回 0（非 10300），内存已对齐 | spec 明确「不存在返回 0」或改为 10300 |
+| 3 | system `bootstrap_version` 的公告域指纹：spec 只要求「公告变更即变化」，未定义实现 | PG 取 `MAX(updated_at)::text`；同一事务内多次变更指纹相同（事务时间语义） | spec 注明显式指纹/计数也可以，或接受现状 |
+| 4 | reactions `ListReactions/ListReactedTargets` 游标不透明性 | 已统一 AES-GCM 不透明游标 + 非法游标 10000 | 无需改 spec，仅记录 |
+
+### 五、已知残留 / 非缺陷（已评估，不再重复排查）
+
+- `search`、`mapmodule` 的内存实现是**测试专用占位**（源码注释明确声明不保证语义等价、
+  生产不可达），因此不做双实现契约测试；如需覆盖生产语义，应给 Postgres 实现注入
+  `persistence.Queryable` stub 做集成测试。
+- `reports.TargetOwner`、`groupmessages` 成员/群名在内存模式依赖测试注入（跨模块真值不可得，
+  已提供 `SeedTargetOwner`/`SeedMember`/`SetGroupName` 等测试口子）。
+- `platform/auth` 的 session/refresh store 直连连接池（不感知 ctx 事务），调用链在事务外；
+  `bootstrap` 启动期查询同理——已在「Repository 事务上下文一致性审计」节记录为残留项。
+- `admin` 角色/管理员列表全量加载后 Go 侧分页：管理员数量有界，暂可接受；若增长需下推 SQL。
+- media `GetObject` 读取整对象（EXIF 清洗链路）：受「declared size == Head size 且 ≤ 类别上限」
+  约束，图片类别上限内可接受。
+
+### 六、测试资产与维护
+
+- 契约测试位置：各模块 `*_contract_test.go`（如 `moments/list_contract_test.go`、
+  `groupmessages/repo_contract_test.go`）；PG 侧统一用 `testdb.BeginScope` 事务隔离；
+  不支持事务的存储（platform/auth）用 pool + 用例级唯一 ID + 显式清理。
+- 新增模块接入步骤：定义 `TestXxxRepositoryContract` → 两个 `ContractImpl`（memory/postgres）
+  → 用例覆盖「分页不重不漏/过滤/哨兵/回填字段」→ 在门禁 `--with-db` 与 CI 中运行。
+- 门禁命令（推送前按改动范围）：`./scripts/verify-backend-ci.sh [--with-db|--with-e2e|--all]`。
+
+### 七、后续建议（非阻塞）
+
+1. 上表 4 项 spec 歧义经确认后统一修订 `spec/`（本轮未擅自改动）。
+2. 为 mapmodule/search 的生产实现补 Queryable stub 集成测试（真实聚合语义目前仅靠集成测试）。
+3. 管理员列表若规模增长，下推 SQL keyset 分页；其余「全量读」路径已基本收口。
+4. 发版前跑一次 `--all`（含 govulncheck），保持门禁与 CI 长期一致。
+
+---
+
 
 ## 审计清单与结果
 
@@ -673,18 +770,3 @@ GetMessageForReply/GetGroupName、撤回后 MessageGroupID 按不存在处理而
 配套：新增 `SeedMember(groupID, userID, joinedAt)` 供契约测试/降级模式注入成员（生产成员权威
 在 groups 模块的 group_members 表，内存实现无法跨模块读取，与 reports.TargetOwner 同类
 已知限制）；更新既有内存单测（预置成员、缺失消息计数 0）。
-
-## 无界 fanout 查询收口（2026-10-24，moments 收藏者广播）
-
-`moments/broadcastMomentDeletedToFavorites` 在删除瞬间时向收藏者广播 `MomentDeleted`。
-此前审查（P2-17）已在 service 层对广播数量做上限（2000）截断，但 **repo 的
-`ListFavoriteUserIDs` 无 LIMIT**：热门瞬间（收藏数万级）在截断前仍会把全部
-`moment_favorites` 行读进内存，请求路径上的内存与查询耗时随收藏量线性增长。
-
-修复：`Repository.ListFavoriteUserIDs` 增加 `limit` 参数（`limit<=0` = 不限制），SQL 以
-`LIMIT $2`（NULL = 不限制）在数据库侧限量；service 传 `cap+1` 以判断是否发生截断并记
-Warn。契约测试新增「收藏者列表遵守 fanout 上限」用例（limit=1/10/0 三种语义），双实现
-（内存 break / PG SQL LIMIT）一致。
-
-**审计方法沉淀**：审查「先全量读再截断」的 fanout 路径时，上限必须下沉到 repo/SQL；
-在 service 层截断只能保护后续广播次数，不能保护数据库读取与内存。
