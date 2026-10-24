@@ -7,19 +7,25 @@
 	import { ROUTES } from '@/lib/routes';
 
 	// ═══ 现代社交 Feed 项（HomeFeedItem）═══
-	// 左侧作者头像 + 右侧完整社交实体（昵称/时间/位置/正文/图集/标签/互动栏）。
-	// 彻底替代过往单行抽象色块菜单（ActivityRow），使首页呈现有温度、真实的社区氛围。
+	// 两种形态：
+	// - variant="card"（默认，首页/信息流独立高质感卡片）：
+	//   顶部完整作者行（头像 + 昵称/时间/推荐 + 位置胶囊）+ 全宽正文 + 杂志画廊式配图 + 标签胶囊 + 底部操作条。
+	//   彻底告别传统侧边头像缩进带来的留白失衡，让多图与宽图获得最佳视觉延展。
+	// - variant="row"（紧凑列表行）：
+	//   用于搜索发现/附近枢纽等紧凑列表容器内。
 
 	let {
 		moment,
 		onClick,
 		showDistance = false,
-		ariaLabel
+		ariaLabel,
+		variant = 'card'
 	}: {
 		moment: MomentItem;
 		onClick?: () => void;
 		showDistance?: boolean;
 		ariaLabel?: string;
+		variant?: 'card' | 'row';
 	} = $props();
 
 	// 格式化相对时间（优先小时/分钟，超出 24h 回退 formatRelativeDays）
@@ -95,69 +101,68 @@
 	}
 </script>
 
-<div
-	class="group relative flex items-start gap-3 sm:gap-3.5 px-4 py-4 sm:px-5 hover:bg-surface-subtle/70 transition-colors cursor-pointer border-b border-border-subtle/30"
-	role="button"
-	tabindex="0"
-	onclick={onClick}
-	onkeydown={(e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			onClick?.();
-		}
-	}}
-	aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
->
-	<!-- 左侧：作者头像 -->
-	<div class="shrink-0 pt-0.5">
-		<button
-			type="button"
-			class="hover-action hit-slop block rounded-full focus-ring cursor-pointer"
-			aria-label={`查看${moment.user?.nickname ?? '作者'}的个人主页`}
-			onclick={handleUserClick}
-		>
-			<Avatar
-				src={moment.user?.avatar_url ?? null}
-				name={moment.user?.nickname ?? '热点网友'}
-				size="md"
-			/>
-		</button>
-	</div>
-
-	<!-- 右侧：完整社交信息区 -->
-	<div class="min-w-0 flex-1">
-		<!-- 头部：作者名 + 关注状态 + 推荐标记 + 相对时间 -->
-		<div class="flex items-center justify-between gap-2">
-			<div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+{#if variant === 'card'}
+	<!-- 独立画廊岛屿卡片：现代顶级社交卡片架构 -->
+	<div
+		class="group rounded-2xl border border-border-default bg-surface-primary p-4 sm:p-5 shadow-raised-sm hover:shadow-raised-md hover:border-accent-default/30 transition-all duration-standard flex flex-col cursor-pointer"
+		role="button"
+		tabindex="0"
+		onclick={onClick}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				onClick?.();
+			}
+		}}
+		aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
+	>
+		<!-- 头部：作者资料与位置标签 -->
+		<div class="flex items-center justify-between gap-3">
+			<div class="flex items-center gap-3 min-w-0">
 				<button
 					type="button"
-					class="font-semibold text-sm text-text-primary hover:text-accent-default hover:underline transition-colors truncate text-left"
+					class="hover-action hit-slop shrink-0 rounded-full focus-ring cursor-pointer"
+					aria-label={`查看${moment.user?.nickname ?? '作者'}的个人主页`}
 					onclick={handleUserClick}
 				>
-					{moment.user?.nickname ?? '匿名用户'}
+					<Avatar
+						src={moment.user?.avatar_url ?? null}
+						name={moment.user?.nickname ?? '热点网友'}
+						size="md"
+					/>
 				</button>
+				<div class="min-w-0 flex flex-col">
+					<div class="flex items-center gap-1.5 flex-wrap">
+						<button
+							type="button"
+							class="font-semibold text-sm text-text-primary hover:text-accent-default hover:underline transition-colors truncate text-left"
+							onclick={handleUserClick}
+						>
+							{moment.user?.nickname ?? '匿名用户'}
+						</button>
 
-				{#if moment.author_relation?.is_following}
-					<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xxs font-normal bg-accent-soft text-accent-default shrink-0">
-						已关注
-					</span>
-				{/if}
+						{#if moment.author_relation?.is_following}
+							<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xxs font-medium bg-accent-soft text-accent-default shrink-0">
+								已关注
+							</span>
+						{/if}
 
-				{#if recommendationBadge}
-					<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xxs font-normal bg-surface-subtle text-text-secondary shrink-0">
-						<Sparkles class="size-2.5 text-accent-default" />
-						{recommendationBadge}
-					</span>
-				{/if}
-
-				{#if relativeTime}
-					<span class="text-text-secondary text-xs shrink-0">· {relativeTime}</span>
-				{/if}
+						{#if recommendationBadge}
+							<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xxs font-medium bg-surface-subtle text-text-secondary shrink-0">
+								<Sparkles class="size-2.5 text-accent-default" />
+								{recommendationBadge}
+							</span>
+						{/if}
+					</div>
+					{#if relativeTime}
+						<span class="text-text-secondary text-xs mt-0.5">{relativeTime}</span>
+					{/if}
+				</div>
 			</div>
 
 			<!-- 位置微标签 -->
 			{#if locationText}
-				<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-secondary text-xs max-w-[140px] sm:max-w-[180px] shrink-0 truncate">
+				<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-subtle text-text-secondary text-xs max-w-[140px] sm:max-w-[180px] shrink-0 truncate border border-border-subtle/30 shadow-xs">
 					<MapPin class="size-3 text-accent-default shrink-0" strokeWidth={1.5} />
 					<span class="truncate">{locationText}</span>
 					{#if distanceLabel}
@@ -169,45 +174,45 @@
 
 		<!-- 动态正文 -->
 		{#if moment.description}
-			<p class="mt-1.5 text-sm text-text-primary leading-relaxed whitespace-pre-wrap break-words line-clamp-4">
+			<p class="mt-3 text-sm text-text-primary leading-relaxed whitespace-pre-wrap break-words">
 				{moment.description}
 			</p>
 		{/if}
 
-		<!-- 配图展示：单图舒展、多图网格 -->
+		<!-- 配图展示：舒展大图与网格 -->
 		{#if moment.images && moment.images.length > 0}
-			<div class="mt-2.5">
+			<div class="mt-3 overflow-hidden rounded-xl">
 				{#if moment.images.length === 1}
-					<div class="overflow-hidden rounded-xl border border-border-subtle/40 max-h-[280px] max-w-[420px] bg-surface-subtle shadow-xs">
+					<div class="overflow-hidden rounded-xl border border-border-subtle/40 bg-surface-subtle shadow-xs max-h-[380px] sm:max-h-[440px] flex items-center justify-center">
 						<img
 							src={moment.images[0].url}
 							alt="动态配图"
 							loading="lazy"
-							class="w-full h-full object-cover max-h-[280px] hover:scale-[1.01] transition-transform"
+							class="w-full h-full object-cover max-h-[380px] sm:max-h-[440px] hover:scale-[1.01] transition-transform duration-standard"
 						/>
 					</div>
 				{:else if moment.images.length <= 4}
-					<div class="grid grid-cols-2 gap-1.5 max-w-[420px]">
+					<div class="grid grid-cols-2 gap-2">
 						{#each moment.images.slice(0, 4) as img, idx (img.url + idx)}
 							<div class="aspect-square overflow-hidden rounded-xl border border-border-subtle/30 bg-surface-subtle shadow-xs">
 								<img
 									src={img.url}
 									alt={`动态配图 ${idx + 1}`}
 									loading="lazy"
-									class="w-full h-full object-cover hover:scale-[1.02] transition-transform"
+									class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-standard"
 								/>
 							</div>
 						{/each}
 					</div>
 				{:else}
-					<div class="grid grid-cols-3 gap-1.5 max-w-[460px]">
+					<div class="grid grid-cols-3 gap-2">
 						{#each moment.images.slice(0, 9) as img, idx (img.url + idx)}
 							<div class="aspect-square overflow-hidden rounded-xl border border-border-subtle/30 bg-surface-subtle shadow-xs">
 								<img
 									src={img.url}
 									alt={`动态配图 ${idx + 1}`}
 									loading="lazy"
-									class="w-full h-full object-cover hover:scale-[1.02] transition-transform"
+									class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-standard"
 								/>
 							</div>
 						{/each}
@@ -218,11 +223,11 @@
 
 		<!-- 标签胶囊 -->
 		{#if moment.tags && moment.tags.length > 0}
-			<div class="mt-2 flex flex-wrap gap-1.5">
+			<div class="mt-3 flex flex-wrap gap-1.5">
 				{#each moment.tags as tag (tag)}
 					<button
 						type="button"
-						class="text-xs text-accent-default hover:underline font-medium hit-slop focus-ring"
+						class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-soft text-accent-default hover:bg-accent-soft/80 transition-colors hit-slop focus-ring"
 						onclick={(e) => handleTagClick(e, tag)}
 					>
 						#{tag}
@@ -232,40 +237,218 @@
 		{/if}
 
 		<!-- 底部轻量交互操作条 -->
-		<div class="mt-3 flex items-center gap-6 sm:gap-8 text-text-secondary">
-			<!-- 点赞 -->
-			<div
-				class="hover-action hit-slop flex items-center gap-1.5 text-xs focus-ring transition-colors {hasLiked ? 'text-status-danger' : 'hover:text-status-danger'}"
-				aria-label={`点赞 ${totalReactions} 次`}
-			>
-				<Heart
-					class="size-4 shrink-0 transition-transform active:scale-125 {hasLiked ? 'fill-status-danger text-status-danger' : ''}"
-					strokeWidth={1.5}
-				/>
-				<span>{totalReactions > 0 ? totalReactions : '赞'}</span>
-			</div>
+		<div class="mt-3.5 pt-3 border-t border-border-subtle/40 flex items-center justify-between text-text-secondary">
+			<div class="flex items-center gap-6 sm:gap-8">
+				<!-- 点赞 -->
+				<div
+					class="hover-action hit-slop flex items-center gap-1.5 text-xs focus-ring transition-colors {hasLiked ? 'text-status-danger' : 'hover:text-status-danger'}"
+					aria-label={`点赞 ${totalReactions} 次`}
+				>
+					<Heart
+						class="size-4 shrink-0 transition-transform active:scale-125 {hasLiked ? 'fill-status-danger text-status-danger' : ''}"
+						strokeWidth={1.75}
+					/>
+					<span class="font-medium">{totalReactions > 0 ? totalReactions : '赞'}</span>
+				</div>
 
-			<!-- 评论 -->
-			<div
-				class="hover-action hit-slop flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors"
-				aria-label={`评论 ${moment.comments_count} 条`}
-			>
-				<MessageCircle class="size-4 shrink-0" strokeWidth={1.5} />
-				<span>{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
+				<!-- 评论 -->
+				<div
+					class="hover-action hit-slop flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors"
+					aria-label={`评论 ${moment.comments_count} 条`}
+				>
+					<MessageCircle class="size-4 shrink-0" strokeWidth={1.75} />
+					<span class="font-medium">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
+				</div>
 			</div>
 
 			<!-- 分享 -->
 			<button
 				type="button"
-				class="hover-action hit-slop flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors ml-auto sm:ml-0"
+				class="hover-action hit-slop flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors"
 				aria-label="分享动态"
 				onclick={handleShareClick}
 			>
-				<Share2 class="size-4 shrink-0" strokeWidth={1.5} />
+				<Share2 class="size-4 shrink-0" strokeWidth={1.75} />
 				{#if moment.shares_count && moment.shares_count > 0}
-					<span>{moment.shares_count}</span>
+					<span class="font-medium">{moment.shares_count}</span>
 				{/if}
 			</button>
 		</div>
 	</div>
-</div>
+{:else}
+	<!-- 紧凑行形态（保留紧凑内嵌式列表语言） -->
+	<div
+		class="group relative flex items-start gap-3 sm:gap-3.5 px-4 py-4 sm:px-5 hover:bg-surface-subtle/70 transition-colors cursor-pointer border-b border-border-subtle/30"
+		role="button"
+		tabindex="0"
+		onclick={onClick}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				onClick?.();
+			}
+		}}
+		aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
+	>
+		<!-- 左侧：作者头像 -->
+		<div class="shrink-0 pt-0.5">
+			<button
+				type="button"
+				class="hover-action hit-slop block rounded-full focus-ring cursor-pointer"
+				aria-label={`查看${moment.user?.nickname ?? '作者'}的个人主页`}
+				onclick={handleUserClick}
+			>
+				<Avatar
+					src={moment.user?.avatar_url ?? null}
+					name={moment.user?.nickname ?? '热点网友'}
+					size="md"
+				/>
+			</button>
+		</div>
+
+		<!-- 右侧：完整社交信息区 -->
+		<div class="min-w-0 flex-1">
+			<!-- 头部：作者名 + 关注状态 + 推荐标记 + 相对时间 -->
+			<div class="flex items-center justify-between gap-2">
+				<div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+					<button
+						type="button"
+						class="font-semibold text-sm text-text-primary hover:text-accent-default hover:underline transition-colors truncate text-left"
+						onclick={handleUserClick}
+					>
+						{moment.user?.nickname ?? '匿名用户'}
+					</button>
+
+					{#if moment.author_relation?.is_following}
+						<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xxs font-normal bg-accent-soft text-accent-default shrink-0">
+							已关注
+						</span>
+					{/if}
+
+					{#if recommendationBadge}
+						<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xxs font-normal bg-surface-subtle text-text-secondary shrink-0">
+							<Sparkles class="size-2.5 text-accent-default" />
+							{recommendationBadge}
+						</span>
+					{/if}
+
+					{#if relativeTime}
+						<span class="text-text-secondary text-xs shrink-0">· {relativeTime}</span>
+					{/if}
+				</div>
+
+				<!-- 位置微标签 -->
+				{#if locationText}
+					<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-secondary text-xs max-w-[140px] sm:max-w-[180px] shrink-0 truncate">
+						<MapPin class="size-3 text-accent-default shrink-0" strokeWidth={1.5} />
+						<span class="truncate">{locationText}</span>
+						{#if distanceLabel}
+							<span class="text-text-secondary shrink-0">· {distanceLabel}</span>
+						{/if}
+					</div>
+				{/if}
+			</div>
+
+			<!-- 动态正文 -->
+			{#if moment.description}
+				<p class="mt-1.5 text-sm text-text-primary leading-relaxed whitespace-pre-wrap break-words line-clamp-4">
+					{moment.description}
+				</p>
+			{/if}
+
+			<!-- 配图展示：单图舒展、多图网格 -->
+			{#if moment.images && moment.images.length > 0}
+				<div class="mt-2.5">
+					{#if moment.images.length === 1}
+						<div class="overflow-hidden rounded-xl border border-border-subtle/40 max-h-[280px] max-w-[420px] bg-surface-subtle shadow-xs">
+							<img
+								src={moment.images[0].url}
+								alt="动态配图"
+								loading="lazy"
+								class="w-full h-full object-cover max-h-[280px] hover:scale-[1.01] transition-transform"
+							/>
+						</div>
+					{:else if moment.images.length <= 4}
+						<div class="grid grid-cols-2 gap-1.5 max-w-[420px]">
+							{#each moment.images.slice(0, 4) as img, idx (img.url + idx)}
+								<div class="aspect-square overflow-hidden rounded-xl border border-border-subtle/30 bg-surface-subtle shadow-xs">
+									<img
+										src={img.url}
+										alt={`动态配图 ${idx + 1}`}
+										loading="lazy"
+										class="w-full h-full object-cover hover:scale-[1.02] transition-transform"
+									/>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<div class="grid grid-cols-3 gap-1.5 max-w-[460px]">
+							{#each moment.images.slice(0, 9) as img, idx (img.url + idx)}
+								<div class="aspect-square overflow-hidden rounded-xl border border-border-subtle/30 bg-surface-subtle shadow-xs">
+									<img
+										src={img.url}
+										alt={`动态配图 ${idx + 1}`}
+										loading="lazy"
+										class="w-full h-full object-cover hover:scale-[1.02] transition-transform"
+									/>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- 标签胶囊 -->
+			{#if moment.tags && moment.tags.length > 0}
+				<div class="mt-2 flex flex-wrap gap-1.5">
+					{#each moment.tags as tag (tag)}
+						<button
+							type="button"
+							class="text-xs text-accent-default hover:underline font-medium hit-slop focus-ring"
+							onclick={(e) => handleTagClick(e, tag)}
+						>
+							#{tag}
+						</button>
+					{/each}
+				</div>
+			{/if}
+
+			<!-- 底部轻量交互操作条 -->
+			<div class="mt-3 flex items-center gap-6 sm:gap-8 text-text-secondary">
+				<!-- 点赞 -->
+				<div
+					class="hover-action hit-slop flex items-center gap-1.5 text-xs focus-ring transition-colors {hasLiked ? 'text-status-danger' : 'hover:text-status-danger'}"
+					aria-label={`点赞 ${totalReactions} 次`}
+				>
+					<Heart
+						class="size-4 shrink-0 transition-transform active:scale-125 {hasLiked ? 'fill-status-danger text-status-danger' : ''}"
+						strokeWidth={1.5}
+					/>
+					<span>{totalReactions > 0 ? totalReactions : '赞'}</span>
+				</div>
+
+				<!-- 评论 -->
+				<div
+					class="hover-action hit-slop flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors"
+					aria-label={`评论 ${moment.comments_count} 条`}
+				>
+					<MessageCircle class="size-4 shrink-0" strokeWidth={1.5} />
+					<span>{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
+				</div>
+
+				<!-- 分享 -->
+				<button
+					type="button"
+					class="hover-action hit-slop flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors ml-auto sm:ml-0"
+					aria-label="分享动态"
+					onclick={handleShareClick}
+				>
+					<Share2 class="size-4 shrink-0" strokeWidth={1.5} />
+					{#if moment.shares_count && moment.shares_count > 0}
+						<span>{moment.shares_count}</span>
+					{/if}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}

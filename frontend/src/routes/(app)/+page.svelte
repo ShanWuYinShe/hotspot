@@ -4,7 +4,6 @@
 	import { platform } from '@/stores/platform.svelte';
 	import type { MomentItem } from '@/api/types';
 	import { searchMoments, fetchFollowingMoments } from '@/api';
-	import ListContainer from '@/components/list/ListContainer.svelte';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
@@ -167,24 +166,26 @@
 </svelte:head>
 
 {#snippet feedTabs()}
-	<!-- 顶部 Tab 栏：采用规范的 TabBar underline 变体，带平滑滑动下划线与吸顶毛玻璃质感 -->
-	<div class="px-4 sm:px-5 bg-surface-primary/95 backdrop-blur-md sticky top-0 z-10 border-b border-border-subtle/30">
-		<TabBar
-			variant="underline"
-			items={[
-				{ id: 'discover', label: '为你推荐' },
-				{ id: 'following', label: '正在关注' }
-			]}
-			value={activeTab}
-			onChange={(id) => { activeTab = id as FeedTab; }}
-		/>
+	<!-- 顶部 Tab 栏：居中紧凑对齐，滑动下划线与吸顶毛玻璃质感 -->
+	<div class="px-4 sm:px-5 bg-surface-primary/90 backdrop-blur-md sticky top-0 z-10 border-b border-border-subtle/30">
+		<div class="max-w-[280px] mx-auto">
+			<TabBar
+				variant="underline"
+				items={[
+					{ id: 'discover', label: '为你推荐' },
+					{ id: 'following', label: '正在关注' }
+				]}
+				value={activeTab}
+				onChange={(id) => { activeTab = id as FeedTab; }}
+			/>
+		</div>
 	</div>
 {/snippet}
 
 {#snippet nearbyBanner()}
 	<button
 		type="button"
-		class="hover-btn group flex w-full items-center gap-3.5 rounded-2xl border border-border-default bg-surface-primary px-4 py-3.5 text-left focus-ring transition mt-4 hover:border-accent-default/40 hover:shadow-raised-sm"
+		class="hover-btn group flex w-full items-center gap-3.5 rounded-2xl border border-border-default bg-surface-primary px-4 py-4 text-left focus-ring transition mt-4 hover:border-accent-default/40 hover:shadow-raised-md shadow-raised-sm"
 		onclick={() => void goto(ROUTES.nearby)}
 	>
 		<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
@@ -200,7 +201,7 @@
 	</button>
 {/snippet}
 
-<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
+<div class="flex flex-col flex-1 min-h-full">
 	<SplitPageLayout
 		contentMaxWidth="640px"
 		contentClassName="animate-fade-in flex flex-col pt-0 pb-8"
@@ -210,7 +211,7 @@
 				<!-- 移动端顶栏：品牌 Logo + 品牌锚点 + 快捷动作 -->
 				<div class="flex items-center justify-between px-4 pt-3 pb-2.5 bg-surface-primary/95 backdrop-blur-md border-b border-border-subtle/30 sticky top-0 z-20">
 					<div class="flex items-center gap-2">
-						<img src={imgHotSpot} alt="HotSpot" class="size-6 rounded-full object-cover shadow-xs" />
+						<img src={imgHotSpot} alt="HotSpot" class="size-6.5 rounded-full object-cover shadow-xs" />
 						<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
 					</div>
 					<h1 class="sr-only">首页</h1>
@@ -249,28 +250,26 @@
 		{:else if currentError && currentItems.length === 0}
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
 		{:else if currentItems.length > 0}
-			<!-- 高质感社区 Feed 流：岛屿卡片容器，统一全站审美 -->
-			<div class="px-3 sm:px-0 pt-3">
-				<ListContainer bordered class="rounded-2xl shadow-raised-sm overflow-hidden">
-					{#each currentItems as moment (moment.moment_id)}
-						<HomeFeedItem
-							{moment}
-							showDistance={false}
-							onClick={() => void goto(ROUTES.moment(moment.moment_id))}
-						/>
-					{/each}
-				</ListContainer>
+			<!-- 高质感社区 Feed 流：独立画廊岛屿卡片流 -->
+			<div class="flex flex-col gap-3.5 sm:gap-4.5 px-3.5 sm:px-0 pt-3.5">
+				{#each currentItems as moment (moment.moment_id)}
+					<HomeFeedItem
+						{moment}
+						showDistance={false}
+						onClick={() => void goto(ROUTES.moment(moment.moment_id))}
+					/>
+				{/each}
 			</div>
 
 			{#if hasMore}
-				<div class="mt-4 flex justify-center px-4">
+				<div class="mt-5 flex justify-center px-4">
 					<LoadMoreButton loading={loadingMore} onLoad={() => void currentPager.loadMore()} />
 				</div>
 			{:else}
 				<ListEnd class="py-4" />
 			{/if}
 
-			<div class="px-4">
+			<div class="px-3.5 sm:px-0">
 				{@render nearbyBanner()}
 			</div>
 		{:else}
@@ -285,7 +284,7 @@
 				{/snippet}
 			</EmptyState>
 
-			<div class="px-4">
+			<div class="px-3.5 sm:px-0">
 				{@render nearbyBanner()}
 			</div>
 		{/if}
@@ -296,9 +295,9 @@
 				<!-- 活跃邻居推荐 -->
 				{#if activeNeighbors.length > 0}
 					<RailSection title="活跃邻居">
-						<div class="flex flex-col divide-y divide-border-subtle/30 rounded-lg border border-border-default bg-surface-primary overflow-hidden">
+						<div class="flex flex-col divide-y divide-border-subtle/30 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm overflow-hidden">
 							{#each activeNeighbors as neighbor (neighbor.userId)}
-								<div class="flex items-center gap-3 px-3.5 py-3 hover:bg-surface-subtle transition-colors">
+								<div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-subtle transition-colors">
 									<Avatar src={neighbor.avatarUrl} name={neighbor.nickname} size="sm" />
 									<div class="min-w-0 flex-1">
 										<button
@@ -314,7 +313,7 @@
 									</div>
 									<button
 										type="button"
-										class="hover-btn shrink-0 rounded-md border border-border-default bg-surface-primary px-2.5 py-1 text-xxs font-medium text-text-primary hover:border-accent-default hover:text-accent-default focus-ring transition"
+										class="hover-btn shrink-0 rounded-full border border-border-default bg-surface-primary px-3 py-1 text-xxs font-medium text-text-primary hover:border-accent-default hover:text-accent-default hover:bg-accent-soft/30 focus-ring transition shadow-xs"
 										onclick={() => void goto(ROUTES.user(neighbor.userId))}
 									>
 										查看
@@ -327,11 +326,11 @@
 
 				<!-- 社区热议话题 -->
 				<RailSection title="社区热议">
-					<div class="flex flex-col divide-y divide-border-subtle/30 rounded-lg border border-border-default bg-surface-primary overflow-hidden">
+					<div class="flex flex-col divide-y divide-border-subtle/30 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm overflow-hidden">
 						{#each trendingTopics as topic (topic.tag)}
 							<button
 								type="button"
-								class="hover-btn flex w-full items-center justify-between px-3.5 py-2.5 text-left transition hover:bg-surface-subtle focus-ring"
+								class="hover-btn flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-surface-subtle focus-ring"
 								onclick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
 							>
 								<div class="min-w-0 flex-1">
@@ -351,17 +350,17 @@
 				<RailSection title="探索雷达">
 					<button
 						type="button"
-						class="hover-btn group flex w-full items-center gap-3 rounded-lg border border-border-default bg-surface-primary p-3 text-left transition hover:border-accent-default/40 hover:shadow-raised-sm focus-ring"
+						class="hover-btn group flex w-full items-center gap-3.5 rounded-2xl border border-border-default bg-surface-primary p-3.5 text-left transition hover:border-accent-default/40 hover:shadow-raised-sm shadow-raised-sm focus-ring"
 						onclick={() => void goto(ROUTES.nearby)}
 					>
-						<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
-							<Compass class="size-4" strokeWidth={1.75} />
+						<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
+							<Compass class="size-4.5" strokeWidth={1.75} />
 						</span>
 						<div class="min-w-0 flex-1">
-							<span class="block text-xs font-medium text-text-primary">发现身边 5km</span>
+							<span class="block text-xs font-semibold text-text-primary">发现身边 5km</span>
 							<span class="block truncate text-xxs text-text-secondary mt-0.5">人 · 群组 · 动态三合一雷达</span>
 						</div>
-						<ExternalLink class="size-3 text-text-secondary shrink-0 group-hover:text-accent-default" />
+						<ExternalLink class="size-3.5 text-text-secondary shrink-0 group-hover:text-accent-default" />
 					</button>
 				</RailSection>
 			</div>
