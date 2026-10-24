@@ -770,3 +770,29 @@ GetMessageForReply/GetGroupName、撤回后 MessageGroupID 按不存在处理而
 配套：新增 `SeedMember(groupID, userID, joinedAt)` 供契约测试/降级模式注入成员（生产成员权威
 在 groups 模块的 group_members 表，内存实现无法跨模块读取，与 reports.TargetOwner 同类
 已知限制）；更新既有内存单测（预置成员、缺失消息计数 0）。
+
+## 幂等 Redis 后端的「过期命中」语义修复（2026-10-24，第 18 轮）
+
+**问题（多实例部署才暴露）**：`idempotency.RedisStore` 用 `SET NX` 原子占位，记录 TTL
+恰好等于业务有效期（`ExpiresAt`）。键到期后 Redis 直接删除，客户端用**同一个旧
+`Idempotency-Key` 重试时 `SET NX` 成功** → 请求被当成全新请求**静默重新执行**；而单实例
+`InMemoryStore` 的惰性过期会返回 `StatusExpired`，replay 层映射为 `22001`（spec
+`api_spec_errors.md`：幂等缓存已过期，换新 key 重试）。结果：同一契约行为随「是否配置
+Redis/单实例还是多实例」而不同，且失败方向是**重复执行写操作**（比报错更危险）。
+
+**修复**：
+
+1. Redis 记录 TTL = 业务有效期 + `expiredRecordGrace`（10 分钟墓碑窗口）；
+2. `Get`/`Reserve` 读到 `ExpiresAt` 已过的记录时返回 `StatusExpired`（与内存实现惰性
+   过期同口径，replay 层返回 22001），而不是重新占位；
+3. `Save` 的 Lua 覆写同样按延长后的 TTL 写入（完成态响应在墓碑窗口内仍可识别过期）；
+4. `Delete` 保持硬删除（producer panic 回滚路径要求同一 key 可立即重试，不能留墓碑）。
+
+**测试**：新增 `internal/platform/idempotency/store_redis_test.go`（miniredis，`-race` 下运行）：
+原子占位/重复占位不声明执行权、24 并发仅 1 次占位、完成态回放与 Lua「已完成不覆写」
+守卫、过期墓碑识别（`Get`/`Reserve` 均返回 `StatusExpired`）与墓碑 GC 后重新占位、
+`Delete` 允许立即重试、Redis 宕机 fail-open（占位直通 + Save/Delete 不 panic）、
+Redis 调用 context 带超时。此前 `RedisStore`（生产多实例必经路径）无任何单测。
+
+**审计方法沉淀**：跨实现/跨部署拓扑的语义必须用同一组行为用例验证；「TTL 到期删除」
+与「惰性过期 + 墓碑」是两种不同语义，后者才能稳定返回 22001。

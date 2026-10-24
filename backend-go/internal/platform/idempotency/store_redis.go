@@ -22,6 +22,34 @@ type RedisStore struct {
 
 func NewRedisStore(rdb *redis.Client) *RedisStore { return &RedisStore{rdb: rdb} }
 
+// expiredRecordGrace 是记录过期后仍保留的「墓碑」窗口：Redis 的 TTL 一旦到期
+// 键即消失，Reserve 会把同一个旧 key 当作全新请求再次执行；而单实例内存实现与
+// spec api_spec_errors.md 约定「曾存在但已过期」必须返回 22001（换新 key 重试），
+// 不能静默重新执行。保留窗口让 Redis 实现也能识别过期命中（多实例语义一致）。
+// 墓碑由 Redis TTL 自动清理，内存占用有界。
+const expiredRecordGrace = 10 * time.Minute
+
+// recordTTL 返回记录应写入 Redis 的 TTL：业务有效期 + 过期墓碑窗口。
+func recordTTL(expiresAt time.Time) time.Duration {
+	ttl := time.Until(expiresAt)
+	if ttl <= 0 {
+		ttl = time.Minute
+	}
+	return ttl + expiredRecordGrace
+}
+
+// expiredRecord 把已过期记录还原为 StatusExpired（与 InMemoryStore.Get/Reserve
+// 的惰性过期口径一致，replay 层据此返回 22001）。
+func expiredRecord(record Record) Record {
+	return Record{
+		Key:       record.Key,
+		Scope:     record.Scope,
+		Status:    StatusExpired,
+		Response:  record.Response,
+		ExpiresAt: record.ExpiresAt,
+	}
+}
+
 func redisKey(scope, key string) string { return "idem:" + scope + ":" + key }
 
 func marshalRecord(r Record) ([]byte, error) { return json.Marshal(r) }
@@ -48,17 +76,22 @@ func (s *RedisStore) Get(scope, key string) (Record, bool) {
 	if err != nil {
 		return Record{}, false
 	}
-	return unmarshalRecord(b)
+	record, ok := unmarshalRecord(b)
+	if !ok {
+		return Record{}, false
+	}
+	if time.Now().After(record.ExpiresAt) {
+		return expiredRecord(record), true
+	}
+	return record, true
 }
 
 func (s *RedisStore) Reserve(scope, key string, expiresAt time.Time) (Record, bool) {
 	ctx, cancel := redisCallCtx()
 	defer cancel()
 	k := redisKey(scope, key)
-	ttl := time.Until(expiresAt)
-	if ttl <= 0 {
-		ttl = time.Minute
-	}
+	// TTL 覆盖「业务有效期 + 墓碑窗口」：过期后记录仍在，供 22001 识别。
+	ttl := recordTTL(expiresAt)
 	processing := Record{Key: key, Scope: scope, Status: StatusProcessing, ExpiresAt: expiresAt}
 	payload, err := marshalRecord(processing)
 	if err != nil {
@@ -82,7 +115,14 @@ func (s *RedisStore) Reserve(scope, key string, expiresAt time.Time) (Record, bo
 		observability.L().Warn("idempotency redis get failed, failing open", "error", err)
 		return processing, true
 	}
-	existing, _ := unmarshalRecord(b)
+	existing, ok := unmarshalRecord(b)
+	if !ok {
+		return Record{}, false
+	}
+	// 与内存实现一致：曾存在但已过期 → StatusExpired（22001），而不是允许复用旧 key。
+	if time.Now().After(existing.ExpiresAt) {
+		return expiredRecord(existing), false
+	}
 	return existing, false
 }
 
@@ -105,10 +145,8 @@ func (s *RedisStore) Save(record Record) {
 	if err != nil {
 		return
 	}
-	ttl := time.Until(record.ExpiresAt)
-	if ttl <= 0 {
-		ttl = time.Minute
-	}
+	// TTL 同样覆盖墓碑窗口：完成态记录过期后仍需可识别为 22001。
+	ttl := recordTTL(record.ExpiresAt)
 	ctx, cancel := redisCallCtx()
 	defer cancel()
 	_ = saveCompletedScript.Run(ctx, s.rdb, []string{redisKey(record.Scope, record.Key)},
