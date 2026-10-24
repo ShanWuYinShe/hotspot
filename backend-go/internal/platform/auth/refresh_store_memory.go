@@ -50,9 +50,10 @@ func (s *InMemoryRefreshStore) Get(_ context.Context, token string) (RefreshSess
 func (s *InMemoryRefreshStore) Rotate(_ context.Context, oldToken string, current RefreshSession, next RefreshSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// 与 PG 版守卫语义一致：旧 token 已被轮换时返回冲突，不得覆盖
-	// RotatedTo 或插入第二个 next（会把单链轮换分叉成两棵并行链）。
-	if existing, ok := s.items[oldToken]; ok && existing.RotatedTo != "" {
+	// 与 PG 版守卫语义一致：旧 token 不存在或已被轮换时返回冲突。PG 的
+	// UPDATE ... WHERE rotated_to IS NULL 对不存在的 token 是 0 行命中 → 冲突；
+	// 内存实现此前对不存在的 token 仍插入 next，两实现行为不一致。
+	if existing, ok := s.items[oldToken]; !ok || existing.RotatedTo != "" {
 		return ErrRefreshRotationConflict
 	}
 	current.RotatedTo = next.RefreshToken

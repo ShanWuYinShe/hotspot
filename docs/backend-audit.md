@@ -607,3 +607,22 @@ emoji 刷新 reacted_at（列表重排）、聚合（计数/排序/reacted_by_me
 
 **审计方法沉淀**：新增/修改列表分页后，用 `grep -n 'idx >= limit\|page.Next ='` 复核游标
 取值来源；游标必须是**本页最后一条**，不能是第 limit+1 条（严格排他谓词会把它自身排除）。
+
+## 认证存储契约测试（2026-10-24，platform/auth 会话 + 刷新令牌）
+
+`TestSessionStoreContract` / `TestRefreshTokenStoreContract` 接入契约基建（第 13 个接入方），
+覆盖：会话 Save/Get 字段回环、Touch 刷新活跃时间（revoked/missing no-op）、ListActiveByUser
+（排除 revoked + 活跃时间倒序 + 用户隔离）、Revoke 幂等与缺失哨兵、RevokeOthers 计数与
+排除当前/已撤销会话、同设备活跃会话冲突（内存 TOCTOU 检查 vs PG 部分唯一索引）；刷新令牌
+Save/Get 回环、Rotate 链接旧 token（RotatedTo/GraceUntil/GraceTokenEnc/next 链）、二次轮换
+与不存在旧 token 均返回 `ErrRefreshRotationConflict`、Save upsert 覆盖。
+
+**抓到 1 处漂移**：内存 `InMemoryRefreshStore.Rotate` 对**不存在的旧 token** 直接插入 next，
+而 PG 的 `UPDATE ... WHERE rotated_to IS NULL` 对不存在 token 是 0 行命中 → 返回
+`ErrRefreshRotationConflict`。两实现行为不一致（内存模式会让失效 token 轮换出新链）。已改为
+同样返回冲突。
+
+**测试基建说明**：`PostgresSessionStore`/`PostgresRefreshStore` 的 `queryable()` 不感知 ctx
+事务（见「事务上下文」残留项），故契约测试用 pool + 用例级唯一 ID + 显式清理（refresh →
+session → user）。已知差异（有意保留，记录备查）：内存实现 Get 对过期/空闲会话做惰性过期
+（降级模式防内存增长），PG 依赖 sweeper 与调用方过期判断；两者在正常 TTL 内行为一致。
