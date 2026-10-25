@@ -46,13 +46,13 @@
 				{#if header}
 					<div class="shrink-0">{@render header()}</div>
 				{/if}
-				<div class="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+				<div class="min-h-0 flex-1">
 					<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
 						{@render children()}
 					</ContentColumn>
 				</div>
 				{#if footer}
-					<div class="shrink-0">{@render footer()}</div>
+					<div class="shrink-0 sticky bottom-0 z-10">{@render footer()}</div>
 				{/if}
 			</div>
 			<ContextRail attached>{@render rail()}</ContextRail>
