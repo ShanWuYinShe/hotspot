@@ -1434,3 +1434,41 @@ CONCURRENTLY）只会在 CI 之外或线上启动时才暴露。
 3. pprof/SSRF/MD5 等已知安全例外以带理由的 `#nosec` 固化，后续新增同类代码仍会被扫出。
 
 验证：gosec high/high 0 发现；受影响包 `go test -short` 全绿；门禁/CI 新增步骤在本轮提交后验证。
+
+## 只读接口压测基线（2026-10-25，第 44 轮）
+
+按「继续审计」建议做压测：新增可复用的 `backend-go/cmd/loadgen`（仅 stdlib，固定并发、
+输出 RPS/状态码/业务码/延迟分位数），对 **backend-test**（`APP_ENV=test` 跳过限流、独立
+`hotspot_test` 库，端口 8082）做只读路径基线。
+
+### 方法
+```
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d backend-test
+cd backend-go && go run ./cmd/loadgen -url http://localhost:8082/<path> -c 50 -d 10~20s [--method POST --body ... --H 'Authorization: Bearer <guest token>']
+```
+环境：Apple Silicon Mac（压测进程与容器同机共享 CPU），并发 50 keep-alive，单后端实例，
+`hotspot_test` 为 E2E 遗留的小数据量；**数字用于相对比较与瓶颈定位，不是生产容量承诺**。
+
+### 结果（2026-10-25 10:33 +08）
+
+| 端点 | 类型 | RPS | p50 / p95 / p99 | 错误 |
+|---|---|---|---|---|
+| `GET /healthz` | 纯 HTTP（无 DB） | **19,133** | 0.91 / 3.06 / 7.51 ms | 0 |
+| `POST /public/v1/system/health` | DB + Redis 健康检查 | **11,422** | 1.88 / 6.69 / 33.96 ms | 0 |
+| `POST /public/v1/system/announcements/fetch` | 公共 DB 读 | **7,287** | 3.82 / 15.02 / 48.46 ms | 0 |
+| `POST /api/v1/users/account` | 认证 + DB 读（会话校验 + 资料） | **1,351** | 17.16 / 84.16 / 161.11 ms | 0 |
+| `POST /api/v1/system/bootstrap` | 认证聚合（profile + unread） | **1,091** | 25.30 / 91.33 / 169.28 ms | 0 |
+
+压测前后指标：goroutines 21→21；`pgxpool` 由 total 3 / idle 3 升至 **total 25 / idle 25**
+（默认 `MaxConns=25` 达到上限，`acquiring=0`）。所有响应 HTTP 200 且业务 code=0，无错误。
+
+### 结论
+1. HTTP 栈与公共读路径余量充足；认证读取约 **1.1–1.35k RPS**，瓶颈在**数据库连接池/查询**
+   （每请求至少 1 次会话校验 + 1 次资料查询），而非 Go 路由/JSON；
+2. `p99 ~160ms` 与 `MaxConns=25` 饱和相关：50 并发下请求排队等连接。生产默认池 25 对当前
+   社区规模足够；若未来认证 QPS 目标提高，优先调 `DB_MAX_CONNS`/DB 规格，其次评估**短 TTL
+   会话校验缓存**（需权衡撤销即时性：会话/封禁当前为每请求查库，缓存会延迟强制下线）；
+3. 各端点最大延迟 ~600ms 的离群值出现在同机压测（压测进程抢 CPU + GC），非稳定态特征，
+   需在准生产（独立压测机、真实数据量）复测后再下容量结论。
+
+复跑方式见上方命令；工具已入库，后续性能回归可直接复用。
