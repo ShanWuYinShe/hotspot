@@ -1961,3 +1961,39 @@ tags/is_favorited 仍分页后批量补全，响应字段不变。
 候选 SQL 仍有 4 个逐行子查询（reactions COUNT、is_following EXISTS、双向拉黑 NOT EXISTS ×2），
 其中热度与关注只用于同距离时的次级排序。下一步候选：把热度与关注改为「候选集批量聚合查询」
 （GROUP BY / ANY），SQL 只保留 id/时间/坐标 + 拉黑过滤，可进一步降低 DB 扫描成本。
+
+## fetch_nearby 热度/关注改候选集批量聚合（2026-10-25，第 60 轮）
+
+第 59 轮后候选 SQL 仍对最多 2000 行做 4 个逐行子查询（reactions COUNT、is_following EXISTS、
+双向拉黑 NOT EXISTS×2）。本轮把热度与关注改为候选集批量聚合：
+
+### 改动（`3eb4ee6e`）
+- `queryNearbyMoments` 只保留 `moment_id/user_id/created_at/comments_count/shares_count/lat/lng`
+  + 双向拉黑过滤（正确性所需），去掉 users join、热度 COUNT 与关注 EXISTS；
+- 新增 `queryNearbyMomentHeat`（`GROUP BY target_id` 的 reactions 计数）与
+  `queryNearbyFollowingUserIDs`（`ANY(authorIDs)` 关注集合），Go 层合并进排序分数；
+- score 公式不变（likes+comments+shares + 1000×isFollowing + max(0, radius-distance)）；
+- 匿名视角跳过关注批量查询；候选为空提前返回；响应 likes 语义由同一批量结果填充。
+
+### 复核（c=10、密集候选 1032 行）
+| 指标 | 列裁剪后（第 59 轮） | 批量聚合后（本轮） |
+|---|---|---|
+| RPS | 289–336 | **498–502（+50%+）** |
+| p50 | 16.2–19.1 ms | 18.4–18.5 ms（持平） |
+| p95 | 70–77 ms | **32.5–34.0 ms（−55%）** |
+| p99 | 77–88 ms | 41 ms |
+| 候选逐行子查询 | 4 个/行 | 0（仅拉黑过滤） |
+
+同轮 pprof（c=10、30s）显示吞吐提升后 CPU 采样随之上升（请求量 +50%），但 p95/p99 明显收敛；
+`fetch_following` 无回归（c=30 2,974 RPS，历史噪声区间 2.9–4.1k）。
+
+### 语义验证（真实库）
+新建瞬间 → `reactions/set(emoji=👍, active=true)`（code=0）→ 收藏 → `fetch_nearby`：
+该条 `reactions=[{emoji:👍,count:1,reacted_by_me:true}]`、`tags=["bat-tag"]`、`is_favorited=true` ✓。
+（`likes_count` 已从契约删除，JSON 不返回该字段，属预期。）
+工作树门禁 + 主树 `--all`（DB IT + E2E）**ALL CHECKS PASSED**。
+
+### 下一步
+附近流已从 365 RPS / p95 57ms 优化到 ~500 RPS / p95 33ms。剩余 CPU 主要是 GC
+（tryDeferToSpanScan/wbBufFlush/bulkBarrierPreWrite 合计约 30%），可继续减少候选集
+临时 map/切片分配；或把同款「候选批量聚合」模式复用到其他发现流（moments/search 等）。
