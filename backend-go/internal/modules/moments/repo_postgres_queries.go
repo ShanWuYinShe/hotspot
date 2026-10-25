@@ -213,9 +213,12 @@ LIMIT $4`
 	// 终序由 Go 层 compareNearbyCandidates（全序，momentID 兜底）确定，SQL 行序
 	// 不影响排序结果；ORDER BY + LIMIT 仅作为确定性防御截断——区间行数无界时
 	// 避免 DoS/内存无界（截断表现为"没有更多"，分页不错乱；正常规模不触达）。
-	// queryNearbyMomentDetails 为附近流分页后的 ≤limit 条结果补全展示字段（一次查询）。
+	// queryNearbyMomentDetails 一次查询补全附近流页面内的展示字段、标签数组与收藏态
+	// （20 行以内的 LATERAL/EXISTS 成本可忽略，比三次往返更省 context/网络开销）。
 	queryNearbyMomentDetails = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, m.location_name
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, m.location_name,
+       COALESCE((SELECT array_agg(mt.tag_name ORDER BY mt.tag_name) FROM moment_tags mt WHERE mt.moment_id = m.moment_id), ARRAY[]::text[]),
+       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $2)
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.moment_id = ANY($1)`

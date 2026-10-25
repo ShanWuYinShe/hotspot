@@ -175,15 +175,7 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 		for _, candidate := range pageCandidates {
 			pageIDs = append(pageIDs, candidate.momentID)
 		}
-		details, err := loadNearbyMomentDetails(ctx, queryable, pageIDs)
-		if err != nil {
-			return PaginatedMoments{}, err
-		}
-		tagsByMomentID, err := loadMomentTags(ctx, queryable, pageIDs)
-		if err != nil {
-			return PaginatedMoments{}, err
-		}
-		favoritedMomentIDs, err := loadMomentFavorites(ctx, queryable, query.ViewerUserID, pageIDs)
+		details, err := loadNearbyMomentDetails(ctx, queryable, pageIDs, query.ViewerUserID)
 		if err != nil {
 			return PaginatedMoments{}, err
 		}
@@ -198,8 +190,8 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 				SharesCount:   candidate.sharesCount,
 				User:          UserInfo{UserID: detail.userID, Nickname: detail.nickname, AvatarURL: types.StrPtr(detail.avatarURL)},
 				Location:      &Location{Point: pointStruct(candidate.latitude, candidate.longitude), LocationName: detail.locationName},
-				Tags:          tagsByMomentID[candidate.momentID],
-				IsFavorited:   favoritedMomentIDs[candidate.momentID],
+				Tags:          detail.tags,
+				IsFavorited:   detail.isFavorited,
 			}
 			// 附近流参考点恒已解析（service 层兜底），distance/bearing_degrees 恒填充
 			//（spec api_spec_types.md RelativeLocation；匿名版同样基于 reference_point 计算）。
@@ -225,18 +217,20 @@ type nearbyCandidate struct {
 	score                      int
 }
 
-// nearbyMomentDetail 分页结果的展示字段（一次批量查询补全）。
+// nearbyMomentDetail 分页结果的展示字段 + 标签数组 + 收藏态（一次批量查询补全）。
 type nearbyMomentDetail struct {
 	userID, nickname, avatarURL, description, locationName string
+	tags                                                   []string
+	isFavorited                                            bool
 }
 
 // loadNearbyMomentDetails 批量补全附近流页面内的展示字段。
-func loadNearbyMomentDetails(ctx context.Context, queryable persistence.Queryable, momentIDs []string) (map[string]nearbyMomentDetail, error) {
+func loadNearbyMomentDetails(ctx context.Context, queryable persistence.Queryable, momentIDs []string, viewerID string) (map[string]nearbyMomentDetail, error) {
 	details := make(map[string]nearbyMomentDetail, len(momentIDs))
 	if len(momentIDs) == 0 {
 		return details, nil
 	}
-	rows, err := queryable.Query(ctx, queryNearbyMomentDetails, momentIDs)
+	rows, err := queryable.Query(ctx, queryNearbyMomentDetails, momentIDs, viewerID)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +238,7 @@ func loadNearbyMomentDetails(ctx context.Context, queryable persistence.Queryabl
 	for rows.Next() {
 		var momentID string
 		var detail nearbyMomentDetail
-		if err := rows.Scan(&momentID, &detail.userID, &detail.nickname, &detail.avatarURL, &detail.description, &detail.locationName); err != nil {
+		if err := rows.Scan(&momentID, &detail.userID, &detail.nickname, &detail.avatarURL, &detail.description, &detail.locationName, &detail.tags, &detail.isFavorited); err != nil {
 			return nil, err
 		}
 		details[momentID] = detail
