@@ -10,7 +10,7 @@ import (
 // TestBuildSearchUsersQueryVariants 覆盖半径/手机号/标签三类可选谓词的 SQL 组装分支。
 func TestBuildSearchUsersQueryVariants(t *testing.T) {
 	bounds := geo.BoundsAround(geo.Point{Latitude: 39.9, Longitude: 116.4}, 5000)
-	sql, args := buildSearchUsersQuery(bounds, "13800138000", "美食", true)
+	sql, args := buildSearchUsersQuery(bounds, "13800138000", "美食", true, true)
 	if sql == "" {
 		t.Fatal("radius search SQL is empty")
 	}
@@ -20,9 +20,9 @@ func TestBuildSearchUsersQueryVariants(t *testing.T) {
 	if len(args) < 6 {
 		t.Fatalf("args = %d, want >=6 (mins,maxs,keyword,phone,tag,limit)", len(args))
 	}
-	plain, plainArgs := buildSearchUsersQuery(geo.Bounds{}, "", "", false)
-	if strings.Contains(plain, "unnest(") || strings.Contains(plain, "EXISTS (SELECT 1 FROM user_profile_tags") {
-		t.Fatalf("plain search should not include radius/tag filter predicates: %s", plain)
+	plain, plainArgs := buildSearchUsersQuery(geo.Bounds{}, "", "", false, false)
+	if strings.Contains(plain, "unnest(") || strings.Contains(plain, "user_profile_tags") {
+		t.Fatalf("plain search should not include radius/tag predicates or tag array column: %s", plain)
 	}
 	if len(plainArgs) != 1 {
 		t.Fatalf("plain args = %v, want only limit", plainArgs)

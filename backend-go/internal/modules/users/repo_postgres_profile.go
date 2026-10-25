@@ -132,7 +132,10 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	if radiusFilter {
 		bounds = geo.BoundsAround(refPt, radius)
 	}
-	sql, args := buildSearchUsersQuery(bounds, req.Keyword, strings.ToLower(strings.TrimSpace(req.Tag)), radiusFilter)
+	tag := strings.ToLower(strings.TrimSpace(req.Tag))
+	// tag 过滤需要候选全量标签做 Go 层双保险；keyword-only 搜索分页后再补标签。
+	includeTags := tag != ""
+	sql, args := buildSearchUsersQuery(bounds, req.Keyword, tag, radiusFilter, includeTags)
 	if sql == "" {
 		return PaginatedProfiles{}, nil
 	}
@@ -145,14 +148,13 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	sortBy := normalizeSearchSort(req.SortBy)
 	plan := geo.NewSearchPlan(refPt, radius, sortBy)
 	keyword := strings.ToLower(strings.TrimSpace(req.Keyword))
-	tag := strings.ToLower(strings.TrimSpace(req.Tag))
 	// Scan every candidate row first, then load profile tags for the whole
 	// page in a single query (avoids an N+1 of loadUserProfileTags calls
 	// inside the loop).
 	scanned := make([]MyProfile, 0)
 	settingsByUserID := make(map[string]UserSettings, searchCandidateCap)
 	for rows.Next() {
-		profile, settings, err := scanSearchProfileRow(rows)
+		profile, settings, err := scanSearchProfileRow(rows, includeTags)
 		if err != nil {
 			return PaginatedProfiles{}, err
 		}
@@ -179,6 +181,19 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	sortSearchCandidates(candidates, normalizeSearchSort(req.SortBy))
 	page := paginateSearchCandidates(candidates, req.Pagination)
 	page.Settings = settingsByUserID
+	if !includeTags && len(page.Items) > 0 {
+		pageIDs := make([]string, 0, len(page.Items))
+		for i := range page.Items {
+			pageIDs = append(pageIDs, page.Items[i].UserID)
+		}
+		tagsByUserID, err := loadUserProfileTagsBatch(ctx, queryable, pageIDs)
+		if err != nil {
+			return PaginatedProfiles{}, err
+		}
+		for i := range page.Items {
+			page.Items[i].Tags = tagsByUserID[page.Items[i].UserID]
+		}
+	}
 	return page, nil
 }
 
@@ -187,10 +202,17 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 // 上来后单请求即可打爆内存。
 const searchCandidateCap = 500
 
-func buildSearchUsersQuery(bounds geo.Bounds, keyword, tag string, radiusFilter bool) (string, []any) {
+func buildSearchUsersQuery(bounds geo.Bounds, keyword, tag string, radiusFilter bool, includeTags bool) (string, []any) {
 	args := make([]any, 0, 4)
 	var builder strings.Builder
-	builder.WriteString(`SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at, u.is_deleted, COALESCE((SELECT array_agg(up.tag_name ORDER BY up.tag_name) FROM user_profile_tags up WHERE up.user_id = u.user_id), ARRAY[]::text[]), us.presence_visible, us.location_visible, us.stats_visible FROM users u JOIN user_settings us ON us.user_id = u.user_id WHERE us.searchable = TRUE AND u.is_deleted = FALSE AND us.privacy_level = 'public'`)
+	builder.WriteString(`SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at, u.is_deleted`)
+	// 标签数组按需下推：只有 tag 过滤需要候选全量标签做大小写归一校验；
+	// keyword-only 搜索的排序不依赖标签，分页后按页面 ID 批量补全即可，
+	// 避免对最多 500 个候选行逐行 array_agg（密集短关键词搜索的主要开销）。
+	if includeTags {
+		builder.WriteString(`, COALESCE((SELECT array_agg(up.tag_name ORDER BY up.tag_name) FROM user_profile_tags up WHERE up.user_id = u.user_id), ARRAY[]::text[])`)
+	}
+	builder.WriteString(`, us.presence_visible, us.location_visible, us.stats_visible FROM users u JOIN user_settings us ON us.user_id = u.user_id WHERE us.searchable = TRUE AND u.is_deleted = FALSE AND us.privacy_level = 'public'`)
 	if radiusFilter {
 		mins, maxs := geo.CoveringArrays(bounds)
 		if len(mins) == 0 {
@@ -302,7 +324,7 @@ func scanUserProfileRow(scanner interface{ Scan(...any) error }) (MyProfile, err
 // scanSearchProfileRow 扫描 buildSearchUsersQuery 的行：15 个画像列 + 标签数组 +
 // 可见性三列（presence/location/stats）。搜索主查询顺带返回这些列，省去 tags 与
 // settings 两次批量查询。
-func scanSearchProfileRow(scanner interface{ Scan(...any) error }) (MyProfile, UserSettings, error) {
+func scanSearchProfileRow(scanner interface{ Scan(...any) error }, includeTags bool) (MyProfile, UserSettings, error) {
 	var profile MyProfile
 	var avatarURL, bio, gender, email, phone string
 	var locationName string
@@ -311,7 +333,12 @@ func scanSearchProfileRow(scanner interface{ Scan(...any) error }) (MyProfile, U
 	var lastOnline, createdAt time.Time
 	var tags []string
 	var presenceVisible, locationVisible, statsVisible bool
-	if err := scanner.Scan(&profile.UserID, &profile.Nickname, &avatarURL, &userType, &bio, &gender, &email, &phone, &locationName, &latitude, &longitude, &presenceStatus, &lastOnline, &createdAt, &profile.IsDeleted, &tags, &presenceVisible, &locationVisible, &statsVisible); err != nil {
+	dest := []any{&profile.UserID, &profile.Nickname, &avatarURL, &userType, &bio, &gender, &email, &phone, &locationName, &latitude, &longitude, &presenceStatus, &lastOnline, &createdAt, &profile.IsDeleted}
+	if includeTags {
+		dest = append(dest, &tags)
+	}
+	dest = append(dest, &presenceVisible, &locationVisible, &statsVisible)
+	if err := scanner.Scan(dest...); err != nil {
 		return MyProfile{}, UserSettings{}, err
 	}
 	profile.AvatarURL = avatarURL

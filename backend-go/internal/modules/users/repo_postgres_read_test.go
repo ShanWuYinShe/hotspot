@@ -192,7 +192,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	if err != nil || !ok || settings.AllowPrivateChat != ChatPermEveryone {
 		t.Fatalf("unexpected settings: %#v ok=%v err=%v", settings, ok, err)
 	}
-	profiles, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{Keyword: "Alice", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	profiles, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{Keyword: "Alice", Tag: "美食", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil || len(profiles.Items) != 1 || profiles.Items[0].UserID != "user_alice" {
 		t.Fatalf("unexpected search result: %#v err=%v", profiles, err)
 	}

@@ -61,7 +61,7 @@ func TestSearchProfilesPhoneExactMatch(t *testing.T) {
 // auth_accounts 精确匹配分支（受 phone_searchable 控制）；非数字 keyword 不追加。
 func TestBuildSearchUsersQueryPhoneBranch(t *testing.T) {
 	// 手机号 keyword：含 auth_accounts 子查询
-	sql, args := buildSearchUsersQuery(geo.Bounds{}, "13800138000", "", false)
+	sql, args := buildSearchUsersQuery(geo.Bounds{}, "13800138000", "", false, false)
 	if sql == "" {
 		t.Fatal("expected non-empty sql")
 	}
@@ -73,7 +73,7 @@ func TestBuildSearchUsersQueryPhoneBranch(t *testing.T) {
 	}
 
 	// 非手机号 keyword：无 auth_accounts 分支
-	sql, args = buildSearchUsersQuery(geo.Bounds{}, "alice", "", false)
+	sql, args = buildSearchUsersQuery(geo.Bounds{}, "alice", "", false, false)
 	if strings.Contains(sql, "auth_accounts") {
 		t.Fatalf("non-numeric keyword must not include phone branch: %s", sql)
 	}
