@@ -38,6 +38,7 @@ const sweepCadence = 5 * time.Minute
 var (
 	sweeperMu      sync.Mutex
 	sweeperCancel  context.CancelFunc
+	sweeperDone    chan struct{}
 	sweeperStarted bool
 )
 
@@ -60,26 +61,43 @@ func StartSweeper(ctx context.Context) {
 		return
 	}
 	sweepCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
 	sweeperCancel = cancel
+	sweeperDone = done
 	sweeperStarted = true
-	worker.GoRestartable("ratelimit.sweeper", func() { sweepStores(sweepCtx) })
+	worker.GoRestartable("ratelimit.sweeper", func() {
+		// 仅干净退出时关闭 done；panic 交给 GoRestartable 重启。
+		defer func() {
+			if rec := recover(); rec != nil {
+				panic(rec)
+			}
+		}()
+		sweepStores(sweepCtx)
+		close(done)
+	})
 }
 
-// StopSweeper cancels the background sweeper if one is running. It returns
-// without waiting for the goroutine to observe the cancellation; a Stop→Start
-// sequence may therefore briefly run two sweepers (cleanup is idempotent, so
-// this is harmless). Intended for tests that want a clean teardown; production
-// relies on cancelling the app root context passed to StartSweeper.
+// StopSweeper cancels the background sweeper and waits (bounded) for the loop
+// to exit, so a Stop→Start sequence cannot briefly run two sweepers. Idempotent.
+// Intended for tests that want a clean teardown; production relies on cancelling
+// the app root context passed to StartSweeper.
 func StopSweeper() {
 	sweeperMu.Lock()
-	if sweeperCancel == nil {
-		sweeperMu.Unlock()
-		return
-	}
-	sweeperCancel()
+	cancel := sweeperCancel
+	done := sweeperDone
 	sweeperCancel = nil
+	sweeperDone = nil
 	sweeperStarted = false
 	sweeperMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	if done != nil {
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+		}
+	}
 }
 
 func sweepStores(ctx context.Context) {

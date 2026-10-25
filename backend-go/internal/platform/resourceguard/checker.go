@@ -41,6 +41,10 @@ type DBChecker struct {
 	ttl     time.Duration
 	mu      sync.RWMutex
 	missing map[string]time.Time
+
+	sweepMu     sync.Mutex
+	sweepCancel context.CancelFunc
+	sweepDone   chan struct{}
 }
 
 func NewDBChecker(db persistence.QueryableDB) *DBChecker {
@@ -109,8 +113,49 @@ func (c *DBChecker) StartSweeper(ctx context.Context, interval time.Duration) {
 	if c == nil {
 		return
 	}
+	c.sweepMu.Lock()
+	defer c.sweepMu.Unlock()
+	if c.sweepCancel != nil {
+		return // 幂等：已有清扫循环在跑
+	}
+	sweepCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	c.sweepCancel = cancel
+	c.sweepDone = done
 	// 全仓库后台循环统一 worker 启动：panic 自愈重启，不击穿进程。
-	worker.GoRestartable("resourceguard.sweeper", func() { c.sweepLoop(ctx, interval) })
+	worker.GoRestartable("resourceguard.sweeper", func() {
+		// 仅干净退出时关闭 done；panic 交给 GoRestartable 重启。
+		defer func() {
+			if rec := recover(); rec != nil {
+				panic(rec)
+			}
+		}()
+		c.sweepLoop(sweepCtx, interval)
+		close(done)
+	})
+}
+
+// StopSweeper 停止清扫循环并等待（有界）退出；幂等，供测试与显式关闭使用。
+// 生产路径由应用根 ctx 取消（App.Shutdown 的 rootCancel）。
+func (c *DBChecker) StopSweeper() {
+	if c == nil {
+		return
+	}
+	c.sweepMu.Lock()
+	cancel := c.sweepCancel
+	done := c.sweepDone
+	c.sweepCancel = nil
+	c.sweepDone = nil
+	c.sweepMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	if done != nil {
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+		}
+	}
 }
 
 func (c *DBChecker) sweepLoop(ctx context.Context, interval time.Duration) {

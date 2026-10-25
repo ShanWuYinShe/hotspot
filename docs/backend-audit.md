@@ -1360,3 +1360,23 @@ CONCURRENTLY）只会在 CI 之外或线上启动时才暴露。
 意义：这些入口此前只有手写单测（固定样本），fuzz 覆盖了畸形长度/字节/JSON 边界，防止未来改动
 引入 panic（进程级 500 或 DoS）。CI 目前只跑种子（成本可忽略），需要深挖时本地执行：
 `go test -run='^$' -fuzz='FuzzDecodeNeverPanics$' -fuzztime=30s ./internal/platform/cursor/`。
+
+## 后台 sweeper 停止等待语义（2026-10-25，第 41 轮）
+
+审计遗留的可选项：`notify.StopPruneSweeper` 与 `ratelimit.StopSweeper` 此前只 cancel ctx、
+**不等待循环退出**，Stop→Start 序列可能短暂并行两个清扫循环（清理幂等所以无害，但语义不严谨）；
+`resourceguard.DBChecker.StartSweeper` 则完全没有 Stop，重复 Start 会启动两个循环。
+
+本轮统一为「Stop 等待循环退出（有界）」：
+- 三个 sweeper 的 goroutine 包装器仅在**干净退出**时 `close(done)`；panic 交回
+  `worker.GoRestartable` 重启（重启后 ctx 已取消会立即干净退出并关闭 done）；
+- `Stop` 取消 ctx 后最多等 1–2s（notify 的在飞 `pruneOnce` 用独立 1min ctx，不在取消范围）；
+- `resourceguard` 新增 `StopSweeper()` 并让 `StartSweeper` 幂等（已有循环时 no-op）；
+- 测试更新：notify/resourceguard 生命周期用例改用 Stop 等待语义并断言包级状态复位 + 可重启；
+  ratelimit 新增 `TestSweeperStopWaitsAndRestartable`（幂等 Start/Stop + 复位 + 重启）。
+
+### `AppConfig.limits.max_group_members` 调小后的存量群策略（记录，非缺陷）
+当前实现：平台上限只在**创建/更新群**时校验（显式 `max_members` 超上限返回 10000）；
+管理员把平台上限调小**不会回溯修改存量群**的 `max_members`，也不自动裁剪。理由：存量群的容量
+契约已对外承诺，静默裁剪会破坏成员上限语义；如需要「调小后强制收敛」，应作为显式管理操作
+（逐群 update 或迁移）另行评审。

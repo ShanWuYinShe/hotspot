@@ -227,13 +227,22 @@ func TestStartStopPruneSweeperLifecycle(t *testing.T) {
 	service := NewService()
 	service.StartPruneSweeper(ctx)
 	service.StartPruneSweeper(ctx) // 重复启动为 no-op
-	time.Sleep(20 * time.Millisecond)
-	StopPruneSweeper()
-	time.Sleep(20 * time.Millisecond) // 给 sweeper goroutine 退出机会
-	StopPruneSweeper()                // 幂等
-	// 重启后可再次工作
+	StopPruneSweeper()             // 等待循环退出（有界）
+	pruneMu.Lock()
+	if pruneStarted || pruneCancel != nil || pruneDone != nil {
+		pruneMu.Unlock()
+		t.Fatal("prune sweeper state not reset after Stop")
+	}
+	pruneMu.Unlock()
+	StopPruneSweeper() // 幂等
+	// 重启后可再次工作（Stop 已等待旧 goroutine 退出，不会出现双循环）
 	service.StartPruneSweeper(ctx)
-	time.Sleep(20 * time.Millisecond)
+	pruneMu.Lock()
+	running := pruneStarted && pruneDone != nil
+	pruneMu.Unlock()
+	if !running {
+		t.Fatal("prune sweeper not restarted after Stop")
+	}
 	StopPruneSweeper()
 }
 

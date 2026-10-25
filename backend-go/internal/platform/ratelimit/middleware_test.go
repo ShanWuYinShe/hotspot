@@ -157,3 +157,29 @@ func TestAllowWebsocketSubscribeRespectsRateConfig(t *testing.T) {
 		t.Fatalf("expected websocket limit, retry=%d limited=%v", retry, limited)
 	}
 }
+
+// StopSweeper 现在会等待循环退出（有界）：Stop→Start 不得短暂并存两个清扫循环。
+// 同时锁定 StartSweeper 幂等与 StopSweeper 幂等。
+func TestSweeperStopWaitsAndRestartable(t *testing.T) {
+	StopSweeper() // 干净态
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	StartSweeper(ctx)
+	StartSweeper(ctx) // 重复启动为 no-op
+	StopSweeper()     // 等待退出
+	sweeperMu.Lock()
+	leftover := sweeperStarted || sweeperCancel != nil || sweeperDone != nil
+	sweeperMu.Unlock()
+	if leftover {
+		t.Fatal("sweeper state not reset after Stop")
+	}
+	StopSweeper() // 幂等
+	StartSweeper(ctx)
+	sweeperMu.Lock()
+	running := sweeperStarted && sweeperDone != nil
+	sweeperMu.Unlock()
+	if !running {
+		t.Fatal("sweeper not restarted after Stop")
+	}
+	StopSweeper()
+}

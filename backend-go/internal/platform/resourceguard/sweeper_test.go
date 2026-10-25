@@ -21,9 +21,9 @@ func TestDBCheckerStartSweeperExpiresMissingCacheAndStops(t *testing.T) {
 	checker := NewDBChecker(db)
 	checker.ttl = 20 * time.Millisecond
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := context.Background()
 	checker.StartSweeper(ctx, 10*time.Millisecond)
+	checker.StartSweeper(ctx, 10*time.Millisecond) // 重复启动为 no-op
 
 	allowed, err := checker.MayExist(ctx, ResourceUser, "usr_cache_probe")
 	if err != nil || allowed {
@@ -47,9 +47,9 @@ func TestDBCheckerStartSweeperExpiresMissingCacheAndStops(t *testing.T) {
 		t.Fatalf("sweeper did not expire missing entry: %d", got)
 	}
 
-	// ctx 取消后循环退出：新写入的 missing 条目不再被后台清理（仅剩惰性删除路径）。
-	cancel()
-	time.Sleep(50 * time.Millisecond) // 让 in-flight tick 完成退出
+	// StopSweeper 等待循环退出后：新写入的 missing 条目不再被后台清理（仅剩惰性删除路径）。
+	checker.StopSweeper()
+	checker.StopSweeper() // 幂等
 	checker.markMissing(ResourceGroup, "grp_after_stop")
 	time.Sleep(60 * time.Millisecond)
 	if got := missingCount(); got != 1 {

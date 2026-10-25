@@ -25,6 +25,7 @@ const (
 var (
 	pruneMu      sync.Mutex
 	pruneCancel  context.CancelFunc
+	pruneDone    chan struct{}
 	pruneStarted bool
 )
 
@@ -47,20 +48,43 @@ func (s *Service) StartPruneSweeper(ctx context.Context) {
 		return
 	}
 	sweepCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
 	pruneCancel = cancel
+	pruneDone = done
 	pruneStarted = true
-	worker.GoRestartable("notify.prune_sweeper", func() { s.runPruneSweeper(sweepCtx) })
+	worker.GoRestartable("notify.prune_sweeper", func() {
+		// 仅干净退出时关闭 done；panic 交给 GoRestartable 重启（ctx 已取消时重启会
+		// 立即干净退出并关闭），让 Stop 可以安全等待。
+		defer func() {
+			if rec := recover(); rec != nil {
+				panic(rec)
+			}
+		}()
+		s.runPruneSweeper(sweepCtx)
+		close(done)
+	})
 }
 
-// StopPruneSweeper 停止后台 prune（测试用）。
+// StopPruneSweeper 停止后台 prune 并等待循环退出（测试用；幂等）。
+// 在飞的一轮 pruneOnce 使用独立的 1 分钟超时 ctx、不在取消范围内，故最多等 2s；
+// 生产停机由应用根 ctx 取消，不经过本函数。
 func StopPruneSweeper() {
 	pruneMu.Lock()
-	defer pruneMu.Unlock()
-	if pruneCancel != nil {
-		pruneCancel()
-		pruneCancel = nil
-	}
+	cancel := pruneCancel
+	done := pruneDone
+	pruneCancel = nil
+	pruneDone = nil
 	pruneStarted = false
+	pruneMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	if done != nil {
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+		}
+	}
 }
 
 func (s *Service) runPruneSweeper(ctx context.Context) {
