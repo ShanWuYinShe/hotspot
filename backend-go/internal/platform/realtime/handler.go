@@ -284,10 +284,19 @@ var upgrader = websocket.Upgrader{CheckOrigin: sameOrigin, EnableCompression: tr
 // sameOrigin allows the upgrade when the Origin header is absent (non-browser
 // client) or matches the request's own scheme+host. It blocks cross-origin
 // browser WebSocket connections, which is the cookie-theft vector for CSWSH.
+//
+// HarmonyOS 等原生 WebSocket 客户端不受浏览器限制，实测会发送 `Origin: null`
+// （非浏览器语义）。这类客户端不带 Cookie、鉴权完全依赖升级后的 Auth 事件令牌，
+// 因此仅在**请求没有 Cookie** 时放行 null Origin：伪造 null 的浏览器即使完成升级，
+// 也会因拿不到 HttpOnly Cookie（SameSite=Strict 跨站不发送）而鉴权失败，
+// CSWSH 防护不降低。
 func sameOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
 		return true // native/non-browser client
+	}
+	if origin == "null" {
+		return len(r.Cookies()) == 0 // 原生客户端（无 Cookie，Auth 事件令牌鉴权）
 	}
 	u, err := url.Parse(origin)
 	if err != nil {

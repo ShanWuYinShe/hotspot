@@ -839,6 +839,24 @@ func TestSameOriginAllowsAbsentAndMatching(t *testing.T) {
 	}
 }
 
+func TestSameOriginAllowsNullOriginForCookieLessNativeClient(t *testing.T) {
+	// HarmonyOS 等原生 WebSocket 客户端发送 Origin: null 且不带 Cookie —— 放行，
+	// 鉴权由升级后的 Auth 事件令牌完成。
+	req := httptest.NewRequest(http.MethodGet, "https://host.example/ws", nil)
+	req.Header.Set("Origin", "null")
+	if !sameOrigin(req) {
+		t.Fatal("null Origin without cookies should be allowed (native client)")
+	}
+
+	// 带 Cookie 的 null Origin 视为跨站浏览器请求（CSWSH 向量）—— 拒绝。
+	req = httptest.NewRequest(http.MethodGet, "https://host.example/ws", nil)
+	req.Header.Set("Origin", "null")
+	req.AddCookie(&http.Cookie{Name: "access_token", Value: "x"})
+	if sameOrigin(req) {
+		t.Fatal("null Origin with cookies must be blocked (cross-site browser)")
+	}
+}
+
 func TestSameOriginBlocksCrossOrigin(t *testing.T) {
 	// Cross-origin browser request (CSWSH vector) — block.
 	req := httptest.NewRequest(http.MethodGet, "https://host.example/ws", nil)
