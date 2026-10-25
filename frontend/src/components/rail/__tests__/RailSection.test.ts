@@ -26,4 +26,14 @@ describe('RailSection', () => {
 		expect(box.className).toContain('surface-flat');
 		expect(box.className).toContain('rounded-md');
 	});
+
+	it('island 变体应用现代 Bento 微岛浮动卡片类', () => {
+		const { container } = render(RailSection, {
+			props: { title: '活跃邻居', variant: 'island', children: (() => null) as never }
+		});
+		const box = container.firstElementChild as HTMLElement;
+		expect(box.className).toContain('rounded-2xl');
+		expect(box.className).toContain('bg-surface-primary/80');
+		expect(box.className).toContain('shadow-xs');
+	});
 });
