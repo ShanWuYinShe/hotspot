@@ -1735,3 +1735,45 @@ quit/reopen OrbStack + `compose up -d` + 重启 backend。此后改为**低并�
 | `get_account` 画像 3 查询合并为 1 条 SQL | users/account 1,514→1,691 RPS（+11.7%），p50 13.75→11.04ms |
 | bootstrap 公告版本读缓存（写路径显式失效） | bootstrap 1,286→1,536 RPS（+19.4%），p50 16.53→12.32ms |
 | 读端点延迟盘点 | 除短关键词搜索外均在 2–8ms；确认无需新增索引 |
+
+## pgx 预编译语句：运行期查询改用 extended protocol（2026-10-25，第 54 轮）
+
+第 49 轮 CPU profile 显示 simple protocol 的客户端转义（`sanitize.rawState`）约占 2.7% CPU，
+且服务端每次查询都要重复解析/规划。此前用 simple protocol 是为了让**迁移文件多语句**
+能在一条消息内执行（extended protocol 的 Prepare 不允许一条语句里多条 DDL）。
+
+### 设计：运行期预编译 + 迁移强制简单协议
+- 连接池默认 `pgx.QueryExecModeCacheStatement`（extended protocol + 语句缓存）；
+- 迁移执行新增 `persistence.PostgresDB.ExecSimple`：以 `QueryExecModeSimpleProtocol`
+  逐文件执行（`migrate.execMigrationSQL` 优先使用它，stub/内存实现回退普通 `Exec`），
+  保持「整文件单消息」语义与「禁止 CREATE INDEX CONCURRENTLY」的隐式事务约束不变；
+- 若未来接 PgBouncer 事务池（不支持跨事务命名语句），改回 SimpleProtocol（代码注释已写）。
+
+### 附带暴露并修复的潜在 SQL 类型问题
+Postgres 在 prepare（extended protocol）阶段**无法从 `$n IS NULL` 推断参数类型**——
+simple protocol 是把参数内联成字面量，所以旧实现没暴露。扫描全仓后仅两处缺 cast，已补：
+- `share` 列表：`$2::text` / `$3::timestamptz`（`TestShare_MeList` 10600 的根因）；
+- `moments` 收藏列表：`$2::timestamptz`。
+其余可空参数（notify/comments/reactions/admin 等）此前已带 cast。
+
+### 压测对比（backend-test，同机 c=30、10s，每次新建访客 token）
+| 端点 | simple（RPS / p50 / p95） | prepared（RPS / p50 / p95） | 变化 |
+|---|---|---|---|
+| `users/account` | 2,258 / 5.14 / 66.79 ms | 3,303 / 4.90 / 39.02 ms | **+46% RPS，p95 −42%** |
+| `system/bootstrap` | 2,007 / 6.16 / 67.16 ms | 2,658 / 6.33 / 39.86 ms | **+32% RPS，p95 −41%** |
+| `notify/fetch` | 10,286 / 1.80 / 5.02 ms | 11,342 / 1.92 / 5.18 ms | +10% RPS（单查询、轻负载，噪声内） |
+| `moments/fetch_following` | 855 / 13.25 / 88.21 ms | 2,890 / 5.63 / 50.53 ms | **+238% RPS，p50 −58%** |
+
+说明：prepared 版本在合并后首次测量时更高（account 4,310 / bootstrap 4,035 / following 3,129），
+两次测量差异来自同机 dev 环境抖动（压测进程与容器共享 CPU、OrbStack 虚拟机）；此处取**较保守的一次**。
+
+### 验证
+- 全新库迁移：49/49 迁移文件成功、45 张表、`schema_migrations`=49（验证 `ExecSimple`）；
+- 工作树门禁 + 主树 `verify-backend-ci.sh --all`：**ALL CHECKS PASSED**（含真实库 IT 与 ~100 条 HTTP E2E，
+  首轮曾失败于 share 列表，补 cast 后通过）；
+- dev 真实库冒烟（`localhost:8888`）：guest 登录/account/bootstrap/search/notify/following/nearby/
+  share 列表全部 `code=0`（share/create 因冒烟脚本未带 Idempotency-Key 返回 10000，属预期校验）。
+
+### 发版影响
+该改动已合入 main（`b11ab0ba` + `200ae1ae`），v1.4.0 的候选 HEAD 因此前移；
+打 tag 前需按发布门禁**对新 HEAD 重跑**生产镜像本地构建与 OCI 指纹核对（前端无改动，browser QA 结论仍有效）。
