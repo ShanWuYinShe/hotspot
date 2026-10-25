@@ -56,11 +56,10 @@ func (r *PostgresRepository) ListFollowingMoments(ctx context.Context, query mom
 		var latitude, longitude float64
 		var createdAt time.Time
 		var likesCount, commentsCount, sharesCount int
-		var isLiked, isFavorited bool
-		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isLiked, &isFavorited); err != nil {
+		var isFavorited bool
+		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isFavorited); err != nil {
 			return PaginatedMoments{}, err
 		}
-		_ = isLiked // 兼容保留列：likes_count 已从契约删除，reactions 聚合另行填充
 		item := MomentItem{
 			MomentID:      momentID,
 			Description:   description,
@@ -112,18 +111,15 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 	defer rows.Close()
 	plan := geo.NewSearchPlan(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius, "relevance")
 	items := make([]momentCandidate, 0)
-	momentIDs := make([]string, 0)
 	for rows.Next() {
 		var momentID, userID, nickname, avatarURL, description, locationName string
 		var latitude, longitude float64
 		var createdAt time.Time
 		var likesCount, commentsCount, sharesCount int
-		var isLiked, isFavorited bool
 		var isFollowing bool
-		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isLiked, &isFavorited, &isFollowing); err != nil {
+		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isFollowing); err != nil {
 			return PaginatedMoments{}, err
 		}
-		_ = isLiked
 		distance, bearing, ok := plan.Match(geo.Point{Latitude: latitude, Longitude: longitude})
 		if !ok {
 			continue
@@ -142,26 +138,42 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 			SharesCount:   sharesCount,
 			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
 			Location:      &Location{Point: pointStruct(latitude, longitude), LocationName: locationName},
-			IsFavorited:   isFavorited,
 		}
 		// 附近流参考点恒已解析（service 层兜底），distance/bearing_degrees 恒填充
 		//（spec api_spec_types.md RelativeLocation；匿名版同样基于 reference_point 计算）。
 		fillRelativeLocation(item.Location, distance, bearing)
 		items = append(items, momentCandidate{Item: item, Score: score, Distance: distance, CreatedAt: createdAt.UTC()})
-		momentIDs = append(momentIDs, momentID)
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedMoments{}, err
 	}
-	tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs)
+	// 候选集只参与排序/分页：tags 与 is_favorited 在分页后按页面 ID 批量补全，
+	// 避免对最多 2000 个候选行加载全量标签、或逐行 EXISTS 判断收藏。
+	sort.SliceStable(items, func(i, j int) bool { return compareNearbyCandidates(items[i], items[j]) < 0 })
+	page, err := paginateNearbyMoments(items, query.Limit, query.Cursor)
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
-	for idx := range items {
-		items[idx].Item.Tags = tagsByMomentID[items[idx].Item.MomentID]
+	if len(page.Items) == 0 {
+		return page, nil
 	}
-	sort.SliceStable(items, func(i, j int) bool { return compareNearbyCandidates(items[i], items[j]) < 0 })
-	return paginateNearbyMoments(items, query.Limit, query.Cursor)
+	pageIDs := make([]string, 0, len(page.Items))
+	for i := range page.Items {
+		pageIDs = append(pageIDs, page.Items[i].MomentID)
+	}
+	tagsByMomentID, err := loadMomentTags(ctx, queryable, pageIDs)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	favoritedMomentIDs, err := loadMomentFavorites(ctx, queryable, query.ViewerUserID, pageIDs)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	for i := range page.Items {
+		page.Items[i].Tags = tagsByMomentID[page.Items[i].MomentID]
+		page.Items[i].IsFavorited = favoritedMomentIDs[page.Items[i].MomentID]
+	}
+	return page, nil
 }
 
 // pointStruct 构造 Location 的匿名 Point 子结构（与 scanMomentRow 保持同一形状）。

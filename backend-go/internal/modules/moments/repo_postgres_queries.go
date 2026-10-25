@@ -61,6 +61,11 @@ FROM moment_tags
 WHERE moment_id = $1
 ORDER BY tag_name ASC`
 
+	queryMomentFavoritesByIDs = `
+SELECT moment_id
+FROM moment_favorites
+WHERE user_id = $1 AND moment_id = ANY($2)`
+
 	queryListMomentTagsByMomentIDs = `
 SELECT moment_id, tag_name
 FROM moment_tags
@@ -188,7 +193,6 @@ SELECT m.moment_id,
        m.location_name,
        m.latitude,
        m.longitude,
-       EXISTS(SELECT 1 FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id AND r.user_id = $1),
        EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $1)
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
@@ -220,8 +224,6 @@ SELECT m.moment_id,
        m.location_name,
        m.latitude,
        m.longitude,
-       EXISTS(SELECT 1 FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id AND r.user_id = $3),
-       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $3),
        EXISTS(SELECT 1 FROM user_relations ur WHERE ur.target_user_id = m.user_id AND ur.user_id = $3 AND ur.is_following = TRUE)
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
