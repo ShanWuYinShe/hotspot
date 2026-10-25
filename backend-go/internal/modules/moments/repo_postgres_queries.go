@@ -213,17 +213,19 @@ LIMIT $4`
 	// 终序由 Go 层 compareNearbyCandidates（全序，momentID 兜底）确定，SQL 行序
 	// 不影响排序结果；ORDER BY + LIMIT 仅作为确定性防御截断——区间行数无界时
 	// 避免 DoS/内存无界（截断表现为"没有更多"，分页不错乱；正常规模不触达）。
+	// queryNearbyMomentDetails 为附近流分页后的 ≤limit 条结果补全展示字段（一次查询）。
+	queryNearbyMomentDetails = `
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, m.location_name
+FROM moments m
+JOIN users u ON u.user_id = m.user_id
+WHERE m.moment_id = ANY($1)`
+
 	queryNearbyMoments = `
 SELECT m.moment_id,
-       m.user_id,
-       COALESCE(u.nickname, ''),
-       COALESCE(u.avatar_url, ''),
-       m.description,
        m.created_at,
        (SELECT COUNT(*)::int FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id),
        m.comments_count,
        m.shares_count,
-       m.location_name,
        m.latitude,
        m.longitude,
        EXISTS(SELECT 1 FROM user_relations ur WHERE ur.target_user_id = m.user_id AND ur.user_id = $3 AND ur.is_following = TRUE)
