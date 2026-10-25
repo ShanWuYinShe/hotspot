@@ -79,6 +79,7 @@ TOKEN=<既有 token> ./scripts/perf-smoke.sh               # 非测试环境必�
 
 注意：本机 OrbStack 虚拟机在不同时间窗口的绝对吞吐波动可达 ±2 倍（CPU 节流/后台负载），
 **只有同一会话内的前后对比可信**；跨时间比较请同时记录时间与数据集（如 hotspot_test 是否被压测数据污染）。
+
 **已完成的其他性能基线**（2026-10-21 实测，避免重复排查）：pprof 端点已存在、pgx 连接池
 MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 500ms/1s 为有意 fail-slow、
 本地热读接口 ~3ms —— 当前量级不需要读缓存。
