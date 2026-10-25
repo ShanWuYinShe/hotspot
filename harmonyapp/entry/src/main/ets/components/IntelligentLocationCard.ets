@@ -73,8 +73,11 @@ export struct IntelligentLocationCard {
           // 海拔信息
           if (this.showElevation && this.elevationInfo) {
             Row({ space: DesignConstants.SPACING.XS }) {
-              Text('⛰️')
-                .fontSize(DesignConstants.FONT.SIZE.SM)
+              LucideIcon({
+                icon: AppIcon.COMPASS,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+                color: this.getPalette().textSecondary
+              })
               
               Text(this.elevationInfo)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
