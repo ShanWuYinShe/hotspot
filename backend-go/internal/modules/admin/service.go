@@ -24,6 +24,11 @@ type Service struct {
 	// 接线 platformauth.Service.InvalidateBanCache）：保证解封/封禁即时生效，
 	// 不等 banCacheTTL 窗口。nil 时跳过（单测/未接线场景）。
 	banCacheInvalidator func(userIDs ...string)
+	// sessionCacheInvalidator 封禁逐条撤销会话后失效平台 auth 的会话校验缓存：
+	// admin 仓库直接 UPDATE auth_sessions（不经 platform auth SessionStore 装饰器），
+	// 不主动失效会让被撤销会话在缓存 TTL 内继续可用。bootstrap 接线
+	// platformauth.Service.InvalidateSessionCache；nil 时跳过（单测/未接线场景）。
+	sessionCacheInvalidator func(sessionIDs ...string)
 }
 
 type announcementPushService interface {
@@ -51,6 +56,17 @@ func NewService(repo Repository, provider Provider, moderationStore ModerationSt
 // (bootstrap 接线；userIDs 传空表示全量失效)。
 func (s *Service) SetBanCacheInvalidator(fn func(userIDs ...string)) {
 	s.banCacheInvalidator = fn
+}
+
+// SetSessionCacheInvalidator wires the platform auth session-cache invalidation hook.
+func (s *Service) SetSessionCacheInvalidator(fn func(sessionIDs ...string)) {
+	s.sessionCacheInvalidator = fn
+}
+
+func (s *Service) invalidateSessionCache(sessionIDs ...string) {
+	if s.sessionCacheInvalidator != nil {
+		s.sessionCacheInvalidator(sessionIDs...)
+	}
 }
 
 func (s *Service) invalidateBanCache(userID string) {

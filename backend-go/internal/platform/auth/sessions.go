@@ -54,6 +54,21 @@ func (s *Service) IssueSessionEvictingDevice(ctx context.Context, userID string,
 	return AuthResult{}, ErrDeviceSessionConflict
 }
 
+// sessionCacheInvalidator 由 CachedSessionStore 实现；未启用缓存（内存 store 或
+// 直连 PostgresSessionStore）时类型断言失败，InvalidateSessionCache 为 no-op。
+type sessionCacheInvalidator interface {
+	InvalidateSessions(sessionIDs ...string)
+}
+
+// InvalidateSessionCache 让进程内会话校验缓存立即失效。用于绕过 SessionStore
+// 直接改库的调用方（admin 封禁逐条 RevokeSession SQL）保证「撤销后后续请求即拒绝」；
+// 普通撤销路径（Logout/踢设备/撤销其他会话）已经过装饰器自动失效，无需调用本方法。
+func (s *Service) InvalidateSessionCache(sessionIDs ...string) {
+	if invalidator, ok := s.sessions.(sessionCacheInvalidator); ok {
+		invalidator.InvalidateSessions(sessionIDs...)
+	}
+}
+
 func (s *Service) GetSession(ctx context.Context, sessionID string) (SessionRecord, bool, error) {
 	return s.sessions.Get(ctx, sessionID)
 }

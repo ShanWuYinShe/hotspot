@@ -266,6 +266,11 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 			return nil, err
 		}
 	}
+	// 显式失效会话校验缓存：本仓库直接 UPDATE auth_sessions，绕过平台 auth 的
+	// SessionStore 装饰器；不失效会让被撤会话在缓存 TTL（5s）内仍可认证。全部
+	// session 都失效（含撤销失败项——失败项仍是「应失效」目标，下次认证回源 DB
+	// 会再次判定，不会误放行）。
+	s.invalidateSessionCache(sessionIDs...)
 	if failedSessions > 0 {
 		observability.L().Warn("admin: ban applied but some sessions not revoked",
 			"user_id", userID, "failed", failedSessions, "total", len(sessionIDs))

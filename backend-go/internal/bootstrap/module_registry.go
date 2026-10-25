@@ -213,6 +213,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		// 封禁缓存失效接线：admin 封禁/解封状态变更后即时失效平台 auth 的
 		// 进程内缓存（banCacheTTL 窗口内的撤销延迟归零）。
 		adminModule.Service.SetBanCacheInvalidator(svc.InvalidateBanCache)
+		// 会话缓存失效接线：admin 封禁逐条撤销会话直接写 auth_sessions 表，
+		// 不经过平台 auth SessionStore 装饰器，需显式失效（撤销即时生效）。
+		adminModule.Service.SetSessionCacheInvalidator(svc.InvalidateSessionCache)
 	}
 	platformauth.SetAdminChecker(adminModule.Repo)
 	// 首管理员引导（ADMIN_BOOTSTRAP_USER_ID，见 config.AdminBootstrapUserID）：
