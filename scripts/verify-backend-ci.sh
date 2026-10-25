@@ -59,6 +59,15 @@ if ! command -v staticcheck >/dev/null 2>&1; then
 fi
 ( cd "$BACKEND" && "$(go env GOPATH)/bin/staticcheck" -checks 'SA*' ./... )
 
+step "gosec (high severity/high confidence，CI 固定 v2.30.0)"
+GOSEC_BIN="$(go env GOPATH)/bin/gosec"
+if [ ! -x "$GOSEC_BIN" ]; then
+  echo "installing gosec v2.30.0 ..."
+  GOPROXY="${GOPROXY:-https://goproxy.cn,direct}" go install github.com/securego/gosec/v2/cmd/gosec@v2.30.0
+fi
+# #nosec 必须带规则号与 -- 理由（防止无理由压制）；只门禁 high/high，medium 项在审计文档逐条记录。
+( cd "$BACKEND" && "$GOSEC_BIN" -quiet -severity high -confidence high -nosec-require-justification -nosec-require-rules ./... )
+
 if [ "$WITH_VULN" = "1" ]; then
   step "govulncheck (CI 固定 v1.8.0)"
   if ! command -v govulncheck >/dev/null 2>&1; then go install golang.org/x/vuln/cmd/govulncheck@v1.8.0; fi

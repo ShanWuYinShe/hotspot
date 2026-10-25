@@ -3,6 +3,7 @@ package media
 import (
 	"errors"
 	"net/http"
+	"net/url"
 
 	"github.com/go-chi/chi/v5"
 
@@ -27,5 +28,13 @@ func (h *Handler) ServeAvatar(w http.ResponseWriter, r *http.Request) {
 		httpx.NotFoundHandler(w, r)
 		return
 	}
-	http.Redirect(w, r, readURL, http.StatusFound)
+	// 302 目标由存储 provider 生成（S3 presign）；防御性校验只允许绝对 http(s) URL，
+	// 防止 provider 配置/实现异常时把 Location 变成 javascript:/data: 等危险协议。
+	parsed, parseErr := url.Parse(readURL)
+	if parseErr != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		observability.L().Warn("media.avatar invalid read url", "file_id", fileID)
+		httpx.NotFoundHandler(w, r)
+		return
+	}
+	http.Redirect(w, r, readURL, http.StatusFound) // #nosec G710 -- readURL 由受信 provider 生成且已校验 scheme/host
 }

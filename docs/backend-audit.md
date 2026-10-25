@@ -1403,3 +1403,34 @@ CONCURRENTLY）只会在 CI 之外或线上启动时才暴露。
 ### 结论
 两条备份脚本、恢复流程与 `docs/backup-restore.md` 的还原示例在 dev 环境均可用，未发现脚本缺陷；
 建议发版前在准生产再跑一次（数据量/权限更接近线上）。
+
+## 安全扫描（gosec）接入与逐条 triage（2026-10-25，第 43 轮）
+
+按「继续审计」建议接入更强的安全扫描：gosec v2.30.0 全量扫描后端（365 文件 / 60k 行），
+共 **58 条**发现，逐规则 triage 如下：
+
+| 规则 | 数量 | 处置 |
+|---|---|---|
+| G104（未处理错误） | 18 | 全部为 `defer rows.Close()` / 已显式忽略的清理错误；复核后不阻塞（清理失败由上层状态兜底），medium 级别不进 high/high 门禁 |
+| G115（整数溢出转换） | 13 | s2 cell id 的 uint64/int64 转换属 S2 不变式；media EXIF 宽高来自 uint32 元数据；bcrypt cost 来自常量/已校验配置。逐个复核无用户可控溢出路径 |
+| G704（SSRF） | 8 | `media/provider_object_storage.go` 请求 URL 由受信 `S3_ENDPOINT` 配置 + 服务端对象键签名生成，host 不受请求方控制 → 加 `#nosec G704 -- 理由` |
+| G101（硬编码凭据） | 7 | 全部是 SQL 常量含 `login_id/password` 等字段名，非凭据；low confidence 不门禁 |
+| G124（Cookie 属性） | 5 | auth cookie 的 `Secure` 来自 `cookieSecure()` 动态值（生产 true）；device_id cookie 有意非 HttpOnly（已文档化） |
+| G501/G401（MD5） | 2+1 | MD5 仅用于 S3 ETag/内容校验兼容，非安全哈希 |
+| G707（SMTP 注入） | 1 | 注册入口加固：邮箱校验拒绝空白/控制字符、要求恰好一个 `@`、域名含 `.` 且非 `.` 开头/结尾/连续；`net/smtp` 的 `validateLine` 另二次拒绝 CR/LF → `#nosec G707 -- 理由` |
+| G710（开放重定向） | 1 | 头像 302 加固：目标必须是绝对 http(s) URL（host 非空），否则 404 → `#nosec` |
+| G304（文件包含） | 1 | `migrate.ApplyDir` 仅运维 CLI 以受信目录调用（服务端用 embed FS） |
+| G602（切片越界） | 1 | 索引在 `for i := range items` 内，边界安全 |
+| G108（pprof 暴露） | 1 | pprof 仅绑定 127.0.0.1:6060 独立 server（`PPROF_ADDR` 可禁用）→ `#nosec G108` |
+
+**门禁化**：`scripts/verify-backend-ci.sh` 与 CI backend job 新增 gosec 步骤（固定 v2.30.0），
+只门禁 **high severity + high confidence**（当前 0 条），并要求每个 `#nosec` 必须带规则号与
+`-- 理由`（`-nosec-require-justification -nosec-require-rules`），防止无理由压制。
+
+**本轮顺带修复的真实加固点**：
+1. 邮箱登录标识校验过松（如 `a@b.c` 后接 CRLF 内容也能通过）→ auth/users 两处统一收紧，
+   注册/升级入口在进入 SMTP 前拒绝非法地址；
+2. 头像 302 未校验 URL 形态 → 只允许绝对 http(s) 目标，异常统一 404；
+3. pprof/SSRF/MD5 等已知安全例外以带理由的 `#nosec` 固化，后续新增同类代码仍会被扫出。
+
+验证：gosec high/high 0 发现；受影响包 `go test -short` 全绿；门禁/CI 新增步骤在本轮提交后验证。

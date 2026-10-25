@@ -55,6 +55,12 @@ jobs:
         run: |
           go install honnef.co/go/tools/cmd/staticcheck@2026.2.2
           cd backend-go && "$(go env GOPATH)/bin/staticcheck" -checks 'SA*' ./...
+      # gosec 安全扫描（high severity/high confidence）：与本地门禁同款，版本固定。
+      # 规则号/理由缺失的 #nosec 也会失败（-nosec-require-*），防止无理由压制。
+      - name: gosec (high severity/high confidence)
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.30.0
+          cd backend-go && "$(go env GOPATH)/bin/gosec" -quiet -severity high -confidence high -nosec-require-justification -nosec-require-rules ./...
       - name: check migration numbering
         run: ./scripts/check-migrations.sh
       # -race：数据竞争在单测并发场景下才能暴露（如 media retention sweeper

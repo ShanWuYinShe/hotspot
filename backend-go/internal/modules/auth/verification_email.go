@@ -133,10 +133,12 @@ func (s *smtpVerificationSender) sendMail(ctx context.Context, to, htmlBody stri
 			return fmt.Errorf("auth: smtp auth: %w", err)
 		}
 	}
-	if err := c.Mail(smtpEnvelopeFrom(s.from)); err != nil {
+	// to 来自 login_id，注册入口已用 isValidEmailLoginID 拒绝空白/控制字符；
+	// net/smtp 的 Mail/Rcpt 内部 validateLine 亦二次拒绝 CR/LF（无头注入可能）。
+	if err := c.Mail(smtpEnvelopeFrom(s.from)); err != nil { // #nosec G707 -- to 经 isValidEmailLoginID 拒绝空白/控制字符，net/smtp validateLine 二次拒绝 CR/LF
 		return fmt.Errorf("auth: smtp mail from: %w", err)
 	}
-	if err := c.Rcpt(to); err != nil {
+	if err := c.Rcpt(to); err != nil { // #nosec G707 -- 同上
 		return fmt.Errorf("auth: smtp rcpt to: %w", err)
 	}
 	w, err := c.Data()

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	_ "net/http/pprof" // register pprof handlers on the default mux; see startPprofServer
+	_ "net/http/pprof" // #nosec G108 -- pprof 仅注册在 127.0.0.1:6060 的独立 server（PPROF_ADDR 可禁用），不对外暴露
 	"os"
 	"os/signal"
 	"syscall"

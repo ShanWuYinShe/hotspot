@@ -100,7 +100,7 @@ func (p *ObjectStorageProvider) Delete(ctx context.Context, storageKey string) e
 	if err != nil {
 		return err
 	}
-	resp, err := p.client.Do(req)
+	resp, err := p.client.Do(req) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
 	if err != nil {
 		return err
 	}
@@ -120,11 +120,11 @@ func (p *ObjectStorageProvider) Head(ctx context.Context, storageKey string) (Ob
 	if err != nil {
 		return ObjectMetadata{}, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, signedURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, signedURL, nil) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
 	if err != nil {
 		return ObjectMetadata{}, err
 	}
-	resp, err := p.client.Do(req)
+	resp, err := p.client.Do(req) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
 	if err != nil {
 		return ObjectMetadata{}, err
 	}
@@ -155,12 +155,12 @@ func (p *ObjectStorageProvider) ReadPrefix(ctx context.Context, storageKey strin
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, signedURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, signedURL, nil) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Range", fmt.Sprintf("bytes=0-%d", n-1))
-	resp, err := p.client.Do(req)
+	resp, err := p.client.Do(req) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
 	if err != nil {
 		return nil, err
 	}
@@ -180,11 +180,11 @@ func (p *ObjectStorageProvider) GetObject(ctx context.Context, storageKey string
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, signedURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, signedURL, nil) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
 	if err != nil {
 		return nil, err
 	}
-	resp, err := p.client.Do(req)
+	resp, err := p.client.Do(req) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
 	if err != nil {
 		return nil, err
 	}
@@ -205,14 +205,14 @@ func (p *ObjectStorageProvider) PutObject(ctx context.Context, storageKey, conte
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, signedURL, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, signedURL, bytes.NewReader(data)) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
 	if err != nil {
 		return err
 	}
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
-	resp, err := p.client.Do(req)
+	resp, err := p.client.Do(req) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
 	if err != nil {
 		return err
 	}

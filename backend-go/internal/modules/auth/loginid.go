@@ -35,10 +35,27 @@ func classifyLoginID(loginID string) loginIDKind {
 }
 
 // isValidEmailLoginID 与 users 模块 isValidLoginID 的邮箱分支同语义：
-// local@domain 两段均非空且 domain 含 '.'。
+// 恰含一个 '@'、local/domain 非空、domain 含 '.' 且不以 '.' 开头/结尾/连续。
+// 额外拒绝空白与控制字符（gosec G707：邮箱会进入 SMTP RCPT，虽然 net/smtp
+// 的 validateLine 会二次拒绝 CR/LF，注册入口仍应先拒绝非法地址）。
 func isValidEmailLoginID(loginID string) bool {
-	parts := strings.SplitN(loginID, "@", 2)
-	return len(parts[0]) > 0 && len(parts[1]) > 0 && strings.Contains(parts[1], ".")
+	for _, r := range loginID {
+		if r <= ' ' || r == 0x7f {
+			return false
+		}
+	}
+	parts := strings.Split(loginID, "@")
+	if len(parts) != 2 {
+		return false
+	}
+	local, domain := parts[0], parts[1]
+	if local == "" || domain == "" || !strings.Contains(domain, ".") {
+		return false
+	}
+	if strings.HasPrefix(domain, ".") || strings.HasSuffix(domain, ".") || strings.Contains(domain, "..") {
+		return false
+	}
+	return true
 }
 
 // isValidAuthLoginID 校验 register/signin 的 login_id 合法性：

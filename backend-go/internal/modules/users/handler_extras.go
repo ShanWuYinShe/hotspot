@@ -127,8 +127,25 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 // 长度 3-64 与 auth 侧 isValidAuthLoginID 用户名分支对齐。
 func isValidLoginID(loginID string) bool {
 	if strings.Contains(loginID, "@") {
-		parts := strings.SplitN(loginID, "@", 2)
-		return len(parts[0]) > 0 && len(parts[1]) > 0 && strings.Contains(parts[1], ".")
+		// 与 auth 侧 isValidEmailLoginID 同语义：拒绝空白/控制字符、恰好一个 @、
+		// 域名含 '.' 且非 '.' 开头/结尾/连续（SMTP RCPT 前的入口校验）。
+		for _, r := range loginID {
+			if r <= ' ' || r == 0x7f {
+				return false
+			}
+		}
+		parts := strings.Split(loginID, "@")
+		if len(parts) != 2 {
+			return false
+		}
+		local, domain := parts[0], parts[1]
+		if local == "" || domain == "" || !strings.Contains(domain, ".") {
+			return false
+		}
+		if strings.HasPrefix(domain, ".") || strings.HasSuffix(domain, ".") || strings.Contains(domain, "..") {
+			return false
+		}
+		return true
 	}
 	if isNumericLoginID(loginID) {
 		return false
