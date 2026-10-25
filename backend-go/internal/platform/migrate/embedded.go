@@ -72,7 +72,7 @@ func ApplyFS(ctx context.Context, db persistence.QueryableDB, fsys fs.FS) error 
 		if err != nil {
 			return err
 		}
-		if err := db.Exec(ctx, string(blob)); err != nil {
+		if err := execMigrationSQL(ctx, db, string(blob)); err != nil {
 			return fmt.Errorf("apply migration %s: %w", name, err)
 		}
 	}
@@ -212,7 +212,7 @@ func applyWithVersionTable(ctx context.Context, db persistence.QueryableDB, fsys
 		if err != nil {
 			return fmt.Errorf("read migration %s: %w", name, err)
 		}
-		if err := db.Exec(ctx, string(blob)); err != nil {
+		if err := execMigrationSQL(ctx, db, string(blob)); err != nil {
 			return fmt.Errorf("apply migration %s: %w", name, err)
 		}
 		if err := recordMigration(ctx, db, name); err != nil {

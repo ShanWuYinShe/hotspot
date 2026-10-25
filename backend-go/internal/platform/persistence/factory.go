@@ -31,7 +31,12 @@ func NewFactory(cfg config.Config) *Factory {
 			// panic 消息不含 DSN，避免泄漏连接串中的密码。
 			panic(fmt.Sprintf("parse postgres DSN: %v", err))
 		}
-		poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+		// 运行期查询走预编译语句（extended protocol + 语句缓存）：省去每查询的
+		// 文本拼接/转义（simple protocol 的 sanitize 在 CPU profile 中占 ~2.7%）
+		// 与服务端重复解析/规划。迁移等多语句 SQL 不走这里——migrate 包会以
+		// QueryExecModeSimpleProtocol 逐文件执行（见 persistence.PostgresDB.ExecSimple）；
+		// 若未来接入 PgBouncer 事务池（不支持跨事务命名语句），改回 SimpleProtocol。
+		poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
 		// 慢查询日志：超阈值 SQL 以 WARN 输出「耗时 + 语句」，用于线上定位热点查询
 		// （无需常开 pprof）。阈值由 SLOW_QUERY_THRESHOLD 配置，<=0 关闭。
 		poolConfig.ConnConfig.Tracer = NewSlowQueryTracer(cfg.SlowQueryThreshold, func(sql string, dur time.Duration, err error) {

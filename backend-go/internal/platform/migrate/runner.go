@@ -47,7 +47,7 @@ func ApplyDir(ctx context.Context, db persistence.QueryableDB, dir string) error
 		if err != nil {
 			return err
 		}
-		if err := db.Exec(ctx, string(blob)); err != nil {
+		if err := execMigrationSQL(ctx, db, string(blob)); err != nil {
 			return err
 		}
 	}

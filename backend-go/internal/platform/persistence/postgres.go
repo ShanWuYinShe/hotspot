@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -36,6 +37,21 @@ func (db *PostgresDB) ensurePool(ctx context.Context) (*pgxpool.Pool, error) {
 	}
 	db.Pool = pool
 	return db.Pool, nil
+}
+
+// ExecSimple 以简单协议执行 SQL（允许一次发送多条语句）。仅用于迁移/DDL 等
+// 必须支持多语句文本的路径：运行期池默认使用预编译语句（extended protocol
+// 不支持一条消息里多条语句）。非 Postgres 实现（stub）回退普通 Exec。
+func (db *PostgresDB) ExecSimple(ctx context.Context, query string) error {
+	if db.Backend != nil {
+		return db.Backend.Exec(ctx, query)
+	}
+	pool, err := db.ensurePool(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = pool.Exec(ctx, query, pgx.QueryExecModeSimpleProtocol)
+	return err
 }
 
 // EnsurePool 是 ensurePool 的公共入口，供需要直接持有 pool 的调用方使用
