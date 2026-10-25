@@ -1559,3 +1559,32 @@ HTTP 用例与新增 WS 用例）；`-race` 门禁与 CI E2E job 同样执行该
 
 **未包含 Alertmanager**：外发通知（邮件/IM）需要单独部署 Alertmanager 并配置 receiver；
 当前告警仅在 Prometheus UI / Grafana 可见，接入方式在文件头注释说明，属部署侧决策。
+
+## 写路径压测（2026-10-25，第 48 轮）
+
+补 P0-2：`cmd/loadgen` 扩展写压测能力（`-idem-unique` 每请求唯一幂等键、`-body-seq` 请求体
+`{{seq}}` 唯一序号、`-token-file` 多用户轮询 token），在 backend-test（APP_ENV=test）上压三类
+写路径，并发 20、各 15s；结束后按 nickname 标记 `DELETE FROM users` 级联清理（ON DELETE CASCADE）。
+
+### 结果
+| 写路径 | RPS | p50 / p95 / p99 | 结果 |
+|---|---|---|---|
+| `POST /public/v1/auth/guest`（建用户+会话） | **1,824** | 9.4 / 17.0 / 44.5 ms | 27,366 reqs 全 code=0 |
+| `POST /api/v1/moments/create`（瞬间+地理位置） | **584** | 16.3 / 80.1 / 85.9 ms | 8,762 reqs 全 code=0 |
+| `POST /api/v1/comments/create`（评论+通知 fanout） | **509** | 28.3 / 96.7 / 143.3 ms | 7,652 reqs 全 code=0 |
+
+pgxpool：total 3→21、acquiring 0、`empty_acquire_total` 1→19（约 0.3/s，未饱和）；goroutines 21 稳定。
+清理：按标记删除 27,547 个用户并级联清除其内容/会话；测试库无残留。
+
+### 结论
+1. **guest 注册**写入吞吐最高（1.8k RPS）：users+sessions+JWT+Redis 幂等键组合未成为瓶颈；
+2. **内容写路径** 500~600 RPS：moments 主要耗时在写库+geo 索引，comments 含通知 fanout；
+   p95 ~80-100ms 属于单机单实例 dev 栈的可接受量级，瓶颈仍是数据库往返而非 Go 层；
+3. 写路径与读路径量级差异（读认证 1.3k / 写评论 0.5k RPS，同为 20 并发）说明**写多于读或需
+   更高写入吞吐时应优先扩容数据库规格/连接池**，而非应用层重构；
+4. 压测脚本教训：`Idempotency-Key` 若用「左对齐 + 尾部补零」生成，`i=1` 与 `i=10` 会生成**相同**
+   字符串（补零吞掉位数差异），表现为随机 22002；改用 `uuid`/十六进制随机键后 0 冲突。
+   幂等实现本身行为正确（同键并发 → 22002、完成后回放），该现象属脚本缺陷，已记录避免复踩。
+
+复跑：`go run ./cmd/loadgen -url ... -method POST -body '...{{seq}}...' -body-seq -idem-unique
+-token-file /tmp/tokens.txt -c 20 -d 15s`；清理按 `nickname LIKE '<marker>%'` 删除用户级联。

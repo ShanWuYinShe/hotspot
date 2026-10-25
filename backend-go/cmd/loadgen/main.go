@@ -24,8 +24,10 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -46,6 +48,9 @@ func main() {
 	duration := flag.Duration("d", 20*time.Second, "压测时长")
 	headers := flag.String("H", "", "额外请求头，多个用分号分隔，如 k:v;k:v")
 	timeout := flag.Duration("timeout", 10*time.Second, "单请求超时")
+	idemUnique := flag.Bool("idem-unique", false, "为每个请求生成唯一 Idempotency-Key（写压测需开启）")
+	bodySeq := flag.Bool("body-seq", false, "把 body 中的 {{seq}} 替换为本次请求唯一序号（用于唯一昵称/内容）")
+	tokenFile := flag.String("token-file", "", "每行一个 Bearer token；请求间轮询使用（写压测多用户）")
 	flag.Parse()
 	if *url == "" {
 		fmt.Fprintln(os.Stderr, "missing -url")
@@ -61,6 +66,24 @@ func main() {
 			extra[http.CanonicalHeaderKey(strings.TrimSpace(parts[0]))] = strings.TrimSpace(parts[1])
 		}
 	}
+	var tokens []string
+	if *tokenFile != "" {
+		blob, err := os.ReadFile(*tokenFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "read token file: %v\n", err)
+			os.Exit(2)
+		}
+		for _, line := range strings.Split(string(blob), "\n") {
+			if line = strings.TrimSpace(line); line != "" {
+				tokens = append(tokens, line)
+			}
+		}
+		if len(tokens) == 0 {
+			fmt.Fprintln(os.Stderr, "token file has no tokens")
+			os.Exit(2)
+		}
+	}
+	var seqAtomic int64
 	tr := &http.Transport{
 		MaxIdleConns:        *concurrency * 2,
 		MaxIdleConnsPerHost: *concurrency * 2,
@@ -80,7 +103,12 @@ func main() {
 			defer wg.Done()
 			var local []sample
 			for time.Now().Before(deadline) {
-				req, err := http.NewRequest(*method, *url, bytes.NewReader([]byte(*body)))
+				seq := atomic.AddInt64(&seqAtomic, 1)
+				reqBody := *body
+				if *bodySeq {
+					reqBody = strings.ReplaceAll(reqBody, "{{seq}}", strconv.FormatInt(seq, 10))
+				}
+				req, err := http.NewRequest(*method, *url, bytes.NewReader([]byte(reqBody)))
 				if err != nil {
 					local = append(local, sample{err: err.Error()})
 					continue
@@ -90,6 +118,12 @@ func main() {
 				}
 				for k, v := range extra {
 					req.Header.Set(k, v)
+				}
+				if *idemUnique {
+					req.Header.Set("Idempotency-Key", fmt.Sprintf("lt-%032x", time.Now().UnixNano()^seq))
+				}
+				if len(tokens) > 0 {
+					req.Header.Set("Authorization", "Bearer "+tokens[int(seq)%len(tokens)])
 				}
 				t0 := time.Now()
 				resp, err := client.Do(req)
