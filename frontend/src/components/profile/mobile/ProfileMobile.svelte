@@ -48,11 +48,10 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	]);
 </script>
 
-<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
 <StandardPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
-		<!-- 资料页眉（eyebrow；底色对齐消息页实底 surface-primary）。 -->
-		<div class="border-b border-border-default bg-surface-primary" >
+		<!-- 资料页眉：毛玻璃微透，与全局天际线微背景自然互融 -->
+		<div class="border-b border-border-subtle/40 bg-surface-primary/75 backdrop-blur-md">
 			<ContentColumn class="flex items-center justify-between py-3">
 				<p class="eyebrow">个人中心</p>
 			</ContentColumn>
@@ -66,15 +65,14 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 {:else if error}
 		<LoadError message={error} onRetry={retry} />
 	{:else}
-		<!-- 身份卡（compact）：头像复用 Avatar，统计横条居中（对齐桌面 MetricRow 原语）。
-		     卡片壳与桌面 ProfilePage 统一为「白卡 + 发丝描边 + 主题投影」语言，
-		     顶部增添柔和环境天光弥散层，提升质感。 -->
-		<section class="mb-6 rounded-2xl border border-border-default bg-surface-primary shadow-raised-sm overflow-hidden" aria-label="个人资料">
+		<!-- 身份卡（compact）：头像复用 Avatar，统计胶囊居中（对齐桌面 MetricRow capsule 原语）。
+		     卡片壳与桌面 ProfilePage 统一为 Bento 微岛生态。 -->
+		<section class="mb-6 rounded-2xl border border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden" aria-label="个人资料">
 			<!-- 顶部身份信息区 -->
-			<div class="relative p-5 bg-surface-primary">
+			<div class="relative p-5">
 				<div class="flex items-start justify-between gap-5">
 					<div class="flex min-w-0 items-center gap-4">
-						<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0 ring-2 ring-accent-default/20 shadow-sm" />
+						<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0 ring-2 ring-accent-default/20 shadow-xs" />
 						<div class="min-w-0">
 							<h1 class="text-xl font-bold tracking-title text-text-primary">{nickname || '未设置昵称'}</h1>
 							<p class="mt-0.5 text-xs text-text-secondary">{handle}</p>
@@ -92,11 +90,11 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 				{/if}
 
 				<!-- 移动端单手黄金操作区：大拇指无需移位，直达高频设置与编辑 -->
-				<div class="mt-4.5 flex items-center gap-2.5 pt-1">
+				<div class="mt-4 flex items-center gap-2.5 pt-1">
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.meEdit)}
-						class="hover-btn hit-slop inline-flex flex-1 items-center justify-center gap-1.5 border border-border-default rounded-full bg-surface-primary py-2 px-3 text-xs font-medium text-text-primary shadow-raised-sm focus-ring transition-all hover:bg-accent-soft hover:border-accent-default/40 active:scale-[0.98]"
+						class="hover-btn hit-slop inline-flex flex-1 items-center justify-center gap-1.5 border border-border-subtle/80 rounded-full bg-surface-primary/90 py-2 px-3 text-xs font-medium text-text-primary shadow-xs focus-ring transition-all hover:bg-accent-soft hover:border-accent-border/60 active:scale-[0.98]"
 					>
 						<Pencil class="size-3.5 text-text-secondary" strokeWidth={1.75} />
 						编辑资料
@@ -104,7 +102,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.settings)}
-						class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 border border-border-default rounded-full bg-surface-primary py-2 px-4 text-xs font-medium text-text-primary shadow-raised-sm focus-ring transition-all hover:bg-accent-soft hover:border-accent-default/40 active:scale-[0.98]"
+						class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 border border-border-subtle/80 rounded-full bg-surface-primary/90 py-2 px-4 text-xs font-medium text-text-primary shadow-xs focus-ring transition-all hover:bg-accent-soft hover:border-accent-border/60 active:scale-[0.98]"
 						aria-label="系统设置"
 					>
 						<Settings class="size-3.5 text-text-secondary" strokeWidth={1.75} />
@@ -112,18 +110,17 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					</button>
 				</div>
 			</div>
-			<!-- 统计横条：复用 MetricRow 原语 -->
-			<MetricRow class="border-t border-border-default/60 bg-surface-primary" items={statsList} />
+			<!-- 统计胶囊：复用 MetricRow capsule 原语 -->
+			<MetricRow variant="capsule" class="px-5 pb-5 pt-0" items={statsList} />
 		</section>
 
-		<!-- 个人数据 5 行链接：使用唯一分组岛屿卡 ListContainer bordered。
-		     彻底消除无边框裸线导致的视觉割裂。 -->
+		<!-- 个人数据 5 行链接：使用唯一分组微岛卡 ListContainer bordered。 -->
 		<div>
 			<div class="px-1 mb-2.5 flex items-center justify-between">
 				<p class="eyebrow">个人数据</p>
 				<span class="text-xxs text-text-secondary">内容与关系资产</span>
 			</div>
-			<ListContainer bordered ariaLabel="个人数据" class="shadow-raised-sm rounded-2xl">
+			<ListContainer bordered ariaLabel="个人数据" class="shadow-xs rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs overflow-hidden">
 			{#each DATA_ITEMS as item (item.id)}
 				<ListItem
 					onClick={() => void goto(item.href)}
@@ -144,4 +141,3 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		</div>
 	{/if}
 </StandardPageLayout>
-</div>

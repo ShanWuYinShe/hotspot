@@ -55,4 +55,19 @@ describe('MetricRow', () => {
 		await fireEvent.click(clickableItem);
 		expect(handleClick).toHaveBeenCalledTimes(1);
 	});
+
+	it('variant=capsule 渲染微岛胶囊形态', () => {
+		const { container } = render(MetricRow, {
+			props: {
+				variant: 'capsule',
+				items: [
+					{ label: '瞬间', value: 4 },
+					{ label: '关注者', value: 5 }
+				]
+			}
+		});
+		const dl = container.querySelector('dl') as HTMLElement;
+		expect(dl.className).toContain('gap-2.5');
+		expect(container.querySelector('.rounded-xl')).not.toBeNull();
+	});
 });

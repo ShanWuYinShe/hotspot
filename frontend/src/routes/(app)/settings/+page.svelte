@@ -212,12 +212,12 @@
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
-		<div class="flex flex-col divide-y divide-border-default max-w-5xl">
+		<div class="flex flex-col divide-y divide-border-subtle/40 max-w-5xl">
 			<!-- Section 1: 账号与身份 -->
 			<SettingsSection title="账号信息" description="当前登录的账号信息" class="first:pt-0">
 				<!-- 卡片壳统一交 ListContainer bordered（与下方通知/隐私分组同语言），
 				     不再为单行信息手写白卡 -->
-				<ListContainer bordered inset>
+				<ListContainer bordered inset class="rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
 					{#if auth.isAuthenticated}
 						<ListItem class="flex items-center gap-3.5 px-4 py-3.5">
 							<Avatar class="border-2 border-surface-primary shrink-0" src={accountAvatar} name={accountName} size="lg" />
@@ -251,7 +251,7 @@
 
 			<!-- Section 2: 外观与显示 -->
 			<SettingsSection title="外观与显示" description="自定义界面的视觉色彩与深浅模式，全局即时生效">
-				<ListContainer bordered inset>
+				<ListContainer bordered inset class="rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
 					<ListItem class="flex flex-col justify-between gap-3 px-4 py-3.5 sm:flex-row sm:items-center">
 						<div class="flex items-center gap-3">
 							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
@@ -299,7 +299,7 @@
 			<!-- Section 3: 地图与位置 -->
 			<!-- 底图坐标系（GCJ-02/WGS-84）属开发契约，面向用户只描述体验差异，不暴露术语 -->
 			<SettingsSection title="地图与位置" description="选择地图页使用的底图：高德地图（国内坐标，免密钥，位置显示更贴合）或 OpenStreetMap（国际坐标，经本站中转加载）">
-				<ListContainer bordered inset>
+				<ListContainer bordered inset class="rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
 					<ListItem class="flex flex-col justify-between gap-3 px-4 py-3.5 sm:flex-row sm:items-center">
 						<div class="flex items-center gap-3">
 							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
@@ -322,7 +322,7 @@
 
 			<!-- Section 4: 通知偏好 -->
 			<SettingsSection title="通知偏好" description="管理新消息、互动提及与关注流的系统提醒方式">
-				<ListContainer bordered inset>
+				<ListContainer bordered inset class="rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
 					<SettingRow
 						title="推送通知"
 						description="消息、提及与新动态提醒"
@@ -355,7 +355,7 @@
 			     区块自身登录门控，避免匿名暴露无意义的安全操作） -->
 			{#if auth.isAuthenticated}
 				<SettingsSection title="账号与安全" description="修改登录密码、管理活跃设备登录态。">
-					<ListContainer bordered inset>
+					<ListContainer bordered inset class="rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
 						<AccountSecuritySection />
 					</ListContainer>
 				</SettingsSection>
@@ -363,7 +363,7 @@
 
 			<!-- Section 6: 隐私与安全 -->
 			<SettingsSection title="隐私与安全" description="控制个人公开主页以及地理位置在附近雷达中的可见性。">
-				<ListContainer bordered inset>
+				<ListContainer bordered inset class="rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
 					<SettingRow
 						title="私密账号"
 						description="开启后仅关注者可查看你的主页与生活瞬间（服务端设置，需登录）"
@@ -405,7 +405,7 @@
 			<!-- Section 7: 系统与关于 -->
 			<SettingsSection title="系统与关于" description="客户端版本及当前设备会话状态。" class="last:pb-0">
 				<div class="flex flex-col gap-4">
-					<ListContainer bordered inset>
+					<ListContainer bordered inset class="rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
 						<ListItem class="flex items-center justify-between gap-3 px-4 py-3.5">
 							<div class="flex items-center gap-3">
 								<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">

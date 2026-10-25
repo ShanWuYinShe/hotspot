@@ -207,7 +207,7 @@
 			description="在动态、评论或聊天中遇到违规内容时，可通过「举报」提交，处理结果会在这里同步。"
 		/>
 	{:else}
-		<ListContainer class="divide-y divide-border-subtle/30" ariaLabel="举报记录列表">
+		<ListContainer bordered class="rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden" ariaLabel="举报记录列表">
 			{#each items as item (item.report_id)}
 				<ListItem class="px-3 py-3" ariaLabel={`${STATUS_LABELS[item.status]}：举报${TARGET_LABELS[item.target_type]}`}>
 					<div class="flex min-w-0 flex-1 flex-col gap-1 py-1">

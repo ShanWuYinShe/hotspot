@@ -132,7 +132,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<!-- 桌面全宽行会让行尾动作离名字过远（扫描距离），列表限宽到阅读列；
 			     但必须**居中**：限宽 + 左对齐会在宽屏上把 300+px 空白全堆在右侧，
 			     观感上就是"内容没适配剩余空间"（2026-10-21 截图复核 /me/relationships）。 -->
-			<ListContainer class="mx-auto max-w-3xl divide-y divide-border-subtle/30">
+			<ListContainer bordered class="mx-auto max-w-3xl rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
 				{#each items as item (item.id)}
 					{@render children(item)}
 				{/each}

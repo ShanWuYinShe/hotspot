@@ -417,6 +417,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<!-- Stats -->
 			<div class="mt-6">
 				<MetricRow
+					variant="capsule"
 					items={[
 						{ label: '瞬间', value: fmtNum(user.moments) },
 						{ label: '粉丝', value: fmtNum(user.followers) },

@@ -46,8 +46,8 @@
 </svelte:head>
 
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-4">
-	<!-- 身份卡：当前平台管理员 -->
-	<section class="rounded-lg border border-border-default bg-surface-primary p-5 shadow-raised-sm" aria-label="管理员身份">
+	<!-- 身份卡：当前平台管理员（Bento 微岛生态） -->
+	<section class="rounded-2xl border border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs p-5 shadow-xs" aria-label="管理员身份">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div class="flex items-center gap-3 min-w-0">
 				<div class="flex size-9 shrink-0 items-center justify-center rounded-full icon-badge">
@@ -75,7 +75,7 @@
 	<!-- 模块入口：移动端行式列表（同「我的」数据入口的密度与语言），平板/桌面卡片网格 -->
 	{#if isMobile}
 		<section aria-label="管理模块">
-			<ListContainer bordered inset>
+			<ListContainer bordered inset class="rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
 				{#each MODULES as m (m.href)}
 					{@const allowed = hasAdminPermission(m.perm)}
 					<ListItem
@@ -111,20 +111,20 @@
 					disabled={!allowed}
 					onclick={() => void goto(m.href)}
 					title={allowed ? m.label : '无对应权限'}
-					class="hover-btn flex flex-col items-start gap-2 rounded-lg border border-border-default bg-surface-primary p-4 text-left shadow-raised-sm focus-ring transition-all disabled:opacity-faint disabled:pointer-events-none {allowed ? 'hover:border-accent-default' : ''}"
+					class="hover-btn flex flex-col items-start gap-2.5 rounded-2xl border border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs p-5 text-left shadow-xs focus-ring transition-all hover:shadow-raised-sm hover:border-accent-default/60 hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-faint disabled:pointer-events-none"
 				>
-					<span class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
-						<m.icon class="size-4.5 text-accent-default" strokeWidth={1.75} />
+					<span class="flex size-9.5 items-center justify-center rounded-xl bg-accent-soft text-accent-default shrink-0">
+						<m.icon class="size-5" strokeWidth={1.75} />
 					</span>
-					<span>
-						<span class="flex items-center gap-1.5">
-							<span class="block text-sm font-medium text-text-primary">{m.label}</span>
+					<div>
+						<div class="flex items-center gap-1.5">
+							<span class="block text-sm font-semibold text-text-primary">{m.label}</span>
 							{#if m.href === `${ROUTES.admin}/reports` && pendingReports}
 								<span class="inline-flex h-5 items-center justify-center leading-none rounded-full bg-status-warning-bg text-status-warning px-2 text-xxs font-medium">待处理 {pendingReports}</span>
 							{/if}
-						</span>
-						<span class="mt-0.5 block text-xs text-text-secondary">{allowed ? m.desc : '无访问权限'}</span>
-					</span>
+						</div>
+						<p class="mt-1 text-xs text-text-secondary leading-relaxed">{allowed ? m.desc : '无访问权限'}</p>
+					</div>
 				</button>
 			{/each}
 		</section>
