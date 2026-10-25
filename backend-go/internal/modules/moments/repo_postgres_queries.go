@@ -193,7 +193,9 @@ SELECT m.moment_id,
        m.location_name,
        m.latitude,
        m.longitude,
-       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $1)
+       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $1),
+       COALESCE((SELECT array_agg(mt.tag_name ORDER BY mt.tag_name)
+                 FROM moment_tags mt WHERE mt.moment_id = m.moment_id), ARRAY[]::text[])
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 JOIN user_relations ur ON ur.target_user_id = m.user_id AND ur.user_id = $1 AND ur.is_following = TRUE

@@ -50,14 +50,14 @@ func (r *PostgresRepository) ListFollowingMoments(ctx context.Context, query mom
 	}
 	defer rows.Close()
 	items := make([]momentCandidate, 0)
-	momentIDs := make([]string, 0)
 	for rows.Next() {
 		var momentID, userID, nickname, avatarURL, description, locationName string
 		var latitude, longitude float64
 		var createdAt time.Time
 		var likesCount, commentsCount, sharesCount int
 		var isFavorited bool
-		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isFavorited); err != nil {
+		var tags []string
+		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isFavorited, &tags); err != nil {
 			return PaginatedMoments{}, err
 		}
 		item := MomentItem{
@@ -70,23 +70,16 @@ func (r *PostgresRepository) ListFollowingMoments(ctx context.Context, query mom
 			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
 			Location:      &Location{Point: pointStruct(latitude, longitude), LocationName: locationName},
 			IsFavorited:   isFavorited,
+			Tags:          tags,
 		}
 		if query.HasReferencePoint {
 			ref := geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}
 			fillRelativeLocation(item.Location, geo.DistanceMeters(ref, geo.Point{Latitude: latitude, Longitude: longitude}), geo.BearingDegrees(ref, geo.Point{Latitude: latitude, Longitude: longitude}))
 		}
 		items = append(items, momentCandidate{Item: item, CreatedAt: createdAt.UTC()})
-		momentIDs = append(momentIDs, momentID)
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedMoments{}, err
-	}
-	tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs)
-	if err != nil {
-		return PaginatedMoments{}, err
-	}
-	for idx := range items {
-		items[idx].Item.Tags = tagsByMomentID[items[idx].Item.MomentID]
 	}
 	sort.SliceStable(items, func(i, j int) bool { return compareFollowingCandidates(items[i], items[j]) < 0 })
 	return paginateFollowingMoments(items, query.Limit, query.Cursor)

@@ -262,9 +262,14 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 	for _, profile := range profiles.Items {
 		searchUserIDs = append(searchUserIDs, profile.UserID)
 	}
-	settingsByUserID, err := s.repo.GetSettingsBatch(ctx, searchUserIDs)
-	if err != nil {
-		return PaginatedUsers{}, err
+	// 搜索仓库可在主查询里顺带返回可见性（profiles.Settings 非 nil）：命中快路径时
+	// 省去一次 settings 批量查询；内存实现/其它调用方保持回退。
+	settingsByUserID := profiles.Settings
+	if settingsByUserID == nil {
+		settingsByUserID, err = s.repo.GetSettingsBatch(ctx, searchUserIDs)
+		if err != nil {
+			return PaginatedUsers{}, err
+		}
 	}
 	// Batch-load relationships once for the whole page to avoid an N+1 of
 	// Relationship calls. Only meaningful when the caller is authenticated.

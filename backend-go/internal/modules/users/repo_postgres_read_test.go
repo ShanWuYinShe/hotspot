@@ -174,7 +174,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 			queryGetUserRelation:       testdb.RowValues{Values: []any{true, false, "buddy", time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC), nil, ""}},
 		},
 		queryRowsByQuery: map[string][][]any{
-			"FROM users u":        {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false}},
+			"FROM users u":        {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false, []string{"美食", "摄影"}, true, true, true}},
 			queryListBlockedUsers: {{"user_bob", "Bob", "", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
 		},
 		queryErrs: map[string]error{},
@@ -195,6 +195,12 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	profiles, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{Keyword: "Alice", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil || len(profiles.Items) != 1 || profiles.Items[0].UserID != "user_alice" {
 		t.Fatalf("unexpected search result: %#v err=%v", profiles, err)
+	}
+	if len(profiles.Items[0].Tags) != 2 {
+		t.Fatalf("search tags = %v, want 2 inline tags", profiles.Items[0].Tags)
+	}
+	if settings, ok := profiles.Settings["user_alice"]; !ok || !settings.PresenceVisible || !settings.LocationVisible || !settings.StatsVisible {
+		t.Fatalf("search inline settings = %#v, want presence/location/stats visible", profiles.Settings)
 	}
 	blocked, err := repo.ListBlocked(context.Background(), "user_alice", 20, "")
 	if err != nil || len(blocked.Items) != 1 || blocked.Items[0].User.UserID != "user_bob" || blocked.Items[0].User.Nickname != "Bob" {

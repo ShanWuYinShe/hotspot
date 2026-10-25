@@ -90,6 +90,9 @@ type PaginatedProfiles struct {
 	Items         []MyProfile
 	NextCursor    string
 	InvalidCursor bool
+	// Settings 是可选快路径：Postgres 搜索在主查询里顺带返回可见性列，
+	// Service 命中该 map 时无需再发一次 GetSettingsBatch（内存仓库保持 nil，走回退）。
+	Settings map[string]UserSettings
 }
 
 type UpdateLocationRequest struct {

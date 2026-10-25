@@ -150,11 +150,13 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	// page in a single query (avoids an N+1 of loadUserProfileTags calls
 	// inside the loop).
 	scanned := make([]MyProfile, 0)
+	settingsByUserID := make(map[string]UserSettings, searchCandidateCap)
 	for rows.Next() {
-		profile, err := scanUserProfileRow(rows)
+		profile, settings, err := scanSearchProfileRow(rows)
 		if err != nil {
 			return PaginatedProfiles{}, err
 		}
+		settingsByUserID[profile.UserID] = settings
 		scanned = append(scanned, profile)
 	}
 	if err := rows.Err(); err != nil {
@@ -163,16 +165,7 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	if len(scanned) == 0 {
 		return PaginatedProfiles{}, nil
 	}
-	userIDs := make([]string, 0, len(scanned))
 	for _, profile := range scanned {
-		userIDs = append(userIDs, profile.UserID)
-	}
-	tagsByUserID, err := loadUserProfileTagsBatch(ctx, queryable, userIDs)
-	if err != nil {
-		return PaginatedProfiles{}, err
-	}
-	for _, profile := range scanned {
-		profile.Tags = tagsByUserID[profile.UserID]
 		// SQL 已下推 tag EXISTS；此处的 Go 层比对保留为双保险（大小写归一）。
 		if tag != "" && !containsFold(profile.Tags, tag) {
 			continue
@@ -184,7 +177,9 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 		candidates = append(candidates, searchProfileCandidate{Profile: profile, Distance: distance, BearingDegrees: bearing, SortBy: sortBy, RelevanceScore: searchRelevanceScore(profile, keyword, tag)})
 	}
 	sortSearchCandidates(candidates, normalizeSearchSort(req.SortBy))
-	return paginateSearchCandidates(candidates, req.Pagination), nil
+	page := paginateSearchCandidates(candidates, req.Pagination)
+	page.Settings = settingsByUserID
+	return page, nil
 }
 
 // searchCandidateCap 限制单次搜索加载的候选行数：此前「只传 tag」时 SQL 仅剩
@@ -195,7 +190,7 @@ const searchCandidateCap = 500
 func buildSearchUsersQuery(bounds geo.Bounds, keyword, tag string, radiusFilter bool) (string, []any) {
 	args := make([]any, 0, 4)
 	var builder strings.Builder
-	builder.WriteString(`SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at, u.is_deleted FROM users u JOIN user_settings us ON us.user_id = u.user_id WHERE us.searchable = TRUE AND u.is_deleted = FALSE AND us.privacy_level = 'public'`)
+	builder.WriteString(`SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at, u.is_deleted, COALESCE((SELECT array_agg(up.tag_name ORDER BY up.tag_name) FROM user_profile_tags up WHERE up.user_id = u.user_id), ARRAY[]::text[]), us.presence_visible, us.location_visible, us.stats_visible FROM users u JOIN user_settings us ON us.user_id = u.user_id WHERE us.searchable = TRUE AND u.is_deleted = FALSE AND us.privacy_level = 'public'`)
 	if radiusFilter {
 		mins, maxs := geo.CoveringArrays(bounds)
 		if len(mins) == 0 {
@@ -302,6 +297,35 @@ func scanUserProfileRow(scanner interface{ Scan(...any) error }) (MyProfile, err
 	profile.LastOnline = lastOnline.UTC().Format(time.RFC3339)
 	profile.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return profile, nil
+}
+
+// scanSearchProfileRow 扫描 buildSearchUsersQuery 的行：15 个画像列 + 标签数组 +
+// 可见性三列（presence/location/stats）。搜索主查询顺带返回这些列，省去 tags 与
+// settings 两次批量查询。
+func scanSearchProfileRow(scanner interface{ Scan(...any) error }) (MyProfile, UserSettings, error) {
+	var profile MyProfile
+	var avatarURL, bio, gender, email, phone string
+	var locationName string
+	var latitude, longitude float64
+	var presenceStatus, userType string
+	var lastOnline, createdAt time.Time
+	var tags []string
+	var presenceVisible, locationVisible, statsVisible bool
+	if err := scanner.Scan(&profile.UserID, &profile.Nickname, &avatarURL, &userType, &bio, &gender, &email, &phone, &locationName, &latitude, &longitude, &presenceStatus, &lastOnline, &createdAt, &profile.IsDeleted, &tags, &presenceVisible, &locationVisible, &statsVisible); err != nil {
+		return MyProfile{}, UserSettings{}, err
+	}
+	profile.AvatarURL = avatarURL
+	profile.UserType = UserType(userType)
+	profile.Bio = bio
+	profile.Gender = Gender(gender)
+	profile.Email = email
+	profile.Phone = phone
+	profile.Location = Location{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
+	profile.PresenceStatus = UserPresenceStatus(presenceStatus)
+	profile.LastOnline = lastOnline.UTC().Format(time.RFC3339)
+	profile.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+	profile.Tags = tags
+	return profile, UserSettings{PresenceVisible: presenceVisible, LocationVisible: locationVisible, StatsVisible: statsVisible}, nil
 }
 
 // loadUserProfileTagsBatch fetches profile tags for many user IDs in one
