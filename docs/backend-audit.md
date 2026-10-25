@@ -1694,3 +1694,44 @@ CPU profile（bootstrap c=50）显示 pgx Query 累计占 27%（3 次串行 DB �
 ### 下一步
 - 继续收敛其他聚合读端点（搜索/Feed 等按调用频率与查询数评估）；
 - 优化后重跑 `--all` 全量验收并收口。
+
+## 读端点延迟盘点与「搜索索引」复核（2026-10-25，第 53 轮）
+
+继续按「调用频率 × 查询数」找优化点：先对高频读端点做**单请求延迟盘点**（无并发，
+hotspot_test 现有 7,767 users / 972 moments / 243 notifications），避免用高并发压测的
+失真数字下结论：
+
+| 端点 | 单请求平均延迟（5 次采样） |
+|---|---|
+| `notify/fetch` | 2.5 ms |
+| `notify/unread_summary` | 2.8 ms |
+| `users/search`（1 字符关键词） | 28.0 ms |
+| `users/search`（2/3/4 字符关键词） | 20.0 / 5.9 / 6.5 ms |
+| `groups/fetch_joined` | 2.8 ms |
+| `moments/fetch_following` | 7.3 ms |
+| `users/account` | 3.8 ms |
+
+### 搜索慢的真相与结论
+- `users/search` 的子串匹配（`nickname/bio ILIKE '%kw%'`）**早已有 pg_trgm GIN 索引**
+  （迁移 `045_query_indexes.sql`：`idx_users_nickname_trgm` / `idx_users_bio_trgm`，
+  `040/052` 亦有 moments/tags 的 trgm 索引）——原计划的「新增 trgm 迁移」是**重复工作，已放弃**；
+- 3 字符及以上关键词 6ms 左右（索引可生效）；**1–2 字符关键词天生无法用 trigram**
+  （pg_trgm 要求 pattern ≥3 字符），7.7k 用户下顺序扫描 + top-N 排序约 14ms SQL 执行；
+  这是查询语义（任意子串）决定的固有成本，未改契约/未加最小长度限制；
+- 结论：当前规模不需要新的搜索索引/查询改造；若未来 users 到十万级，可评估
+  「短关键词专用路径」或搜索服务拆分，而非继续加同名索引。
+
+### 压测环境教训（重要）
+本轮对 `users/search` 做 50 并发压测（每请求全表扫描、CPU-bound）时，OrbStack 虚拟机
+两次出现 Docker daemon 卡死（`docker info` 超时、网关 502），恢复方式仍为
+quit/reopen OrbStack + `compose up -d` + 重启 backend。此后改为**低并发单请求采样**。
+结论：**本机 dev 环境不适合对 CPU-bound 端点做 ≥50 并发压测**——会先压垮虚拟机而非暴露
+应用瓶颈；容量结论应以准生产独立压测机为准（与第 45 轮结论一致，本轮补充了触发条件）。
+
+### 第 50–53 轮累计成果
+| 优化 | 效果（同环境实测） |
+|---|---|
+| 会话校验进程内缓存（TTL 5s + 撤销即时失效 + admin 封禁钩子） | 与下两项合并计入 |
+| `get_account` 画像 3 查询合并为 1 条 SQL | users/account 1,514→1,691 RPS（+11.7%），p50 13.75→11.04ms |
+| bootstrap 公告版本读缓存（写路径显式失效） | bootstrap 1,286→1,536 RPS（+19.4%），p50 16.53→12.32ms |
+| 读端点延迟盘点 | 除短关键词搜索外均在 2–8ms；确认无需新增索引 |
