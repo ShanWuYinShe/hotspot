@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -291,10 +293,34 @@ var upgrader = websocket.Upgrader{CheckOrigin: sameOrigin, EnableCompression: tr
 // 也会因拿不到 HttpOnly Cookie（SameSite=Strict 跨站不发送）而鉴权失败，
 // CSWSH 防护不降低。
 func sameOrigin(r *http.Request) bool {
-	origin := r.Header.Get("Origin")
-	if origin == "" {
+	origins := r.Header.Values("Origin")
+	if len(origins) == 0 {
 		return true // native/non-browser client
 	}
+
+	// 浏览器禁止脚本设置 Origin，因此出现多个 Origin 头只可能是原生客户端：
+	// 鸿蒙 webSocket 会发送自身的 `Origin: <scheme>://<host>`（**丢掉非默认端口**），
+	// 我们的客户端再补一个带端口的同源 Origin，形成两个值。
+	// 此时要求所有 Origin 的主机名都与请求 Host 主机名一致且请求不带 Cookie，
+	// 浏览器单值路径仍走严格 scheme+host+port 校验，CSWSH 防护不降低。
+	if len(origins) > 1 {
+		if len(r.Cookies()) > 0 {
+			return false
+		}
+		requestHost := r.Host
+		if h, _, err := net.SplitHostPort(requestHost); err == nil {
+			requestHost = h
+		}
+		for _, origin := range origins {
+			u, err := url.Parse(origin)
+			if err != nil || !strings.EqualFold(u.Hostname(), requestHost) {
+				return false
+			}
+		}
+		return true
+	}
+
+	origin := origins[0]
 	if origin == "null" {
 		return len(r.Cookies()) == 0 // 原生客户端（无 Cookie，Auth 事件令牌鉴权）
 	}

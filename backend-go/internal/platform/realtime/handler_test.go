@@ -857,6 +857,37 @@ func TestSameOriginAllowsNullOriginForCookieLessNativeClient(t *testing.T) {
 	}
 }
 
+func TestSameOriginAllowsHarmonyDuplicateOriginWithoutCookies(t *testing.T) {
+	// 鸿蒙原生 WebSocket 实测同时发送 OS 默认的 `Origin: http://host`（丢端口）
+	// 与客户端补的 `origin: http://host:port`；浏览器禁止设置 Origin，出现多个值只可能是原生客户端。
+	req := httptest.NewRequest(http.MethodGet, "http://192.168.0.100:8888/ws/v1", nil)
+	req.Host = "192.168.0.100:8888"
+	req.Header.Add("Origin", "http://192.168.0.100")
+	req.Header.Add("Origin", "http://192.168.0.100:8888")
+	if !sameOrigin(req) {
+		t.Fatal("duplicate same-host Origin without cookies should be allowed (native client)")
+	}
+
+	// 带 Cookie 的多 Origin 请求按跨站浏览器处理 —— 拒绝。
+	req = httptest.NewRequest(http.MethodGet, "http://192.168.0.100:8888/ws/v1", nil)
+	req.Host = "192.168.0.100:8888"
+	req.Header.Add("Origin", "http://192.168.0.100")
+	req.Header.Add("Origin", "http://192.168.0.100:8888")
+	req.AddCookie(&http.Cookie{Name: "access_token", Value: "x"})
+	if sameOrigin(req) {
+		t.Fatal("duplicate Origin with cookies must be blocked")
+	}
+
+	// 主机名不一致的多 Origin —— 拒绝。
+	req = httptest.NewRequest(http.MethodGet, "http://192.168.0.100:8888/ws/v1", nil)
+	req.Host = "192.168.0.100:8888"
+	req.Header.Add("Origin", "http://192.168.0.100")
+	req.Header.Add("Origin", "http://evil.example:8888")
+	if sameOrigin(req) {
+		t.Fatal("duplicate Origin with mismatched host must be blocked")
+	}
+}
+
 func TestSameOriginBlocksCrossOrigin(t *testing.T) {
 	// Cross-origin browser request (CSWSH vector) — block.
 	req := httptest.NewRequest(http.MethodGet, "https://host.example/ws", nil)
