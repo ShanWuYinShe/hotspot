@@ -1380,3 +1380,26 @@ CONCURRENTLY）只会在 CI 之外或线上启动时才暴露。
 管理员把平台上限调小**不会回溯修改存量群**的 `max_members`，也不自动裁剪。理由：存量群的容量
 契约已对外承诺，静默裁剪会破坏成员上限语义；如需要「调小后强制收敛」，应作为显式管理操作
 （逐群 update 或迁移）另行评审。
+
+## 备份/恢复链路实测（2026-10-25，第 42 轮）
+
+审计运维数据安全面：不依赖文档结论，直接在本机 dev 栈把 `scripts/backup-postgres.sh` 与
+`scripts/backup-seaweedfs.sh` 各跑通一遍，并做一次**真实恢复**验证。
+
+### Postgres（`scripts/backup-postgres.sh`）
+- `BACKUP_DIR=/tmp/... sh scripts/backup-postgres.sh` → 产出 `hotspot_YYYYmmdd_HHMMSS.dump`（256K，
+  自定义格式 `-Fc`），脚本内 `pg_restore -l` 完整性校验通过；
+- 恢复实测：在容器内新建 `hotspot_restore_check` 库 → `pg_restore --no-owner` 导入 → **exit 0 无告警**；
+- 数据一致性（源库 vs 恢复库）：`users 226/226`、`groups 18/18`、`moments 33/33`、
+  `comments 22/22`、`notifications 188/188`、`auth_sessions 635/635`、`schema_migrations 49/49`；
+  表总数 `45/45`；
+- 验证后已 DROP 临时库、删除临时 dump，未污染 dev 数据。
+
+### SeaweedFS 媒体卷（`scripts/backup-seaweedfs.sh`）
+- 卷名 `hotspot_seaweedfs_data` 与脚本默认一致；运行产出 `seaweedfs_*.tar.gz`（416K，123 个条目），
+  归档内为 `data/...`（与文档 `--strip-components=1` 的恢复示例一致）；
+- 验证后删除临时备份。
+
+### 结论
+两条备份脚本、恢复流程与 `docs/backup-restore.md` 的还原示例在 dev 环境均可用，未发现脚本缺陷；
+建议发版前在准生产再跑一次（数据量/权限更接近线上）。
