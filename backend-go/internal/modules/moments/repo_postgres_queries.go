@@ -220,17 +220,30 @@ FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.moment_id = ANY($1)`
 
+	// queryNearbyMomentHeat 批量取候选集的 reactions 计数（替代逐行 COUNT 子查询）。
+	queryNearbyMomentHeat = `
+SELECT target_id, COUNT(*)::int
+FROM reactions
+WHERE target_type = 'moment' AND target_id = ANY($1)
+GROUP BY target_id`
+
+	// queryNearbyFollowingUserIDs 批量取查看者关注的候选作者集合（替代逐行 EXISTS）。
+	queryNearbyFollowingUserIDs = `
+SELECT target_user_id
+FROM user_relations
+WHERE user_id = $1 AND is_following = TRUE AND target_user_id = ANY($2)`
+
+	// queryNearbyMoments 候选粗筛只返回排序所需列（无逐行子查询、无 users join）：
+	// 热度/关注改为候选集批量聚合，展示字段分页后批量补全。
 	queryNearbyMoments = `
 SELECT m.moment_id,
+       m.user_id,
        m.created_at,
-       (SELECT COUNT(*)::int FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id),
        m.comments_count,
        m.shares_count,
        m.latitude,
-       m.longitude,
-       EXISTS(SELECT 1 FROM user_relations ur WHERE ur.target_user_id = m.user_id AND ur.user_id = $3 AND ur.is_following = TRUE)
+       m.longitude
 FROM moments m
-JOIN users u ON u.user_id = m.user_id
 WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE
   -- 双向拉黑过滤（对齐私聊/评论口径）：任何一方拉黑即互不可见

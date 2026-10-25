@@ -103,30 +103,53 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 	}
 	defer rows.Close()
 	plan := geo.NewSearchPlan(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius, "relevance")
-	// 候选集只扫描排序所需列（id/时间/坐标/热度计数/关注标记）：
-	// 昵称、头像、描述、位置名等仅分页结果需要的字符串列改为分页后按页面 ID 一次补全，
-	// 降低密集城区（候选上千行）时的行解码与字符串分配（pprof 显示 Scan/Decode 为主要剩余开销）。
+	// 候选粗筛只取排序基础列；热度（reactions 计数）与关注标记改为候选集批量聚合，
+	// 避免对最多 2000 个候选行做逐行 COUNT/EXISTS 子查询。
 	candidates := make([]nearbyCandidate, 0, 256)
+	momentIDs := make([]string, 0, 256)
+	authorIDs := make([]string, 0, 256)
+	seenAuthors := make(map[string]struct{}, 64)
 	for rows.Next() {
 		var candidate nearbyCandidate
-		if err := rows.Scan(&candidate.momentID, &candidate.createdAt, &candidate.likesCount, &candidate.commentsCount, &candidate.sharesCount, &candidate.latitude, &candidate.longitude, &candidate.isFollowing); err != nil {
+		if err := rows.Scan(&candidate.momentID, &candidate.userID, &candidate.createdAt, &candidate.commentsCount, &candidate.sharesCount, &candidate.latitude, &candidate.longitude); err != nil {
 			return PaginatedMoments{}, err
 		}
-		distance, bearing, ok := plan.Match(geo.Point{Latitude: candidate.latitude, Longitude: candidate.longitude})
-		if !ok {
+		distance, bearing, within := plan.Match(geo.Point{Latitude: candidate.latitude, Longitude: candidate.longitude})
+		if !within {
 			continue
 		}
 		candidate.distance = distance
 		candidate.bearing = bearing
-		candidate.score = candidate.likesCount + candidate.commentsCount + candidate.sharesCount
-		if candidate.isFollowing {
-			candidate.score += 1000
-		}
-		candidate.score += max(0, query.Radius-distance)
+		candidate.score = candidate.commentsCount + candidate.sharesCount + max(0, query.Radius-distance)
 		candidates = append(candidates, candidate)
+		momentIDs = append(momentIDs, candidate.momentID)
+		if _, seen := seenAuthors[candidate.userID]; !seen {
+			seenAuthors[candidate.userID] = struct{}{}
+			authorIDs = append(authorIDs, candidate.userID)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedMoments{}, err
+	}
+	if len(candidates) == 0 {
+		return PaginatedMoments{Items: make([]MomentItem, 0)}, nil
+	}
+	heatByMomentID, err := loadNearbyMomentHeat(ctx, queryable, momentIDs)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	var followingByUserID map[string]bool
+	if query.ViewerUserID != "" {
+		followingByUserID, err = loadNearbyFollowing(ctx, queryable, query.ViewerUserID, authorIDs)
+		if err != nil {
+			return PaginatedMoments{}, err
+		}
+	}
+	for i := range candidates {
+		candidates[i].score += heatByMomentID[candidates[i].momentID]
+		if followingByUserID[candidates[i].userID] {
+			candidates[i].score += 1000
+		}
 	}
 	// 排序规则与 compareNearbyCandidates 保持一致：距离升序 → 热度降序 → 时间降序 → ID 降序。
 	sort.SliceStable(candidates, func(i, j int) bool {
@@ -170,7 +193,7 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 				MomentID:      candidate.momentID,
 				Description:   detail.description,
 				CreatedAt:     candidate.createdAt.UTC().Format(time.RFC3339),
-				LikesCount:    candidate.likesCount,
+				LikesCount:    heatByMomentID[candidate.momentID],
 				CommentsCount: candidate.commentsCount,
 				SharesCount:   candidate.sharesCount,
 				User:          UserInfo{UserID: detail.userID, Nickname: detail.nickname, AvatarURL: types.StrPtr(detail.avatarURL)},
@@ -191,15 +214,15 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 	return page, nil
 }
 
-// nearbyCandidate 附近流排序候选（值类型，仅排序所需字段；展示字段分页后补全）。
+// nearbyCandidate 附近流排序候选（值类型，仅排序所需字段；热度/关注由批量聚合填充）。
 type nearbyCandidate struct {
-	momentID                               string
-	createdAt                              time.Time
-	latitude, longitude                    float64
-	distance, bearing                      int
-	likesCount, commentsCount, sharesCount int
-	isFollowing                            bool
-	score                                  int
+	momentID                   string
+	userID                     string
+	createdAt                  time.Time
+	latitude, longitude        float64
+	distance, bearing          int
+	commentsCount, sharesCount int
+	score                      int
 }
 
 // nearbyMomentDetail 分页结果的展示字段（一次批量查询补全）。
@@ -230,6 +253,55 @@ func loadNearbyMomentDetails(ctx context.Context, queryable persistence.Queryabl
 		return nil, err
 	}
 	return details, nil
+}
+
+// loadNearbyMomentHeat 批量取候选集 reactions 计数（热度次级排序输入）。
+func loadNearbyMomentHeat(ctx context.Context, queryable persistence.Queryable, momentIDs []string) (map[string]int, error) {
+	heat := make(map[string]int, len(momentIDs))
+	if len(momentIDs) == 0 {
+		return heat, nil
+	}
+	rows, err := queryable.Query(ctx, queryNearbyMomentHeat, momentIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var momentID string
+		var count int
+		if err := rows.Scan(&momentID, &count); err != nil {
+			return nil, err
+		}
+		heat[momentID] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return heat, nil
+}
+
+// loadNearbyFollowing 批量取查看者关注的候选作者集合（关注加分输入）。
+func loadNearbyFollowing(ctx context.Context, queryable persistence.Queryable, viewerID string, authorIDs []string) (map[string]bool, error) {
+	following := make(map[string]bool, len(authorIDs))
+	if viewerID == "" || len(authorIDs) == 0 {
+		return following, nil
+	}
+	rows, err := queryable.Query(ctx, queryNearbyFollowingUserIDs, viewerID, authorIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			return nil, err
+		}
+		following[userID] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return following, nil
 }
 
 // findNearbyCandidateStart 按游标定位候选起始下标（与 compareNearbyCandidates 同序）。
