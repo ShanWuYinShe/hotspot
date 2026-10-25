@@ -1816,3 +1816,37 @@ simple protocol 是把参数内联成字面量，所以旧实现没暴露。扫�
 ### 教训
 HTTP 聚合压测会掩盖 SQL 层收益：必须用代表性数据/参数测量，SQL 改动以 EXPLAIN ANALYZE 做 A/B，
 再用端到端压测确认没有退化（本轮默认参数下端点数字不变，属预期而非未生效）。
+
+## 搜索/关注流查询收敛：标签与可见性并入主查询（2026-10-25，第 56 轮）
+
+`users/search` 原 4 次数据库往返（主查询 + 标签批量 + settings 批量 + 关系批量），
+`moments/fetch_following` 原 5 次（主查询 + 标签批量 + 图片 + 反应 + 作者关系）。
+
+### 改动
+- `users/search`：主查询（本就 JOIN `user_settings`）顺带 SELECT 标签数组与
+  `presence_visible/location_visible/stats_visible` 三列；新增 `scanSearchProfileRow` 一次扫描；
+  `PaginatedProfiles.Settings` 为可选快路径，Service 命中时跳过 `GetSettingsBatch`；
+  内存仓库保持 nil 走原回退（行为不变）→ 4→3 次往返；
+- `moments/fetch_following`：主查询（≤limit+1 行）顺带 `array_agg` 标签，删除对 ≤21 行的
+  标签批量查询 → 5→4 次往返；响应字段语义不变；
+- 单测：搜索内联 settings 快路径断言「不调用 GetSettingsBatch」；stub 行补标签/可见性列；
+  users 覆盖率 69.8%→70.3%（门禁 70%）。
+
+### 压测（backend-test 同机 c=30、10s，同一访客 token 每轮新建）
+| 端点 | 改前基线 | 改后（两次测量） |
+|---|---|---|
+| `moments/fetch_following` | 3,027 RPS / p50 5.10 / p95 47.29ms | 3,595 / 4.05 / 48.88；3,270 / 4.60 / 50.09 |
+| `users/search`（keyword=abc，0 命中） | 1,637 / 8.26 / 67.48 | 1,489（首轮噪声）/ 1,838（复测）/ 7.64 / 65.52 |
+| `users/search`（keyword=游客，密集命中） | 未测（本轮首次测） | **174 RPS / p50 185.45 / p95 287.93ms** |
+
+结论：关注流往返减少带来约 +8~19% 吞吐（同机噪声较大，取区间）；搜索零命中场景无退化。
+
+### 新发现的遗留问题（下一轮目标）
+1–2 字符关键词（如「游客」）无法用 pg_trgm（要求 ≥3 字符），7.7k 用户下顺序扫描 +
+候选 500 行的逐行标签聚合，使密集短关键词搜索在 c=30 时 p50 达 185ms；
+下一步可把标签聚合推迟到分页后（keyword-only 搜索排序不依赖标签），并复核候选上限策略。
+
+### 验证
+- 工作树门禁 `ALL CHECKS PASSED`；主树 `verify-backend-ci.sh --all`：**ALL CHECKS PASSED**
+  （真实库 IT + ~100 条 HTTP E2E）；
+- 前端无改动；本轮后端提交 `4efd84ad`（HEAD 前移，v1.4.0 打 tag 前仍需对新 HEAD 重跑镜像构建与指纹核对）。
