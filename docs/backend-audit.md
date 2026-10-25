@@ -1533,3 +1533,29 @@ WebSocket 用例（此前 E2E 只有 HTTP，WS 仅 realtime 包单测）：
 
 验证：`BACKEND_URL=http://localhost:8082 go test -count=1 ./test/integration/` 全绿（6.3s，含原 92 个
 HTTP 用例与新增 WS 用例）；`-race` 门禁与 CI E2E job 同样执行该套件，后续 WS 协议回归有据可依。
+
+## Prometheus 告警规则（2026-10-25，第 47 轮）
+
+补 P0-3 缺口：此前 `observability` profile 只有 scrape，没有 alert rules。新增
+`docker/prometheus-alerts.yml`（7 条规则）并在 `prometheus.yml` 挂载，compose 增加只读卷：
+
+| 告警 | 表达式口径 | 级别 |
+|---|---|---|
+| HotspotBackendDown | `up{job=hotspot-backend} == 0` 持续 2m | critical |
+| HotspotHTTP5xxRateHigh | 5xx / 全部请求 > 1% 持续 5m（契约下业务错误是 HTTP 200，只覆盖框架级异常） | critical |
+| HotspotP99LatencyHigh | 全局 p99 > 1s 持续 10m | warning |
+| HotspotDBPoolStarved | `rate(pgxpool_empty_acquire_total[5m])` > 5/s 持续 10m | warning |
+| HotspotWSDroppedEvents | 出站事件丢弃速率 > 1/s 持续 10m | warning |
+| HotspotMemoryHigh | RSS > 850MiB 持续 10m（容器 limit 1g、GOMEMLIMIT 900MiB） | warning |
+| HotspotGoroutineLeak | `go_goroutines > 2000` 持续 15m | warning |
+
+**验证（本机实测）**：
+- `promtool check config /etc/prometheus/prometheus.yml` → `SUCCESS: 1 rule files found` /
+  `SUCCESS: 7 rules found`；
+- `docker compose --profile observability up -d prometheus` 启动后：
+  `/api/v1/rules` 返回 1 组 7 条规则，`/api/v1/targets` 显示 `hotspot-backend` target
+  `health=up`（lastScrapeDuration 33ms），`up{job="hotspot-backend"}=1`；验证后已停止该 profile；
+- CI Infra job 新增 `promtool check config` 步骤（镜像 tag 与 `PROMETHEUS_VERSION` 默认值 v3.4.1 对齐）。
+
+**未包含 Alertmanager**：外发通知（邮件/IM）需要单独部署 Alertmanager 并配置 receiver；
+当前告警仅在 Prometheus UI / Grafana 可见，接入方式在文件头注释说明，属部署侧决策。

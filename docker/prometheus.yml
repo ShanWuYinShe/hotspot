@@ -5,6 +5,10 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# 告警规则（阈值面向单机小规模部署，注释见文件内）。
+rule_files:
+  - /etc/prometheus/alerts.yml
+
 scrape_configs:
   # Go 后端：HTTP 请求指标 / WS 连接规模 / pgxpool 统计 / Go 运行时与进程。
   # 路径与端口即 backend 容器 8081（nginx 上游同名服务）。

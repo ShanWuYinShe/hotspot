@@ -110,6 +110,15 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.dev.yml config -q
           docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q
 
+      # promtool 校验 Prometheus 主配置与告警规则语法（规则文件改动时防漂移）。
+      # 镜像 tag 与 docker-compose.yml 的 PROMETHEUS_VERSION 默认值一致。
+      - name: prometheus config (promtool)
+        run: |
+          docker run --rm --entrypoint promtool \
+            -v "$PWD/docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro" \
+            -v "$PWD/docker/prometheus-alerts.yml:/etc/prometheus/alerts.yml:ro" \
+            prom/prometheus:v3.4.1 check config /etc/prometheus/prometheus.yml
+
       - name: nginx -t (base / dev / prod-tls)
         run: |
           set -eo pipefail

@@ -1,0 +1,88 @@
+# ── HotSpot 后端告警规则（observability profile）─────────────────────
+# 挂载为 Prometheus rule_files（docker-compose.yml services.prometheus）。
+# 阈值面向单机小规模部署，按实际流量与机器规格调整；注释给出判定口径。
+#
+# 注意：业务错误按契约返回 HTTP 200 + envelope code!=0，因此 5xx 比例只覆盖
+# 框架级异常（panic 恢复、网关错误）。业务错误率告警需要额外指标，当前不在
+# 本规则内（避免为低频错误引入高基数 label）。
+#
+# 外发通知（邮件/IM）需另起 Alertmanager 并配置 receiver；未接入时告警仅在
+# Prometheus UI / Grafana 可见。
+groups:
+  - name: hotspot-backend
+    rules:
+      # 抓取目标不可达：进程崩溃、端口不通、容器反复重启。
+      - alert: HotspotBackendDown
+        expr: up{job="hotspot-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HotSpot 后端不可达（{{ $labels.instance }}）"
+          description: "Prometheus 连续 2 分钟抓取 /metrics 失败：检查容器状态、端口与进程日志。"
+
+      # 框架级 5xx 比例：HTTP 非 200 仅用于恐慌恢复/网关异常，>1% 说明有实质故障。
+      - alert: HotspotHTTP5xxRateHigh
+        expr: |
+          sum(rate(http_requests_total{job="hotspot-backend",status=~"5.."}[5m]))
+            /
+          sum(rate(http_requests_total{job="hotspot-backend"}[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HotSpot 5xx 比例超过 1%"
+          description: "检查 panic 恢复日志（httpx.Recoverer）与容器 OOM/重启记录。"
+
+      # 全局 p99：跨路由汇总，超过 1s 说明整体响应明显退化（含慢查询/连接池排队）。
+      - alert: HotspotP99LatencyHigh
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le) (rate(http_request_duration_seconds_bucket{job="hotspot-backend"}[5m]))
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HotSpot HTTP p99 延迟 > 1s（10 分钟）"
+          description: "结合 pgxpool 指标与慢查询日志定位：会话校验/资料查询为认证路径主要开销。"
+
+      # 连接池吃紧：acquire 时池为空的累计速率持续 >5/s，说明已开始排队。
+      - alert: HotspotDBPoolStarved
+        expr: sum(rate(pgxpool_empty_acquire_total{job="hotspot-backend"}[5m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HotSpot 数据库连接池频繁取空"
+          description: "考虑调大 DB_MAX_CONNS / 数据库规格，或减少每请求查询（见审计 P1-4 会话缓存议题）。"
+
+      # WS 慢消费者丢事件：出站队列满会丢弃并累计，持续丢说明有客户端拖慢推送或连接异常。
+      - alert: HotspotWSDroppedEvents
+        expr: sum(rate(realtime_ws_dropped_events_total{job="hotspot-backend"}[5m])) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HotSpot WebSocket 出站事件持续被丢弃"
+          description: "排查慢客户端（大订阅量/弱网）与网络抖动；丢弃为保护服务端的预期降级。"
+
+      # 内存逼近容器上限（limit 1g，GOMEMLIMIT 900MiB）：>850MiB 持续 10 分钟需关注。
+      - alert: HotspotMemoryHigh
+        expr: process_resident_memory_bytes{job="hotspot-backend"} > 850 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HotSpot 后端 RSS 超过 850MiB"
+          description: "结合 go_goroutines 与流量判断是否泄漏；容器 limit 1g，超过会被 OOM kill。"
+
+      # goroutine 泄漏启发式：稳态通常在 20~60，>2000 并持续增长基本可判定泄漏。
+      - alert: HotspotGoroutineLeak
+        expr: go_goroutines{job="hotspot-backend"} > 2000
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HotSpot 后端 goroutine 数异常（>2000）"
+          description: "检查 worker/WS 连接/超时 context 泄漏；结合 pprof goroutine profile 定位。"
