@@ -104,5 +104,14 @@ func (s *Service) bootstrapVersion(ctx context.Context) string {
 	return fmt.Sprintf("%s:%s:%s", buildinfo.Version, s.provider.AppConfigVersion(ctx), annVersion)
 }
 
+// InvalidateAnnouncementsVersion 转发给 Repository 的公告版本读缓存失效。
+// admin 公告 create/update/delete 成功后由 bootstrap 接线调用：admin 用独立
+// systemRepo 实例写库，与 system 模块的 PostgresRepository 缓存互不可见，
+// 必须显式失效（否则 ETag/版本最长延迟 TTL 才变化）。内存仓库无缓存时为 no-op。
+func (s *Service) InvalidateAnnouncementsVersion() {
+	if invalidator, ok := s.repo.(interface{ InvalidateAnnouncementsVersion() }); ok {
+		invalidator.InvalidateAnnouncementsVersion()
+	}
+}
 func (s *Service) GetBootstrapResolver() BootstrapResolver  { return s.bootstrap }
 func (s *Service) SetBootstrapResolver(r BootstrapResolver) { s.bootstrap = r }

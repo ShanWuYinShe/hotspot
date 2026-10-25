@@ -29,6 +29,11 @@ type Service struct {
 	// 不主动失效会让被撤销会话在缓存 TTL 内继续可用。bootstrap 接线
 	// platformauth.Service.InvalidateSessionCache；nil 时跳过（单测/未接线场景）。
 	sessionCacheInvalidator func(sessionIDs ...string)
+	// announcementsVersionInvalidator 公告 create/update/delete 成功后失效 system
+	// 模块的公告版本缓存（bootstrap ETag）。admin 通过自己的 systemRepo 实例写库，
+	// 与 system 模块的缓存互不可见，必须显式失效；bootstrap 接线 system.Service 的
+	// InvalidateAnnouncementsVersion；nil 时跳过（单测/未接线场景）。
+	announcementsVersionInvalidator func()
 }
 
 type announcementPushService interface {
@@ -61,6 +66,17 @@ func (s *Service) SetBanCacheInvalidator(fn func(userIDs ...string)) {
 // SetSessionCacheInvalidator wires the platform auth session-cache invalidation hook.
 func (s *Service) SetSessionCacheInvalidator(fn func(sessionIDs ...string)) {
 	s.sessionCacheInvalidator = fn
+}
+
+// SetAnnouncementsVersionInvalidator wires the system announcement-version cache hook.
+func (s *Service) SetAnnouncementsVersionInvalidator(fn func()) {
+	s.announcementsVersionInvalidator = fn
+}
+
+func (s *Service) invalidateAnnouncementsVersion() {
+	if s.announcementsVersionInvalidator != nil {
+		s.announcementsVersionInvalidator()
+	}
 }
 
 func (s *Service) invalidateSessionCache(sessionIDs ...string) {

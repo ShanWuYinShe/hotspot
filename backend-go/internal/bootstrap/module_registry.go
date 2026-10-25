@@ -203,6 +203,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// update_account 的 avatar_file_id 归属校验接线（spec 10300）。
 	usersModule.Service.SetAvatarMediaResolver(mediaModule.Service)
 	adminModule := admin.NewModule(factory, sharedAppConfig, notificationService)
+	// 公告版本缓存失效接线：admin 用独立 systemRepo 实例写公告，显式让 system 模块
+	// 的 bootstrap 版本缓存失效（ETag 立即变化，不等 5s TTL）。
+	adminModule.Service.SetAnnouncementsVersionInvalidator(systemModule.Service().InvalidateAnnouncementsVersion)
 	// 举报快照源接线（spec api_spec_types.md ReportSnapshot：服务端生成）：
 	// 群聊 + 私聊两个消息源在各自模块构造完成后注入 reports；mediaFiles 经
 	// factory 解析媒体元数据，使 snapshot_media 为完整 MessageMedia。

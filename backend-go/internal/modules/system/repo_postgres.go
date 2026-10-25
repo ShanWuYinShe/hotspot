@@ -5,6 +5,7 @@ import (
 	"errors"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idgen"
+	"sync"
 	"time"
 
 	"hotspot/backend-go/internal/platform/observability"
@@ -26,9 +27,19 @@ type healthPinger func(ctx context.Context) error
 // balancer is polling it).
 const healthProbeTimeout = 2 * time.Second
 
+// annVersionCacheTTL 公告版本读缓存有效期。bootstrap 每请求都要读公告版本生成
+// ETag（queryAnnouncementsVersion 是 MAX 扫描），公告变更是低频事件，缓存后
+// 每请求 DB 读取 3→2。同实例写路径（本仓库 Create/Update/Delete）与 admin 模块
+// 的跨实例写入都显式失效；绕过失效钩子的写入以本 TTL 兜底。
+const annVersionCacheTTL = 5 * time.Second
+
 type PostgresRepository struct {
 	factory     *persistence.Factory
 	redisPinger healthPinger
+
+	annVersionMu       sync.Mutex
+	annVersionCache    string
+	annVersionCachedAt time.Time
 }
 
 func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
@@ -54,8 +65,18 @@ func (r *PostgresRepository) GetMeta(ctx context.Context) ApiVersionMeta {
 	return ApiVersionMeta{Version: "v1", Status: ApiVersionStatusActive}
 }
 
-// AnnouncementsVersion 公告域变更指纹（queryAnnouncementsVersion）。
+// AnnouncementsVersion 公告域变更指纹（queryAnnouncementsVersion），带进程内读缓存。
+// 查询失败不缓存（避免故障窗口固化空版本）；写路径成功后主动失效。
 func (r *PostgresRepository) AnnouncementsVersion(ctx context.Context) (string, error) {
+	now := time.Now()
+	r.annVersionMu.Lock()
+	if !r.annVersionCachedAt.IsZero() && now.Sub(r.annVersionCachedAt) < annVersionCacheTTL {
+		version := r.annVersionCache
+		r.annVersionMu.Unlock()
+		return version, nil
+	}
+	r.annVersionMu.Unlock()
+
 	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return "", err
@@ -64,7 +85,19 @@ func (r *PostgresRepository) AnnouncementsVersion(ctx context.Context) (string, 
 	if err := queryable.QueryRow(ctx, queryAnnouncementsVersion).Scan(&version); err != nil {
 		return "", err
 	}
+	r.annVersionMu.Lock()
+	r.annVersionCache = version
+	r.annVersionCachedAt = now
+	r.annVersionMu.Unlock()
 	return version, nil
+}
+
+// InvalidateAnnouncementsVersion 让公告版本读缓存失效（同实例写成功/跨实例钩子）。
+func (r *PostgresRepository) InvalidateAnnouncementsVersion() {
+	r.annVersionMu.Lock()
+	r.annVersionCache = ""
+	r.annVersionCachedAt = time.Time{}
+	r.annVersionMu.Unlock()
 }
 
 // Health probes the dependencies the service actually depends on (Postgres and,
@@ -143,6 +176,7 @@ func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, input Annou
 	); err != nil {
 		return AnnouncementRecord{}, err
 	}
+	r.InvalidateAnnouncementsVersion()
 	return item, nil
 }
 
@@ -180,6 +214,7 @@ func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, input Annou
 	); err != nil {
 		return AnnouncementRecord{}, err
 	}
+	r.InvalidateAnnouncementsVersion()
 	return current, nil
 }
 
@@ -198,7 +233,11 @@ func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, announcemen
 	if current.IsDeleted() {
 		return nil
 	}
-	return queryable.Exec(ctx, queryDeleteAnnouncement, announcementID, time.Now().UTC())
+	if err := queryable.Exec(ctx, queryDeleteAnnouncement, announcementID, time.Now().UTC()); err != nil {
+		return err
+	}
+	r.InvalidateAnnouncementsVersion()
+	return nil
 }
 
 func nullableAnnouncementString(value string) any {
