@@ -27,10 +27,6 @@
     {
       "name": "common_loading",
       "value": "Loading..."
-    },
-    {
-      "name": "distributed_sync_reason",
-      "value": "We need distributed data sync permission to support multi-device collaboration"
     }
   ]
 }

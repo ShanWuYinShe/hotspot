@@ -221,6 +221,7 @@ WebSocket 契约以 `spec/api_spec_websocket.md` 为权威来源，本节仅列�
 
 - 与 HTTP 共享同一套 auth 机制
 - 连接建立后 5 秒内必须收到 Auth，否则发送 `Error(code=20000, severity=fatal)` 并断开
+- 原生客户端（鸿蒙等）不受浏览器限制，实测以 `Origin: null` 升级：`sameOrigin` 仅对**无 Cookie** 的 null Origin 放行（此类客户端靠升级后的 Auth 事件令牌鉴权），带 Cookie 的 null Origin 仍按跨站拒绝，CSWSH 防护不降低（2026-10-25 实测修复，见 `internal/platform/realtime/handler.go`）
 - 心跳参数由服务端下发，客户端不得硬编码
 - 多实例部署时必须配置跨实例 fanout（RedisBridge），否则跨实例事件丢失
 

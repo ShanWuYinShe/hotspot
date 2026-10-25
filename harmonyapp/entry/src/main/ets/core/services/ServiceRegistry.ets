@@ -6,7 +6,6 @@
 import { LazyServiceManager, ServiceLifecycle, registerService } from './LazyServiceManager';
 import { CacheManager } from '../cache/CacheManager';
 import { SmartNotificationService } from './SmartNotificationService';
-import { DistributedSyncService } from './DistributedSyncService';
 import { AccessibilityManager } from '../accessibility/AccessibilityManager';
 import { I18nManager } from '../i18n/I18nManager';
 import { LogManager } from '../utils/LogManager';
@@ -27,7 +26,6 @@ const logger = createLogger('ServiceRegistry');
 export interface ServiceRegistryConfig {
   enableCacheManager: boolean;
   enableSmartNotification: boolean;
-  enableDistributedSync: boolean;
   enableAccessibility: boolean;
   enableI18n: boolean;
 }
@@ -38,7 +36,6 @@ export interface ServiceRegistryConfig {
 const DEFAULT_CONFIG: ServiceRegistryConfig = {
   enableCacheManager: true,
   enableSmartNotification: true,
-  enableDistributedSync: true,
   enableAccessibility: true,
   enableI18n: true
 };
@@ -71,7 +68,6 @@ export class ServiceRegistry {
     return {
       enableCacheManager: config.enableCacheManager,
       enableSmartNotification: config.enableSmartNotification,
-      enableDistributedSync: config.enableDistributedSync,
       enableAccessibility: config.enableAccessibility,
       enableI18n: config.enableI18n
     };
@@ -87,9 +83,6 @@ export class ServiceRegistry {
     }
     if (partial.enableSmartNotification !== undefined) {
       result.enableSmartNotification = partial.enableSmartNotification;
-    }
-    if (partial.enableDistributedSync !== undefined) {
-      result.enableDistributedSync = partial.enableDistributedSync;
     }
     if (partial.enableAccessibility !== undefined) {
       result.enableAccessibility = partial.enableAccessibility;
@@ -182,18 +175,7 @@ export class ServiceRegistry {
       });
     }
 
-    // 5. 注册分布式同步服务
-    if (this.config.enableDistributedSync) {
-      registerService({
-        name: 'DistributedSyncService',
-        factory: () => DistributedSyncService.getInstance(),
-        lifecycle: ServiceLifecycle.SINGLETON,
-        dependencies: ['LogManager', 'ErrorHandler', 'EventBus'],
-        tags: ['feature', 'distributed']
-      });
-    }
-
-    // 6. 注册无障碍服务
+    // 5. 注册无障碍服务
     if (this.config.enableAccessibility) {
       registerService({
         name: 'AccessibilityManager',
@@ -258,12 +240,6 @@ export class ServiceRegistry {
         const i18nManager = await this.lazyServiceManager.get<I18nManager>('I18nManager');
         i18nManager.setContext(context);
         await i18nManager.initialize();
-      }
-
-      // 初始化分布式同步服务
-      if (this.config.enableDistributedSync) {
-        const distributedService = await this.lazyServiceManager.get<DistributedSyncService>('DistributedSyncService');
-        await distributedService.initialize(context);
       }
 
       logger.info('Context服务初始化完成');

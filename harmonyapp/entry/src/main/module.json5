@@ -46,14 +46,6 @@
           "when": "inuse"
         }
       },
-      {
-        "name": "ohos.permission.DISTRIBUTED_DATASYNC",
-        "reason": "$string:distributed_sync_reason",
-        "usedScene": {
-          "abilities": ["EntryAbility"],
-          "when": "inuse"
-        }
-      }
     ],
     "abilities": [
       {

@@ -1,8 +1,10 @@
 /**
- * 通知订阅页面
- * TODO: Notification subscriptions and device token APIs are not in the backend spec yet.
- * This page uses local AppStorage/PreferencesUtil for client-side preferences only.
- * When backend spec defines subscription APIs, migrate to API calls.
+ * 通知偏好页面（客户端本地生效）
+ *
+ * 后端 spec 目前没有通知订阅接口，因此本页偏好在客户端过滤应用内通知横幅：
+ * 展示前由 NotificationPreferences 读取（总开关在「设置 → 推送通知」），
+ * 只有用户显式关闭的类型才拦截；通知中心历史与未读仍由服务端维护。
+ * 若将来 spec 增加订阅 API，只需把 NotificationPreferences 改为服务端读写即可。
  */
 import { StorageKeys, PageNames } from '../../../constants/AppConstants';
 import { PageShellContainer } from '../../../components/PageShellContainer';
@@ -15,6 +17,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemToggle } from '../../../components/SystemToggle';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
+import { SUBSCRIPTIONS_PREF_KEY, NotificationSubscriptionPrefs } from '../../../core/services/NotificationPreferences';
 import { TokenAssetStore } from '../../../core/storage/TokenAssetStore';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -23,25 +26,9 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
 
-const SUBSCRIPTIONS_STORAGE_KEY = 'notification_subscriptions';
-
-// Local subscription preferences (client-side only; no backend API)
-interface LocalSubscriptionPrefs {
-  new_follower_enabled?: boolean;
-  mutual_follow_enabled?: boolean;
-  group_invite_enabled?: boolean;
-  group_invite_response_enabled?: boolean;
-  group_application_enabled?: boolean;
-  group_application_response_enabled?: boolean;
-  message_mention_enabled?: boolean;
-  moment_like_enabled?: boolean;
-  moment_comment_enabled?: boolean;
-  comment_reply_enabled?: boolean;
-  system_announcement_enabled?: boolean;
-}
 
 interface SubscriptionItem {
-  key: keyof LocalSubscriptionPrefs;
+  key: keyof NotificationSubscriptionPrefs;
   icon: AppIcon;
   title: string;
   description: string;
@@ -54,7 +41,7 @@ export struct SubscriptionsPage {
   pathStack: NavPathStack = new NavPathStack();
   @State private loading: boolean = true;
   @State private savingKey: string = '';
-  @State private data: LocalSubscriptionPrefs | null = null;
+  @State private data: NotificationSubscriptionPrefs | null = null;
   // 页面级加载失败态：失败时明确告知当前展示的是兜底默认值（否则用户无从分辨）
   @State private loadError: boolean = false;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -125,7 +112,7 @@ export struct SubscriptionsPage {
     this.loading = true;
     this.loadError = false;
     try {
-      const stored = await PreferencesUtil.getObject<LocalSubscriptionPrefs>(SUBSCRIPTIONS_STORAGE_KEY);
+      const stored = await PreferencesUtil.getObject<NotificationSubscriptionPrefs>(SUBSCRIPTIONS_PREF_KEY);
       if (this.isDestroyed) return;
       this.data = stored ?? this.getDefaultPrefs();
     } catch (e) {
@@ -137,7 +124,7 @@ export struct SubscriptionsPage {
     }
   }
 
-  private getDefaultPrefs(): LocalSubscriptionPrefs {
+  private getDefaultPrefs(): NotificationSubscriptionPrefs {
     return {
       new_follower_enabled: true,
       mutual_follow_enabled: true,
@@ -153,20 +140,20 @@ export struct SubscriptionsPage {
     };
   }
 
-  private getValue(key: keyof LocalSubscriptionPrefs): boolean {
+  private getValue(key: keyof NotificationSubscriptionPrefs): boolean {
     if (!this.data) return false;
     const dataRecord = (this.data as Object) as Record<string, boolean>;
-    return dataRecord[key as string] ?? false;
+    return dataRecord[key as string] ?? true;
   }
 
-  private setValue(key: keyof LocalSubscriptionPrefs, value: boolean): void {
+  private setValue(key: keyof NotificationSubscriptionPrefs, value: boolean): void {
     if (!this.data) return;
     const dataRecord = (this.data as Object) as Record<string, boolean>;
     dataRecord[key as string] = value;
-    this.data = (dataRecord as Object) as LocalSubscriptionPrefs;
+    this.data = (dataRecord as Object) as NotificationSubscriptionPrefs;
   }
 
-  private async update(key: keyof LocalSubscriptionPrefs, value: boolean): Promise<void> {
+  private async update(key: keyof NotificationSubscriptionPrefs, value: boolean): Promise<void> {
     if (this.isDestroyed) return;
     if (!this.data) return;
     if (this.savingKey) return;
@@ -176,7 +163,7 @@ export struct SubscriptionsPage {
     this.setValue(key, value);
 
     try {
-      await PreferencesUtil.setObject(SUBSCRIPTIONS_STORAGE_KEY, this.data);
+      await PreferencesUtil.setObject(SUBSCRIPTIONS_PREF_KEY, this.data);
       if (this.isDestroyed) return;
       SystemToast.showSuccess('已保存', this.getUIContext());
     } catch (e) {

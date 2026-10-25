@@ -116,6 +116,7 @@ Lint & Format: 依赖 DevEco Studio IDE 内置检查；`harmonyapp/code-linter.j
 - `WebSocketService` 单例管理连接，支持鉴权、心跳、自动重连
 - 事件类型定义在 `core/types/WebSocketTypes.ets`，必须与 spec 一致
 - 可定义镜像类型，不得扩展 spec 中未定义的事件
+- 原生 WebSocket 不受浏览器语义约束：连接时显式携带与服务端同源的 `Origin`（见 `WebSocketUtil`），后端对无 Cookie 的 `Origin: null` 也放行；用户切换/冷启动后由 `Index` 按访问令牌补连（`onLoginStateChanged` + 有限重试），避免「已登录但不建立实时通道」
 
 ## 位置与距离
 

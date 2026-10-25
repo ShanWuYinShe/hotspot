@@ -2,7 +2,7 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "GeoTalk - 基于地理位置的社交应用"
+      "value": "HotSpot - 基于地理位置的社交应用"
     },
     {
       "name": "EntryAbility_desc",
@@ -10,7 +10,7 @@
     },
     {
       "name": "EntryAbility_label",
-      "value": "GeoTalk"
+      "value": "HotSpot"
     },
     {
       "name": "location_reason",
@@ -27,10 +27,6 @@
     {
       "name": "common_loading",
       "value": "加载中..."
-    },
-    {
-      "name": "distributed_sync_reason",
-      "value": "需要分布式数据同步权限以支持多设备协同"
     }
   ]
 }

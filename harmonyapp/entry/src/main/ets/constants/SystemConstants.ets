@@ -2,6 +2,7 @@
  * 系统级配置常量
  * 统一管理所有硬编码的配置值和魔法数字
  */
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 /**
  * 缓存配置接口
@@ -622,7 +623,7 @@ export class ConstantValidator {
       
       return true;
     } catch (error) {
-      console.error('常量验证失败:', error);
+      hilog.error(0xFF00, 'SystemConstants', '常量验证失败: %{public}s', String(error));
       return false;
     }
   }

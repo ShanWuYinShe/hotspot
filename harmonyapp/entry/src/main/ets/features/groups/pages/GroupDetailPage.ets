@@ -47,7 +47,6 @@ import {
 } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
-import { DistributedSyncService, SyncData } from '../../../core/services/DistributedSyncService';
 import { SmartNotificationService } from '../../../core/services/SmartNotificationService';
 import { AccessibilityManager } from '../../../core/accessibility/AccessibilityManager';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
@@ -70,12 +69,6 @@ import { LucideIcon } from '../../../components/LucideIcon';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 
-interface GroupSyncData {
-  groupId: string;
-  groupInfo: Object;
-  members: Object[];
-  lastViewed: number;
-}
 
 const DOMAIN_NUMBER: number = 0xFF17;
 const TAG: string = 'GroupDetailPage';
@@ -105,7 +98,6 @@ export struct GroupDetailPage {
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   
   private stateManager = GlobalStateManager.getInstance();
-  private distributedSyncService = DistributedSyncService.getInstance();
   private smartNotificationService = SmartNotificationService.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
   @State groupInfo: GroupItem | null = null;
@@ -261,7 +253,6 @@ export struct GroupDetailPage {
         if (response.code === 0 && response.data) {
           this.groupInfo = response.data;
           this.isMember = this.groupInfo.viewer_state != null;
-          await this.syncGroupData();
           await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group?.name ?? ''}`);
           // 公告 Tab 数据（对齐前端 AnnouncementsList）
           this.loadGroupAnnouncements();
@@ -1436,31 +1427,6 @@ export struct GroupDetailPage {
     }
   }
 
-  private async syncGroupData(): Promise<void> {
-    if (!this.groupInfo) return;
-    const userId = await AuthAccountManager.getCurrentUserId();
-    if (!userId) return;
-    try {
-      const syncDataObject: GroupSyncData = {
-        groupId: this.groupId,
-        groupInfo: this.groupInfo,
-        members: this.members,
-        lastViewed: Date.now()
-      };
-      
-      const syncData: SyncData = {
-        userId: userId,
-        dataType: 'groups',
-        data: syncDataObject,
-        timestamp: Date.now(),
-        deviceId: 'current_device'
-      };
-      
-      await this.distributedSyncService.syncUserData(syncData);
-    } catch {
-      hilog.error(DOMAIN_NUMBER, TAG, '同步群组数据失败');
-    }
-  }
 
   build() {
     NavDestination() {

@@ -21,6 +21,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SmartNotificationService, NotificationEvent, CreateNotificationInput, NotificationMetadata, CreateNotificationOptions } from '../../../core/services/SmartNotificationService';
 import { NotificationSyncService } from '../../../core/services/NotificationSyncService';
+import { NotificationPreferences } from '../../../core/services/NotificationPreferences';
 import { CacheManager } from '../../../core/cache/CacheManager';
 import { NotificationCenter } from '../../../components/NotificationCenter';
 import { PerformanceIndicator } from '../../../components/PerformanceIndicator';
@@ -89,7 +90,8 @@ struct Index {
   /** Navigation 路由栈 */
   @Provide('NavPathStack') navPathStack: NavPathStack = new NavPathStack();
 
-  @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
+  @StorageLink(KEY_CURRENT_USER) @Watch('onLoginStateChanged') currentUser: AccountInfo | null = null;
+  private wsInitRetryCount: number = 0;
   @StorageLink(KEY_IS_LOGGED_IN) @Watch('onLoginStateChanged') isLoggedIn: boolean = false;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_UNREAD_COUNT) unreadCount: UnreadCount = { total_unread_count: 0 };
@@ -310,7 +312,11 @@ struct Index {
     AppThemeManager.refreshResolvedThemePublic();
     if (this.isLoggedIn) {
       await this.notificationSyncService.syncUnreadCount().catch(() => {});
+      // 冷启动时 AppStorage 登录态可能晚于初始化就绪：在此补连 WS（connect 内部幂等，已连接会跳过）。
+      // 登录切换同样走这里，避免依赖各登录入口各自 connect 导致遗漏。
+      await this.initializeWebSocket();
     } else {
+      this.webSocketService.disconnect();
       this.notificationSyncService.reset();
       this.stateManager.updateUnreadCount({ total_unread_count: 0 });
     }
@@ -437,12 +443,20 @@ struct Index {
   private async initializeWebSocket() {
     try {
       hilog.info(DOMAIN_NUMBER, TAG, '🔌 初始化WebSocket连接');
-      if (this.isLoggedIn && this.currentUser) {
-        const token = await this.getAccessToken();
-        if (token) {
-          await this.webSocketService.connect(token);
-          this.bindWsNotificationsOnce();
-        }
+      // 以「能否取到访问令牌」为准而不是 isLoggedIn：冷启动/静默刷新后
+      // AppStorage 的登录标记可能滞后于 Token 恢复，仅看标记会漏建立 WS。
+      const token = await this.getAccessToken();
+      if (token) {
+        this.bindWsNotificationsOnce();
+        this.wsInitRetryCount = 0;
+        await this.webSocketService.connect(token);
+        return;
+      }
+      // 冷启动时 PersistentStorage 的登录态/令牌异步恢复，可能晚于首页初始化：
+      // 有限次延迟重试，避免「已有登录态但原地不建立 WS」导致实时通道缺失。
+      if (this.wsInitRetryCount < 6) {
+        this.wsInitRetryCount++;
+        setTimeout(() => { void this.initializeWebSocket(); }, 800);
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `WebSocket初始化失败: ${error}`);
@@ -471,6 +485,16 @@ struct Index {
     metadata: NotificationMetadata,
     syncUnread: boolean = false
   ): Promise<void> {
+    // 本地通知偏好（服务端无订阅 API）：总开关 + 按类型订阅在弹出前判定；
+    // 关闭时仅跳过应用内横幅，通知中心历史与未读仍由服务端维护（见 NotificationPreferences）。
+    const notificationAllowed = await NotificationPreferences.isNotificationAllowed(metadata.type ?? '');
+    if (!notificationAllowed) {
+      hilog.debug(DOMAIN_NUMBER, TAG, '本地通知偏好已关闭，跳过应用内通知: %{public}s', metadata.type ?? '');
+      if (syncUnread) {
+        await this.notificationSyncService.syncUnreadCount();
+      }
+      return;
+    }
     const notifInput: CreateNotificationInput = {
       type: category,
       priority: priority,

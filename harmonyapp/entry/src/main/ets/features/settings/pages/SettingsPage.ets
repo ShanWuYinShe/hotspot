@@ -475,7 +475,7 @@ export struct SettingsPage {
       {
         icon: AppIcon.NOTIFICATION,
         title: '通知偏好',
-        subtitle: '管理当前设备上的提醒类型与订阅偏好',
+        subtitle: '管理当前设备上的应用内提醒类型（本机生效）',
         action: () => {
           if (this.requireLogin('管理通知偏好', PageNames.SUBSCRIPTIONS)) {
             AppRouter.push(PageNames.SUBSCRIPTIONS);
@@ -728,7 +728,7 @@ export struct SettingsPage {
                       SettingsToggleRow({
                         icon: AppIcon.NOTIFICATION,
                         title: '推送通知',
-                        subtitle: '消息、提及与新动态提醒（仅本机）',
+                        subtitle: '消息、提及与新动态的应用内提醒（仅本机）',
                         isOn: this.pushNotifyEnabled,
                         onToggle: (next: boolean) => { this.togglePushNotify(next); }
                       })

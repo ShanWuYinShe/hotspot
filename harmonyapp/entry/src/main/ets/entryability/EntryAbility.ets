@@ -224,13 +224,16 @@ export default class EntryAbility extends UIAbility {
    */
   private async initializeNotifications(): Promise<void> {
     try {
-      // 请求通知权限 - 使用最新API
-      await notificationManager.isNotificationEnabled().then(async (enabled) => {
-        if (!enabled) {
-          // 引导用户到设置页面开启通知
-          hilog.info(DOMAIN_NUMBER, TAG, '通知权限未开启，请在设置中开启');
+      const enabled = await notificationManager.isNotificationEnabled();
+      if (!enabled) {
+        // 首次安装/用户关闭后主动拉起系统授权弹窗（1600004=已拒绝、1600013=弹窗已在展示，均不阻塞启动）
+        try {
+          await notificationManager.requestEnableNotification(this.context);
+          hilog.info(DOMAIN_NUMBER, TAG, '已请求通知授权');
+        } catch (requestError) {
+          hilog.info(DOMAIN_NUMBER, TAG, '通知授权未完成: %{public}s', JSON.stringify(requestError));
         }
-      });
+      }
 
       // 创建通知渠道
       await notificationManager.addSlot(notificationManager.SlotType.SOCIAL_COMMUNICATION);

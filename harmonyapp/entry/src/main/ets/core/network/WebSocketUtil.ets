@@ -26,6 +26,16 @@ export class WebSocketUtil {
     return WebSocketUtil.instance;
   }
 
+  /** 由 ws(s) 地址推导同源 Origin（http(s)://host[:port]），去掉 /ws 路径 */
+  private static buildOriginHeader(wsUrl: string): string {
+    let url = wsUrl;
+    const wsPathIndex = url.indexOf('/ws');
+    if (wsPathIndex >= 0) {
+      url = url.substring(0, wsPathIndex);
+    }
+    return url.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+  }
+
   /**
    * 连接WebSocket
    */
@@ -72,8 +82,12 @@ export class WebSocketUtil {
         reject(err);
       });
 
+      // 显式携带 Origin：鸿蒙原生 WebSocket 不保证发送浏览器式 Origin，
+      // 实测会以 `Origin: null` 发出；后端 CSWSH 防护把 Origin≠Host 视为跨站并返回 403。
+      // 这里按连接地址推导同源 Origin（ws:// → http://，wss:// → https://，去掉 /ws 路径），
+      // 与 nginx 转发的 Host（$http_host）一致，既通过同源校验也不放宽服务端防护。
       const options: webSocket.WebSocketRequestOptions = {
-        header: {}
+        header: { 'Origin': WebSocketUtil.buildOriginHeader(this.url) }
       };
 
       this.ws.connect(this.url, options);
