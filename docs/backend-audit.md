@@ -1777,3 +1777,42 @@ simple protocol 是把参数内联成字面量，所以旧实现没暴露。扫�
 ### 发版影响
 该改动已合入 main（`b11ab0ba` + `200ae1ae`），v1.4.0 的候选 HEAD 因此前移；
 打 tag 前需按发布门禁**对新 HEAD 重跑**生产镜像本地构建与 OCI 指纹核对（前端无改动，browser QA 结论仍有效）。
+
+## fetch_nearby 候选集裁剪：只对分页结果补全标签/收藏（2026-10-25，第 55 轮）
+
+`moments/fetch_nearby` 原实现拉取最多 2000 个候选行后，对每个候选行执行 6 个相关子查询，
+再对**全部候选**加载标签，最后才分页出 ≤20 条。梳理发现：
+
+- `is_liked` EXISTS：SQL 扫描后在 Go 里一直 `_ = isLiked`（契约已无该字段，reactions 聚合另行填充）——纯浪费；
+- `is_favorited` EXISTS：响应需要，但只需分页后 ≤21 条，不需要对 2000 个候选逐行判断；
+- 标签同理：排序（距离/热度/时间/ID）不依赖标签，无需全量加载。
+
+### 改动
+- `queryNearbyMoments`：删除 is_liked、is_favorited 两个 EXISTS；保留排序所需的 is_following、
+  点赞实时 COUNT 与双向拉黑过滤；
+- `queryFollowingMoments`：同步删除未使用的 is_liked EXISTS；
+- 分页后用页面 ID 批量加载 tags（原有 `loadMomentTags`）与 favorites（新增 `loadMomentFavorites` +
+  `queryMomentFavoritesByIDs`），响应字段语义不变。
+
+### SQL 层 A/B（同库 1032 条候选、同参数，EXPLAIN ANALYZE）
+| 版本 | Execution Time | Planning Time | Buffers |
+|---|---|---|---|
+| 旧（6 个逐行子查询） | 12.500 ms | 5.929 ms | 838 |
+| 新（4 个逐行子查询，标签/收藏页面级） | **4.997 ms** | **2.256 ms** | 782 |
+
+### 端到端压测（backend-test 同机 c=10、10s）——注意测法坑
+- **默认请求（不传 reference_point）** 走存储位置/default_location 回退，
+  hotspot_test 的 1032 条种子瞬间集中在同一点，回退点命中的候选集很小：
+  改前 739 RPS / p50 5.95 / p95 64.24ms，改后 686 RPS / p50 6.16 / p95 65.62ms——**在噪声内，无差异**；
+- **显式 reference_point 指向种子聚类点**（候选集 1032 条）：改后 257 RPS / p50 32.49 / p95 72.82ms；
+  旧二进制未单独构建，故该场景以 SQL 层 A/B 为准（旧 SQL 每次多 ~7.5ms）；
+- 结论：本次收益在候选集稠密时生效；候选集稀疏时端点被 Go 排序/批量补全主导，SQL 收益被摊薄。
+
+### 语义验证（真实库）
+- 新建带标签瞬间 → `set_favorite(active=true)` → `fetch_nearby`（reference_point 指向该点）：
+  页面内能查到该条，`tags=["sem3-tag"]`、`is_favorited=true`，与分页后补全逻辑一致；
+- 工作树门禁 + 主树 `verify-backend-ci.sh --all`：**ALL CHECKS PASSED**（真实库 IT + ~100 条 E2E）。
+
+### 教训
+HTTP 聚合压测会掩盖 SQL 层收益：必须用代表性数据/参数测量，SQL 改动以 EXPLAIN ANALYZE 做 A/B，
+再用端到端压测确认没有退化（本轮默认参数下端点数字不变，属预期而非未生效）。
