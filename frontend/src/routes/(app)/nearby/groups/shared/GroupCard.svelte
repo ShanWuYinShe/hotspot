@@ -98,7 +98,7 @@
 {#if !featured && verticalTall}
 	<!-- 竖高格：流式信息卡（图上 4:3 + 信息下方，高度自适应、不铺满格子） -->
 	<article
-		class="card-hover isolate group relative w-full overflow-hidden rounded-md border border-border-default bg-surface-primary [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
+		class="card-hover isolate group relative w-full overflow-hidden rounded-2xl border border-border-subtle/60 bg-surface-primary/95 shadow-xs hover:shadow-raised-sm transition-all duration-standard [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
 	>
 		<div class="relative">
 			{#if group.banner}
@@ -136,7 +136,7 @@
 		imageAlt={group.name}
 		onClick={onOpen}
 		horizontal={featured ? horizontal : autoLandscape}
-		class={featured ? (horizontal ? 'rounded-md min-h-56' : 'rounded-md min-h-64') : 'rounded-md aspect-[4/3]'}
+		class={featured ? (horizontal ? 'rounded-2xl min-h-56 border-border-subtle/60 shadow-xs hover:shadow-raised-sm' : 'rounded-2xl min-h-64 border-border-subtle/60 shadow-xs hover:shadow-raised-sm') : 'rounded-2xl aspect-[4/3] border-border-subtle/60 shadow-xs hover:shadow-raised-sm'}
 	>
 		{#snippet placeholder()}
 			<span class="text-accent-default {featured ? 'text-4xl' : 'text-3xl'} font-semibold">{Array.from(group.name)[0] ?? '群'}</span>

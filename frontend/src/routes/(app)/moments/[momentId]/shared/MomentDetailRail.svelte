@@ -19,9 +19,9 @@
 	} = $props();
 </script>
 
-<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-4 py-2">
 	{#if moment.user}
-		<RailSection title="作者" variant="bare">
+		<RailSection title="作者" variant="island">
 			<RailUserRow avatar={moment.avatar} name={moment.user} sub={moment.location} onClick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}>
 				{#snippet trailing()}
 					<button
@@ -40,16 +40,14 @@
 	{/if}
 
 	{#if moment.location}
-		<div class="h-px bg-border-subtle/40"></div>
-		<RailSection title="相关位置" variant="bare">
+		<RailSection title="相关位置" variant="island">
 			<RailLocationMini name={moment.location} />
 		</RailSection>
 	{/if}
 
 	<!-- 此刻附近（moments/fetch_nearby） -->
 	{#if nearbyNow.length > 0}
-		<div class="h-px bg-border-subtle/40"></div>
-		<RailSection title="此刻附近" variant="bare" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)}>
+		<RailSection title="此刻附近" variant="island" action="查看全部" onAction={() => void goto(ROUTES.nearbyPeople)}>
 			<div class="flex flex-col gap-3">
 				{#each nearbyNow as u (u.id)}
 					<RailUserRow avatar={u.avatar} name={u.name} sub={u.sub} onClick={() => { if (u.id) void goto(ROUTES.user(u.id)); }} />
@@ -60,8 +58,7 @@
 
 	<!-- 更多动态（moments/search） -->
 	{#if relatedMoments.length > 0}
-		<div class="h-px bg-border-subtle/40"></div>
-		<RailSection title="更多动态" variant="bare" action="发现" onAction={() => void goto(ROUTES.nearbyMoments)}>
+		<RailSection title="更多动态" variant="island" action="发现" onAction={() => void goto(ROUTES.nearbyMoments)}>
 			<div class="flex flex-col gap-3">
 				{#each relatedMoments as p (p.id)}
 					<RailMomentThumb image={p.image} title={p.title} meta={p.meta} onClick={() => void goto(ROUTES.moment(p.id))} />

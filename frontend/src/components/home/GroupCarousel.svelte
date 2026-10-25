@@ -41,7 +41,7 @@
 				imageSrc={g.banner}
 				imageAlt={g.name}
 				onClick={() => openGroup(g.id)}
-				class="aspect-square w-35 shrink-0 rounded-md"
+				class="aspect-square w-35 shrink-0 rounded-2xl border-border-subtle/60 shadow-xs hover:shadow-raised-sm"
 			>
 				{#snippet placeholder()}
 					<span class="text-accent-default text-3xl font-semibold">{Array.from(g.name)[0] ?? '群'}</span>

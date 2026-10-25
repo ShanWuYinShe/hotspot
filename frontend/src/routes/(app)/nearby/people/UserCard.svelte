@@ -50,7 +50,7 @@
 	imageAlt={user.name}
 	onClick={onNavigate}
 	onImageError={() => (avatarFailed = true)}
-	class="rounded-md aspect-[3/4]"
+	class="rounded-2xl aspect-[3/4] border-border-subtle/60 shadow-xs hover:shadow-raised-sm transition-all duration-standard"
 >
 	{#snippet placeholder()}
 		<span class="flex items-center justify-center rounded-full bg-accent-soft size-16">
@@ -67,7 +67,7 @@
 	{/if}
 
 	{#snippet footer()}
-		<div class="px-3 pt-2.5 pb-2.5">
+		<div class="px-3.5 pt-3 pb-3 bg-surface-primary/90 backdrop-blur-xs">
 			<div>
 				<!-- 在线点紧贴昵称右侧（Gemini UI 审查：原 justify-between 把绿点推到行尾，
 				     与昵称视觉割裂）；行内状态点统一 8px 档（审查 M3：9px 近邻异档归并） -->
@@ -82,7 +82,7 @@
 				</p>
 				<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>
 			</div>
-			<div class="mt-2 flex items-center justify-between gap-2">
+			<div class="mt-2.5 flex items-center justify-between gap-2">
 				{#if user.tag}
 					<span class="badge bg-accent-soft text-accent-default">#{user.tag}</span>
 				{:else}

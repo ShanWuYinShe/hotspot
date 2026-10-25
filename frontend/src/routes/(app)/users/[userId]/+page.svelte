@@ -449,33 +449,35 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	{#snippet rail()}
 	<!-- 空数据不占卡：加载失败/无位置/无标签时整卡隐藏（此前失败态与无标签用户都留空框） -->
-	{#if user.location}
-	<RailSection title="所在位置">
-		<RailLocationMini name={user.location} />
-	</RailSection>
-	{/if}
+	<div class="flex flex-col gap-4 py-2">
+		{#if user.location}
+		<RailSection title="所在位置" variant="island">
+			<RailLocationMini name={user.location} />
+		</RailSection>
+		{/if}
 
-	{#if user.tags.length > 0}
-	<RailSection title="兴趣标签">
-		<div class="flex gap-2 flex-wrap">
-			{#each user.tags as t (t)}
-				<span class="inline-flex h-6 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xs font-medium leading-none text-accent-default">
-					#{t}
-				</span>
-			{/each}
-		</div>
-	</RailSection>
-	{/if}
-
-	{#if mutualFriends.length > 0}
-		<RailSection title="共同好友">
-			<div class="flex flex-col gap-3">
-				{#each mutualFriends as f (f.id)}
-					<RailUserRow avatar={f.avatar} name={f.name} sub={f.sub} onClick={() => void goto(ROUTES.user(f.id))} />
+		{#if user.tags.length > 0}
+		<RailSection title="兴趣标签" variant="island">
+			<div class="flex gap-2 flex-wrap">
+				{#each user.tags as t (t)}
+					<span class="inline-flex h-6 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xs font-medium leading-none text-accent-default">
+						#{t}
+					</span>
 				{/each}
 			</div>
 		</RailSection>
-	{/if}
+		{/if}
+
+		{#if mutualFriends.length > 0}
+			<RailSection title="共同好友" variant="island">
+				<div class="flex flex-col gap-3">
+					{#each mutualFriends as f (f.id)}
+						<RailUserRow avatar={f.avatar} name={f.name} sub={f.sub} onClick={() => void goto(ROUTES.user(f.id))} />
+					{/each}
+				</div>
+			</RailSection>
+		{/if}
+	</div>
 	{/snippet}
 
 	<!-- 移动端底部操作条：主操作（私信/关注）下沉拇指热区，桌面/平板使用头部按钮 -->

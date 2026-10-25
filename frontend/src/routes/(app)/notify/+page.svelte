@@ -322,12 +322,12 @@ const markSingleRead = (id: string) => {
 </svelte:head>
 
 
-<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
+<div class="flex flex-col flex-1 min-h-full">
 <SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			title="通知"
-			class="!bg-surface-primary"
+			glass
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			onBack={() => smartBack()}
@@ -460,62 +460,58 @@ const markSingleRead = (id: string) => {
 	{#snippet rail()}
 		<!-- 未登录隐藏统计侧栏（Gemini UI 审查：未登录显示「0 条未读」与筛选矛盾） -->
 		{#if !needsAuth}
-		<div class="flex flex-col gap-6">
-			<!-- 标题原为「今日概览」，但计数口径是「未读 + 全部通知条数」（含非今日数据）→
-			     文案与数据不符（s2-17）。侧栏概览刻意不随 TabBar 过滤（见下方类型概览注释），
-			     故标题改为与口径一致。升级为 variant="bare" 消除右侧堆叠的独立白盒子。 -->
-			<RailSection title="通知概览" variant="bare">
-				<div class="flex items-baseline gap-1.5 mb-3">
-					<span class="text-text-primary text-2xl font-semibold leading-none">{unread}</span>
-					<span class="text-text-secondary text-xs">条未读 · 共 {notifies.length} 条</span>
-				</div>
-				<div class="flex flex-col gap-1.5">
-					{#each typeStats as { type, count }}
-						{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reaction}
-						<!-- 纯展示：类型概览数字（过滤只走标题下 TabBar，不在此写 filter） -->
-						<div class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-interactive-hover/60 transition-colors">
-							<div class="flex items-center justify-center rounded-full shrink-0 size-6" style="background:{cfg.bg};">
-								<cfg.icon class="size-3" style="color:{cfg.color};" strokeWidth={1.75} />
+			<!-- 桌面端右侧 Rail 辅助区：Bento 微岛生态 -->
+			<div class="flex flex-col gap-4 py-2">
+				<RailSection title="通知概览" variant="island">
+					<div class="flex items-baseline gap-1.5 mb-3">
+						<span class="text-text-primary text-2xl font-semibold leading-none">{unread}</span>
+						<span class="text-text-secondary text-xs">条未读 · 共 {notifies.length} 条</span>
+					</div>
+					<div class="flex flex-col gap-1.5">
+						{#each typeStats as { type, count }}
+							{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reaction}
+							<!-- 纯展示：类型概览数字（过滤只走标题下 TabBar，不在此写 filter） -->
+							<div class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-interactive-hover/60 transition-colors">
+								<div class="flex items-center justify-center rounded-full shrink-0 size-6" style="background:{cfg.bg};">
+									<cfg.icon class="size-3" style="color:{cfg.color};" strokeWidth={1.75} />
+								</div>
+								<span class="text-text-primary text-sm flex-1">{cfg.label}</span>
+								<span class="text-text-secondary text-xs font-medium">{count}</span>
 							</div>
-							<span class="text-text-primary text-sm flex-1">{cfg.label}</span>
-							<span class="text-text-secondary text-xs font-medium">{count}</span>
+						{/each}
+					</div>
+				</RailSection>
+
+				{#if notifies.filter((n) => n.type === 'follow').length > 0}
+					<RailSection title="新关注你的人" variant="island" action="全部" onAction={() => void goto(relationshipsHref('fans'))}>
+						<div class="flex flex-col gap-3">
+							{#each notifies.filter((n) => n.type === 'follow' && n.user.id !== meId).slice(0, 3) as n (n.id)}
+								<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
+									{#snippet trailing()}
+										<FollowButton
+											active={followedBack.has(n.user.id)}
+											disabled={followedBack.has(n.user.id)}
+											labelActive="已关注"
+											labelInactive="回关"
+											onToggle={() => void followBack(n)}
+										/>
+									{/snippet}
+								</RailUserRow>
+							{/each}
 						</div>
-					{/each}
-				</div>
-			</RailSection>
+					</RailSection>
+				{/if}
 
-			{#if notifies.filter((n) => n.type === 'follow').length > 0}
-				<div class="h-px bg-border-subtle/40"></div>
-				<RailSection title="新关注你的人" variant="bare" action="全部" onAction={() => void goto(relationshipsHref('fans'))}>
-					<div class="flex flex-col gap-3">
-						{#each notifies.filter((n) => n.type === 'follow' && n.user.id !== meId).slice(0, 3) as n (n.id)}
-							<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
-								{#snippet trailing()}
-									<FollowButton
-										active={followedBack.has(n.user.id)}
-										disabled={followedBack.has(n.user.id)}
-										labelActive="已关注"
-										labelInactive="回关"
-										onToggle={() => void followBack(n)}
-									/>
-								{/snippet}
-							</RailUserRow>
-						{/each}
-					</div>
-				</RailSection>
-			{/if}
-
-			{#if notifies.filter((n) => n.type === 'nearby').length > 0}
-				<div class="h-px bg-border-subtle/40"></div>
-				<RailSection title="此刻附近" variant="bare" action="查看" onAction={() => void goto(ROUTES.nearbyPeople)}>
-					<div class="flex flex-col gap-3">
-						{#each notifies.filter((n) => n.type === 'nearby').slice(0, 3) as n (n.id)}
-							<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.text} />
-						{/each}
-					</div>
-				</RailSection>
-			{/if}
-		</div>
+				{#if notifies.filter((n) => n.type === 'nearby').length > 0}
+					<RailSection title="此刻附近" variant="island" action="查看" onAction={() => void goto(ROUTES.nearbyPeople)}>
+						<div class="flex flex-col gap-3">
+							{#each notifies.filter((n) => n.type === 'nearby').slice(0, 3) as n (n.id)}
+								<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.text} />
+							{/each}
+						</div>
+					</RailSection>
+				{/if}
+			</div>
 		{/if}
 	{/snippet}
 </SplitPageLayout>
