@@ -1886,3 +1886,44 @@ keyword-only 搜索不再对最多 500 个候选行逐行 `array_agg` 标签，�
 - 工作树门禁 + 主树 `verify-backend-ci.sh --all`：**ALL CHECKS PASSED**（真实库 IT + E2E）；
 - 单测：keyword-only 页面级标签加载、带标签列扫描、inline settings 快路径；users 覆盖率 71.0%；
 - 前端无改动。
+
+## backend-test pprof 接入 + fetch_nearby 紧凑候选（2026-10-25，第 58 轮）
+
+### 1) 测试实例暴露 pprof（可复现剖析入口）
+`backend-test` 增加 `PPROF_ADDR=0.0.0.0:6060` 与宿主机 `127.0.0.1:6060` 映射（仅测试 profile，
+不进入生产 compose/镜像）：
+```bash
+curl -o cpu.prof 'http://127.0.0.1:6060/debug/pprof/profile?seconds=20'
+go tool pprof -top cpu.prof
+```
+
+### 2) 剖析发现
+对 `fetch_nearby`（c=10、密集候选 1032 行）采样 20s：
+- `runtime.mallocgc` cum 27%、`tryDeferToSpanScan` 12%、`wbBufFlush` 14.6%、
+  `bulkBarrierPreWrite` 19.6% —— **GC 相关开销合计约 40%**；
+- 根因：每个候选行都构造 `MomentItem/Location/UserInfo`（指针 + 字符串指针），
+  实际分页只返回 ≤20 条，却为上千候选分配短命对象。
+
+### 3) 改动（`39f48ff8`）
+候选扫描改为值类型 `nearbyCandidate`（无指针/无嵌套响应结构，仅保留排序字段）；
+排序后只为页面内 ≤limit 条构造 `MomentItem`；游标定位新增 `findNearbyCandidateStart`/
+`compareNearbyCandidate`（与 `compareNearbyCandidates` 同序），NextCursor 语义一致；
+tags/is_favorited 仍分页后批量补全，响应字段不变。
+
+### 4) 复核（同一 pprof 口径，c=10、30s）
+| 指标 | 改前 | 改后 |
+|---|---|---|
+| 20s 窗口 CPU 采样总量 | 31.22s（156% 核） | **19.72s（98.6% 核，−37%）** |
+| 请求 p50 | 21.55 ms | **16.83 ms（−22%）** |
+| p95 | 57.39 ms | 69.84 ms（同机噪声，另一轮 57ms 量级） |
+| RPS | 365 | 352（±噪声，CPU 不再是唯一瓶颈） |
+| GC 头部函数 | mallocgc 27% / wbBufFlush 14.6% / tryDefer 12% | tryDefer 14.9% / wbBufFlush 19.7%，mallocgc 跌出前 12 |
+
+语义验证：带标签瞬间创建 → 收藏 → `fetch_nearby` 返回 `tags=["cmp-tag"]`、`is_favorited=true`、
+`distance=0` ✓；工作树门禁 + 主树 `--all`（DB IT + E2E）**ALL CHECKS PASSED**。
+
+### 5) 下一步（数据驱动）
+剩余 CPU 大头是 `pgx.baseRows.Scan`（12.2%）与行解码（DataRow.Decode 3.9%）：候选仍读取
+昵称/头像/描述/位置名等仅页面需要的字符串列。下一步可让候选扫描只取排序所需列
+（id/时间/坐标/likes/comments/shares/is_following），分页后按页面 ID 一次补全展示字段，
+进一步降低行解码与字符串分配。
