@@ -1660,3 +1660,37 @@ CPU profile（bootstrap c=50）显示 pgx Query 累计占 27%（3 次串行 DB �
 不等于并行化就能提速；只有在低并发/延迟敏感场景（排队不占主导）时并行才有意义。
 
 后续方向改为**减少查询次数**（如公告版本缓存 + 写路径失效），而不是并行化。
+
+## bootstrap 公告版本读缓存（2026-10-25，第 52 轮）
+
+第 51 轮并行化负结果后改为**减少查询次数**：bootstrap 每请求都要读公告版本生成 ETag
+（`queryAnnouncementsVersion` 为 `MAX(updated_at)` 扫描），但公告变更是低频事件。
+
+### 设计
+- 缓存放 `system.PostgresRepository`（DB 访问层）：5s TTL、查询失败不缓存；
+- 同实例写（`Create/Update/DeleteAnnouncement` 成功后）主动失效；
+- admin 模块用独立 `systemRepo` 实例写公告，bootstrap 接线
+  `admin.Service.SetAnnouncementsVersionInvalidator` → `system.Service.InvalidateAnnouncementsVersion`
+  显式失效（ETag 立即变化，不等 TTL）；跨实例/绕过钩子的写入以 5s TTL 兜底；
+- 内存仓库不加缓存（cheap），既有「公告发布后 bootstrap_version 递增」回归测试保持通过。
+
+### 复测（同环境 c=50、20s，backend-test）
+| 版本 | RPS | p50 / p95 / p99 | 每请求 DB 读取 |
+|---|---|---|---|
+| 基线（无版本缓存） | 1,286 | 16.53 / 84.88 / 211.26 ms | 3 |
+| +公告版本缓存 | **1,536（+19.4%）** | **12.32** / 84.26 / 215.01 ms（p50 −25.5%） | 2 |
+
+单测覆盖：缓存命中/失效/TTL/错误不缓存/写后失效；admin 公告 create/update/delete 各触发一次
+失效（含独立 systemRepo 实例场景）。
+
+### 累计读路径优化（第 50–52 轮）
+| 优化 | users/account | bootstrap |
+|---|---|---|
+| 基线 | 1,514 RPS / p50 13.75ms | 1,286 RPS / p50 16.53ms |
+| 会话缓存 + 画像单查询 + 公告版本缓存 | **1,691 RPS（+11.7%）/ p50 11.04ms** | **1,536 RPS（+19.4%）/ p50 12.32ms** |
+
+说明：均为同机 dev 压测（压测进程与容器共享 CPU），用于相对比较；生产容量需准生产独立压测机复测。
+
+### 下一步
+- 继续收敛其他聚合读端点（搜索/Feed 等按调用频率与查询数评估）；
+- 优化后重跑 `--all` 全量验收并收口。
