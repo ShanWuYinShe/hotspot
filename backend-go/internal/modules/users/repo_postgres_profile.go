@@ -18,25 +18,15 @@ func (r *PostgresRepository) GetProfile(ctx context.Context, userID string) (MyP
 	if !ok {
 		return MyProfile{}, false, persistence.ErrNotImplemented
 	}
-	profile, err := scanUserProfileRow(queryable.QueryRow(ctx, queryGetUserProfile, userID))
+	// 单条 SQL 取齐画像+统计+标签：get_account 每请求只有 1 次 DB 往返
+	//（此前 3 次，压测下显著放大连接池排队）。语义与旧实现一致。
+	profile, err := scanUserProfileDetailsRow(queryable.QueryRow(ctx, queryGetUserProfileDetails, userID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return MyProfile{}, false, nil
 		}
 		return MyProfile{}, false, err
 	}
-	stats, err := countUserStats(ctx, queryable, userID)
-	if err != nil {
-		return MyProfile{}, false, err
-	}
-	profile.Stats = stats
-	// 画像标签独立表：与批量/搜索路径一致在此回填，否则 get_account 等单查
-	// 永远返回空 tags（线上实测：保存成功，编辑页重载即丢失）。
-	tags, err := loadUserProfileTags(ctx, queryable, userID)
-	if err != nil {
-		return MyProfile{}, false, err
-	}
-	profile.Tags = tags
 	return profile, true, nil
 }
 
@@ -260,6 +250,37 @@ func isPhoneFormatKeyword(keyword string) bool {
 	return true
 }
 
+// scanUserProfileDetailsRow 扫描 queryGetUserProfileDetails（画像 15 列 + 统计 5 列 + 标签数组）。
+func scanUserProfileDetailsRow(scanner interface{ Scan(...any) error }) (MyProfile, error) {
+	var profile MyProfile
+	var avatarURL, bio, gender, email, phone string
+	var locationName string
+	var latitude, longitude float64
+	var presenceStatus, userType string
+	var lastOnline, createdAt time.Time
+	var stats UserStats
+	var tags []string
+	if err := scanner.Scan(&profile.UserID, &profile.Nickname, &avatarURL, &userType, &bio, &gender, &email, &phone, &locationName, &latitude, &longitude, &presenceStatus, &lastOnline, &createdAt, &profile.IsDeleted,
+		&stats.MomentsCount, &stats.FriendsCount, &stats.FollowersCount, &stats.FollowingCount, &stats.GroupsCount, &tags); err != nil {
+		return MyProfile{}, err
+	}
+	profile.AvatarURL = avatarURL
+	profile.UserType = UserType(userType)
+	profile.Bio = bio
+	profile.Gender = Gender(gender)
+	profile.Email = email
+	profile.Phone = phone
+	profile.Location = Location{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
+	profile.PresenceStatus = UserPresenceStatus(presenceStatus)
+	profile.LastOnline = lastOnline.UTC().Format(time.RFC3339)
+	profile.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+	profile.Stats = stats
+	if tags == nil {
+		tags = []string{}
+	}
+	profile.Tags = tags
+	return profile, nil
+}
 func scanUserProfileRow(scanner interface{ Scan(...any) error }) (MyProfile, error) {
 	var profile MyProfile
 	var avatarURL, bio, gender, email, phone string
@@ -281,34 +302,6 @@ func scanUserProfileRow(scanner interface{ Scan(...any) error }) (MyProfile, err
 	profile.LastOnline = lastOnline.UTC().Format(time.RFC3339)
 	profile.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return profile, nil
-}
-
-func countUserStats(ctx context.Context, queryable persistence.Queryable, userID string) (UserStats, error) {
-	var stats UserStats
-	if err := queryable.QueryRow(ctx, queryCountUserStats, userID).Scan(&stats.MomentsCount, &stats.FriendsCount, &stats.FollowersCount, &stats.FollowingCount, &stats.GroupsCount); err != nil {
-		return UserStats{}, err
-	}
-	return stats, nil
-}
-
-func loadUserProfileTags(ctx context.Context, queryable persistence.Queryable, userID string) ([]string, error) {
-	rows, err := queryable.Query(ctx, queryListUserProfileTags, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	tags := make([]string, 0)
-	for rows.Next() {
-		var tag string
-		if err := rows.Scan(&tag); err != nil {
-			return nil, err
-		}
-		tags = append(tags, tag)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return tags, nil
 }
 
 // loadUserProfileTagsBatch fetches profile tags for many user IDs in one

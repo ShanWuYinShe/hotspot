@@ -1,22 +1,11 @@
 package users
 
 const (
-	queryGetUserProfile = `
-SELECT user_id, nickname, COALESCE(avatar_url, ''), user_type, COALESCE(bio, ''), COALESCE(gender, ''), COALESCE(email, ''), COALESCE(phone, ''), location_name, latitude, longitude, presence_status, last_online, created_at, is_deleted
-FROM users
-WHERE user_id = $1`
-
-	// queryGetUserProfiles 与 queryGetUserProfile 同列，供 GetProfiles 一次取多行。
+	// queryGetUserProfiles 与 queryGetUserProfileDetails 同列，供 GetProfiles 一次取多行。
 	queryGetUserProfiles = `
 SELECT user_id, nickname, COALESCE(avatar_url, ''), user_type, COALESCE(bio, ''), COALESCE(gender, ''), COALESCE(email, ''), COALESCE(phone, ''), location_name, latitude, longitude, presence_status, last_online, created_at, is_deleted
 FROM users
 WHERE user_id = ANY($1)`
-
-	queryListUserProfileTags = `
-SELECT tag_name
-FROM user_profile_tags
-WHERE user_id = $1
-ORDER BY tag_name ASC`
 
 	// queryListUserProfileTagsBatch fetches profile tags for many user_ids in
 	// one query so SearchProfiles can avoid an N+1 of loadUserProfileTags
@@ -252,14 +241,20 @@ SELECT user_id, is_following, is_blocked
 FROM user_relations
 WHERE target_user_id = $1 AND user_id = ANY($2)`
 
-	queryCountUserStats = `
-SELECT
+	// queryGetUserProfileDetails 把「画像 + 统计 + 标签」合成单条 SQL：
+	// get_account 是认证后最高频读取路径，原实现 3 次往返（profile/countUserStats/
+	// loadUserProfileTags）在并发下会放大连接池排队。子查询均为单行/聚合、
+	// 执行计划稳定，语义与拆开的三条查询一致（标签仍按 tag_name 升序）。
+	queryGetUserProfileDetails = `
+SELECT user_id, nickname, COALESCE(avatar_url, ''), user_type, COALESCE(bio, ''), COALESCE(gender, ''), COALESCE(email, ''), COALESCE(phone, ''), location_name, latitude, longitude, presence_status, last_online, created_at, is_deleted,
   (SELECT COUNT(*) FROM moments m WHERE m.user_id = $1 AND m.is_deleted = FALSE),
   (SELECT COUNT(*) FROM user_relations ur JOIN user_relations rev ON rev.user_id = ur.target_user_id AND rev.target_user_id = ur.user_id AND rev.is_following = TRUE WHERE ur.user_id = $1 AND ur.is_following = TRUE),
   (SELECT COUNT(*) FROM user_relations ur WHERE ur.target_user_id = $1 AND ur.is_following = TRUE),
   (SELECT COUNT(*) FROM user_relations ur WHERE ur.user_id = $1 AND ur.is_following = TRUE),
-  (SELECT COUNT(*) FROM group_members gm JOIN groups g ON g.group_id = gm.group_id WHERE gm.user_id = $1 AND g.deleted_at IS NULL)`
-
+  (SELECT COUNT(*) FROM group_members gm JOIN groups g ON g.group_id = gm.group_id WHERE gm.user_id = $1 AND g.deleted_at IS NULL),
+  COALESCE((SELECT array_agg(up.tag_name ORDER BY up.tag_name) FROM user_profile_tags up WHERE up.user_id = $1), ARRAY[]::text[])
+FROM users
+WHERE user_id = $1`
 	// queryMutualFriends 双向共同好友一次查全：总数经 COUNT(*) OVER 随行返回
 	//（LIMIT 只截预览，不截总数），预览按最近互关优先。
 	queryMutualFriends = `

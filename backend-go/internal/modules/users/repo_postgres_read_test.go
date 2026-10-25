@@ -168,10 +168,10 @@ func (b *userBackendStub) Query(_ context.Context, query string, _ ...any) (pers
 func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	backend := &userBackendStub{
 		queryRowByQuery: map[string]persistence.Row{
-			queryGetUserProfile:  testdb.RowValues{Values: []any{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false}},
-			queryGetUserSettings: testdb.RowValues{Values: []any{"public", true, true, true, true, true, true, true, "everyone", true, false, true, true, false}},
-			queryGetUserRelation: testdb.RowValues{Values: []any{true, false, "buddy", time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC), nil, ""}},
-			queryCountUserStats:  testdb.RowValues{Values: []any{2, 1, 3, 4, 5}},
+			// GetProfile 单条 SQL：画像 15 列 + 统计 5 列 + 标签数组。
+			queryGetUserProfileDetails: testdb.RowValues{Values: []any{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false, 2, 1, 3, 4, 5, []string{"美食", "摄影"}}},
+			queryGetUserSettings:       testdb.RowValues{Values: []any{"public", true, true, true, true, true, true, true, "everyone", true, false, true, true, false}},
+			queryGetUserRelation:       testdb.RowValues{Values: []any{true, false, "buddy", time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC), nil, ""}},
 		},
 		queryRowsByQuery: map[string][][]any{
 			"FROM users u":        {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC), false}},
