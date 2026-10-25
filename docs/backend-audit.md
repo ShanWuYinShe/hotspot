@@ -1997,3 +1997,40 @@ tags/is_favorited 仍分页后批量补全，响应字段不变。
 附近流已从 365 RPS / p95 57ms 优化到 ~500 RPS / p95 33ms。剩余 CPU 主要是 GC
 （tryDeferToSpanScan/wbBufFlush/bulkBarrierPreWrite 合计约 30%），可继续减少候选集
 临时 map/切片分配；或把同款「候选批量聚合」模式复用到其他发现流（moments/search 等）。
+
+## 附近流页面补全合并 + 测试库污染教训（2026-10-25，第 61 轮）
+
+### 1) 页面补全 3 查询合并为 1（`60ec4dfb`）
+附近流分页后原本要发 3 次查询：展示字段、标签数组、收藏态（均只针对 ≤limit 行）。
+合并为一条 `queryNearbyMomentDetails`：
+- LATERAL `array_agg(mt.tag_name ORDER BY mt.tag_name)` 内联标签；
+- 参数化 `EXISTS(moment_favorites)` 内联收藏态（匿名传空串，恒 false）；
+- 附近流每次请求的 DB 往返从 8 次降到 6 次（候选/热度/关注/页面补全 + service 侧图片/反应/作者关系）。
+
+压测（重置后重建的 1032 条密集候选数据集，c=10、20s×2）：
+| 指标 | 第 60 轮（环境窗口 A） | 本轮（环境窗口 B） |
+|---|---|---|
+| RPS | 498–502 | 421–442 |
+| p50 | 18.4 ms | **16.2–16.9 ms** |
+| p95 | 32–34 ms | 53.6–55.6 ms |
+
+两轮不在同一环境窗口（OrbStack 抖动 + 数据集/作者分布不同），p95 差异主要是噪声；
+该改动是**结构性减少往返与 map 分配**，语义验证通过，故保留并如实记录「未观察到明确吞吐提升」。
+
+### 2) 测试库污染导致 EXPLAIN 计划测试误报（重要教训）
+首次 `--all` 失败于 `TestExplainUsesExpectedS2Indexes`（期望 S2 部分索引、实际走了别的索引）。
+根因不是代码改动，而是 **hotspot_test 被本轮压测数据污染**（此前基准累计写入上万条瞬间/用户），
+规划器在数据量变化后选择不同索引，导致依赖计划形状的测试误报。
+
+处置与规范：`hotspot_test` 是测试库，可随时重建：
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test stop backend-test
+docker exec -it hotspot-postgres-1 psql -U postgres -c 'DROP DATABASE IF EXISTS hotspot_test WITH (FORCE)'
+docker exec -it hotspot-postgres-1 psql -U postgres -c 'CREATE DATABASE hotspot_test'
+# 再启动 backend-test 自动建表/迁移，然后重跑 --all
+```
+重建后 `--all` 恢复 **ALL CHECKS PASSED**；建议在发版门禁/大改动验证前先重建一次测试库。
+
+### 3) 语义验证（真实库）
+重建后重新造 1032 条密集候选数据，创建带标签瞬间 → 收藏 → `fetch_nearby`：
+`description='page hydration'`、`tags=['pg-tag']`、`is_favorited=true` ✓。
