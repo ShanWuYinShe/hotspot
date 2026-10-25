@@ -1588,3 +1588,10 @@ pgxpool：total 3→21、acquiring 0、`empty_acquire_total` 1→19（约 0.3/s�
 
 复跑：`go run ./cmd/loadgen -url ... -method POST -body '...{{seq}}...' -body-seq -idem-unique
 -token-file /tmp/tokens.txt -c 20 -d 15s`；清理按 `nickname LIKE '<marker>%'` 删除用户级联。
+
+## WS E2E 关闭断言去时序依赖（2026-10-25，第 49 轮）
+
+收尾复核时 `--all` 暴露 WS E2E 偶发失败：客户端发 close 帧后，`SetSubscriptions` 触发的
+`SubscriptionsSnapshot` 仍可能排在 close 之前到达，旧断言「下一条必是关闭错误」在事件未读尽时
+会误判。修复：关闭阶段循环读直至错误/超时，只断言「服务端最终关闭连接」，不假设 close 帧是
+下一条消息；`-count=5` 重复运行通过，最终 `--all` 全绿。

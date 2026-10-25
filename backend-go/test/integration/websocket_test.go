@@ -219,10 +219,20 @@ func TestWebSocket_ConnectAuthHeartbeatSubscriptions(t *testing.T) {
 		t.Fatalf("SubscriptionsSnapshot user_ids = %v, want %q", snap.UserIDs, userID)
 	}
 
-	// 正常关闭：发送 close 帧后服务端应关闭连接。
+	// 正常关闭：发送 close 帧后服务端应关闭连接。关闭前可能仍有已排队的推送
+	// （如 SetSubscriptions 触发的快照），故循环读到错误/超时为止，只断言最终
+	// 连接被服务端关闭，避免依赖「下一条必是 close 帧」的时序假设。
 	_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "e2e done"))
-	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	if _, _, err := conn.ReadMessage(); err == nil {
+	closed := false
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		_ = conn.SetReadDeadline(deadline)
+		if _, _, err := conn.ReadMessage(); err != nil {
+			closed = true
+			break
+		}
+	}
+	if !closed {
 		t.Fatal("expected server to close the connection after client close frame")
 	}
 }
