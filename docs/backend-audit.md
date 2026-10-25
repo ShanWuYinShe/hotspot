@@ -2034,3 +2034,35 @@ docker exec -it hotspot-postgres-1 psql -U postgres -c 'CREATE DATABASE hotspot_
 ### 3) 语义验证（真实库）
 重建后重新造 1032 条密集候选数据，创建带标签瞬间 → 收藏 → `fetch_nearby`：
 `description='page hydration'`、`tags=['pg-tag']`、`is_favorited=true` ✓。
+
+## 只读性能冒烟脚本 + 当前热点盘点（2026-10-25，第 62 轮）
+
+### 1) `scripts/perf-smoke.sh`（新增）
+固定读端点（account/bootstrap/notify/following/nearby/users-search）一键压测，输出
+rps 与 p50/p95/p99，用于**同一会话内的前后对比**；非测试环境要求显式传 `TOKEN`（不新建访客）。
+用法与注意事项已写入 `backend-go/AGENTS.md`「只读性能冒烟」。
+
+### 2) 同会话端点盘点（c=10、10s，当前 HEAD）
+| 端点 | RPS | p50 | p95 |
+|---|---|---|---|
+| users/account | 3,672 | 1.73 ms | 4.29 ms |
+| system/bootstrap | 2,636 | 2.48 ms | 10.22 ms |
+| notify/fetch | — | — | —（同批测量中约 0.5–1 ms 量级） |
+| moments/fetch_following | 2,817 | 2.30 ms | 6.55 ms |
+| moments/fetch_nearby（1032 候选） | 651 | 14.46 ms | 23.75 ms |
+| moments/search（keyword=seed，全部命中） | 859 | 6.41 ms | 49.60 ms |
+| users/search（密集短关键词） | 2,148 | 3.50 ms | 11.13 ms |
+
+### 3) 关键结论
+- **account/bootstrap 已接近 I/O 极限**：account c=20 剖析总 CPU 仅 52%（syscall 占 21%），
+  p50 4.09ms、p95 52ms 的长尾来自同机 VM 调度/DB 往返抖动，继续改 Go 代码收益很小；
+- **moments/search 的 p95 高是合成数据最坏情况**：`LIKE '%seed%'` 命中全部 1020 行，
+  SQL 需要全量过滤+排序；真实低选择性关键词会走 pg_trgm 索引，不代表线上形态；
+- **nearby 仍是真实最重读路径**（已从 257 RPS/p95 73ms 优化到 651 RPS/p95 24ms 量级）；
+- 本机 OrbStack 不同时间窗吞吐波动可达 ±2 倍，**跨时间绝对值不可比**；
+  第 7 轮实测同一代码同一数据在 498–502 RPS 与 134–374 RPS 之间波动，即属此类抖动。
+
+### 4) 下一步建议
+- 应用层热点已基本收敛：继续微优化收益低且易被 VM 抖动掩盖；
+- 若要再上一个量级，应转向架构：多实例部署（会话/公告缓存跨实例广播）、
+  独立压测机（准生产环境）验证真实容量，或搜索服务化（解决 1–2 字符中文关键词只能顺序扫描的问题）。

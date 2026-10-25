@@ -66,6 +66,19 @@ go build ./cmd/server               # Go 自动发现同目录 default.pgo
 - 生效验证用对照构建（`go build -pgo=off` vs 默认）+ 线上 P95/QPS 对比，或 benchmark + benchstat；
 - profile 会随版本漂移，大版本前重采一次。
 
+### 只读性能冒烟（`scripts/perf-smoke.sh`）
+
+对指定实例跑一组固定读端点（account/bootstrap/notify/following/nearby/users-search），
+输出 rps 与 p50/p95/p99，用于同会话内的前后对比：
+
+```bash
+./scripts/perf-smoke.sh                                  # 默认 backend-test :8082，c=10、10s
+./scripts/perf-smoke.sh --base http://localhost:8888 --concurrency 20 --duration 10s
+TOKEN=<既有 token> ./scripts/perf-smoke.sh               # 非测试环境必须显式传 TOKEN（不新建访客）
+```
+
+注意：本机 OrbStack 虚拟机在不同时间窗口的绝对吞吐波动可达 ±2 倍（CPU 节流/后台负载），
+**只有同一会话内的前后对比可信**；跨时间比较请同时记录时间与数据集（如 hotspot_test 是否被压测数据污染）。
 **已完成的其他性能基线**（2026-10-21 实测，避免重复排查）：pprof 端点已存在、pgx 连接池
 MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 500ms/1s 为有意 fail-slow、
 本地热读接口 ~3ms —— 当前量级不需要读缓存。
