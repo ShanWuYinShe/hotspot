@@ -1927,3 +1927,37 @@ tags/is_favorited 仍分页后批量补全，响应字段不变。
 昵称/头像/描述/位置名等仅页面需要的字符串列。下一步可让候选扫描只取排序所需列
 （id/时间/坐标/likes/comments/shares/is_following），分页后按页面 ID 一次补全展示字段，
 进一步降低行解码与字符串分配。
+
+## fetch_nearby 候选列裁剪：只扫排序列 + 页面详情批量补全（2026-10-25，第 59 轮）
+
+第 58 轮把候选改为值类型后，pprof 显示剩余大头是 `pgx.baseRows.Scan`（12.2%）与
+`DataRow.Decode`（3.9%）：候选行仍在读取昵称/头像/描述/位置名等仅页面需要的字符串列。
+
+### 改动（`a5708b10`）
+- `queryNearbyMoments` 只保留排序所需列：`moment_id/created_at/likes COUNT/comments/shares/
+  latitude/longitude/is_following`；
+- 分页后对 ≤limit 条结果发一次 `queryNearbyMomentDetails`（JOIN users）补全
+  `user_id/昵称/头像/描述/位置名`；
+- `nearbyCandidate` 进一步瘦身为排序字段；响应构造只在页面内条目上发生；
+- tags/is_favorited 仍按同一批页面 ID 批量补全；响应字段与排序规则不变。
+
+### 复核（同一 pprof 口径，c=10、30s 密集候选 1032 行）
+| 指标 | 原始（第 57 轮） | 紧凑候选（第 58 轮） | 列裁剪（本轮） |
+|---|---|---|---|
+| 20s CPU 采样 | 31.22s（156% 核） | 19.72s（98.6% 核） | **14.89s（74.4% 核，再 −24.5%）** |
+| p50 | 21.55 ms | 16.83 ms | 16.2–19.1 ms（噪声内持平） |
+| RPS | 365 | 352 | 289–336（±噪声，CPU/请求已降至原 74.4%） |
+| 头部 CPU | mallocgc 27% | tryDefer 14.9%/wbBuf 19.7% | syscall 8.5% / wbBuf 12.3% / bulkBarrier 13.0% / Scan 7.9% |
+
+两轮重复测量（20s、无 profile）：300 RPS / p50 18.12、336 RPS / p50 16.21，与上一轮持平；
+累计 CPU 采样从 31.22s 降至 14.89s（**−52%**），说明候选扫描/解码成本已大幅下降，
+当前吞吐受同机 CPU 与 DB 往返共同限制。
+
+语义验证：新建带标签瞬间 → 收藏 → `fetch_nearby` 返回
+`description='cols nearby'`、`tags=['col-tag']`、`is_favorited=true`、`nickname='游客·fliz'`、
+`location_name='Cols City'`、`distance=0` ✓；工作树门禁 + 主树 `--all` **ALL CHECKS PASSED**。
+
+### 下一步
+候选 SQL 仍有 4 个逐行子查询（reactions COUNT、is_following EXISTS、双向拉黑 NOT EXISTS ×2），
+其中热度与关注只用于同距离时的次级排序。下一步候选：把热度与关注改为「候选集批量聚合查询」
+（GROUP BY / ANY），SQL 只保留 id/时间/坐标 + 拉黑过滤，可进一步降低 DB 扫描成本。
