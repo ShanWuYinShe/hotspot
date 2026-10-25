@@ -103,7 +103,7 @@
 			</ListContainer>
 		</section>
 	{:else}
-		<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-label="管理模块">
+		<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4" aria-label="管理模块">
 			{#each MODULES as m (m.href)}
 				{@const allowed = hasAdminPermission(m.perm)}
 				<button

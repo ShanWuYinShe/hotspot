@@ -261,7 +261,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				{/if}
 				<!-- 手机/平板：规整 2 列（平板 BSP 会出 1 窄 + 2 宽 的尺寸落差与底部参差）；
 				     桌面保持「精选卡 + BSP 满铺墙」 -->
-				<div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
+				<div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
 					{#each rest as group (group.id)}
 						<GroupCard group={group} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 					{/each}

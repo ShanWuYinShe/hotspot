@@ -224,7 +224,7 @@
 
 
 <div class="flex flex-col flex-1 min-h-full">
-<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
+<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6 max-w-6xl xl:max-w-7xl 2xl:max-w-[88rem] mx-auto w-full">
 	{#snippet header()}
 		<PageHeader title="搜索" glass onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 			{#snippet below()}

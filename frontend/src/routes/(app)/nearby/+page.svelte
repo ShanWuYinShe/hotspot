@@ -128,7 +128,7 @@
 <!-- 页面根容器：直接承载 HeroStats + 三个带标题分区（人/瞬间/群组），按 RULES §2 例外用
      分区间距 24（gap-6）；页底留白只由 contentClassName pb-6 提供 -->
 <div class="flex flex-col flex-1 min-h-full">
-<StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-6 pt-4 pb-6">
+<StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-6 pt-4 pb-6 max-w-6xl xl:max-w-7xl 2xl:max-w-[88rem] mx-auto w-full">
 	{#snippet header()}
 		<PageHeader
 			title="附近"

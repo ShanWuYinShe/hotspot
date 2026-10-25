@@ -59,7 +59,7 @@ const needsAuth = $derived(myGroups.needsAuth);
 {:else if error}
 	<LoadError message={error} onRetry={retry} />
 {:else if filtered.length > 0}
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
 		{#each filtered as g (g.id)}
 			<NearbyImageCard
 				imageSrc={g.banner || g.avatar}

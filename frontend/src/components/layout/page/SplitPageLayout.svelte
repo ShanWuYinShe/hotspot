@@ -39,8 +39,9 @@
 
 <section data-split-page-layout class="flex h-full min-h-full w-full flex-col">
 	{#if isDesktop}
-		<!-- 桌面主区与 rail 呼吸留白分隔，同处统一氛围画布，无生硬实线与突兀白墙 -->
-		<div class="flex h-full w-full" style="gap:var(--cst-context-rail-gap);">
+		<!-- 桌面主区与 rail 聚合成自适应工作台，保持视觉邻近（gap: rail-gap），
+		     在超宽/高分屏上居中聚合，杜绝内容孤悬与 ContextRail 飘到屏幕极右缘的撕裂感 -->
+		<div class="mx-auto flex h-full w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[88rem] justify-center" style="gap:var(--cst-context-rail-gap);">
 			<!-- 主区：header + 滚动正文 + 固定 footer -->
 			<div class="flex min-w-0 flex-1 flex-col">
 				{#if header}

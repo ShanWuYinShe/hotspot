@@ -135,7 +135,7 @@
 		     工具行 pb-4（分隔线上侧 16）与此处 pt-4（分隔线下侧 16）分居 border-b 两侧，
 		     是对称留白而非 mt+mb 双倍叠加，格子距卡片内容保持 16。 -->
 		<div class="pt-4">
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
 				{#each interactions.items as item (item.id)}
 					{#if item.is_deleted}
 						<!-- 软删除墓碑（契约：客户端展示占位）：不可点、无操作，仅说明状态 -->

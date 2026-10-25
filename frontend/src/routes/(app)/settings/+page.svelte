@@ -212,7 +212,7 @@
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
-		<div class="flex flex-col divide-y divide-border-subtle/40 max-w-5xl">
+		<div class="flex flex-col divide-y divide-border-subtle/40 mx-auto w-full max-w-4xl xl:max-w-5xl">
 			<!-- Section 1: 账号与身份 -->
 			<SettingsSection title="账号信息" description="当前登录的账号信息" class="first:pt-0">
 				<!-- 卡片壳统一交 ListContainer bordered（与下方通知/隐私分组同语言），

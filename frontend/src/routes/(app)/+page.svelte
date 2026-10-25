@@ -205,7 +205,6 @@
 
 <div class="flex flex-col flex-1 min-h-full">
 	<SplitPageLayout
-		contentMaxWidth="640px"
 		contentClassName="animate-fade-in flex flex-col pt-0 pb-8"
 	>
 		{#snippet header()}

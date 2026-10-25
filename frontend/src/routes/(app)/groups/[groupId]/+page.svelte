@@ -232,7 +232,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 </svelte:head>
 
 
-<StandardPageLayout contentClassName="animate-fade-in pb-6">
+<StandardPageLayout contentClassName="animate-fade-in pb-6 max-w-6xl xl:max-w-7xl 2xl:max-w-[88rem] mx-auto w-full">
 	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
 	{#if gd.loading}
 		<InlineLoading label="加载群组…" />
