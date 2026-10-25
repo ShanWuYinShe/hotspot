@@ -433,7 +433,10 @@ struct Index {
 
   private async getAccessToken(): Promise<string | null> {
     try {
-      return await PreferencesUtil.get('access_token', '');
+      // 令牌已迁移到 Asset Store（Preferences 只留非敏感索引），
+      // 沿用 HttpUtil.getToken（与 HTTP 请求一致的读取路径），避免读不到令牌导致 WS 不建立。
+      const token = await HttpUtil.getToken();
+      return token === '' ? null : token;
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `获取访问令牌失败: ${error}`);
       return null;
