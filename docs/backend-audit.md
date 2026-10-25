@@ -1472,3 +1472,47 @@ cd backend-go && go run ./cmd/loadgen -url http://localhost:8082/<path> -c 50 -d
    需在准生产（独立压测机、真实数据量）复测后再下容量结论。
 
 复跑方式见上方命令；工具已入库，后续性能回归可直接复用。
+
+## 剩余改进方向盘点 + 发版镜像演练（2026-10-25，第 45 轮）
+
+按用户要求盘点「还有哪些方向需要改进」，以当前代码/配置实际状态为依据（非泛泛建议）。
+
+### P0（建议尽快做）
+1. **E2E 缺 WebSocket 全链路**：`backend-go/test/integration` 有 92 个 HTTP 用例，但**没有任何 WS 用例**；
+   WS 目前只靠单元测试（handler/hub/redis_bridge）。建议补 `connect → Auth → Subscribe → 事件推送 →
+   心跳/关闭码` 用例（gorilla/websocket 已是直接依赖，测试成本低、回归价值高）。
+2. **写路径未压测**：本轮 `cmd/loadgen` 只覆盖只读接口；创建/发送/入群等写路径涉及事务、唯一约束、
+   fanout 与幂等键，尚无容量数据。建议在 backend-test 库上做受控写压测（含 Idempotency-Key 与清理）。
+3. **无告警规则**：`docker/prometheus.yml` 只有 scrape 配置，没有 alert rules——指标齐全但
+   pgxpool 打满、5xx 突增、WS 掉线等无阈值告警。建议补 Prometheus alert rules + 通知渠道。
+
+### P1（中期，需要权衡）
+4. **会话校验/封禁每请求查库**：压测认证端点 ~1.35k RPS、p99 161ms、pgxpool 达 MaxConns 25；
+   若提高目标需短 TTL 会话缓存。权衡：缓存会延迟「登出/封禁即时生效」，需配合主动失效（撤销时删缓存）。
+5. **数据保留策略未定义**：`admin_audit_logs`、`reports` 无清理逻辑，spec 也未规定保留期；
+   需产品决定（审计合规保留 vs 表体积）。
+6. **无可观测性 tracing**：现有日志 + 指标（request_id 串联），跨 HTTP→DB→Redis 无 trace；
+   规模上来后排障成本上升，可评估 OpenTelemetry。
+7. **本地 Go 1.27.3 vs CI 1.26.10**：本地工具链更新可能掩盖 CI 编译差异；建议统一版本
+   （go.mod toolchain 或 mise/asdf 固定），避免「本地绿 CI 红」的变种。
+
+### P2（按需/长期）
+8. **大数据量查询验证**：无 synthetic dataset 与 EXPLAIN 基线；搜索/Feed/统计在真实数据量下的索引
+   效果未验证。建议造数脚本 + 关键 SQL EXPLAIN 检查。
+9. **发版/回滚演练**：本轮已做镜像构建与 OCI 指纹核对（见下）；完整 deploy→rollback 演练待准生产。
+10. **审计文档结构**：`docs/backend-audit.md` 已 1474 行，建议按主题拆分到 `docs/backend/` 便于检索。
+11. **备份异地/恢复**：脚本与本地恢复已验证（第 42 轮），`OFFSITE_CMD` 与 cron 尚需准生产验证。
+
+### 发版前本地镜像演练（Release 门禁步骤 3/4）
+本轮在 `756a70f2` 上执行（不 tag、不部署）：
+```
+GIT_VERSION=v1.4.0-rc1 GIT_COMMIT=$(git rev-parse HEAD) GIT_BUILD_TIME=$(date -u +...) \
+  IMAGE_TAG=v1.4.0-rc1 docker compose --profile prod build backend frontend-build
+```
+- 构建成功：`hotspot-backend:v1.4.0-rc1`（61MB）、`hotspot-frontend:v1.4.0-rc1`（17MB）；
+- OCI 指纹核对：两个镜像 `org.opencontainers.image.version=v1.4.0-rc1`、`revision=756a70f2...`
+  与构建提交一致（Release workflow 同款断言）；演练镜像已删除，未推送 registry。
+
+### 建议执行顺序
+P0-1 WS E2E → P0-3 告警规则 → P0-2 写路径压测 → P1-4 会话缓存评估（需产品确认撤销语义）→
+其余按需。
