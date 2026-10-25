@@ -104,6 +104,9 @@ services:
       S3_BUCKET: hotspot
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me}
+      # 性能分析：仅测试实例开启 pprof（容器内监听全接口，宿主机只映射 127.0.0.1:6060，
+      # 不进入生产镜像配置；用法：curl -o cpu.prof 'http://127.0.0.1:6060/debug/pprof/profile?seconds=20'）。
+      PPROF_ADDR: 0.0.0.0:6060
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
@@ -113,6 +116,7 @@ services:
         go build -o /tmp/server ./cmd/server/ && exec /tmp/server
     ports:
       - "127.0.0.1:8082:8081"
+      - "127.0.0.1:6060:6060"   # backend-test pprof（仅本机可达）
     healthcheck:
       # 契约要求空 Request 也必须传 JSON 对象；unhealthy 时 HTTP 仍为 200（code=10600），必须校验响应内容
       test: ["CMD-SHELL", "curl -sf -X POST -H 'Content-Type: application/json' -d '{}' http://localhost:8081/public/v1/system/health | grep -q '\"code\":0' || exit 1"]
