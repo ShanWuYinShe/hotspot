@@ -39,8 +39,10 @@ const (
 	       payload::text
 	FROM shares
 	WHERE creator_user_id = $1
-	  AND ($2 IS NULL OR share_type = $2)
-	  AND ($3 IS NULL OR (created_at, share_id) < ($3, $4))
+	  -- 显式 cast：extended protocol 下 prepare 阶段无法从 "IS NULL" 推断参数类型
+	  -- （simple protocol 是把参数内联成字面量，故旧实现未暴露）。
+	  AND ($2::text IS NULL OR share_type = $2)
+	  AND ($3::timestamptz IS NULL OR (created_at, share_id) < ($3, $4))
 	ORDER BY created_at DESC, share_id DESC
 	LIMIT $5`
 

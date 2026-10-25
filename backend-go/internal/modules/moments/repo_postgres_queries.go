@@ -166,7 +166,7 @@ JOIN moments m ON m.moment_id = mf.moment_id
 LEFT JOIN users u ON u.user_id = m.user_id
 WHERE mf.user_id = $1
   AND (
-    $2 IS NULL
+    $2::timestamptz IS NULL
     OR mf.favorited_at < $2
     OR (mf.favorited_at = $2 AND m.moment_id < $3)
   )
