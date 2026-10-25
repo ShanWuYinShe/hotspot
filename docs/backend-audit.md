@@ -1516,3 +1516,20 @@ GIT_VERSION=v1.4.0-rc1 GIT_COMMIT=$(git rev-parse HEAD) GIT_BUILD_TIME=$(date -u
 ### 建议执行顺序
 P0-1 WS E2E → P0-3 告警规则 → P0-2 写路径压测 → P1-4 会话缓存评估（需产品确认撤销语义）→
 其余按需。
+
+## WS E2E 全链路用例（2026-10-25，第 46 轮）
+
+补上 P0-1 缺口：`backend-go/test/integration/websocket_test.go` 新增真实 compose 环境的
+WebSocket 用例（此前 E2E 只有 HTTP，WS 仅 realtime 包单测）：
+
+1. `TestWebSocket_ConnectAuthHeartbeatSubscriptions`：guest token 握手 → `Auth` →
+   收到 `ConnectionEstablished`（校验 connection_id/user_id/server_time(RFC3339)/
+   server_seq(int64-as-string)/resume_token/ping_interval=30/ping_timeout=10/max_subscriptions）；
+   `Ping→Pong`；`SetSubscriptions`（订阅自己）→ `SubscribeAck` accepted 且回显 client_request_id；
+   `GetSubscriptions` → `SubscriptionsSnapshot` 含订阅 ID；发送 close 帧后服务端关闭连接。
+2. `TestWebSocket_AuthFailureClosesWith4001`：
+   - 未鉴权先发消息 → `Error(code=20000,severity=fatal)` + close code `4001`；
+   - 非法 token 鉴权 → 同样 `Error` + close `4001`。
+
+验证：`BACKEND_URL=http://localhost:8082 go test -count=1 ./test/integration/` 全绿（6.3s，含原 92 个
+HTTP 用例与新增 WS 用例）；`-race` 门禁与 CI E2E job 同样执行该套件，后续 WS 协议回归有据可依。
