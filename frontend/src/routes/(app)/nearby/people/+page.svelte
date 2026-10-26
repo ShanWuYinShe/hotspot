@@ -165,10 +165,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			(user) =>
 				(!selfId || user.id !== selfId) &&
 				// 标签按全量匹配：首标签之外同样可命中（此前只比 tags[0]）。
-				(tagFilter === '全部' || user.tags.includes(tagFilter))
+				(tagFilter === '全部' || (user.tags?.includes(tagFilter) ?? false))
 		);
 		if (sort === '在线') return [...next].sort((a, b) => Number(b.isOnline) - Number(a.isOnline));
-		if (sort === '共同好友') return [...next].sort((a, b) => b.mutual - a.mutual);
+		if (sort === '共同好友') return [...next].sort((a, b) => (b.mutual ?? 0) - (a.mutual ?? 0));
 		return next;
 	});
 

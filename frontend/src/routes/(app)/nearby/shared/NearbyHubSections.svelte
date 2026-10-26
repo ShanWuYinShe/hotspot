@@ -1,6 +1,10 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { ROUTES } from '@/lib/routes';
+	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
+	import UserCard from '@/routes/(app)/nearby/people/UserCard.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
 	import type { MomentItem } from '@/api/types';
@@ -16,7 +20,7 @@
 		users = [],
 		moments = [],
 		groups = [],
-		userPreview = 4,
+		userPreview,
 		momentPreview = 3,
 		emptyHint,
 		isFollowed,
@@ -25,7 +29,8 @@
 		onSeeAllUsers,
 		onSeeAllMoments,
 		onSeeAllGroups,
-		onOpenMoment
+		onOpenMoment,
+		onOpenUser
 	}: {
 		users?: NearbyUser[];
 		moments?: MomentItem[];
@@ -40,19 +45,38 @@
 		onSeeAllMoments: () => void;
 		onSeeAllGroups: () => void;
 		onOpenMoment: (momentId: string) => void;
+		onOpenUser?: (userId: string) => void;
 	} = $props();
+
+	const isDesktop = $derived(platform.platform === 'desktop');
+	const defaultUserPreview = $derived(isDesktop ? 6 : 4);
+	const previewCount = $derived(userPreview ?? defaultUserPreview);
 </script>
 
 {#if users.length > 0}
 	<div data-hub-section="people">
 		<SectionHead title="附近的人" action="查看全部" onAction={onSeeAllUsers} />
-		<NearbyUserRows
-			users={users.slice(0, userPreview)}
-			{isFollowed}
-			{isPending}
-			onToggle={onToggleFollow}
-			{emptyHint}
-		/>
+		{#if isDesktop}
+			<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3.5 sm:gap-4 mt-2">
+				{#each users.slice(0, previewCount) as user (user.id)}
+					<UserCard
+						{user}
+						followed={isFollowed(user.id)}
+						pending={isPending(user.id)}
+						onFollow={() => onToggleFollow(user.id)}
+						onNavigate={() => (onOpenUser ? onOpenUser(user.id) : void goto(ROUTES.user(user.id)))}
+					/>
+				{/each}
+			</div>
+		{:else}
+			<NearbyUserRows
+				users={users.slice(0, previewCount)}
+				{isFollowed}
+				{isPending}
+				onToggle={onToggleFollow}
+				{emptyHint}
+			/>
+		{/if}
 	</div>
 {/if}
 

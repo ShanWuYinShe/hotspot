@@ -180,6 +180,7 @@
 			onSeeAllMoments={() => void goto(ROUTES.nearbyMoments)}
 			onSeeAllGroups={() => void goto(ROUTES.nearbyGroups)}
 			onOpenMoment={(id) => void goto(ROUTES.moment(id))}
+			onOpenUser={(id) => void goto(ROUTES.user(id))}
 		/>
 	{/if}
 </StandardPageLayout>

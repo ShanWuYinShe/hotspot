@@ -4,6 +4,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import JoinButton from './JoinButton.svelte';
 	import type { Group } from './group-data';
+	import { cn } from '@/lib/utils';
 
 	// 附近群组卡片（基于 NearbyImageCard 统一图片优先原语）。
 	// 形态分派（Gemini UI 审查：图片铺满 + 信息沉底的 overlay 结构在高格子里
@@ -25,7 +26,8 @@
 		featured = false,
 		horizontal = false,
 		cardWidth = 0,
-		cardHeight = 0
+		cardHeight = 0,
+		class: className = ''
 }: {
 		group: Group;
 		/** 加入/退出请求进行中（JoinButton 禁点防重复提交） */
@@ -41,6 +43,7 @@
 		cardWidth?: number;
 		/** BSP 格子实际高度 */
 		cardHeight?: number;
+		class?: string;
 } = $props();
 
 	// 高格子自动横排：横格（宽>高）且高过首屏一半（420px）时切
@@ -136,7 +139,14 @@
 		imageAlt={group.name}
 		onClick={onOpen}
 		horizontal={featured ? horizontal : autoLandscape}
-		class={featured ? (horizontal ? 'rounded-2xl min-h-56 border-border-subtle/60 shadow-xs hover:shadow-raised-sm' : 'rounded-2xl min-h-64 border-border-subtle/60 shadow-xs hover:shadow-raised-sm') : 'rounded-2xl aspect-[4/3] border-border-subtle/60 shadow-xs hover:shadow-raised-sm'}
+		class={featured
+			? (horizontal
+				? cn('rounded-2xl min-h-56 border-border-subtle/60 shadow-xs hover:shadow-raised-sm', className)
+				: cn('rounded-2xl min-h-[320px] sm:min-h-64 border-border-subtle/60 shadow-xs hover:shadow-raised-sm', className))
+			: cn(
+				'rounded-2xl border-border-subtle/60 shadow-xs hover:shadow-raised-sm',
+				className || 'aspect-[3/4] sm:aspect-[4/3]'
+			)}
 	>
 		{#snippet placeholder()}
 			<span class="text-accent-default {featured ? 'text-4xl' : 'text-3xl'} font-semibold">{Array.from(group.name)[0] ?? '群'}</span>

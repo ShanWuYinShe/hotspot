@@ -323,7 +323,10 @@ const markSingleRead = (id: string) => {
 
 
 <div class="flex flex-col flex-1 min-h-full">
-<SplitPageLayout contentClassName="animate-fade-in pt-4 pb-6">
+<SplitPageLayout
+	contentMaxWidth="64rem"
+	contentClassName="animate-fade-in pt-4 pb-6"
+>
 	{#snippet header()}
 		<PageHeader
 			title="通知"

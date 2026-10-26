@@ -155,11 +155,12 @@
 	<title>我的举报 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
+<StandardPageLayout contentMaxWidth="48rem" contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			title="我的举报"
 			sticky
+			maxWidth="48rem"
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			onBack={() => smartBack(ROUTES.me)}
 		>

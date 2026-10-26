@@ -1,17 +1,18 @@
 <script lang="ts">
-	import { Clock, ArrowUpRight, Flame, TrendingUp, Users } from '@lucide/svelte';
+	import { Clock, ArrowUpRight, Flame, TrendingUp, Users, UsersRound } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import type { MomentItem } from '@/api/types';
 
-	// 搜索页「无查询发现态」：最近搜索 + 热门话题 + 人物推荐 + 热门动态。
+	// 搜索页「无查询发现态」：最近搜索 + 热门话题 + 人物推荐 + 推荐群组 + 热门动态。
 	// 热门话题来自 moments/search 热门模式的 tags 聚合（页面传入）；人物推荐来自
-	// users/search 距离排序（页面传入）；无数据时各自不渲染区块（诚实空态原则，
-	// 不留死区块）。人物推荐补发现态下半屏空白（审查 P1-16：54% 空白）。
+	// users/search 距离排序（页面传入）；推荐群组来自 groups/search 热门排序（页面传入）；
+	// 无数据时各自不渲染区块（诚实空态原则，不留死区块）。
 	// 页面私有组件（colocate），由 search/+page.svelte 渲染。
 
 	/** 人物推荐列表项（users/search 距离排序，页面映射后传入） */
@@ -26,16 +27,28 @@
 		isOnline: boolean;
 	}
 
+	/** 推荐群组列表项（groups/search 热门排序，页面映射后传入） */
+	export interface DiscoveryGroup {
+		id: string;
+		name: string;
+		avatar: string;
+		category: string;
+		memberCount: number;
+	}
+
 	let {
 		recent,
 		hotTopics = [],
 		hotMoments = [],
 		hotUsers = [],
+		hotGroups = [],
 		onChoose,
 		onChooseTopic,
 		onOpenMoment,
 		onOpenUser,
+		onOpenGroup,
 		onSeeAllUsers,
+		onSeeAllGroups,
 		onClear
 	}: {
 		recent: string[];
@@ -45,6 +58,8 @@
 		hotMoments?: MomentItem[];
 		/** 人物推荐（为空时不渲染区块）：users/search 距离排序取前 3 */
 		hotUsers?: DiscoveryUser[];
+		/** 推荐群组（为空时不渲染区块）：groups/search 热门排序取前 3 */
+		hotGroups?: DiscoveryGroup[];
 		onChoose: (value: string) => void;
 		/** 热门话题点击：按 tag 语义搜索（moments/search tag 参数），与关键词搜索分流 */
 		onChooseTopic: (value: string) => void;
@@ -52,8 +67,12 @@
 		onOpenMoment: (momentId: string) => void;
 		/** 人物推荐行点击：跳用户资料页 */
 		onOpenUser: (userId: string) => void;
+		/** 推荐群组行点击：跳群组资料页 */
+		onOpenGroup?: (groupId: string) => void;
 		/** 「查看全部」：跳附近的人专区 */
 		onSeeAllUsers: () => void;
+		/** 「查看全部」：跳附近的群组专区 */
+		onSeeAllGroups?: () => void;
 		onClear: () => void;
 	} = $props();
 </script>
@@ -166,16 +185,57 @@
 		</section>
 	{/if}
 
+	{#if hotGroups.length > 0}
+		<!-- 推荐群组：丰富发现态维度，平衡左右栏纵向节奏 -->
+		<section aria-label="推荐群组">
+			<div class="flex items-center justify-between mb-2.5">
+				<div class="flex items-center gap-1.5">
+					<UsersRound class="size-3.5 text-accent-default" strokeWidth={1.75} />
+					<h2 class="eyebrow">推荐群组</h2>
+				</div>
+				{#if onSeeAllGroups}
+					<button
+						type="button"
+						onclick={onSeeAllGroups}
+						class="link-btn hit-slop -my-1 px-2 py-1 text-xs text-accent-default"
+					>
+						查看全部
+					</button>
+				{/if}
+			</div>
+			<ListContainer bordered class="mt-3 rounded-2xl border-border-subtle/50 shadow-xs overflow-hidden">
+				{#each hotGroups as g (g.id)}
+					<ListItem
+						onClick={() => onOpenGroup?.(g.id)}
+						ariaLabel={`查看 ${g.name} 群组`}
+						class="flex items-center gap-3 px-4 py-3"
+					>
+						<Avatar src={g.avatar} name={g.name} size="md" shape="rounded" />
+						<div class="flex-1 min-w-0">
+							<p class="text-sm font-medium text-text-primary truncate">{g.name}</p>
+							<p class="text-xxs text-text-secondary mt-0.5 flex items-center gap-1.5 truncate">
+								{#if g.category}<span class="text-accent-default">#{g.category}</span>{/if}
+								{#if g.category && g.memberCount > 0}<span class="opacity-muted text-text-secondary">·</span>{/if}
+								<span>{g.memberCount} 成员</span>
+							</p>
+						</div>
+						<ArrowUpRight class="size-4 text-text-secondary" strokeWidth={1.75} />
+					</ListItem>
+				{/each}
+			</ListContainer>
+		</section>
+	{/if}
+
 	</div>
 	{#if hotMoments.length > 0}
 	<div>
-		<!-- 热门动态：独立画廊卡片流，消除外层大框嵌套 -->
+		<!-- 热门动态：独立画廊卡片流，宽屏下响应式双列布局与左栏高度对齐 -->
 		<section aria-label="热门动态">
 			<div class="flex items-center gap-1.5 mb-2.5">
 				<TrendingUp class="size-3.5 text-accent-default" strokeWidth={1.75} />
 				<h2 class="eyebrow">热门动态</h2>
 			</div>
-			<div class="flex flex-col gap-3.5 sm:gap-4 mt-2">
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3.5 sm:gap-4 mt-2">
 				{#each hotMoments as m (m.moment_id)}
 					<HomeFeedItem moment={m} showDistance={false} onClick={() => onOpenMoment(m.moment_id)} />
 				{/each}

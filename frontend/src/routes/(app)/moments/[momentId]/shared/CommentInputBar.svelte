@@ -30,7 +30,7 @@
 				if (e.key === 'Enter' && !e.isComposing) onSend();
 			}}
 			placeholder="写下你的评论…"
-			class="flex-1 bg-transparent text-text-primary text-sm"
+			class="flex-1 bg-transparent text-text-primary text-md"
 		/>
 	</div>
 	<button

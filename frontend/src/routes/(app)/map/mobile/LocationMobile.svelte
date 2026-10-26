@@ -21,6 +21,7 @@
 	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
 	import { smartBack } from '@/lib/smart-back';
+	import { platform } from '@/stores/platform.svelte';
 
 	// 移动端地图探索：全屏底图（高德/OSM 可切换）+ 可拖拽吸附底部 Sheet（148/318/540 三档）。
 	// motion spring 吸附改 CSS transition。
@@ -240,10 +241,16 @@
 		selectedPin = null;
 	}
 
-	const sheetStyle = $derived(
-		`position:absolute;bottom:0;left:0;right:0;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;border:var(--cst-border-width-hairline) solid var(--cst-border-default);border-bottom:none;box-shadow:var(--cst-elevation-sheet);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height var(--cst-motion-spring) var(--cst-ease-bounce);'}`
-	);
-	const rightCtrlBottom = $derived(sheetH + 10);
+	const isLandscape = $derived(platform.orientation === 'landscape');
+
+	const sheetStyle = $derived.by(() => {
+		if (isLandscape) {
+			return 'position:absolute;top:60px;bottom:14px;left:14px;width:340px;max-width:calc(50vw - 28px);z-index:20;border-radius:var(--radius-sheet);border:var(--cst-border-width-hairline) solid var(--cst-border-default);box-shadow:var(--cst-elevation-modal);display:flex;flex-direction:column;overflow:hidden;';
+		}
+		return `position:absolute;bottom:0;left:0;right:0;max-width:640px;margin:0 auto;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;border:var(--cst-border-width-hairline) solid var(--cst-border-default);border-bottom:none;box-shadow:var(--cst-elevation-sheet);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height var(--cst-motion-spring) var(--cst-ease-bounce);'}`;
+	});
+
+	const rightCtrlBottom = $derived(isLandscape ? 20 : sheetH + 10);
 </script>
 
 <div class="bg-surface-page" style="position:relative;width:100%;height:100%;overflow:hidden;">
@@ -328,8 +335,9 @@
 		<MapSourceSwitch align="end" side="top" />
 	</div>
 
-	<!-- ══ BOTTOM SHEET (draggable) ══ -->
+	<!-- ══ BOTTOM SHEET (draggable in portrait, floating side panel in landscape) ══ -->
 	<div class="bg-surface-primary" style={sheetStyle}>
+		{#if !isLandscape}
 		<!-- Drag handle -->
 		<div
 			role="slider"
@@ -345,9 +353,10 @@
 		>
 			<div class="bg-border-default w-9.5 h-1 rounded-full" ></div>
 		</div>
+		{/if}
 
 		<!-- Search bar -->
-		<div class="shrink-0 px-4 pb-2">
+		<div class="shrink-0 px-4 {isLandscape ? 'pt-3 pb-2' : 'pb-2'}">
 			<div class="flex items-center gap-2.5 px-3.5 rounded-md input-surface h-11" >
 				<Search class="size-3.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
 				<input
@@ -380,11 +389,11 @@
 			</div>
 		</div>
 
-		<!-- Scrollable content — 收起(min)时隐藏而非卸载（保留滚动位置/输入状态） -->
+		<!-- Scrollable content — 收起(min)时隐藏而非卸载（保留滚动位置/输入状态；横屏恒定展示） -->
 		<div
-			style="flex:1;min-height:0;overflow-y:auto;{snap === 'min' ? 'display:none;' : ''}"
+			style="flex:1;min-height:0;overflow-y:auto;{!isLandscape && snap === 'min' ? 'display:none;' : ''}"
 			class="no-scrollbar pb-3"
-			aria-hidden={snap === 'min'}
+			aria-hidden={!isLandscape && snap === 'min'}
 		>
 			<LocationSheetList
 				bind:searchQuery

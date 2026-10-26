@@ -332,7 +332,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		}}
 	/>
 
-<SplitPageLayout contentClassName="animate-fade-in pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}">
+<SplitPageLayout
+	contentMaxWidth="58rem"
+	contentClassName="animate-fade-in pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}"
+>
 	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
 	{#if loading}
 		<InlineLoading label="加载资料…" />
@@ -397,7 +400,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					你已屏蔽此用户；关注和私信已停用。
 				</div>
 			{/if}
-			<p class="mt-6 max-w-115 text-sm leading-6 text-text-secondary">{user.bio || '这个人还没有填写简介。'}</p>
+			<p class="mt-6 max-w-115 text-md leading-relaxed text-text-secondary">{user.bio || '这个人还没有填写简介。'}</p>
 
 			<!-- 位置 + 标签 -->
 			<div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">

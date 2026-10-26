@@ -15,11 +15,11 @@
 		isOnline: boolean;
 		/** 展示用首标签（卡片 #tag）；筛选走全量 tags（首标签之外同样可命中） */
 		tag: string;
-		tags: string[];
-		mutual: number;
-		note: string;
+		tags?: string[];
+		mutual?: number;
+		note?: string;
 		/** 查看者是否已关注（users/search relation.is_following；进度缓存沿用） */
-		isFollowing: boolean;
+		isFollowing?: boolean;
 	}
 
 	let {
@@ -80,7 +80,9 @@
 						></span>
 					{/if}
 				</p>
-				<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>
+				{#if user.note}
+					<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>
+				{/if}
 			</div>
 			<div class="mt-2.5 flex items-center justify-between gap-2">
 				{#if user.tag}

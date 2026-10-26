@@ -303,7 +303,7 @@
 						{#if c.isDeleted}
 							<p class="text-text-secondary text-sm mt-0.5 leading-relaxed italic">该评论已删除</p>
 						{:else}
-							<p class="text-text-primary text-sm mt-0.5 leading-relaxed break-words">{c.text}</p>
+							<p class="text-text-primary text-md mt-1 leading-relaxed break-words">{c.text}</p>
 							<div class="flex items-center gap-4 mt-2">
 								<button
 									type="button"
@@ -355,18 +355,18 @@
 											<div class="flex items-baseline gap-2">
 												<button
 													type="button"
-													class="link-btn hit-slop -my-2 py-2 text-text-primary text-xs font-medium focus-ring rounded-sm truncate"
+													class="link-btn hit-slop -my-2 py-2 text-text-primary text-sm font-medium focus-ring rounded-sm truncate"
 													onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
 												>{r.user}</button>
 												{#if !r.isDeleted}
 													<span class="text-text-secondary text-xs">回复 @{c.user}</span>
 												{/if}
-												<span class="text-text-secondary text-xxs shrink-0">{r.time}</span>
+												<span class="text-text-secondary text-xs shrink-0">{r.time}</span>
 											</div>
 											{#if r.isDeleted}
-												<p class="text-text-secondary text-xs mt-0.5 leading-relaxed italic">该评论已删除</p>
+												<p class="text-text-secondary text-sm mt-0.5 leading-relaxed italic">该评论已删除</p>
 											{:else}
-												<p class="text-text-primary text-xs mt-0.5 leading-relaxed break-words">{r.text}</p>
+												<p class="text-text-primary text-sm mt-0.5 leading-relaxed break-words">{r.text}</p>
 											{/if}
 											{#if !r.isDeleted}
 												<div class="flex items-center gap-3 mt-1">
@@ -383,7 +383,7 @@
 								{#if c.repliesCount > c.replies.length}
 									<button
 										type="button"
-										class="link-btn text-accent-default text-xs self-start focus-ring rounded-sm font-medium pt-1"
+										class="link-btn text-accent-default text-sm self-start focus-ring rounded-sm font-medium pt-1"
 										onclick={() => onExpandReplies(c.id)}
 									>查看全部 {c.repliesCount} 条回复</button>
 								{/if}

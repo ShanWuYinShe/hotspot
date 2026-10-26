@@ -186,9 +186,9 @@
 </svelte:head>
 
 
-<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-10">
+<StandardPageLayout contentMaxWidth="48rem" contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
-		<PageHeader title="编辑资料" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
+		<PageHeader title="编辑资料" maxWidth="48rem" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 	{#snippet trailing()}
 		<!-- 未登录隐藏保存(主区已是登录引导,顶栏悬挂保存按钮属不可用控件;Gemini 审查 r08) -->
 		{#if !needsAuth}

@@ -102,6 +102,42 @@ describe('SearchDiscovery', () => {
 		expect(screen.queryByLabelText('人物推荐')).toBeNull();
 	});
 
+	it('推荐群组区块：渲染行并点击走 onOpenGroup，无群组时不渲染', async () => {
+		const onOpenGroup = vi.fn();
+		const onSeeAllGroups = vi.fn();
+		const { rerender } = render(SearchDiscovery, {
+			props: {
+				recent: [],
+				hotGroups: [{ id: 'g1', name: '周末爬山社', avatar: '', category: '户外', memberCount: 28 }],
+				onChoose: () => {},
+				onChooseTopic: () => {},
+				onOpenMoment: () => {},
+				onOpenUser: () => {},
+				onOpenGroup,
+				onSeeAllUsers: () => {},
+				onSeeAllGroups,
+				onClear: () => {}
+			}
+		});
+		expect(screen.getByText('推荐群组')).toBeTruthy();
+		expect(screen.getByText('周末爬山社')).toBeTruthy();
+		expect(screen.getByText('28 成员')).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: '查看 周末爬山社 群组' }));
+		expect(onOpenGroup).toHaveBeenCalledWith('g1');
+
+		await rerender({
+			recent: [],
+			hotGroups: [],
+			onChoose: () => {},
+			onChooseTopic: () => {},
+			onOpenMoment: () => {},
+			onOpenUser: () => {},
+			onSeeAllUsers: () => {},
+			onClear: () => {}
+		});
+		expect(screen.queryByText('推荐群组')).toBeNull();
+	});
+
 	// 回归守卫：两个行内文字动作（清除/查看全部）实测仅 22.7px 高，低于 WCAG 2.5.8 的
 	// 24px 下限；必须带 hit-slop 扩热区（与首页 SectionHead 同名钮写法一致）。
 	it('行内动作「清除/查看全部」带 hit-slop 扩热区', () => {

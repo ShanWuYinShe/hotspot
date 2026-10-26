@@ -137,20 +137,20 @@
 					<div class="flex items-center gap-1.5 flex-wrap">
 						<button
 							type="button"
-							class="font-semibold text-sm text-text-primary hover:text-accent-default hover:underline transition-colors truncate text-left"
+							class="font-semibold text-md text-text-primary hover:text-accent-default hover:underline transition-colors truncate text-left"
 							onclick={handleUserClick}
 						>
 							{moment.user?.nickname ?? '匿名用户'}
 						</button>
 
 						{#if moment.author_relation?.is_following}
-							<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xxs font-medium bg-accent-soft text-accent-default shrink-0">
+							<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-accent-soft text-accent-default shrink-0">
 								已关注
 							</span>
 						{/if}
 
 						{#if recommendationBadge}
-							<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xxs font-medium bg-surface-subtle text-text-secondary shrink-0">
+							<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-surface-subtle text-text-secondary shrink-0">
 								<Sparkles class="size-2.5 text-accent-default" />
 								{recommendationBadge}
 							</span>
@@ -174,9 +174,9 @@
 			{/if}
 		</div>
 
-		<!-- 动态正文 -->
+		<!-- 动态正文：提升至 text-base (16px) 标准正文字号，极大提升阅读舒适度 -->
 		{#if moment.description}
-			<p class="mt-3 text-sm text-text-primary leading-relaxed whitespace-pre-wrap break-words">
+			<p class="mt-3 text-base text-text-primary leading-relaxed whitespace-pre-wrap break-words">
 				{moment.description}
 			</p>
 		{/if}
@@ -243,11 +243,11 @@
 			<div class="flex items-center gap-6 sm:gap-7">
 				<!-- 点赞 -->
 				<div
-					class="hover-action hit-slop flex items-center gap-1.5 text-xs focus-ring transition-colors {hasLiked ? 'text-status-danger' : 'hover:text-status-danger'}"
+					class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors {hasLiked ? 'text-status-danger' : 'hover:text-status-danger'}"
 					aria-label={`点赞 ${totalReactions} 次`}
 				>
 					<Heart
-						class="size-4 shrink-0 transition-transform active:scale-125 {hasLiked ? 'fill-status-danger text-status-danger' : ''}"
+						class="size-4.5 shrink-0 transition-transform active:scale-125 {hasLiked ? 'fill-status-danger text-status-danger' : ''}"
 						strokeWidth={1.75}
 					/>
 					<span class="font-medium">{totalReactions > 0 ? totalReactions : '赞'}</span>
@@ -255,20 +255,20 @@
 
 				<!-- 评论 -->
 				<div
-					class="hover-action hit-slop flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors"
+					class="hover-action hit-slop flex items-center gap-1.5 text-sm hover:text-accent-default focus-ring transition-colors"
 					aria-label={`评论 ${moment.comments_count} 条`}
 				>
-					<MessageCircle class="size-4 shrink-0" strokeWidth={1.75} />
+					<MessageCircle class="size-4.5 shrink-0" strokeWidth={1.75} />
 					<span class="font-medium">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
 				</div>
 
 				<!-- 收藏 -->
 				<div
-					class="hover-action hit-slop flex items-center gap-1.5 text-xs focus-ring transition-colors {moment.is_favorited ? 'text-accent-default' : 'hover:text-accent-default'}"
+					class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors {moment.is_favorited ? 'text-accent-default' : 'hover:text-accent-default'}"
 					aria-label={moment.is_favorited ? '已收藏' : '收藏'}
 				>
 					<Bookmark
-						class="size-4 shrink-0 transition-transform active:scale-125 {moment.is_favorited ? 'fill-accent-default text-accent-default' : ''}"
+						class="size-4.5 shrink-0 transition-transform active:scale-125 {moment.is_favorited ? 'fill-accent-default text-accent-default' : ''}"
 						strokeWidth={1.75}
 					/>
 				</div>
@@ -277,11 +277,11 @@
 			<!-- 分享 -->
 			<button
 				type="button"
-				class="hover-action hit-slop flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors"
+				class="hover-action hit-slop flex items-center gap-1.5 text-sm hover:text-accent-default focus-ring transition-colors"
 				aria-label="分享动态"
 				onclick={handleShareClick}
 			>
-				<Share2 class="size-4 shrink-0" strokeWidth={1.75} />
+				<Share2 class="size-4.5 shrink-0" strokeWidth={1.75} />
 				{#if moment.shares_count && moment.shares_count > 0}
 					<span class="font-medium">{moment.shares_count}</span>
 				{/if}

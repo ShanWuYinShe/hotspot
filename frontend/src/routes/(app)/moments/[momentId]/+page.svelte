@@ -505,7 +505,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 </svelte:head>
 
 
-<SplitPageLayout contentClassName="animate-fade-in pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}">
+<SplitPageLayout
+	contentMaxWidth="58rem"
+	contentClassName="animate-fade-in pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}"
+>
 	{#snippet header()}
 		<!-- 命名对齐全站术语「瞬间」(左栏/搜索/设置均用瞬间;Gemini 审查 r19) -->
 		<PageHeader title="瞬间详情" titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} onBack={() => smartBack()}>

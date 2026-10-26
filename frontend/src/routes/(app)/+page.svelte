@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Bell, Search, Compass, ArrowRight, Sparkles, TrendingUp, Users, LogIn, ExternalLink } from '@lucide/svelte';
+	import { page } from '$app/state';
+	import { Bell, Search, Compass, ArrowRight, Sparkles, TrendingUp, Users, LogIn, ExternalLink, MapPin, Radio } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import type { MomentItem } from '@/api/types';
 	import { searchMoments, fetchFollowingMoments } from '@/api';
@@ -127,6 +128,7 @@
 	// 当前激活 Tab 对应的数据与加载状态
 	const currentPager = $derived(activeTab === 'discover' ? discover : following);
 	const currentItems = $derived(currentPager.items);
+	const demoMode = $derived(page.url.searchParams.get('demo'));
 	const currentLoading = $derived(booting || (currentItems.length === 0 && currentPager.loading));
 	const currentError = $derived(currentPager.error);
 	const hasMore = $derived(currentPager.hasMore);
@@ -268,8 +270,8 @@
 		{:else if currentError && currentItems.length === 0}
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
 		{:else if currentItems.length > 0}
-			<!-- 高质感社区 Feed 流：独立画廊岛屿卡片流 -->
-			<div class="flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2">
+			<!-- 高质感社区 Feed 流：方案 E 超宽屏 3 列流式画廊瀑布（默认标准） -->
+			<div class={demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4.5 px-3 sm:px-0 pt-2'}>
 				{#each currentItems as moment (moment.moment_id)}
 					<HomeFeedItem
 						{moment}
@@ -308,80 +310,204 @@
 		{/if}
 
 		{#snippet rail()}
-			<!-- 桌面端右侧 Rail 辅助区：Bento 微岛生态，与主画布完美融为一体 -->
-			<div class="flex flex-col gap-4 py-2">
-				<!-- 活跃邻居推荐 -->
-				{#if activeNeighbors.length > 0}
-					<RailSection title="活跃邻居" variant="island">
-						<div class="flex flex-col divide-y divide-border-subtle/30">
-							{#each activeNeighbors as neighbor (neighbor.userId)}
-								<div class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-									<Avatar src={neighbor.avatarUrl} name={neighbor.nickname} size="sm" />
-									<div class="min-w-0 flex-1">
-										<button
-											type="button"
-											class="text-left text-xs font-semibold text-text-primary hover:text-accent-default hover:underline transition-colors truncate block w-full"
-											onclick={() => void goto(ROUTES.user(neighbor.userId))}
-										>
-											{neighbor.nickname}
-										</button>
-										{#if neighbor.location}
-											<span class="text-xxs text-text-secondary truncate block mt-0.5">{neighbor.location}</span>
-										{/if}
-									</div>
+			{#if demoMode === 'd'}
+				<!-- 方案 D：LBS 双核全景大屏的右翼实时雷达控制中心 -->
+				<div class="flex flex-col gap-4 py-2">
+					<!-- 实时雷达探索卡片 -->
+					<div class="relative overflow-hidden rounded-2xl border border-border-default bg-surface-primary shadow-sm">
+						<!-- 地图雷达视窗背景模拟 -->
+						<div class="relative h-60 w-full bg-surface-subtle flex items-center justify-center overflow-hidden border-b border-border-subtle">
+							<!-- 仿雷达脉冲扫描同心圆 -->
+							<div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40">
+								<div class="size-28 rounded-full border border-accent-default/50 animate-ping"></div>
+								<div class="absolute size-44 rounded-full border border-border-default/60"></div>
+								<div class="absolute size-64 rounded-full border border-border-default/40"></div>
+								<div class="absolute size-84 rounded-full border border-border-default/20"></div>
+							</div>
+							<!-- 模拟地标图钉 -->
+							<div class="absolute top-10 left-10 flex items-center gap-1.5 rounded-full bg-surface-primary/95 backdrop-blur-sm px-3 py-1 shadow-sm border border-border-subtle text-xs font-medium text-text-primary">
+								<span class="size-2 rounded-full bg-status-online"></span> 云龙湖 · 8条动态
+							</div>
+							<div class="absolute bottom-12 right-10 flex items-center gap-1.5 rounded-full bg-surface-primary/95 backdrop-blur-sm px-3 py-1 shadow-sm border border-border-subtle text-xs font-medium text-text-primary">
+								<span class="size-2 rounded-full bg-accent-default"></span> 回龙窝街区 · 14人
+							</div>
+							<!-- 中心我所在的点 -->
+							<div class="relative flex flex-col items-center">
+								<span class="relative flex size-6">
+									<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-default opacity-75"></span>
+									<span class="relative inline-flex size-6 rounded-full bg-accent-default items-center justify-center text-white shadow-md">
+										<Radio class="size-3.5" />
+									</span>
+								</span>
+								<span class="mt-2 rounded-full bg-surface-primary px-3 py-0.5 text-xs font-bold text-text-primary shadow-xs border border-border-subtle">
+									当前定位 · 5km 探索圈
+								</span>
+							</div>
+
+							<!-- 右上角快捷切换至全屏地图 -->
+							<button
+								type="button"
+								class="absolute top-3 right-3 flex items-center gap-1.5 rounded-lg bg-surface-primary/95 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-text-primary shadow-xs border border-border-subtle hover:bg-surface-primary hover:text-accent-default transition"
+								onclick={() => void goto(ROUTES.map)}
+							>
+								<MapPin class="size-3.5 text-accent-default" />
+								<span>全景地图</span>
+							</button>
+						</div>
+
+						<!-- 雷达控制面板与指标 -->
+						<div class="p-4 space-y-3">
+							<div class="grid grid-cols-3 gap-2.5 text-center">
+								<div class="rounded-xl bg-surface-subtle p-3">
+									<p class="text-xs text-text-secondary">周边动态</p>
+									<p class="text-xl font-bold text-text-primary mt-0.5">38 <span class="text-xxs font-normal text-text-secondary">条</span></p>
+								</div>
+								<div class="rounded-xl bg-surface-subtle p-3">
+									<p class="text-xs text-text-secondary">活跃邻居</p>
+									<p class="text-xl font-bold text-text-primary mt-0.5">12 <span class="text-xxs font-normal text-text-secondary">人</span></p>
+								</div>
+								<div class="rounded-xl bg-surface-subtle p-3">
+									<p class="text-xs text-text-secondary">同城圈子</p>
+									<p class="text-xl font-bold text-text-primary mt-0.5">7 <span class="text-xxs font-normal text-text-secondary">个</span></p>
+								</div>
+							</div>
+
+							<div class="flex items-center justify-between pt-1">
+								<span class="text-xs text-text-secondary">当前状态：实时雷达已就绪</span>
+								<button
+									type="button"
+									class="text-xs font-semibold text-accent-default hover:underline"
+									onclick={() => void goto(ROUTES.nearby)}
+								>
+									打开周边探索中心 &rarr;
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<!-- 方案 D 活跃邻居与热议 -->
+					<div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+						{#if activeNeighbors.length > 0}
+							<RailSection title="活跃邻居" variant="island">
+								<div class="flex flex-col divide-y divide-border-subtle/30">
+									{#each activeNeighbors as neighbor (neighbor.userId)}
+										<div class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+											<Avatar src={neighbor.avatarUrl} name={neighbor.nickname} size="sm" />
+											<div class="min-w-0 flex-1">
+												<button
+													type="button"
+													class="text-left text-xs font-semibold text-text-primary hover:text-accent-default hover:underline transition-colors truncate block w-full"
+													onclick={() => void goto(ROUTES.user(neighbor.userId))}
+												>
+													{neighbor.nickname}
+												</button>
+												{#if neighbor.location}
+													<span class="text-xxs text-text-secondary truncate block mt-0.5">{neighbor.location}</span>
+												{/if}
+											</div>
+										</div>
+									{/each}
+								</div>
+							</RailSection>
+						{/if}
+
+						<RailSection title="社区热议" variant="island">
+							<div class="flex flex-col divide-y divide-border-subtle/30">
+								{#each trendingTopics.slice(0, 4) as topic (topic.tag)}
 									<button
 										type="button"
-										class="hover-btn shrink-0 rounded-full border border-border-default bg-surface-primary px-3 py-1 text-xxs font-medium text-text-primary hover:border-accent-default hover:text-accent-default hover:bg-accent-soft/30 focus-ring transition shadow-xs"
-										onclick={() => void goto(ROUTES.user(neighbor.userId))}
+										class="hover-btn flex w-full items-center justify-between py-2 text-left transition hover:text-accent-default focus-ring first:pt-0 last:pb-0"
+										onclick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
 									>
-										查看
+										<div class="min-w-0 flex-1">
+											<div class="flex items-center gap-1.5">
+												<TrendingUp class="size-3 text-accent-default shrink-0" strokeWidth={1.75} />
+												<span class="text-xs font-medium text-text-primary truncate">#{topic.tag}</span>
+											</div>
+										</div>
+										<span class="text-xxs text-text-secondary tabular-nums shrink-0 ml-2">{topic.count} 条</span>
 									</button>
-								</div>
+								{/each}
+							</div>
+						</RailSection>
+					</div>
+				</div>
+			{:else}
+				<!-- 桌面端右侧 Rail 辅助区：Bento 微岛生态，与主画布完美融为一体 -->
+				<div class="flex flex-col gap-4 py-2">
+					<!-- 活跃邻居推荐 -->
+					{#if activeNeighbors.length > 0}
+						<RailSection title="活跃邻居" variant="island">
+							<div class="flex flex-col divide-y divide-border-subtle/30">
+								{#each activeNeighbors as neighbor (neighbor.userId)}
+									<div class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+										<Avatar src={neighbor.avatarUrl} name={neighbor.nickname} size="sm" />
+										<div class="min-w-0 flex-1">
+											<button
+												type="button"
+												class="text-left text-sm font-semibold text-text-primary hover:text-accent-default hover:underline transition-colors truncate block w-full"
+												onclick={() => void goto(ROUTES.user(neighbor.userId))}
+											>
+												{neighbor.nickname}
+											</button>
+											{#if neighbor.location}
+												<span class="text-xs text-text-secondary truncate block mt-0.5">{neighbor.location}</span>
+											{/if}
+										</div>
+										<button
+											type="button"
+											class="hover-btn shrink-0 rounded-full border border-border-default bg-surface-primary px-3 py-1 text-xs font-medium text-text-primary hover:border-accent-default hover:text-accent-default hover:bg-accent-soft/30 focus-ring transition shadow-xs"
+											onclick={() => void goto(ROUTES.user(neighbor.userId))}
+										>
+											查看
+										</button>
+									</div>
+								{/each}
+							</div>
+						</RailSection>
+					{/if}
+
+					<!-- 社区热议话题 -->
+					<RailSection title="社区热议" variant="island">
+						<div class="flex flex-col divide-y divide-border-subtle/30">
+							{#each trendingTopics as topic (topic.tag)}
+								<button
+									type="button"
+									class="hover-btn flex w-full items-center justify-between py-2 text-left transition hover:text-accent-default focus-ring first:pt-0 last:pb-0"
+									onclick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
+								>
+									<div class="min-w-0 flex-1">
+										<div class="flex items-center gap-1.5">
+											<TrendingUp class="size-3 text-accent-default shrink-0" strokeWidth={1.75} />
+											<span class="text-sm font-medium text-text-primary truncate hover:text-accent-default">#{topic.tag}</span>
+										</div>
+										<span class="text-xs text-text-secondary truncate block mt-0.5 pl-4.5">{topic.desc}</span>
+									</div>
+									<span class="text-xs text-text-secondary tabular-nums shrink-0 ml-2">{topic.count} 条</span>
+								</button>
 							{/each}
 						</div>
 					</RailSection>
-				{/if}
 
-				<!-- 社区热议话题 -->
-				<RailSection title="社区热议" variant="island">
-					<div class="flex flex-col divide-y divide-border-subtle/30">
-						{#each trendingTopics as topic (topic.tag)}
-							<button
-								type="button"
-								class="hover-btn flex w-full items-center justify-between py-2 text-left transition hover:text-accent-default focus-ring first:pt-0 last:pb-0"
-								onclick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
-							>
-								<div class="min-w-0 flex-1">
-									<div class="flex items-center gap-1.5">
-										<TrendingUp class="size-3 text-accent-default shrink-0" strokeWidth={1.75} />
-										<span class="text-xs font-medium text-text-primary truncate hover:text-accent-default">#{topic.tag}</span>
-									</div>
-									<span class="text-xxs text-text-secondary truncate block mt-0.5 pl-4.5">{topic.desc}</span>
-								</div>
-								<span class="text-xxs text-text-secondary tabular-nums shrink-0 ml-2">{topic.count} 条</span>
-							</button>
-						{/each}
-					</div>
-				</RailSection>
-
-				<!-- 快捷探索周边 -->
-				<RailSection title="探索雷达" variant="island">
-					<button
-						type="button"
-						class="hover-btn group flex w-full items-center gap-3 text-left transition focus-ring rounded-xl p-2 -mx-2 hover:bg-surface-subtle/60"
-						onclick={() => void goto(ROUTES.nearby)}
-					>
-						<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
-							<Compass class="size-4.5" strokeWidth={1.75} />
-						</span>
-						<div class="min-w-0 flex-1">
-							<span class="block text-xs font-semibold text-text-primary group-hover:text-accent-default transition-colors">发现身边 5km</span>
-							<span class="block truncate text-xxs text-text-secondary mt-0.5">人 · 群组 · 动态三合一雷达</span>
-						</div>
-						<ExternalLink class="size-3.5 text-text-secondary shrink-0 group-hover:text-accent-default" />
-					</button>
-				</RailSection>
-			</div>
+					<!-- 快捷探索周边 -->
+					<RailSection title="探索雷达" variant="island">
+						<button
+							type="button"
+							class="hover-btn group flex w-full items-center gap-3 text-left transition focus-ring rounded-xl p-2 -mx-2 hover:bg-surface-subtle/60"
+							onclick={() => void goto(ROUTES.nearby)}
+						>
+							<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
+								<Compass class="size-4.5" strokeWidth={1.75} />
+							</span>
+							<div class="min-w-0 flex-1">
+								<span class="block text-xs font-semibold text-text-primary group-hover:text-accent-default transition-colors">发现身边 5km</span>
+								<span class="block truncate text-xxs text-text-secondary mt-0.5">人 · 群组 · 动态三合一雷达</span>
+							</div>
+							<ExternalLink class="size-3.5 text-text-secondary shrink-0 group-hover:text-accent-default" />
+						</button>
+					</RailSection>
+				</div>
+			{/if}
 		{/snippet}
 	</SplitPageLayout>
 </div>

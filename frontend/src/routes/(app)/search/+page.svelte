@@ -5,7 +5,7 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import { searchUsers, searchMoments, searchGroups, searchSuggest , netError } from '@/api';
-	import SearchDiscovery, { type DiscoveryUser } from './shared/SearchDiscovery.svelte';
+	import SearchDiscovery, { type DiscoveryUser, type DiscoveryGroup } from './shared/SearchDiscovery.svelte';
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
@@ -50,6 +50,8 @@
 	// 人物推荐：users/search 距离排序前 3（补发现态下半屏空白，P1-16）；字段映射
 	// 与 home-feed 的 NearbyUser 同口径（tag/距离/在线态）。失败静默、无数据不渲染。
 	let hotUsers = $state<DiscoveryUser[]>([]);
+	// 推荐群组：groups/search 热门排序前 3，丰富发现态并平衡桌面端左右栏高度
+	let hotGroups = $state<DiscoveryGroup[]>([]);
 
 	const device = $derived(platform.platform);
 
@@ -95,7 +97,7 @@
 					}
 				}
 				hotTopics = list.slice(0, 10);
-				hotMoments = (res.data.items ?? []).slice(0, 3);
+				hotMoments = (res.data.items ?? []).slice(0, 4);
 			})
 			.catch(() => {});
 		// 人物推荐：距离排序（不带 reference_point 走服务端默认位置，与首页无锚点
@@ -111,6 +113,19 @@
 					tag: u.tags?.[0] ?? '',
 					distance: formatDistance(u.location?.distance),
 					isOnline: u.presence_status === 'online'
+				}));
+			})
+			.catch(() => {});
+		// 推荐群组：热门排序限 3 条，与人物推荐呼应
+		void searchGroups({ sort_by: 'popular', pagination: { limit: 3 } }, { signal: controller.signal })
+			.then((res) => {
+				if (controller.signal.aborted || res.code !== 0 || !res.data) return;
+				hotGroups = (res.data.items ?? []).slice(0, 3).map((g) => ({
+					id: g.group?.group_id ?? '',
+					name: g.group?.name ?? '',
+					avatar: g.group?.avatar_url ?? '',
+					category: g.tags?.[0] ?? '',
+					memberCount: g.group?.members_count ?? 0
 				}));
 			})
 			.catch(() => {});
@@ -253,11 +268,14 @@
 			hotTopics={hotTopics}
 			hotMoments={hotMoments}
 			hotUsers={hotUsers}
+			hotGroups={hotGroups}
 			onChoose={choose}
 			onChooseTopic={chooseTopic}
 			onOpenMoment={(id) => void goto(ROUTES.moment(id))}
 			onOpenUser={(id) => void goto(ROUTES.user(id))}
+			onOpenGroup={(id) => void goto(ROUTES.group(id))}
 			onSeeAllUsers={() => void goto(ROUTES.nearbyPeople)}
+			onSeeAllGroups={() => void goto(ROUTES.nearbyGroups)}
 			onClear={() => (recent = [])}
 		/>
 	{:else}

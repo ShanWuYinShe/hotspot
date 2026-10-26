@@ -392,10 +392,9 @@ export struct GroupCard {
       NearbyImageCard({
         imageUrl: this.group.group?.avatar_url ?? '',
         imageAlt: this.group.group?.name ?? '',
-        // 前端 nearby/groups/shared/GroupCard 非精选卡是 **aspect-[4/3] 横版**
-        // （实测 web 171×128.25）；此前沿用 0.75 竖版（与 UserCard 混用），
-        // 同一行两张卡比 web 高一截，栅格节奏整体错位。
-        cardAspectRatio: 4 / 3,
+        // 前端 nearby/groups/shared/GroupCard 非精选卡在双列网格（手机端）是 **aspect 0.75 (3:4) 竖版**
+        // 保证封面图片有充足高度（140vp+），避免 4/3 横版导致底部 footer 挤占 70% 空间仅剩 40vp 图条
+        cardAspectRatio: 0.75,
         placeholderText: this.group.group?.name ?? '',
         badgeText: this.getCategory(),
         badgeShape: 'pill',

@@ -247,9 +247,9 @@
 	$effect(() => {
 		setChatUnread(totalUnread);
 	});
-	// 分栏阈值：仅桌面启用 Master-Detail；平板（820 级）分栏后右半屏空态占屏 60%+，
-	// 改为单栏列表（点开会话再进详情），与移动端同一信息密度。
-	const useSplitPane = $derived(platform.platform === 'desktop');
+	// 分栏阈值：桌面与宽平板（≥960px，如横屏 iPad）启用 Master-Detail 双栏；
+	// 窄平板（820 级纵向）保留单栏列表，点开会话再进详情。
+	const useSplitPane = $derived(platform.platform === 'desktop' || platform.isWideTablet);
 	const selectedChat = $derived(
 		liveChats.find((c) => {
 			if (selectedId !== null && c.id === selectedId) return true;
