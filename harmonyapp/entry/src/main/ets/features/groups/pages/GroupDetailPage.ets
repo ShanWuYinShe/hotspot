@@ -1562,6 +1562,7 @@ export struct GroupDetailPage {
 
         // 三 Tab（对齐前端 TabBar 胶囊：简介/成员/公告）
         TabsPillGroup({
+          variant: 'pills',
           tabs: [
             { label: '简介' },
             { label: '成员' },

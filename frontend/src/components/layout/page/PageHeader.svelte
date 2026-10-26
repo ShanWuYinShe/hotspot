@@ -89,8 +89,8 @@
 <header
 	class={cn('shrink-0', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]', !glass && 'page-header-solid', className)}
 	style={glass
-		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'
-		: 'border-bottom:var(--cst-border-width-hairline) solid var(--cst-border-default);'}
+		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));'
+		: ''}
 >
 	<ContentColumn {maxWidth} class={cn(headerPadding, contentClassName)}>
 			<div class="flex items-center gap-3">

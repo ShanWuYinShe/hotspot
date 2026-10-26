@@ -119,16 +119,6 @@ export struct SystemPageHeader {
     return new AppThemeShadow(0, DesignConstants.COLOR.TRANSPARENT, 0, 0);
   }
 
-  private getHeaderBorderColor(): ResourceColor {
-    if (this.backgroundVariant === 'card' || !this.showDivider) {
-      return DesignConstants.COLOR.TRANSPARENT;
-    }
-    // 对齐前端 PageHeader：任何页面头部在任何状态都画 border-bottom hairline
-    // （2026-10-17 逐像素实测 9 个移动端页面：头部最后一行像素均比画布亮，
-    //  如 /messages y=117 是 rgb(42,60,89)、画布 rgb(21,33,52)）。
-    // 此前 transparent 变体完全不画线、bar 变体仅在滚动态画线，与前端不一致。
-    return this.getPalette().borderColor;
-  }
 
   private getRadius(): number {
     // card 变体底栏圆角（对齐 SHAPE.TAB_BAR）；bar/transparent 无圆角
@@ -287,7 +277,7 @@ export struct SystemPageHeader {
       top: this.getHeaderTopPadding()
     })
     .backgroundColor(this.getBackgroundColor())
-    .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getHeaderBorderColor() })
+    // 无硬底边线（R2 去边框）；滚动/浮起态由 shadow 表达层级
     .borderRadius(this.getRadius())
     .shadow(this.getHeaderShadow())
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])

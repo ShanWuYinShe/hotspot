@@ -283,8 +283,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 			{#if tab === 'overview'}
 				<div class="pt-5 flex flex-col gap-5">
-					<!-- 社群 Bento 画卷：整合描述、指标网格与成员预览（彻底根除多层卡片框堆叠） -->
-					<section class="flex flex-col rounded-2xl border border-border-subtle/60 bg-surface-primary p-5 md:p-6 shadow-raised-sm gap-5" aria-label="群组概览">
+					<!-- 去页级外框（Round 2）：概览直接落在连续画布上（原白卡+描边读起来像把整页内容框住）；
+					     内部指标/成员块仍作为内容单元保留浅底。 -->
+					<section class="flex flex-col gap-5" aria-label="群组概览">
 						<!-- 描述简介 -->
 						<p class="text-sm md:text-base leading-relaxed text-text-primary whitespace-pre-wrap break-words">
 							{gd.detail.description || '这个群还没有填写简介。'}
@@ -398,7 +399,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</main>
 
 		<!-- 桌面右栏用圆润卡片承载；移动端平滑自适应，主次操作分明 -->
-		<aside class="flex h-fit flex-col gap-3 rounded-2xl border border-border-subtle/60 bg-surface-primary p-5 shadow-raised-sm">
+		<aside class="flex h-fit flex-col gap-3 rounded-2xl bg-surface-primary/80 p-5 shadow-raised-sm backdrop-blur-xs">
 			{#if gd.joined}
 				<Button
 					type="button"

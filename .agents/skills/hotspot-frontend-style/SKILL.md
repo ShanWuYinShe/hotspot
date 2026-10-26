@@ -401,3 +401,29 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 - 图片/封面上悬浮的返回/更多用 overlay 变体（平台适配，保留）；
 - 触控热区：36px 视觉 + `hit-slop` = 48px（≥44）；纯图标按钮必须带 `aria-label`。
 - 详细口径与鸿蒙映射见 `docs/ui-components.md`「页头动作图标钮口径」。
+## Round 2 样式契约（2026-10-27）
+
+### 1) 整卡图片卡（与 design-system §17 同源）
+
+- 图像优先的内容卡：图片 `object-cover` 铺满整卡，信息以**顶部/底部遮罩覆盖层**压在图上；
+  禁止「图片 + 白色信息托盘」两段式（横排 `horizontal` 列表卡为登记例外）。
+- 卡片不设 border；圆角 `rounded-lg`(20)；hover 抬升走 `card-hover`（图片微缩放 + 卡片上浮）。
+- 遮罩只用 `--cst-surface-card-scrim-top` / `--cst-surface-card-scrim-bottom` /
+  `--cst-surface-card-fallback`（三主题×明暗）；禁止组件内写 rgba/gradient 字面量。
+- 压图白字/白图标对比度 **≥4.5:1**（纯白底图最坏情况，字形区像素法实测）；徽章一律深色强遮罩 +
+  白字，禁止浅玻璃底 + 白字；点赞/收藏等状态用填充形状 + 白描边，不只色相。
+- 位置信息只在右上徽章出现一次；底部元信息只留「时间 · 标签」；多图 → 首图 + 1/N 徽章。
+- 无图 fallback：主题渐变 + 0.08 主题水印图标（64px，`--cst-opacity-watermark`）+ **主题色文字**（不压白字）。
+
+### 2) 页面级容器禁止边框（连续画布）
+
+- 桌面顶栏/侧栏/主内容、移动/平板顶栏/PageHeader 不得有包裹整页的 border/圆角/白底/硬分隔线；
+  层级靠留白、排版、交互态与**内容单元卡片**表达；内容单元卡片可保留但收敛重量。
+- PageHeader 静止无底线，滚动才允许柔和投影；氛围画布桌面整窗单实例（无区域接缝）。
+- 自查：截图四边不得出现「丑竖线/横线」；grep 外壳组件残留的 `border-b` / `rounded-lg border` 包裹体。
+
+### 3) 选中态不得只依赖颜色（design-system §18）
+
+- `segmented`：accent 实底 + ✓ icon + `font-semibold`；`pills`：`font-semibold`；
+  `underline`：`font-semibold` + 下划线。
+- 验收必须附 `filter: grayscale(1)` 灰度截图，选中项仍一眼可辨；新增 Tab/分段控件按此执行。

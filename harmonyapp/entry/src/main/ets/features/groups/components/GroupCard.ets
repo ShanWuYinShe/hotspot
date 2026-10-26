@@ -27,6 +27,8 @@ import { SystemDialog } from '../../../components/SystemDialog';
 export struct GroupCard {
   @Prop group: GroupItem;
   @Prop featured: boolean = false;
+  /** R2 整卡图片卡：是否有图（false = fallback，footer 换主题文字色） */
+  @State private mediaActive: boolean = true;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   // 加入态（对齐 UserCard / MomentFeedCard 的 store 订阅范式）：
@@ -158,13 +160,14 @@ export struct GroupCard {
         .fontSize(DesignConstants.FONT.SIZE.XS)
         .fontWeight(this.hasJoined() ? DesignConstants.FONT.WEIGHT.REGULAR : DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.hasJoined() ?
-          this.getPalette().textSecondary :
+          (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary) :
           this.getPalette().accentText)
-        .backgroundColor(this.hasJoined() ?
-          DesignConstants.COLOR.TRANSPARENT :
-          this.getPalette().accentBackground)
-        .border(this.hasJoined() ?
-          { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor } :
+        .backgroundColor(this.hasJoined()
+          ? (this.mediaActive ? DesignConstants.COLOR.MEDIA_SCRIM_STRONG : DesignConstants.COLOR.TRANSPARENT)
+          : this.getPalette().accentBackground)
+        .border(this.hasJoined()
+          ? { width: DesignConstants.BORDER_WIDTH.HAIRLINE,
+            color: this.mediaActive ? DesignConstants.COLOR.MEDIA_BORDER_WHITE_SOFT : this.getPalette().borderColor } :
           { width: 0 })
         .borderRadius(DesignConstants.RADIUS.FULL)
         .padding({
@@ -191,7 +194,7 @@ export struct GroupCard {
       LucideIcon({
           icon: AppIcon.LOCK,
           iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-          color: this.getPalette().textSecondary
+          color: this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary
         })
       .margin({ left: DesignConstants.SPACING.HALF })
     }
@@ -204,7 +207,7 @@ export struct GroupCard {
         Text(this.group.group?.name ?? '')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-          .fontColor(this.getPalette().textPrimary)
+          .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textPrimary))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         this.buildNameLockIcon()
@@ -216,11 +219,11 @@ export struct GroupCard {
         LucideIcon({
             icon: AppIcon.GROUP,
             iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-            color: this.getPalette().textSecondary
+            color: (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
           })
         Text(`${this.formatMembers()} 人`)
           .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontColor(this.getPalette().textSecondary)
+          .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary))
 
         Blank()
 
@@ -229,11 +232,11 @@ export struct GroupCard {
             LucideIcon({
                 icon: AppIcon.LOCATION,
                 iconSize: DesignConstants.FONT.SIZE.XS2,
-                color: this.getPalette().accentBackground
+                color: (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().accentBackground)
               })
             Text(this.getDistanceText())
               .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.getPalette().accentBackground)
+              .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().accentBackground))
           }
           .alignItems(VerticalAlign.Center)
         }
@@ -247,11 +250,11 @@ export struct GroupCard {
             LucideIcon({
                 icon: AppIcon.TIME,
                 iconSize: DesignConstants.FONT.SIZE.XS2,
-                color: this.getPalette().online
+                color: (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online)
               })
             Text(this.getActivityText())
               .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.getPalette().online)
+              .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online))
           }
           .alignItems(VerticalAlign.Center)
         }
@@ -281,7 +284,7 @@ export struct GroupCard {
           // 前端 featured 群名 text-lg = 18px（本端 18 档是 LG_PLUS；LG=16 是平台适配档）
           .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
           .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-          .fontColor(this.getPalette().textPrimary)
+          .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textPrimary))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         this.buildNameLockIcon()
@@ -292,7 +295,7 @@ export struct GroupCard {
       if (this.group.description) {
         Text(this.group.description)
           .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getPalette().textSecondary)
+          .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -302,11 +305,11 @@ export struct GroupCard {
           LucideIcon({
               icon: AppIcon.GROUP,
               iconSize: DesignConstants.FONT.SIZE.XS,
-              color: this.getPalette().textSecondary
+              color: (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
             })
           Text(`${this.formatMembers()} 人`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getPalette().textSecondary)
+            .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary))
         }
         .alignItems(VerticalAlign.Center)
 
@@ -315,17 +318,17 @@ export struct GroupCard {
             .width(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
             .height(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
             .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.getPalette().online)
+            .backgroundColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online))
           Text(`${this.group.online_members_count ?? 0} 在线`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getPalette().online)
+            .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online))
         }
         .alignItems(VerticalAlign.Center)
 
         if (this.getDistanceText().length > 0) {
           Text(this.getDistanceText())
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getPalette().accentBackground)
+            .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().accentBackground))
         }
       }
       .width('100%')
@@ -338,11 +341,11 @@ export struct GroupCard {
             LucideIcon({
                 icon: AppIcon.TIME,
                 iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                color: this.getPalette().online
+                color: (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online)
               })
             Text(this.getActivityText())
               .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.getPalette().online)
+              .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online))
           }
           .alignItems(VerticalAlign.Center)
         }
@@ -384,6 +387,12 @@ export struct GroupCard {
         badgeShape: 'pill',
         badgeVariant: 'glass',
         badgeAlign: 'topLeft',
+        cardRadius: DesignConstants.SHAPE.CARD,
+        mediaOverlay: true,
+        fallbackIcon: AppIcon.GROUP,
+        onMediaStateChange: (active: boolean) => {
+          this.mediaActive = active;
+        },
         onPress: () => this.openGroupDetail()
       }) {
         this.buildFeaturedFooter()
@@ -402,6 +411,12 @@ export struct GroupCard {
         // 卡片角标用弱对比玻璃底，避免每张卡一个高饱和色块
         badgeVariant: 'glass',
         badgeAlign: 'topLeft',
+        cardRadius: DesignConstants.SHAPE.CARD,
+        mediaOverlay: true,
+        fallbackIcon: AppIcon.GROUP,
+        onMediaStateChange: (active: boolean) => {
+          this.mediaActive = active;
+        },
         onPress: () => this.openGroupDetail()
       }) {
         this.buildCompactFooter()

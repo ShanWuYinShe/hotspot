@@ -104,7 +104,7 @@ export struct ProfileMomentGallery {
       // 喜欢 / 收藏 tab
       Column({ space: DesignConstants.SPACING.MD }) {
         LucideIcon({
-            icon: this.selectedTab === 1 ? AppIcon.HEART : AppIcon.STAR,
+            icon: this.selectedTab === 1 ? AppIcon.HEART : AppIcon.BOOKMARK,
             iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
             color: this.palette().textSecondary
           })

@@ -40,11 +40,11 @@
 | `hover-btn` / `scale-btn`（utilities） | 行内文字/图标动作的 hover/tap CSS 语言 |
 | `hit-slop` / `hit-slop-y`（utilities） | 紧凑控件的触控热区扩展（视觉尺寸不变）。`hit-slop` 四周各 6px，用于图标按钮等**孤立**控件；`hit-slop-y`（2026-10-19 新增）只扩纵向，用于**横向相邻**的紧凑控件（筛选胶囊、分段控制器）——前者的水平 6px 会与相邻项重叠，命中落到 DOM 靠后那颗。注意：两者都靠 `::before` 绝对定位，**会被祖先的 `overflow` 裁剪**，横滚容器需留出纵向 padding（TabBar 的 `py-1` 即为此） |
 | `forms/SearchInput` / `forms/Input` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语。`forms/Input`（2026-10-12 新增）：单行输入，受控 value+onChange；`label`/`labelSnippet`（tracking-field 档位或自定义行）与 input 以 id 关联；`prefix` snippet 前缀图标；`clearable` 清除钮；**错误态三件套** `hasError`+`errorText`→ aria-invalid + aria-describedby + role="alert" 就近错误行（样式由 input-surface 的 :has(aria-invalid) 承担）。padding 由调用方 class 提供（同 SearchInput 约定，如 `rounded-md px-4 py-3`）；另支持 `compact` 形态（input-surface 直贴 input，无包裹/label/prefix/清除，紧凑位专用）。契约对齐鸿蒙 `SystemInput` |
-| `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`）。三个变体：`pills`（筛选/分类，可横滚）、`segmented`（二选一/系统级分段，等宽轨道）与 `underline`（**页级两态切换**，2026-10-20 新增：全宽等分、无轨道无图标、激活项 = 主文字色 + 底部 2px accent 滑动下划线；用于首页「关注/发现」，替代原 288px 浮动胶囊）。`disabled`（2026-10-19 新增）整体禁用并置灰，表达「可读但不可改」（如瞬间可见性探测中）；**移动端触控高度**：按钮 `py-3`（视觉 41px）+ 滚动根 `py-1` + `.hit-slop-y` → 有效 ≈49px，桌面 `lg:py-1.5` 保持紧凑 |
+| `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`）。三个变体：`pills`（筛选/分类，可横滚）、`segmented`（二选一/系统级分段，等宽轨道）、`underline`（页级两态切换：全宽等分、无轨道、激活项 + 2px accent 下划线）。**选中态不得只靠颜色**（2026-10-27 Round 2，用户对色弱/色盲的明确要求）：`segmented` 选中 = accent 实底 + ✓ 图标 + `font-semibold`；`pills`/`underline` 选中 = `font-semibold`（underline 另有下划线形状线索）；验收须过灰度截图（`filter:grayscale(1)`）。`disabled`（2026-10-19）整体禁用并置灰；**移动端触控高度**：按钮 `py-3`（视觉 41px）+ 滚动根 `py-1` + `.hit-slop-y` → 有效 ≈49px，桌面 `lg:py-1.5` 保持紧凑 |
 | `overlays/SheetShell`、`ui/dialog`、`ui/popover`、`ui/dropdown-menu` | 弹层体系 |
 | `overlays/MenuPanel` | 弹出菜单面板唯一实现（标题 + 选项行 + 可选底部动作；容器走 `ui/popover` Content）。已有：地图源菜单、地图筛选菜单。新菜单只传数据，不复制行结构 |
 | `data-display/EmptyState` / `InlineLoading` / `LoadError` / `ListEnd`、`overlays/ToastViewport`、`shared/ConnectionBanner` | 状态反馈。`EmptyState` 可选 `spotlight`（2026-10-26）：超大空态的信标装饰层（光晕 + 双环 + 四向星点，纯 token、无动画、`aria-hidden`）；小面板空态不得开启 |
-| `data-display/Skeleton` / `SkeletonList` / `SkeletonFeed`（2026-10-26 新增） | 列表/信息流**首屏骨架屏**。`Skeleton` 基础占位块（`aria-hidden`）；`SkeletonList` 行式（前导圆 36/40/44/48 + 两行文本条，`role=status + aria-busy`，ListContainer 内自动补 listitem）；`SkeletonFeed` 卡式三形态（`feed` / `card` / `portrait`，栅格类由调用方传入保证零位移）。几何对齐鸿蒙 `Skeleton`/`SkeletonShimmer`，动效 `--cst-motion-skeleton`(1500ms)，reduced-motion 停用 |
+| `data-display/Skeleton` / `SkeletonList` / `SkeletonFeed`（2026-10-26 新增，2026-10-27 更新） | 列表/信息流**首屏骨架屏**。`Skeleton` 基础占位块（`aria-hidden`）；`SkeletonList` 行式（前导圆 36/40/44/48 + 两行文本条，`role=status + aria-busy`，ListContainer 内自动补 listitem）；`SkeletonFeed` 卡式（2026-10-27 起同步整卡图片卡：图片块 + 底部文本条，与真实卡同比例/同文字位置，保证零位移；另有 `card`/`portrait` 形态）。几何对齐鸿蒙 `Skeleton`/`SkeletonShimmer`，动效 `--cst-motion-skeleton`(1500ms)，reduced-motion 停用 |
 | `shared/Avatar` | 头像（尺寸/形状/状态点/环） |
 
 > 四种列表状态各司其职，不得互相替代：空 `EmptyState` / 加载中 `InlineLoading` /
@@ -88,22 +88,24 @@
 - 触控热区：web 36px 视觉 + `hit-slop` → 48px；鸿蒙 `SurfaceIconButton` 外扩 ≥44vp；
 - 图片/封面上悬浮的返回/更多用 `overlay` 变体（媒体镀铬，平台适配，保留）。
 
-### 内容卡封面比例档（2026-10-18 登记）
+### 图像内容卡形态（2026-10-27 Round 2 修订；原「封面比例三档」作废）
 
-同一内容实体在不同视图允许的封面形态只有三档，**同一视图只取一档**：
+用户明确要求图像是卡片主体：**图片铺满整张卡 + 信息以遮罩形式覆盖在图上**
+（完整 spec 见 `docs/design-system.md` §17）。同一视图只用一档：
 
-| 档位 | 形态 | 使用场景 |
+| 形态 | 规格 | 使用场景 |
 |---|---|---|
-| 图片优先竖卡 | `aspect-[3/4]` 图铺满 + 底部信息托盘（`NearbyImageCard` 默认） | 附近的人网格、首页群组轮播 |
-| 内容卡 | `aspect-[4/3]` 图 + footer（`NearbyImageCard` + footer snippet） | 我的瞬间、附近群组普通卡、我的群组平板/桌面 |
-| 横向紧凑卡 | 固定高 `h-32`（128px），`horizontal` 图左 40% + 信息右 | 我的群组手机、列表型群组卡 |
+| 整卡图片 feed 卡 | `aspect-[4/5]` 图铺满 + 顶/底遮罩 + 覆盖信息（白字/白图标）；无 border，`rounded-lg`(20) | 首页信息流卡（`HomeFeedItem` card） |
+| 整卡图片网格卡 | `aspect-[3/4]` 图铺满 + 覆盖信息 + 底部 footer 覆盖（白字） | 附近的人/群组/瞬间网格、我的瞬间/我的群组、群组精选卡 |
+| 横向紧凑卡（例外） | 固定高 `h-32`，`horizontal` 图左 40% + 右侧信息托盘 | 我的群组手机列表等列表型场景（信息可读性优先，保留两段式） |
 
-- 发现流 BSP 瓦片墙的卡片比例是布局算法产物（`minRatio 0.68 / maxRatio 1.48`，
-  已登记的有意设计），不属于上述三档，不得据此另造卡片形态。
-- 手机端需要「一屏多张」时选横向紧凑卡，不得把 4:3 卡直接缩窄（信息会被压碎）。
-- 首页双列人物卡的卡壳由 `ListItem tone="card"` 唯一承担，**禁止外层再包手写卡**
-  （双描边/双投影）；简单关系列表（好友/关注/粉丝等）一律走
-  `ListContainer bordered` + 连接行，不再逐行拆独立卡片。
+- 发现流 BSP 瓦片墙比例是布局算法产物（`minRatio 0.68 / maxRatio 1.48`，有意设计），
+  不得据此另造卡片形态；BSP 图块同样走整卡图片 + 覆盖信息。
+- 视觉/无障碍硬约束：遮罩 token（`--cst-surface-card-scrim-*`）、压图文字 ≥4.5:1 像素实测、
+  徽章一律深色强遮罩 + 白字、无图 fallback 主题渐变 + 主题色文字、多图 1/N、
+  操作热区 ≥44、点赞/收藏状态用形状+白描边不只色相（§17）。
+- 首页双列人物卡壳由 `ListItem tone="card"` 唯一承担（如仍用列表形态），禁止外层再包手写卡；
+  简单关系列表走 `ListContainer bordered` + 连接行，不逐行拆独立卡片。
 
 ## 统一交互契约
 

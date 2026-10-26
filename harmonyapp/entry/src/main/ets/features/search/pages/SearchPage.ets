@@ -543,6 +543,7 @@ export struct SearchPage {
                 .layoutWeight(1)
             } else {
             TabsPillGroup({
+              variant: 'pills',
               tabs: [
                 { label: '全部' } as TabItem,
                 { label: this.tabLabel('用户', this.userResults.length) } as TabItem,

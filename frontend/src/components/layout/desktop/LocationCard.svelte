@@ -41,7 +41,7 @@
 
 <button
 	type="button"
-	class="surface-tinted card-hover relative flex w-full items-center rounded-md border border-border-default p-1.5 text-left focus-ring {collapsed ? 'justify-center' : ''}"
+	class="card-hover relative flex w-full items-center rounded-md bg-surface-subtle/60 p-1.5 text-left backdrop-blur-xs focus-ring hover:bg-surface-subtle {collapsed ? 'justify-center' : ''}"
 	title={collapsed ? '位置选择' : undefined}
 	aria-label="位置选择"
 	onclick={onClick}

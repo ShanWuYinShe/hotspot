@@ -75,8 +75,12 @@ const needsAuth = $derived(myGroups.needsAuth);
 				imageAlt={g.name}
 				onClick={() => void goto(`${ROUTES.group(g.id)}?from=me`)}
 				horizontal={isMobile}
-				class={isMobile ? 'h-32 rounded-md' : 'aspect-[4/3] rounded-md'}
+				class={isMobile ? 'h-32 rounded-md' : 'aspect-[3/4] h-auto rounded-lg'}
 			>
+				{#snippet watermark()}
+					<Users size={72} strokeWidth={1} />
+				{/snippet}
+
 				{#snippet placeholder()}
 					<span class="text-accent-default text-3xl font-semibold">{Array.from(g.name)[0] ?? '群'}</span>
 				{/snippet}
@@ -103,16 +107,17 @@ const needsAuth = $derived(myGroups.needsAuth);
 					</div>
 				{/if}
 
-				{#snippet footer()}
-					<div class="px-3 pb-2.5 pt-2.5">
+				{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
+					{@const onCover = onImage && !horizontal}
+					<div class="p-4">
 						<div class="flex items-center justify-between gap-2">
-							<p class="truncate text-sm font-semibold text-text-primary">{g.name}</p>
-							<ChevronRight class="size-3.5 shrink-0 text-text-secondary" strokeWidth={1.75} />
+							<p class="truncate text-sm font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{g.name}</p>
+							<ChevronRight class="size-3.5 shrink-0 {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}" strokeWidth={1.75} />
 						</div>
 						{#if g.desc}
-							<p class="mt-1 truncate text-xs text-text-secondary">{g.desc}</p>
+							<p class="mt-1 truncate text-xs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">{g.desc}</p>
 						{/if}
-						<div class="mt-2 flex items-center justify-between gap-2 text-xxs text-text-secondary">
+						<div class="mt-2 flex items-center justify-between gap-2 text-xxs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">
 							<span class="flex items-center gap-1">
 								<Users class="size-3" strokeWidth={1.5} />
 								{g.members} 位成员

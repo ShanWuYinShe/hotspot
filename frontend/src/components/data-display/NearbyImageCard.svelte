@@ -3,26 +3,15 @@
 	import { cn } from '@/lib/utils';
 
 	// 数据展示组件（data-display）。
-	// NearbyImageCard — 图片优先的附近内容卡片统一原语。
-	// 对齐 Figma Make data-display/NearbyImageCard 契约（Guidelines 标记为附近内容的唯一卡片实现）：
-	//   - 图片 object-cover 填满卡片，底部 tray 承载元数据/操作（不用页面色块垫在图片下）
-	//   - hover 与内容卡统一 card-hover 抬升语言（投影+上浮 / forest 纸面微染+边框），
-	//     内部图片随之微妙缩放（image-hover-frame__image）
-	//   - 底部 tray 用 --surface-card-menu + --border-card-menu，不用裸页面背景
+	// NearbyImageCard — 图片优先内容卡片统一原语（Image-first Card，Round 2 改版）。
+	//   - 纵排（默认）：图片 object-cover 铺满整卡，信息以「顶部/底部遮罩 + 覆盖层」呈现
+	//     （不再有底部实底托盘；遮罩色走 --cst-surface-card-scrim-* token，三主题×明暗）。
+	//   - 无图 fallback：主题化渐变底 + 低透明度主题水印（opacity-watermark=0.08）+ 主题文字色，
+	//     不压白字（footer 通过 snippet 参数 onImage=false 自行切换文字色）。
+	//   - 横排（horizontal）：图左 40% + 右侧实底信息面板（登记例外：紧凑横排卡保留托盘）。
+	//   - hover 走 card-hover 抬升语言；图片微缩放由 .card-hover:hover 规则驱动；
+	//     整卡按压缩放由 --cst-card-tap-scale 驱动；行内按钮经根上 auto-lift(z-20) 可点。
 	// 替代 PostCard / FeaturedGroupCard / GroupCard / UserCard 内联重复实现。
-	//
-	// ┌──────────────── 页面内容区 ────────────┐
-	// │ ┌──────── NearbyImageCard ──────┐         │
-	// │ │ ┌───────── image ─────────┐   │         │
-	// │ │ │  (object-cover)         │   │         │
-	// │ │ │  children overlay       │   │         │
-	// │ │ └─────────────────────────┘   │         │
-	// │ │ ┌── footer tray (card-menu) ─┐│         │
-	// │ │ │ 元数据 / 操作              ││         │
-	// │ │ └────────────────────────────┘│         │
-	// │ └───────────────────────────────┘         │
-	// └─────────────────────────────────────────────┘
-	// 设备范围：桌面、平板和手机通用。
 
 	let {
 		imageSrc,
@@ -30,6 +19,7 @@
 		onClick,
 		onImageError,
 		placeholder,
+		watermark,
 		footer,
 		children,
 		class: className = '',
@@ -41,45 +31,39 @@
 		onImageError?: () => void;
 		/** 无图时的占位内容（渲染在 accent 渐变层上；缺省为空白渐变层） */
 		placeholder?: Snippet;
-		footer?: Snippet;
+		/** 无图时的低透明度水印装饰（accen 色、aria-hidden，建议 64–96px） */
+		watermark?: Snippet;
+		/** footer 内容：onImage=true 表示有图（纵排需白字）；horizontal=false 时才走压图白字 */
+		footer?: Snippet<[{ onImage: boolean; horizontal: boolean }]>;
 		children?: Snippet;
 		class?: string;
-		/** 横排变体：图片占左侧 40%,footer tray 变右侧内容面板(r03 精选卡横排) */
+		/** 横排变体：图片占左侧 40%,footer tray 变右侧内容面板 */
 		horizontal?: boolean;
 	} = $props();
 
 	// 图片/遮罩/占位层的覆盖盒：纵排=整卡,横排=左列。
 	// w/h 必须显式拉满:abs 定位的替换元素(img)在 width/height:auto 时按固有尺寸渲染
-	// (CSS2 §10.3.7),inset 全拉锚不开——小图按原尺寸露底、大图按固有比例错裁
-	// (线上实测 200px mock 图在卡片内四周露黑边),object-cover 只有盒子尺寸
-	// 确定后才有裁剪意义;装饰 div 是非替换元素,同值无害
+	// (CSS2 §10.3.7),inset 全拉锚不开——小图按原尺寸露底、大图按固有比例错裁。
 	const imageBox = $derived(
 		horizontal ? 'absolute left-0 top-0 h-full w-2/5' : 'absolute left-0 top-0 h-full w-full'
 	);
 
-	// hover 与内容卡（SectionGroups/SectionMoments）统一走 card-hover 抬升语言
-	// （投影+上浮，forest 纸面微染+边框），图片微缩放由 .card-hover:hover
-	// .image-hover-frame__image 规则驱动（CSS :hover 单一事实源——JS 状态与
-	// :hover 不同步会导致鼠标滑动时反馈闪烁/丢失）。键盘焦点由 focus-ring 承载。
-	// 整卡按压 scale 由 --cst-card-tap-scale 驱动（vibrant 0.94 / forest 0.97，
-	// 对齐 Figma useHoverConfig tap）；未按压时不写 inline transform，
-	// 让 card-hover 的 hover translateY 生效。
+	// hover 与内容卡统一走 card-hover；键盘焦点由 focus-ring 承载；按压缩放按平台 token。
 	let pressed = $state(false);
 	const cardTransform = $derived(pressed ? 'scale(var(--cst-card-tap-scale, 0.94))' : '');
 
-	// 图片加载占位（审查 M4）：图片型信息流首刷在弱网下是「白卡跳动」。
-	// 加载完成前显示 accent 渐变层兜底，onload 后渐显图片，避免空白闪现。
+	// 图片加载态：加载完成前 accent 渐变兜底、onload 渐显；失败与「无图」走同一 fallback。
 	let imageLoaded = $state(false);
+	let imageFailed = $state(false);
+	const hasImage = $derived(Boolean(imageSrc) && !imageFailed);
 	$effect(() => {
-		// src 变化（翻页/复用）后回到占位态
 		void imageSrc;
 		imageLoaded = false;
+		imageFailed = false;
 	});
 
-	// 行内子按钮（点赞/收藏/评论等）的按压由按钮自身的 hover-action/tap 承载，
-	// 不带动整卡缩放——否则点按钮时整卡一起缩，看起来像误触了卡片。
+	// 行内子按钮的按压由按钮自身承载，不带动整卡缩放（否则像误触整卡）。
 	function pressedFromEvent(e: PointerEvent): boolean {
-		// 覆盖按钮（.card-cover）= 卡片本体，按压带动整卡；行内操作按钮不带动
 		const btn = (e.target as HTMLElement).closest('button');
 		return !btn || btn.hasAttribute('data-cover');
 	}
@@ -88,15 +72,10 @@
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <article
 	class={cn(
-		// isolate：卡片自成堆叠上下文——内部按钮 z-20 保持覆盖按钮可点（P0），
-		// 整卡对外按 DOM 顺序绘制，滚动到 sticky header（z-sticky=20）下方时
-		// 不再与其内部按钮平级竞胜（用户反馈：卡片按钮压 header）。
-		'card-hover isolate relative h-full w-full overflow-hidden border border-border-default',
+		// isolate：卡片自成堆叠上下文——内部按钮 z-20 保持覆盖按钮可点；
+		// Round 2：去掉外框 border（连续画布，卡片边界只由图片/圆角/投影表达）。
+		'card-hover isolate group relative h-full w-full overflow-hidden',
 		onClick &&
-			// button 抬升必须排除覆盖按钮自身(:not([data-cover])):否则 [&_button]:relative
-			// 与它的 absolute 同 specificity,且工具类生成顺序 .relative 在 .absolute 之后,
-			// 覆盖按钮塌缩 0×0,整卡点击失效(线上实测 P0,同 ListItem);静态防线见
-			// eslint-rules/no-cover-button-collapse.mjs
 			'[&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20',
 		className
 	)}
@@ -107,10 +86,7 @@
 	onpointerup={() => (pressed = false)}
 	onpointerleave={() => (pressed = false)}
 >
-	{#if imageSrc}
-		<!-- 加载占位：onload 前垫 accent 渐变（pointer-events-none 不拦行内按钮）。
-		     注意：装饰层不带 z-index——图片 onload 前 opacity-0 无需被覆盖，
-		     带 z 会把后渲染的 footer tray/徽章盖住（无图卡曾因此只剩占位字母） -->
+	{#if hasImage}
 		{#if !imageLoaded}
 			<div class="surface-accent-gradient pointer-events-none {imageBox} animate-pulse"></div>
 		{/if}
@@ -120,34 +96,55 @@
 			loading="lazy"
 			class="image-hover-frame__image {imageBox} object-cover will-change-transform transition-opacity duration-standard {imageLoaded ? 'opacity-100' : 'opacity-0'}"
 			onload={() => (imageLoaded = true)}
-			onerror={onImageError}
+			onerror={() => {
+				imageFailed = true;
+				onImageError?.();
+			}}
 		/>
-	{:else if placeholder}
-		<!-- 装饰占位层：pointer-events-none 防止拦截 footer 行内按钮（关注等）的点击/悬停；
-		     同样不带 z-index——否则无图时整层盖住 footer tray 与徽章（线上实测：无图群组卡只剩占位字母） -->
-		<div class="surface-accent-gradient pointer-events-none {imageBox} flex items-center justify-center">
-			{@render placeholder()}
+		{#if !horizontal}
+			<!-- 纵排：顶部/底部双遮罩承载覆盖信息（三主题 token） -->
+			<!-- 顶部遮罩 128px（BLOCKER 修复，与 HomeFeedItem 统一）：96px 时两行作者区
+			     （16–52px）落在 0.64→transparent 陡降段，最坏白底不足 4.5；128px 后中段 alpha≈0.63。 -->
+			<div class="pointer-events-none absolute inset-x-0 top-0 h-32" style="background:var(--cst-surface-card-scrim-top);"></div>
+			<div class="pointer-events-none absolute inset-x-0 bottom-0 h-[62%]" style="background:var(--cst-surface-card-scrim-bottom);"></div>
+		{:else}
+			<div class="pointer-events-none {imageBox}" style="background:var(--cst-surface-media-scrim-card);"></div>
+		{/if}
+	{:else}
+		<!-- 无图 fallback（登记例外：不压白字）：主题渐变底 + 低透明主题水印 + 主题色文字 -->
+		<div class="surface-accent-gradient pointer-events-none {imageBox}">
+			{#if watermark}
+				<div
+					class="absolute inset-0 flex items-center justify-center text-accent-default opacity-watermark"
+					aria-hidden="true"
+				>
+					{@render watermark()}
+				</div>
+			{/if}
+			{#if placeholder}
+				<div class="absolute inset-0 flex items-center justify-center">{@render placeholder()}</div>
+			{/if}
 		</div>
-	{/if}
-	{#if imageSrc}
-		<div class="pointer-events-none {imageBox}" style="background:var(--cst-surface-media-scrim-card);"></div>
 	{/if}
 	{#if children}
 		{@render children()}
 	{/if}
 	{#if footer}
-		<div
-			class={horizontal
-				? 'absolute inset-y-0 right-0 left-2/5 flex flex-col justify-center border-l border-border-card-menu bg-surface-card-menu'
-				: 'absolute inset-x-0 bottom-0 border-t border-border-card-menu bg-surface-card-menu'}
-		>
-			{@render footer()}
-		</div>
+		{#if horizontal}
+			<div
+				class="absolute inset-y-0 right-0 left-2/5 flex flex-col justify-center border-l border-border-card-menu bg-surface-card-menu"
+			>
+				{@render footer({ onImage: hasImage, horizontal })}
+			</div>
+		{:else}
+			<div class="absolute inset-x-0 bottom-0">
+				{@render footer({ onImage: hasImage, horizontal })}
+			</div>
+		{/if}
 	{/if}
 	{#if onClick}
-		<!-- 卡片点击覆盖层（最后绘制，z-10 高于图片/遮罩/占位层/footer 非按钮区）：
-		     真实 button 承载点击/键盘/aria，行内操作按钮经根上 auto-lift(z-20) 保持可点——
-		     根不再持 button 语义，消除 nested-interactive（button 嵌套交互子件） -->
+		<!-- 卡片点击覆盖层（最后绘制，z-10）：真实 button 承载点击/键盘/aria，
+		     行内操作按钮经根上 auto-lift(z-20) 保持可点；根不再持 button 语义 -->
 		<button
 			type="button"
 			class="absolute inset-0 z-10 cursor-pointer focus-ring"

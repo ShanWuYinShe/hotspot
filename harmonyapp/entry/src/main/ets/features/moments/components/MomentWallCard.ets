@@ -38,6 +38,8 @@ export struct MomentWallCard {
   @State private socialState: MomentSocialState | undefined = undefined;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private likePopped: boolean = false;
+  /** R2 整卡图片卡：是否有图（false = fallback，footer 换主题文字色） */
+  @State private mediaActive: boolean = true;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -126,7 +128,7 @@ export struct MomentWallCard {
       Text(this.moment.user?.nickname ?? '')
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-        .fontColor(this.getPalette().textPrimary)
+        .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
@@ -136,7 +138,8 @@ export struct MomentWallCard {
       if (this.moment.author_relation?.is_following === true) {
         Text('已关注')
           .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontColor(this.getPalette().textSecondary)
+          .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
+          .opacity(this.mediaActive ? DesignConstants.OPACITY.SUBTLE : 1)
           .maxLines(1)
           .flexShrink(0)
       }
@@ -146,7 +149,8 @@ export struct MomentWallCard {
       if (formatCardTime(this.moment.created_at).length > 0) {
         Text(formatCardTime(this.moment.created_at))
           .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontColor(this.getPalette().textSecondary)
+          .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
+          .opacity(this.mediaActive ? DesignConstants.OPACITY.SUBTLE : 1)
           .maxLines(1)
           .flexShrink(0)
       }
@@ -158,17 +162,21 @@ export struct MomentWallCard {
   @Builder
   private buildActions() {
     Row() {
-      Row({ space: DesignConstants.SPACING.SM2 }) {
+      Row({ space: DesignConstants.SPACING.MD3 }) {
         // 点赞（liked = accent + 实心 + count-pop 弹跳）
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
             icon: this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART,
-            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-            color: this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+            color: this.mediaActive
+              ? (this.isLikedByMe() ? this.getPalette().error : DesignConstants.COLOR.WHITE)
+              : (this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary)
           })
           Text(`${this.getLikeCount()}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary)
+            .fontColor(this.mediaActive
+              ? (this.isLikedByMe() ? this.getPalette().error : DesignConstants.COLOR.WHITE)
+              : (this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary))
             .scale(this.likePopped ?
               { x: DesignConstants.INTERACTION.SCALE_LIKE_POP, y: DesignConstants.INTERACTION.SCALE_LIKE_POP } :
               { x: 1, y: 1 })
@@ -186,12 +194,12 @@ export struct MomentWallCard {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
               icon: AppIcon.MESSAGE,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-              color: this.getPalette().textSecondary
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+              color: this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary
             })
           Text(`${this.getCommentCount()}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getPalette().textSecondary)
+            .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
         }
         .alignItems(VerticalAlign.Center)
         .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}comment-${this.moment.moment_id}`)
@@ -210,9 +218,11 @@ export struct MomentWallCard {
 
       // 收藏
       LucideIcon({
-        icon: this.isFavorited() ? AppIcon.STAR_FILL : AppIcon.STAR,
-        iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-        color: this.isFavorited() ? this.getPalette().accentBackground : this.getPalette().textSecondary
+        icon: this.isFavorited() ? AppIcon.BOOKMARK_FILL : AppIcon.BOOKMARK,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.mediaActive
+          ? (this.isFavorited() ? this.getPalette().accentBackground : DesignConstants.COLOR.WHITE)
+          : (this.isFavorited() ? this.getPalette().accentBackground : this.getPalette().textSecondary)
       })
       .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}favorite-${this.moment.moment_id}`)
       .onClick(() => {
@@ -234,12 +244,19 @@ export struct MomentWallCard {
     NearbyImageCard({
       imageUrl: this.getCoverUrl(),
       imageAlt: this.getPrimaryTag() || this.moment.description || this.moment.user?.nickname || '',
-      cardAspectRatio: this.cardAspectRatio,
+      cardAspectRatio: this.cardAspectRatio > 1 ? 0.75 : this.cardAspectRatio,
+      cardRadius: DesignConstants.SHAPE.CARD,
+      // R2 整卡图片卡：图片铺满 3:4，信息覆盖图面
+      mediaOverlay: true,
+      fallbackIcon: AppIcon.LOCATION,
       placeholderText: this.moment.user?.nickname ?? '',
       badgeText: this.getPrimaryTag(),
       badgeShape: 'pill',
       badgeVariant: 'accent',
       badgeAlign: 'topLeft',
+      onMediaStateChange: (active: boolean) => {
+        this.mediaActive = active;
+      },
       onPress: () => this.openDetail()
     }) {
       Column({ space: DesignConstants.SPACING.THREE }) {
@@ -248,7 +265,7 @@ export struct MomentWallCard {
         if (this.moment.description) {
           Text(cleanPlainText(this.moment.description))
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getPalette().textSecondary)
+            .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -258,10 +275,10 @@ export struct MomentWallCard {
       .width('100%')
       .alignItems(HorizontalAlign.Start)
       .padding({
-        left: DesignConstants.SPACING.MD,
-        right: DesignConstants.SPACING.MD,
+        left: DesignConstants.SPACING.MD3,
+        right: DesignConstants.SPACING.MD3,
         top: DesignConstants.SPACING.MD,
-        bottom: DesignConstants.SPACING.MD
+        bottom: DesignConstants.SPACING.MD3
       })
     }
   }

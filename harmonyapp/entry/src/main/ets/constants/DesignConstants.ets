@@ -21,6 +21,11 @@ export interface ColorPalette {
   IMAGE_BADGE_BG: string;
   /** 图片角标描边（半透明白） */
   IMAGE_BADGE_BORDER: string;
+  /** 图片上徽章强遮罩（R2，对齐 web --cst-surface-media-scrim-strong = rgba(0,0,0,0.55)） */
+  MEDIA_SCRIM_STRONG: string;
+  /** 压图白描边（web border-content-inverse/40 与 /70 的固定值） */
+  MEDIA_BORDER_WHITE_SOFT: string;
+  MEDIA_BORDER_WHITE_STRONG: string;
   /** 图片上传遮罩描边（浅色模式） */
   OVERLAY_BORDER_LIGHT: string;
   /** 图片上传遮罩描边（深色模式） */
@@ -353,6 +358,8 @@ export interface ComponentConstants {
   ICON_SIZE_MD: number;
   /** 紧凑图标（14，徽章/小关闭钮；与 FONT.SIZE 解耦的独立 ICON 刻度） */
   ICON_SIZE_2XS: number;
+  /** 压图操作行图标（web size-4.5 = 18px） */
+  ICON_SIZE_MEDIA_ACTION: number;
   /** 快捷操作图标（22，profile quickAction；独立 ICON 刻度） */
   ICON_SIZE_SM_PLUS: number;
   /** 大图标（32，性能概览/空态强调；独立 ICON 刻度） */
@@ -468,6 +475,10 @@ export interface LayoutSystem {
   MIN_HIT_TARGET: number;
   /** 统计标签列宽（60，对齐前端明细标签列） */
   LABEL_WIDTH: number;
+  /** R2 整卡图片卡：顶部遮罩高度（对齐 web 128px；作者行时间行 37~52px 覆盖需要） */
+  MEDIA_SCRIM_TOP_HEIGHT: number;
+  /** R2 整卡图片卡：底部遮罩高度比例（对齐 web ~58% 卡高） */
+  MEDIA_SCRIM_BOTTOM_HEIGHT_RATIO: number;
   /** 会话列表行尾未读徽章直径（对齐前端 size-5=20px） */
   UNREAD_BADGE_SIZE: number;
   /** 封面型页全幅封面高度（对齐前端 --cst-cover-height clamp 220→340px，移动端取 220） */
@@ -544,6 +555,10 @@ const COLOR: ColorPalette = {
   IMAGE_OVERLAY_END: 'rgba(0, 0, 0, 0.44)',
   IMAGE_BADGE_BG: 'rgba(15, 23, 42, 0.58)',
   IMAGE_BADGE_BORDER: 'rgba(255, 255, 255, 0.24)',
+  /** 图片上徽章强遮罩（R2，对齐 web --cst-surface-media-scrim-strong = rgba(0,0,0,0.55)） */
+  MEDIA_SCRIM_STRONG: 'rgba(0, 0, 0, 0.55)',
+  MEDIA_BORDER_WHITE_SOFT: 'rgba(255, 255, 255, 0.40)',
+  MEDIA_BORDER_WHITE_STRONG: 'rgba(255, 255, 255, 0.70)',
   OVERLAY_BORDER_LIGHT: '#FF40FFFF',
   OVERLAY_BORDER_DARK: '#00260000',
   WHITE: '#FFFFFF',
@@ -756,6 +771,7 @@ const COMPONENT: ComponentConstants = {
   ICON_SIZE_SM: 20,
   ICON_SIZE_MD: 24,
   ICON_SIZE_2XS: 14,
+  ICON_SIZE_MEDIA_ACTION: 18,
   ICON_SIZE_SM_PLUS: 22,
   ICON_SIZE_LG: 32,
   ICON_SIZE_EMPTY: 48,
@@ -816,6 +832,9 @@ const LAYOUT: LayoutSystem = {
   BACK_BUTTON_SIZE: 42,
   MIN_HIT_TARGET: 44,
   LABEL_WIDTH: 60,
+  // ===== R2 整卡图片卡遮罩几何（对齐 web：顶 128px、底 58%/62% 卡高）=====
+  MEDIA_SCRIM_TOP_HEIGHT: 128,
+  MEDIA_SCRIM_BOTTOM_HEIGHT_RATIO: 0.58,
   /** 会话列表行尾未读徽章直径（对齐前端 size-5=20px） */
   UNREAD_BADGE_SIZE: 20,
   COVER_HEIGHT: 220,

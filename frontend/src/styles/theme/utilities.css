@@ -747,13 +747,14 @@
   [data-desktop-main] [data-page-viewport] {
     background-color: transparent !important;
   }
-  /* 实底页头（PageHeader glass=false）：外壳感知底色——移动/平板跟随画布，
-     桌面跟随白浮卡；sticky 时与滚动内容同底，不透出滚动文字。 */
+  /* 实底页头（PageHeader glass=false）：连续画布契约——所有端统一画布色。
+     Round 2 去硬边：改半透明画布色 + 背景模糊，让整窗氛围层透上来（原不透明底在
+     氛围画布上形成一条「白带」，左右边缘读起来像页面框）；blur 保证 sticky 滚动时
+     下方文字不穿透。 */
   .page-header-solid {
-    background-color: var(--cst-surface-page);
-  }
-  [data-desktop-main] .page-header-solid {
-    background-color: var(--cst-surface-primary);
+    background-color: color-mix(in srgb, var(--cst-surface-page) 78%, transparent);
+    -webkit-backdrop-filter: blur(var(--cst-blur-md)) saturate(1.4);
+    backdrop-filter: blur(var(--cst-blur-md)) saturate(1.4);
   }
 }
 

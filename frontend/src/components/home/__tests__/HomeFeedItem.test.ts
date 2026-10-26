@@ -53,9 +53,8 @@ describe('HomeFeedItem', () => {
 		expect(screen.getByText('在老街手冲馆度过了一个悠闲的午后，咖啡香气扑鼻。')).toBeTruthy();
 		// 位置信息
 		expect(screen.getByText('老街手冲馆')).toBeTruthy();
-		// 标签
+		// 标签：整卡图片卡底部元信息只展示首个标签（Round 2 精简信息层级；全部标签见详情页）
 		expect(screen.getByText('#咖啡时光')).toBeTruthy();
-		expect(screen.getByText('#慢生活')).toBeTruthy();
 		// 互动统计
 		expect(screen.getByText('12')).toBeTruthy();
 		expect(screen.getByText('5')).toBeTruthy();

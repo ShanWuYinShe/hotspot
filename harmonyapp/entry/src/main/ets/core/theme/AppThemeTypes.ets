@@ -124,6 +124,14 @@ export interface AppThemePalette {
   /** 状态色淡底（对齐前端 --cst-status-*-bg，随主题变） */
   dangerSoft: string;
   warningSoft: string;
+  /** R2 整卡图片卡遮罩 / fallback（镜像前端 --cst-surface-card-scrim-* / -fallback） */
+  cardScrimTop: string;
+  cardScrimTopMid: string;
+  cardScrimBottomStrong: string;
+  cardScrimBottomMid: string;
+  cardScrimBottomSoft: string;
+  cardFallbackStart: string;
+  cardFallbackMid: string;
   visuals: AppThemeVisualTokens;
 }
 

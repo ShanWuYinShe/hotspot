@@ -296,9 +296,10 @@
 	<!-- h-full：RoutedContentViewport 内容链提供显式高度，分栏固定视口高、左栏列表内部独立滚动；平板/桌面画布均撑满。 -->
 	<div class="content-mode-wide flex h-full">
 		<!-- Left: chat list -->
-		<div class="flex flex-col shrink-0 overflow-hidden w-80 border-r border-border-default bg-surface-primary">
+		<!-- 去硬分隔线（Round 2）：分栏边界改极浅发丝线，避免一条明显竖线贯穿整页 -->
+		<div class="flex flex-col shrink-0 overflow-hidden w-80 border-r border-border-subtle/40 bg-surface-primary">
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
-			<div class="shrink-0 border-b border-border-subtle/40">
+			<div class="shrink-0">
 				<!-- 登记例外：本页三栏面板有意用 surface-primary 实底（与画廊画布
 				     契约不同），PageHeader 的 page-header-solid 外壳感知底色（移动端
 				     =surface-page）在此会与列表面板错配，故用 ! 覆盖为面板同色。

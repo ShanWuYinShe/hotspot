@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
+	import { Check } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { scrollFade } from '@/lib/scroll-fade';
 
@@ -58,7 +59,7 @@
 				aria-pressed={isActive}
 				data-active={isActive ? 'true' : undefined}
 				class="tab-item focus-ring flex flex-1 items-center justify-center py-2.5 text-md transition-colors duration-standard disabled:cursor-not-allowed disabled:opacity-dim {isActive
-					? 'font-medium text-text-primary'
+					? 'font-semibold text-text-primary'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
 				{tab.label}
@@ -89,7 +90,7 @@
 				class="tab-item hit-slop-y flex items-center justify-center gap-1.5 rounded-full focus-ring transition-all duration-standard disabled:cursor-not-allowed disabled:opacity-dim {size === 'md'
 					? 'px-4 py-2 text-sm'
 					: 'px-3 py-2.5 text-xs lg:py-1.5'} {isActive
-					? 'font-medium bg-accent-default text-text-on-accent shadow-raised-sm'
+					? 'font-semibold bg-accent-default text-text-on-accent shadow-raised-sm'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
 				{#if tab.swatch}
@@ -104,6 +105,10 @@
 					<tab.icon class="{size === 'md' ? 'size-4' : 'size-3.5'} shrink-0" strokeWidth={isActive ? 2 : 1.5} />
 				{/if}
 				<span class="truncate">{tab.label}</span>
+				{#if isActive}
+					<!-- 不依赖颜色的选中态：✓ + semibold（色弱/色盲/灰度下仍可辨；视觉 gap 4） -->
+					<Check class="-ml-0.5 size-3.5 shrink-0" strokeWidth={2.5} aria-hidden="true" />
+				{/if}
 				{#if tab.count !== undefined}
 					<span class="text-xxs opacity-emphasis">{tab.count}</span>
 				{/if}
@@ -124,7 +129,7 @@
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
 				class="tab-item hit-slop-y flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-3 text-sm focus-ring transition-colors duration-standard disabled:cursor-not-allowed disabled:opacity-dim lg:py-1.5 {isActive
-					? 'font-medium bg-accent-soft text-accent-default'
+					? 'font-semibold bg-accent-soft text-accent-default'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
 				{#if tab.icon}

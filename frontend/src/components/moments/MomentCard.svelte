@@ -39,6 +39,10 @@
 	{onClick}
 	class={className}
 >
+	{#snippet watermark()}
+		<MapPin size={72} strokeWidth={1} />
+	{/snippet}
+
 	{#snippet placeholder()}
 		<!-- 占位图标容器：只留描边（border），不叠 glow 投影 -->
 		<div
@@ -59,86 +63,78 @@
 	{/if}
 
 	<!-- 底部信息托盘（surface-card-menu，由 NearbyImageCard footer 槽渲染） -->
-	{#snippet footer()}
-		<div class="px-3 pb-2.5 pt-2.5">
-			<!-- 作者行：头像 + 昵称 + 位置 -->
-			<div class="flex min-w-0 items-center gap-2">
-				{#if item.avatar || item.user}
-					<Avatar src={item.avatar} name={item.user} size="xs" style="border:var(--cst-border-width-regular) solid var(--cst-border-card-menu);" />
-					<span class="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary">{item.user || '匿名用户'}</span>
-				<!-- 关系标注（spec MomentItem.author_relation）：只标"我关注了 TA"这一种正向关系，
-				     未关注不标（不制造"未关注"的噪音）。极小号次级色，不做胶囊。 -->
+	{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
+	{@const onCover = onImage && !horizontal}
+	<div class="p-4">
+		<!-- 作者行：头像 + 昵称 + 时间（压图态白字，fallback 用主题色） -->
+		<div class="flex min-w-0 items-center gap-2">
+			{#if item.avatar || item.user}
+				<Avatar src={item.avatar} name={item.user} size="xs" />
+				<span class="min-w-0 flex-1 truncate text-sm font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{item.user || '匿名用户'}</span>
 				{#if item.authorRelation === true}
-					<span class="shrink-0 text-xxs text-text-secondary">已关注</span>
+					<span class="shrink-0 text-xxs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">已关注</span>
 				{/if}
-				{/if}
-				<!-- 时间靠右（tabular-nums 对齐）。
-				     **卡片不再渲染位置**（2026-10-20 用户审查）：手机两列卡宽 171px，
-				     位置+时间会把昵称挤成 1 个字（"鹿鸣"→"鹿…"）。卡片已有分类标签与时间，
-				     位置是详情页信息；归属行留给昵称，昵称才排得开。 -->
-				{#if item.time}
-					<span class="ml-auto shrink-0 text-xxs tabular-nums text-text-secondary">{item.time}</span>
-				{/if}
-			</div>
-
-			<!-- 正文：单行或双行省略 -->
-			{#if item.content}
-				<p class="mt-1 line-clamp-2 leading-card text-xs text-text-secondary">
-					{item.content}
-				</p>
 			{/if}
-
-			<!-- Actions 动作栏 -->
-			<div class="mt-1.5 flex items-center justify-between">
-				<div class="flex gap-3.5">
-					<button
-						type="button"
-						class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring {liked
-							? 'text-accent-default'
-							: 'text-text-secondary hover:text-accent-default'}"
-						aria-label={liked ? '取消点赞' : '点赞'}
-						aria-pressed={liked}
-						onclick={(e) => {
-							e.stopPropagation();
-							onLike();
-						}}
-					>
-						<Heart class="size-4" strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
-						{#key item.likes + (liked ? 1 : 0)}
-							<span class="count-pop text-xs">{item.likes + (liked ? 1 : 0)}</span>
-						{/key}
-					</button>
-					<!-- 评论计数：可点进入动态详情（评论区在详情页内） -->
-					<button
-						type="button"
-						class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring text-text-secondary"
-						aria-label="查看评论"
-						onclick={(e) => {
-							e.stopPropagation();
-							(onCommentClick ?? onClick)?.();
-						}}
-					>
-						<MessageCircle class="size-4" strokeWidth={1.5} />
-						<span class="text-xs">{item.comments}</span>
-					</button>
-				</div>
-				<div class="flex gap-3">
-					<button
-						type="button"
-						class="hover-action hit-slop -my-2 py-2 focus-ring {saved
-							? 'text-accent-default'
-							: 'text-text-secondary hover:text-accent-default'}"
-						aria-label={saved ? '取消收藏' : '收藏'}
-						aria-pressed={saved}
-						onclick={(e) => {
-							e.stopPropagation();
-							onSave();
-						}}
-					>
-						<Bookmark class="size-4" strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
-					</button>
-				</div>
-			</div>
+			{#if item.time}
+				<span class="ml-auto shrink-0 text-xxs tabular-nums {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">{item.time}</span>
+			{/if}
 		</div>
-	{/snippet}
+
+		<!-- 正文：最多 2 行 -->
+		{#if item.content}
+			<p class="mt-1 line-clamp-2 leading-card text-xs {onCover ? 'text-content-inverse opacity-hover' : 'text-text-secondary'}">
+				{item.content}
+			</p>
+		{/if}
+
+		<!-- 操作行：压图态白图标；红/主色态用填充+白描边（不依赖色相） -->
+		<div class="mt-1.5 flex items-center justify-between {onCover ? 'text-content-inverse' : 'text-text-secondary'}">
+			<div class="flex gap-3.5">
+				<button
+					type="button"
+					class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring {liked
+						? (onCover ? 'text-content-inverse' : 'text-accent-default')
+						: (onCover ? 'opacity-hover' : 'hover:text-accent-default')}"
+					aria-label={liked ? '取消点赞' : '点赞'}
+					aria-pressed={liked}
+					onclick={(e) => {
+						e.stopPropagation();
+						onLike();
+					}}
+				>
+					<Heart class="size-4.5 {onCover && liked ? 'fill-status-danger text-content-inverse' : onCover ? 'text-content-inverse' : ''}" strokeWidth={1.5} fill={!onCover && liked ? 'currentColor' : 'none'} />
+					{#key item.likes + (liked ? 1 : 0)}
+						<span class="count-pop text-xs">{item.likes + (liked ? 1 : 0)}</span>
+					{/key}
+				</button>
+				<button
+					type="button"
+					class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring {onCover ? 'opacity-hover' : ''}"
+					aria-label="查看评论"
+					onclick={(e) => {
+						e.stopPropagation();
+						(onCommentClick ?? onClick)?.();
+					}}
+				>
+					<MessageCircle class="size-4.5" strokeWidth={1.5} />
+					<span class="text-xs">{item.comments}</span>
+				</button>
+			</div>
+			<button
+				type="button"
+				class="hover-action hit-slop -my-2 py-2 focus-ring {saved
+					? (onCover ? 'text-content-inverse' : 'text-accent-default')
+					: (onCover ? 'opacity-hover' : 'hover:text-accent-default')}"
+				aria-label={saved ? '取消收藏' : '收藏'}
+				aria-pressed={saved}
+				onclick={(e) => {
+					e.stopPropagation();
+					onSave();
+				}}
+			>
+				<Bookmark class="size-4.5 {onCover && saved ? 'fill-accent-default text-content-inverse' : onCover ? 'text-content-inverse' : ''}" strokeWidth={1.5} fill={!onCover && saved ? 'currentColor' : 'none'} />
+			</button>
+		</div>
+	</div>
+{/snippet}
 </NearbyImageCard>

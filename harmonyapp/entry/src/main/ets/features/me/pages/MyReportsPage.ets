@@ -170,6 +170,7 @@ export struct MyReportsPage {
         // 状态胶囊行 = 页头 below（全部/待处理/已处理/已驳回）
         Scroll() {
         TabsPillGroup({
+          variant: 'pills',
           tabs: TAB_LABELS.map((label: string): TabItem => ({ label })),
           freeWidth: true,
           activeIndex: this.activeTabIndex,

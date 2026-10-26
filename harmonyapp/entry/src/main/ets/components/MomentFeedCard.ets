@@ -18,12 +18,15 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from '../components/LucideIcon';
 import { formatCardTime, cleanPlainText } from '../core/utils/FormatUtil';
+import { CardScrimTop, CardScrimBottom, CardFallbackBackground, MediaOverlayBadge, MediaActionButton } from './media/MediaOverlay';
 
 @Reusable
 @Component
 export struct MomentFeedCard {
   @Prop moment: MomentItem;
   @Prop variant: string = 'default';
+  /** overlay 卡宽高比（宽/高）：feed 4:5=0.8；网格/我的瞬间 3:4=0.75 */
+  @Prop overlayAspectRatio: number = 0.8;
   @Prop imageMode: string = 'preview';
   @Prop showTags: boolean = false;
   @Prop showLocationCard: boolean = false;
@@ -137,6 +140,302 @@ export struct MomentFeedCard {
     AppRouter.push(PageNames.PROFILE, params);
   }
 
+  // ==================== R2 整卡图片卡（Image-first Card）====================
+
+  private getOverlayCoverUrl(): string {
+    const images = this.moment.images;
+    if (!images || images.length === 0) {
+      return '';
+    }
+    return MediaUrlUtil.normalize(images[0].url);
+  }
+
+  private getOverlayImageCount(): number {
+    return this.moment.images ? this.moment.images.length : 0;
+  }
+
+  /** 推荐理由文案（对齐 web HomeFeedItem recommendationBadge） */
+  private getRecommendationLabel(): string {
+    switch (this.moment.recommendation) {
+      case 'trending':
+        return '热门';
+      case 'following':
+        return '来自关注';
+      case 'nearby':
+        return '身边动态';
+      case 'friend_liked':
+        return '好友赞过';
+      case 'tag_match':
+        return '兴趣推荐';
+      default:
+        return '';
+    }
+  }
+
+  /** 位置文本：位置名 + 距离（仅在右上徽章出现一次，meta 不再重复） */
+  private getOverlayLocationText(): string {
+    const location = this.moment.location;
+    if (!location || !location.location_name) {
+      return '';
+    }
+    if (location.distance === undefined || location.distance === null) {
+      return location.location_name;
+    }
+    return location.location_name + ' · ' + LocationUtil.formatDistance(location.distance);
+  }
+
+  /** 无图或封面加载失败 → 主题 fallback（主题文字色，不使用白字遮罩） */
+  private isOverlayFallback(): boolean {
+    const url = this.moment.images && this.moment.images.length > 0 ? this.moment.images[0].url : '';
+    return url.length === 0 || this.isImageFailed(url);
+  }
+
+  private getOverlayTitleColor(): ResourceColor {
+    return this.isOverlayFallback() ? this.getPalette().textPrimary : DesignConstants.COLOR.WHITE;
+  }
+
+  private getOverlayMetaColor(): ResourceColor {
+    return this.isOverlayFallback() ? this.getPalette().textSecondary : DesignConstants.COLOR.WHITE;
+  }
+
+  private getOverlayLikeCount(): number {
+    return this.getMomentState()?.likes_count ?? sumReactionCounts(this.moment.reactions);
+  }
+
+  private getOverlayCommentCount(): number {
+    return this.getMomentState()?.comments_count ?? this.moment.comments_count;
+  }
+
+  private isOverlayFavorited(): boolean {
+    return this.getMomentState()?.is_favorited ?? this.moment.is_favorited;
+  }
+
+  private overlayActionLabel(count: number, zeroLabel: string): string {
+    return count > 0 ? this.formatCount(count) : zeroLabel;
+  }
+
+  @Builder
+  private buildOverlayTop() {
+    Row() {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Column() {
+          SystemAvatar({
+            avatarUrl: this.moment.user?.avatar_url ?? '',
+            name: this.moment.user?.nickname ?? '',
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+            shape: 'circle'
+          })
+        }
+        .onClick(() => this.openUserProfile(this.moment.user))
+
+        Column({ space: DesignConstants.SPACING.XS }) {
+          Row({ space: DesignConstants.SPACING.SM2 }) {
+            Text(this.moment.user?.nickname ?? '匿名用户')
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+              .fontColor(this.getOverlayTitleColor())
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .flexShrink(1)
+              .onClick(() => this.openUserProfile(this.moment.user))
+
+            if (this.moment.author_relation?.is_following) {
+              MediaOverlayBadge({
+                text: '已关注',
+                showIcon: false,
+                onMedia: !this.isOverlayFallback()
+              })
+            }
+
+            if (this.getRecommendationLabel().length > 0) {
+              MediaOverlayBadge({
+                text: this.getRecommendationLabel(),
+                showIcon: false,
+                onMedia: !this.isOverlayFallback()
+              })
+            }
+          }
+          .alignItems(VerticalAlign.Center)
+
+          Text(this.formatTime(this.moment.created_at))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getOverlayMetaColor())
+            .opacity(this.isOverlayFallback() ? 1 : DesignConstants.OPACITY.SUBTLE)
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+      }
+      .alignItems(VerticalAlign.Center)
+      .layoutWeight(1)
+
+      Row({ space: DesignConstants.SPACING.SM2 }) {
+        if (this.getOverlayImageCount() > 1) {
+          MediaOverlayBadge({
+            icon: AppIcon.IMAGES,
+            text: '1/' + this.getOverlayImageCount(),
+            onMedia: !this.isOverlayFallback()
+          })
+        }
+        if (this.getOverlayLocationText().length > 0) {
+          MediaOverlayBadge({
+            icon: AppIcon.LOCATION,
+            text: this.getOverlayLocationText(),
+            onMedia: !this.isOverlayFallback()
+          })
+        }
+      }
+      .alignItems(VerticalAlign.Center)
+      .flexShrink(0)
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Top)
+    .padding(DesignConstants.SPACING.LG)
+  }
+
+  @Builder
+  private buildOverlayBottom() {
+    Column({ space: DesignConstants.SPACING.SM2 }) {
+      if (this.moment.description) {
+        Text(cleanPlainText(this.moment.description))
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.LG, DesignConstants.FONT.LINE_RATIO.CARD))
+          .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+          .fontColor(this.getOverlayTitleColor())
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      }
+
+      // 元信息：位置只在右上胶囊出现一次（避免同卡重复），此处只留 时间 · 标签
+      Row({ space: DesignConstants.SPACING.XS }) {
+        Text(this.formatTime(this.moment.created_at))
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.getOverlayMetaColor())
+          .flexShrink(0)
+        if (this.moment.tags && this.moment.tags.length > 0) {
+          Text('·')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getOverlayMetaColor())
+          Text('#' + this.moment.tags[0])
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getOverlayMetaColor())
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .opacity(this.isOverlayFallback() ? 1 : DesignConstants.OPACITY.SUBTLE)
+
+      Row() {
+        Row({ space: DesignConstants.SPACING.LG2 }) {
+          MediaActionButton({
+            // 压图红态：填充形状本身即非颜色线索（Symbol 不支持白描边，登记平台适配）
+            icon: this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART,
+            label: this.overlayActionLabel(this.getOverlayLikeCount(), '赞'),
+            active: this.isLikedByMe(),
+            activeColor: this.getPalette().error,
+            onMedia: !this.isOverlayFallback(),
+            accessibilityLabel: '点赞',
+            onPress: () => this.onLikeClick(this.moment)
+          })
+          MediaActionButton({
+            icon: AppIcon.MESSAGE,
+            label: this.overlayActionLabel(this.getOverlayCommentCount(), '评论'),
+            onMedia: !this.isOverlayFallback(),
+            accessibilityLabel: '评论',
+            onPress: () => this.openMomentDetail(this.moment)
+          })
+          MediaActionButton({
+            icon: this.isOverlayFavorited() ? AppIcon.BOOKMARK_FILL : AppIcon.BOOKMARK,
+            label: '',
+            active: this.isOverlayFavorited(),
+            activeColor: this.getPalette().accentBackground,
+            onMedia: !this.isOverlayFallback(),
+            accessibilityLabel: this.isOverlayFavorited() ? '已收藏' : '收藏',
+            onPress: () => this.onFavoriteClick(this.moment)
+          })
+        }
+        .alignItems(VerticalAlign.Center)
+
+        Blank()
+
+        MediaActionButton({
+          icon: AppIcon.SHARE,
+          label: this.moment.shares_count > 0 ? this.formatCount(this.moment.shares_count) : '',
+          onMedia: !this.isOverlayFallback(),
+          accessibilityLabel: '分享动态',
+          onPress: () => this.shareMoment(this.moment)
+        })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.LG
+    })
+  }
+
+  @Builder
+  private buildOverlayCard() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      // 背景：封面铺满整卡；无图/失败 → 主题渐变 fallback
+      if (this.isOverlayFallback()) {
+        CardFallbackBackground({ icon: AppIcon.IMAGES })
+      } else {
+        Image(this.getOverlayCoverUrl())
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Cover)
+          .alt($r('app.media.foreground'))
+          .onError(() => this.markImageFailed(this.moment.images[0].url))
+
+        Column() {
+          CardScrimTop()
+          Blank()
+          CardScrimBottom()
+        }
+        .width('100%')
+        .height('100%')
+        .hitTestBehavior(HitTestMode.None)
+        .accessibilityLevel('no')
+      }
+
+      // 信息层：顶部作者行 / 底部标题+元信息+操作行
+      Column() {
+        this.buildOverlayTop()
+        Blank()
+        this.buildOverlayBottom()
+      }
+      .width('100%')
+      .height('100%')
+      .accessibilityGroup(true)
+      .accessibilityText(this.moment.user?.nickname ? '查看' + this.moment.user.nickname + '的瞬间详情' : '查看瞬间详情')
+    }
+    .width('100%')
+    .aspectRatio(this.overlayAspectRatio)
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .clip(true)
+    .backgroundColor(this.getPalette().surfaceSubtle)
+    .shadow(this.getPalette().surfaceShadow)
+    .scale(this.isPressed
+      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
+      : { x: 1, y: 1 })
+    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.isPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.isPressed = false;
+      }
+    })
+    .onClick(() => this.openMomentDetail(this.moment))
+  }
+
   private getMomentState(): MomentSocialState | undefined {
     return this.socialState;
   }
@@ -164,6 +463,8 @@ export struct MomentFeedCard {
   build() {
     if (this.variant === 'postCard') {
       this.buildPostCard()
+    } else if (this.variant === 'overlay') {
+      this.buildOverlayCard()
     } else {
       Column() {
         SystemCard({
@@ -338,7 +639,7 @@ export struct MomentFeedCard {
 
           Row({ space: DesignConstants.SPACING.MD }) {
             LucideIcon({
-                icon: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? AppIcon.STAR_FILL : AppIcon.STAR,
+                icon: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? AppIcon.BOOKMARK_FILL : AppIcon.BOOKMARK,
                 iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                 color: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? this.getPalette().accentBackground : this.getPalette().textSecondary
               })
@@ -663,7 +964,7 @@ export struct MomentFeedCard {
     // 内容动作钮统一走 SurfaceIconButton neutral（36 钮 + 44 命中区 + a11y）；
     // 动作钮语义为图标+计数并排，底色保持透明（对齐旧 IconButton 透明底用法）。
     Row() {
-      Row({ space: DesignConstants.SPACING.XL }) {
+      Row({ space: DesignConstants.SPACING.LG2 }) {
         Row({ space: DesignConstants.SPACING.XS }) {
           SurfaceIconButton({
             icon: this.isLikedByMe() ? AppIcon.HEART_FILL : AppIcon.HEART,
@@ -697,7 +998,7 @@ export struct MomentFeedCard {
 
       Row({ space: DesignConstants.SPACING.MD }) {
         SurfaceIconButton({
-          icon: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? AppIcon.STAR_FILL : AppIcon.STAR,
+          icon: this.getMomentState()?.is_favorited ?? this.moment.is_favorited ? AppIcon.BOOKMARK_FILL : AppIcon.BOOKMARK,
           kind: 'neutral',
           iconColor: this.getMomentState()?.is_favorited ?? this.moment.is_favorited
             ? this.getPalette().accentBackground

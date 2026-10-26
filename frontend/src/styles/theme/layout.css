@@ -79,16 +79,18 @@
   .desktop-workspace {
     gap: var(--cst-workspace-gap);
     padding: var(--cst-workspace-inset);
-    /* 画布连续：舞台并入画布（workspace token 已删除），浮卡边界靠卡片自身边框 */
-    background: var(--cst-surface-page);
+    /* 连续画布（Round 2 去边框）：工作区不再铺不透明画布色，否则会遮住整窗氛围层，
+       在顶栏与正文之间形成一条水平接缝；画布底色由外壳根一次性提供。 */
+    background: transparent;
   }
 
   .desktop-main-panel {
     position: relative;
     isolation: isolate;
     min-height: 0;
-    /* 白浮卡：画布上的主内容框（边框 + 留白分隔，对齐 Figma Make 桌面画布契约） */
-    background: var(--cst-surface-primary);
+    /* 连续画布（Round 2 去边框）：主内容不再是白浮卡，直接落在整窗画布上；
+       层级只由内容单元自身卡片 + 间距表达。 */
+    background: transparent;
   }
 
   .desktop-main-scroll {

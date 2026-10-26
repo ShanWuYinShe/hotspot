@@ -28,7 +28,7 @@
 	const containerClass = $derived.by(() => {
 		if (variant === 'bare') return 'flex flex-col';
 		if (variant === 'island') {
-			return 'rounded-2xl border border-border-subtle/50 bg-surface-primary/80 backdrop-blur-xs p-4 shadow-xs hover:border-border-default/80 transition-all flex flex-col';
+			return 'rounded-2xl bg-surface-primary/70 backdrop-blur-xs p-4 shadow-xs hover:shadow-raised-sm transition-all flex flex-col';
 		}
 		return 'surface-flat rounded-md p-4';
 	});

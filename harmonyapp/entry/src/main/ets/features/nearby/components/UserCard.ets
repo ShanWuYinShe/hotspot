@@ -29,6 +29,8 @@ export struct UserCard {
   @State private socialState: UserRelationState | undefined = undefined;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private followInFlight: boolean = false;
+  /** R2 整卡图片卡：是否有图（false = fallback，footer 换主题文字色） */
+  @State private mediaActive: boolean = true;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -113,7 +115,8 @@ export struct UserCard {
           icon: this.isFollowing() ? AppIcon.CHECK : AppIcon.PERSON_ADD,
           // web FollowButton iconOnly：图标 size-4(16)
           iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-          color: this.isFollowing() ? this.getPalette().textSecondary : this.getPalette().accentBackground
+          color: this.mediaActive ? DesignConstants.COLOR.WHITE :
+            (this.isFollowing() ? this.getPalette().textSecondary : this.getPalette().accentBackground)
         })
       }
       .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}follow-${this.getUserId()}`)
@@ -123,12 +126,17 @@ export struct UserCard {
       .borderRadius(DesignConstants.RADIUS.FULL)
       .justifyContent(FlexAlign.Center)
       // 未关注 = accent-soft 淡底、无描边；已关注 = 透明底 + 强描边（web outline 变体）
-      .backgroundColor(this.isFollowing() ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().accentMuted)
-      // 前端 outline 变体用 border-strong；本端调色板只有 borderColor 一档，
-      // 用 accent 本色描边表达「已关注」的强化档（避免与未关注态仅靠底色区分）
+      // 对齐 web FollowButton onMedia：两态均为强遮罩底 + 白色描边（未操作 40% / 已操作 70%），
+      // 形状线索 = UserPlus ↔ Check，不只靠颜色
+      .backgroundColor(this.mediaActive
+        ? DesignConstants.COLOR.MEDIA_SCRIM_STRONG
+        : (this.isFollowing() ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().accentMuted))
       .border({
-        width: this.isFollowing() ? DesignConstants.BORDER_WIDTH.HAIRLINE : 0,
-        color: this.getPalette().accentBackground
+        width: this.mediaActive ? DesignConstants.BORDER_WIDTH.HAIRLINE :
+          (this.isFollowing() ? DesignConstants.BORDER_WIDTH.HAIRLINE : 0),
+        color: this.mediaActive
+          ? (this.isFollowing() ? DesignConstants.COLOR.MEDIA_BORDER_WHITE_STRONG : DesignConstants.COLOR.MEDIA_BORDER_WHITE_SOFT)
+          : this.getPalette().accentBackground
       })
       .accessibilityText(this.isFollowing() ?
         `取消关注 ${this.user.user?.nickname ?? ''}` :
@@ -147,11 +155,17 @@ export struct UserCard {
       imageUrl: this.user.user?.avatar_url ?? '',
       imageAlt: this.user.user?.nickname ?? '',
       cardAspectRatio: 0.75,
+      cardRadius: DesignConstants.SHAPE.CARD,
+      // R2 整卡图片卡：图片铺满 3:4，信息覆盖图面（对齐 BRIEF §A 网格卡）
+      mediaOverlay: true,
       placeholderText: this.user.user?.nickname ?? '',
       badgeText: this.showDistance ? this.getDistanceText() : '',
       badgeIcon: AppIcon.LOCATION,
       badgeShape: 'pill',
       badgeAlign: 'topRight',
+      onMediaStateChange: (active: boolean) => {
+        this.mediaActive = active;
+      },
       onPress: () => this.openProfile()
     }) {
       Column({ space: DesignConstants.SPACING.THREE }) {
@@ -163,7 +177,7 @@ export struct UserCard {
             .fontSize(DesignConstants.FONT.SIZE.SM) // 对齐前端 nearby/people 卡片名 text-sm（项目口径 12px）
             .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(this.getPalette().textPrimary)
+            .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .flexShrink(1)
@@ -178,7 +192,7 @@ export struct UserCard {
               .backgroundColor(this.getPalette().online)
               .border({
                 width: DesignConstants.BORDER_WIDTH.STRONG,
-                color: this.getPalette().surfaceElevated
+                color: this.mediaActive ? DesignConstants.COLOR.MEDIA_SCRIM_STRONG : this.getPalette().surfaceElevated
               })
           }
         }
@@ -189,7 +203,8 @@ export struct UserCard {
           Text(this.user.bio)
             .fontSize(DesignConstants.FONT.SIZE.XS2) // 对齐前端次要行 text-xxs(10)
             .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-            .fontColor(this.getPalette().textSecondary)
+            .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
+            .opacity(this.mediaActive ? DesignConstants.OPACITY.SUBTLE : 1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -197,8 +212,8 @@ export struct UserCard {
           if (this.getPrimaryTag().length > 0) {
             Text(`#${this.getPrimaryTag()}`)
               .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.getPalette().accentBackground)
-              .backgroundColor(this.getPalette().accentMuted)
+              .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().accentBackground)
+              .backgroundColor(this.mediaActive ? DesignConstants.COLOR.MEDIA_SCRIM_STRONG : this.getPalette().accentMuted)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .padding({
                 left: DesignConstants.SPACING.SM2,
@@ -220,10 +235,10 @@ export struct UserCard {
       .width('100%')
       .alignItems(HorizontalAlign.Start)
       .padding({
-        left: DesignConstants.SPACING.MD,
-        right: DesignConstants.SPACING.MD,
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
         top: DesignConstants.SPACING.MD,
-        bottom: DesignConstants.SPACING.MD
+        bottom: DesignConstants.SPACING.LG
       })
     }
   }

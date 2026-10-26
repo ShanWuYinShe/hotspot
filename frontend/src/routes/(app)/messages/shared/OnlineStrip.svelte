@@ -21,7 +21,7 @@
 	const isLarge = $derived(variant === 'lg');
 </script>
 
-<div class="{isLarge ? 'mb-3' : 'shrink-0 px-4 py-2.5 border-b border-border-default'}">
+<div class="{isLarge ? 'mb-3' : 'shrink-0 px-4 py-2.5'}">
 	<!-- 分组小标统一 eyebrow（tracking-eyebrow 0.14em），与全站一致 -->
 	<p class="eyebrow {isLarge ? 'mb-2.5' : 'mb-2'}">在线</p>
 	<div class="flex overflow-x-auto no-scrollbar {isLarge ? 'gap-3 pb-1 pr-1' : 'gap-3 pr-1'}" use:scrollFade>

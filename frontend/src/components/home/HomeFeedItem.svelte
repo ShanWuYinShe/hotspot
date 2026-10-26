@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Heart, MessageCircle, Bookmark, Share2, MapPin, Sparkles } from '@lucide/svelte';
+	import { Heart, MessageCircle, Bookmark, Share2, MapPin, Sparkles, Images } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import type { MomentItem } from '@/api/types';
 	import { formatDistance, formatRelativeDays } from '@/lib/utils';
@@ -28,6 +28,9 @@
 		ariaLabel?: string;
 		variant?: 'card' | 'row';
 	} = $props();
+
+	/** 整卡图片卡：封面加载失败时回退主题化渐变底（不压白字）。 */
+	let coverError = $state(false);
 
 	// 格式化相对时间（优先小时/分钟，超出 24h 回退 formatRelativeDays）
 	const relativeTime = $derived.by(() => {
@@ -104,9 +107,14 @@
 </script>
 
 {#if variant === 'card'}
-	<!-- 独立画廊岛屿卡片：现代顶级社交卡片架构（去除厚重硬框与多层嵌套，以柔和微边界与呼吸感留白呈现） -->
+	{@const coverUrl = moment.images?.[0]?.url ?? ''}
+	{@const imageCount = moment.images?.length ?? 0}
+	{@const useFallback = !coverUrl || coverError}
+	<!-- 整卡图片卡（Image-first Card，Round 2）：图片铺满整卡、信息覆盖图面、无外框；
+	     顶部遮罩承载作者行，底部遮罩承载标题/元信息/操作行（三主题 token 遮罩）。
+	     无图 fallback 用主题化渐变底 + 主题文字色（不使用白字遮罩，已登记例外）。 -->
 	<div
-		class="group rounded-2xl border border-border-subtle/50 bg-surface-primary p-4 sm:p-5 shadow-xs hover:shadow-raised-sm hover:border-border-default/80 transition-all duration-standard flex flex-col cursor-pointer"
+		class="group relative aspect-[4/5] w-full cursor-pointer overflow-hidden rounded-lg bg-surface-subtle shadow-xs transition-[box-shadow,transform] duration-standard hover:shadow-raised-md focus-ring"
 		role="button"
 		tabindex="0"
 		onclick={onClick}
@@ -118,174 +126,167 @@
 		}}
 		aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
 	>
-		<!-- 头部：作者资料与位置标签 -->
-		<div class="flex items-center justify-between gap-3">
-			<div class="flex items-center gap-3 min-w-0">
+		{#if !useFallback}
+			<img
+				src={coverUrl}
+				alt=""
+				loading="lazy"
+				class="absolute inset-0 h-full w-full object-cover transition-transform duration-slow group-hover:scale-[1.02]"
+				onerror={() => (coverError = true)}
+			/>
+			<!-- 顶部遮罩 128px（BLOCKER 修复）：作者行两行（昵称 16–36px + 时间 37–52px），
+			     96px 时时间行落在 0.64→transparent 陡降区（alpha≈0.49，白字<4.5）；128px 后
+			     该行位于 40% 附近 alpha≈0.63，纯白图最坏情况实测 ≥6:1。 -->
+			<div class="pointer-events-none absolute inset-x-0 top-0 h-32" style="background:var(--cst-surface-card-scrim-top);"></div>
+			<div class="pointer-events-none absolute inset-x-0 bottom-0 h-[58%]" style="background:var(--cst-surface-card-scrim-bottom);"></div>
+		{:else}
+			<!-- 无图 fallback（登记例外，不压白字）：主题渐变底 + 低透明主题水印 -->
+			<div class="absolute inset-0" style="background:var(--cst-surface-card-fallback);"></div>
+			<div class="pointer-events-none absolute inset-0 flex items-center justify-center text-accent-default opacity-watermark" aria-hidden="true">
+				<Images class="size-16" strokeWidth={1} />
+			</div>
+		{/if}
+
+		<!-- 顶部：作者行（头像 32 + 白字昵称 semibold + 关注/推荐徽章）与右侧徽章 -->
+		<div class="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4 sm:p-5">
+			<div class="pointer-events-none flex min-w-0 items-center gap-2.5">
 				<button
 					type="button"
-					class="hover-action hit-slop shrink-0 rounded-full focus-ring cursor-pointer ring-1 ring-border-subtle/40 active:scale-95 transition-transform"
+					class="pointer-events-auto hover-action hit-slop shrink-0 rounded-full focus-ring"
 					aria-label={`查看${moment.user?.nickname ?? '作者'}的个人主页`}
 					onclick={handleUserClick}
 				>
 					<Avatar
 						src={moment.user?.avatar_url ?? null}
 						name={moment.user?.nickname ?? '热点网友'}
-						size="md"
+						size={32}
 					/>
 				</button>
-				<div class="min-w-0 flex flex-col">
-					<div class="flex items-center gap-1.5 flex-wrap">
+				<div class="flex min-w-0 flex-col gap-0.5">
+					<div class="flex min-w-0 items-center gap-1.5">
 						<button
 							type="button"
-							class="font-semibold text-md text-text-primary hover:text-accent-default hover:underline transition-colors truncate text-left"
+							class="pointer-events-auto truncate text-left text-md font-semibold {useFallback
+								? 'text-text-primary'
+								: 'text-content-inverse'} hover:underline"
 							onclick={handleUserClick}
 						>
 							{moment.user?.nickname ?? '匿名用户'}
 						</button>
-
 						{#if moment.author_relation?.is_following}
-							<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-accent-soft text-accent-default shrink-0">
+							<span
+								class="badge h-5 shrink-0 {useFallback
+									? 'bg-surface-subtle text-text-secondary'
+									: 'bg-surface-media-scrim-strong text-content-inverse'}"
+							>
 								已关注
 							</span>
 						{/if}
-
 						{#if recommendationBadge}
-							<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-surface-subtle text-text-secondary shrink-0">
-								<Sparkles class="size-2.5 text-accent-default" />
+							<span
+								class="badge h-5 shrink-0 {useFallback
+									? 'bg-surface-subtle text-text-secondary'
+									: 'bg-surface-media-scrim-strong text-content-inverse'}"
+							>
 								{recommendationBadge}
 							</span>
 						{/if}
 					</div>
 					{#if relativeTime}
-						<span class="text-text-secondary text-xs mt-0.5">{relativeTime}</span>
+						<!-- 时间行提到 opacity-hover（0.90）：BLOCKER 复测中 0.80 时纯白底 min 4.25/4.35，
+						     0.90 后字形区实测 ≥5.9；昵称/徽章仍保持 1.0/胶囊底。 -->
+						<span class="text-xs {useFallback ? 'text-text-secondary' : 'text-content-inverse opacity-hover'}">
+							{relativeTime}
+						</span>
 					{/if}
 				</div>
 			</div>
 
-			<!-- 位置微标签：纯净胶囊，消除多余内层边框与阴影 -->
-			{#if locationText}
-				<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-subtle/70 text-text-secondary text-xs max-w-[140px] sm:max-w-[180px] shrink-0 truncate">
-					<MapPin class="size-3 text-accent-default shrink-0" strokeWidth={1.5} />
-					<span class="truncate">{locationText}</span>
-					{#if distanceLabel}
-						<span class="text-text-secondary shrink-0">· {distanceLabel}</span>
-					{/if}
-				</div>
-			{/if}
+			<div class="pointer-events-none flex shrink-0 items-center gap-1.5">
+				{#if imageCount > 1}
+					<span class="badge h-5 gap-1 bg-surface-media-scrim-strong text-content-inverse">
+						<Images class="size-3" strokeWidth={1.75} aria-hidden="true" />
+						1/{imageCount}
+					</span>
+				{/if}
+				{#if locationText}
+					<span
+						class="badge h-5 max-w-36 gap-1 {useFallback
+							? 'bg-surface-subtle text-text-secondary'
+							: 'bg-surface-media-scrim-strong text-content-inverse'}"
+					>
+						<MapPin class="size-3 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+						<span class="truncate">{locationText}{distanceLabel ? ` · ${distanceLabel}` : ''}</span>
+					</span>
+				{/if}
+			</div>
 		</div>
 
-		<!-- 动态正文：提升至 text-base (16px) 标准正文字号，极大提升阅读舒适度 -->
-		{#if moment.description}
-			<p class="mt-3 text-base text-text-primary leading-relaxed whitespace-pre-wrap break-words">
-				{moment.description}
-			</p>
-		{/if}
-
-		<!-- 配图展示：舒展大图与网格（去除多余内嵌套边框与阴影，让摄影画面纯净舒展） -->
-		{#if moment.images && moment.images.length > 0}
-			<div class="mt-3 overflow-hidden rounded-xl">
-				{#if moment.images.length === 1}
-					<div class="overflow-hidden rounded-xl bg-surface-subtle max-h-[380px] sm:max-h-[440px] flex items-center justify-center">
-						<img
-							src={moment.images[0].url}
-							alt="动态配图"
-							loading="lazy"
-							class="w-full h-full object-cover max-h-[380px] sm:max-h-[440px] hover:scale-[1.01] transition-transform duration-standard"
+		<!-- 底部：标题/正文摘要（最多 2 行）+ 元信息 + 操作行 -->
+		<div class="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-4 sm:p-5">
+			{#if moment.description}
+				<p class="line-clamp-2 text-base font-semibold leading-snug {useFallback
+					? 'text-text-primary'
+					: 'text-content-inverse'}">
+					{moment.description}
+				</p>
+			{/if}
+			<!-- 元信息：位置只在右上胶囊出现一次（避免同卡重复），此处只留时间 · 标签 -->
+			<div class="flex min-w-0 items-center gap-1.5 text-xs {useFallback ? 'text-text-secondary' : 'text-content-inverse opacity-emphasis'}">
+				<span class="shrink-0">{relativeTime}</span>
+				{#if moment.tags?.[0]}
+					<span aria-hidden="true">·</span>
+					<span class="min-w-0 truncate">#{moment.tags[0]}</span>
+				{/if}
+			</div>
+			<div class="mt-1 flex items-center justify-between">
+				<div class="flex items-center gap-5 sm:gap-6 {useFallback ? 'text-text-secondary' : 'text-content-inverse'}">
+					<div
+						class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors {hasLiked
+							? 'text-status-danger'
+							: ''}"
+						aria-label={`点赞 ${totalReactions} 次`}
+					>
+						<!-- 压图红态：红色填充 + 白色描边（深色遮罩/浅色遮罩上都可辨；形状变化不依赖色相） -->
+						<Heart
+							class="size-4.5 shrink-0 transition-transform active:scale-125 {hasLiked
+								? 'fill-status-danger text-content-inverse'
+								: ''}"
+							strokeWidth={1.75}
+						/>
+						<span class="font-medium">{totalReactions > 0 ? totalReactions : '赞'}</span>
+					</div>
+					<div
+						class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors"
+						aria-label={`评论 ${moment.comments_count} 条`}
+					>
+						<MessageCircle class="size-4.5 shrink-0" strokeWidth={1.75} />
+						<span class="font-medium">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
+					</div>
+					<div
+						class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors"
+						aria-label={moment.is_favorited ? '已收藏' : '收藏'}
+					>
+						<Bookmark
+							class="size-4.5 shrink-0 transition-transform active:scale-125 {moment.is_favorited
+								? 'fill-accent-default text-content-inverse'
+								: ''}"
+							strokeWidth={1.75}
 						/>
 					</div>
-				{:else if moment.images.length <= 4}
-					<div class="grid grid-cols-2 gap-2">
-						{#each moment.images.slice(0, 4) as img, idx (img.url + idx)}
-							<div class="aspect-square overflow-hidden rounded-xl bg-surface-subtle">
-								<img
-									src={img.url}
-									alt={`动态配图 ${idx + 1}`}
-									loading="lazy"
-									class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-standard"
-								/>
-							</div>
-						{/each}
-					</div>
-				{:else}
-					<div class="grid grid-cols-3 gap-2">
-						{#each moment.images.slice(0, 9) as img, idx (img.url + idx)}
-							<div class="aspect-square overflow-hidden rounded-xl bg-surface-subtle">
-								<img
-									src={img.url}
-									alt={`动态配图 ${idx + 1}`}
-									loading="lazy"
-									class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-standard"
-								/>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
-
-		<!-- 标签胶囊 -->
-		{#if moment.tags && moment.tags.length > 0}
-			<div class="mt-3 flex flex-wrap gap-1.5">
-				{#each moment.tags as tag (tag)}
-					<button
-						type="button"
-						class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-soft text-accent-default hover:bg-accent-soft/80 transition-colors hit-slop focus-ring"
-						onclick={(e) => handleTagClick(e, tag)}
-					>
-						#{tag}
-					</button>
-				{/each}
-			</div>
-		{/if}
-
-		<!-- 底部轻量交互操作条：去除生硬横切边框线，依靠优雅呼吸留白自然延展 -->
-		<div class="mt-4 pt-1 flex items-center justify-between text-text-secondary">
-			<div class="flex items-center gap-6 sm:gap-7">
-				<!-- 点赞 -->
-				<div
-					class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors {hasLiked ? 'text-status-danger' : 'hover:text-status-danger'}"
-					aria-label={`点赞 ${totalReactions} 次`}
-				>
-					<Heart
-						class="size-4.5 shrink-0 transition-transform active:scale-125 {hasLiked ? 'fill-status-danger text-status-danger' : ''}"
-						strokeWidth={1.75}
-					/>
-					<span class="font-medium">{totalReactions > 0 ? totalReactions : '赞'}</span>
 				</div>
-
-				<!-- 评论 -->
-				<div
-					class="hover-action hit-slop flex items-center gap-1.5 text-sm hover:text-accent-default focus-ring transition-colors"
-					aria-label={`评论 ${moment.comments_count} 条`}
+				<button
+					type="button"
+					class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors"
+					aria-label="分享动态"
+					onclick={handleShareClick}
 				>
-					<MessageCircle class="size-4.5 shrink-0" strokeWidth={1.75} />
-					<span class="font-medium">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
-				</div>
-
-				<!-- 收藏 -->
-				<div
-					class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors {moment.is_favorited ? 'text-accent-default' : 'hover:text-accent-default'}"
-					aria-label={moment.is_favorited ? '已收藏' : '收藏'}
-				>
-					<Bookmark
-						class="size-4.5 shrink-0 transition-transform active:scale-125 {moment.is_favorited ? 'fill-accent-default text-accent-default' : ''}"
-						strokeWidth={1.75}
-					/>
-				</div>
+					<Share2 class="size-4.5 shrink-0" strokeWidth={1.75} />
+					{#if moment.shares_count && moment.shares_count > 0}
+						<span class="font-medium">{moment.shares_count}</span>
+					{/if}
+				</button>
 			</div>
-
-			<!-- 分享 -->
-			<button
-				type="button"
-				class="hover-action hit-slop flex items-center gap-1.5 text-sm hover:text-accent-default focus-ring transition-colors"
-				aria-label="分享动态"
-				onclick={handleShareClick}
-			>
-				<Share2 class="size-4.5 shrink-0" strokeWidth={1.75} />
-				{#if moment.shares_count && moment.shares_count > 0}
-					<span class="font-medium">{moment.shares_count}</span>
-				{/if}
-			</button>
 		</div>
 	</div>
 {:else}

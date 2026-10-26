@@ -313,13 +313,9 @@ export struct MomentPage {
         ListItem() {
           MomentFeedCard({
             moment: moment,
-            imageMode: 'grid',
-            showTags: true,
-            showLocationCard: true,
-            showTime: true,
-            showFavorite: false,
-            textMaxLines: 0,
-            textFontSize: DesignConstants.FONT.SIZE.MD,
+            // R2 整卡图片卡：我的瞬间同样图片铺满 + 信息覆盖（网格档 3:4）
+            variant: 'overlay',
+            overlayAspectRatio: 0.75,
             onImagePreview: (momentId: string, images: string[], index: number) => {
               this.previewImage(momentId, images, index);
             }

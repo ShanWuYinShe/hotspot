@@ -133,6 +133,13 @@ function buildPalette(
     mapMoment: colors.mapMoment,
     dangerSoft: colors.dangerSoft,
     warningSoft: colors.warningSoft,
+    cardScrimTop: colors.cardScrimTop,
+    cardScrimTopMid: colors.cardScrimTopMid,
+    cardScrimBottomStrong: colors.cardScrimBottomStrong,
+    cardScrimBottomMid: colors.cardScrimBottomMid,
+    cardScrimBottomSoft: colors.cardScrimBottomSoft,
+    cardFallbackStart: colors.cardFallbackStart,
+    cardFallbackMid: colors.cardFallbackMid,
     visuals
   } as AppThemePalette;
 }

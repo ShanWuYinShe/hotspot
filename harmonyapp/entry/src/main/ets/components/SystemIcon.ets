@@ -78,6 +78,11 @@ export enum AppIcon {
   HEART_FILL = 'sys.symbol.heart_fill',
   STAR = 'sys.symbol.star',
   STAR_FILL = 'sys.symbol.star_fill',
+  // 多图/图集（web Images；用于整卡 fallback 水印与 1/N）
+  IMAGES = 'sys.symbol.picture_2',
+  // 收藏（R2 统一 web Bookmark 语义，替代星标）
+  BOOKMARK = 'sys.symbol.bookmark',
+  BOOKMARK_FILL = 'sys.symbol.bookmark_fill',
   MOON = 'sys.symbol.moon',
 
   // 系统图标
@@ -184,6 +189,9 @@ export const AppIconMap: Map<AppIcon, string> = new Map<AppIcon, string>([
   [AppIcon.HEART_FILL, 'heart_fill'],
   [AppIcon.STAR, 'star'],
   [AppIcon.STAR_FILL, 'star_fill'],
+  [AppIcon.IMAGES, 'picture_2'],
+  [AppIcon.BOOKMARK, 'bookmark'],
+  [AppIcon.BOOKMARK_FILL, 'bookmark_fill'],
   [AppIcon.INFO, 'info_circle'],
   [AppIcon.WARNING, 'exclamationmark_triangle'],
   [AppIcon.ERROR, 'xmark_circle'],

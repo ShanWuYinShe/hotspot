@@ -255,6 +255,7 @@ export struct NearbyGroupsListPage {
         // 分类胶囊行 = 页头 below（前端 header 内 mt-3 pb-2 的 TabBar；紧凑横向滚动胶囊）
         Scroll() {
         TabsPillGroup({
+          variant: 'pills',
           tabs: this.TAGS.map((tag: string) => ({ label: tag } as TabItem)),
           freeWidth: true,
           activeIndex: Math.max(0, this.TAGS.indexOf(this.activeTag)),

@@ -46,16 +46,22 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token、配色硬
     的区别是语义：前者是「静态的凹陷/次表面」，后者是「悬停反馈」，不可互换。
     该表达式经 `--cst-text-primary` 自适配明暗（light 微沉 / dark 微浮），
     因此只在 themes/*.css 的 light 块定义一次，**不算缺失 dark 覆盖**
-- **画廊连续画布契约（强制）**：`--cst-surface-page`（= page-bg）是应用内唯一的
-  整层底色。外壳各层（外框/内框/视口/状态栏/安全区/导航底座透明区）一律只许用它；
-  层级只靠白卡（`surface-primary`：`card-raised`/`surface-hero`）+ 发丝描边 +
-  主题投影表达。禁止再引入第二个整层底色（`workspace` token 已删除，桌面舞台
-  并入画布，侧栏/主面板/顶栏走白浮卡语言）。分壳规则见 `utilities.css`：
-  移动/平板视口直接暴露画布，桌面视口落在白浮卡内（`desktop-main-scroll > *`
-  强制白底）；`PageHeader` 实底走 `.page-header-solid`（外壳感知：移动/平板画布色、
-  桌面白色），sticky glass 仍走 `surface-nav-glass`。
+- **连续画布契约（强制，2026-10-27 Round 2 修订；原「画廊连续画布/白浮卡」条款作废）**：
+  `--cst-surface-page`（= page-bg）是应用内唯一的整层底色。外壳各层（外框/内框/视口/
+  状态栏/安全区/导航底座透明区/桌面顶栏/侧栏/主内容）一律只许用它连续铺底，**不得再加**
+  包裹整页的描边 / 圆角 / 白底 / 硬分隔线（会在屏幕边缘形成「框线」，用户明确否决）。
+  层级只靠**内容单元卡片**（`surface-primary`：`card-raised`/`surface-hero`，可带发丝描边 +
+  主题投影）与留白表达；内容单元格本身不是页面框，可保留。禁止引入第二个整层底色
+  （`workspace` token 已删除）。分壳规则：四端外壳直接暴露画布（`[data-page-viewport]`
+  透明），桌面氛围画布为**整窗单实例**（外壳根挂一次）；`PageHeader` 实底走
+  `.page-header-solid`（一律画布色，**无底边线**，滚动时才允许柔和投影），sticky glass 仍走
+  `surface-nav-glass`。
   唯一例外：聊天页独立画布 `--cst-surface-chat`（= chat-bg，微差于页面画布，
   对齐鸿蒙 `chatBackground`），仅聊天页根/头部/输入条使用。
+- **图片优先卡遮罩（2026-10-27）**：整卡图片卡只用 `--cst-surface-card-scrim-top` /
+  `--cst-surface-card-scrim-bottom` / `--cst-surface-card-fallback`（三主题×明暗定义在
+  `themes/*.css`，语义见 `docs/design-system.md` §17）；禁止页面里写 rgba 遮罩。
+  **可读性优先**：压图文字必须满足 4.5:1，必要时加深 token alpha，不要靠浅色玻璃底压白字。
 - **氛围画布（Ambient canvas，2026-10-22 起）**：内容稀疏/空态页用主题化装饰层补纵深，
   唯一实现 `components/layout/ambient/AmbientBackdrop.svelte`：canvas 变体挂四端外壳内容区
   （桌面主内容卡 / 平板 / 移动）/ 认证页 / 错误页 / 启动占位；chrome 变体挂桌面顶栏与侧栏

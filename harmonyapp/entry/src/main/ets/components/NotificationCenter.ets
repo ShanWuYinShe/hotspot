@@ -466,6 +466,7 @@ export struct NotificationCenter {
 
       // 过滤器标签
       TabsPillGroup({
+        variant: 'pills',
         tabs: this.filterOptions.map((filter: NotificationFilterOption) => ({ label: filter.label } as TabItem)),
         activeIndex: this.filterOptions.findIndex((filter: NotificationFilterOption) => filter.key === this.selectedFilter),
         actions: {

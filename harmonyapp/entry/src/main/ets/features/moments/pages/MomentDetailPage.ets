@@ -1042,7 +1042,7 @@ export struct MomentDetailPage {
               }) {
                 Row() {
                   LucideIcon({
-                    icon: this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR,
+                    icon: this.isMomentFavorited(moment) ? AppIcon.BOOKMARK_FILL : AppIcon.BOOKMARK,
                     iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
                     color: this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
                   })

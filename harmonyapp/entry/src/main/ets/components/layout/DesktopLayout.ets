@@ -98,27 +98,20 @@ export struct DesktopLayout {
 
         // body：侧边栏 + main card
         Row({ space: DesignConstants.SPACING.LG }) {
+          // R2（2026-10-27）去边框：侧栏与主内容不再是白浮卡，直接落在连续 pageBackground 画布上
+          // （与 web 桌面壳「顶栏/侧栏/主面板共享 --cst-surface-page」一致）。
+          // 侧栏宽度与主内容 gutter 不变；层级只靠控件本体（激活胶囊/卡片内容单元）表达。
           Column() {
             this.Sidebar()
           }
           .width(DesignConstants.LAYOUT.DESKTOP_SIDEBAR_WIDTH) // 224
           .height('100%')
-          .borderRadius(DesignConstants.SHAPE.HERO_CARD) // 24
-          .backgroundColor(this.getPalette().surfaceBackground)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-          .shadow(this.getPalette().elevatedShadow)
-          .clip(true)
 
           Column() {
             this.MainContent()
           }
           .layoutWeight(1)
           .height('100%')
-          .borderRadius(DesignConstants.SHAPE.HERO_CARD) // 24
-          .backgroundColor(this.getPalette().surfaceBackground)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-          .shadow(this.getPalette().elevatedShadow)
-          .clip(true)
         }
         .layoutWeight(1)
         .width('100%')
@@ -126,8 +119,9 @@ export struct DesktopLayout {
       }
       .width('100%')
       .height('100%')
-      // 画布契约：桌面舞台与整层底色一律 pageBackground 连续画布（对齐前端 --cst-surface-page）；
-      // 层级只靠白浮卡（侧栏 / 主面板 surfaceBackground + 发丝描边 + 主题投影）表达，不再用深一档舞台灰
+      // 画布契约（R2 改写）：桌面全窗连续 pageBackground 画布（对齐前端 --cst-surface-page）；
+      // 不再用「侧栏/主面板白浮卡 + 描边 + 投影」表达层级（会把整页框起来，用户明确反对），
+      // 层级由内容单元与控件本体承担。
       .backgroundColor(this.getPalette().pageBackground)
 
       // 通知中心 overlay（遮罩淡入淡出，避免 if 硬切闪现）
@@ -304,9 +298,8 @@ export struct DesktopLayout {
     .width('100%')
     .height(DesignConstants.LAYOUT.DESKTOP_HEADER_HEIGHT) // 52
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-    // 画布契约：顶栏整层用画布色连续（不再整条白色），分隔只靠底边发丝线
+    // 画布契约：顶栏整层与画布连续（R2 去边框：无底边线、无阴影；滚动分层留给后续 blur 方案）
     .backgroundColor(this.getPalette().pageBackground)
-    .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getPalette().borderColor })
   }
 
   // ==================== 主题家族切换 sheet（顶栏 PALETTE 按钮）====================
@@ -400,11 +393,8 @@ export struct DesktopLayout {
       .width('100%')
       .alignItems(HorizontalAlign.Start)
 
-      // 分隔线
-      Divider()
-        .width('100%')
-        .color(this.getPalette().borderColor)
-        .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+      // 分组留白（R2 去边框：不画硬分隔线，靠留白 + 下方「个人中心」eyebrow 分组）
+      Column().height(DesignConstants.SPACING.MD)
 
       // 个人中心 section 标签
       Text('个人中心')
@@ -424,10 +414,8 @@ export struct DesktopLayout {
       .alignItems(HorizontalAlign.Start)
 
       // 管理后台入口（移动端降级概览，对齐前端 admin 侧边栏项；点击进入概览页，复杂操作引导 Web）
-      Divider()
-        .width('100%')
-        .color(this.getPalette().borderColor)
-        .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+      // R2 去边框：原 Divider 删除；分组靠留白表达
+      Column().height(DesignConstants.SPACING.MD)
 
       Row() {
         LucideIcon({
@@ -491,8 +479,8 @@ export struct DesktopLayout {
         AnchorEntry({ variant: 'card' })
       }
       .width('100%')
-      .padding({ top: DesignConstants.SPACING.SM })
-      .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getPalette().borderColor })
+      // 分组用留白表达（R2 去边框：不再画硬分隔线）
+      .padding({ top: DesignConstants.SPACING.LG })
     }
     .width('100%')
     .height('100%')

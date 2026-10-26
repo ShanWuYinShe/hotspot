@@ -31,6 +31,8 @@ import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { curves } from '@kit.ArkUI';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
+import { Skeleton } from '../../../components/states/Skeleton';
+import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'HomePage';
@@ -217,7 +219,9 @@ export struct HomePage {
           TabsPillGroup({
             tabs: this.feedTabs,
             activeIndex: this.activeTab,
-            freeWidth: true,
+            // 首页是系统级分段控制器（对齐 web TabBar variant=segmented）：
+            // 选中 = accent 实底 + ✓ + semibold，不依赖颜色也能辨认
+            variant: 'segmented',
             actions: {
               onChange: (index: number) => {
                 this.activeTab = index;
@@ -246,13 +250,8 @@ export struct HomePage {
             .align(Alignment.Top)
             .scrollBar(BarState.Off)
           } else if (this.isTabLoading() && this.currentTabMoments().length === 0) {
-            Column() {
-              SystemLoadingView({ message: '正在加载…' })
-                .width('100%')
-            }
-            .width('100%')
-            .height('100%')
-            .justifyContent(FlexAlign.Center)
+            // R2 整卡图片卡骨架：4:5 图片块 + 底部两行文字条（与真实卡同比例/同位置，零位移）
+            this.buildFeedSkeleton()
           } else if (this.currentTabError().length > 0 && this.currentTabMoments().length === 0) {
             Scroll() {
               EmptyState({
@@ -344,6 +343,65 @@ export struct HomePage {
     .padding({ top: DesignConstants.SPACING.XXL })
   }
 
+  /** 首屏加载骨架：与整卡图片卡同几何，避免加载完成时的布局跳动 */
+  @Builder
+  private buildFeedSkeleton() {
+    // 与 web SkeletonFeed 同构：4:5 整卡图片位 + 顶部作者行（圆头像/两行条）+ 底部两行文本条，
+    // 与真实 feed 卡同外壳尺寸（零位移）
+    List({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP }) {
+      ForEach([0, 1, 2, 3], (item: number, index: number) => {
+        ListItem() {
+          SkeletonShimmer({ active: true }) {
+            Stack({ alignContent: Alignment.TopStart }) {
+              Column()
+                .width('100%')
+                .aspectRatio(4 / 5)
+                .borderRadius(DesignConstants.SHAPE.CARD)
+                .backgroundColor(this.getPalette().surfaceSubtle)
+
+              Column() {
+                Row({ space: DesignConstants.SPACING.SM }) {
+                  Skeleton({
+                    blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+                    blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+                    cornerRadius: DesignConstants.RADIUS.FULL
+                  })
+                  Column({ space: DesignConstants.SPACING.XS }) {
+                    Skeleton({ blockWidth: '45%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
+                    Skeleton({ blockWidth: '30%', blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
+                  }
+                  .layoutWeight(1)
+                  .alignItems(HorizontalAlign.Start)
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+
+                Blank()
+
+                Column({ space: DesignConstants.SPACING.SM }) {
+                  Skeleton({ blockWidth: '68%', blockHeight: DesignConstants.FONT.SIZE.LG, cornerRadius: DesignConstants.RADIUS.SM })
+                  Skeleton({ blockWidth: '42%', blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
+                }
+                .width('100%')
+                .alignItems(HorizontalAlign.Start)
+              }
+              .width('100%')
+              .height('100%')
+              .padding(DesignConstants.SPACING.LG)
+            }
+            .width('100%')
+            .clip(true)
+          }
+        }
+      }, (item2: number, index2: number) => 'feed-skeleton-' + index2)
+    }
+    .width('100%')
+    .height('100%')
+    .edgeEffect(EdgeEffect.None)
+    .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XL })
+    .scrollBar(BarState.Off)
+  }
+
   /** 动态列表：全面采用高质感富媒体社交卡片（MomentFeedCard） */
   @Builder
   private buildFeed() {
@@ -352,10 +410,8 @@ export struct HomePage {
         ListItem() {
           MomentFeedCard({
             moment: moment,
-            variant: 'default',
-            showTags: true,
-            showTime: true,
-            textMaxLines: 3,
+            // R2 整卡图片卡：图片铺满 4:5、信息覆盖图面（对齐 web HomeFeedItem card variant）
+            variant: 'overlay',
             onOpenDetail: (m: MomentItem) => this.openMomentDetail(m)
           })
         }

@@ -148,6 +148,7 @@ export struct RelationshipHubPage {
 
         // 关系三 Tab —— below 吸顶（对齐前端 below TabBar；count 角标对齐 TabBar count 契约）
         TabsPillGroup({
+          variant: 'pills',
           tabs: [
             { label: '好友', count: this.friends.length },
             { label: '关注', count: this.following.length },

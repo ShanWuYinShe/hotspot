@@ -14,8 +14,16 @@
 		group,
 		pending = false,
 		pendingApproval = false,
+		onMedia = false,
 		onToggle
-	}: { group: Group; pending?: boolean; pendingApproval?: boolean; onToggle: () => void } = $props();
+	}: {
+		group: Group;
+		pending?: boolean;
+		pendingApproval?: boolean;
+		/** 压在图片/遮罩上的形态：白色描边+白字（已加入/审核中），加入仍用 accent 实底 */
+		onMedia?: boolean;
+		onToggle: () => void;
+	} = $props();
 </script>
 
 <Button
@@ -25,8 +33,10 @@
 	disabled={pending}
 	class="hit-slop rounded-full px-3 gap-1
 		{group.joined || pendingApproval
-		? 'border-border-strong text-text-secondary hover:bg-interactive-hover hover:text-text-primary'
-		: 'font-semibold'}
+			? onMedia
+				? 'border-content-inverse/40 bg-surface-media-scrim-strong text-content-inverse backdrop-blur-sm hover:bg-surface-media-scrim-strong/80'
+				: 'border-border-strong text-text-secondary hover:bg-interactive-hover hover:text-text-primary'
+			: 'font-semibold'}
 		{pending ? 'pointer-events-none opacity-soft' : ''}"
 	aria-pressed={group.joined}
 	onclick={(e) => {

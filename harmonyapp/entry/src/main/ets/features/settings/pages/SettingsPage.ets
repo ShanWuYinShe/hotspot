@@ -685,6 +685,7 @@ export struct SettingsPage {
                         .width('100%')
 
                         TabsPillGroup({
+                          variant: 'segmented',
                           tabs: [{ label: '跟随系统' }, { label: '浅色' }, { label: '深色' }],
                           activeIndex: this.getDarkModeIndex(),
                           actions: {

@@ -1,10 +1,12 @@
 /**
  * TabsPillGroup - 分类/筛选胶囊组（对齐前端 navigation/TabBar）
- * 两种形态：
- * - 默认（segmented）：等宽分段 + surfaceSubtle 灰底槽（系统分段控件视觉）
- * - freeWidth：透明容器 + 自适应内容宽左对齐（对齐前端 TabBar 胶囊行，
- *   激活项 accentMuted 淡底胶囊 + textPrimary 字（soft 弱高亮，亮 accent 实底
- *   收给主按钮，避免筛选态与主操作抢焦点），未激活项透明 + 次要色文字）
+ * 形态（与 web navigation/TabBar 三个 variant 同名同义）：
+ * - variant='segmented'：系统分段控制器 —— surfaceSubtle 灰底轨道 + hairline ring；
+ *   **选中 = accent 实底胶囊 + 反色字 + ✓ + semibold**（不依赖颜色也能辨认，色弱/色盲可用）
+ * - variant='pills'：流式胶囊 —— 选中 = accentMuted 淡底 + accent 字 + semibold
+ * - variant='underline'：页级信息流切换 —— 无轨道，选中 = semibold + 下划线形状线索
+ * - variant=''（legacy，未迁移调用点）：保持既有视觉，便于逐步迁移
+ * - freeWidth：仅控制布局（透明容器、自适应内容宽左对齐），不决定选中样式
  *
  * 交互契约（四态）：
  * - 按压差异：选中胶囊按压 = 底色加深（active 加深反馈）；未选中按压 = SCALE_PRESSED_PILL 缩放
@@ -41,7 +43,9 @@ export struct TabsPillGroup {
   @Prop activeIndex: number = 0;
   /** 胶囊间距：对齐前端 TabBar 容器 gap-1.5(6px)（原 XS(4) 偏紧） */
   @Prop gap: number = DesignConstants.SPACING.SM2;
-  /** 自由宽度模式：透明容器 + 自适应内容宽（对齐前端 TabBar；缺省等宽分段） */
+  /** 形态：与 web TabBar variant 同名（segmented/pills/underline）；空串 = legacy 兼容既有调用点 */
+  @Prop variant: string = '';
+  /** 自由宽度模式：透明容器 + 自适应内容宽（对齐前端 TabBar；缺省等宽布局） */
   @Prop freeWidth: boolean = false;
   /**
    * pillFill：让**视觉胶囊**填满分段槽高度（默认胶囊按文字内容高，在 44vp 外壳里显得又小又飘）。
@@ -69,10 +73,33 @@ export struct TabsPillGroup {
   /** 胶囊底色：选中 = accentMuted 淡底（soft 弱高亮，对齐前端 TabBar 选中态——
    *  亮 accent 实底收给主按钮）；未选中 hover = surfaceSubtle 淡底（「将选中」预览，
    *  与选中态同语言不同档，避免 hover 即选中） */
+  private isSegmented(): boolean {
+    return this.variant === 'segmented';
+  }
+
+  private isUnderline(): boolean {
+    return this.variant === 'underline';
+  }
+
+  /** 新口径（segmented/pills/underline）启用；legacy 空串保持旧视觉 */
+  private isNewStyle(): boolean {
+    return this.variant === 'segmented' || this.variant === 'pills' || this.variant === 'underline';
+  }
+
   private getPillBackground(index: number, isActiveTab: boolean): ResourceColor {
     const palette = this.getPalette();
     if (isActiveTab) {
+      // segmented：accent 实底；pills：accentMuted 淡底；underline：无底
+      if (this.isSegmented()) {
+        return palette.accentBackground;
+      }
+      if (this.isUnderline()) {
+        return DesignConstants.COLOR.TRANSPARENT;
+      }
       return palette.accentMuted;
+    }
+    if (this.isUnderline()) {
+      return DesignConstants.COLOR.TRANSPARENT;
     }
     return this.hoveredIndex === index ? palette.surfaceSubtle : DesignConstants.COLOR.TRANSPARENT;
   }
@@ -88,14 +115,28 @@ export struct TabsPillGroup {
   private getPillForeground(index: number, isActiveTab: boolean): ResourceColor {
     const palette = this.getPalette();
     if (isActiveTab) {
-      // 对齐前端 TabBar 选中项：accent-soft 淡底 + **text-accent-default**（accent 本色文字）。
-      // 早期误用 accentText（accent 亮实底上的反色前景）导致近乎不可见；改用
-      // textPrimary 又偏离了前端「选中项是蓝色文字」的视觉层级。accent 本色的
-      // 对比度实测 5.7:1（#69A8FF on #182943，深色 vibrant），达标且与 web 一致。
+      if (this.isSegmented()) {
+        // segmented 是 accent 实底 → 必须用 accentText（反色前景）；accentMuted 淡底才配
+        // accentBackground 字（历史教训：淡底配 accentText 近乎不可见）
+        return palette.accentText;
+      }
       return palette.accentBackground;
     }
     // 未选中：hover 的时候底色会变 surfaceSubtle，文字随之提亮
     return this.hoveredIndex === index ? palette.textPrimary : palette.tabBarInactive;
+  }
+
+  /** 选中字重（新口径统一 semibold；legacy 保留 medium） */
+  private getPillFontWeight(isActiveTab: boolean): FontWeight {
+    if (isActiveTab) {
+      return this.isNewStyle() ? DesignConstants.FONT.WEIGHT.SEMIBOLD : DesignConstants.FONT.WEIGHT.MEDIUM;
+    }
+    return DesignConstants.FONT.WEIGHT.REGULAR;
+  }
+
+  /** 是否展示 ✓（仅 segmented 选中项）：颜色之外的第二条可辨线索 */
+  private shouldShowCheck(isActiveTab: boolean): boolean {
+    return this.isSegmented() && isActiveTab;
   }
 
   @Builder
@@ -115,8 +156,17 @@ export struct TabsPillGroup {
 
         Text(tab.label)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(this.isActive(index) ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.REGULAR)
+          .fontWeight(this.getPillFontWeight(this.isActive(index)))
           .fontColor(this.getPillForeground(index, this.isActive(index)))
+
+        // ✓：分段控制器选中项的非颜色线索（色弱/色盲可用；12~14 档取 2XS=14，gap 4）
+        if (this.shouldShowCheck(this.isActive(index))) {
+          LucideIcon({
+            icon: AppIcon.CHECK,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.getPillForeground(index, true)
+          })
+        }
 
         if (tab.count !== undefined && tab.count > 0) {
           Text(`${tab.count}`)
@@ -152,6 +202,20 @@ export struct TabsPillGroup {
           DesignConstants.INTERACTION.SPRING_DAMPING_TAB
         )
       })
+
+      // underline：选中项下方 2vp 线（形状线索；页级信息流使用）
+      if (this.isUnderline()) {
+        Column()
+          .width(this.isActive(index) ? '64%' : 0)
+          .height(DesignConstants.BORDER_WIDTH.STRONG)
+          .borderRadius(DesignConstants.RADIUS.SM)
+          .backgroundColor(this.getPalette().accentBackground)
+          .margin({ top: DesignConstants.SPACING.XS })
+          .animation({
+            duration: DesignConstants.ANIMATION.DURATION_FAST,
+            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+          })
+      }
     }
     // 外壳（热区壳）不得带水平 padding：内距已在胶囊本体内表达，
     // 否则胶囊会相对页面 gutter 右移一截（对齐前端 TabBar 容器无内距的契约）
@@ -214,10 +278,19 @@ export struct TabsPillGroup {
     // 自由宽度不设 width：由内容撑开（外层可套 Scroll 横向滚动，对齐前端 overflow-x-auto 胶囊行）；
     // 等宽分段占满容器
     .width(this.freeWidth ? undefined : '100%')
-    // 自由宽度模式：透明容器、无灰底槽、无内边距（对齐前端 TabBar 容器）
-    .padding(this.freeWidth ? 0 : DesignConstants.SPACING.THREE)
-    .borderRadius(this.freeWidth ? 0 : DesignConstants.RADIUS.FULL)
-    .backgroundColor(this.freeWidth ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().surfaceSubtle)
+    // 容器：segmented = surfaceSubtle 轨道 + hairline ring（对齐 web 分段控制器）；
+    // pills/underline = 透明容器；legacy 按 freeWidth 保持旧视觉。
+    // 注意 ArkUI 属性顺序：.border() 写在 .borderRadius() 之后会把圆角覆盖为 0，
+    // 因此这里必须 border 先、borderRadius 后。
+    .padding(this.isSegmented() ? DesignConstants.SPACING.THREE :
+      (this.isNewStyle() || this.freeWidth ? 0 : DesignConstants.SPACING.THREE))
+    .border(this.isSegmented()
+      ? { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor }
+      : { width: 0, color: DesignConstants.COLOR.TRANSPARENT })
+    .borderRadius(this.isSegmented() ? DesignConstants.RADIUS.FULL :
+      (this.isNewStyle() || this.freeWidth ? 0 : DesignConstants.RADIUS.FULL))
+    .backgroundColor(this.isSegmented() ? this.getPalette().surfaceSubtle :
+      (this.isNewStyle() || this.freeWidth ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().surfaceSubtle))
     .alignItems(VerticalAlign.Center)
   }
 }

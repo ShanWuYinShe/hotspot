@@ -212,7 +212,8 @@
 		{#snippet header()}
 			{#if device !== 'desktop'}
 				<!-- 移动端顶栏：品牌 Logo + 快捷动作 + 居中胶囊分段器一体化（告别生硬下划线与单调布局） -->
-				<div class="bg-surface-primary/95 backdrop-blur-md border-b border-border-subtle/30 sticky top-0 z-20 pb-2.5">
+				<!-- 去硬边线（Round 2）：画布色半透明 + 模糊承担分隔，不再画 border -->
+				<div class="bg-surface-page/80 backdrop-blur-md sticky top-0 z-20 pb-2.5">
 					<div class="flex items-center justify-between px-4 pt-3 pb-1.5">
 						<div class="flex items-center gap-2">
 							<img src={imgHotSpot} alt="HotSpot" class="size-6.5 rounded-full object-cover shadow-xs" />
@@ -275,13 +276,13 @@
 				variant="feed"
 				count={4}
 				label="加载动态中…"
-				class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4.5 px-3 sm:px-0 pt-2"
+				class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4.5 px-3 sm:px-0 pt-2"
 			/>
 		{:else if currentError && currentItems.length === 0}
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
 		{:else if currentItems.length > 0}
 			<!-- 高质感社区 Feed 流：方案 E 超宽屏 3 列流式画廊瀑布（默认标准） -->
-			<div class={demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4.5 px-3 sm:px-0 pt-2'}>
+			<div class={demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4.5 px-3 sm:px-0 pt-2'}>
 				{#each currentItems as moment (moment.moment_id)}
 					<HomeFeedItem
 						{moment}

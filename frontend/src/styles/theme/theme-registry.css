@@ -189,6 +189,7 @@
   --opacity-hover: var(--cst-opacity-hover);
   --opacity-full: var(--cst-opacity-full);
   --opacity-active: var(--cst-opacity-active);
+  --opacity-watermark: var(--cst-opacity-watermark);
 
   /* Motion duration scale — 生成 duration-instant/rapid/snappy/standard/
      relaxed/spring/slow/gentle 类；transition 与 animation 时长统一走 token。 */

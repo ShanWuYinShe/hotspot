@@ -27,13 +27,15 @@ describe('RailSection', () => {
 		expect(box.className).toContain('rounded-md');
 	});
 
-	it('island 变体应用现代 Bento 微岛浮动卡片类', () => {
+	it('island 变体应用无边框 Bento 微岛类（Round 2 去框：投影承载边界）', () => {
 		const { container } = render(RailSection, {
 			props: { title: '活跃邻居', variant: 'island', children: (() => null) as never }
 		});
 		const box = container.firstElementChild as HTMLElement;
 		expect(box.className).toContain('rounded-2xl');
-		expect(box.className).toContain('bg-surface-primary/80');
+		expect(box.className).toContain('bg-surface-primary/70');
 		expect(box.className).toContain('shadow-xs');
+		// 去明显边界：island 不再画外框线（内容单元边界由投影与底色差表达）
+		expect(box.className).not.toContain('border');
 	});
 });

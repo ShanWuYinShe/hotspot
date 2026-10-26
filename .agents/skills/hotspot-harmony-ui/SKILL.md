@@ -150,6 +150,8 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   | `components/layout/AmbientBackdrop` | 氛围画布（三主题世界层，装饰层唯一实现）；单 Canvas 静态一次性绘制、`hitTestBehavior(None)`、`accessibilityLevel('no')`；统一挂载 `PageShellContainer`（`fillHeight=true`）内，页面禁止自建第二套背景装饰。token 为 `ThemeConstants.AMBIENT`（6 组合 × 12 色，对齐 web `--cst-ambient-*`，见 design-system 第 16 节） |
   | `components/states/EmptySpotlight` | 场景化空态装饰层（超大空态专用，配合 `EmptyState({ spotlight: true })`）；几何 320 光晕 + 288/168 双环 + 4×4 四向星点@±102，纯 ambient token、无动画、不拦截触摸/不进读屏。`EmptyState` 的 `spotlight` 默认 false，小面板空态不得开启 |
   | `components/states/Skeleton` / `SkeletonShimmer` | 列表/信息流首屏骨架屏（几何基准：行内 12、前导圆 36/40/44/48、文本条 14·55% + 11·35%、条间距 8、圆角 12；脉冲 1500ms）；分页/表单等短促场景保留 `LoadingMoreIndicator`/`LoadingProgress` |
+  | `components/media/MediaOverlay` | 整卡图片卡覆盖层原语（2026-10-27 Round 2）：`CardScrimTop`(96vp/.60→透明)、`CardScrimBottom`(58%/.88→.60@42%→透明@78%)、`CardFallbackBackground`（主题渐变+≤.10 水印）、`MediaOverlayBadge`（深色强遮罩胶囊+白字）、`MediaActionButton`（白图标/计数、热区 44）。色值只取 palette 的 `cardScrim*`/`mediaScrimStrong`；禁止页面写 rgba |
+  | `components/TabsPillGroup` | Tab 原语。**选中态不得只依赖颜色**（2026-10-27）：`segmented` 选中 = accent 实底 + ✓(`AppIcon.CHECK`) + semibold；`pills` 选中 = semibold（accent-soft 底）；`underline` 选中 = semibold + 下划线。需过灰度截图验收 |
 - 已登记例外（可保留手写原生控件）：头像/图形按钮、地图全屏控件、搜索建议行、
   动态卡片内嵌操作、主题色板 swatch、扫描/贴纸等特殊控件。存量页面中的手写
   Button/TextInput 属遗留债务，改到该文件时优先迁移为原语。当前存量例外清单：
@@ -161,6 +163,20 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   - ProfileEditPage 多行简介输入辅助、ChatPage 输入栏（含发送钮 `Button('发送')` 属已登记例外 — 需 ChatTheme/getChatVisualStyle 定制动效与 isSendInteractive 动态态，见 ChatPage.ets 顶部“聊天发送钮属已登记例外”注释）、CreateGroupPage 人数步进输入。
 
 - **ArkUI 陷阱复查（2026-10-26 实拍）**：`.border({width,color})` 若写在 `.borderRadius(...)` 之后会把圆角重置为 0（双环/圆钮会变方框）——装饰层双环、圆点等一律先 `.border()` 后 `.borderRadius()`；改完端上放大截图确认。
+
+## 整卡图片卡（Round 2，两端同 spec）
+
+用户明确要求「图片占满整个卡片、信息覆盖在图上」。硬约束（与 `docs/design-system.md` §17 同源）：
+
+- 适用：`MomentFeedCard variant='overlay'`（首页 feed，4:5）、`NearbyImageCard mediaOverlay`（网格 3:4，
+  含附近三叶/我的瞬间/我的群组/群组精选）；`horizontal` 横排两段式保留为列表例外。
+- 卡片无 border、圆角 `SHAPE.CARD`(20)；图片 object-cover 铺满；顶部作者行/徽章 + 底部标题/元信息/
+  白图标操作行压在图 上；位置只在右上出现一次；多图首图 + 1/N 徽章；无图 fallback = 主题渐变 +
+  ≤.10 水印 + 主题色文字（不压白字）。
+- 压图文字对比度 ≥4.5:1（字体区像素实测，亮暗都测）；徽章深色强遮罩 + 白字；点赞/收藏状态
+  用「填充形状 + 白描边」不只色相；操作热区 ≥44。
+- 骨架屏同步：`Skeleton` 的 feed 形态按整卡形状（图片块 + 底部文本条），骨架→内容零位移。
+
 
 
 ## 主题/深色验收：量化口径与实测基线（2026-10-12 实测）
@@ -180,8 +196,9 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 最低值是水墨浅色的 tertiary 4.68 —— **改任何 text/bg token 后必须重跑，低于 4.5 即回归**。
 
 ### 2) 卡片与页面底色的层次：**不要用「底色明度差」判断**
-前端 `semantic.css` 已明文规定：`--cst-surface-page` 是唯一整层底色，
-**层级只靠「白卡 + 发丝描边 + 主题投影」表达**。因此清野主题下
+前端 `semantic.css` 已明文规定：`--cst-surface-page` 是唯一整层底色。**2026-10-27 Round 2 起
+页面级容器不再画框**（桌面/平板壳、顶栏、SystemPageHeader 都不得有包裹整页的描边/圆角/白底/硬分隔线）；
+层级只靠**内容单元卡片**（白卡 + 可选发丝描边/投影，如设置分组卡、动态卡）与留白表达。因此清野主题下
 `pageBackground == surfaceBackground`（浅色深色都是 `#F6F7F3` / `#161A16`）**是刻意设计，不是缺陷**，
 不要为了「拉开层次」去改底色（会破坏跨端色彩校验）。
 

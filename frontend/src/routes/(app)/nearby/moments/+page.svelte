@@ -307,7 +307,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 				{#each filtered.slice(0, visibleCount) as item (item.id)}
 					<!-- 手机两列窄卡用 3:4 竖版：4:3 时卡高仅 ~128px，底部托盘吃掉 70%+ 图片 -->
 					<MomentCard
-						class="aspect-[3/4] rounded-md"
+						class="aspect-[3/4] h-auto rounded-lg"
 						item={item}
 						liked={item.liked}
 						saved={item.saved}

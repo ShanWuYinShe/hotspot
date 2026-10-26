@@ -127,7 +127,8 @@
 	{:else}
 		<!-- 分区工具行：分类 Tab + 记录计数。页面标题由外层 PageHeader 唯一提供
 		     （同族 /me/groups 无内容区大标题；此处曾重复渲染同名 h2 并吃掉首屏 1/3）。 -->
-		<div class="flex flex-wrap items-center justify-between gap-3 border-b border-border-default pb-4">
+		<!-- 去硬分隔线（Round 2）：工具行与网格之间只留留白（原 border-b 在连续画布上像一条页级横线）。 -->
+		<div class="flex flex-wrap items-center justify-between gap-3 pb-2">
 			<div class="min-w-0 flex-1" aria-label="瞬间分类">
 				<TabBar items={tabItems.map((t) => ({ id: t.id, label: t.label, count: t.count }))} value={activeTab} onChange={(id) => setActiveTab(id as Tab)} />
 			</div>
@@ -145,11 +146,12 @@
 				{#each interactions.items as item (item.id)}
 					{#if item.is_deleted}
 						<!-- 软删除墓碑（契约：客户端展示占位）：不可点、无操作，仅说明状态 -->
-						<div class="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-md border border-border-default bg-surface-primary px-4 text-center">
+						<div class="flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-lg bg-surface-subtle/60 px-4 text-center">
 							<p class="text-sm text-text-secondary">该瞬间已删除</p>
 						</div>
 					{:else}
 						<MomentCard
+							class="aspect-[3/4] h-auto rounded-lg"
 							{item}
 							liked={item.liked}
 							saved={item.saved}

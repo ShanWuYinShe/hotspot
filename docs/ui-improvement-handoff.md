@@ -1,10 +1,34 @@
-# UI 一致性改进交接（2026-10-22 ~ 2026-10-26，Round 1-12）
+# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-13）
 
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
 审计结论见 `docs/frontend-ui-audit.md`、`docs/backend-audit.md`。
 
 ## 已完成基线（不要回退）
+
+### 2026-10-27 本轮（Round 13，用户反馈：整卡图片卡 / 去页面级边框 / 选中态无障碍）
+
+- **整卡图片卡（双端同 spec）**：图片铺满整卡 + 顶部 96px/底部 62%（feed 58%）遮罩覆盖信息；
+  feed 4:5、网格 3:4、圆角 20、无 border；顶部作者/徽章、底部标题 2 行+「时间·标签」+ 白图标操作行；
+  多图首图 + 1/N；无图 fallback = 主题渐变 + 0.08 水印 + 主题色文字；覆盖态按钮 `onMedia`
+  （深色强遮罩胶囊+白字+白描边）。压图文字纯白底图最坏情况字形区像素实测全部 ≥4.5:1
+  （最低 4.81，feed 标题 10.70/12.14）。spec 见 `docs/design-system.md` §17。
+  鸿蒙：`MediaOverlay` 原语 + `MomentFeedCard variant='overlay'` + `NearbyImageCard mediaOverlay`，
+  scrim/fallback 与 web 6/6 逐值一致。
+- **去页面级边框（连续画布终版）**：桌面顶栏/侧栏/主内容去掉白浮卡 border/圆角/白底/投影，
+  共享整窗画布 + 氛围单实例（无接缝）；PageHeader 去硬底边线（半透明画布+blur，滚动才投影）；
+  移动品牌头/聊天头/在线条/我的瞬间分区线/群详情概览白卡全部收敛。判定口径：页面级框去、
+  内容单元（设置分组卡/单帖卡/rail）留，逐处结论见 `docs/frontend-ui-audit.md` 与 fe report §3。
+- **选中态不依赖颜色**：`TabBar` / 鸿蒙 `TabsPillGroup` 三形态——segmented = accent 实底 + ✓ + semibold；
+  pills = semibold；underline = semibold + 下划线；浏览器 `filter: grayscale(1)` 实拍验证可辨。
+  spec 见 `docs/design-system.md` §18。
+- **骨架屏同步整卡形状**：`SkeletonFeed` feed 4:5 / card 4:3 / portrait 3:4 + 顶部作者行/底部文本条；
+  首页骨架首卡与真实首卡 rect 完全一致（334×418 @28,115，零位移）。
+- **验收证据**：web 10 核心页 ×5 视口 ×亮暗 = 100 张矩阵（0 console error/0 横向溢出）；
+  check 0 error、test 100 files/518 passed、build 通过、browser-qa 23 页 issues 0。
+  **鸿蒙真机本轮不可用**（hdc 离线；模拟器截图黑屏、componentSnapshot 离屏取证失败，均有复现记录），
+  已用 assembleApp 构建 + 布局树 + token 一致性脚本取证；真机像素验收 checklist 见 `ha/report.md` §7，
+  待设备恢复后补做（本轮不能算「已完成端上验收」）。
 
 ### 2026-10-26 本轮（Round 12，双端 UI 改进 + 跨端对齐）
 
@@ -132,7 +156,13 @@
 
 ## 待做（按优先级）
 
-1. **鸿蒙氛围画布实例数/内存优化（Round 12 遗留，端上实测数据已量化）**：当前每个
+1. **鸿蒙真机像素验收（Round 13 遗留，最高优先）**：本轮鸿蒙改动仅完成构建/布局树/token 校验，
+   真机 hdc 离线导致三主题×明暗矩阵、灰度 Tab、压图对比度像素实测、覆盖态双态截图、web↔鸿蒙并排
+   compare 全部挂起。设备恢复后按 `.worktrees/ui-polish-r2/.workwork/ui-polish-1026/r2/ha/report.md`
+   §7 checklist 执行（含 `ha/run_after_r2.sh` 一键脚本）。
+2. **长尾页面框收敛（Round 13 遗留）**：admin 各页统计/表单卡、关系/举报/通知列表分组卡、
+   编辑资料表单卡等仍用旧浅描边卡片语言；按「页面级框去 / 内容单元留」逐页判定，不要一刀切。
+3. **鸿蒙氛围画布实例数/内存优化（Round 12 遗留，端上实测数据已量化）**：当前每个
    `fillHeight` 页面一块全屏 Canvas（Tab 页常驻，实测 live 2→5 实例、PSS 218.7→330.2MB 含页面数据，
    单画布理论 ≈12MB）。可选方案：上提到外壳内容区单实例（对齐 web）或共享绘制缓存/图片快照；
    修改前先量首帧与滚动帧率，勿只按内存数字取舍。
@@ -153,9 +183,9 @@
    - `/search` 结果骨架行 `py-3`（60）vs 真实 `px-4 py-3.5`（64），且真实结果有分组头 + bordered 卡片壳，
      骨架为裸行；建议 `rowClass="px-4 py-3.5"` + 分组头/卡壳占位；
    - 消息列表骨架未为「在线」横条预留占位（内容到达整体下移约 100px）；建议按是否存在在线条渲染占位。
-9. **鸿蒙 AMBIENT token 纳入 CI（复核 N5，防漂移）**：`check-cross-platform-colors.mjs` 只覆盖 14 组 palette；
-   本轮 AMBIENT 12 项 × 6 组合由人工脚本校验 72/72 一致（`review/lib/check-ambient-parity.py`），
-   建议把该组校验并入 `bun run check:theme`。
+9. **鸿蒙 AMBIENT / CARD-SCRIM token 纳入 CI（复核 N5 + Round 13，防漂移）**：`check-cross-platform-colors.mjs`
+   只覆盖 14 组 palette；AMBIENT 12 项 ×6 组合（72/72）与 CARD-SCRIM/FALLBACK/WATERMARK（6/6）目前只有人工脚本
+   校验（`review/lib/check-ambient-parity.py`、`ha/logs/scrim-parity.txt`），建议并入 `bun run check:theme`。
 10. **鸿蒙装饰几何常量 token 化（复核 N6，低优先）**：`EmptySpotlight.ets` / `AmbientBackdrop.ets` 的 320/288/168/4/102
    与透明色 `'#00000000'` 属已登记布局几何例外，可后续登记到 design-system 或抽常量；透明色建议用 `DesignConstants.COLOR.TRANSPARENT`。
 11. **鸿蒙设置页/管理后台无氛围层（复核 N3，已登记平台差异）**：`PageShellContainer`（`fillHeight=false`，
@@ -165,6 +195,12 @@
    鸿蒙 68/头像 40/名称 14。属两端 avatar/字号档映射既有差异，后续统一时两端同一轮改。
 13. **鸿蒙搜索 Tab 计数（复核 N9，既有 IA）**：鸿蒙搜索 Tab 不显示计数，web 显示（如「用户 7」）；
    信息密度差异，记录备查。
+14. **网格卡字号例外（Round 13）**：171px 宽网格卡正文 12 / 作者 14（feed 标题 16 合规），避免 16px 两行
+   挤压操作行；若后续放大网格卡宽度可统一。
+15. **BSP 卡片比例例外（Round 13）**：附近瞬间/群组桌面 BSP 格按布局单元铺满、非固定比例；如需统一需重排布局。
+16. **横排紧凑卡 fallback/精选横排例外（Round 13）**：horizontal 卡仍两段式与旧占位；群详情精选桌面横排保留。
+17. **鸿蒙我的瞬间 tabs 缺失（Round 13）**：web 有 发布/喜欢/收藏/共 N 条记录 tabs，鸿蒙因无喜欢/收藏数据源、
+   MomentPage 现取 fetchNearbyMoments（既有数据源问题）未实现；需数据层补齐后再对齐 UI。
 
 ## 遗留观察（已评估，保留现状；非缺陷）
 

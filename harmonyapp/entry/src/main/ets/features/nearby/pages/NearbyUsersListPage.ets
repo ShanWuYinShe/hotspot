@@ -270,6 +270,7 @@ export struct NearbyUsersListPage {
         // 排序胶囊行 = 页头 below（前端 header 内 mt-3 pb-2 的 TabBar，属于 header 高度的一部分）
         Scroll() {
         TabsPillGroup({
+          variant: 'pills',
           tabs: [{ label: '距离' }, { label: '在线' }, { label: '共同好友' }],
           freeWidth: true,
           // 对齐前端 nearby/people：紧凑 pill 行（自然宽度左对齐、无灰底槽）
@@ -318,6 +319,7 @@ export struct NearbyUsersListPage {
         // 兴趣分类胶囊行（前端：正文首行 mb-4 的 TabBar，随内容滚动，不在 header 内）
         Scroll() {
         TabsPillGroup({
+          variant: 'pills',
           tabs: NearbyUsersListPage.FILTER_TAGS.map((label: string): TabItem => ({ label })),
           freeWidth: true,
           // 对齐前端：紧凑 pill 行（自然宽度左对齐、无灰底槽）

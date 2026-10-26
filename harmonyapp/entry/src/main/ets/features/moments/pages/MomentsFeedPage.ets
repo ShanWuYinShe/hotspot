@@ -294,6 +294,7 @@ export struct MomentsFeedPage {
         // 动态 tag 药片（对齐前端 nearby/moments tags 药片栏；hotTags 由 hotMoments 派生）
         if (this.hotTags.length > 0) {
           TabsPillGroup({
+            variant: 'pills',
             tabs: this.hotTags.map((tag: string): TabItem => ({ label: tag })),
             activeIndex: this.activeTag ? Math.max(0, this.hotTags.indexOf(this.activeTag)) : -1,
             actions: {

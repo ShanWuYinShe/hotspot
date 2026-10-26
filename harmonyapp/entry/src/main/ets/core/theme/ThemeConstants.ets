@@ -46,6 +46,25 @@ export interface ColorConfig {
   /** 状态色淡底（对齐前端 --cst-status-*-bg 的 color-mix 12~14% 预混近似，随主题变） */
   dangerSoft: string;
   warningSoft: string;
+  /**
+   * 整卡图片卡遮罩（R2 新增，对齐 web --cst-surface-card-scrim-top / -bottom）：
+   * 带主题色调的深色遮罩（三主题各自色调，alpha 固定），保证压图白字对比度；
+   * 值直接镜像 frontend themes/*.css（2026-10-27 实测）。
+   */
+  cardScrimTop: string;
+  /** 顶部遮罩 40% 中段（三段 0.86/0.64/透明，提升作者行对比度） */
+  cardScrimTopMid: string;
+  cardScrimBottomStrong: string;
+  cardScrimBottomMid: string;
+  /** 底部遮罩 60% 档（web 四段 0.94/0.86/0.64，此处第三段） */
+  cardScrimBottomSoft: string;
+  /**
+   * 整卡图片卡无图 fallback 渐变（对齐 web --cst-surface-card-fallback）：
+   * accent 与 surface-primary 的 color-mix 预合成值（135° 三段）。
+   * 使用主题文字色覆盖层，不使用白字遮罩（BRIEF §A 登记例外）。
+   */
+  cardFallbackStart: string;
+  cardFallbackMid: string;
 }
 
 /**
@@ -280,6 +299,16 @@ export class ThemeConstants {
     // 淡底对齐前端 forest light danger 12% 预混（#B4543E × 12% over #F6F7F3）
     dangerSoft: '#EEE3DD',
     warningSoft: '#E9E6DB',
+    // 整卡图片卡遮罩（镜像 frontend themes：主题色调深色 + 固定 alpha）
+    cardScrimTop: '#DB0A120C',
+    // 顶部三段中段（40% 处 0.64）
+    cardScrimTopMid: '#A30A120C',
+    cardScrimBottomStrong: '#F00A120C',
+    cardScrimBottomMid: '#DB0A120C',
+    cardScrimBottomSoft: '#A30A120C',
+    // 无图 fallback 渐变（accent × surface-primary color-mix 预合成，135° 三段）
+    cardFallbackStart: '#C9D7CC',
+    cardFallbackMid: '#E7ECE6',
   };
 
   static readonly DEFAULT_CLEAN_DARK_COLORS: ColorConfig = {
@@ -323,6 +352,16 @@ export class ThemeConstants {
     // 淡底对齐前端 forest dark danger 14% 预混（#D97C5A × 14% over #161A16）
     dangerSoft: '#31271F',
     warningSoft: '#2E2E20',
+    // 整卡图片卡遮罩（镜像 frontend themes：主题色调深色 + 固定 alpha）
+    cardScrimTop: '#DB080F0A',
+    // 顶部三段中段（40% 处 0.64）
+    cardScrimTopMid: '#A3080F0A',
+    cardScrimBottomStrong: '#F5080F0A',
+    cardScrimBottomMid: '#E0080F0A',
+    cardScrimBottomSoft: '#AD080F0A',
+    // 无图 fallback 渐变（accent × surface-primary color-mix 预合成，135° 三段）
+    cardFallbackStart: '#223A2A',
+    cardFallbackMid: '#1A231C',
   };
 
   static readonly SHADOWS: ThemeShadowRegistry = new ThemeShadowRegistry();
@@ -375,6 +414,16 @@ export class ThemeConstants {
     dangerSoft: '#F7E2EA',
     // warningSoft = warning 13% 预合成叠 page-bg（随 warning 加深同步复算）
     warningSoft: '#EEE4DF',
+    // 整卡图片卡遮罩（镜像 frontend themes：主题色调深色 + 固定 alpha）
+    cardScrimTop: '#DB080C16',
+    // 顶部三段中段（40% 处 0.64）
+    cardScrimTopMid: '#A3080C16',
+    cardScrimBottomStrong: '#F0080C16',
+    cardScrimBottomMid: '#DB080C16',
+    cardScrimBottomSoft: '#A3080C16',
+    // 无图 fallback 渐变（accent × surface-primary color-mix 预合成，135° 三段）
+    cardFallbackStart: '#C8D5EB',
+    cardFallbackMid: '#EEF2F9',
   };
 
   static readonly VIBRANT_DARK_COLORS: ColorConfig = {
@@ -417,6 +466,16 @@ export class ThemeConstants {
     mapMoment: '#FB923C',
     dangerSoft: '#2C2131',
     warningSoft: '#2C2B24',
+    // 整卡图片卡遮罩（镜像 frontend themes：主题色调深色 + 固定 alpha）
+    cardScrimTop: '#DB060912',
+    // 顶部三段中段（40% 处 0.64）
+    cardScrimTopMid: '#A3060912',
+    cardScrimBottomStrong: '#F5060912',
+    cardScrimBottomMid: '#E0060912',
+    cardScrimBottomSoft: '#AD060912',
+    // 无图 fallback 渐变（accent × surface-primary color-mix 预合成，135° 三段）
+    cardFallbackStart: '#273F61',
+    cardFallbackMid: '#1B2A42',
   };
 
   static readonly INKWASH_LIGHT_COLORS: ColorConfig = {
@@ -463,6 +522,16 @@ export class ThemeConstants {
     // 淡底对齐前端 inkwash light danger/warning 12% 预混（#9E2140 / #8F7026 × 12% over #F5F2EA）
     dangerSoft: '#EAD9D5',
     warningSoft: '#E9E2D2',
+    // 整卡图片卡遮罩（镜像 frontend themes：主题色调深色 + 固定 alpha）
+    cardScrimTop: '#DB16120E',
+    // 顶部三段中段（40% 处 0.64）
+    cardScrimTopMid: '#A316120E',
+    cardScrimBottomStrong: '#F016120E',
+    cardScrimBottomMid: '#DB16120E',
+    cardScrimBottomSoft: '#A316120E',
+    // 无图 fallback 渐变（accent × surface-primary color-mix 预合成，135° 三段）
+    cardFallbackStart: '#E8CFC8',
+    cardFallbackMid: '#F5ECE5',
   };
 
   static readonly INKWASH_DARK_COLORS: ColorConfig = {
@@ -508,5 +577,15 @@ export class ThemeConstants {
     // 淡底对齐前端 inkwash dark danger/warning 14% 预混（#DE8496 / #D6A54E × 14% over #181A1C）
     dangerSoft: '#34292D',
     warningSoft: '#332E23',
+    // 整卡图片卡遮罩（镜像 frontend themes：主题色调深色 + 固定 alpha）
+    cardScrimTop: '#DB120E0B',
+    // 顶部三段中段（40% 处 0.64）
+    cardScrimTopMid: '#A3120E0B',
+    cardScrimBottomStrong: '#F5120E0B',
+    cardScrimBottomMid: '#E0120E0B',
+    cardScrimBottomSoft: '#AD120E0B',
+    // 无图 fallback 渐变（accent × surface-primary color-mix 预合成，135° 三段）
+    cardFallbackStart: '#433432',
+    cardFallbackMid: '#2C292A',
   };
 }

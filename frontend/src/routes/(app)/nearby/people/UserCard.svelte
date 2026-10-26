@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MapPin } from '@lucide/svelte';
+	import { MapPin, UserRound } from '@lucide/svelte';
 	import FollowButton from '@/components/ui/FollowButton.svelte';
 	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
 
@@ -50,8 +50,12 @@
 	imageAlt={user.name}
 	onClick={onNavigate}
 	onImageError={() => (avatarFailed = true)}
-	class="rounded-2xl aspect-[3/4] border-border-subtle/60 shadow-xs hover:shadow-raised-sm transition-all duration-standard"
+	class="aspect-[3/4] h-auto rounded-lg shadow-xs hover:shadow-raised-sm transition-all duration-standard"
 >
+	{#snippet watermark()}
+		<UserRound size={72} strokeWidth={1} />
+	{/snippet}
+
 	{#snippet placeholder()}
 		<span class="flex items-center justify-center rounded-full bg-accent-soft size-16">
 			<span class="text-accent-default text-3xl font-semibold">{Array.from(user.name)[0] ?? '?'}</span>
@@ -66,33 +70,31 @@
 	</div>
 	{/if}
 
-	{#snippet footer()}
-		<div class="px-3.5 pt-3 pb-3 bg-surface-primary/90 backdrop-blur-xs">
-			<div>
-				<!-- 在线点紧贴昵称右侧（Gemini UI 审查：原 justify-between 把绿点推到行尾，
-				     与昵称视觉割裂）；行内状态点统一 8px 档（审查 M3：9px 近邻异档归并） -->
-				<p class="flex items-center gap-1.5 truncate text-text-primary text-sm font-semibold">
-					<span class="truncate">{user.name}</span>
-					{#if user.isOnline}
-						<span
-							class="shrink-0 rounded-full size-2 ring-2 ring-surface-card-menu bg-status-online"
-							title="在线"
-						></span>
-					{/if}
-				</p>
-				{#if user.note}
-					<p class="truncate text-text-secondary text-xxs mt-0.5">{user.note}</p>
-				{/if}
-			</div>
-			<div class="mt-2.5 flex items-center justify-between gap-2">
-				{#if user.tag}
-					<span class="badge bg-accent-soft text-accent-default">#{user.tag}</span>
-				{:else}
-					<span></span>
-				{/if}
-				<!-- 纯图标档 FollowButton（空间受限卡片行） -->
-				<FollowButton iconOnly active={followed} pending={pending} onToggle={() => onFollow()} />
-			</div>
+	{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
+	{@const onCover = onImage && !horizontal}
+	<div class="p-4">
+		<p class="flex items-center gap-1.5 truncate text-sm font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">
+			<span class="truncate">{user.name}</span>
+			{#if user.isOnline}
+				<span
+					class="shrink-0 rounded-full size-2 bg-status-online {onCover
+						? 'ring-2 ring-content-inverse opacity-emphasis'
+						: 'ring-2 ring-surface-card-menu'}"
+					title="在线"
+				></span>
+			{/if}
+		</p>
+		{#if user.note}
+			<p class="mt-0.5 truncate text-xxs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">{user.note}</p>
+		{/if}
+		<div class="mt-2 flex items-center justify-between gap-2">
+			{#if user.tag}
+				<span class="badge {onCover ? 'bg-surface-media-scrim-strong text-content-inverse' : 'bg-accent-soft text-accent-default'}">#{user.tag}</span>
+			{:else}
+				<span></span>
+			{/if}
+			<FollowButton iconOnly active={followed} pending={pending} onMedia={onCover} onToggle={() => onFollow()} />
 		</div>
-	{/snippet}
+	</div>
+{/snippet}
 </NearbyImageCard>

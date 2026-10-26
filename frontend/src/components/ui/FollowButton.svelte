@@ -17,6 +17,7 @@
 		disabled = false,
 		size = 'pill',
 		iconOnly = false,
+		onMedia = false,
 		labelActive = '已关注',
 		labelInactive = '关注',
 		onToggle
@@ -27,6 +28,8 @@
 		disabled?: boolean;
 		size?: 'pill' | 'wide' | 'block';
 		iconOnly?: boolean;
+		/** 压在图片/遮罩上的形态：改用白色描边+白字（不依赖主题实底/浅玻璃底） */
+		onMedia?: boolean;
 		labelActive?: string;
 		labelInactive?: string;
 		onToggle: (e: MouseEvent) => void;
@@ -39,9 +42,13 @@
 		aria-pressed={active}
 		aria-label={active ? labelActive : labelInactive}
 		disabled={pending || disabled}
-		class="hover-btn hit-slop tap-92 flex size-9 shrink-0 items-center justify-center rounded-full focus-ring disabled:pointer-events-none disabled:opacity-faint {active
-			? 'border border-border-strong bg-transparent text-text-secondary hover:bg-interactive-hover'
-			: 'bg-accent-bg text-accent-default border border-transparent hover:border-accent-border'}"
+		class="hover-btn hit-slop tap-92 flex size-9 shrink-0 items-center justify-center rounded-full focus-ring disabled:pointer-events-none disabled:opacity-faint {onMedia
+			? active
+				? 'border border-content-inverse/70 bg-surface-media-scrim-strong text-content-inverse hover:bg-surface-media-scrim-strong/80'
+				: 'border border-content-inverse/40 bg-surface-media-scrim-strong text-content-inverse hover:bg-surface-media-scrim-strong/80'
+			: active
+				? 'border border-border-strong bg-transparent text-text-secondary hover:bg-interactive-hover'
+				: 'bg-accent-bg text-accent-default border border-transparent hover:border-accent-border'}"
 		onclick={(e) => {
 			e.stopPropagation();
 			onToggle(e);

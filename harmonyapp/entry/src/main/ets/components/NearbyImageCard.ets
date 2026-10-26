@@ -6,6 +6,7 @@ import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/
 import { AppIcon } from './SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { LucideIcon } from '../components/LucideIcon';
+import { CardScrimTop, CardScrimBottom, CardFallbackBackground } from './media/MediaOverlay';
 
 @Builder
 function emptyNearbyCardSlot() {
@@ -39,6 +40,8 @@ export struct NearbyImageCard {
   @Prop cardRadius: number = DesignConstants.SHAPE.COMPACT_CARD;
   /** 无图占位首字来源（昵称/群名） */
   @Prop placeholderText: string = '';
+  /** overlay fallback 居中水印图标（opacity 0.10；用户卡用 PERSON、群卡用 GROUP、瞬间用 PHOTO） */
+  @Prop fallbackIcon: AppIcon = AppIcon.PHOTO;
   /** 图上徽章：pill 文本（空 = 不渲染 pill） */
   @Prop badgeText: string = '';
   /** 图上徽章图标（pill 前缀图标 / circle 徽章主体） */
@@ -49,6 +52,17 @@ export struct NearbyImageCard {
   @Prop badgeVariant: 'glass' | 'accent' = 'glass';
   @Prop badgeAlign: 'topRight' | 'topLeft' = 'topRight';
   @Prop disabled: boolean = false;
+  /**
+   * R2 整卡图片卡模式（Image-first，BRIEF §A）：图片铺满圆角卡，footer 内容覆盖在
+   * 底部遮罩上（白字/白图标），去掉不透明托盘与描边；no-image 时用主题 fallback
+   * + 主题文字色。调用方 footer 需根据 onMediaStateChange 切换文字色。
+   */
+  /** R2 整卡图片卡模式（Image-first，BRIEF §A）：图片铺满圆角卡，footer 内容覆盖在
+   * 底部遮罩上（白字/白图标），去掉不透明托盘与描边；no-image 时用主题 fallback
+   * + 主题文字色。注意：不能命名 overlay（与 ArkUI 内置 overlay 属性冲突）。 */
+  @Prop mediaOverlay: boolean = false;
+  /** 卡片当前是否处于「图上有内容」状态（false = fallback，footer 应换主题文字色） */
+  onMediaStateChange?: (mediaActive: boolean) => void;
   onPress?: () => void = () => {
   };
   @BuilderParam footer: () => void = emptyNearbyCardSlot;
@@ -62,6 +76,21 @@ export struct NearbyImageCard {
 
   private onImageUrlChange(): void {
     this.imageFailed = false;
+    this.notifyMediaState();
+  }
+
+  aboutToAppear(): void {
+    this.notifyMediaState();
+  }
+
+  private hasMedia(): boolean {
+    return this.imageUrl.length > 0 && !this.imageFailed;
+  }
+
+  private notifyMediaState(): void {
+    if (this.onMediaStateChange) {
+      this.onMediaStateChange(this.hasMedia());
+    }
   }
 
   private getPalette() {
@@ -114,8 +143,10 @@ export struct NearbyImageCard {
       .width(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
       .height(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(DesignConstants.COLOR.IMAGE_BADGE_BG)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
+      .backgroundColor(this.mediaOverlay ? DesignConstants.COLOR.MEDIA_SCRIM_STRONG : DesignConstants.COLOR.IMAGE_BADGE_BG)
+      .border(this.mediaOverlay ?
+        { width: 0 } :
+        { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
       .justifyContent(FlexAlign.Center)
       .markAnchor(this.getBadgeAnchor())
       .position(this.getBadgePosition())
@@ -143,8 +174,8 @@ export struct NearbyImageCard {
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.badgeVariant === 'accent' ?
         this.getPalette().accentBackground :
-        DesignConstants.COLOR.IMAGE_BADGE_BG)
-      .border(this.badgeVariant === 'accent' ?
+        (this.mediaOverlay ? DesignConstants.COLOR.MEDIA_SCRIM_STRONG : DesignConstants.COLOR.IMAGE_BADGE_BG))
+      .border(this.badgeVariant === 'accent' || this.mediaOverlay ?
         { width: 0 } :
         { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: DesignConstants.COLOR.IMAGE_BADGE_BORDER })
       .markAnchor(this.getBadgeAnchor())
@@ -218,23 +249,32 @@ export struct NearbyImageCard {
             this.imageFailed = true;
           })
 
-        // media scrim：图上轻渐变，保证图上徽章可读（对齐前端 surface-media-scrim-card）
-        Column()
-          .width('100%')
-          .height('100%')
-          .linearGradient({
-            angle: 180,
-            colors: [
-              [DesignConstants.COLOR.IMAGE_OVERLAY_START, 0.0],
-              [DesignConstants.COLOR.IMAGE_OVERLAY_END, 0.55]
-            ] as [ResourceColor, number][]
-          })
-          .hitTestBehavior(HitTestMode.None)
+        // overlay 模式用 R2 顶/底遮罩（下方统一叠加）；旧托盘模式保留轻渐变
+        if (!this.mediaOverlay) {
+          Column()
+            .width('100%')
+            .height('100%')
+            .linearGradient({
+              angle: 180,
+              colors: [
+                [DesignConstants.COLOR.IMAGE_OVERLAY_START, 0.0],
+                [DesignConstants.COLOR.IMAGE_OVERLAY_END, 0.55]
+              ] as [ResourceColor, number][]
+            })
+            .hitTestBehavior(HitTestMode.None)
+        }
       } else {
-        this.buildFallbackLayer()
+        if (this.mediaOverlay) {
+          CardFallbackBackground({ icon: this.fallbackIcon })
+        } else {
+          this.buildFallbackLayer()
+        }
       }
 
-      this.buildBadge()
+      // 非 overlay：badge 直接叠在图上；overlay 时 badge 要画在遮罩之上（见 build()）
+      if (!this.mediaOverlay) {
+        this.buildBadge()
+      }
     }
     .width('100%')
     .height('100%')
@@ -244,16 +284,46 @@ export struct NearbyImageCard {
     Stack({ alignContent: Alignment.Bottom }) {
       this.buildImageLayer()
 
-      // 底部托盘（surfaceElevated 底 + hairline 顶边，对齐前端 card-menu tray）
-      Column() {
-        this.footer()
+      if (this.mediaOverlay) {
+        if (this.hasMedia()) {
+          // 顶/底遮罩（纯装饰，不拦截触摸）；fallback 不用白字遮罩（BRIEF 例外）
+          Column() {
+            CardScrimTop()
+            Blank()
+            CardScrimBottom({ heightRatio: '62%' })
+          }
+          .width('100%')
+          .height('100%')
+          .hitTestBehavior(HitTestMode.None)
+          .accessibilityLevel('no')
+        }
+
+        // badge 画在遮罩之上，保证深遮罩徽章/白字不被二次压暗
+        Stack() {
+          this.buildBadge()
+        }
+        .width('100%')
+        .height('100%')
+        .hitTestBehavior(HitTestMode.None)
+
+        // 内容覆盖在遮罩上（footer 由调用方按 onMediaStateChange 切白字/主题字）
+        Column() {
+          this.footer()
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+      } else {
+        // 底部托盘（surfaceElevated 底 + hairline 顶边，对齐前端 card-menu tray）
+        Column() {
+          this.footer()
+        }
+        .width('100%')
+        .backgroundColor(this.getPalette().surfaceElevated)
+        .border({
+          width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE },
+          color: { top: this.getPalette().borderColor }
+        })
       }
-      .width('100%')
-      .backgroundColor(this.getPalette().surfaceElevated)
-      .border({
-        width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE },
-        color: { top: this.getPalette().borderColor }
-      })
     }
     .width('100%')
     .aspectRatio(this.cardAspectRatio > 0 ? this.cardAspectRatio : undefined)

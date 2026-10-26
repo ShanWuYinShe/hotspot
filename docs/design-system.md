@@ -64,8 +64,10 @@
 | `map-group` | `#0B7653` | `#34D399` | `#4A703F` | `#88B85A` |
 | `map-moment` | `#C2470B` | `#FB923C` | `#8A6426` | `#C4A75A` |
 
-> `workspace-bg` 已删除：历史上与 `page-bg` 两档整层灰并存造成断裂，现桌面舞台改用
-> `pageBackground`、侧栏与主面板改为白浮卡。inkwash 主题族数值以 `themes/*.css` 为准。
+> `workspace-bg` 已删除：历史上与 `page-bg` 两档整层灰并存造成断裂。**2026-10-27（Round 2）起
+> 桌面舞台不再用白浮卡包住侧栏/主面板**：整窗为一张连续画布，侧栏、主内容、顶栏均无外框、
+> 无硬分隔线，层级只由内容单元卡片与留白表达（见 §17 与 theme skill「连续画布契约」）。
+> inkwash 主题族数值以 `themes/*.css` 为准。
 
 > 派生档位（`-bg` 淡底 / `-border` 淡边框 / `-glow` 光晕）由 `color-mix(in srgb, 主色 12~14%, transparent)`
 > 统一生成，禁止组件/数据层再写 `color-mix`。
@@ -86,13 +88,14 @@
 
 - 画布：`palette.pageBackground` / `palette.surfaceBackground`（对齐前端
   `--cst-surface-page` / `--cst-surface-primary`）
-- **画布契约（克制画廊，全量推广时遵守）**：应用内只允许一个整层底色 = 画布
-  `pageBackground`（对齐前端 `--cst-surface-page`）；外壳各层（手机壳 / 桌面舞台 /
-  顶栏 / 页面整底 / header bar 变体）只许用画布色连续铺底，层级只靠白卡
-  `surfaceBackground` + 发丝描边（`BORDER_WIDTH.HAIRLINE` + `borderColor`）+
-  主题投影（`surfaceShadow` / `elevatedShadow`）表达。禁止引入第二档整层灰。
-  分组卡样板见设置页 `SettingsSectionCard`（白卡 + 发丝描边 + 投影）、分组小标用
-  `textSecondary` eyebrow（`SettingsGroupLabel`）、用户 hero 卡只保留白卡 + 描边（不加光晕）。
+- **画布契约（2026-10-27 Round 2 修订，克制画廊 / 连续画布）**：应用内只允许一个整层底色 =
+  画布 `pageBackground`（对齐前端 `--cst-surface-page`）；外壳各层（手机壳 / 桌面舞台 /
+  顶栏 / 页面整底 / header bar 变体）只许用画布色连续铺底。**页面级容器不再用卡片外框**：
+  桌面壳的侧栏/主面板、手机/平板顶栏与页头都不得出现包裹整页的描边、圆角、白底或硬分隔线
+  （会形成屏幕边缘的「框线」观感，2026-10-27 用户明确否决）。层级只由**内容单元卡片**
+  （`surfaceBackground` + 可选发丝描边/主题投影，如设置分组卡、动态卡、rail 卡片）与留白表达；
+  内容单元格本身不属于「页面框」，可保留。分组卡样板见设置页 `SettingsSectionCard`；
+  分组小标用 `textSecondary` eyebrow（`SettingsGroupLabel`）。
 - 表面：`palette.surfaceSubtle` / `palette.surfaceElevated` / `palette.chatBackground`
 - 文字：`palette.textPrimary` / `palette.textSecondary` / `palette.textTertiary`
 - 品牌：`palette.accentBackground`（forest `#3D7A55`，与前端
@@ -386,11 +389,11 @@
 | `layout/ambient/AmbientBackdrop` | `components/layout/AmbientBackdrop` | 氛围画布（三主题世界层，装饰层唯一实现）。鸿蒙为静态 Canvas 一次性绘制，挂载于 `PageShellContainer`；详见第 16 节 |
 | `data-display/EmptyState`（`spotlight` 开启） | `EmptyState`（`spotlight`）+ `components/states/EmptySpotlight` | 场景化空态装饰层（超大空态专用）。几何/token 见第 16.6 节，两端同一 spec |
 | `data-display/MetricRow` / `HeroStats` | `HomePage.buildHeroStats`（页面内 @Builder） | 统计段（原表写的 `StatSegments` 已不存在，2026-10-12 修正；目前只有首页一处消费，暂不抽独立组件） |
-| `routes/moments/shared/MomentCard` | `MomentFeedCard` | 动态卡片 |
+| `routes/moments/shared/MomentCard` | `MomentFeedCard` / `MomentWallCard` | 动态卡片。**2026-10-27 Round 2**：网格/列表形态均为整卡图片 + 遮罩覆盖信息（3:4；首页 feed 由 `HomeFeedItem` ↔ `MomentFeedCard variant='overlay'` 4:5），spec 见 §17 |
 | `auth/LoginPromptSheet` | `LoginPromptView` | 未登录引导 |
 | `messages/ChatView` 等 | `ChatPage` / `ChatPageHeader` | 聊天界面 |
 | `routes/(app)/nearby/+page.svelte`（附近聚合） | `features/nearby/pages/NearbyPage` | 附近聚合页（tab 式：附近的人/附近群组/附近瞬间三分区，各分区拉取并渲染内容； 2026-10-13 更新描述——原「纯导航门户」描述已过期）。手机/平板底栏「附近」tab |
-| `data-display/NearbyImageCard` | `components/NearbyImageCard` | 图片优先卡（3:4 图 + 覆盖层徽章），附近用户/群组卡共用 |
+| `data-display/NearbyImageCard` | `components/NearbyImageCard` | 图片优先卡。**2026-10-27 Round 2**：默认形态改为图片铺满整卡 + 遮罩覆盖信息（3:4），徽章/操作压在图上（footer 覆盖、白字/白图标、对比度硬约束）；`horizontal` 横排两段式保留为列表场景例外。`HomeFeedItem` card ↔ 鸿蒙 `MomentFeedCard variant='overlay'`（4:5）。spec 见 §17 |
 | `routes/(app)/notify/+page.svelte` + `notify/shared/NotifyRow` | `components/NotificationCenter` | 通知中心（列表 + 行） |
 | `shared/ConnectionBanner`（近似） | `components/NotificationBanner` | 顶部横幅提示（前端对应为连接横幅，语义近似；鸿蒙端承载更广） |
 
@@ -462,12 +465,13 @@
 
 ### 16.3 挂载点（全站统一，页面不得自建）
 
-- **外壳内容区**：`DesktopLayout`（`.desktop-main-panel` 内）、`TabletLayout`、
-  `MobilePortrait`、`MobileLandscape` 各自内容区各挂一次（canvas 完整版）——氛围层固定于
-  可见内容区，**不随路由滚动**；`PageViewport` 底色改为透明以透出装饰层（画布底色由外壳
-  提供：桌面白浮卡 / 移动·平板 `surface-page`）；
-- **桌面导航 chrome**（轻量版）：`DesktopLayout` 顶栏（52px）与左侧栏各挂一次
-  `variant="chrome"`——只铺天光/边光，不画世界层与暗角，让导航与主内容共享同一环境光；
+- **外壳内容区**：`DesktopLayout` 根节点挂**一次整窗实例**（2026-10-27 Round 2 去边框后，
+  顶栏/侧栏/主内容共享同一世界层，不再按区域各挂一份，避免区域交界出现渐变接缝）；
+  `TabletLayout`、`MobilePortrait`、`MobileLandscape` 内容区各挂一次（canvas 完整版）——
+  氛围层固定于可见内容区，**不随路由滚动**；`PageViewport` 底色透明以透出装饰层
+  （画布底色由外壳统一提供 = `surface-page`）；
+- `variant="chrome"`（轻量天光）：仅在确实需要给导航 chrome 单独铺光的场景使用；桌面连续画布
+  下不再需要（整窗已共享世界层）。
 - 认证页（`routes/(auth)/login`）、错误页（`routes/+error.svelte`）；
 - 启动占位（根布局 BootSplash 外层）：开屏即「世界 + 徽记」，接近游戏加载画面。
 - **鸿蒙端**：统一挂在 `PageShellContainer`（`fillHeight=true` 的页面视口容器）内、内容之下；Tab 页与 NavDestination 推入页自动继承。消息 Tab 未登录分支在 `PhoneLayout` 显式接线（底板 → AmbientBackdrop → LoginPromptView，登录提示不得给不透明底色，否则会盖住氛围层）。页面不得自建第二套背景装饰。
@@ -531,3 +535,71 @@
 `hitTestBehavior(None)`、位于内容之下（前端 `z-index:-1` + 父级 `relative isolate`）；
 颜色只取 ambient token（随三主题 × 明暗自适应）；ArkTS 侧 `.border()` 必须写在
 `.borderRadius()` 之前（否则圆环被重置为直角，2026-10-26 实拍踩坑）。
+---
+
+## 17. 整卡图片卡（Image-first overlay card，2026-10-27 Round 2）
+
+**目的**：用户明确要求「图片占满整个卡片，信息覆盖在图片上方」——图像是卡片主体，文字与动作以
+遮罩层形式压在图上，而不是「图片 + 白色信息托盘」两段式。
+
+### 17.1 适用范围
+
+- 适用：首页信息流卡（`HomeFeedItem` card）、附近的人/群组/瞬间网格卡（`NearbyImageCard` 非 horizontal）、
+  我的瞬间/我的群组卡、群组详情精选卡等**图像优先的内容卡**；鸿蒙 `MomentFeedCard` / `NearbyImageCard` 同。
+- 保留两段式（已登记例外）：横排紧凑列表卡（`horizontal`，图左 40% + 右侧信息托盘，用于手机我的群组等
+  列表场景）、搜索/关系等非图片列表行、详情页 hero/封面（已是覆盖式）。
+
+### 17.2 结构与几何
+
+- 图片 `object-cover` 铺满整卡；卡片**不设 border**，圆角 `rounded-lg`(20) / 鸿蒙 `SHAPE.CARD`；
+  投影只在 hover 抬升时出现（`card-hover` 语言）。
+- 比例：feed 卡 `aspect-[4/5]`；网格卡（附近人/群、我的瞬间/群组、群组精选）`aspect-[3/4]`；
+  同一视图只用一档。BSP 瓦片墙按布局单元铺满（登记例外）；横排 `horizontal` 紧凑卡保留两段式（例外）。
+- 三层覆盖（装饰层 `pointer-events-none`，交互按钮自身可点）：
+  1. **顶部遮罩** `--cst-surface-card-scrim-top`（高 128；三段 alpha 0.86 / 0.64@40% / transparent）：
+     作者行（头像 32 + 白字昵称/时间）、关注/推荐徽章、右上分类/位置/多图计数徽章
+     （深色强遮罩胶囊 + 白字）；高度必须覆盖到时间行底（≈52px），96px 会不足；
+  2. **底部遮罩** `--cst-surface-card-scrim-bottom`（高 62%，feed 卡 58%；四段 alpha：亮 0.94/0.86/0.64/0，
+     暗 0.96/0.88/0.68/0）：标题/摘要（白字，≤2 行）+ 元信息（「时间 · 标签」，位置只在右上出现一次）+
+     操作行（点赞/评论/收藏/分享，白色图标 18 + 计数）；
+  3. 中间保持画面干净，不叠半透明层。
+- 内边距 16（移动）/ 20（平板·桌面）；feed 标题 16 semibold；网格卡 171px 宽为登记例外
+  （正文 `text-sm`=12 / 作者 `text-md`=14，避免 16px 两行挤压操作行）；元信息 `text-xs`=11（非 12，
+  以 `theme-registry.css` 实际刻度为准）。
+- 多图：封面取首图 + 右上「1/N」计数徽章（详情页仍可看全部）。
+- 无图/加载失败 fallback：`--cst-surface-card-fallback` 主题渐变 + 居中 64px 主题水印图标
+  （`--cst-opacity-watermark` = 0.08，aria-hidden）+ **主题色文字**（不得压白字）。
+- 骨架屏：整卡图片占位 + 顶部作者行/底部文本条占位，与真实卡同比例、同文字位置（零位移）。
+- 覆盖态按钮（`onMedia` 变体）：关注/加入/已加入/审核中等压图按钮 = 深色强遮罩胶囊 + 白字 + 白描边
+  （未加入主按钮可用 accent 实底 + `text-on-accent`）；亮图/暗图都稳。
+
+### 17.3 硬约束
+
+- 压图文字对比度 **≥4.5:1**（像素级实测：纯白底图最坏情况下的字形区 vs 背景），亮暗双主题都要测；
+  徽章一律深色强遮罩 + 白字（禁止浅玻璃底 + 白字，历史教训 4.16:1 不达标）。
+- 操作行热区 ≥44、纯图标按钮有 `aria-label`；整卡点击仍走覆盖按钮，行内动作抬 z 序可点
+  （沿用 `NearbyImageCard` 既有「覆盖按钮 + auto-lift」模式，不得嵌套交互元素）。
+- 点赞/收藏等**状态**不依赖色相：填充形状 + 白色描边共同表达（色弱可辨）。
+- 新增 scrim/fallback token 必须三主题 × 明暗齐备（前端 `themes/*.css`；鸿蒙 6 套 palette 同值），
+  其余颜色一律走 token，禁止页面内写 rgba。
+- 对比度实测方法：卡内封面替换纯白 data-URI（最坏情况）→ 元素「有字/无字」两帧原子截图取字形区 →
+  按 WCAG 逐像素算 min/P5，全部 ≥4.5:1 才算通过。本轮终测：全局最低 4.81（附近群组群名 light）；
+  顶部作者行初测不达标（昵称 2.46/时间 1.71）→ 顶部遮罩改「三段 0.86/0.64@40%/transparent + 高 128」后
+  复测昵称 7.47/时间 4.89（light）、7.69/5.04（dark），全项达标。
+- 触控：操作行图标 18px + `hit-slop` → ≥44；覆盖按钮热区同样 ≥44。
+
+---
+
+## 18. 选中态不得仅依赖颜色（TabBar / TabsPillGroup，2026-10-27 Round 2）
+
+用户明确要求：**选中态不能只靠颜色区分**（色弱/色盲用户不可辨）。所有「有选中态」的控件必须同时
+提供**非颜色线索**（形状 / 图标 / 字重 / 下划线 / 位置）：
+
+| 形态 | 选中态要求 |
+|---|---|
+| `segmented`（分段控制器：首页「为你推荐/正在关注」、设置明暗、登录模式） | accent 实底胶囊 + **✓ 图标**（`Check` / `AppIcon.CHECK`，12–14px）+ **font-semibold**；未选中 normal |
+| `pills`（筛选/分类胶囊） | accent-soft 底 + accent 字 + **font-semibold** |
+| `underline`（页级两态切换） | **下划线**（2px accent）+ **font-semibold** + 主文字色 |
+
+- ✓ 图标与文字 gap 4；图标尺寸不得盖过文字；有 swatch/icon 的分段项仍加 ✓（不挤时可放文字后）。
+- 验收：强制灰度（`filter: grayscale(1)`）截图中，选中项必须仍一眼可辨；两端（web / 鸿蒙）同口径。
