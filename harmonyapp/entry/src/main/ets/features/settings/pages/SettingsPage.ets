@@ -549,9 +549,10 @@ export struct SettingsPage {
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
+      // r3 软岛：无描边 + 85% surface 底 + 圆角 20（顶部用户卡）
       .borderRadius(DesignConstants.SHAPE.CARD)
-      .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+      .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+      .shadow(this.getCurrentThemePalette().surfaceShadow)
       .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
       .onClick(() => this.openProfile())
     } else {
@@ -576,9 +577,10 @@ export struct SettingsPage {
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
+      // r3 软岛：登录提示卡同语言
       .borderRadius(DesignConstants.SHAPE.CARD)
-      .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+      .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+      .shadow(this.getCurrentThemePalette().surfaceShadow)
       .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
     }
   }
@@ -942,8 +944,8 @@ export struct SettingsPage {
                     }
                     .type(ButtonType.Normal)
                     .height('auto')
-                    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-                    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+                    // r3 danger zone 安静化：danger 软填底、无描边
+                    .backgroundColor(this.getCurrentThemePalette().dangerSoft)
                     .borderRadius(DesignConstants.SHAPE.BUTTON)
                     .padding({
                       left: DesignConstants.SPACING.LG,

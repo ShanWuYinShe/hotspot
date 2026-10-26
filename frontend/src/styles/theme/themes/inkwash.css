@@ -11,6 +11,8 @@
 
 /* ═══ Inkwash Light ═══ */
 .inkwash {
+  /* 内容岛表面（Round 3）：开放页面内容分组软岛底（无描边，靠表面+阴影表达层级） */
+  --cst-surface-island: color-mix(in srgb, var(--cst-surface-primary) 86%, transparent);
   /* ── 原始色板 --cst-palette-* ── */
   /* 表面分层：画布（page）宣纸暖底 + 卡片（bg）宣纸白，层级靠细墨线描边表达 */
   --cst-palette-bg: #FBF9F3;
@@ -223,6 +225,8 @@
 
 /* ═══ Inkwash Dark ═══ */
 .inkwash.dark {
+  /* 内容岛表面（Round 3）：暗色提到 92% 保证软岛与画布的层级可读 */
+  --cst-surface-island: color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-text-primary) 6%);
   /* ── 原始色板 --cst-palette-* ── */
   --cst-palette-bg: #212426;
   --cst-palette-page-bg: #181A1C;

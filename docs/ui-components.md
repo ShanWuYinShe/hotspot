@@ -20,7 +20,7 @@
 ### 列表（行交互的唯一体系）
 | 原语 | 职责 |
 |---|---|
-| `list/ListContainer` | 列表容器，四形态：`bordered`（开放页面卡片）/ embedded（面板内集合）× `inset`（内缩圆角行，Telegram/macOS 语言）/ 默认（分隔线）。可 hover 表面用 `inset` |
+| `list/ListContainer` | 列表容器。**2026-10-27 Round 3**：`bordered` 语义更新为「开放页面内容软岛」——`bg-surface-island + shadow-xs + rounded-lg(20)`、无 1px 描边、`p-2`(8)、行背景透明、行间 `gap-y-0.5`(2)、hover 填充离岛边 8（不再画行横线）；embedded（面板内集合）× `inset`（内缩圆角行）/ 默认（分隔线）不变。调用方不得再给 `bordered` 覆写 border/bg/radius |
 | `list/ListItem` | **唯一行交互原语**。hover/选中填充、12px 圆角、键盘、aria、`tone: joined/card`。行级卡片类禁止（eslint 强制）。列表容器内自动包 `role=listitem`（ListContainer 经 context 声明；ListEnd/InlineLoading 同机制），裸用不变。行点击由内部透明覆盖按钮（`[data-cover]`）承载，行内操作按钮自动抬升（z 序），根不持 button 语义（axe nested-interactive 清零） |
 | 行包装组件 | `ChatListItem` / `home/ActivityRow` / `profile/UserCardRow` / `forms/SettingRow`——只做内容编排，交互全部委托 ListItem |
 
@@ -67,7 +67,9 @@
 |---|---|---|---|
 | A 页面级动作（默认） | `rounded-md`(16px) + `text-sm`，高度档 sm 32 / md 40 / lg 44 | 表单提交、弹层确认、详情页动作区、移动端动作条、错误页动作 | 登录/保存/举报提交/屏蔽/加入群组/私信动作条 |
 | B 行内关系 chip | `rounded-full` + `text-xs`，`px-3.5 py-1.5`（行内）/ `px-4 py-2`（详情宽位） | 卡片/列表行内的关系与轻量动作（嵌在内容里的小动作） | 关注/加入/接受/拒绝/私聊入口 chip |
+| C 安静动作（2026-10-27 Round 3 补充） | `rounded-full` + `bg-surface-subtle/60` 软填底、**无描边**、`text-text-primary`；hover → `bg-surface-subtle` 全量 | 设置/关系/通知等次级页面的行内或分组动作（不抢内容） | 编辑资料/设置、发消息、拒绝、已读、会话操作 |
 
+- **同级动作不得混用「描边胶囊」与「软填胶囊」**（2026-10-27 用户视觉一致性要求）；内容单元功能边界（输入框、主题 swatch）不属动作按钮、保留。
 - 圆角禁档：动作按钮不得使用 `rounded-sm`(12)/`rounded-lg`(20)/`rounded-xl`(24)；
   圆形图标钮走 `ActionIconButton`/`size-* rounded-full`。导航项、菜单行、Toast、
   图片格等非动作控件按各自组件语言，不套本契约。
@@ -140,14 +142,13 @@
     ① wrapper 型新表单一律用 `forms/Input`；② compact 消费方改到该文件且有新增行为需求
     （如清除钮/错误播报）时，先给原语加 compact/size 变体再迁；
     ③ AccountSecuritySection 密码簇若要补 AuthForm 式显隐切换，属 UX 增强需设计确认。
-3. **分组卡壳已收敛**（2026-09-10 / 2026-10-18 收口）：移动端 `ProfileMobile` 的
-   `card-raised` 已改为与桌面 `ProfilePage` 一致的「白卡 + 发丝描边 + 主题投影」。
-   **2026-10-18**：设置页「账号信息/外观与显示/地图与位置/系统与关于」四组手写白卡
-   统一为 `ListContainer bordered inset` + `ListItem`（与通知/隐私/账号安全分组同语言）；
-   手写白卡只保留给真正的独立内容卡（个人主页身份卡、管理概览身份卡等）。新增卡片
-   默认先问：这是「列表集合」还是「独立内容卡」——列表集合必须走 ListContainer。
-4. **触屏列表未启用 inset**：notify / me 个人数据等保持分隔线形态；
-   评估是否全面切换 inset（触屏无 hover，影响仅视觉）。
+3. **分组卡壳已收敛**（2026-09-10 / 2026-10-18 / 2026-10-27 Round 3 收口）：移动端 `ProfileMobile`
+   与桌面 `ProfilePage` 统一为「内容软岛」（无描边 + `surfaceIsland` + `shadow-xs` + 圆角 20）；
+   设置页「账号信息/外观与显示/地图与位置/系统与关于」等分组统一为 `ListContainer bordered inset`
+   + `ListItem`（软岛语言，与通知/隐私/账号安全分组一致）。新增卡片默认先问：这是「列表集合」
+   还是「独立内容卡」——列表集合必须走 ListContainer（软岛）；独立内容卡可保留 hero/封面例外。
+4. ~~**触屏列表未启用 inset**~~（2026-10-27 Round 3 已统一）：notify / me 个人数据 / 关系 / 搜索等
+   开放页列表统一为软岛 `bordered` 形态（`inset` 行、行透明、gap 无发丝线），不再保留分隔线形态。
 
 ## 已完成的收敛（2026-09-10 全量审查批次）
 

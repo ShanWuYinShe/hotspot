@@ -2,7 +2,8 @@
  * ProfileDataSection —— 个人中心「个人数据」分组（分组小标 + ListGroup 数据行）。
  * 从 ProfilePage.buildProfileDataList/buildProfileDataRow 抽取；计数经 props 注入，
  * 主题按 resolvedThemeId 自解析（与 ProfileContentAtoms 同规），行内导航走 AppRouter；无本地状态。
- * 2026-10-13：手写卡片容器与行内底部 hairline 迁移为 ListGroup + ListRowDivider 原语
+ * 2026-10-13：手写卡片容器与行内底部 hairline 迁移为 ListGroup 原语
+ * 2026-10-27（r3）：ListGroup 契约为 gap 行（gap-y-0.5），删除行分隔线
  * （对齐 HarmonyOS 列表规范：分隔线内缩对齐文字起始处，卡片圆角 COMPACT_CARD=16 列表容器档）。
  * 2026-10-17 移动端对齐：本区块只保留前端 ProfileMobile 的 5 行「个人数据」，
  *   端侧动作行（更新位置/升级账号/管理员工具台）改由 ProfilePage 另起端侧分组承载；
@@ -13,7 +14,7 @@ import { DesignConstants, textLineHeight } from '../../../constants/DesignConsta
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { Pressable } from '../../../components/Pressable';
-import { ListGroup, ListRowDivider } from '../../../components/ListGroup';
+import { ListGroup } from '../../../components/ListGroup';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -21,7 +22,6 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 /** 数据行文字起始缩进：行内边距 LG2(20) + 圆形徽标 XS(32) + 行间距 MD(12) */
-const DIVIDER_INSET: number = 64;
 
 @Component
 export struct ProfileDataSection {
@@ -115,19 +115,15 @@ export struct ProfileDataSection {
         this.dataRow(AppIcon.PHOTO, '我的瞬间', `${formatCount(this.myMomentsCount)} 条`, () => {
           AppRouter.push(PageNames.MOMENT);
         })
-        ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
         this.dataRow(AppIcon.GROUP, '我的群组', `${formatCount(this.myGroupsCount)} 个`, () => {
           AppRouter.push(PageNames.GROUP);
         })
-        ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
         this.dataRow(AppIcon.PERSON, '好友', `${formatCount(this.myFriendsCount)} 位`, () => {
           AppRouter.push(PageNames.RELATIONSHIP_HUB);
         })
-        ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
         this.dataRow(AppIcon.STAR, '关注', `${formatCount(this.myFollowingCount)} 人`, () => {
           AppRouter.push(PageNames.RELATIONSHIP_HUB);
         })
-        ListRowDivider({ startMargin: DIVIDER_INSET, endMargin: 0 })
         this.dataRow(AppIcon.HEART, '粉丝', `${formatCount(this.myFollowersCount)} 人`, () => {
           AppRouter.push(PageNames.RELATIONSHIP_HUB);
         })

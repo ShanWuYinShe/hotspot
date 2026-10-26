@@ -271,6 +271,8 @@
 		</div>
 	</div>
 
+	<!-- 表单软岛（Round 3）：字段容器无描边软岛；输入框/错误态的功能边界保持不变 -->
+	<div class="flex flex-col gap-4 rounded-lg bg-surface-island p-4 shadow-xs">
 	<!-- Form fields — spec: nickname, bio, tags are the only user-editable profile fields. -->
 	<!-- 昵称：迁移至 forms/Input 原语（ui-components.md backlog #2 首个消费方）。 -->
 	<Input
@@ -358,11 +360,13 @@
 		</div>
 	</fieldset>
 
+	</div>
+
 	<!-- Danger zone（间距由根容器 gap-4 单侧提供，不再叠 mt 造成 28 双倍间距） -->
 	<div>
 		<p class="eyebrow mb-3">账号</p>
 		{#if deleteConfirmOpen}
-			<div class="flex flex-col gap-2.5 rounded-md border border-border-default bg-surface-primary p-4">
+			<div class="flex flex-col gap-2.5 rounded-lg bg-danger-bg/40 p-4">
 				<p class="text-sm text-text-primary">删除不可恢复，请输入 <code class="font-mono text-xs text-status-danger">DELETE_MY_ACCOUNT</code> 确认：</p>
 				<!-- 注销确认码：compact 形态（input-surface 直贴 input 的紧凑位） -->
 				<Input
@@ -396,7 +400,7 @@
 				type="button"
 				variant="outline"
 				size="md"
-				class="w-full justify-start gap-2 rounded-md border-status-danger-border px-4 py-3.5 text-status-danger hover:bg-danger-bg"
+				class="w-full justify-start gap-2 rounded-lg bg-surface-island px-4 py-3.5 text-status-danger shadow-xs hover:bg-danger-bg"
 				onclick={() => (deleteConfirmOpen = true)}
 			>
 				<Trash2 class="size-4" strokeWidth={1.75} />

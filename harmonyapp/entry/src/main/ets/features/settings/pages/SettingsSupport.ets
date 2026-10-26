@@ -111,17 +111,15 @@ export struct SettingsSectionCard {
           .width('100%')
       }
 
-      // 画廊白卡：surfaceBackground 白卡 + 发丝描边 + 静态投影（画布契约样板）；
+      // r3 软岛：无描边、圆角 20、85% surface 底 + 轻投影（BRIEF A）；
       // 分组感由容器承担、行间用 hairline 分隔线，行本身不得再叠第二层卡片。
-      // 投影用 surfaceShadow（白卡档）：原 elevatedShadow 是弹层/FAB 档，
-      // 会让每个设置分组在页面上「浮起」，与前端 ListContainer bordered 的观感不一致。
-      Column({ space: 0 }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         this.content();
       }
       .width('100%')
-      .backgroundColor(this.getPalette().surfaceBackground)
-      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-      .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+      .padding(DesignConstants.SPACING.SM)
+      .backgroundColor(this.getPalette().surfaceIsland)
+      .borderRadius(DesignConstants.SHAPE.CARD)
       .shadow(this.getPalette().surfaceShadow)
       .clip(true)
     }
@@ -142,11 +140,11 @@ export struct SettingsRowDivider {
   }
 
   build() {
-    // Divider 无 startMargin/endMargin（那是 ListRowDivider 的参数），用通用 margin 内缩
-    Divider()
-      .strokeWidth(DesignConstants.BORDER_WIDTH.HAIRLINE)
-      .color(this.getPalette().borderColor)
-      .margin({ left: this.startMargin, right: this.endMargin })
+    // r3 软岛行分隔改为 gap（Lead 口径：岛内行用间距，不加 1px 横线）
+    Column()
+      .width('100%')
+      .height(DesignConstants.SPACING.HALF)
+      .accessibilityLevel('no')
   }
 }
 
@@ -990,36 +988,24 @@ export struct RelationshipListSection {
       ListGroup({ groupPadding: DesignConstants.SPACING.XS }) {
         if (this.friends.length > 0) {
           ForEach(this.friends, (item: RelatedUserItem, index: number) => {
-            if (index > 0) {
-              ListRowDivider({ startMargin: DesignConstants.SPACING.MD, endMargin: DesignConstants.SPACING.MD })
-            }
             this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at ?? undefined)}`, item.user.presence_status === 'online')
           }, (item: RelatedUserItem) => item.user.user.user_id)
         }
 
         if (this.following.length > 0) {
           ForEach(this.following, (item: RelatedUserItem, index: number) => {
-            if (index > 0 || this.friends.length > 0) {
-              ListRowDivider({ startMargin: DesignConstants.SPACING.MD, endMargin: DesignConstants.SPACING.MD })
-            }
             this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online')
           }, (item: RelatedUserItem) => item.user.user.user_id)
         }
 
         if (this.followers.length > 0) {
           ForEach(this.followers, (item: RelatedUserItem, index: number) => {
-            if (index > 0 || this.friends.length > 0 || this.following.length > 0) {
-              ListRowDivider({ startMargin: DesignConstants.SPACING.MD, endMargin: DesignConstants.SPACING.MD })
-            }
             this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注你于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online')
           }, (item: RelatedUserItem) => item.user.user.user_id)
         }
 
         if (this.blocked.length > 0) {
           ForEach(this.blocked, (item: BlockedUserItem, index: number) => {
-            if (index > 0 || this.friends.length > 0 || this.following.length > 0 || this.followers.length > 0) {
-              ListRowDivider({ startMargin: DesignConstants.SPACING.MD, endMargin: DesignConstants.SPACING.MD })
-            }
             this.buildUserLine(
               item.user.user_id,
               item.user.nickname,

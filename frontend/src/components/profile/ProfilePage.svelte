@@ -105,7 +105,7 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 				<!-- 身份卡 + 居中统计（同一张卡，指标复用 MetricRow 原语）。
 				     页顶留白由 contentClassName 的 pt-6（呼吸型变体）单侧承担，首块不再叠 mt；
 				     与下方双栏的区块间距 24 由本块 mb-6 单侧提供。 -->
-				<section class="mb-6 overflow-hidden rounded-2xl border border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs" aria-label="公开个人资料">
+				<section class="mb-6 overflow-hidden rounded-lg bg-surface-island shadow-xs" aria-label="公开个人资料">
 					<div class="flex items-start gap-5 p-6">
 						<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0 ring-2 ring-accent-default/20 shadow-xs" />
 						<div class="min-w-0 pt-1">
@@ -123,7 +123,7 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 						<button
 							type="button"
 							onclick={() => void goto(ROUTES.meEdit)}
-							class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-full border border-border-subtle/80 bg-surface-primary/90 py-2 px-5 text-sm font-medium text-text-primary shadow-xs focus-ring transition-all hover:bg-accent-soft hover:border-accent-border/60 hover:text-accent-default active:scale-[0.98]"
+							class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-full bg-surface-subtle/60 py-2 px-5 text-sm font-medium text-text-primary focus-ring transition-all hover:bg-surface-subtle active:scale-[0.98]"
 						>
 							<Pencil class="size-3.5 text-text-secondary group-hover:text-accent-default" strokeWidth={1.75} />
 							编辑资料
@@ -131,7 +131,7 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 						<button
 							type="button"
 							onclick={() => void goto(ROUTES.settings)}
-							class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-full border border-border-subtle/80 bg-surface-primary/90 py-2 px-4 text-sm font-medium text-text-primary shadow-xs focus-ring transition-all hover:bg-accent-soft hover:border-accent-border/60 hover:text-accent-default active:scale-[0.98]"
+							class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-full bg-surface-subtle/60 py-2 px-4 text-sm font-medium text-text-primary focus-ring transition-all hover:bg-surface-subtle active:scale-[0.98]"
 							aria-label="系统设置"
 						>
 							<Settings class="size-3.5 text-text-secondary group-hover:text-accent-default" strokeWidth={1.75} />
@@ -144,7 +144,7 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 				<!-- 双栏：我的内容入口 + 资料状态（分区间距由上方身份卡 mb-6 单侧提供）。
 				     桌面双栏列距 20 属纯横向列距，按 RULES 保留。 -->
 				<div class="grid gap-x-5 gap-y-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-					<section class="rounded-2xl border border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden" aria-label="我的内容">
+					<section class="rounded-lg bg-surface-island shadow-xs overflow-hidden" aria-label="我的内容">
 						<div class="px-6 pt-5 pb-2">
 							<h2 class="text-md font-semibold text-text-primary">我的内容</h2>
 							<p class="mt-1 text-xs text-text-secondary">你的瞬间、群组与社交关系都在这里。</p>
@@ -170,7 +170,7 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 					</section>
 
 					<!-- 资料状态 -->
-					<aside class="self-start rounded-2xl border border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs p-6 shadow-xs" aria-label="资料状态">
+					<aside class="self-start rounded-lg bg-surface-island p-6 shadow-xs" aria-label="资料状态">
 						<div class="flex items-center justify-between">
 							<h2 class="text-md font-semibold text-text-primary">资料状态</h2>
 							<span class="flex items-center justify-center size-7 rounded-full bg-accent-soft text-accent-default">
@@ -178,7 +178,7 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 							</span>
 						</div>
 						<p class="mt-2 text-xs leading-relaxed text-text-secondary">你的基础资料已完善，可随时在编辑页更新。</p>
-						<div class="mt-5 h-2 overflow-hidden rounded-full bg-surface-subtle border border-border-subtle/40">
+						<div class="mt-5 h-2 overflow-hidden rounded-full bg-surface-subtle">
 							<div class="h-full rounded-full bg-accent-default transition-all duration-standard" style="width:{filledCount * 20}%;"></div>
 						</div>
 						<p class="mt-2.5 text-xs text-text-secondary font-medium">{filledCount} 项基础资料已填写</p>

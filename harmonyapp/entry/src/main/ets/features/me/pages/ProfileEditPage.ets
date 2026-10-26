@@ -324,6 +324,8 @@ export struct ProfileEditPage {
             .margin({ top: DesignConstants.COMPONENT.PROFILE_AVATAR_HEADER_OVERLAP })
             .padding({ left: DesignConstants.SPACING.LG })
 
+            // r3 表单软岛（镜像 fe me/edit：gap-4/p-4/rounded-lg/surface-island/shadow-xs）
+            Column({ space: DesignConstants.SPACING.LG }) {
             // 表单字段
             this.buildInputField('昵称', '你的名字', this.nickname, MAX_NICKNAME, false, (v: string) => { this.nickname = v; }, this.nicknameFocused, this.getNicknameError() ?? '', () => { this.nicknameFocused = true; }, () => { this.nicknameFocused = false; this.nicknameTouched = true; }, false)
 
@@ -364,6 +366,13 @@ export struct ProfileEditPage {
               .width('100%')
             }
             .width('100%')
+            }
+            .width('100%')
+            .padding(DesignConstants.SPACING.LG)
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
+            .alignItems(HorizontalAlign.Start)
 
             // 底部保存按钮
             SystemButton({

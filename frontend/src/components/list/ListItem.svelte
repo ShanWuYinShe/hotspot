@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { cn } from '@/lib/utils';
-	import { isInListContext } from './context';
+	import { isInIslandContext, isInListContext } from './context';
 
 	// 列表骨架组件（list）——列表只有两个公共组件：ListContainer（容器）+ ListItem（行）。
 	// ListItem 是唯一交互行组件（对齐 Figma Make InteractiveListRow 契约）：
@@ -74,6 +74,8 @@
 	// 直接子元素必须为 listitem，交互 button 语义保留在内层；listitem > button
 	// 为合法 ARIA 组合）。裸用（独立卡片行等）不包裹，DOM 与既有契约一致。
 	const inList = isInListContext();
+	// 软岛容器内：行背景透明，露出软岛表面（含暗色分层）
+	const inIsland = isInIslandContext();
 	// hover 或 focus 时行处于「激活表面」：叠加 hover-fill 背景
 	const surfaceActive = $derived(hovered || focused);
 
@@ -120,7 +122,7 @@
 		data-active={pressed ? 'true' : undefined}
 		class={cn(
 			'relative transition-[background-color,border-radius,box-shadow,opacity] duration-standard ease-standard',
-			isCard ? 'rounded-md border' : 'bg-surface-primary',
+			isCard ? 'rounded-md border' : inIsland ? 'bg-transparent' : 'bg-surface-primary',
 			// 行内既有的操作按钮/链接/输入相对定位抬升到行覆盖按钮之上（axe
 			// nested-interactive：button 语义不得嵌套交互子件）；后写的覆盖按钮
 			// 与它们同层级时 DOM 顺序在先，不拦操作点击。

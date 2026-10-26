@@ -750,6 +750,27 @@ export struct MessagePage {
         Column() {
           SkeletonShimmer({ active: true }) {
             Column() {
+              // N2（对齐 fe ChatListBody）：在线条占位（eyebrow + 4×52 头像 + 昵称条），避免加载后列表下移
+              Column() {
+                Skeleton({ blockWidth: DesignConstants.SPACING.XXL, blockHeight: DesignConstants.FONT.SIZE.XS2, cornerRadius: DesignConstants.RADIUS.SM })
+                Row({ space: DesignConstants.SPACING.LG }) {
+                  ForEach([0, 1, 2, 3], (oi: number) => {
+                    Column({ space: DesignConstants.SPACING.SM2 }) {
+                      Skeleton({
+                        blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.ONLINE_STRIP,
+                        blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.ONLINE_STRIP,
+                        cornerRadius: DesignConstants.RADIUS.FULL
+                      })
+                      Skeleton({ blockWidth: DesignConstants.LAYOUT.NICKNAME_MAX_WIDTH, blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
+                    }
+                    .alignItems(HorizontalAlign.Center)
+                  }, (oi: number) => "online-skeleton-" + oi)
+                }
+                .margin({ top: DesignConstants.SPACING.MD })
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
               ForEach([0, 1, 2, 3, 4], (i: number) => {
                 Row({ space: DesignConstants.SPACING.MD }) {
                   Skeleton({ blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, cornerRadius: DesignConstants.RADIUS.FULL })

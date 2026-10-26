@@ -10,6 +10,8 @@
 
 /* ═══ Forest Light ═══ */
 .forest {
+  /* 内容岛表面（Round 3）：开放页面内容分组软岛底（无描边，靠表面+阴影表达层级） */
+  --cst-surface-island: color-mix(in srgb, var(--cst-surface-primary) 86%, transparent);
   /* ── 原始色板 --cst-palette-* ── */
   --cst-palette-bg: #F6F7F3;
   --cst-palette-page-bg: #F6F7F3;
@@ -227,6 +229,8 @@
 
 /* ═══ Forest Dark ═══ */
 .forest.dark {
+  /* 内容岛表面（Round 3）：暗色提到 92% 保证软岛与画布的层级可读 */
+  --cst-surface-island: color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-text-primary) 6%);
   /* ── 原始色板 --cst-palette-* ── */
   --cst-palette-bg: #161A16;
   --cst-palette-page-bg: #161A16;

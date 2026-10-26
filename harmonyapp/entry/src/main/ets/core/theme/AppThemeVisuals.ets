@@ -476,6 +476,31 @@ export class AppThemeVisuals {
     };
   }
 
+  /** 两色不透明混合（r3 surfaceIsland dark = color-mix(surface-primary 94%, text-primary 6%)） */
+  static mixOpaque(hexA: string, ratioA: number, hexB: string, ratioB: number): string {
+    const a: number[] = AppThemeVisuals.rgbOf(hexA);
+    const b: number[] = AppThemeVisuals.rgbOf(hexB);
+    const total: number = ratioA + ratioB;
+    const r: number = Math.round((a[0] * ratioA + b[0] * ratioB) / total);
+    const g: number = Math.round((a[1] * ratioA + b[1] * ratioB) / total);
+    const b2: number = Math.round((a[2] * ratioA + b[2] * ratioB) / total);
+    return "#FF" + AppThemeVisuals.hex2(r) + AppThemeVisuals.hex2(g) + AppThemeVisuals.hex2(b2);
+  }
+
+  private static rgbOf(hex: string): number[] {
+    const body: string = hex.startsWith("#") ? hex.slice(1) : hex;
+    const off: number = body.length === 8 ? 2 : 0;
+    const r: number = parseInt(body.substring(off, off + 2), 16);
+    const g: number = parseInt(body.substring(off + 2, off + 4), 16);
+    const b: number = parseInt(body.substring(off + 4, off + 6), 16);
+    return [r, g, b];
+  }
+
+  private static hex2(v: number): string {
+    const h: string = v.toString(16).toUpperCase();
+    return h.length === 1 ? "0" + h : h;
+  }
+
   /** 把 #RRGGBB（6 位）拼 alpha → #AARRGGBB（8 位，ArkUI 颜色串 alpha 在前）；
    *  此前误拼成 #RRGGBBAA（Web 顺序）导致全仓半透明色相错乱（蓝 accent 渲染成绿） */
   static withAlpha(hex: string, alpha: number): string {

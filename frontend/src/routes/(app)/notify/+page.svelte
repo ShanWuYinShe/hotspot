@@ -342,9 +342,9 @@ const markSingleRead = (id: string) => {
 						<span class="text-text-secondary text-xs">{unread} 条未读</span>
 						<Button
 							type="button"
-							variant="secondary"
+							variant="ghost"
 							size="md"
-							class="hit-slop rounded-full px-3 py-1.5 text-accent-default"
+							class="hit-slop rounded-full bg-surface-subtle/60 px-3 py-1.5 text-accent-default hover:bg-surface-subtle"
 							onclick={markAllRead}
 						>
 							<CheckCheck class="size-3.5"  strokeWidth={2} />
@@ -375,7 +375,7 @@ const markSingleRead = (id: string) => {
 						<span class="eyebrow">入群邀请</span>
 						<span class="badge text-accent-default bg-accent-soft">{invites.length}</span>
 					</div>
-					<ListContainer bordered class="mb-6 shadow-raised-sm rounded-2xl">
+					<ListContainer bordered class="mb-6">
 						{#each invites as inv (inv.invite_id)}
 							<div class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-3 py-3.5">
 								<Avatar src={inv.group.avatar_url} name={inv.group.name} size="lg" shape="rounded" />
@@ -395,7 +395,7 @@ const markSingleRead = (id: string) => {
 										type="button"
 										onclick={() => void handleRejectInvite(inv.invite_id)}
 										disabled={invitePending.has(inv.invite_id)}
-										class="hover-btn inline-flex h-7 items-center rounded-full border border-border-default px-3 text-xs text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
+										class="hover-btn inline-flex h-7 items-center rounded-full bg-surface-subtle/60 px-3 text-xs text-text-primary focus-ring hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
 									>拒绝</button>
 								</div>
 							</div>
@@ -410,7 +410,7 @@ const markSingleRead = (id: string) => {
 						<p class="eyebrow">新消息</p>
 						<span class="badge text-accent-default bg-accent-soft">{unreadGroup.length}</span>
 					</div>
-					<ListContainer bordered class="mb-6 shadow-raised-sm rounded-2xl">
+					<ListContainer bordered class="mb-6">
 						{#each unreadGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}
@@ -423,7 +423,7 @@ const markSingleRead = (id: string) => {
 						<p class="eyebrow">已读</p>
 						<span aria-hidden="true" class="h-px flex-1 bg-border-default"></span>
 					</div>
-					<ListContainer bordered class="shadow-raised-sm rounded-2xl">
+					<ListContainer bordered class="">
 						{#each readGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
 						{/each}

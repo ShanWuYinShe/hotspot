@@ -1,5 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { curves } from '@kit.ArkUI';
@@ -98,7 +99,8 @@ export struct SystemButton {
       case 'surface':
       case 'surface-accent':
       case 'surface-danger':
-        return p.surfaceSubtle;
+        // r3 次级按钮：surface-subtle/60 软填底、无描边（hover 100%）
+        return AppThemeVisuals.withAlpha(p.surfaceSubtle, 0.60);
       default:
         return p.accentBackground;
     }
@@ -131,7 +133,8 @@ export struct SystemButton {
 
   private getBorderWidth(): number {
     if (this.variant === 'surface' || this.variant === 'surface-accent' || this.variant === 'surface-danger') {
-      return DesignConstants.BORDER_WIDTH.HAIRLINE;
+      // r3：次级软填按钮无描边（fe 冻结按钮契约）
+      return 0;
     }
     return this.variant === 'outline' ? DesignConstants.BORDER_WIDTH.REGULAR : 0;
   }
@@ -183,8 +186,14 @@ export struct SystemButton {
   private getHoverOverlayBackground(): ResourceColor {
     const p = this.getPalette();
     const transparentVariants = ['ghost', 'outline'];
-    if (this.isHovered && this.isInteractive() && transparentVariants.indexOf(this.variant) >= 0) {
-      return p.accentMuted;
+    const softVariants = ['surface', 'surface-accent', 'surface-danger'];
+    if (this.isHovered && this.isInteractive()) {
+      if (transparentVariants.indexOf(this.variant) >= 0) {
+        return p.accentMuted;
+      }
+      if (softVariants.indexOf(this.variant) >= 0) {
+        return p.surfaceSubtle;
+      }
     }
     return this.getBackgroundColor();
   }

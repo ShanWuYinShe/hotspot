@@ -558,6 +558,15 @@ export struct NotificationCenter {
                 }, (notification: NotifyItem) =>
                   notification.notify_id + '_p' + (this.actionLoadingIds.indexOf(notification.notify_id) >= 0))
               }
+              // r3 容器式软岛：每组通知一张无描边圆角卡，行内缩、行间靠底色/留白区分
+              .backgroundColor(this.getPalette().surfaceIsland)
+              .borderRadius(DesignConstants.SHAPE.CARD)
+              .shadow(this.getPalette().surfaceShadow)
+              .clip(true)
+              .margin({
+                left: DesignConstants.SPACING.LG,
+                right: DesignConstants.SPACING.LG
+              })
             }, (group: GroupedNotification) => group.label)
 
             if (this.isLoadingMore) {
@@ -744,12 +753,10 @@ export struct NotificationCenter {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+    // r3 软岛行：未读态=行底色 + 圆点，不再画边框；行内缩 8 使填充离岛边
     .backgroundColor(notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getSoftStatusColor(notification.type))
-    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-    .border({
-      width: DesignConstants.BORDER_WIDTH.HAIRLINE,
-      color: notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getSoftStatusColor(notification.type)
-    })
+    .borderRadius(DesignConstants.RADIUS.SM)
+    .margin({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
     // 整行按压反馈（对齐 DesktopLayout 导航项 tap-97 语义）
     .scale(this.pressedNotificationId === notification.notify_id ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :

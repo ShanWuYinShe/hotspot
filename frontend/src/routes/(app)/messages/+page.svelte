@@ -337,6 +337,19 @@
 			<!-- 在线 strip -->
 			{#if onlineChats.length > 0}
 				<OnlineStrip chats={onlineChats} variant="sm" {selectedId} onSelect={selectChat} />
+			{:else if loading && !needsAuth && !loadError}
+				<!-- N2：分栏骨架期在线条占位（sm 几何），避免加载后列表被在线条下推 -->
+				<div class="shrink-0 px-4 py-2.5" aria-hidden="true">
+					<div class="eyebrow mb-2 h-3 w-8 rounded-sm bg-surface-subtle"></div>
+					<div class="flex gap-3">
+						{#each Array(3) as _, i (i)}
+							<div class="flex flex-col items-center gap-1">
+								<div class="skeleton-block size-9 rounded-full"></div>
+								<div class="h-2.5 w-7 rounded-sm bg-surface-subtle"></div>
+							</div>
+						{/each}
+					</div>
+				</div>
 			{/if}
 
 			<ChatListBody
@@ -469,6 +482,22 @@
 			{#if onlineChats.length > 0}
 				<div class="px-[var(--cst-page-gutter)] pt-2">
 					<OnlineStrip chats={onlineChats} onSelect={(c) => void goto(ROUTES.message(c.peerUserId || c.id))} />
+				</div>
+			{:else if loading && !needsAuth && !loadError}
+				<!-- N2 修复：骨架期在线条占位必须渲染在「最近」标签**之前**（与真实内容顺序：
+				     在线条 → 最近 → 列表 一致），高度 = 真实 lg 条 92px，避免加载后整体下移。 -->
+				<div class="px-[var(--cst-page-gutter)] pt-2" aria-hidden="true">
+					<div class="mb-3 flex h-[92px] flex-col overflow-hidden">
+						<div class="eyebrow mb-2.5 h-3 w-8 rounded-sm bg-surface-subtle"></div>
+						<div class="flex gap-3">
+							{#each Array(4) as _, i (i)}
+								<div class="flex flex-col items-center gap-1">
+									<div class="skeleton-block size-11 rounded-full"></div>
+									<div class="h-2.5 w-8 rounded-sm bg-surface-subtle"></div>
+								</div>
+							{/each}
+						</div>
+					</div>
 				</div>
 			{/if}
 

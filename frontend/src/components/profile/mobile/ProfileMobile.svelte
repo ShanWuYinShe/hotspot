@@ -51,7 +51,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 <StandardPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		<!-- 资料页眉：毛玻璃微透，与全局天际线微背景自然互融 -->
-		<div class="border-b border-border-subtle/40 bg-surface-primary/75 backdrop-blur-md">
+		<div class="bg-surface-primary/75 backdrop-blur-md">
 			<ContentColumn class="flex items-center justify-between py-3">
 				<p class="eyebrow">个人中心</p>
 			</ContentColumn>
@@ -67,7 +67,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	{:else}
 		<!-- 身份卡（compact）：头像复用 Avatar，统计胶囊居中（对齐桌面 MetricRow capsule 原语）。
 		     卡片壳与桌面 ProfilePage 统一为 Bento 微岛生态。 -->
-		<section class="mb-6 rounded-2xl border border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden" aria-label="个人资料">
+		<section class="mb-6 rounded-lg bg-surface-island shadow-xs overflow-hidden" aria-label="个人资料">
 			<!-- 顶部身份信息区 -->
 			<div class="relative p-5">
 				<div class="flex items-start justify-between gap-5">
@@ -94,7 +94,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.meEdit)}
-						class="hover-btn hit-slop inline-flex flex-1 items-center justify-center gap-1.5 border border-border-subtle/80 rounded-full bg-surface-primary/90 py-2 px-3 text-xs font-medium text-text-primary shadow-xs focus-ring transition-all hover:bg-accent-soft hover:border-accent-border/60 active:scale-[0.98]"
+						class="hover-btn hit-slop inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-surface-subtle/60 py-2 px-3 text-xs font-medium text-text-primary focus-ring transition-all hover:bg-surface-subtle active:scale-[0.98]"
 					>
 						<Pencil class="size-3.5 text-text-secondary" strokeWidth={1.75} />
 						编辑资料
@@ -102,7 +102,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 					<button
 						type="button"
 						onclick={() => void goto(ROUTES.settings)}
-						class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 border border-border-subtle/80 rounded-full bg-surface-primary/90 py-2 px-4 text-xs font-medium text-text-primary shadow-xs focus-ring transition-all hover:bg-accent-soft hover:border-accent-border/60 active:scale-[0.98]"
+						class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-full bg-surface-subtle/60 py-2 px-4 text-xs font-medium text-text-primary focus-ring transition-all hover:bg-surface-subtle active:scale-[0.98]"
 						aria-label="系统设置"
 					>
 						<Settings class="size-3.5 text-text-secondary" strokeWidth={1.75} />
@@ -120,7 +120,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 				<p class="eyebrow">个人数据</p>
 				<span class="text-xxs text-text-secondary">内容与关系资产</span>
 			</div>
-			<ListContainer bordered ariaLabel="个人数据" class="shadow-xs rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs overflow-hidden">
+			<ListContainer bordered ariaLabel="个人数据" class="overflow-hidden">
 			{#each DATA_ITEMS as item (item.id)}
 				<ListItem
 					onClick={() => void goto(item.href)}

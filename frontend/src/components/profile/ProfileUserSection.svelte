@@ -66,7 +66,8 @@ import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 <div>
 	{#if !embedded}
 		<!-- Header -->
-		<header class="flex items-center justify-between py-4 border-b border-border-default" >
+		<!-- 页级硬线清零（Round 3 B）：分区标题下不加 1px 横线，靠留白/eyebrow 分组 -->
+		<header class="flex items-center justify-between py-4">
 			<div>
 				<div class="flex items-center gap-2.5">
 					<span class="text-text-primary text-sm">{title}</span>
@@ -119,7 +120,7 @@ import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 		{#if loading}
 			<!-- 首屏骨架屏：关系列表行（前导 44 + 两行文本 + 行尾动作 chip），壳与真实
 			     ListContainer 一致（mx-auto max-w-3xl），骨架→内容不位移 -->
-			<div class="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-border-subtle/50 bg-surface-primary/85 shadow-xs">
+			<div class="mx-auto max-w-3xl overflow-hidden rounded-lg bg-surface-island shadow-xs">
 				<SkeletonList rows={5} leading={44} trailing label="加载中…" />
 			</div>
 		{:else if needsAuth}
@@ -136,7 +137,7 @@ import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 			<!-- 桌面全宽行会让行尾动作离名字过远（扫描距离），列表限宽到阅读列；
 			     但必须**居中**：限宽 + 左对齐会在宽屏上把 300+px 空白全堆在右侧，
 			     观感上就是"内容没适配剩余空间"（2026-10-21 截图复核 /me/relationships）。 -->
-			<ListContainer bordered class="mx-auto max-w-3xl rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
+			<ListContainer bordered class="mx-auto max-w-3xl overflow-hidden">
 				{#each items as item (item.id)}
 					{@render children(item)}
 				{/each}

@@ -1,4 +1,4 @@
-# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-13）
+# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-14）
 
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
@@ -6,7 +6,28 @@
 
 ## 已完成基线（不要回退）
 
-### 2026-10-27 本轮（Round 13，用户反馈：整卡图片卡 / 去页面级边框 / 选中态无障碍）
+### 2026-10-27 本轮（Round 14，次级页面内容软岛化 + 个人中心域精致化）
+
+- **内容软岛（双端同 spec）**：开放页面内容分组统一为「无 1px 描边 + `surfaceIsland` 表面 +
+  `shadow-xs` + 圆角 20 + 行透明/gap 2 + hover 离边 8」；新增 `--cst-surface-island`
+  （light = `surface-primary 86%` 半透合成画布；dark = `surface-primary 94% + text-primary 6%`；6 组值），
+  `ListContainer bordered` 语义更新为软岛 → 设置/通知/关系/搜索/我的/举报等全站列表生效。
+  暗色岛/画布亮度比 1.16–1.33（修复前 1.01–1.07 糊平）。spec 见 `docs/design-system.md` §19。
+- **页面级硬线清零**：/me 自定义页头线、他人主页分区头线、群详情分区线、搜索页头/sticky 线、
+  reports 行线全部删除；保留功能线白名单（聊天输入条/粘底条、消息分栏发丝线、表格/统计行、
+  内容单元内演示分隔）。
+- **安静按钮语言**：次级动作统一 `bg-surface-subtle/60` 软填无描边（hover 全量）；主操作 accent 实底；
+  危险 soft danger；同级动作不再混用描边胶囊与软填胶囊。
+- **六页打磨**：/me、/me/edit（表单软岛+danger 软底）、/settings、/notify、/me/relationships、/search
+  （含 N1 搜索骨架 64px+分组头、N2 消息骨架在线条 92px 占位，骨架→内容零位移）。
+- **鸿蒙镜像**：`surfaceIsland`（6/6 parity PASS）、`ListGroup`/`SystemCard`/`SettingsSectionCard` 软岛、
+  Profile 身份卡去框、stats capsule、通知容器式软岛+未读态、搜索页头/分区线清零、骨架同步；
+  build TYPE CHECK + BUILD SUCCESSFUL、check:theme 全绿。
+- **验证**：web check 0 error / test 518 全过 / build 通过 / browser QA 23 页 issues=[] / 6 页×3 视口×亮暗
+  before-after 36×2 张；暗色岛 ratio 1.16–1.33、岛内文字对比度 ≥4.5。**鸿蒙真机仍离线**：
+  软岛阴影/圆角/gap/按钮 hover/未读态/骨架像素待真机（Round 13+14 两轮端上像素验收均待补）。
+
+### 2026-10-27 上一轮（Round 13，用户反馈：整卡图片卡 / 去页面级边框 / 选中态无障碍）
 
 - **整卡图片卡（双端同 spec）**：图片铺满整卡 + 顶部 96px/底部 62%（feed 58%）遮罩覆盖信息；
   feed 4:5、网格 3:4、圆角 20、无 border；顶部作者/徽章、底部标题 2 行+「时间·标签」+ 白图标操作行；
@@ -156,12 +177,14 @@
 
 ## 待做（按优先级）
 
-1. **鸿蒙真机像素验收（Round 13 遗留，最高优先）**：本轮鸿蒙改动仅完成构建/布局树/token 校验，
-   真机 hdc 离线导致三主题×明暗矩阵、灰度 Tab、压图对比度像素实测、覆盖态双态截图、web↔鸿蒙并排
-   compare 全部挂起。设备恢复后按 `.worktrees/ui-polish-r2/.workwork/ui-polish-1026/r2/ha/report.md`
-   §7 checklist 执行（含 `ha/run_after_r2.sh` 一键脚本）。
-2. **长尾页面框收敛（Round 13 遗留）**：admin 各页统计/表单卡、关系/举报/通知列表分组卡、
-   编辑资料表单卡等仍用旧浅描边卡片语言；按「页面级框去 / 内容单元留」逐页判定，不要一刀切。
+1. **鸿蒙真机像素验收（Round 13+14 遗留，最高优先）**：两轮鸿蒙改动均只完成构建/布局树/token 校验，
+   真机 hdc 离线导致三主题×明暗矩阵、灰度 Tab、压图对比度像素实测、软岛阴影/圆角/gap、按钮 hover、
+   未读态、骨架零位移、web↔鸿蒙并排 compare 全部挂起。设备恢复后按
+   `.workwork/ui-polish-1026/r2/ha/report.md` §7 与 `.workwork/ui-polish-1026/r3/ha/report.md` checklist 执行
+   （含 `ha/run_after_r2.sh` 与 r3 脚本）。
+2. **长尾自定义卡收敛（Round 14 遗留）**：`ListContainer` 场景已随软岛组件全站生效；剩余 admin 统计/表单
+   自定义卡、moment 详情单帖卡、首页新手引导卡等仍走旧描边语言，按「内容单元岛化 / 登记例外」逐页判定
+   （design-system §19；不要一刀切）。
 3. **鸿蒙氛围画布实例数/内存优化（Round 12 遗留，端上实测数据已量化）**：当前每个
    `fillHeight` 页面一块全屏 Canvas（Tab 页常驻，实测 live 2→5 实例、PSS 218.7→330.2MB 含页面数据，
    单画布理论 ≈12MB）。可选方案：上提到外壳内容区单实例（对齐 web）或共享绘制缓存/图片快照；
@@ -179,10 +202,8 @@
    本轮未动（ha report §8 记录）；需要时单独立项对齐。
 7. **BSP 瀑布墙骨架近似（已接受）**：附近瞬间/群组桌面瀑布墙无 1:1 骨架，用同列数卡片栅格近似，
    内容到达有轻微重排；如需消除需按布局算法生成骨架，收益低，保留。
-8. **骨架屏与真实行零位移的残余差（2026-10-26 复核 N1/N2，下轮顺手修）**：
-   - `/search` 结果骨架行 `py-3`（60）vs 真实 `px-4 py-3.5`（64），且真实结果有分组头 + bordered 卡片壳，
-     骨架为裸行；建议 `rowClass="px-4 py-3.5"` + 分组头/卡壳占位；
-   - 消息列表骨架未为「在线」横条预留占位（内容到达整体下移约 100px）；建议按是否存在在线条渲染占位。
+8. **骨架屏零位移 N1/N2（2026-10-27 Round 14 已修）**：搜索骨架行高对齐 64 + 分组头占位；消息骨架补在线条
+   92px 占位；两端已镜像，复核确认后关闭。
 9. **鸿蒙 AMBIENT / CARD-SCRIM token 纳入 CI（复核 N5 + Round 13，防漂移）**：`check-cross-platform-colors.mjs`
    只覆盖 14 组 palette；AMBIENT 12 项 ×6 组合（72/72）与 CARD-SCRIM/FALLBACK/WATERMARK（6/6）目前只有人工脚本
    校验（`review/lib/check-ambient-parity.py`、`ha/logs/scrim-parity.txt`），建议并入 `bun run check:theme`。
@@ -199,7 +220,10 @@
    挤压操作行；若后续放大网格卡宽度可统一。
 15. **BSP 卡片比例例外（Round 13）**：附近瞬间/群组桌面 BSP 格按布局单元铺满、非固定比例；如需统一需重排布局。
 16. **横排紧凑卡 fallback/精选横排例外（Round 13）**：horizontal 卡仍两段式与旧占位；群详情精选桌面横排保留。
-17. **鸿蒙我的瞬间 tabs 缺失（Round 13）**：web 有 发布/喜欢/收藏/共 N 条记录 tabs，鸿蒙因无喜欢/收藏数据源、
+17. **forest 亮色软岛与画布同色（Round 14 遗留）**：light `surfaceIsland` 86% 合成后 forest 与画布同色
+   （ratio 1.00），边界仅靠 `shadow-xs`；若产品觉得需要拉开表面差，可改 light 岛为 `primary 92% + text 8%`
+   （会略变灰，需两端同改并回归主题校验）。
+18. **鸿蒙我的瞬间 tabs 缺失（Round 13）**：web 有 发布/喜欢/收藏/共 N 条记录 tabs，鸿蒙因无喜欢/收藏数据源、
    MomentPage 现取 fetchNearbyMoments（既有数据源问题）未实现；需数据层补齐后再对齐 UI。
 
 ## 遗留观察（已评估，保留现状；非缺陷）

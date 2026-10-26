@@ -427,3 +427,24 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 - `segmented`：accent 实底 + ✓ icon + `font-semibold`；`pills`：`font-semibold`；
   `underline`：`font-semibold` + 下划线。
 - 验收必须附 `filter: grayscale(1)` 灰度截图，选中项仍一眼可辨；新增 Tab/分段控件按此执行。
+## Round 3 内容岛与安静按钮（2026-10-27）
+
+### 1) 内容岛（开放页面内容分组，强制）
+
+- 形态：`bg-surface-island + shadow-xs + rounded-lg(20)`，**无 1px 描边**；`p-2`(8)、行背景透明、
+  行间 `gap-y-0.5`(2)、hover 填充离岛边 8；**不加 1px 行横线**。
+- 开放页面的列表集合只用 `ListContainer bordered`（已改为软岛语义）；调用方不得覆写 border/bg/radius，
+  也不得在外层再包手写卡片（双框）。
+- 例外（登记）：弹层/Sheet、hero/封面预览、单帖卡、聊天输入条、表格/统计页。
+
+### 2) 同级按钮不混用
+
+- 主操作 = accent 实底；次级/安静 = `bg-surface-subtle/60` 软填底、无描边、hover 全量；
+  危险 = soft danger 底 + danger 文字；同一页/同一组动作不得混用「描边胶囊」和「软填胶囊」。
+- 功能边界（输入框、主题 swatch、搜索框）保留，不属「页面框」。
+
+### 3) 页面级硬线
+
+- 页头/分区标题下不得有 1px 硬线（用留白 + eyebrow）；只允许功能线：聊天输入条/粘底条、
+  消息分栏竖向发丝线、表格/统计行、内容单元内演示分隔。
+- 自查：`grep -rn 'border-b' frontend/src/components frontend/src/routes | grep -vE '功能线白名单'`。

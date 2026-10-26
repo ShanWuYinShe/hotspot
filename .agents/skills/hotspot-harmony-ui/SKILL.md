@@ -164,6 +164,18 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 
 - **ArkUI 陷阱复查（2026-10-26 实拍）**：`.border({width,color})` 若写在 `.borderRadius(...)` 之后会把圆角重置为 0（双环/圆钮会变方框）——装饰层双环、圆点等一律先 `.border()` 后 `.borderRadius()`；改完端上放大截图确认。
 
+## 内容软岛（Round 3，两端同 spec）
+
+- 形态：`ListGroup`/`SystemCard` = `surfaceIsland` + `surfaceShadow` + `SHAPE.CARD`(20) + padding 8、
+  行透明 + 行间距 2、行内 hover 填充离岛边 8；**禁止 1px hairline 全框**。`SettingsSectionCard` 同。
+- `surfaceIsland` 与 web `--cst-surface-island` 逐值一致（light = `withAlpha(surfaceBackground,0.86)`；
+  dark = `mixOpaque(surfaceBackground,0.94,textPrimary,0.06)`；6 套组合，`check_surface_parity.py` 6/6）。
+- 按钮安静化：次级动作 `withAlpha(surfaceSubtle,0.60)` 软填底、无描边、hover 全量；主操作 accent 实底；
+  危险 soft danger；同级动作不混用描边/软填。
+- 页面级硬线清零：`SystemPageHeader`/自定义页头/分区头不得有 1px 底线（功能线：聊天输入条/粘底条/
+  表格行/消息分栏发丝线）。
+
+
 ## 整卡图片卡（Round 2，两端同 spec）
 
 用户明确要求「图片占满整个卡片、信息覆盖在图上」。硬约束（与 `docs/design-system.md` §17 同源）：
@@ -198,7 +210,8 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 ### 2) 卡片与页面底色的层次：**不要用「底色明度差」判断**
 前端 `semantic.css` 已明文规定：`--cst-surface-page` 是唯一整层底色。**2026-10-27 Round 2 起
 页面级容器不再画框**（桌面/平板壳、顶栏、SystemPageHeader 都不得有包裹整页的描边/圆角/白底/硬分隔线）；
-层级只靠**内容单元卡片**（白卡 + 可选发丝描边/投影，如设置分组卡、动态卡）与留白表达。因此清野主题下
+层级只靠**内容单元软岛**（2026-10-27 Round 3：`surfaceIsland` 表面 + `surfaceShadow` + 圆角 20，
+**无 hairline 描边**，如 `ListGroup`/`SystemCard`/设置分组卡/通知列表岛）与留白表达。因此清野主题下
 `pageBackground == surfaceBackground`（浅色深色都是 `#F6F7F3` / `#161A16`）**是刻意设计，不是缺陷**，
 不要为了「拉开层次」去改底色（会破坏跨端色彩校验）。
 

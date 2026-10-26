@@ -93,6 +93,11 @@ function buildPalette(
     description,
     pageBackground: colors.pageBackground,
     surfaceBackground: colors.surfaceBackground,
+    // r3 软岛（读 fe themes/*.css）：light = color-mix(surface-primary 86%, transparent);
+    // dark = color-mix(surface-primary 94%, text-primary 6%)；逐主题 RGB 来自 palette
+    surfaceIsland: colors.isDarkTheme
+      ? AppThemeVisuals.mixOpaque(colors.surfaceBackground, 0.94, colors.textPrimary, 0.06)
+      : AppThemeVisuals.withAlpha(colors.surfaceBackground, 0.86),
     surfaceSubtle: colors.surfaceSubtle,
     surfaceElevated: colors.surfaceElevated,
     borderColor: colors.borderColor,

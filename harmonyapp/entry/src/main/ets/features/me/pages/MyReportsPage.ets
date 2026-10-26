@@ -18,6 +18,7 @@ import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { ListGroup } from '../../../components/ListGroup';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { SystemButton } from '../../../components/SystemButton';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -193,10 +194,6 @@ export struct MyReportsPage {
         }
         .width('100%')
         .padding({ bottom: DesignConstants.SPACING.LG })
-        .border({
-          width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
-          color: this.getCurrentThemePalette().borderColor
-        })
 
         // ── 内容区（对齐前端内容列 pt-4）──
         if (this.isLoading) {
@@ -224,9 +221,12 @@ export struct MyReportsPage {
           Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
             Scroll() {
               Column() {
-                ForEach(this.reports, (item: ReportItem) => {
-                  this.buildReportRow(item)
-                }, (item: ReportItem) => item.report_id)
+                // r3 软岛：举报列表统一收进无描边圆角卡，行间 hairline 分隔（不再逐行画线）
+                ListGroup() {
+                  ForEach(this.reports, (item: ReportItem, index: number) => {
+                    this.buildReportRow(item)
+                  }, (item: ReportItem) => item.report_id)
+                }
 
                 // 分页：手动「加载更多」（对齐前端 LoadMoreButton）/ 到底提示
                 if (this.hasMore) {
@@ -329,10 +329,6 @@ export struct MyReportsPage {
       right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
-    })
-    .border({
-      width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
-      color: this.getCurrentThemePalette().borderColor
     })
   }
 }

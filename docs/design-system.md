@@ -79,6 +79,7 @@
 | `--cst-text-primary` / `-secondary` | `palette-text` / `-muted` | 正文 / 辅助文字 |
 | `--cst-text-on-accent` | `on-accent` | accent 底上的文字 |
 | `--cst-surface-primary` / `-page` | `bg` / `page-bg` | 表面 / 画布 |
+| `--cst-surface-island` | `surface-primary` 派生（light 86% 半透合成画布 / dark 94% primary + 6% text-primary） | 开放页面内容岛表面（Round 3，见 §19） |
 | `--cst-accent-default` / `-soft` / `-border` | `accent-primary` / `accent-soft` / `accent-soft-border` | 品牌 / 淡底 / 淡描边 |
 | `--cst-border-default` / `-strong` | `border` / `border-pressed` | 常规 / 强分隔 |
 | `--cst-status-online/danger/warning` | `online` / `hot` / `warning` | 状态色 |
@@ -92,10 +93,10 @@
   画布 `pageBackground`（对齐前端 `--cst-surface-page`）；外壳各层（手机壳 / 桌面舞台 /
   顶栏 / 页面整底 / header bar 变体）只许用画布色连续铺底。**页面级容器不再用卡片外框**：
   桌面壳的侧栏/主面板、手机/平板顶栏与页头都不得出现包裹整页的描边、圆角、白底或硬分隔线
-  （会形成屏幕边缘的「框线」观感，2026-10-27 用户明确否决）。层级只由**内容单元卡片**
-  （`surfaceBackground` + 可选发丝描边/主题投影，如设置分组卡、动态卡、rail 卡片）与留白表达；
-  内容单元格本身不属于「页面框」，可保留。分组卡样板见设置页 `SettingsSectionCard`；
-  分组小标用 `textSecondary` eyebrow（`SettingsGroupLabel`）。
+  （会形成屏幕边缘的「框线」观感，2026-10-27 用户明确否决）。层级只由**内容单元软岛**
+  （`surfaceIsland` 表面 + 轻投影 + 圆角 20，**无 1px 描边**，如设置分组卡、通知列表岛、rail 卡片）
+  与留白表达；内容单元格本身不属于「页面框」，可保留。软岛语言见 §19；分组小标用
+  `textSecondary` eyebrow（`SettingsGroupLabel`）。
 - 表面：`palette.surfaceSubtle` / `palette.surfaceElevated` / `palette.chatBackground`
 - 文字：`palette.textPrimary` / `palette.textSecondary` / `palette.textTertiary`
 - 品牌：`palette.accentBackground`（forest `#3D7A55`，与前端
@@ -263,7 +264,7 @@
 | accent 实底图标钮（SurfaceIconButton primary） | `surfaceShadow` | `elevatedShadow` |
 | 未加入群组/未关注/发布等可点 accent 控件 | `surfaceShadow` | `elevatedShadow` |
 | FAB | `elevatedShadow`（对齐前端 `--cst-elevation-fab` 中性投影） | — |
-| 白卡/统计卡/徽章/**列表分组容器**（ListGroup / SettingsSectionCard） | `surfaceShadow` | — |
+| 内容岛/统计卡/徽章/**列表分组容器**（ListGroup / SettingsSectionCard） | `surfaceShadow`（软岛用 `shadow-xs`） | — |
 | 列表行（分组内的行） | **无投影**（层级由分组容器 + 发丝分隔线承担） | — |
 | 选中胶囊（TabsPillGroup） | `controlShadow`（hover 增量走底色） | — |
 | 输入框聚焦 | `surfaceShadow` + 边框加深（不画光晕） | — |
@@ -376,7 +377,7 @@
 | `shared/Avatar` | `SystemAvatar` | 头像（尺寸/形状/状态点） |
 | `forms/SearchInput` | `SystemInput`（通用单行输入）/ `SearchPageHeader`（页头内联搜索） | 搜索输入（原表写的 `SmartSearchComponent` 已不存在，2026-10-12 修正） |
 | `navigation/TabBar` / `NavTab` / `RailIcon` | `TabsPillGroup`（默认等宽分段；`freeWidth` 形态对齐前端胶囊行，`TabItem.count` 对齐角标） / `PhoneLayout` 底部导航 | 分类/导航 Tab |
-| `list/ListContainer`（bordered / embedded） | `components/ListGroup`（`bordered` 开关）+ `ListRowDivider` / `ListItemGroup.divider` | 列表**分组容器**：唯一一层白卡外框 + 行间发丝分隔线；行本身禁止再叠边框/圆角/投影（同前端 ListContainer 契约） |
+| `list/ListContainer`（bordered / embedded） | `components/ListGroup`（`bordered` 开关）+ `ListItemGroup` | 列表**分组容器**。**2026-10-27 Round 3**：开放页面 `bordered` = 内容软岛（无 1px 描边 + `surfaceIsland` + `surfaceShadow`/`shadow-xs` + 圆角 20 + 行 gap、行透明；无行间发丝线），见 §19；embedded 面板形态仍保留行分隔线。行本身禁止再叠边框/圆角/投影 |
 | `list/ListItem` | `SettingsEntryRow` / `SettingsToggleRow` / `GroupMemberRow` 等行组件 | 列表行：只写 padding + 按压反馈，不写背景/圆角/投影 |
 | `overlays/SheetShell` / `ui/dialog` | `SystemDialog` / `bindSheet` | 弹层/抽屉 |
 | `forms/TagPill` | `TabsPillGroup` chip / `FILTER_CHIP_HEIGHT` | 标签/筛选胶囊 |
@@ -603,3 +604,48 @@
 
 - ✓ 图标与文字 gap 4；图标尺寸不得盖过文字；有 swatch/icon 的分段项仍加 ✓（不挤时可放文字后）。
 - 验收：强制灰度（`filter: grayscale(1)`）截图中，选中项必须仍一眼可辨；两端（web / 鸿蒙）同口径。
+
+---
+
+## 19. 内容岛（Content Island，2026-10-27 Round 3）
+
+**背景**：用户要求「所有页面不要明显的边界」。r2 已去掉页面级/壳层框；Round 3 把开放页面的
+**内容分组**从「白卡 + 1px 硬描边」统一为「软岛」：无描边、表面色 + 轻投影 + 圆角 20 分层。
+用户可见效果：设置/通知/关系/搜索/个人中心不再像一格一格的框，而是若干安静的浮起内容块。
+
+### 19.1 形态（强制）
+
+| 项 | 值 |
+|---|---|
+| 容器 | `bg-surface-island` + `shadow-xs` + `rounded-lg`(20)，**无 border** |
+| 内边距 | `p-2`(8)；行 hover/focus 填充离岛边 ≥8 |
+| 行 | 行背景透明，行间 `gap-y-0.5`(2px)；**不加 1px 行横线**；hover 填充 + 12 圆角 |
+| 岛内元素 | chip/segmented 等用既有 `surface-subtle`/`surface-primary` 单元，不得套第二层带框卡片 |
+| 例外（登记） | 弹层/Sheet、hero/封面预览、单帖卡、聊天输入条等功能/内容单元不纳入岛统一 |
+
+### 19.2 token `--cst-surface-island`（三主题 × 明暗 6 处，必须一致）
+
+| 组合 | 定义 | 合成到画布实测 | 岛/画布亮度比 |
+|---|---|---|---|
+| light（三主题） | `color-mix(in srgb, var(--cst-surface-primary) 86%, transparent)` | vibrant #FDFDFE / forest #F6F7F3 / inkwash #FAF8F2 | 1.00–1.10（forest 与画布同色，靠 shadow-xs 表达边界，登记） |
+| dark（三主题） | `color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-text-primary) 6%)` | vibrant #222D40 / forest #232723 / inkwash #2D3031 | 1.16–1.33（暗色阴影不可见，必须靠表面差分层） |
+
+- registry：`--color-surface-island: var(--cst-surface-island)` → `bg-surface-island`。
+- 新增主题必须同时补 light/dark 两处，`check-theme-parity` 会校验变量集合。
+- 鸿蒙镜像：palette `surfaceIsland`（同 6 值），`ListGroup`/`SystemCard` 走同形态。
+
+### 19.3 页面级硬线
+
+- 页头/分区标题下**不得有 1px 硬线**（用留白 + eyebrow 分组）；页面内允许保留的只有功能线：
+  聊天输入条/粘底操作条（`border-t`）、消息分栏竖线（降为 `border-subtle/40` 发丝线）、
+  表格/统计行、内容单元内演示分隔。
+- 每次新增页面按 §19.1/§19.3 自查，并在审计表登记「保留的功能线」。
+
+### 19.4 按钮语言（安静化，2026-10-27 补充）
+
+- 主操作：accent 实底 + `text-on-accent`（保存/接受/加入）。
+- 次级/安静：`bg-surface-subtle/60` 软填底、无描边、`text-text-primary`；hover → `bg-surface-subtle` 全量；
+  focus-ring / active scale 保留（编辑资料、设置、发消息、拒绝、已读、会话操作）。
+- 危险：软填 danger 底 + danger 文字，保留二次确认（注销、退出登录）。
+- **同级动作不得混用「描边胶囊」与「软填胶囊」**；功能边界（输入框、主题 swatch）保留。
+

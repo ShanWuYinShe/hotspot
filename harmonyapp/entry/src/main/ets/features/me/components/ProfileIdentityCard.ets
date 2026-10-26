@@ -21,12 +21,15 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Component
 export struct ProfileIdentityCard {
   @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+  /** hover 的按钮 label（r3：surfaceSubtle/60 → hover 加深到 surfaceSubtle 全量） */
+  @State private hoveredAction: string = '';
   @Prop avatarUrl: string = '';
   @Prop nickname: string = '';
   @Prop locationName: string = '';
@@ -39,23 +42,32 @@ export struct ProfileIdentityCard {
 
   @Builder
   private statItem(label: string, value: number) {
-    Column({ space: DesignConstants.SPACING.HALF }) {
-      // 数值 text-2xl(24)+SEMIBOLD、标签 text-xs(11)：对齐前端 ProfileMobile 统计条
+    // r3 对齐 web MetricRow capsule：Bento 微岛胶囊（surface-subtle/40 底、rounded-xl、py-2.5）
+    Column() {
       Text(formatCount(value))
-        .fontSize(DesignConstants.FONT.SIZE.XXL)
-        // 前端 text-2xl(24) 行高 32；ArkUI 默认只有 ≈28，统计条会矮一截
-        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
+        // 前端 dd text-xl(20) font-semibold leading-none
+        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .lineHeight(DesignConstants.FONT.SIZE.XL)
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
       Text(label)
         .fontSize(DesignConstants.FONT.SIZE.XS)
         .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
         .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
+        .margin({ top: DesignConstants.SPACING.XS })
     }
     .layoutWeight(1)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+    .padding({
+      top: DesignConstants.SPACING.MD2,
+      bottom: DesignConstants.SPACING.MD2,
+      left: DesignConstants.SPACING.SM,
+      right: DesignConstants.SPACING.SM
+    })
+    .backgroundColor(AppThemeVisuals.withAlpha(
+      AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceSubtle, 0.40))
+    .borderRadius(DesignConstants.RADIUS.XL)
   }
 
   /** 卡内操作行按钮：前端 border + bg-surface-primary + rounded-md + shadow-raised-sm + text-xs(11) + icon 14 */
@@ -78,13 +90,11 @@ export struct ProfileIdentityCard {
     }
     .type(ButtonType.Normal)
     .layoutWeight(grow ? 1 : 0)
-    .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceBackground)
-    .border({
-      width: DesignConstants.BORDER_WIDTH.HAIRLINE,
-      color: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor
-    })
+    // r3 按钮安静化（镜像 web bg-surface-subtle/60 + hover:surface-subtle）：无描边无阴影
+    .backgroundColor(this.hoveredAction === accessibilityLabel
+      ? AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceSubtle
+      : AppThemeVisuals.withAlpha(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceSubtle, 0.60))
     .borderRadius(DesignConstants.SHAPE.BUTTON)
-    .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).controlShadow)
     .padding({
       left: DesignConstants.SPACING.MD,
       right: DesignConstants.SPACING.MD,
@@ -92,6 +102,9 @@ export struct ProfileIdentityCard {
       bottom: DesignConstants.SPACING.SM
     })
     .onClick(() => { onTap(); })
+    .onHover((isHover: boolean) => {
+      this.hoveredAction = isHover ? accessibilityLabel : '';
+    })
     .accessibilityText(accessibilityLabel)
   }
 
@@ -165,29 +178,21 @@ export struct ProfileIdentityCard {
       .alignItems(VerticalAlign.Center)
       .margin({ top: DesignConstants.SPACING.LG })
 
-      // 卡底三列统计（border-t，列间留白——竖线在小屏三列里显得切割局促）
-      Row() {
+      // 卡底三列统计：web MetricRow capsule（gap-2.5=10，无顶部分隔线）
+      Row({ space: DesignConstants.SPACING.MD2 }) {
         this.statItem('瞬间', this.momentsCount)
         this.statItem('关注者', this.followersCount)
         this.statItem('群组', this.groupsCount)
       }
       .width('100%')
-      .border({
-        width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE },
-        color: { top: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor }
-      })
       .margin({ top: DesignConstants.SPACING.LG })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
     .padding(DesignConstants.SPACING.LG2)
-    .borderRadius(DesignConstants.SHAPE.HERO_CARD)
-    .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceBackground)
-    // 前端卡片壳：白卡 + 发丝描边 + 主题投影（原端侧只有投影，缺描边）
-    .border({
-      width: DesignConstants.BORDER_WIDTH.HAIRLINE,
-      color: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor
-    })
+    // r3 软岛：无全框、圆角 20、85% surface 底 + 轻投影（BRIEF A）
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceIsland)
     .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceShadow)
   }
 }

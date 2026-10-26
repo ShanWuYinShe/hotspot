@@ -80,6 +80,8 @@ export interface AppThemePalette {
   description: string;
   pageBackground: string;
   surfaceBackground: string;
+  /** 软岛底色：surfaceBackground 85% alpha（镜像 web bg-surface-primary/85，r3 内容岛语言） */
+  surfaceIsland: string;
   surfaceSubtle: string;
   surfaceElevated: string;
   borderColor: string;

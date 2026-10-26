@@ -217,7 +217,7 @@
 									{#if !s.is_current}
 										<button
 											type="button"
-											class="hover-btn hit-slop flex shrink-0 items-center gap-1 rounded-full border border-border-default bg-surface-primary px-2.5 py-1 text-xs text-text-secondary focus-ring hover:bg-accent-soft"
+											class="hover-btn hit-slop flex shrink-0 items-center gap-1 rounded-full bg-surface-subtle/60 px-2.5 py-1 text-xs text-text-secondary focus-ring hover:bg-surface-subtle"
 											aria-label={`下线设备 ${s.device_name ?? s.device_type ?? ''}`}
 											onclick={() => (revokeTarget = s)}
 										>

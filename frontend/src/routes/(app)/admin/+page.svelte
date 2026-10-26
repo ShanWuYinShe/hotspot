@@ -75,7 +75,7 @@
 	<!-- 模块入口：移动端行式列表（同「我的」数据入口的密度与语言），平板/桌面卡片网格 -->
 	{#if isMobile}
 		<section aria-label="管理模块">
-			<ListContainer bordered inset class="rounded-2xl border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs overflow-hidden">
+			<ListContainer bordered inset class="overflow-hidden">
 				{#each MODULES as m (m.href)}
 					{@const allowed = hasAdminPermission(m.perm)}
 					<ListItem

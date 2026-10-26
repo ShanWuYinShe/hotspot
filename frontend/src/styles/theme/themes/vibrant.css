@@ -12,6 +12,8 @@
 /* ═══ Vibrant Light（:root 默认）═══ */
 :root,
 .vibrant {
+  /* 内容岛表面（Round 3）：开放页面内容分组软岛底（无描边，靠表面+阴影表达层级） */
+  --cst-surface-island: color-mix(in srgb, var(--cst-surface-primary) 86%, transparent);
   /* ── 原始色板 --cst-palette-* ── */
   /* 表面分层：画布（page）灰蓝底 + 卡片（bg）纯白，卡片靠底色差与阴影自然浮起，
      取代旧的"同色 + 1px 描边"贴皮方案 */
@@ -201,6 +203,8 @@
 
 /* ═══ Vibrant Dark ═══ */
 .vibrant.dark {
+  /* 内容岛表面（Round 3）：暗色提到 92% 保证软岛与画布的层级可读 */
+  --cst-surface-island: color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-text-primary) 6%);
   /* ── 原始色板 --cst-palette-* ── */
   /* 卡面提档（UI 复审 D2 token 级微调）：#111D31→#152134，深色下卡片与画布
      (#0B1424) 的底色阶差加大、层级更清晰；亮度阶仍低于 subtle/elevated，阶梯不变 */

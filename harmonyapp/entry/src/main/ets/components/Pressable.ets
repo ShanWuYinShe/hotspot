@@ -49,6 +49,8 @@ export struct Pressable {
     })
     .backgroundColor(this.hoverFill !== undefined && this.isHovered && !this.disabled ?
     this.hoverFill : DesignConstants.COLOR.TRANSPARENT)
+    // r3 行 hover 高亮圆角 12（填充离岛边由 ListGroup padding 8 保证）
+    .borderRadius(this.hoverFill !== undefined ? DesignConstants.RADIUS.SM : 0)
     .animation({
       duration: DesignConstants.ANIMATION.DURATION_FAST,
       curve: DesignConstants.ANIMATION.CURVE_EASE_OUT

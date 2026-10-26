@@ -781,10 +781,7 @@ export struct ProfilePage {
                 top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0),
                 bottom: DesignConstants.SPACING.MD
               })
-              .border({
-                width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
-                color: { bottom: this.getCurrentThemePalette().borderColor }
-              })
+              // r3：页头无硬线（BRIEF B），仅靠留白与 eyebrow 分组
             }
 
             if (this.isExternalProfileMode()) {
@@ -993,11 +990,9 @@ export struct ProfilePage {
               .type(ButtonType.Normal)
               .width('100%')
               .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
-              // .border 先于 .borderRadius：ArkUI 后设属性覆盖先设，border 写在后面会重置圆角
-              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+              // r3：次级动作安静化（软填底、无描边）
               .borderRadius(DesignConstants.SHAPE.BUTTON)
-              .backgroundColor(this.getSurfaceBackground())
-              .shadow(this.getCurrentThemePalette().controlShadow)
+              .backgroundColor(AppThemeVisuals.withAlpha(this.getCurrentThemePalette().surfaceSubtle, 0.60))
               .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
               .onClick(() => this.startEdit())
 
@@ -1233,8 +1228,8 @@ export struct ProfilePage {
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
           .fontColor(this.getPrimaryTextColor())
           .layoutWeight(1)
-          // .border 先于 .borderRadius（同升级表单取消，避免圆角被重置）
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+          // r3：次级动作安静化（软填底、无描边）
+          .backgroundColor(AppThemeVisuals.withAlpha(this.getCurrentThemePalette().surfaceSubtle, 0.60))
           .borderRadius(this.getProfileVisualStyle().card.borderRadius)
           .enabled(!this.isLoading && !this.isAvatarUploading)
           .opacity(this.isLoading || this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)

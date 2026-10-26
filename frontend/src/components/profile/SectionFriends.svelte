@@ -70,7 +70,7 @@
 				     关注/粉丝两个分区同样只保留一个行内动作，三 tab 模式一致。 -->
 				<button
 					type="button"
-					class="hover-btn tap-92 hit-slop flex shrink-0 items-center justify-center gap-1 rounded-full border border-border-default px-2.5 py-1.5 text-xs text-text-primary focus-ring hover:bg-accent-soft"
+					class="hover-btn tap-92 hit-slop flex shrink-0 items-center justify-center gap-1 rounded-full bg-surface-subtle/60 px-2.5 py-1.5 text-xs text-text-primary focus-ring hover:bg-surface-subtle"
 					onclick={(e) => {
 						e.stopPropagation();
 						void goto(ROUTES.message(f.id));

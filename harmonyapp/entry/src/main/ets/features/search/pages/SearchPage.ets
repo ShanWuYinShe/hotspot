@@ -16,7 +16,6 @@ import { UserRelationState, sumReactionCounts } from '../../../core/state/Intera
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { Pressable } from '../../../components/Pressable';
 import { SearchSuggestRow, SearchMomentRow } from '../components/SearchRows';
-import { ListRowDivider } from '../../../components/ListGroup';
 import { EmptyState } from '../../../components/EmptyState';
 import { SearchPageHeader } from '../../../components/SearchPageHeader';
 import { Skeleton } from '../../../components/states/Skeleton';
@@ -453,6 +452,18 @@ export struct SearchPage {
     Column() {
       SkeletonShimmer({ active: true }) {
         Column() {
+          // N1（对齐 fe SearchResults）：结果分组头占位（eyebrow 条 + 辅助条），避免骨架→内容位移
+          Row({ space: DesignConstants.SPACING.SM }) {
+            Skeleton({ blockWidth: DesignConstants.SPACING.XXL, blockHeight: DesignConstants.FONT.SIZE.LG, cornerRadius: DesignConstants.RADIUS.SM })
+            Skeleton({ blockWidth: DesignConstants.SPACING.XL, blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
+          }
+          .width('100%')
+          .padding({
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: DesignConstants.SPACING.MD,
+            bottom: DesignConstants.SPACING.SM
+          })
           ForEach([0, 1, 2, 3, 4], (i: number) => {
             Row({ space: DesignConstants.SPACING.MD }) {
               Skeleton({ blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, cornerRadius: DesignConstants.RADIUS.FULL })
@@ -650,10 +661,7 @@ export struct SearchPage {
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })
-    .border({
-      width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
-      color: { bottom: this.getSurfaceBorder() }
-    })
+    // r3：页头无硬线（BRIEF B）
   }
 
   @Builder
@@ -679,15 +687,15 @@ export struct SearchPage {
                 this.buildUserItem(item)
                 // 仅行间分隔，末行不画（对齐前端 divide-y：末行底部无线，避免卡片内嵌一圈线）
                 if (index < this.userResults.length - 1) {
-                  ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
+                  Column().height(DesignConstants.SPACING.HALF)
                 }
               }, (item: UserItem) => `all-user-${item.user?.user_id ?? ''}`)
             }
             .width('100%')
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+            // r3 软岛：发现卡去硬框、圆角 20、85% surface 底
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .clip(true)
           }
         }
@@ -706,15 +714,15 @@ export struct SearchPage {
                   onPress: () => this.openMomentDetail(moment)
                 })
                 if (index < this.momentResults.length - 1) {
-                  ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
+                  Column().height(DesignConstants.SPACING.HALF)
                 }
               }, (moment: MomentItem) => `all-moment-${moment.moment_id}`)
             }
             .width('100%')
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+            // r3 软岛：发现卡去硬框、圆角 20、85% surface 底
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .clip(true)
           }
         }
@@ -726,15 +734,15 @@ export struct SearchPage {
               ForEach(this.groupResults, (group: GroupItem, index: number) => {
                 this.buildGroupItem(group)
                 if (index < this.groupResults.length - 1) {
-                  ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
+                  Column().height(DesignConstants.SPACING.HALF)
                 }
               }, (group: GroupItem) => `all-group-${group.group?.group_id ?? ''}`)
             }
             .width('100%')
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+            // r3 软岛：发现卡去硬框、圆角 20、85% surface 底
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .clip(true)
           }
         }
@@ -770,10 +778,10 @@ export struct SearchPage {
               }, (tag: string) => `all-topic-${tag}`)
             }
             .width('100%')
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+            // r3 软岛：发现卡去硬框、圆角 20、85% surface 底
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
             .clip(true)
           }
         }
@@ -878,7 +886,7 @@ export struct SearchPage {
       top: DesignConstants.SPACING.LG,
       bottom: DesignConstants.SPACING.MD
     })
-    .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
+    // r3：sticky 分区头无硬线（BRIEF B）
   }
 
   @Builder
@@ -892,7 +900,7 @@ export struct SearchPage {
             this.buildDiscoveryCard('最近搜索', () => this.clearRecentSearches())
             ForEach(this.recentSearches, (item: string, index: number) => {
               if (index > 0) {
-                ListRowDivider({ startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG })
+                Column().height(DesignConstants.SPACING.HALF)
               }
               Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
                 Row({ space: DesignConstants.SPACING.MD }) {
@@ -1318,11 +1326,11 @@ export struct SearchPage {
       .padding(DesignConstants.SPACING.SM)
       .width('100%')
     }
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.LG)
+    // r3 软岛：结果卡去硬框、圆角 20、85% surface 底
+    .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+    .borderRadius(DesignConstants.SHAPE.CARD)
     .clip(true)
     .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
     .onClick(() => {
       this.openMomentDetail(item);
     })

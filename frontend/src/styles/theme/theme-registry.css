@@ -17,6 +17,7 @@
 
   /* Semantic palette — enables bg-surface-primary, text-text-primary etc. */
   --color-surface-primary: var(--cst-surface-primary);
+  --color-surface-island: var(--cst-surface-island);
   --color-surface-page: var(--cst-surface-page);
   --color-surface-chat: var(--cst-surface-chat);
   /* 弱化嵌入面：分段控件底轨、置顶行等「比卡片低一档」的静态填充

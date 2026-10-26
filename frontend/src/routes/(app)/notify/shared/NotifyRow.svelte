@@ -78,7 +78,7 @@
 				type="button"
 				onclick={(e) => { e.stopPropagation(); onReject?.(notif.inviteId!); }}
 				disabled={actionPending}
-				class="hover-btn hit-slop rounded-full border border-border-default px-3.5 py-1.5 text-xs text-text-primary focus-ring hover:border-border-strong disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
+				class="hover-btn hit-slop rounded-full bg-surface-subtle/60 px-3.5 py-1.5 text-xs text-text-primary focus-ring hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
 			>拒绝</button>
 		{/if}
 		{#if notif.momentImage}

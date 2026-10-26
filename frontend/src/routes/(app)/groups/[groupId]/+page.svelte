@@ -269,7 +269,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	<div class="grid gap-y-6 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-8">
 		<main class="min-w-0">
 			<!-- 分类 Tab（胶囊样式，轻柔微发丝底线） -->
-			<div class="pb-3 border-b border-border-subtle/40">
+			<div class="pb-3">
 				<TabBar
 					items={[
 						{ id: 'overview', label: '简介' },
@@ -340,7 +340,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				{:else if tab === 'members'}
 					{#if canManageMembers}
 						<!-- 成员 Tab 子区（owner/admin）：成员 / 申请审批 / 邀请管理 / 封禁名单 -->
-						<div class="mt-6 pb-3 border-b border-border-subtle/40">
+						<div class="mt-6 pb-3">
 							<TabBar
 								items={[
 									{ id: 'members', label: '成员' },

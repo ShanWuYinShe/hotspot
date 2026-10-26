@@ -6,6 +6,7 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -104,7 +105,15 @@
 
 	{#if loading}
 		<!-- 首屏骨架屏：搜索结果行（前导 36 = Avatar md 档，与真实用户结果行同构） -->
-		<SkeletonList rows={5} leading={36} label="搜索中…" class="mt-4" />
+		<!-- N1：骨架对齐真实结果行（px-4 py-3.5 + leading 36 = 64 高）并补分组头占位，
+		     避免骨架 → 内容行高 60→64 的跳动与分组头出现时的整体位移 -->
+		<div class="mt-4 flex flex-col gap-3">
+			<div class="flex items-center gap-2 px-1">
+				<Skeleton class="h-4 w-12 rounded-sm" />
+				<Skeleton class="h-3 w-8 rounded-sm" />
+			</div>
+			<SkeletonList rows={4} leading={36} label="搜索中…" rowClass="px-4 py-3.5" />
+		</div>
 	{:else if !hasResults || tabEmpty}
 		<!-- 空态统一 EmptyState（对齐全局空态契约） -->
 		<EmptyState spotlight title={`没有找到“${query}”`} description="换个关键词再试试。" bare>
@@ -126,7 +135,7 @@
 			{#if (tab === 'all' || tab === 'people') && results.users.length > 0}
 				<!-- 用户结果组 -->
 				{#snippet userRows()}
-					<ListContainer bordered class="rounded-2xl shadow-raised-sm overflow-hidden">
+					<ListContainer bordered class="overflow-hidden">
 						{#each results.users as person (person.user_id)}
 							<ListItem
 								onClick={() => void goto(ROUTES.user(person.user_id))}
@@ -151,7 +160,7 @@
 			{#if (tab === 'all' || tab === 'posts') && results.moments.length > 0}
 				<!-- 动态结果组（补缩略图，对齐 Figma size-10 image） -->
 				{#snippet momentRows()}
-					<ListContainer bordered class="rounded-2xl shadow-raised-sm overflow-hidden">
+					<ListContainer bordered class="overflow-hidden">
 						{#each results.moments as moment (moment.moment_id)}
 							<ListItem
 								onClick={() => void goto(ROUTES.moment(moment.moment_id))}
@@ -185,7 +194,7 @@
 			{#if (tab === 'all' || tab === 'groups') && results.groups.length > 0}
 				<!-- 群组结果组（复用用户组同款行语言：Avatar 圆角区分群组 + ArrowUpRight） -->
 				{#snippet groupRows()}
-					<ListContainer bordered class="rounded-2xl shadow-raised-sm overflow-hidden">
+					<ListContainer bordered class="overflow-hidden">
 						{#each results.groups as group (group.group_id)}
 							<ListItem
 								onClick={() => void goto(ROUTES.group(group.group_id))}
@@ -210,7 +219,7 @@
 			{#if (tab === 'all' || tab === 'topics') && results.topics.length > 0}
 				<!-- 话题结果组 -->
 				{#snippet topicRows()}
-					<ListContainer bordered class="rounded-2xl shadow-raised-sm overflow-hidden">
+					<ListContainer bordered class="overflow-hidden">
 						{#each results.topics as topic (topic)}
 							<ListItem
 								onClick={() => onChoose(topic)}

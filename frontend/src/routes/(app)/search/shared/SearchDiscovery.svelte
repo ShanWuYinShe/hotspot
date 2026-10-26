@@ -106,7 +106,7 @@
 				清除
 			</button>
 		</div>
-		<ListContainer bordered class="mt-3 rounded-2xl border-border-subtle/50 shadow-xs overflow-hidden">
+		<ListContainer bordered class="mt-3 overflow-hidden">
 			{#each recent as item (item)}
 				<ListItem
 					onClick={() => onChoose(item)}
@@ -155,7 +155,7 @@
 					查看全部
 				</button>
 			</div>
-			<ListContainer bordered class="mt-3 rounded-2xl border-border-subtle/50 shadow-xs overflow-hidden">
+			<ListContainer bordered class="mt-3 overflow-hidden">
 				{#each hotUsers as u (u.id)}
 					<UserCardRow
 						name={u.name}
@@ -206,7 +206,7 @@
 					</button>
 				{/if}
 			</div>
-			<ListContainer bordered class="mt-3 rounded-2xl border-border-subtle/50 shadow-xs overflow-hidden">
+			<ListContainer bordered class="mt-3 overflow-hidden">
 				{#each hotGroups as g (g.id)}
 					<ListItem
 						onClick={() => onOpenGroup?.(g.id)}

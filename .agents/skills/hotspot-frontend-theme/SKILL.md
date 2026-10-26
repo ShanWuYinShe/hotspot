@@ -50,14 +50,18 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token、配色硬
   `--cst-surface-page`（= page-bg）是应用内唯一的整层底色。外壳各层（外框/内框/视口/
   状态栏/安全区/导航底座透明区/桌面顶栏/侧栏/主内容）一律只许用它连续铺底，**不得再加**
   包裹整页的描边 / 圆角 / 白底 / 硬分隔线（会在屏幕边缘形成「框线」，用户明确否决）。
-  层级只靠**内容单元卡片**（`surface-primary`：`card-raised`/`surface-hero`，可带发丝描边 +
-  主题投影）与留白表达；内容单元格本身不是页面框，可保留。禁止引入第二个整层底色
+  层级只靠**内容单元软岛**（Round 3：`bg-surface-island` + `shadow-xs` + 圆角 20，**无 1px 描边**；
+  语义见 `docs/design-system.md` §19）与留白表达；内容单元格本身不是页面框，可保留。禁止引入第二个整层底色
   （`workspace` token 已删除）。分壳规则：四端外壳直接暴露画布（`[data-page-viewport]`
   透明），桌面氛围画布为**整窗单实例**（外壳根挂一次）；`PageHeader` 实底走
   `.page-header-solid`（一律画布色，**无底边线**，滚动时才允许柔和投影），sticky glass 仍走
   `surface-nav-glass`。
   唯一例外：聊天页独立画布 `--cst-surface-chat`（= chat-bg，微差于页面画布，
   对齐鸿蒙 `chatBackground`），仅聊天页根/头部/输入条使用。
+- **内容岛表面（2026-10-27 Round 3）**：`--cst-surface-island`（light = `surface-primary 86%` 半透合成画布；
+  dark = `surface-primary 94% + text-primary 6%`；三主题×明暗 6 处，registry 映射 `bg-surface-island`）。
+  开放页面内容分组用「软岛」：无硬描边 + `shadow-xs` + `rounded-lg`(20) + `p-2` + 行透明/gap；
+  **禁止再给 `ListContainer bordered` 覆写 border/bg/radius**。详见 design-system §19。
 - **图片优先卡遮罩（2026-10-27）**：整卡图片卡只用 `--cst-surface-card-scrim-top` /
   `--cst-surface-card-scrim-bottom` / `--cst-surface-card-fallback`（三主题×明暗定义在
   `themes/*.css`，语义见 `docs/design-system.md` §17）；禁止页面里写 rgba 遮罩。

@@ -79,7 +79,8 @@ export struct SystemCard {
       case CardVariant.OUTLINED:
       case CardVariant.DEFAULT:
       default:
-        return this.getPalette().surfaceBackground;
+        // r3 软岛：默认卡改用 85% surface（镜像 web bg-surface-primary/85）
+        return this.getPalette().surfaceIsland;
     }
   }
 

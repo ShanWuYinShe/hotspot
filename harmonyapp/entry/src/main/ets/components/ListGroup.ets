@@ -44,13 +44,15 @@ export struct ListGroup {
   }
 
   build() {
-    Column({ space: 0 }) {
+    // r3 软岛：row gap 2（web gap-y-0.5）；容器内边距 8（p-2，groupPadding 可覆盖）
+    Column({ space: this.bordered ? DesignConstants.SPACING.HALF : 0 }) {
       this.content();
     }
     .width('100%')
-    .padding(this.groupPadding)
-    .backgroundColor(this.bordered ? this.getPalette().surfaceBackground : DesignConstants.COLOR.TRANSPARENT)
-    .borderRadius(this.bordered ? DesignConstants.SHAPE.COMPACT_CARD : 0)
+    .padding(this.groupPadding > 0 ? this.groupPadding : (this.bordered ? DesignConstants.SPACING.SM : 0))
+    // r3 软岛：surfaceIsland 底 + 圆角 20 + 轻阴影 + 无描边（对齐 web ListContainer bordered）
+    .backgroundColor(this.bordered ? this.getPalette().surfaceIsland : DesignConstants.COLOR.TRANSPARENT)
+    .borderRadius(this.bordered ? DesignConstants.SHAPE.CARD : 0)
     // 无描边（2026-10-14 按用户反馈移除）：深色下发丝描边呈「裁剪线」观感，
     // 卡片层级一律靠 底色阶差 + surfaceShadow 表达（M3「同层用色阶而非描边」，
     // 与 GroupDetailPage StatsCell 的既有注释同原则）。行间分隔线不受影响。

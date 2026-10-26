@@ -53,12 +53,13 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	</div>
 {:else if loading}
 	<!-- 首屏骨架屏：几何对齐鸿蒙 MessagePage 会话骨架（前导圆形 40 / 行内 12 / 文本条 14·55% + 11·35%）；
-	     分栏紧凑行与真实 ChatListItem compact 行内距一致，骨架→内容零位移 -->
+	     分栏紧凑行与真实 ChatListItem compact 行内距一致，骨架→内容零位移。
+	     N2：在线条占位由父页面按真实结构渲染（在线条 → 最近 → 列表），本组件不再自行插入。 -->
 	<SkeletonList
 		rows={6}
 		leading={compact ? 40 : 44}
 		label="加载会话…"
-		class={fill ? 'flex-1' : ''}
+		class={fill ? 'flex-1' : 'mt-1'}
 		rowClass={compact ? 'px-3.5 py-2.5' : ''}
 	/>
 {:else if chats.length === 0}
