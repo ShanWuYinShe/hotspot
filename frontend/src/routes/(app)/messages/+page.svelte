@@ -288,7 +288,7 @@
 	<div class="content-mode-wide flex h-full flex-col">
 		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} />
 		<div class="flex flex-1 items-center justify-center">
-			<NeedsAuthNotice title="登录后查看" description="登录后即可查看和发起会话" />
+			<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可查看和发起会话" />
 		</div>
 	</div>
 	{:else}
@@ -372,7 +372,7 @@
 				</div>
 			{:else}
 				<div class="h-full flex items-center justify-center">
-					<EmptyState title="选择一个会话" description="从左侧选择一个会话开始聊天" class="h-full justify-center py-0!" bare>
+					<EmptyState spotlight title="选择一个会话" description="从左侧选择一个会话开始聊天" class="h-full justify-center py-0!" bare>
 						{#snippet icon()}
 							<MessageSquareDashed class="size-9 opacity-muted text-text-secondary" strokeWidth={1.5} />
 						{/snippet}

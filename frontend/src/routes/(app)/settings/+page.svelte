@@ -196,13 +196,14 @@
 	<title>设置 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-10">
+<StandardPageLayout contentMaxWidth="56rem" contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
 		<PageHeader
 			title="设置"
 			subtitle="管理你的账号偏好、主题外观与系统选项"
 			onBack={() => smartBack()}
 			showBackOnDesktop={false}
+			maxWidth="56rem"
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		/>
 	{/snippet}
@@ -212,7 +213,10 @@
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
-		<div class="flex flex-col divide-y divide-border-subtle/40 mx-auto w-full max-w-4xl xl:max-w-5xl">
+		<!-- 宽度约束上移到 StandardPageLayout/PageHeader（同一 max-width），
+		     确保 2560 超宽屏下页头标题与正文左边缘对齐（此前正文内层 mx-auto
+		     居中、页头全宽，左边缘相差 605px）。 -->
+		<div class="flex w-full flex-col divide-y divide-border-subtle/40">
 			<!-- Section 1: 账号与身份 -->
 			<SettingsSection title="账号信息" description="当前登录的账号信息" class="first:pt-0">
 				<!-- 卡片壳统一交 ListContainer bordered（与下方通知/隐私分组同语言），

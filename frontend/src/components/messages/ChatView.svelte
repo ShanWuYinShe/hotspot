@@ -263,11 +263,15 @@
 
 			<!-- Name + status -->
 			<div class="flex-1 min-w-0">
-				<!-- 会话对端名用 h1：每页唯一主标题（a11y；font-normal 抵消 base h1 的
-				     medium 字重，保持与原 p 一致的视觉） -->
-				<h1 class="truncate font-normal text-text-primary {compact ? 'text-sm' : 'text-md'}">
+				<!-- 会话对端名：移动端独立页 = 页面唯一 h1；桌面/宽平板分栏（compact）
+				     时页面已有「消息」PageHeader h1，降为 h2，避免一页两个 h1。
+				     font-normal 抵消 base h1 的 medium 字重，保持与原 p 一致的视觉。 -->
+				<svelte:element
+					this={compact ? 'h2' : 'h1'}
+					class="truncate font-normal text-text-primary {compact ? 'text-sm' : 'text-md'}"
+				>
 					{peerName || '会话'}
-				</h1>
+				</svelte:element>
 			<p class="{typing.active ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'} text-xs" >
 				{#if typing.active}
 					正在输入…
@@ -288,7 +292,7 @@
 	{#if needsAuth}
 		<!-- 未登录：登录引导（替代死胡同重试；输入栏一并隐藏，匿名不可发送） -->
 		<div class="flex flex-1 items-center justify-center">
-			<NeedsAuthNotice title="登录后查看" description="登录后即可查看和发起会话" />
+			<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可查看和发起会话" />
 		</div>
 	{:else}
 		<!-- Messages -->

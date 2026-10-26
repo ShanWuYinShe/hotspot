@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { MessageSquareDashed } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ChatListItem from '@/components/messages/ChatListItem.svelte';
@@ -46,17 +46,25 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 </script>
 
 {#if needsAuth}
-	<NeedsAuthNotice title="登录后查看" description="登录后即可查看和发起会话" />
+	<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可查看和发起会话" />
 {:else if loadError}
 	<div class={fill ? 'flex flex-1 flex-col items-center justify-center px-4 py-10' : ''}>
 		<LoadError message={loadError} {onRetry} />
 	</div>
 {:else if loading}
-	<InlineLoading class={fill ? 'flex-1 justify-center' : ''} label="加载会话…" />
+	<!-- 首屏骨架屏：几何对齐鸿蒙 MessagePage 会话骨架（前导圆形 40 / 行内 12 / 文本条 14·55% + 11·35%）；
+	     分栏紧凑行与真实 ChatListItem compact 行内距一致，骨架→内容零位移 -->
+	<SkeletonList
+		rows={6}
+		leading={compact ? 40 : 44}
+		label="加载会话…"
+		class={fill ? 'flex-1' : ''}
+		rowClass={compact ? 'px-3.5 py-2.5' : ''}
+	/>
 {:else if chats.length === 0}
 	<!-- 空态覆盖搜索无结果场景，文案统一「没有找到会话」 -->
 	<div class={fill ? 'flex flex-1 items-center justify-center' : ''}>
-		<EmptyState bare class={fill ? '' : 'py-12!'} title="没有找到会话">
+		<EmptyState spotlight bare class={fill ? '' : 'py-12!'} title="没有找到会话">
 			{#snippet icon()}
 				<MessageSquareDashed class="size-9 opacity-muted text-text-secondary" strokeWidth={1.5} />
 			{/snippet}

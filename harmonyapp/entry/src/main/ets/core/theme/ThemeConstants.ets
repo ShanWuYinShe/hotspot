@@ -48,6 +48,128 @@ export interface ColorConfig {
   warningSoft: string;
 }
 
+/**
+ * 氛围画布色板（Ambient canvas tokens）
+ *
+ * 对齐 web `frontend/src/styles/theme/themes/*.css` 的 `--cst-ambient-*`
+ * （见 docs/design-system.md 第 16 节），字段语义一一对应：
+ *   glow1/glow2 天光与地平线光源、sky 顶部天光、line 星座/轨道/等高线、
+ *   dot 星尘、sun 清野暖阳、ink1/2/3 近/中/远剪影、emblem 圆相/墨点、
+ *   horizon 地平线雾、vignette 暗角。
+ *
+ * 合成口径：web 用 color-mix(in srgb, <palette 色> N%, transparent) 生成透明色，
+ * 本端按同一 palette 色与同一 N 预合成成 #AARRGGBB（A = round(N% × 255)），
+ * 与 web 仅差 alpha 的 8bit 取整（≤0.2%），透明叠加时同为 source-over，
+ * 不引入第二整层底色。改色时先改 web token，再按同口径重算本表。
+ */
+export interface AmbientColorConfig {
+  glow1: string;
+  glow2: string;
+  sky: string;
+  line: string;
+  dot: string;
+  sun: string;
+  ink1: string;
+  ink2: string;
+  ink3: string;
+  emblem: string;
+  horizon: string;
+  vignette: string;
+}
+
+class AmbientRegistry {
+  readonly VIBRANT_LIGHT: AmbientColorConfig = {
+    glow1: '#1A2B5EB2',
+    glow2: '#140D6A62',
+    sky: '#0D2B5EB2',
+    line: '#382B5EB2',
+    dot: '#992B5EB2',
+    sun: '#00000000',
+    ink1: '#142B5EB2',
+    ink2: '#0E2B5EB2',
+    ink3: '#092B5EB2',
+    emblem: '#3D2B5EB2',
+    horizon: '#0F2B5EB2',
+    vignette: '#0D16233A',
+  };
+
+  readonly VIBRANT_DARK: AmbientColorConfig = {
+    glow1: '#2469A8FF',
+    glow2: '#1A37C99A',
+    sky: '#1269A8FF',
+    line: '#4769A8FF',
+    dot: '#B869A8FF',
+    sun: '#00000000',
+    ink1: '#1F69A8FF',
+    ink2: '#1769A8FF',
+    ink3: '#0F69A8FF',
+    emblem: '#4C69A8FF',
+    horizon: '#1769A8FF',
+    vignette: '#57000000',
+  };
+
+  readonly DEFAULT_CLEAN_LIGHT: AmbientColorConfig = {
+    glow1: '#1739714F',
+    glow2: '#1A7E602B',
+    sky: '#0D7E602B',
+    line: '#3839714F',
+    dot: '#7A39714F',
+    sun: '#247E602B',
+    ink1: '#1739714F',
+    ink2: '#1139714F',
+    ink3: '#0A39714F',
+    emblem: '#3839714F',
+    horizon: '#147E602B',
+    vignette: '#0A152219',
+  };
+
+  readonly DEFAULT_CLEAN_DARK: AmbientColorConfig = {
+    glow1: '#2152B878',
+    glow2: '#24C4A75A',
+    sky: '#12C4A75A',
+    line: '#4252B878',
+    dot: '#8C52B878',
+    sun: '#29C4A75A',
+    ink1: '#1F52B878',
+    ink2: '#1752B878',
+    ink3: '#0F52B878',
+    emblem: '#4252B878',
+    horizon: '#1AC4A75A',
+    vignette: '#57000000',
+  };
+
+  readonly INKWASH_LIGHT: AmbientColorConfig = {
+    glow1: '#14A63A2E',
+    glow2: '#0D2B2A26',
+    sky: '#0A2B2A26',
+    line: '#292B2A26',
+    dot: '#522B2A26',
+    sun: '#00000000',
+    ink1: '#172B2A26',
+    ink2: '#112B2A26',
+    ink3: '#0B2B2A26',
+    emblem: '#42A63A2E',
+    horizon: '#0A2B2A26',
+    vignette: '#0D2B2A26',
+  };
+
+  readonly INKWASH_DARK: AmbientColorConfig = {
+    glow1: '#1FDF7F6A',
+    glow2: '#0FEAE6DA',
+    sky: '#0DEAE6DA',
+    line: '#33EAE6DA',
+    dot: '#66EAE6DA',
+    sun: '#00000000',
+    ink1: '#17EAE6DA',
+    ink2: '#11EAE6DA',
+    ink3: '#0BEAE6DA',
+    emblem: '#4CDF7F6A',
+    horizon: '#0FEAE6DA',
+    vignette: '#5C000000',
+  };
+
+}
+
 export interface ThemeShadows {
   surface: AppThemeShadow;
   elevated: AppThemeShadow;
@@ -204,6 +326,9 @@ export class ThemeConstants {
   };
 
   static readonly SHADOWS: ThemeShadowRegistry = new ThemeShadowRegistry();
+
+  /** 氛围画布色板（三主题 × 明暗，对齐 web --cst-ambient-*） */
+  static readonly AMBIENT: AmbientRegistry = new AmbientRegistry();
 
   static readonly VIBRANT_LIGHT_COLORS: ColorConfig = {
     // 表面分层（对齐前端 vibrant.css）：画布灰蓝底 + 卡片纯白，卡片靠底色差与阴影浮起

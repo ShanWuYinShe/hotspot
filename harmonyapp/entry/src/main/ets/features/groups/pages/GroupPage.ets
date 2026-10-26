@@ -532,7 +532,7 @@ export struct GroupPage {
           } else if (this.groups.length === 0) {
             Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
               EmptyState({
-          bare: true, icon: AppIcon.GROUP, message: '还没有加入任何群组\n去附近发现感兴趣的小组吧！' })
+          spotlight: true, bare: true, icon: AppIcon.GROUP, message: '还没有加入任何群组\n去附近发现感兴趣的小组吧！' })
             }
             .layoutWeight(1)
             .pullToRefresh(false)

@@ -14,7 +14,7 @@ import { formatCount } from '@/lib/utils';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import GroupCard from './shared/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
@@ -220,7 +220,13 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	<div class="min-w-0">
 		{#if loading}
-			<InlineLoading label="加载附近群组…" />
+			<!-- 首屏骨架屏：图片优先群组卡栅格（移动/平板 2 列，桌面逐级加列） -->
+			<SkeletonFeed
+				variant="card"
+				count={6}
+				class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+				label="加载附近群组…"
+			/>
 		{:else if loadError}
 			<LoadError message={loadError} onRetry={() => reloadKey++} />
 			{:else if filtered.length}
@@ -271,7 +277,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				<ListEnd />
 			{/if}
 		{:else}
-			<EmptyState bare title="没有找到相关群组">
+			<EmptyState spotlight bare title="没有找到相关群组">
 				{#snippet icon()}
 					<Users size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
 				{/snippet}

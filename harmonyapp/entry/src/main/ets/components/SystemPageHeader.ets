@@ -31,7 +31,8 @@ export interface PageHeaderAction {
 export interface IconAction {
   icon: AppIcon;
   onClick: () => void;
-  kind?: 'primary' | 'neutral';
+  /** 图标钮档位，透传 SurfaceIconButton：primary accent 实底 / surface 浅底凸起（内页 trailing）/ neutral ghost（顶级页） */
+  kind?: 'primary' | 'neutral' | 'surface';
   disabled?: boolean;
   size?: number;
   iconSize?: number;

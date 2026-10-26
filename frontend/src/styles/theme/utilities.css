@@ -536,6 +536,62 @@
   }
   @keyframes spinner-rotate { to { transform: rotate(360deg); } }
 
+  /* Skeleton 骨架屏（data-display/Skeleton|SkeletonList|SkeletonFeed 共用）。
+     底色 --cst-surface-subtle（比卡片低一档的静态填充，对齐鸿蒙 Skeleton 的
+     surfaceSubtle）；透明度 1 ↔ 0.6 脉冲（对齐鸿蒙 SkeletonShimmer 1↔0.58，
+     0.58 归并到最近 opacity 档 dim=0.60，不新增档位），周期 --cst-motion-skeleton。
+     减弱动效由下方全局规则瞬时化（骨架保留形，不闪动）。 */
+  @keyframes cst-skeleton-pulse {
+    0%, 100% { opacity: var(--cst-opacity-full); }
+    50% { opacity: var(--cst-opacity-dim); }
+  }
+  .skeleton-block {
+    background-color: var(--cst-surface-subtle);
+    animation: cst-skeleton-pulse var(--cst-motion-skeleton) var(--cst-ease-standard) infinite;
+  }
+
+  /* 场景化空态装饰层（EmptyState spotlight，纯装饰、无动画，克制的「信标」意象）。
+     跨端 spec（鸿蒙 EmptyState 可用 径向渐变 + 圆描边 + 圆点 原样镜像）：
+       · 容器：相对定位铺满空态块、flex 居中、overflow hidden、pointer-events none、
+         z-index -1（在正文之下、氛围画布之上）；
+       · 光晕：320×320 圆，径向渐变 --cst-ambient-glow-2(中心) → 透明 70%；
+       · 外环 288×288 / 内环 168×168，1px 描边 --cst-ambient-line，无填充；
+       · 四向星点 4×4 圆，外环 45° 等分位（±102px），底色 --cst-ambient-dot。
+     颜色只引用 --cst-ambient-*（三主题 × 明暗已备），新增主题自动适配。 */
+  .empty-spotlight {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .empty-spotlight__glow {
+    width: 20rem;
+    height: 20rem;
+    border-radius: var(--cst-shape-full);
+    background: radial-gradient(circle, var(--cst-ambient-glow-2) 0%, transparent 70%);
+  }
+  .empty-spotlight__ring {
+    position: absolute;
+    border-radius: var(--cst-shape-full);
+    border: var(--cst-border-width-hairline) solid var(--cst-ambient-line);
+  }
+  .empty-spotlight__ring--outer { width: 18rem; height: 18rem; }
+  .empty-spotlight__ring--inner { width: 10.5rem; height: 10.5rem; }
+  .empty-spotlight__dot {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0.25rem;
+    height: 0.25rem;
+    margin: -0.125rem 0 0 -0.125rem;
+    border-radius: var(--cst-shape-full);
+    background-color: var(--cst-ambient-dot);
+  }
+
   /* 计数变化弹跳（点赞/评论数瞬时数值反馈）。数字元素用 {#key 值} 重建触发：
      <span class="count-pop">{n}</span>；数字不变（初始渲染）时无感知。 */
   @keyframes cst-count-pop {

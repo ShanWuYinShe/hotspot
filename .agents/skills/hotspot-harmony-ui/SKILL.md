@@ -37,7 +37,8 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 - **页面头部（强制 SystemPageHeader）**：
   - 所有页面头部必须用 `SystemPageHeader`（或专用组件 `SearchPageHeader` / `ChatPageHeader`）；禁止手搓 `Row { Text(...).fontSize(XL)... Button(...) }` 头部。
   - 已登记例外（无标准页面头部）：登录页 `LoginPage`（无主壳）、主壳 `Index`（容器）、地图全屏 `LocationPickerPage`、图片全屏预览 `PhotoPreviewPage`、分享解析中间页 `ShareResolutionPage`（无内容 UI，仅 loading/错误/跳转）、调试面板 `DebugPanel`；`SettingsSupport.ets` 等仅导出页面子组件的文件不算页面。
-  - SystemPageHeader API：`title` / `subtitle` / `showBackButton`+`onBack` / `action`(文本按钮) / `leftAction`+`rightAction`(IconAction) / `trailing`(@BuilderParam 任意尾随) / `titleAlign` / `titleSize` / `titleWeight` / `backgroundVariant`('bar'|'transparent'|'card')。
+  - SystemPageHeader API：`title` / `subtitle` / `showBackButton`+`onBack` / `action`(文本按钮) / `leftAction`+`rightAction`(IconAction，`kind: 'primary'|'surface'|'neutral'`，2026-10-26 扩展 surface) / `trailing`(@BuilderParam 任意尾随) / `titleAlign` / `titleSize` / `titleWeight` / `backgroundVariant`('bar'|'transparent'|'card')。
+  - **页头图标钮跨端口径（2026-10-26 Lead 决策）**：品牌头（首页）= ghost（`kind:'neutral'`，前端 `variant="ghost"`）；标准内页 PageHeader trailing = surface（`kind:'surface'`，前端默认 `variant="surface"`）。web 移动端首页只有「搜索 + 通知」两枚，地图入口在附近域页头；鸿蒙同步移除首页地图钮。
   - 安全区由 SystemPageHeader 内聚（自带 `@StorageLink('safeAreaTop')` + `expandSafeArea`），页面无需重复写。
   - 内联搜索框头部 → `SearchPageHeader`；浮动卡片+头像头部 → `ChatPageHeader`。
 - **页面内容栏（PageShellContainer）**：强制使用；档位数值（form/narrow/default/wide + feed 两档）见 design-system.md 第 12 节。
@@ -146,6 +147,9 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   | `LucideIcon` | 业务图标统一渲染（**组件名是历史遗留**——旧 lucide SVG 方案已废，现渲染 `SymbolSpan` + `sys.symbol.*`，与 SystemIcon 同机制；API 多 `paletteRole` 语义色角色）；尺寸用 `ICON_SIZE_*` 刻度 |
   | `SystemIcon` | 系统符号图标（`SymbolSpan` / `sys.symbol.*`），`AppIcon` 枚举定义处；API 直传 color |
   | `NativeMapComponent` | 原生地图组件（平台特有，前端无对应） |
+  | `components/layout/AmbientBackdrop` | 氛围画布（三主题世界层，装饰层唯一实现）；单 Canvas 静态一次性绘制、`hitTestBehavior(None)`、`accessibilityLevel('no')`；统一挂载 `PageShellContainer`（`fillHeight=true`）内，页面禁止自建第二套背景装饰。token 为 `ThemeConstants.AMBIENT`（6 组合 × 12 色，对齐 web `--cst-ambient-*`，见 design-system 第 16 节） |
+  | `components/states/EmptySpotlight` | 场景化空态装饰层（超大空态专用，配合 `EmptyState({ spotlight: true })`）；几何 320 光晕 + 288/168 双环 + 4×4 四向星点@±102，纯 ambient token、无动画、不拦截触摸/不进读屏。`EmptyState` 的 `spotlight` 默认 false，小面板空态不得开启 |
+  | `components/states/Skeleton` / `SkeletonShimmer` | 列表/信息流首屏骨架屏（几何基准：行内 12、前导圆 36/40/44/48、文本条 14·55% + 11·35%、条间距 8、圆角 12；脉冲 1500ms）；分页/表单等短促场景保留 `LoadingMoreIndicator`/`LoadingProgress` |
 - 已登记例外（可保留手写原生控件）：头像/图形按钮、地图全屏控件、搜索建议行、
   动态卡片内嵌操作、主题色板 swatch、扫描/贴纸等特殊控件。存量页面中的手写
   Button/TextInput 属遗留债务，改到该文件时优先迁移为原语。当前存量例外清单：
@@ -155,6 +159,8 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   - SettingsPage「退出登录」（50vp 透明底定制）、DebugPanel 调试按钮；
   - ChatPage 隐藏键盘失焦占位 `Button('')`、LocationPicker 搜索栏内置 searchButton；
   - ProfileEditPage 多行简介输入辅助、ChatPage 输入栏（含发送钮 `Button('发送')` 属已登记例外 — 需 ChatTheme/getChatVisualStyle 定制动效与 isSendInteractive 动态态，见 ChatPage.ets 顶部“聊天发送钮属已登记例外”注释）、CreateGroupPage 人数步进输入。
+
+- **ArkUI 陷阱复查（2026-10-26 实拍）**：`.border({width,color})` 若写在 `.borderRadius(...)` 之后会把圆角重置为 0（双环/圆钮会变方框）——装饰层双环、圆点等一律先 `.border()` 后 `.borderRadius()`；改完端上放大截图确认。
 
 
 ## 主题/深色验收：量化口径与实测基线（2026-10-12 实测）

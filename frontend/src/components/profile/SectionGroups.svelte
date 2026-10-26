@@ -6,7 +6,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
-import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
 	import SectionGroupApplications from '@/components/profile/SectionGroupApplications.svelte';
 	import { useMyGroups } from '@/lib/profile-data.svelte';
@@ -53,9 +53,18 @@ const needsAuth = $derived(myGroups.needsAuth);
 <!-- 统一群组卡片网格：对齐全站图片优先 NearbyImageCard 原语与响应式多列布局。
      与下方入群申请区块的间距由后者的 mt-6 单侧提供，网格不再叠 pb（否则叠加成 48）。 -->
 {#if loading}
-	<InlineLoading class="py-16" label="加载我的群组…" />
+	<!-- 首屏骨架屏：移动端横排紧凑卡（h-32），平板/桌面 4:3 卡网格，与真实群组卡同构 -->
+	<SkeletonFeed
+		variant="card"
+		horizontal={isMobile}
+		count={isMobile ? 4 : 8}
+		class={isMobile
+			? 'grid grid-cols-1 gap-4'
+			: 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'}
+		label="加载我的群组…"
+	/>
 {:else if needsAuth}
-	<NeedsAuthNotice title="登录后查看" description="登录后即可查看你加入的群组" />
+	<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可查看你加入的群组" />
 {:else if error}
 	<LoadError message={error} onRetry={retry} />
 {:else if filtered.length > 0}
@@ -130,7 +139,7 @@ const needsAuth = $derived(myGroups.needsAuth);
 		<!-- 搜索无结果与初始无群组区分语义 -->
 		<EmptyState bare title="没有找到匹配的群组" description="换个关键词试试。" />
 	{:else}
-		<EmptyState bare title="还没有加入群组" description="去附近群组发现感兴趣的小组。" />
+		<EmptyState spotlight bare title="还没有加入群组" description="去附近群组发现感兴趣的小组。" />
 	{/if}
 
 	<!-- 我的入群申请进度（pending 可撤回；未登录时区块自隐藏） -->

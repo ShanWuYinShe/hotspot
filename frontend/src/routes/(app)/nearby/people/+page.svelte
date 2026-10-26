@@ -10,7 +10,8 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Button from '@/components/ui/button.svelte';
-import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import UserCard, { type NearbyUser } from './UserCard.svelte';
@@ -278,11 +279,18 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				{#if loadError}
 					<LoadError message={loadError} onRetry={() => { clearPeopleProgress(); reloadKey++; }} />
 				{:else if loading}
-					<InlineLoading label="加载附近用户…" />
+					<!-- 首屏骨架屏：与 UserCard 同构的 3:4 竖卡，栅格列数与真实网格一致 -->
+					<SkeletonFeed
+						variant="portrait"
+						count={10}
+						class="grid gap-4 {isTablet ? 'grid-cols-3' : 'grid-cols-2'} lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+						label="加载附近用户…"
+					/>
 				{:else if !list.length}
 					<!-- 空态自解释：锚点基准下为空必须让用户知道「在看哪里」，否则与
 						 首页（同基准）之外的旧认知矛盾（线上实测困惑源）。 -->
 					<EmptyState
+						spotlight
 						bare
 						title={anchor ? (anchor.name ? `「${anchor.name}」附近暂时没有用户` : '当前查看的位置附近暂时没有用户') : '附近暂时没有匹配的用户'}
 						description={anchor ? '正在按你设置的浏览位置筛选 5km 范围。' : undefined}

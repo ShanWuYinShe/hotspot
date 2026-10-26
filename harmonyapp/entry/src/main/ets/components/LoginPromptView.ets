@@ -10,6 +10,7 @@ import { PageNames } from '../constants/AppConstants';
 import { AppRouter, LoginRouteParam } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
 import { SystemButton } from './SystemButton';
+import { EmptySpotlight } from './states/EmptySpotlight';
 import { SystemInput } from './SystemInput';
 import { SystemToast } from './SystemToast';
 import { ApiClient } from '../core/api/ApiClient';
@@ -55,13 +56,20 @@ export struct LoginPromptView {
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   /** 作为独立全屏页时由调用方注入背景；嵌入场景不传则透明（让父容器背景透出）。 */
   @Prop surfaceColor: ResourceColor | null = null;
+  /** 场景化空态装饰（web NeedsAuthNotice spotlight 同构）：整页/整块访客引导开启 */
+  @Prop spotlight: boolean = false;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
   build() {
-    Column({ space: DesignConstants.SPACING.LG }) {
+    Stack({ alignContent: Alignment.Top }) {
+      Stack({ alignContent: Alignment.Center }) {
+        if (this.spotlight) {
+          EmptySpotlight()
+        }
+      Column({ space: DesignConstants.SPACING.LG }) {
       // 图标（accent 淡底圆容器 + 主题色 glyph + 光晕，对齐前端 EmptyState 柔和 accent 图标）。
       // 容器放大到 AVATAR_LARGE(80) + 用 AppThemeVisuals 派生的更明亮 accent-soft 背景（vibrant light
       // 主题下 #E2EAF8 实色与页面 #F7FAFF 太接近，导致空态图标区"灰暗没层次"；加深到
@@ -134,14 +142,10 @@ export struct LoginPromptView {
       }
     }
     .width('100%')
-    .height('100%')
-    // 嵌入场景：内容顶部对齐 + 水平靠左，让主内容真正占满页面宽度（旧的垂直居中 + 80% 按钮
-    // 在嵌入到 ProfilePage 时视觉上"集中在中间 50%"，看起来严重没占满）
-    .justifyContent(FlexAlign.Start)
+    // 内容块高度随内容：spotlight 以内容块为锚点居中（对齐 web：装饰层铺在 EmptyState 块内，
+    // 不做整屏居中；消息/我的访客引导内容在页面上部，整屏居中会让双环与文案错位）。
+    // 原「内容顶部对齐」由外层 Stack alignContent(Top) 承担。
     .padding(DesignConstants.SPACING.XXL)
-    // 嵌入场景下不设自己的页面背景（让父容器 PageShellContainer 的 pageBackground + ambientGlow 透出）；
-    // 仅作为独立全屏页时由调用方注入 surfaceColor。
-    .backgroundColor(this.surfaceColor ?? DesignConstants.COLOR.TRANSPARENT)
     .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
       height: SheetSize.FIT_CONTENT,
       showClose: true,
@@ -149,6 +153,14 @@ export struct LoginPromptView {
       backgroundColor: this.getPalette().sheetBackground,
       keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
     })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .height('100%')
+    // 背景放在最外层 Stack：嵌入场景透明（让父容器 pageBackground + ambient 透出），
+    // 独立全屏页由调用方注入 surfaceColor；内层内容透明以透出 spotlight。
+    .backgroundColor(this.surfaceColor ?? DesignConstants.COLOR.TRANSPARENT)
   }
 
   @Builder

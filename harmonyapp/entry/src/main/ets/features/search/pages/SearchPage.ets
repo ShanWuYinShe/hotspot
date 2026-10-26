@@ -19,7 +19,8 @@ import { SearchSuggestRow, SearchMomentRow } from '../components/SearchRows';
 import { ListRowDivider } from '../../../components/ListGroup';
 import { EmptyState } from '../../../components/EmptyState';
 import { SearchPageHeader } from '../../../components/SearchPageHeader';
-import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { Skeleton } from '../../../components/states/Skeleton';
+import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
@@ -66,6 +67,8 @@ export struct SearchPage {
   @State keyword: string = '';
   @State isSearchFocused: boolean = false;
   @State isLoading: boolean = false;
+  /** 建议词请求进行中（输入后、结果返回前的骨架态；避免出现只有 tab 行、下方全空白的中间态） */
+  @State isSuggesting: boolean = false;
   @State userResults: UserItem[] = [];
   private userResultsDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   @State groupResults: GroupItem[] = [];
@@ -158,8 +161,10 @@ export struct SearchPage {
     const trimmed = this.keyword.trim();
     if (!trimmed) {
       this.suggestItems = [];
+      this.isSuggesting = false;
       return;
     }
+    this.isSuggesting = true;
     this.suggestTimerId = TimerManager.setTimeout(() => {
       this.fetchSuggest(trimmed);
     }, 220, 'search-suggest');
@@ -190,6 +195,14 @@ export struct SearchPage {
     } catch (_) {
       if (prefix === this.keyword.trim() && !this.hasSearched) {
         this.suggestItems = [];
+      }
+    }
+    if (!this.isDestroyed && prefix === this.keyword.trim()) {
+      this.isSuggesting = false;
+      // 无建议词时自动进入结果态（对齐 web 移动端搜索输入即出结果的节奏）；
+      // 否则会出现只有 tab 行、结果区空白的中间态（2026-10-26 真机走查发现）。
+      if (this.suggestItems.length === 0 && !this.hasSearched) {
+        this.doSearch();
       }
     }
   }
@@ -434,6 +447,38 @@ export struct SearchPage {
     }
   }
 
+  /** 搜索加载骨架：5 行「头像 + 两行文本条」，几何与消息列表 Skeleton 一致 */
+  @Builder
+  private buildSearchSkeleton() {
+    Column() {
+      SkeletonShimmer({ active: true }) {
+        Column() {
+          ForEach([0, 1, 2, 3, 4], (i: number) => {
+            Row({ space: DesignConstants.SPACING.MD }) {
+              Skeleton({ blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, cornerRadius: DesignConstants.RADIUS.FULL })
+              Column({ space: DesignConstants.SPACING.SM }) {
+                Skeleton({ blockWidth: '55%', blockHeight: DesignConstants.FONT.SIZE.MD, cornerRadius: DesignConstants.RADIUS.SM })
+                Skeleton({ blockWidth: '35%', blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+            }
+            .width('100%')
+            .padding({
+              left: DesignConstants.SPACING.LG,
+              right: DesignConstants.SPACING.LG,
+              top: DesignConstants.SPACING.MD,
+              bottom: DesignConstants.SPACING.MD
+            })
+          }, (i: number) => 'search-skeleton-' + i)
+        }
+        .width('100%')
+      }
+    }
+    .width('100%')
+    .layoutWeight(1)
+  }
+
   build() {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
@@ -453,9 +498,10 @@ export struct SearchPage {
           onFocusChange: (focused: boolean) => { this.isSearchFocused = focused; }
         })
 
-        if (this.isLoading) {
-          SystemLoadingView({ message: '搜索中…' })
-            .layoutWeight(1)
+        if (this.isLoading || (this.isSuggesting && !this.hasSearched)) {
+          // 搜索/建议词加载态：复用全站 Skeleton 几何（头像块 + 两行文本条），
+          // 与消息列表加载态同节奏；避免空白闪烁或退回转圈指示器。
+          this.buildSearchSkeleton()
         } else if (this.keyword.trim().length === 0 && !this.hasSearched) {
           this.DiscoveryView()
         } else if (this.keyword.trim().length > 0 && this.suggestItems.length > 0 && !this.hasSearched) {
@@ -615,6 +661,7 @@ export struct SearchPage {
     if (this.hasSearched && this.userResults.length === 0 && this.momentResults.length === 0 &&
         this.groupResults.length === 0 && this.topicResults.length === 0) {
       EmptyState({
+        spotlight: true,
         icon: AppIcon.SEARCH,
         title: `没有找到“${this.keyword.trim()}”`,
         message: '换个关键词再试试。',
@@ -741,6 +788,7 @@ export struct SearchPage {
   TopicResultList() {
     if (this.hasSearched && this.topicResults.length === 0) {
       EmptyState({
+        spotlight: true,
         icon: AppIcon.SEARCH,
         title: '未找到相关话题',
         message: '尝试其他关键词',
@@ -938,6 +986,7 @@ export struct SearchPage {
   UserResultList() {
     if (this.hasSearched && this.userResults.length === 0) {
       EmptyState({
+        spotlight: true,
         icon: AppIcon.SEARCH,
         title: '未找到相关内容',
         message: '尝试其他关键词',
@@ -974,6 +1023,7 @@ export struct SearchPage {
   GroupResultList() {
     if (this.hasSearched && this.groupResults.length === 0) {
       EmptyState({
+        spotlight: true,
         icon: AppIcon.SEARCH,
         title: '未找到相关内容',
         message: '尝试其他关键词',
@@ -1009,6 +1059,7 @@ export struct SearchPage {
   MomentResultList() {
     if (this.hasSearched && this.momentResults.length === 0) {
       EmptyState({
+        spotlight: true,
         icon: AppIcon.SEARCH,
         title: '未找到相关内容',
         message: '尝试其他关键词',
@@ -1061,115 +1112,67 @@ export struct SearchPage {
     return group.viewer_state != null;
   }
 
+  /**
+   * 搜索结果用户行：对齐 web 移动端 SearchResults 的紧凑列表行——
+   * 头像 40 + 昵称(MD) + 副标(@user_id · 首个标签, SM) + 尾部导航箭头，整行点击进资料页。
+   * web 同样不在搜索行放「关注/私聊」次级按钮（动作在资料页完成），
+   * 此前本端行内两枚整宽按钮 + 简介 + 标签把单行撑到约 180vp，结果列表密度与 web 明显不一致。
+   * 平台差异：web 尾部为 ArrowUpRight 外链语义，本端系统符号库无对应项，用全站列表通用的
+   * chevron_right 箭头（结构/字号/间距同构，仅图标语义按平台库取近档）。
+   */
   @Builder
   buildUserItem(item: UserItem) {
-    Column({ space: DesignConstants.SPACING.SM }) {
-      Row({ space: DesignConstants.SPACING.SM }) {
-        Row({ space: DesignConstants.SPACING.SM }) {
-          SystemAvatar({
-            avatarUrl: item.user?.avatar_url ?? '',
-            name: item.user?.nickname ?? '',
-            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-            shape: 'circle'
-          })
+    Row({ space: DesignConstants.SPACING.MD }) {
+      SystemAvatar({
+        avatarUrl: item.user?.avatar_url ?? '',
+        name: item.user?.nickname ?? '',
+        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+        shape: 'circle'
+      })
 
-          Column({ space: DesignConstants.SPACING.HALF }) {
-            Text(item.user?.nickname ?? '')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .fontColor(this.getCurrentThemePalette().textPrimary)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
+      Column({ space: DesignConstants.SPACING.HALF }) {
+        Text(item.user?.nickname ?? '')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-            if (item.presence_status === 'online') {
-              Text('在线')
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-                .fontColor(this.getCurrentThemePalette().accentBackground)
-            }
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-        }
-        .layoutWeight(1)
-        .onClick(() => {
-          this.openUserProfile(item);
-        })
-
-        Row() {
-          LucideIcon({
-              icon: AppIcon.MORE,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-              color: this.getCurrentThemePalette().textSecondary
-            })
-        }
-        .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
-        .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .backgroundColor(this.getSurfaceSubtle())
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-        .bindMenu([
-          { value: '私聊', action: () => this.startPrivateChat(item) },
-          { value: this.isUserFollowing(item.user?.user_id ?? '') ? '取消关注' : '关注', action: () => this.toggleFollow(item) },
-          { value: '举报用户', action: () => this.reportUser(item) },
-          { value: '复制用户ID', action: () => this.copyText(item.user?.user_id ?? '', '用户ID已复制') }
-        ])
+        Text(this.buildUserSubtitle(item))
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
-      .width('100%')
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
 
-      Text(item.bio ? item.bio : '这个人还没有留下简介')
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-
-      if (item.tags && item.tags.length > 0) {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(item.tags.slice(0, 3), (tag: string) => {
-            Text(`#${tag}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.THREE, bottom: DesignConstants.SPACING.THREE })
-              .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-              .backgroundColor(this.getSurfaceSubtle())
-              .borderRadius(DesignConstants.RADIUS.XL)
-          }, (tag: string) => tag)
-        }
-        .width('100%')
-      }
-
-      Row({ space: DesignConstants.SPACING.SM }) {
-        SystemButton({
-          label: this.isUserFollowing(item.user?.user_id ?? '') ? '已关注' : '关注',
-          // Tonal 化（Gemini 审查：列表次级动作不用实体蓝）
-          variant: this.isUserFollowing(item.user?.user_id ?? '') ? 'outline' : 'surface-accent',
-          buttonSize: 'small',
-          loading: this.isUserActionPending(item.user?.user_id ?? ''),
-          onPress: () => { this.toggleFollow(item); }
-        })
-          .layoutWeight(1)
-
-        SystemButton({
-          label: '私聊',
-          variant: 'surface',
-          buttonSize: 'small',
-          shadowed: true,
-          onPress: () => { this.startPrivateChat(item); }
-        })
-          .layoutWeight(1)
-          .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? DesignConstants.OPACITY.PRESSED : 1)
-      }
-      .width('100%')
+      LucideIcon({
+        icon: AppIcon.ARROW_RIGHT,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textSecondary
+      })
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.MD)
-    // 行级卡片样式移除：分组外框与行间分隔线由 ListItemGroup 承担
-    // （原每行白卡 + 圆角 + 投影 + 描边，一屏结果会叠成多张浮卡）
+    // 行内边距对齐 web ListItem px-4 py-3.5（16 / 14），行高约 68vp
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD3,
+      bottom: DesignConstants.SPACING.MD3
+    })
+    .onClick(() => {
+      this.openUserProfile(item);
+    })
+  }
+
+  /** 用户结果副标：对齐 web 的「@user_id · 首个标签」 */
+  private buildUserSubtitle(item: UserItem): string {
+    const userId = item.user?.user_id ?? '';
+    const tag = item.tags && item.tags.length > 0 ? item.tags[0] : '';
+    return tag !== '' ? ('@' + userId + ' · ' + tag) : ('@' + userId);
   }
 
   @Builder

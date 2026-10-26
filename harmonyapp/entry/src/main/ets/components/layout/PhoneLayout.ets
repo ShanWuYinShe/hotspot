@@ -45,6 +45,7 @@ import { LucideIcon } from '../LucideIcon';
 import { AppRouter } from '../../core/router/AppRouter';
 import { PageNames, StorageKeys } from '../../constants/AppConstants';
 import { CreateMomentSheet } from '../../features/moments/components/CreateMomentSheet';
+import { AmbientBackdrop } from './AmbientBackdrop';
 import { DEFAULT_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 
 interface TabItem {
@@ -148,17 +149,32 @@ export struct PhoneLayout {
               }.width('100%').height('100%')
             } else {
               // Tab 内嵌场景无 PageShell 托底，必须显式绘制页面底色：
-              // 透明背景会让窗口默认底色（浅色）透出，深色主题下整屏发灰
-              Column() {
-                LoginPromptView({
-                  title: '消息功能需要登录',
-                  subtitle: '登录后可与好友实时聊天、加入群组讨论',
-                  surfaceColor: this.getPalette().pageBackground
-                })
+              // 透明背景会让窗口默认底色（浅色）透出，深色主题下整屏发灰。
+              // 底板与氛围层分开：底板铺画布色，氛围画布压在其上、提示内容之下，
+              // 与已登录页（PageShellContainer 内挂 AmbientBackdrop）保持同一视觉语言。
+              Stack({ alignContent: Alignment.Center }) {
+                Column()
+                  .width('100%')
+                  .height('100%')
+                  .backgroundColor(this.getPalette().pageBackground)
+
+                AmbientBackdrop()
+
+                Column() {
+                  // 内嵌场景不注入 surfaceColor：底色由本分支底层 Column 的 pageBackground 提供，
+                  // LoginPromptView 保持透明才能让中间的 AmbientBackdrop 透出
+                  // （此前传 pageBackground 会让其根 Stack 不透明底把氛围层盖住）。
+                  LoginPromptView({
+                    spotlight: true,
+                    title: '消息功能需要登录',
+                    subtitle: '登录后可与好友实时聊天、加入群组讨论'
+                  })
+                }
+                .width('100%')
+                .height('100%')
               }
               .width('100%')
               .height('100%')
-              .backgroundColor(this.getPalette().pageBackground)
             }
           }.tabBar(this.TabBarBuilder(3))
           TabContent() { ProfilePage() }.tabBar(this.TabBarBuilder(4))

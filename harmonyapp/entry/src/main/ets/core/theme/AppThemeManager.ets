@@ -20,7 +20,7 @@ import {
   ThemeMode,
   ThemeOptionItem
 } from './AppThemeTypes';
-import { ColorConfig, ThemeConstants, ThemeShadows } from './ThemeConstants';
+import { AmbientColorConfig, ColorConfig, ThemeConstants, ThemeShadows } from './ThemeConstants';
 import { AppThemeVisuals } from './AppThemeVisuals';
 
 const DEFAULT_THEME_SHAPE: AppThemeShapeTokens = {
@@ -407,6 +407,43 @@ export class AppThemeManager {
       case 'default_clean_light':
       default:
         return DEFAULT_CLEAN_LIGHT;
+    }
+  }
+
+  /** 氛围画布色板（对齐 web --cst-ambient-*，按解析后的主题 id 取） */
+  static getAmbientById(resolvedThemeId: string): AmbientColorConfig {
+    switch (AppThemeManager.normalizeResolvedThemeId(resolvedThemeId)) {
+      case 'vibrant_dark':
+        return ThemeConstants.AMBIENT.VIBRANT_DARK;
+      case 'vibrant_light':
+        return ThemeConstants.AMBIENT.VIBRANT_LIGHT;
+      case 'inkwash_dark':
+        return ThemeConstants.AMBIENT.INKWASH_DARK;
+      case 'inkwash_light':
+        return ThemeConstants.AMBIENT.INKWASH_LIGHT;
+      case 'default_clean_dark':
+        return ThemeConstants.AMBIENT.DEFAULT_CLEAN_DARK;
+      case 'default_clean_light':
+      default:
+        return ThemeConstants.AMBIENT.DEFAULT_CLEAN_LIGHT;
+    }
+  }
+
+  static getAmbient(): AmbientColorConfig {
+    return AppThemeManager.getAmbientById(AppThemeManager.getResolvedThemeId());
+  }
+
+  /** 主题世界语言（对齐 web AmbientBackdrop：vibrant 星际 / forest 清野 / inkwash 水墨） */
+  static getAmbientWorld(resolvedThemeId: string): string {
+    switch (AppThemeManager.normalizeResolvedThemeId(resolvedThemeId)) {
+      case 'inkwash_dark':
+      case 'inkwash_light':
+        return 'inkwash';
+      case 'default_clean_dark':
+      case 'default_clean_light':
+        return 'forest';
+      default:
+        return 'vibrant';
     }
   }
 

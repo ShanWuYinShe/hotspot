@@ -6,7 +6,8 @@
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+import Skeleton from '@/components/data-display/Skeleton.svelte';
+	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
@@ -550,11 +551,40 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	<!-- 内容（gutter 由 SplitPageLayout 提供；全幅封面在 MomentPostBody 内负 margin 抵消） -->
 	{#if loading}
-		<InlineLoading label="加载动态…" />
+		<!-- 详情首屏骨架屏：封面 → 作者行 → 正文 → 评论区；与 MomentPostBody 的纵向
+		     节奏同构（16/12），评论区用 decorative 骨架避免重复播报 -->
+		<div
+			class="mx-auto w-full max-w-4xl"
+			role="status"
+			aria-busy="true"
+			aria-label="加载动态…"
+			data-skeleton-root
+		>
+			<Skeleton class="aspect-[4/3] w-full rounded-xl" />
+			<div class="mt-4 flex items-center gap-3">
+				<Skeleton class="size-9 shrink-0 rounded-full" />
+				<div class="flex min-w-0 flex-1 flex-col gap-1.5">
+					<Skeleton class="w-32 rounded-sm" style="height: 14px;" />
+					<Skeleton class="w-20 rounded-sm" style="height: 11px;" />
+				</div>
+			</div>
+			<div class="mt-4 flex flex-col gap-2">
+				<Skeleton class="w-full rounded-sm" style="height: 14px;" />
+				<Skeleton class="w-11/12 rounded-sm" style="height: 14px;" />
+				<Skeleton class="w-3/4 rounded-sm" style="height: 14px;" />
+			</div>
+			<div class="mt-6 border-t border-border-default pt-4">
+				<div class="mb-3 flex items-center gap-2">
+					<Skeleton class="h-4 w-20 rounded-sm" />
+					<Skeleton class="h-4 w-8 rounded-sm" />
+				</div>
+				<SkeletonList rows={4} leading={36} decorative />
+			</div>
+		</div>
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else if !moment.id}
-		<EmptyState title="动态不存在" description="这条动态可能已被删除或没有权限查看。" bare>
+		<EmptyState spotlight title="动态不存在" description="这条动态可能已被删除或没有权限查看。" bare>
 			{#snippet icon()}
 				<MoreHorizontal class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 			{/snippet}

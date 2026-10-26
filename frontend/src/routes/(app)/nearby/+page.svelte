@@ -16,7 +16,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import { createOptimisticFollow } from '@/lib/relationships.svelte';
 
@@ -149,19 +149,39 @@
 							<span class="text-xs whitespace-nowrap text-text-secondary tabular-nums">{onlineCount} 在线</span>
 						</div>
 					{/if}
-					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} class={device === 'desktop' ? 'hidden' : ''} />
-					<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} variant="ghost" size={36} />
+					<!-- 标准 PageHeader 的 trailing 图标动作统一 surface 圆钮（与 nearby 三叶一致；
+					     仅首页品牌头用 ghost，见 alignment.md §5 决策） -->
+					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} size={36} class={device === 'desktop' ? 'hidden' : ''} />
+					<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} size={36} />
 				</div>
 			{/snippet}
 		</PageHeader>
 	{/snippet}
 
 	{#if loading}
-		<InlineLoading label="加载附近数据…" />
+		<!-- 首屏骨架屏：Hero 统计卡 + 三段分区（人/瞬间/群组）的预览卡行；
+		     与真实枢纽页纵向节奏一致（gap-6 = 分区块间距 24） -->
+		<div class="flex flex-col gap-6" role="status" aria-busy="true" aria-label="加载附近数据…" data-skeleton-root>
+			<Skeleton class="h-28 w-full rounded-lg" />
+			{#each [0, 1, 2] as section (section)}
+				<div class="flex flex-col gap-3">
+					<div class="flex items-center justify-between">
+						<Skeleton class="h-4 w-24 rounded-sm" />
+						<Skeleton class="h-4 w-12 rounded-sm" />
+					</div>
+					<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+						<Skeleton class="aspect-[3/4] w-full rounded-lg" />
+						<Skeleton class="aspect-[3/4] w-full rounded-lg" />
+						<Skeleton class="hidden aspect-[3/4] w-full rounded-lg sm:block" />
+						<Skeleton class="hidden aspect-[3/4] w-full rounded-lg sm:block" />
+					</div>
+				</div>
+			{/each}
+		</div>
 	{:else if error}
 		<LoadError message={error} onRetry={() => reloadKey++} />
 	{:else if moments.length === 0 && visibleNearbyUsers.length === 0 && nearbyGroups.length === 0}
-		<EmptyState title="附近还没有内容" description="去发布第一条瞬间，或换个位置看看。" bare>
+		<EmptyState spotlight title="附近还没有内容" description="去发布第一条瞬间，或换个位置看看。" bare>
 			{#snippet icon()}
 				<MapPin class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 			{/snippet}

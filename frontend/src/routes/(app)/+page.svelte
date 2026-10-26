@@ -14,7 +14,7 @@
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -238,7 +238,11 @@
 						/>
 					</div>
 				</div>
-			{/if}
+		{:else}
+			<!-- 桌面端无移动品牌头，仍需每页唯一 h1（axe page-has-heading-one）；
+			     视觉由顶栏品牌与「为你推荐」Tab 承担，标题仅对读屏可见 -->
+			<h1 class="sr-only">首页</h1>
+		{/if}
 		{/snippet}
 
 		{#if device === 'desktop'}
@@ -266,7 +270,13 @@
 				</button>
 			</div>
 		{:else if currentLoading}
-			<InlineLoading label="加载动态中…" class="py-16" />
+			<!-- 首屏骨架屏：卡壳与 HomeFeedItem 一致（骨架→内容零位移），栅格同真实内容 -->
+			<SkeletonFeed
+				variant="feed"
+				count={4}
+				label="加载动态中…"
+				class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4.5 px-3 sm:px-0 pt-2"
+			/>
 		{:else if currentError && currentItems.length === 0}
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
 		{:else if currentItems.length > 0}
@@ -297,6 +307,7 @@
 				title={activeTab === 'following' ? '暂无关注动态' : '还没有动态'}
 				description={activeTab === 'following' ? '去「为你推荐」发现更多有趣的人，或去附近看看身边正在发生什么。' : '去附近看看，或者发布属于你的第一条瞬间。'}
 				bare
+				spotlight
 				class="py-16"
 			>
 				{#snippet icon()}

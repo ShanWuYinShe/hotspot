@@ -11,7 +11,7 @@ import { goto } from '$app/navigation';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import FollowButton from '@/components/ui/FollowButton.svelte';
-import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
@@ -442,15 +442,17 @@ const markSingleRead = (id: string) => {
 				{/if}
 
 				{#if loading}
-					<InlineLoading label="加载通知…" />
+					<!-- 首屏骨架屏：通知行（前导 44 + 两行文本，行内距 12/14 对齐真实 NotifyRow） -->
+					<SkeletonList rows={6} leading={44} label="加载通知…" rowClass="px-4 py-3.5" />
 				{:else if loadError}
 					<LoadError message={loadError} onRetry={() => reloadKey++} />
 				{:else if needsAuth}
 					<div class="flex min-h-[50vh] items-center justify-center">
-						<NeedsAuthNotice title="登录后查看" description="收到的点赞、评论与关注会出现在这里" />
+						<NeedsAuthNotice spotlight title="登录后查看" description="收到的点赞、评论与关注会出现在这里" />
 					</div>
 				{:else if filtered.length === 0}
 					<EmptyState
+						spotlight
 						title={filter === 'all' ? '暂无通知' : '该分类下暂无通知'}
 						description="收到的点赞、评论与关注会出现在这里" bare>
 						{#snippet icon()}

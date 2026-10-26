@@ -369,3 +369,35 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 
 审计方法（agent-browser）：`set viewport 390 844` → `open <路由>` →
 `eval` 遍历 `button, a[href], [role=button]` 收集 `getBoundingClientRect()`，与上表核对。
+## 骨架屏 / 场景化空态 / 页头图标口径（2026-10-26 登记）
+
+### 1) 列表首屏骨架屏（`data-display/Skeleton*`）
+
+- **首屏加载** 高频列表/信息流一律骨架屏（`SkeletonList` / `SkeletonFeed`），禁止再用
+  spinner 占位：与真实内容同栅格/同列数/同卡片外壳，做到「骨架→内容零位移」
+  （首块 y/高度差 ≤2px）。
+- 几何与鸿蒙 `Skeleton`/`SkeletonShimmer` 同源（不要单独改一端）：行内上下 12、前导圆
+  36/40/44/48、文本条 14·55% + 11·35%、条间距 8、圆角 `rounded-sm`(12)；脉冲
+  `--cst-motion-skeleton`(1500ms)，reduced-motion 下保留骨架形、停止脉冲。
+- 语义：外层 `role=status + aria-busy=true + aria-label`（「加载动态中…」等）；占位块
+  `aria-hidden`、不可聚焦；ListContainer 内自动补 `listitem`（复用 InlineLoading 机制）。
+- **不得换骨架**：分页加载更多（LoadMoreButton/spinner）、表单/设置/admin 表格/聊天首屏
+  （异构或短促，骨架行高与真实气泡差异会造成滚动跳动）。
+- 新增页面接入前先看 `docs/ui-components.md`「骨架屏使用口径」。
+
+### 2) 场景化空态装饰（`EmptyState.spotlight`）
+
+- 只用于 **超大空态**（整页/整块内容区：访客引导、我的内容空、搜索无结果）；
+  窄面板/小空态 **不得开启**（装饰反而吵）。
+- 几何与鸿蒙 `EmptySpotlight` 同一 spec：光晕 320 + 外环 288 + 内环 168 + 四向星点
+  4px@(±102, ±102)；颜色只取 `--cst-ambient-*`；无动画；装饰层 `aria-hidden` +
+  `pointer-events:none` + `z-index:-1`（父级 `relative isolate`）。
+- 规范全文见 `docs/design-system.md` 第 16.6 节；改几何/颜色必须两端同步。
+
+### 3) 页头动作图标钮（ghost / surface）
+
+- **品牌头**（首页 logo + wordmark）：ghost 变体（透明底裸图标，36px）；
+- **标准 PageHeader**（内页）：surface 变体（浅底圆钮 + hairline，36px）——不用 ghost；
+- 图片/封面上悬浮的返回/更多用 overlay 变体（平台适配，保留）；
+- 触控热区：36px 视觉 + `hit-slop` = 48px（≥44）；纯图标按钮必须带 `aria-label`。
+- 详细口径与鸿蒙映射见 `docs/ui-components.md`「页头动作图标钮口径」。

@@ -8,7 +8,7 @@
 	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -257,11 +257,27 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 <!-- ═══ 加载中 / 空列表状态 ═══ -->
 {#snippet feedState()}
 	{#if loading}
-		<InlineLoading label="加载附近瞬间…" />
+		<!-- 首屏骨架屏：移动端 2 列 3:4 卡（与真实网格同构），平板/桌面用 4:3 卡栅格近似 BSP 满铺 -->
+		{#if device === 'mobile'}
+			<SkeletonFeed
+				variant="card"
+				count={4}
+				cardClass="aspect-[3/4] rounded-md"
+				class="grid grid-cols-2 gap-4"
+				label="加载附近瞬间…"
+			/>
+		{:else}
+			<SkeletonFeed
+				variant="card"
+				count={6}
+				class="grid grid-cols-2 gap-4 lg:grid-cols-3"
+				label="加载附近瞬间…"
+			/>
+		{/if}
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => { clearMomentsProgress(); reloadKey++; }} />
 	{:else}
-		<EmptyState title="附近暂时没有瞬间" bare>
+		<EmptyState spotlight title="附近暂时没有瞬间" bare>
 			{#snippet icon()}
 				<Sparkles size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
 			{/snippet}

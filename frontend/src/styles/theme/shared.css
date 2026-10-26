@@ -48,6 +48,9 @@
   --cst-motion-spinner: 700ms;
   --cst-motion-pulse: 2400ms;
   --cst-motion-reduced: 1400ms;
+  /* Skeleton 骨架屏脉冲周期：对齐鸿蒙 ANIMATION.DURATION_SLOW=1500（骨架屏
+     shimmer 循环周期，见 harmonyapp SkeletonShimmer）；仅骨架屏使用。 */
+  --cst-motion-skeleton: 1500ms;
   /* 氛围画布（ambient）超长循环：天光漂移 / 星尘明灭 / 薄雾流动。
      只在装饰层使用；reduced-motion 下整层停用动画。 */
   --cst-motion-ambient: 24000ms;

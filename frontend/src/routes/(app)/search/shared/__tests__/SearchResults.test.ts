@@ -24,9 +24,12 @@ const base = (over: Record<string, unknown> = {}) => ({
 }) as never;
 
 describe('SearchResults', () => {
-	it('加载态显示搜索中', () => {
-		render(SearchResults, { props: base({ loading: true }) });
-		expect(screen.getByText('搜索中…')).toBeTruthy();
+	it('加载态渲染搜索骨架屏（role=status 播报「搜索中…」，不再用 spinner 文案）', () => {
+		const { container } = render(SearchResults, { props: base({ loading: true }) });
+		const status = screen.getByRole('status');
+		expect(status.getAttribute('aria-label')).toBe('搜索中…');
+		expect(status.getAttribute('aria-busy')).toBe('true');
+		expect(container.querySelectorAll('[data-skeleton-row]').length).toBeGreaterThan(0);
 	});
 
 	it('空态显示没有找到查询词', () => {

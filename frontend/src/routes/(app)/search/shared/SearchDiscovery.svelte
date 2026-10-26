@@ -84,8 +84,11 @@
      纵向节奏（Round 9）：页顶留白只由页面 contentClassName pt-4 提供（原根顶距 20 与它重复，
      已删）；分区之间 24 = 左列 `flex flex-col gap-6` + 移动端列间 `gap-y-6`（父 gap 单侧提供，
      不再用子块顶距——否则首个渲染的分区会多叠一层顶距）。 -->
-<div class="grid gap-y-6 gap-x-8 lg:grid-cols-2">
-<div class="flex flex-col gap-6">
+<!-- 超宽屏（2xl ≥1792）改「发现区横向 4 分栏 + 热门动态整行 4 卡」两段式：
+     lg 双列时右栏热门动态远高于左栏，2560 下左栏底部大片留白、纵向重心偏右。
+     改为两段整行后左右高度接近（发现区 ~484 + 热门动态 ~560），内容横向铺满不塌中间。 -->
+<div class="grid gap-y-6 gap-x-8 lg:grid-cols-2 2xl:flex 2xl:flex-col">
+<div class="flex flex-col gap-6 2xl:grid 2xl:grid-cols-4 2xl:items-start">
 	<!-- 最近搜索：页面直出（eyebrow 小标 + 行动），无卡片壳——空态/少内容时
 	     一张几乎空白的浮起卡会放大页面的空洞感。
 	     无记录时整块隐藏（Gemini 审查 r11：干瘪的「暂无记录」文案无信息量），
@@ -235,7 +238,7 @@
 				<TrendingUp class="size-3.5 text-accent-default" strokeWidth={1.75} />
 				<h2 class="eyebrow">热门动态</h2>
 			</div>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3.5 sm:gap-4 mt-2">
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-3.5 sm:gap-4 mt-2">
 				{#each hotMoments as m (m.moment_id)}
 					<HomeFeedItem moment={m} showDistance={false} onClick={() => onOpenMoment(m.moment_id)} />
 				{/each}

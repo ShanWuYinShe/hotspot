@@ -232,20 +232,20 @@ export struct NearbyGroupsListPage {
           hasBelowContent: true,
           showDivider: false
         }) {
-          // trailing：搜索/地图两个页面级工具入口（对齐前端 /nearby/groups PageHeader
-          // trailing，搜索在移动端显示、桌面隐藏；本端统一显示）
+          // trailing：搜索/地图两个页面级工具入口（对齐 web 移动端 /nearby/groups 页头
+          // trailing —— 内页统一 surface 浅底圆钮；搜索在移动端显示、桌面隐藏，本端统一显示）
           Row({ space: DesignConstants.SPACING.SM }) {
             SurfaceIconButton({
               icon: AppIcon.SEARCH,
               accessibilityLabel: '搜索',
-              kind: 'neutral',
+              kind: 'surface',
               buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
               onPress: () => AppRouter.push(PageNames.SEARCH)
             })
             SurfaceIconButton({
               icon: AppIcon.MAP,
               accessibilityLabel: '地图浏览',
-              kind: 'neutral',
+              kind: 'surface',
               buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
               onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
             })

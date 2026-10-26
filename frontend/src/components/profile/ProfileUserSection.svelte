@@ -3,7 +3,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
-import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -117,13 +117,17 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	     尾部留白由页面 contentClassName 统一承担，分区内不叠 pb。 -->
 	<div>
 		{#if loading}
-			<InlineLoading class="py-16" label="加载中…" />
+			<!-- 首屏骨架屏：关系列表行（前导 44 + 两行文本 + 行尾动作 chip），壳与真实
+			     ListContainer 一致（mx-auto max-w-3xl），骨架→内容不位移 -->
+			<div class="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-border-subtle/50 bg-surface-primary/85 shadow-xs">
+				<SkeletonList rows={5} leading={44} trailing label="加载中…" />
+			</div>
 		{:else if needsAuth}
-			<NeedsAuthNotice title="登录后查看" description="登录后即可查看你的好友与关注关系" />
+			<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可查看你的好友与关注关系" />
 		{:else if error}
 			<LoadError message={error} onRetry={onRetry} />
 		{:else if items.length === 0}
-			<EmptyState title={emptyTitle} description={emptyDescription} bare>
+			<EmptyState spotlight title={emptyTitle} description={emptyDescription} bare>
 				{#snippet icon()}
 					<emptyIcon size={24}></emptyIcon>
 				{/snippet}

@@ -2,6 +2,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { BreakpointType } from '../core/responsive/Breakpoint';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { AmbientBackdrop } from './layout/AmbientBackdrop';
 
 /**
  * 页面内容栏容器（对齐前端 .page-shell + .page-pad）
@@ -96,6 +97,16 @@ export struct PageShellContainer {
 
   build() {
     Stack({ alignContent: Alignment.Top }) {
+      // 氛围画布：全站唯一装饰层（对齐 web 在外壳内容区挂 AmbientBackdrop）。
+      // 只挂在「页面视口级」容器上（fillHeight=true）：装饰层固定于内容区、不随内部列表滚动，
+      // 也不进入布局层级；页面自身不得再画第二套背景装饰。
+      // fillHeight=false 的容器位于外页 Scroll 内（如设置页/管理后台），高度由内容撑开，
+      // 不做整屏世界层（会随滚动拉伸）。**已登记平台差异（2026-10-26 复核 N3）**：这些页
+      // 目前外层未再挂 AmbientBackdrop，即无氛围层（与 web 全站有氛围层不一致）；后续若要
+      // 对齐，应由外层页面/外壳统一挂载单实例，而不是在滚动容器内挂。
+      if (this.fillHeight) {
+        AmbientBackdrop()
+      }
 
       Row() {
         Column() {

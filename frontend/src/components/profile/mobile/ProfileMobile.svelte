@@ -61,7 +61,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	{#if loading}
 		<InlineLoading label="加载个人资料…" />
 	{:else if needsAuth}
-		<NeedsAuthNotice title="登录后查看" description="登录后即可管理资料、查看互动数据与收藏内容" />
+		<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可管理资料、查看互动数据与收藏内容" />
 {:else if error}
 		<LoadError message={error} onRetry={retry} />
 	{:else}

@@ -153,16 +153,17 @@ export struct NearbyPage {
         }) {
           // trailing: 搜索/地图是页面级工具，收敛在标题右侧（对齐前端 nearby 页 trailing）
           Row({ space: DesignConstants.SPACING.SM }) {
+            // surface：浅底凸起圆钮（对齐 web 移动端附近页 PageHeader trailing 的 variant=surface）
             SurfaceIconButton({
               icon: AppIcon.SEARCH,
               accessibilityLabel: '搜索',
-              kind: 'neutral',
+              kind: 'surface',
               onPress: () => AppRouter.push(PageNames.SEARCH)
             })
             SurfaceIconButton({
               icon: AppIcon.MAP,
               accessibilityLabel: '地图',
-              kind: 'neutral',
+              kind: 'surface',
               onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
             })
           }
@@ -490,6 +491,14 @@ export struct NearbyPage {
         })
       }
       .onClick(onAction)
+      // 触控热区：文字链接视觉高约 15vp，外扩到 MIN_HIT_TARGET（responseRegion 不占布局，
+      // 与首页 buildSectionHeader / 前端 link-btn hit-slop 同一口径，修复 <44vp 热区）
+      .responseRegion({
+        x: -DesignConstants.SPACING.MD,
+        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT) / 2,
+        width: '120%',
+        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+      })
     }
     .width('100%')
     // 与首页同契约：区块标题 → 其内容用 SECTION_INNER_GAP(12)，

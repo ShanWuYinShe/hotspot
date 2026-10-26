@@ -912,6 +912,7 @@ export struct ProfilePage {
   @Builder
   private buildGuestView() {
     LoginPromptView({
+      spotlight: true,
       title: '个人中心需要登录',
       subtitle: '登录后可管理资料、查看互动数据与收藏内容',
       icon: AppIcon.PERSON,

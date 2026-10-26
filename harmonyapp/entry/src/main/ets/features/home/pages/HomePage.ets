@@ -389,13 +389,13 @@ export struct HomePage {
       // Blank 撑开使左右两端对称锚定
       Blank()
       Row({ space: DesignConstants.SPACING.SM2 }) {
-        // 搜索/通知/地图入口：中性（透明底 + 主文字色图标），对齐前端 PageHeader trailing
-        // （affa411a 为非桌面端补齐通知 Bell 快捷入口，本端同步；搜索/通知/地图三连）
+        // 搜索/通知入口：ghost（透明底 + 主文字色图标），对齐 web 移动端首页
+        // PageHeader trailing（web 移动端首页只有搜索 + 通知两枚 ghost 图标）。
+        // 地图入口不在首页：对齐 web 移动端，地图属「附近」页工具（见 NearbyPage 页头）。
         SurfaceIconButton({
           icon: AppIcon.SEARCH,
           accessibilityLabel: '搜索',
-          // surface：表面底 + hairline 描边，对齐 web 的 .action-icon-btn（此前透明底显得又小又散）
-          kind: 'surface',
+          kind: 'neutral',
           buttonSize: 36,
           onPress: () => AppRouter.push(PageNames.SEARCH)
         })
@@ -403,19 +403,9 @@ export struct HomePage {
         SurfaceIconButton({
           icon: AppIcon.NOTIFICATION,
           accessibilityLabel: '通知',
-          // surface：表面底 + hairline 描边，对齐 web 的 .action-icon-btn（此前透明底显得又小又散）
-          kind: 'surface',
+          kind: 'neutral',
           buttonSize: 36,
           onPress: () => AppStorage.setOrCreate<boolean>('openNotificationCenter', true)
-        })
-
-        SurfaceIconButton({
-          icon: AppIcon.MAP,
-          accessibilityLabel: '地图',
-          // surface：表面底 + hairline 描边，对齐 web 的 .action-icon-btn（此前透明底显得又小又散）
-          kind: 'surface',
-          buttonSize: 36,
-          onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
         })
       }
       .flexShrink(0)

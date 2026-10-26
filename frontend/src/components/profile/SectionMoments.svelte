@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { CalendarDays, Grid3X3 } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -99,14 +99,20 @@
 
 <div>
 	{#if loading}
-		<InlineLoading label="加载我的瞬间…" />
+		<!-- 首屏骨架屏：与真实 MomentCard 网格同列数、同卡比例（骨架→内容零位移） -->
+		<SkeletonFeed
+			variant="card"
+			count={6}
+			class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+			label="加载我的瞬间…"
+		/>
 	{:else if needsAuth}
-		<NeedsAuthNotice title="登录后查看" description="登录后即可查看你的瞬间与收藏" />
+		<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可查看你的瞬间与收藏" />
 	{:else if error}
 		<LoadError message={error} onRetry={retryActive} />
 	{:else if archive.length === 0}
 		<!-- 空态 -->
-		<EmptyState title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。" bare>
+		<EmptyState spotlight title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。" bare>
 			{#snippet icon()}
 				<Grid3X3 size={24} />
 			{/snippet}

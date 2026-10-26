@@ -226,6 +226,7 @@ export struct MySharesPage {
 
       if (!this.isLoggedIn) {
         LoginPromptView({
+          spotlight: true,
           title: '登录后查看我的分享',
           subtitle: '统一管理已生成的分享链接并随时撤销',
           icon: AppIcon.SHARE,

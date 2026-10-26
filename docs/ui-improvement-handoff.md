@@ -1,10 +1,41 @@
-# UI 一致性改进交接（2026-10-22，Round 1-10）
+# UI 一致性改进交接（2026-10-22 ~ 2026-10-26，Round 1-12）
 
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
 审计结论见 `docs/frontend-ui-audit.md`、`docs/backend-audit.md`。
 
 ## 已完成基线（不要回退）
+
+### 2026-10-26 本轮（Round 12，双端 UI 改进 + 跨端对齐）
+
+- **列表首屏骨架屏（web 新增，共享项）**：`Skeleton` / `SkeletonList` / `SkeletonFeed` 三原语 +
+  `.skeleton-block` + `--cst-motion-skeleton`(1500ms)；接入 12 个高频首屏（首页 feed、附近枢纽+三叶、
+  消息、通知、搜索、我的瞬间/群组、关系、瞬间详情含评论区）。几何与鸿蒙 `Skeleton`/`SkeletonShimmer`
+  同源（行内 12 / 文本条 14·55% + 11·35% / 条间距 8 / 圆角 12），`role=status + aria-busy`、
+  占位块 `aria-hidden`、reduced-motion 停用脉冲。分页/表单/admin/聊天首屏保留 spinner（理由见 `docs/ui-components.md`）。
+- **场景化空态 spotlight（双端同 spec，共享项）**：`EmptyState.spotlight`（web 22 个超大空态；
+  鸿蒙访客态/我的内容空/搜索无结果）。几何：光晕 320 + 外环 288 + 内环 168 + 四向星点 4px@±102，
+  纯 ambient token、无动画、装饰层不进读屏/不拦截触摸。spec 见 `docs/design-system.md` 第 16.6 节。
+- **鸿蒙端氛围画布同步（Round 11 遗留，已完成）**：`AmbientBackdrop.ets`（单 Canvas 静态绘制）
+  + `ThemeConstants.AMBIENT`（6 组合 × 12 色，与 web `--cst-ambient-*` 语义/合成口径一一对应），
+  统一挂载 `PageShellContainer`；三主题 × 明暗真机 6/6 像素校验通过。平台适配差异（静态无动效、
+  每页一块画布）已登记，见 `docs/design-system.md` 第 16.4/16.5 节。
+- **页头动作图标跨端口径（Lead 决策）**：品牌头（首页）= ghost（前端 `variant="ghost"` / 鸿蒙
+  `kind:'neutral'`），标准 PageHeader（内页）= surface（前端默认 / 鸿蒙 `kind:'surface'`，
+  `SystemPageHeader.IconAction` 已扩展）；web 移动端首页仅「搜索 + 通知」（地图入口保留在附近域页头），
+  鸿蒙同步移除首页地图钮。
+- **超宽屏对齐修复（web）**：`/settings` 页头与正文同 56rem 居中（2560 左边缘 Δ605→0）；
+  `/search` ≥1792 改两段式（发现区 4 分栏 + 热门动态整行 4 卡，消除左下 500px 空白）；
+  桌面首页补 h1（0→1）、桌面分栏聊天去重复 h1（2→1）。
+- **鸿蒙搜索页三态修复**：输入即搜（消除「只有 tab 行、下方全空」中间态）+ Skeleton 加载态 +
+  无结果 spotlight 空态；用户结果行重写为 web 同构紧凑行（40 头像 + 昵称 + `@user_id · tag` + 箭头，68vp）。
+- **鸿蒙区块标题链接热区**：「查看全部 / 探索群组 / 更多动态」等 `Row.onClick` 通过 `responseRegion`
+  扩到 ≥44vp（原 <44 的登记 backlog 已关闭）。
+- **验收证据**：web 39 页改后同口径巡检 0 回归（溢出 0/坏图 0/h1 全 1/console 0）；
+  骨架真实加载态（`aria-busy=1`、reduced-motion `animation-duration≈0`）实测；鸿蒙真机 Mate60
+  `assembleApp` TYPE CHECK/BUILD SUCCESSFUL + 三主题 × 明暗截图；`bun run check/test/build` 全绿。
+
+### 早期基线
 
 - **状态组件统一为无卡形态**：两端 `EmptyState`（鸿蒙 55 处、前端 51 处）全部无卡片，
   `SystemLoadingView` 默认无卡（`card` 选项留给浮层）；硬编码状态文案 0 处带卡片。
@@ -101,14 +132,39 @@
 
 ## 待做（按优先级）
 
-1. **鸿蒙端氛围画布同步（Round 11 遗留，需单独立项）**：前端已落地三主题世界层背景；
-   鸿蒙需 ArkUI 装饰层（渐变 + 自定义绘制/图片）与三主题 `--cst-ambient-*` 等价 token 评审，
-   注意 ArkTS 侧预合成色约束（见 `check-cross-platform-colors.mjs` 的合成规则）。
-2. **页面级场景化空态（可选增强）**：当前只有全局世界层；若希望超大空态（/me 访客、
-   消息访客、搜索初始态）更有「游戏引导感」，可加中心徽记/信标 spotlight（需新原语评审，
-   避免与 EmptyState 契约冲突）。
-3. **氛围浓淡评审**：世界层透明度集中在 `themes/*.css` 的 `--cst-ambient-*`（12 个），
-   产品/用户若觉得过淡或过浓，改 token alpha 即可，无需动组件。
+1. **鸿蒙氛围画布实例数/内存优化（Round 12 遗留，端上实测数据已量化）**：当前每个
+   `fillHeight` 页面一块全屏 Canvas（Tab 页常驻，实测 live 2→5 实例、PSS 218.7→330.2MB 含页面数据，
+   单画布理论 ≈12MB）。可选方案：上提到外壳内容区单实例（对齐 web）或共享绘制缓存/图片快照；
+   修改前先量首帧与滚动帧率，勿只按内存数字取舍。
+2. **氛围浓淡评审**：世界层透明度集中在 `themes/*.css` 的 `--cst-ambient-*`（12 个），
+   产品/用户若觉得过淡或过浓，改 token alpha 即可，无需动组件；鸿蒙端需按同口径重算
+   `ThemeConstants.AMBIENT` 的 ARGB。
+3. **鸿蒙骨架屏接入扩展（低优先）**：通知/搜索/关系等列表目前未统一接 Skeleton 系（列表骨架
+   原语已有），可按 `docs/ui-components.md`「骨架屏使用口径」逐页补，几何直接复用。
+4. **搜索 Tab 计数格式对齐（低优先，待确认）**：web TabBar count 以独立小字呈现（如「用户 7」），
+   鸿蒙搜索页当前为「用户 (10)」括号形式；如判定为不一致，鸿蒙按 web 口径改（需两端截图确认）。
+5. **搜索发现态 spotlight（待设计确认）**：web 搜索发现态未加 spotlight，鸿蒙本轮未单端先行
+   （符合「不分别改两端」约束）；若设计认为需要，两端同一轮一起加。
+6. **消息页头 trailing 既有差异（待确认）**：鸿蒙消息页头 trailing 与 web 移动端存在既有差异，
+   本轮未动（ha report §8 记录）；需要时单独立项对齐。
+7. **BSP 瀑布墙骨架近似（已接受）**：附近瞬间/群组桌面瀑布墙无 1:1 骨架，用同列数卡片栅格近似，
+   内容到达有轻微重排；如需消除需按布局算法生成骨架，收益低，保留。
+8. **骨架屏与真实行零位移的残余差（2026-10-26 复核 N1/N2，下轮顺手修）**：
+   - `/search` 结果骨架行 `py-3`（60）vs 真实 `px-4 py-3.5`（64），且真实结果有分组头 + bordered 卡片壳，
+     骨架为裸行；建议 `rowClass="px-4 py-3.5"` + 分组头/卡壳占位；
+   - 消息列表骨架未为「在线」横条预留占位（内容到达整体下移约 100px）；建议按是否存在在线条渲染占位。
+9. **鸿蒙 AMBIENT token 纳入 CI（复核 N5，防漂移）**：`check-cross-platform-colors.mjs` 只覆盖 14 组 palette；
+   本轮 AMBIENT 12 项 × 6 组合由人工脚本校验 72/72 一致（`review/lib/check-ambient-parity.py`），
+   建议把该组校验并入 `bun run check:theme`。
+10. **鸿蒙装饰几何常量 token 化（复核 N6，低优先）**：`EmptySpotlight.ets` / `AmbientBackdrop.ets` 的 320/288/168/4/102
+   与透明色 `'#00000000'` 属已登记布局几何例外，可后续登记到 design-system 或抽常量；透明色建议用 `DesignConstants.COLOR.TRANSPARENT`。
+11. **鸿蒙设置页/管理后台无氛围层（复核 N3，已登记平台差异）**：`PageShellContainer`（`fillHeight=false`，
+   位于外页 Scroll）不挂画布，外层目前也未挂；与 web 全站有氛围层不一致。后续对齐应在**外壳/外层页面**挂单实例，
+   禁止在滚动容器内挂（会随滚动拉伸）。
+12. **跨端搜索结果行字号/头像档既有差异（复核 N8，非本轮引入）**：web 行高 64/头像 36/名称 12；
+   鸿蒙 68/头像 40/名称 14。属两端 avatar/字号档映射既有差异，后续统一时两端同一轮改。
+13. **鸿蒙搜索 Tab 计数（复核 N9，既有 IA）**：鸿蒙搜索 Tab 不显示计数，web 显示（如「用户 7」）；
+   信息密度差异，记录备查。
 
 ## 遗留观察（已评估，保留现状；非缺陷）
 
@@ -118,6 +174,16 @@
   不属于页面级三档；若要求页头严格 12/16/24 需单独立项评估全站页头高度，保留。
 - **notify 极端态**：已读为空、仅未读列表时，列表 `mb-6` + `ListEnd` 自带 `py-6` = 48 收尾留白；
   只在极端组合出现，属状态组件内部节奏，保留。
+- **settings 2560 正文列宽收窄（2026-10-26，预期修复的副作用）**：为让页头与正文同 56rem 居中，
+  2560 下正文宽度 1024→896；1440 视觉更整。若产品认为宽屏信息密度下降，可改为「页头与正文同时加宽到同一值」
+  而非各页单独 `contentMaxWidth`。
+- **search ≥1792 两段式布局（2026-10-26）**：新布局仅超宽屏生效（1440/390 像素不变），
+  需产品/用户最终确认信息密度。
+- **我的瞬间页数据源显示附近流（既有问题，非本轮引入）**：ha report §8 记录，属数据层契约问题，单独立项。
+- **本轮已顺手修（复核 N12）**：鸿蒙 `EmptyState.ets` 空态图标圆的 `.border()` 写在 `.borderRadius()` 之后
+  （ArkUI 陷阱会把圆角重置为 0）→ 已改为先 border 后 borderRadius；同类写法（如有）下轮批量扫。
+- **复核留档**：`review/verdict.md`（独立复核结论 A–H、13 Notes）、`review/checklist.md`、
+  `review/baseline-web/` 与 `review/after-web/`（改前/改后 39 页同口径）、`review/metrics/compare.md`。
 
 ## 端上验证环境要点
 

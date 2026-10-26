@@ -189,12 +189,13 @@
 	{:else if needsAuth}
 		<!-- 10100 未登录：登录引导而非接口报错（r15：与其余个人子页鉴权表现一致） -->
 		<div class="flex min-h-[40vh] items-center justify-center">
-			<NeedsAuthNotice title="登录后查看" description="你提交的举报与处理进度会在这里同步。" />
+			<NeedsAuthNotice spotlight title="登录后查看" description="你提交的举报与处理进度会在这里同步。" />
 		</div>
 	{:else if authExpired && loadError}
 		<!-- token 过期：去登录而非死循环重试（r70） -->
 		<div class="flex min-h-[40vh] items-center justify-center">
 			<NeedsAuthNotice
+				spotlight
 				title="登录状态已过期"
 				description="你的登录状态已失效，重新登录后即可继续查看举报与处理进度。"
 			/>
@@ -203,6 +204,7 @@
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else if items.length === 0}
 		<EmptyState
+			spotlight
 			bare
 			title="暂无举报记录"
 			description="在动态、评论或聊天中遇到违规内容时，可通过「举报」提交，处理结果会在这里同步。"

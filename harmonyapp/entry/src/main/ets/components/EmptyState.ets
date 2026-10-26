@@ -9,6 +9,7 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { SystemButton } from './SystemButton';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from './LucideIcon';
+import { EmptySpotlight } from './states/EmptySpotlight';
 
 @Reusable
 @Component
@@ -23,6 +24,8 @@ export struct EmptyState {
   @Prop fillMode: boolean = false;
   /** 极简空态：不画卡片背景/边框/阴影（对齐前端 bare 形态，用于 tab 内容区/列表内空态） */
   @Prop bare: boolean = false;
+  /** 场景化空态装饰：仅超大空态开启（访客引导/我的内容空态），小面板空态保持 false */
+  @Prop spotlight: boolean = false;
   onAction?: () => void;
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
@@ -32,6 +35,11 @@ export struct EmptyState {
   }
 
   build() {
+    Stack({ alignContent: Alignment.Center }) {
+      // 场景化空态装饰层（web EmptyState.spotlight 同构）：内容之下、页面氛围画布之上
+      if (this.spotlight) {
+        EmptySpotlight()
+      }
     Column() {
       // 卡内呼吸感：非 bare 空态图标-文案-按钮间距提档到 XL（r45：层级紧凑、
       // 视觉重心偏低）；bare 列表内空态保持 LG 紧凑
@@ -52,9 +60,11 @@ export struct EmptyState {
             Column()
               .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
               .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+              // ArkUI 陷阱：.border() 必须写在 .borderRadius() 之前，否则会把圆角重置为 0
+              // （空态图标圈的圆形依赖此顺序；2026-10-26 独立复核 N12）
+              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
               .shadow(this.getPalette().surfaceShadow)
 
             LucideIcon({
@@ -114,9 +124,12 @@ export struct EmptyState {
     }
     .width('100%')
     .height('100%')
-    .constraintSize({ minHeight: this.fillMode ? DesignConstants.COMPONENT.EMPTY_FILL_MIN_HEIGHT : 0 })
     .justifyContent(FlexAlign.Center)
     .padding(DesignConstants.SPACING.XL)
+    }
+    .width('100%')
+    .height('100%')
+    .constraintSize({ minHeight: this.fillMode ? DesignConstants.COMPONENT.EMPTY_FILL_MIN_HEIGHT : 0 })
   }
 }
 

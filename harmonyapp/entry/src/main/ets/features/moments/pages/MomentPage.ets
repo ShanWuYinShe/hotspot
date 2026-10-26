@@ -275,7 +275,7 @@ export struct MomentPage {
           } else if (!this.hasData) {
             Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
               EmptyState({
-          bare: true, icon: AppIcon.CAMERA, message: '还没有发布过瞬间\n快来分享第一个吧！' })
+          spotlight: true, bare: true, icon: AppIcon.CAMERA, message: '还没有发布过瞬间\n快来分享第一个吧！' })
             }
             .layoutWeight(1)
             .pullToRefresh(false)

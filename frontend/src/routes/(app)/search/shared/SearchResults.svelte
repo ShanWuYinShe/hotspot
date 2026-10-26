@@ -6,7 +6,7 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -103,10 +103,11 @@
 	{/if}
 
 	{#if loading}
-		<InlineLoading label="搜索中…" />
+		<!-- 首屏骨架屏：搜索结果行（前导 36 = Avatar md 档，与真实用户结果行同构） -->
+		<SkeletonList rows={5} leading={36} label="搜索中…" class="mt-4" />
 	{:else if !hasResults || tabEmpty}
 		<!-- 空态统一 EmptyState（对齐全局空态契约） -->
-		<EmptyState title={`没有找到“${query}”`} description="换个关键词再试试。" bare>
+		<EmptyState spotlight title={`没有找到“${query}”`} description="换个关键词再试试。" bare>
 			{#snippet icon()}
 				<SearchIcon class="size-6 text-text-secondary" strokeWidth={1.5} />
 			{/snippet}

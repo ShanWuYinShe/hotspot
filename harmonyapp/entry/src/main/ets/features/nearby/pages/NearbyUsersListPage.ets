@@ -246,21 +246,21 @@ export struct NearbyUsersListPage {
           hasBelowContent: true,
           showDivider: false
         }) {
-          // trailing：搜索/地图两个页面级工具入口（对齐前端 /nearby/people PageHeader
-          // trailing —— ActionIconButton Search + Map，均 36vp 幽灵钮、gap 8）。
+          // trailing：搜索/地图两个页面级工具入口（对齐 web 移动端 /nearby/people 页头
+          // trailing —— 内页统一 surface 浅底圆钮、gap 8；此前误用 ghost，与 web 内页不一致）。
           // 计数（N 人）前端移动端不在 header 尾部，是正文里的统计；此处不再挤占标题行。
           Row({ space: DesignConstants.SPACING.SM }) {
             SurfaceIconButton({
               icon: AppIcon.SEARCH,
               accessibilityLabel: '搜索',
-              kind: 'neutral',
+              kind: 'surface',
               buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
               onPress: () => AppRouter.push(PageNames.SEARCH)
             })
             SurfaceIconButton({
               icon: AppIcon.MAP,
               accessibilityLabel: '地图浏览',
-              kind: 'neutral',
+              kind: 'surface',
               buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
               onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
             })

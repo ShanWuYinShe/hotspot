@@ -43,13 +43,20 @@
 | `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`）。三个变体：`pills`（筛选/分类，可横滚）、`segmented`（二选一/系统级分段，等宽轨道）与 `underline`（**页级两态切换**，2026-10-20 新增：全宽等分、无轨道无图标、激活项 = 主文字色 + 底部 2px accent 滑动下划线；用于首页「关注/发现」，替代原 288px 浮动胶囊）。`disabled`（2026-10-19 新增）整体禁用并置灰，表达「可读但不可改」（如瞬间可见性探测中）；**移动端触控高度**：按钮 `py-3`（视觉 41px）+ 滚动根 `py-1` + `.hit-slop-y` → 有效 ≈49px，桌面 `lg:py-1.5` 保持紧凑 |
 | `overlays/SheetShell`、`ui/dialog`、`ui/popover`、`ui/dropdown-menu` | 弹层体系 |
 | `overlays/MenuPanel` | 弹出菜单面板唯一实现（标题 + 选项行 + 可选底部动作；容器走 `ui/popover` Content）。已有：地图源菜单、地图筛选菜单。新菜单只传数据，不复制行结构 |
-| `data-display/EmptyState` / `InlineLoading` / `LoadError` / `ListEnd`、`overlays/ToastViewport`、`shared/ConnectionBanner` | 状态反馈 |
+| `data-display/EmptyState` / `InlineLoading` / `LoadError` / `ListEnd`、`overlays/ToastViewport`、`shared/ConnectionBanner` | 状态反馈。`EmptyState` 可选 `spotlight`（2026-10-26）：超大空态的信标装饰层（光晕 + 双环 + 四向星点，纯 token、无动画、`aria-hidden`）；小面板空态不得开启 |
+| `data-display/Skeleton` / `SkeletonList` / `SkeletonFeed`（2026-10-26 新增） | 列表/信息流**首屏骨架屏**。`Skeleton` 基础占位块（`aria-hidden`）；`SkeletonList` 行式（前导圆 36/40/44/48 + 两行文本条，`role=status + aria-busy`，ListContainer 内自动补 listitem）；`SkeletonFeed` 卡式三形态（`feed` / `card` / `portrait`，栅格类由调用方传入保证零位移）。几何对齐鸿蒙 `Skeleton`/`SkeletonShimmer`，动效 `--cst-motion-skeleton`(1500ms)，reduced-motion 停用 |
 | `shared/Avatar` | 头像（尺寸/形状/状态点/环） |
 
 > 四种列表状态各司其职，不得互相替代：空 `EmptyState` / 加载中 `InlineLoading` /
 > 失败 `LoadError` / 已到底 `ListEnd`（文案「没有更多了」）。分页与无限滚动列表
 > 在内容耗尽时必须渲染 `ListEnd`——「加载更多」按钮消失而无收尾提示，用户无法
 > 区分「已到底」与「加载卡住」。
+
+**骨架屏使用口径（2026-10-26 登记）**：
+- **首屏加载**高频列表/信息流 → 骨架屏（`SkeletonList` / `SkeletonFeed`），与真实内容同栅格、同列数、同卡片外壳，做到「骨架→内容零位移」；
+- **分页加载更多** → `LoadMoreButton` / spinner（不换骨架：契约语义是「更多」而非「首屏」）；
+- **短促/异构内容**（表单、设置、详情区块、admin 表格、聊天首屏）→ 保留 spinner（骨架行高与气泡差异会造成滚动跳动，收益低于维护成本）；
+- 语义：外层 `role=status` + `aria-busy=true` + `aria-label`（「加载动态中…」等）；占位块 `aria-hidden`，不进读屏/焦点；reduced-motion 下保留骨架形、停止脉冲。
 
 ### 按钮语言两派契约（2026-10-18 登记，审计 C1 收敛）
 
@@ -66,6 +73,20 @@
   图片格等非动作控件按各自组件语言，不套本契约。
 - 卡片/面板**内嵌**的次级动作钮用 `flat` 去投影（投影语义归容器，见 `ui/button` 注释）。
 - 链接跳转用 `<a>` 时沿用派 A 的原语类语言（如错误页「返回首页」），不自造第三种形态。
+
+### 页头动作图标钮口径（2026-10-26 登记，跨端对齐 Lead 决策）
+
+页面头部右侧的纯图标动作（搜索/通知/地图等）按页头形态分派，**两端同一口径**
+（前端 `ActionIconButton.variant` ↔ 鸿蒙 `SurfaceIconButton.kind`）：
+
+| 页头形态 | 样式 | 前端 | 鸿蒙 |
+|---|---|---|---|
+| 品牌头（首页 logo + wordmark） | **ghost**（透明底、裸图标，36px） | `variant="ghost"` | `kind: 'neutral'` |
+| 标准 PageHeader（内页） | **surface**（浅底圆钮 + hairline，36px） | 默认 `variant="surface"` | `kind: 'surface'`（`SystemPageHeader.IconAction` 已支持） |
+
+- 同一页头内图标数量保持一致：web 移动端首页只有「搜索 + 通知」（地图入口在附近域页头）；
+- 触控热区：web 36px 视觉 + `hit-slop` → 48px；鸿蒙 `SurfaceIconButton` 外扩 ≥44vp；
+- 图片/封面上悬浮的返回/更多用 `overlay` 变体（媒体镀铬，平台适配，保留）。
 
 ### 内容卡封面比例档（2026-10-18 登记）
 

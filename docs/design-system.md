@@ -294,6 +294,8 @@
   `DURATION_STAGGER_DELAY 150`。
 - 曲线：`CURVE_EASE_IN_OUT` / `CURVE_EASE_OUT` / `CURVE_FAST_OUT_SLOW_IN` / `CURVE_SMOOTH`；
   前端曲线 `standard (0.22,1,0.36,1)` / `bounce (0.34,1.56,0.64,1)`。
+- 骨架屏脉冲：前端 `--cst-motion-skeleton: 1500ms`（2026-10-26 新增，仅骨架屏）↔
+  鸿蒙 `ANIMATION.DURATION_SLOW 1500`；两端骨架节奏同源，勿单独改一端。
 - Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）。
 
 ### 10.2 交互反馈（`INTERACTION`，禁用裸 `scale(...)` / 裸 curve）
@@ -380,6 +382,9 @@
 | `data-display/LoadError` | 无独立组件 → `EmptyState` + `actionLabel:'重试'` + `onAction` | 加载失败态。**语义等价**（同为「图标+文案+重试按钮」），故不另造组件；契约要求「失败必须展示错误并提供重试，禁止静默转空态」——实测 9 个失败分支全部满足 |
 | `data-display/InlineLoading` | 无独立组件 → `LoadingMoreIndicator`（分页）/ 行内 `LoadingProgress`（局部） | 局部加载态。分页场景一律走 `LoadingMoreIndicator`（含向上分页，如聊天「加载更早消息…」）；行内指示用 `LoadingProgress` |
 | `data-display/EmptyState` 整页加载 | `SystemLoadingView` / `Skeleton` / `SkeletonShimmer` | 整页/面板加载与列表骨架 |
+| `data-display/Skeleton` / `SkeletonList` / `SkeletonFeed` | `components/states/Skeleton` / `SkeletonShimmer` | **列表/信息流首屏骨架屏**（2026-10-26 新增前端三原语）。几何同源：行内 12、前导圆 36/40/44/48、文本条 14·55% + 11·35%、条间距 8、圆角 12；`role=status + aria-busy`，占位块 `aria-hidden` |
+| `layout/ambient/AmbientBackdrop` | `components/layout/AmbientBackdrop` | 氛围画布（三主题世界层，装饰层唯一实现）。鸿蒙为静态 Canvas 一次性绘制，挂载于 `PageShellContainer`；详见第 16 节 |
+| `data-display/EmptyState`（`spotlight` 开启） | `EmptyState`（`spotlight`）+ `components/states/EmptySpotlight` | 场景化空态装饰层（超大空态专用）。几何/token 见第 16.6 节，两端同一 spec |
 | `data-display/MetricRow` / `HeroStats` | `HomePage.buildHeroStats`（页面内 @Builder） | 统计段（原表写的 `StatSegments` 已不存在，2026-10-12 修正；目前只有首页一处消费，暂不抽独立组件） |
 | `routes/moments/shared/MomentCard` | `MomentFeedCard` | 动态卡片 |
 | `auth/LoginPromptSheet` | `LoginPromptView` | 未登录引导 |
@@ -423,14 +428,17 @@
 
 ---
 
-## 16. 氛围画布（Ambient canvas，前端装饰层）
+## 16. 氛围画布（Ambient canvas，双端装饰层）
 
 **目的**：解决桌面宽屏 / 内容稀疏 / 空态页「大面积纯白，看起来空荡荡」的观感问题。
 借鉴游戏场景的分层做法给页面补「世界感」纵深，而不是往页面里堆内容。
 
 ### 16.1 分层结构
 
-实现：`frontend/src/components/layout/ambient/AmbientBackdrop.svelte`（纯装饰层）。
+实现（两端同构，共用同一套世界语言与 token）：
+
+- 前端：`frontend/src/components/layout/ambient/AmbientBackdrop.svelte`（SVG/渐变，含超长循环动效）；
+- 鸿蒙：`harmonyapp/entry/src/main/ets/components/layout/AmbientBackdrop.ets`（单 Canvas 一次性绘制，静态无逐帧动画，2026-10-26 新增）。
 
 | 层 | 实现 | 作用 |
 |---|---|---|
@@ -462,6 +470,7 @@
   `variant="chrome"`——只铺天光/边光，不画世界层与暗角，让导航与主内容共享同一环境光；
 - 认证页（`routes/(auth)/login`）、错误页（`routes/+error.svelte`）；
 - 启动占位（根布局 BootSplash 外层）：开屏即「世界 + 徽记」，接近游戏加载画面。
+- **鸿蒙端**：统一挂在 `PageShellContainer`（`fillHeight=true` 的页面视口容器）内、内容之下；Tab 页与 NavDestination 推入页自动继承。消息 Tab 未登录分支在 `PhoneLayout` 显式接线（底板 → AmbientBackdrop → LoginPromptView，登录提示不得给不透明底色，否则会盖住氛围层）。页面不得自建第二套背景装饰。
 
 > 历史说明（2026-10-22 同日迭代）：最初挂在 `PageViewport` 内并尝试 `position:sticky`，
 > 但页面视口高度固定为视口高、内容溢出其外，sticky 无活动空间 → 背景会随滚动消失；
@@ -482,9 +491,43 @@
   由自身不透明画布覆盖，氛围不可见属预期；
 - **窄屏构图修正（≤640px）**：世界层经 `xMidYMid slice` 裁切时右侧母题会出画，手机档把
   星际轨道环/星座、水墨朱砂圆相平移到画面中部并缩小（`utilities.css` 媒体查询）；
-  新增主题的世界层若含右侧母题，必须同步补窄屏构图。
+  新增主题的世界层若含右侧母题，必须同步补窄屏构图。鸿蒙端按同一 1600×900 设计空间与
+  slice 裁切口径复刻（窄屏变换同 web）。
+- **鸿蒙端 Canvas 约束**：静态一次性绘制（尺寸/主题变化才重绘）、`hitTestBehavior(HitTestMode.None)`、
+  `accessibilityLevel('no')`、无逐帧状态更新；每个 `fillHeight` 页面一块画布实例（Tab 页常驻，
+  实测 4→5 实例、PSS 218.7→330.2MB 含页面数据，单画布理论 ≈12MB）。实例数/内存优化是已登记
+  backlog（见 `docs/ui-improvement-handoff.md`），未优化前不得再增加挂载点。
 
 ### 16.5 已知边界
 
-- 鸿蒙端尚未同步该视觉：需要 ArkUI 装饰层实现 + 三主题 token 评审，单独立项；
-- 若后续觉得氛围过淡/过浓，调 `--cst-ambient-*` 的 alpha 即可全站生效（不改组件）。
+- 鸿蒙端已于 2026-10-26 同步（`AmbientBackdrop.ets` + `ThemeConstants.AMBIENT` 6 组合 × 12 色，
+  与 web `--cst-ambient-*` 语义/合成口径一一对应，见 §13 映射表）；
+- **平台适配差异（已登记）**：web 有 24s/36s 超长循环动效，鸿蒙为静态 Canvas（性能优先）；
+  鸿蒙每页一块画布（见 16.4）；两端同主题同明暗的世界语言/构图一致；
+- 若后续觉得氛围过淡/过浓，调 `--cst-ambient-*` 的 alpha 即可全站生效（不改组件），
+  鸿蒙需按同口径重算 `ThemeConstants.AMBIENT` 的 ARGB 值；
+- **待优化 backlog**：鸿蒙多画布实例的内存/首帧成本（上提到外壳单实例 or 共享绘制缓存）。
+
+### 16.6 场景化空态装饰（Spotlight，超大空态专用）
+
+**目的**：给整页/整块内容区的超大空态（访客引导、我的内容空、搜索无结果等）一个「信标」
+意象，与氛围画布协同一体；小面板空态保持纯图标/文案，**不得开启**（堆装饰反而吵）。
+
+**实现（两端同一 spec）**：
+
+- 前端：`EmptyState` 的 `spotlight?: boolean`（默认 false）+ `.empty-spotlight*`；
+- 鸿蒙：`EmptyState` 的 `spotlight` + `components/states/EmptySpotlight.ets`。
+
+**几何（vp/px 同值，1:1）**：
+
+| 层 | 尺寸 | 样式 | token |
+|---|---|---|---|
+| 中心光晕 | 320×320 | 径向渐变，中心色 → 70% 透明 | `--cst-ambient-glow-2` / `AMBIENT.glow2` |
+| 外环 | 288×288 | 1 发丝描边、无填充 | `--cst-ambient-line` / `AMBIENT.line` |
+| 内环 | 168×168 | 1 发丝描边、无填充 | 同上 |
+| 四向星点 | 4×4 ×4 | 外环半径 144 的 45° 等分位（相对中心 ±102, ±102） | `--cst-ambient-dot` / `AMBIENT.dot` |
+
+**硬约束**：无动画；装饰层 `aria-hidden` / `accessibilityLevel('no')`、`pointer-events:none` /
+`hitTestBehavior(None)`、位于内容之下（前端 `z-index:-1` + 父级 `relative isolate`）；
+颜色只取 ambient token（随三主题 × 明暗自适应）；ArkTS 侧 `.border()` 必须写在
+`.borderRadius()` 之前（否则圆环被重置为直角，2026-10-26 实拍踩坑）。
