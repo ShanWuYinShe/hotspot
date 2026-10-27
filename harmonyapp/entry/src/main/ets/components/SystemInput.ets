@@ -139,7 +139,11 @@ export struct SystemInput {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .backgroundColor(this.getPalette().inputBackgroundColor)
     .borderRadius(DesignConstants.SHAPE.INPUT) // 16
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getBorderResolution().borderColor })
+    // r4：焦点统一 2vp accent 边框（与 SystemTextArea 一致，对齐 web focus ring 2px）
+    .border({
+      width: this.isFocused ? DesignConstants.BORDER_WIDTH.REGULAR : DesignConstants.BORDER_WIDTH.HAIRLINE,
+      color: this.getBorderResolution().borderColor
+    })
     .shadow(this.getBorderResolution().shadow)
     // 裁剪子组件（TextInput 等），防止系统默认视觉溢出圆角
     .clip(true)

@@ -75,6 +75,8 @@ export struct ExternalProfileView {
       Column() {
         Scroll() {
           Column({ space: DesignConstants.SPACING.MD }) {
+            // r4 身份软岛（对齐 /me：无描边 + surfaceIsland + shadow + 圆角 20）
+            Column({ space: DesignConstants.SPACING.MD }) {
             Row({ space: DesignConstants.SPACING.MD }) {
               Stack({ alignContent: Alignment.BottomEnd }) {
                 SystemAvatar({
@@ -149,6 +151,13 @@ export struct ExternalProfileView {
             .width('100%')
             .margin({ top: DesignConstants.SPACING.SM })
 
+            }
+            .width('100%')
+            .padding(DesignConstants.SPACING.LG)
+            .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
+            .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceShadow)
+
             // 近期瞬间九宫格（无瞬间时给空态，避免内容区整片空白——2026-10-20 端上走查实测
             // 0 瞬间用户的页面出现大段空白、没有任何说明，看起来像页面坏了）
             if (this.moments.length === 0) {
@@ -205,7 +214,7 @@ export struct ExternalProfileView {
         Row({ space: DesignConstants.SPACING.MD }) {
           SystemButton({
             label: '私信',
-            variant: 'outline',
+            variant: 'surface',
             buttonSize: 'small',
             onPress: () => { this.onPrivateChat(); }
           })
@@ -213,7 +222,7 @@ export struct ExternalProfileView {
 
           SystemButton({
             label: this.isFollowing ? '已关注' : '关注',
-            variant: this.isFollowing ? 'outline' : 'primary',
+            variant: this.isFollowing ? 'surface' : 'primary',
             buttonSize: 'small',
             disabled: this.followPending,
             onPress: () => { this.onToggleFollow(); }
@@ -222,7 +231,7 @@ export struct ExternalProfileView {
 
           SystemButton({
             label: '备注',
-            variant: 'outline',
+            variant: 'surface',
             buttonSize: 'small',
             onPress: () => { this.onOpenRemark(); }
           })

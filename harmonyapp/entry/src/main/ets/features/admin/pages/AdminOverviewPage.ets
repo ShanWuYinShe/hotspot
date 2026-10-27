@@ -17,6 +17,8 @@ import { PageShellContainer } from '../../../components/PageShellContainer';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
+import { FocusRing } from '../../../core/accessibility/FocusRing';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -189,9 +191,10 @@ struct AdminOverviewPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+    // r4 软岛：去 1px 描边，surfaceIsland + 轻投影 + 圆角 20
+    .backgroundColor(this.getPalette().surfaceIsland)
     .borderRadius(DesignConstants.SHAPE.CARD)
+    .shadow(this.getPalette().surfaceShadow)
     .alignItems(VerticalAlign.Center)
   }
 
@@ -253,18 +256,23 @@ struct AdminOverviewPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+    // r4 软岛：去 1px 描边；可聚焦 + focus 环 + 按压反馈
+    .backgroundColor(this.getPalette().surfaceIsland)
     .borderRadius(DesignConstants.SHAPE.CARD)
+    .shadow(this.getPalette().surfaceShadow)
     .alignItems(VerticalAlign.Center)
-    // 按压反馈（对齐侧栏管理后台行 tap-97 语义）
-    .scale(this.pressedModuleKey === m.title ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-      { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(
+    .focusable(true)
+    .focusOnTouch(false)
+    .focusBox(FocusRing.box(this.getPalette().accentBackground))
+    // 按压反馈（对齐侧栏管理后台行 tap-97 语义；减少动态时不缩放）
+    .scale({
+      x: MotionUtil.pressScale(this.pressedModuleKey === m.title, DesignConstants.INTERACTION.SCALE_PRESSED_CARD),
+      y: MotionUtil.pressScale(this.pressedModuleKey === m.title, DesignConstants.INTERACTION.SCALE_PRESSED_CARD)
+    })
+    .animation(MotionUtil.spring(
       DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
       DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-    ) })
+    ))
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.pressedModuleKey = m.title;

@@ -649,3 +649,54 @@
 - 危险：软填 danger 底 + danger 文字，保留二次确认（注销、退出登录）。
 - **同级动作不得混用「描边胶囊」与「软填胶囊」**；功能边界（输入框、主题 swatch）保留。
 
+### 19.5 例外清单（2026-10-27 Round 4 登记：类型 / 理由 / 是否保留 1px）
+
+| 类型 | 位置示例 | 理由 | 保留 1px |
+|---|---|---|---|
+| 表格行线 / 表头线 | admin 全部表格 TH/TR | 数据对齐与扫读必需 | ✅ 保留 |
+| 表格外壳 / 容器框 | TABLE_WRAP | 内容分组，非功能线 | ❌ 移除 |
+| 表单输入框 / select / textarea | SearchInput、admin 筛选 | 控件功能边界（可点击区域/输入态） | ✅ 保留 |
+| 媒体容器（单帖大图/行卡配图/九宫格） | MomentPostBody、HomeFeedItem | 图片与背景边界靠圆角+阴影+占位即可 | ❌ 移除（圆角/阴影/focus-ring 保留） |
+| Hero 封面（群详情/主页封面） | group-detail hero | 媒体 hero 例外 | ❌ 移除描边（保留圆角/阴影/占位） |
+| 内容分隔发丝线 | 单帖统计/评论分隔、群详情 tab 下 | 内容分区，非卡片边界 | ✅ 保留 |
+| 评论输入条 / 底部操作条 | moment detail、group detail | 功能栏 | ✅ 保留 |
+| 内容 chip / badge / 筛选 pill | 标签、状态胶囊、tab pill | 内容单元边界 + 可点控件 | ✅ 保留 |
+| 头像圆环 | 头像、评论头像 | 头像与背景分离的功能边界 | ✅ 保留 |
+| 弹层 / Sheet / Dialog / 菜单 | overlays/*、sheets | 浮层容器 | ✅ 保留 |
+| 地图桌面面板 | map/desktop/* | 功能浮层（与地图强耦合） | ✅ 保留 |
+| demo-only 演示卡 | `/?demo=` 雷达/轮播演示 | 非默认用户路径，避免为改而改 | ✅ 保留（不改） |
+| 举报裁决 segmented | admin/reports 弹窗 | 表单控件选中态边界 | ✅ 保留 |
+| 浮动保存条 | admin/config sticky bar | 功能反馈条，去 1px 但保留阴影/模糊 | ❌ 移除 1px |
+| 悬浮 Tab 容器 | 首页桌面分段器 | 浮岛，底色/投影表达 | ❌ 移除 1px |
+
+---
+
+## 20. 交互状态与可访问性基线（2026-10-27 Round 4）
+
+### 20.1 焦点可见（focus-visible，强制）
+
+- 所有 interactive（按钮/链接/行/输入/自定义卡片点击区/表格行按钮）必须有可见焦点环：
+  **2px accent + 2px offset**（web `ring-accent` / 鸿蒙 `focusBox`）。
+- 键盘 Tab 顺序可到达；skip link 首 Tab 可见；**去描边不得连带丢焦点环**。
+- 亮/暗主题都要验证；父容器 overflow/裁切不得吃掉焦点环（ArkUI 需父级 padding ≥2vp）。
+- 验收：键盘 Tab 截图 + computed outline（web）/ 布局树 + 代码参数（鸿蒙）。
+
+### 20.2 减少动态（prefers-reduced-motion，强制）
+
+- 全局 `@media (prefers-reduced-motion: reduce)` 覆盖：位移动画/脉冲/骨架 shimmer/悬停过渡禁用
+  （duration ≈0 / 单次）；透明度淡入可保留。
+- web 走 `styles/theme/utilities.css` 全局规则；鸿蒙走 `MotionUtil`（`shouldReduceMotion()`），
+  新增动画一律走统一入口，禁止裸写动画参数；默认（未开启）行为必须与既有完全一致。
+
+### 20.3 hover / press / disabled
+
+- 卡片 hover 抬升 + 图片微缩放（`card-hover`）；按钮 active scale .94–.98；行 hover 填充；
+  disabled 不可点且可辨（opacity + pointer-events）；同级元素手感一致。
+
+### 20.4 加载 / 空 / 错误态
+
+- 首屏加载：列表/卡片优先 Skeleton；单实体/短列表可 InlineLoading（需给理由：结构轻、<1s、
+  避免二次位移）。空态/错误态统一 `EmptyState` / `LoadError` + 重试；admin/长尾页一致。
+- 回归基线：39 页 0 console error / 0 横向溢出 / h1=1。
+
+

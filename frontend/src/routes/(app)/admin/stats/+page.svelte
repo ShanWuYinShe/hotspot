@@ -273,7 +273,7 @@
 			{#if trendDays > 0 && data.trends.length > 0}
 				<section aria-label="每日新增趋势" class="flex flex-col gap-2">
 					<h2 class="text-md font-semibold text-text-primary">每日新增（近 {trendDays} 天 · UTC+8 日界）</h2>
-					<div class="rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
+					<div class="rounded-lg bg-surface-island p-4 shadow-xs">
 						<div class="flex items-end gap-1 h-28" role="img" aria-label="每日新增柱状图">
 							{#each data.trends as p (p.date)}
 								{@const total = p.user + p.group + p.moment}
@@ -297,7 +297,7 @@
 			<!-- 区域落点地图 -->
 			<section aria-label="区域分布图" class="flex flex-col gap-2">
 				<h2 class="text-md font-semibold text-text-primary">区域分布（网格中心落点 · 数字为聚合量）</h2>
-				<div class="relative rounded-lg overflow-hidden border border-border-default shadow-raised-sm" style="height: 320px;">
+				<div class="relative rounded-lg overflow-hidden shadow-xs" style="height: 320px;">
 					<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} />
 					{#each data.regions as r (r.cell_token)}
 						<MapHeatDot
@@ -340,7 +340,7 @@
 										<td class={TD}>
 											<button
 												type="button"
-												class="hover-btn tap-92 rounded-md border border-border-default px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-interactive-hover"
+												class="hover-btn tap-92 rounded-md bg-surface-subtle/60 px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-surface-subtle active:scale-95"
 												aria-pressed={selectedToken === r.cell_token}
 												onclick={() => selectRegion(r.cell_token, r.level)}
 											>
@@ -357,12 +357,12 @@
 
 			<!-- 下钻明细 -->
 			{#if selectedToken}
-				<section aria-label="区域明细" class="flex flex-col gap-2 rounded-lg border border-border-default bg-surface-primary p-4 shadow-raised-sm">
+				<section aria-label="区域明细" class="flex flex-col gap-2 rounded-lg bg-surface-island p-4 shadow-xs">
 					<div class="flex items-center justify-between gap-2">
 						<h3 class="text-sm font-medium text-text-primary">网格明细 · {selectedRegionLabel}</h3>
 						<button
 							type="button"
-							class="hover-btn tap-92 rounded-md border border-border-default px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-interactive-hover"
+							class="hover-btn tap-92 rounded-md bg-surface-subtle/60 px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-surface-subtle active:scale-95"
 							onclick={() => { selectedToken = null; }}
 						>关闭</button>
 					</div>

@@ -381,7 +381,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					<div class="flex shrink-0 gap-2 pb-1">
 						<button
 							type="button"
-							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3.5 py-1.5 text-xs text-text-secondary shadow-raised-sm hover:bg-accent-soft focus-ring disabled:cursor-not-allowed disabled:opacity-muted"
+							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 rounded-full bg-surface-subtle/60 px-3.5 py-1.5 text-xs text-text-secondary focus-ring hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-muted"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>
@@ -395,7 +395,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				</div>
 
 			{#if blocked}
-				<div class="mt-6 flex items-center gap-2 rounded-sm ring-1 ring-status-danger-border bg-danger-bg px-3 py-2 text-sm text-status-danger">
+				<div class="mt-6 flex items-center gap-2 rounded-md bg-danger-bg/60 px-3 py-2 text-sm text-status-danger">
 					<UserX size={14} />
 					你已屏蔽此用户；关注和私信已停用。
 				</div>

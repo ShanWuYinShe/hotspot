@@ -170,7 +170,7 @@
 {#snippet feedTabs()}
 	<!-- 顶部 Tab 栏：居中悬浮胶囊分段器（Floating Island Segmented Control），彻底消除直角长条与生硬底线 -->
 	<div class="sticky top-0 z-20 pt-2.5 pb-2 flex justify-center pointer-events-none">
-		<div class="pointer-events-auto rounded-full bg-surface-primary/90 backdrop-blur-md shadow-raised-sm border border-border-default/80 p-0.5">
+		<div class="pointer-events-auto rounded-full bg-surface-primary/90 backdrop-blur-md shadow-raised-sm p-0.5">
 			<TabBar
 				variant="segmented"
 				size="md"
@@ -189,7 +189,7 @@
 {#snippet nearbyBanner()}
 	<button
 		type="button"
-		class="hover-btn group flex w-full items-center gap-3.5 rounded-2xl border border-border-subtle/50 bg-surface-primary/80 backdrop-blur-xs px-4 py-4 text-left focus-ring transition mt-4 hover:border-accent-default/30 hover:shadow-raised-sm shadow-xs"
+		class="hover-btn group flex w-full items-center gap-3.5 rounded-lg bg-surface-island px-4 py-4 text-left focus-ring transition mt-4 hover:shadow-raised-sm shadow-xs"
 		onclick={() => void goto(ROUTES.nearby)}
 	>
 		<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
@@ -253,7 +253,7 @@
 
 		<!-- 关注流未登录态：温馨引导登录卡片 -->
 		{#if activeTab === 'following' && auth.status !== 'authenticated'}
-			<div class="mx-4 my-8 rounded-2xl border border-border-subtle/50 bg-surface-subtle/60 p-6 text-center shadow-xs">
+			<div class="mx-4 my-8 rounded-lg bg-surface-island p-6 text-center shadow-xs">
 				<div class="mx-auto flex size-12 items-center justify-center rounded-full bg-accent-soft text-accent-default mb-3">
 					<Users class="size-6" strokeWidth={1.75} />
 				</div>
@@ -468,7 +468,7 @@
 										</div>
 										<button
 											type="button"
-											class="hover-btn shrink-0 rounded-full border border-border-default bg-surface-primary px-3 py-1 text-xs font-medium text-text-primary hover:border-accent-default hover:text-accent-default hover:bg-accent-soft/30 focus-ring transition shadow-xs"
+											class="hover-btn shrink-0 rounded-full bg-surface-subtle/60 px-3 py-1 text-xs font-medium text-text-primary hover:bg-accent-soft hover:text-accent-default focus-ring transition active:scale-95"
 											onclick={() => void goto(ROUTES.user(neighbor.userId))}
 										>
 											查看

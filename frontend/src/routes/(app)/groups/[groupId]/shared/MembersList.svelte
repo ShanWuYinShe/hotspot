@@ -48,7 +48,7 @@
 
 {#if canManageMembers}
 	<div class="mt-6 flex justify-end">
-		<button type="button" onclick={onInvite} class="hover-btn hit-slop flex items-center gap-1 rounded-full border border-border-default px-3.5 py-2 text-sm text-text-primary focus-ring hover:border-border-strong">
+		<button type="button" onclick={onInvite} class="hover-btn hit-slop flex items-center gap-1 rounded-full bg-surface-subtle/60 px-3.5 py-2 text-sm text-text-primary focus-ring hover:bg-surface-subtle">
 			<UserPlus size={12} strokeWidth={1.75} />
 			添加成员
 		</button>

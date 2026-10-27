@@ -420,3 +420,35 @@ Huawei 移动端规范要求有效触控目标 **≥44vp**。本项目原语层�
 
 **审计方法**：`uitest dumpLayout` 后按 `clickable=true` 过滤节点，取 `bounds` 的宽高，
 与 `44vp × 屏幕缩放（本机 3.5x ≈ 154px）` 对比。注意排除整行可点（宽 >900px）的行级目标。
+
+## 焦点环与减少动态（Round 4，2026-10-27 起强制）
+
+### 键盘焦点环 focus-visible
+
+- 口径：ArkUI `focusBox`，**2vp accent 描边 + 2vp 外距**（颜色取 `palette.accentBackground`），对齐 web `ring-accent 2px offset 2`；不新造颜色档。
+- 实现：`core/accessibility/FocusRing.ets` 的 `FocusRing.box(accentHex)`；`SystemButton` / `SurfaceIconButton` / `Pressable` 已默认接入（`.focusable(true)` + `.focusOnTouch(false)` + `.focusBox(...)`）。
+- 输入：`SystemInput` / `SystemTextArea` 聚焦用 **2vp accent 边框**（与 focusBox 等价的可见焦点；避免被输入容器 `.clip(true)` 裁切）。
+- 新增可聚焦自定义卡片/行：`.focusable(true).focusOnTouch(false).focusBox(FocusRing.box(getPalette().accentBackground))`。父容器需有 ≥2vp padding（ListGroup 默认 padding 8），否则焦点环会被 `clip(true)` 裁切。
+- 验证：编译 + 布局树/代码参数；真机键盘 Tab 截图（真机离线时报告标注待真机）。
+
+### 减少动态 reduced-motion
+
+- 数据源：`AccessibilityManager.getInstance().shouldReduceMotion()`（系统「减少动态/移除动画」或应用内关闭动画）。
+- 实现：`core/accessibility/MotionUtil.ets`：
+  - `spring(response, damping)`：reduced 时 `duration=0`；
+  - `pressScale(pressed, scale)`：reduced 时恒为 1（不缩放）；
+  - `shimmerActive()`：reduced 时 false（骨架不脉冲）。
+- 已接入：`SystemButton` / `SurfaceIconButton` / `Pressable` 按压动画、`SkeletonShimmer` 脉冲。
+- 要求：reduced 下禁用位移/缩放/脉冲，透明度淡入可保留；默认（false）行为必须与既有完全一致；新增动画一律走 `MotionUtil`，禁止裸写动画参数。
+## 长尾/后台页面软岛映射（Round 4，2026-10-27）
+
+- 对应 web 长尾软岛化的鸿蒙落点：
+  - `MomentDetailPage`：单帖内容包软岛（surfaceIsland/20/shadow/clip），媒体大图圆角 24+shadow、九宫格 16+shadow；
+    反馈容器/粘底操作条按功能线例外保留；加载态用骨架（媒体块+作者行+正文两行）。
+  - 他人 `ProfilePage`：身份区软岛（20/p16/shadow）；私信/已关注/备注按钮 surface 软填，关注 primary。
+  - `GroupDetailPage`：hero 圆角 24+shadow+clip；Tab 内容一张软岛；行线保留（内容分隔例外）。
+  - `AdminOverviewPage`：权限卡/模块行软岛；其余后台页 web-only（N/A 登记）。
+  - 首页 onboarding/HeroStats/轮播/附近人列表：鸿蒙无对应组件（N/A，不强行造页面）。
+- 例外（保留功能边界）：媒体容器/九宫格圆角与阴影、输入框 2vp accent 焦点边、表格行线/内容分隔线、
+  chip/badge、弹层/Sheet、地图控件、hero 封面裁切结构。
+- 验证：build + check:theme + 布局树；真机离线时阴影/焦点环/reduced-motion 开启路径标注待真机。

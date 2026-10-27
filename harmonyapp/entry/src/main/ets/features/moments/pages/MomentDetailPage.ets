@@ -25,6 +25,8 @@ import {
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { Skeleton } from '../../../components/states/Skeleton';
+import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 import { SystemToast } from '../../../components/SystemToast';
 import { LoginGate } from '../../../core/state/LoginGate';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
@@ -498,7 +500,29 @@ export struct MomentDetailPage {
         }
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         if (this.isLoading) {
-          SystemLoadingView({ message: '正在加载瞬间详情…' })
+          // r4：对齐 fe moment detail 骨架（媒体块 + 作者行 + 正文两行 + 评论行）
+          Column({ space: DesignConstants.SPACING.LG }) {
+            SkeletonShimmer({ active: true }) {
+              Column({ space: DesignConstants.SPACING.MD }) {
+                Skeleton({ blockWidth: '100%', blockHeight: DesignConstants.COMPONENT.MOMENT_COVER_HEIGHT, cornerRadius: DesignConstants.SHAPE.HERO_CARD })
+                Row({ space: DesignConstants.SPACING.MD }) {
+                  Skeleton({ blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS, blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS, cornerRadius: DesignConstants.RADIUS.FULL })
+                  Column({ space: DesignConstants.SPACING.SM }) {
+                    Skeleton({ blockWidth: '42%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
+                    Skeleton({ blockWidth: '28%', blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
+                  }
+                  .alignItems(HorizontalAlign.Start)
+                  .layoutWeight(1)
+                }
+                .width('100%')
+                Skeleton({ blockWidth: '92%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
+                Skeleton({ blockWidth: '64%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
+              }
+              .width('100%')
+            }
+          }
+          .width('100%')
+          .padding(DesignConstants.SPACING.LG)
         } else if (!this.moment) {
           EmptyState({
             bare: true,
@@ -512,7 +536,17 @@ export struct MomentDetailPage {
             // 正文区与评论区：间距由评论区自身 margin-top(24, 对齐前端 mt-6) 承担，
             // 不再叠加 SECTION_GAP（否则 24+24=48，与前端不一致）
             Column() {
-              this.buildMomentContent(this.moment as MomentItem)
+              // r4 单帖软岛（对齐 fe MomentPostBody）：无描边 + surfaceIsland + shadow + 圆角 20
+              Column() {
+                this.buildMomentContent(this.moment as MomentItem)
+              }
+              .width('100%')
+              .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD })
+              .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+              .borderRadius(DesignConstants.SHAPE.CARD)
+              .shadow(this.getCurrentThemePalette().surfaceShadow)
+              .clip(true)
+
               Column() {
             this.buildCommentsSection()
           }
@@ -658,6 +692,10 @@ export struct MomentDetailPage {
           }
         }
         .width('100%')
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG })
+        .borderRadius(DesignConstants.SHAPE.HERO_CARD)
+        .clip(true)
+        .shadow(this.getCurrentThemePalette().controlShadow)
       } else if (moment.location?.location_name) {
         // 无图占位（对齐前端：accent 底 + MapPin + 「来自 X 的动态」，通栏）
         Column({ space: DesignConstants.SPACING.SM2 }) {
@@ -676,6 +714,10 @@ export struct MomentDetailPage {
         .height(DesignConstants.COMPONENT.MOMENT_COVER_HEIGHT)
         .justifyContent(FlexAlign.Center)
         .backgroundColor(this.getCurrentThemePalette().accentMuted)
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG })
+        .borderRadius(DesignConstants.SHAPE.HERO_CARD)
+        .clip(true)
+        .shadow(this.getCurrentThemePalette().controlShadow)
       }
 
       // ── 以下内容在 gutter 内（页面已关容器留白，分区自带 16 横向留白）──
@@ -695,6 +737,9 @@ export struct MomentDetailPage {
                   }
                 }
                 .layoutWeight(1)
+                .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+                .clip(true)
+                .shadow(this.getCurrentThemePalette().controlShadow)
               }, (img: MomentImage, colIndex: number) => `${img.url}_r${rowIndex}_c${colIndex}`)
             }
             .width('100%')

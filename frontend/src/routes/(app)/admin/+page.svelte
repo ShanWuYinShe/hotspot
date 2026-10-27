@@ -47,7 +47,8 @@
 
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-4">
 	<!-- 身份卡：当前平台管理员（Bento 微岛生态） -->
-	<section class="rounded-2xl border border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs p-5 shadow-xs" aria-label="管理员身份">
+	<!-- 软岛（Round 4）：开放页内容分组无 1px 描边，表面+投影+圆角 20 表达层级 -->
+	<section class="rounded-lg bg-surface-island p-5 shadow-xs" aria-label="管理员身份">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div class="flex items-center gap-3 min-w-0">
 				<div class="flex size-9 shrink-0 items-center justify-center rounded-full icon-badge">
@@ -111,7 +112,7 @@
 					disabled={!allowed}
 					onclick={() => void goto(m.href)}
 					title={allowed ? m.label : '无对应权限'}
-					class="hover-btn flex flex-col items-start gap-2.5 rounded-2xl border border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs p-5 text-left shadow-xs focus-ring transition-all hover:shadow-raised-sm hover:border-accent-default/60 hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-faint disabled:pointer-events-none"
+					class="hover-btn flex flex-col items-start gap-2.5 rounded-lg bg-surface-island p-5 text-left shadow-xs focus-ring transition-all hover:shadow-raised-sm hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-faint disabled:pointer-events-none"
 				>
 					<span class="flex size-9.5 items-center justify-center rounded-xl bg-accent-soft text-accent-default shrink-0">
 						<m.icon class="size-5" strokeWidth={1.75} />

@@ -1,5 +1,9 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { FocusRing } from '../core/accessibility/FocusRing';
+import { MotionUtil } from '../core/accessibility/MotionUtil';
 
 /**
  * Pressable — 统一按压反馈容器（对齐前端 active:scale 语义与 SystemCard 按压三件套）。
@@ -35,6 +39,7 @@ export struct Pressable {
 
   @State isPressed: boolean = false;
   @State isHovered: boolean = false;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State pressWidth: number = 0;
   @State pressHeight: number = 0;
 
@@ -55,15 +60,14 @@ export struct Pressable {
       duration: DesignConstants.ANIMATION.DURATION_FAST,
       curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
     })
-    .scale(this.isPressed && !this.disabled ?
-      { x: this.pressScale, y: this.pressScale } :
-      { x: 1, y: 1 })
-    .animation({
-      curve: curves.springMotion(
-        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-      )
+    .scale({
+      x: MotionUtil.pressScale(this.isPressed && !this.disabled, this.pressScale),
+      y: MotionUtil.pressScale(this.isPressed && !this.disabled, this.pressScale)
     })
+    .animation(MotionUtil.spring(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ))
     .onTouch((event: TouchEvent) => {
       if (this.disabled) {
         this.isPressed = false;
@@ -86,6 +90,9 @@ export struct Pressable {
         this.onPress();
       }
     })
+    .focusable(!this.disabled)
+    .focusOnTouch(false)
+    .focusBox(FocusRing.box(AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground))
     .onHover((isHover: boolean) => {
       if (!this.disabled) {
         this.isHovered = isHover;

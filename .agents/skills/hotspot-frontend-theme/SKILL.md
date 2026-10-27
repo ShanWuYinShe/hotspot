@@ -159,3 +159,9 @@ theme/
   并注明理由。
 - **许可**：字体许可全文随资源存放（`static/fonts/OFL.txt`），并在
   `frontend/ATTRIBUTIONS.md` 登记来源与许可类型。
+## 焦点/动效相关 token 口径（Round 4，2026-10-27）
+
+- 焦点环颜色只用 `--cst-accent-default`（accent token），2px + 2px offset；**不得新造焦点色**。
+- 减少动态走全局 `@media (prefers-reduced-motion: reduce)`（`styles/theme/utilities.css`），
+  不新增动画 token；新增动画必须复用既有 motion token + 全局降级规则，禁止裸写 duration/iteration。
+- 软岛/长尾例外不改颜色 token：媒体/hero/表格行线等边界由结构/阴影/发丝线表达，颜色仍走既有语义 token。

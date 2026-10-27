@@ -374,7 +374,7 @@
 			{#if moment.images && moment.images.length > 0}
 				<div class="mt-2.5">
 					{#if moment.images.length === 1}
-						<div class="overflow-hidden rounded-xl border border-border-subtle/40 max-h-[280px] max-w-[420px] bg-surface-subtle shadow-xs">
+						<div class="overflow-hidden rounded-xl max-h-[280px] max-w-[420px] bg-surface-subtle shadow-xs">
 							<img
 								src={moment.images[0].url}
 								alt="动态配图"
@@ -385,7 +385,7 @@
 					{:else if moment.images.length <= 4}
 						<div class="grid grid-cols-2 gap-1.5 max-w-[420px]">
 							{#each moment.images.slice(0, 4) as img, idx (img.url + idx)}
-								<div class="aspect-square overflow-hidden rounded-xl border border-border-subtle/30 bg-surface-subtle shadow-xs">
+								<div class="aspect-square overflow-hidden rounded-xl bg-surface-subtle shadow-xs">
 									<img
 										src={img.url}
 										alt={`动态配图 ${idx + 1}`}
@@ -398,7 +398,7 @@
 					{:else}
 						<div class="grid grid-cols-3 gap-1.5 max-w-[460px]">
 							{#each moment.images.slice(0, 9) as img, idx (img.url + idx)}
-								<div class="aspect-square overflow-hidden rounded-xl border border-border-subtle/30 bg-surface-subtle shadow-xs">
+								<div class="aspect-square overflow-hidden rounded-xl bg-surface-subtle shadow-xs">
 									<img
 										src={img.url}
 										alt={`动态配图 ${idx + 1}`}

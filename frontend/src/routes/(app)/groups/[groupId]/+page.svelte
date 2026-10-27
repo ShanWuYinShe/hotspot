@@ -240,7 +240,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		<LoadError message={gd.loadError} onRetry={() => void gd.loadAll(params.groupId ?? '')} />
 	{:else}
 	<!-- 现代高质感社群 Hero 封面（圆角温润，磨砂悬浮操作区） -->
-	<div class="relative h-cover-height overflow-hidden rounded-2xl border border-border-subtle/50 shadow-raised-sm bg-surface-subtle">
+	<!-- Hero 封面（例外登记）：去 1px 描边，保留圆角/阴影/加载占位；图片 object-cover -->
+	<div class="relative h-cover-height overflow-hidden rounded-2xl shadow-raised-sm bg-surface-subtle">
 		{#if gd.detail.banner}
 			<img src={gd.detail.banner} alt={`${gd.detail.name} 的群组封面`} class="h-full w-full object-cover transition-transform duration-standard hover:scale-[1.01]" />
 		{:else}
@@ -293,22 +294,22 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 						<!-- 社群活力 Bento 矩阵（四宫格通透指标） -->
 						<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-							<div class="flex flex-col p-3 rounded-xl bg-surface-subtle/60 border border-border-subtle/30">
+							<div class="flex flex-col p-3 rounded-lg bg-surface-subtle/60">
 								<span class="text-xs text-text-secondary font-medium">群成员</span>
 								<span class="text-lg font-bold text-text-primary mt-1">{formatCount(gd.detail.members)}</span>
 							</div>
-							<div class="flex flex-col p-3 rounded-xl bg-surface-subtle/60 border border-border-subtle/30">
+							<div class="flex flex-col p-3 rounded-lg bg-surface-subtle/60">
 								<span class="text-xs text-text-secondary font-medium flex items-center gap-1.5">
 									<span>在线</span>
 									<span class="size-1.5 rounded-full bg-status-online animate-pulse"></span>
 								</span>
 								<span class="text-lg font-bold text-status-online mt-1">{gd.detail.online}</span>
 							</div>
-							<div class="flex flex-col p-3 rounded-xl bg-surface-subtle/60 border border-border-subtle/30">
+							<div class="flex flex-col p-3 rounded-lg bg-surface-subtle/60">
 								<span class="text-xs text-text-secondary font-medium">距你</span>
 								<span class="text-lg font-bold text-text-primary mt-1">{gd.detail.distance || '—'}</span>
 							</div>
-							<div class="flex flex-col p-3 rounded-xl bg-surface-subtle/60 border border-border-subtle/30">
+							<div class="flex flex-col p-3 rounded-lg bg-surface-subtle/60">
 								<span class="text-xs text-text-secondary font-medium">分类</span>
 								<span class="text-lg font-bold text-text-primary mt-1">{gd.detail.category || '—'}</span>
 							</div>
@@ -318,7 +319,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						{#if gd.members.length > 0}
 							<button
 								type="button"
-								class="hover-btn flex items-center justify-between p-3.5 rounded-xl border border-border-subtle/50 bg-surface-subtle/40 focus-ring transition-all hover:bg-interactive-hover hover:border-accent-border/40 group mt-1"
+								class="hover-btn flex items-center justify-between p-3.5 rounded-lg bg-surface-subtle/40 focus-ring transition-all hover:bg-interactive-hover group mt-1"
 								onclick={() => (tab = 'members')}
 							>
 								<div class="flex items-center gap-3 min-w-0">
@@ -399,14 +400,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</main>
 
 		<!-- 桌面右栏用圆润卡片承载；移动端平滑自适应，主次操作分明 -->
-		<aside class="flex h-fit flex-col gap-3 rounded-2xl bg-surface-primary/80 p-5 shadow-raised-sm backdrop-blur-xs">
+		<aside class="flex h-fit flex-col gap-3 rounded-lg bg-surface-island p-5 shadow-xs">
 			{#if gd.joined}
 				<Button
 					type="button"
-					variant="secondary"
+					variant="ghost"
 					size="lg"
 					flat
-					class="w-full border-accent-border/60 text-accent-default hover:bg-interactive-hover hover:border-accent-border"
+					class="w-full bg-surface-subtle/60 text-accent-default hover:bg-surface-subtle"
 					onclick={() => {
 						if (gd.joinPendingApproval) {
 							void gd.cancelJoinApplication();
@@ -435,7 +436,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				<Button type="button" variant="primary" size="lg" class="w-full" onclick={requestJoin}>加入群组</Button>
 			{/if}
 				{#if gd.joined && (gd.myRole === 'owner' || gd.myRole === 'admin')}
-					<Button type="button" variant="secondary" size="lg" flat class="w-full" onclick={() => (settingsOpen = true)}>
+					<Button type="button" variant="ghost" size="lg" flat class="w-full bg-surface-subtle/60 hover:bg-surface-subtle" onclick={() => (settingsOpen = true)}>
 						<Settings size={15} />
 						群管理
 					</Button>

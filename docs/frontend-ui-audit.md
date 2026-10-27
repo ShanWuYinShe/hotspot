@@ -180,3 +180,36 @@
 | surfaceIsland | 6/6 与 web 逐值一致（`check_surface_parity.py` PASS）；`ListGroup`/`SystemCard`/`SettingsSectionCard` 软岛；ProfileIdentityCard 去框 20；stats capsule；通知容器式软岛+未读态；搜索页头/分区线清零；骨架同步 |
 | 构建 | `assembleApp` TYPE CHECK + BUILD SUCCESSFUL；`check:theme` 全绿 |
 | 真机 | 软岛像素/阴影/圆角/gap、按钮 hover、未读态、骨架零位移待真机矩阵（Round 13+14 同批补） |
+## 2026-10-27 补充（Round 4：长尾/后台软岛化 + 交互状态/可访问性）
+
+**范围**：Web 18 文件（+51/−48）+ 鸿蒙长尾页面（P0 原语已完成，P1/P2 镜像中）；方案见 design-system §19.5（例外清单）/ §20（交互基线）。
+证据：`.workwork/ui-polish-1026/r4/fe/{raw/before-matrix,raw/after-matrix,raw/audit,compare}`、`r4/ha/{interim,compare}`。**鸿蒙真机仍离线**，端上像素待补。
+
+### 一、长尾/后台软岛化（Web 实测）
+
+| 页面/区域 | 结果 |
+|---|---|
+| 瞬间详情 | 单帖卡改内容软岛；媒体容器/九宫格/回复框去 1px 描边、保留圆角/阴影/focus-ring；统计/评论分隔发丝线保留 |
+| 首页长尾 | onboarding 卡、未登录关注卡、悬浮 Tab 容器、HeroStats、GroupCarousel、NearbyUserRows 去框；整卡图片卡语言不变 |
+| 群详情 | hero 封面去描边保留圆角/阴影/占位；指标/操作/成员分组与 5 个子列表按钮软岛/软填 |
+| 他人主页 | 身份/数据卡与 /me 同构；私信/屏蔽提示收敛 |
+| admin 10 页 | 概览身份条+9 模块卡、config 5 分区卡+保存条、stats 卡/图表容器/筛选、tags danger callout；6 张表共用 `table.ts`：外壳去描边、表头 bg-subtle+行线+行 hover 保留、行按钮软填/soft danger、390 横向滚动、空态/分页统一 |
+
+### 二、交互状态与可访问性（独立实测基线）
+
+| 项 | 方法 | 结果 |
+|---|---|---|
+| focus-visible | 键盘 Tab 逐次 + computed outline；亮/暗 | 2px solid accent（rgb(43,94,178)）；admin 表格行按钮（tab36 进入「封禁」）同 2px；moment/group/users 390 可见；skip link 首 Tab 可见 |
+| hover / press / disabled | 计算样式 + 截图 | 行按钮 soft danger 背景 0.065→0.13；press scale .94–.95；disabled opacity-faint + pointer-events |
+| reduced-motion | `set media reduced-motion` 遍历 | ambient 24s/36s、ping 1s、pulse 2s、hover 0.18s → reduced 下 ambient 消失、其余 1e-05s 单次、hover 1e-05s（全局 utilities 规则） |
+| 加载/空/错误 | 逐页核查 | moment = Skeleton；group/users = InlineLoading（理由：单实体/短列表、<1s、避免二次位移）；admin = InlineLoading + EmptyState + LoadError + LoadMoreButton；mock 后台筛选参数未实现 → 空态不可复现（已注明，未伪造） |
+
+### 三、回归
+
+- QA 23/23 `issues: []`、console 0；补充 16 路由 ×2 视口 32/32（0 溢出 / 0 坏图 / h1 正常 / 0 error）；
+- check 0 errors 0 warnings + eslint 0 + theme 四联 OK；test 100 文件/518；build 通过。
+
+### 四、鸿蒙（代码/构建/布局树，像素待真机）
+
+- P0：`FocusRing`（focusBox 2vp accent + 2vp 外距，SystemButton/SurfaceIconButton/Pressable/SystemInput 接入）；`MotionUtil`（reduced 下 spring duration=0 / pressScale=1 / shimmer 关闭，原语已接）；AdminOverview 软岛。
+- P1/P2：MomentDetail/GroupDetail/他人主页软岛映射（按 web 终稿值），布局树与 compare 见 r4/ha；build/check:theme/parity 全绿；端上像素待真机。

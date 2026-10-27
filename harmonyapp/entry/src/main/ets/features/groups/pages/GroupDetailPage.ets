@@ -1523,6 +1523,10 @@ export struct GroupDetailPage {
       // 左右各内缩一个 gutter（本机 2026-10-11 实测：封面 x=70..1186 / 屏宽 1256）。
       // 真要通栏需把本页改为 noHorizontalPadding + 各区块自加 gutter（已登记例外），
       // 或改用 calc 宽度；当前选择与下方内容对齐的「收束式 hero」，视觉更一致。
+      // r4 hero：去描边（本无）、圆角 24 + 阴影 + 裁剪（媒体 hero 例外：描边已去、圆角/阴影/占位保留）
+      .borderRadius(DesignConstants.SHAPE.HERO_CARD)
+      .clip(true)
+      .shadow(this.getCurrentThemePalette().surfaceShadow)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 举报确认弹窗（更多操作 sheet → 举报群组；danger 确认，对齐 ChatPage 举报范式）。
@@ -1976,9 +1980,11 @@ export struct GroupDetailPage {
         .padding({
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, DesignConstants.SPACING.LG)
         })
-        // 分组卡（surfaceShadow 表达层级；描边已按用户反馈移除——深色下呈裁剪线观感）
-        .backgroundColor(this.getSurfaceBackground())
-        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+        // r4 软岛：Tab 内容分组卡（去描边、surfaceIsland、圆角 20、轻投影；行间发丝线保留）
+        .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+        .borderRadius(DesignConstants.SHAPE.CARD)
+        .shadow(this.getCurrentThemePalette().surfaceShadow)
+        .clip(true)
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .transition(
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })

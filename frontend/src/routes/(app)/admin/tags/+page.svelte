@@ -148,7 +148,7 @@
 						: '软屏蔽：该标签不再可被新建/搜索命中，历史数据保留不变。'}
 				</Dialog.Description>
 				{#if !banTarget?.is_blocked}
-				<label class="mt-4 flex items-start gap-2.5 rounded-md border border-status-danger-border bg-danger-bg p-3">
+				<label class="mt-4 flex items-start gap-2.5 rounded-lg bg-danger-bg/60 p-3">
 					<input type="checkbox" bind:checked={hardDelete} class="mt-0.5" />
 					<span class="text-xs leading-relaxed text-text-primary">
 						物理删除（不可逆）：从所有历史引用中移除该标签，删除后同名标签视为新标签可重新创建。

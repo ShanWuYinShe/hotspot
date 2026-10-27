@@ -108,7 +108,7 @@
 		}
 	};
 
-	const SECTION_CARD = 'rounded-lg border border-border-default bg-surface-primary p-5 shadow-raised-sm';
+	const SECTION_CARD = 'rounded-lg bg-surface-island p-5 shadow-xs';
 	const LABEL = 'text-xs text-text-secondary';
 	const INPUT = 'input-surface w-full rounded-md px-3 py-2 text-sm text-text-primary';
 	const FEATURE_LABELS: Record<keyof FeatureSwitches, string> = {
@@ -244,7 +244,7 @@
 
 		<!-- 全局保存栏：仅存在未保存修改时出现（r60：卡内散落保存收敛为全局「保存更改/重置」） -->
 		{#if canWrite && hasDirty}
-			<div class="sticky bottom-4 z-[var(--cst-z-overlay)] flex items-center justify-between gap-3 rounded-lg border border-border-default bg-surface-primary/95 px-4 py-3 shadow-raised-md backdrop-blur-md" role="status">
+			<div class="sticky bottom-4 z-[var(--cst-z-overlay)] flex items-center justify-between gap-3 rounded-lg bg-surface-primary/95 px-4 py-3 shadow-raised-md backdrop-blur-md" role="status">
 				<p class="text-xs text-text-secondary" aria-live="polite">{dirtySections.length} 个分组有未保存的修改</p>
 				<div class="flex items-center gap-2">
 					<Button type="button" variant="secondary" size="sm" onclick={resetEdits} disabled={pending !== ''}>重置</Button>

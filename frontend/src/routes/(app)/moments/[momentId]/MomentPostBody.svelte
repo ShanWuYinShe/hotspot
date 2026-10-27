@@ -109,7 +109,7 @@
      单图保持全幅封面；多图改为网格（首图全幅 + 其余 3 列网格，点击任一张打开大图查看器）。 -->
 
 <!-- 统一度极高的沉浸式画卷流，消除碎片化盒子嵌套 -->
-<article class="flex flex-col rounded-2xl border border-border-subtle/50 bg-surface-primary p-4 sm:p-5 md:p-7 shadow-raised-sm">
+<article class="flex flex-col rounded-lg bg-surface-island p-4 sm:p-5 md:p-7 shadow-xs">
 	<!-- 1. 作者 Header -->
 	<header class="flex items-center justify-between gap-3 pb-4">
 		<div class="flex items-center gap-3 min-w-0">
@@ -162,7 +162,8 @@
 	<!-- 4. 配图画廊（单图全幅封面或多图网格） -->
 	{#if cover}
 		<div class="pb-5">
-			<div class="relative overflow-hidden rounded-xl border border-border-subtle/50 shadow-xs h-cover-height-lg bg-surface-subtle">
+			<!-- 媒体容器（例外登记）：去 1px 描边，用 bg-subtle + 圆角 + 阴影表达边界 -->
+			<div class="relative overflow-hidden rounded-xl shadow-xs h-cover-height-lg bg-surface-subtle">
 				<button
 					type="button"
 					class="block h-full w-full cursor-zoom-in focus-ring"
@@ -193,7 +194,7 @@
 					{#each moment.images.slice(1) as img, i (img + i)}
 						<button
 							type="button"
-							class="aspect-square w-full overflow-hidden rounded-lg border border-border-subtle/40 focus-ring shadow-xs"
+							class="aspect-square w-full overflow-hidden rounded-lg focus-ring shadow-xs"
 							aria-label={`查看第 ${i + 2} 张图片`}
 							onclick={() => {
 								viewerIndex = i + 1;
@@ -207,7 +208,7 @@
 			{/if}
 		</div>
 	{:else if !moment.content && moment.location}
-		<div class="mb-5 relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-border-subtle/60 bg-accent-soft/30 h-cover-height-lg">
+		<div class="mb-5 relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-xl bg-accent-soft/30 h-cover-height-lg">
 			<MapPin size={28} class="text-accent-default" strokeWidth={1.5} />
 			<span class="text-text-secondary text-xs">来自 {moment.location} 的瞬间</span>
 		</div>
@@ -340,7 +341,7 @@
 							</div>
 						{/if}
 						{#if c.replies.length > 0}
-							<div class="mt-3 flex flex-col gap-3 rounded-xl bg-surface-subtle/50 p-3 border border-border-subtle/30">
+							<div class="mt-3 flex flex-col gap-3 rounded-lg bg-surface-subtle/50 p-3">
 								{#each c.replies as r (r.id)}
 									<div class="flex gap-2.5">
 										<button

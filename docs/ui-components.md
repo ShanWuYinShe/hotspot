@@ -29,7 +29,10 @@
 |---|---|
 | `data-display/NearbyImageCard` | 图片优先内容卡**唯一实现**（附近瞬间/附近的人/附近群组/首页轮播/群组详情） |
 | `card-hover`（utilities） | 可点击卡片唯一 hover 语言：投影抬升 + `--cst-hover-lift`（vibrant）/ 纸面微染+边框（forest） |
-| `card-raised` / `surface-hero` / `ListItem tone=card` | 静态卡片语言（白底 + 投影/描边），禁止再发明第四种 |
+| `card-raised` / `surface-hero` / `ListItem tone=card` | 静态卡片语言（白底 + 投影），禁止再发明第四种 |
+| 单帖卡（瞬间详情） | 内容软岛（无描边 + `surface-island` + shadow-xs + 圆角 20）；媒体容器去 1px 描边、保留圆角/阴影/加载占位/focus-ring；统计与评论分隔发丝线保留（Round 4） |
+| Hero 封面（群详情/主页） | 去 1px 描边，保留圆角/阴影/加载占位（媒体 hero 例外，见 design-system §19.5） |
+| 表格（admin） | 外壳去描边改软岛；**表头 bg-subtle + 行线 + 行 hover 保留**；行内按钮次级软填 / soft danger；390 横向滚动可及全部列；分页 ≤20 行不强制 sticky；空态/分页/筛选统一（Round 4） |
 | `image-hover-frame` | 相册小方格专用（照片墙缩略图），内容卡不得使用 |
 
 ### 按钮 / 输入 / 导航 / 弹层 / 反馈
@@ -118,6 +121,14 @@
    主题在 `themes/{vibrant,forest,inkwash}.css` 各自演绎。
 3. **按压**：行 = opacity-tap；卡片 = `--cst-card-tap-scale`；按钮 = `hover-btn`。
 4. **明暗**：一律 token，禁止组件写死色值/色 mix。
+5. **焦点可见（Round 4 强制）**：所有 interactive（按钮/链接/行/输入/自定义点击区/表格行按钮）
+   必须有可见焦点环：2px accent + 2px offset（`focus-ring`）；键盘 Tab 顺序可达、skip link 首 Tab 可见；
+   **去描边不得连带丢焦点环**；亮/暗都测；父容器 overflow 不得裁切焦点环。
+6. **减少动态（Round 4 强制）**：全局 `prefers-reduced-motion` 下禁用位移/缩放/脉冲/shimmer/悬停过渡
+   （过渡降为 ≈0）；透明度淡入可留；新增动画不得裸写，走既有全局规则/`MotionUtil`。
+7. **加载/空/错误（Round 4 收口）**：首屏列表/卡片优先 `Skeleton`；单实体/短列表可用 `InlineLoading`
+   （需在页面注释给理由：结构轻/<1s/避免二次位移）；空 `EmptyState`、失败 `LoadError` + 重试、
+   到底 `ListEnd` 四态不得互替。
 
 ## 近重复收敛 backlog（按危害排序）
 

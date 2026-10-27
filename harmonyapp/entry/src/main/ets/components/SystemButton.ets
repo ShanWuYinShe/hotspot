@@ -1,6 +1,8 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
+import { FocusRing } from '../core/accessibility/FocusRing';
+import { MotionUtil } from '../core/accessibility/MotionUtil';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
 import { curves } from '@kit.ArkUI';
@@ -98,9 +100,11 @@ export struct SystemButton {
         return p.error;
       case 'surface':
       case 'surface-accent':
-      case 'surface-danger':
         // r3 次级按钮：surface-subtle/60 软填底、无描边（hover 100%）
         return AppThemeVisuals.withAlpha(p.surfaceSubtle, 0.60);
+      case 'surface-danger':
+        // r4 危险 soft：danger-bg 50% 底 + danger 字（无描边；二次确认可保留实底 danger）
+        return AppThemeVisuals.withAlpha(p.dangerSoft, 0.50);
       default:
         return p.accentBackground;
     }
@@ -192,7 +196,7 @@ export struct SystemButton {
         return p.accentMuted;
       }
       if (softVariants.indexOf(this.variant) >= 0) {
-        return p.surfaceSubtle;
+        return this.variant === 'surface-danger' ? p.dangerSoft : p.surfaceSubtle;
       }
     }
     return this.getBackgroundColor();
@@ -263,18 +267,21 @@ export struct SystemButton {
     .border({ width: this.getBorderWidth(), color: this.getHoverBorderColor() })
     .shadow(this.getShadow())
     .enabled(this.isInteractive())
+    // r4 键盘焦点环（web ring-accent 2px offset 2）：accent token、2vp 环 + 2vp 外距
+    .focusable(this.isInteractive())
+    .focusOnTouch(false)
+    .focusBox(FocusRing.box(this.getPalette().accentBackground))
     // 禁用/加载中时从无障碍树移除（对齐原生 disabled 语义：不可聚焦、不可触发）
     .accessibilityLevel(this.isInteractive() ? 'auto' : 'no')
     .opacity(this.disabled ? DesignConstants.OPACITY.DISABLED : 1)
-    .scale(this.isPressed
-      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON }
-      : { x: 1, y: 1 })
-    .animation({
-      curve: curves.springMotion(
-        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-      )
+    .scale({
+      x: MotionUtil.pressScale(this.isPressed, DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON),
+      y: MotionUtil.pressScale(this.isPressed, DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON)
     })
+    .animation(MotionUtil.spring(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ))
     .onTouch((event: TouchEvent) => {
       if (!this.isInteractive()) {
         return;

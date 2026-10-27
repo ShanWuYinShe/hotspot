@@ -1,4 +1,4 @@
-# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-14）
+# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-15）
 
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
@@ -6,7 +6,22 @@
 
 ## 已完成基线（不要回退）
 
-### 2026-10-27 本轮（Round 14，次级页面内容软岛化 + 个人中心域精致化）
+### 2026-10-27 本轮（Round 15，长尾/后台软岛化 + 交互状态与可访问性基线）
+
+- **长尾/后台软岛化（Web 18 文件）**：瞬间详情单帖卡/媒体容器、首页 onboarding/HeroStats/轮播/附近人列表、
+  群详情 hero/指标/操作/子列表、他人主页、**admin 10 页**（模块卡/表格外壳/筛选/危险 callout）统一为软岛
+  （无 1px 全框描边 + `surface-island` + shadow-xs + 圆角 20）；表格外壳去描边但表头/行线/行 hover 保留；
+  例外清单（表格行线/输入控件/媒体格/hero/分隔线/chip/头像环/弹层/地图面板）登记在 design-system §19.5。
+- **交互状态与可访问性基线（design-system §20）**：
+  focus-visible 全站可见（web 2px accent + offset 2，键盘 Tab 实测含 admin 表格行按钮/skip link；
+  鸿蒙 `FocusRing` focusBox 2vp + 2vp，原语接入）；reduced-motion（web 全局 `prefers-reduced-motion` 覆盖；
+  鸿蒙 `MotionUtil`，原语接入；默认行为不回归）；hover/press/disabled 统一；长尾加载/空/错误态核查
+  （moment=Skeleton；group/users=InlineLoading 带理由；admin=InlineLoading+EmptyState+LoadError+LoadMoreButton）。
+- **验证**：before/after 矩阵各 28 张（7 页×390/1440×亮暗）+ 39 页回归（23 QA issues=[] + 16 路由×2 视口 0 错误）；
+  check 0/0、test 518、build 通过。鸿蒙 P0（焦点/减少动态/AdminOverview）+ P1/P2 软岛映射，build/check:theme/parity 全绿；
+  **真机仍离线**（Round 13/14/15 端上像素验收均待补）。
+
+### 2026-10-27 上一轮（Round 14，次级页面内容软岛化 + 个人中心域精致化）
 
 - **内容软岛（双端同 spec）**：开放页面内容分组统一为「无 1px 描边 + `surfaceIsland` 表面 +
   `shadow-xs` + 圆角 20 + 行透明/gap 2 + hover 离边 8」；新增 `--cst-surface-island`
@@ -177,14 +192,13 @@
 
 ## 待做（按优先级）
 
-1. **鸿蒙真机像素验收（Round 13+14 遗留，最高优先）**：两轮鸿蒙改动均只完成构建/布局树/token 校验，
+1. **鸿蒙真机像素验收（Round 13+14+15 遗留，最高优先）**：三轮鸿蒙改动均只完成构建/布局树/token 校验，
    真机 hdc 离线导致三主题×明暗矩阵、灰度 Tab、压图对比度像素实测、软岛阴影/圆角/gap、按钮 hover、
    未读态、骨架零位移、web↔鸿蒙并排 compare 全部挂起。设备恢复后按
-   `.workwork/ui-polish-1026/r2/ha/report.md` §7 与 `.workwork/ui-polish-1026/r3/ha/report.md` checklist 执行
-   （含 `ha/run_after_r2.sh` 与 r3 脚本）。
-2. **长尾自定义卡收敛（Round 14 遗留）**：`ListContainer` 场景已随软岛组件全站生效；剩余 admin 统计/表单
-   自定义卡、moment 详情单帖卡、首页新手引导卡等仍走旧描边语言，按「内容单元岛化 / 登记例外」逐页判定
-   （design-system §19；不要一刀切）。
+   `.workwork/ui-polish-1026/{r2,r3,r4}/ha/report.md` checklist 执行（r4 增补焦点环/减少动态/长尾软岛的端上验证）。
+2. **长尾自定义卡收尾（Round 15 已基本完成）**：moment 详情/首页长尾/群详情/他人主页/admin 已软岛化；
+   剩余 demo-only 演示卡（`/?demo=`）与地图面板等按例外保留；新增页面按 §19/§19.5 判定。
+   鸿蒙后台仅 AdminOverview（其余 web-only，N/A 登记）；首页 onboarding/HeroStats/轮播在鸿蒙无对应组件（N/A）。
 3. **鸿蒙氛围画布实例数/内存优化（Round 12 遗留，端上实测数据已量化）**：当前每个
    `fillHeight` 页面一块全屏 Canvas（Tab 页常驻，实测 live 2→5 实例、PSS 218.7→330.2MB 含页面数据，
    单画布理论 ≈12MB）。可选方案：上提到外壳内容区单实例（对齐 web）或共享绘制缓存/图片快照；
@@ -220,7 +234,12 @@
    挤压操作行；若后续放大网格卡宽度可统一。
 15. **BSP 卡片比例例外（Round 13）**：附近瞬间/群组桌面 BSP 格按布局单元铺满、非固定比例；如需统一需重排布局。
 16. **横排紧凑卡 fallback/精选横排例外（Round 13）**：horizontal 卡仍两段式与旧占位；群详情精选桌面横排保留。
-17. **forest 亮色软岛与画布同色（Round 14 遗留）**：light `surfaceIsland` 86% 合成后 forest 与画布同色
+17. **交互状态新增契约的持续守护（Round 15）**：focus-visible / reduced-motion / 四态（Skeleton/InlineLoading/
+   EmptyState/LoadError/ListEnd）已写入 design-system §20 与 style/harmony skill；新页面/新原语必须按契约自查，
+   建议后续把「focus 环存在性 / reduced-motion 无回归」纳入 UI 自查清单（本轮未做自动化）。
+18. **admin mock 空态不可复现（Round 15 登记）**：mock 列表接口未实现筛选参数过滤，空态分支在 mock 环境不可达；
+   组件路径已核查但无截图，真接口/联调环境补验证。
+19. **forest 亮色软岛与画布同色（Round 14 遗留，顺延）**：light `surfaceIsland` 86% 合成后 forest 与画布同色
    （ratio 1.00），边界仅靠 `shadow-xs`；若产品觉得需要拉开表面差，可改 light 岛为 `primary 92% + text 8%`
    （会略变灰，需两端同改并回归主题校验）。
 18. **鸿蒙我的瞬间 tabs 缺失（Round 13）**：web 有 发布/喜欢/收藏/共 N 条记录 tabs，鸿蒙因无喜欢/收藏数据源、

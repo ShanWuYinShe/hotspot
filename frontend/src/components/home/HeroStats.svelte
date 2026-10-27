@@ -22,7 +22,7 @@ import { formatCount } from '@/lib/utils';
 
 	<button
 		type="button"
-		class="group hover-btn tap-97 rounded-2xl border border-border-subtle/50 bg-surface-primary/85 backdrop-blur-xs shadow-xs hover:border-accent-default/30 hover:shadow-raised-sm cursor-pointer overflow-hidden text-left w-full py-4.5 px-5 transition-all"
+		class="group hover-btn tap-97 rounded-lg bg-surface-island shadow-xs hover:shadow-raised-sm cursor-pointer overflow-hidden text-left w-full py-4.5 px-5 transition-all"
 		aria-label="查看附近的人"
 		onclick={onExplore}
 	>

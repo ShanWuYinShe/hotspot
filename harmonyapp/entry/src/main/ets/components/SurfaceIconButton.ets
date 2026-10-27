@@ -1,4 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
+import { FocusRing } from '../core/accessibility/FocusRing';
+import { MotionUtil } from '../core/accessibility/MotionUtil';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeShadow, DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
@@ -128,17 +130,19 @@ export struct SurfaceIconButton {
     .height(Math.max(this.buttonSize, DesignConstants.LAYOUT.MIN_HIT_TARGET))
     .alignContent(Alignment.Center)
     .enabled(!this.disabled)
+    .focusable(!this.disabled)
+    .focusOnTouch(false)
+    .focusBox(FocusRing.box(this.getPalette().accentBackground))
     .opacity(this.disabled ? DesignConstants.OPACITY.DISABLED : 1)
     .accessibilityText(this.accessibilityLabel)
-    .scale(this.isPressed ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-      { x: 1, y: 1 })
-    .animation({
-      curve: curves.springMotion(
-        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-      )
+    .scale({
+      x: MotionUtil.pressScale(this.isPressed, DesignConstants.INTERACTION.SCALE_PRESSED_ICON),
+      y: MotionUtil.pressScale(this.isPressed, DesignConstants.INTERACTION.SCALE_PRESSED_ICON)
     })
+    .animation(MotionUtil.spring(
+      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
+      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
+    ))
     .onTouch((event: TouchEvent) => {
       if (this.disabled) {
         return;

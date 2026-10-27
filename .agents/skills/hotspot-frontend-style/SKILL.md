@@ -448,3 +448,26 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 - 页头/分区标题下不得有 1px 硬线（用留白 + eyebrow）；只允许功能线：聊天输入条/粘底条、
   消息分栏竖向发丝线、表格/统计行、内容单元内演示分隔。
 - 自查：`grep -rn 'border-b' frontend/src/components frontend/src/routes | grep -vE '功能线白名单'`。
+## Round 4 长尾/后台与交互状态（2026-10-27）
+
+### 1) 长尾/后台软岛
+
+- 页面级自定义卡（单帖卡、群详情 hero/指标/操作、他人主页、首页 onboarding/统计/轮播、admin 模块卡与表格外壳）
+  一律按 design-system §19 软岛化；例外按 §19.5（表格行线/表头线、输入控件、媒体容器、hero 封面、内容分隔线、
+  chip/badge、头像环、弹层、地图面板等保留其功能边界）。
+- 单帖卡=内容岛；媒体容器去 1px 描边但保留圆角/阴影/focus-ring；表格外壳去描边但表头/行线/行 hover 保留。
+
+### 2) 焦点可见（强制）
+
+- 所有 interactive 必须 `focus-ring`（2px accent + offset 2）；键盘 Tab 可达、skip link 首 Tab 可见；
+  **去描边不得丢焦点环**；父容器 overflow 不得裁切；亮/暗都测（键盘截图 + computed outline）。
+
+### 3) 减少动态（强制）
+
+- 全局 `@media (prefers-reduced-motion: reduce)` 覆盖位移/脉冲/shimmer/悬停过渡；透明度淡入可留；
+  新增动画不得裸写 duration/iteration；默认行为不得回归。
+
+### 4) 加载/空/错误态
+
+- 首屏列表/卡优先 Skeleton；单实体/短列表可 InlineLoading（页面注释给理由）；
+  EmptyState / LoadError+重试 / ListEnd 四态不得互替。

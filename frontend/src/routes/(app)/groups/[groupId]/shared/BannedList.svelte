@@ -26,7 +26,7 @@
 				<span class="block truncate text-sm text-text-primary">{item.user.nickname}</span>
 				<span class="text-xs text-text-secondary">{formatDateTime(item.banned_at)}{item.reason ? ` · ${item.reason}` : ''}</span>
 			</span>
-			<button type="button" onclick={() => onUnban(item.user.user_id)} class="hover-btn hit-slop rounded-full border border-border-default px-3.5 py-2 text-sm text-text-primary focus-ring hover:border-border-strong">解封</button>
+			<button type="button" onclick={() => onUnban(item.user.user_id)} class="hover-btn hit-slop rounded-full bg-surface-subtle/60 px-3.5 py-2 text-sm text-text-primary focus-ring hover:bg-surface-subtle">解封</button>
 		</ListItem>
 	{:else}
 		<EmptyState bare title="暂无封禁成员" />

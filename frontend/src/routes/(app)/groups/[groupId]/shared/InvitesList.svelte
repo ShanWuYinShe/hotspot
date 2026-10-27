@@ -29,7 +29,7 @@
 				<span class="text-xs text-text-secondary">{inviteStatusText(inv.status)} · {formatDateTime(inv.created_at)}</span>
 			</span>
 			{#if inv.status === 'pending'}
-				<button type="button" onclick={() => onRevoke(inv.invite_id)} class="hover-btn hit-slop rounded-full border border-border-default px-3.5 py-2 text-sm text-text-primary focus-ring hover:border-border-strong">撤销</button>
+				<button type="button" onclick={() => onRevoke(inv.invite_id)} class="hover-btn hit-slop rounded-full bg-surface-subtle/60 px-3.5 py-2 text-sm text-text-primary focus-ring hover:bg-surface-subtle">撤销</button>
 			{/if}
 		</ListItem>
 	{:else}

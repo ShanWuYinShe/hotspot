@@ -16,6 +16,7 @@
  */
 
 import { DesignConstants } from '../../constants/DesignConstants';
+import { MotionUtil } from '../../core/accessibility/MotionUtil';
 
 @Component
 export struct SkeletonShimmer {
@@ -27,7 +28,7 @@ export struct SkeletonShimmer {
   @State shimmerOpacity: number = 1.0;
 
   aboutToAppear() {
-    if (this.active) {
+    if (this.active && MotionUtil.shimmerActive()) {
       this.startShimmer();
     }
   }
@@ -37,7 +38,7 @@ export struct SkeletonShimmer {
   }
 
   onActiveChange() {
-    if (this.active) {
+    if (this.active && MotionUtil.shimmerActive()) {
       this.startShimmer();
     } else {
       this.stopShimmer();
@@ -62,6 +63,11 @@ export struct SkeletonShimmer {
   }
 
   private startShimmer() {
+    // 系统减少动态/关闭动画：骨架静止（保留静态骨架，不脉冲）
+    if (!MotionUtil.shimmerActive()) {
+      this.shimmerOpacity = 1.0;
+      return;
+    }
     this.shimmerOpacity = 1.0;
     this.getUIContext().animateTo({
       duration: DesignConstants.ANIMATION.DURATION_SLOW, // 脉冲/shimmer 循环周期
