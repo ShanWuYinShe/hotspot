@@ -107,8 +107,11 @@ bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
    二进制（socket 目录不可写直接全 FAIL）——用 `AB=~/.local/bin/agent-browser`
    前缀显式指到 wrapper；被拦后按现行方案对该命令申请 `danger-full-access`
    （2026-10-14 起提权原生启动，插件有意不放行 `~/.agent-browser`）；
-2. qa 会话与既有交互 agent-browser 会话共用 chrome-profile（SingletonLock 冲突，
-   Chrome 起不来）——跑之前先 `agent-browser close --all` 释放。
+2. （2026-10-27 修正）qa 会话是独立 `--session` 实例、自带独立临时 profile，与既有
+   会话无 profile 冲突；`close --all` 属红线禁止（会关掉全机所有会话，wrapper 会直接
+   拦截并给出正确指引）。浏览器起不来时先 `agent-browser session list` 复查残留，
+   再用 `node ~/.agents/bin/ab-reap-orphans.mjs --min-age 0` 清孤儿（先确认无活任务），
+   而不是关别人的会话。
 
 `bun run build` 是 `write-version-info`（注入版本信息）+ `vite build`（不含
 `svelte-kit sync`；重建 `.svelte-kit/` 的是
