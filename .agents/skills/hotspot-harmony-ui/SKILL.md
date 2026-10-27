@@ -490,3 +490,9 @@ Huawei 移动端规范要求有效触控目标 **≥44vp**。本项目原语层�
 - 回顶：`components/BackToTopButton.ets`（48vp、ARROW_UP、surface+hairline+shadow、opacity 180ms via MotionUtil/reduced 直接显隐、不可见禁触+无障碍树移除、label「回到顶部」）；
   已接 Home/Nearby/Notification/Search/MomentsFeed 5 页（阈值 1.5×视口高、scrollTo 300ms/reduced 0ms、右下避底栏/居中 FAB）；GroupPage/Profile/MyShares 下轮。
 - SPA 焦点/TalkBack 播报由系统处理（N/A 登记）；320/reflow 为 web-only（N/A）。
+## 聊天滚动与回底（Round 10，2026-10-27）
+
+- 私聊/群聊共用 ChatPage：ListScroller + `onScrollIndex`（+列表头偏移）判定末条可见=近底；ArkUI List 无距底像素 API，平台差异已登记。
+- 规则：仅近底自动 `scrollToBottom`+`markAsRead`；上滑时不跳转、计数++、显示 `ChatJumpToBottomButton`；自己发送/初始/切换/分页保持滚底/视口；
+  回底按钮 48vp、count>0 徽标（99+）、150ms via MotionUtil/reduced 直接、不可见禁触+移出 a11y、label 与计数一致；旧 78% 胶囊已删除。
+- 新增聊天/列表页时按此契约实现；真机上滑不跳/计数/按钮位置待补验。

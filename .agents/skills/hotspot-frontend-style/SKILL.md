@@ -537,3 +537,10 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 - 回顶按钮：阈值 1.5 屏、44px、右下角避浮层/底栏；点击平滑回顶（reduced 直接跳）、隐藏 <200ms 防闪烁；不可见时移出无障碍树。
 - SPA 导航：焦点 main + sr-only announcer（aria-live polite/atomic），首屏不播、去重；避免同时聚焦 h1 造成重复播报。
 - Reflow 自查：320px/200% 缩放无横向滚动；新浮层不得在窄屏溢出。
+## Round 10 聊天滚动与回底（2026-10-27）
+
+- 聊天自动滚只在「近底部（≤120px）」发生；上滑阅读收到新消息**不得跳转**，只累加计数并显示回底按钮；
+  自己发送/初始/切会话始终回底；分页 prepend 保持视口。
+- 回底按钮：距底 >200px 显示（44px；鸿蒙 48vp），无消息只显箭头、有新消息「N 条新消息」（>99→99+）；`aria-live`、aria-label 与文本一致；
+  150ms 显隐（reduced 直接）；点击滚底+清零+补 markRead；不遮挡输入栏/浮层。
+- markRead：仅初始/近底/回底补标（1s 节流），上滑/离开不补；会话切换计数清零。新聊天页面按此契约实现。

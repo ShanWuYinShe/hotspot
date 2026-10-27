@@ -251,3 +251,8 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 - 焦点管理：客户端导航后焦点落 `main#main-content`（tabindex=-1、preventScroll），`#route-announcer` 播报 h1 标题（首屏不播、1.5s 去重）；不聚焦 h1 避免重复播报；无 h1 才回退并跳过播报。
 - 回顶：滚动 >1.5×视口高出现 44px 圆钮（桌面 bottom-6、移动 bottom-24，避开浮层/底栏）；平滑回顶（reduced 直接跳）、回顶后 200ms 内隐藏；`aria-label` 必填。
 - Reflow：320px 宽 / 200% 文本缩放关键页无横向滚动（documentElement/主滚动区溢出=0）；装饰层超界须被裁剪。
+## 聊天滚动容器（Round 10）
+
+- 聊天消息区是独立滚动容器（`chat.scrollEl`），分页 prepend 时用 `scrollHeight - prevHeight + prevTop` 保持视口；
+- 自动滚策略见 style skill；回底按钮 overlay 固定于消息区右下（输入栏上方），不得放进滚动流（避免 CLS）。
+- 阈值 120/200px 为当前基线；新增输入栏浮层/表情面板时复测按钮位置。

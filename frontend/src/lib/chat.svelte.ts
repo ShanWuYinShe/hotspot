@@ -10,6 +10,7 @@
 
 import type { PrivateMessageNewPayload } from '@/lib/ws/types';
 import { wsClient } from '@/lib/ws/client';
+import { prefersReducedMotion } from '@/lib/motion';
 
 // 断线补拉阈值（spec L163-165）：WS 断开超过该时长后，重连时主动拉取历史（private_messages/fetch / group_messages/fetch）
 // 首页补拉（HTTP 与 WS 推送重复按主键去重，spec L169）；未超阈值直接依赖
@@ -151,6 +152,21 @@ export function useChat(opts: UseChatOptions) {
 	let sending = $state(false);
 	let sendError = $state('');
 	let scrollEl = $state<HTMLDivElement | null>(null);
+	// 滚动位置状态（Round 10）：距底 ≤120px 视为「在底部」；上滑超过 200px 才显示回底按钮；
+	// 不在底部时收到的新消息只累加计数，不打断阅读。
+	let distanceToBottom = $state(0);
+	let nearBottom = $state(true);
+	let newMessageCount = $state(0);
+	let lastMarkReadAt = 0;
+
+	/** 滚到底（smooth / reduced 直接跳），并同步状态。 */
+	function scrollToBottomInternal(el: HTMLElement, animate: boolean) {
+		const behavior: ScrollBehavior = animate && !prefersReducedMotion() ? 'smooth' : 'auto';
+		el.scrollTo({ top: el.scrollHeight, behavior });
+		distanceToBottom = 0;
+		nearBottom = true;
+		newMessageCount = 0;
+	}
 	// --- 历史分页(契约:游标分页,next_cursor 缺失即无更多) ---
 	// $state：加载中/失败/到底三态要暴露给视图做指示（layout 第 6 条），须可响应。
 	let nextCursor = $state<string | null>(null);
@@ -167,6 +183,10 @@ export function useChat(opts: UseChatOptions) {
 		const target = opts.targetId();
 		loading = true;
 		loadError = false;
+		// 会话切换：新消息计数/滚动状态清零（旧会话 pending 不带到新会话）
+		newMessageCount = 0;
+		distanceToBottom = 0;
+		nearBottom = true;
 		// 切换会话时清空旧消息：分栏复用实例时不清理会残留上一个会话的内容
 		messages = [];
 		nextCursor = null;
@@ -199,17 +219,37 @@ export function useChat(opts: UseChatOptions) {
 		void loadInitial();
 	});
 
-	// 滚动到底部：仅在「尾部消息 id 变化」（初始加载/新消息 append/会话切换）时触发；
-	// loadMore 往顶部插入旧消息不改变尾部 id，避免与顶部位置还原互相打架。
+	// 滚动策略（Round 10）：仅在「尾部消息 id 变化」时决策，loadMore 往顶部插入旧消息
+	// 不改变尾部 id（视口保持逻辑不受影响）：
+	// - 初始加载/切换会话（此前列表为空）→ 直接回底（无动画）；
+	// - 自己发送（尾部 sent=true）→ 始终滚底（发送反馈）；
+	// - 距底 ≤120px → 自动滚底（smooth，reduced 直接跳）；
+	// - 上滑超过阈值收到新消息 → 不跳转，只累加 newMessageCount。
 	let prevLastId = '';
+	let prevLen = 0;
 	$effect(() => {
 		const el = scrollEl;
 		if (!el) return;
-		const lastId = messages.length ? messages[messages.length - 1].id : '';
-		if (lastId === prevLastId) return;
+		const len = messages.length;
+		const added = Math.max(0, len - prevLen);
+		prevLen = len;
+		const tail = len ? messages[len - 1] : null;
+		const lastId = tail?.id ?? '';
+		const prev = prevLastId;
+		if (lastId === prev) return;
 		prevLastId = lastId;
-		if (lastId) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-		else el.scrollTop = el.scrollHeight;
+		if (!lastId) {
+			el.scrollTop = el.scrollHeight;
+			return;
+		}
+		const initial = prev === '';
+		const own = tail?.sent === true;
+		if (initial || own || nearBottom) {
+			scrollToBottomInternal(el, !initial);
+		} else {
+			// 一次批量到达多条（同步注入/合批推送）时按新增条数累加，而不是每 effect 只 +1
+			newMessageCount += Math.max(1, added);
+		}
 	});
 
 	// WS 实时接收：新消息追加（按 id 去重）；更新处理编辑/撤回。
@@ -330,10 +370,36 @@ export function useChat(opts: UseChatOptions) {
 		});
 	}
 
+	/** 近底部时补一次已读（节流 1s）；上滑期间收到的新消息不 markRead，
+	 * 由用户滚回底部/点回底按钮后统一补标。 */
+	function markReadNow() {
+		if (!nearBottom) return;
+		const now = Date.now();
+		if (now - lastMarkReadAt < 1000) return;
+		lastMarkReadAt = now;
+		opts.markRead();
+	}
+
+	/** 滚到底（按钮点击/外部调用）：滚底 + 清计数 + 补已读。 */
+	function scrollToBottom() {
+		const el = scrollEl;
+		if (!el) return;
+		scrollToBottomInternal(el, true);
+		markReadNow();
+	}
+
 	function handleScroll() {
 		const el = scrollEl;
-		if (!el || loadingMore || !nextCursor) return;
-		if (el.scrollTop < 40) void loadMore();
+		if (!el) return;
+		distanceToBottom = Math.max(0, el.scrollHeight - el.scrollTop - el.clientHeight);
+		const nowNear = distanceToBottom <= 120;
+		// 手动滚回底部：清空新消息计数并补已读（恢复自动滚动）
+		if (nowNear && !nearBottom) {
+			newMessageCount = 0;
+			markReadNow();
+		}
+		nearBottom = nowNear;
+		if (!loadingMore && nextCursor && el.scrollTop < 40) void loadMore();
 	}
 
 	/** 输入内容变化：非空且距上次发送 ≥3 秒发 true；清空立即发 false；停止输入 3 秒后发 false。
@@ -467,6 +533,19 @@ export function useChat(opts: UseChatOptions) {
 		get scrollEl() {
 			return scrollEl;
 		},
+		get distanceToBottom() {
+			return distanceToBottom;
+		},
+		get nearBottom() {
+			return nearBottom;
+		},
+		get newMessageCount() {
+			return newMessageCount;
+		},
+		get showScrollDown() {
+			return distanceToBottom > 200;
+		},
+		scrollToBottom,
 		set scrollEl(v: HTMLDivElement | null) {
 			scrollEl = v;
 		},

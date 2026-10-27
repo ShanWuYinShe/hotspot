@@ -436,3 +436,40 @@
 - 回顶：新增 `BackToTopButton.ets`（48vp、ARROW_UP、surface+hairline+shadow、opacity 180ms via MotionUtil/reduced 直接、不可见禁触+移出无障碍树、label「回到顶部」）；
   Home/Nearby/Notification/Search/MomentsFeed 5 页接入（阈值 1.5×视口高、scrollTo 300ms/reduced 0ms、右下避底栏）；
 - SPA 焦点/TalkBack、320/reflow 登记 N/A；build 断言无 .ets 晚于构建、check:theme/parity/2 页布局树正常（搜索/通知/瞬间墙回顶未稳定端上触发，非崩溃，登记验证限制）。
+## 2026-10-27 补充（Round 10：聊天滚动策略 + 回底/新消息计数）
+
+**范围**：Web 4 文件（chat.svelte.ts/ChatMessageList/ChatView/GroupChatView，+120/−14）+ 鸿蒙 2 文件（1 改：ChatPage +75/−38；1 新：`ChatJumpToBottomButton.ets`）+ 文档 4 + 技能 3；总计 12 改 + 1 新（+291/−57）；基线 `3d102907`。
+规范：design-system §20.12；证据：`.workwork/ui-polish-1026/r10/fe/{compare,raw}`、`r10/ha/{interim,logs}`。
+**鸿蒙真机仍离线**：上滑不跳/计数/按钮位置/键盘遮挡/150ms 手感待真机；聊天页布局树受登录态限制（游客无会话）。
+
+### 一、滚动策略（Web）
+
+| 场景 | 行为 |
+|---|---|
+| 初始/切会话 | 直接回底（无动画） |
+| 自己发送 | 始终滚底（发送反馈） |
+| 近底部（≤120px）收新消息 | 自动滚底（smooth；reduced auto） |
+| 上滑（>120px）收新消息 | **不跳转**、计数累加、显示回底按钮 |
+| 分页加载更早 | prepend + 视口保持（现有逻辑保留） |
+| 会话切换 | 计数/按钮状态清零 |
+
+实测矩阵（私聊/群聊 ×1440/390，WS 注入）：上滑 dist500 收 1 条 → scrollTop 完全不变；批量 2→3、120→「99+」；点击回底 dist0/清零/隐藏；底部注入自动滚；自己发送(dist450)→dist0；reduced 回底 18ms；上滑注入 3 条 CLS 0。
+
+### 二、回底按钮（Web）
+
+- 44px、距底 >200px 显示、right-14 bottom-3（与 dev MockBadge 间距 12px、距输入栏 35px，无重叠）；仅箭头 / 「N 条新消息」（>99→99+）；
+  `aria-live=polite`、aria-label 与文本一致；150ms in/out（reduced 0）；键盘 Shift+Tab 可达 + Enter 回底；回底后隐藏。
+
+### 三、markRead 延后
+
+- 移除 WS 即时已读；仅初始/近底部/点回底补标（1s 节流）；上滑期间与离开页面不补标；切会话计数/状态清零。
+
+### 四、回归
+
+- axe 39 页/50 runs **0 violation**；browser-qa 23/23 页 issues=[]、console 0；CLS 0；check 0/0；test **103 文件/546**；build 通过。
+
+### 五、鸿蒙镜像（代码/构建/布局树）
+
+- 新 `ChatJumpToBottomButton.ets`：48vp、ARROW_DOWN、count>0 徽标（99+）、opacity 150ms via MotionUtil/reduced 直接、不可见禁触+移出无障碍树、
+  label「回到底部 / 回到底部，N 条新消息」；ChatPage（私聊+群聊共用）ListScroller + `onScrollIndex` 末尾可见近似（无距底像素 API，平台差异登记）；
+  仅近底自动滚/markRead、上滑计数不跳、自己发送/初始/分页保持；旧 78% 胶囊删除；build 断言无 `.ets` 晚于构建、check:theme/parity 正常。

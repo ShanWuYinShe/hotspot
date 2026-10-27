@@ -151,8 +151,9 @@
 			if (!id) return null;
 			// 按 message_id 去重：乐观追加已替换为真实 id，自己发送的推送自然跳过。
 			const sent = payload.sender?.user_id === meId;
-			// 收到非自己消息即视为已读（与加载行为一致）
-			if (!sent) void markGroupRead({ scope: 'group', group_id: groupId }).catch(() => {});
+			// markRead 延后（Round 10）：由 useChat 在「近底部/用户回底」时统一补标，
+			// 上滑读历史时收到的新消息不再被立即标记已读。
+			void sent;
 			// sentAt 供 useChat 按服务端时间保持正序（resume 回放/实时交错不乱序）
 			return { id, text: payload.content ?? '', sent, time: formatTime(payload.sent_at), sentAt: payload.sent_at, senderName: payload.sender?.nickname ?? '' };
 		},

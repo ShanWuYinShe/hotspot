@@ -27,6 +27,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { Pressable } from '../../../components/Pressable';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { ChatPageHeader } from '../../../components/ChatPageHeader';
+import { ChatJumpToBottomButton } from '../../../components/ChatJumpToBottomButton';
 import { ChatMessageItem, ChatMessageView } from '../components/ChatMessageItem';
 import { DatePill } from '../components/DatePill';
 import { canRecallMessage, canAdminRecallMessage, canEditMessage, hasMessageActions } from '../components/ChatMessageRules';
@@ -153,10 +154,16 @@ export struct ChatPage {
   private targetId?: string;
   private webSocketService = WebSocketService.getInstance();
   private messageCacheService = MessageCacheService.getInstance();
-  private scroller: Scroller = new Scroller();
+  private scroller: ListScroller = new ListScroller();
   private firstVisibleIndex: number = 0;
-  /** 上翻读历史时收到新消息：显示「↓新消息」悬浮钮（对齐审查 P1 聊天三件套） */
-  @State showNewMessageBadge: boolean = false;
+  private lastVisibleIndex: number = 0;
+  /** 非近底部时累计的新消息数（0 = 只显示箭头） */
+  @State newMessageCount: number = 0;
+  /** 距底部较远（方案 A：末尾消息不可见）时显示回底按钮 */
+  @State showJumpToBottom: boolean = false;
+  @State private nearBottom: boolean = true;
+  /** 上滑期间暂缓上报的已读消息 id，回底/贴底时补报 */
+  private pendingReadId: string = '';
   private typingStopTimer: number = -1;
   private lastTypingSentAt: number = 0;
   private typingStateReported: boolean = false;
@@ -419,13 +426,15 @@ export struct ChatPage {
     this.messagesDataSource.addData([newMessage]);
 
     if (!newMessage.isSelf) {
-      // 仅贴底时自动滚动到底（上翻读历史不拽回底部）；否则显示「↓新消息」悬浮钮
-      if (this.isNearBottom()) {
+      // 仅近底时自动滚动到底；上滑阅读期间只累加计数、暂缓 markRead
+      if (this.nearBottom) {
         this.scrollToBottom();
+        this.markAsRead(newMessage.id);
       } else {
-        this.showNewMessageBadge = true;
+        this.newMessageCount += 1;
+        this.pendingReadId = newMessage.id;
+        this.showJumpToBottom = true;
       }
-      this.markAsRead(newMessage.id);
     } else {
       // 自己的消息（含乐观气泡确认）总是滚动到底
       this.scrollToBottom();
@@ -443,6 +452,9 @@ export struct ChatPage {
   }
 
   aboutToDisappear() {
+    this.newMessageCount = 0;
+    this.showJumpToBottom = false;
+    this.pendingReadId = '';
     this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.OFFSET);
     this.isInputFocused = false;
     this.stopTyping();
@@ -765,20 +777,64 @@ export struct ChatPage {
     this.scrollTimer = setTimeout(() => {
       this.scrollTimer = -1;
       this.scroller.scrollEdge(Edge.Bottom);
+      this.nearBottom = true;
+      this.newMessageCount = 0;
+      this.showJumpToBottom = false;
+      const pending = this.pendingReadId;
+      this.pendingReadId = '';
+      if (pending.length > 0) {
+        this.markAsRead(pending);
+      }
     }, 100);
   }
 
   /** 是否贴底（末尾 3 条内视为贴底）：上翻读历史时收新消息不拽回底部 */
-  /** 是否接近底部：规则实现在 ChatViewportRules（末尾 3 条以内或空列表） */
-  private isNearBottom(): boolean {
-    return isMessageListNearBottom(this.messages.length, this.firstVisibleIndex);
+  /** 列表头部固定项数：无更多历史时的 ListEnd + 加载更多指示条（消息索引需扣除） */
+  private listHeaderCount(): number {
+    return (this.hasMoreHistory ? 0 : 1) + (this.isLoadingMoreHistory ? 1 : 0);
   }
 
-  /** 悬浮钮点击：滚动到底并清除标记 */
+  /** 是否接近底部：方案 A（List 无距底像素 API）——末尾一条消息可见即视为近底 */
+  private isNearBottom(): boolean {
+    if (this.messages.length === 0) return true;
+    return this.lastVisibleIndex >= this.listHeaderCount() + this.messages.length - 1;
+  }
+
+  /** 滚动/新消息后刷新近底态、回底按钮与新消息计数（加载/分页期间索引抖动不更新） */
+  private updateScrollState(): void {
+    if (this.isLoading || this.isLoadingMoreHistory) return;
+    const nextNearBottom = this.isNearBottom();
+    this.nearBottom = nextNearBottom;
+    this.showJumpToBottom = !nextNearBottom && this.messages.length > 0;
+    if (nextNearBottom) {
+      this.newMessageCount = 0;
+      const pending = this.pendingReadId;
+      this.pendingReadId = '';
+      if (pending.length > 0) {
+        this.markAsRead(pending);
+      }
+    }
+  }
+
+  /** 回底按钮点击：滚到底、清零计数/隐藏按钮、补报已读 */
   private jumpToBottom(): void {
-    this.showNewMessageBadge = false;
+    this.newMessageCount = 0;
+    this.showJumpToBottom = false;
+    this.nearBottom = true;
     this.scrollToBottom();
   }
+
+  @Builder
+  private buildJumpToBottomOverlay() {
+    ChatJumpToBottomButton({
+      visible: this.showJumpToBottom,
+      count: this.newMessageCount,
+      onTap: () => { this.jumpToBottom(); }
+    })
+      .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD })
+  }
+
+
 
   /** 加载更早历史后恢复视口锚点：等 reload 布局与顶部指示项移除完成后，定位到「旧 index + 新增条数」 */
   private restoreHistoryAnchor(anchorIndex: number, addedCount: number): void {
@@ -1123,6 +1179,10 @@ export struct ChatPage {
 
   /** 从 onReady 参数初始化后，异步加载聊天数据 */
   private async initChatData(): Promise<void> {
+    this.newMessageCount = 0;
+    this.showJumpToBottom = false;
+    this.nearBottom = true;
+    this.pendingReadId = '';
     // 通知 MessageSyncManager 当前正在查看此会话，避免重复刷新消息列表
     const activeChatId = this.chatType === 'private_chat' ? (this.targetId ?? this.chatId) : this.chatId;
     MessageSyncManager.getInstance().enterChat(activeChatId);
@@ -1286,16 +1346,15 @@ export struct ChatPage {
       })
       .backgroundColor(this.getChatTheme().listBackground)
       .borderRadius(this.getChatVisualStyle().listRadius)
-      .onScrollIndex((start: number) => {
+      .overlay(this.buildJumpToBottomOverlay(), { align: Alignment.BottomEnd })
+      .onScrollIndex((start: number, end: number) => {
         this.firstVisibleIndex = start;
+        this.lastVisibleIndex = end;
         // 当滚动到列表顶部附近时加载更早的消息
         if (start <= 1 && this.hasMoreHistory && !this.isLoadingMoreHistory) {
           this.loadMoreHistory();
         }
-        // 贴底（接近末尾）时清除「↓新消息」悬浮钮
-        if (this.isNearBottom()) {
-          this.showNewMessageBadge = false;
-        }
+        this.updateScrollState();
       })
       .onTouch((event: TouchEvent) => {
         if (event.type === TouchType.Down) {
@@ -1506,28 +1565,6 @@ export struct ChatPage {
       }
     })
 
-    // 「↓新消息」悬浮钮（外层 Stack child，position 定位右下；上翻读历史时收到新消息才显示）
-    if (this.showNewMessageBadge) {
-      Row({ space: DesignConstants.SPACING.XS }) {
-        LucideIcon({
-          icon: AppIcon.ARROW_DOWN,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-          color: this.getCurrentThemePalette().accentText
-        })
-        Text('新消息')
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-          .fontColor(this.getCurrentThemePalette().accentText)
-      }
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.getCurrentThemePalette().accentBackground)
-      .shadow(this.getCurrentThemePalette().surfaceShadow) // 对齐前端 raised-sm（无彩色光晕）
-      .position({ x: '50%', y: '78%' })
-      .translate({ x: -56, y: 0 }) // 半宽回中（markAnchor 亦可；pill 约 112vp 宽）
-      .onClick(() => { this.jumpToBottom(); })
-      .accessibilityText('滚动到最新消息')
-    }
     }
     }
     .hideTitleBar(true)

@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { MessageCircle } from '@lucide/svelte';
+	import { ArrowDown, MessageCircle } from '@lucide/svelte';
+	import { fade, fly } from 'svelte/transition';
+	import { motionDuration } from '@/lib/motion';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
@@ -25,7 +27,8 @@
 	} = $props();
 </script>
 
-<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="mx-auto w-full max-w-3xl lg:max-w-5xl flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
+<div class="relative mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col lg:max-w-5xl">
+<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="min-h-0 flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
 	{#if chat.loading}
 		<!-- 加载态统一 InlineLoading（全站三态标配，不再自绘 spinner） -->
 		<InlineLoading label="加载消息…" class="h-full justify-center" />
@@ -75,5 +78,27 @@
 				{/each}
 			{/each}
 		</div>
+	{/if}
+</div>
+
+	<!-- 回到底部（Round 10）：上滑超过 200px 才出现；无新消息时只有箭头，
+	     有新消息时显示「N 条新消息」。点击滚底 + 清计数 + 恢复自动滚动。 -->
+	{#if chat.showScrollDown && !chat.loading}
+		<button
+			type="button"
+			aria-label={chat.newMessageCount > 0
+				? `回到底部，${chat.newMessageCount > 99 ? '99+' : chat.newMessageCount} 条新消息`
+				: '回到底部'}
+			title="回到底部"
+			onclick={() => chat.scrollToBottom()}
+			in:fly={{ y: 8, duration: motionDuration(150) }}
+			out:fade={{ duration: motionDuration(150) }}
+			class="absolute right-14 bottom-3 z-[var(--cst-z-sticky)] flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-border-default bg-surface-primary/95 px-3 text-xs font-medium text-text-primary shadow-raised-md backdrop-blur-sm focus-ring"
+		>
+			<ArrowDown class="size-4 shrink-0" strokeWidth={2} />
+			{#if chat.newMessageCount > 0}
+				<span aria-live="polite">{chat.newMessageCount > 99 ? '99+' : chat.newMessageCount} 条新消息</span>
+			{/if}
+		</button>
 	{/if}
 </div>
