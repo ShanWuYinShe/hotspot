@@ -746,7 +746,7 @@
 | full | 1600（q85） | ImageViewer 全屏查看（打开即加载，不 lazy） |
 
 - **srcset/sizes**：卡片/封面用 1x/2x 两档 srcset + 调用方 `sizes`（按实际布局列宽）；非 unsplash 不生成 srcset。
-- **加载优先级**：仅首屏可见图用 `loading=eager` + `fetchpriority=high`（feed 前 2、详情首图、hero、ImageViewer）；
+- **加载优先级**：仅首屏可见图用 `loading=eager` + `fetchpriority=high`（feed 前 2、**附近的人/附近瞬间首屏前 2**、详情首图、hero、ImageViewer）；
   其余 `loading=lazy` + `decoding=async`。鸿蒙无 fetchpriority/lazy：用「首屏前 2 高清档+立即创建、LazyForEach 离屏不创建」
   近似表达并登记平台差异。
 - **加载体验**：占位（主题渐变/骨架/占位底，不新增 shimmer）+ onload 渐显 0.22s；`prefers-reduced-motion` 下直接显示（1e-05s）。

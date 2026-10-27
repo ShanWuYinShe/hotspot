@@ -288,7 +288,8 @@
 - `lib/images.ts`：仅 `images.unsplash.com` 追加/覆盖 `auto=format&fit=crop&q=78|80|82|85&w=<width>`；其他域名/本地/blob/无效 URL 原样；
   6 档预设（avatar/thumb/card/cover/hero/full）+ `presetSrcSet` + `avatarImageWidths`（32→64/96、48→96/144、xl→160）+ `fadeImage`（0.22s，reduced 1e-05s）。
 - 接入 26 个 `<img>`：feed 封面/行卡、附近卡、详情大图+九宫格、群 hero、头像、通知、搜索、他人主页、rail、ImageViewer（full 1600/q85 eager）、地图图钉；
-  首屏仅 feed 前 2/详情首图/hero/Viewer eager+high，其余 lazy+async；非 unsplash 不生成 srcset；onerror/srcset 降级保留。
+  首屏仅 feed 前 2、附近的人/附近瞬间前 2（复核 N1 已补）、详情首图、hero、Viewer eager+high，其余 lazy+async；非 unsplash 不生成 srcset；
+  onerror/srcset 降级保留；静态 logo 补 `decoding=async`。
 
 ### 二、前后数据（transferSize，各 2 轮）
 
