@@ -471,3 +471,21 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 
 - 首屏列表/卡优先 Skeleton；单实体/短列表可 InlineLoading（页面注释给理由）；
   EmptyState / LoadError+重试 / ListEnd 四态不得互替。
+## Round 5 质量门（可访问性/触控/主题/性能，2026-10-27）
+
+### 1) axe 可访问性基线（0 serious / 0 critical）
+
+- 整卡可点必须用「覆盖按钮 + 行内动作 auto-lift」，卡片根不得持 button/aria-label（nested-interactive）。
+- `role=list` 子节点补 `role=listitem`；listitem 不挂 aria-label；`dl` 只包 dt/dd；无 role 的 div 不挂 aria-label。
+- 每页有 `main`；可滚动非键盘可达容器加 `tabindex=0` + `role=region` + `aria-label`；装饰图 alt=""+aria-hidden。
+- 状态徽章用实底 + on-accent 字；用 axe-core（`--init-script`）扫描，新的可点结构先跑 axe 再加。
+
+### 2) 触控目标
+
+- 移动端有效热区 ≥44×44（`hit-slop`/`hit-slop-44`）；横向相邻元素不得互相覆盖；
+  例外：表单控件、横向 chip/筛选 pill、内联链接、地图 marker/工具条、skip link。
+
+### 3) 主题与性能
+
+- 三主题×明暗关键页必测；软岛/画布 ratio 与文字对比记录基线；状态徽章避免低对比淡底。
+- 性能基线：关键页 LCP/CLS 采样（本地 dev 环境仅作相对参考）；CLS 应 <0.1，图片显式尺寸/懒加载/骨架零位移。

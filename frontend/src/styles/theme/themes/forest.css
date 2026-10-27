@@ -10,8 +10,10 @@
 
 /* ═══ Forest Light ═══ */
 .forest {
-  /* 内容岛表面（Round 3）：开放页面内容分组软岛底（无描边，靠表面+阴影表达层级） */
-  --cst-surface-island: color-mix(in srgb, var(--cst-surface-primary) 86%, transparent);
+  /* 内容岛表面（Round 3；Round 5 选型 v2）：森林亮色画布与 primary 同色，86% 透明会让岛与画布 ratio=1.00、
+     仅靠阴影分层。改为 92% surface-primary + 8% text-primary（合成 #E4E6E2），岛/画布亮度比 1.17，
+     纸面气质保留、层级更明确；仅本主题亮色覆写，其余主题/暗色不变。 */
+  --cst-surface-island: color-mix(in srgb, var(--cst-surface-primary) 92%, var(--cst-text-primary) 8%);
   /* ── 原始色板 --cst-palette-* ── */
   --cst-palette-bg: #F6F7F3;
   --cst-palette-page-bg: #F6F7F3;

@@ -165,3 +165,11 @@ theme/
 - 减少动态走全局 `@media (prefers-reduced-motion: reduce)`（`styles/theme/utilities.css`），
   不新增动画 token；新增动画必须复用既有 motion token + 全局降级规则，禁止裸写 duration/iteration。
 - 软岛/长尾例外不改颜色 token：媒体/hero/表格行线等边界由结构/阴影/发丝线表达，颜色仍走既有语义 token。
+## 主题覆盖与验收（Round 5，2026-10-27）
+
+- **forest light 软岛覆写**：`--cst-surface-island = color-mix(surface-primary 92%, text-primary 8%)`
+  （合成 #E4E6E2，岛/画布 ratio 1.17）；其余 5 组保持 86%（light）/94%+6%（dark）。修改此值时两端同改并重跑 parity。
+- **方块验收**：三主题 × 明暗关键页截图 + 软岛/画布亮度比 + 文字对比（≥4.5）记录到 `frontend-ui-audit.md`；
+  禁止只验 vibrant。
+- **harmony-only 档**：`textTertiary`（web 无对应）允许单端调整（forest light #5F6C64→#58645C），但需在文档标注。
+- **状态徽章对比**：实底 + on-accent 字（避免淡底 + 主题字在部分主题/明暗下 <4.5，axe color-contrast 会拦）。

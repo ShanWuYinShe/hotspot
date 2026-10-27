@@ -960,6 +960,12 @@ export struct SearchPage {
                 .borderRadius(DesignConstants.RADIUS.FULL)
                 .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
                 .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+                .responseRegion({
+                  x: -DesignConstants.SPACING.SM2,
+                  y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - 39) / 2,
+                  width: '120%',
+                  height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+                })
                 .onClick(() => this.applyKeywordAndSearch(topic))
             }, (topic: string) => `topic-chip-${topic}`)
           }
@@ -1133,6 +1139,7 @@ export struct SearchPage {
   buildUserItem(item: UserItem) {
     Row({ space: DesignConstants.SPACING.MD }) {
       SystemAvatar({
+        decorative: true,
         avatarUrl: item.user?.avatar_url ?? '',
         name: item.user?.nickname ?? '',
         avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
@@ -1190,6 +1197,7 @@ export struct SearchPage {
       Row({ space: DesignConstants.SPACING.SM }) {
         Row({ space: DesignConstants.SPACING.SM }) {
           SystemAvatar({
+            decorative: true,
             avatarUrl: item.group?.avatar_url ?? '',
             name: item.group?.name ?? '',
             avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
@@ -1298,6 +1306,7 @@ export struct SearchPage {
 
       Row({ space: DesignConstants.SPACING.SM2 }) {
         SystemAvatar({
+          decorative: true,
           avatarUrl: item.user?.avatar_url ?? '',
           name: item.user?.nickname ?? '',
           avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL

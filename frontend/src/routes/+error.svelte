@@ -8,7 +8,7 @@
 	<title>{page.status === 404 ? '页面不存在' : '出错了'} · HotSpot</title>
 </svelte:head>
 
-<div class="relative isolate flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-page p-6 text-center">
+<main class="relative isolate flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-page p-6 text-center">
 	<!-- 氛围画布：错误页整屏留白大，主题世界层兜底视觉密度 -->
 	<AmbientBackdrop />
 	<!-- 字重收敛到 normal/medium/semibold 三档：bold 原全站仅此与地图计数徽章两处，
@@ -29,4 +29,4 @@
 			返回首页
 		</a>
 	</div>
-</div>
+</main>

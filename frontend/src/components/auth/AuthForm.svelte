@@ -342,7 +342,7 @@
 					/>
 					<button
 						type="button"
-						class="hit-slop shrink-0 focus-ring"
+						class="hit-slop -m-2 p-2 shrink-0 focus-ring"
 						aria-label={showPassword ? '隐藏密码' : '显示密码'}
 						onclick={() => (showPassword = !showPassword)}
 					>
@@ -422,7 +422,7 @@
 					/>
 					<button
 						type="button"
-						class="hit-slop shrink-0 focus-ring"
+						class="hit-slop -m-2 p-2 shrink-0 focus-ring"
 						aria-label={showPassword ? '隐藏密码' : '显示密码'}
 						onclick={() => (showPassword = !showPassword)}
 					>
@@ -472,25 +472,25 @@
 	<!-- Mode switcher -->
 	<div class="flex flex-wrap items-center justify-center gap-3.5 mt-1" >
 		{#if mode === 'register'}
-			<button type="button" onclick={() => switchMode('login')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
+			<button type="button" onclick={() => switchMode('login')} class="link-btn hit-slop-44 -my-2 py-2 text-sm focus-ring text-accent-default">
 				已有账号？登录
 			</button>
 		{/if}
 		{#if mode === 'login'}
-			<button type="button" onclick={() => switchMode('register')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
+			<button type="button" onclick={() => switchMode('register')} class="link-btn hit-slop-44 -my-2 py-2 text-sm focus-ring text-accent-default">
 				注册新账号
 			</button>
-			<button type="button" onclick={() => switchMode('forgot')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
+			<button type="button" onclick={() => switchMode('forgot')} class="link-btn hit-slop-44 -my-2 py-2 text-sm focus-ring text-accent-default">
 				忘记密码
 			</button>
 		{/if}
 		{#if mode === 'forgot' || mode === 'reset' || mode === 'guest'}
-			<button type="button" onclick={() => switchMode('login')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
+			<button type="button" onclick={() => switchMode('login')} class="link-btn hit-slop-44 -my-2 py-2 text-sm focus-ring text-accent-default">
 				返回登录
 			</button>
 		{/if}
 		{#if mode !== 'guest' && mode !== 'forgot' && mode !== 'reset'}
-			<button type="button" onclick={() => switchMode('guest')} class="link-btn -my-1 py-1 text-sm focus-ring text-accent-default">
+			<button type="button" onclick={() => switchMode('guest')} class="link-btn hit-slop-44 -my-2 py-2 text-sm focus-ring text-accent-default">
 				随便逛逛（访客）
 			</button>
 		{/if}

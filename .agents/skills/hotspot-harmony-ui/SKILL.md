@@ -452,3 +452,12 @@ Huawei 移动端规范要求有效触控目标 **≥44vp**。本项目原语层�
 - 例外（保留功能边界）：媒体容器/九宫格圆角与阴影、输入框 2vp accent 焦点边、表格行线/内容分隔线、
   chip/badge、弹层/Sheet、地图控件、hero 封面裁切结构。
 - 验证：build + check:theme + 布局树；真机离线时阴影/焦点环/reduced-motion 开启路径标注待真机。
+## 主题/A11y/触控验收（Round 5，2026-10-27）
+
+- **forest light 软岛**：仅 `default_clean_light` 的 `surfaceIsland` = `mixOpaque(surfaceBackground 92%, textPrimary 8%)` = #E4E6E2；
+  其余 5 组公式不变；surface parity 6/6。`textTertiary` forest light 调为 #58645C（岛上 4.93），文档标注 harmony-only。
+- **无障碍名称**：`dumpLayout` 不暴露 accessibilityText（description 恒空），验收采用「源码级 onClick↔accessibilityText 覆盖扫描
+  + 运行期结构」；新增可点控件必须显式 `accessibilityText`（纯图标钮/复合卡/中央发布钮等）。
+- **触控**：有效热区 ≥44vp（`responseRegion` 外扩、视觉不变）；chip/输入框/地图 marker 等登记例外；
+  边缘 tap 实测（视觉边界外仍命中）验证。
+- **真机限制**：TalkBack / 系统 reduced-motion 开启路径 / 焦点环像素需真机；离线时标注未验证并保留复现步骤。

@@ -276,7 +276,9 @@ export class ThemeConstants {
     textSecondary: '#3F5547',
     // 审计 P3-4：原 #7A837E on 纸面 #F6F7F3 对比度仅 3.77(<4.5)，加深至 #5F6C64（5.12），
     // 色相同族微加深、仍保持比 textSecondary(#3F5547) 弱一档的层次
-    textTertiary: '#5F6C64',
+    // R5/forest light v2：岛底 #E4E6E2 上原 #5F6C64 仅 4.38(<4.5)，加深到 #58645C（岛 4.93 / 画布 5.75）；
+    // textTertiary 为 harmony-only palette（web 只有 primary/secondary），无跨端同步负担
+    textTertiary: '#58645C',
     iconMuted: '#3F5547',
     buttonSecondaryBackground: '#F0F1F0',
     buttonSecondaryText: '#152219',

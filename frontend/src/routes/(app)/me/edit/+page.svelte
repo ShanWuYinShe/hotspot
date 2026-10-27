@@ -196,7 +196,7 @@
 			type="button"
 			variant={saved ? 'secondary' : 'primary'}
 			size="md"
-			class="rounded-full px-4 py-2"
+			class="hit-slop-44 rounded-full px-4 py-2"
 			loading={saving}
 			disabled={saved || saving || !userId}
 			onclick={() => void handleSave()}
@@ -231,7 +231,7 @@
 	     白字压 overlay-strong 在浅色封面底实测仅 3.62–3.92（<4.5），换 scrim 后 ≥4.9。 -->
 		<button
 			type="button"
-			class="hover-btn absolute top-3 right-3 flex h-8 items-center justify-center gap-1.5 rounded-full px-2.5 focus-ring bg-surface-media-scrim-strong text-content-inverse disabled:opacity-muted"
+			class="hover-btn hit-slop-44 absolute top-3 right-3 flex h-8 items-center justify-center gap-1.5 rounded-full px-2.5 focus-ring bg-surface-media-scrim-strong text-content-inverse disabled:opacity-muted"
 			style="backdrop-filter:blur(var(--cst-blur-md));"
 			disabled
 			aria-disabled="true"
@@ -248,7 +248,7 @@
 			<Avatar src={avatar} name={nickname} size="xl" shape="rounded" class="border-heavy border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
 			<button
 				type="button"
-				class="hover-btn hit-slop absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm hover:shadow-raised-md"
+				class="hover-btn hit-slop-44 absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm hover:shadow-raised-md"
 				aria-label="更换头像"
 				disabled={uploadingAvatar}
 				onclick={() => avatarInput?.click()}
@@ -400,7 +400,7 @@
 				type="button"
 				variant="outline"
 				size="md"
-				class="w-full justify-start gap-2 rounded-lg bg-surface-island px-4 py-3.5 text-status-danger shadow-xs hover:bg-danger-bg"
+				class="hit-slop-44 w-full justify-start gap-2 rounded-lg bg-surface-island px-4 py-3.5 text-status-danger shadow-xs hover:bg-danger-bg"
 				onclick={() => (deleteConfirmOpen = true)}
 			>
 				<Trash2 class="size-4" strokeWidth={1.75} />

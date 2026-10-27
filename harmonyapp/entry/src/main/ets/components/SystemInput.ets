@@ -130,6 +130,7 @@ export struct SystemInput {
         .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
+        .accessibilityText('清空输入')
         .onClick(() => {
           this.onChange?.('');
         })

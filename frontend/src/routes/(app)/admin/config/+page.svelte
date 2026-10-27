@@ -143,6 +143,13 @@
 		terms_of_service_url: '服务条款链接',
 		official_website_url: '官方网站链接'
 	};
+
+	// 只读 JSON 可滚动区域：运行期设置 tabindex=0，键盘用户可聚焦后用方向键/PageUp 滚动
+	//（axe scrollable-region-focusable；静态 tabindex 会触发 svelte a11y_noninteractive_tabindex 误报）。
+	function focusableScroll(node: HTMLElement) {
+		node.setAttribute('tabindex', '0');
+		return {};
+	}
 </script>
 
 <svelte:head>
@@ -239,7 +246,7 @@
 		<section class={SECTION_CARD} aria-label="服务端配置（只读）">
 			<h2 class="text-md font-semibold text-text-primary">服务端运行参数（只读）</h2>
 			<p class="mt-1 text-xs text-text-secondary">upload / defaults / rate_limits / response_defaults——修改走 app_config/update API（Patch 语义）。</p>
-			<pre class="mt-3 max-h-80 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed text-text-secondary">{JSON.stringify({ upload: config.upload, defaults: config.defaults, rate_limits: config.rate_limits, response_defaults: config.response_defaults }, null, 2)}</pre>
+			<pre use:focusableScroll role="region" aria-label="服务端配置 JSON（只读，可滚动）" class="mt-3 max-h-80 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed text-text-secondary">{JSON.stringify({ upload: config.upload, defaults: config.defaults, rate_limits: config.rate_limits, response_defaults: config.response_defaults }, null, 2)}</pre>
 		</section>
 
 		<!-- 全局保存栏：仅存在未保存修改时出现（r60：卡内散落保存收敛为全局「保存更改/重置」） -->

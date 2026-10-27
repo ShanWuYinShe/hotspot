@@ -1447,6 +1447,7 @@ export struct ChatPage {
               this.isSendPressed = false;
             }
           })
+          .accessibilityText('发送消息')
           .onClick(() => this.sendMessage())
       }
       .width('100%')
@@ -1471,6 +1472,7 @@ export struct ChatPage {
         .height(1)
         .opacity(0)
         .focusable(true)
+        .accessibilityLevel('no')
         .onClick(() => {})
     }
     .width('100%')

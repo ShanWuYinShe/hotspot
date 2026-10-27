@@ -93,11 +93,15 @@ function buildPalette(
     description,
     pageBackground: colors.pageBackground,
     surfaceBackground: colors.surfaceBackground,
-    // r3 软岛（读 fe themes/*.css）：light = color-mix(surface-primary 86%, transparent);
-    // dark = color-mix(surface-primary 94%, text-primary 6%)；逐主题 RGB 来自 palette
+    // 软岛（读 fe themes/*.css）：
+    // - 其余主题 light = color-mix(surface-primary 86%, transparent)，dark = 94% surface + 6% text；
+    // - forest 亮色（default_clean_light）R5 v2：画布与 primary 同色导致岛 ratio=1.00，
+    //   改为 color-mix(surface-primary 92%, text-primary 8%) → 合成 #E4E6E2（fe forest.css 同一决策）
     surfaceIsland: colors.isDarkTheme
       ? AppThemeVisuals.mixOpaque(colors.surfaceBackground, 0.94, colors.textPrimary, 0.06)
-      : AppThemeVisuals.withAlpha(colors.surfaceBackground, 0.86),
+      : (id === 'default_clean_light'
+        ? AppThemeVisuals.mixOpaque(colors.surfaceBackground, 0.92, colors.textPrimary, 0.08)
+        : AppThemeVisuals.withAlpha(colors.surfaceBackground, 0.86)),
     surfaceSubtle: colors.surfaceSubtle,
     surfaceElevated: colors.surfaceElevated,
     borderColor: colors.borderColor,

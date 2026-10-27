@@ -36,8 +36,8 @@ describe('MetricRow', () => {
 				]
 			}
 		});
-		const dl = container.querySelector('dl') as HTMLElement;
-		expect(dl.style.gridTemplateColumns).toContain('repeat(3');
+		const grid = container.querySelector('[role="group"]') as HTMLElement;
+		expect(grid.style.gridTemplateColumns).toContain('repeat(3');
 	});
 
 	it('item 带有 onClick 时赋予可点击交互并响应点击', async () => {
@@ -66,8 +66,8 @@ describe('MetricRow', () => {
 				]
 			}
 		});
-		const dl = container.querySelector('dl') as HTMLElement;
-		expect(dl.className).toContain('gap-2.5');
+		const grid = container.querySelector('[role="group"]') as HTMLElement;
+		expect(grid.className).toContain('gap-2.5');
 		expect(container.querySelector('.rounded-xl')).not.toBeNull();
 	});
 });

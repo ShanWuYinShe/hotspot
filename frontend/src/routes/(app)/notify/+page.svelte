@@ -377,7 +377,7 @@ const markSingleRead = (id: string) => {
 					</div>
 					<ListContainer bordered class="mb-6">
 						{#each invites as inv (inv.invite_id)}
-							<div class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-3 py-3.5">
+							<div role="listitem" class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-3 py-3.5">
 								<Avatar src={inv.group.avatar_url} name={inv.group.name} size="lg" shape="rounded" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm font-medium text-text-primary">{inv.group.name}</span>
@@ -389,13 +389,13 @@ const markSingleRead = (id: string) => {
 										type="button"
 										onclick={() => void handleAcceptInvite(inv.invite_id)}
 										disabled={invitePending.has(inv.invite_id)}
-										class="hover-btn inline-flex h-7 items-center rounded-full bg-accent-default px-3 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
+										class="hover-btn hit-slop-44 inline-flex h-8 items-center rounded-full bg-accent-default px-3 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
 									>接受</button>
 									<button
 										type="button"
 										onclick={() => void handleRejectInvite(inv.invite_id)}
 										disabled={invitePending.has(inv.invite_id)}
-										class="hover-btn inline-flex h-7 items-center rounded-full bg-surface-subtle/60 px-3 text-xs text-text-primary focus-ring hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
+										class="hover-btn hit-slop-44 inline-flex h-8 items-center rounded-full bg-surface-subtle/60 px-3 text-xs text-text-primary focus-ring hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
 									>拒绝</button>
 								</div>
 							</div>

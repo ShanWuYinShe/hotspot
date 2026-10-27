@@ -124,12 +124,12 @@
 			<span
 				class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full size-5 bg-surface-overlay-strong"
 				title={group.privacy === 'private' ? '私密群组' : group.requiresApproval ? '加入需管理员审核' : '公开群组'}
-				aria-label={group.privacy === 'private' ? '私密群组' : group.requiresApproval ? '加入需管理员审核' : '公开群组'}
 			>
+				<span class="sr-only">{group.privacy === 'private' ? '私密群组' : group.requiresApproval ? '加入需管理员审核' : '公开群组'}</span>
 				{#if group.privacy === 'private'}
-					<Lock size={10} color="var(--cst-content-inverse)" />
+					<Lock size={10} color="var(--cst-content-inverse)" aria-hidden="true" />
 				{:else}
-					<Globe size={10} color="var(--cst-content-inverse)" />
+					<Globe size={10} color="var(--cst-content-inverse)" aria-hidden="true" />
 				{/if}
 			</span>
 		{/if}

@@ -35,7 +35,7 @@
 				<span class="text-xs text-text-secondary">{formatDateTime(app.created_at)}{app.message ? ` · ${app.message}` : ''}</span>
 			</span>
 			<button type="button" disabled={pending.has(app.application_id)} onclick={() => onApprove(app.application_id)} class="hover-btn hit-slop rounded-full bg-accent-default px-3.5 py-1.5 text-sm font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:opacity-faint">同意</button>
-			<button type="button" disabled={pending.has(app.application_id)} onclick={() => onReject(app.application_id)} class="hover-btn hit-slop rounded-full bg-surface-subtle/60 px-3.5 py-1.5 text-sm text-text-primary focus-ring hover:bg-surface-subtle disabled:opacity-faint">拒绝</button>
+			<button type="button" disabled={pending.has(app.application_id)} onclick={() => onReject(app.application_id)} class="hover-btn hit-slop-44 rounded-full bg-surface-subtle/60 px-3.5 py-1.5 text-sm text-text-primary focus-ring hover:bg-surface-subtle disabled:opacity-faint">拒绝</button>
 		</ListItem>
 	{/each}
 </ListContainer>

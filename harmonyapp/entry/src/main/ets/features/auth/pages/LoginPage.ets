@@ -266,10 +266,17 @@ export struct LoginPage {
               iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
               paletteRole: 'textPrimary'
             })
+            .accessibilityText('返回')
             .onClick(() => {
               AppRouter.pop();
             })
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+            .responseRegion({
+              x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM) / 2,
+              y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM) / 2,
+              width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+              height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+            })
             .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
             .scale(this.isBackPressed ?
               { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :

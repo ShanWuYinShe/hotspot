@@ -36,6 +36,7 @@
 						src={c.avatar}
 						name={c.name}
 						size={isLarge ? 44 : 36}
+						decorative
 						class="border"
 						style={isLarge
 							? 'border-color:var(--cst-accent-default);border-width:var(--cst-border-width-regular);'

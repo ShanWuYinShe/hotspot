@@ -32,7 +32,7 @@
 
 {#if variant === 'capsule'}
 	<!-- Capsule variant: modern Bento frosted capsules with rhythmic spacing -->
-	<dl
+	<div role="group"
 		class="grid gap-2.5 {className}"
 		style="grid-template-columns:repeat({items.length}, minmax(0, 1fr));"
 	>
@@ -44,33 +44,33 @@
 						onclick={item.onClick}
 						class="hover-btn cursor-pointer flex w-full h-full min-w-0 flex-col-reverse items-center justify-center rounded-xl bg-surface-subtle/40 py-2.5 px-2 text-center transition-all hover:bg-surface-subtle/70 backdrop-blur-xs focus-ring"
 					>
-						<dt class="truncate text-xs text-text-secondary mt-1">{item.label}</dt>
-						<dd class="truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
+						<span class="truncate text-xs text-text-secondary mt-1">{item.label}</span>
+						<span class="truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
 							{#if typeof item.value === 'function'}
 								{@render item.value()}
 							{:else}
 								{item.value}
 							{/if}
-						</dd>
+						</span>
 					</button>
 				</div>
 			{:else}
 				<div class="flex min-w-0 flex-col-reverse items-center justify-center rounded-xl bg-surface-subtle/40 py-2.5 px-2 text-center backdrop-blur-xs">
-					<dt class="truncate text-xs text-text-secondary mt-1">{item.label}</dt>
-					<dd class="truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
+					<span class="truncate text-xs text-text-secondary mt-1">{item.label}</span>
+					<span class="truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
 						{#if typeof item.value === 'function'}
 							{@render item.value()}
 						{:else}
 							{item.value}
 						{/if}
-					</dd>
+					</span>
 				</div>
 			{/if}
 		{/each}
-	</dl>
+	</div>
 {:else}
 	<!-- Default dense grid with divider line -->
-	<dl
+	<div role="group"
 		class="grid overflow-hidden rounded-md ring-border bg-border-default gap-px {className}"
 		style="grid-template-columns:repeat({items.length}, minmax(0, 1fr));"
 	>
@@ -83,28 +83,28 @@
 						onclick={item.onClick}
 						class="hover-btn cursor-pointer flex w-full h-full min-w-0 flex-col-reverse items-center px-2 py-2.5 text-center transition-colors hover:bg-interactive-hover focus-ring"
 					>
-						<dt class="truncate text-xs text-text-secondary">{item.label}</dt>
-						<dd class="mb-1 truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
+						<span class="truncate text-xs text-text-secondary">{item.label}</span>
+						<span class="mb-1 truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
 							{#if typeof item.value === 'function'}
 								{@render item.value()}
 							{:else}
 								{item.value}
 							{/if}
-						</dd>
+						</span>
 					</button>
 				</div>
 			{:else}
 				<div class="flex min-w-0 flex-col-reverse items-center bg-surface-primary px-2 py-2.5 text-center">
-					<dt class="truncate text-xs text-text-secondary">{item.label}</dt>
-					<dd class="mb-1 truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
+					<span class="truncate text-xs text-text-secondary">{item.label}</span>
+					<span class="mb-1 truncate text-xl font-semibold leading-none {tones[item.tone ?? 'default']}">
 						{#if typeof item.value === 'function'}
 							{@render item.value()}
 						{:else}
 							{item.value}
 						{/if}
-					</dd>
+					</span>
 				</div>
 			{/if}
 		{/each}
-	</dl>
+	</div>
 {/if}

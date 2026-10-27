@@ -1,4 +1,4 @@
-# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-15）
+# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-16）
 
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
@@ -6,7 +6,23 @@
 
 ## 已完成基线（不要回退）
 
-### 2026-10-27 本轮（Round 15，长尾/后台软岛化 + 交互状态与可访问性基线）
+### 2026-10-27 本轮（Round 16，三主题验收 + a11y/触控/性能质量门）
+
+- **三主题×明暗验收**：9 页 × forest/inkwash/vibrant × 亮暗对比；**forest light 软岛 v2**（仅 forest light：
+  `color-mix(surface-primary 92%, text-primary 8%)` = #E4E6E2，岛/画布 1.00→1.17，岛内 primary 13.11/secondary 6.42）；
+  其余 5 组不变（1.11/1.33/1.16/1.06/1.31）；主题相关 color-contrast 4 处修复（设置徽章/瞬间 tag chip/状态徽章）。
+- **axe 可访问性清零**：主扫描 50 runs **50/50 页 0 violation**（修复前 23/50；critical 3、serious 22 实例），
+  主题附加 36 runs 0 flagged。修复：nested-interactive（整卡改「覆盖按钮 + 行内动作 auto-lift」，51 节点）、
+  aria-required-children（列表行 role=listitem）、definition-list（MetricRow → div role=group）、aria-prohibited（13 节点）、
+  scrollable-region 可聚焦、landmark（login/register/error 补 main）、image-redundant-alt（头像装饰化）。
+- **触控目标**：390×20 页有效热区 ≥44 由 **69.0% → 91.2%**（425/466；离群 41 全为登记例外：地图 marker/控件 19、
+  相邻 TagPill 22、表单控件 34、skip link 19——分类见 audit）；新增 `.hit-slop-44`；鸿蒙 responseRegion 补 5 处 + 边缘 tap 实测。
+- **性能基线**（dev/mock，仅相对参考）：TTFB 5–12ms、FCP 152–284ms、LCP 180–436ms、CLS 0–0.0195（<0.1）、长任务 0；无需修复。
+- **鸿蒙追加**：装饰头像 `SystemAvatar.decorative`（13 处）、11 个 accessibilityText、responseRegion 5 处、
+  textTertiary forest light #58645C；build/check:theme/parity 全绿；真机 TalkBack/像素仍待补。
+- **验证**：39 页回归全绿；check 0/0、test 100 文件/518、build 通过；独立复核 verdict-r5。
+
+### 2026-10-27 上一轮（Round 15，长尾/后台软岛化 + 交互状态与可访问性基线）
 
 - **长尾/后台软岛化（Web 18 文件）**：瞬间详情单帖卡/媒体容器、首页 onboarding/HeroStats/轮播/附近人列表、
   群详情 hero/指标/操作/子列表、他人主页、**admin 10 页**（模块卡/表格外壳/筛选/危险 callout）统一为软岛
@@ -192,10 +208,11 @@
 
 ## 待做（按优先级）
 
-1. **鸿蒙真机像素验收（Round 13+14+15 遗留，最高优先）**：三轮鸿蒙改动均只完成构建/布局树/token 校验，
+1. **鸿蒙真机像素/TalkBack 验收（Round 13–16 遗留，最高优先）**：四轮鸿蒙改动均只完成构建/布局树/token 校验，
    真机 hdc 离线导致三主题×明暗矩阵、灰度 Tab、压图对比度像素实测、软岛阴影/圆角/gap、按钮 hover、
    未读态、骨架零位移、web↔鸿蒙并排 compare 全部挂起。设备恢复后按
-   `.workwork/ui-polish-1026/{r2,r3,r4}/ha/report.md` checklist 执行（r4 增补焦点环/减少动态/长尾软岛的端上验证）。
+   `.workwork/ui-polish-1026/{r2,r3,r4,r5}/ha/report.md` checklist 执行（r5 增补三主题像素/TalkBack 顺序/
+   reduced-motion 系统路径/触控边缘 tap）。
 2. **长尾自定义卡收尾（Round 15 已基本完成）**：moment 详情/首页长尾/群详情/他人主页/admin 已软岛化；
    剩余 demo-only 演示卡（`/?demo=`）与地图面板等按例外保留；新增页面按 §19/§19.5 判定。
    鸿蒙后台仅 AdminOverview（其余 web-only，N/A 登记）；首页 onboarding/HeroStats/轮播在鸿蒙无对应组件（N/A）。
@@ -234,7 +251,15 @@
    挤压操作行；若后续放大网格卡宽度可统一。
 15. **BSP 卡片比例例外（Round 13）**：附近瞬间/群组桌面 BSP 格按布局单元铺满、非固定比例；如需统一需重排布局。
 16. **横排紧凑卡 fallback/精选横排例外（Round 13）**：horizontal 卡仍两段式与旧占位；群详情精选桌面横排保留。
-17. **交互状态新增契约的持续守护（Round 15）**：focus-visible / reduced-motion / 四态（Skeleton/InlineLoading/
+17. **a11y/触控/主题自动化纳入门禁（Round 16）**：axe 扫描（50 runs 0 violation 已达成）与触控覆盖率脚本目前为会话内
+   一次性工具（`r5/fe/run-axe.sh`、`run-touch.sh`、`axe.min.js` 在 `.workwork`，不入库）。建议后续把 axe-core 加为
+   devDependency + CI/本地检查脚本，并把「页面 main/landmark、整卡覆盖按钮、列表 role、触控 44」加入 PR 自查清单。
+18. **触控例外清单（Round 16 登记）**：地图 marker/控件（36×53，防相邻误点）；相邻 TagPill（WCAG 24 已满足、扩 44 会强制
+   26px 间距溢出）；表单控件；skip link。新增「相邻可点元素」场景时先跑 390 扫描再决定扩热区方式。
+19. **性能基线口径（Round 16）**：当前 LCP/CLS 为本地 dev/mock 数据，仅作相对参考；生产环境需用真实网络/镜像另测。
+20. **inkwash light 岛合成口径（Round 16 登记）**：有效合成 **#FAF8F2**（86% surface over #F5F2EA）；不同采样点（ambient 高光）
+   会读到 #FCF9F3，报告需标注取样口径，避免误判 token 漂移。
+21. **交互状态新增契约的持续守护（Round 15）：focus-visible / reduced-motion / 四态（Skeleton/InlineLoading/
    EmptyState/LoadError/ListEnd）已写入 design-system §20 与 style/harmony skill；新页面/新原语必须按契约自查，
    建议后续把「focus 环存在性 / reduced-motion 无回归」纳入 UI 自查清单（本轮未做自动化）。
 18. **admin mock 空态不可复现（Round 15 登记）**：mock 列表接口未实现筛选参数过滤，空态分支在 mock 环境不可达；

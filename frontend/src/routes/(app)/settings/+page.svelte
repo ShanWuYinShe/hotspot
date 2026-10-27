@@ -228,7 +228,7 @@
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-2">
 									<p class="text-sm font-semibold text-text-primary truncate">{accountName || '用户'}</p>
-									<span class="badge bg-accent-soft text-accent-default">已登录</span>
+									<span class="badge bg-accent-default text-text-on-accent">已登录</span>
 								</div>
 								<p class="text-xs text-text-secondary mt-0.5 truncate">{accountEmail || '未绑定邮箱'}</p>
 							</div>
@@ -433,7 +433,7 @@
 						<div class="flex justify-end">
 							<Button
 								variant="ghost"
-								class="hover-btn hit-slop h-auto gap-2 rounded-md bg-danger-bg/40 px-4 py-2 text-xs text-status-danger hover:bg-danger-bg"
+								class="hover-btn hit-slop-44 h-auto gap-2 rounded-md bg-danger-bg/40 px-4 py-2 text-xs text-status-danger hover:bg-danger-bg"
 								onclick={() => (confirmLogoutOpen = true)}
 							>
 								<LogOut class="size-3.5" strokeWidth={1.75} />

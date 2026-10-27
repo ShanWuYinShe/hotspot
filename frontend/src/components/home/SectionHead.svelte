@@ -17,7 +17,7 @@
 	{#if action && onAction}
 		<button
 			type="button"
-			class="link-btn hit-slop -my-2.5 flex items-center gap-0.5 px-1 py-2.5 focus-ring text-xs text-accent-default"
+			class="link-btn hit-slop-44 -my-2.5 flex items-center gap-0.5 px-1 py-2.5 focus-ring text-xs text-accent-default"
 			onclick={onAction}
 		>
 			<span>{action}</span>

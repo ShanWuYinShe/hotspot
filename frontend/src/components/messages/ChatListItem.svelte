@@ -54,6 +54,7 @@
 			src={chat.avatar}
 			name={chat.name}
 			size={compact ? 40 : 44}
+			decorative
 			style={isSelected ? 'box-shadow:0 0 0 var(--cst-border-width-regular) var(--cst-border-inverse);' : ''}
 		/>
 		{#if chat.online}

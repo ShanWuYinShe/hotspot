@@ -381,7 +381,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					<div class="flex shrink-0 gap-2 pb-1">
 						<button
 							type="button"
-							class="hover-btn tap-92 hit-slop flex items-center gap-1.5 rounded-full bg-surface-subtle/60 px-3.5 py-1.5 text-xs text-text-secondary focus-ring hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-muted"
+							class="hover-btn tap-92 hit-slop-44 flex items-center gap-1.5 rounded-full bg-surface-subtle/60 px-3.5 py-1.5 text-xs text-text-secondary focus-ring hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-muted"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>

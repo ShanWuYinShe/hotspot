@@ -112,7 +112,7 @@
 									<span class="badge max-w-32 truncate bg-accent-soft text-accent-default">#{t.name}</span>
 									{#if t.is_blocked}
 										<!-- 已屏蔽态必须可见：否则与正常标签无从区分（全站复审 s4-22 的根因） -->
-										<span class="badge bg-danger-bg text-status-danger ring-1 ring-status-danger-border">已屏蔽</span>
+										<span class="badge bg-status-danger text-text-on-accent">已屏蔽</span>
 									{/if}
 								</td>
 								<td class={TD}>{t.usage_count}</td>

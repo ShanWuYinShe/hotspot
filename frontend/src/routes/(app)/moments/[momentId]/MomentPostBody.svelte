@@ -124,7 +124,7 @@
 			<div class="flex-1 min-w-0">
 				<button
 					type="button"
-					class="link-btn text-left text-text-primary text-sm font-semibold truncate hover:text-accent-default focus-ring rounded-sm block"
+					class="link-btn hit-slop-44 -my-2 py-2 text-left text-text-primary text-sm font-semibold truncate hover:text-accent-default focus-ring rounded-sm block"
 					onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
 				>
 					{moment.user}
@@ -153,7 +153,7 @@
 	<!-- 3. 话题标签 -->
 	{#if moment.tag}
 		<div class="pb-4">
-			<span class="inline-flex items-center px-3 py-1 rounded-full bg-accent-soft text-accent-default border border-accent-border/40 text-xs font-medium shadow-xs">
+			<span class="inline-flex items-center px-3 py-1 rounded-full bg-accent-soft text-text-primary border border-accent-border/40 text-xs font-medium shadow-xs">
 				#{moment.tag}
 			</span>
 		</div>
@@ -220,7 +220,7 @@
 			<div class="flex items-center gap-6">
 				<button
 					type="button"
-					class="hover-action hit-slop flex items-center gap-1.5 py-1 focus-ring transition-colors {liked ? 'text-status-danger' : 'text-text-secondary hover:text-status-danger'}"
+					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 focus-ring transition-colors {liked ? 'text-status-danger' : 'text-text-secondary hover:text-status-danger'}"
 					aria-label={liked ? '取消点赞' : '点赞'}
 					aria-pressed={liked}
 					onclick={onToggleLike}
@@ -232,7 +232,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-action hit-slop flex items-center gap-1.5 py-1 focus-ring text-text-secondary hover:text-accent-default transition-colors"
+					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 focus-ring text-text-secondary hover:text-accent-default transition-colors"
 					aria-label="查看评论"
 					onclick={onCommentClick}
 				>
@@ -243,7 +243,7 @@
 			<div class="flex items-center gap-4">
 				<button
 					type="button"
-					class="hover-action hit-slop flex items-center gap-1.5 py-1 focus-ring transition-colors {saved ? 'text-accent-default' : 'text-text-secondary hover:text-accent-default'}"
+					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 focus-ring transition-colors {saved ? 'text-accent-default' : 'text-text-secondary hover:text-accent-default'}"
 					aria-label={saved ? '取消收藏' : '收藏'}
 					aria-pressed={saved}
 					onclick={onToggleSave}
@@ -254,7 +254,7 @@
 					type="button"
 					onclick={onShare}
 					aria-label={shareStatus === 'failed' ? '复制动态链接失败' : '复制动态链接'}
-					class="hover-action hit-slop flex items-center py-1 focus-ring transition-colors {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary hover:text-accent-default'}"
+					class="hover-action hit-slop-44 flex items-center py-1 focus-ring transition-colors {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary hover:text-accent-default'}"
 				>
 					{#if shareStatus === 'copied'}
 						<Check class="size-4.5" strokeWidth={2} />
@@ -286,7 +286,7 @@
 				<div class="flex gap-3 py-3.5 first:pt-0 last:pb-0">
 					<button
 						type="button"
-						class="hover-btn hit-slop shrink-0 rounded-full focus-ring"
+						class="hover-btn hit-slop-44 shrink-0 rounded-full focus-ring"
 						aria-label={`查看${c.user}的个人主页`}
 						onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
 					>
@@ -296,7 +296,7 @@
 						<div class="flex items-baseline gap-2">
 							<button
 								type="button"
-								class="link-btn hit-slop -my-2.5 py-2.5 text-text-primary text-sm font-medium focus-ring rounded-sm truncate"
+								class="link-btn hit-slop-44 -my-2.5 py-2.5 text-text-primary text-sm font-medium focus-ring rounded-sm truncate"
 								onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
 							>{c.user}</button>
 							<span class="text-text-secondary text-xs shrink-0">{c.time}</span>
@@ -308,7 +308,7 @@
 							<div class="flex items-center gap-4 mt-2">
 								<button
 									type="button"
-									class="hover-action hit-slop -my-2 flex items-center gap-1 py-2 focus-ring transition-colors {c.liked ? 'text-accent-default' : 'text-text-secondary hover:text-text-primary'}"
+									class="hover-action hit-slop-44 -my-2 flex items-center gap-1 py-2 focus-ring transition-colors {c.liked ? 'text-accent-default' : 'text-text-secondary hover:text-text-primary'}"
 									aria-label={c.liked ? '取消点赞评论' : '点赞评论'}
 									aria-pressed={c.liked}
 									onclick={() => onToggleCommentLike(c.id)}
@@ -320,20 +320,20 @@
 								</button>
 								<button
 									type="button"
-									class="hover-action hit-slop -my-2 py-2 focus-ring text-text-secondary hover:text-text-primary text-xs"
+									class="hover-action hit-slop-44 -my-2 py-2 focus-ring text-text-secondary hover:text-text-primary text-xs"
 									onclick={() => onReply(c.user, c.id)}
 								>回复</button>
 								{#if c.userId && c.userId === auth.user?.user_id}
 									<button
 										type="button"
-										class="hover-action hit-slop -my-2 py-2 focus-ring text-text-secondary hover:text-status-danger text-xs"
+										class="hover-action hit-slop-44 -my-2 py-2 focus-ring text-text-secondary hover:text-status-danger text-xs"
 										aria-label="删除我的评论"
 										onclick={() => onDeleteComment(c.id)}
 									>删除</button>
 								{:else if c.userId && c.userId !== auth.user?.user_id}
 									<button
 										type="button"
-										class="hover-action hit-slop -my-2 py-2 desktop-reveal focus-ring text-text-secondary hover:text-status-danger text-xs"
+										class="hover-action hit-slop-44 -my-2 py-2 desktop-reveal focus-ring text-text-secondary hover:text-status-danger text-xs"
 										aria-label={`举报 ${c.user} 的评论`}
 										onclick={() => onReportComment(c.id)}
 									>举报</button>
@@ -346,7 +346,7 @@
 									<div class="flex gap-2.5">
 										<button
 											type="button"
-											class="hover-btn hit-slop shrink-0 rounded-full focus-ring"
+											class="hover-btn hit-slop-44 shrink-0 rounded-full focus-ring"
 											aria-label={`查看${r.user}的个人主页`}
 											onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
 										>
@@ -356,7 +356,7 @@
 											<div class="flex items-baseline gap-2">
 												<button
 													type="button"
-													class="link-btn hit-slop -my-2 py-2 text-text-primary text-sm font-medium focus-ring rounded-sm truncate"
+													class="link-btn hit-slop-44 -my-2 py-2 text-text-primary text-sm font-medium focus-ring rounded-sm truncate"
 													onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
 												>{r.user}</button>
 												{#if !r.isDeleted}
@@ -373,7 +373,7 @@
 												<div class="flex items-center gap-3 mt-1">
 													<button
 														type="button"
-														class="hover-action hit-slop -my-2 py-2 focus-ring text-text-secondary hover:text-text-primary text-xs"
+														class="hover-action hit-slop-44 -my-2 py-2 focus-ring text-text-secondary hover:text-text-primary text-xs"
 														onclick={() => onReply(r.user, c.id)}
 													>回复</button>
 												</div>

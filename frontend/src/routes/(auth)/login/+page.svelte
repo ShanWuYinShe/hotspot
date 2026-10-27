@@ -26,7 +26,7 @@
 </svelte:head>
 
 
-<div class="relative isolate flex min-h-dvh justify-center bg-surface-page px-5 py-10">
+<main class="relative isolate flex min-h-dvh justify-center bg-surface-page px-5 py-10">
 	<!-- 氛围画布：认证页整屏留白大，用主题世界层（星尘/等高线/墨山）补足空荡感 -->
 	<AmbientBackdrop />
 	<!-- my-auto 替代 items-center：卡片高于视口时容器被撑开、整页可滚动（flex 居中溢出会硬裁底部） -->
@@ -50,4 +50,4 @@
 			/>
 		</div>
 	</section>
-</div>
+</main>

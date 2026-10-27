@@ -1633,6 +1633,12 @@ export struct GroupDetailPage {
                 pasteboard.getSystemPasteboard().setData(data);
                 SystemToast.showSuccess(`位置已复制：${name}`, this.getUIContext());
               })
+              .responseRegion({
+                x: 0,
+                y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
+                width: '100%',
+                height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+              })
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start)
@@ -2661,6 +2667,7 @@ export struct GroupDetailPage {
             ListItem() {
               Row({ space: DesignConstants.SPACING.SM }) {
                 SystemAvatar({
+                  decorative: true,
                   src: user.user?.avatar_url ?? '',
                   name: user.user?.nickname ?? '',
                   avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS
@@ -2750,6 +2757,7 @@ export struct GroupDetailPage {
             ListItem() {
               Row({ space: DesignConstants.SPACING.SM }) {
                 SystemAvatar({
+                  decorative: true,
                   src: banned.user?.avatar_url ?? '',
                   name: banned.user?.nickname ?? '',
                   avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS

@@ -197,6 +197,12 @@ export struct SettingsThemeSegmentCard {
       width: this.selected ? DesignConstants.BORDER_WIDTH.HAIRLINE : 0,
       color: this.getPalette().accentBackground
     })
+    .responseRegion({
+      x: 0,
+      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - 32) / 2,
+      width: '100%',
+      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+    })
     .onClick(() => { this.onSelect(this.mode); })
   }
 }
@@ -865,7 +871,7 @@ export struct RelationshipListSection {
   private buildUserLine(userId: string, nickname: string, meta: string, online: boolean, actionLabel?: string, action?: () => void) {
     Row({ space: DesignConstants.SPACING.MD }) {
       Stack({ alignContent: Alignment.BottomEnd }) {
-        SystemAvatar({ name: nickname, avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL })
+        SystemAvatar({ name: nickname, avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL, decorative: true })
         if (online) {
           Row()
             .width(DesignConstants.SPACING.MD)

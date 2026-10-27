@@ -29,6 +29,7 @@
 		size = 'lg',
 		shape = 'circle',
 		ring = false,
+		decorative = false,
 		badge,
 		class: className = '',
 		style = ''
@@ -43,6 +44,8 @@
 		shape?: 'circle' | 'rounded';
 		/** Draw a thin themed ring around the avatar. */
 		ring?: boolean;
+		/** 装饰性头像（相邻已有可见姓名文本）：图片 alt 置空并 aria-hidden，避免屏幕阅读器重复念名。 */
+		decorative?: boolean;
 		/** Optional badge (e.g. online dot) rendered absolutely positioned inside the wrapper. */
 		badge?: Snippet;
 		class?: string;
@@ -65,11 +68,12 @@
 </script>
 
 <div
+	aria-hidden={decorative || undefined}
 	class="relative shrink-0 overflow-hidden bg-surface-primary {className}"
 	style="width:{px}px;height:{px}px;border-radius:{borderRadius};{ring ? 'border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);' : ''}{style}"
 >
 	{#if showImage}
-		<img src={src} loading="lazy" decoding="async" alt={name ?? ''} class="h-full w-full object-cover" onerror={() => (hasError = true)} />
+		<img src={src} loading="lazy" decoding="async" alt={decorative ? '' : (name ?? '')} class="h-full w-full object-cover" onerror={() => (hasError = true)} />
 	{:else if initial}
 		<span
 			class="flex h-full w-full items-center justify-center text-text-secondary bg-accent-bg"

@@ -35,7 +35,7 @@
 		info: 'bg-surface-subtle text-text-secondary',
 		// 警告归位 warning 族而非 accent（r57：语义色各归其位,亮 accent 收给主操作）
 		warning: 'bg-status-warning-bg text-status-warning',
-		error: 'bg-danger-bg text-status-danger'
+		error: 'bg-status-danger text-text-on-accent'
 	};
 
 	// 编辑弹层（create 与 update 共用；editTarget=null 即发布模式）

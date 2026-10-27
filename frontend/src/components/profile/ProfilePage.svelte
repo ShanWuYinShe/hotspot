@@ -123,7 +123,7 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 						<button
 							type="button"
 							onclick={() => void goto(ROUTES.meEdit)}
-							class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-full bg-surface-subtle/60 py-2 px-5 text-sm font-medium text-text-primary focus-ring transition-all hover:bg-surface-subtle active:scale-[0.98]"
+							class="hover-btn hit-slop-44 inline-flex items-center justify-center gap-1.5 rounded-full bg-surface-subtle/60 py-2 px-5 text-sm font-medium text-text-primary focus-ring transition-all hover:bg-surface-subtle active:scale-[0.98]"
 						>
 							<Pencil class="size-3.5 text-text-secondary group-hover:text-accent-default" strokeWidth={1.75} />
 							编辑资料
@@ -131,7 +131,7 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 						<button
 							type="button"
 							onclick={() => void goto(ROUTES.settings)}
-							class="hover-btn hit-slop inline-flex items-center justify-center gap-1.5 rounded-full bg-surface-subtle/60 py-2 px-4 text-sm font-medium text-text-primary focus-ring transition-all hover:bg-surface-subtle active:scale-[0.98]"
+							class="hover-btn hit-slop-44 inline-flex items-center justify-center gap-1.5 rounded-full bg-surface-subtle/60 py-2 px-4 text-sm font-medium text-text-primary focus-ring transition-all hover:bg-surface-subtle active:scale-[0.98]"
 							aria-label="系统设置"
 						>
 							<Settings class="size-3.5 text-text-secondary group-hover:text-accent-default" strokeWidth={1.75} />

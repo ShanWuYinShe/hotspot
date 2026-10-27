@@ -101,7 +101,7 @@
 			<button
 				type="button"
 				onclick={onClear}
-				class="link-btn hit-slop -my-1 px-2 py-1 text-xs text-accent-default"
+				class="link-btn hit-slop-44 -my-1 px-2 py-1 text-xs text-accent-default"
 			>
 				清除
 			</button>
@@ -150,7 +150,7 @@
 				<button
 					type="button"
 					onclick={onSeeAllUsers}
-					class="link-btn hit-slop -my-1 px-2 py-1 text-xs text-accent-default"
+					class="link-btn hit-slop-44 -my-1 px-2 py-1 text-xs text-accent-default"
 				>
 					查看全部
 				</button>
@@ -200,7 +200,7 @@
 					<button
 						type="button"
 						onclick={onSeeAllGroups}
-						class="link-btn hit-slop -my-1 px-2 py-1 text-xs text-accent-default"
+						class="link-btn hit-slop-44 -my-1 px-2 py-1 text-xs text-accent-default"
 					>
 						查看全部
 					</button>

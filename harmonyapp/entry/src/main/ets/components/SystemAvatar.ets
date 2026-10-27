@@ -24,6 +24,8 @@ export struct SystemAvatar {
   @Prop shape: 'circle' | 'squircle' | 'square' = 'circle';
   @Prop userType: string = '';
   @Prop inset: boolean = false;
+  /** 装饰性头像（相邻已有姓名文本）：从无障碍树移除，避免「头像：X」与姓名重复播报 */
+  @Prop decorative: boolean = false;
   @State private imageLoadFailed: boolean = false;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
@@ -128,6 +130,7 @@ export struct SystemAvatar {
     Stack({ alignContent: Alignment.Center }) {
       this.buildAvatarContent()
     }
+    .accessibilityLevel(this.decorative ? 'no' : 'auto')
   }
 
   private getBorderRadius(): Length {

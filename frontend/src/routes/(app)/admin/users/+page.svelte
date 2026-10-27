@@ -142,7 +142,7 @@
 								</td>
 								<td class={TD_SECONDARY}>{u.login_id}</td>
 								<td class={TD}>
-									<span class="badge {u.status === 'banned' ? 'bg-danger-bg text-status-danger' : 'bg-surface-subtle text-text-secondary'}">{statusText(u)}</span>
+									<span class="badge {u.status === 'banned' ? 'bg-status-danger text-text-on-accent' : 'bg-surface-subtle text-text-secondary'}">{statusText(u)}</span>
 								</td>
 								<td class={TD_SECONDARY}>{u.email ?? '—'}</td>
 								<td class={TD_SECONDARY}>{formatDateTime(u.created_at)}</td>

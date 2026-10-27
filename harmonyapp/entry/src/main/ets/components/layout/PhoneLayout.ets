@@ -464,6 +464,7 @@ export struct PhoneLayout {
     .backgroundColor(this.getPalette().accentBackground)
     .borderRadius(DesignConstants.RADIUS.FULL)
     .shadow(this.getPalette().elevatedShadow)
+    .accessibilityText('发布动态')
     // 按压反馈（对齐手机端 CreateTabBuilder FAB 语义）
     .scale(this.tabletFabPressed ?
       { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } :
@@ -520,6 +521,7 @@ export struct PhoneLayout {
     }
     .height(DesignConstants.LAYOUT.MOBILE_BOTTOM_NAV_HEIGHT)
     .justifyContent(FlexAlign.Center)
+    .accessibilityText('发布动态')
     .onClick(() => {
       this.showCreateSheet = true;
     })

@@ -114,17 +114,7 @@
 	     顶部遮罩承载作者行，底部遮罩承载标题/元信息/操作行（三主题 token 遮罩）。
 	     无图 fallback 用主题化渐变底 + 主题文字色（不使用白字遮罩，已登记例外）。 -->
 	<div
-		class="group relative aspect-[4/5] w-full cursor-pointer overflow-hidden rounded-lg bg-surface-subtle shadow-xs transition-[box-shadow,transform] duration-standard hover:shadow-raised-md focus-ring"
-		role="button"
-		tabindex="0"
-		onclick={onClick}
-		onkeydown={(e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				onClick?.();
-			}
-		}}
-		aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
+		class="group relative aspect-[4/5] w-full cursor-pointer overflow-hidden rounded-lg bg-surface-subtle shadow-xs transition-[box-shadow,transform] duration-standard hover:shadow-raised-md [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
 	>
 		{#if !useFallback}
 			<img
@@ -152,7 +142,7 @@
 			<div class="pointer-events-none flex min-w-0 items-center gap-2.5">
 				<button
 					type="button"
-					class="pointer-events-auto hover-action hit-slop shrink-0 rounded-full focus-ring"
+					class="pointer-events-auto hover-action hit-slop-44 shrink-0 rounded-full focus-ring"
 					aria-label={`查看${moment.user?.nickname ?? '作者'}的个人主页`}
 					onclick={handleUserClick}
 				>
@@ -166,7 +156,7 @@
 					<div class="flex min-w-0 items-center gap-1.5">
 						<button
 							type="button"
-							class="pointer-events-auto truncate text-left text-md font-semibold {useFallback
+							class="pointer-events-auto hit-slop-44 truncate text-left text-md font-semibold {useFallback
 								? 'text-text-primary'
 								: 'text-content-inverse'} hover:underline"
 							onclick={handleUserClick}
@@ -242,10 +232,9 @@
 			<div class="mt-1 flex items-center justify-between">
 				<div class="flex items-center gap-5 sm:gap-6 {useFallback ? 'text-text-secondary' : 'text-content-inverse'}">
 					<div
-						class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors {hasLiked
+						class="hover-action hit-slop-44 flex items-center gap-1.5 text-sm focus-ring transition-colors {hasLiked
 							? 'text-status-danger'
 							: ''}"
-						aria-label={`点赞 ${totalReactions} 次`}
 					>
 						<!-- 压图红态：红色填充 + 白色描边（深色遮罩/浅色遮罩上都可辨；形状变化不依赖色相） -->
 						<Heart
@@ -257,15 +246,13 @@
 						<span class="font-medium">{totalReactions > 0 ? totalReactions : '赞'}</span>
 					</div>
 					<div
-						class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors"
-						aria-label={`评论 ${moment.comments_count} 条`}
+						class="hover-action hit-slop-44 flex items-center gap-1.5 text-sm focus-ring transition-colors"
 					>
 						<MessageCircle class="size-4.5 shrink-0" strokeWidth={1.75} />
 						<span class="font-medium">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
 					</div>
 					<div
-						class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors"
-						aria-label={moment.is_favorited ? '已收藏' : '收藏'}
+						class="hover-action hit-slop-44 flex items-center gap-1.5 text-sm focus-ring transition-colors"
 					>
 						<Bookmark
 							class="size-4.5 shrink-0 transition-transform active:scale-125 {moment.is_favorited
@@ -277,7 +264,7 @@
 				</div>
 				<button
 					type="button"
-					class="hover-action hit-slop flex items-center gap-1.5 text-sm focus-ring transition-colors"
+					class="hover-action hit-slop-44 flex items-center gap-1.5 text-sm focus-ring transition-colors"
 					aria-label="分享动态"
 					onclick={handleShareClick}
 				>
@@ -288,27 +275,28 @@
 				</button>
 			</div>
 		</div>
+
+		<!-- 整卡点击覆盖层（最后绘制，z-10）：真实 button 承载点击/键盘/aria，
+		     行内作者/点赞/评论/收藏/分享按钮经根上 auto-lift(z-20) 保持可点；
+		     根不再持 button 语义（axe nested-interactive）。 -->
+		<button
+			type="button"
+			class="absolute inset-0 z-10 cursor-pointer focus-ring"
+			data-cover
+			aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
+			onclick={onClick}
+		></button>
 	</div>
 {:else}
 	<!-- 紧凑行形态（保留紧凑内嵌式列表语言） -->
 	<div
-		class="group relative flex items-start gap-3 sm:gap-3.5 px-4 py-4 sm:px-5 hover:bg-surface-subtle/70 transition-colors cursor-pointer border-b border-border-subtle/30"
-		role="button"
-		tabindex="0"
-		onclick={onClick}
-		onkeydown={(e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				onClick?.();
-			}
-		}}
-		aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
+		class="group relative flex items-start gap-3 sm:gap-3.5 px-4 py-4 sm:px-5 hover:bg-surface-subtle/70 transition-colors cursor-pointer border-b border-border-subtle/30 [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
 	>
 		<!-- 左侧：作者头像 -->
 		<div class="shrink-0 pt-0.5">
 			<button
 				type="button"
-				class="hover-action hit-slop block rounded-full focus-ring cursor-pointer"
+				class="hover-action hit-slop-44 block rounded-full focus-ring cursor-pointer"
 				aria-label={`查看${moment.user?.nickname ?? '作者'}的个人主页`}
 				onclick={handleUserClick}
 			>
@@ -431,8 +419,7 @@
 			<div class="mt-3 flex items-center gap-6 sm:gap-8 text-text-secondary">
 				<!-- 点赞 -->
 				<div
-					class="hover-action hit-slop flex items-center gap-1.5 text-xs focus-ring transition-colors {hasLiked ? 'text-status-danger' : 'hover:text-status-danger'}"
-					aria-label={`点赞 ${totalReactions} 次`}
+					class="hover-action hit-slop-44 flex items-center gap-1.5 text-xs focus-ring transition-colors {hasLiked ? 'text-status-danger' : 'hover:text-status-danger'}"
 				>
 					<Heart
 						class="size-4 shrink-0 transition-transform active:scale-125 {hasLiked ? 'fill-status-danger text-status-danger' : ''}"
@@ -443,8 +430,7 @@
 
 				<!-- 评论 -->
 				<div
-					class="hover-action hit-slop flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors"
-					aria-label={`评论 ${moment.comments_count} 条`}
+					class="hover-action hit-slop-44 flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors"
 				>
 					<MessageCircle class="size-4 shrink-0" strokeWidth={1.5} />
 					<span>{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
@@ -453,7 +439,7 @@
 				<!-- 分享 -->
 				<button
 					type="button"
-					class="hover-action hit-slop flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors ml-auto sm:ml-0"
+					class="hover-action hit-slop-44 flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors ml-auto sm:ml-0"
 					aria-label="分享动态"
 					onclick={handleShareClick}
 				>
@@ -464,5 +450,14 @@
 				</button>
 			</div>
 		</div>
+
+		<!-- 行点击覆盖层（最后绘制，z-10）：真实 button 承载点击/键盘；行内按钮 auto-lift -->
+		<button
+			type="button"
+			class="absolute inset-0 z-10 cursor-pointer focus-ring"
+			data-cover
+			aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
+			onclick={onClick}
+		></button>
 	</div>
 {/if}

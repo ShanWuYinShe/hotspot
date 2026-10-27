@@ -518,6 +518,7 @@ export struct SettingsPage {
     if (this.isLoggedIn && this.currentUser) {
       Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
+          decorative: true,
           avatarUrl: this.currentUser?.avatar_url ?? '',
           name: this.currentUser?.nickname ?? '',
           avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS

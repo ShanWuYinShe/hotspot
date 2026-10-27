@@ -72,13 +72,13 @@
 				type="button"
 				onclick={(e) => { e.stopPropagation(); onAccept?.(notif.inviteId!); }}
 				disabled={actionPending}
-				class="hover-btn hit-slop rounded-full bg-accent-default px-3.5 py-1.5 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
+				class="hover-btn hit-slop inline-flex h-8 items-center rounded-full bg-accent-default px-3.5 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
 			>接受</button>
 			<button
 				type="button"
 				onclick={(e) => { e.stopPropagation(); onReject?.(notif.inviteId!); }}
 				disabled={actionPending}
-				class="hover-btn hit-slop rounded-full bg-surface-subtle/60 px-3.5 py-1.5 text-xs text-text-primary focus-ring hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
+				class="hover-btn hit-slop inline-flex h-8 items-center rounded-full bg-surface-subtle/60 px-3.5 text-xs text-text-primary focus-ring hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
 			>拒绝</button>
 		{/if}
 		{#if notif.momentImage}
@@ -90,8 +90,9 @@
 			<!-- 未读指示：实心微蓝呼吸光点，高质感辨识 -->
 			<div
 				class="rounded-full size-2 bg-accent-default shadow-[0_0_6px_var(--cst-accent-default)] animate-pulse"
-				aria-label="未读"
+				aria-hidden="true"
 			></div>
+			<span class="sr-only">未读</span>
 		{/if}
 	</div>
 </ListItem>

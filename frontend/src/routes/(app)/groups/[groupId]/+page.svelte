@@ -268,7 +268,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	</div>
 
 	<div class="grid gap-y-6 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-8">
-		<main class="min-w-0">
+		<div class="min-w-0">
 			<!-- 分类 Tab（胶囊样式，轻柔微发丝底线） -->
 			<div class="pb-3">
 				<TabBar
@@ -397,10 +397,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					onDelete={(id) => (deleteAnnounceId = id)}
 				/>
 			{/if}
-		</main>
+		</div>
 
 		<!-- 桌面右栏用圆润卡片承载；移动端平滑自适应，主次操作分明 -->
-		<aside class="flex h-fit flex-col gap-3 rounded-lg bg-surface-island p-5 shadow-xs">
+		<section aria-label="群组操作" class="flex h-fit flex-col gap-3 rounded-lg bg-surface-island p-5 shadow-xs">
 			{#if gd.joined}
 				<Button
 					type="button"
@@ -452,7 +452,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					加入后可管理群组通知并进入群聊
 				</p>
 			{/if}
-		</aside>
+		</section>
 	</div>
 	{/if}
 	</StandardPageLayout>

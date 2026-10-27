@@ -627,7 +627,7 @@
 
 | 组合 | 定义 | 合成到画布实测 | 岛/画布亮度比 |
 |---|---|---|---|
-| light（三主题） | `color-mix(in srgb, var(--cst-surface-primary) 86%, transparent)` | vibrant #FDFDFE / forest #F6F7F3 / inkwash #FAF8F2 | 1.00–1.10（forest 与画布同色，靠 shadow-xs 表达边界，登记） |
+| light | vibrant/inkwash：`color-mix(surface-primary 86%, transparent)`；**forest 覆写**：`color-mix(surface-primary 92%, text-primary 8%)`（2026-10-27 R5 决策） | vibrant #FDFDFE / **forest #E4E6E2** / inkwash #FAF8F2 | vibrant 1.11 / forest **1.17** / inkwash 1.06（forest 原 ratio 1.00 改为 v2，原因：纸面主题画布与卡片同色，仅阴影不足以分层；v2 仍保纸面气质，岛屿文字 primary 13.11 / secondary 6.42） |
 | dark（三主题） | `color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-text-primary) 6%)` | vibrant #222D40 / forest #232723 / inkwash #2D3031 | 1.16–1.33（暗色阴影不可见，必须靠表面差分层） |
 
 - registry：`--color-surface-island: var(--cst-surface-island)` → `bg-surface-island`。
@@ -698,5 +698,37 @@
 - 首屏加载：列表/卡片优先 Skeleton；单实体/短列表可 InlineLoading（需给理由：结构轻、<1s、
   避免二次位移）。空态/错误态统一 `EmptyState` / `LoadError` + 重试；admin/长尾页一致。
 - 回归基线：39 页 0 console error / 0 横向溢出 / h1=1。
+
+### 20.5 语义结构规则（axe-core 基线，2026-10-27 Round 5）
+
+自动化基线：axe-core 4.10.2（工具 `.workwork/ui-polish-1026/r5/tools/axe.min.js`，经 `agent-browser --init-script` 注入）；
+验收目标 **0 serious / 0 critical**。规则：
+
+- **整卡可点**：卡片根不得持 button/aria-label + 内层交互（nested-interactive）；用「覆盖按钮（承载点击/键盘/aria）
+  + 行内动作 auto-lift」模式（NearbyImageCard / HomeFeedItem / ListItem 已统一）。
+- **列表语义**：`role=list` 的直接子节点必须是 `role=listitem`（自定义行也要补）；`role=listitem` 上不挂 `aria-label`，
+  名称由覆盖按钮或可见文本承载。
+- **定义列表**：`dl` 只能直接包含 `dt/dd`；指标组/统计组用 `div role=group`（MetricRow 已改）。
+- **aria-prohibited**：无 role 的 `div` 不得挂 `aria-label`；用可见文本 / `sr-only` 文本 / 覆盖按钮承载。
+- **地标**：每页有 `main`（登录/注册/错误页也要），必需 landmark 不重复；`lang` 正确。
+- **可滚动区域**：可滚动且非键盘可达的容器（如 admin config 的 `pre`）加 `tabindex=0` + `role=region` + `aria-label`。
+- **图片**：装饰图 `alt=""` + `aria-hidden`；内容图 alt 提供信息，避免与相邻文本重复（image-redundant-alt）。
+- **对比度**：axe color-contrast 0 serious；状态徽章用实底 + on-accent 字（不再用低对比淡底 + 主题字）。
+
+### 20.6 触控目标（WCAG 2.2 / 项目标准）
+
+- 移动端可点元素**有效热区 ≥44×44**（含 `hit-slop` / `hit-slop-44` / ArkUI `responseRegion`），视觉尺寸可小于 44。
+- 孤立图标/文本链可用 `.hit-slop-44`；横向相邻元素不得互相覆盖（用容器 padding 替代）。
+- 例外登记：表单控件、横向流中的 chip/筛选 pill、内联文本链接、地图 marker/工具条（精度/密度冲突）、skip link。
+- 验收：390 视口脚本扫描可点元素 rect + 命中测试；输出覆盖率与例外清单。
+
+### 20.7 主题验收基线（三主题 × 明暗）
+
+- 关键页（首页/我的/设置/通知/附近人/附近瞬间/瞬间详情/群详情/admin）每主题×明暗必测；不允许「只在 vibrant 好看」。
+- 软岛/画布亮度比记录：vibrant light 1.11 / vibrant dark 1.33 / **forest light 1.17（R5 v2 覆写）** / forest dark 1.16 /
+  inkwash light 1.06 / inkwash dark 1.31；文字对比 primary/secondary ≥4.5（forest light 岛 primary 13.11 / secondary 6.42）。
+- 主题特有 token 变更（如 forest light `surfaceIsland`）必须两端同值并重跑 parity；harmony-only 档（如 textTertiary）
+  在文档标注「web 无对应档」。
+
 
 

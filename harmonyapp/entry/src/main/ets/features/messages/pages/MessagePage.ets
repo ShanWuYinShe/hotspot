@@ -662,6 +662,7 @@ export struct MessagePage {
             width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
             height: DesignConstants.LAYOUT.MIN_HIT_TARGET
           })
+          .accessibilityText('发起新会话')
           .bindMenu([
             {
               value: '发起群聊',
@@ -963,6 +964,7 @@ export struct MessagePage {
                 // （前端 Avatar size=52 + padding:2px + border-width-strong）
                 Column() {
                   SystemAvatar({
+                    decorative: true,
                     avatarUrl: chat.avatarUrl,
                     name: chat.name,
                     avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
@@ -1016,6 +1018,7 @@ export struct MessagePage {
       // 头像 44（对齐前端 ChatListItem：Avatar size=44 无描边、私聊/群聊同为圆形；
       // 选中态的描边由 ListItem 负责，这里不额外画环）+ 在线角标 10（OnlineDot md）
       SystemAvatar({
+        decorative: true,
         avatarUrl: item.avatarUrl,
         name: item.name,
         avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,

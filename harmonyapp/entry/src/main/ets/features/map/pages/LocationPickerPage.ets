@@ -1240,6 +1240,7 @@ export struct LocationPickerPage {
               this.pressedMapControl = '';
             }
           })
+          .accessibilityText('定位到当前位置')
           .onClick(() => { this.locateUser(); })
 
           Column() {
@@ -1272,6 +1273,7 @@ export struct LocationPickerPage {
               this.pressedMapControl = '';
             }
           })
+          .accessibilityText('定位到浏览锚点')
           .onClick(() => { this.locateBrowseAnchor(); })
 
           Column() {
@@ -1303,6 +1305,7 @@ export struct LocationPickerPage {
               this.pressedMapControl = '';
             }
           })
+          .accessibilityText('放大地图')
           .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
 
           Column() {
@@ -1334,6 +1337,7 @@ export struct LocationPickerPage {
               this.pressedMapControl = '';
             }
           })
+          .accessibilityText('缩小地图')
           .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
         }
         .position({ right: DesignConstants.SPACING.MD, bottom: this.getControlsBottomOffset() })

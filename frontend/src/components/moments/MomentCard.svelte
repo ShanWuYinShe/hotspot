@@ -89,10 +89,10 @@
 
 		<!-- 操作行：压图态白图标；红/主色态用填充+白描边（不依赖色相） -->
 		<div class="mt-1.5 flex items-center justify-between {onCover ? 'text-content-inverse' : 'text-text-secondary'}">
-			<div class="flex gap-3.5">
+			<div class="flex gap-7">
 				<button
 					type="button"
-					class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring {liked
+					class="hover-action hit-slop-44 -my-2 flex items-center gap-1.5 py-2 focus-ring {liked
 						? (onCover ? 'text-content-inverse' : 'text-accent-default')
 						: (onCover ? 'opacity-hover' : 'hover:text-accent-default')}"
 					aria-label={liked ? '取消点赞' : '点赞'}
@@ -109,7 +109,7 @@
 				</button>
 				<button
 					type="button"
-					class="hover-action hit-slop -my-2 flex items-center gap-1.5 py-2 focus-ring {onCover ? 'opacity-hover' : ''}"
+					class="hover-action hit-slop-44 -my-2 flex items-center gap-1.5 py-2 focus-ring {onCover ? 'opacity-hover' : ''}"
 					aria-label="查看评论"
 					onclick={(e) => {
 						e.stopPropagation();
@@ -122,7 +122,7 @@
 			</div>
 			<button
 				type="button"
-				class="hover-action hit-slop -my-2 py-2 focus-ring {saved
+				class="hover-action hit-slop-44 -my-2 py-2 focus-ring {saved
 					? (onCover ? 'text-content-inverse' : 'text-accent-default')
 					: (onCover ? 'opacity-hover' : 'hover:text-accent-default')}"
 				aria-label={saved ? '取消收藏' : '收藏'}

@@ -645,6 +645,7 @@ export struct GroupPage {
     Column({ space: DesignConstants.SPACING.SM }) {
       Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
+          decorative: true,
           avatarUrl: invite.group?.avatar_url ?? '',
           name: invite.group?.name ?? '群组',
           avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
@@ -779,6 +780,7 @@ export struct GroupPage {
     Column({ space: DesignConstants.SPACING.SM }) {
       Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
+          decorative: true,
           avatarUrl: '',
           name: '群组申请',
           avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
@@ -873,6 +875,7 @@ export struct GroupPage {
   private buildGroupCard(group: GroupItem) {
     Row({ space: DesignConstants.SPACING.MD }) {
       SystemAvatar({
+        decorative: true,
         avatarUrl: group.group.avatar_url || '',
         name: group.group.name,
         avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,

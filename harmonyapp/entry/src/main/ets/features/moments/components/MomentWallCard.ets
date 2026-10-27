@@ -119,6 +119,7 @@ export struct MomentWallCard {
   private buildAuthorRow() {
     Row({ space: DesignConstants.SPACING.SM }) {
       SystemAvatar({
+        decorative: true,
         avatarUrl: this.moment.user?.avatar_url ?? '',
         name: this.moment.user?.nickname ?? '',
         avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XXS,

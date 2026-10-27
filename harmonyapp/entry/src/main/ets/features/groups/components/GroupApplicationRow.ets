@@ -23,6 +23,7 @@ export struct GroupApplicationRow {
     Column({ space: DesignConstants.SPACING.SM }) {
       Row() {
         SystemAvatar({
+          decorative: true,
           src: this.application.applicant?.avatar_url ?? '',
           name: this.application.applicant?.nickname ?? '',
           avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,

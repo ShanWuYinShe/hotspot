@@ -118,7 +118,7 @@
 	     （aria-required-children），裸用=group（非静态，允许视觉反馈的指针事件） -->
 	<div
 		role={inList ? 'listitem' : 'group'}
-		aria-label={ariaLabel}
+		aria-label={inList ? undefined : ariaLabel}
 		data-active={pressed ? 'true' : undefined}
 		class={cn(
 			'relative transition-[background-color,border-radius,box-shadow,opacity] duration-standard ease-standard',

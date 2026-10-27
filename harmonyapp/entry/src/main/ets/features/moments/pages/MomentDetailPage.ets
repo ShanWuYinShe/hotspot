@@ -772,6 +772,7 @@ export struct MomentDetailPage {
         Row({ space: DesignConstants.SPACING.MD }) {
           Stack() {
             SystemAvatar({
+              decorative: true,
               avatarUrl: moment.user?.avatar_url ?? '',
               name: moment.user?.nickname ?? '未知用户',
               avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
@@ -815,6 +816,12 @@ export struct MomentDetailPage {
                   GlobalStateManager.setBrowseAnchor(locationInfo);
                   SystemToast.showSuccess('已设为浏览锚点', this.getUIContext());
                 }
+              })
+              .responseRegion({
+                x: 0,
+                y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.FONT.SIZE.SM) / 2,
+                width: '100%',
+                height: DesignConstants.LAYOUT.MIN_HIT_TARGET
               })
             }
           }
@@ -871,6 +878,7 @@ export struct MomentDetailPage {
           .margin({ left: DesignConstants.SPACING.MD })
       }
       SystemAvatar({
+        decorative: true,
         avatarUrl: comment.user?.avatar_url ?? '',
         name: comment.user?.nickname ?? '匿名',
         avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,

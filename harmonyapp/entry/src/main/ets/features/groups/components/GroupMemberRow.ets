@@ -26,6 +26,7 @@ export struct GroupMemberRow {
   build() {
     Row() {
       SystemAvatar({
+        decorative: true,
         src: this.member.user?.avatar_url ?? '',
         name: this.member.user?.nickname ?? '',
         avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,

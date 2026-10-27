@@ -213,3 +213,67 @@
 
 - P0：`FocusRing`（focusBox 2vp accent + 2vp 外距，SystemButton/SurfaceIconButton/Pressable/SystemInput 接入）；`MotionUtil`（reduced 下 spring duration=0 / pressScale=1 / shimmer 关闭，原语已接）；AdminOverview 软岛。
 - P1/P2：MomentDetail/GroupDetail/他人主页软岛映射（按 web 终稿值），布局树与 compare 见 r4/ha；build/check:theme/parity 全绿；端上像素待真机。
+## 2026-10-27 补充（Round 5：三主题验收 + 可访问性/触控/性能质量门）
+
+**范围**：Web 39 文件（+167/−136）+ 鸿蒙 19 文件（+72/−5）+ 文档 4（+136/−6）+ 技能 3（+35）；基线 `4c61487d`。
+方法与工具：axe-core 4.10.2（`agent-browser --init-script axe.min.js` 注入）；触控扫描脚本；Performance API 采样。
+**鸿蒙真机仍离线**：TalkBack / 系统 reduced-motion 开启路径 / 焦点环 / 软岛像素待真机。
+
+### 一、三主题 × 明暗验收
+
+| 组合 | 软岛/画布亮度比 | 说明 |
+|---|---|---|
+| vibrant light / dark | 1.11 / 1.33 | 未变 |
+| forest light | **1.17（#E4E6E2）** | R5 决策：仅 forest light 覆写 `surface-primary 92% + text-primary 8%`（原 1.00，纸面主题画布与卡片同色，仅阴影不足） |
+| forest dark / inkwash light / inkwash dark | 1.16 / 1.06 / 1.31 | 未变；inkwash light 1.06 偏弱但文字对比达标，保持 |
+
+- 岛内文字：forest light primary 13.11:1 / secondary 6.42:1；其余组合 ≥4.5（axe color-contrast 主题扫描 36 runs 0 flagged）。
+- 主题相关 axe 对比问题修复：settings「已登录」徽章、瞬间详情 tag chip、admin/入群申请状态徽章（改实底 + on-accent 字）。
+
+### 二、可访问性（axe-core）
+
+| 项 | 修复前 | 修复后 |
+|---|---|---|
+| 主扫描 50 runs（35×1440 light + 5×390 light + 10×1440 dark） | 23/50 页 0 violation；critical 3、serious 多类 | **50/50 页 0 violation** |
+| 主题附加 36 runs | 4 处 color-contrast | **0 flagged** |
+
+- 修复项：nested-interactive 7 页/51 节点（整卡改「覆盖按钮 + 行内动作 auto-lift」，卡片根不再持 button/aria-label）、
+  aria-required-children 3（列表行补 `role=listitem`）、definition-list/dlitem（MetricRow 改 `div role=group`）、
+  aria-prohibited-attr 13（listitem/徽章去 aria-label，改覆盖按钮或 sr-only 文本）、scrollable-region-focusable
+  （admin config `pre` 加 tabindex/role=region/aria-label）、landmark（login/register/error 页补 main）、
+  image-redundant-alt（头像装饰化 alt=""/aria-hidden）。
+- 新增验证入口：axe 扫描脚本与基线（工具在 `.workwork/ui-polish-1026/r5/tools/axe.min.js`，页面注入即扫）。
+
+### 三、触控目标（390×20 页）
+
+| 项 | 修复前 | 修复后 |
+|---|---|---|
+| 可点元素有效热区 ≥44 | 321/465 = 69.0% | **425/466 = 91.2%** |
+| 离群 | 144 | **41（全部登记例外）** |
+
+- 新增 `.hit-slop-44` 原语（孤立图标/文本链扩 44，不占布局）；紧凑按钮视觉 ≥32 或 slop。
+- 例外清单：地图 marker 17（36×53，防相邻误点）+ 地图控件 2、相邻 TagPill 22（/me/edit×16、/search×6，WCAG 24 已满足，扩 44 会强制 26px 间距溢出）、
+  表单控件 34、skip link 19（聚焦展开）。鸿蒙侧 responseRegion 补 5 处，边缘 tap 实测通过；同类例外登记。
+
+### 四、性能基线（本地 dev/mock，仅相对参考）
+
+| 指标 | 实测 |
+|---|---|
+| TTFB | 5–12ms |
+| FCP | 152–284ms |
+| LCP | 180–436ms |
+| CLS | 0–0.0195（全部 <0.1） |
+| 长任务 | 0 |
+
+结论：无修复项；关键页首屏/布局稳定性达标，记录为基线（生产环境需另测）。
+
+### 五、修复过程中发现并修掉的回归
+
+- **/login 横向溢出 13px**（复核 Blocker）：`.hit-slop-44::before` 的 5 个未定位 link-btn 宿主以登录页 `<main class="relative">` 为基准撑宽页面；
+  修法：`.hit-slop-44:not(.absolute):not(.fixed):not(.sticky){position:relative}`（宿主自动获得定位基准，显式 absolute 不被覆盖），
+  utilities 注释写明「宿主必须定位」；复验 /login 1440/390 ovf=0、28/28 hit-slop-44 路由 0 溢出、39 页回归不退化。
+
+### 六、回归
+
+- 39 页：主巡检 22/22 `issues=[]`、console 0；补充 16 路由×2 视口 32/32（0 溢出/0 坏图/h1 正常/0 error）。
+- check 0 errors 0 warnings + eslint 0 + theme 四联 OK；build 通过；test 全量（MetricRow 契约已随语义更新）。

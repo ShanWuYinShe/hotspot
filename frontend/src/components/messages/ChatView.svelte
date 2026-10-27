@@ -252,6 +252,7 @@
 			<Avatar
 				src={contact?.avatar}
 				name={peerName}
+				decorative
 				size={compact ? 24 : 36}
 				class="border-regular border-border-default shadow-raised-sm"
 			>

@@ -16,7 +16,7 @@
 	const STATUS_META: Record<ApplicationStatus, { label: string; class: string }> = {
 		pending: { label: '审核中', class: 'bg-accent-soft text-accent-default' },
 		accepted: { label: '已通过', class: 'bg-status-online-bg text-status-online' },
-		rejected: { label: '未通过', class: 'bg-danger-bg text-status-danger' },
+		rejected: { label: '未通过', class: 'bg-status-danger text-text-on-accent' },
 		revoked: { label: '已撤回', class: 'bg-surface-subtle text-text-secondary' }
 	};
 
@@ -85,7 +85,7 @@
 			<ListContainer class="divide-y divide-border-subtle/30">
 				{#each items as a (a.application_id)}
 					{@const meta = STATUS_META[a.status]}
-					<div class="flex items-center gap-3 px-4 py-3">
+					<div role="listitem" class="flex items-center gap-3 px-4 py-3">
 						<Avatar src={a.group.avatar_url ?? ''} name={a.group.name} size="md" shape="rounded" class="shrink-0" />
 						<div class="min-w-0 flex-1">
 							<p class="truncate text-sm text-text-primary">{a.group.name}</p>
@@ -97,7 +97,7 @@
 						{#if a.status === 'pending'}
 							<button
 								type="button"
-								class="hover-btn hit-slop flex shrink-0 items-center rounded-full border border-border-default bg-surface-primary px-2.5 py-1 text-xs text-text-secondary focus-ring hover:bg-accent-soft"
+								class="hover-btn hit-slop-44 flex shrink-0 items-center rounded-full bg-surface-subtle/60 px-2.5 py-1.5 text-xs text-text-secondary focus-ring hover:bg-surface-subtle"
 								aria-label={`撤回加入「${a.group.name}」的申请`}
 								onclick={() => (cancelTarget = a)}
 							>

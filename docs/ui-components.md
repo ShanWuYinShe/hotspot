@@ -129,6 +129,15 @@
 7. **加载/空/错误（Round 4 收口）**：首屏列表/卡片优先 `Skeleton`；单实体/短列表可用 `InlineLoading`
    （需在页面注释给理由：结构轻/<1s/避免二次位移）；空 `EmptyState`、失败 `LoadError` + 重试、
    到底 `ListEnd` 四态不得互替。
+8. **语义结构（Round 5，axe 基线）**：整卡可点必须用「覆盖按钮 + 行内动作 auto-lift」，卡片根不得持
+   button/aria-label 语义；`role=list` 子节点必须 `role=listitem`，listitem 不挂 aria-label；`dl` 只包 `dt/dd`，
+   指标组用 `div role=group`；无 role 的 div 不挂 aria-label；每页有 `main`；可滚动非键盘可达容器加
+   `tabindex=0` + `role=region` + `aria-label`；装饰图 `alt=""` + `aria-hidden`。验收：axe-core 0 serious/critical。
+9. **触控目标（Round 5）**：移动端可点元素有效热区 ≥44×44（`hit-slop` / 新增 `hit-slop-44` / ArkUI
+   `responseRegion`），视觉尺寸可小；横向相邻元素不得互相覆盖；例外登记（表单控件/chip/内联链接/地图
+   marker/工具条/skip link）。验收：390 视口扫描覆盖率 + 命中测试。
+10. **主题验收（Round 5）**：三主题×明暗关键页必测；软岛/画布亮度比与文字对比记录进 `frontend-ui-audit.md`；
+   主题特有 token 变更两端同值并重跑 parity（design-system §20.7）。
 
 ## 近重复收敛 backlog（按危害排序）
 
