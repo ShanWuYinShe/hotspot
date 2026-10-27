@@ -102,27 +102,16 @@ git branch -d <分支名>
   hotspot_test 库上：库内有 E2E 累积数据，**IT 断言不能用绝对总数**，要用
   「播种前基线 + 增量」口径（参考 admin/repo_postgres_stats_it_test.go，2026-10-01）。
 
-## worktree 内跑 Go 工具链（2026-10-14 起无需重定向缓存，含 pre-commit 门禁）
+## worktree 内跑 Go 工具链（直接跑，含 pre-commit 门禁）
 
-**`~/Library/Caches/go-build` 与 `~/go` 已由 DSH sandbox-extra-roots 插件放行（2026-10-14
-逐项实测可写）**，worktree 内 `go build/vet/test`（含 `.husky/pre-commit` 钩子触发的门禁）
-直接跑即可，不要再 `export GOCACHE/GOMODCACHE`。
+`~/Library/Caches/go-build`、`~/go`（整棵：`pkg/mod`、`pkg/sumdb`、`bin`）、
+`~/Library/Application Support/go` 已由 DSH sandbox-extra-roots 插件放行，worktree 内
+`go build/vet/test`（含 `.husky/pre-commit` 钩子触发的门禁）直接跑即可，**不要 `export GOCACHE/GOMODCACHE`**。
+若报 EPERM，把报错目录加进插件配置（见 `sandbox-adaptation` skill）。
 
-历史坑（未配插件的机器仍适用，2026-09-25 实测）：用 `$PWD/.workwork/...` **相对路径**重定向时，
-缓存落在该 worktree 内部（pre-commit 在 worktree 根执行，`$PWD` 即 worktree 根）；Go 模块
-缓存解压目录默认只读（0444/0555），`git worktree remove` 报 Permission denied，目录删不掉。
-当时正确做法——绝对路径指向主工作树共享缓存（门禁本身不降级，实测同日 build+vet+test 通过）：
-
-```bash
-export GOCACHE="$HOME/work/hotspot/.workwork/go-build"
-export GOMODCACHE="$HOME/work/hotspot/.workwork/go-mod"
-```
-
-- `.husky/pre-commit` 不覆盖这两个变量、继承 shell 环境，未配插件的机器提交前 `export` 即可让
-  门禁跑通。
-- 已踩坑的 worktree 目录删除被挡时：
+- 旧 worktree 里若残留 `.workwork/` 下的 Go 模组缓存，删除目录被挡时：
   `chmod -R u+w .worktrees/<分支名> && rm -rf .worktrees/<分支名>`
-  （`git worktree list` 已注销、仅剩目录时无需再跑 `git worktree remove`）。
+  （Go 模块缓存文件 0444 只读；`git worktree list` 已注销、仅剩目录时无需再跑 `git worktree remove`）。
 
 
 当 Worktree 分支代码完成验证并合并到 `main` 分支后，如果主开发环境容器正在运行（`http://localhost:8888`）：
@@ -149,26 +138,16 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --force-rec
 后反复验证失败，排查半天才定位到挂载悬空（教训来源：dev 网关剥凭证 Cookie Secure 修复）。
 
 
-## worktree 内跑鸿蒙 hvigor（2026-10-18 实测，DSH 沙盒环境）
+## worktree 内跑鸿蒙 hvigor（直接跑，DSH 沙盒环境）
 
-DevEco hvigor 默认把项目缓存写到 `~/.hvigor/project_caches/`，hvigorw wrapper 启动
-阶段还会经 npm 拉 pnpm（写 `~/.npm`）——DSH workspace-write 沙盒下两者均 EPERM
-（报错形如 `EPERM: operation not permitted, mkdir '/Users/liyou/.hvigor/...'`，
-看似构建错误实为沙盒拦截）。按「重定向优先」用工具自身配置面解决，不提权：
+`~/.hvigor`、`~/.ohpm`、`~/.npm` 已由 DSH sandbox-extra-roots 插件放行，worktree 内
+hvigorw 构建（含 `.husky/pre-commit` 钩子触发的 harmonyapp 门禁）直接跑即可，
+**不要 `export HVIGOR_USER_HOME`/`npm_config_cache` 重定向**。若报 EPERM，把报错目录
+加进插件配置（见 `sandbox-adaptation` skill）。
 
-```bash
-# cwd = worktree 根；目录需先建好（.workwork/ 已 gitignore）
-mkdir -p .workwork/hvigor-home .workwork/npm-cache
-export HVIGOR_USER_HOME="$PWD/.workwork/hvigor-home"   # hvigor 缓存根（须绝对路径）
-export npm_config_cache="$PWD/.workwork/npm-cache"     # wrapper 内 npm 缓存
-# JAVA_HOME / DEVECO_SDK_HOME / PATH 按 harmonyapp/AGENTS.md「构建 & 测试」节照常 export
-```
-
-- **pre-commit 钩子内的 hvigor 走同一套变量**：钩子继承当前 shell 环境，commit 前
-  先 `export` 上述变量再 `git commit`，harmonyapp 门禁即可通过（批次 6 提交实测
-  TYPE CHECK SUCCESSFUL + BUILD SUCCESSFUL，门禁全绿）。
+- `JAVA_HOME` / `DEVECO_SDK_HOME` / `PATH` 按 `harmonyapp/AGENTS.md`「构建 & 测试」节照常设置
+  （那是工具链路径，不是沙盒重定向）。
 - worktree 清理时 `.workwork/` 随目录一并删除，无残留。
-- 纪律同全局：这是②「工具自身配置面」方案，实测有效，不要再为此申请提权。
 
 ## worktree 内的**后端**改动无法用主环境验证（2026-10-20 实测）
 
@@ -182,4 +161,4 @@ dev 的 backend 容器把**主工作树**目录挂进容器（`docker inspect ho
 - 或者在本 worktree 起独立 compose（见上文端口重映射），但注意 dev 端口会与主环境冲突；
 - 判断"容器看的是哪份源码"：`docker inspect <backend container> --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'`。
 
-同类坑：沙盒里跑 `go build`/`go test` 需重定向 `GOCACHE`/`GOTMPDIR` 到工作区（见 `sandbox-adaptation`）。
+同类坑：沙盒内跑 `go build`/`go test` 报 EPERM 时，按 `sandbox-adaptation` 把报错目录加进插件配置，不要重定向。

@@ -36,8 +36,8 @@ WORK=".workwork/rotate-bot-$$"
 HELPER="backend-go/tmp-pwhash"
 mkdir -p "$WORK"; chmod 700 "$WORK"
 # Go 构建缓存默认写 ~/Library/Caches/go-build：本机已由 DSH sandbox-extra-roots 插件
-# 放行（2026-10-14 实测可写），直接构建即可；未配插件的机器如报 operation not
-# permitted，可临时 export GOCACHE=<工作区内目录> 兜底（bcrypt 生成步骤曾无声失败的坑）。
+# 放行（2026-10-14 实测可写），直接构建即可；若报 operation not permitted，把该目录
+# 加进插件配置即可（见 sandbox-adaptation skill），不要 export GOCACHE 重定向。
 
 cleanup() { rm -rf "$WORK" "$HELPER"; }
 restore_db() {
