@@ -116,6 +116,30 @@ bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 与正在运行的 dev server 共用该目录，可能相互干扰。需要跑 build 前先停掉 frontend
 容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
 
+
+### 质量门禁脚本（R11 固化，需 dev 环境 + agent-browser）
+
+```bash
+# axe 可访问性：全部桌面页（QA 18 + 审计扩展 17 + 详情页 3，详情取不到则 35）
+bun run audit:a11y
+# 追加 390×844 移动 5 页（可与 --reduced 组合）
+bun run audit:a11y -- --mobile --reduced
+# 390 触控热区：默认全量页面（QA 18 + 审计扩展 17 + 详情），对照 allowlist，未登记离群即失败
+bun run audit:touch
+# 一键：browser-qa --mobile + a11y + touch（任一失败整体 exit 1，末尾打印各报告路径）
+bun run audit:ui
+# 指定网关（worktree 独立环境）与调试抽样
+bun run audit:a11y -- --base http://localhost:8898
+bun run audit:touch -- --base http://localhost:8898 --limit 5
+```
+
+- 依赖：axe-core 为 devDependency（`bun install` 后从 `node_modules/axe-core` 注入），不进 build/check；
+- 登录：dev/mock 栈用 `hotspot:mock-auth-logged-in` 标记；生产无该 handler 时自动降级为「未登录态扫描」；
+- 输出：仓库根 `.workwork/browser-check/{a11y,touch,qa}-<时间戳>/`（report.json + summary.txt + raw/），可重复运行；
+- 会话：脚本使用独立 `hotspot-audit-*` session 并在结束时关闭，不干扰其它浏览器会话；
+- allowlist 维护：`scripts/ui-quality-touch-allowlist.json`（稳定 selector + 理由，禁止 nth-child）；新增例外必须写明理由并在 `docs/frontend-ui-audit.md` 记录，详见该文「质量门禁」节；
+- `--limit <n>` 仅用于调试抽样，正式门禁不要带；`audit:touch -- --baseline` 可只跑 r5 基线 22 页做快速对照。
+
 ## 硬约束
 
 - 调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 dev server 地址

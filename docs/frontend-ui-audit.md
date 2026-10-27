@@ -473,3 +473,54 @@
 - 新 `ChatJumpToBottomButton.ets`：48vp、ARROW_DOWN、count>0 徽标（99+）、opacity 150ms via MotionUtil/reduced 直接、不可见禁触+移出无障碍树、
   label「回到底部 / 回到底部，N 条新消息」；ChatPage（私聊+群聊共用）ListScroller + `onScrollIndex` 末尾可见近似（无距底像素 API，平台差异登记）；
   仅近底自动滚/markRead、上滑计数不跳、自己发送/初始/分页保持；旧 78% 胶囊删除；build 断言无 `.ets` 晚于构建、check:theme/parity 正常。
+
+## 2026-10-27 补充（Round 11：UI 质量门禁脚本化）
+
+**背景**：r5 的 axe/触控检查此前是一次性会话脚本（未入库）；本轮固化为仓库命令，后续每轮可重复跑。
+**范围**：frontend 依赖 + 脚本 + docs + skill；基线 `9245d736`；未 commit。
+
+### 命令
+
+| 命令 | 作用 | 失败条件 | 输出 |
+|---|---|---|---|
+| `bun run audit:a11y` | axe-core 扫描全部桌面页（默认 1440，38 页：QA 18 + 审计扩展 17 + 详情 3；详情 ID 取不到则 35） | serious/critical > 0、axe 未注入、页面加载失败 | `.workwork/browser-check/a11y-<ts>/` |
+| `bun run audit:a11y -- --mobile` | 追加 390×844 5 页（首页/附近的人/搜索/设置/通知） | 同上 | 同上 |
+| `bun run audit:a11y -- --reduced` | reduced-motion：关键类残留 + 非允许 CSS 动画 >20ms | 有残留/长动画 | `raw/reduced.jsonl` |
+| `bun run audit:touch` | 390×844 触控有效热区，**默认全量页面**（QA 18 + 审计扩展 17 + 详情页，最多 38 页），对照 allowlist | 未登记离群、页面加载失败 | `.workwork/browser-check/touch-<ts>/` |
+| `bun run audit:touch -- --baseline` | 仅 r5 基线 22 页（快速/对照） | 同上 | 同上 |
+| `bun run audit:ui` | browser-qa --mobile + a11y + touch | 任一子检查失败整体 exit 1 | 三个报告路径 + 摘要 |
+
+参数：`--base`、`--session`、`--theme vibrant|forest|inkwash`、`--mode light|dark`、`--reduced`、`--mobile`、`--limit <n>`（调试）、`--allowlist <path>`（touch，负向验证用）、`--help`。
+
+### 基线（8898 worktree / 2026-10-27）
+
+- a11y：5 页抽样 0 violations（vibrant light；forest dark 3 页 0）；`--reduced` 5 页 0 异常；
+- touch：18 页全量 447 元素 / 分母 419、≥44 通过 378、登记例外 41（全部命中 r5 例外）、排除表单/skip link 28、覆盖率 90.2%、未登记离群 0；
+- 负向验证：DOM 注入无 alt 图片 + 无名称按钮 → axe `image-alt`/`button-name` critical，脚本 exit 1；临时移除 TagPill allowlist 规则 → touch 未登记离群，exit 1（临时文件已删除，未改仓库）。
+
+### allowlist 维护
+
+- 文件：`frontend/scripts/ui-quality-touch-allowlist.json`；每条规则 = `id` + 稳定 `selector` + `reason`（可选 `exclude: true` 表示不计入分母）；
+- **禁止**写入 nth-child / 纯坐标 / 易漂移选择器；优先 `.marker-hit`、`[role=...][aria-label=...]` 这类语义/稳定类；
+- 新增例外前先修样式（`hit-slop-44` / 提高视觉尺寸）；确需例外时同步更新本文件与本文登记表，并在 PR/轮次报告中说明；
+- 表单控件与 skip link 为 `exclude`（r5 口径，不计入 44 门槛分母）。
+
+### 注意
+
+- 脚本使用独立 session（`hotspot-audit-*-<pid>`），结束时自动关闭；不要与交互会话混用；
+- `--limit` 仅调试用；正式门禁不带；输出目录带时间戳，可重复运行；
+- 脚本依赖 dev 环境与 agent-browser，**不加入 `check` 链**（check 保持静态检查）；
+- 鸿蒙端无浏览器脚本，对应检查仍走 build/check:theme/parity/布局树（见 harmonyapp/AGENTS.md），本门禁为 Web 侧。
+
+### 触控全量收尾修复（2026-10-27）
+默认门禁已切到全量页面；此前 `--full` 暴露的 r5 未覆盖离群已全部按 ≥44 修复（视觉尽量不变、无布局位移、无相邻重叠）：
+| 位置 | 修复前 | 修复后 | 方式 |
+|---|---|---|---|
+| /admin/audit 表格文字链（5+） | 22×15 → eff 41 | 22×19 → eff 45 | hit-slop-44 + py-0.5 |
+| /admin/stats 明细按钮（2） | 42×23 → eff 23 | 390 下 44×44（桌面不变） | max-sm:min-h-11/max-sm:min-w-11 |
+| /admin/stats 热力聚合点（2） | 28×28 → eff 28 | 28×28 视觉不变 → eff 54 | hit-slop-44 |
+| 聊天头部整行按钮（2） | 304×36 → eff 36 | 304×36 视觉不变 → eff 48 | hit-slop |
+| /share 分享 CTA | 106×40 → eff 40 | 106×40 视觉不变 → eff 52 | hit-slop |
+| 404/错误页按钮（3） | 40 高 → eff 40 | 40 高视觉不变 → eff 52 | hit-slop |
+
+全量结果：8898 touch 35 页、8888 待复跑；详见 R11 report.md。

@@ -544,3 +544,10 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 - 回底按钮：距底 >200px 显示（44px；鸿蒙 48vp），无消息只显箭头、有新消息「N 条新消息」（>99→99+）；`aria-live`、aria-label 与文本一致；
   150ms 显隐（reduced 直接）；点击滚底+清零+补 markRead；不遮挡输入栏/浮层。
 - markRead：仅初始/近底/回底补标（1s 节流），上滑/离开不补；会话切换计数清零。新聊天页面按此契约实现。
+
+## Round 11 质量门禁命令（2026-10-27）
+
+- 新增/改 UI 后跑：`bun run audit:a11y`（axe 0 serious/critical）、`bun run audit:touch`（390 触控无未登记离群）、`bun run audit:ui`（含 browser-qa）；
+- reduced-motion：`bun run audit:a11y -- --mobile --reduced`（残留类/长动画即失败）；
+- 触控例外只允许走 `scripts/ui-quality-touch-allowlist.json` 稳定 selector + 理由（禁止 nth-child），维护说明见 `docs/frontend-ui-audit.md`；
+- 命令依赖 dev 环境 + agent-browser，不进 `check` 链；`--limit` 仅调试。

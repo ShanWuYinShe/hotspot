@@ -236,7 +236,7 @@
 		<!-- 头像 + 名称/状态：点击进入群详情（移动端群聊页的管理/公告入口） -->
 		<button
 			type="button"
-			class="avatar-entry hover-bg focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-md text-left"
+			class="avatar-entry hit-slop hover-bg focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-md text-left"
 			onclick={() => void goto(ROUTES.group(groupId))}
 			aria-label={`查看群「${groupName || '群聊'}」详情`}
 		>

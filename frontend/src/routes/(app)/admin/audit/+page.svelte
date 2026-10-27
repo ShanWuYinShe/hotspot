@@ -153,7 +153,7 @@
 										<!-- 点击操作者=按其 user_id 筛选（r59 关联追溯） -->
 										<button
 											type="button"
-											class="link-btn hit-slop-44 focus-ring text-xs"
+											class="link-btn hit-slop-44 py-0.5 focus-ring text-xs"
 											title="筛选该操作者的日志"
 											onclick={() => (operatorId = log.operator.user_id)}
 										>
@@ -172,7 +172,7 @@
 									<!-- 截断 + 点击弹窗看全文（r59：生硬截断→可展开） -->
 									<button
 										type="button"
-										class="link-btn hit-slop-44 focus-ring max-w-72 truncate text-left"
+										class="link-btn hit-slop-44 max-w-72 truncate py-0.5 text-left focus-ring"
 										title={detailsText(log.details)}
 										onclick={() => (detailTarget = log)}
 									>

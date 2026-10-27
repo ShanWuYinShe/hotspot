@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "description": "390 触控热区 allowlist：仅登记 r5 已确认的例外类别；selector 必须稳定（禁止 nth-child / 纯位置选择器）。新增例外须写明理由并复核。",
+  "rules": [
+    {
+      "id": "map-pin-marker",
+      "selector": ".marker-hit",
+      "reason": "地图图钉 marker（r5 17 例，36×53）：地图精度/密度，扩宽会与相邻 marker 热区重叠引错点；高度已 ≥44、宽度满足 WCAG 2.2 2.5.8（≥24）。"
+    },
+    {
+      "id": "map-drag-handle",
+      "selector": "[role=\"slider\"][aria-label=\"面板高度\"]",
+      "reason": "地图底部 Sheet 拖拽条（r5 1 例，388×20）：手势控件（role=slider），纵向拖动无需 44 高。"
+    },
+    {
+      "id": "map-filter-button",
+      "selector": "[aria-label=\"筛选地图显示类型\"]",
+      "reason": "地图筛选入口（r5 1 例，80×35）：另有 44 主操作覆盖，筛选为辅助入口，保留视觉紧凑。"
+    },
+    {
+      "id": "tag-pill-adjacent",
+      "selector": "button[aria-pressed].hit-slop",
+      "reason": "相邻多选 TagPill（r5 22 例，视觉高 28）：同一行相邻胶囊间距 8px，扩到 44 会强制 26px+ 间距导致横向溢出/误触；视觉高 ≥24 满足 WCAG 2.2 2.5.8。"
+    },
+    {
+      "id": "form-controls",
+      "selector": "input, select, textarea",
+      "exclude": true,
+      "reason": "表单控件热区由浏览器原生行为承载（r5 34 例仅记录），不计入 44 门槛分母。"
+    },
+    {
+      "id": "skip-link",
+      "selector": "a[href=\"#main-content\"]",
+      "exclude": true,
+      "reason": "skip link 为 sr-only 1×1，聚焦时展开为常规按钮，排除出分母。"
+    }
+  ]
+}

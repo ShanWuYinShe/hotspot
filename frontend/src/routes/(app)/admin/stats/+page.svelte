@@ -340,7 +340,7 @@
 										<td class={TD}>
 											<button
 												type="button"
-												class="hover-btn tap-92 rounded-md bg-surface-subtle/60 px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-surface-subtle active:scale-95"
+												class="hover-btn tap-92 inline-flex items-center justify-center rounded-md bg-surface-subtle/60 px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors max-sm:min-h-11 max-sm:min-w-11 hover:bg-surface-subtle active:scale-95"
 												aria-pressed={selectedToken === r.cell_token}
 												onclick={() => selectRegion(r.cell_token, r.level)}
 											>

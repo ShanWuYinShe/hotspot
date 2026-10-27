@@ -246,7 +246,7 @@
 		<!-- 头像 + 名称/状态：点击进入对方主页（移动端私聊页的资料入口，Telegram/iMessage 惯例） -->
 		<button
 			type="button"
-			class="avatar-entry hover-bg focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-md text-left"
+			class="avatar-entry hit-slop hover-bg focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-md text-left"
 			onclick={() => void goto(ROUTES.user(peerUserId))}
 			aria-label={`查看 ${peerName || '对方'} 的资料`}
 		>

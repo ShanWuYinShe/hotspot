@@ -88,7 +88,7 @@
 					重试
 				</Button>
 			{/if}
-			<Button variant="primary" onclick={() => goto(ROUTES.home, { replaceState: true })}>前往 HotSpot</Button>
+			<Button variant="primary" class="hit-slop" onclick={() => goto(ROUTES.home, { replaceState: true })}>前往 HotSpot</Button>
 		</div>
 	{:else if detail}
 		{@const p = detail.payload}

@@ -20,10 +20,10 @@
 		<!-- 主次分明：返回首页为主操作（primary accent 实底），重试/返回上一页为次级
 		     描边（secondary）。页面级动作走 Button 原语 md 档（rounded-md），胶囊仅
 	     保留给行内关系 chip——按钮语言两派契约见 skill hotspot-frontend-style。 -->
-		<Button variant="secondary" onclick={() => location.reload()}>重试</Button>
-		<Button variant="secondary" onclick={() => history.back()}>返回上一页</Button>
+		<Button variant="secondary" class="hit-slop" onclick={() => location.reload()}>重试</Button>
+		<Button variant="secondary" class="hit-slop" onclick={() => history.back()}>返回上一页</Button>
 		<a
-			class="focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent-default px-4 text-sm font-medium text-text-on-accent no-underline shadow-raised-sm hover:shadow-raised-md hover-btn"
+			class="hit-slop focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent-default px-4 text-sm font-medium text-text-on-accent no-underline shadow-raised-sm hover:shadow-raised-md hover-btn"
 			href="/"
 		>
 			返回首页

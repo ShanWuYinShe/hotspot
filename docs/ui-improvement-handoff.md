@@ -1,4 +1,4 @@
-# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-21）
+# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-22）
 
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
@@ -6,7 +6,20 @@
 
 ## 已完成基线（不要回退）
 
-### 2026-10-27 本轮（Round 21，聊天滚动策略 + 回底/新消息计数）
+### 2026-10-27 本轮（Round 22，UI 质量门禁脚本化：axe / 触控 / reduced）
+
+- **依赖**：`axe-core@4.10.2` 进 frontend devDependency（不进 check/build）；`bun.lock` 更新。
+- **脚本**：`scripts/lib/qa-common.sh`（AB/node/登录/页面清单/详情发现/输出目录）、`scripts/browser-a11y.sh`
+  （逐页 axe、serious/critical>0 或 axe 未注入/加载失败 → exit 1，支持 --base/--theme/--mode/--reduced/--mobile/--limit）、
+  `scripts/browser-touch.sh`（390 有效热区扫描 + allowlist，未登记离群 → exit 1，支持 --full/--baseline）、`scripts/audit-all.sh`；
+  package `audit:a11y` / `audit:touch` / `audit:ui`（任一失败整体 exit 1，打印报告路径）；`browser-qa.sh` 抽到 qa-common。
+- **门禁结果（8898）**：`audit:ui` exit 0 —— QA 18+5 移动 issues=[]；a11y 35 页 0 violations/0 错误；touch 全量 35 页 768 元素、
+  分母 688、通过 641、例外 47、覆盖率 93.2%、未登记 0；负向验证（注入无 alt/无名称 → critical + exit 1；未登记离群 → exit 1）通过。
+- **顺带修复 --full 发现**：admin/audit 文字链 eff41→45、admin/stats 明细 44×44/热力点 eff54、聊天头部 eff48、share CTA eff52、
+  错误页按钮 eff52（视觉不变）；map axe-not-loaded 加重载重试。
+- **文档**：frontend/AGENTS.md（命令/前置）、frontend-ui-audit（命令/基线/allowlist 维护）、style skill；默认门禁切全量，--baseline 保留 r5 22 页快速对照。
+
+### 2026-10-27 上一轮（Round 21，聊天滚动策略 + 回底/新消息计数）
 
 - **滚动策略**：近底部（≤120px）才自动滚；上滑阅读收到新消息**不跳转**、按条数累加并显示回底按钮；自己发送始终滚底；
   初始/切会话直接回底；分页 prepend 保持视口；会话切换计数/状态清零。
@@ -335,6 +348,11 @@
 39. **鸿蒙聊天页布局树受限（R21）**：模拟器重装登录态重置，游客无会话无法进入聊天页；聊天滚动/回底行为以代码级触发证据 + reduced 分支为准，真机/有会话账号补布局树与像素。
 40. **聊天滚动阈值与按钮位置回归（R21）**：近底 120px/按钮 200px、right-14/bottom-3、99+ 上限为当前基线；新增输入栏浮层/表情面板/引用条时需复测按钮不遮挡。
 41. **聊天未读语义（R21）**：markRead 延后为客户端语义（服务端不维护独立未读字段），上滑/离开不补标；后续若引入「会话内未读分隔线」需与后端游标契约对齐再实现。
+
+42. **质量门禁每轮必跑（R22）**：前端改动合并前在主环境或 worktree 跑 `bun run audit:ui`（需 dev 环境运行）；a11y serious/critical、
+    触控未登记离群必须为 0；新增合理例外才进 allowlist 并写理由。CI 无浏览器，暂为本地门禁（后续可评估 Playwright/远程浏览器接入）。
+43. **allowlist 维护（R22）**：6 条规则（地图 marker/面板拖拽/地图筛选/pressed chip/表单/skip link）以稳定 selector 匹配；
+    页面结构大改后若规则失配，脚本会报未登记离群，按「先确认是否合理例外，再决定修元素或改 allowlist」处理。
 
 ## 遗留观察（已评估，保留现状；非缺陷）
 

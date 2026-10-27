@@ -17,24 +17,11 @@ set -u
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
-AB="${AB:-}"
-if [ -z "$AB" ]; then
-  # 优先用户级 wrapper（沙盒自适应：socket/profile 重定向 + Chrome 沙盒判定）。
-  # 沙盒内 command -v 可能解析到绕过 wrapper 的裸二进制，导致 socket 目录
-  # 不可写而整轮全 FAIL（2026-10-04 实测），故 wrapper 存在时先于 command -v。
-  if [ -x /Users/liyou/.local/bin/agent-browser ]; then AB=/Users/liyou/.local/bin/agent-browser;
-  elif command -v agent-browser >/dev/null 2>&1; then AB="$(command -v agent-browser)";
-  elif [ -x /Users/liyou/.bun/bin/agent-browser ]; then AB=/Users/liyou/.bun/bin/agent-browser;
-  else echo "找不到 agent-browser，请安装或设置 AB 环境变量"; exit 1; fi
-fi
-
-NODE_BIN="${NODE_BIN:-}"
-if [ -z "$NODE_BIN" ]; then
-  if command -v node >/dev/null 2>&1; then NODE_BIN="$(dirname "$(command -v node)")";
-  elif [ -x /Users/liyou/.nvm/versions/node/v26.2.0/bin/node ]; then NODE_BIN=/Users/liyou/.nvm/versions/node/v26.2.0/bin;
-  fi
-fi
-[ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/lib/qa-common.sh"
+find_ab
+find_node
+# agent-browser 定位（沙盒 wrapper 优先）与 node 定位统一收敛在 scripts/lib/qa-common.sh。
 
 BASE="http://localhost:8888"
 SESSION="hotspot-qa"
@@ -53,8 +40,6 @@ mkdir -p "$OUT/screenshots"
 REPORT="$OUT/report.txt"
 echo "HotSpot 浏览器巡检 $(date '+%Y-%m-%d %H:%M:%S')" | tee "$REPORT"
 echo "BASE=$BASE SESSION=$SESSION MOBILE=$MOBILE" | tee -a "$REPORT"
-
-ab() { "$AB" --session "$SESSION" "$@"; }
 
 audit_js='(() => {
 	const vw = document.documentElement.clientWidth;
@@ -100,27 +85,14 @@ run_pages() {
 
 guest_login
 
-# 详情页样例 ID 运行时从匿名端点提取（DB 种子数据会变，不写死）；取不到则跳过该页。
-api_first() { # $1=path $2=payload $3=json 键
-	curl -s -X POST "$BASE$1" -H 'Content-Type: application/json' -d "$2" \
-		| grep -o "\"$3\":\"[^\"]*\"" | head -1 | cut -d'"' -f4
-}
-moment_id="$(api_first /public/v1/moments/search '{"keyword":"a"}' moment_id)"
-user_id="$(api_first /public/v1/feed/nearby_users '{}' user_id)"
-group_id="$(api_first /public/v1/groups/search '{"keyword":"a"}' group_id)"
-if [ -z "$group_id" ] && [ -n "${HOTSPOT_COMPOSE:-}" ]; then
-	group_id="$(docker compose -f "$HOTSPOT_COMPOSE" exec -T postgres psql -U postgres -d hotspot -t -A -c "SELECT group_id FROM groups LIMIT 1;" 2>/dev/null)"
-fi
-
-DESKTOP_PAGES=(
-	"/" "/nearby/people" "/nearby/groups" "/nearby/moments" "/notify"
-	"/messages" "/me" "/me/edit" "/settings" "/map" "/search" "/me/relationships"
-	"/me/moments" "/me/groups" "/me/reports" "/me/friends" "/me/following" "/me/fans"
-)
-[ -n "$moment_id" ] && DESKTOP_PAGES+=("/moments/$moment_id")
-[ -n "$user_id" ] && DESKTOP_PAGES+=("/users/$user_id")
-[ -n "$group_id" ] && DESKTOP_PAGES+=("/groups/$group_id")
-run_pages "desktop" "${DESKTOP_PAGES[@]}"
+# 页面清单与详情页 ID 发现统一收敛在 scripts/lib/qa-common.sh（public API 优先，
+# 空则从首页 href fallback，仍空则跳过并记录）。QA 保持 18 页基线 + 详情页。
+build_page_lists
+QA_PAGES=("${QA_DESKTOP_PAGES[@]}")
+[ -n "$DETAIL_MOMENT" ] && QA_PAGES+=("/moments/$DETAIL_MOMENT")
+[ -n "$DETAIL_USER" ] && QA_PAGES+=("/users/$DETAIL_USER")
+[ -n "$DETAIL_GROUP" ] && QA_PAGES+=("/groups/$DETAIL_GROUP")
+run_pages "desktop" "${QA_PAGES[@]}"
 
 if [ "$MOBILE" = "1" ]; then
 	ab set viewport 390 844 >/dev/null 2>&1
