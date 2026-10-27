@@ -65,12 +65,15 @@ describe('NearbyHubSections（附近枢纽三段分区）', () => {
 	it('「查看全部」回调分别指向三个叶子页入口', async () => {
 		const props = baseProps();
 		render(NearbyHubSections, { props });
+		// R13：三段卡头统一 SectionHead（人 / 瞬间 / 群组都由「查看全部」入口，不再有「更多」变体）
 		const seeAll = screen.getAllByText('查看全部');
-		expect(seeAll.length).toBe(2); // 人 / 瞬间（群组由轮播自带「更多」）
+		expect(seeAll.length).toBe(3);
 		await seeAll[0].click();
 		await seeAll[1].click();
+		await seeAll[2].click();
 		expect(props.onSeeAllUsers).toHaveBeenCalledOnce();
 		expect(props.onSeeAllMoments).toHaveBeenCalledOnce();
+		expect(props.onSeeAllGroups).toHaveBeenCalledOnce();
 	});
 
 	it('空数据段整段不渲染', () => {

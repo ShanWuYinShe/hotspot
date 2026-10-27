@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { MapPin, Heart, MessageCircle, Share2, Bookmark, Check, Flag } from '@lucide/svelte';
+	import { MapPin, Heart, MessageCircle, Share2, Bookmark, Check } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
@@ -19,6 +20,13 @@
 	// 动态详情内容体：作者/正文/图片（单图全幅封面、多图网格）/操作条/评论区。
 	// 评论输入栏由页面经 SplitPageLayout footer 渲染，本组件只负责内容体。
 	// 页面私有组件（colocate），由 moments/[momentId]/+page.svelte 渲染。
+	//
+	// R13 视觉改版口径（对齐 MomentCard 已升级语言）：
+	// - 作者行 昵称 14px semibold、头像 44/36、位置+时间 11px 次级；正文 14px/1.75 阅读行高；
+	// - 标签回归标准胶囊（h-6，无描边无投影，避免「底色+描边+投影」三层堆叠）；
+	// - 操作行图标 18 + 计数 12px tabular，点赞态用 accent（与卡片一致，不再用 danger 红）；
+	// - 评论行昵称 14 semibold / 正文 14 / 时间 11，回复块落在 soft 底内；
+	// - 评论区分区标题改用全站 SectionHead 原语，空态走 EmptyState（裸图标 28）。
 
 	export interface MomentComment {
 		/** 真实 comment_id（reactions/set target_id 用） */
@@ -114,57 +122,60 @@
 	// moment.likes 由父页维护（服务端快照 + 本页乐观增量，已含本人状态），
 	// 这里不能再按 liked 叠加——否则刷新后计数双倍。
 	const likeCount = $derived(moment.likes);
+	const isDesktop = $derived(platform.platform === 'desktop');
 </script>
 
-<!-- Post images（全幅封面：负 margin 抵消外层 SplitPageLayout 的 gutter，与 users 详情一致）。
-     单图保持全幅封面；多图改为网格（首图全幅 + 其余 3 列网格，点击任一张打开大图查看器）。 -->
+<!-- 评论区操作条/评论行共用的轻量动作按钮语言（图标 18 + 12px tabular 计数） -->
+{#snippet countText(value: number)}
+	<span class="text-sm font-medium tabular-nums">{value}</span>
+{/snippet}
 
 <!-- 统一度极高的沉浸式画卷流，消除碎片化盒子嵌套 -->
 <article class="flex flex-col rounded-lg bg-surface-island p-4 sm:p-5 md:p-7 shadow-xs">
-	<!-- 1. 作者 Header -->
+	<!-- 1. 作者 Header：头像（桌面 44 / 移动 36）+ 昵称 14 semibold + 位置·时间 11 次级 -->
 	<header class="flex items-center justify-between gap-3 pb-4">
-		<div class="flex items-center gap-3 min-w-0">
+		<div class="flex min-w-0 items-center gap-3">
 			<button
 				type="button"
-				class="hover-btn size-11 shrink-0 cursor-pointer rounded-full border border-border-subtle/80 bg-transparent p-0 overflow-hidden hover:opacity-hover focus-ring focus-visible:ring-offset-surface-primary shadow-xs"
+				class="hover-btn hit-slop shrink-0 cursor-pointer overflow-hidden rounded-full p-0 focus-ring {isDesktop ? 'size-11' : 'size-9'}"
 				aria-label={`查看${moment.user}的个人主页`}
 				onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
 			>
-				<Avatar src={moment.avatar} name={moment.user} size="lg" />
+				<Avatar src={moment.avatar} name={moment.user} size={isDesktop ? 'lg' : 'md'} />
 			</button>
-			<div class="flex-1 min-w-0">
+			<div class="min-w-0 flex-1">
 				<button
 					type="button"
-					class="link-btn hit-slop-44 -my-2 py-2 text-left text-text-primary text-sm font-semibold truncate hover:text-accent-default focus-ring rounded-sm block"
+					class="link-btn hit-slop-44 -my-2 block truncate rounded-sm py-2 text-left text-md font-semibold text-text-primary hover:text-accent-default focus-ring"
 					onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
 				>
 					{moment.user}
 				</button>
-				<div class="flex items-center gap-1.5 mt-0.5 text-text-secondary text-xs">
+				<div class="mt-0.5 flex items-center gap-1.5 text-sm text-text-secondary">
 					{#if moment.location}
-						<div class="flex items-center gap-1 truncate text-accent-default font-medium">
-							<MapPin class="size-3 shrink-0" strokeWidth={1.75} />
+						<span class="flex min-w-0 items-center gap-1 font-medium text-accent-default">
+							<MapPin class="size-3.5 shrink-0" strokeWidth={1.75} />
 							<span class="truncate">{moment.location}</span>
-						</div>
-						<span class="text-text-secondary/60">·</span>
+						</span>
+						<span class="opacity-muted" aria-hidden="true">·</span>
 					{/if}
-					<span class="shrink-0">{moment.time}</span>
+					<span class="shrink-0 tabular-nums">{moment.time}</span>
 				</div>
 			</div>
 		</div>
 	</header>
 
-	<!-- 2. 正文叙述 -->
+	<!-- 2. 正文叙述：14px / 1.75 阅读行高（与卡片 12px 摘要拉开层级） -->
 	{#if moment.content}
-		<p class="text-text-primary text-base leading-relaxed whitespace-pre-wrap break-words pb-4 font-normal tracking-normal select-text">
+		<p class="select-text whitespace-pre-wrap break-words pb-3 text-md font-normal leading-copy tracking-normal text-text-primary">
 			{moment.content}
 		</p>
 	{/if}
 
-	<!-- 3. 话题标签 -->
+	<!-- 3. 话题标签：标准胶囊档（h-6 + leading-none），只保留一层 accent 淡底 -->
 	{#if moment.tag}
 		<div class="pb-4">
-			<span class="inline-flex items-center px-3 py-1 rounded-full bg-accent-soft text-text-primary border border-accent-border/40 text-xs font-medium shadow-xs">
+			<span class="inline-flex h-6 items-center justify-center rounded-full bg-accent-soft px-2.5 text-xs font-medium leading-none text-text-accent-on-soft">
 				#{moment.tag}
 			</span>
 		</div>
@@ -174,7 +185,7 @@
 	{#if cover}
 		<div class="pb-5">
 			<!-- 媒体容器（例外登记）：去 1px 描边，用 bg-subtle + 圆角 + 阴影表达边界 -->
-			<div class="media-placeholder relative overflow-hidden rounded-xl shadow-xs h-cover-height-lg">
+			<div class="media-placeholder relative h-cover-height-lg overflow-hidden rounded-lg shadow-xs">
 				<button
 					type="button"
 					class="block h-full w-full cursor-zoom-in focus-ring"
@@ -192,14 +203,14 @@
 						loading="eager"
 						fetchpriority="high"
 						decoding="async"
-						class="w-full h-full object-cover transition-transform duration-standard hover:scale-[1.01]"
+						class="h-full w-full object-cover transition-transform duration-standard hover:scale-[1.01]"
 						use:fadeImage
 					/>
 				</button>
 				{#if moment.images.length > 1}
 					<button
 						type="button"
-						class="hover-btn absolute right-3 bottom-3 inline-flex h-6 items-center justify-center rounded-full bg-surface-media-scrim-strong px-3 text-xxs font-medium leading-none text-content-inverse hover:opacity-hover focus-ring shadow-xs"
+						class="hover-btn absolute bottom-3 right-3 inline-flex h-6 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2.5 text-xxs font-medium leading-none text-content-inverse hover:opacity-hover focus-ring shadow-xs"
 						aria-label={`查看全部 ${moment.images.length} 张图片`}
 						onclick={() => {
 							viewerIndex = 0;
@@ -229,7 +240,7 @@
 								alt="动态图片"
 								loading="lazy"
 								decoding="async"
-								class="aspect-square w-full object-cover cursor-zoom-in hover:scale-105 transition-transform duration-standard"
+								class="aspect-square w-full cursor-zoom-in object-cover transition-transform duration-standard hover:scale-105"
 								use:fadeImage
 							/>
 						</button>
@@ -238,19 +249,19 @@
 			{/if}
 		</div>
 	{:else if !moment.content && moment.location}
-		<div class="mb-5 relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-xl bg-accent-soft/30 h-cover-height-lg">
+		<div class="relative mb-5 flex h-cover-height-lg flex-col items-center justify-center gap-2 overflow-hidden rounded-lg bg-accent-soft/30">
 			<MapPin size={28} class="text-accent-default" strokeWidth={1.5} />
-			<span class="text-text-secondary text-xs">来自 {moment.location} 的瞬间</span>
+			<span class="text-xs text-text-secondary">来自 {moment.location} 的瞬间</span>
 		</div>
 	{/if}
 
-	<!-- 5. 交互动作条（桌面端行内舒展展示） -->
-	{#if platform.platform !== 'mobile'}
-		<div class="flex items-center justify-between py-3 border-y border-border-subtle/40">
+	<!-- 5. 交互动作条（桌面/平板行内舒展展示；移动端由页面底部操作条承载） -->
+	{#if isDesktop || platform.platform === 'tablet'}
+		<div class="flex items-center justify-between py-3">
 			<div class="flex items-center gap-6">
 				<button
 					type="button"
-					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 focus-ring transition-colors {liked ? 'text-status-danger' : 'text-text-secondary hover:text-status-danger'}"
+					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 focus-ring transition-colors {liked ? 'text-accent-default' : 'text-text-secondary hover:text-text-primary'}"
 					aria-label={liked ? '取消点赞' : '点赞'}
 					aria-pressed={liked}
 					onclick={() => {
@@ -262,23 +273,23 @@
 						<Heart class="size-4.5" strokeWidth={1.75} fill={liked ? 'currentColor' : 'none'} />
 					</span>
 					{#key likeCount}
-						<span class="count-pop text-xs font-medium">{likeCount}</span>
+						<span class="count-pop text-sm font-medium tabular-nums">{likeCount}</span>
 					{/key}
 				</button>
 				<button
 					type="button"
-					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 focus-ring text-text-secondary hover:text-accent-default transition-colors"
+					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 text-text-secondary transition-colors hover:text-text-primary focus-ring"
 					aria-label="查看评论"
 					onclick={onCommentClick}
 				>
 					<MessageCircle class="size-4.5" strokeWidth={1.75} />
-					<span class="text-xs font-medium">{commentCount}</span>
+					{@render countText(commentCount)}
 				</button>
 			</div>
 			<div class="flex items-center gap-4">
 				<button
 					type="button"
-					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 focus-ring transition-colors {saved ? 'text-accent-default' : 'text-text-secondary hover:text-accent-default'}"
+					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 focus-ring transition-colors {saved ? 'text-accent-default' : 'text-text-secondary hover:text-text-primary'}"
 					aria-label={saved ? '取消收藏' : '收藏'}
 					aria-pressed={saved}
 					onclick={() => {
@@ -294,7 +305,7 @@
 					type="button"
 					onclick={onShare}
 					aria-label={shareStatus === 'failed' ? '复制动态链接失败' : '复制动态链接'}
-					class="hover-action hit-slop-44 flex items-center py-1 focus-ring transition-colors {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary hover:text-accent-default'}"
+					class="hover-action hit-slop-44 flex items-center py-1 focus-ring transition-colors {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary hover:text-text-primary'}"
 				>
 					{#if shareStatus === 'copied'}
 						<Check class="size-4.5" strokeWidth={2} />
@@ -306,24 +317,21 @@
 		</div>
 	{/if}
 
-	<!-- 6. 评论讨论区：自然在画卷内延展，不再嵌套独立卡片框 -->
-	<section class="pt-6" id="moment-comments">
-		<h2 class="mb-4 text-sm font-semibold text-text-primary flex items-center gap-2">
-			<span>评论讨论</span>
-			<span class="text-xs font-normal text-text-secondary bg-surface-subtle px-2 py-0.5 rounded-full">{commentCount}</span>
-		</h2>
+	<!-- 6. 评论讨论区：与动作条之间用一条内容分隔发丝线（非卡片边界），自然在画卷内延展 -->
+	<section class="mt-2 border-t border-border-subtle/40 pt-6" id="moment-comments">
+		<SectionHead title="评论讨论" count={commentCount} />
 		{#if comments.length === 0}
-			<div class="py-6">
-				<EmptyState bare title="还没有评论" description="来说点什么吧">
+			<div class="py-4">
+				<EmptyState bare title="还没有评论" description="来说点什么吧，成为第一个评论的人。">
 					{#snippet icon()}
-						<MessageCircle class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+						<MessageCircle class="size-7" strokeWidth={1.5} />
 					{/snippet}
 				</EmptyState>
 			</div>
 		{/if}
 		<div class="flex flex-col divide-y divide-border-subtle/30">
 			{#each comments as c (c.id)}
-				<div class="flex gap-3 py-3.5 first:pt-0 last:pb-0" use:enterOnce={c.id === newCommentId}>
+				<div class="flex gap-3 py-4 first:pt-0 last:pb-0" use:enterOnce={c.id === newCommentId}>
 					<button
 						type="button"
 						class="hover-btn hit-slop-44 shrink-0 rounded-full focus-ring"
@@ -332,20 +340,20 @@
 					>
 						<Avatar src={c.avatar} name={c.user} size="md" />
 					</button>
-					<div class="flex-1 min-w-0">
+					<div class="min-w-0 flex-1">
 						<div class="flex items-baseline gap-2">
 							<button
 								type="button"
-								class="link-btn hit-slop-44 -my-2.5 py-2.5 text-text-primary text-sm font-medium focus-ring rounded-sm truncate"
+								class="link-btn hit-slop-44 -my-2.5 truncate rounded-sm py-2.5 text-left text-md font-semibold text-text-primary focus-ring"
 								onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
 							>{c.user}</button>
-							<span class="text-text-secondary text-xs shrink-0">{c.time}</span>
+							<span class="shrink-0 text-xs tabular-nums text-text-secondary">{c.time}</span>
 						</div>
 						{#if c.isDeleted}
-							<p class="text-text-secondary text-sm mt-0.5 leading-relaxed italic">该评论已删除</p>
+							<p class="mt-1 text-md italic leading-copy text-text-secondary">该评论已删除</p>
 						{:else}
-							<p class="text-text-primary text-md mt-1 leading-relaxed break-words">{c.text}</p>
-							<div class="flex items-center gap-4 mt-2">
+							<p class="mt-1 break-words text-md leading-copy text-text-primary">{c.text}</p>
+							<div class="mt-2 flex items-center gap-4">
 								<button
 									type="button"
 									class="hover-action hit-slop-44 -my-2 flex items-center gap-1 py-2 focus-ring transition-colors {c.liked ? 'text-accent-default' : 'text-text-secondary hover:text-text-primary'}"
@@ -360,25 +368,25 @@
 										<Heart class="size-3.5" strokeWidth={1.5} fill={c.liked ? 'currentColor' : 'none'} />
 									</span>
 									{#key c.likes}
-										<span class="count-pop text-xs">{c.likes}</span>
+										<span class="count-pop text-sm tabular-nums">{c.likes}</span>
 									{/key}
 								</button>
 								<button
 									type="button"
-									class="hover-action hit-slop-44 -my-2 py-2 focus-ring text-text-secondary hover:text-text-primary text-xs"
+									class="hover-action hit-slop-44 -my-2 py-2 text-sm text-text-secondary transition-colors hover:text-text-primary focus-ring"
 									onclick={() => onReply(c.user, c.id)}
 								>回复</button>
 								{#if c.userId && c.userId === auth.user?.user_id}
 									<button
 										type="button"
-										class="hover-action hit-slop-44 -my-2 py-2 focus-ring text-text-secondary hover:text-status-danger text-xs"
+										class="hover-action hit-slop-44 -my-2 py-2 text-sm text-text-secondary transition-colors hover:text-status-danger focus-ring"
 										aria-label="删除我的评论"
 										onclick={() => onDeleteComment(c.id)}
 									>删除</button>
 								{:else if c.userId && c.userId !== auth.user?.user_id}
 									<button
 										type="button"
-										class="hover-action hit-slop-44 -my-2 py-2 desktop-reveal focus-ring text-text-secondary hover:text-status-danger text-xs"
+										class="hover-action desktop-reveal hit-slop-44 -my-2 py-2 text-sm text-text-secondary transition-colors hover:text-status-danger focus-ring"
 										aria-label={`举报 ${c.user} 的评论`}
 										onclick={() => onReportComment(c.id)}
 									>举报</button>
@@ -386,7 +394,7 @@
 							</div>
 						{/if}
 						{#if c.replies.length > 0}
-							<div class="mt-3 flex flex-col gap-3 rounded-lg bg-surface-subtle/50 p-3">
+							<div class="mt-3 flex flex-col gap-3 rounded-md bg-surface-subtle/50 p-3">
 								{#each c.replies as r (r.id)}
 									<div class="flex gap-2.5" use:enterOnce={r.id === newReplyId}>
 										<button
@@ -397,28 +405,28 @@
 										>
 											<Avatar src={r.avatar} name={r.user} size="sm" />
 										</button>
-										<div class="flex-1 min-w-0">
-											<div class="flex items-baseline gap-2">
+										<div class="min-w-0 flex-1">
+											<div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
 												<button
 													type="button"
-													class="link-btn hit-slop-44 -my-2 py-2 text-text-primary text-sm font-medium focus-ring rounded-sm truncate"
+													class="link-btn hit-slop-44 -my-2 truncate rounded-sm py-2 text-left text-sm font-semibold text-text-primary focus-ring"
 													onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
 												>{r.user}</button>
 												{#if !r.isDeleted}
-													<span class="text-text-secondary text-xs">回复 @{c.user}</span>
+													<span class="text-xs text-text-secondary">回复 @{c.user}</span>
 												{/if}
-												<span class="text-text-secondary text-xs shrink-0">{r.time}</span>
+												<span class="shrink-0 text-xs tabular-nums text-text-secondary">{r.time}</span>
 											</div>
 											{#if r.isDeleted}
-												<p class="text-text-secondary text-sm mt-0.5 leading-relaxed italic">该评论已删除</p>
+												<p class="mt-0.5 text-sm italic leading-relaxed text-text-secondary">该评论已删除</p>
 											{:else}
-												<p class="text-text-primary text-sm mt-0.5 leading-relaxed break-words">{r.text}</p>
+												<p class="mt-0.5 break-words text-sm leading-relaxed text-text-primary">{r.text}</p>
 											{/if}
 											{#if !r.isDeleted}
-												<div class="flex items-center gap-3 mt-1">
+												<div class="mt-1 flex items-center gap-3">
 													<button
 														type="button"
-														class="hover-action hit-slop-44 -my-2 py-2 focus-ring text-text-secondary hover:text-text-primary text-xs"
+														class="hover-action hit-slop-44 -my-2 py-2 text-sm text-text-secondary transition-colors hover:text-text-primary focus-ring"
 														onclick={() => onReply(r.user, c.id)}
 													>回复</button>
 												</div>
@@ -429,7 +437,7 @@
 								{#if c.repliesCount > c.replies.length}
 									<button
 										type="button"
-										class="link-btn text-accent-default text-sm self-start focus-ring rounded-sm font-medium pt-1"
+										class="link-btn self-start rounded-sm pt-1 text-sm font-medium text-accent-default focus-ring"
 										onclick={() => onExpandReplies(c.id)}
 									>查看全部 {c.repliesCount} 条回复</button>
 								{/if}

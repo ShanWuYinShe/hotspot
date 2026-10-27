@@ -3,19 +3,25 @@
 	import type { AdminGroupItem } from '@/api/types';
 	import { hasAdminPermission } from '@/stores/admin.svelte';
 	import { showToast } from '@/stores/toast.svelte';
+	import { UsersRound } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN_DANGER } from '../shared/table';
+	import {
+		TABLE_WRAP, TABLE, TH, TH_NUM, TH_SECONDARY, TR, TD, TD_NUM, TD_SECONDARY, TD_ACTIONS,
+		ROW_BTN_DANGER, TOOLBAR, SEARCH_WRAP, META_MONO
+	} from '../shared/table';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 群组管理：按名称搜索 + 解散（reason 仅入审计日志，不推送给成员）。
+	// R13：工具栏/表头/数字列（成员数右对齐等宽数字）/空态与其他模块统一。
 
 	const canRead = $derived(hasAdminPermission('admin.groups.read'));
 	const canWrite = $derived(hasAdminPermission('admin.groups.write'));
@@ -52,11 +58,15 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.groups.read 权限" bare />
+	<EmptyState title="无访问权限" description="需要 admin.groups.read 权限" iconTone="accent">
+		{#snippet icon()}<UsersRound class="size-7" strokeWidth={1.5} />{/snippet}
+	</EmptyState>
 {:else}
 	<div class="flex flex-col gap-4">
-		<div class="w-full max-w-80">
-			<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索群组名称…" class="px-4 py-2.5 rounded-md" />
+		<div class={TOOLBAR}>
+			<div class={SEARCH_WRAP}>
+				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索群组名称…" class="px-4 py-2.5 rounded-md" />
+			</div>
 		</div>
 
 		{#if list.loading}
@@ -64,7 +74,14 @@
 		{:else if list.error}
 			<LoadError message={list.error} onRetry={list.reload} />
 		{:else if list.count === 0}
-			<EmptyState title="没有匹配的群组" bare />
+			<EmptyState title="没有匹配的群组" description="换个群组名称试试，或清空搜索词后重试。" iconTone="neutral">
+				{#snippet icon()}<UsersRound class="size-7" strokeWidth={1.5} />{/snippet}
+				{#snippet action()}
+					{#if query}
+						<Button type="button" variant="secondary" size="sm" onclick={() => (query = '')}>清空搜索</Button>
+					{/if}
+				{/snippet}
+			</EmptyState>
 		{:else}
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
@@ -72,7 +89,7 @@
 						<tr>
 							<th scope="col" class={TH}>群组</th>
 							<th scope="col" class={TH}>群主</th>
-							<th scope="col" class={TH}>成员数</th>
+							<th scope="col" class={TH_NUM}>成员数</th>
 							<th scope="col" class={TH_SECONDARY}>创建时间</th>
 							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 						</tr>
@@ -83,11 +100,11 @@
 								<td class={TD}>
 									<span class="flex items-center gap-2">
 										<span class="text-text-primary">{g.group.name}</span>
-										<span class="text-xs text-text-secondary font-mono">{g.group.group_id}</span>
+										<span class={`${META_MONO} max-sm:hidden`}>{g.group.group_id}</span>
 									</span>
 								</td>
 								<td class={TD}>{g.owner?.nickname ?? '—'}</td>
-								<td class={TD}>{g.group.members_count}</td>
+								<td class={TD_NUM}>{g.group.members_count}</td>
 								<td class={TD_SECONDARY}>{formatDateTime(g.created_at)}</td>
 								<td class={TD_ACTIONS}>
 									{#if canWrite}

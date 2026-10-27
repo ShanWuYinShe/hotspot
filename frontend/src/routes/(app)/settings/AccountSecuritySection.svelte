@@ -206,7 +206,7 @@
 										<div class="flex items-center gap-2">
 											<p class="truncate text-sm text-text-primary">{s.device_name ?? s.device_type ?? '未知设备'}</p>
 											{#if s.is_current}
-												<span class="inline-flex h-5 items-center justify-center rounded-full bg-accent-soft px-2 text-xxs font-medium leading-none text-accent-default">当前设备</span>
+												<span class="inline-flex h-5 items-center justify-center rounded-full bg-accent-soft px-2 text-xxs font-medium leading-none text-text-accent-on-soft">当前设备</span>
 											{/if}
 										</div>
 										<p class="mt-0.5 truncate text-xs text-text-secondary">
@@ -234,7 +234,7 @@
 							type="button"
 							variant="outline"
 							size="sm"
-							class="w-full text-status-danger hover:bg-danger-bg"
+							class="w-full text-status-danger hover:text-text-status-danger-on-soft hover:bg-danger-bg"
 							onclick={() => (revokeAllOpen = true)}
 						>
 							<ShieldCheck class="size-3.5" strokeWidth={1.75} />

@@ -8,8 +8,8 @@
 	// 与 3cbb2bec 同类：需审核群申请后不得冒充「已加入」）。
 	// 统一走 ui/button 原语（审查 H1：第四种手写主按钮收敛）：
 	//   未加入：primary（accent 实底 + 光晕抬档）胶囊 sm 档；
-	//   已加入/审核中：outline 变体 + 描边加深/文字降级覆写，hover 淡底填充——
-	//   两态 hover 反馈不同（四态契约）。pending：禁点防重复提交（乐观更新期间）。
+	//   已加入/审核中：soft（中性软填，R13 次级动作统一语言，不再用描边胶囊）+
+	//   压图时换成深色遮罩底白字（onMedia），两种形态各自有 hover 反馈。
 	// 审核中点击 = 取消申请（onToggle 由页面分流），与详情页「审核中 · 点击取消」一致。
 	let {
 		group,
@@ -31,14 +31,14 @@
 
 <Button
 	type="button"
-	variant={group.joined || pendingApproval ? 'outline' : 'primary'}
+	variant={group.joined || pendingApproval ? 'soft' : 'primary'}
 	size="sm"
 	disabled={pending}
 	class="hit-slop rounded-full px-3 gap-1
 		{group.joined || pendingApproval
 			? onMedia
-				? 'border-content-inverse/40 bg-surface-media-scrim-strong text-content-inverse backdrop-blur-sm hover:bg-surface-media-scrim-strong/80'
-				: 'border-border-strong text-text-secondary hover:bg-interactive-hover hover:text-text-primary'
+				? 'bg-surface-media-scrim-strong text-content-inverse backdrop-blur-sm hover:bg-surface-media-scrim-strong/80'
+				: 'text-text-secondary hover:text-text-primary'
 			: 'font-semibold'}
 		{pending ? 'pointer-events-none opacity-soft' : ''}"
 	aria-pressed={group.joined}

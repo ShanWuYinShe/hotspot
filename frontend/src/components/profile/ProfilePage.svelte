@@ -1,24 +1,28 @@
 <script lang="ts">
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { goto } from '$app/navigation';
-	import { MapPin, Pencil, Settings, ShieldCheck, Sparkles, UsersRound, Users, ChevronRight } from '@lucide/svelte';
+	import { ChevronRight, LayoutGrid, Pencil, Settings, Sparkles, Users, UsersRound } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
-	import Avatar from '@/components/shared/Avatar.svelte';
-	import MetricRow from '@/components/data-display/MetricRow.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
-import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
+	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
+	import ListContainer from '@/components/list/ListContainer.svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
+	import Button from '@/components/ui/button.svelte';
+	import IdentityHero from '@/components/profile/IdentityHero.svelte';
+	import ProfileCompleteness, { type CompletenessItem } from '@/components/profile/ProfileCompleteness.svelte';
 	import SectionMoments from '@/components/profile/SectionMoments.svelte';
 	import SectionGroups from '@/components/profile/SectionGroups.svelte';
 	import { useAccountData } from '@/lib/profile-data.svelte';
 	import { smartBack } from '@/lib/smart-back';
-import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
+	import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 
 	// 个人主页（/me）——全设备使用：
-	// 总览 = 个人总览（身份卡 + 居中统计 + 我的内容入口 + 资料状态 aside），
+	// 总览 = 身份封面卡（IdentityHero，桌面/移动同构）+ 我的内容入口 + 资料状态，
 	// 定位为「内容与关系导航落地页」，与编辑页去重（bio/位置只出现一次）；
-	// 分区模式 = PageHeader + Section 组件（moments/groups/friends/following/fans）。
+	// 分区模式 = PageHeader + Section 组件（moments/groups）。
 	// 设备分派：mobile 总览走 ProfileMobile；tablet/desktop 总览与全部 me 分区页
 	// （任意设备）走本组件。relationships 聚合分区由 /me/relationships 独立渲染
 	// （RelationshipsPage），不走本组件。
@@ -46,22 +50,58 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 	const meta = $derived(section && SECTION_META[section] ? SECTION_META[section] : null);
 	const device = $derived(platform.platform);
 
+	// 指标行：数字是资料页的节奏锚点（MetricRow strip：大数字 + 小标签 + 发丝分隔）
 	const metricItems = $derived([
 		{ label: '瞬间', value: stats.moments_count, onClick: () => void goto(ME_SECTION_PATHS.moments) },
-		{ label: '关注者', value: stats.followers_count, onClick: () => void goto(ME_SECTION_PATHS.relationships) },
+		{ label: '粉丝', value: stats.followers_count, onClick: () => void goto(ME_SECTION_PATHS.relationships) },
 		{ label: '群组', value: stats.groups_count, onClick: () => void goto(ME_SECTION_PATHS.groups) }
 	]);
 
-	const ENTRY_ITEMS = $derived<{ section: ProfileSection; title: string; description: string; icon: typeof Users }[]>([
-		// 副标题统一为「量词 + 数字」，与移动端 ProfileMobile 同口径（2026-10-19 UI 审查）
-		{ section: 'moments', title: '我的瞬间', description: `${stats.moments_count} 条`, icon: Sparkles },
-		{ section: 'groups', title: '我的群组', description: `${stats.groups_count} 个`, icon: UsersRound },
-		{ section: 'relationships', title: '关系', description: `好友 ${stats.friends_count} · 关注 ${stats.following_count} · 粉丝 ${stats.followers_count}`, icon: Users }
+	type EntryItem = {
+		id: string;
+		href: string;
+		title: string;
+		description: string;
+		count?: string;
+		icon: typeof Users;
+	};
+
+	// 我的内容入口：图标砖 + 标题/说明 + 右对齐计数 + chevron（与移动端 ProfileMobile 同构）
+	const ENTRY_ITEMS = $derived<EntryItem[]>([
+		{
+			id: 'moments',
+			href: ME_SECTION_PATHS.moments,
+			title: '我的瞬间',
+			description: '记录城市里的光影',
+			count: `${stats.moments_count} 条`,
+			icon: Sparkles
+		},
+		{
+			id: 'groups',
+			href: ME_SECTION_PATHS.groups,
+			title: '我的群组',
+			description: '和同好一起探索',
+			count: `${stats.groups_count} 个`,
+			icon: UsersRound
+		},
+		{
+			id: 'relationships',
+			href: ME_SECTION_PATHS.relationships,
+			title: '关系',
+			description: '关注与粉丝都在这里',
+			count: `${stats.friends_count} 位好友`,
+			icon: Users
+		}
 	]);
 
-	const filledCount = $derived(
-		[nickname, avatar, bio, locationName, stats.groups_count > 0].filter(Boolean).length
-	);
+	// 资料完善度：与资料接口实际返回的字段对齐（头像/昵称/简介/位置/群组）。
+	const COMPLETENESS = $derived<CompletenessItem[]>([
+		{ id: 'avatar', label: '上传一张头像', done: !!avatar, href: ROUTES.meEdit },
+		{ id: 'nickname', label: '设置昵称', done: !!nickname, href: ROUTES.meEdit },
+		{ id: 'bio', label: '写一句个人简介', done: !!bio, href: ROUTES.meEdit },
+		{ id: 'location', label: '选择所在位置', done: !!locationName, href: ROUTES.meEdit },
+		{ id: 'group', label: '加入一个群组', done: stats.groups_count > 0, href: ROUTES.nearbyGroups }
+	]);
 </script>
 
 {#if meta}
@@ -78,15 +118,14 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 		{/if}
 	</StandardPageLayout>
 {:else}
-	<!-- 总览模式：个人总览（身份卡 + 统计 + 内容入口 + 资料状态）。
+	<!-- 总览模式：身份封面卡 + 我的内容 + 资料状态。
 	     总览页是长内容呼吸型布局，顶/底 padding 略大于标准列表页（pt-6 pb-8），
 	     属于样板 pt-4 pb-6 的可登记变体。 -->
 	<StandardPageLayout contentClassName="animate-fade-in pt-6 pb-8">
 		{#snippet header()}
-			<!-- 页头不放操作按钮：编辑资料/设置统一收在下方身份卡的操作区，
-			     同一页同一功能只允许一个入口（原先页头与身份卡各有一个「编辑资料」）。
-			     外观控制不进身份卡：桌面顶栏已有常驻「外观设置」，其余设备走设置页
-			     「外观与显示」，避免与同屏「设置」按钮形成同一功能两条路径。 -->
+			<!-- 页头不放操作按钮：编辑资料/设置统一收在身份卡的动作区，
+			     同一页同一功能只允许一个入口。外观控制不进身份卡：桌面顶栏已有常驻
+			     「外观设置」，其余设备走设置页「外观与显示」。 -->
 			<PageHeader
 				title="个人中心"
 				subtitle="你的公开资料、内容与关系的入口"
@@ -97,92 +136,85 @@ import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
 		{#if loading}
 			<InlineLoading label="加载个人资料…" />
 		{:else if needsAuth}
-			<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可管理资料、查看互动数据与收藏内容" />
+			<NeedsAuthNotice
+				spotlight
+				title="登录后查看"
+				description="登录后即可管理资料、查看互动数据与收藏内容"
+				highlights={[
+					{ icon: Pencil, text: '完善头像、昵称与简介，让附近的人认识你' },
+					{ icon: Sparkles, text: '整理你的瞬间与收藏，随时回看' },
+					{ icon: UsersRound, text: '管理好友、关注与群组关系' }
+				]}
+			/>
 		{:else if error}
 			<LoadError message={error} onRetry={retry} />
 		{:else}
 			<div class="mx-auto w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl">
-				<!-- 身份卡 + 居中统计（同一张卡，指标复用 MetricRow 原语）。
-				     页顶留白由 contentClassName 的 pt-6（呼吸型变体）单侧承担，首块不再叠 mt；
+				<!-- 身份封面卡：封面 + 头像 + 身份 + 简介/位置 + 指标行 + 动作区。
+				     页顶留白由 contentClassName 的 pt-6（呼吸型变体）单侧承担；
 				     与下方双栏的区块间距 24 由本块 mb-6 单侧提供。 -->
-				<section class="mb-6 overflow-hidden rounded-lg bg-surface-island shadow-xs" aria-label="公开个人资料">
-					<div class="flex items-start gap-5 p-6">
-						<Avatar src={avatar} name={nickname} size="xl" ring class="shrink-0 ring-2 ring-accent-default/20 shadow-xs" />
-						<div class="min-w-0 pt-1">
-							<h2 class="text-2xl font-bold tracking-title text-text-primary">{nickname || '未设置昵称'}</h2>
-							<p class="mt-1 text-sm text-text-secondary">{handle}</p>
-							<p class="mt-3.5 max-w-115 text-sm leading-relaxed text-text-secondary">{bio || '这个人还没有填写简介。'}</p>
-							<p class="mt-3 flex items-center gap-1.5 text-xs text-text-secondary">
-								<MapPin class="size-3.5 text-accent-default" strokeWidth={1.75} />
-								{locationName || '未设置位置'}
-							</p>
-						</div>
-					</div>
-					<!-- 黄金操作区：圆润胶囊形态，亲和高雅 -->
-					<div class="flex items-center gap-2.5 px-6 pb-4 pt-1">
-						<button
-							type="button"
-							onclick={() => void goto(ROUTES.meEdit)}
-							class="hover-btn hit-slop-44 inline-flex items-center justify-center gap-1.5 rounded-full bg-surface-subtle/60 py-2 px-5 text-sm font-medium text-text-primary focus-ring transition-all hover:bg-surface-subtle active:scale-[0.98]"
-						>
-							<Pencil class="size-3.5 text-text-secondary group-hover:text-accent-default" strokeWidth={1.75} />
-							编辑资料
-						</button>
-						<button
-							type="button"
-							onclick={() => void goto(ROUTES.settings)}
-							class="hover-btn hit-slop-44 inline-flex items-center justify-center gap-1.5 rounded-full bg-surface-subtle/60 py-2 px-4 text-sm font-medium text-text-primary focus-ring transition-all hover:bg-surface-subtle active:scale-[0.98]"
-							aria-label="系统设置"
-						>
-							<Settings class="size-3.5 text-text-secondary group-hover:text-accent-default" strokeWidth={1.75} />
-							<span class="hidden sm:inline text-xs">设置</span>
-						</button>
-					</div>
-					<MetricRow items={metricItems} variant="capsule" class="px-6 pb-6 pt-1" />
-				</section>
+				<div class="mb-6">
+					<IdentityHero
+						mode="self"
+						name={nickname || '未设置昵称'}
+						{bio}
+						{avatar}
+						{handle}
+						location={locationName || '未设置位置'}
+						metrics={metricItems}
+					>
+						{#snippet actions()}
+							<Button
+								variant="primary"
+								size="md"
+								class="hit-slop-44 flex-1 gap-1.5 sm:flex-none"
+								onclick={() => void goto(ROUTES.meEdit)}
+							>
+								<Pencil class="size-4" strokeWidth={1.75} />
+								编辑资料
+							</Button>
+							<Button
+								variant="soft"
+								size="md"
+								class="hit-slop-44 flex-1 gap-1.5 sm:flex-none"
+								aria-label="系统设置"
+								onclick={() => void goto(ROUTES.settings)}
+							>
+								<Settings class="size-4 text-text-secondary" strokeWidth={1.75} />
+								设置
+							</Button>
+						{/snippet}
+					</IdentityHero>
+				</div>
 
-				<!-- 双栏：我的内容入口 + 资料状态（分区间距由上方身份卡 mb-6 单侧提供）。
-				     桌面双栏列距 20 属纯横向列距，按 RULES 保留。 -->
+				<!-- 双栏：我的内容入口 + 资料状态（分区间距由上方身份卡 mb-6 单侧提供）。 -->
 				<div class="grid gap-x-5 gap-y-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-					<section class="rounded-lg bg-surface-island shadow-xs overflow-hidden" aria-label="我的内容">
-						<div class="px-6 pt-5 pb-2">
-							<h2 class="text-md font-semibold text-text-primary">我的内容</h2>
-							<p class="mt-1 text-xs text-text-secondary">你的瞬间、群组与社交关系都在这里。</p>
-						</div>
-						<div class="p-3">
-							{#each ENTRY_ITEMS as item (item.section)}
-								<button
-									type="button"
-									onclick={() => void goto(ME_SECTION_PATHS[item.section])}
-									class="hover-btn flex w-full items-center gap-3.5 rounded-xl p-3 text-left focus-ring transition-colors hover:bg-interactive-hover"
+					<section aria-label="我的内容">
+						<SectionHead title="我的内容" subtitle="你的瞬间、群组与社交关系都在这里" icon={LayoutGrid} />
+						<ListContainer bordered>
+							{#each ENTRY_ITEMS as item (item.id)}
+								<ListItem
+									onClick={() => void goto(item.href)}
+									ariaLabel={item.title}
+									class="flex items-center gap-3.5 px-3 py-3"
 								>
-									<span class="flex shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-default size-9.5 transition-transform group-hover:scale-105">
+									<span class="flex size-9.5 shrink-0 items-center justify-center rounded-sm bg-accent-soft text-text-accent-on-soft">
 										<item.icon class="size-4.5" strokeWidth={1.75} />
 									</span>
 									<span class="min-w-0 flex-1">
-										<span class="block text-sm font-medium text-text-primary">{item.title}</span>
+										<span class="block text-md font-medium text-text-primary">{item.title}</span>
 										<span class="mt-0.5 block truncate text-xs text-text-secondary">{item.description}</span>
 									</span>
-									<ChevronRight class="size-4 text-text-secondary opacity-subtle transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
-								</button>
+									{#if item.count}
+										<span class="shrink-0 text-xs font-medium tabular-nums text-text-secondary">{item.count}</span>
+									{/if}
+									<ChevronRight class="size-4 shrink-0 text-text-secondary" strokeWidth={1.5} />
+								</ListItem>
 							{/each}
-						</div>
+						</ListContainer>
 					</section>
 
-					<!-- 资料状态 -->
-					<aside class="self-start rounded-lg bg-surface-island p-6 shadow-xs" aria-label="资料状态">
-						<div class="flex items-center justify-between">
-							<h2 class="text-md font-semibold text-text-primary">资料状态</h2>
-							<span class="flex items-center justify-center size-7 rounded-full bg-accent-soft text-accent-default">
-								<ShieldCheck class="size-4" strokeWidth={1.75} />
-							</span>
-						</div>
-						<p class="mt-2 text-xs leading-relaxed text-text-secondary">你的基础资料已完善，可随时在编辑页更新。</p>
-						<div class="mt-5 h-2 overflow-hidden rounded-full bg-surface-subtle">
-							<div class="h-full rounded-full bg-accent-default transition-all duration-standard" style="width:{filledCount * 20}%;"></div>
-						</div>
-						<p class="mt-2.5 text-xs text-text-secondary font-medium">{filledCount} 项基础资料已填写</p>
-					</aside>
+					<ProfileCompleteness items={COMPLETENESS} class="self-start" />
 				</div>
 			</div>
 		{/if}

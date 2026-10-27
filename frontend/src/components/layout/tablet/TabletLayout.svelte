@@ -41,12 +41,13 @@
 >
 	<!-- RoutedContentViewport 是三端唯一的路由内容与滚动承载区。
 	     地图/消息为全画布页：禁用滚动，canvas 固定视口高度。
-	     宽平板浮动 Dock 悬于内容之上，画布需预留底部净空。 -->
+	     宽平板 Dock 是流内浮动条（外层透明 padding + 居中玻璃轨道），不与内容重叠，
+	     因此内容区不做 pb-* 预留——此前 pb-28 会把 h-full 全画布页真实内容盒压掉 112px。 -->
 	<div class="relative isolate flex flex-1 min-h-0 flex-col overflow-hidden">
 		<!-- 氛围画布固定在外壳内容区（不随路由滚动） -->
 		<AmbientBackdrop />
 		<RoutedContentViewport
-			contentClassName="tablet-page-canvas {(pathname === ROUTES.map || (pathname === ROUTES.messages && isWide)) ? 'h-full' : ''} {isWide ? 'pb-28' : ''}"
+			contentClassName="tablet-page-canvas {(pathname === ROUTES.map || (pathname === ROUTES.messages && isWide)) ? 'h-full' : ''}"
 			style={(pathname === ROUTES.map || pathname === ROUTES.messages) ? 'overflow:hidden;' : undefined}
 		>
 			{@render children()}
@@ -92,8 +93,7 @@
 				<div class="flex items-center justify-center w-full">
 					<button
 						type="button"
-						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring select-none size-12 {composer.composerOpen ? 'bg-text-secondary' : 'bg-accent-default'}"
-						style="box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};"
+						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring select-none size-12 {composer.composerOpen ? 'bg-text-secondary' : 'bg-accent-default shadow-glow-md'}"
 						aria-label={composer.composerOpen ? '关闭' : '发布'}
 						onclick={toggleComposer}
 					>

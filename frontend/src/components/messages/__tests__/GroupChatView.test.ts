@@ -157,9 +157,9 @@ describe('GroupChatView', () => {
 		mocks.getGroupMessages.mockResolvedValue({ code: 10100, message: 'Access Token 无效或过期' });
 		renderGroup();
 		await waitFor(() => {
-			expect(screen.getByText('去登录')).toBeTruthy();
+			expect(screen.getByText('登录 / 注册')).toBeTruthy();
 		});
-		// 死胡同重试与输入栏一并隐藏
+		// 死胡同重试与输入栏一并隐藏（R13 NeedsAuthNotice 主 CTA 文案为「登录 / 注册」）
 		expect(screen.queryByText('重试')).toBeNull();
 		expect(screen.queryByLabelText('消息输入框')).toBeNull();
 	});

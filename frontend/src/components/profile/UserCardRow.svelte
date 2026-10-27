@@ -15,6 +15,8 @@
 		avatarBadge,
 		nameBadge,
 		subtitle,
+		/** 行尾第二信息位（关系状态/最近互动等），紧邻动作按钮之前 */
+		meta,
 		thumbnail,
 		actions,
 		onClick,
@@ -27,6 +29,7 @@
 		avatarBadge?: Snippet;
 		nameBadge?: Snippet;
 		subtitle?: Snippet;
+		meta?: Snippet;
 		thumbnail?: Snippet;
 		actions?: Snippet;
 		/** 整行点击（不传则行不可点击，仅行内动作交互，如附近用户行的关注按钮）。 */
@@ -52,7 +55,7 @@
 	</Avatar>
 	<div class="min-w-0 flex-1">
 		<div class="flex items-center gap-2">
-			<span class="text-text-primary text-sm">{name}</span>
+			<span class="text-text-primary text-sm font-medium">{name}</span>
 			{#if nameBadge}
 				{@render nameBadge()}
 			{/if}
@@ -61,6 +64,9 @@
 			{@render subtitle()}
 		{/if}
 	</div>
+	{#if meta}
+		<span class="flex shrink-0 items-center">{@render meta()}</span>
+	{/if}
 	{#if thumbnail}
 		{@render thumbnail()}
 	{/if}

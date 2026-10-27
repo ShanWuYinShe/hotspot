@@ -183,7 +183,7 @@ export struct SettingsThemeSegmentCard {
         // 选中态底色是 accentMuted（淡底 + accent 描边），文字必须用 accent 本色
         // （accentText 是 accent 亮实底上的反色前景，配淡底会不可读）
         .fontColor(this.selected ?
-          this.getPalette().accentBackground :
+          this.getPalette().textAccentOnSoft :
           this.getPalette().textSecondary)
     }
     .layoutWeight(1)
@@ -223,7 +223,7 @@ export struct SettingsEntryRow {
         LucideIcon({
             icon: this.item.icon,
             iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-            color: this.getPalette().accentBackground
+            color: this.getPalette().textAccentOnSoft
           })
       }
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -357,7 +357,7 @@ export struct SettingsToggleRow {
         LucideIcon({
             icon: this.icon,
             iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-            color: this.getPalette().accentBackground
+            color: this.getPalette().textAccentOnSoft
           })
       }
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
@@ -433,6 +433,21 @@ export struct SettingsMetaCard {
     }
   }
 
+  /** R12：状态胶囊文字用 on-soft 状态色（web text-status-*-on-soft 同口径） */
+  private getStatusTextColor(): string {
+    if (!this.meta) {
+      return this.getPalette().textSecondary;
+    }
+    switch (this.meta.status) {
+      case "deprecated":
+        return this.getPalette().textStatusWarningOnSoft;
+      case "sunset":
+        return this.getPalette().textStatusDangerOnSoft;
+      default:
+        return this.getPalette().textStatusOnlineOnSoft;
+    }
+  }
+
   private getStatusBackground(): ResourceColor {
     if (!this.meta) {
       return AppThemeManager.getSoftStatusBackground('neutral');
@@ -468,7 +483,7 @@ export struct SettingsMetaCard {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getPalette().textPrimary)
+          .fontColor(this.getStatusTextColor())
           .backgroundColor(this.getStatusBackground())
           .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
           .borderRadius(DesignConstants.SHAPE.CHIP)

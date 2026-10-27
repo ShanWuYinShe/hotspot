@@ -5,6 +5,7 @@
 import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
 	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
@@ -65,38 +66,32 @@ import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 
 <div>
 	{#if !embedded}
-		<!-- Header -->
-		<!-- 页级硬线清零（Round 3 B）：分区标题下不加 1px 横线，靠留白/eyebrow 分组 -->
-		<header class="flex items-center justify-between py-4">
-			<div>
-				<div class="flex items-center gap-2.5">
-					<span class="text-text-primary text-sm">{title}</span>
-					{#if !needsAuth}
-						<span class="inline-flex h-5 items-center justify-center rounded-full bg-accent-default px-2 text-xxs font-medium leading-none text-text-on-accent">
-							{count}{countSuffix}
-						</span>
-					{/if}
-				</div>
-				{#if subtitle}
-					<p class="mt-1 text-text-secondary text-xs">{subtitle}</p>
-				{/if}
-			</div>
+		<!-- 分区标题：全站唯一实现 SectionHead（标题 + 计数 + 副标题）；
+		     页级硬线已清零（Round 3），靠留白分组。
+		     右侧自定义位（如粉丝「待回关」徽章）与标题基线对齐。 -->
+		<div class="flex items-start justify-between gap-3 pt-2 pb-3">
+			<SectionHead
+				class="mb-0 min-w-0 flex-1"
+				{title}
+				{subtitle}
+				count={needsAuth ? undefined : `${count}${countSuffix}`}
+			/>
 			{#if headerNote}
-				<span class="inline-flex h-6 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xs font-medium leading-none text-accent-default">
+				<span class="inline-flex h-6 shrink-0 items-center justify-center rounded-full bg-accent-soft px-2.5 text-xs font-medium leading-none text-text-accent-on-soft">
 					{headerNote}
 				</span>
 			{:else if headerExtra}
-				{@render headerExtra()}
+				<div class="shrink-0">{@render headerExtra()}</div>
 			{/if}
-		</header>
+		</div>
 	{/if}
 
 		<!-- Search 已上提至聚合页头部行（tabs 左 + 搜索右限宽，固定头部高度，消除
 		     切 tab 时搜索行独占一行的纵向跳动，Gemini 审查 r12-r18） -->
 	{#if stats && !needsAuth}
-		<!-- Stats row — flat joined cells -->
+		<!-- 统计行：MetricRow strip（数字做节奏锚点，发丝竖线分隔） -->
 		<div class="py-3">
-			<MetricRow items={stats} />
+			<MetricRow items={stats} variant="strip" size="sm" />
 		</div>
 	{/if}
 
@@ -120,7 +115,7 @@ import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 		{#if loading}
 			<!-- 首屏骨架屏：关系列表行（前导 44 + 两行文本 + 行尾动作 chip），壳与真实
 			     ListContainer 一致（mx-auto max-w-3xl），骨架→内容不位移 -->
-			<div class="mx-auto max-w-3xl overflow-hidden rounded-lg bg-surface-island shadow-xs">
+			<div class="mx-auto max-w-2xl overflow-hidden rounded-lg bg-surface-island shadow-xs">
 				<SkeletonList rows={5} leading={44} trailing label="加载中…" />
 			</div>
 		{:else if needsAuth}
@@ -128,16 +123,16 @@ import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 		{:else if error}
 			<LoadError message={error} onRetry={onRetry} />
 		{:else if items.length === 0}
-			<EmptyState spotlight title={emptyTitle} description={emptyDescription} bare>
+			<EmptyState spotlight iconTone="accent" title={emptyTitle} description={emptyDescription} class="py-16">
 				{#snippet icon()}
-					<emptyIcon size={24}></emptyIcon>
+					<emptyIcon size={28} strokeWidth={1.5}></emptyIcon>
 				{/snippet}
 			</EmptyState>
 		{:else}
 			<!-- 桌面全宽行会让行尾动作离名字过远（扫描距离），列表限宽到阅读列；
 			     但必须**居中**：限宽 + 左对齐会在宽屏上把 300+px 空白全堆在右侧，
 			     观感上就是"内容没适配剩余空间"（2026-10-21 截图复核 /me/relationships）。 -->
-			<ListContainer bordered class="mx-auto max-w-3xl overflow-hidden">
+			<ListContainer bordered class="mx-auto max-w-2xl overflow-hidden">
 				{#each items as item (item.id)}
 					{@render children(item)}
 				{/each}

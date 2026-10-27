@@ -418,6 +418,8 @@
 
 ---
 
+**状态色 on-soft 校验**（R12 补充）：`python3 harmonyapp/scripts/check_status_parity.py` 断言 web `--cst-text-*-on-soft`（80% 语义色 + 20% text-primary）与鸿蒙 `ColorConfig.*OnSoft` 双端一致，且 3 主题×明暗×4 语义色对最差软底（含 danger /50）≥4.5；改状态色/新增语义色时与 `check:theme` 一起跑。
+
 ## 15. 已登记例外与平台适配
 
 - `FONT.SIZE.LG = 16`：HarmonyOS 标准正文尺寸，平台有意差异（跨端刻度脚本豁免项）。
@@ -713,113 +715,80 @@
 - **地标**：每页有 `main`（登录/注册/错误页也要），必需 landmark 不重复；`lang` 正确。
 - **可滚动区域**：可滚动且非键盘可达的容器（如 admin config 的 `pre`）加 `tabindex=0` + `role=region` + `aria-label`。
 - **图片**：装饰图 `alt=""` + `aria-hidden`；内容图 alt 提供信息，避免与相邻文本重复（image-redundant-alt）。
-- **对比度**：axe color-contrast 0 serious；状态徽章用实底 + on-accent 字（不再用低对比淡底 + 主题字）。
 
-### 20.6 触控目标（WCAG 2.2 / 项目标准）
+## 21. R13 视觉语言（2026-10-28）：锚点、同轴与安静动作
 
-- 移动端可点元素**有效热区 ≥44×44**（含 `hit-slop` / `hit-slop-44` / ArkUI `responseRegion`），视觉尺寸可小于 44。
-- 孤立图标/文本链可用 `.hit-slop-44`；横向相邻元素不得互相覆盖（用容器 padding 替代）。
-- 例外登记：表单控件、横向流中的 chip/筛选 pill、内联文本链接、地图 marker/工具条（精度/密度冲突）、skip link。
-- 验收：390 视口脚本扫描可点元素 rect + 命中测试；输出覆盖率与例外清单。
+> 本轮把「干净但平淡的 SaaS 白卡」升级为「有节奏、有记忆点的城市社交画布」。本节登记
+> **可验收的规则**（页面/组件按此执行，新增页面不得另起一套）；数值全部复用既有
+> token（无新增 palette、无新增字号/圆角档位）。
 
-### 20.7 主题验收基线（三主题 × 明暗）
+### 21.1 三个母题
 
-- 关键页（首页/我的/设置/通知/附近人/附近瞬间/瞬间详情/群详情/admin）每主题×明暗必测；不允许「只在 vibrant 好看」。
-- 软岛/画布亮度比记录：vibrant light 1.11 / vibrant dark 1.33 / **forest light 1.17（R5 v2 覆写）** / forest dark 1.16 /
-  inkwash light 1.06 / inkwash dark 1.31；文字对比 primary/secondary ≥4.5（forest light 岛 primary 13.11 / secondary 6.42）。
-- 主题特有 token 变更（如 forest light `surfaceIsland`）必须两端同值并重跑 parity；harmony-only 档（如 textTertiary）
-  在文档标注「web 无对应档」。
+1. **一个锚点**：每屏只允许一个视觉主角（一张图 / 一个人 / 一组数字），其余退到
+   `text-secondary` + 11–12px；**容器宽度服从内容**，不得为填满容器而拉伸
+   （反面：1024 宽身份卡右半 400px 全空、精选横卡右半 350px 空）。
+2. **同一张卡**：所有图片优先卡共用一套几何与覆盖语法——一个左上分类/标签胶囊、
+   一个右上距离/隐私徽标、底部一行标题 + 一行 meta + 一行动作；**比例只随断点变一档**
+   （移动 3/4，≥600px 4/5；BSP 瓦片墙为算法产物例外）。
+3. **一条轴，一种安静**：页头标题、正文列、粘底动作条共用同一条内容轴；
+   安静次级动作只有一种形态（`ui/button variant="soft"` 中性软填、无描边）。
 
-### 20.8 图片加载规范（Round 6，2026-10-27）
+### 21.2 内容轴（强制）
 
-- **URL 压缩**：仅对 `images.unsplash.com` 追加/覆盖 `auto=format&fit=crop&q=<78|80|82|85>&w=<width>`；
-  其他域名/本地/blob/地图瓦片原样返回（helper 唯一入口：web `lib/images.ts`、鸿蒙 `ImageUrlUtil.ets`，参数集合必须一致）。
-- **尺寸档预设**（按显示尺寸 × 2x/3x；组件不得散落魔法宽度）：
+- 页面**不得自设页面级 `max-w-*`**（除已登记的表单/列表窄列例外），正文与
+  `PageHeader` 共用 `ContentColumn` 的 `--cst-page-gutter`；分栏页主列恒为
+  「主列 + gap + rail」，不随视口漂移。
+- 粘底条（评论输入/移动操作条）内部内容与内容卡同轴（1440 实测应完全对齐：
+  例 /moments/[id] 312–1060 = 卡片 312–1060）。
+- 表格/后台页正文与模块 Tab 栏同轴（`/admin` 概览卡片起点 = Tab 栏起点）。
 
-| 档位 | 典型宽度 | 用途 |
-|---|---|---|
-| avatar | 64/96/160（按头像显示尺寸 2x/3x） | 头像、通知小头像 |
-| thumb | 200/400 | rail/缩略图/九宫格小图 |
-| card | 400/800 | 首页 feed 卡、附近卡封面 |
-| cover | 800/1600 | 群 hero/主页封面/详情大图 |
-| hero | 1080+ | 首屏大图、详情首图（优先） |
-| full | 1600（q85） | ImageViewer 全屏查看（打开即加载，不 lazy） |
+### 21.3 指标条（MetricRow strip）
 
-- **srcset/sizes**：卡片/封面用 1x/2x 两档 srcset + 调用方 `sizes`（按实际布局列宽）；非 unsplash 不生成 srcset。
-- **加载优先级**：仅首屏可见图用 `loading=eager` + `fetchpriority=high`（feed 前 2、**附近的人/附近瞬间首屏前 2**、详情首图、hero、ImageViewer）；
-  其余 `loading=lazy` + `decoding=async`。鸿蒙无 fetchpriority/lazy：用「首屏前 2 高清档+立即创建、LazyForEach 离屏不创建」
-  近似表达并登记平台差异。
-- **加载体验**：占位（主题渐变/骨架/占位底，不新增 shimmer）+ onload 渐显 0.22s；`prefers-reduced-motion` 下直接显示（1e-05s）。
-  不得引入布局位移；失败走既有 fallback（图片渐变/首字母/图标）。
-- **验收**：关键页图片 transferSize 前后对比（HAR/Resource Timing）；CLS 不回归、LCP 不劣化；图片清晰度不下降（首屏 2x、
-  Retina/高 DPR 设备按 2x/3x 取值；真机若偏软再升档）。
+- 用法：`MetricRow variant="strip"`（详见 `docs/ui-components.md`）。
+- 数字 24px（紧凑 20）semibold `tabular-nums` `tracking-tight`；标签 12px 次级；
+  `divide-x divide-border-subtle` 发丝分隔；**每屏最多一处强调色**（如"在线"绿色 + 圆点），
+  其余中性。
+- 禁止：灰色药丸指标块、每个数字套圆角矩形、「卡片里的卡片」。
 
-### 20.9 动效与状态反馈规范（Round 7，2026-10-27）
+### 21.4 资料身份封面（IdentityHero）
 
-- **语义时长**（复用 motion token，不新增刻度）：enter 180ms（snappy，ease-out）、exit 150ms（rapid，ease-in）、
-  pop 220ms（standard，ease-out）；仅 transform/opacity，不得改变布局。
-- **页面进场（web）**：仅在**客户端导航**（`afterNavigate` 的 `nav.type !== 'enter'`，含 back/forward）对内容层播放
-  `opacity 0→1 + translateY 4px→0`；**首屏加载不播**（保护 LCP）；只包内容层，sticky 页头/滚动容器/焦点不受影响。
-- **骨架 → 内容**：仅「实际展示过骨架」的列表在数据到达时做 150ms fade-in；缓存命中/直接命中不播；不得逐项 stagger 大列表。
-- **Toast**：保留入场，新增退场（fade + y −8px，150ms）；容器常驻以便最后一条也能退场；`aria-live` 空容器不得产生读屏噪音。
-- **状态反馈（点赞/收藏/关注/加入）**：仅在用户**激活方向**操作时图标 pop（scale 1→1.18→1，220ms），取消不做 pop；
-  **禁止在初始数据同步/首帧已激活时播放**；激活色过渡可同时进行。
-- **评论新增**：仅本次提交成功后新增行 fade + translateY 4px（160ms）；初始加载不播。
-- **reduced-motion**：CSS 动画由全局规则压至 0.01ms；**JS 驱动动画（Svelte transition / 定时器 / 鸿蒙 animateTo）必须显式判断**
-  `prefersReducedMotion()` / `MotionUtil.reduced` 并直接跳到终态，不得留下动画类/定时器残留。
-- **红线**：不得动画首屏 LCP 元素；不得引入 CLS；QA 长截图不得因新增动画抖动（动画 ≤260ms 且不阻塞截图）；
-  持续 animation 不得用于大面积内容或列表全部项。
-- **验收**：normal/reduced 双路径 computed animation-name/duration + 中间态截图；axe 0；QA 23 页稳定；
-  CLS 不回归、LCP 首屏不回归；鸿蒙以代码级 + reduced 分支证据 + build/parity 为准，真机手感待补。
+- 封面条：桌面 132 / 移动 92，主题渐变或封面图 + 遮罩（token）；
+  头像 88/72，`-mt-11` 压封面 + `ring-4 ring-surface-page`；
+  桌面两栏（左身份 / 右指标+动作），移动动作整行；stats 用 21.3。
+- 动作：主操作 = accent 实底；次操作 = `soft`。他人主页动作形态二选一：
+  未关注（关注 primary / 私信 soft）、已关注（私信 primary / 已关注 soft），**禁止第三种描边胶囊**。
 
-### 20.10 媒体占位与加载降级（Round 8，2026-10-27）
+### 21.5 安静次级动作（soft 变体）
 
-- **原则**：任何网络媒体（头像/封面/缩略图/内容图）在加载中必须显示有意义的占位，**不得出现纯灰圆/灰块**；
-  加载失败时保留或切换到同等语义的降级态（首字母/人形/群组图标/主题渐变/失败图标）。
-- **头像**：占位层**始终渲染**（有 name = 首字母 `trim().slice(0,1)`；无 name = UserRound 图标；`aria-hidden`），
-  图片 absolute 覆盖 + `fadeImage` 渐显；失败保留占位不闪烁；decorative/alt 语义不变。
-- **封面/缩略图/内容图**：占位统一 `.media-placeholder`（主题 accent 渐变/骨架/图标）作底层，图片渐显覆盖；
-  失败保留占位；有 Skeleton 的列表用骨架，不叠加占位。
-- **对比度**：占位首字母/图标文字在占位底上 ≥4.5:1（实测 vibrant 11.75/9.25、forest 11.58/10.11、inkwash 10.21/8.49，用 text-primary）；
-  若换底必须先复测。
-- **约束**：占位与图片同尺寸/同布局（无 CLS）；不新增 token；`prefers-reduced-motion` 下渐显直接显示；SSR/no-JS 可见占位。
-- **验收**：慢网模拟（延迟图片）4 页×2 视口「加载中 vs 完成」截图，加载中无灰块；失败态截图；
-  axe 0；CLS/LCP 不回归。
+- `ui/button variant="soft"`（`bg-surface-subtle/60`、无描边、hover 全量）是页面/行内
+  次级动作唯一形态：编辑资料/设置/发消息/私信/拒绝/新会话/全部已读/表格行内动作等。
+- 描边只留给「可切换的筛选 chip」（TagPill/TabBar）与「功能边界」（输入框、主题 swatch）。
+- 状态型关系 chip（已关注/已加入）同族：未激活 = surface-accent，已激活 = soft。
 
-### 20.11 页头滚动、SPA 焦点播报与回顶（Round 9，2026-10-27）
+### 21.6 分区标题（SectionHead）
 
-- **页头滚动**（web，sticky PageHeader）：顶部（scrollTop ≤4px）**透明**（无底色/描边/阴影/blur，与连续画布融合，不再有白带）；
-  滚动 >4px 切换 glass：`surface-page 78% + blur(16px) saturate(1.4)` + 细底边 + elevation，过渡 150ms（reduced 立即）；
-  监听最近滚动容器（passive + rAF），仅改背景/边框/阴影，不动 sticky 定位（无 CLS）。
-- **SPA 焦点**（web a11y）：客户端导航（非首屏）后焦点移到 `main#main-content`（tabindex=-1、preventScroll、程序化聚焦不显示轮廓）；
-  main 不可聚焦时才回退 h1 并**跳过播报**（二选一，不得叠加）。
-- **播报**：`#route-announcer`（sr-only、`aria-live=polite`、`aria-atomic`）导航后播报新页面标题（h1），首屏不播、1.5s 去重；
-  返回/前进同样播报；skip link 首 Tab 仍可用。
-- **回到顶部**（web/鸿蒙）：滚动 > 1.5×视口高后出现浮动圆钮（web 44px / 鸿蒙 48vp，`aria-label`/`accessibilityText`「回到顶部」），
-  点击平滑回顶（reduced 直接跳），回顶后 200ms 内隐藏（防闪烁）；fixed/overlay 不占流、不遮挡底栏与其它浮层；
-  不可见时移出无障碍树/禁触。
-- **Reflow**：320px 宽与 200% 文本缩放关键页无横向滚动（`documentElement`/主滚动区溢出 = 0）；装饰层超界须被裁剪。
-- **验收**：三主题×亮暗 top/scrolled 数据+截图（top 透明、scrolled 78%+blur）；页头滚动 0 layout-shift；
-  activeElement/announcer 矩阵（首屏/导航/后退/前进/skip link）；axe 0；QA 23 页；CLS/LCP 不回归。
+- icon 16 + 标题 14 semibold + count 12 次级 + 右侧「查看全部」文字链（12 accent）；
+  rail 变体（11 semibold）用于右侧栏卡片；`eyebrow` 只用于表单/微型分组标。
+- 页面不再手写「标题 + 查看全部」行；同一页多个分区间距 24，标题→内容 12。
 
-### 20.12 聊天滚动策略（Round 10，2026-10-27）
+### 21.7 空态与访客引导
 
-- **近底部判定**：距底部 ≤120px 视为在底部；距底 >200px 显示「回到底部」按钮（120–200 区间保持现状不闪烁）。
-- **自动滚规则**：初始加载/切换会话 → 直接回底（无动画）；**自己发送** → 始终滚底（发送反馈）；
-  收到新消息且近底部 → 滚底（smooth；reduced `auto`）；**上滑阅读（非近底）→ 绝不跳转**，只累加新消息计数；
-  分页加载更早消息 → 保持当前视口（prepend 补偿）。
-- **回底按钮**：44px（鸿蒙 48vp），距底 >200px 显示，位置在输入栏上方/右侧且不遮挡输入栏与浮层；
-  无新消息只显向下箭头，有新消息显示「N 条新消息」（>99 → 99+）；计数 `aria-live=polite`，按钮 `aria-label` 与可见文本一致；
-  150ms 显隐（reduced 直接）；点击 → 滚底 + 清零 + 补 markRead；回底后 200ms 内隐藏。
-- **markRead 时机**：仅初始/近底部/点击回底时补标（1s 节流）；上滑阅读期间与离开页面不补标；会话切换计数/状态清零。
-- **平台差异（鸿蒙）**：ArkUI List 无距底像素 API，用 `onScrollIndex` 末尾可见性近似（末条可见=近底），report 登记。
-- **验收**：注入新消息矩阵（1/批量/>99）、上滑不跳/计数、回底/清零/隐藏、自己发送、初始/切会话、分页视口保持、
-  reduced、键盘可达、axe 0、QA 23 页、CLS 0。
+- 页面级空态：新版 EmptyState（64px 软底图标砖 + 14 semibold 标题 + 12 描述 + 动作），
+  超大空态开 `spotlight`；小面板不开。
+- 访客态整页/整块：`NeedsAuthNotice` 面板（spotlight + 3 条价值点 + 主/次 CTA），
+  页面按语境传 highlights（如消息：私聊与群聊会话 / 在线好友与群组 / 消息实时同步）。
 
+### 21.8 卡片文字层级（图片优先卡）
 
+- 标题：`text-base sm:text-lg` semibold `leading-tight`（压图仍白字，禁止降低遮罩对比度）；
+- 作者行：头像 24–32 + 昵称 14 semibold + 时间 12；meta 行 12；动作计数 12 `tabular-nums`、动作间距 24；
+- 压图对比度保持 §17（徽章强遮罩 + 白字；位置信息只出现一次）。
 
+### 21.9 验收（可重跑）
 
-
-
-
-
+- 全量截图矩阵：3 主题 × 2 明暗 × 桌面 1440 / 平板 768·1024 / 移动 390 × 登录/访客/管理员三态；
+- `bun run audit:a11y -- --matrix --parallel 2`（3×2，0 serious/critical）；
+- `bun run audit:touch`（390 起，未登记离群 0）；
+- 轴与密度：同屏标题左缘 = 正文首元素左缘（±1px）；1440 内容包围盒 / 容器包围盒 ≥70%，
+  容器内侧无 >120px 空带（截图量测）；
+- 交互：hover/focus/press/reduced-motion 仍走既有基线（§20）。

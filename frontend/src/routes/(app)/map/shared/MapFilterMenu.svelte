@@ -2,7 +2,7 @@
 	import { SlidersHorizontal } from '@lucide/svelte';
 	import * as Popover from '@/components/ui/popover';
 	import MenuPanel from '@/components/overlays/MenuPanel.svelte';
-	import { PIN_TONES, markerSvg } from './location-shared';
+	import { PIN_COLORS, PIN_TONES, markerSvg } from './location-shared';
 	import type { PinType } from './location-data';
 
 	// MapFilterMenu — 地图筛选菜单（桌面/移动共用）。
@@ -112,5 +112,19 @@
 				{/if}
 			{/snippet}
 		</MenuPanel>
+		<!-- 类型色图例（设计评审 P2-13）：三类图钉按 marker token 三色族编码，图例让颜色
+		     可被解释；放在面板底部动作行下方，与选项区用同一条分隔线区隔，不新增横线。 -->
+		<div class="flex items-center justify-between gap-2 px-3.5 pb-2.5 text-xxs text-text-secondary">
+			{#each ALL as item (item.type)}
+				<span class="inline-flex items-center gap-1.5">
+					<span
+						class="size-2 rounded-full"
+						style="background:{PIN_COLORS[item.type]};"
+						aria-hidden="true"
+					></span>
+					{item.label}
+				</span>
+			{/each}
+		</div>
 	</Popover.Content>
 </Popover.Root>

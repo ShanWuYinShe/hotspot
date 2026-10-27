@@ -121,11 +121,13 @@
 	{@const coverUrl = moment.images?.[0]?.url ?? ''}
 	{@const imageCount = moment.images?.length ?? 0}
 	{@const useFallback = !coverUrl || coverError}
-	<!-- 整卡图片卡（Image-first Card，Round 2）：图片铺满整卡、信息覆盖图面、无外框；
+	<!-- 整卡图片卡（Image-first Card）：图片铺满整卡、信息覆盖图面、无外框；
 	     顶部遮罩承载作者行，底部遮罩承载标题/元信息/操作行（三主题 token 遮罩）。
-	     无图 fallback 用主题化渐变底 + 主题文字色（不使用白字遮罩，已登记例外）。 -->
+	     hover 统一走 card-hover（主题化上浮 + elevation-button）与 image-hover-frame__image
+	     （图片 1.045 缩放），不再手写 hover:shadow/scale；无图 fallback 用主题化渐变底 +
+	     主题文字色（不使用白字遮罩，已登记例外）。 -->
 	<div
-		class="group relative aspect-[4/5] w-full cursor-pointer overflow-hidden rounded-lg bg-surface-subtle shadow-xs transition-[box-shadow,transform] duration-standard hover:shadow-raised-md [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
+		class="card-hover group relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-surface-subtle shadow-xs sm:aspect-[4/5] [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
 	>
 		{#if !useFallback}
 			{#if !coverLoaded}
@@ -140,7 +142,7 @@
 				loading={priority ? 'eager' : 'lazy'}
 				fetchpriority={priority ? 'high' : 'auto'}
 				decoding="async"
-				class="absolute inset-0 h-full w-full object-cover transition-transform duration-standard group-hover:scale-[1.02]"
+				class="image-hover-frame__image absolute inset-0 h-full w-full object-cover"
 				use:fadeImage
 				onload={() => (coverLoaded = true)}
 				onerror={() => (coverError = true)}
@@ -206,7 +208,7 @@
 					{#if relativeTime}
 						<!-- 时间行提到 opacity-hover（0.90）：BLOCKER 复测中 0.80 时纯白底 min 4.25/4.35，
 						     0.90 后字形区实测 ≥5.9；昵称/徽章仍保持 1.0/胶囊底。 -->
-						<span class="text-xs {useFallback ? 'text-text-secondary' : 'text-content-inverse opacity-hover'}">
+						<span class="text-sm {useFallback ? 'text-text-secondary' : 'text-content-inverse opacity-hover'}">
 							{relativeTime}
 						</span>
 					{/if}
@@ -236,20 +238,18 @@
 		<!-- 底部：标题/正文摘要（最多 2 行）+ 元信息 + 操作行 -->
 		<div class="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-4 sm:p-5">
 			{#if moment.description}
-				<p class="line-clamp-2 text-base font-semibold leading-snug {useFallback
+				<p class="line-clamp-2 text-base font-semibold leading-tight sm:text-lg {useFallback
 					? 'text-text-primary'
 					: 'text-content-inverse'}">
 					{moment.description}
 				</p>
 			{/if}
-			<!-- 元信息：位置只在右上胶囊出现一次（避免同卡重复），此处只留时间 · 标签 -->
-			<div class="flex min-w-0 items-center gap-1.5 text-xs {useFallback ? 'text-text-secondary' : 'text-content-inverse opacity-emphasis'}">
-				<span class="shrink-0">{relativeTime}</span>
-				{#if moment.tags?.[0]}
-					<span aria-hidden="true">·</span>
+			<!-- 元信息：时间只在作者行出现一次（同卡不重复），此处只留首个标签（12px） -->
+			{#if moment.tags?.[0]}
+				<div class="flex min-w-0 items-center gap-1.5 text-sm {useFallback ? 'text-text-secondary' : 'text-content-inverse opacity-emphasis'}">
 					<span class="min-w-0 truncate">#{moment.tags[0]}</span>
-				{/if}
-			</div>
+				</div>
+			{/if}
 			<div class="mt-1 flex items-center justify-between">
 				<div class="flex items-center gap-5 sm:gap-6 {useFallback ? 'text-text-secondary' : 'text-content-inverse'}">
 					<div
@@ -264,13 +264,13 @@
 								: ''}"
 							strokeWidth={1.75}
 						/>
-						<span class="font-medium">{totalReactions > 0 ? totalReactions : '赞'}</span>
+						<span class="font-medium tabular-nums">{totalReactions > 0 ? totalReactions : '赞'}</span>
 					</div>
 					<div
 						class="hover-action hit-slop-44 flex items-center gap-1.5 text-sm focus-ring transition-colors"
 					>
 						<MessageCircle class="size-4.5 shrink-0" strokeWidth={1.75} />
-						<span class="font-medium">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
+						<span class="font-medium tabular-nums">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
 					</div>
 					<div
 						class="hover-action hit-slop-44 flex items-center gap-1.5 text-sm focus-ring transition-colors"
@@ -291,7 +291,7 @@
 				>
 					<Share2 class="size-4.5 shrink-0" strokeWidth={1.75} />
 					{#if moment.shares_count && moment.shares_count > 0}
-						<span class="font-medium">{moment.shares_count}</span>
+						<span class="font-medium tabular-nums">{moment.shares_count}</span>
 					{/if}
 				</button>
 			</div>
@@ -343,7 +343,7 @@
 					</button>
 
 					{#if moment.author_relation?.is_following}
-						<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xxs font-normal bg-accent-soft text-accent-default shrink-0">
+						<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xxs font-normal bg-accent-soft text-text-accent-on-soft shrink-0">
 							已关注
 						</span>
 					{/if}

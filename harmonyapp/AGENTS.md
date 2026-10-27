@@ -141,3 +141,5 @@ PageShellContainer、路由对齐、SystemButton / SystemInput 原语与已登�
 - 页面头部用 SystemPageHeader（专用变体 SearchPageHeader / ChatPageHeader）；内容栏用 PageShellContainer。
 - 通用按钮/输入框用 SystemButton / SystemInput，禁止手写重复样式（已登记例外见 skill）。
 - 跨端 token（色彩/字号/圆角）必须与 frontend 同步，check:theme 漂移即拦截。
+- 状态色 on-soft（R12）：`ColorConfig.accentOnSoft/onlineOnSoft/warningOnSoft/dangerOnSoft` 必须等于 web 语义色 80% + textPrimary 20%；
+  `python3 harmonyapp/scripts/check_status_parity.py` 断言双端 6 配置 × 4 语义色 hex 一致与对比度 ≥4.5（palette 值不变）。

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { adminListPermissions, adminListRoles, adminCreateRole, adminUpdateRole, adminDeleteRole, adminSetRolePermissions, adminListAdmins, adminAwardAdmin, adminRevokeAdmin } from '@/api';
 	import type { AdminPermissionItem, AdminRoleItem, AdminOperatorItem } from '@/api/types';
+	import { KeyRound, ShieldCheck } from '@lucide/svelte';
 	import { hasAdminPermission, isSuperAdmin } from '@/stores/admin.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -9,7 +10,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
-	import { TABLE_WRAP, TABLE, TH, TR, TD, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER, ROW_BTN_PRIMARY } from '../shared/table';
+	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER } from '../shared/table';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -237,45 +238,62 @@
 </svelte:head>
 
 {#if !canManage}
-	<EmptyState title="无访问权限" description="需要 admin.rbac.manage 权限" bare />
+	<EmptyState title="无访问权限" description="需要 admin.rbac.manage 权限" iconTone="accent">
+		{#snippet icon()}<KeyRound class="size-7" strokeWidth={1.5} />{/snippet}
+	</EmptyState>
 {:else}
-	<div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
-		<!-- 角色管理 -->
-		<section class="flex flex-col gap-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<h2 class="text-md font-semibold text-text-primary">角色</h2>
-					<p class="mt-1 text-xs text-text-secondary">角色绑定权限键，授予平台管理员时选择角色。</p>
+	<div class="flex w-full flex-col gap-6">
+		<!-- 角色管理（分区头与 SectionHead 同语言：图标 + 标题 + 计数 + 说明 + 右侧主操作） -->
+		<section class="flex flex-col gap-3" aria-label="角色管理">
+			<div class="flex flex-wrap items-start justify-between gap-3">
+				<div class="flex min-w-0 items-start gap-2">
+					<span class="mt-0.5 flex shrink-0 items-center justify-center text-text-secondary" aria-hidden="true">
+						<KeyRound class="size-4" strokeWidth={1.75} />
+					</span>
+					<div class="min-w-0">
+						<div class="flex items-baseline gap-2">
+							<h2 class="truncate text-md font-semibold text-text-primary">角色</h2>
+							{#if !rolesLoading}
+								<span class="shrink-0 text-xs font-medium tabular-nums text-text-secondary">{roles.length}</span>
+							{/if}
+						</div>
+						<p class="mt-1 text-xs text-text-secondary">角色绑定权限键，授予平台管理员时选择角色。</p>
+					</div>
 				</div>
-				<button type="button" class={ROW_BTN_PRIMARY} onclick={openCreate}>新建角色</button>
+				<Button type="button" variant="primary" size="sm" class="hit-slop-44 ml-auto" onclick={openCreate}>新建角色</Button>
 			</div>
 
 			{#if rolesLoading}
 				<InlineLoading label="加载角色…" />
 			{:else if rolesError}
 				<LoadError message={rolesError} onRetry={() => void loadRoles()} />
+			{:else if roles.length === 0}
+				<EmptyState title="还没有角色" description="创建第一个角色并分配权限，再把角色授予平台管理员。" iconTone="neutral">
+					{#snippet icon()}<KeyRound class="size-7" strokeWidth={1.5} />{/snippet}
+					{#snippet action()}
+						<Button type="button" variant="primary" size="sm" onclick={openCreate}>新建角色</Button>
+					{/snippet}
+				</EmptyState>
 			{:else}
 				<div class={TABLE_WRAP} use:scrollFade>
 					<table class={TABLE}>
 						<thead>
 							<tr>
 								<th scope="col" class={TH}>角色</th>
-								<th scope="col" class={TH}>描述</th>
+								<th scope="col" class={TH_SECONDARY}>描述</th>
 								<th scope="col" class={TH}>权限</th>
 								<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 							</tr>
 						</thead>
 						<tbody>
-							{#if roles.length === 0}
-								<tr class={TR}><td class={TD} colspan={4}>暂无角色，点击「新建角色」创建。</td></tr>
-							{/if}
 							{#each roles as r (r.role_id)}
 								<tr class={TR}>
 									<td class={TD}>{r.name}</td>
-									<td class={`${TD} max-w-56 truncate`} title={r.description ?? ''}>{r.description ?? '—'}</td>
+									<!-- 移动端隐藏描述列：让「权限 / 操作」在 390 宽下无需横滚即可到达（描述在编辑弹层可查） -->
+									<td class={`${TD_SECONDARY} max-w-56 truncate`} title={r.description ?? ''}>{r.description ?? '—'}</td>
 									<td class={TD}>
 										{#if r.permissions.includes('*')}
-											<span class="badge bg-accent-soft text-accent-default">全部权限</span>
+											<span class="badge bg-accent-soft text-text-accent-on-soft">全部权限</span>
 										{:else}
 											<span class="badge bg-surface-subtle text-text-secondary">{r.permissions.length} 项</span>
 										{/if}
@@ -295,14 +313,24 @@
 			{/if}
 		</section>
 
-		<!-- 平台管理员 -->
-		<section class="flex flex-col gap-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<h2 class="text-md font-semibold text-text-primary">平台管理员</h2>
-					<p class="mt-1 text-xs text-text-secondary">按最近授权时间排序；撤销 superadmin 仅 superadmin 可执行。</p>
+		<!-- 平台管理员（同分区头语言） -->
+		<section class="flex flex-col gap-3" aria-label="平台管理员">
+			<div class="flex flex-wrap items-start justify-between gap-3">
+				<div class="flex min-w-0 items-start gap-2">
+					<span class="mt-0.5 flex shrink-0 items-center justify-center text-text-secondary" aria-hidden="true">
+						<ShieldCheck class="size-4" strokeWidth={1.75} />
+					</span>
+					<div class="min-w-0">
+						<div class="flex items-baseline gap-2">
+							<h2 class="truncate text-md font-semibold text-text-primary">平台管理员</h2>
+							{#if !adminsLoading}
+								<span class="shrink-0 text-xs font-medium tabular-nums text-text-secondary">{admins.length}</span>
+							{/if}
+						</div>
+						<p class="mt-1 text-xs text-text-secondary">按最近授权时间排序；撤销 superadmin 仅 superadmin 可执行。</p>
+					</div>
 				</div>
-				<button type="button" class={ROW_BTN_PRIMARY} onclick={openAward}>授予管理员</button>
+				<Button type="button" variant="primary" size="sm" class="hit-slop-44 ml-auto" onclick={openAward}>授予管理员</Button>
 			</div>
 
 			{#if adminsLoading}
@@ -317,7 +345,7 @@
 								<th scope="col" class={TH}>用户</th>
 								<th scope="col" class={TH}>权限</th>
 								<th scope="col" class={TH}>角色</th>
-								<th scope="col" class={TH}>授权时间</th>
+								<th scope="col" class={TH_SECONDARY}>授权时间</th>
 								<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 							</tr>
 						</thead>
@@ -326,17 +354,17 @@
 								<tr class={TR}>
 									<td class={TD}>
 										<span class="text-text-primary">{a.user.nickname}</span>
-										<span class="ml-1.5 text-xs text-text-secondary font-mono">{a.user.user_id}</span>
+										<span class="ml-1.5 max-sm:hidden text-xs text-text-secondary font-mono">{a.user.user_id}</span>
 									</td>
 									<td class={TD}>
 										{#if a.permissions.includes('*')}
-											<span class="badge bg-accent-soft text-accent-default">superadmin</span>
+											<span class="badge bg-accent-soft text-text-accent-on-soft">superadmin</span>
 										{:else}
 											<span class="badge bg-surface-subtle text-text-secondary">{a.permissions.length} 项</span>
 										{/if}
 									</td>
 									<td class={TD}>{a.roles.map((r) => r.name).join('、') || '—'}</td>
-									<td class={TD}>{formatDateTime(a.granted_at)}</td>
+									<td class={TD_SECONDARY}>{formatDateTime(a.granted_at)}</td>
 									<td class={TD_ACTIONS}>
 										<button type="button" class={ROW_BTN_DANGER} onclick={() => (revokeTarget = a)}>撤销</button>
 									</td>
@@ -377,7 +405,10 @@
 		<Dialog.Content class="max-w-105 p-0">
 			<div class="px-5 pt-6 pb-4">
 				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">设置角色权限「{permTarget?.name}」</Dialog.Title>
-				<Dialog.Description class="mt-1 text-sm text-text-secondary">权限键来自权限字典；{'*'}（全量权限）仅超级管理员可设置。</Dialog.Description>
+				<Dialog.Description class="mt-1 text-sm text-text-secondary">
+					权限键来自权限字典；{'*'}（全量权限）仅超级管理员可设置。
+					<span class="ml-1 font-medium tabular-nums text-text-primary">已选 {permDraft.size} 项</span>
+				</Dialog.Description>
 				<div class="mt-4 grid max-h-96 grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-2">
 					{#if isSuper}
 						<label class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text-primary hover:bg-interactive-hover">

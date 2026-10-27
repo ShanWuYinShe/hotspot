@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { ArrowLeft } from '@lucide/svelte';
+	import { ArrowLeft, UserRound } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
 	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -229,9 +230,10 @@
 <div class="flex min-h-0 flex-col h-full bg-surface-chat">
 	<p class="sr-only" aria-live="polite">{lastIncoming ? `新消息：${lastIncoming.text}` : ''}</p>
 	<!-- Header -->
-	<!-- 去硬边线（Round 2）：聊天画布自身底色承担分隔 -->
+	<!-- 去硬边线（Round 2）：聊天画布自身底色承担分隔；
+	     头部层级（R13）：返回（移动）→ 头像+昵称/状态（可点进资料）→ 资料入口图标钮 -->
 	<div class="shrink-0 bg-surface-chat px-4 {compact ? 'h-13' : 'h-15'}">
-		<div class="mx-auto flex h-full w-full max-w-3xl items-center gap-3 lg:max-w-5xl">
+		<div class="mx-auto flex h-full w-full max-w-3xl items-center gap-2 lg:max-w-5xl">
 		{#if showBackButton}
 			<button
 				type="button"
@@ -246,15 +248,16 @@
 		<!-- 头像 + 名称/状态：点击进入对方主页（移动端私聊页的资料入口，Telegram/iMessage 惯例） -->
 		<button
 			type="button"
-			class="avatar-entry hit-slop hover-bg focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-md text-left"
+			class="avatar-entry hit-slop-y hover-bg focus-ring flex min-w-0 flex-1 items-center gap-2.5 rounded-md text-left"
 			onclick={() => void goto(ROUTES.user(peerUserId))}
 			aria-label={`查看 ${peerName || '对方'} 的资料`}
+			title="查看资料"
 		>
 			<Avatar
 				src={contact?.avatar}
 				name={peerName}
 				decorative
-				size={compact ? 24 : 36}
+				size={compact ? 32 : 36}
 				class="border-regular border-border-default shadow-raised-sm"
 			>
 				{#snippet badge()}
@@ -271,11 +274,11 @@
 				     font-normal 抵消 base h1 的 medium 字重，保持与原 p 一致的视觉。 -->
 				<svelte:element
 					this={compact ? 'h2' : 'h1'}
-					class="truncate font-normal text-text-primary {compact ? 'text-sm' : 'text-md'}"
+					class="truncate font-semibold text-text-primary {compact ? 'text-md' : 'text-lg'}"
 				>
 					{peerName || '会话'}
 				</svelte:element>
-			<p class="{typing.active ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'} text-xs" >
+			<p class="mt-0.5 flex items-center gap-1 text-xs {typing.active ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'}">
 				{#if typing.active}
 					正在输入…
 				{:else if onlineNow}
@@ -288,6 +291,15 @@
 			</p>
 			</div>
 		</button>
+
+		<!-- 资料入口：与「点头像/昵称进资料」同一跳转，给桌面/平板一个显式、可发现的入口 -->
+		<ActionIconButton
+			icon={UserRound}
+			label="查看资料"
+			variant="ghost"
+			size={36}
+			onClick={() => void goto(ROUTES.user(peerUserId))}
+		/>
 		</div>
 
 	</div>

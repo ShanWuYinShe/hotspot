@@ -68,6 +68,14 @@
   --cst-status-danger: var(--cst-palette-hot);
   --cst-status-warning: var(--cst-palette-warning);
 
+  /* Status / accent「on-soft」文字（R12）：仅用于 tint 淡底（-bg / /50 等软底）上的同色系文字，
+     不得用于实底或画布正文。公式 = 语义色 80% + text-primary 20%，6 主题×明暗自动派生；
+     背景淡底 mix 比例不动，靠文字加深/提亮达到 3 主题×明暗 ≥4.5（axe 矩阵实测）。 */
+  --cst-text-accent-on-soft: color-mix(in srgb, var(--cst-palette-accent-primary) 80%, var(--cst-text-primary) 20%);
+  --cst-text-status-online-on-soft: color-mix(in srgb, var(--cst-palette-online) 80%, var(--cst-text-primary) 20%);
+  --cst-text-status-warning-on-soft: color-mix(in srgb, var(--cst-palette-warning) 80%, var(--cst-text-primary) 20%);
+  --cst-text-status-danger-on-soft: color-mix(in srgb, var(--cst-palette-hot) 80%, var(--cst-text-primary) 20%);
+
   /* Map markers */
   --cst-marker-user: var(--cst-palette-map-user);
   --cst-marker-group: var(--cst-palette-map-group);

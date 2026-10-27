@@ -1,6 +1,7 @@
 <script lang="ts">
 	// 成员操作底部 sheet：设管理员/取消、禁言/解除（时长）、封禁、移出。危险操作二次确认。
 	import * as Dialog from '@/components/ui/dialog';
+	import Button from '@/components/ui/button.svelte';
 	import { X, ShieldCheck, ShieldOff, Ban, UserMinus, VolumeOff, Volume2, Clock } from '@lucide/svelte';
 
 	export type MemberAction = 'set_admin' | 'unset_admin' | 'mute' | 'unmute' | 'ban' | 'remove';
@@ -56,14 +57,17 @@
 		style="box-shadow:var(--cst-elevation-modal);"
 	>
 		<div class="flex items-center justify-between px-1 pb-3">
-			<p class="text-md font-medium text-text-primary">{member?.name ?? '成员'}</p>
+			<div class="min-w-0">
+				<p class="text-md font-semibold text-text-primary">{member?.name ?? '成员'}</p>
+				<p class="mt-0.5 text-xs text-text-secondary">成员管理</p>
+			</div>
 			<button
 				type="button"
 				onclick={onClose}
-				class="hit-slop flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
+				class="hit-slop flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary focus-ring hover:bg-interactive-hover"
 				aria-label="关闭"
 			>
-				<X size={15} />
+				<X size={15} strokeWidth={1.75} />
 			</button>
 		</div>
 
@@ -109,10 +113,10 @@
 				<p class="mt-1 text-xs text-text-secondary">{confirmAction === 'ban' ? '封禁后该成员将被移出群组并加入封禁名单' : '移出后该成员需要重新申请加入'}</p>
 			</div>
 			<div class="mt-2 flex items-center justify-end gap-3">
-				<button type="button" onclick={() => { view = 'actions'; confirmAction = null; }} class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">取消</button>
-				<button type="button" onclick={() => { if (confirmAction) onSelect(confirmAction); }} class="hover-btn rounded-full px-5 py-2 text-sm font-medium text-text-on-accent outline-none focus-visible:ring-2 focus-visible:ring-status-danger enabled:bg-status-danger">
+				<Button type="button" variant="soft" size="md" onclick={() => { view = 'actions'; confirmAction = null; }}>取消</Button>
+				<Button type="button" variant="danger" size="md" onclick={() => { if (confirmAction) onSelect(confirmAction); }}>
 					确认{confirmAction === 'ban' ? '封禁' : '移出'}
-				</button>
+				</Button>
 			</div>
 		{/if}
 	</Dialog.Content>

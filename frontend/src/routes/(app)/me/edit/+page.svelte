@@ -2,12 +2,12 @@
 	// 简介长度契约：上限 150，超过 85%（128）进入告警色
 	const MAX_BIO = 150;
 	const BIO_WARN = Math.floor(MAX_BIO * 0.85);
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';	import { Camera, User, FileText, Check, Trash2 } from '@lucide/svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import { Camera, Check, Trash2 } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { logout } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
-	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
@@ -181,234 +181,261 @@
 		}
 	};
 </script>
+
 <svelte:head>
 	<title>编辑资料 · HotSpot</title>
 </svelte:head>
 
-
 <StandardPageLayout contentMaxWidth="48rem" contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
 		<PageHeader title="编辑资料" maxWidth="48rem" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
-	{#snippet trailing()}
-		<!-- 未登录隐藏保存(主区已是登录引导,顶栏悬挂保存按钮属不可用控件;Gemini 审查 r08) -->
-		{#if !needsAuth}
-		<Button
-			type="button"
-			variant={saved ? 'secondary' : 'primary'}
-			size="md"
-			class="hit-slop-44 rounded-full px-4 py-2"
-			loading={saving}
-			disabled={saved || saving || !userId}
-			onclick={() => void handleSave()}
-		>
-			{#if saved}
-				<Check class="size-3.5 text-accent-default" strokeWidth={2.5} />
-			{/if}
-			{saved ? '已保存' : '保存'}
-		</Button>
-		{/if}
-	{/snippet}
-	</PageHeader>
-{/snippet}
-
-	{#if loading}
-	<InlineLoading label="加载资料…" />
-	{:else if needsAuth}
-	<NeedsAuthNotice title="登录后编辑" description="登录后即可编辑你的资料" />
-	{:else if loadError}
-	<LoadError message={loadError} onRetry={() => reloadKey++} />
-	{:else}
-	<div class="animate-fade-in mx-auto flex w-full max-w-3xl flex-col gap-4">
-	<!-- Avatar section -->
-	<div class="relative rounded-xl overflow-hidden h-cover-height-sm">
-		<!-- 无封面数据时的占位底：主题 token 承载（vibrant 渐变 / forest 纸面纯色），页面只引用；
-		     上传能力开放前「更换横幅」收敛为图标按钮（禁用态） -->
-		<div class="absolute inset-0" style="background:var(--cst-surface-cover-placeholder);"></div>
-		<!-- 禁用必须可见可解释：原来只有 32px 图标钮 + title（触屏看不到 title，用户只见到
-		     一个点了没反应的相机），照 CreateGroupSheet「添加封面图片 / 即将开放」的既有模式，
-		     把「暂未开放」写在按钮上（全站复审 s3 P2-6）。
-	     底色用 media-scrim-strong（0.55 黑）而非 overlay-strong（vibrant 浅色仅 0.52）：
-	     白字压 overlay-strong 在浅色封面底实测仅 3.62–3.92（<4.5），换 scrim 后 ≥4.9。 -->
-		<button
-			type="button"
-			class="hover-btn hit-slop-44 absolute top-3 right-3 flex h-8 items-center justify-center gap-1.5 rounded-full px-2.5 focus-ring bg-surface-media-scrim-strong text-content-inverse disabled:opacity-muted"
-			style="backdrop-filter:blur(var(--cst-blur-md));"
-			disabled
-			aria-disabled="true"
-			title="更换横幅（暂未开放）"
-		>
-			<Camera class="size-4" strokeWidth={1.75} />
-			<span class="text-xxs leading-none">暂未开放</span>
-		</button>
-	</div>
-
-	<!-- Avatar edit -->
-	<div class="flex items-center gap-4 -mt-8">
-		<div class="relative shrink-0">
-			<Avatar src={avatar} name={nickname} size="xl" shape="rounded" class="border-heavy border-surface-primary" style="box-shadow:var(--cst-elevation-profile-avatar);" />
-			<button
-				type="button"
-				class="hover-btn hit-slop-44 absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm hover:shadow-raised-md"
-				aria-label="更换头像"
-				disabled={uploadingAvatar}
-				onclick={() => avatarInput?.click()}
-			>
-				<Camera class="size-3 text-text-on-accent"   strokeWidth={2} />
-			</button>
-		</div>
-		<input
-			bind:this={avatarInput}
-			type="file"
-			accept="image/jpeg,image/png,image/webp"
-			class="hidden"
-			onchange={(e) => void handleAvatarChange(e)}
-		/>
-		<div>
-			<p class="text-text-primary text-md">{nickname || '未设置昵称'}</p>
-			{#if userId}
-				<p class="text-text-secondary text-sm mt-0.5">@{userId}</p>
-			{/if}
-		</div>
-	</div>
-
-	<!-- 表单软岛（Round 3）：字段容器无描边软岛；输入框/错误态的功能边界保持不变 -->
-	<div class="flex flex-col gap-4 rounded-lg bg-surface-island p-4 shadow-xs">
-	<!-- Form fields — spec: nickname, bio, tags are the only user-editable profile fields. -->
-	<!-- 昵称：迁移至 forms/Input 原语（ui-components.md backlog #2 首个消费方）。 -->
-	<Input
-		id="edit-nickname"
-		value={nickname}
-		onChange={(v) => {
-			nickname = v.slice(0, 30);
-			// 输入即清除 inline 错误（对齐 AuthForm clearFieldError）
-			if (nicknameError) nicknameError = null;
-			if (formError) formError = null;
-		}}
-		placeholder="你的名字"
-		hasError={!!nicknameError}
-		errorText={nicknameError ?? undefined}
-		inputClass="w-full"
-	>
-		{#snippet labelSnippet()}
-			<!-- 字段标签不带图标：与「性别/兴趣标签」legend 同语言（同表单不混两种标签结构） -->
-			<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-nickname">昵称</label>
-		{/snippet}
-	</Input>
-
-	<div class="flex flex-col gap-1.5">
-		<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-bio">个人简介</label>
-		<div class="px-4 py-3 rounded-md input-surface">
-			<div>
-				<textarea
-					id="edit-bio"
-					bind:value={bio}
-					oninput={(e) => (bio = e.currentTarget.value.slice(0, MAX_BIO))}
-					placeholder="介绍一下自己…"
-					rows={3}
-					class="w-full bg-transparent resize-none text-text-primary text-sm leading-copy"
-				></textarea>
-				<div class="flex justify-end mt-1">
-					<span class="{bio.length > BIO_WARN ? 'text-status-warning' : 'text-text-secondary'} text-xs">
-						{bio.length}/{MAX_BIO}
-					</span>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- Gender（spec: updateAccount.gender，单选；不选 = 保持服务端当前值） -->
-	<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
-		<legend class="flex items-center gap-1.5 text-text-secondary text-xs uppercase tracking-field">
-			性别
-		</legend>
-		<div class="flex flex-wrap gap-2">
-			{#each GENDER_OPTIONS as g (g.id)}
-				<TagPill active={gender === g.id} onClick={() => (gender = gender === g.id ? null : g.id)}>
-					{g.label}
-				</TagPill>
-			{/each}
-		</div>
-	</fieldset>
-
-	{#if formError}
-		<p class="text-xs text-status-danger" role="alert">{formError}</p>
-	{/if}
-
-	<!-- Interest tags -->
-	<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
-		<legend class="flex items-center gap-1.5 text-text-secondary text-xs uppercase tracking-field">
-			兴趣标签
-			<span class="opacity-dim">({tags.size}/5)</span>
-		</legend>
-		<div class="flex flex-wrap gap-2">
-			{#each TAG_OPTIONS as t (t)}
-				{@const active = tags.has(t)}
-				{@const disabled = !active && tags.size >= 5}
-				<TagPill active={active} onClick={() => toggleTag(t)} disabled={disabled}>
-					#{t}
-				</TagPill>
-			{/each}
-			<!-- 账号上已有的、但不在本页 12 项固定选项里的标签（后端标签字典可大于前端选项表，
-			     如 mock 的「咖啡」）：必须一并渲染，否则图例按 tags.size 计数、而胶囊只显示
-			     子集，出现「(3/5) 却只有 2 个高亮」且该标签无法取消（全站复审 s3 P1-2）。
-			     这些标签恒为已选中态，点击即移除。 -->
-			{#each extraTags as t (t)}
-				<TagPill active onClick={() => toggleTag(t)}>
-					#{t}
-				</TagPill>
-			{/each}
-		</div>
-	</fieldset>
-
-	</div>
-
-	<!-- Danger zone（间距由根容器 gap-4 单侧提供，不再叠 mt 造成 28 双倍间距） -->
-	<div>
-		<p class="eyebrow mb-3">账号</p>
-		{#if deleteConfirmOpen}
-			<div class="flex flex-col gap-2.5 rounded-lg bg-danger-bg/40 p-4">
-				<p class="text-sm text-text-primary">删除不可恢复，请输入 <code class="font-mono text-xs text-status-danger">DELETE_MY_ACCOUNT</code> 确认：</p>
-				<!-- 注销确认码：compact 形态（input-surface 直贴 input 的紧凑位） -->
-				<Input
-					compact
-					type="text"
-					value={deleteConfirmText}
-					onChange={(v) => (deleteConfirmText = v)}
-					placeholder="DELETE_MY_ACCOUNT"
-					autocomplete="off"
-					ariaLabel="注销确认码"
-					inputClass="w-full px-3 py-2"
-				/>
-				<div class="flex justify-end gap-2">
-					<Button type="button" variant="secondary" size="sm" onclick={() => (deleteConfirmOpen = false)}>
-						取消
-					</Button>
+			{#snippet trailing()}
+				<!-- 未登录隐藏保存（主区已是登录引导，顶栏悬挂保存按钮属不可用控件）；
+				     移动端保存下沉到底部粘底操作条（拇指热区），页头不重复出现 -->
+				{#if !needsAuth && device !== 'mobile'}
 					<Button
 						type="button"
-						variant="danger"
-						size="sm"
-						disabled={deleteConfirmText !== 'DELETE_MY_ACCOUNT' || deleting}
-						loading={deleting}
-						onclick={() => void confirmDelete()}
+						variant={saved ? 'secondary' : 'primary'}
+						size="md"
+						class="hit-slop-44 rounded-full px-4 py-2"
+						loading={saving}
+						disabled={saved || saving || !userId}
+						onclick={() => void handleSave()}
 					>
-						确认注销
+						{#if saved}
+							<Check class="size-3.5 text-accent-default" strokeWidth={2.5} />
+						{/if}
+						{saved ? '已保存' : '保存'}
+					</Button>
+				{/if}
+			{/snippet}
+		</PageHeader>
+	{/snippet}
+
+	{#if loading}
+		<InlineLoading label="加载资料…" />
+	{:else if needsAuth}
+		<NeedsAuthNotice
+			spotlight
+			title="登录后编辑"
+			description="登录后即可编辑头像、昵称与简介，让附近的人更容易记住你。"
+		/>
+	{:else if loadError}
+		<LoadError message={loadError} onRetry={() => reloadKey++} />
+	{:else}
+		<div class="animate-fade-in flex w-full flex-col gap-4">
+			<!-- 身份条（R13）：头像编辑浮标 + 昵称/@账号。
+			     原 160px「暂未开放」封面占掉首屏且无任何功能，按评审意见整块删除；
+			     头像编辑仍需显式入口，故保留浮标 + 一句可预期说明。 -->
+			<section class="flex items-center gap-4 rounded-lg bg-surface-island p-4 shadow-xs" aria-label="头像与账号">
+				<div class="relative shrink-0">
+					<Avatar
+						src={avatar}
+						name={nickname}
+						size="xl"
+						shape="rounded"
+						class="border-heavy border-surface-primary"
+						style="box-shadow:var(--cst-elevation-profile-avatar);"
+					/>
+					<button
+						type="button"
+						class="hover-btn hit-slop-44 absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm hover:shadow-raised-md"
+						aria-label="更换头像"
+						disabled={uploadingAvatar}
+						onclick={() => avatarInput?.click()}
+					>
+						<Camera class="size-3 text-text-on-accent" strokeWidth={2} />
+					</button>
+				</div>
+				<input
+					bind:this={avatarInput}
+					type="file"
+					accept="image/jpeg,image/png,image/webp"
+					class="hidden"
+					onchange={(e) => void handleAvatarChange(e)}
+				/>
+				<div class="min-w-0 flex-1">
+					<p class="truncate text-md font-medium text-text-primary">{nickname || '未设置昵称'}</p>
+					{#if userId}
+						<p class="mt-0.5 truncate text-xs text-text-secondary">@{userId}</p>
+					{/if}
+					<p class="mt-1 text-xs text-text-secondary">
+						{uploadingAvatar ? '头像上传中…' : '点头像可更换照片'}
+					</p>
+				</div>
+			</section>
+
+			<!-- 基本资料：公开显示（昵称/简介） -->
+			<section aria-label="基本资料">
+				<div class="mb-3">
+					<h2 class="text-md font-semibold text-text-primary">基本资料</h2>
+					<p class="mt-1 text-xs leading-relaxed text-text-secondary">公开显示在你的主页上，附近的人会看到这些信息。</p>
+				</div>
+				<div class="flex flex-col gap-4 rounded-lg bg-surface-island p-4 shadow-xs">
+					<!-- 昵称：迁移至 forms/Input 原语 -->
+					<Input
+						id="edit-nickname"
+						value={nickname}
+						onChange={(v) => {
+							nickname = v.slice(0, 30);
+							if (nicknameError) nicknameError = null;
+							if (formError) formError = null;
+						}}
+						placeholder="你的名字"
+						hasError={!!nicknameError}
+						errorText={nicknameError ?? undefined}
+						inputClass="w-full"
+					>
+						{#snippet labelSnippet()}
+							<!-- 字段标签不带图标：与「性别/兴趣标签」legend 同语言 -->
+							<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-nickname">昵称</label>
+						{/snippet}
+					</Input>
+
+					<div class="flex flex-col gap-1.5">
+						<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-bio">个人简介</label>
+						<div class="px-4 py-3 rounded-md input-surface">
+							<div>
+								<textarea
+									id="edit-bio"
+									bind:value={bio}
+									oninput={(e) => (bio = e.currentTarget.value.slice(0, MAX_BIO))}
+									placeholder="介绍一下自己…"
+									rows={3}
+									class="w-full bg-transparent resize-none text-text-primary text-sm leading-copy"
+								></textarea>
+								<div class="flex justify-end mt-1">
+									<span class="{bio.length > BIO_WARN ? 'text-status-warning' : 'text-text-secondary'} text-xs">
+										{bio.length}/{MAX_BIO}
+									</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- 更多信息：性别/兴趣标签（都用于附近推荐与个人主页展示） -->
+			<section aria-label="更多信息">
+				<div class="mb-3">
+					<h2 class="text-md font-semibold text-text-primary">更多信息</h2>
+					<p class="mt-1 text-xs leading-relaxed text-text-secondary">帮助附近的人更快了解你，随时可以修改或清空。</p>
+				</div>
+				<div class="flex flex-col gap-4 rounded-lg bg-surface-island p-4 shadow-xs">
+					<!-- Gender（spec: updateAccount.gender，单选；不选 = 保持服务端当前值） -->
+					<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
+						<legend class="flex items-center gap-1.5 text-text-secondary text-xs uppercase tracking-field">
+							性别
+						</legend>
+						<div class="flex flex-wrap gap-2">
+							{#each GENDER_OPTIONS as g (g.id)}
+								<TagPill active={gender === g.id} onClick={() => (gender = gender === g.id ? null : g.id)}>
+									{g.label}
+								</TagPill>
+							{/each}
+						</div>
+					</fieldset>
+
+					<!-- Interest tags -->
+					<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
+						<legend class="flex items-center gap-1.5 text-text-secondary text-xs uppercase tracking-field">
+							兴趣标签
+							<span class="opacity-dim">({tags.size}/5)</span>
+						</legend>
+						<div class="flex flex-wrap gap-2">
+							{#each TAG_OPTIONS as t (t)}
+								{@const active = tags.has(t)}
+								{@const disabled = !active && tags.size >= 5}
+								<TagPill active={active} onClick={() => toggleTag(t)} {disabled}>
+									#{t}
+								</TagPill>
+							{/each}
+							<!-- 账号上已有的、但不在本页 12 项固定选项里的标签（后端标签字典可大于前端选项表，
+							     如 mock 的「咖啡」）：必须一并渲染，否则图例按 tags.size 计数、而胶囊只显示
+							     子集，出现「(3/5) 却只有 2 个高亮」且该标签无法取消（全站复审 s3 P1-2）。 -->
+							{#each extraTags as t (t)}
+								<TagPill active onClick={() => toggleTag(t)}>
+									#{t}
+								</TagPill>
+							{/each}
+						</div>
+					</fieldset>
+				</div>
+			</section>
+
+			{#if formError}
+				<p class="text-xs text-status-danger" role="alert">{formError}</p>
+			{/if}
+
+			<!-- Danger zone（间距由根容器 gap-4 单侧提供） -->
+			<div>
+				<p class="eyebrow mb-3">账号</p>
+				{#if deleteConfirmOpen}
+					<div class="flex flex-col gap-2.5 rounded-lg bg-danger-bg/40 p-4">
+						<p class="text-sm text-text-primary">删除不可恢复，请输入 <code class="font-mono text-xs text-status-danger">DELETE_MY_ACCOUNT</code> 确认：</p>
+						<!-- 注销确认码：compact 形态（input-surface 直贴 input 的紧凑位） -->
+						<Input
+							compact
+							type="text"
+							value={deleteConfirmText}
+							onChange={(v) => (deleteConfirmText = v)}
+							placeholder="DELETE_MY_ACCOUNT"
+							autocomplete="off"
+							ariaLabel="注销确认码"
+							inputClass="w-full px-3 py-2"
+						/>
+						<div class="flex justify-end gap-2">
+							<Button type="button" variant="secondary" size="sm" onclick={() => (deleteConfirmOpen = false)}>
+								取消
+							</Button>
+							<Button
+								type="button"
+								variant="danger"
+								size="sm"
+								disabled={deleteConfirmText !== 'DELETE_MY_ACCOUNT' || deleting}
+								loading={deleting}
+								onclick={() => void confirmDelete()}
+							>
+								确认注销
+							</Button>
+						</div>
+					</div>
+				{:else}
+					<Button
+						type="button"
+						variant="outline"
+						size="md"
+						class="hit-slop-44 w-full justify-start gap-2 rounded-lg bg-surface-island px-4 py-3.5 text-status-danger hover:text-text-status-danger-on-soft shadow-xs hover:bg-danger-bg"
+						onclick={() => (deleteConfirmOpen = true)}
+					>
+						<Trash2 class="size-4" strokeWidth={1.75} />
+						注销账号
+					</Button>
+				{/if}
+			</div>
+
+			<!-- 移动端底部粘底保存条：拇指区 + 安全区净空；桌面保存仍在页头 -->
+			{#if device === 'mobile'}
+				<div
+					class="sticky bottom-0 z-10 -mx-[var(--cst-page-gutter)] mt-1 border-t border-border-default px-4 pt-3"
+					style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));-webkit-backdrop-filter:blur(var(--cst-blur-md));padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
+				>
+					<Button
+						type="button"
+						variant={saved ? 'secondary' : 'primary'}
+						size="lg"
+						class="w-full gap-2"
+						loading={saving}
+						disabled={saved || saving || !userId}
+						onclick={() => void handleSave()}
+					>
+						{#if saved}
+							<Check class="size-4 text-accent-default" strokeWidth={2.5} />
+						{/if}
+						{saved ? '已保存' : saving ? '保存中…' : '保存资料'}
 					</Button>
 				</div>
-			</div>
-		{:else}
-			<Button
-				type="button"
-				variant="outline"
-				size="md"
-				class="hit-slop-44 w-full justify-start gap-2 rounded-lg bg-surface-island px-4 py-3.5 text-status-danger shadow-xs hover:bg-danger-bg"
-				onclick={() => (deleteConfirmOpen = true)}
-			>
-				<Trash2 class="size-4" strokeWidth={1.75} />
-				注销账号
-			</Button>
-		{/if}
-	</div>
-	</div>
+			{/if}
+		</div>
 	{/if}
 </StandardPageLayout>
-

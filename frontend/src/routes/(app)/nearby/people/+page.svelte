@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Map as MapIcon, MapPin, Search, Users } from '@lucide/svelte';
+	import { ChevronDown, Map as MapIcon, MapPin, Search, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
@@ -40,7 +40,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	const FILTER_TAGS = NEARBY_CATEGORIES;
 
 	let sort = $state('距离');
-	// 登出后 sort 可能残留「共同好友」，此时 TabBar 无匹配项，回落到「距离」
+	// 登出后 sort 可能残留「共同好友」（不再有对应选项）：展示值回落「距离」
 	const effectiveSort = $derived(sortOptions.includes(sort) ? sort : '距离');
 	let tagFilter = $state('全部');
 	let followedIds = $state<Set<string>>(new Set());
@@ -173,8 +173,6 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 		return next;
 	});
 
-	const isDesktop = $derived(platform.platform === 'desktop');
-	const isTablet = $derived(platform.platform === 'tablet');
 	const device = $derived(platform.platform);
 
 	// in-flight 去重（防连点双翻转，响应式供按钮 pending 态）；业务失败（code≠0）显式判 code 回滚
@@ -249,32 +247,48 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 				</div>
 			{/snippet}
 			{#snippet below()}
-				<!-- 排序：sticky header 内只保留排序；标签过滤放正文首行。
-				     桌面端排序并入正文分类行右端合并单行（r02：双行筛选+分割线吃首屏），移动/平板维持 -->
-				{#if device !== 'desktop'}
+				<!-- 页头 below 只保留「分类」这一层主筛选（全端一致、吸顶可达）；
+				     排序不再是同形 pill 行（会被误读为二级分类），降级为正文工具行右侧的下拉 -->
 				<div class="mt-3 pb-2">
-					<TabBar items={sortOptions.map((o) => ({ id: o, label: o }))} value={effectiveSort} onChange={(id) => (sort = id)} />
+					<TabBar
+						items={FILTER_TAGS.map((t) => ({ id: t, label: t }))}
+						value={tagFilter}
+						onChange={(id) => (tagFilter = id)}
+						class={device === 'desktop' ? 'flex-wrap' : 'pr-1'}
+					/>
 				</div>
-				{/if}
 			{/snippet}
 		</PageHeader>
 	{/snippet}
 
-	<div class="mb-4 flex items-center justify-between gap-4">
-		<TabBar
-			items={FILTER_TAGS.map((t) => ({ id: t, label: t }))}
-			value={tagFilter}
-			onChange={(id) => (tagFilter = id)}
-			class={device === 'desktop' ? 'flex-wrap' : 'overflow-x-auto pr-1'}
-		/>
-		{#if device === 'desktop'}
-			<div class="shrink-0">
-				<TabBar items={sortOptions.map((o) => ({ id: o, label: o }))} value={effectiveSort} onChange={(id) => (sort = id)} />
-			</div>
-		{/if}
+	<!-- 工具行：左为分区标题 + 计数（与 SectionHead 同档），右为排序下拉（文字链形态，
+	     避免与分类 pill 同形；原生命名 select 保键盘/读屏可达） -->
+	<div class="mb-3 flex items-center justify-between gap-3">
+		<h2 class="flex min-w-0 items-baseline gap-2">
+			<span class="text-md font-semibold text-text-primary">附近的人</span>
+			{#if !loading && !loadError}
+				<span class="shrink-0 text-xs font-medium tabular-nums text-text-secondary">{list.length}</span>
+			{/if}
+		</h2>
+		<label class="inline-flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
+			<span>排序</span>
+			<span class="relative inline-flex items-center">
+				<select
+					value={effectiveSort}
+					onchange={(e) => (sort = e.currentTarget.value)}
+					aria-label="排序方式"
+					class="cursor-pointer appearance-none rounded-sm bg-transparent py-0.5 pl-0.5 pr-4 text-xs font-medium text-accent-default focus-ring"
+				>
+					{#each sortOptions as option (option)}
+						<option value={option}>{option}</option>
+					{/each}
+				</select>
+				<ChevronDown class="pointer-events-none absolute right-0 size-3 text-accent-default" strokeWidth={1.75} aria-hidden="true" />
+			</span>
+		</label>
 	</div>
 
-		<div class={isTablet ? 'grid gap-6' : ''}>
+		<div>
 			<div class="min-w-0">
 				{#if loadError}
 					<LoadError message={loadError} onRetry={() => { clearPeopleProgress(); reloadKey++; }} />
@@ -283,7 +297,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 					<SkeletonFeed
 						variant="portrait"
 						count={10}
-						class="grid gap-4 {isTablet ? 'grid-cols-3' : 'grid-cols-2'} lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+						class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
 						label="加载附近用户…"
 					/>
 				{:else if !list.length}
@@ -291,12 +305,12 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 						 首页（同基准）之外的旧认知矛盾（线上实测困惑源）。 -->
 					<EmptyState
 						spotlight
-						bare
+						iconTone="accent"
 						title={anchor ? (anchor.name ? `「${anchor.name}」附近暂时没有用户` : '当前查看的位置附近暂时没有用户') : '附近暂时没有匹配的用户'}
 						description={anchor ? '正在按你设置的浏览位置筛选 5km 范围。' : undefined}
 					>
 						{#snippet icon()}
-							<Users size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
+							<Users class="size-7" strokeWidth={1.5} />
 						{/snippet}
 						{#snippet action()}
 							{#if anchor}
@@ -311,7 +325,8 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 						{/snippet}
 					</EmptyState>
 				{:else}
-					<div class="grid gap-4 {isTablet ? 'grid-cols-3' : 'grid-cols-2'} lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+					<!-- 网格列数：移动 2 / 平板 3（768 已核实正常）/ 桌面 4 -->
+					<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
 						{#each list.slice(0, visibleCount) as user, index (user.id)}
 							<UserCard
 								{user}

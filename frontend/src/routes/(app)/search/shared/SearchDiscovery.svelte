@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Clock, ArrowUpRight, Flame, TrendingUp, Users, UsersRound } from '@lucide/svelte';
+	import { Clock, ChevronRight, Flame, TrendingUp, Users, UsersRound } from '@lucide/svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
@@ -77,36 +78,16 @@
 	} = $props();
 </script>
 
-<!-- 宽屏双列：左（最近搜索 / 热门话题 / 人物推荐）+ 右（热门动态）。
-     此前全部单列堆在内容列里，宽屏时内容只占中间一条、右侧大片空白（用户截图反馈）。
-     窄屏自动回落单列，顺序与原先一致。断点用 `lg`（项目自定义 lg=1280 / xl=1536，
-     1397px 常见笔记本宽度只到 lg）。
-     纵向节奏（Round 9）：页顶留白只由页面 contentClassName pt-4 提供（原根顶距 20 与它重复，
-     已删）；分区之间 24 = 左列 `flex flex-col gap-6` + 移动端列间 `gap-y-6`（父 gap 单侧提供，
-     不再用子块顶距——否则首个渲染的分区会多叠一层顶距）。 -->
-<!-- 超宽屏（2xl ≥1792）改「发现区横向 4 分栏 + 热门动态整行 4 卡」两段式：
-     lg 双列时右栏热门动态远高于左栏，2560 下左栏底部大片留白、纵向重心偏右。
-     改为两段整行后左右高度接近（发现区 ~484 + 热门动态 ~560），内容横向铺满不塌中间。 -->
-<div class="grid gap-y-6 gap-x-8 lg:grid-cols-2 2xl:flex 2xl:flex-col">
+<!-- 发现态布局：默认单列；md（960）起双列（窄平板 768–959 仍单列，避免两列被压成窄条），
+     2xl 超宽屏改「发现区横向 4 分栏 + 热门动态整行 4 卡」两段式（左栏不再底部大片留白）。
+     卡头统一 SectionHead（icon + 标题 + 可选动作），不再手写 eyebrow 标题行。 -->
+<div class="grid gap-y-6 gap-x-8 md:grid-cols-2 2xl:flex 2xl:flex-col">
 <div class="flex flex-col gap-6 2xl:grid 2xl:grid-cols-4 2xl:items-start">
-	<!-- 最近搜索：页面直出（eyebrow 小标 + 行动），无卡片壳——空态/少内容时
-	     一张几乎空白的浮起卡会放大页面的空洞感。
-	     无记录时整块隐藏（Gemini 审查 r11：干瘪的「暂无记录」文案无信息量），
-	     首次搜索后自然出现 -->
+	<!-- 最近搜索：无记录时整块隐藏（干瘪的「暂无记录」无信息量），首次搜索后自然出现 -->
 	{#if recent.length > 0}
 	<section aria-label="最近搜索">
-		<div class="flex items-center justify-between">
-			<!-- 标题图标与「热门话题」Flame 对称（Gemini 审查 r11） -->
-			<h2 class="eyebrow flex items-center gap-1.5"><Clock class="size-3.5 text-accent-default" strokeWidth={1.75} />最近搜索</h2>
-			<button
-				type="button"
-				onclick={onClear}
-				class="link-btn hit-slop-44 -my-1 px-2 py-1 text-xs text-accent-default focus-ring"
-			>
-				清除
-			</button>
-		</div>
-		<ListContainer bordered class="mt-3 overflow-hidden">
+		<SectionHead title="最近搜索" icon={Clock} action="清除" onAction={onClear} />
+		<ListContainer bordered>
 			{#each recent as item (item)}
 				<ListItem
 					onClick={() => onChoose(item)}
@@ -115,7 +96,7 @@
 				>
 					<Clock class="size-4 text-text-secondary" strokeWidth={1.75} />
 					<span class="flex-1 text-sm text-text-primary">{item}</span>
-					<ArrowUpRight class="size-4 text-text-secondary" strokeWidth={1.75} />
+					<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
 				</ListItem>
 			{/each}
 		</ListContainer>
@@ -123,13 +104,10 @@
 	{/if}
 
 	{#if hotTopics.length > 0}
-		<!-- 热门话题：无界流式标签云，点击即搜，告别生硬方框束缚 -->
+		<!-- 热门话题：无界流式标签云（chip 本身即操作，不套卡片壳） -->
 		<section aria-label="热门话题">
-			<div class="flex items-center gap-1.5 mb-2.5">
-				<Flame class="size-3.5 text-accent-default" strokeWidth={1.75} />
-				<h2 class="eyebrow">热门话题</h2>
-			</div>
-			<div class="flex flex-wrap gap-2 pt-1">
+			<SectionHead title="热门话题" icon={Flame} />
+			<div class="flex flex-wrap gap-2">
 				{#each hotTopics as topic (topic)}
 					<TagPill onClick={() => onChooseTopic(topic)}>#{topic}</TagPill>
 				{/each}
@@ -138,24 +116,10 @@
 	{/if}
 
 	{#if hotUsers.length > 0}
-		<!-- 人物推荐：users/search 距离排序前 3（补发现态下半屏空白，P1-16）；
-		     行原语与首页附近用户行同语言（头像角标 + #tag · 距离副标题），尾部
-		     ArrowUpRight 与本页最近搜索/结果行导航语义一致 -->
+		<!-- 人物推荐：users/search 距离排序前 3（头像角标 + #tag · 距离 + 尾部导航箭头） -->
 		<section aria-label="人物推荐">
-			<div class="flex items-center justify-between mb-2.5">
-				<div class="flex items-center gap-1.5">
-					<Users class="size-3.5 text-accent-default" strokeWidth={1.75} />
-					<h2 class="eyebrow">人物推荐</h2>
-				</div>
-				<button
-					type="button"
-					onclick={onSeeAllUsers}
-					class="link-btn hit-slop-44 -my-1 px-2 py-1 text-xs text-accent-default focus-ring"
-				>
-					查看全部
-				</button>
-			</div>
-			<ListContainer bordered class="mt-3 overflow-hidden">
+			<SectionHead title="人物推荐" icon={Users} action="查看全部" onAction={onSeeAllUsers} />
+			<ListContainer bordered>
 				{#each hotUsers as u (u.id)}
 					<UserCardRow
 						name={u.name}
@@ -172,15 +136,15 @@
 							{@const hasTag = Boolean(u.tag)}
 							{@const hasDistance = Boolean(u.distance)}
 							{#if hasTag || hasDistance}
-								<p class="mt-1 flex items-center gap-1.5 text-xxs">
+								<p class="mt-1 flex items-center gap-1.5 text-xs">
 									{#if hasTag}<span class="text-accent-default">#{u.tag}</span>{/if}
 									{#if hasTag && hasDistance}<span class="opacity-muted text-text-secondary">·</span>{/if}
-									{#if hasDistance}<span class="text-text-secondary">{u.distance}</span>{/if}
+									{#if hasDistance}<span class="text-text-secondary tabular-nums">{u.distance}</span>{/if}
 								</p>
 							{/if}
 						{/snippet}
 						{#snippet actions()}
-							<ArrowUpRight class="size-4 text-text-secondary" strokeWidth={1.75} />
+							<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
 						{/snippet}
 					</UserCardRow>
 				{/each}
@@ -189,24 +153,14 @@
 	{/if}
 
 	{#if hotGroups.length > 0}
-		<!-- 推荐群组：丰富发现态维度，平衡左右栏纵向节奏 -->
+		<!-- 推荐群组：与人物推荐同栅格语言，平衡发现态左右栏纵向节奏 -->
 		<section aria-label="推荐群组">
-			<div class="flex items-center justify-between mb-2.5">
-				<div class="flex items-center gap-1.5">
-					<UsersRound class="size-3.5 text-accent-default" strokeWidth={1.75} />
-					<h2 class="eyebrow">推荐群组</h2>
-				</div>
-				{#if onSeeAllGroups}
-					<button
-						type="button"
-						onclick={onSeeAllGroups}
-						class="link-btn hit-slop-44 -my-1 px-2 py-1 text-xs text-accent-default focus-ring"
-					>
-						查看全部
-					</button>
-				{/if}
-			</div>
-			<ListContainer bordered class="mt-3 overflow-hidden">
+			{#if onSeeAllGroups}
+				<SectionHead title="推荐群组" icon={UsersRound} action="查看全部" onAction={onSeeAllGroups} />
+			{:else}
+				<SectionHead title="推荐群组" icon={UsersRound} />
+			{/if}
+			<ListContainer bordered>
 				{#each hotGroups as g (g.id)}
 					<ListItem
 						onClick={() => onOpenGroup?.(g.id)}
@@ -215,32 +169,33 @@
 					>
 						<Avatar src={g.avatar} name={g.name} size="md" shape="rounded" />
 						<div class="flex-1 min-w-0">
-							<p class="text-sm font-medium text-text-primary truncate">{g.name}</p>
-							<p class="text-xxs text-text-secondary mt-0.5 flex items-center gap-1.5 truncate">
+							<p class="truncate text-sm font-medium text-text-primary">{g.name}</p>
+							<p class="mt-0.5 flex items-center gap-1.5 truncate text-xs">
 								{#if g.category}<span class="text-accent-default">#{g.category}</span>{/if}
 								{#if g.category && g.memberCount > 0}<span class="opacity-muted text-text-secondary">·</span>{/if}
-								<span>{g.memberCount} 成员</span>
+								<span class="tabular-nums text-text-secondary">{g.memberCount} 成员</span>
 							</p>
 						</div>
-						<ArrowUpRight class="size-4 text-text-secondary" strokeWidth={1.75} />
+						<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
 					</ListItem>
 				{/each}
 			</ListContainer>
 		</section>
 	{/if}
-
 	</div>
+
 	{#if hotMoments.length > 0}
 	<div>
-		<!-- 热门动态：独立画廊卡片流，宽屏下响应式双列布局与左栏高度对齐 -->
+		<!-- 热门动态画廊：任何断点都 ≥2 张（避免单卡 + 大片空白）：
+		     手机单列（与首页信息流同宽）→ 平板起 2 列（768 单列页下不再出现整屏大卡）→
+		     lg 双列 2×2（与左栏发现区高度齐平）→ 2xl 与发现区同宽成 4 列一行 -->
 		<section aria-label="热门动态">
-			<div class="flex items-center gap-1.5 mb-2.5">
-				<TrendingUp class="size-3.5 text-accent-default" strokeWidth={1.75} />
-				<h2 class="eyebrow">热门动态</h2>
-			</div>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-3.5 sm:gap-4 mt-2">
-				{#each hotMoments as m (m.moment_id)}
-					<HomeFeedItem moment={m} showDistance={false} onClick={() => onOpenMoment(m.moment_id)} />
+			<SectionHead title="热门动态" icon={TrendingUp} />
+			<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 2xl:grid-cols-4">
+				{#each hotMoments as m, i (m.moment_id)}
+					<div>
+						<HomeFeedItem moment={m} showDistance={false} priority={i < 2} onClick={() => onOpenMoment(m.moment_id)} />
+					</div>
 				{/each}
 			</div>
 		</section>

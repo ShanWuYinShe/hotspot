@@ -1,16 +1,22 @@
 <script lang="ts">
-	import { Flag, X, Check } from '@lucide/svelte';
+	import { Flag, Check } from '@lucide/svelte';
 	import * as Dialog from '@/components/ui/dialog';
-	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import { createReport } from '@/api';
 	import type { ReportReason, ReportTargetType } from '@/api/types';
 	import { showToast } from '@/stores/toast.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
+	import { platform } from '@/stores/platform.svelte';
+	import { cn } from '@/lib/utils';
 
 	// ReportDialog — 举报理由选择 + 提交的全站唯一举报弹窗（bits-ui Dialog 底座）。
 	// 交互收敛自 users/[userId] 页既有实现（createReport + 原因选择按钮组），
 	// 供动态/评论（moments 详情）、群组（groups 详情）、消息（ChatView/GroupChatView）复用。
 	// spec: api_spec_report.md → reports/create（重复举报幂等回放 is_duplicate=true，均按成功提示）。
+	//
+	// R13：弹层形态按设备分派——移动端底部 sheet（拇指可达），桌面/平板居中模态
+	// （与 ConfirmDialog 同一套"图标头 + 标题 + 描述 + 动作行"语言）；理由改为单选行，
+	// 提交/取消为规范按钮（危险动作用 danger 实底，不再用描边文字钮）。
 
 	let {
 		open,
@@ -28,11 +34,11 @@
 	} = $props();
 
 	// 举报理由（ReportReason 枚举取常用四档；harassment 骚扰 / impersonation 冒充他人）
-	const REPORT_REASONS: { id: ReportReason; label: string }[] = [
-		{ id: 'spam', label: '垃圾信息' },
-		{ id: 'harassment', label: '骚扰攻击' },
-		{ id: 'impersonation', label: '冒充他人' },
-		{ id: 'other', label: '其他' }
+	const REPORT_REASONS: { id: ReportReason; label: string; hint: string }[] = [
+		{ id: 'spam', label: '垃圾信息', hint: '广告、刷屏、诱导分享' },
+		{ id: 'harassment', label: '骚扰攻击', hint: '辱骂、人身攻击、恶意骚扰' },
+		{ id: 'impersonation', label: '冒充他人', hint: '冒用身份或伪造信息' },
+		{ id: 'other', label: '其他', hint: '不适合社区的其他内容' }
 	];
 
 	let reason = $state<ReportReason>('spam');
@@ -42,6 +48,8 @@
 	$effect(() => {
 		if (open) reason = 'spam';
 	});
+
+	const isMobile = $derived(platform.platform === 'mobile');
 
 	const submit = async () => {
 		if (pending) return;
@@ -65,44 +73,65 @@
 
 <Dialog.Root {open} onOpenChange={(next) => (next ? undefined : onClose())}>
 	<Dialog.Content
-		side="bottom"
-		class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl p-5"
+		side={isMobile ? 'bottom' : 'center'}
+		class={cn(
+			'mx-auto w-full',
+			isMobile ? 'max-w-md rounded-t-sheet px-5 pt-5 pb-6' : 'max-w-md rounded-lg px-6 pt-6 pb-5'
+		)}
 		aria-label={`举报${targetLabel}`}
-		style="box-shadow:var(--cst-elevation-modal);"
 	>
-		<div class="flex items-center justify-between">
-			<div>
-				<p class="eyebrow">举报</p>
-				<p class="mt-1 text-md text-text-primary">举报{targetLabel}</p>
+		<!-- 图标头 + 标题 + 一句说明（与 ConfirmDialog 同语言） -->
+		<div class="flex items-start gap-3.5">
+			<div
+				class="flex size-11 shrink-0 items-center justify-center rounded-full bg-danger-bg text-text-status-danger-on-soft ring-1 ring-status-danger-border"
+			>
+				<Flag class="size-5" strokeWidth={1.75} />
 			</div>
-			<ActionIconButton icon={X} label="关闭" onClick={onClose} />
+			<div class="min-w-0 flex-1">
+				<Dialog.Title class="mt-0.5 text-lg font-semibold tracking-title text-text-primary">
+					举报{targetLabel}
+				</Dialog.Title>
+				<Dialog.Description class="mt-1 text-md leading-relaxed text-text-secondary">
+					请选择最符合的理由，我们会尽快核实处理。
+				</Dialog.Description>
+			</div>
 		</div>
-		<div class="mt-4 flex flex-col gap-1.5" aria-label="举报理由">
+
+		<!-- 理由单选行：左侧单选点 + 主文案 + 次要说明，选中 accent 淡底（on-soft 文字档） -->
+		<div class="mt-5 flex flex-col gap-1.5" role="radiogroup" aria-label="举报理由">
 			{#each REPORT_REASONS as r (r.id)}
 				{@const selected = reason === r.id}
-				<!-- 选中/未选中 hover 差异化（四态契约）：未选中 hover 淡底预览、选中 hover 加深 -->
 				<button
 					type="button"
-					aria-pressed={selected}
+					role="radio"
+					aria-checked={selected}
 					onclick={() => (reason = r.id)}
-					class="hover-btn flex items-center justify-between rounded-sm border px-3 py-2 text-left text-sm transition-colors duration-rapid ease-standard focus-ring
-						{selected
-						? 'border-accent-border bg-accent-soft text-accent-default hover:bg-interactive-active'
-						: 'border-border-default text-text-secondary hover:bg-interactive-hover'}"
+					class="group flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors duration-rapid focus-ring {selected
+						? 'bg-accent-soft'
+						: 'hover:bg-interactive-hover'}"
 				>
-					{r.label}
-					{#if selected}<Check class="size-3.5" strokeWidth={2.5} />{/if}
+					<span
+						class="flex size-4.5 shrink-0 items-center justify-center rounded-full border-2 transition-colors {selected
+							? 'border-accent-default bg-accent-default text-text-on-accent'
+							: 'border-border-strong'}"
+						aria-hidden="true"
+					>
+						{#if selected}<Check class="size-2.5" strokeWidth={3} />{/if}
+					</span>
+					<span class="min-w-0 flex-1">
+						<span class="block text-sm font-medium {selected ? 'text-text-primary' : 'text-text-primary'}">{r.label}</span>
+						<span class="mt-0.5 block truncate text-xs {selected ? 'text-text-accent-on-soft' : 'text-text-secondary'}">{r.hint}</span>
+					</span>
 				</button>
 			{/each}
-			<button
-				type="button"
-				disabled={pending}
-				onclick={() => void submit()}
-				class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-full border border-border-default py-2.5 text-sm font-medium text-status-danger focus-ring hover:bg-danger-bg disabled:pointer-events-none disabled:opacity-faint"
-			>
-				<Flag class="size-3.5" strokeWidth={1.75} />
-				{pending ? '提交中…' : '提交举报'}
-			</button>
+		</div>
+
+		<!-- 动作行：取消（次级）+ 提交举报（危险实底） -->
+		<div class="mt-5 flex items-center justify-end gap-2.5">
+			<Button type="button" variant="secondary" size="md" onclick={onClose}>取消</Button>
+			<Button type="button" variant="danger" size="md" loading={pending} onclick={() => void submit()}>
+				提交举报
+			</Button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

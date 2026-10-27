@@ -3,17 +3,20 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
-	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
-import PinMedia from '../shared/PinMedia.svelte';
-import * as Dialog from '@/components/ui/dialog';
+	import SectionHead from '@/components/home/SectionHead.svelte';
 	import Button from '@/components/ui/button.svelte';
+	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
+	import { PIN_COLORS, PIN_LABELS } from '../shared/location-shared';
+	import PinMedia from '../shared/PinMedia.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 
 	// 移动端地图「底部 Sheet 列表内容」：搜索建议 / 选中图钉 mini-card / 最近使用列表。
 	// 页面私有组件（colocate），由 map/LocationMobile.svelte 渲染（仅 snap !== 'min' 时显示）。
 	// 选中态经 $bindable 双向绑定；跨状态联动（选地点→移动地图中心）走 onSelectLoc 回调。
 	// 原「热门地点」Tab 为静态演示数据脚手架，已按产品决定移除。
+	//
+	// R13：分区标题收口到 SectionHead（rail 变体），最近记录空态升级为带图标的
+	// EmptyState（iconTone=accent），选中图钉卡与列表行的图标/按钮尺寸对齐。
 
 	let {
 		searchQuery = $bindable(''),
@@ -52,14 +55,14 @@ import * as Dialog from '@/components/ui/dialog';
 				pressed={isSelected}
 				onClick={() => onSelectLoc(r)}
 				ariaLabel={`选择地点 ${r.displayName}`}
-				class="flex list-row-standard items-center gap-3 px-4 py-3"
+				class="flex list-row-standard items-center gap-3 px-4 py-2.5"
 			>
-				<div class="flex items-center justify-center rounded-full shrink-0 size-8.5 {isSelected ? 'bg-surface-primary' : 'bg-accent-soft'}">
-					<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
-				</div>
-				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm"  style="flex:1">{r.displayName}</span>
+				<span class="flex size-9 shrink-0 items-center justify-center rounded-full {isSelected ? 'bg-surface-primary' : 'bg-accent-soft'}">
+					<MapPin class="size-3.5 text-accent-default" strokeWidth={1.75} />
+				</span>
+				<span class="{isSelected ? 'text-text-on-accent' : 'text-text-primary'} min-w-0 flex-1 truncate text-sm">{r.displayName}</span>
 				{#if isSelected}
-					<Check class="size-3.5 shrink-0 text-text-on-accent"   strokeWidth={2.5} />
+					<Check class="size-3.5 shrink-0 text-text-on-accent" strokeWidth={2.5} />
 				{/if}
 			</ListItem>
 		{/each}
@@ -73,46 +76,55 @@ import * as Dialog from '@/components/ui/dialog';
 	</EmptyState>
 {:else if searchQuery && searchResults.length === 0}
 	<!-- 空态统一 EmptyState（bare + 紧凑 py-8：地图 sheet 不是整页，不套 py-20） -->
-	<EmptyState bare title="未找到匹配地点" class="py-8">
+	<EmptyState bare title="未找到匹配地点" description="换个关键词或拖动地图再试试" class="py-8">
 		{#snippet icon()}
-			<MapPin size={24} class="opacity-faint text-text-secondary"   strokeWidth={1.5} />
+			<MapPin size={24} class="text-text-secondary opacity-faint" strokeWidth={1.5} />
 		{/snippet}
 	</EmptyState>
 {:else}
 	<div class="animate-fade-in">
 		<!-- Selected pin mini-card -->
 		{#if selectedPin}
-			<div class="flex items-center gap-3 mx-4 mb-2 p-3 rounded-md" style="background:{PIN_TONES[selectedPin.type].bg};border:var(--cst-border-width-hairline) solid {PIN_TONES[selectedPin.type].border};">
+			<div class="mx-4 mb-3 flex items-center gap-3 rounded-md bg-surface-island p-2.5 shadow-xs">
 				<PinMedia pin={selectedPin} size={42} />
-				<div class="flex-1 min-w-0">
-					<p class="text-text-primary text-sm">{selectedPin.name || selectedPin.title}</p>
-					<p class="text-text-secondary text-xs mt-px" >
-						{PIN_LABELS[selectedPin.type]}
-						{selectedPin.distance ? ` · ${selectedPin.distance}` : ''}
-						{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
+				<div class="min-w-0 flex-1">
+					<p class="truncate text-md font-medium text-text-primary">{selectedPin.name || selectedPin.title}</p>
+					<p class="mt-0.5 truncate text-xs">
+						<span class="font-medium" style="color:{PIN_COLORS[selectedPin.type]};">{PIN_LABELS[selectedPin.type]}</span>
+						<span class="text-text-secondary">
+							{selectedPin.distance ? ` · ${selectedPin.distance}` : ''}{selectedPin.tag ? ` · #${selectedPin.tag}` : ''}
+						</span>
 					</p>
 				</div>
-				<button type="button" class="hover-btn scale-btn px-2.5 py-1.5 rounded-full focus-ring shrink-0 text-sm" style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);" onclick={() => onOpenPinDetail(selectedPin)}>
+				<Button
+					variant="surface-accent"
+					size="sm"
+					class="hit-slop shrink-0"
+					onclick={() => onOpenPinDetail(selectedPin)}
+				>
 					查看
-				</button>
-				<button type="button" class="hover-btn hit-slop focus-ring shrink-0 ml-0.5" aria-label="清除选中地点" onclick={onClearPin}>
-					<X class="size-3.5 text-text-secondary"   strokeWidth={2} />
+				</Button>
+				<button
+					type="button"
+					class="hover-action -m-1 flex shrink-0 items-center justify-center rounded-full p-1 focus-ring"
+					aria-label="清除选中地点"
+					title="清除"
+					onclick={onClearPin}
+				>
+					<X class="size-4 text-text-secondary" strokeWidth={1.75} />
 				</button>
 			</div>
 		{/if}
 
 		<!-- 最近使用（搜索选点记录） -->
-		<div class="flex items-center justify-between px-4 pb-2">
-			<span class="text-xs text-text-secondary">最近使用</span>
-			{#if recentItems.length > 0}
-				<button
-					type="button"
-					class="link-btn -my-1 px-2 py-1 focus-ring text-xs text-text-secondary hover:text-accent-default"
-					onclick={() => (confirmClearOpen = true)}
-				>
-					清空
-				</button>
-			{/if}
+		<div class="px-4">
+			<SectionHead
+				variant="rail"
+				title="最近使用"
+				count={recentItems.length > 0 ? recentItems.length : undefined}
+				action={recentItems.length > 0 ? '清空' : undefined}
+				onAction={() => (confirmClearOpen = true)}
+			/>
 		</div>
 
 		<!-- List items -->
@@ -124,33 +136,42 @@ import * as Dialog from '@/components/ui/dialog';
 						pressed={isSelected}
 						onClick={() => onSelectLoc(loc)}
 						ariaLabel={`选择最近地点 ${loc.displayName}`}
-						class="flex list-row-standard items-center gap-3 px-4 py-3"
+						class="flex list-row-standard items-center gap-3 px-4 py-2.5"
 					>
-						<div class="flex items-center justify-center rounded-full shrink-0 bg-surface-primary size-9 border border-border-default shadow-raised-sm"  >
+						<div
+							class="flex size-9 shrink-0 items-center justify-center rounded-full"
+							style="background:{isSelected ? 'var(--cst-surface-primary)' : 'var(--cst-accent-soft)'};"
+						>
 							{#if loc.emoji}
 								<span class="text-lg" aria-hidden="true">{loc.emoji}</span>
 							{:else}
 								<MapPin class="size-3.5 text-accent-default" strokeWidth={1.75} />
 							{/if}
 						</div>
-						<div class="flex-1 min-w-0">
+						<div class="min-w-0 flex-1">
 							<p class="truncate {isSelected ? 'text-text-on-accent' : 'text-text-primary'} text-sm">{loc.displayName}</p>
 							{#if loc.desc}
-								<p class="{isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} text-xs mt-px" >{loc.desc}</p>
+								<p class="{isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'} mt-0.5 truncate text-xs">{loc.desc}</p>
 							{/if}
 						</div>
 						{#if isSelected}
-							<Check class="size-3.5 shrink-0 text-text-on-accent"   strokeWidth={2.5} />
+							<Check class="size-3.5 shrink-0 text-text-on-accent" strokeWidth={2.5} />
 						{:else}
-							<ChevronRight class="size-3.5 shrink-0 text-border-default" strokeWidth={1.5} />
+							<ChevronRight class="size-3.5 shrink-0 text-text-secondary" strokeWidth={1.5} />
 						{/if}
 					</ListItem>
 				{/each}
 			</ListContainer>
 		{:else}
-			<EmptyState bare title="暂无最近记录" class="py-8">
+			<EmptyState
+				iconTone="accent"
+				title="暂无最近记录"
+				description="搜索并选择地点后，会记录在这里"
+				iconSize={38}
+				class="py-2"
+			>
 				{#snippet icon()}
-					<Clock size={24} class="opacity-faint text-text-secondary"   strokeWidth={1.5} />
+					<Clock class="size-5" strokeWidth={1.5} />
 				{/snippet}
 			</EmptyState>
 		{/if}

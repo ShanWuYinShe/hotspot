@@ -42,7 +42,7 @@
 			sizeClasses[size],
 			disabled && 'pointer-events-none opacity-subtle',
 			active
-				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold active:bg-interactive-active'
+				? 'bg-accent-soft text-text-accent-on-soft border border-accent-border font-semibold active:bg-interactive-active'
 				: 'border border-border-default bg-surface-primary text-text-secondary hover:bg-accent-soft',
 			className
 		)}
@@ -61,7 +61,7 @@
 			'inline-flex items-center justify-center gap-1 rounded-full focus-ring leading-none transition-colors',
 			sizeClasses[size],
 			active
-				? 'bg-accent-soft text-accent-default border border-accent-border font-semibold'
+				? 'bg-accent-soft text-text-accent-on-soft border border-accent-border font-semibold'
 				: 'border border-border-default bg-surface-primary text-text-secondary',
 			className
 		)}

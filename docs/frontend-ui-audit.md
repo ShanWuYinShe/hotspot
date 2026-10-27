@@ -524,3 +524,81 @@
 | 404/错误页按钮（3） | 40 高 → eff 40 | 40 高视觉不变 → eff 52 | hit-slop |
 
 全量结果：8898 touch 35 页、8888 待复跑；详见 R11 report.md。
+
+## 2026-10-27 补充（Round 12：主题矩阵 a11y 收口 + on-soft 状态文字）
+
+**背景**：r11 门禁默认只扫 vibrant light；专项矩阵发现 forest light / vibrant dark / inkwash dark 等主题下「tint 软底 + 同色语义文字」有 serious color-contrast。修复采用语义 on-soft 文字 token，背景 mix 不动。
+
+### 矩阵命令
+
+- `bun run audit:a11y -- --matrix`：3 主题 × 2 明暗 × 桌面全量页面（35–38）+ 移动 5 页；聚合 report.json（matrix：每组合 pages/impact/errors）与 summary 矩阵表；serious/critical>0、axe 错误/加载失败 → exit 1。
+- 耗时：单 worker 约 25–30min；`--parallel 2` 约 15–20min（各 worker 独立 session/输出文件）。合并前专项门禁，**不进 audit:ui 默认**（默认仍 vibrant light）。
+- 快查：`--only /admin/reports,/me/edit --limit 2`（定向路由 + 每组页数），`--limit`/并行仅调试/专项。
+
+### 修复（全站同类组合，非逐页 hack）
+
+- 新增 `--cst-text-{accent,status-online,status-warning,status-danger}-on-soft` = 语义色 80% + text-primary 20%；registry 注册 `text-text-*-on-soft`；
+- 替换全站「tint 软底 + 同色文字」：TagPill 激活、admin pending/已确认/警告徽章、后台行内危险按钮（ROW_BTN_DANGER）、确认/举报/Toast/危险菜单项、资料卡徽章、TabBar 激活等（35 文件；含 hover/高亮态写法 `text-status-* hover:text-text-status-*-on-soft`）；
+- 背景 token/mix 不动；before→after 对比度（最差软底，含 danger /50）：vibrant light 5.33、vibrant dark 6.64、forest light 5.68、forest dark 5.83、inkwash light 5.18、inkwash dark 6.12（全部 ≥4.5）。
+- 鸿蒙：`ColorConfig` 新增 4 个 OnSoft 字段（同 80/20、palette 不变），`harmonyapp/scripts/check_status_parity.py` 断言双端 hex 与对比度。
+
+## 2026-10-28 补充（Round 13：全站视觉改版——锚点/同轴/安静动作）
+
+**范围**：Web 全站（外壳、认证、首页/附近/搜索、资料域、消息/通知、详情页、后台、地图）。方案与规则：`docs/design-system.md` §21 / skill `hotspot-frontend-style`「Round 13」/ `hotspot-frontend-layout`「内容轴」；本轮工作区证据根：`.workwork/ui-review-r13/`（before 基线 / after-<模块> / after-full 全量矩阵 / critique-design.md 独立评审 / DESIGN-SPEC.md）。
+**基线**：`9fc07a3b` + R12 未提交改动（状态色 on-soft 与主题矩阵门禁随本轮一起入库）。
+**鸿蒙**：本轮只做前端（用户指定）；R12 已同步的 on-soft token 与矩阵门禁不变，鸿蒙侧无新增改动。
+
+### 一、方法
+
+1. **基线取证**：3 主题 × 明暗 × 桌面 1440 / 平板 768·1024 / 移动 390 × 登录/访客/管理员三态，共 528 张（`before/`；含 detail/查询态/空态补充 `extra/`）。
+2. **独立评审**：另起只读评审代理通读矩阵 + 关键处像素实测 + 源码定位，输出 `critique-design.md`（P0 2 项 / P1 9 项 / P2 29 项，含可执行改法），Lead 逐项派单到模块。
+3. **并行实施**：6 个模块负责人（外壳/信息流/资料/消息/详情/后台）按 `DESIGN-SPEC.md` 与评审清单改造，Lead 提供共享原语（MetricRow strip、SectionHead、EmptyState、NeedsAuthNotice、Button soft、图片卡文字层级、Confirm/Report 弹层）。
+4. **验收**：全量矩阵重拍（`after-full/`）与 before 同口径对比；check/test/build；axe 主题矩阵；390 触控；文档与 skill 登记。
+
+### 二、关键改造（按母题）
+
+| 母题 | 落地 |
+|---|---|
+| 一个锚点 | `IdentityHero`（/me、/users、移动资料页）——封面 132/92 + 头像压封面 + 桌面两栏（左身份/右指标+动作），1024/1440 不再右半空；`/settings` 改单列分组（标题描述在上、软岛在下）；`/nearby/groups` 精选卡降高 192 + 右面板两栏；`/me/groups` 图片网格改横排列表限宽；关系/搜索/举报行补「第二信息位」 |
+| 同一张卡 | 全站图片卡统一：标题 `text-base sm:text-lg`、作者行头像 24–32 + 昵称 14、meta 12、动作计数 12 tabular、比例移动 3/4 / ≥600 4/5；MomentCard / HomeFeedItem / UserCard / GroupCard / 我的瞬间 全量对齐 |
+| 一条轴 | `/search` 删自设 max-w（标题 284 = 正文 284，修前 +116px）；`/admin` 概览卡片 284 = Tab 栏；`/me` 身份卡与正文同轴；`/moments/[id]` 粘底条与帖子卡逐 px 对齐；后台/详情页统一满宽 + page gutter |
+| 安静动作 | `ui/button variant="soft"` 成为唯一安静次级动作（编辑资料/设置/发消息/私信/拒绝/新会话/全部已读/表格行内）；`FollowButton`/`JoinButton` 两态收敛为 surface-accent + soft；描边只留筛选 chip 与功能边界 |
+| 指标与分区 | 灰药丸指标块全量替换为 `MetricRow strip`（附近枢纽/资料页/群组详情/后台 KPI/stats）；分区标题统一 `SectionHead`（icon + 标题 + count + 查看全部；rail 变体） |
+| 空态/访客 | `EmptyState` 升级（64px 软底图标砖 + 14 semibold 标题 + 12 描述 + extra 建议 chips）；`NeedsAuthNotice` 升级为访客引导面板（3 条价值点 + 主/次 CTA），/me、/messages、/notify、me 子页统一 |
+| 外壳/认证 | 登录/注册桌面双栏品牌页 + `/register` 深链（修外部 404）；404 品牌化（路径 sr-only）；分享页挂氛围画布；侧栏分组/选中态、移动底栏选中态与 FAB 光晕；地图左面板悬浮岛 + 类型图标砖 + 图例 + 移动面板收敛 |
+| 消息/通知 | 聊天页 `--cst-surface-chat` 画布、头部资料入口、气泡/日期分隔/输入条精修、空会话面板（引导 + 最近 3 条建议）、窄平板 ?peer= 深链修复；通知未读条 + 成对动作（接受 primary / 拒绝 soft）+ 右 rail MetricRow strip |
+| 管理后台 | 概览真仪表盘（KPI 行 + 9 模块卡 + 举报待办角标 + 最近审计活动）；10 页统一工具栏/表头/行 hover/行内动作；枚举中文化、目标列链到内容、audit 列折叠、stats 筛选标签化、config 布尔统一 Toggle |
+| 详情 | 瞬间详情帖子卡与评论层级重排、移动端动作行去重、粘底条同轴；群组详情 hero 层级、指标 strip、群公告摘要行、右 rail 动作重排、审核中状态 bug 修复 |
+
+### 三、评审 P0/P1 关闭情况
+
+- P0-1 设置页主题/地图源 segmented 文字截断：`TabBar` segmented 标签 `whitespace-nowrap` + ✓ 绝对定位 + 选中项隐藏 swatch；设置页整行宽度 —— 已修（1440/768/1024 × 三主题复验）。
+- P0-2 访客 /messages 白色实底页头横带：根因是 messages 页显式 `!bg-surface-primary`，访客分支去掉后与连续画布一致 —— 已修。
+- P1-1 次级动作三形态 → soft 唯一形态（`FollowButton`/`JoinButton`/rail/关系/通知/后台）—— 已收敛。
+- P1-2 内容轴漂移 → search/admin/me/详情 全部同轴 —— 已修。
+- P1-3 通知接受/拒绝权重 → primary + soft，移动端行尾同列 —— 已修。
+- P1-4 宽容器空岛 → IdentityHero 两栏 / settings 单列 / 精选卡两栏 / 行第二信息位 —— 已修。
+- P1-5 附近群组首屏 → 精选卡降高 + 两栏，网格首行信息可见 —— 已修。
+- P1-6 移动瞬间详情动作重复 → 移动只留粘底条 —— 已修。
+- P1-7 自己的内容无管理入口 → `ProfileMomentTile`/`ProfileGroupTile` 加 `…` 菜单（编辑/删除/退出群组 + ConfirmDialog）—— 已修。
+- P1-8 后台表格问题 → 列优先级折叠/操作列表头/枚举中文/目标链接/stats 筛选标签/config 布尔 Toggle —— 已修。
+- P1-9 1024×768 断点：宽平板移除 pb-28（/messages 内容盒 669→665 撑满）、首页操作行不再被 dock 遮挡 —— 已修。
+
+> 逐条证据见 `.workwork/ui-review-r13/after-*` 截图与各模块交付说明；未关闭项见下方「未完成」。
+
+### 四、门禁（最终态）
+
+- `bun run check`：0 error / 0 warning，eslint + theme 四联全 OK。
+- `bun run test`：112 files / 588 tests 全绿（含本轮新增 IdentityHero / ProfileCompleteness / AdminModuleCard / deep-link / ChatEmptyPanel / NeedsAuthNotice / MetricRow strip 等契约测试）。
+- `bun run build`：通过（`vite build` + adapter-static，7.6s）。
+- `bun run audit:a11y -- --matrix --parallel 2 --only '<11 条代表路由>' --base …`：**90 页 × 6 组合（vibrant/forest/inkwash × light/dark）全部 0 违规（serious/critical/moderate/minor 均为 0，0 加载错误）**；命令与原始报告见 `.workwork/browser-check/a11y-20261028-030606/`。
+  详情页种子 ID 在 mock/空库环境不可发现，本轮用 `AUDIT_DETAIL_MOMENT/USER/GROUP` 环境变量兜底（脚本已支持）。
+- `bun run audit:touch`（390×844）：**38 页 / 826 元素 / 计入分母 742 / ≥44 通过 695 / 登记例外 47 / 覆盖率 93.7% / 未登记离群 0 → PASS**（`.workwork/browser-check/touch-20261028-032912/`）。触控修复：admin/reports 目标链接加 hit-slop-44+py-0.5、share CTA 加 hit-slop、瞬间详情作者头像按钮加 hit-slop、群详情退出按钮加 hit-slop。
+- 视觉矩阵：`after-full/` 与 `before/` 同口径（528 张）逐页对比，全部图片有效（无空图/主题错位，脚本校验通过）。
+
+### 五、未完成 / 后续
+
+- 桌面页标题字号仍为 20（移动 24）；评审建议桌面提到 24 属跨全站口径变更（涉及 `PageHeader` 契约与 skill 一行描述），本轮未做，登记为后续候选。
+- 聊天输入条附件入口：无接口/功能，未加装饰死按钮。
+- 管理员侧部分弹层（发公告/群管理/成员操作）在 mock 普通成员登录态不可达，仅代码路径审查；建议主环境真数据补走查。
+- `/moments/[id]` 等详情页 a11y 官方脚本在 mock/空库环境取不到种子 ID：已给 `qa-common.sh` 加 `AUDIT_DETAIL_MOMENT/USER/GROUP` 环境变量兜底（本轮门禁即用此方式覆盖详情页）。

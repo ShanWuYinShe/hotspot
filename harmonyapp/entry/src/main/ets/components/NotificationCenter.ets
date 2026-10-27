@@ -718,7 +718,7 @@ export struct NotificationCenter {
             LucideIcon({
               icon: this.getNotificationIcon(notification.type),
               iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
-              color: this.getTypeColor(notification.type)
+              color: this.getTypeOnSoftColor(notification.type)
             })
           }
           .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
@@ -871,6 +871,18 @@ export struct NotificationCenter {
       case 'follow':
       default:
         return this.getPalette().accentBackground;
+    }
+  }
+
+  /** R12：soft 底上的类型图标用 on-soft 色（web text-status-*-on-soft 同口径） */
+  private getTypeOnSoftColor(type: string): string {
+    switch (this.mapTypeToCategory(type as NotifyType)) {
+      case 'reaction':
+        return this.getPalette().textStatusDangerOnSoft;
+      case 'nearby':
+        return this.getPalette().textStatusOnlineOnSoft;
+      default:
+        return this.getPalette().textAccentOnSoft;
     }
   }
 

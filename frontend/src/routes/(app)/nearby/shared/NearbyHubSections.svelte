@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
+	import { Sparkles, Users, UsersRound } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
@@ -48,16 +49,21 @@
 		onOpenUser?: (userId: string) => void;
 	} = $props();
 
-	const isDesktop = $derived(platform.platform === 'desktop');
-	const defaultUserPreview = $derived(isDesktop ? 6 : 4);
+	// 只有手机用「全宽行」（宽度有限，行式信息密度最高）；平板/桌面一律卡片网格，
+	// 否则单行横跨 1100px（名字贴左、关注贴右）会读成一排空岛（设计评审 P1-4）。
+	const devicePlatform = $derived(platform.platform);
+	const useRows = $derived(devicePlatform === 'mobile');
+	// 桌面 6（宽屏一行铺满）/ 平板与手机 4（移动端行式列表、平板卡片网格都取 4 条预览）
+	const defaultUserPreview = $derived(devicePlatform === 'desktop' ? 6 : 4);
 	const previewCount = $derived(userPreview ?? defaultUserPreview);
 </script>
 
 {#if users.length > 0}
 	<div data-hub-section="people">
-		<SectionHead title="附近的人" action="查看全部" onAction={onSeeAllUsers} />
-		{#if isDesktop}
-			<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3.5 sm:gap-4 mt-2">
+		<!-- 三段分区卡头统一 SectionHead（icon + count + 查看全部）；标题→内容间距由卡头 mb-3 承担 -->
+		<SectionHead title="附近的人" icon={Users} count={users.length} action="查看全部" onAction={onSeeAllUsers} />
+		{#if !useRows}
+			<div class="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6">
 				{#each users.slice(0, previewCount) as user (user.id)}
 					<UserCard
 						{user}
@@ -74,6 +80,7 @@
 				{isFollowed}
 				{isPending}
 				onToggle={onToggleFollow}
+				onOpenUser={onOpenUser}
 				{emptyHint}
 			/>
 		{/if}
@@ -82,8 +89,8 @@
 
 {#if moments.length > 0}
 	<div data-hub-section="moments">
-		<SectionHead title="附近瞬间" action="查看全部" onAction={onSeeAllMoments} />
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 mt-2">
+		<SectionHead title="附近瞬间" icon={Sparkles} count={moments.length} action="查看全部" onAction={onSeeAllMoments} />
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
 			{#each moments.slice(0, momentPreview) as moment (moment.moment_id)}
 				<HomeFeedItem
 					{moment}
@@ -97,7 +104,7 @@
 
 {#if groups.length > 0}
 	<div data-hub-section="groups">
-		<!-- 「附近群组」标题由轮播组件自带（含「更多」入口），此处不再重复标题 -->
-		<GroupCarousel {groups} onSeeAll={onSeeAllGroups} />
+		<!-- 「附近群组」标题由轮播组件自带（SectionHead + 查看全部），此处不再重复标题 -->
+		<GroupCarousel {groups} icon={UsersRound} count={groups.length} actionLabel="查看全部" onSeeAll={onSeeAllGroups} />
 	</div>
 {/if}

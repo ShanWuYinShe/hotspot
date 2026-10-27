@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { MoreHorizontal, Link2, Send, PencilLine, Trash2, Heart, MessageCircle, Bookmark, Share2, Check, Flag } from '@lucide/svelte';
+	import { MoreHorizontal, Link2, PencilLine, Trash2, Heart, MessageCircle, Bookmark, Share2, Check, Flag, EyeOff } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-import Skeleton from '@/components/data-display/Skeleton.svelte';
+	import Skeleton from '@/components/data-display/Skeleton.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
@@ -543,13 +544,13 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 									<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
 									编辑动态
 								</DropdownMenu.Item>
-								<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { deleteOpen = true; moreOpen = false; }}>
+								<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { deleteOpen = true; moreOpen = false; }}>
 									<Trash2 class="size-3.5" strokeWidth={1.75} />
 									删除动态
 								</DropdownMenu.Item>
 							{:else if moment.id}
 								<!-- 非作者可举报动态（spec: api_spec_report.md，目标属于当前用户时服务端 10400） -->
-								<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { reportTarget = { target_type: 'moment', target_id: momentId }; moreOpen = false; }}>
+								<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { reportTarget = { target_type: 'moment', target_id: momentId }; moreOpen = false; }}>
 									<Flag class="size-3.5" strokeWidth={1.75} />
 									举报动态
 								</DropdownMenu.Item>
@@ -566,8 +567,9 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 
 	<!-- 内容（gutter 由 SplitPageLayout 提供；全幅封面在 MomentPostBody 内负 margin 抵消） -->
 	{#if loading}
-		<!-- 详情首屏骨架屏：封面 → 作者行 → 正文 → 评论区；与 MomentPostBody 的纵向
-		     节奏同构（16/12），评论区用 decorative 骨架避免重复播报 -->
+		<!-- 详情首屏骨架屏：作者行 → 正文 → 媒体 → 操作条 → 评论区，与 MomentPostBody
+		     的真实卡片同构（同外壳/同纵向节奏），做到「骨架→内容零位移」；
+		     评论区用 decorative 骨架避免屏读器重复播报 -->
 		<div
 			class="mx-auto w-full max-w-4xl"
 			role="status"
@@ -575,33 +577,44 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 			aria-label="加载动态…"
 			data-skeleton-root
 		>
-			<Skeleton class="aspect-[4/3] w-full rounded-xl" />
-			<div class="mt-4 flex items-center gap-3">
-				<Skeleton class="size-9 shrink-0 rounded-full" />
-				<div class="flex min-w-0 flex-1 flex-col gap-1.5">
-					<Skeleton class="w-32 rounded-sm" style="height: 14px;" />
-					<Skeleton class="w-20 rounded-sm" style="height: 11px;" />
+			<div class="rounded-lg bg-surface-island p-4 shadow-xs sm:p-5 md:p-7">
+				<div class="flex items-center gap-3 pb-4">
+					<Skeleton class="size-11 shrink-0 rounded-full" />
+					<div class="flex min-w-0 flex-1 flex-col gap-1.5">
+						<Skeleton class="w-32 rounded-sm" style="height: 14px;" />
+						<Skeleton class="w-24 rounded-sm" style="height: 11px;" />
+					</div>
 				</div>
-			</div>
-			<div class="mt-4 flex flex-col gap-2">
-				<Skeleton class="w-full rounded-sm" style="height: 14px;" />
-				<Skeleton class="w-11/12 rounded-sm" style="height: 14px;" />
-				<Skeleton class="w-3/4 rounded-sm" style="height: 14px;" />
-			</div>
-			<div class="mt-6 border-t border-border-default pt-4">
-				<div class="mb-3 flex items-center gap-2">
-					<Skeleton class="h-4 w-20 rounded-sm" />
-					<Skeleton class="h-4 w-8 rounded-sm" />
+				<div class="flex flex-col gap-2 pb-4">
+					<Skeleton class="w-full rounded-sm" style="height: 14px;" />
+					<Skeleton class="w-11/12 rounded-sm" style="height: 14px;" />
+					<Skeleton class="w-3/4 rounded-sm" style="height: 14px;" />
 				</div>
-				<SkeletonList rows={4} leading={36} decorative />
+				<Skeleton class="aspect-[4/3] w-full rounded-lg" />
+				<div class="flex items-center gap-6 py-4">
+					<Skeleton class="h-4 w-16 rounded-sm" />
+					<Skeleton class="h-4 w-12 rounded-sm" />
+				</div>
+				<div class="border-t border-border-subtle/40 pt-6">
+					<Skeleton class="mb-3 h-4 w-24 rounded-sm" />
+					<SkeletonList rows={3} leading={36} decorative />
+				</div>
 			</div>
 		</div>
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else if !moment.id}
-		<EmptyState spotlight title="动态不存在" description="这条动态可能已被删除或没有权限查看。" bare>
+		<EmptyState
+			spotlight
+			iconTone="accent"
+			title="动态不存在"
+			description="这条动态可能已被删除，或你没有查看权限。"
+		>
 			{#snippet icon()}
-				<MoreHorizontal class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+				<EyeOff class="size-7" strokeWidth={1.5} />
+			{/snippet}
+			{#snippet action()}
+				<Button variant="soft" size="md" class="mt-1" onclick={() => smartBack()}>返回上一页</Button>
 			{/snippet}
 		</EmptyState>
 	{:else}
@@ -632,18 +645,19 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 	{#snippet footer()}
 		<!-- 移动端互动操作条（拇指热区）：点赞/评论/收藏/分享 44pt，内容区只读 -->
 		{#if platform.platform === 'mobile'}
-			<div class="flex shrink-0 items-stretch border-t border-border-default bg-surface-primary">
+			<!-- 移动端互动操作条（拇指热区 48pt）：点赞/评论/收藏/分享，计数 12px tabular 对齐 -->
+			<div class="flex shrink-0 items-stretch border-t border-border-subtle/50 bg-surface-primary px-[var(--cst-page-gutter)]">
 				<button
 					type="button"
 					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {liked
 						? 'text-accent-default'
-						: 'text-text-secondary active:text-accent-default'}"
+						: 'text-text-secondary'}"
 					aria-label={liked ? '取消点赞' : '点赞'}
 					aria-pressed={liked}
 					onclick={() => void toggleLike()}
 				>
-					<Heart class="size-5"  strokeWidth={1.5} fill={liked ? 'currentColor' : 'none'} />
-					<span class="text-sm">{likeCount}</span>
+					<Heart class="size-5" strokeWidth={1.75} fill={liked ? 'currentColor' : 'none'} />
+					<span class="text-sm font-medium tabular-nums">{likeCount}</span>
 				</button>
 				<button
 					type="button"
@@ -651,19 +665,19 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 					aria-label="查看评论"
 					onclick={focusComments}
 				>
-					<MessageCircle class="size-5"  strokeWidth={1.5} />
-					<span class="text-sm">{commentCount}</span>
+					<MessageCircle class="size-5" strokeWidth={1.75} />
+					<span class="text-sm font-medium tabular-nums">{commentCount}</span>
 				</button>
 				<button
 					type="button"
 					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {saved
 						? 'text-accent-default'
-						: 'text-text-secondary active:text-accent-default'}"
+						: 'text-text-secondary'}"
 					aria-label={saved ? '取消收藏' : '收藏'}
 					aria-pressed={saved}
 					onclick={() => void toggleSave()}
 				>
-					<Bookmark class="size-5"  strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
+					<Bookmark class="size-5" strokeWidth={1.75} fill={saved ? 'currentColor' : 'none'} />
 				</button>
 				<button
 					type="button"
@@ -672,16 +686,16 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 					onclick={() => void copyMomentLink()}
 				>
 					{#if shareStatus === 'copied'}
-						<Check class="size-5"  strokeWidth={1.75} />
+						<Check class="size-5" strokeWidth={2} />
 					{:else}
-						<Share2 class="size-5"  strokeWidth={1.5} />
+						<Share2 class="size-5" strokeWidth={1.75} />
 					{/if}
 				</button>
 			</div>
 		{/if}
 		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
 		{#if replyTarget}
-			<div class="mx-4 mb-1.5 flex items-center justify-between rounded-lg border border-border-subtle/70 bg-surface-subtle/80 px-3 py-1.5 backdrop-blur-xs">
+			<div class="mx-[var(--cst-page-gutter)] mb-1.5 flex items-center justify-between gap-3 rounded-md bg-surface-subtle/70 px-3 py-1.5">
 				<p class="truncate text-xs text-text-secondary font-medium">回复 @{replyTarget.user}</p>
 				<button
 					type="button"

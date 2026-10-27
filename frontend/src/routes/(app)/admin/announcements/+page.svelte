@@ -3,38 +3,53 @@
 	import type { AdminAnnouncementItem, AnnounceSeverity } from '@/api/types';
 	import { hasAdminPermission } from '@/stores/admin.svelte';
 	import { showToast } from '@/stores/toast.svelte';
+	import { Megaphone, Plus } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
+	import Toggle from '@/components/forms/Toggle.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER, ROW_BTN_PRIMARY } from '../shared/table';
+	import {
+		TABLE_WRAP, TABLE, TH, TH_SECONDARY, TH_SECONDARY_NUM, TR, TD, TD_SECONDARY, TD_SECONDARY_NUM,
+		TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER
+	} from '../shared/table';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 系统公告管理：列表 + 发布/编辑/删除。create 为契约幂等端点（client 层自动携带 Idempotency-Key）。
+	// R13：补「级别」筛选（TabBar，与其他模块的筛选态语言一致）、页面级动作右置、数字列右对齐；
+	// 级别徽章保留语义色，危险动作保持 soft danger。
 
 	const canRead = $derived(hasAdminPermission('admin.announcements.read'));
 	const canWrite = $derived(hasAdminPermission('admin.announcements.write'));
-
-	const list = createAdminList<AdminAnnouncementItem>(
-		(cursor, limit) => adminListAnnouncements({ severity: null, pagination: { limit, cursor } }),
-		() => 'all'
-	);
 
 	const SEVERITIES: { value: AnnounceSeverity; label: string }[] = [
 		{ value: 'info', label: '信息' },
 		{ value: 'warning', label: '警告' },
 		{ value: 'error', label: '严重' }
 	];
+	const SEVERITY_TABS = [{ id: '', label: '全部' }, ...SEVERITIES.map((s) => ({ id: s.value, label: s.label }))];
+	let severityFilter = $state<'' | AnnounceSeverity>('');
+
+	const list = createAdminList<AdminAnnouncementItem>(
+		(cursor, limit) =>
+			adminListAnnouncements({
+				severity: (severityFilter || null) as AnnounceSeverity | null,
+				pagination: { limit, cursor }
+			}),
+		() => severityFilter
+	);
+
 	const severityBadge: Record<AnnounceSeverity, string> = {
 		info: 'bg-surface-subtle text-text-secondary',
 		// 警告归位 warning 族而非 accent（r57：语义色各归其位,亮 accent 收给主操作）
-		warning: 'bg-status-warning-bg text-status-warning',
+		warning: 'bg-status-warning-bg text-text-status-warning-on-soft',
 		error: 'bg-status-danger text-text-on-accent'
 	};
 
@@ -119,21 +134,35 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.announcements.read 权限" bare />
+	<EmptyState title="无访问权限" description="需要 admin.announcements.read 权限" iconTone="accent">
+		{#snippet icon()}<Megaphone class="size-7" strokeWidth={1.5} />{/snippet}
+	</EmptyState>
 {:else}
 	<div class="flex flex-col gap-4">
-		{#if canWrite}
-			<div class="flex justify-end">
-				<button type="button" class={ROW_BTN_PRIMARY} onclick={openCreate}>发布公告</button>
-			</div>
-		{/if}
+		<!-- 工具栏：级别筛选（左）+ 页面级动作（右）；移动端上下堆叠 -->
+		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+			<TabBar items={SEVERITY_TABS} value={severityFilter} onChange={(id) => (severityFilter = id as '' | AnnounceSeverity)} />
+			{#if canWrite}
+				<Button type="button" variant="primary" size="sm" onclick={openCreate} class="hit-slop-44 self-end sm:self-auto">
+					<Plus class="size-3.5" strokeWidth={2} aria-hidden="true" />
+					发布公告
+				</Button>
+			{/if}
+		</div>
 
 		{#if list.loading}
 			<InlineLoading label="加载公告列表…" />
 		{:else if list.error}
 			<LoadError message={list.error} onRetry={list.reload} />
 		{:else if list.count === 0}
-			<EmptyState title="还没有系统公告" bare />
+			<EmptyState title="还没有系统公告" description="发布一条公告，让全站用户看到平台最新安排。" iconTone="neutral">
+				{#snippet icon()}<Megaphone class="size-7" strokeWidth={1.5} />{/snippet}
+				{#snippet action()}
+					{#if canWrite}
+						<Button type="button" variant="primary" size="sm" class="hit-slop-44" onclick={openCreate}>发布公告</Button>
+					{/if}
+				{/snippet}
+			</EmptyState>
 		{:else}
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
@@ -141,8 +170,8 @@
 						<tr>
 							<th scope="col" class={TH}>标题</th>
 							<th scope="col" class={TH}>级别</th>
-							<th scope="col" class={TH}>发布人</th>
-							<th scope="col" class={TH_SECONDARY}>浏览</th>
+							<th scope="col" class={TH_SECONDARY}>发布人</th>
+							<th scope="col" class={TH_SECONDARY_NUM}>浏览</th>
 							<th scope="col" class={TH_SECONDARY}>推送</th>
 							<th scope="col" class={TH_SECONDARY}>发布时间</th>
 							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
@@ -153,8 +182,8 @@
 							<tr class={TR}>
 								<td class={`${TD} max-w-64 truncate`} title={a.content}>{a.title}</td>
 								<td class={TD}><span class="badge {severityBadge[a.severity]}">{SEVERITIES.find((s) => s.value === a.severity)?.label}</span></td>
-								<td class={TD}>{a.created_by?.nickname ?? '—'}</td>
-								<td class={TD_SECONDARY}>{a.view_count}</td>
+								<td class={TD_SECONDARY}>{a.created_by?.nickname ?? '—'}</td>
+								<td class={TD_SECONDARY_NUM}>{a.view_count}</td>
 								<td class={TD_SECONDARY}>{a.send_push ? (a.push_sent_at ? '已推送' : '待推送') : '—'}</td>
 								<td class={TD_SECONDARY}>{formatDateTime(a.created_at)}</td>
 								<td class={TD_ACTIONS}>
@@ -207,10 +236,11 @@
 						</label>
 					</div>
 					{#if !editTarget}
-						<label class="flex items-center gap-2 text-sm text-text-primary">
-							<input type="checkbox" bind:checked={sendPush} />
-							同时推送通知
-						</label>
+						<!-- 布尔开关与系统配置/设置页统一用 Toggle -->
+						<div class="flex items-center justify-between gap-3 text-sm text-text-primary">
+							<span>同时推送通知</span>
+							<Toggle on={sendPush} label="同时推送通知" onToggle={() => (sendPush = !sendPush)} />
+						</div>
 					{/if}
 				</div>
 			</div>

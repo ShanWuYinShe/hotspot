@@ -61,6 +61,20 @@ describe('HomeFeedItem', () => {
 		expect(screen.getByText('2')).toBeTruthy();
 	});
 
+	it('R13 卡片语言：标题升档、时间不重复、hover 由 card-hover 原语承载', () => {
+		const { container } = render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {} } });
+		const title = screen.getByText('在老街手冲馆度过了一个悠闲的午后，咖啡香气扑鼻。');
+		// 标题档：text-base sm:text-lg semibold leading-tight（压图白字、遮罩不变）
+		expect(title.className).toContain('text-base');
+		expect(title.className).toContain('sm:text-lg');
+		expect(title.className).toContain('leading-tight');
+		// 时间只在作者行出现一次（此前作者行 + 底部元信息重复渲染同一时间）
+		expect(screen.getAllByText('1小时前').length).toBe(1);
+		// 整卡 hover 走 card-hover（主题化上浮 + 图片 1.045 缩放），不再手写 hover 样式
+		const card = container.firstElementChild as HTMLElement;
+		expect(card.className).toContain('card-hover');
+	});
+
 	it('点击行触发 onClick 回调', async () => {
 		const onClick = vi.fn();
 		render(HomeFeedItem, { props: { moment: mockMoment, onClick } });

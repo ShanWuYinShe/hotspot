@@ -7,7 +7,7 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
-	import MomentCard from '@/components/moments/MomentCard.svelte';
+	import ProfileMomentTile from '@/components/profile/ProfileMomentTile.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/moment-feed.svelte';
 	import { openComposer } from '@/stores/composer.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -15,9 +15,9 @@
 	import { formatCardTime } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
 
-	// 我的瞬间分区：与 nearby/moments 全面统一视觉语言。
-	// 共享 MomentCard 原语（封面 + 标签 + 作者 + 位置 + 正文 + 赞评藏操作栏），
-	// 采用标准响应式网格（桌面 3 列 / 平板 2 列 / 移动 1~2 列），告别生硬纯英文与割裂版面。
+	// 我的瞬间分区：与 nearby/moments 统一视觉语言（共享 MomentCard 原语），
+	// 并给每张卡加管理入口（R13 评审 P1-7 批准：编辑/删除，复用详情页同一实现）。
+	// 删除/编辑结果只改本地列表（不做整页重拉），避免操作后滚动位置丢失。
 
 	type Tab = 'posts' | 'liked' | 'saved';
 	const TABS: Tab[] = ['posts', 'liked', 'saved'];
@@ -40,12 +40,16 @@
 	const reacted = useReactedMoments(() => auth.user?.user_id);
 	const savedP = useFavoriteMoments();
 
+	// 本地删除/编辑覆盖（不重拉列表，保留滚动位置）
+	let removedIds = $state(new Set<string>());
+	let editedMap = $state<Record<string, { description: string; tags: string[] }>>({});
+
 	const postsMap = $derived({
 		posts: myPosts.posts || [],
 		liked: reacted.posts || [],
 		saved: savedP.posts || []
 	} as Record<Tab, GalleryMoment[]>);
-	const archive = $derived(postsMap[activeTab] || []);
+	const archive = $derived((postsMap[activeTab] || []).filter((m) => !removedIds.has(m.id)));
 	const loading = $derived(activeTab === 'posts' ? myPosts.loading : activeTab === 'liked' ? reacted.loading : savedP.loading);
 	const error = $derived(activeTab === 'posts' ? myPosts.error : activeTab === 'liked' ? reacted.error : savedP.error);
 	const needsAuth = $derived(
@@ -64,36 +68,48 @@
 		saved: { label: '收藏', note: '可随时继续整理' }
 	};
 	const tabItems: Array<{ id: Tab; label: string; count: number }> = $derived([
-		{ id: 'posts', label: '发布', count: (myPosts.posts || []).length },
-		{ id: 'liked', label: '喜欢', count: (reacted.posts || []).length },
-		{ id: 'saved', label: '收藏', count: (savedP.posts || []).length }
+		{ id: 'posts', label: '发布', count: myPosts.posts?.length ?? 0 },
+		{ id: 'liked', label: '喜欢', count: reacted.posts?.length ?? 0 },
+		{ id: 'saved', label: '收藏', count: savedP.posts?.length ?? 0 }
 	]);
 
 	// 将 GalleryMoment 转换为标准的 FeedItem，以完全适配并复用 MomentCard
 	const feedItems = $derived<FeedItem[]>(
-		(archive || []).map((m) => ({
-			id: m.id,
-			is_deleted: m.is_deleted ?? false,
-			user: m.user || account.nickname || '我',
-			avatar: m.avatar || account.avatar || '',
-			location: m.location || (activeTab === 'posts' ? account.locationName : '') || '',
-			tag: m.tag || '',
-			tags: m.tag ? [m.tag] : [],
-			content: m.title || '',
-			image: m.img || '',
-			likes: m.likes || 0,
-			comments: m.comments || 0,
-			time: m.created_at ? formatCardTime(m.created_at) : '',
-			liked: m.liked ?? (activeTab === 'liked'),
-			saved: m.saved ?? (activeTab === 'saved'),
-			likeEmoji: '👍'
-		}))
+		(archive || []).map((m) => {
+			const edited = editedMap[m.id];
+			const tags = edited ? edited.tags : m.tag ? [m.tag] : [];
+			return {
+				id: m.id,
+				is_deleted: m.is_deleted ?? false,
+				user: m.user || account.nickname || '我',
+				avatar: m.avatar || account.avatar || '',
+				location: m.location || (activeTab === 'posts' ? account.locationName : '') || '',
+				tag: tags[0] ?? '',
+				tags,
+				content: edited ? edited.description : m.title || '',
+				image: m.img || '',
+				likes: m.likes || 0,
+				comments: m.comments || 0,
+				time: m.created_at ? formatCardTime(m.created_at) : '',
+				liked: m.liked ?? (activeTab === 'liked'),
+				saved: m.saved ?? (activeTab === 'saved'),
+				likeEmoji: '👍'
+			};
+		})
 	);
 
 	const interactions = createFeedInteractions(() => feedItems);
 
 	function openMoment(id: string, focusComments = false) {
 		void goto(focusComments ? `${ROUTES.moment(id)}?from=me&focus=comments` : `${ROUTES.moment(id)}?from=me`);
+	}
+
+	function handleDeleted(id: string) {
+		removedIds = new Set([...removedIds, id]);
+	}
+
+	function handleEdited(id: string, updated: { description: string; tags: string[] }) {
+		editedMap = { ...editedMap, [id]: updated };
 	}
 </script>
 
@@ -103,7 +119,7 @@
 		<SkeletonFeed
 			variant="card"
 			count={6}
-			class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+			class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
 			label="加载我的瞬间…"
 		/>
 	{:else if needsAuth}
@@ -111,24 +127,26 @@
 	{:else if error}
 		<LoadError message={error} onRetry={retryActive} />
 	{:else if archive.length === 0}
-		<!-- 空态 -->
-		<EmptyState spotlight title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。" bare>
+		<!-- 空态：页面级，用带图标砖的空态（非 bare）+ 场景化装饰 -->
+		<EmptyState spotlight iconTone="accent" title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。">
 			{#snippet icon()}
-				<Grid3X3 size={24} />
+				<Grid3X3 class="size-7" strokeWidth={1.5} />
 			{/snippet}
 			{#snippet action()}
 				{#if activeTab === 'posts'}
-					<button type="button" onclick={openComposer} class="hover-btn rounded-full bg-accent-default px-4 py-2 text-sm font-medium text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring">
+					<button
+						type="button"
+						onclick={openComposer}
+						class="hover-btn rounded-full bg-accent-default px-4 py-2 text-sm font-medium text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring"
+					>
 						发布第一条
 					</button>
 				{/if}
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<!-- 分区工具行：分类 Tab + 记录计数。页面标题由外层 PageHeader 唯一提供
-		     （同族 /me/groups 无内容区大标题；此处曾重复渲染同名 h2 并吃掉首屏 1/3）。 -->
-		<!-- 去硬分隔线（Round 2）：工具行与网格之间只留留白（原 border-b 在连续画布上像一条页级横线）。 -->
-		<div class="flex flex-wrap items-center justify-between gap-3 pb-2">
+		<!-- 分区工具行：分类 Tab + 记录计数。页面标题由外层 PageHeader 唯一提供。 -->
+		<div class="flex flex-wrap items-center justify-between gap-3 pb-4">
 			<div class="min-w-0 flex-1" aria-label="瞬间分类">
 				<TabBar items={tabItems.map((t) => ({ id: t.id, label: t.label, count: t.count }))} value={activeTab} onChange={(id) => setActiveTab(id as Tab)} />
 			</div>
@@ -138,32 +156,28 @@
 			</div>
 		</div>
 
-		<!-- 规整动态网格：与 nearby/moments 完全对齐的 1~3 列对称网格，所有卡片统一复用 MomentCard。
-		     工具行 pb-4（分隔线上侧 16）与此处 pt-4（分隔线下侧 16）分居 border-b 两侧，
-		     是对称留白而非 mt+mb 双倍叠加，格子距卡片内容保持 16。 -->
-		<div class="pt-4">
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-				{#each interactions.items as item (item.id)}
-					{#if item.is_deleted}
-						<!-- 软删除墓碑（契约：客户端展示占位）：不可点、无操作，仅说明状态 -->
-						<div class="flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-lg bg-surface-subtle/60 px-4 text-center">
-							<p class="text-sm text-text-secondary">该瞬间已删除</p>
-						</div>
-					{:else}
-						<MomentCard
-							class="aspect-[3/4] h-auto rounded-lg"
-							{item}
-							liked={item.liked}
-							saved={item.saved}
-							onLike={() => void interactions.toggleLike(item.id)}
-							onSave={() => void interactions.toggleSave(item.id)}
-							onClick={() => openMoment(item.id)}
-							onCommentClick={() => openMoment(item.id, true)}
-						/>
-					{/if}
-				{/each}
-			</div>
+		<!-- 规整动态网格：与 nearby/moments 对齐（移动 2 列竖版卡 / 桌面 3–4 列） -->
+		<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+			{#each interactions.items as item (item.id)}
+				{#if item.is_deleted}
+					<!-- 软删除墓碑（契约：客户端展示占位）：不可点、无操作，仅说明状态 -->
+					<div class="flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-lg bg-surface-subtle/60 px-4 text-center">
+						<p class="text-sm text-text-secondary">该瞬间已删除</p>
+					</div>
+				{:else}
+					<ProfileMomentTile
+						{item}
+						liked={item.liked}
+						saved={item.saved}
+						onLike={() => void interactions.toggleLike(item.id)}
+						onSave={() => void interactions.toggleSave(item.id)}
+						onClick={() => openMoment(item.id)}
+						onCommentClick={() => openMoment(item.id, true)}
+						onDeleted={() => handleDeleted(item.id)}
+						onEdited={(updated) => handleEdited(item.id, updated)}
+					/>
+				{/if}
+			{/each}
 		</div>
 	{/if}
 </div>
-

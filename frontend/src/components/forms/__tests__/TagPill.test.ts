@@ -19,7 +19,7 @@ describe('TagPill', () => {
 		});
 		const btn = container.querySelector('button') as HTMLButtonElement;
 		expect(btn.className).toContain('bg-accent-soft');
-		expect(btn.className).toContain('text-accent-default');
+		expect(btn.className).toContain('text-text-accent-on-soft'); // R12：tint 软底文字走 on-soft
 	});
 
 	it('点击触发 onClick', async () => {

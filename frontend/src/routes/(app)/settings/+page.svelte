@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Bell, Flag, Lock, ChevronRight, LogOut, Info, MapPin, Palette, Moon, Sun, UserRound } from '@lucide/svelte';
+	import { Bell, Flag, Lock, ChevronRight, LogOut, Info, MapPin, Monitor, Palette, Moon, Sun, UserRound } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -16,6 +16,7 @@
 	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import SettingsSection from './SettingsSection.svelte';
+	import SettingsControlRow from './SettingsControlRow.svelte';
 	import AccountSecuritySection from './AccountSecuritySection.svelte';
 	import { auth, logout, requireAuth } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
@@ -176,7 +177,7 @@
 	// 地图源偏好（localStorage 持久化，本机生效；地图页快捷切换同步此值）
 	$effect(() => initMapSource());
 	const mapSourceDesc = $derived(
-		mapSourceStore.source === 'amap' ? '高德瓦片，国内街巷细节丰富' : 'OpenStreetMap，全球开源数据'
+		mapSourceStore.source === 'amap' ? '高德地图 · 国内地点更贴合' : 'OpenStreetMap · 全球开源数据'
 	);
 
 	// 当前主题的风格说明（THEME_OPTIONS.note：store 提供但此前页面未消费，s3 P2-5）
@@ -192,6 +193,7 @@
 		void goto(ROUTES.home);
 	};
 </script>
+
 <svelte:head>
 	<title>设置 · HotSpot</title>
 </svelte:head>
@@ -213,14 +215,11 @@
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
-		<!-- 宽度约束上移到 StandardPageLayout/PageHeader（同一 max-width），
-		     确保 2560 超宽屏下页头标题与正文左边缘对齐（此前正文内层 mx-auto
-		     居中、页头全宽，左边缘相差 605px）。 -->
-		<div class="flex w-full flex-col divide-y divide-border-subtle/40">
+		<!-- 单列分组（R13）：组标题/描述在上、内容软岛在下。
+		     原两栏布局在 1440 宽下会留出 130+px 空档，且右列被压窄导致分段控件文字截断。 -->
+		<div class="flex w-full flex-col">
 			<!-- Section 1: 账号与身份 -->
-			<SettingsSection title="账号信息" description="当前登录的账号信息" class="first:pt-0">
-				<!-- 卡片壳统一交 ListContainer bordered（与下方通知/隐私分组同语言），
-				     不再为单行信息手写白卡 -->
+			<SettingsSection title="账号信息" description="当前登录的账号信息">
 				<ListContainer bordered inset class="overflow-hidden">
 					{#if auth.isAuthenticated}
 						<ListItem class="flex items-center gap-3.5 px-4 py-3.5">
@@ -235,7 +234,7 @@
 						</ListItem>
 					{:else}
 						<ListItem class="flex items-center gap-3.5 px-4 py-3.5">
-							<div class="flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent-default shrink-0">
+							<div class="flex size-11 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft shrink-0">
 								<UserRound class="size-5" strokeWidth={1.5} />
 							</div>
 							<div class="min-w-0 flex-1">
@@ -253,110 +252,99 @@
 				</ListContainer>
 			</SettingsSection>
 
-			<!-- Section 2: 外观与显示 -->
+			<!-- Section 2: 外观与显示（选择器整行宽度，杜绝标签截断） -->
 			<SettingsSection title="外观与显示" description="自定义界面的视觉色彩与深浅模式，全局即时生效">
 				<ListContainer bordered inset class="overflow-hidden">
-					<ListItem class="flex flex-col justify-between gap-3 px-4 py-3.5 sm:flex-row sm:items-center">
-						<div class="flex items-center gap-3">
-							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
-								<Palette class="size-4 text-accent-default" strokeWidth={1.5} />
-							</div>
-							<div>
-								<p class="text-sm font-medium text-text-primary">应用主题</p>
-								<p class="text-xs text-text-secondary">
-									选择全局视觉色彩风格{#if themeNote} · {themeNote}{/if}
-								</p>
-							</div>
-						</div>
-						<TabBar
-							variant="segmented"
-							items={THEME_OPTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.icon, swatch: t.swatch }))}
-							value={theme.theme}
-							onChange={(id) => setTheme(id as AppTheme)}
-						/>
-					</ListItem>
+					<SettingsControlRow
+						title="应用主题"
+						description={themeNote ? `选择全局视觉色彩风格 · ${themeNote}` : '选择全局视觉色彩风格'}
+					>
+						{#snippet icon()}
+							<Palette class="size-4 text-accent-default" strokeWidth={1.5} />
+						{/snippet}
+						{#snippet control()}
+							<TabBar
+								variant="segmented"
+								size="md"
+								items={THEME_OPTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.icon, swatch: t.swatch }))}
+								value={theme.theme}
+								onChange={(id) => setTheme(id as AppTheme)}
+							/>
+						{/snippet}
+					</SettingsControlRow>
 
-					<ListItem class="flex flex-col justify-between gap-3 px-4 py-3.5 sm:flex-row sm:items-center">
-						<div class="flex items-center gap-3">
-							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
-								{#if theme.isDark}
-									<Moon class="size-4 text-accent-default" strokeWidth={1.5} />
-								{:else}
-									<Sun class="size-4 text-accent-default" strokeWidth={1.5} />
-								{/if}
-							</div>
-							<div>
-								<p class="text-sm font-medium text-text-primary">外观模式</p>
-								<p class="text-xs text-text-secondary">{colorSchemeDesc}</p>
-							</div>
-						</div>
-						<TabBar
-							variant="segmented"
-							items={COLOR_SCHEME_OPTIONS.map((o) => ({ id: o.id, label: o.label, icon: o.id === 'dark' ? Moon : o.id === 'light' ? Sun : undefined }))}
-							value={theme.colorScheme}
-							onChange={(id) => setColorScheme(id as ColorSchemeMode)}
-						/>
-					</ListItem>
+					<SettingsControlRow title="外观模式" description={colorSchemeDesc}>
+						{#snippet icon()}
+							{#if theme.isDark}
+								<Moon class="size-4 text-accent-default" strokeWidth={1.5} />
+							{:else}
+								<Sun class="size-4 text-accent-default" strokeWidth={1.5} />
+							{/if}
+						{/snippet}
+						{#snippet control()}
+							<TabBar
+								variant="segmented"
+								size="md"
+								items={COLOR_SCHEME_OPTIONS.map((o) => ({ id: o.id, label: o.label, icon: o.id === 'dark' ? Moon : o.id === 'light' ? Sun : Monitor }))}
+								value={theme.colorScheme}
+								onChange={(id) => setColorScheme(id as ColorSchemeMode)}
+							/>
+						{/snippet}
+					</SettingsControlRow>
 				</ListContainer>
 			</SettingsSection>
 
 			<!-- Section 3: 地图与位置 -->
-			<!-- 底图坐标系（GCJ-02/WGS-84）属开发契约，面向用户只描述体验差异，不暴露术语 -->
-			<SettingsSection title="地图与位置" description="选择地图页使用的底图：高德地图（国内坐标，免密钥，位置显示更贴合）或 OpenStreetMap（国际坐标，经本站中转加载）">
+			<SettingsSection
+				title="地图与位置"
+				description="选择地图页使用的底图，两种底图都能看到附近的人与瞬间，差别在地点名称与街道的贴合程度。"
+			>
 				<ListContainer bordered inset class="overflow-hidden">
-					<ListItem class="flex flex-col justify-between gap-3 px-4 py-3.5 sm:flex-row sm:items-center">
-						<div class="flex items-center gap-3">
-							<div class="flex size-9 items-center justify-center rounded-full icon-badge shrink-0">
-								<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
-							</div>
-							<div>
-								<p class="text-sm font-medium text-text-primary">地图源</p>
-								<p class="text-xs text-text-secondary">{mapSourceDesc}</p>
-							</div>
-						</div>
-						<TabBar
-							variant="segmented"
-							items={MAP_SOURCE_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
-							value={mapSourceStore.source}
-							onChange={(id) => setMapSource(id as MapSource)}
-						/>
-					</ListItem>
+					<SettingsControlRow title="地图源" description={mapSourceDesc}>
+						{#snippet icon()}
+							<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
+						{/snippet}
+						{#snippet control()}
+							<TabBar
+								variant="segmented"
+								size="md"
+								items={MAP_SOURCE_OPTIONS.map((o) => ({ id: o.id, label: o.id === 'amap' ? '高德' : 'OSM' }))}
+								value={mapSourceStore.source}
+								onChange={(id) => setMapSource(id as MapSource)}
+							/>
+						{/snippet}
+					</SettingsControlRow>
 				</ListContainer>
 			</SettingsSection>
 
 			<!-- Section 4: 通知偏好 -->
 			<SettingsSection title="通知偏好" description="管理新消息、互动提及与关注流的系统提醒方式">
 				<ListContainer bordered inset class="overflow-hidden">
-					<SettingRow
-						title="推送通知"
-						description="消息、提及与新动态提醒"
-						onRowClick={toggleNotif}
-					>
+					<SettingRow title="推送通知" description="消息、提及与新动态提醒" onRowClick={toggleNotif}>
 						{#snippet badge()}
 							<!-- 纯本机偏好（localStorage），后端 spec 无对应字段；与下方服务端
 							     开关（私密账号/位置共享）同列时必须标明生效范围，避免误以为已同步。 -->
-							<span class="badge bg-surface-subtle text-text-secondary">仅本机</span>
+							<span class="badge bg-surface-subtle text-text-secondary">仅保存在本设备</span>
 						{/snippet}
 						{#snippet icon()}
 							<Bell class="size-4 text-accent-default" strokeWidth={1.5} />
 						{/snippet}
 						<Toggle on={notif} onToggle={toggleNotif} label="推送通知" />
 					</SettingRow>
-				<SettingRow
-					title="附近新瞬间通知"
-					description="附近有人发布新瞬间时提醒我（服务端设置，需登录）"
-					onRowClick={toggleNearbyMomentNotify}
-				>
-					{#snippet icon()}
-						<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
-					{/snippet}
-					<Toggle on={nearbyMomentNotify} onToggle={toggleNearbyMomentNotify} label="附近新瞬间通知" />
-				</SettingRow>
+					<SettingRow
+						title="附近新瞬间通知"
+						description="附近有人发布新瞬间时提醒我{auth.isAuthenticated ? '' : '（登录后生效）'}"
+						onRowClick={toggleNearbyMomentNotify}
+					>
+						{#snippet icon()}
+							<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
+						{/snippet}
+						<Toggle on={nearbyMomentNotify} onToggle={toggleNearbyMomentNotify} label="附近新瞬间通知" />
+					</SettingRow>
 				</ListContainer>
 			</SettingsSection>
 
-			<!-- Section 5: 账号与安全（登录用户：修改密码/登录设备管理；游客：升级入口。
-			     区块自身登录门控，避免匿名暴露无意义的安全操作） -->
+			<!-- Section 5: 账号与安全（登录用户：修改密码/登录设备管理；游客：升级入口） -->
 			{#if auth.isAuthenticated}
 				<SettingsSection title="账号与安全" description="修改登录密码、管理活跃设备登录态。">
 					<ListContainer bordered inset class="overflow-hidden">
@@ -370,7 +358,7 @@
 				<ListContainer bordered inset class="overflow-hidden">
 					<SettingRow
 						title="私密账号"
-						description="开启后仅关注者可查看你的主页与生活瞬间（服务端设置，需登录）"
+						description="开启后仅关注者可查看你的主页与生活瞬间{auth.isAuthenticated ? '' : '（登录后生效）'}"
 						onRowClick={togglePrivateProfile}
 					>
 						{#snippet icon()}
@@ -381,7 +369,7 @@
 
 					<SettingRow
 						title="位置共享"
-						description="允许附近用户在发现雷达和地图中感知到你（服务端设置，需登录）"
+						description="允许附近用户在发现雷达和地图中感知到你{auth.isAuthenticated ? '' : '（登录后生效）'}"
 						onRowClick={toggleLocationSharing}
 					>
 						{#snippet icon()}
@@ -407,7 +395,7 @@
 			</SettingsSection>
 
 			<!-- Section 7: 系统与关于 -->
-			<SettingsSection title="系统与关于" description="客户端版本及当前设备会话状态。" class="last:pb-0">
+			<SettingsSection title="系统与关于" description="客户端版本及当前设备会话状态。">
 				<div class="flex flex-col gap-4">
 					<ListContainer bordered inset class="overflow-hidden">
 						<ListItem class="flex items-center justify-between gap-3 px-4 py-3.5">
@@ -430,16 +418,15 @@
 					</ListContainer>
 
 					{#if auth.isAuthenticated}
-						<div class="flex justify-end">
-							<Button
-								variant="ghost"
-								class="hover-btn hit-slop-44 h-auto gap-2 rounded-md bg-danger-bg/40 px-4 py-2 text-xs text-status-danger hover:bg-danger-bg"
-								onclick={() => (confirmLogoutOpen = true)}
-							>
-								<LogOut class="size-3.5" strokeWidth={1.75} />
-								退出登录当前账号
-							</Button>
-						</div>
+						<!-- 危险动作语气收敛：安静软填底 + danger 文字，不再用整块红底按钮抢视线 -->
+						<Button
+							variant="soft"
+							class="hit-slop-44 h-auto w-full justify-center gap-2 px-4 py-3 text-status-danger hover:bg-danger-bg"
+							onclick={() => (confirmLogoutOpen = true)}
+						>
+							<LogOut class="size-4" strokeWidth={1.75} />
+							退出登录当前账号
+						</Button>
 					{/if}
 				</div>
 			</SettingsSection>
@@ -451,7 +438,7 @@
 				title="退出登录？"
 				description="退出后将保持游客浏览，发布、关注等操作需要重新登录。"
 				icon={LogOut}
-				layout="stacked"
+				layout={device === 'mobile' ? 'stacked' : 'row'}
 				confirmLabel="退出登录"
 				onCancel={() => (confirmLogoutOpen = false)}
 				onConfirm={() => void handleLogout()}

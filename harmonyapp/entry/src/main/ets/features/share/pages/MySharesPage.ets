@@ -506,7 +506,10 @@ export struct MySharesPage {
   }
 
   private shareStatusColor(share: ShareListItem) {
-    return share.is_revoked ? this.getCurrentThemePalette().textTertiary : this.getCurrentThemePalette().accentBackground;
+    // R12：软底状态文字用 on-soft 色（对齐 web text-status-*-on-soft；状态语义保留）
+    return share.is_revoked
+      ? this.getCurrentThemePalette().textStatusWarningOnSoft
+      : this.getCurrentThemePalette().textStatusInfoOnSoft;
   }
 
   private shareStatusBackground(share: ShareListItem): ResourceColor {

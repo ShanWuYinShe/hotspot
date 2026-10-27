@@ -5,8 +5,9 @@
 	import { LOCATION_ANCHOR_UPDATED_EVENT, readLastLocation } from '@/lib/map-auto-locate';
 
 	// 侧栏底部「位置选择」锚点入口（地图门户）。
-	// 独立小卡片形态（tinted 底 + hairline 边框），与上方导航行明确区隔：
-	// hover 沿 card-hover 契约抬升投影；折叠时文字随侧栏宽度同步收起，图标磁贴居中不位移。
+	// R13：从「独立浮起小卡」收敛为安静的定位胶囊——去掉 backdrop 模糊与 hover 抬升投影，
+	// 只保留淡底 + hover 淡 accent 填充，避免和上方导航抢视觉重量；
+	// 折叠时文字随侧栏宽度同步收起，图标磁贴居中不位移。
 
 	let {
 		onClick,
@@ -41,16 +42,16 @@
 
 <button
 	type="button"
-	class="card-hover relative flex w-full items-center rounded-md bg-surface-subtle/60 p-1.5 text-left backdrop-blur-xs focus-ring hover:bg-surface-subtle {collapsed ? 'justify-center' : ''}"
+	class="relative flex w-full items-center rounded-md bg-surface-subtle/60 p-1.5 text-left transition-colors duration-rapid focus-ring hover:bg-accent-soft {collapsed ? 'justify-center' : ''}"
 	title={collapsed ? '位置选择' : undefined}
 	aria-label="位置选择"
 	onclick={onClick}
 >
 	<span
-		class="flex size-8 shrink-0 items-center justify-center rounded-sm transition-colors duration-standard ease-standard"
+		class="flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors duration-standard ease-standard"
 		style="background:var(--cst-accent-soft);"
 	>
-		<MapPin class="size-4 text-accent-default" strokeWidth={1.75} />
+		<MapPin class="size-3.5 text-accent-default" strokeWidth={1.75} />
 	</span>
 
 	<span

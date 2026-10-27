@@ -78,27 +78,27 @@
 		<!-- 作者行：头像 + 昵称 + 时间（压图态白字，fallback 用主题色） -->
 		<div class="flex min-w-0 items-center gap-2">
 			{#if item.avatar || item.user}
-				<Avatar src={item.avatar} name={item.user} size="xs" />
-				<span class="min-w-0 flex-1 truncate text-sm font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{item.user || '匿名用户'}</span>
+				<Avatar src={item.avatar} name={item.user} size="sm" />
+				<span class="min-w-0 flex-1 truncate text-md font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{item.user || '匿名用户'}</span>
 				{#if item.authorRelation === true}
-					<span class="shrink-0 text-xxs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">已关注</span>
+					<span class="inline-flex h-5 shrink-0 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none {onCover ? 'bg-surface-media-scrim-strong text-content-inverse' : 'bg-accent-soft text-text-accent-on-soft'}">已关注</span>
 				{/if}
 			{/if}
 			{#if item.time}
-				<span class="ml-auto shrink-0 text-xxs tabular-nums {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">{item.time}</span>
+				<span class="ml-auto shrink-0 text-xs tabular-nums {onCover ? 'text-content-inverse opacity-hover' : 'text-text-secondary'}">{item.time}</span>
 			{/if}
 		</div>
 
 		<!-- 正文：最多 2 行 -->
 		{#if item.content}
-			<p class="mt-1 line-clamp-2 leading-card text-xs {onCover ? 'text-content-inverse opacity-hover' : 'text-text-secondary'}">
+			<p class="mt-1.5 line-clamp-2 text-sm leading-card {onCover ? 'text-content-inverse opacity-hover' : 'text-text-secondary'}">
 				{item.content}
 			</p>
 		{/if}
 
 		<!-- 操作行：压图态白图标；红/主色态用填充+白描边（不依赖色相） -->
-		<div class="mt-1.5 flex items-center justify-between {onCover ? 'text-content-inverse' : 'text-text-secondary'}">
-			<div class="flex gap-7">
+		<div class="mt-2 flex items-center justify-between {onCover ? 'text-content-inverse' : 'text-text-secondary'}">
+			<div class="flex gap-6">
 				<button
 					type="button"
 					class="hover-action hit-slop-44 -my-2 flex items-center gap-1.5 py-2 focus-ring {liked
@@ -129,7 +129,7 @@
 					}}
 				>
 					<MessageCircle class="size-4.5" strokeWidth={1.5} />
-					<span class="text-xs">{item.comments}</span>
+					<span class="text-sm tabular-nums">{item.comments}</span>
 				</button>
 			</div>
 			<button

@@ -1,8 +1,11 @@
 <script lang="ts">
-import { formatCount } from '@/lib/utils';
 	import { Radar, ChevronRight } from '@lucide/svelte';
+	import MetricRow from '@/components/data-display/MetricRow.svelte';
+	import { formatCount } from '@/lib/utils';
 
-	// Hero 统计横幅——单一焦点 + 环境光晕。
+	// Hero 统计横幅——单一焦点 + 发丝分隔的数字节奏（R13「数字与秩序」母题）。
+	// 旧的三个灰底圆角指标块（卡片里的卡片）已去掉，改为标题行 / 发丝线 / MetricRow(strip)：
+	// 数字 24px semibold tabular 是唯一视觉锚点，标签 12px 次级，靠竖发丝线建立秩序。
 
 	let {
 		onExplore,
@@ -18,11 +21,19 @@ import { formatCount } from '@/lib/utils';
 	// 恒为「5km 内 · 实时更新」，用户自定义锚点后看不到当前基准，与附近页
 	// 列表数对不上时无从解释）。
 	const rangeLabel = $derived(locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新');
+
+	// 指标项：数值字符串化交给 MetricRow 统一排版；仅「在线」用一处状态强调（2px 圆点 + 状态色），
+	// 其余保持中性，避免"每个数字都染色"。
+	const metrics = $derived([
+		{ value: formatCount(stats.nearby), label: '人' },
+		{ value: formatCount(stats.active), label: '瞬间' },
+		{ value: formatCount(stats.online), label: '在线', tone: 'positive' as const }
+	]);
 </script>
 
 	<button
 		type="button"
-		class="group hover-btn tap-97 rounded-lg bg-surface-island shadow-xs hover:shadow-raised-sm cursor-pointer overflow-hidden text-left w-full py-4.5 px-5 transition-all"
+		class="group hover-btn tap-97 rounded-lg bg-surface-island shadow-xs hover:shadow-raised-sm cursor-pointer overflow-hidden text-left w-full pt-4 pb-4 px-5 transition-all"
 		aria-label="查看附近的人"
 		onclick={onExplore}
 	>
@@ -30,16 +41,16 @@ import { formatCount } from '@/lib/utils';
 		     右箭头 shrink-0 锁定；定位名过长时副标题单行截断，不顶出箭头、不贴卡边裁字。 -->
 		<div class="flex items-center justify-between gap-2">
 			<div class="flex min-w-0 flex-1 items-center gap-3">
-				<!-- 雷达声纳声波呼吸环动效 -->
+				<!-- 雷达声纳声波呼吸环动效（单处动效：徽章圆点保持静态，避免叠两层动画） -->
 				<div class="relative flex shrink-0 items-center justify-center rounded-full bg-accent-default size-10 shadow-sm">
 					<span class="absolute inset-0 rounded-full bg-accent-default/30 animate-ping"></span>
 					<Radar class="relative size-5 text-text-on-accent transition-transform duration-standard group-hover:scale-110" strokeWidth={2} />
 				</div>
 				<div class="min-w-0">
 					<div class="flex items-center gap-2">
-						<p class="text-sm font-semibold text-text-primary">实时附近</p>
-						<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-status-online/10 text-status-online text-xxs font-medium">
-							<span class="size-1.5 rounded-full bg-status-online animate-pulse"></span>
+						<p class="text-md font-semibold text-text-primary">实时附近</p>
+						<span class="inline-flex h-5 items-center justify-center gap-1 rounded-full bg-status-online/10 px-2 text-xxs font-medium leading-none text-text-status-online-on-soft">
+							<span class="size-1.5 rounded-full bg-status-online"></span>
 							实时雷达
 						</span>
 					</div>
@@ -51,19 +62,6 @@ import { formatCount } from '@/lib/utils';
 			<ChevronRight class="size-4 shrink-0 text-text-secondary transition-transform duration-rapid group-hover:translate-x-0.5 group-hover:text-accent-default" strokeWidth={1.5} />
 		</div>
 
-		<!-- Stats row：现代通透 Bento 指标列，告别生硬方框与切线 -->
-		<div class="grid grid-cols-3 mt-4 gap-2.5">
-			<div class="flex flex-col items-center justify-center py-3 rounded-xl bg-surface-subtle/40 backdrop-blur-xs transition-colors group-hover:bg-surface-subtle/70">
-				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary">{formatCount(stats.nearby)}</span>
-				<span class="text-xxs mt-1.5 text-text-secondary font-medium">人附近</span>
-			</div>
-			<div class="flex flex-col items-center justify-center py-3 rounded-xl bg-surface-subtle/40 backdrop-blur-xs transition-colors group-hover:bg-surface-subtle/70">
-				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary">{formatCount(stats.active)}</span>
-				<span class="text-xxs mt-1.5 text-text-secondary font-medium">瞬间</span>
-			</div>
-			<div class="flex flex-col items-center justify-center py-3 rounded-xl bg-surface-subtle/40 backdrop-blur-xs transition-colors group-hover:bg-surface-subtle/70">
-				<span class="text-2xl font-bold leading-none tracking-tight tabular-nums text-text-primary">{formatCount(stats.online)}</span>
-				<span class="text-xxs mt-1.5 text-text-secondary font-medium">在线</span>
-			</div>
-		</div>
+		<!-- 数字与秩序：标题行 → 发丝线 → 三等分指标（无灰底块、无卡片里的卡片） -->
+		<MetricRow items={metrics} variant="strip" class="mt-3.5 border-t border-border-subtle pt-4" />
 	</button>

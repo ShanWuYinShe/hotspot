@@ -4,15 +4,16 @@
 	import { cn } from '@/lib/utils';
 
 	// Button — 全站统一按钮原语（components/ui）。
-	// variant：primary（accent 实底）/ secondary（面板描边）/ outline（透明描边）/
-	//          ghost（透明）/ danger（状态色实底）/ surface-accent（accent 淡底 Tonal：
+	// variant：primary（accent 实底）/ secondary（面板描边）/ soft（中性软填，安静次级动作）/
+	//          outline（透明描边）/ ghost（透明）/ danger（状态色实底）/
+	//          surface-accent（accent 淡底 Tonal：
 	//          列表次级动作，实体蓝让位全局主流程——对齐鸿蒙 surface-accent 同名变体）。
 	// size：sm=32 / md=40 / lg=44 高度，字号与内边距对齐既有页面按钮。
 	// loading：显示统一 spinner + aria-busy，并阻止重复提交。
 	// 焦点环由 focus-ring 统一提供；hover/tap 由 hover-btn 承载。
 	// 调用方 className 经 tailwind-merge 合并，可覆盖圆角/宽度等布局类。
 
-	type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'surface-accent';
+	type ButtonVariant = 'primary' | 'secondary' | 'soft' | 'outline' | 'ghost' | 'danger' | 'surface-accent';
 	type ButtonSize = 'sm' | 'md' | 'lg';
 
 	// hover 反馈走组件级 token（全局 button hover 填充只兜底透明裸按钮）：
@@ -22,6 +23,10 @@
 	const VARIANTS: Record<ButtonVariant, string> = {
 		primary: 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md',
 		secondary: 'bg-surface-primary text-text-primary border border-border-default shadow-raised-sm hover:border-border-strong',
+	// soft：安静次级动作（R13 统一口径）——中性软填底、无描边、hover 全量加深。
+	// 用于页面/行内的次级动作（查看/发消息/私信/拒绝/新会话/展开），替代各页手写的
+	// bg-surface-subtle/60 软填胶囊与描边胶囊两种形态；不承担主操作身份。
+		soft: 'bg-surface-subtle/60 text-text-primary hover:bg-surface-subtle',
 		outline: 'bg-transparent text-text-primary border border-border-default hover:border-border-strong',
 		ghost: 'bg-transparent text-text-primary hover:bg-interactive-hover',
 	// danger 实底文字走 text-text-on-accent（随明暗翻转：light 白 / dark 深），而非

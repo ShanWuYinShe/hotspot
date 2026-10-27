@@ -1,4 +1,4 @@
-// PinMedia 契约测试：用户头像/动态缩略/marker 与选中底。
+// PinMedia 契约测试：类型图标砖承载用户头像/动态缩略/类型图标，选中态换中性底。
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/svelte';
 import PinMedia from '../PinMedia.svelte';
@@ -20,7 +20,7 @@ describe('PinMedia', () => {
 		expect(container.querySelector('img')?.getAttribute('alt')).toBe('湖畔');
 	});
 
-	it('群组图钉渲染 marker SVG 与淡底', () => {
+	it('群组图钉使用类型图标砖（marker bg + 类型图标）', () => {
 		const { container } = render(PinMedia, {
 			props: { pin: { id: 'p1', type: 'group', lat: 30.5, lng: 117.5 } as never }
 		});
@@ -28,7 +28,7 @@ describe('PinMedia', () => {
 		expect((container.firstElementChild as HTMLElement).style.background).toContain('var(--cst-marker-');
 	});
 
-	it('selected 时 marker 底换实色', () => {
+	it('selected 时类型砖底换中性面（避免与 accent 行底撞色）', () => {
 		const { container } = render(PinMedia, {
 			props: { pin: { id: 'p1', type: 'group', lat: 30.5, lng: 117.5 } as never, selected: true }
 		});

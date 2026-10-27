@@ -24,6 +24,7 @@
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
 	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import PinMedia from '../shared/PinMedia.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import LocationDesktopPanel from './LocationDesktopPanel.svelte';
 
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认，由 LocationDesktopPanel 承载）
@@ -269,9 +270,12 @@
 	}
 </script>
 
-<div class="flex h-full bg-surface-page">
-	<!-- ══ LEFT SIDEBAR ══ -->
-	<div class="flex flex-col shrink-0 w-85 border-r border-border-default"  >
+<!-- 全画布地图页（外壳已禁用滚动）：R13 改为「悬浮左面板 + 圆角地图卡」，
+     用投影与 12px 留白替代原来的整条 border-r 分隔线（页面级硬分隔线契约）；
+     地图引擎/投影逻辑不变，MapCanvas 仍是唯一瓦片层。 -->
+<div class="flex h-full gap-3 bg-surface-page p-3">
+	<!-- ══ LEFT PANEL — 悬浮内容岛（无硬分隔线） ══ -->
+	<div class="flex w-85 shrink-0 flex-col overflow-hidden rounded-lg bg-surface-island shadow-raised-md">
 		<LocationDesktopPanel
 			bind:searchQuery
 			{searchResults}
@@ -287,10 +291,10 @@
 		/>
 	</div>
 
-	<!-- ══ MAP PANEL ══ -->
+	<!-- ══ MAP PANEL — 圆角地图卡（留白节奏与左面板一致） ══ -->
 	<!-- 地图空白点击由 MapCanvas onMapTap 承担（内部区分拖拽/原地点击，拖拽后不再误清选中）；
 	     筛选面板关闭由 MapFilterMenu 的 Popover 外点机制承担；Escape 清选中见 svelte:window -->
-	<div class="flex-1 relative overflow-hidden">
+	<div class="relative flex-1 overflow-hidden rounded-lg bg-surface-page">
 		{#if mapCenter}
 			<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} bind:gestureTransform={mapGestureTransform} onMapTap={() => (selectedPin = null)} />
 		{/if}
@@ -330,14 +334,15 @@
 		/>
 
 		<!-- 左上筛选菜单（桌面/移动共用组件；含计数徽章、至少一项约束与全部显示重置） -->
-		<div class="absolute z-20" style="top:14px;left:14px;">
+		<!-- 内缩 8（14→22）：筛选钮原本压住底图左上角的 POI 标注（设计评审 P2） -->
+		<div class="absolute z-20" style="top:22px;left:22px;">
 			<MapFilterMenu bind:activeFilters counts={mapData.counts} showLegend align="start" />
 		</div>
 
 		<!-- 右上角控制组：定位到当前位置（浏览器 GPS，失败回退默认位置）+ 地图源切换。
 		     地图源菜单 align="end"：按钮贴右边缘，菜单向左展开防视口裁剪
 		     （此前默认 align="start" 向右展开，200px 菜单被右边缘挡住一部分）。 -->
-		<div class="absolute z-20 flex items-center gap-2" style="top:14px;right:14px;">
+		<div class="absolute z-20 flex items-center gap-2" style="top:22px;right:22px;">
 			<MapSourceSwitch align="end" />
 			<button
 				type="button"
@@ -360,62 +365,69 @@
 		</div>
 
 
-		<!-- Selected pin popup -->
+		<!-- Selected pin popup：悬浮内容岛（浮在地图卡上，投影表达层级，不再叠描边） -->
 		{#if selectedPin}
 			<div
 				data-map-popup
-				class="bg-surface-primary"
-				style="position:absolute;bottom:20px;left:20px;right:76px;z-index:25;border-radius:var(--cst-shape-lg);padding:16px;box-shadow:var(--cst-elevation-modal);"
+				class="absolute bottom-4 left-4 right-16 z-30 rounded-lg bg-surface-primary p-4 shadow-modal"
 			>
 				<div class="flex items-center gap-3">
-					<PinMedia pin={selectedPin} size={52} markerWidth={26} markerHeight={35} />
-					<div class="flex-1 min-w-0">
+					<PinMedia pin={selectedPin} size={48} />
+					<div class="min-w-0 flex-1">
 						<div class="flex items-center gap-2">
-							<p class="text-text-primary text-sm">{selectedPin.name || selectedPin.title}</p>
+							<p class="truncate text-md font-semibold text-text-primary">{selectedPin.name || selectedPin.title}</p>
 							{#if (selectedPin.count ?? 1) > 1}
-								<span class="text-xs" style="padding:1px 6px;border-radius:var(--cst-shape-sm);background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);">
+								<span
+									class="inline-flex h-5 shrink-0 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none"
+									style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);"
+								>
 									{selectedPin.count}个
 								</span>
 							{/if}
 						</div>
-						<div class="flex items-center gap-2 mt-1 flex-wrap">
-							<span class="text-xs" style="padding:1px 6px;border-radius:var(--cst-shape-sm);background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};">
+						<div class="mt-1 flex flex-wrap items-center gap-2">
+							<span
+								class="inline-flex h-5 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none"
+								style="background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};"
+							>
 								{PIN_LABELS[selectedPin.type]}
 							</span>
 							{#if selectedPin.tag}
-								<span class="text-text-secondary text-xs">#{selectedPin.tag}</span>
+								<span class="text-xs text-text-secondary">#{selectedPin.tag}</span>
 							{/if}
 							{#if selectedPin.distance}
-								<span class="text-text-secondary text-xs">{selectedPin.distance}</span>
+								<span class="text-xs tabular-nums text-text-secondary">{selectedPin.distance}</span>
 							{/if}
 							{#if selectedPin.members}
-								<span class="text-text-secondary text-xs">{selectedPin.members}名成员</span>
+								<span class="text-xs text-text-secondary">{selectedPin.members}名成员</span>
 							{/if}
 							{#if selectedPin.likes}
 								<span class="flex items-center gap-1">
-									<Heart class="size-2.5 text-status-danger"   strokeWidth={1.5} />
-									<span class="text-text-secondary text-xs">{selectedPin.likes}</span>
+									<Heart class="size-2.5 text-status-danger" strokeWidth={1.5} />
+									<span class="text-xs tabular-nums text-text-secondary">{selectedPin.likes}</span>
 								</span>
 							{/if}
 						</div>
 					</div>
-					<div class="flex gap-2 shrink-0">
-						<button
-							type="button"
-							class="hover-btn flex items-center gap-1.5 px-4 py-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm shadow-raised-sm hover:shadow-raised-md"
+					<div class="flex shrink-0 items-center gap-2">
+						<Button
+							variant="primary"
+							size="sm"
+							class="hit-slop"
 							onclick={() => selectedPin && openPinDetail(selectedPin)}
 						>
 							<!-- 聚合桶无详情页：不能给"查看详情"（点了没反应/404），改为放大看明细 -->
 							{selectedPin?.isAggregate ? '放大地图查看' : '查看详情'}
-							<ChevronRight class="size-3.5"  strokeWidth={2} />
-						</button>
+							<ChevronRight class="size-3.5" strokeWidth={1.75} />
+						</Button>
 						<button
 							type="button"
-							class="hover-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-9 shadow-raised-sm hover:bg-accent-soft focus-ring"
+							class="hover-btn hit-slop flex size-8 items-center justify-center rounded-full text-text-secondary hover:bg-interactive-hover focus-ring"
 							aria-label="关闭详情"
+							title="关闭"
 							onclick={() => (selectedPin = null)}
 						>
-							<X class="size-3.5 text-text-secondary" strokeWidth={2} />
+							<X class="size-4" strokeWidth={1.75} />
 						</button>
 					</div>
 				</div>

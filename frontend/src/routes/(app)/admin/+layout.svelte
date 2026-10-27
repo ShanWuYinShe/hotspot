@@ -72,7 +72,7 @@
 		>
 			{#snippet below()}
 				{#if admin.isAdmin}
-					<div class="mt-3 overflow-x-auto pr-1">
+					<div class="mt-3 overflow-x-auto pr-1" role="group" aria-label="管理模块导航">
 						<TabBar
 							items={MODULES.map((m) => ({ id: m.id, label: m.label, count: m.id === 'reports' && pendingReports ? pendingReports : undefined }))}
 							value={activeId}
@@ -90,13 +90,24 @@
 	{#if auth.status === 'loading'}
 		<InlineLoading label="加载登录状态…" />
 	{:else if auth.status !== 'authenticated'}
-		<NeedsAuthNotice title="登录后访问" description="平台管理后台仅对平台管理员开放" />
+		<!-- 访客态：统一 NeedsAuthNotice（R13 访客引导面板），admin 语境下不堆价值点，只说明门槛 -->
+		<NeedsAuthNotice
+			title="登录后访问"
+			description="平台管理后台仅对平台管理员开放。登录后若无权限，请联系超级管理员授予角色。"
+			secondaryLabel="返回首页"
+		/>
 	{:else if !admin.loaded}
 		<InlineLoading label="校验平台管理员权限…" />
 	{:else if !admin.isAdmin}
-		<EmptyState title="无访问权限" description="当前账号不是平台管理员，如需权限请联系超级管理员。" bare>
+		<!-- 平台级无权限空态：图标软底 + spotlight，交代「为什么看不到」与下一步动作 -->
+		<EmptyState
+			title="无访问权限"
+			description="当前账号不是平台管理员。如需管理权限，请联系超级管理员授予角色。"
+			iconTone="accent"
+			spotlight
+		>
 			{#snippet icon()}
-				<Shield class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+				<Shield class="size-8" strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
 	{:else}

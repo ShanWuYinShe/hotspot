@@ -54,12 +54,6 @@
 			? (page.url.searchParams.get('tab') as RelationshipTab)
 			: DEFAULT_RELATIONSHIP_TAB
 	);
-	// 黑名单计数由 SectionBlocked 自行拉取（fetch_blocked），页头计数对 blocked 不显示
-	// 具体值（避免重复请求），仅统计三个关系 tab
-	const activeCount = $derived(
-		activeTab === 'friends' ? friends.length : activeTab === 'following' ? followingCount : activeTab === 'fans' ? followers.length : 0
-	);
-
 	const switchTab = (tab: RelationshipTab) => {
 		if (tab === activeTab) return;
 		void goto(relationshipsHref(tab));
@@ -79,11 +73,8 @@
 		onBack={() => smartBack(ROUTES.me)}
 	>
 		{#snippet trailing()}
-			<!-- 黑名单计数在 SectionBlocked 内自持（避免页头重复请求），此处仅统计关系 tab；
-			     零计数不显示（未登录「0 人」是无效信息，Gemini 审查 r12） -->
-			{#if activeTab !== 'blocked' && activeCount > 0}
-				<span class="text-text-secondary text-xs" aria-live="polite">{activeCount} 人</span>
-			{/if}
+			<!-- 页头不再放计数：R13 评审 P2-10（右上悬空「6 人」与分区计数重复且无操作价值）。
+			     计数由 Tab 徽标与分区标题承担。 -->
 		{/snippet}
 		{#snippet below()}
 			<!-- TabBar 作为 below 首元素需带上间距（对齐 nearby/moments 样板 below 首元素 mt-3）；

@@ -14,12 +14,14 @@ describe('JoinButton', () => {
 		expect((container.querySelector('button') as HTMLElement).getAttribute('aria-pressed')).toBe('false');
 	});
 
-	it('已加入时渲染「已加入」与描边类', () => {
+	it('已加入时渲染「已加入」与 soft 软填类（R13 次级动作无描边）', () => {
 		const { container } = render(JoinButton, {
 			props: { group: { joined: true } as never, onToggle: () => {} }
 		});
 		expect(screen.getByRole('button', { name: /已加入/ })).toBeTruthy();
-		expect((container.querySelector('button') as HTMLElement).className).toContain('border-border-strong');
+		const joinedCls = (container.querySelector('button') as HTMLElement).className;
+		expect(joinedCls).toContain('bg-surface-subtle/60');
+		expect(joinedCls).not.toContain('border-border-strong');
 		expect((container.querySelector('button') as HTMLElement).getAttribute('aria-pressed')).toBe('true');
 	});
 
@@ -33,13 +35,13 @@ describe('JoinButton', () => {
 	});
 
 	// 需审核群申请 pending 时不得冒充「已加入」（对齐群详情页三态语义）。
-	it('待审时渲染「审核中 · 点击取消」与描边类，不显示已加入', () => {
+	it('待审时渲染「审核中 · 点击取消」与 soft 软填类，不显示已加入', () => {
 		const { container } = render(JoinButton, {
 			props: { group: { joined: false } as never, pendingApproval: true, onToggle: () => {} }
 		});
 		expect(screen.getByRole('button', { name: /审核中 · 点击取消/ })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: /已加入/ })).toBeNull();
-		expect((container.querySelector('button') as HTMLElement).className).toContain('border-border-strong');
+		expect((container.querySelector('button') as HTMLElement).className).toContain('bg-surface-subtle/60');
 		expect((container.querySelector('button') as HTMLElement).getAttribute('aria-pressed')).toBe('false');
 	});
 

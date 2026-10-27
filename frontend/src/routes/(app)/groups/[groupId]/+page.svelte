@@ -1,13 +1,14 @@
 <script lang="ts">
 import { formatCount } from '@/lib/utils';
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Bell, Check, ChevronRight, Flag, LogOut, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, UserPlus, Users, X } from '@lucide/svelte';
+	import { ArrowLeft, Bell, ChevronRight, Flag, LogOut, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, UserPlus, Users, X } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
@@ -37,6 +38,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import type { MemberAction } from '@/components/groups/MemberActionSheet.svelte';
 	import type { UpdateGroupRequest } from '@/api/types';
 	import { smartBack } from '@/lib/smart-back';
+	import { platform } from '@/stores/platform.svelte';
 
 	// 群组详情：封面 + 简介/成员/公告三 Tab + 加入按钮 + 桌面侧栏。
 	// 状态/加载/WS/操作收敛到 useGroupDetail 工厂；本页只保留 UI + 角色门控。
@@ -237,7 +239,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 </svelte:head>
 
 
-<StandardPageLayout contentClassName="animate-fade-in pb-6 max-w-6xl xl:max-w-7xl 2xl:max-w-[88rem] mx-auto w-full">
+<!-- R13：内容统一「满宽 + page gutter」（去掉 max-w-6xl/xl/2xl 收窄档，避免 1024 满宽、1440 收窄的
+     gutter 不一致）；移动端无固定底栏，保留 32px 底部净空即可（评审 P2-19）。 -->
+<StandardPageLayout contentClassName="animate-fade-in {platform.platform === 'mobile' ? 'pb-8' : 'pb-6'}">
 	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
 	{#if gd.loading}
 		<InlineLoading label="加载群组…" />
@@ -246,7 +250,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	{:else}
 	<!-- 现代高质感社群 Hero 封面（圆角温润，磨砂悬浮操作区） -->
 	<!-- Hero 封面（例外登记）：去 1px 描边，保留圆角/阴影/加载占位；图片 object-cover -->
-	<div class="media-placeholder relative h-cover-height overflow-hidden rounded-2xl shadow-raised-sm">
+	<div class="media-placeholder relative h-cover-height overflow-hidden rounded-xl shadow-raised-sm">
 		{#if gd.detail.banner}
 			<img
 				src={presetImageUrl(gd.detail.banner, 'cover', 1600)}
@@ -256,7 +260,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				loading="eager"
 				fetchpriority="high"
 				decoding="async"
-				class="h-full w-full object-cover transition-transform duration-standard hover:scale-[1.01]"
+				class="h-full w-full object-cover"
 				use:fadeImage
 			/>
 		{:else}
@@ -274,7 +278,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</div>
 		<div class="absolute bottom-5 left-5 right-5">
 			{#if gd.detail.category}
-				<span class="inline-flex h-6 items-center justify-center rounded-full bg-surface-media-scrim-strong px-3 text-xs font-medium leading-none text-content-inverse backdrop-blur-md shadow-xs">
+				<span class="inline-flex h-6 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2.5 text-xs font-medium leading-none text-content-inverse backdrop-blur-md shadow-xs">
 					{gd.detail.category}
 				</span>
 			{/if}
@@ -284,8 +288,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 	<div class="grid gap-y-6 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-8">
 		<div class="min-w-0">
-			<!-- 分类 Tab（胶囊样式，轻柔微发丝底线） -->
-			<div class="pb-3">
+			<!-- 分类 Tab（胶囊样式）：Tab 栏→内容统一 24（下方内容块自带 mt-6） -->
+			<div>
 				<TabBar
 					items={[
 						{ id: 'overview', label: '简介' },
@@ -298,65 +302,92 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			</div>
 
 			{#if tab === 'overview'}
-				<div class="pt-5 flex flex-col gap-5">
-					<!-- 去页级外框（Round 2）：概览直接落在连续画布上（原白卡+描边读起来像把整页内容框住）；
-					     内部指标/成员块仍作为内容单元保留浅底。 -->
-					<section class="flex flex-col gap-5" aria-label="群组概览">
-						<!-- 描述简介 -->
-						<p class="text-sm md:text-base leading-relaxed text-text-primary whitespace-pre-wrap break-words">
+				<div class="mt-6 flex flex-col gap-6">
+					<!-- 去页级外框（Round 2）：概览直接落在连续画布上（原白卡+描边读起来像把整页内容框住）。
+					     R13：四宫格灰药丸 → MetricRow(strip)：24px 数字 + 12px 标签 + 发丝分隔，
+					     数字成为页面节奏锚点；「在线」是全页唯一强调（绿色 + 2px 圆点）。 -->
+					<section class="flex flex-col gap-6" aria-label="群组概览">
+						<!-- 描述简介：14px / 1.75 阅读行高，限可读行宽 -->
+						<p class="max-w-prose text-md leading-copy text-text-primary whitespace-pre-wrap break-words">
 							{gd.detail.description || '这个群还没有填写简介。'}
 						</p>
 
-						<!-- 社群活力 Bento 矩阵（四宫格通透指标） -->
-						<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-							<div class="flex flex-col p-3 rounded-lg bg-surface-subtle/60">
-								<span class="text-xs text-text-secondary font-medium">群成员</span>
-								<span class="text-lg font-bold text-text-primary mt-1">{formatCount(gd.detail.members)}</span>
-							</div>
-							<div class="flex flex-col p-3 rounded-lg bg-surface-subtle/60">
-								<span class="text-xs text-text-secondary font-medium flex items-center gap-1.5">
-									<span>在线</span>
-									<span class="size-1.5 rounded-full bg-status-online animate-pulse"></span>
-								</span>
-								<span class="text-lg font-bold text-status-online mt-1">{gd.detail.online}</span>
-							</div>
-							<div class="flex flex-col p-3 rounded-lg bg-surface-subtle/60">
-								<span class="text-xs text-text-secondary font-medium">距你</span>
-								<span class="text-lg font-bold text-text-primary mt-1">{gd.detail.distance || '—'}</span>
-							</div>
-							<div class="flex flex-col p-3 rounded-lg bg-surface-subtle/60">
-								<span class="text-xs text-text-secondary font-medium">分类</span>
-								<span class="text-lg font-bold text-text-primary mt-1">{gd.detail.category || '—'}</span>
-							</div>
-						</div>
+						{#snippet onlineValue()}
+							<span class="inline-flex items-center gap-1.5">
+								{gd.detail.online}
+								<span class="size-1.5 rounded-full bg-status-online" aria-hidden="true"></span>
+							</span>
+						{/snippet}
+						<MetricRow
+							variant="strip"
+							items={[
+								{ label: '群成员', value: formatCount(gd.detail.members) },
+								{ label: '在线', value: onlineValue, tone: 'positive' },
+								{ label: '距你', value: gd.detail.distance || '—' },
+								{ label: '公告', value: gd.announcements.length }
+							]}
+						/>
 
-						<!-- 活跃成员画廊与跳转入廊（融为一体，去除外层割裂白框） -->
+						<!-- 活跃成员：SectionHead 统一「标题 + 计数 + 查看全部」语言，头像条只做身份预览 -->
 						{#if gd.members.length > 0}
-							<button
-								type="button"
-								class="hover-btn flex items-center justify-between p-3.5 rounded-lg bg-surface-subtle/40 focus-ring transition-all hover:bg-interactive-hover group mt-1"
-								onclick={() => (tab = 'members')}
-							>
-								<div class="flex items-center gap-3 min-w-0">
-									<div class="flex -space-x-2 shrink-0">
+							<div>
+								<SectionHead
+									title="活跃成员"
+									count={formatCount(gd.detail.members)}
+									action="查看全部"
+									onAction={() => (tab = 'members')}
+								/>
+								<div class="flex items-center gap-3">
+									<div class="flex shrink-0 -space-x-2">
 										{#each gd.members.slice(0, 6) as m, i (m.userId ?? i)}
-											<Avatar src={m.avatar} name={m.name} size="md" class="rounded-full border-2 border-surface-primary object-cover shadow-xs" />
+											<Avatar src={m.avatar} name={m.name} size="md" decorative class="rounded-full border-2 border-surface-page shadow-xs" />
 										{/each}
 									</div>
-									<span class="text-sm font-medium text-text-primary truncate">{formatCount(gd.detail.members)} 位成员在群中</span>
+									<p class="min-w-0 truncate text-xs text-text-secondary">{formatCount(gd.detail.members)} 位成员在群中</p>
 								</div>
-								<span class="text-xs text-accent-default font-medium flex items-center gap-1 shrink-0 group-hover:translate-x-0.5 transition-transform">
-									查看全部成员
-									<ChevronRight class="size-3.5" strokeWidth={1.75} />
-								</span>
-							</button>
+							</div>
+						{/if}
+
+						<!-- 最新群公告摘要：补首屏内容密度，同时给公告 Tab 一个入口预览 -->
+						{#if gd.announcements.length > 0}
+							{@const latest = gd.announcements[0]}
+							<div>
+								<SectionHead
+									title="群公告"
+									count={gd.announcements.length}
+									action="查看全部"
+									onAction={() => (tab = 'announcements')}
+								/>
+								<button
+									type="button"
+									class="hover-btn flex w-full items-start gap-3 rounded-lg bg-surface-subtle/50 p-3.5 text-left transition-colors focus-ring hover:bg-surface-subtle"
+									onclick={() => (tab = 'announcements')}
+								>
+									<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default">
+										<Megaphone size={16} strokeWidth={1.75} />
+									</span>
+									<span class="min-w-0 flex-1">
+										<span class="flex min-w-0 items-center gap-2">
+											{#if latest.isPinned}
+												<span class="inline-flex h-5 shrink-0 items-center justify-center gap-1 rounded-full bg-accent-soft px-2 text-xxs font-medium leading-none text-text-accent-on-soft">
+													<Pin size={10} strokeWidth={2} />
+													置顶
+												</span>
+											{/if}
+											<span class="truncate text-md font-semibold text-text-primary">{latest.title}</span>
+										</span>
+										<span class="mt-1 block truncate text-sm text-text-secondary">{latest.body}</span>
+									</span>
+									<ChevronRight size={14} class="mt-1 shrink-0 text-text-secondary" strokeWidth={1.5} />
+								</button>
+							</div>
 						{/if}
 					</section>
 				</div>
 				{:else if tab === 'members'}
 					{#if canManageMembers}
 						<!-- 成员 Tab 子区（owner/admin）：成员 / 申请审批 / 邀请管理 / 封禁名单 -->
-						<div class="mt-6 pb-3">
+						<div class="mt-6">
 							<TabBar
 								items={[
 									{ id: 'members', label: '成员' },
@@ -372,6 +403,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				{#if !canManageMembers || memberTab === 'members'}
 					<MembersList
 						members={gd.members}
+						total={gd.detail.members}
 						onlineMemberIds={gd.onlineMemberIds}
 						canManageMembers={canManageMembers}
 						canManageMember={canManageMember}
@@ -414,39 +446,54 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{/if}
 		</div>
 
-		<!-- 桌面右栏用圆润卡片承载；移动端平滑自适应，主次操作分明 -->
-		<section aria-label="群组操作" class="flex h-fit flex-col gap-3 rounded-lg bg-surface-island p-5 shadow-xs">
+		<!-- 桌面右栏操作卡：主操作（打开群聊 accent 实底）→ 次级（群管理软填）→ 安静退出。
+		     按钮层级按 R13「主操作 / 次级软填 / 危险二次确认」三档收敛；卡内间距 12。 -->
+		<section aria-label="群组操作" class="flex h-fit flex-col gap-3 rounded-lg bg-surface-island p-4 shadow-xs">
 			{#if gd.joined}
+				<Button type="button" variant="primary" size="lg" class="w-full" onclick={() => void goto(ROUTES.groupMessage(params.groupId))}>
+					<MessageCircle size={15} />
+					打开群聊
+				</Button>
+				{#if gd.myRole === 'owner' || gd.myRole === 'admin'}
+					<Button type="button" variant="soft" size="lg" class="w-full" onclick={() => (settingsOpen = true)}>
+						<Settings size={15} />
+						群管理
+					</Button>
+				{/if}
+				<!-- 退出群组：安静文字钮（可逆操作，不抢主操作焦点；点击后二次确认） -->
+				<div class="border-t border-border-subtle/40 pt-3">
+					<Button
+						type="button"
+						variant="ghost"
+						size="md"
+						flat
+						class="w-full text-text-secondary hover:bg-interactive-hover hover:text-text-primary hit-slop"
+						onclick={() => {
+							if (gd.myRole === 'owner') {
+								showToast('群主需先转让群主身份（群管理 → 转让群主）', 'danger');
+								return;
+							}
+							leaveConfirmOpen = true;
+						}}
+					>
+						<LogOut size={14} strokeWidth={1.75} />
+						已加入 · 点击退出
+					</Button>
+				</div>
+			{:else if gd.joinPendingApproval}
+				<!-- 待审态（joined=false 但已有 pending 申请）：此前落进「加入群组」分支，
+				     重载后仍是待审却显示可再次加入——点一次只会再提一份申请。 -->
 				<Button
 					type="button"
-					variant="ghost"
+					variant="soft"
 					size="lg"
-					flat
-					class="w-full bg-surface-subtle/60 text-accent-default hover:bg-surface-subtle"
-					onclick={() => {
-						if (gd.joinPendingApproval) {
-							void gd.cancelJoinApplication();
-							return;
-						}
-						if (gd.joined && gd.myRole === 'owner') {
-							showToast('群主需先转让群主身份（群管理 → 转让群主）', 'danger');
-							return;
-						}
-						gd.joined ? (leaveConfirmOpen = true) : requestJoin();
-					}}
+					class="w-full"
+					onclick={() => void gd.cancelJoinApplication()}
 				>
-					{#if gd.joinPendingApproval}
-						<span class="flex items-center justify-center gap-1.5">
-							<Check size={15} />
-							审核中 · 点击取消
-						</span>
-					{:else}
-						<span class="flex items-center justify-center gap-1.5">
-							<Check size={15} />
-							已加入 · 点击退出
-						</span>
-					{/if}
+					<X size={15} strokeWidth={1.75} />
+					审核中 · 点击取消申请
 				</Button>
+				<p class="px-2 text-center text-xs leading-5 text-text-secondary">群主通过申请后即可进入群聊</p>
 			{:else}
 				<Button
 					type="button"
@@ -458,19 +505,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						requestJoin();
 					}}
 				><span class="inline-flex" use:popOn={joinPop}>加入群组</span></Button>
-			{/if}
-				{#if gd.joined && (gd.myRole === 'owner' || gd.myRole === 'admin')}
-					<Button type="button" variant="ghost" size="lg" flat class="w-full bg-surface-subtle/60 hover:bg-surface-subtle" onclick={() => (settingsOpen = true)}>
-						<Settings size={15} />
-						群管理
-					</Button>
-				{/if}
-			{#if gd.joined}
-				<Button type="button" variant="primary" size="lg" class="w-full" onclick={() => void goto(ROUTES.groupMessage(params.groupId))}>
-					<MessageCircle size={15} />
-					打开群聊
-				</Button>
-			{:else}
 				<p class="px-2 text-center text-xs leading-5 text-text-secondary">
 					<Bell size={13} class="mr-1 inline text-accent-default" />
 					加入后可管理群组通知并进入群聊
@@ -516,7 +550,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} />
 		</div>
 		{#if canReportGroup}
-			<Button type="button" variant="ghost" class="mt-4 w-full text-status-danger hover:bg-danger-bg" onclick={() => { moreOpen = false; reportOpen = true; }}>
+			<Button type="button" variant="ghost" class="mt-4 w-full text-status-danger hover:text-text-status-danger-on-soft hover:bg-danger-bg" onclick={() => { moreOpen = false; reportOpen = true; }}>
 				<Flag size={14} />
 				举报群组
 			</Button>

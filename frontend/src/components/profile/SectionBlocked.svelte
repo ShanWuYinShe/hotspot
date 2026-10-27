@@ -3,6 +3,7 @@
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { fetchBlocked, unblock, netError } from '@/api';
 	import { formatDateTime } from '@/lib/utils';
@@ -111,20 +112,22 @@
 			tone={embedded ? 'card' : 'row'}
 			ariaLabel={`查看 ${b.name} 的主页`}
 		>
-			{#snippet subtitle()}
-				<p class="mt-0.5 text-text-secondary text-xs">拉黑于 {formatDateTime(b.blockedAt)}</p>
+			{#snippet meta()}
+				<span class="shrink-0 whitespace-nowrap text-xs text-text-secondary">{formatDateTime(b.blockedAt)} 拉黑</span>
 			{/snippet}
 			{#snippet actions()}
-				<button
+				<Button
 					type="button"
-					class="hover-btn tap-92 hit-slop flex shrink-0 items-center justify-center rounded-full border border-border-default bg-surface-primary px-2.5 py-1.5 text-sm text-text-secondary focus-ring hover:bg-accent-soft"
+					variant="soft"
+					size="sm"
+					class="hit-slop shrink-0 gap-1 rounded-full px-3 py-1.5 text-xs"
 					onclick={(e) => {
 						e.stopPropagation();
 						unblockTarget = b;
 					}}
 				>
 					解除拉黑
-				</button>
+				</Button>
 			{/snippet}
 		</UserCardRow>
 	{/snippet}

@@ -285,7 +285,7 @@ export struct MyReportsPage {
           .fontSize(DesignConstants.FONT.SIZE.XS2)
           .lineHeight(1)
           .fontColor(item.status === 'pending' ?
-            this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+            this.getCurrentThemePalette().textAccentOnSoft : this.getCurrentThemePalette().textSecondary)
           .padding({
             left: DesignConstants.SPACING.SM2,
             right: DesignConstants.SPACING.SM2,

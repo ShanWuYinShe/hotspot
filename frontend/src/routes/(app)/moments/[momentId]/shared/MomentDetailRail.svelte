@@ -4,10 +4,13 @@
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
 	import { goto } from '$app/navigation';
-	import { ROUTES } from '@/lib/routes';
+	import { ROUTES } from '$lib/routes';
 	import type { MomentDetail, RailPerson, RailMoment } from './detail-types';
 
 	// MomentDetailRail —— 动态详情页右侧栏（作者/相关位置/此刻附近/更多动态）。
+	// 四张卡统一走 RailSection（variant="island"）：标题语气、右侧文字链、卡内节奏
+	// 与全站 SectionHead(rail) 同一语言（11px semibold 标题 + accent 文字链 + ChevronRight）。
+	// 作者卡的「私信」为次级动作，按 R13 安静按钮口径改为软填底（去描边、去 accent 抢色）。
 	let {
 		moment,
 		nearbyNow,
@@ -26,7 +29,7 @@
 				{#snippet trailing()}
 					<button
 						type="button"
-						class="hover-btn hit-slop shrink-0 rounded-full border border-accent-border bg-accent-soft px-3 py-1.5 text-xs text-accent-default focus-ring hover:bg-interactive-active hover:text-text-primary"
+						class="hover-btn hit-slop shrink-0 rounded-full bg-surface-subtle/60 px-3 py-1.5 text-xs font-medium text-text-primary transition-colors focus-ring hover:bg-surface-subtle"
 						onclick={(e) => {
 							e.stopPropagation();
 							if (moment.authorId) void goto(ROUTES.message(moment.authorId));

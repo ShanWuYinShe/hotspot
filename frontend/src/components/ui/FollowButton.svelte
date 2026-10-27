@@ -4,8 +4,10 @@
 	import { popOn } from '@/lib/motion';
 
 	// FollowButton — 关注/已关注切换的唯一实现（审计 P1-6：此前 6 种手写写法）。
-	// 复用 ui/button 原语：未关注 = primary（accent 实底），已关注 = outline 变体
-	// 覆写 accent 文字（JoinButton 同款两态范式）。pending 禁点防重复提交。
+	// 复用 ui/button 原语，两态共用同一"安静次级动作"语言（R13 统一口径）：
+	//   未关注 = surface-accent（accent 淡底 Tonal，引导点击）
+	//   已关注 = soft（中性软填、无描边，回到信息态；与 JoinButton/私信/拒绝同族）
+	// pending 禁点防重复提交。
 	// size（两派契约：胶囊只属于行内 chip 形态，页面级动作条归 md 派，见 style skill）：
 	//   pill     列表行动作位胶囊 chip（rounded-full px-3.5 py-1.5 text-xs）；
 	//   wide     详情页宽胶囊 chip（rounded-full px-4 py-2 text-xs，桌面/平板动作区）；
@@ -55,7 +57,7 @@
 				? 'border border-content-inverse/70 bg-surface-media-scrim-strong text-content-inverse hover:bg-surface-media-scrim-strong/80'
 				: 'border border-content-inverse/40 bg-surface-media-scrim-strong text-content-inverse hover:bg-surface-media-scrim-strong/80'
 			: active
-				? 'border border-border-strong bg-transparent text-text-secondary hover:bg-interactive-hover'
+				? 'bg-surface-subtle text-text-secondary hover:bg-interactive-active'
 				: 'bg-accent-bg text-accent-default border border-transparent hover:border-accent-border'}"
 		onclick={(e) => {
 			e.stopPropagation();
@@ -73,16 +75,14 @@
 {:else}
 	<Button
 		type="button"
-		variant={active ? 'outline' : 'surface-accent'}
+		variant={active ? 'soft' : 'surface-accent'}
 		size={size === 'block' ? 'lg' : 'sm'}
 		disabled={pending || disabled}
 		class="hit-slop tap-92 gap-1
 			{size === 'pill' ? 'rounded-full px-3.5 py-1.5 text-xs' : ''}
 			{size === 'wide' ? 'rounded-full px-4 py-2 text-xs' : ''}
 			{size === 'block' ? 'h-11 flex-1' : ''}
-			{active
-			? 'border-accent-default bg-surface-primary text-accent-default hover:bg-accent-soft'
-			: 'font-semibold'}
+			{active ? 'text-text-primary' : 'font-semibold'}
 			{pending ? 'pointer-events-none opacity-soft' : ''}"
 		aria-pressed={active}
 		onclick={(e) => {

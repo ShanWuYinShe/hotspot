@@ -76,7 +76,14 @@ import UserCardRow from '@/components/profile/UserCardRow.svelte';
 
 		>
 			{#snippet subtitle()}
-				<p class="truncate mt-px text-text-secondary text-xs">{f.desc}</p>
+				<p class="mt-px truncate text-xs text-text-secondary">{f.desc || '已关注'}</p>
+			{/snippet}
+			{#snippet meta()}
+				{#if f.isMutual}
+					<span class="inline-flex h-5 items-center justify-center rounded-full bg-status-online-bg px-2 text-xxs font-medium leading-none text-text-status-online-on-soft">
+						互相关注
+					</span>
+				{/if}
 			{/snippet}
 			{#snippet actions()}
 				<FollowButton

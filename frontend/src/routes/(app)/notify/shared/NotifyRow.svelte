@@ -1,11 +1,18 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import Button from '@/components/ui/button.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import { avatarImageWidths, buildImageSrcSet, fadeImage, optimizedImageUrl } from '@/lib/images';
 	import { TYPE_CONFIG, type NotifyViewItem } from './notify-data';
 
 	// 通知行（对齐 Figma Make NotifyPage 行契约：ListItem
 	// hover 背景填充 + tap opacity 0.84，无 scale 位移）。
+	// R13：
+	//   - 未读标识由「右侧呼吸光点」改为**左侧 3px 未读条**（静态、不抢注意力，
+	//     与列表行的扫读方向一致）；「未读」语义保留在 aria-label + sr-only 文本；
+	//   - 缩略图与头像统一 44px（同一行两个媒体单元不再一大一小）；
+	//   - 接受/拒绝按钮统一行内关系 chip 档（主=accent 实底 / 次=软填），两个按钮
+	//     都带 ≥44 触控热区。
 
 	let {
 		notif,
@@ -34,13 +41,18 @@
 		// 点击跳转（payload 上下文推导的 href；行内接受/拒绝按钮已 stopPropagation）
 		if (notif.href) void goto(notif.href);
 	}}
-	ariaLabel={`通知：${notif.user.name}${notif.text}`}
-	class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3.5 transition-colors {notif.read ? '' : 'bg-accent-soft/15'}"
+	ariaLabel={`${notif.read ? '' : '未读，'}通知：${notif.user.name}${notif.text}`}
+	class="relative flex items-center gap-x-3.5 px-4 py-3.5 transition-colors"
 >
+	<!-- 未读条：左侧 3px accent 竖条（状态条 1-3px 属已登记例外，不用圆角外框） -->
+	{#if !notif.read}
+		<span aria-hidden="true" class="absolute left-0 top-2.5 bottom-2.5 w-0.75 rounded-full bg-accent-default"></span>
+	{/if}
+
 	<!-- Avatar + icon badge -->
 	<div class="relative shrink-0">
 		{#if notif.user.avatar}
-			<div class="rounded-full overflow-hidden size-11 ring-1 ring-border-subtle/50">
+			<div class="size-11 overflow-hidden rounded-full ring-1 ring-border-subtle/50">
 				<img
 					src={optimizedImageUrl(notif.user.avatar, { width: 88 })}
 					srcset={buildImageSrcSet(notif.user.avatar, avatarImageWidths(44))}
@@ -48,51 +60,61 @@
 					alt={notif.user.name}
 					loading="lazy"
 					decoding="async"
-					class="w-full h-full object-cover"
+					class="h-full w-full object-cover"
 					use:fadeImage
 				/>
 			</div>
 		{:else}
-			<div class="rounded-full flex items-center justify-center size-11" style="background:{cfg.bg};">
+			<div class="flex size-11 items-center justify-center rounded-full" style="background:{cfg.bg};">
 				<cfg.icon class="size-4.5" style="color:{cfg.color};" strokeWidth={1.75} />
 			</div>
 		{/if}
 		{#if notif.user.avatar}
-			<div class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full size-4.5 shadow-xs" style="background:{cfg.color};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);">
+			<div
+				class="absolute -bottom-0.5 -right-0.5 flex size-4.5 items-center justify-center rounded-full shadow-xs"
+				style="background:{cfg.color};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);"
+			>
 				<cfg.icon class="size-2.5 text-text-on-accent" strokeWidth={2.5} />
 			</div>
 		{/if}
 	</div>
 
 	<!-- Text -->
-	<div class="flex-1 min-w-0">
+	<div class="min-w-0 flex-1">
 		<p class="truncate text-text-primary text-sm">
-			<span class="{notif.read ? 'font-normal text-text-secondary' : 'font-semibold text-text-primary'}">{notif.user.name}</span>
+			<span class={notif.read ? 'font-medium text-text-secondary' : 'font-semibold text-text-primary'}>{notif.user.name}</span>
 			{' '}{notif.text}
 		</p>
-		<p class="text-text-secondary text-xs mt-0.5">{notif.time}</p>
+		<p class="mt-0.5 text-xs text-text-secondary">{notif.time}</p>
 	</div>
 
-	<!-- Moment thumb or unread dot；邀请行窄屏时动作组换行到第二行，
-	     避免把正文挤成省略号、时间被拆行 -->
-	<div class="flex items-center gap-2.5 shrink-0 {notif.inviteId ? 'w-full justify-end sm:w-auto' : ''}">
+	<!-- 动作组（入群邀请）/ 瞬间缩略图 / 未读语义 -->
+	<div class="flex shrink-0 items-center gap-2.5">
 		{#if notif.inviteId}
-			<!-- 入群邀请操作：行内接受/拒绝（stopPropagation 避免触发行已读） -->
-			<button
-				type="button"
-				onclick={(e) => { e.stopPropagation(); onAccept?.(notif.inviteId!); }}
-				disabled={actionPending}
-				class="hover-btn hit-slop inline-flex h-8 items-center rounded-full bg-accent-default px-3.5 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
-			>接受</button>
-			<button
-				type="button"
-				onclick={(e) => { e.stopPropagation(); onReject?.(notif.inviteId!); }}
-				disabled={actionPending}
-				class="hover-btn hit-slop inline-flex h-8 items-center rounded-full bg-surface-subtle/60 px-3.5 text-xs text-text-primary focus-ring hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
-			>拒绝</button>
+			<!-- 入群邀请操作：主=accent 实底 / 次=soft 软填（同档视觉重量，不再一实一虚）；
+			     移动端两钮在行尾同一列竖排（不折到第二行悬空），sm+ 回到单行 -->
+			<div class="flex shrink-0 flex-col items-stretch gap-1.5 sm:flex-row sm:items-center">
+				<Button
+					type="button"
+					size="sm"
+					variant="primary"
+					class="hit-slop-44 rounded-full px-3.5"
+					disabled={actionPending}
+					onclick={(e) => { e.stopPropagation(); onAccept?.(notif.inviteId!); }}
+				>接受</Button>
+				<Button
+					type="button"
+					size="sm"
+					variant="soft"
+					class="hit-slop-44 rounded-full px-3.5"
+					disabled={actionPending}
+					onclick={(e) => { e.stopPropagation(); onReject?.(notif.inviteId!); }}
+				>拒绝</Button>
+			</div>
 		{/if}
 		{#if notif.momentImage}
-			<div class="media-placeholder rounded-lg overflow-hidden size-10 border border-border-subtle/50 shadow-xs">
+			<!-- 缩略图：媒体容器去 1px 描边（边界由圆角 + 占位渐变 + 轻投影表达） -->
+			<div class="media-placeholder size-11 overflow-hidden rounded-md shadow-xs">
 				<img
 					src={optimizedImageUrl(notif.momentImage, { width: 88 })}
 					srcset={buildImageSrcSet(notif.momentImage, avatarImageWidths(44))}
@@ -100,17 +122,12 @@
 					alt=""
 					loading="lazy"
 					decoding="async"
-					class="w-full h-full object-cover"
+					class="h-full w-full object-cover"
 					use:fadeImage
 				/>
 			</div>
 		{/if}
 		{#if !notif.read}
-			<!-- 未读指示：实心微蓝呼吸光点，高质感辨识 -->
-			<div
-				class="rounded-full size-2 bg-accent-default shadow-[0_0_6px_var(--cst-accent-default)] animate-pulse"
-				aria-hidden="true"
-			></div>
 			<span class="sr-only">未读</span>
 		{/if}
 	</div>

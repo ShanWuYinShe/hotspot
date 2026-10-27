@@ -822,7 +822,7 @@ export struct MomentFeedCard {
           Text(this.moment.location.location_name)
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-            .fontColor(this.getPalette().accentBackground)
+            .fontColor(this.getPalette().textAccentOnSoft)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .constraintSize({ maxWidth: MomentFeedCard.LOCATION_MAX_WIDTH })

@@ -227,7 +227,7 @@ export struct NearbyImageCard {
           Text(this.getPlaceholderInitial())
             .fontSize(DesignConstants.FONT.SIZE.XXXL)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(this.getPalette().accentBackground)
+            .fontColor(this.getPalette().textAccentOnSoft)
         }
         // web 占位圆 size-16 = 64vp（原 48 偏小，首字母显得局促）
         .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)

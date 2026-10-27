@@ -61,7 +61,7 @@
 		<button
 			type="button"
 			onclick={() => inputEl?.click()}
-			class="hover-btn flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border-strong text-text-secondary outline-none transition-colors hover:border-accent-border hover:bg-accent-soft hover:text-accent-default focus-visible:ring-2 focus-visible:ring-accent-default"
+			class="hover-btn flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border-strong text-text-secondary outline-none transition-colors hover:border-accent-border hover:bg-accent-soft hover:text-text-accent-on-soft focus-visible:ring-2 focus-visible:ring-accent-default"
 			aria-label="添加照片"
 		>
 			<ImagePlus size={18} strokeWidth={1.5} />

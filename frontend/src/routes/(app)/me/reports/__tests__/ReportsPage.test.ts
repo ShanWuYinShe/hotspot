@@ -64,14 +64,21 @@ describe('我的举报页', () => {
 			])
 		);
 
-		render(ReportsPage);
+		const { container } = render(ReportsPage);
 
 		await waitFor(() => expect(screen.getByText('举报瞬间 · 垃圾信息')).toBeTruthy());
 		expect(screen.getByText('举报用户 · 骚扰')).toBeTruthy();
 		expect(screen.getByText('疑似营销刷屏')).toBeTruthy();
 		// 状态胶囊文案与筛选 Tab 同名，故用 getAllByText
 		expect(screen.getAllByText('待处理').length).toBeGreaterThan(1);
-		expect(screen.getByText(/处理结果：已确认处理 · 确认垃圾营销/)).toBeTruthy();
+		// R13：处理结果拆成「标签 + 加粗结论 + 备注」三段（层级更清楚）；
+		// 文本被拆到多个节点，testing-library 的 getByText 只读直接文本节点，
+		// 故按 <p> 的 textContent 聚合断言（不绑死节点结构）。
+		const resolution = [...container.querySelectorAll('p')].find((el) =>
+			(el.textContent ?? '').includes('处理结果')
+		);
+		expect(resolution?.textContent).toContain('已确认处理');
+		expect(resolution?.textContent).toContain('确认垃圾营销');
 		expect(screen.getByText('没有更多了')).toBeTruthy();
 	});
 

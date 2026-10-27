@@ -277,9 +277,15 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => { clearMomentsProgress(); reloadKey++; }} />
 	{:else}
-		<EmptyState spotlight title="附近暂时没有瞬间" bare>
+		<!-- 页面级空态走新版 EmptyState（72px accent 软底图标 + spotlight） -->
+		<EmptyState
+			spotlight
+			iconTone="accent"
+			title="附近暂时没有瞬间"
+			description="换个位置看看，或成为附近第一个发布瞬间的人。"
+		>
 			{#snippet icon()}
-				<Sparkles size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
+				<Sparkles class="size-7" strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
 	{/if}

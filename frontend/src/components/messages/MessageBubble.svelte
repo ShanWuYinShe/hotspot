@@ -72,10 +72,10 @@
 
 <div class="group animate-fade-in flex flex-col {sent ? 'items-end' : 'items-start'}">
 	{#if !sent && senderName}
-		<p class="mb-0.5 text-xs text-text-secondary px-1">{senderName}</p>
+		<p class="mb-1 px-1 text-xxs font-medium text-text-secondary">{senderName}</p>
 	{/if}
 	<div
-		class="max-w-chat-bubble px-3.5 py-2.5 {sent
+		class="max-w-chat-bubble px-3.5 py-2 {sent
 			? 'bg-accent-default'
 			: 'bg-surface-primary'} {sent
 			? 'rounded-[var(--cst-shape-md)_var(--cst-shape-sm)_var(--cst-shape-md)_var(--cst-shape-md)]'
@@ -122,8 +122,10 @@
 			>
 				{recalled ? '消息已撤回' : text}
 			</p>
+			<!-- 时间戳：气泡内右下/左下元信息，统一 text-xxs（11px 档下的极小档），
+			     与昵称/正文拉开一档，避免「时间比正文还抢眼」 -->
 			<p
-				class="mt-1 flex items-center gap-0.75 text-xs {sent
+				class="mt-1 flex items-center gap-0.75 text-xxs tabular-nums {sent
 					? 'justify-end text-text-on-accent opacity-soft'
 					: 'justify-start text-text-secondary'}"
 			>
@@ -159,10 +161,10 @@
 				{/if}
 				{#if canRecall}
 					<!-- 危险操作：hover/键盘高亮走 danger 淡底档（与普通项 accent-soft 区分） -->
-					<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={handleRecall}>撤回</DropdownMenu.Item>
+					<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={handleRecall}>撤回</DropdownMenu.Item>
 				{/if}
 				{#if canReport}
-					<DropdownMenu.Item class="text-status-danger hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={handleReport}>
+					<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={handleReport}>
 						<Flag class="size-3.5" strokeWidth={1.75} />
 						举报
 					</DropdownMenu.Item>

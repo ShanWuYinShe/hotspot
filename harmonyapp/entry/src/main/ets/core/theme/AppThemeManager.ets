@@ -110,6 +110,13 @@ function buildPalette(
     accentBackground: colors.accentBackground,
     accentText: colors.accentText,
     accentMuted: colors.accentMuted,
+    // R12 on-soft 文字：唯一源 ThemeConstants.ColorConfig（accentOnSoft 等，web 80/20 派生）
+    textAccentOnSoft: colors.accentOnSoft,
+    textStatusOnlineOnSoft: colors.onlineOnSoft,
+    textStatusWarningOnSoft: colors.warningOnSoft,
+    textStatusDangerOnSoft: colors.dangerOnSoft,
+    // harmony-only：info 无 web token，同公式派生
+    textStatusInfoOnSoft: AppThemeVisuals.mixOpaque(colors.info, 0.8, colors.textPrimary, 0.2),
     chatBackground: colors.chatBackground,
     systemSurfaceBaseColor: colors.systemSurfaceBaseColor,
     online: colors.online,

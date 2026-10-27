@@ -50,8 +50,8 @@
 
 			<button
 				type="button"
-				class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring my-1 size-11"
-				style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)'};"
+				class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring my-1 size-11 {composer.composerOpen ? '' : 'shadow-glow-md'}"
+				style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};"
 				aria-label={composer.composerOpen ? '关闭' : '发布'}
 				onclick={toggleComposer}
 			>

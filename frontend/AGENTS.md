@@ -129,6 +129,10 @@ bun run audit:a11y
 bun run audit:a11y -- --mobile --reduced
 # 390 触控热区：默认全量页面（QA 18 + 审计扩展 17 + 详情），对照 allowlist，未登记离群即失败
 bun run audit:touch
+# 主题矩阵专项（3 主题×2 明暗×桌面全量+移动 5 页；合并前专项门禁，不进 audit:ui）
+bun run audit:a11y -- --matrix --parallel 2        # 约 15–20min（单 worker 25–30min）
+# 矩阵快查：--only 路由子串、--limit 每页组前 n 页
+bun run audit:a11y -- --matrix --only /admin/reports,/me/edit --limit 2
 # 一键：browser-qa --mobile + a11y + touch（任一失败整体 exit 1，末尾打印各报告路径）
 bun run audit:ui
 # 指定网关（worktree 独立环境）与调试抽样

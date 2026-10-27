@@ -87,15 +87,17 @@
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
 				data-active={isActive ? 'true' : undefined}
-				class="tab-item hit-slop-y flex items-center justify-center gap-1.5 rounded-full focus-ring transition-all duration-standard disabled:cursor-not-allowed disabled:opacity-dim {size === 'md'
-					? 'px-4 py-2 text-sm'
-					: 'px-3 py-2.5 text-xs lg:py-1.5'} {isActive
+				class="tab-item hit-slop-y relative flex min-w-0 items-center justify-center gap-1.5 rounded-full focus-ring transition-all duration-standard disabled:cursor-not-allowed disabled:opacity-dim {size === 'md'
+					? 'py-2 text-sm'
+					: 'py-2.5 text-xs lg:py-1.5'} {isActive ? 'pl-2.5 pr-6' : 'px-2.5'} {isActive
 					? 'font-semibold bg-accent-default text-text-on-accent shadow-raised-sm'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
-				{#if tab.swatch}
+				{#if tab.swatch && !isActive}
 					<!-- 主题色板点：让用户在选择前就看到各主题的主色（全站复审 s3 P2-5：
-					     THEME_OPTIONS 提供了 swatch，此前页面未消费） -->
+					     THEME_OPTIONS 提供了 swatch，此前页面未消费）。
+					     选中项不再显示色点：实底 accent 与自身 swatch 同色会"消失"，
+					     且选中态已由 ✓ + 实底 + semibold 三重表达。 -->
 					<span
 						class="size-3 shrink-0 rounded-full ring-1 ring-border-default"
 						style="background:{tab.swatch};"
@@ -104,10 +106,17 @@
 				{:else if tab.icon}
 					<tab.icon class="{size === 'md' ? 'size-4' : 'size-3.5'} shrink-0" strokeWidth={isActive ? 2 : 1.5} />
 				{/if}
-				<span class="truncate">{tab.label}</span>
+				<!-- 文字必须整词不裁切：此前 truncate 让 grid 轨道可被 flex 行挤到只剩半个字
+				     （设置页 1440/768「星际/清野/水墨」显示成首字）。选项宽度由内容决定。 -->
+				<span class="whitespace-nowrap">{tab.label}</span>
 				{#if isActive}
-					<!-- 不依赖颜色的选中态：✓ + semibold（色弱/色盲/灰度下仍可辨；视觉 gap 4） -->
-					<Check class="-ml-0.5 size-3.5 shrink-0" strokeWidth={2.5} aria-hidden="true" />
+					<!-- 不依赖颜色的选中态：✓ + semibold（色弱/色盲/灰度下仍可辨）。
+					     ✓ 绝对定位、不占 flex 宽度：窄容器优先保住主题文字完整性。 -->
+					<Check
+						class="pointer-events-none absolute right-1.5 top-1/2 size-3.5 -translate-y-1/2"
+						strokeWidth={2.5}
+						aria-hidden="true"
+					/>
 				{/if}
 				{#if tab.count !== undefined}
 					<span class="text-xxs opacity-emphasis">{tab.count}</span>
@@ -129,7 +138,7 @@
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
 				class="tab-item hit-slop-y flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-3 text-sm focus-ring transition-colors duration-standard disabled:cursor-not-allowed disabled:opacity-dim lg:py-1.5 {isActive
-					? 'font-semibold bg-accent-soft text-accent-default'
+					? 'font-semibold bg-accent-soft text-text-accent-on-soft'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
 				{#if tab.icon}

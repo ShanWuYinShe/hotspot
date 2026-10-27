@@ -50,9 +50,10 @@
 {#snippet compactFooter({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
 	{@const onCover = onImage && !horizontal}
 	<div class="p-4">
-		<p class="line-clamp-1 text-sm font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{group.name}</p>
-		<!-- stats 行：头像堆叠 + 成员 / 距离（对齐 Figma GroupCard 行序） -->
-		<div class="mt-1 flex items-center justify-between gap-2 text-xxs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">
+		<!-- 群名是卡内唯一主标题（14px semibold），与 MomentCard 作者/标题档一致 -->
+		<p class="line-clamp-1 text-md font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{group.name}</p>
+		<!-- stats 行：头像堆叠 + 成员 / 距离（数字等宽，右对齐距离不因位数抖动） -->
+		<div class="mt-1.5 flex items-center justify-between gap-2 text-xs tabular-nums {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">
 			<div class="flex items-center gap-1.5 min-w-0">
 				{#if group.avatars.length > 0}
 					<div class="flex -space-x-2 shrink-0">
@@ -64,20 +65,20 @@
 					</div>
 				{/if}
 				<span class="flex items-center gap-1 truncate">
-					<Users size={10} />
+					<Users size={11} />
 					{group.members} 人
 				</span>
 			</div>
 			<span class="flex items-center gap-1 shrink-0 {onCover ? 'text-content-inverse' : 'text-accent-default'}">
-				<MapPin size={10} />
+				<MapPin size={11} />
 				{group.distance}
 			</span>
 		</div>
 		<!-- activity 独立行（对齐 Figma：semantic-online 色 + CalendarDays 图标） -->
 		<div class="mt-2 flex items-center justify-between gap-2">
 			{#if group.activity}
-				<span class="min-w-0 truncate text-xxs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-status-online'}">
-					<CalendarDays class="inline mr-1 size-2.5"  />
+				<span class="min-w-0 truncate text-xs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-status-online'}">
+					<CalendarDays class="inline mr-1 size-3"  />
 					{group.activity}
 				</span>
 			{:else}
@@ -95,11 +96,11 @@
 		horizontal={featured ? horizontal : autoLandscape}
 		class={featured
 			? (horizontal
-				? cn('rounded-2xl min-h-56 shadow-xs hover:shadow-raised-sm', className)
+				? cn('rounded-2xl min-h-48 shadow-xs hover:shadow-raised-sm', className)
 				: cn('min-h-[320px] rounded-lg shadow-xs hover:shadow-raised-sm sm:min-h-64', className))
 			: cn(
 				'rounded-lg shadow-xs hover:shadow-raised-sm',
-				className || 'aspect-[3/4] h-auto'
+				className || 'aspect-[3/4] h-auto sm:aspect-[4/5]'
 			)}
 	>
 		{#snippet watermark()}
@@ -112,8 +113,8 @@
 	
 		{#if featured}
 			<!-- 左上：精选徽章 -->
-			<div class="absolute top-3 left-3 z-[2] flex items-center gap-1.5 px-2 py-1 rounded-full bg-surface-overlay-strong" style="backdrop-filter:blur(var(--cst-blur-sm));">
-				<Sparkles size={11} color="var(--cst-content-inverse)" />
+			<div class="absolute top-3 left-3 z-[2] inline-flex h-5 items-center justify-center gap-1.5 rounded-full bg-surface-overlay-strong px-2.5 leading-none" style="backdrop-filter:blur(var(--cst-blur-sm));">
+				<Sparkles size={11} class="text-content-inverse" />
 				<span class="text-content-inverse text-xxs">本周精选</span>
 			</div>
 		{:else}
@@ -137,33 +138,33 @@
 		{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
 			{@const onCover = onImage && !horizontal}
 			{#if featured}
-				<div class="p-4 h-full flex flex-col justify-center">
-					<p class="text-lg font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{group.name}</p>
-					<p class="mt-1 truncate text-xs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">{group.desc}</p>
-					<div class="mt-3 flex items-center gap-3">
-						<div class="min-w-0 flex-1">
-							<!-- stats 行：成员 / 在线 / 距离（对齐 Figma FeaturedGroupCard） -->
-							<div class="flex items-center gap-3 text-xs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">
-								<span class="flex items-center gap-1 shrink-0">
-									<Users size={12} />
-									{group.members}
-								</span>
-								<span class="flex items-center gap-1 shrink-0 font-medium {onCover ? 'text-content-inverse' : 'text-status-online'}">
-									<span class="rounded-full size-1.5 bg-status-online"></span>
-									{group.online} 在线
-								</span>
-								<span class="shrink-0">{group.distance}</span>
-							</div>
+				<!-- 精选卡右面板 = 两栏（文案 flex-1 / CTA auto）：CTA 不再孤悬最右，
+				     横向精选卡高度收敛到 192，网格首行信息回到首屏 -->
+				<div class="flex h-full items-center gap-4 p-4 sm:p-5">
+					<div class="min-w-0 flex-1">
+						<p class="text-lg font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{group.name}</p>
+						<p class="mt-1 truncate text-sm {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">{group.desc}</p>
+						<!-- stats 行：成员 / 在线 / 距离（对齐 Figma FeaturedGroupCard） -->
+						<div class="mt-2.5 flex flex-wrap items-center gap-3 text-sm tabular-nums {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">
+							<span class="flex items-center gap-1 shrink-0">
+								<Users size={12} />
+								{group.members}
+							</span>
+							<span class="flex items-center gap-1 shrink-0 font-medium {onCover ? 'text-content-inverse' : 'text-status-online'}">
+								<span class="rounded-full size-1.5 bg-status-online"></span>
+								{group.online} 在线
+							</span>
+							<span class="shrink-0">{group.distance}</span>
 							{#if group.activity}
-								<!-- activity 独立 accent 行（对齐 Figma：与 stats 行分离） -->
-								<p class="mt-2 truncate text-xs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-accent-default'}">
-									<CalendarDays class="inline mr-1 size-3"  />
-									{group.activity}
-								</p>
+								<!-- activity 与 stats 同行：精选卡不超过两行信息，避免右侧面板大片留白 -->
+								<span class="flex min-w-0 items-center gap-1 {onCover ? 'text-content-inverse opacity-emphasis' : 'text-accent-default'}">
+									<CalendarDays class="inline size-3 shrink-0"  />
+									<span class="truncate">{group.activity}</span>
+								</span>
 							{/if}
 						</div>
-						<JoinButton {group} {pending} {pendingApproval} onMedia={onCover} {onToggle} />
 					</div>
+					<JoinButton {group} {pending} {pendingApproval} onMedia={onCover} {onToggle} />
 				</div>
 			{:else}
 				{@render compactFooter({ onImage, horizontal })}

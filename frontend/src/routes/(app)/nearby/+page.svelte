@@ -162,7 +162,7 @@
 		<!-- 首屏骨架屏：Hero 统计卡 + 三段分区（人/瞬间/群组）的预览卡行；
 		     与真实枢纽页纵向节奏一致（gap-6 = 分区块间距 24） -->
 		<div class="flex flex-col gap-6" role="status" aria-busy="true" aria-label="加载附近数据…" data-skeleton-root>
-			<Skeleton class="h-28 w-full rounded-lg" />
+			<Skeleton class="h-36 w-full rounded-lg" />
 			{#each [0, 1, 2] as section (section)}
 				<div class="flex flex-col gap-3">
 					<div class="flex items-center justify-between">
@@ -181,9 +181,15 @@
 	{:else if error}
 		<LoadError message={error} onRetry={() => reloadKey++} />
 	{:else if moments.length === 0 && visibleNearbyUsers.length === 0 && nearbyGroups.length === 0}
-		<EmptyState spotlight title="附近还没有内容" description="去发布第一条瞬间，或换个位置看看。" bare>
+		<!-- 页面级空态走新版 EmptyState：72px 图标软底 + spotlight（不再用裸图标 + 灰字） -->
+		<EmptyState
+			spotlight
+			iconTone="accent"
+			title="附近还没有内容"
+			description="去发布第一条瞬间，或换个位置看看。"
+		>
 			{#snippet icon()}
-				<MapPin class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
+				<MapPin class="size-7" strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
 	{:else}

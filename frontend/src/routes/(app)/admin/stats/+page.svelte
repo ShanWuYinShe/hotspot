@@ -4,8 +4,10 @@
 	import type { AdminGeoStatsResponse, AdminGeoDrilldownItem } from '@/api/types';
 	import { hasAdminPermission } from '@/stores/admin.svelte';
 	import { platform } from '@/stores/platform.svelte';
+	import { Map as MapIcon, MapPin, TrendingUp, Trophy } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
@@ -14,7 +16,7 @@
 	import MapCanvas from '@/components/map/MapCanvas.svelte';
 	import MapHeatDot from '@/components/map/MapHeatDot.svelte';
 	import type { MapBounds } from '@/components/map/types';
-	import { TABLE_WRAP, TABLE, TH, TR, TD } from '../shared/table';
+	import { TABLE_WRAP, TABLE, TH, TH_NUM, TR, TD, TD_NUM } from '../shared/table';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -66,6 +68,12 @@
 
 	const fmt = (n: number): string => n.toLocaleString('zh-CN');
 	const coord = (v: number): string => v.toFixed(3);
+	// 区域排名「明细」按钮：未选中=次级软填、选中=accent 淡底（同一枚按钮承载 toggle，
+	// 选中态不能只靠颜色：aria-pressed 已由页面维护，按钮文案同步改「已选」）
+	const DRILL_BTN =
+		'hover-btn tap-92 inline-flex items-center justify-center whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium focus-ring transition-colors max-sm:min-h-11 max-sm:min-w-11 active:scale-95';
+	const drillBtnCls = (selected: boolean): string =>
+		`${DRILL_BTN} ${selected ? 'bg-accent-soft text-text-accent-on-soft' : 'bg-surface-subtle/60 text-text-primary hover:bg-surface-subtle'}`;
 
 	$effect(() => {
 		void level;
@@ -219,47 +227,51 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.stats.read 权限" bare />
+	<EmptyState title="无访问权限" description="需要 admin.stats.read 权限" iconTone="accent">
+		{#snippet icon()}<TrendingUp class="size-7" strokeWidth={1.5} />{/snippet}
+	</EmptyState>
 {:else}
-	<div class="mx-auto flex w-full max-w-5xl flex-col gap-4">
-		<!-- 全站存量：指标统一走 MetricRow 单卡（原 4 张独立小卡 = 4 套边框/间距） -->
+	<!-- 根容器直接承载多个带标题分区：区块间 24（layout skill 登记的根容器例外） -->
+	<div class="flex w-full flex-col gap-6">
+		<!-- 全站存量：数字与秩序（24px 半粗等宽数字 + 发丝分隔，替换 4 张独立小卡的边框网格） -->
 		<section aria-label="全站存量">
 			{#if data}
-				<MetricRow
-					class="max-w-3xl"
-					items={[
-						{ label: '用户', value: fmt(data.totals.user) },
-						{ label: '群组', value: fmt(data.totals.group) },
-						{ label: '动态', value: fmt(data.totals.moment) },
-						{ label: '合计', value: fmt(data.totals.total), tone: 'accent' }
-					]}
-				/>
+				<div class="rounded-lg bg-surface-island px-5 py-4 shadow-xs">
+					<MetricRow
+						variant="strip"
+						items={[
+							{ label: '用户', value: fmt(data.totals.user) },
+							{ label: '群组', value: fmt(data.totals.group) },
+							{ label: '动态', value: fmt(data.totals.moment) },
+							{ label: '合计', value: fmt(data.totals.total), tone: 'accent' }
+						]}
+					/>
+				</div>
 			{:else if loading}
 				<InlineLoading label="统计中…" />
 			{/if}
 		</section>
 
-		<!-- 筛选：粒度 + 时间窗 + 趋势 -->
-		<section class="flex flex-col gap-2" aria-label="筛选">
-			<TabBar
-				items={LEVELS}
-				value={String(level)}
-				onChange={(id) => { level = Number(id); }}
-			/>
-			<div class="flex flex-wrap gap-2">
-				<TabBar
-					items={RANGES}
-					value={range}
-					onChange={(id) => { range = id; }}
-				/>
+		<!-- 筛选：维度一行；时间 + 趋势同排（≥sm），移动端纵向堆叠 —— 三行筛选收成两行；
+		     每行加 eyebrow 行标签，避免三组同形胶囊各自指代不明 -->
+		<section class="flex flex-col gap-2.5" aria-label="筛选">
+			<div role="group" aria-label="统计维度" class="flex min-w-0 items-center gap-2">
+				<span class="eyebrow w-7 shrink-0">维度</span>
+				<TabBar class="min-w-0" items={LEVELS} value={String(level)} onChange={(id) => { level = Number(id); }} />
 			</div>
-			<div class="flex flex-wrap gap-2">
-				<TabBar
-					items={TRENDS}
-					value={String(trendDays)}
-					onChange={(id) => { trendDays = Number(id); }}
-				/>
+			<div class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
+				<div role="group" aria-label="时间范围" class="flex min-w-0 items-center gap-2">
+					<span class="eyebrow w-7 shrink-0">时间</span>
+					<TabBar class="min-w-0" items={RANGES} value={range} onChange={(id) => { range = id; }} />
+				</div>
+				<div role="group" aria-label="新增趋势" class="flex min-w-0 items-center gap-2">
+					<span class="eyebrow w-7 shrink-0">趋势</span>
+					<TabBar class="min-w-0" items={TRENDS} value={String(trendDays)} onChange={(id) => { trendDays = Number(id); }} />
+				</div>
 			</div>
+			{#if data && !loading}
+				<p class="text-xxs text-text-secondary">统计生成于 {formatDateTime(data.generated_at)} · 弱一致快照</p>
+			{/if}
 		</section>
 
 		{#if loading}
@@ -267,12 +279,11 @@
 		{:else if error}
 			<LoadError message={error} onRetry={() => { reloadKey += 1; }} />
 		{:else if data}
-			<p class="text-xs text-text-secondary">统计生成于 {formatDateTime(data.generated_at)} · 弱一致快照</p>
 
 			<!-- 每日新增趋势 -->
 			{#if trendDays > 0 && data.trends.length > 0}
-				<section aria-label="每日新增趋势" class="flex flex-col gap-2">
-					<h2 class="text-md font-semibold text-text-primary">每日新增（近 {trendDays} 天 · UTC+8 日界）</h2>
+				<section aria-label="每日新增趋势" class="flex flex-col">
+					<SectionHead title={`每日新增（近 ${trendDays} 天 · UTC+8 日界）`} icon={TrendingUp} />
 					<div class="rounded-lg bg-surface-island p-4 shadow-xs">
 						<div class="flex items-end gap-1 h-28" role="img" aria-label="每日新增柱状图">
 							{#each data.trends as p (p.date)}
@@ -295,8 +306,8 @@
 			{/if}
 
 			<!-- 区域落点地图 -->
-			<section aria-label="区域分布图" class="flex flex-col gap-2">
-				<h2 class="text-md font-semibold text-text-primary">区域分布（网格中心落点 · 数字为聚合量）</h2>
+			<section aria-label="区域分布图" class="flex flex-col">
+				<SectionHead title="区域分布" subtitle="网格中心落点 · 数字为聚合量" icon={MapIcon} />
 				<div class="relative rounded-lg overflow-hidden shadow-xs" style="height: 320px;">
 					<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} />
 					{#each data.regions as r (r.cell_token)}
@@ -310,10 +321,16 @@
 			</section>
 
 			<!-- 区域排名 -->
-			<section aria-label="区域排名" class="flex flex-col gap-2">
-				<h2 class="text-md font-semibold text-text-primary">区域排名（S2 网格 · {LEVELS.find((l) => Number(l.id) === level)?.label ?? level}）<span class="ml-2 text-xs font-normal text-text-secondary">点击“明细”查看该网格</span></h2>
+			<section aria-label="区域排名" class="flex flex-col">
+				<SectionHead
+					title={`区域排名（S2 网格 · ${LEVELS.find((l) => Number(l.id) === level)?.label ?? level}）`}
+					subtitle="点击「明细」查看该网格"
+					icon={Trophy}
+				/>
 				{#if data.regions.length === 0}
-					<EmptyState title="暂无地理数据" description="当前筛选条件下没有带位置的数据" bare />
+					<EmptyState title="暂无地理数据" description="当前筛选条件下没有带位置的数据" iconTone="neutral">
+						{#snippet icon()}<MapIcon class="size-7" strokeWidth={1.5} />{/snippet}
+					</EmptyState>
 				{:else}
 					<div class={TABLE_WRAP} use:scrollFade>
 						<table class={TABLE}>
@@ -321,10 +338,10 @@
 								<tr>
 									<th scope="col" class={TH}>#</th>
 									<th scope="col" class={TH}>网格中心</th>
-									<th scope="col" class={TH}>用户</th>
-									<th scope="col" class={TH}>群组</th>
-									<th scope="col" class={TH}>动态</th>
-									<th scope="col" class={TH}>合计</th>
+									<th scope="col" class={TH_NUM}>用户</th>
+									<th scope="col" class={TH_NUM}>群组</th>
+									<th scope="col" class={TH_NUM}>动态</th>
+									<th scope="col" class={TH_NUM}>合计</th>
 									<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 								</tr>
 							</thead>
@@ -333,14 +350,14 @@
 									<tr class={TR} class:bg-interactive-hover={selectedToken === r.cell_token}>
 										<td class={TD}>{i + 1}</td>
 										<td class={TD} title={r.cell_token}>{coord(r.center.latitude)}°, {coord(r.center.longitude)}°</td>
-										<td class={TD}>{fmt(r.breakdown.user)}</td>
-										<td class={TD}>{fmt(r.breakdown.group)}</td>
-										<td class={TD}>{fmt(r.breakdown.moment)}</td>
-										<td class={TD + ' font-medium'}>{fmt(r.total_count)}</td>
+										<td class={TD_NUM}>{fmt(r.breakdown.user)}</td>
+										<td class={TD_NUM}>{fmt(r.breakdown.group)}</td>
+										<td class={TD_NUM}>{fmt(r.breakdown.moment)}</td>
+										<td class={`${TD_NUM} font-medium`}>{fmt(r.total_count)}</td>
 										<td class={TD}>
 											<button
 												type="button"
-												class="hover-btn tap-92 inline-flex items-center justify-center rounded-md bg-surface-subtle/60 px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors max-sm:min-h-11 max-sm:min-w-11 hover:bg-surface-subtle active:scale-95"
+												class={drillBtnCls(selectedToken === r.cell_token)}
 												aria-pressed={selectedToken === r.cell_token}
 												onclick={() => selectRegion(r.cell_token, r.level)}
 											>
@@ -355,59 +372,65 @@
 				{/if}
 			</section>
 
-			<!-- 下钻明细 -->
+			<!-- 下钻明细（选中区域后出现；标题走 SectionHead，「关闭」是分区动作而非卡片内按钮） -->
 			{#if selectedToken}
-				<section aria-label="区域明细" class="flex flex-col gap-2 rounded-lg bg-surface-island p-4 shadow-xs">
-					<div class="flex items-center justify-between gap-2">
-						<h3 class="text-sm font-medium text-text-primary">网格明细 · {selectedRegionLabel}</h3>
-						<button
-							type="button"
-							class="hover-btn tap-92 rounded-md bg-surface-subtle/60 px-2.5 py-1 text-xs font-medium text-text-primary focus-ring transition-colors hover:bg-surface-subtle active:scale-95"
-							onclick={() => { selectedToken = null; }}
-						>关闭</button>
-					</div>
-					<TabBar
-						items={DRILL_TYPES}
-						value={drillType}
-						onChange={(id) => { drillType = id as 'user' | 'group' | 'moment'; }}
+				<section aria-label="区域明细" class="flex flex-col">
+					<SectionHead
+						title={`网格明细 · ${selectedRegionLabel}`}
+						icon={MapPin}
+						action="关闭"
+						onAction={() => { selectedToken = null; }}
 					/>
-					{#if drillLoading && drillItems.length === 0}
-						<InlineLoading label="加载明细…" />
-					{:else if drillError}
-						<LoadError message={drillError} onRetry={() => void loadDrill(false)} />
-					{:else if drillItems.length === 0}
-						<EmptyState title="该网格暂无此类数据" bare />
-					{:else}
-						<div class="flex flex-col">
-							{#each drillItems as item (item.object_id + item.created_at)}
-								<div class="flex items-center justify-between gap-3 py-2 border-b border-border-default last:border-b-0">
-									<div class="min-w-0">
-										<p class="text-sm font-medium text-text-primary truncate">{item.title}</p>
-										<p class="mt-0.5 text-xs text-text-secondary truncate">
-											{item.location_name ?? '未填地点'} · {formatDateTime(item.created_at)}
-										</p>
-									</div>
-									<span class="text-xxs text-text-secondary font-mono shrink-0">{item.object_id}</span>
-								</div>
-							{/each}
-						</div>
-						{#if drillCursor}
-							<LoadMoreButton
-								loading={drillLoading}
-								onLoad={() => void loadDrill(true)}
+					<div class="flex flex-col gap-3 rounded-lg bg-surface-island p-4 shadow-xs">
+						<div role="group" aria-label="明细类型" class="min-w-0">
+							<TabBar
+								items={DRILL_TYPES}
+								value={drillType}
+								onChange={(id) => { drillType = id as 'user' | 'group' | 'moment'; }}
 							/>
+						</div>
+						{#if drillLoading && drillItems.length === 0}
+							<InlineLoading label="加载明细…" />
+						{:else if drillError}
+							<LoadError message={drillError} onRetry={() => void loadDrill(false)} />
+						{:else if drillItems.length === 0}
+							<EmptyState title="该网格暂无此类数据" description="换个类型或时间范围再看看。" iconTone="neutral">
+								{#snippet icon()}<MapPin class="size-7" strokeWidth={1.5} />{/snippet}
+							</EmptyState>
 						{:else}
-							<ListEnd />
+							<div class="flex flex-col">
+								{#each drillItems as item (item.object_id + item.created_at)}
+									<div class="flex items-center justify-between gap-3 border-b border-border-default py-2 last:border-b-0">
+										<div class="min-w-0">
+											<p class="truncate text-sm font-medium text-text-primary">{item.title}</p>
+											<p class="mt-0.5 truncate text-xs text-text-secondary">
+												{item.location_name ?? '未填地点'} · {formatDateTime(item.created_at)}
+											</p>
+										</div>
+										<span class="shrink-0 font-mono text-xxs text-text-secondary">{item.object_id}</span>
+									</div>
+								{/each}
+							</div>
+							{#if drillCursor}
+								<LoadMoreButton
+									loading={drillLoading}
+									onLoad={() => void loadDrill(true)}
+								/>
+							{:else}
+								<ListEnd />
+							{/if}
 						{/if}
-					{/if}
+					</div>
 				</section>
 			{/if}
 
 			<!-- 热门地点 -->
-			<section aria-label="热门地点" class="flex flex-col gap-2">
-				<h2 class="text-md font-semibold text-text-primary">热门地点（按地点名聚合）</h2>
+			<section aria-label="热门地点" class="flex flex-col">
+				<SectionHead title="热门地点" subtitle="按地点名聚合" icon={MapPin} />
 				{#if data.places.length === 0}
-					<EmptyState title="暂无地点数据" description="当前筛选条件下没有非空地点名" bare />
+					<EmptyState title="暂无地点数据" description="当前筛选条件下没有非空地点名" iconTone="neutral">
+						{#snippet icon()}<MapPin class="size-7" strokeWidth={1.5} />{/snippet}
+					</EmptyState>
 				{:else}
 					<div class={TABLE_WRAP} use:scrollFade>
 						<table class={TABLE}>
@@ -415,21 +438,21 @@
 								<tr>
 									<th scope="col" class={TH}>#</th>
 									<th scope="col" class={TH}>地点</th>
-									<th scope="col" class={TH}>用户</th>
-									<th scope="col" class={TH}>群组</th>
-									<th scope="col" class={TH}>动态</th>
-									<th scope="col" class={TH}>合计</th>
+									<th scope="col" class={TH_NUM}>用户</th>
+									<th scope="col" class={TH_NUM}>群组</th>
+									<th scope="col" class={TH_NUM}>动态</th>
+									<th scope="col" class={TH_NUM}>合计</th>
 								</tr>
 							</thead>
 							<tbody>
 								{#each data.places as p, i (p.location_name)}
 									<tr class={TR}>
 										<td class={TD}>{i + 1}</td>
-										<td class={TD + ' font-medium'}>{p.location_name}</td>
-										<td class={TD}>{fmt(p.breakdown.user)}</td>
-										<td class={TD}>{fmt(p.breakdown.group)}</td>
-										<td class={TD}>{fmt(p.breakdown.moment)}</td>
-										<td class={TD + ' font-medium'}>{fmt(p.total_count)}</td>
+										<td class={`${TD} font-medium`}>{p.location_name}</td>
+										<td class={TD_NUM}>{fmt(p.breakdown.user)}</td>
+										<td class={TD_NUM}>{fmt(p.breakdown.group)}</td>
+										<td class={TD_NUM}>{fmt(p.breakdown.moment)}</td>
+										<td class={`${TD_NUM} font-medium`}>{fmt(p.total_count)}</td>
 									</tr>
 								{/each}
 							</tbody>

@@ -143,7 +143,7 @@
 				<button
 					type="button"
 					onclick={() => (surface = 'group')}
-					class="rounded-full border border-accent-border bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent-default outline-none transition-colors hover:bg-accent-default hover:text-text-on-accent focus-visible:ring-2 focus-visible:ring-accent-default"
+					class="rounded-full border border-accent-border bg-accent-soft px-3 py-1.5 text-xs font-medium text-text-accent-on-soft outline-none transition-colors hover:bg-accent-default hover:text-text-on-accent focus-visible:ring-2 focus-visible:ring-accent-default"
 				>
 					创建群组
 				</button>
@@ -166,7 +166,7 @@
 					</div>
 				</div>
 				{#if submitting}
-					<span class="inline-flex h-5 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xxs font-medium leading-none text-accent-default">
+					<span class="inline-flex h-5 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xxs font-medium leading-none text-text-accent-on-soft">
 						{submitStatus || '正在发布…'}
 					</span>
 				{/if}
@@ -196,7 +196,7 @@
 						aria-label="添加话题"
 						aria-pressed={topicActive}
 						class="hit-slop flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {topicActive
-							? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
+							? 'bg-accent-soft text-text-accent-on-soft hover:bg-interactive-active'
 							: 'text-text-secondary hover:bg-interactive-hover'}"
 					>
 						<Hash size={16} strokeWidth={topicActive ? 2 : 1.5} />
@@ -246,7 +246,7 @@
 							onclick={() => (draft.audience = id)}
 							aria-pressed={active}
 							class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {active
-								? 'bg-accent-soft text-accent-default hover:bg-interactive-active'
+								? 'bg-accent-soft text-text-accent-on-soft hover:bg-interactive-active'
 								: 'text-text-secondary hover:bg-interactive-hover'}"
 						>
 							<AudienceIcon size={14} strokeWidth={active ? 2 : 1.5} />

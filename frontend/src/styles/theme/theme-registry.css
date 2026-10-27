@@ -33,6 +33,10 @@
   --color-border-strong: var(--cst-border-strong);
   --color-border-subtle: var(--cst-border-subtle);
   --color-status-online: var(--cst-status-online);
+  --color-text-accent-on-soft: var(--cst-text-accent-on-soft);
+  --color-text-status-online-on-soft: var(--cst-text-status-online-on-soft);
+  --color-text-status-warning-on-soft: var(--cst-text-status-warning-on-soft);
+  --color-text-status-danger-on-soft: var(--cst-text-status-danger-on-soft);
   --color-status-danger: var(--cst-status-danger);
   --color-status-warning: var(--cst-status-warning);
 

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
-	import { ArrowLeft } from '@lucide/svelte';
+	import { ArrowLeft, Info } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
 	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -219,9 +220,10 @@
 <div class="flex min-h-0 flex-col h-full bg-surface-chat">
 	<p class="sr-only" aria-live="polite">{lastIncoming ? `新消息：${lastIncoming.text}` : ''}</p>
 	<!-- Header -->
-	<!-- 去硬边线（Round 2）：聊天画布自身底色承担分隔 -->
+	<!-- 去硬边线（Round 2）：聊天画布自身底色承担分隔；
+	     头部层级（R13）：返回（移动）→ 群头像+群名/成员数（可点进群详情）→ 群信息入口图标钮 -->
 	<div class="shrink-0 bg-surface-chat px-4 {compact ? 'h-13' : 'h-15'}">
-		<div class="mx-auto flex h-full w-full max-w-3xl items-center gap-3">
+		<div class="mx-auto flex h-full w-full max-w-3xl items-center gap-2">
 		{#if showBackButton}
 			<button
 				type="button"
@@ -236,15 +238,16 @@
 		<!-- 头像 + 名称/状态：点击进入群详情（移动端群聊页的管理/公告入口） -->
 		<button
 			type="button"
-			class="avatar-entry hit-slop hover-bg focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-md text-left"
+			class="avatar-entry hit-slop-y hover-bg focus-ring flex min-w-0 flex-1 items-center gap-2.5 rounded-md text-left"
 			onclick={() => void goto(ROUTES.group(groupId))}
 			aria-label={`查看群「${groupName || '群聊'}」详情`}
+			title="群信息"
 		>
 			<Avatar
 				src={groupAvatar}
 				name={groupName}
 				decorative
-				size={compact ? 'sm' : 'md'}
+				size={compact ? 32 : 36}
 				shape="rounded"
 				class="border-regular border-border-default shadow-raised-sm"
 			/>
@@ -256,11 +259,11 @@
 				     font-normal 抵消 base h1 的 medium 字重，保持与原 p 一致的视觉。 -->
 				<svelte:element
 					this={compact ? 'h2' : 'h1'}
-					class="truncate font-normal text-text-primary {compact ? 'text-sm' : 'text-md'}"
+					class="truncate font-semibold text-text-primary {compact ? 'text-md' : 'text-lg'}"
 				>
 					{groupName || '群聊'}
 				</svelte:element>
-				<p class="{typing.active ? 'text-accent-default' : 'text-text-secondary'} text-xs" >
+				<p class="mt-0.5 text-xs {typing.active ? 'text-accent-default' : 'text-text-secondary'}">
 					{#if typing.active}
 						{typing.actorName || '有人'}正在输入…
 					{:else if membersCount != null}
@@ -271,6 +274,15 @@
 				</p>
 			</div>
 		</button>
+
+		<!-- 群信息入口：成员数/群公告都在群详情页，这里给显式、可发现的跳转（与点头像同一目标） -->
+		<ActionIconButton
+			icon={Info}
+			label="群信息"
+			variant="ghost"
+			size={36}
+			onClick={() => void goto(ROUTES.group(groupId))}
+		/>
 		</div>
 	</div>
 

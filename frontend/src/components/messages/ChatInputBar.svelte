@@ -76,12 +76,14 @@
 {#if chat.sendError}
 	<p class="px-4 pb-1.5 text-status-danger text-xs">{chat.sendError}</p>
 {/if}
+<!-- 输入条：与消息区之间用功能发丝线（§19.3 登记的功能线）而非留白断崖；
+     背景与聊天画布同色，工具栏与画布连成一体 -->
 <div
-	class="mx-auto w-full max-w-3xl shrink-0 flex items-center gap-2.5 bg-surface-chat border-t border-border-default px-4 pt-3"
+	class="mx-auto w-full max-w-3xl shrink-0 flex items-center gap-2.5 bg-surface-chat border-t border-border-subtle px-4 pt-2.5"
 	style="padding-bottom:max(0.75rem, env(safe-area-inset-bottom));"
 >
 
-	<div class="relative flex-1 flex items-center px-4 rounded-md input-surface h-9.5">
+	<div class="relative flex-1 flex items-center px-4 rounded-md input-surface h-10">
 		{#if mentionOpen}
 			<!-- 提及选择浮层：贴在输入框上方（输入栏在底部），键盘 ↑↓ 选择、Enter 确认、Esc 关闭 -->
 			<div
@@ -98,7 +100,7 @@
 						aria-selected={i === mentionIndex}
 						class="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm focus-ring {i ===
 						mentionIndex
-							? 'bg-accent-soft text-accent-default'
+							? 'bg-accent-soft text-text-accent-on-soft'
 							: 'text-text-primary hover:bg-interactive-hover'}"
 						onmousedown={(e) => {
 							e.preventDefault(); // 别让输入框失焦
@@ -158,10 +160,10 @@
 
 	<button
 		type="button"
-		class="hover-btn hit-slop scale-btn flex items-center justify-center rounded-full border border-border-default focus-ring shrink-0 transition-all duration-standard size-9
+		class="hover-btn hit-slop scale-btn flex items-center justify-center rounded-full border focus-ring shrink-0 transition-all duration-standard size-10
 			{chat.inputVal.trim() && !chat.sending
 			? 'border-transparent bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md'
-			: 'bg-surface-primary text-text-secondary shadow-raised-sm'}
+			: 'border-border-default bg-surface-primary text-text-secondary shadow-raised-sm'}
 			{chat.sending ? 'pointer-events-none opacity-soft' : ''}"
 		onclick={send}
 		aria-label="发送"
@@ -171,7 +173,7 @@
 		{#if chat.sending}
 			<span class="spinner size-4" aria-hidden="true"></span>
 		{:else}
-			<Send class="size-3.5 {chat.inputVal.trim() ? '' : 'text-text-secondary'}" style="transform:translateX(1px);" strokeWidth={2} />
+			<Send class="size-4 {chat.inputVal.trim() ? '' : 'text-text-secondary'}" style="transform:translateX(1px);" strokeWidth={2} />
 		{/if}
 	</button>
 </div>

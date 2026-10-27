@@ -4,6 +4,7 @@
 	import type { AdminUserItem, UserAccountStatus, UserType } from '@/api/types';
 	import { hasAdminPermission } from '@/stores/admin.svelte';
 	import { showToast } from '@/stores/toast.svelte';
+	import { Users } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -11,13 +12,19 @@
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER } from '../shared/table';
+	import {
+		TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS,
+		ROW_BTN, ROW_BTN_DANGER, TOOLBAR, SEARCH_WRAP, SELECT, META, META_MONO
+	} from '../shared/table';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 用户管理：筛选（状态 / 注册类型 / 按昵称或 ID 搜索）+ 封禁、解封（两态统一 set_ban）。
+	// R13：工具栏/筛选/表格语言与其他 8 个模块对齐；封禁态改软底 danger 徽章 + 时间次级说明，
+	// 避免一排实底红胶囊压过页面主信息。
 
 	const canWrite = $derived(hasAdminPermission('admin.users.write'));
 	const canRead = $derived(hasAdminPermission('admin.users.read'));
@@ -31,6 +38,13 @@
 	let userType = $state<'' | UserType>('');
 	let searchField = $state<'nickname' | 'user_id' | 'login_id'>('nickname');
 	let query = $state('');
+
+	const hasFilter = $derived(Boolean(query || status || userType));
+	const clearFilters = () => {
+		query = '';
+		status = '';
+		userType = '';
+	};
 
 	const list = createAdminList<AdminUserItem>(
 		(cursor, limit) =>
@@ -82,8 +96,6 @@
 			banPending = false;
 		}
 	};
-
-	const statusText = (u: AdminUserItem) => (u.status === 'banned' ? (u.banned_until ? `封禁至 ${formatDateTime(u.banned_until)}` : '永久封禁') : '正常');
 </script>
 
 <svelte:head>
@@ -91,19 +103,21 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.users.read 权限" bare />
+	<EmptyState title="无访问权限" description="需要 admin.users.read 权限" iconTone="accent">
+		{#snippet icon()}<Users class="size-7" strokeWidth={1.5} />{/snippet}
+	</EmptyState>
 {:else}
 	<div class="flex flex-col gap-4">
-		<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-			<div class="w-full max-w-80">
+		<div class={TOOLBAR}>
+			<div class={SEARCH_WRAP}>
 				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索用户…" class="px-4 py-2.5 rounded-md" />
 			</div>
-			<select bind:value={searchField} class="input-surface rounded-md px-3 py-2 text-xs text-text-primary" aria-label="搜索字段">
+			<select bind:value={searchField} class={SELECT} aria-label="搜索字段">
 				<option value="nickname">按昵称</option>
 				<option value="user_id">按用户 ID</option>
 				<option value="login_id">按登录 ID</option>
 			</select>
-			<select bind:value={userType} class="input-surface rounded-md px-3 py-2 text-xs text-text-primary" aria-label="注册类型">
+			<select bind:value={userType} class={SELECT} aria-label="注册类型">
 				<option value="">全部类型</option>
 				<option value="normal">正式</option>
 				<option value="temp">临时</option>
@@ -113,62 +127,75 @@
 		<TabBar items={STATUS_TABS} value={status} onChange={(id) => (status = id)} />
 
 		<div use:contentFade={list.loading}>
-
-		{#if list.loading}
-			<InlineLoading label="加载用户列表…" />
-		{:else if list.error}
-			<LoadError message={list.error} onRetry={list.reload} />
-		{:else if list.count === 0}
-			<EmptyState title="没有匹配的用户" bare />
-		{:else}
-			<div class={TABLE_WRAP} use:scrollFade>
-				<table class={TABLE}>
-					<thead>
-						<tr>
-							<th scope="col" class={TH}>用户</th>
-							<th scope="col" class={TH_SECONDARY}>登录 ID</th>
-							<th scope="col" class={TH}>状态</th>
-							<th scope="col" class={TH_SECONDARY}>邮箱</th>
-							<th scope="col" class={TH_SECONDARY}>注册时间</th>
-							<th scope="col" class={TH_SECONDARY}>最后活跃</th>
-							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each list.items as u (u.user.user_id)}
-							<tr class={TR}>
-								<td class={TD}>
-									<span class="flex items-center gap-2">
-										<span class="text-text-primary">{u.user.nickname}</span>
-										<span class="text-xs text-text-secondary font-mono">{u.user.user_id}</span>
-									</span>
-								</td>
-								<td class={TD_SECONDARY}>{u.login_id}</td>
-								<td class={TD}>
-									<span class="badge {u.status === 'banned' ? 'bg-status-danger text-text-on-accent' : 'bg-surface-subtle text-text-secondary'}">{statusText(u)}</span>
-								</td>
-								<td class={TD_SECONDARY}>{u.email ?? '—'}</td>
-								<td class={TD_SECONDARY}>{formatDateTime(u.created_at)}</td>
-								<td class={TD_SECONDARY}>{u.last_active_at ? formatDateTime(u.last_active_at) : '—'}</td>
-								<td class={TD_ACTIONS}>
-									{#if canWrite}
-										<button type="button" class={u.status === 'banned' ? ROW_BTN : ROW_BTN_DANGER} onclick={() => openBan(u)}>
-											{u.status === 'banned' ? '解封' : '封禁'}
-										</button>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-
-			{#if list.hasMore}
-				<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
+			{#if list.loading}
+				<InlineLoading label="加载用户列表…" />
+			{:else if list.error}
+				<LoadError message={list.error} onRetry={list.reload} />
+			{:else if list.count === 0}
+				<EmptyState title="没有匹配的用户" description="换个搜索词，或清除筛选条件后重试。" iconTone="neutral">
+					{#snippet icon()}<Users class="size-7" strokeWidth={1.5} />{/snippet}
+					{#snippet action()}
+						{#if hasFilter}
+							<Button type="button" variant="secondary" size="sm" onclick={clearFilters}>清除筛选</Button>
+						{/if}
+					{/snippet}
+				</EmptyState>
 			{:else}
-				<ListEnd />
+				<div class={TABLE_WRAP} use:scrollFade>
+					<table class={TABLE}>
+						<thead>
+							<tr>
+								<th scope="col" class={TH}>用户</th>
+								<th scope="col" class={TH_SECONDARY}>登录 ID</th>
+								<th scope="col" class={TH}>状态</th>
+								<th scope="col" class={TH_SECONDARY}>邮箱</th>
+								<th scope="col" class={TH_SECONDARY}>注册时间</th>
+								<th scope="col" class={TH_SECONDARY}>最后活跃</th>
+								<th scope="col" class={TH}><span class="sr-only">操作</span></th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each list.items as u (u.user.user_id)}
+								<tr class={TR}>
+									<td class={TD}>
+										<span class="flex items-center gap-2">
+											<span class="text-text-primary">{u.user.nickname}</span>
+											<span class={`${META_MONO} max-sm:hidden`}>{u.user.user_id}</span>
+										</span>
+									</td>
+									<td class={TD_SECONDARY}>{u.login_id}</td>
+									<td class={TD}>
+										{#if u.status === 'banned'}
+											<span class="badge bg-danger-bg/50 text-text-status-danger-on-soft">已封禁</span>
+											<span class={`ml-1.5 ${META}`}>
+												{u.banned_until ? `至 ${formatDateTime(u.banned_until)}` : '永久'}
+											</span>
+										{:else}
+											<span class="badge bg-surface-subtle text-text-secondary">正常</span>
+										{/if}
+									</td>
+									<td class={TD_SECONDARY}>{u.email ?? '—'}</td>
+									<td class={TD_SECONDARY}>{formatDateTime(u.created_at)}</td>
+									<td class={TD_SECONDARY}>{u.last_active_at ? formatDateTime(u.last_active_at) : '—'}</td>
+									<td class={TD_ACTIONS}>
+										{#if canWrite}
+											<button type="button" class={u.status === 'banned' ? ROW_BTN : ROW_BTN_DANGER} onclick={() => openBan(u)}>
+												{u.status === 'banned' ? '解封' : '封禁'}
+											</button>
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+
+				{#if list.hasMore}
+					<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
+				{:else}
+					<ListEnd />
+				{/if}
 			{/if}
-		{/if}
 		</div>
 	</div>
 

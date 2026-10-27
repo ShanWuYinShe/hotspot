@@ -33,8 +33,8 @@
 	const pathname = $derived(page.url.pathname);
 	const isSubPage = $derived(isSubPagePath(pathname));
 
-	// FAB 悬浮投影：统一走 --cst-elevation-fab（中性高雅，无彩色炫光）
-	const fabShadow = $derived(composer.composerOpen ? 'none' : 'var(--cst-elevation-fab)');
+	// FAB 视觉与主题融合：投影改用 accent 光晕档（shadow-glow-md，随三主题派生），
+	// 收起态无投影；底栏玻璃上的主操作因此带一层主题色微光，而不是中性黑投影。
 
 	// 单手边缘轻扫返回手势（Swipe-to-Go-Back）——解救单手大屏握持痛点
 	let touchStartX = 0;
@@ -144,8 +144,8 @@
 					<div class="flex items-center justify-center w-full">
 						<button
 							type="button"
-							class="hover-btn scale-btn flex items-center justify-center focus-ring select-none rounded-full size-12"
-							style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};box-shadow:{fabShadow};"
+							class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring select-none size-12 {composer.composerOpen ? '' : 'shadow-glow-md'}"
+							style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};"
 							onclick={toggleComposer}
 							aria-label={composer.composerOpen ? '关闭' : '发布'}
 						>

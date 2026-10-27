@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { Bell, Search, Compass, ArrowRight, Sparkles, TrendingUp, Users, LogIn, ExternalLink, MapPin, Radio } from '@lucide/svelte';
+	import { Bell, Search, Compass, ArrowRight, Sparkles, TrendingUp, Users, LogIn, MapPin, Radio, ChevronRight } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
+	import { formatDistance } from '@/lib/utils';
 	import type { MomentItem } from '@/api/types';
 	import { searchMoments, fetchFollowingMoments } from '@/api';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
@@ -13,6 +14,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
+	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import { contentFade } from '@/lib/motion';
@@ -154,6 +156,20 @@
 		return list;
 	});
 
+	// 右 rail「附近活动」：复用已加载的发现流里带位置信息的瞬间（零额外请求），
+	// 用位置 + 距离作为地理轴信息（主列是算法轴，rail 补一条地理轴线索）。
+	const railNearbyMoments = $derived.by(() =>
+		discover.items
+			.filter((m) => m.moment_id && m.location?.location_name)
+			.slice(0, 3)
+			.map((m) => ({
+				id: m.moment_id,
+				image: m.images?.[0]?.url ?? '',
+				title: m.description?.trim() || '无标题瞬间',
+				meta: [m.location?.location_name, formatDistance(m.location?.distance)].filter(Boolean).join(' · ')
+			}))
+	);
+
 	// 社区精选热议话题（带瞬间计数与搜索入口）
 	const trendingTopics = [
 		{ tag: '周末去哪儿', count: 32, desc: '周末好去处灵感分享' },
@@ -193,7 +209,7 @@
 		class="hover-btn group flex w-full items-center gap-3.5 rounded-lg bg-surface-island px-4 py-4 text-left focus-ring transition mt-4 hover:shadow-raised-sm shadow-xs"
 		onclick={() => void goto(ROUTES.nearby)}
 	>
-		<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
+		<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft transition-transform group-hover:scale-105">
 			<Compass class="size-5" strokeWidth={1.75} />
 		</span>
 		<div class="min-w-0 flex-1">
@@ -214,8 +230,8 @@
 			{#if device !== 'desktop'}
 				<!-- 移动端顶栏：品牌 Logo + 快捷动作 + 居中胶囊分段器一体化（告别生硬下划线与单调布局） -->
 				<!-- 去硬边线（Round 2）：画布色半透明 + 模糊承担分隔，不再画 border -->
-				<div class="bg-surface-page/80 backdrop-blur-md sticky top-0 z-20 pb-2.5">
-					<div class="flex items-center justify-between px-4 pt-3 pb-1.5">
+				<div class="bg-surface-page/80 backdrop-blur-md sticky top-0 z-20 pb-2">
+					<div class="flex items-center justify-between px-4 pt-3 pb-2">
 						<div class="flex items-center gap-2">
 							<img src={imgHotSpot} decoding="async" alt="HotSpot" class="size-6.5 rounded-full object-cover shadow-xs" />
 							<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
@@ -256,7 +272,7 @@
 		<div use:contentFade={currentLoading}>
 		{#if activeTab === 'following' && auth.status !== 'authenticated'}
 			<div class="mx-4 my-8 rounded-lg bg-surface-island p-6 text-center shadow-xs">
-				<div class="mx-auto flex size-12 items-center justify-center rounded-full bg-accent-soft text-accent-default mb-3">
+				<div class="mx-auto flex size-12 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft mb-3">
 					<Users class="size-6" strokeWidth={1.75} />
 				</div>
 				<h2 class="text-base font-semibold text-text-primary">登录后查看关注动态</h2>
@@ -278,13 +294,13 @@
 				variant="feed"
 				count={4}
 				label="加载动态中…"
-				class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4.5 px-3 sm:px-0 pt-2"
+				class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 px-3 sm:px-0 pt-2"
 			/>
 		{:else if currentError && currentItems.length === 0}
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
 		{:else if currentItems.length > 0}
 			<!-- 高质感社区 Feed 流：方案 E 超宽屏 3 列流式画廊瀑布（默认标准） -->
-			<div class={demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4.5 px-3 sm:px-0 pt-2'}>
+			<div class={demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 px-3 sm:px-0 pt-2'}>
 				{#each currentItems as moment, index (moment.moment_id)}
 					<HomeFeedItem
 						{moment}
@@ -448,82 +464,124 @@
 						</RailSection>
 					</div>
 				</div>
-			{:else}
-				<!-- 桌面端右侧 Rail 辅助区：Bento 微岛生态，与主画布完美融为一体 -->
-				<div class="flex flex-col gap-4 py-2">
-					<!-- 活跃邻居推荐 -->
-					{#if activeNeighbors.length > 0}
-						<RailSection title="活跃邻居" variant="island">
-							<div class="flex flex-col divide-y divide-border-subtle/30">
-								{#each activeNeighbors as neighbor (neighbor.userId)}
-									<div class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-										<Avatar src={neighbor.avatarUrl} name={neighbor.nickname} size="sm" />
-										<div class="min-w-0 flex-1">
-											<button
-												type="button"
-												class="text-left text-sm font-semibold text-text-primary hover:text-accent-default hover:underline transition-colors truncate block w-full"
-												onclick={() => void goto(ROUTES.user(neighbor.userId))}
-											>
-												{neighbor.nickname}
-											</button>
-											{#if neighbor.location}
-												<span class="text-xs text-text-secondary truncate block mt-0.5">{neighbor.location}</span>
-											{/if}
-										</div>
-										<button
-											type="button"
-											class="hover-btn shrink-0 rounded-full bg-surface-subtle/60 px-3 py-1 text-xs font-medium text-text-primary hover:bg-accent-soft hover:text-accent-default focus-ring transition active:scale-95"
-											onclick={() => void goto(ROUTES.user(neighbor.userId))}
-										>
-											查看
-										</button>
-									</div>
-								{/each}
-							</div>
-						</RailSection>
-					{/if}
-
-					<!-- 社区热议话题 -->
-					<RailSection title="社区热议" variant="island">
+		{:else}
+			<!-- 桌面端右侧 Rail：三块卡统一 RailSection + SectionHead(rail) 卡头（标题 + 右侧动作），
+			     内容一律「行式」节奏；不再手写卡头、也不再每行堆一个「查看」按钮（整行可点）。 -->
+			<div class="flex flex-col gap-4 py-2">
+				{#if activeNeighbors.length > 0}
+					<RailSection
+						title="活跃邻居"
+						icon={Users}
+						action="附近的人"
+						onAction={() => void goto(ROUTES.nearbyPeople)}
+						variant="island"
+					>
 						<div class="flex flex-col divide-y divide-border-subtle/30">
-							{#each trendingTopics as topic (topic.tag)}
+							{#each activeNeighbors as neighbor (neighbor.userId)}
 								<button
 									type="button"
-									class="hover-btn flex w-full items-center justify-between py-2 text-left transition hover:text-accent-default focus-ring first:pt-0 last:pb-0"
-									onclick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
+									class="hover-bg focus-ring group/row -mx-2 flex min-w-0 items-center gap-2.5 rounded-sm px-2 py-2.5 text-left transition-colors first:pt-0 last:pb-0"
+									aria-label={`查看 ${neighbor.nickname} 的个人主页`}
+									onclick={() => void goto(ROUTES.user(neighbor.userId))}
 								>
-									<div class="min-w-0 flex-1">
-										<div class="flex items-center gap-1.5">
-											<TrendingUp class="size-3 text-accent-default shrink-0" strokeWidth={1.75} />
-											<span class="text-sm font-medium text-text-primary truncate hover:text-accent-default">#{topic.tag}</span>
-										</div>
-										<span class="text-xs text-text-secondary truncate block mt-0.5 pl-4.5">{topic.desc}</span>
-									</div>
-									<span class="text-xs text-text-secondary tabular-nums shrink-0 ml-2">{topic.count} 条</span>
+									<Avatar src={neighbor.avatarUrl} name={neighbor.nickname} size={32} />
+									<span class="min-w-0 flex-1">
+										<span class="block truncate text-sm font-medium text-text-primary">{neighbor.nickname}</span>
+										{#if neighbor.location}
+											<span class="mt-0.5 block truncate text-xxs text-text-secondary">{neighbor.location}</span>
+										{/if}
+									</span>
+									<ChevronRight
+										class="size-3.5 shrink-0 text-text-secondary transition-transform duration-rapid group-hover/row:translate-x-0.5 group-hover/row:text-accent-default"
+										strokeWidth={1.5}
+									/>
 								</button>
 							{/each}
 						</div>
 					</RailSection>
+				{/if}
 
-					<!-- 快捷探索周边 -->
-					<RailSection title="探索雷达" variant="island">
-						<button
-							type="button"
-							class="hover-btn group flex w-full items-center gap-3 text-left transition focus-ring rounded-xl p-2 -mx-2 hover:bg-surface-subtle/60"
-							onclick={() => void goto(ROUTES.nearby)}
-						>
-							<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default transition-transform group-hover:scale-105">
-								<Compass class="size-4.5" strokeWidth={1.75} />
-							</span>
-							<div class="min-w-0 flex-1">
-								<span class="block text-xs font-semibold text-text-primary group-hover:text-accent-default transition-colors">发现身边 5km</span>
-								<span class="block truncate text-xxs text-text-secondary mt-0.5">人 · 群组 · 动态三合一雷达</span>
-							</div>
-							<ExternalLink class="size-3.5 text-text-secondary shrink-0 group-hover:text-accent-default" />
-						</button>
+				<!-- 社区热议：序号 + 话题 + 计数构成「数字与秩序」节奏（数字等宽、不抖动） -->
+				<RailSection
+					title="社区热议"
+					icon={TrendingUp}
+					action="查看全部"
+					onAction={() => void goto(ROUTES.search)}
+					variant="island"
+				>
+					<div class="flex flex-col divide-y divide-border-subtle/30">
+						{#each trendingTopics.slice(0, 5) as topic, i (topic.tag)}
+							<button
+								type="button"
+								class="hover-bg focus-ring group/row -mx-2 flex w-full items-center gap-2.5 rounded-sm px-2 py-2 text-left transition-colors first:pt-0 last:pb-0"
+								aria-label={`搜索话题 #${topic.tag}`}
+								onclick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
+							>
+								<span class="w-4 shrink-0 text-xxs font-medium tabular-nums text-text-secondary">{String(i + 1).padStart(2, '0')}</span>
+								<span class="min-w-0 flex-1">
+									<span class="block truncate text-sm font-medium text-text-primary transition-colors group-hover/row:text-accent-default">#{topic.tag}</span>
+									<span class="mt-0.5 block truncate text-xxs text-text-secondary">{topic.desc}</span>
+								</span>
+								<span class="shrink-0 text-xs tabular-nums text-text-secondary">{topic.count} 条</span>
+							</button>
+						{/each}
+					</div>
+				</RailSection>
+
+				<!-- 附近活动：rail 的地理轴线索（位置 + 距离），补足主列高度 -->
+				{#if railNearbyMoments.length > 0}
+					<RailSection
+						title="附近活动"
+						icon={MapPin}
+						action="去附近"
+						onAction={() => void goto(ROUTES.nearby)}
+						variant="island"
+					>
+						<div class="flex flex-col divide-y divide-border-subtle/30">
+							{#each railNearbyMoments as item (item.id)}
+								<div class="py-2 first:pt-0 last:pb-0">
+									<RailMomentThumb
+										image={item.image}
+										title={item.title}
+										meta={item.meta}
+										onClick={() => void goto(ROUTES.moment(item.id))}
+									/>
+								</div>
+							{/each}
+						</div>
 					</RailSection>
-				</div>
-			{/if}
+				{/if}
+
+				<!-- 探索雷达：改成「入口卡」形态——图标砖 + 一句说明 + 箭头 -->
+				<RailSection
+					title="探索雷达"
+					icon={Compass}
+					action="全景地图"
+					onAction={() => void goto(ROUTES.map)}
+					variant="island"
+				>
+					<button
+						type="button"
+						class="hover-bg focus-ring group/entry -mx-2 flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition-colors"
+						onclick={() => void goto(ROUTES.nearby)}
+					>
+						<span
+							class="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft transition-transform duration-rapid group-hover/entry:scale-105"
+						>
+							<Compass class="size-5" strokeWidth={1.75} />
+						</span>
+						<span class="min-w-0 flex-1">
+							<span class="block text-sm font-semibold text-text-primary">发现身边 5km</span>
+							<span class="mt-0.5 block truncate text-xxs text-text-secondary">人 · 群组 · 瞬间三合一雷达</span>
+						</span>
+						<ArrowRight
+							class="size-4 shrink-0 text-text-secondary transition-all duration-rapid group-hover/entry:translate-x-0.5 group-hover/entry:text-accent-default"
+							strokeWidth={1.75}
+						/>
+					</button>
+				</RailSection>
+			</div>
+		{/if}
 		{/snippet}
 	</SplitPageLayout>
 </div>

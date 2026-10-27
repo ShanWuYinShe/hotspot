@@ -2,11 +2,17 @@
 	// 分享码落地页（spec api_spec_public.md share/open_the_door）：/share/[code] 统一解析
 	// 鸿蒙端与 Web 端分享出去的分享码链接，按 payload 类型跳转到对应详情页。
 	// 独立于 (app) 分组：落地页不要求登录、不挂导航 chrome（目标页自身再按需引导登录）。
+	//
+	// R13 品牌化：从「居中一列散字」收成一张品牌内容卡（品牌字标 + 状态图标砖 +
+	// 单一主 CTA + 语境化次 CTA），与登录/404 共用同一套语言；跳转逻辑与
+	// 过期文案不变。
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Leaf, Link2Off, RotateCw } from '@lucide/svelte';
+	import { Compass, Link2Off, MapPin, RotateCw } from '@lucide/svelte';
 	import { openShareDoor } from '@/api';
 	import Button from '@/components/ui/button.svelte';
+	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
+	import BrandLockup from '@/components/layout/brand/BrandLockup.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import type { ShareDetail } from '@/api/types';
 
@@ -68,44 +74,68 @@
 </svelte:head>
 
 <!-- 本路由独立于 (app) 分组：外层没有 main 地标，需自备（走查 s3：全站唯一无 <main> 的路由） -->
-<main id="main-content" class="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-page px-6 text-center">
-	<div class="flex size-11 items-center justify-center rounded-full bg-accent-default text-text-on-accent shadow-raised-sm">
-		<Leaf class="size-5" strokeWidth={1.75} aria-hidden="true" />
-	</div>
-	<p class="eyebrow">HotSpot</p>
-	{#if phase === 'loading'}
-		<p class="text-md text-text-secondary" role="status">正在解析分享…</p>
-	{:else if phase === 'error'}
-		<!-- 错误图标增强视觉焦点(r83:内容单一集中中部) -->
-		<Link2Off class="size-10 text-text-secondary opacity-subtle" strokeWidth={1.5} aria-hidden="true" />
-		<h1 class="text-2xl font-semibold tracking-title text-text-primary">{errorMessage}</h1>
-		<!-- 副说明补充容错语境(r83:强化引导与容错) -->
-		<p class="text-xs text-text-secondary">{errorMessage.includes('网络') ? '网络不稳定，可稍后重试' : '链接可能已被删除，或地址有误'}</p>
-		<div class="flex items-center gap-2">
-			{#if errorMessage.includes('网络')}
-				<Button variant="secondary" onclick={() => (retryKey += 1)}>
-					<RotateCw class="size-3.5" strokeWidth={1.75} aria-hidden="true" />
-					重试
-				</Button>
-			{/if}
-			<Button variant="primary" class="hit-slop" onclick={() => goto(ROUTES.home, { replaceState: true })}>前往 HotSpot</Button>
+<main id="main-content" class="relative isolate flex min-h-dvh flex-col items-center justify-center bg-surface-page px-5 py-10">
+	<!-- 氛围画布：与登录/错误页同一套主题世界层，落地页不再是一块孤立白底 -->
+	<AmbientBackdrop />
+
+	<section class="relative w-full max-w-100 rounded-lg bg-surface-primary p-6 text-center shadow-raised-lg sm:p-8">
+		<div class="flex justify-center">
+			<BrandLockup size="md" />
 		</div>
-	{:else if detail}
-		{@const p = detail.payload}
-		{#if 'shared_location' in p}
-			<div class="flex flex-col items-center gap-2">
-				<h1 class="text-lg font-semibold tracking-title text-text-primary">{p.shared_location.location_name}</h1>
-				<!-- point 缺失（旧数据/异常 payload）时不能整页白屏，降级只展示名称 -->
-				{#if p.shared_location.point}
-					<p class="text-xs tabular-nums text-text-secondary">
-						{p.shared_location.point.latitude.toFixed(5)}, {p.shared_location.point.longitude.toFixed(5)}
-					</p>
+
+		<div class="mt-7 flex flex-col items-center">
+			{#if phase === 'loading'}
+				<span class="flex size-14 items-center justify-center rounded-full bg-accent-soft">
+					<span class="spinner size-5" role="status" aria-label="正在解析分享"></span>
+				</span>
+				<p class="mt-4 text-sm text-text-secondary">正在解析分享…</p>
+			{:else if phase === 'error'}
+				<span class="flex size-14 items-center justify-center rounded-full bg-accent-soft text-accent-default">
+					<Link2Off class="size-6" strokeWidth={1.5} aria-hidden="true" />
+				</span>
+				<p class="mt-4 text-xxs font-medium uppercase tracking-eyebrow text-accent-default">分享链接</p>
+				<h1 class="mt-1.5 text-2xl font-semibold tracking-title text-text-primary">{errorMessage}</h1>
+				<!-- 副说明补充容错语境(r83:强化引导与容错) -->
+				<p class="mt-2 max-w-xs text-sm leading-6 text-text-secondary">
+					{errorMessage.includes('网络') ? '网络不稳定，可稍后重试。' : '链接可能已被删除，或地址有误。'}
+				</p>
+				<div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+					{#if errorMessage.includes('网络')}
+						<Button variant="soft" size="md" class="hit-slop" onclick={() => (retryKey += 1)}>
+							<RotateCw class="size-4" strokeWidth={1.75} aria-hidden="true" />
+							重试
+						</Button>
+					{/if}
+					<Button variant="primary" size="md" class="hit-slop" onclick={() => void goto(ROUTES.home, { replaceState: true })}>
+						<Compass class="size-4" strokeWidth={1.75} aria-hidden="true" />
+						前往 HotSpot
+					</Button>
+				</div>
+			{:else if detail}
+				{@const p = detail.payload}
+				{#if 'shared_location' in p}
+					<span class="flex size-14 items-center justify-center rounded-full bg-accent-soft text-accent-default">
+						<MapPin class="size-6" strokeWidth={1.5} aria-hidden="true" />
+					</span>
+					<p class="mt-4 text-xxs font-medium uppercase tracking-eyebrow text-accent-default">位置锚点</p>
+					<h1 class="mt-1.5 text-2xl font-semibold tracking-title text-text-primary">{p.shared_location.location_name}</h1>
+					<!-- point 缺失（旧数据/异常 payload）时不能整页白屏，降级只展示名称 -->
+					{#if p.shared_location.point}
+						<p class="mt-2 text-xs tabular-nums text-text-secondary">
+							{p.shared_location.point.latitude.toFixed(5)}, {p.shared_location.point.longitude.toFixed(5)}
+						</p>
+					{/if}
+					<p class="mt-2 max-w-xs text-sm leading-6 text-text-secondary">这是一个位置锚点分享，可在 HotSpot 地图里查看周边。</p>
+					<Button variant="primary" size="md" class="mt-6" onclick={() => void goto(ROUTES.map, { replaceState: true })}>
+						<MapPin class="size-4" strokeWidth={1.75} aria-hidden="true" />
+						打开地图
+					</Button>
+				{:else}
+					<p class="text-sm text-text-secondary" role="status">正在跳转…</p>
 				{/if}
-				<p class="text-sm text-text-secondary">这是一个位置锚点分享，请在 HotSpot App 内查看</p>
-			</div>
-			<Button variant="primary" onclick={() => goto(ROUTES.map, { replaceState: true })}>打开地图</Button>
-		{:else}
-			<p class="text-md text-text-secondary" role="status">正在跳转…</p>
-		{/if}
-	{/if}
+			{/if}
+		</div>
+	</section>
+
+	<p class="relative mt-5 text-xs text-text-secondary">HotSpot · 让附近有温度</p>
 </main>

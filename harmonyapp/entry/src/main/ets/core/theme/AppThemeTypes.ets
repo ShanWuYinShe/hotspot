@@ -90,6 +90,13 @@ export interface AppThemePalette {
   accentBackground: string;
   accentText: string;
   accentMuted: string;
+  /** R12：软底同色系文字（对齐 web --cst-text-*-on-soft：语义色 80% + text-primary 20%） */
+  textAccentOnSoft: string;
+  textStatusOnlineOnSoft: string;
+  textStatusWarningOnSoft: string;
+  textStatusDangerOnSoft: string;
+  /** harmony-only：info 软底文字（web 无 info-on-soft token，同公式派生） */
+  textStatusInfoOnSoft: string;
   chatBackground: string;
   systemSurfaceBaseColor: string;
   /** 在线状态色（对齐前端 --cst-palette-online） */

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	// 设置页区块骨架：左标题/描述栏（平板 240px / 桌面 22vw 自适应，clamp 240–300px）+ 右内容区；
-	// 平板（≥768px）也启用两栏——单栏时行内 label 与右侧控件间距可达 400px。
-	// 区块间分隔线由父级 divide-y 承担；页顶/页底留白由页面 contentClassName 统一承担，
-	// 首区块由页面传 first:pt-0、末区块传 last:pb-0，避免与其叠成双倍留白。
+	// 设置页区块骨架（R13 改单列）：组标题/描述在上、内容卡在下。
+	// 原两栏（左 240–300 描述列 + 右内容列）在 1440 宽下会留出 130+px 空档，且右列被压窄
+	// 导致分段控件（主题/明暗/地图源）文字截断成首字；单列后每行控件获得整行宽度。
+	// 区块间距由本组件的 pb-6 单侧提供；页顶/页底留白仍由页面 contentClassName 统一承担。
 
 	let {
 		title,
@@ -19,14 +19,10 @@
 	} = $props();
 </script>
 
-<div class="grid grid-cols-1 gap-3 py-6 min-[768px]:grid-cols-[240px_minmax(0,1fr)] min-[768px]:gap-8 lg:grid-cols-[clamp(240px,22vw,300px)_minmax(0,1fr)] lg:gap-10 {className}">
-	<div>
+<section class="pb-6 last:pb-0 {className}">
+	<div class="mb-3">
 		<h2 class="text-md font-semibold text-text-primary">{title}</h2>
-		<p class="text-xs text-text-secondary mt-1 leading-relaxed">
-			{description}
-		</p>
+		<p class="mt-1 text-xs leading-relaxed text-text-secondary">{description}</p>
 	</div>
-	<div>
-		{@render children()}
-	</div>
-</div>
+	{@render children()}
+</section>

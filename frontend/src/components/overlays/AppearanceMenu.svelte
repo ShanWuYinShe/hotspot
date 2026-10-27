@@ -85,7 +85,7 @@
 			label="外观设置"
 			onClick={() => (open = !open)}
 			variant="ghost"
-			size={34}
+			size={36}
 			class="header-action"
 		/>
 	</div>
@@ -114,7 +114,7 @@
 							onclick={() => setTheme(item.id)}
 							aria-pressed={selected}
 							class="rounded-md border p-2.5 text-left outline-none transition-all duration-standard focus-visible:ring-2 focus-visible:ring-accent-default {selected
-								? 'border-accent-border bg-accent-soft text-accent-default shadow-raised-sm'
+								? 'border-accent-border bg-accent-soft text-text-accent-on-soft shadow-raised-sm'
 								: 'border-border-default bg-surface-primary text-text-secondary hover:bg-interactive-hover hover:text-text-primary'}"
 						>
 							<div class="flex items-center justify-between mb-2">
@@ -186,7 +186,7 @@
 								onclick={() => void applyScenario(s.id)}
 								aria-pressed={isCur}
 								class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors duration-instant outline-none focus-visible:ring-2 focus-visible:ring-accent-default {isCur
-									? 'bg-accent-soft font-medium text-accent-default'
+									? 'bg-accent-soft font-medium text-text-accent-on-soft'
 									: 'text-text-primary hover:bg-interactive-hover'}"
 							>
 								<span class="truncate">{s.label}</span>

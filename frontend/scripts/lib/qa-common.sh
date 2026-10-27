@@ -123,6 +123,11 @@ build_page_lists() {
     [ -z "$user_id" ] && user_id="$(printf '%s\n' "$scraped" | sed -n '2p')"
     [ -z "$group_id" ] && group_id="$(printf '%s\n' "$scraped" | sed -n '3p')"
   fi
+  # 详情页 ID 环境变量兜底（mock/空库环境不可发现时使用，见 frontend/AGENTS.md
+  # 「质量门禁脚本」：AUDIT_DETAIL_MOMENT / AUDIT_DETAIL_USER / AUDIT_DETAIL_GROUP）。
+  [ -z "$moment_id" ] && [ -n "${AUDIT_DETAIL_MOMENT:-}" ] && moment_id="$AUDIT_DETAIL_MOMENT"
+  [ -z "$user_id" ] && [ -n "${AUDIT_DETAIL_USER:-}" ] && user_id="$AUDIT_DETAIL_USER"
+  [ -z "$group_id" ] && [ -n "${AUDIT_DETAIL_GROUP:-}" ] && group_id="$AUDIT_DETAIL_GROUP"
   DETAIL_MOMENT="$moment_id"; DETAIL_USER="$user_id"; DETAIL_GROUP="$group_id"
   local detail_note=""
   [ -z "$moment_id" ] && detail_note="$detail_note moments"

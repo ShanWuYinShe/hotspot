@@ -55,6 +55,17 @@ describe('SearchResults', () => {
 		expect(screen.queryByText('有内容')).toBeNull();
 	});
 
+	it('空态给建议 chips：点击走 onChooseTopic（tag 语义搜索）', async () => {
+		const onChooseTopic = vi.fn();
+		render(
+			SearchResults,
+			base({ hotTopics: ['松弛', '老街'], onChooseTopic })
+		);
+		expect(screen.getByText('没有找到“鹿”')).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: '#松弛' }));
+		expect(onChooseTopic).toHaveBeenCalledWith('松弛');
+	});
+
 	it('渲染用户结果与 Tab 切换回调', async () => {
 		const onTabChange = vi.fn();
 		render(

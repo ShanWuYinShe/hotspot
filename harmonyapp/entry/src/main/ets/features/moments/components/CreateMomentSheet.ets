@@ -216,7 +216,7 @@ export struct CreateMomentSheet {
         // 创建群组切换 pill（对齐前端：accent-soft 底 + accent 蓝字，浅色表面语义）
         Text('创建群组')
           .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getPalette().accentBackground)
+          .fontColor(this.getPalette().textAccentOnSoft)
           .backgroundColor(this.getPalette().accentMuted)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground })
           .borderRadius(DesignConstants.RADIUS.FULL)
@@ -289,7 +289,7 @@ export struct CreateMomentSheet {
       if (this.isPublishing) {
         Text(this.publishingMessage || '正在发布…')
           .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontColor(this.getPalette().accentBackground)
+          .fontColor(this.getPalette().textAccentOnSoft)
           .backgroundColor(this.getPalette().accentMuted)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().accentBackground })
           .borderRadius(DesignConstants.RADIUS.FULL)
@@ -452,7 +452,7 @@ export struct CreateMomentSheet {
             .fontWeight(this.selectedMoods.indexOf(mood) >= 0 ?
               DesignConstants.FONT.WEIGHT.SEMIBOLD : DesignConstants.FONT.WEIGHT.REGULAR)
             .fontColor(this.selectedMoods.indexOf(mood) >= 0 ?
-              this.getPalette().accentBackground :
+              this.getPalette().textAccentOnSoft :
               this.getPalette().textSecondary)
             .backgroundColor(this.selectedMoods.indexOf(mood) >= 0 ?
               this.getPalette().accentMuted :

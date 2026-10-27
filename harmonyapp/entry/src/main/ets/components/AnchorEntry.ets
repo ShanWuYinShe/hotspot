@@ -97,7 +97,7 @@ export struct AnchorEntry {
             .layoutWeight(1)
           Text(this.getRadiusText())
             .fontSize(DesignConstants.FONT.SIZE.XS2) // 10
-            .fontColor(this.getPalette().accentBackground)
+            .fontColor(this.getPalette().textAccentOnSoft)
             .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2 })
             .borderRadius(DesignConstants.RADIUS.FULL)
             .backgroundColor(this.getPalette().accentMuted)

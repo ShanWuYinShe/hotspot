@@ -659,7 +659,7 @@ export struct SettingsPage {
                             LucideIcon({
                               icon: AppIcon.MOON,
                               iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-                              color: this.getCurrentThemePalette().accentBackground
+                              color: this.getCurrentThemePalette().textAccentOnSoft
                             })
                           }
                           .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)

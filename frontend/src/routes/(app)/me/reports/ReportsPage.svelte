@@ -15,6 +15,7 @@
 	import { listReports } from '@/api/client';
 	import type { ReportItem, ReportStatus } from '@/api/types';
 	import { formatMomentTime } from '@/lib/utils';
+	import { ShieldCheck } from '@lucide/svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { ROUTES } from '@/lib/routes';
 
@@ -24,6 +25,14 @@
 	// StandardPageLayout + sticky PageHeader + below TabBar（?tab= 深链）。
 
 	type ReportsTab = 'all' | ReportStatus;
+
+	// 状态胶囊配色：待处理用 warning 软底（需要用户/管理员处理）、已处理 online 软底（安全语义）、
+	// 已驳回中性。软底必须配 on-soft 文字档（R12 口径），禁止淡底 + 同色语义字直配。
+	const STATUS_CLASS: Record<ReportStatus, string> = {
+		pending: 'bg-status-warning-bg text-text-status-warning-on-soft',
+		resolved: 'bg-status-online-bg text-text-status-online-on-soft',
+		dismissed: 'bg-surface-subtle text-text-secondary'
+	};
 
 	const TABS: { id: ReportsTab; label: string }[] = [
 		{ id: 'all', label: '全部' },
@@ -205,24 +214,26 @@
 	{:else if items.length === 0}
 		<EmptyState
 			spotlight
-			bare
+			iconTone="accent"
 			title="暂无举报记录"
 			description="在动态、评论或聊天中遇到违规内容时，可通过「举报」提交，处理结果会在这里同步。"
-		/>
+		>
+			{#snippet icon()}
+				<ShieldCheck class="size-7" strokeWidth={1.5} />
+			{/snippet}
+		</EmptyState>
 	{:else}
 		<ListContainer bordered class="overflow-hidden" ariaLabel="举报记录列表">
 			{#each items as item (item.report_id)}
 				<ListItem class="px-3 py-3" ariaLabel={`${STATUS_LABELS[item.status]}：举报${TARGET_LABELS[item.target_type]}`}>
 					<div class="flex min-w-0 flex-1 flex-col gap-1 py-1">
+						<!-- 标题 + 状态胶囊：胶囊固定行尾（ml-auto），不随标题长度漂移（R13 评审 P2-9） -->
 						<div class="flex items-center gap-2">
-							<span class="text-sm font-medium text-text-primary truncate">
+							<span class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
 								举报{TARGET_LABELS[item.target_type]} · {REASON_LABELS[item.reason]}
 							</span>
 							<span
-								class="inline-flex h-5 shrink-0 items-center justify-center px-2 leading-none rounded-full text-xxs {item.status ===
-								'pending'
-									? 'bg-accent-soft text-accent-default'
-									: 'bg-surface-subtle text-text-secondary'}"
+								class="ml-auto inline-flex h-5 shrink-0 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none {STATUS_CLASS[item.status]}"
 							>
 								{STATUS_LABELS[item.status]}
 							</span>
@@ -231,10 +242,12 @@
 							<p class="text-xs text-text-secondary line-clamp-2">{item.description}</p>
 						{/if}
 						{#if item.resolution}
-							<p class="text-xs text-text-secondary">
-								处理结果：{item.resolution.action === 'resolve' ? '已确认处理' : '未构成违规'}{item.resolution.note
-									? ` · ${item.resolution.note}`
-									: ''}
+							<p class="text-xs leading-relaxed text-text-secondary">
+								处理结果：
+								<span class="font-medium text-text-primary">
+									{item.resolution.action === 'resolve' ? '已确认处理' : '未构成违规'}
+								</span>
+								{#if item.resolution.note} · {item.resolution.note}{/if}
 							</p>
 						{/if}
 						<!-- 时间行：原为 text-xxs(10px) + opacity-dim 且用绝对时间戳，与全站

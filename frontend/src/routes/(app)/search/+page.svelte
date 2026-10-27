@@ -348,12 +348,13 @@
 
 
 <div class="flex flex-col flex-1 min-h-full" data-search-root>
-<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6 max-w-6xl xl:max-w-7xl 2xl:max-w-[88rem] mx-auto w-full">
+<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader title="搜索" glass onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 			{#snippet below()}
-				<!-- 搜索框随 sticky header 吸顶（对齐 nearby/moments 样板 below 结构） -->
-				<div class="mx-auto w-full max-w-3xl mt-3 mb-2.5">
+				<!-- 搜索框随 sticky header 吸顶（对齐 nearby/moments 样板 below 结构）；
+				     below 全宽、与标题同轴，不另设窄列（否则发现态/结果态整页水平漂移） -->
+				<div class="mt-3 mb-2.5 w-full">
 					<!-- 占位词与全站术语对齐:瞬间(非动态)并补群组维度(Gemini 审查 r11) -->
 					<SearchInput
 						value={query}
@@ -405,6 +406,8 @@
 			{hasResults}
 			{results}
 			suggestions={discoveryTopics.filter((t) => t.toLowerCase() !== keyword)}
+			hotTopics={hotTopics}
+			onChooseTopic={chooseTopic}
 			onTabChange={(id) => {
 				tab = id;
 				commitSearchUrl();

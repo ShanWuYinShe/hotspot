@@ -1,34 +1,49 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { MapPin, MessageCircle, UserPlus, UserCheck, Share2, MoreHorizontal, Flag, PencilLine, UserX, X, Check, ArrowLeft } from '@lucide/svelte';
+	import {
+		ArrowLeft,
+		Check,
+		ChevronRight,
+		Flag,
+		ImageIcon,
+		MapPin,
+		MessageCircle,
+		MoreHorizontal,
+		PencilLine,
+		Share2,
+		Tag,
+		UserCheck,
+		UserPlus,
+		Users,
+		UserX,
+		X
+	} from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import Avatar from '@/components/shared/Avatar.svelte';
-	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
-import { formatCount, formatDistance } from '@/lib/utils';
-import FollowButton from '@/components/ui/FollowButton.svelte';
-import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import RailSection from '@/components/rail/RailSection.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
+	import IdentityHero from '@/components/profile/IdentityHero.svelte';
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
-	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
-	import MetricRow from '@/components/data-display/MetricRow.svelte';
-	import { openTheDoor, follow, block, setRemark , netError } from '@/api';
-	import { auth } from '@/stores/auth.svelte';
-	import { ROUTES } from '@/lib/routes';
-	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
-	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import * as Dialog from '@/components/ui/dialog';
+	import { formatCardTime, formatCount, formatDistance } from '@/lib/utils';
+	import { openTheDoor, follow, block, setRemark, netError } from '@/api';
+	import type { UserPresenceStatus } from '@/api/types';
+	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { showToast } from '@/stores/toast.svelte';
-	import { requireAuth } from '@/stores/auth.svelte';
 	import { platform } from '@/stores/platform.svelte';
+	import { ROUTES } from '@/lib/routes';
 	import { smartBack } from '@/lib/smart-back';
 	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import { copyShareLink } from '@/lib/share';
 
-	// 用户详情：关注/私信/屏蔽/举报/备注 + 瞬间画廊 + 桌面 Rail。
+	// 用户详情：身份封面卡（IdentityHero other 模式）+ 瞬间网格 + 桌面 rail。
+	// R13：头像/昵称/简介/位置/标签/指标/关系动作收敛进一张身份卡（原先散落在
+	// 头像行、简介行、胶囊指标与右浮动作四段），封面承担页面视觉焦点。
 
 	let { params }: { params: { userId: string } } = $props();
 
@@ -40,7 +55,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		followers: number;
 		following: number;
 		moments: number;
-		galleryMoments: Array<{ id: string; url: string }>;
+		galleryMoments: Array<{ id: string; url: string; time: string }>;
 		tags: string[];
 	}
 
@@ -62,17 +77,31 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	let followed = $state(false);
 	let moreOpen = $state(false);
 	let blocked = $state(false);
+	// 在线状态（spec: UserItem.presence_status，null = 对方隐藏了在线状态）：
+	// 此前头像角标恒亮「在线」是假信息，现按接口真值渲染。
+	let presence = $state<UserPresenceStatus | null>(null);
 	let remark = $state('');
 	let remarkDraft = $state('');
 	let savingRemark = $state(false);
 	let shareCopied = $state(false);
 
 	const uid = $derived(params.userId ?? '');
+	const device = $derived(platform.platform);
+	const isMobile = $derived(device === 'mobile');
 
 	// 自己看自己（mock 登录用户即 user_lumos）：此前仍显示「私信/关注/更多操作」，
 	// 甚至能把「关注」点成功、把「备注」写到自己头上（全站复审 s2-19）。
 	// 自己的资料页不发关系动作——改资料走 /me/edit（入口在个人中心）。
 	const isSelf = $derived(!!uid && auth.user?.user_id === uid);
+
+	// 身份卡副行：有备注时展示备注（只对自己可见）+ 账号标识
+	const handleLine = $derived(remark ? `${remark} · @${uid}` : `@${uid}`);
+
+	const metrics = $derived([
+		{ label: '瞬间', value: formatCount(user.moments) },
+		{ label: '粉丝', value: formatCount(user.followers) },
+		{ label: '关注', value: formatCount(user.following) }
+	]);
 
 	$effect(() => {
 		void reloadKey;
@@ -105,9 +134,15 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	// 只展示带图瞬间（无图动态渲染 <img src=""> 会破图）；保留 moment_id 供跳转详情
 	data.recent_moments?.items
 		?.filter((m) => m.images?.[0]?.url)
-		.map((m) => ({ id: m.moment_id, url: m.images![0]!.url })) ?? [],
+		.map((m) => ({
+			id: m.moment_id,
+			url: m.images![0]!.url,
+			// 缩略图上的极简 meta：发布时间（避免纯图网格被读成装饰图）
+			time: formatCardTime(m.created_at ?? '')
+		})) ?? [],
 						tags: u.tags ?? []
 					};
+					presence = u.presence_status ?? null;
 					if (r?.is_following !== undefined) followed = r.is_following;
 					if (r?.is_blocked !== undefined) blocked = r.is_blocked;
 
@@ -133,10 +168,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		};
 	});
 
-	const fmtNum = formatCount;
-
 	// in-flight 去重（防连点双翻转）；业务失败（code≠0）显式判 code 回滚
-	let followPending = false;
+	let followPending = $state(false);
 	let blockPending = false;
 
 	const toggleFollow = async () => {
@@ -192,7 +225,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		}
 	};
 
-	// 举报弹层开合（理由选择/提交/提示均由 ReportDialog 内部承担，本页不再自写提交逻辑）
+	// 举报弹层开合（理由选择/提交/提示均由 ReportDialog 内部承担，本页不自写提交逻辑）
 	let reportOpen = $state(false);
 
 	// 分享：share/create 生成分享码并复制 /share/[code] 落地链接；
@@ -212,310 +245,352 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	<title>用户主页 · HotSpot</title>
 </svelte:head>
 
-
 <Dialog.Root open={moreOpen} onOpenChange={(next) => (next ? undefined : (moreOpen = false))}>
-		<Dialog.Content
-			side="bottom"
-			class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl p-5"
-			aria-label={`${user.name} 的更多操作`}
-			style="box-shadow:var(--cst-elevation-modal);"
-		>
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="eyebrow">关系与安全</p>
-					<p class="mt-1 text-md text-text-primary">{user.name}</p>
-				</div>
-				<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} />
+	<Dialog.Content
+		side="bottom"
+		class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl p-5"
+		aria-label={`${user.name} 的更多操作`}
+		style="box-shadow:var(--cst-elevation-modal);"
+	>
+		<div class="flex items-center justify-between">
+			<div>
+				<p class="eyebrow">关系与安全</p>
+				<p class="mt-1 text-md text-text-primary">{user.name}</p>
 			</div>
-				<label class="mt-5 block text-sm text-text-secondary">
-					备注名称
-					<input
-						bind:value={remarkDraft}
-						oninput={(e) => (remarkDraft = e.currentTarget.value.slice(0, 24))}
-						placeholder="只对你可见"
-						class="mt-2 w-full input-surface rounded-md px-3 py-2.5 text-sm text-text-primary"
-					/>
-				</label>
-			<Button
-				type="button"
-				variant="secondary"
-				disabled={!followed || savingRemark}
-				class="mt-2 w-full"
-				onclick={async () => {
-					if (!followed) return;
-					savingRemark = true;
-					try {
-						const res = await setRemark({ user_id: uid, remark: remarkDraft.trim() });
-						if (res.code === 0) {
-							remark = remarkDraft.trim();
-							moreOpen = false;
-							showToast('备注已保存', 'success');
-						} else {
-							showToast(res.message || '保存失败', 'danger');
-						}
-					} catch {
-						showToast('保存失败，请重试', 'danger');
-					} finally {
-						savingRemark = false;
-					}
-				}}
-			>
-				<PencilLine size={14} />
-				{savingRemark ? '保存中…' : '保存备注'}
-			</Button>
-			{#if !followed}
-				<p class="mt-1 text-xs text-text-secondary">关注对方后可设备注</p>
-			{/if}
-				<Button
-					type="button"
-					variant="ghost"
-					class="mt-2 w-full text-status-danger hover:bg-danger-bg"
-					onclick={() => { moreOpen = false; if (blocked) confirmUnblockOpen = true; else confirmBlockOpen = true; }}
-				>
-					<UserX size={14} />
-					{blocked ? '解除屏蔽' : '屏蔽用户'}
-				</Button>
-				<!-- 举报：走全站统一 ReportDialog（理由选择 + 提交 + 提示都在原语内），
-				     此前本页手写了一套「举报理由手风琴 + 提交钮」嵌在更多操作弹层里，
-				     与 ChatView/动态详情/群详情用的 ReportDialog 形态不一致（全站复审 s2-14）。 -->
-				<Button
-					type="button"
-					variant="ghost"
-					class="mt-1 w-full text-text-secondary"
-					onclick={() => {
+			<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} />
+		</div>
+		<label class="mt-5 block text-sm text-text-secondary">
+			备注名称
+			<input
+				bind:value={remarkDraft}
+				oninput={(e) => (remarkDraft = e.currentTarget.value.slice(0, 24))}
+				placeholder="只对你可见"
+				class="mt-2 w-full input-surface rounded-md px-3 py-2.5 text-sm text-text-primary"
+			/>
+		</label>
+		<Button
+			type="button"
+			variant="secondary"
+			disabled={!followed || savingRemark}
+			class="mt-2 w-full"
+			onclick={async () => {
+				if (!followed) return;
+				savingRemark = true;
+				try {
+					const res = await setRemark({ user_id: uid, remark: remarkDraft.trim() });
+					if (res.code === 0) {
+						remark = remarkDraft.trim();
 						moreOpen = false;
-						reportOpen = true;
-					}}
-				>
-					<Flag size={14} />
-					举报用户
-				</Button>
-		</Dialog.Content>
-	</Dialog.Root>
+						showToast('备注已保存', 'success');
+					} else {
+						showToast(res.message || '保存失败', 'danger');
+					}
+				} catch {
+					showToast('保存失败，请重试', 'danger');
+				} finally {
+					savingRemark = false;
+				}
+			}}
+		>
+			<PencilLine size={14} />
+			{savingRemark ? '保存中…' : '保存备注'}
+		</Button>
+		{#if !followed}
+			<p class="mt-1 text-xs text-text-secondary">关注对方后可设备注</p>
+		{/if}
+		<Button
+			type="button"
+			variant="ghost"
+			class="mt-2 w-full text-status-danger hover:text-text-status-danger-on-soft hover:bg-danger-bg"
+			onclick={() => {
+				moreOpen = false;
+				if (blocked) confirmUnblockOpen = true;
+				else confirmBlockOpen = true;
+			}}
+		>
+			<UserX size={14} />
+			{blocked ? '解除屏蔽' : '屏蔽用户'}
+		</Button>
+		<!-- 举报：走全站统一 ReportDialog（理由选择 + 提交 + 提示都在原语内），
+		     此前本页手写了一套「举报理由手风琴 + 提交钮」嵌在更多操作弹层里，
+		     与 ChatView/动态详情/群详情用的 ReportDialog 形态不一致（全站复审 s2-14）。 -->
+		<Button
+			type="button"
+			variant="ghost"
+			class="mt-1 w-full text-text-secondary"
+			onclick={() => {
+				moreOpen = false;
+				reportOpen = true;
+			}}
+		>
+			<Flag size={14} />
+			举报用户
+		</Button>
+	</Dialog.Content>
+</Dialog.Root>
 
-	<ReportDialog
-		open={reportOpen}
-		targetType="user"
-		targetId={uid}
-		targetLabel={user.name}
-		onClose={() => (reportOpen = false)}
-	/>
+<ReportDialog
+	open={reportOpen}
+	targetType="user"
+	targetId={uid}
+	targetLabel={user.name}
+	onClose={() => (reportOpen = false)}
+/>
 
-	<!-- 屏蔽/解除屏蔽二次确认（destructive 操作防误触） -->
-	<!-- 破坏性操作二次确认：走全站唯一确认原语 ConfirmDialog（此前手写 Dialog 内容结构，
-	     与其它确认弹层形态不一致，全站复审 C7） -->
-	<ConfirmDialog
-		open={confirmBlockOpen}
-		tone="danger"
-		icon={UserX}
-		title="屏蔽该用户？"
-		description="屏蔽后将无法收到对方消息与动态，且自动取消关注。"
-		confirmLabel="屏蔽"
-		layout="stacked"
-		onCancel={() => (confirmBlockOpen = false)}
-		onConfirm={() => {
-			confirmBlockOpen = false;
-			void toggleBlock();
-		}}
-	/>
-	<ConfirmDialog
-		open={confirmUnblockOpen}
-		tone="neutral"
-		icon={Check}
-		title="解除屏蔽？"
-		description="解除后可以重新关注对方并接收其动态。"
-		confirmLabel="解除屏蔽"
-		layout="stacked"
-		onCancel={() => (confirmUnblockOpen = false)}
-		onConfirm={() => {
-			confirmUnblockOpen = false;
-			void toggleBlock();
-		}}
-	/>
+<!-- 屏蔽/解除屏蔽二次确认（destructive 操作防误触），走全站唯一确认原语 ConfirmDialog -->
+<ConfirmDialog
+	open={confirmBlockOpen}
+	tone="danger"
+	icon={UserX}
+	title="屏蔽该用户？"
+	description="屏蔽后将无法收到对方消息与动态，且自动取消关注。"
+	confirmLabel="屏蔽"
+	layout={isMobile ? 'stacked' : 'row'}
+	onCancel={() => (confirmBlockOpen = false)}
+	onConfirm={() => {
+		confirmBlockOpen = false;
+		void toggleBlock();
+	}}
+/>
+<ConfirmDialog
+	open={confirmUnblockOpen}
+	tone="neutral"
+	icon={Check}
+	title="解除屏蔽？"
+	description="解除后可以重新关注对方并接收其动态。"
+	confirmLabel="解除屏蔽"
+	layout={isMobile ? 'stacked' : 'row'}
+	onCancel={() => (confirmUnblockOpen = false)}
+	onConfirm={() => {
+		confirmUnblockOpen = false;
+		void toggleBlock();
+	}}
+/>
 
 <SplitPageLayout
 	contentMaxWidth="58rem"
-	contentClassName="animate-fade-in pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}"
+	contentClassName="animate-fade-in pt-4 pb-6"
 >
-	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
 	{#if loading}
-		<InlineLoading label="加载资料…" />
-	{:else if loadError}
-		<LoadError message={loadError} onRetry={() => reloadKey++} />
-	{:else}
-	<!-- 资料头（无封面数据：紧凑头部，返回/分享/更多 浮在首行，对齐动态详情作者行层级） -->
-	<div class="flex items-center justify-between">
-		<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} size={42} />
-		<div class="flex gap-2">
-			<ActionIconButton icon={Share2} label={shareCopied ? '链接已复制' : '分享资料'} onClick={copyProfileLink} />
-			{#if !isSelf}
-				<ActionIconButton
-					icon={MoreHorizontal}
-					label="更多操作"
-					onClick={() => {
-						remarkDraft = remark;
-						moreOpen = true;
-					}}
-				/>
-			{/if}
+		<!-- 单实体资料页：结构轻、通常 <1s，用 InlineLoading 而非骨架（避免骨架形状与最终封面差异造成二次位移） -->
+		<div>
+			<div class="mb-4 flex items-center">
+				<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} size={42} />
+			</div>
+			<InlineLoading label="加载资料…" />
 		</div>
-	</div>
+	{:else if loadError}
+		<div>
+			<div class="mb-4 flex items-center">
+				<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} size={42} />
+			</div>
+			<LoadError message={loadError} onRetry={() => reloadKey++} />
+		</div>
+	{:else}
+		<!-- 身份封面卡（other 模式）：返回/分享/更多浮在封面上，关系动作收敛到卡片动作区 -->
+		<IdentityHero
+			mode="other"
+			titleTag="h1"
+			name={user.name}
+			handle={handleLine}
+			bio={user.bio || '这个人还没有填写简介。'}
+			avatar={user.avatar}
+			location={user.location || '未设置位置'}
+			tags={user.tags}
+			online={presence === null ? undefined : presence === 'online'}
+			metrics={metrics}
+		>
+			{#snippet coverActions()}
+				<ActionIconButton
+					icon={ArrowLeft}
+					label="返回"
+					variant="overlay"
+					tone="inverse"
+					size={42}
+					onClick={() => smartBack()}
+				/>
+				<div class="flex gap-2">
+					<ActionIconButton
+						icon={Share2}
+						label={shareCopied ? '链接已复制' : '分享资料'}
+						variant="overlay"
+						tone="inverse"
+						onClick={copyProfileLink}
+					/>
+					{#if !isSelf}
+						<ActionIconButton
+							icon={MoreHorizontal}
+							label="更多操作"
+							variant="overlay"
+							tone="inverse"
+							onClick={() => {
+								remarkDraft = remark;
+								moreOpen = true;
+							}}
+						/>
+					{/if}
+				</div>
+			{/snippet}
 
-	<!-- Avatar + 身份（gutter 由 SplitPageLayout 提供）。
-	     页头操作行→正文资料块 16（页顶留白）；正文块之间 24；页底留白只由 contentClassName 的底内距提供，此处不再叠加底距 -->
-	<div class="mt-4 flex flex-col">
-				<div class="flex items-end justify-between gap-4">
-					<div class="flex min-w-0 items-center gap-4">
-						<div class="relative shrink-0">
-							<Avatar src={user.avatar} name={user.name} size="xl" class="border-2 border-surface-primary shadow-raised-lg" />
-							<!-- 角标统一 OnlineDot（审查 M3：手写 14px 异档收编为 lg 档 + 内边距覆写） -->
-							<OnlineDot size="lg" class="bottom-1 right-1 border-2" />
-						</div>
-						<div class="min-w-0 pt-1">
-							<h1 class="truncate text-2xl font-medium tracking-title text-text-primary">{user.name}</h1>
-							<p class="mt-1 truncate text-text-secondary">{remark}</p>
-						</div>
-					</div>
-
-					<!-- Action buttons（桌面/平板在头像旁；移动端下沉为底部操作条，见 footer snippet） -->
-					{#if platform.platform !== 'mobile' && !isSelf}
-					<div class="flex shrink-0 gap-2 pb-1">
-						<button
+			{#snippet actions()}
+				<!-- R13 收尾：动作区同族同宽——未关注时 主=关注(primary)/次=私信(soft)；
+				     已关注时 主=私信(primary)/次=已关注(soft)。不再出现第三种「accent 描边胶囊」。 -->
+				{#if !isSelf}
+					{#if followed}
+						<Button
 							type="button"
-							class="hover-btn tap-92 hit-slop-44 flex items-center gap-1.5 rounded-full bg-surface-subtle/60 px-3.5 py-1.5 text-xs text-text-secondary focus-ring hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-muted"
+							variant="primary"
+							size="md"
+							class="hit-slop-44 flex-1 gap-1.5 sm:flex-none"
 							disabled={blocked}
 							onclick={() => !blocked && void goto(ROUTES.message(uid))}
 						>
-							<MessageCircle class="size-3.5"  strokeWidth={1.5} />
+							<MessageCircle class="size-4" strokeWidth={1.75} />
 							私信
-						</button>
-						<!-- 关注按钮：统一走 FollowButton（审计 P1-6 收敛 6 种手写写法） -->
-						<FollowButton active={followed} disabled={blocked} size="wide" onToggle={() => toggleFollow()} />
-					</div>
+						</Button>
+						<Button
+							type="button"
+							variant="soft"
+							size="md"
+							class="hit-slop-44 flex-1 gap-1.5 sm:flex-none"
+							aria-pressed={followed}
+							disabled={followPending || blocked}
+							onclick={() => void toggleFollow()}
+						>
+							<UserCheck class="size-4" strokeWidth={1.75} />
+							{followed ? '已关注' : '关注'}
+						</Button>
+					{:else}
+						<Button
+							type="button"
+							variant="primary"
+							size="md"
+							class="hit-slop-44 flex-1 gap-1.5 sm:flex-none"
+							aria-pressed={followed}
+							disabled={followPending || blocked}
+							onclick={() => void toggleFollow()}
+						>
+							<UserPlus class="size-4" strokeWidth={1.75} />
+							关注
+						</Button>
+						<Button
+							type="button"
+							variant="soft"
+							size="md"
+							class="hit-slop-44 flex-1 gap-1.5 sm:flex-none"
+							disabled={blocked}
+							onclick={() => !blocked && void goto(ROUTES.message(uid))}
+						>
+							<MessageCircle class="size-4" strokeWidth={1.75} />
+							私信
+						</Button>
 					{/if}
-				</div>
-
-			{#if blocked}
-				<div class="mt-6 flex items-center gap-2 rounded-md bg-danger-bg/60 px-3 py-2 text-sm text-status-danger">
-					<UserX size={14} />
-					你已屏蔽此用户；关注和私信已停用。
-				</div>
-			{/if}
-			<p class="mt-6 max-w-115 text-md leading-relaxed text-text-secondary">{user.bio || '这个人还没有填写简介。'}</p>
-
-			<!-- 位置 + 标签 -->
-			<div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
-				{#if user.location}
-					<span class="flex items-center gap-1.5 text-text-secondary text-sm">
-						<MapPin class="size-3.5 text-accent-default"   strokeWidth={1.75} />
-						{user.location}
-					</span>
 				{/if}
-				{#each user.tags as t (t)}
-					<span class="inline-flex h-6 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xs font-medium leading-none text-accent-default">
-						#{t}
-					</span>
-				{/each}
-			</div>
+			{/snippet}
 
-			<!-- Stats -->
-			<div class="mt-6">
-				<MetricRow
-					variant="capsule"
-					items={[
-						{ label: '瞬间', value: fmtNum(user.moments) },
-						{ label: '粉丝', value: fmtNum(user.followers) },
-						{ label: '关注', value: fmtNum(user.following) }
-					]}
-				/>
-			</div>
+			{#snippet children()}
+				{#if blocked}
+					<p
+						class="flex items-center gap-2 rounded-md bg-danger-bg/60 px-3 py-2 text-sm text-text-status-danger-on-soft"
+					>
+						<UserX size={14} />
+						你已屏蔽此用户；关注和私信已停用。
+					</p>
+				{/if}
+			{/snippet}
+		</IdentityHero>
 
-	<!-- Gallery（spec UserProfileBundle 仅含 recent_moments，无喜欢/收藏流）。
-	     整格跳转动态详情（大图查看在详情页内）。 -->
-	{#if user.galleryMoments.length > 0}
-		<div class="mt-6 grid grid-cols-3 gap-1.5">
-			{#each user.galleryMoments as g, i (g.id)}
-				<button
-					type="button"
-					class="media-placeholder image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden focus-ring"
-					style="aspect-ratio:1;"
-					aria-label={`查看 ${user.name} 的瞬间图片 ${i + 1}`}
-					onclick={() => void goto(ROUTES.moment(g.id))}
+		<!-- 瞬间网格：整格跳转动态详情（大图查看在详情页内）；网格对齐全站图片卡语言 -->
+		<section class="mt-6" aria-label="最近瞬间">
+			<SectionHead title="最近瞬间" count={user.galleryMoments.length > 0 ? user.galleryMoments.length : undefined} icon={ImageIcon} />
+			{#if user.galleryMoments.length > 0}
+				<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+					{#each user.galleryMoments as g, i (g.id)}
+						<button
+							type="button"
+							class="media-placeholder image-hover-frame tap-97 relative aspect-square cursor-pointer overflow-hidden rounded-md focus-ring"
+							aria-label={`查看 ${user.name} 的瞬间图片 ${i + 1}`}
+							onclick={() => void goto(ROUTES.moment(g.id))}
+						>
+							<img
+								src={presetImageUrl(g.url, 'card', 800)}
+								srcset={presetSrcSet(g.url, 'card')}
+								sizes="(min-width: 600px) 33vw, 50vw"
+								alt={`${user.name} 的瞬间图片 ${i + 1}`}
+								loading={i < 2 ? 'eager' : 'lazy'}
+								fetchpriority={i < 2 ? 'high' : undefined}
+								decoding="async"
+								class="image-hover-frame__image h-full w-full object-cover"
+								use:fadeImage
+							/>
+							{#if g.time}
+								<span
+									class="pointer-events-none absolute bottom-2 left-2 z-[2] inline-flex h-5 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2 text-xxs font-medium leading-none text-content-inverse"
+								>
+									{g.time}
+								</span>
+							{/if}
+						</button>
+					{/each}
+				</div>
+			{:else}
+				<EmptyState
+					iconTone="accent"
+					class="py-12"
+					title="还没有照片"
+					description="该用户发布带图瞬间后会显示在这里。"
 				>
-					<img
-						src={presetImageUrl(g.url, 'card', 800)}
-						srcset={presetSrcSet(g.url, 'card')}
-						sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 50vw"
-						alt={`${user.name} 的瞬间图片 ${i + 1}`}
-						loading="lazy"
-						decoding="async"
-						class="image-hover-frame__image w-full h-full object-cover"
-						use:fadeImage
-					/>
-				</button>
-			{/each}
-		</div>
-	{:else}
-		<EmptyState bare title="还没有照片" description="该用户发布带图瞬间后会显示在这里。" />
-	{/if}
-</div>
+					{#snippet icon()}
+						<ImageIcon class="size-7" strokeWidth={1.5} />
+					{/snippet}
+				</EmptyState>
+			{/if}
+		</section>
 	{/if}
 
 	{#snippet rail()}
-	<!-- 空数据不占卡：加载失败/无位置/无标签时整卡隐藏（此前失败态与无标签用户都留空框） -->
-	<div class="flex flex-col gap-4 py-2">
-		{#if user.location}
-		<RailSection title="所在位置" variant="island">
-			<RailLocationMini name={user.location} />
-		</RailSection>
-		{/if}
+		<!-- 空数据不占卡：无位置/无标签/无共同好友时整卡隐藏（此前失败态与无标签用户都留空框） -->
+		<div class="flex flex-col gap-4 py-2">
+			{#if user.location}
+				<section class="rounded-lg bg-surface-island p-4 shadow-xs" aria-label="所在位置">
+					<SectionHead variant="rail" title="所在位置" icon={MapPin} />
+					<button
+						type="button"
+						class="hover-bg -mx-2 flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left focus-ring"
+						onclick={() => void goto(ROUTES.map)}
+					>
+						<span class="min-w-0 flex-1 truncate text-xs text-text-primary">{user.location}</span>
+						<ChevronRight class="size-3.5 shrink-0 text-text-secondary" strokeWidth={1.5} />
+					</button>
+				</section>
+			{/if}
 
-		{#if user.tags.length > 0}
-		<RailSection title="兴趣标签" variant="island">
-			<div class="flex gap-2 flex-wrap">
-				{#each user.tags as t (t)}
-					<span class="inline-flex h-6 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xs font-medium leading-none text-accent-default">
-						#{t}
-					</span>
-				{/each}
-			</div>
-		</RailSection>
-		{/if}
+			{#if user.tags.length > 0}
+				<section class="rounded-lg bg-surface-island p-4 shadow-xs" aria-label="兴趣标签">
+					<SectionHead variant="rail" title="兴趣标签" icon={Tag} />
+					<div class="flex flex-wrap gap-2">
+						{#each user.tags as t (t)}
+							<span
+								class="inline-flex h-6 items-center justify-center rounded-full bg-accent-soft px-2.5 text-xs font-medium leading-none text-text-accent-on-soft"
+							>
+								#{t}
+							</span>
+						{/each}
+					</div>
+				</section>
+			{/if}
 
-		{#if mutualFriends.length > 0}
-			<RailSection title="共同好友" variant="island">
-				<div class="flex flex-col gap-3">
-					{#each mutualFriends as f (f.id)}
-						<RailUserRow avatar={f.avatar} name={f.name} sub={f.sub} onClick={() => void goto(ROUTES.user(f.id))} />
-					{/each}
-				</div>
-			</RailSection>
-		{/if}
-	</div>
+			{#if mutualFriends.length > 0}
+				<section class="rounded-lg bg-surface-island p-4 shadow-xs" aria-label="共同好友">
+					<SectionHead variant="rail" title="共同好友" icon={Users} />
+					<div class="flex flex-col gap-2.5">
+						{#each mutualFriends as f (f.id)}
+							<RailUserRow avatar={f.avatar} name={f.name} sub={f.sub} onClick={() => void goto(ROUTES.user(f.id))} />
+						{/each}
+					</div>
+				</section>
+			{/if}
+		</div>
 	{/snippet}
 
-	<!-- 移动端底部操作条：主操作（私信/关注）下沉拇指热区，桌面/平板使用头部按钮 -->
-	{#snippet footer()}
-		{#if platform.platform === 'mobile' && !blocked && !isSelf}
-			<div
-				class="flex gap-3 border-t border-border-default px-4 pt-2.5"
-				style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));-webkit-backdrop-filter:blur(var(--cst-blur-md));padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
-			>
-				<!-- 私信次级动作走 Button lg（原 rounded-xl 破档归并 md；两派契约见 style skill） -->
-				<Button
-					type="button"
-					variant="secondary"
-					size="lg"
-					class="flex-1"
-					disabled={blocked}
-					onclick={() => !blocked && void goto(ROUTES.message(uid))}
-				>
-					<MessageCircle class="size-4" strokeWidth={1.75} />
-					私信
-				</Button>
-				<FollowButton active={followed} disabled={blocked} size="block" onToggle={() => toggleFollow()} />
-			</div>
-		{/if}
-	{/snippet}
 </SplitPageLayout>
-

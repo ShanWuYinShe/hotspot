@@ -255,7 +255,7 @@ struct AdminOverviewPage {
         LucideIcon({
             icon: m.icon,
             iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-            color: this.getPalette().accentBackground
+            color: this.getPalette().textAccentOnSoft
           })
       }
       .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)

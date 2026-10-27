@@ -2,18 +2,19 @@
 	import { untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Plus, MessageSquareDashed, Pin, BellOff, Trash2, X } from '@lucide/svelte';
+	import { Plus, MessageSquareDashed, Pin, BellOff, Trash2, X, MessageCircle, Users, Zap } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
-	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import OnlineStrip from './shared/OnlineStrip.svelte';
 	import ChatListBody from './shared/ChatListBody.svelte';
+	import ChatEmptyPanel from './shared/ChatEmptyPanel.svelte';
+	import { canUseSplitPane, resolvePushChatHref } from './shared/deep-link';
 	import GroupChatView from '@/components/messages/GroupChatView.svelte';
 	import NewConversationSheet from '@/components/overlays/NewConversationSheet.svelte';
 	import CreateGroupSheet from '@/components/overlays/CreateGroupSheet.svelte';
@@ -248,8 +249,17 @@
 		setChatUnread(totalUnread);
 	});
 	// 分栏阈值：桌面与宽平板（≥960px，如横屏 iPad）启用 Master-Detail 双栏；
-	// 窄平板（820 级纵向）保留单栏列表，点开会话再进详情。
-	const useSplitPane = $derived(platform.platform === 'desktop' || platform.isWideTablet);
+	// 窄平板（820 级纵向）保留单栏列表，点开会话再进详情（判定见 shared/deep-link.ts）。
+	const useSplitPane = $derived(canUseSplitPane(platform));
+
+	// 窄平板/移动不可分栏：把 ?peer= / ?group= 深链落到单栏推入页。
+	// 否则（桌面分享/历史/通知带过来的深链）在平板上只会停在列表页——
+	// 用户看到的是一块没有会话内容的空白面板。replaceState 不新增历史项。
+	$effect(() => {
+		if (useSplitPane) return;
+		const href = resolvePushChatHref(queryPeer, queryGroup);
+		if (href) void goto(href, { replaceState: true });
+	});
 	const selectedChat = $derived(
 		liveChats.find((c) => {
 			if (selectedId !== null && c.id === selectedId) return true;
@@ -286,9 +296,20 @@
 	<!-- 访客态补页头：此前分栏分支直接渲染 NeedsAuthNotice，桌面/平板访客整页没有
 	     PageHeader/无 h1，与移动端（有「消息」页头）不一致（全站复审 s2-15）。 -->
 	<div class="content-mode-wide flex h-full flex-col">
-		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} />
+		<!-- 访客态页头通栏铺在画布上：不能沿用分栏左栏的 surface-primary 实底
+		     （会在画布上形成一条白色横带），顶部保持透明、与连续画布融合。 -->
+		<PageHeader title="消息" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} />
 		<div class="flex flex-1 items-center justify-center">
-			<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可查看和发起会话" />
+			<NeedsAuthNotice
+				spotlight
+				title="登录后查看消息"
+				description="登录后即可查看和发起会话"
+				highlights={[
+					{ icon: MessageCircle, text: '私聊与群聊会话' },
+					{ icon: Users, text: '在线好友与群组' },
+					{ icon: Zap, text: '消息实时同步' }
+				]}
+			/>
 		</div>
 	</div>
 	{:else}
@@ -310,18 +331,20 @@
 						<!-- 带文字标签（2026-10-19 UI 审查）：全站底栏中央是「+ 发布瞬间」FAB，
 						     本页头部若也用纯「+」图标，同屏会出现两个「+」做两件事、语义无法区分。
 						     加「新会话」文字后一眼可辨；高度仍 h-9，与页头对齐。 -->
-						<button
+						<Button
 							type="button"
-							class="hover-btn hit-slop scale-btn flex h-9 items-center justify-center gap-1 rounded-full border border-border-default bg-surface-primary px-3 shadow-raised-sm focus-ring"
+							variant="soft"
+							size="sm"
+							class="hit-slop-44 h-9 rounded-full px-3.5"
+							aria-label="发起新会话"
 							onclick={() => {
 								newChatTab = 'chat';
 								showNewChat = true;
 							}}
-							aria-label="发起新会话"
 						>
-							<Plus class="size-4 text-text-secondary" strokeWidth={1.5} />
-							<span class="text-xs font-medium text-text-primary">新会话</span>
-						</button>
+							<Plus class="size-4 text-text-secondary" strokeWidth={1.5} aria-hidden="true" />
+							新会话
+						</Button>
 						{/if}
 					{/snippet}
 					{#snippet below()}
@@ -359,18 +382,21 @@
 				loading={loading}
 				onRetry={() => reloadKey++}
 				onSelect={selectChat}
-				onTogglePin={togglePin}
-				onToggleMute={toggleMute}
-				onDelete={(chat) => (deleteTarget = chat)}
 				onMore={(chat) => (moreTarget = chat)}
+				searchQuery={searchQuery}
+				onNewChat={() => {
+					newChatTab = 'chat';
+					showNewChat = true;
+				}}
 				{selectedId}
 				compact
 				fill
 			/>
 		</div>
 
-		<!-- Right: chat view or empty state（底色与面板统一，中间由发丝边框清晰划分） -->
-		<div class="flex-1 overflow-hidden bg-surface-primary">
+		<!-- Right: chat view or empty state：右栏统一用聊天画布（--cst-surface-chat），
+		     与左栏列表的 surface-primary 形成一档微差，靠画布本身分区、不额外加边框 -->
+		<div class="flex-1 overflow-hidden bg-surface-chat">
 			{#if queryGroup || (selectedChat && selectedChat.kind === 'group')}
 				<div class="h-full">
 					<GroupChatView groupId={queryGroup || String(selectedChat?.id ?? '')} compact showBackButton={false} />
@@ -385,17 +411,16 @@
 					/>
 				</div>
 			{:else}
-				<div class="h-full flex items-center justify-center">
-					<EmptyState spotlight title="选择一个会话" description="从左侧选择一个会话开始聊天" class="h-full justify-center py-0!" bare>
-						{#snippet icon()}
-							<MessageSquareDashed class="size-9 opacity-muted text-text-secondary" strokeWidth={1.5} />
-						{/snippet}
-						{#snippet action()}
-							<!-- 空状态动线闭环（第二轮审查 t7）：不选会话也能直接发起新聊天 -->
-							<Button type="button" size="md" onclick={() => { newChatTab = 'chat'; showNewChat = true; }}>发起新聊天</Button>
-						{/snippet}
-					</EmptyState>
-				</div>
+				<!-- 空会话面板（R13）：引导 + 最近 3 条会话建议（纯前端取自已拉到的列表）。
+				     小面板不开 spotlight；发新聊天入口内置在面板底部，动线闭环。 -->
+				<ChatEmptyPanel
+					recent={liveChats}
+					onSelect={selectChat}
+					onNewChat={() => {
+						newChatTab = 'chat';
+						showNewChat = true;
+					}}
+				/>
 			{/if}
 		</div>
 
@@ -453,18 +478,20 @@
 					{/if}
 					<!-- 移动端单栏页头（本分支）：与底栏中央「+ 发布瞬间」FAB 同屏，
 					     纯「+」图标会与之语义混同，故加「新会话」文字标签（同分栏分支口径）。 -->
-					<button
+					<Button
 						type="button"
-						class="hover-btn hit-slop scale-btn flex h-9 items-center justify-center gap-1 rounded-full border border-border-default bg-surface-primary px-3 shadow-raised-sm focus-ring"
+						variant="soft"
+						size="sm"
+						class="hit-slop-44 h-9 rounded-full px-3.5"
+						aria-label="发起新会话"
 						onclick={() => {
 							newChatTab = 'chat';
 							showNewChat = true;
 						}}
-						aria-label="发起新会话"
 					>
-						<Plus class="size-4 text-text-secondary" strokeWidth={1.5} />
-						<span class="text-xs font-medium text-text-primary">新会话</span>
-					</button>
+						<Plus class="size-4 text-text-secondary" strokeWidth={1.5} aria-hidden="true" />
+						新会话
+					</Button>
 				</div>
 				{/if}
 			{/snippet}
@@ -514,10 +541,12 @@
 				loading={loading}
 				onRetry={() => reloadKey++}
 				onSelect={(chat) => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
-				onTogglePin={togglePin}
-				onToggleMute={toggleMute}
-				onDelete={(chat) => (deleteTarget = chat)}
 				onMore={(chat) => (moreTarget = chat)}
+				searchQuery={searchQuery}
+				onNewChat={() => {
+					newChatTab = 'chat';
+					showNewChat = true;
+				}}
 			/>
 		</div>
 

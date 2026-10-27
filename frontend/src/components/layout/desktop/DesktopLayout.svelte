@@ -108,6 +108,17 @@
 	};
 </script>
 
+<!-- 侧栏分组标签（发现 / 个人中心）唯一实现：同字号/字距/颜色，折叠时高度与透明度同步收起 -->
+{#snippet navSectionLabel(label: string)}
+	<p
+		class="overflow-hidden whitespace-nowrap text-text-secondary text-xxs font-semibold tracking-label uppercase transition-[max-height,opacity,margin] duration-standard ease-standard {isSidebarCollapsed
+			? 'max-h-0 mb-0 opacity-none'
+			: 'max-h-6 px-3 mb-2 opacity-soft'}"
+	>
+		{label}
+	</p>
+{/snippet}
+
 <div
 	class="relative isolate flex flex-col h-screen w-screen overflow-hidden transition-colors duration-gentle font-sans"
 	style="background-color:var(--cst-surface-page);color:var(--cst-text-primary);"
@@ -214,6 +225,7 @@
 					type="button"
 					class="hover-btn scale-btn hit-slop relative ml-2 shrink-0 rounded-full focus-ring size-8"
 					aria-label="打开个人主页"
+					title="个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
 				>
 					<!-- Avatar 组件：空头像/加载失败回退首字母色块（不渲染空 src img） -->
@@ -250,6 +262,7 @@
 			<!-- Scrollable nav region — takes all available space -->
 			<div class="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
 				<!-- Section 1: 发现导航 -->
+				{@render navSectionLabel('发现')}
 				<div class="flex flex-col gap-1">
 					{#each TOP_NAV as item (item.id)}
 						<SidebarNavItem
@@ -264,12 +277,8 @@
 				<!-- 分组留白（Round 2：去掉硬分隔线，改用纯留白分组） -->
 				<div class="my-3 self-center" aria-hidden="true"></div>
 
-				<!-- Section 2 label — 折叠时高度/透明度同步收起（不用 sr-only 硬切） -->
-				<p
-					class="overflow-hidden whitespace-nowrap text-text-secondary text-xxs font-semibold tracking-label uppercase transition-[max-height,opacity,margin] duration-standard ease-standard {isSidebarCollapsed ? 'max-h-0 mb-0 opacity-none' : 'max-h-6 px-3 mb-2 opacity-soft'}"
-				>
-					个人中心
-				</p>
+				<!-- Section 2 label — 与「发现」共用同一标签实现（折叠时同步收起） -->
+				{@render navSectionLabel('个人中心')}
 
 				<!-- Section 2: Personal nav -->
 				<div class="flex flex-col gap-1">

@@ -20,21 +20,21 @@
 	const CONFIGS: Record<ToastKind, ToastConfig> = {
 		success: {
 			icon: Check,
-			iconClass: 'text-status-online',
+			iconClass: 'text-text-status-online-on-soft',
 			badgeBg: 'bg-status-online-bg',
 			badgeRing: 'ring-status-online-border',
 			borderClass: 'border-status-online-border'
 		},
 		danger: {
 			icon: CircleAlert,
-			iconClass: 'text-status-danger',
+			iconClass: 'text-text-status-danger-on-soft',
 			badgeBg: 'bg-danger-bg',
 			badgeRing: 'ring-status-danger-border',
 			borderClass: 'border-status-danger-border'
 		},
 		info: {
 			icon: Info,
-			iconClass: 'text-accent-default',
+			iconClass: 'text-text-accent-on-soft',
 			badgeBg: 'bg-accent-soft',
 			badgeRing: 'ring-accent-border',
 			borderClass: 'border-border-default/80'

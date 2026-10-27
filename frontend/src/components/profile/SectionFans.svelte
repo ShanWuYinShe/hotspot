@@ -1,7 +1,7 @@
 <script lang="ts">
 import { formatRelativeDays } from '@/lib/utils';
 	import { goto } from '$app/navigation';
-	import { Check, UserPlus } from '@lucide/svelte';
+	import { UserPlus } from '@lucide/svelte';
 	import FollowButton from '@/components/ui/FollowButton.svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
@@ -96,18 +96,12 @@ import { formatRelativeDays } from '@/lib/utils';
 			onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
 			ariaLabel={`查看 ${f.name} 的主页`}
 		>
-			{#snippet nameBadge()}
-				{#if isMutual}
-					<span class="flex items-center gap-0.5 badge text-status-online" style="background:var(--cst-status-online-bg);">
-						<Check class="size-2.5"  strokeWidth={2.5} />
-						互关
-					</span>
-				{/if}
-			{/snippet}
 			{#snippet subtitle()}
-				<p class="mt-0.5 text-text-secondary text-xs">
-					{f.handle} · {fanLabel(f.joinedDays)}关注了你
-				</p>
+				<p class="mt-0.5 text-text-secondary text-xs">{f.handle}</p>
+			{/snippet}
+			{#snippet meta()}
+				<!-- 行尾第二信息位：关注时间（原本挤在副标题里，扫读时被 handle 淹没） -->
+				<span class="shrink-0 whitespace-nowrap text-xs text-text-secondary">{fanLabel(f.joinedDays)}关注</span>
 			{/snippet}
 			{#snippet actions()}
 				<FollowButton

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { MessageCircle, Users } from '@lucide/svelte';
-	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import { useRelationships, type MappedFriend } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
@@ -58,27 +58,36 @@
 			onClick={() => void goto(`${ROUTES.user(f.id)}?from=relationships`)}
 			ariaLabel={`查看 ${f.name} 的主页`}
 		>
-			{#snippet avatarBadge()}
-				<OnlineDot size="md" color={f.online ? undefined : 'var(--cst-text-secondary)'} class={f.online ? '' : 'opacity-muted'} />
-			{/snippet}
 			{#snippet subtitle()}
 				<p class="mt-0.5 text-text-secondary text-xs">{f.handle}</p>
+			{/snippet}
+			{#snippet meta()}
+				<!-- 行尾第二信息位：在线状态（原先只有头像角标，远看分不清谁在线） -->
+				<span class="inline-flex items-center gap-1.5 text-xs {f.online ? 'text-status-online' : 'text-text-secondary'}">
+					<span
+						aria-hidden="true"
+						class="size-1.5 rounded-full {f.online ? 'bg-status-online' : 'bg-border-strong'}"
+					></span>
+					{f.online ? '在线' : '离线'}
+				</span>
 			{/snippet}
 			{#snippet actions()}
 				<!-- 只留「发消息」：整行点击已跳该用户主页（UserCardRow onClick），
 				     原先并存的「查看主页」按钮是同一行内跳同一目标的重复入口；
 				     关注/粉丝两个分区同样只保留一个行内动作，三 tab 模式一致。 -->
-				<button
+				<Button
 					type="button"
-					class="hover-btn tap-92 hit-slop-44 flex shrink-0 items-center justify-center gap-1 rounded-full bg-surface-subtle/60 px-2.5 py-1.5 text-xs text-text-primary focus-ring hover:bg-surface-subtle"
+					variant="soft"
+					size="sm"
+					class="hit-slop-44 shrink-0 gap-1 rounded-full px-3 py-1.5 text-xs"
 					onclick={(e) => {
 						e.stopPropagation();
 						void goto(ROUTES.message(f.id));
 					}}
 				>
-					<MessageCircle class="size-3"  strokeWidth={2} />
+					<MessageCircle class="size-3.5" strokeWidth={1.75} />
 					发消息
-				</button>
+				</Button>
 			{/snippet}
 		</UserCardRow>
 	{/snippet}

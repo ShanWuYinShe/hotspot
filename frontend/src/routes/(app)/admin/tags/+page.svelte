@@ -3,6 +3,7 @@
 	import type { AdminTagItem } from '@/api/types';
 	import { hasAdminPermission } from '@/stores/admin.svelte';
 	import { showToast } from '@/stores/toast.svelte';
+	import { Tags } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -12,12 +13,16 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER } from '../shared/table';
+	import {
+		TABLE_WRAP, TABLE, TH, TH_NUM, TH_SECONDARY, TR, TD, TD_NUM, TD_SECONDARY, TD_ACTIONS,
+		ROW_BTN, TOOLBAR, SEARCH_WRAP
+	} from '../shared/table';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 标签管理：模糊搜索 + 软屏蔽 / 解屏蔽；物理删除（hard_delete）为高危不可逆，需显式勾选。
 	// spec：标签业务唯一键为 name；屏蔽后新内容引用该标签将失败，历史数据保留。
+	// R13：工具栏/数字列/徽章语言与其他模块统一（已屏蔽改软底 danger 徽章，不再抢视觉）。
 
 	const canRead = $derived(hasAdminPermission('admin.tags.read'));
 	const canWrite = $derived(hasAdminPermission('admin.tags.write'));
@@ -79,11 +84,15 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.tags.read 权限" bare />
+	<EmptyState title="无访问权限" description="需要 admin.tags.read 权限" iconTone="accent">
+		{#snippet icon()}<Tags class="size-7" strokeWidth={1.5} />{/snippet}
+	</EmptyState>
 {:else}
 	<div class="flex flex-col gap-4">
-		<div class="w-full max-w-80">
-			<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索标签…" class="px-4 py-2.5 rounded-md" />
+		<div class={TOOLBAR}>
+			<div class={SEARCH_WRAP}>
+				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索标签…" class="px-4 py-2.5 rounded-md" />
+			</div>
 		</div>
 
 		{#if list.loading}
@@ -91,14 +100,21 @@
 		{:else if list.error}
 			<LoadError message={list.error} onRetry={list.reload} />
 		{:else if list.count === 0}
-			<EmptyState title="没有匹配的标签" bare />
+			<EmptyState title="没有匹配的标签" description="换个关键词试试，或清空搜索词后重试。" iconTone="neutral">
+				{#snippet icon()}<Tags class="size-7" strokeWidth={1.5} />{/snippet}
+				{#snippet action()}
+					{#if query}
+						<Button type="button" variant="secondary" size="sm" onclick={() => (query = '')}>清空搜索</Button>
+					{/if}
+				{/snippet}
+			</EmptyState>
 		{:else}
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
 						<tr>
 							<th scope="col" class={TH}>标签</th>
-							<th scope="col" class={TH}>使用次数</th>
+							<th scope="col" class={TH_NUM}>使用次数</th>
 							<th scope="col" class={TH_SECONDARY}>创建时间</th>
 							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 						</tr>
@@ -109,13 +125,13 @@
 								<td class={TD}>
 									<!-- 限宽截断：移动端该表实测仅剩 1px 余量（tableW 356 / wrap 358，全站复审
 									     S4-24），标签名变长即溢出；截断后表格宽度不再随标签名无限增长 -->
-									<span class="badge max-w-32 truncate bg-accent-soft text-accent-default">#{t.name}</span>
+									<span class="badge max-w-32 truncate bg-accent-soft text-text-accent-on-soft">#{t.name}</span>
 									{#if t.is_blocked}
 										<!-- 已屏蔽态必须可见：否则与正常标签无从区分（全站复审 s4-22 的根因） -->
-										<span class="badge bg-status-danger text-text-on-accent">已屏蔽</span>
+										<span class="badge bg-danger-bg/50 text-text-status-danger-on-soft">已屏蔽</span>
 									{/if}
 								</td>
-								<td class={TD}>{t.usage_count}</td>
+								<td class={TD_NUM}>{t.usage_count}</td>
 								<td class={TD_SECONDARY}>{formatDateTime(t.created_at)}</td>
 								<td class={TD_ACTIONS}>
 									{#if canWrite}

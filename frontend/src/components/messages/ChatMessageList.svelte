@@ -39,7 +39,8 @@
 		<!-- 空会话：统一 EmptyState 空态（对齐全局空态契约） -->
 		<EmptyState class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧" bare>
 			{#snippet icon()}
-				<MessageCircle class="size-6 text-text-secondary" strokeWidth={1.5} />
+				<!-- bare 空态裸图标统一 28px（style skill 已登记口径） -->
+				<MessageCircle class="size-7 text-text-secondary" strokeWidth={1.5} aria-hidden="true" />
 			{/snippet}
 		</EmptyState>
 	{:else}

@@ -54,7 +54,7 @@
 	{priority}
 	onClick={onNavigate}
 	onImageError={() => (avatarFailed = true)}
-	class="aspect-[3/4] h-auto rounded-lg shadow-xs hover:shadow-raised-sm transition-all duration-standard"
+	class="aspect-[3/4] h-auto rounded-lg shadow-xs transition-all duration-standard sm:aspect-[4/5]"
 >
 	{#snippet watermark()}
 		<UserRound size={72} strokeWidth={1} />
@@ -68,8 +68,12 @@
 
 	<!-- 右上：距离（单份，消除历史重复徽章 bug；无距离时整 pill 隐藏，免得剩个光杆图钉） -->
 	{#if user.distance}
-	<div class="absolute top-2.5 right-2.5 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-overlay-strong" style="backdrop-filter:blur(var(--cst-blur-sm));">
-		<MapPin class="w-2.5 h-2.5 text-content-inverse" strokeWidth={1.5} />
+	<!-- 距离角标：卡内唯一角标，位置/尺寸/居中契约与其它图片卡一致（h-5 + leading-none） -->
+	<div
+		class="absolute top-2.5 right-2.5 z-[2] inline-flex h-5 items-center justify-center gap-1 rounded-full bg-surface-overlay-strong px-2 leading-none"
+		style="backdrop-filter:blur(var(--cst-blur-sm));"
+	>
+		<MapPin class="size-2.5 text-content-inverse" strokeWidth={1.75} />
 		<span class="text-content-inverse text-xxs">{user.distance}</span>
 	</div>
 	{/if}
@@ -77,7 +81,7 @@
 	{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
 	{@const onCover = onImage && !horizontal}
 	<div class="p-4">
-		<p class="flex items-center gap-1.5 truncate text-sm font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">
+		<p class="flex items-center gap-1.5 truncate text-md font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">
 			<span class="truncate">{user.name}</span>
 			{#if user.isOnline}
 				<span
@@ -89,11 +93,11 @@
 			{/if}
 		</p>
 		{#if user.note}
-			<p class="mt-0.5 truncate text-xxs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">{user.note}</p>
+			<p class="mt-0.5 truncate text-xs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">{user.note}</p>
 		{/if}
 		<div class="mt-2 flex items-center justify-between gap-2">
 			{#if user.tag}
-				<span class="badge {onCover ? 'bg-surface-media-scrim-strong text-content-inverse' : 'bg-accent-soft text-accent-default'}">#{user.tag}</span>
+				<span class="badge {onCover ? 'bg-surface-media-scrim-strong text-content-inverse' : 'bg-accent-soft text-text-accent-on-soft'}">#{user.tag}</span>
 			{:else}
 				<span></span>
 			{/if}

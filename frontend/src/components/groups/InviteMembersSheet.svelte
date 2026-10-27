@@ -6,6 +6,7 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import type { UserItem } from '@/api/types';
 
 	let {
@@ -101,8 +102,11 @@
 		style="box-shadow:var(--cst-elevation-modal);"
 	>
 		<div class="flex items-center justify-between px-1 pb-3">
-			<p class="text-md font-medium text-text-primary">邀请成员入群</p>
-			<button type="button" onclick={onClose} class="hit-slop flex h-7 w-7 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default" aria-label="关闭"><X size={15} /></button>
+			<div class="min-w-0">
+				<p class="text-md font-semibold text-text-primary">邀请成员入群</p>
+				<p class="mt-0.5 text-xs text-text-secondary">搜索昵称后可多选邀请</p>
+			</div>
+			<button type="button" onclick={onClose} class="hit-slop flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary focus-ring hover:bg-interactive-hover" aria-label="关闭"><X size={15} strokeWidth={1.75} /></button>
 		</div>
 
 		<div class="flex items-center gap-2 input-surface rounded-md px-3 py-2.5">
@@ -118,7 +122,10 @@
 				     py-8 收紧（LoadError 默认 py-20，会撑爆 max-h-72 的 sheet 列表） -->
 				<LoadError message={searchError} onRetry={() => void doSearch()} class="py-8" />
 			{:else if results.length === 0}
-				<p class="py-6 text-center text-sm text-text-secondary">{keyword.trim() ? '无匹配用户' : '输入昵称搜索用户'}</p>
+				<div class="flex flex-col items-center gap-2 py-6 text-center">
+					<Search size={22} class="text-text-secondary" strokeWidth={1.5} />
+					<p class="text-sm text-text-secondary">{keyword.trim() ? '没有找到匹配的用户，换个昵称试试' : '输入昵称搜索用户'}</p>
+				</div>
 			{:else}
 				{#each results as u (u.user.user_id)}
 					{@const isSelected = selected.has(u.user.user_id)}
@@ -133,7 +140,7 @@
 					>
 						<Avatar src={u.user.avatar_url ?? undefined} name={u.user.nickname} size="md" />
 						<span class="min-w-0 flex-1">
-							<span class="block truncate text-sm text-text-primary">{u.user.nickname}</span>
+							<span class="block truncate text-md font-medium text-text-primary">{u.user.nickname}</span>
 						</span>
 						<span
 							class="flex size-4.5 shrink-0 items-center justify-center rounded-full transition-colors duration-rapid ease-standard
@@ -146,9 +153,17 @@
 			{/if}
 		</div>
 
-		<button type="button" disabled={selected.size === 0 || inviting} onclick={handleInvite} class="hover-btn mt-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-faint enabled:bg-accent-default enabled:text-text-on-accent enabled:shadow-raised-sm enabled:hover:shadow-raised-md">
+		<Button
+			type="button"
+			variant="primary"
+			size="lg"
+			class="mt-3 w-full"
+			disabled={selected.size === 0}
+			loading={inviting}
+			onclick={() => void handleInvite()}
+		>
 			<UserPlus size={15} strokeWidth={1.75} />
-			{inviting ? '邀请中…' : `邀请${selected.size > 0 ? ` ${selected.size} 人` : ''}`}
-		</button>
+			{selected.size > 0 ? `邀请 ${selected.size} 人` : '邀请'}
+		</Button>
 	</Dialog.Content>
 </Dialog.Root>

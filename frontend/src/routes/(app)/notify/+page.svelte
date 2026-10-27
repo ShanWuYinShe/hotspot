@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 import { goto } from '$app/navigation';
-	import { Bell, CheckCheck } from '@lucide/svelte';
+	import { Bell, CheckCheck, Heart, MapPin, UserPlus, Users } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
+	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
@@ -340,15 +342,17 @@ const markSingleRead = (id: string) => {
 				<!-- 未读计数统一在标题右侧（对齐首页/附近瞬间样板），与「全部已读」同排 -->
 				<div class="flex items-center gap-2">
 					{#if unread > 0}
-						<span class="text-text-secondary text-xs">{unread} 条未读</span>
+						<span class="text-xs text-text-secondary">{unread} 条未读</span>
+						<!-- 「全部已读」是批量清理动作，不是页面主操作：安静软填底 + 主文字色，
+						     不与内容区的接受/拒绝主操作抢层级 -->
 						<Button
 							type="button"
-							variant="ghost"
-							size="md"
-							class="hit-slop rounded-full bg-surface-subtle/60 px-3 py-1.5 text-accent-default hover:bg-surface-subtle"
+							variant="soft"
+							size="sm"
+							class="hit-slop-44 rounded-full"
 							onclick={markAllRead}
 						>
-							<CheckCheck class="size-3.5"  strokeWidth={2} />
+							<CheckCheck class="size-3.5 text-text-secondary" strokeWidth={2} />
 							全部已读
 						</Button>
 					{/if}
@@ -372,32 +376,34 @@ const markSingleRead = (id: string) => {
 	<div class="flex flex-col">
 				{#if invites.length > 0}
 					<!-- 入群邀请待办区块（listMyInvites 补拉路径；接受/拒绝后移除） -->
-					<div class="mb-3 flex h-5 items-center gap-2">
-						<span class="eyebrow">入群邀请</span>
-						<span class="badge text-accent-default bg-accent-soft">{invites.length}</span>
-					</div>
+					<SectionHead variant="eyebrow" title="入群邀请" count={invites.length} />
 					<ListContainer bordered class="mb-6">
 						{#each invites as inv (inv.invite_id)}
-							<div role="listitem" class="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-3 py-3.5">
+							<div role="listitem" class="flex items-center gap-x-3.5 px-3 py-3.5">
 								<Avatar src={inv.group.avatar_url} name={inv.group.name} size="lg" shape="rounded" />
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm font-medium text-text-primary">{inv.group.name}</span>
 									<span class="block truncate text-xs text-text-secondary">{inv.inviter.nickname} 邀请你 · {formatMomentTime(inv.created_at)}</span>
 								</span>
-								<!-- 窄屏动作组独占第二行，日期/时间不再被按钮挤到折行 -->
-								<div class="flex w-full items-center justify-end gap-2 sm:w-auto">
-									<button
+								<!-- 动作组：移动端在行尾同一列竖排（不折第二行悬空），sm+ 单行；
+								     主=accent 实底 / 次=soft 软填（与 NotifyRow 邀请行同一实现） -->
+								<div class="flex shrink-0 flex-col items-stretch gap-1.5 sm:flex-row sm:items-center">
+									<Button
 										type="button"
+										size="sm"
+										variant="primary"
+										class="hit-slop-44 rounded-full px-3.5"
+										disabled={invitePending.has(inv.invite_id)}
 										onclick={() => void handleAcceptInvite(inv.invite_id)}
-										disabled={invitePending.has(inv.invite_id)}
-										class="hover-btn hit-slop-44 inline-flex h-8 items-center rounded-full bg-accent-default px-3 text-xs font-medium text-text-on-accent shadow-raised-sm focus-ring hover:shadow-raised-md disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
-									>接受</button>
-									<button
+									>接受</Button>
+									<Button
 										type="button"
-										onclick={() => void handleRejectInvite(inv.invite_id)}
+										size="sm"
+										variant="soft"
+										class="hit-slop-44 rounded-full px-3.5"
 										disabled={invitePending.has(inv.invite_id)}
-										class="hover-btn hit-slop-44 inline-flex h-8 items-center rounded-full bg-surface-subtle/60 px-3 text-xs text-text-primary focus-ring hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-faint active:scale-95 transition-transform"
-									>拒绝</button>
+										onclick={() => void handleRejectInvite(inv.invite_id)}
+									>拒绝</Button>
 								</div>
 							</div>
 						{/each}
@@ -405,12 +411,8 @@ const markSingleRead = (id: string) => {
 				{/if}
 
 				{#if unreadGroup.length > 0}
-					<!-- 新消息分组标题（emphasis：accent 点 + 计数 pill，对齐 Figma Make） -->
-					<div class="mb-3 flex h-5 items-center gap-2">
-						<span aria-hidden="true" class="h-1.5 w-1.5 rounded-full bg-accent-default shadow-[0_0_6px_var(--cst-accent-default)] animate-pulse" ></span>
-						<p class="eyebrow">新消息</p>
-						<span class="badge text-accent-default bg-accent-soft">{unreadGroup.length}</span>
-					</div>
+					<!-- 新消息分组标题：统一 SectionHead 语言（图标 + 计数），不再手写呼吸点 -->
+					<SectionHead variant="eyebrow" title="新消息" icon={Bell} count={unreadGroup.length} />
 					<ListContainer bordered class="mb-6">
 						{#each unreadGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
@@ -419,11 +421,8 @@ const markSingleRead = (id: string) => {
 				{/if}
 
 				{#if readGroup.length > 0}
-					<!-- 已读分组标题（非 emphasis：仅 label + flex 分隔线，对齐 Figma Make） -->
-					<div class="mb-3 flex h-5 items-center gap-2">
-						<p class="eyebrow">已读</p>
-						<span aria-hidden="true" class="h-px flex-1 bg-border-default"></span>
-					</div>
+					<!-- 已读分组标题：与上方分组同一 SectionHead 语言；不再画 1px 分隔横线 -->
+					<SectionHead variant="eyebrow" title="已读" count={readGroup.length} />
 					<ListContainer bordered class="">
 						{#each readGroup as n (n.id)}
 							<NotifyRow notif={n} actionPending={n.inviteId ? invitePending.has(n.inviteId) : false} onRead={markSingleRead} onRemove={remove} onAccept={(id) => void handleAcceptInvite(id)} onReject={(id) => void handleRejectInvite(id)} />
@@ -450,15 +449,45 @@ const markSingleRead = (id: string) => {
 					<LoadError message={loadError} onRetry={() => reloadKey++} />
 				{:else if needsAuth}
 					<div class="flex min-h-[50vh] items-center justify-center">
-						<NeedsAuthNotice spotlight title="登录后查看" description="收到的点赞、评论与关注会出现在这里" />
+						<NeedsAuthNotice
+							spotlight
+							title="登录后查看通知"
+							description="收到的点赞、评论与关注会出现在这里"
+							highlights={[
+								{ icon: Heart, text: '谁点赞了你的瞬间' },
+								{ icon: UserPlus, text: '新的关注与互相关注' },
+								{ icon: Users, text: '入群邀请与群申请结果' }
+							]}
+						/>
 					</div>
 				{:else if filtered.length === 0}
+					<!-- 空态：按语境给下一步建议（不发呆在空页面） -->
 					<EmptyState
 						spotlight
+						iconTone="accent"
 						title={filter === 'all' ? '暂无通知' : '该分类下暂无通知'}
-						description="收到的点赞、评论与关注会出现在这里" bare>
+						description={filter === 'all'
+							? '收到的点赞、评论与关注会出现在这里。'
+							: '换个分类看看，或去附近逛逛。'}
+					>
 						{#snippet icon()}
-							<Bell class="size-6 opacity-muted text-text-secondary"  strokeWidth={1.5} />
+							<Bell class="size-7" strokeWidth={1.5} aria-hidden="true" />
+						{/snippet}
+						{#snippet extra()}
+							<div class="mt-1 flex flex-wrap items-center justify-center gap-2">
+								<Button
+									type="button"
+									variant="soft"
+									size="sm"
+									onclick={() => void goto(ROUTES.nearbyPeople)}
+								>去附近看看</Button>
+								<Button
+									type="button"
+									variant="soft"
+									size="sm"
+									onclick={() => void goto(ROUTES.nearbyMoments)}
+								>逛逛热门瞬间</Button>
+							</div>
 						{/snippet}
 					</EmptyState>
 				{/if}
@@ -470,28 +499,35 @@ const markSingleRead = (id: string) => {
 		{#if !needsAuth}
 			<!-- 桌面端右侧 Rail 辅助区：Bento 微岛生态 -->
 			<div class="flex flex-col gap-4 py-2">
-				<RailSection title="通知概览" variant="island">
-					<div class="flex items-baseline gap-1.5 mb-3">
-						<span class="text-text-primary text-2xl font-semibold leading-none">{unread}</span>
-						<span class="text-text-secondary text-xs">条未读 · 共 {notifies.length} 条</span>
-					</div>
-					<div class="flex flex-col gap-1.5">
+				<RailSection title="通知概览" variant="island" icon={Bell}>
+					<!-- 母题 A（数字与秩序）：未读/已读/全部 三个数字用 strip 发丝分隔，
+					     取代「一个大数字 + 一行说明」的松散排版 -->
+					<MetricRow
+						variant="strip"
+						size="sm"
+						items={[
+							{ value: unread, label: '未读' },
+							{ value: notifies.length - unread, label: '已读' },
+							{ value: notifies.length, label: '全部' }
+						]}
+					/>
+					<div class="mt-3 flex flex-col">
 						{#each typeStats as { type, count }}
 							{@const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.reaction}
 							<!-- 纯展示：类型概览数字（过滤只走标题下 TabBar，不在此写 filter） -->
-							<div class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-interactive-hover/60 transition-colors">
-								<div class="flex items-center justify-center rounded-full shrink-0 size-6" style="background:{cfg.bg};">
-									<cfg.icon class="size-3" style="color:{cfg.color};" strokeWidth={1.75} />
-								</div>
-								<span class="text-text-primary text-sm flex-1">{cfg.label}</span>
-								<span class="text-text-secondary text-xs font-medium">{count}</span>
+							<div class="flex items-center gap-2 py-1.5">
+								<span class="flex size-5 shrink-0 items-center justify-center rounded-full" style="background:{cfg.bg};">
+									<cfg.icon class="size-3" style="color:{cfg.color};" strokeWidth={1.75} aria-hidden="true" />
+								</span>
+								<span class="flex-1 text-xs text-text-secondary">{cfg.label}</span>
+								<span class="text-xs font-medium tabular-nums text-text-primary">{count}</span>
 							</div>
 						{/each}
 					</div>
 				</RailSection>
 
 				{#if notifies.filter((n) => n.type === 'follow').length > 0}
-					<RailSection title="新关注你的人" variant="island" action="全部" onAction={() => void goto(relationshipsHref('fans'))}>
+					<RailSection title="新关注你的人" variant="island" icon={UserPlus} action="全部" onAction={() => void goto(relationshipsHref('fans'))}>
 						<div class="flex flex-col gap-3">
 							{#each notifies.filter((n) => n.type === 'follow' && n.user.id !== meId).slice(0, 3) as n (n.id)}
 								<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.time}>
@@ -511,7 +547,7 @@ const markSingleRead = (id: string) => {
 				{/if}
 
 				{#if notifies.filter((n) => n.type === 'nearby').length > 0}
-					<RailSection title="此刻附近" variant="island" action="查看" onAction={() => void goto(ROUTES.nearbyPeople)}>
+					<RailSection title="此刻附近" variant="island" icon={MapPin} action="查看" onAction={() => void goto(ROUTES.nearbyPeople)}>
 						<div class="flex flex-col gap-3">
 							{#each notifies.filter((n) => n.type === 'nearby').slice(0, 3) as n (n.id)}
 								<RailUserRow avatar={n.user.avatar} name={n.user.name} sub={n.text} />

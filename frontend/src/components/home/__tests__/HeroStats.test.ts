@@ -21,6 +21,16 @@ describe('HeroStats', () => {
 		expect(onExplore).toHaveBeenCalledTimes(1);
 	});
 
+	it('统计区走 MetricRow strip：发丝竖线分隔、无灰底药丸容器', () => {
+		const { container } = render(HeroStats, { props: { stats, onExplore: () => {} } });
+		const strip = container.querySelector('[role="group"]') as HTMLElement | null;
+		expect(strip).not.toBeNull();
+		expect(strip?.className).toContain('divide-x');
+		expect(strip?.className).toContain('divide-border-subtle');
+		// 三项指标都在 strip 内；旧的 grid + 灰底块写法已移除
+		expect(strip?.children.length).toBe(3);
+	});
+
 	it('标题行弹性契约：文本簇可收缩、副标题单行截断、箭头不压缩', () => {
 		const { container } = render(HeroStats, {
 			props: { stats, onExplore: () => {}, locationName: '一个很长很长的定位名称' }

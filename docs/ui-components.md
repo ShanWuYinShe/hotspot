@@ -38,7 +38,7 @@
 ### 按钮 / 输入 / 导航 / 弹层 / 反馈
 | 原语 | 职责 |
 |---|---|
-| `ui/button` | 全部动作按钮的唯一壳（表单/CTA/弹层确认/详情动作区；`ui/FollowButton` 等复合钮经它派生） |
+| `ui/button` | 全部动作按钮的唯一壳（表单/CTA/弹层确认/详情动作区；`ui/FollowButton` 等复合钮经它派生）。**R13 新增 `variant="soft"`**：中性软填底（`bg-surface-subtle/60`）+ 无描边 + hover 全量，是「安静次级动作」的唯一形态（与派 C 同源，替代各页手写的软填/描边变体） |
 | `navigation/ActionIconButton` | 图标按钮（ghost/outline） |
 | `hover-btn` / `scale-btn`（utilities） | 行内文字/图标动作的 hover/tap CSS 语言 |
 | `hit-slop` / `hit-slop-y`（utilities） | 紧凑控件的触控热区扩展（视觉尺寸不变）。`hit-slop` 四周各 6px，用于图标按钮等**孤立**控件；`hit-slop-y`（2026-10-19 新增）只扩纵向，用于**横向相邻**的紧凑控件（筛选胶囊、分段控制器）——前者的水平 6px 会与相邻项重叠，命中落到 DOM 靠后那颗。注意：两者都靠 `::before` 绝对定位，**会被祖先的 `overflow` 裁剪**，横滚容器需留出纵向 padding（TabBar 的 `py-1` 即为此） |
@@ -118,6 +118,23 @@
   操作热区 ≥44、点赞/收藏状态用形状+白描边不只色相（§17）。
 - 首页双列人物卡壳由 `ListItem tone="card"` 唯一承担（如仍用列表形态），禁止外层再包手写卡；
   简单关系列表走 `ListContainer bordered` + 连接行，不逐行拆独立卡片。
+
+### R13 视觉原语（2026-10-28，Round 13）
+
+| 原语 | 职责与契约 |
+|---|---|
+| `data-display/MetricRow` `variant="strip"` | **数字横幅唯一形态**（资料页/附近枢纽/群组详情/后台 KPI）：`flex divide-x divide-border-subtle` + 24px（`size="sm"` 20px）semibold `tabular-nums` 数字 + 12px 次级标签；`align="center"\|"start"`；可点项渲染为 button（focus-ring）。**不再新增灰色药丸指标块**（旧 `capsule` 仅保留既有调用） |
+| `home/SectionHead`（全站共享） | **分区标题唯一实现**：icon（16，text-secondary）+ 标题 14 semibold + `count`（12 次级 tabular）+ 副标题 + 右侧 `action` 文字链；`variant="section"\|"rail"\|"eyebrow"`。页面/rail 不再手写「标题 + 查看全部」行 |
+| `data-display/EmptyState`（R13 升级） | 非 bare 图标砖 64px（`iconTone="neutral"\|"accent"`，accent = accent-soft 底 + accent 图标）；标题 14 semibold、描述 12 次级；新增 `extra` snippet（价值点/建议 chips，位于描述与动作之间）；spotlight 契约不变 |
+| `auth/NeedsAuthNotice`（R13 升级） | **访客引导面板**：spotlight + accent 图标砖 + 标题/描述 + `highlights`（≤3 条 icon+文案）+ 主 CTA（登录/注册）+ 次 CTA（先随便逛逛，默认回首页）；`/me`、`/messages`、`/notify`、me 子页访客态统一使用 |
+| `profile/IdentityHero`（R13 新增） | **资料页身份封面唯一实现**（/me、/users/[id]、ProfileMobile）：封面条（桌面 132 / 移动 92，主题渐变/封面图 + 遮罩）→ 头像（88/72，`-mt-11` 压封面 + `ring-4 ring-surface-page`）→ 昵称/handle/在线状态/简介/位置/标签 → `MetricRow strip` → `actions` snippet；桌面两栏（左身份 / 右指标+动作）、移动动作整行。**禁止页面再自写身份卡** |
+| `profile/ProfileCompleteness` | 资料状态卡：<100% 分段点 + 可点补全入口；100% 隐藏进度条只留完成态 |
+| `profile/ProfileMomentTile` / `profile/ProfileGroupTile` | 我的瞬间/我的群组卡片：整卡图片 + `…` 管理菜单（编辑/删除/退出群组，桌面 `desktop-reveal`、移动常显；删除/退出走 ConfirmDialog + 本地移除） |
+| `settings/SettingsControlRow` | 设置单列分组行：icon + 标题/描述 + 整行控件（主题/明暗/地图源 segmented 给整行宽度，杜绝文字截断） |
+| `messages/ChatEmptyPanel`（routes 内私有） | 聊天空会话面板：引导 + 最近 3 条会话建议 + 「发起新会话」；小面板不开 spotlight |
+
+> 本轮新原语均由 Lead 或模块负责人在写作用域内实现；新增页面优先组合上述原语，
+> 不一致的旧手写形态按模块逐步收敛。
 
 ## 统一交互契约
 

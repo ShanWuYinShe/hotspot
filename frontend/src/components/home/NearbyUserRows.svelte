@@ -16,6 +16,7 @@
 		isFollowed,
 		isPending,
 		onToggle,
+		onOpenUser,
 		emptyHint,
 		columns = 1
 	}: {
@@ -25,6 +26,8 @@
 		/** 关注请求进行中判断（按钮禁点防重复提交） */
 		isPending?: (id: string) => boolean;
 		onToggle: (id: string) => void;
+		/** 整行点击进用户主页（缺省时行只承载关注动作） */
+		onOpenUser?: (id: string) => void;
 		/** 空态补充说明（如「正在按「南天门」5km 范围筛选」），缺省不渲染。 */
 		emptyHint?: string;
 		/** 2 = 卡片双列网格（桌面右栏，r01：单列行过宽拉扯关注按钮距离）；缺省单列行列表 */
@@ -35,13 +38,9 @@
 {#if users.length === 0}
 	<!-- 空列表契约（skill hotspot-frontend-layout）：空态一律 EmptyState，
 		 不渲染空 bordered 容器（线上反馈：空框 + 大片空白观感差）。 -->
-	<EmptyState
-		bare
-		title="附近暂时没有匹配的用户"
-		description={emptyHint}
-	>
+	<EmptyState bare title="附近暂时没有匹配的用户" description={emptyHint}>
 		{#snippet icon()}
-			<Users size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
+			<Users class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />
 		{/snippet}
 	</EmptyState>
 {:else if columns === 2}
@@ -78,7 +77,12 @@
 	<ListContainer bordered>
 	{#each users as u (u.id)}
 		{@const followed = isFollowed(u.id)}
-		<UserCardRow name={u.name} avatar={u.avatar}>
+		<UserCardRow
+			name={u.name}
+			avatar={u.avatar}
+			onClick={onOpenUser ? () => onOpenUser(u.id) : undefined}
+			ariaLabel={onOpenUser ? `查看 ${u.name} 的主页` : undefined}
+		>
 			{#snippet avatarBadge()}
 				{#if u.isOnline}
 					<OnlineDot size="md" />
@@ -89,10 +93,10 @@
 				{@const hasTag = Boolean(u.tag)}
 				{@const hasDistance = Boolean(u.distance)}
 				{#if hasTag || hasDistance}
-					<p class="mt-1 flex items-center gap-1.5 text-xxs">
+					<p class="mt-1 flex items-center gap-1.5 text-xs">
 						{#if hasTag}<span class="text-accent-default">#{u.tag}</span>{/if}
 						{#if hasTag && hasDistance}<span class="opacity-muted text-text-secondary">·</span>{/if}
-						{#if hasDistance}<span class="text-text-secondary">{u.distance}</span>{/if}
+						{#if hasDistance}<span class="text-text-secondary tabular-nums">{u.distance}</span>{/if}
 					</p>
 				{/if}
 			{/snippet}

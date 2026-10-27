@@ -20,6 +20,7 @@
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
 	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { platform } from '@/stores/platform.svelte';
 
@@ -243,11 +244,14 @@
 
 	const isLandscape = $derived(platform.orientation === 'landscape');
 
+	// Sheet 外壳：无描边、只靠 sheet/modal 投影与地图分层（控件边界允许，但不叠描边+投影）。
+	// 横屏是悬浮侧卡（投影 modal），竖屏是底部抽屉（投影 sheet），
+	// 拖拽中禁用高度过渡以跟手，松手后回弹到吸附档。
 	const sheetStyle = $derived.by(() => {
 		if (isLandscape) {
-			return 'position:absolute;top:60px;bottom:14px;left:14px;width:340px;max-width:calc(50vw - 28px);z-index:20;border-radius:var(--radius-sheet);border:var(--cst-border-width-hairline) solid var(--cst-border-default);box-shadow:var(--cst-elevation-modal);display:flex;flex-direction:column;overflow:hidden;';
+			return 'position:absolute;top:60px;bottom:14px;left:14px;width:340px;max-width:calc(50vw - 28px);z-index:20;border-radius:var(--radius-sheet);box-shadow:var(--cst-elevation-modal);display:flex;flex-direction:column;overflow:hidden;';
 		}
-		return `position:absolute;bottom:0;left:0;right:0;max-width:640px;margin:0 auto;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;border:var(--cst-border-width-hairline) solid var(--cst-border-default);border-bottom:none;box-shadow:var(--cst-elevation-sheet);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height var(--cst-motion-spring) var(--cst-ease-bounce);'}`;
+		return `position:absolute;bottom:0;left:0;right:0;max-width:640px;margin:0 auto;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;box-shadow:var(--cst-elevation-sheet);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height var(--cst-motion-spring) var(--cst-ease-bounce);'}`;
 	});
 
 	const rightCtrlBottom = $derived(isLandscape ? 20 : sheetH + 10);
@@ -347,11 +351,12 @@
 			aria-valuemax={SNAP_MAX}
 			aria-valuenow={Math.min(SNAP_MAX, Math.max(SNAP_MIN, sheetH))}
 			tabindex="0"
-			style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:10px;padding-bottom:6px;cursor:grab;touch-action:none;user-select:none;"
+			style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:8px;padding-bottom:6px;cursor:{dragging ? 'grabbing' : 'grab'};touch-action:none;user-select:none;"
 			onpointerdown={onHandlePointerDown}
 			onkeydown={onHandleKeydown}
 		>
-			<div class="bg-border-default w-9.5 h-1 rounded-full" ></div>
+			<!-- 拖拽把手：加宽加深一档，让「可拖动」在玻璃底上第一眼可辨；热区由整条 24px 高容器承担 -->
+			<div class="h-1.5 w-11 rounded-full bg-border-strong opacity-soft transition-colors duration-rapid"></div>
 		</div>
 		{/if}
 
@@ -375,13 +380,15 @@
 				{#if searchQuery}
 					<button
 						type="button"
-						class="hover-btn focus-ring"
+						class="hover-action -m-1.5 flex items-center justify-center rounded-full p-1.5 focus-ring"
+						aria-label="清空搜索"
+						title="清空"
 						onclick={() => {
 							searchQuery = '';
 							selectedLoc = null;
 						}}
 					>
-						<X class="size-3.5 text-text-secondary"   strokeWidth={2} />
+						<X class="size-3.5 text-text-secondary" strokeWidth={1.75} />
 					</button>
 				{:else if selectedLoc}
 					<Check class="size-3.5 shrink-0 text-accent-default"   strokeWidth={2.5} />
@@ -408,16 +415,15 @@
 			/>
 		</div>
 
-		<!-- Confirm button — always at bottom of sheet -->
-		<div class="shrink-0 px-4 pt-2 pb-4.5">
-			<button
-				type="button"
-				class="hover-btn w-full flex items-center justify-center gap-2 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm h-12.5 px-4 shadow-raised-md hover:shadow-raised-lg"
-				onclick={handleConfirm}
-			>
-				<MapPin class="size-4 shrink-0" strokeWidth={2} />
+		<!-- Confirm button — 粘底操作条（安全区净空由 padding-bottom 承担） -->
+		<div
+			class="shrink-0 px-4 pt-2"
+			style="padding-bottom:max(18px, env(safe-area-inset-bottom, 18px));"
+		>
+			<Button variant="primary" size="lg" class="w-full" onclick={handleConfirm}>
+				<MapPin class="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
 				<span class="min-w-0 truncate">{selectedLoc ? `确认：${selectedLoc.displayName}` : '设为浏览锚点'}</span>
-			</button>
+			</Button>
 		</div>
 	</div>
 </div>

@@ -8,6 +8,7 @@
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import type { GroupItem, UpdateGroupRequest } from '@/api/types';
 
@@ -243,8 +244,8 @@
 			</div>
 		</fieldset>
 
-		<!-- Privacy toggle -->
-		<div class="flex items-center justify-between rounded-md border border-border-default bg-surface-primary px-4 py-3.5 shadow-raised-md">
+		<!-- Privacy toggle（软岛行：去描边，底色 + 轻投影表达层级） -->
+		<div class="flex items-center justify-between rounded-lg bg-surface-island px-4 py-3.5 shadow-xs">
 			<div class="flex items-center gap-3">
 				{#if isPrivate}
 					<Lock class="size-4.5 text-accent-default" strokeWidth={1.5} />
@@ -266,8 +267,8 @@
 			/>
 		</div>
 
-		<!-- Approval toggle -->
-		<div class="flex items-center justify-between rounded-md border border-border-default bg-surface-primary px-4 py-3.5 shadow-raised-md">
+		<!-- Approval toggle（同上） -->
+		<div class="flex items-center justify-between rounded-lg bg-surface-island px-4 py-3.5 shadow-xs">
 			<div class="flex items-center gap-3">
 				<Check class="size-4.5" style="color:{requiresApproval ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};" strokeWidth={1.5} />
 				<div>
@@ -289,20 +290,23 @@
 			<p class="text-sm text-status-danger">{saveError}</p>
 		{/if}
 
-		<!-- Save button -->
-		<button
+		<!-- Save button（页面级动作 → Button primary lg 档） -->
+		<Button
 			type="button"
-			onclick={() => void handleSave()}
+			variant="primary"
+			size="lg"
+			class="w-full"
 			disabled={!canSave}
-			class="hover-btn flex items-center justify-center gap-2 w-full py-4 rounded-lg focus-ring text-sm font-medium transition-all duration-standard ease-standard {canSave ? 'bg-accent-default text-text-on-accent shadow-raised-md border-none cursor-pointer' : 'bg-surface-primary text-text-secondary shadow-inset-sm border-hairline border-border-default cursor-not-allowed'}"
+			loading={saving}
+			onclick={() => void handleSave()}
 		>
-			{saving ? '保存中…' : '保存设置'}
-		</button>
+			保存设置
+		</Button>
 
 		{#if isOwner}
 			<!-- 危险区（仅群主；转让后原群主降级，解散不可逆） -->
-			<section aria-labelledby="danger-zone-label" class="mt-2 rounded-md border border-status-danger-border bg-danger-bg p-4">
-				<p id="danger-zone-label" class="flex items-center gap-1.5 text-sm font-medium text-status-danger">
+			<section aria-labelledby="danger-zone-label" class="mt-2 rounded-lg bg-danger-bg p-4">
+				<p id="danger-zone-label" class="flex items-center gap-1.5 text-sm font-medium text-text-status-danger-on-soft">
 					<ShieldAlert class="size-4" strokeWidth={1.75} />
 					危险区
 				</p>
@@ -326,11 +330,13 @@
 								<div class="flex items-center gap-2.5 rounded-md px-2 py-2">
 									<span class="min-w-0 flex-1 truncate text-sm text-text-primary">{m.name}</span>
 									<span class="text-xs text-text-secondary">{m.role === 'admin' ? '管理员' : '成员'}</span>
-									<button
+									<Button
 										type="button"
+										variant="soft"
+										size="sm"
+										class="hit-slop shrink-0"
 										onclick={() => (transferTarget = { userId: m.userId, name: m.name })}
-										class="hover-btn rounded-full border border-border-default px-3.5 py-1.5 text-sm text-text-primary focus-ring"
-									>转让</button>
+									>转让</Button>
 								</div>
 							{:else}
 								<p class="px-2 py-1 text-xs text-text-secondary">群内暂无其他成员可转让</p>
@@ -345,7 +351,7 @@
 						<UserMinus class="size-4 text-text-secondary" strokeWidth={1.75} />
 						解散群组
 					</p>
-					<p class="mt-1 text-xs leading-5 text-text-secondary">解散后不可恢复，所有成员将被移出。输入群名 <code class="font-mono text-xs text-status-danger">{initial?.group.name}</code> 确认：</p>
+					<p class="mt-1 text-xs leading-5 text-text-secondary">解散后不可恢复，所有成员将被移出。输入群名 <code class="font-mono text-xs text-text-status-danger-on-soft">{initial?.group.name}</code> 确认：</p>
 					<input
 						type="text"
 						bind:value={dismissConfirmText}
@@ -355,19 +361,21 @@
 						class="mt-2 w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-status-danger"
 					/>
 					<div class="mt-2 flex justify-end">
-						<button
+						<Button
 							type="button"
-							onclick={() => void handleDismiss()}
+							variant="danger"
+							size="md"
 							disabled={!dismissReady || dismissing}
-							class="hover-btn rounded-full px-4 py-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-status-danger disabled:cursor-not-allowed disabled:opacity-muted enabled:bg-status-danger enabled:text-text-on-accent"
+							loading={dismissing}
+							onclick={() => void handleDismiss()}
 						>
-							{dismissing ? '解散中…' : '解散群组'}
-						</button>
+							解散群组
+						</Button>
 					</div>
 				</div>
 
 				{#if dangerError}
-					<p class="mt-2 text-sm text-status-danger">{dangerError}</p>
+					<p class="mt-2 text-sm text-text-status-danger-on-soft">{dangerError}</p>
 				{/if}
 			</section>
 		{/if}

@@ -551,3 +551,32 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 - reduced-motion：`bun run audit:a11y -- --mobile --reduced`（残留类/长动画即失败）；
 - 触控例外只允许走 `scripts/ui-quality-touch-allowlist.json` 稳定 selector + 理由（禁止 nth-child），维护说明见 `docs/frontend-ui-audit.md`；
 - 命令依赖 dev 环境 + agent-browser，不进 `check` 链；`--limit` 仅调试。
+
+## Round 12 状态色 on-soft 与主题矩阵门禁（2026-10-27）
+
+- 「tint 淡底 + 同色语义文字」必须用 on-soft 文字档：`text-text-accent-on-soft` / `text-text-status-{online,warning,danger}-on-soft`
+  （= 语义色 80% + text-primary 20%，semantic.css 派生）；**仅限 tint 软底**（徽章/胶囊/软底容器/危险菜单 hover），
+  实底/画布正文继续用 `text-status-*` / `text-accent-default`。
+- 悬停才出现 tint 的场景写成 `text-status-* hover:text-text-status-*-on-soft` + `hover:bg-*`；背景 mix 比例不动。
+- 合并前跑主题矩阵：`bun run audit:a11y -- --matrix --parallel 2`（约 15–20min，0 serious/critical）；快查 `--only/--limit`；
+  默认 `audit:ui` 仍然只扫 vibrant light。
+- 改状态色/新增语义色需 3 主题×明暗 ≥4.5（矩阵 + `python3 harmonyapp/scripts/check_status_parity.py` 双端校验）。
+
+## Round 13 视觉语言：锚点/同轴/安静动作（2026-10-28）
+
+- **安静次级动作唯一形态**：`ui/button variant="soft"`（中性软填 `bg-surface-subtle/60`、无描边、hover 全量）。
+  编辑资料/设置/发消息/私信/拒绝/新会话/全部已读/表格行内动作一律用它；**不再手写软填胶囊或描边胶囊**。
+  描边只留给可切换筛选 chip（TagPill/TabBar）与功能边界（输入框、主题 swatch）。
+  关系 chip（关注/加入）两态同族：未激活 `surface-accent`、已激活 `soft`（已关注/已加入不再用 accent 描边）。
+- **指标不再用灰药丸**：用 `MetricRow variant="strip"`（24px semibold tabular 数字 + 12px 次级标签 + `divide-x divide-border-subtle` 发丝分隔），
+  每屏最多一处强调色（如「在线」绿点）；禁止每个数字套圆角底块、禁止「卡片里的卡片」。
+- **分区标题唯一实现** `home/SectionHead`（icon 16 + 标题 14 semibold + count 12 + 右侧「查看全部」文字链；rail 变体 11）；
+  页面不得再手写「标题 + 查看全部」行。
+- **资料身份卡唯一实现** `profile/IdentityHero`（封面 132/92 + 头像 88/72 压封面 ring-4 + 身份/简介/标签 + MetricRow strip + actions）；
+  页面不得自写身份卡；他人主页动作：未关注=关注 primary/私信 soft，已关注=私信 primary/已关注 soft（禁止第三种描边胶囊）。
+- **空态**：页面级用新版 EmptyState（64px 软底图标砖 + 14 semibold 标题 + 12 描述 + `extra` 建议 chips/价值点），
+  超大空态开 spotlight；访客态整块用 `auth/NeedsAuthNotice`（3 条 highlights + 主/次 CTA）。
+- **图片卡文字层级**：标题 `text-base sm:text-lg` semibold leading-tight（压图仍白字，禁止降低遮罩对比度）；
+  作者行头像 24–32 + 昵称 14 semibold + 时间 12；动作计数 12 tabular、动作间距 24；卡比例只随断点变一档（移动 3/4、≥600 4/5）。
+- **内容轴**：页面不得自设页面级 `max-w-*`，正文/页头/粘底条同轴（三条规则见 layout skill「内容轴」节）。
+- 验收：本轮新增规则纳入 `audit:a11y`（矩阵 3×2 0 serious）+ `audit:touch`；视觉验收用三主题 × 明暗 × 桌面/平板/移动截图对比。

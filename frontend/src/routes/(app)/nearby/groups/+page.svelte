@@ -223,16 +223,23 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			<!-- 首屏骨架屏：图片优先群组卡栅格（移动/平板 2 列，桌面逐级加列） -->
 			<SkeletonFeed
 				variant="card"
-				count={6}
-				class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+				count={8}
+				class="grid grid-cols-2 gap-4 lg:grid-cols-4"
 				label="加载附近群组…"
 			/>
 		{:else if loadError}
 			<LoadError message={loadError} onRetry={() => reloadKey++} />
 			{:else if filtered.length}
-				<div class="flex items-center justify-between mb-3">
-					<span class="eyebrow">此刻附近群组</span>
-					<span class="text-status-online font-medium text-xs">{filtered.length} 个活跃 · {formatCount(totalOnline)} 人正在群聊</span>
+				<div class="mb-3 flex items-baseline justify-between gap-3">
+					<h2 class="flex min-w-0 items-baseline gap-2">
+						<span class="text-md font-semibold text-text-primary">此刻附近群组</span>
+						<span class="shrink-0 text-xs font-medium tabular-nums text-text-secondary">{filtered.length} 个</span>
+					</h2>
+					<span class="flex shrink-0 items-center gap-1.5 text-xs tabular-nums text-text-secondary">
+						<span class="size-1.5 rounded-full bg-status-online"></span>
+						<span class="font-medium text-text-status-online-on-soft">{formatCount(totalOnline)} 人</span>
+						正在群聊
+					</span>
 				</div>
 			{#if isDesktop && rest.length > 3}
 			<!-- 精选卡用 GroupCard featured 横排（图片左 40%,r03:纵排大卡吃首屏）；
@@ -267,7 +274,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 				{/if}
 				<!-- 手机/平板：规整 2 列（平板 BSP 会出 1 窄 + 2 宽 的尺寸落差与底部参差）；
 				     桌面保持「精选卡 + BSP 满铺墙」 -->
-				<div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+				<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
 					{#each rest as group (group.id)}
 						<GroupCard group={group} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 					{/each}
@@ -277,9 +284,14 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 				<ListEnd />
 			{/if}
 		{:else}
-			<EmptyState spotlight bare title="没有找到相关群组">
+			<EmptyState
+				spotlight
+				iconTone="accent"
+				title="没有找到相关群组"
+				description="换个分类看看，或去全景地图发现身边的圈子。"
+			>
 				{#snippet icon()}
-					<Users size={24} color="var(--cst-text-secondary)" class="opacity-subtle" />
+					<Users class="size-7" strokeWidth={1.5} />
 				{/snippet}
 			</EmptyState>
 		{/if}
