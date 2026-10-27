@@ -489,3 +489,17 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 
 - 三主题×明暗关键页必测；软岛/画布 ratio 与文字对比记录基线；状态徽章避免低对比淡底。
 - 性能基线：关键页 LCP/CLS 采样（本地 dev 环境仅作相对参考）；CLS 应 <0.1，图片显式尺寸/懒加载/骨架零位移。
+## Round 6 图片加载与键盘导航（2026-10-27）
+
+### 1) 图片必须走统一管线
+
+- 所有 `<img>` 用 `lib/images.ts`：`presetImageUrl/presetSrcSet`（avatar/thumb/card/cover/hero/full）+ 调用方 `sizes`；
+  仅 unsplash 追加 `auto=format&fit=crop&q&w`，其他域名/本地/blob/地图瓦片原样；禁止裸写 `<img src>`。
+- 首屏仅可见图 `loading=eager` + `fetchpriority=high`（feed 前 2/详情首图/hero/ImageViewer）；其余 `lazy` + `decoding=async`。
+- 占位（主题渐变/骨架/占位底）+ 0.22s 渐显；reduced-motion 直接显示；不得引入布局位移；失败走 fallback（渐变/首字母/图标）。
+- 清晰度：按显示尺寸 2x/3x 取档；Retina 用 2x srcset；真机偏软再升档（不要用低清拉伸）。
+
+### 2) 键盘导航
+
+- 列表/搜索页可加 ↑↓ 焦点移动（落到真实链接/按钮、focus-ring 可见），Enter 原生打开、Esc 清空/返回；
+  不引入 combobox/aria-activedescendant；Tab 顺序不变。新增交互后必须跑 axe（0 serious/critical）。

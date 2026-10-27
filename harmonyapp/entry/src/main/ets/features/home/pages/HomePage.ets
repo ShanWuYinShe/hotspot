@@ -406,12 +406,14 @@ export struct HomePage {
   @Builder
   private buildFeed() {
     List({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP }) {
-      ForEach(this.currentTabMoments(), (moment: MomentItem) => {
+      ForEach(this.currentTabMoments(), (moment: MomentItem, index: number) => {
         ListItem() {
           MomentFeedCard({
             moment: moment,
             // R2 整卡图片卡：图片铺满 4:5、信息覆盖图面（对齐 web HomeFeedItem card variant）
             variant: 'overlay',
+            // R6 首屏优先：首 2 张卡封面高清档 + 立即创建（ArkUI 无 fetchpriority，登记平台差异）
+            priority: index < 2,
             onOpenDetail: (m: MomentItem) => this.openMomentDetail(m)
           })
         }

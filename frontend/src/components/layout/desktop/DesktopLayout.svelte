@@ -134,7 +134,7 @@
 				onclick={() => (isSidebarCollapsed = false)}
 			>
 				<img
-					src={imgHotSpot}
+					src={imgHotSpot} decoding="async"
 					alt="HotSpot"
 					class="size-7 rounded-full object-cover transition-opacity duration-rapid group-hover:opacity-0"
 				/>
@@ -154,7 +154,7 @@
 					void goto(ROUTES.home);
 				}}
 			>
-				<img src={imgHotSpot} alt="HotSpot Logo" class="rounded-full object-cover shrink-0 size-7 transition-transform duration-rapid group-hover:scale-105 group-active:scale-95" />
+				<img src={imgHotSpot} decoding="async" alt="HotSpot Logo" class="rounded-full object-cover shrink-0 size-7 transition-transform duration-rapid group-hover:scale-105 group-active:scale-95" />
 				<span class="tracking-tight text-lg text-text-primary transition-colors group-hover:text-accent-default">HotSpot</span>
 			</button>
 

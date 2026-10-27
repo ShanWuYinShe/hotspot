@@ -44,6 +44,8 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -94,6 +96,8 @@ export struct MomentDetailPage {
   @State isDeleting: boolean = false;
   /** 本地新增评论数（服务端计数刷新前叠加展示，避免手动克隆 MomentItem） */
   @State commentAdditions: number = 0;
+  /** R6：已加载图片 URL（onComplete 渐显） */
+  @State loadedImageUrls: string[] = [];
   /** 评论点赞 in-flight 去重（防连点双翻转） */
   private commentLikePending: Set<string> = new Set<string>();
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
@@ -122,6 +126,18 @@ export struct MomentDetailPage {
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  // ==================== R6 图片加载体验 ====================
+  private isImageLoaded(url: string): boolean {
+    return this.loadedImageUrls.indexOf(url) >= 0;
+  }
+
+  private markImageLoaded(url: string): void {
+    if (!url || this.isImageLoaded(url)) return;
+    const next: string[] = this.loadedImageUrls.slice();
+    next.push(url);
+    this.loadedImageUrls = next;
   }
 
   private getSurfaceBackground(): string {
@@ -668,11 +684,17 @@ export struct MomentDetailPage {
       if (moment.images && moment.images.length > 0) {
         Stack({ alignContent: Alignment.BottomEnd }) {
           Pressable({ onPress: () => { this.previewImage(0); } }) {
-            Image(MediaUrlUtil.normalize(moment.images[0].url))
+            Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(moment.images[0].url), 1080))
               .width('100%')
               .height(DesignConstants.COMPONENT.MOMENT_COVER_HEIGHT)
               .objectFit(ImageFit.Cover)
               .backgroundColor(this.getSurfaceBackground())
+              .opacity(this.isImageLoaded(moment.images[0].url) || MotionUtil.reduced() ? 1 : 0)
+              .animation({
+                duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+                curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+              })
+              .onComplete(() => this.markImageLoaded(moment.images[0].url))
           }
           if (moment.images.length > 1) {
             Text(`共 ${moment.images.length} 张`)
@@ -693,6 +715,7 @@ export struct MomentDetailPage {
         }
         .width('100%')
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG })
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.SHAPE.HERO_CARD)
         .clip(true)
         .shadow(this.getCurrentThemePalette().controlShadow)
@@ -729,14 +752,21 @@ export struct MomentDetailPage {
               ForEach(rowImages, (img: MomentImage, colIndex: number) => {
                 Column() {
                   Pressable({ onPress: () => { this.previewImage(rowIndex * 3 + colIndex + 1); } }) {
-                    Image(MediaUrlUtil.normalize(img.url))
+                    Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(img.url), 360))
                       .width('100%')
                       .aspectRatio(1)
                       .objectFit(ImageFit.Cover)
                       .backgroundColor(this.getSurfaceBackground())
+                      .opacity(this.isImageLoaded(img.url) || MotionUtil.reduced() ? 1 : 0)
+                      .animation({
+                        duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+                        curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+                      })
+                      .onComplete(() => this.markImageLoaded(img.url))
                   }
                 }
                 .layoutWeight(1)
+                .backgroundColor(this.getSurfaceSubtle())
                 .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
                 .clip(true)
                 .shadow(this.getCurrentThemePalette().controlShadow)

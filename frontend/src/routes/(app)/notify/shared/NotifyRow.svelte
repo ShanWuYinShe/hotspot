@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import { avatarImageWidths, buildImageSrcSet, fadeImage, optimizedImageUrl } from '@/lib/images';
 	import { TYPE_CONFIG, type NotifyViewItem } from './notify-data';
 
 	// 通知行（对齐 Figma Make NotifyPage 行契约：ListItem
@@ -40,7 +41,16 @@
 	<div class="relative shrink-0">
 		{#if notif.user.avatar}
 			<div class="rounded-full overflow-hidden size-11 ring-1 ring-border-subtle/50">
-				<img src={notif.user.avatar} alt={notif.user.name} loading="lazy" class="w-full h-full object-cover" />
+				<img
+					src={optimizedImageUrl(notif.user.avatar, { width: 88 })}
+					srcset={buildImageSrcSet(notif.user.avatar, avatarImageWidths(44))}
+					sizes="44px"
+					alt={notif.user.name}
+					loading="lazy"
+					decoding="async"
+					class="w-full h-full object-cover"
+					use:fadeImage
+				/>
 			</div>
 		{:else}
 			<div class="rounded-full flex items-center justify-center size-11" style="background:{cfg.bg};">
@@ -83,7 +93,16 @@
 		{/if}
 		{#if notif.momentImage}
 			<div class="rounded-lg overflow-hidden size-10 border border-border-subtle/50 shadow-xs">
-				<img src={notif.momentImage} alt="" loading="lazy" class="w-full h-full object-cover" />
+				<img
+					src={optimizedImageUrl(notif.momentImage, { width: 88 })}
+					srcset={buildImageSrcSet(notif.momentImage, avatarImageWidths(44))}
+					sizes="44px"
+					alt=""
+					loading="lazy"
+					decoding="async"
+					class="w-full h-full object-cover"
+					use:fadeImage
+				/>
 			</div>
 		{/if}
 		{#if !notif.read}

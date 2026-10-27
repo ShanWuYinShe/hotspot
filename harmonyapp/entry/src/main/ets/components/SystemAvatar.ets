@@ -3,6 +3,8 @@ import { UserTypeUtil } from '../core/utils/UserTypeUtil';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
+import { ImageUrlUtil } from '../core/utils/ImageUrlUtil';
+import { MotionUtil } from '../core/accessibility/MotionUtil';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
@@ -13,7 +15,7 @@ import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/
 @Component
 export struct SystemAvatar {
   @Prop src: string | Resource | undefined;
-  @Prop avatarUrl: string | undefined;
+  @Prop @Watch('resetImageLoaded') avatarUrl: string | undefined;
   @Prop name: string = '';
   @Prop avatarSize: number = 40;
   @Prop isOnline: boolean = false;
@@ -27,10 +29,27 @@ export struct SystemAvatar {
   /** 装饰性头像（相邻已有姓名文本）：从无障碍树移除，避免「头像：X」与姓名重复播报 */
   @Prop decorative: boolean = false;
   @State private imageLoadFailed: boolean = false;
+  /** R6：onComplete 渐显（reduced-motion 时直接显示） */
+  @State private imageLoaded: boolean = false;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  /** URL 变更时重置渐显状态（列表复用场景） */
+  private resetImageLoaded(): void {
+    this.imageLoaded = false;
+    this.imageLoadFailed = false;
+  }
+
+  /** unsplash 头像按显示尺寸 2x 取图；本地/其他域名原样 */
+  private getOptimizedSrc(): string | Resource | undefined {
+    const source = this.getActualSrc();
+    if (typeof source === 'string' && source.length > 0) {
+      return ImageUrlUtil.optimized(source, Math.ceil(this.avatarSize * 2));
+    }
+    return source;
   }
 
   private getBorderOptions(): BorderOptions {
@@ -68,7 +87,15 @@ export struct SystemAvatar {
   private buildAvatarContent() {
     Stack({ alignContent: Alignment.BottomEnd }) {
       if (this.getActualSrc() && !this.imageLoadFailed) {
-        Image(this.getActualSrc()!)
+        // R6 占位：加载中显示主题淡底圆（渐显前身）；失败后走首字母降级
+        if (!this.imageLoaded && !MotionUtil.reduced()) {
+          Column()
+            .width(this.avatarSize)
+            .height(this.avatarSize)
+            .borderRadius(this.getBorderRadius())
+            .backgroundColor(this.getPalette().accentMuted)
+        }
+        Image(this.getOptimizedSrc()!)
           .width(this.avatarSize)
           .height(this.avatarSize)
           .objectFit(ImageFit.Cover)
@@ -77,6 +104,12 @@ export struct SystemAvatar {
           .backgroundColor(this.getPalette().surfaceBackground)
           .alt($r('app.media.foreground'))
           .accessibilityText(this.name ? `头像：${this.name}` : '用户头像')
+          .opacity(this.imageLoaded || MotionUtil.reduced() ? 1 : 0)
+          .animation({
+            duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+          })
+          .onComplete(() => { this.imageLoaded = true; })
           .onError(() => {
             this.imageLoadFailed = true;
           })

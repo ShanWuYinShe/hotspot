@@ -10,6 +10,7 @@
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import { ROUTES } from '@/lib/routes';
+	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 
 	// 搜索页「有查询结果态」：Tab 栏 + 用户/动态/话题结果组。
@@ -168,7 +169,16 @@
 								class="flex items-center gap-3 px-4 py-3.5"
 							>
 								{#if moment.images?.[0]?.url}
-		<img src={moment.images[0].url} alt="" loading="lazy" class="size-10 rounded-sm object-cover" />
+		<img
+			src={presetImageUrl(moment.images[0].url, 'thumb', 200)}
+			srcset={presetSrcSet(moment.images[0].url, 'thumb')}
+			sizes="40px"
+			alt=""
+			loading="lazy"
+			decoding="async"
+			class="size-10 rounded-sm object-cover"
+			use:fadeImage
+		/>
 								{:else}
 									<div
 										class="flex size-10 items-center justify-center rounded-sm bg-accent-soft"

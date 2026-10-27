@@ -10,6 +10,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { AppThemePalette, DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { ChatThemeColors, ChatThemeManager } from '../../../core/theme/ChatTheme';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
 import { ChatMessageListItem, TypingMessageSource } from './ChatMessageListUtils';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { AppRouter, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
@@ -120,7 +121,7 @@ export struct ChatMessageItem {
                   .backgroundColor(this.chatTheme?.listBackground)
                   .borderRadius(this.getBubbleRadius(this.msg.isSelf))
                   } else {
-                  Image(MediaUrlUtil.normalize(this.msg.content))
+                  Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.msg.content), 720))
                     .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
                     .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
                     .objectFit(ImageFit.Contain)

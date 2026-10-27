@@ -31,6 +31,8 @@ export struct MomentWallCard {
   /** 卡片宽高比（宽/高）：2 列窄墙用 0.75（3:4），3 列用 1.333（4:3）。
    *  2026-10-20：此前写死 1.333，手机 2 列时卡高仅 ~128px、底部托盘吃掉 70%+ 图片。 */
   @Prop cardAspectRatio: number = 1.333;
+  /** R6：首屏前 2 张（LazyForEach index<2）高清档 */
+  @Prop priority: boolean = false;
   onOpenDetail?: (moment: MomentItem) => void;
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
   // 同 MomentFeedCard：仅持有本卡社交态，事件总线按 moment_id 定向更新
@@ -244,6 +246,7 @@ export struct MomentWallCard {
   build() {
     NearbyImageCard({
       imageUrl: this.getCoverUrl(),
+      priority: this.priority,
       imageAlt: this.getPrimaryTag() || this.moment.description || this.moment.user?.nickname || '',
       cardAspectRatio: this.cardAspectRatio > 1 ? 0.75 : this.cardAspectRatio,
       cardRadius: DesignConstants.SHAPE.CARD,

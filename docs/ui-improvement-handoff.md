@@ -1,4 +1,4 @@
-# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-16）
+# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-17）
 
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
@@ -6,7 +6,20 @@
 
 ## 已完成基线（不要回退）
 
-### 2026-10-27 本轮（Round 16，三主题验收 + a11y/触控/性能质量门）
+### 2026-10-27 本轮（Round 17，图片加载管线 + 感知性能 + 搜索键盘导航）
+
+- **图片管线**：新增 `frontend/src/lib/images.ts`（仅 unsplash 加 `auto=format&fit=crop&q&w`）+ 鸿蒙 `ImageUrlUtil.ets`；
+  6 档尺寸预设（avatar/thumb/card/cover/hero/full）、srcset/sizes、`fadeImage` 渐显（0.22s，reduced 直接显示）；
+  全站 26 个 `<img>` 接入：首屏 feed 前 2/详情首图/hero/ImageViewer eager+high，其余 lazy+async；Avatar 占位+失败首字母。
+- **感知性能（transferSize 前后）**：`/` 1440 −62%、`/` 390 −54~64%、`/me` −46~70%、详情 1440 −77.6%、详情 390 −52%；
+  CLS 不回归（详情 0.0213→0）；LCP 方向改善（dev 噪声）。`/nearby/people` 1440 +43% 为「封面 200w→400w 清晰度收益」的有意取舍（备选：非首屏回退 thumb）。
+- **搜索键盘导航**：`/search` ↑↓ 在输入框/话题/结果行/最近条目间移动焦点（真实链接、focus-ring 可见）、Enter 打开、Esc 清空回输入框；
+  未引入 combobox；Tab 顺序不变；axe 复扫 50 runs 0 violation。
+- **鸿蒙镜像**：ImageUrlUtil 15 处接入、首屏优先/LazyForEach 策略（无 fetchpriority/lazy 的平台差异已登记）、高频图占位+onComplete 渐显
+  （reduced 直接显示）；build/check:theme/parity/布局树全绿。
+- **验证**：axe 50 runs 0；QA 23/23；check 0/0；test **101 文件/526**；build 通过；39 页回归全绿。
+
+### 2026-10-27 上一轮（Round 16，三主题验收 + a11y/触控/性能质量门）
 
 - **三主题×明暗验收**：9 页 × forest/inkwash/vibrant × 亮暗对比；**forest light 软岛 v2**（仅 forest light：
   `color-mix(surface-primary 92%, text-primary 8%)` = #E4E6E2，岛/画布 1.00→1.17，岛内 primary 13.11/secondary 6.42）；
@@ -208,67 +221,46 @@
 
 ## 待做（按优先级）
 
-1. **鸿蒙真机像素/TalkBack 验收（Round 13–16 遗留，最高优先）**：四轮鸿蒙改动均只完成构建/布局树/token 校验，
-   真机 hdc 离线导致三主题×明暗矩阵、灰度 Tab、压图对比度像素实测、软岛阴影/圆角/gap、按钮 hover、
-   未读态、骨架零位移、web↔鸿蒙并排 compare 全部挂起。设备恢复后按
-   `.workwork/ui-polish-1026/{r2,r3,r4,r5}/ha/report.md` checklist 执行（r5 增补三主题像素/TalkBack 顺序/
-   reduced-motion 系统路径/触控边缘 tap）。
-2. **长尾自定义卡收尾（Round 15 已基本完成）**：moment 详情/首页长尾/群详情/他人主页/admin 已软岛化；
-   剩余 demo-only 演示卡（`/?demo=`）与地图面板等按例外保留；新增页面按 §19/§19.5 判定。
-   鸿蒙后台仅 AdminOverview（其余 web-only，N/A 登记）；首页 onboarding/HeroStats/轮播在鸿蒙无对应组件（N/A）。
-3. **鸿蒙氛围画布实例数/内存优化（Round 12 遗留，端上实测数据已量化）**：当前每个
-   `fillHeight` 页面一块全屏 Canvas（Tab 页常驻，实测 live 2→5 实例、PSS 218.7→330.2MB 含页面数据，
-   单画布理论 ≈12MB）。可选方案：上提到外壳内容区单实例（对齐 web）或共享绘制缓存/图片快照；
-   修改前先量首帧与滚动帧率，勿只按内存数字取舍。
-2. **氛围浓淡评审**：世界层透明度集中在 `themes/*.css` 的 `--cst-ambient-*`（12 个），
-   产品/用户若觉得过淡或过浓，改 token alpha 即可，无需动组件；鸿蒙端需按同口径重算
-   `ThemeConstants.AMBIENT` 的 ARGB。
-3. **鸿蒙骨架屏接入扩展（低优先）**：通知/搜索/关系等列表目前未统一接 Skeleton 系（列表骨架
-   原语已有），可按 `docs/ui-components.md`「骨架屏使用口径」逐页补，几何直接复用。
-4. **搜索 Tab 计数格式对齐（低优先，待确认）**：web TabBar count 以独立小字呈现（如「用户 7」），
-   鸿蒙搜索页当前为「用户 (10)」括号形式；如判定为不一致，鸿蒙按 web 口径改（需两端截图确认）。
-5. **搜索发现态 spotlight（待设计确认）**：web 搜索发现态未加 spotlight，鸿蒙本轮未单端先行
-   （符合「不分别改两端」约束）；若设计认为需要，两端同一轮一起加。
-6. **消息页头 trailing 既有差异（待确认）**：鸿蒙消息页头 trailing 与 web 移动端存在既有差异，
-   本轮未动（ha report §8 记录）；需要时单独立项对齐。
-7. **BSP 瀑布墙骨架近似（已接受）**：附近瞬间/群组桌面瀑布墙无 1:1 骨架，用同列数卡片栅格近似，
-   内容到达有轻微重排；如需消除需按布局算法生成骨架，收益低，保留。
-8. **骨架屏零位移 N1/N2（2026-10-27 Round 14 已修）**：搜索骨架行高对齐 64 + 分组头占位；消息骨架补在线条
-   92px 占位；两端已镜像，复核确认后关闭。
-9. **鸿蒙 AMBIENT / CARD-SCRIM token 纳入 CI（复核 N5 + Round 13，防漂移）**：`check-cross-platform-colors.mjs`
-   只覆盖 14 组 palette；AMBIENT 12 项 ×6 组合（72/72）与 CARD-SCRIM/FALLBACK/WATERMARK（6/6）目前只有人工脚本
-   校验（`review/lib/check-ambient-parity.py`、`ha/logs/scrim-parity.txt`），建议并入 `bun run check:theme`。
-10. **鸿蒙装饰几何常量 token 化（复核 N6，低优先）**：`EmptySpotlight.ets` / `AmbientBackdrop.ets` 的 320/288/168/4/102
-   与透明色 `'#00000000'` 属已登记布局几何例外，可后续登记到 design-system 或抽常量；透明色建议用 `DesignConstants.COLOR.TRANSPARENT`。
-11. **鸿蒙设置页/管理后台无氛围层（复核 N3，已登记平台差异）**：`PageShellContainer`（`fillHeight=false`，
-   位于外页 Scroll）不挂画布，外层目前也未挂；与 web 全站有氛围层不一致。后续对齐应在**外壳/外层页面**挂单实例，
-   禁止在滚动容器内挂（会随滚动拉伸）。
-12. **跨端搜索结果行字号/头像档既有差异（复核 N8，非本轮引入）**：web 行高 64/头像 36/名称 12；
-   鸿蒙 68/头像 40/名称 14。属两端 avatar/字号档映射既有差异，后续统一时两端同一轮改。
-13. **鸿蒙搜索 Tab 计数（复核 N9，既有 IA）**：鸿蒙搜索 Tab 不显示计数，web 显示（如「用户 7」）；
-   信息密度差异，记录备查。
-14. **网格卡字号例外（Round 13）**：171px 宽网格卡正文 12 / 作者 14（feed 标题 16 合规），避免 16px 两行
-   挤压操作行；若后续放大网格卡宽度可统一。
-15. **BSP 卡片比例例外（Round 13）**：附近瞬间/群组桌面 BSP 格按布局单元铺满、非固定比例；如需统一需重排布局。
-16. **横排紧凑卡 fallback/精选横排例外（Round 13）**：horizontal 卡仍两段式与旧占位；群详情精选桌面横排保留。
-17. **a11y/触控/主题自动化纳入门禁（Round 16）**：axe 扫描（50 runs 0 violation 已达成）与触控覆盖率脚本目前为会话内
-   一次性工具（`r5/fe/run-axe.sh`、`run-touch.sh`、`axe.min.js` 在 `.workwork`，不入库）。建议后续把 axe-core 加为
-   devDependency + CI/本地检查脚本，并把「页面 main/landmark、整卡覆盖按钮、列表 role、触控 44」加入 PR 自查清单。
-18. **触控例外清单（Round 16 登记）**：地图 marker/控件（36×53，防相邻误点）；相邻 TagPill（WCAG 24 已满足、扩 44 会强制
-   26px 间距溢出）；表单控件；skip link。新增「相邻可点元素」场景时先跑 390 扫描再决定扩热区方式。
-19. **性能基线口径（Round 16）**：当前 LCP/CLS 为本地 dev/mock 数据，仅作相对参考；生产环境需用真实网络/镜像另测。
-20. **inkwash light 岛合成口径（Round 16 登记）**：有效合成 **#FAF8F2**（86% surface over #F5F2EA）；不同采样点（ambient 高光）
-   会读到 #FCF9F3，报告需标注取样口径，避免误判 token 漂移。
-21. **交互状态新增契约的持续守护（Round 15）：focus-visible / reduced-motion / 四态（Skeleton/InlineLoading/
-   EmptyState/LoadError/ListEnd）已写入 design-system §20 与 style/harmony skill；新页面/新原语必须按契约自查，
-   建议后续把「focus 环存在性 / reduced-motion 无回归」纳入 UI 自查清单（本轮未做自动化）。
-18. **admin mock 空态不可复现（Round 15 登记）**：mock 列表接口未实现筛选参数过滤，空态分支在 mock 环境不可达；
-   组件路径已核查但无截图，真接口/联调环境补验证。
-19. **forest 亮色软岛与画布同色（Round 14 遗留，顺延）**：light `surfaceIsland` 86% 合成后 forest 与画布同色
-   （ratio 1.00），边界仅靠 `shadow-xs`；若产品觉得需要拉开表面差，可改 light 岛为 `primary 92% + text 8%`
-   （会略变灰，需两端同改并回归主题校验）。
-18. **鸿蒙我的瞬间 tabs 缺失（Round 13）**：web 有 发布/喜欢/收藏/共 N 条记录 tabs，鸿蒙因无喜欢/收藏数据源、
-   MomentPage 现取 fetchNearbyMoments（既有数据源问题）未实现；需数据层补齐后再对齐 UI。
+> 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
+> 下一轮从 1 开始按序接。
+
+1. **鸿蒙真机像素/TalkBack/流量验收（R13–R17 遗留，最高优先）**：五轮鸿蒙改动均只完成构建/布局树/token 校验；
+   真机 hdc 离线导致三主题×明暗矩阵、灰度 Tab、压图文字对比度、软岛阴影/圆角/gap、按钮 hover、未读态、
+   骨架零位移、整卡图片流量/渐显像素、头像 2x vs 3x、TalkBack 顺序、reduced-motion 系统路径、web↔鸿蒙并排 compare 挂起。
+   设备恢复后按 `.workwork/ui-polish-1026/{r2,r3,r4,r5,r6}/ha/report.md` checklist 执行。
+2. **长尾自定义卡收尾（R15 已基本完成）**：剩余 demo-only 演示卡（`/?demo=`）与地图面板按例外保留；
+   新增页面按 §19/§19.5 判定；鸿蒙后台仅 AdminOverview（其余 web-only N/A）、首页长尾组件 N/A。
+3. **鸿蒙氛围画布实例数/内存优化（R12 遗留）**：当前每 `fillHeight` 页一块全屏 Canvas（Tab 页常驻，实测 live 2→5，
+   PSS 218.7→330.2MB）；可选上提到外壳内容区单实例/共享绘制缓存；改前先量首帧与滚动帧率。
+4. **氛围浓淡评审**：世界层透明度集中在 `themes/*.css` 的 `--cst-ambient-*`（12 个）；鸿蒙按同口径重算 AMBIENT ARGB。
+5. **鸿蒙骨架屏接入扩展（低优先）**：通知/搜索/关系等列表未统一接 Skeleton 系，可逐页补。
+6. **搜索 Tab 计数格式对齐（低优先）**：web 显示计数（如「用户 7」），鸿蒙为「用户 (10)」或不显示；两端截图确认后统一。
+7. **搜索发现态 spotlight（待设计确认）**：web 搜索发现态未加，鸿蒙未单端先行；需要则两端同轮加。
+8. **消息页头 trailing 差异（待确认）**：鸿蒙消息页头 trailing 与 web 移动端既有差异，需要时单独立项。
+9. **BSP 瀑布墙骨架近似（已接受）**：无 1:1 骨架，用同列数卡栅格近似，轻微重排；收益低保留。
+10. **鸿蒙 AMBIENT / CARD-SCRIM token 纳入 CI（防漂移）**：`check-cross-platform-colors.mjs` 只覆盖 14 组 palette；
+    AMBIENT 72/72 与 CARD-SCRIM/FALLBACK/WATERMARK 6/6 目前只有人工脚本，建议并入 `bun run check:theme`。
+11. **鸿蒙装饰几何常量 token 化（低优先）**：EmptySpotlight/AmbientBackdrop 的 320/288/168/4/102 与透明色可抽常量/登记。
+12. **鸿蒙设置页/管理后台无氛围层（平台差异）**：后续对齐应在**外壳/外层**挂单实例，禁止在滚动容器内挂。
+13. **跨端搜索结果行字号/头像档差异**：web 行高 64/头像 36/名称 12 vs 鸿蒙 68/40/14；统一时两端同轮改。
+14. **网格卡字号例外（R13）**：171px 网格卡正文 12 / 作者 14；放大卡宽后可统一。
+15. **BSP 卡片比例例外（R13）**：BSP 格按布局单元铺满、非固定比例；统一需重排布局。
+16. **横排紧凑卡 fallback/精选横排例外（R13）**：horizontal 卡仍两段式与旧占位；群详情精选桌面横排保留。
+17. **图片档位/清晰度真机复核（R17）**：dev 图片为本地代理图，unsplash 压缩在预发/线上生效；真机核首屏流量、
+    头像 2x vs 3x、nearby 页 +43% 取舍（非首屏可回退 thumb 档）。
+18. **鸿蒙 5 处缩略图未接渐显（R17）**：ProfileGallery/MyShares/Chat/PhotoPreview/通知头像仅 URL 优化，渐显/占位下轮补齐。
+19. **搜索键盘导航扩展（R17）**：当前只 /search；后续评估 feed/通知列表 ↑↓ 前先做读屏/真机验证，避免冲突。
+20. **a11y/触控/主题自动化纳入门禁（R16）**：axe-core 加 devDependency + 检查脚本，触控覆盖率脚本入库，
+    并把 main/landmark、整卡覆盖按钮、列表 role、触控 44 加入 PR 自查清单。
+21. **触控例外清单（R16）**：地图 marker/控件（防相邻误点）、相邻 TagPill（WCAG 24 + 间距）、表单控件、skip link；
+    新增「相邻可点元素」场景先跑 390 扫描再决定扩热区方式。
+22. **性能基线口径（R16/R17）**：LCP/CLS/transferSize 均为本地 dev/mock 数据，仅相对参考；生产需真实网络另测。
+23. **inkwash light 岛合成口径（R16）**：有效合成 #FAF8F2；不同采样点（ambient 高光）会读到 #FCF9F3，报告需标注取样口径。
+24. **交互状态契约守护（R15）**：focus-visible/reduced-motion/四态已入 design-system §20 与 skills；新页面按契约自查。
+25. **admin mock 空态不可复现（R15）**：mock 列表未实现筛选参数，空态不可达；联调环境补验证。
+26. **鸿蒙我的瞬间 tabs 缺失（R13）**：缺喜欢/收藏数据源 + MomentPage 取 fetchNearbyMoments（既有数据源问题）；数据层补齐后再对齐 UI。
+27. **图片管线契约守护（R17）**：新增图片必须走 `lib/images.ts` 档位（unsplash 参数/srcset/渐显/首屏优先级），禁止裸写 `<img src>`；
+    reviewer 已把「非 unsplash 原样/失败降级」纳入审计。
 
 ## 遗留观察（已评估，保留现状；非缺陷）
 

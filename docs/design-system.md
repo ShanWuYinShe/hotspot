@@ -730,5 +730,30 @@
 - 主题特有 token 变更（如 forest light `surfaceIsland`）必须两端同值并重跑 parity；harmony-only 档（如 textTertiary）
   在文档标注「web 无对应档」。
 
+### 20.8 图片加载规范（Round 6，2026-10-27）
+
+- **URL 压缩**：仅对 `images.unsplash.com` 追加/覆盖 `auto=format&fit=crop&q=<78|80|82|85>&w=<width>`；
+  其他域名/本地/blob/地图瓦片原样返回（helper 唯一入口：web `lib/images.ts`、鸿蒙 `ImageUrlUtil.ets`，参数集合必须一致）。
+- **尺寸档预设**（按显示尺寸 × 2x/3x；组件不得散落魔法宽度）：
+
+| 档位 | 典型宽度 | 用途 |
+|---|---|---|
+| avatar | 64/96/160（按头像显示尺寸 2x/3x） | 头像、通知小头像 |
+| thumb | 200/400 | rail/缩略图/九宫格小图 |
+| card | 400/800 | 首页 feed 卡、附近卡封面 |
+| cover | 800/1600 | 群 hero/主页封面/详情大图 |
+| hero | 1080+ | 首屏大图、详情首图（优先） |
+| full | 1600（q85） | ImageViewer 全屏查看（打开即加载，不 lazy） |
+
+- **srcset/sizes**：卡片/封面用 1x/2x 两档 srcset + 调用方 `sizes`（按实际布局列宽）；非 unsplash 不生成 srcset。
+- **加载优先级**：仅首屏可见图用 `loading=eager` + `fetchpriority=high`（feed 前 2、详情首图、hero、ImageViewer）；
+  其余 `loading=lazy` + `decoding=async`。鸿蒙无 fetchpriority/lazy：用「首屏前 2 高清档+立即创建、LazyForEach 离屏不创建」
+  近似表达并登记平台差异。
+- **加载体验**：占位（主题渐变/骨架/占位底，不新增 shimmer）+ onload 渐显 0.22s；`prefers-reduced-motion` 下直接显示（1e-05s）。
+  不得引入布局位移；失败走既有 fallback（图片渐变/首字母/图标）。
+- **验收**：关键页图片 transferSize 前后对比（HAR/Resource Timing）；CLS 不回归、LCP 不劣化；图片清晰度不下降（首屏 2x、
+  Retina/高 DPR 设备按 2x/3x 取值；真机若偏软再升档）。
+
+
 
 

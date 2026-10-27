@@ -7,6 +7,8 @@ import { curves } from '@kit.ArkUI';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { MomentDetailRouteParam } from '../../../core/router/AppRouter';
@@ -18,15 +20,22 @@ export struct ViewedMomentThumb {
   @Prop moment: MomentItem;
   palette: AppThemePalette | null = null;
   @State pressed: boolean = false;
+  @State imageLoaded: boolean = false;
 
   build() {
     Stack() {
       if (this.moment.images && this.moment.images.length > 0) {
-        Image(MediaUrlUtil.normalize(this.moment.images[0].url))
+        Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.moment.images[0].url), 320))
           .width('100%')
           .height('100%')
           .objectFit(ImageFit.Cover)
           .borderRadius(DesignConstants.RADIUS.LG)
+          .opacity(this.imageLoaded || MotionUtil.reduced() ? 1 : 0)
+          .animation({
+            duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+          })
+          .onComplete(() => { this.imageLoaded = true; })
       } else {
         Column() {
           Text(cleanPlainText(this.moment.description))
@@ -46,6 +55,7 @@ export struct ViewedMomentThumb {
     }
     .aspectRatio(1)
     .width('100%')
+    .backgroundColor(this.palette?.surfaceSubtle)
     .borderRadius(DesignConstants.RADIUS.LG)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.palette?.borderColor })
     // 缩略图按压反馈（对齐 tap-97 语义）

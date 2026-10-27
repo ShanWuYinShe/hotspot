@@ -9,6 +9,7 @@ import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
 
 @Preview
 @Component
@@ -66,7 +67,7 @@ export struct PhotoPreviewPage {
       Swiper(this.swiperController) {
         ForEach(this.images, (imageUrl: string, index: number) => {
           Stack() {
-            Image(MediaUrlUtil.normalize(imageUrl))
+            Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(imageUrl), 1080))
               .width('100%')
               .height('100%')
               .objectFit(ImageFit.Contain)

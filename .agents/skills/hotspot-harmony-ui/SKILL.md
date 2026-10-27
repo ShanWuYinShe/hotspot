@@ -461,3 +461,11 @@ Huawei 移动端规范要求有效触控目标 **≥44vp**。本项目原语层�
 - **触控**：有效热区 ≥44vp（`responseRegion` 外扩、视觉不变）；chip/输入框/地图 marker 等登记例外；
   边缘 tap 实测（视觉边界外仍命中）验证。
 - **真机限制**：TalkBack / 系统 reduced-motion 开启路径 / 焦点环像素需真机；离线时标注未验证并保留复现步骤。
+## 图片加载与 URL 优化（Round 6，2026-10-27）
+
+- `core/utils/ImageUrlUtil.ets`：与 web `lib/images.ts` 同规则——仅 `images.unsplash.com` 追加/覆盖
+  `auto=format&fit=crop&q=78&w=<width>`，其他域名原样。宽度档按显示尺寸 2x/2.5x（首屏大图 1080、卡片 900/800、头像 2x）。
+- ArkUI 无 `fetchpriority/loading`：首屏前 2 张高清档 + 立即创建，`LazyForEach` 离屏不创建；report 登记平台差异。
+- 加载体验：占位（surfaceSubtle/accentMuted，不新增 shimmer）+ `onComplete` 渐显 200ms ease-out；`MotionUtil.reduced` 直接显示；
+  失败 fallback 保持。新图片组件必须按此接入，禁止裸用远程原图。
+- 真机待核：首屏流量、头像 2x vs 3x、渐显像素、reduced 系统路径。

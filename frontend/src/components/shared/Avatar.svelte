@@ -18,6 +18,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { UserRound } from '@lucide/svelte';
+	import { avatarImageWidths, buildImageSrcSet, fadeImage, optimizedImageUrl } from '@/lib/images';
 
 	// Avatar — 用户/群组头像统一展示组件。
 	// 包装元素持有 border-radius + outline + overflow:hidden，徽标作为子元素
@@ -69,11 +70,21 @@
 
 <div
 	aria-hidden={decorative || undefined}
-	class="relative shrink-0 overflow-hidden bg-surface-primary {className}"
+	class="relative shrink-0 overflow-hidden bg-surface-subtle {className}"
 	style="width:{px}px;height:{px}px;border-radius:{borderRadius};{ring ? 'border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);' : ''}{style}"
 >
 	{#if showImage}
-		<img src={src} loading="lazy" decoding="async" alt={decorative ? '' : (name ?? '')} class="h-full w-full object-cover" onerror={() => (hasError = true)} />
+		<img
+			src={optimizedImageUrl(src, { width: px * 2 })}
+			srcset={buildImageSrcSet(src, avatarImageWidths(px))}
+			sizes={`${px}px`}
+			loading="lazy"
+			decoding="async"
+			alt={decorative ? '' : (name ?? '')}
+			class="h-full w-full object-cover"
+			use:fadeImage
+			onerror={() => (hasError = true)}
+		/>
 	{:else if initial}
 		<span
 			class="flex h-full w-full items-center justify-center text-text-secondary bg-accent-bg"

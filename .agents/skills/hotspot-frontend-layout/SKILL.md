@@ -239,3 +239,9 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 - 长尾页加载态：列表/卡优先 Skeleton；单实体/短列表可 InlineLoading（页面注释给理由）；
   空态 `EmptyState`、错误 `LoadError` + 重试、到底 `ListEnd`，四态不得互替。
 - 媒体/hero/输入控件等例外边界见 design-system §19.5；不要为「统一」把功能边界也去掉。
+## 图片尺寸档与 srcset（Round 6）
+
+- 图片尺寸按**显示尺寸 × 2x/3x**取档，不按容器猜测：avatar（显示 32/48→64/96/144）、thumb 200/400、card 400/800、
+  cover 800/1600、hero 1080+、full 1600（ImageViewer 打开即加载）。
+- 调用方必须给 `sizes`（移动单列 100vw、桌面对应列宽/固定 px），否则浏览器按 100vw 选档导致流量浪费；
+- 首屏优先级只给首屏可见图，列表/轮播后续 lazy；非 unsplash 不生成 srcset；加载占位不得改变布局（aspect/尺寸已定）。

@@ -8,6 +8,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
 import { MomentItem } from '../../../core/types/api';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
@@ -31,7 +32,7 @@ export struct ProfileMomentGallery {
       const first = imgs[0];
       // normalize：相对 /s3/ 路径与本地 host 绝对地址统一改写（与其余页面一致，
       // 兜底 RDB 缓存/历史数据未经 HttpUtil 网络层改写的场景）
-      return MediaUrlUtil.normalize(first.thumbnail_url || first.url);
+      return ImageUrlUtil.optimized(MediaUrlUtil.normalize(first.thumbnail_url || first.url), 480);
     }
     return '';
   }

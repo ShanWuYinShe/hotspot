@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { cn } from '@/lib/utils';
+	import { buildImageSrcSet, optimizedImageUrl, presetImageUrl, presetSrcSet } from '@/lib/images';
 
 	// 数据展示组件（data-display）。
 	// NearbyImageCard — 图片优先内容卡片统一原语（Image-first Card，Round 2 改版）。
@@ -16,6 +17,8 @@
 	let {
 		imageSrc,
 		imageAlt = '',
+		priority = false,
+		sizes = '(min-width: 1024px) 25vw, (min-width: 640px) 40vw, 50vw',
 		onClick,
 		onImageError,
 		placeholder,
@@ -27,6 +30,10 @@
 	}: {
 		imageSrc: string;
 		imageAlt?: string;
+		/** 首屏图：eager + fetchpriority=high + 更高 1x 宽度覆盖 */
+		priority?: boolean;
+		/** 响应式 sizes，按实际布局传入（缺省网格约 25–50vw） */
+		sizes?: string;
 		onClick?: () => void;
 		onImageError?: () => void;
 		/** 无图时的占位内容（渲染在 accent 渐变层上；缺省为空白渐变层） */
@@ -91,9 +98,13 @@
 			<div class="surface-accent-gradient pointer-events-none {imageBox} animate-pulse"></div>
 		{/if}
 		<img
-			src={imageSrc}
+			src={presetImageUrl(imageSrc, 'card', priority ? 900 : 800)}
+			srcset={presetSrcSet(imageSrc, 'card')}
+			{sizes}
 			alt={imageAlt}
-			loading="lazy"
+			loading={priority ? 'eager' : 'lazy'}
+			fetchpriority={priority ? 'high' : 'auto'}
+			decoding="async"
 			class="image-hover-frame__image {imageBox} object-cover will-change-transform transition-opacity duration-standard {imageLoaded ? 'opacity-100' : 'opacity-0'}"
 			onload={() => (imageLoaded = true)}
 			onerror={() => {

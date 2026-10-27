@@ -25,6 +25,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { useGroupDetail } from '@/lib/group-data.svelte';
+	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import { formatDateTime } from '@/lib/utils';
 	import { onlineUsers, presence, watchPresence } from '@/stores/presence.svelte';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
@@ -243,7 +244,17 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	<!-- Hero 封面（例外登记）：去 1px 描边，保留圆角/阴影/加载占位；图片 object-cover -->
 	<div class="relative h-cover-height overflow-hidden rounded-2xl shadow-raised-sm bg-surface-subtle">
 		{#if gd.detail.banner}
-			<img src={gd.detail.banner} alt={`${gd.detail.name} 的群组封面`} class="h-full w-full object-cover transition-transform duration-standard hover:scale-[1.01]" />
+			<img
+				src={presetImageUrl(gd.detail.banner, 'cover', 1600)}
+				srcset={presetSrcSet(gd.detail.banner, 'cover')}
+				sizes="(min-width: 1024px) 900px, 100vw"
+				alt={`${gd.detail.name} 的群组封面`}
+				loading="eager"
+				fetchpriority="high"
+				decoding="async"
+				class="h-full w-full object-cover transition-transform duration-standard hover:scale-[1.01]"
+				use:fadeImage
+			/>
 		{:else}
 			<div class="h-full w-full bg-accent-soft/40 flex items-center justify-center">
 				<Users size={48} class="text-accent-default/30" strokeWidth={1.5} />

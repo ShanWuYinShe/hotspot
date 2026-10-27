@@ -304,11 +304,12 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			<!-- 手机：规整 2 列 4:3 网格。BSP 满铺在 390 视口会产出近方形大卡（一屏一卡），
 			     且与「我的瞬间」同内容不同比例；手机改用统一 4:3 内容卡，平板/桌面保留 BSP。 -->
 			<div class="grid grid-cols-2 gap-4">
-				{#each filtered.slice(0, visibleCount) as item (item.id)}
+				{#each filtered.slice(0, visibleCount) as item, index (item.id)}
 					<!-- 手机两列窄卡用 3:4 竖版：4:3 时卡高仅 ~128px，底部托盘吃掉 70%+ 图片 -->
 					<MomentCard
 						class="aspect-[3/4] h-auto rounded-lg"
 						item={item}
+						priority={index < 2}
 						liked={item.liked}
 						saved={item.saved}
 						onLike={() => void interactions.toggleLike(item.id)}
@@ -335,6 +336,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 		{#snippet renderItem(item: FeedItem, index: number)}
 			<MomentCard
 				item={item}
+				priority={index < 2}
 				liked={item.liked}
 				saved={item.saved}
 				onLike={() => void interactions.toggleLike(item.id)}

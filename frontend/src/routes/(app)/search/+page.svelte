@@ -232,13 +232,63 @@
 		{ id: 'groups', label: '群组', count: loading ? undefined : results.groups.length },
 		{ id: 'topics', label: '话题', count: loading ? undefined : results.topics.length }
 	]);
+
+	// 搜索键盘导航（Round 6，轻量不引入 combobox）：↑↓ 在输入框 / 结果行 / 最近·热门条目间移动焦点，
+	// 焦点落在真实链接/按钮上（Enter 原生打开，Esc 由 SearchInput 清空）；Tab 顺序不受影响。
+	function searchNavCandidates(): HTMLElement[] {
+		const root = document.querySelector('[data-search-root]');
+		if (!root) return [];
+		return Array.from(
+			root.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [data-cover]')
+		).filter(
+			(el) =>
+				!el.closest('[role="tablist"], [data-tab-bar], .input-surface') &&
+				el.offsetParent !== null &&
+				!el.hasAttribute('aria-hidden')
+		);
+	}
+	function handleSearchNavKeydown(e: KeyboardEvent) {
+		// Esc：清空输入并回到输入框（搜索页范围内；弹层打开时交给弹层处理）
+		if (e.key === 'Escape') {
+			const root = document.querySelector('[data-search-root]');
+			const active = document.activeElement as HTMLElement | null;
+			if (!root || !active || !root.contains(active) || document.querySelector('[role="dialog"]')) return;
+			const input = root.querySelector('input') as HTMLInputElement | null;
+			if (!input) return;
+			if (query || input.value) {
+				e.preventDefault();
+				query = '';
+				searchTag = null;
+				input.value = '';
+				input.dispatchEvent(new Event('input', { bubbles: true }));
+			}
+			input.focus();
+			return;
+		}
+		if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+		const active = document.activeElement as HTMLElement | null;
+		const root = document.querySelector('[data-search-root]');
+		if (!root || !active || !root.contains(active)) return;
+		// 弹层（图片查看/筛选等）打开时不劫持方向键
+		if (document.querySelector('[role="dialog"]')) return;
+		const nodes = searchNavCandidates();
+		if (nodes.length === 0) return;
+		e.preventDefault();
+		const idx = nodes.indexOf(active);
+		let next: number;
+		if (idx < 0) next = e.key === 'ArrowDown' ? 0 : nodes.length - 1;
+		else next = Math.min(nodes.length - 1, Math.max(0, idx + (e.key === 'ArrowDown' ? 1 : -1)));
+		nodes[next]?.focus();
+	}
 </script>
 <svelte:head>
 	<title>搜索 · HotSpot</title>
 </svelte:head>
 
+<svelte:window onkeydown={handleSearchNavKeydown} />
 
-<div class="flex flex-col flex-1 min-h-full">
+
+<div class="flex flex-col flex-1 min-h-full" data-search-root>
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6 max-w-6xl xl:max-w-7xl 2xl:max-w-[88rem] mx-auto w-full">
 	{#snippet header()}
 		<PageHeader title="搜索" glass onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>

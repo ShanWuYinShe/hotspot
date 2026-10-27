@@ -1,5 +1,7 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
+import { ImageUrlUtil } from '../core/utils/ImageUrlUtil';
+import { MotionUtil } from '../core/accessibility/MotionUtil';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
@@ -32,6 +34,8 @@ export struct NearbyImageCard {
 
   @Watch('onImageUrlChange')
   @Prop imageUrl: string = '';
+  /** R6：首屏优先（900）/非首屏降档（800），与 fe NearbyImageCard 对齐 */
+  @Prop priority: boolean = false;
   @Prop imageAlt: string = '';
   /** 宽高比（宽/高，3:4 竖卡传 0.75）；为 0 时高度由 fixedHeight 或父容器决定 */
   @Prop cardAspectRatio: number = 0;
@@ -68,6 +72,8 @@ export struct NearbyImageCard {
   @BuilderParam footer: () => void = emptyNearbyCardSlot;
 
   @State private imageFailed: boolean = false;
+  /** R6：onComplete 渐显（reduced-motion 直接显示） */
+  @State private imageLoaded: boolean = false;
   @State private isPressed: boolean = false;
   @State private slideOut: boolean = false;
   @State private cardWidth: number = 0;
@@ -76,6 +82,7 @@ export struct NearbyImageCard {
 
   private onImageUrlChange(): void {
     this.imageFailed = false;
+    this.imageLoaded = false;
     this.notifyMediaState();
   }
 
@@ -239,12 +246,24 @@ export struct NearbyImageCard {
   private buildImageLayer() {
     Stack() {
       if (this.imageUrl && !this.imageFailed) {
-        Image(MediaUrlUtil.normalize(this.imageUrl))
+        if (!this.imageLoaded && !MotionUtil.reduced()) {
+          Column()
+            .width('100%')
+            .height('100%')
+            .backgroundColor(this.getPalette().surfaceSubtle)
+        }
+        Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.imageUrl), this.priority ? 900 : 800))
           .width('100%')
           .height('100%')
           .objectFit(ImageFit.Cover)
           .draggable(false)
           .accessibilityText(this.imageAlt)
+          .opacity(this.imageLoaded || MotionUtil.reduced() ? 1 : 0)
+          .animation({
+            duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+          })
+          .onComplete(() => { this.imageLoaded = true; })
           .onError(() => {
             this.imageFailed = true;
           })

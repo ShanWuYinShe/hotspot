@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Heart, MessageCircle, Bookmark, Share2, MapPin, Sparkles, Images } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import type { MomentItem } from '@/api/types';
 	import { formatDistance, formatRelativeDays } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
@@ -20,17 +21,27 @@
 		onClick,
 		showDistance = false,
 		ariaLabel,
+		priority = false,
 		variant = 'card'
 	}: {
 		moment: MomentItem;
 		onClick?: () => void;
 		showDistance?: boolean;
 		ariaLabel?: string;
+		/** 首屏图（feed 前 2 张）：eager + fetchpriority=high + 更高 1x 宽度；其余 lazy */
+		priority?: boolean;
 		variant?: 'card' | 'row';
 	} = $props();
 
 	/** 整卡图片卡：封面加载失败时回退主题化渐变底（不压白字）。 */
 	let coverError = $state(false);
+	/** 封面加载完成前 opacity-0，onload 后渐显（reduced-motion 下 transition 由全局规则压至瞬时）。 */
+	let coverLoaded = $state(false);
+	$effect(() => {
+		void moment.images?.[0]?.url;
+		coverLoaded = false;
+		coverError = false;
+	});
 
 	// 格式化相对时间（优先小时/分钟，超出 24h 回退 formatRelativeDays）
 	const relativeTime = $derived.by(() => {
@@ -117,11 +128,21 @@
 		class="group relative aspect-[4/5] w-full cursor-pointer overflow-hidden rounded-lg bg-surface-subtle shadow-xs transition-[box-shadow,transform] duration-standard hover:shadow-raised-md [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
 	>
 		{#if !useFallback}
+			{#if !coverLoaded}
+				<!-- 加载中占位：与 NearbyImageCard 同款主题 accent 渐变，避免纯灰浅带 -->
+				<div class="surface-accent-gradient pointer-events-none absolute inset-0 animate-pulse" aria-hidden="true"></div>
+			{/if}
 			<img
-				src={coverUrl}
+				src={presetImageUrl(coverUrl, 'card', priority ? 900 : 800)}
+				srcset={presetSrcSet(coverUrl, 'card')}
+				sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
 				alt=""
-				loading="lazy"
-				class="absolute inset-0 h-full w-full object-cover transition-transform duration-slow group-hover:scale-[1.02]"
+				loading={priority ? 'eager' : 'lazy'}
+				fetchpriority={priority ? 'high' : 'auto'}
+				decoding="async"
+				class="absolute inset-0 h-full w-full object-cover transition-transform duration-standard group-hover:scale-[1.02]"
+				use:fadeImage
+				onload={() => (coverLoaded = true)}
 				onerror={() => (coverError = true)}
 			/>
 			<!-- 顶部遮罩 128px（BLOCKER 修复）：作者行两行（昵称 16–36px + 时间 37–52px），
@@ -364,10 +385,14 @@
 					{#if moment.images.length === 1}
 						<div class="overflow-hidden rounded-xl max-h-[280px] max-w-[420px] bg-surface-subtle shadow-xs">
 							<img
-								src={moment.images[0].url}
+								src={presetImageUrl(moment.images[0].url, 'card', 800)}
+								srcset={presetSrcSet(moment.images[0].url, 'card')}
+								sizes="(min-width: 640px) 420px, 100vw"
 								alt="动态配图"
 								loading="lazy"
+								decoding="async"
 								class="w-full h-full object-cover max-h-[280px] hover:scale-[1.01] transition-transform"
+								use:fadeImage
 							/>
 						</div>
 					{:else if moment.images.length <= 4}
@@ -375,10 +400,14 @@
 							{#each moment.images.slice(0, 4) as img, idx (img.url + idx)}
 								<div class="aspect-square overflow-hidden rounded-xl bg-surface-subtle shadow-xs">
 									<img
-										src={img.url}
+										src={presetImageUrl(img.url, 'thumb', 400)}
+										srcset={presetSrcSet(img.url, 'thumb')}
+										sizes="(min-width: 640px) 210px, 50vw"
 										alt={`动态配图 ${idx + 1}`}
 										loading="lazy"
+										decoding="async"
 										class="w-full h-full object-cover hover:scale-[1.02] transition-transform"
+										use:fadeImage
 									/>
 								</div>
 							{/each}
@@ -388,10 +417,14 @@
 							{#each moment.images.slice(0, 9) as img, idx (img.url + idx)}
 								<div class="aspect-square overflow-hidden rounded-xl bg-surface-subtle shadow-xs">
 									<img
-										src={img.url}
+										src={presetImageUrl(img.url, 'thumb', 400)}
+										srcset={presetSrcSet(img.url, 'thumb')}
+										sizes="(min-width: 640px) 140px, 33vw"
 										alt={`动态配图 ${idx + 1}`}
 										loading="lazy"
+										decoding="async"
 										class="w-full h-full object-cover hover:scale-[1.02] transition-transform"
+										use:fadeImage
 									/>
 								</div>
 							{/each}

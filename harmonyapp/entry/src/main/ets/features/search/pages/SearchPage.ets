@@ -36,6 +36,8 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import pasteboard from '@ohos.pasteboard';
@@ -80,6 +82,8 @@ export struct SearchPage {
   @State recentSearches: string[] = [];
 
   @State discoveryTopics: string[] = [];
+  /** R6：搜索结果图已加载 URL（onComplete 渐显） */
+  @State loadedImageUrls: string[] = [];
 
   private readonly RECENT_SEARCHES_KEY: string = 'search_recent';
   @State hasSearched: boolean = false;
@@ -108,6 +112,17 @@ export struct SearchPage {
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private isImageLoaded(url: string): boolean {
+    return this.loadedImageUrls.indexOf(url) >= 0;
+  }
+
+  private markImageLoaded(url: string): void {
+    if (!url || this.isImageLoaded(url)) return;
+    const next: string[] = this.loadedImageUrls.slice();
+    next.push(url);
+    this.loadedImageUrls = next;
   }
 
   private getSurfaceBackground(): string {
@@ -1283,11 +1298,17 @@ export struct SearchPage {
   buildMomentSearchCard(item: MomentItem) {
     Column({ space: 0 }) {
       if (item.images && item.images.length > 0) {
-        Image(MediaUrlUtil.normalize(item.images[0].url))
+        Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(item.images[0].url), 320))
           .width('100%')
           .height(this.calculateSearchImageHeight(item))
           .objectFit(ImageFit.Cover)
           .backgroundColor(this.getSurfaceSubtle())
+          .opacity(this.isImageLoaded(item.images[0].url) || MotionUtil.reduced() ? 1 : 0)
+          .animation({
+            duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+          })
+          .onComplete(() => this.markImageLoaded(item.images[0].url))
       } else {
         Column() {
           Text(item.description.substring(0, 60))

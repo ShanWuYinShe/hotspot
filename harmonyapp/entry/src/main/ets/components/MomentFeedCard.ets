@@ -6,6 +6,8 @@ import { AppIcon } from './SystemIcon';
 import { SurfaceIconButton } from './SurfaceIconButton';
 import { DesignConstants, lineHeightFor } from '../constants/DesignConstants';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
+import { ImageUrlUtil } from '../core/utils/ImageUrlUtil';
+import { MotionUtil } from '../core/accessibility/MotionUtil';
 import { LocationUtil } from '../core/location/LocationUtil';
 import { SystemShareService } from '../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
@@ -34,6 +36,8 @@ export struct MomentFeedCard {
   @Prop showFavorite: boolean = true;
   @Prop textMaxLines: number = 3;
   @Prop textFontSize: number = DesignConstants.FONT.SIZE.SM;
+  /** R6：首屏优先（首 2 张卡封面高清档 900，其余 720） */
+  @Prop priority: boolean = false;
   onOpenDetail?: (moment: MomentItem) => void;
   onImagePreview?: (momentId: string, images: string[], index: number) => void;
   // 仅持有本卡社交态：历史上整 Map @StorageLink，任意卡片点赞会让全列表
@@ -45,6 +49,8 @@ export struct MomentFeedCard {
   @State private pressedActionKey: string = '';
   // 加载失败的图片 URL 集合（onError 后切换 surfaceSubtle 占位，对齐 SystemAvatar 兜底模式）
   @State private failedImageUrls: string[] = [];
+  /** R6：已完成加载的图片 URL（onComplete 触发渐显） */
+  @State private loadedImageUrls: string[] = [];
 
   // location pill 地名截断宽度（布局几何，非主题风格）
   private static readonly LOCATION_MAX_WIDTH: number = 120;
@@ -58,6 +64,25 @@ export struct MomentFeedCard {
     const next: string[] = this.failedImageUrls.slice();
     next.push(url);
     this.failedImageUrls = next;
+  }
+
+  // ==================== R6 图片加载体验 ====================
+
+  private isImageLoaded(url: string): boolean {
+    return this.loadedImageUrls.indexOf(url) >= 0;
+  }
+
+  private markImageLoaded(url: string): void {
+    if (!url || this.isImageLoaded(url)) return;
+    const next: string[] = this.loadedImageUrls.slice();
+    next.push(url);
+    this.loadedImageUrls = next;
+  }
+
+  /** 首屏卡高清档（≥2.5x 显示宽度），非首屏降档 */
+  private getOptimizedCoverWidth(): number {
+    // 与 fe HomeFeedItem 档位对齐：priority 900 / 非首屏 800（≈2.2x 显示宽）
+    return this.priority ? 900 : 800;
   }
 
   aboutToAppear(): void {
@@ -147,7 +172,7 @@ export struct MomentFeedCard {
     if (!images || images.length === 0) {
       return '';
     }
-    return MediaUrlUtil.normalize(images[0].url);
+    return ImageUrlUtil.optimized(MediaUrlUtil.normalize(images[0].url), this.getOptimizedCoverWidth());
   }
 
   private getOverlayImageCount(): number {
@@ -387,11 +412,21 @@ export struct MomentFeedCard {
       if (this.isOverlayFallback()) {
         CardFallbackBackground({ icon: AppIcon.IMAGES })
       } else {
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor(this.getPalette().surfaceSubtle)
         Image(this.getOverlayCoverUrl())
           .width('100%')
           .height('100%')
           .objectFit(ImageFit.Cover)
           .alt($r('app.media.foreground'))
+          .opacity(this.isImageLoaded(this.moment.images[0].url) || MotionUtil.reduced() ? 1 : 0)
+          .animation({
+            duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+          })
+          .onComplete(() => this.markImageLoaded(this.moment.images[0].url))
           .onError(() => this.markImageFailed(this.moment.images[0].url))
 
         Column() {
@@ -496,12 +531,18 @@ export struct MomentFeedCard {
             .aspectRatio(16 / 9)
             .clip(true)
           } else {
-            Image(MediaUrlUtil.normalize(this.moment.images[0].url))
+            Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.moment.images[0].url), this.getOptimizedCoverWidth()))
               .width('100%')
               .aspectRatio(16 / 9)
               .objectFit(ImageFit.Cover)
               .backgroundColor(this.getPalette().surfaceSubtle)
               .alt($r('app.media.foreground'))
+              .opacity(this.isImageLoaded(this.moment.images[0].url) || MotionUtil.reduced() ? 1 : 0)
+              .animation({
+                duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+                curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+              })
+              .onComplete(() => this.markImageLoaded(this.moment.images[0].url))
               .onError(() => this.markImageFailed(this.moment.images[0].url))
           }
         } else {
@@ -838,13 +879,19 @@ export struct MomentFeedCard {
             .clip(true)
             .accessibilityText(`图片 ${imgIndex + 1}，共 ${(this.moment.images ?? []).length} 张`)
           } else {
-            Image(MediaUrlUtil.normalize(img.url))
+            Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(img.url), 240))
               .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
               .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
               .objectFit(ImageFit.Cover)
               .borderRadius(DesignConstants.RADIUS.MD)
               .backgroundColor(this.getPalette().surfaceSubtle)
               .alt($r('app.media.foreground'))
+              .opacity(this.isImageLoaded(img.url) || MotionUtil.reduced() ? 1 : 0)
+              .animation({
+                duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+                curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+              })
+              .onComplete(() => this.markImageLoaded(img.url))
               .onError(() => this.markImageFailed(img.url))
               .accessibilityText(`图片 ${imgIndex + 1}，共 ${(this.moment.images ?? []).length} 张`)
               .geometryTransition('moment_img_' + this.moment.moment_id + '_' + imgIndex)
@@ -891,13 +938,19 @@ export struct MomentFeedCard {
           .clip(true)
           .accessibilityText('动态图片')
         } else {
-          Image(MediaUrlUtil.normalize(this.moment.images[0].url))
+          Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.moment.images[0].url), this.getOptimizedCoverWidth()))
             .width('100%')
             .aspectRatio(1.6)
             .objectFit(ImageFit.Cover)
             .borderRadius(DesignConstants.SHAPE.CARD)
             .backgroundColor(this.getPalette().surfaceSubtle)
             .alt($r('app.media.foreground'))
+            .opacity(this.isImageLoaded(this.moment.images[0].url) || MotionUtil.reduced() ? 1 : 0)
+            .animation({
+              duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+              curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+            })
+            .onComplete(() => this.markImageLoaded(this.moment.images[0].url))
             .onError(() => this.markImageFailed(this.moment.images[0].url))
             .accessibilityText('动态图片')
         }

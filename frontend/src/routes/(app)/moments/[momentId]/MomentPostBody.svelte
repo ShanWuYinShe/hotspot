@@ -6,6 +6,7 @@
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
+	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import { ROUTES } from '@/lib/routes';
 	import { platform } from '@/stores/platform.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -173,7 +174,17 @@
 						viewerOpen = true;
 					}}
 				>
-					<img src={cover} alt="动态图片" class="w-full h-full object-cover transition-transform duration-standard hover:scale-[1.01]" />
+					<img
+						src={presetImageUrl(cover, 'cover', 1600)}
+						srcset={presetSrcSet(cover, 'cover')}
+						sizes="(min-width: 768px) 720px, 100vw"
+						alt="动态图片"
+						loading="eager"
+						fetchpriority="high"
+						decoding="async"
+						class="w-full h-full object-cover transition-transform duration-standard hover:scale-[1.01]"
+						use:fadeImage
+					/>
 				</button>
 				{#if moment.images.length > 1}
 					<button
@@ -201,7 +212,16 @@
 								viewerOpen = true;
 							}}
 						>
-							<img src={img} alt="动态图片" class="aspect-square w-full object-cover cursor-zoom-in hover:scale-105 transition-transform duration-standard" />
+							<img
+								src={presetImageUrl(img, 'thumb', 400)}
+								srcset={presetSrcSet(img, 'thumb')}
+								sizes="(min-width: 640px) 240px, 33vw"
+								alt="动态图片"
+								loading="lazy"
+								decoding="async"
+								class="aspect-square w-full object-cover cursor-zoom-in hover:scale-105 transition-transform duration-standard"
+								use:fadeImage
+							/>
 						</button>
 					{/each}
 				</div>

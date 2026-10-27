@@ -25,6 +25,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { requireAuth } from '@/stores/auth.svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { smartBack } from '@/lib/smart-back';
+	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import { copyShareLink } from '@/lib/share';
 
 	// 用户详情：关注/私信/屏蔽/举报/备注 + 瞬间画廊 + 桌面 Rail。
@@ -441,7 +442,16 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					aria-label={`查看 ${user.name} 的瞬间图片 ${i + 1}`}
 					onclick={() => void goto(ROUTES.moment(g.id))}
 				>
-					<img src={g.url} alt={`${user.name} 的瞬间图片 ${i + 1}`} loading="lazy" class="image-hover-frame__image w-full h-full object-cover" />
+					<img
+						src={presetImageUrl(g.url, 'card', 800)}
+						srcset={presetSrcSet(g.url, 'card')}
+						sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 50vw"
+						alt={`${user.name} 的瞬间图片 ${i + 1}`}
+						loading="lazy"
+						decoding="async"
+						class="image-hover-frame__image w-full h-full object-cover"
+						use:fadeImage
+					/>
 				</button>
 			{/each}
 		</div>

@@ -26,12 +26,15 @@
 		user,
 		followed,
 		pending = false,
+		priority = false,
 		onFollow,
 		onNavigate
 	}: {
 		user: NearbyUser;
 		/** 关注请求进行中（按钮禁点防重复提交） */
 		pending?: boolean;
+		/** 首屏前 2 张（N1）：透传 NearbyImageCard 的 eager + fetchpriority=high */
+		priority?: boolean;
 		followed: boolean;
 		onFollow: () => void;
 		onNavigate: () => void;
@@ -48,6 +51,7 @@
 <NearbyImageCard
 	imageSrc={avatarFailed ? '' : user.avatar}
 	imageAlt={user.name}
+	{priority}
 	onClick={onNavigate}
 	onImageError={() => (avatarFailed = true)}
 	class="aspect-[3/4] h-auto rounded-lg shadow-xs hover:shadow-raised-sm transition-all duration-standard"

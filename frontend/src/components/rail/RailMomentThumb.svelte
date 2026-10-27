@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { ChevronRight, MapPin } from '@lucide/svelte';
+	import { avatarImageWidths, buildImageSrcSet, fadeImage, optimizedImageUrl } from '@/lib/images';
 
 	// 详情栏小尺寸帖子缩略。
 
@@ -19,7 +20,16 @@
 <button type="button" class="tap-97 flex items-center gap-2.5 w-full text-left rounded-sm {onClick ? 'hover-bg cursor-pointer' : 'cursor-default focus-visible:outline-none'}" disabled={!onClick} onclick={onClick}>
 	<div class="rounded-sm overflow-hidden shrink-0 size-11.5 bg-accent-soft" >
 		{#if image}
-			<img src={image} alt={title} loading="lazy" class="w-full h-full object-cover" />
+			<img
+				src={optimizedImageUrl(image, { width: 92 })}
+				srcset={buildImageSrcSet(image, avatarImageWidths(46))}
+				sizes="46px"
+				alt={title}
+				loading="lazy"
+				decoding="async"
+				class="w-full h-full object-cover"
+				use:fadeImage
+			/>
 		{:else}
 			<!-- 无图动态占位（禁止 <img src=""> 破图） -->
 			<div class="flex h-full w-full items-center justify-center">

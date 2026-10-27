@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Dialog } from 'bits-ui';
+	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import { ChevronLeft, ChevronRight, X } from '@lucide/svelte';
 
 	// ImageViewer — 全屏大图查看器（对齐 harmonyapp PhotoPreviewPage 的交互集合的 Web 版）。
@@ -243,8 +244,14 @@
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 					<img
-						src={current.url}
+						src={presetImageUrl(current.url, 'full', 1600)}
+						srcset={presetSrcSet(current.url, 'full')}
+						sizes="100vw"
 						alt={current.alt ?? ''}
+						loading="eager"
+						fetchpriority="high"
+						decoding="async"
+						use:fadeImage
 						draggable="false"
 						class="max-h-full max-w-full object-contain"
 						style="transform:translate({panX}px, {panY}px) scale({scale});transform-origin:{originX}% {originY}%;cursor:{dragging ? 'grabbing' : scale > 1 ? 'grab' : 'zoom-in'};transition:{dragging ? 'none' : 'transform var(--cst-motion-instant) var(--cst-ease-standard)'};"
@@ -286,7 +293,17 @@
 							aria-current={i === index}
 							onclick={() => (index = i)}
 						>
-							<img src={img.url} alt="" loading="lazy" class="h-full w-full object-cover" draggable="false" />
+							<img
+								src={presetImageUrl(img.url, 'thumb', 200)}
+								srcset={presetSrcSet(img.url, 'thumb')}
+								sizes="44px"
+								alt=""
+								loading="lazy"
+								decoding="async"
+								class="h-full w-full object-cover"
+								use:fadeImage
+								draggable="false"
+							/>
 						</button>
 					{/each}
 				</div>

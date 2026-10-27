@@ -16,6 +16,7 @@
 		onSave,
 		onClick,
 		onCommentClick,
+		priority = false,
 		class: className = 'aspect-[4/3] rounded-md'
 	}: {
 		item: FeedItem;
@@ -26,6 +27,8 @@
 		onClick?: () => void;
 		/** 评论计数点击（直达详情页评论区）；缺省回退 onClick */
 		onCommentClick?: () => void;
+		/** 首屏图（列表前 2 张）：透传 NearbyImageCard 的 eager/high */
+		priority?: boolean;
 		class?: string;
 	} = $props();
 
@@ -37,6 +40,7 @@
 	imageSrc={item.image || item.avatar}
 	imageAlt={cardLabel}
 	{onClick}
+	{priority}
 	class={className}
 >
 	{#snippet watermark()}

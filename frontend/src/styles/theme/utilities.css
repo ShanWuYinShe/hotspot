@@ -73,6 +73,16 @@
     inset: -6px 0;
   }
 
+  /* 图片渐显（Round 6）：加载完成前占位可见，onload 加 .img-loaded 渐显 0.22s；
+     reduced-motion 由文件末尾全局规则把 transition-duration 压到 0.01ms（直接显示）。 */
+  .img-fade {
+    opacity: 0;
+    transition: opacity var(--cst-motion-standard) var(--cst-ease-standard);
+  }
+  .img-fade.img-loaded {
+    opacity: 1;
+  }
+
   /* Sticky page header — consistent across Messages, Nearby, Notifications etc. */
   .sticky-header {
     position: sticky;

@@ -19,6 +19,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -380,7 +381,7 @@ export struct MySharesPage {
       }
 
       if (share.preview?.cover_url) {
-        Image(MediaUrlUtil.normalize(share.preview.cover_url))
+        Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(share.preview.cover_url), 480))
           .width('100%')
           .height(DesignConstants.COMPONENT.SHARE_CARD_HEIGHT)
           .objectFit(ImageFit.Cover)

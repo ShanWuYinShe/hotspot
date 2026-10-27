@@ -20,6 +20,7 @@ import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from '../components/LucideIcon';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
+import { ImageUrlUtil } from '../core/utils/ImageUrlUtil';
 
 // 过滤维度对齐前端 /notify FILTER_TABS（全部/点赞/关注/评论/附近）：
 // 按「语义类型」分栏，而非「业务域」——域分组（互动/群组/举报/系统）是桌面 Rail 的视角，
@@ -637,7 +638,7 @@ export struct NotificationCenter {
       Stack({ alignContent: Alignment.Center }) {
         if (notification.payload?.actor?.avatar_url) {
           // 经 MediaUrlUtil 归一：avatar_url 为 /public/ 相对代理路径时拼 API origin
-          Image(MediaUrlUtil.normalize(notification.payload.actor.avatar_url))
+          Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(notification.payload.actor.avatar_url), 80))
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
             .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
             .borderRadius(DesignConstants.RADIUS.FULL)

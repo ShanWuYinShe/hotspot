@@ -216,7 +216,7 @@
 				<div class="bg-surface-page/80 backdrop-blur-md sticky top-0 z-20 pb-2.5">
 					<div class="flex items-center justify-between px-4 pt-3 pb-1.5">
 						<div class="flex items-center gap-2">
-							<img src={imgHotSpot} alt="HotSpot" class="size-6.5 rounded-full object-cover shadow-xs" />
+							<img src={imgHotSpot} decoding="async" alt="HotSpot" class="size-6.5 rounded-full object-cover shadow-xs" />
 							<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
 						</div>
 						<h1 class="sr-only">首页</h1>
@@ -283,10 +283,11 @@
 		{:else if currentItems.length > 0}
 			<!-- 高质感社区 Feed 流：方案 E 超宽屏 3 列流式画廊瀑布（默认标准） -->
 			<div class={demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4.5 px-3 sm:px-0 pt-2'}>
-				{#each currentItems as moment (moment.moment_id)}
+				{#each currentItems as moment, index (moment.moment_id)}
 					<HomeFeedItem
 						{moment}
 						showDistance={false}
+						priority={index < 2}
 						onClick={() => void goto(ROUTES.moment(moment.moment_id))}
 					/>
 				{/each}

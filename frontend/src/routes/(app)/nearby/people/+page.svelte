@@ -312,9 +312,10 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 					</EmptyState>
 				{:else}
 					<div class="grid gap-4 {isTablet ? 'grid-cols-3' : 'grid-cols-2'} lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-						{#each list.slice(0, visibleCount) as user (user.id)}
+						{#each list.slice(0, visibleCount) as user, index (user.id)}
 							<UserCard
 								{user}
+								priority={index < 2}
 								followed={followedIds.has(user.id)}
 								pending={followPending.has(user.id)}
 								onFollow={() => toggleFollow(user.id)}

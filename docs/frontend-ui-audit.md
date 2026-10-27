@@ -277,3 +277,45 @@
 
 - 39 页：主巡检 22/22 `issues=[]`、console 0；补充 16 路由×2 视口 32/32（0 溢出/0 坏图/h1 正常/0 error）。
 - check 0 errors 0 warnings + eslint 0 + theme 四联 OK；build 通过；test 全量（MetricRow 契约已随语义更新）。
+## 2026-10-27 补充（Round 6：图片加载管线 + 感知性能 + 搜索键盘导航）
+
+**范围**：Web 22 文件（20 改 + 2 新增：`lib/images.ts` + 单测；+266/−31）+ 鸿蒙 15 文件（14 改 + 1 新增 `ImageUrlUtil.ets`；+196/−18）+ 文档 4 + 技能 3；总计 41 改 + 3 新；基线 `eaa3098e`（数字以复核快照为准）。
+规范：design-system §20.8。证据：`.workwork/ui-polish-1026/r6/fe/{har,compare,raw/after/screens}`、`r6/ha/{interim,logs}`。
+**鸿蒙真机仍离线**：流量/首屏时间/渐显像素/reduced 系统路径待真机。
+
+### 一、图片管线
+
+- `lib/images.ts`：仅 `images.unsplash.com` 追加/覆盖 `auto=format&fit=crop&q=78|80|82|85&w=<width>`；其他域名/本地/blob/无效 URL 原样；
+  6 档预设（avatar/thumb/card/cover/hero/full）+ `presetSrcSet` + `avatarImageWidths`（32→64/96、48→96/144、xl→160）+ `fadeImage`（0.22s，reduced 1e-05s）。
+- 接入 26 个 `<img>`：feed 封面/行卡、附近卡、详情大图+九宫格、群 hero、头像、通知、搜索、他人主页、rail、ImageViewer（full 1600/q85 eager）、地图图钉；
+  首屏仅 feed 前 2/详情首图/hero/Viewer eager+high，其余 lazy+async；非 unsplash 不生成 srcset；onerror/srcset 降级保留。
+
+### 二、前后数据（transferSize，各 2 轮）
+
+| 页面/视口 | before → after | 变化 | CLS |
+|---|---|---|---|
+| `/` 1440 | 443,364 → 168,762 | **−62.0%** | 0.0195→0.0195 |
+| `/` 390 | 324,624 → 117,284 / 150,667 | −63.9% / −53.6% | 0 |
+| `/nearby/people` 1440 | 108,037 → 154,305 | **+43%（清晰度收益：封面 200w→400w）** | 0 |
+| `/me` 1440 / 390 | 18,679 → 10,043 / 5,596 | −46.2% / −70.0% | 0 |
+| 详情 1440 | 264,510 → 59,207 | **−77.6%** | 0.0213→0 |
+| 详情 390 | 93,961 → 45,051 | −52.1% | 0 |
+
+- LCP 方向改善/持平（本地 dev 噪声、冷启动离群已在报告注明）；CLS 全部不回归（详情 0.0213→0）。
+- 结论：清晰度提升 + 流量整体大幅下降；nearby 唯一上涨为「低清→清晰」的有意取舍（如需省流可对非首屏回退 thumb 档，登记备选）。
+
+### 三、搜索键盘导航
+
+- `/search`：↑↓ 在输入框/相关话题/结果行/最近条目间移动焦点（真实链接/按钮，focus-ring 可见），Enter 打开（实测 → /users/user_lumos），
+  Esc 清空并回输入框；未引入 combobox/aria-activedescendant；Tab 顺序不变；axe 复扫 50 runs 0 violation。
+
+### 四、回归
+
+- axe 39 页/50 runs **50/50 0 violation（0 serious/critical）**；browser-qa 23/23 页 issues=[]、console 0；
+- check 0 errors/0 warnings + eslint 0 + 主题四联 OK；test **101 文件 / 526 用例**；build 通过。
+
+### 五、鸿蒙镜像（代码/构建/布局树，像素待真机）
+
+- `ImageUrlUtil.ets`：与 web 同 host/参数规则（w/auto=format/fit=crop/q=78），其他域名原样；15 处接入（卡片/详情/头像/缩略图/通知）；
+  宽度档对齐（首屏 1080/大图、卡片 900:800、头像 2x）；首屏前 2 优先、LazyForEach 离屏不创建（ArkUI 无 fetchpriority/lazy，登记平台差异）；
+  高频图占位 + onComplete 渐显 200ms（reduced 直接显示）；失败 fallback 保留；build/check:theme/parity/布局树全绿。

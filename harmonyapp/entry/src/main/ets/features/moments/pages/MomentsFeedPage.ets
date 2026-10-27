@@ -378,10 +378,12 @@ export struct MomentsFeedPage {
             WaterFlow() {
               // LazyForEach 虚拟化（审查 P1-9：替换全量 ForEach，长列表滚动不掉帧）；
               // 数据源由 refreshVisibleDataSource 保持与标签过滤同步
-              LazyForEach(this.hotMomentsDataSource, (moment: MomentItem) => {
+              LazyForEach(this.hotMomentsDataSource, (moment: MomentItem, index: number) => {
                 FlowItem() {
                   MomentWallCard({
                     moment: moment,
+                    // R6 首屏优先：前 2 张高清档（LazyForEach 离屏不创建）
+                    priority: index < 2,
                     // 2 列窄墙用 3:4 竖版（对齐 web 移动端）；3 列用 4:3
                     cardAspectRatio: this.getWallColumns() === 2 ? 0.75 : 1.333,
                     onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),

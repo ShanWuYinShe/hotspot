@@ -3,6 +3,7 @@
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import type { Pin } from './location-data';
 	import { PIN_TONES, markerSvg } from './location-shared';
+	import { avatarImageWidths, buildImageSrcSet, fadeImage, optimizedImageUrl } from '@/lib/images';
 
 	// 图钉媒体展示（地图三处共用：桌面面板列表行 / 移动 Sheet 卡 / 桌面选中详情）：
 	// 用户 → 头像 + 在线角标；动态 → 图片缩略图；群组/其他 → 类型 marker（PIN_TONES 淡底）。
@@ -33,7 +34,17 @@
 		{/if}
 	</div>
 {:else if pin.type === 'moment' && pin.image}
-	<img src={pin.image} alt={pin.title || pin.name || ''} class="rounded-sm object-cover shrink-0" style="width:{size}px;height:{size}px;" />
+	<img
+		src={optimizedImageUrl(pin.image, { width: size * 2 })}
+		srcset={buildImageSrcSet(pin.image, avatarImageWidths(size))}
+		sizes="{size}px"
+		alt={pin.title || pin.name || ''}
+		loading="lazy"
+		decoding="async"
+		class="rounded-sm object-cover shrink-0"
+		style="width:{size}px;height:{size}px;"
+		use:fadeImage
+	/>
 {:else}
 	<div
 		class="flex items-center justify-center rounded-sm shrink-0"
