@@ -476,3 +476,11 @@ Huawei 移动端规范要求有效触控目标 **≥44vp**。本项目原语层�
 - 内容进场：loading true→false / tab 切换 / 刷新时播，**冷启动首屏跳过、缓存命中不播**；只包内容层，不含页头/滚动容器/系统转场；无布局位移。
 - 状态 pop：点赞/收藏/关注/加入仅激活方向播，取消不播；旧手写模式已全部替换为 `MotionUtil.statePop`。
 - 验收：代码级检查 + reduced 分支证据（duration 0/直接终态）+ build/check:theme/parity/布局树；真机手感/中间帧像素待补。
+## 媒体占位与降级（Round 8，2026-10-27）
+
+- `SystemAvatar`：占位层**始终渲染**（有 name 首字母 trim+slice(0,1)、无 name 人形图标；accentMuted 底 + textSecondary 字），
+  Image 覆盖占位 + `onComplete` 渐显（`MotionUtil.reduced` 直接显示）；`onError` 保留占位不闪烁/不分支切换；
+  decorative/alt 语义与尺寸不变。
+- 群封面/通知/搜索/rail/主页瞬间/详情/群 hero 等缩略图：底层占位（渐变/图标/首字母）+ 渐显 + 失败保留；
+  有 Skeleton 的列表不叠加；不新增 token。
+- 新图片接入必须同时给「占位 + 失败降级 + 宽度档/URL 优化」；真机占位/渐显/失败像素待补。

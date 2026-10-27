@@ -73,6 +73,12 @@
     inset: -6px 0;
   }
 
+  /* 媒体缩略图占位（Round 8）：图片未加载时显示主题渐变底，避免纯灰块；
+     与 .img-fade 配套使用（图片渐显覆盖）。token 复用既有 surface-card-fallback。 */
+  .media-placeholder {
+    background: var(--cst-surface-card-fallback);
+  }
+
   /* 图片渐显（Round 6）：加载完成前占位可见，onload 加 .img-loaded 渐显 0.22s；
      reduced-motion 由文件末尾全局规则把 transition-duration 压到 0.01ms（直接显示）。 */
   .img-fade {

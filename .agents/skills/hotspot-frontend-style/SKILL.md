@@ -523,3 +523,11 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 
 - 不得动画首屏 LCP 元素；不得引入 CLS；QA 截图不得因动效抖动（动画 ≤260ms；动效 QA 建议在 reduced-motion 下取基线）。
 - 验收：normal/reduced 双路径 computed + 中间态截图；axe 0；CLS/LCP 不回归；键盘/焦点无回归。
+## Round 8 媒体占位与降级（2026-10-27）
+
+- 网络媒体（头像/封面/缩略图/内容图）**加载中必须有意义占位**，不得纯灰圆/灰块：头像=首字母/UserRound；
+  封面缩略图=`.media-placeholder` 主题渐变/图标；加载完成渐显覆盖；失败保留占位或降级图标。
+- Avatar 占位层始终渲染（`aria-hidden`），图片 absolute 覆盖；decorative/alt 语义不变；占位文字用 text-primary
+  （accent-bg 上各主题/明暗 ≥4.5，text-secondary 在 inkwash 不达标）。
+- 有 Skeleton 的列表用骨架、不叠加占位；占位与图片同尺寸（无 CLS）；reduced-motion 渐显直接显示。
+- 新图片接入必须同时给「占位 + 失败降级 + 尺寸档/srcset」（design-system §20.8/§20.10）。

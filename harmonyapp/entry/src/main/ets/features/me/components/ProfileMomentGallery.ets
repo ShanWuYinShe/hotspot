@@ -12,6 +12,7 @@ import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
 import { MomentItem } from '../../../core/types/api';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 
 @Component
 export struct ProfileMomentGallery {
@@ -21,6 +22,8 @@ export struct ProfileMomentGallery {
   /** 网格列数（宽屏 master-detail 3 列，窄屏 2 列，对齐前端 grid-cols-2 md:grid-cols-3） */
   @Prop columns: number = 2;
   @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+  @State private loadedThumbs: string[] = [];
+  @State private failedThumbs: string[] = [];
 
   private palette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -51,12 +54,50 @@ export struct ProfileMomentGallery {
   @Builder
   private momentTile(moment: MomentItem) {
     Column() {
-      Image(this.momentThumb(moment))
+      Stack() {
+        // R8 占位层：图标常驻，加载中/失败不出现纯灰块
+        Column() {
+          LucideIcon({
+            icon: AppIcon.IMAGES,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
+            color: this.palette().textTertiary
+          })
+        }
         .width('100%')
-        .aspectRatio(1)
+        .height('100%')
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor(this.palette().surfaceSubtle)
         .borderRadius(DesignConstants.RADIUS.LG)
-        .objectFit(ImageFit.Cover)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.palette().borderColor })
+        if (this.failedThumbs.indexOf(this.momentThumb(moment)) < 0) {
+          Image(this.momentThumb(moment))
+            .width('100%')
+            .height('100%')
+            .objectFit(ImageFit.Cover)
+            .borderRadius(DesignConstants.RADIUS.LG)
+            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.palette().borderColor })
+            .opacity(this.loadedThumbs.indexOf(this.momentThumb(moment)) >= 0 || MotionUtil.reduced() ? 1 : 0)
+            .animation({
+              duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+              curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+            })
+            .onComplete(() => {
+              const key: string = this.momentThumb(moment);
+              if (this.loadedThumbs.indexOf(key) >= 0) return;
+              const next: string[] = this.loadedThumbs.slice();
+              next.push(key);
+              this.loadedThumbs = next;
+            })
+            .onError(() => {
+              const key: string = this.momentThumb(moment);
+              if (this.failedThumbs.indexOf(key) >= 0) return;
+              const next: string[] = this.failedThumbs.slice();
+              next.push(key);
+              this.failedThumbs = next;
+            })
+        }
+      }
+      .width('100%')
+      .aspectRatio(1)
     }
     .layoutWeight(1)
   }

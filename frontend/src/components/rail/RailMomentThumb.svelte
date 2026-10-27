@@ -18,7 +18,7 @@
 </script>
 
 <button type="button" class="tap-97 flex items-center gap-2.5 w-full text-left rounded-sm {onClick ? 'hover-bg cursor-pointer' : 'cursor-default focus-visible:outline-none'}" disabled={!onClick} onclick={onClick}>
-	<div class="rounded-sm overflow-hidden shrink-0 size-11.5 bg-accent-soft" >
+	<div class="media-placeholder rounded-sm overflow-hidden shrink-0 size-11.5" >
 		{#if image}
 			<img
 				src={optimizedImageUrl(image, { width: 92 })}

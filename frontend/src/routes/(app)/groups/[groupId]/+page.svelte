@@ -246,7 +246,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	{:else}
 	<!-- 现代高质感社群 Hero 封面（圆角温润，磨砂悬浮操作区） -->
 	<!-- Hero 封面（例外登记）：去 1px 描边，保留圆角/阴影/加载占位；图片 object-cover -->
-	<div class="relative h-cover-height overflow-hidden rounded-2xl shadow-raised-sm bg-surface-subtle">
+	<div class="media-placeholder relative h-cover-height overflow-hidden rounded-2xl shadow-raised-sm">
 		{#if gd.detail.banner}
 			<img
 				src={presetImageUrl(gd.detail.banner, 'cover', 1600)}

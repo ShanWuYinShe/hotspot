@@ -174,7 +174,7 @@
 	{#if cover}
 		<div class="pb-5">
 			<!-- 媒体容器（例外登记）：去 1px 描边，用 bg-subtle + 圆角 + 阴影表达边界 -->
-			<div class="relative overflow-hidden rounded-xl shadow-xs h-cover-height-lg bg-surface-subtle">
+			<div class="media-placeholder relative overflow-hidden rounded-xl shadow-xs h-cover-height-lg">
 				<button
 					type="button"
 					class="block h-full w-full cursor-zoom-in focus-ring"
@@ -215,7 +215,7 @@
 					{#each moment.images.slice(1) as img, i (img + i)}
 						<button
 							type="button"
-							class="aspect-square w-full overflow-hidden rounded-lg focus-ring shadow-xs"
+							class="media-placeholder aspect-square w-full overflow-hidden rounded-lg focus-ring shadow-xs"
 							aria-label={`查看第 ${i + 2} 张图片`}
 							onclick={() => {
 								viewerIndex = i + 1;

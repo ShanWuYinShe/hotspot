@@ -246,11 +246,12 @@ export struct NearbyImageCard {
   private buildImageLayer() {
     Stack() {
       if (this.imageUrl && !this.imageFailed) {
-        if (!this.imageLoaded && !MotionUtil.reduced()) {
-          Column()
-            .width('100%')
-            .height('100%')
-            .backgroundColor(this.getPalette().surfaceSubtle)
+        // R8：fallback 层（主题渐变 + 首字母/图标）常驻图片底层，加载中不再出现纯灰块；
+        // 图片失败时仅隐藏 Image，占位层仍在。
+        if (this.mediaOverlay) {
+          CardFallbackBackground({ icon: this.fallbackIcon })
+        } else {
+          this.buildFallbackLayer()
         }
         Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.imageUrl), this.priority ? 900 : 800))
           .width('100%')

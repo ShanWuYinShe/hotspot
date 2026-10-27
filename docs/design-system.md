@@ -772,6 +772,21 @@
 - **验收**：normal/reduced 双路径 computed animation-name/duration + 中间态截图；axe 0；QA 23 页稳定；
   CLS 不回归、LCP 首屏不回归；鸿蒙以代码级 + reduced 分支证据 + build/parity 为准，真机手感待补。
 
+### 20.10 媒体占位与加载降级（Round 8，2026-10-27）
+
+- **原则**：任何网络媒体（头像/封面/缩略图/内容图）在加载中必须显示有意义的占位，**不得出现纯灰圆/灰块**；
+  加载失败时保留或切换到同等语义的降级态（首字母/人形/群组图标/主题渐变/失败图标）。
+- **头像**：占位层**始终渲染**（有 name = 首字母 `trim().slice(0,1)`；无 name = UserRound 图标；`aria-hidden`），
+  图片 absolute 覆盖 + `fadeImage` 渐显；失败保留占位不闪烁；decorative/alt 语义不变。
+- **封面/缩略图/内容图**：占位统一 `.media-placeholder`（主题 accent 渐变/骨架/图标）作底层，图片渐显覆盖；
+  失败保留占位；有 Skeleton 的列表用骨架，不叠加占位。
+- **对比度**：占位首字母/图标文字在占位底上 ≥4.5:1（实测 vibrant 11.75/9.25、forest 11.58/10.11、inkwash 10.21/8.49，用 text-primary）；
+  若换底必须先复测。
+- **约束**：占位与图片同尺寸/同布局（无 CLS）；不新增 token；`prefers-reduced-motion` 下渐显直接显示；SSR/no-JS 可见占位。
+- **验收**：慢网模拟（延迟图片）4 页×2 视口「加载中 vs 完成」截图，加载中无灰块；失败态截图；
+  axe 0；CLS/LCP 不回归。
+
+
 
 
 

@@ -437,7 +437,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{#each user.galleryMoments as g, i (g.id)}
 				<button
 					type="button"
-					class="image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden focus-ring"
+					class="media-placeholder image-hover-frame tap-97 relative cursor-pointer rounded-sm overflow-hidden focus-ring"
 					style="aspect-ratio:1;"
 					aria-label={`查看 ${user.name} 的瞬间图片 ${i + 1}`}
 					onclick={() => void goto(ROUTES.moment(g.id))}

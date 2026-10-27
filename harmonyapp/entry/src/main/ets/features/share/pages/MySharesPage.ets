@@ -23,6 +23,8 @@ import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
+import { LucideIcon } from '../../../components/LucideIcon';
 
 @Preview
 @Component
@@ -36,6 +38,8 @@ export struct MySharesPage {
 
   private sharesDataSource: BasicDataSource<ShareListItem> = new BasicDataSource<ShareListItem>([]);
   @State private shares: ShareListItem[] = [];
+  @State private coverLoadedKeys: string[] = [];
+  @State private coverFailedKeys: string[] = [];
   @State private isLoading: boolean = true;
   @State private isRefreshing: boolean = false;
   @State private isLoadingMore: boolean = false;
@@ -88,6 +92,10 @@ export struct MySharesPage {
 
   private getSurfaceBackground(): string {
     return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private coverKeyOf(share: ShareListItem): string {
+    return share.preview?.cover_url ?? '';
   }
 
   private getSurfaceSubtle(): string {
@@ -381,13 +389,48 @@ export struct MySharesPage {
       }
 
       if (share.preview?.cover_url) {
-        Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(share.preview.cover_url), 480))
+        // R8：占位 icon 常驻底层 + 图片渐显 + 失败保留占位
+        Stack() {
+          Column() {
+            LucideIcon({
+              icon: AppIcon.IMAGES,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
+              color: this.getCurrentThemePalette().textTertiary
+            })
+          }
           .width('100%')
-          .height(DesignConstants.COMPONENT.SHARE_CARD_HEIGHT)
-          .objectFit(ImageFit.Cover)
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getSurfaceSubtle())
-          .accessibilityText('分享内容封面图')
+          if (this.coverFailedKeys.indexOf(share.preview.cover_url ?? '') < 0) {
+            Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.coverKeyOf(share)), 480))
+              .width('100%')
+              .height('100%')
+              .objectFit(ImageFit.Cover)
+              .opacity(this.coverLoadedKeys.indexOf(this.coverKeyOf(share)) >= 0 || MotionUtil.reduced() ? 1 : 0)
+              .animation({
+                duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+                curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+              })
+              .onComplete(() => {
+                if (this.coverLoadedKeys.indexOf(this.coverKeyOf(share)) >= 0) return;
+                const next: string[] = this.coverLoadedKeys.slice();
+                next.push(this.coverKeyOf(share));
+                this.coverLoadedKeys = next;
+              })
+              .onError(() => {
+                if (this.coverFailedKeys.indexOf(this.coverKeyOf(share)) >= 0) return;
+                const next: string[] = this.coverFailedKeys.slice();
+                next.push(this.coverKeyOf(share));
+                this.coverFailedKeys = next;
+              })
+          }
+        }
+        .width('100%')
+        .height(DesignConstants.COMPONENT.SHARE_CARD_HEIGHT)
+        .borderRadius(DesignConstants.RADIUS.LG)
+        .clip(true)
+        .accessibilityText('分享内容封面图')
       }
 
       Column({ space: DesignConstants.SPACING.XS }) {

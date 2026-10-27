@@ -3,6 +3,8 @@ import { UserTypeUtil } from '../core/utils/UserTypeUtil';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
+import { LucideIcon } from './LucideIcon';
+import { AppIcon } from './SystemIcon';
 import { ImageUrlUtil } from '../core/utils/ImageUrlUtil';
 import { MotionUtil } from '../core/accessibility/MotionUtil';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
@@ -86,22 +88,16 @@ export struct SystemAvatar {
   @Builder
   private buildAvatarContent() {
     Stack({ alignContent: Alignment.BottomEnd }) {
+      // R8：底层占位始终渲染（加载中/失败可见），不再出现纯灰圆/空块
+      this.buildAvatarPlaceholder()
       if (this.getActualSrc() && !this.imageLoadFailed) {
-        // R6 占位：加载中显示主题淡底圆（渐显前身）；失败后走首字母降级
-        if (!this.imageLoaded && !MotionUtil.reduced()) {
-          Column()
-            .width(this.avatarSize)
-            .height(this.avatarSize)
-            .borderRadius(this.getBorderRadius())
-            .backgroundColor(this.getPalette().accentMuted)
-        }
+        // 图片覆盖占位层，onComplete 渐显；reduced 直接显示；失败保留占位
         Image(this.getOptimizedSrc()!)
           .width(this.avatarSize)
           .height(this.avatarSize)
           .objectFit(ImageFit.Cover)
           .borderRadius(this.getBorderRadius())
           .border(this.getBorderOptions())
-          .backgroundColor(this.getPalette().surfaceBackground)
           .alt($r('app.media.foreground'))
           .accessibilityText(this.name ? `头像：${this.name}` : '用户头像')
           .opacity(this.imageLoaded || MotionUtil.reduced() ? 1 : 0)
@@ -113,22 +109,6 @@ export struct SystemAvatar {
           .onError(() => {
             this.imageLoadFailed = true;
           })
-      } else {
-        // 无图占位对齐前端 Avatar.svelte:accentMuted 底 + textSecondary 单首字母
-        // (0.42×尺寸)。不再用高饱和色块白字——大尺寸时是廉价感主要来源(UI 审查 D7)
-        Flex({ justifyContent: FlexAlign.Center, alignItems: ItemAlign.Center }) {
-          Text(this.getInitials(this.name))
-            .fontSize(this.avatarSize * 0.42)
-            .fontWeight(DesignConstants.FONT.WEIGHT.REGULAR)
-            .fontColor(this.getPalette().textSecondary)
-            .textAlign(TextAlign.Center)
-        }
-        .width(this.avatarSize)
-        .height(this.avatarSize)
-        .backgroundColor(this.getPalette().accentMuted)
-        .borderRadius(this.avatarSize / 2)
-        .clip(true)
-        .border(this.getBorderOptions())
       }
 
       if (this.isOnline) {
@@ -173,10 +153,37 @@ export struct SystemAvatar {
     return DesignConstants.RADIUS.SM;
   }
 
+  @Builder
+  private buildAvatarPlaceholder() {
+    // 对齐前端 Avatar.svelte：accentMuted 底 + textSecondary 占位；有 name 首字母，无 name 人形图标
+    Flex({ justifyContent: FlexAlign.Center, alignItems: ItemAlign.Center }) {
+      if (this.getInitials(this.name).length > 0) {
+        Text(this.getInitials(this.name))
+          .fontSize(this.avatarSize * 0.42)
+          .fontWeight(DesignConstants.FONT.WEIGHT.REGULAR)
+          .fontColor(this.getPalette().textSecondary)
+          .textAlign(TextAlign.Center)
+      } else {
+        LucideIcon({
+          icon: AppIcon.PERSON,
+          iconSize: this.avatarSize * 0.5,
+          color: this.getPalette().textSecondary
+        })
+      }
+    }
+    .width(this.avatarSize)
+    .height(this.avatarSize)
+    .backgroundColor(this.getPalette().accentMuted)
+    .borderRadius(this.getBorderRadius())
+    .clip(true)
+    .border(this.getBorderOptions())
+    .accessibilityLevel('no')
+  }
+
+  /** 与 web Avatar.svelte 一致：trim + slice(0,1)，不额外大写；无名字返回空串由人形图标兜底 */
   private getInitials(name: string): string {
-    // 对齐前端 Avatar.svelte:仅取首字符(原双字符+白字已随占位克制化移除)
-    if (!name) return '?';
-    return name.substring(0, 1).toUpperCase();
+    const trimmed: string = name ? name.trim() : '';
+    return trimmed.length > 0 ? trimmed.substring(0, 1) : '';
   }
 }
 

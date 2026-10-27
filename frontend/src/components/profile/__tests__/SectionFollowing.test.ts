@@ -47,8 +47,9 @@ beforeEach(() => {
 describe('SectionFollowing', () => {
 	it('渲染两行与计数 2 人', () => {
 		render(SectionFollowing);
-		expect(screen.getByText('甲')).toBeTruthy();
-		expect(screen.getByText('乙')).toBeTruthy();
+		// Avatar 占位层会同时渲染首字母（aria-hidden）；断言行存在用 getAllByText
+		expect(screen.getAllByText('甲').length).toBeGreaterThan(0);
+		expect(screen.getAllByText('乙').length).toBeGreaterThan(0);
 		expect(screen.getByText('2 人')).toBeTruthy();
 	});
 
@@ -57,8 +58,8 @@ describe('SectionFollowing', () => {
 		const btns = screen.getAllByRole('button', { name: '已关注' });
 		expect(btns).toHaveLength(2);
 		await fireEvent.click(btns[0]);
-		await waitFor(() => expect(screen.queryByText('甲')).toBeNull());
-		expect(screen.getByText('乙')).toBeTruthy();
+		await waitFor(() => expect(screen.queryAllByText('甲')).toHaveLength(0));
+		expect(screen.getAllByText('乙').length).toBeGreaterThan(0);
 		expect(screen.getByText('1 人')).toBeTruthy();
 		expect(followMock).toHaveBeenCalledWith({ user_id: 'u1', active: false });
 	});
@@ -77,7 +78,7 @@ describe('SectionFollowing', () => {
 		render(SectionFollowing);
 		await fireEvent.click(screen.getAllByRole('button', { name: '已关注' })[0]);
 		await waitFor(() => expect(toastMock).toHaveBeenCalledWith('操作失败，请重试', 'danger'));
-		expect(screen.getByText('甲')).toBeTruthy();
+		expect(screen.getAllByText('甲').length).toBeGreaterThan(0);
 		expect(screen.getByText('2 人')).toBeTruthy();
 	});
 });

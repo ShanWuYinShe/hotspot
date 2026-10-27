@@ -357,3 +357,37 @@
 - `MotionUtil` 扩展为唯一动画入口：`contentEnter`（180ms）、`statePop`（220ms，1→1.15→1，keyframeAnimateTo 两段）、`popScale`、`enterOffset`；reduced 直接终态；
 - 内容进场 10 处（Home 冷启动跳过、tab 切换/刷新重播、缓存命中不播；触发/跳过条件见 ha report §2 表）；状态 pop 11 处，旧手写 150ms/1.3 模式全部替换；
 - 无新增 token；build/check:theme/parity/布局树快照正常。
+## 2026-10-27 补充（Round 8：媒体占位/降级 + 搜索 URL 状态）
+
+**范围**：Web 12 文件（10 改 + 2 新增 `lib/search-url.ts` + 单测；+122/−41）+ 鸿蒙 7 文件（+212/−67）；基线 `1bdf0b5e`。
+规范：design-system §20.10；证据：`.workwork/ui-polish-1026/r8/fe/{raw,compare}`、`r8/ha/{interim,logs}`。
+**鸿蒙真机仍离线**：占位/渐显/失败像素与慢网表现待真机。
+
+### 一、媒体占位与降级
+
+- Avatar：占位层始终渲染（有 name 首字母 / 无 name UserRound，`aria-hidden`）+ 图片 absolute 覆盖 + `fadeImage` 渐显；失败保留占位不闪烁；decorative/alt 语义不变、无布局变化。
+- 统一 `.media-placeholder` 主题渐变占位：群封面、通知缩略图、搜索缩略图、rail thumb、用户主页瞬间、详情封面与九宫格、群 hero；有 Skeleton 列表不叠加。
+- **慢网实测**（延迟图片 3.5s）：4 页 × 390/1440「加载中 vs 完成」——加载中无纯灰圆/灰块，占位可见，完成后渐显；无 CLS。
+- 占位文字对比（accent-bg 上，text-primary）：vibrant 11.75/9.25、forest 11.58/10.11、inkwash 10.21/8.49（均 ≥4.5；text-secondary 在 inkwash 仅 4.01/4.26 故不用）。
+
+### 二、搜索 URL 状态（`?query=&tab=&tag=`）
+
+| 场景 | 结果 |
+|---|---|
+| 深链 `/search?query=咖啡` | 恢复 query+tab+tag，执行搜索（**仅 1 组请求**，无 discovery 额外请求） |
+| 输入防抖/联想 | 不写 URL（避免历史污染） |
+| Enter/选最近·热门/点 tag/切 Tab/Esc | `replaceState` 同步，history.length 不变 |
+| 刷新 / 前进 / 后退 | 恢复（popstate 也只 1 组请求） |
+| 非法 tab / 空 query | tab→all；空 query 清空全部参数回发现态 |
+
+### 三、回归
+
+- axe 39 页/50 runs **0 violation**；browser-qa 23/23 页 issues=[]、console 0；
+- LCP 408/228（home）、324/208、608/220、700/144（1440/390）；CLS home 0.0195 持平、其余 0/0.0025/0.0077（search 390 既有 0.0995 降至 0.0077）；0 长任务；
+- check 0 errors/0 warnings + eslint 0 + 主题四联 OK；test **103 文件 / 546**；build 通过。
+
+### 四、鸿蒙镜像（代码/构建/布局树）
+
+- `SystemAvatar`：占位层始终渲染（有 name 首字母 trim+slice(0,1) / 无 name 人形图标，accentMuted 底 + textSecondary 字）+ Image 覆盖 + onComplete 渐显（reduced 直接显示）+ onError 保留占位；decorative/alt/尺寸不变；
+- 通知头像改 SystemAvatar（相邻含姓名时 decorative）；缩略图 6 处统一占位 + fade + 失败保留；群 hero 渐变登记为已有意义占位；搜索 URL N/A；
+- build 断言无 `.ets` 晚于构建；check:theme/parity/6 页布局树正常。

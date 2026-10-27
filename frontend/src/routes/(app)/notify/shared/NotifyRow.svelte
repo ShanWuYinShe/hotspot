@@ -92,7 +92,7 @@
 			>拒绝</button>
 		{/if}
 		{#if notif.momentImage}
-			<div class="rounded-lg overflow-hidden size-10 border border-border-subtle/50 shadow-xs">
+			<div class="media-placeholder rounded-lg overflow-hidden size-10 border border-border-subtle/50 shadow-xs">
 				<img
 					src={optimizedImageUrl(notif.momentImage, { width: 88 })}
 					srcset={buildImageSrcSet(notif.momentImage, avatarImageWidths(44))}

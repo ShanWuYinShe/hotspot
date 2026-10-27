@@ -171,16 +171,18 @@
 								class="flex items-center gap-3 px-4 py-3.5"
 							>
 								{#if moment.images?.[0]?.url}
-		<img
-			src={presetImageUrl(moment.images[0].url, 'thumb', 200)}
-			srcset={presetSrcSet(moment.images[0].url, 'thumb')}
-			sizes="40px"
-			alt=""
-			loading="lazy"
-			decoding="async"
-			class="size-10 rounded-sm object-cover"
-			use:fadeImage
-		/>
+		<span class="media-placeholder flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-sm">
+			<img
+				src={presetImageUrl(moment.images[0].url, 'thumb', 200)}
+				srcset={presetSrcSet(moment.images[0].url, 'thumb')}
+				sizes="40px"
+				alt=""
+				loading="lazy"
+				decoding="async"
+				class="size-10 object-cover"
+				use:fadeImage
+			/>
+		</span>
 								{:else}
 									<div
 										class="flex size-10 items-center justify-center rounded-sm bg-accent-soft"

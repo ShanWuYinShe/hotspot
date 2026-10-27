@@ -90,6 +90,7 @@ export struct SearchPage {
   @State discoveryTopics: string[] = [];
   /** R6：搜索结果图已加载 URL（onComplete 渐显） */
   @State loadedImageUrls: string[] = [];
+  @State failedImageUrls: string[] = [];
 
   private readonly RECENT_SEARCHES_KEY: string = 'search_recent';
   @State hasSearched: boolean = false;
@@ -122,6 +123,17 @@ export struct SearchPage {
 
   private isImageLoaded(url: string): boolean {
     return this.loadedImageUrls.indexOf(url) >= 0;
+  }
+
+  private isImageFailed(url: string): boolean {
+    return this.failedImageUrls.indexOf(url) >= 0;
+  }
+
+  private markImageFailed(url: string): void {
+    if (!url || this.isImageFailed(url)) return;
+    const next: string[] = this.failedImageUrls.slice();
+    next.push(url);
+    this.failedImageUrls = next;
   }
 
   private markImageLoaded(url: string): void {
@@ -1333,17 +1345,35 @@ export struct SearchPage {
   buildMomentSearchCard(item: MomentItem) {
     Column({ space: 0 }) {
       if (item.images && item.images.length > 0) {
-        Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(item.images[0].url), 320))
+        // R8：占位 icon 常驻底层，图片 fade，失败保留占位
+        Stack() {
+          Column() {
+            LucideIcon({
+              icon: AppIcon.IMAGES,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
+              color: this.getCurrentThemePalette().textTertiary
+            })
+          }
           .width('100%')
-          .height(this.calculateSearchImageHeight(item))
-          .objectFit(ImageFit.Cover)
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
           .backgroundColor(this.getSurfaceSubtle())
-          .opacity(this.isImageLoaded(item.images[0].url) || MotionUtil.reduced() ? 1 : 0)
-          .animation({
-            duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
-            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
-          })
-          .onComplete(() => this.markImageLoaded(item.images[0].url))
+          if (!this.isImageFailed(item.images[0].url)) {
+            Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(item.images[0].url), 320))
+              .width('100%')
+              .height('100%')
+              .objectFit(ImageFit.Cover)
+              .opacity(this.isImageLoaded(item.images[0].url) || MotionUtil.reduced() ? 1 : 0)
+              .animation({
+                duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+                curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+              })
+              .onComplete(() => this.markImageLoaded(item.images[0].url))
+              .onError(() => this.markImageFailed(item.images[0].url))
+          }
+        }
+        .width('100%')
+        .height(this.calculateSearchImageHeight(item))
       } else {
         Column() {
           Text(item.description.substring(0, 60))

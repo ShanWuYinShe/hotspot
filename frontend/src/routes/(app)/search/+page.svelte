@@ -13,6 +13,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
 	import type { MomentItem } from '@/api/types';
+	import { buildSearchUrl, parseSearchUrl } from '@/lib/search-url';
 
 	// 搜索页：最近搜索（localStorage）、热门搜索、推荐话题、全部/用户/动态/话题 Tab。
 	// 对齐 Figma Make SearchPage：卡片使用 surface-primary + border 的 token 类，
@@ -27,10 +28,18 @@
 		}
 	}
 
-	let query = $state('');
+	// URL 状态（Round 8）：`?query=&tab=&tag=` 初始化恢复；输入提交/切 Tab/点 tag 用
+	// history.replaceState 同步（不新增历史项）；popstate 前进/后退恢复。
+	const initialUrlState =
+		typeof window !== 'undefined'
+			? parseSearchUrl(window.location.search)
+			: { query: '', tab: 'all' as TabType, tag: null };
+	let query = $state(initialUrlState.query);
 	/** 非空 = tag 语义搜索（moments/search tag 参数）；输入/最近搜索路径复位为 null */
-	let searchTag = $state<string | null>(null);
-	let tab = $state<TabType>('all');
+	let searchTag = $state<string | null>(initialUrlState.tag);
+	let tab = $state<TabType>(initialUrlState.tab as TabType);
+	/** popstate/URL 应用期间跳过 replaceState，避免循环 */
+	let applyingFromUrl = false;
 	let searchSeq = 0;
 	let recent = $state<string[]>(readRecent());
 	let discoveryTopics = $state<string[]>([]);
@@ -65,6 +74,44 @@
 
 	const keyword = $derived(query.trim().toLowerCase());
 
+	// URL 写入仅发生在「明确搜索动作」：提交(Enter)/选最近·热门/点 tag/切 Tab/Esc·清空。
+	// 输入防抖与联想不写 URL（避免历史栏/地址栏随输入抖动）；replaceState 不新增历史项。
+	function commitSearchUrl() {
+		if (typeof window === 'undefined' || applyingFromUrl) return;
+		const next = buildSearchUrl({ query: query.trim(), tab, tag: searchTag });
+		const current = window.location.pathname + window.location.search;
+		if (next !== current) window.history.replaceState(window.history.state, '', next);
+	}
+
+	// 初始归一化：非法 tab/冗余参数只修正地址栏一次（不新增历史、不触发搜索）
+	if (typeof window !== 'undefined') {
+		const canonical = buildSearchUrl({
+			query: initialUrlState.query,
+			tab: initialUrlState.tab as TabType,
+			tag: initialUrlState.tag
+		});
+		if (canonical !== window.location.pathname + window.location.search) {
+			window.history.replaceState(window.history.state, '', canonical);
+		}
+	}
+
+	// 浏览器前进/后退（popstate）恢复搜索态；刷新/分享由上面 initialUrlState 承担。
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		const onPopState = () => {
+			const state = parseSearchUrl(window.location.search);
+			applyingFromUrl = true;
+			query = state.query;
+			searchTag = state.tag;
+			tab = state.tab as TabType;
+			applyingFromUrl = false;
+			// 不在此直接 doSearch：防抖搜索键含 query/tag，恢复后由统一防抖路径触发一次，
+			// 避免 popstate 与防抖各发一轮请求（深链/后退均只触发一组搜索）。
+		};
+		window.addEventListener('popstate', onPopState);
+		return () => window.removeEventListener('popstate', onPopState);
+	});
+
 	// 输入联想（search/suggest，spec prefix 1-50 必填、types=['tag']）：
 	// 关键词非空时防抖取 tag 联想，作为结果页顶部的「相关话题」快速入口。
 	// 空查询不调 suggest（spec 空串会 10000），发现态只保留最近搜索。
@@ -82,6 +129,10 @@
 
 	// 发现态热门话题：只拉一次（无查询时展示，有查询时不打扰结果态）
 	$effect(() => {
+		// 有查询时不拉发现态推荐（结果态不渲染这些区块；也避免深链触发两组 search 请求）；
+		// 清空查询后自动重新拉取。
+		void keyword;
+		if (keyword) return;
 		const controller = new AbortController();
 		void searchMoments({ sort_by: 'popular', pagination: { limit: 12 } }, { signal: controller.signal })
 			.then((res) => {
@@ -193,9 +244,14 @@
 
 	// 结果搜索同样统一 300ms 防抖（SEARCH_DEBOUNCE_MS）；请求竞态由 doSearch 内部 seq 承载。
 	// 行为微调：清空关键词由「防抖到期后清空结果」改为立即清空（输入框已空时旧结果不应滞留）。
+	const SEARCH_KEY_SEP = '\u0000';
 	createDebouncedSearch({
-		query: () => keyword,
-		fetch: (term, signal) => doSearch(term, signal).then(() => undefined),
+		// 键含 tag：同一关键词下 tag 语义切换（深链/后退恢复）也会重新搜索一次
+		query: () => keyword + SEARCH_KEY_SEP + (searchTag ?? ''),
+		fetch: (key, signal) => {
+			const term = key.split(SEARCH_KEY_SEP)[0] ?? '';
+			return doSearch(term, signal).then(() => undefined);
+		},
 		apply: () => {},
 		clear: () => void doSearch('')
 	});
@@ -208,6 +264,7 @@
 		query = value;
 		remember(value);
 		tab = 'all';
+		commitSearchUrl();
 	};
 
 	// 热门话题点击：按 tag 语义搜索（moments/search 的 tag 参数精确匹配
@@ -219,6 +276,7 @@
 		query = value;
 		remember(value);
 		tab = 'all';
+		commitSearchUrl();
 	};
 
 	const hasResults = $derived(results.users.length + results.moments.length + results.topics.length + results.groups.length > 0);
@@ -261,6 +319,7 @@
 				searchTag = null;
 				input.value = '';
 				input.dispatchEvent(new Event('input', { bubbles: true }));
+				commitSearchUrl();
 			}
 			input.focus();
 			return;
@@ -298,10 +357,18 @@
 					<!-- 占位词与全站术语对齐:瞬间(非动态)并补群组维度(Gemini 审查 r11) -->
 					<SearchInput
 						value={query}
-						onChange={(v) => { searchTag = null; query = v; }}
+						onChange={(v) => {
+							searchTag = null;
+							query = v;
+							if (!v.trim()) commitSearchUrl();
+						}}
 						placeholder="搜索用户、瞬间、群组、地点或话题"
 						autofocus
-						onEnter={(v) => v.trim() && remember(v.trim())}
+						onEnter={(v) => {
+							if (!v.trim()) return;
+							remember(v.trim());
+							commitSearchUrl();
+						}}
 						class="px-4 py-2.5 rounded-full shadow-xs"
 					/>
 				</div>
@@ -338,7 +405,10 @@
 			{hasResults}
 			{results}
 			suggestions={discoveryTopics.filter((t) => t.toLowerCase() !== keyword)}
-			onTabChange={(id) => (tab = id)}
+			onTabChange={(id) => {
+				tab = id;
+				commitSearchUrl();
+			}}
 			onChoose={choose}
 		/>
 	{/if}

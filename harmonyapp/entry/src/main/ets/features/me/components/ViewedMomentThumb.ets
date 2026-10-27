@@ -14,6 +14,8 @@ import { PageNames } from '../../../constants/AppConstants';
 import { MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { MomentItem } from '../../../core/types/api';
 import { cleanPlainText } from '../../../core/utils/FormatUtil';
+import { LucideIcon } from '../../../components/LucideIcon';
+import { AppIcon } from '../../../components/SystemIcon';
 
 @Component
 export struct ViewedMomentThumb {
@@ -21,21 +23,38 @@ export struct ViewedMomentThumb {
   palette: AppThemePalette | null = null;
   @State pressed: boolean = false;
   @State imageLoaded: boolean = false;
+  @State imageFailed: boolean = false;
 
   build() {
     Stack() {
       if (this.moment.images && this.moment.images.length > 0) {
-        Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.moment.images[0].url), 320))
-          .width('100%')
-          .height('100%')
-          .objectFit(ImageFit.Cover)
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .opacity(this.imageLoaded || MotionUtil.reduced() ? 1 : 0)
-          .animation({
-            duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
-            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+        // R8 占位层：图标常驻图片底层，加载中/失败不出现纯灰块
+        Column() {
+          LucideIcon({
+            icon: AppIcon.IMAGES,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
+            color: this.palette?.textTertiary
           })
-          .onComplete(() => { this.imageLoaded = true; })
+        }
+        .width('100%')
+        .height('100%')
+        .justifyContent(FlexAlign.Center)
+        .borderRadius(DesignConstants.RADIUS.LG)
+
+        if (!this.imageFailed) {
+          Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.moment.images[0].url), 320))
+            .width('100%')
+            .height('100%')
+            .objectFit(ImageFit.Cover)
+            .borderRadius(DesignConstants.RADIUS.LG)
+            .opacity(this.imageLoaded || MotionUtil.reduced() ? 1 : 0)
+            .animation({
+              duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+              curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+            })
+            .onComplete(() => { this.imageLoaded = true; })
+            .onError(() => { this.imageFailed = true; })
+        }
       } else {
         Column() {
           Text(cleanPlainText(this.moment.description))

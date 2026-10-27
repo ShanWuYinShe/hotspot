@@ -48,7 +48,9 @@
 | `overlays/MenuPanel` | 弹出菜单面板唯一实现（标题 + 选项行 + 可选底部动作；容器走 `ui/popover` Content）。已有：地图源菜单、地图筛选菜单。新菜单只传数据，不复制行结构 |
 | `data-display/EmptyState` / `InlineLoading` / `LoadError` / `ListEnd`、`overlays/ToastViewport`、`shared/ConnectionBanner` | 状态反馈。`EmptyState` 可选 `spotlight`（2026-10-26）：超大空态的信标装饰层（光晕 + 双环 + 四向星点，纯 token、无动画、`aria-hidden`）；小面板空态不得开启 |
 | `data-display/Skeleton` / `SkeletonList` / `SkeletonFeed`（2026-10-26 新增，2026-10-27 更新） | 列表/信息流**首屏骨架屏**。`Skeleton` 基础占位块（`aria-hidden`）；`SkeletonList` 行式（前导圆 36/40/44/48 + 两行文本条，`role=status + aria-busy`，ListContainer 内自动补 listitem）；`SkeletonFeed` 卡式（2026-10-27 起同步整卡图片卡：图片块 + 底部文本条，与真实卡同比例/同文字位置，保证零位移；另有 `card`/`portrait` 形态）。几何对齐鸿蒙 `Skeleton`/`SkeletonShimmer`，动效 `--cst-motion-skeleton`(1500ms)，reduced-motion 停用 |
-| `shared/Avatar` | 头像（尺寸/形状/状态点/环）。2026-10-27 R6：占位底 + 加载成功渐显 + 失败首字母/图标降级；图片经 `lib/images.ts` avatar 档（显示尺寸 2x/3x） |
+| `shared/Avatar` | 头像（尺寸/形状/状态点/环）。R6：图片经 `lib/images.ts` avatar 档、渐显；**R8：占位层始终渲染**（有 name 首字母 / 无 name UserRound，`aria-hidden`）+ 图片 absolute 覆盖渐显、失败保留占位不闪烁；占位字用 text-primary（accent-bg 上 3 主题×亮暗 ≥4.5） |
+| `.media-placeholder`（utilities） | **媒体占位统一底层**（R8）：主题 accent 渐变/图标占位，图片渐显覆盖、失败保留；用于群封面/通知·搜索·rail·主页瞬间缩略图/详情封面与九宫格/群 hero；有 Skeleton 的列表不叠加（design-system §20.10） |
+| `lib/search-url.ts` | **搜索 URL 状态契约**（R8）：`?query=&tab=&tag=` 解析/序列化；`people/posts` 为内部 Tab（兼容 `users/moments` 别名）、非法 tab→all、空 query 清空全部参数；replaceState 同步（不增历史）、popstate 恢复。路由契约见 `hotspot-frontend-routing` skill |
 | `lib/images.ts` | **图片管线唯一入口**（R6）：`optimizedImageUrl`（仅 unsplash 追加/覆盖 `auto=format&fit=crop&q&w`，其他域名原样）、6 档预设（avatar/thumb/card/cover/hero/full）、`presetSrcSet`、`avatarImageWidths`、`fadeImage` 渐显 action；规范见 design-system §20.8 |
 | `lib/motion.ts` | **动效唯一入口**（R7）：`MOTION`（enter 180 / exit 150 / pop 220）、`prefersReducedMotion()`、`motionDuration()`、`pop` action、`playPageEnter()`、`toastExit`；CSS `cst-page-enter` / `cst-state-pop` / `cst-comment-enter`；规范见 design-system §20.9 |
 

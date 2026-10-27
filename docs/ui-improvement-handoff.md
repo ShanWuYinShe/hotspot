@@ -1,4 +1,4 @@
-# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-18）
+# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-19）
 
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
@@ -6,7 +6,20 @@
 
 ## 已完成基线（不要回退）
 
-### 2026-10-27 本轮（Round 18，微动效与状态反馈）
+### 2026-10-27 本轮（Round 19，媒体占位/降级 + 搜索 URL 状态）
+
+- **媒体占位与降级**：Avatar 占位层**始终渲染**（有 name 首字母 / 无 name UserRound，aria-hidden）+ 图片 absolute 覆盖 + 渐显；
+  失败保留占位不闪烁；群封面/通知·搜索·rail·主页瞬间缩略图/详情封面与九宫格/群 hero 统一 `.media-placeholder` 主题渐变占位；
+  有 Skeleton 列表不叠加；占位文字 accent-bg 上 3 主题×亮暗 ≥4.5（text-primary：vibrant 11.75/9.25、forest 11.58/10.11、inkwash 10.21/8.49）；
+  慢网（延迟 3.5s）4 页×2 视口「加载中 vs 完成」无灰块、无 CLS。
+- **搜索 URL 状态**：新增 `lib/search-url.ts`（`?query=&tab=&tag=`；people/posts 为内部 Tab、兼容 users/moments 别名；非法 tab→all；空 query 清空全部参数）；
+  深链恢复只 1 组搜索请求；`replaceState` 同步不增历史；popstate 前进后退恢复；输入防抖/联想不写 URL；Esc 清空回发现态；
+  键盘/防抖/最近搜索不回归。
+- **鸿蒙镜像**：`SystemAvatar` 占位始终渲染 + onComplete 渐显（reduced 直接显示）+ onError 保留；通知头像改 SystemAvatar；
+  6 处缩略图占位/fade/失败保留；群 hero 渐变登记；搜索 URL N/A；build/check:theme/parity/布局树全绿。
+- **验证**：axe 50 runs 0；QA 23/23；check 0/0；test **103 文件/546**；build 通过；CLS search 390 既有 0.0995→0.0077、home 0.0195 持平；0 长任务。
+
+### 2026-10-27 上一轮（Round 18，微动效与状态反馈）
 
 - **动效入口**：新增 `frontend/src/lib/motion.ts`（enter 180/exit 150/pop 220；`prefersReducedMotion/motionDuration/pop/playPageEnter/toastExit`）+ CSS
   `cst-page-enter`/`cst-state-pop`/`cst-comment-enter`；鸿蒙 `MotionUtil` 扩展为唯一动画入口（contentEnter/statePop/popScale/enterOffset，reduced 直接终态）。
@@ -237,10 +250,11 @@
 > 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
 > 下一轮从 1 开始按序接。
 
-1. **鸿蒙真机像素/TalkBack/流量/动效验收（R13–R18 遗留，最高优先）**：六轮鸿蒙改动均只完成构建/布局树/token 校验；
+1. **鸿蒙真机像素/TalkBack/流量/动效/占位验收（R13–R19 遗留，最高优先）**：七轮鸿蒙改动均只完成构建/布局树/token 校验；
    真机 hdc 离线导致三主题×明暗矩阵、灰度 Tab、压图文字对比度、软岛阴影/圆角/gap、按钮 hover、未读态、
    骨架零位移、整卡图片流量/渐显像素、头像 2x vs 3x、TalkBack 顺序、reduced-motion 系统路径、web↔鸿蒙并排 compare 挂起。
-   设备恢复后按 `.workwork/ui-polish-1026/{r2,r3,r4,r5,r6}/ha/report.md` checklist 执行。
+   设备恢复后按 `.workwork/ui-polish-1026/{r2,r3,r4,r5,r6,r7,r8}/ha/report.md` checklist 执行（r7 增补动效手感/中间帧、
+   r8 增补占位/渐显/失败态与慢网表现）。
 2. **长尾自定义卡收尾（R15 已基本完成）**：剩余 demo-only 演示卡（`/?demo=`）与地图面板按例外保留；
    新增页面按 §19/§19.5 判定；鸿蒙后台仅 AdminOverview（其余 web-only N/A）、首页长尾组件 N/A。
 3. **鸿蒙氛围画布实例数/内存优化（R12 遗留）**：当前每 `fillHeight` 页一块全屏 Canvas（Tab 页常驻，实测 live 2→5，
@@ -279,8 +293,12 @@
     否则 reduced 下仍播。
 29. **鸿蒙动效残留（R18）**：MomentFeedCard preview 变体动作条未单独接 pop（overlay 卡由 MediaActionButton 覆盖）、SearchPage 用户行无关注 UI（toggleFollow 已备函数级 pop）、
     GroupPage joinGroup 函数级已接；下轮按 UI 入口补齐或登记 N/A。
-30. **search 390 既有 CLS 0.0995（R18 登记）**：discovery 位移为既有问题（非本轮引入），接近 0.1 阈值，建议后续优化到 <0.05；
-    另：动效相关 QA 建议在 reduced-motion 下取基线截图，避免中间帧偶发 diff。
+30. **search 390 既有 CLS 0.0995（R18 登记，R19 已降至 0.0077）**：r8 的媒体占位/结构改动顺带消除该位移，后续回归按 0.0077 基线看。
+    动效相关 QA 建议在 reduced-motion 下取基线截图，避免中间帧偶发 diff。
+31. **鸿蒙详情图片失败态（R19）**：MomentDetail 图片有渐显+主题底但无失败图标，登记下轮统一「失败保留占位/图标」；
+    另：`delay-images.js` 慢网模拟目前在 `.workwork` 未入库，建议后续并入 browser QA 脚本做常规回归。
+32. **图片失败降级统一审计（R19）**：本轮覆盖头像/封面/缩略图；剩余裸 `<img>`（如部分详情/编辑器预览）按「占位层+失败降级」
+    逐个接入或登记 N/A（新页面/新组件按 design-system §20.10 自查）。
 
 ## 遗留观察（已评估，保留现状；非缺陷）
 

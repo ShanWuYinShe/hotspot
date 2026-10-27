@@ -10,6 +10,7 @@ import { TabsPillGroup, TabItem } from './TabsPillGroup';
 import { AppRouter, AnnouncementsRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../core/router/AppRouter';
 import { PageNames } from '../constants/AppConstants';
 import { SystemToast } from './SystemToast';
+import { SystemAvatar } from './SystemAvatar';
 import { SystemDialog } from './SystemDialog';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 import { MotionUtil } from '../core/accessibility/MotionUtil';
@@ -668,12 +669,15 @@ export struct NotificationCenter {
       // 头像 + 类型图标徽章
       Stack({ alignContent: Alignment.Center }) {
         if (notification.payload?.actor?.avatar_url) {
-          // 经 MediaUrlUtil 归一：avatar_url 为 /public/ 相对代理路径时拼 API origin
-          Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(notification.payload.actor.avatar_url), 80))
-            .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
-            .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .objectFit(ImageFit.Cover)
+          // R8：统一 Avatar 原语（底层首字母/人形图标占位 + 渐显 + 失败保留占位）
+          // 相邻正文已含 actor 姓名 → decorative 移出无障碍树
+          SystemAvatar({
+            avatarUrl: notification.payload.actor.avatar_url,
+            name: notification.payload.actor.nickname ?? '',
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+            shape: 'circle',
+            decorative: true
+          })
         } else {
           Row() {
             LucideIcon({

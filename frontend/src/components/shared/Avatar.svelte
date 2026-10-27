@@ -73,6 +73,19 @@
 	class="relative shrink-0 overflow-hidden bg-surface-subtle {className}"
 	style="width:{px}px;height:{px}px;border-radius:{borderRadius};{ring ? 'border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);' : ''}{style}"
 >
+	<!-- 占位底层始终渲染（加载中/失败可见）：首字母或人形图标 + accent 底，
+	     不再出现纯灰空块；图片以 absolute 覆盖并 onload 渐显。 -->
+	<span
+		class="absolute inset-0 flex items-center justify-center bg-accent-bg text-text-primary"
+		aria-hidden="true"
+		style={initial ? `font-size:${Math.round(px * 0.42)}px;` : ''}
+	>
+		{#if initial}
+			{initial}
+		{:else}
+			<UserRound class="size-1/2" strokeWidth={1.5} aria-hidden="true" />
+		{/if}
+	</span>
 	{#if showImage}
 		<img
 			src={optimizedImageUrl(src, { width: px * 2 })}
@@ -81,21 +94,10 @@
 			loading="lazy"
 			decoding="async"
 			alt={decorative ? '' : (name ?? '')}
-			class="h-full w-full object-cover"
+			class="absolute inset-0 h-full w-full object-cover"
 			use:fadeImage
 			onerror={() => (hasError = true)}
 		/>
-	{:else if initial}
-		<span
-			class="flex h-full w-full items-center justify-center text-text-secondary bg-accent-bg"
-			style="font-size:{Math.round(px * 0.42)}px;"
-		>
-			{initial}
-		</span>
-	{:else}
-		<span class="flex h-full w-full items-center justify-center text-text-secondary bg-accent-bg">
-			<UserRound class="size-1/2" strokeWidth={1.5} aria-hidden="true" />
-		</span>
 	{/if}
 	{#if badge}
 		{@render badge()}
