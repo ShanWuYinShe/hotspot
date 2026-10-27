@@ -4,6 +4,8 @@
 	import { cn } from '@/lib/utils';
 	import { decideScroll, restoreScrollTop, savePosition } from '@/lib/scroll-positions';
 	import { playPageEnter } from '@/lib/motion';
+	import { announceRoute } from '@/lib/route-announcer';
+	import BackToTop from '@/components/navigation/BackToTop.svelte';
 	import PageViewport from './PageViewport.svelte';
 
 	// 布局组件（layout/page）。
@@ -57,7 +59,32 @@
 
 	afterNavigate((nav) => {
 		// 页面进场：仅客户端导航（link/goto/form/popstate），首屏 enter 不播（保护 LCP）。
-		if (nav.type !== 'enter') playPageEnter(contentEl);
+		if (nav.type !== 'enter') {
+			playPageEnter(contentEl);
+			// SPA 焦点与播报：优先聚焦页面 h1（退化为 main），preventScroll 不打断滚动恢复；
+			// 首屏 enter 不聚焦/不播报；返回/前进同样生效。
+			requestAnimationFrame(() => {
+				const heading = contentEl?.querySelector('h1') as HTMLElement | null;
+				const title = heading?.textContent ?? '';
+				// 优先聚焦主内容区（main#main-content）：读屏从新页面开始，且避免
+				// 「聚焦 h1 + announcer」重复念标题；main 不可聚焦时回退 h1 并跳过播报。
+				const mainTarget = mainEl;
+				if (mainTarget) {
+					mainTarget.setAttribute('tabindex', '-1');
+					mainTarget.focus({ preventScroll: true });
+				}
+				if (document.activeElement === mainTarget) {
+					announceRoute(title);
+					return;
+				}
+				const fallback: HTMLElement | null = heading ?? contentEl;
+				if (fallback) {
+					fallback.setAttribute('tabindex', '-1');
+					fallback.focus({ preventScroll: true });
+				}
+				// 兜底路径不叠加播报（避免重复）
+			});
+		}
 		const decision = decideScroll(nav.type, nav.from?.url.pathname ?? null, nav.to?.url.pathname ?? null, savedTops);
 		if (decision.action === 'keep' || !mainEl) return;
 		restoreScrollTop(mainEl, decision.action === 'restore' ? decision.top : 0);
@@ -66,6 +93,7 @@
 
 <main
 	id="main-content"
+	tabindex="-1"
 	bind:this={mainEl}
 	{...(desktopPane ? { 'data-desktop-main': '' } : {})}
 	class={cn(
@@ -83,4 +111,5 @@
 			{@render children()}
 		</PageViewport>
 	</div>
+	<BackToTop scrollEl={() => mainEl} />
 </main>

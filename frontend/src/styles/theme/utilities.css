@@ -825,6 +825,30 @@
      Round 2 去硬边：改半透明画布色 + 背景模糊，让整窗氛围层透上来（原不透明底在
      氛围画布上形成一条「白带」，左右边缘读起来像页面框）；blur 保证 sticky 滚动时
      下方文字不穿透。 */
+  /* 页头滚动感知（Round 9）：顶部透明 → 滚动后 glass。
+     过渡 150ms，reduced-motion 由全局规则瞬时；不改变 sticky 定位/布局。 */
+  .page-header-scroll {
+    background-color: transparent;
+    border-bottom: var(--cst-border-width-hairline) solid transparent;
+    transition:
+      background-color var(--cst-motion-rapid) var(--cst-ease-standard),
+      border-color var(--cst-motion-rapid) var(--cst-ease-standard),
+      box-shadow var(--cst-motion-rapid) var(--cst-ease-standard);
+  }
+  .page-header-scrolled {
+    background-color: color-mix(in srgb, var(--cst-surface-page) 78%, transparent);
+    -webkit-backdrop-filter: blur(var(--cst-blur-md)) saturate(1.4);
+    backdrop-filter: blur(var(--cst-blur-md)) saturate(1.4);
+    border-bottom-color: var(--cst-border-default);
+    box-shadow: var(--cst-elevation-nav);
+  }
+
+  /* SPA 导航程序化焦点：h1/main 不显示默认轮廓；交互元素 focus-ring 不受影响。 */
+  h1[tabindex='-1']:focus,
+  #main-content:focus {
+    outline: none;
+  }
+
   .page-header-solid {
     background-color: color-mix(in srgb, var(--cst-surface-page) 78%, transparent);
     -webkit-backdrop-filter: blur(var(--cst-blur-md)) saturate(1.4);

@@ -20,6 +20,8 @@
 >
 	跳到主要内容
 </a>
+<!-- SPA 路由播报：导航后由 RoutedContentViewport 更新文本（首屏不播） -->
+<div id="route-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 <MainLayout>
 	{@render children()}
 </MainLayout>

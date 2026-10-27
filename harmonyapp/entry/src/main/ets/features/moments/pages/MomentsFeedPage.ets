@@ -30,6 +30,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
+import { BackToTopButton } from '../../../components/BackToTopButton';
 import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
@@ -85,6 +86,9 @@ export struct MomentsFeedPage {
   /** R7 内容进场（只包内容区；首屏为导航进入，播放） */
   @State private enterOpacity: number = 1;
   @State private enterOffset: number = 0;
+  @State private showBackToTop: boolean = false;
+  @State private viewportHeight: number = 0;
+  private backToTopScroller: Scroller = new Scroller();
   private enterPlayed: boolean = false;
   /** 动态 tag 列表（从前 N 条 moment.tags 聚合去重，对齐前端 moments tagsList 派生模式） */
   @State hotTags: string[] = [];
@@ -271,6 +275,34 @@ export struct MomentsFeedPage {
     this.enterOffset = 0;
   }
 
+  private updateBackToTop(): void {
+    const offset: OffsetResult | undefined = this.backToTopScroller.currentOffset();
+    const y: number = offset ? offset.yOffset : 0;
+    const threshold: number = this.viewportHeight > 0 ? this.viewportHeight * 1.5 : 1200;
+    const next: boolean = y > threshold;
+    if (next !== this.showBackToTop) {
+      this.showBackToTop = next;
+    }
+  }
+
+  private scrollToTop(): void {
+    this.showBackToTop = false;
+    this.backToTopScroller.scrollTo({
+      xOffset: 0,
+      yOffset: 0,
+      animation: { duration: MotionUtil.reduced() ? 0 : 300, curve: Curve.EaseInOut }
+    });
+  }
+
+  @Builder
+  private buildBackToTopOverlay() {
+    BackToTopButton({
+      visible: this.showBackToTop,
+      onTap: () => { this.scrollToTop(); }
+    })
+      .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+  }
+
   build() {
   NavDestination() {
   PageShellContainer({ variant: 'feed-medium', currentBreakpoint: this.currentBreakpoint}) {
@@ -411,7 +443,7 @@ export struct MomentsFeedPage {
         // Refresh 直接包可滚动的 WaterFlow（子组件需为滚动组件下拉刷新才生效）
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           Column() {
-            WaterFlow() {
+            WaterFlow({ scroller: this.backToTopScroller }) {
               // LazyForEach 虚拟化（审查 P1-9：替换全量 ForEach，长列表滚动不掉帧）；
               // 数据源由 refreshVisibleDataSource 保持与标签过滤同步
               LazyForEach(this.hotMomentsDataSource, (moment: MomentItem, index: number) => {
@@ -443,6 +475,8 @@ export struct MomentsFeedPage {
             .scrollBar(BarState.Off)
             // 触底加载更多（cursor 分页，P2-3：突破首屏 20 条封顶）
             .onReachEnd(() => { this.loadMoreMoments(); })
+            .onDidScroll(() => { this.updateBackToTop(); })
+            .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
 
             // 分页状态条（WaterFlow 外常驻，规避 FlowItem 跨列占位；照 NearbyUsersListPage 模式）
             if (this.hasMore) {
@@ -490,6 +524,7 @@ export struct MomentsFeedPage {
       .opacity(this.enterOpacity)
       .translate({ y: this.enterOffset })
     }
+    .overlay(this.buildBackToTopOverlay(), { align: Alignment.BottomEnd })
     .width('100%')
     .height('100%')
   }

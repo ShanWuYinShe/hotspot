@@ -19,6 +19,7 @@ import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
+import { BackToTopButton } from '../../../components/BackToTopButton';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
@@ -77,6 +78,9 @@ export struct HomePage {
   @State private enterOffset: number = 0;
   private enterPlayed: boolean = false;
   private hasCompletedFirstLoad: boolean = false;
+  @State private showBackToTop: boolean = false;
+  @State private viewportHeight: number = 0;
+  private backToTopScroller: Scroller = new Scroller();
 
   private isDestroyed: boolean = false;
 
@@ -245,6 +249,34 @@ export struct HomePage {
 
   // ==================== UI ====================
 
+  private updateBackToTop(): void {
+    const offset: OffsetResult | undefined = this.backToTopScroller.currentOffset();
+    const y: number = offset ? offset.yOffset : 0;
+    const threshold: number = this.viewportHeight > 0 ? this.viewportHeight * 1.5 : 1200;
+    const next: boolean = y > threshold;
+    if (next !== this.showBackToTop) {
+      this.showBackToTop = next;
+    }
+  }
+
+  private scrollToTop(): void {
+    this.showBackToTop = false;
+    this.backToTopScroller.scrollTo({
+      xOffset: 0,
+      yOffset: 0,
+      animation: { duration: MotionUtil.reduced() ? 0 : 300, curve: Curve.EaseInOut }
+    });
+  }
+
+  @Builder
+  private buildBackToTopOverlay() {
+    BackToTopButton({
+      visible: this.showBackToTop,
+      onTap: () => { this.scrollToTop(); }
+    })
+      .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+  }
+
   build() {
     // 横向留白由容器 gutter 统一提供（页面不再自加左右 padding）
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
@@ -335,6 +367,7 @@ export struct HomePage {
         .refreshOffset(64)
         .onRefreshing(() => { this.refreshHome(); })
       }
+      .overlay(this.buildBackToTopOverlay(), { align: Alignment.BottomEnd })
       .width('100%')
       .height('100%')
     }
@@ -449,12 +482,14 @@ export struct HomePage {
     .edgeEffect(EdgeEffect.None)
     .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XL })
     .scrollBar(BarState.Off)
+    .onDidScroll(() => { this.updateBackToTop(); })
+    .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
   }
 
   /** 动态列表：全面采用高质感富媒体社交卡片（MomentFeedCard） */
   @Builder
   private buildFeed() {
-    List({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP }) {
+    List({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP, scroller: this.backToTopScroller }) {
       ForEach(this.currentTabMoments(), (moment: MomentItem, index: number) => {
         ListItem() {
           MomentFeedCard({

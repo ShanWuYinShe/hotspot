@@ -22,6 +22,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
+import { BackToTopButton } from '../../../components/BackToTopButton';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { UserItem, GroupItem, MomentItem, SearchUsersRequest, SearchGroupsRequest, FetchNearbyMomentsRequest } from '../../../core/types/api';
@@ -171,6 +172,37 @@ export struct NearbyPage {
     this.enterOffset = 0;
   }
 
+  @State private showBackToTop: boolean = false;
+  @State private viewportHeight: number = 0;
+  private backToTopScroller: Scroller = new Scroller();
+  private updateBackToTop(): void {
+    const offset: OffsetResult | undefined = this.backToTopScroller.currentOffset();
+    const y: number = offset ? offset.yOffset : 0;
+    const threshold: number = this.viewportHeight > 0 ? this.viewportHeight * 1.5 : 1200;
+    const next: boolean = y > threshold;
+    if (next !== this.showBackToTop) {
+      this.showBackToTop = next;
+    }
+  }
+
+  private scrollToTop(): void {
+    this.showBackToTop = false;
+    this.backToTopScroller.scrollTo({
+      xOffset: 0,
+      yOffset: 0,
+      animation: { duration: MotionUtil.reduced() ? 0 : 300, curve: Curve.EaseInOut }
+    });
+  }
+
+  @Builder
+  private buildBackToTopOverlay() {
+    BackToTopButton({
+      visible: this.showBackToTop,
+      onTap: () => { this.scrollToTop(); }
+    })
+      .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+  }
+
   build() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
@@ -201,7 +233,7 @@ export struct NearbyPage {
         }
 
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-        Scroll() {
+        Scroll(this.backToTopScroller) {
           Column({ space: DesignConstants.SPACING.LG }) {
             // 统计卡：统计属地理轴，跟「附近」走（2026-10-19 由首页迁来，对齐 web 枢纽页）
             if (!this.isLoading && this.loadError === '') {
@@ -307,6 +339,8 @@ export struct NearbyPage {
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.None)
         .align(Alignment.Top)
+        .onDidScroll(() => { this.updateBackToTop(); })
+        .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
         }
         .width('100%')
         .layoutWeight(1)
@@ -316,6 +350,7 @@ export struct NearbyPage {
         .opacity(this.enterOpacity)
         .translate({ y: this.enterOffset })
       }
+      .overlay(this.buildBackToTopOverlay(), { align: Alignment.BottomEnd })
       .width('100%')
       .height('100%')
     }

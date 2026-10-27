@@ -391,3 +391,48 @@
 - `SystemAvatar`：占位层始终渲染（有 name 首字母 trim+slice(0,1) / 无 name 人形图标，accentMuted 底 + textSecondary 字）+ Image 覆盖 + onComplete 渐显（reduced 直接显示）+ onError 保留占位；decorative/alt/尺寸不变；
 - 通知头像改 SystemAvatar（相邻含姓名时 decorative）；缩略图 6 处统一占位 + fade + 失败保留；群 hero 渐变登记为已有意义占位；搜索 URL N/A；
 - build 断言无 `.ets` 晚于构建；check:theme/parity/6 页布局树正常。
+## 2026-10-27 补充（Round 9：页头滚动/SPA 焦点播报/回顶/reflow）
+
+**范围**：Web 7 文件（5 改 + 2 新增 `BackToTop.svelte`/`route-announcer.ts`，+104/−10）+ 鸿蒙 5 文件（+195/−9）；总计 17 修改 + 3 新增（+400/−21）；基线 `86705ced`。
+规范：design-system §20.11；证据：`.workwork/ui-polish-1026/r9/fe/{compare,raw}`、`r9/ha/{interim,logs}`。
+**鸿蒙真机仍离线**：回顶出现时机/位置/手感/遮挡、reduced 显隐待真机。
+
+### 一、页头滚动感知（Web）
+
+- 顶部（scrollTop ≤4px）：透明（bg rgba(0,0,0,0)、无 border/shadow/blur），不再有白带；
+- 滚动 >4px：`surface-page 78% + blur(16px) saturate(1.4)` + 细底边 + elevation，过渡 150ms（reduced 1e-05s）；
+- 三主题 × 亮暗矩阵数据一致（top 透明 / scrolled 玻璃）；页头滚动过程 **0 layout-shift**；滚动回顶恢复透明；18 处 PageHeader 调用无需改。
+- **修复既有缺陷（复核 N1）**：`SplitPageLayout` 桌面 3 分支 header 外层缺 sticky（`shrink-0` 包裹高度=header 高 → 内部 sticky 无行程），`/notify` 1440 滚动时 header 随内容滚出；
+  给外层加 `sticky top-0 z-sticky`（保留 ContentColumn 对齐）后复验：/notify 1440 scroll 200/400 header top=64 吸顶 + 玻璃态可见，回顶恢复透明；
+  /search /settings 1440、390 /notify 无回归，layout-shift 不变。
+
+### 二、SPA 焦点与播报（Web a11y）
+
+| 场景 | activeElement | announcer |
+|---|---|---|
+| 首屏 | BODY | 空（不播） |
+| 导航（首页→附近的人） | main#main-content | 「附近的人」 |
+| 后退 / 前进 | main#main-content | 「首页」/「附近的人」 |
+
+- 焦点程序化（preventScroll、outline none），skip link 首 Tab 仍可用、Enter 后焦点 main；不聚焦 h1（避免与 announcer 重复播报）；
+- announcer `aria-live=polite`/atomic、1.5s 去重。
+
+### 三、回到顶部（Web）
+
+- 滚动 >1.5 屏出现 44px 圆钮（桌面 bottom-6、距 MockBadge 28px；移动 bottom-24、距底栏 14px）；点击平滑回顶（reduced 直接跳），19ms 内隐藏（<200ms 防闪烁）；键盘可达、不可见移出无障碍树。
+
+### 四、Reflow（Web）
+
+- 320px × 34 页 + 200% 文本缩放（root 32px）× 8 关键页：documentElement/main 横向溢出 = 0；仅装饰 ambient SVG 超出被裁剪。
+
+### 五、回归
+
+- axe 39 页/50 runs **0 violation**；browser-qa 23/23 页 issues=[]、console 0；CLS home 0.0195 持平、notify 0.0069、me/detail 0；0 longtask；LCP 288–644ms；
+- check 0 errors/0 warnings + eslint 0 + 主题四联 OK；test **103 文件 / 546**；build 通过。
+
+### 六、鸿蒙镜像（代码/构建/布局树）
+
+- TopBar 滚动玻璃 **N/A**：`grep -rn '.sticky('` = 0，所有 TopBar 在滚动容器外、内容不穿过页头（依据+复现写入 ha report）；
+- 回顶：新增 `BackToTopButton.ets`（48vp、ARROW_UP、surface+hairline+shadow、opacity 180ms via MotionUtil/reduced 直接、不可见禁触+移出无障碍树、label「回到顶部」）；
+  Home/Nearby/Notification/Search/MomentsFeed 5 页接入（阈值 1.5×视口高、scrollTo 300ms/reduced 0ms、右下避底栏）；
+- SPA 焦点/TalkBack、320/reflow 登记 N/A；build 断言无 .ets 晚于构建、check:theme/parity/2 页布局树正常（搜索/通知/瞬间墙回顶未稳定端上触发，非崩溃，登记验证限制）。

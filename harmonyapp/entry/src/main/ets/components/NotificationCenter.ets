@@ -11,6 +11,7 @@ import { AppRouter, AnnouncementsRouteParam, GroupDetailRouteParam, MomentDetail
 import { PageNames } from '../constants/AppConstants';
 import { SystemToast } from './SystemToast';
 import { SystemAvatar } from './SystemAvatar';
+import { BackToTopButton } from './BackToTopButton';
 import { SystemDialog } from './SystemDialog';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 import { MotionUtil } from '../core/accessibility/MotionUtil';
@@ -52,6 +53,9 @@ export struct NotificationCenter {
   @State private isLoading: boolean = false;
   @State private enterOpacity: number = 1;
   @State private enterOffset: number = 0;
+  @State private showBackToTop: boolean = false;
+  @State private viewportHeight: number = 0;
+  private backToTopScroller: Scroller = new Scroller();
   private enterPlayed: boolean = false;
 
   @State private isRefreshing: boolean = false;
@@ -421,6 +425,34 @@ export struct NotificationCenter {
     this.enterOffset = 0;
   }
 
+  private updateBackToTop(): void {
+    const offset: OffsetResult | undefined = this.backToTopScroller.currentOffset();
+    const y: number = offset ? offset.yOffset : 0;
+    const threshold: number = this.viewportHeight > 0 ? this.viewportHeight * 1.5 : 1200;
+    const next: boolean = y > threshold;
+    if (next !== this.showBackToTop) {
+      this.showBackToTop = next;
+    }
+  }
+
+  private scrollToTop(): void {
+    this.showBackToTop = false;
+    this.backToTopScroller.scrollTo({
+      xOffset: 0,
+      yOffset: 0,
+      animation: { duration: MotionUtil.reduced() ? 0 : 300, curve: Curve.EaseInOut }
+    });
+  }
+
+  @Builder
+  private buildBackToTopOverlay() {
+    BackToTopButton({
+      visible: this.showBackToTop,
+      onTap: () => { this.scrollToTop(); }
+    })
+      .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+  }
+
   build() {
     Column({ space: DesignConstants.SPACING.LG }) {
       // 标题栏
@@ -576,7 +608,7 @@ export struct NotificationCenter {
         })
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          List({ space: DesignConstants.SPACING.MD }) {
+          List({ space: DesignConstants.SPACING.MD, scroller: this.backToTopScroller }) {
             ForEach(this.getGroupedNotifications(), (group: GroupedNotification) => {
               ListItemGroup({
                 header: this.buildGroupHeader(group.label),
@@ -611,6 +643,8 @@ export struct NotificationCenter {
           .width('100%')
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
           .onReachEnd(() => this.loadMoreNotifications())
+          .onDidScroll(() => { this.updateBackToTop(); })
+          .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
         }
         .layoutWeight(1)
         .pullToRefresh(false)
@@ -623,6 +657,7 @@ export struct NotificationCenter {
         })
         .opacity(this.enterOpacity)
         .translate({ y: this.enterOffset })
+        .overlay(this.buildBackToTopOverlay(), { align: Alignment.BottomEnd })
       }
 
       // 全部已读二次确认（与全站确认弹窗视觉一致）

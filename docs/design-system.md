@@ -786,6 +786,23 @@
 - **验收**：慢网模拟（延迟图片）4 页×2 视口「加载中 vs 完成」截图，加载中无灰块；失败态截图；
   axe 0；CLS/LCP 不回归。
 
+### 20.11 页头滚动、SPA 焦点播报与回顶（Round 9，2026-10-27）
+
+- **页头滚动**（web，sticky PageHeader）：顶部（scrollTop ≤4px）**透明**（无底色/描边/阴影/blur，与连续画布融合，不再有白带）；
+  滚动 >4px 切换 glass：`surface-page 78% + blur(16px) saturate(1.4)` + 细底边 + elevation，过渡 150ms（reduced 立即）；
+  监听最近滚动容器（passive + rAF），仅改背景/边框/阴影，不动 sticky 定位（无 CLS）。
+- **SPA 焦点**（web a11y）：客户端导航（非首屏）后焦点移到 `main#main-content`（tabindex=-1、preventScroll、程序化聚焦不显示轮廓）；
+  main 不可聚焦时才回退 h1 并**跳过播报**（二选一，不得叠加）。
+- **播报**：`#route-announcer`（sr-only、`aria-live=polite`、`aria-atomic`）导航后播报新页面标题（h1），首屏不播、1.5s 去重；
+  返回/前进同样播报；skip link 首 Tab 仍可用。
+- **回到顶部**（web/鸿蒙）：滚动 > 1.5×视口高后出现浮动圆钮（web 44px / 鸿蒙 48vp，`aria-label`/`accessibilityText`「回到顶部」），
+  点击平滑回顶（reduced 直接跳），回顶后 200ms 内隐藏（防闪烁）；fixed/overlay 不占流、不遮挡底栏与其它浮层；
+  不可见时移出无障碍树/禁触。
+- **Reflow**：320px 宽与 200% 文本缩放关键页无横向滚动（`documentElement`/主滚动区溢出 = 0）；装饰层超界须被裁剪。
+- **验收**：三主题×亮暗 top/scrolled 数据+截图（top 透明、scrolled 78%+blur）；页头滚动 0 layout-shift；
+  activeElement/announcer 矩阵（首屏/导航/后退/前进/skip link）；axe 0；QA 23 页；CLS/LCP 不回归。
+
+
 
 
 

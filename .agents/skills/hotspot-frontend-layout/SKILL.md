@@ -245,3 +245,9 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
   cover 800/1600、hero 1080+、full 1600（ImageViewer 打开即加载）。
 - 调用方必须给 `sizes`（移动单列 100vw、桌面对应列宽/固定 px），否则浏览器按 100vw 选档导致流量浪费；
 - 首屏优先级只给首屏可见图，列表/轮播后续 lazy；非 unsplash 不生成 srcset；加载占位不得改变布局（aspect/尺寸已定）。
+## 页头滚动与回顶（Round 9，2026-10-27）
+
+- sticky `PageHeader`：顶部（scrollTop ≤4）**透明**、与连续画布融合（无白带）；滚动 >4 切 glass（78% surface-page + blur16 + 细底边 + elevation，150ms，reduced 立即）。仅改背景/边框/阴影，不动 sticky 定位（无 CLS）。
+- 焦点管理：客户端导航后焦点落 `main#main-content`（tabindex=-1、preventScroll），`#route-announcer` 播报 h1 标题（首屏不播、1.5s 去重）；不聚焦 h1 避免重复播报；无 h1 才回退并跳过播报。
+- 回顶：滚动 >1.5×视口高出现 44px 圆钮（桌面 bottom-6、移动 bottom-24，避开浮层/底栏）；平滑回顶（reduced 直接跳）、回顶后 200ms 内隐藏；`aria-label` 必填。
+- Reflow：320px 宽 / 200% 文本缩放关键页无横向滚动（documentElement/主滚动区溢出=0）；装饰层超界须被裁剪。

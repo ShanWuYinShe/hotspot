@@ -49,7 +49,7 @@
 			<div class="mx-auto flex h-full w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[88rem] justify-center" style="gap:var(--cst-context-rail-gap);">
 				<div class="flex min-w-0 flex-1 flex-col">
 					{#if header}
-						<div class="shrink-0">{@render header()}</div>
+						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
 					{/if}
 					<div class="min-h-0 flex-1">
 						<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
@@ -67,7 +67,7 @@
 			<div class="flex h-full w-full justify-start px-[var(--cst-page-gutter)]" style="gap:var(--cst-context-rail-gap);">
 				<div class="flex min-w-0 max-w-2xl flex-1 flex-col">
 					{#if header}
-						<div class="shrink-0">{@render header()}</div>
+						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
 					{/if}
 					<div class="min-h-0 flex-1">
 						<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
@@ -85,7 +85,7 @@
 			<div class="mx-auto flex h-full w-full max-w-7xl xl:max-w-[88rem] 2xl:max-w-[96rem] justify-center" style="gap:var(--cst-context-rail-gap);">
 				<div class="flex min-w-0 flex-1 flex-col">
 					{#if header}
-						<div class="shrink-0">{@render header()}</div>
+						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
 					{/if}
 					<div class="min-h-0 flex-1">
 						<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
@@ -103,7 +103,7 @@
 			<div class="flex h-full w-full px-[var(--cst-page-gutter)]" style="gap:var(--cst-context-rail-gap);">
 				<div class="flex min-w-0 flex-1 max-w-[58%] flex-col">
 					{#if header}
-						<div class="shrink-0">{@render header()}</div>
+						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
 					{/if}
 					<div class="min-h-0 flex-1">
 						<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
@@ -137,7 +137,7 @@
 						: undefined}
 				>
 					{#if header}
-						<div class="shrink-0">
+						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">
 							{#if isConstrained}
 								<ContentColumn maxWidth={contentMaxWidth} class="p-0">
 									{@render header()}

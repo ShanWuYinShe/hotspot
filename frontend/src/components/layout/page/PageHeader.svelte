@@ -4,6 +4,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ContentColumn from './ContentColumn.svelte';
 	import { platform } from '@/stores/platform.svelte';
+	import { onMount } from 'svelte';
 	import { cn } from '@/lib/utils';
 
 	// 布局组件（layout/page）。
@@ -19,6 +20,9 @@
 	// │ │ ←  标题              trailing  │  (sticky 可选)   │
 	// │ └───────────────────────────────┘                  │
 	// └────────────────────────────────────────────────────┘
+	// 滚动感知（Round 9）：页头在顶部透明（与画布融合、不再出现 78% 白底带），
+	// 滚动 > 4px 后切换 glass（surface-page 78% + blur + 细底边/轻阴影），150ms 过渡；
+	// reduced-motion 由全局规则瞬时切换。监听最近的滚动容器，passive + rAF 节流。
 	// 设备范围：桌面、平板和手机通用。
 
 	let {
@@ -61,6 +65,38 @@
 		contentClassName?: string;
 	} = $props();
 
+	// glass prop 保留兼容（历史调用）；统一改为「顶部透明 → 滚动后 glass」，不再直接消费。
+	let headerEl: HTMLElement | null = $state(null);
+	let scrolled = $state(false);
+
+	onMount(() => {
+		if (!headerEl) return;
+		let scroller: HTMLElement | null = headerEl.parentElement;
+		while (scroller) {
+			const st = getComputedStyle(scroller);
+			if (/(auto|scroll)/.test(st.overflowY)) break;
+			scroller = scroller.parentElement;
+		}
+		if (!scroller) scroller = document.getElementById('main-content');
+		if (!scroller) return;
+		const target = scroller;
+		let raf = 0;
+		const apply = () => {
+			raf = 0;
+			scrolled = target.scrollTop > 4;
+		};
+		const onScroll = () => {
+			if (raf) return;
+			raf = requestAnimationFrame(apply);
+		};
+		target.addEventListener('scroll', onScroll, { passive: true });
+		apply();
+		return () => {
+			target.removeEventListener('scroll', onScroll);
+			if (raf) cancelAnimationFrame(raf);
+		};
+	});
+
 	// 显式映射表：完整类名字面量可被 Tailwind 扫描器检测（动态拼接 text-{x} 不会）。
 	// 3xl+semibold：顶级 tab 页大标题档（对齐 Figma Make 移动端 display 标题——28px 级
 	// 半粗是页面的视觉锚点，与正文拉开层级；字重统一 semibold，不用 bold）。
@@ -87,10 +123,13 @@
 </script>
 
 <header
-	class={cn('shrink-0', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]', !glass && 'page-header-solid', className)}
-	style={glass
-		? 'background-color:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));'
-		: ''}
+	bind:this={headerEl}
+	class={cn(
+		'shrink-0 page-header-scroll',
+		sticky && 'sticky top-0 z-[var(--cst-z-sticky)]',
+		scrolled && 'page-header-scrolled',
+		className
+	)}
 >
 	<ContentColumn {maxWidth} class={cn(headerPadding, contentClassName)}>
 			<div class="flex items-center gap-3">

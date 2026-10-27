@@ -484,3 +484,9 @@ Huawei 移动端规范要求有效触控目标 **≥44vp**。本项目原语层�
 - 群封面/通知/搜索/rail/主页瞬间/详情/群 hero 等缩略图：底层占位（渐变/图标/首字母）+ 渐显 + 失败保留；
   有 Skeleton 的列表不叠加；不新增 token。
 - 新图片接入必须同时给「占位 + 失败降级 + 宽度档/URL 优化」；真机占位/渐显/失败像素待补。
+## 回顶与页头滚动（Round 9，2026-10-27）
+
+- 页头滚动玻璃：鸿蒙 TopBar 均在滚动容器外（`grep '.sticky('`=0），**N/A**；如未来引入 sticky 页头再按 web 口径实现并去掉常驻底。
+- 回顶：`components/BackToTopButton.ets`（48vp、ARROW_UP、surface+hairline+shadow、opacity 180ms via MotionUtil/reduced 直接显隐、不可见禁触+无障碍树移除、label「回到顶部」）；
+  已接 Home/Nearby/Notification/Search/MomentsFeed 5 页（阈值 1.5×视口高、scrollTo 300ms/reduced 0ms、右下避底栏/居中 FAB）；GroupPage/Profile/MyShares 下轮。
+- SPA 焦点/TalkBack 播报由系统处理（N/A 登记）；320/reflow 为 web-only（N/A）。

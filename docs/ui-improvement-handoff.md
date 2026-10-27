@@ -1,4 +1,4 @@
-# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-19）
+# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-20）
 
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
@@ -6,7 +6,21 @@
 
 ## 已完成基线（不要回退）
 
-### 2026-10-27 本轮（Round 19，媒体占位/降级 + 搜索 URL 状态）
+### 2026-10-27 本轮（Round 20，页头滚动/SPA 焦点播报/回顶/reflow）
+
+- **页头滚动**：sticky PageHeader 顶部透明（无白带）→ 滚动 >4px 玻璃（`surface-page 78% + blur16 + 细底边 + elevation`，150ms，reduced 立即）；
+  三主题×亮暗矩阵一致、滚动过程 0 layout-shift、滚动回顶恢复透明；18 处调用无需改；
+  并修复既有缺陷：`SplitPageLayout` 桌面分支 header 外层未 sticky（/notify 1440 滚动时 header 滚出）→ 加 `sticky top-0 z-sticky`，复验吸顶+玻璃可见、其它分栏页与 390 无回归。
+- **SPA 焦点/播报**：客户端导航后焦点落 `main#main-content`（tabindex=-1、preventScroll、outline none）；`#route-announcer` 播报 h1 标题
+  （首屏不播、1.5s 去重、后退/前进恢复）；不聚焦 h1 避免与播报重复；skip link/Tab 顺序不回归。
+- **回到顶部**：滚动 >1.5 屏出现 44px 圆钮（桌面 bottom-6 距 MockBadge 28px、移动 bottom-24 距底栏 14px）；平滑回顶（reduced 直接跳）、
+  19ms 隐藏防闪烁；键盘可达、不可见移出无障碍树。
+- **Reflow**：320px × 34 页 + 200% 文本缩放 × 8 关键页 document/main 横向溢出 = 0（装饰层超界被裁剪）。
+- **鸿蒙镜像**：TopBar 玻璃 N/A（grep `.sticky(`=0，页头在滚动容器外）；新增 `BackToTopButton.ets`（48vp、MotionUtil、a11y label），
+  Home/Nearby/Notification/Search/MomentsFeed 5 页接入；SPA 焦点/TalkBack、320/reflow N/A；build/check:theme/parity/布局树全绿。
+- **验证**：axe 50 runs 0；QA 23/23；CLS home 0.0195 持平/notify 0.0069/me/detail 0、0 layout-shift、0 长任务；test **103 文件/546**；build 通过。
+
+### 2026-10-27 上一轮（Round 19，媒体占位/降级 + 搜索 URL 状态）
 
 - **媒体占位与降级**：Avatar 占位层**始终渲染**（有 name 首字母 / 无 name UserRound，aria-hidden）+ 图片 absolute 覆盖 + 渐显；
   失败保留占位不闪烁；群封面/通知·搜索·rail·主页瞬间缩略图/详情封面与九宫格/群 hero 统一 `.media-placeholder` 主题渐变占位；
@@ -299,6 +313,12 @@
     另：`delay-images.js` 慢网模拟目前在 `.workwork` 未入库，建议后续并入 browser QA 脚本做常规回归。
 32. **图片失败降级统一审计（R19）**：本轮覆盖头像/封面/缩略图；剩余裸 `<img>`（如部分详情/编辑器预览）按「占位层+失败降级」
     逐个接入或登记 N/A（新页面/新组件按 design-system §20.10 自查）。
+
+33. **鸿蒙回顶扩展（R20）**：GroupPage/Profile/MyShares 等长列表下轮接入 BackToTopButton；真机上搜索/通知/瞬间墙回顶未稳定触发（模拟器登录态重置），恢复后按 ha report 逐页验证出现时机/位置/遮挡。
+34. **回顶与浮层避让（R20）**：当前基线无 changelog 浮动钮；若后续引入同角浮层，按「回顶置其上留 8–12px」规则处理并实测不遮挡。
+35. **页头玻璃可读性（R20）**：scrolled 状态在真实内容（图片/大标题）下的可读性、宽屏/真机滚动观感待真机复验；如觉过透可调 78% 系数（两端 token/常量需同步）。
+36. **SPA 焦点/播报回退（R20）**：h1 缺失页面采用「回退 h1 并跳过播报」二选一策略；新增页面若无 h1，需按 §20.11 自查（优先补 h1）。
+37. **Reflow 持续回归（R20）**：320px/200% 缩放当前抽 34 页 + 8 关键页通过；新页面/新组件按 §20.11 复测，装饰层超界必须被裁剪。
 
 ## 遗留观察（已评估，保留现状；非缺陷）
 

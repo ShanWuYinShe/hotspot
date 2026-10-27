@@ -531,3 +531,9 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
   （accent-bg 上各主题/明暗 ≥4.5，text-secondary 在 inkwash 不达标）。
 - 有 Skeleton 的列表用骨架、不叠加占位；占位与图片同尺寸（无 CLS）；reduced-motion 渐显直接显示。
 - 新图片接入必须同时给「占位 + 失败降级 + 尺寸档/srcset」（design-system §20.8/§20.10）。
+## Round 9 页头/回顶/播报（2026-10-27）
+
+- 页头默认透明、滚动才玻璃；不要给页头常驻底色（会形成「白带」）。glass 的 blur/底色用 token，过渡 150ms，reduced 立即。
+- 回顶按钮：阈值 1.5 屏、44px、右下角避浮层/底栏；点击平滑回顶（reduced 直接跳）、隐藏 <200ms 防闪烁；不可见时移出无障碍树。
+- SPA 导航：焦点 main + sr-only announcer（aria-live polite/atomic），首屏不播、去重；避免同时聚焦 h1 造成重复播报。
+- Reflow 自查：320px/200% 缩放无横向滚动；新浮层不得在窄屏溢出。

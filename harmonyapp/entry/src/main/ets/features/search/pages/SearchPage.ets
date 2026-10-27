@@ -38,6 +38,7 @@ import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
+import { BackToTopButton } from '../../../components/BackToTopButton';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import pasteboard from '@ohos.pasteboard';
@@ -72,6 +73,9 @@ export struct SearchPage {
   @State private followPoppedUserId: string = '';
   @State private enterOpacity: number = 1;
   @State private enterOffset: number = 0;
+  @State private showBackToTop: boolean = false;
+  @State private viewportHeight: number = 0;
+  private backToTopScroller: Scroller = new Scroller();
   private enterPlayed: boolean = false;
 
   /** 建议词请求进行中（输入后、结果返回前的骨架态；避免出现只有 tab 行、下方全空白的中间态） */
@@ -549,6 +553,34 @@ export struct SearchPage {
     this.enterOffset = 0;
   }
 
+  private updateBackToTop(): void {
+    const offset: OffsetResult | undefined = this.backToTopScroller.currentOffset();
+    const y: number = offset ? offset.yOffset : 0;
+    const threshold: number = this.viewportHeight > 0 ? this.viewportHeight * 1.5 : 1200;
+    const next: boolean = y > threshold;
+    if (next !== this.showBackToTop) {
+      this.showBackToTop = next;
+    }
+  }
+
+  private scrollToTop(): void {
+    this.showBackToTop = false;
+    this.backToTopScroller.scrollTo({
+      xOffset: 0,
+      yOffset: 0,
+      animation: { duration: MotionUtil.reduced() ? 0 : 300, curve: Curve.EaseInOut }
+    });
+  }
+
+  @Builder
+  private buildBackToTopOverlay() {
+    BackToTopButton({
+      visible: this.showBackToTop,
+      onTap: () => { this.scrollToTop(); }
+    })
+      .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+  }
+
   build() {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
@@ -592,6 +624,8 @@ export struct SearchPage {
             }, (item: SearchSuggestItem, index?: number) => this.getSuggestKey(item, index ?? 0))
           }
           .scrollBar(BarState.Off)
+      .onDidScroll(() => { this.updateBackToTop(); })
+      .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
           .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
           .layoutWeight(1)
           .width('100%')
@@ -625,6 +659,7 @@ export struct SearchPage {
               actions: {
                 onChange: (index: number) => {
                   this.currentIndex = index;
+                  this.showBackToTop = false;
                 }
               }
             })
@@ -648,6 +683,7 @@ export struct SearchPage {
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .opacity(this.enterOpacity)
         .translate({ y: this.enterOffset })
+        .overlay(this.buildBackToTopOverlay(), { align: Alignment.BottomEnd })
         }
       }
       .width('100%')
@@ -739,7 +775,7 @@ export struct SearchPage {
         fillMode: true
       })
     } else {
-      List({ space: DesignConstants.SPACING.LG }) {
+      List({ space: DesignConstants.SPACING.LG, scroller: this.backToTopScroller }) {
         if (this.userResults.length > 0) {
           ListItem() {
             Column() {
@@ -851,6 +887,8 @@ export struct SearchPage {
       .width('100%').height('100%')
       .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
       .scrollBar(BarState.Off)
+      .onDidScroll(() => { this.updateBackToTop(); })
+      .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
     }
   }
 
@@ -866,7 +904,7 @@ export struct SearchPage {
         fillMode: true
       })
     } else {
-      List() {
+      List({ scroller: this.backToTopScroller }) {
         ListItemGroup() {
         ForEach(this.topicResults, (tag: string) => {
           ListItem() {
@@ -918,6 +956,8 @@ export struct SearchPage {
       .width('100%').height('100%')
       .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
       .scrollBar(BarState.Off)
+      .onDidScroll(() => { this.updateBackToTop(); })
+      .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
     }
   }
 
@@ -1070,7 +1110,7 @@ export struct SearchPage {
         fillMode: true
       })
     } else {
-      List() {
+      List({ scroller: this.backToTopScroller }) {
         ListItemGroup() {
           ForEach(this.userResults, (item: UserItem) => {
             ListItem() {
@@ -1092,6 +1132,8 @@ export struct SearchPage {
       .width('100%').height('100%')
       .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
       .scrollBar(BarState.Off)
+      .onDidScroll(() => { this.updateBackToTop(); })
+      .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
     }
   }
 
@@ -1107,7 +1149,7 @@ export struct SearchPage {
         fillMode: true
       })
     } else {
-      List() {
+      List({ scroller: this.backToTopScroller }) {
         ListItemGroup() {
           ForEach(this.groupResults, (item: GroupItem) => {
             ListItem() {
@@ -1128,6 +1170,8 @@ export struct SearchPage {
       .width('100%').height('100%')
       .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })
       .scrollBar(BarState.Off)
+      .onDidScroll(() => { this.updateBackToTop(); })
+      .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
     }
   }
 
@@ -1143,7 +1187,7 @@ export struct SearchPage {
         fillMode: true
       })
     } else {
-      WaterFlow() {
+      WaterFlow({ scroller: this.backToTopScroller }) {
         LazyForEach(this.momentResultsDataSource, (item: MomentItem) => {
           FlowItem() {
             this.buildMomentSearchCard(item)
@@ -1152,6 +1196,8 @@ export struct SearchPage {
         }, (item: MomentItem) => item.moment_id)
       }
       .scrollBar(BarState.Off)
+      .onDidScroll(() => { this.updateBackToTop(); })
+      .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
       .width('100%').height('100%')
       // 桌面 3 列瀑布流（与 MomentsFeedPage getWallColumns 契约对齐），
       // 平板/手机 2 列紧凑保留
