@@ -24,7 +24,7 @@ find_node
 # agent-browser 定位（沙盒 wrapper 优先）与 node 定位统一收敛在 scripts/lib/qa-common.sh。
 
 BASE="http://localhost:8888"
-SESSION="hotspot-qa"
+SESSION="hotspot-qa-$$"  # PID 后缀：主检出与 worktree 并发跑互不抢同一实例（2026-10-27）
 MOBILE=0
 while [ $# -gt 0 ]; do
   case "$1" in
