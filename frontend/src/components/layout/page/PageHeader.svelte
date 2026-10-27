@@ -4,7 +4,6 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ContentColumn from './ContentColumn.svelte';
 	import { platform } from '@/stores/platform.svelte';
-	import { onMount } from 'svelte';
 	import { cn } from '@/lib/utils';
 
 	// 布局组件（layout/page）。
@@ -66,12 +65,14 @@
 	} = $props();
 
 	// glass prop 保留兼容（历史调用）；统一改为「顶部透明 → 滚动后 glass」，不再直接消费。
-	let headerEl: HTMLElement | null = $state(null);
 	let scrolled = $state(false);
 
-	onMount(() => {
-		if (!headerEl) return;
-		let scroller: HTMLElement | null = headerEl.parentElement;
+	// 滚动监听改为 Svelte action：action 在节点挂载时执行、组件重挂/平台重排时
+	// 自动重建监听，避免「onMount + $state ref 绑定时序」竞态（主环境 8888 实测
+	// 生产构建下 listener 未挂到 main 的问题）。向上找最近 overflow 滚动容器，
+	// 回退 #main-content；passive + rAF 节流，destroy 清理。
+	function headerScroll(node: HTMLElement) {
+		let scroller: HTMLElement | null = node.parentElement;
 		while (scroller) {
 			const st = getComputedStyle(scroller);
 			if (/(auto|scroll)/.test(st.overflowY)) break;
@@ -91,11 +92,13 @@
 		};
 		target.addEventListener('scroll', onScroll, { passive: true });
 		apply();
-		return () => {
-			target.removeEventListener('scroll', onScroll);
-			if (raf) cancelAnimationFrame(raf);
+		return {
+			destroy() {
+				target.removeEventListener('scroll', onScroll);
+				if (raf) cancelAnimationFrame(raf);
+			}
 		};
-	});
+	}
 
 	// 显式映射表：完整类名字面量可被 Tailwind 扫描器检测（动态拼接 text-{x} 不会）。
 	// 3xl+semibold：顶级 tab 页大标题档（对齐 Figma Make 移动端 display 标题——28px 级
@@ -123,7 +126,7 @@
 </script>
 
 <header
-	bind:this={headerEl}
+	use:headerScroll
 	class={cn(
 		'shrink-0 page-header-scroll',
 		sticky && 'sticky top-0 z-[var(--cst-z-sticky)]',
