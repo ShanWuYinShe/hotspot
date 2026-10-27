@@ -18,6 +18,7 @@ import { MomentItem, SearchMomentsRequest, FetchFollowingMomentsRequest } from '
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
@@ -71,8 +72,35 @@ export struct HomePage {
   /** 「查看全部」链接的按下态索引（-1 = 无；对齐前端 link 按压反馈） */
   @State viewAllPressedIndex: number = -1;
   @State isRefreshing: boolean = false;
+  /** R7 内容进场（仅内容层 opacity/translate；首屏跳过） */
+  @State private enterOpacity: number = 1;
+  @State private enterOffset: number = 0;
+  private enterPlayed: boolean = false;
+  private hasCompletedFirstLoad: boolean = false;
 
   private isDestroyed: boolean = false;
+
+  private playContentEnter(): void {
+    if (this.enterPlayed) return;
+    this.enterPlayed = true;
+    if (MotionUtil.reduced()) {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+      return;
+    }
+    this.enterOpacity = 0;
+    this.enterOffset = MotionUtil.enterOffset();
+    MotionUtil.contentEnter(this.getUIContext(), () => {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+    });
+  }
+
+  private resetContentEnter(): void {
+    this.enterPlayed = false;
+    this.enterOpacity = 1;
+    this.enterOffset = 0;
+  }
 
   private onMomentsChanged(): void {
     const merged: MomentItem[] = [];
@@ -150,7 +178,16 @@ export struct HomePage {
     } catch {
       this.momentsError = '加载热门内容失败';
     } finally {
-      if (!this.isDestroyed) this.momentsLoading = false;
+      if (!this.isDestroyed) {
+        this.momentsLoading = false;
+        if (!this.hasCompletedFirstLoad) {
+          // 冷启动首屏：跳过进场（保护首屏/系统转场不叠加）
+          this.hasCompletedFirstLoad = true;
+        } else {
+          this.resetContentEnter();
+          this.playContentEnter();
+        }
+      }
     }
   }
 
@@ -225,6 +262,11 @@ export struct HomePage {
             actions: {
               onChange: (index: number) => {
                 this.activeTab = index;
+                // 内容替换（tab 切换）：有缓存内容时立即播进场；无内容等加载完成 finally 播
+                if (this.currentTabMoments().length > 0) {
+                  this.resetContentEnter();
+                  this.playContentEnter();
+                }
               }
             }
           })
@@ -241,6 +283,8 @@ export struct HomePage {
           refreshing: $$this.isRefreshing,
           builder: RefreshIndicator
         }) {
+          // R7 内容进场：只包内容层，不含 sticky header/Refresh 容器；首屏不播
+          Column() {
           if (this.activeTab === 1 && !this.isLoggedIn) {
             Scroll() {
               this.buildLoginPrompt()
@@ -279,6 +323,11 @@ export struct HomePage {
           } else {
             this.buildFeed()
           }
+          }
+          .width('100%')
+          .height('100%')
+          .opacity(this.enterOpacity)
+          .translate({ y: this.enterOffset })
         }
         .width('100%')
         .layoutWeight(1)

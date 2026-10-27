@@ -3,6 +3,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
 	import type { FeedItem } from './moment-feed.svelte';
+	import { popOn } from '@/lib/motion';
 
 	// MomentCard — 全站统一动态卡片：基于 NearbyImageCard 图片优先原语。
 	// 卡片比例由调用方按列宽传（2 列窄卡用 3:4 竖版，1 列/桌面用 4:3）：
@@ -31,6 +32,10 @@
 		priority?: boolean;
 		class?: string;
 	} = $props();
+
+	// 点击驱动的 pop 计数（仅在点击处理器递增；like/saved 首帧或数据同步不播）。
+	let likePop = $state(0);
+	let savePop = $state(0);
 
 	// 卡片可访问名（role=button 的 aria-label 来源）：tag 可为空，回退正文/作者并截断。
 	const cardLabel = $derived((item.tag || item.content || item.user).slice(0, 30));
@@ -103,10 +108,13 @@
 					aria-pressed={liked}
 					onclick={(e) => {
 						e.stopPropagation();
+						if (!liked) likePop += 1;
 						onLike();
 					}}
 				>
-					<Heart class="size-4.5 {onCover && liked ? 'fill-status-danger text-content-inverse' : onCover ? 'text-content-inverse' : ''}" strokeWidth={1.5} fill={!onCover && liked ? 'currentColor' : 'none'} />
+					<span class="inline-flex" use:popOn={likePop}>
+						<Heart class="size-4.5 {onCover && liked ? 'fill-status-danger text-content-inverse' : onCover ? 'text-content-inverse' : ''}" strokeWidth={1.5} fill={!onCover && liked ? 'currentColor' : 'none'} />
+					</span>
 					{#key item.likes + (liked ? 1 : 0)}
 						<span class="count-pop text-xs">{item.likes + (liked ? 1 : 0)}</span>
 					{/key}
@@ -133,10 +141,13 @@
 				aria-pressed={saved}
 				onclick={(e) => {
 					e.stopPropagation();
+					if (!saved) savePop += 1;
 					onSave();
 				}}
 			>
-				<Bookmark class="size-4.5 {onCover && saved ? 'fill-accent-default text-content-inverse' : onCover ? 'text-content-inverse' : ''}" strokeWidth={1.5} fill={!onCover && saved ? 'currentColor' : 'none'} />
+				<span class="inline-flex" use:popOn={savePop}>
+					<Bookmark class="size-4.5 {onCover && saved ? 'fill-accent-default text-content-inverse' : onCover ? 'text-content-inverse' : ''}" strokeWidth={1.5} fill={!onCover && saved ? 'currentColor' : 'none'} />
+				</span>
 			</button>
 		</div>
 	</div>

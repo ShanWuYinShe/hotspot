@@ -754,6 +754,25 @@
 - **验收**：关键页图片 transferSize 前后对比（HAR/Resource Timing）；CLS 不回归、LCP 不劣化；图片清晰度不下降（首屏 2x、
   Retina/高 DPR 设备按 2x/3x 取值；真机若偏软再升档）。
 
+### 20.9 动效与状态反馈规范（Round 7，2026-10-27）
+
+- **语义时长**（复用 motion token，不新增刻度）：enter 180ms（snappy，ease-out）、exit 150ms（rapid，ease-in）、
+  pop 220ms（standard，ease-out）；仅 transform/opacity，不得改变布局。
+- **页面进场（web）**：仅在**客户端导航**（`afterNavigate` 的 `nav.type !== 'enter'`，含 back/forward）对内容层播放
+  `opacity 0→1 + translateY 4px→0`；**首屏加载不播**（保护 LCP）；只包内容层，sticky 页头/滚动容器/焦点不受影响。
+- **骨架 → 内容**：仅「实际展示过骨架」的列表在数据到达时做 150ms fade-in；缓存命中/直接命中不播；不得逐项 stagger 大列表。
+- **Toast**：保留入场，新增退场（fade + y −8px，150ms）；容器常驻以便最后一条也能退场；`aria-live` 空容器不得产生读屏噪音。
+- **状态反馈（点赞/收藏/关注/加入）**：仅在用户**激活方向**操作时图标 pop（scale 1→1.18→1，220ms），取消不做 pop；
+  **禁止在初始数据同步/首帧已激活时播放**；激活色过渡可同时进行。
+- **评论新增**：仅本次提交成功后新增行 fade + translateY 4px（160ms）；初始加载不播。
+- **reduced-motion**：CSS 动画由全局规则压至 0.01ms；**JS 驱动动画（Svelte transition / 定时器 / 鸿蒙 animateTo）必须显式判断**
+  `prefersReducedMotion()` / `MotionUtil.reduced` 并直接跳到终态，不得留下动画类/定时器残留。
+- **红线**：不得动画首屏 LCP 元素；不得引入 CLS；QA 长截图不得因新增动画抖动（动画 ≤260ms 且不阻塞截图）；
+  持续 animation 不得用于大面积内容或列表全部项。
+- **验收**：normal/reduced 双路径 computed animation-name/duration + 中间态截图；axe 0；QA 23 页稳定；
+  CLS 不回归、LCP 首屏不回归；鸿蒙以代码级 + reduced 分支证据 + build/parity 为准，真机手感待补。
+
+
 
 
 

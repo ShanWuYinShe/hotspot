@@ -82,6 +82,7 @@ export struct MomentDetailPage {
   @State likePending: boolean = false;
   /** 点赞计数弹跳（count-pop：成功瞬间 1→1.3→1，对齐前端 cst-count-pop） */
   @State likePop: boolean = false;
+  @State favoritePop: boolean = false;
   @State favoritePending: boolean = false;
   @State comments: CommentItem[] = [];
   @State commentText: string = '';
@@ -140,6 +141,27 @@ export struct MomentDetailPage {
     this.loadedImageUrls = next;
   }
 
+  // ==================== R7 内容进场 ====================
+  @State private enterOpacity: number = 1;
+  @State private enterOffset: number = 0;
+  private enterPlayed: boolean = false;
+
+  private playContentEnter(): void {
+    if (this.enterPlayed) return;
+    this.enterPlayed = true;
+    if (MotionUtil.reduced()) {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+      return;
+    }
+    this.enterOpacity = 0;
+    this.enterOffset = MotionUtil.enterOffset();
+    MotionUtil.contentEnter(this.getUIContext(), () => {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+    });
+  }
+
   private getSurfaceBackground(): string {
     return this.getCurrentThemePalette().surfaceBackground;
   }
@@ -195,6 +217,10 @@ export struct MomentDetailPage {
       hilog.error(DOMAIN_NUMBER, TAG, `loadMomentDetail failed: ${JSON.stringify(error)}`);
     } finally {
       this.isLoading = false;
+      if (this.moment) {
+        // 详情为用户导航进入：数据就绪播内容进场（首屏/系统转场不叠加）
+        this.playContentEnter();
+      }
     }
   }
 
@@ -307,11 +333,10 @@ export struct MomentDetailPage {
       const success = await interactionActions.toggleMomentLike(this.moment.moment_id);
       if (this.isDestroyed) return;
       if (success) {
-        // count-pop：点赞成功瞬间计数放大弹跳后回落
-        this.likePop = true;
-        setTimeout(() => {
-          this.likePop = false;
-        }, DesignConstants.ANIMATION.DURATION_FAST);
+        // R7 状态 pop：1→1.15→1（220ms，MotionUtil 统一；reduced 直接终态）
+        MotionUtil.statePop(this.getUIContext(),
+          () => { this.likePop = true; },
+          () => { this.likePop = false; });
       } else {
         SystemToast.showError('点赞操作失败', this.getUIContext());
       }
@@ -324,11 +349,17 @@ export struct MomentDetailPage {
     if (this.isDestroyed) return;
     if (!this.moment) return;
     if (this.favoritePending) return;
+    const wasFavorited: boolean = this.isMomentFavorited(this.moment);
     this.favoritePending = true;
     try {
       const success = await interactionActions.toggleMomentFavorite(this.moment.moment_id);
       if (this.isDestroyed) return;
-      if (!success) {
+      if (success && !wasFavorited) {
+        // 仅激活方向 pop
+        MotionUtil.statePop(this.getUIContext(),
+          () => { this.favoritePop = true; },
+          () => { this.favoritePop = false; });
+      } else if (!success) {
         SystemToast.showError('收藏操作失败', this.getUIContext());
       }
     } finally {
@@ -569,6 +600,8 @@ export struct MomentDetailPage {
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
             }
             .width('100%')
+            .opacity(this.enterOpacity)
+            .translate({ y: this.enterOffset })
           }
           .layoutWeight(1)
           .width('100%')
@@ -1116,6 +1149,7 @@ export struct MomentDetailPage {
               }
             }
             .accessibilityText(this.isMomentLiked(moment) ? '取消点赞' : '点赞')
+            .scale({ x: MotionUtil.popScale(this.likePop), y: MotionUtil.popScale(this.likePop) })
 
             // 收藏
             Row() {
@@ -1136,6 +1170,7 @@ export struct MomentDetailPage {
               }
             }
             .accessibilityText(this.isMomentFavorited(moment) ? '取消收藏' : '收藏')
+            .scale({ x: MotionUtil.popScale(this.favoritePop), y: MotionUtil.popScale(this.favoritePop) })
 
             // 分享
             Row() {

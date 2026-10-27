@@ -34,6 +34,7 @@ import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { useMasterDetail } from '../../../core/responsive/Breakpoint';
 import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -80,6 +81,10 @@ export struct MessagePage {
   private loadVersion: number = 0;
 
   @State isLoading: boolean = true;
+  @State private enterOpacity: number = 1;
+  @State private enterOffset: number = 0;
+  private enterPlayed: boolean = false;
+
   @State isRefreshing: boolean = false;
   @State errorMessage: string = '';
   // 桌面宽屏（≥960）master-detail：当前选中的会话 key，用于高亮列表项
@@ -220,6 +225,8 @@ export struct MessagePage {
       // 仅当前最新请求可重置加载态，否则会把新请求的 loading 提前置 false
       if (capturedVersion === this.loadVersion) {
         this.isLoading = false;
+        this.resetContentEnter();
+        this.playContentEnter();
         this.isRefreshing = false;
       }
     }
@@ -606,6 +613,28 @@ export struct MessagePage {
     }
   }
 
+  private playContentEnter(): void {
+    if (this.enterPlayed) return;
+    this.enterPlayed = true;
+    if (MotionUtil.reduced()) {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+      return;
+    }
+    this.enterOpacity = 0;
+    this.enterOffset = MotionUtil.enterOffset();
+    MotionUtil.contentEnter(this.getUIContext(), () => {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+    });
+  }
+
+  private resetContentEnter(): void {
+    this.enterPlayed = false;
+    this.enterOpacity = 1;
+    this.enterOffset = 0;
+  }
+
   build() {
   Stack() {
   PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
@@ -906,7 +935,9 @@ export struct MessagePage {
         .layoutWeight(1)
         .pullToRefresh(false)
         .refreshOffset(64)
-        .onRefreshing(() => { this.loadData(true, true); })
+.onRefreshing(() => { this.loadData(true, true); })
+        .opacity(this.enterOpacity)
+        .translate({ y: this.enterOffset })
         .transition(
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))

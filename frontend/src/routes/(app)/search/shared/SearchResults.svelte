@@ -11,6 +11,7 @@
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
+	import { contentFade } from '@/lib/motion';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 
 	// 搜索页「有查询结果态」：Tab 栏 + 用户/动态/话题结果组。
@@ -104,6 +105,7 @@
 		</div>
 	{/if}
 
+	<div use:contentFade={loading}>
 	{#if loading}
 		<!-- 首屏骨架屏：搜索结果行（前导 36 = Avatar md 档，与真实用户结果行同构） -->
 		<!-- N1：骨架对齐真实结果行（px-4 py-3.5 + leading 36 = 64 高）并补分组头占位，
@@ -247,4 +249,5 @@
 			{/if}
 		</div>
 	{/if}
+	</div>
 </section>

@@ -12,6 +12,7 @@ import { goto } from '$app/navigation';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import FollowButton from '@/components/ui/FollowButton.svelte';
 import SkeletonList from '@/components/data-display/SkeletonList.svelte';
+import { contentFade } from '@/lib/motion';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
@@ -441,6 +442,7 @@ const markSingleRead = (id: string) => {
 					<ListEnd />
 				{/if}
 
+				<div use:contentFade={loading}>
 				{#if loading}
 					<!-- 首屏骨架屏：通知行（前导 44 + 两行文本，行内距 12/14 对齐真实 NotifyRow） -->
 					<SkeletonList rows={6} leading={44} label="加载通知…" rowClass="px-4 py-3.5" />
@@ -460,6 +462,7 @@ const markSingleRead = (id: string) => {
 						{/snippet}
 					</EmptyState>
 				{/if}
+				</div>
 	</div>
 
 	{#snippet rail()}

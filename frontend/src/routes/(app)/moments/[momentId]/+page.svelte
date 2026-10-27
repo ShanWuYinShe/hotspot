@@ -224,6 +224,17 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 	// 本地列表长度会少算第 2 页起的评论）；commentDelta 承载本页内的增减。
 	let commentCountBase = $state(0);
 	let commentDelta = $state(0);
+	// 本次新增的评论/回复 id（仅它们播 160ms 进场；初始加载/缓存不播）
+	let newCommentId = $state<string | null>(null);
+	let newReplyId = $state<string | null>(null);
+	function markNewComment(id: string) {
+		newCommentId = id;
+		setTimeout(() => { if (newCommentId === id) newCommentId = null; }, 600);
+	}
+	function markNewReply(id: string) {
+		newReplyId = id;
+		setTimeout(() => { if (newReplyId === id) newReplyId = null; }, 600);
+	}
 	const commentCount = $derived(commentCountBase + commentDelta);
 	// 点赞计数：moment.likes 由本页维护（服务端快照 + toggleLike 乐观增量，已含本人状态），
 	// 与 MomentPostBody 内 likeCount 同口径，避免按 liked 叠加导致刷新后计数双倍。
@@ -279,11 +290,13 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 				if (res.code !== 0 || !res.data) throw new Error(res.message || '回复发布失败');
 				showToast('回复已发布', 'success');
 				commentDelta += 1;
+				const newReply = toMomentComment(res.data);
 				const parent = apiComments.find((c) => c.id === reply.commentId);
 				if (parent) {
 					apiComments = apiComments.map((c) =>
-						c.id === reply.commentId ? { ...c, replies: [...c.replies, toMomentComment(res.data)] } : c
+						c.id === reply.commentId ? { ...c, replies: [...c.replies, newReply] } : c
 					);
+					markNewReply(newReply.id);
 				} else {
 					const refreshed = await listComments(momentId, { limit: COMMENT_PAGE_SIZE }).catch(() => netError({ items: [], next_cursor: null }));
 					if (refreshed.code === 0 && refreshed.data) {
@@ -314,6 +327,7 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 			repliesCount: 0
 		};
 		apiComments = [...apiComments, optimistic];
+		markNewComment(optimistic.id);
 		commentDelta += 1;
 		commentPending = true;
 		try {
@@ -324,6 +338,7 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 			// reactions/set(target_id=comment_id)，乐观占位 id 必然失败。
 			const confirmed = toMomentComment(res.data);
 			apiComments = apiComments.map((item) => (item.id === optimistic.id ? confirmed : item));
+			markNewComment(confirmed.id);
 		} catch (err) {
 			apiComments = apiComments.filter((c) => c.id !== optimistic.id);
 			commentDelta -= 1;
@@ -599,6 +614,8 @@ import Skeleton from '@/components/data-display/Skeleton.svelte';
 			{liked}
 			{saved}
 			{shareStatus}
+			{newCommentId}
+			{newReplyId}
 			onToggleLike={() => void toggleLike()}
 			onToggleSave={() => void toggleSave()}
 			onShare={() => void copyMomentLink()}

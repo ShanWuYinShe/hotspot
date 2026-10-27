@@ -469,3 +469,10 @@ Huawei 移动端规范要求有效触控目标 **≥44vp**。本项目原语层�
 - 加载体验：占位（surfaceSubtle/accentMuted，不新增 shimmer）+ `onComplete` 渐显 200ms ease-out；`MotionUtil.reduced` 直接显示；
   失败 fallback 保持。新图片组件必须按此接入，禁止裸用远程原图。
 - 真机待核：首屏流量、头像 2x vs 3x、渐显像素、reduced 系统路径。
+## 动效与状态反馈（Round 7，2026-10-27）
+
+- `MotionUtil` 是**唯一动画入口**：`contentEnter`（180ms ease-out）、`statePop`（220ms，1→1.15→1，keyframeAnimateTo 两段）、`popScale`、`enterOffset`；
+  `reduced` 时全部直接终态（duration 0 / scale 1 / offset 0）。禁止裸写 animateTo 参数或旧 150ms/1.3 手写 pop。
+- 内容进场：loading true→false / tab 切换 / 刷新时播，**冷启动首屏跳过、缓存命中不播**；只包内容层，不含页头/滚动容器/系统转场；无布局位移。
+- 状态 pop：点赞/收藏/关注/加入仅激活方向播，取消不播；旧手写模式已全部替换为 `MotionUtil.statePop`。
+- 验收：代码级检查 + reduced 分支证据（duration 0/直接终态）+ build/check:theme/parity/布局树；真机手感/中间帧像素待补。

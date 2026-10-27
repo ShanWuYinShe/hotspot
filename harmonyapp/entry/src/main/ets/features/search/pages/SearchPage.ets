@@ -68,6 +68,12 @@ export struct SearchPage {
   @State keyword: string = '';
   @State isSearchFocused: boolean = false;
   @State isLoading: boolean = false;
+  @State private joinPoppedGroupId: string = '';
+  @State private followPoppedUserId: string = '';
+  @State private enterOpacity: number = 1;
+  @State private enterOffset: number = 0;
+  private enterPlayed: boolean = false;
+
   /** 建议词请求进行中（输入后、结果返回前的骨架态；避免出现只有 tab 行、下方全空白的中间态） */
   @State isSuggesting: boolean = false;
   @State userResults: UserItem[] = [];
@@ -377,6 +383,10 @@ export struct SearchPage {
       this.searchError = '搜索失败，请检查网络后重试';
     } finally {
       this.isLoading = false;
+      if (this.hasSearched) {
+        this.resetContentEnter();
+        this.playContentEnter();
+      }
     }
   }
 
@@ -505,6 +515,28 @@ export struct SearchPage {
     .layoutWeight(1)
   }
 
+  private playContentEnter(): void {
+    if (this.enterPlayed) return;
+    this.enterPlayed = true;
+    if (MotionUtil.reduced()) {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+      return;
+    }
+    this.enterOpacity = 0;
+    this.enterOffset = MotionUtil.enterOffset();
+    MotionUtil.contentEnter(this.getUIContext(), () => {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+    });
+  }
+
+  private resetContentEnter(): void {
+    this.enterPlayed = false;
+    this.enterOpacity = 1;
+    this.enterOffset = 0;
+  }
+
   build() {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
@@ -602,6 +634,8 @@ export struct SearchPage {
           .width('100%')
           .layoutWeight(1)
           .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+        .opacity(this.enterOpacity)
+        .translate({ y: this.enterOffset })
         }
       }
       .width('100%')
@@ -1276,6 +1310,7 @@ export struct SearchPage {
           onPress: () => { this.joinGroup(item); }
         })
           .layoutWeight(1)
+          .scale({ x: MotionUtil.popScale(this.joinPoppedGroupId === (item.group?.group_id ?? '')), y: MotionUtil.popScale(this.joinPoppedGroupId === (item.group?.group_id ?? '')) })
 
         SystemButton({
           label: '详情',
@@ -1421,13 +1456,18 @@ export struct SearchPage {
     const userId = user.user?.user_id;
     if (!userId) return;
     if (this.isUserActionPending(userId)) return;
+    const wasFollowing: boolean = this.isUserFollowing(userId);
     this.setUserActionPending(userId, true);
     try {
-      const isFollowing = this.isUserFollowing(userId);
-      const success = await interactionActions.setFollowUser(userId, !isFollowing, '关注用户');
+      const success = await interactionActions.setFollowUser(userId, !wasFollowing, '关注用户');
+      if (success && !wasFollowing) {
+        MotionUtil.statePop(this.getUIContext(),
+          () => { this.followPoppedUserId = userId; },
+          () => { this.followPoppedUserId = ''; });
+      }
       if (success) {
-        this.patchUserRelation(userId, !isFollowing);
-        SystemToast.showSuccess(isFollowing ? '已取消关注' : '已关注', this.getUIContext());
+        this.patchUserRelation(userId, !wasFollowing);
+        SystemToast.showSuccess(wasFollowing ? '已取消关注' : '已关注', this.getUIContext());
       } else {
         SystemToast.showError('操作失败', this.getUIContext());
       }

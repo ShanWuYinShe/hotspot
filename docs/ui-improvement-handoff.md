@@ -1,4 +1,4 @@
-# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-17）
+# UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-18）
 
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
@@ -6,7 +6,20 @@
 
 ## 已完成基线（不要回退）
 
-### 2026-10-27 本轮（Round 17，图片加载管线 + 感知性能 + 搜索键盘导航）
+### 2026-10-27 本轮（Round 18，微动效与状态反馈）
+
+- **动效入口**：新增 `frontend/src/lib/motion.ts`（enter 180/exit 150/pop 220；`prefersReducedMotion/motionDuration/pop/playPageEnter/toastExit`）+ CSS
+  `cst-page-enter`/`cst-state-pop`/`cst-comment-enter`；鸿蒙 `MotionUtil` 扩展为唯一动画入口（contentEnter/statePop/popScale/enterOffset，reduced 直接终态）。
+- **页面进场（仅客户端导航）**：RoutedContentViewport `afterNavigate` 仅 `nav.type!=='enter'` 播放（首屏不播护 LCP；popstate/前进后退播），
+  仅内容层 opacity 0→1 + translateY 4px（180ms）；sticky/滚动/focus 不受影响。
+- **骨架→内容 + Toast**：home/notify/messages/search/admin-users 有骨架才 fade（缓存命中不播）；toast 每条 `out:toastExit`（150ms）+ 容器常驻（最后一条可退）。
+- **状态 pop**：点赞/收藏/关注/加入 仅激活方向（1→1.18→1，220ms；点击 nonce 驱动，初始/同步不播；取消不 pop）Web 11 处 + 鸿蒙 11 处；
+  旧手写 150ms/1.3 模式全部替换；评论新增仅新行 fade+6px（160ms）。
+- **reduced 矩阵**：normal vs reduced 双路径（首屏 animationstart 0、导航/pop/toast/评论均无类无事件、computed 1e-05s）；
+- **性能**：LCP 同 r6 量级（首屏无动画）、CLS 不回归（home 0.0195 与基线一致、search 390 0.0995 既有 discovery 位移）、0 长任务。
+- **验证**：axe 50 runs 0；QA 23/23；check 0/0；test **102 文件/540**；build 通过；鸿蒙 build/check:theme/parity/布局树全绿。
+
+### 2026-10-27 上一轮（Round 17，图片加载管线 + 感知性能 + 搜索键盘导航）
 
 - **图片管线**：新增 `frontend/src/lib/images.ts`（仅 unsplash 加 `auto=format&fit=crop&q&w`）+ 鸿蒙 `ImageUrlUtil.ets`；
   6 档尺寸预设（avatar/thumb/card/cover/hero/full）、srcset/sizes、`fadeImage` 渐显（0.22s，reduced 直接显示）；
@@ -224,7 +237,7 @@
 > 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
 > 下一轮从 1 开始按序接。
 
-1. **鸿蒙真机像素/TalkBack/流量验收（R13–R17 遗留，最高优先）**：五轮鸿蒙改动均只完成构建/布局树/token 校验；
+1. **鸿蒙真机像素/TalkBack/流量/动效验收（R13–R18 遗留，最高优先）**：六轮鸿蒙改动均只完成构建/布局树/token 校验；
    真机 hdc 离线导致三主题×明暗矩阵、灰度 Tab、压图文字对比度、软岛阴影/圆角/gap、按钮 hover、未读态、
    骨架零位移、整卡图片流量/渐显像素、头像 2x vs 3x、TalkBack 顺序、reduced-motion 系统路径、web↔鸿蒙并排 compare 挂起。
    设备恢复后按 `.workwork/ui-polish-1026/{r2,r3,r4,r5,r6}/ha/report.md` checklist 执行。
@@ -261,6 +274,13 @@
 26. **鸿蒙我的瞬间 tabs 缺失（R13）**：缺喜欢/收藏数据源 + MomentPage 取 fetchNearbyMoments（既有数据源问题）；数据层补齐后再对齐 UI。
 27. **图片管线契约守护（R17）**：新增图片必须走 `lib/images.ts` 档位（unsplash 参数/srcset/渐显/首屏优先级），禁止裸写 `<img src>`；
     reviewer 已把「非 unsplash 原样/失败降级」纳入审计。
+28. **动效契约守护（R18）**：新增动画必须走 `lib/motion.ts` / 鸿蒙 `MotionUtil`；页面进场只能客户端导航、JS 动画必须显式 reduced；
+    pop 只能在用户激活操作触发；禁止动画首屏 LCP 元素/引入 CLS/列表逐项 stagger。经验：Svelte transition 需用 `motionDuration()` 处理 reduced，
+    否则 reduced 下仍播。
+29. **鸿蒙动效残留（R18）**：MomentFeedCard preview 变体动作条未单独接 pop（overlay 卡由 MediaActionButton 覆盖）、SearchPage 用户行无关注 UI（toggleFollow 已备函数级 pop）、
+    GroupPage joinGroup 函数级已接；下轮按 UI 入口补齐或登记 N/A。
+30. **search 390 既有 CLS 0.0995（R18 登记）**：discovery 位移为既有问题（非本轮引入），接近 0.1 阈值，建议后续优化到 <0.05；
+    另：动效相关 QA 建议在 reduced-motion 下取基线截图，避免中间帧偶发 diff。
 
 ## 遗留观察（已评估，保留现状；非缺陷）
 

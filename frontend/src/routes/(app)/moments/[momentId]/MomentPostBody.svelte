@@ -7,6 +7,11 @@
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
+	import { enterOnce, popOn } from '@/lib/motion';
+	// 点击驱动的 pop 计数（仅点击处理器递增；liked/saved 初始同步不播）
+	let likePop = $state(0);
+	let savePop = $state(0);
+	let commentPops = $state<Record<string, number>>({});
 	import { ROUTES } from '@/lib/routes';
 	import { platform } from '@/stores/platform.svelte';
 	import { auth } from '@/stores/auth.svelte';
@@ -58,6 +63,8 @@
 		liked,
 		saved,
 		shareStatus,
+		newCommentId = null,
+		newReplyId = null,
 		onToggleLike,
 		onToggleSave,
 		onShare,
@@ -78,6 +85,9 @@
 		liked: boolean;
 		saved: boolean;
 		shareStatus: 'idle' | 'copied' | 'failed';
+		/** 本次新增的评论/回复 id：仅它们播放 160ms 进场；初始加载/缓存不播 */
+		newCommentId?: string | null;
+		newReplyId?: string | null;
 		onToggleLike: () => void;
 		onToggleSave: () => void;
 		onShare: () => void;
@@ -243,9 +253,14 @@
 					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 focus-ring transition-colors {liked ? 'text-status-danger' : 'text-text-secondary hover:text-status-danger'}"
 					aria-label={liked ? '取消点赞' : '点赞'}
 					aria-pressed={liked}
-					onclick={onToggleLike}
+					onclick={() => {
+						if (!liked) likePop += 1;
+						onToggleLike();
+					}}
 				>
-					<Heart class="size-4.5" strokeWidth={1.75} fill={liked ? 'currentColor' : 'none'} />
+					<span class="inline-flex" use:popOn={likePop}>
+						<Heart class="size-4.5" strokeWidth={1.75} fill={liked ? 'currentColor' : 'none'} />
+					</span>
 					{#key likeCount}
 						<span class="count-pop text-xs font-medium">{likeCount}</span>
 					{/key}
@@ -266,9 +281,14 @@
 					class="hover-action hit-slop-44 flex items-center gap-1.5 py-1 focus-ring transition-colors {saved ? 'text-accent-default' : 'text-text-secondary hover:text-accent-default'}"
 					aria-label={saved ? '取消收藏' : '收藏'}
 					aria-pressed={saved}
-					onclick={onToggleSave}
+					onclick={() => {
+						if (!saved) savePop += 1;
+						onToggleSave();
+					}}
 				>
-					<Bookmark class="size-4.5" strokeWidth={1.75} fill={saved ? 'currentColor' : 'none'} />
+					<span class="inline-flex" use:popOn={savePop}>
+						<Bookmark class="size-4.5" strokeWidth={1.75} fill={saved ? 'currentColor' : 'none'} />
+					</span>
 				</button>
 				<button
 					type="button"
@@ -303,7 +323,7 @@
 		{/if}
 		<div class="flex flex-col divide-y divide-border-subtle/30">
 			{#each comments as c (c.id)}
-				<div class="flex gap-3 py-3.5 first:pt-0 last:pb-0">
+				<div class="flex gap-3 py-3.5 first:pt-0 last:pb-0" use:enterOnce={c.id === newCommentId}>
 					<button
 						type="button"
 						class="hover-btn hit-slop-44 shrink-0 rounded-full focus-ring"
@@ -331,9 +351,14 @@
 									class="hover-action hit-slop-44 -my-2 flex items-center gap-1 py-2 focus-ring transition-colors {c.liked ? 'text-accent-default' : 'text-text-secondary hover:text-text-primary'}"
 									aria-label={c.liked ? '取消点赞评论' : '点赞评论'}
 									aria-pressed={c.liked}
-									onclick={() => onToggleCommentLike(c.id)}
+									onclick={() => {
+										if (!c.liked) commentPops = { ...commentPops, [c.id]: (commentPops[c.id] ?? 0) + 1 };
+										onToggleCommentLike(c.id);
+									}}
 								>
-									<Heart class="size-3.5" strokeWidth={1.5} fill={c.liked ? 'currentColor' : 'none'} />
+									<span class="inline-flex" use:popOn={commentPops[c.id] ?? 0}>
+										<Heart class="size-3.5" strokeWidth={1.5} fill={c.liked ? 'currentColor' : 'none'} />
+									</span>
 									{#key c.likes}
 										<span class="count-pop text-xs">{c.likes}</span>
 									{/key}
@@ -363,7 +388,7 @@
 						{#if c.replies.length > 0}
 							<div class="mt-3 flex flex-col gap-3 rounded-lg bg-surface-subtle/50 p-3">
 								{#each c.replies as r (r.id)}
-									<div class="flex gap-2.5">
+									<div class="flex gap-2.5" use:enterOnce={r.id === newReplyId}>
 										<button
 											type="button"
 											class="hover-btn hit-slop-44 shrink-0 rounded-full focus-ring"

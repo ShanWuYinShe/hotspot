@@ -16,11 +16,17 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { MomentItem } from '../../../core/types/api';
 import { ViewedMomentThumb } from './ViewedMomentThumb';
 import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 
 @Component
 export struct ExternalProfileView {
   @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
-  @Prop loading: boolean = false;
+  @Prop @Watch('onLoadingChanged') loading: boolean = false;
+  /** R7 内容进场（加载完成；缓存命中不播） */
+  @State private enterOpacity: number = 1;
+  @State private enterOffset: number = 0;
+  private enterPlayed: boolean = false;
+  @State private followPopped: boolean = false;
   @Prop errorMessage: string = '';
   @Prop hasProfile: boolean = false;
   @Prop avatarUrl: string = '';
@@ -40,6 +46,35 @@ export struct ExternalProfileView {
   onPrivateChat: () => void = () => {};
   onToggleFollow: () => void = () => {};
   onOpenRemark: () => void = () => {};
+
+  private onLoadingChanged(): void {
+    if (!this.loading) {
+      this.resetContentEnter();
+      this.playContentEnter();
+    }
+  }
+
+  private playContentEnter(): void {
+    if (this.enterPlayed) return;
+    this.enterPlayed = true;
+    if (MotionUtil.reduced()) {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+      return;
+    }
+    this.enterOpacity = 0;
+    this.enterOffset = MotionUtil.enterOffset();
+    MotionUtil.contentEnter(this.getUIContext(), () => {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+    });
+  }
+
+  private resetContentEnter(): void {
+    this.enterPlayed = false;
+    this.enterOpacity = 1;
+    this.enterOffset = 0;
+  }
 
   @Builder
   private statItem(value: string, label: string) {
@@ -208,6 +243,8 @@ export struct ExternalProfileView {
         .layoutWeight(1)
         .align(Alignment.TopStart)
         .scrollBar(BarState.Off)
+        .opacity(this.enterOpacity)
+        .translate({ y: this.enterOffset })
 
         // 底部操作条（对齐前端 footer snippet：私信 + 关注 下沉拇指热区；
         // 备注入口对齐前端「更多操作」sheet 的备注名称，仅已关注可保存）
@@ -225,9 +262,18 @@ export struct ExternalProfileView {
             variant: this.isFollowing ? 'surface' : 'primary',
             buttonSize: 'small',
             disabled: this.followPending,
-            onPress: () => { this.onToggleFollow(); }
+            onPress: () => {
+              // R7 关注 pop：仅未激活→激活方向
+              if (!this.isFollowing) {
+                MotionUtil.statePop(this.getUIContext(),
+                  () => { this.followPopped = true; },
+                  () => { this.followPopped = false; });
+              }
+              this.onToggleFollow();
+            }
           })
             .layoutWeight(1)
+            .scale({ x: MotionUtil.popScale(this.followPopped), y: MotionUtil.popScale(this.followPopped) })
 
           SystemButton({
             label: '备注',

@@ -32,6 +32,7 @@ import { SystemShareService } from '../../../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
 import pasteboard from '@ohos.pasteboard';
 import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import {
   GroupItem,
   GroupApplicationItem,
@@ -107,6 +108,11 @@ export struct GroupDetailPage {
   @State applications: GroupApplicationItem[] = [];
   private applicationsDataSource: BasicDataSource<GroupApplicationItem> = new BasicDataSource<GroupApplicationItem>([]);
   @State isLoading: boolean = true;
+  @State private joinPopped: boolean = false;
+  @State private enterOpacity: number = 1;
+  @State private enterOffset: number = 0;
+  private enterPlayed: boolean = false;
+
   @State isLoadingMembers: boolean = false;
   @State isLoadingApplications: boolean = false;
   @State membersErrorMessage: string = '';
@@ -264,6 +270,10 @@ export struct GroupDetailPage {
       this.errorMessage = '加载群组详情失败';
     } finally {
       this.isLoading = false;
+      if (this.groupInfo) {
+        this.resetContentEnter();
+        this.playContentEnter();
+      }
     }
   }
 
@@ -627,6 +637,9 @@ export struct GroupDetailPage {
         if (response.code === 0 && response.data) {
           if (response.data.status === 'joined') {
             SystemToast.showSuccess('加入群组成功', this.getUIContext());
+            MotionUtil.statePop(this.getUIContext(),
+              () => { this.joinPopped = true; },
+              () => { this.joinPopped = false; });
             this.isMember = true;
             InteractionStateStore.getInstance().updateGroupMembership(this.groupId, { is_member: true });
             await this.loadGroupDetail();
@@ -1428,6 +1441,28 @@ export struct GroupDetailPage {
   }
 
 
+  private playContentEnter(): void {
+    if (this.enterPlayed) return;
+    this.enterPlayed = true;
+    if (MotionUtil.reduced()) {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+      return;
+    }
+    this.enterOpacity = 0;
+    this.enterOffset = MotionUtil.enterOffset();
+    MotionUtil.contentEnter(this.getUIContext(), () => {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+    });
+  }
+
+  private resetContentEnter(): void {
+    this.enterPlayed = false;
+    this.enterOpacity = 1;
+    this.enterOffset = 0;
+  }
+
   build() {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
@@ -1855,6 +1890,7 @@ export struct GroupDetailPage {
                       loading: this.isJoining,
                       onPress: () => { this.joinGroup(); }
                     })
+                      .scale({ x: MotionUtil.popScale(this.joinPopped), y: MotionUtil.popScale(this.joinPopped) })
                 }
              }
              .padding(DesignConstants.SPACING.LG)
@@ -1991,6 +2027,8 @@ export struct GroupDetailPage {
         .borderRadius(DesignConstants.SHAPE.CARD)
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .clip(true)
+        .opacity(this.enterOpacity)
+        .translate({ y: this.enterOffset })
         .shadow(this.getCurrentThemePalette().surfaceShadow)
         .transition(
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })

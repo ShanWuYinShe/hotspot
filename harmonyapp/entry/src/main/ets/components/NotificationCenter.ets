@@ -12,6 +12,7 @@ import { PageNames } from '../constants/AppConstants';
 import { SystemToast } from './SystemToast';
 import { SystemDialog } from './SystemDialog';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
+import { MotionUtil } from '../core/accessibility/MotionUtil';
 import { DesignConstants } from '../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
 import { SmartNotificationService, NotificationEvent, SmartNotification } from '../core/services/SmartNotificationService';
@@ -48,6 +49,10 @@ export struct NotificationCenter {
   @State private visibleNotifications: NotifyItem[] = [];
   @State private selectedFilter: NotificationFilterKey = 'all';
   @State private isLoading: boolean = false;
+  @State private enterOpacity: number = 1;
+  @State private enterOffset: number = 0;
+  private enterPlayed: boolean = false;
+
   @State private isRefreshing: boolean = false;
   @State private isLoadingMore: boolean = false;
   @State private hasMore: boolean = false;
@@ -164,6 +169,8 @@ export struct NotificationCenter {
       SystemToast.showError(message, this.getUIContext());
     } finally {
       this.isLoading = false;
+      this.resetContentEnter();
+      this.playContentEnter();
       this.isRefreshing = false;
     }
   }
@@ -391,6 +398,28 @@ export struct NotificationCenter {
     }
   }
 
+  private playContentEnter(): void {
+    if (this.enterPlayed) return;
+    this.enterPlayed = true;
+    if (MotionUtil.reduced()) {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+      return;
+    }
+    this.enterOpacity = 0;
+    this.enterOffset = MotionUtil.enterOffset();
+    MotionUtil.contentEnter(this.getUIContext(), () => {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+    });
+  }
+
+  private resetContentEnter(): void {
+    this.enterPlayed = false;
+    this.enterOpacity = 1;
+    this.enterOffset = 0;
+  }
+
   build() {
     Column({ space: DesignConstants.SPACING.LG }) {
       // 标题栏
@@ -585,12 +614,14 @@ export struct NotificationCenter {
         .layoutWeight(1)
         .pullToRefresh(false)
         .refreshOffset(64)
-        .onRefreshing(() => {
+.onRefreshing(() => {
           if (!this.isRefreshing) {
             this.isRefreshing = true;
             this.refreshNotifications();
           }
         })
+        .opacity(this.enterOpacity)
+        .translate({ y: this.enterOffset })
       }
 
       // 全部已读二次确认（与全站确认弹窗视觉一致）

@@ -632,6 +632,46 @@
     animation: cst-count-pop var(--cst-motion-snappy) var(--cst-ease-bounce);
   }
 
+  /* 页面进场（Round 7）：仅客户端导航时由 playPageEnter() 添加，180ms opacity+4px 上移；
+     首屏不播（保护 LCP）。reduced 下 JS 直接跳过，不会残留该类。 */
+  @keyframes cst-page-enter {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+  .page-enter {
+    animation: cst-page-enter var(--cst-motion-snappy) var(--cst-ease-standard) both;
+  }
+
+  /* 骨架→内容 fade（Round 7）：有骨架→数据到达时播 150ms；缓存命中不播。 */
+  @keyframes cst-content-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .content-fade {
+    animation: cst-content-fade var(--cst-motion-rapid) var(--cst-ease-standard) both;
+  }
+
+  /* 评论/回复新增（Round 7）：仅本次新增播放 160ms fade + 6px 上移。 */
+  @keyframes cst-comment-enter {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  .comment-enter {
+    animation: cst-comment-enter var(--cst-motion-snappy) var(--cst-ease-standard) both;
+  }
+
+  /* 状态切换 pop（点赞/收藏/关注，Round 7）：false→true 时由 action 添加 220ms 缩放弹跳；
+     仅 transform，不改变布局；reduced 下 action 显式跳过。 */
+  @keyframes cst-state-pop {
+    0% { transform: scale(1); }
+    55% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+  .state-pop {
+    display: inline-flex;
+    animation: cst-state-pop var(--cst-motion-standard) var(--cst-ease-bounce);
+  }
+
   /* 尊重系统减弱动效偏好：无限/装饰性动画一律降级为瞬时，缩放反馈保留无感时长。
      地图脉冲这类纯装饰动画直接停用；加载 spinner 属于状态反馈，保留但加快周期。 */
   @media (prefers-reduced-motion: reduce) {

@@ -16,6 +16,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { curves } from '@kit.ArkUI';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { LucideIcon } from '../../../components/LucideIcon';
 
 /**
@@ -40,6 +41,7 @@ export struct MomentWallCard {
   @State private socialState: MomentSocialState | undefined = undefined;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private likePopped: boolean = false;
+  @State private favoritePopped: boolean = false;
   /** R2 整卡图片卡：是否有图（false = fallback，footer 换主题文字色） */
   @State private mediaActive: boolean = true;
 
@@ -108,12 +110,13 @@ export struct MomentWallCard {
   }
 
   private onLikeClick(): void {
-    // count-pop：点赞瞬间计数放大弹跳后回落（对齐前端 cst-count-pop 1→1.3→1；
-    // 原实现翻转布尔永不回落，计数停留在缩小态）
-    this.likePopped = true;
-    setTimeout(() => {
-      this.likePopped = false;
-    }, DesignConstants.ANIMATION.DURATION_FAST);
+    // R7 状态 pop（MotionUtil 统一：1→1.15→1 / 220ms；仅激活方向；reduced 直接终态）
+    const wasLiked: boolean = this.isLikedByMe();
+    if (!wasLiked) {
+      MotionUtil.statePop(this.getUIContext(),
+        () => { this.likePopped = true; },
+        () => { this.likePopped = false; });
+    }
     interactionActions.toggleMomentLike(this.moment.moment_id);
   }
 
@@ -180,13 +183,7 @@ export struct MomentWallCard {
             .fontColor(this.mediaActive
               ? (this.isLikedByMe() ? this.getPalette().error : DesignConstants.COLOR.WHITE)
               : (this.isLikedByMe() ? this.getPalette().accentBackground : this.getPalette().textSecondary))
-            .scale(this.likePopped ?
-              { x: DesignConstants.INTERACTION.SCALE_LIKE_POP, y: DesignConstants.INTERACTION.SCALE_LIKE_POP } :
-              { x: 1, y: 1 })
-            .animation({
-              duration: DesignConstants.ANIMATION.DURATION_FAST,
-              curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
-            })
+            .scale({ x: MotionUtil.popScale(this.likePopped), y: MotionUtil.popScale(this.likePopped) })
         }
         .alignItems(VerticalAlign.Center)
         .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}like-${this.moment.moment_id}`)
@@ -229,8 +226,15 @@ export struct MomentWallCard {
       })
       .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}favorite-${this.moment.moment_id}`)
       .onClick(() => {
+        const wasFavorited: boolean = this.isFavorited();
+        if (!wasFavorited) {
+          MotionUtil.statePop(this.getUIContext(),
+            () => { this.favoritePopped = true; },
+            () => { this.favoritePopped = false; });
+        }
         interactionActions.toggleMomentFavorite(this.moment.moment_id);
       })
+      .scale({ x: MotionUtil.popScale(this.favoritePopped), y: MotionUtil.popScale(this.favoritePopped) })
       .accessibilityText(this.isFavorited() ? '取消收藏' : '收藏')
       .responseRegion({
         x: -DesignConstants.SPACING.MD2,

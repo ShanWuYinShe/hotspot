@@ -3,6 +3,7 @@
 	import { afterNavigate, beforeNavigate } from '$app/navigation';
 	import { cn } from '@/lib/utils';
 	import { decideScroll, restoreScrollTop, savePosition } from '@/lib/scroll-positions';
+	import { playPageEnter } from '@/lib/motion';
 	import PageViewport from './PageViewport.svelte';
 
 	// 布局组件（layout/page）。
@@ -46,6 +47,8 @@
 	// 恢复用追到为止（restoreScrollTop）：图片/瀑布流布局异步长高时单次赋值
 	// 会被钳位，每帧重设直到到达目标或布局稳定。
 	let mainEl: HTMLElement | null = $state(null);
+	/** 内容层（不含 <main> 滚动容器本身）：仅客户端导航时做进场动画。 */
+	let contentEl: HTMLElement | null = $state(null);
 	const savedTops = new Map<string, number>();
 
 	beforeNavigate((nav) => {
@@ -53,6 +56,8 @@
 	});
 
 	afterNavigate((nav) => {
+		// 页面进场：仅客户端导航（link/goto/form/popstate），首屏 enter 不播（保护 LCP）。
+		if (nav.type !== 'enter') playPageEnter(contentEl);
 		const decision = decideScroll(nav.type, nav.from?.url.pathname ?? null, nav.to?.url.pathname ?? null, savedTops);
 		if (decision.action === 'keep' || !mainEl) return;
 		restoreScrollTop(mainEl, decision.action === 'restore' ? decision.top : 0);
@@ -73,7 +78,7 @@
 	     父级时百分比高度失效（min-height 不算显式高度），导致内容不满时页面
 	     无法撑满视口（消息页等短内容页底部出现空白）。h-full 相对 main
 	     （flex item，高度由 shell 确定）始终有效；min-h-full 兜底超长内容。 -->
-	<div class={cn('h-full min-h-full w-full', contentClassName)}>
+	<div bind:this={contentEl} class={cn('h-full min-h-full w-full', contentClassName)}>
 		<PageViewport>
 			{@render children()}
 		</PageViewport>

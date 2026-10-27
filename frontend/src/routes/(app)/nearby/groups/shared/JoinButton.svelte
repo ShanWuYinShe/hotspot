@@ -2,6 +2,7 @@
 	import { Check } from '@lucide/svelte';
 	import Button from '@/components/ui/button.svelte';
 	import type { Group } from './group-data';
+	import { popOn } from '@/lib/motion';
 
 	// 加入/已加入/审核中三态切换按钮（对齐群详情页 toggleJoin 三态语义，
 	// 与 3cbb2bec 同类：需审核群申请后不得冒充「已加入」）。
@@ -24,6 +25,8 @@
 		onMedia?: boolean;
 		onToggle: () => void;
 	} = $props();
+	// 点击驱动的 pop：仅未加入→加入/申请时播；初始 joined 同步不播。
+	let joinPop = $state(0);
 </script>
 
 <Button
@@ -41,16 +44,19 @@
 	aria-pressed={group.joined}
 	onclick={(e) => {
 		e.stopPropagation();
+		if (!group.joined && !pendingApproval) joinPop += 1;
 		onToggle();
 	}}
 >
-	{#if pendingApproval}
-		<Check size={12} />
-		审核中 · 点击取消
-	{:else if group.joined}
-		<Check size={12} />
-		已加入
-	{:else}
-		加入
-	{/if}
+	<span class="inline-flex items-center gap-1" use:popOn={joinPop}>
+		{#if pendingApproval}
+			<Check size={12} />
+			审核中 · 点击取消
+		{:else if group.joined}
+			<Check size={12} />
+			已加入
+		{:else}
+			加入
+		{/if}
+	</span>
 </Button>

@@ -15,6 +15,7 @@
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
+	import { contentFade } from '@/lib/motion';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
@@ -252,6 +253,7 @@
 		{/if}
 
 		<!-- 关注流未登录态：温馨引导登录卡片 -->
+		<div use:contentFade={currentLoading}>
 		{#if activeTab === 'following' && auth.status !== 'authenticated'}
 			<div class="mx-4 my-8 rounded-lg bg-surface-island p-6 text-center shadow-xs">
 				<div class="mx-auto flex size-12 items-center justify-center rounded-full bg-accent-soft text-accent-default mb-3">
@@ -321,6 +323,7 @@
 				{@render nearbyBanner()}
 			</div>
 		{/if}
+		</div>
 
 		{#snippet rail()}
 			{#if demoMode === 'd'}

@@ -5,6 +5,7 @@ import { LocationUtil } from '../../../core/location/LocationUtil';
 import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
@@ -29,6 +30,7 @@ export struct UserCard {
   @State private socialState: UserRelationState | undefined = undefined;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private followInFlight: boolean = false;
+  @State private followPopped: boolean = false;
   /** R2 整卡图片卡：是否有图（false = fallback，footer 换主题文字色） */
   @State private mediaActive: boolean = true;
 
@@ -88,9 +90,16 @@ export struct UserCard {
 
   private async toggleFollow(): Promise<void> {
     if (this.followInFlight) return;
+    const wasFollowing: boolean = this.isFollowing();
+    if (!wasFollowing) {
+      // R7 关注 pop：仅未激活→激活方向
+      MotionUtil.statePop(this.getUIContext(),
+        () => { this.followPopped = true; },
+        () => { this.followPopped = false; });
+    }
     this.followInFlight = true;
     try {
-      await interactionActions.setFollowUser(this.getUserId(), !this.isFollowing());
+      await interactionActions.setFollowUser(this.getUserId(), !wasFollowing);
     } finally {
       this.followInFlight = false;
     }
@@ -120,6 +129,7 @@ export struct UserCard {
         })
       }
       .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}follow-${this.getUserId()}`)
+      .scale({ x: MotionUtil.popScale(this.followPopped), y: MotionUtil.popScale(this.followPopped) })
       // web：size-9 = 36vp 圆钮（28vp 偏小，与 16vp 图标比例不匹配）
       .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
       .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)

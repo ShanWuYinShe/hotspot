@@ -58,6 +58,10 @@ struct AdminOverviewPage {
   @State permissions: string[] = [];
   @State isSuperAdmin: boolean = false;
   @State isLoading: boolean = true;
+  @State private enterOpacity: number = 1;
+  @State private enterOffset: number = 0;
+  private enterPlayed: boolean = false;
+
   @State errorMessage: string = '';
   @State private pressedModuleKey: string = '';
 
@@ -100,6 +104,8 @@ struct AdminOverviewPage {
       }
     } finally {
       this.isLoading = false;
+      this.resetContentEnter();
+      this.playContentEnter();
     }
   }
 
@@ -108,6 +114,28 @@ struct AdminOverviewPage {
       return true;
     }
     return this.permissions.indexOf(perm) >= 0;
+  }
+
+  private playContentEnter(): void {
+    if (this.enterPlayed) return;
+    this.enterPlayed = true;
+    if (MotionUtil.reduced()) {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+      return;
+    }
+    this.enterOpacity = 0;
+    this.enterOffset = MotionUtil.enterOffset();
+    MotionUtil.contentEnter(this.getUIContext(), () => {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+    });
+  }
+
+  private resetContentEnter(): void {
+    this.enterPlayed = false;
+    this.enterOpacity = 1;
+    this.enterOffset = 0;
   }
 
   build() {
@@ -148,6 +176,8 @@ struct AdminOverviewPage {
           .scrollBar(BarState.Off)
           // 短内容顶对齐：Scroll 对小于视口的内容默认居中（SKILL:286-291）
           .align(Alignment.Top)
+        .opacity(this.enterOpacity)
+        .translate({ y: this.enterOffset })
         }
       }
       .width('100%')

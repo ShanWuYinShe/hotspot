@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Check, UserCheck, UserPlus } from '@lucide/svelte';
 	import Button from '@/components/ui/button.svelte';
+	import { popOn } from '@/lib/motion';
 
 	// FollowButton — 关注/已关注切换的唯一实现（审计 P1-6：此前 6 种手写写法）。
 	// 复用 ui/button 原语：未关注 = primary（accent 实底），已关注 = outline 变体
@@ -34,6 +35,13 @@
 		labelInactive?: string;
 		onToggle: (e: MouseEvent) => void;
 	} = $props();
+
+	// 点击驱动的 pop：仅「未关注→关注」点击时递增；已关注/初始同步不播。
+	let followPop = $state(0);
+	function handleClick(e: MouseEvent) {
+		if (!active && !pending && !disabled) followPop += 1;
+		onToggle(e);
+	}
 </script>
 
 {#if iconOnly}
@@ -51,14 +59,16 @@
 				: 'bg-accent-bg text-accent-default border border-transparent hover:border-accent-border'}"
 		onclick={(e) => {
 			e.stopPropagation();
-			onToggle(e);
+			handleClick(e);
 		}}
 	>
-		{#if active}
-			<Check class="size-4" strokeWidth={2.5} />
-		{:else}
-			<UserPlus class="size-4" strokeWidth={2} />
-		{/if}
+		<span class="inline-flex" use:popOn={followPop}>
+			{#if active}
+				<Check class="size-4" strokeWidth={2.5} />
+			{:else}
+				<UserPlus class="size-4" strokeWidth={2} />
+			{/if}
+		</span>
 	</button>
 {:else}
 	<Button
@@ -77,9 +87,10 @@
 		aria-pressed={active}
 		onclick={(e) => {
 			e.stopPropagation();
-			onToggle(e);
+			handleClick(e);
 		}}
 	>
+		<span class="inline-flex items-center gap-1" use:popOn={followPop}>
 		{#if active}
 			{#if labelActive === '已关注'}
 				<UserCheck class="size-2.5" strokeWidth={1.5} />
@@ -91,5 +102,6 @@
 			<UserPlus class="size-2.5" strokeWidth={2} />
 			{labelInactive}
 		{/if}
+		</span>
 	</Button>
 {/if}

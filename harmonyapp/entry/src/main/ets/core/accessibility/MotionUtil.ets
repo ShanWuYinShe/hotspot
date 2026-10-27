@@ -16,6 +16,12 @@ export interface MotionSpringParam {
 }
 
 export class MotionUtil {
+  /** R7 动效语义（与 web enter 180/exit 150/pop 220 对齐；不新增设计 token） */
+  static readonly ENTER_MS: number = 180;
+  static readonly ENTER_OFFSET_VP: number = 4;
+  static readonly POP_MS: number = 220;
+  static readonly POP_SCALE: number = 1.15;
+
   static reduced(): boolean {
     return AccessibilityManager.getInstance().shouldReduceMotion();
   }
@@ -37,5 +43,44 @@ export class MotionUtil {
   /** 骨架脉冲：减少动态/系统关闭动画时返回 false（骨架静止） */
   static shimmerActive(): boolean {
     return !MotionUtil.reduced();
+  }
+
+  // ==================== R7：内容进场 / 状态 pop ====================
+
+  /** 内容进场位移动量：reduced 时 0（直接终态） */
+  static enterOffset(): number {
+    return MotionUtil.reduced() ? 0 : MotionUtil.ENTER_OFFSET_VP;
+  }
+
+  /**
+   * 内容进场：reduced 直接 apply 终态；否则 180ms ease-out opacity/translate 动画。
+   * 仅用于数据就绪/内容替换的内容层，首屏与系统转场不调用。
+   */
+  static contentEnter(context: UIContext, apply: () => void): void {
+    if (MotionUtil.reduced()) {
+      apply();
+      return;
+    }
+    context.animateTo({ duration: MotionUtil.ENTER_MS, curve: Curve.EaseOut }, apply);
+  }
+
+  /**
+   * 状态 pop：1→1.15→1，220ms（keyframe 两段各 110ms）；reduced 直接 setSettle 终态。
+   * 仅「未激活→激活」调用；取消激活不播。
+   */
+  static statePop(context: UIContext, setPeak: () => void, setSettle: () => void): void {
+    if (MotionUtil.reduced()) {
+      setSettle();
+      return;
+    }
+    context.keyframeAnimateTo({ delay: 0 }, [
+      { duration: MotionUtil.POP_MS / 2, curve: Curve.EaseOut, event: setPeak },
+      { duration: MotionUtil.POP_MS / 2, curve: Curve.EaseInOut, event: setSettle }
+    ]);
+  }
+
+  /** pop 缩放值：reduced 或未 pop 时 1 */
+  static popScale(popped: boolean): number {
+    return popped && !MotionUtil.reduced() ? MotionUtil.POP_SCALE : 1;
   }
 }

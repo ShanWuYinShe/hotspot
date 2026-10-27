@@ -7,6 +7,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ChatListItem from '@/components/messages/ChatListItem.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import type { ChatItem } from '@/lib/chat-list';
+	import { contentFade } from '@/lib/motion';
 
 	// ChatListBody —— 消息页会话列表体（错误/加载/空态/列表三态），
 	// 移动与桌面分栏共用；桌面传 compact + selectedId + onSelect（就地展开），
@@ -45,6 +46,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	} = $props();
 </script>
 
+<div class={fill ? 'flex min-h-0 flex-1 flex-col' : ''} use:contentFade={loading}>
 {#if needsAuth}
 	<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可查看和发起会话" />
 {:else if loadError}
@@ -94,3 +96,4 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		{/each}
 	</ListContainer>
 {/if}
+</div>

@@ -11,6 +11,7 @@
  * 禁止在卡片里硬编码 rgba。
  */
 import { DesignConstants } from '../../constants/DesignConstants';
+import { MotionUtil } from '../../core/accessibility/MotionUtil';
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 import { AppIcon } from '../SystemIcon';
@@ -156,7 +157,9 @@ export struct MediaOverlayBadge {
 export struct MediaActionButton {
   @Prop icon: AppIcon = AppIcon.HEART;
   @Prop label: string = '';
-  @Prop active: boolean = false;
+  @Prop @Watch('onActiveChanged') active: boolean = false;
+  /** R7 状态 pop（未激活→激活 1→1.15→1；reduced 直接终态） */
+  @State private popped: boolean = false;
   /** 选中态颜色（点赞=error / 收藏=accent），空则仅图标形状变化 */
   @Prop activeColor: string = '';
   /** true = 图片上（白图标+白字）；false = fallback（主题文字色） */
@@ -165,6 +168,16 @@ export struct MediaActionButton {
   onPress: () => void = () => {};
 
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+
+  private onActiveChanged(): void {
+    if (!this.active) {
+      this.popped = false;
+      return;
+    }
+    MotionUtil.statePop(this.getUIContext(),
+      () => { this.popped = true; },
+      () => { this.popped = false; });
+  }
 
   /** 图标色：选中态用 activeColor 填充（点赞红/收藏主色），否则白/主题色 */
   private iconForeground(): string {
@@ -199,6 +212,7 @@ export struct MediaActionButton {
     }
     .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
     .alignItems(VerticalAlign.Center)
+    .scale({ x: MotionUtil.popScale(this.popped), y: MotionUtil.popScale(this.popped) })
     .accessibilityText(this.accessibilityLabel)
     .onClick(() => {
       this.onPress();

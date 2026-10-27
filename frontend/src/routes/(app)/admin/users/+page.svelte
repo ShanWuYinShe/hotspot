@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { adminSearchUsers, adminSetUserBan } from '@/api';
+	import { contentFade } from '@/lib/motion';
 	import type { AdminUserItem, UserAccountStatus, UserType } from '@/api/types';
 	import { hasAdminPermission } from '@/stores/admin.svelte';
 	import { showToast } from '@/stores/toast.svelte';
@@ -111,6 +112,8 @@
 
 		<TabBar items={STATUS_TABS} value={status} onChange={(id) => (status = id)} />
 
+		<div use:contentFade={list.loading}>
+
 		{#if list.loading}
 			<InlineLoading label="加载用户列表…" />
 		{:else if list.error}
@@ -166,6 +169,7 @@
 				<ListEnd />
 			{/if}
 		{/if}
+		</div>
 	</div>
 
 	<ConfirmDialog

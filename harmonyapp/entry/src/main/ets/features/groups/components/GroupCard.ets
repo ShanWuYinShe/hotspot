@@ -4,6 +4,7 @@ import { interactionEventHub, GroupMemberState, GroupMembershipState } from '../
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { AppRouter, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
@@ -132,6 +133,7 @@ export struct GroupCard {
 
   /** 退出群组二次确认可见性（destructive 防误触：已加入态一点即静默退群） */
   @State private showLeaveConfirm: boolean = false;
+  @State private joinPopped: boolean = false;
 
   private toggleJoin(): void {
     const groupId = this.getGroupId();
@@ -141,6 +143,10 @@ export struct GroupCard {
     if (this.hasJoined()) {
       this.showLeaveConfirm = true;
     } else {
+      // R7 加入 pop（仅激活方向）
+      MotionUtil.statePop(this.getUIContext(),
+        () => { this.joinPopped = true; },
+        () => { this.joinPopped = false; });
       interactionActions.joinGroup(groupId);
     }
   }
@@ -157,6 +163,7 @@ export struct GroupCard {
     }) {
       Text(this.hasJoined() ? '已加入' : '加入')
         .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}join-${this.getGroupId()}`)
+        .scale({ x: MotionUtil.popScale(this.joinPopped), y: MotionUtil.popScale(this.joinPopped) })
         .fontSize(DesignConstants.FONT.SIZE.XS)
         .fontWeight(this.hasJoined() ? DesignConstants.FONT.WEIGHT.REGULAR : DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.hasJoined() ?

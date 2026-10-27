@@ -26,6 +26,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { useGroupDetail } from '@/lib/group-data.svelte';
 	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
+	import { popOn } from '@/lib/motion';
 	import { formatDateTime } from '@/lib/utils';
 	import { onlineUsers, presence, watchPresence } from '@/stores/presence.svelte';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
@@ -149,6 +150,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		if (res.code === 0) showToast('群组已解散', 'success');
 		return res;
 	};
+
+	// 点击驱动的加入 pop（仅点击触发；初始 joined 同步不播）
+	let joinPop = $state(0);
 
 	// 加入群组是写操作：访客必须先登录。此前直接调 toggleJoin 会打到 groups/enter
 	// 拿到 10100「Access Token 无效或过期」技术错误 toast，而同页的关注/点赞等都弹
@@ -444,7 +448,16 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					{/if}
 				</Button>
 			{:else}
-				<Button type="button" variant="primary" size="lg" class="w-full" onclick={requestJoin}>加入群组</Button>
+				<Button
+					type="button"
+					variant="primary"
+					size="lg"
+					class="w-full"
+					onclick={() => {
+						joinPop += 1;
+						requestJoin();
+					}}
+				><span class="inline-flex" use:popOn={joinPop}>加入群组</span></Button>
 			{/if}
 				{#if gd.joined && (gd.myRole === 'owner' || gd.myRole === 'admin')}
 					<Button type="button" variant="ghost" size="lg" flat class="w-full bg-surface-subtle/60 hover:bg-surface-subtle" onclick={() => (settingsOpen = true)}>

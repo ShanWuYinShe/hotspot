@@ -503,3 +503,23 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 
 - 列表/搜索页可加 ↑↓ 焦点移动（落到真实链接/按钮、focus-ring 可见），Enter 原生打开、Esc 清空/返回；
   不引入 combobox/aria-activedescendant；Tab 顺序不变。新增交互后必须跑 axe（0 serious/critical）。
+## Round 7 动效与状态反馈（2026-10-27）
+
+### 1) 动效必须走统一入口
+
+- `lib/motion.ts`：`MOTION.enter 180 / exit 150 / pop 220`、`prefersReducedMotion()`、`motionDuration()`、`pop` action、`playPageEnter()`、`toastExit`；
+  CSS 用 `cst-page-enter` / `cst-state-pop` / `cst-comment-enter`。禁止手写新 duration/scale 数字。
+- 页面进场只允许客户端导航（`afterNavigate` 且 `nav.type !== 'enter'`）；**首屏不播**（护 LCP）；只包内容层，不动 sticky/滚动/焦点。
+- 骨架→内容只在「实际展示过骨架」时 fade；缓存命中不播；不得逐项 stagger 大列表。
+- 状态 pop 只在用户激活操作触发（点击 nonce/显式 handler）；初始数据同步/首帧已激活不播，取消不 pop。
+- toast 退场用 `out:toastExit`，容器常驻（最后一条可退）；空 aria-live 无内容。
+
+### 2) reduced-motion（强制）
+
+- CSS 动画由全局 `@media (prefers-reduced-motion: reduce)` 压到 0.01ms；**JS 动画（Svelte transition/class 定时器）必须显式判断**，
+  transition duration 用 `motionDuration(ms)`（reduced 返回 0），否则 reduced 下仍会播。验收：无动画类/事件/定时器残留。
+
+### 3) 红线与验收
+
+- 不得动画首屏 LCP 元素；不得引入 CLS；QA 截图不得因动效抖动（动画 ≤260ms；动效 QA 建议在 reduced-motion 下取基线）。
+- 验收：normal/reduced 双路径 computed + 中间态截图；axe 0；CLS/LCP 不回归；键盘/焦点无回归。

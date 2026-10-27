@@ -23,6 +23,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { curves } from '@kit.ArkUI';
@@ -405,6 +406,8 @@ export struct GroupPage {
     }
   }
 
+  @State private joinPoppedGroupId: string = '';
+
   private async joinGroup(group: GroupItem) {
     const groupId = group.group.group_id;
     if (this.isGroupJoining(groupId)) {
@@ -434,6 +437,10 @@ export struct GroupPage {
       if (response.code === 0 && response.data) {
         if (response.data.status === 'joined') {
           SystemToast.show('加入群组成功', this.getUIContext());
+          // R7 加入 pop（仅激活方向；GroupPage 列表的加入 UI 由 GroupCard 承载，已接）
+          MotionUtil.statePop(this.getUIContext(),
+            () => { this.joinPoppedGroupId = groupId; },
+            () => { this.joinPoppedGroupId = ''; });
           InteractionStateStore.getInstance().updateGroupMembership(groupId, { is_member: true });
           await this.loadMyGroups();
         } else if (response.data.status === 'pending_approval') {

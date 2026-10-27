@@ -320,3 +320,40 @@
 - `ImageUrlUtil.ets`：与 web 同 host/参数规则（w/auto=format/fit=crop/q=78），其他域名原样；15 处接入（卡片/详情/头像/缩略图/通知）；
   宽度档对齐（首屏 1080/大图、卡片 900:800、头像 2x）；首屏前 2 优先、LazyForEach 离屏不创建（ArkUI 无 fetchpriority/lazy，登记平台差异）；
   高频图占位 + onComplete 渐显 200ms（reduced 直接显示）；失败 fallback 保留；build/check:theme/parity/布局树全绿。
+## 2026-10-27 补充（Round 7：微动效与状态反馈）
+
+**范围**：Web 16 文件（14 改 + 2 新增 `lib/motion.ts` + 单测；+184/−37）+ 鸿蒙 16 文件（+491/−30）；基线 `6d292e98`。
+规范：design-system §20.9。证据：`.workwork/ui-polish-1026/r7/fe/{compare,raw}`、`r7/ha/{interim,logs}`。
+**鸿蒙真机仍离线**：动效手感/中间帧像素/reduced 系统开启路径待真机。
+
+### 一、动效实现
+
+| 项 | 实现 | reduced 行为 |
+|---|---|---|
+| 页面进场 | `RoutedContentViewport` afterNavigate 仅 `nav.type!=='enter'`（首屏不播护 LCP；popstate 播）；内容层 opacity 0→1 + translateY 4px，180ms | 不播（无类/无事件） |
+| 骨架→内容 | home/notify/messages/search/admin-users `contentFade`（仅实际展示骨架时、缓存命中不播） | 直接显示 |
+| Toast 退场 | 每条 `out:toastExit`（fade+y −8px，150ms）+ 容器常驻（最后一条可退）；空 aria-live 无噪音 | 立即移除 |
+| 状态 pop | 点赞/收藏/关注/加入 11 处（MomentCard/MomentPostBody 点赞收藏评论赞/FollowButton/JoinButton/群详情加入/鸿蒙 11 处）；仅激活方向，点击 nonce 驱动 | 无 class/无事件 |
+| 评论新增 | 仅本次新增行 fade+6px（160ms；600ms 标记清除） | 跳过 |
+
+- reduced 全矩阵：normal vs reduced 对照截图与 computed（`cst-page-enter` 0.18s vs 无；`cst-state-pop` 0.22s vs 无；toast 30ms 仍存在→300ms 移除 vs 30ms 已 0）；
+  JS 路径均走 `prefersReducedMotion()` 判断，无动画类/定时器残留。
+
+### 二、性能红线
+
+| 指标 | 结果 |
+|---|---|
+| LCP（dev） | home 560/412、nearby 628/276、detail 796/616、search 640/492（同 r6 量级；首屏无进场动画） |
+| CLS | home 1440 0.0195（与基线一致）、390/其它 0；search 390 0.0995（既有 discovery 位移，非本轮） |
+| 长任务 | 0 |
+
+### 三、回归
+
+- axe 39 页/50 runs **0 violation**；browser-qa 23/23 页 issues=[]、console 0；
+- check 0 errors/0 warnings + eslint 0 + 主题四联 OK；test **102 文件 / 540**；build 通过。
+
+### 四、鸿蒙镜像（代码/构建/布局树）
+
+- `MotionUtil` 扩展为唯一动画入口：`contentEnter`（180ms）、`statePop`（220ms，1→1.15→1，keyframeAnimateTo 两段）、`popScale`、`enterOffset`；reduced 直接终态；
+- 内容进场 10 处（Home 冷启动跳过、tab 切换/刷新重播、缓存命中不播；触发/跳过条件见 ha report §2 表）；状态 pop 11 处，旧手写 150ms/1.3 模式全部替换；
+- 无新增 token；build/check:theme/parity/布局树快照正常。

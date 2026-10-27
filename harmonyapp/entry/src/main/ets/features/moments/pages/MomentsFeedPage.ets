@@ -29,6 +29,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
 import { MomentFeedCard } from '../../../components/MomentFeedCard';
@@ -81,6 +82,10 @@ export struct MomentsFeedPage {
   @State hasMore: boolean = false;
   @State nextCursor: string = '';
   @State activeTag: string = '';
+  /** R7 内容进场（只包内容区；首屏为导航进入，播放） */
+  @State private enterOpacity: number = 1;
+  @State private enterOffset: number = 0;
+  private enterPlayed: boolean = false;
   /** 动态 tag 列表（从前 N 条 moment.tags 聚合去重，对齐前端 moments tagsList 派生模式） */
   @State hotTags: string[] = [];
 
@@ -237,7 +242,33 @@ export struct MomentsFeedPage {
     } finally {
       this.isLoading = false;
       this.isRefreshing = false;
+      if (this.hasAnyData()) {
+        this.resetContentEnter();
+        this.playContentEnter();
+      }
     }
+  }
+
+  private playContentEnter(): void {
+    if (this.enterPlayed) return;
+    this.enterPlayed = true;
+    if (MotionUtil.reduced()) {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+      return;
+    }
+    this.enterOpacity = 0;
+    this.enterOffset = MotionUtil.enterOffset();
+    MotionUtil.contentEnter(this.getUIContext(), () => {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+    });
+  }
+
+  private resetContentEnter(): void {
+    this.enterPlayed = false;
+    this.enterOpacity = 1;
+    this.enterOffset = 0;
   }
 
   build() {
@@ -303,6 +334,9 @@ export struct MomentsFeedPage {
                 // 再次点击已激活项可取消筛选（对齐前端 activeTag === id ? null : id）
                 this.activeTag = this.activeTag === tag ? '' : (tag ?? '');
                 this.refreshVisibleDataSource();
+                // 内容替换（标签筛选）：重播进场
+                this.resetContentEnter();
+                this.playContentEnter();
               }
             }
           })
@@ -371,6 +405,8 @@ export struct MomentsFeedPage {
         bottom: DesignConstants.SPACING.SM
       })
 
+      // R7 内容进场（只包内容区，不含粘性头）
+      Column() {
       if (this.getVisibleMoments().length > 0) {
         // Refresh 直接包可滚动的 WaterFlow（子组件需为滚动组件下拉刷新才生效）
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
@@ -448,6 +484,11 @@ export struct MomentsFeedPage {
             .layoutWeight(1)
         }
       }
+      }
+      .width('100%')
+      .layoutWeight(1)
+      .opacity(this.enterOpacity)
+      .translate({ y: this.enterOffset })
     }
     .width('100%')
     .height('100%')

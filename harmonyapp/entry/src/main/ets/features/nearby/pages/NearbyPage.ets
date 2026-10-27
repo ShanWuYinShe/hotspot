@@ -21,6 +21,7 @@ import type { LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { UserItem, GroupItem, MomentItem, SearchUsersRequest, SearchGroupsRequest, FetchNearbyMomentsRequest } from '../../../core/types/api';
@@ -41,6 +42,10 @@ export struct NearbyPage {
   @State private nearbyGroups: GroupItem[] = [];
   @State private nearbyMoments: MomentItem[] = [];
   @State private isLoading: boolean = true;
+  @State private enterOpacity: number = 1;
+  @State private enterOffset: number = 0;
+  private enterPlayed: boolean = false;
+
   @State private loadError: string = '';
   @State private isRefreshing: boolean = false;
   /** 统计卡（2026-10-19 由首页迁来）：位置与按压态 */
@@ -123,6 +128,10 @@ export struct NearbyPage {
     } finally {
       if (!this.isDestroyed) {
         this.isLoading = false;
+        if (this.loadError.length === 0) {
+          this.resetContentEnter();
+          this.playContentEnter();
+        }
       }
     }
   }
@@ -138,6 +147,28 @@ export struct NearbyPage {
   /** 三段是否全空（全空才走整页空态；否则逐段渲染，空段自行隐藏） */
   private hasAnyNearbyData(): boolean {
     return this.nearbyUsers.length > 0 || this.nearbyGroups.length > 0 || this.nearbyMoments.length > 0;
+  }
+
+  private playContentEnter(): void {
+    if (this.enterPlayed) return;
+    this.enterPlayed = true;
+    if (MotionUtil.reduced()) {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+      return;
+    }
+    this.enterOpacity = 0;
+    this.enterOffset = MotionUtil.enterOffset();
+    MotionUtil.contentEnter(this.getUIContext(), () => {
+      this.enterOpacity = 1;
+      this.enterOffset = 0;
+    });
+  }
+
+  private resetContentEnter(): void {
+    this.enterPlayed = false;
+    this.enterOpacity = 1;
+    this.enterOffset = 0;
   }
 
   build() {
@@ -282,6 +313,8 @@ export struct NearbyPage {
         .pullToRefresh(false)
         .refreshOffset(64)
         .onRefreshing(() => { this.refreshNearby(); })
+        .opacity(this.enterOpacity)
+        .translate({ y: this.enterOffset })
       }
       .width('100%')
       .height('100%')

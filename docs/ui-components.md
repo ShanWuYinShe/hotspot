@@ -50,6 +50,7 @@
 | `data-display/Skeleton` / `SkeletonList` / `SkeletonFeed`（2026-10-26 新增，2026-10-27 更新） | 列表/信息流**首屏骨架屏**。`Skeleton` 基础占位块（`aria-hidden`）；`SkeletonList` 行式（前导圆 36/40/44/48 + 两行文本条，`role=status + aria-busy`，ListContainer 内自动补 listitem）；`SkeletonFeed` 卡式（2026-10-27 起同步整卡图片卡：图片块 + 底部文本条，与真实卡同比例/同文字位置，保证零位移；另有 `card`/`portrait` 形态）。几何对齐鸿蒙 `Skeleton`/`SkeletonShimmer`，动效 `--cst-motion-skeleton`(1500ms)，reduced-motion 停用 |
 | `shared/Avatar` | 头像（尺寸/形状/状态点/环）。2026-10-27 R6：占位底 + 加载成功渐显 + 失败首字母/图标降级；图片经 `lib/images.ts` avatar 档（显示尺寸 2x/3x） |
 | `lib/images.ts` | **图片管线唯一入口**（R6）：`optimizedImageUrl`（仅 unsplash 追加/覆盖 `auto=format&fit=crop&q&w`，其他域名原样）、6 档预设（avatar/thumb/card/cover/hero/full）、`presetSrcSet`、`avatarImageWidths`、`fadeImage` 渐显 action；规范见 design-system §20.8 |
+| `lib/motion.ts` | **动效唯一入口**（R7）：`MOTION`（enter 180 / exit 150 / pop 220）、`prefersReducedMotion()`、`motionDuration()`、`pop` action、`playPageEnter()`、`toastExit`；CSS `cst-page-enter` / `cst-state-pop` / `cst-comment-enter`；规范见 design-system §20.9 |
 
 > 四种列表状态各司其职，不得互相替代：空 `EmptyState` / 加载中 `InlineLoading` /
 > 失败 `LoadError` / 已到底 `ListEnd`（文案「没有更多了」）。分页与无限滚动列表
@@ -144,6 +145,10 @@
    非 unsplash/本地/blob 原样。`ImageViewer` 用 full 档（1600/q85）打开即加载。
 12. **键盘导航（Round 6）**：搜索页 ↑↓ 在真实结果链接/最近/话题间移动焦点、Enter 打开、Esc 清空；
    不引入 combobox/aria-activedescendant；Tab 顺序与焦点环不变。
+13. **动效（Round 7，design-system §20.9）**：enter 180/exit 150/pop 220，仅 transform/opacity；页面进场仅客户端导航
+   （首屏不播护 LCP）；骨架→内容仅实际展示骨架时 fade；toast 退场 150ms；JS 动画必须显式 reduced 判断；禁止动画 LCP/引入 CLS/列表逐项 stagger。
+14. **状态反馈（Round 7）**：点赞/收藏/关注/加入仅在用户**激活**操作时 pop（220ms，1→1.18→1），取消不 pop，
+   初始数据同步/首帧已激活不播；评论新增仅新行 fade+4px（160ms）。
 
 ## 近重复收敛 backlog（按危害排序）
 
