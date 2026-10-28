@@ -20,8 +20,11 @@ description: hotspot 前端页面布局契约：StandardPageLayout / SplitPageLa
   - 聊天页面（桌面端与移动端）因分栏/全屏会话布局特殊，可暂不套用
     `StandardPageLayout`/`SplitPageLayout`；但页头、列表与正文的 gutter/padding
     仍必须与样板一致（沿用 `PageHeader` + `ContentColumn`）。桌面消息分栏左栏
-    （`w-75`=300px 窄列）不进 `--cst-page-gutter`，用 `px-4` 压缩 gutter（见 skill
+    （`w-80`=320px 窄列，R16 实测值）不进 `--cst-page-gutter`，用 `px-4` 压缩 gutter（见 skill
     `hotspot-frontend-style` 的「窄列特例」，已登记例外）。
+    **聊天内容轴（R16 强制）**：右栏的聊天头部、消息列、输入栏必须共用
+    `components/messages/ChatColumn.svelte`（`max-w-3xl lg:max-w-5xl`）同一列宽，禁止各自写
+    `max-w-*`；改档位只改 ChatColumn。实测三列 1440 全部 x=576/w=852、1920 全部 x=730/w=1024。
   - **封面/紧凑型资料头**（`groups/[groupId]`、`users/[userId]`）：标题与封面/头像
     绑定，不在 header 操作行内，故不套 `PageHeader`，自建返回/分享/更多操作行 +
     封面下方 `<h1>`。与 `moments/[momentId]`（有独立标题"动态详情"，套 PageHeader）
@@ -266,3 +269,18 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 3. **粘底条同轴**：评论输入条/移动操作条的内部内容与内容卡同左右缘（1440 实测应逐 px 对齐，见 R13 截图基线）；满宽铺底时内部仍与卡同轴。
 4. **表格/后台页**：正文（模块卡/表格）起点 = 页头 Tab 栏起点（`/admin` 概览卡片 284 = Tab 284）。
 5. 自查：1440/1024/390 三视口截图量「同屏标题左缘 vs 正文首元素左缘」，差值必须 ≤1px。
+
+### 聊天页内容轴与降噪（R16，2026-10-28，强制）
+
+聊天页（桌面分栏 / 移动推入）是唯一豁免 StandardPageLayout 的常规页面，但三块内容必须同轴：
+
+1. **唯一列宽来源**：`components/messages/ChatColumn.svelte`（`mx-auto w-full max-w-3xl lg:max-w-5xl`）。
+   聊天头部 / 消息列 / 输入栏内部都包它；页面/组件不得再写各自的 `max-w-*`。
+   实测（R16）：1440 三列全部 x=576 / w=852；1920 全部 x=730 / w=1024；1303 全部 x=576 / w=715。
+   错位是「头部飘着、消息挤在一侧」的直接原因（改前群聊头 768 vs 消息 1024，差 128px/侧）。
+2. **短会话底对齐**：消息内容容器 `min-h-full flex flex-col justify-end`，空白留在上方；
+   顶部锚定 + 底部 228px 死空白是用户「消息页很怪」的主因之一。
+3. **ListEnd 降噪**：「没有更多了」只在历史确实翻页并耗尽后渲染（首屏一次返回全部、
+   `next_cursor=null` 时不得出现）；日期分节用中性 11px 文本标签，禁止白底胶囊。
+4. 输入条整体铺满面板（发丝线是功能线），内部内容经 ChatColumn 与消息列同轴；
+   不得再用 `mx-auto max-w-3xl` 直接居中（会与消息列错 26–128px）。

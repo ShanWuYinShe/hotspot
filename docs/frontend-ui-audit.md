@@ -598,100 +598,86 @@
 
 ### 五、未完成 / 后续
 
-- 桌面页标题字号仍为 20（移动 24）；评审建议桌面提到 24 属跨全站口径变更（涉及 `PageHeader` 契约与 skill 一行描述），本轮未做，登记为后续候选。
-- 聊天输入条附件入口：无接口/功能，未加装饰死按钮。
+## 2026-10-28 补充（Round 16：运行时响应 / 消息页 / 导航可读性）
 
-## R14 卡片交互一致性与层叠修复（2026-10-28）
+**范围**：Web 前端 30 文件（24 改 + 4 新：`ChatColumn.svelte`、`nav-preload.ts`、`nav-preload.test.ts`、
+`ChatMessageList.test.ts`）+ 文档 4 + skill 3。基线 `d311819b`。方案契约见 `docs/design-system.md` §21.12；
+证据根 `.worktree/r16-runtime-polish/.workwork/`（perf / messages / nav / audit / lead）。
+**触发（用户原话）**：「整个页面反应都慢一拍」「特别的消息页面现在看起来明显很奇怪」「侧边栏的 hover 效果
+也太不明显，对色弱、色盲的用户很不友好」，要求「不减少特效」地优化。
 
-**用户反馈**：① 卡片交互逻辑（hover、压图功能 UI 的交互效果）应保持一致；② 移动端卡片滚到标题栏下方时
-z 值不对，卡片上的 UI 显示到标题栏上方（附截图）。
+### 一、根因（可复现）
 
-**根因（实测复现）**：`HomeFeedItem` 卡根缺 `isolate`。行内操作按钮经根上 `[&_button…]:z-20` 抬升，
-根不是堆叠上下文 → 这些按钮参与页面堆叠上下文；与页内 sticky 条（`--cst-z-sticky=20`）同 z 且 DOM 更晚，
-故滚动时卡片作者/操作压住吸顶 tab。实测 `elementsFromPoint(60,80)` 修复前返回卡片按钮、修复后返回吸顶条。
-
-**修复内容**：
-1. `HomeFeedItem` 卡/行根加 `isolate`；`ProfileMomentTile`/`ProfileGroupTile` 包装层加 `isolate`（同类陷阱：卡外 z-20 菜单）；
-2. 按压统一：新增 `lib/motion.cardPress`，`.card-hover:active` 固定 0.985 → `[data-pressed]` + `--cst-card-tap-scale`；
-   `NearbyImageCard` 删除手写 pointer 状态/内联 transform（原 0.94 与 0.985 两套量感）；
-3. 操作行统一：新增 `data-display/ImageCardActions`（四类操作、状态语义、pop、aria、md/sm 档）；
-   `HomeFeedItem`（卡+行两形态）与 `MomentCard` 全部接入；此前**信息流卡的点赞/评论/收藏只是 div（点击只打开详情）**，
-   现为真按钮且失败可回滚（与网格卡同语义）；
-4. 压图徽章统一：新增 `.media-badge`/`--icon`，迁移 HomeFeedItem / MomentCard / UserCard / GroupCard / GroupCarousel /
-   ProfileGroupTile / users 页日期徽章（原混用 `surface-overlay-strong` 与 `surface-media-scrim-strong`、有无 blur 不一）；
-5. 作者区统一：`FeedItem` 增可选 `userId`，MomentCard 作者头像/昵称可点进主页（与信息流卡同 hover 语言）；
-6. 分享统一：`lib/moment-actions.shareMoment`，两张卡同一实现；
-7. 窄卡适配：`size="sm"` 动作档用于手机 2 列卡（171px 实测四类操作不越界，此前分享/收藏被 overflow 裁切）。
-
-**验证（2026-10-28，R14 worktree env http://localhost:8898）**：
-- 移动端 390×844 首页滚动 520px：重叠点首位元素 = 吸顶条（修复前为卡片按钮）；截图 before/after 见
-  `.workwork/r14-repro/`；
-- 桌面 hover/press 实测：卡 hover 抬升 + 图片 1.045 缩放；按压 `data-pressed=true` → computed transform
-  `matrix(0.94,0,0,0.94,0,0)`；行内按钮按下不产生按压态；
-- 点赞点击（mock 登录）：`aria-pressed` false→true、计数 30→31、URL 不变（不误触整卡跳转）；
-- 作者点击：/nearby/moments → /users/user_lumos；
-- 移动 2 列卡操作行右侧边界 ≤ 卡内容右缘（收藏 right=171 / 卡右缘 203）；
-- `bun run check` 0 error / 0 warning；`bun run test` 113 文件 / 599 用例全绿（新增
-  ImageCardActions / HomeFeedItem / NearbyImageCard 契约测试）；
-- a11y（`--base http://localhost:8898 --mobile --reduced`）：**PASS**，40 页 axe 0 违规
-  （minor/moderate/serious/critical 全 0），reduced-motion 异常 0（`.workwork/browser-check/a11y-20261028-130501`）；
-- 触控（`--base http://localhost:8898`）：**PASS**，35 页 / 890 元素 / 覆盖率 94.2% /
-  47 条登记例外 / 未登记离群 0（`.workwork/browser-check/touch-20261028-131436`）。
-- 触控修复：动作行按钮视觉 16px（sm 档纯图标）时 `hit-slop-44` 有效热区仅 42px，补 `min-w-4.5` 后 44px 通过。
-
-**验证工具修复（同轮发现）**：`frontend/scripts/browser-a11y.sh` 原先只在循环外执行一次
-`ab set media light reduced-motion`，而 agent-browser 的 `open` 打开新标签页会重置 CDP 媒体模拟，
-导致 reduced-motion 检查实际在 no-preference 下执行——把 ambient 装饰动画误报为长动画
-（40 页 37 页假阳性 + 1 页未返回）。已改为**每页页面稳定后、注入检查脚本前**重设媒体模拟；
-修复后 ambient 动画在 reduced 下被全局规则关停，检查恢复可信。
-
-
-## R15 前端空闲 GPU 占用修复（2026-10-28）
-
-**用户反馈**：打开首页后浏览器进程管理器显示 GPU 占用 60%，明显不正常。
-
-**定位方法**（可重跑，headless Chrome + 固定视口 1440x900 + mock 登录）：
-
-1. 找本会话 GPU 进程：agent-browser 的 profile 目录 `ls -dt /var/folders/*/*/T/agent-browser-chrome-*` → 主进程 →
-   其 `--type=gpu-process` 子进程；
-2. 采样：`top -l 5 -s 2 -pid $GPU -stats pid,cpu` 取平均（页面完全空闲，不滚动不悬停）；
-3. 页面侧计数：`document.getAnimations().length`、`backdrop-filter !== none` 元素数、`will-change !== auto` 元素数；
-4. 单变量 A/B：注入 `<style>` 分别关闭全部动画 / 关闭 backdrop-filter / 关闭 will-change 再采样。
-
-**实测（修复前）**：
-
-| 场景 | GPU 进程 CPU | 说明 |
+| 假设 | 实测结论 | 证据 |
 |---|---|---|
-| 首页空闲 | **24.6%**（稳定在 24–33%） | renderer 0%，纯 GPU 合成/模糊 |
-| 首页滚动 | 19.3% | 程序化滚动 |
-| 关闭全部动画 | 0.0% | 证明全部空闲 GPU 成本来自动画 |
-| 关闭 backdrop-filter（动画保留） | 10.0% | 毛玻璃逐帧重算占约 14.6% |
-| 关闭 will-change（动画保留） | 22.4% | 影响小（层数/显存为主） |
-| 空白页 | 0.0% | 基线 |
+| 特效拖慢 GPU | 否（R15 已治理；本轮内容页 animation=0、longtask=0、滚动 60fps） | lead/after |
+| 单次交互慢 | 否：Event Timing INP click 16–64ms、hover 24ms、键盘 24–48ms；弹窗 10ms | audit §3 |
+| **dev 首访路由按需编译** | **是**：冷路由 58–900ms（页面 + 依赖 transform），warm 8–37ms；生产同路由 8–49ms | perf before/after |
+| **页面进场从 opacity:0 起 180ms** | **是**：点击后先空白一拍再淡入，warm 导航「可见」= DOM + 180ms | perf |
+| **全局 scroll-smooth** | **是（间接）**：把任何 scrollTop 赋值/无参 scrollTo 动画化 **766–768ms**，破坏滚动恢复/回底 | perf scroll-exp |
+| 消息页顶部锚定 + 228px 死空白 | **是**（存量 R13）：短会话最后气泡底 612 / 输入条顶 840 | audit P1-4 |
+| 消息页「没有更多了」噪音 | **是**（存量）：未分页会话顶部即渲染 ListEnd | audit P1-5 |
+| 消息三列不同轴 | **是**：1440 消息 852@576 / 输入 768@618 / 群聊头 768@618（每侧差 26px）；1920 差 128px/侧 | messages before |
+| 侧栏 hover 太淡 | **是**：旧 token 9% text-primary 混 surface-primary，hover 底/画布仅 1.07–1.19:1 | nav before |
+| 全站 button 无 pointer 光标 | **是**：侧栏/顶栏/TabBar computed cursor=default（只有 card-hover 等少数是 pointer） | audit P2-1 |
 
-**根因**：氛围画布 3 条无限动画（2 条全屏渐变 transform 漂移 + 1 条星层 opacity 呼吸）持续驱动合成；
-叠加首页 24 个 `backdrop-filter` 元素（其中 R14 引入的 `.media-badge` 一屏 18 个）在动画背景上逐帧重算模糊；
-`.hover-action` 常驻 `will-change: transform` 使首页 48 个图标各占一个合成层（共 79 个 will-change 元素）。
+### 二、整改与实测（dev worktree 8898、1440×900、mock）
 
-**修复**：
-
-1. 氛围画布动画**默认关闭**：基础类去掉 animation，新增 `.ambient-backdrop--motion` opt-in
-   （`<AmbientBackdrop motion />`，仅空态/稀疏页使用；`prefers-reduced-motion` 仍然全禁）；
-2. `.media-badge` 去掉 backdrop-filter（深色遮罩本身已满足白字对比度；一屏 18 个模糊层是滚动成本主因之一）；
-3. `.hover-btn/.hover-action` 去掉常驻 will-change（transform 过渡时 Chrome 会自动提升）；
-4. 新增源码契约测试 `src/styles/__tests__/perf-contract.test.ts` 防止回退；
-5. 规则沉淀到 design-system §16.4/§21.11、style skill Round 15。
-
-**验证（worktree env）**：
-
-| 指标 | 修复前 | 修复后 |
+| 项 | 改前 | 改后 |
 |---|---|---|
-| 首页空闲 GPU 进程 CPU | 24.6% | **0.0%** |
-| 首页滚动 GPU 进程 CPU | 19.3% | 10.5%（再关 backdrop 对照 6.1%） |
-| `document.getAnimations()` | 3 | **0** |
-| backdrop-filter 元素数 | 24 | 6（右栏玻璃卡 4 + 吸顶胶囊 1 + Mock 角标 1） |
-| will-change 元素数 | 79 | 12（仅图片 hover 缩放层） |
+| 关系页导航 click→DOM / click→完全可见 | 390.9 / 532.4ms | **29.9 / 127.6ms** |
+| 通知 click→DOM / 完全可见 | 288.5 / 461.8ms | **26.9 / 167.4ms** |
+| 设置 click→DOM / 完全可见 | 454.5 / 598.1ms | **31.7 / 133.6ms** |
+| 服务端路由模块 transform（冷） | 58–720ms | **3.3–9.6ms**（warmup 生效） |
+| 页面进场 | 180ms / opacity 0 / 4px | **120ms / opacity 0.6 / 2px** |
+| 骨架→内容 fade | 150ms | **110ms** |
+| main scrollBehavior | smooth | **auto**（程序化滚动即时；回顶仍显式 smooth） |
+| 首页 will-change 元素 | 12 | **0** |
+| 生产构建（本地静态+真实后端）导航 click→DOM / 完全可见 | 5–49ms / +180ms | **5–34ms / 148–180ms**（含 120ms 进场） |
 
-视觉：首页 light/dark 截图对比，氛围世界（天光/星层/剪影）与角标观感不变（动画仅影响运动，静态帧一致；
-角标去模糊后深色遮罩下白字对比度不变）。
+- 预取：hover 350ms 未点击时已请求目标路由模块；reload 后 7s 内空闲预取 6 个常用路由完成；
+  `preloadCode` 不执行 load，无额外 API 请求；`saveData` 跳过。
+- 消息页：三列 1303 全部 x=576/w=715、1440 全部 x=576/w=852、1920 全部 x=730/w=1024（±1px）；
+  短会话底对齐（最后气泡距输入条 27px）；短会话无「没有更多了」；气泡正文 12→14px、时间戳 10→11px；
+  自己气泡正文/时间戳对比度 5.76–7.60、对方 12.5–15.7 / 5.36–8.84（改前 3.97 不达标）；日期标签去胶囊。
+- 侧栏：普通文字 4.93–8.45、hover 文字 10.28–12.05、选中文字 8.61–12.05、选中图标/指示条 3.73–5.55；
+  hover 底/画布 1.17–1.25、选中 1.27–1.33（旧 1.07–1.19 / 1.13）；灰度 L* 梯 hover→选中 4.3–6.8，
+  选中另有指示条 + 内缘描边 + semibold + 描边粗细 4 项非颜色信号（灰度截图 `nav/after/v2-sidebar-contactsheet-all.png`）。
+- 光标：`base.css` 全局补 `button:not(:disabled)/[role=button] → cursor:pointer`（内容页实测 pointer）。
 
+### 三、门禁（全绿）
+
+| 检查 | 结果 |
+|---|---|
+| `bun run check` | **0 error / 0 warning**（svelte-check + eslint + theme 四联 OK） |
+| `bun run test` | **117 files / 631 tests 全绿**（安静环境 128s；含新增 nav-preload 8 条、ChatMessageList 契约、motion CSS-JS 同源断言） |
+| `bun run build` | 通过（13.6s，adapter-static） |
+| `bun run audit:a11y -- --base 8898 --mobile` | **40 页 / 0 违规（minor/moderate/serious/critical 全 0）/ 0 加载错误 → PASS** |
+| `audit:a11y -- --matrix --only /messages,/me --limit 2` | **12 页 × 6 组合（3 主题 × 明暗）0 违规 → PASS** |
+| `bun run audit:touch -- --base 8898` | 35 页 / 890 元素 / 计入分母 810 / ≥44 通过 763 / 登记例外 47 / **未登记离群 0 / 覆盖率 94.2% → PASS** |
+| `bash scripts/browser-qa.sh --base 8898 --mobile` | **23/23 页 issues=[]**（0 横向溢出/0 坏图/0 控制台错误） |
+| 截图矩阵 | 消息 1303/1440/1920/390 + 亮暗 + 三主题；侧栏三态 × 6 组合 + 灰度；证据在 `.workwork/{messages,nav,lead}/` |
+
+### 四、独立审计发现（**未关闭**，超出本轮用户反馈范围，登记 backlog）
+
+> 来源：独立只读审计（`.workwork/audit/report.md`，62 次页面加载/67 张截图）。均为**改动前既有**问题，
+> 本轮未修改（避免扩大改动面）；复验方法见该报告 §6。
+
+| 级别 | 问题 | 关键数据/根因 | 建议 |
+|---|---|---|---|
+| P1 | /me 总览页头与正文内容轴漂移 | h1 左缘 284 vs 身份卡 330（Δ46@1440）、Δ158@1920；ProfilePage.svelte:152 正文 max-w-5xl/6xl/7xl 但 PageHeader 未传 maxWidth | 推荐删页级 max-w（正文直接落 ContentColumn）或 PageHeader 传同档 maxWidth |
+| P1 | /me/relationships、/me/reports 宽屏填充率低 | 1440 内容 712/1172=0.61；1920 672/1652=0.41；RelationshipsPage/ReportsPage contentMaxWidth=48rem 固定 | 列表页去掉 48rem 或加宽屏档（R13 验收要求 ≥0.70） |
+| P1 | /search 移动端首屏 CLS 0.16 | 640ms 两段 shift（section 下移 121px + 卡片 261→4px）；发现态异步分区未预留高度 | 各分区骨架固定高度/min-h；目标 <0.05 |
+| P2 | BSP 瓦片墙左缘比页头右移 7px | bsp-layout.ts inset=gap/2 + 页面 gap=14 | 外层 -mx-[7px] |
+| P2 | 慢图下移动首页 7 个占位 pulse 常驻 | HomeFeedItem/NearbyImageCard 占位 animate-pulse | 占位限时转静态（生产 S3 影响小） |
+| P2 | /nearby 枢纽「在线数」同屏重复 | 页头 chip + Hero 指标 | 保留 Hero，chip 换雷达/刷新 |
+| P2 | 首屏卡片图仍 lazy（mock 外链 LCP 1.2–5.2s） | R6 管线仅前 2 张 eager；mock unsplash 外链是预览环境产物 | 真实 S3 环境复测 LCP 后决定是否加 eager |
+| P2 | ListItem hover 时间戳对比度部分 <4.5 | palette-hover 半透明叠加 text-secondary：inkwash-dark 3.2 / inkwash-light 3.75 / vibrant-dark 4.03 / forest-dark 4.16 / vibrant-light 4.43（非 hover 5.31–7.62 达标） | 需动 palette 或统一 hover 语言（跨端影响），登记 backlog |
+
+### 五、遗留风险
+
+- 长会话翻页后 ListEnd 仅单测覆盖（mock 会话太短），真实长会话视觉未验；
+- 气泡 ⋯ 菜单在 hover:none 真机常显位置未真机复核（headless 按 fine pointer 不显示）；
+- 空闲预取在真实网络下多 6 个后台 chunk 请求（`saveData` 已跳过）；若线上不接受，可在
+  `scheduleIdlePreload` 加一行开关；
+- forest/inkwash 全页 axe 矩阵只抽了 /messages、/me 各 2 页（12 页/6 组合 0 违规），非全量矩阵。

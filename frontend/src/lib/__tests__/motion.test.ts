@@ -1,5 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { MOTION, contentFade, enterOnce, motionDuration, playPageEnter, playPop, pop, popOn, prefersReducedMotion, toastExit } from '../motion';
+
+// 源码级契约（jsdom 无法真实合成动画）：CSS 关键帧/时长必须与 lib/motion.ts 同源，
+// 且 reduced-motion 压制不得回归。R16 跟手微调后锁定 120ms / 110ms。
+const utilitiesCss = readFileSync('src/styles/theme/utilities.css', 'utf8');
+function cssRuleBody(anchor: string): string {
+	const idx = utilitiesCss.indexOf(anchor);
+	if (idx < 0) throw new Error('未找到 CSS 规则锚点：' + JSON.stringify(anchor));
+	const open = utilitiesCss.indexOf('{', idx);
+	const close = utilitiesCss.indexOf('}', open);
+	if (open < 0 || close < 0) throw new Error('规则块不完整：' + anchor);
+	return utilitiesCss.slice(open + 1, close);
+}
 
 function mockReduced(reduced: boolean) {
 	vi.stubGlobal('matchMedia', (query: string) => ({
@@ -22,7 +35,7 @@ afterEach(() => {
 describe('prefersReducedMotion / motionDuration', () => {
 	it('matchMedia 不可用时按不减弱处理', () => {
 		expect(prefersReducedMotion()).toBe(false);
-		expect(motionDuration(MOTION.enter)).toBe(180);
+		expect(motionDuration(MOTION.enter)).toBe(120);
 	});
 
 	it('reduced 时 duration=0，正常时返回原值', () => {
@@ -144,6 +157,25 @@ describe('contentFade（骨架→内容）', () => {
 		const action = contentFade(node, true);
 		action.update(false);
 		expect(node.classList.contains('content-fade')).toBe(false);
+	});
+});
+
+describe('CSS 动效与 JS 时长同源（R16，防漂移）', () => {
+	it('page-enter 时长 = MOTION.enter，起点不是接近空白（opacity ≥ 0.5）', () => {
+		expect(cssRuleBody('\n  .page-enter {')).toContain(MOTION.enter + 'ms');
+		const keyframes = utilitiesCss.slice(utilitiesCss.indexOf('@keyframes cst-page-enter'));
+		expect(keyframes).toMatch(/from\s*\{\s*opacity:\s*0\.[5-9]/);
+		expect(keyframes).toMatch(/translateY\(2px\)/);
+	});
+
+	it('content-fade 时长 = MOTION.contentFade', () => {
+		expect(cssRuleBody('\n  .content-fade {')).toContain(MOTION.contentFade + 'ms');
+	});
+
+	it('reduced-motion 仍直接压制动画并禁用平滑滚动（不得回归）', () => {
+		expect(utilitiesCss).toMatch(/@media \(prefers-reduced-motion: reduce\)/);
+		expect(utilitiesCss).toMatch(/animation-duration: 0\.01ms !important/);
+		expect(utilitiesCss).toMatch(/scroll-behavior: auto !important/);
 	});
 });
 

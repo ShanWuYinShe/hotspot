@@ -228,4 +228,10 @@ describe('ChatView', () => {
 		);
 		await waitFor(() => expect(screen.getAllByText('来自手机端的消息').length).toBeGreaterThan(0));
 	});
+	// R16 内容轴契约：页头 / 消息列 / 输入栏三处必须由同一个 ChatColumn 承载宽度，
+	// 否则 1440/1920 下输入栏比消息列窄、左缘错位（「消息页很怪」的主因）。
+	it('页头/消息列/输入栏共用同一内容轴（3 个 ChatColumn）', () => {
+		const { container } = renderChat();
+		expect(container.querySelectorAll('[data-chat-column]').length).toBe(3);
+	});
 });

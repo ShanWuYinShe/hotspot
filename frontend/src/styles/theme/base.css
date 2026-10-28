@@ -91,6 +91,17 @@
     outline-offset: 2px;
   }
 
+  /* 指针光标（R16，用户反馈「hover/点击反馈不明确」的体感来源之一）：
+     浏览器对 <button> 默认给 default 箭头（不是 pointer），全站按钮此前只有个别组件
+     显式 cursor:pointer（审计实测 1440 首页侧栏/顶栏/TabBar 的动作按钮 computed cursor
+     全是 default）。按钮语义 + 可点外观必须一致，否则「这能不能点」要靠猜，也会让
+     hover 反馈显得「不跟手」。禁用态保持默认光标（不可点不能伪装可点）。
+     作用域只补 visual cursor，不改变任何布局/交互行为。 */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+
   /* 浏览器自动填充（Chrome/Safari）默认给 input/textarea 涂淡黄底
      （rgb(250 255 189)），与设计系统冲突。用内嵌阴影盖掉原生底色：
      input-surface 内的输入用与容器一致的混合底色，其余用 surface-primary；

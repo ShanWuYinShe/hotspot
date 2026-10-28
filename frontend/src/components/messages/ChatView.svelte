@@ -6,6 +6,7 @@
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
 	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
+	import ChatColumn from '@/components/messages/ChatColumn.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
@@ -232,8 +233,9 @@
 	<!-- Header -->
 	<!-- 去硬边线（Round 2）：聊天画布自身底色承担分隔；
 	     头部层级（R13）：返回（移动）→ 头像+昵称/状态（可点进资料）→ 资料入口图标钮 -->
-	<div class="shrink-0 bg-surface-chat px-4 {compact ? 'h-13' : 'h-15'}">
-		<div class="mx-auto flex h-full w-full max-w-3xl items-center gap-2 lg:max-w-5xl">
+	<div class="shrink-0 bg-surface-chat {compact ? 'h-13' : 'h-15'}">
+		<!-- 头部内容经 ChatColumn 与消息列/输入栏同轴（R16）；px-4 是列内 gutter -->
+		<ChatColumn class="flex h-full items-center gap-2 px-4">
 		{#if showBackButton}
 			<button
 				type="button"
@@ -257,7 +259,7 @@
 				src={contact?.avatar}
 				name={peerName}
 				decorative
-				size={compact ? 32 : 36}
+				size={compact ? 36 : 40}
 				class="border-regular border-border-default shadow-raised-sm"
 			>
 				{#snippet badge()}
@@ -274,11 +276,11 @@
 				     font-normal 抵消 base h1 的 medium 字重，保持与原 p 一致的视觉。 -->
 				<svelte:element
 					this={compact ? 'h2' : 'h1'}
-					class="truncate font-semibold text-text-primary {compact ? 'text-md' : 'text-lg'}"
+					class="truncate font-semibold text-text-primary {compact ? 'text-base' : 'text-lg'}"
 				>
 					{peerName || '会话'}
 				</svelte:element>
-			<p class="mt-0.5 flex items-center gap-1 text-xs {typing.active ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'}">
+			<p class="mt-0.5 flex items-center gap-1 text-sm {typing.active ? 'text-accent-default' : onlineNow ? 'text-status-online' : 'text-text-secondary'}">
 				{#if typing.active}
 					正在输入…
 				{:else if onlineNow}
@@ -300,7 +302,7 @@
 			size={36}
 			onClick={() => void goto(ROUTES.user(peerUserId))}
 		/>
-		</div>
+		</ChatColumn>
 
 	</div>
 

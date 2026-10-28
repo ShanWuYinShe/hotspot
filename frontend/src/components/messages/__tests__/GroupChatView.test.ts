@@ -163,4 +163,10 @@ describe('GroupChatView', () => {
 		expect(screen.queryByText('重试')).toBeNull();
 		expect(screen.queryByLabelText('消息输入框')).toBeNull();
 	});
+	// R16 内容轴契约：此前群聊头部只有 max-w-3xl（缺 lg:max-w-5xl），宽屏群名/成员数与
+	// 消息列错位 128-256px；现在统一由 ChatColumn 提供宽度。
+	it('页头/消息列/输入栏共用同一内容轴（3 个 ChatColumn）', () => {
+		const { container } = renderGroup();
+		expect(container.querySelectorAll('[data-chat-column]').length).toBe(3);
+	});
 });

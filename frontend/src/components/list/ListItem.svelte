@@ -121,7 +121,7 @@
 		aria-label={inList ? undefined : ariaLabel}
 		data-active={pressed ? 'true' : undefined}
 		class={cn(
-			'relative transition-[background-color,border-radius,box-shadow,opacity] duration-standard ease-standard',
+			'relative transition-[background-color,border-radius,box-shadow,opacity] duration-rapid ease-standard',
 			isCard ? 'rounded-md border' : inIsland ? 'bg-transparent' : 'bg-surface-primary',
 			// 行内既有的操作按钮/链接/输入相对定位抬升到行覆盖按钮之上（axe
 			// nested-interactive：button 语义不得嵌套交互子件）；后写的覆盖按钮
@@ -133,7 +133,7 @@
 				'[&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-10 [&_a]:relative [&_a]:z-10 [&_input]:relative [&_input]:z-10 [&_select]:relative [&_select]:z-10',
 			className
 		)}
-		style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? 'var(--cst-motion-instant)' : 'var(--cst-motion-standard)'};`}
+		style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? 'var(--cst-motion-instant)' : 'var(--cst-motion-rapid)'};`}
 		onmouseenter={() => canHover && (hovered = true)}
 		onmouseleave={() => {
 			hovered = false;

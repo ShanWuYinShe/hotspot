@@ -122,6 +122,13 @@
   --color-interactive-hover-fill: var(--cst-interactive-hover-fill);
   --color-interactive-active: var(--cst-interactive-active);
 
+  /* Navigation surfaces（R16 桌面侧栏三态；值在 semantic.css 派生，随主题×明暗自动变化。
+     组件以 inline var() 消费，这里注册以保证类名 bg-surface-navigation-* 可用——
+     Tailwind v4 未注册的 utility 会静默失效，新增 token 必须同步注册）。 */
+  --color-surface-navigation-hover: var(--cst-surface-navigation-hover);
+  --color-surface-navigation-active: var(--cst-surface-navigation-active);
+  --color-surface-navigation-active-hover: var(--cst-surface-navigation-active-hover);
+
   /* Toggle 表面（轨道 off 底/滑块底）——注册类供 Toggle 组件类化状态，
      inline background 会压制一切 hover/active 反馈 */
   --color-surface-toggle-off: var(--cst-surface-toggle-off);

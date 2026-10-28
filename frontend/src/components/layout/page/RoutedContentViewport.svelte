@@ -97,7 +97,12 @@
 	bind:this={mainEl}
 	{...(desktopPane ? { 'data-desktop-main': '' } : {})}
 	class={cn(
-		'h-full min-h-0 flex-1 w-full overflow-y-auto overflow-x-hidden no-scrollbar scroll-smooth',
+		// R16：移除全局 scroll-smooth——实测 CSS scroll-behavior:smooth 会把任何
+		// scrollTop 赋值/无参 scrollTo 变成 ~767ms 动画（scroll-positions 需临时把
+		// behavior 置 auto 才能即时恢复）；键盘 PageDown/Home 的 ~134ms 平滑是浏览器
+		// 原生动画、与 CSS 无关（smooth/auto 实测一致）。BackToTop 已显式传
+		// behavior:'smooth'，回顶动效不变；去掉全局 smooth 后程序化滚动即时生效。
+		'h-full min-h-0 flex-1 w-full overflow-y-auto overflow-x-hidden no-scrollbar',
 		className
 	)}
 	{style}

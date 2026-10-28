@@ -93,12 +93,23 @@
   --cst-navigation-content: var(--cst-content-secondary);
   --cst-navigation-content-active: var(--cst-accent-default);
   --cst-navigation-active-indicator: var(--cst-accent-default);
-  /* 桌面侧栏导航 hover：侧栏 chrome 氛围天光本身带 accent 淡染，沿用 7% accent 混底
-     （--cst-surface-hover）与天光同色系、叠上去几乎不可辨。改为中性「正文色混底」
-     （text-primary 9%）：在浅色是中性灰、深色自动变亮灰，与 accent 选中态
-     （accent-soft + accent 图标/指示条）明确区分；配合 SidebarNavItem 的图标/文字
-     同升一档，hover 一眼可辨。 */
-  --cst-surface-navigation-hover: color-mix(in srgb, var(--cst-text-primary) 9%, var(--cst-surface-primary));
+  /* ── 桌面侧栏导航三态（R16 无障碍整改，用户反馈「hover 太不明显、对色弱色盲不友好」）──
+     验收口径：普通 / hover / 选中三态在灰度（filter:grayscale(1)）下必须一眼可分。
+     ① hover（未选中）= 低彩度「正文色 12% 混画布」中性底：
+        - 旧值（text-primary 9% 混 surface-primary）的基准面选错了——侧栏直接铺在
+          整窗画布 surface-page 上（无卡片底），与画布对比只有 1.07~1.19:1，灰度下
+          几乎不可见；混 surface-page 后提升到浅色 1.25:1 / 深色 1.36:1。
+        - 用中性灰（低彩度）而非 accent 色相：hover 靠**明度**被感知，accent 色相
+          专门留给选中态，色弱/色盲用户不会把 hover 误读成选中。
+     ② 选中 = accent 26% 混画布底（灰度 L* 比 hover 低 ~5，明度上「更强」）
+        + 左侧指示条 + accent 图标
+        + semibold + 1px accent 内缘描边，四重信号（颜色/形状/字重）；
+        灰度下靠指示条与内缘描边、字重可分，不依赖色相。
+     ③ 选中 + hover = 再加深一档（保留既有「选中行 hover 仍有增量」契约），
+        始终比未选中 hover 更强，色相明确属于选中态。 */
+  --cst-surface-navigation-hover: color-mix(in srgb, var(--cst-text-primary) 12%, var(--cst-surface-page));
+  --cst-surface-navigation-active: color-mix(in srgb, var(--cst-accent-default) 26%, var(--cst-surface-page));
+  --cst-surface-navigation-active-hover: color-mix(in srgb, var(--cst-accent-default) 34%, var(--cst-surface-page));
   --cst-elevation-side-sheet: -8px 0 40px rgba(0, 0, 0, 0.22);
   --cst-border-subtle: var(--cst-border-default);
   --cst-interactive-hover-fill: var(--cst-interactive-hover);

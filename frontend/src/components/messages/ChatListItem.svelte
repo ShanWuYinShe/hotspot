@@ -5,11 +5,14 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import type { ChatItem } from '@/lib/chat-list';
 
-	// 会话列表项（R13 重排层级；独立评审 P2-24 修正）：
+	// 会话列表项（R13 重排层级；R16 三态重构）：
 	//   - 基于公共 ListItem 行组件（hover 填充 / tap 反馈 / 键盘 / aria）
-	//   - 未读统一由「数字徽标 + 行底淡 tint（bg-accent-soft）」同一实现表达；
-	//     字号/字重只做一眼可辨的强弱（未读昵称 semibold、预览 text-primary）
-	//   - selected：ListItem pressed 驱动 accent 全背景 + on-accent 文字
+	//   - 三态的非色相信号（灰度截图也能分辨，R16）：
+	//       选中 = 左侧竖指示条（on-accent）+ accent 实底 + semibold 昵称
+	//       未读 = 左侧短竖指示条（accent）+ 数字徽标 + semibold 昵称 + 行底淡 tint
+	//       普通 = 无指示条 + medium 昵称；hover 由 ListItem 统一填充 + 本行文字/头像加强
+	//   - selected 行内文字一律 full on-accent（旧实现 preview/time 叠 opacity 0.7/0.8，
+	//     实底上对比度掉到 3.97/4.35，不满足 4.5；主次改由字号/字重表达）
 	//   - 右缘不再并排堆「日期 / 未读 / ⋯」三种控件：日期固定在首行右端，
 	//     未读徽标在次行右端；会话操作（置顶/免打扰/删除）收进**一个**菜单——
 	//     桌面 hover/focus 显现 ⋯（desktop-reveal），移动端由列表级长按
@@ -33,16 +36,20 @@
 
 	const isGroup = $derived(chat.kind === 'group');
 	const hasUnread = $derived(chat.unread > 0);
-	const nameCls = $derived(isSelected ? 'text-text-on-accent' : 'text-text-primary');
+	const nameCls = $derived(
+		isSelected ? 'text-text-on-accent' : 'text-text-primary group-hover:text-accent-default'
+	);
 	const previewCls = $derived(
 		isSelected
-			? 'text-text-on-accent opacity-emphasis'
+			? 'text-text-on-accent'
 			: hasUnread
 				? 'text-text-primary'
 				: 'text-text-secondary'
 	);
-	const metaCls = $derived(
-		isSelected ? 'text-text-on-accent opacity-soft' : 'text-text-secondary'
+	const metaCls = $derived(isSelected ? 'text-text-on-accent' : 'text-text-secondary');
+	// 左侧指示条：选中=长条 on-accent；未读=短条 accent（与徽标同色，形状+色相同步）
+	const indicatorCls = $derived(
+		isSelected ? 'h-8 bg-text-on-accent' : 'h-6 bg-accent-default'
 	);
 </script>
 
@@ -52,6 +59,14 @@
 	ariaLabel={`打开与 ${chat.name} 的会话`}
 	class="group flex select-none items-center gap-3 {compact ? 'px-3.5 py-2.5' : 'px-4 py-3'} {!isSelected && hasUnread ? 'bg-accent-soft' : ''}"
 >
+	{#if isSelected || hasUnread}
+		<!-- 非色相态信号：选中/未读在行首各有一根竖指示条（灰度下仍靠「有/无条 + 长度」区分） -->
+		<span
+			aria-hidden="true"
+			data-chat-indicator={isSelected ? 'selected' : 'unread'}
+			class="absolute left-1 top-1/2 w-1 -translate-y-1/2 rounded-full {indicatorCls}"
+		></span>
+	{/if}
 	<span class="relative shrink-0">
 		<Avatar
 			src={chat.avatar}
@@ -70,7 +85,7 @@
 		<!-- 首行：昵称（+ 置顶/免打扰静态标识） / 日期 -->
 		<span class="flex items-center justify-between gap-2">
 			<span class="flex min-w-0 items-center gap-1.5">
-				<span class="truncate text-md {hasUnread ? 'font-semibold' : 'font-medium'} {nameCls}">
+				<span class="truncate text-md {hasUnread || isSelected ? 'font-semibold' : 'font-medium'} {nameCls}">
 					{chat.name}
 				</span>
 				{#if chat.isPinned}
@@ -82,7 +97,7 @@
 				{/if}
 				{#if chat.isMuted}
 					<BellOff
-						class="size-3 shrink-0 {isSelected ? 'text-text-on-accent opacity-soft' : 'text-text-secondary'}"
+						class="size-3 shrink-0 {isSelected ? 'text-text-on-accent opacity-emphasis' : 'text-text-secondary'}"
 						strokeWidth={2}
 						aria-hidden="true"
 					/>

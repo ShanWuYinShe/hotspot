@@ -4,10 +4,12 @@
 import { fly } from 'svelte/transition';
 import { cubicOut } from 'svelte/easing';
 
-/** 动效时长语义（复用既有 --cst-motion-* 刻度，不新造值）。 */
+/** 动效时长语义（进入段与 CSS utilities.css 中的 .page-enter/.content-fade 同源，改一处必须同步另一处）。 */
 export const MOTION = {
-	/** 页面/内容进场：snappy 180ms */
-	enter: 180,
+	/** 页面进场：120ms（R16 跟手微调，原 180ms；与 .page-enter 的 --cst-page-enter-duration 同步） */
+	enter: 120,
+	/** 骨架→内容 fade：110ms（R16 跟手微调，原 150ms；与 .content-fade 的 --cst-content-fade-duration 同步） */
+	contentFade: 110,
 	/** 退场（toast/移除）：rapid 150ms */
 	exit: 150,
 	/** 状态切换 pop：standard 220ms */
@@ -59,7 +61,8 @@ export function pop(node: HTMLElement, active: boolean) {
 
 /**
  * 页面进场（仅客户端导航时由 RoutedContentViewport 调用；首屏 enter 不调用）：
- * opacity 0→1 + translateY 4px→0，180ms；reduced 直接跳过（不加类）。
+ * opacity 0.6→1 + translateY 2px→0，120ms——起点不再接近全透明，避免「先空白
+ * 一拍再淡入」的可感知迟滞；reduced 直接跳过（不加类）。
  */
 export function playPageEnter(node: HTMLElement | null): void {
 	if (!node || prefersReducedMotion() || motionDuration(MOTION.enter) === 0) return;

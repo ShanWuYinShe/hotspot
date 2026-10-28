@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Component, Snippet } from 'svelte';
+	import { onMount, type Component, type Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import {
@@ -22,6 +22,7 @@
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
 	import { ROUTES, ME_SECTION_PATHS, getDesktopNavId, type DesktopNavId } from '@/lib/routes';
+	import { preloadRoute, resolvePreloadTarget, scheduleIdlePreload } from '@/lib/nav-preload';
 	import imgHotSpot from '@/assets/hotspot-logo.png';
 
 	// 桌面全屏布局（≥1024px）：52px 顶栏 + 可折叠侧栏 + 主内容卡片 + 发布模态。
@@ -54,6 +55,41 @@
 		{ id: 'my-groups', icon: Users, label: '我的群组', path: ME_SECTION_PATHS.groups },
 		{ id: 'relationships', icon: Heart, label: '关系', path: ME_SECTION_PATHS.relationships }
 	];
+
+	/* 导航意图预取（R16）：侧栏/顶栏导航是 button + goto，SvelteKit 内置的
+	   data-sveltekit-preload-data="hover" 只对 <a href> 生效，覆盖不到这里，因此在
+	   外壳根节点做事件委托——pointerover / focusin / touchstart 命中导航入口时提前
+	   preloadCode(目标路由)，点击时模块多已就绪（不改任何子组件）。
+	   标签→路径映射：侧栏 TOP_NAV/PERSONAL_NAV 用 item.label（SidebarNavItem 的
+	   aria-label），顶栏图标按钮用 ActionIconButton 的 label=aria-label，
+	   位置卡用 aria-label=位置选择，头像用 aria-label=打开个人主页，
+	   管理员入口用 aria-label=管理后台。 */
+	const PRELOAD_LABELS = new Map<string, string>([
+		...TOP_NAV.map((item) => [item.label, item.path] as const),
+		...PERSONAL_NAV.map((item) => [item.label, item.path] as const),
+		['管理后台', ROUTES.admin],
+		['搜索', ROUTES.search],
+		['通知', ROUTES.notify],
+		['设置', ROUTES.settings],
+		['打开个人主页', ROUTES.me],
+		['位置选择', ROUTES.map]
+	]);
+	const handlePreloadIntent = (event: Event) => {
+		const path = resolvePreloadTarget(event.target, PRELOAD_LABELS);
+		if (path) void preloadRoute(path);
+	};
+	// 空闲兜底：无 hover 意图（触屏点按/键盘）也给常用目的地留一条加速路径，
+	// 延迟 5s 后挑空闲带宽预热（preloadCode 不执行 load、不产生 API 请求）。
+	onMount(() =>
+		scheduleIdlePreload([
+			ROUTES.messages,
+			ROUTES.notify,
+			ROUTES.search,
+			ROUTES.settings,
+			ME_SECTION_PATHS.relationships,
+			ROUTES.me
+		])
+	);
 
 	// 登录后拉一次平台管理员权限：决定侧栏「管理后台」入口是否渲染
 	$effect(() => {
@@ -118,6 +154,11 @@
 		{label}
 	</p>
 {/snippet}
+
+<!-- 导航意图预取的事件委托挂在 window 上（事件冒泡，覆盖导航入口；不给外壳根
+     <div> 加 ARIA role，避免静态元素带交互处理器的 a11y 警告）。svelte:window 只能在
+     模板顶层，故放在外壳根节点之前。 -->
+<svelte:window onpointerover={handlePreloadIntent} onfocusin={handlePreloadIntent} ontouchstart={handlePreloadIntent} />
 
 <div
 	class="relative isolate flex flex-col h-screen w-screen overflow-hidden transition-colors duration-gentle font-sans"

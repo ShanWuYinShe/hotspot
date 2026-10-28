@@ -94,7 +94,7 @@
 			loading={priority ? 'eager' : 'lazy'}
 			fetchpriority={priority ? 'high' : 'auto'}
 			decoding="async"
-			class="image-hover-frame__image {imageBox} object-cover will-change-transform transition-opacity duration-standard {imageLoaded ? 'opacity-100' : 'opacity-0'}"
+			class="image-hover-frame__image {imageBox} object-cover transition-opacity duration-standard {imageLoaded ? 'opacity-100' : 'opacity-0'}"
 			onload={() => (imageLoaded = true)}
 			onerror={() => {
 				imageFailed = true;

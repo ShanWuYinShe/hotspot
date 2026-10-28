@@ -654,3 +654,59 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 | 动画数 / backdrop 元素 / will-change 元素 | 3 / 24 / 79 | 0 / 6 / 12 |
 
 （数据与量测脚本见 docs/frontend-ui-audit.md「R15 性能」。）
+
+## Round 16 运行时响应 / 导航三态 / 消息页（2026-10-28，强制）
+
+触发：用户反馈「整个页面反应慢一拍」「消息页看起来明显很奇怪」「侧栏 hover 太不明显、对色弱色盲不友好」。
+完整契约与实测数据见 `docs/design-system.md` §21.12；此处是执行清单。
+
+### 1) 页面进场预算（不减少特效、只去掉空白窗口）
+
+- 客户端导航进场 ≤120ms、起点 `opacity ≥0.6` + 位移 ≤2px（禁止 opacity:0 起——
+  点击后先空白再淡入就是「慢一拍」）；骨架→内容 fade ≤110ms；首屏不播。
+- 时长双源：CSS `.page-enter/.content-fade`（`--cst-page-enter-duration` / `--cst-content-fade-duration`）
+  ↔ `lib/motion.ts` 的 `MOTION.enter/contentFade`，`motion.test.ts` 源码锁定，改一处必须同步。
+
+### 2) 导航意图预取（button 导航必须补齐）
+
+- SvelteKit `data-sveltekit-preload-data` 只覆盖 `<a>`；button + goto 的导航（桌面侧栏/顶栏/
+  位置卡/头像）必须经 `lib/nav-preload.ts`：hover/focus/touchstart 时 `preloadRoute()` +
+  5s 空闲兜底 `scheduleIdlePreload()`；外壳用 `<svelte:window>`（**模板顶层**）事件委托。
+- dev 必须配 `vite.config.ts` `server.warmup.clientFiles`（全部路由 + 布局/消息/导航组件；
+  glob 用 `src/routes/*/**` 绕开 `(app)` 括号陷阱），否则首访路由按需编译 58–720ms。
+- 只用 preloadCode（本应用无路由 load 数据）。
+
+### 3) 滚动与合成层
+
+- 唯一滚动容器 `main` **禁止 `scroll-smooth`**：会把 scrollTop 赋值/无参 scrollTo 动画化 766ms；
+  平滑只给显式入口（BackToTop 传 behavior:'smooth'）。键盘 PageDown 的 ~134ms 是浏览器原生，勿回退。
+- will-change 只允许持续动画的固定图层；图片 hover 缩放、头像入口、批量交互类一律不加
+  （本轮清理 `.image-hover-frame__image`、`.avatar-entry__avatar img` 与
+  `NearbyImageCard` 上的 `will-change-transform` 类）。
+
+### 4) 侧栏导航三态（灰度可辨 + 非颜色信号）
+
+| 状态 | 底色 | 其它 |
+|---|---|---|
+| 普通 | 透明 | secondary / 1.5 描边 |
+| hover | `--cst-surface-navigation-hover`（text-primary 12% 混 surface-page） | 图标/文字升 primary + 图标 scale1.1 |
+| 选中 | `--cst-surface-navigation-active`（accent 26%） | 3×20px 指示条 + accent 图标 + semibold + 1px accent 内缘描边 |
+| 选中+hover | `--cst-surface-navigation-active-hover`（accent 34%） | 同选中 |
+
+- hover 禁用 accent 色相（色盲会把 hover 误读成选中）；token 在 `semantic.css` 派生、
+  `theme-registry.css` 注册 `bg-surface-navigation-*`。
+- 灰度验收：hover 底/画布 ≥1.2、选中底/画布 ≥1.4，选中至少 2 种非颜色线索；
+  `filter:grayscale(1)` 截图（三主题 × 明暗）留档。
+- **按钮光标**：`base.css` 全局 `button:not(:disabled)` / `[role="button"]:not([aria-disabled])`
+  给 `cursor:pointer`（Chrome 默认箭头会让 hover 反馈「不像可点」）。
+
+### 5) 消息页排版/降噪（与 layout skill「聊天页内容轴」配套）
+
+- 正文 `text-md`(14) + `leading-card`；时间戳 `text-xs`(11)；群聊发送者名 `text-sm`(12)；
+  输入框 `text-md`(14)、高 44。
+- accent 实底气泡内文字用 `text-text-on-accent` 全量，**不得叠 opacity**（旧 0.7 → 3.97:1 不达标）；
+  对方气泡时间戳仍用 secondary（实测 5.36–8.84）。
+- 日期分节 = 中性 11px 文本标签；ListEnd 仅分页耗尽后出现；短会话底对齐。
+- 会话行三态：选中 accent 实底 + 长指示条（on-accent）+ semibold；未读 淡 tint + 短指示条
+  （accent）+ 数字徽标 + semibold；普通无条 medium。选中行文字 on-accent 全量。
+- 圆角统一 `rounded-md`(16)；⋯ 菜单绝对定位不占文档流（否则底对齐最后一条会上移 ~40px）。

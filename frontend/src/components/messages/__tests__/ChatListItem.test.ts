@@ -94,4 +94,27 @@ describe('ChatListItem', () => {
 		expect(screen.queryByRole('button', { name: '开启免打扰' })).toBeNull();
 		expect(screen.queryByRole('button', { name: '关闭免打扰' })).toBeNull();
 	});
+	// R16 三态非色相信号：选中/未读在行首有竖指示条（灰度截图可辨），
+	// 选中行内文字全量 on-accent（不再叠 opacity 导致对比度 <4.5）。
+	it('选中行有左侧指示条 + accent 实底 + semibold 昵称', () => {
+		const { container } = render(ChatListItem, {
+			props: { chat: { ...chat, unread: 0 }, onClick: () => {}, isSelected: true }
+		});
+		expect(container.querySelector('[data-chat-indicator="selected"]')).toBeTruthy();
+		expect(container.querySelector('[data-active="true"]')).toBeTruthy();
+		expect(screen.getByText('鹿鸣').className).toContain('font-semibold');
+		expect(screen.getByText('10:24').className).toContain('text-text-on-accent');
+	});
+
+	it('未读行有短指示条（非纯色相态信号）', () => {
+		const { container } = render(ChatListItem, { props: { chat, onClick: () => {} } });
+		expect(container.querySelector('[data-chat-indicator="unread"]')).toBeTruthy();
+	});
+
+	it('普通已读行无指示条', () => {
+		const { container } = render(ChatListItem, {
+			props: { chat: { ...chat, unread: 0 }, onClick: () => {} }
+		});
+		expect(container.querySelector('[data-chat-indicator]')).toBeNull();
+	});
 });

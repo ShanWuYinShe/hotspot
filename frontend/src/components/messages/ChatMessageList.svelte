@@ -6,12 +6,16 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
+	import ChatColumn from '@/components/messages/ChatColumn.svelte';
 	import MessageBubble from '@/components/messages/MessageBubble.svelte';
 	import ChatDatePill from '@/components/messages/ChatDatePill.svelte';
 	import { inRecallWindow, type ChatController, type ChatMessage } from '@/lib/chat.svelte';
 
 	// ChatMessageList —— 私聊/群聊共享的消息区（加载/错误/空态 + 日期分组气泡）。
 	// 视图差异仅 canRecall 判定（群聊管理员可撤回他人消息），由 props 注入。
+
+	// 消息列宽度与页头/输入栏同轴：统一由 ChatColumn 提供（禁止本文件再写 max-w-*）。
+
 	let {
 		chat,
 		canRecall,
@@ -25,62 +29,84 @@
 		/** 收到消息的举报入口（reports/create target_type='message'）；缺省不渲染 */
 		onReport?: (messageId: string) => void;
 	} = $props();
+
+	// 「没有更多了」只在真正有意义时出现（R16 降噪）：
+	// 首屏一次就返回全部消息（next_cursor=null）说明这个会话从未分页，顶部再写一句
+	// 「没有更多了」只是噪声（用户实测「很怪」）；只有历史确实翻过页、翻到耗尽后，
+	// 收尾提示才有信息量。切换会话（loading / messages 清空）时重置。
+	let everPaginated = $state(false);
+	$effect(() => {
+		if (chat.loading || chat.messages.length === 0) everPaginated = false;
+		else if (chat.hasMore) everPaginated = true;
+	});
 </script>
 
-<div class="relative mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col lg:max-w-5xl">
-<div bind:this={chat.scrollEl} onscroll={chat.handleScroll} class="min-h-0 flex-1 overflow-y-auto no-scrollbar" style="overscroll-behavior:contain;">
-	{#if chat.loading}
-		<!-- 加载态统一 InlineLoading（全站三态标配，不再自绘 spinner） -->
-		<InlineLoading label="加载消息…" class="h-full justify-center" />
-	{:else if chat.loadError}
-		<!-- 错误态统一 LoadError（与全站一致），不再各页手搓文案 + 按钮 -->
-		<LoadError message="消息加载失败，请检查网络后重试" onRetry={() => void chat.reload()} class="h-full" />
-	{:else if chat.messages.length === 0}
-		<!-- 空会话：统一 EmptyState 空态（对齐全局空态契约） -->
-		<EmptyState class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧" bare>
-			{#snippet icon()}
-				<!-- bare 空态裸图标统一 28px（style skill 已登记口径） -->
-				<MessageCircle class="size-7 text-text-secondary" strokeWidth={1.5} aria-hidden="true" />
-			{/snippet}
-		</EmptyState>
-	{:else}
-		<div class="animate-fade-in flex flex-col gap-2 px-4 pt-4 pb-3">
-			{#if chat.loadingMoreFailed}
-				<!-- 分页失败可见化（layout 第 6 条）：轻量重试入口，不遮蔽已加载消息 -->
-				<div class="flex items-center justify-center gap-2 py-3 text-xs text-text-secondary">
-					<span>更早的消息加载失败</span>
-					<button type="button" class="link-btn" onclick={() => void chat.loadMore()}>重试</button>
-				</div>
-			{:else if chat.loadingMore}
-				<InlineLoading label="加载更早消息…" class="py-3" />
-			{:else if !chat.hasMore}
-				<!-- 历史耗尽：ListEnd 收尾（layout 第 6 条），区分「已到顶」与「卡住」 -->
-				<ListEnd />
-			{/if}
-			{#each chat.dateGroups as group (group.label)}
-				<ChatDatePill label={group.label} />
-				{#each group.messages as msg (msg.id)}
-					<MessageBubble
-						text={msg.text}
-						sent={msg.sent}
-						time={msg.time}
-						senderName={showSenderNames ? msg.senderName : ''}
-						showCheck={msg.id === chat.lastSentId}
-						messageId={msg.id}
-						recalled={msg.recalled}
-						editedAt={msg.editedAt}
-						canRecall={canRecall(msg)}
-						canEdit={msg.sent}
-						canReport={!msg.sent && Boolean(onReport)}
-						onRecall={(id) => void chat.handleRecall(id)}
-						onEdit={(id, content) => void chat.handleEdit(id, content)}
-						onReport={(id) => onReport?.(id)}
-					/>
+<ChatColumn class="relative flex min-h-0 flex-1 flex-col">
+	<!-- 消息区是独立滚动容器（Round 10：分页 prepend 保视口） -->
+	<div
+		bind:this={chat.scrollEl}
+		onscroll={chat.handleScroll}
+		class="min-h-0 flex-1 overflow-y-auto no-scrollbar"
+		style="overscroll-behavior:contain;"
+	>
+		{#if chat.loading}
+			<!-- 加载态统一 InlineLoading（全站三态标配，不再自绘 spinner） -->
+			<InlineLoading label="加载消息…" class="h-full justify-center" />
+		{:else if chat.loadError}
+			<!-- 错误态统一 LoadError（与全站一致），不再各页手搓文案 + 按钮 -->
+			<LoadError message="消息加载失败，请检查网络后重试" onRetry={() => void chat.reload()} class="h-full" />
+		{:else if chat.messages.length === 0}
+			<!-- 空会话：统一 EmptyState 空态（对齐全局空态契约） -->
+			<EmptyState class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧" bare>
+				{#snippet icon()}
+					<!-- bare 空态裸图标统一 28px（style skill 已登记口径） -->
+					<MessageCircle class="size-7 text-text-secondary" strokeWidth={1.5} aria-hidden="true" />
+				{/snippet}
+			</EmptyState>
+		{:else}
+			<!-- 短会话底对齐（R16）：消息贴住输入条、空白留在上方（Telegram/iMessage/WhatsApp 同款），
+			     消除「消息挤在顶部、下方一大片空场」的断裂感；内容超过一屏时 min-h-full 自然失效、正常滚动。
+			     上方 pt-3 / 下方 pb-4 是滚动到顶/底时的呼吸余量。 -->
+			<div class="animate-fade-in flex min-h-full flex-col justify-end gap-2 px-4 pb-4 pt-3">
+				{#if chat.loadingMoreFailed}
+					<!-- 分页失败可见化（layout 第 6 条）：轻量重试入口，不遮蔽已加载消息 -->
+					<div class="flex items-center justify-center gap-2 py-3 text-sm text-text-secondary">
+						<span>更早的消息加载失败</span>
+						<button type="button" class="link-btn" onclick={() => void chat.loadMore()}>重试</button>
+					</div>
+				{:else if chat.loadingMore}
+					<InlineLoading label="加载更早消息…" class="py-3" />
+				{:else if !chat.hasMore && everPaginated}
+					<!-- 历史耗尽：ListEnd 收尾（layout 第 6 条），区分「已到顶」与「卡住」 -->
+					<ListEnd />
+				{/if}
+				{#each chat.dateGroups as group, gi (group.label)}
+					<!-- 每个日期分节：中性日期标签 + 气泡组；分节之间比组内多一档留白（12+8） -->
+					<div class="flex flex-col gap-2 {gi > 0 ? 'mt-2' : ''}">
+						<ChatDatePill label={group.label} />
+						{#each group.messages as msg (msg.id)}
+							<MessageBubble
+								text={msg.text}
+								sent={msg.sent}
+								time={msg.time}
+								senderName={showSenderNames ? msg.senderName : ''}
+								showCheck={msg.id === chat.lastSentId}
+								messageId={msg.id}
+								recalled={msg.recalled}
+								editedAt={msg.editedAt}
+								canRecall={canRecall(msg)}
+								canEdit={msg.sent}
+								canReport={!msg.sent && Boolean(onReport)}
+								onRecall={(id) => void chat.handleRecall(id)}
+								onEdit={(id, content) => void chat.handleEdit(id, content)}
+								onReport={(id) => onReport?.(id)}
+							/>
+						{/each}
+					</div>
 				{/each}
-			{/each}
-		</div>
-	{/if}
-</div>
+			</div>
+		{/if}
+	</div>
 
 	<!-- 回到底部（Round 10）：上滑超过 200px 才出现；无新消息时只有箭头，
 	     有新消息时显示「N 条新消息」。点击滚底 + 清计数 + 恢复自动滚动。 -->
@@ -102,4 +128,4 @@
 			{/if}
 		</button>
 	{/if}
-</div>
+</ChatColumn>

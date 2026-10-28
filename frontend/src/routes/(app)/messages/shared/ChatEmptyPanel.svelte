@@ -35,8 +35,8 @@
 			<div class="flex size-16 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft">
 				<MessageCircle class="size-7" strokeWidth={1.5} aria-hidden="true" />
 			</div>
-			<h2 class="mt-5 text-md font-semibold text-text-primary">选择一个会话</h2>
-			<p class="mt-2 max-w-xs text-xs leading-relaxed text-text-secondary">
+			<h2 class="mt-5 text-base font-semibold text-text-primary">选择一个会话</h2>
+			<p class="mt-2 max-w-xs text-sm leading-relaxed text-text-secondary">
 				从左侧选择会话继续聊天，或从最近会话快速进入。
 			</p>
 		</div>
@@ -60,10 +60,10 @@
 							/>
 							<span class="min-w-0 flex-1">
 								<span class="flex items-center justify-between gap-2">
-									<span class="truncate text-sm font-medium text-text-primary">{chat.name}</span>
-									<span class="shrink-0 text-xxs tabular-nums text-text-secondary">{chat.time}</span>
+									<span class="truncate text-md font-medium text-text-primary">{chat.name}</span>
+									<span class="shrink-0 text-xs tabular-nums text-text-secondary">{chat.time}</span>
 								</span>
-								<span class="mt-0.5 block truncate text-xs text-text-secondary">
+								<span class="mt-0.5 block truncate text-sm text-text-secondary">
 									{chat.lastMessage || '暂无消息'}
 								</span>
 							</span>

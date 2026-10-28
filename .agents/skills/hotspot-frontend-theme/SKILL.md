@@ -173,3 +173,15 @@ theme/
   禁止只验 vibrant。
 - **harmony-only 档**：`textTertiary`（web 无对应）允许单端调整（forest light #5F6C64→#58645C），但需在文档标注。
 - **状态徽章对比**：实底 + on-accent 字（避免淡底 + 主题字在部分主题/明暗下 <4.5，axe color-contrast 会拦）。
+
+## 导航三态 token（R16，2026-10-28）
+
+- `--cst-surface-navigation-hover` = `color-mix(text-primary 12%, surface-page)`（中性低彩度，hover 靠明度）；
+- `--cst-surface-navigation-active` = `color-mix(accent-default 26%, surface-page)`（选中底色）；
+- `--cst-surface-navigation-active-hover` = `color-mix(accent-default 34%, surface-page)`（选中+hover）。
+- 三者定义在 `semantic.css`（随主题 × 明暗自动派生，**不要**写进 themes/*.css palette，跨端 parity 不比对）；
+  `theme-registry.css` 注册 `--color-surface-navigation-{hover,active,active-hover}` 以启用
+  `bg-surface-navigation-*` 类（Tailwind v4 未注册 utility 静默失效）。
+- 旧值（text-primary 9% 混 surface-primary）实测 hover 底/画布仅 1.07–1.19:1、灰度不可辨；
+  新值浅色 1.17–1.25 / 深色 1.27–1.36，选中再加指示条/内缘描边/字重四个非颜色信号。
+- 灰度验收口径：hover 底/画布 ≥1.2、选中底/画布 ≥1.4 且非颜色线索 ≥2 种（见 design-system §21.12）。

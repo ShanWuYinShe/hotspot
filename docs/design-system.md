@@ -831,3 +831,93 @@
 - 交互：hover/focus/press/reduced-motion 仍走既有基线（§20）。
 - 性能（§21.11）：内容页空闲 GPU 进程 CPU 约 0%（document.getAnimations() 为 0）；
   bun run test 含 src/styles/__tests__/perf-contract.test.ts 源码契约守卫。
+
+### 21.12 运行时响应与导航可读性（R16，2026-10-28，强制）
+
+> 背景：用户反馈「整个页面反应慢一拍」「消息页看起来明显很奇怪」「侧栏 hover 太不明显、对色弱色盲不友好」。
+> 实测结论：单次交互本身不慢（Event Timing INP 16–64ms、hover 24ms、60fps），可感知迟滞来自
+> ① dev 首访路由按需编译（58–900ms，生产 8–49ms）+ ② 页面进场动画从 `opacity:0` 起、180ms
+> （点击后「空白一拍」再淡入）+ ③ 唯一滚动容器上的全局 `scroll-smooth` 把程序化滚动动画化 766ms。
+> 整改后同口径 dev 导航「点击→DOM / 点击→完全可见」：关系 390.9/532.4ms → **29.9/127.6ms**，
+> 通知 288.5/461.8 → **26.9/167.4ms**，设置 454.5/598.1 → **31.7/133.6ms**（1440×900）。
+
+**1. 页面进场预算（强制）**
+
+- 客户端导航进场 ≤**120ms**，起点 `opacity ≥ 0.6`、位移 ≤2px；**禁止从 opacity:0 起**
+  （先空白再淡入 = 用户所说的「慢一拍」，特效保留但去掉不可见窗口）。
+- 骨架→内容 fade ≤**110ms**。首屏不播进场（保护 LCP）；reduced-motion 由 JS 直接跳过（不加类）。
+- 时长唯一来源：CSS `.page-enter` / `.content-fade` 的 `--cst-page-enter-duration` /
+  `--cst-content-fade-duration` 与 `lib/motion.ts` 的 `MOTION`，由
+  `lib/__tests__/motion.test.ts` 源码级锁定（改一处必须同步另一处）。
+
+**2. 导航意图预取（强制，button 导航必须补齐）**
+
+- SvelteKit 的 `data-sveltekit-preload-data="hover"` 只覆盖 `<a>`；本项目侧栏/顶栏是
+  `<button>` + `goto()`，必须经 `lib/nav-preload.ts`：`preloadRoute()`（`preloadCode`、
+  Set 去重、失败静默、当前路径跳过）+ `scheduleIdlePreload()`（5s 后 requestIdleCallback
+  预热常用路由，saveData 跳过）。事件委托放 `DesktopLayout` 的 `<svelte:window>`
+  （**必须在模板顶层**，放进元素内会编译失败）。
+- 只允许预取**代码**（preloadCode）：本应用没有会取数的路由 load 函数，改成 preloadData
+  会在 mock/真实后端产生额外请求。
+- dev 必须配 `vite.config.ts` → `server.warmup.clientFiles`（全部路由 `+page.svelte` +
+  布局/消息/导航组件；glob 用 `src/routes/*/**` 绕开 `(app)` 括号陷阱），否则首访路由
+  按需编译 58–720ms，就是「每个新页面都要等一拍」的根因。
+- 验收：冷 hover 300ms 后点击导航，click→DOM ≤50ms；未 hover 直点不回归。
+
+**3. 全局滚动（禁止 scroll-smooth）**
+
+- 唯一滚动容器（`RoutedContentViewport` 的 `<main>`）禁止 `scroll-smooth`：实测把任何
+  `scrollTop` 赋值 / 无参 `scrollTo` 动画化 766–768ms，破坏滚动恢复、回底与分页视口保持；
+  需要平滑的入口（BackToTop）自己传 `behavior:'smooth'`。
+- 键盘 PageDown/Home 的 ~134ms 平滑是浏览器原生行为，与 CSS 无关（不要为此回退）。
+
+**4. 合成层（§21.11 补充）**
+
+- will-change 只允许「持续动画的固定图层」；本轮补删 `.image-hover-frame__image` 与
+  `.avatar-entry__avatar img` 的常驻 will-change（首页 12→0，滚动 60fps 不变），并清掉
+  `NearbyImageCard.svelte` 上的 `will-change-transform` Tailwind 类（Tailwind 类不受 CSS 删除影响）。
+  新增同类交互禁止再加。
+
+**5. 侧栏导航三态（强制）**
+
+| 状态 | 底色 | 图标/文字 | 非颜色信号 |
+|---|---|---|---|
+| 普通 | 透明 | secondary / 1.5 描边 | — |
+| hover（未选中） | `--cst-surface-navigation-hover`（text-primary 12% 混 surface-page，中性低彩度） | primary | 图标 scale 1.1 |
+| 选中 | `--cst-surface-navigation-active`（accent 26% 混 surface-page） | accent 图标 / primary 文字 | 左侧 3×20px 指示条 + 1px accent 内缘描边 + semibold |
+| 选中 + hover | `--cst-surface-navigation-active-hover`（accent 34%） | 同选中 | 同选中 |
+
+- hover 不得使用 accent 色相（避免与选中混淆，且色盲/灰度可辨）；token 定义在
+  `semantic.css`、Tailwind 类在 `theme-registry.css` 注册（`bg-surface-navigation-*`）。
+- **灰度验收口径**：hover 底/画布 ≥1.2、选中底/画布 ≥1.4，且选中至少 2 种非颜色线索；
+  `filter:grayscale(1)` 截图留档（三主题 × 明暗）。
+- 全站按钮光标：`button:not(:disabled)` / `[role="button"]:not([aria-disabled="true"])`
+  由 `base.css` 全局给 `cursor:pointer`——浏览器对 `<button>` 默认是箭头，会让 hover 反馈
+  「不像可点」（R16 审计实测侧栏/顶栏/TabBar 全是 default）。
+
+**6. 消息页（聊天）内容轴与降噪（强制）**
+
+- 页头 / 消息列 / 输入栏必须共用 `components/messages/ChatColumn.svelte` 的同一列宽
+  （`max-w-3xl lg:max-w-5xl`），禁止各自写 `max-w-*`；面板窄于该档自然 w-full。
+  实测三列：1440 全部 x=576 / w=852；1920 全部 x=730 / w=1024。
+- 短会话消息**底对齐**（`min-h-full` + `justify-end`，空白留在上方）——顶部锚定 + 底部
+  228px 死空白是「消息页很怪」的主因之一。
+- 「没有更多了」（ListEnd）只在历史确实分页并耗尽后出现；首屏一次返回全部
+  （`next_cursor=null`）不得显示。
+- 字号：消息正文 `text-md`(14) + `leading-card`；时间戳 `text-xs`(11)；群聊发送者名
+  `text-sm`(12)；输入框 `text-md`(14)。accent 实底气泡内文字用 `text-text-on-accent`
+  全量、**不得叠 opacity**（旧 0.7 实测 3.97:1 不达标）。
+- 日期分节 = 中性 11px 文本标签（无底色/无投影），禁止白底胶囊（像按钮）。
+- 会话行三态：选中 accent 实底 + 行首长指示条（on-accent）+ semibold；未读 淡 tint +
+  行首短指示条（accent）+ 数字徽标 + semibold；普通无条 medium。选中行内文字 on-accent 全量。
+
+**7. 验收（R16 实测）**
+
+- `bun run check` 0 error / 0 warning（含 eslint + theme 四联）；`bun run test` 117 files / 631 tests 全绿。
+- 消息页三视口三列同轴（±1px）、短会话底对齐（最后气泡距输入条 27px）、无 ListEnd 噪音；
+  正文/时间/日期/选中行对比度实测 ≥4.5（6 主题 × 明暗）。
+- 侧栏 3 主题 × 明暗：普通文字 4.93–8.45、hover 10.28–12.05、选中 8.61–12.05；
+  hover 底/画布 1.17–1.25、选中底/画布 1.27–1.33；灰度 L* 梯 hover→选中 4.3–6.8 且多 4 项非颜色信号。
+- 页面性能纪律：内容页 `getAnimations()`=0、will-change 0、longtask 0、滚动 60fps；
+  `main` computed `scroll-behavior:auto`。
+

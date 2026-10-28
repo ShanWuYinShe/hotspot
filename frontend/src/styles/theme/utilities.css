@@ -662,23 +662,30 @@
     animation: cst-count-pop var(--cst-motion-snappy) var(--cst-ease-bounce);
   }
 
-  /* 页面进场（Round 7）：仅客户端导航时由 playPageEnter() 添加，180ms opacity+4px 上移；
-     首屏不播（保护 LCP）。reduced 下 JS 直接跳过，不会残留该类。 */
+  /* 页面进场（Round 7，R16 跟手微调）：仅客户端导航时由 playPageEnter() 添加，
+     120ms 完成、起点 opacity 0.6 + translateY 2px（原 180ms / opacity 0 / 4px）——
+     起点接近不透明后不再出现「先空白一拍再淡入」的可感知迟滞，保留继续淡入的动效。
+     首屏不播（保护 LCP）。reduced 下 JS 直接跳过，不会残留该类。
+     时长定义在局部自定义属性上（单文件单一来源，与 lib/motion.ts 的 MOTION.enter
+     用测试锁定一致）；未直接改全局 --cst-motion-snappy，避免连带变更全站 hover 时长。 */
   @keyframes cst-page-enter {
-    from { opacity: 0; transform: translateY(4px); }
+    from { opacity: 0.6; transform: translateY(2px); }
     to { opacity: 1; transform: none; }
   }
   .page-enter {
-    animation: cst-page-enter var(--cst-motion-snappy) var(--cst-ease-standard) both;
+    --cst-page-enter-duration: 120ms;
+    animation: cst-page-enter var(--cst-page-enter-duration) var(--cst-ease-standard) both;
   }
 
-  /* 骨架→内容 fade（Round 7）：有骨架→数据到达时播 150ms；缓存命中不播。 */
+  /* 骨架→内容 fade（Round 7，R16 跟手微调）：有骨架→数据到达时播 110ms（原 150ms）；
+     缓存命中不播。时长与 lib/motion.ts 的 MOTION.contentFade 同源。 */
   @keyframes cst-content-fade {
     from { opacity: 0; }
     to { opacity: 1; }
   }
   .content-fade {
-    animation: cst-content-fade var(--cst-motion-rapid) var(--cst-ease-standard) both;
+    --cst-content-fade-duration: 110ms;
+    animation: cst-content-fade var(--cst-content-fade-duration) var(--cst-ease-standard) both;
   }
 
   /* 评论/回复新增（Round 7）：仅本次新增播放 160ms fade + 6px 上移。 */
@@ -773,9 +780,13 @@
     border-radius: inherit;
     transition: border-color 160ms var(--cst-ease-standard);
   }
+  /* 注意：不要给 .image-hover-frame__image 加 will-change: transform。
+     首页一次渲染 12 个该图片、附近页 10 个，每个都会常驻独占一个合成层
+     （显存/层数上升，且无实际收益——Chrome 在 transform 过渡开始时自动提升）。
+     2026-10-28 R16 性能修复：首页 will-change 元素 12 → 0，滚动 fps 与卡片
+     hover 缩放（1.045）实测无回归（.workwork/perf/{before,after}/*-layers.json）。 */
   .image-hover-frame__image {
     transition: transform 240ms var(--cst-ease-standard);
-    will-change: transform;
   }
   @media (hover: hover) and (pointer: fine) {
     .image-hover-frame:hover::after {
@@ -797,9 +808,9 @@
     transition: transform 160ms var(--cst-ease-standard), border-color 160ms var(--cst-ease-standard), box-shadow 160ms var(--cst-ease-standard);
     transform-origin: center;
   }
+  /* 同上：头像入口仅 hover 缩放 1.055，过渡开始即由浏览器提升层，无需常驻 will-change。 */
   .avatar-entry__avatar img {
     transition: transform 180ms var(--cst-ease-standard);
-    will-change: transform;
   }
   @media (hover: hover) and (pointer: fine) {
     .avatar-entry:hover {
