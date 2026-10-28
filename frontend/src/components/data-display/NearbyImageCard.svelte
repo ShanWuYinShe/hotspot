@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { cn } from '@/lib/utils';
 	import { buildImageSrcSet, optimizedImageUrl, presetImageUrl, presetSrcSet } from '@/lib/images';
+	import { cardPress } from '@/lib/motion';
 
 	// 数据展示组件（data-display）。
 	// NearbyImageCard — 图片优先内容卡片统一原语（Image-first Card，Round 2 改版）。
@@ -55,10 +56,8 @@
 		horizontal ? 'absolute left-0 top-0 h-full w-2/5' : 'absolute left-0 top-0 h-full w-full'
 	);
 
-	// hover 与内容卡统一走 card-hover；键盘焦点由 focus-ring 承载；按压缩放按平台 token。
-	let pressed = $state(false);
-	const cardTransform = $derived(pressed ? 'scale(var(--cst-card-tap-scale, 0.94))' : '');
-
+	// hover 与内容卡统一走 card-hover；键盘焦点由 focus-ring 承载；按压反馈由共享
+	// use:cardPress（R14 契约）驱动，CSS 统一按 --cst-card-tap-scale 缩放。
 	// 图片加载态：加载完成前 accent 渐变兜底、onload 渐显；失败与「无图」走同一 fallback。
 	let imageLoaded = $state(false);
 	let imageFailed = $state(false);
@@ -69,11 +68,6 @@
 		imageFailed = false;
 	});
 
-	// 行内子按钮的按压由按钮自身承载，不带动整卡缩放（否则像误触整卡）。
-	function pressedFromEvent(e: PointerEvent): boolean {
-		const btn = (e.target as HTMLElement).closest('button');
-		return !btn || btn.hasAttribute('data-cover');
-	}
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -86,12 +80,7 @@
 			'[&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20',
 		className
 	)}
-	style={cardTransform ? `transform:${cardTransform};transition:transform var(--cst-motion-instant) var(--cst-ease-standard);` : ''}
-	onpointerdown={(e) => {
-		if (pressedFromEvent(e)) pressed = true;
-	}}
-	onpointerup={() => (pressed = false)}
-	onpointerleave={() => (pressed = false)}
+	use:cardPress
 >
 	{#if hasImage}
 		{#if !imageLoaded}

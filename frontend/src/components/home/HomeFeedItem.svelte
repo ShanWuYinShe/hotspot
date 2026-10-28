@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Heart, MessageCircle, Bookmark, Share2, MapPin, Sparkles, Images } from '@lucide/svelte';
+	import { MapPin, Sparkles, Images } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import ImageCardActions from '@/components/data-display/ImageCardActions.svelte';
 	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import type { MomentItem } from '@/api/types';
 	import { formatDistance, formatRelativeDays } from '@/lib/utils';
 	import { ROUTES } from '@/lib/routes';
-	import { showToast } from '@/stores/toast.svelte';
+	import { cardPress } from '@/lib/motion';
+	import { setMomentLiked, setMomentSaved, shareMoment } from '@/lib/moment-actions';
+	import { requireAuth } from '@/stores/auth.svelte';
 
 	// ═══ 现代社交 Feed 项（HomeFeedItem）═══
 	// 两种形态：
@@ -19,6 +22,7 @@
 	let {
 		moment,
 		onClick,
+		onComment,
 		showDistance = false,
 		ariaLabel,
 		priority = false,
@@ -26,6 +30,8 @@
 	}: {
 		moment: MomentItem;
 		onClick?: () => void;
+		/** 评论入口（缺省回退整卡点击 → 详情页） */
+		onComment?: () => void;
 		showDistance?: boolean;
 		ariaLabel?: string;
 		/** 首屏图（feed 前 2 张）：eager + fetchpriority=high + 更高 1x 宽度；其余 lazy */
@@ -102,18 +108,48 @@
 		void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + tag)}`);
 	}
 
-	function handleShareClick(e: MouseEvent) {
-		e.stopPropagation();
-		if (navigator.share) {
-			void navigator.share({
-				title: `${moment.user?.nickname ?? 'HotSpot 用户'}的瞬间`,
-				text: moment.description,
-				url: window.location.origin + ROUTES.moment(moment.moment_id)
-			}).catch(() => {});
-		} else {
-			void navigator.clipboard?.writeText(window.location.origin + ROUTES.moment(moment.moment_id));
-			showToast('动态链接已复制到剪贴板', 'success');
+	// ── 卡片覆盖操作（R14 卡片交互契约）──────────────────────────────────────
+	// 与网格卡（MomentCard）共用 lib/moment-actions 的请求/失败语义；本组件持有乐观态，
+	// 切换瞬间时复位。登录拦截走 requireAuth（未登录先弹登录，登录后重放该动作）。
+	let likedOverride = $state<boolean | null>(null);
+	let savedOverride = $state<boolean | null>(null);
+	$effect(() => {
+		void moment.moment_id;
+		likedOverride = null;
+		savedOverride = null;
+	});
+	const liked = $derived(likedOverride ?? hasLiked);
+	const saved = $derived(savedOverride ?? Boolean(moment.is_favorited));
+
+	async function handleLike(next: boolean) {
+		if (!requireAuth({ action: next ? '点赞' : '取消点赞', targetId: moment.moment_id, run: () => void handleLike(next) })) return;
+		likedOverride = next;
+		const ok = await setMomentLiked(moment.moment_id, next, moment.reactions?.[0]?.emoji ?? '👍');
+		if (!ok) likedOverride = !next;
+	}
+
+	async function handleSave(next: boolean) {
+		if (!requireAuth({ action: next ? '收藏' : '取消收藏', targetId: moment.moment_id, run: () => void handleSave(next) })) return;
+		savedOverride = next;
+		const ok = await setMomentSaved(moment.moment_id, next);
+		if (!ok) savedOverride = !next;
+	}
+
+	function handleCommentClick() {
+		if (onComment) {
+			onComment();
+			return;
 		}
+		// 与网格卡（MomentCard）一致：评论入口直达详情评论区，而非只打开详情页顶部。
+		void goto(`${ROUTES.moment(moment.moment_id)}?focus=comments`);
+	}
+
+	function handleShare() {
+		void shareMoment({
+			momentId: moment.moment_id,
+			authorName: moment.user?.nickname,
+			text: moment.description
+		});
 	}
 </script>
 
@@ -127,7 +163,8 @@
 	     （图片 1.045 缩放），不再手写 hover:shadow/scale；无图 fallback 用主题化渐变底 +
 	     主题文字色（不使用白字遮罩，已登记例外）。 -->
 	<div
-		class="card-hover group relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-surface-subtle shadow-xs sm:aspect-[4/5] [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
+		class="card-hover isolate group relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-surface-subtle shadow-xs sm:aspect-[4/5] [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
+		use:cardPress
 	>
 		{#if !useFallback}
 			{#if !coverLoaded}
@@ -187,20 +224,12 @@
 							{moment.user?.nickname ?? '匿名用户'}
 						</button>
 						{#if moment.author_relation?.is_following}
-							<span
-								class="badge h-5 shrink-0 {useFallback
-									? 'bg-surface-subtle text-text-secondary'
-									: 'bg-surface-media-scrim-strong text-content-inverse'}"
-							>
+							<span class="shrink-0 {useFallback ? 'badge bg-surface-subtle text-text-secondary' : 'media-badge'}">
 								已关注
 							</span>
 						{/if}
 						{#if recommendationBadge}
-							<span
-								class="badge h-5 shrink-0 {useFallback
-									? 'bg-surface-subtle text-text-secondary'
-									: 'bg-surface-media-scrim-strong text-content-inverse'}"
-							>
+							<span class="shrink-0 {useFallback ? 'badge bg-surface-subtle text-text-secondary' : 'media-badge'}">
 								{recommendationBadge}
 							</span>
 						{/if}
@@ -217,17 +246,13 @@
 
 			<div class="pointer-events-none flex shrink-0 items-center gap-1.5">
 				{#if imageCount > 1}
-					<span class="badge h-5 gap-1 bg-surface-media-scrim-strong text-content-inverse">
+					<span class="media-badge gap-1">
 						<Images class="size-3" strokeWidth={1.75} aria-hidden="true" />
 						1/{imageCount}
 					</span>
 				{/if}
 				{#if locationText}
-					<span
-						class="badge h-5 max-w-36 gap-1 {useFallback
-							? 'bg-surface-subtle text-text-secondary'
-							: 'bg-surface-media-scrim-strong text-content-inverse'}"
-					>
+					<span class="max-w-36 gap-1 {useFallback ? 'badge bg-surface-subtle text-text-secondary' : 'media-badge'}">
 						<MapPin class="size-3 shrink-0" strokeWidth={1.75} aria-hidden="true" />
 						<span class="truncate">{locationText}{distanceLabel ? ` · ${distanceLabel}` : ''}</span>
 					</span>
@@ -250,50 +275,19 @@
 					<span class="min-w-0 truncate">#{moment.tags[0]}</span>
 				</div>
 			{/if}
-			<div class="mt-1 flex items-center justify-between">
-				<div class="flex items-center gap-5 sm:gap-6 {useFallback ? 'text-text-secondary' : 'text-content-inverse'}">
-					<div
-						class="hover-action hit-slop-44 flex items-center gap-1.5 text-sm focus-ring transition-colors {hasLiked
-							? 'text-status-danger'
-							: ''}"
-					>
-						<!-- 压图红态：红色填充 + 白色描边（深色遮罩/浅色遮罩上都可辨；形状变化不依赖色相） -->
-						<Heart
-							class="size-4.5 shrink-0 transition-transform active:scale-125 {hasLiked
-								? 'fill-status-danger text-content-inverse'
-								: ''}"
-							strokeWidth={1.75}
-						/>
-						<span class="font-medium tabular-nums">{totalReactions > 0 ? totalReactions : '赞'}</span>
-					</div>
-					<div
-						class="hover-action hit-slop-44 flex items-center gap-1.5 text-sm focus-ring transition-colors"
-					>
-						<MessageCircle class="size-4.5 shrink-0" strokeWidth={1.75} />
-						<span class="font-medium tabular-nums">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
-					</div>
-					<div
-						class="hover-action hit-slop-44 flex items-center gap-1.5 text-sm focus-ring transition-colors"
-					>
-						<Bookmark
-							class="size-4.5 shrink-0 transition-transform active:scale-125 {moment.is_favorited
-								? 'fill-accent-default text-content-inverse'
-								: ''}"
-							strokeWidth={1.75}
-						/>
-					</div>
-				</div>
-				<button
-					type="button"
-					class="hover-action hit-slop-44 flex items-center gap-1.5 text-sm focus-ring transition-colors"
-					aria-label="分享动态"
-					onclick={handleShareClick}
-				>
-					<Share2 class="size-4.5 shrink-0" strokeWidth={1.75} />
-					{#if moment.shares_count && moment.shares_count > 0}
-						<span class="font-medium tabular-nums">{moment.shares_count}</span>
-					{/if}
-				</button>
+			<div class="mt-1">
+				<ImageCardActions
+					likes={totalReactions}
+					comments={moment.comments_count}
+					shares={moment.shares_count}
+					{liked}
+					{saved}
+					onImage={!useFallback}
+					onLike={(next) => void handleLike(next)}
+					onComment={handleCommentClick}
+					onSave={(next) => void handleSave(next)}
+					onShare={handleShare}
+				/>
 			</div>
 		</div>
 
@@ -311,7 +305,7 @@
 {:else}
 	<!-- 紧凑行形态（保留紧凑内嵌式列表语言） -->
 	<div
-		class="group relative flex items-start gap-3 sm:gap-3.5 px-4 py-4 sm:px-5 hover:bg-surface-subtle/70 transition-colors cursor-pointer border-b border-border-subtle/30 [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
+		class="group relative isolate flex items-start gap-3 sm:gap-3.5 px-4 py-4 sm:px-5 hover:bg-surface-subtle/70 transition-colors cursor-pointer border-b border-border-subtle/30 [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
 	>
 		<!-- 左侧：作者头像 -->
 		<div class="shrink-0 pt-0.5">
@@ -449,38 +443,19 @@
 			{/if}
 
 			<!-- 底部轻量交互操作条 -->
-			<div class="mt-3 flex items-center gap-6 sm:gap-8 text-text-secondary">
-				<!-- 点赞 -->
-				<div
-					class="hover-action hit-slop-44 flex items-center gap-1.5 text-xs focus-ring transition-colors {hasLiked ? 'text-status-danger' : 'hover:text-status-danger'}"
-				>
-					<Heart
-						class="size-4 shrink-0 transition-transform active:scale-125 {hasLiked ? 'fill-status-danger text-status-danger' : ''}"
-						strokeWidth={1.5}
-					/>
-					<span>{totalReactions > 0 ? totalReactions : '赞'}</span>
-				</div>
-
-				<!-- 评论 -->
-				<div
-					class="hover-action hit-slop-44 flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors"
-				>
-					<MessageCircle class="size-4 shrink-0" strokeWidth={1.5} />
-					<span>{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
-				</div>
-
-				<!-- 分享 -->
-				<button
-					type="button"
-					class="hover-action hit-slop-44 flex items-center gap-1.5 text-xs hover:text-accent-default focus-ring transition-colors ml-auto sm:ml-0"
-					aria-label="分享动态"
-					onclick={handleShareClick}
-				>
-					<Share2 class="size-4 shrink-0" strokeWidth={1.5} />
-					{#if moment.shares_count && moment.shares_count > 0}
-						<span>{moment.shares_count}</span>
-					{/if}
-				</button>
+			<div class="mt-3">
+				<ImageCardActions
+					likes={totalReactions}
+					comments={moment.comments_count}
+					shares={moment.shares_count}
+					{liked}
+					{saved}
+					onImage={false}
+					onLike={(next) => void handleLike(next)}
+					onComment={handleCommentClick}
+					onSave={(next) => void handleSave(next)}
+					onShare={handleShare}
+				/>
 			</div>
 		</div>
 

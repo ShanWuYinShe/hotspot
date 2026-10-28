@@ -784,7 +784,18 @@
 - 作者行：头像 24–32 + 昵称 14 semibold + 时间 12；meta 行 12；动作计数 12 `tabular-nums`、动作间距 24；
 - 压图对比度保持 §17（徽章强遮罩 + 白字；位置信息只出现一次）。
 
-### 21.9 验收（可重跑）
+### 21.9 卡片交互（R14，2026-10-28）
+
+- **层叠**：图片内容卡根 = `card-hover isolate group relative overflow-hidden`；`isolate` 让卡内
+  `z-20` 操作限制在卡内，页内 sticky header 稳定压住整卡（用户反馈的移动端「卡片 UI 压标题栏」即根缺 `isolate`）。
+- **按压**：`use:cardPress` + `data-pressed` + `--cst-card-tap-scale`（vibrant 0.94 / forest·inkwash 0.97），
+  仅卡本体/覆盖按钮按下缩放；行内按钮不带动整卡。
+- **操作行**：`data-display/ImageCardActions` 唯一实现（点赞红/收藏 accent/评论分享中性；pop 仅激活方向；
+  md/sm 两档；计数 `tabular-nums`；aria 完备），信息流大卡与网格卡共用。
+- **压图徽章**：`.media-badge`（图标方角标 `--icon`）唯一实现：深色遮罩 + 反色字 + 毛玻璃 + h-5。
+- **作者区**：有 `userId` 时可点进主页（头像/昵称同 hover 语言）；分享统一 `lib/moment-actions.shareMoment`。
+
+### 21.10 验收（可重跑）
 
 - 全量截图矩阵：3 主题 × 2 明暗 × 桌面 1440 / 平板 768·1024 / 移动 390 × 登录/访客/管理员三态；
 - `bun run audit:a11y -- --matrix --parallel 2`（3×2，0 serious/critical）；

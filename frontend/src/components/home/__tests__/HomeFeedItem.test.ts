@@ -55,8 +55,8 @@ describe('HomeFeedItem', () => {
 		expect(screen.getByText('老街手冲馆')).toBeTruthy();
 		// 标签：整卡图片卡底部元信息只展示首个标签（Round 2 精简信息层级；全部标签见详情页）
 		expect(screen.getByText('#咖啡时光')).toBeTruthy();
-		// 互动统计
-		expect(screen.getByText('12')).toBeTruthy();
+		// 互动统计：mock 中已点赞（reacted_by_me）→ ImageCardActions 展示基数 +1
+		expect(screen.getByText('13')).toBeTruthy();
 		expect(screen.getByText('5')).toBeTruthy();
 		expect(screen.getByText('2')).toBeTruthy();
 	});
@@ -82,5 +82,40 @@ describe('HomeFeedItem', () => {
 		const article = screen.getByRole('button', { name: /查看咖啡小迷妹的瞬间详情/i });
 		await fireEvent.click(article);
 		expect(onClick).toHaveBeenCalledTimes(1);
+	});
+
+	it('卡片根节点自成堆叠上下文（isolate）且按压走统一 cardPress', async () => {
+		const { container } = render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {} } });
+		const root = container.firstElementChild as HTMLElement;
+		expect(root.className.split(/\s+/)).toContain('isolate');
+		await fireEvent.pointerDown(root);
+		expect(root.dataset.pressed).toBe('true');
+		await fireEvent.pointerUp(root);
+		expect(root.dataset.pressed).toBeUndefined();
+	});
+
+	it('行内操作按钮按下不触发整卡按压态（避免点按钮整卡抖一下）', async () => {
+		const { container } = render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {} } });
+		const root = container.firstElementChild as HTMLElement;
+		const likeBtn = screen.getByRole('button', { name: '取消点赞' });
+		await fireEvent.pointerDown(likeBtn);
+		expect(root.dataset.pressed).toBeUndefined();
+	});
+
+	it('覆盖操作行统一走 ImageCardActions（四类操作齐备，评论回调生效）', async () => {
+		const onComment = vi.fn();
+		render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {}, onComment } });
+		expect(screen.getByRole('button', { name: '取消点赞' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: '查看评论' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: '分享瞬间' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: '收藏' })).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: '查看评论' }));
+		expect(onComment).toHaveBeenCalledTimes(1);
+	});
+
+	it('压图角标统一用 media-badge（分类/位置/已关注）', () => {
+		const { container } = render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {} } });
+		const badges = [...container.querySelectorAll('.media-badge')];
+		expect(badges.length).toBeGreaterThanOrEqual(2);
 	});
 });

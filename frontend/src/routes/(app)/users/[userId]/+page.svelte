@@ -525,7 +525,7 @@
 							/>
 							{#if g.time}
 								<span
-									class="pointer-events-none absolute bottom-2 left-2 z-[2] inline-flex h-5 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2 text-xxs font-medium leading-none text-content-inverse"
+									class="pointer-events-none media-badge absolute bottom-2 left-2 z-[2]"
 								>
 									{g.time}
 								</span>

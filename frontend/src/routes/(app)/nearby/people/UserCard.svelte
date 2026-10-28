@@ -69,10 +69,7 @@
 	<!-- 右上：距离（单份，消除历史重复徽章 bug；无距离时整 pill 隐藏，免得剩个光杆图钉） -->
 	{#if user.distance}
 	<!-- 距离角标：卡内唯一角标，位置/尺寸/居中契约与其它图片卡一致（h-5 + leading-none） -->
-	<div
-		class="absolute top-2.5 right-2.5 z-[2] inline-flex h-5 items-center justify-center gap-1 rounded-full bg-surface-overlay-strong px-2 leading-none"
-		style="backdrop-filter:blur(var(--cst-blur-sm));"
-	>
+	<div class="media-badge absolute top-2.5 right-2.5 z-[2]">
 		<MapPin class="size-2.5 text-content-inverse" strokeWidth={1.75} />
 		<span class="text-content-inverse text-xxs">{user.distance}</span>
 	</div>
@@ -97,7 +94,7 @@
 		{/if}
 		<div class="mt-2 flex items-center justify-between gap-2">
 			{#if user.tag}
-				<span class="badge {onCover ? 'bg-surface-media-scrim-strong text-content-inverse' : 'bg-accent-soft text-text-accent-on-soft'}">#{user.tag}</span>
+				<span class={onCover ? 'media-badge' : 'badge bg-accent-soft text-text-accent-on-soft'}>#{user.tag}</span>
 			{:else}
 				<span></span>
 			{/if}

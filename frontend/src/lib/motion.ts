@@ -164,3 +164,44 @@ export function enterOnce(node: HTMLElement, active: boolean) {
 		}
 	};
 }
+
+/**
+ * 卡片按压反馈 action（R14 卡片交互契约，所有图片内容卡共用）：
+ * - 按下卡片本体（非行内按钮/链接）→ 根节点 data-pressed="true"，CSS 统一按
+ *   --cst-card-tap-scale 缩放（vibrant 0.94 / forest·inkwash 0.97，随主题）；
+ * - 在行内操作（点赞/收藏/关注/菜单/作者）上按下不缩放整卡，避免"点按钮整卡抖一下"；
+ * - pointerup / cancel / leave 立即复位；iOS 滚动时 pointercancel 同样复位。
+ * 使用：<article class="card-hover" use:cardPress>…</article>
+ */
+export function cardPress(node: HTMLElement) {
+	const isInnerControl = (target: EventTarget | null) => {
+		const el = target as HTMLElement | null;
+		if (!el || typeof el.closest !== 'function') return false;
+		return Boolean(
+			el.closest(
+				'button:not([data-cover]), a[href], input, textarea, select, [role="menuitem"], [role="slider"]'
+			)
+		);
+	};
+	const down = (e: PointerEvent) => {
+		if (e.button !== 0 && e.pointerType === 'mouse') return;
+		if (isInnerControl(e.target)) return;
+		node.dataset.pressed = 'true';
+	};
+	const up = () => {
+		delete node.dataset.pressed;
+	};
+	node.addEventListener('pointerdown', down);
+	node.addEventListener('pointerup', up);
+	node.addEventListener('pointercancel', up);
+	node.addEventListener('pointerleave', up);
+	return {
+		destroy() {
+			node.removeEventListener('pointerdown', down);
+			node.removeEventListener('pointerup', up);
+			node.removeEventListener('pointercancel', up);
+			node.removeEventListener('pointerleave', up);
+			delete node.dataset.pressed;
+		}
+	};
+}

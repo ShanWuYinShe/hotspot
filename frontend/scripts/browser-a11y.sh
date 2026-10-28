@@ -153,6 +153,12 @@ run_page() { # $1=route $2=vw $3=vh
   fi
   # 矩阵模式页面多，压缩固定等待（axe 在 DOM 稳定后跑）；单组合保留更长等待。
   if [ "$MATRIX" = "1" ]; then ab wait 900 >/dev/null 2>&1; else ab wait 1700 >/dev/null 2>&1; fi
+  # reduced-motion 必须每页重设：agent-browser 的 `open` 打开新标签页会重置 CDP 媒体模拟，
+  # 只在循环外 set 一次时，reduced 检查实际在 no-preference 下执行——会把 ambient 装饰动画
+  # 误报成长动画（R14 实测 37 页假阳性）。放在页面稳定后、注入检查脚本前设置。
+  if [ "$REDUCED" = "1" ] && [ "$MATRIX" != "1" ]; then
+    ab set media light reduced-motion >/dev/null 2>&1
+  fi
   local axe_ready
   axe_ready="$(ab eval 'typeof axe' 2>/dev/null | tail -1 | tr -d '"')"
   # 注入脚本偶发未生效（/map 首屏资源重、并发时曾出现 axe-not-loaded）：重载一次重试，

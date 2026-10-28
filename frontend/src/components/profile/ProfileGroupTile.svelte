@@ -50,7 +50,7 @@
 	}
 </script>
 
-<div class="group relative">
+<div class="group relative isolate">
 	<NearbyImageCard
 		imageSrc={group.banner || group.avatar}
 		imageAlt={group.name}
@@ -68,8 +68,7 @@
 
 		<!-- 左上：角色身份徽章 -->
 		<div
-			class="absolute left-2.5 top-2.5 z-[2] inline-flex h-5 items-center justify-center gap-1 rounded-full bg-surface-overlay-strong px-2.5 text-xxs font-medium leading-none text-content-inverse"
-			style="backdrop-filter:blur(var(--cst-blur-sm));"
+			class="media-badge absolute left-2.5 top-2.5 z-[2] gap-1"
 		>
 			{#if group.role === '管理员'}
 				<Shield class="mr-0.5 inline size-2.5 text-accent-default" strokeWidth={2} />

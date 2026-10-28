@@ -1,9 +1,12 @@
 <script lang="ts">
-	import { MapPin, Heart, MessageCircle, Bookmark } from '@lucide/svelte';
+	import { MapPin } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
+	import ImageCardActions from '@/components/data-display/ImageCardActions.svelte';
 	import type { FeedItem } from './moment-feed.svelte';
-	import { popOn } from '@/lib/motion';
+	import { shareMoment } from '@/lib/moment-actions';
+	import { ROUTES } from '@/lib/routes';
 
 	// MomentCard — 全站统一动态卡片：基于 NearbyImageCard 图片优先原语。
 	// 卡片比例由调用方按列宽传（2 列窄卡用 3:4 竖版，1 列/桌面用 4:3）：
@@ -18,6 +21,7 @@
 		onClick,
 		onCommentClick,
 		priority = false,
+		compact = false,
 		class: className = 'aspect-[4/3] rounded-md'
 	}: {
 		item: FeedItem;
@@ -30,15 +34,22 @@
 		onCommentClick?: () => void;
 		/** 首屏图（列表前 2 张）：透传 NearbyImageCard 的 eager/high */
 		priority?: boolean;
+		/** 窄卡（手机 2 列，约 170px 宽）：操作行切紧凑档，四类操作不裁切 */
+		compact?: boolean;
 		class?: string;
 	} = $props();
 
-	// 点击驱动的 pop 计数（仅在点击处理器递增；like/saved 首帧或数据同步不播）。
-	let likePop = $state(0);
-	let savePop = $state(0);
-
 	// 卡片可访问名（role=button 的 aria-label 来源）：tag 可为空，回退正文/作者并截断。
 	const cardLabel = $derived((item.tag || item.content || item.user).slice(0, 30));
+
+	const canOpenAuthor = $derived(Boolean(item.userId));
+	function openAuthor() {
+		if (item.userId) void goto(ROUTES.user(item.userId));
+	}
+	// 分享与首页信息流卡同一实现（lib/moment-actions.shareMoment）
+	function handleShare() {
+		void shareMoment({ momentId: item.id, authorName: item.user, text: item.content });
+	}
 </script>
 
 <NearbyImageCard
@@ -66,7 +77,7 @@
 	{#if item.tag}
 		<!-- Tag chip：毛玻璃底与卡片徽章语言统一（Gemini 审查 r04：降噪，亮蓝让位核心交互），
 	     严格锁定 h-5 与 leading-none 避免行高继承膨胀偏心 -->
-		<span class="absolute top-2.5 left-2.5 z-[2] inline-flex h-5 items-center justify-center rounded-full bg-surface-overlay-strong px-2.5 text-xxs font-medium leading-none text-content-inverse" style="backdrop-filter:blur(var(--cst-blur-sm));">
+		<span class="media-badge absolute top-2.5 left-2.5 z-[2]">
 			{item.tag}
 		</span>
 	{/if}
@@ -78,10 +89,35 @@
 		<!-- 作者行：头像 + 昵称 + 时间（压图态白字，fallback 用主题色） -->
 		<div class="flex min-w-0 items-center gap-2">
 			{#if item.avatar || item.user}
-				<Avatar src={item.avatar} name={item.user} size="sm" />
-				<span class="min-w-0 flex-1 truncate text-md font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{item.user || '匿名用户'}</span>
+				{#if canOpenAuthor}
+					<!-- 作者区与首页信息流卡同契约：头像 hover 放大、昵称 hover 下划线，点击进主页并阻断整卡跳转 -->
+					<button
+						type="button"
+						class="hover-action hit-slop-44 shrink-0 rounded-full focus-ring"
+						aria-label={`查看${item.user || '作者'}的个人主页`}
+						onclick={(e) => {
+							e.stopPropagation();
+							openAuthor();
+						}}
+					>
+						<Avatar src={item.avatar} name={item.user} size="sm" />
+					</button>
+					<button
+						type="button"
+						class="min-w-0 truncate text-left text-md font-semibold hit-slop-44 focus-ring {onCover ? 'text-content-inverse hover:underline' : 'text-text-primary hover:text-accent-default hover:underline'} transition-colors"
+						onclick={(e) => {
+							e.stopPropagation();
+							openAuthor();
+						}}
+					>
+						{item.user || '匿名用户'}
+					</button>
+				{:else}
+					<Avatar src={item.avatar} name={item.user} size="sm" />
+					<span class="min-w-0 flex-1 truncate text-md font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{item.user || '匿名用户'}</span>
+				{/if}
 				{#if item.authorRelation === true}
-					<span class="inline-flex h-5 shrink-0 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none {onCover ? 'bg-surface-media-scrim-strong text-content-inverse' : 'bg-accent-soft text-text-accent-on-soft'}">已关注</span>
+					<span class="shrink-0 {onCover ? 'media-badge' : 'badge bg-accent-soft text-text-accent-on-soft'}">已关注</span>
 				{/if}
 			{/if}
 			{#if item.time}
@@ -96,59 +132,20 @@
 			</p>
 		{/if}
 
-		<!-- 操作行：压图态白图标；红/主色态用填充+白描边（不依赖色相） -->
-		<div class="mt-2 flex items-center justify-between {onCover ? 'text-content-inverse' : 'text-text-secondary'}">
-			<div class="flex gap-6">
-				<button
-					type="button"
-					class="hover-action hit-slop-44 -my-2 flex items-center gap-1.5 py-2 focus-ring {liked
-						? (onCover ? 'text-content-inverse' : 'text-accent-default')
-						: (onCover ? 'opacity-hover' : 'hover:text-accent-default')}"
-					aria-label={liked ? '取消点赞' : '点赞'}
-					aria-pressed={liked}
-					onclick={(e) => {
-						e.stopPropagation();
-						if (!liked) likePop += 1;
-						onLike();
-					}}
-				>
-					<span class="inline-flex" use:popOn={likePop}>
-						<Heart class="size-4.5 {onCover && liked ? 'fill-status-danger text-content-inverse' : onCover ? 'text-content-inverse' : ''}" strokeWidth={1.5} fill={!onCover && liked ? 'currentColor' : 'none'} />
-					</span>
-					{#key item.likes + (liked ? 1 : 0)}
-						<span class="count-pop text-xs">{item.likes + (liked ? 1 : 0)}</span>
-					{/key}
-				</button>
-				<button
-					type="button"
-					class="hover-action hit-slop-44 -my-2 flex items-center gap-1.5 py-2 focus-ring {onCover ? 'opacity-hover' : ''}"
-					aria-label="查看评论"
-					onclick={(e) => {
-						e.stopPropagation();
-						(onCommentClick ?? onClick)?.();
-					}}
-				>
-					<MessageCircle class="size-4.5" strokeWidth={1.5} />
-					<span class="text-sm tabular-nums">{item.comments}</span>
-				</button>
-			</div>
-			<button
-				type="button"
-				class="hover-action hit-slop-44 -my-2 py-2 focus-ring {saved
-					? (onCover ? 'text-content-inverse' : 'text-accent-default')
-					: (onCover ? 'opacity-hover' : 'hover:text-accent-default')}"
-				aria-label={saved ? '取消收藏' : '收藏'}
-				aria-pressed={saved}
-				onclick={(e) => {
-					e.stopPropagation();
-					if (!saved) savePop += 1;
-					onSave();
-				}}
-			>
-				<span class="inline-flex" use:popOn={savePop}>
-					<Bookmark class="size-4.5 {onCover && saved ? 'fill-accent-default text-content-inverse' : onCover ? 'text-content-inverse' : ''}" strokeWidth={1.5} fill={!onCover && saved ? 'currentColor' : 'none'} />
-				</span>
-			</button>
+		<!-- 操作行：与首页信息流卡共用 ImageCardActions（同一套图标/间距/hover/press/状态语义） -->
+		<div class="mt-2">
+			<ImageCardActions
+				likes={item.likes}
+				comments={item.comments}
+				{liked}
+				{saved}
+				onImage={onCover}
+				onLike={() => onLike()}
+				onComment={() => (onCommentClick ?? onClick)?.()}
+				onSave={() => onSave()}
+				onShare={handleShare}
+				size={compact ? 'sm' : 'md'}
+			/>
 		</div>
 	</div>
 {/snippet}

@@ -10,6 +10,8 @@ export interface FeedItem {
 	/** 软删除墓碑：为 true 时调用方渲染占位而非内容卡（可选，其余列表默认正常卡）。 */
 	is_deleted?: boolean;
 	user: string;
+	/** 作者 user_id（可选；提供时卡片作者区可点击进入主页，与首页信息流卡一致）。 */
+	userId?: string;
 	avatar: string;
 	location: string;
 	/** 我是否关注了作者（来自 spec MomentItem.author_relation；匿名/缺省为 false）。 */

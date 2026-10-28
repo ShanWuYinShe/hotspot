@@ -97,4 +97,15 @@ describe('NearbyImageCard', () => {
 		await fireEvent.click(cover);
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
+
+	it('按压反馈由统一 cardPress 驱动（卡本体/覆盖按钮按下 → data-pressed，松开复位）', async () => {
+		const { container } = render(NearbyImageCard, { props: { imageSrc: 'x', onClick: () => {} } });
+		const card = container.querySelector('article') as HTMLElement;
+		// 覆盖按钮是卡片本体的点击面：按下它等于按下整卡（应缩放）
+		const cover = card.querySelector('[data-cover]') as HTMLElement;
+		await fireEvent.pointerDown(cover);
+		expect(card.dataset.pressed).toBe('true');
+		await fireEvent.pointerUp(card);
+		expect(card.dataset.pressed).toBeUndefined();
+	});
 });

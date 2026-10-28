@@ -580,3 +580,44 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
   作者行头像 24–32 + 昵称 14 semibold + 时间 12；动作计数 12 tabular、动作间距 24；卡比例只随断点变一档（移动 3/4、≥600 4/5）。
 - **内容轴**：页面不得自设页面级 `max-w-*`，正文/页头/粘底条同轴（三条规则见 layout skill「内容轴」节）。
 - 验收：本轮新增规则纳入 `audit:a11y`（矩阵 3×2 0 serious）+ `audit:touch`；视觉验收用三主题 × 明暗 × 桌面/平板/移动截图对比。
+
+## Round 14 卡片交互契约（2026-10-28，用户反馈沉淀）
+
+**用户反馈的两个问题**：① 卡片交互逻辑（hover、压图功能 UI 的交互）不一致；② 移动端卡片滚到标题栏下方时 z 值不对，卡片上的 UI 压到标题栏上面。
+
+### 1) 层叠：卡片必须自成堆叠上下文
+
+- 所有图片内容卡根节点必须同时具备：`card-hover isolate group relative overflow-hidden`；
+- 原因：行内操作经根上 `[&_button…]:z-20` 抬升；若根无 `isolate`，这些 `z-20` 会在页面堆叠上下文里与
+  页内 sticky header 的 `--cst-z-sticky(20)` 平级，DOM 更晚的卡片胜出 → 卡片 UI 压住标题栏；
+- `isolate` 后卡片内 `z-20` 只在卡内生效，sticky header（z-20 定位元素）稳定压住整卡；
+- 验收：移动端首页滚动到卡片作者行与吸顶 tab 重叠，`document.elementsFromPoint` 首位必须是吸顶条而非卡片按钮；
+- 同类陷阱：`ProfileMomentTile` / `ProfileGroupTile` 这类「卡片 + 卡片外 z-20 菜单」的包装层也要 `isolate`。
+
+### 2) 按压：唯一入口 `use:cardPress`
+
+- `.card-hover:active` 已删除；改 `.card-hover[data-pressed="true"] { transform: scale(var(--cst-card-tap-scale)) }`；
+- `lib/motion.ts` 的 `cardPress`：卡本体/覆盖按钮按下 → `data-pressed`；行内 `button:not([data-cover])/a/input…` 按下不缩放整卡；
+- 不再允许组件内手写 pointerdown/pointerleave + 内联 transform（曾导致 0.94 与 0.985 两套量感）。
+
+### 3) 操作行：唯一原语 `ImageCardActions`
+
+- 信息流大卡（HomeFeedItem）、网格卡（MomentCard）、我的瞬间卡全部使用；不允许在卡片里再手写点赞/评论/收藏/分享按钮；
+- 状态语义（全站唯一）：点赞 = 危险红填充（压图态白描边）；收藏 = accent 填充；评论/分享 = 中性；
+  **不能只靠色相**（填充形状 + 颜色双信号）；压图态所有操作内容满亮度反色（不再叠 opacity）；
+- 交互：图标/计数一起 hover 放大（hover-action）、按压缩小、focus-ring、计数 count-pop（仅激活方向）、
+  `aria-label/aria-pressed`、点击 `stopPropagation`；
+- 档位：`size="md"`（图标 18 / 间距 24 / 计数 12）；`size="sm"`（图标 16 / 间距 12 / 计数 12）用于手机 2 列窄卡，
+  四类操作必须全部落在卡内（171px 卡实测量取右侧不越界）。
+
+### 4) 压图徽章：唯一类 `.media-badge`
+
+- 深色遮罩底 + 反色字 + 毛玻璃 + h-5 紧凑档；图标方角标用 `.media-badge--icon`；
+- 分类/位置/距离/1-N/已关注/身份徽章全部迁移；禁止再手写 `bg-surface-overlay-strong` 或
+  `bg-surface-media-scrim-strong + px + text-xxs` 组合；非压图 fallback 用 `.badge` + 主题色。
+
+### 5) 作者区与分享
+
+- 作者区在有 userId 时可点（头像 hover-action、昵称下划线，stopPropagation → 主页）；无目标渲染纯文本；
+- 分享统一 `lib/moment-actions.shareMoment`（系统分享 → 剪贴板 + toast）；点赞/收藏统一
+  `setMomentLiked/setMomentSaved`（失败 toast + 调用方回滚乐观态）。

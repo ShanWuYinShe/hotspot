@@ -136,7 +136,6 @@
       transform var(--cst-motion-relaxed) var(--cst-ease-standard),
       border-color var(--cst-motion-relaxed) var(--cst-ease-standard);
   }
-  .card-hover:active { transform: scale(0.985); }
   .card-hover:focus-visible { outline: 2px solid var(--cst-accent-default); outline-offset: 2px; }
   @media (hover: hover) and (pointer: fine) {
     .card-hover:hover {
@@ -148,6 +147,14 @@
       box-shadow: var(--cst-elevation-button) !important;
       transform: translateY(calc(var(--cst-hover-lift, 0px) * -1));
     }
+  }
+
+  /* 卡片按压反馈（R14）：所有图片内容卡共用 use:cardPress → data-pressed。
+     缩放走主题 token（vibrant 0.94 / forest·inkwash 0.97，与鸿蒙端 tap 反馈同口径），
+     不再用固定的 0.985——此前两类卡片按压量感不一致。 */
+  .card-hover[data-pressed="true"] {
+    transform: scale(var(--cst-card-tap-scale, 0.97));
+    transition-duration: var(--cst-motion-instant);
   }
 
   /*── List row standard（行高/内边距契约）────────────────────────────
@@ -879,4 +886,33 @@
   font-size: var(--text-xxs);
   line-height: 1;
   white-space: nowrap;
+}
+
+/*── 压图媒体徽章（R14 卡片交互契约）────────────────────────────────
+   图片内容卡上的角标（分类/位置/距离/1-N/已关注/身份）唯一实现：
+   深色遮罩底 + 反色字 + 毛玻璃，h-5 紧凑档（AGENTS UI 原则第 6 条）。
+   此前各卡手写 bg-surface-overlay-strong / bg-surface-media-scrim-strong 两种底、
+   有无 backdrop-blur 混用，观感不一致；统一用本类，不再手写组合。
+   - 常规：<span class="media-badge">…</span>
+   - 纯图标方角标：<span class="media-badge media-badge--icon">…</span> */
+.media-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  font-size: var(--text-xxs);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--cst-content-inverse);
+  background-color: var(--cst-surface-media-scrim-strong);
+  -webkit-backdrop-filter: blur(var(--cst-blur-sm));
+  backdrop-filter: blur(var(--cst-blur-sm));
+}
+.media-badge--icon {
+  width: 20px;
+  padding: 0;
 }

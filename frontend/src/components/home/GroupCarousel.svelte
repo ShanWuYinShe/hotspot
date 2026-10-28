@@ -59,7 +59,7 @@
 
 				<!-- 右上：隐私徽章（纯图标，title/aria 提供语义；与其它卡片角标同位置/同尺寸） -->
 				<div
-					class="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-surface-overlay-strong"
+					class="media-badge media-badge--icon absolute right-2.5 top-2.5"
 					title={g.privacy === 'private' ? '私密群组' : '公开群组'}
 					aria-hidden="true"
 				>

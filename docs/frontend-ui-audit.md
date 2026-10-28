@@ -600,5 +600,47 @@
 
 - 桌面页标题字号仍为 20（移动 24）；评审建议桌面提到 24 属跨全站口径变更（涉及 `PageHeader` 契约与 skill 一行描述），本轮未做，登记为后续候选。
 - 聊天输入条附件入口：无接口/功能，未加装饰死按钮。
-- 管理员侧部分弹层（发公告/群管理/成员操作）在 mock 普通成员登录态不可达，仅代码路径审查；建议主环境真数据补走查。
-- `/moments/[id]` 等详情页 a11y 官方脚本在 mock/空库环境取不到种子 ID：已给 `qa-common.sh` 加 `AUDIT_DETAIL_MOMENT/USER/GROUP` 环境变量兜底（本轮门禁即用此方式覆盖详情页）。
+
+## R14 卡片交互一致性与层叠修复（2026-10-28）
+
+**用户反馈**：① 卡片交互逻辑（hover、压图功能 UI 的交互效果）应保持一致；② 移动端卡片滚到标题栏下方时
+z 值不对，卡片上的 UI 显示到标题栏上方（附截图）。
+
+**根因（实测复现）**：`HomeFeedItem` 卡根缺 `isolate`。行内操作按钮经根上 `[&_button…]:z-20` 抬升，
+根不是堆叠上下文 → 这些按钮参与页面堆叠上下文；与页内 sticky 条（`--cst-z-sticky=20`）同 z 且 DOM 更晚，
+故滚动时卡片作者/操作压住吸顶 tab。实测 `elementsFromPoint(60,80)` 修复前返回卡片按钮、修复后返回吸顶条。
+
+**修复内容**：
+1. `HomeFeedItem` 卡/行根加 `isolate`；`ProfileMomentTile`/`ProfileGroupTile` 包装层加 `isolate`（同类陷阱：卡外 z-20 菜单）；
+2. 按压统一：新增 `lib/motion.cardPress`，`.card-hover:active` 固定 0.985 → `[data-pressed]` + `--cst-card-tap-scale`；
+   `NearbyImageCard` 删除手写 pointer 状态/内联 transform（原 0.94 与 0.985 两套量感）；
+3. 操作行统一：新增 `data-display/ImageCardActions`（四类操作、状态语义、pop、aria、md/sm 档）；
+   `HomeFeedItem`（卡+行两形态）与 `MomentCard` 全部接入；此前**信息流卡的点赞/评论/收藏只是 div（点击只打开详情）**，
+   现为真按钮且失败可回滚（与网格卡同语义）；
+4. 压图徽章统一：新增 `.media-badge`/`--icon`，迁移 HomeFeedItem / MomentCard / UserCard / GroupCard / GroupCarousel /
+   ProfileGroupTile / users 页日期徽章（原混用 `surface-overlay-strong` 与 `surface-media-scrim-strong`、有无 blur 不一）；
+5. 作者区统一：`FeedItem` 增可选 `userId`，MomentCard 作者头像/昵称可点进主页（与信息流卡同 hover 语言）；
+6. 分享统一：`lib/moment-actions.shareMoment`，两张卡同一实现；
+7. 窄卡适配：`size="sm"` 动作档用于手机 2 列卡（171px 实测四类操作不越界，此前分享/收藏被 overflow 裁切）。
+
+**验证（2026-10-28，R14 worktree env http://localhost:8898）**：
+- 移动端 390×844 首页滚动 520px：重叠点首位元素 = 吸顶条（修复前为卡片按钮）；截图 before/after 见
+  `.workwork/r14-repro/`；
+- 桌面 hover/press 实测：卡 hover 抬升 + 图片 1.045 缩放；按压 `data-pressed=true` → computed transform
+  `matrix(0.94,0,0,0.94,0,0)`；行内按钮按下不产生按压态；
+- 点赞点击（mock 登录）：`aria-pressed` false→true、计数 30→31、URL 不变（不误触整卡跳转）；
+- 作者点击：/nearby/moments → /users/user_lumos；
+- 移动 2 列卡操作行右侧边界 ≤ 卡内容右缘（收藏 right=171 / 卡右缘 203）；
+- `bun run check` 0 error / 0 warning；`bun run test` 113 文件 / 599 用例全绿（新增
+  ImageCardActions / HomeFeedItem / NearbyImageCard 契约测试）；
+- a11y（`--base http://localhost:8898 --mobile --reduced`）：**PASS**，40 页 axe 0 违规
+  （minor/moderate/serious/critical 全 0），reduced-motion 异常 0（`.workwork/browser-check/a11y-20261028-130501`）；
+- 触控（`--base http://localhost:8898`）：**PASS**，35 页 / 890 元素 / 覆盖率 94.2% /
+  47 条登记例外 / 未登记离群 0（`.workwork/browser-check/touch-20261028-131436`）。
+- 触控修复：动作行按钮视觉 16px（sm 档纯图标）时 `hit-slop-44` 有效热区仅 42px，补 `min-w-4.5` 后 44px 通过。
+
+**验证工具修复（同轮发现）**：`frontend/scripts/browser-a11y.sh` 原先只在循环外执行一次
+`ab set media light reduced-motion`，而 agent-browser 的 `open` 打开新标签页会重置 CDP 媒体模拟，
+导致 reduced-motion 检查实际在 no-preference 下执行——把 ambient 装饰动画误报为长动画
+（40 页 37 页假阳性 + 1 页未返回）。已改为**每页页面稳定后、注入检查脚本前**重设媒体模拟；
+修复后 ambient 动画在 reduced 下被全局规则关停，检查恢复可信。

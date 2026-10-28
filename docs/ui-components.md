@@ -27,8 +27,11 @@
 ### 卡片（CSS 卡语言 + 一个内容卡原语）
 | 原语 | 职责 |
 |---|---|
-| `data-display/NearbyImageCard` | 图片优先内容卡**唯一实现**（附近瞬间/附近的人/附近群组/首页轮播/群组详情） |
-| `card-hover`（utilities） | 可点击卡片唯一 hover 语言：投影抬升 + `--cst-hover-lift`（vibrant）/ 纸面微染+边框（forest） |
+| `data-display/NearbyImageCard` | 图片优先内容卡**唯一实现**（附近瞬间/附近的人/附近群组/首页轮播/群组详情）；根节点必须 `isolate` + `use:cardPress` |
+| `data-display/ImageCardActions`（R14） | **图片卡覆盖操作行唯一实现**：点赞/评论/分享/收藏四类操作、计数弹跳、状态语义与 hover/press/focus 全站一致；`size="md"\|"sm"`（sm 用于手机 2 列窄卡） |
+| `.media-badge` / `.media-badge--icon`（utilities，R14） | **压图徽章唯一类**：深色遮罩底 + 反色字 + 毛玻璃 + h-5 紧凑档；分类/位置/距离/1-N/已关注/身份角标不再手写组合 |
+| `use:cardPress`（lib/motion，R14） | 卡片按压统一入口：卡本体/覆盖按钮按下 → 根节点 `data-pressed` → CSS 按 `--cst-card-tap-scale` 缩放；行内按钮按下不缩放整卡 |
+| `card-hover`（utilities） | 可点击卡片唯一 hover 语言：投影抬升 + `--cst-hover-lift`（vibrant）/ 纸面微染+边框（forest）；按压档由 `[data-pressed]` 规则承载（`--cst-card-tap-scale`） |
 | `card-raised` / `surface-hero` / `ListItem tone=card` | 静态卡片语言（白底 + 投影），禁止再发明第四种 |
 | 单帖卡（瞬间详情） | 内容软岛（无描边 + `surface-island` + shadow-xs + 圆角 20）；媒体容器去 1px 描边、保留圆角/阴影/加载占位/focus-ring；统计与评论分隔发丝线保留（Round 4） |
 | Hero 封面（群详情/主页） | 去 1px 描边，保留圆角/阴影/加载占位（媒体 hero 例外，见 design-system §19.5） |
@@ -136,14 +139,26 @@
 > 本轮新原语均由 Lead 或模块负责人在写作用域内实现；新增页面优先组合上述原语，
 > 不一致的旧手写形态按模块逐步收敛。
 
+### R14 卡片交互契约（2026-10-28，用户反馈「卡片交互要保持一致 + 移动端层叠错误」）
+
+| 层 | 强制契约 |
+|---|---|
+| 卡片根 | `card-hover isolate group relative overflow-hidden` + `use:cardPress`；`isolate` **不可省**——否则内部 `z-20` 按钮会逃出卡片堆叠上下文，滚动到页内 sticky header 下方时压住标题栏（用户截图反馈的真实 bug） |
+| 覆盖点击层 | 最后绘制 `absolute inset-0 z-10` 的真 `<button data-cover>`；行内控件经根上 `[&_button:not([data-cover])]:relative ...:z-20 [&_a]:relative [&_a]:z-20` 抬升；卡片根不持 button/aria-label |
+| 操作行 | 一律 `ImageCardActions`：图标 size-4.5（sm 档 4）、间距 24（sm 12）、计数 text-sm tabular；点赞 = 危险红填充（压图白描边）、收藏 = accent 填充、评论/分享 = 中性；只在激活方向 pop；`aria-label/aria-pressed` 完备；点击 stopPropagation |
+| 按压 | 只由 `use:cardPress` + `.card-hover[data-pressed="true"]` 驱动，缩放值走 `--cst-card-tap-scale`（vibrant 0.94 / forest·inkwash 0.97）；不允许再在组件内手写 transform/pointer 监听 |
+| 压图徽章 | 一律 `.media-badge`（图标方角标加 `--icon`），禁止再手写 `bg-surface-overlay-strong`/`bg-surface-media-scrim-strong` 组合；非压图 fallback 用 `.badge` + 主题色 |
+| 作者区 | 有 `userId` 时头像/昵称均为可点按钮（hover：头像放大、昵称下划线；点击 stopPropagation → 主页）；无目标时保持纯文本 |
+| 分享 | 统一 `lib/moment-actions.shareMoment`（系统分享 → 复制链接 + toast），信息流卡与网格卡同一实现 |
+
 ## 统一交互契约
 
 1. **行高亮**：hover / 选中 / 键盘焦点同形状（12px 圆角 `--cst-shape-sm`），
    由 ListItem 内聚；容器 `inset` 时高亮天然离边 8px，禁止行高亮顶容器边。
 2. **卡片 hover**：只走 `card-hover`；参数全部 token 化
    （`--cst-hover-lift` / `--cst-hover-image-zoom` / `--cst-card-tap-scale`），
-   主题在 `themes/{vibrant,forest,inkwash}.css` 各自演绎。
-3. **按压**：行 = opacity-tap；卡片 = `--cst-card-tap-scale`；按钮 = `hover-btn`。
+   主题在 `themes/{vibrant,forest,inkwash}.css` 各自演绎。卡片根必须 `isolate`（R14，防压 sticky header）。
+3. **按压**：行 = opacity-tap；卡片 = `use:cardPress` + `--cst-card-tap-scale`（R14 唯一入口）；按钮 = `hover-btn`。
 4. **明暗**：一律 token，禁止组件写死色值/色 mix。
 5. **焦点可见（Round 4 强制）**：所有 interactive（按钮/链接/行/输入/自定义点击区/表格行按钮）
    必须有可见焦点环：2px accent + 2px offset（`focus-ring`）；键盘 Tab 顺序可达、skip link 首 Tab 可见；

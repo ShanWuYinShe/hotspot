@@ -113,17 +113,17 @@
 	
 		{#if featured}
 			<!-- 左上：精选徽章 -->
-			<div class="absolute top-3 left-3 z-[2] inline-flex h-5 items-center justify-center gap-1.5 rounded-full bg-surface-overlay-strong px-2.5 leading-none" style="backdrop-filter:blur(var(--cst-blur-sm));">
+			<div class="media-badge absolute top-3 left-3 z-[2] gap-1.5">
 				<Sparkles size={11} class="text-content-inverse" />
 				<span class="text-content-inverse text-xxs">本周精选</span>
 			</div>
 		{:else}
 			<!-- 左上：分类（毛玻璃底与「本周精选」/距离徽章同语言，亮蓝实底让位核心按钮；Gemini 审查 r03） -->
-			<span class="absolute top-2.5 left-2.5 z-[2] inline-flex h-5 items-center justify-center rounded-full bg-surface-overlay-strong px-2.5 text-xxs font-medium leading-none text-content-inverse" style="backdrop-filter:blur(var(--cst-blur-sm));">{group.category}</span>
+			<span class="media-badge absolute top-2.5 left-2.5 z-[2]">{group.category}</span>
 	
 			<!-- 右上：隐私（锁/球图标表意不明，补悬停与读屏文案；Gemini 审查 r03） -->
 			<span
-				class="absolute top-2 right-2 z-[2] flex items-center justify-center rounded-full size-5 bg-surface-overlay-strong"
+				class="media-badge media-badge--icon absolute top-2 right-2 z-[2]"
 				title={group.privacy === 'private' ? '私密群组' : group.requiresApproval ? '加入需管理员审核' : '公开群组'}
 			>
 				<span class="sr-only">{group.privacy === 'private' ? '私密群组' : group.requiresApproval ? '加入需管理员审核' : '公开群组'}</span>
@@ -171,4 +171,3 @@
 			{/if}
 		{/snippet}
 	</NearbyImageCard>
-

@@ -74,13 +74,14 @@
 	}
 </script>
 
-<div class="group relative">
+<div class="group relative isolate">
 	<MomentCard
 		class="aspect-[3/4] h-auto rounded-lg"
 		{item}
 		{liked}
 		{saved}
 		{priority}
+		compact={isMobile}
 		onLike={onLike}
 		onSave={onSave}
 		onClick={onClick ?? (() => {})}

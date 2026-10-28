@@ -57,6 +57,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			// 缺 moment_id 的项仅在本地作列表 key；点击导航在下方 openMoment 统一校验
 			id: m.moment_id ?? `local-${i + 1}`,
 			user: m.user?.nickname ?? '',
+			userId: m.user?.user_id,
 			avatar: m.user?.avatar_url ?? '',
 			// 位置拼实时距离(distance 已下发未映射;Gemini 审查 r04:卡片补时空信息)
 			location: [m.location?.location_name, formatDistance(m.location?.distance)].filter(Boolean).join(' · '),
@@ -316,6 +317,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 						class="aspect-[3/4] h-auto rounded-lg"
 						item={item}
 						priority={index < 2}
+						compact
 						liked={item.liked}
 						saved={item.saved}
 						onLike={() => void interactions.toggleLike(item.id)}
