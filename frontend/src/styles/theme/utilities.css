@@ -324,6 +324,10 @@
      action（行内小图标）hover 1.20/var(--cst-motion-rapid)；tap 统一 0.94/var(--cst-motion-instant)。
      仅 fine pointer 设备启用 hover 缩放（withoutHover 契约）。 */
 
+  /* 注意：不要给 .hover-btn/.hover-action 加 will-change: transform。
+     这两个类在长列表/卡片里批量使用（首页实测 48 个元素），会让每个图标
+     长期独占一个合成层（层数/显存上升，且无实际收益——Chrome 在 transform
+     过渡开始时会自动提升）。2026-10-28 性能修复。 */
   .hover-btn,
   .hover-action {
     transition: transform var(--cst-motion-snappy) var(--cst-ease-standard),
@@ -331,7 +335,6 @@
       background-color var(--cst-motion-snappy) var(--cst-ease-standard),
       border-color var(--cst-motion-snappy) var(--cst-ease-standard),
       color var(--cst-motion-snappy) var(--cst-ease-standard);
-    will-change: transform;
   }
 
   /* 通用按钮：按下 0.94 缩放（对齐 Figma tap 0.94/var(--cst-motion-instant)）；hover 由全局 button 规则的
@@ -461,14 +464,17 @@
   .ambient-sky {
     background: linear-gradient(180deg, var(--cst-ambient-sky) 0%, transparent 30%);
   }
+  /* 氛围动画默认关闭（2026-10-28 性能修复）：全屏渐变层 + SVG 星层的无限动画会让
+     浏览器 GPU 进程在页面完全空闲时仍持续合成/重算 backdrop-filter（实测首页 idle
+     GPU 进程 24.6% → 0，滚动 19.3% → 14.9%）。氛围画布保留静态层（天光/世界/暗角），
+     动画只作为稀疏页面的显式增强：<AmbientBackdrop motion /> → .ambient-backdrop--motion。
+     开启后仍受全局 prefers-reduced-motion 规则压制。 */
   .ambient-glow--a {
     background: radial-gradient(46% 40% at 12% 6%, var(--cst-ambient-glow-1) 0%, transparent 72%);
-    animation: ambient-drift var(--cst-motion-ambient) var(--cst-ease-standard) infinite;
   }
   /* 地平线天光（世界光源）：底部中央的柔和光柱，游戏场景的主光源 */
   .ambient-glow--b {
     background: radial-gradient(62% 46% at 50% 104%, var(--cst-ambient-glow-2) 0%, transparent 72%);
-    animation: ambient-drift-reverse var(--cst-motion-ambient-slow) var(--cst-ease-standard) infinite;
   }
   /* 地平线雾：底部渐隐带，把世界剪影与画布衔接起来 */
   .ambient-horizon {
@@ -517,6 +523,17 @@
   }
   .ambient-stars {
     color: var(--cst-ambient-dot);
+  }
+
+  /* 氛围动画 opt-in（默认关闭，见上方性能说明）：只有显式声明 motion 的页面才动。
+     动画参数仍走既有 --cst-motion-ambient 刻度，不新增 token。 */
+  .ambient-backdrop--motion .ambient-glow--a {
+    animation: ambient-drift var(--cst-motion-ambient) var(--cst-ease-standard) infinite;
+  }
+  .ambient-backdrop--motion .ambient-glow--b {
+    animation: ambient-drift-reverse var(--cst-motion-ambient-slow) var(--cst-ease-standard) infinite;
+  }
+  .ambient-backdrop--motion .ambient-stars {
     animation: ambient-twinkle var(--cst-motion-ambient-slow) var(--cst-ease-standard) infinite;
   }
   .ambient-constellation,
@@ -890,9 +907,12 @@
 
 /*── 压图媒体徽章（R14 卡片交互契约）────────────────────────────────
    图片内容卡上的角标（分类/位置/距离/1-N/已关注/身份）唯一实现：
-   深色遮罩底 + 反色字 + 毛玻璃，h-5 紧凑档（AGENTS UI 原则第 6 条）。
+   深色遮罩底 + 反色字，h-5 紧凑档（AGENTS UI 原则第 6 条）。
    此前各卡手写 bg-surface-overlay-strong / bg-surface-media-scrim-strong 两种底、
    有无 backdrop-blur 混用，观感不一致；统一用本类，不再手写组合。
+   **不要加 backdrop-filter**（2026-10-28 性能修复）：首页一屏就 18 个角标，
+   每个毛玻璃都会生成独立合成层，滚动时逐帧重算背景模糊（实测滚动 GPU
+   19.3%→14.9% 中约 1/3 来自这类小面积毛玻璃）；深色遮罩本身已足够保证白字对比度。
    - 常规：<span class="media-badge">…</span>
    - 纯图标方角标：<span class="media-badge media-badge--icon">…</span> */
 .media-badge {
@@ -909,8 +929,6 @@
   white-space: nowrap;
   color: var(--cst-content-inverse);
   background-color: var(--cst-surface-media-scrim-strong);
-  -webkit-backdrop-filter: blur(var(--cst-blur-sm));
-  backdrop-filter: blur(var(--cst-blur-sm));
 }
 .media-badge--icon {
   width: 20px;

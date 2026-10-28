@@ -612,7 +612,7 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 
 ### 4) 压图徽章：唯一类 `.media-badge`
 
-- 深色遮罩底 + 反色字 + 毛玻璃 + h-5 紧凑档；图标方角标用 `.media-badge--icon`；
+- 深色遮罩底 + 反色字 + h-5 紧凑档；图标方角标用 `.media-badge--icon`；**禁止 backdrop-filter**（R15 性能）；
 - 分类/位置/距离/1-N/已关注/身份徽章全部迁移；禁止再手写 `bg-surface-overlay-strong` 或
   `bg-surface-media-scrim-strong + px + text-xxs` 组合；非压图 fallback 用 `.badge` + 主题色。
 
@@ -621,3 +621,36 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 - 作者区在有 userId 时可点（头像 hover-action、昵称下划线，stopPropagation → 主页）；无目标渲染纯文本；
 - 分享统一 `lib/moment-actions.shareMoment`（系统分享 → 剪贴板 + toast）；点赞/收藏统一
   `setMomentLiked/setMomentSaved`（失败 toast + 调用方回滚乐观态）。
+
+
+## Round 15 性能纪律：氛围动画 / 合成层 / backdrop-filter（2026-10-28，强制）
+
+**触发**：用户反馈「打开首页后浏览器进程管理器 GPU 占用 60%」。
+
+### 1) 定位方法（可重跑）
+
+- 用 agent-browser 打开页面后，按 profile 找到本会话 Chrome 的 GPU 进程：
+  `PROFILE=$(ls -dt /var/folders/*/*/T/agent-browser-chrome-* | head -1)`，
+  `MAIN=$(ps -axo pid,command | grep -- "--user-data-dir=$PROFILE" | grep -v type= | awk "{print \$1}" | head -1)`，
+  GPU 进程 = MAIN 的 `--type=gpu-process` 子进程；`top -l 5 -s 2 -pid $GPU -stats pid,cpu` 取平均；
+- 页面侧计数：`document.getAnimations().length`、`getComputedStyle(e).backdropFilter !== "none"` 的元素数、
+  `willChange !== "auto"` 的元素数（都应在内容页为 0 / 个位数）；
+- 用注入 `<style>` 的方式做单变量 A/B（关全部动画 / 关 backdrop-filter / 关 will-change），对比 GPU 进程 CPU。
+
+### 2) 契约（违反即回退）
+
+- **全屏/大面积无限动画默认禁止**：氛围画布基础类不带 animation，只有 `.ambient-backdrop--motion`
+  （`<AmbientBackdrop motion />`，仅空态/稀疏页）才播放；新增无限动画必须先给 idle GPU 实测；
+- **will-change 不得挂在批量交互类上**：`.hover-btn/.hover-action` 禁止 will-change（首页 48 个实例 = 48 个常驻层）；
+- **backdrop-filter 只给少量大面积 glass**（右栏玻璃卡/吸顶胶囊），禁止给批量小角标；
+- 源码契约守卫：`src/styles/__tests__/perf-contract.test.ts`（改 CSS 后必须过）。
+
+### 3) 本轮实测（首页 1440x900，mock 登录，headless Chrome GPU 进程 CPU%）
+
+| 场景 | 修复前 | 修复后 |
+|---|---|---|
+| 空闲 | 24.6% | **0.0%** |
+| 滚动 | 19.3% | 10.5%（对照：再关 backdrop = 6.1%） |
+| 动画数 / backdrop 元素 / will-change 元素 | 3 / 24 / 79 | 0 / 6 / 12 |
+
+（数据与量测脚本见 docs/frontend-ui-audit.md「R15 性能」。）

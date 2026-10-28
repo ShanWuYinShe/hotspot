@@ -29,7 +29,7 @@
 |---|---|
 | `data-display/NearbyImageCard` | 图片优先内容卡**唯一实现**（附近瞬间/附近的人/附近群组/首页轮播/群组详情）；根节点必须 `isolate` + `use:cardPress` |
 | `data-display/ImageCardActions`（R14） | **图片卡覆盖操作行唯一实现**：点赞/评论/分享/收藏四类操作、计数弹跳、状态语义与 hover/press/focus 全站一致；`size="md"\|"sm"`（sm 用于手机 2 列窄卡） |
-| `.media-badge` / `.media-badge--icon`（utilities，R14） | **压图徽章唯一类**：深色遮罩底 + 反色字 + 毛玻璃 + h-5 紧凑档；分类/位置/距离/1-N/已关注/身份角标不再手写组合 |
+| `.media-badge` / `.media-badge--icon`（utilities，R14） | **压图徽章唯一类**：深色遮罩底 + 反色字 + h-5 紧凑档（**禁止 backdrop-filter**，见 design-system §21.11）；分类/位置/距离/1-N/已关注/身份角标不再手写组合 |
 | `use:cardPress`（lib/motion，R14） | 卡片按压统一入口：卡本体/覆盖按钮按下 → 根节点 `data-pressed` → CSS 按 `--cst-card-tap-scale` 缩放；行内按钮按下不缩放整卡 |
 | `card-hover`（utilities） | 可点击卡片唯一 hover 语言：投影抬升 + `--cst-hover-lift`（vibrant）/ 纸面微染+边框（forest）；按压档由 `[data-pressed]` 规则承载（`--cst-card-tap-scale`） |
 | `card-raised` / `surface-hero` / `ListItem tone=card` | 静态卡片语言（白底 + 投影），禁止再发明第四种 |

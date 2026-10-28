@@ -22,11 +22,22 @@
 	 * canvas：完整世界层（主内容区，默认）；
 	 * chrome：轻量天光版（桌面顶栏/侧栏），只铺天光与边光、不画世界层，
 	 *         让导航 chrome 与主内容共享同一环境光而不抢内容。
+	 *
+	 * motion：氛围动画开关，默认 false（2026-10-28 性能修复）。
+	 *   全屏渐变/星层的无限动画会让 GPU 进程在页面空闲时持续合成（实测首页
+	 *   idle GPU 24.6%→0%、滚动 19.3%→14.9%），因此默认只保留静态世界；
+	 *   仅空态/稀疏页面需要「活的世界感」时才显式开启，并自行承担 GPU 成本。
+	 *   chrome 变体本就无动画，忽略该属性。
 	 */
 	let {
 		variant = 'canvas',
-		orientation = 'h'
-	}: { variant?: 'canvas' | 'chrome'; orientation?: 'h' | 'v' } = $props();
+		orientation = 'h',
+		motion = false
+	}: {
+		variant?: 'canvas' | 'chrome';
+		orientation?: 'h' | 'v';
+		motion?: boolean;
+	} = $props();
 
 	interface Star {
 		x: number;
@@ -163,6 +174,7 @@
 	class:ambient-backdrop--chrome={variant === 'chrome'}
 	class:ambient-backdrop--chrome-h={variant === 'chrome' && orientation === 'h'}
 	class:ambient-backdrop--chrome-v={variant === 'chrome' && orientation === 'v'}
+	class:ambient-backdrop--motion={motion && variant !== 'chrome'}
 	aria-hidden="true"
 >
 	<div class="ambient-stage">

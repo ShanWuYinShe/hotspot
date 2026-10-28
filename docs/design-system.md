@@ -443,7 +443,8 @@
 
 实现（两端同构，共用同一套世界语言与 token）：
 
-- 前端：`frontend/src/components/layout/ambient/AmbientBackdrop.svelte`（SVG/渐变，含超长循环动效）；
+- 前端：`frontend/src/components/layout/ambient/AmbientBackdrop.svelte`（SVG/渐变；**动画默认关闭**，
+  仅稀疏页面用 `<AmbientBackdrop motion />` 显式开启，见 16.4 与 §21.11）；
 - 鸿蒙：`harmonyapp/entry/src/main/ets/components/layout/AmbientBackdrop.ets`（单 Canvas 一次性绘制，静态无逐帧动画，2026-10-26 新增）。
 
 | 层 | 实现 | 作用 |
@@ -488,8 +489,12 @@
 - 装饰层必须 `aria-hidden="true"` + `pointer-events:none`；挂载容器 `relative isolate`，
   层自身 `z-index:-1`（压在画布底色之上、正文之下），不参与布局 / 交互 / 焦点 / 读屏；
 - 不允许页面内手写第二套背景装饰（新页面自动继承画布；确需场景化空态时另立组件评审）；
-- 动效只用 `transform` / `opacity` 合成动画，循环时长走 `--cst-motion-ambient*`（24s/36s）；
-  `prefers-reduced-motion: reduce` 下全部停用；
+- **动效默认关闭（2026-10-28 性能修复，强制）**：全屏渐变/星层无限动画会让浏览器 GPU
+  进程在页面完全空闲时持续合成（实测首页 idle GPU 进程 24.6%→0%、滚动 19.3%→14.9%、
+  1.6%→0%），因此基础类不带 `animation`；只有显式 `<AmbientBackdrop motion />`
+  （→ `.ambient-backdrop--motion`）才播放，且仅限空态/稀疏页面使用；
+  动画只允许 `transform` / `opacity` 合成属性，时长走 `--cst-motion-ambient*`（24s/36s，仅 motion opt-in 时生效）；
+  `prefers-reduced-motion: reduce` 下全部停用（含 opt-in）；
 - `variant="chrome"` 只允许天光/边光（不得画世界层/剪影/暗角），用于顶栏、侧栏这类
   窄而高的导航 chrome；主内容区必须用默认 canvas 变体；
 - **不引入第二整层底色**：装饰层是透明渐变/图形叠加，不改变「`--cst-surface-page` 是唯一
@@ -509,7 +514,8 @@
 
 - 鸿蒙端已于 2026-10-26 同步（`AmbientBackdrop.ets` + `ThemeConstants.AMBIENT` 6 组合 × 12 色，
   与 web `--cst-ambient-*` 语义/合成口径一一对应，见 §13 映射表）；
-- **平台适配差异（已登记）**：web 有 24s/36s 超长循环动效，鸿蒙为静态 Canvas（性能优先）；
+- **平台适配差异（已登记）**：web 与鸿蒙默认都为静态世界（2026-10-28 起 web 动画默认关闭，
+  统一以性能优先）；web 额外支持 `motion` 逐页 opt-in，鸿蒙保持静态 Canvas；
   鸿蒙每页一块画布（见 16.4）；两端同主题同明暗的世界语言/构图一致；
 - 若后续觉得氛围过淡/过浓，调 `--cst-ambient-*` 的 alpha 即可全站生效（不改组件），
   鸿蒙需按同口径重算 `ThemeConstants.AMBIENT` 的 ARGB 值；
@@ -792,8 +798,28 @@
   仅卡本体/覆盖按钮按下缩放；行内按钮不带动整卡。
 - **操作行**：`data-display/ImageCardActions` 唯一实现（点赞红/收藏 accent/评论分享中性；pop 仅激活方向；
   md/sm 两档；计数 `tabular-nums`；aria 完备），信息流大卡与网格卡共用。
-- **压图徽章**：`.media-badge`（图标方角标 `--icon`）唯一实现：深色遮罩 + 反色字 + 毛玻璃 + h-5。
+- **压图徽章**：`.media-badge`（图标方角标 `--icon`）唯一实现：深色遮罩 + 反色字 + h-5；
+  **禁止 backdrop-filter**（见 §21.11）。
 - **作者区**：有 `userId` 时可点进主页（头像/昵称同 hover 语言）；分享统一 `lib/moment-actions.shareMoment`。
+
+### 21.11 性能纪律（R15，2026-10-28，强制）
+
+**背景**：用户反馈首页打开后浏览器进程管理器 GPU 占用 60%。实测（headless Chrome，GPU 进程 CPU%）定位到三个叠加项：
+
+| 因素 | 实测影响（首页 1440x900，mock 登录） | 处理 |
+|---|---|---|
+| 氛围画布 3 条无限动画（全屏渐变 x2 + 星层 opacity） | 空闲 GPU **24.6% -> 0%**（关闭后归零） | 默认关闭，motion opt-in |
+| .media-badge 的 backdrop-filter（一屏 18 个） | 滚动 GPU 19.3%->14.9% 中约 1/3 | 移除（深色遮罩已保证对比度） |
+| .hover-action 常驻 will-change（首页 48 个） | 合成层数 79->12（CPU 影响小，显存/层数大） | 移除 |
+
+修复后实测：首页空闲 GPU 0.0%、滚动 10.5%（剩余为右栏 glass 与吸顶胶囊的少量毛玻璃，保留设计语言）；滚动 + 关 backdrop 的对照为 6.1%。
+
+**规则（新增 UI 自检）**：
+
+1. 全屏/大面积**无限循环动画默认不允许**；需要时逐页 opt-in，并给出 idle GPU 实测；
+2. will-change 只允许加在「持续动画的固定图层」上，禁止挂到批量列表/卡片内的交互类（.hover-btn/.hover-action 明确禁止；transform 过渡 Chrome 会自动提升）；
+3. backdrop-filter 只用于**少量、大面积有设计意义的 glass 面板**（右栏玻璃卡、吸顶胶囊），禁止用于批量小角标；新增毛玻璃必须评估滚动成本；
+4. 性能改动必须给出可复现量测：见 docs/frontend-ui-audit.md「R15 性能」的采样方法（GPU 进程 CPU / document.getAnimations() / 合成层计数），并保留 before/after 数据。
 
 ### 21.10 验收（可重跑）
 
@@ -803,3 +829,5 @@
 - 轴与密度：同屏标题左缘 = 正文首元素左缘（±1px）；1440 内容包围盒 / 容器包围盒 ≥70%，
   容器内侧无 >120px 空带（截图量测）；
 - 交互：hover/focus/press/reduced-motion 仍走既有基线（§20）。
+- 性能（§21.11）：内容页空闲 GPU 进程 CPU 约 0%（document.getAnimations() 为 0）；
+  bun run test 含 src/styles/__tests__/perf-contract.test.ts 源码契约守卫。

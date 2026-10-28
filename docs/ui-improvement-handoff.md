@@ -228,7 +228,7 @@
   forest 等高线+暖阳+树林剪影 / inkwash 墨山+朱砂圆相+飞白墨点）→ 暗角；
   装饰层 `z-index:-1`、`aria-hidden`、`pointer-events:none`，不引入第二整层底色。
   12 个 `--cst-ambient-*` token（三主题 × 明暗，随主题/明暗自动适配），
-  超长循环动效 24s/36s 且 reduced-motion 停用；背景常驻形成纵深感。
+  超长循环动效 24s/36s 且 reduced-motion 停用；背景常驻形成纵深感。**2026-10-28 起 Web 端动画默认关闭**（`<AmbientBackdrop motion />` opt-in，性能修复见 design-system §21.11）；
   规范见 `docs/design-system.md` 第 16 节；调浓淡只改 token alpha，无需改组件。
 - **鸿蒙首页下拉刷新「鬼畜晃动」第四轮终极定位与根治（2026-10-23 用户反馈）**：
   端上逐帧抓包量化（uinput 拖动持续按压采样），定位到核心根因：

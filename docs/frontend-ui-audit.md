@@ -201,7 +201,7 @@
 |---|---|---|
 | focus-visible | 键盘 Tab 逐次 + computed outline；亮/暗 | 2px solid accent（rgb(43,94,178)）；admin 表格行按钮（tab36 进入「封禁」）同 2px；moment/group/users 390 可见；skip link 首 Tab 可见 |
 | hover / press / disabled | 计算样式 + 截图 | 行按钮 soft danger 背景 0.065→0.13；press scale .94–.95；disabled opacity-faint + pointer-events |
-| reduced-motion | `set media reduced-motion` 遍历 | ambient 24s/36s、ping 1s、pulse 2s、hover 0.18s → reduced 下 ambient 消失、其余 1e-05s 单次、hover 1e-05s（全局 utilities 规则） |
+| reduced-motion | `set media reduced-motion` 遍历 | ambient 24s/36s、ping 1s、pulse 2s、hover 0.18s → reduced 下 ambient 消失、其余 1e-05s 单次、hover 1e-05s（全局 utilities 规则）。**2026-10-28 R15 起 ambient 动画默认关闭**（opt-in），本条仅适用于历史版本与 motion 显式开启页面 |
 | 加载/空/错误 | 逐页核查 | moment = Skeleton；group/users = InlineLoading（理由：单实体/短列表、<1s、避免二次位移）；admin = InlineLoading + EmptyState + LoadError + LoadMoreButton；mock 后台筛选参数未实现 → 空态不可复现（已注明，未伪造） |
 
 ### 三、回归
@@ -644,3 +644,54 @@ z 值不对，卡片上的 UI 显示到标题栏上方（附截图）。
 导致 reduced-motion 检查实际在 no-preference 下执行——把 ambient 装饰动画误报为长动画
 （40 页 37 页假阳性 + 1 页未返回）。已改为**每页页面稳定后、注入检查脚本前**重设媒体模拟；
 修复后 ambient 动画在 reduced 下被全局规则关停，检查恢复可信。
+
+
+## R15 前端空闲 GPU 占用修复（2026-10-28）
+
+**用户反馈**：打开首页后浏览器进程管理器显示 GPU 占用 60%，明显不正常。
+
+**定位方法**（可重跑，headless Chrome + 固定视口 1440x900 + mock 登录）：
+
+1. 找本会话 GPU 进程：agent-browser 的 profile 目录 `ls -dt /var/folders/*/*/T/agent-browser-chrome-*` → 主进程 →
+   其 `--type=gpu-process` 子进程；
+2. 采样：`top -l 5 -s 2 -pid $GPU -stats pid,cpu` 取平均（页面完全空闲，不滚动不悬停）；
+3. 页面侧计数：`document.getAnimations().length`、`backdrop-filter !== none` 元素数、`will-change !== auto` 元素数；
+4. 单变量 A/B：注入 `<style>` 分别关闭全部动画 / 关闭 backdrop-filter / 关闭 will-change 再采样。
+
+**实测（修复前）**：
+
+| 场景 | GPU 进程 CPU | 说明 |
+|---|---|---|
+| 首页空闲 | **24.6%**（稳定在 24–33%） | renderer 0%，纯 GPU 合成/模糊 |
+| 首页滚动 | 19.3% | 程序化滚动 |
+| 关闭全部动画 | 0.0% | 证明全部空闲 GPU 成本来自动画 |
+| 关闭 backdrop-filter（动画保留） | 10.0% | 毛玻璃逐帧重算占约 14.6% |
+| 关闭 will-change（动画保留） | 22.4% | 影响小（层数/显存为主） |
+| 空白页 | 0.0% | 基线 |
+
+**根因**：氛围画布 3 条无限动画（2 条全屏渐变 transform 漂移 + 1 条星层 opacity 呼吸）持续驱动合成；
+叠加首页 24 个 `backdrop-filter` 元素（其中 R14 引入的 `.media-badge` 一屏 18 个）在动画背景上逐帧重算模糊；
+`.hover-action` 常驻 `will-change: transform` 使首页 48 个图标各占一个合成层（共 79 个 will-change 元素）。
+
+**修复**：
+
+1. 氛围画布动画**默认关闭**：基础类去掉 animation，新增 `.ambient-backdrop--motion` opt-in
+   （`<AmbientBackdrop motion />`，仅空态/稀疏页使用；`prefers-reduced-motion` 仍然全禁）；
+2. `.media-badge` 去掉 backdrop-filter（深色遮罩本身已满足白字对比度；一屏 18 个模糊层是滚动成本主因之一）；
+3. `.hover-btn/.hover-action` 去掉常驻 will-change（transform 过渡时 Chrome 会自动提升）；
+4. 新增源码契约测试 `src/styles/__tests__/perf-contract.test.ts` 防止回退；
+5. 规则沉淀到 design-system §16.4/§21.11、style skill Round 15。
+
+**验证（worktree env）**：
+
+| 指标 | 修复前 | 修复后 |
+|---|---|---|
+| 首页空闲 GPU 进程 CPU | 24.6% | **0.0%** |
+| 首页滚动 GPU 进程 CPU | 19.3% | 10.5%（再关 backdrop 对照 6.1%） |
+| `document.getAnimations()` | 3 | **0** |
+| backdrop-filter 元素数 | 24 | 6（右栏玻璃卡 4 + 吸顶胶囊 1 + Mock 角标 1） |
+| will-change 元素数 | 79 | 12（仅图片 hover 缩放层） |
+
+视觉：首页 light/dark 截图对比，氛围世界（天光/星层/剪影）与角标观感不变（动画仅影响运动，静态帧一致；
+角标去模糊后深色遮罩下白字对比度不变）。
+
