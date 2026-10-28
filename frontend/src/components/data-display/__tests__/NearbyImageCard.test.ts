@@ -57,6 +57,17 @@ describe('NearbyImageCard', () => {
 		horizontal.unmount();
 	});
 
+	it('加载中占位用限时脉冲类（media-placeholder--pulse），不再用 Tailwind animate-pulse', () => {
+		// R17：旧 animate-pulse 2s/infinite 会在慢图/lazy 卡上常驻；改 3 次后静态。
+		const { container } = render(NearbyImageCard, {
+			props: { imageSrc: 'https://example.com/a.jpg' }
+		});
+		const placeholder = container.querySelector('.media-placeholder--pulse');
+		expect(placeholder).not.toBeNull();
+		expect(placeholder?.className).not.toContain('animate-pulse');
+		expect(placeholder?.getAttribute('aria-hidden')).toBe('true');
+	});
+
 	it('onClick 提供时由覆盖按钮承载点击（根不再持 button 语义）', async () => {
 		const onClick = vi.fn();
 		const { container } = render(NearbyImageCard, {

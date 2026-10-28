@@ -64,9 +64,10 @@
 		<SectionHead title="附近的人" icon={Users} count={users.length} action="查看全部" onAction={onSeeAllUsers} />
 		{#if !useRows}
 			<div class="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6">
-				{#each users.slice(0, previewCount) as user (user.id)}
+				{#each users.slice(0, previewCount) as user, index (user.id)}
 					<UserCard
 						{user}
+						priority={index < 2}
 						followed={isFollowed(user.id)}
 						pending={isPending(user.id)}
 						onFollow={() => onToggleFollow(user.id)}

@@ -138,6 +138,101 @@ describe('SearchDiscovery', () => {
 		expect(screen.queryByText('推荐群组')).toBeNull();
 	});
 
+	// ── R17 CLS 整改：发现态加载期骨架（与最终内容等高，数据到达只替换块内内容）──
+	it('加载期四个分区渲染等高骨架（role=status 播报，骨架不进焦点序列）', () => {
+		const { container } = render(SearchDiscovery, {
+			props: {
+				recent: [],
+				topicsLoading: true,
+				momentsLoading: true,
+				usersLoading: true,
+				groupsLoading: true,
+				onChoose: () => {},
+				onChooseTopic: () => {},
+				onOpenMoment: () => {},
+				onOpenUser: () => {},
+				onSeeAllUsers: () => {},
+				onClear: () => {}
+			}
+		});
+		// 分区骨架常驻最终位置：三块列表/画廊骨架 + 话题 chips 骨架都在首帧渲染
+		for (const label of ['加载热门话题…', '加载人物推荐…', '加载推荐群组…', '加载热门动态…']) {
+			const status = screen.getByRole('status', { name: label });
+			expect(status.getAttribute('aria-busy')).toBe('true');
+		}
+		// 人物推荐/推荐群组各 3 行（与 limit 3 一致）：合计 6 行
+		expect(container.querySelectorAll('[data-skeleton-row]').length).toBe(6);
+		// 热门动态 4 卡（与 slice(0, 4) 一致）
+		expect(container.querySelectorAll('[data-skeleton-card]').length).toBe(4);
+		// 热门话题 chip 骨架（与 slice(0, 10) 的典型 2 行估算一致）
+		expect(container.querySelectorAll('[data-skeleton]').length).toBeGreaterThanOrEqual(6);
+	});
+
+	it('数据到达后同位置替换为真实内容，骨架不再残留', async () => {
+		const { container, rerender } = render(SearchDiscovery, {
+			props: {
+				recent: [],
+				topicsLoading: true,
+				momentsLoading: true,
+				usersLoading: true,
+				groupsLoading: true,
+				onChoose: () => {},
+				onChooseTopic: () => {},
+				onOpenMoment: () => {},
+				onOpenUser: () => {},
+				onSeeAllUsers: () => {},
+				onClear: () => {}
+			}
+		});
+		expect(container.querySelectorAll('[data-skeleton-card]').length).toBe(4);
+		await rerender({
+			recent: [],
+			hotTopics: ['松弛'],
+			hotMoments: [{ moment_id: 'm1', description: '周末市集', created_at: new Date().toISOString() } as never],
+			hotUsers: [{ id: 'u1', name: '鹿鸣', avatar: '', tag: '摄影', distance: '300m', isOnline: true }],
+			hotGroups: [{ id: 'g1', name: '晨跑团', avatar: '', category: '户外', memberCount: 5 }],
+			topicsLoading: false,
+			momentsLoading: false,
+			usersLoading: false,
+			groupsLoading: false,
+			onChoose: () => {},
+			onChooseTopic: () => {},
+			onOpenMoment: () => {},
+			onOpenUser: () => {},
+			onSeeAllUsers: () => {},
+			onClear: () => {}
+		});
+		expect(container.querySelectorAll('[data-skeleton-card]').length).toBe(0);
+		expect(container.querySelectorAll('[data-skeleton-row]').length).toBe(0);
+		expect(screen.queryAllByRole('status')).toHaveLength(0);
+		for (const text of ['热门话题', '人物推荐', '推荐群组', '热门动态']) {
+			expect(screen.getByText(text)).toBeTruthy();
+		}
+	});
+
+	it('加载落定后无数据不渲染死骨架（诚实空态）', () => {
+		const { container } = render(SearchDiscovery, {
+			props: {
+				recent: [],
+				topicsLoading: false,
+				momentsLoading: false,
+				usersLoading: false,
+				groupsLoading: false,
+				onChoose: () => {},
+				onChooseTopic: () => {},
+				onOpenMoment: () => {},
+				onOpenUser: () => {},
+				onSeeAllUsers: () => {},
+				onClear: () => {}
+			}
+		});
+		expect(container.querySelectorAll('[data-skeleton-card]').length).toBe(0);
+		expect(container.querySelectorAll('[data-skeleton-row]').length).toBe(0);
+		expect(screen.queryAllByRole('status')).toHaveLength(0);
+		expect(screen.queryByText('热门话题')).toBeNull();
+		expect(screen.queryByText('热门动态')).toBeNull();
+	});
+
 	// 回归守卫：两个行内文字动作（清除/查看全部）实测仅 22.7px 高，低于 WCAG 2.5.8 的
 	// 24px 下限；必须带 hit-slop 扩热区（与首页 SectionHead 同名钮写法一致）。
 	it('行内动作「清除/查看全部」带 hit-slop 扩热区', () => {

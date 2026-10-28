@@ -119,6 +119,7 @@
 	<div
 		role={inList ? 'listitem' : 'group'}
 		aria-label={inList ? undefined : ariaLabel}
+		data-list-item=""
 		data-active={pressed ? 'true' : undefined}
 		class={cn(
 			'relative transition-[background-color,border-radius,box-shadow,opacity] duration-rapid ease-standard',
@@ -163,3 +164,24 @@
 		{@render children()}
 	</div>
 {/snippet}
+
+<style>
+	/* R17：hover/focus 时行内次级文字升到 text-primary。
+	   根因：行 hover 底色是半透明 --cst-interactive-hover-fill，叠加后行内
+	   .text-text-secondary 的实测对比度跌到 3.2–4.43:1（inkwash-dark 3.2 /
+	   inkwash-light 3.75 / vibrant-dark 4.03 / forest-dark 4.16 / vibrant-light 4.43；
+	   非 hover 5.31–7.62 达标）——根因是 palette 半透明叠加，不是字号/字重。
+	   方案：只给 ListItem 行（根 data-list-item）在 hover/focus 时把行内次级文字升到
+	   text-primary；不改 palette、不改全站 hover 语言，避免全站/跨端联动。
+	   - hover 仅 fine pointer（触屏没有 hover 底色，无需提升）；
+	   - focus-within 与行背景的 surfaceActive（hovered || focused）同源，键盘/点击聚焦同步；
+	   - 选中态 pressed（data-active，on-accent 文字体系）排除在外，不受本规则影响。 */
+	@media (hover: hover) and (pointer: fine) {
+		:global([data-list-item]:not([data-active='true']):hover .text-text-secondary) {
+			color: var(--cst-text-primary);
+		}
+	}
+	:global([data-list-item]:not([data-active='true']):focus-within .text-text-secondary) {
+		color: var(--cst-text-primary);
+	}
+</style>

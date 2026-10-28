@@ -79,6 +79,23 @@
     background: var(--cst-surface-card-fallback);
   }
 
+  /* 媒体加载占位脉冲（R17，限时）：慢图/懒加载卡片在图片未就绪时的占位反馈。
+     旧实现用 Tailwind animate-pulse（2s / infinite）——首屏之外 lazy 卡的占位也会
+     常驻播放（390 移动首页加载完成后实测仍有 7 个 pulse 动画在跑，持续合成耗电），
+     且与骨架屏共用「无限脉冲」语言、失去加载中/已就绪的区分。
+     改为固定 3 次后停在静态渐变（3 × --cst-motion-skeleton = 4.5s；fill-mode 默认
+     none → 结束后回到完全不透明），周期/缓动复用既有 motion token，不新增档位。
+     与骨架的区分：本占位是 accent 主题渐变（.surface-accent-gradient）+ 限时脉冲，
+     骨架是中性灰块（.skeleton-block）+ 持续脉冲；reduced-motion 由文件末尾全局规则
+     压成单次瞬时（保留占位形、不再闪动）。 */
+  @keyframes cst-media-placeholder-pulse {
+    0%, 100% { opacity: var(--cst-opacity-full); }
+    50% { opacity: var(--cst-opacity-dim); }
+  }
+  .media-placeholder--pulse {
+    animation: cst-media-placeholder-pulse var(--cst-motion-skeleton) var(--cst-ease-standard) 3;
+  }
+
   /* 图片渐显（Round 6）：加载完成前占位可见，onload 加 .img-loaded 渐显 0.22s；
      reduced-motion 由文件末尾全局规则把 transition-duration 压到 0.01ms（直接显示）。 */
   .img-fade {

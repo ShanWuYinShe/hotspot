@@ -21,6 +21,7 @@
 		horizontal = false,
 		cardWidth = 0,
 		cardHeight = 0,
+		priority = false,
 		class: className = ''
 }: {
 		group: Group;
@@ -31,6 +32,8 @@
 		onToggle: () => void;
 		onOpen: () => void;
 		featured?: boolean;
+		/** 首屏前 2 张（R6/R17 策略）：透传 NearbyImageCard 的 eager + fetchpriority=high */
+		priority?: boolean;
 		/** 横排精选(桌面,图片左 40% + 内容右;r03 精选卡过高吃首屏) */
 		horizontal?: boolean;
 		/** BSP 格子实际宽度（形态分派判定用） */
@@ -92,6 +95,7 @@
 	<NearbyImageCard
 		imageSrc={group.banner}
 		imageAlt={group.name}
+		{priority}
 		onClick={onOpen}
 		horizontal={featured ? horizontal : autoLandscape}
 		class={featured

@@ -143,12 +143,8 @@
 			{#snippet trailing()}
 				<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐附近样板页与鸿蒙 NearbyPage） -->
 				<div class="flex shrink-0 items-center gap-2">
-					{#if onlineCount > 0}
-						<div class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-border-default bg-surface-primary px-3 py-1.5 leading-none whitespace-nowrap shadow-raised-sm">
-							<span class="size-1.5 shrink-0 rounded-full bg-status-online"></span>
-							<span class="text-xs whitespace-nowrap text-text-secondary tabular-nums">{onlineCount} 在线</span>
-						</div>
-					{/if}
+					<!-- R17：不再放「N 在线」chip —— 与下方 Hero 指标行同屏重复（审计 P2-6）。
+					     在线数由 Hero MetricRow 单一表达，页头只保留搜索/地图工具入口。 -->
 					<!-- 标准 PageHeader 的 trailing 图标动作统一 surface 圆钮（与 nearby 三叶一致；
 					     仅首页品牌头用 ghost，见 alignment.md §5 决策） -->
 					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} size={36} class={device === 'desktop' ? 'hidden' : ''} />

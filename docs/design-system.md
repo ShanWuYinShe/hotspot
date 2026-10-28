@@ -921,3 +921,35 @@
 - 页面性能纪律：内容页 `getAnimations()`=0、will-change 0、longtask 0、滚动 60fps；
   `main` computed `scroll-behavior:auto`。
 
+### 21.13 宽屏填充与列表轴（R17，2026-10-29，强制）
+
+> 背景：R16 独立审计发现 /me 总览页头与正文轴漂移（Δ46@1440/Δ158@1920）、关系/举报页宽屏
+> 填充率仅 0.61/0.41、BSP 瓦片墙左缘 +7px——都是「页面自设窄列但页头不跟随」与
+> 「组件内层再收窄」的重复犯错。规则收口：
+
+1. **页头必须跟随正文宽度**：`PageHeader` 的 `maxWidth` 与 `StandardPageLayout` 的
+   `contentMaxWidth` 必须同值（一对 prop 一起传）；只改其一即轴漂移。
+2. **宽屏呼吸档 = 1280px**（数字字面量，布局几何）：需要「长内容呼吸型」的页面
+   （/me 总览、关系、举报）统一用 `contentMaxWidth={1280}`，不再自造
+   `max-w-5xl/6xl/7xl` 或 `48rem` 私有档。
+3. **列表组件不得内层再收窄**：ProfileUserSection（好友/关注/粉丝/黑名单）、
+   SectionGroups 等列表/卡片分区内层禁止 `mx-auto max-w-2xl/3xl`——宽度只由页面
+   ContentColumn 一层决定。骨架与内容必须同宽（骨架→内容零位移的前提）。
+4. **列表行 hover 次级文字对比度（无障碍，强制）**：行 hover 底色是半透明
+   palette-hover，叠加后行内 `.text-text-secondary` 实测跌到 3.2–4.7:1。ListItem
+   在 hover（fine pointer）与 focus-within 时把行内次级文字升 `--cst-text-primary`
+   （pressed/on-accent 行排除）。新增行类组件必须按此口径自检，不得只测静态态。
+5. **BSP 瓦片墙轴对齐**：BSP 几何从 `gap/2` 内缩起算，容器外扩 `±gap/2`
+   （BspCardCanvas 内置），保证首卡左缘 = 页头正文左缘；调用方不要再手补 margin。
+6. **媒体占位动画限时**：图片占位 pulse 类动画最多 **3 个周期**（`.media-placeholder--pulse`，
+   ≈4.5s）后转静态；禁止 infinite 占位动画（慢图下批量常驻会拖 GPU，见 §21.11）。
+7. **首屏图优先级口径（补齐）**：每个列表首屏**前 2 张**内容图 eager + fetchpriority=high
+   （GroupCard 现支持 `priority` prop）；行式列表头像小图、rail 缩略图保持 lazy。
+8. **同屏信息不双写**：同一指标（如「N 在线」）同屏只允许一个表达位（Hero MetricRow
+   或页头 chip 二选一）。
+
+**验收（R17 实测）**：/me 全页族 h1 与内容左缘 Δ0@1440；关系/举报列表岛填充 0.95@1440、
+0.74@1920（≥0.70）；BSP slot0 x = h1 x（Δ0@1440）；ListItem hover 对比度 6 组合
+10.61–13.86（全 ≥4.5）；/search 390 CLS 0×8 采样；/nearby 与 /nearby/groups 首屏
+eager 图各 2 张且像素 diff 0 回归。
+

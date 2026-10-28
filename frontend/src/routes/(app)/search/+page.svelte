@@ -54,13 +54,20 @@
 	// 发现态热门话题：moments/search 热门模式取热门动态 tags 聚合（与 home-feed 同源）；
 	// 无数据时不渲染区块（诚实空态原则），失败静默。
 	let hotTopics = $state<string[]>([]);
-	// 同一热门响应的动态条目复用（此前只取 tags 即丢弃）：取前 3 条进「热门动态」区块
+	// 同一热门响应的动态条目复用（此前只取 tags 即丢弃）：取前 4 条进「热门动态」区块
 	let hotMoments = $state<MomentItem[]>([]);
 	// 人物推荐：users/search 距离排序前 3（补发现态下半屏空白，P1-16）；字段映射
 	// 与 home-feed 的 NearbyUser 同口径（tag/距离/在线态）。失败静默、无数据不渲染。
 	let hotUsers = $state<DiscoveryUser[]>([]);
 	// 推荐群组：groups/search 热门排序前 3，丰富发现态并平衡桌面端左右栏高度
 	let hotGroups = $state<DiscoveryGroup[]>([]);
+	// 发现态分区加载标志（R17 CLS 整改）：三个请求各自落定前，对应分区先渲染与最终内容
+	// 等高的骨架，骨架常驻最终位置 → 数据到达只替换块内内容，不再把已渲染分区整段下移。
+	// 归并为三态（moments 响应同时供「热门话题」+「热门动态」）；失败也在 finally 落定，
+	// 不出现永久骨架；数据为空时分区按既有「诚实空态」不渲染。
+	let momentsLoading = $state(true);
+	let usersLoading = $state(true);
+	let groupsLoading = $state(true);
 
 	const device = $derived(platform.platform);
 
@@ -134,6 +141,15 @@
 		void keyword;
 		if (keyword) return;
 		const controller = new AbortController();
+		// 重新进入发现态（清空查询）时回到骨架态并清空旧数据：避免旧内容与新请求交错，
+		// 也保证「清空查询」不会闪一帧上一轮的结果。
+		hotTopics = [];
+		hotMoments = [];
+		hotUsers = [];
+		hotGroups = [];
+		momentsLoading = true;
+		usersLoading = true;
+		groupsLoading = true;
 		void searchMoments({ sort_by: 'popular', pagination: { limit: 12 } }, { signal: controller.signal })
 			.then((res) => {
 				if (controller.signal.aborted || res.code !== 0 || !res.data) return;
@@ -150,7 +166,10 @@
 				hotTopics = list.slice(0, 10);
 				hotMoments = (res.data.items ?? []).slice(0, 4);
 			})
-			.catch(() => {});
+			.catch(() => {})
+			.finally(() => {
+				if (!controller.signal.aborted) momentsLoading = false;
+			});
 		// 人物推荐：距离排序（不带 reference_point 走服务端默认位置，与首页无锚点
 		// 回退同口径）；限 3 条（服务端/mock 对 limit 的裁剪口径不一，客户端显式
 		// 切片兜底）；仅发现态消费，失败静默。
@@ -166,7 +185,10 @@
 					isOnline: u.presence_status === 'online'
 				}));
 			})
-			.catch(() => {});
+			.catch(() => {})
+			.finally(() => {
+				if (!controller.signal.aborted) usersLoading = false;
+			});
 		// 推荐群组：热门排序限 3 条，与人物推荐呼应
 		void searchGroups({ sort_by: 'popular', pagination: { limit: 3 } }, { signal: controller.signal })
 			.then((res) => {
@@ -179,7 +201,10 @@
 					memberCount: g.group?.members_count ?? 0
 				}));
 			})
-			.catch(() => {});
+			.catch(() => {})
+			.finally(() => {
+				if (!controller.signal.aborted) groupsLoading = false;
+			});
 		return () => {
 			controller.abort();
 		};
@@ -387,6 +412,10 @@
 			hotMoments={hotMoments}
 			hotUsers={hotUsers}
 			hotGroups={hotGroups}
+			topicsLoading={momentsLoading}
+			{momentsLoading}
+			{usersLoading}
+			{groupsLoading}
 			onChoose={choose}
 			onChooseTopic={chooseTopic}
 			onOpenMoment={(id) => void goto(ROUTES.moment(id))}

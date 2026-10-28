@@ -7,6 +7,9 @@
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
+	import Skeleton from '@/components/data-display/Skeleton.svelte';
+	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
+	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import type { MomentItem } from '@/api/types';
 
@@ -43,6 +46,10 @@
 		hotMoments = [],
 		hotUsers = [],
 		hotGroups = [],
+		topicsLoading = false,
+		momentsLoading = false,
+		usersLoading = false,
+		groupsLoading = false,
 		onChoose,
 		onChooseTopic,
 		onOpenMoment,
@@ -61,6 +68,13 @@
 		hotUsers?: DiscoveryUser[];
 		/** 推荐群组（为空时不渲染区块）：groups/search 热门排序取前 3 */
 		hotGroups?: DiscoveryGroup[];
+		/** 加载期骨架（R17 CLS 整改）：数据落定前先在最终位置渲染与真实内容等高的骨架，
+		 *  数据到达只替换块内内容（分区不再按到达顺序插入/整段下移）。为 false 且数据
+		 *  为空时该区块不渲染（诚实空态，不留死骨架）。 */
+		topicsLoading?: boolean;
+		momentsLoading?: boolean;
+		usersLoading?: boolean;
+		groupsLoading?: boolean;
 		onChoose: (value: string) => void;
 		/** 热门话题点击：按 tag 语义搜索（moments/search tag 参数），与关键词搜索分流 */
 		onChooseTopic: (value: string) => void;
@@ -103,101 +117,141 @@
 	</section>
 	{/if}
 
-	{#if hotTopics.length > 0}
-		<!-- 热门话题：无界流式标签云（chip 本身即操作，不套卡片壳） -->
+	{#if topicsLoading || hotTopics.length > 0}
+		<!-- 热门话题：无界流式标签云（chip 本身即操作，不套卡片壳）。加载期骨架复刻真实
+		     chip 几何（h-7 / gap-2 / 约 55px 宽）：390 下折成 2 行、md+ 收成 1 行，与真实
+		     标签云的换行结果一致，数据到达时区块高度不变。 -->
 		<section aria-label="热门话题">
 			<SectionHead title="热门话题" icon={Flame} />
-			<div class="flex flex-wrap gap-2">
-				{#each hotTopics as topic (topic)}
-					<TagPill onClick={() => onChooseTopic(topic)}>#{topic}</TagPill>
-				{/each}
-			</div>
+			{#if topicsLoading}
+				<div role="status" aria-busy="true" aria-label="加载热门话题…">
+					<div class="flex flex-wrap gap-2" aria-hidden="true">
+						{#each [0, 1, 2, 3, 4, 5] as i (i)}
+							<Skeleton class="h-7 w-[55px] rounded-full" />
+						{/each}
+					</div>
+				</div>
+			{:else}
+				<div class="flex flex-wrap gap-2">
+					{#each hotTopics as topic (topic)}
+						<TagPill onClick={() => onChooseTopic(topic)}>#{topic}</TagPill>
+					{/each}
+				</div>
+			{/if}
 		</section>
 	{/if}
 
-	{#if hotUsers.length > 0}
-		<!-- 人物推荐：users/search 距离排序前 3（头像角标 + #tag · 距离 + 尾部导航箭头） -->
+	{#if usersLoading || hotUsers.length > 0}
+		<!-- 人物推荐：users/search 距离排序前 3（头像角标 + #tag · 距离 + 尾部导航箭头）。
+		     加载期骨架复用 SkeletonList（Avatar 44 + 上下 12 = 行高 68、行间 2、软岛 p-2），
+		     与 UserCardRow 行几何一致 → 数据到达零位移。 -->
 		<section aria-label="人物推荐">
 			<SectionHead title="人物推荐" icon={Users} action="查看全部" onAction={onSeeAllUsers} />
-			<ListContainer bordered>
-				{#each hotUsers as u (u.id)}
-					<UserCardRow
-						name={u.name}
-						avatar={u.avatar}
-						onClick={() => onOpenUser(u.id)}
-						ariaLabel={`查看 ${u.name} 的资料`}
-					>
-						{#snippet avatarBadge()}
-							{#if u.isOnline}
-								<OnlineDot size="md" />
-							{/if}
-						{/snippet}
-						{#snippet subtitle()}
-							{@const hasTag = Boolean(u.tag)}
-							{@const hasDistance = Boolean(u.distance)}
-							{#if hasTag || hasDistance}
-								<p class="mt-1 flex items-center gap-1.5 text-xs">
-									{#if hasTag}<span class="text-accent-default">#{u.tag}</span>{/if}
-									{#if hasTag && hasDistance}<span class="opacity-muted text-text-secondary">·</span>{/if}
-									{#if hasDistance}<span class="text-text-secondary tabular-nums">{u.distance}</span>{/if}
-								</p>
-							{/if}
-						{/snippet}
-						{#snippet actions()}
-							<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
-						{/snippet}
-					</UserCardRow>
-				{/each}
-			</ListContainer>
+			{#if usersLoading}
+				<ListContainer bordered>
+					<SkeletonList rows={3} leading={44} label="加载人物推荐…" rowClass="p-3 mb-0.5 last:mb-0" />
+				</ListContainer>
+			{:else}
+				<ListContainer bordered>
+					{#each hotUsers as u (u.id)}
+						<UserCardRow
+							name={u.name}
+							avatar={u.avatar}
+							onClick={() => onOpenUser(u.id)}
+							ariaLabel={`查看 ${u.name} 的资料`}
+						>
+							{#snippet avatarBadge()}
+								{#if u.isOnline}
+									<OnlineDot size="md" />
+								{/if}
+							{/snippet}
+							{#snippet subtitle()}
+								{@const hasTag = Boolean(u.tag)}
+								{@const hasDistance = Boolean(u.distance)}
+								{#if hasTag || hasDistance}
+									<p class="mt-1 flex items-center gap-1.5 text-xs">
+										{#if hasTag}<span class="text-accent-default">#{u.tag}</span>{/if}
+										{#if hasTag && hasDistance}<span class="opacity-muted text-text-secondary">·</span>{/if}
+										{#if hasDistance}<span class="text-text-secondary tabular-nums">{u.distance}</span>{/if}
+									</p>
+								{/if}
+							{/snippet}
+							{#snippet actions()}
+								<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
+							{/snippet}
+						</UserCardRow>
+					{/each}
+				</ListContainer>
+			{/if}
 		</section>
 	{/if}
 
-	{#if hotGroups.length > 0}
-		<!-- 推荐群组：与人物推荐同栅格语言，平衡发现态左右栏纵向节奏 -->
+	{#if groupsLoading || hotGroups.length > 0}
+		<!-- 推荐群组：与人物推荐同栅格语言，平衡发现态左右栏纵向节奏。
+		     加载期骨架复用 SkeletonList（Avatar 36 + 上下 12 = 行高 60、行间 2、软岛 p-2），
+		     与下方 ListItem 行几何一致 → 数据到达零位移。 -->
 		<section aria-label="推荐群组">
 			{#if onSeeAllGroups}
 				<SectionHead title="推荐群组" icon={UsersRound} action="查看全部" onAction={onSeeAllGroups} />
 			{:else}
 				<SectionHead title="推荐群组" icon={UsersRound} />
 			{/if}
-			<ListContainer bordered>
-				{#each hotGroups as g (g.id)}
-					<ListItem
-						onClick={() => onOpenGroup?.(g.id)}
-						ariaLabel={`查看 ${g.name} 群组`}
-						class="flex items-center gap-3 px-4 py-3"
-					>
-						<Avatar src={g.avatar} name={g.name} size="md" shape="rounded" />
-						<div class="flex-1 min-w-0">
-							<p class="truncate text-sm font-medium text-text-primary">{g.name}</p>
-							<p class="mt-0.5 flex items-center gap-1.5 truncate text-xs">
-								{#if g.category}<span class="text-accent-default">#{g.category}</span>{/if}
-								{#if g.category && g.memberCount > 0}<span class="opacity-muted text-text-secondary">·</span>{/if}
-								<span class="tabular-nums text-text-secondary">{g.memberCount} 成员</span>
-							</p>
-						</div>
-						<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
-					</ListItem>
-				{/each}
-			</ListContainer>
+			{#if groupsLoading}
+				<ListContainer bordered>
+					<SkeletonList rows={3} leading={36} label="加载推荐群组…" rowClass="px-4 py-3 mb-0.5 last:mb-0" />
+				</ListContainer>
+			{:else}
+				<ListContainer bordered>
+					{#each hotGroups as g (g.id)}
+						<ListItem
+							onClick={() => onOpenGroup?.(g.id)}
+							ariaLabel={`查看 ${g.name} 群组`}
+							class="flex items-center gap-3 px-4 py-3"
+						>
+							<Avatar src={g.avatar} name={g.name} size="md" shape="rounded" />
+							<div class="flex-1 min-w-0">
+								<p class="truncate text-sm font-medium text-text-primary">{g.name}</p>
+								<p class="mt-0.5 flex items-center gap-1.5 truncate text-xs">
+									{#if g.category}<span class="text-accent-default">#{g.category}</span>{/if}
+									{#if g.category && g.memberCount > 0}<span class="opacity-muted text-text-secondary">·</span>{/if}
+									<span class="tabular-nums text-text-secondary">{g.memberCount} 成员</span>
+								</p>
+							</div>
+							<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
+						</ListItem>
+					{/each}
+				</ListContainer>
+			{/if}
 		</section>
 	{/if}
 	</div>
 
-	{#if hotMoments.length > 0}
+	{#if momentsLoading || hotMoments.length > 0}
 	<div>
 		<!-- 热门动态画廊：任何断点都 ≥2 张（避免单卡 + 大片空白）：
 		     手机单列（与首页信息流同宽）→ 平板起 2 列（768 单列页下不再出现整屏大卡）→
-		     lg 双列 2×2（与左栏发现区高度齐平）→ 2xl 与发现区同宽成 4 列一行 -->
+		     lg 双列 2×2（与左栏发现区高度齐平）→ 2xl 与发现区同宽成 4 列一行。
+		     加载期骨架复用 SkeletonFeed（与真实卡同栅格/同 3:4·4:5 比例/同圆角），
+		     数据到达只替换卡片内容 → 首屏高度不变。 -->
 		<section aria-label="热门动态">
 			<SectionHead title="热门动态" icon={TrendingUp} />
-			<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 2xl:grid-cols-4">
-				{#each hotMoments as m, i (m.moment_id)}
-					<div>
-						<HomeFeedItem moment={m} showDistance={false} priority={i < 2} onClick={() => onOpenMoment(m.moment_id)} />
-					</div>
-				{/each}
-			</div>
+			{#if momentsLoading}
+				<SkeletonFeed
+					variant="feed"
+					count={4}
+					label="加载热门动态…"
+					class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 2xl:grid-cols-4"
+					cardClass="aspect-[3/4] sm:aspect-[4/5]"
+				/>
+			{:else}
+				<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 2xl:grid-cols-4">
+					{#each hotMoments as m, i (m.moment_id)}
+						<div>
+							<HomeFeedItem moment={m} showDistance={false} priority={i < 2} onClick={() => onOpenMoment(m.moment_id)} />
+						</div>
+					{/each}
+				</div>
+			{/if}
 		</section>
 	</div>
 	{/if}

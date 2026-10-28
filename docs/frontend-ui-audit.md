@@ -681,3 +681,29 @@
 - 空闲预取在真实网络下多 6 个后台 chunk 请求（`saveData` 已跳过）；若线上不接受，可在
   `scheduleIdlePreload` 加一行开关；
 - forest/inkwash 全页 axe 矩阵只抽了 /messages、/me 各 2 页（12 页/6 组合 0 违规），非全量矩阵。
+
+## 2026-10-29 补充（Round 17：backlog 清偿）
+
+> R16 §四登记的 8 项 backlog 全部整改完毕（P1×3 + P2×5）。方案契约补记入 design-system §21.13；
+> 证据 `.worktrees/r17-backlog/.workwork/`（base/ 基线、lead/{before,after}/、search-cls/、media-a11y/、lead/*.log）。
+
+| backlog 项 | 整改 | 整改后实测 |
+|---|---|---|
+| P1 /me 轴漂移（Δ46/158px） | ProfilePage 总览与分区模式统一 `contentMaxWidth=1280` 呼吸档，PageHeader 传同值，删正文包裹 max-w | h1 与身份卡左缘同轴（1440 Δ0）；/me/moments、/me/groups 分区页同步对齐 |
+| P1 关系/举报页填充率 0.61/0.41 | Relationships/Reports `48rem`→1280；ProfileUserSection/SectionGroups 删内层 `max-w-2xl/3xl` | 列表岛 1116/1172=**0.95**@1440、1224/1652=**0.74**@1920（≥0.70 达标） |
+| P1 /search 移动 CLS 0.16 | 发现态三请求独立 loading 态，加载期在最终位置渲染等高骨架（话题 chips/人物/群组/动态四种），落定原位替换 | 390 冷启动 8 次 median 0.08/max 0.40 → **0×8**；1440 → **0×8**；几何逐项相同（scrollH 2817→2817） |
+| P2 BSP 左缘 +7px | BspCardCanvas 容器外扩 `±gap/2`（布局几何，非主题值） | moments 1440：slot0 x=284 = h1 x=284（Δ0） |
+| P2 占位 pulse 常驻 | 新 `.media-placeholder--pulse`（3×skeleton token ≈4.5s 后静态），HomeFeedItem/NearbyImageCard 替换 | 390 首页改前 7 个 infinite pulse 常驻 → 改后 3 次后归零（@8s/@14s = 0），reduced-motion 0 |
+| P2 /nearby 在线数双写 | 删页头「N 在线」chip，Hero MetricRow 单一表达 | 同屏「在线」节点 2 → 1 |
+| P2 首屏图 lazy 缺口 | GroupCard 加 `priority` prop；/nearby 枢纽前 2 张 UserCard、/nearby/groups featured+rest[0] 传值 | /nearby 1440 eager 0→2、/nearby/groups 1440/390 eager 0→2（像素 diff 0 回归） |
+| P2 ListItem hover 对比度 <4.5 | ListItem 根 `data-list-item` + 组件内规则：hover(fine pointer)/focus-within 时行内 `.text-text-secondary` 升 text-primary（pressed 行排除） | 真实鼠标 hover 实测 6 组合 fg 全部切 primary；按合成底色算 **10.61–13.86 全 PASS**（改前 2.49–4.7），pressed 行不受影响 |
+
+### 门禁（R17 合并树，全绿）
+
+`bun run check` 0/0（含 theme 四联）；`bun run test` **117 files / 640 tests**（新增 SearchDiscovery 骨架契约 3 条、媒体/列表/群组卡契约）；`bun run build` 通过；`audit:a11y -- --mobile` **40 页 0 违规 PASS**；`audit:touch` 35 页未登记离群 0（94.2%）；`browser:qa --mobile` 23/23 页 issues=[]。
+
+### 仍开放（非本轮范围）
+
+- 首屏图 LCP 需真实 S3 环境复测（mock unsplash 外链不能代表生产）；
+- 搜索骨架按 limit 估算，极端标签分布仍可能有 28/36px 级一次性位移（当前 mock 六视口零位移）；
+- GroupCarousel 若未来移入首屏需补 priority 接口（当前首屏外，未加）。

@@ -710,3 +710,21 @@ rounded-sm/full → Button；`FollowButton` block 形态 rounded-xl → rounded-
 - 会话行三态：选中 accent 实底 + 长指示条（on-accent）+ semibold；未读 淡 tint + 短指示条
   （accent）+ 数字徽标 + semibold；普通无条 medium。选中行文字 on-accent 全量。
 - 圆角统一 `rounded-md`(16)；⋯ 菜单绝对定位不占文档流（否则底对齐最后一条会上移 ~40px）。
+
+## Round 17 交互态对比度与媒体占位（2026-10-29，强制）
+
+### 1) 列表行 hover 次级文字对比度
+
+- 行 hover 底色是半透明 palette-hover，叠加后行内 `.text-text-secondary` 实测 **3.2–4.7:1**
+  （不达标；非 hover 5.31–7.62 达标）。ListItem 已内置修复：hover(fine pointer)/focus-within
+  时行内次级文字升 `--cst-text-primary`（pressed/on-accent 行排除）。
+- **新增任何「行类」组件必须自检 hover 态对比度**（不能只测静态态）；修复优先在组件内做
+  状态化文字升档，不改 palette（跨端联动）、不删 hover 底色（减特效）。
+- 实测（真实鼠标 hover + 合成底色 WCAG）：6 组合 hover 态 10.61–13.86 全 ≥4.5。
+
+### 2) 媒体占位动画限时
+
+- 图片占位 pulse 用 `.media-placeholder--pulse`（3 × skeleton token ≈4.5s 后静态）；
+  **禁止 `animate-pulse`（infinite）**做图片占位（慢图下批量常驻）；
+  reduced-motion 由全局规则压制。验证口径：加载完成后 `document.getAnimations()` 中
+  pulse 计数归零（R17 实测 390 首页 7→0）。

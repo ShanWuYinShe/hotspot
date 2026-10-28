@@ -84,7 +84,9 @@
 >
 	{#if hasImage}
 		{#if !imageLoaded}
-			<div class="surface-accent-gradient pointer-events-none {imageBox} animate-pulse"></div>
+			<!-- 加载中占位：脉冲限时 3 次后转静态（.media-placeholder--pulse，R17；旧
+			     animate-pulse 在慢图/lazy 卡上无限常驻）。reduced-motion 由全局规则压制。 -->
+			<div class="surface-accent-gradient media-placeholder--pulse pointer-events-none {imageBox}" aria-hidden="true"></div>
 		{/if}
 		<img
 			src={presetImageUrl(imageSrc, 'card', priority ? 900 : 800)}

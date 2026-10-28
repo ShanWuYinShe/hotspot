@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import NearbyHubSections from '../NearbyHubSections.svelte';
+import { initPlatform } from '@/stores/platform.svelte';
 import type { MomentItem } from '@/api/types';
 import type { NearbyUser } from '@/components/home/nearby-users';
 
@@ -74,6 +75,25 @@ describe('NearbyHubSections（附近枢纽三段分区）', () => {
 		expect(props.onSeeAllUsers).toHaveBeenCalledOnce();
 		expect(props.onSeeAllMoments).toHaveBeenCalledOnce();
 		expect(props.onSeeAllGroups).toHaveBeenCalledOnce();
+	});
+
+	it('「附近的人」首屏前 2 张 UserCard 图 eager+high，其余 lazy（R17 首屏图策略）', () => {
+		// jsdom 默认 mobile → 行式列表（无图片卡）；这里按 1440 桌面把平台切到网格分支
+		Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+		Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 });
+		const cleanup = initPlatform();
+		const withAvatars = users.map((u, i) => ({ ...u, avatar: `https://example.com/a${i}.jpg` }));
+		const { container } = render(NearbyHubSections, {
+			props: baseProps({ users: withAvatars })
+		});
+		const imgs = [...container.querySelectorAll('[data-hub-section="people"] img')] as HTMLImageElement[];
+		expect(imgs.length).toBeGreaterThanOrEqual(4);
+		expect(imgs[0].getAttribute('loading')).toBe('eager');
+		expect(imgs[0].getAttribute('fetchpriority')).toBe('high');
+		expect(imgs[1].getAttribute('loading')).toBe('eager');
+		expect(imgs[1].getAttribute('fetchpriority')).toBe('high');
+		expect(imgs[2].getAttribute('loading')).toBe('lazy');
+		cleanup();
 	});
 
 	it('空数据段整段不渲染', () => {

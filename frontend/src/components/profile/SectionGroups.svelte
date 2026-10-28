@@ -37,7 +37,7 @@
 
 <!-- 工具行（统计 + 搜索）：与下方列表同宽居中，避免宽屏下工具行与列表左右不齐 -->
 {#if !needsAuth && !loading}
-	<div class="mx-auto mb-4 flex w-full max-w-3xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+	<div class="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
 		<p class="shrink-0 text-sm text-text-secondary">
 			共 {visibleGroups.length} 个群组
 			<span class="mx-2 text-text-secondary opacity-dim" aria-hidden="true">·</span>
@@ -54,7 +54,7 @@
 
 {#if loading}
 	<!-- 首屏骨架屏：与真实横排群组卡同构（图左 40% + 右侧两行信息），骨架→内容零位移 -->
-	<div class="mx-auto w-full max-w-3xl">
+	<div class="w-full">
 		<SkeletonFeed variant="card" horizontal count={4} class="grid grid-cols-1 gap-3" label="加载我的群组…" />
 	</div>
 {:else if needsAuth}
@@ -62,7 +62,7 @@
 {:else if error}
 	<LoadError message={error} onRetry={retry} />
 {:else if filtered.length > 0}
-	<div class="mx-auto flex w-full max-w-3xl flex-col gap-3">
+	<div class="flex w-full flex-col gap-3">
 		{#each filtered as g (g.id)}
 			<ProfileGroupTile group={g} onLeft={() => handleLeft(g.id)} />
 		{/each}
@@ -94,6 +94,6 @@
 	{/if}
 
 	<!-- 我的入群申请进度（pending 可撤回；未登录时区块自隐藏） -->
-	<div class="mx-auto w-full max-w-3xl">
+	<div class="w-full">
 		<SectionGroupApplications />
 	</div>

@@ -31,6 +31,21 @@ describe('GroupCard', () => {
 		expect(onToggle).toHaveBeenCalledTimes(1);
 	});
 
+	it('priority 透传首屏图片优先级（eager + fetchpriority=high），默认 lazy', () => {
+		// R17 首屏图策略：列表首屏前 2 张 eager+high，其余 lazy。
+		const { container, unmount } = render(GroupCard, {
+			props: { group, onToggle: () => {}, onOpen: () => {}, priority: true }
+		});
+		const hot = container.querySelector('img') as HTMLImageElement;
+		expect(hot.getAttribute('loading')).toBe('eager');
+		expect(hot.getAttribute('fetchpriority')).toBe('high');
+		unmount();
+
+		const def = render(GroupCard, { props: { group, onToggle: () => {}, onOpen: () => {} } });
+		const cold = def.container.querySelector('img') as HTMLImageElement;
+		expect(cold.getAttribute('loading')).toBe('lazy');
+	});
+
 	it('featured 变体渲染精选徽章与扩展信息', () => {
 		const featured = {
 			id: 'g2',

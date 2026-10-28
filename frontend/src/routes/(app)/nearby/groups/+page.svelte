@@ -247,7 +247,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			     信息沉底观感由 GroupCard autoLandscape 兜底（横格>420px 自动切横排） -->
 			{#if featured}
 				<div class="mb-6">
-					<GroupCard featured horizontal group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+					<GroupCard featured horizontal priority group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 				</div>
 			{/if}
 			<BspCardCanvas
@@ -263,20 +263,20 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 				onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
 			>
 				{#snippet renderItem(group: Group, index: number, rect: BspRect)}
-					<GroupCard group={group} cardWidth={rect.width} cardHeight={rect.height} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
+					<GroupCard group={group} priority={index === 0} cardWidth={rect.width} cardHeight={rect.height} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 				{/snippet}
 			</BspCardCanvas>
 			{:else}
 				{#if featured}
 					<div class="mb-6">
-						<GroupCard featured horizontal={isDesktop || isTablet} group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
+						<GroupCard featured priority horizontal={isDesktop || isTablet} group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
 					</div>
 				{/if}
 				<!-- 手机/平板：规整 2 列（平板 BSP 会出 1 窄 + 2 宽 的尺寸落差与底部参差）；
 				     桌面保持「精选卡 + BSP 满铺墙」 -->
 				<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-					{#each rest as group (group.id)}
-						<GroupCard group={group} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
+					{#each rest as group, index (group.id)}
+						<GroupCard group={group} priority={index === 0} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
 					{/each}
 				</div>
 			{/if}

@@ -168,8 +168,10 @@
 	>
 		{#if !useFallback}
 			{#if !coverLoaded}
-				<!-- 加载中占位：与 NearbyImageCard 同款主题 accent 渐变，避免纯灰浅带 -->
-				<div class="surface-accent-gradient pointer-events-none absolute inset-0 animate-pulse" aria-hidden="true"></div>
+				<!-- 加载中占位：与 NearbyImageCard 同款主题 accent 渐变，避免纯灰浅带；
+				     脉冲限时 3 次后转静态（.media-placeholder--pulse，R17）——旧 animate-pulse
+				     在慢图/lazy 卡上会无限常驻；reduced-motion 由全局规则压制。 -->
+				<div class="surface-accent-gradient media-placeholder--pulse pointer-events-none absolute inset-0" aria-hidden="true"></div>
 			{/if}
 			<img
 				src={presetImageUrl(coverUrl, 'card', priority ? 900 : 800)}

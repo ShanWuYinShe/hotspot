@@ -113,6 +113,19 @@ describe('HomeFeedItem', () => {
 		expect(onComment).toHaveBeenCalledTimes(1);
 	});
 
+	it('加载中占位用限时脉冲类（media-placeholder--pulse），不再用 Tailwind animate-pulse', () => {
+		// R17：旧 animate-pulse 是 2s/infinite，慢图与首屏外 lazy 卡会让占位动画常驻；
+		// 改用 .media-placeholder--pulse（3 次后转静态）。jsdom 不跑 CSS 动画，
+		// 按本文件惯例以类串断言锁定契约。
+		const { container } = render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {} } });
+		const placeholder = container.querySelector('.media-placeholder--pulse');
+		expect(placeholder).not.toBeNull();
+		expect(placeholder?.className).not.toContain('animate-pulse');
+		expect(placeholder?.getAttribute('aria-hidden')).toBe('true');
+		// 占位底色仍是主题 accent 渐变（与中性灰骨架屏区分）
+		expect(placeholder?.className).toContain('surface-accent-gradient');
+	});
+
 	it('压图角标统一用 media-badge（分类/位置/已关注）', () => {
 		const { container } = render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {} } });
 		const badges = [...container.querySelectorAll('.media-badge')];

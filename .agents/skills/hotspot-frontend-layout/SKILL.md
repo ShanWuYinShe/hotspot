@@ -284,3 +284,12 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
    `next_cursor=null` 时不得出现）；日期分节用中性 11px 文本标签，禁止白底胶囊。
 4. 输入条整体铺满面板（发丝线是功能线），内部内容经 ChatColumn 与消息列同轴；
    不得再用 `mx-auto max-w-3xl` 直接居中（会与消息列错 26–128px）。
+
+### 宽屏呼吸档与列表轴（R17，2026-10-29，强制）
+
+1. `PageHeader` 的 `maxWidth` 与 `StandardPageLayout` 的 `contentMaxWidth` 必须同值成对出现
+   （R16 审计：/me 正文 1280 档而页头全宽，轴漂移 46–158px）。宽屏呼吸档统一 **1280**
+   （数字字面量），不再自造 max-w-5xl/6xl/7xl / 48rem 私有档。
+2. 列表/卡片分区内层禁止 `mx-auto max-w-2xl/3xl` 再收窄（ProfileUserSection / SectionGroups
+   已清理）；骨架必须与内容同宽，否则骨架→内容位移。
+3. 验收口径：列表岛宽度 / main 宽度 ≥0.70@1920（R13 口径；R17 实测关系/举报 0.74–0.95）。

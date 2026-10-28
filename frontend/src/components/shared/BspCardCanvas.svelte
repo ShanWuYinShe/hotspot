@@ -326,6 +326,10 @@
 	});
 </script>
 
+<!-- R17 轴对齐：BSP 卡片几何从 gap/2 内缩起算，容器外扩同样的 gap/2 后，
+     首卡左缘 / 末卡右缘才与页头正文列对齐（此前整体右移 7px，窄卡墙一眼可见）。
+     负外边距是布局几何（不与 token 色彩/圆角体系冲突），宽度由内层 w-full 自动补齐。 -->
+<div style="margin-left:-{gap / 2}px;margin-right:-{gap / 2}px;">
 <section
 	bind:this={containerEl}
 	aria-label={ariaLabel}
@@ -357,3 +361,4 @@
 		<div class="h-0.25" bind:this={sentinelEl} aria-hidden="true"  style="position:absolute;bottom:0;left:0;right:0"></div>
 	{/if}
 </section>
+</div>
