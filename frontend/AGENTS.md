@@ -33,6 +33,12 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
   因此 mock 认证态只用 localStorage 旗标（`isMockLoggedIn`）表达，**不要在 mock
   handler 里为 token 设置 `Set-Cookie`**；只有 bootstrap 的 `device_id`（非 HttpOnly、
   按 spec）可以下发。
+  **MSW 也无法模拟 WebSocket**：mock 登录态下真实后端没有会话，WS 握手成功后会立刻
+  以 4001 auth failed 关闭。因此 `stores/ws.svelte.ts` 在 mock 启用时**整体跳过真实
+  WS 连接**（`resolveWsAction` → disconnect），不要在 store/组件里绕过该判断；
+  同时 `lib/ws/client.ts` 对连续 4001「刷新成功但一连接又被关闭」最多重连 2 轮，
+  超过即派发 auth-failed 停止——两处都是为了防止「WS 握手 + refresh_token」1–2 秒一次
+  的无限循环（2026-10-28 实测：mock 登录下 12 秒 9 轮，并把后端 WS 握手限流打到 429）。
 
 ## 开发模式：必须通过 Docker Compose + Nginx 网关
 

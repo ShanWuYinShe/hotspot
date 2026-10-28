@@ -6,7 +6,9 @@
 // - ConnectionEstablished 下发心跳配置（ping_interval / ping_timeout）与 resume_token
 // - Ping 后 ping_timeout 内未收到 Pong 视为断线，触发重连
 // - 重连：指数退避 1s/2s/4s…最大 30s + 随机 jitter；携带 resume_token
-// - close code 1000/1008/4001 与手动 disconnect 不自动重连
+// - close code 1000/1008 与手动 disconnect 不自动重连；4001（Token 失效）先刷新一次再
+//   重连，且连续 4001 刷新重连最多 2 轮（退避不清零），超过即 auth-failed 停止——
+//   防止「刷新成功但一连上就被 4001 关闭」时的无限循环（2026-10-28 实测修复）
 // - 重连成功后用 set 操作全量重放订阅（本地订阅状态为权威）
 // - SessionRevoked/AccountBanned → auth-failed/auth-banned CustomEvent（与 client.ts 一致）
 // - 通知类/私聊类事件 → ws:* CustomEvent 供 UI 消费
@@ -63,6 +65,16 @@ const WS_PATH = '/ws/v1';
  *  由 handleAuthCloseWithRefresh 特殊处理（见 handleClose）。 */
 const NO_RECONNECT_CODES = new Set([1000, 1008]);
 
+/**
+ * 连续 4001（Token 失效）刷新重连的上限。正常情况下一条链路只会走一轮：
+ * access 过期 → 4001 → 刷新 → 重连 → ConnectionEstablished 复位。若刷新成功
+ * 但服务端仍持续以 4001 关闭（会话与 WS 鉴权口径不一致、mock 登录态连真实后端等），
+ * 旧实现每轮都把退避清零 + 重新刷新，形成 1–2 秒一次的「WS + refresh_token」无限循环
+ * （2026-10-28 实测：12 秒 9 次握手 + 9 次 refresh）。超过上限即派发 auth-failed
+ * 交给上层登出，绝不再自行刷新重连。
+ */
+const MAX_AUTH_RECONNECT_CYCLES = 2;
+
 /** 通知类事件 → ws:notify（payload 携带 notify_id，与 notify/fetch 同主键）。 */
 const NOTIFY_EVENT_TYPES = new Set<ServerEventType>([
   'NewFollower',
@@ -116,8 +128,10 @@ export class WsClient {
     WsClientOptions;
   /** 手动断开（登出）标记：禁止自动重连。 */
   private manualClose = false;
-  /** 4001 刷新重连的一次性标记：ConnectionEstablished 成功后复位 */
+  /** 4001 刷新重连的一次性在途标记（防并发重复刷新）：ConnectionEstablished 成功后复位 */
   private authReconnectAttempted = false;
+  /** 连续 4001 刷新重连轮数：ConnectionEstablished 成功后清零；超过上限停止重连 */
+  private authReconnectCycles = 0;
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -317,6 +331,7 @@ export class WsClient {
         this.pingTimeoutMs = Math.max(1, p.config?.ping_timeout ?? 10) * 1000;
         this.reconnectAttempts = 0;
         this.authReconnectAttempted = false;
+        this.authReconnectCycles = 0;
         this.setStatus('connected');
         this.startHeartbeat();
         // 重连成功后用 set 全量重放订阅（本地订阅状态为权威；resume 成功时服务端已恢复，set 幂等无害）
@@ -463,21 +478,32 @@ export class WsClient {
   private handleAuthCloseWithRefresh(): void {
     this.setStatus('disconnected');
     const refresh = this.options.refreshBeforeReconnect;
-    if (!refresh || this.authReconnectAttempted) {
+    if (!refresh) {
       this.emitAuthEvent(WS_AUTH_FAILED_EVENT, '登录状态已失效');
       return;
     }
+    // 刷新请求在途时不重复发起（并发 close 只处理一次）。
+    if (this.authReconnectAttempted) return;
+    if (this.authReconnectCycles >= MAX_AUTH_RECONNECT_CYCLES) {
+      // 连续多轮「刷新成功但一连接就被 4001 关闭」：会话与 WS 鉴权已不可自愈，
+      // 停止自动重连并交给上层登出，避免刷新 token + 握手的无限循环。
+      this.emitAuthEvent(WS_AUTH_FAILED_EVENT, '登录状态已失效，请重新登录');
+      return;
+    }
+    this.authReconnectCycles += 1;
     this.authReconnectAttempted = true;
     void refresh().then((outcome) => {
+      this.authReconnectAttempted = false;
       if (outcome === 'ok') {
-        this.reconnectAttempts = 0;
-        this.authReconnectAttempted = false;
+        // 不重置 reconnectAttempts：多轮失败时退避按 1s/2s/4s… 增长，
+        // 只有真正 ConnectionEstablished 成功才清零（旧实现每轮清零 → 恒定 1–2s 循环）。
         this.scheduleReconnect();
       } else if (outcome === 'invalid') {
         this.emitAuthEvent(WS_AUTH_FAILED_EVENT, '登录状态已失效，请重新登录');
       } else {
-        // transport-error：复位后按退避重连，不锁存登出（后端恢复后自然续上）。
-        this.authReconnectAttempted = false;
+        // transport-error：后端不可达等传输失败不锁存登出，按退避重连；
+        // 该轮不计入鉴权失败轮数（后端恢复后应能自行续上）。
+        this.authReconnectCycles = Math.max(0, this.authReconnectCycles - 1);
         this.scheduleReconnect();
       }
     });

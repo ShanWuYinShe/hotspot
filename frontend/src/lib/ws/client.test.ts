@@ -315,6 +315,41 @@ describe('事件映射', () => {
     expect(refresh).toHaveBeenCalledTimes(2);
   });
 
+  it('4001 + 刷新持续成功但一连接就被 4001 → 达到上限后派发 auth-failed 并停止（防无限刷新循环）', async () => {
+    const onFailed = vi.fn();
+    window.addEventListener('auth-failed', onFailed);
+    const refresh = vi.fn(async () => 'ok' as const);
+    const client = new WsClient({
+      url: 'ws://test.local/ws/v1',
+      refreshBeforeReconnect: refresh,
+      baseBackoffMs: 1,
+      maxBackoffMs: 2
+    });
+    client.connect();
+
+    // 第 1 次握手：4001 → 刷新（1）→ 退避后重连
+    FakeWebSocket.instances[0].open();
+    FakeWebSocket.instances[0].onclose!({ code: 4001 });
+    await vi.waitFor(() => expect(FakeWebSocket.instances.length).toBeGreaterThanOrEqual(2), {
+      timeout: 4000
+    });
+    // 第 2 次握手：再 4001 → 刷新（2）→ 退避后重连
+    FakeWebSocket.instances[1].open();
+    FakeWebSocket.instances[1].onclose!({ code: 4001 });
+    await vi.waitFor(() => expect(FakeWebSocket.instances.length).toBeGreaterThanOrEqual(3), {
+      timeout: 4000
+    });
+    // 第 3 次握手：超过连续重连上限 → 不再刷新、派发 auth-failed、不再重连
+    FakeWebSocket.instances[2].open();
+    FakeWebSocket.instances[2].onclose!({ code: 4001 });
+    expect(onFailed).toHaveBeenCalledTimes(1);
+    expect(refresh).toHaveBeenCalledTimes(2);
+    // 假时钟环境：推进时间确认没有排入新的重连（不再产生第 4 次握手）
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(FakeWebSocket.instances.length).toBe(3);
+    window.removeEventListener('auth-failed', onFailed);
+  }, 15000);
+
   it('4001 + 无刷新通道 → 派发 auth-failed 且不重连', () => {
     const onFailed = vi.fn();
     window.addEventListener('auth-failed', onFailed);
