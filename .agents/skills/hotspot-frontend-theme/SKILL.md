@@ -42,7 +42,7 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token（shared �
 
 - 「tint 淡底 + 同色语义文字」必须用 on-soft 文字档：`text-text-accent-on-soft` / `text-text-status-{online,warning,danger}-on-soft`（= 语义色 80% + text-primary 20%，`semantic.css` 派生）；**仅限 tint 软底**（徽章/胶囊/软底容器/危险菜单 hover），实底/画布正文继续用 `text-status-*` / `text-accent-default`。
 - 悬停才出现 tint 的场景写成 `text-status-* hover:text-text-status-*-on-soft` + `hover:bg-*`；背景 mix 比例不动。
-- 新增/改状态色需 3 主题×明暗 ≥4.5（矩阵审计 + `python3 harmonyapp/scripts/check_status_parity.py` 双端校验）。
+- 状态色/徽章的对比度**验收**（三主题×明暗 ≥4.5、矩阵与 `check_status_parity.py` 命令）单点权威在 skill `hotspot-frontend-style`「质量门与性能红线」；本文件只定义 token 与用法，不重复验收口径。
 
 ## 导航三态 token
 
@@ -63,7 +63,7 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token（shared �
 - **forest light 软岛覆写**：`--cst-surface-island = color-mix(surface-primary 92%, text-primary 8%)`（合成 #E4E6E2，岛/画布 ratio 1.17）；其余 5 组保持 86%（light）/94%+6%（dark）。修改此值时两端同改并重跑 parity。
 - **方块验收**：三主题 × 明暗关键页截图 + 软岛/画布亮度比 + 文字对比（≥4.5）记录到 `frontend-ui-audit.md`；禁止只验 vibrant。
 - **harmony-only 档**：`textTertiary`（web 无对应）允许单端调整（forest light #5F6C64→#58645C），但需在文档标注。
-- **状态徽章对比**：实底 + on-accent 字（避免淡底 + 主题字在部分主题/明暗下 <4.5，axe color-contrast 会拦）。
+- **状态徽章对比**：验收规则与命令见 skill `hotspot-frontend-style`「质量门与性能红线」，此处不重复。
 
 ## 主题 & CSS Token 架构
 

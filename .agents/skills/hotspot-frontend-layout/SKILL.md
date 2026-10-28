@@ -56,7 +56,12 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 常见笔记本宽度 1397px 只到 **`lg`** —— 用 `xl:` 写的布局在那里**不会生效**（实测踩过一次）。
 
-- 布局原语的默认内容宽度是 `--cst-page-content-max: 100%`（**流式**）。**页面禁止再传 `contentMaxWidth`/`maxWidth`**——一旦传了窄值（如 768），宽屏下内容只占中间一条、右侧大片空白。需要可读行宽时，用 `max-w-4xl mx-auto` 这类**页内**约束，且**宽屏要放宽**（`lg:max-w-5xl`）。
+内容宽度按**三类**选择（`ContentColumn` 默认 `--cst-page-content-max: 100%` 流式；其注释口径：「仅真正的阅读/详情列才传 maxWidth，不得用窄宽度来摆放标准页面」）：
+
+- **默认流式**：标准信息流/列表/枢纽页**不传** `contentMaxWidth`/`maxWidth`——传窄值（如 768）会让宽屏内容只占中间一条、右侧大片空白。
+- **阅读/详情/表单列（合法例外）**：仅真正的阅读或表单页传列宽（现状：settings `56rem`、me/edit `48rem`、notify `64rem`、瞬间详情/用户详情 `58rem`），由 `ContentColumn`/`SplitPageLayout` 承载。
+- **宽屏呼吸档 = 1280（数字字面量）**：长内容呼吸型页面（/me 总览、关系、举报）统一 `contentMaxWidth={1280}`；`PageHeader` 的 `maxWidth` 必须与页面 `contentMaxWidth` **同值成对**（只改其一即轴漂移 46–158px）。细则见「内容轴 → 宽屏呼吸档与列表轴」。
+- **页内可读行宽**：需要限制正文行宽时用页内 `max-w-4xl mx-auto`，宽屏随页宽放宽（`lg:max-w-5xl`）——这是**页内**约束，不能替代页面级 `contentMaxWidth`。
 - 宽屏提升密度靠**页内响应式网格**，不是把内容拉宽了事：例如 `/search` 发现态在 `lg:` 起双列（左：最近搜索/热门话题/人物推荐；右：热门动态），窄屏回落单列且顺序不变。
 - 聊天类页面：消息滚动区与页头用 `max-w-3xl lg:max-w-5xl`（宽屏 1024），气泡自身仍受 `--cst-chat-bubble-max` 约束——容器变宽不能让行宽失控。
 
@@ -140,7 +145,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 ### 宽屏呼吸档与列表轴
 
-1. `PageHeader` 的 `maxWidth` 与 `StandardPageLayout` 的 `contentMaxWidth` 必须同值**成对**出现（审计发现 /me 正文 1280 档而页头全宽，轴漂移 46–158px）。宽屏呼吸档统一 **1280**（数字字面量），不再自造 `max-w-5xl/6xl/7xl` / `48rem` 私有档。
+1. `PageHeader` 的 `maxWidth` 与 `StandardPageLayout` 的 `contentMaxWidth` 必须同值**成对**出现（审计发现 /me 正文 1280 档而页头全宽，轴漂移 46–158px）。宽屏呼吸档统一 **1280**（数字字面量）；呼吸型页面不再自造 `max-w-5xl/6xl/7xl` / `48rem` 私有档（阅读/表单列的既有 rem 列宽属「断点与内容宽度」的另一类，不属呼吸档）。
 2. 列表/卡片分区内层禁止 `mx-auto max-w-2xl/3xl` 再收窄（ProfileUserSection / SectionGroups 已清理）；骨架必须与内容同宽，否则骨架→内容位移。
 3. 验收口径：列表岛宽度 / main 宽度 ≥0.70@1920（关系/举报页实测 0.74–0.95）。
 

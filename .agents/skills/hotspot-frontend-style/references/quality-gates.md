@@ -13,15 +13,14 @@
 
 - `bun run audit:a11y -- --matrix --parallel 2`：约 15–20min，要求 0 serious/critical；默认 `audit:ui` 仍只扫 vibrant light。
 - 三主题（vibrant/forest/inkwash）× 明暗的关键页必须实测；软岛/画布亮度比与文字对比记录基线（≥4.5）。
-- 状态徽章用实底 + on-accent 字：淡底 + 主题字在部分主题/明暗下会 <4.5，axe color-contrast 会拦。
-- 改状态色/新增语义色需 3 主题×明暗 ≥4.5（矩阵 + `python3 harmonyapp/scripts/check_status_parity.py` 双端校验）。
+- 状态色/徽章对比（单点权威）：状态徽章用实底 + on-accent 字（淡底 + 主题字在部分主题/明暗下会 <4.5，axe color-contrast 会拦）；改状态色/新增语义色需 3 主题×明暗 ≥4.5（矩阵 + `python3 harmonyapp/scripts/check_status_parity.py` 双端校验）。token 定义与 on-soft 用法见 skill `hotspot-frontend-theme`。
 
 ## 3. axe 可访问性结构基线（0 serious / 0 critical）
 
 - 整卡可点必须用「覆盖按钮 + 行内动作 auto-lift」，卡片根不得持 button/aria-label（nested-interactive）。
 - `role=list` 子节点补 `role=listitem`；listitem 不挂 aria-label；`dl` 只包 dt/dd；无 role 的 div 不挂 aria-label。
 - 每页有 `main`；可滚动非键盘可达容器加 `tabindex=0` + `role=region` + `aria-label`；装饰图 `alt=""` + `aria-hidden`。
-- 状态徽章用实底 + on-accent 字；新增可点结构先跑 axe 再加；扫描方式为 axe-core 注入（`--init-script`）。
+- 新增可点结构先跑 axe 再加；扫描方式为 axe-core 注入（`--init-script`）。
 - 键盘验收：Tab 全站可达、skip link 首 Tab 可见；去描边不得丢焦点环；父容器 overflow 不得裁切；亮/暗都测（键盘截图 + computed outline）。
 
 ## 4. 性能实测与定位方法（可重跑）
