@@ -7,7 +7,9 @@
 - 现象：同一对并排按钮，无 border 的呈胶囊（borderRadius=999 生效），带 hairline border 的呈直角矩形——尽管两者引用同一个 borderRadius 值（SHAPE.BUTTON=RADIUS.FULL）。
 - 根因：ArkUI 属性后设覆盖先设；`.border({width,color})` 自带的 radius 字段未显式给出时按 0 生效，把先前 `.borderRadius()` 的值覆盖掉。
 - 修复：**`.border()` 一律写在 `.borderRadius()` 之前**（后设的 borderRadius 覆盖 border）。
-- 排查工具：`.workwork/global-border-scan.py`（扫「.border( 紧随 .borderRadius(」模式，全仓曾报 66 处——是否真有视觉影响需逐例核实，部分元素本意即直角）。
+- 排查口径（可复现，替代已清理的一次性脚本）：扫「`.borderRadius(` 之后 3 行内出现 `.border(`」的候选——
+  `grep -rn -A3 '\.borderRadius(' harmonyapp/entry/src/main/ets | grep -B2 '\.border('`
+  （历史一次性脚本曾报 66 处候选；是否真有视觉影响需逐例核实，部分元素本意即直角）。
 - 实拍案例：ProfilePage 升级表单「取消」直角 vs「确认升级」胶囊。
 
 ## 2. Scroll 内容短于视口时默认垂直居中

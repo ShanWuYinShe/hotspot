@@ -7,7 +7,7 @@ description: hotspot 后端数据库迁移纪律：文件命名与幂等要求�
 
 ## 数据库迁移
 
-`migrations/` 下 `NNN_描述.sql` 格式，嵌入二进制由启动时自动执行（字典序全量重跑，幂等靠各自 `IF NOT EXISTS`）。新增 migration 使用下一个可用序号（CI 校验序号唯一且无重复——历史 009 重号在脚本白名单放行，见仓库根 `scripts/check-migrations.sh`）。
+`migrations/` 下 `NNN_描述.sql` 格式，嵌入二进制由启动时自动执行：按序号执行**未应用**文件（`schema_migrations` 版本表登记/跳过已应用文件；存量库首次接入做一次性基线登记、不重放，见下）。新增迁移仍应保持幂等写法（`IF NOT EXISTS` / `DO $$` 自检），以兼容基线登记与手工重跑。新增 migration 使用下一个可用序号（CI 校验序号唯一且无重复——历史 009 重号在脚本白名单放行，见仓库根 `scripts/check-migrations.sh`）。
 
 **向后兼容纪律（硬性）**：迁移必须兼容「上一个已发布版本」的二进制——发布是无停机产物替换，旧版后端会短暂与新 schema 共存：
 

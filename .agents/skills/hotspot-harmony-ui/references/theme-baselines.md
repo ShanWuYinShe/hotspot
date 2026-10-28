@@ -44,7 +44,7 @@
 
 - **forest light 软岛**：仅 `default_clean_light` 的 `surfaceIsland` = `mixOpaque(surfaceBackground 92%, textPrimary 8%)` = #E4E6E2；其余 5 组公式不变；surface parity 6/6。
 - **textTertiary**：forest light 调为 #58645C（岛上 4.93），文档标注 harmony-only。
-- 改 token 后必须跑 `check_surface_parity.py` / 回归说明；两端同改见 SKILL.md 跨端同步表。
+- 改 token 后按两端代码逐值比对（web `themes/*.css` 的 `--cst-surface-island` ↔ 鸿蒙 `AppThemeManager` 的 `surfaceIsland`，6 套组合；仓库无独立入库校验脚本），并同步更新 `docs/frontend-ui-audit.md` 记录；两端同改见 SKILL.md 跨端同步表。
 
 ## 5. 设计 token 对照 HarmonyOS 官方规范
 

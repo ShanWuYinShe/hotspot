@@ -55,7 +55,7 @@ ON CONFLICT (user_id) DO UPDATE SET grant_all_permissions = TRUE, revoked_at = N
 curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"location":{"point":{"latitude":35.154922,"longitude":112.682524},"location_name":"南天门"}}'
-# 2) 用另一账号在该坐标建群（Idempotency-Key 必须是 {UUID}-{13位ms}-{8位随机}，见 spec/api_spec_base.md）
+# 2) 用另一账号在该坐标建群（Idempotency-Key 见 spec/api_spec_base.md「幂等性（契约级）」：32-64 字符、[a-zA-Z0-9-_]，推荐 {client_id}-{timestamp_ms}-{random}（非强制），同一次重试须复用同一 key）
 #    → 之后 app（登录同账号、无锚点）的附近群组即可看到这些群，距离 0m
 ```
 

@@ -40,7 +40,7 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 
 ## 组件原语强制（对齐前端 button/input 体系）
 
-- 通用文本操作按钮必须用 `SystemButton`（variant=primary/secondary/outline/ghost/danger/surface/surface-danger，size=small/default/large/sheet，支持 loading/disabled/fullWidth）；禁止手写 `Button('文案') + backgroundColor/fontColor/height/borderRadius` 重复样式。
+- 通用文本操作按钮必须用 `SystemButton`（variant=primary/secondary/outline/ghost/danger/surface/surface-accent/surface-danger，size=compact/small/default/large/sheet，支持 loading/disabled/fullWidth）；禁止手写 `Button('文案') + backgroundColor/fontColor/height/borderRadius` 重复样式。
 - **危险操作分两档，别混用**：`danger`（**实底 error 色 + 白字**）只用于**最终确认**（二次确认弹窗的 `SystemDialog.confirmVariant`、弹层里的确认键，如「封禁并移出」）；`surface-danger`（染色底 + error 文字 + 发丝描边，安静档）用于**行级/列表内**的危险操作（账号行删除、消息/聊天操作表、退出群组、取消分享…）。反例：账号管理页每行一个实底 `danger`，眯眼测试下整页形成一列刺眼红色块，视线被破坏性操作抢走、观感像警报页（NN/g：最强颜色档必须留给真正的警示）。
 - 通用单行输入框必须用 `SystemInput`（前缀图标/清除按钮/错误态）；登录/表单等密码框可用 `SystemInput({ passwordMode: true })`。
 - **其余基础原语清单（唯一登记处，docs/design-system.md 第 13 节引用此处）**：
@@ -67,7 +67,7 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 
 ## 内容软岛与整卡图片卡（两端同 spec，鸿蒙实现）
 
-- **内容软岛**：`ListGroup`/`SystemCard` = `surfaceIsland` + `surfaceShadow` + `SHAPE.CARD`(20) + padding 8、行透明 + 行间距 2、行内 hover 填充离岛边 8；**禁止 1px hairline 全框**；`SettingsSectionCard` 同。`surfaceIsland` 与 web `--cst-surface-island` 逐值一致（light = `withAlpha(surfaceBackground,0.86)`；dark = `mixOpaque(surfaceBackground,0.94,textPrimary,0.06)`；6 套组合，`check_surface_parity.py` 6/6）。按钮安静化同 web：次级动作 `withAlpha(surfaceSubtle,0.60)` 软填底、无描边、hover 全量；主操作 accent 实底；危险 soft danger；同级动作不混用描边/软填。页面级硬线清零：`SystemPageHeader`/自定义页头/分区头不得有 1px 底线（功能线：聊天输入条/粘底条/表格行/消息分栏发丝线）。页面结构与网络端同一套规则，见 skill `hotspot-frontend-layout`「内容软岛」。
+- **内容软岛**：`ListGroup`/`SystemCard` = `surfaceIsland` + `surfaceShadow` + `SHAPE.CARD`(20) + padding 8、行透明 + 行间距 2、行内 hover 填充离岛边 8；**禁止 1px hairline 全框**；`SettingsSectionCard` 同。`surfaceIsland` 与 web `--cst-surface-island` 逐值一致（light = `withAlpha(surfaceBackground,0.86)`；dark = `mixOpaque(surfaceBackground,0.94,textPrimary,0.06)`；6 套组合，实测 6/6，记录见 `docs/frontend-ui-audit.md`）。改 token 后按两端代码逐值比对（web `themes/*.css` 的 `--cst-surface-island` ↔ 鸿蒙 `AppThemeManager` 的 `surfaceIsland`，仓库无独立入库校验脚本）。按钮安静化同 web：次级动作 `withAlpha(surfaceSubtle,0.60)` 软填底、无描边、hover 全量；主操作 accent 实底；危险 soft danger；同级动作不混用描边/软填。页面级硬线清零：`SystemPageHeader`/自定义页头/分区头不得有 1px 底线（功能线：聊天输入条/粘底条/表格行/消息分栏发丝线）。页面结构与 web 端同一套规则，见 skill `hotspot-frontend-layout`「内容软岛与长尾/后台页面」。
 - **整卡图片卡**（用户明确要求「图片占满整个卡片、信息覆盖在图上」；与 `docs/design-system.md` §17 同源，视觉细则见 skill `hotspot-frontend-style`「媒体与图片」）：适用 `MomentFeedCard variant='overlay'`（首页 feed，4:5）、`NearbyImageCard mediaOverlay`（网格 3:4，含附近三叶/我的瞬间/我的群组/群组精选）；`horizontal` 横排两段式保留为列表例外。卡片无 border、圆角 `SHAPE.CARD`(20)；图片 object-cover 铺满；顶部作者行/徽章 + 底部标题/元信息/白图标操作行压在图；位置只在右上出现一次；多图首图 + 1/N 徽章；无图 fallback = 主题渐变 + ≤.10 水印 + 主题色文字（不压白字）。压图文字对比度 ≥4.5:1（字形区像素实测，亮暗都测）；徽章深色强遮罩 + 白字；点赞/收藏状态用「填充形状 + 白描边」不只色相；操作热区 ≥44。骨架屏同步：`Skeleton` 的 feed 形态按整卡形状（图片块 + 底部文本条），骨架→内容零位移。
 
 ## 主题、A11y 与触控验收
