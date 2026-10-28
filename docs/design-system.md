@@ -953,3 +953,35 @@
 10.61–13.86（全 ≥4.5）；/search 390 CLS 0×8 采样；/nearby 与 /nearby/groups 首屏
 eager 图各 2 张且像素 diff 0 回归。
 
+### 21.14 卡片 hover 的合成器纪律（R18，2026-10-29，强制）
+
+> 背景：快速晃动鼠标在不同卡片间来回滑动时 GPU/CPU 占用飙升（用户反馈，首页 / 附近的人 /
+> 附近群组 / 附近瞬间 / 我的瞬间 / 我的群组等全部卡片页）。定位方法：agent-browser 驱动
+> headless Chrome（真 GPU：ANGLE Metal）+ CDP trace 分线程归因 + 逐进程 CPU 时间采样，
+> 视口 1440×1000 @DPR2、拟真晃动（卡内移动为主 + 5–6 次跨卡/s、6s 窗口 ×3 轮）。
+> 根因：每次 hover 同时启动 4 条动画——卡片上浮（transform）、box-shadow、图片缩放
+> （transform）、整卡覆盖按钮背景色；其中 box-shadow 与整卡按钮底色是「整卡面积逐帧重绘」
+> 的 paint 动画（GPU 进程 CPU 0.14–0.15 cores，空闲仅 0.02；renderer 主线程 0.18 cores）。
+
+1. **整卡命中面 hover 底色改伪元素 opacity（视觉等价）**：`[data-cover]::before`
+   （`position:absolute; inset:0; border-radius:inherit; background:var(--cst-interactive-hover-fill);
+   opacity:0; pointer-events:none; transition:opacity 160ms`）+ `[data-cover]:hover` 自身
+   `background-color:transparent`（压过全局 button hover 填充）。颜色 token 与 160ms 时长
+   与旧行为一致，只有执行位置从主线程重绘换成合成器；卡片与 ListItem 的覆盖按钮共用。
+2. **卡片 hover 动画限定合成器属性**：`.card-hover` 只过渡 `transform` + `border-color`；
+   抬升用 transform（vibrant 2px / forest·inkwash 0），配图缩放仍是 transform。
+3. **卡片/配图在 fine pointer 下常驻合成层**：`@media (hover:hover) and (pointer:fine)` 内
+   `.card-hover, .image-hover-frame__image { will-change: transform; }`——避免快速跨卡时
+   反复提升/销毁层并重栅格化整卡；批量交互小类（`.hover-btn/.hover-action`）仍禁止。
+4. **死类清理**：卡片 className 上的 `hover:shadow-raised-sm`（被 `.card-hover:hover` 的
+   `!important` 覆盖）与 `transition-all`（被 `.card-hover` 过渡覆盖）从未生效，已删除，
+   避免后人误以为它们在承载 hover 视觉。
+
+**验收（R18 实测；worktree 8898 与主环境 8888 同 harness 交替采样，DPR2）**
+
+- GPU 进程 CPU：**0.141–0.146 → 0.101–0.109 cores（-27%）**；renderer 0.182–0.187 → 0.177–0.182（-3%）。
+- hover 视觉增量像素级一致：/me/moments 单卡 hover-delta 178,601 vs 178,622 px，重叠 178,586 px
+  （差异 3,294 px = 1.8%，全部为亚像素抗锯齿/合成取整）。
+- 空闲 GPU 0.013–0.016 cores 不变；Chrome RSS ±4MB；滚动 GPU 0.127 → 0.090 cores（副作用为正向）。
+- 契约守卫：`src/styles/__tests__/perf-contract.test.ts` 的「卡片 hover 只走合成器属性（R18）」一组。
+

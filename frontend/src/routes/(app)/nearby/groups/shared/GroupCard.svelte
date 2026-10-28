@@ -100,10 +100,10 @@
 		horizontal={featured ? horizontal : autoLandscape}
 		class={featured
 			? (horizontal
-				? cn('rounded-2xl min-h-48 shadow-xs hover:shadow-raised-sm', className)
-				: cn('min-h-[320px] rounded-lg shadow-xs hover:shadow-raised-sm sm:min-h-64', className))
+				? cn('rounded-2xl min-h-48 shadow-xs', className)
+				: cn('min-h-[320px] rounded-lg shadow-xs sm:min-h-64', className))
 			: cn(
-				'rounded-lg shadow-xs hover:shadow-raised-sm',
+				'rounded-lg shadow-xs',
 				className || 'aspect-[3/4] h-auto sm:aspect-[4/5]'
 			)}
 	>

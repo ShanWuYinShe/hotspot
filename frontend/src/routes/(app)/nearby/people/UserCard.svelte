@@ -54,7 +54,7 @@
 	{priority}
 	onClick={onNavigate}
 	onImageError={() => (avatarFailed = true)}
-	class="aspect-[3/4] h-auto rounded-lg shadow-xs transition-all duration-standard sm:aspect-[4/5]"
+	class="aspect-[3/4] h-auto rounded-lg shadow-xs sm:aspect-[4/5]"
 >
 	{#snippet watermark()}
 		<UserRound size={72} strokeWidth={1} />

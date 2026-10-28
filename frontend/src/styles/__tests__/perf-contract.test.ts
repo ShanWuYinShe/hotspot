@@ -42,3 +42,26 @@ describe('合成层纪律', () => {
 		expect(ruleBody('\n.media-badge {')).not.toMatch(/backdrop-filter/);
 	});
 });
+
+// R18（2026-10-29）：快速跨卡晃动时 GPU/CPU 飙升的两个根因——
+//  ① 整卡覆盖按钮的 background-color 过渡 = 整卡面积逐帧重绘；
+//  ② 卡片 hover 层反复提升/销毁并重栅格化。
+// 契约：底色改由 [data-cover]::before 的 opacity 承载；卡片/配图在 fine pointer
+// 下常驻合成层（仅这两类卡面允许，且必须限定在 hover 媒体查询内）。
+describe('卡片 hover 只走合成器属性（R18）', () => {
+	it('覆盖按钮 hover 底色改为伪元素 opacity 过渡（不再让按钮自身背景过渡）', () => {
+		const tint = ruleBody('\n[data-cover]::before {');
+		expect(tint).toMatch(/background\s*:/);
+		expect(tint).toMatch(/opacity\s*:\s*0/);
+		expect(tint).toMatch(/pointer-events\s*:\s*none/);
+		expect(tint).toMatch(/transition\s*:\s*opacity/);
+		expect(ruleBody('\n  [data-cover]:hover {')).toMatch(/background-color\s*:\s*transparent/);
+	});
+
+	it('卡片与配图在 fine pointer 下常驻合成层；基础规则不带 will-change', () => {
+		expect(ruleBody('\n  .card-hover {')).not.toMatch(/will-change/);
+		expect(ruleBody('\n    .card-hover {')).toMatch(/will-change\s*:\s*transform/);
+		expect(ruleBody('\n  .image-hover-frame__image {')).not.toMatch(/will-change/);
+		expect(ruleBody('\n    .image-hover-frame__image {')).toMatch(/will-change\s*:\s*transform/);
+	});
+});

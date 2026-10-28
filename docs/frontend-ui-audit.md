@@ -707,3 +707,59 @@
 - 首屏图 LCP 需真实 S3 环境复测（mock unsplash 外链不能代表生产）；
 - 搜索骨架按 limit 估算，极端标签分布仍可能有 28/36px 级一次性位移（当前 mock 六视口零位移）；
 - GroupCarousel 若未来移入首屏需补 priority 接口（当前首屏外，未加）。
+
+## 2026-10-29 补充（Round 18：卡片 hover 的 GPU/CPU 峰值收敛）
+
+> 用户反馈：快速晃动鼠标在不同卡片间来回滑动时 GPU/CPU 占用飙升（首页 + 附近的人 /
+> 附近群组 / 附近瞬间 / 我的瞬间 / 我的群组等卡片页）。要求不降低特效。
+> 方案契约见 design-system §21.14；证据与脚本在 `.workwork/r18-hover/`（未入库）。
+
+### 一、定位（可复现）
+
+- 工具：agent-browser 驱动 headless Chrome（真 GPU，ANGLE Metal M1），CDP profiler trace
+  分线程归因 + 逐进程 CPU 时间采样（renderer 全进程 / GPU 进程）+ 页面 rAF/长任务。
+- 场景：1440×1000 @DPR2，拟真晃动 = 卡内小幅往返为主 + 5–6 次跨卡/s（每次跨卡触发
+  进出各一套 hover 动画），6s 窗口 ×3 轮交替采样；对照组为同一页面滚到底再回顶（热身），
+  避免懒加载图片解码污染。
+- 结论：稳定复现「每次 hover = 4 条动画」，其中**整卡覆盖按钮（`[data-cover]`）背景色过渡**
+  与**卡片 box-shadow 过渡**是整卡面积的 paint 动画，每帧重绘整卡；空闲 GPU 进程 CPU 仅
+  0.013–0.02 cores，晃动时 0.14–0.15 cores。中等窗口下 renderer 0.18 cores。
+- 归因对照：禁用全部 transition/animation → GPU 0.093 cores；仅把覆盖按钮底色改成
+  合成器 opacity → GPU -13%；再叠加卡片/配图常驻合成层 → 合计 -27%。给卡片套 DOM
+  包装层改「预绘阴影 + opacity」的方案实测反而 +5%（整卡层合成开销 > 阴影重绘），已弃用。
+
+### 二、整改（不降低特效，视觉等价）
+
+| 改动 | 位置 | 说明 |
+|---|---|---|
+| 覆盖按钮 hover 底色改伪元素 opacity | `styles/theme/utilities.css`（无 layer 区） | `[data-cover]::before` 用同一 `--cst-interactive-hover-fill`、同一 160ms；`[data-cover]:hover` 自身底色透明。卡片与 ListItem 覆盖按钮共用，视觉等价 |
+| 卡片/配图 fine pointer 常驻合成层 | 同上（`.card-hover`、`.image-hover-frame__image` 段） | 仅在 `(hover:hover) and (pointer:fine)` 下 `will-change: transform`；批量小图标（`.hover-btn/.hover-action`）红线不变 |
+| 死类清理 | `nearby/groups/shared/GroupCard.svelte`、`nearby/people/UserCard.svelte` | 删 `hover:shadow-raised-sm`（被 `.card-hover:hover` 的 `!important` 覆盖）与 `transition-all`（被 `.card-hover` 过渡覆盖） |
+| 契约守卫 | `styles/__tests__/perf-contract.test.ts` | 新增「卡片 hover 只走合成器属性（R18）」3 条断言 |
+
+### 三、实测（worktree 8898 vs 主环境 8888，同 harness 交替 3 轮，DPR2）
+
+| 指标 | 改前 | 改后 | 变化 |
+|---|---|---|---|
+| GPU 进程 CPU | 0.141–0.146 cores | 0.101–0.109 cores | **-27%** |
+| renderer 全进程 CPU | 0.182–0.187 cores | 0.177–0.182 cores | -3% |
+| 空闲 GPU | 0.013–0.016 cores | 0.013–0.016 cores | 不变 |
+| Chrome RSS | 基线 | ±4MB | 无常驻层膨胀 |
+| 滚动 GPU（1440 DPR1） | 0.127 cores | 0.090 cores | -29% |
+| hover 视觉增量（/me/moments 单卡） | — | 178,601 vs 178,622 px（重叠 178,586） | 视觉等价（差异 3,294px=1.8%，亚像素抗锯齿） |
+
+### 四、门禁（R18 worktree 8898 实测）
+
+- `bun run check` **0 error / 0 warning**（svelte-check + eslint）；`check:theme` 四联全绿；
+- `bun run test` **117 files / 642 tests 全绿**（新增 perf-contract 2 条）；`bun run build` 通过；
+- `audit:a11y --base http://localhost:8898` **35 页 0 违规 PASS**；
+- `audit:touch --base http://localhost:8898` **35 页 PASS**：890 元素 / 分母 810 / 通过 763 / 登记例外 47 / 覆盖率 94.2% / 未登记离群 0（本轮无触控几何变化，纯 hover 执行路径优化）；
+- `browser:qa --base http://localhost:8898 --mobile` **23/23 页 issues=[]**（桌面 18 + 移动 5，无控制台错误）。
+
+### 五、仍开放（非本轮范围）
+
+- renderer 主线程成本主要来自「每次 hover 状态变更」本身（命中测试 + 样式重算 + 合成提交），
+  约 0.12–0.14 cores 无法通过 CSS 属性选择消除；如需进一步下降，需要减少 hover 命中面
+  变化频率（交互改版）而非特效实现。
+- 极端快速整卡跳变（鼠标逐帧在两卡中心间跳）实测仍会短时拉高 GPU（动画重启频率上限），
+  已从 0.19 降到 0.14 cores 量级。
