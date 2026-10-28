@@ -11,25 +11,24 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
 
 | 标记 | 渲染组件 | 定位方式 |
 |---|---|---|
-| 图钉 | `MapPinMarker.svelte` | 经纬度投影（`pos.x%/pos.y%`）|
-| 热力点 | `MapHeatDot.svelte` | 经纬度投影 |
-| **我的位置蓝点** | `MapOverlays.svelte` 内联 div | ⚠️ 截至 2026-10-09 是 `left:50%;top:50%` **钉死视口中心，不做地理投影** |
+| 图钉 | `routes/(app)/map/shared/MapPinMarker.svelte` | 经纬度投影（`pos.x%/pos.y%`）|
+| 热力点 | `components/map/MapHeatDot.svelte` | 经纬度投影 |
+| **我的位置蓝点** | `routes/(app)/map/shared/MapMyLocationDot.svelte`（经 `map/shared/MapOverlays.svelte` 挂载） | 经纬度投影（与图钉同口径，缩放/平移后钉在同一地理坐标）|
 
 **蓝点语义（用户 2026-10-10 权威澄清，红线）**：蓝点代表「**我的地理位置**」，不是
 「地图中心」——禁止用 `left:50%;top:50%` 钉视口中心来模拟，任何把二者混同的实现都是 bug。
 
-**已知缺陷（2026-10-09 实测）**：当前蓝点实现钉视口中心，只在「地图中心恰好=我的位置」
-的瞬间是准的。以偏离中心的光标为锚滚轮缩放一级（14→15），底图按光标锚移动、蓝点不动，
-实测等效漂移 1339px；拖拽后同样失真。本地与线上同套实现，两边都有。正确修法：蓝点改为
-与 MapPinMarker 同口径——拿到我的位置 lat/lng，经 `toTileSpace` 纠偏后按 bounds 算百分比
-定位（缩放/平移后蓝点钉在同一地理坐标）。
+**反模式（已被取代）**：曾用 `left:50%;top:50%` 钉视口中心模拟蓝点——以偏离中心的光标为锚
+滚轮缩放一级（14→15）时底图按光标锚移动、蓝点不动，实测等效漂移 1339px，拖拽后同样失真。
+现由 `MapMyLocationDot` 按「我的位置 lat/lng → 地理投影」实现；任何把「我的位置」与
+「地图中心」混同的实现都是 bug。
 
 ## 地理投影契约（防「缩放越大 marker 越偏」的根因）
 
 - **同空间原则**：bounds 与 marker 坐标必须投到同一坐标系再算百分比。底图为高德
   （GCJ-02 瓦片）时，WGS-84 的 marker 坐标先经 `wgs84ToGcj02` 纠偏；OSM 底图恒等直通。
   混用两个空间是国内场景 zoom 放大后 marker 与底图地标错位的根因（注释见
-  MapPinMarker.svelte，勿删）。
+  `MapPinMarker.svelte`，勿删）。
 - `gcj02ToWgs84` 必须迭代到厘米级，否则高 zoom 下「我的位置」肉眼可见滑 off
   （测试：`__tests__/map-projection.gcj.test.ts`）。
 - 新增任何标记一律走经纬度投影，**禁止**用视口百分比（`left:50%` 之类）模拟地理位置。

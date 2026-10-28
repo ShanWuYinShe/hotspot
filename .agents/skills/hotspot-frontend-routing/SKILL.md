@@ -60,7 +60,7 @@ src/routes/
 - **默认两分支**：`isDesktop = platform.platform !== 'mobile'`（tablet 与 desktop 同分支），适用于大多数页面（tablet 在字号/边距等细节差异由组件内 `platform` 派生，不需要独立 if 分支）。
 - **按需三分支**：当 tablet 在**列数、栏宽、整段布局**上确实与 desktop 表现不同时（如 `nearby/moments` 桌面 3 列 / 平板 2 列、`nearby/people`、`nearby/groups`），显式写 `isDesktop` + `isTablet` + mobile 三分支是**合规**的，不算"逐页发明"。判断标准是"tablet 是否有独立的**布局结构**"，而非"字号/间距不同"。
 - **反模式**：仅为字号/颜色/间距等可在组件内用 `platform` 单值派生的差异而开三分支——这种情况一律用两分支 + 组件内派生。
-## 搜索页 URL 状态契约（Round 8，2026-10-27）
+## 搜索页 URL 状态契约
 
 - `/search` 支持 `?query=<q>&tab=<all|people|posts|groups|topics>&tag=<tag>`（`people/posts` 为内部 Tab 名，
   外部兼容 `users→people`、`moments→posts`；非法 tab→all；空 query 清空全部参数回发现态）。

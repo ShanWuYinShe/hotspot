@@ -48,7 +48,7 @@ kill $(cat reception-bot/state/ws-online.pid)
 
 注意:keeper 重登录会顶掉同 wsDevice 旧会话(自愈重连),但**不会**顶掉脚本 device 的会话——两者设备隔离。
 
-## 智能体团队模式(2026-09-25 起)
+## 智能体团队模式
 
 - **reception 队友**:专职执行上述循环并以林小满身份语境化回复;每轮向 lead 汇报摘要;只运营账号不修代码,发现问题报 lead
 - **fixer 队友**:专职修复接待循环脚本/前端/后端缺陷;先复现再最小修复,修完必验证(check/test/实跑);主工作树不自行 commit,提交由 lead 决策

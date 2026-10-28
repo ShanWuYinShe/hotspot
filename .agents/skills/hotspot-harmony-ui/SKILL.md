@@ -1,30 +1,17 @@
 ---
 name: hotspot-harmony-ui
-description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制规则、跨端同步机制、SystemPageHeader/PageShellContainer、路由对齐、SystemButton/SystemInput 原语与已登记例外清单。触发：修改 harmonyapp 任意 UI 或样式；新增鸿蒙页面；使用设计 token 或颜色字号间距；手写 Button/TextInput 前确认是否该用原语；跨端色彩/刻度同步。
+description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制规则、跨端同步机制、SystemPageHeader/PageShellContainer/ListGroup、路由对齐、SystemButton/SystemInput 原语与已登记例外清单、焦点环/减少动态、动效与媒体、回顶与聊天滚动。触发：修改 harmonyapp 任意 UI 或样式；新增鸿蒙页面；使用设计 token 或颜色字号间距；手写 Button/TextInput 前确认是否该用原语；跨端色彩/刻度同步；鸿蒙端 a11y/触控验收。
 ---
 
 # hotspot-harmony-ui
 
-## UI/UX 设计规范
+> 设计 token 的**全部数值档位**（颜色/字号/间距/圆角/边框/动效/交互反馈/透明度/尺寸/阴影/模糊）、双端共享组件映射表与跨端投影契约速查的唯一权威是 [docs/design-system.md](../../../docs/design-system.md)（仓库根 docs/）。本文件只保留强制规则、原语契约与鸿蒙端专项口径；web 端对应规则见 skill `hotspot-frontend-style` / `hotspot-frontend-layout` / `hotspot-frontend-theme`。
 
-设计 token 的**全部数值档位**（颜色/字号/间距/圆角/边框/动效/交互反馈/透明度/尺寸/阴影/模糊）、双端共享组件映射表与跨端投影契约速查的唯一权威是 [docs/design-system.md](../../../docs/design-system.md)（仓库根 docs/），改 UI 前必读。本节只保留强制规则与指针。
+## UI/UX 设计规范（强制）
 
 - **禁止硬编码**：颜色一律使用 `AppThemeManager.getPaletteById(resolvedThemeId)` 的 palette token（或 `DesignConstants` 系统/图片固定色），禁止硬编码色值；字号/间距/圆角/边框/动效/透明度/尺寸一律用 `DesignConstants` 对应 token 档位，禁止裸 `fontSize(N)` / `padding({left:N})` / `width(N)` / `duration: N` / `scale(...)`；`$r('app.color.*')` 资源仅用于启动窗口等系统场景（当前 color.json 只保留 start_window_background）。
-- **图标尺寸用专用刻度（强制）**：图标尺寸一律 `COMPONENT.ICON_SIZE_*`
-  （`2XS 14 / XS 16 / SM 20 / SM_PLUS 22 / MD 24 / LG 32 / EMPTY 48`），
-  **不要用 `FONT.SIZE.*` 当图标尺寸**——那是字号刻度，混用会让图标尺寸随字号变动、
-  并产生 9 种图标尺寸（实测 2026-10-12：`iconSize` 有 133 处取自 FONT.SIZE、仅 17 处用专用刻度）。
-  - **唯一例外（明示约定）**：图标**与同档文字行内并排**时（如聊天气泡的「已编辑」行、
-    群卡 meta 行的图标），允许 `iconSize: FONT.SIZE.X` 与该文字同档——这是刻意对齐，
-    不是漂移。判断口径：该处 ±14 行内存在 `fontSize(...FONT.SIZE.同档)`。
-  - 已登记未迁移：`LG_PLUS(18)` 11 处（行首图标）、`HERO(36)` 2 处（hero/地图图标）
-    ——专用刻度无 18/36，取近档会改像素，待设计定档。
-- **行高（多行正文强制用比例制）**：`FONT.LINE_RATIO.{DEFAULT 1.5, CARD 1.7, COPY 1.75}` +
-  `lineHeightFor(fontSize, ratio)`，对齐前端 `--leading-*`（`card` 是前端「原 1.55，
-  阅读疲劳修复」后的值）。适用：聊天气泡/卡片正文 `CARD`；简介、公告、动态正文等长文 `COPY`。
-  `FONT.LINE_HEIGHT` 的绝对档（XS18/SM20/MD22/LG24/XL26）**只用于单行紧凑场景**——它与字号
-  解耦，把 `LINE_HEIGHT.SM`(20) 配 `SIZE.LG`(16) 只有 1.25 倍。实测 2026-10-12：多处
-  误用导致比值散落 1.57~1.83，且聊天气泡/群公告**完全没有行高**（长文本挤成一团）。
+- **图标尺寸用专用刻度**：一律 `COMPONENT.ICON_SIZE_*`（`2XS 14 / XS 16 / SM 20 / SM_PLUS 22 / MD 24 / LG 32 / EMPTY 48`），**不要用 `FONT.SIZE.*` 当图标尺寸**——那是字号刻度，混用会让图标尺寸随字号变动、并产生 9 种图标尺寸（实测：`iconSize` 有 133 处取自 FONT.SIZE、仅 17 处用专用刻度）。唯一例外（明示约定）：图标**与同档文字行内并排**时（如聊天气泡的「已编辑」行、群卡 meta 行的图标），允许 `iconSize: FONT.SIZE.X` 与该文字同档——判断口径：该处 ±14 行内存在 `fontSize(...FONT.SIZE.同档)`。已登记未迁移：`LG_PLUS(18)` 11 处（行首图标）、`HERO(36)` 2 处（hero/地图图标）——专用刻度无 18/36，取近档会改像素，待设计定档。
+- **行高（多行正文强制用比例制）**：`FONT.LINE_RATIO.{DEFAULT 1.5, CARD 1.7, COPY 1.75}` + `lineHeightFor(fontSize, ratio)`，对齐前端 `--leading-*`（`card` 是前端「原 1.55，阅读疲劳修复」后的值）。适用：聊天气泡/卡片正文 `CARD`；简介、公告、动态正文等长文 `COPY`。`FONT.LINE_HEIGHT` 的绝对档（XS18/SM20/MD22/LG24/XL26）**只用于单行紧凑场景**——它与字号解耦，把 `LINE_HEIGHT.SM`(20) 配 `SIZE.LG`(16) 只有 1.25 倍。实测：多处误用导致比值散落 1.57~1.83，且聊天气泡/群公告**完全没有行高**（长文本挤成一团）。
 - **跨端同步机制（强制）**：前端与鸿蒙共享同一套设计 token 刻度，同步由 CI 脚本强制拦截，**改两端任一 token 必须同步改另一端**：
 
   | 校验 | 脚本 | 覆盖范围 |
@@ -33,107 +20,29 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   | 跨端刻度 | `frontend/scripts/check-cross-platform-scale.mjs` | 字号 9 档（`--text-*` ↔ `FONT.SIZE`）+ 圆角 5 档（`--radius-*` ↔ `RADIUS`）逐值一致；单端加近邻档即拦截。已登记豁免：`FONT.SIZE.LG=16`（HarmonyOS 平台适配档） |
 
   两脚本均挂入 `bun run check:theme`（随 `bun run check` 与 CI 生效），漂移即红。
-- **视觉结构同步约定**：前端 `components/home|messages|profile/` 下组件与鸿蒙 `components/`、`features/*/` 对应实现构成 design-system.md 第 13 节映射表——修改任一端的**共享组件**（改动视觉契约：布局/字号档/圆角档/投影/动效）时，必须检查映射表对端并同步，commit message 中注明「对齐 <前端组件/commit>」；仅平台适配差异（如 FAB 位置、安全区）可不同步但需在两端代码注释中互指。
-- **页面头部（强制 SystemPageHeader）**：
-  - 所有页面头部必须用 `SystemPageHeader`（或专用组件 `SearchPageHeader` / `ChatPageHeader`）；禁止手搓 `Row { Text(...).fontSize(XL)... Button(...) }` 头部。
-  - 已登记例外（无标准页面头部）：登录页 `LoginPage`（无主壳）、主壳 `Index`（容器）、地图全屏 `LocationPickerPage`、图片全屏预览 `PhotoPreviewPage`、分享解析中间页 `ShareResolutionPage`（无内容 UI，仅 loading/错误/跳转）、调试面板 `DebugPanel`；`SettingsSupport.ets` 等仅导出页面子组件的文件不算页面。
-  - SystemPageHeader API：`title` / `subtitle` / `showBackButton`+`onBack` / `action`(文本按钮) / `leftAction`+`rightAction`(IconAction，`kind: 'primary'|'surface'|'neutral'`，2026-10-26 扩展 surface) / `trailing`(@BuilderParam 任意尾随) / `titleAlign` / `titleSize` / `titleWeight` / `backgroundVariant`('bar'|'transparent'|'card')。
-  - **页头图标钮跨端口径（2026-10-26 Lead 决策）**：品牌头（首页）= ghost（`kind:'neutral'`，前端 `variant="ghost"`）；标准内页 PageHeader trailing = surface（`kind:'surface'`，前端默认 `variant="surface"`）。web 移动端首页只有「搜索 + 通知」两枚，地图入口在附近域页头；鸿蒙同步移除首页地图钮。
-  - 安全区由 SystemPageHeader 内聚（自带 `@StorageLink('safeAreaTop')` + `expandSafeArea`），页面无需重复写。
-  - 内联搜索框头部 → `SearchPageHeader`；浮动卡片+头像头部 → `ChatPageHeader`。
-- **页面内容栏（PageShellContainer）**：强制使用；档位数值（form/narrow/default/wide + feed 两档）见 design-system.md 第 12 节。
-- **页面横向 gutter（唯一来源，强制）**：横向留白**只能**由 `PageShellContainer` 提供（手机 16 / 平板 24 / 桌面 28，
-  对齐前端 `--cst-page-gutter`；2026-10-13 手机档由 20 收紧至 16，对齐 iOS inset grouped 16pt /
-  Material 16dp 主流下限，两端同步）。**禁止**双重留白（容器 gutter + 页面自加 left/right padding，
-  会叠成 36~40，与只用容器 gutter 的页面差 16~20vp）；**禁止**用 `noHorizontalPadding: true`
-  关掉容器留白再另写一套值。`SystemPageHeader` 只带纵向节奏、不自带横向 padding。
-  - **通栏元素的坑（实测 2026-10-11）**：前端用 `-mx-[var(--cst-page-gutter)]` 抵消 gutter，ArkUI **不能照搬**
-    ——子元素 `width('100%')` 相对父内容盒解析，负 margin 只位移不加宽（群详情封面加左右 −20vp
-    后实测仍是 x=70..1186 / 屏宽 1256）。当前约定：封面/hero 与下方内容同宽；确需通栏要把整页改
-    `noHorizontalPadding: true` + 各区块自加 gutter（已登记例外）。
-  - **症状对照**：各页正文左边缘不在同一条竖线上、滑动时内容左右边界跳动、页头标题比正文多缩进一截
-    ——都是本规则被违反的表现（实测于 2026-10-11：25 个页面里同时存在 16/20/24/32 四套留白）。
-- **页面纵向节奏（强制）**：分区之间 `PAGE_SHELL.SECTION_GAP`(24) 用**底距**且**每个分区都要有（含首块）**；
-  分区标题→其内容 `PAGE_SHELL.SECTION_INNER_GAP`(12)；页头→首块 `PAGE_SHELL.PAGE_TOP_GAP`(16)。
-  - 24 : 12 = 2:1 是必需的层次比：分区之间不明显大于标题内距，标题就会飘在两块之间、整页读不出分组。
-  - 用「上距」或漏给首块加底距，会让标题上方间距随各卡片自身 padding 变化，同类标题间距不一致
-    （实测于 2026-10-11：首页三个分区底距曾混用 20/20/24，且首块统计卡完全没有底距）。
-- **页头字号档统一（强制）**：全站 `SystemPageHeader.titleSize` 统一 `FONT.SIZE.XXL`(24)
-  ——前端各页实测均为 `desktop ? 'xl'(20) : '2xl'(24)`，**无 3xl 用法**。
-  禁止顶级 Tab 页用 XXXL(30)、二级页用 XXL(24) 的分档（同机切换页面标题大小会跳动，
-  违反者实测于 2026-10-11：首页/附近曾用 XXXL）。
-- **列表分组容器（ListGroup，强制）**：任何「可重复的同类条目集合」（设置项、关系列表、搜索结果、群组/分享/订阅/账号列表、公告列表）一律走
-  `components/ListGroup`（`bordered` 默认 true = 开放页面区域的唯一一层分组外框卡）+ 行间
-  `ListRowDivider` / `ListItemGroup.divider`，**禁止给每一行加边框/圆角/投影**（那就是「一行一张浮卡」，
-  整屏看起来所有内容都在漂浮）。`bordered=false` 用于嵌入面板/Sheet/侧栏内的集合。
-  - 判定依据（官方规范原文）：M3 Cards guidelines「Don't force content into cards when spacing,
-    headlines, or dividers would create a simpler visual hierarchy」；M3 Lists「Use gaps for
-    contained lists / Limit dividers to uncontained lists」；Apple HIG Layout「negative space,
-    container shapes, or separator lines」三选一、HIG Materials「Don't use Liquid Glass in the
-    content layer」；HarmonyOS `ListItemGroupStyle` 默认就是 NONE（无卡片），卡片是显式开关；
-    NN/g「homogenous items → 标准竖排列表，不要卡片」。
-  - **卡片只留给「单一主题、内容异构、可独立存在」的块**：动态卡（MomentFeedCard / MomentWallCard）、
-    群组封面卡（NearbyImageCard）、统计/仪表盘块、空态卡、页面级 hero 卡。
-  - 分组外框静态投影一律 `surfaceShadow`（白卡档），**禁止 `elevatedShadow`**（弹层/FAB 档）；
-    行本身无投影、无边框、无圆角，只有按压填充（`surfaceSubtle`）。
-  - 设置页专用分组卡 `SettingsSectionCard` 已按同一契约实现，新设置分组直接复用。
-  - **横向留白按列表形态二分（实测 2026-10-11，踩过的坑）**：容器已提供 gutter 后，
-    - **扁平列表**（无卡片外框，行直接铺在页面底色上，如消息会话列表）→ **行不得有
-      `left`/`right` padding，列表也不得有横向 `margin`**；否则行内容比页头多缩进
-      一个 gutter（实测消息页曾多 16~36vp，「消息」标题 x=73 而「最近」标签 x=109）。
-      行间分隔线用 `startMargin: 0`。
-    - **分组卡片**（`ListGroup`/`ListItemGroup` 带底色+描边+圆角，如群列表/订阅/账号管理）
-      → **卡片去掉横向外边距**（与外层内容同宽），**行内 padding 保留**（那是卡片内边距）。
-      卡片自带 `margin LG` 会让卡片比页头窄 32vp、卡内内容窄 64vp。
-    - 页面级元素（退出登录按钮、搜索框、升级表单）同样不得自加横向 padding：
-      实测个人中心升级表单自带 `XXL(32)` 叠加容器 gutter 后达 52vp。
-    - 分组标题（`SettingsGroupLabel`）也不得自加 `left`，否则比分组卡多缩进（实测 91 → 70）。
+- **视觉结构同步约定**：前端 `components/home|messages|profile/` 下组件与鸿蒙 `components/`、`features/*/` 对应实现构成 design-system.md 第 13 节映射表——修改任一端的**共享组件**（视觉契约：布局/字号档/圆角档/投影/动效）时，必须检查映射表对端并同步，commit message 中注明「对齐 <前端组件/commit>」；仅平台适配差异（如 FAB 位置、安全区）可不同步但需在两端代码注释中互指。
+- **页面头部（强制 SystemPageHeader）**：所有页面头部必须用 `SystemPageHeader`（或专用组件 `SearchPageHeader` / `ChatPageHeader`）；禁止手搓 `Row { Text(...).fontSize(XL)... Button(...) }` 头部。已登记例外（无标准页面头部）：登录页 `LoginPage`（无主壳）、主壳 `Index`（容器）、地图全屏 `LocationPickerPage`、图片全屏预览 `PhotoPreviewPage`、分享解析中间页 `ShareResolutionPage`（无内容 UI，仅 loading/错误/跳转）、调试面板 `DebugPanel`；`SettingsSupport.ets` 等仅导出页面子组件的文件不算页面。API：`title` / `subtitle` / `showBackButton`+`onBack` / `action`(文本按钮) / `leftAction`+`rightAction`(IconAction，`kind: 'primary'|'surface'|'neutral'`) / `trailing`(@BuilderParam 任意尾随) / `titleAlign` / `titleSize` / `titleWeight` / `backgroundVariant`('bar'|'transparent'|'card')。**页头图标钮跨端口径**：品牌头（首页）= ghost（`kind:'neutral'`，前端 `variant="ghost"`）；标准内页 PageHeader trailing = surface（`kind:'surface'`，前端默认 `variant="surface"`）。web 移动端首页只有「搜索 + 通知」两枚，地图入口在附近域页头；鸿蒙同步移除首页地图钮。安全区由 SystemPageHeader 内聚（自带 `@StorageLink('safeAreaTop')` + `expandSafeArea`），页面无需重复写。内联搜索框头部 → `SearchPageHeader`；浮动卡片+头像头部 → `ChatPageHeader`。
+- **页面内容栏（PageShellContainer）**：强制使用；档位数值（form/narrow/default/wide + feed 两档）见 design-system.md 第 12 节与本文「PageShellContainer 档位选择」。
+- **页面横向 gutter（唯一来源）**：横向留白**只能**由 `PageShellContainer` 提供（手机 16 / 平板 24 / 桌面 28，对齐前端 `--cst-page-gutter`；手机档由 20 收紧至 16，对齐 iOS inset grouped 16pt / Material 16dp 主流下限，两端同步）。**禁止**双重留白（容器 gutter + 页面自加 left/right padding，会叠成 36~40，与只用容器 gutter 的页面差 16~20vp）；**禁止**用 `noHorizontalPadding: true` 关掉容器留白再另写一套值。`SystemPageHeader` 只带纵向节奏、不自带横向 padding。
+  - **通栏元素的坑**：前端用 `-mx-[var(--cst-page-gutter)]` 抵消 gutter，ArkUI **不能照搬**——子元素 `width('100%')` 相对父内容盒解析，负 margin 只位移不加宽（群详情封面加左右 −20vp 后实测仍是 x=70..1186 / 屏宽 1256）。当前约定：封面/hero 与下方内容同宽；确需通栏要把整页改 `noHorizontalPadding: true` + 各区块自加 gutter（已登记例外）。
+  - **症状对照**：各页正文左边缘不在同一条竖线上、滑动时内容左右边界跳动、页头标题比正文多缩进一截——都是本规则被违反的表现（实测 25 个页面里同时存在 16/20/24/32 四套留白）。
+- **页面纵向节奏（强制）**：分区之间 `PAGE_SHELL.SECTION_GAP`(24) 用**底距**且**每个分区都要有（含首块）**；分区标题→其内容 `PAGE_SHELL.SECTION_INNER_GAP`(12)；页头→首块 `PAGE_SHELL.PAGE_TOP_GAP`(16)。24 : 12 = 2:1 是必需的层次比：分区之间不明显大于标题内距，标题就会飘在两块之间、整页读不出分组。用「上距」或漏给首块加底距，会让标题上方间距随各卡片自身 padding 变化，同类标题间距不一致（实测首页三个分区底距曾混用 20/20/24，且首块统计卡完全没有底距）。
+- **页头字号档统一（强制）**：全站 `SystemPageHeader.titleSize` 统一 `FONT.SIZE.XXL`(24)——前端各页实测均为 `desktop ? 'xl'(20) : '2xl'(24)`，**无 3xl 用法**。禁止顶级 Tab 页用 XXXL(30)、二级页用 XXL(24) 的分档（同机切换页面标题大小会跳动；违规者实测首页/附近曾用 XXXL）。
+- **列表分组容器（ListGroup，强制）**：任何「可重复的同类条目集合」（设置项、关系列表、搜索结果、群组/分享/订阅/账号列表、公告列表）一律走 `components/ListGroup`（`bordered` 默认 true = 开放页面区域的唯一一层分组外框卡）+ 行间 `ListRowDivider` / `ListItemGroup.divider`，**禁止给每一行加边框/圆角/投影**（那就是「一行一张浮卡」，整屏看起来所有内容都在漂浮）。`bordered=false` 用于嵌入面板/Sheet/侧栏内的集合。
+  - 判定依据（官方规范原文）：M3 Cards guidelines「Don't force content into cards when spacing, headlines, or dividers would create a simpler visual hierarchy」；M3 Lists「Use gaps for contained lists / Limit dividers to uncontained lists」；Apple HIG Layout「negative space, container shapes, or separator lines」三选一、HIG Materials「Don't use Liquid Glass in the content layer」；HarmonyOS `ListItemGroupStyle` 默认就是 NONE（无卡片），卡片是显式开关；NN/g「homogenous items → 标准竖排列表，不要卡片」。
+  - **卡片只留给「单一主题、内容异构、可独立存在」的块**：动态卡（MomentFeedCard / MomentWallCard）、群组封面卡（NearbyImageCard）、统计/仪表盘块、空态卡、页面级 hero 卡。
+  - 分组外框静态投影一律 `surfaceShadow`（白卡档），**禁止 `elevatedShadow`**（弹层/FAB 档）；行本身无投影、无边框、无圆角，只有按压填充（`surfaceSubtle`）。设置页专用分组卡 `SettingsSectionCard` 已按同一契约实现，新设置分组直接复用。
+  - **横向留白按列表形态二分**（踩过的坑）：容器已提供 gutter 后——**扁平列表**（无卡片外框，行直接铺在页面底色上，如消息会话列表）行不得有 `left`/`right` padding，列表也不得有横向 `margin`；否则行内容比页头多缩进一个 gutter（实测消息页曾多 16~36vp，「消息」标题 x=73 而「最近」标签 x=109），行间分隔线用 `startMargin: 0`。**分组卡片**（`ListGroup`/`ListItemGroup` 带底色+描边+圆角，如群列表/订阅/账号管理）卡片去掉横向外边距（与外层内容同宽）、行内 padding 保留（那是卡片内边距）；卡片自带 `margin LG` 会让卡片比页头窄 32vp、卡内内容窄 64vp。页面级元素（退出登录按钮、搜索框、升级表单）同样不得自加横向 padding（实测个人中心升级表单自带 `XXL(32)` 叠加容器 gutter 后达 52vp）；分组标题（`SettingsGroupLabel`）也不得自加 `left`，否则比分组卡多缩进（实测 91 → 70）。
 
-### 页面路由对齐（web → harmony）
+## 页面路由对齐（web → harmony）
 
-- 目录命名对齐前端路由域（复数）：`features/messages`（消息列表）/
-  `features/moments`（瞬间）/ `features/groups`（群组）/ `features/me`（个人中心，
-  同时承载前端 `/users/[userId]` 他人主页查看——同一 ProfilePage 复用，属平台例外）/
-  `features/nearby` / `features/settings` / `features/search` / `features/map` /
-  `features/auth` / `features/chat`（聊天窗口独立域）。
-- 底栏 4 tab：首页 / 附近 / 消息 / 我的（`PhoneLayout` TAB_ITEMS + `AppNavigation.BOTTOM_TABS`，
-  与前端 `routes/(app)/+page.svelte`、`/nearby` 聚合页对齐）。
-- 桌面侧边栏：首页 / 附近瞬间（moments tab）/ 附近的人 / 附近群组 + 消息 / 通知 overlay /
-  我的瞬间 / 我的群组 / 关系（对齐前端 desktop nav：home / nearby-people / nearby-groups /
-  nearby-moments——2026-10-22 web 侧栏已拆为三个邻近入口——messages / moments /
-  my-groups / relationships；web 通知走顶栏铃铛，不在侧栏）。
-- 消息列表：排序 = 置顶优先 → 最新一条消息时间倒序（`last_message.sent_at` 优先，
-  回退 `last_activity_at`），已读/未读不参与排序；列表头部有「全部 / 未读 / 已读」过滤
-  （`TabsPillGroup`，对齐前端 messages 页 TabBar）；点击未读会话后徽章立即清零。
-- 聊天记录：消息按 `sent_at` 正序渲染（越新越靠下，对齐前端 useChat 翻转）；
-  跨天自动插入日期胶囊（`FormatUtil.formatDateLabel` → 今天/昨天/M月D日，
-  对齐前端 groupMessagesByDay/formatDateLabel）。
-- 动态详情：点赞/收藏/分享/评论（评论列表 + 乐观发布，对齐前端 MomentDetailPage）。
-- 附近聚合页 `NearbyPage` 三区块「查看全部」分别 push `NEARBY_USERS` /
-  `NEARBY_GROUPS` / `NEARBY_MOMENTS`（MomentsFeedPage 已注册为路由页，push 场景
-  带返回按钮，对齐前端 `/nearby/people|groups|moments`）。
-- 搜索页 Tab：全部 / 用户 / 动态 / 话题（话题从动态标签聚合，对齐前端搜索
-  全部/用户/动态/话题）；群组 Tab 为鸿蒙端扩展（前端搜索无群组 Tab）。
-  空查询显示发现态（最近搜索 / 正在关注 / 推荐话题，对齐前端 SearchDiscovery）；
-  最近搜索持久化在 PreferencesUtil（键 `search_recent`，最多 5 条）。
-- WS 事件类型与 spec/前端对齐：含 `GroupMessageReadCountUpdated` /
-  `GroupMemberRoleChanged`（已登记类型与订阅，展示由群详情/聊天页按需刷新）。
+目录命名对齐前端路由域（复数）、底栏 4 tab / 桌面侧边栏 IA、消息列表排序、聊天记录正序与日期胶囊、附近聚合页与搜索页 Tab、WS 事件类型等对齐事实见 `references/routing-map.md`。
 
 ## 组件原语强制（对齐前端 button/input 体系）
 
-- 通用文本操作按钮必须用 `SystemButton`（variant=primary/secondary/outline/ghost/danger，
-  surface/surface-danger，size=small/default/large/sheet，支持 loading/disabled/fullWidth）；禁止手写
-  `Button('文案') + backgroundColor/fontColor/height/borderRadius` 重复样式。
-- **危险操作分两档，别混用（实测 2026-10-12）**：
-  - `danger`（**实底 error 色 + 白字**）只用于**最终确认**：二次确认弹窗的
-    `SystemDialog.confirmVariant`、弹层里的确认键（如「封禁并移出」）。
-  - `surface-danger`（染色底 + error 文字 + 发丝描边，安静档）用于**行级/列表内**
-    的危险操作（账号行删除、消息/聊天操作表、退出群组、取消分享…）。
-  - 反例：账号管理页每行一个实底 `danger`，眯眼测试下整页形成一列刺眼红色块，
-    视线被破坏性操作抢走、观感像警报页。NN/g《Visual Hierarchy》：「Reserve warm bright
-    colors, like red, for warnings or errors」——最强颜色档必须留给真正的警示。
-- 通用单行输入框必须用 `SystemInput`（前缀图标/清除按钮/错误态）；登录/表单等
-  密码框可用 `SystemInput({ passwordMode: true })`。
+- 通用文本操作按钮必须用 `SystemButton`（variant=primary/secondary/outline/ghost/danger/surface/surface-danger，size=small/default/large/sheet，支持 loading/disabled/fullWidth）；禁止手写 `Button('文案') + backgroundColor/fontColor/height/borderRadius` 重复样式。
+- **危险操作分两档，别混用**：`danger`（**实底 error 色 + 白字**）只用于**最终确认**（二次确认弹窗的 `SystemDialog.confirmVariant`、弹层里的确认键，如「封禁并移出」）；`surface-danger`（染色底 + error 文字 + 发丝描边，安静档）用于**行级/列表内**的危险操作（账号行删除、消息/聊天操作表、退出群组、取消分享…）。反例：账号管理页每行一个实底 `danger`，眯眼测试下整页形成一列刺眼红色块，视线被破坏性操作抢走、观感像警报页（NN/g：最强颜色档必须留给真正的警示）。
+- 通用单行输入框必须用 `SystemInput`（前缀图标/清除按钮/错误态）；登录/表单等密码框可用 `SystemInput({ passwordMode: true })`。
 - **其余基础原语清单（唯一登记处，docs/design-system.md 第 13 节引用此处）**：
 
   | 原语 | 用途 / 关键约束 |
@@ -150,222 +59,44 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
   | `components/layout/AmbientBackdrop` | 氛围画布（三主题世界层，装饰层唯一实现）；单 Canvas 静态一次性绘制、`hitTestBehavior(None)`、`accessibilityLevel('no')`；统一挂载 `PageShellContainer`（`fillHeight=true`）内，页面禁止自建第二套背景装饰。token 为 `ThemeConstants.AMBIENT`（6 组合 × 12 色，对齐 web `--cst-ambient-*`，见 design-system 第 16 节） |
   | `components/states/EmptySpotlight` | 场景化空态装饰层（超大空态专用，配合 `EmptyState({ spotlight: true })`）；几何 320 光晕 + 288/168 双环 + 4×4 四向星点@±102，纯 ambient token、无动画、不拦截触摸/不进读屏。`EmptyState` 的 `spotlight` 默认 false，小面板空态不得开启 |
   | `components/states/Skeleton` / `SkeletonShimmer` | 列表/信息流首屏骨架屏（几何基准：行内 12、前导圆 36/40/44/48、文本条 14·55% + 11·35%、条间距 8、圆角 12；脉冲 1500ms）；分页/表单等短促场景保留 `LoadingMoreIndicator`/`LoadingProgress` |
-  | `components/media/MediaOverlay` | 整卡图片卡覆盖层原语（2026-10-27 Round 2）：`CardScrimTop`(96vp/.60→透明)、`CardScrimBottom`(58%/.88→.60@42%→透明@78%)、`CardFallbackBackground`（主题渐变+≤.10 水印）、`MediaOverlayBadge`（深色强遮罩胶囊+白字）、`MediaActionButton`（白图标/计数、热区 44）。色值只取 palette 的 `cardScrim*`/`mediaScrimStrong`；禁止页面写 rgba |
-  | `components/TabsPillGroup` | Tab 原语。**选中态不得只依赖颜色**（2026-10-27）：`segmented` 选中 = accent 实底 + ✓(`AppIcon.CHECK`) + semibold；`pills` 选中 = semibold（accent-soft 底）；`underline` 选中 = semibold + 下划线。需过灰度截图验收 |
-- 已登记例外（可保留手写原生控件）：头像/图形按钮、地图全屏控件、搜索建议行、
-  动态卡片内嵌操作、主题色板 swatch、扫描/贴纸等特殊控件。存量页面中的手写
-  Button/TextInput 属遗留债务，改到该文件时优先迁移为原语。当前存量例外清单：
-  - ProfilePage 外部主页/升级/编辑流程按钮（走 `getProfileVisualStyle()` 主题样式对象，
-    已 token 化，不套 SystemButton）；
-  - 创建页「移除」等 48vp 大 chip、群组详情「恢复原头像」ghost 小按钮；
-  - SettingsPage「退出登录」（50vp 透明底定制）、DebugPanel 调试按钮；
-  - ChatPage 隐藏键盘失焦占位 `Button('')`、LocationPicker 搜索栏内置 searchButton；
-  - ProfileEditPage 多行简介输入辅助、ChatPage 输入栏（含发送钮 `Button('发送')` 属已登记例外 — 需 ChatTheme/getChatVisualStyle 定制动效与 isSendInteractive 动态态，见 ChatPage.ets 顶部“聊天发送钮属已登记例外”注释）、CreateGroupPage 人数步进输入。
+  | `components/media/MediaOverlay` | 整卡图片卡覆盖层原语：`CardScrimTop`(96vp/.60→透明)、`CardScrimBottom`(58%/.88→.60@42%→透明@78%)、`CardFallbackBackground`（主题渐变+≤.10 水印）、`MediaOverlayBadge`（深色强遮罩胶囊+白字）、`MediaActionButton`（白图标/计数、热区 44）。色值只取 palette 的 `cardScrim*`/`mediaScrimStrong`；禁止页面写 rgba |
+  | `components/TabsPillGroup` | Tab 原语。**选中态不得只依赖颜色**：`segmented` 选中 = accent 实底 + ✓(`AppIcon.CHECK`) + semibold；`pills` 选中 = semibold（accent-soft 底）；`underline` 选中 = semibold + 下划线。需过灰度截图验收 |
 
-- **ArkUI 陷阱复查（2026-10-26 实拍）**：`.border({width,color})` 若写在 `.borderRadius(...)` 之后会把圆角重置为 0（双环/圆钮会变方框）——装饰层双环、圆点等一律先 `.border()` 后 `.borderRadius()`；改完端上放大截图确认。
+- 已登记例外（可保留手写原生控件）：头像/图形按钮、地图全屏控件、搜索建议行、动态卡片内嵌操作、主题色板 swatch、扫描/贴纸等特殊控件。存量页面手写 Button/TextInput 属遗留债务，改到该文件时优先迁移为原语。当前存量例外清单：ProfilePage 外部主页/升级/编辑流程按钮（走 `getProfileVisualStyle()` 主题样式对象，已 token 化，不套 SystemButton）；创建页「移除」等 48vp 大 chip、群组详情「恢复原头像」ghost 小按钮；SettingsPage「退出登录」（50vp 透明底定制）、DebugPanel 调试按钮；ChatPage 隐藏键盘失焦占位 `Button('')`、LocationPicker 搜索栏内置 searchButton；ProfileEditPage 多行简介输入辅助、ChatPage 输入栏（含发送钮 `Button('发送')`，需 ChatTheme/getChatVisualStyle 定制动效与 isSendInteractive 动态态，见 ChatPage.ets 顶部「聊天发送钮属已登记例外」注释）、CreateGroupPage 人数步进输入。
+- **ArkUI 陷阱：`.border()` 写在 `.borderRadius()` 之后会把圆角重置为 0**（双环/圆钮会变方框）——装饰层双环、圆点等一律先 `.border()` 后 `.borderRadius()`；改完端上放大截图确认（实拍案例：ProfilePage 升级表单「取消」直角 vs「确认升级」胶囊）。
 
-## 内容软岛（Round 3，两端同 spec）
+## 内容软岛与整卡图片卡（两端同 spec，鸿蒙实现）
 
-- 形态：`ListGroup`/`SystemCard` = `surfaceIsland` + `surfaceShadow` + `SHAPE.CARD`(20) + padding 8、
-  行透明 + 行间距 2、行内 hover 填充离岛边 8；**禁止 1px hairline 全框**。`SettingsSectionCard` 同。
-- `surfaceIsland` 与 web `--cst-surface-island` 逐值一致（light = `withAlpha(surfaceBackground,0.86)`；
-  dark = `mixOpaque(surfaceBackground,0.94,textPrimary,0.06)`；6 套组合，`check_surface_parity.py` 6/6）。
-- 按钮安静化：次级动作 `withAlpha(surfaceSubtle,0.60)` 软填底、无描边、hover 全量；主操作 accent 实底；
-  危险 soft danger；同级动作不混用描边/软填。
-- 页面级硬线清零：`SystemPageHeader`/自定义页头/分区头不得有 1px 底线（功能线：聊天输入条/粘底条/
-  表格行/消息分栏发丝线）。
+- **内容软岛**：`ListGroup`/`SystemCard` = `surfaceIsland` + `surfaceShadow` + `SHAPE.CARD`(20) + padding 8、行透明 + 行间距 2、行内 hover 填充离岛边 8；**禁止 1px hairline 全框**；`SettingsSectionCard` 同。`surfaceIsland` 与 web `--cst-surface-island` 逐值一致（light = `withAlpha(surfaceBackground,0.86)`；dark = `mixOpaque(surfaceBackground,0.94,textPrimary,0.06)`；6 套组合，`check_surface_parity.py` 6/6）。按钮安静化同 web：次级动作 `withAlpha(surfaceSubtle,0.60)` 软填底、无描边、hover 全量；主操作 accent 实底；危险 soft danger；同级动作不混用描边/软填。页面级硬线清零：`SystemPageHeader`/自定义页头/分区头不得有 1px 底线（功能线：聊天输入条/粘底条/表格行/消息分栏发丝线）。页面结构与网络端同一套规则，见 skill `hotspot-frontend-layout`「内容软岛」。
+- **整卡图片卡**（用户明确要求「图片占满整个卡片、信息覆盖在图上」；与 `docs/design-system.md` §17 同源，视觉细则见 skill `hotspot-frontend-style`「媒体与图片」）：适用 `MomentFeedCard variant='overlay'`（首页 feed，4:5）、`NearbyImageCard mediaOverlay`（网格 3:4，含附近三叶/我的瞬间/我的群组/群组精选）；`horizontal` 横排两段式保留为列表例外。卡片无 border、圆角 `SHAPE.CARD`(20)；图片 object-cover 铺满；顶部作者行/徽章 + 底部标题/元信息/白图标操作行压在图；位置只在右上出现一次；多图首图 + 1/N 徽章；无图 fallback = 主题渐变 + ≤.10 水印 + 主题色文字（不压白字）。压图文字对比度 ≥4.5:1（字形区像素实测，亮暗都测）；徽章深色强遮罩 + 白字；点赞/收藏状态用「填充形状 + 白描边」不只色相；操作热区 ≥44。骨架屏同步：`Skeleton` 的 feed 形态按整卡形状（图片块 + 底部文本条），骨架→内容零位移。
 
+## 主题、A11y 与触控验收
 
-## 整卡图片卡（Round 2，两端同 spec）
+- **不要用「底色明度差」判断卡片层次**：前端 `semantic.css` 已明文规定 `--cst-surface-page` 是唯一整层底色；页面级容器不画框后，层级只靠**内容单元软岛**（`surfaceIsland` 表面 + `surfaceShadow` + 圆角 20，无 hairline 描边，如 `ListGroup`/`SystemCard`/设置分组卡/通知列表岛）与留白表达。因此清野主题下 `pageBackground == surfaceBackground`（浅色深色都是 `#F6F7F3` / `#161A16`）**是刻意设计，不是缺陷**，不要为了「拉开层次」去改底色（会破坏跨端色彩校验）。深色下的层级靠**加亮的描边**承载（`ThemeConstants.ets` 注释：深色下黑阴影对比弱，卡片抬升改用更亮的描边，阴影只做轻微加深）；`borderColor` 是 `#AARRGGBB`，验收要算**与底色合成后**的颜色再求对比度（不能只看 alpha）。量化基线（文字对比度、描边合成比、6 组合主题矩阵、forest light 软岛覆写、harmony-only `textTertiary`）见 `references/theme-baselines.md`。
+- **无障碍名称**：`dumpLayout` 不暴露 accessibilityText（description 恒空），验收采用「源码级 onClick↔accessibilityText 覆盖扫描 + 运行期结构」；新增可点控件必须显式 `accessibilityText`（纯图标钮/复合卡/中央发布钮等）。
+- **触控**：有效热区 ≥44vp（`responseRegion` 外扩、视觉不变）；chip/输入框/地图 marker 等登记例外；边缘 tap 实测（视觉边界外仍命中）验证。原语层已强制：`MIN_HIT_TARGET = 44`（`DesignConstants.LAYOUT`）、`SurfaceIconButton` 外框取 `max(buttonSize, MIN_HIT_TARGET)`、`.responseRegion(...)`（首页 tab 行、消息行、瞬间卡标签、发布页等，行高压到 20vp 也能外扩到 44 不占布局）。**实测剩余缺口（backlog）**：区块标题右侧「查看全部 / 探索群组 / 更多动态」是 `Row.onClick`（文字 ~17vp 高），有效热区低于 44；修法需结构调整（`responseRegion` 在百分比宽度行上无法简单外扩），优先级低（次级跳转、无相邻可点元素、误触代价小）。审计方法：`uitest dumpLayout` 后按 `clickable=true` 过滤节点取 `bounds`，与 `44vp × 屏幕缩放（本机 3.5x ≈ 154px）` 对比，排除整行可点（宽 >900px）。
+- **真机限制**：TalkBack / 系统 reduced-motion 开启路径 / 焦点环像素需真机；离线时标注未验证并保留复现步骤。
 
-用户明确要求「图片占满整个卡片、信息覆盖在图上」。硬约束（与 `docs/design-system.md` §17 同源）：
+## 焦点环与减少动态
 
-- 适用：`MomentFeedCard variant='overlay'`（首页 feed，4:5）、`NearbyImageCard mediaOverlay`（网格 3:4，
-  含附近三叶/我的瞬间/我的群组/群组精选）；`horizontal` 横排两段式保留为列表例外。
-- 卡片无 border、圆角 `SHAPE.CARD`(20)；图片 object-cover 铺满；顶部作者行/徽章 + 底部标题/元信息/
-  白图标操作行压在图 上；位置只在右上出现一次；多图首图 + 1/N 徽章；无图 fallback = 主题渐变 +
-  ≤.10 水印 + 主题色文字（不压白字）。
-- 压图文字对比度 ≥4.5:1（字体区像素实测，亮暗都测）；徽章深色强遮罩 + 白字；点赞/收藏状态
-  用「填充形状 + 白描边」不只色相；操作热区 ≥44。
-- 骨架屏同步：`Skeleton` 的 feed 形态按整卡形状（图片块 + 底部文本条），骨架→内容零位移。
+- **键盘焦点环**：口径 `focusBox`，**2vp accent 描边 + 2vp 外距**（颜色取 `palette.accentBackground`），对齐 web `ring-accent 2px offset 2`；不新造颜色档。实现 `core/accessibility/FocusRing.ets` 的 `FocusRing.box(accentHex)`；`SystemButton` / `SurfaceIconButton` / `Pressable` 已默认接入（`.focusable(true)` + `.focusOnTouch(false)` + `.focusBox(...)`）。输入：`SystemInput` / `SystemTextArea` 聚焦用 **2vp accent 边框**（与 focusBox 等价的可见焦点；避免被输入容器 `.clip(true)` 裁切）。新增可聚焦自定义卡片/行：`.focusable(true).focusOnTouch(false).focusBox(FocusRing.box(getPalette().accentBackground))`；父容器需有 ≥2vp padding（ListGroup 默认 padding 8），否则焦点环会被 `clip(true)` 裁切。验证：编译 + 布局树/代码参数；真机键盘 Tab 截图（真机离线时报告标注待真机）。
+- **减少动态 reduced-motion**：数据源 `AccessibilityManager.getInstance().shouldReduceMotion()`（系统「减少动态/移除动画」或应用内关闭动画）。实现 `core/accessibility/MotionUtil.ets`：`spring(response, damping)` reduced 时 `duration=0`；`pressScale(pressed, scale)` reduced 时恒为 1（不缩放）；`shimmerActive()` reduced 时 false（骨架不脉冲）。已接入 `SystemButton` / `SurfaceIconButton` / `Pressable` 按压动画、`SkeletonShimmer` 脉冲。要求：reduced 下禁用位移/缩放/脉冲，透明度淡入可保留；默认（false）行为必须与既有完全一致；新增动画一律走 `MotionUtil`，禁止裸写动画参数。
 
+## 动效与媒体
 
+- **动效唯一入口 `MotionUtil`**：`contentEnter`（180ms ease-out）、`statePop`（220ms，1→1.15→1，keyframeAnimateTo 两段）、`popScale`、`enterOffset`；`reduced` 时全部直接终态（duration 0 / scale 1 / offset 0）。禁止裸写 animateTo 参数或旧 150ms/1.3 手写 pop。内容进场：loading true→false / tab 切换 / 刷新时播，**冷启动首屏跳过、缓存命中不播**；只包内容层，不含页头/滚动容器/系统转场；无布局位移。状态 pop：点赞/收藏/关注/加入仅激活方向播，取消不播。验收：代码级检查 + reduced 分支证据（duration 0/直接终态）+ build/check:theme/parity/布局树；真机手感/中间帧像素待补。
+- **图片加载与 URL 优化**：`core/utils/ImageUrlUtil.ets` 与 web `lib/images.ts` 同规则——仅 `images.unsplash.com` 追加/覆盖 `auto=format&fit=crop&q=78&w=<width>`，其他域名原样。宽度档按显示尺寸 2x/2.5x（首屏大图 1080、卡片 900/800、头像 2x）。ArkUI 无 `fetchpriority/loading`：首屏前 2 张高清档 + 立即创建，`LazyForEach` 离屏不创建（平台差异已登记）。加载体验：占位（surfaceSubtle/accentMuted，不新增 shimmer）+ `onComplete` 渐显 200ms ease-out；`MotionUtil.reduced` 直接显示；失败 fallback 保持。新图片组件必须按此接入，禁止裸用远程原图。真机待核：首屏流量、头像 2x vs 3x、渐显像素、reduced 系统路径。
+- **媒体占位与降级**：`SystemAvatar` 占位层**始终渲染**（有 name 首字母 trim+slice(0,1)、无 name 人形图标；accentMuted 底 + textSecondary 字），Image 覆盖占位 + `onComplete` 渐显（`MotionUtil.reduced` 直接显示）；`onError` 保留占位不闪烁/不分支切换；decorative/alt 语义与尺寸不变。群封面/通知/搜索/rail/主页瞬间/详情/群 hero 等缩略图：底层占位（渐变/图标/首字母）+ 渐显 + 失败保留；有 Skeleton 的列表不叠加；不新增 token。新图片接入必须同时给「占位 + 失败降级 + 宽度档/URL 优化」；真机占位/渐显/失败像素待补。
 
-## 主题/深色验收：量化口径与实测基线（2026-10-12 实测）
+## 回顶、页头滚动与聊天滚动
 
-改主题、改颜色、或做深色验收时，**不要只看截图感觉**，用下面的量化口径跑一遍：
+- **页头滚动玻璃**：鸿蒙 TopBar 均在滚动容器外（`grep '.sticky('`=0），**N/A**；如未来引入 sticky 页头再按 web 口径实现并去掉常驻底。
+- **回顶**：`components/BackToTopButton.ets`（48vp、ARROW_UP、surface+hairline+shadow、opacity 180ms via MotionUtil/reduced 直接显隐、不可见禁触+无障碍树移除、label「回到顶部」）；已接 Home/Nearby/Notification/Search/MomentsFeed 5 页（阈值 1.5×视口高、scrollTo 300ms/reduced 0ms、右下避底栏/居中 FAB）；GroupPage/Profile/MyShares 待接。SPA 焦点/TalkBack 播报由系统处理（N/A 登记）；320/reflow 为 web-only（N/A）。
+- **聊天滚动与回底**：私聊/群聊共用 ChatPage：ListScroller + `onScrollIndex`（+列表头偏移）判定末条可见=近底；ArkUI List 无距底像素 API，平台差异已登记。规则：仅近底自动 `scrollToBottom` + `markAsRead`；上滑时不跳转、计数++、显示 `ChatJumpToBottomButton`；自己发送/初始/切换/分页保持滚底/视口；回底按钮 48vp、count>0 徽标（99+）、150ms via MotionUtil/reduced 直接、不可见禁触+移出 a11y、label 与计数一致；旧 78% 胶囊已删除。新增聊天/列表页时按此契约实现；真机上滑不跳/计数/按钮位置待补验。
 
-### 1) 文字对比度（WCAG 2.x）
-取 `ThemeConstants.ets` 每个主题块的 `pageBackground / surfaceBackground / textPrimary / textSecondary / textTertiary`，
-按 WCAG 相对亮度公式算比值，正文要求 **≥4.5:1**。本机实测基线（3 主题 × 2 明暗，全部达标）：
+## PageShellContainer 档位选择
 
-| 主题·模式 | primary | secondary | tertiary |
-|---|---|---|---|
-| 清野 浅/深 | 15.31 / 15.24 | 7.50 / 8.84 | 5.12 / 5.04 |
-| 星际 浅/深 | 14.12 / 16.19 | 5.41 / 8.93 | 4.74 / 5.35 |
-| 水墨 浅/深 | 12.84 / 13.99 | 4.82 / 7.02 | **4.68** / 5.20 |
-
-最低值是水墨浅色的 tertiary 4.68 —— **改任何 text/bg token 后必须重跑，低于 4.5 即回归**。
-
-### 2) 卡片与页面底色的层次：**不要用「底色明度差」判断**
-前端 `semantic.css` 已明文规定：`--cst-surface-page` 是唯一整层底色。**2026-10-27 Round 2 起
-页面级容器不再画框**（桌面/平板壳、顶栏、SystemPageHeader 都不得有包裹整页的描边/圆角/白底/硬分隔线）；
-层级只靠**内容单元软岛**（2026-10-27 Round 3：`surfaceIsland` 表面 + `surfaceShadow` + 圆角 20，
-**无 hairline 描边**，如 `ListGroup`/`SystemCard`/设置分组卡/通知列表岛）与留白表达。因此清野主题下
-`pageBackground == surfaceBackground`（浅色深色都是 `#F6F7F3` / `#161A16`）**是刻意设计，不是缺陷**，
-不要为了「拉开层次」去改底色（会破坏跨端色彩校验）。
-
-### 3) 深色下的层级靠**加亮的描边**承载
-`ThemeConstants.ets` 注释原文：「深色下黑阴影对比弱，卡片抬升改用更亮的描边承载
-（border 单独加亮），阴影只做轻微加深」。`borderColor` 是 `#AARRGGBB`，
-验收时要算**与底色合成后**的颜色再求对比度（不能只看 alpha）。实测基线：
-
-| 主题·模式 | 描边合成后 vs 底色 |
-|---|---|
-| 清野 浅 / 深 | 1.511 / 1.476 |
-| 星际 浅 / 深 | **1.271（偏弱）** / 1.414 |
-| 水墨 浅 / 深 | 1.463 / 1.553 |
-
-经验阈值：**≥1.35 清晰、1.2~1.35 偏弱、<1.2 过弱**。星际浅色 1.271 偏弱属跨端一致的
-既有设计（前端 `--cst-palette-border` 同值），**修要两端一起改**，不要只改鸿蒙端。
-
-
-## 「固定高度」审计的正确判据（2026-10-12 实测，避免误报/误改）
-
-本仓 skill 要求「固定高度容器（搜索框、菜单行、pill）改用最小尺寸约束，系统大字体时
-要能随内容撑高而不是截断」。据此审计全仓 **81 处** `.height(...)` 且块内含 Text 的位置，
-**逐一核实后判定为无缺口、不需要改动**。判据如下，下次别再重复怀疑：
-
-| 类别 | 例子 | 判定 |
-|---|---|---|
-| **图形容器**（只含 Icon/头像/徽章，无文字） | `EMPTY_ICON_SIZE`、`ICON_SIZE_MD`、`AVATAR_SIZE.*`、`UNREAD_BADGE_SIZE`、`LOADING_ICON_SIZE`、`DIALOG_ICON_TILE_SIZE` | ✅ **固定尺寸正确**——图形不随字体缩放，改 minHeight 反而错 |
-| **按钮 / 输入框** | `SystemButton`(BUTTON_HEIGHT*)、`SystemInput`(INPUT_HEIGHT)、`SearchPageHeader`(CHAT.INPUT_HEIGHT) | ✅ **固定高度正确**——前端同为固定高（`button.svelte` 用 `h-10`/`h-11`，全仓 `min-h-*` 仅 14 处且都是特殊场景）。控件固定高是跨端一致的既定契约 + 行业惯例，改成 minHeight 会破坏跨端一致 |
-| **可撑高容器** | `SystemTextArea`(`constraintSize({minHeight})`)、`EmptyState`(`EMPTY_FILL_MIN_HEIGHT`)、`CreateMomentSheet` 多行输入 | ✅ 已用 minHeight，正确 |
-| **热区扩展** | `TabsPillGroup`：视觉高度由内层固定、外层 `constraintSize({minHeight: MIN_HIT_TARGET})` 只扩命中区 | ✅ 正确范式，可作参考 |
-
-**审计脚本的坑**：「块内 N 行含 Text」这种粗判会把**图标容器**误报为「文本容器」
-（81 处里绝大多数是图标容器）——要按**该 height 所属元素自身**是否承载文字判断，
-不要用「附近有 Text」。
-
-
-## 交互反馈审计的判据（2026-10-12 实测，避免误报/误改）
-
-项目原则要求「交互状态一眼可辨：hover / focus / active / disabled 四态差异长在元素本体上」。
-按「可点元素链上是否有反馈」做全仓审计，得到 21 处候选，**逐一核实后判定全部为误报**——
-
-原因：按压反馈**不一定写在 onClick 所在的那条属性链上**。以下都是合法承载方式：
-
-| 承载方式 | 例子 | 说明 |
-|---|---|---|
-| **组件内部承载** | `SystemCard({ clickable: true })` 外层再 `.onClick` | 卡片组件内部用 `isPressed` → `SCALE_PRESSED_CARD` + spring 动画 |
-| **状态驱动的样式** | `TabsPillGroup` 的 `.onClick` 只 dispatch | 反馈由 `hoveredIndex` / 选中态驱动背景与缩放（13 处相关代码） |
-| **属性开关** | `SystemIcon` 的 `clickable` | 反馈由使用方通过该开关启用 |
-| **聚焦态代替按压态** | `SystemInput` | 输入框交互靠 focus border 表达，**不需要**按压缩放 |
-| **父级行承载** | 设置行的 `.onClick` | 行组件统一提供按压填充（`surfaceSubtle`） |
-
-**结论：本仓交互原语（Pressable / SystemButton / SystemCard / SurfaceIconButton /
-SystemToggle / TabsPillGroup / SystemInput / 设置行）的反馈机制完备，无需补齐。**
-
-**审计脚本的坑**：用「onClick 所在属性链上是否出现 scale/onTouch/animation/backgroundColor」
-做启发式，误报率极高（本次 21/21 误报）——因为反馈常在**组件内部**或**由状态间接驱动**。
-要判断某处是否真缺反馈，必须**打开该组件与其使用上下文**看，不能只扫属性链。
-
-
-## 性能审计基线（2026-10-12 实测，全部无缺口）
-
-ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代码后按此回归）：
-
-| 项 | 结果 | 复核方法 |
-|---|---|---|
-| LazyForEach/ForEach 键稳定性 | **85/85 稳定** | 键函数是 ForEach 块**收尾行**的 `(item) => 表达式`；逐一核对均为稳定 ID（user_id/moment_id/session_id/图片 url）。两类含 index 的属合法：静态 tab 配置（`\`\${tab.label}-\${index}\``）、骨架占位（`conv-skeleton-\${i}`，键=字符串项自身，HomePage 的 `(_, s) => s` 同理） |
-| cachedCount | 12 处长列表全部配置（5~8） | grep cachedCount |
-| @Reusable | 18 个组件（含 MomentFeedCard/UserCard/EmptyState 等高频卡） | grep @Reusable |
-| Image 尺寸约束 | **20/20** 有 objectFit + 宽高/aspectRatio | 动态图全用 `.width('100%') + .aspectRatio() + objectFit(Cover) + alt + onError` 契约 |
-| 事件生命周期 | **9/9 组件 on/off 配对完整**（2026-10-12 补测） | interactionEventHub 订阅组件 4 个 + ChatPage 9on/9off + ProfilePage 双事件双注销 + NativeMapComponent（清定时器/清聚合层/**release 全部 PixelMap**）；地图监听挂组件自有 controller 随组件销毁。新增订阅时必须在 aboutToDisappear 注销同 handler 引用 |
-
-**审计脚本的坑（第三次验证同一规律）**：Image 约束检查报 3 处「缺尺寸」，实际都有
-`.width('100%') + .aspectRatio()` —— 脚本只认数字 `.width(N)/.height(N)`。
-启发式只产候选清单，判定必须人工开上下文；键函数要按「块收尾行」提取而非开头。
-
-
-### 4) 主题族运行时矩阵：**6 组合已全部实测通过**（2026-10-12 补齐）
-
-此前只有 vibrant 的明暗两态实测过，本日补齐 forest（清野）/ inkwash（水墨）× 明暗，
-用模拟器在设置页逐组合切换截图确认：
-
-| 组合 | 结果 |
-|---|---|
-| vibrant 浅/深 | ✅（此前多页实测） |
-| 清野 浅色 | ✅ 绿调米白底 #F6F7F3、深绿选中 pill 白字、图标徽章绿调 |
-| 清野 深色 | ✅ 绿调暗底 #161A16、**亮绿 pill + 深绿文字**（对比清晰）、徽章绿调 |
-| 水墨 浅色 | ✅（同批截图确认） |
-| 水墨 深色 | ✅ 暖黑底 #181A1C、珊瑚红 pill + 深色文字、徽章红调 |
-
-选中的明暗分段 pill 在深色下均为「亮 accent 底 + 深 accent 文字」——与静态对比度基线
-（第 1 节）一致。头像游客色不随主题变（身份色独立于主题 accent，业界惯例，非缺陷）。
-
-## ArkUI 布局陷阱（实拍确认，2026-10-13）
-
-两个真实踩过的渲染坑，都会造成「观感与代码意图不符」：
-
-### 1. `.border()` 写在 `.borderRadius()` 之后会重置圆角为直角
-
-- 现象：同一对并排按钮，无 border 的呈胶囊（borderRadius=999 生效），带 hairline border 的
-  呈直角矩形——尽管两者引用同一个 borderRadius 值（SHAPE.BUTTON=RADIUS.FULL）。
-- 根因：ArkUI 属性后设覆盖先设；`.border({width,color})` 自带的 radius 字段未显式给出
-  时按 0 生效，把先前 `.borderRadius()` 的值覆盖掉。
-- 修复：**`.border()` 一律写在 `.borderRadius()` 之前**（后设的 borderRadius 覆盖 border）。
-- 排查工具：`.workwork/global-border-scan.py`（扫「.border( 紧随 .borderRadius(」模式，
-  全仓曾报 66 处——是否真有视觉影响需逐例核实，部分元素本意即直角）。
-- 实拍案例：ProfilePage 升级表单「取消」直角 vs「确认升级」胶囊（commit d05aaacc）。
-
-### 2. Scroll 内容短于视口时默认垂直居中
-
-- 现象：短表单在 `Scroll{...}.layoutWeight(1)` 里「飘」在页中段，页头下方出现大空隙
-  （实measured：Scroll 高 597vp、内容 289vp，上下各留 154vp）。
-- 根因：Scroll 对小于滚动区的内容默认居中对齐。
-- 修复：表单类 Scroll 一律补 `.align(Alignment.Top)`（commit 1ae09938，升级表单）。
-- 排查：dump 里 Scroll bounds 与其内容 Column bounds 的 y1 不一致即为居中。
-
-### 3. Refresh 内容区结构与防抖动契约（2026-10-23 端上实测，彻底消除下拉刷新鬼畜晃动）
-
-- **必须显式配置 `.pullToRefresh(false)`（强制松手才刷新，晃动最核心根因）**：
-  ArkUI NEXT (API 12+) 的 `Refresh` 属性 `pullToRefresh` 默认值为 `true`！
-  这意味着一旦下拉位移超过 `refreshOffset`（默认 64vp），**不等用户手指松开，系统便立即启动刷新并执行吸附回弹动画**！
-  若用户手指仍在向下拉拽，**用户的触控向下拉伸与系统的吸附回弹动画在同一时刻发生剧烈对抗**（手指拉下→系统弹回→手指拉下→系统弹回），
-  形成每秒数十次的高频振荡（俗称「鬼畜晃动」）。
-  **修法**：必须显式配置 `.pullToRefresh(false)`，恢复标准移动端手势（下拉松手后才发起刷新），手指触摸期间绝对不自动吸附打断。
-- **嵌套滚动容器必须设置 `.edgeEffect(EdgeEffect.None)`**：
-  `List` 默认带有 `EdgeEffect.Spring`。当嵌套在 `Refresh` 内时，两个弹性阻尼系统同时响应垂直手势，产生双重弹簧手势竞争。
-  必须在内层 `List` 上显式设置 `.edgeEffect(EdgeEffect.None)`，弹性完全由外层 `Refresh` 单一容器统一接管。
-- **自定义刷新指示器统一使用全局锁高的 `builder: RefreshIndicator`**：
-  `EmptyState.ets` 导出的 `RefreshIndicator` 锁高 56vp（`MIN_HIT_TARGET + MD`）。
-  不要只传 `refreshingContent` 而缺省 `builder`：未配 `builder` 时，下拉阶段系统使用默认圆圈指示器，
-  进入刷新态才突变为自定义内容，两套指示器高度和布局在树中交替挂载，造成高度突变跳动。全站统一使用 `builder: RefreshIndicator`。
-- **列表项必须使用 `Pressable` 原语，禁止在行上写 `onTouch` 修改页面级 `@State`**：
-  在 `ListItem` 上手动写 `.onTouch` 修改父组件 `@State`，会在手指按下和滑动被 List 拦截为 Cancel 时频繁触发布局重算。
-  按压反馈统一收敛在 `Pressable` 内部，保持页面状态无抖动。
-- **列表页的 Refresh 内容区用 `List`，不要用 `Scroll{ Column{...} }`**：Refresh 下拉时
-  内容区高度会随指示器区域连续变化，Scroll 包裹动态 ForEach 在该过程中会重排失稳；改 `List` 后行布局稳定。
-  注意 `List` 的行距不要再用 `space`（活动行自带上下 padding，叠 space 会让节奏变松）。
-- **不要在 `Refresh.onOffsetChange` 里逐帧写 `@State`**（例如记录位移做渐显动画）：
-  状态更新会触发整页重建 → Refresh 重新计算位移 → 再次回调，形成反馈环。
-- 判定口径：端上连续截图（`snapshot_display` 循环）抓「下拉中 / 松手后 / 刷新中」三态，
-  看 spinner 相对页头的位置与内容行位移序列是否单调；不要只截静态终态。
-
-## 已知布局坑（2026-10-19 端上实测）
-
-- **裸 `{ }` 块不是容器**：在 `if/else` 分支里用裸块包裹布局（如把两栏 `if` 简化成
-  `else { { Column() {...}.layoutWeight(1) } }`）时，块内 `.layoutWeight()` **不生效**，
-  容器高度塌陷 → 内部 `WaterFlow`/`List` 高度为 0 → **页头（标题/计数/筛选）正常但内容一条不渲染**。
-  类型检查与编译都不会报错，必须端上或预览器确认。修法：删掉裸块，容器直接作为分支体。
-- 自查口径：任何"改完结构后内容区空白"的问题，先看分支体是不是裸块、`.layoutWeight()`
-  是否直接挂在**容器组件**上（Column/Row/List/WaterFlow）。
-
-## PageShellContainer 档位选择（2026-10-20 排查）
-
-宽度已统一收口在 `PageShellContainer`（禁止页面各自 `maxWidth`，架构正确），但**档位要按内容类型选**，
-选错会在平板/桌面只占中间一条：
+宽度已统一收口在 `PageShellContainer`（禁止页面各自 `maxWidth`），但**档位要按内容类型选**，选错会在平板/桌面只占中间一条：
 
 | 档位 | 宽度 | 适用 |
 |---|---|---|
@@ -376,123 +107,23 @@ ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代�
 | `default` | 1180 | 信息流/列表/枢纽/仪表盘（首页、消息、附近、群组、搜索、管理后台概览、订阅、公告、我的分享…）|
 | `wide` | 1320 | 大表格/管理后台宽页 |
 
-2026-10-20 修正：`SearchPage`、`AdminOverviewPage`、`MySharesPage`、`SubscriptionsPage`、
-`AnnouncementsPage`、`RelationshipHubPage` 由 `form` 改为 `default`（它们不是表单）。
+`SearchPage`、`AdminOverviewPage`、`MySharesPage`、`SubscriptionsPage`、`AnnouncementsPage`、`RelationshipHubPage` 曾从 `form` 改为 `default`（它们不是表单）。
 
-## 设计 token 对照 HarmonyOS 官方规范（2026-10-21 审计）
+## 长尾/后台页面软岛映射
 
-依据华为官方 UX/UI 规范（鸿蒙设计规范文档，经 DeepSeek 官方 tools/search 检索、tools/fetch 取原文核实）：
-系统通用圆角 **16vp**；卡片之间间距 **12vp**；卡片内主标题 **16sp** / 副标题 **12sp**（90% / 60% 不透明度）；
-默认鸿蒙黑体，单页不超过 2 种字体；卡片内最大字号 **24**。
+- 对应 web 长尾软岛化的鸿蒙落点：`MomentDetailPage` 单帖内容包软岛（surfaceIsland/20/shadow/clip），媒体大图圆角 24+shadow、九宫格 16+shadow，反馈容器/粘底操作条按功能线例外保留，加载态用骨架（媒体块+作者行+正文两行）；他人 `ProfilePage` 身份区软岛（20/p16/shadow），私信/已关注/备注按钮 surface 软填、关注 primary；`GroupDetailPage` hero 圆角 24+shadow+clip、Tab 内容一张软岛、行线保留（内容分隔例外）；`AdminOverviewPage` 权限卡/模块行软岛，其余后台页 web-only（N/A 登记）；首页 onboarding/HeroStats/轮播/附近人列表鸿蒙无对应组件（N/A，不强行造页面）。
+- 例外（保留功能边界）：媒体容器/九宫格圆角与阴影、输入框 2vp accent 焦点边、表格行线/内容分隔线、chip/badge、弹层/Sheet、地图控件、hero 封面裁切结构。验证：build + check:theme + 布局树；真机离线时阴影/焦点环/reduced-motion 开启路径标注待真机。
 
-本项目 `DesignConstants` 对照结果：
+## 审计基线与布局陷阱（指针）
 
-| 官方项 | 官方值 | 本项目 | 结论 |
-|---|---|---|---|
-| 卡片之间间距 | 12vp | `SPACING.MD = 12`（实测枢纽/首页卡片列 `space: SPACING.MD`） | ✅ 一致 |
-| 系统通用圆角 | 16vp | `RADIUS.MD = 16`（`COMPACT_CARD` / `INPUT` 用它） | ✅ 一致 |
-| 卡片主标题 | 16sp | `FONT.SIZE.LG = 16` | ✅ 有对应档 |
-| 卡片副标题 | 12sp | `FONT.SIZE.SM = 12` | ✅ 有对应档 |
-| 卡片内最大字号 | 24 | `XXL = 24`；更大的 `XXXL 30` / `HERO 36` 只用于页面级标题 | ✅ 限界内 |
+- 审计判据与假阳性规律（「固定高度」正确判据、交互反馈承载方式、性能审计基线：LazyForEach 键/cachedCount/@Reusable/Image 约束/事件生命周期）见 `references/audit-baselines.md`。
+- ArkUI 布局陷阱（`.border()`/`.borderRadius()` 顺序、Scroll 短内容居中、Refresh 防抖动契约、裸 `{ }` 块不是容器）见 `references/layout-pitfalls.md`。
+- web → harmony 页面路由对齐、底栏/侧栏 IA、消息列表排序与聊天记录、搜索页 Tab 等路由事实见 `references/routing-map.md`。
+- 设计 token 对照 HarmonyOS 官方规范与已登记有意偏差见 `references/theme-baselines.md`。
 
-**已登记的有意偏差（跨端统一，非缺陷）**
+## references
 
-1. **普通卡片圆角 20vp**（`SHAPE.CARD = RADIUS.LG`）而官方通用 16vp —— 对齐前端 `rounded-lg = 20`
-   跨端一致优先；紧凑卡/输入框仍用 16 与官方一致。
-2. **正文字号 14**（`FONT.SIZE.MD`）小于官方正文量级 16 —— 对齐前端 `text-md = 14`；
-   展示型标题仍走 20/24/30/36 档。
-
-新增页面/组件必须从现有档位取值，不得引入近邻档（13/15/18/22/28 已归并过一轮）。
-
-## 触控热区审计（2026-10-21 实测，设备 dump 量取）
-
-Huawei 移动端规范要求有效触控目标 **≥44vp**。本项目原语层已强制满足：
-
-| 机制 | 位置 | 效果 |
-|---|---|---|
-| `MIN_HIT_TARGET = 44` | `DesignConstants.LAYOUT` | 统一常量 |
-| `SurfaceIconButton` | 图标按钮原语 | 外框取 `max(buttonSize, MIN_HIT_TARGET)`，视觉小也不缩热区 |
-| `.responseRegion(...)` | 首页 tab 行、消息行、瞬间卡标签、发布页等 | 行高压到 20vp 也能外扩到 44（不占布局） |
-
-**实测剩余缺口（backlog，未修）**：区块标题右侧的「查看全部 / 探索群组 / 更多动态」是
-`Row.onClick`（文字 ~17vp 高），有效热区低于 44。修法需要结构调整（ArkUI 的 `responseRegion`
-在百分比宽度行上无法简单外扩）；优先级低——它是次级跳转、旁边没有相邻可点元素，误触代价小。
-
-**审计方法**：`uitest dumpLayout` 后按 `clickable=true` 过滤节点，取 `bounds` 的宽高，
-与 `44vp × 屏幕缩放（本机 3.5x ≈ 154px）` 对比。注意排除整行可点（宽 >900px）的行级目标。
-
-## 焦点环与减少动态（Round 4，2026-10-27 起强制）
-
-### 键盘焦点环 focus-visible
-
-- 口径：ArkUI `focusBox`，**2vp accent 描边 + 2vp 外距**（颜色取 `palette.accentBackground`），对齐 web `ring-accent 2px offset 2`；不新造颜色档。
-- 实现：`core/accessibility/FocusRing.ets` 的 `FocusRing.box(accentHex)`；`SystemButton` / `SurfaceIconButton` / `Pressable` 已默认接入（`.focusable(true)` + `.focusOnTouch(false)` + `.focusBox(...)`）。
-- 输入：`SystemInput` / `SystemTextArea` 聚焦用 **2vp accent 边框**（与 focusBox 等价的可见焦点；避免被输入容器 `.clip(true)` 裁切）。
-- 新增可聚焦自定义卡片/行：`.focusable(true).focusOnTouch(false).focusBox(FocusRing.box(getPalette().accentBackground))`。父容器需有 ≥2vp padding（ListGroup 默认 padding 8），否则焦点环会被 `clip(true)` 裁切。
-- 验证：编译 + 布局树/代码参数；真机键盘 Tab 截图（真机离线时报告标注待真机）。
-
-### 减少动态 reduced-motion
-
-- 数据源：`AccessibilityManager.getInstance().shouldReduceMotion()`（系统「减少动态/移除动画」或应用内关闭动画）。
-- 实现：`core/accessibility/MotionUtil.ets`：
-  - `spring(response, damping)`：reduced 时 `duration=0`；
-  - `pressScale(pressed, scale)`：reduced 时恒为 1（不缩放）；
-  - `shimmerActive()`：reduced 时 false（骨架不脉冲）。
-- 已接入：`SystemButton` / `SurfaceIconButton` / `Pressable` 按压动画、`SkeletonShimmer` 脉冲。
-- 要求：reduced 下禁用位移/缩放/脉冲，透明度淡入可保留；默认（false）行为必须与既有完全一致；新增动画一律走 `MotionUtil`，禁止裸写动画参数。
-## 长尾/后台页面软岛映射（Round 4，2026-10-27）
-
-- 对应 web 长尾软岛化的鸿蒙落点：
-  - `MomentDetailPage`：单帖内容包软岛（surfaceIsland/20/shadow/clip），媒体大图圆角 24+shadow、九宫格 16+shadow；
-    反馈容器/粘底操作条按功能线例外保留；加载态用骨架（媒体块+作者行+正文两行）。
-  - 他人 `ProfilePage`：身份区软岛（20/p16/shadow）；私信/已关注/备注按钮 surface 软填，关注 primary。
-  - `GroupDetailPage`：hero 圆角 24+shadow+clip；Tab 内容一张软岛；行线保留（内容分隔例外）。
-  - `AdminOverviewPage`：权限卡/模块行软岛；其余后台页 web-only（N/A 登记）。
-  - 首页 onboarding/HeroStats/轮播/附近人列表：鸿蒙无对应组件（N/A，不强行造页面）。
-- 例外（保留功能边界）：媒体容器/九宫格圆角与阴影、输入框 2vp accent 焦点边、表格行线/内容分隔线、
-  chip/badge、弹层/Sheet、地图控件、hero 封面裁切结构。
-- 验证：build + check:theme + 布局树；真机离线时阴影/焦点环/reduced-motion 开启路径标注待真机。
-## 主题/A11y/触控验收（Round 5，2026-10-27）
-
-- **forest light 软岛**：仅 `default_clean_light` 的 `surfaceIsland` = `mixOpaque(surfaceBackground 92%, textPrimary 8%)` = #E4E6E2；
-  其余 5 组公式不变；surface parity 6/6。`textTertiary` forest light 调为 #58645C（岛上 4.93），文档标注 harmony-only。
-- **无障碍名称**：`dumpLayout` 不暴露 accessibilityText（description 恒空），验收采用「源码级 onClick↔accessibilityText 覆盖扫描
-  + 运行期结构」；新增可点控件必须显式 `accessibilityText`（纯图标钮/复合卡/中央发布钮等）。
-- **触控**：有效热区 ≥44vp（`responseRegion` 外扩、视觉不变）；chip/输入框/地图 marker 等登记例外；
-  边缘 tap 实测（视觉边界外仍命中）验证。
-- **真机限制**：TalkBack / 系统 reduced-motion 开启路径 / 焦点环像素需真机；离线时标注未验证并保留复现步骤。
-## 图片加载与 URL 优化（Round 6，2026-10-27）
-
-- `core/utils/ImageUrlUtil.ets`：与 web `lib/images.ts` 同规则——仅 `images.unsplash.com` 追加/覆盖
-  `auto=format&fit=crop&q=78&w=<width>`，其他域名原样。宽度档按显示尺寸 2x/2.5x（首屏大图 1080、卡片 900/800、头像 2x）。
-- ArkUI 无 `fetchpriority/loading`：首屏前 2 张高清档 + 立即创建，`LazyForEach` 离屏不创建；report 登记平台差异。
-- 加载体验：占位（surfaceSubtle/accentMuted，不新增 shimmer）+ `onComplete` 渐显 200ms ease-out；`MotionUtil.reduced` 直接显示；
-  失败 fallback 保持。新图片组件必须按此接入，禁止裸用远程原图。
-- 真机待核：首屏流量、头像 2x vs 3x、渐显像素、reduced 系统路径。
-## 动效与状态反馈（Round 7，2026-10-27）
-
-- `MotionUtil` 是**唯一动画入口**：`contentEnter`（180ms ease-out）、`statePop`（220ms，1→1.15→1，keyframeAnimateTo 两段）、`popScale`、`enterOffset`；
-  `reduced` 时全部直接终态（duration 0 / scale 1 / offset 0）。禁止裸写 animateTo 参数或旧 150ms/1.3 手写 pop。
-- 内容进场：loading true→false / tab 切换 / 刷新时播，**冷启动首屏跳过、缓存命中不播**；只包内容层，不含页头/滚动容器/系统转场；无布局位移。
-- 状态 pop：点赞/收藏/关注/加入仅激活方向播，取消不播；旧手写模式已全部替换为 `MotionUtil.statePop`。
-- 验收：代码级检查 + reduced 分支证据（duration 0/直接终态）+ build/check:theme/parity/布局树；真机手感/中间帧像素待补。
-## 媒体占位与降级（Round 8，2026-10-27）
-
-- `SystemAvatar`：占位层**始终渲染**（有 name 首字母 trim+slice(0,1)、无 name 人形图标；accentMuted 底 + textSecondary 字），
-  Image 覆盖占位 + `onComplete` 渐显（`MotionUtil.reduced` 直接显示）；`onError` 保留占位不闪烁/不分支切换；
-  decorative/alt 语义与尺寸不变。
-- 群封面/通知/搜索/rail/主页瞬间/详情/群 hero 等缩略图：底层占位（渐变/图标/首字母）+ 渐显 + 失败保留；
-  有 Skeleton 的列表不叠加；不新增 token。
-- 新图片接入必须同时给「占位 + 失败降级 + 宽度档/URL 优化」；真机占位/渐显/失败像素待补。
-## 回顶与页头滚动（Round 9，2026-10-27）
-
-- 页头滚动玻璃：鸿蒙 TopBar 均在滚动容器外（`grep '.sticky('`=0），**N/A**；如未来引入 sticky 页头再按 web 口径实现并去掉常驻底。
-- 回顶：`components/BackToTopButton.ets`（48vp、ARROW_UP、surface+hairline+shadow、opacity 180ms via MotionUtil/reduced 直接显隐、不可见禁触+无障碍树移除、label「回到顶部」）；
-  已接 Home/Nearby/Notification/Search/MomentsFeed 5 页（阈值 1.5×视口高、scrollTo 300ms/reduced 0ms、右下避底栏/居中 FAB）；GroupPage/Profile/MyShares 下轮。
-- SPA 焦点/TalkBack 播报由系统处理（N/A 登记）；320/reflow 为 web-only（N/A）。
-## 聊天滚动与回底（Round 10，2026-10-27）
-
-- 私聊/群聊共用 ChatPage：ListScroller + `onScrollIndex`（+列表头偏移）判定末条可见=近底；ArkUI List 无距底像素 API，平台差异已登记。
-- 规则：仅近底自动 `scrollToBottom`+`markAsRead`；上滑时不跳转、计数++、显示 `ChatJumpToBottomButton`；自己发送/初始/切换/分页保持滚底/视口；
-  回底按钮 48vp、count>0 徽标（99+）、150ms via MotionUtil/reduced 直接、不可见禁触+移出 a11y、label 与计数一致；旧 78% 胶囊已删除。
-- 新增聊天/列表页时按此契约实现；真机上滑不跳/计数/按钮位置待补验。
+- `references/theme-baselines.md`：文字/描边对比度量化基线、6 组合主题矩阵、forest light 软岛、官方规范对照与有意偏差。
+- `references/audit-baselines.md`：固定高度/交互反馈/性能审计的正确判据与脚本假阳性规律。
+- `references/layout-pitfalls.md`：ArkUI 渲染与滚动陷阱、Refresh 防抖动契约、裸块陷阱。
+- `references/routing-map.md`：web → harmony 路由与信息架构对齐。

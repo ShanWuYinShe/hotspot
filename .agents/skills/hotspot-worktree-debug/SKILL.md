@@ -124,7 +124,7 @@ git branch -d <分支名>
   ```
 - 重启后需通过 `docker compose ps` 确认容器恢复 `healthy` 状态，确保开发者刷新浏览器即可直接看到最新效果。
 
-### 单文件 bind mount 编辑后：restart 不够，必须 force-recreate（2026-09-25 实测）
+### 单文件 bind mount 编辑后：restart 不够，必须 force-recreate
 
 编辑已被单文件 bind mount 进容器的配置（如 `docker/nginx.dev.conf`）后，文件 inode 变化，
 容器内挂载点悬空（`docker exec <容器> nginx -t` 报 open failed）——**`docker compose restart nginx`
@@ -149,7 +149,7 @@ hvigorw 构建（含 `.husky/pre-commit` 钩子触发的 harmonyapp 门禁）直
   （那是工具链路径，不是沙盒重定向）。
 - worktree 清理时 `.workwork/` 随目录一并删除，无残留。
 
-## worktree 内的**后端**改动无法用主环境验证（2026-10-20 实测）
+## worktree 内的**后端**改动无法用主环境验证
 
 dev 的 backend 容器把**主工作树**目录挂进容器（`docker inspect hotspot-backend-1` 可见
 `/Users/<me>/work/hotspot/backend-go -> /src`）+ `air` 热重载。因此：
@@ -160,5 +160,3 @@ dev 的 backend 容器把**主工作树**目录挂进容器（`docker inspect ho
   再 `docker compose restart backend nginx` 并验证（重建容器后 nginx 上游 DNS 可能过期，502 时一并重启 nginx）；
 - 或者在本 worktree 起独立 compose（见上文端口重映射），但注意 dev 端口会与主环境冲突；
 - 判断"容器看的是哪份源码"：`docker inspect <backend container> --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'`。
-
-同类坑：沙盒内跑 `go build`/`go test` 报 EPERM 时，按 `sandbox-adaptation` 把报错目录加进插件配置，不要重定向。
