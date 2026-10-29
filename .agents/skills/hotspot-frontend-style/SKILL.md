@@ -92,6 +92,8 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 - **底部浮层两档**：标准 bottom sheet = `Dialog.Content side="bottom"`（rounded-t-sheet 28 贴底全宽）；浮层卡片 sheet（成员操作/邀请/更多/分享等操作面板）= `side="bottom" floating`（`rounded-xl` + inset + max-w-md + shadow-modal 唯一实现）。调用方只传内距与内容，**禁止自拼定位/圆角/阴影**（`sheet-radius-override`）。
 - **未注册圆角档**：只允许 design-system 登记档（4 档 + full + sheet）；`rounded-2xl/3xl` 等禁止（`untiered-radius`）。
 - **头像**：一律 `shared/Avatar`（尺寸档/形状/占位/渐显/失败兜底），裸 `<img rounded-full>` 头像禁止（`raw-avatar-img`；品牌 logo 除外）。
+- **卡片行内交互（强制，2026-10-29 用户反馈）**：卡片作者行外层常为 `pointer-events-none`——所有看着可点的东西（尤其「已关注/关注」）必须是真实 `button` + `pointer-events-auto` + `stopPropagation`；**禁止不可点徽章伪装成按钮**（会穿透到整卡覆盖层、点击直接打开详情）。关注态统一 `ui/FollowButton size="chip"`（`aria-pressed` + 「取消关注/关注 + 名字」label + 乐观态 + toast），点击不得触发卡片 `onClick`。非交互状态徽章保持纯展示、允许点击穿透（点卡片其他区域打开详情是预期）。新增卡片必须过「行内控件逐一点击」审计：头像/昵称→主页、动作→只切换、评论→详情评论区、封面→详情、关注→取关且不导航。
+- **详情页（瞬间详情）**：页头用 `PageHeader variant="floating"`（无整条 glass 横杠，只悬浮返回/更多圆钮，标题 sr-only）；单图必须 `object-contain` + 自身比例 + `max-h`（禁止固定高度 `h-cover-height-*` + `object-cover` 裁切）；评论输入器 `inline`（桌面嵌评论区）/`floating`（移动悬浮 dock），发送钮 40px，**禁止整条白底 `border-t` 通栏底栏**；移动端不叠加第二条底部动作条。依据见 `docs/ui-components.md`「详情页契约」与 `docs/frontend-ui-audit.md` 2026-10-29 节。
 - 卡片/面板**内嵌**次级动作钮用 `flat` 去投影（投影语义归容器）。
 - 完整表格与示例见 `docs/ui-components.md`「按钮语言两派契约」。
 

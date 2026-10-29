@@ -7,6 +7,10 @@
 	import type { FeedItem } from './moment-feed.svelte';
 	import { shareMoment } from '@/lib/moment-actions';
 	import { ROUTES } from '@/lib/routes';
+	import FollowButton from '@/components/ui/FollowButton.svelte';
+	import { auth, requireAuth } from '@/stores/auth.svelte';
+	import { follow } from '@/api';
+	import { showToast } from '@/stores/toast.svelte';
 
 	// MomentCard — 全站统一动态卡片：基于 NearbyImageCard 图片优先原语。
 	// 卡片比例由调用方按列宽传（2 列窄卡用 3:4 竖版，1 列/桌面用 4:3）：
@@ -49,6 +53,43 @@
 	// 分享与首页信息流卡同一实现（lib/moment-actions.shareMoment）
 	function handleShare() {
 		void shareMoment({ momentId: item.id, authorName: item.user, text: item.content });
+	}
+
+	// 作者关注态（2026-10-29）：与 HomeFeedItem 同契约——「已关注」必须是可点按钮，
+	// 点击取消关注而不是穿透整卡打开详情；未关注显示「关注」。
+	let followOverride = $state<boolean | null>(null);
+	let followPending = $state(false);
+	$effect(() => {
+		void item.id;
+		followOverride = null;
+		followPending = false;
+	});
+	const canFollow = $derived(Boolean(item.userId) && item.userId !== auth.user?.user_id);
+	const isFollowing = $derived(followOverride ?? Boolean(item.authorRelation));
+	// 与 HomeFeedItem 同口径：默认只在已关注作者卡显示，用户取关后就地保留「关注」chip。
+	const showFollowChip = $derived(canFollow && (isFollowing || followOverride !== null));
+
+	async function toggleAuthorFollow(next: boolean) {
+		if (!item.userId || followPending) return;
+		followPending = true;
+		followOverride = next;
+		try {
+			await follow({ user_id: item.userId, active: next });
+			showToast(next ? '已关注 ' + item.user : '已取消关注 ' + item.user, 'success');
+		} catch {
+			followOverride = !next;
+			showToast(next ? '关注失败，请重试' : '取消关注失败，请重试', 'danger');
+		} finally {
+			followPending = false;
+		}
+	}
+
+	function handleFollowToggle(e: MouseEvent) {
+		e.stopPropagation();
+		if (!item.userId || followPending) return;
+		const next = !isFollowing;
+		if (!requireAuth({ action: next ? '关注' : '取消关注', targetId: item.userId, run: () => void toggleAuthorFollow(next) })) return;
+		void toggleAuthorFollow(next);
 	}
 </script>
 
@@ -116,8 +157,15 @@
 					<Avatar src={item.avatar} name={item.user} size="sm" />
 					<span class="min-w-0 flex-1 truncate text-md font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{item.user || '匿名用户'}</span>
 				{/if}
-				{#if item.authorRelation === true}
-					<span class="shrink-0 {onCover ? 'media-badge' : 'badge bg-accent-soft text-text-accent-on-soft'}">已关注</span>
+				{#if showFollowChip}
+					<FollowButton
+						size="chip"
+						active={isFollowing}
+						pending={followPending}
+						onMedia={onCover}
+						ariaLabel={(isFollowing ? '取消关注 ' : '关注 ') + item.user}
+						onToggle={handleFollowToggle}
+					/>
 				{/if}
 			{/if}
 			{#if item.time}

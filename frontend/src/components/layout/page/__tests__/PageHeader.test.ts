@@ -35,3 +35,26 @@ describe('PageHeader', () => {
 		expect(subtitleText.parentElement?.classList.contains('min-w-0')).toBe(true);
 	});
 });
+
+describe('PageHeader floating 沉浸式变体（2026-10-29 详情页）', () => {
+	it('不画整条 glass 横杠：根节点无 page-header-scroll，透明+仅圆钮可交互', () => {
+		const { container } = render(PageHeader, {
+			props: { title: '瞬间详情', variant: 'floating', onBack: () => {}, showBackOnDesktop: false }
+		});
+		const header = container.querySelector('header') as HTMLElement;
+		expect(header.className).not.toContain('page-header-scroll');
+		expect(header.className).toContain('pointer-events-none');
+		// 标题只保留读屏语义，视觉上不出现标题横条
+		const title = screen.getByRole('heading', { level: 1 });
+		expect(title.className).toContain('sr-only');
+		// floating 下桌面也显示返回（唯一离开路径）
+		expect(screen.getByLabelText('返回')).toBeTruthy();
+	});
+
+	it('默认变体仍是可见标题 + 可滚动 glass 页头', () => {
+		const { container } = render(PageHeader, { props: { title: '附近动态' } });
+		const header = container.querySelector('header') as HTMLElement;
+		expect(header.className).toContain('page-header-scroll');
+		expect(screen.getByRole('heading', { level: 1 }).className).not.toContain('sr-only');
+	});
+});

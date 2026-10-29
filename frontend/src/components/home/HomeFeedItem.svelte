@@ -9,7 +9,10 @@
 	import { ROUTES } from '@/lib/routes';
 	import { cardPress } from '@/lib/motion';
 	import { setMomentLiked, setMomentSaved, shareMoment } from '@/lib/moment-actions';
-	import { requireAuth } from '@/stores/auth.svelte';
+	import { auth, requireAuth } from '@/stores/auth.svelte';
+	import { follow } from '@/api';
+	import { showToast } from '@/stores/toast.svelte';
+	import FollowButton from '@/components/ui/FollowButton.svelte';
 
 	// ═══ 现代社交 Feed 项（HomeFeedItem）═══
 	// 两种形态：
@@ -106,6 +109,52 @@
 	function handleTagClick(e: MouseEvent, tag: string) {
 		e.stopPropagation();
 		void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + tag)}`);
+	}
+
+	// ── 卡片作者关注态（2026-10-29 修复用户反馈）────────────────────────────
+	// 「已关注」曾是不可点徽章：pointer-events-none 让点击穿透到整卡覆盖层，
+	// 表现为「点已关注却打开了详情」。现在它是真实按钮（FollowButton chip）：
+	// 点击 = 取消关注（乐观态 + toast），阻止冒泡，绝不再触发整卡导航。
+	// 展示策略（视觉降噪）：默认只在「非本人且已关注」作者卡显示「已关注」chip；
+	// 用户在本卡取关后就地变为「关注」（可重新关注）；未关注作者卡不新增常驻按钮。
+	// 无论哪态，chip 都是可点按钮，绝不让点击穿透到整卡覆盖层。
+	let followOverride = $state<boolean | null>(null);
+	let followPending = $state(false);
+	$effect(() => {
+		void moment.moment_id;
+		followOverride = null;
+		followPending = false;
+	});
+	const followTargetId = $derived(moment.user?.user_id ?? '');
+	const canFollow = $derived(Boolean(followTargetId) && followTargetId !== auth.user?.user_id);
+	const isFollowing = $derived(followOverride ?? Boolean(moment.author_relation?.is_following));
+	// 视觉降噪（2026-10-29 评审）：默认只在「已关注」作者卡上出现关注 chip（原设计），
+	// 用户在本卡发生过取关后保留「关注」chip（允许就地重新关注），其余未关注作者卡不新增长期按钮，
+	// 避免首页每张卡都顶一颗 accent 实底胶囊把图片压花。
+	const showFollowChip = $derived(canFollow && (isFollowing || followOverride !== null));
+
+	async function toggleAuthorFollow(next: boolean) {
+		if (!followTargetId || followPending) return;
+		followPending = true;
+		followOverride = next;
+		const name = moment.user?.nickname ?? '';
+		try {
+			await follow({ user_id: followTargetId, active: next });
+			showToast(next ? '已关注 ' + name : '已取消关注 ' + name, 'success');
+		} catch {
+			followOverride = !next;
+			showToast(next ? '关注失败，请重试' : '取消关注失败，请重试', 'danger');
+		} finally {
+			followPending = false;
+		}
+	}
+
+	function handleFollowToggle(e: MouseEvent) {
+		e.stopPropagation();
+		if (!followTargetId || followPending) return;
+		const next = !isFollowing;
+		if (!requireAuth({ action: next ? '关注' : '取消关注', targetId: followTargetId, run: () => void toggleAuthorFollow(next) })) return;
+		void toggleAuthorFollow(next);
 	}
 
 	// ── 卡片覆盖操作（R14 卡片交互契约）──────────────────────────────────────
@@ -225,10 +274,15 @@
 						>
 							{moment.user?.nickname ?? '匿名用户'}
 						</button>
-						{#if moment.author_relation?.is_following}
-							<span class="shrink-0 {useFallback ? 'badge bg-surface-subtle text-text-secondary' : 'media-badge'}">
-								已关注
-							</span>
+						{#if showFollowChip}
+							<FollowButton
+								size="chip"
+								active={isFollowing}
+								pending={followPending}
+								onMedia={!useFallback}
+								ariaLabel={(isFollowing ? '取消关注 ' : '关注 ') + (moment.user?.nickname ?? '作者')}
+								onToggle={handleFollowToggle}
+							/>
 						{/if}
 						{#if recommendationBadge}
 							<span class="shrink-0 {useFallback ? 'badge bg-surface-subtle text-text-secondary' : 'media-badge'}">
@@ -338,10 +392,14 @@
 						{moment.user?.nickname ?? '匿名用户'}
 					</button>
 
-					{#if moment.author_relation?.is_following}
-						<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xxs font-normal bg-accent-soft text-text-accent-on-soft shrink-0">
-							已关注
-						</span>
+					{#if showFollowChip}
+						<FollowButton
+							size="chip"
+							active={isFollowing}
+							pending={followPending}
+							ariaLabel={(isFollowing ? '取消关注 ' : '关注 ') + (moment.user?.nickname ?? '作者')}
+							onToggle={handleFollowToggle}
+						/>
 					{/if}
 
 					{#if recommendationBadge}

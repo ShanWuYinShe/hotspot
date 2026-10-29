@@ -3,26 +3,34 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { auth } from '@/stores/auth.svelte';
 
-	// CommentInputBar —— 详情页底部固定评论输入栏（Enter/按钮发送均走 onSend）。
-	// R13：与消息区的关系收敛为「一条发丝线 + 画布色」；输入框 39 高、发送钮 36 圆钮，
-	// 空内容时不带投影（安静态），有内容才浮起 accent 实底。
+	// CommentInputBar —— 瞬间详情的评论输入器（Enter/按钮发送均走 onSend）。
+	// 2026-10-29 详情页改版：不再用「整条白底 + 硬边 border-t」的全宽底栏（用户反馈与本卡格格不入、
+	// 移动端还与动作条叠成两条横杠）。改为同一输入器的两种登记形态：
+	//   inline  桌面/平板：嵌在评论区内（软底浅槽），与卡片同圆角/同底色，不再悬浮成第三条带；
+	//   floating 移动端：悬浮胶囊 dock（玻璃/白底 + 细边 + 投影 + 左右 inset + 安全区外），
+	//            不再通栏贴边，视觉上属于画布而不是一条独立横条。
+	// 输入框仍走输入族原语 .input-surface（39px 档），发送钮 36px 圆钮；空态不带投影。
 	let {
 		input = $bindable(''),
 		inputEl = $bindable(null),
-		onSend
+		onSend,
+		variant = 'floating'
 	}: {
 		input?: string;
 		inputEl?: HTMLInputElement | null;
 		onSend: () => void;
+		variant?: 'inline' | 'floating';
 	} = $props();
 
 	const canSend = $derived(input.trim().length > 0);
+	const shell = $derived(
+		variant === 'inline'
+			? 'rounded-md bg-surface-subtle/40 p-2'
+			: 'mx-3 mb-1 rounded-md border border-border-default/60 bg-surface-primary/95 px-3 py-2 shadow-raised-md backdrop-blur-md'
+	);
 </script>
 
-<div
-	class="shrink-0 flex items-center gap-2.5 bg-surface-primary border-t border-border-subtle/50 px-[var(--cst-page-gutter)] pt-3"
-	style="padding-bottom:max(0.75rem, env(safe-area-inset-bottom));"
->
+<div class="flex items-center gap-2.5 {shell}">
 	<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size="md" />
 	<div class="flex flex-1 items-center rounded-md input-surface px-3.5 py-2">
 		<input
@@ -39,12 +47,12 @@
 	</div>
 	<button
 		type="button"
-		class="hover-btn hit-slop scale-btn flex size-9 shrink-0 items-center justify-center rounded-full transition-all duration-standard ease-standard focus-ring
+		class="hover-btn hit-slop scale-btn flex size-10 shrink-0 items-center justify-center rounded-full transition-all duration-standard ease-standard focus-ring
 			{canSend ? 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md' : 'bg-surface-subtle text-text-secondary'}"
 		onclick={() => onSend()}
 		aria-label="发送评论"
 		disabled={!canSend}
 	>
-		<Send class="size-3.5" style="transform:translateX(1px);" strokeWidth={2} />
+		<Send class="size-4" style="transform:translateX(1px);" strokeWidth={2} />
 	</button>
 </div>

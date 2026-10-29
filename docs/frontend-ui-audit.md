@@ -843,3 +843,59 @@
 - `MockBadge` 由「白底 + warning 描边」改为 warning 软底（Badge tone 枚举统一）；announcements「严重」由实底红改 `danger` 软底（全站徽章统一软底语言；solid 仅 accent「已登录」档）。
 - 地图 marker 4 处动态 pin 色用 Badge `style` 逃生口（值仅 CSS token 变量，禁止 hex/rgba）；admin 表格行内 27px/12px 按钮（ROW_BTN）为既有登记例外，不属动作按钮契约。
 
+
+## 2026-10-29 第三轮：卡片交互修复 + 瞬间详情页改版
+
+**触发**：用户反馈 ① 首页卡片点「已关注」却播放打开动态动画；要求所有卡片 UI 响应逐个过一遍；② 瞬间详情页顶部有明显横条、评论输入区格格不入、图片比例失真；要求联网调研后改。
+
+### 调研依据（联网抓取，2026-10-29）
+
+- [MUI Card](https://mui.com/material-ui/react-card/)：卡片次级动作要 "stand detached from the main action area in order to avoid event overlap" → 卡内动作必须是与整卡覆盖层分离的真按钮。
+- [NN/g Cards](https://www.nngroup.com/articles/cards-component/)：整卡可点要有清晰 signifier；卡内可有 secondary clickable elements，但层级要区分。
+- [Bootstrap stretched-link](https://getbootstrap.com/docs/5.3/helpers/stretched-link/)：拉伸链接不推荐叠加多个 tap target，需要 z-index/定位处理。
+- [NN/g Sticky headers](https://www.nngroup.com/articles/sticky-headers/)：持久页头只有 unobtrusive、高对比、动效克制且确有必要才成立；可考虑 partially persistent 或不用。
+- [MDN object-fit](https://developer.mozilla.org/en-US/docs/Web/CSS/object-fit)：`cover` 保持比例填满但会裁剪；`contain` 保持比例完整显示（可留边）。
+- [web.dev aspect-ratio](https://web.dev/articles/aspect-ratio)：用固有比例/占位避免重排。
+- [NN/g 移动输入清单](https://www.nngroup.com/articles/mobile-input-checklist/)：移动输入需满足触控/标签/可见性等 14 项。
+- [NN/g Image-focused design](https://www.nngroup.com/articles/image-focused-design/)：大图需被正确优先级组织，而非无约束铺满。
+
+### 卡片交互：根因与修复
+
+- 根因（8888 旧版实测）：作者行外层 `pointer-events-none`，「已关注」是不可点 `span`（无 `pointer-events-auto`）；真实指针点击 hit-test 落到整卡覆盖按钮（agent-browser 实测提示 "covered by button.absolute.inset-0"）→ 打开详情。
+- 修复：HomeFeedItem / MomentCard 关注态改 `ui/FollowButton size="chip"`（真按钮 + `pointer-events-auto` + `aria-pressed` + 「取消/关注 + 名字」label + 乐观态 + toast + `stopPropagation`）；默认只在已关注作者卡显示，取关后就地保留「关注」，未关注作者卡不新增常驻按钮。
+- 真实指针复测（8897）：点「已关注」→ 路径保持 `/`、chip 变「关注」并出 toast；旧版同点位命中覆盖层（打开详情）。
+
+**卡片响应审计矩阵（真实指针 + 代码核对）**
+
+| 页面/卡片 | 控件 | 预期 | 结果 |
+|---|---|---|---|
+| 首页信息流卡 | 头像/昵称 | 进作者主页 | ✅ |
+| 首页信息流卡 | 已关注/关注 chip | 取关/关注，不导航 | ✅（本轮修复） |
+| 首页信息流卡 | 点赞/收藏/分享 | 仅切换状态，不导航 | ✅ |
+| 首页信息流卡 | 评论计数 | 进详情评论区 | ✅ |
+| 首页信息流卡 | 标签 | 进搜索 | ✅ |
+| 首页信息流卡 | 封面/其它区域 | 进详情（cardPress 动画） | ✅ |
+| 附近的人卡 | 关注图标钮 | 切换，不导航 | ✅（真实点击） |
+| 附近群组卡 | 加入/已加入 | 切换，不导航 | ✅（真实点击） |
+| 附近瞬间/资料瞬间卡 | 作者/点赞/评论/收藏/分享 | 作者→主页、动作不导航、评论→详情 | ✅ |
+| 所有卡 | 行内按钮按下 | 不触发整卡 press 缩放 | ✅ |
+
+### 瞬间详情页改版（改前 8888 → 改后 8897 实测）
+
+| 项 | 改前 | 改后 |
+|---|---|---|
+| 页头 | 平板滚动后 sticky glass 带 `h=79 / border-bottom 1px`，内容从横杠下穿过 | `PageHeader variant="floating"`：透明无底边/阴影（bg rgba(0,0,0,0)、border 0、shadow none，h=52–58），仅悬浮返回/更多圆钮，标题 sr-only |
+| 单图比例 | 固定 `h-cover-height-lg`（692×380）+ `object-cover`：渲染比例 1.821 vs 原图 1.488（裁切/观感失真） | `object-contain` + 自身比例 + `max-h(min(60vh/26rem) 移动 / min(72vh/38rem) 桌面)`：moment_1 1.487 vs 1.488、moment_4 1.626 vs 1.629（误差 <0.2%） |
+| 评论输入（桌面） | 固定底栏宽 804 > 卡片内容宽 692（错位 56px），白底 + 1px 上边线 | 评论区顶部 `inline` 输入器：宽 692 = 卡片内容宽、radius 16、软底浅槽、无固定定位 |
+| 评论输入（移动） | 底部两条通栏：动作条 48 + 输入条 64（合计 ≈112px chrome，`border-t` 硬边） | 动作条内嵌内容；仅一条浮动 dock `366×~56`（inset 12 / 底 12 / radius 16 / 细边 + 玻璃底 + 投影），发送钮 40px（与聊天统一） |
+| 顶部投入 | 页头 + 内容卡两段割裂 | 内容卡从画布直接开始，仅两个圆钮悬浮，无整条 chrome |
+
+- 同轮收口：CreateSheet「谁可以看到」两列自绘按钮（49px 扁条）→ `TabBar variant="segmented"`（与 MomentEditDialog 同形）。
+- 代码：`components/ui/FollowButton.svelte`（chip/onMedia/pointer-events-auto）、`components/home/HomeFeedItem.svelte`、`components/moments/MomentCard.svelte`、`components/layout/page/PageHeader.svelte`（floating）、`routes/(app)/moments/[momentId]/{+page,MomentPostBody}.svelte`、`shared/CommentInputBar.svelte`、`components/overlays/CreateSheet.svelte`。
+- 测试：HomeFeedItem 10、MomentCard 6、PageHeader 7、MomentPostBody 3、CommentInputBar 4 全绿（新增交互/媒体契约 10 条）；全量 check/test/build 见提交信息与 CI。
+
+### 已知取舍
+
+- 详情单图未用固定 aspect-ratio 占位（API 无 width/height 字段）；首屏以 min-height + 渐显承载，后续 API 下发尺寸可升级为精确 ratio 占位消除 CLS。
+- 移动端悬浮 dock 与键盘联动沿用 SplitPageLayout footer 机制；安全区由 footer 容器负责。
+

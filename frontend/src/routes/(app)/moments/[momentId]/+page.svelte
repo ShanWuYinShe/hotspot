@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { MoreHorizontal, Link2, PencilLine, Trash2, Heart, MessageCircle, Bookmark, Share2, Check, Flag, EyeOff } from '@lucide/svelte';
+	import { MoreHorizontal, Link2, PencilLine, Trash2, Flag, EyeOff } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -238,8 +238,6 @@
 	}
 	const commentCount = $derived(commentCountBase + commentDelta);
 	// 点赞计数：moment.likes 由本页维护（服务端快照 + toggleLike 乐观增量，已含本人状态），
-	// 与 MomentPostBody 内 likeCount 同口径，避免按 liked 叠加导致刷新后计数双倍。
-	const likeCount = $derived(moment.likes);
 	const isAuthor = $derived(Boolean(auth.user?.user_id) && auth.user?.user_id === moment.authorId);
 
 	// in-flight 去重：写请求未完成时忽略重复触发，避免连点双翻转 + 并发乱序
@@ -521,14 +519,37 @@
 	<title>瞬间详情 · HotSpot</title>
 </svelte:head>
 
+<!-- 评论输入器（唯一实现，按端切换登记形态）：
+     桌面/平板 → inline 嵌在评论区顶部；移动 → floating 悬浮 dock（页面 footer 承载）。
+     2026-10-29：替代原先「整条白底 border-t 底栏」，解决输入区与本卡格格不入、移动端动作条+输入器叠两条横杠的问题。 -->
+{#snippet commentComposer()}
+	{#if replyTarget}
+		<div class="mb-2 flex items-center justify-between gap-3 rounded-md bg-surface-subtle/70 px-3 py-1.5">
+			<p class="truncate text-xs text-text-secondary font-medium">回复 @{replyTarget.user}</p>
+			<button
+				type="button"
+				class="link-btn shrink-0 text-xs text-accent-default hover:underline"
+				onclick={cancelReply}
+			>取消回复</button>
+		</div>
+	{/if}
+	<CommentInputBar
+		bind:input
+		bind:inputEl={commentInputEl}
+		onSend={() => void handleComment()}
+		variant={platform.platform === 'desktop' ? 'inline' : 'floating'}
+	/>
+{/snippet}
 
 <SplitPageLayout
 	contentMaxWidth="58rem"
-	contentClassName="animate-fade-in pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}"
+	contentClassName="animate-fade-in pt-2 pb-6"
 >
 	{#snippet header()}
-		<!-- 命名对齐全站术语「瞬间」(左栏/搜索/设置均用瞬间;Gemini 审查 r19) -->
-		<PageHeader title="瞬间详情" titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'} onBack={() => smartBack()}>
+		<!-- 命名对齐全站术语「瞬间」(左栏/搜索/设置均用瞬间;Gemini 审查 r19)
+		     variant="floating"：详情页沉浸式页头——不再出现整条 sticky glass 横杠，
+		     只保留返回/更多两个悬浮圆钮（图标即操作，标题仅 sr-only 供读屏）。 -->
+		<PageHeader variant="floating" title="瞬间详情" onBack={() => smartBack()}>
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">
@@ -639,72 +660,18 @@
 			onReportComment={(id) => (reportTarget = { target_type: 'comment', target_id: id })}
 			onDeleteComment={(id) => (commentDeleteTarget = id)}
 			onLoadMoreComments={() => void loadMoreComments()}
+			commentComposer={platform.platform === 'desktop' ? commentComposer : undefined}
 		/>
 	{/if}
 
 	{#snippet footer()}
-		<!-- 移动端互动操作条（拇指热区）：点赞/评论/收藏/分享 44pt，内容区只读 -->
-		{#if platform.platform === 'mobile'}
-			<!-- 移动端互动操作条（拇指热区 48pt）：点赞/评论/收藏/分享，计数 12px tabular 对齐 -->
-			<div class="flex shrink-0 items-stretch border-t border-border-subtle/50 bg-surface-primary px-[var(--cst-page-gutter)]">
-				<button
-					type="button"
-					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {liked
-						? 'text-accent-default'
-						: 'text-text-secondary'}"
-					aria-label={liked ? '取消点赞' : '点赞'}
-					aria-pressed={liked}
-					onclick={() => void toggleLike()}
-				>
-					<Heart class="size-5" strokeWidth={1.75} fill={liked ? 'currentColor' : 'none'} />
-					<span class="text-sm font-medium tabular-nums">{likeCount}</span>
-				</button>
-				<button
-					type="button"
-					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 text-text-secondary focus-ring"
-					aria-label="查看评论"
-					onclick={focusComments}
-				>
-					<MessageCircle class="size-5" strokeWidth={1.75} />
-					<span class="text-sm font-medium tabular-nums">{commentCount}</span>
-				</button>
-				<button
-					type="button"
-					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {saved
-						? 'text-accent-default'
-						: 'text-text-secondary'}"
-					aria-label={saved ? '取消收藏' : '收藏'}
-					aria-pressed={saved}
-					onclick={() => void toggleSave()}
-				>
-					<Bookmark class="size-5" strokeWidth={1.75} fill={saved ? 'currentColor' : 'none'} />
-				</button>
-				<button
-					type="button"
-					class="hover-btn tap-92 flex h-12 flex-1 items-center justify-center gap-1.5 focus-ring {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary'}"
-					aria-label={shareStatus === 'failed' ? '复制动态链接失败' : '复制动态链接'}
-					onclick={() => void copyMomentLink()}
-				>
-					{#if shareStatus === 'copied'}
-						<Check class="size-5" strokeWidth={2} />
-					{:else}
-						<Share2 class="size-5" strokeWidth={1.75} />
-					{/if}
-				</button>
+		<!-- 移动端：仅评论输入器（floating dock）；动作条已内嵌内容，不再叠第二条全宽横杠。
+		     SplitPageLayout 负责 safe-area 与内容补偿，这里只给悬浮 dock 留呼吸位。 -->
+		{#if platform.platform !== 'desktop'}
+			<div class="pt-1 pb-2">
+				{@render commentComposer()}
 			</div>
 		{/if}
-		<!-- 评论输入栏固定在主区底部，不随正文滚动 -->
-		{#if replyTarget}
-			<div class="mx-[var(--cst-page-gutter)] mb-1.5 flex items-center justify-between gap-3 rounded-md bg-surface-subtle/70 px-3 py-1.5">
-				<p class="truncate text-xs text-text-secondary font-medium">回复 @{replyTarget.user}</p>
-				<button
-					type="button"
-					class="link-btn shrink-0 text-xs text-accent-default hover:underline"
-					onclick={cancelReply}
-				>取消回复</button>
-			</div>
-		{/if}
-		<CommentInputBar bind:input bind:inputEl={commentInputEl} onSend={() => void handleComment()} />
 	{/snippet}
 
 	{#snippet rail()}

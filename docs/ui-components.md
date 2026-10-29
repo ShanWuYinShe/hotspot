@@ -47,7 +47,7 @@
 | `hover-btn` / `scale-btn`（utilities） | 行内文字/图标动作的 hover/tap CSS 语言 |
 | `hit-slop` / `hit-slop-y`（utilities） | 紧凑控件的触控热区扩展（视觉尺寸不变）。`hit-slop` 四周各 6px，用于图标按钮等**孤立**控件；`hit-slop-y`（2026-10-19 新增）只扩纵向，用于**横向相邻**的紧凑控件（筛选胶囊、分段控制器）——前者的水平 6px 会与相邻项重叠，命中落到 DOM 靠后那颗。注意：两者都靠 `::before` 绝对定位，**会被祖先的 `overflow` 裁剪**，横滚容器需留出纵向 padding（TabBar 的 `py-1` 即为此） |
 | `forms/SearchInput` / `forms/Input` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语。**2026-10-29 输入族重构**：两者共用 `.input-surface` 表面（单层 1px 边 + hover 边界加深 + accent 2px 视觉焦点 + 3px 柔光环 + danger 错误环 + disabled 弱化底，见 utilities.css）；`forms/SearchInput` = 搜索胶囊（rounded-full / 39px / text-md 14 / 图标 16 / 32px 清空钮 + hit-slop 44 命中 / `ariaLabel` 按页面语义 / 清空后回焦 / Esc 清空 / ⌘K 提示槽）；`forms/Input` = 表单 16 圆角（43px ≈ INPUT 42 / text-md / 默认 px-4 py-2.5；`label`/`labelSnippet`、`prefix`、`clearable`、错误态三件套、`compact` 形态均保留）。契约对齐鸿蒙 `SystemInput`（表单）/`SearchPageHeader`（搜索） |
-| `layout/page/PageHeader` | 页面页头（sticky）。**R9：顶部透明（与画布融合、无白带）→ 滚动 >4px 加 glass**（`surface-page 78% + blur(16px) + 细底边 + elevation`，150ms，reduced 立即）；仅背景/边框/阴影变化，不改定位；原 `glass` prop 统一为该行为 |
+| `layout/page/PageHeader` | 页面页头（sticky）。**R9：顶部透明（与画布融合、无白带）→ 滚动 >4px 加 glass**（`surface-page 78% + blur(16px) + 细底边 + elevation`，150ms，reduced 立即）；仅背景/边框/阴影变化，不改定位；原 `glass` prop 统一为该行为。**`variant="floating"`（2026-10-29）**：详情/沉浸页专用——永不画整条背景/底边/阴影，只保留返回+更多两个悬浮圆钮，标题仅 `sr-only`；用于消除「内容从页头横杠下穿过」的割裂感（NN/g sticky-header：chrome 占比最小且不抢内容） |
 | `navigation/BackToTop` | 回顶浮动圆钮（R9）：滚动 > 1.5×视口高出现（44px，移动 bottom-24 / 桌面 bottom-6，避开底栏与浮层），点击平滑回顶（reduced 直接跳）、回顶后 200ms 内隐藏；`aria-label="回到顶部"`；fixed 不占流 |
 | `lib/route-announcer` | SPA 导航播报（R9）：`#route-announcer`（sr-only `aria-live=polite`/atomic）播报新页 h1 标题；首屏不播、1.5s 去重；焦点落 `main#main-content`（tabindex=-1、preventScroll），不叠加 h1 聚焦 |
 | `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`）。三个变体：`pills`（筛选/分类，可横滚）、`segmented`（二选一/系统级分段，等宽轨道）、`underline`（页级两态切换：全宽等分、无轨道、激活项 + 2px accent 下划线）。**选中态不得只靠颜色**（2026-10-27 Round 2，用户对色弱/色盲的明确要求）：`segmented` 选中 = accent 实底 + ✓ 图标 + `font-semibold`；`pills`/`underline` 选中 = `font-semibold`（underline 另有下划线形状线索）；验收须过灰度截图（`filter:grayscale(1)`）。`disabled`（2026-10-19）整体禁用并置灰；**移动端触控高度**：按钮 `py-3`（视觉 41px）+ 滚动根 `py-1` + `.hit-slop-y` → 有效 ≈49px，桌面 `lg:py-1.5` 保持紧凑 |
@@ -150,7 +150,19 @@
 | 按压 | 只由 `use:cardPress` + `.card-hover[data-pressed="true"]` 驱动，缩放值走 `--cst-card-tap-scale`（vibrant 0.94 / forest·inkwash 0.97）；不允许再在组件内手写 transform/pointer 监听 |
 | 压图徽章 | 一律 `.media-badge`（图标方角标加 `--icon`），禁止再手写 `bg-surface-overlay-strong`/`bg-surface-media-scrim-strong` 组合；非压图徽章统一 `data-display/Badge`（sm/md + tone），禁止手写 h-5/h-6 胶囊 |
 | 作者区 | 有 `userId` 时头像/昵称均为可点按钮（hover：头像放大、昵称下划线；点击 stopPropagation → 主页）；无目标时保持纯文本 |
+| **行内关注态（2026-10-29 修复）** | 卡片作者行的「已关注/关注」必须是真实按钮（`ui/FollowButton size="chip"`，`aria-pressed` + `aria-label`「取消/关注 + 名字」），**禁止用不可点徽章**：徽章在 `pointer-events-none` 作者行里会穿透到整卡覆盖层，真实点击 = 打开详情（用户反馈 bug）。chip 在作者行内必须显式 `pointer-events-auto` + `stopPropagation` + 乐观取关/关注 + toast；点击绝不触发卡片 onClick。默认只在已关注作者卡显示，取关后就地保留「关注」chip，未关注作者卡不新增常驻按钮（降噪） |
+| 行内控件通用 | 所有行内可交互元素必须是 `button/a` 且 `pointer-events-auto`（作者行外层是 `pointer-events-none`）；非交互状态徽章保持纯展示并允许点击穿透（= 点卡片其他区域打开详情是预期） |
 | 分享 | 统一 `lib/moment-actions.shareMoment`（系统分享 → 复制链接 + toast），信息流卡与网格卡同一实现 |
+
+### 详情页（瞬间详情）契约（2026-10-29，用户反馈「顶部横条 / 评论输入格格不入 / 图片比例失真」）
+
+| 项 | 强制契约 |
+|---|---|
+| 页头 | `PageHeader variant="floating"`：无整条背景/底边/阴影，只保留返回 + 更多悬浮圆钮；标题 `sr-only`。禁止在详情页用整条 sticky glass 横杠（内容从其下穿过会形成割裂横条）。依据 NN/g sticky headers「chrome 最小化、不抢内容」。 |
+| 媒体（单图） | 按图片自身比例完整展示：`object-contain` + `h-auto/max-w-full` + `max-h` 约束（移动 `min(60vh,26rem)` / 桌面 `min(72vh,38rem)`），软底承载留边。**禁止固定高度 + object-cover** 裁切（旧实现渲染比例 1.821 vs 原图 1.488 = 观感失真）。多图缩略图保持方图 `object-cover`（网格语义）。 |
+| 动作条 | 所有端都内嵌在内容中（`MomentPostBody` 内），**移动端不再有第二条底部动作条**，避免与输入器叠成两条通栏横杠。 |
+| 评论输入器 | 页面私有 `CommentInputBar`，两种登记形态：`inline`（桌面/平板：嵌评论区顶部，`rounded-md` + 软底浅槽，宽度随内容）；`floating`（移动：悬浮 dock `mx-3` + `rounded-md` + 细边 + 玻璃底 + `shadow-raised-md` + 底部安全区）。两者都只用 39px 输入壳 + **40px 发送钮**（与聊天发送钮同档；旧评论 36 vs 聊天 40 已统一）。**禁止整条白底 `border-t` 通栏输入条**。 |
+| 与评论的关系 | 输入器是评论区的一部分：`inline` 时位于 `#moment-comments` 顶部（`commentComposer` snippet 注入）；移动悬浮 dock 仍归属评论动作；回复目标 chip 在输入器上方。 |
 
 ## 统一交互契约
 

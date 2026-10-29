@@ -8,6 +8,7 @@
 	import Badge from '@/components/data-display/Badge.svelte';
 	import Textarea from '@/components/forms/Textarea.svelte';
 	import { auth } from '@/stores/auth.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
@@ -236,22 +237,14 @@
 					<p id="audience-label" class="eyebrow">谁可以看到</p>
 					<span class="text-xxs text-text-secondary">{activeAudience.hint}</span>
 				</div>
-				<div class="grid grid-cols-2 gap-1">
-					{#each AUDIENCES as { id, label, icon: AudienceIcon }}
-						{@const active = draft.audience === id}
-						<button
-							type="button"
-							onclick={() => (draft.audience = id)}
-							aria-pressed={active}
-							class="flex min-w-0 flex-col items-center gap-1 rounded-sm px-1 py-2 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {active
-								? 'bg-accent-soft text-text-accent-on-soft hover:bg-interactive-active'
-								: 'text-text-secondary hover:bg-interactive-hover'}"
-						>
-							<AudienceIcon size={14} strokeWidth={active ? 2 : 1.5} />
-							<span class="truncate text-xxs font-medium">{label}</span>
-						</button>
-					{/each}
-				</div>
+				<!-- 可见范围统一走注册原语 TabBar segmented（与瞬间编辑弹层同形）：
+				     旧实现是两列自绘按钮（扁条 + text-xxs + 移动端热区不足），属同类型组件双实现。 -->
+				<TabBar
+					variant="segmented"
+					items={AUDIENCES.map(({ id, label, icon }) => ({ id, label, icon }))}
+					value={draft.audience}
+					onChange={(id) => (draft.audience = id as 'nearby' | 'private')}
+				/>
 			</section>
 		</div>
 	</div>

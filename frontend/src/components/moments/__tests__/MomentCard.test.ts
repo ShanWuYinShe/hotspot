@@ -80,3 +80,37 @@ describe('MomentCard', () => {
 		expect(screen.getByText('9月3日')).toBeTruthy();
 	});
 });
+
+describe('MomentCard 关注 chip（2026-10-29 卡片交互契约）', () => {
+	const followItem = (extra: Record<string, unknown>) =>
+		({
+			id: 'm1',
+			userId: 'user_456',
+			user: '鹿鸣',
+			avatar: '',
+			image: '',
+			images: [],
+			likes: 1,
+			comments: 0,
+			authorRelation: true,
+			...extra
+		}) as never;
+
+	it('已关注作者卡渲染可点关注按钮，点击不触发整卡 onClick', async () => {
+		const onClick = vi.fn();
+		render(MomentCard, {
+			props: { item: followItem({}), liked: false, saved: false, onLike: () => {}, onSave: () => {}, onClick }
+		});
+		const chip = screen.getByRole('button', { name: /取消关注 鹿鸣/ }) as HTMLButtonElement;
+		expect(chip.getAttribute('aria-pressed')).toBe('true');
+		await fireEvent.click(chip);
+		expect(onClick).not.toHaveBeenCalled();
+	});
+
+	it('未关注作者默认不显示关注 chip', () => {
+		render(MomentCard, {
+			props: { item: followItem({ authorRelation: false }), liked: false, saved: false, onLike: () => {}, onSave: () => {} }
+		});
+		expect(screen.queryByRole('button', { name: /关注 鹿鸣/ })).toBeNull();
+	});
+});

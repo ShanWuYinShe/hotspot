@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import type { Snippet } from 'svelte';
 	import { MapPin, Heart, MessageCircle, Share2, Bookmark, Check } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
@@ -18,8 +19,9 @@
 	import { platform } from '@/stores/platform.svelte';
 	import { auth } from '@/stores/auth.svelte';
 
-	// 动态详情内容体：作者/正文/图片（单图全幅封面、多图网格）/操作条/评论区。
-	// 评论输入栏由页面经 SplitPageLayout footer 渲染，本组件只负责内容体。
+	// 动态详情内容体：作者/正文/图片（单图按原比例、多图网格）/操作条/评论区。
+	// 评论输入器通过 commentComposer snippet 注入评论区（桌面内嵌）或由页面移动端悬浮 dock 渲染；
+	// 本组件只负责内容体与评论区骨架。
 	// 页面私有组件（colocate），由 moments/[momentId]/+page.svelte 渲染。
 	//
 	// R13 视觉改版口径（对齐 MomentCard 已升级语言）：
@@ -83,7 +85,8 @@
 		onToggleCommentLike,
 		onReportComment,
 		onDeleteComment,
-		onLoadMoreComments
+		onLoadMoreComments,
+		commentComposer
 	}: {
 		moment: MomentData;
 		comments: MomentComment[];
@@ -113,6 +116,8 @@
 		/** 删除自己的评论（comments/delete，作者本人；页面负责确认层） */
 		onDeleteComment: (commentId: string) => void;
 		onLoadMoreComments: () => void;
+		/** 桌面/平板：评论区顶部内嵌评论输入器（移动端由页面底部悬浮 dock 承载） */
+		commentComposer?: Snippet;
 	} = $props();
 
 	// 大图查看器状态
@@ -183,11 +188,15 @@
 	<!-- 4. 配图画廊（单图全幅封面或多图网格） -->
 	{#if cover}
 		<div class="pb-5">
-			<!-- 媒体容器（例外登记）：去 1px 描边，用 bg-subtle + 圆角 + 阴影表达边界 -->
-			<div class="media-placeholder relative h-cover-height-lg overflow-hidden rounded-lg shadow-xs">
+			<!-- 单图：按图片自身比例完整展示（2026-10-29 修复「比例失真」）——
+			     旧实现固定 h-cover-height-lg + object-cover，任何非 16:9 图片都会被裁切/拉伸观感；
+			     MDN object-fit 定义：cover 填满容器会裁剪，contain 保持比例但可能留边。
+			     这里用容器承载「按比例完整图 + 软底留边」，并限制最大高度避免竖图撑爆首屏。
+			     高度由图片自身决定，不写死容器比例（web.dev 推荐用 aspect-ratio/固有比例避免重排）。 -->
+			<div class="media-placeholder relative flex w-full items-center justify-center overflow-hidden rounded-lg bg-surface-subtle/60 shadow-xs">
 				<button
 					type="button"
-					class="block h-full w-full cursor-zoom-in focus-ring"
+					class="block w-full cursor-zoom-in focus-ring"
 					aria-label="查看大图"
 					onclick={() => {
 						viewerIndex = 0;
@@ -202,7 +211,7 @@
 						loading="eager"
 						fetchpriority="high"
 						decoding="async"
-						class="h-full w-full object-cover transition-transform duration-standard hover:scale-[1.01]"
+						class="mx-auto block h-auto max-h-[min(60vh,26rem)] w-auto max-w-full object-contain sm:max-h-[min(72vh,38rem)]"
 						use:fadeImage
 					/>
 				</button>
@@ -254,9 +263,8 @@
 		</div>
 	{/if}
 
-	<!-- 5. 交互动作条（桌面/平板行内舒展展示；移动端由页面底部操作条承载） -->
-	{#if isDesktop || platform.platform === 'tablet'}
-		<div class="flex items-center justify-between py-3">
+	<!-- 5. 交互动作条：所有端都在内容内展示（2026-10-29 移除移动端底部独立动作条，避免与输入器叠成两条横杠） -->
+	<div class="flex items-center justify-between py-3">
 			<div class="flex items-center gap-6">
 				<button
 					type="button"
@@ -314,11 +322,14 @@
 				</button>
 			</div>
 		</div>
-	{/if}
 
 	<!-- 6. 评论讨论区：与动作条之间用一条内容分隔发丝线（非卡片边界），自然在画卷内延展 -->
 	<section class="mt-2 border-t border-border-subtle/40 pt-6" id="moment-comments">
 		<SectionHead title="评论讨论" count={commentCount} />
+		{#if commentComposer}
+			<!-- 桌面/平板：输入器内嵌评论区顶部（与卡片同语言），不再固定在视口底部形成独立横条 -->
+			<div class="mt-3 mb-4">{@render commentComposer()}</div>
+		{/if}
 		{#if comments.length === 0}
 			<div class="py-4">
 				<EmptyState bare title="还没有评论" description="来说点什么吧，成为第一个评论的人。">

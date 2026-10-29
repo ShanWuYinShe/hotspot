@@ -132,3 +132,20 @@ describe('HomeFeedItem', () => {
 		expect(badges.length).toBeGreaterThanOrEqual(2);
 	});
 });
+	// 2026-10-29 用户反馈回归：卡片上的「已关注」曾是不可点徽章，点击穿透整卡覆盖层打开详情。
+	// 现在必须是真按钮：可取消关注、aria-pressed/label 正确、点击绝不触发整卡 onClick。
+	it('已关注 chip 是可点按钮（aria-pressed + 取消关注 label），点击不触发整卡导航', async () => {
+		const onClick = vi.fn();
+		render(HomeFeedItem, { props: { moment: mockMoment, onClick } });
+		const chip = screen.getByRole('button', { name: /取消关注 咖啡小迷妹/ }) as HTMLButtonElement;
+		expect(chip.getAttribute('aria-pressed')).toBe('true');
+		await fireEvent.click(chip);
+		expect(onClick).not.toHaveBeenCalled();
+	});
+
+	it('未关注作者默认不显示关注 chip（避免信息流每张卡顶一颗按钮）', () => {
+		render(HomeFeedItem, {
+			props: { moment: { ...mockMoment, author_relation: { is_following: false, is_followed_by: false } }, onClick: () => {} }
+		});
+		expect(screen.queryByRole('button', { name: /关注 咖啡小迷妹/ })).toBeNull();
+	});
