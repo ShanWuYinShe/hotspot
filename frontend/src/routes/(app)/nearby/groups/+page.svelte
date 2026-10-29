@@ -194,24 +194,31 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
 			<PageHeader
+				variant="integrated"
 				title="附近群组"
-				subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
-				sticky
-				titleSize={device === 'desktop' ? 'xl' : '2xl'}
+				subtitle={locationName
+					? `${locationName} · 5km 内${!loading && !loadError && filtered.length ? ` · ${filtered.length} 个群组` : ''}`
+					: `5km 内 · 实时更新${!loading && !loadError && filtered.length ? ` · ${filtered.length} 个群组` : ''}`}
 			>
 				{#snippet subtitleIcon()}
 					<MapPin class="size-2.5 text-accent-default"   strokeWidth={1.75} />
 				{/snippet}
 				{#snippet trailing()}
 					<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
-					<div class="flex items-center gap-2">
-						<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} class={device === 'desktop' ? 'hidden' : ''} />
-						<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
+					<div class="flex items-center gap-2.5">
+						{#if !loading && !loadError && filtered.length}
+							<span class="flex items-center gap-1.5 text-xs tabular-nums text-text-secondary">
+								<span class="size-1.5 rounded-full bg-status-online"></span>
+								<span class="font-medium text-text-status-online-on-soft">{formatCount(totalOnline)} 人在线</span>
+							</span>
+						{/if}
+						<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} class={device === 'desktop' ? 'hidden' : ''} />
+						<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
 					</div>
 				{/snippet}
 				{#snippet below()}
 					<!-- 分类过滤统一走 TabBar（胶囊），随 header 吸顶 -->
-					<div class="mt-3 pb-2">
+					<div>
 						<TabBar items={CATEGORIES.map((c) => ({ id: c, label: c }))} value={activeCategory} onChange={(id) => (activeCategory = id)} />
 					</div>
 				{/snippet}
@@ -230,17 +237,6 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 		{:else if loadError}
 			<LoadError message={loadError} onRetry={() => reloadKey++} />
 			{:else if filtered.length}
-				<div class="mb-3 flex items-baseline justify-between gap-3">
-					<h2 class="flex min-w-0 items-baseline gap-2">
-						<span class="text-md font-semibold text-text-primary">此刻附近群组</span>
-						<span class="shrink-0 text-xs font-medium tabular-nums text-text-secondary">{filtered.length} 个</span>
-					</h2>
-					<span class="flex shrink-0 items-center gap-1.5 text-xs tabular-nums text-text-secondary">
-						<span class="size-1.5 rounded-full bg-status-online"></span>
-						<span class="font-medium text-text-status-online-on-soft">{formatCount(totalOnline)} 人</span>
-						正在群聊
-					</span>
-				</div>
 			{#if isDesktop && rest.length > 3}
 			<!-- 精选卡用 GroupCard featured 横排（图片左 40%,r03:纵排大卡吃首屏）；
 			     其余 BSP 满铺墙（高格子自动横排：图左 40% + 信息右面板），

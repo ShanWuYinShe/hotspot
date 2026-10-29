@@ -232,10 +232,11 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
 		<PageHeader
+			variant="integrated"
 			title="附近的人"
-			subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
-			sticky
-			titleSize={device === 'desktop' ? 'xl' : '2xl'}
+			subtitle={locationName
+				? `${locationName} · 5km 内${!loading && !loadError && list.length ? ` · ${list.length} 人` : ''}`
+				: `5km 内 · 实时更新${!loading && !loadError && list.length ? ` · ${list.length} 人` : ''}`}
 		>
 			{#snippet subtitleIcon()}
 				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
@@ -243,44 +244,36 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			{#snippet trailing()}
 				<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
 				<div class="flex items-center gap-2">
-					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} class={device === 'desktop' ? 'hidden' : ''} />
-					<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
+					<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} class={device === 'desktop' ? 'hidden' : ''} />
+					<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
 				</div>
 			{/snippet}
 			{#snippet below()}
-				<!-- 页头 below 只保留「分类」这一层主筛选（全端一致、吸顶可达）；
-				     排序不再是同形 pill 行（会被误读为二级分类），降级为正文工具行右侧的下拉 -->
-				<div class="mt-3 pb-2">
-					<TabBar
-						items={FILTER_TAGS.map((t) => ({ id: t, label: t }))}
-						value={tagFilter}
-						onChange={(id) => (tagFilter = id)}
-						class={device === 'desktop' ? 'flex-wrap' : 'pr-1'}
-					/>
+				<!-- 页头 below 只保留「分类」这一层主筛选；排序不再是同形 pill 行
+				     （会被误读为二级分类），收敛为筛选行右端的 ghost 下拉。
+				     整段随内容滚走：无背景/边框/吸顶，与卡片栅格同处一块画布。 -->
+				<div class="flex items-center justify-between gap-3">
+					<div class="min-w-0 flex-1">
+						<TabBar
+							items={FILTER_TAGS.map((t) => ({ id: t, label: t }))}
+							value={tagFilter}
+							onChange={(id) => (tagFilter = id)}
+							class={device === 'desktop' ? 'flex-wrap' : 'pr-1'}
+						/>
+					</div>
+					<label class="inline-flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
+						<span>排序</span>
+						<!-- 行内排序：ghost 变体（透明底 / accent 文字 / 无边框） -->
+						<Select value={effectiveSort} onChange={(v) => (sort = v)} ariaLabel="排序方式" variant="ghost">
+							{#each sortOptions as option (option)}
+								<option value={option}>{option}</option>
+							{/each}
+						</Select>
+					</label>
 				</div>
 			{/snippet}
 		</PageHeader>
 	{/snippet}
-
-	<!-- 工具行：左为分区标题 + 计数（与 SectionHead 同档），右为排序下拉（文字链形态，
-	     避免与分类 pill 同形；原生命名 select 保键盘/读屏可达） -->
-	<div class="mb-3 flex items-center justify-between gap-3">
-		<h2 class="flex min-w-0 items-baseline gap-2">
-			<span class="text-md font-semibold text-text-primary">附近的人</span>
-			{#if !loading && !loadError}
-				<span class="shrink-0 text-xs font-medium tabular-nums text-text-secondary">{list.length}</span>
-			{/if}
-		</h2>
-		<label class="inline-flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
-			<span>排序</span>
-			<!-- 行内排序：ghost 变体（透明底 / accent 文字 / 无边框，chevron 由原语绘制） -->
-			<Select value={effectiveSort} onChange={(v) => (sort = v)} ariaLabel="排序方式" variant="ghost">
-				{#each sortOptions as option (option)}
-					<option value={option}>{option}</option>
-				{/each}
-			</Select>
-		</label>
-	</div>
 
 		<div>
 			<div class="min-w-0">

@@ -1013,3 +1013,43 @@
 
 **历史说明**：第 5 轮「整行悬浮玻璃工具条」已被本轮取代（用户明确不要显性横栏）；当前详情页契约为「内容内极简工具行 + 画廊 hero」，见 `docs/ui-components.md`「详情页契约」。
 
+
+## 2026-10-29 第七轮：hub/列表页页头去框，统一为「内容内页头」（用户反馈「顶部大边框」）
+
+**反馈原文**：「顶部这个大边框太难看了,没有更加能融合成一体的设计么,我希望你改了这个以后在所有其他类似地方都用这样的设计,还是那句话,同样类型的东西在所有地方都要保持一致的风格」。
+
+### 问题定位
+
+- 附近人/群组页：`sticky + glass` 的 PageHeader（标题 20/24 + 副标题 + trailing 圆钮 + below 筛选胶囊）在顶部形成一块独立、厚重、与内容割裂的页头区；滚动时再出现一条玻璃横带。
+- 人/群组正文又重复了一次页面标题（「附近的人 6」「此刻附近群组 4 个」），等于「大页头 + 第二个分区头」叠加，首张卡片被推到 y=239（1440×900）。
+- 同类页面（附近、附近人/群组/瞬间、关系、举报、通知）页头结构一致但实现细节漂移：有的筛选在 below、有的在正文；有的有重复标题、有的没有。
+
+### 方案：`PageHeader variant="integrated"`（内容内页头）
+
+- **无背景、无边框、无描边、无圆角、非吸顶**：页头不再是独立面板/横栏，和卡片栅格同处一张画布，滚动时整体随内容离开（不再出现滚动后的玻璃横带）。
+- **标题 + 副标题/计数 + 工具同一行**：标题紧凑档 `text-lg sm:text-xl`；副标题/计数紧贴标题（如「徐州 · 5km 内 · 6 人」「… · 4 个群组」）；trailing 工具统一 `ghost` 图标（36px），不再用 surface 圆钮形成第二组悬浮块。
+- **筛选/操作 below 紧随**：PageHeader 统一 `mt-2.5` 间距，页面不再自行加 `mt-3/pb-2`；人页把排序下拉收进筛选行右端（筛选左、排序右），群组页在线人数收进标题行右侧。
+- **删除正文重复分区头**：人页「附近的人 + 计数 + 排序」整行删除（计数/排序上移）；群组页「此刻附近群组 + 计数 + 在线」整行删除（计数/在线并入副标题/trailing）。正文首块内容直接开始。
+- **同类统一覆盖（7 处）**：/nearby、/nearby/people、/nearby/groups、/nearby/moments（tag 筛选从正文移入 header below）、/me/relationships、/me/reports、/notify。
+- **不是同类的保持原形态（登记）**：/search（搜索优先，sticky 搜索框是核心控件）、设置/表单页、聊天分栏、品牌首页。默认 `PageHeader`（sticky/glass）继续用于这些页面。
+
+### 实测（1440×900，8897）
+
+| 项 | 改前 | 改后 |
+|---|---|---|
+| PageHeader 高度（附近人） | 127px（sticky/glass） | 99px（static，无背景） |
+| 首张卡片 y | 239 | 179（提前 60px） |
+| 重复标题 | 页头 + 正文「附近的人 6」 | 仅页头，正文直接栅格 |
+| 滚动行为 | sticky，滚动后玻璃横带 | 非吸顶，页头随内容滚走；sticky headers = 0 |
+| 筛选/排序 | 筛选 below + 排序独占正文一行 | 同一行：筛选左、排序右 |
+| 页头工具 | surface 圆钮 | ghost 图标（36px） |
+| 移动端 | 标题/筛选/内容分层 | 标题行（含副标题/计数/工具）→ 筛选行 → 内容；无横向溢出 |
+| 主题 | — | vibrant light/dark 均验证（附近人/群组/瞬间/通知/关系/举报/附近枢纽） |
+
+截图：`.workwork/integrated-intro/`（改前 `before-people-header.png` / 改后 `after-dark-*.png`、`after-light-nearby-people.png`、`after-mobile-*.png`、`after-guest-collapsed-people.png`）。
+
+### 测试与门禁
+
+- PageHeader 新增 integrated 契约测试（无 page-header-scroll/sticky、data-page-intro、标题+副标题同容器、紧凑标题档），PageHeader 共 9 tests 通过；全量 **124 文件 / 707 tests** 通过；check（含 eslint/theme/utility/一致性 16 条）0 错；build 成功；**audit:ui PASS**（browser-qa 0 console error；axe 35 页 0 错；touch 35 页 94.2% PASS）。
+- 文档同步：`docs/ui-components.md` PageHeader 行、skill `hotspot-frontend-layout` 页头规则、`hotspot-frontend-style` 标题档/图标钮、`frontend/AGENTS.md`「页面布局」。
+

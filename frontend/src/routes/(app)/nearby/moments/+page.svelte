@@ -222,27 +222,6 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 </svelte:head>
 
 
-<!-- ═══ 三端统一页面 header（标题行 + trailing 工具入口 + below 内容源 Tab）═══ -->
-{#snippet feedHeader()}
-	<PageHeader
-		title="附近瞬间"
-		subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
-		sticky
-		titleSize={device === 'desktop' ? 'xl' : '2xl'}
-	>
-		{#snippet subtitleIcon()}
-			<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
-		{/snippet}
-		{#snippet trailing()}
-			<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
-			<div class="flex items-center gap-2">
-				<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} class={device === 'desktop' ? 'hidden' : ''} />
-				<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
-			</div>
-		{/snippet}
-	</PageHeader>
-{/snippet}
-
 <!-- ═══ 热门 tag 列表（scrollable / flex-wrap 由调用处 className 决定，对齐 Figma TagChips）═══ -->
 {#snippet tagChips(className: string)}
 	<!-- 标签过滤统一走 TabBar：行首「全部」为默认态（与附近的人/群组筛选语言一致），
@@ -254,6 +233,33 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 		class={className}
 	/>
 {/snippet}
+
+<!-- ═══ 三端统一页面 header（标题行 + trailing 工具入口 + below 内容源 Tab）═══ -->
+{#snippet feedHeader()}
+	<PageHeader
+		variant="integrated"
+		title="附近瞬间"
+		subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
+	>
+		{#snippet subtitleIcon()}
+			<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
+		{/snippet}
+		{#snippet trailing()}
+			<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
+			<div class="flex items-center gap-2">
+				<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} class={device === 'desktop' ? 'hidden' : ''} />
+				<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
+			</div>
+		{/snippet}
+		{#snippet below()}
+			<div>
+				{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'pr-1')}
+			</div>
+		{/snippet}
+	</PageHeader>
+{/snippet}
+
+
 
 <!-- ═══ 加载中 / 空列表状态 ═══ -->
 {#snippet feedState()}
@@ -292,17 +298,11 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	{/if}
 {/snippet}
 
-<!-- ═══ 样板 layout：StandardPageLayout（sticky header + ContentColumn 全宽 gutter）═══ -->
+<!-- ═══ 样板 layout：StandardPageLayout（integrated header + ContentColumn 全宽 gutter）═══ -->
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		{@render feedHeader()}
 	{/snippet}
-
-	<!-- 过滤 TabBar 是页头附属工具区（布局契约要求 Tab 置于 header 附近），到首块内容按常规 16 -->
-	<div class="mb-4">
-		<!-- TabBar 自身已含 overflow-x-auto，此处不再重复声明（重复类名会让排查困惑） -->
-		{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'pr-1')}
-	</div>
 
 	{#if loading || loadError || !filtered.length}
 		{@render feedState()}

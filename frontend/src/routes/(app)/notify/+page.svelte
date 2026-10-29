@@ -332,10 +332,8 @@ const markSingleRead = (id: string) => {
 >
 	{#snippet header()}
 		<PageHeader
+			variant="integrated"
 			title="通知"
-			glass
-			sticky
-			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			onBack={() => smartBack()}
 		>
 			{#snippet trailing()}
@@ -362,7 +360,7 @@ const markSingleRead = (id: string) => {
 			{#snippet below()}
 				<!-- 分类过滤统一走 TabBar（胶囊）；未登录无通知数据，筛选无意义直接隐藏（Gemini UI 审查：未登录态矛盾） -->
 				{#if !needsAuth}
-					<div class="mt-3">
+					<div>
 						<TabBar items={FILTER_TABS.map((t) => ({ id: t.id, label: t.label }))} value={filter} onChange={(id) => (filter = id)} />
 					</div>
 				{/if}

@@ -68,3 +68,26 @@ describe('PageHeader floating 悬浮工具条（2026-10-29 详情页）', () => 
 		expect(screen.getByRole('heading', { level: 1 }).className).not.toContain('sr-only');
 	});
 });
+
+describe('PageHeader integrated 内容内页头（hub/列表页，2026-10-29）', () => {
+	it('无背景/边框/吸顶：header 不挂 glass/滚动类，标题与副标题同一行', () => {
+		const { container } = render(PageHeader, {
+			props: { title: '附近的人', subtitle: '徐州 · 5km 内 · 6 人', variant: 'integrated' }
+		});
+		const header = container.querySelector('header') as HTMLElement;
+		expect(header.className).not.toContain('page-header-scroll');
+		expect(header.className).not.toContain('sticky');
+		expect(container.querySelector('[data-page-intro]')).toBeTruthy();
+		const intro = container.querySelector('[data-page-intro]') as HTMLElement;
+		const title = screen.getByRole('heading', { level: 1 });
+		expect(intro.contains(title)).toBe(true);
+		expect(intro.contains(screen.getByText('徐州 · 5km 内 · 6 人'))).toBe(true);
+	});
+
+	it('标题用紧凑档（不随 titleSize 变成页面大标题）', () => {
+		render(PageHeader, { props: { title: '附近的人', variant: 'integrated', titleSize: '2xl' } });
+		const title = screen.getByRole('heading', { level: 1 });
+		expect(title.className).toContain('text-lg');
+		expect(title.className).not.toContain('text-2xl');
+	});
+});

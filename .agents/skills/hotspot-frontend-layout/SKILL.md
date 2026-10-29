@@ -15,7 +15,7 @@ description: hotspot 前端页面布局契约：StandardPageLayout / SplitPageLa
 - **分栏页面**（桌面主区 + 右 rail）：`SplitPageLayout`（`components/layout/page/SplitPageLayout.svelte`），主区与 rail 滚动由组件统一管理，footer 固定于主区底部。当前分栏页：首页（桌面端）、通知、动态详情、用户详情。
 - **临时豁免/已登记例外**：
   - 聊天页面（桌面端与移动端）因分栏/全屏会话布局特殊，可暂不套用 `StandardPageLayout`/`SplitPageLayout`；但页头、列表与正文的 gutter/padding 仍必须与样板一致（沿用 `PageHeader` + `ContentColumn`）。桌面消息分栏左栏窄列（`w-80`=320px）用 `px-4` 压缩 gutter、不进 `--cst-page-gutter`（见 skill `hotspot-frontend-style`「窄列特例」，已登记例外）；聊天三块同轴见本文「内容轴」节。
-  - **封面/紧凑型资料头**（`groups/[groupId]`、`users/[userId]`）：标题与封面/头像绑定，不在 header 操作行内，故不套 `PageHeader`，自建返回/分享/更多操作行 + 封面下方 `<h1>`。与 `moments/[momentId]`（有独立标题「动态详情」，套 PageHeader）区分。
+  - **封面/紧凑型资料头**（`groups/[groupId]`、`users/[userId]`）：标题与封面/头像绑定，不在 header 操作行内，故不套 `PageHeader`，自建返回/分享/更多操作行 + 封面下方 `<h1>`。`moments/[momentId]` 详情页已改为「内容内极简工具行 + 画廊 hero」，也不套 PageHeader（见「详情页契约」）。
   - 移动个人主页（`ProfileMobile`）：自建 eyebrow 页眉，非标准列表页 header；设置/外观/编辑入口统一收在身份卡的拇指操作区，页眉不放重复入口。
   - 地图（全画布）与登录页（无 MainLayout 外壳）不适用。
 - 强制统一布局是为了保证切换页面时右侧内容区不发生水平偏移；存量页面需逐步对齐，不得新增其他例外（新增例外必须在上面登记）。
@@ -35,7 +35,9 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 约束：
 
 1. **布局**：普通页面必须用 `StandardPageLayout`，分栏页面必须用 `SplitPageLayout`；header 以 snippet 传入、正文放 children；不得自行组合 PageHeader/ContentColumn/页面级滚动/页面级横向 padding（聊天页豁免见上）。gutter 一律由 `ContentColumn` 的 `px-[var(--cst-page-gutter)]` 管理。
-2. **页头**：一律用 `PageHeader`（`sticky` 默认开），`onBack` 在非桌面自动显示返回按钮；`below` 只放搜索框与 Tab 栏等 header 附属区。**below 首元素必须带上间距**（`mt-3`，与样板 nearby/moments 一致）——TabBar/搜索框直接贴 title 属于间距错误；below 内多行元素之间用 `mt-3` 分隔。`PageHeader` 内部 ContentColumn 的上下内距由组件派生（有 below：`pt-4 pb-3.5`；无 below：`pt-4.5 pb-4.5`），页面不要再传 `contentClassName` 覆盖（唯一例外是已登记的窄列面板）。
+2. **页头**：一律用 `PageHeader`，按页面类型选变体：
+   - **默认变体**：`sticky` 默认开（表单/设置/管理/搜索/聊天/资料页等），`onBack` 在非桌面自动显示返回按钮；`below` 只放搜索框与 Tab 栏等 header 附属区，**below 首元素带 `mt-3`**（默认变体 spacing 由页面控制），below 内多行元素之间用 `mt-3` 分隔。内部 ContentColumn 上下内距由组件派生（有 below：`pt-4 pb-3.5`；无 below：`pt-4.5 pb-4.5`），页面不要再传 `contentClassName` 覆盖（唯一例外是已登记的窄列面板）。
+   - **`variant="integrated"`（hub/列表页内容内页头）**：无背景/边框/吸顶（不随滚动变 glass），标题+副标题/计数+trailing 工具同一行，`below` 筛选/操作紧随（组件统一 `mt-2.5`，页面不要再加 `mt-3`）；正文 `pt-4` 直接开始。适用 /nearby、/nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；**这些页面禁止在正文重复页面标题/分区头**。搜索页（sticky 搜索优先）、设置/表单页、聊天分栏、品牌首页不是同类，继续用默认变体/自建页头。
 3. **分类/筛选/排序 Tab（强制统一）**：一律使用 `TabBar`（`components/navigation/TabBar.svelte`，胶囊样式 + 激活项 accent 实底胶囊 + `aria-pressed`，对齐鸿蒙 TabsPillGroup 分段式视觉），放 `below` snippet 内随 header 吸顶；tab 状态可存 URL query（如 `?tab=`）以支持深链，切换用 `goto` 更新 URL。**禁止再写手写 tab/chip 变体**（通知/搜索/个人主页/地图 sheet 的手写胶囊已统一为 TabBar）。表单内的标签/多选 chips 一律用 `TagPill`；网格选择器（主题 swatch、发布可见范围）属例外，不套 TabBar。
 4. **正文与滚动**：正文直接放 children；`StandardPageLayout` 页面滚动由 `RoutedContentViewport`（main）唯一承担，`SplitPageLayout` 分栏页的主区/rail 滚动由组件统一管理；页面不得自建滚动容器（消息分栏、地图等全画布页面除外）。内嵌自带 gutter 的组件时用负 margin（`-mx-[var(--cst-page-gutter)]`）抵消 ContentColumn gutter，避免双重内边距（参照 `me/relationships/RelationshipsPage.svelte`）。
 5. **三端差异**：共用组件只写一次，设备差异用 `platform.platform` 派生（列数、字号、布局分支），不得复制三份页面。
@@ -118,7 +120,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 1. **外壳不画框**：桌面顶栏/侧栏/主内容面板、移动与平板顶栏/PageHeader 一律不得有包裹整页的 `border`/`rounded-*`/白色底面/硬分隔线（`border-b` 发丝线也算）。四端外壳共享同一张 `--cst-surface-page` 连续画布；层级靠留白、排版、交互态表达。
 2. **氛围画布整窗一次**：桌面在 `DesktopLayout` 根挂单实例 `AmbientBackdrop`；不得按区域各挂一份（区域交界会出现渐变接缝）。移动/平板仍挂在各自外壳内容区。
-3. **PageHeader**：静止态无底线；滚动后允许柔和投影（不再用硬 `border-bottom`）；sticky 背景 = 画布色/玻璃，不留白条。
+3. **PageHeader**：默认变体静止态无底线、滚动后允许柔和投影（不再用硬 `border-bottom`），sticky 背景 = 画布色/玻璃，不留白条；**`variant="integrated"` 无背景/边框/吸顶，整段随内容滚走**（hub/列表页），不得再包一层描边/圆角/软岛。
 4. **页头/分区硬线清零**：/me 自定义页头线、他人主页分区头线、群详情分区标题线、通知/设置/搜索/关系页内分区线、reports 过滤行线一律清零。页面分组用「eyebrow + 留白 + 内容软岛」，不要用横线切分。
 5. **保留的功能线（白名单）**：聊天输入条/粘底操作条（`border-t`）、消息分栏竖向发丝线（`border-subtle/40`）、表格/统计行、内容单元内演示分隔。新增页面不得引入新的页面级横线。
 6. **页面内允许的「边界」**：内容单元卡片（`ListContainer bordered`、设置分组卡、rail 卡、信息卡）是内容层级，不是页面框，可保留；但要收敛视觉重量（外框读起来像页面框时改投影/间距）。**例外登记**：底部 tab dock、FAB、弹层/Sheet 控件的玻璃浮层属于控件边界，可保留。

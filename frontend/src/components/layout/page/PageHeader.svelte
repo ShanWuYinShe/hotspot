@@ -30,6 +30,10 @@
 	// 工具条吸顶，内容从其下方滚过并透出毛玻璃；没有通栏硬边，不形成割裂横条。
 	// 依据 NN/g「Sticky headers」：页头只有在不抢内容、chrome 占比小时才成立。
 	// 注：瞬间详情页已于同日改为「内容内极简工具行 + 画廊 hero」，本变体保留为通用沉浸页原语。
+	//
+	// variant="integrated"（2026-10-29，hub/列表页「内容内页头」）：无背景/边框/吸顶，
+	// 标题 + 副标题（可含计数）+ 工具同一行，筛选 below 紧随其后；与正文同处一块画布，
+	// 消除大块页头/重复分区标题带来的割裂感。用于附近人/群组/瞬间、关系、举报、通知。
 
 	let {
 		title,
@@ -49,8 +53,9 @@
 		/** glass：半透明毛玻璃背景（对齐 Figma nearby 页 sticky header）。 */
 		glass = false,
 		/**
-		 * floating：沉浸式页头（详情页专用）——无整条背景/底边/阴影，仅悬浮圆钮；
-		 * 标题仅保留 sr-only h1 供读屏与路由播报，visual 上不出现标题横条。
+		 * floating：沉浸式页头——整行玻璃工具条（返回/标题/更多同一面板，吸顶）。
+		 * integrated：hub/列表页内容内页头——无背景/边框/吸顶，标题/副标题/工具一行，
+		 * 筛选 below 紧随；与正文同一画布。
 		 */
 		variant = 'default',
 		class: className = '',
@@ -70,7 +75,7 @@
 		titleSize?: 'md' | 'base' | 'lg' | 'xl' | '2xl' | '3xl';
 		subtitleSize?: 'xxs' | 'xs' | 'sm' | 'md';
 		glass?: boolean;
-		variant?: 'default' | 'floating';
+		variant?: 'default' | 'floating' | 'integrated';
 		class?: string;
 		/** 内部 ContentColumn 的 className（默认由 headerPadding 派生：有 below 时 pt-4 pb-3.5、
 		    无 below 时 pt-4.5 pb-4.5；仅已登记的窄列特例传值覆盖） */
@@ -78,6 +83,7 @@
 	} = $props();
 
 	const floating = $derived(variant === 'floating');
+	const integrated = $derived(variant === 'integrated');
 
 	// glass prop 保留兼容（历史调用）；统一改为「顶部透明 → 滚动后 glass」，不再直接消费。
 	let scrolled = $state(false);
@@ -138,20 +144,46 @@
 	// header 统一预留黄金呼吸感：
 	// - 纯标题时标题/副标题/操作组与下边框之间留 pb-4.5（18px），上下留白匀称舒展，杜绝标题与分割线紧贴粘连；
 	// - below 存在时（搜索框/Tab 栏等），给 below 内容与下边框之间留 pb-3.5（14px）。
-	const headerPadding = $derived(floating ? 'pt-2 pb-2' : below ? 'pt-4 pb-3.5' : 'pt-4.5 pb-4.5');
+	const headerPadding = $derived(integrated ? 'pt-3 pb-1' : floating ? 'pt-2 pb-2' : below ? 'pt-4 pb-3.5' : 'pt-4.5 pb-4.5');
 </script>
 
 <header
 	use:headerScroll
 	class={cn(
-		floating
-			? 'shrink-0 sticky top-0 z-[var(--cst-z-sticky)] pointer-events-none'
-			: ['shrink-0 page-header-scroll', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]', scrolled && 'page-header-scrolled'],
+		integrated
+			? 'shrink-0'
+			: floating
+				? 'shrink-0 sticky top-0 z-[var(--cst-z-sticky)] pointer-events-none'
+				: ['shrink-0 page-header-scroll', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]', scrolled && 'page-header-scrolled'],
 		className
 	)}
 >
 	<ContentColumn {maxWidth} class={cn(headerPadding, contentClassName)}>
-		{#if floating}
+		{#if integrated}
+			<!-- hub/列表页「内容内页头」：标题 + 副标题/计数 + 工具同一行；筛选紧随；无背景/边框/吸顶 -->
+			<div data-page-intro class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+				<div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1">
+					{#if showBack}
+						<ActionIconButton variant="ghost" icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} class="-ml-1 self-center" />
+					{/if}
+					<h1 class="min-w-0 truncate text-lg font-semibold text-text-primary sm:text-xl">{title}</h1>
+					{#if subtitle}
+						<p class="flex min-w-0 items-center gap-1 text-xs text-text-secondary">
+							{#if subtitleIcon}
+								<span class="flex shrink-0 items-center">{@render subtitleIcon()}</span>
+							{/if}
+							<span class="truncate">{subtitle}</span>
+						</p>
+					{/if}
+				</div>
+				{#if trailing}
+					<div class="flex shrink-0 items-center gap-2">{@render trailing()}</div>
+				{/if}
+			</div>
+			{#if below}
+				<div class="mt-2.5">{@render below()}</div>
+			{/if}
+		{:else if floating}
 			<!-- 整行悬浮工具条：返回 / 标题 / 更多收进同一块玻璃面板，而不是两枚孤立圆钮 -->
 			<div
 				data-floating-toolbar
@@ -195,7 +227,7 @@
 			{/if}
 		</div>
 		{/if}
-		{#if below && !floating}
+		{#if below && !floating && !integrated}
 			{@render below()}
 		{/if}
 	</ContentColumn>

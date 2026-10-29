@@ -131,11 +131,9 @@
 <StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-6 pt-4 pb-6 max-w-6xl xl:max-w-7xl 2xl:max-w-[88rem] mx-auto w-full">
 	{#snippet header()}
 		<PageHeader
+			variant="integrated"
 			title="附近"
-			glass
 			subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
-			titleSize={device === 'desktop' ? 'xl' : '2xl'}
-			sticky
 		>
 			{#snippet subtitleIcon()}
 				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
@@ -145,10 +143,10 @@
 				<div class="flex shrink-0 items-center gap-2">
 					<!-- R17：不再放「N 在线」chip —— 与下方 Hero 指标行同屏重复（审计 P2-6）。
 					     在线数由 Hero MetricRow 单一表达，页头只保留搜索/地图工具入口。 -->
-					<!-- 标准 PageHeader 的 trailing 图标动作统一 surface 圆钮（与 nearby 三叶一致；
-					     仅首页品牌头用 ghost，见 alignment.md §5 决策） -->
-					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} size={36} class={device === 'desktop' ? 'hidden' : ''} />
-					<ActionIconButton icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} size={36} />
+					<!-- integrated 页头的 trailing 图标动作用 ghost（与 nearby 三叶一致）：
+					     页头无承载面，圆钮会重新变成悬浮控件块 -->
+					<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} size={36} class={device === 'desktop' ? 'hidden' : ''} />
+					<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} size={36} />
 				</div>
 			{/snippet}
 		</PageHeader>

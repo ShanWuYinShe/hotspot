@@ -23,7 +23,7 @@
 	// 我的举报（/me/reports）：消费 /api/v1/reports/fetch（spec api_spec_report.md），
 	// 让举报人看到处理进度与结果（resolution）。此前举报提交后无任何结果可见入口，
 	// 属功能完整性缺口。样板对齐 nearby/moments / relationships：
-	// StandardPageLayout + sticky PageHeader + below TabBar（?tab= 深链）。
+	// StandardPageLayout + integrated PageHeader + below TabBar（?tab= 深链）。
 
 	type ReportsTab = 'all' | ReportStatus;
 
@@ -168,10 +168,9 @@
 <StandardPageLayout contentMaxWidth={1280} contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
+			variant="integrated"
 			title="我的举报"
-			sticky
 			maxWidth={1280}
-			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			onBack={() => smartBack(ROUTES.me)}
 		>
 			{#snippet trailing()}
@@ -182,7 +181,7 @@
 			{#snippet below()}
 				<!-- 未登录/鉴权失效隐藏状态标签（Gemini UI 审查 r15/r70：展示不可用控件与其余个人子页鉴权表现不一） -->
 				{#if !authExpired}
-				<div class="mt-3">
+				<div>
 					<TabBar
 						items={TABS}
 						value={activeTab}
