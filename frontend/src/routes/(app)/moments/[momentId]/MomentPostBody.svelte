@@ -154,9 +154,11 @@
 <!-- 统一度极高的沉浸式画卷流，消除碎片化盒子嵌套 -->
 <article class="flex flex-col overflow-hidden rounded-lg bg-surface-island p-4 sm:p-5 md:p-7 shadow-xs">
 	<!-- 1. 画廊 hero（单图：整幅展陈；多图：主图 + 底部缩略图导航）
-	     设计：主图保持原始比例完整展示（object-contain），比例与展台不一致时用同图放大
-	     模糊铺底（ambient matte）填充留白；多图改为「主图 + 横向缩略图条」的画廊导航
-	     （点击缩略图内联切换主图，点击主图进全屏查看器），右下角页码替代旧「共 N 张」角标。 -->
+	     设计：主图**始终按图片自身宽高比**完整展示（w-auto + max-w-full + h-auto + max-h：
+	     宽度不超容器、高度不超视口上限，两者任一受限时另一维按比例缩放），因此任何
+	     分辨率下图片区域比例恒定，不会因视口高度不足把盒子压成异形；比例与展台不一致
+	     时用同图放大模糊铺底（ambient matte）填充留白。多图：主图 + 横向缩略图条画廊
+	     导航（点击缩略图内联切换主图，点击主图进全屏查看器），右下角页码 N / M。 -->
 	{#if cover}
 		<div class="pb-5">
 			<div class="relative -mx-4 -mt-4 overflow-hidden rounded-lg sm:-mx-5 sm:-mt-5 md:-mx-7 md:-mt-7">
@@ -193,7 +195,7 @@
 								loading={imageIndex === 0 ? 'eager' : 'lazy'}
 								fetchpriority={imageIndex === 0 ? 'high' : 'auto'}
 								decoding="async"
-								class="block h-auto max-h-[min(78vh,44rem)] w-full object-contain"
+								class="mx-auto block h-auto max-h-[min(78vh,44rem)] w-auto max-w-full object-contain"
 								use:fadeImage
 								onerror={onGalleryImageError}
 							/>
