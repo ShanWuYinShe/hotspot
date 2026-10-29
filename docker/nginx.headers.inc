@@ -17,9 +17,13 @@ add_header Cross-Origin-Resource-Policy "same-origin" always;
 #  - script-src 'unsafe-inline'：SvelteKit 模块引导需内联 bootstrap script
 #    （<script type="module">import { start } ...），被 'self' 拦截会导致
 #    生产白屏；无第三方注入面，风险可控
+#  - script-src 放行 static.cloudflareinsights.com、connect-src 放行
+#    cloudflareinsights.com：橙云站点由 CF 边缘自动注入 Web Analytics
+#    beacon（RUM 统计），不放行会被 CSP 拦截并在控制台报 CSP 违规；除 CF
+#    自动注入外，站点自身不加载任何第三方脚本
 #  - style-src 'unsafe-inline'：Tailwind / Svelte 注入内联样式
 #  - img-src：允许 data: URI 与任意 https CDN（用户头像/地图瓦片）
 #  - connect-src 'self'：API/WS 必须同源；restapi.amap.com 为高德 Web 服务
 #    API（地理编码/POI 搜索直连，见 lib/geo-service.ts）。当前未配置 key 时
 #    不会向其发请求，放行是为了配置 key 后不被 CSP 拦截退回演示数据
-add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://restapi.amap.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://restapi.amap.com https://cloudflareinsights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;

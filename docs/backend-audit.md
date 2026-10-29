@@ -191,8 +191,10 @@
   列数」的存量 bug（真 PG 下会 scan 报错）。
 
 **部署拓扑已确认（2026-10-23，站长；2026-10-30 调整）**：全部流量必经
-Cloudflare 回源，源站以 mTLS origin-pull（Global AOP，CF 共享证书）作为唯一
-入口闸——直连无客户端证书一律 400，80 端口对公网只做 301。原「CF 网段
+Cloudflare 回源，源站以 mTLS origin-pull 作为唯一入口闸——2026-10-30 起
+chaoset.com / www.chaoset.com 使用 **per-hostname AOP（自备证书，源站只信任
+自有根 CA）**，其它 CF zone 的共享证书不再被接受；直连无客户端证书一律 400，
+80 端口对公网只做 301。原「CF 网段
 allow/deny」白名单已移除：它与 real_ip 还原互斥（CF-Connecting-IP 改写后的
 $remote_addr 是真实访客 IP，命中不了 CF 网段，2026-10-30 全站 403 事故根因），
 且写死网段易过时。real_ip 还原改为只在 443 server 内信任所有对端（能到达即
