@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { MoreHorizontal, Link2, PencilLine, Trash2, Flag, EyeOff } from '@lucide/svelte';
+	import { ArrowLeft, MoreHorizontal, Link2, PencilLine, Trash2, Flag, EyeOff } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Skeleton from '@/components/data-display/Skeleton.svelte';
@@ -541,51 +540,53 @@
 	/>
 {/snippet}
 
+{#snippet moreMenu()}
+	<DropdownMenu.Root bind:open={moreOpen}>
+		<div bind:this={moreMenuEl} class="relative">
+			<ActionIconButton icon={MoreHorizontal} label="更多操作" variant="ghost" onClick={() => (moreOpen = !moreOpen)} />
+		</div>
+		<DropdownMenu.Content customAnchor={moreMenuEl}>
+			<DropdownMenu.Item onSelect={() => void copyMomentLink()}>
+				<Link2 class="size-3.5 text-accent-default" strokeWidth={1.75} />
+				复制链接
+			</DropdownMenu.Item>
+			{#if isAuthor}
+				<DropdownMenu.Item onSelect={() => void openEditDialog()}>
+					<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
+					编辑动态
+				</DropdownMenu.Item>
+				<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { deleteOpen = true; moreOpen = false; }}>
+					<Trash2 class="size-3.5" strokeWidth={1.75} />
+					删除动态
+				</DropdownMenu.Item>
+			{:else if moment.id}
+				<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { reportTarget = { target_type: 'moment', target_id: momentId }; moreOpen = false; }}>
+					<Flag class="size-3.5" strokeWidth={1.75} />
+					举报动态
+				</DropdownMenu.Item>
+			{/if}
+		</DropdownMenu.Content>
+	</DropdownMenu.Root>
+{/snippet}
+
 <SplitPageLayout
 	contentMaxWidth="58rem"
 	contentClassName="animate-fade-in pt-2 pb-6"
 >
-	{#snippet header()}
-		<!-- 命名对齐全站术语「瞬间」(左栏/搜索/设置均用瞬间;Gemini 审查 r19)
-		     variant="floating"：整行收进一块悬浮玻璃工具条（返回 + 标题 + 更多同一面板），
-		     不再出现两条孤立悬浮圆钮压在内容上的割裂感（2026-10-29 用户反馈「要有整行悬浮的和谐感」）。
-		     工具条吸顶，内容从下方滚过并被毛玻璃承接，不形成通栏硬边。 -->
-		<PageHeader variant="floating" title="瞬间详情" onBack={() => smartBack()}>
-			{#snippet trailing()}
-				<DropdownMenu.Root bind:open={moreOpen}>
-					<div bind:this={moreMenuEl} class="relative">
-						<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = !moreOpen)} />
-					</div>
-						<DropdownMenu.Content customAnchor={moreMenuEl}>
-							<DropdownMenu.Item onSelect={() => void copyMomentLink()}>
-								<Link2 class="size-3.5 text-accent-default"   strokeWidth={1.75} />
-								复制链接
-							</DropdownMenu.Item>
-							{#if isAuthor}
-								<DropdownMenu.Item onSelect={() => void openEditDialog()}>
-									<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
-									编辑动态
-								</DropdownMenu.Item>
-								<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { deleteOpen = true; moreOpen = false; }}>
-									<Trash2 class="size-3.5" strokeWidth={1.75} />
-									删除动态
-								</DropdownMenu.Item>
-							{:else if moment.id}
-								<!-- 非作者可举报动态（spec: api_spec_report.md，目标属于当前用户时服务端 10400） -->
-								<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { reportTarget = { target_type: 'moment', target_id: momentId }; moreOpen = false; }}>
-									<Flag class="size-3.5" strokeWidth={1.75} />
-									举报动态
-								</DropdownMenu.Item>
-							{/if}
-						</DropdownMenu.Content>
-				</DropdownMenu.Root>
-			{/snippet}
-		</PageHeader>
-
-		<p aria-live="polite" class="sr-only">
-			{shareStatus === 'copied' ? '动态链接已复制' : shareStatus === 'failed' ? '无法复制动态链接' : ''}
-		</p>
-	{/snippet}
+	<!-- 内容内工具行（无表面、非吸顶）：返回 + 标题 + 更多与内容同处一块画布，
+	     不再形成一条横栏；图片画廊直接作为内容卡首屏。 -->
+	<div class="flex items-center justify-between gap-3 pb-2">
+		<ActionIconButton icon={ArrowLeft} label="返回" variant="ghost" onClick={() => smartBack()} />
+		<h1 class="min-w-0 flex-1 truncate text-center text-md font-semibold text-text-primary">瞬间详情</h1>
+		{#if moment.id && !loading}
+			{@render moreMenu()}
+		{:else}
+			<span class="size-9 shrink-0" aria-hidden="true"></span>
+		{/if}
+	</div>
+	<p aria-live="polite" class="sr-only">
+		{shareStatus === 'copied' ? '动态链接已复制' : shareStatus === 'failed' ? '无法复制动态链接' : ''}
+	</p>
 
 	<!-- 内容（gutter 由 SplitPageLayout 提供；全幅封面在 MomentPostBody 内负 margin 抵消） -->
 	{#if loading}
@@ -599,27 +600,30 @@
 			aria-label="加载动态…"
 			data-skeleton-root
 		>
-			<div class="rounded-lg bg-surface-island p-4 shadow-xs sm:p-5 md:p-7">
-				<div class="flex items-center gap-3 pb-4">
-					<Skeleton class="size-11 shrink-0 rounded-full" />
-					<div class="flex min-w-0 flex-1 flex-col gap-1.5">
-						<Skeleton class="w-32 rounded-sm" style="height: 14px;" />
-						<Skeleton class="w-24 rounded-sm" style="height: 11px;" />
+			<div class="overflow-hidden rounded-lg bg-surface-island shadow-xs">
+				<!-- 画廊 hero 首屏：与真实页一致（图片 → 作者/正文 → 动作条 → 评论区），零位移 -->
+				<Skeleton class="aspect-[4/3] w-full" />
+				<div class="p-4 sm:p-5 md:p-7">
+					<div class="flex items-center gap-3 pb-4">
+						<Skeleton class="size-11 shrink-0 rounded-full" />
+						<div class="flex min-w-0 flex-1 flex-col gap-1.5">
+							<Skeleton class="w-32 rounded-sm" style="height: 14px;" />
+							<Skeleton class="w-24 rounded-sm" style="height: 11px;" />
+						</div>
 					</div>
-				</div>
-				<div class="flex flex-col gap-2 pb-4">
-					<Skeleton class="w-full rounded-sm" style="height: 14px;" />
-					<Skeleton class="w-11/12 rounded-sm" style="height: 14px;" />
-					<Skeleton class="w-3/4 rounded-sm" style="height: 14px;" />
-				</div>
-				<Skeleton class="aspect-[4/3] w-full rounded-lg" />
-				<div class="flex items-center gap-6 py-4">
-					<Skeleton class="h-4 w-16 rounded-sm" />
-					<Skeleton class="h-4 w-12 rounded-sm" />
-				</div>
-				<div class="border-t border-border-subtle/40 pt-6">
-					<Skeleton class="mb-3 h-4 w-24 rounded-sm" />
-					<SkeletonList rows={3} leading={36} decorative />
+					<div class="flex flex-col gap-2 pb-4">
+						<Skeleton class="w-full rounded-sm" style="height: 14px;" />
+						<Skeleton class="w-11/12 rounded-sm" style="height: 14px;" />
+						<Skeleton class="w-3/4 rounded-sm" style="height: 14px;" />
+					</div>
+					<div class="flex items-center gap-6 py-4">
+						<Skeleton class="h-4 w-16 rounded-sm" />
+						<Skeleton class="h-4 w-12 rounded-sm" />
+					</div>
+					<div class="border-t border-border-subtle/40 pt-6">
+						<Skeleton class="mb-3 h-4 w-24 rounded-sm" />
+						<SkeletonList rows={3} leading={36} decorative />
+					</div>
 				</div>
 			</div>
 		</div>

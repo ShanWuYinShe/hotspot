@@ -961,3 +961,55 @@
 
 **历史说明**：第 4 轮「随正文滚走」方案已被本轮取代，保留其记录用于追溯；当前详情页契约以本轮为准（见 `docs/ui-components.md`「详情页契约」）。
 
+
+## 2026-10-29 第六轮：详情页去掉横栏 + 画廊级图片展陈（用户反馈「要融合感/无横栏/图片留白难看」）
+
+**反馈原文**：「要有融合感，同时也不要有明显的横栏，联网搜索下，给我更好的方案。而且这个图片显示的也不好，两边还有留白，展示图片的时候要像画廊一样，要有艺术感、设计感、审美感」。
+
+### 联网调研（2026-10-29 抓取）
+
+| 来源 | 关键结论 | 对本案的指导 |
+|---|---|---|
+| [MDN object-fit](https://developer.mozilla.org/en-US/docs/Web/CSS/object-fit) | `contain` 保持比例完整显示，但比例不匹配时会 letterbox/pillarbox；`cover` 保持比例填满但会裁剪 | 画廊主图必须 `contain` 保真；留边用「同图模糊铺底」承接而不是空白 |
+| [web.dev aspect-ratio / object-fit](https://web.dev/articles/aspect-ratio) | 用固有比例承载媒体；`contain` 存整图、`cover` 会在低边界放大裁剪 | 主图 `w-full + h-auto + max-h + object-contain`，高度由比例决定 |
+| [NN/g Photos as Web Content](https://www.nngroup.com/articles/photos-as-web-content/) | 用户会仔细审视照片，照片是内容而非装饰 | 详情页把图片升级为内容卡首屏 hero，而不是正文里的缩略配图 |
+| [NN/g Image-Focused Design](https://www.nngroup.com/articles/image-focused-design/) | 大图能吸引注意，但必须被正确优先级组织 | 图片优先、控件让位：去掉常驻 chrome，工具行退成无表面的一行 |
+| [NN/g Product Photos on Listing Pages](https://www.nngroup.com/articles/product-photos-listing-pages/) | 图片应够大够清楚；如 Helmut Lang 案例中「照片周围大量空白」会让用户难以辨认内容 | 禁止两侧空白条/空底色，主图必须尽量铺满展台 |
+| [NN/g Sticky Headers](https://www.nngroup.com/articles/sticky-headers/) | 持久页头只有在不抢内容、chrome 占比最小时成立；要考虑「是否真的需要 sticky」 | 详情页不再使用吸顶横栏/玻璃工具条；工具行随内容滚走 |
+| [MDN blur()](https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/blur) / [backdrop-filter](https://developer.mozilla.org/en-US/docs/Web/CSS/backdrop-filter) | filter 可对元素本身模糊；backdrop-filter 处理元素背后区域 | 用同图模糊衬底（ambient matte）填充比例差，而不是露空底色 |
+
+### 方案对比
+
+| 方案 | 问题 |
+|---|---|
+| 悬浮玻璃横栏（上一轮） | 无论多圆润，仍是一条明显的横向 chrome；用户明确要求「不要明显横栏」 |
+| 两枚孤立悬浮圆钮（更早） | 无承载面、零散（上一轮反馈） |
+| **内容内极简工具行 + 画廊 hero（采用）** | 工具行与画布同底、无表面、非吸顶，不构成横栏；图片作为首屏 hero 整幅出血；返回/更多仍在首屏可见，滚动后交给浏览器/系统返回与全局回顶 |
+
+### 实现
+
+- **页面**：移除 `PageHeader`/header snippet；内容顶部改为一条 `ghost` 工具行（返回 + 居中可见 `h1`「瞬间详情」+ 更多，36px，无背景/边框/吸顶，随内容滚走）；加载/错误/空态同样保留；更多菜单逻辑抽为 `moreMenu` snippet；骨架屏同步改为「hero → 作者/正文 → 动作条 → 评论区」零位移结构。
+- **图片（MomentPostBody）**：媒体区移到卡片首屏（作者/正文后移）；单图 hero：
+  - 左右/上方负 margin 出血到卡片边缘（`-mx-4 sm:-mx-5 md:-mx-7 -mt-4…`），卡片 `overflow-hidden` 裁出圆角；
+  - 主图 `w-full h-auto max-h-[min(78vh,44rem)] object-contain`，保持原比例、不裁切；
+  - 同图 `scale-110 object-cover opacity-soft filter:blur(var(--cst-blur-lg))` + 既有 `--cst-surface-media-scrim-card` 作环境衬底：宽图铺满无留白，竖图两侧显示同图模糊展墙，不再出现空底色；
+  - 顶部/底部/圆角/阴影保持卡片语言；多图首图 hero + 下方 3 列缩略图（方图 `object-cover` 语义不变）；
+  - 点击主图/缩略图仍打开 ImageViewer。
+- **PageHeader `variant="floating"`** 保留为通用沉浸页原语（当前详情页不再使用），文档已注明。
+
+### 实测（8897，vibrant light/dark，1440×900 / 390×844）
+
+| 项 | 结果 |
+|---|---|
+| 横栏 | 无 PageHeader/无横栏；工具行 36px、同画布底、非吸顶；标题可见居中；滚动后随内容离开 |
+| 主图宽度 | 748px = 内容卡整宽（旧实现为 692px 内缩 + 部分比例两侧留白） |
+| 比例 | moment_1 渲染 1.488 vs 原图 1.490；moment_2 1.500 vs 1.501；moment_3 1.500 vs 1.501；moment_4 1.626 vs 1.627（误差 <0.2%，不裁切） |
+| 竖图（注入 600×900 测试图） | 主图框 748×702，两侧由同图模糊衬底填满，无空底色 |
+| 布局顺序 | 图片 hero → 作者/位置/时间 → 正文 → 标签 → 动作条 → 评论；骨架与真实结构同序 |
+| 主题 | light/dark 均验证；无横向溢出、无布局抖动 |
+| 交互 | 返回、更多菜单（复制链接/编辑/删除/举报）、图片查看器均正常 |
+
+**测试与门禁**：MomentPostBody 4 tests（新增画廊主图/模糊衬底契约）；`bun run check` / `bun run test` / `bun run build` 全绿；a11y 40 页 0 错误、touch PASS（见 `.workwork/browser-check/` 最新报告）。
+
+**历史说明**：第 5 轮「整行悬浮玻璃工具条」已被本轮取代（用户明确不要显性横栏）；当前详情页契约为「内容内极简工具行 + 画廊 hero」，见 `docs/ui-components.md`「详情页契约」。
+

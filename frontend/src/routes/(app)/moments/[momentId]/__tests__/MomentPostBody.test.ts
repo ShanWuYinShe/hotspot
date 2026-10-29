@@ -41,14 +41,25 @@ const baseProps = {
 };
 
 describe('MomentPostBody 详情媒体与布局契约', () => {
-	it('单图按原始比例完整展示：object-contain，不再用固定 cover 高度裁切', () => {
+	it('单图画廊展陈：主图 object-contain + 全宽，不再裁切/固定 cover 高度', () => {
 		const { container } = render(MomentPostBody, { props: baseProps });
-		const img = container.querySelector('article img') as HTMLImageElement;
+		const img = container.querySelector('[data-gallery-image]') as HTMLImageElement;
 		expect(img).toBeTruthy();
 		expect(img.className).toContain('object-contain');
 		expect(img.className).not.toContain('object-cover');
 		expect(img.className).not.toContain('h-cover-height-lg');
+		expect(img.className).toContain('w-full');
 		expect(img.className).toContain('max-h-');
+	});
+
+	it('画廊展台用同图模糊铺底填充比例差，避免两侧空底色', () => {
+		const { container } = render(MomentPostBody, { props: baseProps });
+		const backdrop = container.querySelector('[data-gallery-backdrop]') as HTMLImageElement;
+		expect(backdrop).toBeTruthy();
+		expect(backdrop.getAttribute('aria-hidden')).toBe('true');
+		expect(backdrop.className).toContain('object-cover');
+		// 模糊半径走 token（inline style：filter:blur(var(--cst-blur-lg))），不写死像素值
+		expect(backdrop.getAttribute('style')).toContain('blur(var(--cst-blur-lg))');
 	});
 
 	it('动作条在所有端内嵌（移动端不再依赖底部独立动作条）', () => {

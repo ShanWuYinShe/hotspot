@@ -137,97 +137,62 @@
 {/snippet}
 
 <!-- 统一度极高的沉浸式画卷流，消除碎片化盒子嵌套 -->
-<article class="flex flex-col rounded-lg bg-surface-island p-4 sm:p-5 md:p-7 shadow-xs">
-	<!-- 1. 作者 Header：头像（桌面 44 / 移动 36）+ 昵称 14 semibold + 位置·时间 11 次级 -->
-	<header class="flex items-center justify-between gap-3 pb-4">
-		<div class="flex min-w-0 items-center gap-3">
-			<button
-				type="button"
-				class="hover-btn hit-slop shrink-0 cursor-pointer overflow-hidden rounded-full p-0 focus-ring {isDesktop ? 'size-11' : 'size-9'}"
-				aria-label={`查看${moment.user}的个人主页`}
-				onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
-			>
-				<Avatar src={moment.avatar} name={moment.user} size={isDesktop ? 'lg' : 'md'} />
-			</button>
-			<div class="min-w-0 flex-1">
-				<button
-					type="button"
-					class="link-btn hit-slop-44 -my-2 block truncate rounded-sm py-2 text-left text-md font-semibold text-text-primary hover:text-accent-default focus-ring"
-					onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
-				>
-					{moment.user}
-				</button>
-				<div class="mt-0.5 flex items-center gap-1.5 text-sm text-text-secondary">
-					{#if moment.location}
-						<span class="flex min-w-0 items-center gap-1 font-medium text-accent-default">
-							<MapPin class="size-3.5 shrink-0" strokeWidth={1.75} />
-							<span class="truncate">{moment.location}</span>
-						</span>
-						<span class="opacity-muted" aria-hidden="true">·</span>
-					{/if}
-					<span class="shrink-0 tabular-nums">{moment.time}</span>
-				</div>
-			</div>
-		</div>
-	</header>
-
-	<!-- 2. 正文叙述：14px / 1.75 阅读行高（与卡片 12px 摘要拉开层级） -->
-	{#if moment.content}
-		<p class="select-text whitespace-pre-wrap break-words pb-3 text-md font-normal leading-copy tracking-normal text-text-primary">
-			{moment.content}
-		</p>
-	{/if}
-
-	<!-- 3. 话题标签：标准胶囊档（h-6 + leading-none），只保留一层 accent 淡底 -->
-	{#if moment.tag}
-		<div class="pb-4">
-			<Badge size="md" tone="accent">#{moment.tag}</Badge>
-		</div>
-	{/if}
-
-	<!-- 4. 配图画廊（单图全幅封面或多图网格） -->
+<article class="flex flex-col overflow-hidden rounded-lg bg-surface-island p-4 sm:p-5 md:p-7 shadow-xs">
+	<!-- 1. 画廊首屏（单图：整幅展陈；多图：首图 hero + 缩略图） -->
 	{#if cover}
 		<div class="pb-5">
-			<!-- 单图：按图片自身比例完整展示（2026-10-29 修复「比例失真」）——
-			     旧实现固定 h-cover-height-lg + object-cover，任何非 16:9 图片都会被裁切/拉伸观感；
-			     MDN object-fit 定义：cover 填满容器会裁剪，contain 保持比例但可能留边。
-			     这里用容器承载「按比例完整图 + 软底留边」，并限制最大高度避免竖图撑爆首屏。
-			     高度由图片自身决定，不写死容器比例（web.dev 推荐用 aspect-ratio/固有比例避免重排）。 -->
-			<div class="media-placeholder relative flex w-full items-center justify-center overflow-hidden rounded-lg bg-surface-subtle/60 shadow-xs">
-				<button
-					type="button"
-					class="block w-full cursor-zoom-in focus-ring"
-					aria-label="查看大图"
-					onclick={() => {
-						viewerIndex = 0;
-						viewerOpen = true;
-					}}
-				>
+			<!-- 画廊展陈：整幅出血到卡片边缘；主图保持原始比例完整展示（object-contain），
+			     当主图比例与展台不一致时，用同图放大模糊铺底（ambient matte）填充留白，
+			     而不是露出空底色——两侧不再出现「留白条」，暗色主题下也像展墙承托。 -->
+			<div class="relative -mx-4 -mt-4 overflow-hidden rounded-lg sm:-mx-5 sm:-mt-5 md:-mx-7 md:-mt-7">
+				<div class="relative overflow-hidden rounded-lg bg-surface-subtle">
 					<img
-						src={presetImageUrl(cover, 'cover', 1600)}
-						srcset={presetSrcSet(cover, 'cover')}
-						sizes="(min-width: 768px) 720px, 100vw"
-						alt="动态图片"
-						loading="eager"
-						fetchpriority="high"
+						data-gallery-backdrop
+						src={presetImageUrl(cover, 'cover', 800)}
+						alt=""
+						aria-hidden="true"
+						loading="lazy"
 						decoding="async"
-						class="mx-auto block h-auto max-h-[min(60vh,26rem)] w-auto max-w-full object-contain sm:max-h-[min(72vh,38rem)]"
-						use:fadeImage
+						class="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-soft"
+						style="filter:blur(var(--cst-blur-lg));"
 					/>
-				</button>
-				{#if moment.images.length > 1}
+					<div class="pointer-events-none absolute inset-0" style="background:var(--cst-surface-media-scrim-card);"></div>
 					<button
 						type="button"
-						class="media-badge hover-btn absolute bottom-3 right-3 shadow-xs hover:opacity-hover focus-ring"
-						aria-label={`查看全部 ${moment.images.length} 张图片`}
+						class="relative z-10 block w-full cursor-zoom-in focus-ring"
+						aria-label="查看大图"
 						onclick={() => {
 							viewerIndex = 0;
 							viewerOpen = true;
 						}}
 					>
-						共 {moment.images.length} 张
+						<img
+							data-gallery-image
+							src={presetImageUrl(cover, 'cover', 1600)}
+							srcset={presetSrcSet(cover, 'cover')}
+							sizes="(min-width: 768px) 812px, 100vw"
+							alt="动态图片"
+							loading="eager"
+							fetchpriority="high"
+							decoding="async"
+							class="block h-auto max-h-[min(78vh,44rem)] w-full object-contain"
+							use:fadeImage
+						/>
 					</button>
-				{/if}
+					{#if moment.images.length > 1}
+						<button
+							type="button"
+							class="media-badge hover-btn absolute bottom-3 right-3 z-20 shadow-xs hover:opacity-hover focus-ring"
+							aria-label={`查看全部 ${moment.images.length} 张图片`}
+							onclick={() => {
+								viewerIndex = 0;
+								viewerOpen = true;
+							}}
+						>
+							共 {moment.images.length} 张
+						</button>
+					{/if}
+				</div>
 			</div>
 			{#if moment.images.length > 1}
 				<div class="mt-2.5 grid grid-cols-3 gap-2">
@@ -260,6 +225,54 @@
 		<div class="relative mb-5 flex h-cover-height-lg flex-col items-center justify-center gap-2 overflow-hidden rounded-lg bg-accent-soft/30">
 			<MapPin size={28} class="text-accent-default" strokeWidth={1.5} />
 			<span class="text-xs text-text-secondary">来自 {moment.location} 的瞬间</span>
+		</div>
+	{/if}
+
+
+	<!-- 2. 作者 Header：头像（桌面 44 / 移动 36）+ 昵称 14 semibold + 位置·时间 11 次级 -->
+	<header class="flex items-center justify-between gap-3 pb-4">
+		<div class="flex min-w-0 items-center gap-3">
+			<button
+				type="button"
+				class="hover-btn hit-slop shrink-0 cursor-pointer overflow-hidden rounded-full p-0 focus-ring {isDesktop ? 'size-11' : 'size-9'}"
+				aria-label={`查看${moment.user}的个人主页`}
+				onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
+			>
+				<Avatar src={moment.avatar} name={moment.user} size={isDesktop ? 'lg' : 'md'} />
+			</button>
+			<div class="min-w-0 flex-1">
+				<button
+					type="button"
+					class="link-btn hit-slop-44 -my-2 block truncate rounded-sm py-2 text-left text-md font-semibold text-text-primary hover:text-accent-default focus-ring"
+					onclick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}
+				>
+					{moment.user}
+				</button>
+				<div class="mt-0.5 flex items-center gap-1.5 text-sm text-text-secondary">
+					{#if moment.location}
+						<span class="flex min-w-0 items-center gap-1 font-medium text-accent-default">
+							<MapPin class="size-3.5 shrink-0" strokeWidth={1.75} />
+							<span class="truncate">{moment.location}</span>
+						</span>
+						<span class="opacity-muted" aria-hidden="true">·</span>
+					{/if}
+					<span class="shrink-0 tabular-nums">{moment.time}</span>
+				</div>
+			</div>
+		</div>
+	</header>
+
+	<!-- 3. 正文叙述：14px / 1.75 阅读行高（与卡片 12px 摘要拉开层级） -->
+	{#if moment.content}
+		<p class="select-text whitespace-pre-wrap break-words pb-3 text-md font-normal leading-copy tracking-normal text-text-primary">
+			{moment.content}
+		</p>
+	{/if}
+
+	<!-- 4. 话题标签：标准胶囊档（h-6 + leading-none），只保留一层 accent 淡底 -->
+	{#if moment.tag}
+		<div class="pb-4">
+			<Badge size="md" tone="accent">#{moment.tag}</Badge>
 		</div>
 	{/if}
 
