@@ -136,6 +136,12 @@ MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 50
   （非 handled/rejected）；瞬间软删列为 `is_deleted`（迁移 037，无 `deleted_at` 列）；
   shares 表无 `view_count` 列；管理端权限 key 为 `admin.reports.read` 形式（非 `reports:read`）；
   反应 emoji 取 AppConfig 白名单（👍 ❤️ 😂 😮 😢 🙏，无 🔥）。
+- **默认浏览锚点**：`app_configs.defaults.default_location` 与 `default_group_settings.location`
+  写入徐州云龙湖（`specs.go` 的 `seedAnchor*`，与 `user_seed_lumos` 一致），否则服务端默认
+  南天门与徐州种子数据相距 400+km、附近/地图页开箱即空。**已有 app_configs 配置不会被覆盖**：
+  seed 只写自己创建的行（`--reset` 同样只删 `updated_by_user_id LIKE 'user_seed_%'` 的行），
+  已有环境（如主开发库）的既有默认位置保持原样；全新库（CI/新机器）上 seed 写入即生效。
+  需要强制对齐时用管理端「应用配置」页修改，或先删除该 `config_id='default'` 行再重跑 seed。
 - **测试**：`go test ./internal/seed/...`（不依赖 DB/网络）；验证过真实 Postgres + SeaweedFS
   双写、重复执行幂等、`--reset` 清理重建一致。
 
