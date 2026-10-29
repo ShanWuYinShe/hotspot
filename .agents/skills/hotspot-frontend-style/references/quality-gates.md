@@ -57,7 +57,8 @@ MAIN=$(ps -axo pid,command | grep -- "--user-data-dir=$PROFILE" | grep -v type= 
 ## 6. 滚动与合成层
 
 - 唯一滚动容器 `main` 禁止 `scroll-smooth`：会把 scrollTop 赋值/无参 scrollTo 动画化 766ms；平滑只给显式入口（BackToTop 传 `behavior:'smooth'`）。键盘 PageDown 的 ~134ms 为浏览器原生，勿回退。
-- `will-change` 只允许持续动画的固定图层；图片 hover 缩放、头像入口、批量交互类一律不加（曾清理 `.image-hover-frame__image`、`.avatar-entry__avatar img` 与 `NearbyImageCard` 上的 `will-change-transform`）。
+- `will-change` 纪律（按 `utilities.css` 现行策略）：**只在 `@media (hover: hover) and (pointer: fine)` 内**允许 `.card-hover`（整卡 hover 抬升）与 `.image-hover-frame__image`（卡片配图缩放）常驻 `transform` 合成层——卡片层与配图层各约 -15% 快速跨卡晃动 GPU 进程 CPU（叠加约 -28%），空闲 GPU/内存无回归；基础规则（媒体查询外）不得带 `will-change`。
+- 其余一律不加：`.hover-btn` / `.hover-action`（首页实测 48 个实例 = 48 个常驻层，收益为零）、头像入口 `.avatar-entry__avatar img`、批量小图标（过渡开始时浏览器会自动提升）。源码契约守卫 `src/styles/__tests__/perf-contract.test.ts`：`.hover-action` 不得含 `will-change`；`.card-hover`/`.image-hover-frame__image` 的基础规则不得带、媒体查询内必须带 `will-change: transform`（改 CSS 后必须过）。
 
 ## 7. 验收纪律
 
