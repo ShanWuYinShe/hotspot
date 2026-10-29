@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # HotSpot 可访问性门禁（axe-core 逐页扫描）。
 #
-# 前置：dev 环境已启动（默认 http://localhost:8888 或 worktree 网关）；已安装 agent-browser；
+# 前置：dev 环境已启动（默认 http://localhost:8888 或 worktree 网关）且已执行
+#       ./scripts/seed-dev.sh（未注入时降级为未登录态扫描）；已安装 agent-browser；
 #       frontend 已 bun install（axe-core 为 devDependency，脚本从 node_modules 注入）。
+# 登录：QA_LOGIN_ID（默认 qa@hotspot.local）/ QA_PASSWORD（默认 Qa12345678）真实登录，见 qa-common.sh。
 #
 # 用法：
 #   bun run audit:a11y
@@ -56,6 +58,9 @@ done
 case "$THEME" in vibrant|forest|inkwash) ;; *) echo "--theme 仅支持 vibrant|forest|inkwash"; exit 2 ;; esac
 case "$MODE" in light|dark) ;; *) echo "--mode 仅支持 light|dark"; exit 2 ;; esac
 
+# 前置健康检查：后端不可达/不健康时明确报错退出（避免成片假失败）。
+require_backend
+
 AXE_TOOL="$REPO_ROOT/frontend/node_modules/axe-core/axe.min.js"
 if [ ! -f "$AXE_TOOL" ]; then
   echo "找不到 $AXE_TOOL，请先 cd frontend && bun install"; exit 1
@@ -75,7 +80,9 @@ echo "BASE=$BASE SESSION=$SESSION THEME=$THEME MODE=$MODE REDUCED=$REDUCED MOBIL
 [ "$PARALLEL" -gt 1 ] && echo "PARALLEL=$PARALLEL"
 echo "输出：$OUT"
 
+# 真实 seed 账号登录（失败自动回退登录页表单/未登录态扫描），状态供报告判断。
 ensure_login
+echo "SCAN_LOGGED_IN=$SCAN_LOGGED_IN"
 if [ "$REDUCED" = "1" ] && [ "$MATRIX" != "1" ]; then
   ab set media light reduced-motion >/dev/null 2>&1
 else

@@ -806,7 +806,7 @@
 
 ### 21.11 性能纪律（R15，2026-10-28，强制）
 
-**背景**：用户反馈首页打开后浏览器进程管理器 GPU 占用 60%。实测（headless Chrome，GPU 进程 CPU%）定位到三个叠加项：
+**背景**：用户反馈首页打开后浏览器进程管理器 GPU 占用 60%。实测（headless Chrome，GPU 进程 CPU%；当时前端走 MSW mock 登录，现 mock 已移除，结论对真实后端同样适用）定位到三个叠加项：
 
 | 因素 | 实测影响（首页 1440x900，mock 登录） | 处理 |
 |---|---|---|
@@ -860,7 +860,7 @@
   预热常用路由，saveData 跳过）。事件委托放 `DesktopLayout` 的 `<svelte:window>`
   （**必须在模板顶层**，放进元素内会编译失败）。
 - 只允许预取**代码**（preloadCode）：本应用没有会取数的路由 load 函数，改成 preloadData
-  会在 mock/真实后端产生额外请求。
+  会在真实后端产生额外请求。
 - dev 必须配 `vite.config.ts` → `server.warmup.clientFiles`（全部路由 `+page.svelte` +
   布局/消息/导航组件；glob 用 `src/routes/*/**` 绕开 `(app)` 括号陷阱），否则首访路由
   按需编译 58–720ms，就是「每个新页面都要等一拍」的根因。

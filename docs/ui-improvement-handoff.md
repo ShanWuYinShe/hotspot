@@ -1,5 +1,9 @@
 # UI 一致性改进交接（2026-10-22 ~ 2026-10-27，Round 1-22）
 
+> **口径变更（2026-10-29）**：前端 MSW mock 已移除（MockBadge 组件同步删除），dev 环境改用后端
+> 种子数据 + 真实后端。本文中「dev/mock」「mock 登录」「mock 空态不可复现」等历史结论保留原记录，
+> 新基线以 seed 环境为准（见根 `AGENTS.md`「开发种子数据」）。
+
 本文件记录 UI 一致性/审美改进的完成基线与待做项，供后续会话直接接手。规则细节见
 `.agents/skills/hotspot-harmony-ui/SKILL.md`、`.agents/skills/hotspot-frontend-layout/SKILL.md`；
 审计结论见 `docs/frontend-ui-audit.md`、`docs/backend-audit.md`。

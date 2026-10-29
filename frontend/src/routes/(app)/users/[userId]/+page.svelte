@@ -91,7 +91,7 @@
 	const device = $derived(platform.platform);
 	const isMobile = $derived(device === 'mobile');
 
-	// 自己看自己（mock 登录用户即 user_lumos）：此前仍显示「私信/关注/更多操作」，
+	// 自己看自己：此前仍显示「私信/关注/更多操作」，
 	// 甚至能把「关注」点成功、把「备注」写到自己头上（全站复审 s2-19）。
 	// 自己的资料页不发关系动作——改资料走 /me/edit（入口在个人中心）。
 	const isSelf = $derived(!!uid && auth.user?.user_id === uid);

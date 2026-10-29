@@ -201,7 +201,8 @@ function getDeviceId(): string {
  * 生成幂等键（spec: api_spec_base.md「幂等性（契约级）」）。
  * 格式：{client_id}-{timestamp_ms}-{random}，长度 32-64，字符集 [a-zA-Z0-9-_]；
  * 服务端按该正则校验，超长/非法 key 会被当作无 key 静默跳过幂等。
- * DeviceId 最长可达 41 字符（mock 前缀形态），截断到 24 保总量 ≤64。
+ * DeviceId 长度无固定契约（服务端 bootstrap 下发 UUID v4，自定义客户端标识更长），
+ * 截断到 24 保总量 ≤64。
  */
 export function newIdempotencyKey(): string {
   const clientId = getDeviceId().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'hotspot-web';

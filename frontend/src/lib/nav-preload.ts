@@ -8,7 +8,7 @@
 //
 // 为什么用 preloadCode 而不是 preloadData：本应用 ssr=false 且没有会取数的路由
 // load 函数（仅旧链接 308 重定向的 +page.ts），预取数据没有收益；preloadCode
-// 不执行 load 函数，因此对 mock / 真实后端都是零请求副作用（settings、notify 等
+// 不执行 load 函数，因此对真实后端是零请求副作用（settings、notify 等
 // 页面的数据仍在真实挂载后的 $effect 里拉取，时序不变）。
 import { preloadCode } from '$app/navigation';
 

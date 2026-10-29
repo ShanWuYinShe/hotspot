@@ -137,7 +137,7 @@
 - **分页**：`PaginationParams = { limit?, cursor? }`（默认 20，最大 100）。
 - **`moments/fetch_nearby` 等"流"端点还需位置参数**（reference point），只传 `{limit}` 会得到
   `参数错误` —— 造流量时优先用 `moments/search`（热门模式）这类参数简单的端点。
-- **注意**：前端 `bun run browser:qa` 走 **MSW mock**，**不产生后端流量**，不能拿它压后端或验证 SQL 性能。
+- **注意**：前端 `bun run browser:qa` 走**真实后端**（seed 数据 + 真实账号登录），会产生后端流量，但它是 UI 巡检（单线程、页面加载型），不能代替压测或 SQL 性能验证。
 - **慢查询观察**：`SLOW_QUERY_THRESHOLD=10ms docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d backend`
   → 打接口 → `docker compose ... logs backend | grep "slow query"`（日志含 duration/sql/err）。
 

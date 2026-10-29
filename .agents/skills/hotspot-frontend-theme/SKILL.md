@@ -26,7 +26,7 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token（shared �
 - 遮罩/玻璃：`--cst-surface-scrim`（弹层遮罩）、`--cst-surface-media-scrim-strong`（照片遮罩）、`--cst-surface-cover-scrim`（封面渐变）、`--cst-surface-glass-badge`（玻璃徽章）。
 - hover/active：优先 `hover:bg-accent-soft` 等 token 类；背景填充走 `--cst-interactive-hover-fill` / `--cst-interactive-active`。
 - 弱化嵌入面（分段控件底轨、置顶会话行等「比卡片低一档」的静态填充）：`--cst-surface-subtle`（`bg-surface-subtle`）。与 `bg-interactive-hover` 的区别是语义：前者是「静态的凹陷/次表面」，后者是「悬停反馈」，不可互换。该表达式经 `--cst-text-primary` 自适配明暗（light 微沉 / dark 微浮），因此只在 themes/*.css 的 light 块定义一次，**不算缺失 dark 覆盖**。
-- **数据层禁止携带颜色**：mock 数据/API 响应只返回语义标识（tag/type/category），不得包含 `color`/`bg` 等展示字段；视觉色由前端按语义键映射到 token（参照 `notify/shared/notify-data.ts` 的 `TYPE_CONFIG` 语义键 → token 映射模式）。
+- **数据层禁止携带颜色**：种子数据/API 响应只返回语义标识（tag/type/category），不得包含 `color`/`bg` 等展示字段；视觉色由前端按语义键映射到 token（参照 `notify/shared/notify-data.ts` 的 `TYPE_CONFIG` 语义键 → token 映射模式）。
 - **组件/数据层禁止 color-mix 表达式**：需要淡底/淡边框/光晕时引用主题预定义档位 token——每个语义色族在 themes/{vibrant,forest,inkwash}.css 定义三档：`-bg`（淡底）、`-border`（淡边框）、`-glow`（光晕），如 `--cst-status-warning-bg/-border/-glow`、`--cst-marker-user-bg/-border/-glow`。color-mix 只允许出现在 `styles/theme/` 定义体系内部（themes/*.css 的 token 值、semantic.css 的语义派生档位、utilities.css/base.css 的既有工具类——值即最终定义）；页面/组件/数据层仍然禁止，需要新档位时先在定义体系补 token。
 
 ## 画布、软岛与媒体表面 token（强制）

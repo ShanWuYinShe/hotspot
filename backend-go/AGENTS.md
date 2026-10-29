@@ -90,6 +90,55 @@ MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 50
 - 首次构建/重建镜像：`docker compose -f docker-compose.yml -f docker-compose.dev.yml build backend`（`GOPROXY` 默认 `goproxy.cn,direct`，依赖经 BuildKit cache mount 缓存）。
 - 注意：`Dockerfile.dev` 的 `ARG GO_VERSION`/`AIR_VERSION` 必须带精确 patch 版本（如 `1.26.10`），浮动 tag（`1.26-alpine`）拉取易超时；跨仓版本主本见 `workwork/versions.env`，改版本走 sync-versions.sh。
 
+## 开发种子数据（dev 环境）
+
+前端已无任何 API mock，dev 下全部走真实后端。首次启动或数据被改乱后，用种子命令注入
+一套可复现数据（Postgres + SeaweedFS 双写；幂等，重复执行不产生重复数据）：
+
+```bash
+# 仓库根执行（worktree 内同样适用；自动走 dev compose 的 backend 容器）
+./scripts/seed-dev.sh            # 默认 --if-missing：缺失则写入，已存在则跳过（保留开发中产生的互动）
+./scripts/seed-dev.sh --reset    # 先按固定前缀清理 seed 数据（含 S3 对象）再重建
+./scripts/seed-dev.sh --dry-run  # 只打印计划（账号/媒体数量/各表行数），不写数据
+```
+
+前置：dev compose 已启动（`docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d`）。
+脚本在 backend 容器内执行 `go run ./cmd/seed`（继承容器内 POSTGRES_DSN / S3_* env），
+无需新增 compose 服务；也可在容器内直接执行 `go run ./cmd/seed [--reset|--dry-run]`。
+全新 SeaweedFS 卷默认没有 S3 bucket（PUT 会 404），脚本会在真实写入前尽力自动创建
+（`weed shell s3.bucket.create`；现有 dev 卷已存在时为空操作）。
+
+| 账号 | login_id | 口令（env 可覆盖） | 角色 |
+|------|----------|--------------------|------|
+| 鹿鸣 | `qa@hotspot.local` | `SEED_QA_PASSWORD`（默认 `Qa12345678`） | 普通用户（QA 主账号，`user_seed_lumos`） |
+| 巡检员 | `admin@hotspot.local` | `SEED_ADMIN_PASSWORD`（默认 `Admin12345678`） | 管理员（`grant_all`，同时是完整普通用户） |
+
+其余 8 个开发账号（`sophia/marco/mika/chen/lin/xiaoman/privacy/banned@hotspot.local`）口令统一
+`Seed123456`；仅本地开发使用，生产环境 `cmd/seed` 会直接拒绝执行（APP_ENV 判定）。
+
+- **实现位置**：`internal/seed/`（数据规格 `specs_*.go`、媒体计划 `mediaplan.go`、写入层
+  `tables.go`、清理 `cleanup.go`、dry-run `plan.go`、执行 `run.go`）；入口 `cmd/seed/main.go`。
+- **素材**：`internal/seed/assets/*.jpg`（`//go:embed` 打包，勿替换/改尺寸）：9 张 400x400 头像、
+  4 张 800x800 群头像、12 张 1200x800 瞬间图；`file_id/storage_key` 复写 media 模块规则
+  （`file_+md5(userID:uploadID)` / `uploads/<userID>/<uploadID>.jpg`，单测锁定）。
+- **固定 ID 前缀**（`--reset` 按前缀清理，也是 QA 脚本的稳定 ID）：`user_seed_*`、
+  `moment_seed_01..24`、`comment_seed_*`、`group_seed_1..4`、`gmsg_seed_*`、`chat_seed_*`、
+  `notify_seed_*`、`share_seed_*`、`report_seed_*`、`upload_seed_*`、`role_seed_*`、`audit_seed_*` 等。
+- **数据规模**（dry-run 可见）：38 张表 396 行 + 38 个媒体对象；覆盖 10 用户/24 瞬间/4 群组/
+  3 私聊/9 通知/2 分享/4 举报/2 管理角色/6 审计日志/2 系统公告/1 份 AppConfig。
+- **S2 地理索引**：users/moments/groups 的 `s2_cell_id` 用 `platform/geo.LeafCellID`、
+  groups 的 `s2_cell_token` 用 `geo.CellTokenAtLevel(point, 14)`（与各模块写入口径一致），
+  否则附近/地图查询为空。
+- **分享码**：shares 表契约要求 12 位、字符集 `[A-HJ-NP-Z2-9]`；seed 使用
+  `SEEDSUNSET23`（moment_seed_01）与 `SEEDUSERPAGE`（user_seed_lumos），QA 走
+  `/share/SEEDSUNSET23` 即有内容（seed-spec 里 3 位的 `abc/def` 会被参数校验拒绝）。
+- **与 seed-spec 的差异（以代码/迁移为准）**：reports 状态为 `pending/resolved/dismissed`
+  （非 handled/rejected）；瞬间软删列为 `is_deleted`（迁移 037，无 `deleted_at` 列）；
+  shares 表无 `view_count` 列；管理端权限 key 为 `admin.reports.read` 形式（非 `reports:read`）；
+  反应 emoji 取 AppConfig 白名单（👍 ❤️ 😂 😮 😢 🙏，无 🔥）。
+- **测试**：`go test ./internal/seed/...`（不依赖 DB/网络）；验证过真实 Postgres + SeaweedFS
+  双写、重复执行幂等、`--reset` 清理重建一致。
+
 ## 技术栈（名称级）
 
 - Go（见 `go.mod`）、chi router、PostgreSQL + pgx/v5、Redis（限流/幂等缓存/WS 跨实例 fanout，可选）、google/s2（地理网格索引）、gorilla/websocket、zap（结构化日志）
@@ -98,7 +147,7 @@ MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 50
 
 ```
 backend-go/
-├── cmd/                    # 入口（server / migrate）
+├── cmd/                    # 入口（server / migrate / seed）
 ├── migrations/             # SQL 迁移（embed 进二进制）
 ├── test/                   # 集成测试（E2E，需要 Docker）
 └── internal/

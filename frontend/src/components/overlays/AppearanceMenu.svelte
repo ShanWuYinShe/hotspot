@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Check, Palette, Database } from '@lucide/svelte';
+	import { Check, Palette } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
@@ -22,60 +22,6 @@
 		theme.colorScheme === 'auto' ? '跟随系统' : theme.colorScheme === 'dark' ? '深色' : '浅色'
 	);
 
-	// ── Dev API source toggle（仅 dev）───────────────────────────
-	let mockEnabled = $state(true);
-
-	$effect(() => {
-		if (!import.meta.env.DEV) return;
-		let unsub: (() => void) | undefined;
-		void import('@/mocks/toggle').then(({ isMockEnabled, subscribe }) => {
-			mockEnabled = isMockEnabled();
-			unsub = subscribe(() => {
-				mockEnabled = isMockEnabled();
-			});
-		});
-		return () => unsub?.();
-	});
-
-	const handleMockToggle = async () => {
-		const { toggleMock } = await import('@/mocks/toggle');
-		await toggleMock();
-	};
-
-	// ── Dev auth scenario（仅 dev）──────────────────────────────
-	const AUTH_SCENARIOS = [
-		{ id: 'ok', label: '正常登录' },
-		{ id: 'invalid-creds', label: '账号/密码错误 (10100)' },
-		{ id: 'banned', label: '账号封禁 (10201)' },
-		{ id: 'param-error', label: '参数错误 (10000)' },
-		{ id: 'rate-limit', label: '限流 (10500)' }
-	] as const;
-
-	let scenario = $state<string>('ok');
-
-	$effect(() => {
-		if (!import.meta.env.DEV) return;
-		void import('@/mocks/data').then(({ getMockAuthScenario }) => {
-			scenario = getMockAuthScenario();
-		});
-	});
-
-	const applyScenario = async (next: string) => {
-		const { setMockAuthScenario } = await import('@/mocks/data');
-		setMockAuthScenario(next as any);
-		scenario = next;
-	};
-
-	const resetLoggedOut = async () => {
-		const { setMockLoggedIn } = await import('@/mocks/data');
-		// 只重置 mock 登录态，再 reload 让 auth store 重新判定。
-		// 注意：access_token / refresh_token 是服务端下发的 HttpOnly Cookie，JS 无法读取、
-		// 也无法删除——此前这里用 document.cookie 试图清 Cookie，被 Chrome 全部拒绝并在
-		// console 刷「已有 HTTP-Only Cookie …已拒绝 Cookie “access_token”」。真实登出应走
-		// /auth/signout（服务端 Set-Cookie Max-Age=0）；mock 态由 localStorage 旗标控制。
-		setMockLoggedIn(false);
-		window.location.reload();
-	};
 </script>
 
 <Popover.Root bind:open>
@@ -150,60 +96,5 @@
 				/>
 			</section>
 
-			{#if import.meta.env.DEV}
-				<button
-					type="button"
-					onclick={handleMockToggle}
-					class="hover-btn mt-2.5 flex w-full items-center justify-between rounded-lg ring-1 ring-border-default bg-surface-primary p-2.5 text-left outline-none transition-colors hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default text-text-primary"
-				>
-					<span class="flex items-center gap-2.5">
-						<span class="flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft shrink-0">
-							<Database size={14} color="var(--cst-accent-default)" />
-						</span>
-						<span>
-							<span class="block text-xs font-medium">API 数据来源</span>
-							<span class="block text-xxs text-text-secondary">{mockEnabled ? '模拟数据' : '真实后端'}</span>
-						</span>
-					</span>
-					<span class="relative h-5 w-8.5 overflow-hidden rounded-full {mockEnabled ? 'bg-accent-default' : 'bg-border-strong'}">
-						<span
-							class="absolute top-0.75 h-3.5 w-3.5 rounded-full bg-content-inverse shadow-control-thumb"
-							style="left:{mockEnabled ? 17 : 3}px;transition:left var(--cst-motion-standard) var(--cst-ease-bounce);"
-						></span>
-					</span>
-				</button>
-
-				<div class="mt-2.5 rounded-lg ring-1 ring-border-default bg-surface-primary p-2.5 text-text-primary">
-					<div class="px-0.5 pb-2">
-						<span class="block text-xs font-medium">模拟登录态</span>
-						<span class="mt-0.5 block text-xxs text-text-secondary">影响 login/register/guest/reset 的返回</span>
-					</div>
-					<div class="space-y-1">
-						{#each AUTH_SCENARIOS as s}
-							{@const isCur = scenario === s.id}
-							<button
-								type="button"
-								onclick={() => void applyScenario(s.id)}
-								aria-pressed={isCur}
-								class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors duration-instant outline-none focus-visible:ring-2 focus-visible:ring-accent-default {isCur
-									? 'bg-accent-soft font-medium text-text-accent-on-soft'
-									: 'text-text-primary hover:bg-interactive-hover'}"
-							>
-								<span class="truncate">{s.label}</span>
-								{#if isCur}
-									<Check size={13} class="shrink-0 text-accent-default" />
-								{/if}
-							</button>
-						{/each}
-					</div>
-					<button
-						type="button"
-						onclick={() => void resetLoggedOut()}
-						class="mt-2.5 w-full rounded-md border border-border-default bg-surface-primary py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-interactive-hover hover:text-text-primary focus-ring"
-					>
-						重置为未登录（匿名浏览）
-					</button>
-				</div>
-			{/if}
 	</Popover.Content>
 </Popover.Root>

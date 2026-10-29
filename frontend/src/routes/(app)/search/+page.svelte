@@ -176,7 +176,7 @@
 				if (!controller.signal.aborted) momentsLoading = false;
 			});
 		// 人物推荐：距离排序（不带 reference_point 走服务端默认位置，与首页无锚点
-		// 回退同口径）；限 3 条（服务端/mock 对 limit 的裁剪口径不一，客户端显式
+		// 回退同口径）；限 3 条（服务端对 limit 的裁剪口径不一，客户端显式
 		// 切片兜底）；仅发现态消费，失败静默。
 		void searchUsers({ radius: 5000, sort_by: 'distance', pagination: { limit: 3 } }, { signal: controller.signal })
 			.then((res) => {

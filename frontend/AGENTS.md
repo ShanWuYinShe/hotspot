@@ -20,25 +20,11 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 - 组件测试约定：与组件同目录的 `__tests__/Xxx.test.ts`（如
   `components/shared/__tests__/Avatar.test.ts`）；snippet 类 props
   在 jsdom 下传参不稳定，契约用例以渲染/交互/布局差异为准
-- Mock：MSW（仅 dev 且 `PUBLIC_API_MOCK !== 'false'` 时启用；`hooks.client.ts` 的
-  `init()` 中注册——service worker 首次注册后需刷新一次才接管，带 sessionStorage
-  防死循环标记。`mocks/browser.ts` 的 `setupWorker(...handlers)` 未配显式 scope
-  （默认同源）；`mocks/toggle.ts` 的 `onUnhandledRequest` 对非 `/api/v1/` 请求
-  直接 `bypass`——只拦截 API 流量，页面/静态资源不受 mock 影响，`/api/v1/`
-  未匹配的请求才 `warn`。mock 开关经 localStorage `hotspot:mock-enabled`
-  持久化（`toggleMock()` 切换后 reload））。
-  **MSW 无法下发 HttpOnly Cookie**：浏览器端 MSW 会把 mock 响应里的 `Set-Cookie`
-  逐条用 `document.cookie` 转发（`forwardResponseCookies`），同名 HttpOnly Cookie
-  已存在时会被 Chrome 全部拒绝并在控制台刷「已有 HTTP-Only Cookie …已拒绝 Cookie」。
-  因此 mock 认证态只用 localStorage 旗标（`isMockLoggedIn`）表达，**不要在 mock
-  handler 里为 token 设置 `Set-Cookie`**；只有 bootstrap 的 `device_id`（非 HttpOnly、
-  按 spec）可以下发。
-  **MSW 也无法模拟 WebSocket**：mock 登录态下真实后端没有会话，WS 握手成功后会立刻
-  以 4001 auth failed 关闭。因此 `stores/ws.svelte.ts` 在 mock 启用时**整体跳过真实
-  WS 连接**（`resolveWsAction` → disconnect），不要在 store/组件里绕过该判断；
-  同时 `lib/ws/client.ts` 对连续 4001「刷新成功但一连接又被关闭」最多重连 2 轮，
-  超过即派发 auth-failed 停止——两处都是为了防止「WS 握手 + refresh_token」1–2 秒一次
-  的无限循环（2026-10-28 实测：mock 登录下 12 秒 9 轮，并把后端 WS 握手限流打到 429）。
+- 开发数据：dev 环境直连真实后端，**不内置任何 API mock**（原 MSW 已移除）。可复现的测试数据由
+  后端种子命令注入（Postgres + SeaweedFS 双写），见根 `AGENTS.md`「开发种子数据」与
+  `backend-go/AGENTS.md`：`./scripts/seed-dev.sh`（幂等；`--reset` 重建）。
+  测试账号 `qa@hotspot.local`（普通用户）与 `admin@hotspot.local`（管理员，同时是完整普通用户），
+  口令经 `.env` 的 `SEED_QA_PASSWORD` / `SEED_ADMIN_PASSWORD` 注入，仅本地开发使用。
 
 ## 开发模式：必须通过 Docker Compose + Nginx 网关
 
@@ -104,7 +90,7 @@ bun run browser:qa:mobile
 bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 ```
 
-以 MSW mock + 访客身份自动巡检：横向溢出 / 坏图 / h1 数量 / TabBar 数量 / 控制台错误，
+以种子账号真实登录（默认 `qa@hotspot.local`，seed 未注入时降级访客/未登录）自动巡检：横向溢出 / 坏图 / h1 数量 / TabBar 数量 / 控制台错误，
 逐页截图并生成报告。输出统一在仓库根 `.workwork/browser-check/qa-<时间戳>/`
 （已 gitignore，不提交）。
 
@@ -147,7 +133,7 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
 ```
 
 - 依赖：axe-core 为 devDependency（`bun install` 后从 `node_modules/axe-core` 注入），不进 build/check；
-- 登录：dev/mock 栈用 `hotspot:mock-auth-logged-in` 标记；生产无该 handler 时自动降级为「未登录态扫描」；
+- 登录：QA 脚本用种子账号真实登录（`QA_LOGIN_ID` / `QA_PASSWORD`，默认 `qa@hotspot.local`，见 `.env.example`）；seed 未注入或登录失败时降级为「未登录态扫描」并提示先跑 `./scripts/seed-dev.sh`；
 - 输出：仓库根 `.workwork/browser-check/{a11y,touch,qa}-<时间戳>/`（report.json + summary.txt + raw/），可重复运行；
 - 会话：脚本使用独立 `hotspot-audit-*` session 并在结束时关闭，不干扰其它浏览器会话；
 - allowlist 维护：`scripts/ui-quality-touch-allowlist.json`（稳定 selector + 理由，禁止 nth-child）；新增例外必须写明理由并在 `docs/frontend-ui-audit.md` 记录，详见该文「质量门禁」节；
@@ -238,9 +224,8 @@ src/
                   #   core.ts，按业务域的端点包装在 domains/*.ts——新增端点放对应域文件）
   styles/         # CSS（主题、Tailwind）
   assets/         # 静态资源（含地图图钉 SVG）
-  mocks/          # MSW mock（仅 dev；toggle.ts 提供 localStorage 持久化开关）
 ```
-> `static/` 位于**项目根**（SvelteKit 约定，不在 `src/` 下）：`static/mockServiceWorker.js`（MSW service worker）。
+> `static/` 位于**项目根**（SvelteKit 约定，不在 `src/` 下）：静态资源原样拷贝进构建产物。
 
 ## 主题与 Token 架构
 

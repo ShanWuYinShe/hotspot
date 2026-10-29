@@ -37,7 +37,7 @@ export async function loadDefaultLocation(): Promise<DefaultLocation | null> {
 				}
 			}
 		} catch {
-			/* network/mock unavailable — caller handles null */
+			/* 网络不可用（后端未就绪等）——调用方按 null 处理 */
 		} finally {
 			inflight = null;
 		}

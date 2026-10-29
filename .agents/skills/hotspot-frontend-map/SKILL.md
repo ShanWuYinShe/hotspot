@@ -46,7 +46,7 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
 
 ## 浏览器实测方法（agent-browser，合成 wheel 事件即可生效）
 
-1. 打开 `http://localhost:8888/map`（本地 Docker，mock 数据，无需登录）。
+1. 打开 `http://localhost:8888/map`（本地 Docker，先用 `./scripts/seed-dev.sh` 注入种子数据；未登录可看公开数据，登录后覆盖个人 marker）。
 2. 图钉锚定验证：记录 marker 屏幕坐标 → 派发 `WheelEvent(deltaY:-120)`（光标故意
    偏离中心）→ 缩放一级后应满足 `p' = cursor + 2·(p − cursor)`（相对误差 ≈0）。
 3. 缩放级从瓦片 `img.map-tile` 的 `src` 读 `z=`。

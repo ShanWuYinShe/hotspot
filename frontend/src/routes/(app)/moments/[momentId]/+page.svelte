@@ -58,7 +58,7 @@
 	type MomentComment = import('./MomentPostBody.svelte').MomentComment;
 	type MomentData = import('./MomentPostBody.svelte').MomentData;
 
-	// 桌面 rail 数据：此刻附近来自 moments/fetch_nearby，更多动态来自 moments/search 热门模式（均走 MSW mock）。
+	// 桌面 rail 数据：此刻附近来自 moments/fetch_nearby，更多动态来自 moments/search 热门模式。
 	let nearbyNow = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
 	let relatedMoments = $state<{ id: string; title: string; meta: string; image: string }[]>([]);
 

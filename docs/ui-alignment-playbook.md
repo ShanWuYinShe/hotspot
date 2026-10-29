@@ -55,8 +55,9 @@
 
 ## 3. 对齐前的环境清单（数据不同源 = 全部白做）
 
-1. **同一后端 + 同一账号**：客户端连 docker nginx（8888）；前端**关掉 MSW**
-   （`localStorage['hotspot:mock-enabled']='false'` + reload，dev 默认开启会骗过你）。
+1. **同一后端 + 同一账号**：客户端与前端都连 docker nginx（8888）；前端已无 API mock
+   （dev 直连真实后端），两端用同一测试账号登录（`qa@hotspot.local`，见根 `AGENTS.md`
+   「开发种子数据」），否则数据不同源。
 2. **同一浏览锚点**：前端锚点来自后端 `client_config.defaults.default_location`；
    客户端锚点存 preferences（`haps/entry/preferences/geotalk` 的 `browse_anchor` 键），
    不一致时首页数据完全不同。debug 构建下可直接改文件（`aa force-stop` 后 `file send` 回去）。
@@ -118,7 +119,7 @@
 ## 6. 工作流（建议顺序）
 
 ```
-0. 环境：docker 起、前端关 MSW、两端锚点/账号一致、debug 构建、视口 390 确认
+0. 环境：docker 起、两端同一测试账号（seed 数据）、锚点一致、debug 构建、视口 390 确认
 1. 前端页截图（viewport + full）+ computed style 备查
 2. 客户端同页截图 + dumpLayout
 3. 差异 → 归因到 token（改 ThemeConstants/DesignConstants，进 CI）或规格（改布局代码）

@@ -70,6 +70,25 @@
 
 详见各子项目 `AGENTS.md`：`frontend/AGENTS.md`、`backend-go/AGENTS.md`。
 
+### 开发种子数据（dev 环境）
+
+前端**不内置任何 API mock**：dev 下 API / WebSocket / S3 全部直连真实后端。首次启动（或数据被改乱后）
+执行种子命令注入一套可复现的测试数据（Postgres + SeaweedFS 双写，幂等，重复执行不产生重复数据）：
+
+```bash
+./scripts/seed-dev.sh           # 缺失则写入；已有 seed 数据则跳过（保留开发中产生的互动）
+./scripts/seed-dev.sh --reset   # 按固定前缀清空 seed 数据后重建（含 S3 对象）
+./scripts/seed-dev.sh --dry-run # 只打印写入计划
+```
+
+| 账号 | login_id | 口令（`.env` 可覆盖） | 角色 |
+|------|----------|------------------------|------|
+| 鹿鸣 | `qa@hotspot.local` | `SEED_QA_PASSWORD`（默认 `Qa12345678`） | 普通用户，QA 巡检主账号 |
+| 巡检员 | `admin@hotspot.local` | `SEED_ADMIN_PASSWORD`（默认 `Admin12345678`） | 管理员（grant_all），同时是完整普通用户 |
+
+口令仅本地开发使用，生产部署不得沿用；数据规格、媒体素材与实现见 `backend-go/internal/seed/` 与
+`backend-go/AGENTS.md`「开发种子数据」。
+
 ## worktree 调试与清理
 
 worktree 内调试同样通过 Docker Compose，与主工作树自动隔离。

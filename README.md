@@ -25,9 +25,12 @@
 ```bash
 cp .env.example .env
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+./scripts/seed-dev.sh   # 注入开发测试数据（Postgres + SeaweedFS，幂等）
 ```
 
 启动后访问 `http://localhost:8888`（nginx 网关统一反代前端、API 与 WebSocket）。
+
+开发环境不内置 API mock，所有请求走真实后端；测试账号与种子数据说明见 [AGENTS.md](AGENTS.md)「开发种子数据」。
 
 ## 版本号管理与发布
 

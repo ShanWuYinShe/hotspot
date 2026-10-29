@@ -45,7 +45,6 @@
 		"eslint": "^10.8.0",
 		"eslint-plugin-svelte": "^3.22.0",
 		"jsdom": "^30.0.1",
-		"msw": "^2.15.0",
 		"svelte-check": "^4.7.4",
 		"tailwindcss": "^4.3.3",
 		"typescript": "~6",

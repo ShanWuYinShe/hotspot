@@ -12,7 +12,7 @@ description: hotspot 前端路由与目录组织：文件路由表、设备分�
 ```
 src/routes/
   +layout.ts               # export const ssr = false（SPA 模式开关）
-  +layout.svelte           # 全局壳（styles + stores + AuthGate；MSW 注册在 hooks.client.ts）
+  +layout.svelte           # 全局壳（styles + stores + AuthGate）
   +error.svelte            # 404
   (auth)/login/+page.svelte    # 登录页（无 MainLayout 外壳）
   share/[code]/+page.svelte    # 分享落地页（真实用户走 SPA；爬虫 UA 由 nginx 分流到后端 OG，

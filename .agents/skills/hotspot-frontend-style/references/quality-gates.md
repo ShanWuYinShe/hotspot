@@ -37,7 +37,7 @@ MAIN=$(ps -axo pid,command | grep -- "--user-data-dir=$PROFILE" | grep -v type= 
 - 单变量 A/B：用注入 `<style>` 的方式分别关全部动画 / 关 backdrop-filter / 关 will-change，对比 GPU 进程 CPU。
 - 源码契约守卫：`src/styles/__tests__/perf-contract.test.ts`（改 CSS 后必须过）。
 
-**首页 1440x900（mock 登录，headless Chrome GPU 进程 CPU%）实测基线**：
+**首页 1440x900（登录态，headless Chrome GPU 进程 CPU%）实测基线**（2026-10-28 采集时前端走 MSW mock，mock 已移除；结论对真实后端同样适用）：
 
 | 场景 | 修复前 | 修复后 |
 |---|---|---|

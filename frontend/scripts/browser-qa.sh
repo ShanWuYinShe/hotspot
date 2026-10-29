@@ -2,8 +2,14 @@
 # HotSpot 前端浏览器巡检脚本（agent-browser）。
 #
 # 前置：
-#   1. dev 环境已启动（仓库根：docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d）
+#   1. dev 环境已启动（仓库根：docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d），
+#      并已执行 ./scripts/seed-dev.sh 注入种子数据（未注入时降级为未登录态扫描）
 #   2. 已安装 agent-browser（npm i -g agent-browser && agent-browser install）
+#
+# 登录：真实种子账号（QA_LOGIN_ID 默认 qa@hotspot.local / QA_PASSWORD 默认 Qa12345678）；
+#       失败回退登录页表单，再失败按未登录态扫描（SCAN_LOGGED_IN=0）并提示先跑 seed-dev.sh。
+# 详情页 ID：seed 固定 ID（moment_seed_01 / user_seed_lumos / group_seed_1）优先，
+#       AUDIT_DETAIL_MOMENT / AUDIT_DETAIL_USER / AUDIT_DETAIL_GROUP 可覆盖。
 #
 # 用法：
 #   bun run browser:qa              # 桌面 21 页
@@ -35,6 +41,9 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# 前置健康检查与登录/详情页 ID 统一由 qa-common 处理（真实种子账号登录）。
+require_backend
+
 OUT="${QA_OUT_DIR:-$REPO_ROOT/.workwork/browser-check}/qa-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT/screenshots"
 REPORT="$OUT/report.txt"
@@ -57,19 +66,6 @@ audit_js='(() => {
 	return { url: location.pathname, title: document.title, vw, tabBars: document.querySelectorAll("nav[aria-label=\"主导航\"]").length, issues };
 })()'
 
-guest_login() {
-	ab open "$BASE/" >/dev/null 2>&1
-	ab wait --load networkidle >/dev/null 2>&1
-	local need_login
-	need_login="$(ab eval '(() => document.body.innerText.includes("随便逛逛（访客）"))()' 2>/dev/null | tr -d '"')"
-	[ "$need_login" != "true" ] && return 0
-	ab eval '(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.includes("随便逛逛")); if (b) b.click(); return !!b; })()' >/dev/null 2>&1
-	ab wait 500 >/dev/null 2>&1
-	ab eval '(() => { const i = document.querySelector("input[autocomplete=nickname]") || [...document.querySelectorAll("input")].find((x) => (x.placeholder || "").includes("给自己起个名字")); if (!i) return false; Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set.call(i, "QA巡检"); i.dispatchEvent(new Event("input", { bubbles: true })); return true; })()' >/dev/null 2>&1
-	ab eval '(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.includes("以访客身份继续")); if (b) b.click(); return !!b; })()' >/dev/null 2>&1
-	ab wait --load networkidle >/dev/null 2>&1
-}
-
 run_pages() {
 	local label="$1"; shift
 	local idx=0
@@ -83,11 +79,15 @@ run_pages() {
 	done
 }
 
-guest_login
-
-# 页面清单与详情页 ID 发现统一收敛在 scripts/lib/qa-common.sh（public API 优先，
-# 空则从首页 href fallback，仍空则跳过并记录）。QA 保持 18 页基线 + 详情页。
+# 登录：qa-common.ensure_login（真实 seed 账号 → 登录页表单回退 → 未登录态扫描）。
+ensure_login
+# 页面清单与详情页 ID 解析统一收敛在 scripts/lib/qa-common.sh（seed 固定 ID 优先，
+# 不可用时回退 public API / 首页 href，仍空则跳过并记录）。QA 保持 18 页基线 + 详情页。
 build_page_lists
+echo "SCAN_LOGGED_IN=$SCAN_LOGGED_IN DETAIL_MOMENT=$DETAIL_MOMENT DETAIL_USER=$DETAIL_USER DETAIL_GROUP=$DETAIL_GROUP" | tee -a "$REPORT"
+if [ "$SCAN_LOGGED_IN" = "0" ]; then
+	echo "WARN: 未登录态扫描（seed 未注入或 QA 账号登录失败；先执行 ./scripts/seed-dev.sh）" | tee -a "$REPORT"
+fi
 QA_PAGES=("${QA_DESKTOP_PAGES[@]}")
 [ -n "$DETAIL_MOMENT" ] && QA_PAGES+=("/moments/$DETAIL_MOMENT")
 [ -n "$DETAIL_USER" ] && QA_PAGES+=("/users/$DETAIL_USER")

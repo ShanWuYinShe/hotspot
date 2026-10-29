@@ -346,7 +346,7 @@
 								</TagPill>
 							{/each}
 							<!-- 账号上已有的、但不在本页 12 项固定选项里的标签（后端标签字典可大于前端选项表，
-							     如 mock 的「咖啡」）：必须一并渲染，否则图例按 tags.size 计数、而胶囊只显示
+							     如「咖啡」）：必须一并渲染，否则图例按 tags.size 计数、而胶囊只显示
 							     子集，出现「(3/5) 却只有 2 个高亮」且该标签无法取消（全站复审 s3 P1-2）。 -->
 							{#each extraTags as t (t)}
 								<TagPill active onClick={() => toggleTag(t)}>
