@@ -41,7 +41,7 @@ const baseProps = {
 };
 
 describe('MomentPostBody 详情媒体与布局契约', () => {
-	it('单图画廊展陈：主图 object-contain + 全宽，不再裁切/固定 cover 高度', () => {
+	it('单图画廊展陈：主图按原比例整宽展示，不裁切、不压缩高度', () => {
 		const { container } = render(MomentPostBody, { props: baseProps });
 		const img = container.querySelector('[data-gallery-image]') as HTMLImageElement;
 		expect(img).toBeTruthy();
@@ -49,10 +49,21 @@ describe('MomentPostBody 详情媒体与布局契约', () => {
 		expect(img.className).not.toContain('object-cover');
 		expect(img.className).not.toContain('h-cover-height-lg');
 		expect(img.className).toContain('w-full');
-		expect(img.className).toContain('max-h-');
+		expect(img.className).toContain('h-auto');
+		// 2026-10-29 用户反馈：不得用 max-h 压高度（高图由页面滚动承载、左右不留白）
+		expect(img.className).not.toContain('max-h-');
 	});
 
-	it('画廊展台用同图模糊铺底填充比例差，避免两侧空底色', () => {
+	it('图片区只保留顶部圆角（底部直角贴边），不是悬浮的圆角矩形', () => {
+		const { container } = render(MomentPostBody, { props: baseProps });
+		const img = container.querySelector('[data-gallery-image]') as HTMLImageElement;
+		const box = img.closest('.relative.overflow-hidden') as HTMLElement;
+		expect(box).toBeTruthy();
+		expect(box.className).toContain('rounded-t-lg');
+		expect(box.className).not.toContain('rounded-lg');
+	});
+
+	it('图片加载失败兜底：同图模糊铺底（ambient matte）仍保留', () => {
 		const { container } = render(MomentPostBody, { props: baseProps });
 		const backdrop = container.querySelector('[data-gallery-backdrop]') as HTMLImageElement;
 		expect(backdrop).toBeTruthy();
