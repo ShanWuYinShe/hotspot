@@ -37,7 +37,7 @@ const (
 	// 由 GET /public/v1/media/avatars/{file_id} 匿名 302 到签名读 URL。
 	avatarPublicPathPrefix = "/public/v1/media/avatars/"
 
-	// seedJPEGMimeType 是全部素材的 MIME（assets/ 下均为 JPEG）。
+	// seedJPEGMimeType 是全部素材的 MIME（devdata/seed/media 下均为 JPEG）。
 	seedJPEGMimeType = "image/jpeg"
 )
 

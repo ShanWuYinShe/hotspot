@@ -69,7 +69,8 @@ func Run(ctx context.Context, cfg config.Config, factory *persistence.Factory, o
 // execute 是 Run 的依赖注入版本（单测直接调用，注入 fake 事务/对象存储）。
 func execute(ctx context.Context, runInTx txRunner, storage ObjectStorage, plan *Plan) error {
 	startedAt := time.Now()
-	log.Printf("seed: 开始执行（模式=%s，基准时间=%s）", plan.Options.Mode, plan.BaseTime.Format(time.RFC3339))
+	log.Printf("seed: 开始执行（模式=%s，基准时间=%s，素材目录=%s）",
+		plan.Options.Mode, plan.BaseTime.Format(time.RFC3339), plan.AssetsDir)
 
 	if plan.Options.Mode == ModeReset {
 		log.Printf("seed: 按固定前缀清理已有 seed 数据 ...")
@@ -123,6 +124,7 @@ func execute(ctx context.Context, runInTx txRunner, storage ObjectStorage, plan 
 func printAccountHints() {
 	log.Printf("seed: QA 账号 qa@hotspot.local（普通用户）/ admin@hotspot.local（管理员，grant_all）")
 	log.Printf("seed: 口令来自 SEED_QA_PASSWORD / SEED_ADMIN_PASSWORD，缺省值见 backend-go/AGENTS.md「开发种子数据」")
+	log.Printf("seed: 素材与数据设施说明见 devdata/seed/README.md")
 }
 
 // uploadMedia 把计划的全部媒体对象 PUT 到对象存储（同 key 覆盖，天然幂等）。

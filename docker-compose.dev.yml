@@ -39,6 +39,10 @@ services:
     # 源码实时同步，air 监听 .go 变化自动重新编译重启，无需 rebuild 镜像
     volumes:
       - ./backend-go:/src               # 完整源码 mount（air 监听 .go 变化）
+      # 仓库根 devdata/（开发数据配套设施，含 seed 素材）挂载到 /devdata：
+      # 素材位于 backend-go 之外、不 embed 进二进制；scripts/seed-dev.sh 传
+      # -assets-dir /devdata/seed/media，cwd=/src 时默认候选 ../devdata/seed/media 也命中。
+      - ./devdata:/devdata:ro
       - backend_tmp:/src/tmp            # 隔离 air 编译产物（避免污染 host）
       - backend_gocache:/root/.cache/go-build   # 持久化 Go 编译缓存，air 增量编译秒级
     environment:

@@ -271,10 +271,7 @@ func TestAdminSpec(t *testing.T) {
 // TestMediaRowsMatchAssets 媒体会话行与素材元数据一致（宽度/高度/大小/MIME/md5）。
 func TestMediaRowsMatchAssets(t *testing.T) {
 	plan := mustBuildPlan(t, testPlanOptions())
-	assets, err := loadAllAssets()
-	if err != nil {
-		t.Fatalf("加载素材失败: %v", err)
-	}
+	assets := plan.assets // 计划已加载素材，直接复用避免二次读取文件系统
 	rows := rowsOfTable(t, plan, "media_upload_sessions")
 	columns := columnsOfTable(t, plan, "media_upload_sessions")
 	fileNameIndex := columnIndex(t, columns, "file_name")

@@ -14,9 +14,9 @@ import (
 
 // plan.go — 写入计划（dry-run 输出 / 执行输入）与口径校验。
 //
-// BuildPlan 是纯计算入口：读取 //go:embed 素材、展开静态规格、计算 file_id/
-// s2_cell_id/计数列，不连接数据库与对象存储。--dry-run 只调用它并打印计划；
-// 真实执行则在计划之上再做清理/上传/写库。
+// BuildPlan 是纯计算入口：从外置素材目录（默认 devdata/seed/media）读取素材、
+// 展开静态规格、计算 file_id/s2_cell_id/计数列，不连接数据库与对象存储。
+// --dry-run 只调用它并打印计划；真实执行则在计划之上再做清理/上传/写库。
 
 // Mode 是 seed 的执行模式。
 type Mode string
@@ -34,6 +34,10 @@ type Options struct {
 	Mode Mode
 	// DryRun 只打印计划，不触达 DB / 对象存储。
 	DryRun bool
+	// AssetsDir 是开发素材目录（仓库根 devdata/seed/media；外置、不 embed）。
+	// 空值按默认候选解析；cmd/seed 由 -assets-dir / SEED_ASSETS_DIR 传入，
+	// 单测传临时目录。解析后的绝对路径写入 Plan.AssetsDir。
+	AssetsDir string
 	// Now 是数据时间线的基准时刻（零值取 time.Now()）；内部向下取整到小时，
 	// 保证同一小时内重复 --reset 得到相同时间线。
 	Now time.Time
@@ -77,10 +81,12 @@ func (o Options) normalize() (Options, error) {
 type Plan struct {
 	Options  Options
 	BaseTime time.Time
-	accounts []accountSpec
-	steps    []tableData
-	media    []mediaObject
-	assets   map[string]seedAsset
+	// AssetsDir 是本次计划实际使用的素材目录（绝对路径；dry-run 展示用）。
+	AssetsDir string
+	accounts  []accountSpec
+	steps     []tableData
+	media     []mediaObject
+	assets    map[string]seedAsset
 }
 
 // TableCount 是一张表的写入行数（dry-run 摘要）。
@@ -121,15 +127,19 @@ func (p *Plan) Accounts() []accountSpec {
 	return append([]accountSpec(nil), p.accounts...)
 }
 
-// BuildPlan 构建写入计划。素材读取/规格展开都在这里完成；失败说明素材缺失、
-// 规格引用了不存在的实体或坐标非法。
+// BuildPlan 构建写入计划。素材目录解析/读取与规格展开都在这里完成；失败说明
+// 素材缺失（错误信息列出尝试过的目录与缺失文件）、规格引用了不存在的实体或坐标非法。
 func BuildPlan(cfg config.Config, opts Options) (*Plan, error) {
 	normalized, err := opts.normalize()
 	if err != nil {
 		return nil, err
 	}
 	data := buildSeedData()
-	assets, err := loadAllAssets()
+	assetsDir, _, err := resolveAssetsDir(normalized.AssetsDir)
+	if err != nil {
+		return nil, err
+	}
+	assets, err := loadAllAssets(assetsDir)
 	if err != nil {
 		return nil, err
 	}
@@ -151,12 +161,13 @@ func BuildPlan(cfg config.Config, opts Options) (*Plan, error) {
 		return nil, err
 	}
 	return &Plan{
-		Options:  normalized,
-		BaseTime: normalized.Now,
-		accounts: dataset.accounts,
-		steps:    dataset.steps,
-		media:    mediaBundle.objects,
-		assets:   assets,
+		Options:   normalized,
+		BaseTime:  normalized.Now,
+		AssetsDir: assetsDir,
+		accounts:  dataset.accounts,
+		steps:     dataset.steps,
+		media:     mediaBundle.objects,
+		assets:    assets,
 	}, nil
 }
 
@@ -191,6 +202,7 @@ func PrintPlan(w io.Writer, plan *Plan) error {
 	}
 	fmt.Fprintf(w, "  模式        : %s\n", plan.Options.Mode)
 	fmt.Fprintf(w, "  基准时间    : %s（UTC，向下取整到小时）\n", plan.BaseTime.Format(time.RFC3339))
+	fmt.Fprintf(w, "  素材目录    : %s（%d 张 JPEG）\n", plan.AssetsDir, len(plan.assets))
 	fmt.Fprintf(w, "  媒体对象    : %d 个（%s）\n", plan.MediaCount(), formatCategoryCounts(plan.media))
 	fmt.Fprintf(w, "  数据总行数  : %d\n", plan.RowCount())
 	fmt.Fprintln(w, "\n账号（口令来自 SEED_QA_PASSWORD / SEED_ADMIN_PASSWORD，缺省为 dev 规格值）:")

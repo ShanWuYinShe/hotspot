@@ -36,7 +36,10 @@ func insertAuthAccountsFromPlan(t *testing.T, plan *Plan) map[string]string {
 		if !ok {
 			t.Fatalf("auth_accounts password_hash 参数类型 = %T", exec.args[2])
 		}
-		if hash == loginID || strings.Contains(hash, "Qa") || hash == defaultQAPassword {
+		// 断言「哈希不是明文」时不能用短子串 "Qa" 判断：bcrypt 的 base64 字符集
+		// 含大小写字母，每个哈希约 1% 概率偶然出现 "Qa"（10 个账号时每轮全量测试
+		// 约 1/10 概率随机失败，2026-10-29 实测复现 1 次）。按完整明文口令判断才可靠。
+		if hash == loginID || strings.Contains(hash, defaultQAPassword) {
 			t.Errorf("口令哈希疑似明文: %q", hash)
 		}
 		hashes[loginID] = hash

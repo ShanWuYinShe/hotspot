@@ -31,7 +31,7 @@ type mediaObject struct {
 	Height      int
 	CreatedAt   time.Time
 	CompletedAt time.Time
-	AssetName   string // 素材文件名（上传时从 //go:embed 读取）
+	AssetName   string // 素材文件名（上传时从外置素材目录 devdata/seed/media 读取）
 }
 
 // mediaBundle 是媒体计划的输出：对象列表 + 供其它表引用的 file_id 查找表。

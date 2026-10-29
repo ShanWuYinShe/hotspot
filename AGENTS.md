@@ -86,8 +86,8 @@
 | 鹿鸣 | `qa@hotspot.local` | `SEED_QA_PASSWORD`（默认 `Qa12345678`） | 普通用户，QA 巡检主账号 |
 | 巡检员 | `admin@hotspot.local` | `SEED_ADMIN_PASSWORD`（默认 `Admin12345678`） | 管理员（grant_all），同时是完整普通用户 |
 
-口令仅本地开发使用，生产部署不得沿用；数据规格、媒体素材与实现见 `backend-go/internal/seed/` 与
-`backend-go/AGENTS.md`「开发种子数据」。
+口令仅本地开发使用，生产部署不得沿用；数据规格与实现见 `backend-go/internal/seed/`，媒体素材与
+配套设施说明见 `devdata/seed/`（`README.md`），运行细节见 `backend-go/AGENTS.md`「开发种子数据」。
 
 ## worktree 调试与清理
 

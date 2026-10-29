@@ -16,13 +16,20 @@
 #   qa@hotspot.local    Qa12345678      普通用户（QA 巡检主账号，user_seed_lumos）
 #   admin@hotspot.local Admin12345678   管理员（grant_all，同时是完整普通用户）
 #
-# 数据规格/素材/实现：backend-go/internal/seed/（assets/ 为 //go:embed 素材）。
+# 数据规格/实现：backend-go/internal/seed/；开发素材是外置配套设施（仓库根 devdata/seed/media/，
+# 不再 //go:embed 打包进二进制），dev compose 把 devdata/ 挂载到容器 /devdata，脚本显式传
+# -assets-dir /devdata/seed/media。素材与数据设施说明见 devdata/seed/README.md。
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
 COMPOSE_ARGS=(-f docker-compose.yml -f docker-compose.dev.yml)
+
+# seed 素材（仓库根 devdata/seed/media）在 dev compose 中挂载到容器 /devdata
+# （见 docker-compose.dev.yml 的 backend volumes）。脚本显式传 -assets-dir，
+# 不依赖 cmd/seed 的默认候选解析；其它挂载布局可用该 env 覆盖容器内路径。
+ASSETS_DIR_CONTAINER="${SEED_ASSETS_DIR_CONTAINER:-/devdata/seed/media}"
 
 # 读取仓库根 .env 中的 SEED_* 口令覆盖值。
 # 不能直接 source .env：其中可能含 SMTP_FROM 等带空格/尖括号的值，bash source
@@ -39,12 +46,18 @@ env_value() {
 SEED_QA_PASSWORD="${SEED_QA_PASSWORD:-$(env_value SEED_QA_PASSWORD)}"
 SEED_ADMIN_PASSWORD="${SEED_ADMIN_PASSWORD:-$(env_value SEED_ADMIN_PASSWORD)}"
 
+# print_header 输出脚本头部注释（帮助文本），不依赖固定的行号范围。
+print_header() {
+	awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
+}
+
 case "${1:-}" in
 	-h | --help)
-		sed -n '2,19p' "$0" | sed 's/^# //; s/^#$//'
+		print_header
 		echo
 		echo "实际执行等价于："
-		echo '  docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T backend go run ./cmd/seed "$@"'
+		echo '  docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T backend \'
+		echo '    go run ./cmd/seed -assets-dir /devdata/seed/media "$@"'
 		exit 0
 		;;
 esac
@@ -92,11 +105,21 @@ esac
 
 # SEED_* 口令通过 exec -e 透传（空值 = 使用 cmd/seed 内的 dev 缺省值）。
 # 口令只用于本地开发，禁止在部署环境沿用（生产环境 cmd/seed 会直接拒绝启动）。
+#
+# 素材目录：脚本默认显式传 -assets-dir（容器内 /devdata/seed/media）；用户自己
+# 传了 -assets-dir/--assets-dir 时不再注入（用户参数在后，覆盖默认）。默认解析
+# 仍保留兜底：容器内直接 go run ./cmd/seed 也会解析到 ../devdata/seed/media。
+seed_cmd=(docker compose "${COMPOSE_ARGS[@]}" exec -T
+	-e "SEED_QA_PASSWORD=${SEED_QA_PASSWORD:-}"
+	-e "SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD:-}"
+	backend go run ./cmd/seed)
+case " $* " in
+	*" -assets-dir "* | *" -assets-dir="* | *" --assets-dir "* | *" --assets-dir="*) ;;
+	*) seed_cmd+=(-assets-dir "$ASSETS_DIR_CONTAINER") ;;
+esac
+seed_cmd+=("$@")
 set +e
-docker compose "${COMPOSE_ARGS[@]}" exec -T \
-	-e "SEED_QA_PASSWORD=${SEED_QA_PASSWORD:-}" \
-	-e "SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD:-}" \
-	backend go run ./cmd/seed "$@"
+"${seed_cmd[@]}"
 rc=$?
 set -e
 [ "$rc" -ne 0 ] && exit "$rc"

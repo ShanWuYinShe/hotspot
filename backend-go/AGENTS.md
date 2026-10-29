@@ -104,7 +104,9 @@ MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 50
 
 前置：dev compose 已启动（`docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d`）。
 脚本在 backend 容器内执行 `go run ./cmd/seed`（继承容器内 POSTGRES_DSN / S3_* env），
-无需新增 compose 服务；也可在容器内直接执行 `go run ./cmd/seed [--reset|--dry-run]`。
+无需新增 compose 服务；dev compose 已把仓库根 `devdata/` 只读挂载到 `/devdata` 供 seed 读取素材
+（脚本显式传 `-assets-dir /devdata/seed/media`）；也可在容器内直接执行
+`go run ./cmd/seed [--reset|--dry-run]`。
 全新 SeaweedFS 卷默认没有 S3 bucket（PUT 会 404），脚本会在真实写入前尽力自动创建
 （`weed shell s3.bucket.create`；现有 dev 卷已存在时为空操作）。
 
@@ -118,9 +120,13 @@ MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 50
 
 - **实现位置**：`internal/seed/`（数据规格 `specs_*.go`、媒体计划 `mediaplan.go`、写入层
   `tables.go`、清理 `cleanup.go`、dry-run `plan.go`、执行 `run.go`）；入口 `cmd/seed/main.go`。
-- **素材**：`internal/seed/assets/*.jpg`（`//go:embed` 打包，勿替换/改尺寸）：9 张 400x400 头像、
-  4 张 800x800 群头像、12 张 1200x800 瞬间图；`file_id/storage_key` 复写 media 模块规则
-  （`file_+md5(userID:uploadID)` / `uploads/<userID>/<uploadID>.jpg`，单测锁定）。
+- **素材**：仓库根 `devdata/seed/media/*.jpg`（外置开发数据配套设施，**不 embed、不进生产二进制**；
+  详见 `devdata/seed/README.md`）：9 张 400x400 头像、4 张 800x800 群头像、12 张 1200x800 瞬间图；
+  目录由 `-assets-dir` / `SEED_ASSETS_DIR` 指定（默认候选 `../devdata/seed/media`、`/devdata/seed/media`；
+  dev compose 把仓库根 `devdata/` 挂载到 `/devdata`，`scripts/seed-dev.sh` 显式传
+  `/devdata/seed/media`）；替换素材须保持文件名与尺寸，缺失直接报错并列清单。
+  `file_id/storage_key` 复写 media 模块规则（`file_+md5(userID:uploadID)` /
+  `uploads/<userID>/<uploadID>.jpg`，单测锁定）。
 - **固定 ID 前缀**（`--reset` 按前缀清理，也是 QA 脚本的稳定 ID）：`user_seed_*`、
   `moment_seed_01..24`、`comment_seed_*`、`group_seed_1..4`、`gmsg_seed_*`、`chat_seed_*`、
   `notify_seed_*`、`share_seed_*`、`report_seed_*`、`upload_seed_*`、`role_seed_*`、`audit_seed_*` 等。
@@ -142,8 +148,8 @@ MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 50
   seed 只写自己创建的行（`--reset` 同样只删 `updated_by_user_id LIKE 'user_seed_%'` 的行），
   已有环境（如主开发库）的既有默认位置保持原样；全新库（CI/新机器）上 seed 写入即生效。
   需要强制对齐时用管理端「应用配置」页修改，或先删除该 `config_id='default'` 行再重跑 seed。
-- **测试**：`go test ./internal/seed/...`（不依赖 DB/网络）；验证过真实 Postgres + SeaweedFS
-  双写、重复执行幂等、`--reset` 清理重建一致。
+- **测试**：`go test ./internal/seed/...`（不依赖 DB/网络/devdata：素材由单测在临时目录现场生成）；
+  验证过真实 Postgres + SeaweedFS 双写、重复执行幂等、`--reset` 清理重建一致。
 
 ## 技术栈（名称级）
 

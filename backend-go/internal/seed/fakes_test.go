@@ -143,12 +143,14 @@ func fakeTxRunner(queryable persistence.Queryable) txRunner {
 }
 
 // testPlanOptions 返回测试用的 Options：固定基准时间 + 最低 bcrypt 成本
-// （单测只验证「哈希可校验」，成本与生产无关，min cost 让测试秒级完成）。
+// （单测只验证「哈希可校验」，成本与生产无关，min cost 让测试秒级完成）；
+// 素材目录指向 TestMain 生成的临时目录（单测不依赖仓库 devdata/seed/media）。
 func testPlanOptions() Options {
 	return Options{
 		Mode:       ModeIfMissing,
 		Now:        testBaseTime,
 		BcryptCost: bcryptMinCostForTest,
+		AssetsDir:  testAssetsDirPath,
 	}
 }
 

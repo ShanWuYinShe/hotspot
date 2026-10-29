@@ -14,8 +14,12 @@ import (
 // plan_test.go — 计划层单测：幂等计划、表行数口径、SQL 形态、dry-run 输出。
 
 // mustBuildPlan 构建测试计划（固定基准时间 + 最低 bcrypt 成本）。
+// 未显式指定素材目录时用 TestMain 生成的临时素材（单测不依赖仓库 devdata）。
 func mustBuildPlan(t *testing.T, opts Options) *Plan {
 	t.Helper()
+	if opts.AssetsDir == "" {
+		opts.AssetsDir = testAssetsDirPath
+	}
 	plan, err := BuildPlan(testConfig, opts)
 	if err != nil {
 		t.Fatalf("BuildPlan 失败: %v", err)
