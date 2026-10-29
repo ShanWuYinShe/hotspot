@@ -169,6 +169,9 @@
 							avatar: detailData.user?.avatar_url ?? '',
 						location: detailData.location?.location_name ?? '',
 						images: (detailData.images ?? []).map((im) => im.url).filter(Boolean),
+						// 首图宽高用于加载前比例占位（图片慢/失败时不塌陷）
+						coverWidth: detailData.images?.[0]?.width ?? null,
+						coverHeight: detailData.images?.[0]?.height ?? null,
 						content: detailData.description ?? '',
 						time: formatMomentTime(detailData.created_at),
 						likes: (detailData.reactions ?? []).reduce((sum, r) => sum + r.count, 0),

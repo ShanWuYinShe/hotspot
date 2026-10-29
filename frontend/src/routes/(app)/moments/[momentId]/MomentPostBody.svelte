@@ -58,6 +58,10 @@
 		location: string;
 		/** 全部图片 URL（无图为空数组；首图兼作单图封面） */
 		images: string[];
+		/** 首图原始宽高（spec MediaAsset.width/height）：用于图片加载前按比例占位。
+		 *  缺省 null 时不写 width/height 属性（浏览器自然行为）。 */
+		coverWidth?: number | null;
+		coverHeight?: number | null;
 		content: string;
 		time: string;
 		likes: number;
@@ -125,6 +129,14 @@
 	let viewerIndex = $state(0);
 
 	const cover = $derived(moment.images[0] ?? '');
+
+	/** 画廊图片加载失败兜底：隐藏破图图标，但保留 img 的 width/height 比例占位，
+	 *  避免容器高度塌陷成「一长条」后覆盖层（「共 N 张」角标）错位。
+	 *  2026-10-29 用户实测复现：图片请求失败时容器高度 587px→18px、角标跑到容器外。 */
+	function onGalleryImageError(event: Event) {
+		const el = event.currentTarget as HTMLImageElement;
+		el.classList.add('opacity-0');
+	}
 	// moment.likes 由父页维护（服务端快照 + 本页乐观增量，已含本人状态），
 	// 这里不能再按 liked 叠加——否则刷新后计数双倍。
 	const likeCount = $derived(moment.likes);
@@ -172,11 +184,14 @@
 							srcset={presetSrcSet(cover, 'cover')}
 							sizes="(min-width: 768px) 812px, 100vw"
 							alt="动态图片"
+							width={moment.coverWidth ?? undefined}
+							height={moment.coverHeight ?? undefined}
 							loading="eager"
 							fetchpriority="high"
 							decoding="async"
 							class="block h-auto max-h-[min(78vh,44rem)] w-full object-contain"
 							use:fadeImage
+							onerror={onGalleryImageError}
 						/>
 					</button>
 					{#if moment.images.length > 1}

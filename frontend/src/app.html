@@ -46,6 +46,26 @@
 				}
 			})();
 		</script>
+		<script>
+			// 一次性迁移清理（2026-10-29）：旧版 dev 用 MSW service worker 伪造 API，已随
+			// 「真实种子数据」重构移除。已注册的 mockServiceWorker 不会因文件删除自动注销，
+			// 可能继续控制页面并干扰真实请求/图片加载。这里注销本项目遗留的 MSW worker
+			//（只匹配 mockServiceWorker.js，不影响其他 service worker）。
+			(function () {
+				try {
+					if (!('serviceWorker' in navigator)) return;
+					navigator.serviceWorker.getRegistrations().then(function (regs) {
+						regs.forEach(function (reg) {
+							var w = reg.active || reg.installing || reg.waiting;
+							var url = (w && w.scriptURL) || '';
+							if (url.indexOf('mockServiceWorker.js') >= 0) reg.unregister();
+						});
+					}).catch(function () {});
+				} catch (e) {
+					// 隐私模式等不可用场景忽略
+				}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
