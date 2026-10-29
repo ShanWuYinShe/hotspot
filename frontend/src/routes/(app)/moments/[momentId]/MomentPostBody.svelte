@@ -154,11 +154,12 @@
 <!-- 统一度极高的沉浸式画卷流，消除碎片化盒子嵌套 -->
 <article class="flex flex-col overflow-hidden rounded-lg bg-surface-island p-4 sm:p-5 md:p-7 shadow-xs">
 	<!-- 1. 画廊 hero（单图：整幅展陈；多图：主图 + 底部缩略图导航）
-	     设计：主图**始终按图片自身宽高比**完整展示（w-auto + max-w-full + h-auto + max-h：
-	     宽度不超容器、高度不超视口上限，两者任一受限时另一维按比例缩放），因此任何
-	     分辨率下图片区域比例恒定，不会因视口高度不足把盒子压成异形；比例与展台不一致
-	     时用同图放大模糊铺底（ambient matte）填充留白。多图：主图 + 横向缩略图条画廊
-	     导航（点击缩略图内联切换主图，点击主图进全屏查看器），右下角页码 N / M。 -->
+	     设计：主图**宽度始终撑满内容卡（w-full），高度按图片自身比例（h-auto）**，因此
+	     任何分辨率下图片盒子比例恒等于图片宽高比、左右不出现任何留白/模糊铺底（2026-10-29
+	     用户反馈「任何时候都不应该让图片出现两遍空白」）。不再用 max-h 压缩高度——高图
+	     只是更高、由页面滚动承载，绝不为适配视口把盒子压成异形。ambient matte 仅保留为
+	     图片加载失败时的兜底底色。多图：主图 + 横向缩略图条画廊导航（点击缩略图内联切换
+	     主图，点击主图进全屏查看器），右下角页码 N / M。 -->
 	{#if cover}
 		<div class="pb-5">
 			<div class="relative -mx-4 -mt-4 overflow-hidden rounded-lg sm:-mx-5 sm:-mt-5 md:-mx-7 md:-mt-7">
@@ -195,7 +196,7 @@
 								loading={imageIndex === 0 ? 'eager' : 'lazy'}
 								fetchpriority={imageIndex === 0 ? 'high' : 'auto'}
 								decoding="async"
-								class="mx-auto block h-auto max-h-[min(78vh,44rem)] w-auto max-w-full object-contain"
+								class="block h-auto w-full object-contain"
 								use:fadeImage
 								onerror={onGalleryImageError}
 							/>
