@@ -162,8 +162,11 @@
 	     主图，点击主图进全屏查看器），右下角页码 N / M。 -->
 	{#if cover}
 		<div class="pb-5">
-			<div class="relative -mx-4 -mt-4 overflow-hidden rounded-lg sm:-mx-5 sm:-mt-5 md:-mx-7 md:-mt-7">
-				<div class="relative overflow-hidden rounded-lg bg-surface-subtle">
+			<!-- 图片区出血到卡片边缘：顶部圆角由卡片 overflow-hidden 裁剪（与卡片一致），
+			     底部保持直角——图片底部与卡片内容区直线相接，不再是一个悬浮的圆角矩形。
+			     2026-10-30 用户反馈：底部圆角 + 卡片背景留缝导致「图片底部不贴合、很丑」。 -->
+			<div class="relative -mx-4 -mt-4 overflow-hidden sm:-mx-5 sm:-mt-5 md:-mx-7 md:-mt-7">
+				<div class="relative overflow-hidden rounded-t-lg bg-surface-subtle">
 					<img
 						data-gallery-backdrop
 						src={presetImageUrl(currentImage, 'cover', 800)}
@@ -212,7 +215,9 @@
 			{#if moment.images.length > 1}
 				<!-- 画廊缩略图导航：点击内联切换主图（不打开全屏）；选中态 accent 描边 + 全不透明，
 				     其余降透明度保持层次；窄屏横向滚动。 -->
-				<div class="mt-3 flex items-center gap-2 overflow-x-auto pb-0.5" role="group" aria-label="图片缩略图">
+				<!-- -mx-1/px-1/py-1：给选中态 ring（画在按钮边界外 2px）留出绘制空间，
+				     否则会被 overflow-x-auto 在左右/上下边缘裁掉一部分（2026-10-30 用户反馈）。 -->
+				<div class="-mx-1 mt-3 flex items-center gap-2 overflow-x-auto px-1 py-1" role="group" aria-label="图片缩略图">
 					{#each moment.images as img, i (img + i)}
 						<button
 							type="button"
