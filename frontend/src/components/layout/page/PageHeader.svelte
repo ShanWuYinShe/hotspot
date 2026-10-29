@@ -28,6 +28,9 @@
 	// 只保留左侧返回圆钮 + 右侧操作圆钮悬浮在画布上（标题仅 sr-only 保留语义）。
 	// 依据 NN/g「Sticky headers」：持久页头只有在不抢内容、chrome 占比最小时才成立；
 	// 整条 glass 带在图片详情页会把内容切出一条明显横杠（用户反馈的真实问题）。
+	// 2026-10-29 补充（用户反馈「按钮压在图片上像内容重叠」）：floating 支持 sticky={false}
+	// 配合 SplitPageLayout headerSticky={false}，让工具条留在文档流、随正文滚走——
+	// 阅读/评论时零遮挡；返回走浏览器/系统返回与全局「回到顶部」。
 
 	let {
 		title,
@@ -143,7 +146,7 @@
 	use:headerScroll
 	class={cn(
 		floating
-			? 'shrink-0 sticky top-0 z-[var(--cst-z-sticky)] pointer-events-none'
+			? ['shrink-0 pointer-events-none', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]']
 			: ['shrink-0 page-header-scroll', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]', scrolled && 'page-header-scrolled'],
 		className
 	)}

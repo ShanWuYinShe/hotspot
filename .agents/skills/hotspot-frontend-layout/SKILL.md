@@ -13,6 +13,7 @@ description: hotspot 前端页面布局契约：StandardPageLayout / SplitPageLa
 
 - **普通页面**：`StandardPageLayout`（`components/layout/page/StandardPageLayout.svelte`），正文单列，滚动由 `RoutedContentViewport` 承担；正文内可含多列 grid（如群组详情 main + aside、个人主页双栏），不属于分栏需求。
 - **分栏页面**（桌面主区 + 右 rail）：`SplitPageLayout`（`components/layout/page/SplitPageLayout.svelte`），主区与 rail 滚动由组件统一管理，footer 固定于主区底部。当前分栏页：首页（桌面端）、通知、动态详情、用户详情。
+  - **`headerSticky={false}`**（2026-10-29）：页头留在文档流、随正文一起滚走，用于沉浸式详情页避免悬浮工具条永久压住内容（瞬间详情已使用；配合 `PageHeader variant="floating" sticky={false}`）。返回能力由浏览器/系统返回与全局 `BackToTop` 承担；新增页面若关闭吸顶必须在本文登记。
 - **临时豁免/已登记例外**：
   - 聊天页面（桌面端与移动端）因分栏/全屏会话布局特殊，可暂不套用 `StandardPageLayout`/`SplitPageLayout`；但页头、列表与正文的 gutter/padding 仍必须与样板一致（沿用 `PageHeader` + `ContentColumn`）。桌面消息分栏左栏窄列（`w-80`=320px）用 `px-4` 压缩 gutter、不进 `--cst-page-gutter`（见 skill `hotspot-frontend-style`「窄列特例」，已登记例外）；聊天三块同轴见本文「内容轴」节。
   - **封面/紧凑型资料头**（`groups/[groupId]`、`users/[userId]`）：标题与封面/头像绑定，不在 header 操作行内，故不套 `PageHeader`，自建返回/分享/更多操作行 + 封面下方 `<h1>`。与 `moments/[momentId]`（有独立标题「动态详情」，套 PageHeader）区分。

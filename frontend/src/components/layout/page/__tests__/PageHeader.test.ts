@@ -58,3 +58,24 @@ describe('PageHeader floating 沉浸式变体（2026-10-29 详情页）', () => 
 		expect(screen.getByRole('heading', { level: 1 }).className).not.toContain('sr-only');
 	});
 });
+
+describe('PageHeader floating 随正文滚走（2026-10-29 用户反馈「按钮压住内容」）', () => {
+	it('floating + sticky={false}：页头留在文档流，不再吸顶悬浮', () => {
+		const { container } = render(PageHeader, {
+			props: { title: '瞬间详情', variant: 'floating', sticky: false, onBack: () => {} }
+		});
+		const header = container.querySelector('header') as HTMLElement;
+		expect(header.className).not.toContain('sticky');
+		// 工具条本身仍可交互（子按钮 pointer-events-auto），但根不再吸顶
+		expect(header.className).toContain('pointer-events-none');
+		expect(screen.getByLabelText('返回')).toBeTruthy();
+	});
+
+	it('floating 默认仍吸顶（其他沉浸页可继续使用覆盖式页头）', () => {
+		const { container } = render(PageHeader, {
+			props: { title: '瞬间详情', variant: 'floating', onBack: () => {} }
+		});
+		const header = container.querySelector('header') as HTMLElement;
+		expect(header.className).toContain('sticky');
+	});
+});

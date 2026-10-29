@@ -158,7 +158,7 @@
 
 | 项 | 强制契约 |
 |---|---|
-| 页头 | `PageHeader variant="floating"`：无整条背景/底边/阴影，只保留返回 + 更多悬浮圆钮；标题 `sr-only`。禁止在详情页用整条 sticky glass 横杠（内容从其下穿过会形成割裂横条）。依据 NN/g sticky headers「chrome 最小化、不抢内容」。 |
+| 页头 | `PageHeader variant="floating"` + `sticky={false}` + `SplitPageLayout headerSticky={false}`：无整条背景/底边/阴影，只保留返回 + 更多圆钮，且**工具条留在文档流、随正文滚走**（标题 `sr-only`）。禁止两种反例：①整条 sticky glass 横杠（内容穿过形成割裂横条）；②永久吸顶的透明悬浮按钮（滚动后压住图片/评论，用户反馈「内容重叠」，2026-10-29）。返回依赖浏览器/系统返回与全局「回到顶部」。依据 NN/g sticky headers「chrome 最小化、不抢内容」。 |
 | 媒体（单图） | 按图片自身比例完整展示：`object-contain` + `h-auto/max-w-full` + `max-h` 约束（移动 `min(60vh,26rem)` / 桌面 `min(72vh,38rem)`），软底承载留边。**禁止固定高度 + object-cover** 裁切（旧实现渲染比例 1.821 vs 原图 1.488 = 观感失真）。多图缩略图保持方图 `object-cover`（网格语义）。 |
 | 动作条 | 所有端都内嵌在内容中（`MomentPostBody` 内），**移动端不再有第二条底部动作条**，避免与输入器叠成两条通栏横杠。 |
 | 评论输入器 | 页面私有 `CommentInputBar`，两种登记形态：`inline`（桌面/平板：嵌评论区顶部，`rounded-md` + 软底浅槽，宽度随内容）；`floating`（移动：悬浮 dock `mx-3` + `rounded-md` + 细边 + 玻璃底 + `shadow-raised-md` + 底部安全区）。两者都只用 39px 输入壳 + **40px 发送钮**（与聊天发送钮同档；旧评论 36 vs 聊天 40 已统一）。**禁止整条白底 `border-t` 通栏输入条**。 |
