@@ -58,10 +58,9 @@
 		location: string;
 		/** 全部图片 URL（无图为空数组；首图兼作单图封面） */
 		images: string[];
-		/** 首图原始宽高（spec MediaAsset.width/height）：用于图片加载前按比例占位。
+		/** 每张图片原始宽高（spec MediaAsset.width/height）：用于图片加载前按比例占位。
 		 *  缺省 null 时不写 width/height 属性（浏览器自然行为）。 */
-		coverWidth?: number | null;
-		coverHeight?: number | null;
+		imageSizes?: Array<{ width: number | null; height: number | null }>;
 		content: string;
 		time: string;
 		likes: number;
@@ -129,6 +128,10 @@
 	let viewerIndex = $state(0);
 
 	const cover = $derived(moment.images[0] ?? '');
+	// 画廊主图索引（多图时由底部缩略图导航切换；点击主图进入全屏查看器）
+	let imageIndex = $state(0);
+	const currentImage = $derived(moment.images[imageIndex] ?? cover);
+	const currentSize = $derived(moment.imageSizes?.[imageIndex] ?? null);
 
 	/** 画廊图片加载失败兜底：隐藏破图图标，但保留 img 的 width/height 比例占位，
 	 *  避免容器高度塌陷成「一长条」后覆盖层（「共 N 张」角标）错位。
@@ -150,17 +153,17 @@
 
 <!-- 统一度极高的沉浸式画卷流，消除碎片化盒子嵌套 -->
 <article class="flex flex-col overflow-hidden rounded-lg bg-surface-island p-4 sm:p-5 md:p-7 shadow-xs">
-	<!-- 1. 画廊首屏（单图：整幅展陈；多图：首图 hero + 缩略图） -->
+	<!-- 1. 画廊 hero（单图：整幅展陈；多图：主图 + 底部缩略图导航）
+	     设计：主图保持原始比例完整展示（object-contain），比例与展台不一致时用同图放大
+	     模糊铺底（ambient matte）填充留白；多图改为「主图 + 横向缩略图条」的画廊导航
+	     （点击缩略图内联切换主图，点击主图进全屏查看器），右下角页码替代旧「共 N 张」角标。 -->
 	{#if cover}
 		<div class="pb-5">
-			<!-- 画廊展陈：整幅出血到卡片边缘；主图保持原始比例完整展示（object-contain），
-			     当主图比例与展台不一致时，用同图放大模糊铺底（ambient matte）填充留白，
-			     而不是露出空底色——两侧不再出现「留白条」，暗色主题下也像展墙承托。 -->
 			<div class="relative -mx-4 -mt-4 overflow-hidden rounded-lg sm:-mx-5 sm:-mt-5 md:-mx-7 md:-mt-7">
 				<div class="relative overflow-hidden rounded-lg bg-surface-subtle">
 					<img
 						data-gallery-backdrop
-						src={presetImageUrl(cover, 'cover', 800)}
+						src={presetImageUrl(currentImage, 'cover', 800)}
 						alt=""
 						aria-hidden="true"
 						loading="lazy"
@@ -174,62 +177,55 @@
 						class="relative z-10 block w-full cursor-zoom-in focus-ring"
 						aria-label="查看大图"
 						onclick={() => {
-							viewerIndex = 0;
+							viewerIndex = imageIndex;
 							viewerOpen = true;
 						}}
 					>
-						<img
-							data-gallery-image
-							src={presetImageUrl(cover, 'cover', 1600)}
-							srcset={presetSrcSet(cover, 'cover')}
-							sizes="(min-width: 768px) 812px, 100vw"
-							alt="动态图片"
-							width={moment.coverWidth ?? undefined}
-							height={moment.coverHeight ?? undefined}
-							loading="eager"
-							fetchpriority="high"
-							decoding="async"
-							class="block h-auto max-h-[min(78vh,44rem)] w-full object-contain"
-							use:fadeImage
-							onerror={onGalleryImageError}
-						/>
+						{#key imageIndex}
+							<img
+								data-gallery-image
+								src={presetImageUrl(currentImage, 'cover', 1600)}
+								srcset={presetSrcSet(currentImage, 'cover')}
+								sizes="(min-width: 768px) 812px, 100vw"
+								alt="动态图片"
+								width={currentSize?.width ?? undefined}
+								height={currentSize?.height ?? undefined}
+								loading={imageIndex === 0 ? 'eager' : 'lazy'}
+								fetchpriority={imageIndex === 0 ? 'high' : 'auto'}
+								decoding="async"
+								class="block h-auto max-h-[min(78vh,44rem)] w-full object-contain"
+								use:fadeImage
+								onerror={onGalleryImageError}
+							/>
+						{/key}
 					</button>
 					{#if moment.images.length > 1}
-						<button
-							type="button"
-							class="media-badge hover-btn absolute bottom-3 right-3 z-20 shadow-xs hover:opacity-hover focus-ring"
-							aria-label={`查看全部 ${moment.images.length} 张图片`}
-							onclick={() => {
-								viewerIndex = 0;
-								viewerOpen = true;
-							}}
-						>
-							共 {moment.images.length} 张
-						</button>
+						<span class="media-badge pointer-events-none absolute bottom-3 right-3 z-20 shadow-xs" aria-hidden="true">
+							{imageIndex + 1} / {moment.images.length}
+						</span>
 					{/if}
 				</div>
 			</div>
 			{#if moment.images.length > 1}
-				<div class="mt-2.5 grid grid-cols-3 gap-2">
-					{#each moment.images.slice(1) as img, i (img + i)}
+				<!-- 画廊缩略图导航：点击内联切换主图（不打开全屏）；选中态 accent 描边 + 全不透明，
+				     其余降透明度保持层次；窄屏横向滚动。 -->
+				<div class="mt-3 flex items-center gap-2 overflow-x-auto pb-0.5" role="group" aria-label="图片缩略图">
+					{#each moment.images as img, i (img + i)}
 						<button
 							type="button"
-							class="media-placeholder aspect-square w-full overflow-hidden rounded-lg focus-ring shadow-xs"
-							aria-label={`查看第 ${i + 2} 张图片`}
-							onclick={() => {
-								viewerIndex = i + 1;
-								viewerOpen = true;
-							}}
+							aria-pressed={i === imageIndex}
+							aria-label={`第 ${i + 1} 张图片`}
+							class="relative size-14 shrink-0 overflow-hidden rounded-md transition-opacity duration-standard focus-ring {i === imageIndex
+								? 'opacity-100 ring-2 ring-accent-default'
+								: 'opacity-60 hover:opacity-100'}"
+							onclick={() => (imageIndex = i)}
 						>
 							<img
-								src={presetImageUrl(img, 'thumb', 400)}
-								srcset={presetSrcSet(img, 'thumb')}
-								sizes="(min-width: 640px) 240px, 33vw"
-								alt="动态图片"
+								src={presetImageUrl(img, 'thumb', 200)}
+								alt=""
 								loading="lazy"
 								decoding="async"
-								class="aspect-square w-full cursor-zoom-in object-cover transition-transform duration-standard hover:scale-105"
-								use:fadeImage
+								class="h-full w-full object-cover"
 							/>
 						</button>
 					{/each}

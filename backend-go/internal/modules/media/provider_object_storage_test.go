@@ -562,6 +562,67 @@ func TestPresignURLRejectsInvalidEndpointURL(t *testing.T) {
 	}
 }
 
+// TestPresignGetCachesPerClientEndpoint：presign 读 URL 缓存必须按客户端入口
+// （scheme+host）隔离。否则 A 入口（如 http://localhost:8888）先签发的 URL 会被
+// B 入口（如 https://nginx.hotspot.orb.local）复用，导致跨源、CSP img-src 拦截或
+// SigV4 验签失败（2026-10-29 实测：https orb 页面拿到 http localhost 图片 URL，
+// 被 CSP "img-src 'self' data: https:" 全部拦截）。
+func TestPresignGetCachesPerClientEndpoint(t *testing.T) {
+	provider := NewObjectStorageProvider(config.Config{
+		S3Endpoint:             "http://seaweedfs:8333",
+		S3PublicEndpoint:       "http://127.0.0.1:8888/s3",
+		S3Region:               "us-east-1",
+		S3Bucket:               "hotspot",
+		S3AccessKey:            "access-key",
+		S3SecretKey:            "secret-key",
+		S3ForcePathStyle:       true,
+		S3PublicForcePathStyle: true,
+	})
+	provider.now = func() time.Time {
+		return time.Date(2026, 3, 30, 8, 0, 0, 0, time.UTC)
+	}
+
+	httpCtx := WithClientRequestEndpoint(context.Background(), "http", "localhost:8888")
+	httpsCtx := WithClientRequestEndpoint(context.Background(), "https", "nginx.hotspot.orb.local")
+	const key = "uploads/u1/upload_1.jpg"
+	const ttl = 15 * time.Minute
+
+	httpURL, err := provider.PresignGet(httpCtx, key, ttl)
+	if err != nil {
+		t.Fatalf("PresignGet(http) returned error: %v", err)
+	}
+	httpsURL, err := provider.PresignGet(httpsCtx, key, ttl)
+	if err != nil {
+		t.Fatalf("PresignGet(https) returned error: %v", err)
+	}
+	if httpURL == httpsURL {
+		t.Fatalf("不同客户端入口返回了同一 presigned URL（缓存 key 未区分入口）：%s", httpURL)
+	}
+	httpParsed, err := url.Parse(httpURL)
+	if err != nil {
+		t.Fatalf("parse http url: %v", err)
+	}
+	if httpParsed.Scheme != "http" || httpParsed.Host != "localhost:8888" {
+		t.Fatalf("unexpected http entry url: %s", httpURL)
+	}
+	httpsParsed, err := url.Parse(httpsURL)
+	if err != nil {
+		t.Fatalf("parse https url: %v", err)
+	}
+	if httpsParsed.Scheme != "https" || httpsParsed.Host != "nginx.hotspot.orb.local" {
+		t.Fatalf("unexpected https entry url: %s", httpsURL)
+	}
+
+	// 同入口重复调用应命中缓存（返回同一 URL），验证缓存仍在生效。
+	again, err := provider.PresignGet(httpCtx, key, ttl)
+	if err != nil {
+		t.Fatalf("PresignGet(http) repeat returned error: %v", err)
+	}
+	if again != httpURL {
+		t.Fatalf("同入口重复调用未命中缓存：%s != %s", again, httpURL)
+	}
+}
+
 // ReadPrefix 魔数嗅探取数（P2-1）：Range GET 读取对象前 n 字节。
 func TestObjectStorageProviderReadPrefix(t *testing.T) {
 	var gotRange string

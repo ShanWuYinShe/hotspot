@@ -159,9 +159,9 @@
 | 项 | 强制契约 |
 |---|---|
 | 页头/工具行 | **不渲染 PageHeader、不出现横栏**：内容顶部是一条与画布同底、非吸顶的极简工具行（`ghost` 返回 + 可见居中标题 + `ghost` 更多，36px，随内容滚走），与正文同一视觉层；加载/错误/空态同样保留。禁止：①整条 sticky glass 通栏硬条；②玻璃悬浮工具条或孤立圆钮压内容。滚动后的返回由浏览器/系统返回与全局「回到顶部」承担。 |
-| 媒体（单图） | **画廊级展陈**：图片 hero 位于内容卡首屏（作者/正文在图片之后），整幅出血到卡片左右边缘；主图 `w-full` + `h-auto` + `max-h-[min(78vh,44rem)]` + `object-contain`（保持比例、不裁切）；比例与展台不一致时，用同图 `scale-110 + object-cover + blur(var(--cst-blur-lg))` 作环境衬底（ambient matte）填充，两侧不再出现空底色/留白条。多图：首图 hero + 下方 3 列缩略图（方图 `object-cover`，网格语义）。依据 MDN object-fit（contain 保比例但可能留边）、web.dev aspect-ratio、NN/g 图像内容（大图且避免过多空白）。 |
+| 媒体（单图） | **画廊级展陈**：图片 hero 位于内容卡首屏（作者/正文在图片之后），整幅出血到卡片左右边缘；主图 `w-full` + `h-auto` + `max-h-[min(78vh,44rem)]` + `object-contain`（保持比例、不裁切）；比例与展台不一致时，用同图 `scale-110 + object-cover + blur(var(--cst-blur-lg))` 作环境衬底（ambient matte）填充，两侧不再出现空底色/留白条。**多图（2026-10-29 晚画廊化）**：主图 + 底部横向缩略图导航（56px 方图 `object-cover`、选中态 `ring-2 ring-accent-default` + 全不透明、未选中 `opacity-60`、窄屏横滚；点击缩略图**内联切换主图**、不打开全屏），主图右下角页码 `N / M`（非交互，替代旧「共 N 张」角标按钮）；点击主图进全屏查看器。主图切换用 `{#key imageIndex}` 重挂载 + 渐显，避免残留旧图。依据 MDN object-fit（contain 保比例但可能留边）、web.dev aspect-ratio、NN/g 图像内容（大图且避免过多空白）。 |
 | 动作条 | 所有端都内嵌在内容中（`MomentPostBody` 内），**移动端不再有第二条底部动作条**，避免与输入器叠成两条通栏横杠。 |
-| 评论输入器 | 页面私有 `CommentInputBar`，两种登记形态：`inline`（桌面/平板：嵌评论区顶部，`rounded-md` + 软底浅槽，宽度随内容）；`floating`（移动：悬浮 dock `mx-3` + `rounded-md` + 细边 + 玻璃底 + `shadow-raised-md` + 底部安全区）。两者都只用 39px 输入壳 + **40px 发送钮**（与聊天发送钮同档；旧评论 36 vs 聊天 40 已统一）。**禁止整条白底 `border-t` 通栏输入条**。 |
+| 评论输入器 | 页面私有 `CommentInputBar`，两种登记形态：`inline`（**桌面 + 平板，即 ≥600 宽**：嵌评论区顶部，`rounded-md` + 软底浅槽，宽度随内容）；`floating`（**仅手机 <600**：悬浮 dock `mx-3` + `rounded-md` + 细边 + 玻璃底 + `shadow-raised-md` + 底部安全区）。2026-10-29 晚修正：此前平板（600–1279）误用 floating，宽屏下悬浮输入框压住内容；现仅手机悬浮。两者都只用 39px 输入壳 + **40px 发送钮**（与聊天发送钮同档；旧评论 36 vs 聊天 40 已统一）。**禁止整条白底 `border-t` 通栏输入条**。 |
 | 与评论的关系 | 输入器是评论区的一部分：`inline` 时位于 `#moment-comments` 顶部（`commentComposer` snippet 注入）；移动悬浮 dock 仍归属评论动作；回复目标 chip 在输入器上方。 |
 
 ## 统一交互契约

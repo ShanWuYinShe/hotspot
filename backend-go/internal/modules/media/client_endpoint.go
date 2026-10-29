@@ -50,15 +50,22 @@ func requestOrigin(r *http.Request) string {
 }
 
 // ClientEndpointMiddleware 为所有 API 请求注入入口 origin（供媒体模块生成
-// 同源的直传/读 URL）。scheme 以 X-Forwarded-Proto 为准（nginx 统一覆写，
-// 防客户端伪造），host 取 Origin/Referer（含端口）。
+// 同源的直传/读 URL）。scheme/host 都取 Origin/Referer（含端口）：这是浏览器
+// 实际访问的 origin，JS 无法伪造（Origin 由浏览器设置、Referer 受浏览器控制），
+// 也天然覆盖「TLS 在网关/隧道终止、nginx 侧 $scheme 已是 http」的部署形态
+// （OrbStack .orb.local HTTPS 实测：X-Forwarded-Proto=http，若以其为准会签发
+// http 图片 URL，https 页面被 CSP img-src 拦截 + 混合内容阻断）。仅当无
+// Origin/Referer（脚本/内部调用）时才回退 X-Forwarded-Proto。
 func ClientEndpointMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if ep := requestOrigin(r); ep != "" {
 			if u, err := url.Parse(ep); err == nil && u.Host != "" {
 				scheme := u.Scheme
-				if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
-					scheme = proto
+				if scheme == "" {
+					scheme = "http"
+					if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
+						scheme = proto
+					}
 				}
 				r = r.WithContext(WithClientRequestEndpoint(r.Context(), scheme, u.Host))
 			}

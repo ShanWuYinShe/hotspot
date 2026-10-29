@@ -169,9 +169,11 @@
 							avatar: detailData.user?.avatar_url ?? '',
 						location: detailData.location?.location_name ?? '',
 						images: (detailData.images ?? []).map((im) => im.url).filter(Boolean),
-						// 首图宽高用于加载前比例占位（图片慢/失败时不塌陷）
-						coverWidth: detailData.images?.[0]?.width ?? null,
-						coverHeight: detailData.images?.[0]?.height ?? null,
+						// 每张图宽高用于加载前比例占位（图片慢/失败时不塌陷、覆盖层不错位）
+						imageSizes: (detailData.images ?? []).map((im) => ({
+							width: im.width ?? null,
+							height: im.height ?? null
+						})),
 						content: detailData.description ?? '',
 						time: formatMomentTime(detailData.created_at),
 						likes: (detailData.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
@@ -539,7 +541,7 @@
 		bind:input
 		bind:inputEl={commentInputEl}
 		onSend={() => void handleComment()}
-		variant={platform.platform === 'desktop' ? 'inline' : 'floating'}
+		variant={platform.platform === 'mobile' ? 'floating' : 'inline'}
 	/>
 {/snippet}
 
@@ -668,14 +670,14 @@
 			onReportComment={(id) => (reportTarget = { target_type: 'comment', target_id: id })}
 			onDeleteComment={(id) => (commentDeleteTarget = id)}
 			onLoadMoreComments={() => void loadMoreComments()}
-			commentComposer={platform.platform === 'desktop' ? commentComposer : undefined}
+			commentComposer={platform.platform === 'mobile' ? undefined : commentComposer}
 		/>
 	{/if}
 
 	{#snippet footer()}
 		<!-- 移动端：仅评论输入器（floating dock）；动作条已内嵌内容，不再叠第二条全宽横杠。
 		     SplitPageLayout 负责 safe-area 与内容补偿，这里只给悬浮 dock 留呼吸位。 -->
-		{#if platform.platform !== 'desktop'}
+		{#if platform.platform === 'mobile'}
 			<div class="pt-1 pb-2">
 				{@render commentComposer()}
 			</div>

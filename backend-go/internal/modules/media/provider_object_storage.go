@@ -230,7 +230,12 @@ func (p *ObjectStorageProvider) PutObject(ctx context.Context, storageKey, conte
 // 读 URL 走两代缓存（审计 perf P3-4）：同 key 在签名有效期内返回同一 URL；
 // 条目过期（签名时刻 + ttl − margin）后重签——缓存服务期永不超过签名有效期。
 func (p *ObjectStorageProvider) PresignGet(ctx context.Context, storageKey string, ttl time.Duration) (string, error) {
-	cacheKey := "get:" + storageKey + ":" + ttl.String()
+	// 缓存 key 必须包含客户端入口 endpoint：SigV4 签名把 Host 纳入签名，多入口
+	// （localhost / 127.0.0.1 / OrbStack https 域名）访问同一对象时若共用缓存，
+	// 会把 A 入口签发的 URL 发给 B 入口 → 跨源、CSP img-src 拦截或验签失败
+	//（2026-10-29 实测：http://localhost 的签名被 https orb 页面复用，图片被
+	// CSP "img-src 'self' data: https:" 全部拦截）。
+	cacheKey := "get:" + presignCacheEndpointKey(ctx) + ":" + storageKey + ":" + ttl.String()
 	if url, ok := p.cachedPresignedURL(cacheKey); ok {
 		return url, nil
 	}
@@ -240,6 +245,16 @@ func (p *ObjectStorageProvider) PresignGet(ctx context.Context, storageKey strin
 	}
 	p.storePresignedURL(cacheKey, url, ttl)
 	return url, nil
+}
+
+// presignCacheEndpointKey 是客户端入口 endpoint 的缓存键：有请求入口信息（Origin/
+// Referer 注入）时按 scheme+host 区分，无入口信息时统一走静态 S3_PUBLIC_ENDPOINT
+// （同进程内静态配置固定，无需再区分）。
+func presignCacheEndpointKey(ctx context.Context) string {
+	if ep, ok := clientRequestEndpointFromContext(ctx); ok {
+		return ep.Scheme + "://" + ep.Host
+	}
+	return "static"
 }
 
 // cachedPresignedURL 查缓存并按窗口懒轮换（cur → prev，prev 丢弃）；命中
