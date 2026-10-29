@@ -32,7 +32,8 @@ describe('RailSection', () => {
 			props: { title: '活跃邻居', variant: 'island', children: (() => null) as never }
 		});
 		const box = container.firstElementChild as HTMLElement;
-		expect(box.className).toContain('rounded-2xl');
+		// 2026-10-29 一致性收口：rounded-2xl 属未注册档（实际也是 16px），归一到 rounded-lg(20)
+		expect(box.className).toContain('rounded-lg');
 		expect(box.className).toContain('bg-surface-primary/70');
 		expect(box.className).toContain('shadow-xs');
 		// 去明显边界：island 不再画外框线（内容单元边界由投影与底色差表达）

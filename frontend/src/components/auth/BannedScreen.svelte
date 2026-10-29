@@ -24,7 +24,7 @@
 		<p class="text-sm leading-relaxed text-text-secondary" >
 			{message ?? '你的账号因违规操作被封禁。如有疑问，请联系客服。'}
 		</p>
-		<Button type="button" variant="primary" size="md" class="mt-2 rounded-sm px-8" onclick={onAcknowledge}>
+		<Button type="button" variant="primary" size="md" class="mt-2 px-8" onclick={onAcknowledge}>
 			知道了
 		</Button>
 	</div>

@@ -6,6 +6,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
@@ -77,9 +78,7 @@ import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 				count={needsAuth ? undefined : `${count}${countSuffix}`}
 			/>
 			{#if headerNote}
-				<span class="inline-flex h-6 shrink-0 items-center justify-center rounded-full bg-accent-soft px-2.5 text-xs font-medium leading-none text-text-accent-on-soft">
-					{headerNote}
-				</span>
+				<Badge size="md" tone="accent" class="shrink-0">{headerNote}</Badge>
 			{:else if headerExtra}
 				<div class="shrink-0">{@render headerExtra()}</div>
 			{/if}

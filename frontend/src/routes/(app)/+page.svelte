@@ -12,6 +12,7 @@
 	import { auth } from '@/stores/auth.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
@@ -279,14 +280,10 @@
 				<p class="mt-1 text-xs text-text-secondary max-w-sm mx-auto">
 					关注同频的好友与活跃邻居，即时获取 TA 们的最新瞬间与生活记录。
 				</p>
-				<button
-					type="button"
-					class="hover-btn mt-4 inline-flex items-center gap-1.5 rounded-full bg-accent-default px-5 py-2 text-xs font-medium text-text-on-accent focus-ring transition shadow-raised-sm"
-					onclick={() => void goto(ROUTES.login)}
-				>
+				<Button type="button" size="md" class="mt-4" onclick={() => void goto(ROUTES.login)}>
 					<LogIn class="size-3.5" />
 					<span>立即登录</span>
-				</button>
+				</Button>
 			</div>
 		{:else if currentLoading}
 			<!-- 首屏骨架屏：卡壳与 HomeFeedItem 一致（骨架→内容零位移），栅格同真实内容 -->
@@ -346,7 +343,7 @@
 				<!-- 方案 D：LBS 双核全景大屏的右翼实时雷达控制中心 -->
 				<div class="flex flex-col gap-4 py-2">
 					<!-- 实时雷达探索卡片 -->
-					<div class="relative overflow-hidden rounded-2xl border border-border-default bg-surface-primary shadow-sm">
+					<div class="relative overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-sm">
 						<!-- 地图雷达视窗背景模拟 -->
 						<div class="relative h-60 w-full bg-surface-subtle flex items-center justify-center overflow-hidden border-b border-border-subtle">
 							<!-- 仿雷达脉冲扫描同心圆 -->

@@ -4,15 +4,17 @@
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import { cn } from '@/lib/utils';
 
-	// Input —— 表单单行输入原语（ui-components.md 契约）。
+	// Input —— 表单单行输入原语（ui-components.md 契约，输入族唯一单行实现）。
 	// 表面走统一的 input-surface（边框/焦点环/错误态/禁用态见 utilities.css），
 	// 圆角固定 rounded-md(16)，与搜索原语（胶囊）形成两派语言。
-	// 行为契约对齐鸿蒙 SystemInput：前缀图标（prefix snippet）/ 清除按钮（clearable，
-	// value 非空显示）/ 错误态三件套（hasError + errorText → aria-invalid +
-	// aria-describedby + role="alert" 就近错误行）。
+	// 行为契约对齐鸿蒙 SystemInput：前缀图标（prefix）/ 后缀动作（suffix，如密码可见性）
+	// / 清除按钮（clearable，value 非空显示）/ 错误态三件套（hasError + errorText →
+	// aria-invalid + aria-describedby + role="alert" 就近错误行）。
 	// 受控模式：value 进、onChange 出（同 SearchInput）。label 两种形态：
 	// label（标准 tracking-field 档位行）或 labelSnippet（自定义整行，含图标等，
 	// 调用方自行用 id 关联 for=）；无可见 label 时传 ariaLabel。
+	// 尺寸：density='default' 43px（px-4 py-2.5 + text-md 21 + border 2，≈INPUT_HEIGHT 42）
+	// / density='compact' 39px（px-3.5 py-2，与搜索/后台紧凑档一致）。
 
 	let {
 		value = '',
@@ -27,11 +29,17 @@
 		id,
 		/** 前缀图标区（调用方渲染 lucide 图标，size-4 shrink-0） */
 		prefix,
+		/** 后缀动作区（如密码显隐按钮），渲染在清空钮之前 */
+		suffix,
 		/** value 非空时显示清空按钮 */
 		clearable = false,
+		/** 密度：default=43px（表单块）/ compact=39px（后台、紧凑位） */
+		density = 'default',
 		hasError = false,
 		/** 错误文案（与 hasError 同传，渲染 role="alert" 就近错误行） */
 		errorText,
+		/** 无错误时也渲染等高错误行（防止错误出现时把下方内容顶下去） */
+		reserveErrorSpace = false,
 		disabled = false,
 		autocomplete,
 		inputmode,
@@ -57,18 +65,21 @@
 		value?: string;
 		onChange?: (value: string) => void;
 		placeholder?: string;
-		type?: 'text' | 'email' | 'password' | 'number';
+		type?: 'text' | 'email' | 'password' | 'number' | 'date' | 'time' | 'tel' | 'url';
 		label?: string;
 		labelSnippet?: Snippet;
 		id?: string;
 		prefix?: Snippet;
+		suffix?: Snippet;
 		clearable?: boolean;
+		density?: 'default' | 'compact';
 		compact?: boolean;
 		hasError?: boolean;
 		errorText?: string;
+		reserveErrorSpace?: boolean;
 		disabled?: boolean;
 		autocomplete?: HTMLInputAttributes['autocomplete'];
-		inputmode?: 'text' | 'numeric' | 'decimal' | 'email';
+		inputmode?: 'text' | 'numeric' | 'decimal' | 'email' | 'search';
 		min?: number;
 		max?: number;
 		maxlength?: number;
@@ -84,6 +95,9 @@
 	const inputId = $derived(id ?? autoId);
 	const errorId = $derived(inputId + '-error');
 	let inputEl = $state<HTMLInputElement | null>(null);
+
+	const shellPadding = $derived(density === 'compact' ? 'px-3.5 py-2' : 'px-4 py-2.5');
+	const errId = $derived(hasError && errorText ? errorId : undefined);
 
 	function clear() {
 		value = '';
@@ -108,16 +122,16 @@
 		{maxlength}
 		aria-label={ariaLabel}
 		aria-invalid={hasError ? 'true' : undefined}
-		aria-describedby={hasError && errorText ? errorId : undefined}
+		aria-describedby={errId}
 		bind:value
 		oninput={(e) => onChange?.(e.currentTarget.value)}
 		onkeydown={(e) => {
 			if (e.key === 'Enter') onEnter?.(value);
 		}}
-		class={cn('input-surface rounded-md text-text-primary', textClass, inputClass)}
+		class={cn('input-surface rounded-md text-text-primary', shellPadding, textClass, inputClass)}
 	/>
-	{#if hasError && errorText}
-		<p id={errorId} class="text-xs text-status-danger" role="alert">{errorText}</p>
+	{#if reserveErrorSpace || (hasError && errorText)}
+		<p id={errorId} class="min-h-4 text-xs text-status-danger" role="alert">{hasError ? errorText ?? '' : ''}</p>
 	{/if}
 {:else}
 	<div class="flex flex-col gap-1.5">
@@ -127,9 +141,9 @@
 			{@render labelSnippet()}
 		{/if}
 		<!-- 默认内边距不可省：input-surface 只提供底色/描边/焦点态，不含 padding。
-		     默认 px-4 py-2.5 + text-md 行高 21 + 边框 2 = 43px（≈ INPUT_HEIGHT 42 契约）；
-		     调用方仍可用 className 覆盖（cn 走 tailwind-merge）。 -->
-		<span class={cn('flex items-center gap-2 rounded-md input-surface px-4 py-2.5', className)}>
+		     density 决定两档：default 43px（px-4 py-2.5）/ compact 39px（px-3.5 py-2）；
+		     调用方 className 仍可覆盖（cn 走 tailwind-merge，兼容历史用法）。 -->
+		<span class={cn('flex items-center gap-2 rounded-md input-surface', shellPadding, className)}>
 			{@render prefix?.()}
 			<!-- 聚焦态由外层 input-surface:focus-within 整框承担（见 utilities.css），内层不画自身焦点框 -->
 			<input
@@ -145,7 +159,7 @@
 				{maxlength}
 				aria-label={ariaLabel}
 				aria-invalid={hasError ? 'true' : undefined}
-				aria-describedby={hasError && errorText ? errorId : undefined}
+				aria-describedby={errId}
 				bind:value
 				oninput={(e) => onChange?.(e.currentTarget.value)}
 				onkeydown={(e) => {
@@ -153,6 +167,7 @@
 				}}
 				class={cn('min-w-0 flex-1 bg-transparent text-text-primary', textClass, inputClass)}
 			/>
+			{@render suffix?.()}
 			{#if clearable && value && !disabled}
 				<!-- 32px 视觉 + hit-slop → 44px 命中；-my-2 抵消纵向占位，输入框高度不变 -->
 				<button
@@ -165,8 +180,8 @@
 				</button>
 			{/if}
 		</span>
-		{#if hasError && errorText}
-			<p id={errorId} class="text-xs text-status-danger" role="alert">{errorText}</p>
+		{#if reserveErrorSpace || (hasError && errorText)}
+			<p id={errorId} class="min-h-4 text-xs text-status-danger" role="alert">{hasError ? errorText ?? '' : ''}</p>
 		{/if}
 	</div>
 {/if}

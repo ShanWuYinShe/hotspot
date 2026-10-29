@@ -8,6 +8,8 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import Input from '@/components/forms/Input.svelte';
+	import Select from '@/components/forms/Select.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import {
@@ -96,26 +98,42 @@
 		     首屏只剩半张表；全站复审 S4-09）。网格化后同屏可见的控件数不变，仅省竖向空间。
 		     日期两件套用 sm:contents 在桌面端还原为父级 flex 的普通子项。 -->
 		<div class="grid grid-cols-2 gap-2.5 sm:flex sm:flex-row sm:flex-wrap sm:items-center">
-			<select bind:value={action} class="input-surface w-full rounded-md px-3.5 py-2 text-md text-text-primary sm:w-auto" aria-label="动作">
+			<Select value={action} onChange={(v) => (action = v)} ariaLabel="动作" density="compact" class="w-full sm:w-auto">
 				{#each ACTIONS as a (a.value)}
 					<option value={a.value}>{a.label}</option>
 				{/each}
-			</select>
-			<select bind:value={targetType} class="input-surface w-full rounded-md px-3.5 py-2 text-md text-text-primary sm:w-auto" aria-label="目标类型">
+			</Select>
+			<Select value={targetType} onChange={(v) => (targetType = v)} ariaLabel="目标类型" density="compact" class="w-full sm:w-auto">
 				{#each TARGET_TYPES as t (t.value)}
 					<option value={t.value}>{t.label}</option>
 				{/each}
-			</select>
-			<input
-				bind:value={operatorId}
-				class="input-surface col-span-2 w-full rounded-md px-3.5 py-2 text-md text-text-primary sm:col-span-1 sm:w-56"
+			</Select>
+			<Input
+				value={operatorId}
+				onChange={(v) => (operatorId = v)}
 				placeholder="操作者 user_id…"
-				aria-label="操作者 ID"
+				ariaLabel="操作者 ID"
+				density="compact"
+				class="col-span-2 w-full sm:col-span-1 sm:w-56"
 			/>
 			<div class="col-span-2 flex items-center gap-2 sm:contents">
-				<input bind:value={startDate} type="date" class="input-surface min-w-0 flex-1 rounded-md px-3.5 py-2 text-md text-text-primary sm:flex-none" aria-label="开始日期" />
+				<Input
+					value={startDate}
+					onChange={(v) => (startDate = v)}
+					type="date"
+					ariaLabel="开始日期"
+					density="compact"
+					class="min-w-0 flex-1 sm:flex-none"
+				/>
 				<span class="shrink-0 text-xxs text-text-secondary sm:self-center">至</span>
-				<input bind:value={endDate} type="date" class="input-surface min-w-0 flex-1 rounded-md px-3.5 py-2 text-md text-text-primary sm:flex-none" aria-label="结束日期" />
+				<Input
+					value={endDate}
+					onChange={(v) => (endDate = v)}
+					type="date"
+					ariaLabel="结束日期"
+					density="compact"
+					class="min-w-0 flex-1 sm:flex-none"
+				/>
 			</div>
 			{#if !canReadIp}
 				<span class="col-span-2 text-xxs text-text-secondary sm:self-center">IP 字段需 admin.audit.read_ip 权限</span>

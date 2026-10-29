@@ -6,6 +6,8 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import type { UserItem } from '@/api/types';
@@ -96,12 +98,7 @@
 </script>
 
 <Dialog.Root open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
-	<Dialog.Content
-		side="bottom"
-		class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl bg-surface-primary p-4"
-		aria-label="邀请成员"
-		style="box-shadow:var(--cst-elevation-modal);"
-	>
+	<Dialog.Content side="bottom" floating class="p-4" aria-label="邀请成员">
 		<div class="flex items-center justify-between px-1 pb-3">
 			<div class="min-w-0">
 				<p class="text-md font-semibold text-text-primary">邀请成员入群</p>
@@ -122,16 +119,21 @@
 
 		<div class="mt-3 max-h-72 overflow-y-auto no-scrollbar pb-3">
 			{#if loading}
-				<p class="py-6 text-center text-sm text-text-secondary">搜索中…</p>
+				<InlineLoading label="搜索中…" class="py-6" />
 			{:else if searchError}
 				<!-- 搜索失败必须与「无匹配用户」区分开：否则用户以为真的没人而放弃邀请。
 				     py-8 收紧（LoadError 默认 py-20，会撑爆 max-h-72 的 sheet 列表） -->
 				<LoadError message={searchError} onRetry={() => void doSearch()} class="py-8" />
 			{:else if results.length === 0}
-				<div class="flex flex-col items-center gap-2 py-6 text-center">
-					<Search size={22} class="text-text-secondary" strokeWidth={1.5} />
-					<p class="text-sm text-text-secondary">{keyword.trim() ? '没有找到匹配的用户，换个昵称试试' : '输入昵称搜索用户'}</p>
-				</div>
+				<EmptyState
+					bare
+					title={keyword.trim() ? '没有找到匹配的用户，换个昵称试试' : '输入昵称搜索用户'}
+					class="py-6"
+				>
+					{#snippet icon()}
+						<Search size={22} class="text-text-secondary" strokeWidth={1.5} />
+					{/snippet}
+				</EmptyState>
 			{:else}
 				{#each results as u (u.user.user_id)}
 					{@const isSelected = selected.has(u.user.user_id)}

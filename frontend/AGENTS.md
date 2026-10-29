@@ -190,6 +190,7 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
    - 紧凑型徽标（未读数气泡、状态胶囊、卡片角标）：`h-5 px-2` 或 `h-5 px-2.5`，字号 `text-xxs`；
    - 标准型标签（封面分类胶囊、个人兴趣标签、大图页码）：`h-6 px-2.5`，字号 `text-xs font-medium`；
    - 表单筛选胶囊（`TagPill`）：`sm` 为 `h-6 px-2.5 text-xxs`，`md` 为 `h-7 px-3 text-xs`。
+   - **实现必须用原语**（2026-10-29）：非压图徽章/标签一律 `data-display/Badge`（`size="sm"`=20px / `"md"`=24px，`tone` 枚举）；压图角标用 `.media-badge`；数字未读用 `shared/UnreadBadge`（`variant="accent|inverse"`）。禁止手写 `inline-flex h-5/h-6 rounded-full px-*` 胶囊或旧 `.badge` 类（检查器 `raw-badge` 拦截）。
 
 > 具体状态契约见 skill `hotspot-frontend-style`（样式自查清单 → 交互状态契约）。
 
@@ -252,4 +253,5 @@ src/
 
 **完整契约见 skill hotspot-frontend-style**（样式自查清单、交互状态契约、档位表；档位数值以根 `docs/design-system.md` 为准）。要点一句话：风格值落 token 体系（布局几何 px 除外）、档位禁止近邻并存、用既有交互工具类、焦点必须可见、UI 改动必须截图对比审查（细则见「UI 设计原则」）。
 
-- **输入族（2026-10-29）**：搜索一律 `forms/SearchInput`（胶囊 / 39px / text-md / 清空钮 44 命中）；表单输入一律 `forms/Input` 或裸 `.input-surface`（16 圆角 / 43px / text-md）；页面不得再传 padding/圆角/字号覆盖原语；输入表面契约（hover/focus/error/disabled、placeholder 对比度、⌘K 全局搜索）见 `docs/ui-components.md`「输入族契约」与源码测试 `src/styles/__tests__/input-surface-contract.test.ts`。
+- **输入族（2026-10-29 第二轮收口）**：搜索一律 `forms/SearchInput`（胶囊 / 39px / text-md / 清空钮 44 命中）；单行一律 `forms/Input`（`density="default"` 43px / `"compact"` 39px）；多行一律 `forms/Textarea`（统一 `px-3.5 py-3` 壳）；下拉一律 `forms/Select`（`field`/`ghost`）；复选一律 `forms/Checkbox`。页面不得手写 input/textarea/select/checkbox/`.input-surface`，不得传 padding/圆角/字号覆盖原语（例外只能登记 allowlist 并写理由）。
+- **同类型一致性（强制）**：任何同类型 UI（搜索/输入/文本域/下拉/复选/Tab/按钮/卡片/列表行/空态…）在所有页面必须走同一原语或同一登记类契约，上下文差异只允许通过原语变体表达，禁止页内近似实现。输入族由 `bun run check:ui-consistency`（scripts/check-component-consistency.mjs，已挂入 `bun run check`）源码级拦截；契约与例外清单见 `docs/ui-components.md`「同类型一致性契约」，表面状态详见同文「输入族契约」与 `src/styles/__tests__/input-surface-contract.test.ts`。

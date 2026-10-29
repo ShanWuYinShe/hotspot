@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import Button from '@/components/ui/button.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import { avatarImageWidths, buildImageSrcSet, fadeImage, optimizedImageUrl } from '@/lib/images';
 	import { TYPE_CONFIG, type NotifyViewItem } from './notify-data';
 
@@ -52,29 +53,18 @@
 	<!-- Avatar + icon badge -->
 	<div class="relative shrink-0">
 		{#if notif.user.avatar}
-			<div class="size-11 overflow-hidden rounded-full ring-1 ring-border-subtle/50">
-				<img
-					src={optimizedImageUrl(notif.user.avatar, { width: 88 })}
-					srcset={buildImageSrcSet(notif.user.avatar, avatarImageWidths(44))}
-					sizes="44px"
-					alt={notif.user.name}
-					loading="lazy"
-					decoding="async"
-					class="h-full w-full object-cover"
-					use:fadeImage
-				/>
-			</div>
-		{:else}
-			<div class="flex size-11 items-center justify-center rounded-full" style="background:{cfg.bg};">
-				<cfg.icon class="size-4.5" style="color:{cfg.color};" strokeWidth={1.75} />
-			</div>
-		{/if}
-		{#if notif.user.avatar}
+			<!-- 头像统一 shared/Avatar（占位/兜底/渐显内置）；类型角标外挂：
+			     Avatar 包装是 overflow-hidden，18px 角标放内部会被圆角裁切 -->
+			<Avatar src={notif.user.avatar} name={notif.user.name} size="lg" class="ring-1 ring-border-subtle/50" />
 			<div
 				class="absolute -bottom-0.5 -right-0.5 flex size-4.5 items-center justify-center rounded-full shadow-xs"
 				style="background:{cfg.color};border:var(--cst-border-width-strong) solid var(--cst-surface-primary);"
 			>
 				<cfg.icon class="size-2.5 text-text-on-accent" strokeWidth={2.5} />
+			</div>
+		{:else}
+			<div class="flex size-11 items-center justify-center rounded-full" style="background:{cfg.bg};">
+				<cfg.icon class="size-4.5" style="color:{cfg.color};" strokeWidth={1.75} />
 			</div>
 		{/if}
 	</div>
@@ -98,7 +88,8 @@
 					type="button"
 					size="sm"
 					variant="primary"
-					class="hit-slop-44 rounded-full px-3.5"
+					shape="pill"
+					class="hit-slop-44 px-3.5"
 					disabled={actionPending}
 					onclick={(e) => { e.stopPropagation(); onAccept?.(notif.inviteId!); }}
 				>接受</Button>
@@ -106,7 +97,8 @@
 					type="button"
 					size="sm"
 					variant="soft"
-					class="hit-slop-44 rounded-full px-3.5"
+					shape="pill"
+					class="hit-slop-44 px-3.5"
 					disabled={actionPending}
 					onclick={(e) => { e.stopPropagation(); onReject?.(notif.inviteId!); }}
 				>拒绝</Button>

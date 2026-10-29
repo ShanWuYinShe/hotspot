@@ -11,6 +11,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import Button from '@/components/ui/button.svelte';
@@ -227,7 +228,7 @@
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-2">
 									<p class="text-sm font-semibold text-text-primary truncate">{accountName || '用户'}</p>
-									<span class="badge bg-accent-default text-text-on-accent">已登录</span>
+									<Badge tone="solid">已登录</Badge>
 								</div>
 								<p class="text-xs text-text-secondary mt-0.5 truncate">{accountEmail || '未绑定邮箱'}</p>
 							</div>
@@ -324,7 +325,7 @@
 						{#snippet badge()}
 							<!-- 纯本机偏好（localStorage），后端 spec 无对应字段；与下方服务端
 							     开关（私密账号/位置共享）同列时必须标明生效范围，避免误以为已同步。 -->
-							<span class="badge bg-surface-subtle text-text-secondary">仅保存在本设备</span>
+							<Badge>仅保存在本设备</Badge>
 						{/snippet}
 						{#snippet icon()}
 							<Bell class="size-4 text-accent-default" strokeWidth={1.5} />
@@ -409,7 +410,7 @@
 								</div>
 							</div>
 							<div class="flex flex-col items-end gap-0.5">
-								<span class="badge text-xs font-mono font-medium border border-border-default bg-transparent text-text-secondary">{buildInfo.info?.version ?? '…'}</span>
+								<Badge tone="outline" size="sm" class="font-mono">{buildInfo.info?.version ?? '…'}</Badge>
 								{#if shortCommit}
 									<span class="text-xxs font-mono text-text-secondary">构建 {shortCommit}</span>
 								{/if}

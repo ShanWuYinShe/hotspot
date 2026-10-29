@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { KeyRound, Smartphone, UserRoundPlus, ShieldCheck, X } from '@lucide/svelte';
 	import SettingRow from '@/components/forms/SettingRow.svelte';
+	import Input from '@/components/forms/Input.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { auth, refreshUser } from '@/stores/auth.svelte';
@@ -206,7 +208,7 @@
 										<div class="flex items-center gap-2">
 											<p class="truncate text-sm text-text-primary">{s.device_name ?? s.device_type ?? '未知设备'}</p>
 											{#if s.is_current}
-												<span class="inline-flex h-5 items-center justify-center rounded-full bg-accent-soft px-2 text-xxs font-medium leading-none text-text-accent-on-soft">当前设备</span>
+												<Badge tone="accent">当前设备</Badge>
 											{/if}
 										</div>
 										<p class="mt-0.5 truncate text-xs text-text-secondary">
@@ -263,39 +265,35 @@
 		{#snippet extension()}
 			{#if upgradeOpen}
 				<form class="flex flex-col gap-2.5 pb-1" onsubmit={(e) => { e.preventDefault(); void submitUpgrade(); }}>
-					<label class="block">
-						<span class="text-xs tracking-field text-text-secondary">用户名</span>
-						<input
-							type="text"
-							bind:value={upgradeLoginId}
-							autocomplete="username"
-							aria-label="用户名"
-							placeholder="用于日后登录"
-							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
-						/>
-					</label>
-					<label class="block">
-						<span class="text-xs tracking-field text-text-secondary">密码</span>
-						<input
-							type="password"
-							bind:value={upgradePassword}
-							autocomplete="new-password"
-							aria-label="设置密码"
-							placeholder="设置登录密码"
-							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
-						/>
-					</label>
-					<label class="block">
-						<span class="text-xs tracking-field text-text-secondary">确认密码</span>
-						<input
-							type="password"
-							bind:value={upgradeConfirm}
-							autocomplete="new-password"
-							aria-label="确认密码"
-							placeholder="再输入一次密码"
-							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
-						/>
-					</label>
+					<Input
+						label="用户名"
+						value={upgradeLoginId}
+						onChange={(v) => (upgradeLoginId = v)}
+						autocomplete="username"
+						ariaLabel="用户名"
+						placeholder="用于日后登录"
+						density="compact"
+					/>
+					<Input
+						type="password"
+						label="密码"
+						value={upgradePassword}
+						onChange={(v) => (upgradePassword = v)}
+						autocomplete="new-password"
+						ariaLabel="设置密码"
+						placeholder="设置登录密码"
+						density="compact"
+					/>
+					<Input
+						type="password"
+						label="确认密码"
+						value={upgradeConfirm}
+						onChange={(v) => (upgradeConfirm = v)}
+						autocomplete="new-password"
+						ariaLabel="确认密码"
+						placeholder="再输入一次密码"
+						density="compact"
+					/>
 					{#if upgradeError}
 						<p class="text-xs text-status-danger" role="alert">{upgradeError}</p>
 					{/if}
@@ -321,49 +319,42 @@
 		{#snippet extension()}
 			{#if pwdOpen}
 				<form class="flex flex-col gap-2.5 pb-1" onsubmit={(e) => { e.preventDefault(); void submitPassword(); }}>
-					<label class="block">
-						<span class="text-xs tracking-field text-text-secondary">旧密码</span>
-						<input
-							type="password"
-							bind:value={oldPassword}
-							autocomplete="current-password"
-							aria-label="旧密码"
-							placeholder="输入当前密码"
-							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
-						/>
-					</label>
-					<label class="block">
-						<span class="text-xs tracking-field text-text-secondary">新密码</span>
-						<input
-							type="password"
-							bind:value={newPassword}
-							autocomplete="new-password"
-							aria-label="新密码"
-							placeholder="设置新密码"
-							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
-						/>
-					</label>
-					<label class="block">
-						<span class="text-xs tracking-field text-text-secondary">确认新密码</span>
-						<input
-							type="password"
-							bind:value={pwdConfirm}
-							autocomplete="new-password"
-							aria-label="确认新密码"
-							placeholder="再输入一次新密码"
-							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
-						/>
-					</label>
+					<Input
+						type="password"
+						label="旧密码"
+						value={oldPassword}
+						onChange={(v) => (oldPassword = v)}
+						autocomplete="current-password"
+						ariaLabel="旧密码"
+						placeholder="输入当前密码"
+						density="compact"
+					/>
+					<Input
+						type="password"
+						label="新密码"
+						value={newPassword}
+						onChange={(v) => (newPassword = v)}
+						autocomplete="new-password"
+						ariaLabel="新密码"
+						placeholder="设置新密码"
+						density="compact"
+					/>
+					<Input
+						type="password"
+						label="确认新密码"
+						value={pwdConfirm}
+						onChange={(v) => (pwdConfirm = v)}
+						autocomplete="new-password"
+						ariaLabel="确认新密码"
+						placeholder="再输入一次新密码"
+						density="compact"
+					/>
 					{#if pwdError}
 						<p class="text-xs text-status-danger" role="alert">{pwdError}</p>
 					{/if}
-					<button
-						type="submit"
-						disabled={pwdSaving}
-						class="hover-btn mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-accent-default py-2.5 text-sm font-medium text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring disabled:opacity-muted"
-					>
+					<Button type="submit" variant="primary" size="md" disabled={pwdSaving} class="mt-1 w-full">
 						{pwdSaving ? '提交中…' : '确认修改'}
-					</button>
+					</Button>
 				</form>
 			{/if}
 		{/snippet}

@@ -10,6 +10,7 @@
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
@@ -139,10 +140,7 @@
 		onConfirm={() => void submitDismiss()}
 	>
 		{#snippet extra()}
-			<label class="flex flex-col gap-1.5">
-				<span class="text-xs text-text-secondary">解散原因（可留空）</span>
-				<textarea bind:value={dismissReason} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3.5 py-2 text-md text-text-primary"></textarea>
-			</label>
+			<Textarea label="解散原因（可留空）" value={dismissReason} onChange={(v) => (dismissReason = v)} rows={2} maxlength={500} />
 		{/snippet}
 	</ConfirmDialog>
 {/if}

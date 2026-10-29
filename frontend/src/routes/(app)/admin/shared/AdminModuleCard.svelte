@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
 	import { ChevronRight } from '@lucide/svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 
 	// 管理后台模块入口卡（/admin 概览私有组件）。
 	// 语言：图标砖 + 标题 + 一句说明 + 待办角标 + 进入箭头；整卡可点（button 本体承载语义，
@@ -42,7 +43,7 @@
 		<span class="flex flex-wrap items-center gap-x-2 gap-y-1">
 			<span class="truncate text-md font-semibold text-text-primary">{label}</span>
 			{#if badge}
-				<span class="badge bg-status-warning-bg text-text-status-warning-on-soft">{badge}</span>
+				<Badge tone="warning">{badge}</Badge>
 			{/if}
 		</span>
 		<span class="mt-1 block text-xs leading-card text-text-secondary">

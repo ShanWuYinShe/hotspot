@@ -150,3 +150,58 @@ describe('Input 输入族契约（2026-10-29）', () => {
 		expect(document.activeElement).toBe(input);
 	});
 });
+
+// 2026-10-29 一致性收口：density / reserveErrorSpace / date 类型 / suffix。
+describe('Input 密度与布局契约（2026-10-29 一致性收口）', () => {
+	it('density=compact 用 39px 紧凑档（px-3.5 py-2）', () => {
+		const { container } = render(Input, {
+			props: { value: '', onChange: () => {}, ariaLabel: '备注', density: 'compact' }
+		});
+		const surface = container.querySelector('.input-surface') as HTMLElement;
+		expect(surface.className).toContain('px-3.5');
+		expect(surface.className).toContain('py-2');
+		expect(surface.className).not.toContain('px-4');
+	});
+
+	it('density 默认仍为表单块 43px 档（px-4 py-2.5）', () => {
+		const { container } = render(Input, { props: { value: '', onChange: () => {}, ariaLabel: '昵称' } });
+		const surface = container.querySelector('.input-surface') as HTMLElement;
+		expect(surface.className).toContain('px-4');
+		expect(surface.className).toContain('py-2.5');
+	});
+
+	it('reserveErrorSpace：无错误时也保留错误行占位（不顶动下方内容）', () => {
+		render(Input, {
+			props: { value: '', onChange: () => {}, label: '昵称', reserveErrorSpace: true }
+		});
+		const row = screen.getByRole('alert');
+		expect(row.textContent?.trim()).toBe('');
+		expect(row.className).toContain('min-h-4');
+		const input = screen.getByLabelText('昵称') as HTMLInputElement;
+		expect(input.getAttribute('aria-describedby')).toBeNull();
+	});
+
+	it('reserveErrorSpace + 错误文案：同一行填充文案并关联 aria-describedby', () => {
+		render(Input, {
+			props: {
+				value: '',
+				onChange: () => {},
+				label: '昵称',
+				reserveErrorSpace: true,
+				hasError: true,
+				errorText: '不能为空'
+			}
+		});
+		const row = screen.getByRole('alert');
+		expect(row.textContent).toBe('不能为空');
+		const input = screen.getByLabelText('昵称') as HTMLInputElement;
+		expect(input.getAttribute('aria-describedby')).toBe(row.id);
+	});
+
+	it('type=date 透传原生日期输入', () => {
+		render(Input, { props: { value: '', onChange: () => {}, type: 'date', ariaLabel: '开始日期' } });
+		const input = screen.getByLabelText('开始日期') as HTMLInputElement;
+		expect(input.type).toBe('date');
+	});
+});
+

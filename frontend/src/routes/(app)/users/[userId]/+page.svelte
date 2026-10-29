@@ -23,11 +23,13 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import IdentityHero from '@/components/profile/IdentityHero.svelte';
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
+	import Input from '@/components/forms/Input.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { formatCardTime, formatCount, formatDistance } from '@/lib/utils';
@@ -246,12 +248,7 @@
 </svelte:head>
 
 <Dialog.Root open={moreOpen} onOpenChange={(next) => (next ? undefined : (moreOpen = false))}>
-	<Dialog.Content
-		side="bottom"
-		class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl p-5"
-		aria-label={`${user.name} 的更多操作`}
-		style="box-shadow:var(--cst-elevation-modal);"
-	>
+	<Dialog.Content side="bottom" floating class="p-5" aria-label={`${user.name} 的更多操作`}>
 		<div class="flex items-center justify-between">
 			<div>
 				<p class="eyebrow">关系与安全</p>
@@ -259,15 +256,14 @@
 			</div>
 			<ActionIconButton icon={X} label="关闭" onClick={() => (moreOpen = false)} />
 		</div>
-		<label class="mt-5 block text-sm text-text-secondary">
-			备注名称
-			<input
-				bind:value={remarkDraft}
-				oninput={(e) => (remarkDraft = e.currentTarget.value.slice(0, 24))}
-				placeholder="只对你可见"
-				class="mt-2 w-full input-surface rounded-md px-3.5 py-2.5 text-md text-text-primary"
-			/>
-		</label>
+		<Input
+			class="mt-5"
+			label="备注名称"
+			value={remarkDraft}
+			onChange={(v) => (remarkDraft = v.slice(0, 24))}
+			placeholder="只对你可见"
+			maxlength={24}
+		/>
 		<Button
 			type="button"
 			variant="secondary"
@@ -570,11 +566,7 @@
 					<SectionHead variant="rail" title="兴趣标签" icon={Tag} />
 					<div class="flex flex-wrap gap-2">
 						{#each user.tags as t (t)}
-							<span
-								class="inline-flex h-6 items-center justify-center rounded-full bg-accent-soft px-2.5 text-xs font-medium leading-none text-text-accent-on-soft"
-							>
-								#{t}
-							</span>
+							<Badge tone="accent" size="md">#{t}</Badge>
 						{/each}
 					</div>
 				</section>

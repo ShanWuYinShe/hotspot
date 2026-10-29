@@ -4,6 +4,7 @@
 	import { requestPasswordReset, resetPassword, sendRegisterCode, getClientConfig } from '@/api';
 	import Button from '@/components/ui/button.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
+	import Input from '@/components/forms/Input.svelte';
 	import {
 		validateAuthFields,
 		validateLoginId,
@@ -235,208 +236,178 @@
 	}}
 >
 	{#if mode === 'register' || mode === 'guest'}
-		<label class="flex flex-col gap-1.5" for="auth-field-nickname">
-			<span class="text-xs font-medium tracking-field text-text-secondary">昵称</span>
-			<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
-				<input
-					id="auth-field-nickname"
-					type="text"
-					bind:value={nickname}
-					placeholder={mode === 'guest' ? '昵称（可选，留空自动生成）' : '1–30 个字符'}
-					disabled={submitting}
-					autocomplete="nickname"
-					aria-invalid={fieldErrors.nickname ? 'true' : undefined}
-					aria-describedby={fieldErrors.nickname ? 'auth-field-nickname-error' : undefined}
-					oninput={() => clearFieldError('nickname')}
-					class="min-w-0 flex-1 bg-transparent text-md text-text-primary"
-					
-				/>
-			</span>
-			<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
-             统一预留固定高度（2026-10-21 录屏分析）。 -->
-<p id="auth-field-nickname-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.nickname ?? ''}</p>
-		</label>
+		<Input
+			id="auth-field-nickname"
+			label="昵称"
+			value={nickname}
+			onChange={(v) => {
+				nickname = v;
+				clearFieldError('nickname');
+			}}
+			placeholder={mode === 'guest' ? '昵称（可选，留空自动生成）' : '1–30 个字符'}
+			disabled={submitting}
+			autocomplete="nickname"
+			hasError={!!fieldErrors.nickname}
+			errorText={fieldErrors.nickname}
+			reserveErrorSpace
+		/>
 	{/if}
 
 	{#if mode === 'login' || mode === 'register'}
 		<!-- 验证码登录接口 spec 暂无：不展示不可用选项（业务态不可伪装成可用功能）；
 		     仅注册手机号/邮箱型需验证码（所有权验证），与密码共存 -->
-		<label class="flex flex-col gap-1.5" for="auth-field-loginId">
-			<span class="text-xs font-medium tracking-field text-text-secondary">手机号、邮箱或账号</span>
-			<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
-				<Mail class="size-4 shrink-0 text-accent-default"   strokeWidth={1.75} />
-				<input
-					id="auth-field-loginId"
-					type="text"
-					bind:value={loginId}
-					placeholder="请输入账号"
-					disabled={submitting}
-					autocomplete="username"
-					aria-invalid={fieldErrors.loginId ? 'true' : undefined}
-					aria-describedby={fieldErrors.loginId ? 'auth-field-loginId-error' : undefined}
-					oninput={() => clearFieldError('loginId')}
-					class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
-					
-				/>
-			</span>
-			<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
-             统一预留固定高度（2026-10-21 录屏分析）。 -->
-<p id="auth-field-loginId-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.loginId ?? ''}</p>
-		</label>
-			{#if needsRegisterCode}
-				<!-- 验证码：登录验证码模式（发送接口暂未开放）或注册手机号/邮箱型（所有权验证）；
-				     注册型与密码共存（注册始终需要密码），登录验证码模式替代密码 -->
-				<label class="flex flex-col gap-1.5" for="auth-field-code">
-					<span class="text-xs font-medium tracking-field text-text-secondary">验证码</span>
-					<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
-						<input
-							id="auth-field-code"
-							type="text"
-							bind:value={code}
-							placeholder="输入收到的验证码"
-							disabled={submitting}
-							autocomplete="one-time-code"
-							aria-invalid={fieldErrors.code ? 'true' : undefined}
-							aria-describedby={fieldErrors.code ? 'auth-field-code-error' : undefined}
-							oninput={() => clearFieldError('code')}
-							class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
-
-						/>
-					</span>
-					<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
-             统一预留固定高度（2026-10-21 录屏分析）。 -->
-<p id="auth-field-code-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.code ?? ''}</p>
-				</label>
-				<Button
-					type="button"
-					variant="surface-accent"
-					size="lg"
-					class="w-full"
-					disabled={codeCountdown > 0 || sendingCode}
-					onclick={() => void sendRegisterCodeAndCountdown()}
-				>
-					{#if needsRegisterCode}
-						{sendingCode ? '发送中…' : codeCountdown > 0 ? `${codeCountdown}s 后重发` : '发送验证码'}
-					{:else}
-						获取验证码
-					{/if}
-				</Button>
-			{/if}
-			{#if mode === 'login' || mode === 'register'}
-			<label class="flex flex-col gap-1.5" for="auth-field-password">
-				<span class="text-xs font-medium tracking-field text-text-secondary">密码</span>
-				<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
-					<LockKeyhole class="size-4 shrink-0 text-accent-default"   strokeWidth={1.75} />
-					<input
-						id="auth-field-password"
-						type={showPassword ? 'text' : 'password'}
-						bind:value={password}
-						placeholder="请输入密码"
-						disabled={submitting}
-						autocomplete="current-password"
-						aria-invalid={fieldErrors.password ? 'true' : undefined}
-						aria-describedby={fieldErrors.password ? 'auth-field-password-error' : undefined}
-						oninput={() => clearFieldError('password')}
-						class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
-						
-					/>
+		<Input
+			id="auth-field-loginId"
+			label="手机号、邮箱或账号"
+			value={loginId}
+			onChange={(v) => {
+				loginId = v;
+				clearFieldError('loginId');
+			}}
+			placeholder="请输入账号"
+			disabled={submitting}
+			autocomplete="username"
+			hasError={!!fieldErrors.loginId}
+			errorText={fieldErrors.loginId}
+			reserveErrorSpace
+		>
+			{#snippet prefix()}
+				<Mail class="size-4 shrink-0 text-accent-default" strokeWidth={1.75} />
+			{/snippet}
+		</Input>
+		{#if needsRegisterCode}
+			<!-- 验证码：注册手机号/邮箱型验证所有权（登录验证码接口 spec 暂无），与密码共存 -->
+			<Input
+				id="auth-field-code"
+				label="验证码"
+				value={code}
+				onChange={(v) => {
+					code = v;
+					clearFieldError('code');
+				}}
+				placeholder="输入收到的验证码"
+				disabled={submitting}
+				autocomplete="one-time-code"
+				hasError={!!fieldErrors.code}
+				errorText={fieldErrors.code}
+				reserveErrorSpace
+			/>
+			<Button
+				type="button"
+				variant="surface-accent"
+				size="lg"
+				class="w-full"
+				disabled={codeCountdown > 0 || sendingCode}
+				onclick={() => void sendRegisterCodeAndCountdown()}
+			>
+				{#if needsRegisterCode}
+					{sendingCode ? '发送中…' : codeCountdown > 0 ? `${codeCountdown}s 后重发` : '发送验证码'}
+				{:else}
+					获取验证码
+				{/if}
+			</Button>
+		{/if}
+		{#if mode === 'login' || mode === 'register'}
+			<Input
+				id="auth-field-password"
+				type={showPassword ? 'text' : 'password'}
+				label="密码"
+				value={password}
+				onChange={(v) => {
+					password = v;
+					clearFieldError('password');
+				}}
+				placeholder="请输入密码"
+				disabled={submitting}
+				autocomplete="current-password"
+				hasError={!!fieldErrors.password}
+				errorText={fieldErrors.password}
+				reserveErrorSpace
+			>
+				{#snippet prefix()}
+					<LockKeyhole class="size-4 shrink-0 text-accent-default" strokeWidth={1.75} />
+				{/snippet}
+				{#snippet suffix()}
 					<button
 						type="button"
-						class="hit-slop -m-2 p-2 shrink-0 focus-ring"
+						class="hit-slop -m-2 shrink-0 p-2 focus-ring"
 						aria-label={showPassword ? '隐藏密码' : '显示密码'}
 						onclick={() => (showPassword = !showPassword)}
 					>
 						{#if showPassword}
-							<EyeOff class="size-4 text-text-secondary"  strokeWidth={1.75} />
+							<EyeOff class="size-4 text-text-secondary" strokeWidth={1.75} />
 						{:else}
-							<Eye class="size-4 text-text-secondary"  strokeWidth={1.75} />
+							<Eye class="size-4 text-text-secondary" strokeWidth={1.75} />
 						{/if}
 					</button>
-				</span>
-				<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
-             统一预留固定高度（2026-10-21 录屏分析）。 -->
-<p id="auth-field-password-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.password ?? ''}</p>
-			</label>
+				{/snippet}
+			</Input>
 		{/if}
 	{/if}
 
 	{#if mode === 'forgot' || mode === 'reset'}
-		<label class="flex flex-col gap-1.5" for="auth-field-resetLoginId">
-			<span class="text-xs font-medium tracking-field text-text-secondary">账号</span>
-			<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
-				<input
-					id="auth-field-resetLoginId"
-					type="text"
-					bind:value={resetLoginId}
-					placeholder="注册时的手机号 / 邮箱"
-					disabled={submitting}
-					autocomplete="username"
-					aria-invalid={fieldErrors.resetLoginId ? 'true' : undefined}
-					aria-describedby={fieldErrors.resetLoginId ? 'auth-field-resetLoginId-error' : undefined}
-					oninput={() => clearFieldError('resetLoginId')}
-					class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
-					
-				/>
-			</span>
-			<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
-             统一预留固定高度（2026-10-21 录屏分析）。 -->
-<p id="auth-field-resetLoginId-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.resetLoginId ?? ''}</p>
-		</label>
+		<Input
+			id="auth-field-resetLoginId"
+			label="账号"
+			value={resetLoginId}
+			onChange={(v) => {
+				resetLoginId = v;
+				clearFieldError('resetLoginId');
+			}}
+			placeholder="注册时的手机号 / 邮箱"
+			disabled={submitting}
+			autocomplete="username"
+			hasError={!!fieldErrors.resetLoginId}
+			errorText={fieldErrors.resetLoginId}
+			reserveErrorSpace
+		/>
 		{#if mode === 'reset'}
-			<label class="flex flex-col gap-1.5" for="auth-field-code">
-				<span class="text-xs font-medium tracking-field text-text-secondary">验证码</span>
-				<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
-					<input
-						id="auth-field-code"
-						type="text"
-						bind:value={code}
-						placeholder="输入收到的验证码"
-						disabled={submitting}
-						autocomplete="one-time-code"
-						aria-invalid={fieldErrors.code ? 'true' : undefined}
-						aria-describedby={fieldErrors.code ? 'auth-field-code-error' : undefined}
-						oninput={() => clearFieldError('code')}
-						class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
-						
-					/>
-				</span>
-				<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
-             统一预留固定高度（2026-10-21 录屏分析）。 -->
-<p id="auth-field-code-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.code ?? ''}</p>
-			</label>
-			<label class="flex flex-col gap-1.5" for="auth-field-newPassword">
-				<span class="text-xs font-medium tracking-field text-text-secondary">新密码</span>
-				<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
-					<input
-						id="auth-field-newPassword"
-						type={showPassword ? 'text' : 'password'}
-						bind:value={newPassword}
-						placeholder="8–128 位，含字母和数字"
-						disabled={submitting}
-						autocomplete="new-password"
-						aria-invalid={fieldErrors.newPassword ? 'true' : undefined}
-						aria-describedby={fieldErrors.newPassword ? 'auth-field-newPassword-error' : undefined}
-						oninput={() => clearFieldError('newPassword')}
-						class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
-						
-					/>
+			<Input
+				id="auth-field-code"
+				label="验证码"
+				value={code}
+				onChange={(v) => {
+					code = v;
+					clearFieldError('code');
+				}}
+				placeholder="输入收到的验证码"
+				disabled={submitting}
+				autocomplete="one-time-code"
+				hasError={!!fieldErrors.code}
+				errorText={fieldErrors.code}
+				reserveErrorSpace
+			/>
+			<Input
+				id="auth-field-newPassword"
+				type={showPassword ? 'text' : 'password'}
+				label="新密码"
+				value={newPassword}
+				onChange={(v) => {
+					newPassword = v;
+					clearFieldError('newPassword');
+				}}
+				placeholder="8–128 位，含字母和数字"
+				disabled={submitting}
+				autocomplete="new-password"
+				hasError={!!fieldErrors.newPassword}
+				errorText={fieldErrors.newPassword}
+				reserveErrorSpace
+			>
+				{#snippet suffix()}
 					<button
 						type="button"
-						class="hit-slop -m-2 p-2 shrink-0 focus-ring"
+						class="hit-slop -m-2 shrink-0 p-2 focus-ring"
 						aria-label={showPassword ? '隐藏密码' : '显示密码'}
 						onclick={() => (showPassword = !showPassword)}
 					>
 						{#if showPassword}
-							<EyeOff class="size-4 text-text-secondary"  strokeWidth={1.75} />
+							<EyeOff class="size-4 text-text-secondary" strokeWidth={1.75} />
 						{:else}
-							<Eye class="size-4 text-text-secondary"  strokeWidth={1.75} />
+							<Eye class="size-4 text-text-secondary" strokeWidth={1.75} />
 						{/if}
 					</button>
-				</span>
-				<!-- 错误提示常驻占位：条件渲染会让提示出现时把下方按钮顶下去（移动端表现为按钮上下闪），
-             统一预留固定高度（2026-10-21 录屏分析）。 -->
-<p id="auth-field-newPassword-error" class="text-xs text-status-danger min-h-4" role="alert">{fieldErrors.newPassword ?? ''}</p>
-			</label>
+				{/snippet}
+			</Input>
 		{/if}
 	{/if}
 

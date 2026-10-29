@@ -4,6 +4,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
@@ -18,11 +19,14 @@
 
 	// 状态胶囊统一「淡底 + on-soft 文字」档（R12 口径）：不再用 danger 实底大色块，
 	// 与举报页/关系页的状态语言一致。
-	const STATUS_META: Record<ApplicationStatus, { label: string; class: string }> = {
-		pending: { label: '审核中', class: 'bg-status-warning-bg text-text-status-warning-on-soft' },
-		accepted: { label: '已通过', class: 'bg-status-online-bg text-text-status-online-on-soft' },
-		rejected: { label: '未通过', class: 'bg-danger-bg text-text-status-danger-on-soft' },
-		revoked: { label: '已撤回', class: 'bg-surface-subtle text-text-secondary' }
+	const STATUS_META: Record<
+		ApplicationStatus,
+		{ label: string; tone: 'warning' | 'online' | 'danger' | 'neutral' }
+	> = {
+		pending: { label: '审核中', tone: 'warning' },
+		accepted: { label: '已通过', tone: 'online' },
+		rejected: { label: '未通过', tone: 'danger' },
+		revoked: { label: '已撤回', tone: 'neutral' }
 	};
 
 	let items = $state<GroupApplicationItem[]>([]);
@@ -96,15 +100,14 @@
 							<p class="truncate text-sm font-medium text-text-primary">{a.group.name}</p>
 							<p class="mt-0.5 text-xs text-text-secondary">申请于 {formatDateTime(a.created_at)}</p>
 						</div>
-						<span class="ml-auto inline-flex h-5 shrink-0 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none {meta.class}">
-							{meta.label}
-						</span>
+						<Badge tone={meta.tone} class="ml-auto shrink-0">{meta.label}</Badge>
 						{#if a.status === 'pending'}
 							<Button
 								type="button"
 								variant="soft"
 								size="sm"
-								class="hit-slop shrink-0 gap-1 rounded-full px-3 py-1.5 text-xs"
+								shape="pill"
+								class="hit-slop shrink-0 gap-1 px-3.5 py-1.5 text-xs"
 								aria-label={`撤回加入「${a.group.name}」的申请`}
 								onclick={() => (cancelTarget = a)}
 							>

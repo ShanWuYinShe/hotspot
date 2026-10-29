@@ -5,6 +5,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
@@ -175,17 +176,17 @@
 							</span>
 						</span>
 						{#if isSelected}
-							<span class="inline-flex h-5 shrink-0 items-center justify-center rounded-full bg-text-on-accent px-2 text-xxs font-medium leading-none text-accent-default">
-								已定位
-							</span>
+							<!-- 选中行（accent 实底）上的反色徽章：class 覆盖 tone 的 bg/text（token 语义保留） -->
+							<Badge tone="neutral" class="shrink-0 bg-text-on-accent text-accent-default">已定位</Badge>
 						{:else if pin.isAggregate}
-							<!-- 聚合桶：该网格内对象总数。热力桶不是单个实体，箭头会误导成「可进详情」 -->
-							<span
-								class="inline-flex h-5 shrink-0 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none tabular-nums"
-								style="background:{PIN_TONES[pin.type].bg};color:{PIN_COLORS[pin.type]};"
+							<!-- 聚合桶：该网格内对象总数。热力桶不是单个实体，箭头会误导成「可进详情」；
+							     颜色是 marker 调色板动态语义色，走 Badge 登记例外 style（仅 token 变量） -->
+							<Badge
+								class="shrink-0 tabular-nums"
+								style="background:{PIN_TONES[pin.type].bg};color:{PIN_COLORS[pin.type]}"
 							>
 								{pin.count ?? 0} 项
-							</span>
+							</Badge>
 						{:else}
 							<ChevronRight class="size-3.5 shrink-0 text-text-secondary" strokeWidth={1.5} />
 						{/if}

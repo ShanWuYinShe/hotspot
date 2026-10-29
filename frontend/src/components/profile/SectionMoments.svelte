@@ -7,6 +7,7 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import ProfileMomentTile from '@/components/profile/ProfileMomentTile.svelte';
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/moment-feed.svelte';
 	import { openComposer } from '@/stores/composer.svelte';
@@ -134,13 +135,7 @@
 			{/snippet}
 			{#snippet action()}
 				{#if activeTab === 'posts'}
-					<button
-						type="button"
-						onclick={openComposer}
-						class="hover-btn rounded-full bg-accent-default px-4 py-2 text-sm font-medium text-text-on-accent shadow-raised-sm hover:shadow-raised-md focus-ring"
-					>
-						发布第一条
-					</button>
+					<Button type="button" size="md" onclick={openComposer}>发布第一条</Button>
 				{/if}
 			{/snippet}
 		</EmptyState>

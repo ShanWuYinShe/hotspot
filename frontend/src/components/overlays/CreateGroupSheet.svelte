@@ -4,6 +4,8 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import Toggle from '@/components/forms/Toggle.svelte';
+	import Input from '@/components/forms/Input.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
 	import Button from '@/components/ui/button.svelte';
@@ -91,13 +93,7 @@
 				<p class="text-xl font-medium text-text-primary">群组已创建！</p>
 				<p class="text-sm mt-1.5 text-text-secondary">「{name}」已成功创建，现在可以邀请好友加入了</p>
 			</div>
-			<button
-				type="button"
-				onclick={onClose}
-				class="hover-btn px-8 py-3 rounded-full focus-ring bg-accent-default text-text-on-accent text-sm font-medium shadow-raised-md hover:shadow-raised-lg"
-			>
-				完成
-			</button>
+			<Button type="button" size="lg" onclick={onClose}>完成</Button>
 		</div>
 	{:else}
 		<div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-8 flex flex-col gap-5">
@@ -117,37 +113,35 @@
 				</button>
 			</div>
 
-			<!-- Group name -->
-			<div>
-				<label class="text-xs tracking-field uppercase text-text-secondary" for="group-name">群组名称 *</label>
-				<div class="flex items-center gap-2.5 mt-1.5 px-3.5 py-2.5 rounded-md input-surface">
-					<input
-						id="group-name"
-						class="flex-1 bg-transparent text-text-primary text-md"
-						placeholder="给你的群组起个名字…"
-						bind:value={name}
-						maxlength={30}
-					/>
+			<!-- Group name（字符计数走原语 suffix，仍在壳内右端） -->
+			<Input
+				id="group-name"
+				label="群组名称 *"
+				value={name}
+				onChange={(v) => (name = v)}
+				placeholder="给你的群组起个名字…"
+				maxlength={30}
+			>
+				{#snippet suffix()}
 					<span class="text-xs shrink-0 text-text-secondary">{name.length}/30</span>
-				</div>
-			</div>
+				{/snippet}
+			</Input>
 
-			<!-- Description -->
-			<div>
-				<label class="text-xs tracking-field uppercase text-text-secondary" for="group-desc">简介</label>
-				<div class="mt-1.5 px-3.5 py-3 rounded-md input-surface">
-					<textarea
-						id="group-desc"
-						class="w-full bg-transparent resize-none text-text-primary text-md min-h-18"
-						placeholder="描述一下这个群组的主题…"
-						bind:value={desc}
-						maxlength={150}
-					></textarea>
-					<div class="flex justify-end">
-						<span class="text-xxs text-text-secondary">{desc.length}/150</span>
-					</div>
-				</div>
-			</div>
+			<!-- Description（字符计数走原语 footer，壳内右下） -->
+			<Textarea
+				id="group-desc"
+				label="简介"
+				value={desc}
+				onChange={(v) => (desc = v)}
+				placeholder="描述一下这个群组的主题…"
+				rows={2}
+				maxlength={150}
+				inputClass="min-h-18"
+			>
+				{#snippet footer()}
+					<span class="text-xxs text-text-secondary">{desc.length}/150</span>
+				{/snippet}
+			</Textarea>
 
 			<!-- Category chips -->
 			<fieldset class="flex flex-col border-0 p-0 m-0 min-w-0">
@@ -229,7 +223,7 @@
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
 				size="lg"
-				class="w-full rounded-full"
+				class="w-full"
 			>
 				{creating ? '创建中…' : '创建群组'}
 			</Button>

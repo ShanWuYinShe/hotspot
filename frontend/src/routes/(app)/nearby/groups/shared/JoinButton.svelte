@@ -33,8 +33,9 @@
 	type="button"
 	variant={group.joined || pendingApproval ? 'soft' : 'primary'}
 	size="sm"
+	shape="pill"
 	disabled={pending}
-	class="hit-slop rounded-full px-3 gap-1
+	class="hit-slop px-3 gap-1
 		{group.joined || pendingApproval
 			? onMedia
 				? 'bg-surface-media-scrim-strong text-content-inverse backdrop-blur-sm hover:bg-surface-media-scrim-strong/80'

@@ -4,6 +4,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import MetricRow, { type MetricItem } from '@/components/data-display/MetricRow.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import { platform } from '@/stores/platform.svelte';
 	import { cn } from '@/lib/utils';
@@ -134,16 +135,12 @@
 							{name || '未设置昵称'}
 						</svelte:element>
 						{#if showPresence}
-							<span
-								class="inline-flex h-5 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-xxs font-medium leading-none {online
-									? 'bg-status-online-bg text-text-status-online-on-soft'
-									: 'bg-surface-subtle text-text-secondary'}"
-							>
+							<Badge tone={online ? 'online' : 'neutral'} class="shrink-0">
 								{#if online}
 									<span class="size-1.5 rounded-full bg-status-online" aria-hidden="true"></span>
 								{/if}
 								{online ? onlineLabel : offlineLabel}
-							</span>
+							</Badge>
 						{/if}
 					</div>
 					{#if handle}
@@ -165,11 +162,7 @@
 						</span>
 					{/if}
 					{#each tags as tag (tag)}
-						<span
-							class="inline-flex h-6 items-center justify-center rounded-full bg-accent-soft px-2.5 text-xs font-medium leading-none text-text-accent-on-soft"
-						>
-							#{tag}
-						</span>
+						<Badge size="md" tone="accent">#{tag}</Badge>
 					{/each}
 				</div>
 			{/if}

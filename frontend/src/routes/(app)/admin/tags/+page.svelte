@@ -5,11 +5,13 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import { Tags } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import Checkbox from '@/components/forms/Checkbox.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
@@ -125,10 +127,10 @@
 								<td class={TD}>
 									<!-- 限宽截断：移动端该表实测仅剩 1px 余量（tableW 356 / wrap 358，全站复审
 									     S4-24），标签名变长即溢出；截断后表格宽度不再随标签名无限增长 -->
-									<span class="badge max-w-32 truncate bg-accent-soft text-text-accent-on-soft">#{t.name}</span>
+									<Badge tone="accent" class="max-w-32 truncate">#{t.name}</Badge>
 									{#if t.is_blocked}
 										<!-- 已屏蔽态必须可见：否则与正常标签无从区分（全站复审 s4-22 的根因） -->
-										<span class="badge bg-danger-bg/50 text-text-status-danger-on-soft">已屏蔽</span>
+										<Badge tone="danger">已屏蔽</Badge>
 									{/if}
 								</td>
 								<td class={TD_NUM}>{t.usage_count}</td>
@@ -164,12 +166,16 @@
 						: '软屏蔽：该标签不再可被新建/搜索命中，历史数据保留不变。'}
 				</Dialog.Description>
 				{#if !banTarget?.is_blocked}
-				<label class="mt-4 flex items-start gap-2.5 rounded-lg bg-danger-bg/60 p-3">
-					<input type="checkbox" bind:checked={hardDelete} class="mt-0.5" />
+				<!-- 危险确认卡：整行可点，可见文案走 Checkbox children -->
+				<Checkbox
+					checked={hardDelete}
+					onChange={(checked) => (hardDelete = checked)}
+					class="mt-4 flex w-full rounded-lg bg-danger-bg/60 p-3"
+				>
 					<span class="text-xs leading-relaxed text-text-primary">
 						物理删除（不可逆）：从所有历史引用中移除该标签，删除后同名标签视为新标签可重新创建。
 					</span>
-				</label>
+				</Checkbox>
 				{/if}
 			</div>
 			<!-- 动作按当前态渲染（全站复审 s4-22）：此前「解除屏蔽」无条件出现，在正常标签上

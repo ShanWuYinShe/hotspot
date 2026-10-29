@@ -800,3 +800,46 @@
 - mobile 14px 字段在 iOS Safari 聚焦会触发自动放大（<16px 的确定性平台行为）；受全站 9 档字号约束不做 16px 字段，需真机复测观感。
 - 地图移动端主搜索由手写 44px 统一到 39px 搜索档（输入框不在 `audit:touch` 扫描集；39px 为全站搜索统一档）。
 - admin 原生 `<select>` 实测 37px vs input 39px（2px，原生控件高度不可精确控；同排视觉无明显落差，注释已改为「≈39px 档」）；hero 实际用 `max-w-3xl`(768)，与设计提案 720 的差异按 Tailwind 标准档取舍记录。
+
+## 2026-10-29 第二轮：同类型 UI 全局一致性收口（搜索/输入族 + 徽章/按钮/浮层）
+
+**触发**：用户「一定要保持所有地方的搜索框风格都一致，任何相同类型的 UI 组件都应该在所有地方保持一致」。
+
+### 盘点（`ui-inventory`，inventory.md 434 行 + 61 截图 + 57 份 DOM census）
+
+- **搜索族**：11 文件 12 处 `SearchInput` 实测同形同尺寸（39px/rounded-full/text-md 14/图标 16/清空钮 44 命中），仅宽度按上下文覆盖；无手写搜索控件、无遗漏 ✅。
+- **输入族**：单行输入 4 档高度（39 裸 compact / 41 三处 / 43 原语 / 44 聊天条例外）、Textarea 12 处 5 种壳 padding × 3 种行高、Select 6 处裸原生（37px）、Checkbox 5 处原生（12–13px、无 token）、图片上传 3 套触发 UI。
+- **其他族**：Badge 三档高度 14/20/24（手写 h-5 17 处 + h-6 7 处；旧 `.badge` 14px 与 AGENTS 徽章契约冲突）；同语义按钮两形态（设置页 33px 手写胶囊 vs Button 40；me/edit 桌面 40 胶囊 vs 移动 44 矩形）；按钮 `rounded-full` 覆盖 19 处、`rounded-sm` 破档 1 处；底部浮层 3 套圆角（28/28/0/0、28/28/24/24 混用、24 浮层）；通知头像手写 `<img>`、InviteMembers 加载/空态手写；未注册 `rounded-2xl` 3 处。
+
+### 新增/增强原语
+
+- `forms/Textarea`：统一 `px-3.5 py-3` 壳 + `footer` 壳内计数；`forms/Select`：`field`（43/39 + chevron）/`ghost`（行内排序）；`forms/Checkbox`：原生 + `accent-accent-default` 语义色 + focus-ring。
+- `forms/Input`：新增 `density`（default 43 / compact 39）、`reserveErrorSpace`（错误行常驻防跳动）、`suffix`（密码显隐）、`type=date`。
+- `data-display/Badge`：sm 20px（h-5 px-2 text-xxs）/ md 24px（h-6 px-2.5 text-xs）+ `tone` 枚举 + `style` 逃生口（仅地图 marker 动态 token 色）。
+- `ui/button` 新增 `shape: 'rect'|'pill'`（派 A / 派 B·C，禁止 class 覆盖 `rounded-*`）；`ui/dialog` 新增 `floating`（浮层卡片 bottom sheet 唯一实现）；`shared/UnreadBadge` 新增 `variant: 'accent'|'inverse'`。
+
+### 迁移与收口（25 + 44 文件）
+
+- 输入族 25 文件：auth 登录/注册 7 字段、settings 安全设置 6 字段、me/edit、users/[userId]、admin 8 页、群公告/群设置/新建群组/创建瞬间/瞬间编辑弹层、nearby/people 排序（ghost）。
+- 其他族 44 文件：Badge 24 文件（旧 `.badge` 清零）；Button 圆角覆盖清零（派 B/C chip 改 `shape="pill"`、手写 accent 胶囊 CTA 回归 Button、`LoadMoreButton` 视觉守恒）；3 处用户操作浮层改 `Dialog.Content floating`；NotifyRow 手写头像改 `Avatar`（类型角标保留外层，注释说明理由）、ChatListItem 未读改 `UnreadBadge inverse`；压图角标改 `.media-badge`；`rounded-2xl` 归一到 `rounded-lg/md`；MockBadge 改用 Badge。
+
+### 强制一致性门禁
+
+- `scripts/check-component-consistency.mjs` **10 条 → 16 条规则**：新增 `raw-badge`/`button-radius-override`/`untiered-radius`/`handwritten-cta`/`raw-avatar-img`/`sheet-radius-override`；已挂入 `bun run check`（CI frontend job 拦截）。
+- allowlist **10 条**（聊天/评论输入条、气泡内联编辑、头像/封面 file input、搜索页选择器字符串、ImageViewer 浮层 chrome、地图筛选 CTA），每条带 `reason`，见 `frontend/scripts/ui-consistency-allowlist.json`。
+
+### 验收（2026-10-29，8899 独立环境）
+
+- `bun run check`：svelte-check **0/0** + eslint + theme 四联 + **16 条规则 0 违规（扫描 321 文件）**。
+- `bun run test`：**122 files / 691 tests** 全绿；`bun run build` 通过。
+- `audit:a11y`：35 页 **PASS，0 违规**；`audit:touch`：35 页 **PASS，未登记离群 0，覆盖率 94.2%**（报告 `.workwork/browser-check/a11y-20261029-151102` / `touch-20261029-151102`）。
+- **搜索一致性实测**（Lead 直测）：8 个页面级消费方（/search、/messages、/me/relationships、/me/groups、admin users/groups/tags、/map 桌面）+ 地图移动 + 搜索页移动 = 全部 **39px / 9999px 圆角 / 14px 字**（弹层消费方由原语保证）。
+- **Badge 实测**：admin/users 7 个徽章全部 20px；群详情 Badge 20px + media-badge 20px；源码旧 `.badge` **0 处**、`rounded-2xl/3xl` **0 处**；`shape="pill"` 11 处；floating sheet 实测 **24px 圆角 / 448 宽 / 水平居中 / 距底 16px**。
+- 说明：本轮 QA/审查 teammate 浏览器长任务连续失败（3 次，无产出），上述审计与实测均由 Lead 直接执行；截图证据在 `.workwork/ui-consistency/{lead-qa,shots,raw}`，盘点清单在 `.workwork/ui-consistency/inventory.md`。
+
+### 已知取舍（显式接受）
+
+- `NotifyRow` 通知类型角标保留外层绝对定位（Avatar `overflow-hidden` 会裁切 18px 角标，已注释；后续可给 Avatar 加 overflow-visible 变体再迁）。
+- `MockBadge` 由「白底 + warning 描边」改为 warning 软底（Badge tone 枚举统一）；announcements「严重」由实底红改 `danger` 软底（全站徽章统一软底语言；solid 仅 accent「已登录」档）。
+- 地图 marker 4 处动态 pin 色用 Badge `style` 逃生口（值仅 CSS token 变量，禁止 hex/rgba）；admin 表格行内 27px/12px 按钮（ROW_BTN）为既有登记例外，不属动作按钮契约。
+

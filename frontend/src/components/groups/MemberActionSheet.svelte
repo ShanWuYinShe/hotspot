@@ -50,12 +50,7 @@
 </script>
 
 <Dialog.Root open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
-	<Dialog.Content
-		side="bottom"
-		class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl bg-surface-primary p-4"
-		aria-label="成员管理"
-		style="box-shadow:var(--cst-elevation-modal);"
-	>
+	<Dialog.Content side="bottom" floating class="p-4" aria-label="成员管理">
 		<div class="flex items-center justify-between px-1 pb-3">
 			<div class="min-w-0">
 				<p class="text-md font-semibold text-text-primary">{member?.name ?? '成员'}</p>

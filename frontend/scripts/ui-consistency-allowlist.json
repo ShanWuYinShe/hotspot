@@ -1,0 +1,52 @@
+[
+	{
+		"rule": "raw-input",
+		"file": "src/components/messages/ChatInputBar.svelte",
+		"reason": "聊天输入条：输入 + 发送按钮的组合输入器，由 ChatInputBar 统一承载，不套 forms/Input 字段壳"
+	},
+	{
+		"rule": "input-surface-outside",
+		"file": "src/components/messages/ChatInputBar.svelte",
+		"reason": "聊天输入条整条即输入表面（44px 消息契约），与搜索/表单字段两档不同；全站唯一实现"
+	},
+	{
+		"rule": "raw-input",
+		"file": "src/routes/(app)/moments/[momentId]/shared/CommentInputBar.svelte",
+		"reason": "评论输入条：输入 + 发送按钮的组合输入器，由 CommentInputBar 统一承载"
+	},
+	{
+		"rule": "input-surface-outside",
+		"file": "src/routes/(app)/moments/[momentId]/shared/CommentInputBar.svelte",
+		"reason": "评论输入条整条即输入表面（39px 紧凑档），与单行字段壳不同；全站唯一实现"
+	},
+	{
+		"rule": "raw-textarea",
+		"file": "src/components/messages/MessageBubble.svelte",
+		"reason": "聊天气泡内联编辑：textarea 直接嵌在气泡内、继承气泡底色，不是独立表单字段"
+	},
+	{
+		"rule": "raw-file-input",
+		"file": "src/routes/(app)/me/edit/+page.svelte",
+		"reason": "头像更换：媒体上传徽标（+ 隐藏 file input）交互，与表单字段/相册选择器语义不同；徽标样式与群封面同构"
+	},
+	{
+		"rule": "raw-file-input",
+		"file": "src/components/groups/GroupSettingsSheet.svelte",
+		"reason": "群封面更换：媒体上传徽标（+ 隐藏 file input）交互，与表单字段/相册选择器语义不同；徽标样式与头像同构"
+	},
+	{
+		"rule": "input-surface-outside",
+		"file": "src/routes/(app)/search/+page.svelte",
+		"reason": "仅 JS 选择器字符串 .input-surface（键盘导航排除输入区），非样式声明"
+	},
+	{
+		"rule": "raw-badge",
+		"file": "src/components/overlays/ImageViewer.svelte",
+		"reason": "全屏看图浮层的顶部 chrome 徽章（页码/缩放），属于浮层 chrome 而非内容标签，不参与徽章档位统一"
+	},
+	{
+		"rule": "handwritten-cta",
+		"file": "src/routes/(app)/map/shared/MapFilterMenu.svelte",
+		"reason": "地图筛选菜单触发器：带筛选计数徽章与展开态的动态 pill 控件（非页面动作 CTA），强度/形状随打开态变化，属地图工具栏登记例外"
+	}
+]

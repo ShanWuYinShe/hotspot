@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Megaphone, PencilLine, Pin, Trash2 } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
@@ -59,10 +60,10 @@
 				<ListItem class="relative flex flex-col items-start px-4 py-4" ariaLabel={item.title}>
 					<div class="flex min-w-0 items-center gap-2 pr-16">
 						{#if item.isPinned}
-							<span class="inline-flex h-5 shrink-0 items-center justify-center gap-1 rounded-full bg-accent-soft px-2 text-xxs font-medium leading-none text-text-accent-on-soft">
+							<Badge tone="accent" class="shrink-0 gap-1">
 								<Pin size={10} strokeWidth={2} />
 								置顶
-							</span>
+							</Badge>
 						{/if}
 						<p class="min-w-0 truncate text-md font-semibold text-text-primary">{item.title}</p>
 					</div>

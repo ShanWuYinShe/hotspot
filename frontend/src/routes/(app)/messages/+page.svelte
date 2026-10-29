@@ -335,7 +335,7 @@
 							type="button"
 							variant="soft"
 							size="sm"
-							class="hit-slop-44 h-9 rounded-full px-3.5"
+							class="hit-slop-44 h-9 px-3.5"
 							aria-label="发起新会话"
 							onclick={() => {
 								newChatTab = 'chat';
@@ -482,7 +482,7 @@
 						type="button"
 						variant="soft"
 						size="sm"
-						class="hit-slop-44 h-9 rounded-full px-3.5"
+						class="hit-slop-44 h-9 px-3.5"
 						aria-label="发起新会话"
 						onclick={() => {
 							newChatTab = 'chat';
@@ -580,12 +580,7 @@
      此前只能「取消」不能「新增」。形态走全站「更多操作」族的底部浮动卡
      （与用户详情页更多操作同语言）；删除仍交给下方 ConfirmDialog 二次确认。 -->
 <Dialog.Root open={!!moreTarget} onOpenChange={(next) => (next ? undefined : (moreTarget = null))}>
-	<Dialog.Content
-		side="bottom"
-		class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl p-5"
-		aria-label={moreTarget ? `${moreTarget.name} 的会话操作` : '会话操作'}
-		style="box-shadow:var(--cst-elevation-modal);"
-	>
+	<Dialog.Content side="bottom" floating class="p-5" aria-label={moreTarget ? `${moreTarget.name} 的会话操作` : '会话操作'}>
 		{#if moreTarget}
 			<div class="flex items-center justify-between">
 				<div>

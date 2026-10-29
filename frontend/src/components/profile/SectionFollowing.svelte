@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Heart } from '@lucide/svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import FollowButton from '@/components/ui/FollowButton.svelte';
 import UserCardRow from '@/components/profile/UserCardRow.svelte';
@@ -80,9 +81,7 @@ import UserCardRow from '@/components/profile/UserCardRow.svelte';
 			{/snippet}
 			{#snippet meta()}
 				{#if f.isMutual}
-					<span class="inline-flex h-5 items-center justify-center rounded-full bg-status-online-bg px-2 text-xxs font-medium leading-none text-text-status-online-on-soft">
-						互相关注
-					</span>
+					<Badge tone="online">互相关注</Badge>
 				{/if}
 			{/snippet}
 			{#snippet actions()}

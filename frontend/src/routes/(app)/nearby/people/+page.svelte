@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronDown, Map as MapIcon, MapPin, Search, Users } from '@lucide/svelte';
+	import { Map as MapIcon, MapPin, Search, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
@@ -9,6 +9,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Select from '@/components/forms/Select.svelte';
 	import Button from '@/components/ui/button.svelte';
 import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
@@ -272,19 +273,12 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 		</h2>
 		<label class="inline-flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
 			<span>排序</span>
-			<span class="relative inline-flex items-center">
-				<select
-					value={effectiveSort}
-					onchange={(e) => (sort = e.currentTarget.value)}
-					aria-label="排序方式"
-					class="cursor-pointer appearance-none rounded-sm bg-transparent py-0.5 pl-0.5 pr-4 text-xs font-medium text-accent-default focus-ring"
-				>
-					{#each sortOptions as option (option)}
-						<option value={option}>{option}</option>
-					{/each}
-				</select>
-				<ChevronDown class="pointer-events-none absolute right-0 size-3 text-accent-default" strokeWidth={1.75} aria-hidden="true" />
-			</span>
+			<!-- 行内排序：ghost 变体（透明底 / accent 文字 / 无边框，chevron 由原语绘制） -->
+			<Select value={effectiveSort} onChange={(v) => (sort = v)} ariaLabel="排序方式" variant="ghost">
+				{#each sortOptions as option (option)}
+					<option value={option}>{option}</option>
+				{/each}
+			</Select>
 		</label>
 	</div>
 

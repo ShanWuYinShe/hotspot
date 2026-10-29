@@ -79,7 +79,8 @@
 					type="button"
 					variant="soft"
 					size="sm"
-					class="hit-slop-44 shrink-0 gap-1 rounded-full px-3 py-1.5 text-xs"
+					shape="pill"
+					class="hit-slop-44 shrink-0 gap-1 px-3.5 py-1.5 text-xs"
 					onclick={(e) => {
 						e.stopPropagation();
 						void goto(ROUTES.message(f.id));

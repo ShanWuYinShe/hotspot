@@ -5,9 +5,9 @@
 	// 内容型列表默认走无限滚动哨兵；需要显式分页控制成本的场景（管理后台
 	// 六模块）用它，不再各页手写 pill 按钮。label 由调用方组装
 	//（「加载更多」或「加载更多 (N)」）。
-	// 形态走 ui/button 的 secondary + flat（无变体投影）+ className 覆盖：
-	// 胶囊圆角、次级文字色（hover 转正文色）——与原手写样式逐类等价，
-	// 差异仅新增标准 secondary 描边加深 hover（设计契约的对齐）。
+	// 形态走 ui/button 的 secondary + flat（无变体投影）+ shape="pill"（圆角由原语形状档表达，
+	// 调用方不再传 rounded-*）+ className 只留布局/字色/字形：
+	// h-auto（覆盖尺寸档高度）、px-5 py-2、text-sm、次级文字色（hover 转正文色）——与原手写样式逐类等价。
 	let {
 		label = '加载更多',
 		loading = false,
@@ -23,9 +23,10 @@
 	<Button
 		variant="secondary"
 		flat
+		shape="pill"
 		disabled={loading}
 		onclick={onLoad}
-		class="h-auto rounded-full px-5 py-2 text-text-secondary hover:text-text-primary"
+		class="h-auto px-5 py-2 text-sm text-text-secondary hover:text-text-primary"
 	>
 		{loading ? '加载中…' : label}
 	</Button>

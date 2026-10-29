@@ -25,6 +25,7 @@
 	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import PinMedia from '../shared/PinMedia.svelte';
 	import Button from '@/components/ui/button.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import LocationDesktopPanel from './LocationDesktopPanel.svelte';
 
 	// 桌面地图探索：左侧栏（统计/搜索/Tab 列表/确认，由 LocationDesktopPanel 承载）
@@ -377,21 +378,20 @@
 						<div class="flex items-center gap-2">
 							<p class="truncate text-md font-semibold text-text-primary">{selectedPin.name || selectedPin.title}</p>
 							{#if (selectedPin.count ?? 1) > 1}
-								<span
-									class="inline-flex h-5 shrink-0 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none"
-									style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker);"
+								<!-- 聚合计数：marker 调色板动态语义色，走 Badge 登记例外 style（仅 token 变量） -->
+								<Badge
+									class="shrink-0"
+									style="background:{PIN_COLORS[selectedPin.type]};color:var(--cst-content-on-marker)"
 								>
 									{selectedPin.count}个
-								</span>
+								</Badge>
 							{/if}
 						</div>
 						<div class="mt-1 flex flex-wrap items-center gap-2">
-							<span
-								class="inline-flex h-5 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none"
-								style="background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]};"
-							>
+							<!-- 类型徽章：marker 调色板动态语义色（Badge 登记例外 style，仅 token 变量） -->
+							<Badge style="background:{PIN_TONES[selectedPin.type].bg};color:{PIN_COLORS[selectedPin.type]}">
 								{PIN_LABELS[selectedPin.type]}
-							</span>
+							</Badge>
 							{#if selectedPin.tag}
 								<span class="text-xs text-text-secondary">#{selectedPin.tag}</span>
 							{/if}

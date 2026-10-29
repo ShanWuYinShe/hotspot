@@ -5,6 +5,8 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import ImagePicker from '@/components/forms/ImagePicker.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { loadDefaultLocation } from '@/lib/default-location';
@@ -140,13 +142,9 @@
 				</h2>
 			</div>
 			<div class="flex items-center gap-2">
-				<button
-					type="button"
-					onclick={() => (surface = 'group')}
-					class="rounded-full border border-accent-border bg-accent-soft px-3 py-1.5 text-xs font-medium text-text-accent-on-soft outline-none transition-colors hover:bg-accent-default hover:text-text-on-accent focus-visible:ring-2 focus-visible:ring-accent-default"
-				>
+				<Button type="button" variant="surface-accent" size="sm" onclick={() => (surface = 'group')}>
 					创建群组
-				</button>
+				</Button>
 				<ActionIconButton icon={X} label="关闭发布器" onClick={onClose} size={36} />
 			</div>
 		</div>
@@ -166,47 +164,47 @@
 					</div>
 				</div>
 				{#if submitting}
-					<span class="inline-flex h-5 items-center justify-center rounded-full border border-accent-border bg-accent-soft px-2.5 text-xxs font-medium leading-none text-text-accent-on-soft">
-						{submitStatus || '正在发布…'}
-					</span>
+					<Badge tone="accent">{submitStatus || '正在发布…'}</Badge>
 				{/if}
 			</div>
 
-			<div class="input-surface rounded-md p-4">
-				<textarea
-					bind:value={draft.text}
-					oninput={(e) => (draft.text = e.currentTarget.value.slice(0, 280))}
-					placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
-					class="min-h-30.5 w-full resize-none bg-transparent text-md leading-7 text-text-primary placeholder:text-text-secondary"
-					aria-label="瞬间内容"
-				></textarea>
-				<div class="mt-3 flex items-center justify-between border-t border-border-default pt-3">
-					<div class="flex items-center gap-1">
-						<button
-							type="button"
-							onclick={() => appendText('✨')}
-							aria-label="添加心情"
-							class="hit-slop flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default text-text-secondary hover:bg-interactive-hover"
-					>
-						<Smile size={16} strokeWidth={1.5} />
-					</button>
-					<button
-						type="button"
-						onclick={toggleTopic}
-						aria-label="添加话题"
-						aria-pressed={topicActive}
-						class="hit-slop flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {topicActive
-							? 'bg-accent-soft text-text-accent-on-soft hover:bg-interactive-active'
-							: 'text-text-secondary hover:bg-interactive-hover'}"
-					>
-						<Hash size={16} strokeWidth={topicActive ? 2 : 1.5} />
-					</button>
+			<!-- 正文 + 壳内工具条：正文统一走 forms/Textarea（壳 px-3.5 py-3），工具条与计数走 footer -->
+			<Textarea
+				value={draft.text}
+				onChange={(v) => (draft.text = v.slice(0, 280))}
+				placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
+				ariaLabel="瞬间内容"
+				inputClass="min-h-30.5"
+			>
+				{#snippet footer()}
+					<div class="flex w-full items-center justify-between border-t border-border-default pt-3">
+						<div class="flex items-center gap-1">
+							<button
+								type="button"
+								onclick={() => appendText('✨')}
+								aria-label="添加心情"
+								class="hit-slop flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default text-text-secondary hover:bg-interactive-hover"
+							>
+								<Smile size={16} strokeWidth={1.5} />
+							</button>
+							<button
+								type="button"
+								onclick={toggleTopic}
+								aria-label="添加话题"
+								aria-pressed={topicActive}
+								class="hit-slop flex h-8 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {topicActive
+									? 'bg-accent-soft text-text-accent-on-soft hover:bg-interactive-active'
+									: 'text-text-secondary hover:bg-interactive-hover'}"
+							>
+								<Hash size={16} strokeWidth={topicActive ? 2 : 1.5} />
+							</button>
+						</div>
+						<span class="text-xs tabular-nums {draft.text.length >= 260 ? 'text-status-danger' : 'text-text-secondary'}">
+							{draft.text.length}/280
+						</span>
 					</div>
-					<span class="text-xs tabular-nums {draft.text.length >= 260 ? 'text-status-danger' : 'text-text-secondary'}">
-						{draft.text.length}/280
-					</span>
-				</div>
-			</div>
+				{/snippet}
+			</Textarea>
 
 			<section aria-labelledby="image-label">
 				<p id="image-label" class="mb-2 eyebrow">照片</p>
@@ -264,7 +262,7 @@
 				{draft.moods.length ? `将以 ${draft.moods.join(' · ')} 的氛围出现` : '选择氛围，让附近的人更容易找到你'}
 			</p>
 		</div>
-		<Button type="submit" size="md" disabled={!canPublish} class="rounded-full px-5">
+		<Button type="submit" size="md" disabled={!canPublish} class="px-5">
 			{submitStatus || '发布瞬间'}
 		</Button>
 	</footer>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { FlaskConical } from '@lucide/svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import { isMockEnabled, subscribe } from '@/mocks/toggle';
 
 	// Dev-only Mock 数据指示徽标：mock 接管后全页数据均为假数据，此前没有任何
@@ -23,15 +24,18 @@
 		role="status"
 		aria-label="当前页面数据来自本地 Mock，非真实后端"
 	>
-		<!-- 默认只显示图标（24px 圆点），桌面 hover/focus 才展开「Mock 数据」文字：
+		<!-- 默认只显示图标（24px 圆点），桌面 hover 才展开「Mock 数据」文字：
 		     原为常驻文字徽标（约 90×24），在移动端与弹层/列表正文叠压（全站复审
-		     S4-05 / s3 P2-10）；信息不丢——aria-label/title 始终带完整说明。 -->
-		<div
-			title="开发联调提示：当前页面数据来自本地 Mock，非真实后端"
-			class="group inline-flex items-center justify-center leading-none gap-1.5 h-6 w-6 px-0 md:w-auto md:px-2.5 rounded-full border border-status-warning-border bg-surface-primary/95 text-xxs font-medium text-status-warning shadow-raised-md backdrop-blur-md transition-all duration-standard md:group-hover:px-2.5"
+		     S4-05 / s3 P2-10）；信息不丢——外层 aria-label 始终带完整说明。
+		     2026-10-29：外壳收敛到 data-display/Badge（warning 语义），本组件只保留
+		     折叠/展开的布局几何与动效。 -->
+		<Badge
+			size="md"
+			tone="warning"
+			class="group h-6 w-6 gap-1.5 px-0 shadow-raised-md transition-all duration-standard md:w-auto md:px-2.5"
 		>
 			<FlaskConical class="size-3 shrink-0" strokeWidth={2.2} />
-			<span class="hidden md:inline max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-standard group-hover:max-w-20 group-hover:opacity-100">Mock 数据</span>
-		</div>
+			<span class="hidden max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-standard md:inline md:group-hover:max-w-20 md:group-hover:opacity-100">Mock 数据</span>
+		</Badge>
 	</div>
 {/if}

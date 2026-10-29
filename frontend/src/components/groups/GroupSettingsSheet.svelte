@@ -5,6 +5,8 @@
 	import { Camera, Check, Globe, Lock, ShieldAlert, UserMinus, Users } from '@lucide/svelte';
 	import { uploadMediaFile } from '@/lib/upload';
 	import Toggle from '@/components/forms/Toggle.svelte';
+	import Input from '@/components/forms/Input.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
@@ -200,37 +202,35 @@
 			onchange={(e) => handleCoverChange(e)}
 		/>
 
-		<!-- Group name -->
-		<div>
-			<label class="text-xs tracking-field uppercase text-text-secondary" for="group-settings-name">群组名称 *</label>
-			<div class="flex items-center gap-2.5 mt-1.5 px-3.5 py-2.5 rounded-md input-surface">
-				<input
-					id="group-settings-name"
-					class="flex-1 bg-transparent text-text-primary text-md"
-					placeholder="给你的群组起个名字…"
-					bind:value={name}
-					maxlength={30}
-				/>
+		<!-- Group name（字符计数走原语 suffix，仍在壳内右端） -->
+		<Input
+			id="group-settings-name"
+			label="群组名称 *"
+			value={name}
+			onChange={(v) => (name = v)}
+			placeholder="给你的群组起个名字…"
+			maxlength={30}
+		>
+			{#snippet suffix()}
 				<span class="text-xs shrink-0 text-text-secondary">{name.length}/30</span>
-			</div>
-		</div>
+			{/snippet}
+		</Input>
 
-		<!-- Description -->
-		<div>
-			<label class="text-xs tracking-field uppercase text-text-secondary" for="group-settings-desc">简介</label>
-			<div class="mt-1.5 px-3.5 py-3 rounded-md input-surface">
-				<textarea
-					id="group-settings-desc"
-					class="w-full bg-transparent resize-none text-text-primary text-md min-h-18"
-					placeholder="描述一下这个群组的主题…"
-					bind:value={desc}
-					maxlength={150}
-				></textarea>
-				<div class="flex justify-end">
-					<span class="text-xxs text-text-secondary">{desc.length}/150</span>
-				</div>
-			</div>
-		</div>
+		<!-- Description（字符计数走原语 footer，壳内右下） -->
+		<Textarea
+			id="group-settings-desc"
+			label="简介"
+			value={desc}
+			onChange={(v) => (desc = v)}
+			placeholder="描述一下这个群组的主题…"
+			rows={2}
+			maxlength={150}
+			inputClass="min-h-18"
+		>
+			{#snippet footer()}
+				<span class="text-xxs text-text-secondary">{desc.length}/150</span>
+			{/snippet}
+		</Textarea>
 
 		<!-- Category chips -->
 		<fieldset class="flex flex-col border-0 p-0 m-0 min-w-0">
@@ -352,13 +352,14 @@
 						解散群组
 					</p>
 					<p class="mt-1 text-xs leading-5 text-text-secondary">解散后不可恢复，所有成员将被移出。输入群名 <code class="font-mono text-xs text-text-status-danger-on-soft">{initial?.group.name}</code> 确认：</p>
-					<input
-						type="text"
-						bind:value={dismissConfirmText}
-						placeholder={initial?.group.name}
+					<Input
+						density="compact"
+						value={dismissConfirmText}
+						onChange={(v) => (dismissConfirmText = v)}
+						placeholder={initial?.group.name ?? ''}
 						autocomplete="off"
-						aria-label="解散确认群名"
-						class="mt-2 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
+						ariaLabel="解散确认群名"
+						inputClass="mt-2 w-full"
 					/>
 					<div class="mt-2 flex justify-end">
 						<Button

@@ -120,7 +120,8 @@
 					type="button"
 					variant="soft"
 					size="sm"
-					class="hit-slop shrink-0 gap-1 rounded-full px-3 py-1.5 text-xs"
+					shape="pill"
+					class="hit-slop shrink-0 gap-1 px-3.5 py-1.5 text-xs"
 					onclick={(e) => {
 						e.stopPropagation();
 						unblockTarget = b;

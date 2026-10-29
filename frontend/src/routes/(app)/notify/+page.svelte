@@ -349,7 +349,8 @@ const markSingleRead = (id: string) => {
 							type="button"
 							variant="soft"
 							size="sm"
-							class="hit-slop-44 rounded-full"
+							shape="pill"
+							class="hit-slop-44"
 							onclick={markAllRead}
 						>
 							<CheckCheck class="size-3.5 text-text-secondary" strokeWidth={2} />
@@ -392,7 +393,8 @@ const markSingleRead = (id: string) => {
 										type="button"
 										size="sm"
 										variant="primary"
-										class="hit-slop-44 rounded-full px-3.5"
+										shape="pill"
+										class="hit-slop-44 px-3.5"
 										disabled={invitePending.has(inv.invite_id)}
 										onclick={() => void handleAcceptInvite(inv.invite_id)}
 									>接受</Button>
@@ -400,7 +402,8 @@ const markSingleRead = (id: string) => {
 										type="button"
 										size="sm"
 										variant="soft"
-										class="hit-slop-44 rounded-full px-3.5"
+										shape="pill"
+										class="hit-slop-44 px-3.5"
 										disabled={invitePending.has(inv.invite_id)}
 										onclick={() => void handleRejectInvite(inv.invite_id)}
 									>拒绝</Button>

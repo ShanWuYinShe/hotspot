@@ -71,7 +71,8 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 
 ### 输入族契约（2026-10-29 重构，强制）
 
-- **两类语义、两种几何**：搜索 = 胶囊 `forms/SearchInput`（`rounded-full`，39px = `px-3.5 py-2` + `text-md`，图标 16）；表单 = 16 圆角 `forms/Input`（43px = `px-4 py-2.5` + `text-md`）或裸 `.input-surface`（页面按场景只选两档：表单块 43px = `px-4 py-2.5`、紧凑/后台 39px = `px-3.5 py-2`；textarea 走内容 padding 不套单行档）。**原语消费方不得再传 padding/圆角/字号覆盖**（历史上同一原语被传成 px-3/py-2.5/rounded-md/rounded-full 四种形态）；裸 surfaces 只允许上述两档，不得自造第三档。
+- **输入族唯一原语（2026-10-29 第二轮收口）**：搜索 = `forms/SearchInput`（胶囊 39px）；单行 = `forms/Input`（`density="default"` 43px / `"compact"` 39px，`prefix`/`suffix`/`reserveErrorSpace`）；多行 = `forms/Textarea`（统一 `px-3.5 py-3` 壳，`footer` 放计数）；下拉 = `forms/Select`（`field`/`ghost`）；复选 = `forms/Checkbox`。**页面不得手写 `<input>`/`<textarea>`/`<select>`/`.input-surface`，不得传 padding/圆角/字号覆盖原语**；上下文差异只允许用原语变体（如 `density`/`variant`）表达。聊天输入条/评论输入条/气泡内联编辑/头像封面上传为登记例外（`frontend/scripts/ui-consistency-allowlist.json`）。
+- **同类型一致性（强制）**：任何同类型 UI（搜索/输入/文本域/下拉/复选/Tab/按钮/卡片/列表行/空态…）在所有页面必须走同一原语或同一登记类契约；禁止页内近似实现。输入族由 `bun run check:ui-consistency` 源码级拦截（已挂入 `bun run check`，CI 漂移即失败）；契约见 `docs/ui-components.md`「输入族契约」/「同类型一致性契约」，新增例外必须登记 allowlist 并写理由。
 - **状态单一来源**：`.input-surface`（utilities.css）——静态字段底 + 1px border；hover 边框升 border-strong；focus accent 边界 + 内缘 1px（视觉 2px）+ 3px 柔光环；error danger 边界 + danger 光环；disabled 弱化底。**禁止回退**：静态态双层描边（border + 同色 inset 环）、双向内凹阴影、输入表面 `backdrop-filter`、主题文件覆写 `.input-surface`（focus 的 accent 内缘 1px 是刻意的 2px 焦点指示，不属此禁）。源码契约测试 `src/styles/__tests__/input-surface-contract.test.ts`。
 - **placeholder**：锁 `text-secondary` + `opacity:1`（全站 CSS 已接管），不要再叠 `opacity-*`（改前 0.6 透明度实测 2.43–4.0:1）。实测 5.3–8.8:1。
 - **清空钮**：32px 视觉 + `hit-slop`（44 命中），图标 14；点击后焦点回输入框；搜索钮 aria-label「清空搜索」、表单「清空」。
@@ -86,6 +87,11 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 - **派 A 页面级动作（默认）**：`rounded-md`(16) + `text-sm`，高度档 sm 32 / md 40 / lg 44（表单提交、弹层确认、详情动作区、移动动作条、错误页动作）。
 - **派 B 行内关系 chip**：`rounded-full` + `text-xs`，`px-3.5 py-1.5`（行内）/`px-4 py-2`（详情宽位）（关注/加入/接受/私聊入口等嵌在内容里的小动作）。
 - 圆角禁档：动作按钮禁 `rounded-sm`(12)/`rounded-lg`(20)/`rounded-xl`(24)；圆形图标钮走 `ActionIconButton`/`size-* rounded-full`；导航项/菜单行/Toast/图片格等非动作控件按各自组件语言，不套本契约。
+- **按钮圆角只由 `shape` 表达**（2026-10-29）：派 A 用默认 `shape="rect"`（rounded-md），派 B/C 用 `shape="pill"`（rounded-full + text-xs）；**禁止在 `<Button class>` 里写 `rounded-*`**（检查器 `button-radius-override` 拦截）。手写 accent 实底胶囊 CTA 必须改 `<Button variant="primary">`（`handwritten-cta`）。
+- **徽章/标签唯一原语**：非压图 `data-display/Badge`（`size="sm"` 20px / `"md"` 24px，`tone` 走语义 token）；压图 `.media-badge`；未读 `shared/UnreadBadge`（accent/inverse）。禁止手写 h-5/h-6 胶囊或旧 `.badge`（`raw-badge`）；同页同类徽章必须同 size/tone 语义。
+- **底部浮层两档**：标准 bottom sheet = `Dialog.Content side="bottom"`（rounded-t-sheet 28 贴底全宽）；浮层卡片 sheet（成员操作/邀请/更多/分享等操作面板）= `side="bottom" floating`（`rounded-xl` + inset + max-w-md + shadow-modal 唯一实现）。调用方只传内距与内容，**禁止自拼定位/圆角/阴影**（`sheet-radius-override`）。
+- **未注册圆角档**：只允许 design-system 登记档（4 档 + full + sheet）；`rounded-2xl/3xl` 等禁止（`untiered-radius`）。
+- **头像**：一律 `shared/Avatar`（尺寸档/形状/占位/渐显/失败兜底），裸 `<img rounded-full>` 头像禁止（`raw-avatar-img`；品牌 logo 除外）。
 - 卡片/面板**内嵌**次级动作钮用 `flat` 去投影（投影语义归容器）。
 - 完整表格与示例见 `docs/ui-components.md`「按钮语言两派契约」。
 

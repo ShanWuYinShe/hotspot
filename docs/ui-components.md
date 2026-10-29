@@ -30,6 +30,7 @@
 | `data-display/NearbyImageCard` | 图片优先内容卡**唯一实现**（附近瞬间/附近的人/附近群组/首页轮播/群组详情）；根节点必须 `isolate` + `use:cardPress` |
 | `data-display/ImageCardActions`（R14） | **图片卡覆盖操作行唯一实现**：点赞/评论/分享/收藏四类操作、计数弹跳、状态语义与 hover/press/focus 全站一致；`size="md"\|"sm"`（sm 用于手机 2 列窄卡） |
 | `.media-badge` / `.media-badge--icon`（utilities，R14） | **压图徽章唯一类**：深色遮罩底 + 反色字 + h-5 紧凑档（**禁止 backdrop-filter**，见 design-system §21.11）；分类/位置/距离/1-N/已关注/身份角标不再手写组合 |
+| `data-display/Badge`（2026-10-29） | **非压图徽章/标签唯一原语**：尺寸严格两档 `sm`=20px（`h-5 px-2 text-xxs`）/`md`=24px（`h-6 px-2.5 text-xs`）；`tone`=`neutral/accent/solid/danger/warning/online/outline`；数字未读用 `shared/UnreadBadge`（`variant="accent"\|"inverse"`）。旧 `.badge` 类只保留兼容，新代码不得再用。**`style` 逃生口仅限地图 marker 调色板等动态语义色**（值必须是 design token 变量，禁止 hex/rgba；常规场景一律用 `tone`）。|
 | `use:cardPress`（lib/motion，R14） | 卡片按压统一入口：卡本体/覆盖按钮按下 → 根节点 `data-pressed` → CSS 按 `--cst-card-tap-scale` 缩放；行内按钮按下不缩放整卡 |
 | `card-hover`（utilities） | 可点击卡片唯一 hover 语言：投影抬升 + `--cst-hover-lift`（vibrant）/ 纸面微染+边框（forest）；按压档由 `[data-pressed]` 规则承载（`--cst-card-tap-scale`） |
 | `card-raised` / `surface-hero` / `ListItem tone=card` | 静态卡片语言（白底 + 投影），禁止再发明第四种 |
@@ -41,7 +42,7 @@
 ### 按钮 / 输入 / 导航 / 弹层 / 反馈
 | 原语 | 职责 |
 |---|---|
-| `ui/button` | 全部动作按钮的唯一壳（表单/CTA/弹层确认/详情动作区；`ui/FollowButton` 等复合钮经它派生）。**R13 新增 `variant="soft"`**：中性软填底（`bg-surface-subtle/60`）+ 无描边 + hover 全量，是「安静次级动作」的唯一形态（与派 C 同源，替代各页手写的软填/描边变体） |
+| `ui/button` | 全部动作按钮的唯一壳（表单/CTA/弹层确认/详情动作区；`ui/FollowButton` 等复合钮经它派生）。**R13 新增 `variant="soft"`**：中性软填底（`bg-surface-subtle/60`）+ 无描边 + hover 全量，是「安静次级动作」的唯一形态（与派 C 同源，替代各页手写的软填/描边变体）。**2026-10-29 新增 `shape`**：`"rect"`（默认，派 A `rounded-md`）/`"pill"`（派 B/C，`rounded-full` + `text-xs`）；调用方禁止再用 class 覆盖 `rounded-*` |
 | `navigation/ActionIconButton` | 图标按钮（ghost/outline） |
 | `hover-btn` / `scale-btn`（utilities） | 行内文字/图标动作的 hover/tap CSS 语言 |
 | `hit-slop` / `hit-slop-y`（utilities） | 紧凑控件的触控热区扩展（视觉尺寸不变）。`hit-slop` 四周各 6px，用于图标按钮等**孤立**控件；`hit-slop-y`（2026-10-19 新增）只扩纵向，用于**横向相邻**的紧凑控件（筛选胶囊、分段控制器）——前者的水平 6px 会与相邻项重叠，命中落到 DOM 靠后那颗。注意：两者都靠 `::before` 绝对定位，**会被祖先的 `overflow` 裁剪**，横滚容器需留出纵向 padding（TabBar 的 `py-1` 即为此） |
@@ -50,7 +51,7 @@
 | `navigation/BackToTop` | 回顶浮动圆钮（R9）：滚动 > 1.5×视口高出现（44px，移动 bottom-24 / 桌面 bottom-6，避开底栏与浮层），点击平滑回顶（reduced 直接跳）、回顶后 200ms 内隐藏；`aria-label="回到顶部"`；fixed 不占流 |
 | `lib/route-announcer` | SPA 导航播报（R9）：`#route-announcer`（sr-only `aria-live=polite`/atomic）播报新页 h1 标题；首屏不播、1.5s 去重；焦点落 `main#main-content`（tabindex=-1、preventScroll），不叠加 h1 聚焦 |
 | `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`）。三个变体：`pills`（筛选/分类，可横滚）、`segmented`（二选一/系统级分段，等宽轨道）、`underline`（页级两态切换：全宽等分、无轨道、激活项 + 2px accent 下划线）。**选中态不得只靠颜色**（2026-10-27 Round 2，用户对色弱/色盲的明确要求）：`segmented` 选中 = accent 实底 + ✓ 图标 + `font-semibold`；`pills`/`underline` 选中 = `font-semibold`（underline 另有下划线形状线索）；验收须过灰度截图（`filter:grayscale(1)`）。`disabled`（2026-10-19）整体禁用并置灰；**移动端触控高度**：按钮 `py-3`（视觉 41px）+ 滚动根 `py-1` + `.hit-slop-y` → 有效 ≈49px，桌面 `lg:py-1.5` 保持紧凑 |
-| `overlays/SheetShell`、`ui/dialog`、`ui/popover`、`ui/dropdown-menu` | 弹层体系 |
+| `overlays/SheetShell`、`ui/dialog`、`ui/popover`、`ui/dropdown-menu` | 弹层体系。**2026-10-29**：`Dialog.Content` 新增 `floating`（浮层卡片式底部 sheet：inset-x-4/bottom-4/max-w-md/rounded-xl/shadow-modal 唯一实现）；调用方只传内距 `p-4|p-5`，不得再自拼定位/圆角/阴影；标准 bottom sheet 仍为 `rounded-t-sheet`(28) 贴底全宽 |
 | `overlays/MenuPanel` | 弹出菜单面板唯一实现（标题 + 选项行 + 可选底部动作；容器走 `ui/popover` Content）。已有：地图源菜单、地图筛选菜单。新菜单只传数据，不复制行结构 |
 | `data-display/EmptyState` / `InlineLoading` / `LoadError` / `ListEnd`、`overlays/ToastViewport`、`shared/ConnectionBanner` | 状态反馈。`EmptyState` 可选 `spotlight`（2026-10-26）：超大空态的信标装饰层（光晕 + 双环 + 四向星点，纯 token、无动画、`aria-hidden`）；小面板空态不得开启 |
 | `data-display/Skeleton` / `SkeletonList` / `SkeletonFeed`（2026-10-26 新增，2026-10-27 更新） | 列表/信息流**首屏骨架屏**。`Skeleton` 基础占位块（`aria-hidden`）；`SkeletonList` 行式（前导圆 36/40/44/48 + 两行文本条，`role=status + aria-busy`，ListContainer 内自动补 listitem）；`SkeletonFeed` 卡式（2026-10-27 起同步整卡图片卡：图片块 + 底部文本条，与真实卡同比例/同文字位置，保证零位移；另有 `card`/`portrait` 形态）。几何对齐鸿蒙 `Skeleton`/`SkeletonShimmer`，动效 `--cst-motion-skeleton`(1500ms)，reduced-motion 停用 |
@@ -78,12 +79,12 @@
 
 | 派别 | 形态 | 适用场景 | 例 |
 |---|---|---|---|
-| A 页面级动作（默认） | `rounded-md`(16px) + `text-sm`，高度档 sm 32 / md 40 / lg 44 | 表单提交、弹层确认、详情页动作区、移动端动作条、错误页动作 | 登录/保存/举报提交/屏蔽/加入群组/私信动作条 |
-| B 行内关系 chip | `rounded-full` + `text-xs`，`px-3.5 py-1.5`（行内）/ `px-4 py-2`（详情宽位） | 卡片/列表行内的关系与轻量动作（嵌在内容里的小动作） | 关注/加入/接受/拒绝/私聊入口 chip |
-| C 安静动作（2026-10-27 Round 3 补充） | `rounded-full` + `bg-surface-subtle/60` 软填底、**无描边**、`text-text-primary`；hover → `bg-surface-subtle` 全量 | 设置/关系/通知等次级页面的行内或分组动作（不抢内容） | 编辑资料/设置、发消息、拒绝、已读、会话操作 |
+| A 页面级动作（默认） | `shape="rect"`（`rounded-md` 16px）+ `text-sm`，高度档 sm 32 / md 40 / lg 44 | 表单提交、弹层确认、详情页动作区、移动端动作条、错误页动作 | 登录/保存/举报提交/屏蔽/加入群组/私信动作条 |
+| B 行内关系 chip | `shape="pill"`（`rounded-full` + `text-xs`），`px-3.5 py-1.5`（行内）/ `px-4 py-2`（详情宽位） | 卡片/列表行内的关系与轻量动作（嵌在内容里的小动作） | 关注/加入/接受/拒绝/私聊入口 chip |
+| C 安静动作（2026-10-27 Round 3 补充） | `shape="pill"` + `bg-surface-subtle/60` 软填底、**无描边**、`text-text-primary`；hover → `bg-surface-subtle` 全量 | 设置/关系/通知等次级页面的行内或分组动作（不抢内容） | 编辑资料/设置、发消息、拒绝、已读、会话操作 |
 
 - **同级动作不得混用「描边胶囊」与「软填胶囊」**（2026-10-27 用户视觉一致性要求）；内容单元功能边界（输入框、主题 swatch）不属动作按钮、保留。
-- 圆角禁档：动作按钮不得使用 `rounded-sm`(12)/`rounded-lg`(20)/`rounded-xl`(24)；
+- **圆角只由 `shape` 表达**（2026-10-29）：A 用默认 `rect`，B/C 用 `shape="pill"`；**调用方禁止再用 class 传 `rounded-*`**（`button-radius-override` 检查器拦截）。动作按钮禁 `rounded-sm`(12)/`rounded-lg`(20)/`rounded-xl`(24)；
   圆形图标钮走 `ActionIconButton`/`size-* rounded-full`。导航项、菜单行、Toast、
   图片格等非动作控件按各自组件语言，不套本契约。
 - 卡片/面板**内嵌**的次级动作钮用 `flat` 去投影（投影语义归容器，见 `ui/button` 注释）。
@@ -147,7 +148,7 @@
 | 覆盖点击层 | 最后绘制 `absolute inset-0 z-10` 的真 `<button data-cover>`；行内控件经根上 `[&_button:not([data-cover])]:relative ...:z-20 [&_a]:relative [&_a]:z-20` 抬升；卡片根不持 button/aria-label |
 | 操作行 | 一律 `ImageCardActions`：图标 size-4.5（sm 档 4）、间距 24（sm 12）、计数 text-sm tabular；点赞 = 危险红填充（压图白描边）、收藏 = accent 填充、评论/分享 = 中性；只在激活方向 pop；`aria-label/aria-pressed` 完备；点击 stopPropagation |
 | 按压 | 只由 `use:cardPress` + `.card-hover[data-pressed="true"]` 驱动，缩放值走 `--cst-card-tap-scale`（vibrant 0.94 / forest·inkwash 0.97）；不允许再在组件内手写 transform/pointer 监听 |
-| 压图徽章 | 一律 `.media-badge`（图标方角标加 `--icon`），禁止再手写 `bg-surface-overlay-strong`/`bg-surface-media-scrim-strong` 组合；非压图 fallback 用 `.badge` + 主题色 |
+| 压图徽章 | 一律 `.media-badge`（图标方角标加 `--icon`），禁止再手写 `bg-surface-overlay-strong`/`bg-surface-media-scrim-strong` 组合；非压图徽章统一 `data-display/Badge`（sm/md + tone），禁止手写 h-5/h-6 胶囊 |
 | 作者区 | 有 `userId` 时头像/昵称均为可点按钮（hover：头像放大、昵称下划线；点击 stopPropagation → 主页）；无目标时保持纯文本 |
 | 分享 | 统一 `lib/moment-actions.shareMoment`（系统分享 → 复制链接 + toast），信息流卡与网格卡同一实现 |
 
@@ -197,14 +198,47 @@
 | 语义 | 原语 | 几何 | 说明 |
 |---|---|---|---|
 | 搜索（发现入口） | `forms/SearchInput` | 胶囊 `rounded-full`，39px（`px-3.5 py-2` + `text-md`），图标 16，清空钮 32px 视觉 + `hit-slop`（44 命中） | 页面不得再传 padding/圆角/字号覆盖；`ariaLabel` 按页面语义（搜索会话/用户/标签…）；清空后回焦；Esc 有内容时先清空（`stopPropagation`，弹层内不会连关），空输入才交还弹层；Enter/Escape 判 IME `isComposing`；输入带 `inputmode=search`/`enterkeyhint`/`autocomplete=off` |
-| 表单录入 | `forms/Input` / `.input-surface` | `rounded-md`(16)，43px（`px-4 py-2.5` + `text-md`），compact 39px（`px-3.5 py-2`） | label `tracking-field`；错误态三件套；清空钮同搜索 |
+| 单行输入 | `forms/Input` | `rounded-md`(16)；`density="default"` 43px（`px-4 py-2.5` + `text-md`）/`density="compact"` 39px（`px-3.5 py-2`） | label `tracking-field`；错误态三件套；`prefix`/`suffix` snippet；`reserveErrorSpace` 预留错误行（登录/设置防跳动）；清空钮同搜索 |
+| 多行文本 | `forms/Textarea` | 壳 `rounded-md`(16) + `.input-surface` + `px-3.5 py-3`；高度由 `rows`/`inputClass`(min-h) 决定 | label/错误态契约同 Input；`footer` snippet 放字符计数（同一壳内）；不套单行 39/43 档；全站多行输入统一用它 |
+| 下拉选择 | `forms/Select` | `variant="field"`：`.input-surface` + `rounded-md` + `text-md`（default 43 / compact 39）+ 自绘 chevron；`variant="ghost"`：透明底 + accent 文字（行内排序/轻量切换） | 保留原生 `<select>` 可访问性；后台筛选/表单统一 `field`，行内排序统一 `ghost`；页面不得再写裸 select |
+| 复选框 | `forms/Checkbox` | 原生 checkbox 16px + `accent-accent-default` 语义色 + `focus-ring` | 权限勾选/多选/危险确认统一用它；可见文案走 children，无文案传 `ariaLabel` |
 | 表面状态 | 单一来源 `.input-surface`（utilities.css） | 静态 = `--cst-field-bg` + 1px `--cst-field-border`；hover = border-strong；focus = accent 1px + 内缘 1px（视觉 2px）+ 3px `--cst-field-ring`；error = danger + `--cst-field-ring-danger`；disabled = `--cst-field-bg-disabled` | 主题文件禁止覆写 `.input-surface`；输入表面禁止 `backdrop-filter`；placeholder 锁 `text-secondary` + `opacity:1`（改前叠 0.6 → 2.43–4.0:1） |
 | 快捷键 | `lib/search-shortcut.ts`（纯决策 + 9 条单测）+ `(app)/+layout.svelte` + 搜索页 trailing kbd 胶囊 | ⌘K（Mac）/ Ctrl+K | 任意页唤出搜索；已在搜索页则聚焦全选（导航后 rAF 显式补聚焦，避免被路由焦点管理抢到 main）；弹层打开 / 非搜索页表单编辑中让位；提示与监听必须同时存在 |
 | 页面宽度 | `/search` hero | 桌面 `max-w-3xl`(768)，移动满宽 | 布局例外登记见 skill `hotspot-frontend-layout` |
 
 源码契约测试：`src/styles/__tests__/input-surface-contract.test.ts`（锁表面状态/单一来源/placeholder 对比度修复，禁止回退到「双层描边 + 双向内凹阴影 + vibrant 毛玻璃」）。
 
-> 多行文本域沿用各场景既有内容 padding（弹层编辑区 `p-4`、表单块 `px-3.5 py-3`），高度由 rows/min-h 决定，不套单行 39/43 档；不要为了「完全统一」把 textarea 压成单行高度。
+### 同类型一致性契约（2026-10-29 第二轮收口，强制）
+
+**原则：一种语义（搜索/单行/多行/下拉/复选/文件/Tab/按钮/卡片/列表行/空态…）在全部页面只允许一种实现路径**。同类型组件在所有地方的视觉（几何/字号/圆角/状态）与行为（交互/可访问性）必须一致；上下文差异只能通过原语的**登记变体**（如 Input `density`、Select `field|ghost`）表达，**禁止页内近似实现**（手写 input/select/textarea/checkbox、复制粘贴的卡片样式、自绘 Tab、给原语传几何覆盖类）。
+
+已强制覆盖的原语族（源码级检查器 `scripts/check-component-consistency.mjs` + 16 条规则，2026-10-29 第二轮从 10 条扩到 16 条）：
+
+| 规则 | 强制内容 |
+|---|---|
+| `raw-search` | 任何搜索语义控件（placeholder/aria-label 含「搜索」）必须用 `forms/SearchInput` |
+| `search-override` | SearchInput 调用方不得传 padding/圆角/字号/投影覆盖 |
+| `search-aria` | 每个 SearchInput 必须传 `ariaLabel`（按页面语义命名） |
+| `raw-input` | 单行输入必须用 `forms/Input`（聊天/评论输入条为登记例外） |
+| `raw-textarea` | 多行文本必须用 `forms/Textarea`（聊天气泡内联编辑为登记例外） |
+| `raw-select` | 下拉必须用 `forms/Select`（field/ghost 两种变体） |
+| `raw-checkbox` | 复选框必须用 `forms/Checkbox` |
+| `raw-file-input` | 文件上传必须走 `forms/ImagePicker`（头像/封面徽标为登记例外） |
+| `input-surface-outside` | `.input-surface` 只能由输入族原语消费，页面不得手写输入表面 |
+| `tab-role-outside` | Tab 必须用 `navigation/TabBar`，页面不得自绘 `role=tab/tablist` |
+| `raw-badge` | 非压图徽章/标签必须用 `data-display/Badge`（压图用 `.media-badge`，未读用 `UnreadBadge`），禁止旧 `.badge` 或手写 h-5/h-6 胶囊 |
+| `button-radius-override` | Button 调用方不得覆盖 `rounded-*`；派 B/C 用 `shape="pill"`，派 A 用默认 `rect` |
+| `untiered-radius` | 禁止 `rounded-2xl/3xl` 等未注册圆角档，必须落到 design-system 登记的 4 档 + full/sheet |
+| `handwritten-cta` | accent 实底胶囊 CTA 必须用 `Button`（主操作身份），禁止手写拼语言 |
+| `raw-avatar-img` | 头像必须用 `shared/Avatar`（裸 `<img rounded-full>` 会丢占位/兜底/渐显；品牌 logo 除外） |
+| `sheet-radius-override` | Dialog 圆角由组件档位决定：浮层卡片用 `floating`，禁止调用方 class 覆盖 `rounded-*` |
+
+- **执行**：`bun run check:ui-consistency`（已挂入 `bun run check`，CI frontend job 漂移即拦截）。
+- **例外**：只能登记 `frontend/scripts/ui-consistency-allowlist.json`（`rule + file + reason`），并在 `docs/frontend-ui-audit.md` 记录理由；禁止用 ignore 注释绕过。
+- **新增同类型 UI 的流程**：先查本表 → 有原语就复用/扩展 prop → 没有则**先建原语 + 契约测试 + 检查器规则**再使用，禁止直接在各页写近似实现。
+- 非输入族的同类型偏差由 `docs/frontend-ui-audit.md` 的「UI 一致性」节登记与收敛（按钮/卡片/列表行等历史 backlog 见下节），新代码不得新增近似实现。
+
+> 多行文本域统一 `forms/Textarea` 的 `px-3.5 py-3` 壳（不再各页传 `p-4`/`px-4 py-3`）；高度由 rows/min-h 决定，不套单行 39/43 档；不要为了「完全统一」把 textarea 压成单行高度。
 
 ## 近重复收敛 backlog（按危害排序）
 
@@ -219,18 +253,15 @@
    （如 LoadMoreButton）在原语支持「去投影」开关之前**不得迁移**，否则静默
    加一层投影。`LoadMoreButton.test.ts` 的「视觉形态守恒」用例已锁定当前形态
    （token 边界匹配），任何加投影/改圆角/改字色的迁移会在此失败。
- 2. **表单 Input 原语**：**已落地（2026-10-12）**——`forms/Input` 建成（10 个契约测试），
-    首个消费方 `me/edit` 昵称输入已迁移（登录态截图对比审查通过）。
-    确认码输入亦已迁（compact 形态，2026-10-12，运行时截图验证通过）——me/edit 全页输入原语化。
-    **2026-10-29 输入族重构后**：`.input-surface` 表面/状态统一、SearchInput/Input 几何与字号收敛，
-    剩余裸 `input-surface` 消费方按新契约做 class 收口（见本文件「输入族契约」）。
-    **其余消费方评估后保留手写（2026-10-12 全量盘点）**：剩余 20 处 input 全部是
-    **compact 变体**（`input-surface` 直贴 input，admin 六页/群组弹层 ×3/安全设置 ×6/
-    map 面板 ×2）+ 应保持原生的 file/checkbox。compact 迁移收益≈0：样式半边已合规、
-    表单无错误态需求，迁移只改写 markup 不增行为，反有回归风险。策略改为：
-    ① wrapper 型新表单一律用 `forms/Input`；② compact 消费方改到该文件且有新增行为需求
-    （如清除钮/错误播报）时，先给原语加 compact/size 变体再迁；
-    ③ AccountSecuritySection 密码簇若要补 AuthForm 式显隐切换，属 UX 增强需设计确认。
+ 2. **表单 Input 原语（2026-10-29 第二轮已全量收口）**：`forms/Input`（含 `density` 两档、
+    `reserveErrorSpace`、`suffix`）+`forms/Textarea`+`forms/Select`+`forms/Checkbox` 建成，
+    auth/settings/me-edit/users/admin 六页/群组弹层/overlay/nearby 排序全部迁移，
+    裸 `input`/`textarea`/`select`/`checkbox`/`.input-surface` 由
+    `bun run check:ui-consistency` 拦截（`scripts/check-component-consistency.mjs`）。
+    保留的登记例外：聊天输入条（`ChatInputBar`）、评论输入条（`CommentInputBar`）、
+    气泡内联编辑（`MessageBubble`）、头像/封面上传徽标（隐藏 file input）、
+    `ImagePicker` 内部 file input —— 均为「输入条/媒体上传」等不同语义，
+    见 `scripts/ui-consistency-allowlist.json` 理由。
 3. **分组卡壳已收敛**（2026-09-10 / 2026-10-18 / 2026-10-27 Round 3 收口）：移动端 `ProfileMobile`
    与桌面 `ProfilePage` 统一为「内容软岛」（无描边 + `surfaceIsland` + `shadow-xs` + 圆角 20）；
    设置页「账号信息/外观与显示/地图与位置/系统与关于」等分组统一为 `ListContainer bordered inset`

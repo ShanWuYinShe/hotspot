@@ -5,6 +5,7 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import { Megaphone, Plus } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
@@ -13,6 +14,9 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import Toggle from '@/components/forms/Toggle.svelte';
+	import Input from '@/components/forms/Input.svelte';
+	import Select from '@/components/forms/Select.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import {
@@ -46,11 +50,13 @@
 		() => severityFilter
 	);
 
-	const severityBadge: Record<AnnounceSeverity, string> = {
-		info: 'bg-surface-subtle text-text-secondary',
+	// 级别 → Badge tone（全站徽章统一软底语言；error 由原实底红收敛到 danger 软底，
+	// 保留「严重」红色语义，不再与主操作抢视觉）
+	const severityTone: Record<AnnounceSeverity, 'neutral' | 'warning' | 'danger'> = {
+		info: 'neutral',
 		// 警告归位 warning 族而非 accent（r57：语义色各归其位,亮 accent 收给主操作）
-		warning: 'bg-status-warning-bg text-text-status-warning-on-soft',
-		error: 'bg-status-danger text-text-on-accent'
+		warning: 'warning',
+		error: 'danger'
 	};
 
 	// 编辑弹层（create 与 update 共用；editTarget=null 即发布模式）
@@ -181,7 +187,7 @@
 						{#each list.items as a (a.announcement_id)}
 							<tr class={TR}>
 								<td class={`${TD} max-w-64 truncate`} title={a.content}>{a.title}</td>
-								<td class={TD}><span class="badge {severityBadge[a.severity]}">{SEVERITIES.find((s) => s.value === a.severity)?.label}</span></td>
+								<td class={TD}><Badge tone={severityTone[a.severity]}>{SEVERITIES.find((s) => s.value === a.severity)?.label}</Badge></td>
 								<td class={TD_SECONDARY}>{a.created_by?.nickname ?? '—'}</td>
 								<td class={TD_SECONDARY_NUM}>{a.view_count}</td>
 								<td class={TD_SECONDARY}>{a.send_push ? (a.push_sent_at ? '已推送' : '待推送') : '—'}</td>
@@ -213,27 +219,21 @@
 			<div class="px-5 pt-6 pb-4">
 				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">{editTarget ? '编辑公告' : '发布公告'}</Dialog.Title>
 				<div class="mt-4 flex flex-col gap-3">
-					<label class="flex flex-col gap-1.5">
-						<span class="text-xs text-text-secondary">标题</span>
-						<input bind:value={title} maxlength={100} class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary" />
-					</label>
-					<label class="flex flex-col gap-1.5">
-						<span class="text-xs text-text-secondary">内容</span>
-						<textarea bind:value={content} rows={4} maxlength={2000} class="input-surface resize-none rounded-md px-3.5 py-2 text-md leading-copy text-text-primary"></textarea>
-					</label>
+					<Input label="标题" value={title} onChange={(v) => (title = v)} maxlength={100} density="compact" />
+					<Textarea label="内容" value={content} onChange={(v) => (content = v)} rows={4} maxlength={2000} />
 					<div class="grid grid-cols-2 gap-3">
-						<label class="flex flex-col gap-1.5">
-							<span class="text-xs text-text-secondary">级别</span>
-							<select bind:value={severity} class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary">
-								{#each SEVERITIES as s (s.value)}
-									<option value={s.value}>{s.label}</option>
-								{/each}
-							</select>
-						</label>
-						<label class="flex flex-col gap-1.5">
-							<span class="text-xs text-text-secondary">跳转链接（可留空）</span>
-							<input bind:value={actionUrl} placeholder="https://…" class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary" />
-						</label>
+						<Select label="级别" value={severity} onChange={(v) => (severity = v as AnnounceSeverity)} density="compact">
+							{#each SEVERITIES as s (s.value)}
+								<option value={s.value}>{s.label}</option>
+							{/each}
+						</Select>
+						<Input
+							label="跳转链接（可留空）"
+							value={actionUrl}
+							onChange={(v) => (actionUrl = v)}
+							placeholder="https://…"
+							density="compact"
+						/>
 					</div>
 					{#if !editTarget}
 						<!-- 布尔开关与系统配置/设置页统一用 Toggle -->

@@ -4,6 +4,7 @@ import { formatRelativeDays } from '@/lib/utils';
 	import { UserPlus } from '@lucide/svelte';
 	import FollowButton from '@/components/ui/FollowButton.svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import { useRelationships, type MappedFollower } from '@/lib/profile-data.svelte';
@@ -82,9 +83,7 @@ import { formatRelativeDays } from '@/lib/utils';
 >
 	{#snippet headerExtra()}
 		{#if pendingCount > 0}
-			<span class="inline-flex h-5 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none text-status-warning" style="background:var(--cst-status-warning-bg);border:var(--cst-border-width-hairline) solid var(--cst-status-warning-border);">
-				{pendingCount} 待回关
-			</span>
+			<Badge tone="warning" class="shrink-0">{pendingCount} 待回关</Badge>
 		{/if}
 	{/snippet}
 	{#snippet children(f)}

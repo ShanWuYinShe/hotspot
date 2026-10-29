@@ -9,6 +9,7 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import Toggle from '@/components/forms/Toggle.svelte';
+	import Input from '@/components/forms/Input.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -112,7 +113,6 @@
 	};
 
 	const SECTION_CARD = 'rounded-lg bg-surface-island p-5 shadow-xs';
-	const LABEL = 'text-xs text-text-secondary';
 	// 未保存修改的全局提示需要说清「改了什么」：分区中文名与卡片标题同口径
 	const SECTION_LABELS: Record<ConfigSection, string> = {
 		features: '功能开关',
@@ -121,7 +121,6 @@
 		auth: '认证安全'
 	};
 	const dirtyText = $derived(dirtySections.map((s) => SECTION_LABELS[s]).join('、'));
-	const INPUT = 'input-surface w-full rounded-md px-3.5 py-2 text-md text-text-primary';
 	const FEATURE_LABELS: Record<keyof FeatureSwitches, string> = {
 		enable_public_registration: '开放注册',
 		enable_guest_register: '访客浏览',
@@ -153,6 +152,28 @@
 		privacy_policy_url: '隐私政策链接',
 		terms_of_service_url: '服务条款链接',
 		official_website_url: '官方网站链接'
+	};
+
+	// 字段回写：forms/Input 是受控字符串原语（value 进、onChange 出）。
+	// 数字字段在空串/非法中间态不回写，避免「清空输入框」把正整数值写成 0；
+	// 文本字段（contact）直接回写。
+	// limits 的 reaction_emojis 是非数值字段，回写只对数值键成立。
+	type NumericLimitKey = {
+		[K in keyof AppLimits]: AppLimits[K] extends number ? K : never;
+	}[keyof AppLimits];
+	const setLimit = (key: string, raw: string) => {
+		const n = Number(raw);
+		if (!limits || raw.trim() === '' || !Number.isFinite(n)) return;
+		limits[key as NumericLimitKey] = n;
+	};
+	const setAuth = (key: string, raw: string) => {
+		const n = Number(raw);
+		if (!auth || raw.trim() === '' || !Number.isFinite(n)) return;
+		auth[key as keyof AuthConfig] = n;
+	};
+	const setContact = (key: string, raw: string) => {
+		if (!contact) return;
+		contact[key as keyof ContactInfo] = raw;
 	};
 
 	// 只读 JSON 可滚动区域：运行期设置 tabindex=0，键盘用户可聚焦后用方向键/PageUp 滚动
@@ -208,10 +229,15 @@
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 				{#each Object.entries(limits) as [key, value] (key)}
 					{#if typeof value === 'number'}
-						<label class="flex flex-col gap-1">
-							<span class={LABEL}>{LIMIT_LABELS[key] ?? key}</span>
-							<input type="number" min={0} bind:value={limits[key as keyof AppLimits]} disabled={!canWrite} class={INPUT} />
-						</label>
+						<Input
+							label={LIMIT_LABELS[key] ?? key}
+							type="number"
+							min={0}
+							value={String(value)}
+							onChange={(raw) => setLimit(key, raw)}
+							disabled={!canWrite}
+							density="compact"
+						/>
 					{/if}
 				{/each}
 			</div>
@@ -222,10 +248,13 @@
 			<SectionHead title="联系与合规" subtitle="support_email 须为有效 Email，*_url 须为有效 URL（服务端校验）。" icon={Building2} />
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				{#each Object.keys(contact) as key (key)}
-					<label class="flex flex-col gap-1">
-						<span class={LABEL}>{CONTACT_LABELS[key] ?? key}</span>
-						<input bind:value={contact[key as keyof ContactInfo]} disabled={!canWrite} class={INPUT} />
-					</label>
+					<Input
+						label={CONTACT_LABELS[key] ?? key}
+						value={contact[key as keyof ContactInfo]}
+						onChange={(raw) => setContact(key, raw)}
+						disabled={!canWrite}
+						density="compact"
+					/>
 				{/each}
 			</div>
 		</section>
@@ -235,10 +264,15 @@
 			<SectionHead title="认证安全" subtitle="验证码有效期与登录爆破锁定参数（正整数），保存后即时生效。" icon={ShieldCheck} />
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 				{#each Object.keys(AUTH_LABELS) as key (key)}
-					<label class="flex flex-col gap-1">
-						<span class={LABEL}>{AUTH_LABELS[key]}</span>
-						<input type="number" min={1} step={1} bind:value={auth[key as keyof AuthConfig]} disabled={!canWrite} class={INPUT} />
-					</label>
+					<Input
+						label={AUTH_LABELS[key]}
+						type="number"
+						min={1}
+						value={String(auth[key as keyof AuthConfig])}
+						onChange={(raw) => setAuth(key, raw)}
+						disabled={!canWrite}
+						density="compact"
+					/>
 				{/each}
 			</div>
 		</section>

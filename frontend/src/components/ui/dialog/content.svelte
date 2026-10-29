@@ -20,6 +20,12 @@
 
 	type Props = Dialog.ContentProps & {
 		side?: DialogSide;
+		/**
+		 * floating：底部「浮层卡片」sheet 变体（inset-x-4 / bottom-4 / max-w-md / 四角 rounded-xl），
+		 * 用于成员操作/邀请/更多操作等「操作面板」；与标准 bottom sheet（rounded-t-sheet 28、
+		 * 贴底全宽）是登记的两档。只允许与 side="bottom" 组合，禁止调用方再覆盖定位/圆角。
+		 */
+		floating?: boolean;
 		overlayClassName?: string;
 		/** side sheet 自动渲染右上角 X 关闭按钮（center 永不渲染）。 */
 		showCloseButton?: boolean;
@@ -29,6 +35,7 @@
 		class: className,
 		overlayClassName = '',
 		side = 'center',
+		floating = false,
 		showCloseButton = false,
 		children,
 		...rest
@@ -53,9 +60,15 @@
 			'top-0 left-0 right-0 rounded-b-sheet border-b border-border-default/80 shadow-sheet data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top'
 	};
 
+	// 浮层卡片式底部 sheet（唯一实现）：inset-x-4/bottom-4/max-w-md/rounded-xl，动画仍从底部滑入。
+	// 调用方只传内距（p-4/p-5）与内容，不再自己拼定位/圆角/阴影。
+	const FLOATING_BOTTOM =
+		'inset-x-4 bottom-4 mx-auto max-w-md rounded-xl border border-border-default/80 shadow-modal data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom';
+
 	// 遮罩走 --cst-surface-scrim 满值（themes/*.css 按主题/明暗定义，vibrant≈0.38-0.42），
 	// 与 ImageViewer 深遮罩统一（原 /80 减淡档已收敛），叠加微虚化提升景深。
 	const canShowClose = $derived(showCloseButton && side !== 'center');
+	const sideClass = $derived(floating && side === 'bottom' ? FLOATING_BOTTOM : SIDE_CLASSES[side]);
 </script>
 
 <Dialog.Portal>
@@ -65,7 +78,7 @@
 			overlayClassName
 		)}
 	/>
-	<Dialog.Content class={cn(BASE, SIDE_CLASSES[side], className)} {...rest}>
+	<Dialog.Content class={cn(BASE, sideClass, className)} {...rest}>
 		{@render children?.()}
 		{#if canShowClose}
 			<Dialog.Close

@@ -4,6 +4,7 @@
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
@@ -90,9 +91,7 @@
 				<span class="min-w-0 flex-1">
 					<span class="block truncate text-md font-medium text-text-primary">{member.name}</span>
 					{#if member.role === 'owner' || member.role === 'admin'}
-						<span class="mt-0.5 inline-flex h-5 items-center justify-center rounded-full bg-accent-soft px-2 text-xxs font-medium leading-none text-text-accent-on-soft">
-							{roleLabel(member.role)}
-						</span>
+						<Badge tone="accent" class="mt-0.5">{roleLabel(member.role)}</Badge>
 					{:else}
 						<span class="mt-0.5 block text-xs text-text-secondary">{roleLabel(member.role)}</span>
 					{/if}

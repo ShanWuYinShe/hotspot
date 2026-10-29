@@ -7,6 +7,7 @@ import { formatCount } from '@/lib/utils';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
@@ -278,7 +279,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</div>
 		<div class="absolute bottom-5 left-5 right-5">
 			{#if gd.detail.category}
-				<span class="inline-flex h-6 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2.5 text-xs font-medium leading-none text-content-inverse backdrop-blur-md shadow-xs">
+				<span class="media-badge">
 					{gd.detail.category}
 				</span>
 			{/if}
@@ -369,10 +370,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 									<span class="min-w-0 flex-1">
 										<span class="flex min-w-0 items-center gap-2">
 											{#if latest.isPinned}
-												<span class="inline-flex h-5 shrink-0 items-center justify-center gap-1 rounded-full bg-accent-soft px-2 text-xxs font-medium leading-none text-text-accent-on-soft">
+												<Badge tone="accent" class="shrink-0 gap-1">
 													<Pin size={10} strokeWidth={2} />
 													置顶
-												</span>
+												</Badge>
 											{/if}
 											<span class="truncate text-md font-semibold text-text-primary">{latest.title}</span>
 										</span>
@@ -536,12 +537,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 <!-- 更多操作菜单（bottom sheet，对齐用户详情页「更多操作」交互模式） -->
 <Dialog.Root open={moreOpen} onOpenChange={(next) => (next ? undefined : (moreOpen = false))}>
-	<Dialog.Content
-		side="bottom"
-		class="inset-x-4 bottom-4 mx-auto max-w-md rounded-xl p-5"
-		aria-label={`${gd.detail.name} 的更多操作`}
-		style="box-shadow:var(--cst-elevation-modal);"
-	>
+	<Dialog.Content side="bottom" floating class="p-5" aria-label={`${gd.detail.name} 的更多操作`}>
 		<div class="flex items-center justify-between">
 			<div>
 				<p class="eyebrow">更多操作</p>

@@ -282,7 +282,7 @@
 						type="button"
 						variant="primary"
 						size="sm"
-						class="ml-2 rounded-full px-3 text-sm"
+						class="ml-2 px-3"
 						aria-label="登录"
 						onclick={() => void goto(ROUTES.login)}
 					>

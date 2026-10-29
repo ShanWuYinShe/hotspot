@@ -14,6 +14,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import Input from '@/components/forms/Input.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { getAccount, updateAccount, deleteAccount , netError } from '@/api';
@@ -197,7 +198,7 @@
 						type="button"
 						variant={saved ? 'secondary' : 'primary'}
 						size="md"
-						class="hit-slop-44 rounded-full px-4 py-2"
+						class="hit-slop-44 px-4 py-2"
 						loading={saving}
 						disabled={saved || saving || !userId}
 						onclick={() => void handleSave()}
@@ -292,26 +293,20 @@
 						{/snippet}
 					</Input>
 
-					<div class="flex flex-col gap-1.5">
-						<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-bio">个人简介</label>
-						<div class="px-4 py-3 rounded-md input-surface">
-							<div>
-								<textarea
-									id="edit-bio"
-									bind:value={bio}
-									oninput={(e) => (bio = e.currentTarget.value.slice(0, MAX_BIO))}
-									placeholder="介绍一下自己…"
-									rows={3}
-									class="w-full bg-transparent resize-none text-text-primary text-md leading-copy"
-								></textarea>
-								<div class="flex justify-end mt-1">
-									<span class="{bio.length > BIO_WARN ? 'text-status-warning' : 'text-text-secondary'} text-xs">
-										{bio.length}/{MAX_BIO}
-									</span>
-								</div>
-							</div>
-						</div>
-					</div>
+					<!-- 简介：多行输入统一走 forms/Textarea；字符计数走原语 footer（壳内右下） -->
+					<Textarea
+						id="edit-bio"
+						label="个人简介"
+						value={bio}
+						onChange={(v) => (bio = v.slice(0, MAX_BIO))}
+						placeholder="介绍一下自己…"
+						rows={3}
+						maxlength={MAX_BIO}
+					>
+						{#snippet footer()}
+							<span class={bio.length > BIO_WARN ? 'text-status-warning' : 'text-text-secondary'}>{bio.length}/{MAX_BIO}</span>
+						{/snippet}
+					</Textarea>
 				</div>
 			</section>
 
@@ -373,7 +368,7 @@
 				{#if deleteConfirmOpen}
 					<div class="flex flex-col gap-2.5 rounded-lg bg-danger-bg/40 p-4">
 						<p class="text-sm text-text-primary">删除不可恢复，请输入 <code class="font-mono text-xs text-status-danger">DELETE_MY_ACCOUNT</code> 确认：</p>
-						<!-- 注销确认码：compact 形态（input-surface 直贴 input 的紧凑位） -->
+						<!-- 注销确认码：forms/Input compact 形态（无字段壳的 39px 紧凑位） -->
 						<Input
 							compact
 							type="text"
@@ -382,7 +377,8 @@
 							placeholder="DELETE_MY_ACCOUNT"
 							autocomplete="off"
 							ariaLabel="注销确认码"
-							inputClass="w-full px-3.5 py-2"
+							density="compact"
+							inputClass="w-full"
 						/>
 						<div class="flex justify-end gap-2">
 							<Button type="button" variant="secondary" size="sm" onclick={() => (deleteConfirmOpen = false)}>
@@ -405,7 +401,7 @@
 						type="button"
 						variant="outline"
 						size="md"
-						class="hit-slop-44 w-full justify-start gap-2 rounded-lg bg-surface-island px-4 py-3.5 text-status-danger hover:text-text-status-danger-on-soft shadow-xs hover:bg-danger-bg"
+						class="hit-slop-44 w-full justify-start gap-2 bg-surface-island px-4 py-3.5 text-status-danger hover:text-text-status-danger-on-soft shadow-xs hover:bg-danger-bg"
 						onclick={() => (deleteConfirmOpen = true)}
 					>
 						<Trash2 class="size-4" strokeWidth={1.75} />

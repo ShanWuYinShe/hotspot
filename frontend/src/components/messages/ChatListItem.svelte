@@ -3,6 +3,7 @@
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import UnreadBadge from '@/components/shared/UnreadBadge.svelte';
 	import type { ChatItem } from '@/lib/chat-list';
 
 	// 会话列表项（R13 重排层级；R16 三态重构）：
@@ -113,16 +114,8 @@
 				{chat.lastMessage || '暂无消息'}
 			</span>
 			<span class="flex shrink-0 items-center gap-1">
-				{#if hasUnread}
-					<!-- 未读徽标：紧凑型 h-5 px-2 + text-xxs（AGENTS 徽标契约）；选中态反色 -->
-					<span
-						class="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-2 text-xxs font-semibold leading-none tabular-nums {isSelected
-							? 'bg-text-on-accent text-accent-default'
-							: 'bg-accent-default text-text-on-accent'}"
-					>
-						{chat.unread}
-					</span>
-				{/if}
+				<!-- 未读徽标统一 UnreadBadge（99+ 截断 / tabular-nums / 选中态反色由 variant 表达） -->
+				<UnreadBadge count={chat.unread} variant={isSelected ? 'inverse' : 'accent'} />
 				{#if onMore}
 					<!-- 唯一操作入口：桌面 hover/focus 显现；移动端走行级长按（不常驻） -->
 					<button

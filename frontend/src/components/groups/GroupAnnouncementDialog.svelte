@@ -4,6 +4,8 @@
 	// 底部动作收敛到 Button 原语（取消=ghost / 发布=primary），与群详情页语言一致。
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
+	import Input from '@/components/forms/Input.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import { X, Pin } from '@lucide/svelte';
 
 	let {
@@ -68,23 +70,24 @@
 		</div>
 
 		<div class="mt-4 flex flex-col gap-3">
-			<label class="sr-only" for="group-announcement-title">公告标题</label>
-			<input
+			<!-- 弹层内无可见字段 label：读屏名称走 ariaLabel（与原 sr-only label 等价） -->
+			<Input
 				id="group-announcement-title"
-				bind:value={title}
-				oninput={(e) => (title = e.currentTarget.value.slice(0, 50))}
+				value={title}
+				onChange={(v) => (title = v.slice(0, 50))}
 				placeholder="公告标题"
-				class="w-full input-surface rounded-md px-3.5 py-2.5 text-md text-text-primary"
+				ariaLabel="公告标题"
+				maxlength={50}
 			/>
-			<label class="sr-only" for="group-announcement-content">公告内容</label>
-			<textarea
+			<Textarea
 				id="group-announcement-content"
-				bind:value={content}
-				rows="4"
-				oninput={(e) => (content = e.currentTarget.value.slice(0, 1000))}
+				value={content}
+				onChange={(v) => (content = v.slice(0, 1000))}
 				placeholder="公告内容…"
-				class="w-full resize-none input-surface rounded-md px-3.5 py-2.5 text-md leading-6 text-text-primary"
-			></textarea>
+				ariaLabel="公告内容"
+				rows={4}
+				maxlength={1000}
+			/>
 			<button
 				type="button"
 				onclick={() => (isPinned = !isPinned)}

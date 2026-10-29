@@ -4,6 +4,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import { X, Lock, MapPin } from '@lucide/svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { updateMoment } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
@@ -102,18 +103,21 @@
 			</button>
 		</div>
 
-		<div class="mt-4 input-surface rounded-md p-4">
-			<textarea
-				bind:value={text}
-				oninput={(e) => (text = e.currentTarget.value.slice(0, 500))}
-				placeholder="写下此刻发生的事…"
-				class="min-h-24 w-full resize-none bg-transparent text-md leading-7 text-text-primary placeholder:text-text-secondary"
-				aria-label="瞬间内容"
-			></textarea>
-			<div class="mt-2 flex items-center justify-end border-t border-border-default pt-2">
-				<span class="text-xs tabular-nums text-text-secondary">{text.length}/500</span>
-			</div>
-		</div>
+		<!-- 正文 + 字符计数：正文统一走 forms/Textarea（壳 px-3.5 py-3），计数走 footer -->
+		<Textarea
+			class="mt-4"
+			value={text}
+			onChange={(v) => (text = v.slice(0, 500))}
+			placeholder="写下此刻发生的事…"
+			ariaLabel="瞬间内容"
+			inputClass="min-h-24"
+		>
+			{#snippet footer()}
+				<div class="flex w-full justify-end border-t border-border-default pt-2">
+					<span class="tabular-nums">{text.length}/500</span>
+				</div>
+			{/snippet}
+		</Textarea>
 
 		<section aria-labelledby="edit-mood-label" class="mt-4">
 			<p id="edit-mood-label" class="mb-2 eyebrow">此刻氛围</p>
@@ -159,7 +163,7 @@
 				disabled={!canSubmit}
 				onclick={handleSubmit}
 				size="md"
-				class="rounded-full px-5"
+				class="px-5"
 			>
 				{submitting ? '保存中…' : '保存'}
 			</Button>

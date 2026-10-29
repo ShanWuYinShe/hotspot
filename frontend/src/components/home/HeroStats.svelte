@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Radar, ChevronRight } from '@lucide/svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import { formatCount } from '@/lib/utils';
 
 	// Hero 统计横幅——单一焦点 + 发丝分隔的数字节奏（R13「数字与秩序」母题）。
@@ -49,10 +50,10 @@
 				<div class="min-w-0">
 					<div class="flex items-center gap-2">
 						<p class="text-md font-semibold text-text-primary">实时附近</p>
-						<span class="inline-flex h-5 items-center justify-center gap-1 rounded-full bg-status-online/10 px-2 text-xxs font-medium leading-none text-text-status-online-on-soft">
+						<Badge tone="online">
 							<span class="size-1.5 rounded-full bg-status-online"></span>
 							实时雷达
-						</span>
+						</Badge>
 					</div>
 					<p class="text-xs mt-0.5 truncate text-text-secondary">
 						{rangeLabel}

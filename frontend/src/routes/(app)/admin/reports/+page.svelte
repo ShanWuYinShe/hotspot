@@ -7,15 +7,19 @@
 	import { Camera, Flag, MessageCircle, MessageSquare, UserRound, UsersRound } from '@lucide/svelte';
 	import { ROUTES } from '@/lib/routes';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
+	import Input from '@/components/forms/Input.svelte';
+	import Select from '@/components/forms/Select.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { SELECT, META_MONO } from '../shared/table';
+	import { META_MONO } from '../shared/table';
 	import { REPORT_REASON_LABELS, REPORT_STATUS_LABELS, REPORT_TARGET_LABELS } from '../shared/labels';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -53,12 +57,12 @@
 		() => `${status}|${targetType}`
 	);
 
-	// 状态徽章：待处理=accent 淡底（唯一强调）、已确认=online 淡底、已驳回=中性；
-	// 三档均走 tint 软底 + on-soft 文字（§20.13），不使用实底抢视觉。
-	const statusBadge: Record<ReportStatus, string> = {
-		pending: 'bg-accent-soft text-text-accent-on-soft',
-		resolved: 'bg-status-online-bg text-text-status-online-on-soft',
-		dismissed: 'bg-surface-subtle text-text-secondary'
+	// 状态徽章 tone：待处理=accent（唯一强调）、已确认=online、已驳回=中性；
+	// 三档均走 Badge 软底语义档（§20.13），不使用实底抢视觉。
+	const statusTone: Record<ReportStatus, 'accent' | 'online' | 'neutral'> = {
+		pending: 'accent',
+		resolved: 'online',
+		dismissed: 'neutral'
 	};
 
 	let judgeTarget = $state<AdminReportItem | null>(null);
@@ -127,11 +131,11 @@
 		<!-- 筛选行：状态 TabBar（左）+ 目标类型下拉（右）；移动端堆叠 -->
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 			<TabBar items={STATUS_TABS} value={status} onChange={(id) => (status = id)} />
-			<select bind:value={targetType} class={`${SELECT} w-full sm:w-auto`} aria-label="目标类型">
+			<Select value={targetType} onChange={(v) => (targetType = v)} ariaLabel="目标类型" density="compact" class="w-full sm:w-auto">
 				{#each TARGET_TYPES as t (t.value)}
 					<option value={t.value}>{t.label}</option>
 				{/each}
-			</select>
+			</Select>
 		</div>
 
 		{#if list.loading}
@@ -159,7 +163,7 @@
 							<div class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
 								<span class="flex items-center gap-1.5">
 									<TargetIcon class="size-3.5 shrink-0 text-text-secondary" strokeWidth={1.75} aria-hidden="true" />
-									<span class="badge bg-surface-subtle text-text-secondary">{REPORT_TARGET_LABELS[r.target_type]}</span>
+									<Badge>{REPORT_TARGET_LABELS[r.target_type]}</Badge>
 								</span>
 								{#if target.href}
 									<a
@@ -170,7 +174,7 @@
 								{:else}
 									<span class={`${META_MONO}`} title="该类型暂无独立详情页">{r.target_id}</span>
 								{/if}
-								<span class="badge {statusBadge[r.status]}">{REPORT_STATUS_LABELS[r.status]}</span>
+								<Badge tone={statusTone[r.status]}>{REPORT_STATUS_LABELS[r.status]}</Badge>
 								<time datetime={r.created_at} class="ml-auto text-xs tabular-nums text-text-secondary">
 									{formatDateTime(r.created_at)}
 								</time>
@@ -250,17 +254,23 @@
 						value={action}
 						onChange={(id) => (action = id as 'resolve' | 'dismiss')}
 					/>
-					<label class="flex flex-col gap-1.5">
-						<span class="text-xs text-text-secondary">处理备注（写入 handle_note 与审计日志，可留空）</span>
-						<textarea bind:value={note} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3.5 py-2 text-md text-text-primary"></textarea>
-					</label>
+					<Textarea
+						label="处理备注（写入 handle_note 与审计日志，可留空）"
+						value={note}
+						onChange={(v) => (note = v)}
+						rows={2}
+						maxlength={500}
+					/>
 					{#if action === 'resolve'}
-						<label class="flex flex-col gap-1.5">
-							<span class="text-xs text-text-secondary">
-								连带封禁天数{canBan ? '（留空 = 仅标记处理不封禁；0 = 永久）' : '（需要 admin.users.write 权限）'}
-							</span>
-							<input type="number" min={0} bind:value={banDays} disabled={!canBan} class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary" />
-						</label>
+						<Input
+							label={`连带封禁天数${canBan ? '（留空 = 仅标记处理不封禁；0 = 永久）' : '（需要 admin.users.write 权限）'}`}
+							type="number"
+							min={0}
+							value={banDays === null ? '' : String(banDays)}
+							onChange={(v) => (banDays = v.trim() === '' ? null : Number(v))}
+							disabled={!canBan}
+							density="compact"
+						/>
 					{/if}
 				</div>
 			</div>

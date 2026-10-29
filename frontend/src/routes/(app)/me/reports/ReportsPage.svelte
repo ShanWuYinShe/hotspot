@@ -8,6 +8,7 @@
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
@@ -26,12 +27,12 @@
 
 	type ReportsTab = 'all' | ReportStatus;
 
-	// 状态胶囊配色：待处理用 warning 软底（需要用户/管理员处理）、已处理 online 软底（安全语义）、
-	// 已驳回中性。软底必须配 on-soft 文字档（R12 口径），禁止淡底 + 同色语义字直配。
-	const STATUS_CLASS: Record<ReportStatus, string> = {
-		pending: 'bg-status-warning-bg text-text-status-warning-on-soft',
-		resolved: 'bg-status-online-bg text-text-status-online-on-soft',
-		dismissed: 'bg-surface-subtle text-text-secondary'
+	// 状态胶囊 tone：待处理 warning 软底（需要用户/管理员处理）、已处理 online 软底（安全语义）、
+	// 已驳回中性；颜色全部由 Badge tone 语义档表达（R12 口径：禁止淡底 + 同色语义字直配）。
+	const STATUS_TONE: Record<ReportStatus, 'warning' | 'online' | 'neutral'> = {
+		pending: 'warning',
+		resolved: 'online',
+		dismissed: 'neutral'
 	};
 
 	const TABS: { id: ReportsTab; label: string }[] = [
@@ -232,11 +233,7 @@
 							<span class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
 								举报{TARGET_LABELS[item.target_type]} · {REASON_LABELS[item.reason]}
 							</span>
-							<span
-								class="ml-auto inline-flex h-5 shrink-0 items-center justify-center rounded-full px-2 text-xxs font-medium leading-none {STATUS_CLASS[item.status]}"
-							>
-								{STATUS_LABELS[item.status]}
-							</span>
+							<Badge class="ml-auto shrink-0" tone={STATUS_TONE[item.status]}>{STATUS_LABELS[item.status]}</Badge>
 						</div>
 						{#if item.description}
 							<p class="text-xs text-text-secondary line-clamp-2">{item.description}</p>

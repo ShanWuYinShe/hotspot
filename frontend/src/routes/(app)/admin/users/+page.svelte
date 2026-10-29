@@ -6,18 +6,22 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import { Users } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import Input from '@/components/forms/Input.svelte';
+	import Select from '@/components/forms/Select.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import {
 		TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS,
-		ROW_BTN, ROW_BTN_DANGER, TOOLBAR, SEARCH_WRAP, SELECT, META, META_MONO
+		ROW_BTN, ROW_BTN_DANGER, TOOLBAR, SEARCH_WRAP, META, META_MONO
 	} from '../shared/table';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
@@ -112,16 +116,28 @@
 			<div class={SEARCH_WRAP}>
 				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索用户…" ariaLabel="搜索用户" />
 			</div>
-			<select bind:value={searchField} class={SELECT} aria-label="搜索字段">
+			<Select
+				value={searchField}
+				onChange={(v) => (searchField = v as 'nickname' | 'user_id' | 'login_id')}
+				ariaLabel="搜索字段"
+				density="compact"
+				class="shrink-0"
+			>
 				<option value="nickname">按昵称</option>
 				<option value="user_id">按用户 ID</option>
 				<option value="login_id">按登录 ID</option>
-			</select>
-			<select bind:value={userType} class={SELECT} aria-label="注册类型">
+			</Select>
+			<Select
+				value={userType}
+				onChange={(v) => (userType = v as '' | UserType)}
+				ariaLabel="注册类型"
+				density="compact"
+				class="shrink-0"
+			>
 				<option value="">全部类型</option>
 				<option value="normal">正式</option>
 				<option value="temp">临时</option>
-			</select>
+			</Select>
 		</div>
 
 		<TabBar items={STATUS_TABS} value={status} onChange={(id) => (status = id)} />
@@ -166,12 +182,12 @@
 									<td class={TD_SECONDARY}>{u.login_id}</td>
 									<td class={TD}>
 										{#if u.status === 'banned'}
-											<span class="badge bg-danger-bg/50 text-text-status-danger-on-soft">已封禁</span>
+											<Badge tone="danger">已封禁</Badge>
 											<span class={`ml-1.5 ${META}`}>
 												{u.banned_until ? `至 ${formatDateTime(u.banned_until)}` : '永久'}
 											</span>
 										{:else}
-											<span class="badge bg-surface-subtle text-text-secondary">正常</span>
+											<Badge>正常</Badge>
 										{/if}
 									</td>
 									<td class={TD_SECONDARY}>{u.email ?? '—'}</td>
@@ -213,15 +229,16 @@
 	>
 		{#snippet extra()}
 			<div class="flex flex-col gap-3">
-				<label class="flex flex-col gap-1.5">
-					<span class="text-xs text-text-secondary">原因（记入审计日志，可留空）</span>
-					<textarea bind:value={banReason} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3.5 py-2 text-md text-text-primary"></textarea>
-				</label>
+				<Textarea label="原因（记入审计日志，可留空）" value={banReason} onChange={(v) => (banReason = v)} rows={2} maxlength={500} />
 				{#if banTarget?.status !== 'banned'}
-					<label class="flex flex-col gap-1.5">
-						<span class="text-xs text-text-secondary">封禁天数（留空 = 永久封禁）</span>
-						<input type="number" min={1} bind:value={banDays} class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary" />
-					</label>
+					<Input
+						label="封禁天数（留空 = 永久封禁）"
+						type="number"
+						min={1}
+						value={banDays === null ? '' : String(banDays)}
+						onChange={(v) => (banDays = v.trim() === '' ? null : Number(v))}
+						density="compact"
+					/>
 				{/if}
 			</div>
 		{/snippet}

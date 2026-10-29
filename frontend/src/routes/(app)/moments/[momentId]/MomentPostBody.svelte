@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { MapPin, Heart, MessageCircle, Share2, Bookmark, Check } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
@@ -175,9 +176,7 @@
 	<!-- 3. 话题标签：标准胶囊档（h-6 + leading-none），只保留一层 accent 淡底 -->
 	{#if moment.tag}
 		<div class="pb-4">
-			<span class="inline-flex h-6 items-center justify-center rounded-full bg-accent-soft px-2.5 text-xs font-medium leading-none text-text-accent-on-soft">
-				#{moment.tag}
-			</span>
+			<Badge size="md" tone="accent">#{moment.tag}</Badge>
 		</div>
 	{/if}
 
@@ -210,7 +209,7 @@
 				{#if moment.images.length > 1}
 					<button
 						type="button"
-						class="hover-btn absolute bottom-3 right-3 inline-flex h-6 items-center justify-center rounded-full bg-surface-media-scrim-strong px-2.5 text-xxs font-medium leading-none text-content-inverse hover:opacity-hover focus-ring shadow-xs"
+						class="media-badge hover-btn absolute bottom-3 right-3 shadow-xs hover:opacity-hover focus-ring"
 						aria-label={`查看全部 ${moment.images.length} 张图片`}
 						onclick={() => {
 							viewerIndex = 0;

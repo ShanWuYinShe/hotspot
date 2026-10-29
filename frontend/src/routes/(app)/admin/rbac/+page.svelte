@@ -5,8 +5,12 @@
 	import { hasAdminPermission, isSuperAdmin } from '@/stores/admin.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import Input from '@/components/forms/Input.svelte';
+	import Checkbox from '@/components/forms/Checkbox.svelte';
+	import Textarea from '@/components/forms/Textarea.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
@@ -293,9 +297,9 @@
 									<td class={`${TD_SECONDARY} max-w-56 truncate`} title={r.description ?? ''}>{r.description ?? '—'}</td>
 									<td class={TD}>
 										{#if r.permissions.includes('*')}
-											<span class="badge bg-accent-soft text-text-accent-on-soft">全部权限</span>
+											<Badge tone="accent">全部权限</Badge>
 										{:else}
-											<span class="badge bg-surface-subtle text-text-secondary">{r.permissions.length} 项</span>
+											<Badge>{r.permissions.length} 项</Badge>
 										{/if}
 									</td>
 									<td class={TD_ACTIONS}>
@@ -358,9 +362,9 @@
 									</td>
 									<td class={TD}>
 										{#if a.permissions.includes('*')}
-											<span class="badge bg-accent-soft text-text-accent-on-soft">superadmin</span>
+											<Badge tone="accent">superadmin</Badge>
 										{:else}
-											<span class="badge bg-surface-subtle text-text-secondary">{a.permissions.length} 项</span>
+											<Badge>{a.permissions.length} 项</Badge>
 										{/if}
 									</td>
 									<td class={TD}>{a.roles.map((r) => r.name).join('、') || '—'}</td>
@@ -383,14 +387,8 @@
 			<div class="px-5 pt-6 pb-4">
 				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">{editTarget ? '编辑角色' : '新建角色'}</Dialog.Title>
 				<div class="mt-4 flex flex-col gap-3">
-					<label class="flex flex-col gap-1.5">
-						<span class="text-xs text-text-secondary">名称</span>
-						<input bind:value={roleName} maxlength={50} class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary" />
-					</label>
-					<label class="flex flex-col gap-1.5">
-						<span class="text-xs text-text-secondary">描述（可留空）</span>
-						<textarea bind:value={roleDesc} rows={2} maxlength={200} class="input-surface resize-none rounded-md px-3.5 py-2 text-md text-text-primary"></textarea>
-					</label>
+					<Input label="名称" value={roleName} onChange={(v) => (roleName = v)} maxlength={50} density="compact" />
+					<Textarea label="描述（可留空）" value={roleDesc} onChange={(v) => (roleDesc = v)} rows={2} maxlength={200} />
 				</div>
 			</div>
 			<div class="flex justify-end gap-2 px-5 pb-5">
@@ -411,22 +409,27 @@
 				</Dialog.Description>
 				<div class="mt-4 grid max-h-96 grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-2">
 					{#if isSuper}
-						<label class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text-primary hover:bg-interactive-hover">
-							<input type="checkbox" checked={permDraft.has('*')} onchange={() => togglePerm('*')} />
+						<Checkbox
+							checked={permDraft.has('*')}
+							onChange={() => togglePerm('*')}
+							class="rounded-md px-2 py-1.5 hover:bg-interactive-hover"
+						>
 							<span class="font-mono text-xs">*</span>（全部权限）
-						</label>
+						</Checkbox>
 					{/if}
 					{#each permGroups as g (g.domain)}
 						<!-- 组标题跨两列（sm 下网格），组内项按域聚集；用 eyebrow 档与全站分组标题一致 -->
 						<p class="eyebrow col-span-full mt-2 first:mt-0">{g.label}</p>
 						{#each g.items as p (p.key)}
-							<label class="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-interactive-hover" title={p.description}>
-								<input type="checkbox" class="mt-0.5" checked={permDraft.has(p.key)} onchange={() => togglePerm(p.key)} />
-								<span class="min-w-0">
-									<span class="block font-mono text-xs text-text-primary">{p.key}</span>
-									<span class="block truncate text-xxs text-text-secondary">{p.description}</span>
-								</span>
-							</label>
+							<Checkbox
+								checked={permDraft.has(p.key)}
+								onChange={() => togglePerm(p.key)}
+								class="rounded-md px-2 py-1.5 hover:bg-interactive-hover"
+							>
+								<span class="block font-mono text-xs text-text-primary">{p.key}</span>
+								<!-- 描述可能被 truncate：title 挂在描述本体上（原 label 整行的 title） -->
+								<span class="block truncate text-xxs text-text-secondary" title={p.description}>{p.description}</span>
+							</Checkbox>
 						{/each}
 					{/each}
 				</div>
@@ -455,25 +458,32 @@
 			<div class="px-5 pt-6 pb-4">
 				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">授予平台管理员</Dialog.Title>
 				<div class="mt-4 flex flex-col gap-3">
-					<label class="flex flex-col gap-1.5">
-						<span class="text-xs text-text-secondary">用户 ID</span>
-						<input bind:value={awardUserId} placeholder="user_xxx" class="input-surface rounded-md px-3.5 py-2 text-md font-mono text-text-primary" />
-					</label>
+					<!-- user_id 等宽展示（原输入框的 font-mono 业务语义保留） -->
+					<Input
+						label="用户 ID"
+						value={awardUserId}
+						onChange={(v) => (awardUserId = v)}
+						placeholder="user_xxx"
+						inputClass="font-mono"
+						density="compact"
+					/>
 					{#if isSuper}
-						<label class="flex items-center gap-2 text-sm text-text-primary">
-							<input type="checkbox" bind:checked={awardAll} />
+						<Checkbox checked={awardAll} onChange={(checked) => (awardAll = checked)}>
 							授予全部权限（superadmin；与角色互斥）
-						</label>
+						</Checkbox>
 					{/if}
 					{#if !awardAll}
 						<div class="flex flex-col gap-1.5">
 							<span class="text-xs text-text-secondary">选择角色（必选）</span>
 							<div class="flex flex-col gap-1">
 								{#each roles as r (r.role_id)}
-									<label class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text-primary hover:bg-interactive-hover">
-										<input type="checkbox" checked={awardRoleIds.has(r.role_id)} onchange={() => toggleAwardRole(r.role_id)} />
+									<Checkbox
+										checked={awardRoleIds.has(r.role_id)}
+										onChange={() => toggleAwardRole(r.role_id)}
+										class="rounded-md px-2 py-1.5 hover:bg-interactive-hover"
+									>
 										{r.name}
-									</label>
+									</Checkbox>
 								{/each}
 							</div>
 						</div>
