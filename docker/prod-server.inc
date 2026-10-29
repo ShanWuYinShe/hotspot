@@ -1,26 +1,17 @@
-# ── HotSpot 生产 server{} 公共片段（80/443 共用）──────────────────
+# ── HotSpot 生产 443 server{} 公共片段（仅 443 使用）────────────
 # 位置类配置与仓库 docker/nginx.conf 保持一致；依赖同目录挂载的
-# headers.inc / proxy.inc / amap.inc。
+# headers.inc / proxy.inc / amap.inc。80 端口端点定义在 nginx.prod-tls.conf。
+#
+# 入口访问控制：本片段只挂在 443 server 上，来源鉴权由 TLS 层的 Cloudflare
+# Authenticated Origin Pulls（mTLS）完成——nginx 握手阶段即校验 CF 回源客户端
+# 证书（ssl_verify_client on，见 nginx.prod-tls.conf），直连无证书一律 400，
+# 请求不会进入本片段。因此不再维护 CF 回源网段 allow/deny 白名单：旧白名单与
+# real_ip 还原互斥（CF-Connecting-IP 改写后的 $remote_addr 是真实访客 IP，
+# 永远匹配不上 CF 网段），是 2026-10-30 全站 403 事故的根因。
 
 root /usr/share/nginx/html;
 client_max_body_size 100m;
 server_tokens off;
-
-# ── 入口访问控制：仅 Cloudflare 回源网段与容器内本机 ──────────────
-# 本站仅经 CF full proxy 对外服务，源站 IPv6 全网可路由，不锁定即可被
-# 直连绕过 CF 的 WAF/边缘限流。80/443 双块共用本 include，一并生效。
-# 网段来源：https://www.cloudflare.com/ips-v6（2026-09 核对）
-# 127.0.0.1/::1 供容器 healthcheck（wget http://127.0.0.1/）与本地排查。
-allow 127.0.0.1;
-allow ::1;
-allow 2400:cb00::/32;
-allow 2606:4700::/32;
-allow 2803:f800::/32;
-allow 2405:b500::/32;
-allow 2405:8100::/32;
-allow 2a06:98c0::/29;
-allow 2c0f:f248::/32;
-deny all;
 
 include /etc/nginx/conf.d/headers.inc;
 

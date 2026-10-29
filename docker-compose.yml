@@ -258,7 +258,9 @@ services:
       - ./docker/amap.default.inc:/etc/nginx/conf.d/amap.inc:ro
       - frontend_build:/usr/share/nginx/html:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
+      # 生产 80 端口对公网只做 301，跟随后会落到 https 被 mTLS 拒绝——健康检查
+      # 必须打本机端点 /healthz（dev 网关同样提供该端点）。
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/healthz || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

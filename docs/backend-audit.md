@@ -190,10 +190,14 @@
   替换；顺带修复 main 上「queryListFollowing/Followers SQL 已摘列但 scan 仍旧
   列数」的存量 bug（真 PG 下会 scan 报错）。
 
-**部署拓扑已确认（2026-10-23，站长）**：全部流量必经 Cloudflare 回源，源站
-mTLS origin-pull + CF 网段 allow/deny——故 CF-Connecting-IP 由 CF 强制设置、
-后端信任 CF 头是正确口径（**不要清洗该头**）；此前「源站可直连伪造 IP」的
-担忧不成立，nginx 侧只需 real_ip 还原供 limit_req/X-Real-IP 使用。
+**部署拓扑已确认（2026-10-23，站长；2026-10-30 调整）**：全部流量必经
+Cloudflare 回源，源站以 mTLS origin-pull（Global AOP，CF 共享证书）作为唯一
+入口闸——直连无客户端证书一律 400，80 端口对公网只做 301。原「CF 网段
+allow/deny」白名单已移除：它与 real_ip 还原互斥（CF-Connecting-IP 改写后的
+$remote_addr 是真实访客 IP，命中不了 CF 网段，2026-10-30 全站 403 事故根因），
+且写死网段易过时。real_ip 还原改为只在 443 server 内信任所有对端（能到达即
+已通过 mTLS），CF-Connecting-IP 仍由 CF 强制设置、可信——后端信任 CF 头的
+口径不变（**不要清洗该头**）。
 
 ## P2 第三批修复（2026-10-23，安全/正确性/配置类）
 
