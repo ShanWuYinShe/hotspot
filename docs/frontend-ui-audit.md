@@ -892,7 +892,7 @@
 
 - 同轮收口：CreateSheet「谁可以看到」两列自绘按钮（49px 扁条）→ `TabBar variant="segmented"`（与 MomentEditDialog 同形）。
 - 代码：`components/ui/FollowButton.svelte`（chip/onMedia/pointer-events-auto）、`components/home/HomeFeedItem.svelte`、`components/moments/MomentCard.svelte`、`components/layout/page/PageHeader.svelte`（floating）、`routes/(app)/moments/[momentId]/{+page,MomentPostBody}.svelte`、`shared/CommentInputBar.svelte`、`components/overlays/CreateSheet.svelte`。
-- 测试：HomeFeedItem 10、MomentCard 6、PageHeader 7、MomentPostBody 3、CommentInputBar 4 全绿（新增交互/媒体契约 10 条）；全量 check/test/build 见提交信息与 CI。
+- 测试：HomeFeedItem 10、MomentCard 6、PageHeader 7、MomentPostBody 3、CommentInputBar 4 全绿（新增交互/媒体契约 13 条：HomeFeedItem +2 / MomentCard +2 / PageHeader +2 / MomentPostBody +3 / CommentInputBar +4）；全量 check/test/build 见提交信息与 CI。
 
 ### 已知取舍
 
