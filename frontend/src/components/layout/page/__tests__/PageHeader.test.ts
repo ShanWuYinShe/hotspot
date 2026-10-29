@@ -36,46 +36,35 @@ describe('PageHeader', () => {
 	});
 });
 
-describe('PageHeader floating 沉浸式变体（2026-10-29 详情页）', () => {
-	it('不画整条 glass 横杠：根节点无 page-header-scroll，透明+仅圆钮可交互', () => {
+describe('PageHeader floating 悬浮工具条（2026-10-29 详情页）', () => {
+	it('整行是一块悬浮玻璃面板：返回 / 标题 / 更多同处一个容器，而不是孤立圆钮', () => {
 		const { container } = render(PageHeader, {
 			props: { title: '瞬间详情', variant: 'floating', onBack: () => {}, showBackOnDesktop: false }
 		});
 		const header = container.querySelector('header') as HTMLElement;
 		expect(header.className).not.toContain('page-header-scroll');
 		expect(header.className).toContain('pointer-events-none');
-		// 标题只保留读屏语义，视觉上不出现标题横条
+		expect(header.className).toContain('sticky');
+		const bar = container.querySelector('[data-floating-toolbar]') as HTMLElement;
+		expect(bar).toBeTruthy();
+		// 整行共享同一表面：圆角 + 半透明底 + 毛玻璃 + 细边 + 轻阴影
+		expect(bar.className).toContain('rounded-md');
+		expect(bar.className).toContain('bg-surface-primary/85');
+		expect(bar.className).toContain('backdrop-blur-md');
+		expect(bar.className).toContain('border-border-default/60');
+		expect(bar.className).toContain('shadow-raised-sm');
+		// 标题与返回都在同一面板内，且标题可见（不再 sr-only）
 		const title = screen.getByRole('heading', { level: 1 });
-		expect(title.className).toContain('sr-only');
-		// floating 下桌面也显示返回（唯一离开路径）
-		expect(screen.getByLabelText('返回')).toBeTruthy();
+		expect(title.className).not.toContain('sr-only');
+		expect(bar.contains(title)).toBe(true);
+		expect(bar.contains(screen.getByLabelText('返回'))).toBe(true);
 	});
 
 	it('默认变体仍是可见标题 + 可滚动 glass 页头', () => {
 		const { container } = render(PageHeader, { props: { title: '附近动态' } });
 		const header = container.querySelector('header') as HTMLElement;
 		expect(header.className).toContain('page-header-scroll');
+		expect(container.querySelector('[data-floating-toolbar]')).toBeNull();
 		expect(screen.getByRole('heading', { level: 1 }).className).not.toContain('sr-only');
-	});
-});
-
-describe('PageHeader floating 随正文滚走（2026-10-29 用户反馈「按钮压住内容」）', () => {
-	it('floating + sticky={false}：页头留在文档流，不再吸顶悬浮', () => {
-		const { container } = render(PageHeader, {
-			props: { title: '瞬间详情', variant: 'floating', sticky: false, onBack: () => {} }
-		});
-		const header = container.querySelector('header') as HTMLElement;
-		expect(header.className).not.toContain('sticky');
-		// 工具条本身仍可交互（子按钮 pointer-events-auto），但根不再吸顶
-		expect(header.className).toContain('pointer-events-none');
-		expect(screen.getByLabelText('返回')).toBeTruthy();
-	});
-
-	it('floating 默认仍吸顶（其他沉浸页可继续使用覆盖式页头）', () => {
-		const { container } = render(PageHeader, {
-			props: { title: '瞬间详情', variant: 'floating', onBack: () => {} }
-		});
-		const header = container.querySelector('header') as HTMLElement;
-		expect(header.className).toContain('sticky');
 	});
 });

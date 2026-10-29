@@ -24,13 +24,11 @@
 	// reduced-motion 由全局规则瞬时切换。监听最近的滚动容器，passive + rAF 节流。
 	// 设备范围：桌面、平板和手机通用。
 	//
-	// variant="floating"（2026-10-29，详情页沉浸式）：**永远不画整条背景/底边/阴影**，
-	// 只保留左侧返回圆钮 + 右侧操作圆钮悬浮在画布上（标题仅 sr-only 保留语义）。
-	// 依据 NN/g「Sticky headers」：持久页头只有在不抢内容、chrome 占比最小时才成立；
-	// 整条 glass 带在图片详情页会把内容切出一条明显横杠（用户反馈的真实问题）。
-	// 2026-10-29 补充（用户反馈「按钮压在图片上像内容重叠」）：floating 支持 sticky={false}
-	// 配合 SplitPageLayout headerSticky={false}，让工具条留在文档流、随正文滚走——
-	// 阅读/评论时零遮挡；返回走浏览器/系统返回与全局「回到顶部」。
+	// variant="floating"（2026-10-29，详情页沉浸式）：**整行收进一块悬浮玻璃工具条**
+	// （返回 + 标题 + 更多在同一面板内，圆角/细边/半透明底/轻阴影），不再让两枚按钮
+	// 各自孤立地浮在内容上——用户反馈「只有两个按钮悬浮很奇怪，要整行区域的和谐感」。
+	// 工具条吸顶，内容从其下方滚过并透出毛玻璃；没有通栏硬边，不形成割裂横条。
+	// 依据 NN/g「Sticky headers」：页头只有在不抢内容、chrome 占比小时才成立。
 
 	let {
 		title,
@@ -139,50 +137,63 @@
 	// header 统一预留黄金呼吸感：
 	// - 纯标题时标题/副标题/操作组与下边框之间留 pb-4.5（18px），上下留白匀称舒展，杜绝标题与分割线紧贴粘连；
 	// - below 存在时（搜索框/Tab 栏等），给 below 内容与下边框之间留 pb-3.5（14px）。
-	const headerPadding = $derived(floating ? 'pt-3 pb-1' : below ? 'pt-4 pb-3.5' : 'pt-4.5 pb-4.5');
+	const headerPadding = $derived(floating ? 'pt-2 pb-2' : below ? 'pt-4 pb-3.5' : 'pt-4.5 pb-4.5');
 </script>
 
 <header
 	use:headerScroll
 	class={cn(
 		floating
-			? ['shrink-0 pointer-events-none', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]']
+			? 'shrink-0 sticky top-0 z-[var(--cst-z-sticky)] pointer-events-none'
 			: ['shrink-0 page-header-scroll', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]', scrolled && 'page-header-scrolled'],
 		className
 	)}
 >
 	<ContentColumn {maxWidth} class={cn(headerPadding, contentClassName)}>
+		{#if floating}
+			<!-- 整行悬浮工具条：返回 / 标题 / 更多收进同一块玻璃面板，而不是两枚孤立圆钮 -->
+			<div
+				data-floating-toolbar
+				class="pointer-events-auto flex items-center gap-2 rounded-md border border-border-default/60 bg-surface-primary/85 px-1.5 py-1 shadow-raised-sm backdrop-blur-md"
+			>
+				{#if showBack}
+					<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={42} />
+				{:else}
+					<span class="size-[42px] shrink-0" aria-hidden="true"></span>
+				{/if}
+				<h1 class="min-w-0 flex-1 truncate text-center text-md font-semibold text-text-primary">{title}</h1>
+				{#if trailing}
+					<div class="shrink-0">{@render trailing()}</div>
+				{:else}
+					<span class="size-[42px] shrink-0" aria-hidden="true"></span>
+				{/if}
+			</div>
+		{:else}
 			<div class="flex items-center gap-3">
 				{#if showBack}
 					<!-- 42：返回是导航关键动作，视觉与命中区大于普通 header 图标钮（36），易点不误触 -->
-					<div class={floating ? 'pointer-events-auto' : ''}>
-						<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={42} />
-					</div>
+					<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={42} />
 				{/if}
 			<!-- 标题列恒为弹性列（flex-1 min-w-0）：窄屏下标题区先让位收缩，
 			     trailing 操作簇由 shrink-0 锁定不被压缩；溢出优先级 = 操作钮 > 装饰 chip > 副标题尾字。
 			    （此前有 trailing 时标题列无 flex-1，trailing 又无 shrink-0，360px 级窄屏下
 			     在线 chip 与副标题同时被压折行。） -->
 			<div class="min-w-0 flex-1">
-				{#if floating}
-					<!-- 沉浸式：视觉上不出现标题横条，只保留读屏/SEO 语义 -->
-					<h1 class="sr-only">{title}</h1>
-				{:else}
-					<h1 class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
-					{#if subtitle}
-						<p class="mt-1 flex min-w-0 items-center gap-1 text-text-secondary {SUBTITLE_SIZE_CLASS[subtitleSize]}">
-							{#if subtitleIcon}
-								<span class="flex shrink-0 items-center">{@render subtitleIcon()}</span>
-							{/if}
-							<span class="truncate">{subtitle}</span>
-						</p>
-					{/if}
+				<h1 class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
+				{#if subtitle}
+					<p class="mt-1 flex min-w-0 items-center gap-1 text-text-secondary {SUBTITLE_SIZE_CLASS[subtitleSize]}">
+						{#if subtitleIcon}
+							<span class="flex shrink-0 items-center">{@render subtitleIcon()}</span>
+						{/if}
+						<span class="truncate">{subtitle}</span>
+					</p>
 				{/if}
 			</div>
 			{#if trailing}
-				<div class={floating ? 'shrink-0 pointer-events-auto' : 'shrink-0'}>{@render trailing()}</div>
+				<div class="shrink-0">{@render trailing()}</div>
 			{/if}
 		</div>
+		{/if}
 		{#if below && !floating}
 			{@render below()}
 		{/if}

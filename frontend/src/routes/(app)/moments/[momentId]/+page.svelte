@@ -544,14 +544,13 @@
 <SplitPageLayout
 	contentMaxWidth="58rem"
 	contentClassName="animate-fade-in pt-2 pb-6"
-	headerSticky={false}
 >
 	{#snippet header()}
 		<!-- 命名对齐全站术语「瞬间」(左栏/搜索/设置均用瞬间;Gemini 审查 r19)
-		     variant="floating" + sticky={false} + headerSticky={false}：详情页工具条留在文档流、
-		     随正文滚走——顶部不再出现 glass 横杠，也不会像悬浮按钮那样永久压在图片/评论上
-		     （2026-10-29 用户反馈「返回/更多与内容重叠」）。标题仅 sr-only 供读屏。 -->
-		<PageHeader variant="floating" sticky={false} title="瞬间详情" onBack={() => smartBack()}>
+		     variant="floating"：整行收进一块悬浮玻璃工具条（返回 + 标题 + 更多同一面板），
+		     不再出现两条孤立悬浮圆钮压在内容上的割裂感（2026-10-29 用户反馈「要有整行悬浮的和谐感」）。
+		     工具条吸顶，内容从下方滚过并被毛玻璃承接，不形成通栏硬边。 -->
+		<PageHeader variant="floating" title="瞬间详情" onBack={() => smartBack()}>
 			{#snippet trailing()}
 				<DropdownMenu.Root bind:open={moreOpen}>
 					<div bind:this={moreMenuEl} class="relative">
