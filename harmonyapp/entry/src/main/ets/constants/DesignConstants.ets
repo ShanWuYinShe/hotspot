@@ -302,7 +302,7 @@ export interface ComponentConstants {
   AVATAR_SIZE: AvatarSizes;
   BUTTON_HEIGHT: number;
   INPUT_HEIGHT: number;
-  /** 搜索输入框高度（39，对齐前端 SearchInput 移动端实测 39.14 = py-2.5+行高+border） */
+  /** 搜索输入框高度（39；对齐前端 SearchInput：2026-10-29 输入族重构后 = py-2(8) + text-md 行高 21 + border 2） */
   SEARCH_INPUT_HEIGHT: number;
   /** 在线角标固定档（对齐前端 OnlineDot sizeMap：sm 8 / md 10 / lg 12） */
   ONLINE_DOT_MD: number;

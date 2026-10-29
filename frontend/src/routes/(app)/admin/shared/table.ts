@@ -74,5 +74,6 @@ export const TOOLBAR = 'flex flex-wrap items-center gap-2.5';
 /** 搜索框容器（桌面限宽 320，移动占满一行） */
 export const SEARCH_WRAP = 'w-full max-w-80';
 
-/** 下拉筛选控件（与 SearchInput 同圆角/同高度） */
-export const SELECT = 'input-surface shrink-0 rounded-md px-3 py-2 text-xs text-text-primary';
+/** 下拉筛选控件（≈39px 紧凑档：py-2 + text-md；原生 select 实测 37px，与 input 的 39px
+ *  同排视觉无明显落差；圆角随表单族 rounded-md） */
+export const SELECT = 'input-surface shrink-0 rounded-md px-3.5 py-2 text-md text-text-primary';

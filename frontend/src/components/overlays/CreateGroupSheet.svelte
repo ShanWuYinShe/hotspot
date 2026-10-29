@@ -120,10 +120,10 @@
 			<!-- Group name -->
 			<div>
 				<label class="text-xs tracking-field uppercase text-text-secondary" for="group-name">群组名称 *</label>
-				<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-md input-surface h-11.5" >
+				<div class="flex items-center gap-2.5 mt-1.5 px-3.5 py-2.5 rounded-md input-surface">
 					<input
 						id="group-name"
-						class="flex-1 bg-transparent text-text-primary text-sm"
+						class="flex-1 bg-transparent text-text-primary text-md"
 						placeholder="给你的群组起个名字…"
 						bind:value={name}
 						maxlength={30}
@@ -135,10 +135,10 @@
 			<!-- Description -->
 			<div>
 				<label class="text-xs tracking-field uppercase text-text-secondary" for="group-desc">简介</label>
-				<div class="mt-1.5 px-4 py-3 rounded-md input-surface">
+				<div class="mt-1.5 px-3.5 py-3 rounded-md input-surface">
 					<textarea
 						id="group-desc"
-						class="w-full bg-transparent resize-none text-text-primary text-sm min-h-18"
+						class="w-full bg-transparent resize-none text-text-primary text-md min-h-18"
 						placeholder="描述一下这个群组的主题…"
 						bind:value={desc}
 						maxlength={150}

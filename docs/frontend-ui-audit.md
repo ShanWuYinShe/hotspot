@@ -600,6 +600,7 @@
 
 ## 2026-10-28 补充（Round 16：运行时响应 / 消息页 / 导航可读性）
 
+
 **范围**：Web 前端 30 文件（24 改 + 4 新：`ChatColumn.svelte`、`nav-preload.ts`、`nav-preload.test.ts`、
 `ChatMessageList.test.ts`）+ 文档 4 + skill 3。基线 `d311819b`。方案契约见 `docs/design-system.md` §21.12；
 证据根 `.worktree/r16-runtime-polish/.workwork/`（perf / messages / nav / audit / lead）。
@@ -763,3 +764,39 @@
   变化频率（交互改版）而非特效实现。
 - 极端快速整卡跳变（鼠标逐帧在两卡中心间跳）实测仍会短时拉高 GPU（动画重启频率上限），
   已从 0.19 降到 0.14 cores 量级。
+
+## 2026-10-29 输入类 UI 重构（搜索框 / 表单输入 / input-surface）
+
+**范围**：`forms/SearchInput`、`forms/Input`、`input-surface` 表面体系及其消费方（搜索页/消息/关系/我的群组/管理后台/地图面板/弹层/登录/设置/编辑资料），跨端同步 `harmonyapp SearchPageHeader`。改前证据：`.workwork/search-redesign/{before,audit-shots,audit-data,audit.md}`（72 个可见输入实例的实测盘点）。
+
+### 改前基线（2026-10-29 实测）
+
+- 72 个可见输入实例 → **9 档高度**（32.66–44px）、**3 档字号**（11/12/14）、8 种 padding；搜索框两派圆角（hero 胶囊 / 其余 16）。
+- 聚焦前后边框对比仅 **1.24–1.45:1**（<3:1），浅色主题下肉眼不可辨；axe 不覆盖该项。
+- placeholder 叠 0.6 透明度 → 实测 **2.43–4.0:1**（<4.5）；清空钮 25×25 无 hit-slop。
+- vibrant 给所有 `.input-surface` 加 `backdrop-filter: blur(16px)`（大面积毛玻璃，违反性能红线）；搜索页传非 token 的 `shadow-xs`。
+
+### 改后契约（详见 `docs/ui-components.md`「输入族契约」/ skill `hotspot-frontend-style`）
+
+- 搜索 = 胶囊 39px（`px-3.5 py-2` + `text-md`）/ 图标 16 / 清空钮 32px 视觉 + hit-slop 44 / `ariaLabel` 按页面语义 / 清空回焦 / Esc 清空 / ⌘K 提示；表单 = 16 圆角 43px（`px-4 py-2.5` + `text-md`）。
+- 表面单一来源 `.input-surface`：静态字段底 + 1px border；hover 升 border-strong；focus accent 1px + 内缘 1px（视觉 2px）+ 3px 柔光环；error danger + danger 光环；disabled 弱化底；placeholder `text-secondary` + `opacity:1`。
+- 原语消费方不得传 padding/圆角/字号覆盖；裸 `.input-surface` 只允许 43px（`px-4 py-2.5`）/ 39px（`px-3.5 py-2`）两档，textarea 走内容 padding；`/search` hero 桌面 `max-w-3xl`（布局例外已登记）；主题文件不得覆写输入表面；⌘K / Ctrl+K 全局唤出搜索（决策抽到 `lib/search-shortcut.ts` + 9 条单测；弹层打开/非搜索页表单编辑中让位，已在搜索页则聚焦全选）。弹层内 Esc 先清空输入、空输入再交给弹层关闭（`stopPropagation`），避免「清空 + 连关」；Enter/Escape 已加 IME `isComposing` 防护。
+
+### 验收（2026-10-29，worktree 独立环境 8889，最终版本）
+
+- **静态检查**：宿主机全量 `bun run check`（`svelte-kit sync + svelte-check --tsgo + eslint + check:theme 四联`）→ svelte-check **0 error / 0 warning**、eslint 通过、主题一致性/跨端色彩/跨端刻度/类名有效性四联全绿。
+- **测试**：`bun run test` **119 files / 670 tests 全绿**（新增 `input-surface-contract` 9 条、SearchInput 11 条、Input 17 条、`search-shortcut` 9 条；既有用例全部保持）。
+- **构建**：`bun run build` 通过（先按 frontend/AGENTS.md 停掉 frontend 容器，避免与 dev server 共享 `.svelte-kit`；adapter-static 写出 `frontend/build/`，日志见主工作树 `.workwork/search-redesign/build.log`）；harmonyapp `assembleApp --no-daemon` **BUILD SUCCESSFUL**（两轮：首次同步 + 聚焦色/投影/静态边修正后复审；日志见主工作树 `.workwork/search-redesign/harmony-build.log`，CI 不覆盖鸿蒙，tag 前仍需人工确认本机可编）。
+- **a11y**：`audit:a11y --base http://localhost:8889` **PASS**，35 页 0 违规（serious/critical/moderate/minor 全 0；报告 worktree `.workwork/browser-check/a11y-20261029-134450`）。
+- **触控**：`audit:touch --base http://localhost:8889` **PASS**，35 页 / 890 元素 / 计入分母 810 / ≥44 通过 763 / 登记例外 47 / **未登记离群 0** / 覆盖率 94.2%（报告 `.../touch-20261029-134751`）。
+- **视觉 QA**：报告主工作树 `.workwork/search-redesign/qa-after/qa-after.md` + **56 张截图**（P2 修复后按运行态快照 `a1e380ec…` 重截聚焦/hover 与 12 张主题矩阵）；主体快照 diff sha `9fb46e36…`（13:44 冻结）；三主题×明暗、桌面 1440×900 + 移动 390×844、焦点/已填/键盘焦点/hover/disabled/弹层/登录错误态全覆盖；全页 overflowX=0、console error 0。指针聚焦曾被 hover 规则（特异度更高）覆盖为 border-strong，已加 `:not(:focus-within)` 修复并由 QA 复测通过（`qa-after.md` §12）。
+- **四个原始问题对照（改前 → 改后）**：满宽条带 1116px → 768px；聚焦边框对比 1.61:1 → **5.35–7.11:1**（accent 边框 + 视觉 2px + 3px 光环）；placeholder 2.43–4.0:1 → **5.36–8.84:1**；清空钮 25×25 → **32×32 视觉 + hit-slop 44 命中**。
+- **⌘K 实测**：5/5 入口页（/、/messages、/me/edit、/settings、/admin/users）→ `/search` 且输入框获焦；搜索页再按一次全选；/me/edit 编辑中与弹层打开时正确让位（首轮 13:28 偶发的「焦点落 main」已由导航后 rAF 显式补聚焦消除）。
+- **环境事故与恢复**：dev 容器运行时在宿主机跑 `bun run check/test/sync` 会用宿主相对路径重写 `.svelte-kit/generated/server/internal.js`，导致容器 SSR 全站 500（本轮共 6 次，均用容器内 `bunx svelte-kit sync` 恢复）。结论写入本页：**dev 容器在跑时，check/test/build 只能走容器内命令，或先停 frontend 容器**；该纪律已同步 QA 报告 §11。
+
+### 已知遗留 / 显式决策（2026-10-29）
+
+- **静态字段边界对比 1.30–1.57:1（<WCAG 1.4.11 的 3:1）——显式接受**：这是全站 hairline 边界语言的一部分（卡片/分隔线同档，改前同值甚至更弱）；字段识别由 label + placeholder（5.36–8.84:1）+ 焦点环（accent，视觉 2px，对比 5.35–7.11:1）承担。若后续无障碍评审要求升档，改 `semantic.css` 一处 `--cst-field-border: var(--cst-border-strong)` 即可（视觉略重，已备选）。
+- mobile 14px 字段在 iOS Safari 聚焦会触发自动放大（<16px 的确定性平台行为）；受全站 9 档字号约束不做 16px 字段，需真机复测观感。
+- 地图移动端主搜索由手写 44px 统一到 39px 搜索档（输入框不在 `audit:touch` 扫描集；39px 为全站搜索统一档）。
+- admin 原生 `<select>` 实测 37px vs input 39px（2px，原生控件高度不可精确控；同排视觉无明显落差，注释已改为「≈39px 档」）；hero 实际用 `max-w-3xl`(768)，与设计提案 720 的差异按 Tailwind 标准档取舍记录。

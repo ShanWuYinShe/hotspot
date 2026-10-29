@@ -121,7 +121,7 @@
 		auth: '认证安全'
 	};
 	const dirtyText = $derived(dirtySections.map((s) => SECTION_LABELS[s]).join('、'));
-	const INPUT = 'input-surface w-full rounded-md px-3 py-2 text-sm text-text-primary';
+	const INPUT = 'input-surface w-full rounded-md px-3.5 py-2 text-md text-text-primary';
 	const FEATURE_LABELS: Record<keyof FeatureSwitches, string> = {
 		enable_public_registration: '开放注册',
 		enable_guest_register: '访客浏览',

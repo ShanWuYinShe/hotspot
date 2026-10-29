@@ -73,7 +73,7 @@
 		<SearchInput
 			value={searchQ}
 			onChange={(v) => (searchQ = v)}
-			class="px-3.5 py-2.5"
+			ariaLabel={tab === 'add' ? '搜索用户名或手机号' : '搜索联系人'}
 			placeholder={tab === 'add' ? '搜索用户名或手机号…' : '搜索联系人…'}
 		/>
 	</div>

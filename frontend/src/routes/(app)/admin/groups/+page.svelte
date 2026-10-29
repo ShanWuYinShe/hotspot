@@ -65,7 +65,7 @@
 	<div class="flex flex-col gap-4">
 		<div class={TOOLBAR}>
 			<div class={SEARCH_WRAP}>
-				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索群组名称…" class="px-4 py-2.5 rounded-md" />
+				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索群组名称…" ariaLabel="搜索群组名称" />
 			</div>
 		</div>
 
@@ -141,7 +141,7 @@
 		{#snippet extra()}
 			<label class="flex flex-col gap-1.5">
 				<span class="text-xs text-text-secondary">解散原因（可留空）</span>
-				<textarea bind:value={dismissReason} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3 py-2 text-sm text-text-primary"></textarea>
+				<textarea bind:value={dismissReason} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3.5 py-2 text-md text-text-primary"></textarea>
 			</label>
 		{/snippet}
 	</ConfirmDialog>

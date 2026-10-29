@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { Search, MapPin, Navigation, X, ChevronRight, Check, Heart } from '@lucide/svelte';
+	import { MapPin, Navigation, X, ChevronRight, Check, Heart } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -58,30 +59,15 @@
 
 <!-- Search -->
 <div class="relative shrink-0 px-4 pb-3">
-	<div class="flex h-10 items-center gap-2.5 rounded-md input-surface px-3.5">
-		<Search class="size-3.5 shrink-0 text-text-secondary" strokeWidth={1.75} aria-hidden="true" />
-		<input
-			bind:value={searchQuery}
-			oninput={(e) => {
-				searchQuery = e.currentTarget.value;
-				selectedLoc = null;
-			}}
-			placeholder="搜索地点或地标…"
-			aria-label="搜索地点或地标"
-			class="min-w-0 flex-1 bg-transparent text-sm text-text-primary focus-ring"
-		/>
-		{#if searchQuery}
-			<button
-				type="button"
-				class="hover-action -m-1.5 flex items-center justify-center rounded-full p-1.5 focus-ring"
-				aria-label="清空搜索"
-				title="清空"
-				onclick={() => (searchQuery = '')}
-			>
-				<X class="size-3.5 text-text-secondary" strokeWidth={1.75} />
-			</button>
-		{/if}
-	</div>
+	<SearchInput
+		value={searchQuery}
+		onChange={(v) => {
+			searchQuery = v;
+			selectedLoc = null;
+		}}
+		placeholder="搜索地点或地标…"
+		ariaLabel="搜索地点或地标"
+	/>
 	{#if searchResults.length > 0}
 		<ListContainer bordered class="absolute left-4 right-4 top-full z-30 mt-1 shadow-menu">
 			{#each searchResults as r}

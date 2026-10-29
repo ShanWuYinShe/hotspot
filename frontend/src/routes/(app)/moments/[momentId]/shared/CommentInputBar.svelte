@@ -4,7 +4,7 @@
 	import { auth } from '@/stores/auth.svelte';
 
 	// CommentInputBar —— 详情页底部固定评论输入栏（Enter/按钮发送均走 onSend）。
-	// R13：与消息区的关系收敛为「一条发丝线 + 画布色」；输入框 40 高、发送钮 36 圆钮，
+	// R13：与消息区的关系收敛为「一条发丝线 + 画布色」；输入框 39 高、发送钮 36 圆钮，
 	// 空内容时不带投影（安静态），有内容才浮起 accent 实底。
 	let {
 		input = $bindable(''),
@@ -24,7 +24,7 @@
 	style="padding-bottom:max(0.75rem, env(safe-area-inset-bottom));"
 >
 	<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size="md" />
-	<div class="flex h-10 flex-1 items-center rounded-md input-surface px-4">
+	<div class="flex flex-1 items-center rounded-md input-surface px-3.5 py-2">
 		<input
 			bind:this={inputEl}
 			bind:value={input}

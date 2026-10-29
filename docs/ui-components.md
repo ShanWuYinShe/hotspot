@@ -45,7 +45,7 @@
 | `navigation/ActionIconButton` | 图标按钮（ghost/outline） |
 | `hover-btn` / `scale-btn`（utilities） | 行内文字/图标动作的 hover/tap CSS 语言 |
 | `hit-slop` / `hit-slop-y`（utilities） | 紧凑控件的触控热区扩展（视觉尺寸不变）。`hit-slop` 四周各 6px，用于图标按钮等**孤立**控件；`hit-slop-y`（2026-10-19 新增）只扩纵向，用于**横向相邻**的紧凑控件（筛选胶囊、分段控制器）——前者的水平 6px 会与相邻项重叠，命中落到 DOM 靠后那颗。注意：两者都靠 `::before` 绝对定位，**会被祖先的 `overflow` 裁剪**，横滚容器需留出纵向 padding（TabBar 的 `py-1` 即为此） |
-| `forms/SearchInput` / `forms/Input` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语。`forms/Input`（2026-10-12 新增）：单行输入，受控 value+onChange；`label`/`labelSnippet`（tracking-field 档位或自定义行）与 input 以 id 关联；`prefix` snippet 前缀图标；`clearable` 清除钮；**错误态三件套** `hasError`+`errorText`→ aria-invalid + aria-describedby + role="alert" 就近错误行（样式由 input-surface 的 :has(aria-invalid) 承担）。padding 由调用方 class 提供（同 SearchInput 约定，如 `rounded-md px-4 py-3`）；另支持 `compact` 形态（input-surface 直贴 input，无包裹/label/prefix/清除，紧凑位专用）。契约对齐鸿蒙 `SystemInput` |
+| `forms/SearchInput` / `forms/Input` / `forms/Toggle` / `forms/ImagePicker` / `forms/TagPill` | 输入类原语。**2026-10-29 输入族重构**：两者共用 `.input-surface` 表面（单层 1px 边 + hover 边界加深 + accent 2px 视觉焦点 + 3px 柔光环 + danger 错误环 + disabled 弱化底，见 utilities.css）；`forms/SearchInput` = 搜索胶囊（rounded-full / 39px / text-md 14 / 图标 16 / 32px 清空钮 + hit-slop 44 命中 / `ariaLabel` 按页面语义 / 清空后回焦 / Esc 清空 / ⌘K 提示槽）；`forms/Input` = 表单 16 圆角（43px ≈ INPUT 42 / text-md / 默认 px-4 py-2.5；`label`/`labelSnippet`、`prefix`、`clearable`、错误态三件套、`compact` 形态均保留）。契约对齐鸿蒙 `SystemInput`（表单）/`SearchPageHeader`（搜索） |
 | `layout/page/PageHeader` | 页面页头（sticky）。**R9：顶部透明（与画布融合、无白带）→ 滚动 >4px 加 glass**（`surface-page 78% + blur(16px) + 细底边 + elevation`，150ms，reduced 立即）；仅背景/边框/阴影变化，不改定位；原 `glass` prop 统一为该行为 |
 | `navigation/BackToTop` | 回顶浮动圆钮（R9）：滚动 > 1.5×视口高出现（44px，移动 bottom-24 / 桌面 bottom-6，避开底栏与浮层），点击平滑回顶（reduced 直接跳）、回顶后 200ms 内隐藏；`aria-label="回到顶部"`；fixed 不占流 |
 | `lib/route-announcer` | SPA 导航播报（R9）：`#route-announcer`（sr-only `aria-live=polite`/atomic）播报新页 h1 标题；首屏不播、1.5s 去重；焦点落 `main#main-content`（tabindex=-1、preventScroll），不叠加 h1 聚焦 |
@@ -192,6 +192,20 @@
    `aria-live=polite`、`aria-label` 与文本一致；150ms 显隐（reduced 直接）；点击滚底+清零+补 markRead；回底 200ms 内隐藏；
    不遮挡输入栏/浮层。鸿蒙 List 无距底像素 API，用 `onScrollIndex` 末尾可见近似（平台差异登记）。
 
+### 输入族契约（2026-10-29 重构，强制）
+
+| 语义 | 原语 | 几何 | 说明 |
+|---|---|---|---|
+| 搜索（发现入口） | `forms/SearchInput` | 胶囊 `rounded-full`，39px（`px-3.5 py-2` + `text-md`），图标 16，清空钮 32px 视觉 + `hit-slop`（44 命中） | 页面不得再传 padding/圆角/字号覆盖；`ariaLabel` 按页面语义（搜索会话/用户/标签…）；清空后回焦；Esc 有内容时先清空（`stopPropagation`，弹层内不会连关），空输入才交还弹层；Enter/Escape 判 IME `isComposing`；输入带 `inputmode=search`/`enterkeyhint`/`autocomplete=off` |
+| 表单录入 | `forms/Input` / `.input-surface` | `rounded-md`(16)，43px（`px-4 py-2.5` + `text-md`），compact 39px（`px-3.5 py-2`） | label `tracking-field`；错误态三件套；清空钮同搜索 |
+| 表面状态 | 单一来源 `.input-surface`（utilities.css） | 静态 = `--cst-field-bg` + 1px `--cst-field-border`；hover = border-strong；focus = accent 1px + 内缘 1px（视觉 2px）+ 3px `--cst-field-ring`；error = danger + `--cst-field-ring-danger`；disabled = `--cst-field-bg-disabled` | 主题文件禁止覆写 `.input-surface`；输入表面禁止 `backdrop-filter`；placeholder 锁 `text-secondary` + `opacity:1`（改前叠 0.6 → 2.43–4.0:1） |
+| 快捷键 | `lib/search-shortcut.ts`（纯决策 + 9 条单测）+ `(app)/+layout.svelte` + 搜索页 trailing kbd 胶囊 | ⌘K（Mac）/ Ctrl+K | 任意页唤出搜索；已在搜索页则聚焦全选（导航后 rAF 显式补聚焦，避免被路由焦点管理抢到 main）；弹层打开 / 非搜索页表单编辑中让位；提示与监听必须同时存在 |
+| 页面宽度 | `/search` hero | 桌面 `max-w-3xl`(768)，移动满宽 | 布局例外登记见 skill `hotspot-frontend-layout` |
+
+源码契约测试：`src/styles/__tests__/input-surface-contract.test.ts`（锁表面状态/单一来源/placeholder 对比度修复，禁止回退到「双层描边 + 双向内凹阴影 + vibrant 毛玻璃」）。
+
+> 多行文本域沿用各场景既有内容 padding（弹层编辑区 `p-4`、表单块 `px-3.5 py-3`），高度由 rows/min-h 决定，不套单行 39/43 档；不要为了「完全统一」把 textarea 压成单行高度。
+
 ## 近重复收敛 backlog（按危害排序）
 
 1. **手写按钮**：58 个文件用 `hover-btn` 手写 `<button>`，`ui/button` 引用 23 个文件
@@ -208,6 +222,8 @@
  2. **表单 Input 原语**：**已落地（2026-10-12）**——`forms/Input` 建成（10 个契约测试），
     首个消费方 `me/edit` 昵称输入已迁移（登录态截图对比审查通过）。
     确认码输入亦已迁（compact 形态，2026-10-12，运行时截图验证通过）——me/edit 全页输入原语化。
+    **2026-10-29 输入族重构后**：`.input-surface` 表面/状态统一、SearchInput/Input 几何与字号收敛，
+    剩余裸 `input-surface` 消费方按新契约做 class 收口（见本文件「输入族契约」）。
     **其余消费方评估后保留手写（2026-10-12 全量盘点）**：剩余 20 处 input 全部是
     **compact 变体**（`input-surface` 直贴 input，admin 六页/群组弹层 ×3/安全设置 ×6/
     map 面板 ×2）+ 应保持原生的 file/checkbox。compact 迁移收益≈0：样式半边已合规、

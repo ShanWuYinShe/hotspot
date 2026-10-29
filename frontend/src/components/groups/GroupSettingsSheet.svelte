@@ -203,10 +203,10 @@
 		<!-- Group name -->
 		<div>
 			<label class="text-xs tracking-field uppercase text-text-secondary" for="group-settings-name">群组名称 *</label>
-			<div class="flex items-center gap-2.5 mt-1.5 px-4 rounded-md input-surface h-11.5">
+			<div class="flex items-center gap-2.5 mt-1.5 px-3.5 py-2.5 rounded-md input-surface">
 				<input
 					id="group-settings-name"
-					class="flex-1 bg-transparent text-text-primary text-sm"
+					class="flex-1 bg-transparent text-text-primary text-md"
 					placeholder="给你的群组起个名字…"
 					bind:value={name}
 					maxlength={30}
@@ -218,10 +218,10 @@
 		<!-- Description -->
 		<div>
 			<label class="text-xs tracking-field uppercase text-text-secondary" for="group-settings-desc">简介</label>
-			<div class="mt-1.5 px-4 py-3 rounded-md input-surface">
+			<div class="mt-1.5 px-3.5 py-3 rounded-md input-surface">
 				<textarea
 					id="group-settings-desc"
-					class="w-full bg-transparent resize-none text-text-primary text-sm min-h-18"
+					class="w-full bg-transparent resize-none text-text-primary text-md min-h-18"
 					placeholder="描述一下这个群组的主题…"
 					bind:value={desc}
 					maxlength={150}
@@ -358,7 +358,7 @@
 						placeholder={initial?.group.name}
 						autocomplete="off"
 						aria-label="解散确认群名"
-						class="mt-2 w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-status-danger"
+						class="mt-2 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
 					/>
 					<div class="mt-2 flex justify-end">
 						<Button

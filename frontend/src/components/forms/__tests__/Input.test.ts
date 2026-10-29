@@ -107,11 +107,12 @@ describe('Input compact 形态', () => {
 describe('Input 默认内边距（防塌陷回归）', () => {
 	// 审计发现：原语无默认 padding，调用方只传 inputClass="w-full" 时整框塌成 19px
 	// （/me/edit 昵称字段实测 356×17.1、padding 0），偏离 INPUT_HEIGHT 42 且低于 24px 触控下限。
-	it('非 compact 形态默认带 px-4 py-3', () => {
+	// 2026-10-29 输入族重构：py-3(12) → py-2.5(10)，配合 text-md 行高 21 得 43px ≈ INPUT 42。
+	it('非 compact 形态默认带 px-4 py-2.5', () => {
 		const { container } = render(Input, { props: { value: '', onChange: () => {}, ariaLabel: '昵称' } });
 		const surface = container.querySelector('.input-surface') as HTMLElement;
 		expect(surface.className).toContain('px-4');
-		expect(surface.className).toContain('py-3');
+		expect(surface.className).toContain('py-2.5');
 	});
 
 	it('调用方 className 可覆盖默认内边距（tailwind-merge）', () => {
@@ -120,6 +121,32 @@ describe('Input 默认内边距（防塌陷回归）', () => {
 		});
 		const surface = container.querySelector('.input-surface') as HTMLElement;
 		expect(surface.className).toContain('py-2');
-		expect(surface.className).not.toContain('py-3');
+		expect(surface.className).not.toContain('py-2.5');
+	});
+});
+
+// 2026-10-29 输入族重构：表单输入与搜索输入同宗不同形（16 圆角 vs 胶囊），
+// 字号统一 text-md，清空钮升到 32px 视觉 + hit-slop 44 命中。
+describe('Input 输入族契约（2026-10-29）', () => {
+	it('默认 14px 字段字（text-md），不再用 12px', () => {
+		render(Input, { props: { value: '', onChange: () => {}, ariaLabel: '昵称' } });
+		const input = screen.getByLabelText('昵称') as HTMLElement;
+		expect(input.className).toContain('text-md');
+		expect(input.className).not.toContain('text-sm');
+	});
+
+	it('clearable 清空钮 32px 视觉 + hit-slop 命中扩展', () => {
+		render(Input, { props: { value: 'x', onChange: () => {}, clearable: true, ariaLabel: '昵称' } });
+		const clear = screen.getByLabelText('清空');
+		expect(clear.className).toContain('hit-slop');
+		expect(clear.className).toContain('size-8');
+	});
+
+	it('清空后焦点回到输入框', async () => {
+		const onChange = vi.fn();
+		render(Input, { props: { value: '已有', onChange, clearable: true, ariaLabel: '昵称' } });
+		const input = screen.getByLabelText('昵称') as HTMLInputElement;
+		await fireEvent.click(screen.getByLabelText('清空'));
+		expect(document.activeElement).toBe(input);
 	});
 });

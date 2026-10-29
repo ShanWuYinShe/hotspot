@@ -173,7 +173,6 @@
 
   /* strict paper-flat：无阴影，仅 border 描边（icon-badge 除外：
      基类已改 accent 淡底无描边，inkwash 下同样适用，不再压回纸面底） */
-  .inkwash .input-surface,
   .inkwash .flat,
   .inkwash .pressed,
   .inkwash .card-hover,
@@ -181,17 +180,8 @@
     box-shadow: none !important;
     background: var(--cst-surface-primary);
   }
-  .inkwash .input-surface:focus-within {
-    /* inkwash 保持纸面扁平：内凹 1px 墨线加深，无外发光 */
-    box-shadow: inset 0 0 0 1px var(--cst-border-strong) !important;
-  }
   .inkwash .pressed {
     box-shadow: inset 0 0 0 1px var(--cst-border-strong) !important;
-  }
-  .inkwash .input-surface {
-    /* 宣纸暖白输入面：卡面混入 6% 画布暖底 + 内凹细墨线 */
-    background: color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-surface-page) 6%) !important;
-    box-shadow: inset 0 0 0 1px var(--cst-border-default) !important;
   }
   .inkwash .surface-hero,
   .inkwash.dark .surface-hero {

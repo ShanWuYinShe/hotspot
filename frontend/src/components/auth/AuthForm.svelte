@@ -237,7 +237,7 @@
 	{#if mode === 'register' || mode === 'guest'}
 		<label class="flex flex-col gap-1.5" for="auth-field-nickname">
 			<span class="text-xs font-medium tracking-field text-text-secondary">昵称</span>
-			<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
+			<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
 				<input
 					id="auth-field-nickname"
 					type="text"
@@ -248,7 +248,7 @@
 					aria-invalid={fieldErrors.nickname ? 'true' : undefined}
 					aria-describedby={fieldErrors.nickname ? 'auth-field-nickname-error' : undefined}
 					oninput={() => clearFieldError('nickname')}
-					class="min-w-0 flex-1 bg-transparent text-sm focus-ring text-text-primary"
+					class="min-w-0 flex-1 bg-transparent text-md text-text-primary"
 					
 				/>
 			</span>
@@ -263,7 +263,7 @@
 		     仅注册手机号/邮箱型需验证码（所有权验证），与密码共存 -->
 		<label class="flex flex-col gap-1.5" for="auth-field-loginId">
 			<span class="text-xs font-medium tracking-field text-text-secondary">手机号、邮箱或账号</span>
-			<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
+			<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
 				<Mail class="size-4 shrink-0 text-accent-default"   strokeWidth={1.75} />
 				<input
 					id="auth-field-loginId"
@@ -275,7 +275,7 @@
 					aria-invalid={fieldErrors.loginId ? 'true' : undefined}
 					aria-describedby={fieldErrors.loginId ? 'auth-field-loginId-error' : undefined}
 					oninput={() => clearFieldError('loginId')}
-					class="min-w-0 flex-1 bg-transparent text-sm focus-ring placeholder:text-text-secondary text-text-primary"
+					class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
 					
 				/>
 			</span>
@@ -288,7 +288,7 @@
 				     注册型与密码共存（注册始终需要密码），登录验证码模式替代密码 -->
 				<label class="flex flex-col gap-1.5" for="auth-field-code">
 					<span class="text-xs font-medium tracking-field text-text-secondary">验证码</span>
-					<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
+					<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
 						<input
 							id="auth-field-code"
 							type="text"
@@ -299,7 +299,7 @@
 							aria-invalid={fieldErrors.code ? 'true' : undefined}
 							aria-describedby={fieldErrors.code ? 'auth-field-code-error' : undefined}
 							oninput={() => clearFieldError('code')}
-							class="min-w-0 flex-1 bg-transparent text-sm focus-ring placeholder:text-text-secondary text-text-primary"
+							class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
 
 						/>
 					</span>
@@ -325,7 +325,7 @@
 			{#if mode === 'login' || mode === 'register'}
 			<label class="flex flex-col gap-1.5" for="auth-field-password">
 				<span class="text-xs font-medium tracking-field text-text-secondary">密码</span>
-				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
+				<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
 					<LockKeyhole class="size-4 shrink-0 text-accent-default"   strokeWidth={1.75} />
 					<input
 						id="auth-field-password"
@@ -337,7 +337,7 @@
 						aria-invalid={fieldErrors.password ? 'true' : undefined}
 						aria-describedby={fieldErrors.password ? 'auth-field-password-error' : undefined}
 						oninput={() => clearFieldError('password')}
-						class="min-w-0 flex-1 bg-transparent text-sm focus-ring placeholder:text-text-secondary text-text-primary"
+						class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
 						
 					/>
 					<button
@@ -363,7 +363,7 @@
 	{#if mode === 'forgot' || mode === 'reset'}
 		<label class="flex flex-col gap-1.5" for="auth-field-resetLoginId">
 			<span class="text-xs font-medium tracking-field text-text-secondary">账号</span>
-			<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
+			<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
 				<input
 					id="auth-field-resetLoginId"
 					type="text"
@@ -374,7 +374,7 @@
 					aria-invalid={fieldErrors.resetLoginId ? 'true' : undefined}
 					aria-describedby={fieldErrors.resetLoginId ? 'auth-field-resetLoginId-error' : undefined}
 					oninput={() => clearFieldError('resetLoginId')}
-					class="min-w-0 flex-1 bg-transparent text-sm focus-ring placeholder:text-text-secondary text-text-primary"
+					class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
 					
 				/>
 			</span>
@@ -385,7 +385,7 @@
 		{#if mode === 'reset'}
 			<label class="flex flex-col gap-1.5" for="auth-field-code">
 				<span class="text-xs font-medium tracking-field text-text-secondary">验证码</span>
-				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
+				<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
 					<input
 						id="auth-field-code"
 						type="text"
@@ -396,7 +396,7 @@
 						aria-invalid={fieldErrors.code ? 'true' : undefined}
 						aria-describedby={fieldErrors.code ? 'auth-field-code-error' : undefined}
 						oninput={() => clearFieldError('code')}
-						class="min-w-0 flex-1 bg-transparent text-sm focus-ring placeholder:text-text-secondary text-text-primary"
+						class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
 						
 					/>
 				</span>
@@ -406,7 +406,7 @@
 			</label>
 			<label class="flex flex-col gap-1.5" for="auth-field-newPassword">
 				<span class="text-xs font-medium tracking-field text-text-secondary">新密码</span>
-				<span class="flex items-center gap-2 input-surface rounded-md px-3 py-3" >
+				<span class="flex items-center gap-2 input-surface rounded-md px-4 py-2.5" >
 					<input
 						id="auth-field-newPassword"
 						type={showPassword ? 'text' : 'password'}
@@ -417,7 +417,7 @@
 						aria-invalid={fieldErrors.newPassword ? 'true' : undefined}
 						aria-describedby={fieldErrors.newPassword ? 'auth-field-newPassword-error' : undefined}
 						oninput={() => clearFieldError('newPassword')}
-						class="min-w-0 flex-1 bg-transparent text-sm focus-ring placeholder:text-text-secondary text-text-primary"
+						class="min-w-0 flex-1 bg-transparent text-md placeholder:text-text-secondary text-text-primary"
 						
 					/>
 					<button

@@ -385,11 +385,11 @@
 				<div class="mt-4 flex flex-col gap-3">
 					<label class="flex flex-col gap-1.5">
 						<span class="text-xs text-text-secondary">名称</span>
-						<input bind:value={roleName} maxlength={50} class="input-surface rounded-md px-3 py-2 text-sm text-text-primary" />
+						<input bind:value={roleName} maxlength={50} class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary" />
 					</label>
 					<label class="flex flex-col gap-1.5">
 						<span class="text-xs text-text-secondary">描述（可留空）</span>
-						<textarea bind:value={roleDesc} rows={2} maxlength={200} class="input-surface resize-none rounded-md px-3 py-2 text-sm text-text-primary"></textarea>
+						<textarea bind:value={roleDesc} rows={2} maxlength={200} class="input-surface resize-none rounded-md px-3.5 py-2 text-md text-text-primary"></textarea>
 					</label>
 				</div>
 			</div>
@@ -457,7 +457,7 @@
 				<div class="mt-4 flex flex-col gap-3">
 					<label class="flex flex-col gap-1.5">
 						<span class="text-xs text-text-secondary">用户 ID</span>
-						<input bind:value={awardUserId} placeholder="user_xxx" class="input-surface rounded-md px-3 py-2 text-sm font-mono text-text-primary" />
+						<input bind:value={awardUserId} placeholder="user_xxx" class="input-surface rounded-md px-3.5 py-2 text-md font-mono text-text-primary" />
 					</label>
 					{#if isSuper}
 						<label class="flex items-center gap-2 text-sm text-text-primary">

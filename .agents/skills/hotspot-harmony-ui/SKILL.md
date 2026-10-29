@@ -43,6 +43,7 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 - 通用文本操作按钮必须用 `SystemButton`（variant=primary/secondary/outline/ghost/danger/surface/surface-accent/surface-danger，size=compact/small/default/large/sheet，支持 loading/disabled/fullWidth）；禁止手写 `Button('文案') + backgroundColor/fontColor/height/borderRadius` 重复样式。
 - **危险操作分两档，别混用**：`danger`（**实底 error 色 + 白字**）只用于**最终确认**（二次确认弹窗的 `SystemDialog.confirmVariant`、弹层里的确认键，如「封禁并移出」）；`surface-danger`（染色底 + error 文字 + 发丝描边，安静档）用于**行级/列表内**的危险操作（账号行删除、消息/聊天操作表、退出群组、取消分享…）。反例：账号管理页每行一个实底 `danger`，眯眼测试下整页形成一列刺眼红色块，视线被破坏性操作抢走、观感像警报页（NN/g：最强颜色档必须留给真正的警示）。
 - 通用单行输入框必须用 `SystemInput`（前缀图标/清除按钮/错误态）；登录/表单等密码框可用 `SystemInput({ passwordMode: true })`。
+- **搜索输入（2026-10-29 跨端对齐）**：搜索页头部 `SearchPageHeader` 与前端 `forms/SearchInput` 同口径——胶囊（`SHAPE.BUTTON`）+ `SEARCH_INPUT_HEIGHT 39` + `FONT.SIZE.MD 14` + `ICON_SIZE_XS 16` + `SPACING.MD2 10`；静态边框用 `palette.borderColor`（18% alpha，对齐前端 `border-default`，勿用 8% 的 `floatingBorderColor`）、**无投影**（对齐前端 `input-surface` 与 design-system §8）；聚焦用 `palette.accentBackground` 1.5 边框（**不要用 `accentText`**——它是 accent 实底上的文字色，浅色主题为白，作焦点边会不可见）；`SystemInput` 保持 42/16 圆角不变（表单与搜索两派语言），其聚焦边框同用 `accentBackground`（见 `resolveInputBorder`）。
 - **其余基础原语清单（唯一登记处，docs/design-system.md 第 13 节引用此处）**：
 
   | 原语 | 用途 / 关键约束 |

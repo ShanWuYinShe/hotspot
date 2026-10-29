@@ -91,7 +91,7 @@
 	<div class="flex flex-col gap-4">
 		<div class={TOOLBAR}>
 			<div class={SEARCH_WRAP}>
-				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索标签…" class="px-4 py-2.5 rounded-md" />
+				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索标签…" ariaLabel="搜索标签" />
 			</div>
 		</div>
 

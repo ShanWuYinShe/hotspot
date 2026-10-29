@@ -350,7 +350,7 @@
 					{#snippet below()}
 						{#if !needsAuth}
 						<div class="mt-3">
-							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="px-3 py-2.5" textClass="text-md" />
+							<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" ariaLabel="搜索会话" />
 						</div>
 						{/if}
 					{/snippet}
@@ -499,7 +499,7 @@
 				<!-- 搜索框：sticky header 内第二行（对齐 Figma MessagesMobile）；未登录隐藏（r24） -->
 				{#if !needsAuth}
 				<div class="mt-3">
-					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" class="rounded-md px-4 py-2.5" textClass="text-md" />
+					<SearchInput value={searchQuery} onChange={(v) => (searchQuery = v)} placeholder="搜索会话…" ariaLabel="搜索会话" />
 				</div>
 				{/if}
 			{/snippet}

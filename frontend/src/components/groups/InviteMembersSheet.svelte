@@ -7,6 +7,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Button from '@/components/ui/button.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import type { UserItem } from '@/api/types';
 
 	let {
@@ -109,10 +110,15 @@
 			<button type="button" onclick={onClose} class="hit-slop flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary focus-ring hover:bg-interactive-hover" aria-label="关闭"><X size={15} strokeWidth={1.75} /></button>
 		</div>
 
-		<div class="flex items-center gap-2 input-surface rounded-md px-3 py-2.5">
-			<Search size={14} class="text-text-secondary" strokeWidth={1.75} />
-			<input bind:value={keyword} oninput={onInput} placeholder="搜索用户昵称…" aria-label="搜索用户昵称" class="flex-1 bg-transparent text-sm text-text-primary" />
-		</div>
+		<SearchInput
+			value={keyword}
+			onChange={(v) => {
+				keyword = v;
+				onInput();
+			}}
+			placeholder="搜索用户昵称…"
+			ariaLabel="搜索用户昵称"
+		/>
 
 		<div class="mt-3 max-h-72 overflow-y-auto no-scrollbar pb-3">
 			{#if loading}

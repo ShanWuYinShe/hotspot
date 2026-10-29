@@ -302,7 +302,7 @@
 									oninput={(e) => (bio = e.currentTarget.value.slice(0, MAX_BIO))}
 									placeholder="介绍一下自己…"
 									rows={3}
-									class="w-full bg-transparent resize-none text-text-primary text-sm leading-copy"
+									class="w-full bg-transparent resize-none text-text-primary text-md leading-copy"
 								></textarea>
 								<div class="flex justify-end mt-1">
 									<span class="{bio.length > BIO_WARN ? 'text-status-warning' : 'text-text-secondary'} text-xs">
@@ -382,7 +382,7 @@
 							placeholder="DELETE_MY_ACCOUNT"
 							autocomplete="off"
 							ariaLabel="注销确认码"
-							inputClass="w-full px-3 py-2"
+							inputClass="w-full px-3.5 py-2"
 						/>
 						<div class="flex justify-end gap-2">
 							<Button type="button" variant="secondary" size="sm" onclick={() => (deleteConfirmOpen = false)}>

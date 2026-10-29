@@ -74,7 +74,7 @@
 				bind:value={title}
 				oninput={(e) => (title = e.currentTarget.value.slice(0, 50))}
 				placeholder="公告标题"
-				class="w-full input-surface rounded-md px-3 py-2.5 text-sm text-text-primary outline-none focus-ring"
+				class="w-full input-surface rounded-md px-3.5 py-2.5 text-md text-text-primary"
 			/>
 			<label class="sr-only" for="group-announcement-content">公告内容</label>
 			<textarea
@@ -83,7 +83,7 @@
 				rows="4"
 				oninput={(e) => (content = e.currentTarget.value.slice(0, 1000))}
 				placeholder="公告内容…"
-				class="w-full resize-none input-surface rounded-md px-3 py-2.5 text-sm leading-6 text-text-primary outline-none focus-ring"
+				class="w-full resize-none input-surface rounded-md px-3.5 py-2.5 text-md leading-6 text-text-primary"
 			></textarea>
 			<button
 				type="button"

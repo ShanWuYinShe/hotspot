@@ -252,14 +252,14 @@
 					/>
 					<label class="flex flex-col gap-1.5">
 						<span class="text-xs text-text-secondary">处理备注（写入 handle_note 与审计日志，可留空）</span>
-						<textarea bind:value={note} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3 py-2 text-sm text-text-primary"></textarea>
+						<textarea bind:value={note} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3.5 py-2 text-md text-text-primary"></textarea>
 					</label>
 					{#if action === 'resolve'}
 						<label class="flex flex-col gap-1.5">
 							<span class="text-xs text-text-secondary">
 								连带封禁天数{canBan ? '（留空 = 仅标记处理不封禁；0 = 永久）' : '（需要 admin.users.write 权限）'}
 							</span>
-							<input type="number" min={0} bind:value={banDays} disabled={!canBan} class="input-surface rounded-md px-3 py-2 text-sm text-text-primary disabled:opacity-faint" />
+							<input type="number" min={0} bind:value={banDays} disabled={!canBan} class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary" />
 						</label>
 					{/if}
 				</div>

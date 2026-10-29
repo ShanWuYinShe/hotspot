@@ -71,6 +71,11 @@
 
 	const device = $derived(platform.platform);
 
+	// 全局 ⌘K / Ctrl+K 快捷键（监听在 (app)/+layout.svelte）：搜索页在输入框尾部提示该入口。
+	const searchShortcut = $derived(
+		typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K'
+	);
+
 	$effect(() => {
 		try {
 			localStorage.setItem('search_recent', JSON.stringify(recent));
@@ -377,8 +382,10 @@
 	{#snippet header()}
 		<PageHeader title="搜索" glass onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 			{#snippet below()}
-				<!-- 搜索框随 sticky header 吸顶（对齐 nearby/moments 样板 below 结构）；
-				     below 全宽、与标题同轴，不另设窄列（否则发现态/结果态整页水平漂移） -->
+				<!-- 搜索框随 sticky header 吸顶（对齐 nearby/moments 样板 below 结构）。
+				     below 容器仍全宽、与标题同轴；仅搜索输入本身在桌面限宽 max-w-3xl(768)——
+				     满宽 1116px 会被读成「页头条带」而不是输入框（2026-10-29 审计 P0-1），
+				     限宽后形成「标题 → 搜索入口 → 内容」三级节奏，移动端保持满宽。 -->
 				<div class="mt-3 mb-2.5 w-full">
 					<!-- 占位词与全站术语对齐:瞬间(非动态)并补群组维度(Gemini 审查 r11) -->
 					<SearchInput
@@ -389,14 +396,24 @@
 							if (!v.trim()) commitSearchUrl();
 						}}
 						placeholder="搜索用户、瞬间、群组、地点或话题"
+						ariaLabel="搜索用户、瞬间、群组、地点或话题"
 						autofocus
+						class={device === 'desktop' ? 'max-w-3xl' : ''}
 						onEnter={(v) => {
 							if (!v.trim()) return;
 							remember(v.trim());
 							commitSearchUrl();
 						}}
-						class="px-4 py-2.5 rounded-full shadow-xs"
-					/>
+					>
+						{#snippet trailing()}
+							{#if device === 'desktop'}
+								<kbd
+									class="flex shrink-0 items-center rounded-sm border border-border-default bg-surface-subtle px-1.5 py-0.5 text-xs font-medium text-text-secondary"
+									aria-hidden="true"
+								>{searchShortcut}</kbd>
+							{/if}
+						{/snippet}
+					</SearchInput>
 				</div>
 			{/snippet}
 		</PageHeader>

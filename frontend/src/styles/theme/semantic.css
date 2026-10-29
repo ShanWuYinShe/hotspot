@@ -82,6 +82,23 @@
   --cst-marker-moment: var(--cst-palette-map-moment);
 }
 
+/* ── Field / input surface（2026-10-29 输入类 UI 重构）──────────────────
+   输入、搜索、文本域的唯一表面语言：单层 hairline 边界 + 主表面填充；
+   hover 边界加深；focus = accent 边界 + 柔光环；错误态 = danger 边界 +
+   danger 光环；禁用态回落到弱化嵌入面。
+   旧实现（border + 内缘 inset 描边 + 双向内凹阴影 + vibrant 毛玻璃）在
+   浅色画布上发灰、像「凹槽」，且与全站「浮起软岛」语言冲突，已移除。
+   圆角由组件类决定：表单 16（rounded-md）/ 搜索胶囊（rounded-full）。 */
+:root {
+  --cst-field-bg: var(--cst-surface-primary);
+  --cst-field-bg-disabled: var(--cst-surface-subtle);
+  --cst-field-border: var(--cst-border-default);
+  --cst-field-border-hover: var(--cst-border-strong);
+  --cst-field-border-focus: var(--cst-accent-default);
+  --cst-field-ring: color-mix(in srgb, var(--cst-accent-default) 22%, transparent);
+  --cst-field-ring-danger: color-mix(in srgb, var(--cst-status-danger) 24%, transparent);
+}
+
 /* ── Interaction token contract ────────────────────────────────────────
    通过 var() 派生的交互/导航 token，值随主题自动变化。 */
 :root {

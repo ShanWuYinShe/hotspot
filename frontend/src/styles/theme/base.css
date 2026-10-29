@@ -104,7 +104,7 @@
 
   /* 浏览器自动填充（Chrome/Safari）默认给 input/textarea 涂淡黄底
      （rgb(250 255 189)），与设计系统冲突。用内嵌阴影盖掉原生底色：
-     input-surface 内的输入用与容器一致的混合底色，其余用 surface-primary；
+     input-surface 内的输入用字段表面色（--cst-field-bg），其余用 surface-primary；
      文字色同步锁到 text-primary，避免暗色模式下被填成黑字。 */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
@@ -127,6 +127,6 @@
   .input-surface textarea:-webkit-autofill,
   .input-surface textarea:-webkit-autofill:hover,
   .input-surface textarea:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0 1000px color-mix(in srgb, var(--cst-surface-primary) 82%, var(--cst-surface-page) 18%) inset;
+    -webkit-box-shadow: 0 0 0 1000px var(--cst-field-bg) inset;
   }
 }

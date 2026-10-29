@@ -235,7 +235,7 @@
 | full | `999` | 圆/胶囊 |
 | sheet | `28` | 底部弹层专用大圆角 |
 
-语义形状（`SHAPE`）：`CARD 20 / HERO_CARD 24 / COMPACT_CARD 16 / PREVIEW_CARD 20 / LIST_ITEM 20 / ICON_TILE 12 / INPUT 16 / BUTTON FULL / CHIP FULL / TAB_BAR 24 / SHEET_TOP_RADIUS 28`，按前端语义用法对齐（hero/feature 24、主按钮胶囊 FULL、弹层顶部 28）。近邻档 8/18/22 已删除，禁止再引入。
+语义形状（`SHAPE`）：`CARD 20 / HERO_CARD 24 / COMPACT_CARD 16 / PREVIEW_CARD 20 / LIST_ITEM 20 / ICON_TILE 12 / INPUT 16 / BUTTON FULL / CHIP FULL / TAB_BAR 24 / SHEET_TOP_RADIUS 28`，按前端语义用法对齐（hero/feature 24、主按钮胶囊 FULL、弹层顶部 28）。近邻档 8/18/22 已删除，禁止再引入。**输入族两派（2026-10-29）**：搜索输入 = 胶囊（前端 `rounded-full`，鸿蒙 `SearchPageHeader` 用 `SHAPE.BUTTON`）；表单输入保持 `INPUT 16`（鸿蒙 `SystemInput` 不变）。
 
 ---
 
@@ -267,7 +267,8 @@
 | 内容岛/统计卡/徽章/**列表分组容器**（ListGroup / SettingsSectionCard） | `surfaceShadow`（软岛用 `shadow-xs`） | — |
 | 列表行（分组内的行） | **无投影**（层级由分组容器 + 发丝分隔线承担） | — |
 | 选中胶囊（TabsPillGroup） | `controlShadow`（hover 增量走底色） | — |
-| 输入框聚焦 | `surfaceShadow` + 边框加深（不画光晕） | — |
+| 输入框静态（2026-10-29） | 字段表面色（surface-primary）+ 1px border-default，无投影（纸面主题一致） | hover：边框升 border-strong |
+| 输入框聚焦（2026-10-29） | accent 1px 边界 + 内缘 1px（视觉 2px）+ 3px accent 柔光环 | — |
 | 菜单/浮层（NotificationCenter、sheet 内浮钮） | `controlShadow` | — |
 | 静态内容卡（登录卡/表单区块/提示 banner/空态卡/骨架卡） | `surfaceShadow` | — |
 
@@ -327,9 +328,10 @@
   按钮 `BUTTON_HEIGHT 42` / `BUTTON_HEIGHT_LG 48` / `ACTION_BUTTON_HEIGHT 28` /
   `ACTION_BUTTON_HEIGHT_MD 40` / `ACTION_BUTTON_HEIGHT_LG 34` / `SHEET_ACTION_HEIGHT 44` /
   `FILTER_CHIP_HEIGHT 30` / `LOGOUT_BUTTON_HEIGHT 50` / `PASSWORD_INPUT_HEIGHT 46`
-- 输入框 `INPUT_HEIGHT 42`（通用表单）/ `SEARCH_INPUT_HEIGHT 39`（搜索框：对齐前端
-  SearchInput 移动端实测 39.14 = py-2.5(10) + 行高 17.14 + border 2，2026-10-17 逐像素实测）；
-  搜索框内图标与文字间距同前端 `gap-2.5`(10)
+- 输入框 `INPUT_HEIGHT 42`（通用表单）/ `SEARCH_INPUT_HEIGHT 39`（搜索框）。2026-10-29 输入族
+  重构后两端同口径：搜索框 = 胶囊 + 39px（前端 py-2(8) + text-md 行高 21 + border 2 = 39），
+  图标 16、字号 14、图标与文字间距 `gap-2.5`(10)；表单输入 = 16 圆角 + 43px（前端 px-4 py-2.5 +
+  行高 21 + border 2 = 43，≈ INPUT_HEIGHT 42）
 - 图标 `ICON_SIZE_2XS 14` / `ICON_SIZE_XS 16` / `ICON_SIZE_SM 20` / `ICON_SIZE_SM_PLUS 22` /
   `ICON_SIZE_MD 24` / `ICON_SIZE_LG 32` / `ICON_SIZE_EMPTY 48`（与 `FONT.SIZE` 解耦的独立
   ICON 刻度，图标尺寸一律走此档，不用字号 token）/ `STATUS_ICON_SIZE 28` /
@@ -375,7 +377,7 @@
 | `MainLayout`（desktop/mobile/tablet） | `layout/DesktopLayout` / `PhoneLayout` / `ResponsiveContainer` | 设备外壳分派 |
 | `EmptyState` | `EmptyState` | 空态（同名同契约） |
 | `shared/Avatar` | `SystemAvatar` | 头像（尺寸/形状/状态点） |
-| `forms/SearchInput` | `SystemInput`（通用单行输入）/ `SearchPageHeader`（页头内联搜索） | 搜索输入（原表写的 `SmartSearchComponent` 已不存在，2026-10-12 修正） |
+| `forms/SearchInput` | `SystemInput`（通用单行输入）/ `SearchPageHeader`（页头内联搜索） | 搜索输入（原表写的 `SmartSearchComponent` 已不存在，2026-10-12 修正；2026-10-29 起搜索两端统一胶囊 39px / 字号 14 / 图标 16，表单 `SystemInput` / 前端 `forms/Input` 仍 16 圆角） |
 | `navigation/TabBar` / `NavTab` / `RailIcon` | `TabsPillGroup`（默认等宽分段；`freeWidth` 形态对齐前端胶囊行，`TabItem.count` 对齐角标） / `PhoneLayout` 底部导航 | 分类/导航 Tab |
 | `list/ListContainer`（bordered / embedded） | `components/ListGroup`（`bordered` 开关）+ `ListItemGroup` | 列表**分组容器**。**2026-10-27 Round 3**：开放页面 `bordered` = 内容软岛（无 1px 描边 + `surfaceIsland` + `surfaceShadow`/`shadow-xs` + 圆角 20 + 行 gap、行透明；无行间发丝线），见 §19；embedded 面板形态仍保留行分隔线。行本身禁止再叠边框/圆角/投影 |
 | `list/ListItem` | `SettingsEntryRow` / `SettingsToggleRow` / `GroupMemberRow` 等行组件 | 列表行：只写 padding + 按压反馈，不写背景/圆角/投影 |

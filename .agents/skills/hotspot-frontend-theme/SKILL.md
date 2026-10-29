@@ -38,6 +38,13 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token（shared �
 - **图钉 SVG 资源（`assets/markers/*.svg`）**：主题色 fill/stroke 一律用 `currentColor`，由 `location-shared.ts` 的 `markerSvg()` 以 `style="color:var(--cst-marker-*)"` 染色，随主题/明暗变化；资源内仅保留图标固有固定对比色（深色底 `#102A43`、白色高光 `#FFFFFF`）不随主题，属合理例外。新增 marker 类 SVG 必须遵循：主题色走 currentColor，禁止内嵌主题色 hex。
 - **主题选择器 swatch（stores/theme.svelte.ts `THEME_OPTIONS`）**：色板需在主题激活前静态展示**目标主题**的 accent 代表色，而 CSS 变量只能解析「当前」主题，故保留字面 hex（vibrant `#2B5EB2` / forest `#39714F` / inkwash `#A63A2E`）作为已登记例外；必须与 themes/{vibrant,forest,inkwash}.css 的 `--cst-palette-accent-primary` 保持同步（check-cross-platform-colors.mjs 直比）。
 
+## 输入表面 token（2026-10-29）
+
+- 输入族表面统一走 `.input-surface`（utilities.css）；颜色全部由 semantic.css 的 `--cst-field-*` 派生：`bg` / `bg-disabled` / `border` / `border-hover` / `border-focus` / `ring` / `ring-danger`（由 accent / status-danger / surface 系混出，三主题×明暗自动成立）。
+- **主题文件（themes/*.css）禁止覆写 `.input-surface`**：vibrant 曾给全部输入加 `backdrop-filter: blur(16px)` + 白化混合底，导致大面积毛玻璃（违反性能红线）且与 forest/inkwash 纸面语言不一致；2026-10-29 全部移除。
+- 输入表面不使用投影（静态/hover/focus 都不加）：层级由单层 hairline 边界 + 字段底 + 焦点环表达，纸面主题因此零主题分支。
+- 新增字段色档只能在 semantic.css 用 `color-mix` 派生（定义层最终值）；组件/页面仍禁止 color-mix。`--cst-field-*` 不注册 Tailwind 颜色类（组件不消费类名）。
+
 ## 状态色 on-soft 档
 
 - 「tint 淡底 + 同色语义文字」必须用 on-soft 文字档：`text-text-accent-on-soft` / `text-text-status-{online,warning,danger}-on-soft`（= 语义色 80% + text-primary 20%，`semantic.css` 派生）；**仅限 tint 软底**（徽章/胶囊/软底容器/危险菜单 hover），实底/画布正文继续用 `text-status-*` / `text-accent-default`。

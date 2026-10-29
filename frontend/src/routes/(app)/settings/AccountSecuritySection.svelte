@@ -271,7 +271,7 @@
 							autocomplete="username"
 							aria-label="用户名"
 							placeholder="用于日后登录"
-							class="mt-1 w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary"
+							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
 						/>
 					</label>
 					<label class="block">
@@ -282,7 +282,7 @@
 							autocomplete="new-password"
 							aria-label="设置密码"
 							placeholder="设置登录密码"
-							class="mt-1 w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary"
+							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
 						/>
 					</label>
 					<label class="block">
@@ -293,7 +293,7 @@
 							autocomplete="new-password"
 							aria-label="确认密码"
 							placeholder="再输入一次密码"
-							class="mt-1 w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary"
+							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
 						/>
 					</label>
 					{#if upgradeError}
@@ -329,7 +329,7 @@
 							autocomplete="current-password"
 							aria-label="旧密码"
 							placeholder="输入当前密码"
-							class="mt-1 w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary"
+							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
 						/>
 					</label>
 					<label class="block">
@@ -340,7 +340,7 @@
 							autocomplete="new-password"
 							aria-label="新密码"
 							placeholder="设置新密码"
-							class="mt-1 w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary"
+							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
 						/>
 					</label>
 					<label class="block">
@@ -351,7 +351,7 @@
 							autocomplete="new-password"
 							aria-label="确认新密码"
 							placeholder="再输入一次新密码"
-							class="mt-1 w-full input-surface rounded-md px-3 py-2 text-sm text-text-primary"
+							class="mt-1 w-full input-surface rounded-md px-3.5 py-2 text-md text-text-primary"
 						/>
 					</label>
 					{#if pwdError}

@@ -89,7 +89,7 @@
 			<p class="pb-1.5 text-status-danger text-xs">{chat.sendError}</p>
 		{/if}
 		<div class="flex items-center gap-2.5">
-			<div class="relative flex h-11 flex-1 items-center rounded-md input-surface px-4">
+			<div class="relative flex h-11 flex-1 items-center rounded-md input-surface px-3.5">
 				{#if mentionOpen}
 					<!-- 提及选择浮层：贴在输入框上方（输入栏在底部），键盘 ↑↓ 选择、Enter 确认、Esc 关闭 -->
 					<div

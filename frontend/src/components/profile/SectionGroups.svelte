@@ -48,7 +48,7 @@
 				{totalOnline} 人在线
 			</span>
 		</p>
-		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" class="w-full px-3 py-2.5 sm:w-72 sm:shrink-0" />
+		<SearchInput value={searchQ} onChange={(v) => (searchQ = v)} placeholder="搜索我的群组…" ariaLabel="搜索我的群组" class="w-full sm:w-72 sm:shrink-0" />
 	</div>
 {/if}
 

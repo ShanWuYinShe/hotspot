@@ -102,12 +102,12 @@
 			</button>
 		</div>
 
-		<div class="mt-4 input-surface rounded-lg p-4">
+		<div class="mt-4 input-surface rounded-md p-4">
 			<textarea
 				bind:value={text}
 				oninput={(e) => (text = e.currentTarget.value.slice(0, 500))}
 				placeholder="写下此刻发生的事…"
-				class="min-h-24 w-full resize-none bg-transparent text-sm leading-7 text-text-primary placeholder:text-text-secondary"
+				class="min-h-24 w-full resize-none bg-transparent text-md leading-7 text-text-primary placeholder:text-text-secondary"
 				aria-label="瞬间内容"
 			></textarea>
 			<div class="mt-2 flex items-center justify-end border-t border-border-default pt-2">

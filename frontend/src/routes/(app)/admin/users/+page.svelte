@@ -110,7 +110,7 @@
 	<div class="flex flex-col gap-4">
 		<div class={TOOLBAR}>
 			<div class={SEARCH_WRAP}>
-				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索用户…" class="px-4 py-2.5 rounded-md" />
+				<SearchInput value={query} onChange={(v) => (query = v)} placeholder="搜索用户…" ariaLabel="搜索用户" />
 			</div>
 			<select bind:value={searchField} class={SELECT} aria-label="搜索字段">
 				<option value="nickname">按昵称</option>
@@ -215,12 +215,12 @@
 			<div class="flex flex-col gap-3">
 				<label class="flex flex-col gap-1.5">
 					<span class="text-xs text-text-secondary">原因（记入审计日志，可留空）</span>
-					<textarea bind:value={banReason} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3 py-2 text-sm text-text-primary"></textarea>
+					<textarea bind:value={banReason} rows={2} maxlength={500} class="input-surface resize-none rounded-md px-3.5 py-2 text-md text-text-primary"></textarea>
 				</label>
 				{#if banTarget?.status !== 'banned'}
 					<label class="flex flex-col gap-1.5">
 						<span class="text-xs text-text-secondary">封禁天数（留空 = 永久封禁）</span>
-						<input type="number" min={1} bind:value={banDays} class="input-surface rounded-md px-3 py-2 text-sm text-text-primary" />
+						<input type="number" min={1} bind:value={banDays} class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary" />
 					</label>
 				{/if}
 			</div>

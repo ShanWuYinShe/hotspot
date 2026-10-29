@@ -251,3 +251,5 @@ src/
 ## 样式与交互状态
 
 **完整契约见 skill hotspot-frontend-style**（样式自查清单、交互状态契约、档位表；档位数值以根 `docs/design-system.md` 为准）。要点一句话：风格值落 token 体系（布局几何 px 除外）、档位禁止近邻并存、用既有交互工具类、焦点必须可见、UI 改动必须截图对比审查（细则见「UI 设计原则」）。
+
+- **输入族（2026-10-29）**：搜索一律 `forms/SearchInput`（胶囊 / 39px / text-md / 清空钮 44 命中）；表单输入一律 `forms/Input` 或裸 `.input-surface`（16 圆角 / 43px / text-md）；页面不得再传 padding/圆角/字号覆盖原语；输入表面契约（hover/focus/error/disabled、placeholder 对比度、⌘K 全局搜索）见 `docs/ui-components.md`「输入族契约」与源码测试 `src/styles/__tests__/input-surface-contract.test.ts`。

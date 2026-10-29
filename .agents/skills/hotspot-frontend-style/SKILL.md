@@ -37,7 +37,7 @@ description: hotspot 前端 web 样式与交互状态契约：样式自查清单
 
 | 元素 | hover | focus / active |
 |------|-------|----------------|
-| 输入框（input-surface） | — | 边框加深（border-strong）+ 内缘 1px 加深线 + 内凹阴影（`--shadow-inset-sm`），底色保持中性 |
+| 输入框（input-surface） | 边框升 border-strong（单层，不叠内缘） | 聚焦：accent 1px 边 + 内缘 1px（视觉 2px）+ 3px accent 柔光环；内层 input 不画自身 outline；错误态 danger 边 + danger 光环 |
 | 图片卡（image-hover-frame） | 内嵌 accent 2px 描边 + 图片缩放 1.045（仅 fine pointer） | — |
 | 带边框卡片（card-hover） | 边框变 accent（`hover:border-accent-default`）或投影抬升，不画外环 | — |
 | 可交互 surface-flat | 描边加深（border-strong） | — |
@@ -57,17 +57,27 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 - 导航 Tab 不参与本表：`.tab-item` 规则统一提供 `--cst-interactive-hover-fill`（无 layer，优先级高于 `@layer utilities`），**不要在 TabBar 上再写 `hover:bg-*`**（写了也不生效，是死类名）。
 
 硬性规则：
-- 输入框聚焦态由整框承载：内层 input/textarea 不画自身焦点框（utilities.css `.input-surface:focus-visible` 统一压制，与第 16 条配合）；底色保持中性，不引入 accent 色，避免与错误态等 accent 元素抢视觉。
+- 输入框聚焦态由整框承载：内层 input/textarea 不画自身焦点框（utilities.css `.input-surface:focus-visible` 统一压制，与第 16 条配合）。2026-10-29 起聚焦以 accent 为唯一信号（accent 边界 + 内缘 1px + 3px 柔光环，视觉 2px 满足焦点指示周长），控件内图标可随聚焦转 accent；错误态改用 danger 边界 + danger 光环，与 accent 互斥。
 - 禁止双重边框：card-hover 只抬投影不画外环；带边框的卡片 hover 用 `hover:border-accent-default`；surface-flat 的 hover 描边仅对可交互元素生效。
 - 图片缩放必须由外层 `overflow:hidden` + 圆角裁剪，图片任何像素不得溢出卡片。
 - **禁止渲染空 src 图片**：`<img src="">` 会被浏览器解析为当前页面 URL 而显示破图。无图/空 URL 一律走占位：大图/整卡用主题 fallback 底（`--cst-surface-card-fallback` 渐变；加载中叠加 `.media-placeholder` + `.media-placeholder--pulse` 限时脉冲，加载完成叠加 `img-fade` 渐显），头像用 `Avatar`（`components/shared/Avatar.svelte`，首字母兜底），列表小缩略图内联 `{#if url}` 分支。
 - **计数变化反馈**：点赞/评论等瞬时数值变化用 `count-pop` 类 + `{#key 值}` 重建元素触发弹跳（utilities.css cst-count-pop，snappy + bounce，自动遵循 reduced-motion）。
 - **大图查看统一入口**：任何「点击查看大图」交互一律复用 `components/overlays/ImageViewer`（bits-ui Dialog 底座：Esc/外点关闭、左右键/滑动切图、单击图片切换放大（以点击位置为锚）与滚轮连续缩放、放大后拖拽平移、缩略图条），禁止各页自建 lightbox。入口仅限动态详情页（单图封面/多图网格）；列表卡片与画廊一律整卡跳详情，不在卡片上直接开大图。
 - **地图筛选菜单统一**：`routes/(app)/map/shared/MapFilterMenu.svelte` 是桌面/移动唯一筛选实现（Popover 外点/Escape 关闭、徽章、至少一项约束、「全部显示」重置）；地图空白点击一律经 `MapCanvas onMapTap`（内部区分拖拽，拖动不误触），禁止父级用原生 onclick 判定。
-- **键盘导航**：列表/搜索页可加 ↑↓ 焦点移动（落到真实链接/按钮、focus-ring 可见），Enter 原生打开、Esc 清空/返回；不引入 combobox/aria-activedescendant；Tab 顺序不变。新增交互后必须跑 axe（0 serious/critical）。
+- **键盘导航**：列表/搜索页可加 ↑↓ 焦点移动（落到真实链接/按钮、focus-ring 可见），Enter 原生打开、Esc 清空/返回；不引入 combobox/aria-activedescendant；Tab 顺序不变；⌘K（Mac）/ Ctrl+K 全局唤出搜索（监听在 `(app)/+layout.svelte`、提示在搜索页输入框尾部，两处必须同时存在）。新增交互后必须跑 axe（0 serious/critical）。
 - **按钮光标**：`base.css` 全局 `button:not(:disabled)` / `[role="button"]:not([aria-disabled])` 给 `cursor:pointer`（Chrome 默认箭头会让 hover 反馈「不像可点」）。
 - **行类组件 hover 态对比度自检（强制）**：行 hover 底色（半透明 palette-hover）叠加后，行内 `.text-text-secondary` 实测仅 **3.2–4.7:1**（不达标；非 hover 基线 5.31–7.62 达标）。ListItem 已内置修复：hover（仅 fine pointer）/ `focus-within` 时行内次级文字升 `--cst-text-primary`（pressed/on-accent 行排除）。**新增任何「行类」组件必须自检 hover 态对比度**（不能只测静态态）；修复优先在组件内做状态化文字升档，不改 palette（跨端联动）、不删 hover 底色（减特效）。真实鼠标 hover 实测 6 组合 10.61–13.86 全 ≥4.5。
 - **tint 淡底 + 同色语义文字**必须用 on-soft 文字档：`text-text-accent-on-soft` / `text-text-status-{online,warning,danger}-on-soft`（= 语义色 80% + text-primary 20%，semantic.css 派生；定义见 skill `hotspot-frontend-theme`）；仅限 tint 软底（徽章/胶囊/软底容器/危险菜单 hover），实底/画布正文继续用 `text-status-*` / `text-accent-default`。悬停才出现 tint 的场景写成 `text-status-* hover:text-text-status-*-on-soft` + `hover:bg-*`。
+
+### 输入族契约（2026-10-29 重构，强制）
+
+- **两类语义、两种几何**：搜索 = 胶囊 `forms/SearchInput`（`rounded-full`，39px = `px-3.5 py-2` + `text-md`，图标 16）；表单 = 16 圆角 `forms/Input`（43px = `px-4 py-2.5` + `text-md`）或裸 `.input-surface`（页面按场景只选两档：表单块 43px = `px-4 py-2.5`、紧凑/后台 39px = `px-3.5 py-2`；textarea 走内容 padding 不套单行档）。**原语消费方不得再传 padding/圆角/字号覆盖**（历史上同一原语被传成 px-3/py-2.5/rounded-md/rounded-full 四种形态）；裸 surfaces 只允许上述两档，不得自造第三档。
+- **状态单一来源**：`.input-surface`（utilities.css）——静态字段底 + 1px border；hover 边框升 border-strong；focus accent 边界 + 内缘 1px（视觉 2px）+ 3px 柔光环；error danger 边界 + danger 光环；disabled 弱化底。**禁止回退**：静态态双层描边（border + 同色 inset 环）、双向内凹阴影、输入表面 `backdrop-filter`、主题文件覆写 `.input-surface`（focus 的 accent 内缘 1px 是刻意的 2px 焦点指示，不属此禁）。源码契约测试 `src/styles/__tests__/input-surface-contract.test.ts`。
+- **placeholder**：锁 `text-secondary` + `opacity:1`（全站 CSS 已接管），不要再叠 `opacity-*`（改前 0.6 透明度实测 2.43–4.0:1）。实测 5.3–8.8:1。
+- **清空钮**：32px 视觉 + `hit-slop`（44 命中），图标 14；点击后焦点回输入框；搜索钮 aria-label「清空搜索」、表单「清空」。
+- **读屏名称**：搜索输入按页面语义传 `ariaLabel`（搜索会话/用户/标签/联系人…），不得一律「搜索」；搜索输入带 `inputmode=search`/`enterkeyhint`/`autocomplete=off`。
+- **快捷键**：⌘K（Mac）/ Ctrl+K 全局唤出搜索；决策抽到 `lib/search-shortcut.ts`（纯函数 + 9 条单测），监听在 `(app)/+layout.svelte`、提示在搜索页输入框尾部 kbd 胶囊——两处必须同时存在，否则提示即假承诺。让位规则：弹层打开、非搜索页焦点在表单控件内时不劫持；已在搜索页则聚焦全选（导航落点用 rAF 显式补聚焦，避免被路由焦点管理抢到 main）。
+- **页面宽度**：`/search` hero 桌面 `max-w-3xl` 限宽（布局例外，见 skill `hotspot-frontend-layout`），移动满宽。
 
 ## 按钮语言两派与组件档位
 
@@ -91,7 +101,7 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 
 **图标线宽四档**（Lucide strokeWidth；新增图标按档选，禁止引入第五档）：1.5 大尺寸/装饰性图标（size-5+，如 MomentCard 占位 MapPin 20）；1.75 标准 UI 图标（size-4/5 列表行、导航，全站默认）；2 小尺寸强调（size-3.5/4 状态类，如 Toast 状态图标）；2.5-3 极小可见性特例（size-3 选中态 Check，如 MenuPanel 选中勾）。跨端：harmonyapp 用系统符号（`sys.symbol.*`，线宽由 HarmonyOS 设计定，无 strokeWidth 参数），两端无法字面统一线宽，以「同尺寸视觉重量相当」为准。
 
-**触控热区（强制）**：任何可点元素的**视觉高度 < 44px 时必须带 `hit-slop`**（或 `hit-slop-y`/`hit-slop-44`）。`.hit-slop` 用 `::before` 外扩 6px，实测换算：36×36 顶栏图标按钮 → 48×48 ✅；34×34 消息行更多操作 → 46×46 ✅；32（Button `h-8`）→ 44×44 ✅ 刚好达标；40（`py-1.5` 文本按钮）→ 52 ✅；28（筛选 chip）→ 40 ✗ 可接受（chip 为次级筛选、行长 ≥44，且带横向间距）。审计方法：`set viewport 390 844` → `open <路由>` → `eval` 遍历 `button, a[href], [role=button]` 收集 `getBoundingClientRect()` 与上表核对。
+**触控热区（强制）**：任何可点元素的**视觉高度 < 44px 时必须带 `hit-slop`**（或 `hit-slop-y`/`hit-slop-44`）。`.hit-slop` 用 `::before` 外扩 6px，实测换算：36×36 顶栏图标按钮 → 48×48 ✅；34×34 消息行更多操作 → 46×46 ✅；32（Button `h-8`）→ 44×44 ✅ 刚好达标；40（`py-1.5` 文本按钮）→ 52 ✅；28（筛选 chip）→ 40 ✗ 可接受（chip 为次级筛选、行长 ≥44，且带横向间距）；输入框清空钮 32 → 44 ✅（2026-10-29 起 SearchInput/Input 统一）。审计方法：`set viewport 390 844` → `open <路由>` → `eval` 遍历 `button, a[href], [role=button]` 收集 `getBoundingClientRect()` 与上表核对。
 
 ## 卡片交互契约（信息流卡/网格卡统一）
 

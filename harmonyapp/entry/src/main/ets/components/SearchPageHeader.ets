@@ -44,7 +44,9 @@ export struct SearchPageHeader {
   }
 
   private getSurfaceBorder(): ResourceColor {
-    return this.getPalette().floatingBorderColor;
+    // 静态边框用 borderColor（18% alpha，对齐前端 --cst-field-border/border-default）；
+    // floatingBorderColor 是 8% 的浮层发丝边，放在输入框上会明显偏淡（跨端视觉不一致）。
+    return this.getPalette().borderColor;
   }
 
   @Builder
@@ -66,11 +68,12 @@ export struct SearchPageHeader {
 
   @Builder
   private SearchInputRow() {
-    // 对齐前端 SearchInput：gap-2.5(10) + 框高 39.14 → SEARCH_INPUT_HEIGHT
-    Row({ space: DesignConstants.SPACING.MD }) {
+    // 对齐前端 SearchInput（2026-10-29 输入族重构）：胶囊 + 框高 39 + 字号 14 + 图标 16
+    // + gap-2.5(10)；TextInput 内边距 MD3(14) 与前端 px-3.5 同档。
+    Row({ space: DesignConstants.SPACING.MD2 }) {
       LucideIcon({
           icon: AppIcon.SEARCH,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
           color: this.getPalette().textSecondary
         })
 
@@ -80,8 +83,8 @@ export struct SearchPageHeader {
         // 完全透明化：消除 TextInput 系统主题默认背景/圆角溢出
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .background(DesignConstants.COLOR.TRANSPARENT)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .placeholderColor(this.getPalette().textTertiary)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .placeholderColor(this.getPalette().textSecondary)
         .fontColor(this.getPalette().textPrimary)
         .border({ width: 0 })
         .borderRadius(0)
@@ -111,12 +114,18 @@ export struct SearchPageHeader {
         })
     }
     .height(DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT)
-    .borderRadius(DesignConstants.SHAPE.INPUT)
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    // 搜索 = 胶囊（对齐前端 rounded-full；表单 SystemInput 仍是 16 圆角）
+    .borderRadius(DesignConstants.SHAPE.BUTTON)
+    .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3 })
     .backgroundColor(this.getSurfaceBackground())
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.isFocused ? this.getPalette().accentText : this.getSurfaceBorder() })
-    // 对齐前端 input-surface 聚焦契约：边框加深承载焦点（内凹阴影），无彩色光晕
-    .shadow(this.getPalette().surfaceShadow)
+    // 对齐前端 input-surface 聚焦契约：accent 边界（聚焦时加粗到 1.5）承载焦点。
+    // 颜色必须用 accentBackground（主题强调色本体）；accentText 是 accent 实底上的文字色
+    // （浅色主题 = 白），用作焦点边框会在白色输入面上不可见（与 SystemTextArea focus 同口径）。
+    .border({
+      width: this.isFocused ? DesignConstants.BORDER_WIDTH.REGULAR : DesignConstants.BORDER_WIDTH.HAIRLINE,
+      color: this.isFocused ? this.getPalette().accentBackground : this.getSurfaceBorder()
+    })
+    // 输入表面无投影（对齐前端 input-surface 与 design-system §8：层级由边线 + 焦点环表达）
     // 裁剪子组件，防止 TextInput 系统默认视觉溢出圆角
     .clip(true)
   }

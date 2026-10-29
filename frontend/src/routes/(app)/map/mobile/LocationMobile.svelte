@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Search, MapPin, X, Crosshair, Check, ArrowLeft } from '@lucide/svelte';
+	import { MapPin, Crosshair, Check, ArrowLeft } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
@@ -20,6 +20,7 @@
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
 	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { platform } from '@/stores/platform.svelte';
@@ -362,38 +363,25 @@
 
 		<!-- Search bar -->
 		<div class="shrink-0 px-4 {isLandscape ? 'pt-3 pb-2' : 'pb-2'}">
-			<div class="flex items-center gap-2.5 px-3.5 rounded-md input-surface h-11" >
-				<Search class="size-3.5 shrink-0 text-text-secondary"   strokeWidth={1.5} />
-				<input
-					bind:value={searchQuery}
-					oninput={(e) => {
-						searchQuery = e.currentTarget.value;
-						selectedLoc = null;
-						if (snap === 'min') snapTo('mid');
-					}}
-					onfocus={() => {
-						if (snap === 'min') snapTo('mid');
-					}}
-					placeholder="搜索地点、地标或坐标"
-					class="flex-1 bg-transparent text-text-primary text-sm"
-				/>
-				{#if searchQuery}
-					<button
-						type="button"
-						class="hover-action -m-1.5 flex items-center justify-center rounded-full p-1.5 focus-ring"
-						aria-label="清空搜索"
-						title="清空"
-						onclick={() => {
-							searchQuery = '';
-							selectedLoc = null;
-						}}
-					>
-						<X class="size-3.5 text-text-secondary" strokeWidth={1.75} />
-					</button>
-				{:else if selectedLoc}
-					<Check class="size-3.5 shrink-0 text-accent-default"   strokeWidth={2.5} />
-				{/if}
-			</div>
+			<SearchInput
+				value={searchQuery}
+				onChange={(v) => {
+					searchQuery = v;
+					selectedLoc = null;
+					if (snap === 'min') snapTo('mid');
+				}}
+				onFocus={() => {
+					if (snap === 'min') snapTo('mid');
+				}}
+				placeholder="搜索地点、地标或坐标"
+				ariaLabel="搜索地点、地标或坐标"
+			>
+				{#snippet trailing()}
+					{#if selectedLoc}
+						<Check class="size-3.5 shrink-0 text-accent-default" strokeWidth={2.5} aria-hidden="true" />
+					{/if}
+				{/snippet}
+			</SearchInput>
 		</div>
 
 		<!-- Scrollable content — 收起(min)时隐藏而非卸载（保留滚动位置/输入状态；横屏恒定展示） -->

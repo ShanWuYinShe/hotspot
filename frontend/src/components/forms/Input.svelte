@@ -4,9 +4,9 @@
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import { cn } from '@/lib/utils';
 
-	// Input —— 表单单行输入原语（ui-components.md backlog #2 落地）。
-	// 样式走 input-surface（聚焦/错误态由 :focus-within 与 :has(input[aria-invalid])
-	// 在 utilities.css 统一承担，本组件不写内联风格）。
+	// Input —— 表单单行输入原语（ui-components.md 契约）。
+	// 表面走统一的 input-surface（边框/焦点环/错误态/禁用态见 utilities.css），
+	// 圆角固定 rounded-md(16)，与搜索原语（胶囊）形成两派语言。
 	// 行为契约对齐鸿蒙 SystemInput：前缀图标（prefix snippet）/ 清除按钮（clearable，
 	// value 非空显示）/ 错误态三件套（hasError + errorText → aria-invalid +
 	// aria-describedby + role="alert" 就近错误行）。
@@ -41,7 +41,7 @@
 		/** 无可见 label 时的读屏名称 */
 		ariaLabel,
 		/** 输入字号（text-* 刻度类）。禁止内联 font-size。 */
-		textClass = 'text-sm',
+		textClass = 'text-md',
 		/** 输入框内额外 class（如 w-full） */
 		inputClass = '',
 		/** 外层容器额外 class */
@@ -80,37 +80,45 @@
 	} = $props();
 
 	const uid = $props.id();
-	const autoId = `input-${uid}`;
+	const autoId = 'input-' + uid;
 	const inputId = $derived(id ?? autoId);
-	const errorId = $derived(`${inputId}-error`);
+	const errorId = $derived(inputId + '-error');
+	let inputEl = $state<HTMLInputElement | null>(null);
+
+	function clear() {
+		value = '';
+		onChange?.('');
+		inputEl?.focus();
+	}
 </script>
 
 {#if compact}
-		<!-- compact：input-surface 直贴 input，完整样式（含 padding）由 inputClass 提供；
-		     错误行渲染在 input 之后 -->
-		<input
-			id={inputId}
-			{type}
-			{placeholder}
-			{disabled}
-			{autocomplete}
-			{inputmode}
-			{min}
-			{max}
-			{maxlength}
-			aria-label={ariaLabel}
-			aria-invalid={hasError ? 'true' : undefined}
-			aria-describedby={hasError && errorText ? errorId : undefined}
-			bind:value
-			oninput={(e) => onChange?.(e.currentTarget.value)}
-			onkeydown={(e) => {
-				if (e.key === 'Enter') onEnter?.(value);
-			}}
-			class={cn('input-surface rounded-md text-text-primary', textClass, inputClass)}
-		/>
-		{#if hasError && errorText}
-			<p id={errorId} class="text-xs text-status-danger" role="alert">{errorText}</p>
-		{/if}
+	<!-- compact：input-surface 直贴 input，完整样式（含 padding）由 inputClass 提供；
+	     错误行渲染在 input 之后 -->
+	<input
+		id={inputId}
+		bind:this={inputEl}
+		{type}
+		{placeholder}
+		{disabled}
+		{autocomplete}
+		{inputmode}
+		{min}
+		{max}
+		{maxlength}
+		aria-label={ariaLabel}
+		aria-invalid={hasError ? 'true' : undefined}
+		aria-describedby={hasError && errorText ? errorId : undefined}
+		bind:value
+		oninput={(e) => onChange?.(e.currentTarget.value)}
+		onkeydown={(e) => {
+			if (e.key === 'Enter') onEnter?.(value);
+		}}
+		class={cn('input-surface rounded-md text-text-primary', textClass, inputClass)}
+	/>
+	{#if hasError && errorText}
+		<p id={errorId} class="text-xs text-status-danger" role="alert">{errorText}</p>
+	{/if}
 {:else}
 	<div class="flex flex-col gap-1.5">
 		{#if label}
@@ -118,16 +126,15 @@
 		{:else if labelSnippet}
 			{@render labelSnippet()}
 		{/if}
-		<!-- 默认内边距不可省：input-surface 只提供底色/描边/聚焦态，不含 padding。
-		     曾因原语无默认档、调用方漏传 className 而整框塌成 19px（/me/edit 昵称字段实测
-		     356×17.1、padding 0），既偏离 INPUT_HEIGHT 42 契约，也低于 24px 触控下限。
-		     默认取 px-4 py-3：与同表单「个人简介」（input-surface px-4 py-3）及登录表单
-		     实测 43.1px 同档；调用方仍可用 className 覆盖（cn 走 tailwind-merge）。 -->
-		<span class={cn('flex items-center gap-2 input-surface rounded-md px-4 py-3', className)}>
+		<!-- 默认内边距不可省：input-surface 只提供底色/描边/焦点态，不含 padding。
+		     默认 px-4 py-2.5 + text-md 行高 21 + 边框 2 = 43px（≈ INPUT_HEIGHT 42 契约）；
+		     调用方仍可用 className 覆盖（cn 走 tailwind-merge）。 -->
+		<span class={cn('flex items-center gap-2 rounded-md input-surface px-4 py-2.5', className)}>
 			{@render prefix?.()}
 			<!-- 聚焦态由外层 input-surface:focus-within 整框承担（见 utilities.css），内层不画自身焦点框 -->
 			<input
 				id={inputId}
+				bind:this={inputEl}
 				{type}
 				{placeholder}
 				{disabled}
@@ -147,16 +154,14 @@
 				class={cn('min-w-0 flex-1 bg-transparent text-text-primary', textClass, inputClass)}
 			/>
 			{#if clearable && value && !disabled}
+				<!-- 32px 视觉 + hit-slop → 44px 命中；-my-2 抵消纵向占位，输入框高度不变 -->
 				<button
 					type="button"
 					aria-label="清空"
-					class="shrink-0 rounded-full p-0.5 text-text-secondary hover:text-text-primary focus-ring"
-					onclick={() => {
-						value = '';
-						onChange?.('');
-					}}
+					class="hit-slop hover-btn -my-2 -mr-1 flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary focus-ring hover:bg-interactive-hover hover:text-text-primary"
+					onclick={clear}
 				>
-					<X size={14} />
+					<X size={14} strokeWidth={2} aria-hidden="true" />
 				</button>
 			{/if}
 		</span>

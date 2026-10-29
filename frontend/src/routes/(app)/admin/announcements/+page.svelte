@@ -215,16 +215,16 @@
 				<div class="mt-4 flex flex-col gap-3">
 					<label class="flex flex-col gap-1.5">
 						<span class="text-xs text-text-secondary">标题</span>
-						<input bind:value={title} maxlength={100} class="input-surface rounded-md px-3 py-2 text-sm text-text-primary" />
+						<input bind:value={title} maxlength={100} class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary" />
 					</label>
 					<label class="flex flex-col gap-1.5">
 						<span class="text-xs text-text-secondary">内容</span>
-						<textarea bind:value={content} rows={4} maxlength={2000} class="input-surface resize-none rounded-md px-3 py-2 text-sm leading-copy text-text-primary"></textarea>
+						<textarea bind:value={content} rows={4} maxlength={2000} class="input-surface resize-none rounded-md px-3.5 py-2 text-md leading-copy text-text-primary"></textarea>
 					</label>
 					<div class="grid grid-cols-2 gap-3">
 						<label class="flex flex-col gap-1.5">
 							<span class="text-xs text-text-secondary">级别</span>
-							<select bind:value={severity} class="input-surface rounded-md px-3 py-2 text-sm text-text-primary">
+							<select bind:value={severity} class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary">
 								{#each SEVERITIES as s (s.value)}
 									<option value={s.value}>{s.label}</option>
 								{/each}
@@ -232,7 +232,7 @@
 						</label>
 						<label class="flex flex-col gap-1.5">
 							<span class="text-xs text-text-secondary">跳转链接（可留空）</span>
-							<input bind:value={actionUrl} placeholder="https://…" class="input-surface rounded-md px-3 py-2 text-sm text-text-primary" />
+							<input bind:value={actionUrl} placeholder="https://…" class="input-surface rounded-md px-3.5 py-2 text-md text-text-primary" />
 						</label>
 					</div>
 					{#if !editTarget}

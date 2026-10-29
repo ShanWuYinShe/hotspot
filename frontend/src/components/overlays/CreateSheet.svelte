@@ -172,12 +172,12 @@
 				{/if}
 			</div>
 
-			<div class="input-surface rounded-lg p-4">
+			<div class="input-surface rounded-md p-4">
 				<textarea
 					bind:value={draft.text}
 					oninput={(e) => (draft.text = e.currentTarget.value.slice(0, 280))}
 					placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
-					class="min-h-30.5 w-full resize-none bg-transparent text-sm leading-7 text-text-primary placeholder:text-text-secondary"
+					class="min-h-30.5 w-full resize-none bg-transparent text-md leading-7 text-text-primary placeholder:text-text-secondary"
 					aria-label="瞬间内容"
 				></textarea>
 				<div class="mt-3 flex items-center justify-between border-t border-border-default pt-3">
