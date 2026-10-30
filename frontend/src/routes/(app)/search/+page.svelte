@@ -4,6 +4,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import { searchUsers, searchMoments, searchGroups, searchSuggest , netError } from '@/api';
 	import SearchDiscovery, { type DiscoveryUser, type DiscoveryGroup } from './shared/SearchDiscovery.svelte';
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
@@ -15,6 +16,7 @@
 	import type { MomentItem } from '@/api/types';
 	import { buildSearchUrl, parseSearchUrl } from '@/lib/search-url';
 	import { isSearchNavKey, nextSearchNavIndex } from '@/lib/search-nav';
+	import { resolveDiscoveryErrorView } from '@/lib/search-discovery-error';
 
 	// 搜索页：最近搜索（localStorage）、热门搜索、推荐话题、全部/用户/动态/话题 Tab。
 	// 对齐 Figma Make SearchPage：卡片使用 surface-primary + border 的 token 类，
@@ -58,7 +60,7 @@
 	// 同一热门响应的动态条目复用（此前只取 tags 即丢弃）：取前 4 条进「热门动态」区块
 	let hotMoments = $state<MomentItem[]>([]);
 	// 人物推荐：users/search 距离排序前 3（补发现态下半屏空白，P1-16）；字段映射
-	// 与 home-feed 的 NearbyUser 同口径（tag/距离/在线态）。失败静默、无数据不渲染。
+	// 与 home-feed 的 NearbyUser 同口径（tag/距离/在线态）。无数据不渲染；失败不静默（R2）。
 	let hotUsers = $state<DiscoveryUser[]>([]);
 	// 推荐群组：groups/search 热门排序前 3，丰富发现态并平衡桌面端左右栏高度
 	let hotGroups = $state<DiscoveryGroup[]>([]);
@@ -69,6 +71,23 @@
 	let momentsLoading = $state(true);
 	let usersLoading = $state(true);
 	let groupsLoading = $state(true);
+	// 发现态分区失败标志（R2）：三请求相互独立，任一失败都不得静默转空态。
+	// 呈现分档由 resolveDiscoveryErrorView 决定：部分失败→内联错误条+重试；
+	// 全部失败且没有本地内容→整块 LoadError+重试（契约见 lib/search-discovery-error.ts）。
+	let momentsFailed = $state(false);
+	let usersFailed = $state(false);
+	let groupsFailed = $state(false);
+	/** 发现态重试计数：递增即触发下面的加载 effect 重跑（清空 → 骨架 → 重新请求）。 */
+	let discoveryReload = $state(0);
+	const discoveryAllFailed = $derived(momentsFailed && usersFailed && groupsFailed);
+	const discoveryErrorView = $derived(
+		resolveDiscoveryErrorView({ moments: momentsFailed, users: usersFailed, groups: groupsFailed }, recent.length > 0)
+	);
+
+	/** 发现态重试：递增计数触发上面的加载 effect 重跑；仍失败会重新呈现对应错误态。 */
+	const retryDiscovery = () => {
+		discoveryReload += 1;
+	};
 
 	const device = $derived(platform.platform);
 
@@ -145,6 +164,7 @@
 		// 有查询时不拉发现态推荐（结果态不渲染这些区块；也避免深链触发两组 search 请求）；
 		// 清空查询后自动重新拉取。
 		void keyword;
+		void discoveryReload;
 		if (keyword) return;
 		const controller = new AbortController();
 		// 重新进入发现态（清空查询）时回到骨架态并清空旧数据：避免旧内容与新请求交错，
@@ -156,9 +176,16 @@
 		momentsLoading = true;
 		usersLoading = true;
 		groupsLoading = true;
+		momentsFailed = false;
+		usersFailed = false;
+		groupsFailed = false;
 		void searchMoments({ sort_by: 'popular', pagination: { limit: 12 } }, { signal: controller.signal })
 			.then((res) => {
-				if (controller.signal.aborted || res.code !== 0 || !res.data) return;
+				if (controller.signal.aborted) return;
+				if (res.code !== 0 || !res.data) {
+					momentsFailed = true;
+					return;
+				}
 				const seen = new Set<string>();
 				const list: string[] = [];
 				for (const m of res.data.items ?? []) {
@@ -172,16 +199,22 @@
 				hotTopics = list.slice(0, 10);
 				hotMoments = (res.data.items ?? []).slice(0, 4);
 			})
-			.catch(() => {})
+			.catch(() => {
+				if (!controller.signal.aborted) momentsFailed = true;
+			})
 			.finally(() => {
 				if (!controller.signal.aborted) momentsLoading = false;
 			});
 		// 人物推荐：距离排序（不带 reference_point 走服务端默认位置，与首页无锚点
 		// 回退同口径）；限 3 条（服务端对 limit 的裁剪口径不一，客户端显式
-		// 切片兜底）；仅发现态消费，失败静默。
+		// 切片兜底）；仅发现态消费，失败标记交由失败聚合呈现（不再静默）。
 		void searchUsers({ radius: 5000, sort_by: 'distance', pagination: { limit: 3 } }, { signal: controller.signal })
 			.then((res) => {
-				if (controller.signal.aborted || res.code !== 0 || !res.data) return;
+				if (controller.signal.aborted) return;
+				if (res.code !== 0 || !res.data) {
+					usersFailed = true;
+					return;
+				}
 				hotUsers = (res.data.items ?? []).slice(0, 3).map((u) => ({
 					id: u.user?.user_id ?? '',
 					name: u.user?.nickname ?? '',
@@ -191,14 +224,20 @@
 					isOnline: u.presence_status === 'online'
 				}));
 			})
-			.catch(() => {})
+			.catch(() => {
+				if (!controller.signal.aborted) usersFailed = true;
+			})
 			.finally(() => {
 				if (!controller.signal.aborted) usersLoading = false;
 			});
 		// 推荐群组：热门排序限 3 条，与人物推荐呼应
 		void searchGroups({ sort_by: 'popular', pagination: { limit: 3 } }, { signal: controller.signal })
 			.then((res) => {
-				if (controller.signal.aborted || res.code !== 0 || !res.data) return;
+				if (controller.signal.aborted) return;
+				if (res.code !== 0 || !res.data) {
+					groupsFailed = true;
+					return;
+				}
 				hotGroups = (res.data.items ?? []).slice(0, 3).map((g) => ({
 					id: g.group?.group_id ?? '',
 					name: g.group?.name ?? '',
@@ -207,7 +246,9 @@
 					memberCount: g.group?.members_count ?? 0
 				}));
 			})
-			.catch(() => {})
+			.catch(() => {
+				if (!controller.signal.aborted) groupsFailed = true;
+			})
 			.finally(() => {
 				if (!controller.signal.aborted) groupsLoading = false;
 			});
@@ -424,26 +465,42 @@
 	{#if searchError}
 		<LoadError message={searchError} onRetry={() => void doSearch(keyword)} />
 	{:else if !keyword}
-		<!-- 无查询发现态：最近搜索 + 热门话题 + 人物推荐 + 热门动态（无数据时各区块内部不渲染） -->
-		<SearchDiscovery
-			recent={recent}
-			hotTopics={hotTopics}
-			hotMoments={hotMoments}
-			hotUsers={hotUsers}
-			hotGroups={hotGroups}
-			topicsLoading={momentsLoading}
-			{momentsLoading}
-			{usersLoading}
-			{groupsLoading}
-			onChoose={choose}
-			onChooseTopic={chooseTopic}
-			onOpenMoment={(id) => void goto(ROUTES.moment(id))}
-			onOpenUser={(id) => void goto(ROUTES.user(id))}
-			onOpenGroup={(id) => void goto(ROUTES.group(id))}
-			onSeeAllUsers={() => void goto(ROUTES.nearbyPeople)}
-			onSeeAllGroups={() => void goto(ROUTES.nearbyGroups)}
-			onClear={() => (recent = [])}
-		/>
+		<!-- 无查询发现态：最近搜索 + 热门话题 + 人物推荐 + 热门动态（无数据时各区块内部不渲染）。
+		     分区加载失败不静默（R2）：部分失败给内联错误条 + 重试，保留已成功区块；
+		     全部失败且没有最近搜索可看时给整块 LoadError —— 分档见 lib/search-discovery-error.ts -->
+		{#if discoveryErrorView === 'full'}
+			<LoadError message="推荐内容加载失败，请稍后重试" onRetry={retryDiscovery} />
+		{:else}
+			{#if discoveryErrorView === 'inline'}
+				<!-- 内联错误条：次表面底（静态凹陷档）而非内容岛，避免与下方分区卡抢层级；
+				     文案收 flex-1 保证 390 下单行（窄屏只在文案内部折行），重试与 LoadError 同款同尺寸 -->
+				<div class="mb-6 flex items-center gap-3 rounded-md bg-surface-subtle px-3 py-2.5">
+					<p class="min-w-0 flex-1 text-sm text-text-secondary" role="status">
+						{discoveryAllFailed ? '推荐内容暂时无法加载，你仍可通过上方搜索框查找。' : '部分推荐内容加载失败。'}
+					</p>
+					<Button type="button" variant="secondary" size="sm" class="hit-slop shrink-0" onclick={retryDiscovery}>重试</Button>
+				</div>
+			{/if}
+			<SearchDiscovery
+				recent={recent}
+				hotTopics={hotTopics}
+				hotMoments={hotMoments}
+				hotUsers={hotUsers}
+				hotGroups={hotGroups}
+				topicsLoading={momentsLoading}
+				{momentsLoading}
+				{usersLoading}
+				{groupsLoading}
+				onChoose={choose}
+				onChooseTopic={chooseTopic}
+				onOpenMoment={(id) => void goto(ROUTES.moment(id))}
+				onOpenUser={(id) => void goto(ROUTES.user(id))}
+				onOpenGroup={(id) => void goto(ROUTES.group(id))}
+				onSeeAllUsers={() => void goto(ROUTES.nearbyPeople)}
+				onSeeAllGroups={() => void goto(ROUTES.nearbyGroups)}
+				onClear={() => (recent = [])}
+			/>
+		{/if}
 	{:else}
 		<!-- 有查询结果态（对齐 Figma）；输入联想（相关话题）作为顶部快速入口 -->
 		<SearchResults
