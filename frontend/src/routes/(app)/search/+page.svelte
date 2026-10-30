@@ -230,8 +230,11 @@
 			.finally(() => {
 				if (!controller.signal.aborted) usersLoading = false;
 			});
-		// 推荐群组：热门排序限 3 条，与人物推荐呼应
-		void searchGroups({ sort_by: 'popular', pagination: { limit: 3 } }, { signal: controller.signal })
+		// 推荐群组：附近活跃群组——radius(5km) 过滤 + popular(成员数/活跃度) 排序，与人物推荐的
+		// 5000m 半径同口径。契约：groups/search 要求 keyword/tag/radius 至少其一
+		// （spec/api_spec_group.md），此前只传 sort_by 会被后端 10000 拒绝、区块从未渲染
+		// （R2 失败呈现使其可见，2026-10-31 修正为显式 radius）。
+		void searchGroups({ radius: 5000, sort_by: 'popular', pagination: { limit: 3 } }, { signal: controller.signal })
 			.then((res) => {
 				if (controller.signal.aborted) return;
 				if (res.code !== 0 || !res.data) {
