@@ -14,6 +14,7 @@
 	import { formatDistance } from '@/lib/utils';
 	import type { MomentItem } from '@/api/types';
 	import { buildSearchUrl, parseSearchUrl } from '@/lib/search-url';
+	import { isSearchNavKey, nextSearchNavIndex } from '@/lib/search-nav';
 
 	// 搜索页：最近搜索（localStorage）、热门搜索、推荐话题、全部/用户/动态/话题 Tab。
 	// 对齐 Figma Make SearchPage：卡片使用 surface-primary + border 的 token 类，
@@ -323,6 +324,8 @@
 
 	// 搜索键盘导航（Round 6，轻量不引入 combobox）：↑↓ 在输入框 / 结果行 / 最近·热门条目间移动焦点，
 	// 焦点落在真实链接/按钮上（Enter 原生打开，Esc 由 SearchInput 清空）；Tab 顺序不受影响。
+	// 2026-10-31（R1）：候选只取正文内容区——页头不属于「输入框/相关话题/结果行/最近条目」序列，
+	// 否则从搜索框按 ↓ 会先落到页头返回钮；方向语义见 lib/search-nav.ts。
 	function searchNavCandidates(): HTMLElement[] {
 		const root = document.querySelector('[data-search-root]');
 		if (!root) return [];
@@ -330,6 +333,7 @@
 			root.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [data-cover]')
 		).filter(
 			(el) =>
+				!el.closest('header') &&
 				!el.closest('[role="tablist"], [data-tab-bar], .input-surface') &&
 				el.offsetParent !== null &&
 				!el.hasAttribute('aria-hidden')
@@ -354,19 +358,17 @@
 			input.focus();
 			return;
 		}
-		if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+		if (!isSearchNavKey(e.key)) return;
 		const active = document.activeElement as HTMLElement | null;
 		const root = document.querySelector('[data-search-root]');
 		if (!root || !active || !root.contains(active)) return;
 		// 弹层（图片查看/筛选等）打开时不劫持方向键
 		if (document.querySelector('[role="dialog"]')) return;
 		const nodes = searchNavCandidates();
-		if (nodes.length === 0) return;
+		const next = nextSearchNavIndex(nodes.indexOf(active), nodes.length, e.key);
+		// null = 本次不接管（如搜索框内按 ↑）：保留浏览器默认行为，不 preventDefault
+		if (next === null) return;
 		e.preventDefault();
-		const idx = nodes.indexOf(active);
-		let next: number;
-		if (idx < 0) next = e.key === 'ArrowDown' ? 0 : nodes.length - 1;
-		else next = Math.min(nodes.length - 1, Math.max(0, idx + (e.key === 'ArrowDown' ? 1 : -1)));
 		nodes[next]?.focus();
 	}
 </script>
