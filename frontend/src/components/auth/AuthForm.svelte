@@ -434,9 +434,9 @@
 		     原「其他方式」分隔线随微信按钮一并移除，仅保留条款行 -->
 		<p class="mt-5 text-center text-xs leading-5 text-text-secondary">
 			登录即表示你同意
-			{#if termsUrl}<a href={termsUrl} target="_blank" rel="noopener" class="link-btn text-accent-default">服务条款</a>{:else}服务条款{/if}
+			{#if termsUrl}<a href={termsUrl} target="_blank" rel="noopener" class="link-btn text-accent-default focus-ring">服务条款</a>{:else}服务条款{/if}
 			与
-			{#if privacyUrl}<a href={privacyUrl} target="_blank" rel="noopener" class="link-btn text-accent-default">隐私政策</a>{:else}隐私政策{/if}。
+			{#if privacyUrl}<a href={privacyUrl} target="_blank" rel="noopener" class="link-btn text-accent-default focus-ring">隐私政策</a>{:else}隐私政策{/if}。
 		</p>
 	{/if}
 

@@ -85,7 +85,7 @@
 	<div class="animate-fade-in">
 		<!-- Selected pin mini-card -->
 		{#if selectedPin}
-			<div class="mx-4 mb-3 flex items-center gap-3 rounded-md bg-surface-island p-2.5 shadow-xs">
+			<div class="mx-4 mb-3 flex items-center gap-3 rounded-lg bg-surface-island p-2.5 shadow-xs">
 				<PinMedia pin={selectedPin} size={42} />
 				<div class="min-w-0 flex-1">
 					<p class="truncate text-md font-medium text-text-primary">{selectedPin.name || selectedPin.title}</p>

@@ -343,7 +343,7 @@
 				<!-- 方案 D：LBS 双核全景大屏的右翼实时雷达控制中心 -->
 				<div class="flex flex-col gap-4 py-2">
 					<!-- 实时雷达探索卡片 -->
-					<div class="relative overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-sm">
+					<div class="relative overflow-hidden rounded-lg border border-border-default bg-surface-primary shadow-raised-sm">
 						<!-- 地图雷达视窗背景模拟 -->
 						<div class="relative h-60 w-full bg-surface-subtle flex items-center justify-center overflow-hidden border-b border-border-subtle">
 							<!-- 仿雷达脉冲扫描同心圆 -->
@@ -354,17 +354,17 @@
 								<div class="absolute size-84 rounded-full border border-border-default/20"></div>
 							</div>
 							<!-- 模拟地标图钉 -->
-							<div class="absolute top-10 left-10 flex items-center gap-1.5 rounded-full bg-surface-primary/95 backdrop-blur-sm px-3 py-1 shadow-sm border border-border-subtle text-xs font-medium text-text-primary">
+							<div class="absolute top-10 left-10 flex items-center gap-1.5 rounded-full bg-surface-primary/95 backdrop-blur-sm px-3 py-1 shadow-raised-sm border border-border-subtle text-xs font-medium text-text-primary">
 								<span class="size-2 rounded-full bg-status-online"></span> 云龙湖 · 8条动态
 							</div>
-							<div class="absolute bottom-12 right-10 flex items-center gap-1.5 rounded-full bg-surface-primary/95 backdrop-blur-sm px-3 py-1 shadow-sm border border-border-subtle text-xs font-medium text-text-primary">
+							<div class="absolute bottom-12 right-10 flex items-center gap-1.5 rounded-full bg-surface-primary/95 backdrop-blur-sm px-3 py-1 shadow-raised-sm border border-border-subtle text-xs font-medium text-text-primary">
 								<span class="size-2 rounded-full bg-accent-default"></span> 回龙窝街区 · 14人
 							</div>
 							<!-- 中心我所在的点 -->
 							<div class="relative flex flex-col items-center">
 								<span class="relative flex size-6">
 									<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-default opacity-75"></span>
-									<span class="relative inline-flex size-6 rounded-full bg-accent-default items-center justify-center text-white shadow-md">
+									<span class="relative inline-flex size-6 rounded-full bg-accent-default items-center justify-center text-text-on-accent shadow-raised-md">
 										<Radio class="size-3.5" />
 									</span>
 								</span>

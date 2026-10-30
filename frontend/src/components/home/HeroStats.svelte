@@ -43,7 +43,7 @@
 		<div class="flex items-center justify-between gap-2">
 			<div class="flex min-w-0 flex-1 items-center gap-3">
 				<!-- 雷达声纳声波呼吸环动效（单处动效：徽章圆点保持静态，避免叠两层动画） -->
-				<div class="relative flex shrink-0 items-center justify-center rounded-full bg-accent-default size-10 shadow-sm">
+				<div class="relative flex shrink-0 items-center justify-center rounded-full bg-accent-default size-10 shadow-raised-sm">
 					<span class="absolute inset-0 rounded-full bg-accent-default/30 animate-ping"></span>
 					<Radar class="relative size-5 text-text-on-accent transition-transform duration-standard group-hover:scale-110" strokeWidth={2} />
 				</div>

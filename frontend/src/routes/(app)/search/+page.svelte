@@ -380,7 +380,7 @@
 <div class="flex flex-col flex-1 min-h-full" data-search-root>
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
-		<PageHeader title="搜索" glass onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
+		<PageHeader title="搜索" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
 			{#snippet below()}
 				<!-- 搜索框随 sticky header 吸顶（对齐 nearby/moments 样板 below 结构）。
 				     below 容器仍全宽、与标题同轴；仅搜索输入本身在桌面限宽 max-w-3xl(768)——
