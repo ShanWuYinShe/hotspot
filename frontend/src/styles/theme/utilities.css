@@ -845,6 +845,14 @@
   [data-cover]:hover::before {
     opacity: 1;
   }
+  /* 图片内容卡（.card-hover）不叠整卡 hover 底色（2026-10-31，用户反馈「重复反馈」）：
+     卡片 hover 已有合成器上浮 + 配图 1.045 缩放两重反馈，再叠 10% accent 半透明底
+     属于重复蒙板（视觉上像整卡被压暗/染色）。列表行（ListItem 的 [data-cover]）没有
+     抬升/缩放，继续保留底色作为唯一 hover 反馈。
+     本规则留在无 layer 区且特异性更高（0,3,1 > 0,2,1），无需 !important。 */
+  .card-hover [data-cover]:hover::before {
+    opacity: 0;
+  }
 }
 
 /* 紧凑导航控件需要真胶囊形，而非通用控件圆角 */

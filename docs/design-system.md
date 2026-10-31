@@ -970,6 +970,9 @@ eager 图各 2 张且像素 diff 0 回归。
    opacity:0; pointer-events:none; transition:opacity 160ms`）+ `[data-cover]:hover` 自身
    `background-color:transparent`（压过全局 button hover 填充）。颜色 token 与 160ms 时长
    与旧行为一致，只有执行位置从主线程重绘换成合成器；卡片与 ListItem 的覆盖按钮共用。
+   **例外（2026-10-31，用户反馈「缩放 + 蒙板属重复反馈」）**：图片内容卡（`.card-hover`，
+   已有合成器上浮 + 配图 1.045 缩放）不再显示整卡底色——`.card-hover [data-cover]:hover::before
+   { opacity: 0 }`（无 layer 区、特异性覆盖）。列表行没有抬升/缩放，**继续保留**底色反馈。
 2. **卡片 hover 动画限定合成器属性**：`.card-hover` 只过渡 `transform` + `border-color`；
    抬升用 transform（vibrant 2px / forest·inkwash 0），配图缩放仍是 transform。
 3. **卡片/配图在 fine pointer 下常驻合成层**：`@media (hover:hover) and (pointer:fine)` 内

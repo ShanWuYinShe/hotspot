@@ -56,6 +56,12 @@ describe('卡片 hover 只走合成器属性（R18）', () => {
 		expect(tint).toMatch(/pointer-events\s*:\s*none/);
 		expect(tint).toMatch(/transition\s*:\s*opacity/);
 		expect(ruleBody('\n  [data-cover]:hover {')).toMatch(/background-color\s*:\s*transparent/);
+		// 2026-10-31：图片内容卡（.card-hover）已有上浮 + 图片缩放，不再叠整卡底色；
+		// opt-out 必须存在、且排在上面的全局规则之后（同层无 layer 区，靠特异性覆盖）。
+		expect(ruleBody('\n  .card-hover [data-cover]:hover::before {')).toMatch(/opacity\s*:\s*0/);
+		expect(css.indexOf('.card-hover [data-cover]:hover::before')).toBeGreaterThan(
+			css.indexOf('[data-cover]:hover::before')
+		);
 	});
 
 	it('卡片与配图在 fine pointer 下常驻合成层；基础规则不带 will-change', () => {
