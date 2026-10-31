@@ -212,13 +212,14 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
 src/
   routes/         # SvelteKit 路由（+page.svelte / +layout.svelte + 页面私有组件按设备分子目录）
   components/     # 共享组件（按域分子目录：auth/ data-display/ forms/ home/ layout/ list/
-                  #   messages/ navigation/ overlays/ profile/ rail/ shared/ ui/；
+                  #   messages/ moments/ navigation/ overlays/ profile/ rail/ shared/ ui/；
                   #   设备专属共享组件再按 {desktop,tablet,mobile}/ 分目录，如 layout/mobile/、
                   #   layout/desktop/；layout/ 域含 page/ 通用页面原语子目录——
                   #   StandardPageLayout/SplitPageLayout/PageHeader/ContentColumn/
                   #   PageViewport/RoutedContentViewport）
-                  #   单路由私有组件不下沉到 components/（如 moments/ 域已清空——MomentCard
-                  #   等随路由走 shared/）
+                  #   单路由私有组件留在该路由目录，跨路由复用的才下沉到 components/
+                  #   （反例校正 2026-10-31：moments/ 是仍在使用的域目录，MomentCard 位于
+                  #   components/moments/，被 /nearby/moments 与 ProfileMomentTile 引用）
   stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer/toast/admin/mapSource/unread，.svelte.ts）
   lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式；ws/ 为 WebSocket
                   #   客户端封装 client.ts + types.ts）
@@ -244,4 +245,4 @@ src/
 - **输入族（2026-10-29 第二轮收口）**：搜索一律 `forms/SearchInput`（胶囊 / 39px / text-md / 清空钮 44 命中）；单行一律 `forms/Input`（`density="default"` 43px / `"compact"` 39px）；多行一律 `forms/Textarea`（统一 `px-3.5 py-3` 壳）；下拉一律 `forms/Select`（`field`/`ghost`）；复选一律 `forms/Checkbox`。页面不得手写 input/textarea/select/checkbox/`.input-surface`，不得传 padding/圆角/字号覆盖原语（例外只能登记 allowlist 并写理由）。
 - **同类型一致性（强制）**：任何同类型 UI（搜索/输入/文本域/下拉/复选/Tab/按钮/卡片/列表行/空态…）在所有页面必须走同一原语或同一登记类契约，上下文差异只允许通过原语变体表达，禁止页内近似实现。输入族由 `bun run check:ui-consistency`（scripts/check-component-consistency.mjs，已挂入 `bun run check`）源码级拦截；契约与例外清单见 `docs/ui-components.md`「同类型一致性契约」，表面状态详见同文「输入族契约」与 `src/styles/__tests__/input-surface-contract.test.ts`。
 - **卡片行内交互（2026-10-29 用户反馈）**：作者行内所有「看起来可点」的元素必须是真实 `button/a` + `pointer-events-auto` + `stopPropagation`；禁止不可点徽章伪装按钮（会穿透整卡覆盖层直接打开详情）。关注态统一 `ui/FollowButton size="chip"`（`aria-pressed` + 「取消/关注 + 名字」 + 乐观态 + toast），点击不得触发卡片 `onClick`；非交互徽章允许点击穿透。新增卡片必须过「行内控件逐一点击」审计：头像/昵称→主页、动作→只切换、评论→详情评论区、封面→详情、关注→取关不导航。
-- **详情页（瞬间详情）**：**不渲染 PageHeader/横栏**——内容顶部是一条与画布同底、非吸顶的极简工具行（`ghost` 返回 + 居中标题 + `ghost` 更多，随内容滚走）；图片是内容卡首屏：整幅出血、宽度撑满内容卡 + 高度按图片自身比例（`w-full h-auto`），**任何分辨率下左右不得出现留白/模糊铺底**（高图由页面滚动承载，禁止用 max-h 压成异形）；ambient matte 仅作加载失败兜底；禁止固定高度 + `object-cover` 裁切；**多图走画廊导航**（主图 + 底部 56px 横向缩略图条，点击内联切换主图，右下角 `N / M` 页码；点击主图进全屏查看器），禁止再堆 3 列大缩略图网格；**图片区只保留顶部圆角**（卡片 `overflow-hidden` 裁剪）、底部直角贴边（禁止悬浮圆角矩形式图片卡）；缩略图条容器需给选中 ring 留绘制空间（`-mx-1 px-1 py-1`），禁止被 `overflow-x-auto` 裁掉；评论输入器**桌面/平板 `inline`（≥600 宽）/ 仅手机 `floating`**（40px 发送钮），禁止整条白底 `border-t` 通栏底栏与移动端第二条动作条。契约见 `docs/ui-components.md`「详情页契约」。
+- **详情页（瞬间详情）**：顶部用 `DetailHeader`（`sticky top-0`，`scrollThreshold=160`：起始为整行工具行，滚动过阈值后收成居中胶囊岛并常驻，不随内容滚走）——**不渲染 `PageHeader`/横栏**，这两点别混为一谈（2026-10-31 校正：旧文写「非吸顶、随内容滚走」，与现行 `DetailHeader` 相反）；图片是内容卡首屏：整幅出血、宽度撑满内容卡 + 高度按图片自身比例（`w-full h-auto`），**任何分辨率下左右不得出现留白/模糊铺底**（高图由页面滚动承载，禁止用 max-h 压成异形）；ambient matte 仅作加载失败兜底；禁止固定高度 + `object-cover` 裁切；**多图走画廊导航**（主图 + 底部 56px 横向缩略图条，点击内联切换主图，右下角 `N / M` 页码；点击主图进全屏查看器），禁止再堆 3 列大缩略图网格；**图片区只保留顶部圆角**（卡片 `overflow-hidden` 裁剪）、底部直角贴边（禁止悬浮圆角矩形式图片卡）；缩略图条容器需给选中 ring 留绘制空间（`-mx-1 px-1 py-1`），禁止被 `overflow-x-auto` 裁掉；评论输入器 **桌面/平板 `inline`（嵌评论区）/ 手机 `docked`**（`SplitPageLayout` 的 footer 渲染，`sticky bottom-0` 常驻贴底：横向 padding + 顶部分割线 + 毛玻璃实底，消除悬浮漏光）；发送钮 `size-9`（36px）；移动端不叠加第二条底部动作条。（2026-10-31 校正：旧文写的 `floating` 悬浮 dock / 40px / 禁止通栏底栏已作废，`floating` 变体当前无调用方。）契约见 `docs/ui-components.md`「详情页契约」（该文档同节仍为旧口径，待同步）。

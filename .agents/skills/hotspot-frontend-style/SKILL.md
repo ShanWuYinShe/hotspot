@@ -93,7 +93,7 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 - **未注册圆角档**：只允许 design-system 登记档（4 档 + full + sheet）；`rounded-2xl/3xl` 等禁止（`untiered-radius`）。
 - **头像**：一律 `shared/Avatar`（尺寸档/形状/占位/渐显/失败兜底），裸 `<img rounded-full>` 头像禁止（`raw-avatar-img`；品牌 logo 除外）。
 - **卡片行内交互（强制，2026-10-29 用户反馈）**：卡片作者行外层常为 `pointer-events-none`——所有看着可点的东西（尤其「已关注/关注」）必须是真实 `button` + `pointer-events-auto` + `stopPropagation`；**禁止不可点徽章伪装成按钮**（会穿透到整卡覆盖层、点击直接打开详情）。关注态统一 `ui/FollowButton size="chip"`（`aria-pressed` + 「取消关注/关注 + 名字」label + 乐观态 + toast），点击不得触发卡片 `onClick`。非交互状态徽章保持纯展示、允许点击穿透（点卡片其他区域打开详情是预期）。新增卡片必须过「行内控件逐一点击」审计：头像/昵称→主页、动作→只切换、评论→详情评论区、封面→详情、关注→取关且不导航。
-- **详情页（瞬间详情）**：不渲染 PageHeader/横栏——内容顶部是与画布同底、非吸顶的极简工具行（`ghost` 返回 + 居中标题 + `ghost` 更多，随内容滚走）；图片作为内容卡首屏画廊 hero：整幅出血、`object-contain` + 自身比例 + `max-h`，比例不匹配用同图模糊铺底（ambient matte）填满，不留白条/空底色，禁止固定高度 `h-cover-height-*` + `object-cover` 裁切；评论输入器 `inline`（桌面嵌评论区）/`floating`（移动悬浮 dock），发送钮 40px，**禁止整条白底 `border-t` 通栏底栏**；移动端不叠加第二条底部动作条。依据见 `docs/ui-components.md`「详情页契约」与 `docs/frontend-ui-audit.md` 2026-10-29 节。
+- **详情页（瞬间详情）**：顶部用 `DetailHeader`（`sticky top-0`、`scrollThreshold=160`，滚动后收成居中胶囊岛并常驻）；**不渲染 `PageHeader`/横栏**（两句别混：不渲染 PageHeader 是对的，非吸顶则已作废）。图片是内容卡首屏画廊 hero：整幅出血、`w-full h-auto object-contain` 按自身比例，**高图由页面滚动承载，不用 `max-h` 压缩**，禁止固定高度 `h-cover-height-*` + `object-cover` 裁切；ambient matte 仅作加载失败兜底，不作常规填满手段。评论输入器 桌面/平板 `inline`（嵌评论区）/ 手机 `docked`（`SplitPageLayout` footer，`sticky bottom-0` 贴底：横向 padding + 顶分割线 + 毛玻璃实底），发送钮 `size-9`（36px）；移动端不叠加第二条底部动作条。（2026-10-31 校正：旧的 `floating` 悬浮 dock / 40px / `max-h` / 「禁止通栏底栏」均已作废。）依据见 `docs/ui-components.md`「详情页契约」（该节仍为 2026-10-29 旧口径，待同步）与 `docs/frontend-ui-audit.md`。
 - 卡片/面板**内嵌**次级动作钮用 `flat` 去投影（投影语义归容器）。
 - 完整表格与示例见 `docs/ui-components.md`「按钮语言两派契约」。
 
