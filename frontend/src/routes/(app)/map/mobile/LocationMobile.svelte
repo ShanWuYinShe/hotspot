@@ -22,6 +22,7 @@
 	import LocationSheetList from './LocationSheetList.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import Button from '@/components/ui/button.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { platform } from '@/stores/platform.svelte';
 
@@ -297,15 +298,13 @@
 		<div style="position:absolute;top:0;left:0;right:0;z-index:50;padding:12px 14px 0;">
 			<div style="display:flex;align-items:center;justify-content:space-between;">
 				<!-- Back -->
-				<button
-					type="button"
-					class="hover-btn hit-slop flex items-center justify-center rounded-full focus-ring circle-hover size-10.5"
-					style="{floatBtnStyle}"
-					aria-label="返回"
-					onclick={() => smartBack()}
-				>
-					<ArrowLeft class="size-4.5 text-text-primary" strokeWidth={2} />
-				</button>
+				<ActionIconButton
+					icon={ArrowLeft}
+					label="返回"
+					onClick={() => smartBack()}
+					size={42}
+					variant="surface"
+				/>
 
 				<!-- Filter menu（桌面/移动共用组件：徽章/重置/至少一项/外点关闭统一） -->
 				<MapFilterMenu bind:activeFilters align="end" />

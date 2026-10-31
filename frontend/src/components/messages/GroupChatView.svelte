@@ -227,14 +227,14 @@
 		<!-- 头部内容经 ChatColumn 与消息列/输入栏同轴（R16，此前缺 lg:max-w-5xl 导致宽屏群名错位） -->
 		<ChatColumn class="flex h-full items-center gap-2 px-4">
 		{#if showBackButton}
-			<button
-				type="button"
-				class="hover-btn hit-slop scale-btn flex items-center justify-center rounded-full border border-border-default bg-surface-primary size-10.5 shrink-0 shadow-raised-sm focus-ring"
-				onclick={onBack}
-				aria-label="返回"
-			>
-				<ArrowLeft class="size-4.5 text-text-secondary"   strokeWidth={1.5} />
-			</button>
+			<ActionIconButton
+				icon={ArrowLeft}
+				label="返回"
+				onClick={onBack}
+				size={42}
+				variant="surface"
+				class="shrink-0"
+			/>
 		{/if}
 
 		<!-- 头像 + 名称/状态：点击进入群详情（移动端群聊页的管理/公告入口） -->
