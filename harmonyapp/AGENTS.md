@@ -35,7 +35,8 @@ PATH=$JAVA_HOME/bin:$PATH
 - `$NODE $HVIGOR --mode project -p product=default -p buildMode=debug assembleApp --analyze=normal --parallel --incremental --no-daemon` — 编译整个应用（含 CompileArkTS + 打包 + 签名，约 45s）。**`-p buildMode=debug` 不可省**：缺省按 release 构建，`BuildProfile.DEBUG=false` 会让 `SERVER_BASE_URL` 指向生产域名（`chaoset.com`，与 Web 网关同域；api 子域未建 DNS），本地调试环境永远连不上后端且不易察觉
 - `$NODE $HVIGOR clean --no-daemon` — 清理构建产物
 
-> 当前 hvigor 版本无 `assembleHap` 任务（旧文档废弃，调用报 `Task 'assembleHap' was not found`）；类型检查在 assembleApp 启动时自动执行（首行 `TYPE CHECK SUCCESSFUL`），完整验证统一用 assembleApp。
+> `assembleHap` 任务**按模式存在**（2026-10-31 实测，hvigor 6.26.4）：`--mode module` 下可用（`Finished :entry:assembleHap` / `BUILD SUCCESSFUL`），`--mode project` 下才报 `Task 'assembleHap' was not found`。不要把它当成已废弃任务删掉。
+> 本项目的完整验证仍统一用 `assembleApp`（`--mode project`，含 CompileArkTS + 打包 + 签名）；类型检查在 assembleApp 启动时自动执行（首行 `TYPE CHECK SUCCESSFUL`）。
 
 **提交时的 hvigor 门禁（2026-10-19 实测）**：repo root 的 pre-commit 钩子会对 `harmonyapp/` 改动跑 hvigor
 `assembleApp`（工具链缺失时告警跳过）。沙盒内缓存目录（`~/.hvigor`、`~/.npm`、`~/.ohpm`）已由
