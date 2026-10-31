@@ -22,7 +22,7 @@
 |---|---|
 | `list/ListContainer` | 列表容器。**2026-10-27 Round 3**：`bordered` 语义更新为「开放页面内容软岛」——`bg-surface-island + shadow-xs + rounded-lg(20)`、无 1px 描边、`p-2`(8)、行背景透明、行间 `gap-y-0.5`(2)、hover 填充离岛边 8（不再画行横线）；embedded（面板内集合）× `inset`（内缩圆角行）/ 默认（分隔线）不变。调用方不得再给 `bordered` 覆写 border/bg/radius |
 | `list/ListItem` | **唯一行交互原语**。hover/选中填充、12px 圆角、键盘、aria、`tone: joined/card`。行级卡片类禁止（eslint 强制）。列表容器内自动包 `role=listitem`（ListContainer 经 context 声明；ListEnd/InlineLoading 同机制），裸用不变。行点击由内部透明覆盖按钮（`[data-cover]`）承载，行内操作按钮自动抬升（z 序），根不持 button 语义（axe nested-interactive 清零） |
-| 行包装组件 | `ChatListItem` / `home/ActivityRow` / `profile/UserCardRow` / `forms/SettingRow`——只做内容编排，交互全部委托 ListItem |
+| 行包装组件 | `ChatListItem` / `home/ActivityRow` / `profile/UserCardRow`（用户/群组实体行；avatarShape 区分圆形/圆角方头像） / `forms/SettingRow`——只做内容编排，交互全部委托 ListItem |
 
 ### 卡片（CSS 卡语言 + 一个内容卡原语）
 | 原语 | 职责 |
@@ -350,3 +350,8 @@ System Settings 等）的模式对表后再动手。
 不新建中间值；如需例外，在本文件登记并写明理由。
 
 > 收敛完成后，本清单转为**硬约束**：新 UI 必须先选档位，不新建中间值。
+
+> **2026-10-31（行尺度收敛）**：`/search` 四类实体行（发现态人物/群组、结果态用户/群组）已统一为 `profile/UserCardRow`
+> （68px 双行 + 头像 44 + 名称 12px/500，群组用 `avatarShape="rounded"`），实测改前 60/66/68 三档并存 → 改后全 68。
+> **遗留**：`UserCardRow` 名称档 12px 与「三层信息标题 14–15px」密度原则存在张力，是否上调需跨消费方
+> （关系/附近/搜索结果/发现推荐，6+ 页）截图评审，单独立项，不在本轮范围。

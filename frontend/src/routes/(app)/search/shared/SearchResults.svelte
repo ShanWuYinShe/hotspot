@@ -4,7 +4,7 @@
 	import { Search as SearchIcon, Users, FileText, Hash, ChevronRight } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
-	import Avatar from '@/components/shared/Avatar.svelte';
+	import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
@@ -122,13 +122,13 @@
 
 	<div use:contentFade={loading}>
 	{#if loading}
-		<!-- 首屏骨架屏：搜索结果行（前导 36 = Avatar md 档，与真实用户结果行同构） -->
+		<!-- 首屏骨架屏：搜索结果行（前导 44 + p-3 = UserCardRow 行几何，与真实结果行零位移） -->
 		<div class="mt-4 flex flex-col gap-3">
 			<div class="flex items-center gap-2 px-1">
 				<Skeleton class="h-4 w-12 rounded-sm" />
 				<Skeleton class="h-3 w-8 rounded-sm" />
 			</div>
-			<SkeletonList rows={4} leading={36} label="搜索中…" rowClass="px-4 py-3.5" />
+			<SkeletonList rows={4} leading={44} label="搜索中…" />
 		</div>
 	{:else if !hasResults || tabEmpty}
 		<!-- 空态统一 EmptyState：页面级 spotlight + accent 图标软底 + 建议 chips -->
@@ -165,20 +165,22 @@
 				{#snippet userRows()}
 					<ListContainer bordered>
 						{#each results.users as person (person.user_id)}
-							<ListItem
-								onClick={() => void goto(ROUTES.user(person.user_id))}
+							<UserCardRow
+								name={person.nickname}
+								avatar={person.avatar_url ?? ''}
 								ariaLabel={`查看 ${person.nickname} 的资料`}
-								class="flex items-center gap-3 px-4 py-3.5"
+								onClick={() => void goto(ROUTES.user(person.user_id))}
 							>
-								<Avatar src={person.avatar_url ?? ''} name={person.nickname} size="md" />
-								<span class="min-w-0 flex-1">
-									<span class="block text-md text-text-primary">{person.nickname}</span>
-									<span class="mt-0.5 block text-xs text-text-secondary">
-										@{person.user_id}{#if person.tags?.length} · {person.tags[0]}{/if}
-									</span>
-								</span>
-								<ChevronRight class="size-4 text-text-secondary" />
-							</ListItem>
+								{#snippet subtitle()}
+									<p class="mt-1 flex items-center gap-1.5 text-xs">
+										<span class="text-text-secondary">@{person.user_id}</span>
+										{#if person.tags?.length}<span class="opacity-muted text-text-secondary">·</span><span class="text-accent-default">{person.tags[0]}</span>{/if}
+									</p>
+								{/snippet}
+								{#snippet actions()}
+									<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
+								{/snippet}
+							</UserCardRow>
 						{/each}
 					</ListContainer>
 				{/snippet}
@@ -232,20 +234,20 @@
 				{#snippet groupRows()}
 					<ListContainer bordered>
 						{#each results.groups as group (group.group_id)}
-							<ListItem
-								onClick={() => void goto(ROUTES.group(group.group_id))}
+							<UserCardRow
+								avatarShape="rounded"
+								name={group.name}
+								avatar={group.avatar_url ?? ''}
 								ariaLabel={`查看群组 ${group.name}`}
-								class="flex items-center gap-3 px-4 py-3.5"
+								onClick={() => void goto(ROUTES.group(group.group_id))}
 							>
-								<Avatar src={group.avatar_url ?? ''} name={group.name} size="md" shape="rounded" />
-								<span class="min-w-0 flex-1">
-									<span class="block text-md text-text-primary">{group.name}</span>
-									<span class="mt-0.5 block text-xs tabular-nums text-text-secondary">
-										{group.members_count ?? 0} 位成员
-									</span>
-								</span>
-								<ChevronRight class="size-4 text-text-secondary" />
-							</ListItem>
+								{#snippet subtitle()}
+									<p class="mt-1 text-xs tabular-nums text-text-secondary">{group.members_count ?? 0} 位成员</p>
+								{/snippet}
+								{#snippet actions()}
+									<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
+								{/snippet}
+							</UserCardRow>
 						{/each}
 					</ListContainer>
 				{/snippet}

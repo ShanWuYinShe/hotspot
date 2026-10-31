@@ -3,8 +3,9 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 
-	// UserCardRow — 用户卡片行（好友/关注/粉丝列表共用）。
-	// 统一：ListItem 外壳 + Avatar（ring + 可选角标）+ 名字 + 可选徽章。
+	// UserCardRow — 实体卡片行（用户/群组通用：好友/关注/粉丝/搜索结果/发现推荐）。
+	// 统一：ListItem 外壳 + Avatar（ring + 可选角标）+ 名字 + 可选副信息/动作。
+	// avatarShape 区分实体类型：用户 circle（默认）/ 群组 rounded（圆角方头像）。
 	// 副信息（handle/desc/时间）、缩略图、动作按钮由调用方 snippet 注入。
 	// tone: 'row'（List bordered 内，avatar 44）/ 'card'（embedded 网格，avatar 48）。
 
@@ -12,6 +13,7 @@
 		name,
 		avatar,
 		tone = 'row',
+		avatarShape = 'circle',
 		avatarBadge,
 		nameBadge,
 		subtitle,
@@ -26,6 +28,8 @@
 		name: string;
 		avatar: string;
 		tone?: 'row' | 'card';
+		/** 头像形状：用户=circle（默认）/ 群组=rounded（圆角方，与 Avatar shape 一致）。 */
+		avatarShape?: 'circle' | 'rounded';
 		avatarBadge?: Snippet;
 		nameBadge?: Snippet;
 		subtitle?: Snippet;
@@ -46,7 +50,7 @@
 	ariaLabel={ariaLabel ?? name}
 	{style}
 >
-	<Avatar ring src={avatar} name={name} size={tone === 'card' ? 48 : 44}>
+	<Avatar ring shape={avatarShape} src={avatar} name={name} size={tone === 'card' ? 48 : 44}>
 		{#snippet badge()}
 			{#if avatarBadge}
 				{@render avatarBadge()}

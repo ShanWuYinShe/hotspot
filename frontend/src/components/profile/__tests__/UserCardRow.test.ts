@@ -1,4 +1,4 @@
-// UserCardRow 契约测试：名称/头像渲染、可点击行与卡片形态。
+// UserCardRow 契约测试：名称/头像渲染、可点击行、卡片形态与群组圆角方头像。
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import UserCardRow from '../UserCardRow.svelte';
@@ -27,5 +27,14 @@ describe('UserCardRow', () => {
 		});
 		const row = container.querySelector('[aria-label="行"]') as HTMLElement;
 		expect(row.className).toContain('rounded-md');
+	});
+
+	it('avatarShape=rounded 时头像为圆角方（群组行复用同一原语）', () => {
+		const { container } = render(UserCardRow, {
+			props: { name: '晨跑团', avatar: 'x', avatarShape: 'rounded', ariaLabel: '行' }
+		});
+		const row = container.querySelector('[aria-label="行"]') as HTMLElement;
+		const avatar = row?.querySelector('div[style*="border-radius"]') as HTMLElement | null;
+		expect(avatar?.getAttribute('style') ?? '').toContain('border-radius: 12px');
 	});
 });

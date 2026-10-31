@@ -10,7 +10,6 @@
 	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
-	import Avatar from '@/components/shared/Avatar.svelte';
 	import type { MomentItem } from '@/api/types';
 
 	// 搜索页「无查询发现态」：最近搜索 + 热门话题 + 人物推荐 + 推荐群组 + 热门动态。
@@ -188,8 +187,8 @@
 
 	{#if groupsLoading || hotGroups.length > 0}
 		<!-- 推荐群组：与人物推荐同栅格语言，平衡发现态左右栏纵向节奏。
-		     加载期骨架复用 SkeletonList（Avatar 36 + 上下 12 = 行高 60、行间 2、软岛 p-2），
-		     与下方 ListItem 行几何一致 → 数据到达零位移。 -->
+		     加载期骨架复用 SkeletonList（Avatar 44 + p-3 = 行高 68、行间 2、软岛 p-2），
+		     与 UserCardRow 行几何一致 → 数据到达零位移。 -->
 		<section aria-label="推荐群组">
 			{#if onSeeAllGroups}
 				<SectionHead title="推荐群组" icon={UsersRound} action="查看全部" onAction={onSeeAllGroups} />
@@ -198,28 +197,30 @@
 			{/if}
 			{#if groupsLoading}
 				<ListContainer bordered>
-					<SkeletonList rows={3} leading={36} label="加载推荐群组…" rowClass="px-4 py-3 mb-0.5 last:mb-0" />
+					<SkeletonList rows={3} leading={44} label="加载推荐群组…" rowClass="p-3 mb-0.5 last:mb-0" />
 				</ListContainer>
 			{:else}
 				<ListContainer bordered>
-					{#each hotGroups as g (g.id)}
-						<ListItem
-							onClick={() => onOpenGroup?.(g.id)}
-							ariaLabel={`查看 ${g.name} 群组`}
-							class="flex items-center gap-3 px-4 py-3"
-						>
-							<Avatar src={g.avatar} name={g.name} size="md" shape="rounded" />
-							<div class="flex-1 min-w-0">
-								<p class="truncate text-sm font-medium text-text-primary">{g.name}</p>
-								<p class="mt-0.5 flex items-center gap-1.5 truncate text-xs">
-									{#if g.category}<span class="text-accent-default">#{g.category}</span>{/if}
-									{#if g.category && g.memberCount > 0}<span class="opacity-muted text-text-secondary">·</span>{/if}
-									<span class="tabular-nums text-text-secondary">{g.memberCount} 成员</span>
-								</p>
-							</div>
-							<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
-						</ListItem>
-					{/each}
+						{#each hotGroups as g (g.id)}
+							<UserCardRow
+								avatarShape="rounded"
+								name={g.name}
+								avatar={g.avatar}
+								ariaLabel={`查看 ${g.name} 群组`}
+								onClick={() => onOpenGroup?.(g.id)}
+							>
+								{#snippet subtitle()}
+									<p class="mt-1 flex items-center gap-1.5 truncate text-xs">
+										{#if g.category}<span class="text-accent-default">#{g.category}</span>{/if}
+										{#if g.category && g.memberCount > 0}<span class="opacity-muted text-text-secondary">·</span>{/if}
+										<span class="tabular-nums text-text-secondary">{g.memberCount} 成员</span>
+									</p>
+								{/snippet}
+								{#snippet actions()}
+									<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
+								{/snippet}
+							</UserCardRow>
+						{/each}
 				</ListContainer>
 			{/if}
 		</section>
