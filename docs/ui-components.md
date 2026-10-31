@@ -152,7 +152,8 @@
 | 作者区 | 有 `userId` 时头像/昵称均为可点按钮（hover：头像放大、昵称下划线；点击 stopPropagation → 主页）；无目标时保持纯文本 |
 | **行内关注态（2026-10-29 修复）** | 卡片作者行的「已关注/关注」必须是真实按钮（`ui/FollowButton size="chip"`，`aria-pressed` + `aria-label`「取消/关注 + 名字」），**禁止用不可点徽章**：徽章在 `pointer-events-none` 作者行里会穿透到整卡覆盖层，真实点击 = 打开详情（用户反馈 bug）。chip 在作者行内必须显式 `pointer-events-auto` + `stopPropagation` + 乐观取关/关注 + toast；点击绝不触发卡片 onClick。默认只在已关注作者卡显示，取关后就地保留「关注」chip，未关注作者卡不新增常驻按钮（降噪） |
 | 行内控件通用 | 所有行内可交互元素必须是 `button/a` 且 `pointer-events-auto`（作者行外层是 `pointer-events-none`）；非交互状态徽章保持纯展示并允许点击穿透（= 点卡片其他区域打开详情是预期） |
-| hover 反馈（2026-10-31） | 图片内容卡（`card-hover`）hover = **上浮 + 配图缩放**，**不再叠整卡底色蒙板**（`.card-hover [data-cover]:hover::before { opacity: 0 }`；用户反馈重复）；列表行（无抬升/缩放）保留 `[data-cover]` 伪元素底色。非交互徽章（图片数 `1/N`、位置）不接收点击，必须穿透到整卡覆盖层打开详情 |
+| hover 反馈（2026-10-31） | 图片内容卡（`card-hover`）hover = **上浮 + 配图缩放**，**不再叠整卡底色蒙板**（`.card-hover [data-cover]:hover::before { opacity: 0 }`；用户反馈重复）；列表行（无抬升/缩放）保留 `[data-cover]` 伪元素底色 |
+| **覆盖层穿透（2026-10-31，统一契约）** | 图片卡 = 图片 + 覆盖 UI。**非交互覆盖层一律 `pointer-events-none`**（`NearbyImageCard` 的 `data-card-children`/`data-card-footer`、`HomeFeedItem` 的 `data-card-info`、全部徽章角标），点击穿透到 `[data-cover]` 打开卡片；**交互控件必须是真实 `button/a`**，由卡根 `[&_button:not([data-cover])]:pointer-events-auto [&_a]:pointer-events-auto` 统一恢复并抬到 cover(z-10) 之上（头像→主页、点赞/评论/分享/收藏→各自动作、关注 chip→只切换）。**新增卡/覆盖 UI 只需遵守这两条**，不要再逐处排查或给徽章加特殊 click 处理；`HomeFeedItem`/`NearbyImageCard` 单测锁定该契约 |
 | 分享 | 统一 `lib/moment-actions.shareMoment`（系统分享 → 复制链接 + toast），信息流卡与网格卡同一实现 |
 
 ### 详情页（瞬间详情）契约（2026-10-29，用户反馈「顶部横条 / 评论输入格格不入 / 图片比例失真」）

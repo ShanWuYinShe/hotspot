@@ -119,4 +119,11 @@ describe('NearbyImageCard', () => {
 		await fireEvent.pointerUp(card);
 		expect(card.dataset.pressed).toBeUndefined();
 	});
+
+	it('卡根统一恢复交互控件 pointer-events-auto（覆盖层穿透契约兜底）', () => {
+		const { container } = render(NearbyImageCard, { props: { imageSrc: 'x', onClick: () => {} } });
+		const card = container.querySelector('article') as HTMLElement;
+		expect(card.className).toContain('[&_button:not([data-cover])]:pointer-events-auto');
+		expect(card.className).toContain('[&_a]:pointer-events-auto');
+	});
 });

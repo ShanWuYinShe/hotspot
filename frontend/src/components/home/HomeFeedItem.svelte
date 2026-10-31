@@ -212,7 +212,7 @@
 	     （图片 1.045 缩放），不再手写 hover:shadow/scale；无图 fallback 用主题化渐变底 +
 	     主题文字色（不使用白字遮罩，已登记例外）。 -->
 	<div
-		class="card-hover isolate group relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-surface-subtle shadow-xs sm:aspect-[4/5] [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
+		class="card-hover isolate group relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-surface-subtle shadow-xs sm:aspect-[4/5] [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_button:not([data-cover])]:pointer-events-auto [&_a]:relative [&_a]:z-20 [&_a]:pointer-events-auto"
 		use:cardPress
 	>
 		{#if !useFallback}
@@ -317,7 +317,9 @@
 		</div>
 
 		<!-- 底部：标题/正文摘要（最多 2 行）+ 元信息 + 操作行 -->
-		<div class="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-4 sm:p-5">
+		<!-- 底部信息层：文案/标签为非交互覆盖 UI，整层穿透到整卡覆盖按钮；操作行按钮由
+		     卡根 [&_button:not([data-cover])]:pointer-events-auto 恢复（覆盖层穿透契约）。 -->
+		<div class="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-4 sm:p-5" data-card-info>
 			{#if moment.description}
 				<p class="line-clamp-2 text-base font-semibold leading-tight sm:text-lg {useFallback
 					? 'text-text-primary'

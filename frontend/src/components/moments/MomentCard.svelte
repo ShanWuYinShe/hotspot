@@ -118,7 +118,7 @@
 	{#if item.tag}
 		<!-- Tag chip：毛玻璃底与卡片徽章语言统一（Gemini 审查 r04：降噪，亮蓝让位核心交互），
 	     严格锁定 h-5 与 leading-none 避免行高继承膨胀偏心 -->
-		<span class="media-badge absolute top-2.5 left-2.5 z-[2]">
+		<span class="pointer-events-none media-badge absolute top-2.5 left-2.5 z-[2]">
 			{item.tag}
 		</span>
 	{/if}

@@ -76,6 +76,10 @@
 		// isolate：卡片自成堆叠上下文——内部按钮 z-20 保持覆盖按钮可点；
 		// Round 2：去掉外框 border（连续画布，卡片边界只由图片/圆角/投影表达）。
 		'card-hover isolate group relative h-full w-full overflow-hidden',
+		// 覆盖层穿透契约（2026-10-31）：非交互覆盖层一律 pointer-events-none（见 children/footer
+		// 包装），交互控件由此处统一恢复 auto 并抬到 [data-cover](z-10) 之上。新增覆盖 UI 只需
+		// 遵守「非交互=none、交互=真实 button/a」两条，无需再逐处排查穿透。
+		'[&_button:not([data-cover])]:pointer-events-auto [&_a]:pointer-events-auto',
 		onClick &&
 			'[&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20',
 		className
@@ -129,17 +133,21 @@
 		</div>
 	{/if}
 	{#if children}
-		{@render children()}
+		<!-- 非交互覆盖 UI（徽章/角标等）：整层穿透到整卡覆盖按钮；交互控件由卡根 auto 恢复 -->
+		<div class="pointer-events-none" data-card-children>
+			{@render children()}
+		</div>
 	{/if}
 	{#if footer}
 		{#if horizontal}
 			<div
-				class="absolute inset-y-0 right-0 left-2/5 flex flex-col justify-center border-l border-border-card-menu bg-surface-card-menu"
+				class="pointer-events-none absolute inset-y-0 right-0 left-2/5 flex flex-col justify-center border-l border-border-card-menu bg-surface-card-menu"
+				data-card-footer
 			>
 				{@render footer({ onImage: hasImage, horizontal })}
 			</div>
 		{:else}
-			<div class="absolute inset-x-0 bottom-0">
+			<div class="pointer-events-none absolute inset-x-0 bottom-0" data-card-footer>
 				{@render footer({ onImage: hasImage, horizontal })}
 			</div>
 		{/if}

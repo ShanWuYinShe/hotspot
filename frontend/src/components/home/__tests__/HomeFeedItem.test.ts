@@ -149,3 +149,13 @@ describe('HomeFeedItem', () => {
 		});
 		expect(screen.queryByRole('button', { name: /关注 咖啡小迷妹/ })).toBeNull();
 	});
+
+	it('覆盖层穿透契约：非交互信息层 pointer-events-none，交互控件由卡根统一恢复 auto', () => {
+		const { container } = render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {} } });
+		const root = container.firstElementChild as HTMLElement;
+		const info = container.querySelector('[data-card-info]') as HTMLElement;
+		expect(info).toBeTruthy();
+		expect(info.className.split(/\s+/)).toContain('pointer-events-none');
+		expect(root.className).toContain('[&_button:not([data-cover])]:pointer-events-auto');
+		expect(root.className).toContain('[&_a]:pointer-events-auto');
+	});
