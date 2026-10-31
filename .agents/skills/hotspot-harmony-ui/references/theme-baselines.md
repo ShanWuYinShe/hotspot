@@ -8,11 +8,17 @@
 
 | 主题·模式 | primary | secondary | tertiary |
 |---|---|---|---|
-| 清野 浅/深 | 15.31 / 15.24 | 7.50 / 8.84 | 5.12 / 5.04 |
+| 清野 浅/深 | 15.31 / 15.24 | 7.50 / 8.84 | **5.75** / 5.04 |
 | 星际 浅/深 | 14.12 / 16.19 | 5.41 / 8.93 | 4.74 / 5.35 |
-| 水墨 浅/深 | 12.84 / 13.99 | 4.82 / 7.02 | **4.68** / 5.20 |
+| 水墨 浅/深 | 12.84 / 13.99 | **5.04** / 7.02 | **4.68** / 5.20 |
 
 最低值是水墨浅色的 tertiary 4.68 —— **改任何 text/bg token 后必须重跑，低于 4.5 即回归**。
+
+> 取数方式（2026-10-31 复核：按 `git show HEAD:` 版本重算，表内两组旧值已订正——
+> 清野浅 tertiary 旧写 5.12、水墨浅 secondary 旧写 4.82，均已过期）：
+> 从 `ThemeConstants.ets` 取每个 `static readonly *_COLORS` 块的 `pageBackground`（缺则
+> `surfaceBackground`）与 `textPrimary/Secondary/Tertiary`，按 WCAG 相对亮度公式求比值。
+> 注意 `borderColor` 等是 `#AARRGGBB`（8 位带 alpha），算对比度时先剥掉前两位 alpha。
 
 ## 2. 深色下的层级靠加亮的描边（不能只看 alpha）
 
