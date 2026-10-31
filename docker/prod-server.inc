@@ -1,6 +1,6 @@
 # ── HotSpot 生产 443 server{} 公共片段（仅 443 使用）────────────
 # 位置类配置与仓库 docker/nginx.conf 保持一致；依赖同目录挂载的
-# headers.inc / proxy.inc / amap.inc。80 端口端点定义在 nginx.prod-tls.conf。
+# headers.inc / csp.inc / proxy.inc / amap.inc。80 端口端点定义在 nginx.prod-tls.conf。
 #
 # 入口访问控制：本片段只挂在 443 server 上，来源鉴权由 TLS 层的 Cloudflare
 # Authenticated Origin Pulls（mTLS）完成——nginx 握手阶段即校验 CF 回源客户端
@@ -14,6 +14,7 @@ client_max_body_size 100m;
 server_tokens off;
 
 include /etc/nginx/conf.d/headers.inc;
+include /etc/nginx/conf.d/csp.inc;
 
 # 存活探针（全站约定 GET /healthz）：无鉴权、无限流，直通后端。
 location = /healthz {
@@ -91,12 +92,14 @@ location /share/ {
 
 location /_app/ {
     include /etc/nginx/conf.d/headers.inc;
+    include /etc/nginx/conf.d/csp.inc;
     add_header Cache-Control "public, immutable, max-age=31536000";
     try_files $uri =404;
 }
 
 location / {
     include /etc/nginx/conf.d/headers.inc;
+    include /etc/nginx/conf.d/csp.inc;
     add_header Cache-Control "no-cache";
     try_files $uri $uri/ /index.html;
 }
