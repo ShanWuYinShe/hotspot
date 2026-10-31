@@ -261,7 +261,7 @@
 				     font-normal 抵消 base h1 的 medium 字重，保持与原 p 一致的视觉。 -->
 				<svelte:element
 					this={compact ? 'h2' : 'h1'}
-					class="truncate font-semibold text-text-primary {compact ? 'text-base' : 'text-lg'}"
+					class="truncate font-semibold text-text-primary {compact ? 'text-md' : 'text-lg'}"
 				>
 					{groupName || '群聊'}
 				</svelte:element>

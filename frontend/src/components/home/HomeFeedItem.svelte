@@ -321,7 +321,7 @@
 		     卡根 [&_button:not([data-cover])]:pointer-events-auto 恢复（覆盖层穿透契约）。 -->
 		<div class="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-4 sm:p-5" data-card-info>
 			{#if moment.description}
-				<p class="line-clamp-2 text-base font-semibold leading-tight sm:text-lg {useFallback
+				<p class="line-clamp-2 text-md font-semibold leading-tight sm:text-lg {useFallback
 					? 'text-text-primary'
 					: 'text-content-inverse'}">
 					{moment.description}

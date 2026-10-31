@@ -126,7 +126,7 @@
 	// 半粗是页面的视觉锚点，与正文拉开层级；字重统一 semibold，不用 bold）。
 	const TITLE_SIZE_CLASS: Record<'md' | 'base' | 'lg' | 'xl' | '2xl' | '3xl', string> = {
 		md: 'text-md',
-		base: 'text-base',
+		base: 'text-md',
 		lg: 'text-lg',
 		xl: 'text-xl',
 		'2xl': 'text-2xl',
@@ -139,8 +139,8 @@
 		md: 'text-md'
 	};
 
-	// floating 是详情/沉浸页：返回是唯一离开路径，桌面也必须显示
-	const showBack = $derived(Boolean(onBack) && (floating || platform.platform !== 'desktop' || showBackOnDesktop));
+	// 凡传入 onBack 的页面（二级页/流程页/详情页），桌面/移动端统一保持常驻返回入口
+	const showBack = $derived(Boolean(onBack));
 	// header 统一预留黄金呼吸感：
 	// - 纯标题时标题/副标题/操作组与下边框之间留 pb-4.5（18px），上下留白匀称舒展，杜绝标题与分割线紧贴粘连；
 	// - below 存在时（搜索框/Tab 栏等），给 below 内容与下边框之间留 pb-3.5（14px）。

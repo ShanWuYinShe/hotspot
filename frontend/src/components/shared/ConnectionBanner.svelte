@@ -27,7 +27,7 @@
 			class="pointer-events-auto flex items-center gap-2 rounded-full border border-status-warning-border bg-surface-primary/95 px-3.5 py-1.5 shadow-raised-md backdrop-blur-md animate-in fade-in-0 slide-in-from-top-2"
 		>
 			<span class="relative flex size-2 shrink-0">
-				<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-warning opacity-75"></span>
+				<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-warning opacity-soft"></span>
 				<span class="relative inline-flex size-2 rounded-full bg-status-warning"></span>
 			</span>
 			<WifiOff class="size-3.5 shrink-0 text-status-warning" strokeWidth={2.2} />

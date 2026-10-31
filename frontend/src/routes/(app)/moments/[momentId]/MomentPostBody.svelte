@@ -225,7 +225,7 @@
 							aria-label={`第 ${i + 1} 张图片`}
 							class="relative size-14 shrink-0 overflow-hidden rounded-md transition-opacity duration-standard focus-ring {i === imageIndex
 								? 'opacity-100 ring-2 ring-accent-default'
-								: 'opacity-60 hover:opacity-100'}"
+								: 'opacity-dim hover:opacity-100'}"
 							onclick={() => (imageIndex = i)}
 						>
 							<img

@@ -239,7 +239,7 @@
 >
 	<Dialog.Content class="max-w-120 p-0">
 		<div class="px-5 pt-6 pb-5">
-			<Dialog.Title class="text-base font-semibold tracking-title text-text-primary">
+			<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">
 				{detailTarget ? `${AUDIT_ACTION_LABELS[detailTarget.action] ?? detailTarget.action} · ${formatDateTime(detailTarget.created_at)}` : ''}
 			</Dialog.Title>
 			{#if detailTarget?.operator}

@@ -35,7 +35,7 @@
 			<div class="flex size-16 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft">
 				<MessageCircle class="size-7" strokeWidth={1.5} aria-hidden="true" />
 			</div>
-			<h2 class="mt-5 text-base font-semibold text-text-primary">选择一个会话</h2>
+			<h2 class="mt-5 text-md font-semibold text-text-primary">选择一个会话</h2>
 			<p class="mt-2 max-w-xs text-sm leading-relaxed text-text-secondary">
 				从左侧选择会话继续聊天，或从最近会话快速进入。
 			</p>

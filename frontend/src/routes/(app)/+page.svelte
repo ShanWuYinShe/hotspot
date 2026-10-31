@@ -235,7 +235,7 @@
 					<div class="flex items-center justify-between px-4 pt-3 pb-2">
 						<div class="flex items-center gap-2">
 							<img src={imgHotSpot} decoding="async" alt="HotSpot" class="size-6.5 rounded-full object-cover shadow-xs" />
-							<span class="text-base font-bold tracking-tight text-text-primary">HotSpot</span>
+							<span class="text-md font-bold tracking-tight text-text-primary">HotSpot</span>
 						</div>
 						<h1 class="sr-only">首页</h1>
 						<div class="flex items-center gap-1">
@@ -276,7 +276,7 @@
 				<div class="mx-auto flex size-12 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft mb-3">
 					<Users class="size-6" strokeWidth={1.75} />
 				</div>
-				<h2 class="text-base font-semibold text-text-primary">登录后查看关注动态</h2>
+				<h2 class="text-md font-semibold text-text-primary">登录后查看关注动态</h2>
 				<p class="mt-1 text-xs text-text-secondary max-w-sm mx-auto">
 					关注同频的好友与活跃邻居，即时获取 TA 们的最新瞬间与生活记录。
 				</p>
@@ -347,7 +347,7 @@
 						<!-- 地图雷达视窗背景模拟 -->
 						<div class="relative h-60 w-full bg-surface-subtle flex items-center justify-center overflow-hidden border-b border-border-subtle">
 							<!-- 仿雷达脉冲扫描同心圆 -->
-							<div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40">
+							<div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-subtle">
 								<div class="size-28 rounded-full border border-accent-default/50 animate-ping"></div>
 								<div class="absolute size-44 rounded-full border border-border-default/60"></div>
 								<div class="absolute size-64 rounded-full border border-border-default/40"></div>
@@ -363,7 +363,7 @@
 							<!-- 中心我所在的点 -->
 							<div class="relative flex flex-col items-center">
 								<span class="relative flex size-6">
-									<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-default opacity-75"></span>
+									<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-default opacity-soft"></span>
 									<span class="relative inline-flex size-6 rounded-full bg-accent-default items-center justify-center text-text-on-accent shadow-raised-md">
 										<Radio class="size-3.5" />
 									</span>

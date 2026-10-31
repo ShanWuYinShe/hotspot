@@ -64,8 +64,8 @@ describe('HomeFeedItem', () => {
 	it('R13 卡片语言：标题升档、时间不重复、hover 由 card-hover 原语承载', () => {
 		const { container } = render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {} } });
 		const title = screen.getByText('在老街手冲馆度过了一个悠闲的午后，咖啡香气扑鼻。');
-		// 标题档：text-base sm:text-lg semibold leading-tight（压图白字、遮罩不变）
-		expect(title.className).toContain('text-base');
+		// 标题档：text-md sm:text-lg semibold leading-tight（压图白字、遮罩不变）
+		expect(title.className).toContain('text-md');
 		expect(title.className).toContain('sm:text-lg');
 		expect(title.className).toContain('leading-tight');
 		// 时间只在作者行出现一次（此前作者行 + 底部元信息重复渲染同一时间）
