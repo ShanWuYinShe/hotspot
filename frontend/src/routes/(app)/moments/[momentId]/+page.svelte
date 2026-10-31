@@ -48,6 +48,8 @@
 	import { formatMomentTime } from '@/lib/utils';
 	import { smartBack } from '@/lib/smart-back';
 	import { copyShareLink } from '@/lib/share';
+	import { ROUTES } from '@/lib/routes';
+	import DetailHeader from '@/components/layout/page/DetailHeader.svelte';
 	import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
@@ -574,21 +576,39 @@
 	</DropdownMenu.Root>
 {/snippet}
 
+{#snippet headerActions()}
+	{#if moment.id && !loading}
+		<div class="flex items-center gap-1">
+			<ActionIconButton icon={Link2} label="复制动态链接" variant="ghost" size={36} onClick={() => void copyMomentLink()} />
+			{@render moreMenu()}
+		</div>
+	{:else}
+		<span class="size-9 shrink-0" aria-hidden="true"></span>
+	{/if}
+{/snippet}
+
 <SplitPageLayout
 	contentMaxWidth="58rem"
-	contentClassName="animate-fade-in pt-2 pb-6"
+	contentClassName="animate-fade-in pt-1 pb-6"
 >
-	<!-- 内容内工具行（无表面、非吸顶）：返回 + 标题 + 更多与内容同处一块画布，
-	     不再形成一条横栏；图片画廊直接作为内容卡首屏。 -->
-	<div class="flex items-center justify-between gap-3 pb-2">
-		<ActionIconButton icon={ArrowLeft} label="返回" variant="ghost" onClick={() => smartBack()} />
-		<h1 class="min-w-0 flex-1 truncate text-center text-md font-semibold text-text-primary">瞬间详情</h1>
-		{#if moment.id && !loading}
-			{@render moreMenu()}
-		{:else}
-			<span class="size-9 shrink-0" aria-hidden="true"></span>
-		{/if}
-	</div>
+	{#snippet header()}
+		<DetailHeader
+			category="发现动态"
+			entityName={moment.user ? `@${moment.user} 的瞬间` : '瞬间详情'}
+			author={moment.id && !loading ? {
+				id: moment.authorId,
+				name: moment.user || '用户',
+				avatar: moment.avatar,
+				location: moment.location,
+				time: moment.time
+			} : undefined}
+			onBack={() => smartBack()}
+			onAuthorClick={() => {
+				if (moment.authorId) void goto(ROUTES.user(moment.authorId));
+			}}
+			trailing={headerActions}
+		/>
+	{/snippet}
 	<p aria-live="polite" class="sr-only">
 		{shareStatus === 'copied' ? '动态链接已复制' : shareStatus === 'failed' ? '无法复制动态链接' : ''}
 	</p>
