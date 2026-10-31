@@ -20,6 +20,7 @@
 	} from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
+	import DetailHeader from '@/components/layout/page/DetailHeader.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -363,27 +364,55 @@
 	}}
 />
 
+{#snippet userHeaderActions()}
+	<div class="flex items-center gap-1">
+		<ActionIconButton
+			icon={Share2}
+			label={shareCopied ? '链接已复制' : '分享资料'}
+			variant="ghost"
+			size={36}
+			onClick={copyProfileLink}
+		/>
+		{#if !isSelf}
+			<ActionIconButton
+				icon={MoreHorizontal}
+				label="更多操作"
+				variant="ghost"
+				size={36}
+				onClick={() => {
+					remarkDraft = remark;
+					moreOpen = true;
+				}}
+			/>
+		{/if}
+	</div>
+{/snippet}
+
 <SplitPageLayout
 	contentMaxWidth="58rem"
-	contentClassName="animate-fade-in pt-4 pb-6"
+	contentClassName="animate-fade-in pt-1 pb-6"
 >
+	{#snippet header()}
+		<DetailHeader
+			category="用户"
+			entityName={user.name ? `@${user.name}` : '用户资料'}
+			author={user.name && !loading ? {
+				name: user.name,
+				avatar: user.avatar,
+				location: user.location,
+				time: handleLine
+			} : undefined}
+			onBack={() => smartBack()}
+			trailing={userHeaderActions}
+		/>
+	{/snippet}
 	{#if loading}
 		<!-- 单实体资料页：结构轻、通常 <1s，用 InlineLoading 而非骨架（避免骨架形状与最终封面差异造成二次位移） -->
-		<div>
-			<div class="mb-4 flex items-center">
-				<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} size={42} />
-			</div>
-			<InlineLoading label="加载资料…" />
-		</div>
+		<InlineLoading label="加载资料…" />
 	{:else if loadError}
-		<div>
-			<div class="mb-4 flex items-center">
-				<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} size={42} />
-			</div>
-			<LoadError message={loadError} onRetry={() => reloadKey++} />
-		</div>
+		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
-		<!-- 身份封面卡（other 模式）：返回/分享/更多浮在封面上，关系动作收敛到卡片动作区 -->
+		<!-- 身份封面卡（other 模式）：返回/分享/更多收进 DetailHeader，避免封面四角散落孤立圆钮 -->
 		<IdentityHero
 			mode="other"
 			titleTag="h1"
@@ -396,37 +425,6 @@
 			online={presence === null ? undefined : presence === 'online'}
 			metrics={metrics}
 		>
-			{#snippet coverActions()}
-				<ActionIconButton
-					icon={ArrowLeft}
-					label="返回"
-					variant="overlay"
-					tone="inverse"
-					size={42}
-					onClick={() => smartBack()}
-				/>
-				<div class="flex gap-2">
-					<ActionIconButton
-						icon={Share2}
-						label={shareCopied ? '链接已复制' : '分享资料'}
-						variant="overlay"
-						tone="inverse"
-						onClick={copyProfileLink}
-					/>
-					{#if !isSelf}
-						<ActionIconButton
-							icon={MoreHorizontal}
-							label="更多操作"
-							variant="overlay"
-							tone="inverse"
-							onClick={() => {
-								remarkDraft = remark;
-								moreOpen = true;
-							}}
-						/>
-					{/if}
-				</div>
-			{/snippet}
 
 			{#snippet actions()}
 				<!-- R13 收尾：动作区同族同宽——未关注时 主=关注(primary)/次=私信(soft)；

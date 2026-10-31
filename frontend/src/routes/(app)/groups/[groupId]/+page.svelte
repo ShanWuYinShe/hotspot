@@ -3,6 +3,7 @@ import { formatCount } from '@/lib/utils';
 	import { goto } from '$app/navigation';
 	import { ArrowLeft, Bell, ChevronRight, Flag, LogOut, Megaphone, MessageCircle, MoreHorizontal, PencilLine, Pin, Settings, UserPlus, Users, X } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import DetailHeader from '@/components/layout/page/DetailHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
@@ -240,9 +241,27 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 </svelte:head>
 
 
+{#snippet groupHeaderActions()}
+	<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = true)} variant="ghost" size={36} />
+{/snippet}
+
 <!-- R13：内容统一「满宽 + page gutter」（去掉 max-w-6xl/xl/2xl 收窄档，避免 1024 满宽、1440 收窄的
      gutter 不一致）；移动端无固定底栏，保留 32px 底部净空即可（评审 P2-19）。 -->
 <StandardPageLayout contentClassName="animate-fade-in {platform.platform === 'mobile' ? 'pb-8' : 'pb-6'}">
+	{#snippet header()}
+		<DetailHeader
+			category="社群"
+			entityName={gd.detail.name || '群组主页'}
+			author={gd.detail.name && !gd.loading ? {
+				name: gd.detail.name,
+				avatar: gd.detail.banner,
+				location: gd.detail.category || '社群',
+				time: `${formatCount(gd.detail.members ?? 0)} 位成员`
+			} : undefined}
+			onBack={() => smartBack()}
+			trailing={groupHeaderActions}
+		/>
+	{/snippet}
 	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
 	{#if gd.loading}
 		<InlineLoading label="加载群组…" />
@@ -271,12 +290,6 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		{/if}
 		<!-- 沉浸式暗角天光渐变 -->
 		<div class="absolute inset-0" style="background:var(--cst-surface-cover-scrim);"></div>
-		<div class="absolute left-4 top-4">
-			<ActionIconButton icon={ArrowLeft} label="返回" onClick={() => smartBack()} variant="overlay" tone="inverse" size={42} />
-		</div>
-		<div class="absolute right-4 top-4">
-			<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = true)} variant="overlay" tone="inverse" size={42} />
-		</div>
 		<div class="absolute bottom-5 left-5 right-5">
 			{#if gd.detail.category}
 				<span class="media-badge">
