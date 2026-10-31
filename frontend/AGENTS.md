@@ -78,13 +78,15 @@ HTTPS（OrbStack 自带受信任的开发证书）：
 
 ### 浏览器巡检（可选，需 dev 环境已启动）
 
-前置：dev 环境已启动（见上），宿主机已安装 `agent-browser`
-（`bun install -g agent-browser && agent-browser install`）。
+前置：dev 环境已启动（见上），宿主机已装好 `agent-browser` 包装器。
+**不要执行 `bun install -g agent-browser`**：本机 `~/.bun/bin/agent-browser` 与 `~/.local/bin/agent-browser`
+都是指向 `~/.agents/bin/agent-browser`（自建 wrapper，含 chrome-guard 防弹窗与 session 隔离）的软链，
+重装会把它覆盖成上游原版，直接失去浏览器自动化红线。缺失时按 `browser-automation-safety` skill 处置。
 
 ```bash
-# 桌面 20 页
+# 桌面 21 页（QA 18 + 详情 3）
 bun run browser:qa
-# 桌面 20 页 + 移动 5 页（390×844）
+# 桌面 21 页 + 移动 5 页（390×844）
 bun run browser:qa:mobile
 # 指定网关地址（如 worktree 独立环境 8889）
 bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
@@ -144,7 +146,7 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
 - 调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 dev server 地址
 - 修改 nginx 配置后必须重启对应容器
 - Svelte 组件互引必须写显式 `.svelte` 扩展名（默认导出）；Svelte 5 单文件单组件
-- 新增依赖后容器内需重装（entrypoint 有自动检测，或 `docker compose up -d --force-recreate frontend`）
+- 新增依赖后**必须重建容器**：frontend 的 `entrypoint` 只在**启动时**跑 `bun install --frozen-lockfile`，运行中不会检测依赖变化——`docker compose up -d --force-recreate frontend`（2026-10-31 复核 `docker-compose.dev.yml` 第 166-169 行）
 - 每个路由 `+page.svelte` 必须设置 `<svelte:head><title>`（格式 `页面名 · HotSpot`）；
   `(app)` 组外层已提供 skip link（`#main-content`），路由内容滚动区
   `RoutedContentViewport` 的 `<main id="main-content">` 不得移除

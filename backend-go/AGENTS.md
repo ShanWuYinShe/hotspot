@@ -23,6 +23,10 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 
 ### 推送前门禁（硬性）：`./scripts/verify-backend-ci.sh`
 
+> 路径说明：本文所有 `scripts/xxx.sh` 都在**仓库根 `hotspot/scripts/`**，不是 `backend-go/scripts/`（该目录不存在）。
+> 从 `backend-go/` 里执行要写 `../scripts/verify-backend-ci.sh`，或先 `cd ..` 到仓库根。同理 `docs/` 指的是
+> 仓库根 `hotspot/docs/`（如 `docs/backend-audit.md` = `../docs/backend-audit.md`）。
+
 `go test -short` **不覆盖** CI 的以下检查，历史上多次「本地绿、CI 红」均源于此
 （2026-10-23 连续 4 个提交因真实库 SQL/参数错误红灯）：
 
