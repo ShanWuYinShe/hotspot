@@ -131,6 +131,7 @@ jobs:
           docker run --rm \
             -v "$PWD/docker/nginx.conf":/etc/nginx/conf.d/default.conf:ro \
             -v "$PWD/docker/nginx.headers.inc":/etc/nginx/conf.d/headers.inc:ro \
+            -v "$PWD/docker/nginx.csp.inc":/etc/nginx/conf.d/csp.inc:ro \
             -v "$PWD/docker/nginx.proxy.inc":/etc/nginx/conf.d/proxy.inc:ro \
             -v "$PWD/docker/amap.default.inc":/etc/nginx/conf.d/amap.inc:ro \
             --add-host backend:127.0.0.1 --add-host seaweedfs:127.0.0.1 \
@@ -155,6 +156,7 @@ jobs:
             -v "$PWD/docker/nginx.prod-tls.conf":/etc/nginx/conf.d/default.conf:ro \
             -v "$PWD/docker/prod-server.inc":/etc/nginx/conf.d/server.inc:ro \
             -v "$PWD/docker/nginx.headers.inc":/etc/nginx/conf.d/headers.inc:ro \
+            -v "$PWD/docker/nginx.csp.inc":/etc/nginx/conf.d/csp.inc:ro \
             -v "$PWD/docker/nginx.proxy.inc":/etc/nginx/conf.d/proxy.inc:ro \
             -v "$PWD/docker/amap.default.inc":/etc/nginx/conf.d/amap.inc:ro \
             -v /tmp/chaoset.pem:/etc/nginx/certs/chaoset.pem:ro \
@@ -271,6 +273,7 @@ jobs:
             --add-host backend:host-gateway --add-host seaweedfs:host-gateway \
             -v "$PWD/docker/nginx.conf":/etc/nginx/conf.d/default.conf:ro \
             -v "$PWD/docker/nginx.headers.inc":/etc/nginx/conf.d/headers.inc:ro \
+            -v "$PWD/docker/nginx.csp.inc":/etc/nginx/conf.d/csp.inc:ro \
             -v "$PWD/docker/nginx.proxy.inc":/etc/nginx/conf.d/proxy.inc:ro \
             -v "$PWD/docker/amap.default.inc":/etc/nginx/conf.d/amap.inc:ro \
             nginx:1.30.4-alpine
