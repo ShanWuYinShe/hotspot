@@ -152,7 +152,7 @@
 {/snippet}
 
 <!-- 统一度极高的沉浸式画卷流，消除碎片化盒子嵌套 -->
-<article class="flex flex-col overflow-hidden rounded-lg bg-surface-island p-4 sm:p-5 md:p-7 shadow-xs">
+<article class="flex flex-col overflow-hidden rounded-none sm:rounded-lg bg-surface-island p-0 sm:p-5 md:p-7 shadow-none sm:shadow-xs">
 	<!-- 1. 画廊 hero（单图：整幅展陈；多图：主图 + 底部缩略图导航）
 	     设计：主图**宽度始终撑满内容卡（w-full），高度按图片自身比例（h-auto）**，因此
 	     任何分辨率下图片盒子比例恒等于图片宽高比、左右不出现任何留白/模糊铺底（2026-10-29
@@ -162,11 +162,9 @@
 	     主图，点击主图进全屏查看器），右下角页码 N / M。 -->
 	{#if cover}
 		<div class="pb-5">
-			<!-- 图片区出血到卡片边缘：顶部圆角由卡片 overflow-hidden 裁剪（与卡片一致），
-			     底部保持直角——图片底部与卡片内容区直线相接，不再是一个悬浮的圆角矩形。
-			     2026-10-30 用户反馈：底部圆角 + 卡片背景留缝导致「图片底部不贴合、很丑」。 -->
-			<div class="relative -mx-4 -mt-4 overflow-hidden sm:-mx-5 sm:-mt-5 md:-mx-7 md:-mt-7">
-				<div class="relative overflow-hidden rounded-t-lg bg-surface-subtle">
+			<!-- 图片区：移动端通栏满宽直角铺满（0 边距）；平板/桌面出血到卡片边缘并保留顶部圆角 -->
+			<div class="relative overflow-hidden sm:-mx-5 sm:-mt-5 md:-mx-7 md:-mt-7">
+				<div class="relative overflow-hidden rounded-none sm:rounded-t-lg bg-surface-subtle">
 					<img
 						data-gallery-backdrop
 						src={presetImageUrl(currentImage, 'cover', 800)}
@@ -217,7 +215,7 @@
 				     其余降透明度保持层次；窄屏横向滚动。 -->
 				<!-- -mx-1/px-1/py-1：给选中态 ring（画在按钮边界外 2px）留出绘制空间，
 				     否则会被 overflow-x-auto 在左右/上下边缘裁掉一部分（2026-10-30 用户反馈）。 -->
-				<div class="-mx-1 mt-3 flex items-center gap-2 overflow-x-auto px-1 py-1" role="group" aria-label="图片缩略图">
+				<div class="mt-3 flex items-center gap-2 overflow-x-auto px-4 sm:px-1 sm:-mx-1 py-1" role="group" aria-label="图片缩略图">
 					{#each moment.images as img, i (img + i)}
 						<button
 							type="button"
@@ -241,7 +239,7 @@
 			{/if}
 		</div>
 	{:else if !moment.content && moment.location}
-		<div class="relative mb-5 flex h-cover-height-lg flex-col items-center justify-center gap-2 overflow-hidden rounded-lg bg-accent-soft/30">
+		<div class="relative mb-5 mx-4 sm:mx-0 flex h-cover-height-lg flex-col items-center justify-center gap-2 overflow-hidden rounded-lg bg-accent-soft/30">
 			<MapPin size={28} class="text-accent-default" strokeWidth={1.5} />
 			<span class="text-xs text-text-secondary">来自 {moment.location} 的瞬间</span>
 		</div>
@@ -249,7 +247,7 @@
 
 
 	<!-- 2. 作者 Header：头像（桌面 44 / 移动 36）+ 昵称 14 semibold + 位置·时间 11 次级 -->
-	<header class="flex items-center justify-between gap-3 pb-4">
+	<header class="flex items-center justify-between gap-3 pb-4 px-4 sm:px-0">
 		<div class="flex min-w-0 items-center gap-3">
 			<button
 				type="button"
@@ -283,20 +281,20 @@
 
 	<!-- 3. 正文叙述：14px / 1.75 阅读行高（与卡片 12px 摘要拉开层级） -->
 	{#if moment.content}
-		<p class="select-text whitespace-pre-wrap break-words pb-3 text-md font-normal leading-copy tracking-normal text-text-primary">
+		<p class="select-text whitespace-pre-wrap break-words pb-3 text-md font-normal leading-copy tracking-normal text-text-primary px-4 sm:px-0">
 			{moment.content}
 		</p>
 	{/if}
 
 	<!-- 4. 话题标签：标准胶囊档（h-6 + leading-none），只保留一层 accent 淡底 -->
 	{#if moment.tag}
-		<div class="pb-4">
+		<div class="pb-4 px-4 sm:px-0">
 			<Badge size="md" tone="accent">#{moment.tag}</Badge>
 		</div>
 	{/if}
 
 	<!-- 5. 交互动作条：所有端都在内容内展示（2026-10-29 移除移动端底部独立动作条，避免与输入器叠成两条横杠） -->
-	<div class="flex items-center justify-between py-3">
+	<div class="flex items-center justify-between py-3 px-4 sm:px-0">
 			<div class="flex items-center gap-6">
 				<button
 					type="button"
@@ -356,7 +354,7 @@
 		</div>
 
 	<!-- 6. 评论讨论区：与动作条之间用一条内容分隔发丝线（非卡片边界），自然在画卷内延展 -->
-	<section class="mt-2 border-t border-border-subtle/40 pt-6" id="moment-comments">
+	<section class="mt-2 border-t border-border-subtle/40 pt-6 px-4 sm:px-0" id="moment-comments">
 		<SectionHead title="评论讨论" count={commentCount} />
 		{#if commentComposer}
 			<!-- 桌面/平板：输入器内嵌评论区顶部（与卡片同语言），不再固定在视口底部形成独立横条 -->

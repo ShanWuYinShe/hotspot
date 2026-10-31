@@ -543,7 +543,7 @@
 		bind:input
 		bind:inputEl={commentInputEl}
 		onSend={() => void handleComment()}
-		variant={platform.platform === 'mobile' ? 'floating' : 'inline'}
+		variant={platform.platform === 'mobile' ? 'docked' : 'inline'}
 	/>
 {/snippet}
 
@@ -589,7 +589,8 @@
 
 <SplitPageLayout
 	contentMaxWidth="58rem"
-	contentClassName="animate-fade-in pt-1 pb-6"
+	edgeToEdgeMobile={true}
+	contentClassName="animate-fade-in pt-0 sm:pt-1 pb-6"
 >
 	{#snippet header()}
 		<DetailHeader
@@ -613,7 +614,7 @@
 		{shareStatus === 'copied' ? '动态链接已复制' : shareStatus === 'failed' ? '无法复制动态链接' : ''}
 	</p>
 
-	<!-- 内容（gutter 由 SplitPageLayout 提供；全幅封面在 MomentPostBody 内负 margin 抵消） -->
+	<!-- 内容（移动端通栏满宽，桌面居中软岛） -->
 	{#if loading}
 		<!-- 详情首屏骨架屏：作者行 → 正文 → 媒体 → 操作条 → 评论区，与 MomentPostBody
 		     的真实卡片同构（同外壳/同纵向节奏），做到「骨架→内容零位移」；
@@ -625,7 +626,7 @@
 			aria-label="加载动态…"
 			data-skeleton-root
 		>
-			<div class="overflow-hidden rounded-lg bg-surface-island shadow-xs">
+			<div class="overflow-hidden rounded-none sm:rounded-lg bg-surface-island shadow-none sm:shadow-xs">
 				<!-- 画廊 hero 首屏：与真实页一致（图片 → 作者/正文 → 动作条 → 评论区），零位移 -->
 				<Skeleton class="aspect-[4/3] w-full" />
 				<div class="p-4 sm:p-5 md:p-7">
@@ -695,10 +696,9 @@
 	{/if}
 
 	{#snippet footer()}
-		<!-- 移动端：仅评论输入器（floating dock）；动作条已内嵌内容，不再叠第二条全宽横杠。
-		     SplitPageLayout 负责 safe-area 与内容补偿，这里只给悬浮 dock 留呼吸位。 -->
+		<!-- 移动端：通栏贴底底栏，消除浮动胶囊与内容穿插漏光 -->
 		{#if platform.platform === 'mobile'}
-			<div class="pt-1 pb-2">
+			<div class="w-full border-t border-border-default/60 bg-surface-primary/95 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] backdrop-blur-md">
 				{@render commentComposer()}
 			</div>
 		{/if}

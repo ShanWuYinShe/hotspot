@@ -4,6 +4,7 @@
 	import { platform } from '@/stores/platform.svelte';
 	import ContextRail from '@/components/layout/ContextRail.svelte';
 	import ContentColumn from './ContentColumn.svelte';
+	import { cn } from '@/lib/utils';
 
 	// 布局组件（layout/page）。
 	// SplitPageLayout — 分栏页面的统一外层布局（桌面主区 + 右 rail）。
@@ -23,7 +24,8 @@
 		rail,
 		footer,
 		contentClassName = 'pt-4 pb-6',
-		contentMaxWidth
+		contentMaxWidth,
+		edgeToEdgeMobile = false
 	}: {
 		header?: Snippet;
 		children: Snippet;
@@ -31,6 +33,7 @@
 		footer?: Snippet;
 		contentClassName?: string;
 		contentMaxWidth?: number | string;
+		edgeToEdgeMobile?: boolean;
 	} = $props();
 
 	const isDesktop = $derived(platform.platform === 'desktop');
@@ -40,7 +43,7 @@
 	const isConstrained = $derived(contentMaxWidth != null);
 </script>
 
-<section data-split-page-layout class="flex h-full min-h-full w-full flex-col">
+<section data-split-page-layout class="flex min-h-full w-full flex-col">
 	{#if isDesktop}
 		<!-- 桌面主区与 rail 聚合成自适应工作台，保持视觉邻近（gap: rail-gap），
 		     在超宽/高分屏上居中聚合，杜绝内容孤悬与 ContextRail 飘到屏幕极右缘的撕裂感 -->
@@ -124,8 +127,8 @@
 			     杜绝内容孤悬与 ContextRail 飘到屏幕极右缘的 1000px 撕裂断层 -->
 			<div
 				class={isConstrained
-					? 'mx-auto flex h-full w-full justify-center px-[var(--cst-page-gutter)]'
-					: 'flex h-full w-full justify-between px-[var(--cst-page-gutter)]'}
+					? 'mx-auto flex min-h-full w-full justify-center px-[var(--cst-page-gutter)]'
+					: 'flex min-h-full w-full justify-between px-[var(--cst-page-gutter)]'}
 				style={isConstrained
 					? `max-width:calc(${typeof contentMaxWidth === 'number' ? `${contentMaxWidth}px` : contentMaxWidth} + 21rem + var(--cst-context-rail-gap) + (var(--cst-page-gutter) * 2));gap:var(--cst-context-rail-gap);`
 					: 'gap:var(--cst-context-rail-gap);'}
@@ -172,10 +175,13 @@
 		     header 吸顶 / 内容列 / 固定 footer，避免双层嵌套滚动 -->
 		{#if header}
 			<!-- 移动端 header 吸顶（滚动时内容上探，避免固定 header 常驻挤压内容区） -->
-			<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
+			<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0 w-full">{@render header()}</div>
 		{/if}
 		<div class="min-h-0 flex-1" style={footerHeight > 0 ? `padding-bottom:${footerHeight}px` : undefined}>
-			<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
+			<ContentColumn
+				maxWidth={contentMaxWidth}
+				class={cn(edgeToEdgeMobile && 'px-0 sm:px-[var(--cst-page-gutter)]', contentClassName)}
+			>
 				{@render children()}
 			</ContentColumn>
 		</div>
@@ -185,7 +191,7 @@
 			     配合 app.html 的 interactive-widget=resizes-content，键盘弹出时布局
 			     视口收缩、底栏始终浮在键盘上方 -->
 			<div
-				class="fixed inset-x-0 bottom-0 z-[var(--cst-z-sticky)] shrink-0 pb-[env(safe-area-inset-bottom)]"
+				class="fixed inset-x-0 bottom-0 z-[var(--cst-z-sticky)] shrink-0 w-full"
 				bind:clientHeight={footerHeight}
 			>
 				{@render footer()}

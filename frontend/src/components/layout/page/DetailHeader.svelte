@@ -23,7 +23,7 @@
 		author,
 		trailing,
 		onAuthorClick,
-		scrollThreshold = 200,
+		scrollThreshold = 180,
 		maxWidth = '58rem',
 		class: className = ''
 	}: {
@@ -40,8 +40,9 @@
 	} = $props();
 
 	let scrolled = $state(false);
+	let hidden = $state(false);
 
-	// 监听滚动：向上查找最近带 overflow-y 的滚动容器，回退 #main-content
+	// 监听滚动与方向（向上微划滑入 / 向下深划避让 / 顶部常驻）
 	function headerScroll(node: HTMLElement) {
 		let scroller: HTMLElement | null = node.parentElement;
 		while (scroller) {
@@ -53,10 +54,31 @@
 		if (!scroller) return;
 		const target = scroller;
 		let raf = 0;
+		let lastScrollTop = 0;
+
 		const apply = () => {
 			raf = 0;
-			scrolled = target.scrollTop > scrollThreshold;
+			const current = target.scrollTop;
+			const delta = current - lastScrollTop;
+
+			scrolled = current > scrollThreshold;
+
+			// 智慧避让：
+			// 1. 回到首屏顶部（<= 20px）时始终显现；
+			// 2. 向下快速滚动浏览长内容且已离开首屏时（delta > 8 && current > scrollThreshold），
+			//    向上平滑隐藏，让出 100% 视口给大图和长文；
+			// 3. 向上微划（delta < -6）时立即唤出供返回与操作。
+			if (current <= 20) {
+				hidden = false;
+			} else if (delta > 8 && current > scrollThreshold) {
+				hidden = true;
+			} else if (delta < -6) {
+				hidden = false;
+			}
+
+			lastScrollTop = Math.max(0, current);
 		};
+
 		const onScroll = () => {
 			if (raf) return;
 			raf = requestAnimationFrame(apply);
@@ -75,16 +97,25 @@
 <header
 	use:headerScroll
 	class={cn(
-		'sticky top-0 z-[var(--cst-z-sticky)] w-full pointer-events-none transition-all duration-standard select-none',
+		'sticky top-0 z-[var(--cst-z-sticky)] w-full select-none transition-all duration-snappy ease-standard',
+		hidden ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100',
+		scrolled
+			? 'pointer-events-auto border-b border-border-default/50 bg-surface-primary/90 shadow-xs backdrop-blur-md'
+			: 'pointer-events-none bg-transparent',
 		className
 	)}
 >
-	<ContentColumn {maxWidth} class="pointer-events-none px-3 sm:px-4 py-2 sm:py-2.5">
-		<div class="flex items-center justify-between gap-2">
-			<!-- ══ 左侧：返回胶囊 + 桌面实体面包屑 ══ -->
+	<ContentColumn {maxWidth} class="px-3 sm:px-4 py-1.5 sm:py-2">
+		<div class="flex items-center justify-between gap-2 h-9 sm:h-10">
+			<!-- ══ 左侧：返回按键 + 桌面实体面包屑 ══ -->
 			<div
 				data-detail-header-left
-				class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/80 p-0.5 shadow-raised-sm backdrop-blur-md transition-all duration-standard"
+				class={cn(
+					'pointer-events-auto flex items-center transition-all duration-snappy',
+					scrolled
+						? ''
+						: 'rounded-full border border-border-default/60 bg-surface-primary/80 p-0.5 shadow-raised-sm backdrop-blur-md'
+				)}
 			>
 				<ActionIconButton
 					icon={ArrowLeft}
@@ -113,20 +144,20 @@
 				{/if}
 			</div>
 
-			<!-- ══ 中间：滚动吸顶微名片（仅在下滑离开首屏后渐显展开） ══ -->
+			<!-- ══ 中间：吸顶紧凑微名片（仅在滚动离开首屏后整齐呈现于毛玻璃横栏中心） ══ -->
 			{#if scrolled}
 				<div
 					data-detail-header-center
-					class="pointer-events-auto flex min-w-0 max-w-[280px] sm:max-w-[360px] items-center rounded-full border border-border-default/60 bg-surface-primary/90 px-2.5 py-1 shadow-raised-sm backdrop-blur-md animate-in fade-in zoom-in-95 duration-snappy"
+					class="pointer-events-auto flex min-w-0 max-w-[240px] sm:max-w-[360px] items-center justify-center animate-in fade-in duration-snappy"
 				>
 					{#if author}
 						<button
 							type="button"
-							class="hover-btn focus-ring flex min-w-0 items-center gap-2 rounded-full text-left"
+							class="hover-btn focus-ring flex min-w-0 items-center gap-2 rounded-full px-2 py-0.5 text-left"
 							onclick={() => onAuthorClick?.()}
 							aria-label={`查看 ${author.name} 的资料`}
 						>
-							<Avatar src={author.avatar} name={author.name} size={24} class="shrink-0" />
+							<Avatar src={author.avatar} name={author.name} size={22} class="shrink-0" />
 							<div class="flex min-w-0 flex-col justify-center">
 								<span class="truncate text-xs font-semibold text-text-primary leading-tight">
 									{author.name}
@@ -150,7 +181,12 @@
 			{#if trailing}
 				<div
 					data-detail-header-right
-					class="pointer-events-auto flex items-center gap-1 rounded-full border border-border-default/60 bg-surface-primary/80 p-0.5 shadow-raised-sm backdrop-blur-md"
+					class={cn(
+						'pointer-events-auto flex items-center gap-1 transition-all duration-snappy',
+						scrolled
+							? ''
+							: 'rounded-full border border-border-default/60 bg-surface-primary/80 p-0.5 shadow-raised-sm backdrop-blur-md'
+					)}
 				>
 					{@render trailing()}
 				</div>

@@ -1,4 +1,4 @@
-// CommentInputBar 契约测试：inline/floating 两种登记形态 + 发送交互（2026-10-29 详情页改版）。
+// CommentInputBar 契约测试：inline/docked 两种登记形态 + 发送交互。
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import CommentInputBar from '../CommentInputBar.svelte';
@@ -14,15 +14,14 @@ describe('CommentInputBar', () => {
 		expect(shell.className).not.toContain('backdrop-blur-md');
 	});
 
-	it('floating：移动端悬浮 dock（左右 inset + 细边 + 投影 + 玻璃底），不再通栏贴边', () => {
+	it('docked：移动端通栏贴底底栏（全宽贴边，无浮动悬浮外边距与悬浮投影）', () => {
 		const { container } = render(CommentInputBar, {
-			props: { input: '', onSend: () => {}, variant: 'floating' }
+			props: { input: '', onSend: () => {}, variant: 'docked' }
 		});
 		const shell = container.firstElementChild as HTMLElement;
-		expect(shell.className).toContain('mx-3');
-		expect(shell.className).toContain('rounded-md');
-		expect(shell.className).toContain('backdrop-blur-md');
-		expect(shell.className).toContain('shadow-raised-md');
+		expect(shell.className).toContain('w-full');
+		expect(shell.className).not.toContain('mx-3');
+		expect(shell.className).not.toContain('shadow-raised-md');
 	});
 
 	it('空输入禁用发送；有内容可点发送并回调', async () => {
