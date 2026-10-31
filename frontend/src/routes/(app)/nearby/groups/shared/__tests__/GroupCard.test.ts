@@ -1,7 +1,7 @@
 // GroupCard 契约测试：群组信息渲染与加入切换回调。
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import GroupCard from '../GroupCard.svelte';
+import GroupCard from '@/components/data-display/GroupCard.svelte';
 
 const group = {
 	id: 'g1',

@@ -169,11 +169,11 @@ export function enterOnce(node: HTMLElement, active: boolean) {
 }
 
 /**
- * 卡片按压反馈 action（R14 卡片交互契约，所有图片内容卡共用）：
- * - 按下卡片本体（非行内按钮/链接）→ 根节点 data-pressed="true"，CSS 统一按
- *   --cst-card-tap-scale 缩放（vibrant 0.94 / forest·inkwash 0.97，随主题）；
- * - 在行内操作（点赞/收藏/关注/菜单/作者）上按下不缩放整卡，避免"点按钮整卡抖一下"；
- * - pointerup / cancel / leave 立即复位；iOS 滚动时 pointercancel 同样复位。
+ * 卡片按压状态 action（方案 2：全端扁平稳定化，所有图片内容卡共用）：
+ * - 按下卡片本体（非行内按钮/链接）→ 根节点 data-pressed="true"；
+ * - 方案 2 契约：整卡不执行 scale 几何位移，保持视觉与指针绝对稳定；
+ * - 在行内操作（点赞/收藏/关注/菜单/作者）上按下不触发整卡按压态；
+ * - pointerup / cancel / leave 立即复位。
  * 使用：<article class="card-hover" use:cardPress>…</article>
  */
 export function cardPress(node: HTMLElement) {

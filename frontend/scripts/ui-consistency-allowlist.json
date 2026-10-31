@@ -48,5 +48,10 @@
 		"rule": "handwritten-cta",
 		"file": "src/routes/(app)/map/shared/MapFilterMenu.svelte",
 		"reason": "地图筛选菜单触发器：带筛选计数徽章与展开态的动态 pill 控件（非页面动作 CTA），强度/形状随打开态变化，属地图工具栏登记例外"
+	},
+	{
+		"rule": "handwritten-cta",
+		"file": "src/components/navigation/TabBar.svelte",
+		"reason": "分类筛选标签栏激活项：分段选择器选中态（非动作 CTA），对齐 hotspot-frontend-layout 激活项 accent 实底胶囊契约"
 	}
 ]

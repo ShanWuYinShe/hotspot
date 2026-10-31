@@ -29,24 +29,19 @@
 
 <button
 	type="button"
-	class="nav-tab group relative flex w-full min-w-0 flex-col items-center justify-center py-1 focus-ring select-none transition-transform active:scale-95 duration-rapid"
+	class="nav-tab group relative flex w-full min-w-0 flex-col items-center justify-center py-1.5 focus-ring select-none transition-transform active:scale-95 duration-rapid"
 	aria-label={label}
 	aria-current={isActive ? 'page' : undefined}
 	onclick={onClick}
 >
-	<!-- 选中胶囊包住图标+文字：命中区仍是整格按钮（触控 ≥44），视觉重心收在内容上 -->
-	<span
-		class="flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-1.5 transition-colors duration-standard {isActive
-			? 'bg-accent-soft'
-			: 'group-hover:bg-interactive-hover'}"
-	>
+	<div class="relative flex flex-col items-center justify-center gap-1">
 		<span
-			class="relative flex items-center justify-center transition-transform duration-standard {isActive
-				? 'scale-105'
+			class="relative flex items-center justify-center transition-all duration-standard {isActive
+				? 'scale-105 -translate-y-0.5'
 				: 'scale-100'}"
 		>
 			<Icon
-				style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);"
+				style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);"
 				strokeWidth={isActive ? 2.25 : 1.5}
 			/>
 			{#if count > 0}
@@ -56,10 +51,16 @@
 			{/if}
 		</span>
 		<span
-			class="text-xs leading-none {isActive ? 'font-semibold' : 'font-normal'}"
-			style="color:{isActive ? 'var(--cst-navigation-content-active)' : 'var(--cst-navigation-content)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);"
+			class="text-xxs sm:text-xs leading-none transition-colors duration-standard {isActive ? 'font-semibold' : 'font-normal'}"
+			style="color:{isActive ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};"
 		>
 			{label}
 		</span>
-	</span>
+		{#if isActive}
+			<span
+				class="absolute -bottom-1.5 h-0.5 w-4 rounded-full bg-accent-default transition-all duration-standard"
+				aria-hidden="true"
+			></span>
+		{/if}
+	</div>
 </button>

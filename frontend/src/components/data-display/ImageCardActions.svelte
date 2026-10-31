@@ -22,7 +22,7 @@
 		comments,
 		shares = null,
 		liked,
-		saved,
+		saved = false,
 		onImage = true,
 		onLike,
 		onComment,
@@ -38,13 +38,13 @@
 		/** 分享数；null/0 时不显示数字（仅图标） */
 		shares?: number | null;
 		liked: boolean;
-		saved: boolean;
+		saved?: boolean;
 		/** 压在图片上（白字反色）；false 为实底/无图回退（主题色） */
 		onImage?: boolean;
 		onLike: (next: boolean) => void;
 		onComment: () => void;
-		onSave: (next: boolean) => void;
-		/** 分享：所有卡片都传（由 lib/moment-actions 的 shareMoment 实现） */
+		onSave?: (next: boolean) => void;
+		/** 分享：由 lib/moment-actions 的 shareMoment 实现 */
 		onShare?: () => void;
 		/** 计数为 0 时显示「赞/评论」文案（大卡友好）；false 时显示 0 */
 		placeholderLabels?: boolean;
@@ -143,28 +143,30 @@
 		{/if}
 
 		<!-- 收藏：accent 填充（压图：accent 填充白描边；实底：accent 填充） -->
-		<button
-			type="button"
-			class="{btnBase} {saved ? activeSaveCls : idleCls}"
-			aria-label={saved ? '取消收藏' : '收藏'}
-			aria-pressed={saved}
-			onclick={(e) => {
-				e.stopPropagation();
-				if (!saved) savePop += 1;
-				onSave(!saved);
-			}}
-		>
-			<span class="inline-flex" use:popOn={savePop}>
-				<Bookmark
-					class="{iconSize} shrink-0 {saved
-						? onImage
-							? 'fill-accent-default text-content-inverse'
-							: 'fill-accent-default text-accent-default'
-						: ''}"
-					strokeWidth={1.5}
-					fill={!onImage && saved ? 'currentColor' : 'none'}
-				/>
-			</span>
-		</button>
+		{#if onSave}
+			<button
+				type="button"
+				class="{btnBase} {saved ? activeSaveCls : idleCls}"
+				aria-label={saved ? '取消收藏' : '收藏'}
+				aria-pressed={saved}
+				onclick={(e) => {
+					e.stopPropagation();
+					if (!saved) savePop += 1;
+					onSave?.(!saved);
+				}}
+			>
+				<span class="inline-flex" use:popOn={savePop}>
+					<Bookmark
+						class="{iconSize} shrink-0 {saved
+							? onImage
+								? 'fill-accent-default text-content-inverse'
+								: 'fill-accent-default text-accent-default'
+							: ''}"
+						strokeWidth={1.5}
+						fill={!onImage && saved ? 'currentColor' : 'none'}
+					/>
+				</span>
+			</button>
+		{/if}
 	</div>
 </div>

@@ -4,10 +4,11 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import type { GroupSentInviteItem } from '@/api/types';
 
 	// InvitesList —— 已发邀请（默认仅 pending，revoked 含过期自动撤销）。
-	// R13：行语言/动作档位与成员、申请列表统一；空态升级为带图标与说明的 EmptyState。
+	// 行语言/动作档位与成员、申请列表统一，撤销动作统一使用 Button 原语（soft 软填胶囊）。
 	let {
 		invites,
 		inviteStatusText,
@@ -19,9 +20,6 @@
 		formatDateTime: (iso: string) => string;
 		onRevoke: (id: string) => void;
 	} = $props();
-
-	const CHIP_QUIET =
-		'hover-btn hit-slop inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-surface-subtle/60 px-3.5 text-sm text-text-primary transition-colors hover:bg-surface-subtle focus-ring';
 </script>
 
 {#if invites.length === 0}
@@ -41,7 +39,9 @@
 				<span class="block truncate text-xs text-text-secondary">{inviteStatusText(inv.status)} · {formatDateTime(inv.created_at)}</span>
 			</span>
 			{#if inv.status === 'pending'}
-				<button type="button" onclick={() => onRevoke(inv.invite_id)} class={CHIP_QUIET}>撤销</button>
+				<Button type="button" variant="soft" size="sm" shape="pill" onclick={() => onRevoke(inv.invite_id)}>
+					撤销
+				</Button>
 			{/if}
 		</ListItem>
 	{/each}

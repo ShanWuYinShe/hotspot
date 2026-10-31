@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { ChevronRight, Clock, LogOut, MoreHorizontal, Shield, Users } from '@lucide/svelte';
-	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import ActionIconButton from '@/cst-ui/buttons/ActionIconButton.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
-	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
-	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
+	import MediaCard from '@/cst-ui/cards/MediaCard.svelte';
+	import ConfirmDialog from '@/cst-ui/overlays/ConfirmDialog.svelte';
 	import { leaveGroup } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { platform } from '@/stores/platform.svelte';
@@ -51,17 +51,13 @@
 </script>
 
 <div class="group relative isolate">
-	<NearbyImageCard
+	<MediaCard
 		imageSrc={group.banner || group.avatar}
 		imageAlt={group.name}
 		horizontal
 		onClick={() => void goto(`${ROUTES.group(group.id)}?from=me`)}
 		class="h-32 rounded-md sm:h-36"
 	>
-		{#snippet watermark()}
-			<Users size={72} strokeWidth={1} />
-		{/snippet}
-
 		{#snippet placeholder()}
 			<span class="text-accent-default text-3xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
 		{/snippet}
@@ -131,7 +127,7 @@
 				</div>
 			</div>
 		{/snippet}
-	</NearbyImageCard>
+	</MediaCard>
 
 	<ConfirmDialog
 		open={leaveOpen}

@@ -6,10 +6,7 @@
 	import { Tags } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import LoadError from '@/components/data-display/LoadError.svelte';
-	import ListEnd from '@/components/data-display/ListEnd.svelte';
-	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import AdminListView from '../shared/AdminListView.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import Checkbox from '@/components/forms/Checkbox.svelte';
 	import * as Dialog from '@/components/ui/dialog';
@@ -97,20 +94,25 @@
 			</div>
 		</div>
 
-		{#if list.loading}
-			<InlineLoading label="加载标签列表…" />
-		{:else if list.error}
-			<LoadError message={list.error} onRetry={list.reload} />
-		{:else if list.count === 0}
-			<EmptyState title="没有匹配的标签" description="换个关键词试试，或清空搜索词后重试。" iconTone="neutral">
-				{#snippet icon()}<Tags class="size-7" strokeWidth={1.5} />{/snippet}
-				{#snippet action()}
-					{#if query}
-						<Button type="button" variant="secondary" size="sm" onclick={() => (query = '')}>清空搜索</Button>
-					{/if}
-				{/snippet}
-			</EmptyState>
-		{:else}
+		<AdminListView
+			loading={list.loading}
+			error={list.error}
+			count={list.count}
+			hasMore={list.hasMore}
+			loadingMore={list.loadingMore}
+			onReload={list.reload}
+			onLoadMore={list.loadMore}
+			loadingLabel="加载标签列表…"
+			emptyTitle="没有匹配的标签"
+			emptyDescription="换个关键词试试，或清空搜索词后重试。"
+			emptyIcon={Tags}
+		>
+			{#snippet emptyAction()}
+				{#if query}
+					<Button type="button" variant="secondary" size="sm" onclick={() => (query = '')}>清空搜索</Button>
+				{/if}
+			{/snippet}
+
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
@@ -125,11 +127,8 @@
 						{#each list.items as t (t.tag_id)}
 							<tr class={TR}>
 								<td class={TD}>
-									<!-- 限宽截断：移动端该表实测仅剩 1px 余量（tableW 356 / wrap 358，全站复审
-									     S4-24），标签名变长即溢出；截断后表格宽度不再随标签名无限增长 -->
 									<Badge tone="accent" class="max-w-32 truncate">#{t.name}</Badge>
 									{#if t.is_blocked}
-										<!-- 已屏蔽态必须可见：否则与正常标签无从区分（全站复审 s4-22 的根因） -->
 										<Badge tone="danger">已屏蔽</Badge>
 									{/if}
 								</td>
@@ -145,13 +144,7 @@
 					</tbody>
 				</table>
 			</div>
-
-			{#if list.hasMore}
-				<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
-			{:else}
-				<ListEnd />
-			{/if}
-		{/if}
+		</AdminListView>
 	</div>
 
 	<Dialog.Root open={banTarget !== null} onOpenChange={(next) => (next ? undefined : (banTarget = null))}>

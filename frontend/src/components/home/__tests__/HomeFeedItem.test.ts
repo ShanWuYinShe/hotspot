@@ -58,7 +58,6 @@ describe('HomeFeedItem', () => {
 		// 互动统计：mock 中已点赞（reacted_by_me）→ ImageCardActions 展示基数 +1
 		expect(screen.getByText('13')).toBeTruthy();
 		expect(screen.getByText('5')).toBeTruthy();
-		expect(screen.getByText('2')).toBeTruthy();
 	});
 
 	it('R13 卡片语言：标题升档、时间不重复、hover 由 card-hover 原语承载', () => {
@@ -102,13 +101,14 @@ describe('HomeFeedItem', () => {
 		expect(root.dataset.pressed).toBeUndefined();
 	});
 
-	it('覆盖操作行统一走 ImageCardActions（四类操作齐备，评论回调生效）', async () => {
+	it('覆盖操作行统一走 ImageCardActions（卡片轻量浏览仅保留点赞与评论，评论回调生效）', async () => {
 		const onComment = vi.fn();
 		render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {}, onComment } });
 		expect(screen.getByRole('button', { name: '取消点赞' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: '查看评论' })).toBeTruthy();
-		expect(screen.getByRole('button', { name: '分享瞬间' })).toBeTruthy();
-		expect(screen.getByRole('button', { name: '收藏' })).toBeTruthy();
+		// 遵循极简与用户心智原则：卡片浏览期不堆砌分享与收藏（详情页承载）
+		expect(screen.queryByRole('button', { name: '分享瞬间' })).toBeNull();
+		expect(screen.queryByRole('button', { name: '收藏' })).toBeNull();
 		await fireEvent.click(screen.getByRole('button', { name: '查看评论' }));
 		expect(onComment).toHaveBeenCalledTimes(1);
 	});
@@ -126,10 +126,10 @@ describe('HomeFeedItem', () => {
 		expect(placeholder?.className).toContain('surface-accent-gradient');
 	});
 
-	it('压图角标统一用 media-badge（分类/位置/已关注）', () => {
+	it('压图角标统一用 media-badge（多图/状态标识）', () => {
 		const { container } = render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {} } });
 		const badges = [...container.querySelectorAll('.media-badge')];
-		expect(badges.length).toBeGreaterThanOrEqual(2);
+		expect(badges.length).toBeGreaterThanOrEqual(1);
 	});
 });
 	// 2026-10-29 用户反馈回归：卡片上的「已关注」曾是不可点徽章，点击穿透整卡覆盖层打开详情。

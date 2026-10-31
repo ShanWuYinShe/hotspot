@@ -4,12 +4,12 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import CommentInputBar from '../CommentInputBar.svelte';
 
 describe('CommentInputBar', () => {
-	it('inline：嵌在评论区的软底浅槽（无左右 inset / 无悬浮投影）', () => {
+	it('inline：嵌在评论区的平顺输入槽（全宽自然流，无左右 inset / 无悬浮投影）', () => {
 		const { container } = render(CommentInputBar, {
 			props: { input: '', onSend: () => {}, variant: 'inline' }
 		});
 		const shell = container.firstElementChild as HTMLElement;
-		expect(shell.className).toContain('bg-surface-subtle/40');
+		expect(shell.className).toContain('w-full');
 		expect(shell.className).not.toContain('mx-3');
 		expect(shell.className).not.toContain('backdrop-blur-md');
 	});

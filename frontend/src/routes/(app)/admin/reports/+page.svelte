@@ -8,10 +8,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import LoadError from '@/components/data-display/LoadError.svelte';
-	import ListEnd from '@/components/data-display/ListEnd.svelte';
-	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import AdminListView from '../shared/AdminListView.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import Input from '@/components/forms/Input.svelte';
 	import Select from '@/components/forms/Select.svelte';
@@ -138,20 +135,25 @@
 			</Select>
 		</div>
 
-		{#if list.loading}
-			<InlineLoading label="加载举报列表…" />
-		{:else if list.error}
-			<LoadError message={list.error} onRetry={list.reload} />
-		{:else if list.count === 0}
-			<EmptyState title="没有匹配的举报" description="当前筛选条件下暂无举报，切换状态或目标类型再试。" iconTone="neutral">
-				{#snippet icon()}<Flag class="size-7" strokeWidth={1.5} />{/snippet}
-				{#snippet action()}
-					{#if hasFilter}
-						<Button type="button" variant="secondary" size="sm" onclick={clearFilters}>清除筛选</Button>
-					{/if}
-				{/snippet}
-			</EmptyState>
-		{:else}
+		<AdminListView
+			loading={list.loading}
+			error={list.error}
+			count={list.count}
+			hasMore={list.hasMore}
+			loadingMore={list.loadingMore}
+			onReload={list.reload}
+			onLoadMore={list.loadMore}
+			loadingLabel="加载举报列表…"
+			emptyTitle="没有匹配的举报"
+			emptyDescription="当前筛选条件下暂无举报，切换状态或目标类型再试。"
+			emptyIcon={Flag}
+		>
+			{#snippet emptyAction()}
+				{#if hasFilter}
+					<Button type="button" variant="secondary" size="sm" onclick={clearFilters}>清除筛选</Button>
+				{/if}
+			{/snippet}
+
 			<!-- 桌面两列卡片（内容链路较长，2 列兼顾密度与可读；≥md=960 起） -->
 			<ul class="grid grid-cols-1 gap-3 md:grid-cols-2">
 				{#each list.items as r (r.report_id)}
@@ -212,13 +214,7 @@
 					</li>
 				{/each}
 			</ul>
-
-			{#if list.hasMore}
-				<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
-			{:else}
-				<ListEnd />
-			{/if}
-		{/if}
+		</AdminListView>
 	</div>
 
 	<Dialog.Root open={judgeTarget !== null} onOpenChange={(next) => (next ? undefined : (judgeTarget = null))}>

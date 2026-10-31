@@ -7,10 +7,7 @@
 	import { Users } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import LoadError from '@/components/data-display/LoadError.svelte';
-	import ListEnd from '@/components/data-display/ListEnd.svelte';
-	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import AdminListView from '../shared/AdminListView.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import Input from '@/components/forms/Input.svelte';
 	import Select from '@/components/forms/Select.svelte';
@@ -142,77 +139,74 @@
 
 		<TabBar items={STATUS_TABS} value={status} onChange={(id) => (status = id)} />
 
-		<div use:contentFade={list.loading}>
-			{#if list.loading}
-				<InlineLoading label="加载用户列表…" />
-			{:else if list.error}
-				<LoadError message={list.error} onRetry={list.reload} />
-			{:else if list.count === 0}
-				<EmptyState title="没有匹配的用户" description="换个搜索词，或清除筛选条件后重试。" iconTone="neutral">
-					{#snippet icon()}<Users class="size-7" strokeWidth={1.5} />{/snippet}
-					{#snippet action()}
-						{#if hasFilter}
-							<Button type="button" variant="secondary" size="sm" onclick={clearFilters}>清除筛选</Button>
-						{/if}
-					{/snippet}
-				</EmptyState>
-			{:else}
-				<div class={TABLE_WRAP} use:scrollFade>
-					<table class={TABLE}>
-						<thead>
-							<tr>
-								<th scope="col" class={TH}>用户</th>
-								<th scope="col" class={TH_SECONDARY}>登录 ID</th>
-								<th scope="col" class={TH}>状态</th>
-								<th scope="col" class={TH_SECONDARY}>邮箱</th>
-								<th scope="col" class={TH_SECONDARY}>注册时间</th>
-								<th scope="col" class={TH_SECONDARY}>最后活跃</th>
-								<th scope="col" class={TH}><span class="sr-only">操作</span></th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each list.items as u (u.user.user_id)}
-								<tr class={TR}>
-									<td class={TD}>
-										<span class="flex items-center gap-2">
-											<span class="text-text-primary">{u.user.nickname}</span>
-											<span class={`${META_MONO} max-sm:hidden`}>{u.user.user_id}</span>
-										</span>
-									</td>
-									<td class={TD_SECONDARY}>{u.login_id}</td>
-									<td class={TD}>
-										{#if u.status === 'banned'}
-											<Badge tone="danger">已封禁</Badge>
-											<span class={`ml-1.5 ${META}`}>
-												{u.banned_until ? `至 ${formatDateTime(u.banned_until)}` : '永久'}
-											</span>
-										{:else}
-											<Badge>正常</Badge>
-										{/if}
-									</td>
-									<td class={TD_SECONDARY}>{u.email ?? '—'}</td>
-									<td class={TD_SECONDARY}>{formatDateTime(u.created_at)}</td>
-									<td class={TD_SECONDARY}>{u.last_active_at ? formatDateTime(u.last_active_at) : '—'}</td>
-									<td class={TD_ACTIONS}>
-										{#if canWrite}
-											<button type="button" class={u.status === 'banned' ? ROW_BTN : ROW_BTN_DANGER} onclick={() => openBan(u)}>
-												{u.status === 'banned' ? '解封' : '封禁'}
-											</button>
-										{/if}
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-
-				{#if list.hasMore}
-					<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
-				{:else}
-					<ListEnd />
+		<AdminListView
+			loading={list.loading}
+			error={list.error}
+			count={list.count}
+			hasMore={list.hasMore}
+			loadingMore={list.loadingMore}
+			onReload={list.reload}
+			onLoadMore={list.loadMore}
+			loadingLabel="加载用户列表…"
+			emptyTitle="没有匹配的用户"
+			emptyDescription="换个搜索词，或清除筛选条件后重试。"
+			emptyIcon={Users}
+		>
+			{#snippet emptyAction()}
+				{#if hasFilter}
+					<Button type="button" variant="secondary" size="sm" onclick={clearFilters}>清除筛选</Button>
 				{/if}
-			{/if}
-		</div>
+			{/snippet}
+
+			<div class={TABLE_WRAP} use:scrollFade>
+				<table class={TABLE}>
+					<thead>
+						<tr>
+							<th scope="col" class={TH}>用户</th>
+							<th scope="col" class={TH_SECONDARY}>登录 ID</th>
+							<th scope="col" class={TH}>状态</th>
+							<th scope="col" class={TH_SECONDARY}>邮箱</th>
+							<th scope="col" class={TH_SECONDARY}>注册时间</th>
+							<th scope="col" class={TH_SECONDARY}>最后活跃</th>
+							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each list.items as u (u.user.user_id)}
+							<tr class={TR}>
+								<td class={TD}>
+									<span class="flex items-center gap-2">
+										<span class="text-text-primary">{u.user.nickname}</span>
+										<span class={`${META_MONO} max-sm:hidden`}>{u.user.user_id}</span>
+									</span>
+								</td>
+								<td class={TD_SECONDARY}>{u.login_id}</td>
+								<td class={TD}>
+									{#if u.status === 'banned'}
+										<Badge tone="danger">已封禁</Badge>
+										<span class={`ml-1.5 ${META}`}>
+											{u.banned_until ? `至 ${formatDateTime(u.banned_until)}` : '永久'}
+										</span>
+									{:else}
+										<Badge>正常</Badge>
+									{/if}
+								</td>
+								<td class={TD_SECONDARY}>{u.email ?? '—'}</td>
+								<td class={TD_SECONDARY}>{formatDateTime(u.created_at)}</td>
+								<td class={TD_SECONDARY}>{u.last_active_at ? formatDateTime(u.last_active_at) : '—'}</td>
+								<td class={TD_ACTIONS}>
+									{#if canWrite}
+										<button type="button" class={u.status === 'banned' ? ROW_BTN : ROW_BTN_DANGER} onclick={() => openBan(u)}>
+											{u.status === 'banned' ? '解封' : '封禁'}
+										</button>
+									{/if}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</AdminListView>
 	</div>
 
 	<ConfirmDialog

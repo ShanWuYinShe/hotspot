@@ -5,7 +5,7 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
-	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
@@ -143,7 +143,7 @@
 	{#if usersLoading || hotUsers.length > 0}
 		<!-- 人物推荐：users/search 距离排序前 3（头像角标 + #tag · 距离 + 尾部导航箭头）。
 		     加载期骨架复用 SkeletonList（Avatar 44 + 上下 12 = 行高 68、行间 2、软岛 p-2），
-		     与 UserCardRow 行几何一致 → 数据到达零位移。 -->
+		     与 EntityRow 行几何一致 → 数据到达零位移。 -->
 		<section aria-label="人物推荐">
 			<SectionHead title="人物推荐" icon={Users} action="查看全部" onAction={onSeeAllUsers} />
 			{#if usersLoading}
@@ -153,7 +153,7 @@
 			{:else}
 				<ListContainer bordered>
 					{#each hotUsers as u (u.id)}
-						<UserCardRow
+						<EntityRow
 							name={u.name}
 							avatar={u.avatar}
 							onClick={() => onOpenUser(u.id)}
@@ -178,7 +178,7 @@
 							{#snippet actions()}
 								<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
 							{/snippet}
-						</UserCardRow>
+						</EntityRow>
 					{/each}
 				</ListContainer>
 			{/if}
@@ -188,7 +188,7 @@
 	{#if groupsLoading || hotGroups.length > 0}
 		<!-- 推荐群组：与人物推荐同栅格语言，平衡发现态左右栏纵向节奏。
 		     加载期骨架复用 SkeletonList（Avatar 44 + p-3 = 行高 68、行间 2、软岛 p-2），
-		     与 UserCardRow 行几何一致 → 数据到达零位移。 -->
+		     与 EntityRow 行几何一致 → 数据到达零位移。 -->
 		<section aria-label="推荐群组">
 			{#if onSeeAllGroups}
 				<SectionHead title="推荐群组" icon={UsersRound} action="查看全部" onAction={onSeeAllGroups} />
@@ -202,7 +202,7 @@
 			{:else}
 				<ListContainer bordered>
 						{#each hotGroups as g (g.id)}
-							<UserCardRow
+							<EntityRow
 								avatarShape="rounded"
 								name={g.name}
 								avatar={g.avatar}
@@ -219,7 +219,7 @@
 								{#snippet actions()}
 									<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
 								{/snippet}
-							</UserCardRow>
+							</EntityRow>
 						{/each}
 				</ListContainer>
 			{/if}

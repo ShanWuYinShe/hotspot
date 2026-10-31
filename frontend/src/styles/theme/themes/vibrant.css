@@ -165,7 +165,8 @@
   --cst-border-card-menu: var(--cst-border-subtle, var(--cst-border-default));
 
   /* ── 卡片交互档位（vibrant：按压 0.94 / hover 抬升 2px / 图片 hover 缩放 1.045）── */
-  --cst-card-tap-scale: 0.94;
+  /* 方案 2 扁平稳定化：卡片点击保持 1.0 几何稳定，不执行缩放脱靶 */
+  --cst-card-tap-scale: 1;
   --cst-hover-lift: 2px;
   --cst-hover-image-zoom: 1.045;
 }
@@ -197,36 +198,34 @@
 
 /* ═══ Vibrant Dark ═══ */
 .vibrant.dark {
-  /* 内容岛表面（Round 3）：暗色提到 92% 保证软岛与画布的层级可读 */
-  --cst-surface-island: color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-text-primary) 6%);
+  /* 内容岛表面（深邃曜石雅墨）：保持柔和的层级纵深 */
+  --cst-surface-island: #181E2B;
   /* ── 原始色板 --cst-palette-* ── */
-  /* 卡面提档（UI 复审 D2 token 级微调）：#111D31→#152134，深色下卡片与画布
-     (#0B1424) 的底色阶差加大、层级更清晰；亮度阶仍低于 subtle/elevated，阶梯不变 */
-  --cst-palette-bg: #152134;
-  --cst-palette-page-bg: #0B1424;
-  --cst-palette-chat-bg: #0D1726;
-  --cst-palette-text: #E8F1FF;
-  --cst-palette-text-muted: #A5B6CE;
-  --cst-palette-accent-primary: #69A8FF;
-  --cst-palette-glow: rgba(105, 168, 255, 0.25);
-  --cst-palette-shadow-light: rgba(129, 140, 248, 0.07);
-  --cst-palette-shadow-dark: rgba(0, 0, 0, 0.72);
-  --cst-palette-border: rgba(136, 183, 255, 0.18);
-  --cst-palette-border-pressed: rgba(136, 183, 255, 0.32);
-  --cst-palette-accent-soft: rgba(105, 168, 255, 0.14);
-  --cst-palette-accent-soft-border: rgba(105, 168, 255, 0.30);
-  --cst-palette-hover: rgba(105, 168, 255, 0.15);
-  --cst-palette-active-hover: rgba(105, 168, 255, 0.22);
-  --cst-palette-on-accent: #071426;
-  --cst-palette-online: #37C99A;
-  --cst-palette-hot: #FB7185;
+  --cst-palette-bg: #121622;
+  --cst-palette-page-bg: #0B0E14;
+  --cst-palette-chat-bg: #0E121B;
+  --cst-palette-text: #F1F5F9;
+  --cst-palette-text-muted: #94A3B8;
+  --cst-palette-accent-primary: #5B9CF6;
+  --cst-palette-glow: rgba(91, 156, 246, 0.22);
+  --cst-palette-shadow-light: rgba(148, 163, 184, 0.05);
+  --cst-palette-shadow-dark: rgba(0, 0, 0, 0.75);
+  --cst-palette-border: rgba(160, 185, 220, 0.11);
+  --cst-palette-border-pressed: rgba(160, 185, 220, 0.22);
+  --cst-palette-accent-soft: rgba(91, 156, 246, 0.12);
+  --cst-palette-accent-soft-border: rgba(91, 156, 246, 0.26);
+  --cst-palette-hover: rgba(91, 156, 246, 0.12);
+  --cst-palette-active-hover: rgba(91, 156, 246, 0.18);
+  --cst-palette-on-accent: #0B0E14;
+  --cst-palette-online: #34D399;
+  --cst-palette-hot: #F87171;
   --cst-palette-warning: #FBBF24;
-  --cst-palette-map-user: #69A8FF;
+  --cst-palette-map-user: #5B9CF6;
   --cst-palette-map-group: #34D399;
   --cst-palette-map-moment: #FB923C;
-  --cst-palette-overlay-strong: rgba(0, 8, 20, 0.62);
-  --cst-palette-shadow-card: 0 2px 10px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.25);
-  --cst-palette-shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.18);
+  --cst-palette-overlay-strong: rgba(0, 4, 12, 0.65);
+  --cst-palette-shadow-card: 0 2px 10px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --cst-palette-shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.2);
 
   /* ── 透明度档位（dark）── */
   --cst-palette-opacity-none: 0;

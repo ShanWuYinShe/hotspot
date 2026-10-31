@@ -4,7 +4,7 @@
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { MapPin, Users, Lock, Globe } from '@lucide/svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
-	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
+	import MediaCard from '@/cst-ui/cards/MediaCard.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 附近群组横向轮播（对齐 Figma Make HomePage GroupCarousel）。
@@ -47,7 +47,7 @@
 	<SectionHead title="附近群组" {icon} {count} action={actionLabel} onAction={onSeeAll} />
 	<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2 pr-1" use:scrollFade>
 		{#each groups as g (g.id)}
-			<NearbyImageCard
+			<MediaCard
 				imageSrc={g.banner}
 				imageAlt={g.name}
 				onClick={() => openGroup(g.id)}
@@ -59,7 +59,7 @@
 
 				<!-- 右上：隐私徽章（纯图标，title/aria 提供语义；与其它卡片角标同位置/同尺寸） -->
 				<div
-					class="media-badge media-badge--icon absolute right-2.5 top-2.5"
+					class="pointer-events-none media-badge media-badge--icon absolute right-2.5 top-2.5 z-[2]"
 					title={g.privacy === 'private' ? '私密群组' : '公开群组'}
 					aria-hidden="true"
 				>
@@ -85,7 +85,7 @@
 						</div>
 					</div>
 				{/snippet}
-			</NearbyImageCard>
+			</MediaCard>
 		{/each}
 	</div>
 </div>

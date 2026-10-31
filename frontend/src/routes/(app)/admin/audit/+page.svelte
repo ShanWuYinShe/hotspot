@@ -4,10 +4,7 @@
 	import { hasAdminPermission } from '@/stores/admin.svelte';
 	import { ScrollText } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import LoadError from '@/components/data-display/LoadError.svelte';
-	import ListEnd from '@/components/data-display/ListEnd.svelte';
-	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import AdminListView from '../shared/AdminListView.svelte';
 	import Input from '@/components/forms/Input.svelte';
 	import Select from '@/components/forms/Select.svelte';
 	import Button from '@/components/ui/button.svelte';
@@ -144,20 +141,25 @@
 			{/if}
 		</div>
 
-		{#if list.loading}
-			<InlineLoading label="加载审计日志…" />
-		{:else if list.error}
-			<LoadError message={list.error} onRetry={list.reload} />
-		{:else if list.count === 0}
-			<EmptyState title="没有匹配的日志" description="调整动作、操作者或时间范围后再试。" iconTone="neutral">
-				{#snippet icon()}<ScrollText class="size-7" strokeWidth={1.5} />{/snippet}
-				{#snippet action()}
-					{#if hasFilter}
-						<Button type="button" variant="secondary" size="sm" onclick={clearFilters}>清除筛选</Button>
-					{/if}
-				{/snippet}
-			</EmptyState>
-		{:else}
+		<AdminListView
+			loading={list.loading}
+			error={list.error}
+			count={list.count}
+			hasMore={list.hasMore}
+			loadingMore={list.loadingMore}
+			onReload={list.reload}
+			onLoadMore={list.loadMore}
+			loadingLabel="加载审计日志…"
+			emptyTitle="没有匹配的日志"
+			emptyDescription="调整动作、操作者或时间范围后再试。"
+			emptyIcon={ScrollText}
+		>
+			{#snippet emptyAction()}
+				{#if hasFilter}
+					<Button type="button" variant="secondary" size="sm" onclick={clearFilters}>清除筛选</Button>
+				{/if}
+			{/snippet}
+
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
@@ -222,13 +224,7 @@
 					</tbody>
 				</table>
 			</div>
-
-			{#if list.hasMore}
-				<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
-			{:else}
-				<ListEnd />
-			{/if}
-		{/if}
+		</AdminListView>
 	</div>
 {/if}
 

@@ -15,7 +15,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
-	import UserCard, { type NearbyUser } from './UserCard.svelte';
+	import UserCard, { type NearbyUser } from '@/components/data-display/UserCard.svelte';
 	import { searchUsers, follow , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
@@ -176,6 +176,29 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 
 	const device = $derived(platform.platform);
 
+	function getUserCardLayout(index: number, total: number, dev: string) {
+		if (dev === 'mobile') {
+			if (index === 0) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const };
+			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
+		}
+		if (dev === 'tablet') {
+			if (total >= 3) {
+				if (index === 0) return { cls: 'col-span-2 row-span-2', tier: '2x2' as const };
+				return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
+			}
+			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
+		}
+		if (total >= 5) {
+			if (index === 0) return { cls: 'col-span-2 row-span-2', tier: '2x2' as const };
+			if (index >= 1 && index <= 4) return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
+			if (index === 5) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const };
+			if (index === 6 || index === 7) return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
+			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
+		}
+		if (index === 0) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const };
+		return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
+	}
+
 	// in-flight 去重（防连点双翻转，响应式供按钮 pending 态）；业务失败（code≠0）显式判 code 回滚
 	let followPending = $state(new Set<string>());
 
@@ -312,25 +335,36 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 						{/snippet}
 					</EmptyState>
 				{:else}
-					<!-- 网格列数：移动 2 / 平板 3（768 已核实正常）/ 桌面 4 -->
-					<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-						{#each list.slice(0, visibleCount) as user, index (user.id)}
-							<UserCard
-								{user}
-								priority={index < 2}
-								followed={followedIds.has(user.id)}
-								pending={followPending.has(user.id)}
-								onFollow={() => toggleFollow(user.id)}
-								onNavigate={() => void goto(ROUTES.user(user.id))}
-							/>
-						{/each}
+					<div class="mx-auto w-full max-w-[1920px]">
+						<!-- 响应式邻居网格：移动端 2 列（首项 2x1 满宽横排焦点），平板 3 列，桌面 4 列，宽屏/2K 5-6 列；
+						     采用金字塔闭环几何排布，兼顾精选推荐大卡与标准卡，严格 100% 满铺零空洞，行高自适应屏幕比例 -->
+						<div
+							class="grid grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
+							style="grid-auto-rows: clamp(195px, 20vw, 275px);"
+						>
+							{#each list.slice(0, visibleCount) as user, index (user.id)}
+								{@const layout = getUserCardLayout(index, list.length, device)}
+								<div class={layout.cls}>
+									<UserCard
+										{user}
+										priority={index < 3}
+										tier={layout.tier}
+										followed={followedIds.has(user.id)}
+										pending={followPending.has(user.id)}
+										onFollow={() => toggleFollow(user.id)}
+										onNavigate={() => void goto(ROUTES.user(user.id))}
+										class="h-full w-full"
+									/>
+								</div>
+							{/each}
+						</div>
 					</div>
 
 					{#if visibleCount < list.length}
 						<div bind:this={sentinelEl} class="flex justify-center px-4 py-6" aria-hidden="true">
 							<InlineLoading label="加载更多…" />
 						</div>
-					{:else}
+					{:else if visibleCount >= list.length}
 						<ListEnd class="pb-6" />
 					{/if}
 				{/if}

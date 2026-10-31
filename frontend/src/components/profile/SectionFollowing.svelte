@@ -5,13 +5,13 @@
 	import Badge from '@/components/data-display/Badge.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import FollowButton from '@/components/ui/FollowButton.svelte';
-import UserCardRow from '@/components/profile/UserCardRow.svelte';
+import EntityRow from '@/cst-ui/list/EntityRow.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { createOptimisticFollow, type OptimisticFollow } from '@/lib/relationships.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 关注分区：ProfileUserSection 骨架 + UserCardRow 行。
+	// 关注分区：ProfileUserSection 骨架 + EntityRow 行。
 
 	// followState 由调用方（关系聚合页）注入共享，tab 内切换即时同步行与计数；
 	// 独立使用时回退本地实例（行为不变）。
@@ -68,7 +68,7 @@ import UserCardRow from '@/components/profile/UserCardRow.svelte';
 	items={filtered}
 >
 	{#snippet children(f)}
-		<UserCardRow
+		<EntityRow
 			name={f.name}
 			avatar={f.avatar}
 			tone="row"
@@ -91,6 +91,6 @@ import UserCardRow from '@/components/profile/UserCardRow.svelte';
 					onToggle={() => void toggleUnfollow(f.id, f.name)}
 				/>
 			{/snippet}
-		</UserCardRow>
+		</EntityRow>
 	{/snippet}
 </ProfileUserSection>

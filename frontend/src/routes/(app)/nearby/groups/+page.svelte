@@ -7,8 +7,6 @@ import { formatCount } from '@/lib/utils';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { readLastLocation } from '@/lib/map-auto-locate';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
-	import type { BspRect } from '@/lib/bsp-layout';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -16,7 +14,7 @@ import { formatCount } from '@/lib/utils';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
-	import GroupCard from './shared/GroupCard.svelte';
+	import GroupCard from '@/components/data-display/GroupCard.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
 	import { NEARBY_CATEGORIES } from '../shared/categories';
 	import { requireAuth } from '@/stores/auth.svelte';
@@ -98,6 +96,29 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	const isDesktop = $derived(platform.platform === 'desktop');
 	const isTablet = $derived(platform.platform === 'tablet');
 	const device = $derived(platform.platform);
+
+	function getGroupCardLayout(index: number, total: number, dev: string) {
+		if (dev === 'mobile') {
+			if (index === 0) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const, featured: true, horizontal: true };
+			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const, featured: false, horizontal: false };
+		}
+		if (dev === 'tablet') {
+			if (index === 0) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const, featured: true, horizontal: true };
+			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const, featured: false, horizontal: false };
+		}
+		// 桌面端：
+		// 群组数充裕（>= 6）时首项展开 2x2 巨幕精选；
+		// 少量群组（< 6）时：在 2xl (6列) 下首尾 2x1 满铺 (2+1+1+2=6)，在 lg (4列) 下首项 2x1 次项 1x1... 或纯平整铺满
+		if (total >= 6) {
+			if (index === 0) return { cls: 'col-span-2 row-span-2', tier: '2x2' as const, featured: true, horizontal: false };
+			if (index === 1 || index === 2) return { cls: 'col-span-1 row-span-1', tier: '1x1' as const, featured: false, horizontal: false };
+			if (index === 3) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const, featured: false, horizontal: true };
+			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const, featured: false, horizontal: false };
+		}
+		if (index === 0) return { cls: 'lg:col-span-1 2xl:col-span-2 col-span-1 row-span-1', tier: '2x1' as const, featured: true, horizontal: true };
+		if (index === 3) return { cls: 'lg:col-span-1 2xl:col-span-2 col-span-1 row-span-1', tier: '2x1' as const, featured: false, horizontal: true };
+		return { cls: 'col-span-1 row-span-1', tier: '1x1' as const, featured: false, horizontal: false };
+	}
 	const filtered = $derived(
 		// 类目按全量标签匹配：首标签之外同样可命中（此前只比 tags[0]）。
 		groups.filter((group) => activeCategory === '全部' || group.tags.includes(activeCategory))
@@ -237,45 +258,32 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 		{:else if loadError}
 			<LoadError message={loadError} onRetry={() => reloadKey++} />
 			{:else if filtered.length}
-			{#if isDesktop && rest.length > 3}
-			<!-- 精选卡用 GroupCard featured 横排（图片左 40%,r03:纵排大卡吃首屏）；
-			     其余 BSP 满铺墙（高格子自动横排：图左 40% + 信息右面板），
-			     信息沉底观感由 GroupCard autoLandscape 兜底（横格>420px 自动切横排） -->
-			{#if featured}
-				<div class="mb-6">
-					<GroupCard featured horizontal priority group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
-				</div>
-			{/if}
-			<BspCardCanvas
-				items={rest.slice(0, visibleCount - 1)}
-				gap={14}
-				minRatio={0.68}
-				maxRatio={1.48}
-				minCardWidth={160}
-				minCardHeight={210}
-				minCanvasHeight={420}
-				ariaLabel="附近群组的不规则满铺布局"
-				hasMore={visibleCount < filtered.length}
-				onLoadMore={() => (visibleCount = Math.min(visibleCount + 8, filtered.length))}
-			>
-				{#snippet renderItem(group: Group, index: number, rect: BspRect)}
-					<GroupCard group={group} priority={index === 0} cardWidth={rect.width} cardHeight={rect.height} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
-				{/snippet}
-			</BspCardCanvas>
-			{:else}
-				{#if featured}
-					<div class="mb-6">
-						<GroupCard featured priority horizontal={isDesktop || isTablet} group={featured} pending={joinPending.has(featured.id)} pendingApproval={pendingApprovals.has(featured.id)} onToggle={() => toggleJoin(featured.id)} onOpen={() => void goto(ROUTES.group(featured.id))} />
-					</div>
-				{/if}
-				<!-- 手机/平板：规整 2 列（平板 BSP 会出 1 窄 + 2 宽 的尺寸落差与底部参差）；
-				     桌面保持「精选卡 + BSP 满铺墙」 -->
-				<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-					{#each rest as group, index (group.id)}
-						<GroupCard group={group} priority={index === 0} pending={joinPending.has(group.id)} pendingApproval={pendingApprovals.has(group.id)} onToggle={() => toggleJoin(group.id)} onOpen={() => void goto(ROUTES.group(group.id))} />
+			<div class="mx-auto w-full max-w-[1920px]">
+				<!-- 响应式群组网格：移动端 2 列（首项 2x1 满宽横排焦点），平板 3 列，桌面 4 列，宽屏/2K 5-6 列；
+				     首两行 2x2 精选 + 1x1 + 2x1 闭环满铺，行高自适应屏幕比例，绝对零空洞零拉伸 -->
+				<div
+					class="grid grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
+					style="grid-auto-rows: clamp(195px, 20vw, 275px);"
+				>
+					{#each filtered.slice(0, visibleCount) as group, index (group.id)}
+						{@const layout = getGroupCardLayout(index, filtered.length, device)}
+						<div class={layout.cls}>
+							<GroupCard
+								{group}
+								priority={index < 4}
+								featured={layout.featured}
+								horizontal={layout.horizontal}
+								tier={layout.tier}
+								pending={joinPending.has(group.id)}
+								pendingApproval={pendingApprovals.has(group.id)}
+								onToggle={() => toggleJoin(group.id)}
+								onOpen={() => void goto(ROUTES.group(group.id))}
+								class="h-full w-full"
+							/>
+						</div>
 					{/each}
 				</div>
-			{/if}
+			</div>
 			{#if visibleCount >= filtered.length}
 				<ListEnd />
 			{/if}

@@ -84,8 +84,8 @@
     transition: background-color 160ms var(--cst-ease-standard), background-image 160ms var(--cst-ease-standard),
       border-color 160ms var(--cst-ease-standard), color 160ms var(--cst-ease-standard), opacity 140ms var(--cst-ease-standard);
   }
-  /* Tap 可轻微压缩，但不得改变布局流（Figma Make tap 契约）。 */
-  button:not(:disabled):active { transform: scale(0.975); }
+  /* Tap 可轻微压缩，但不得改变布局流（Figma Make tap 契约；覆盖按钮 data-cover 禁用防穿透位移）。 */
+  button:not(:disabled):not([data-cover]):active { transform: scale(0.975); }
   button:focus-visible {
     outline: 2px solid var(--cst-accent-default);
     outline-offset: 2px;

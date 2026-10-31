@@ -5,7 +5,7 @@
 	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
-	import UserCard from '@/routes/(app)/nearby/people/UserCard.svelte';
+	import UserCard from '@/components/data-display/UserCard.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
 	import type { MomentItem } from '@/api/types';

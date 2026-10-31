@@ -177,11 +177,12 @@
     }
   }
 
-  /* 卡片按压反馈（R14）：所有图片内容卡共用 use:cardPress → data-pressed。
-     缩放走主题 token（vibrant 0.94 / forest·inkwash 0.97，与鸿蒙端 tap 反馈同口径），
-     不再用固定的 0.985——此前两类卡片按压量感不一致。 */
+  /* 卡片按压反馈（方案 2：全端扁平稳定化，2026-10-31）：
+     全端统一废除大卡片 scale-down 几何缩放——大卡片（尤其高分屏下可达 745px）做整体缩放会使边缘
+     产生 20~35px 的剧烈位移，违背人机工学且导致点击脱靶。卡片点击保持几何零位移，坚如磐石；
+     点击由自然转场进入详情页，行内小按钮（头像、点赞、关注等）继续保留小尺寸触控微反馈。 */
   .card-hover[data-pressed="true"] {
-    transform: scale(var(--cst-card-tap-scale, 0.97));
+    transform: none;
     transition-duration: var(--cst-motion-instant);
   }
 
@@ -536,28 +537,21 @@
      GPU 进程 24.6% → 0，滚动 19.3% → 14.9%）。氛围画布保留静态层（天光/世界/暗角），
      动画只作为稀疏页面的显式增强：<AmbientBackdrop motion /> → .ambient-backdrop--motion。
      开启后仍受全局 prefers-reduced-motion 规则压制。 */
+  /* 氛围微光：天顶广角柔光漫射（杜绝局部突兀光团/色斑，保证内容聚焦与空气感） */
   .ambient-glow--a {
-    background: radial-gradient(46% 40% at 12% 6%, var(--cst-ambient-glow-1) 0%, transparent 72%);
+    background: radial-gradient(100% 60% at 50% -10%, var(--cst-ambient-glow-1) 0%, transparent 100%);
   }
-  /* 地平线天光（世界光源）：底部中央的柔和光柱，游戏场景的主光源 */
+  /* 地平线微光：极度克制的地平线微漫射，柔化视口边缘 */
   .ambient-glow--b {
-    background: radial-gradient(62% 46% at 50% 104%, var(--cst-ambient-glow-2) 0%, transparent 72%);
+    background: radial-gradient(120% 40% at 50% 110%, var(--cst-ambient-glow-2) 0%, transparent 100%);
   }
   /* 地平线雾：底部渐隐带，把世界剪影与画布衔接起来 */
   .ambient-horizon {
     background: linear-gradient(0deg, var(--cst-ambient-horizon) 0%, transparent 30%);
   }
-  /* 清野暖阳：柔和径向光斑（不画实心圆，避免像 UI 元素） */
+  /* 移除粗暴光团：消灭刺眼大光斑（曾导致背景出现突兀大色团） */
   .ambient-sun {
-    position: absolute;
-    right: 4%;
-    top: 1%;
-    width: 36vw;
-    max-width: 620px;
-    height: 36vw;
-    max-height: 620px;
-    border-radius: 9999px;
-    background: radial-gradient(circle at 50% 42%, var(--cst-ambient-sun) 0%, transparent 68%);
+    display: none;
   }
   .ambient-vignette {
     background: radial-gradient(135% 115% at 50% -8%, transparent 52%, var(--cst-ambient-vignette) 100%);
@@ -1045,6 +1039,7 @@
   white-space: nowrap;
   color: var(--cst-content-inverse);
   background-color: var(--cst-surface-media-scrim-strong);
+  pointer-events: none;
 }
 .media-badge--icon {
   width: 20px;

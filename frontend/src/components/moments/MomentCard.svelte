@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { MapPin } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import Avatar from '@/components/shared/Avatar.svelte';
-	import NearbyImageCard from '@/components/data-display/NearbyImageCard.svelte';
-	import ImageCardActions from '@/components/data-display/ImageCardActions.svelte';
+	import Avatar from '@/cst-ui/data-display/Avatar.svelte';
+	import MediaCard from '@/cst-ui/cards/MediaCard.svelte';
+	import ImageCardActions from '@/cst-ui/cards/ImageCardActions.svelte';
 	import type { FeedItem } from './moment-feed.svelte';
 	import { shareMoment } from '@/lib/moment-actions';
 	import { ROUTES } from '@/lib/routes';
-	import FollowButton from '@/components/ui/FollowButton.svelte';
+	import FollowButton from '@/cst-ui/buttons/FollowButton.svelte';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { follow } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
@@ -19,7 +19,7 @@
 	let {
 		item,
 		liked,
-		saved,
+		saved = false,
 		onLike,
 		onSave,
 		onClick,
@@ -30,15 +30,15 @@
 	}: {
 		item: FeedItem;
 		liked: boolean;
-		saved: boolean;
+		saved?: boolean;
 		onLike: () => void;
-		onSave: () => void;
+		onSave?: () => void;
 		onClick?: () => void;
 		/** 评论计数点击（直达详情页评论区）；缺省回退 onClick */
 		onCommentClick?: () => void;
 		/** 首屏图（列表前 2 张）：透传 NearbyImageCard 的 eager/high */
 		priority?: boolean;
-		/** 窄卡（手机 2 列，约 170px 宽）：操作行切紧凑档，四类操作不裁切 */
+		/** 窄卡（手机 2 列，约 170px 宽）：操作行切紧凑档 */
 		compact?: boolean;
 		class?: string;
 	} = $props();
@@ -49,10 +49,6 @@
 	const canOpenAuthor = $derived(Boolean(item.userId));
 	function openAuthor() {
 		if (item.userId) void goto(ROUTES.user(item.userId));
-	}
-	// 分享与首页信息流卡同一实现（lib/moment-actions.shareMoment）
-	function handleShare() {
-		void shareMoment({ momentId: item.id, authorName: item.user, text: item.content });
 	}
 
 	// 作者关注态（2026-10-29）：与 HomeFeedItem 同契约——「已关注」必须是可点按钮，
@@ -93,108 +89,98 @@
 	}
 </script>
 
-<NearbyImageCard
-	imageSrc={item.image || item.avatar}
+<MediaCard
+	imageSrc={item.image}
 	imageAlt={cardLabel}
 	{onClick}
 	{priority}
 	class={className}
 >
-	{#snippet watermark()}
-		<MapPin size={72} strokeWidth={1} />
-	{/snippet}
-
-	{#snippet placeholder()}
-		<!-- 占位图标容器：只留描边（border），不叠 glow 投影 -->
-		<div
-			class="flex items-center justify-center rounded-sm size-11.5 bg-accent-bg"
-			style="border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);"
-		>
-			<MapPin size={20} class="text-accent-default" strokeWidth={1.5} />
-		</div>
-	{/snippet}
-
-	<!-- Tag chip：标准居中胶囊，严格锁定 h-5 与 leading-none 避免行高继承膨胀偏心 -->
+	<!-- Tag chip：左上角类别/标签 -->
 	{#if item.tag}
-		<!-- Tag chip：毛玻璃底与卡片徽章语言统一（Gemini 审查 r04：降噪，亮蓝让位核心交互），
-	     严格锁定 h-5 与 leading-none 避免行高继承膨胀偏心 -->
 		<span class="pointer-events-none media-badge absolute top-2.5 left-2.5 z-[2]">
 			{item.tag}
 		</span>
 	{/if}
 
-	<!-- 底部信息托盘（surface-card-menu，由 NearbyImageCard footer 槽渲染） -->
+	<!-- 时间徽章：右上角轻量显示，与左上角标签平衡且不占用底部操作行空间 -->
+	{#if item.time}
+		<span class="pointer-events-none media-badge absolute top-2.5 right-2.5 z-[2] text-xxs tabular-nums font-medium">
+			{item.time}
+		</span>
+	{/if}
+
+	<!-- 底部信息托盘：紧凑排布在卡片底部 25% 区域，彻底腾出上方图片空间 -->
 	{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
-	{@const onCover = onImage && !horizontal}
-	<div class="p-4">
-		<!-- 作者行：头像 + 昵称 + 时间（压图态白字，fallback 用主题色） -->
-		<div class="flex min-w-0 items-center gap-2">
-			{#if item.avatar || item.user}
-				{#if canOpenAuthor}
-					<!-- 作者区与首页信息流卡同契约：头像 hover 放大、昵称 hover 下划线，点击进主页并阻断整卡跳转 -->
-					<button
-						type="button"
-						class="hover-action hit-slop-44 shrink-0 rounded-full focus-ring"
-						aria-label={`查看${item.user || '作者'}的个人主页`}
-						onclick={(e) => {
-							e.stopPropagation();
-							openAuthor();
-						}}
-					>
-						<Avatar src={item.avatar} name={item.user} size="sm" />
-					</button>
-					<button
-						type="button"
-						class="min-w-0 truncate text-left text-md font-semibold hit-slop-44 focus-ring {onCover ? 'text-content-inverse hover:underline' : 'text-text-primary hover:text-accent-default hover:underline'} transition-colors"
-						onclick={(e) => {
-							e.stopPropagation();
-							openAuthor();
-						}}
-					>
-						{item.user || '匿名用户'}
-					</button>
-				{:else}
-					<Avatar src={item.avatar} name={item.user} size="sm" />
-					<span class="min-w-0 flex-1 truncate text-md font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{item.user || '匿名用户'}</span>
-				{/if}
-				{#if showFollowChip}
-					<FollowButton
-						size="chip"
-						active={isFollowing}
-						pending={followPending}
-						onMedia={onCover}
-						ariaLabel={(isFollowing ? '取消关注 ' : '关注 ') + item.user}
-						onToggle={handleFollowToggle}
+		{@const onCover = onImage && !horizontal}
+		<div class="pointer-events-none flex flex-col gap-1 p-2 sm:p-2.5" data-card-footer>
+			<!-- 正文：最多 2 行，文字下衬轻阴影提升可读性 -->
+			{#if item.content}
+				<p class="pointer-events-none line-clamp-2 text-xs sm:text-sm font-semibold leading-snug drop-shadow-xs {onCover ? 'text-content-inverse' : 'text-text-primary'}">
+					{item.content}
+				</p>
+			{/if}
+
+			<!-- 底行：左侧作者信息（头像+昵称），右侧核心操作（仅点赞与评论，无分享/收藏冗余） -->
+			<div class="flex items-center justify-between gap-1.5 pt-0.5">
+				<div class="flex min-w-0 items-center gap-1.5">
+					{#if item.avatar || item.user}
+						{#if canOpenAuthor}
+							<button
+								type="button"
+								class="pointer-events-auto hover-action hit-slop-44 shrink-0 rounded-full focus-ring"
+								aria-label={`查看${item.user || '作者'}的个人主页`}
+								onclick={(e) => {
+									e.stopPropagation();
+									openAuthor();
+								}}
+							>
+								<Avatar src={item.avatar} name={item.user} size="xs" />
+							</button>
+							<button
+								type="button"
+								class="pointer-events-auto min-w-0 truncate text-left text-xs font-semibold hit-slop-44 focus-ring {onCover ? 'text-content-inverse hover:underline' : 'text-text-primary hover:text-accent-default hover:underline'} transition-colors"
+								onclick={(e) => {
+									e.stopPropagation();
+									openAuthor();
+								}}
+							>
+								{item.user || '匿名用户'}
+							</button>
+						{:else}
+							<Avatar src={item.avatar} name={item.user} size="xs" />
+							<span class="min-w-0 truncate text-xs font-semibold {onCover ? 'text-content-inverse' : 'text-text-primary'}">{item.user || '匿名用户'}</span>
+						{/if}
+						{#if showFollowChip}
+							<span class="pointer-events-auto">
+								<FollowButton
+									size="chip"
+									active={isFollowing}
+									pending={followPending}
+									onMedia={onCover}
+									ariaLabel={(isFollowing ? '取消关注 ' : '关注 ') + item.user}
+									onToggle={handleFollowToggle}
+								/>
+							</span>
+						{/if}
+					{/if}
+				</div>
+
+				<!-- 操作区：遵循极简原则，卡片仅保留点赞与评论；去除未消费前即分享/收藏的冗余 UI -->
+				<div class="pointer-events-auto shrink-0 flex items-center">
+					<ImageCardActions
+						likes={item.likes}
+						comments={item.comments}
+						{liked}
+						saved={saved}
+						onImage={onCover}
+						onLike={() => onLike()}
+						onComment={() => (onCommentClick ?? onClick)?.()}
+						onSave={onSave ? () => onSave?.() : undefined}
+						size="sm"
 					/>
-				{/if}
-			{/if}
-			{#if item.time}
-				<span class="ml-auto shrink-0 text-xs tabular-nums {onCover ? 'text-content-inverse opacity-hover' : 'text-text-secondary'}">{item.time}</span>
-			{/if}
+				</div>
+			</div>
 		</div>
-
-		<!-- 正文：最多 2 行 -->
-		{#if item.content}
-			<p class="mt-1.5 line-clamp-2 text-sm leading-card {onCover ? 'text-content-inverse opacity-hover' : 'text-text-secondary'}">
-				{item.content}
-			</p>
-		{/if}
-
-		<!-- 操作行：与首页信息流卡共用 ImageCardActions（同一套图标/间距/hover/press/状态语义） -->
-		<div class="mt-2">
-			<ImageCardActions
-				likes={item.likes}
-				comments={item.comments}
-				{liked}
-				{saved}
-				onImage={onCover}
-				onLike={() => onLike()}
-				onComment={() => (onCommentClick ?? onClick)?.()}
-				onSave={() => onSave()}
-				onShare={handleShare}
-				size={compact ? 'sm' : 'md'}
-			/>
-		</div>
-	</div>
-{/snippet}
-</NearbyImageCard>
+	{/snippet}
+</MediaCard>

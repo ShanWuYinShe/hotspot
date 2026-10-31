@@ -4,7 +4,7 @@
 	import { Search as SearchIcon, Users, FileText, Hash, ChevronRight } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
-	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
@@ -122,7 +122,7 @@
 
 	<div use:contentFade={loading}>
 	{#if loading}
-		<!-- 首屏骨架屏：搜索结果行（前导 44 + p-3 = UserCardRow 行几何，与真实结果行零位移） -->
+		<!-- 首屏骨架屏：搜索结果行（前导 44 + p-3 = EntityRow 行几何，与真实结果行零位移） -->
 		<div class="mt-4 flex flex-col gap-3">
 			<div class="flex items-center gap-2 px-1">
 				<Skeleton class="h-4 w-12 rounded-sm" />
@@ -165,7 +165,7 @@
 				{#snippet userRows()}
 					<ListContainer bordered>
 						{#each results.users as person (person.user_id)}
-							<UserCardRow
+							<EntityRow
 								name={person.nickname}
 								avatar={person.avatar_url ?? ''}
 								ariaLabel={`查看 ${person.nickname} 的资料`}
@@ -180,7 +180,7 @@
 								{#snippet actions()}
 									<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
 								{/snippet}
-							</UserCardRow>
+							</EntityRow>
 						{/each}
 					</ListContainer>
 				{/snippet}
@@ -234,7 +234,7 @@
 				{#snippet groupRows()}
 					<ListContainer bordered>
 						{#each results.groups as group (group.group_id)}
-							<UserCardRow
+							<EntityRow
 								avatarShape="rounded"
 								name={group.name}
 								avatar={group.avatar_url ?? ''}
@@ -247,7 +247,7 @@
 								{#snippet actions()}
 									<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.75} />
 								{/snippet}
-							</UserCardRow>
+							</EntityRow>
 						{/each}
 					</ListContainer>
 				{/snippet}

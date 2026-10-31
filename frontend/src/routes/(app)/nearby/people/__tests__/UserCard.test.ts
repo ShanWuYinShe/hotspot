@@ -1,7 +1,7 @@
 // UserCard 无头像/头像加载失败时渲染主题化占位，而非浏览器 broken image。
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import UserCard, { type NearbyUser } from '../UserCard.svelte';
+import UserCard, { type NearbyUser } from '@/components/data-display/UserCard.svelte';
 
 const base = (over: Partial<NearbyUser> = {}): NearbyUser => ({
 	id: 'user_1',

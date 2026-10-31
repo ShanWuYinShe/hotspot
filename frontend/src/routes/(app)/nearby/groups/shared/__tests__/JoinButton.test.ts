@@ -2,7 +2,7 @@
 // 双态样式已类化（inline background 会压制 hover 反馈），断言走类名。
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import JoinButton from '../JoinButton.svelte';
+import JoinButton from '@/cst-ui/buttons/JoinButton.svelte';
 
 describe('JoinButton', () => {
 	it('未加入时渲染「加入」与 accent 实底类', () => {

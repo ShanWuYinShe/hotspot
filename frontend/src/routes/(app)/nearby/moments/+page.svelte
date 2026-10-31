@@ -5,10 +5,10 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { readLastLocation } from '@/lib/map-auto-locate';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
-	import BspCardCanvas from '@/components/shared/BspCardCanvas.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
+	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -211,10 +211,21 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	const feedHasMore = $derived(loadingMore || visibleCount < filtered.length || Boolean(nextCursor));
 
 	const device = $derived(platform.platform);
-	const gridColumns = $derived(device === 'mobile' ? 2 : device === 'tablet' ? 2 : 3);
-	const minCardWidth = $derived(device === 'mobile' ? 150 : 160);
-	const minCardHeight = $derived(device === 'mobile' ? 220 : 260);
-	const minCanvasHeight = $derived(device === 'mobile' ? 440 : 520);
+	let sentinelEl = $state<HTMLElement | null>(null);
+
+	$effect(() => {
+		if (!sentinelEl) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting && feedHasMore && !loadingMore) {
+					void handleLoadMore();
+				}
+			},
+			{ rootMargin: '300px' }
+		);
+		observer.observe(sentinelEl);
+		return () => observer.disconnect();
+	});
 </script>
 <svelte:head>
 	<!-- 术语统一：全站用「瞬间」，「附近动态」是旧名；页头/导航/空态/加载态保持一致 -->
@@ -264,23 +275,14 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 <!-- ═══ 加载中 / 空列表状态 ═══ -->
 {#snippet feedState()}
 	{#if loading}
-		<!-- 首屏骨架屏：移动端 2 列 3:4 卡（与真实网格同构），平板/桌面用 4:3 卡栅格近似 BSP 满铺 -->
-		{#if device === 'mobile'}
-			<SkeletonFeed
-				variant="card"
-				count={4}
-				cardClass="aspect-[3/4] rounded-md"
-				class="grid grid-cols-2 gap-4"
-				label="加载附近瞬间…"
-			/>
-		{:else}
-			<SkeletonFeed
-				variant="card"
-				count={6}
-				class="grid grid-cols-2 gap-4 lg:grid-cols-3"
-				label="加载附近瞬间…"
-			/>
-		{/if}
+		<!-- 首屏骨架屏：与真实照片网格同构（移动 2 列、平板 3 列、桌面 4-6 列） -->
+		<SkeletonFeed
+			variant="card"
+			count={device === 'mobile' ? 4 : 8}
+			cardClass="aspect-[3/4] rounded-lg"
+			class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
+			label="加载附近瞬间…"
+		/>
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => { clearMomentsProgress(); reloadKey++; }} />
 	{:else}
@@ -307,56 +309,30 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	{#if loading || loadError || !filtered.length}
 		{@render feedState()}
 	{:else}
-		{#if device === 'mobile'}
-			<!-- 手机：规整 2 列 4:3 网格。BSP 满铺在 390 视口会产出近方形大卡（一屏一卡），
-			     且与「我的瞬间」同内容不同比例；手机改用统一 4:3 内容卡，平板/桌面保留 BSP。 -->
-			<div class="grid grid-cols-2 gap-4">
+		<div class="mx-auto w-full max-w-[2000px]">
+			<!-- 响应式照片流网格：移动端 2 列、平板 3 列、桌面 4 列、宽屏/2K 5-6 列，零空洞零拉伸 -->
+			<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6">
 				{#each filtered.slice(0, visibleCount) as item, index (item.id)}
-					<!-- 手机两列窄卡用 3:4 竖版：4:3 时卡高仅 ~128px，底部托盘吃掉 70%+ 图片 -->
 					<MomentCard
-						class="aspect-[3/4] h-auto rounded-lg"
-						item={item}
-						priority={index < 2}
-						compact
+						class="aspect-[3/4] h-auto w-full rounded-lg"
+						{item}
+						priority={index < 4}
+						compact={device === 'mobile'}
 						liked={item.liked}
-						saved={item.saved}
 						onLike={() => void interactions.toggleLike(item.id)}
-						onSave={() => void interactions.toggleSave(item.id)}
 						onClick={() => openMoment(item.id)}
 						onCommentClick={() => openMoment(item.id, true)}
 					/>
 				{/each}
 			</div>
-		{:else}
-		<!-- BSP 瓦片墙（平板/桌面；无首项 hero，列数随平台：桌面 3 / 平板 2） -->
-		<BspCardCanvas
-			items={filtered.slice(0, visibleCount)}
-			gap={14}
-			minRatio={0.68}
-			maxRatio={1.48}
-			minCardWidth={minCardWidth}
-			minCardHeight={minCardHeight}
-			minCanvasHeight={minCanvasHeight}
-			ariaLabel="附近瞬间的不规则满铺布局"
-			hasMore={feedHasMore}
-			onLoadMore={() => void handleLoadMore()}
-		>
-		{#snippet renderItem(item: FeedItem, index: number)}
-			<MomentCard
-				item={item}
-				priority={index < 2}
-				liked={item.liked}
-				saved={item.saved}
-				onLike={() => void interactions.toggleLike(item.id)}
-				onSave={() => void interactions.toggleSave(item.id)}
-				onClick={() => openMoment(item.id)}
-				onCommentClick={() => openMoment(item.id, true)}
-			/>
-		{/snippet}
-		</BspCardCanvas>
-		{/if}
-		{#if showListEnd}
-			<ListEnd />
-		{/if}
+
+			{#if feedHasMore}
+				<div bind:this={sentinelEl} class="flex justify-center px-4 py-6" aria-hidden="true">
+					<InlineLoading label="加载更多…" />
+				</div>
+			{:else if showListEnd}
+				<ListEnd class="pb-6" />
+			{/if}
+		</div>
 	{/if}
 </StandardPageLayout>

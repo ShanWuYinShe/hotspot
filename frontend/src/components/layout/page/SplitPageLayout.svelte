@@ -174,8 +174,15 @@
 		<!-- 移动端：滚动交还 RoutedContentViewport（唯一滚动 owner），此处只承载
 		     header 吸顶 / 内容列 / 固定 footer，避免双层嵌套滚动 -->
 		{#if header}
-			<!-- 移动端 header 吸顶（滚动时内容上探，避免固定 header 常驻挤压内容区） -->
-			<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0 w-full">{@render header()}</div>
+			<!-- 移动端 header 吸顶（通栏满宽模式负外边距上抽，内容直抵视口顶端，顶栏按钮自然浮动于图片之上） -->
+			<div
+				class={cn(
+					'sticky top-0 z-[var(--cst-z-sticky)] shrink-0 w-full',
+					edgeToEdgeMobile && '-mb-12 pointer-events-none'
+				)}
+			>
+				{@render header()}
+			</div>
 		{/if}
 		<div class="min-h-0 flex-1" style={footerHeight > 0 ? `padding-bottom:${footerHeight}px` : undefined}>
 			<ContentColumn

@@ -60,48 +60,6 @@
 		o: Number((0.16 + hash(i + 109) * 0.5).toFixed(2))
 	}));
 
-	/** Catmull-Rom → 三次贝塞尔，把折线点转成柔顺曲线（等高线用）。 */
-	function smoothPath(points: Array<{ x: number; y: number }>): string {
-		if (points.length < 2) return '';
-		let d = `M${points[0].x} ${points[0].y}`;
-		for (let i = 0; i < points.length - 1; i++) {
-			const p0 = points[Math.max(0, i - 1)];
-			const p1 = points[i];
-			const p2 = points[i + 1];
-			const p3 = points[Math.min(points.length - 1, i + 2)];
-			const c1x = p1.x + (p2.x - p0.x) / 6;
-			const c1y = p1.y + (p2.y - p0.y) / 6;
-			const c2x = p2.x - (p3.x - p1.x) / 6;
-			const c2y = p2.y - (p3.y - p1.y) / 6;
-			d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x} ${p2.y}`;
-		}
-		return d;
-	}
-
-	/** 等高线地形：9 条上下叠置的柔顺曲线，越往下振幅越大（近处地形起伏更明显）。 */
-	const CONTOURS: string[] = Array.from({ length: 9 }, (_, i) => {
-		const base = 470 + i * 46;
-		const amp = 22 + i * 6;
-		const points = Array.from({ length: 17 }, (_, s) => {
-			const t = s / 16;
-			return {
-				x: Math.round(t * 1600),
-				y: Math.round(
-					base +
-						Math.sin(t * Math.PI * 2 + i * 0.9) * amp +
-						Math.sin(t * Math.PI * 4 + i * 1.7) * amp * 0.32
-				)
-			};
-		});
-		return smoothPath(points);
-	});
-
-	/** 星座连线：三段折线，端点刻意靠近星点群（不要求逐点吸附，避免解剖感过强）。 */
-	const CONSTELLATIONS = [
-		'M232 168 L318 214 L286 296 L372 330',
-		'M1084 118 L1156 176 L1122 250 L1204 286',
-		'M640 92 L700 148 L664 208'
-	];
 
 	/**
 	 * 城市天际线：由 [x, 宽, 高] 生成楼群剪影路径（底部对齐 900）。
@@ -179,9 +137,7 @@
 >
 	<div class="ambient-stage">
 		<div class="ambient-layer ambient-sky"></div>
-		{#if variant === 'canvas' && world === 'forest'}
-			<div class="ambient-sun"></div>
-		{/if}
+		<!-- 天顶微光：纯净单层天光与柔和微漫射 -->
 		<div class="ambient-layer ambient-glow ambient-glow--a"></div>
 		<div class="ambient-layer ambient-glow ambient-glow--b"></div>
 
@@ -190,7 +146,7 @@
 		{/if}
 
 		{#if variant === 'canvas' && world === 'vibrant'}
-			<!-- 星际：星尘 + 星座 + 轨道环 + 城市天际线 -->
+			<!-- 星际：极简微星星尘 + 远景城市剪影（无刺眼轨道环与生硬连线，不抢内容焦点） -->
 			<svg
 				class="ambient-world ambient-world--vibrant"
 				viewBox="0 0 1600 900"
@@ -199,56 +155,33 @@
 			>
 				<g class="ambient-stars" fill="currentColor">
 					{#each STARS as star (star.x + '-' + star.y)}
-						<circle cx={star.x} cy={star.y} r={star.r} opacity={star.o} />
+						<circle cx={star.x} cy={star.y} r={star.r * 0.75} opacity={star.o * 0.6} />
 					{/each}
 				</g>
-				<g
-					class="ambient-constellation"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.1"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					{#each CONSTELLATIONS as d}<path {d} />{/each}
-				</g>
-				<g class="ambient-orbit" fill="none" stroke="currentColor" stroke-width="1">
-					<ellipse cx="1290" cy="218" rx="260" ry="112" transform="rotate(-18 1290 218)" />
-					<ellipse cx="1290" cy="218" rx="352" ry="158" transform="rotate(-18 1290 218)" opacity="0.55" />
-				</g>
-				<g class="ambient-scene ambient-scene--far" fill="currentColor">
+				<g class="ambient-scene ambient-scene--far opacity-40" fill="currentColor">
 					<path d={SKYLINE_FAR} />
 				</g>
-				<g class="ambient-scene ambient-scene--near" fill="currentColor">
+				<g class="ambient-scene ambient-scene--near opacity-40" fill="currentColor">
 					<path d={SKYLINE_NEAR} />
 				</g>
 			</svg>
 		{:else if variant === 'canvas' && world === 'forest'}
-			<!-- 清野：等高线地形 + 针叶林剪影 -->
+			<!-- 清野：远景自然树林剪影（无突兀等高线与大光斑） -->
 			<svg
 				class="ambient-world ambient-world--forest"
 				viewBox="0 0 1600 900"
 				preserveAspectRatio="xMidYMid slice"
 				focusable="false"
 			>
-				<g
-					class="ambient-contours"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.1"
-					stroke-linecap="round"
-				>
-					{#each CONTOURS as d}<path {d} />{/each}
-				</g>
-				<g class="ambient-scene ambient-scene--far" fill="currentColor">
+				<g class="ambient-scene ambient-scene--far opacity-40" fill="currentColor">
 					<path d={TREES_FAR} />
 				</g>
-				<g class="ambient-scene ambient-scene--near" fill="currentColor">
+				<g class="ambient-scene ambient-scene--near opacity-40" fill="currentColor">
 					<path d={TREES_NEAR} />
 				</g>
 			</svg>
 		{:else if variant === 'canvas'}
-			<!-- 水墨：三段墨山 + 朱砂圆相 + 墨点 -->
+			<!-- 水墨：三段远山墨韵（无突兀巨大圆相，纯净素雅） -->
 			<svg
 				class="ambient-world ambient-world--inkwash"
 				viewBox="0 0 1600 900"
@@ -256,37 +189,25 @@
 				focusable="false"
 			>
 				<path
-					class="ambient-scene ambient-scene--far"
+					class="ambient-scene ambient-scene--far opacity-40"
 					fill="currentColor"
 					d="M0 900 L0 636 C120 600 220 660 340 612 S560 560 700 620 S940 572 1080 642 S1360 592 1600 662 L1600 900 Z"
 				/>
 				<path
-					class="ambient-scene ambient-scene--mid"
+					class="ambient-scene ambient-scene--mid opacity-40"
 					fill="currentColor"
 					d="M0 900 L0 704 C160 662 260 722 420 682 S660 642 820 702 S1080 652 1240 712 S1460 672 1600 702 L1600 900 Z"
 				/>
 				<path
-					class="ambient-scene ambient-scene--near"
+					class="ambient-scene ambient-scene--near opacity-40"
 					fill="currentColor"
 					d="M0 900 L0 772 C200 742 320 802 520 772 S780 732 980 792 S1240 752 1400 802 S1520 782 1600 802 L1600 900 Z"
 				/>
-				<circle
-					class="ambient-enso"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="9"
-					stroke-linecap="round"
-					stroke-dasharray="700 220"
-					transform="rotate(-28 1290 250)"
-					cx="1290"
-					cy="250"
-					r="146"
-				/>
-				<g class="ambient-ink-dots" fill="currentColor">
-					<circle cx="246" cy="742" r="4" opacity="0.5" />
-					<circle cx="284" cy="706" r="2.2" opacity="0.35" />
-					<circle cx="196" cy="676" r="2.8" opacity="0.4" />
-					<circle cx="1322" cy="812" r="3" opacity="0.3" />
+				<g class="ambient-ink-dots opacity-30" fill="currentColor">
+					<circle cx="246" cy="742" r="3" opacity="0.3" />
+					<circle cx="284" cy="706" r="1.8" opacity="0.25" />
+					<circle cx="196" cy="676" r="2.2" opacity="0.25" />
+					<circle cx="1322" cy="812" r="2.5" opacity="0.2" />
 				</g>
 			</svg>
 		{/if}

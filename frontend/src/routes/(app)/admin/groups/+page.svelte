@@ -5,10 +5,7 @@
 	import { showToast } from '@/stores/toast.svelte';
 	import { UsersRound } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import LoadError from '@/components/data-display/LoadError.svelte';
-	import ListEnd from '@/components/data-display/ListEnd.svelte';
-	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import AdminListView from '../shared/AdminListView.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import Textarea from '@/components/forms/Textarea.svelte';
 	import Button from '@/components/ui/button.svelte';
@@ -70,20 +67,25 @@
 			</div>
 		</div>
 
-		{#if list.loading}
-			<InlineLoading label="加载群组列表…" />
-		{:else if list.error}
-			<LoadError message={list.error} onRetry={list.reload} />
-		{:else if list.count === 0}
-			<EmptyState title="没有匹配的群组" description="换个群组名称试试，或清空搜索词后重试。" iconTone="neutral">
-				{#snippet icon()}<UsersRound class="size-7" strokeWidth={1.5} />{/snippet}
-				{#snippet action()}
-					{#if query}
-						<Button type="button" variant="secondary" size="sm" onclick={() => (query = '')}>清空搜索</Button>
-					{/if}
-				{/snippet}
-			</EmptyState>
-		{:else}
+		<AdminListView
+			loading={list.loading}
+			error={list.error}
+			count={list.count}
+			hasMore={list.hasMore}
+			loadingMore={list.loadingMore}
+			onReload={list.reload}
+			onLoadMore={list.loadMore}
+			loadingLabel="加载群组列表…"
+			emptyTitle="没有匹配的群组"
+			emptyDescription="换个群组名称试试，或清空搜索词后重试。"
+			emptyIcon={UsersRound}
+		>
+			{#snippet emptyAction()}
+				{#if query}
+					<Button type="button" variant="secondary" size="sm" onclick={() => (query = '')}>清空搜索</Button>
+				{/if}
+			{/snippet}
+
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
@@ -121,13 +123,7 @@
 					</tbody>
 				</table>
 			</div>
-
-			{#if list.hasMore}
-				<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
-			{:else}
-				<ListEnd />
-			{/if}
-		{/if}
+		</AdminListView>
 	</div>
 
 	<ConfirmDialog

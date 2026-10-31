@@ -291,13 +291,13 @@
 				variant="feed"
 				count={4}
 				label="加载动态中…"
-				class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 px-3 sm:px-0 pt-2"
+				class="grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 2xl:grid-cols-3 sm:gap-4 sm:px-0 pt-2"
 			/>
 		{:else if currentError && currentItems.length === 0}
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
 		{:else if currentItems.length > 0}
-			<!-- 高质感社区 Feed 流：方案 E 超宽屏 3 列流式画廊瀑布（默认标准） -->
-			<div class={demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 px-3 sm:px-0 pt-2'}>
+			<!-- 高质感社区 Feed 流：移动端规整 2 列满铺提效，桌面 2~3 列流式画廊瀑布 -->
+			<div class={demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 2xl:grid-cols-3 sm:gap-4 sm:px-0 pt-2'}>
 				{#each currentItems as moment, index (moment.moment_id)}
 					<HomeFeedItem
 						{moment}

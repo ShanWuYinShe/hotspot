@@ -1,18 +1,18 @@
-// NearbyImageCard 契约测试：图片/占位渲染、点击与键盘触发。
+// MediaCard 契约测试：图片/占位渲染、点击与键盘触发。
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
-import NearbyImageCard from '../NearbyImageCard.svelte';
+import MediaCard from '../MediaCard.svelte';
 
-describe('NearbyImageCard', () => {
+describe('MediaCard', () => {
 	it('有图片时渲染 img 并带 alt', () => {
-		const { container } = render(NearbyImageCard, {
+		const { container } = render(MediaCard, {
 			props: { imageSrc: 'https://example.com/a.jpg', imageAlt: '群组封面' }
 		});
 		expect(container.querySelector('img')?.getAttribute('alt')).toBe('群组封面');
 	});
 
 	it('无图片时渲染渐变占位层', () => {
-		const { container } = render(NearbyImageCard, {
+		const { container } = render(MediaCard, {
 			props: { imageSrc: '', placeholder: (() => null) as never }
 		});
 		expect(container.querySelector('.surface-accent-gradient')).not.toBeNull();
@@ -27,7 +27,7 @@ describe('NearbyImageCard', () => {
 			{ imageSrc: '', placeholder: (() => null) as never },
 			{ imageSrc: 'https://example.com/a.jpg' }
 		] as never[]) {
-			const { container, unmount } = render(NearbyImageCard, { props });
+			const { container, unmount } = render(MediaCard, { props });
 		for (const layer of Array.from(container.querySelectorAll('.surface-accent-gradient'))) {
 				expect(layer.className).not.toMatch(/(?:^|\s)z-(?:\[|\d)/);
 			}
@@ -40,7 +40,7 @@ describe('NearbyImageCard', () => {
 		// inset-0 拉不开、object-cover 无从生效——mock 小图在卡片内露底/错裁(线上实测)。
 		// jsdom 不做布局,按本文件既有惯例以类串断言拦截:纵横两变体的 img 都必须
 		// 带显式高度/宽度档(h-full + w-full / w-2/5)。
-		const { container, unmount } = render(NearbyImageCard, {
+		const { container, unmount } = render(MediaCard, {
 			props: { imageSrc: 'https://example.com/a.jpg' }
 		});
 		const cls = container.querySelector('img')?.className ?? '';
@@ -48,7 +48,7 @@ describe('NearbyImageCard', () => {
 		expect(cls).toContain('w-full');
 		unmount();
 
-		const horizontal = render(NearbyImageCard, {
+		const horizontal = render(MediaCard, {
 			props: { imageSrc: 'https://example.com/a.jpg', horizontal: true }
 		});
 		const hCls = horizontal.container.querySelector('img')?.className ?? '';
@@ -59,7 +59,7 @@ describe('NearbyImageCard', () => {
 
 	it('加载中占位用限时脉冲类（media-placeholder--pulse），不再用 Tailwind animate-pulse', () => {
 		// R17：旧 animate-pulse 2s/infinite 会在慢图/lazy 卡上常驻；改 3 次后静态。
-		const { container } = render(NearbyImageCard, {
+		const { container } = render(MediaCard, {
 			props: { imageSrc: 'https://example.com/a.jpg' }
 		});
 		const placeholder = container.querySelector('.media-placeholder--pulse');
@@ -70,7 +70,7 @@ describe('NearbyImageCard', () => {
 
 	it('onClick 提供时由覆盖按钮承载点击（根不再持 button 语义）', async () => {
 		const onClick = vi.fn();
-		const { container } = render(NearbyImageCard, {
+		const { container } = render(MediaCard, {
 			props: { imageSrc: 'x', onClick }
 		});
 		const card = container.querySelector('article') as HTMLElement;
@@ -85,7 +85,7 @@ describe('NearbyImageCard', () => {
 		// 回归防线:jsdom 不应用 Tailwind 样式表,塌缩(0×0)只能靠类串断言拦截——
 		// [&_button]:relative 与覆盖按钮 absolute 同 specificity 且 .relative 后生成,
 		// 一旦漏排除,真实浏览器整卡点击失效(线上实测 P0)
-		const { container } = render(NearbyImageCard, {
+		const { container } = render(MediaCard, {
 			props: { imageSrc: 'x', onClick: () => {} }
 		});
 		const root = container.querySelector('article') as HTMLElement;
@@ -99,7 +99,7 @@ describe('NearbyImageCard', () => {
 
 	it('覆盖按钮为原生 button（键盘 Enter/Space 原生激活）', async () => {
 		const onClick = vi.fn();
-		const { container } = render(NearbyImageCard, {
+		const { container } = render(MediaCard, {
 			props: { imageSrc: 'x', onClick }
 		});
 		const cover = container.querySelector('[data-cover]') as HTMLElement;
@@ -110,7 +110,7 @@ describe('NearbyImageCard', () => {
 	});
 
 	it('按压反馈由统一 cardPress 驱动（卡本体/覆盖按钮按下 → data-pressed，松开复位）', async () => {
-		const { container } = render(NearbyImageCard, { props: { imageSrc: 'x', onClick: () => {} } });
+		const { container } = render(MediaCard, { props: { imageSrc: 'x', onClick: () => {} } });
 		const card = container.querySelector('article') as HTMLElement;
 		// 覆盖按钮是卡片本体的点击面：按下它等于按下整卡（应缩放）
 		const cover = card.querySelector('[data-cover]') as HTMLElement;
@@ -121,7 +121,7 @@ describe('NearbyImageCard', () => {
 	});
 
 	it('卡根统一恢复交互控件 pointer-events-auto（覆盖层穿透契约兜底）', () => {
-		const { container } = render(NearbyImageCard, { props: { imageSrc: 'x', onClick: () => {} } });
+		const { container } = render(MediaCard, { props: { imageSrc: 'x', onClick: () => {} } });
 		const card = container.querySelector('article') as HTMLElement;
 		expect(card.className).toContain('[&_button:not([data-cover])]:pointer-events-auto');
 		expect(card.className).toContain('[&_a]:pointer-events-auto');

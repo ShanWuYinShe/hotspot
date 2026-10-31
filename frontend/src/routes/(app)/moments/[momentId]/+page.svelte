@@ -550,7 +550,7 @@
 {#snippet moreMenu()}
 	<DropdownMenu.Root bind:open={moreOpen}>
 		<div bind:this={moreMenuEl} class="relative">
-			<ActionIconButton icon={MoreHorizontal} label="更多操作" variant="ghost" onClick={() => (moreOpen = !moreOpen)} />
+			<ActionIconButton icon={MoreHorizontal} label="更多操作" variant="ghost" tone="current" onClick={() => (moreOpen = !moreOpen)} />
 		</div>
 		<DropdownMenu.Content customAnchor={moreMenuEl}>
 			<DropdownMenu.Item onSelect={() => void copyMomentLink()}>
@@ -579,7 +579,7 @@
 {#snippet headerActions()}
 	{#if moment.id && !loading}
 		<div class="flex items-center gap-1">
-			<ActionIconButton icon={Link2} label="复制动态链接" variant="ghost" size={36} onClick={() => void copyMomentLink()} />
+			<ActionIconButton icon={Link2} label="复制动态链接" variant="ghost" tone="current" size={36} onClick={() => void copyMomentLink()} />
 			{@render moreMenu()}
 		</div>
 	{:else}

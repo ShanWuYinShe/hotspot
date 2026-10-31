@@ -26,7 +26,7 @@
 		label: string;
 		onClick?: () => void;
 		variant?: 'surface' | 'overlay' | 'ghost';
-		tone?: 'muted' | 'accent' | 'inverse';
+		tone?: 'muted' | 'accent' | 'inverse' | 'current';
 		size?: 32 | 34 | 36 | 42;
 		disabled?: boolean;
 		type?: 'button' | 'submit' | 'reset';
@@ -35,7 +35,13 @@
 	} = $props();
 
 	const iconColor = $derived(
-		tone === 'inverse' ? 'var(--cst-content-inverse)' : tone === 'accent' ? 'var(--cst-accent-default)' : 'var(--cst-content-secondary)'
+		tone === 'inverse'
+			? 'var(--cst-content-inverse)'
+			: tone === 'accent'
+				? 'var(--cst-accent-default)'
+				: tone === 'current'
+					? 'currentColor'
+					: 'var(--cst-content-secondary)'
 	);
 
 	const style = $derived.by(() => {
@@ -56,7 +62,10 @@
 	style={style}
 	aria-label={label}
 	title={label}
-	onclick={() => onClick?.()}
+	onclick={(e) => {
+		e.stopPropagation();
+		onClick?.();
+	}}
 	{disabled}
 >
 	<Icon size={Math.round(size * 0.42)} color={iconColor} strokeWidth={1.75} />

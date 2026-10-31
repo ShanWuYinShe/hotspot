@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ShieldBan } from '@lucide/svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
-	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { showToast } from '@/stores/toast.svelte';
@@ -10,7 +10,7 @@
 
 	// 黑名单分区（/me/relationships 第四 tab）：users/fetch_blocked 拉取 +
 	// 单条解除拉黑（users/set_block active=false，两态统一端点的 false 侧）。
-	// 骨架与行样式对齐好友/关注/粉丝三个 Section（ProfileUserSection + UserCardRow）。
+	// 骨架与行样式对齐好友/关注/粉丝三个 Section（ProfileUserSection + EntityRow）。
 
 	// 行模型：ProfileUserSection 泛型要求 items 携带 id（spec user_id）
 	interface BlockedRow {
@@ -106,7 +106,7 @@
 	items={filtered}
 >
 	{#snippet children(b)}
-		<UserCardRow
+		<EntityRow
 			name={b.name}
 			avatar={b.avatar}
 			tone={embedded ? 'card' : 'row'}
@@ -130,7 +130,7 @@
 					解除拉黑
 				</Button>
 			{/snippet}
-		</UserCardRow>
+		</EntityRow>
 	{/snippet}
 </ProfileUserSection>
 

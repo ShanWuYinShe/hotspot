@@ -6,13 +6,13 @@ import { formatRelativeDays } from '@/lib/utils';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
-	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
 	import { useRelationships, type MappedFollower } from '@/lib/profile-data.svelte';
 	import { createOptimisticFollow, type OptimisticFollow } from '@/lib/relationships.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 粉丝分区：ProfileUserSection 骨架 + UserCardRow 行（含统计行与待回关徽章）。
+	// 粉丝分区：ProfileUserSection 骨架 + EntityRow 行（含统计行与待回关徽章）。
 
 	// followState 由调用方（关系聚合页）注入共享，跨 tab 切换保持一致；
 	// 独立使用时回退本地实例（行为不变）。
@@ -88,7 +88,7 @@ import { formatRelativeDays } from '@/lib/utils';
 	{/snippet}
 	{#snippet children(f)}
 		{@const isMutual = isMutualWith(f)}
-		<UserCardRow
+		<EntityRow
 			name={f.name}
 			avatar={f.avatar}
 			tone="row"
@@ -111,6 +111,6 @@ import { formatRelativeDays } from '@/lib/utils';
 					onToggle={() => void toggleFollow(f)}
 				/>
 			{/snippet}
-		</UserCardRow>
+		</EntityRow>
 	{/snippet}
 </ProfileUserSection>

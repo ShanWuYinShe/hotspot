@@ -23,7 +23,7 @@
 		author,
 		trailing,
 		onAuthorClick,
-		scrollThreshold = 180,
+		scrollThreshold = 160,
 		maxWidth = '58rem',
 		class: className = ''
 	}: {
@@ -63,18 +63,10 @@
 
 			scrolled = current > scrollThreshold;
 
-			// 智慧避让：
-			// 1. 回到首屏顶部（<= 20px）时始终显现；
-			// 2. 向下快速滚动浏览长内容且已离开首屏时（delta > 8 && current > scrollThreshold），
-			//    向上平滑隐藏，让出 100% 视口给大图和长文；
-			// 3. 向上微划（delta < -6）时立即唤出供返回与操作。
-			if (current <= 20) {
-				hidden = false;
-			} else if (delta > 8 && current > scrollThreshold) {
-				hidden = true;
-			} else if (delta < -6) {
-				hidden = false;
-			}
+			// 标头吸顶逻辑：
+			// 移除过度自动避让，滚动离开首屏后保持优雅吸顶且常驻，
+			// 不在用户向下浏览长文或评论时莫名消失，彻底消除「完全看不到标头」的问题。
+			hidden = false;
 
 			lastScrollTop = Math.max(0, current);
 		};
@@ -97,63 +89,43 @@
 <header
 	use:headerScroll
 	class={cn(
-		'sticky top-0 z-[var(--cst-z-sticky)] w-full select-none transition-all duration-snappy ease-standard',
+		'sticky top-0 z-[var(--cst-z-sticky)] w-full select-none transition-all duration-snappy ease-standard pointer-events-none bg-transparent py-2 sm:py-2.5',
 		hidden ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100',
-		scrolled
-			? 'pointer-events-auto border-b border-border-default/50 bg-surface-primary/90 shadow-xs backdrop-blur-md'
-			: 'pointer-events-none bg-transparent',
 		className
 	)}
 >
-	<ContentColumn {maxWidth} class="px-3 sm:px-4 py-1.5 sm:py-2">
-		<div class="flex items-center justify-between gap-2 h-9 sm:h-10">
-			<!-- ══ 左侧：返回按键 + 桌面实体面包屑 ══ -->
+	<ContentColumn {maxWidth} class="px-3 sm:px-4">
+		{#if scrolled}
+			<!-- ══ 方案 A：居中灵动胶囊岛（Unified Dynamic Island Capsule） ══
+			     滚动离开首屏后，以精致的居中胶囊岛浮现：将返回、作者微名片与操作按钮
+			     收敛为一颗有机整体，半透毛玻璃融入内容，绝不对图面造成生硬横断。 -->
 			<div
-				data-detail-header-left
-				class={cn(
-					'pointer-events-auto flex items-center transition-all duration-snappy',
-					scrolled
-						? ''
-						: 'rounded-full border border-border-default/60 bg-surface-primary/80 p-0.5 shadow-raised-sm backdrop-blur-md'
-				)}
+				data-detail-header-island
+				class="pointer-events-auto mx-auto flex items-center justify-between gap-2 sm:gap-3 h-10 px-2.5 sm:px-3 rounded-full bg-surface-primary/90 backdrop-blur-xl border border-border-default/40 shadow-raised-md text-text-primary transition-all max-w-[92%] sm:max-w-xl animate-in fade-in zoom-in-95 duration-snappy"
+				style="contain: layout paint; transform: translateZ(0);"
 			>
+				<!-- 左侧：返回按钮 -->
 				<ActionIconButton
 					icon={ArrowLeft}
 					label={backLabel}
 					onClick={onBack}
 					variant="ghost"
-					size={36}
+					tone="muted"
+					size={32}
 					class="shrink-0"
 				/>
 
-				{#if (category || entityName) && !scrolled}
-					<div
-						data-breadcrumb
-						class="hidden sm:flex items-center gap-1.5 pl-0.5 pr-3 text-xs font-medium text-text-secondary animate-in fade-in duration-snappy"
-					>
-						{#if category}
-							<span class="opacity-soft">{category}</span>
-							{#if entityName}
-								<span class="opacity-subtle">/</span>
-							{/if}
-						{/if}
-						{#if entityName}
-							<span class="max-w-[200px] truncate text-text-primary font-semibold">{entityName}</span>
-						{/if}
-					</div>
-				{/if}
-			</div>
+				<div class="h-4 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
 
-			<!-- ══ 中间：吸顶紧凑微名片（仅在滚动离开首屏后整齐呈现于毛玻璃横栏中心） ══ -->
-			{#if scrolled}
+				<!-- 中间：作者微名片 / 详情标题 -->
 				<div
 					data-detail-header-center
-					class="pointer-events-auto flex min-w-0 max-w-[240px] sm:max-w-[360px] items-center justify-center animate-in fade-in duration-snappy"
+					class="flex min-w-0 flex-1 items-center justify-center overflow-hidden"
 				>
 					{#if author}
 						<button
 							type="button"
-							class="hover-btn focus-ring flex min-w-0 items-center gap-2 rounded-full px-2 py-0.5 text-left"
+							class="hover-btn focus-ring flex min-w-0 max-w-full items-center gap-2 rounded-full px-2 py-0.5 text-left"
 							onclick={() => onAuthorClick?.()}
 							aria-label={`查看 ${author.name} 的资料`}
 						>
@@ -175,24 +147,63 @@
 						</span>
 					{/if}
 				</div>
-			{/if}
 
-			<!-- ══ 右侧：操作区（分享 / 更多 / 互动等） ══ -->
-			{#if trailing}
+				{#if trailing}
+					<div class="h-4 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
+					<!-- 右侧：操作区（分享 / 更多 / 互动等） -->
+					<div data-detail-header-right class="flex items-center gap-0.5 sm:gap-1 shrink-0">
+						{@render trailing()}
+					</div>
+				{/if}
+			</div>
+		{:else}
+			<!-- ══ 顶部初始态：两侧角落悬浮透亮光斑胶囊 ══ -->
+			<div class="flex items-center justify-between gap-2 h-9 sm:h-10">
+				<!-- 左侧：返回按键 + 桌面实体面包屑 -->
 				<div
-					data-detail-header-right
-					class={cn(
-						'pointer-events-auto flex items-center gap-1 transition-all duration-snappy',
-						scrolled
-							? ''
-							: 'rounded-full border border-border-default/60 bg-surface-primary/80 p-0.5 shadow-raised-sm backdrop-blur-md'
-					)}
+					data-detail-header-left
+					class="pointer-events-auto flex items-center transition-all duration-snappy rounded-full border border-content-inverse/20 bg-surface-media-scrim-strong text-content-inverse p-0.5 shadow-raised-sm backdrop-blur-md sm:border-border-default/60 sm:bg-surface-primary/80 sm:text-text-primary"
 				>
-					{@render trailing()}
+					<ActionIconButton
+						icon={ArrowLeft}
+						label={backLabel}
+						onClick={onBack}
+						variant="ghost"
+						tone="current"
+						size={36}
+						class="shrink-0"
+					/>
+
+					{#if (category || entityName)}
+						<div
+							data-breadcrumb
+							class="hidden sm:flex items-center gap-1.5 pl-0.5 pr-3 text-xs font-medium text-text-secondary animate-in fade-in duration-snappy"
+						>
+							{#if category}
+								<span class="opacity-soft">{category}</span>
+								{#if entityName}
+									<span class="opacity-subtle">/</span>
+								{/if}
+							{/if}
+							{#if entityName}
+								<span class="max-w-[200px] truncate text-text-primary font-semibold">{entityName}</span>
+							{/if}
+						</div>
+					{/if}
 				</div>
-			{:else}
-				<span class="size-9 shrink-0" aria-hidden="true"></span>
-			{/if}
-		</div>
+
+				<!-- 右侧：操作区（分享 / 更多等） -->
+				{#if trailing}
+					<div
+						data-detail-header-right
+						class="pointer-events-auto flex items-center gap-1 transition-all duration-snappy rounded-full border border-content-inverse/20 bg-surface-media-scrim-strong text-content-inverse p-0.5 shadow-raised-sm backdrop-blur-md sm:border-border-default/60 sm:bg-surface-primary/80 sm:text-text-primary"
+					>
+						{@render trailing()}
+					</div>
+				{:else}
+					<span class="size-9 shrink-0" aria-hidden="true"></span>
+				{/if}
+			</div>
+		{/if}
 	</ContentColumn>
 </header>

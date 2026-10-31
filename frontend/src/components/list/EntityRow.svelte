@@ -3,11 +3,11 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 
-	// UserCardRow — 实体卡片行（用户/群组通用：好友/关注/粉丝/搜索结果/发现推荐）。
-	// 统一：ListItem 外壳 + Avatar（ring + 可选角标）+ 名字 + 可选副信息/动作。
-	// avatarShape 区分实体类型：用户 circle（默认）/ 群组 rounded（圆角方头像）。
-	// 副信息（handle/desc/时间）、缩略图、动作按钮由调用方 snippet 注入。
-	// tone: 'row'（List bordered 内，avatar 44）/ 'card'（embedded 网格，avatar 48）。
+	// EntityRow —— 通用实体卡片行原语（用户/群组/成员/申请/邀请通用）：
+	// - 统一基于 ListItem 外壳 + Avatar（ring + 可选角标/在线点）+ 名字 + 可选副信息/动作；
+	// - avatarShape 区分实体类型：用户 circle（默认）/ 群组 rounded（圆角方头像）；
+	// - tone: 'row'（标准列表行，Avatar 44）/ 'card'（独立卡片行，Avatar 48）；
+	// - 动作按钮（FollowButton / JoinButton / Button / ActionIconButton）经 actions snippet 注入。
 
 	let {
 		name,
@@ -17,18 +17,17 @@
 		avatarBadge,
 		nameBadge,
 		subtitle,
-		/** 行尾第二信息位（关系状态/最近互动等），紧邻动作按钮之前 */
 		meta,
 		thumbnail,
 		actions,
 		onClick,
 		ariaLabel,
-		style
+		style,
+		class: className = ''
 	}: {
 		name: string;
 		avatar: string;
 		tone?: 'row' | 'card';
-		/** 头像形状：用户=circle（默认）/ 群组=rounded（圆角方，与 Avatar shape 一致）。 */
 		avatarShape?: 'circle' | 'rounded';
 		avatarBadge?: Snippet;
 		nameBadge?: Snippet;
@@ -36,16 +35,16 @@
 		meta?: Snippet;
 		thumbnail?: Snippet;
 		actions?: Snippet;
-		/** 整行点击（不传则行不可点击，仅行内动作交互，如附近用户行的关注按钮）。 */
 		onClick?: () => void;
 		ariaLabel?: string;
 		style?: string;
+		class?: string;
 	} = $props();
 </script>
 
 <ListItem
 	tone={tone === 'card' ? 'card' : undefined}
-	class="flex items-center gap-3 {tone === 'card' ? 'p-3.5' : 'p-3'}"
+	class="flex items-center gap-3 {tone === 'card' ? 'p-3.5' : 'p-3'} {className}"
 	{onClick}
 	ariaLabel={ariaLabel ?? name}
 	{style}

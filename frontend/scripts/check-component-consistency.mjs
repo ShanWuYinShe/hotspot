@@ -18,14 +18,15 @@ const SRC = join(ROOT, 'src');
 const ALLOWLIST_PATH = join(ROOT, 'scripts', 'ui-consistency-allowlist.json');
 
 const PRIMITIVES = {
-	search: 'src/components/forms/SearchInput.svelte',
-	input: 'src/components/forms/Input.svelte',
-	textarea: 'src/components/forms/Textarea.svelte',
-	select: 'src/components/forms/Select.svelte',
-	checkbox: 'src/components/forms/Checkbox.svelte',
-	imagePicker: 'src/components/forms/ImagePicker.svelte',
-	tabBar: 'src/components/navigation/TabBar.svelte'
+	search: new Set(['src/components/forms/SearchInput.svelte', 'src/cst-ui/forms/SearchInput.svelte']),
+	input: new Set(['src/components/forms/Input.svelte', 'src/cst-ui/forms/Input.svelte']),
+	textarea: new Set(['src/components/forms/Textarea.svelte', 'src/cst-ui/forms/Textarea.svelte']),
+	select: new Set(['src/components/forms/Select.svelte', 'src/cst-ui/forms/Select.svelte']),
+	checkbox: new Set(['src/components/forms/Checkbox.svelte', 'src/cst-ui/forms/Checkbox.svelte']),
+	imagePicker: new Set(['src/components/forms/ImagePicker.svelte', 'src/cst-ui/forms/ImagePicker.svelte']),
+	tabBar: new Set(['src/components/navigation/TabBar.svelte', 'src/cst-ui/navigation/TabBar.svelte'])
 };
+const ALL_PRIMITIVES = new Set(Object.values(PRIMITIVES).flatMap((s) => Array.from(s)));
 
 const RULES = {
 	'raw-search': '搜索字段必须使用 forms/SearchInput（禁止裸 input/textarea + 搜索语义）',
@@ -137,7 +138,7 @@ for (const abs of files) {
 	const markup = file.endsWith('.svelte') ? maskForMarkup(text) : text;
 
 	// ── 搜索语义的裸控件（R1） ──
-	if (file !== PRIMITIVES.search && file.endsWith('.svelte')) {
+	if (!PRIMITIVES.search.has(file) && file.endsWith('.svelte')) {
 		const re = /<(input|textarea)\b/g;
 		let m;
 		while ((m = re.exec(markup))) {
@@ -165,11 +166,11 @@ for (const abs of files) {
 
 	// ── 裸 textarea/select/checkbox/file（R4–R8） ──
 	if (file.endsWith('.svelte')) {
-		const checkTag = (pattern, primitive, rule, extra) => {
+		const checkTag = (pattern, primitiveSet, rule, extra) => {
 			const re = new RegExp(pattern, 'g');
 			let m;
 			while ((m = re.exec(markup))) {
-				if (file === primitive) continue;
+				if (primitiveSet.has(file)) continue;
 				if (isAllowed(rule, file)) continue;
 				const tag = readTag(markup, m.index);
 				report(rule, file, lineOf(markup, m.index), extra ? extra + ': ' + tag.replace(/\s+/g, ' ').slice(0, 140) : tag.replace(/\s+/g, ' ').slice(0, 140));
@@ -181,7 +182,7 @@ for (const abs of files) {
 		checkTag('<input\\b[^>]*\\btype="file"', PRIMITIVES.imagePicker, 'raw-file-input');
 
 		// 裸 input（排除 checkbox/file 已由上面规则覆盖；primitive 内部放行）
-		const inputAllowed = new Set([PRIMITIVES.search, PRIMITIVES.input, PRIMITIVES.checkbox, PRIMITIVES.imagePicker]);
+		const inputAllowed = new Set([...PRIMITIVES.search, ...PRIMITIVES.input, ...PRIMITIVES.checkbox, ...PRIMITIVES.imagePicker]);
 		const ire = /<input\b/g;
 		let im;
 		while ((im = ire.exec(markup))) {
@@ -193,7 +194,7 @@ for (const abs of files) {
 	}
 
 	// ── .input-surface 只能由输入族原语消费（R9；脚本里的类常量也算消费） ──
-	if (!Object.values(PRIMITIVES).includes(file) && !isAllowed('input-surface-outside', file)) {
+	if (!ALL_PRIMITIVES.has(file) && !isAllowed('input-surface-outside', file)) {
 		const re = /(^|[^.\w-])input-surface\b/g;
 		let m;
 		while ((m = re.exec(text))) {
@@ -202,7 +203,7 @@ for (const abs of files) {
 	}
 
 	// ── role=tab/tablist 只能由 TabBar 提供（R10） ──
-	if (file !== PRIMITIVES.tabBar && file.endsWith('.svelte') && !isAllowed('tab-role-outside', file)) {
+	if (!PRIMITIVES.tabBar.has(file) && file.endsWith('.svelte') && !isAllowed('tab-role-outside', file)) {
 		const re = /<[a-zA-Z][^>]*\brole="tab(list)?"/g;
 		let m;
 		while ((m = re.exec(markup))) report('tab-role-outside', file, lineOf(markup, m.index), '页面自绘 Tab');
@@ -212,9 +213,12 @@ for (const abs of files) {
 	if (file.endsWith('.svelte')) {
 		const BADGE_PRIMITIVES = new Set([
 			'src/components/data-display/Badge.svelte',
+			'src/cst-ui/data-display/Badge.svelte',
 			'src/components/shared/UnreadBadge.svelte',
+			'src/cst-ui/data-display/UnreadBadge.svelte',
 			'src/components/forms/TagPill.svelte',
-			PRIMITIVES.tabBar
+			'src/cst-ui/forms/TagPill.svelte',
+			...PRIMITIVES.tabBar
 		]);
 
 		// R11 徽章：旧 .badge 类或手写「inline-flex + h-5/6 + rounded-full + px-」小胶囊
@@ -279,7 +283,11 @@ for (const abs of files) {
 		}
 
 		// R15 裸头像 img（必须在 Avatar 内）
-		if (file !== 'src/components/shared/Avatar.svelte' && !isAllowed('raw-avatar-img', file)) {
+		if (
+			file !== 'src/components/shared/Avatar.svelte' &&
+			file !== 'src/cst-ui/data-display/Avatar.svelte' &&
+			!isAllowed('raw-avatar-img', file)
+		) {
 			const re = /<img\b/g;
 			let m;
 			while ((m = re.exec(markup))) {

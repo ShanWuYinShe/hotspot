@@ -1,7 +1,7 @@
 // people 列表进度（会话级）：已加载集合 + 渲染切片。组件卸载（进详情再
 // 返回）后仍保持，回退即同步渲染、不重拉；定位 key 变化或手动重试时重置。
 // 排序/标签筛选是客户端派生，不影响进度。
-import type { NearbyUser } from './UserCard.svelte';
+import type { NearbyUser } from '@/components/data-display/UserCard.svelte';
 
 export interface PeopleListProgress {
 	key: string;

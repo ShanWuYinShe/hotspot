@@ -7,6 +7,7 @@
 	import Badge from '@/components/data-display/Badge.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { goto } from '$app/navigation';
@@ -97,14 +98,14 @@
 					{/if}
 				</span>
 				{#if canManageMember(member)}
-					<button
-						type="button"
-						onclick={(e) => { e.stopPropagation(); onManage(member); }}
-						class="hit-slop hover-btn scale-btn flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary focus-ring hover:bg-interactive-hover"
-						aria-label={`管理 ${member.name}`}
-					>
-						<MoreHorizontal size={15} strokeWidth={2} />
-					</button>
+					<ActionIconButton
+						icon={MoreHorizontal}
+						label={`管理 ${member.name}`}
+						size={32}
+						variant="ghost"
+						tone="muted"
+						onClick={() => onManage(member)}
+					/>
 				{/if}
 			</ListItem>
 		{/each}

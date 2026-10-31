@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { MapPin, Sparkles, Images } from '@lucide/svelte';
-	import Avatar from '@/components/shared/Avatar.svelte';
-	import ImageCardActions from '@/components/data-display/ImageCardActions.svelte';
+	import Avatar from '@/cst-ui/data-display/Avatar.svelte';
+	import ImageCardActions from '@/cst-ui/cards/ImageCardActions.svelte';
+	import MediaCard from '@/cst-ui/cards/MediaCard.svelte';
 	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import type { MomentItem } from '@/api/types';
 	import { formatDistance, formatRelativeDays } from '@/lib/utils';
@@ -12,7 +13,7 @@
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { follow } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
-	import FollowButton from '@/components/ui/FollowButton.svelte';
+	import FollowButton from '@/cst-ui/buttons/FollowButton.svelte';
 
 	// ═══ 现代社交 Feed 项（HomeFeedItem）═══
 	// 两种形态：
@@ -206,51 +207,24 @@
 	{@const coverUrl = moment.images?.[0]?.url ?? ''}
 	{@const imageCount = moment.images?.length ?? 0}
 	{@const useFallback = !coverUrl || coverError}
-	<!-- 整卡图片卡（Image-first Card）：图片铺满整卡、信息覆盖图面、无外框；
-	     顶部遮罩承载作者行，底部遮罩承载标题/元信息/操作行（三主题 token 遮罩）。
-	     hover 统一走 card-hover（主题化上浮 + elevation-button）与 image-hover-frame__image
-	     （图片 1.045 缩放），不再手写 hover:shadow/scale；无图 fallback 用主题化渐变底 +
-	     主题文字色（不使用白字遮罩，已登记例外）。 -->
-	<div
-		class="card-hover isolate group relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-surface-subtle shadow-xs sm:aspect-[4/5] [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_button:not([data-cover])]:pointer-events-auto [&_a]:relative [&_a]:z-20 [&_a]:pointer-events-auto"
-		use:cardPress
+	<!-- 基于 MediaCard 统一图片优先原语（全站唯一 Image-first 卡片规范）：
+	     - 顶部遮罩承载作者行与媒体状态徽章；
+	     - 底部遮罩承载标题、首标签与 ImageCardActions 互动行；
+	     - 非交互元素（徽章/文字/胶囊/间距）经 data-card-children / data-card-footer 严格 pointer-events-none，
+	       点击百分百直透整卡 data-cover，绝无“仅有交互样式却无实际动作”的吃点击现象；
+	     - 交互元素（头像/关注/点赞/评论/分享）由卡根统一恢复 auto 并抬升至 z-20 保持独立响应。 -->
+	<MediaCard
+		imageSrc={coverUrl}
+		imageAlt={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
+		{priority}
+		sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
+		{onClick}
+		onImageError={() => (coverError = true)}
+		class="aspect-[3/4] rounded-lg shadow-xs sm:aspect-[4/5]"
 	>
-		{#if !useFallback}
-			{#if !coverLoaded}
-				<!-- 加载中占位：与 NearbyImageCard 同款主题 accent 渐变，避免纯灰浅带；
-				     脉冲限时 3 次后转静态（.media-placeholder--pulse，R17）——旧 animate-pulse
-				     在慢图/lazy 卡上会无限常驻；reduced-motion 由全局规则压制。 -->
-				<div class="surface-accent-gradient media-placeholder--pulse pointer-events-none absolute inset-0" aria-hidden="true"></div>
-			{/if}
-			<img
-				src={presetImageUrl(coverUrl, 'card', priority ? 900 : 800)}
-				srcset={presetSrcSet(coverUrl, 'card')}
-				sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
-				alt=""
-				loading={priority ? 'eager' : 'lazy'}
-				fetchpriority={priority ? 'high' : 'auto'}
-				decoding="async"
-				class="image-hover-frame__image absolute inset-0 h-full w-full object-cover"
-				use:fadeImage
-				onload={() => (coverLoaded = true)}
-				onerror={() => (coverError = true)}
-			/>
-			<!-- 顶部遮罩 128px（BLOCKER 修复）：作者行两行（昵称 16–36px + 时间 37–52px），
-			     96px 时时间行落在 0.64→transparent 陡降区（alpha≈0.49，白字<4.5）；128px 后
-			     该行位于 40% 附近 alpha≈0.63，纯白图最坏情况实测 ≥6:1。 -->
-			<div class="pointer-events-none absolute inset-x-0 top-0 h-32" style="background:var(--cst-surface-card-scrim-top);"></div>
-			<div class="pointer-events-none absolute inset-x-0 bottom-0 h-[58%]" style="background:var(--cst-surface-card-scrim-bottom);"></div>
-		{:else}
-			<!-- 无图 fallback（登记例外，不压白字）：主题渐变底 + 低透明主题水印 -->
-			<div class="absolute inset-0" style="background:var(--cst-surface-card-fallback);"></div>
-			<div class="pointer-events-none absolute inset-0 flex items-center justify-center text-accent-default opacity-watermark" aria-hidden="true">
-				<Images class="size-16" strokeWidth={1} />
-			</div>
-		{/if}
-
-		<!-- 顶部：作者行（头像 32 + 白字昵称 semibold + 关注/推荐徽章）与右侧徽章 -->
-		<div class="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4 sm:p-5">
-			<div class="pointer-events-none flex min-w-0 items-center gap-2.5">
+		<!-- 顶部：极简作者行（左侧头像 + 昵称，右侧多图角标；彻底移除时间与地点，移至底部，杜绝重叠） -->
+		<div class="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-2.5 sm:p-4">
+			<div class="pointer-events-none flex min-w-0 items-center gap-2">
 				<button
 					type="button"
 					class="pointer-events-auto hover-action hit-slop-44 shrink-0 rounded-full focus-ring"
@@ -260,106 +234,94 @@
 					<Avatar
 						src={moment.user?.avatar_url ?? null}
 						name={moment.user?.nickname ?? '热点网友'}
-						size={32}
+						size={24}
 					/>
 				</button>
-				<div class="flex min-w-0 flex-col gap-0.5">
-					<div class="flex min-w-0 items-center gap-1.5">
-						<button
-							type="button"
-							class="pointer-events-auto hit-slop-44 truncate text-left text-md font-semibold {useFallback
-								? 'text-text-primary'
-								: 'text-content-inverse'} hover:underline"
-							onclick={handleUserClick}
-						>
-							{moment.user?.nickname ?? '匿名用户'}
-						</button>
-						{#if showFollowChip}
-							<FollowButton
-								size="chip"
-								active={isFollowing}
-								pending={followPending}
-								onMedia={!useFallback}
-								ariaLabel={(isFollowing ? '取消关注 ' : '关注 ') + (moment.user?.nickname ?? '作者')}
-								onToggle={handleFollowToggle}
-							/>
-						{/if}
-						{#if recommendationBadge}
-							<span class="shrink-0 {useFallback ? 'badge bg-surface-subtle text-text-secondary' : 'media-badge'}">
-								{recommendationBadge}
-							</span>
-						{/if}
-					</div>
-					{#if relativeTime}
-						<!-- 时间行提到 opacity-hover（0.90）：BLOCKER 复测中 0.80 时纯白底 min 4.25/4.35，
-						     0.90 后字形区实测 ≥5.9；昵称/徽章仍保持 1.0/胶囊底。 -->
-						<span class="text-sm {useFallback ? 'text-text-secondary' : 'text-content-inverse opacity-hover'}">
-							{relativeTime}
-						</span>
-					{/if}
-				</div>
+				<button
+					type="button"
+					class="pointer-events-auto hit-slop-44 truncate text-left text-xs font-semibold sm:text-sm {useFallback
+						? 'text-text-primary'
+						: 'text-content-inverse'} hover:underline"
+					onclick={handleUserClick}
+				>
+					{moment.user?.nickname ?? '匿名用户'}
+				</button>
+				{#if showFollowChip}
+					<span class="hidden sm:inline-flex">
+						<FollowButton
+							size="chip"
+							active={isFollowing}
+							pending={followPending}
+							onMedia={!useFallback}
+							ariaLabel={(isFollowing ? '取消关注 ' : '关注 ') + (moment.user?.nickname ?? '作者')}
+							onToggle={handleFollowToggle}
+						/>
+					</span>
+				{/if}
+				{#if recommendationBadge}
+					<span class="pointer-events-none hidden sm:inline-flex shrink-0 {useFallback ? 'badge bg-surface-subtle text-text-secondary' : 'media-badge'}">
+						{recommendationBadge}
+					</span>
+				{/if}
 			</div>
 
-			<div class="pointer-events-none flex shrink-0 items-center gap-1.5">
-				{#if imageCount > 1}
-					<span class="media-badge gap-1">
-						<Images class="size-3" strokeWidth={1.75} aria-hidden="true" />
+			{#if imageCount > 1}
+				<div class="pointer-events-none flex shrink-0 items-center">
+					<span class="pointer-events-none media-badge gap-0.5 sm:gap-1 text-xxs sm:text-xs whitespace-nowrap">
+						<Images class="size-2.5 sm:size-3" strokeWidth={1.75} aria-hidden="true" />
 						1/{imageCount}
 					</span>
-				{/if}
-				{#if locationText}
-					<span class="max-w-36 gap-1 {useFallback ? 'badge bg-surface-subtle text-text-secondary' : 'media-badge'}">
-						<MapPin class="size-3 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-						<span class="truncate">{locationText}{distanceLabel ? ` · ${distanceLabel}` : ''}</span>
-					</span>
-				{/if}
-			</div>
-		</div>
-
-		<!-- 底部：标题/正文摘要（最多 2 行）+ 元信息 + 操作行 -->
-		<!-- 底部信息层：文案/标签为非交互覆盖 UI，整层穿透到整卡覆盖按钮；操作行按钮由
-		     卡根 [&_button:not([data-cover])]:pointer-events-auto 恢复（覆盖层穿透契约）。 -->
-		<div class="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-4 sm:p-5" data-card-info>
-			{#if moment.description}
-				<p class="line-clamp-2 text-md font-semibold leading-tight sm:text-lg {useFallback
-					? 'text-text-primary'
-					: 'text-content-inverse'}">
-					{moment.description}
-				</p>
-			{/if}
-			<!-- 元信息：时间只在作者行出现一次（同卡不重复），此处只留首个标签（12px） -->
-			{#if moment.tags?.[0]}
-				<div class="flex min-w-0 items-center gap-1.5 text-sm {useFallback ? 'text-text-secondary' : 'text-content-inverse opacity-emphasis'}">
-					<span class="min-w-0 truncate">#{moment.tags[0]}</span>
 				</div>
 			{/if}
-			<div class="mt-1">
-				<ImageCardActions
-					likes={totalReactions}
-					comments={moment.comments_count}
-					shares={moment.shares_count}
-					{liked}
-					{saved}
-					onImage={!useFallback}
-					onLike={(next) => void handleLike(next)}
-					onComment={handleCommentClick}
-					onSave={(next) => void handleSave(next)}
-					onShare={handleShare}
-				/>
-			</div>
 		</div>
 
-		<!-- 整卡点击覆盖层（最后绘制，z-10）：真实 button 承载点击/键盘/aria，
-		     行内作者/点赞/评论/收藏/分享按钮经根上 auto-lift(z-20) 保持可点；
-		     根不再持 button 语义（axe nested-interactive）。 -->
-		<button
-			type="button"
-			class="absolute inset-0 z-10 cursor-pointer focus-ring"
-			data-cover
-			aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
-			onclick={onClick}
-		></button>
-	</div>
+		<!-- 底部信息托盘（由 NearbyImageCard footer 槽渲染，默认即带 pointer-events-none 包装） -->
+		{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
+			{@const onCover = onImage && !horizontal}
+			<div class="pointer-events-none flex flex-col gap-1 p-2 sm:gap-1.5 sm:p-4" data-card-info>
+				{#if moment.description}
+					<p class="pointer-events-none line-clamp-2 text-md font-semibold leading-tight sm:text-lg {onCover
+						? 'text-content-inverse'
+						: 'text-text-primary'}">
+						{moment.description}
+					</p>
+				{/if}
+				<!-- 元信息单行流：标签 + 地点 + 相对时间，优雅排布，信息一目了然且绝不重叠 -->
+				<div class="pointer-events-none flex min-w-0 items-center gap-1.5 text-xxs sm:text-xs {onCover ? 'text-content-inverse opacity-emphasis' : 'text-text-secondary'}">
+					{#if moment.tags?.[0]}
+						<span class="pointer-events-none shrink-0 font-medium">#{moment.tags[0]}</span>
+					{/if}
+					{#if locationText}
+						{#if moment.tags?.[0]}
+							<span class="pointer-events-none opacity-40">·</span>
+						{/if}
+						<span class="pointer-events-none flex min-w-0 items-center gap-0.5 truncate">
+							<MapPin class="size-2.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+							<span class="truncate">{locationText}{distanceLabel ? ` · ${distanceLabel}` : ''}</span>
+						</span>
+					{/if}
+					{#if relativeTime}
+						{#if moment.tags?.[0] || locationText}
+							<span class="pointer-events-none opacity-40">·</span>
+						{/if}
+						<span class="pointer-events-none shrink-0 whitespace-nowrap">{relativeTime}</span>
+					{/if}
+				</div>
+				<div class="mt-0.5">
+					<!-- 卡片操作行极简原则：仅保留核心点赞与评论计数，移除未消费即收藏/分享的冗余按钮 -->
+					<ImageCardActions
+						likes={totalReactions}
+						comments={moment.comments_count}
+						{liked}
+						size="sm"
+						onImage={onCover}
+						onLike={(next) => void handleLike(next)}
+						onComment={handleCommentClick}
+					/>
+				</div>
+			</div>
+		{/snippet}
+	</MediaCard>
 {:else}
 	<!-- 紧凑行形态（保留紧凑内嵌式列表语言） -->
 	<div

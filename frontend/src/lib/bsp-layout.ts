@@ -25,6 +25,8 @@ export type BspRect = {
   y: number;
   width: number;
   height: number;
+  /** BSP 四种离散尺寸档位：1x1（标准方）、1x2（高竖）、2x1（宽横）、2x2（巨幕精选） */
+  tier?: Tier;
   /**
    * True for tiles added by the hole-filling pass (beyond `targetCount`).
    * These are layout fillers, not real cards — the host should render them as
@@ -723,6 +725,7 @@ export function generateBspCardLayout({
     y: p.gy * geometry.unitH + inset,
     width: Math.max(0, p.shape.w * geometry.unitW - gap),
     height: Math.max(0, p.shape.h * geometry.unitH - gap),
+    tier: p.shape.tier,
     placeholder: p.placeholder,
   }));
 }
@@ -1042,6 +1045,7 @@ function tryAppend({
     y: p.gy * unitH + inset,
     width: Math.max(0, p.shape.w * unitW - gap),
     height: Math.max(0, p.shape.h * unitH - gap),
+    tier: p.shape.tier,
     placeholder: p.placeholder,
   }));
 }

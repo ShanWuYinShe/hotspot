@@ -3,7 +3,7 @@
 	import { Users } from '@lucide/svelte';
 	import type { NearbyUser } from './nearby-users';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import FollowButton from '@/components/ui/FollowButton.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -49,7 +49,7 @@
 		{#each users as u (u.id)}
 			{@const followed = isFollowed(u.id)}
 			<!-- 卡壳由 tone="card" 的 ListItem 承担；外层再包手写卡会造成双描边/双投影（卡片套卡片） -->
-			<UserCardRow name={u.name} avatar={u.avatar} tone="card">
+			<EntityRow name={u.name} avatar={u.avatar} tone="card">
 					{#snippet avatarBadge()}
 						{#if u.isOnline}
 							<OnlineDot size="md" />
@@ -70,14 +70,14 @@
 						{@const pending = isPending?.(u.id) ?? false}
 						<FollowButton active={followed} pending={pending} onToggle={() => onToggle(u.id)} />
 					{/snippet}
-			</UserCardRow>
+			</EntityRow>
 		{/each}
 	</div>
 {:else}
 	<ListContainer bordered>
 	{#each users as u (u.id)}
 		{@const followed = isFollowed(u.id)}
-		<UserCardRow
+		<EntityRow
 			name={u.name}
 			avatar={u.avatar}
 			onClick={onOpenUser ? () => onOpenUser(u.id) : undefined}
@@ -104,7 +104,7 @@
 				{@const pending = isPending?.(u.id) ?? false}
 				<FollowButton active={followed} pending={pending} onToggle={() => onToggle(u.id)} />
 			{/snippet}
-		</UserCardRow>
+		</EntityRow>
 	{/each}
 	</ListContainer>
 {/if}

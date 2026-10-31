@@ -137,9 +137,9 @@
 				disabled={disabled}
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
-				class="tab-item hit-slop-y flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-3 text-sm focus-ring transition-colors duration-standard disabled:cursor-not-allowed disabled:opacity-dim lg:py-1.5 {isActive
-					? 'font-semibold bg-accent-soft text-text-accent-on-soft'
-					: 'font-normal text-text-secondary hover:text-text-primary'}"
+				class="tab-item hit-slop-y flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs focus-ring transition-all duration-standard disabled:cursor-not-allowed disabled:opacity-dim {isActive
+					? 'font-medium bg-accent-default text-text-on-accent shadow-xs'
+					: 'font-normal text-text-secondary hover:text-text-primary hover:bg-surface-subtle/50'}"
 			>
 				{#if tab.icon}
 					<tab.icon class="size-3.5" strokeWidth={isActive ? 2 : 1.5} />

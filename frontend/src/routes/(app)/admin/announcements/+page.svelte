@@ -6,10 +6,7 @@
 	import { Megaphone, Plus } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import LoadError from '@/components/data-display/LoadError.svelte';
-	import ListEnd from '@/components/data-display/ListEnd.svelte';
-	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import AdminListView from '../shared/AdminListView.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
@@ -156,20 +153,25 @@
 			{/if}
 		</div>
 
-		{#if list.loading}
-			<InlineLoading label="加载公告列表…" />
-		{:else if list.error}
-			<LoadError message={list.error} onRetry={list.reload} />
-		{:else if list.count === 0}
-			<EmptyState title="还没有系统公告" description="发布一条公告，让全站用户看到平台最新安排。" iconTone="neutral">
-				{#snippet icon()}<Megaphone class="size-7" strokeWidth={1.5} />{/snippet}
-				{#snippet action()}
-					{#if canWrite}
-						<Button type="button" variant="primary" size="sm" class="hit-slop-44" onclick={openCreate}>发布公告</Button>
-					{/if}
-				{/snippet}
-			</EmptyState>
-		{:else}
+		<AdminListView
+			loading={list.loading}
+			error={list.error}
+			count={list.count}
+			hasMore={list.hasMore}
+			loadingMore={list.loadingMore}
+			onReload={list.reload}
+			onLoadMore={list.loadMore}
+			loadingLabel="加载公告列表…"
+			emptyTitle="还没有系统公告"
+			emptyDescription="发布一条公告，让全站用户看到平台最新安排。"
+			emptyIcon={Megaphone}
+		>
+			{#snippet emptyAction()}
+				{#if canWrite}
+					<Button type="button" variant="primary" size="sm" class="hit-slop-44" onclick={openCreate}>发布公告</Button>
+				{/if}
+			{/snippet}
+
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
@@ -205,13 +207,7 @@
 					</tbody>
 				</table>
 			</div>
-
-			{#if list.hasMore}
-				<LoadMoreButton loading={list.loadingMore} onLoad={list.loadMore} />
-			{:else}
-				<ListEnd />
-			{/if}
-		{/if}
+		</AdminListView>
 	</div>
 
 	<Dialog.Root bind:open={editOpen} onOpenChange={(next) => (next ? undefined : (editOpen = false))}>

@@ -4,10 +4,11 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import type { AdminBannedMemberItem } from '@/api/types';
 
 	// BannedList —— 封禁名单（owner/admin）。
-	// R13：行语言/动作档位统一；空态升级为带图标与说明的 EmptyState。
+	// 行语言/动作档位统一使用 Button 原语（soft 软填胶囊）。
 	let {
 		banned,
 		formatDateTime,
@@ -17,9 +18,6 @@
 		formatDateTime: (iso: string) => string;
 		onUnban: (userId: string) => void;
 	} = $props();
-
-	const CHIP_QUIET =
-		'hover-btn hit-slop inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-surface-subtle/60 px-3.5 text-sm text-text-primary transition-colors hover:bg-surface-subtle focus-ring';
 </script>
 
 {#if banned.length === 0}
@@ -38,7 +36,9 @@
 				<span class="block truncate text-md font-medium text-text-primary">{item.user.nickname}</span>
 				<span class="block truncate text-xs text-text-secondary">{formatDateTime(item.banned_at)}{item.reason ? ` · ${item.reason}` : ''}</span>
 			</span>
-			<button type="button" onclick={() => onUnban(item.user.user_id)} class={CHIP_QUIET}>解封</button>
+			<Button type="button" variant="soft" size="sm" shape="pill" onclick={() => onUnban(item.user.user_id)}>
+				解封
+			</Button>
 		</ListItem>
 	{/each}
 </ListContainer>

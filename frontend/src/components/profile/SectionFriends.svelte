@@ -3,12 +3,12 @@
 	import { MessageCircle, Users } from '@lucide/svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
-	import UserCardRow from '@/components/profile/UserCardRow.svelte';
+	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { useRelationships, type MappedFriend } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';
 
-	// 好友分区：ProfileUserSection 骨架 + UserCardRow 行。
+	// 好友分区：ProfileUserSection 骨架 + EntityRow 行。
 
 	let { embedded = false, searchQ = '' }: { embedded?: boolean; searchQ?: string } = $props();
 	let activeFilter = $state<'all' | 'online' | 'offline'>('all');
@@ -51,7 +51,7 @@
 	items={filtered}
 >
 	{#snippet children(f: MappedFriend)}
-		<UserCardRow
+		<EntityRow
 			name={f.name}
 			avatar={f.avatar}
 			tone="row"
@@ -72,7 +72,7 @@
 				</span>
 			{/snippet}
 			{#snippet actions()}
-				<!-- 只留「发消息」：整行点击已跳该用户主页（UserCardRow onClick），
+				<!-- 只留「发消息」：整行点击已跳该用户主页（EntityRow onClick），
 				     原先并存的「查看主页」按钮是同一行内跳同一目标的重复入口；
 				     关注/粉丝两个分区同样只保留一个行内动作，三 tab 模式一致。 -->
 				<Button
@@ -90,6 +90,6 @@
 					发消息
 				</Button>
 			{/snippet}
-		</UserCardRow>
+		</EntityRow>
 	{/snippet}
 </ProfileUserSection>
