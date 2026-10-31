@@ -10,7 +10,7 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 ## UI/UX 设计规范（强制）
 
 - **禁止硬编码**：颜色一律使用 `AppThemeManager.getPaletteById(resolvedThemeId)` 的 palette token（或 `DesignConstants` 系统/图片固定色），禁止硬编码色值；字号/间距/圆角/边框/动效/透明度/尺寸一律用 `DesignConstants` 对应 token 档位，禁止裸 `fontSize(N)` / `padding({left:N})` / `width(N)` / `duration: N` / `scale(...)`；`$r('app.color.*')` 资源仅用于启动窗口等系统场景（当前 color.json 只保留 start_window_background）。
-- **图标尺寸用专用刻度**：一律 `COMPONENT.ICON_SIZE_*`（`2XS 14 / XS 16 / SM 20 / SM_PLUS 22 / MD 24 / LG 32 / EMPTY 48`），**不要用 `FONT.SIZE.*` 当图标尺寸**——那是字号刻度，混用会让图标尺寸随字号变动、并产生 9 种图标尺寸（实测：`iconSize` 有 133 处取自 FONT.SIZE、仅 17 处用专用刻度）。唯一例外（明示约定）：图标**与同档文字行内并排**时（如聊天气泡的「已编辑」行、群卡 meta 行的图标），允许 `iconSize: FONT.SIZE.X` 与该文字同档——判断口径：该处 ±14 行内存在 `fontSize(...FONT.SIZE.同档)`。已登记未迁移：`LG_PLUS(18)` 11 处（行首图标）、`HERO(36)` 2 处（hero/地图图标）——专用刻度无 18/36，取近档会改像素，待设计定档。
+- **图标尺寸用专用刻度**：一律 `COMPONENT.ICON_SIZE_*`（`2XS 14 / XS 16 / SM 20 / SM_PLUS 22 / MD 24 / LG 32 / EMPTY 48`），**不要用 `FONT.SIZE.*` 当图标尺寸**——那是字号刻度，混用会让图标尺寸随字号变动、并产生 9 种图标尺寸（实测：`iconSize` 有 133 处取自 FONT.SIZE、仅 17 处用专用刻度）。唯一例外（明示约定）：图标**与同档文字行内并排**时（如聊天气泡的「已编辑」行、群卡 meta 行的图标），允许 `iconSize: FONT.SIZE.X` 与该文字同档——判断口径：该处 ±14 行内存在 `fontSize(...FONT.SIZE.同档)`。已登记未迁移：`LG_PLUS(18)` 23 处（行首图标）、`HERO(36)` 2 处（hero/地图图标）——专用刻度无 18/36，取近档会改像素，待设计定档。
 - **行高（多行正文强制用比例制）**：`FONT.LINE_RATIO.{DEFAULT 1.5, CARD 1.7, COPY 1.75}` + `lineHeightFor(fontSize, ratio)`，对齐前端 `--leading-*`（`card` 是前端「原 1.55，阅读疲劳修复」后的值）。适用：聊天气泡/卡片正文 `CARD`；简介、公告、动态正文等长文 `COPY`。`FONT.LINE_HEIGHT` 的绝对档（XS18/SM20/MD22/LG24/XL26）**只用于单行紧凑场景**——它与字号解耦，把 `LINE_HEIGHT.SM`(20) 配 `SIZE.LG`(16) 只有 1.25 倍。实测：多处误用导致比值散落 1.57~1.83，且聊天气泡/群公告**完全没有行高**（长文本挤成一团）。
 - **跨端同步机制（强制）**：前端与鸿蒙共享同一套设计 token 刻度，同步由 CI 脚本强制拦截，**改两端任一 token 必须同步改另一端**：
 
@@ -36,7 +36,7 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 
 ## 页面路由对齐（web → harmony）
 
-目录命名对齐前端路由域（复数）、底栏 4 tab / 桌面侧边栏 IA、消息列表排序、聊天记录正序与日期胶囊、附近聚合页与搜索页 Tab、WS 事件类型等对齐事实见 `references/routing-map.md`。
+目录命名对齐前端路由域（复数）、底栏 4 个导航 tab + 中央发布动作（`TAB_ITEMS` 共 5 项、`CREATE_TAB_INDEX=2`）/ 桌面侧边栏 IA、消息列表排序、聊天记录正序与日期胶囊、附近聚合页与搜索页 Tab、WS 事件类型等对齐事实见 `references/routing-map.md`。
 
 ## 组件原语强制（对齐前端 button/input 体系）
 

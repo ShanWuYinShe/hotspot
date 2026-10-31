@@ -4,7 +4,7 @@
 
 ## 1. 压图文字对比度的像素级实测法
 
-自动指标（`getComputedStyle` 取色）对压在图片上的文字**不可信**：它拿到的是父级不透明度叠加值而非图片像素，只能把这类元素单列（hotspot 审计脚本按 `contrastOverMedia` 分类，不计入 AA 结论）。要判定必须实测像素：
+自动指标（`getComputedStyle` 取色）对压在图片上的文字**不可信**：它拿到的是父级不透明度叠加值而非图片像素，只能把这类元素单列（**旧文说审计脚本按 `contrastOverMedia` 分类——该类名在现行脚本里已不存在**，2026-10-31 复核 `frontend/scripts` 与 `harmonyapp/scripts` 均无命中，脚本已演化；按现行 `browser-a11y.sh` 实际能力描述，别按类名找）（不计入 AA 结论）。要判定必须实测像素：
 
 1. 找到候选元素 → `document.createRange(); selectNodeContents(el)` 取**文字节点自身的 `getBoundingClientRect()`**；
 2. 截图该矩形 → 把元素 `style.color='transparent'`（**只改颜色，保布局**）→ 再截同一矩形，得到「纯背景」像素；
@@ -16,11 +16,11 @@
 
 ## 2. 前端「原语绕过」审计判据
 
-前端与鸿蒙的原语纪律**不同**：鸿蒙强制 SystemButton 原语；前端允许原生 `<button>` + token 类（Svelte/Tailwind 惯例），约束落在**交互反馈类**（SKILL.md 自查清单第 7 条）。据此对全仓 209 处原生 `<button>` 做了审计，**结论：无缺口**。合规基线（命中任一即合规）：
+前端与鸿蒙的原语纪律**不同**：鸿蒙强制 SystemButton 原语；前端允许原生 `<button>` + token 类（Svelte/Tailwind 惯例），约束落在**交互反馈类**（SKILL.md 自查清单第 7 条）。据此对全仓（审计当时 209 处；2026-10-31 复核已收到 **157** 处，取数 `grep -rn '<button' --include=*.svelte src | wc -l`）处原生 `<button>` 做了审计，**结论：无缺口**。合规基线（命中任一即合规）：
 
 - 反馈工具类：`hover-btn` / `hover-bg` / `hover:bg-*` / `tap-*` / `scale-btn` / `focus-ring` / `focus-visible:ring-*`
 - `link-btn` 工具类（自带 transition + underline 反馈）
-- 共享常量：admin 页的 `ROW_BTN / ROW_BTN_PRIMARY / ROW_BTN_DANGER`（`routes/(app)/admin/shared/table.ts`，内含完整 hover/tap/focus/disabled 四态）
+- 共享常量：admin 页的 `ROW_BTN / ROW_BTN_DANGER`（`routes/(app)/admin/shared/table.ts`，内含完整 hover/tap/focus/disabled 四态）。**`ROW_BTN_PRIMARY` 已于 R13 视觉改版删除**（`git log -S ROW_BTN_PRIMARY` → 26d1d3ac），不要再引用
 - `ListItem` 组件（列表行，自查清单第 5 条）
 
 **审计脚本的坑（本次 106/209 误报）**：
