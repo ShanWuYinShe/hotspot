@@ -156,25 +156,8 @@ export struct AmbientBackdrop {
 
   private drawWorld(ctx: CanvasRenderingContext2D, width: number, height: number, world: string,
     colors: AmbientColorConfig): void {
-    const scale = Math.max(width / WORLD_WIDTH, height / WORLD_HEIGHT);
-    const offsetX = (width - WORLD_WIDTH * scale) * 0.5;
-    // vibrant/forest 用 xMidYMid（居中），inkwash 用 xMidYMax（贴底）
-    const offsetY = world === 'inkwash'
-      ? height - WORLD_HEIGHT * scale
-      : (height - WORLD_HEIGHT * scale) * 0.5;
-    const narrow = width < NARROW_WIDTH;
-
-    ctx.save();
-    ctx.translate(offsetX, offsetY);
-    ctx.scale(scale, scale);
-    if (world === 'vibrant') {
-      this.drawVibrantWorld(ctx, narrow, colors);
-    } else if (world === 'forest') {
-      this.drawForestWorld(ctx, colors);
-    } else {
-      this.drawInkwashWorld(ctx, narrow, colors);
-    }
-    ctx.restore();
+    // 移除繁杂具象图案剪影，保持现代纯粹的天光漫射与渐变环境底色
+    return;
   }
 
   // ---------- vibrant 星际 ----------

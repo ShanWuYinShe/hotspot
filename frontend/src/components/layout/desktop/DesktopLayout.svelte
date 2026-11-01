@@ -4,13 +4,15 @@
 	import { goto } from '$app/navigation';
 	import {
 		Home, Users, Rss, MessageCircle, Bell, ImageIcon,
-		Heart, Search, Settings, Plus, Navigation2, UserRound, PanelLeftClose, PanelLeftOpen, Shield
+		Heart, Search, Settings, Plus, Navigation2, UserRound, PanelLeftClose, PanelLeftOpen, Shield, ArrowLeft
 	} from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { admin, ensureAdminLoaded } from '@/stores/admin.svelte';
 	import { composer, openComposer, closeComposer } from '@/stores/composer.svelte';
 	import { unread } from '@/stores/unread.svelte';
+	import { headerIsland } from '@/stores/header-island.svelte';
+	import { smartBack } from '@/lib/smart-back';
 	import * as Dialog from '@/components/ui/dialog';
 	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
@@ -244,8 +246,64 @@
 			</button>
 		{/if}
 
-		<!-- Spacer -->
-		<div class="flex-1"></div>
+		<!-- Center Dynamic Island — 灵动岛居中胶囊：当详情页或内容页浮动页头激活时展示，充分利用居中空间，绝不遮挡正文 -->
+		<div class="flex-1 flex items-center justify-center min-w-0 px-2 h-full pointer-events-none">
+			{#if headerIsland.scrolled && headerIsland.active}
+				<div
+					data-desktop-dynamic-island
+					class="pointer-events-auto flex items-center gap-2 h-9 px-3 rounded-full bg-surface-primary/90 backdrop-blur-xl border border-border-default/50 shadow-raised-sm text-text-primary transition-all duration-snappy animate-in fade-in zoom-in-95 max-w-md min-w-0"
+					style="contain: layout paint;"
+				>
+					<!-- 返回按钮 -->
+					<ActionIconButton
+						icon={ArrowLeft}
+						label={headerIsland.backLabel || '返回'}
+						onClick={() => (headerIsland.onBack ? headerIsland.onBack() : smartBack())}
+						variant="ghost"
+						tone="muted"
+						size={32}
+						class="shrink-0"
+					/>
+
+					<div class="h-3.5 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
+
+					<!-- 中间：作者微名片 / 页面标题 -->
+					<div class="flex min-w-0 flex-1 items-center justify-center overflow-hidden">
+						{#if headerIsland.author}
+							<button
+								type="button"
+								class="hover-btn focus-ring flex min-w-0 max-w-full items-center gap-2 rounded-full px-2 py-0.5 text-left"
+								onclick={() => headerIsland.onAuthorClick?.()}
+								aria-label={`查看 ${headerIsland.author.name} 的资料`}
+							>
+								<Avatar src={headerIsland.author.avatar} name={headerIsland.author.name} size={20} class="shrink-0" />
+								<div class="flex min-w-0 flex-col justify-center">
+									<span class="truncate text-xs font-semibold text-text-primary leading-tight">
+										{headerIsland.author.name}
+									</span>
+									{#if headerIsland.author.location || headerIsland.author.time}
+										<span class="truncate text-xxs text-text-secondary leading-tight">
+											{[headerIsland.author.location, headerIsland.author.time].filter(Boolean).join(' · ')}
+										</span>
+									{/if}
+								</div>
+							</button>
+						{:else}
+							<span class="truncate text-xs font-semibold text-text-primary px-1">
+								{headerIsland.entityName || headerIsland.category || '详情'}
+							</span>
+						{/if}
+					</div>
+
+					{#if headerIsland.trailing}
+						<div class="h-3.5 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
+						<div class="flex items-center gap-0.5 shrink-0">
+							{@render headerIsland.trailing()}
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</div>
 
 		<!-- Right Actions -->
 		<div class="flex items-center gap-1.5">

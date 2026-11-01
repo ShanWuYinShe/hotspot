@@ -269,9 +269,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		<LoadError message={gd.loadError} onRetry={() => void gd.loadAll(params.groupId ?? '')} />
 	{:else}
 	<!-- 现代高质感社群 Hero 封面（圆角温润，磨砂悬浮操作区） -->
-	<!-- Hero 封面（例外登记）：去 1px 描边，保留圆角/阴影/加载占位；图片 object-cover -->
-	<div class="media-placeholder relative h-cover-height overflow-hidden rounded-xl shadow-raised-sm">
-		{#if gd.detail.banner}
+	{#if gd.detail.banner}
+		<div class="media-placeholder relative h-cover-height overflow-hidden rounded-xl shadow-raised-sm">
 			<img
 				src={presetImageUrl(gd.detail.banner, 'cover', 1600)}
 				srcset={presetSrcSet(gd.detail.banner, 'cover')}
@@ -283,22 +282,46 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				class="h-full w-full object-cover"
 				use:fadeImage
 			/>
-		{:else}
-			<div class="h-full w-full bg-accent-soft/40 flex items-center justify-center">
-				<Users size={48} class="text-accent-default/30" strokeWidth={1.5} />
+			<!-- 真实图片封面专属暗角遮罩，保证白色文字可读 -->
+			<div class="absolute inset-0" style="background:var(--cst-surface-cover-scrim);"></div>
+			<div class="absolute bottom-5 left-5 right-5">
+				{#if gd.detail.category}
+					<span class="media-badge">
+						{gd.detail.category}
+					</span>
+				{/if}
+				<h1 class="mt-2.5 text-2xl md:text-3xl font-bold tracking-title text-content-inverse drop-shadow-sm">{gd.detail.name}</h1>
 			</div>
-		{/if}
-		<!-- 沉浸式暗角天光渐变 -->
-		<div class="absolute inset-0" style="background:var(--cst-surface-cover-scrim);"></div>
-		<div class="absolute bottom-5 left-5 right-5">
-			{#if gd.detail.category}
-				<span class="media-badge">
-					{gd.detail.category}
-				</span>
-			{/if}
-			<h1 class="mt-2.5 text-2xl md:text-3xl font-bold tracking-title text-content-inverse drop-shadow-sm">{gd.detail.name}</h1>
 		</div>
-	</div>
+	{:else}
+		<!-- 无封面时的专属高质感设计：融入页面调性，拒绝死灰与突兀暗角 -->
+		<div class="relative h-cover-height overflow-hidden rounded-xl border border-border-default/50 bg-surface-primary/75 backdrop-blur-md p-6 flex flex-col justify-between shadow-raised-sm">
+			<!-- 柔和主题环境光漫射底纹 -->
+			<div class="pointer-events-none absolute -right-16 -top-16 size-72 rounded-full bg-accent-soft/50 blur-3xl" aria-hidden="true"></div>
+			<div class="pointer-events-none absolute -left-10 -bottom-10 size-48 rounded-full bg-surface-subtle blur-2xl" aria-hidden="true"></div>
+
+			<!-- 顶部微标与图标 -->
+			<div class="relative z-10 flex items-center justify-between">
+				{#if gd.detail.category}
+					<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent-default border border-accent-border/30">
+						{gd.detail.category}
+					</span>
+				{:else}
+					<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-surface-subtle text-text-secondary">
+						群组主页
+					</span>
+				{/if}
+				<div class="flex size-11 items-center justify-center rounded-xl bg-accent-soft text-accent-default shadow-raised-sm">
+					<Users size={22} strokeWidth={1.75} />
+				</div>
+			</div>
+
+			<!-- 底部标题与简介预览 -->
+			<div class="relative z-10">
+				<h1 class="text-2xl md:text-3xl font-bold tracking-title text-text-primary">{gd.detail.name}</h1>
+			</div>
+		</div>
+	{/if}
 
 	<div class="grid gap-y-6 pt-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-x-8">
 		<div class="min-w-0">
@@ -460,9 +483,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			{/if}
 		</div>
 
-		<!-- 桌面右栏操作卡：主操作（打开群聊 accent 实底）→ 次级（群管理软填）→ 安静退出。
-		     按钮层级按 R13「主操作 / 次级软填 / 危险二次确认」三档收敛；卡内间距 12。 -->
-		<section aria-label="群组操作" class="flex h-fit flex-col gap-3 rounded-lg bg-surface-island p-4 shadow-xs">
+		<!-- 桌面右栏操作卡：精致磨砂内容岛，与左侧内容保持统一的设计语言 -->
+		<section aria-label="群组操作" class="flex h-fit flex-col gap-3.5 rounded-xl border border-border-default/50 bg-surface-primary/80 backdrop-blur-md p-5 shadow-raised-sm">
 			{#if gd.joined}
 				<Button type="button" variant="primary" size="lg" class="w-full" onclick={() => void goto(ROUTES.groupMessage(params.groupId))}>
 					<MessageCircle size={15} />
@@ -475,7 +497,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 					</Button>
 				{/if}
 				<!-- 退出群组：安静文字钮（可逆操作，不抢主操作焦点；点击后二次确认） -->
-				<div class="border-t border-border-subtle/40 pt-3">
+				<div class="border-t border-border-subtle/50 pt-3">
 					<Button
 						type="button"
 						variant="ghost"
@@ -519,9 +541,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						requestJoin();
 					}}
 				><span class="inline-flex" use:popOn={joinPop}>加入群组</span></Button>
-				<p class="px-2 text-center text-xs leading-5 text-text-secondary">
-					<Bell size={13} class="mr-1 inline text-accent-default" />
-					加入后可管理群组通知并进入群聊
+				<p class="px-2 text-center text-xs leading-5 text-text-secondary flex items-center justify-center gap-1.5">
+					<Bell size={13} class="text-accent-default/80 shrink-0" />
+					<span>加入后可管理群组通知并进入群聊</span>
 				</p>
 			{/if}
 		</section>

@@ -1,11 +1,12 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onDestroy, type Snippet } from 'svelte';
 	import { ArrowLeft } from '@lucide/svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import ContentColumn from './ContentColumn.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { cn } from '@/lib/utils';
+	import { headerIsland } from '@/stores/header-island.svelte';
 
 	export interface AuthorInfo {
 		id?: string;
@@ -84,6 +85,26 @@
 			}
 		};
 	}
+
+	$effect(() => {
+		headerIsland.register({
+			category,
+			entityName,
+			author,
+			onBack,
+			backLabel,
+			onAuthorClick,
+			trailing
+		});
+	});
+
+	$effect(() => {
+		headerIsland.setScrolled(scrolled);
+	});
+
+	onDestroy(() => {
+		headerIsland.unregister();
+	});
 </script>
 
 <header
@@ -98,10 +119,12 @@
 		{#if scrolled}
 			<!-- ══ 方案 A：居中灵动胶囊岛（Unified Dynamic Island Capsule） ══
 			     滚动离开首屏后，以精致的居中胶囊岛浮现：将返回、作者微名片与操作按钮
-			     收敛为一颗有机整体，半透毛玻璃融入内容，绝不对图面造成生硬横断。 -->
+			     收敛为一颗有机整体，半透毛玻璃融入内容，绝不对图面造成生硬横断。
+			     桌面端（≥1024px）收敛至全局顶部 Chrome 灵动岛，正文视口彻底释放不被遮挡；
+			     移动/平板端在页面内顶部优雅吸顶。 -->
 			<div
 				data-detail-header-island
-				class="pointer-events-auto mx-auto flex items-center justify-between gap-2 sm:gap-3 h-10 px-2.5 sm:px-3 rounded-full bg-surface-primary/90 backdrop-blur-xl border border-border-default/40 shadow-raised-md text-text-primary transition-all max-w-[92%] sm:max-w-xl animate-in fade-in zoom-in-95 duration-snappy"
+				class="pointer-events-auto mx-auto flex items-center justify-between gap-2 sm:gap-3 h-10 px-2.5 sm:px-3 rounded-full bg-surface-primary/90 backdrop-blur-xl border border-border-default/40 shadow-raised-md text-text-primary transition-all max-w-[92%] sm:max-w-xl animate-in fade-in zoom-in-95 duration-snappy lg:hidden"
 				style="contain: layout paint; transform: translateZ(0);"
 			>
 				<!-- 左侧：返回按钮 -->
