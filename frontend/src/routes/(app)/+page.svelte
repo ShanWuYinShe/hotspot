@@ -111,19 +111,25 @@
 		paged(await fetchFollowingMoments({ pagination: { limit: PAGE_SIZE, ...(cursor ? { cursor } : {}) } }))
 	);
 
-	// 发现流：全局预加载
+	// 发现流：全局预加载（每次挂载只自动拉一次）。
+	//
+	// 必须带 !error 守卫：本 effect 依赖 loaded/loading 两个 rune，而 load() 无论
+	// 成功失败都会把 loading 置回 false。失败时 loaded 仍为 false，若只判
+	// 「!loaded && !loading」，load 一结束 effect 就再次触发 → 无限重试风暴
+	// （实测接口不可用时 8 秒内打出 165 个 POST，弱网下会把本来就不稳的链路彻底
+	// 打满）。失败态由下方 LoadError 的手动「重试」接管（load() 开头会清 error）。
 	$effect(() => {
-		if (!discover.loaded && !discover.loading) {
+		if (!discover.loaded && !discover.loading && !discover.error) {
 			void discover.load().finally(() => {
 				booting = false;
 			});
 		}
 	});
 
-	// 关注流：登录用户加载
+	// 关注流：登录用户加载（同上的 !error 守卫，失败不自动重试）
 	$effect(() => {
 		if (auth.status === 'authenticated') {
-			if (!following.loaded && !following.loading) {
+			if (!following.loaded && !following.loading && !following.error) {
 				void following.load();
 			}
 		}
