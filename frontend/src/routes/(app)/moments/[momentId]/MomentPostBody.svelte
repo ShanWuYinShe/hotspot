@@ -152,7 +152,7 @@
 {/snippet}
 
 <!-- 统一度极高的沉浸式画卷流，消除碎片化盒子嵌套与底色割裂 -->
-<article class="flex flex-col overflow-hidden rounded-none sm:rounded-lg bg-surface-island p-0 sm:p-5 md:p-7 shadow-none sm:shadow-xs">
+<article class="flex flex-col flex-1 min-h-full overflow-hidden rounded-none sm:rounded-lg bg-surface-island p-0 sm:p-5 md:p-7 shadow-none sm:shadow-xs">
 	<!-- 1. 画廊 hero（单图：整幅展陈；多图：主图 + 底部缩略图导航）
 	     设计：主图**宽度始终撑满内容卡（w-full），高度按图片自身比例（h-auto）**，因此
 	     任何分辨率下图片盒子比例恒等于图片宽高比、左右不出现任何留白/模糊铺底（2026-10-29
@@ -356,7 +356,7 @@
 		</div>
 
 	<!-- 6. 评论讨论区：与动作条之间用一条内容分隔发丝线（非卡片边界），自然在画卷内延展 -->
-	<section class="mt-2 border-t border-border-subtle/40 pt-6 px-4 sm:px-0" id="moment-comments">
+	<section class="mt-2 flex-1 border-t border-border-subtle/40 pt-6 px-4 sm:px-0" id="moment-comments">
 		<SectionHead title="评论讨论" count={commentCount} />
 		{#if commentComposer}
 			<!-- 桌面/平板：输入器内嵌评论区顶部（与卡片同语言），不再固定在视口底部形成独立横条 -->

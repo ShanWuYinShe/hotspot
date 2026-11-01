@@ -14,6 +14,7 @@
 		UsersRound
 	} from '@lucide/svelte';
 	import ContentColumn from '@/components/layout/page/ContentColumn.svelte';
+	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -110,11 +111,11 @@
 
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
-		<!-- 页眉只留页级 eyebrow：入口（编辑资料/设置）统一收在身份卡拇指区，不重复；
-		     不做常驻底色，避免在连续画布上形成一条「白带」（Round 9 页头契约）。 -->
-		<ContentColumn class="flex items-center justify-between py-2.5">
-			<p class="eyebrow">个人中心</p>
-		</ContentColumn>
+		<PageHeader
+			title="个人中心"
+			sticky
+			titleSize="2xl"
+		/>
 	{/snippet}
 
 	{#if loading}

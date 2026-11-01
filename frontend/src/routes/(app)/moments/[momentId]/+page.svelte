@@ -553,10 +553,6 @@
 			<ActionIconButton icon={MoreHorizontal} label="更多操作" variant="ghost" tone="current" onClick={() => (moreOpen = !moreOpen)} />
 		</div>
 		<DropdownMenu.Content customAnchor={moreMenuEl}>
-			<DropdownMenu.Item onSelect={() => void copyMomentLink()}>
-				<Link2 class="size-3.5 text-accent-default" strokeWidth={1.75} />
-				复制链接
-			</DropdownMenu.Item>
 			{#if isAuthor}
 				<DropdownMenu.Item onSelect={() => void openEditDialog()}>
 					<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
@@ -590,7 +586,7 @@
 <SplitPageLayout
 	contentMaxWidth="58rem"
 	edgeToEdgeMobile={true}
-	contentClassName="animate-fade-in pt-0 sm:pt-1 pb-6"
+	contentClassName="animate-fade-in flex flex-col flex-1 min-h-full pt-0 sm:pt-1 pb-6"
 >
 	{#snippet header()}
 		<DetailHeader

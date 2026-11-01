@@ -29,7 +29,8 @@ describe('EmptyState', () => {
 		expect(layer).not.toBeNull();
 		expect(layer.getAttribute('aria-hidden')).toBe('true');
 		expect(layer.className).toContain('empty-spotlight');
-		expect(container.querySelector('.empty-spotlight__ring--outer')).not.toBeNull();
+		expect(container.querySelector('.empty-spotlight__glow')).not.toBeNull();
+		expect(container.querySelector('.empty-spotlight__ring')).toBeNull();
 		expect(screen.getByText('空')).toBeTruthy();
 	});
 

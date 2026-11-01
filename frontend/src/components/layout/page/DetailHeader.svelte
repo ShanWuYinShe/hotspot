@@ -162,7 +162,7 @@
 				<!-- 左侧：返回按键 + 桌面实体面包屑 -->
 				<div
 					data-detail-header-left
-					class="pointer-events-auto flex items-center transition-all duration-snappy rounded-full border border-content-inverse/20 bg-surface-media-scrim-strong text-content-inverse p-0.5 shadow-raised-sm backdrop-blur-md sm:border-border-default/60 sm:bg-surface-primary/80 sm:text-text-primary"
+					class="pointer-events-auto flex items-center transition-all duration-snappy rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md"
 				>
 					<ActionIconButton
 						icon={ArrowLeft}
@@ -196,7 +196,7 @@
 				{#if trailing}
 					<div
 						data-detail-header-right
-						class="pointer-events-auto flex items-center gap-1 transition-all duration-snappy rounded-full border border-content-inverse/20 bg-surface-media-scrim-strong text-content-inverse p-0.5 shadow-raised-sm backdrop-blur-md sm:border-border-default/60 sm:bg-surface-primary/80 sm:text-text-primary"
+						class="pointer-events-auto flex items-center gap-1 transition-all duration-snappy rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md"
 					>
 						{@render trailing()}
 					</div>

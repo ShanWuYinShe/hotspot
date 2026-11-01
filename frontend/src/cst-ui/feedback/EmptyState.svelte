@@ -45,14 +45,6 @@
 		class?: string;
 	} = $props();
 
-	/** 四向星点：外环半径 144px 的 45° 等分位（跨端可镜像的固定几何）。 */
-	const SPOTLIGHT_DOTS: ReadonlyArray<readonly [number, number]> = [
-		[102, 102],
-		[-102, 102],
-		[-102, -102],
-		[102, -102]
-	];
-
 	const iconTileCls = $derived(
 		iconTone === 'accent'
 			? 'bg-accent-soft text-text-accent-on-soft'
@@ -63,11 +55,6 @@
 {#snippet spotlightLayer()}
 	<div aria-hidden="true" data-empty-spotlight class="empty-spotlight">
 		<div class="empty-spotlight__glow"></div>
-		<div class="empty-spotlight__ring empty-spotlight__ring--outer"></div>
-		<div class="empty-spotlight__ring empty-spotlight__ring--inner"></div>
-		{#each SPOTLIGHT_DOTS as dot, i (i)}
-			<span class="empty-spotlight__dot" style="transform: translate({dot[0]}px, {dot[1]}px)"></span>
-		{/each}
 	</div>
 {/snippet}
 

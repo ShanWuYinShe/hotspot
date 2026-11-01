@@ -184,10 +184,10 @@
 				{@render header()}
 			</div>
 		{/if}
-		<div class="min-h-0 flex-1" style={footerHeight > 0 ? `padding-bottom:${footerHeight}px` : undefined}>
+		<div class="min-h-0 flex-1 flex flex-col" style={footerHeight > 0 ? `padding-bottom:${footerHeight}px` : undefined}>
 			<ContentColumn
 				maxWidth={contentMaxWidth}
-				class={cn(edgeToEdgeMobile && 'px-0 sm:px-[var(--cst-page-gutter)]', contentClassName)}
+				class={cn(edgeToEdgeMobile && 'px-0 sm:px-[var(--cst-page-gutter)]', 'flex-1 flex flex-col', contentClassName)}
 			>
 				{@render children()}
 			</ContentColumn>
