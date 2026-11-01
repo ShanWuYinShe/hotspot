@@ -91,9 +91,30 @@
 		])
 	);
 
-	// 登录后拉一次平台管理员权限：决定侧栏「管理后台」入口是否渲染
+	// 登录后拉一次平台管理员权限：决定侧栏「管理后台」入口是否渲染。
+	// 延后到页面 load 完成后的空闲时段：rbac/me 只影响侧栏一个入口，不应占用
+	// 首屏请求窗口（非管理员同样会走这条请求，线上实测被排在路由 chunk 之后，
+	// 白白把首屏关键 API 往后挤）。/admin 路由守卫仍会在进入后台时自行拉取。
 	$effect(() => {
-		if (auth.status === 'authenticated') ensureAdminLoaded();
+		if (auth.status !== 'authenticated') return;
+		let cancelled = false;
+		let idleHandle: number | null = null;
+		const load = () => {
+			if (!cancelled) ensureAdminLoaded();
+		};
+		const scheduleIdle = () => {
+			if (cancelled) return;
+			const idle = window.requestIdleCallback;
+			if (typeof idle === 'function') idleHandle = idle(load, { timeout: 2000 });
+			else load();
+		};
+		if (document.readyState === 'complete') scheduleIdle();
+		else window.addEventListener('load', scheduleIdle, { once: true });
+		return () => {
+			cancelled = true;
+			if (idleHandle !== null) window.cancelIdleCallback?.(idleHandle);
+			window.removeEventListener('load', scheduleIdle);
+		};
 	});
 
 	const pathname = $derived(page.url.pathname);

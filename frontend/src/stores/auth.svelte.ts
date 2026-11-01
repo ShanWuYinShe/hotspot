@@ -7,13 +7,13 @@
 // 登录弹层并在登录成功后重放该操作。
 
 import {
-  bootstrap as apiBootstrap,
   checkAuthStatus, getAccount, guest as apiGuest, login as apiLogin,
   logout as apiLogout, register as apiRegister, setAuthenticated,
   setKnownAccessExpiry,
   type ApiResponse,
 } from '@/api';
 
+import { loadBootstrap, refreshBootstrap } from '@/lib/bootstrap-cache';
 import { resetAdmin } from "@/stores/admin.svelte";
 import { resetPresence } from "@/stores/presence.svelte";
 import { applyBootstrapUnread, resetUnread } from "@/stores/unread.svelte";
@@ -84,7 +84,7 @@ export function initAuth(): () => void {
     // 服务端在此下发 device_id Cookie；auth/register、auth/guest、auth/signin 等
     // Web 端认证变更都从该 Cookie 读取设备标识，缺失即 10000 参数错误。
     // 失败不阻塞启动（匿名浏览公开端点不受影响）。
-    const boot = await apiBootstrap().catch(() => null);
+    const boot = await loadBootstrap();
     // 传输失败退避重试（部署滚动窗口内冷启动）：只在真正的会话失效时落
     // 匿名，避免后端短暂不可用造成“发版即掉登录”且永不恢复。
     let res: Awaited<ReturnType<typeof checkAuthStatus>> | null = null;
@@ -104,7 +104,7 @@ export function initAuth(): () => void {
     const data = res && res.code === 0 ? res.data : null;
     if (data) {
       // 冷启动未读校准：bootstrap 已携带服务端现算的 unread_summary，零额外请求
-      applyBootstrapUnread(boot && boot.code === 0 ? boot.data?.unread_summary : null);
+      applyBootstrapUnread(boot?.unread_summary ?? null);
       setKnownAccessExpiry(data.expires_at);
       await refreshUser();
     } else {
@@ -222,8 +222,8 @@ async function onAuthSuccess(): Promise<void> {
   if (st && st.code === 0 && st.data) setKnownAccessExpiry(st.data.expires_at);
   // 登录/注册/访客成功后重新 bootstrap：拉取该账号的 unread_summary 校准全局
   // 未读徽标（与冷启动同一来源；失败静默——后续由 WS 增量与页面回写收敛）。
-  const boot = await apiBootstrap().catch(() => null);
-  applyBootstrapUnread(boot && boot.code === 0 ? boot.data?.unread_summary : null);
+  const boot = await refreshBootstrap();
+  applyBootstrapUnread(boot?.unread_summary ?? null);
   if (pendingAction) {
     replayPending();
   }

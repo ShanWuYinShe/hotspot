@@ -40,6 +40,22 @@ export default defineConfig({
 			]
 		}
 	},
+	build: {
+		// 打包产物切分（Vite 8 / Rolldown 1.2）：@lucide/svelte 的每个图标是独立
+		// ESM 模块，被多个路由共享时 Rolldown 默认给每个图标切一个 chunk——实测
+		// 89 个 <1KB chunk（合计仅 38.5KB），首屏因此多出几十个 HTTP 请求。
+		// 用 Rolldown 的 codeSplitting.groups 把图标模块合并为单个 icons chunk
+		// （advancedChunks 是其 deprecated 别名，勿再用）。
+		rollupOptions: {
+			output: {
+				codeSplitting: {
+					groups: [
+						{ name: 'icons', test: /node_modules[\\/]@lucide[\\/]svelte/ }
+					]
+				}
+			}
+		}
+	},
 	test: {
 		environment: 'jsdom',
 		setupFiles: ['./vitest-setup.ts'],

@@ -8,7 +8,8 @@
 	import { initUnread } from '@/stores/unread.svelte';
 	import { initTheme } from '@/stores/theme.svelte';
 	import { initMapSource } from '@/stores/mapSource.svelte';
-	import { initPlatform } from '@/stores/platform.svelte';
+	import { initPlatform, platform } from '@/stores/platform.svelte';
+	import { loadShell, shellKindFor } from '@/lib/shell-loader';
 	import AuthGate from '@/components/auth/AuthGate.svelte';
 	import BootSplash from '@/components/shared/BootSplash.svelte';
 	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
@@ -25,6 +26,9 @@
 	// 地图源偏好（高德/OSM）持久化初值，设置页与地图页共享。
 	initMapSource();
 	void initPlatform();
+	// 启动阶段（BootSplash 等待 auth/session 期间）预取当前端外壳 chunk：与 auth
+	// 请求并行，避免 BootSplash 结束后才开始下载外壳（慢网下等于多一个串行 RTT）。
+	void loadShell(shellKindFor(platform.platform, platform.orientation)).catch(() => {});
 	void initAuth();
 	// WS 实时通道：监听 auth store，登录后自动连接、登出后断开。
 	// 与 initAuth 一样在 script 顶层调用（非 onMount），保证内部 $effect 注册在组件初始化上下文。

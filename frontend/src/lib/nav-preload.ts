@@ -96,11 +96,18 @@ export function scheduleIdlePreload(
 	let cancelled = false;
 	const run = () => {
 		if (cancelled || document.visibilityState === 'hidden') return;
-		const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+		const connection = (
+			navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }
+		).connection;
 		if (connection?.saveData) return;
+		// 弱网（2g/3g）不预取：慢网下预取会与首屏 API / 图片抢连接与带宽。
+		// 线上实测：5s 后预取的 6 条常用路由 ≈70 个 chunk 持续下载 13s，
+		// 首个 feed API 被挤到 18.5s 才完成——正是本函数造成的「路由 chunk 波」。
+		if (connection?.effectiveType && /^(slow-2g|2g|3g)$/.test(connection.effectiveType)) return;
 		for (const route of routes) void preloadRoute(route);
 	};
-	const timer = window.setTimeout(() => {
+	function runIdle() {
+		if (cancelled) return;
 		const idle = (
 			window as Window & {
 				requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number;
@@ -108,10 +115,23 @@ export function scheduleIdlePreload(
 		).requestIdleCallback;
 		if (typeof idle === 'function') idle(run, { timeout: timeoutMs });
 		else run();
+	}
+	// 首屏 load 完成前不预取：原先只看 5s 定时器，慢网下 5s 时首屏资源仍在传输，
+	// 预取会直接挤占关键路径；等 load 后再挑空闲时间才符合「首屏优先」的本意。
+	let onLoad: (() => void) | null = null;
+	const timer = window.setTimeout(() => {
+		if (cancelled) return;
+		if (document.readyState === 'complete') {
+			runIdle();
+			return;
+		}
+		onLoad = runIdle;
+		window.addEventListener('load', onLoad, { once: true });
 	}, delayMs);
 	return () => {
 		cancelled = true;
 		window.clearTimeout(timer);
+		if (onLoad) window.removeEventListener('load', onLoad);
 	};
 }
 

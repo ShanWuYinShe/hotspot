@@ -6,6 +6,7 @@
 // 交给服务端回退链。全应用缓存一次(配置近静态)。
 
 import { getClientConfig } from '@/api';
+import { loadBootstrap } from '@/lib/bootstrap-cache';
 
 export interface GeoPoint {
 	latitude: number;
@@ -25,16 +26,21 @@ export async function loadDefaultLocation(): Promise<DefaultLocation | null> {
 	if (inflight) return inflight;
 	inflight = (async () => {
 		try {
-			const res = await getClientConfig();
-			if (res.code === 0) {
-				const loc = res.data?.defaults?.default_location;
-				if (loc?.point?.latitude != null && loc?.point?.longitude != null) {
-					cached = {
-						point: { latitude: loc.point.latitude, longitude: loc.point.longitude },
-						location_name: loc.location_name ?? ''
-					};
-					return cached;
-				}
+			// 优先用冷启动 bootstrap 聚合响应里的 client_config（同一次请求已下发，
+			// spec api_spec_system.md → bootstrap），避免首屏再单独请求一次公共配置。
+			// 仅当该段被省略（bootstrap 缓存命中精简响应）时才回退独立端点。
+			let config = (await loadBootstrap())?.client_config ?? null;
+			if (!config) {
+				const res = await getClientConfig();
+				if (res.code === 0) config = res.data ?? null;
+			}
+			const loc = config?.defaults?.default_location;
+			if (loc?.point?.latitude != null && loc?.point?.longitude != null) {
+				cached = {
+					point: { latitude: loc.point.latitude, longitude: loc.point.longitude },
+					location_name: loc.location_name ?? ''
+				};
+				return cached;
 			}
 		} catch {
 			/* 网络不可用（后端未就绪等）——调用方按 null 处理 */
