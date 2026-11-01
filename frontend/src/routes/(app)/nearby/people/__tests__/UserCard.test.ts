@@ -41,4 +41,20 @@ describe('UserCard', () => {
 		expect(container.querySelector('img')).toBeNull();
 		expect(screen.getByText('鹿')).toBeTruthy();
 	});
+
+	it('在线状态角标放置于 overflow-hidden 内层容器外部，避免被裁剪', () => {
+		const { container } = render(UserCard, {
+			props: {
+				user: base({ isOnline: true }),
+				followed: false,
+				onFollow: () => {},
+				onNavigate: () => {}
+			}
+		});
+		const dot = container.querySelector('[title="在线"]');
+		expect(dot).not.toBeNull();
+		// 角标直接父级不包含 overflow-hidden
+		const parent = dot?.parentElement;
+		expect(parent?.classList.contains('overflow-hidden')).toBe(false);
+	});
 });

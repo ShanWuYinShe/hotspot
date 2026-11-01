@@ -105,8 +105,8 @@
 		<!-- 中部：头像 + 姓名 + 简介 -->
 		<div class="relative z-10 flex items-center gap-3.5 my-auto py-1">
 			<!-- 头像 -->
-			<div class="relative shrink-0">
-				<div class="relative flex items-center justify-center size-13 sm:size-15 rounded-full overflow-hidden shadow-xs ring-2 ring-accent-default/30 bg-accent-soft group-hover:scale-105 transition-transform duration-standard">
+			<div class="relative shrink-0 group-hover:scale-105 transition-transform duration-standard">
+				<div class="relative flex items-center justify-center size-13 sm:size-15 rounded-full overflow-hidden shadow-xs ring-2 ring-accent-default/30 bg-accent-soft">
 					{#if hasAvatar}
 						<img
 							src={user.avatar}
@@ -215,23 +215,25 @@
 
 		<!-- 中部：大头像与主体信息 -->
 		<div class="relative z-10 flex flex-col items-center text-center my-auto py-4">
-			<div class="relative size-22 sm:size-24 rounded-full overflow-hidden shadow-raised-sm ring-2 ring-accent-default/30 bg-accent-soft group-hover:scale-105 transition-transform duration-standard">
-				{#if hasAvatar}
-					<img
-						src={user.avatar}
-						alt={user.name}
-						loading={priority ? 'eager' : 'lazy'}
-						fetchpriority={priority ? 'high' : 'auto'}
-						decoding="async"
-						class="size-full object-cover"
-						onerror={() => (avatarFailed = true)}
-					/>
-				{:else}
-					<span class="text-accent-default font-bold text-4xl flex items-center justify-center h-full select-none">{Array.from(user.name)[0] ?? '?'}</span>
-				{/if}
+			<div class="relative shrink-0 group-hover:scale-105 transition-transform duration-standard">
+				<div class="relative flex items-center justify-center size-22 sm:size-24 rounded-full overflow-hidden shadow-raised-sm ring-2 ring-accent-default/30 bg-accent-soft">
+					{#if hasAvatar}
+						<img
+							src={user.avatar}
+							alt={user.name}
+							loading={priority ? 'eager' : 'lazy'}
+							fetchpriority={priority ? 'high' : 'auto'}
+							decoding="async"
+							class="size-full object-cover"
+							onerror={() => (avatarFailed = true)}
+						/>
+					{:else}
+						<span class="text-accent-default font-bold text-4xl flex items-center justify-center h-full select-none">{Array.from(user.name)[0] ?? '?'}</span>
+					{/if}
+				</div>
 				{#if user.isOnline}
 					<span
-						class="absolute bottom-1 right-1 size-4 rounded-full bg-status-online ring-2 ring-surface-page"
+						class="absolute bottom-1 right-1 size-4 rounded-full bg-status-online ring-2 ring-surface-page shadow-xs"
 						title="在线"
 					></span>
 				{/if}
@@ -322,20 +324,22 @@
 
 		<!-- 中部：头像与姓名签名 -->
 		<div class="relative z-10 flex flex-col items-center text-center my-auto py-1">
-			<div class="relative size-12 sm:size-13.5 rounded-full overflow-hidden shadow-xs ring-2 ring-accent-default/20 bg-accent-soft group-hover:scale-105 transition-transform duration-standard">
-				{#if hasAvatar}
-					<img
-						src={user.avatar}
-						alt={user.name}
-						loading={priority ? 'eager' : 'lazy'}
-						fetchpriority={priority ? 'high' : 'auto'}
-						decoding="async"
-						class="size-full object-cover"
-						onerror={() => (avatarFailed = true)}
-					/>
-				{:else}
-					<span class="text-accent-default font-bold text-lg sm:text-xl flex items-center justify-center h-full select-none">{Array.from(user.name)[0] ?? '?'}</span>
-				{/if}
+			<div class="relative shrink-0 group-hover:scale-105 transition-transform duration-standard">
+				<div class="relative flex items-center justify-center size-12 sm:size-13.5 rounded-full overflow-hidden shadow-xs ring-2 ring-accent-default/20 bg-accent-soft">
+					{#if hasAvatar}
+						<img
+							src={user.avatar}
+							alt={user.name}
+							loading={priority ? 'eager' : 'lazy'}
+							fetchpriority={priority ? 'high' : 'auto'}
+							decoding="async"
+							class="size-full object-cover"
+							onerror={() => (avatarFailed = true)}
+						/>
+					{:else}
+						<span class="text-accent-default font-bold text-lg sm:text-xl flex items-center justify-center h-full select-none">{Array.from(user.name)[0] ?? '?'}</span>
+					{/if}
+				</div>
 				{#if user.isOnline}
 					<span
 						class="absolute bottom-0 right-0 size-2.5 rounded-full bg-status-online ring-2 ring-surface-page"

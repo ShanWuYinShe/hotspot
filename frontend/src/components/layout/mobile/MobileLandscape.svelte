@@ -7,14 +7,13 @@
 	import { unread } from '@/stores/unread.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import CreateSheet from '@/components/overlays/CreateSheet.svelte';
-	import RailIcon from '@/components/layout/mobile/RailIcon.svelte';
+	import NavTab from '@/components/layout/mobile/NavTab.svelte';
 	import RoutedContentViewport from '@/components/layout/page/RoutedContentViewport.svelte';
 	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
 	import { ROUTES, isPrimaryRouteActive, isSubPagePath } from '@/lib/routes';
 
-	// 移动横屏：紧凑左栏（无状态栏），全高内容 + 右侧滑入发布面板。
-	// 「附近」是一级 Tab（落点 /nearby 枢纽页），竖屏/平板均含此 slot，
-	// 横屏同样保留——三端一级导航集合一致（2026-10-18 审查 P2-9）。
+	// 移动横屏：对齐移动端/平板端设计约束——「导航栏永远在底部」。
+	// 5 slot 居中自适应，大屏横屏收敛在中央大拇指触控区（max-w-lg），不散落两侧，杜绝出现左侧侧边栏。
 
 	let { children }: { children: Snippet } = $props();
 
@@ -28,52 +27,11 @@
 	const pathname = $derived(page.url.pathname);
 	const isSubPage = $derived(isSubPagePath(pathname));
 	const showCreate = $derived(composer.composerOpen);
-
 </script>
 
 <div
-	class="bg-surface-page text-text-primary flex h-dvh w-full overflow-hidden font-sans transition-colors duration-gentle"
+	class="bg-surface-page text-text-primary flex flex-col h-dvh w-full overflow-hidden font-sans transition-colors duration-gentle"
 >
-	{#if !isSubPage}
-		<aside
-			class="shrink-0 flex flex-col items-center nav-glass nav-glass--side"
-			style="width:var(--cst-mobile-rail-width);padding-top:max(env(safe-area-inset-top, 8px), 8px);padding-bottom:max(env(safe-area-inset-bottom, 8px), 8px);padding-left:max(env(safe-area-inset-left, 0px), 0px);gap:var(--cst-bottom-nav-pad-top);"
-		>
-			{#each NAV_ITEMS.slice(0, 2) as item}
-				<RailIcon
-					Icon={item.icon}
-					label={item.label}
-					isActive={isPrimaryRouteActive(pathname, item.path)}
-					onClick={() => goto(item.path)}
-				/>
-			{/each}
-
-			<button
-				type="button"
-				class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring my-1 size-11 {composer.composerOpen ? '' : 'shadow-glow-md'}"
-				style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};"
-				aria-label={composer.composerOpen ? '关闭' : '发布'}
-				onclick={toggleComposer}
-			>
-				{#if composer.composerOpen}
-					<X class="size-4.5 text-text-on-accent"   strokeWidth={2} />
-				{:else}
-					<Plus class="size-4.5 text-text-on-accent"   strokeWidth={2} />
-				{/if}
-			</button>
-
-			{#each NAV_ITEMS.slice(2, 4) as item}
-				<RailIcon
-					Icon={item.icon}
-					label={item.label}
-					isActive={isPrimaryRouteActive(pathname, item.path)}
-					onClick={() => goto(item.path)}
-					count={item.path === ROUTES.messages ? unread.chat : 0}
-				/>
-			{/each}
-		</aside>
-	{/if}
-
 	<div class="relative isolate flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
 		<!-- 氛围画布固定在外壳内容区（不随路由滚动） -->
 		<AmbientBackdrop />
@@ -82,11 +40,83 @@
 		</RoutedContentViewport>
 	</div>
 
+	<!-- 移动端底栏导航：永远位于视口底部，中央 FAB 发布按钮 -->
+	{#if !isSubPage}
+		<nav
+			aria-label="主导航"
+			class="shrink-0 w-full flex justify-center nav-glass nav-glass--bottom border-t border-border-default/40"
+			style="box-shadow:var(--cst-elevation-nav);"
+		>
+			<div
+				class="grid grid-cols-5 items-center w-full max-w-lg px-2"
+				style="padding-top:var(--cst-bottom-nav-pad-top);padding-bottom:max(var(--cst-bottom-nav-pad-bottom), env(safe-area-inset-bottom, var(--cst-bottom-nav-pad-bottom)));"
+			>
+				<!-- Slot 1: 首页 -->
+				<div class="flex items-center justify-center w-full">
+					<NavTab
+						label={NAV_ITEMS[0].label}
+						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[0].path)}
+						onClick={() => goto(NAV_ITEMS[0].path)}
+						Icon={NAV_ITEMS[0].icon}
+					/>
+				</div>
+
+				<!-- Slot 2: 附近 -->
+				<div class="flex items-center justify-center w-full">
+					<NavTab
+						label={NAV_ITEMS[1].label}
+						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[1].path)}
+						onClick={() => goto(NAV_ITEMS[1].path)}
+						Icon={NAV_ITEMS[1].icon}
+					/>
+				</div>
+
+				<!-- Slot 3: Centre FAB -->
+				<div class="flex items-center justify-center w-full">
+					<button
+						type="button"
+						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring select-none size-11 {composer.composerOpen ? '' : 'shadow-glow-md'}"
+						style="background:{composer.composerOpen ? 'var(--cst-text-secondary)' : 'var(--cst-accent-default)'};"
+						onclick={toggleComposer}
+						aria-label={composer.composerOpen ? '关闭' : '发布'}
+					>
+						{#if composer.composerOpen}
+							<X class="size-4.5 text-text-on-accent" strokeWidth={2} />
+						{:else}
+							<Plus class="size-4.5 text-text-on-accent" strokeWidth={2} />
+						{/if}
+					</button>
+				</div>
+
+				<!-- Slot 4: 消息 -->
+				<div class="flex items-center justify-center w-full">
+					<NavTab
+						label={NAV_ITEMS[2].label}
+						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[2].path)}
+						onClick={() => goto(NAV_ITEMS[2].path)}
+						Icon={NAV_ITEMS[2].icon}
+						count={unread.chat}
+					/>
+				</div>
+
+				<!-- Slot 5: 我的 -->
+				<div class="flex items-center justify-center w-full">
+					<NavTab
+						label={NAV_ITEMS[3].label}
+						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[3].path)}
+						onClick={() => goto(NAV_ITEMS[3].path)}
+						Icon={NAV_ITEMS[3].icon}
+					/>
+				</div>
+			</div>
+		</nav>
+	{/if}
+
 	<Dialog.Root open={showCreate} onOpenChange={(next) => (next ? openComposer() : closeComposer())}>
 		<Dialog.Content
-			side="right"
-			class="overflow-hidden rounded-l-sheet border-l-0"
-			style="width:min(560px,90%);box-shadow:var(--cst-elevation-side-sheet);"
+			side="bottom"
+			class="overflow-hidden"
+			style="height:var(--cst-sheet-height-2xl);"
 		>
 			<CreateSheet onClose={closeComposer} />
 		</Dialog.Content>

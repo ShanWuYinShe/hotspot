@@ -143,13 +143,7 @@
 				>
 					{#if header}
 						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">
-							{#if isConstrained}
-								<ContentColumn maxWidth={contentMaxWidth} class="p-0">
-									{@render header()}
-								</ContentColumn>
-							{:else}
-								{@render header()}
-							{/if}
+							{@render header()}
 						</div>
 					{/if}
 					<div class="min-h-0 flex-1">
@@ -159,13 +153,7 @@
 					</div>
 					{#if footer}
 						<div class="shrink-0 sticky bottom-0 z-10 w-full bg-surface-primary">
-							{#if isConstrained}
-								<ContentColumn maxWidth={contentMaxWidth} class="p-0">
-									{@render footer()}
-								</ContentColumn>
-							{:else}
-								{@render footer()}
-							{/if}
+							{@render footer()}
 						</div>
 					{/if}
 				</div>

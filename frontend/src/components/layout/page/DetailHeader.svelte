@@ -25,8 +25,9 @@
 		trailing,
 		onAuthorClick,
 		scrollThreshold = 160,
-		maxWidth = '58rem',
-		class: className = ''
+		maxWidth,
+		class: className = '',
+		contentClassName = ''
 	}: {
 		onBack?: () => void;
 		backLabel?: string;
@@ -38,6 +39,7 @@
 		scrollThreshold?: number;
 		maxWidth?: number | string;
 		class?: string;
+		contentClassName?: string;
 	} = $props();
 
 	let scrolled = $state(false);
@@ -115,7 +117,7 @@
 		className
 	)}
 >
-	<ContentColumn {maxWidth} class="px-3 sm:px-4">
+	<ContentColumn {maxWidth} class={contentClassName}>
 		{#if scrolled}
 			<!-- ══ 方案 A：居中灵动胶囊岛（Unified Dynamic Island Capsule） ══
 			     滚动离开首屏后，以精致的居中胶囊岛浮现：将返回、作者微名片与操作按钮

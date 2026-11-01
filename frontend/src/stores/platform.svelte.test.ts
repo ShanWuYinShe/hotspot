@@ -14,18 +14,20 @@ describe('detect()', () => {
   });
 
   it('宽度 <600 横屏为 mobile landscape', () => {
-    setViewport(667, 375);
+    setViewport(568, 320);
     expect(detect()).toEqual({ platform: 'mobile', orientation: 'landscape', isWideTablet: false });
   });
 
-  it('minDim ≥600 且宽度 <1280 为 tablet', () => {
-    setViewport(1024, 768);
-    expect(detect()).toEqual({ platform: 'tablet', orientation: 'landscape', isWideTablet: true });
+  it('宽度 600..1023 为 tablet', () => {
     setViewport(768, 1024);
     expect(detect()).toEqual({ platform: 'tablet', orientation: 'portrait', isWideTablet: false });
+    setViewport(960, 600);
+    expect(detect()).toEqual({ platform: 'tablet', orientation: 'landscape', isWideTablet: true });
   });
 
-  it('宽度 ≥1280 为 desktop', () => {
+  it('宽度 ≥1024 为 desktop', () => {
+    setViewport(1024, 768);
+    expect(detect()).toEqual({ platform: 'desktop', orientation: 'landscape', isWideTablet: false });
     setViewport(1440, 900);
     expect(detect()).toEqual({ platform: 'desktop', orientation: 'landscape', isWideTablet: false });
   });

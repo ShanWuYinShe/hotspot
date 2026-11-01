@@ -32,12 +32,12 @@
 | 语义 | 前端 | 鸿蒙 | 值 |
 |---|---|---|---|
 | 移动端（手机） | `platform.platform === 'mobile'` | `!isDesktopForm` | `< 600` |
-| 平板端 | `isTablet` | `isTablet` | `600 – 1279` |
-| 桌面端 | `isDesktop` | `isDesktopForm` | `≥ 1280` |
+| 平板端 | `isTablet` | `isTablet` | `600 – 1023` |
+| 桌面端 | `isDesktop` | `isDesktopForm` | `≥ 1024` |
 | 内容双栏（master-detail） | `isWide` | `isWideForm` | `≥ 960` |
 
-- **chrome 归桌面**：≥1280 切桌面顶栏 + 侧边栏；<1280 走 PhoneLayout（含平板药丸底栏）。
-- **内容双栏归 isWide**：960–1279 是「平板药丸底栏 + 内容可双栏」，不是桌面侧边栏。
+- **chrome 归桌面**：≥1024 切桌面顶栏 + 侧边栏；<1024 走 Phone/TabletLayout（**移动端和平板端的导航栏永远在底部**，绝对禁止在左侧出现 side rail 侧边栏）。
+- **内容双栏归 isWide**：960–1023 是「平板药丸底栏 + 内容可双栏」，不是桌面侧边栏。
 - 鸿蒙 `Breakpoint.ets` 底层 6 档（xs/sm/md/lg/xl/xxl）仅服务栅格，业务一律用语义派生量。
 
 ---

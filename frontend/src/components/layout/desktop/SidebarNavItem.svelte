@@ -69,7 +69,7 @@
 
 <button
 	type="button"
-	class="tap-97 relative flex h-10 w-full items-center rounded-sm focus-ring text-left {collapsed
+	class="tap-97 relative flex h-10 w-full shrink-0 items-center rounded-sm focus-ring text-left {collapsed
 		? 'justify-center'
 		: ''}"
 	style="background:{fill};box-shadow:{borderRing};color:{labelColor};transition:background var(--cst-motion-rapid) var(--cst-ease-standard), box-shadow var(--cst-motion-rapid) var(--cst-ease-standard), color var(--cst-motion-rapid) var(--cst-ease-standard), transform var(--cst-motion-instant) var(--cst-ease-standard);"
@@ -107,7 +107,7 @@
 		{/if}
 	</span>
 	<span
-		class="overflow-hidden whitespace-nowrap text-md transition-[max-width,opacity,margin] duration-standard ease-standard {collapsed
+		class="overflow-hidden whitespace-nowrap truncate text-md transition-[max-width,opacity,margin] duration-standard ease-standard {collapsed
 			? 'ml-0 max-w-0 opacity-none'
 			: 'ml-1.5 max-w-full opacity-full'} {isActive ? 'font-semibold' : 'font-normal'}"
 	>

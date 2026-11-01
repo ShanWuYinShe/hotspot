@@ -170,7 +170,7 @@
 <!-- 侧栏分组标签（发现 / 个人中心）唯一实现：同字号/字距/颜色，折叠时高度与透明度同步收起 -->
 {#snippet navSectionLabel(label: string)}
 	<p
-		class="overflow-hidden whitespace-nowrap text-text-secondary text-xxs font-semibold tracking-label uppercase transition-[max-height,opacity,margin] duration-standard ease-standard {isSidebarCollapsed
+		class="shrink-0 overflow-hidden whitespace-nowrap text-text-secondary text-xxs font-semibold tracking-label uppercase transition-[max-height,opacity,margin] duration-standard ease-standard {isSidebarCollapsed
 			? 'max-h-0 mb-0 opacity-none'
 			: 'max-h-6 px-3 mb-2 opacity-soft'}"
 	>
@@ -222,7 +222,7 @@
 		{:else}
 			<button
 				type="button"
-				class="group flex items-center gap-2 mr-1 select-none rounded-xl px-2 py-1 focus-ring hover:bg-interactive-hover"
+				class="group flex shrink-0 items-center gap-2 mr-1 select-none rounded-xl px-2 py-1 focus-ring hover:bg-interactive-hover"
 				title="返回首页"
 				onclick={() => {
 					activeNavId = 'home';
@@ -306,7 +306,7 @@
 		</div>
 
 		<!-- Right Actions -->
-		<div class="flex items-center gap-1.5">
+		<div class="flex shrink-0 items-center gap-1.5">
 			<!-- 当前在搜索页时 accent 高亮（Gemini 审查 r11：顶栏入口缺当前页选中态） -->
 			<ActionIconButton
 				icon={Search}
