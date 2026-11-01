@@ -1,6 +1,6 @@
 # 宽屏回归基线（hotspot web）
 
-本文件是 skill `hotspot-frontend-layout`「宽屏回归基线」的明细：视口、路由清单、测量口径与历史数值。
+本文件是 skill `hotspot-frontend-layout`「宽屏回归基线」的明细：视口、路由清单、测量口径与基线数值。
 
 ## 视口 1920×1080（10 个关键路由）
 
@@ -8,7 +8,7 @@
 
 - **内容填充率全部 0.97**（页面内容横向占满可用区域，侧栏宽度扣除后计算）；
 - **无横向滚动**（`scrollWidth <= innerWidth + 2`）；
-- `/search` **1920 下不是左右双列**（2026-10-31 校正）：`SearchDiscovery.svelte:97` 为 `md:grid-cols-2 2xl:flex 2xl:flex-col`，1920 ≥ `2xl`(1792) 后变成**单列纵向**，内部卡片区 :98 转 `2xl:grid-cols-4`（4 列卡墙）。断点是 `md`(960) 起双列、`2xl`(1792) 起改单列，不是 `lg`。旧文「左热门话题+人物推荐 / 右热门动态」与实现不符。
+- `/search` **1920 下不是左右双列**：`SearchDiscovery.svelte:97` 为 `md:grid-cols-2 2xl:flex 2xl:flex-col`，1920 ≥ `2xl`(1792) 后变成**单列纵向**，内部卡片区 :98 转 `2xl:grid-cols-4`（4 列卡墙）。断点是 `md`(960) 起双列、`2xl`(1792) 起改单列，不是 `lg`。
 
 ## 视口 1397×750（同口径）
 

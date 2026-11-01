@@ -38,7 +38,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 2. **页头**：一律用 `PageHeader`，按页面类型选变体：
    - **默认变体**：`sticky` 默认开（表单/设置/管理/搜索/聊天/资料页等），`onBack` 在非桌面自动显示返回按钮；`below` 只放搜索框与 Tab 栏等 header 附属区，**below 首元素带 `mt-3`**（默认变体 spacing 由页面控制），below 内多行元素之间用 `mt-3` 分隔。内部 ContentColumn 上下内距由组件派生（有 below：`pt-4 pb-3.5`；无 below：`pt-4.5 pb-4.5`），页面不要再传 `contentClassName` 覆盖（唯一例外是已登记的窄列面板）。
    - **`variant="integrated"`（hub/列表页内容内页头）**：无背景/边框/吸顶（不随滚动变 glass），标题+副标题/计数+trailing 工具同一行，`below` 筛选/操作紧随（组件统一 `mt-2.5`，页面不要再加 `mt-3`）；正文 `pt-4` 直接开始。适用 /nearby、/nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；**这些页面禁止在正文重复页面标题/分区头**。搜索页（sticky 搜索优先）、设置/表单页、聊天分栏、品牌首页不是同类，继续用默认变体/自建页头。
-3. **分类/筛选/排序 Tab（强制统一）**：一律使用 `TabBar`（`components/navigation/TabBar.svelte`，胶囊样式 + 激活项 accent 实底胶囊 + `aria-pressed`，对齐鸿蒙 TabsPillGroup 分段式视觉），放 `below` snippet 内随 header 吸顶；tab 状态可存 URL query（如 `?tab=`）以支持深链，切换用 `goto` 更新 URL。**禁止再写手写 tab/chip 变体**（通知/搜索/个人主页/地图 sheet 的手写胶囊已统一为 TabBar）。表单内的标签/多选 chips 一律用 `TagPill`；网格选择器（主题 swatch、发布可见范围）属例外，不套 TabBar。
+3. **分类/筛选/排序 Tab（强制统一）**：一律使用 `TabBar`（`components/navigation/TabBar.svelte`，胶囊样式 + 激活项 accent 实底胶囊 + `aria-pressed`，对齐鸿蒙 TabsPillGroup 分段式视觉），放 `below` snippet 内随 header 吸顶；tab 状态可存 URL query（如 `?tab=`）以支持深链，切换用 `goto` 更新 URL。**禁止再写手写 tab/chip 变体**（通知/搜索/个人主页/地图 sheet 一律用 TabBar）。表单内的标签/多选 chips 一律用 `TagPill`；网格选择器（主题 swatch、发布可见范围）属例外，不套 TabBar。
 4. **正文与滚动**：正文直接放 children；`StandardPageLayout` 页面滚动由 `RoutedContentViewport`（main）唯一承担，`SplitPageLayout` 分栏页的主区/rail 滚动由组件统一管理；页面不得自建滚动容器（消息分栏、地图等全画布页面除外）。内嵌自带 gutter 的组件时用负 margin（`-mx-[var(--cst-page-gutter)]`）抵消 ContentColumn gutter，避免双重内边距（参照 `me/relationships/RelationshipsPage.svelte`）。
 5. **三端差异**：共用组件只写一次，设备差异用 `platform.platform` 派生（列数、字号、布局分支），不得复制三份页面。
 6. **数据获取与状态**：`$effect` + `cancelled` 竞态清理模式（参照样板页）；加载中用 spinner、空列表用 `EmptyState`（参照样板页 feedState snippet）；数据加载失败必须展示 `LoadError`（`components/data-display/LoadError.svelte`）并提供重试（`reloadKey` 递增触发 effect 重跑），禁止静默转空态。分页/无限滚动列表**内容耗尽时必须渲染 `ListEnd`**（`components/data-display/ListEnd.svelte`，文案「没有更多了」）——「加载更多」按钮消失而无收尾提示会让用户无法区分「已到底」与「加载卡住」。四种状态各司其职：空列表 `EmptyState`、加载中 `InlineLoading`、失败 `LoadError`、到底 `ListEnd`，不得互相替代。**首屏列表/卡优先 Skeleton**；单实体/短列表可 `InlineLoading`（页面注释给理由）。
@@ -64,13 +64,13 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 - **阅读/详情/表单列（合法例外）**：仅真正的阅读或表单页传列宽（现状：settings `56rem`、me/edit `48rem`、notify `64rem`、瞬间详情/用户详情 `58rem`），由 `ContentColumn`/`SplitPageLayout` 承载。
 - **宽屏呼吸档 = 1280（数字字面量）**：长内容呼吸型页面（/me 总览、关系、举报）统一 `contentMaxWidth={1280}`；`PageHeader` 的 `maxWidth` 必须与页面 `contentMaxWidth` **同值成对**（只改其一即轴漂移 46–158px）。细则见「内容轴 → 宽屏呼吸档与列表轴」。
 - **页内可读行宽**：需要限制正文行宽时用页内 `max-w-4xl mx-auto`，宽屏随页宽放宽（`lg:max-w-5xl`）——这是**页内**约束，不能替代页面级 `contentMaxWidth`。
-- **搜索页 hero 搜索框（2026-10-29 登记例外）**：`/search` 页头 `below` 内的搜索框桌面 `max-w-3xl`(768) 限宽、左对齐标题轴，移动端满宽；正文（发现态双列/结果列表）仍全宽。理由：满宽 1116px 的输入会被读成「页头条带」，限宽形成「标题 → 搜索入口 → 内容」三级节奏；这是组件功能宽度上限，不是页面级窄列，不改变内容轴（标题/正文左缘仍同为 284）。
+- **搜索页 hero 搜索框（登记例外）**：`/search` 页头 `below` 内的搜索框桌面 `max-w-3xl`(768) 限宽、左对齐标题轴，移动端满宽；正文（发现态双列/结果列表）仍全宽。理由：满宽 1116px 的输入会被读成「页头条带」，限宽形成「标题 → 搜索入口 → 内容」三级节奏；这是组件功能宽度上限，不是页面级窄列，不改变内容轴（标题/正文左缘仍同为 284）。
 - 宽屏提升密度靠**页内响应式网格**，不是把内容拉宽了事：例如 `/search` 发现态在 `lg:` 起双列（左：最近搜索/热门话题/人物推荐；右：热门动态），窄屏回落单列且顺序不变。
 - 聊天类页面：消息滚动区与页头用 `max-w-3xl lg:max-w-5xl`（宽屏 1024），气泡自身仍受 `--cst-chat-bubble-max` 约束——容器变宽不能让行宽失控。
 
 ## 侧栏导航层级与跨端信息架构
 
-- **桌面侧栏**：「附近」域直接列三个叶子入口——附近的人 / 附近的群组 / 附近瞬间（`nearby-people` / `nearby-groups` / `nearby-moments`）。用户明确要求桌面少跳一层，这是对「只列域」口径的**定向覆盖**，不推广到其他域。
+- **桌面侧栏**：「附近」域直接列三个叶子入口——附近的人 / 附近的群组 / 附近瞬间（`nearby-people` / `nearby-groups` / `nearby-moments`）。桌面少跳一层是对「只列域」口径的**定向覆盖**，不推广到其他域。
 - **移动 / 平板底栏**保持域级 5 slot（首页/附近/发布/消息/我的）：「附近」落 `/nearby` 枢纽页，由枢纽页三段分区的「查看全部」进三个叶子页。
 - **高亮**：桌面三个叶子各自点亮对应项（`getDesktopNavId` 一对一映射）；枢纽页 `/nearby` 不再占桌面侧栏项，因此**不点亮任何项**（宁可不亮，不错亮）。移动/平板仍由 `isPrimaryRouteActive` 统一高亮「附近」。
 - **入口可达性**：枢纽页仍可从首页「看看附近」卡片进入，三个叶子的深链不变。
@@ -93,7 +93,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 ### 前端落地口径（逐页归一，已验证）
 
-`routes/(app)/**` 已按下列口径逐页归一（聊天/地图/登录/分享豁免，见「页面布局」一节的登记例外）：
+`routes/(app)/**` 按下列口径逐页归一（聊天/地图/登录/分享豁免，见「页面布局」一节的登记例外）：
 
 | 位置 | 值 | 实现 |
 |---|---|---|
@@ -109,14 +109,14 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 - **间距只允许单侧提供**：父容器 gap 与子块 mt/mb 不得叠成 40/44 的双倍间距；`contentClassName` 已带页顶/底留白时，首/末块不再叠 `mt-*`/`pb-*`（同页内同类间距必须同值）。
 - **不归三档的部分**：组件内部刻度（`py-2.5`/`py-3.5`/`gap-1.5`/`mt-0.5` 等）、`PageHeader` 自身上下内距、头像叠压 `-mt-8`、封面负 margin、网格单元 gap、纯横向列距（桌面双栏拆成 `gap-y-6 lg:gap-x-*` 保留列距）。
 - **横向列距拆分写法**：`grid gap-8` 在移动单列时是纵向 32 → 改为 `gap-y-6 lg:grid-cols-[...] lg:gap-x-8`。
-- **Tab 栏→内容的间距**：带 `border-b` 的 Tab 栏（含页面内的子 Tab 栏）到其内容统一 **24**；同一页内多个 Tab 层级同值，不得「简介 24 / 成员 16」并存（groups 详情已按此统一）。列表内「工具行→列表」等块内间距仍按 16。
+- **Tab 栏→内容的间距**：带 `border-b` 的 Tab 栏（含页面内的子 Tab 栏）到其内容统一 **24**；同一页内多个 Tab 层级同值，不得「简介 24 / 成员 16」并存（groups 详情按此为准）。列表内「工具行→列表」等块内间距仍按 16。
 - **保留现状（已评估，非缺陷）**：`ContextRail` rail 分区间距 16（rail 是紧凑侧栏；改 24 会同时影响 notify/users/moments 三处共享原语，收益低）。
 
 验证方法（可重跑）：静态扫描页面根容器/`contentClassName`/页面级块间距，离群档（`gap-5`/`gap-8`/`mb-5`/`mt-5`/`pb-16` 等）应为 0；浏览器 1920×1080 与 390×844 双视口、亮/暗双主题截图对比，只允许出现预期的纵向间距变化，不得有水平位移/错位。
 
 ## 页面级容器去边框与硬线清零（连续画布）
 
-用户明确否决「把页面主要内容用一个框圈起来」——屏幕边缘的框线会让界面显得笨重。规则：
+「把页面主要内容用一个框圈起来」是明确否决的做法——屏幕边缘的框线会让界面显得笨重。规则：
 
 1. **外壳不画框**：桌面顶栏/侧栏/主内容面板、移动与平板顶栏/PageHeader 一律不得有包裹整页的 `border`/`rounded-*`/白色底面/硬分隔线（`border-b` 发丝线也算）。四端外壳共享同一张 `--cst-surface-page` 连续画布；层级靠留白、排版、交互态表达。
 2. **氛围画布整窗一次**：桌面在 `DesktopLayout` 根挂单实例 `AmbientBackdrop`；不得按区域各挂一份（区域交界会出现渐变接缝）。移动/平板仍挂在各自外壳内容区。
@@ -130,7 +130,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 **内容软岛（开放页面内容分组，强制）**：
 
-- 形态：`bg-surface-island + shadow-xs + rounded-lg(20)`，**无 1px 描边**；`p-2`(8)、行背景透明、行间 `gap-y-0.5`(2)、hover 填充离岛边 8；**不加 1px 行横线**。开放页面的列表集合只用 `ListContainer bordered`（已改为软岛语义）；调用方不得覆写 border/bg/radius，也不得在外层再包手写卡片（双框）。
+- 形态：`bg-surface-island + shadow-xs + rounded-lg(20)`，**无 1px 描边**；`p-2`(8)、行背景透明、行间 `gap-y-0.5`(2)、hover 填充离岛边 8；**不加 1px 行横线**。开放页面的列表集合只用 `ListContainer bordered`（软岛语义）；调用方不得覆写 border/bg/radius，也不得在外层再包手写卡片（双框）。
 - 例外（登记）：弹层/Sheet、hero/封面预览、单帖卡、聊天输入条、表格/统计页。
 - **长尾/后台页面软岛化**：页面级自定义卡（单帖卡、群详情 hero/指标/操作、他人主页、首页 onboarding/统计/轮播、admin 模块卡与表格外壳）一律按 design-system §19 软岛化；例外按 §19.5（表格行线/表头线、输入控件、媒体容器、hero 封面、内容分隔线、chip/badge、头像环、弹层、地图面板等保留其功能边界）。单帖卡=内容岛；媒体容器去 1px 描边但保留圆角/阴影/focus-ring；表格外壳去描边但表头/行线/行 hover 保留。
 - **表格（长尾/后台）**：390 宽必须可横向滚动到全部列（容器 `overflow-x-auto`，列不强行压缩）；单页 ≤20 行不强制 sticky；分页/筛选/空态/加载/错误统一走既有原语；行按钮次级软填，危险操作 soft danger。长尾页加载态：列表/卡优先 Skeleton；单实体/短列表可 InlineLoading（页面注释给理由）；空态 `EmptyState`、错误 `LoadError` + 重试、到底 `ListEnd`，四态不得互替。
@@ -148,15 +148,15 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 ### 宽屏呼吸档与列表轴
 
-1. `PageHeader` 的 `maxWidth` 与 `StandardPageLayout` 的 `contentMaxWidth` 必须同值**成对**出现（审计发现 /me 正文 1280 档而页头全宽，轴漂移 46–158px）。宽屏呼吸档统一 **1280**（数字字面量）；呼吸型页面不再自造 `max-w-5xl/6xl/7xl` / `48rem` 私有档（阅读/表单列的既有 rem 列宽属「断点与内容宽度」的另一类，不属呼吸档）。
-2. 列表/卡片分区内层禁止 `mx-auto max-w-2xl/3xl` 再收窄（ProfileUserSection / SectionGroups 已清理）；骨架必须与内容同宽，否则骨架→内容位移。
+1. `PageHeader` 的 `maxWidth` 与 `StandardPageLayout` 的 `contentMaxWidth` 必须同值**成对**出现（反例：/me 正文 1280 档而页头全宽，轴漂移 46–158px）。宽屏呼吸档统一 **1280**（数字字面量）；呼吸型页面不再自造 `max-w-5xl/6xl/7xl` / `48rem` 私有档（阅读/表单列的既有 rem 列宽属「断点与内容宽度」的另一类，不属呼吸档）。
+2. 列表/卡片分区内层禁止 `mx-auto max-w-2xl/3xl` 再收窄（ProfileUserSection / SectionGroups 都不得再收窄）；骨架必须与内容同宽，否则骨架→内容位移。
 3. 验收口径：列表岛宽度 / main 宽度 ≥0.70@1920（关系/举报页实测 0.74–0.95）。
 
 ### 聊天页内容轴与降噪
 
 聊天页（桌面分栏 / 移动推入）是唯一豁免 StandardPageLayout 的常规页面，但三块内容必须同轴：
 
-1. **唯一列宽来源**：`components/messages/ChatColumn.svelte`（`mx-auto w-full max-w-3xl lg:max-w-5xl`）。聊天头部 / 消息列 / 输入栏内部都包它；页面/组件不得再写各自的 `max-w-*`。实测 1440 三列全部 x=576 / w=852；1920 全部 x=730 / w=1024；1303 全部 x=576 / w=715。错位是「头部飘着、消息挤在一侧」的直接原因（改前群聊头 768 vs 消息 1024，差 128px/侧）。
+1. **唯一列宽来源**：`components/messages/ChatColumn.svelte`（`mx-auto w-full max-w-3xl lg:max-w-5xl`）。聊天头部 / 消息列 / 输入栏内部都包它；页面/组件不得再写各自的 `max-w-*`。实测 1440 三列全部 x=576 / w=852；1920 全部 x=730 / w=1024；1303 全部 x=576 / w=715。（反例：群聊头 768 vs 消息 1024，差 128px/侧，表现为「头部飘着、消息挤在一侧」）。
 2. **短会话底对齐**：消息内容容器 `min-h-full flex flex-col justify-end`，空白留在上方；顶部锚定 + 底部 228px 死空白是「消息页很怪」的主因之一。
 3. **ListEnd 降噪**：「没有更多了」只在历史确实翻页并耗尽后渲染（首屏一次返回全部、`next_cursor=null` 时不得出现）；日期分节用中性 11px 文本标签，禁止白底胶囊。
 4. 输入条整体铺满面板（发丝线是功能线），内部内容经 ChatColumn 与消息列同轴；不得再用 `mx-auto max-w-3xl` 直接居中（会与消息列错 26–128px）。
@@ -182,4 +182,4 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 ## references
 
-- `references/wide-regression.md`：宽屏回归基线的路由清单、测量口径与历史数值。
+- `references/wide-regression.md`：宽屏回归基线的路由清单、测量口径与基线数值。

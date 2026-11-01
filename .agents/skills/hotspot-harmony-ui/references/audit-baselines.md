@@ -29,7 +29,7 @@
 
 **结论：本仓交互原语（Pressable / SystemButton / SystemCard / SurfaceIconButton / SystemToggle / TabsPillGroup / SystemInput / 设置行）的反馈机制完备，无需补齐。**
 
-**审计脚本的坑**：用「onClick 所在属性链上是否出现 scale/onTouch/animation/backgroundColor」做启发式，误报率极高（本次 21/21 误报）——因为反馈常在**组件内部**或**由状态间接驱动**。要判断某处是否真缺反馈，必须**打开该组件与其使用上下文**看，不能只扫属性链。
+**审计脚本的坑**：用「onClick 所在属性链上是否出现 scale/onTouch/animation/backgroundColor」做启发式，误报率极高（21/21 误报）——因为反馈常在**组件内部**或**由状态间接驱动**。要判断某处是否真缺反馈，必须**打开该组件与其使用上下文**看，不能只扫属性链。
 
 ## 3. 性能审计基线（全部无缺口）
 
@@ -43,7 +43,7 @@ ArkUI 性能清单四项实测结果与复核方法（改列表/图片相关代�
 | Image 尺寸约束 | **20/20** 有 objectFit + 宽高/aspectRatio | 动态图全用 `.width('100%') + .aspectRatio() + objectFit(Cover) + alt + onError` 契约 |
 | 事件生命周期 | **9/9 组件 on/off 配对完整**（补测） | interactionEventHub 订阅组件 5 个（MomentFeedCard / MomentWallCard / MomentDetailPage / GroupCard / UserCard）+ ChatPage 9on/9off + ProfilePage 双事件双注销 + NativeMapComponent（清定时器/清聚合层/**release 全部 PixelMap**）；地图监听挂组件自有 controller 随组件销毁。新增订阅时必须在 aboutToDisappear 注销同 handler 引用 |
 
-**审计脚本的坑（第三次验证同一规律）**：Image 约束检查报 3 处「缺尺寸」，实际都有 `.width('100%') + .aspectRatio()` —— 脚本只认数字 `.width(N)/.height(N)`。启发式只产候选清单，判定必须人工开上下文；键函数要按「块收尾行」提取而非开头。
+**审计脚本的坑（同一规律）**：Image 约束检查报 3 处「缺尺寸」，实际都有 `.width('100%') + .aspectRatio()` —— 脚本只认数字 `.width(N)/.height(N)`。启发式只产候选清单，判定必须人工开上下文；键函数要按「块收尾行」提取而非开头。
 
 ## 4. 通用规律（指针）
 

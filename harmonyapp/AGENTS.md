@@ -30,15 +30,15 @@ JAVA_HOME=/Applications/Android Studio.app/Contents/jbr/Contents/Home
 PATH=$JAVA_HOME/bin:$PATH
 ```
 
-- **所有 hvigor 命令一律 `--no-daemon`**：构建/check 完进程立即退出，禁止 `--daemon`（会常驻 Java 进程占资源）。历史残留 daemon 用 `$NODE $HVIGOR --stop-daemon` 清理；游离进程（`--stop-daemon` 报 0 但 `ps` 仍见 `hvigor-java-daemon`）用 `pkill -f hvigor-java-daemon`。
+- **所有 hvigor 命令一律 `--no-daemon`**：构建/check 完进程立即退出，禁止 `--daemon`（会常驻 Java 进程占资源）。残留 daemon 用 `$NODE $HVIGOR --stop-daemon` 清理；游离进程（`--stop-daemon` 报 0 但 `ps` 仍见 `hvigor-java-daemon`）用 `pkill -f hvigor-java-daemon`。
 - `$OHPM install --all --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true` — 安装依赖
 - `$NODE $HVIGOR --mode project -p product=default -p buildMode=debug assembleApp --analyze=normal --parallel --incremental --no-daemon` — 编译整个应用（含 CompileArkTS + 打包 + 签名，约 45s）。**`-p buildMode=debug` 不可省**：缺省按 release 构建，`BuildProfile.DEBUG=false` 会让 `SERVER_BASE_URL` 指向生产域名（`chaoset.com`，与 Web 网关同域；api 子域未建 DNS），本地调试环境永远连不上后端且不易察觉
 - `$NODE $HVIGOR clean --no-daemon` — 清理构建产物
 
-> `assembleHap` 任务**按模式存在**（2026-10-31 实测，hvigor 6.26.4）：`--mode module` 下可用（`Finished :entry:assembleHap` / `BUILD SUCCESSFUL`），`--mode project` 下才报 `Task 'assembleHap' was not found`。不要把它当成已废弃任务删掉。
+> `assembleHap` 任务**按模式存在**（验证方式：实测；hvigor 6.26.4）：`--mode module` 下可用（`Finished :entry:assembleHap` / `BUILD SUCCESSFUL`），`--mode project` 下才报 `Task 'assembleHap' was not found`。不要把它当成废弃任务删掉。
 > 本项目的完整验证仍统一用 `assembleApp`（`--mode project`，含 CompileArkTS + 打包 + 签名）；类型检查在 assembleApp 启动时自动执行（首行 `TYPE CHECK SUCCESSFUL`）。
 
-**提交时的 hvigor 门禁（2026-10-19 实测）**：repo root 的 pre-commit 钩子会对 `harmonyapp/` 改动跑 hvigor
+**提交时的 hvigor 门禁**：repo root 的 pre-commit 钩子会对 `harmonyapp/` 改动跑 hvigor
 `assembleApp`（工具链缺失时告警跳过）。沙盒内缓存目录（`~/.hvigor`、`~/.npm`、`~/.ohpm`）已由
 sandbox-extra-roots 放行，直接 `git commit` 即可，**不要 export `HVIGOR_USER_HOME`/`npm_config_cache` 重定向**。
 若报 `EPERM: ... mkdir '/Users/<me>/.hvigor/project_caches/...'`（不是 Git 问题），把该目录加进插件配置即可
@@ -142,5 +142,5 @@ PageShellContainer、路由对齐、SystemButton / SystemInput 原语与已登�
 - 页面头部用 SystemPageHeader（专用变体 SearchPageHeader / ChatPageHeader）；内容栏用 PageShellContainer。
 - 通用按钮/输入框用 SystemButton / SystemInput，禁止手写重复样式（已登记例外见 skill）。
 - 跨端 token（色彩/字号/圆角）必须与 frontend 同步，check:theme 漂移即拦截。
-- 状态色 on-soft（R12）：`ColorConfig.accentOnSoft/onlineOnSoft/warningOnSoft/dangerOnSoft` 必须等于 web 语义色 80% + textPrimary 20%；
+- 状态色 on-soft：`ColorConfig.accentOnSoft/onlineOnSoft/warningOnSoft/dangerOnSoft` 必须等于 web 语义色 80% + textPrimary 20%；
   `python3 harmonyapp/scripts/check_status_parity.py` 断言双端 6 配置 × 4 语义色 hex 一致与对比度 ≥4.5（palette 值不变）。

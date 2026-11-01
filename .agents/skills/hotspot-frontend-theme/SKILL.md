@@ -31,17 +31,17 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token（shared �
 
 ## 画布、软岛与媒体表面 token（强制）
 
-- **连续画布契约**：`--cst-surface-page`（= page-bg）是应用内唯一的整层底色。外壳各层（外框/内框/视口/状态栏/安全区/导航底座透明区/桌面顶栏/侧栏/主内容）一律只许用它连续铺底，**不得再加**包裹整页的描边/圆角/白底/硬分隔线（会在屏幕边缘形成「框线」，用户明确否决）。层级只靠**内容单元软岛**与留白表达；内容单元格本身不是页面框，可保留。禁止引入第二个整层底色（原整层底色 `workspace` token 已删除；layout.css 仅保留 `--cst-workspace-gap`/`-inset` 间距变量，不是底色）。分壳规则：四端外壳直接暴露画布（`[data-page-viewport]` 透明），桌面氛围画布为**整窗单实例**（外壳根挂一次）；`PageHeader` 实底走 `.page-header-solid`（一律画布色，**无底边线**，滚动时才允许柔和投影），sticky glass 仍走 `surface-nav-glass`。唯一例外：聊天页独立画布 `--cst-surface-chat`（= chat-bg，微差于页面画布，对齐鸿蒙 `chatBackground`），仅聊天页根/头部/输入条使用。
+- **连续画布契约**：`--cst-surface-page`（= page-bg）是应用内唯一的整层底色。外壳各层（外框/内框/视口/状态栏/安全区/导航底座透明区/桌面顶栏/侧栏/主内容）一律只许用它连续铺底，**不得再加**包裹整页的描边/圆角/白底/硬分隔线（会在屏幕边缘形成「框线」）。层级只靠**内容单元软岛**与留白表达；内容单元格本身不是页面框，可保留。禁止引入第二个整层底色（`workspace` 整层底色 token 已删除；layout.css 仅保留 `--cst-workspace-gap`/`-inset` 间距变量，不是底色）。分壳规则：四端外壳直接暴露画布（`[data-page-viewport]` 透明），桌面氛围画布为**整窗单实例**（外壳根挂一次）；`PageHeader` 实底走 `.page-header-solid`（一律画布色，**无底边线**，滚动时才允许柔和投影），sticky glass 仍走 `surface-nav-glass`。唯一例外：聊天页独立画布 `--cst-surface-chat`（= chat-bg，微差于页面画布，对齐鸿蒙 `chatBackground`），仅聊天页根/头部/输入条使用。
 - **内容岛表面**：`--cst-surface-island`（light = `surface-primary 86%` 半透合成画布；dark = `surface-primary 94% + text-primary 6%`；三主题×明暗 6 处，registry 映射 `bg-surface-island`）。开放页面内容分组用「软岛」：无硬描边 + `shadow-xs` + `rounded-lg`(20) + `p-2` + 行透明/gap；**禁止再给 `ListContainer bordered` 覆写 border/bg/radius**。详见 design-system §19；页面结构侧规则见 skill `hotspot-frontend-layout`「内容软岛与长尾/后台页面」。
 - **图片优先卡遮罩**：整卡图片卡只用 `--cst-surface-card-scrim-top` / `--cst-surface-card-scrim-bottom` / `--cst-surface-card-fallback`（三主题×明暗定义在 `themes/*.css`，语义见 `docs/design-system.md` §17）；禁止页面里写 rgba 遮罩。**可读性优先**：压图文字必须满足 4.5:1，必要时加深 token alpha，不要靠浅色玻璃底压白字。
 - **氛围画布**：内容稀疏/空态页用主题化装饰层补纵深，唯一实现 `components/layout/ambient/AmbientBackdrop.svelte`：canvas 变体挂四端外壳内容区（桌面主内容卡 / 平板 / 移动）/ 认证页 / 错误页 / 启动占位；chrome 变体挂桌面顶栏与侧栏（只铺天光、不画世界层）。页面禁止自建第二套背景装饰。装饰层是**透明渐变/图形叠加**，不引入第二整层底色，因此不违反画布契约；它必须 `aria-hidden` + `pointer-events:none` + `z-index:-1`（容器 `relative isolate`）。色值走 `themes/*.css` 的 `--cst-ambient-*` 全套 token（三主题 × 明暗；新增主题必须补齐，`check-theme-parity` 强制），完整分层/主题语言/边界见 `docs/design-system.md` 第 16 节。
 - **图钉 SVG 资源（`assets/markers/*.svg`）**：主题色 fill/stroke 一律用 `currentColor`，由 `location-shared.ts` 的 `markerSvg()` 以 `style="color:var(--cst-marker-*)"` 染色，随主题/明暗变化；资源内仅保留图标固有固定对比色（深色底 `#102A43`、白色高光 `#FFFFFF`）不随主题，属合理例外。新增 marker 类 SVG 必须遵循：主题色走 currentColor，禁止内嵌主题色 hex。
 - **主题选择器 swatch（stores/theme.svelte.ts `THEME_OPTIONS`）**：色板需在主题激活前静态展示**目标主题**的 accent 代表色，而 CSS 变量只能解析「当前」主题，故保留字面 hex（vibrant `#2B5EB2` / forest `#39714F` / inkwash `#A63A2E`）作为已登记例外；必须与 themes/{vibrant,forest,inkwash}.css 的 `--cst-palette-accent-primary` 保持同步（check-cross-platform-colors.mjs 直比）。
 
-## 输入表面 token（2026-10-29）
+## 输入表面 token
 
 - 输入族表面统一走 `.input-surface`（utilities.css）；颜色全部由 semantic.css 的 `--cst-field-*` 派生：`bg` / `bg-disabled` / `border` / `border-hover` / `border-focus` / `ring` / `ring-danger`（由 accent / status-danger / surface 系混出，三主题×明暗自动成立）。
-- **主题文件（themes/*.css）禁止覆写 `.input-surface`**：vibrant 曾给全部输入加 `backdrop-filter: blur(16px)` + 白化混合底，导致大面积毛玻璃（违反性能红线）且与 forest/inkwash 纸面语言不一致；2026-10-29 全部移除。
+- **主题文件（themes/*.css）禁止覆写 `.input-surface`**：给全部输入加 `backdrop-filter: blur(16px)` + 白化混合底会导致大面积毛玻璃（违反性能红线），且与 forest/inkwash 纸面语言不一致。
 - 输入表面不使用投影（静态/hover/focus 都不加）：层级由单层 hairline 边界 + 字段底 + 焦点环表达，纸面主题因此零主题分支。
 - 新增字段色档只能在 semantic.css 用 `color-mix` 派生（定义层最终值）；组件/页面仍禁止 color-mix。`--cst-field-*` 不注册 Tailwind 颜色类（组件不消费类名）。
 
@@ -57,7 +57,7 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token（shared �
 - `--cst-surface-navigation-active` = `color-mix(accent-default 26%, surface-page)`（选中底色）；
 - `--cst-surface-navigation-active-hover` = `color-mix(accent-default 34%, surface-page)`（选中+hover）。
 - 三者定义在 `semantic.css`（随主题 × 明暗自动派生，**不要**写进 themes/*.css palette，跨端 parity 不比对）；`theme-registry.css` 注册 `--color-surface-navigation-{hover,active,active-hover}` 以启用 `bg-surface-navigation-*` 类（Tailwind v4 未注册 utility 静默失效）。
-- 灰度验收口径：hover 底/画布 ≥1.2、选中底/画布 ≥1.4，且选中至少 2 种非颜色线索（指示条/内缘描边/字重/图标）；`filter:grayscale(1)` 截图（三主题 × 明暗）留档。hover 禁用 accent 色相（色盲会把 hover 误读成选中）。旧值（text-primary 9% 混 surface-primary）实测 hover 底/画布仅 1.07–1.19:1、灰度不可辨，已被取代。
+- 灰度验收口径：hover 底/画布 ≥1.2、选中底/画布 ≥1.4，且选中至少 2 种非颜色线索（指示条/内缘描边/字重/图标）；`filter:grayscale(1)` 截图（三主题 × 明暗）留档。hover 禁用 accent 色相（色盲会把 hover 误读成选中）。反例（text-primary 9% 混 surface-primary）：hover 底/画布仅 1.07–1.19:1、灰度不可辨。
 
 ## 焦点/动效相关 token 口径
 
@@ -104,5 +104,5 @@ theme/
 
 - **Inter 自托管**：`static/fonts/inter-latin-wght.woff2`（latin 子集，可变字重轴 100–900，48 KB），`@font-face` 定义在 `src/styles/fonts.css`，首帧 `<link rel="preload">` 在 `src/app.html`（字体请求必须带 `crossorigin`，否则同源也会下载两次）。
 - **中文字形走系统字体栈**，不自托管 CJK 字体：`"Inter", "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans CJK SC", ui-sans-serif, system-ui…`（定义在 `theme/base.css`）。与 harmonyapp 使用系统字体的策略一致，也避免为 CJK 背上数 MB 分片。
-- **禁止在 CSS 里 `@import` 任何第三方样式表**（字体/图标/CDN 主题等）。`@import` 在样式表内部是串行且阻塞的：浏览器会把整张应用样式表挂起，直到该第三方资源返回。本项目实测代价——`@import url("https://fonts.googleapis.com/css2?...")` 122 KB / 2.4–5.1s，样式生效时间 2999ms；删除后同一构建 159ms（首次绘制 2908ms → 364ms）。需要外部字体/图标时改为自托管，或用 `media="print"` + `onload` 切回的非阻塞 `<link>` 并注明理由。
+- **禁止在 CSS 里 `@import` 任何第三方样式表**（字体/图标/CDN 主题等）。`@import` 在样式表内部是串行且阻塞的：浏览器会把整张应用样式表挂起，直到该第三方资源返回。本项目实测：带 `@import url("https://fonts.googleapis.com/css2?...")` 时 122 KB / 2.4–5.1s、样式生效时间 2999ms；改为自托管后同一构建 159ms（首次绘制 364ms）。需要外部字体/图标时改为自托管，或用 `media="print"` + `onload` 切回的非阻塞 `<link>` 并注明理由。
 - **许可**：字体许可全文随资源存放（`static/fonts/OFL.txt`），并在 `frontend/ATTRIBUTIONS.md` 登记来源与许可类型。

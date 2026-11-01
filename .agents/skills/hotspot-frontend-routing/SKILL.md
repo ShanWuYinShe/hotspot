@@ -21,7 +21,7 @@ src/routes/
     +layout.svelte         # MainLayout 外壳（桌面/平板/移动/横屏四端分派）
     +page.svelte           # 首页 = 发现（moments/search 热门模式，spec 定位“发现页首屏”）
     nearby/+page.svelte    # 「附近」枢纽页（地理轴唯一归属：Hero 统计 + 人/瞬间/群组三段分区，
-                           # 各段“查看全部”进下方三个叶子页；2026-10-19 起不再是 307 跳转）
+                           # 各段“查看全部”进下方三个叶子页；枢纽页直接渲染，不做 307 跳转）
     nearby/shared/NearbyHubSections.svelte  # 枢纽三段分区（纯展示，用例锁预览条数与入口）
     nearby/people/         # 附近的人
     nearby/groups/         # 附近的组

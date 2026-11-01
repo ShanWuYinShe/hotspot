@@ -15,10 +15,10 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
 | 热力点 | `components/map/MapHeatDot.svelte` | 经纬度投影 |
 | **我的位置蓝点** | `routes/(app)/map/shared/MapMyLocationDot.svelte`（经 `map/shared/MapOverlays.svelte` 挂载） | 经纬度投影（与图钉同口径，缩放/平移后钉在同一地理坐标）|
 
-**蓝点语义（用户 2026-10-10 权威澄清，红线）**：蓝点代表「**我的地理位置**」，不是
+**蓝点语义（红线）**：蓝点代表「**我的地理位置**」，不是
 「地图中心」——禁止用 `left:50%;top:50%` 钉视口中心来模拟，任何把二者混同的实现都是 bug。
 
-**反模式（已被取代）**：曾用 `left:50%;top:50%` 钉视口中心模拟蓝点——以偏离中心的光标为锚
+**反模式**：用 `left:50%;top:50%` 钉视口中心模拟蓝点——以偏离中心的光标为锚
 滚轮缩放一级（14→15）时底图按光标锚移动、蓝点不动，实测等效漂移 1339px，拖拽后同样失真。
 现由 `MapMyLocationDot` 按「我的位置 lat/lng → 地理投影」实现；任何把「我的位置」与
 「地图中心」混同的实现都是 bug。
@@ -42,7 +42,7 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
   悬停在 marker 上滚动的事件不经过画布。
 - 覆盖层 `pointer-events-none` 放行拖拽/滚轮给画布，marker 按钮自身恢复
   `pointer-events:auto`。**覆盖层若整体拦截真实指针事件 → 拖拽/滚轮全失效**，且
-  合成事件测试测不出来（历史修复 0f6528aa，线上 v1.3.1 因缺此提交滚轮全失效）。
+  合成事件测试测不出来（commit 0f6528aa 修复；缺这段逻辑时滚轮全失效）。
 
 ## 浏览器实测方法（agent-browser，合成 wheel 事件即可生效）
 
@@ -54,5 +54,5 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
    按 `getAttribute("style").includes("left:50%")` 找会扑空；按覆盖层
    （`className` 含 `pointer-events-none absolute inset-0`）的子元素找。
 5. 多标签时先 `agent-browser tab list` 确认当前标签——评估跑错标签会得出假结论
-   （2026-10-09 实际踩过：把线上页当本地测）。
+   （实测踩过：把线上页当本地测）。
 6. 结论口径：marker 无漂移 = 所有标记（含蓝点）缩放/平移后仍钉在同一地理坐标。

@@ -4,8 +4,6 @@
 
 Go 主后端,模块化单体 + S2 地理索引。提供认证/用户/群组/聊天/瞬间/Feed/搜索/地图/分享/媒体/举报/通知/系统/管理后台等全部 HTTP API 与 WebSocket 实时能力。支付/交易、端侧离线同步、消息全文搜索不在范围内。
 
-历史 `backend/`（Rust/Axum）已删除（2026-08 清理），git 历史可找回。
-
 API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）。
 
 ## 构建 & 测试
@@ -27,8 +25,8 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 > 从 `backend-go/` 里执行要写 `../scripts/verify-backend-ci.sh`，或先 `cd ..` 到仓库根。同理 `docs/` 指的是
 > 仓库根 `hotspot/docs/`（如 `docs/backend-audit.md` = `../docs/backend-audit.md`）。
 
-`go test -short` **不覆盖** CI 的以下检查，历史上多次「本地绿、CI 红」均源于此
-（2026-10-23 连续 4 个提交因真实库 SQL/参数错误红灯）：
+`go test -short` **不覆盖** CI 的以下检查，本地绿、CI 红常源于此
+（真实库 SQL/参数错误会造成红灯）：
 
 - `-race` 数据竞争 + `internal/modules` 每包覆盖率 **≥70%** 门禁；
 - `TestPostgresIT` 真实库仓库集成测试（会暴露 SQL 列歧义、参数个数不符等
@@ -84,7 +82,7 @@ TOKEN=<既有 token> ./scripts/perf-smoke.sh               # 非测试环境必�
 注意：本机 OrbStack 虚拟机在不同时间窗口的绝对吞吐波动可达 ±2 倍（CPU 节流/后台负载），
 **只有同一会话内的前后对比可信**；跨时间比较请同时记录时间与数据集（如 hotspot_test 是否被压测数据污染）。
 
-**已完成的其他性能基线**（2026-10-21 实测，避免重复排查）：pprof 端点已存在、pgx 连接池
+**其他性能基线**（验证方式：实测；避免重复排查）：pprof 端点存在、pgx 连接池
 MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 500ms/1s 为有意 fail-slow、
 本地热读接口 ~3ms —— 当前量级不需要读缓存。
 
@@ -200,7 +198,7 @@ Handler -> Service -> Repository
 **完整纪律见 skill hotspot-backend-migrations**（命名与幂等、向后兼容 expand-contract、
 data_migrations 旗标、禁止 CREATE INDEX CONCURRENTLY 的原因、INVALID 索引处理）。要点速记：
 
-- migrations/NNN_描述.sql，字典序执行；`schema_migrations` 版本表记录已应用文件（新库逐个执行并登记，存量库首次启动自动一次性基线，不重放历史）——幂等仍靠 IF NOT EXISTS（版本表是 2026-10-06 落地的加速与 CONCURRENTLY 前置，非幂等替代）；序号唯一由 CI 校验。
+- migrations/NNN_描述.sql，字典序执行；`schema_migrations` 版本表记录已应用文件（新库逐个执行并登记，存量库首次启动自动一次性基线，不重放历史）——幂等仍靠 IF NOT EXISTS（版本表提供加速与 CONCURRENTLY 前置，不是幂等的替代）；序号唯一由 CI 校验。
 - **迁移必须兼容上一个已发布版本的二进制**（只加不删，废弃列跨版本再清）。
 - **禁止 CREATE INDEX CONCURRENTLY**（pgx 简单协议下整文件单消息执行会落隐式事务，报 25001 导致启动失败）。
 - 无 down 迁移；回滚 = 旧镜像 + 保留新 schema。
@@ -251,7 +249,7 @@ data_migrations 旗标、禁止 CREATE INDEX CONCURRENTLY 的原因、INVALID �
 
 - 禁止 OFFSET，必须使用 cursor/keyset 分页
 - cursor 不透明，客户端只透传；编码/解码仅在 Repository 层
-- 时间 keyset 的精度必须对齐：游标携带的时间精度不得粗于排序列的写入精度（如列以 `time.Now().UTC()` 全精度写入，游标必须用 `RFC3339Nano` 编码；秒截断游标配全精度列会导致同秒行在翻页中静默丢失，见 `moments/fetch_favorites` 修复先例）。新增时间 keyset 列表时，复核「写入精度 × 游标精度 × 谓词」三者一致
+- 时间 keyset 的精度必须对齐：游标携带的时间精度不得粗于排序列的写入精度（如列以 `time.Now().UTC()` 全精度写入，游标必须用 `RFC3339Nano` 编码；秒截断游标配全精度列会导致同秒行在翻页中静默丢失，如 `moments/fetch_favorites` 的游标实现）。新增时间 keyset 列表时，复核「写入精度 × 游标精度 × 谓词」三者一致
 - limit 默认 20、上限 100，由 Service 层兜底裁剪
 - 无更多数据时 `next_cursor` 为 `null`（恒定 nullable，见 `spec/api_spec_types.md`），禁止省略字段
 
@@ -286,7 +284,7 @@ WebSocket 契约以 `spec/api_spec_websocket.md` 为权威来源，本节仅列�
 
 - 与 HTTP 共享同一套 auth 机制
 - 连接建立后 5 秒内必须收到 Auth，否则发送 `Error(code=20000, severity=fatal)` 并断开
-- 原生客户端（鸿蒙等）不受浏览器限制，实测会出现两种非浏览器行为：`Origin: null`，或同时发送 OS 默认 `Origin: <scheme>://<host>`（丢非默认端口）与客户端补充的同源 Origin；`sameOrigin` 在**无 Cookie** 时放行 null Origin，并对多 Origin 请求要求所有主机名与请求 Host 一致（浏览器禁止脚本设置 Origin，多值只可能来自原生客户端）。带 Cookie 的上述请求仍按跨站拒绝（2026-10-25 真机实测修复，见 `internal/platform/realtime/handler.go`）
+- 原生客户端（鸿蒙等）不受浏览器限制，实测会出现两种非浏览器行为：`Origin: null`，或同时发送 OS 默认 `Origin: <scheme>://<host>`（丢非默认端口）与客户端补充的同源 Origin；`sameOrigin` 在**无 Cookie** 时放行 null Origin，并对多 Origin 请求要求所有主机名与请求 Host 一致（浏览器禁止脚本设置 Origin，多值只可能来自原生客户端）。带 Cookie 的上述请求仍按跨站拒绝（验证方式：真机实测；见 `internal/platform/realtime/handler.go`）
 - 心跳参数由服务端下发，客户端不得硬编码
 - 多实例部署时必须配置跨实例 fanout（RedisBridge），否则跨实例事件丢失
 

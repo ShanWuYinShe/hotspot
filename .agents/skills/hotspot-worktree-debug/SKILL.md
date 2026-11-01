@@ -87,10 +87,9 @@ git branch -d <分支名>
 ## worktree 重映射端口下跑 E2E 集成测试（NGINX_PORT 契约）
 
 - 媒体两个 E2E 用例（TestMedia_E2E_PresignUploadComplete / Batch）的客户端入口
-  origin **跟随 NGINX_PORT 环境变量**（默认 8888，backend-go/test/integration
-  docker_test.go mediaPresignClientOrigin，2026-10-03 定稿；origin 固定的旧方案
-  已废——763e3fa2 修好 origin 跟随后，固定 8888 会把 PUT 打进默认端口那套栈，
-  complete_upload 在本栈查不到对象报 10400）。
+  origin **跟随 NGINX_PORT 环境变量**（默认 8888，见 backend-go/test/integration
+  `docker_test.go` 的 `mediaPresignClientOrigin`；origin 不能固定 8888——那样会把 PUT 打进默认端口
+  那套栈，complete_upload 在本栈查不到对象报 10400；origin 跟随由 commit 763e3fa2 实现）。
 - 重映射起栈（NGINX_PORT=8889 docker compose up …）后跑测试带**同名变量**即可，
   无需再 -skip：
   ```bash
@@ -100,7 +99,7 @@ git branch -d <分支名>
   ```
 - 真库 IT（internal/**/*_it_test.go，testdb.Open 读 POSTGRES_DSN）跑在同一
   hotspot_test 库上：库内有 E2E 累积数据，**IT 断言不能用绝对总数**，要用
-  「播种前基线 + 增量」口径（参考 admin/repo_postgres_stats_it_test.go，2026-10-01）。
+  「播种前基线 + 增量」口径（参考 admin/repo_postgres_stats_it_test.go）。
 
 ## worktree 内跑 Go 工具链（直接跑，含 pre-commit 门禁）
 
@@ -134,8 +133,8 @@ git branch -d <分支名>
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --force-recreate nginx
 ```
 
-重建后 `nginx -t` 与 `docker compose ps` healthy 再验。曾致 fixer 改完 `proxy_cookie_flags`
-后反复验证失败，排查半天才定位到挂载悬空（教训来源：dev 网关剥凭证 Cookie Secure 修复）。
+重建后 `nginx -t` 与 `docker compose ps` healthy 再验。反例：改完 `proxy_cookie_flags`
+后反复验证失败，根因就是挂载悬空（`restart` 不重做挂载）。
 
 
 ## worktree 内跑鸿蒙 hvigor（直接跑，DSH 沙盒环境）

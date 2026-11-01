@@ -7,16 +7,16 @@
 - 现象：同一对并排按钮，无 border 的呈胶囊（borderRadius=999 生效），带 hairline border 的呈直角矩形——尽管两者引用同一个 borderRadius 值（SHAPE.BUTTON=RADIUS.FULL）。
 - 根因：ArkUI 属性后设覆盖先设；`.border({width,color})` 自带的 radius 字段未显式给出时按 0 生效，把先前 `.borderRadius()` 的值覆盖掉。
 - 修复：**`.border()` 一律写在 `.borderRadius()` 之前**（后设的 borderRadius 覆盖 border）。
-- 排查口径（可复现，替代已清理的一次性脚本）：扫「`.borderRadius(` 之后 3 行内出现 `.border(`」的候选——
+- 排查口径（可复现）：扫「`.borderRadius(` 之后 3 行内出现 `.border(`」的候选——
   `grep -rn -A3 '\.borderRadius(' harmonyapp/entry/src/main/ets | grep -B2 '\.border('`
-  （历史一次性脚本曾报 66 处候选；是否真有视觉影响需逐例核实，部分元素本意即直角）。
+  （一次性脚本报过 66 处候选，但部分元素本意即直角，视觉影响需逐例核实）。
 - 实拍案例：ProfilePage 升级表单「取消」直角 vs「确认升级」胶囊。
 
 ## 2. Scroll 内容短于视口时默认垂直居中
 
 - 现象：短表单在 `Scroll{...}.layoutWeight(1)` 里「飘」在页中段，页头下方出现大空隙（实测 Scroll 高 597vp、内容 289vp，上下各留 154vp）。
 - 根因：Scroll 对小于滚动区的内容默认居中对齐。
-- 修复：表单类 Scroll 一律补 `.align(Alignment.Top)`（升级表单即此修法）。
+- 修复：表单类 Scroll 一律补 `.align(Alignment.Top)`（升级表单即按此处理）。
 - 排查：dump 里 Scroll bounds 与其内容 Column bounds 的 y1 不一致即为居中。
 
 ## 3. Refresh 内容区结构与防抖动契约（彻底消除下拉刷新鬼畜晃动）
@@ -33,4 +33,4 @@
 
 - 在 `if/else` 分支里用裸块包裹布局（如把两栏 `if` 简化成 `else { { Column() {...}.layoutWeight(1) } }`）时，块内 `.layoutWeight()` **不生效**，容器高度塌陷 → 内部 `WaterFlow`/`List` 高度为 0 → **页头（标题/计数/筛选）正常但内容一条不渲染**。类型检查与编译都不会报错，必须端上或预览器确认。
 - 修法：删掉裸块，容器直接作为分支体。
-- 自查口径：任何「改完结构后内容区空白」的问题，先看分支体是不是裸块、`.layoutWeight()` 是否直接挂在**容器组件**上（Column/Row/List/WaterFlow）。判定手法：dump 节点数（本例页头 10 节点 → 修复后 52 节点）。
+- 自查口径：任何「改完结构后内容区空白」的问题，先看分支体是不是裸块、`.layoutWeight()` 是否直接挂在**容器组件**上（Column/Row/List/WaterFlow）。判定手法：dump 节点数（本例页头 10 节点 → 正常时 52 节点）。

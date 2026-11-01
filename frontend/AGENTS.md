@@ -20,7 +20,7 @@ API 契约见 `spec/api_spec_*.md`（`spec/` 目录只读权威）。
 - 组件测试约定：与组件同目录的 `__tests__/Xxx.test.ts`（如
   `components/shared/__tests__/Avatar.test.ts`）；snippet 类 props
   在 jsdom 下传参不稳定，契约用例以渲染/交互/布局差异为准
-- 开发数据：dev 环境直连真实后端，**不内置任何 API mock**（原 MSW 已移除）。可复现的测试数据由
+- 开发数据：dev 环境直连真实后端，**不内置任何 API mock**。可复现的测试数据由
   后端种子命令注入（Postgres + SeaweedFS 双写），见根 `AGENTS.md`「开发种子数据」与
   `backend-go/AGENTS.md`：`./scripts/seed-dev.sh`（幂等；`--reset` 重建）。
   测试账号 `qa@hotspot.local`（普通用户）与 `admin@hotspot.local`（管理员，同时是完整普通用户），
@@ -96,12 +96,12 @@ bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 逐页截图并生成报告。输出统一在仓库根 `.workwork/browser-check/qa-<时间戳>/`
 （已 gitignore，不提交）。
 
-沙盒/受限环境（2026-10-02 实测）两个坑：
+沙盒/受限环境两个坑：
 1. 脚本按 `command -v agent-browser` 找二进制，沙盒内可能解析到绕过 wrapper 的裸
    二进制（socket 目录不可写直接全 FAIL）——用 `AB=~/.local/bin/agent-browser`
    前缀显式指到 wrapper；被拦后按现行方案对该命令申请 `danger-full-access`
-   （2026-10-14 起提权原生启动，插件有意不放行 `~/.agent-browser`）；
-2. （2026-10-27 修正）qa 会话是独立 `--session` 实例、自带独立临时 profile，与既有
+   （提权原生启动；插件有意不放行 `~/.agent-browser`）；
+2. qa 会话是独立 `--session` 实例、自带独立临时 profile，与既有
    会话无 profile 冲突；`close --all` 属红线禁止（会关掉全机所有会话，wrapper 会直接
    拦截并给出正确指引）。浏览器起不来时先 `agent-browser session list` 复查残留，
    再用 `node ~/.agents/bin/ab-reap-orphans.mjs --min-age 0` 清孤儿（先确认无活任务），
@@ -114,7 +114,7 @@ bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 容器（`docker compose stop frontend`），跑完再 `docker compose start frontend`。
 
 
-### 质量门禁脚本（R11 固化，需 dev 环境 + agent-browser）
+### 质量门禁脚本（需 dev 环境 + agent-browser）
 
 ```bash
 # axe 可访问性：全部桌面页（QA 18 + 审计扩展 17 + 详情页 3，详情取不到则 35）
@@ -146,12 +146,12 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
 - 调试/开发/预览时，默认入口是 `http://localhost:8888`（nginx 网关），不是 dev server 地址
 - 修改 nginx 配置后必须重启对应容器
 - Svelte 组件互引必须写显式 `.svelte` 扩展名（默认导出）；Svelte 5 单文件单组件
-- 新增依赖后**必须重建容器**：frontend 的 `entrypoint` 只在**启动时**跑 `bun install --frozen-lockfile`，运行中不会检测依赖变化——`docker compose up -d --force-recreate frontend`（2026-10-31 复核 `docker-compose.dev.yml` 第 166-169 行）
+- 新增依赖后**必须重建容器**：frontend 的 `entrypoint` 只在**启动时**跑 `bun install --frozen-lockfile`，运行中不会检测依赖变化——`docker compose up -d --force-recreate frontend`（验证方式：核对 `docker-compose.dev.yml` 第 166-169 行）
 - 每个路由 `+page.svelte` 必须设置 `<svelte:head><title>`（格式 `页面名 · HotSpot`）；
   `(app)` 组外层已提供 skip link（`#main-content`），路由内容滚动区
   `RoutedContentViewport` 的 `<main id="main-content">` 不得移除
 
-## UI 设计原则（用户硬性要求）
+## UI 设计原则（硬性要求）
 
 1. **好看**：效果克制、有节奏，不堆叠效果，不用生硬或突兀的视觉。
 2. **交互状态一眼可辨**：hover / focus / active / disabled 四态都必须有明确可感知的
@@ -178,7 +178,7 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
    - 紧凑型徽标（未读数气泡、状态胶囊、卡片角标）：`h-5 px-2` 或 `h-5 px-2.5`，字号 `text-xxs`；
    - 标准型标签（封面分类胶囊、个人兴趣标签、大图页码）：`h-6 px-2.5`，字号 `text-xs font-medium`；
    - 表单筛选胶囊（`TagPill`）：`sm` 为 `h-6 px-2.5 text-xxs`，`md` 为 `h-7 px-3 text-xs`。
-   - **实现必须用原语**（2026-10-29）：非压图徽章/标签一律 `data-display/Badge`（`size="sm"`=20px / `"md"`=24px，`tone` 枚举）；压图角标用 `.media-badge`；数字未读用 `shared/UnreadBadge`（`variant="accent|inverse"`）。禁止手写 `inline-flex h-5/h-6 rounded-full px-*` 胶囊或旧 `.badge` 类（检查器 `raw-badge` 拦截）。
+   - **实现必须用原语**：非压图徽章/标签一律 `data-display/Badge`（`size="sm"`=20px / `"md"`=24px，`tone` 枚举）；压图角标用 `.media-badge`；数字未读用 `shared/UnreadBadge`（`variant="accent|inverse"`）。禁止手写 `inline-flex h-5/h-6 rounded-full px-*` 胶囊或旧 `.badge` 类（检查器 `raw-badge` 拦截）。
 
 > 具体状态契约见 skill `hotspot-frontend-style`（样式自查清单 → 交互状态契约）。
 
@@ -202,7 +202,7 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
 
 - 普通页用 StandardPageLayout，分栏页用 SplitPageLayout；禁止自行拼装页头/滚动/横向 padding。
 - 权威样板页：src/routes/(app)/nearby/moments/+page.svelte。
-- **hub/列表页页头统一 `PageHeader variant="integrated"`**（2026-10-29）：无背景/边框/吸顶，标题+副标题/计数+工具同一行，筛选/操作 below 紧随（组件统一间距），正文直接开始；**禁止正文再重复页面标题/分区头**。适用 /nearby、/nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；搜索页（sticky 搜索优先）、设置/表单、聊天分栏、品牌首页不套用。其余页面用默认变体（sticky）。
+- **hub/列表页页头统一 `PageHeader variant="integrated"`**：无背景/边框/吸顶，标题+副标题/计数+工具同一行，筛选/操作 below 紧随（组件统一间距），正文直接开始；**禁止正文再重复页面标题/分区头**。适用 /nearby、/nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；搜索页（sticky 搜索优先）、设置/表单、聊天分栏、品牌首页不套用。其余页面用默认变体（sticky）。
 - Tab 一律 TabBar；列表一律 ListContainer + ListItem；空/加载/失败/到底四态各司其职。
 - 页面纵向间距收敛到样板约定值，禁止散乱 py-* 值。
 
@@ -218,7 +218,7 @@ src/
                   #   StandardPageLayout/SplitPageLayout/PageHeader/ContentColumn/
                   #   PageViewport/RoutedContentViewport）
                   #   单路由私有组件留在该路由目录，跨路由复用的才下沉到 components/
-                  #   （反例校正 2026-10-31：moments/ 是仍在使用的域目录，MomentCard 位于
+                  #   （moments/ 是仍在使用的域目录，MomentCard 位于
                   #   components/moments/，被 /nearby/moments 与 ProfileMomentTile 引用）
   stores/         # runes 模块单例（auth/theme/platform/presence/ws/composer/toast/admin/mapSource/unread，.svelte.ts）
   lib/            # 工具函数 + 路由常量 + 数据工厂（.svelte.ts 响应式；ws/ 为 WebSocket
@@ -242,7 +242,7 @@ src/
 
 **完整契约见 skill hotspot-frontend-style**（样式自查清单、交互状态契约、档位表；档位数值以根 `docs/design-system.md` 为准）。要点一句话：风格值落 token 体系（布局几何 px 除外）、档位禁止近邻并存、用既有交互工具类、焦点必须可见、UI 改动必须截图对比审查（细则见「UI 设计原则」）。
 
-- **输入族（2026-10-29 第二轮收口）**：搜索一律 `forms/SearchInput`（胶囊 / 39px / text-md / 清空钮 44 命中）；单行一律 `forms/Input`（`density="default"` 43px / `"compact"` 39px）；多行一律 `forms/Textarea`（统一 `px-3.5 py-3` 壳）；下拉一律 `forms/Select`（`field`/`ghost`）；复选一律 `forms/Checkbox`。页面不得手写 input/textarea/select/checkbox/`.input-surface`，不得传 padding/圆角/字号覆盖原语（例外只能登记 allowlist 并写理由）。
+- **输入族**：搜索一律 `forms/SearchInput`（胶囊 / 39px / text-md / 清空钮 44 命中）；单行一律 `forms/Input`（`density="default"` 43px / `"compact"` 39px）；多行一律 `forms/Textarea`（统一 `px-3.5 py-3` 壳）；下拉一律 `forms/Select`（`field`/`ghost`）；复选一律 `forms/Checkbox`。页面不得手写 input/textarea/select/checkbox/`.input-surface`，不得传 padding/圆角/字号覆盖原语（例外只能登记 allowlist 并写理由）。
 - **同类型一致性（强制）**：任何同类型 UI（搜索/输入/文本域/下拉/复选/Tab/按钮/卡片/列表行/空态…）在所有页面必须走同一原语或同一登记类契约，上下文差异只允许通过原语变体表达，禁止页内近似实现。输入族由 `bun run check:ui-consistency`（scripts/check-component-consistency.mjs，已挂入 `bun run check`）源码级拦截；契约与例外清单见 `docs/ui-components.md`「同类型一致性契约」，表面状态详见同文「输入族契约」与 `src/styles/__tests__/input-surface-contract.test.ts`。
-- **卡片行内交互（2026-10-29 用户反馈）**：作者行内所有「看起来可点」的元素必须是真实 `button/a` + `pointer-events-auto` + `stopPropagation`；禁止不可点徽章伪装按钮（会穿透整卡覆盖层直接打开详情）。关注态统一 `ui/FollowButton size="chip"`（`aria-pressed` + 「取消/关注 + 名字」 + 乐观态 + toast），点击不得触发卡片 `onClick`；非交互徽章允许点击穿透。新增卡片必须过「行内控件逐一点击」审计：头像/昵称→主页、动作→只切换、评论→详情评论区、封面→详情、关注→取关不导航。
-- **详情页（瞬间详情）**：顶部用 `DetailHeader`（`sticky top-0`，`scrollThreshold=160`：起始为整行工具行，滚动过阈值后收成居中胶囊岛并常驻，不随内容滚走）——**不渲染 `PageHeader`/横栏**，这两点别混为一谈（2026-10-31 校正：旧文写「非吸顶、随内容滚走」，与现行 `DetailHeader` 相反）；图片是内容卡首屏：整幅出血、宽度撑满内容卡 + 高度按图片自身比例（`w-full h-auto`），**任何分辨率下左右不得出现留白/模糊铺底**（高图由页面滚动承载，禁止用 max-h 压成异形）；ambient matte 仅作加载失败兜底；禁止固定高度 + `object-cover` 裁切；**多图走画廊导航**（主图 + 底部 56px 横向缩略图条，点击内联切换主图，右下角 `N / M` 页码；点击主图进全屏查看器），禁止再堆 3 列大缩略图网格；**图片区只保留顶部圆角**（卡片 `overflow-hidden` 裁剪）、底部直角贴边（禁止悬浮圆角矩形式图片卡）；缩略图条容器需给选中 ring 留绘制空间（`-mx-1 px-1 py-1`），禁止被 `overflow-x-auto` 裁掉；评论输入器 **桌面/平板 `inline`（嵌评论区）/ 手机 `docked`**（`SplitPageLayout` 的 footer 渲染，`sticky bottom-0` 常驻贴底：横向 padding + 顶部分割线 + 毛玻璃实底，消除悬浮漏光）；发送钮 `size-9`（36px）；移动端不叠加第二条底部动作条。（2026-10-31 校正：旧文写的 `floating` 悬浮 dock / 40px / 禁止通栏底栏已作废，`floating` 变体当前无调用方。）契约见 `docs/ui-components.md`「详情页契约」（2026-10-31 已同步为现行口径）。
+- **卡片行内交互**：作者行内所有「看起来可点」的元素必须是真实 `button/a` + `pointer-events-auto` + `stopPropagation`；禁止不可点徽章伪装按钮（会穿透整卡覆盖层直接打开详情）。关注态统一 `ui/FollowButton size="chip"`（`aria-pressed` + 「取消/关注 + 名字」 + 乐观态 + toast），点击不得触发卡片 `onClick`；非交互徽章允许点击穿透。新增卡片必须过「行内控件逐一点击」审计：头像/昵称→主页、动作→只切换、评论→详情评论区、封面→详情、关注→取关不导航。
+- **详情页（瞬间详情）**：顶部用 `DetailHeader`（`sticky top-0`，`scrollThreshold=160`：起始为整行工具行，滚动过阈值后收成居中胶囊岛并常驻，不随内容滚走）——**不渲染 `PageHeader`/横栏**，这两点别混为一谈；图片是内容卡首屏：整幅出血、宽度撑满内容卡 + 高度按图片自身比例（`w-full h-auto`），**任何分辨率下左右不得出现留白/模糊铺底**（高图由页面滚动承载，禁止用 max-h 压成异形）；ambient matte 仅作加载失败兜底；禁止固定高度 + `object-cover` 裁切；**多图走画廊导航**（主图 + 底部 56px 横向缩略图条，点击内联切换主图，右下角 `N / M` 页码；点击主图进全屏查看器），禁止再堆 3 列大缩略图网格；**图片区只保留顶部圆角**（卡片 `overflow-hidden` 裁剪）、底部直角贴边（禁止悬浮圆角矩形式图片卡）；缩略图条容器需给选中 ring 留绘制空间（`-mx-1 px-1 py-1`），禁止被 `overflow-x-auto` 裁掉；评论输入器 **桌面/平板 `inline`（嵌评论区）/ 手机 `docked`**（`SplitPageLayout` 的 footer 渲染，`sticky bottom-0` 常驻贴底：横向 padding + 顶部分割线 + 毛玻璃实底，消除悬浮漏光）；发送钮 `size-9`（36px）；移动端不叠加第二条底部动作条。（`floating` 变体当前无调用方。）契约见 `docs/ui-components.md`「详情页契约」。

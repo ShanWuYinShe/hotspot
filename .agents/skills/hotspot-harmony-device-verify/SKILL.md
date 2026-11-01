@@ -5,7 +5,7 @@ description: hotspot 鸿蒙端模拟器实测流程：项目事实与测试账�
 
 # hotspot 鸿蒙端模拟器实测流程（hdc + uitest）
 
-> 通用 hdc 行为见用户级 skill `harmony-device-debug`；本文件只记 hotspot 项目专属事实与实测流程。**环境类结论必须附验证日期 + 复现步骤，沿用前先证伪一次**（项目 AGENTS.md「环境类结论必须可复现」）。
+> 通用 hdc 行为见用户级 skill `harmony-device-debug`；本文件只记 hotspot 项目专属事实与实测流程。**环境类结论必须附验证方式（命令/取数口径）+ 复现步骤，沿用前先证伪一次**（项目 AGENTS.md「环境类结论必须可复现」）。
 
 ## 项目事实（唯一维护处）
 
@@ -59,13 +59,13 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 #    → 之后 app（登录同账号、无锚点）的附近群组即可看到这些群，距离 0m
 ```
 
-已按此造好两个走查群：**走查群A-改前**（`group_553935e9eada256e4091f266`）、**走查群B-改后**（`group_2fa2449f039e11f8845d5e80`），均为 `uitest_admin` 所有、`direct` 入群、位于默认位置；uitest_a 未加入，可直接用于「加入态刷新」的端上复核。
+本地库有两个走查群：**走查群A-改前**（`group_553935e9eada256e4091f266`）、**走查群B-改后**（`group_2fa2449f039e11f8845d5e80`，群名即上述标识），均为 `uitest_admin` 所有、`direct` 入群、位于默认位置；uitest_a 未加入，可直接用于「加入态刷新」的端上复核。
 
 ## 环境准备：模拟器、反向转发与恢复
 
 ### 1) 启动模拟器（沙盒内直接直启）
 
-`~/.Huawei/Emulator/deployed`（实例镜像，含 `*.qcow2`/`ram.bin`）已由 DSH sandbox-extra-roots 插件放行，沙盒内直接 `Emulator -start <实例名>` 即可（实测约 10s 就绪、`hdc list targets` 出现 `127.0.0.1:5555`）。**不要再把实例克隆到 `.workwork/` 或改 `config.ini` 重定向路径**（旧做法已废弃）。
+`~/.Huawei/Emulator/deployed`（实例镜像，含 `*.qcow2`/`ram.bin`）已由 DSH sandbox-extra-roots 插件放行，沙盒内直接 `Emulator -start <实例名>` 即可（实测约 10s 就绪、`hdc list targets` 出现 `127.0.0.1:5555`）。**不要把实例克隆到 `.workwork/` 或改 `config.ini` 重定向路径**。
 
 - `-stop` 可能 hang，清场用 `pkill -9 -f Emulator`。
 - 只读系统镜像在 `~/Library/Huawei/Sdk/system-image/...`，读不受限，无需搬运。
@@ -102,7 +102,7 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 1. **连接**：`hdc list targets -v` 出现 `Connected`（本机模拟器为 `127.0.0.1:5555`）。
 2. **冷启动**：`aa force-stop com.lsyb.social` → `aa start -b com.lsyb.social -a EntryAbility`。
-3. **登录**：可从「消息」Tab 的登录提示进入（角色行刷新已内置，不要求先后顺序）；坐标一律 `dumpLayout` 取 bounds 后点击，历史实测基线见 `references/coords-baselines.md`。
+3. **登录**：可从「消息」Tab 的登录提示进入（角色行刷新已内置，不要求先后顺序）；坐标一律 `dumpLayout` 取 bounds 后点击，实测基线见 `references/coords-baselines.md`。
 4. **进个人中心**：点底部「我的」Tab，然后 `uitest uiInput fling 628 2150 628 900 3500` 滚到动作行。
 5. **断言**：`uitest dumpLayout -p /data/local/tmp/ui.json` 后逐节点取 text，判断「升级为完整账号」/「管理员工具台」/「设置」/「退出登录」是否存在。
 6. **截图**：`snapshot_display -f /data/local/tmp/x.jpeg` → `hdc shell "cat …" > local.jpeg`（`hdc file recv` 会 hang，见下）。
@@ -110,7 +110,7 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
    - 放锚点用 `uitest uiInput longClick <x> <y>`（长按放置；单击无效，双击是地图缩放），长按即写 `anchor_history` 偏好并触发逆地理解析；再点「设为浏览锚点」确认。**锚点模式确认后不关页**（toast「浏览锚点已设置」），需自己返回首页——切 Tab 前注意先返回，否则 Tab 点击落空；
    - 模拟器**系统地理编码无数据**：地点搜索（geocodeMultiple 走系统 geocoder）对任何关键词都返回「未找到该地点」，且锚点名只会是「未知位置」——这是模拟器环境限制，真机不受影响；历史锚点持久化在偏好文件 `anchor_history`；
    - 快速体验游客的锚点与会话态（AppStorage）**冷启动即清**，重装(-r)保留偏好但锚点需重新设置；暗色等偏好（`dark_mode_preference`）在 `geotalk` 偏好文件中持久化。
-8. **密度/尺寸标定**：本机模拟器（Pura 90 Pro 实例）密度 ≈3.917（1256px / ≈320vp 逻辑宽），dump bounds 换算 vp 用 3.917，不要想当然用 3.25（曾因密度误算误判骨架卡/空态过大）。
+8. **密度/尺寸标定**：本机模拟器（Pura 90 Pro 实例）密度 ≈3.917（1256px / ≈320vp 逻辑宽），dump bounds 换算 vp 用 3.917，不要想当然用 3.25（密度误算会误判骨架卡/空态过大）。
 
 ## 登录/切号后的角色行刷新（已内置，无需特定顺序）
 
@@ -131,7 +131,7 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 ## 登录流程（坐标、安全键盘与「串位」根因）
 
-**已实测可用**（分辨率 1256×2760，Pura 90 Pro 实例；坐标随构建会变，一律以 dump 为准，历史基线见 `references/coords-baselines.md`）：
+**实测可用**（分辨率 1256×2760，Pura 90 Pro 实例；坐标随构建会变，一律以 dump 为准，基线见 `references/coords-baselines.md`）：
 
 1. 冷启后停在首页 → 点底部「消息」`(877, 2599)`；
 2. 游客态消息页点 **「登录 / 注册」**（实测中心 `(628, 1279)`——注意不要用 `text.includes("登录")` 匹配，会命中页面文案「消息功能需要登录」而点到非按钮文字上）；
@@ -146,20 +146,20 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 2. 点密码框 → `inputText 'UiTest#12345'`（会切安全键盘）→ **`keyEvent Back` 一次**关安全键盘 → dump 校验仍在登录页 ✓ 且「安全键盘」节点消失 ✓；
 3. 此时 dump 能看到两个字段分别持有 `uitest_admin` 与 `*************` ✓（值已正确分离），再点「登录」。
 
-**提交按钮的正确点法**：登录表单默认在**折叠线以下**，dump 只含可见节点，所以要先 `fling` 往上滚一次，再从 dump 里按特征找按钮（`clickable=true` + `w>600` + `h>120` + `cy>1200`）；历史实测按钮 `(628,2442)`，点它确实触发提交。
+**提交按钮的正确点法**：登录表单默认在**折叠线以下**，dump 只含可见节点，所以要先 `fling` 往上滚一次，再从 dump 里按特征找按钮（`clickable=true` + `w>600` + `h>120` + `cy>1200`）；实测按钮 `(628,2442)`，点它确实触发提交。
 
-**「账号/密码串位」的根因 = 自动化 stale 坐标（不是 app bug）**：`uitest uiInput inputText <x> <y> <text>` 会**先按 (x,y) 点一下**再输入；键盘弹出后窗口上移，原先的输入框 y 坐标此时落在**键盘按键**上——那一下会先敲进一个字符，再输入文本（曾观察到 `tUiTest#12345`，多出的 `t` 就是落点处键盘键）。
+**「账号/密码串位」的根因 = 自动化 stale 坐标（不是 app bug）**：`uitest uiInput inputText <x> <y> <text>` 会**先按 (x,y) 点一下**再输入；键盘弹出后窗口上移，原先的输入框 y 坐标此时落在**键盘按键**上——那一下会先敲进一个字符，再输入文本（实测会出现 `tUiTest#12345`，多出的 `t` 就是落点处键盘键）。
 
 - **复现实验**：密码框输入 `abc`（3 字符）→ dump 显示 `****`（4 个）；先点输入框、**重新 dump 取键盘弹出后的实时坐标**再 inputText，`abc` → `***`（正好 3 个）。
 - **正确用法（已跑通）**：点输入框 → dump 取**当前**输入框坐标 → `inputText` 用该坐标 → `Back` 收键盘。每次键盘开合后窗口坐标都会变，**不能复用键盘前的坐标**。
 - **纪律**：任何「输入串位 / 多字符 / 少字符」的端上现象，先用「输入 N 字符 → dump 看长度/掩码位数」做自证；长度不对先查坐标与键盘，再考虑 app 缺陷。
 - `keyEvent Back` 只有在 **IME/安全键盘打开时**才安全（只关键盘）；键盘未开时它等于导航后退，连按两次会退出应用。每次 Back 后都要 dump 校验页面没变。
 
-## 踩坑与纪律
+## 陷阱与纪律
 
 ### 走查铁律：截图与 dumpLayout 必须**同一次调用**获取
 
-用截图目测判断布局位置时极易与 dumpLayout 的坐标不一致——两次命令之间页面可能仍在滚动/重排（尤其刚 fling 过或有入场动画）。曾连续 3 次误判（动态详情长文「行高没生效」、首页空态卡片「偏上」、消息页「最近」标签 x 值），根因都是截图与 dump 处于不同滚动位置。
+用截图目测判断布局位置时极易与 dumpLayout 的坐标不一致——两次命令之间页面可能仍在滚动/重排（尤其刚 fling 过或有入场动画）。反例：动态详情长文「行高没生效」、首页空态卡片「偏上」、消息页「最近」标签 x 值这类误判，根因都是截图与 dump 处于不同滚动位置。
 
 **正确做法**：把 dumpLayout 与 snapshot_display 放进**同一条 shell 命令**，且**先 dump 后截图**（两者之间不插入任何滚动/点击）：
 
@@ -178,10 +178,10 @@ hdc shell "cat /data/local/tmp/y.jpeg" > shot.jpeg
 - **滚轮/拖拽不滚动 ArkUI 列表**：`uinput -M -s`、`uinput -M -g` 实测无效，`uinput -T -g` 报「wrong number of parameters」；滚动一律 `uitest uiInput fling`。
 - **软键盘弹出后原坐标失效**（窗口上移）：先收键盘或重新 dumpLayout。
 - **`uitest uiInput click` 坐标越界会静默点空**（不报错），必须用 bounds 中心点。
-- **临时账号 token 时效短**：「快速体验」的临时账号 token 约 30 分钟内失效；跨轮走查（间隔 >30min）后应用回到「个人中心需要登录」态，需重新 快速体验 → 开始体验。走查批次尽量在同一时效窗口内完成；「开始体验」按钮坐标每次以 dump 定位（弹层出现位置稳定在 y≈2358，但勿硬编码——曾在 2255 点空）。
+- **临时账号 token 时效短**：「快速体验」的临时账号 token 约 30 分钟内失效；跨轮走查（间隔 >30min）后应用回到「个人中心需要登录」态，需重新 快速体验 → 开始体验。走查批次尽量在同一时效窗口内完成；「开始体验」按钮坐标每次以 dump 定位（弹层出现位置稳定在 y≈2358，但勿硬编码——在 2255 会点空）。
 - **首启会弹定位权限框**：文本「允许"GeoTalk"访问你的位置？」，「仅使用期间允许」中心 ≈ `(628,1964)`（bounds `[432,1931][824,1997]`）。不处理会挡住所有页面断言（dump 只有弹窗节点）；授权后不影响后续 Tab 走查（模拟器定位本身仍不可用）。
 - **偶发「整页空白」= 应用瞬时坏状态，不是模拟器限制**：恢复手段 `aa force-stop` → `aa start` 冷启。**反模式**：只用 `dumpLayout`（无障碍树）判空、不截图——页面可能「页头渲染正常、内容区全空」，dump 里同样有文本，只看节点数会把坏页面误判成正常页。**判断页面是否正常一律用 `snapshot_display` 截图复核**。
-- **页面只渲染页头、内容区全空 → 先查 ArkUI 裸 `{ }` 块**：块内 `.layoutWeight(1)` 不生效 → 容器高度塌陷 → 内部 WaterFlow/List 高度为 0。修法/判定见 skill `hotspot-harmony-ui`「审计基线与布局陷阱（指针）」列出的 ArkUI 陷阱明细（dump 节点数：本例页头 10 → 修复后 52）。
+- **页面只渲染页头、内容区全空 → 先查 ArkUI 裸 `{ }` 块**：块内 `.layoutWeight(1)` 不生效 → 容器高度塌陷 → 内部 WaterFlow/List 高度为 0。修法/判定见 skill `hotspot-harmony-ui`「审计基线与布局陷阱（指针）」列出的 ArkUI 陷阱明细（dump 节点数：本例页头 10 → 正常时 52）。
 - **常见无害日志**：`智能服务初始化失败 … 15100003` 每 10s 重试、定位恒失败 `3301100 The location switch is off`——属模拟器环境常态，与页面渲染无因果关系。
 - **新增纪律**：**只有 dump 确认当前是推入页（有返回入口）时才按 `keyEvent Back`**——在「点了没反应」的页面（如游客态通知）按 Back 等于退到上一页/退出应用，实测直接退回桌面（随后所有点击都落在桌面上）。
 
@@ -197,7 +197,7 @@ python3 .agents/skills/hotspot-harmony-device-verify/scripts/walk.py 附近
 
 ## 免登录可达页面与顶栏坐标
 
-顶栏动作按钮坐标、免登录与需登录页面清单见 `references/coords-baselines.md`。游客态「通知」点之无反应、「地图/选点」未打开——后者记为**待查**，不要当成「已走查」。
+顶栏动作按钮坐标、免登录与需登录页面清单见 `references/coords-baselines.md`。游客态「通知」点之无反应；首页已无「地图/选点」入口（见 `references/coords-baselines.md`），不要再当走查项。
 
 ## references
 
