@@ -105,6 +105,8 @@
 					variant="overlay"
 					tone="inverse"
 					size={32}
+					ariaExpanded={moreOpen}
+					ariaHasPopup="menu"
 					onClick={() => (moreOpen = !moreOpen)}
 				/>
 			</div>

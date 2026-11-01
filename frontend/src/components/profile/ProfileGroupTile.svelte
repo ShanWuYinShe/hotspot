@@ -72,33 +72,37 @@
 			{group.role}
 		</div>
 
-		<!-- 右上：管理入口（desktop-reveal；展开时保持可见） -->
-		<div class="desktop-reveal absolute right-2 top-2 z-20" style={moreOpen ? 'opacity:1' : undefined}>
-			<DropdownMenu.Root bind:open={moreOpen}>
-				<div bind:this={menuAnchor}>
-					<ActionIconButton
-						icon={MoreHorizontal}
-						label="管理这个群组"
-						variant="overlay"
-						tone="inverse"
-						size={32}
-						onClick={() => (moreOpen = !moreOpen)}
-					/>
-				</div>
-				<DropdownMenu.Content customAnchor={menuAnchor}>
-					<DropdownMenu.Item
-						class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg"
-						onSelect={() => {
-							moreOpen = false;
-							leaveOpen = true;
-						}}
-					>
-						<LogOut class="size-3.5" strokeWidth={1.75} />
-						退出群组
-					</DropdownMenu.Item>
-				</DropdownMenu.Content>
-			</DropdownMenu.Root>
-		</div>
+		<!-- 右上：管理入口（desktop-reveal；展开时保持可见）。
+		     群主不能退群（服务端 10400 要求先转让），不渲染一个必然失败的空菜单。 -->
+		{#if group.role !== '群主'}
+			<div class="desktop-reveal absolute right-2 top-2 z-20" style={moreOpen ? 'opacity:1' : undefined}>
+				<DropdownMenu.Root bind:open={moreOpen}>
+					<div bind:this={menuAnchor}>
+						<ActionIconButton
+							icon={MoreHorizontal}
+							label="管理这个群组"
+							variant="overlay"
+							tone="inverse"
+							size={32}
+							ariaExpanded={moreOpen}
+							onClick={() => (moreOpen = !moreOpen)}
+						/>
+					</div>
+					<DropdownMenu.Content customAnchor={menuAnchor}>
+						<DropdownMenu.Item
+							class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg"
+							onSelect={() => {
+								moreOpen = false;
+								leaveOpen = true;
+							}}
+						>
+							<LogOut class="size-3.5" strokeWidth={1.75} />
+							退出群组
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			</div>
+		{/if}
 
 		{#snippet footer({ horizontal }: { onImage: boolean; horizontal: boolean })}
 			{@const onCover = false}

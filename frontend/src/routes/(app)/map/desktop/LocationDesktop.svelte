@@ -286,9 +286,12 @@
 			bind:selectedLoc
 			mapCounts={mapData.counts}
 			locationName={locationName}
+			hasMyLocation={Boolean(myLocation)}
+			locating={locate.locating}
 			onSelectPin={handleSelectPin}
 			onSelectLoc={handleSelectLoc}
 			onConfirm={handleConfirm}
+			onLocate={() => void locate.locate()}
 		/>
 	</div>
 

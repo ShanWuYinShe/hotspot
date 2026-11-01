@@ -6,7 +6,8 @@
 	import Button from '@/components/ui/button.svelte';
 	import Input from '@/components/forms/Input.svelte';
 	import Textarea from '@/components/forms/Textarea.svelte';
-	import { X, Pin } from '@lucide/svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
+	import { Pin, X } from '@lucide/svelte';
 
 	let {
 		open,
@@ -42,9 +43,14 @@
 	const handleSubmit = async () => {
 		if (!canSubmit) return;
 		submitting = true;
-		const ok = await onSubmit(title.trim(), content.trim(), isPinned);
-		submitting = false;
-		if (ok) onClose();
+		try {
+			const ok = await onSubmit(title.trim(), content.trim(), isPinned);
+			if (ok) onClose();
+		} catch {
+			// 提交异常由父级统一 toast；这里只保证 loading 不会永久卡住。
+		} finally {
+			submitting = false;
+		}
 	};
 </script>
 
@@ -56,17 +62,15 @@
 	>
 		<div class="flex items-start justify-between gap-3">
 			<div class="min-w-0">
-				<p class="text-md font-semibold text-text-primary">{mode === 'create' ? '发布群公告' : '编辑群公告'}</p>
-				<p class="mt-0.5 text-xs text-text-secondary">{mode === 'create' ? '发布后全体群成员可见' : '修改后立即对全体成员生效'}</p>
+				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">{mode === 'create' ? '发布群公告' : '编辑群公告'}</Dialog.Title>
+				<Dialog.Description class="mt-1 text-sm text-text-secondary">{mode === 'create' ? '发布后全体群成员可见' : '修改后立即对全体成员生效'}</Dialog.Description>
 			</div>
-			<button
-				type="button"
+			<Dialog.Close
 				class="hit-slop flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary focus-ring hover:bg-interactive-hover"
-				onclick={onClose}
 				aria-label="关闭"
 			>
 				<X size={16} strokeWidth={1.75} />
-			</button>
+			</Dialog.Close>
 		</div>
 
 		<div class="mt-4 flex flex-col gap-3">
@@ -88,21 +92,19 @@
 				rows={4}
 				maxlength={1000}
 			/>
-			<button
-				type="button"
-				onclick={() => (isPinned = !isPinned)}
-				aria-pressed={isPinned}
-				class="hit-slop inline-flex h-7 items-center gap-1.5 self-start rounded-full px-3 text-xs font-medium focus-ring transition-colors {isPinned
-					? 'bg-accent-soft text-text-accent-on-soft'
-					: 'text-text-secondary hover:bg-interactive-hover'}"
+			<TagPill
+				size="md"
+				class="self-start"
+				active={isPinned}
+				icon={Pin}
+				onClick={() => (isPinned = !isPinned)}
 			>
-				<Pin size={12} strokeWidth={isPinned ? 2 : 1.75} />
 				{isPinned ? '已置顶' : '置顶'}
-			</button>
+			</TagPill>
 		</div>
 
 		<footer class="mt-5 flex items-center justify-end gap-3">
-			<Button type="button" variant="soft" size="md" onclick={onClose}>取消</Button>
+			<Button type="button" variant="secondary" size="md" onclick={onClose}>取消</Button>
 			<Button
 				type="button"
 				variant="primary"

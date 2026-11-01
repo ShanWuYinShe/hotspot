@@ -74,7 +74,8 @@
 <Dialog.Root {open} onOpenChange={(next) => (next ? undefined : onClose())}>
 	<Dialog.Content
 		side={isMobile ? 'bottom' : 'center'}
-		class={cn('mx-auto w-full max-w-md', isMobile ? 'px-5 pt-5 pb-6' : 'px-6 pt-6 pb-5')}
+		class={cn('mx-auto w-full max-w-md', isMobile ? 'px-5 pt-5 pb-6 pr-12' : 'px-6 pt-6 pb-5')}
+		showCloseButton={isMobile}
 		aria-label={`举报${targetLabel}`}
 	>
 		<!-- 图标头 + 标题 + 一句说明（与 ConfirmDialog 同语言） -->

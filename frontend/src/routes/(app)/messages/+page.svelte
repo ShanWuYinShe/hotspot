@@ -187,10 +187,15 @@
 			chat.kind === 'group'
 				? updateGroupPreferences({ group_id: String(chat.id), is_pinned: next })
 				: updatePrivateChatPreferences({ target_user_id: chat.peerUserId || String(chat.id), is_pinned: next });
-		void req.catch(() => {
-			// 失败回滚：置顶状态还原并恢复原排序
-			chats = chats.map((c) => (c.id === chat.id ? { ...c, isPinned: !next } : c)).sort(compareChatItems);
-		});
+		void req
+			.then((res) => {
+				if (res.code !== 0) throw new Error(res.message || '设置失败');
+			})
+			.catch(() => {
+				// 失败回滚：置顶状态还原并恢复原排序，并与免打扰一样给出可见反馈。
+				chats = chats.map((c) => (c.id === chat.id ? { ...c, isPinned: !next } : c)).sort(compareChatItems);
+				showToast('置顶设置失败，请重试', 'danger');
+			});
 	};
 
 	// 免打扰开关：与置顶同款乐观更新（spec: private_chats|groups update_preferences is_muted），
@@ -214,23 +219,28 @@
 
 	// 删除会话（仅私聊；spec: private_chats/delete 只影响自己视角，对方不受影响）：
 	// ConfirmDialog 确认后调 API，成功移除本地行；群聊无删除端点（退群走 groups/exit）。
-	const handleDeleteChat = () => {
+	const handleDeleteChat = async () => {
 		const chat = deleteTarget;
-		if (!chat) return;
-		void deletePrivateChat({ target_user_id: chat.peerUserId || String(chat.id) })
-			.then((res) => {
-				if (res.code === 0) {
-					chats = chats.filter((c) => c.id !== chat.id);
-					if (selectedId === chat.id) selectedId = null;
-					showToast('会话已删除', 'success');
-				} else {
-					showToast(res.message || '删除失败，请重试', 'danger');
-				}
-			})
-			.catch(() => showToast('删除失败，请重试', 'danger'))
-			.finally(() => (deleteTarget = null));
+		if (!chat || deletingChat) return;
+		deletingChat = true;
+		try {
+			const res = await deletePrivateChat({ target_user_id: chat.peerUserId || String(chat.id) });
+			if (res.code === 0) {
+				chats = chats.filter((c) => c.id !== chat.id);
+				if (selectedId === chat.id) selectedId = null;
+				showToast('会话已删除', 'success');
+			} else {
+				showToast(res.message || '删除失败，请重试', 'danger');
+			}
+		} catch {
+			showToast('删除失败，请重试', 'danger');
+		} finally {
+			deletingChat = false;
+			deleteTarget = null;
+		}
 	};
 	let deleteTarget = $state<ChatItem | null>(null);
+	let deletingChat = $state(false);
 	// 移动端会话操作弹层目标（s2-01：置顶/免打扰/删除在移动端原本无入口）
 	let moreTarget = $state<ChatItem | null>(null);
 
@@ -644,6 +654,7 @@
 	description="删除后将清空本机的聊天记录，对方不受影响。"
 	icon={MessageSquareDashed}
 	confirmLabel="删除会话"
+	loading={deletingChat}
 	onCancel={() => (deleteTarget = null)}
-	onConfirm={handleDeleteChat}
+	onConfirm={() => void handleDeleteChat()}
 />

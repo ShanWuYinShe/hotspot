@@ -85,15 +85,27 @@
 		try {
 			const settled = await Promise.all(ids.map((uid) => inviteGroupMember({ group_id: groupId, user_id: uid }).catch(() => netError(undefined))));
 			const okCount = settled.filter((r) => r.code === 0).length;
-			if (okCount === ids.length) showToast(`已邀请 ${okCount} 人`, 'success');
-			else if (okCount > 0) showToast(`已邀请 ${okCount}/${ids.length} 人`, 'success');
-			else showToast('邀请失败', 'danger');
-			onInvited?.();
-			onClose();
+			const failedIds = ids.filter((_, i) => settled[i].code !== 0);
+			if (failedIds.length === 0) {
+				showToast(`已邀请 ${okCount} 人`, 'success');
+				onInvited?.();
+				onClose();
+			} else {
+				// 部分失败：保留弹层与失败项选中态，用户可只重试失败对象。
+				selected = new Set(failedIds);
+				onInvited?.();
+				showToast(
+					okCount > 0
+						? `已邀请 ${okCount}/${ids.length} 人，失败 ${failedIds.length} 人，可重试`
+						: '邀请失败，请重试',
+					okCount > 0 ? 'info' : 'danger'
+				);
+			}
 		} catch {
 			showToast('邀请失败，请重试', 'danger');
+		} finally {
+			inviting = false;
 		}
-		inviting = false;
 	};
 </script>
 

@@ -86,13 +86,16 @@
 			options={ALL.map((item) => {
 				const active = activeFilters.has(item.type);
 				const count = counts?.[item.type];
+				const lastActive = active && activeFilters.size === 1;
 				return {
 					id: item.type,
 					title: item.label,
-					desc: active ? '正在显示' : '已隐藏',
+					desc: lastActive ? '至少保留一项' : active ? '正在显示' : '已隐藏',
 					badge: count !== undefined ? (active ? `${count}` : '—') : undefined,
 					selected: active,
-					dimmed: !active
+					dimmed: !active,
+					// 最后一项不可取消：禁用并说明，而不是点了毫无反馈。
+					disabled: lastActive
 				};
 			})}
 			onSelect={(id) => toggleFilter(id as PinType)}

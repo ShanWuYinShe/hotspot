@@ -42,8 +42,7 @@
 	};
 	const unbanCurrent = async () => {
 		if (!banTarget) return;
-		await unban(banTarget.name);
-		banTarget = null;
+		if (await unban(banTarget.name)) banTarget = null;
 	};
 
 	const submitBan = async (active: boolean) => {
@@ -62,16 +61,18 @@
 		}
 	};
 
-	const unban = async (name: string) => {
-		if (pending) return;
+	const unban = async (name: string): Promise<boolean> => {
+		if (pending) return false;
 		pending = true;
 		try {
 			const res = await adminSetTagBan({ name, active: false, hard_delete: null });
 			if (res.code !== 0) throw new Error(res.message || '操作失败');
 			showToast('标签已解除屏蔽', 'success');
 			list.reload();
+			return true;
 		} catch (err) {
 			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
+			return false;
 		} finally {
 			pending = false;
 		}

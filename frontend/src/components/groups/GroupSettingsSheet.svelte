@@ -4,6 +4,7 @@
 	// 封面在上传时先 uploadMediaFile('group_avatar') 换 file_id 再随 patch 提交。
 	import { Camera, Check, Globe, Lock, ShieldAlert, UserMinus, Users } from '@lucide/svelte';
 	import { uploadMediaFile } from '@/lib/upload';
+	import { showToast } from '@/stores/toast.svelte';
 	import Toggle from '@/components/forms/Toggle.svelte';
 	import Input from '@/components/forms/Input.svelte';
 	import Textarea from '@/components/forms/Textarea.svelte';
@@ -13,7 +14,10 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import * as Dialog from '@/components/ui/dialog';
+	import { platform } from '@/stores/platform.svelte';
 	import type { GroupItem, UpdateGroupRequest } from '@/api/types';
+
+	const isMobile = $derived(platform.platform === 'mobile');
 
 	let {
 		open,
@@ -139,12 +143,15 @@
 				transferTarget = null;
 				transferOpen = false;
 				onClose();
-			} else {
-				dangerError = res.message ?? '转让失败';
-			}
-		} catch {
-			dangerError = '转让失败，请重试';
-		} finally {
+				} else {
+					dangerError = res.message ?? '转让失败';
+					// 确认弹窗叠在 sheet 上方，sheet 内的错误行不可见；失败必须 toast。
+					showToast(dangerError, 'danger');
+				}
+			} catch {
+				dangerError = '转让失败，请重试';
+				showToast(dangerError, 'danger');
+			} finally {
 			transferring = false;
 		}
 	};
@@ -167,7 +174,13 @@
 <!-- Dialog 外壳：open 控制显隐（对齐 InviteMembersSheet 范式）。此前缺这层导致
 	SheetShell 常驻文档流；bottom 档 sm 起居中限宽由 Dialog.Content 统一承担 -->
 <Dialog.Root open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
-	<Dialog.Content side="bottom" class="overflow-hidden max-h-[var(--cst-sheet-height-xl)]" aria-label="群设置">
+	<Dialog.Content
+		side={isMobile ? 'bottom' : 'center'}
+		class={isMobile
+			? 'h-[var(--cst-sheet-height-xl)] max-h-[var(--cst-sheet-max-height)] overflow-hidden'
+			: 'h-[var(--cst-sheet-height)] max-h-[var(--cst-sheet-max-height)] w-[32rem] max-w-[calc(100vw-2rem)] overflow-hidden'}
+		aria-label="群设置"
+	>
 		<SheetShell title="群设置" {onClose}>
 	<div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-8 flex flex-col gap-5">
 		<!-- Cover photo：空封面渲染占位图标（img src="" 会让浏览器把 alt 文字

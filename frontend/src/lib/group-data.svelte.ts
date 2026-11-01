@@ -338,7 +338,8 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 					void loadMembers(gid);
 				}
 			} else {
-				// 退出成功：同理刷新人数与名单。
+				// 退出成功：同理刷新人数与名单，并像附近群组页一样给出成功反馈。
+				showToast('已退出群组', 'success');
 				void loadDetail(gid);
 				void loadMembers(gid);
 			}

@@ -233,7 +233,7 @@
 	open={detailTarget !== null}
 	onOpenChange={(next) => (next ? undefined : (detailTarget = null))}
 >
-	<Dialog.Content class="max-w-120 p-0">
+	<Dialog.Content class="max-w-120 p-0" aria-label="审计详情">
 		<div class="px-5 pt-6 pb-5">
 			<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">
 				{detailTarget ? `${AUDIT_ACTION_LABELS[detailTarget.action] ?? detailTarget.action} · ${formatDateTime(detailTarget.created_at)}` : ''}
@@ -259,6 +259,9 @@
 				{/if}
 			</div>
 			<pre class="mt-4 max-h-96 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed whitespace-pre-wrap break-all text-text-secondary">{detailTarget ? JSON.stringify(detailTarget.details, null, 2) : ''}</pre>
+		</div>
+		<div class="flex justify-end border-t border-border-default px-5 py-3">
+			<Button type="button" variant="secondary" size="md" onclick={() => (detailTarget = null)}>关闭</Button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

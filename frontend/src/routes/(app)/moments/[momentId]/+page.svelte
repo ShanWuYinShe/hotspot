@@ -550,7 +550,7 @@
 {#snippet moreMenu()}
 	<DropdownMenu.Root bind:open={moreOpen}>
 		<div bind:this={moreMenuEl} class="relative">
-			<ActionIconButton icon={MoreHorizontal} label="更多操作" variant="ghost" tone="current" onClick={() => (moreOpen = !moreOpen)} />
+			<ActionIconButton icon={MoreHorizontal} label="更多操作" variant="ghost" tone="current" ariaExpanded={moreOpen} ariaHasPopup="menu" onClick={() => (moreOpen = !moreOpen)} />
 		</div>
 		<DropdownMenu.Content customAnchor={moreMenuEl}>
 			{#if isAuthor}

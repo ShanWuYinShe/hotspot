@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { Camera, Globe, Lock, Check, ChevronRight, MapPin } from '@lucide/svelte';
+	import { ArrowLeft, Camera, Globe, Lock, Check, MapPin } from '@lucide/svelte';
+	import { onDestroy } from 'svelte';
 	import { createGroup } from '@/api';
+	import { uploadMediaFile } from '@/lib/upload';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { loadDefaultLocation } from '@/lib/default-location';
 	import Toggle from '@/components/forms/Toggle.svelte';
@@ -8,6 +10,7 @@
 	import Textarea from '@/components/forms/Textarea.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import Button from '@/components/ui/button.svelte';
 
 	// CreateGroupSheet — 创建群组的底部 Sheet / 模态。
@@ -32,8 +35,26 @@
 	let creating = $state(false);
 	let createError = $state('');
 	let locationName = $state('');
+	let coverInput = $state<HTMLInputElement | null>(null);
+	let newAvatarFile = $state<File | null>(null);
+	let previewUrl = $state('');
+	let uploadingCover = $state(false);
 
 	const canCreate = $derived(name.trim().length >= 2);
+
+	onDestroy(() => {
+		if (previewUrl) URL.revokeObjectURL(previewUrl);
+	});
+
+	function handleCoverChange(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		if (!file || !file.type.startsWith('image/')) return;
+		newAvatarFile = file;
+		if (previewUrl) URL.revokeObjectURL(previewUrl);
+		previewUrl = URL.createObjectURL(file);
+	}
 
 	$effect(() => startDefaultLocation((loc) => {
 		locationName = loc?.location_name ?? '';
@@ -55,9 +76,22 @@
 				createError = '无法获取当前位置，请稍后重试';
 				return;
 			}
+			let avatarFileId: string | undefined;
+			if (newAvatarFile) {
+				uploadingCover = true;
+				try {
+					avatarFileId = await uploadMediaFile(newAvatarFile, 'group_avatar');
+				} catch {
+					createError = '封面上传失败，请重试或先不传封面';
+					return;
+				} finally {
+					uploadingCover = false;
+				}
+			}
 			const res = await createGroup({
 				name: name.trim(),
 				description: desc.trim() || undefined,
+				avatar_file_id: avatarFileId,
 				tags: [category],
 				join_method: isPrivate ? 'invite_only' : 'direct',
 				requires_approval: requiresApproval,
@@ -80,7 +114,21 @@
 	};
 </script>
 
-<SheetShell title="创建群组" {onClose}>
+{#snippet headerExtra()}
+	{#if onBack}
+		<button
+			type="button"
+			class="hover-action hit-slop flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs text-text-secondary focus-ring"
+			aria-label="返回发布瞬间"
+			onclick={onBack}
+		>
+			<ArrowLeft class="size-3.5" strokeWidth={1.75} />
+			返回
+		</button>
+	{/if}
+{/snippet}
+
+<SheetShell title="创建群组" {onClose} {headerExtra}>
 	{#if step === 'done'}
 		<div class="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
 			<div
@@ -97,20 +145,36 @@
 		</div>
 	{:else}
 		<div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-8 flex flex-col gap-5">
-			<!-- Cover photo selector -->
-			<div class="flex justify-center">
-				<!-- disabled 必须可见可解释：视觉降级 + 行内「即将开放」说明（title 在触屏不可见） -->
-				<button
-					type="button"
-					class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-default bg-surface-primary shadow-inset-sm hover:border-accent-border hover:bg-accent-soft focus-ring disabled:cursor-not-allowed disabled:opacity-faint w-full h-28"
-					disabled
-					aria-disabled="true"
-					title="暂未开放"
-				>
-					<Camera class="size-6.5 text-text-secondary" strokeWidth={1.5} />
-					<span class="text-sm text-text-secondary">添加封面图片</span>
-					<span class="text-xxs text-text-secondary">即将开放</span>
-				</button>
+			<!-- Cover photo selector（与 GroupSettingsSheet 同一形态；创建后也可修改） -->
+			<div class="flex items-center gap-4">
+				<div class="relative shrink-0">
+					{#if previewUrl}
+						<Avatar src={previewUrl} name={name || '群'} size={64} shape="rounded" class="ring-1 ring-border-default" />
+					{:else}
+						<div class="flex size-16 items-center justify-center rounded-xl bg-accent-soft ring-1 ring-border-default" aria-hidden="true">
+							<Camera class="size-5 text-text-secondary" strokeWidth={1.5} />
+						</div>
+					{/if}
+					<button
+						type="button"
+						class="hover-btn hit-slop absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border-strong border-surface-primary bg-accent-default shadow-raised-sm focus-ring hover:shadow-raised-md"
+						onclick={() => coverInput?.click()}
+						aria-label="选择群组封面"
+					>
+						<Camera class="size-3 text-text-on-accent" strokeWidth={2} />
+					</button>
+				</div>
+				<div class="min-w-0">
+					<p class="text-sm text-text-primary">群组封面</p>
+					<p class="mt-0.5 text-xs text-text-secondary">可选，创建后也可在群设置中修改</p>
+				</div>
+				<input
+					bind:this={coverInput}
+					type="file"
+					accept="image/*"
+					class="hidden"
+					onchange={handleCoverChange}
+				/>
 			</div>
 
 			<!-- Group name（字符计数走原语 suffix，仍在壳内右端） -->
@@ -157,7 +221,7 @@
 
 			<!-- Privacy toggle -->
 			<div
-				class="flex items-center justify-between rounded-md border border-border-default bg-surface-primary px-4 py-3.5 shadow-raised-md"
+				class="flex items-center justify-between rounded-lg bg-surface-island px-4 py-3.5 shadow-xs"
 			>
 				<div class="flex items-center gap-3">
 					{#if isPrivate}
@@ -182,7 +246,7 @@
 
 			<!-- Approval toggle（requires_approval：审核通过后才算真正加入） -->
 			<div
-				class="flex items-center justify-between rounded-md border border-border-default bg-surface-primary px-4 py-3.5 shadow-raised-md"
+				class="flex items-center justify-between rounded-lg bg-surface-island px-4 py-3.5 shadow-xs"
 			>
 				<div class="flex items-center gap-3">
 					<Check class="size-4.5 {requiresApproval ? 'text-accent-default' : 'text-text-secondary'}" strokeWidth={1.5} />
@@ -201,32 +265,36 @@
 				/>
 			</div>
 
-			<!-- Location -->
+			<!-- Location：只读使用浏览位置，不渲染虚假的“可修改”箭头 -->
 			<div
-				class="flex items-center gap-2.5 rounded-md border border-border-default bg-surface-primary px-4 py-3 shadow-raised-md"
+				class="flex items-center gap-2.5 rounded-lg bg-surface-island px-4 py-3 shadow-xs"
 			>
-				<MapPin class="size-4 shrink-0 text-accent-default"   strokeWidth={1.5} />
+				<MapPin class="size-4 shrink-0 text-accent-default" strokeWidth={1.5} />
 				<div class="flex-1 min-w-0">
-					<p class="text-sm text-text-primary">{locationName || '自动定位中…'}</p>
-					<p class="text-xs text-text-secondary">自动定位 — 可修改</p>
+					<p class="text-sm text-text-primary">群组位置</p>
+					<p class="text-xs text-text-secondary">
+						{locationName || '获取位置中…'} · 使用当前浏览位置，暂不支持手动选择
+					</p>
 				</div>
-				<ChevronRight class="size-3.5 text-text-secondary"   strokeWidth={1.5} />
 			</div>
 
-			{#if createError}
-				<p class="text-sm text-status-danger">{createError}</p>
-			{/if}
+		</div>
 
-			<!-- Create button -->
+		<!-- 粘底创建条：与发布器/群设置一致，主操作常驻可见，不被滚动区吞掉 -->
+		<footer class="flex-none border-t border-border-default bg-surface-primary px-5 py-3">
+			{#if createError}
+				<p class="mb-2 text-sm text-status-danger">{createError}</p>
+			{/if}
 			<Button
 				type="button"
 				onclick={() => void handleCreate()}
 				disabled={!canCreate || creating}
+				loading={creating}
 				size="lg"
 				class="w-full"
 			>
-				{creating ? '创建中…' : '创建群组'}
+				{uploadingCover ? '上传封面…' : creating ? '创建中…' : '创建群组'}
 			</Button>
-	</div>
-{/if}
+		</footer>
+	{/if}
 </SheetShell>

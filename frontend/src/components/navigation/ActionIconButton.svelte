@@ -20,6 +20,8 @@
 		disabled = false,
 		type = 'button',
 		badge = 0,
+		ariaExpanded,
+		ariaHasPopup,
 		class: className = ''
 	}: {
 		icon: Component;
@@ -31,6 +33,9 @@
 		disabled?: boolean;
 		type?: 'button' | 'submit' | 'reset';
 		badge?: number;
+		/** 下拉/弹层触发器：向读屏声明展开态。 */
+		ariaExpanded?: boolean;
+		ariaHasPopup?: 'menu' | 'dialog' | 'listbox' | 'true';
 		class?: string;
 	} = $props();
 
@@ -62,6 +67,8 @@
 	style={style}
 	aria-label={label}
 	title={label}
+	aria-expanded={ariaExpanded}
+	aria-haspopup={ariaHasPopup}
 	onclick={(e) => {
 		e.stopPropagation();
 		onClick?.();

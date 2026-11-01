@@ -9,11 +9,13 @@
 	let {
 		open,
 		member,
+		loading = false,
 		onClose,
 		onSelect
 	}: {
 		open: boolean;
 		member: { userId: string; name: string; role: string; mutedUntil?: string } | null;
+		loading?: boolean;
 		onClose: () => void;
 		onSelect: (action: MemberAction, durationMinutes?: number) => void;
 	} = $props();
@@ -68,14 +70,14 @@
 
 		{#if view === 'actions'}
 			<div class="flex flex-col gap-1">
-				<button type="button" onclick={() => choose(isAdmin ? 'unset_admin' : 'set_admin')} class="hover-btn flex items-center gap-2.5 rounded-md px-3 py-3 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">
+				<button type="button" disabled={loading} onclick={() => choose(isAdmin ? 'unset_admin' : 'set_admin')} class="hover-btn flex items-center gap-2.5 rounded-md px-3 py-3 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:pointer-events-none disabled:opacity-faint">
 					{#if isAdmin}
 						<ShieldOff size={15} class="text-text-secondary" strokeWidth={1.75} />取消管理员
 					{:else}
 						<ShieldCheck size={15} class="text-accent-default" strokeWidth={1.75} />设为管理员
 					{/if}
 				</button>
-				<button type="button" onclick={() => choose(isMuted ? 'unmute' : 'mute')} class="hover-btn flex items-center gap-2.5 rounded-md px-3 py-3 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default">
+				<button type="button" disabled={loading} onclick={() => choose(isMuted ? 'unmute' : 'mute')} class="hover-btn flex items-center gap-2.5 rounded-md px-3 py-3 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default disabled:pointer-events-none disabled:opacity-faint">
 					{#if isMuted}
 						<Volume2 size={15} class="text-text-secondary" strokeWidth={1.75} />解除禁言
 					{:else}
@@ -108,8 +110,8 @@
 				<p class="mt-1 text-xs text-text-secondary">{confirmAction === 'ban' ? '封禁后该成员将被移出群组并加入封禁名单' : '移出后该成员需要重新申请加入'}</p>
 			</div>
 			<div class="mt-2 flex items-center justify-end gap-3">
-				<Button type="button" variant="soft" size="md" onclick={() => { view = 'actions'; confirmAction = null; }}>取消</Button>
-				<Button type="button" variant="danger" size="md" onclick={() => { if (confirmAction) onSelect(confirmAction); }}>
+				<Button type="button" variant="secondary" size="md" disabled={loading} onclick={() => { view = 'actions'; confirmAction = null; }}>取消</Button>
+				<Button type="button" variant="danger" size="md" {loading} onclick={() => { if (confirmAction) onSelect(confirmAction); }}>
 					确认{confirmAction === 'ban' ? '封禁' : '移出'}
 				</Button>
 			</div>

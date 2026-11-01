@@ -61,6 +61,13 @@
 		panY = 0;
 	});
 
+	$effect(() => {
+		// 打开期间图片列表可能缩短：把 index 收敛到有效范围，避免「5 / 3」页码与失配的缩略图选中态。
+		if (count === 0) return;
+		if (index > count - 1) index = count - 1;
+		else if (index < 0) index = 0;
+	});
+
 	function step(delta: number) {
 		if (count === 0) return;
 		index = (index + delta + count) % count;

@@ -17,6 +17,8 @@
 		selected: boolean;
 		/** 未选中时整行降淡（如筛选菜单的已隐藏项） */
 		dimmed?: boolean;
+		/** 当前不可操作（如筛选「至少保留一项」的最后一项）。 */
+		disabled?: boolean;
 	}
 
 	export interface MenuPanelFooter {
@@ -69,7 +71,8 @@
 				type="button"
 				role={multi ? 'menuitemcheckbox' : 'menuitemradio'}
 				aria-checked={opt.selected}
-				class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left focus-ring transition-colors {opt.selected ? 'bg-accent-soft hover:bg-interactive-active' : 'hover:bg-interactive-hover'} {opt.dimmed ? 'opacity-soft' : ''}"
+				disabled={opt.disabled}
+				class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left focus-ring transition-colors {opt.selected ? 'bg-accent-soft hover:bg-interactive-active' : 'hover:bg-interactive-hover'} {opt.dimmed ? 'opacity-soft' : ''} {opt.disabled ? 'pointer-events-none opacity-soft' : ''}"
 				onclick={() => onSelect(opt.id)}
 			>
 				{#if leading}

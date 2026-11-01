@@ -189,9 +189,19 @@
 		theme.colorScheme === 'auto' ? '跟随系统外观' : theme.colorScheme === 'dark' ? '当前使用深色外观' : '当前使用浅色外观'
 	);
 
+	let loggingOut = $state(false);
 	const handleLogout = async () => {
-		await logout();
-		void goto(ROUTES.home);
+		if (loggingOut) return;
+		loggingOut = true;
+		try {
+			await logout();
+			confirmLogoutOpen = false;
+			void goto(ROUTES.home);
+		} catch {
+			showToast('退出登录失败，请重试', 'danger');
+		} finally {
+			loggingOut = false;
+		}
 	};
 </script>
 
@@ -442,6 +452,7 @@
 				icon={LogOut}
 				layout={device === 'mobile' ? 'stacked' : 'row'}
 				confirmLabel="退出登录"
+				loading={loggingOut}
 				onCancel={() => (confirmLogoutOpen = false)}
 				onConfirm={() => void handleLogout()}
 			/>

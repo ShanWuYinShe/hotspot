@@ -99,12 +99,23 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		}
 		return false;
 	};
+	let announcementDeleting = $state(false);
 	const handleDeleteAnnouncement = async () => {
-		if (!deleteAnnounceId) return;
-		const res = await gd.deleteAnnouncement(deleteAnnounceId);
-		if (res.code === 0) showToast('公告已删除', 'success');
-		else showToast(res.message || '删除失败', 'danger');
-		deleteAnnounceId = null;
+		if (!deleteAnnounceId || announcementDeleting) return;
+		announcementDeleting = true;
+		try {
+			const res = await gd.deleteAnnouncement(deleteAnnounceId);
+			if (res.code === 0) {
+				showToast('公告已删除', 'success');
+				deleteAnnounceId = null;
+			} else {
+				showToast(res.message || '删除失败', 'danger');
+			}
+		} catch {
+			showToast('删除失败，请重试', 'danger');
+		} finally {
+			announcementDeleting = false;
+		}
 	};
 
 	// 成员管理（owner/admin；不能操作群主/自己）
@@ -209,10 +220,12 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		}
 	};
 
+	let memberActionPending = $state(false);
 	const handleMemberAction = async (action: MemberAction, durationMinutes?: number) => {
-		if (!actionMember) return;
+		if (!actionMember || memberActionPending) return;
 		const m = actionMember;
 		const gid = params.groupId;
+		memberActionPending = true;
 		try {
 			let res: { code: number; message?: string } = { code: -1 };
 			if (action === 'set_admin') res = await setGroupMemberRole({ group_id: gid, user_id: m.userId, role: 'admin' });
@@ -232,6 +245,8 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			}
 		} catch {
 			showToast('操作失败，请重试', 'danger');
+		} finally {
+			memberActionPending = false;
 		}
 	};
 </script>
@@ -241,7 +256,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 
 {#snippet groupHeaderActions()}
-	<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = true)} variant="ghost" size={36} />
+	{#if canReportGroup}
+		<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (moreOpen = true)} variant="ghost" size={36} />
+	{/if}
 {/snippet}
 
 <!-- R13：内容统一「满宽 + page gutter」（去掉 max-w-6xl/xl/2xl 收窄档，避免 1024 满宽、1440 收窄的
@@ -551,8 +568,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	title="删除这条公告？"
 	description="删除后无法恢复。"
 	confirmLabel="确认删除"
+	loading={announcementDeleting}
 	onCancel={() => (deleteAnnounceId = null)}
-	onConfirm={handleDeleteAnnouncement}
+	onConfirm={() => void handleDeleteAnnouncement()}
 />
 
 <ConfirmDialog
@@ -603,6 +621,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 <MemberActionSheet
 	open={actionMember !== null}
 	member={actionMember}
+	loading={memberActionPending}
 	onClose={() => (actionMember = null)}
 	onSelect={handleMemberAction}
 />

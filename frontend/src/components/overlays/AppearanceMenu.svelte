@@ -32,11 +32,13 @@
 			onClick={() => (open = !open)}
 			variant="ghost"
 			size={36}
+			ariaExpanded={open}
+			ariaHasPopup="dialog"
 			class="header-action"
 		/>
 	</div>
 
-	<Popover.Content customAnchor={rootEl} class="w-76 rounded-xl p-3 shadow-raised-lg border border-border-default bg-surface-primary" role="dialog" aria-label="外观设置">
+	<Popover.Content customAnchor={rootEl} class="w-76 p-3" role="dialog" aria-label="外观设置">
 			<div class="px-1 pb-2.5">
 				<p class="eyebrow text-text-secondary">外观</p>
 				<p class="mt-0.5 text-xs text-text-secondary">

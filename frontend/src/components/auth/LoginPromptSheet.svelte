@@ -2,6 +2,7 @@
 	import { X } from '@lucide/svelte';
 	import AuthForm from '@/components/auth/AuthForm.svelte';
 	import * as Dialog from '@/components/ui/dialog';
+	import { platform } from '@/stores/platform.svelte';
 
 	// requireAuth() 拦截匿名用户写操作时弹出的底部登录 Sheet。
 	// 内嵌共享 AuthForm；登录成功后 auth store 自动重放延迟操作。
@@ -18,16 +19,21 @@
 		onClose: () => void;
 		onSuccess: () => void;
 	} = $props();
+
+	// 移动端保持拇指可达的底部 sheet；桌面/平板用居中模态，与全站表单弹层一致。
+	const isMobile = $derived(platform.platform === 'mobile');
 </script>
 
 <Dialog.Root {open} onOpenChange={(next) => (next ? undefined : onClose())}>
 	<Dialog.Content
-		side="bottom"
-		class="w-full px-5 pb-8 pt-3 sm:max-w-115"
+		side={isMobile ? 'bottom' : 'center'}
+		class={isMobile ? 'w-full px-5 pb-8 pt-3 sm:max-w-115' : 'w-[28rem] max-w-[calc(100vw-2rem)] p-6'}
 	>
-		<div class="mb-3 flex justify-center" aria-hidden="true">
-			<span class="h-1 w-9 rounded-full bg-border-strong"></span>
-		</div>
+		{#if isMobile}
+			<div class="mb-3 flex justify-center" aria-hidden="true">
+				<span class="h-1 w-9 rounded-full bg-border-strong"></span>
+			</div>
+		{/if}
 		<div class="mb-4 flex items-start justify-between">
 			<div>
 				<!-- 弹层标题字重对齐 h1-h4 基线（font-medium），不跟随数字/激活态的 semibold -->

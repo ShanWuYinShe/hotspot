@@ -259,9 +259,9 @@
 					/>
 					{#if action === 'resolve'}
 						<Input
-							label={`连带封禁天数${canBan ? '（留空 = 仅标记处理不封禁；0 = 永久）' : '（需要 admin.users.write 权限）'}`}
+							label={`连带封禁天数${canBan ? '（留空 = 不封禁；正整数 = 封禁天数）' : '（需要 admin.users.write 权限）'}`}
 							type="number"
-							min={0}
+							min={1}
 							value={banDays === null ? '' : String(banDays)}
 							onChange={(v) => (banDays = v.trim() === '' ? null : Number(v))}
 							disabled={!canBan}

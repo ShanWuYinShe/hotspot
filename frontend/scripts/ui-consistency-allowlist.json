@@ -35,6 +35,11 @@
 		"reason": "群封面更换：媒体上传徽标（+ 隐藏 file input）交互，与表单字段/相册选择器语义不同；徽标样式与头像同构"
 	},
 	{
+		"rule": "raw-file-input",
+		"file": "src/components/overlays/CreateGroupSheet.svelte",
+		"reason": "建群封面选择：与 GroupSettingsSheet 同一媒体上传徽标交互（+ 隐藏 file input），不是表单字段/相册选择器"
+	},
+	{
 		"rule": "input-surface-outside",
 		"file": "src/routes/(app)/search/+page.svelte",
 		"reason": "仅 JS 选择器字符串 .input-surface（键盘导航排除输入区），非样式声明"

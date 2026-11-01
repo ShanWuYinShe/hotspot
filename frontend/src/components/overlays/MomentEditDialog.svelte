@@ -88,19 +88,17 @@
 		class="max-w-md p-5"
 		aria-label="编辑瞬间"
 	>
-		<div class="flex items-center justify-between">
-			<div>
-				<p class="eyebrow">编辑瞬间</p>
-				<p class="mt-1 text-md text-text-primary">修改内容、氛围与可见范围</p>
+		<div class="flex items-start justify-between gap-3">
+			<div class="min-w-0">
+				<Dialog.Title class="text-lg font-semibold tracking-title text-text-primary">编辑瞬间</Dialog.Title>
+				<Dialog.Description class="mt-1 text-sm text-text-secondary">修改内容、氛围与可见范围</Dialog.Description>
 			</div>
-			<button
-				type="button"
-				class="hit-slop flex h-8 w-8 items-center justify-center rounded-full text-text-secondary outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
-				onclick={onClose}
+			<Dialog.Close
+				class="hit-slop flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary focus-ring hover:bg-interactive-hover"
 				aria-label="关闭"
 			>
 				<X size={16} />
-			</button>
+			</Dialog.Close>
 		</div>
 
 		<!-- 正文 + 字符计数：正文统一走 forms/Textarea（壳 px-3.5 py-3），计数走 footer -->
@@ -151,10 +149,11 @@
 		</section>
 
 		<footer class="mt-5 flex items-center justify-end gap-3">
-			<Button variant="secondary" size="sm" onclick={onClose}>取消</Button>
+			<Button variant="secondary" size="md" onclick={onClose}>取消</Button>
 			<Button
 				type="button"
 				disabled={!canSubmit}
+				loading={submitting}
 				onclick={handleSubmit}
 				size="md"
 				class="px-5"
