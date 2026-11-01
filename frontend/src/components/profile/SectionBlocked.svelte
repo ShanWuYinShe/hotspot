@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ShieldBan } from '@lucide/svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
-	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
+	import EntityRow from '@/components/list/EntityRow.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { showToast } from '@/stores/toast.svelte';

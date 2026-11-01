@@ -4,7 +4,7 @@
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { MapPin, Users, Lock, Globe } from '@lucide/svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
-	import MediaCard from '@/cst-ui/cards/MediaCard.svelte';
+	import MediaCard from '@/components/data-display/MediaCard.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 附近群组横向轮播（对齐 Figma Make HomePage GroupCarousel）。

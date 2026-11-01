@@ -180,6 +180,9 @@ export function cardPress(node: HTMLElement) {
 	const isInnerControl = (target: EventTarget | null) => {
 		const el = target as HTMLElement | null;
 		if (!el || typeof el.closest !== 'function') return false;
+		// 卡根本身就是 button（如统计横幅/后台模块卡）时按下应缩放整卡；
+		// 只有卡内嵌的其它控件才排除（closest 会命中最内层，先排除 node 自身）。
+		if (el === node) return false;
 		return Boolean(
 			el.closest(
 				'button:not([data-cover]), a[href], input, textarea, select, [role="menuitem"], [role="slider"]'

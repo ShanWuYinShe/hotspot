@@ -3,6 +3,7 @@
 	import { UserPlus, MessageCircle, Users } from '@lucide/svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
@@ -90,16 +91,17 @@
 					description={searchQ.trim() ? '换个关键词试试，或到附近的人里逛逛' : '发现 5km 内有趣的人，关注后即可发起私聊'}
 				>
 					{#snippet action()}
-						<button
-							type="button"
-							class="hover-btn rounded-full border border-border-default px-4 py-2 text-xs text-text-primary focus-ring hover:border-border-strong"
+						<Button
+							variant="soft"
+							size="sm"
+							shape="pill"
 							onclick={() => {
 								onClose();
 								void goto(ROUTES.nearbyPeople);
 							}}
 						>
 							去附近看看
-						</button>
+						</Button>
 					{/snippet}
 				</EmptyState>
 			</div>
@@ -154,16 +156,17 @@
 						description={searchQ.trim() ? '换个关键词试试' : '先添加好友，即可在这里发起私聊'}
 					>
 						{#snippet action()}
-							<button
-								type="button"
-								class="hover-btn rounded-full border border-border-default px-4 py-2 text-xs text-text-primary focus-ring hover:border-border-strong"
+							<Button
+								variant="soft"
+								size="sm"
+								shape="pill"
 								onclick={() => {
 									tab = 'add';
 									searchQ = '';
 								}}
 							>
 								去添加好友
-							</button>
+							</Button>
 						{/snippet}
 					</EmptyState>
 				{/if}

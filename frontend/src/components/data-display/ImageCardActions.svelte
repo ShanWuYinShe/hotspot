@@ -43,8 +43,9 @@
 		onImage?: boolean;
 		onLike: (next: boolean) => void;
 		onComment: () => void;
+		/** 收藏：卡片若需要收藏则传入；不传时不展示（feed 列表卡遵循极简原则不堆砌收藏） */
 		onSave?: (next: boolean) => void;
-		/** 分享：由 lib/moment-actions 的 shareMoment 实现 */
+		/** 分享：不传时不展示 */
 		onShare?: () => void;
 		/** 计数为 0 时显示「赞/评论」文案（大卡友好）；false 时显示 0 */
 		placeholderLabels?: boolean;
@@ -124,49 +125,51 @@
 		</button>
 	</div>
 
-	<div class="flex shrink-0 items-center {groupGap}">
-		{#if onShare}
-			<button
-				type="button"
-				class="{btnBase} {idleCls}"
-				aria-label="分享瞬间"
-				onclick={(e) => {
-					e.stopPropagation();
-					onShare?.();
-				}}
-			>
-				<Share2 class="{iconSize} shrink-0" strokeWidth={1.5} />
-				{#if shares && shares > 0}
-					<span class="text-sm font-medium tabular-nums">{shares}</span>
-				{/if}
-			</button>
-		{/if}
+	{#if onShare || onSave}
+		<div class="flex shrink-0 items-center {groupGap}">
+			{#if onShare}
+				<button
+					type="button"
+					class="{btnBase} {idleCls}"
+					aria-label="分享瞬间"
+					onclick={(e) => {
+						e.stopPropagation();
+						onShare?.();
+					}}
+				>
+					<Share2 class="{iconSize} shrink-0" strokeWidth={1.5} />
+					{#if shares && shares > 0}
+						<span class="text-sm font-medium tabular-nums">{shares}</span>
+					{/if}
+				</button>
+			{/if}
 
-		<!-- 收藏：accent 填充（压图：accent 填充白描边；实底：accent 填充） -->
-		{#if onSave}
-			<button
-				type="button"
-				class="{btnBase} {saved ? activeSaveCls : idleCls}"
-				aria-label={saved ? '取消收藏' : '收藏'}
-				aria-pressed={saved}
-				onclick={(e) => {
-					e.stopPropagation();
-					if (!saved) savePop += 1;
-					onSave?.(!saved);
-				}}
-			>
-				<span class="inline-flex" use:popOn={savePop}>
-					<Bookmark
-						class="{iconSize} shrink-0 {saved
-							? onImage
-								? 'fill-accent-default text-content-inverse'
-								: 'fill-accent-default text-accent-default'
-							: ''}"
-						strokeWidth={1.5}
-						fill={!onImage && saved ? 'currentColor' : 'none'}
-					/>
-				</span>
-			</button>
-		{/if}
-	</div>
+			{#if onSave}
+				<!-- 收藏：accent 填充（压图：accent 填充白描边；实底：accent 填充） -->
+				<button
+					type="button"
+					class="{btnBase} {saved ? activeSaveCls : idleCls}"
+					aria-label={saved ? '取消收藏' : '收藏'}
+					aria-pressed={saved}
+					onclick={(e) => {
+						e.stopPropagation();
+						if (!saved) savePop += 1;
+						onSave(!saved);
+					}}
+				>
+					<span class="inline-flex" use:popOn={savePop}>
+						<Bookmark
+							class="{iconSize} shrink-0 {saved
+								? onImage
+									? 'fill-accent-default text-content-inverse'
+									: 'fill-accent-default text-accent-default'
+								: ''}"
+							strokeWidth={1.5}
+							fill={!onImage && saved ? 'currentColor' : 'none'}
+						/>
+					</span>
+				</button>
+			{/if}
+		</div>
+	{/if}
 </div>

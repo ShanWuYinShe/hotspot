@@ -166,7 +166,7 @@
 			<div class="relative overflow-hidden sm:-mx-5 sm:-mt-5 md:-mx-7 md:-mt-7">
 				<div class="relative overflow-hidden rounded-none sm:rounded-t-lg bg-surface-subtle">
 					<!-- 移动端顶部渐变暗影层（Scrim）：确保顶部浮动白标头/白按钮在任意明亮天空图下均具备超高辨识度与现代沉浸感 -->
-					<div class="pointer-events-none absolute inset-x-0 top-0 h-28 z-10 sm:hidden" style="background: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 50%, transparent 100%);"></div>
+					<div class="pointer-events-none absolute inset-x-0 top-0 h-28 z-10 sm:hidden" style="background:var(--cst-surface-card-scrim-top);"></div>
 					<img
 						data-gallery-backdrop
 						src={presetImageUrl(currentImage, 'cover', 800)}
@@ -391,7 +391,7 @@
 									onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
 								>{c.user}</button>
 								{#if c.userId && c.userId === moment.authorId}
-									<span class="rounded bg-accent-soft px-1.5 py-0.5 text-xxs font-medium text-text-accent-on-soft">作者</span>
+									<Badge tone="accent" size="sm">作者</Badge>
 								{/if}
 							</div>
 							<span class="shrink-0 text-xs tabular-nums text-text-secondary">{c.time}</span>
@@ -461,7 +461,7 @@
 													onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
 												>{r.user}</button>
 												{#if r.userId && r.userId === moment.authorId}
-													<span class="rounded bg-accent-soft px-1 py-0.2 text-xxs font-medium text-text-accent-on-soft">作者</span>
+													<Badge tone="accent" size="sm">作者</Badge>
 												{/if}
 												{#if !r.isDeleted}
 													<span class="text-xxs text-text-secondary">回复</span>

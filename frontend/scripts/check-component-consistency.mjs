@@ -18,13 +18,13 @@ const SRC = join(ROOT, 'src');
 const ALLOWLIST_PATH = join(ROOT, 'scripts', 'ui-consistency-allowlist.json');
 
 const PRIMITIVES = {
-	search: new Set(['src/components/forms/SearchInput.svelte', 'src/cst-ui/forms/SearchInput.svelte']),
-	input: new Set(['src/components/forms/Input.svelte', 'src/cst-ui/forms/Input.svelte']),
-	textarea: new Set(['src/components/forms/Textarea.svelte', 'src/cst-ui/forms/Textarea.svelte']),
-	select: new Set(['src/components/forms/Select.svelte', 'src/cst-ui/forms/Select.svelte']),
-	checkbox: new Set(['src/components/forms/Checkbox.svelte', 'src/cst-ui/forms/Checkbox.svelte']),
-	imagePicker: new Set(['src/components/forms/ImagePicker.svelte', 'src/cst-ui/forms/ImagePicker.svelte']),
-	tabBar: new Set(['src/components/navigation/TabBar.svelte', 'src/cst-ui/navigation/TabBar.svelte'])
+	search: new Set(['src/components/forms/SearchInput.svelte']),
+	input: new Set(['src/components/forms/Input.svelte']),
+	textarea: new Set(['src/components/forms/Textarea.svelte']),
+	select: new Set(['src/components/forms/Select.svelte']),
+	checkbox: new Set(['src/components/forms/Checkbox.svelte']),
+	imagePicker: new Set(['src/components/forms/ImagePicker.svelte']),
+	tabBar: new Set(['src/components/navigation/TabBar.svelte'])
 };
 const ALL_PRIMITIVES = new Set(Object.values(PRIMITIVES).flatMap((s) => Array.from(s)));
 
@@ -213,11 +213,8 @@ for (const abs of files) {
 	if (file.endsWith('.svelte')) {
 		const BADGE_PRIMITIVES = new Set([
 			'src/components/data-display/Badge.svelte',
-			'src/cst-ui/data-display/Badge.svelte',
 			'src/components/shared/UnreadBadge.svelte',
-			'src/cst-ui/data-display/UnreadBadge.svelte',
 			'src/components/forms/TagPill.svelte',
-			'src/cst-ui/forms/TagPill.svelte',
 			...PRIMITIVES.tabBar
 		]);
 
@@ -283,11 +280,7 @@ for (const abs of files) {
 		}
 
 		// R15 裸头像 img（必须在 Avatar 内）
-		if (
-			file !== 'src/components/shared/Avatar.svelte' &&
-			file !== 'src/cst-ui/data-display/Avatar.svelte' &&
-			!isAllowed('raw-avatar-img', file)
-		) {
+		if (file !== 'src/components/shared/Avatar.svelte' && !isAllowed('raw-avatar-img', file)) {
 			const re = /<img\b/g;
 			let m;
 			while ((m = re.exec(markup))) {

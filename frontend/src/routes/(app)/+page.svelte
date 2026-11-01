@@ -13,6 +13,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Button from '@/components/ui/button.svelte';
+	import TagPill from '@/components/forms/TagPill.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
@@ -297,13 +298,14 @@
 				variant="feed"
 				count={4}
 				label="加载动态中…"
-				class="grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 2xl:grid-cols-3 sm:gap-4 sm:px-0 pt-2"
+				class="grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] sm:gap-4 sm:px-0 pt-2"
 			/>
 		{:else if currentError && currentItems.length === 0}
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
 		{:else if currentItems.length > 0}
-			<!-- 高质感社区 Feed 流：单条居中陈列避免半屏塌陷，多条移动端规整 2 列满铺提效，桌面 2~3 列流式画廊瀑布 -->
-			<div class={currentItems.length === 1 ? 'max-w-md mx-auto w-full px-2.5 sm:px-0 pt-2' : demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 2xl:grid-cols-3 sm:gap-4 sm:px-0 pt-2'}>
+			<!-- 高质感社区 Feed 流：单条居中陈列避免半屏塌陷，多条移动端规整 2 列满铺提效；
+			     md 起按 340px 最小轨自动增列，避免 2K/4K 下固定 3 列把卡片拉成 600px+ 巨卡 -->
+			<div class={currentItems.length === 1 ? 'max-w-md mx-auto w-full px-2.5 sm:px-0 pt-2' : demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] sm:gap-4 sm:px-0 pt-2'}>
 				{#each currentItems as moment, index (moment.moment_id)}
 					<HomeFeedItem
 						{moment}
@@ -325,7 +327,7 @@
 			{#if currentItems.length <= 2 && !hasMore}
 				<!-- 数据稀疏时（<=2条）提供探索热门话题卡片，充实版面、引导互动，消除大面积死白与断崖空旷感 -->
 				<div class="px-3.5 sm:px-0 my-3">
-					<div class="rounded-xl border border-border-subtle/40 bg-surface-island/70 p-4 shadow-xs">
+					<div class="rounded-lg border border-border-subtle/40 bg-surface-island/70 p-4 shadow-xs">
 						<div class="flex items-center justify-between mb-2.5">
 							<div class="flex items-center gap-1.5">
 								<Sparkles class="size-4 text-accent-default" strokeWidth={1.75} />
@@ -335,14 +337,13 @@
 						</div>
 						<div class="flex flex-wrap gap-1.5">
 							{#each trendingTopics.slice(0, 4) as topic (topic.tag)}
-								<button
-									type="button"
-									class="hover-action hit-slop-44 inline-flex items-center gap-1 rounded-full bg-surface-subtle px-2.5 py-1 text-xs text-text-secondary hover:text-text-primary focus-ring"
-									onclick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
+								<TagPill
+									size="sm"
+									onClick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
 								>
 									<span>#{topic.tag}</span>
 									<span class="text-xxs opacity-70">({topic.count})</span>
-								</button>
+								</TagPill>
 							{/each}
 						</div>
 					</div>

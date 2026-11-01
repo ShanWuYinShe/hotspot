@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { ChevronRight, MapPin } from '@lucide/svelte';
+	import ListItem from '@/components/list/ListItem.svelte';
 	import { avatarImageWidths, buildImageSrcSet, fadeImage, optimizedImageUrl } from '@/lib/images';
 
 	// 详情栏小尺寸帖子缩略。
@@ -17,7 +18,11 @@
 	} = $props();
 </script>
 
-<button type="button" class="tap-97 flex items-center gap-2.5 w-full text-left rounded-sm {onClick ? 'hover-bg cursor-pointer' : 'cursor-default focus-visible:outline-none'}" disabled={!onClick} onclick={onClick}>
+<ListItem
+	onClick={onClick}
+	ariaLabel={onClick ? title : undefined}
+	class="flex w-full items-center gap-2.5 bg-transparent py-1"
+>
 	<div class="media-placeholder rounded-sm overflow-hidden shrink-0 size-11.5" >
 		{#if image}
 			<img
@@ -41,5 +46,5 @@
 		<p   class="truncate text-xs text-text-primary">{title}</p>
 		<p   class="truncate text-xxs mt-0.5 text-text-secondary">{meta}</p>
 	</div>
-	<ChevronRight class="size-3 shrink-0 text-text-secondary"   strokeWidth={1.5} />
-</button>
+	<ChevronRight class="size-3 shrink-0 text-text-secondary" strokeWidth={1.5} />
+</ListItem>

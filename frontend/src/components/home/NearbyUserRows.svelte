@@ -3,7 +3,7 @@
 	import { Users } from '@lucide/svelte';
 	import type { NearbyUser } from './nearby-users';
 	import ListContainer from '@/components/list/ListContainer.svelte';
-	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
+	import EntityRow from '@/components/list/EntityRow.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import FollowButton from '@/components/ui/FollowButton.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';

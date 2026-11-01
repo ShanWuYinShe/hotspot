@@ -5,6 +5,7 @@
 	import { hasAdminPermission, isSuperAdmin } from '@/stores/admin.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -247,25 +248,19 @@
 	</EmptyState>
 {:else}
 	<div class="flex w-full flex-col gap-6">
-		<!-- 角色管理（分区头与 SectionHead 同语言：图标 + 标题 + 计数 + 说明 + 右侧主操作） -->
+		<!-- 角色管理 -->
 		<section class="flex flex-col gap-3" aria-label="角色管理">
-			<div class="flex flex-wrap items-start justify-between gap-3">
-				<div class="flex min-w-0 items-start gap-2">
-					<span class="mt-0.5 flex shrink-0 items-center justify-center text-text-secondary" aria-hidden="true">
-						<KeyRound class="size-4" strokeWidth={1.75} />
-					</span>
-					<div class="min-w-0">
-						<div class="flex items-baseline gap-2">
-							<h2 class="truncate text-md font-semibold text-text-primary">角色</h2>
-							{#if !rolesLoading}
-								<span class="shrink-0 text-xs font-medium tabular-nums text-text-secondary">{roles.length}</span>
-							{/if}
-						</div>
-						<p class="mt-1 text-xs text-text-secondary">角色绑定权限键，授予平台管理员时选择角色。</p>
-					</div>
-				</div>
-				<Button type="button" variant="primary" size="sm" class="hit-slop-44 ml-auto" onclick={openCreate}>新建角色</Button>
-			</div>
+			<SectionHead
+				title="角色"
+				icon={KeyRound}
+				count={rolesLoading ? undefined : roles.length}
+				subtitle="角色绑定权限键，授予平台管理员时选择角色。"
+				class="mb-0"
+			>
+				{#snippet trailing()}
+					<Button type="button" variant="primary" size="sm" class="hit-slop-44" onclick={openCreate}>新建角色</Button>
+				{/snippet}
+			</SectionHead>
 
 			{#if rolesLoading}
 				<InlineLoading label="加载角色…" />
@@ -317,25 +312,19 @@
 			{/if}
 		</section>
 
-		<!-- 平台管理员（同分区头语言） -->
+		<!-- 平台管理员 -->
 		<section class="flex flex-col gap-3" aria-label="平台管理员">
-			<div class="flex flex-wrap items-start justify-between gap-3">
-				<div class="flex min-w-0 items-start gap-2">
-					<span class="mt-0.5 flex shrink-0 items-center justify-center text-text-secondary" aria-hidden="true">
-						<ShieldCheck class="size-4" strokeWidth={1.75} />
-					</span>
-					<div class="min-w-0">
-						<div class="flex items-baseline gap-2">
-							<h2 class="truncate text-md font-semibold text-text-primary">平台管理员</h2>
-							{#if !adminsLoading}
-								<span class="shrink-0 text-xs font-medium tabular-nums text-text-secondary">{admins.length}</span>
-							{/if}
-						</div>
-						<p class="mt-1 text-xs text-text-secondary">按最近授权时间排序；撤销 superadmin 仅 superadmin 可执行。</p>
-					</div>
-				</div>
-				<Button type="button" variant="primary" size="sm" class="hit-slop-44 ml-auto" onclick={openAward}>授予管理员</Button>
-			</div>
+			<SectionHead
+				title="平台管理员"
+				icon={ShieldCheck}
+				count={adminsLoading ? undefined : admins.length}
+				subtitle="按最近授权时间排序；撤销 superadmin 仅 superadmin 可执行。"
+				class="mb-0"
+			>
+				{#snippet trailing()}
+					<Button type="button" variant="primary" size="sm" class="hit-slop-44" onclick={openAward}>授予管理员</Button>
+				{/snippet}
+			</SectionHead>
 
 			{#if adminsLoading}
 				<InlineLoading label="加载管理员列表…" />

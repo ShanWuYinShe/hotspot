@@ -182,7 +182,8 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			visibleUsers.map((u) => ({
 				isOnline: u.isOnline,
 				isFeatured: Boolean(u.isOnline || (u.mutual && u.mutual > 0)),
-				likes: u.mutual
+				likes: u.mutual,
+				hasImage: Boolean(u.avatar)
 			})),
 			{ device, kind: 'user' }
 		)

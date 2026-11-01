@@ -43,12 +43,7 @@
 		{ icon: MessageCircle, title: '遇见同频', text: '一个招呼、一次同行，让附近不再陌生。' },
 		{ icon: Sparkles, title: '记录此刻', text: '把街角的温度分享给刚好路过的人。' }
 	];
-	const pageTitle = $derived(mode === 'register' ? '注册' : mode === 'guest' ? '访客浏览' : '登录');
 </script>
-
-<svelte:head>
-	<title>{pageTitle} · HotSpot</title>
-</svelte:head>
 
 <main class="relative isolate min-h-dvh bg-surface-page">
 	<!-- 氛围画布：认证页大留白，用主题世界层（星尘/等高线/墨山）补足空荡感 -->

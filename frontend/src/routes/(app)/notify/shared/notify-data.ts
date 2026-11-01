@@ -4,6 +4,7 @@ import type { Component } from 'svelte';
 import { Heart, UserPlus, MessageCircle, Bell, MapPin } from '@lucide/svelte';
 
 import type { NotifyPayload } from '@/api/types';
+import { ROUTES } from '@/lib/routes';
 
 export interface NotifyViewItem {
 	id: string;
@@ -35,18 +36,18 @@ export function resolveNotifHref(
 		case 'moment_commented':
 		case 'comment_reply':
 		case 'mentioned':
-			return p.moment_id ? `/moments/${p.moment_id}` : undefined;
+			return p.moment_id ? ROUTES.moment(p.moment_id) : undefined;
 		case 'reaction_added':
-			return p.target_type === 'moment' && p.target_id ? `/moments/${p.target_id}` : undefined;
+			return p.target_type === 'moment' && p.target_id ? ROUTES.moment(p.target_id) : undefined;
 		case 'new_follower':
 		case 'mutual_follow':
-			return actorId ? `/users/${actorId}` : undefined;
+			return actorId ? ROUTES.user(actorId) : undefined;
 		case 'group_invite_received':
 		case 'group_application_received':
 		case 'group_application_accepted':
 		case 'group_application_rejected':
 		case 'group_mentioned':
-			return p.group_id ? `/groups/${p.group_id}` : undefined;
+			return p.group_id ? ROUTES.group(p.group_id) : undefined;
 		default:
 			return undefined;
 	}

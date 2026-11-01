@@ -4,7 +4,7 @@
 	import { Search as SearchIcon, Users, FileText, Hash, ChevronRight } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
-	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
+	import EntityRow from '@/components/list/EntityRow.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';

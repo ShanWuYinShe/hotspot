@@ -18,6 +18,7 @@
 		count,
 		action,
 		onAction,
+		trailing,
 		variant = 'section',
 		class: className = ''
 	}: {
@@ -27,6 +28,8 @@
 		count?: number | string;
 		action?: string;
 		onAction?: () => void;
+		/** 右侧自定义操作（主按钮等）；优先于文字链 action。 */
+		trailing?: Snippet;
 		variant?: 'section' | 'rail' | 'eyebrow';
 		class?: string;
 	} = $props();
@@ -66,7 +69,9 @@
 			{/if}
 		</div>
 	</div>
-	{#if action && onAction}
+	{#if trailing}
+		<div class="shrink-0">{@render trailing()}</div>
+	{:else if action && onAction}
 		<button
 			type="button"
 			class="link-btn hit-slop-44 -my-2.5 flex shrink-0 items-center gap-0.5 px-1 py-2.5 text-xs text-accent-default focus-ring"

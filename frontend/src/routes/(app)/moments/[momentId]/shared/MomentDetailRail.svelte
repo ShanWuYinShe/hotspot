@@ -3,6 +3,7 @@
 	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
 	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '$lib/routes';
 	import type { MomentDetail, RailPerson, RailMoment } from './detail-types';
@@ -27,16 +28,18 @@
 		<RailSection title="作者" variant="island">
 			<RailUserRow avatar={moment.avatar} name={moment.user} sub={moment.location} onClick={() => { if (moment.authorId) void goto(ROUTES.user(moment.authorId)); }}>
 				{#snippet trailing()}
-					<button
-						type="button"
-						class="hover-btn hit-slop shrink-0 rounded-full bg-surface-subtle/60 px-3 py-1.5 text-xs font-medium text-text-primary transition-colors focus-ring hover:bg-surface-subtle"
+					<Button
+						variant="soft"
+						size="sm"
+						shape="pill"
+						class="hit-slop shrink-0"
 						onclick={(e) => {
 							e.stopPropagation();
 							if (moment.authorId) void goto(ROUTES.message(moment.authorId));
 						}}
 					>
 						私信
-					</button>
+					</Button>
 				{/snippet}
 			</RailUserRow>
 		</RailSection>

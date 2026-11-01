@@ -2,6 +2,7 @@
 	import { Radar, ChevronRight } from '@lucide/svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
+	import { cardPress } from '@/lib/motion';
 	import { formatCount } from '@/lib/utils';
 
 	// Hero 统计横幅——单一焦点 + 发丝分隔的数字节奏（R13「数字与秩序」母题）。
@@ -34,7 +35,8 @@
 
 	<button
 		type="button"
-		class="group hover-btn tap-97 rounded-lg bg-surface-island shadow-xs hover:shadow-raised-sm cursor-pointer overflow-hidden text-left w-full pt-4 pb-4 px-5 transition-all"
+		use:cardPress
+		class="group card-hover rounded-lg bg-surface-island shadow-xs cursor-pointer overflow-hidden text-left w-full pt-4 pb-4 px-5"
 		aria-label="查看附近的人"
 		onclick={onExplore}
 	>

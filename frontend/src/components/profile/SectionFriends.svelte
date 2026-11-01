@@ -3,7 +3,7 @@
 	import { MessageCircle, Users } from '@lucide/svelte';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
-	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
+	import EntityRow from '@/components/list/EntityRow.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { useRelationships, type MappedFriend } from '@/lib/profile-data.svelte';
 	import { ROUTES } from '@/lib/routes';

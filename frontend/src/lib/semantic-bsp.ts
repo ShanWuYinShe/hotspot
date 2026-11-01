@@ -58,6 +58,10 @@ export function getCardBspLayout(
 	}
 
 	const prevTier = prevTiers[index - 1] ?? null;
+	// 纯文字卡（hasImage === false）不参与任何跨度档位：2x2/1x2 会把无图内容
+	// 拉成整块空画布，2x1 横排也会留下 40% 的空图片区（2K 下尤其明显）。
+	// 所有大卡只留给真的有图的卡片。
+	const canSpan = item.hasImage !== false;
 
 	let tier: CardTier = '1x1';
 
@@ -65,19 +69,19 @@ export function getCardBspLayout(
 		// ════ 移动端（双列 2-Cols 约束）════
 		// 严禁 2x2（会吃掉整屏高度，造成严重压迫感）。
 		// 首项推荐：首张横画幅卡片或特别推荐卡展开 2x1 满宽焦点
-		if (index === 0 && (item.isFeatured || (ratio !== null && ratio >= 1.2) || Boolean(item.likes && item.likes > 5) || Boolean(item.members && item.members > 10))) {
+		if (canSpan && index === 0 && (item.isFeatured || (ratio !== null && ratio >= 1.2) || Boolean(item.likes && item.likes > 5) || Boolean(item.members && item.members > 10))) {
 			tier = '2x1';
 		} else if (ratio !== null && ratio < 0.75) {
 			// 竖长图（< 0.75，如 9:16、3:4）：采用 1x2 竖高卡（小红书式优雅纵深）
 			// 节奏防粘连：若前一张刚是竖卡，降为 1x1 避免并排过长
 			tier = prevTier === '1x2' ? '1x1' : '1x2';
-		} else if (ratio !== null && ratio > 1.35) {
+		} else if (canSpan && ratio !== null && ratio > 1.35) {
 			// 宽横图（> 1.35，如 16:9）：采用 2x1 满宽横向卡
 			// 节奏防粘连：若前一张刚是横卡，降为 1x1
 			tier = prevTier === '2x1' ? '1x1' : '2x1';
 		} else {
 			// 无明显极端比例时，通过周期律动（每 7-9 张）插入一次 2x1 满宽横条破局
-			if (index > 0 && index % 8 === 4 && prevTier !== '2x1') {
+			if (canSpan && index > 0 && index % 8 === 4 && prevTier !== '2x1') {
 				tier = '2x1';
 			} else {
 				tier = '1x1';
@@ -85,13 +89,13 @@ export function getCardBspLayout(
 		}
 	} else if (isTablet) {
 		// ════ 平板端（三列 3-Cols 约束）════
-		if (index === 0 && (item.isFeatured || (ratio !== null && ratio >= 1.0) || total >= 6)) {
+		if (canSpan && index === 0 && (item.isFeatured || (ratio !== null && ratio >= 1.0) || total >= 6)) {
 			tier = '2x2';
-		} else if (ratio !== null && ratio < 0.75) {
+		} else if (canSpan && ratio !== null && ratio < 0.75) {
 			tier = prevTier === '1x2' ? '1x1' : '1x2';
-		} else if (ratio !== null && ratio > 1.35) {
+		} else if (canSpan && ratio !== null && ratio > 1.35) {
 			tier = prevTier === '2x1' ? '1x1' : '2x1';
-		} else if (index % 7 === 3 && prevTier !== '2x1') {
+		} else if (canSpan && index % 7 === 3 && prevTier !== '2x1') {
 			tier = '2x1';
 		} else {
 			tier = '1x1';
@@ -99,18 +103,18 @@ export function getCardBspLayout(
 	} else {
 		// ════ 桌面端（4 ~ 6 列宽幅画册）════
 		// 1. 首屏视线黄金位：首项优先展开 2x2 巨幕精选
-		if (index === 0 && (total >= 4 || item.isFeatured || (ratio !== null && ratio >= 1.0))) {
+		if (canSpan && index === 0 && (total >= 4 || item.isFeatured || (ratio !== null && ratio >= 1.0))) {
 			tier = '2x2';
-		} else if (ratio !== null && ratio < 0.75) {
+		} else if (canSpan && ratio !== null && ratio < 0.75) {
 			// 竖图优先 1x2
 			tier = prevTier === '1x2' ? '1x1' : '1x2';
-		} else if (ratio !== null && ratio > 1.35) {
+		} else if (canSpan && ratio !== null && ratio > 1.35) {
 			// 横图优先 2x1
 			tier = prevTier === '2x1' ? '1x1' : '2x1';
-		} else if (total >= 12 && index > 0 && index % 14 === 8 && prevTier !== '2x2') {
+		} else if (canSpan && total >= 12 && index > 0 && index % 14 === 8 && prevTier !== '2x2') {
 			// 长瀑布流周期性 2x2 视觉锚点（每 14 张左右穿插 1 张巨幕）
 			tier = '2x2';
-		} else if (index > 0 && (index % 6 === 3 || item.isFeatured || Boolean(item.members && item.members > 30)) && prevTier !== '2x1') {
+		} else if (canSpan && index > 0 && (index % 6 === 3 || item.isFeatured || Boolean(item.members && item.members > 30)) && prevTier !== '2x1') {
 			// 周期性横向穿插（2x1）
 			tier = '2x1';
 		} else {

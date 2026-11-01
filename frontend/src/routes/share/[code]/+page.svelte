@@ -11,6 +11,7 @@
 	import { Compass, Link2Off, MapPin, RotateCw } from '@lucide/svelte';
 	import { openShareDoor } from '@/api';
 	import Button from '@/components/ui/button.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import AmbientBackdrop from '@/components/layout/ambient/AmbientBackdrop.svelte';
 	import BrandLockup from '@/components/layout/brand/BrandLockup.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -85,10 +86,7 @@
 
 		<div class="mt-7 flex flex-col items-center">
 			{#if phase === 'loading'}
-				<span class="flex size-14 items-center justify-center rounded-full bg-accent-soft">
-					<span class="spinner size-5" role="status" aria-label="正在解析分享"></span>
-				</span>
-				<p class="mt-4 text-sm text-text-secondary">正在解析分享…</p>
+				<InlineLoading compact label="正在解析分享…" />
 			{:else if phase === 'error'}
 				<span class="flex size-14 items-center justify-center rounded-full bg-accent-soft text-accent-default">
 					<Link2Off class="size-6" strokeWidth={1.5} aria-hidden="true" />

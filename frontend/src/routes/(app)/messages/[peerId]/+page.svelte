@@ -25,7 +25,7 @@
 
 
 {#if !useSplit}
-	<div class="flex flex-col" style="height:100%;background-color:var(--cst-surface-chat);">
+	<div class="flex h-full flex-col bg-surface-chat">
 		<ChatView peerUserId={params.peerId ?? ''} showBackButton onBack={() => smartBack()} />
 	</div>
 {/if}

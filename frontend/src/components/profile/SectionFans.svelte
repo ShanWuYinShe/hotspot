@@ -6,7 +6,7 @@ import { formatRelativeDays } from '@/lib/utils';
 	import ProfileUserSection from '@/components/profile/ProfileUserSection.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
-	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
+	import EntityRow from '@/components/list/EntityRow.svelte';
 	import { useRelationships, type MappedFollower } from '@/lib/profile-data.svelte';
 	import { createOptimisticFollow, type OptimisticFollow } from '@/lib/relationships.svelte';
 	import { showToast } from '@/stores/toast.svelte';

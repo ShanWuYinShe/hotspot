@@ -151,13 +151,7 @@
 		</section>
 
 		<footer class="mt-5 flex items-center justify-end gap-3">
-			<button
-				type="button"
-				onclick={onClose}
-				class="hover-btn rounded-full px-4 py-2 text-sm text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
-			>
-				取消
-			</button>
+			<Button variant="secondary" size="sm" onclick={onClose}>取消</Button>
 			<Button
 				type="button"
 				disabled={!canSubmit}

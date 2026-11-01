@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { MapPin } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import Avatar from '@/cst-ui/data-display/Avatar.svelte';
-	import MediaCard from '@/cst-ui/cards/MediaCard.svelte';
-	import ImageCardActions from '@/cst-ui/cards/ImageCardActions.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
+	import MediaCard from '@/components/data-display/MediaCard.svelte';
+	import ImageCardActions from '@/components/data-display/ImageCardActions.svelte';
 	import type { FeedItem } from './moment-feed.svelte';
 	import { shareMoment } from '@/lib/moment-actions';
 	import { ROUTES } from '@/lib/routes';
-	import FollowButton from '@/cst-ui/buttons/FollowButton.svelte';
+	import FollowButton from '@/components/ui/FollowButton.svelte';
 	import type { Tier } from '@/lib/bsp-layout';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { follow } from '@/api';
@@ -29,7 +29,7 @@
 		compact = false,
 		tier = '1x1' as Tier,
 		horizontal = false,
-		class: className = 'aspect-[4/3] rounded-md'
+		class: className = 'aspect-[4/3] rounded-lg'
 	}: {
 		item: FeedItem;
 		liked: boolean;
@@ -124,7 +124,7 @@
 	<!-- 底部信息托盘：紧凑排布在卡片底部 25% 区域，彻底腾出上方图片空间 -->
 	{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
 		{@const onCover = onImage && !horizontal}
-		<div class="pointer-events-none flex flex-col gap-1 p-2 sm:p-2.5 {isHorizontal ? 'p-3 sm:p-4 justify-between h-full' : ''}" data-card-footer>
+		<div class="pointer-events-none flex flex-col gap-1 p-2 sm:p-2.5 {isHorizontal ? 'gap-3 p-3 sm:p-4 justify-center' : ''}" data-card-footer>
 			<!-- 正文：普通卡 2 行，横排/巨幕卡 3 行 -->
 			{#if item.content}
 				<p class="pointer-events-none line-clamp-2 {isHorizontal || isHero ? 'line-clamp-3 sm:text-base' : ''} text-xs sm:text-sm font-semibold leading-snug drop-shadow-xs {onCover ? 'text-content-inverse' : 'text-text-primary'}">

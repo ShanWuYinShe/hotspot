@@ -5,7 +5,7 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
-	import EntityRow from '@/cst-ui/list/EntityRow.svelte';
+	import EntityRow from '@/components/list/EntityRow.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';

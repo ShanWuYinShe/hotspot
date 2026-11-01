@@ -5,7 +5,16 @@
 	// 保留在内层），裸用（网格/独立内容区）不包裹。
 	import { cn } from '@/lib/utils';
 	import { isInListContext } from '@/components/list/context';
-	let { label = '加载中…', class: cls = '' }: { label?: string; class?: string } = $props();
+	let {
+		label = '加载中…',
+		compact = false,
+		class: cls = ''
+	}: {
+		label?: string;
+		/** 紧凑档：嵌在小卡片/弹层内时使用（spinner 20 + py-6 + 12px 文案）。 */
+		compact?: boolean;
+		class?: string;
+	} = $props();
 
 	const inList = isInListContext();
 </script>
@@ -19,8 +28,12 @@
 {/if}
 
 {#snippet loading()}
-	<div class={cn('flex flex-col items-center gap-3 py-20', cls)} role="status" aria-label={label}>
-		<div class="spinner size-7"></div>
-		<p class="text-text-secondary text-sm">{label}</p>
+	<div
+		class={cn('flex flex-col items-center', compact ? 'gap-2 py-6' : 'gap-3 py-20', cls)}
+		role="status"
+		aria-label={label}
+	>
+		<div class={compact ? 'spinner size-5' : 'spinner size-7'}></div>
+		<p class={compact ? 'text-text-secondary text-xs' : 'text-text-secondary text-sm'}>{label}</p>
 	</div>
 {/snippet}

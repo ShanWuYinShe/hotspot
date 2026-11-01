@@ -61,7 +61,7 @@
 			<span class="text-xxs text-text-secondary">{meta}</span>
 		</div>
 	{:else}
-		<p class="px-2.5 pt-1 pb-1.5 text-xxs" style="color:var(--cst-text-secondary);">{title}</p>
+		<p class="px-2.5 pt-1 pb-1.5 text-xxs text-text-secondary">{title}</p>
 	{/if}
 	<div class="flex flex-col gap-1 p-1.5">
 		{#each options as opt (opt.id)}

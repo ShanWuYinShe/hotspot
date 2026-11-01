@@ -2,6 +2,7 @@
 	import type { Component } from 'svelte';
 	import { ChevronRight } from '@lucide/svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
+	import { cardPress } from '@/lib/motion';
 
 	// 管理后台模块入口卡（/admin 概览私有组件）。
 	// 语言：图标砖 + 标题 + 一句说明 + 待办角标 + 进入箭头；整卡可点（button 本体承载语义，
@@ -31,7 +32,8 @@
 	disabled={!allowed}
 	title={allowed ? label : '无对应权限'}
 	onclick={onOpen}
-	class="group flex w-full items-center gap-3 rounded-lg bg-surface-island p-4 text-left shadow-xs transition-[box-shadow,transform] duration-standard ease-standard hover:-translate-y-0.5 hover:shadow-raised-md active:scale-[0.99] focus-ring disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-faint"
+	use:cardPress
+	class="group card-hover flex w-full items-center gap-3 rounded-lg bg-surface-island p-4 text-left shadow-xs focus-ring disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-faint"
 >
 	<span
 		class="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-soft text-text-accent-on-soft"

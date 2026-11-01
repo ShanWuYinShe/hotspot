@@ -186,11 +186,12 @@
 
 	const galleryBspLayouts = $derived(
 		computeBspLayoutSequence(
-			user.galleryMoments.map((g) => ({
-				aspectRatio: g.aspectRatio,
-				width: g.width,
-				height: g.height
-			})),
+				user.galleryMoments.map((g) => ({
+					aspectRatio: g.aspectRatio,
+					width: g.width,
+					height: g.height,
+					hasImage: Boolean(g.url)
+				})),
 			{ device }
 		)
 	);

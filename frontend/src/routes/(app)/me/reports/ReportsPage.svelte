@@ -10,6 +10,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
@@ -161,10 +162,6 @@
 	};
 </script>
 
-<svelte:head>
-	<title>我的举报 · HotSpot</title>
-</svelte:head>
-
 <StandardPageLayout contentMaxWidth={1280} contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
@@ -254,22 +251,12 @@
 					</div>
 				</ListItem>
 			{/each}
-			{#if nextCursor}
-				<ListItem
-					onClick={() => void loadMore()}
-					ariaLabel={loadingMore ? '加载中' : '加载更多'}
-				>
-					<div class="flex flex-1 items-center justify-center py-3">
-						{#if loadingMore}
-							<span class="spinner size-5"></span>
-						{:else}
-							<span class="text-sm text-text-secondary">加载更多</span>
-						{/if}
-					</div>
-				</ListItem>
-			{/if}
 		</ListContainer>
-		{#if !nextCursor}
+		{#if nextCursor}
+			<div class="py-2">
+				<LoadMoreButton loading={loadingMore} onLoad={() => void loadMore()} />
+			</div>
+		{:else}
 			<ListEnd />
 		{/if}
 	{/if}

@@ -57,10 +57,6 @@
 	const activeId = $derived((pathname.split('/').filter(Boolean)[1] ?? 'overview') || 'overview');
 </script>
 
-<svelte:head>
-	<title>管理后台 · HotSpot</title>
-</svelte:head>
-
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader

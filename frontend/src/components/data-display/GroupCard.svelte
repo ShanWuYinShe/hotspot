@@ -18,13 +18,13 @@
 
 <script lang="ts">
 	import { CalendarDays, Globe, Lock, MapPin, Sparkles, Users } from '@lucide/svelte';
-	import MediaCard from '@/cst-ui/cards/MediaCard.svelte';
-	import Avatar from '@/cst-ui/data-display/Avatar.svelte';
-	import JoinButton from '@/cst-ui/buttons/JoinButton.svelte';
+	import MediaCard from '@/components/data-display/MediaCard.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
+	import JoinButton from '@/components/ui/JoinButton.svelte';
 	import type { Tier } from '@/lib/bsp-layout';
 	import { cn } from '@/lib/utils';
 
-	// 统一群组图片优先卡片（基于 CSTUI MediaCard 原语）
+	// 统一群组图片优先卡片（基于 MediaCard 原语）
 	// - 支持 BSP 四档离散布局：1x1（方格标准）、1x2（高竖）、2x1（宽横）、2x2（巨幕精选）；
 	// - featured / 2x2：精选卡（丰富信息与成员头像）；
 	// - 2x1：自动横排变体（图左 + 信息右面板）；

@@ -243,7 +243,8 @@
 								<p class="text-xs text-text-secondary mt-0.5">登录后可同步跨端偏好、个人主页与瞬间收藏</p>
 							</div>
 							<Button
-								class="h-auto shrink-0 rounded-md px-4 py-2 text-xs"
+								size="sm"
+								class="shrink-0"
 								onclick={() => requireAuth({ action: '登录账号', run: () => { reloadKey++; } })}
 							>
 								登录 / 注册

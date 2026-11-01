@@ -32,6 +32,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	let activeCategory = $state('全部');
 	let groups = $state<Group[]>([]);
 	let visibleCount = $state(12);
+	let sentinelEl = $state<HTMLElement | null>(null);
 	let loading = $state(true);
 	// 本机浏览锚点（localStorage 同步可读）优先于服务端默认位置。
 	const savedAnchor = readLastLocation();
@@ -104,12 +105,34 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	);
 	const visibleGroups = $derived(filtered.slice(0, visibleCount));
 
+	// 无限滚动哨兵（对齐 nearby/people、nearby/moments）：每次 +8，避免首屏一次渲染
+	// 24 条；到底后由 ListEnd 收尾。此前 visibleCount 固定 12 且无加载入口，
+	// 返回 13–24 条时被静默截断，用户无法判断「已到底」还是「加载卡住」。
+	$effect(() => {
+		if (visibleCount >= filtered.length) return;
+		const el = sentinelEl;
+		if (!el) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((e) => e.isIntersecting)) {
+					visibleCount = Math.min(visibleCount + 8, filtered.length);
+				}
+			},
+			{ root: null, rootMargin: '600px 0px 0px 0px' }
+		);
+		observer.observe(el);
+		return () => observer.disconnect();
+	});
+
 	const bspLayouts = $derived(
 		computeBspLayoutSequence(
 			visibleGroups.map((g) => ({
 				members: g.members,
 				isFeatured: g.members > 30 || g.joined,
-				likes: g.online
+				likes: g.online,
+				// 无 banner 的群不放大到 2x2（否则巨型空画布只显示一个首字母）；
+				// avatar 是方形小图，铺满大卡会拉伸，不能作为大卡的视觉依据。
+				hasImage: Boolean(g.banner)
 			})),
 			{ device, kind: 'group' }
 		)
@@ -274,7 +297,9 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 					{/each}
 				</div>
 			</div>
-			{#if visibleCount >= filtered.length}
+			{#if visibleCount < filtered.length}
+				<div bind:this={sentinelEl} class="h-px w-full" aria-hidden="true"></div>
+			{:else}
 				<ListEnd />
 			{/if}
 		{:else}

@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { MapPin, Sparkles, Images } from '@lucide/svelte';
-	import Avatar from '@/cst-ui/data-display/Avatar.svelte';
-	import ImageCardActions from '@/cst-ui/cards/ImageCardActions.svelte';
-	import MediaCard from '@/cst-ui/cards/MediaCard.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
+	import Badge from '@/components/data-display/Badge.svelte';
+	import ImageCardActions from '@/components/data-display/ImageCardActions.svelte';
+	import MediaCard from '@/components/data-display/MediaCard.svelte';
 	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
 	import type { MomentItem } from '@/api/types';
 	import { formatDistance, formatRelativeDays } from '@/lib/utils';
@@ -13,15 +14,12 @@
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { follow } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
-	import FollowButton from '@/cst-ui/buttons/FollowButton.svelte';
+	import FollowButton from '@/components/ui/FollowButton.svelte';
 
 	// ═══ 现代社交 Feed 项（HomeFeedItem）═══
-	// 两种形态：
-	// - variant="card"（默认，首页/信息流独立高质感卡片）：
+	// 首页/信息流独立高质感卡片：
 	//   顶部完整作者行（头像 + 昵称/时间/推荐 + 位置胶囊）+ 全宽正文 + 杂志画廊式配图 + 标签胶囊 + 底部操作条。
-	//   彻底告别传统侧边头像缩进带来的留白失衡，让多图与宽图获得最佳视觉延展。
-	// - variant="row"（紧凑列表行）：
-	//   用于搜索发现/附近枢纽等紧凑列表容器内。
+	// 彻底告别传统侧边头像缩进带来的留白失衡，让多图与宽图获得最佳视觉延展。
 
 	let {
 		moment,
@@ -29,8 +27,7 @@
 		onComment,
 		showDistance = false,
 		ariaLabel,
-		priority = false,
-		variant = 'card'
+		priority = false
 	}: {
 		moment: MomentItem;
 		onClick?: () => void;
@@ -40,7 +37,6 @@
 		ariaLabel?: string;
 		/** 首屏图（feed 前 2 张）：eager + fetchpriority=high + 更高 1x 宽度；其余 lazy */
 		priority?: boolean;
-		variant?: 'card' | 'row';
 	} = $props();
 
 	/** 整卡图片卡：封面加载失败时回退主题化渐变底（不压白字）。 */
@@ -52,6 +48,10 @@
 		coverLoaded = false;
 		coverError = false;
 	});
+
+	const coverUrl = $derived(moment.images?.[0]?.url ?? '');
+	const imageCount = $derived(moment.images?.length ?? 0);
+	const useFallback = $derived(!coverUrl || coverError);
 
 	// 格式化相对时间（优先小时/分钟，超出 24h 回退 formatRelativeDays）
 	const relativeTime = $derived.by(() => {
@@ -203,10 +203,6 @@
 	}
 </script>
 
-{#if variant === 'card'}
-	{@const coverUrl = moment.images?.[0]?.url ?? ''}
-	{@const imageCount = moment.images?.length ?? 0}
-	{@const useFallback = !coverUrl || coverError}
 	<!-- 基于 MediaCard 统一图片优先原语（全站唯一 Image-first 卡片规范）：
 	     - 顶部遮罩承载作者行与媒体状态徽章；
 	     - 底部遮罩承载标题、首标签与 ImageCardActions 互动行；
@@ -259,8 +255,12 @@
 					</span>
 				{/if}
 				{#if recommendationBadge}
-					<span class="pointer-events-none hidden sm:inline-flex shrink-0 {useFallback ? 'badge bg-surface-subtle text-text-secondary' : 'media-badge'}">
-						{recommendationBadge}
+					<span class="pointer-events-none hidden sm:inline-flex shrink-0">
+						{#if useFallback}
+							<Badge tone="neutral" size="sm">{recommendationBadge}</Badge>
+						{:else}
+							<span class="media-badge">{recommendationBadge}</span>
+						{/if}
 					</span>
 				{/if}
 			</div>
@@ -322,174 +322,3 @@
 			</div>
 		{/snippet}
 	</MediaCard>
-{:else}
-	<!-- 紧凑行形态（保留紧凑内嵌式列表语言） -->
-	<div
-		class="group relative isolate flex items-start gap-3 sm:gap-3.5 px-4 py-4 sm:px-5 hover:bg-surface-subtle/70 transition-colors cursor-pointer border-b border-border-subtle/30 [&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20"
-	>
-		<!-- 左侧：作者头像 -->
-		<div class="shrink-0 pt-0.5">
-			<button
-				type="button"
-				class="hover-action hit-slop-44 block rounded-full focus-ring cursor-pointer"
-				aria-label={`查看${moment.user?.nickname ?? '作者'}的个人主页`}
-				onclick={handleUserClick}
-			>
-				<Avatar
-					src={moment.user?.avatar_url ?? null}
-					name={moment.user?.nickname ?? '热点网友'}
-					size="md"
-				/>
-			</button>
-		</div>
-
-		<!-- 右侧：完整社交信息区 -->
-		<div class="min-w-0 flex-1">
-			<!-- 头部：作者名 + 关注状态 + 推荐标记 + 相对时间 -->
-			<div class="flex items-center justify-between gap-2">
-				<div class="flex items-center gap-1.5 min-w-0 flex-wrap">
-					<button
-						type="button"
-						class="font-semibold text-sm text-text-primary hover:text-accent-default hover:underline transition-colors truncate text-left"
-						onclick={handleUserClick}
-					>
-						{moment.user?.nickname ?? '匿名用户'}
-					</button>
-
-					{#if showFollowChip}
-						<FollowButton
-							size="chip"
-							active={isFollowing}
-							pending={followPending}
-							ariaLabel={(isFollowing ? '取消关注 ' : '关注 ') + (moment.user?.nickname ?? '作者')}
-							onToggle={handleFollowToggle}
-						/>
-					{/if}
-
-					{#if recommendationBadge}
-						<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xxs font-normal bg-surface-subtle text-text-secondary shrink-0">
-							<Sparkles class="size-2.5 text-accent-default" />
-							{recommendationBadge}
-						</span>
-					{/if}
-
-					{#if relativeTime}
-						<span class="text-text-secondary text-xs shrink-0">· {relativeTime}</span>
-					{/if}
-				</div>
-
-				<!-- 位置微标签 -->
-				{#if locationText}
-					<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-secondary text-xs max-w-[140px] sm:max-w-[180px] shrink-0 truncate">
-						<MapPin class="size-3 text-accent-default shrink-0" strokeWidth={1.5} />
-						<span class="truncate">{locationText}</span>
-						{#if distanceLabel}
-							<span class="text-text-secondary shrink-0">· {distanceLabel}</span>
-						{/if}
-					</div>
-				{/if}
-			</div>
-
-			<!-- 动态正文 -->
-			{#if moment.description}
-				<p class="mt-1.5 text-sm text-text-primary leading-relaxed whitespace-pre-wrap break-words line-clamp-4">
-					{moment.description}
-				</p>
-			{/if}
-
-			<!-- 配图展示：单图舒展、多图网格 -->
-			{#if moment.images && moment.images.length > 0}
-				<div class="mt-2.5">
-					{#if moment.images.length === 1}
-						<div class="overflow-hidden rounded-xl max-h-[280px] max-w-[420px] bg-surface-subtle shadow-xs">
-							<img
-								src={presetImageUrl(moment.images[0].url, 'card', 800)}
-								srcset={presetSrcSet(moment.images[0].url, 'card')}
-								sizes="(min-width: 640px) 420px, 100vw"
-								alt="动态配图"
-								loading="lazy"
-								decoding="async"
-								class="w-full h-full object-cover max-h-[280px] hover:scale-[1.01] transition-transform"
-								use:fadeImage
-							/>
-						</div>
-					{:else if moment.images.length <= 4}
-						<div class="grid grid-cols-2 gap-1.5 max-w-[420px]">
-							{#each moment.images.slice(0, 4) as img, idx (img.url + idx)}
-								<div class="aspect-square overflow-hidden rounded-xl bg-surface-subtle shadow-xs">
-									<img
-										src={presetImageUrl(img.url, 'thumb', 400)}
-										srcset={presetSrcSet(img.url, 'thumb')}
-										sizes="(min-width: 640px) 210px, 50vw"
-										alt={`动态配图 ${idx + 1}`}
-										loading="lazy"
-										decoding="async"
-										class="w-full h-full object-cover hover:scale-[1.02] transition-transform"
-										use:fadeImage
-									/>
-								</div>
-							{/each}
-						</div>
-					{:else}
-						<div class="grid grid-cols-3 gap-1.5 max-w-[460px]">
-							{#each moment.images.slice(0, 9) as img, idx (img.url + idx)}
-								<div class="aspect-square overflow-hidden rounded-xl bg-surface-subtle shadow-xs">
-									<img
-										src={presetImageUrl(img.url, 'thumb', 400)}
-										srcset={presetSrcSet(img.url, 'thumb')}
-										sizes="(min-width: 640px) 140px, 33vw"
-										alt={`动态配图 ${idx + 1}`}
-										loading="lazy"
-										decoding="async"
-										class="w-full h-full object-cover hover:scale-[1.02] transition-transform"
-										use:fadeImage
-									/>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			{/if}
-
-			<!-- 标签胶囊 -->
-			{#if moment.tags && moment.tags.length > 0}
-				<div class="mt-2 flex flex-wrap gap-1.5">
-					{#each moment.tags as tag (tag)}
-						<button
-							type="button"
-							class="text-xs text-accent-default hover:underline font-medium hit-slop focus-ring"
-							onclick={(e) => handleTagClick(e, tag)}
-						>
-							#{tag}
-						</button>
-					{/each}
-				</div>
-			{/if}
-
-			<!-- 底部轻量交互操作条 -->
-			<div class="mt-3">
-				<ImageCardActions
-					likes={totalReactions}
-					comments={moment.comments_count}
-					shares={moment.shares_count}
-					{liked}
-					{saved}
-					onImage={false}
-					onLike={(next) => void handleLike(next)}
-					onComment={handleCommentClick}
-					onSave={(next) => void handleSave(next)}
-					onShare={handleShare}
-				/>
-			</div>
-		</div>
-
-		<!-- 行点击覆盖层（最后绘制，z-10）：真实 button 承载点击/键盘；行内按钮 auto-lift -->
-		<button
-			type="button"
-			class="absolute inset-0 z-10 cursor-pointer focus-ring"
-			data-cover
-			aria-label={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
-			onclick={onClick}
-		></button>
-	</div>
-{/if}

@@ -2,6 +2,7 @@
 	import { SlidersHorizontal } from '@lucide/svelte';
 	import * as Popover from '@/components/ui/popover';
 	import MenuPanel from '@/components/overlays/MenuPanel.svelte';
+	import UnreadBadge from '@/components/shared/UnreadBadge.svelte';
 	import { PIN_COLORS, PIN_TONES, markerSvg } from './location-shared';
 	import type { PinType } from './location-data';
 
@@ -69,7 +70,9 @@
 				     与 LocationDesktopPanel 的选中图钉标签同款。此前用 25% 半透明白底配
 				     on-accent 文字，浅色模式下为白字压浅底（≈3.4:1，低于 WCAG AA 4.5:1）
 				     且叠在 accent 实底上近乎隐形。 -->
-				<span class="text-xxs font-medium rounded-full" style="margin-left:2px;padding:1px 6px;background:{open ? 'var(--cst-text-on-accent)' : 'var(--cst-accent-soft)'};color:var(--cst-accent-default);">{activeFilters.size}</span>
+				<span class="ml-0.5">
+					<UnreadBadge count={activeFilters.size} variant={open ? 'inverse' : 'accent'} />
+				</span>
 			{/if}
 		</button>
 	</div>

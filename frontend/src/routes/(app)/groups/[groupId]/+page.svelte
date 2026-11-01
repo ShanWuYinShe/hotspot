@@ -7,7 +7,6 @@ import { formatCount } from '@/lib/utils';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
@@ -303,13 +302,9 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<!-- 顶部微标与图标 -->
 			<div class="relative z-10 flex items-center justify-between">
 				{#if gd.detail.category}
-					<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent-default border border-accent-border/30">
-						{gd.detail.category}
-					</span>
+					<Badge tone="accent" size="md">{gd.detail.category}</Badge>
 				{:else}
-					<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-surface-subtle text-text-secondary">
-						群组主页
-					</span>
+					<Badge tone="neutral" size="md">群组主页</Badge>
 				{/if}
 				<div class="flex size-11 items-center justify-center rounded-xl bg-accent-soft text-accent-default shadow-raised-sm">
 					<Users size={22} strokeWidth={1.75} />

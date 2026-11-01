@@ -224,7 +224,8 @@
 				aspectRatio: item.aspectRatio,
 				width: item.imageWidth,
 				height: item.imageHeight,
-				likes: item.likes
+				likes: item.likes,
+				hasImage: Boolean(item.image)
 			})),
 			{ device }
 		)

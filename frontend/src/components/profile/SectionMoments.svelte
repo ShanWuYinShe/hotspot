@@ -14,8 +14,6 @@
 	import { auth } from '@/stores/auth.svelte';
 	import { useAccountData, useGalleryMoments, useReactedMoments, useFavoriteMoments, type GalleryMoment } from '@/lib/profile-data.svelte';
 	import { formatCardTime } from '@/lib/utils';
-	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
-	import { platform } from '@/stores/platform.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 我的瞬间分区：与 nearby/moments 统一视觉语言（共享 MomentCard 原语），
@@ -106,19 +104,8 @@
 
 	const interactions = createFeedInteractions(() => feedItems);
 
-	const device = $derived(platform.platform);
-	const bspLayouts = $derived(
-		computeBspLayoutSequence(
-			interactions.items.map((item) => ({
-				aspectRatio: item.aspectRatio,
-				width: item.imageWidth,
-				height: item.imageHeight,
-				likes: item.likes
-			})),
-			{ device }
-		)
-	);
-
+	// 个人主页是窄内容列（1280 档 4 列）：BSP 大跨度会撕出无法回填的空洞，
+	// 统一用 1x1 瓦片（与骨架同栅格），不再按热度放大单卡。
 	function openMoment(id: string, focusComments = false) {
 		void goto(focusComments ? `${ROUTES.moment(id)}?from=me&focus=comments` : `${ROUTES.moment(id)}?from=me`);
 	}
@@ -169,23 +156,21 @@
 			</div>
 		</div>
 
-		<!-- 语义化 BSP 动态网格：密集排布 (grid-flow-dense) + 自适应行高，感知长宽比与防粘连 -->
+		<!-- 统一 1x1 瓦片网格（与骨架同列数/同行高；个人主页不做 BSP 大跨度，避免空洞） -->
 		<div
-			class="grid grid-flow-dense grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
+			class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
 			style="grid-auto-rows: clamp(195px, 20vw, 275px);"
 		>
-			{#each interactions.items as item, index (item.id)}
-				{@const layout = bspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
+			{#each interactions.items as item (item.id)}
 				{#if item.is_deleted}
 					<!-- 软删除墓碑（契约：客户端展示占位）：不可点、无操作，仅说明状态 -->
-					<div class="col-span-1 row-span-1 flex h-full w-full flex-col items-center justify-center gap-2 rounded-lg bg-surface-subtle/60 px-4 text-center">
+					<div class="flex h-full w-full flex-col items-center justify-center gap-2 rounded-lg bg-surface-subtle/60 px-4 text-center">
 						<p class="text-sm text-text-secondary">该瞬间已删除</p>
 					</div>
 				{:else}
-					<div class="{layout.cls} h-full w-full">
+					<div class="h-full w-full">
 						<ProfileMomentTile
 							{item}
-							tier={layout.tier}
 							liked={item.liked}
 							saved={item.saved}
 							onLike={() => void interactions.toggleLike(item.id)}

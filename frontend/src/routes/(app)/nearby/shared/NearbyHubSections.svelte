@@ -23,7 +23,7 @@
 		moments = [],
 		groups = [],
 		userPreview,
-		momentPreview = 3,
+		momentPreview,
 		emptyHint,
 		isFollowed,
 		isPending,
@@ -57,12 +57,17 @@
 	// 桌面 6（宽屏一行铺满）/ 平板与手机 4（移动端行式列表、平板卡片网格都取 4 条预览）
 	const defaultUserPreview = $derived(devicePlatform === 'desktop' ? 6 : 4);
 	const previewCount = $derived(userPreview ?? defaultUserPreview);
+	// 瞬间预览按栅格列数给：2560 下 6 列、3 条会留下半行空白；平板 4、手机 3。
+	const momentPreviewCount = $derived(
+		momentPreview ?? (devicePlatform === 'desktop' ? 6 : devicePlatform === 'tablet' ? 4 : 3)
+	);
 	const userBspLayouts = $derived(
 		computeBspLayoutSequence(
 			users.slice(0, previewCount).map((u) => ({
 				isOnline: u.isOnline,
 				isFeatured: Boolean(u.isOnline),
-				likes: 0
+				likes: 0,
+				hasImage: Boolean(u.avatar)
 			})),
 			{ device: devicePlatform, kind: 'user' }
 		)
@@ -110,8 +115,8 @@
 {#if moments.length > 0}
 	<div data-hub-section="moments">
 		<SectionHead title="附近瞬间" icon={Sparkles} count={moments.length} action="查看全部" onAction={onSeeAllMoments} />
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-			{#each moments.slice(0, momentPreview) as moment (moment.moment_id)}
+		<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(340px,1fr))]">
+			{#each moments.slice(0, momentPreviewCount) as moment (moment.moment_id)}
 				<HomeFeedItem
 					{moment}
 					showDistance={true}

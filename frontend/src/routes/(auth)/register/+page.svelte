@@ -5,4 +5,8 @@
 	// 独立路由是为了外部链接（文档/活动页）直接进注册态不再落 404（设计评审 P1）。
 </script>
 
+<svelte:head>
+	<title>注册 · HotSpot</title>
+</svelte:head>
+
 <AuthPage initialMode="register" />

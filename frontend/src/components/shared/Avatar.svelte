@@ -32,6 +32,7 @@
 		shape = 'circle',
 		ring = false,
 		decorative = false,
+		priority = false,
 		badge,
 		class: className = '',
 		style = ''
@@ -48,6 +49,8 @@
 		ring?: boolean;
 		/** 装饰性头像（相邻已有可见姓名文本）：图片 alt 置空并 aria-hidden，避免屏幕阅读器重复念名。 */
 		decorative?: boolean;
+		/** 首屏头像：eager + fetchpriority=high（信息流首卡等）。 */
+		priority?: boolean;
 		/** Optional badge (e.g. online dot) rendered absolutely positioned inside the wrapper. */
 		badge?: Snippet;
 		class?: string;
@@ -97,7 +100,8 @@
 				src={optimizedImageUrl(src, { width: px * 2 })}
 				srcset={buildImageSrcSet(src, avatarImageWidths(px))}
 				sizes={`${px}px`}
-				loading="lazy"
+				loading={priority ? 'eager' : 'lazy'}
+				fetchpriority={priority ? 'high' : 'auto'}
 				decoding="async"
 				alt={decorative ? '' : (name ?? '')}
 				class="absolute inset-0 h-full w-full object-cover"

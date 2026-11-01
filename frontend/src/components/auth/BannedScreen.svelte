@@ -10,10 +10,7 @@
 
 <div class="fixed inset-0 z-[var(--cst-z-toast)] flex items-center justify-center p-6 bg-surface-primary" >
 	<div class="flex flex-col items-center text-center gap-4"  style="max-width:360px">
-		<div
-			class="flex items-center justify-center rounded-full size-16"
-			 style="background:var(--cst-status-danger-bg);"
-		>
+		<div class="flex items-center justify-center rounded-full size-16 bg-danger-bg">
 			<ShieldAlert size={30} color="var(--cst-status-danger)" strokeWidth={1.5} />
 		</div>
 		<!-- 标题字重对齐全站 h1-h4 基线（base.css = font-medium）；

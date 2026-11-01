@@ -10,6 +10,7 @@
 	import TagPill from '@/components/forms/TagPill.svelte';
 	import SheetShell from '@/components/overlays/SheetShell.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
+	import Avatar from '@/components/shared/Avatar.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import type { GroupItem, UpdateGroupRequest } from '@/api/types';
@@ -174,7 +175,7 @@
 		<div class="flex items-center gap-4">
 			<div class="relative shrink-0">
 				{#if previewUrl || avatar}
-					<img src={previewUrl || avatar} alt="群组封面" class="size-16 rounded-xl object-cover ring-1 ring-border-default" />
+					<Avatar src={previewUrl || avatar} name={name} size={64} shape="rounded" class="ring-1 ring-border-default" />
 				{:else}
 					<div class="flex items-center justify-center size-16 rounded-xl ring-1 ring-border-default bg-accent-soft" aria-hidden="true">
 						<Camera class="size-5 text-text-secondary" strokeWidth={1.5} />

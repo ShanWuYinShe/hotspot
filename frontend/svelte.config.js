@@ -11,9 +11,7 @@ const config = {
 		// SPA 模式：全部页面客户端渲染，nginx try_files 回退 index.html
 		adapter: adapter({ fallback: 'index.html' }),
 		alias: {
-			'@/*': './src/*',
-			'@cst-ui/*': './src/cst-ui/*',
-			'@cst-ui': './src/cst-ui'
+			'@/*': './src/*'
 		}
 	}
 };

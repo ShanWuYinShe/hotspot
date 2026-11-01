@@ -184,8 +184,7 @@
 <svelte:window onpointerover={handlePreloadIntent} onfocusin={handlePreloadIntent} ontouchstart={handlePreloadIntent} />
 
 <div
-	class="relative isolate flex flex-col h-screen w-screen overflow-hidden transition-colors duration-gentle font-sans"
-	style="background-color:var(--cst-surface-page);color:var(--cst-text-primary);"
+	class="relative isolate flex h-screen w-screen flex-col overflow-hidden bg-surface-page font-sans text-text-primary transition-colors duration-gentle"
 >
 	<!-- 整窗氛围画布（Round 2 去边框）：外壳根只挂一次，顶栏/侧栏/主内容共享同一世界层，
 	     不再按区域各挂一份（旧方案会在区域交界处出现渐变接缝）。 -->

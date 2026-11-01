@@ -37,7 +37,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 1. **布局**：普通页面必须用 `StandardPageLayout`，分栏页面必须用 `SplitPageLayout`；header 以 snippet 传入、正文放 children；不得自行组合 PageHeader/ContentColumn/页面级滚动/页面级横向 padding（聊天页豁免见上）。gutter 一律由 `ContentColumn` 的 `px-[var(--cst-page-gutter)]` 管理。
 2. **页头**：一律用 `PageHeader`，按页面类型选变体：
    - **默认变体**：`sticky` 默认开（表单/设置/管理/搜索/聊天/资料页等），`onBack` 在非桌面自动显示返回按钮；`below` 只放搜索框与 Tab 栏等 header 附属区，**below 首元素带 `mt-3`**（默认变体 spacing 由页面控制），below 内多行元素之间用 `mt-3` 分隔。内部 ContentColumn 上下内距由组件派生（有 below：`pt-4 pb-3.5`；无 below：`pt-4.5 pb-4.5`），页面不要再传 `contentClassName` 覆盖（唯一例外是已登记的窄列面板）。
-   - **`variant="integrated"`（hub/列表页内容内页头）**：无背景/边框/吸顶（不随滚动变 glass），标题+副标题/计数+trailing 工具同一行，`below` 筛选/操作紧随（组件统一 `mt-2.5`，页面不要再加 `mt-3`）；正文 `pt-4` 直接开始。适用 /nearby、/nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；**这些页面禁止在正文重复页面标题/分区头**。搜索页（sticky 搜索优先）、设置/表单页、聊天分栏、品牌首页不是同类，继续用默认变体/自建页头。
+   - **`variant="integrated"`（hub/列表页内容内页头）**：无背景/边框/吸顶（不随滚动变 glass），标题+副标题/计数+trailing 工具同一行，`below` 筛选/操作紧随（组件统一 `mt-2.5`，页面不要再加 `mt-3`）；正文 `pt-4` 直接开始。适用 /nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；**这些页面禁止在正文重复页面标题/分区头**。搜索页（sticky 搜索优先）、设置/表单页、聊天分栏、品牌首页不是同类，继续用默认变体/自建页头。**/nearby 枢纽页为登记例外：用默认 sticky 变体（与首页对齐，保留常驻搜索/地图工具）**。
 3. **分类/筛选/排序 Tab（强制统一）**：一律使用 `TabBar`（`components/navigation/TabBar.svelte`，胶囊样式 + 激活项 accent 实底胶囊 + `aria-pressed`，对齐鸿蒙 TabsPillGroup 分段式视觉），放 `below` snippet 内随 header 吸顶；tab 状态可存 URL query（如 `?tab=`）以支持深链，切换用 `goto` 更新 URL。**禁止再写手写 tab/chip 变体**（通知/搜索/个人主页/地图 sheet 一律用 TabBar）。表单内的标签/多选 chips 一律用 `TagPill`；网格选择器（主题 swatch、发布可见范围）属例外，不套 TabBar。
 4. **正文与滚动**：正文直接放 children；`StandardPageLayout` 页面滚动由 `RoutedContentViewport`（main）唯一承担，`SplitPageLayout` 分栏页的主区/rail 滚动由组件统一管理；页面不得自建滚动容器（消息分栏、地图等全画布页面除外）。内嵌自带 gutter 的组件时用负 margin（`-mx-[var(--cst-page-gutter)]`）抵消 ContentColumn gutter，避免双重内边距（参照 `me/relationships/RelationshipsPage.svelte`）。
 5. **三端差异**：共用组件只写一次，设备差异用 `platform.platform` 派生（列数、字号、布局分支），不得复制三份页面。
@@ -105,7 +105,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 | 区块内元素 | 16 | `gap-4` |
 
 - **根容器唯一例外**：根容器直接承载多个带标题分区（如「附近」枢纽页 = HeroStats + 附近的人/瞬间/群组）时用 `gap-6`(24)，并在页面注释说明；其余一律 `gap-4`。
-- **`contentClassName` 白名单**：标准 header 页 `pt-4 pb-6`（页顶 16 由页头自身内距承接）；长表单（settings、me/edit）`pt-4 pb-10`（尾部加大留白）；封面型（groups/[groupId]）`pb-6`；资料总览（ProfilePage 总览）`pt-6 pb-8`；移动端固定底部操作条净空 `pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}`（users/[userId]、moments/[momentId]）；状态/空态区 `py-20`（样板 `feedState` + `EmptyState` 内置）。其它散值（`pb-16`、全端 `pb-28`、`py-5` 等）一律改白名单值。
+- **`contentClassName` 白名单**：标准 header 页 `pt-4 pb-6`（页顶 16 由页头自身内距承接）；长表单（settings、me/edit）`pt-4 pb-10`（尾部加大留白）；封面型（groups/[groupId]）`pb-6`；资料总览（ProfilePage 总览）`pt-6 pb-8`；移动端固定底部操作条净空 `pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}`（users/[userId]）；状态/空态区 `py-20`（样板 `feedState` + `EmptyState` 内置）。**已登记例外**：首页（`routes/(app)/+page.svelte`）`pt-0 pb-8`（自建移动顶栏，正文顶不留白）；群详情移动端 `pb-8`（无固定底栏的 32px 净空）；用户详情 `pt-1 pb-6`（DetailHeader 后紧接内容）；瞬间详情 `pt-0 sm:pt-1 pb-0 sm:pb-6`（edge-to-edge 画廊，移动端 docked 输入条自行净空）。其它散值（`pb-16`、全端 `pb-28`、`py-5` 等）一律改白名单值。
 - **间距只允许单侧提供**：父容器 gap 与子块 mt/mb 不得叠成 40/44 的双倍间距；`contentClassName` 已带页顶/底留白时，首/末块不再叠 `mt-*`/`pb-*`（同页内同类间距必须同值）。
 - **不归三档的部分**：组件内部刻度（`py-2.5`/`py-3.5`/`gap-1.5`/`mt-0.5` 等）、`PageHeader` 自身上下内距、头像叠压 `-mt-8`、封面负 margin、网格单元 gap、纯横向列距（桌面双栏拆成 `gap-y-6 lg:gap-x-*` 保留列距）。
 - **横向列距拆分写法**：`grid gap-8` 在移动单列时是纵向 32 → 改为 `gap-y-6 lg:grid-cols-[...] lg:gap-x-8`。

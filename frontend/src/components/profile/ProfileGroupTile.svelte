@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { ChevronRight, Clock, LogOut, MoreHorizontal, Shield, Users } from '@lucide/svelte';
-	import ActionIconButton from '@/cst-ui/buttons/ActionIconButton.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
-	import MediaCard from '@/cst-ui/cards/MediaCard.svelte';
-	import ConfirmDialog from '@/cst-ui/overlays/ConfirmDialog.svelte';
+	import MediaCard from '@/components/data-display/MediaCard.svelte';
+	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { leaveGroup } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { platform } from '@/stores/platform.svelte';
@@ -56,7 +56,7 @@
 		imageAlt={group.name}
 		horizontal
 		onClick={() => void goto(`${ROUTES.group(group.id)}?from=me`)}
-		class="h-32 rounded-md sm:h-36"
+		class="h-32 rounded-lg sm:h-36"
 	>
 		{#snippet placeholder()}
 			<span class="text-accent-default text-3xl font-semibold">{Array.from(group.name)[0] ?? '群'}</span>

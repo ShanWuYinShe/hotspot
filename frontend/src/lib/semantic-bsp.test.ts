@@ -57,6 +57,18 @@ describe('semantic-bsp', () => {
 		expect(seq[2].tier).toBe('1x1');
 	});
 
+	it('纯文字卡（hasImage=false）在所有设备都不放大（避免空画布/空图片区）', () => {
+		const items: CardBspMeta[] = Array.from({ length: 20 }, () => ({
+			hasImage: false,
+			likes: 99,
+			isFeatured: true
+		}));
+		for (const device of ['mobile', 'tablet', 'desktop']) {
+			const seq = computeBspLayoutSequence(items, { device });
+			expect(seq.every((s) => s.tier === '1x1')).toBe(true);
+		}
+	});
+
 	it('长流周期性节奏：长列表中周期性穿插 2x1 与 2x2 锚点', () => {
 		const items: CardBspMeta[] = Array.from({ length: 20 }, () => ({
 			width: 1000,

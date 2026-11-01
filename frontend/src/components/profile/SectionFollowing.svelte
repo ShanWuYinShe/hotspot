@@ -5,7 +5,7 @@
 	import Badge from '@/components/data-display/Badge.svelte';
 	import type { SectionFilter } from '@/components/profile/section-filter';
 	import FollowButton from '@/components/ui/FollowButton.svelte';
-import EntityRow from '@/cst-ui/list/EntityRow.svelte';
+import EntityRow from '@/components/list/EntityRow.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { createOptimisticFollow, type OptimisticFollow } from '@/lib/relationships.svelte';
 	import { showToast } from '@/stores/toast.svelte';

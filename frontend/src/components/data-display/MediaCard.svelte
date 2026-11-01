@@ -4,7 +4,7 @@
 	import { presetImageUrl, presetSrcSet } from '@/lib/images';
 	import { cardPress } from '@/lib/motion';
 
-	// ═══ CSTUI MediaCard ═══
+	// ═══ MediaCard ═══
 	// 全站通用的图片/视频/封面优先卡片设计系统原语（Image-first / Media Card）。
 	// 特性：
 	//   1. 纵排（默认）：图片 object-cover 铺满整卡，信息以渐变遮罩 + 覆盖层呈现；
@@ -56,12 +56,16 @@
 
 	let imageLoaded = $state(false);
 	let imageFailed = $state(false);
+	let imgEl = $state<HTMLImageElement | null>(null);
 	const hasImage = $derived(Boolean(imageSrc) && !imageFailed);
 
+	// 缓存命中时图片可能在 onload 绑定前就已 complete（profile 页二次进入实测
+	// 图片 opacity 恒 0、只剩渐变底）。挂载后主动检查 complete/naturalWidth，
+	// 与 onload 共同保证首帧可见。
 	$effect(() => {
 		void imageSrc;
-		imageLoaded = false;
 		imageFailed = false;
+		imageLoaded = Boolean(imgEl?.complete && imgEl.naturalWidth > 0);
 	});
 </script>
 
@@ -91,6 +95,7 @@
 			<div class="surface-accent-gradient media-placeholder--pulse pointer-events-none {imageBox}" aria-hidden="true"></div>
 		{/if}
 		<img
+			bind:this={imgEl}
 			src={presetImageUrl(imageSrc, 'card', priority ? 900 : 800)}
 			srcset={presetSrcSet(imageSrc, 'card')}
 			{sizes}

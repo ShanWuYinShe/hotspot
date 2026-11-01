@@ -16,6 +16,7 @@
 	import Input from '@/components/forms/Input.svelte';
 	import Textarea from '@/components/forms/Textarea.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import SectionHead from '@/components/home/SectionHead.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { getAccount, updateAccount, deleteAccount , netError } from '@/api';
 	import type { Gender } from '@/api/types';
@@ -268,10 +269,7 @@
 
 			<!-- 基本资料：公开显示（昵称/简介） -->
 			<section aria-label="基本资料">
-				<div class="mb-3">
-					<h2 class="text-md font-semibold text-text-primary">基本资料</h2>
-					<p class="mt-1 text-xs leading-relaxed text-text-secondary">公开显示在你的主页上，附近的人会看到这些信息。</p>
-				</div>
+				<SectionHead title="基本资料" subtitle="公开显示在你的主页上，附近的人会看到这些信息。" />
 				<div class="flex flex-col gap-4 rounded-lg bg-surface-island p-4 shadow-xs">
 					<!-- 昵称：迁移至 forms/Input 原语 -->
 					<Input
@@ -312,10 +310,7 @@
 
 			<!-- 更多信息：性别/兴趣标签（都用于附近推荐与个人主页展示） -->
 			<section aria-label="更多信息">
-				<div class="mb-3">
-					<h2 class="text-md font-semibold text-text-primary">更多信息</h2>
-					<p class="mt-1 text-xs leading-relaxed text-text-secondary">帮助附近的人更快了解你，随时可以修改或清空。</p>
-				</div>
+				<SectionHead title="更多信息" subtitle="帮助附近的人更快了解你，随时可以修改或清空。" />
 				<div class="flex flex-col gap-4 rounded-lg bg-surface-island p-4 shadow-xs">
 					<!-- Gender（spec: updateAccount.gender，单选；不选 = 保持服务端当前值） -->
 					<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
@@ -413,8 +408,8 @@
 			<!-- 移动端底部粘底保存条：拇指区 + 安全区净空；桌面保存仍在页头 -->
 			{#if device === 'mobile'}
 				<div
-					class="sticky bottom-0 z-10 -mx-[var(--cst-page-gutter)] mt-1 border-t border-border-default px-4 pt-3"
-					style="background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-md));-webkit-backdrop-filter:blur(var(--cst-blur-md));padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
+					class="nav-glass nav-glass--bottom sticky bottom-0 z-10 -mx-[var(--cst-page-gutter)] mt-1 px-4 pt-3"
+					style="padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
 				>
 					<Button
 						type="button"
