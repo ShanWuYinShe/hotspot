@@ -8,7 +8,9 @@
 # 要求合理用量与署名，attribution 已在前端瓦片层展示
 # © OpenStreetMap contributors）。Nominatim（/osm-service/）没有等价公开
 # 镜像，dev 保持官方上游——不可达时地理编码降级失败，瓦片显示不受影响。
-# 两个文件的瓦片 location 改动必须保持同步。
+# 两个文件的瓦片与 /s3/ 两个 location 改动必须保持同步（缓存 key、Cache-Control、
+# keepalive、超时、安全前提注释都按同一口径）；/s3/ 的差异仅是本文件不 include
+# csp.inc（dev 未挂载，见 docker-compose.dev.yml）。
 # 由 docker-compose.dev.yml 挂载为 /etc/nginx/conf.d/proxy.inc，
 # 由 docker/nginx.dev.conf 在 server 块内 include。
 
@@ -28,15 +30,48 @@ location /ws/ {
     proxy_read_timeout 86400s;
 }
 
-# ── SeaweedFS S3 ─────────────────────────────────────────
+# ── SeaweedFS S3（presigned GET 媒体对象）────────────────────────────
+# 与 docker/nginx.proxy.inc（prod 事实来源）的 /s3/ 逐条同构：缓存 key 只取
+# 对象路径（忽略 presigned query）、upstream keepalive、Cache-Control 覆盖、
+# Range bypass、超时口径全部相同——本地要能复现线上命中行为。
+# 唯一差异：dev 不挂载 csp.inc（见 docker-compose.dev.yml 与 headers.inc 头注释），
+# 故这里只 include headers.inc；生产侧两份片段都 include。
+#
+# 安全前提与取舍（为什么可以按 URI 缓存、TTL 为何 1h、删除/回收后窗口多大）
+# 见 docker/nginx.proxy.inc 的 /s3/ 头注释，改动缓存策略时以那里为准。
+#
 # 用 $http_host（含端口）而非 $host（不含端口）：presigned URL 的 SigV4 签名
 # 把 host 头（如 localhost:8888）纳入签名，nginx 的 $host 会丢掉端口导致验签失败。
 location /s3/ {
     proxy_pass http://seaweedfs_s3/;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
     proxy_set_header Host $http_host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_cache s3_media;
+    proxy_cache_key "$request_method$host$uri";
+    proxy_cache_methods GET;
+    proxy_cache_convert_head off;
+    proxy_ignore_headers Cache-Control Expires Set-Cookie;
+    proxy_cache_valid 200 1h;
+    proxy_cache_valid 404 60s;
+    proxy_cache_lock on;
+    proxy_cache_lock_timeout 10s;
+    proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+    proxy_cache_bypass $http_range;
+    proxy_no_cache $http_range;
+    proxy_hide_header Cache-Control;
+    proxy_hide_header Expires;
+    add_header Cache-Control "public, max-age=3600";
+    add_header X-S3-Cache $upstream_cache_status;
+    include /etc/nginx/conf.d/headers.inc;
+
+    proxy_connect_timeout 3s;
+    proxy_send_timeout 15s;
+    proxy_read_timeout 30s;
 }
 
 # ── 高德瓦片同源代理（地图底图）──────────────────────────

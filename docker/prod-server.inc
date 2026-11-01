@@ -1,6 +1,10 @@
 # ── HotSpot 生产 443 server{} 公共片段（仅 443 使用）────────────
-# 位置类配置与仓库 docker/nginx.conf 保持一致；依赖同目录挂载的
-# headers.inc / csp.inc / proxy.inc / amap.inc。80 端口端点定义在 nginx.prod-tls.conf。
+# 位置类配置与仓库 docker/nginx.conf 保持一致；其中「首屏静态资源缓存策略」
+# 四段（/fonts/、/icons/、= /favicon.png、= /manifest.webmanifest）与
+# docker/nginx.conf 的同段**逐字一致**，任一侧改动都要同步另一侧。/s3/、瓦片等
+# 共享代理 location 抽在 docker/nginx.proxy.inc（base 与 443 共用同一挂载文件）。
+# 依赖同目录挂载的 headers.inc / csp.inc / proxy.inc / amap.inc。
+# 80 端口端点定义在 nginx.prod-tls.conf。
 #
 # 入口访问控制：本片段只挂在 443 server 上，来源鉴权由 TLS 层的 Cloudflare
 # Authenticated Origin Pulls（mTLS）完成——nginx 握手阶段即校验 CF 回源客户端
@@ -96,6 +100,55 @@ location /_app/ {
     add_header Cache-Control "public, immutable, max-age=31536000";
     try_files $uri =404;
 }
+
+# ── 首屏静态资源缓存策略（本段与 docker/nginx.conf 的同段内容必须一致：
+#    只允许缩进不同，指令/注释/顺序一律相同；任一侧改动都要同步另一侧）────
+# 每个 location 都重新 include headers/csp：nginx 的 add_header 不跨层级
+# 继承，加了缓存头就会丢掉 server 层安全头（与 /_app/ 同一处理，见
+# docker/nginx.headers.inc、docker/nginx.csp.inc 头注释）。
+#
+# /fonts/：字体 public, max-age=1y + immutable。当前字体文件名不带 content
+# hash（frontend/static/fonts/inter-latin-wght.woff2 原样发布），用 1y 的前提
+# 是「不原地替换同名文件」；将来要同文件名换内容，必须先改名（或迁到带 hash
+# 的路径），否则已缓存客户端 1 年内看不到新字体。取舍：首屏 preload 字体命中
+# 本地缓存零往返，代价是改名纪律。
+location /fonts/ {
+    include /etc/nginx/conf.d/headers.inc;
+    include /etc/nginx/conf.d/csp.inc;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    try_files $uri =404;
+}
+
+# /icons/ 与 /favicon.png：PWA 图标/站点图标会随发版原地替换（同名），
+# 故 30d 而非 immutable——换图后最多 30 天收敛，不会出现 1 年不更新。
+location /icons/ {
+    include /etc/nginx/conf.d/headers.inc;
+    include /etc/nginx/conf.d/csp.inc;
+    add_header Cache-Control "public, max-age=2592000";
+    try_files $uri =404;
+}
+
+location = /favicon.png {
+    include /etc/nginx/conf.d/headers.inc;
+    include /etc/nginx/conf.d/csp.inc;
+    add_header Cache-Control "public, max-age=2592000";
+    try_files $uri =404;
+}
+
+# = /manifest.webmanifest：PWA 清单。nginx 内置 mime.types 未收录
+# .webmanifest（nginx 1.30.4 实测），不显式 default_type 会以
+# application/octet-stream 下发，影响 PWA 安装判定。缓存 1h：与 index.html
+# 同属「改版后应尽快生效」的入口元数据，同时吸收首屏重复请求。
+location = /manifest.webmanifest {
+    include /etc/nginx/conf.d/headers.inc;
+    include /etc/nginx/conf.d/csp.inc;
+    default_type application/manifest+json;
+    add_header Cache-Control "public, max-age=3600";
+    try_files $uri =404;
+}
+
+# dev 网关（docker/nginx.dev.conf）前端是 Vite dev server 直出、没有构建
+# 产物 root，故不做上述长缓存（有意差异，说明见该文件）。
 
 location / {
     include /etc/nginx/conf.d/headers.inc;
