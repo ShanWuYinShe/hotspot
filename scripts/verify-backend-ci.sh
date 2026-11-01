@@ -103,6 +103,12 @@ if [ "$WITH_DB" = "1" ]; then
     || "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "CREATE DATABASE $DB"
   DSN="postgres://postgres:$PG_PASSWORD@localhost:5432/$DB?sslmode=disable"
   ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go run ./cmd/migrate >/dev/null )
+  # 迁移声明索引 vs 库实际索引（只读比对）：存量库基线（schema_migrations 只登记
+  # 不执行）会让「基线数据快照里不存在的索引」永久缺失——线上 2026-11-01 排查到的
+  # idx_moments_keyset 即此因。新库顺序执行永远发现不了这类缺失，故对「先于新版
+  # 迁移存在」的 hotspot_it 增量执行后再复检一次。
+  step "迁移声明的索引与库实际索引一致性（$DB）"
+  PG_CONTAINER="${PG_CONTAINER:-$("${COMPOSE[@]}" ps -q postgres)}" "$ROOT/scripts/check-migration-indexes.sh" --database "$DB"
   # -p 1：各包串行。真实库是共享数据库，IT 测试会提交 fixture 行（BeginScope 之外的
   # 用例），并行包会让「统计类」断言（如 admin 今日新增）采到其它包的行而偶发红灯。
   ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go test -p 1 -count=1 -run "TestPostgresIT|Contract" ./internal/modules/... )
