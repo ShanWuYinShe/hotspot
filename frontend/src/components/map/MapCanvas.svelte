@@ -124,10 +124,37 @@
 		gestureTransform = `transform:scale(${scale});transform-origin:${gestureOx}px ${gestureOy}px;`;
 	}
 
+	interface PrevLayer {
+		tiles: TileItem[];
+		zoom: number;
+		originX: number;
+		originY: number;
+		scale: number;
+		source: string;
+	}
+	let prevLayer = $state<PrevLayer | null>(null);
+	let prevLayerTimer: ReturnType<typeof setTimeout> | null = null;
+
 	// 以 gestureOx/Oy 为锚把 zoom 落到 next（可为整数级跨越；分数 k 仅在
 	// 松手吸附时出现）。锚点地理坐标在缩放前后保持同一屏幕位置。
 	function applyZoomStep(next: number) {
 		if (next === zoom || !activeCenter || !containerEl) return;
+		// 记录旧图层做无缝垫底，杜绝跳级网络/解码期白屏（「慢一拍」视觉主因）
+		if (tiles.length > 0) {
+			const k = Math.pow(2, next - zoom);
+			prevLayer = {
+				tiles: [...tiles],
+				zoom,
+				originX: gestureOx,
+				originY: gestureOy,
+				scale: k,
+				source: tileSource
+			};
+			if (prevLayerTimer) clearTimeout(prevLayerTimer);
+			prevLayerTimer = setTimeout(() => {
+				prevLayer = null;
+			}, 400);
+		}
 		const g = toTileSpace(activeCenter.lat, activeCenter.lng);
 		const worldAx = lngToWorldX(g.lng, zoom) - width / 2 + gestureOx;
 		const worldAy = latToWorldY(g.lat, zoom) - height / 2 + gestureOy;
@@ -137,6 +164,49 @@
 			worldXToLng(worldAx * k + width / 2 - gestureOx, next)
 		);
 		zoom = next;
+	}
+
+	function applyZoomAtAnchor(ax: number, ay: number, next: number) {
+		gestureOx = ax;
+		gestureOy = ay;
+		applyZoomStep(next);
+		if (renderCenter) commitCenter(renderCenter);
+	}
+
+	let prevZoom = zoom;
+	$effect(() => {
+		if (zoom !== prevZoom) {
+			const oldZ = prevZoom;
+			prevZoom = zoom;
+			if (!pinched && containerEl && tiles.length > 0 && !prevLayer) {
+				const ax = width / 2;
+				const ay = height / 2;
+				const k = Math.pow(2, zoom - oldZ);
+				prevLayer = {
+					tiles: [...tiles],
+					zoom: oldZ,
+					originX: ax,
+					originY: ay,
+					scale: k,
+					source: tileSource
+				};
+				if (prevLayerTimer) clearTimeout(prevLayerTimer);
+				prevLayerTimer = setTimeout(() => {
+					prevLayer = null;
+				}, 400);
+			}
+		}
+	});
+
+	$effect(() => {
+		void tileSource;
+		prevLayer = null;
+	});
+
+	function initTile(node: HTMLImageElement) {
+		if (node.complete && node.naturalWidth > 0) {
+			node.classList.add('loaded');
+		}
 	}
 
 	function onPointerDown(e: PointerEvent) {
@@ -244,36 +314,99 @@
 		}
 	}
 
-	/* ── 滚轮缩放（以鼠标位置为锚） ── */
+	/* ── 滚轮缩放（以鼠标位置为锚，即时连续变换 + 弹性落级） ── */
 	let wheelAcc = 0;
+	let wheelDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 	function onWheel(e: WheelEvent) {
 		e.preventDefault();
-		wheelAcc += e.deltaY;
-		const step = 120;
-		if (Math.abs(wheelAcc) < step) return;
-		const delta = wheelAcc > 0 ? -1 : 1;
-		wheelAcc = 0;
-		const next = Math.max(minZoom, Math.min(maxZoom, zoom + delta));
-		if (next === zoom || !activeCenter || !containerEl) return;
-		// 以鼠标位置为锚（标准地图行为）：缩放前后锚点指向同一地理坐标，
-		// 否则以视口中心为锚会让「想放大的位置」随每级跳变漂移（不跟手）。
+		if (!activeCenter || !containerEl) return;
+
 		const rect = containerEl.getBoundingClientRect();
 		const ax = e.clientX - rect.left;
 		const ay = e.clientY - rect.top;
-		const g = toTileSpace(activeCenter.lat, activeCenter.lng);
-		const worldCx = lngToWorldX(g.lng, zoom);
-		const worldCy = latToWorldY(g.lat, zoom);
-		// 视口左上角世界坐标 → 锚点世界坐标；跳级后锚点像素坐标不变，
-		// 反推新中心 = 新锚世界坐标 − (视口半径 − 锚点视口偏移)。
-		const k = Math.pow(2, next - zoom);
-		const worldAx = worldCx - width / 2 + ax;
-		const worldAy = worldCy - height / 2 + ay;
-		const cx = worldAx * k + width / 2 - ax;
-		const cy = worldAy * k + height / 2 - ay;
-		const g1 = { lat: worldYToLat(cy, next), lng: worldXToLng(cx, next) };
-		commitCenter(fromTileSpace(g1.lat, g1.lng));
-		zoom = next;
+		gestureOx = ax;
+		gestureOy = ay;
+
+		// 1. 触控板双指捏合（macOS/Win 精度触控板发送 ctrlKey=true 滚轮事件）
+		if (e.ctrlKey) {
+			const deltaFrac = -e.deltaY * 0.02;
+			gestureFrac += deltaFrac;
+			if (gestureFrac >= 1) {
+				const next = Math.min(maxZoom, zoom + 1);
+				if (next !== zoom) {
+					applyZoomAtAnchor(ax, ay, next);
+					gestureFrac -= 1;
+				} else {
+					gestureFrac = Math.min(0.5, gestureFrac);
+				}
+			} else if (gestureFrac <= -1) {
+				const next = Math.max(minZoom, zoom - 1);
+				if (next !== zoom) {
+					applyZoomAtAnchor(ax, ay, next);
+					gestureFrac += 1;
+				} else {
+					gestureFrac = Math.max(-0.5, gestureFrac);
+				}
+			}
+			updateGestureTransform();
+
+			if (wheelDebounceTimer) clearTimeout(wheelDebounceTimer);
+			wheelDebounceTimer = setTimeout(() => {
+				if (Math.abs(gestureFrac) >= 0.35) {
+					const target = gestureFrac > 0 ? zoom + 1 : zoom - 1;
+					const next = Math.max(minZoom, Math.min(maxZoom, target));
+					if (next !== zoom) applyZoomAtAnchor(ax, ay, next);
+				}
+				gestureFrac = 0;
+				updateGestureTransform();
+			}, 140);
+			return;
+		}
+
+		// 2. 普通滚轮与双指滚动：即时 CSS scale 连续跟手 + 整数级落定
+		wheelAcc += e.deltaY;
+
+		// 即时视觉反馈：在达到整数级阈值前，滚轮立即驱动 CSS scale 连续缩放（零死区、即刻跟手）
+		gestureFrac = Math.max(-0.6, Math.min(0.6, -wheelAcc / 180));
+		updateGestureTransform();
+
+		const step = 100;
+		if (Math.abs(wheelAcc) >= step) {
+			const delta = wheelAcc > 0 ? -1 : 1;
+			const next = Math.max(minZoom, Math.min(maxZoom, zoom + delta));
+			wheelAcc = 0;
+			gestureFrac = 0;
+			updateGestureTransform();
+			if (wheelDebounceTimer) clearTimeout(wheelDebounceTimer);
+			if (next !== zoom) {
+				applyZoomAtAnchor(ax, ay, next);
+			}
+			return;
+		}
+
+		// 滚轮停顿防呆（轻微滚动停顿后如达到半级则吸附落级，否则平滑复位）
+		if (wheelDebounceTimer) clearTimeout(wheelDebounceTimer);
+		wheelDebounceTimer = setTimeout(() => {
+			if (Math.abs(wheelAcc) >= 45) {
+				const delta = wheelAcc > 0 ? -1 : 1;
+				const next = Math.max(minZoom, Math.min(maxZoom, zoom + delta));
+				if (next !== zoom) {
+					applyZoomAtAnchor(ax, ay, next);
+				}
+			}
+			wheelAcc = 0;
+			gestureFrac = 0;
+			updateGestureTransform();
+		}, 140);
 	}
+
+	$effect(() => {
+		return () => {
+			if (wheelDebounceTimer) clearTimeout(wheelDebounceTimer);
+			if (prevLayerTimer) clearTimeout(prevLayerTimer);
+		};
+	});
 
 	// Svelte 5 的 onwheel 事件属性注册为 passive 监听，preventDefault 不生效
 	//（页面会跟着滚）——滚轮缩放必须阻止默认滚动，改用非被动原生监听。
@@ -308,7 +441,29 @@
 	role="application"
 	aria-label="地图画布"
 >
-	<!-- 捏合手势中：剩余小数缩放以 CSS scale 呈现（父级把同款变换施加到
+	<!-- 垫底图层：缩放跳级期间保留上一级瓦片并施加对偶变换，
+	     杜绝新瓦片加载/解码期的空白闪烁（视觉「慢一拍」根因） -->
+	{#if prevLayer}
+		<div
+			data-testid="prev-layer"
+			class="absolute inset-0 pointer-events-none"
+			style="transform:scale({prevLayer.scale});transform-origin:{prevLayer.originX}px {prevLayer.originY}px;opacity:0.9;"
+		>
+			{#each prevLayer.tiles as t (`bg-${prevLayer.source}/${t.z}/${t.x}/${t.y}`)}
+				<img
+					src={prevLayer.source === 'amap'
+						? `https://webrd0${((t.x + t.y) % 4) + 1}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x=${t.x}&y=${t.y}&z=${t.z}`
+						: `/osm-tiles/${t.z}/${t.x}/${t.y}.png`}
+					alt=""
+					draggable="false"
+					class="map-tile absolute loaded"
+					style="left:{t.left}px;top:{t.top}px;width:256px;height:256px;user-select:none;"
+				/>
+			{/each}
+		</div>
+	{/if}
+
+	<!-- 捏合手势/滚轮即时缩放中：剩余小数缩放以 CSS scale 呈现（父级把同款变换施加到
 		 marker 覆盖层），松手吸附整数级后清除。 -->
 	<div class="absolute inset-0" style={gestureTransform}>
 		{#each tiles as t (`${tileSource}/${t.z}/${t.x}/${t.y}`)}
@@ -323,7 +478,8 @@
 				loading="eager"
 				class="map-tile absolute"
 				style="left:{t.left}px;top:{t.top}px;width:256px;height:256px;user-select:none;"
-				onload={(e) => e.currentTarget.classList.add('loaded')}
+				use:initTile
+				onload={(e) => (e.currentTarget as HTMLElement).classList.add('loaded')}
 			/>
 		{/each}
 	</div>

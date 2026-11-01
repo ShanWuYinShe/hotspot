@@ -27,13 +27,13 @@ beforeAll(() => {
 	};
 });
 
-function wheel(el: Element, deltaY: number, x: number, y: number): Event {
+function wheel(el: Element, deltaY: number, x: number, y: number, opts: { ctrlKey?: boolean } = {}): Event {
 	let ev: Event;
 	try {
-		ev = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY, clientX: x, clientY: y });
+		ev = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY, clientX: x, clientY: y, ctrlKey: opts.ctrlKey ?? false });
 	} catch {
 		ev = new Event('wheel', { bubbles: true, cancelable: true });
-		Object.assign(ev, { deltaY, clientX: x, clientY: y });
+		Object.assign(ev, { deltaY, clientX: x, clientY: y, ctrlKey: opts.ctrlKey ?? false });
 	}
 	el.dispatchEvent(ev);
 	return ev;
@@ -74,5 +74,40 @@ describe('MapCanvas 滚轮缩放', () => {
 		const [lat1, lng1] = (screen.getByTestId('center').textContent || '').split(',').map(Number);
 		expect(Math.abs(lat1 - lat0)).toBeLessThan(TOL_DEG);
 		expect(Math.abs(lng1 - lng0)).toBeLessThan(TOL_DEG);
+	});
+
+	it('触控板双指捏合（ctrlKey=true）平滑缩放', async () => {
+		const { container } = render(PinchHost, { props: { center: { lat: 34.26, lng: 117.19 }, zoom: 14 } });
+		const canvas = container.querySelector('[data-testid="canvas-host"] > div') as HTMLElement;
+		await act(async () => {
+			// 触控板捏合：连续微小 delta 带 ctrlKey
+			wheel(canvas, -25, 200, 450, { ctrlKey: true });
+			wheel(canvas, -30, 200, 450, { ctrlKey: true });
+		});
+		expect(Number(screen.getByTestId('zoom').textContent)).toBe(15);
+	});
+
+	it('滚轮未达整级时产生即时连续 gestureTransform（零死区跟手）', async () => {
+		const { container } = render(PinchHost, { props: { center: { lat: 34.26, lng: 117.19 }, zoom: 14 } });
+		const canvas = container.querySelector('[data-testid="canvas-host"] > div') as HTMLElement;
+		await act(async () => {
+			wheel(canvas, -36, 200, 450);
+		});
+		// zoom 尚未跨整级，但 gestureTransform (gt) 已即时输出 scale > 1
+		const transform = screen.getByTestId('gt').textContent || '';
+		expect(transform).toContain('scale(');
+		expect(transform).toContain('transform-origin:');
+	});
+
+	it('缩放跳级时保留上一级瓦片做垫底图层（防白屏闪烁）', async () => {
+		const { container } = render(PinchHost, { props: { center: { lat: 34.26, lng: 117.19 }, zoom: 14 } });
+		const canvas = container.querySelector('[data-testid="canvas-host"] > div') as HTMLElement;
+		await act(async () => {
+			wheel(canvas, -120, 200, 450);
+		});
+		// 应存在垫底图层与 scale 变换
+		const bgLayer = container.querySelector('[data-testid="prev-layer"]') as HTMLElement;
+		expect(bgLayer).toBeTruthy();
+		expect(bgLayer.style.transform).toContain('scale(2)');
 	});
 });
