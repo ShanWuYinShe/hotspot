@@ -271,11 +271,12 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 		{:else if loadError}
 			<LoadError message={loadError} onRetry={() => reloadKey++} />
 			{:else if filtered.length}
-			<div class="mx-auto w-full max-w-[1920px]">
-				<!-- 语义化 BSP 群组网格：移动端 2 列（首项 2x1 满宽横排焦点），平板 3 列，桌面 4 列，宽屏/2K 5-6 列；
-				     密集排布 (grid-flow-dense) + 自适应行高，全量卡片周期性穿插，绝对零空洞零拉伸 -->
+			<div class="w-full">
+				<!-- 语义化 BSP 群组网格：移动 2 列 / 平板 3 列；lg 起按 300px 最小卡宽自动增列，
+				     2560≈7 列、4K≈11 列，避免固定 6 列在超宽屏把卡片拉成巨幅。
+				     密集排布 (grid-flow-dense) + 自适应行高，全量卡片周期性穿插。 -->
 				<div
-					class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
+					class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]"
 					style="grid-auto-rows: clamp(195px, 20vw, 275px);"
 				>
 					{#each visibleGroups as group, index (group.id)}

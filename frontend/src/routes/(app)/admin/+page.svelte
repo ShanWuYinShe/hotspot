@@ -155,7 +155,7 @@
 	<!-- 模块入口：移动单列 / 平板 2 列 / 桌面 3 列 / 宽屏 4 列（避免 2K 下模块卡被拉成 700px+ 巨条） -->
 	<section aria-label="管理模块" class="flex flex-col">
 		<SectionHead title="管理模块" icon={LayoutGrid} />
-		<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+		<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
 			{#each MODULES as m (m.href)}
 				{@const isReports = m.href === `${ROUTES.admin}/reports`}
 				<AdminModuleCard

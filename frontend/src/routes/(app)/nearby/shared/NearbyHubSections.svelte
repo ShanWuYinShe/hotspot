@@ -6,7 +6,6 @@
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
 	import UserCard from '@/components/data-display/UserCard.svelte';
-	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
 	import type { MomentItem } from '@/api/types';
@@ -61,17 +60,8 @@
 	const momentPreviewCount = $derived(
 		momentPreview ?? (devicePlatform === 'desktop' ? 6 : devicePlatform === 'tablet' ? 4 : 3)
 	);
-	const userBspLayouts = $derived(
-		computeBspLayoutSequence(
-			users.slice(0, previewCount).map((u) => ({
-				isOnline: u.isOnline,
-				isFeatured: Boolean(u.isOnline),
-				likes: 0,
-				hasImage: Boolean(u.avatar)
-			})),
-			{ device: devicePlatform, kind: 'user' }
-		)
-	);
+	// 枢纽页只是 6 条预览，不做 BSP 大跨度：2x2/2x1 与固定预览条数组合会在宽屏
+	// 留下整行/整列空洞。统一 1x1，一行铺满即止；完整 BSP 留给 /nearby/people。
 </script>
 
 {#if users.length > 0}
@@ -80,15 +70,13 @@
 		<SectionHead title="附近的人" icon={Users} count={users.length} action="查看全部" onAction={onSeeAllUsers} />
 		{#if !useRows}
 			<div
-				class="grid grid-flow-dense grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6"
+				class="grid grid-flow-dense grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]"
 				style="grid-auto-rows: clamp(195px, 20vw, 275px);"
 			>
 				{#each users.slice(0, previewCount) as user, index (user.id)}
-					{@const layout = userBspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
-					<div class="{layout.cls} h-full w-full">
+					<div class="h-full w-full">
 						<UserCard
 							{user}
-							tier={layout.tier}
 							priority={index < 2}
 							followed={isFollowed(user.id)}
 							pending={isPending(user.id)}

@@ -328,10 +328,12 @@
 	{#if loading || loadError || !filtered.length}
 		{@render feedState()}
 	{:else}
-		<div class="mx-auto w-full max-w-[2000px]">
-			<!-- 语义化 BSP 照片流网格：密集排布 (grid-flow-dense) + 自适应行高，感知图片长宽比与节奏防粘连 -->
+		<div class="w-full">
+			<!-- 语义化 BSP 照片流网格：移动 2 / 平板 3；lg 起按 300px 最小卡宽自动增列，
+			     2560≈7 列、4K≈11 列，全宽利用超宽屏而不是被 max-w 限制在中间。
+			     密集排布 (grid-flow-dense) + 自适应行高，感知图片长宽比与节奏防粘连 -->
 			<div
-				class="grid grid-flow-dense grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
+				class="grid grid-flow-dense grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]"
 				style="grid-auto-rows: clamp(195px, 20vw, 275px);"
 			>
 				{#each filtered.slice(0, visibleCount) as item, index (item.id)}
