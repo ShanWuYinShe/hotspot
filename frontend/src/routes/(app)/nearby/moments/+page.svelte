@@ -17,6 +17,7 @@
 	import { createFeedInteractions, type FeedItem } from '@/components/moments/moment-feed.svelte';
 	import { fetchNearbyMoments, netError } from '@/api';
 	import { formatCardTime, formatDistance } from '@/lib/utils';
+	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
 	import { ROUTES } from '@/lib/routes';
 	import {
 		getMomentsProgress,
@@ -53,6 +54,9 @@
 
 	function mapMoment(m: import('@/api/types').MomentItem, i: number): FeedItem {
 		const mine = (m.reactions || []).find((r) => r.reacted_by_me);
+		const firstImg = m.images?.[0];
+		const w = firstImg?.width ?? null;
+		const h = firstImg?.height ?? null;
 		return {
 			// 缺 moment_id 的项仅在本地作列表 key；点击导航在下方 openMoment 统一校验
 			id: m.moment_id ?? `local-${i + 1}`,
@@ -64,7 +68,10 @@
 			tag: m.tags?.[0] ?? '',
 			tags: m.tags ?? [],
 			content: m.description ?? '',
-			image: m.images?.[0]?.url ?? '',
+			image: firstImg?.url ?? '',
+			imageWidth: w,
+			imageHeight: h,
+			aspectRatio: w && h && h > 0 ? w / h : null,
 			likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 			comments: m.comments_count ?? 0,
 			time: formatCardTime(m.created_at),
@@ -211,6 +218,17 @@
 	const feedHasMore = $derived(loadingMore || visibleCount < filtered.length || Boolean(nextCursor));
 
 	const device = $derived(platform.platform);
+	const bspLayouts = $derived(
+		computeBspLayoutSequence(
+			filtered.slice(0, visibleCount).map((item) => ({
+				aspectRatio: item.aspectRatio,
+				width: item.imageWidth,
+				height: item.imageHeight,
+				likes: item.likes
+			})),
+			{ device }
+		)
+	);
 	let sentinelEl = $state<HTMLElement | null>(null);
 
 	$effect(() => {
@@ -310,19 +328,26 @@
 		{@render feedState()}
 	{:else}
 		<div class="mx-auto w-full max-w-[2000px]">
-			<!-- 响应式照片流网格：移动端 2 列、平板 3 列、桌面 4 列、宽屏/2K 5-6 列，零空洞零拉伸 -->
-			<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6">
+			<!-- 语义化 BSP 照片流网格：密集排布 (grid-flow-dense) + 自适应行高，感知图片长宽比与节奏防粘连 -->
+			<div
+				class="grid grid-flow-dense grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
+				style="grid-auto-rows: clamp(195px, 20vw, 275px);"
+			>
 				{#each filtered.slice(0, visibleCount) as item, index (item.id)}
-					<MomentCard
-						class="aspect-[3/4] h-auto w-full rounded-lg"
-						{item}
-						priority={index < 4}
-						compact={device === 'mobile'}
-						liked={item.liked}
-						onLike={() => void interactions.toggleLike(item.id)}
-						onClick={() => openMoment(item.id)}
-						onCommentClick={() => openMoment(item.id, true)}
-					/>
+					{@const layout = bspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
+					<div class="{layout.cls} h-full w-full">
+						<MomentCard
+							class="h-full w-full rounded-lg"
+							{item}
+							priority={index < 4}
+							compact={device === 'mobile'}
+							tier={layout.tier}
+							liked={item.liked}
+							onLike={() => void interactions.toggleLike(item.id)}
+							onClick={() => openMoment(item.id)}
+							onCommentClick={() => openMoment(item.id, true)}
+						/>
+					</div>
 				{/each}
 			</div>
 

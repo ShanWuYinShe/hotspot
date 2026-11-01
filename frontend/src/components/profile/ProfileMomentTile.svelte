@@ -8,6 +8,7 @@
 	import { deleteMoment } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { platform } from '@/stores/platform.svelte';
+	import type { Tier } from '@/lib/bsp-layout';
 	import type { FeedItem } from '@/components/moments/moment-feed.svelte';
 
 	// 我的瞬间卡 + 管理菜单（R13 评审 P1-7 批准）：
@@ -24,6 +25,7 @@
 		onClick,
 		onCommentClick,
 		priority = false,
+		tier = '1x1' as Tier,
 		onDeleted,
 		onEdited
 	}: {
@@ -35,6 +37,7 @@
 		onClick?: () => void;
 		onCommentClick?: () => void;
 		priority?: boolean;
+		tier?: Tier;
 		onDeleted: () => void;
 		onEdited: (updated: { description: string; tags: string[]; privacy_level: 'public' | 'private' | null }) => void;
 	} = $props();
@@ -74,13 +77,14 @@
 	}
 </script>
 
-<div class="group relative isolate">
+<div class="group relative isolate h-full w-full">
 	<MomentCard
-		class="aspect-[3/4] h-auto rounded-lg"
+		class="h-full w-full rounded-lg"
 		{item}
 		{liked}
 		{saved}
 		{priority}
+		{tier}
 		compact={isMobile}
 		onLike={onLike}
 		onSave={onSave}

@@ -14,6 +14,8 @@
 	import { auth } from '@/stores/auth.svelte';
 	import { useAccountData, useGalleryMoments, useReactedMoments, useFavoriteMoments, type GalleryMoment } from '@/lib/profile-data.svelte';
 	import { formatCardTime } from '@/lib/utils';
+	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
+	import { platform } from '@/stores/platform.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 我的瞬间分区：与 nearby/moments 统一视觉语言（共享 MomentCard 原语），
@@ -89,6 +91,9 @@
 				tags,
 				content: edited ? edited.description : m.title || '',
 				image: m.img || '',
+				imageWidth: m.width,
+				imageHeight: m.height,
+				aspectRatio: m.aspectRatio,
 				likes: m.likes || 0,
 				comments: m.comments || 0,
 				time: m.created_at ? formatCardTime(m.created_at) : '',
@@ -100,6 +105,19 @@
 	);
 
 	const interactions = createFeedInteractions(() => feedItems);
+
+	const device = $derived(platform.platform);
+	const bspLayouts = $derived(
+		computeBspLayoutSequence(
+			interactions.items.map((item) => ({
+				aspectRatio: item.aspectRatio,
+				width: item.imageWidth,
+				height: item.imageHeight,
+				likes: item.likes
+			})),
+			{ device }
+		)
+	);
 
 	function openMoment(id: string, focusComments = false) {
 		void goto(focusComments ? `${ROUTES.moment(id)}?from=me&focus=comments` : `${ROUTES.moment(id)}?from=me`);
@@ -151,26 +169,33 @@
 			</div>
 		</div>
 
-		<!-- 规整动态网格：与 nearby/moments 对齐（移动 2 列竖版卡 / 桌面 3–4 列） -->
-		<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-			{#each interactions.items as item (item.id)}
+		<!-- 语义化 BSP 动态网格：密集排布 (grid-flow-dense) + 自适应行高，感知长宽比与防粘连 -->
+		<div
+			class="grid grid-flow-dense grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
+			style="grid-auto-rows: clamp(195px, 20vw, 275px);"
+		>
+			{#each interactions.items as item, index (item.id)}
+				{@const layout = bspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
 				{#if item.is_deleted}
 					<!-- 软删除墓碑（契约：客户端展示占位）：不可点、无操作，仅说明状态 -->
-					<div class="flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-lg bg-surface-subtle/60 px-4 text-center">
+					<div class="col-span-1 row-span-1 flex h-full w-full flex-col items-center justify-center gap-2 rounded-lg bg-surface-subtle/60 px-4 text-center">
 						<p class="text-sm text-text-secondary">该瞬间已删除</p>
 					</div>
 				{:else}
-					<ProfileMomentTile
-						{item}
-						liked={item.liked}
-						saved={item.saved}
-						onLike={() => void interactions.toggleLike(item.id)}
-						onSave={() => void interactions.toggleSave(item.id)}
-						onClick={() => openMoment(item.id)}
-						onCommentClick={() => openMoment(item.id, true)}
-						onDeleted={() => handleDeleted(item.id)}
-						onEdited={(updated) => handleEdited(item.id, updated)}
-					/>
+					<div class="{layout.cls} h-full w-full">
+						<ProfileMomentTile
+							{item}
+							tier={layout.tier}
+							liked={item.liked}
+							saved={item.saved}
+							onLike={() => void interactions.toggleLike(item.id)}
+							onSave={() => void interactions.toggleSave(item.id)}
+							onClick={() => openMoment(item.id)}
+							onCommentClick={() => openMoment(item.id, true)}
+							onDeleted={() => handleDeleted(item.id)}
+							onEdited={(updated) => handleEdited(item.id, updated)}
+						/>
+					</div>
 				{/if}
 			{/each}
 		</div>

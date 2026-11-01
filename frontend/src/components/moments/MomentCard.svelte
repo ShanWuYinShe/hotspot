@@ -8,6 +8,7 @@
 	import { shareMoment } from '@/lib/moment-actions';
 	import { ROUTES } from '@/lib/routes';
 	import FollowButton from '@/cst-ui/buttons/FollowButton.svelte';
+	import type { Tier } from '@/lib/bsp-layout';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { follow } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
@@ -26,6 +27,8 @@
 		onCommentClick,
 		priority = false,
 		compact = false,
+		tier = '1x1' as Tier,
+		horizontal = false,
 		class: className = 'aspect-[4/3] rounded-md'
 	}: {
 		item: FeedItem;
@@ -40,8 +43,15 @@
 		priority?: boolean;
 		/** 窄卡（手机 2 列，约 170px 宽）：操作行切紧凑档 */
 		compact?: boolean;
+		/** BSP 尺寸档位：1x1, 1x2, 2x1, 2x2 */
+		tier?: Tier;
+		/** 横排变体（左图右文） */
+		horizontal?: boolean;
 		class?: string;
 	} = $props();
+
+	const isHorizontal = $derived(horizontal || tier === '2x1');
+	const isHero = $derived(tier === '2x2');
 
 	// 卡片可访问名（role=button 的 aria-label 来源）：tag 可为空，回退正文/作者并截断。
 	const cardLabel = $derived((item.tag || item.content || item.user).slice(0, 30));
@@ -94,6 +104,7 @@
 	imageAlt={cardLabel}
 	{onClick}
 	{priority}
+	horizontal={isHorizontal}
 	class={className}
 >
 	<!-- Tag chip：左上角类别/标签 -->
@@ -113,10 +124,10 @@
 	<!-- 底部信息托盘：紧凑排布在卡片底部 25% 区域，彻底腾出上方图片空间 -->
 	{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
 		{@const onCover = onImage && !horizontal}
-		<div class="pointer-events-none flex flex-col gap-1 p-2 sm:p-2.5" data-card-footer>
-			<!-- 正文：最多 2 行，文字下衬轻阴影提升可读性 -->
+		<div class="pointer-events-none flex flex-col gap-1 p-2 sm:p-2.5 {isHorizontal ? 'p-3 sm:p-4 justify-between h-full' : ''}" data-card-footer>
+			<!-- 正文：普通卡 2 行，横排/巨幕卡 3 行 -->
 			{#if item.content}
-				<p class="pointer-events-none line-clamp-2 text-xs sm:text-sm font-semibold leading-snug drop-shadow-xs {onCover ? 'text-content-inverse' : 'text-text-primary'}">
+				<p class="pointer-events-none line-clamp-2 {isHorizontal || isHero ? 'line-clamp-3 sm:text-base' : ''} text-xs sm:text-sm font-semibold leading-snug drop-shadow-xs {onCover ? 'text-content-inverse' : 'text-text-primary'}">
 					{item.content}
 				</p>
 			{/if}

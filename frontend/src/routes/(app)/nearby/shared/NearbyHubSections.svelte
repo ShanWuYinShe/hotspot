@@ -6,6 +6,7 @@
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
 	import UserCard from '@/components/data-display/UserCard.svelte';
+	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
 	import type { MomentItem } from '@/api/types';
@@ -56,6 +57,16 @@
 	// 桌面 6（宽屏一行铺满）/ 平板与手机 4（移动端行式列表、平板卡片网格都取 4 条预览）
 	const defaultUserPreview = $derived(devicePlatform === 'desktop' ? 6 : 4);
 	const previewCount = $derived(userPreview ?? defaultUserPreview);
+	const userBspLayouts = $derived(
+		computeBspLayoutSequence(
+			users.slice(0, previewCount).map((u) => ({
+				isOnline: u.isOnline,
+				isFeatured: Boolean(u.isOnline),
+				likes: 0
+			})),
+			{ device: devicePlatform, kind: 'user' }
+		)
+	);
 </script>
 
 {#if users.length > 0}
@@ -63,16 +74,24 @@
 		<!-- 三段分区卡头统一 SectionHead（icon + count + 查看全部）；标题→内容间距由卡头 mb-3 承担 -->
 		<SectionHead title="附近的人" icon={Users} count={users.length} action="查看全部" onAction={onSeeAllUsers} />
 		{#if !useRows}
-			<div class="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6">
+			<div
+				class="grid grid-flow-dense grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6"
+				style="grid-auto-rows: clamp(195px, 20vw, 275px);"
+			>
 				{#each users.slice(0, previewCount) as user, index (user.id)}
-					<UserCard
-						{user}
-						priority={index < 2}
-						followed={isFollowed(user.id)}
-						pending={isPending(user.id)}
-						onFollow={() => onToggleFollow(user.id)}
-						onNavigate={() => (onOpenUser ? onOpenUser(user.id) : void goto(ROUTES.user(user.id)))}
-					/>
+					{@const layout = userBspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
+					<div class="{layout.cls} h-full w-full">
+						<UserCard
+							{user}
+							tier={layout.tier}
+							priority={index < 2}
+							followed={isFollowed(user.id)}
+							pending={isPending(user.id)}
+							onFollow={() => onToggleFollow(user.id)}
+							onNavigate={() => (onOpenUser ? onOpenUser(user.id) : void goto(ROUTES.user(user.id)))}
+							class="h-full w-full"
+						/>
+					</div>
 				{/each}
 			</div>
 		{:else}

@@ -19,6 +19,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import { searchUsers, follow , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDistance } from '@/lib/utils';
+	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
 	import { showToast } from '@/stores/toast.svelte';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { NEARBY_CATEGORIES } from '../shared/categories';
@@ -175,29 +176,17 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	});
 
 	const device = $derived(platform.platform);
-
-	function getUserCardLayout(index: number, total: number, dev: string) {
-		if (dev === 'mobile') {
-			if (index === 0) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const };
-			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
-		}
-		if (dev === 'tablet') {
-			if (total >= 3) {
-				if (index === 0) return { cls: 'col-span-2 row-span-2', tier: '2x2' as const };
-				return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
-			}
-			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
-		}
-		if (total >= 5) {
-			if (index === 0) return { cls: 'col-span-2 row-span-2', tier: '2x2' as const };
-			if (index >= 1 && index <= 4) return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
-			if (index === 5) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const };
-			if (index === 6 || index === 7) return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
-			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
-		}
-		if (index === 0) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const };
-		return { cls: 'col-span-1 row-span-1', tier: '1x1' as const };
-	}
+	const visibleUsers = $derived(list.slice(0, visibleCount));
+	const bspLayouts = $derived(
+		computeBspLayoutSequence(
+			visibleUsers.map((u) => ({
+				isOnline: u.isOnline,
+				isFeatured: Boolean(u.isOnline || (u.mutual && u.mutual > 0)),
+				likes: u.mutual
+			})),
+			{ device, kind: 'user' }
+		)
+	);
 
 	// in-flight 去重（防连点双翻转，响应式供按钮 pending 态）；业务失败（code≠0）显式判 code 回滚
 	let followPending = $state(new Set<string>());
@@ -336,14 +325,14 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 					</EmptyState>
 				{:else}
 					<div class="mx-auto w-full max-w-[1920px]">
-						<!-- 响应式邻居网格：移动端 2 列（首项 2x1 满宽横排焦点），平板 3 列，桌面 4 列，宽屏/2K 5-6 列；
-						     采用金字塔闭环几何排布，兼顾精选推荐大卡与标准卡，严格 100% 满铺零空洞，行高自适应屏幕比例 -->
+						<!-- 语义化 BSP 邻居网格：移动端 2 列（首项 2x1 满宽横排焦点），平板 3 列，桌面 4 列，宽屏/2K 5-6 列；
+						     密集排布 (grid-flow-dense) + 自适应行高，全量卡片周期性穿插推荐焦点，绝对零空洞零拉伸 -->
 						<div
-							class="grid grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
+							class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
 							style="grid-auto-rows: clamp(195px, 20vw, 275px);"
 						>
-							{#each list.slice(0, visibleCount) as user, index (user.id)}
-								{@const layout = getUserCardLayout(index, list.length, device)}
+							{#each visibleUsers as user, index (user.id)}
+								{@const layout = bspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
 								<div class={layout.cls}>
 									<UserCard
 										{user}

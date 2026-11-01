@@ -25,6 +25,9 @@ export interface GalleryMoment {
 	/** 软删除墓碑（后端下发 is_deleted，契约要求客户端展示占位而非空白卡）。 */
 	is_deleted: boolean;
 	img: string;
+	width?: number | null;
+	height?: number | null;
+	aspectRatio?: number | null;
 	title: string;
 	likes: number;
 	comments: number;
@@ -48,10 +51,16 @@ export interface ProfileStats {
 /** Map a spec MomentItem to the flat GalleryMoment shape the gallery tiles consume. */
 function mapGalleryMoment(m: MomentItem): GalleryMoment {
 	const mine = (m.reactions || []).find((r) => r.reacted_by_me);
+	const img = m.images?.[0];
+	const w = img?.width ?? null;
+	const h = img?.height ?? null;
 	return {
 		id: m.moment_id,
 		is_deleted: m.is_deleted ?? false,
-		img: m.images?.[0]?.url ?? '',
+		img: img?.url ?? '',
+		width: w,
+		height: h,
+		aspectRatio: w && h && h > 0 ? w / h : null,
 		title: m.description ?? '',
 		likes: (m.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
 		comments: m.comments_count ?? 0,

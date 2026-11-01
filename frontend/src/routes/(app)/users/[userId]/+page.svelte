@@ -34,6 +34,7 @@
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import { formatCardTime, formatCount, formatDistance } from '@/lib/utils';
+	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
 	import { openTheDoor, follow, block, setRemark, netError } from '@/api';
 	import type { UserPresenceStatus } from '@/api/types';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
@@ -58,7 +59,7 @@
 		followers: number;
 		following: number;
 		moments: number;
-		galleryMoments: Array<{ id: string; url: string; time: string }>;
+		galleryMoments: Array<{ id: string; url: string; time: string; width?: number | null; height?: number | null; aspectRatio?: number | null }>;
 		tags: string[];
 	}
 
@@ -137,12 +138,20 @@
 	// 只展示带图瞬间（无图动态渲染 <img src=""> 会破图）；保留 moment_id 供跳转详情
 	data.recent_moments?.items
 		?.filter((m) => m.images?.[0]?.url)
-		.map((m) => ({
-			id: m.moment_id,
-			url: m.images![0]!.url,
-			// 缩略图上的极简 meta：发布时间（避免纯图网格被读成装饰图）
-			time: formatCardTime(m.created_at ?? '')
-		})) ?? [],
+		.map((m) => {
+			const img = m.images![0]!;
+			const w = img.width ?? null;
+			const h = img.height ?? null;
+			return {
+				id: m.moment_id,
+				url: img.url,
+				width: w,
+				height: h,
+				aspectRatio: w && h && h > 0 ? w / h : null,
+				// 缩略图上的极简 meta：发布时间（避免纯图网格被读成装饰图）
+				time: formatCardTime(m.created_at ?? '')
+			};
+		}) ?? [],
 						tags: u.tags ?? []
 					};
 					presence = u.presence_status ?? null;
@@ -174,6 +183,17 @@
 	// in-flight 去重（防连点双翻转）；业务失败（code≠0）显式判 code 回滚
 	let followPending = $state(false);
 	let blockPending = false;
+
+	const galleryBspLayouts = $derived(
+		computeBspLayoutSequence(
+			user.galleryMoments.map((g) => ({
+				aspectRatio: g.aspectRatio,
+				width: g.width,
+				height: g.height
+			})),
+			{ device }
+		)
+	);
 
 	const toggleFollow = async () => {
 		if (blocked || followPending) return;
@@ -494,15 +514,19 @@
 			{/snippet}
 		</IdentityHero>
 
-		<!-- 瞬间网格：整格跳转动态详情（大图查看在详情页内）；网格对齐全站图片卡语言 -->
+		<!-- 瞬间网格：语义化 BSP 紧密网格（grid-flow-dense），整格跳转动态详情 -->
 		<section class="mt-6" aria-label="最近瞬间">
 			<SectionHead title="最近瞬间" count={user.galleryMoments.length > 0 ? user.galleryMoments.length : undefined} icon={ImageIcon} />
 			{#if user.galleryMoments.length > 0}
-				<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+				<div
+					class="grid grid-flow-dense grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3"
+					style="grid-auto-rows: clamp(140px, 16vw, 220px);"
+				>
 					{#each user.galleryMoments as g, i (g.id)}
+						{@const layout = galleryBspLayouts[i] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
 						<button
 							type="button"
-							class="media-placeholder image-hover-frame tap-97 relative aspect-square cursor-pointer overflow-hidden rounded-md focus-ring"
+							class="{layout.cls} media-placeholder image-hover-frame tap-97 relative h-full w-full cursor-pointer overflow-hidden rounded-md focus-ring"
 							aria-label={`查看 ${user.name} 的瞬间图片 ${i + 1}`}
 							onclick={() => void goto(ROUTES.moment(g.id))}
 						>

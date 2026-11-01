@@ -18,6 +18,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import { mapGroup, type Group } from './shared/group-data';
 	import { NEARBY_CATEGORIES } from '../shared/categories';
 	import { requireAuth } from '@/stores/auth.svelte';
+	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
 	import { searchGroups, joinGroup, leaveGroup, cancelGroupApplication, listMyApplications, netError } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -97,33 +98,22 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	const isTablet = $derived(platform.platform === 'tablet');
 	const device = $derived(platform.platform);
 
-	function getGroupCardLayout(index: number, total: number, dev: string) {
-		if (dev === 'mobile') {
-			if (index === 0) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const, featured: true, horizontal: true };
-			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const, featured: false, horizontal: false };
-		}
-		if (dev === 'tablet') {
-			if (index === 0) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const, featured: true, horizontal: true };
-			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const, featured: false, horizontal: false };
-		}
-		// 桌面端：
-		// 群组数充裕（>= 6）时首项展开 2x2 巨幕精选；
-		// 少量群组（< 6）时：在 2xl (6列) 下首尾 2x1 满铺 (2+1+1+2=6)，在 lg (4列) 下首项 2x1 次项 1x1... 或纯平整铺满
-		if (total >= 6) {
-			if (index === 0) return { cls: 'col-span-2 row-span-2', tier: '2x2' as const, featured: true, horizontal: false };
-			if (index === 1 || index === 2) return { cls: 'col-span-1 row-span-1', tier: '1x1' as const, featured: false, horizontal: false };
-			if (index === 3) return { cls: 'col-span-2 row-span-1', tier: '2x1' as const, featured: false, horizontal: true };
-			return { cls: 'col-span-1 row-span-1', tier: '1x1' as const, featured: false, horizontal: false };
-		}
-		if (index === 0) return { cls: 'lg:col-span-1 2xl:col-span-2 col-span-1 row-span-1', tier: '2x1' as const, featured: true, horizontal: true };
-		if (index === 3) return { cls: 'lg:col-span-1 2xl:col-span-2 col-span-1 row-span-1', tier: '2x1' as const, featured: false, horizontal: true };
-		return { cls: 'col-span-1 row-span-1', tier: '1x1' as const, featured: false, horizontal: false };
-	}
 	const filtered = $derived(
 		// 类目按全量标签匹配：首标签之外同样可命中（此前只比 tags[0]）。
 		groups.filter((group) => activeCategory === '全部' || group.tags.includes(activeCategory))
 	);
 	const visibleGroups = $derived(filtered.slice(0, visibleCount));
+
+	const bspLayouts = $derived(
+		computeBspLayoutSequence(
+			visibleGroups.map((g) => ({
+				members: g.members,
+				isFeatured: g.members > 30 || g.joined,
+				likes: g.online
+			})),
+			{ device, kind: 'group' }
+		)
+	);
 	const featured = $derived(filtered[0]);
 	const rest = $derived(filtered.slice(1));
 	const totalOnline = $derived(filtered.reduce((sum, group) => sum + group.online, 0));
@@ -259,14 +249,14 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			<LoadError message={loadError} onRetry={() => reloadKey++} />
 			{:else if filtered.length}
 			<div class="mx-auto w-full max-w-[1920px]">
-				<!-- 响应式群组网格：移动端 2 列（首项 2x1 满宽横排焦点），平板 3 列，桌面 4 列，宽屏/2K 5-6 列；
-				     首两行 2x2 精选 + 1x1 + 2x1 闭环满铺，行高自适应屏幕比例，绝对零空洞零拉伸 -->
+				<!-- 语义化 BSP 群组网格：移动端 2 列（首项 2x1 满宽横排焦点），平板 3 列，桌面 4 列，宽屏/2K 5-6 列；
+				     密集排布 (grid-flow-dense) + 自适应行高，全量卡片周期性穿插，绝对零空洞零拉伸 -->
 				<div
-					class="grid grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
+					class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
 					style="grid-auto-rows: clamp(195px, 20vw, 275px);"
 				>
-					{#each filtered.slice(0, visibleCount) as group, index (group.id)}
-						{@const layout = getGroupCardLayout(index, filtered.length, device)}
+					{#each visibleGroups as group, index (group.id)}
+						{@const layout = bspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1', horizontal: false, featured: false }}
 						<div class={layout.cls}>
 							<GroupCard
 								{group}

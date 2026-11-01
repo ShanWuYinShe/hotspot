@@ -21,6 +21,9 @@ export interface FeedItem {
 	tags: string[];
 	content: string;
 	image: string;
+	imageWidth?: number | null;
+	imageHeight?: number | null;
+	aspectRatio?: number | null;
 	likes: number;
 	comments: number;
 	time: string;
