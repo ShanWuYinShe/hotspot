@@ -62,18 +62,21 @@ describe('DetailHeader', () => {
 		expect(leftPill?.classList.contains('backdrop-blur-md')).toBe(true);
 	});
 
-	it('无封面时（纯文字/资料页）：顶部呈现语义标题并挂载毛玻璃底色', () => {
+	it('契约保证：顶栏外层保持 bg-transparent 与页面画布无缝融合，严禁通栏硬条/白带', () => {
 		const { container } = render(DetailHeader, {
 			props: {
 				category: '发现动态',
-				entityName: '纯文字瞬间',
-				hasCover: false
+				entityName: '纯文字瞬间'
 			}
 		});
 
 		const header = container.querySelector('header');
-		expect(header?.className).toContain('bg-surface-page/85');
-		expect(header?.className).toContain('backdrop-blur-md');
-		expect(container.textContent).toContain('纯文字瞬间');
+		expect(header?.className).toContain('bg-transparent');
+		expect(header?.className).not.toContain('bg-surface-page');
+		expect(header?.className).not.toContain('backdrop-blur');
+
+		const leftPill = container.querySelector('[data-detail-header-left]');
+		expect(leftPill?.className).toContain('bg-surface-primary/85');
+		expect(leftPill?.className).toContain('backdrop-blur-md');
 	});
 });

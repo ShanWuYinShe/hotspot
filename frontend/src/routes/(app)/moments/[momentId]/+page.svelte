@@ -600,7 +600,6 @@
 				location: moment.location,
 				time: moment.time
 			} : undefined}
-			hasCover={!loading && moment.images.length > 0}
 			onBack={() => smartBack()}
 			onAuthorClick={() => {
 				if (moment.authorId) void goto(ROUTES.user(moment.authorId));
