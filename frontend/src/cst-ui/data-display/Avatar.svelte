@@ -21,8 +21,9 @@
 	import { avatarImageWidths, buildImageSrcSet, fadeImage, optimizedImageUrl } from '@/lib/images';
 
 	// Avatar — 用户/群组头像统一展示组件。
-	// 包装元素持有 border-radius + outline + overflow:hidden，徽标作为子元素
-	// 与描边同一元素，避免「分离边框的 broken-border」问题。
+	// 外层包装元素持有 border-radius 与相对定位，为 badge 角标提供锚点；
+	// 内层容器持有 border-radius + overflow:hidden 负责图片与首字母占位的圆形/圆角裁剪，
+	// 避免外层 overflow:hidden 将角标（如 OnlineDot 在线圆点）的半边外圈切掉。
 
 	let {
 		src,
@@ -70,35 +71,41 @@
 
 <div
 	aria-hidden={decorative || undefined}
-	class="relative shrink-0 overflow-hidden bg-surface-subtle {className}"
-	style="width:{px}px;height:{px}px;border-radius:{borderRadius};{ring ? 'border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);' : ''}{style}"
+	class="relative shrink-0 {className}"
+	style="width:{px}px;height:{px}px;border-radius:{borderRadius};{style}"
 >
-	<!-- 占位底层始终渲染（加载中/失败可见）：首字母或人形图标 + accent 底，
-	     不再出现纯灰空块；图片以 absolute 覆盖并 onload 渐显。 -->
-	<span
-		class="absolute inset-0 flex items-center justify-center bg-accent-bg text-text-primary"
-		aria-hidden="true"
-		style={initial ? `font-size:${Math.round(px * 0.42)}px;` : ''}
+	<!-- 头像内层：圆形/圆角裁剪图片与占位底层，持有 overflow:hidden -->
+	<div
+		class="relative h-full w-full overflow-hidden bg-surface-subtle"
+		style="border-radius:{borderRadius};{ring ? 'border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);' : ''}"
 	>
-		{#if initial}
-			{initial}
-		{:else}
-			<UserRound class="size-1/2" strokeWidth={1.5} aria-hidden="true" />
+		<!-- 占位底层始终渲染（加载中/失败可见）：首字母或人形图标 + accent 底，
+		     不再出现纯灰空块；图片以 absolute 覆盖并 onload 渐显。 -->
+		<span
+			class="absolute inset-0 flex items-center justify-center bg-accent-bg text-text-primary"
+			aria-hidden="true"
+			style={initial ? `font-size:${Math.round(px * 0.42)}px;` : ''}
+		>
+			{#if initial}
+				{initial}
+			{:else}
+				<UserRound class="size-1/2" strokeWidth={1.5} aria-hidden="true" />
+			{/if}
+		</span>
+		{#if showImage}
+			<img
+				src={optimizedImageUrl(src, { width: px * 2 })}
+				srcset={buildImageSrcSet(src, avatarImageWidths(px))}
+				sizes={`${px}px`}
+				loading="lazy"
+				decoding="async"
+				alt={decorative ? '' : (name ?? '')}
+				class="absolute inset-0 h-full w-full object-cover"
+				use:fadeImage
+				onerror={() => (hasError = true)}
+			/>
 		{/if}
-	</span>
-	{#if showImage}
-		<img
-			src={optimizedImageUrl(src, { width: px * 2 })}
-			srcset={buildImageSrcSet(src, avatarImageWidths(px))}
-			sizes={`${px}px`}
-			loading="lazy"
-			decoding="async"
-			alt={decorative ? '' : (name ?? '')}
-			class="absolute inset-0 h-full w-full object-cover"
-			use:fadeImage
-			onerror={() => (hasError = true)}
-		/>
-	{/if}
+	</div>
 	{#if badge}
 		{@render badge()}
 	{/if}

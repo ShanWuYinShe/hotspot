@@ -31,4 +31,13 @@ describe('Avatar', () => {
 		expect(wrapper.style.width).toBe('48px');
 		expect(wrapper.style.height).toBe('48px');
 	});
+
+	it('外层容器不带 overflow-hidden，内层裁剪层持有 overflow-hidden 保护角标不被裁切', () => {
+		const { container } = render(Avatar, { props: { name: '测试', size: 44 } });
+		const wrapper = container.firstElementChild as HTMLElement;
+		expect(wrapper.classList.contains('overflow-hidden')).toBe(false);
+		const innerMask = wrapper.querySelector('.overflow-hidden') as HTMLElement;
+		expect(innerMask).not.toBeNull();
+		expect(innerMask.classList.contains('relative')).toBe(true);
+	});
 });
