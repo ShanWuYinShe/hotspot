@@ -422,6 +422,7 @@
 				location: user.location,
 				time: handleLine
 			} : undefined}
+			hasCover={false}
 			onBack={() => smartBack()}
 			trailing={userHeaderActions}
 		/>

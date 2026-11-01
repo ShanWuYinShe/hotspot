@@ -586,7 +586,8 @@
 <SplitPageLayout
 	contentMaxWidth="58rem"
 	edgeToEdgeMobile={true}
-	contentClassName="animate-fade-in flex flex-col flex-1 min-h-full pt-0 sm:pt-1 pb-6"
+	overlayHeaderMobile={!loading && moment.images.length > 0}
+	contentClassName="animate-fade-in flex flex-col flex-1 min-h-full pt-0 sm:pt-1 pb-0 sm:pb-6"
 >
 	{#snippet header()}
 		<DetailHeader
@@ -599,6 +600,7 @@
 				location: moment.location,
 				time: moment.time
 			} : undefined}
+			hasCover={!loading && moment.images.length > 0}
 			onBack={() => smartBack()}
 			onAuthorClick={() => {
 				if (moment.authorId) void goto(ROUTES.user(moment.authorId));
@@ -616,13 +618,13 @@
 		     的真实卡片同构（同外壳/同纵向节奏），做到「骨架→内容零位移」；
 		     评论区用 decorative 骨架避免屏读器重复播报 -->
 		<div
-			class="mx-auto w-full max-w-4xl"
+			class="mx-auto w-full max-w-4xl flex-1 flex flex-col"
 			role="status"
 			aria-busy="true"
 			aria-label="加载动态…"
 			data-skeleton-root
 		>
-			<div class="overflow-hidden rounded-none sm:rounded-lg bg-surface-island shadow-none sm:shadow-xs">
+			<div class="overflow-hidden rounded-none sm:rounded-lg bg-surface-island shadow-none sm:shadow-xs flex-1 flex flex-col">
 				<!-- 画廊 hero 首屏：与真实页一致（图片 → 作者/正文 → 动作条 → 评论区），零位移 -->
 				<Skeleton class="aspect-[4/3] w-full" />
 				<div class="p-4 sm:p-5 md:p-7">

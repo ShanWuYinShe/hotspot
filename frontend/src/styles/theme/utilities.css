@@ -977,6 +977,14 @@
     box-shadow: var(--cst-elevation-nav);
   }
 
+  @media (max-width: 639px) {
+    .page-header-scrolled {
+      /* 移动端去硬边线：对齐首页顶栏，用毛玻璃光感分隔，滚动后不画 1px 硬底边 */
+      border-bottom-color: transparent;
+      box-shadow: none;
+    }
+  }
+
   /* SPA 导航程序化焦点：h1/main 不显示默认轮廓；交互元素 focus-ring 不受影响。 */
   h1[tabindex='-1']:focus,
   #main-content:focus {

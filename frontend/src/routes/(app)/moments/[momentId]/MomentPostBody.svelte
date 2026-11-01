@@ -249,7 +249,7 @@
 
 
 	<!-- 2. 作者 Header：头像（桌面 44 / 移动 36）+ 昵称 14 semibold + 位置·时间 11 次级 -->
-	<header class="flex items-center justify-between gap-3 pb-4 px-4 sm:px-0">
+	<header class="flex items-center justify-between gap-3 pb-4 px-4 sm:px-0 {cover ? '' : 'pt-2 sm:pt-0'}">
 		<div class="flex min-w-0 items-center gap-3">
 			<button
 				type="button"

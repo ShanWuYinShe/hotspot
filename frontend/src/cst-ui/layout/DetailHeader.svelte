@@ -25,6 +25,7 @@
 		onAuthorClick,
 		scrollThreshold = 160,
 		maxWidth = '58rem',
+		hasCover = true,
 		class: className = ''
 	}: {
 		onBack?: () => void;
@@ -36,6 +37,7 @@
 		onAuthorClick?: () => void;
 		scrollThreshold?: number;
 		maxWidth?: number | string;
+		hasCover?: boolean;
 		class?: string;
 	} = $props();
 
@@ -89,7 +91,8 @@
 <header
 	use:headerScroll
 	class={cn(
-		'sticky top-0 z-[var(--cst-z-sticky)] w-full select-none transition-all duration-snappy ease-standard pointer-events-none bg-transparent py-2 sm:py-2.5',
+		'sticky top-0 z-[var(--cst-z-sticky)] w-full select-none transition-all duration-snappy ease-standard pointer-events-none py-2 sm:py-2.5',
+		hasCover ? 'bg-transparent' : 'bg-surface-page/85 backdrop-blur-md',
 		hidden ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100',
 		className
 	)}
@@ -191,6 +194,14 @@
 						</div>
 					{/if}
 				</div>
+
+				{#if !hasCover && (entityName || category)}
+					<div class="flex min-w-0 flex-1 items-center justify-center px-1 sm:hidden">
+						<span class="truncate text-sm font-semibold text-text-primary">
+							{entityName || category}
+						</span>
+					</div>
+				{/if}
 
 				<!-- 右侧：操作区（分享 / 更多等） -->
 				{#if trailing}

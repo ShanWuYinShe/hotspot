@@ -298,13 +298,17 @@
 		<div style="position:absolute;top:0;left:0;right:0;z-index:50;padding:12px 14px 0;">
 			<div style="display:flex;align-items:center;justify-content:space-between;">
 				<!-- Back -->
-				<ActionIconButton
-					icon={ArrowLeft}
-					label="返回"
-					onClick={() => smartBack()}
-					size={42}
-					variant="surface"
-				/>
+				<div class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0">
+					<ActionIconButton
+						icon={ArrowLeft}
+						label="返回"
+						onClick={() => smartBack()}
+						size={36}
+						variant="ghost"
+						tone="current"
+						class="shrink-0"
+					/>
+				</div>
 
 				<!-- Filter menu（桌面/移动共用组件：徽章/重置/至少一项/外点关闭统一） -->
 				<MapFilterMenu bind:activeFilters align="end" />

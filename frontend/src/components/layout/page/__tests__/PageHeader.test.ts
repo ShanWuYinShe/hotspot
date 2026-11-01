@@ -70,13 +70,14 @@ describe('PageHeader floating 悬浮工具条（2026-10-29 详情页）', () => 
 });
 
 describe('PageHeader integrated 内容内页头（hub/列表页，2026-10-29）', () => {
-	it('无背景/边框/吸顶：header 不挂 glass/滚动类，标题与副标题同一行', () => {
+	it('无桌面硬边吸顶：header 不挂桌面滚动类，移动端对齐主页毛玻璃吸顶，标题与副标题同一行', () => {
 		const { container } = render(PageHeader, {
 			props: { title: '附近的人', subtitle: '徐州 · 5km 内 · 6 人', variant: 'integrated' }
 		});
 		const header = container.querySelector('header') as HTMLElement;
 		expect(header.className).not.toContain('page-header-scroll');
-		expect(header.className).not.toContain('sticky');
+		expect(header.classList.contains('sticky')).toBe(false);
+		expect(header.className).toContain('max-sm:sticky');
 		expect(container.querySelector('[data-page-intro]')).toBeTruthy();
 		const intro = container.querySelector('[data-page-intro]') as HTMLElement;
 		const title = screen.getByRole('heading', { level: 1 });

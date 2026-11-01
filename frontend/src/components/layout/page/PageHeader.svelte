@@ -142,19 +142,31 @@
 	// 凡传入 onBack 的页面（二级页/流程页/详情页），桌面/移动端统一保持常驻返回入口
 	const showBack = $derived(Boolean(onBack));
 	// header 统一预留黄金呼吸感：
-	// - 纯标题时标题/副标题/操作组与下边框之间留 pb-4.5（18px），上下留白匀称舒展，杜绝标题与分割线紧贴粘连；
-	// - below 存在时（搜索框/Tab 栏等），给 below 内容与下边框之间留 pb-3.5（14px）。
-	const headerPadding = $derived(integrated ? 'pt-3 pb-1' : floating ? 'pt-2 pb-2' : below ? 'pt-4 pb-3.5' : 'pt-4.5 pb-4.5');
+	// - 移动端黄金比例：pt-2.5 pb-2（对齐首页顶栏紧凑通透语言，释放视口）；
+	// - 桌面端舒展呼吸：纯标题留 pb-4.5，有 below 时留 pb-3.5。
+	const headerPadding = $derived(
+		integrated
+			? 'pt-3 pb-1'
+			: floating
+				? 'pt-2 pb-2'
+				: below
+					? 'pt-2.5 sm:pt-4 pb-2 sm:pb-3.5'
+					: 'pt-2.5 sm:pt-4.5 pb-2 sm:pb-4.5'
+	);
 </script>
 
 <header
 	use:headerScroll
 	class={cn(
 		integrated
-			? 'shrink-0'
+			? 'shrink-0 max-sm:sticky max-sm:top-0 max-sm:z-[var(--cst-z-sticky)] max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:pb-1.5'
 			: floating
 				? 'shrink-0 sticky top-0 z-[var(--cst-z-sticky)] pointer-events-none'
-				: ['shrink-0 page-header-scroll', sticky && 'sticky top-0 z-[var(--cst-z-sticky)]', scrolled && 'page-header-scrolled'],
+				: [
+						'shrink-0 page-header-scroll max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:border-b-0',
+						sticky && 'sticky top-0 z-[var(--cst-z-sticky)]',
+						scrolled && 'page-header-scrolled'
+					],
 		className
 	)}
 >
@@ -164,7 +176,17 @@
 			<div data-page-intro class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
 				<div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1">
 					{#if showBack}
-						<ActionIconButton variant="ghost" icon={ArrowLeft} label={backLabel} onClick={onBack} size={36} class="-ml-1 self-center" />
+						<div class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0 self-center -ml-0.5">
+							<ActionIconButton
+								variant="ghost"
+								tone="current"
+								icon={ArrowLeft}
+								label={backLabel}
+								onClick={onBack}
+								size={36}
+								class="shrink-0"
+							/>
+						</div>
 					{/if}
 					<h1 class="min-w-0 truncate text-lg font-semibold text-text-primary sm:text-xl">{title}</h1>
 					{#if subtitle}
@@ -190,22 +212,42 @@
 				class="pointer-events-auto flex items-center gap-2 rounded-md border border-border-default/60 bg-surface-primary/85 px-1.5 py-1 shadow-raised-sm backdrop-blur-md"
 			>
 				{#if showBack}
-					<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={42} />
+					<div class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0">
+						<ActionIconButton
+							icon={ArrowLeft}
+							label={backLabel}
+							onClick={onBack}
+							variant="ghost"
+							tone="current"
+							size={36}
+							class="shrink-0"
+						/>
+					</div>
 				{:else}
-					<span class="size-[42px] shrink-0" aria-hidden="true"></span>
+					<span class="size-[38px] shrink-0" aria-hidden="true"></span>
 				{/if}
 				<h1 class="min-w-0 flex-1 truncate text-center text-md font-semibold text-text-primary">{title}</h1>
 				{#if trailing}
 					<div class="shrink-0">{@render trailing()}</div>
 				{:else}
-					<span class="size-[42px] shrink-0" aria-hidden="true"></span>
+					<span class="size-[38px] shrink-0" aria-hidden="true"></span>
 				{/if}
 			</div>
 		{:else}
 			<div class="flex items-center gap-3">
 				{#if showBack}
-					<!-- 42：返回是导航关键动作，视觉与命中区大于普通 header 图标钮（36），易点不误触 -->
-					<ActionIconButton icon={ArrowLeft} label={backLabel} onClick={onBack} size={42} />
+					<!-- 全局统一返回按钮：38px 现代微毛玻璃圆钮（p-0.5 + 36px 幽灵钮），触控区经 hit-slop 达 44px -->
+					<div class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0">
+						<ActionIconButton
+							icon={ArrowLeft}
+							label={backLabel}
+							onClick={onBack}
+							variant="ghost"
+							tone="current"
+							size={36}
+							class="shrink-0"
+						/>
+					</div>
 				{/if}
 			<!-- 标题列恒为弹性列（flex-1 min-w-0）：窄屏下标题区先让位收缩，
 			     trailing 操作簇由 shrink-0 锁定不被压缩；溢出优先级 = 操作钮 > 装饰 chip > 副标题尾字。

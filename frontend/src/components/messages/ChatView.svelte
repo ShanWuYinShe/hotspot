@@ -237,14 +237,17 @@
 		<!-- 头部内容经 ChatColumn 与消息列/输入栏同轴（R16）；px-4 是列内 gutter -->
 		<ChatColumn class="flex h-full items-center gap-2 px-4">
 		{#if showBackButton}
-			<ActionIconButton
-				icon={ArrowLeft}
-				label="返回"
-				onClick={onBack}
-				size={42}
-				variant="surface"
-				class="shrink-0"
-			/>
+			<div class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0">
+				<ActionIconButton
+					icon={ArrowLeft}
+					label="返回"
+					onClick={onBack}
+					size={36}
+					variant="ghost"
+					tone="current"
+					class="shrink-0"
+				/>
+			</div>
 		{/if}
 
 		<!-- 头像 + 名称/状态：点击进入对方主页（移动端私聊页的资料入口，Telegram/iMessage 惯例） -->

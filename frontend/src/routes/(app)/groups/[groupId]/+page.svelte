@@ -258,6 +258,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 				location: gd.detail.category || '社群',
 				time: `${formatCount(gd.detail.members ?? 0)} 位成员`
 			} : undefined}
+			hasCover={Boolean(gd.detail.banner)}
 			onBack={() => smartBack()}
 			trailing={groupHeaderActions}
 		/>

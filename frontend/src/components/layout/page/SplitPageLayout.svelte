@@ -25,7 +25,8 @@
 		footer,
 		contentClassName = 'pt-4 pb-6',
 		contentMaxWidth,
-		edgeToEdgeMobile = false
+		edgeToEdgeMobile = false,
+		overlayHeaderMobile = false
 	}: {
 		header?: Snippet;
 		children: Snippet;
@@ -34,6 +35,7 @@
 		contentClassName?: string;
 		contentMaxWidth?: number | string;
 		edgeToEdgeMobile?: boolean;
+		overlayHeaderMobile?: boolean;
 	} = $props();
 
 	const isDesktop = $derived(platform.platform === 'desktop');
@@ -178,13 +180,16 @@
 			<div
 				class={cn(
 					'sticky top-0 z-[var(--cst-z-sticky)] shrink-0 w-full',
-					edgeToEdgeMobile && '-mb-12 pointer-events-none'
+					overlayHeaderMobile && '-mb-12 pointer-events-none'
 				)}
 			>
 				{@render header()}
 			</div>
 		{/if}
-		<div class="min-h-0 flex-1 flex flex-col" style={footerHeight > 0 ? `padding-bottom:${footerHeight}px` : undefined}>
+		<div
+			class={cn('min-h-0 flex-1 flex flex-col', edgeToEdgeMobile && 'bg-surface-island')}
+			style={footerHeight > 0 ? `padding-bottom:${footerHeight}px` : undefined}
+		>
 			<ContentColumn
 				maxWidth={contentMaxWidth}
 				class={cn(edgeToEdgeMobile && 'px-0 sm:px-[var(--cst-page-gutter)]', 'flex-1 flex flex-col', contentClassName)}
