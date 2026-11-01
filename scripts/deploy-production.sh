@@ -252,7 +252,7 @@ echo "==> 从 tag ${TARGET} 导出部署配置（与镜像同源）…"
 CONFIG_STAGING="$STAGING/config"
 rm -rf "$CONFIG_STAGING"
 mkdir -p "$CONFIG_STAGING"
-CONFIG_PATHS="docker-compose.yml docker-compose.prod.yml docker/nginx.headers.inc docker/nginx.proxy.inc docker/nginx.prod-tls.conf docker/prod-server.inc docker/prometheus.yml docker/grafana-provisioning scripts/health-check.sh scripts/backup-postgres.sh scripts/backup-seaweedfs.sh"
+CONFIG_PATHS="docker-compose.yml docker-compose.prod.yml docker/nginx.headers.inc docker/nginx.csp.inc docker/nginx.proxy.inc docker/nginx.prod-tls.conf docker/prod-server.inc docker/prometheus.yml docker/prometheus-alerts.yml docker/grafana-provisioning scripts/health-check.sh scripts/backup-postgres.sh scripts/backup-seaweedfs.sh"
 ARCHIVE_PATHS=""
 for p in $CONFIG_PATHS; do
   if git -C "$REPO_ROOT" cat-file -e "${TARGET}:${p}" 2>/dev/null; then
@@ -266,7 +266,7 @@ git -C "$REPO_ROOT" archive "$TARGET" $ARCHIVE_PATHS | tar -x -C "$CONFIG_STAGIN
 
 echo "==> 同步部署配置与运维脚本（compose + nginx 片段 + observability 采集配置 + 备份/巡检脚本，非源码）…"
 SCP_LIST="$CONFIG_STAGING/docker-compose.yml $CONFIG_STAGING/docker-compose.prod.yml"
-for f in nginx.headers.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml; do
+for f in nginx.headers.inc nginx.csp.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml prometheus-alerts.yml; do
   [ -f "$CONFIG_STAGING/docker/$f" ] && SCP_LIST="$SCP_LIST $CONFIG_STAGING/docker/$f"
 done
 [ -d "$CONFIG_STAGING/docker/grafana-provisioning" ] && SCP_LIST="$SCP_LIST $CONFIG_STAGING/docker/grafana-provisioning"
@@ -283,9 +283,9 @@ ssh "$SERVER" "mkdir -p $REMOTE_DIR/tmp-deploy-incoming"
 scp -q -r $SCP_LIST "$SERVER:$REMOTE_DIR/tmp-deploy-incoming/"
 
 REMOTE_MOVE="cd $REMOTE_DIR && mkdir -p docker && mv tmp-deploy-incoming/docker-compose.yml tmp-deploy-incoming/docker-compose.prod.yml ."
-for f in nginx.headers.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml; do
+for f in nginx.headers.inc nginx.csp.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml prometheus-alerts.yml; do
   if [ -f "$CONFIG_STAGING/docker/$f" ]; then
-    REMOTE_MOVE="$REMOTE_MOVE && mv tmp-deploy-incoming/$f docker/$f"
+    REMOTE_MOVE="$REMOTE_MOVE && rm -rf docker/$f && mv tmp-deploy-incoming/$f docker/$f"
   fi
 done
 if [ -d "$CONFIG_STAGING/docker/grafana-provisioning" ]; then
