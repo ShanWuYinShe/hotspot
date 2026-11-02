@@ -109,7 +109,7 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 
 **图标线宽四档**（Lucide strokeWidth；新增图标按档选，禁止引入第五档）：1.5 大尺寸/装饰性图标（size-5+，如 MomentCard 占位 MapPin 20）；1.75 标准 UI 图标（size-4/5 列表行、导航，全站默认）；2 小尺寸强调（size-3.5/4 状态类，如 Toast 状态图标）；2.5-3 极小可见性特例（size-3 选中态 Check，如 MenuPanel 选中勾）。跨端：harmonyapp 用系统符号（`sys.symbol.*`，线宽由 HarmonyOS 设计定，无 strokeWidth 参数），两端无法字面统一线宽，以「同尺寸视觉重量相当」为准。
 
-**触控热区（强制）**：任何可点元素的**视觉高度 < 44px 时必须带 `hit-slop`**（或 `hit-slop-y`/`hit-slop-44`）。`.hit-slop` 用 `::before` 外扩 6px，实测换算：36×36 顶栏图标按钮 → 48×48 ✅；34×34 消息行更多操作 → 46×46 ✅；32（Button `h-8`）→ 44×44 ✅ 刚好达标；40（`py-1.5` 文本按钮）→ 52 ✅；28（筛选 chip）→ 40 ✗ 可接受（chip 为次级筛选、行长 ≥44，且带横向间距）；输入框清空钮 32 → 44 ✅（SearchInput/Input 统一）。审计方法：`set viewport 390 844` → `open <路由>` → `eval` 遍历 `button, a[href], [role=button]` 收集 `getBoundingClientRect()` 与上表核对。
+**触控热区（强制）**：任何可点元素的**视觉高度 < 44px 时必须带 `hit-slop`**（或 `hit-slop-y`/`hit-slop-y-44`/`hit-slop-44`）。`.hit-slop` 用 `::before` 外扩 6px，实测换算：36×36 顶栏图标按钮 → 48×48 ✅；34×34 消息行更多操作 → 46×46 ✅；32（Button `h-8`）→ 44×44 ✅ 刚好达标；40（`py-1.5` 文本按钮）→ 52 ✅；28（筛选 chip）→ 40 ✗ 可接受（chip 为次级筛选、行长 ≥44，且带横向间距）；输入框清空钮 32 → 44 ✅（SearchInput/Input 统一）。**27px TabBar 胶囊**用 `hit-slop-y-44`（纵向 ±8.5 → 44）；`hit-slop-44` 按视觉高度 +26px 计算，15px 文本按钮需同时给 `min-h-[18px]` 才到 44。审计方法：`set viewport 390 844` → `open <路由>` → `eval` 遍历 `button, a[href], [role=button]` 收集 `getBoundingClientRect()` 与上表核对。
 
 ## 卡片交互契约（信息流卡/网格卡统一）
 

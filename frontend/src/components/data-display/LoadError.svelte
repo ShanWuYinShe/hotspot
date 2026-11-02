@@ -20,7 +20,7 @@
 <EmptyState bare title="加载失败" description={message} class={className}>
 	{#snippet action()}
 		{#if onRetry}
-			<Button type="button" variant="secondary" size="sm" onclick={onRetry}>重试</Button>
+			<Button type="button" variant="secondary" size="sm" class="hit-slop" onclick={onRetry}>重试</Button>
 		{/if}
 	{/snippet}
 </EmptyState>

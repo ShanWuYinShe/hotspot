@@ -235,7 +235,7 @@
 				</button>
 				<button
 					type="button"
-					class="pointer-events-auto hit-slop-44 truncate text-left text-xs font-semibold sm:text-sm {useFallback
+					class="pointer-events-auto hit-slop-44 min-h-[18px] truncate text-left text-xs font-semibold sm:text-sm {useFallback
 						? 'text-text-primary'
 						: 'text-content-inverse'} hover:underline"
 					onclick={handleUserClick}

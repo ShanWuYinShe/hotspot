@@ -254,7 +254,7 @@
 							</div>
 							<Button
 								size="sm"
-								class="shrink-0"
+								class="hit-slop shrink-0"
 								onclick={() => requireAuth({ action: '登录账号', run: () => { reloadKey++; } })}
 							>
 								登录 / 注册

@@ -134,7 +134,7 @@
 
 			<!-- 底行：左侧作者信息（头像+昵称），右侧核心操作（仅点赞与评论，无分享/收藏冗余） -->
 			<div class="flex items-center justify-between gap-1.5 pt-0.5">
-				<div class="flex min-w-0 items-center gap-1.5">
+				<div class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
 					{#if item.avatar || item.user}
 						{#if canOpenAuthor}
 							<button
@@ -150,7 +150,7 @@
 							</button>
 							<button
 								type="button"
-								class="pointer-events-auto min-w-0 truncate text-left text-xs font-semibold hit-slop-44 focus-ring {onCover ? 'text-content-inverse hover:underline' : 'text-text-primary hover:text-accent-default hover:underline'} transition-colors"
+								class="pointer-events-auto min-w-[18px] min-h-[18px] truncate text-left text-xs font-semibold hit-slop-44 focus-ring {onCover ? 'text-content-inverse hover:underline' : 'text-text-primary hover:text-accent-default hover:underline'} transition-colors"
 								onclick={(e) => {
 									e.stopPropagation();
 									openAuthor();

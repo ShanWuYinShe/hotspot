@@ -481,12 +481,14 @@ const markSingleRead = (id: string) => {
 									variant="soft"
 									size="sm"
 									onclick={() => void goto(ROUTES.nearbyPeople)}
+									class="hit-slop"
 								>去附近看看</Button>
 								<Button
 									type="button"
 									variant="soft"
 									size="sm"
 									onclick={() => void goto(ROUTES.nearbyMoments)}
+									class="hit-slop"
 								>逛逛热门瞬间</Button>
 							</div>
 						{/snippet}

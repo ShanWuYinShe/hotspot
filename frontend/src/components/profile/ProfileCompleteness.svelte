@@ -77,7 +77,7 @@
 				{#each missing as item (item.id)}
 					<button
 						type="button"
-						class="hover-bg -mx-2 flex items-center gap-2 rounded-sm px-2 py-2 text-left focus-ring"
+						class="hover-bg -mx-2 flex min-h-11 items-center gap-2 rounded-sm px-2 py-2 text-left focus-ring"
 						onclick={() => void goto(item.href)}
 					>
 						<Circle class="size-3.5 shrink-0 text-text-secondary opacity-subtle" strokeWidth={1.75} />

@@ -280,8 +280,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	{/snippet}
 	<!-- 错误态收敛进 layout children（与正文同 gutter，不再偏移） -->
 	{#if gd.loading}
+		<h1 class="sr-only">群组主页</h1>
 		<InlineLoading label="加载群组…" />
 	{:else if gd.loadError}
+		<h1 class="sr-only">群组主页</h1>
 		<LoadError message={gd.loadError} onRetry={() => void gd.loadAll(params.groupId ?? '')} />
 	{:else}
 	<!-- 现代高质感社群 Hero 封面（圆角温润，磨砂悬浮操作区） -->

@@ -87,7 +87,7 @@
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
 				data-active={isActive ? 'true' : undefined}
-				class="tab-item hit-slop-y relative flex min-w-0 items-center justify-center gap-1.5 rounded-full focus-ring transition-all duration-standard disabled:cursor-not-allowed disabled:opacity-dim {size === 'md'
+				class="tab-item hit-slop-y-44 relative flex min-w-11 items-center justify-center gap-1.5 rounded-full focus-ring transition-all duration-standard disabled:cursor-not-allowed disabled:opacity-dim {size === 'md'
 					? 'py-2 text-sm'
 					: 'py-2.5 text-xs lg:py-1.5'} {isActive ? 'pl-2.5 pr-6' : 'px-2.5'} {isActive
 					? 'font-semibold bg-accent-default text-text-on-accent shadow-raised-sm'
@@ -137,7 +137,7 @@
 				disabled={disabled}
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
-				class="tab-item hit-slop-y flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs focus-ring transition-all duration-standard disabled:cursor-not-allowed disabled:opacity-dim {isActive
+				class="tab-item hit-slop-y-44 flex min-w-11 shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs focus-ring transition-all duration-standard disabled:cursor-not-allowed disabled:opacity-dim {isActive
 					? 'font-medium bg-accent-default text-text-on-accent shadow-xs'
 					: 'font-normal text-text-secondary hover:text-text-primary hover:bg-surface-subtle/50'}"
 			>

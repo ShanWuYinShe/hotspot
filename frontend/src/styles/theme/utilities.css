@@ -73,6 +73,17 @@
     inset: -6px 0;
   }
 
+  /* 27px 档 TabBar 胶囊（py-1.5 + text-xs）：纵向各扩 8.5px 达到 44px；
+     仍不横向扩，避免相邻胶囊热区互相覆盖。 */
+  .hit-slop-y-44 {
+    position: relative;
+  }
+  .hit-slop-y-44::before {
+    content: "";
+    position: absolute;
+    inset: -8.5px 0;
+  }
+
   /* 媒体缩略图占位（Round 8）：图片未加载时显示主题渐变底，避免纯灰块；
      与 .img-fade 配套使用（图片渐显覆盖）。token 复用既有 surface-card-fallback。 */
   .media-placeholder {

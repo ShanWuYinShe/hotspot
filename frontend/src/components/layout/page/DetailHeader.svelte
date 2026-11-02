@@ -205,7 +205,7 @@
 							class="hidden sm:flex items-center gap-1.5 pl-0.5 pr-3 text-xs font-medium text-text-secondary animate-in fade-in duration-snappy"
 						>
 							{#if category}
-								<span class="opacity-soft">{category}</span>
+								<span>{category}</span>
 								{#if entityName}
 									<span class="opacity-subtle">/</span>
 								{/if}

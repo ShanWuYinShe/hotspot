@@ -22,10 +22,10 @@
     var cs = getComputedStyle(el);
     if (cs.visibility === "hidden" || cs.display === "none") return;
     var cls = typeof el.className === "string" ? el.className : "";
-    var slop = cls.indexOf("hit-slop-44") >= 0 ? "44" : cls.indexOf("hit-slop-y") >= 0 ? "y" : cls.indexOf("hit-slop") >= 0 ? "both" : "";
-    var ex = slop === "44" ? 26 : slop ? 12 : 0;
+    var slop = cls.indexOf("hit-slop-y-44") >= 0 ? "y44" : cls.indexOf("hit-slop-44") >= 0 ? "44" : cls.indexOf("hit-slop-y") >= 0 ? "y" : cls.indexOf("hit-slop") >= 0 ? "both" : "";
+    var ex = slop === "44" ? 26 : slop === "y44" ? 17 : slop ? 12 : 0;
     var ew = r.width + (slop === "both" || slop === "44" ? ex : 0);
-    var eh = r.height + (slop === "44" ? 26 : slop ? 12 : 0);
+    var eh = r.height + (slop === "44" ? 26 : slop === "y44" ? 17 : slop ? 12 : 0);
     var eff = Math.min(ew, eh);
     var rule = matchAllow(el);
     var isForm = /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName);
