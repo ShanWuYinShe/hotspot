@@ -63,7 +63,7 @@ require_backend
 
 AXE_TOOL="$REPO_ROOT/frontend/node_modules/axe-core/axe.min.js"
 if [ ! -f "$AXE_TOOL" ]; then
-  echo "找不到 $AXE_TOOL，请先 cd frontend && bun install"; exit 1
+  echo "找不到 ${AXE_TOOL}，请先 cd frontend && bun install"; exit 1
 fi
 
 OUT="$(make_out_dir a11y)"
@@ -227,7 +227,7 @@ run_combos() { # 参数：组合（theme|mode）
     t="${combo%%|*}"
     m="${combo##*|}"
     CUR_THEME="$t"; CUR_MODE="$m"
-    echo "=== 组合 $t/$m（桌面 $DESK_N 页 + 移动 $MOB_N 页，worker=$WORKER_ID）==="
+    echo "=== 组合 $t/${m}（桌面 $DESK_N 页 + 移动 $MOB_N 页，worker=${WORKER_ID}）==="
     ab eval "localStorage.setItem('appTheme','$t'); localStorage.setItem('colorScheme','$m'); true" >/dev/null 2>&1
     ab open "$BASE/" >/dev/null 2>&1
     # 组合切换：矩阵/并行下 networkidle 可能永不触发（WebSocket），用固定等待

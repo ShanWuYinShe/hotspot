@@ -100,7 +100,7 @@ require_backend() {
     exit 1
   fi
   status="$(qa_json_field "$body" status)"
-  echo "✓ 后端健康：$BASE（status=${status:-unknown}）"
+  echo "✓ 后端健康：${BASE}（status=${status:-unknown}）"
 }
 
 # 轮询浏览器内异步探针写入的 window 变量（最多约 12s）；拿到 JSON 后打印到 stdout。
@@ -264,7 +264,7 @@ ensure_login() {
   fi
 
   # 3) 真实账号登录，成功后 reload 让 SPA 重新引导会话。
-  echo "登录态：尝试真实账号 $login_id（POST /public/v1/auth/signin）"
+  echo "登录态：尝试真实账号 ${login_id}（POST /public/v1/auth/signin）"
   qa_browser_signin "$login_id" "$password"
   if raw="$(qa_poll_window_json 'window.__qaLogin')"; then
     code="$(qa_json_code "$raw")"
@@ -275,7 +275,7 @@ ensure_login() {
       if qa_browser_session_ok; then
         SCAN_LOGGED_IN=1
         qa_mark_seed_account "$login_id"
-        echo "登录态：登录成功 $login_id（SCAN_LOGGED_IN=1）"
+        echo "登录态：登录成功 ${login_id}（SCAN_LOGGED_IN=1）"
         return 0
       fi
       echo "真实账号登录返回成功，但会话校验未通过；回退界面登录"
@@ -291,7 +291,7 @@ ensure_login() {
   if qa_browser_ui_login "$login_id" "$password"; then
     SCAN_LOGGED_IN=1
     qa_mark_seed_account "$login_id"
-    echo "登录态：表单登录成功 $login_id（SCAN_LOGGED_IN=1）"
+    echo "登录态：表单登录成功 ${login_id}（SCAN_LOGGED_IN=1）"
     return 0
   fi
 
