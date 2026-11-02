@@ -3,56 +3,67 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
 	import type { Pin } from './location-data';
-	import { PIN_COLORS, PIN_TONES } from './location-shared';
 	import { avatarImageWidths, buildImageSrcSet, fadeImage, optimizedImageUrl } from '@/lib/images';
 
 	// 图钉媒体展示（地图三处共用：桌面面板列表行 / 移动 Sheet 卡 / 桌面选中详情）。
-	// R13 统一为「类型图标砖」：按 --cst-marker-user/group/moment 的 bg/glow 档位铺一块
-	// 40px 类型色砖，内部承载头像 / 瞬间缩略图 / 类型图标——同一行高、同一外部轮廓，
-	// 列表扫读时先按颜色认类型、再看内容；选中态（accent 实底行）换 surface-primary 底，
-	// 避免类型色与 accent 同色隐形。
+	// 与全站列表媒体同一语言：用户/群组直接用 shared/Avatar（circle / rounded，含首字母
+	// 与图片失败兜底），瞬间用圆角缩略图，无图/聚合桶给中性无底色图标。
+	// 不再使用「类型色砖 + marker 光晕」旧视觉：色块与阴影已从全站列表媒体移除，
+	// 类型语义由行内类型文字（PIN_COLORS）承载。
 
-	let { pin, size = 42, selected = false }: {
+	let { pin, size = 44, selected = false }: {
 		pin: Pin;
+		/** 媒体边长（px）：列表行 44 / 详情卡 48，对齐全站列表头像刻度（md/lg 档）。 */
 		size?: number;
-		/** 所在列表行处于选中态（accent 背景）时传入：砖底换中性面，避免与类型色撞色。 */
+		/** 所在列表行处于选中态（accent 背景）：无图/聚合图标换 on-accent 档。 */
 		selected?: boolean;
 	} = $props();
 
-	const Icon = $derived(pin.type === 'group' ? Users : pin.type === 'moment' ? ImageIcon : UserRound);
-	const inner = $derived(size - 10);
+	const name = $derived(pin.name || pin.title || '');
+	const iconColor = $derived(selected ? 'var(--cst-text-on-accent)' : 'var(--cst-text-secondary)');
 </script>
 
-<div
-	class="relative flex shrink-0 items-center justify-center rounded-sm"
-	style="width:{size}px;height:{size}px;background:{selected ? 'var(--cst-surface-primary)' : PIN_TONES[pin.type].bg};box-shadow:{selected ? 'none' : `var(--cst-marker-halo) ${PIN_TONES[pin.type].glow}`};"
->
-	{#if pin.type === 'user' && pin.avatar}
-		<div class="relative">
-			<Avatar src={pin.avatar} name={pin.name || pin.title || ''} size={inner} />
-			{#if pin.online}
-				<!-- 角标统一 OnlineDot（审查 M3：手写 10px inline style 复制品收编） -->
+{#if pin.isAggregate}
+	<!-- 聚合桶没有真实实体（无头像/封面）：中性无底色类型图标，计数由行尾 Badge 承载 -->
+	<span class="flex shrink-0 items-center justify-center" style="width:{size}px;height:{size}px" aria-hidden="true">
+		{#if pin.type === 'group'}
+			<Users class="size-5" style="color:{iconColor}" strokeWidth={1.75} />
+		{:else if pin.type === 'moment'}
+			<ImageIcon class="size-5" style="color:{iconColor}" strokeWidth={1.75} />
+		{:else}
+			<UserRound class="size-5" style="color:{iconColor}" strokeWidth={1.75} />
+		{/if}
+	</span>
+{:else if pin.type === 'moment'}
+	{#if pin.image}
+		<span
+			class="media-placeholder flex shrink-0 items-center justify-center overflow-hidden rounded-sm"
+			style="width:{size}px;height:{size}px"
+		>
+			<img
+				src={optimizedImageUrl(pin.image, { width: size * 2 })}
+				srcset={buildImageSrcSet(pin.image, avatarImageWidths(size))}
+				sizes="{size}px"
+				alt={name}
+				loading="lazy"
+				decoding="async"
+				class="object-cover"
+				style="width:{size}px;height:{size}px;"
+				use:fadeImage
+			/>
+		</span>
+	{:else}
+		<span class="flex shrink-0 items-center justify-center" style="width:{size}px;height:{size}px" aria-hidden="true">
+			<ImageIcon class="size-5" style="color:{iconColor}" strokeWidth={1.75} />
+		</span>
+	{/if}
+{:else}
+	<!-- 用户/群组：与全站列表一致直接用 Avatar（circle / rounded），在线角标走 badge snippet -->
+	<Avatar src={pin.avatar} {name} {size} shape={pin.type === 'group' ? 'rounded' : 'circle'}>
+		{#snippet badge()}
+			{#if pin.type === 'user' && pin.online}
 				<OnlineDot size="sm" class="bottom-0 right-0" />
 			{/if}
-		</div>
-	{:else if pin.type === 'moment' && pin.image}
-		<img
-			src={optimizedImageUrl(pin.image, { width: inner * 2 })}
-			srcset={buildImageSrcSet(pin.image, avatarImageWidths(inner))}
-			sizes="{inner}px"
-			alt={pin.title || pin.name || ''}
-			loading="lazy"
-			decoding="async"
-			class="rounded-full object-cover"
-			style="width:{inner}px;height:{inner}px;"
-			use:fadeImage
-		/>
-	{:else}
-		<Icon
-			class="size-4.5"
-			style="color:{selected ? 'var(--cst-accent-default)' : PIN_COLORS[pin.type]};"
-			strokeWidth={1.75}
-			aria-hidden="true"
-		/>
-	{/if}
-</div>
+		{/snippet}
+	</Avatar>
+{/if}

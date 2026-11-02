@@ -18,8 +18,8 @@
 	// 仅跨状态联动（选地点→移动地图中心）与外部动作（重置/确认）走回调。
 	// 原「热门/最近」Tab 为静态演示数据脚手架，已按产品决定移除。
 	//
-	// R13：面板本身是悬浮内容岛（外壳负责投影/圆角），内部收敛为
-	// 「位置头 → 搜索 → 浏览位置实底卡 → 类型图标砖列表 → 粘底确认」一条纵向节奏；
+	// 面板与地图直接相连（外层整张圆角卡片负责整体圆角/投影与内缩，面板与地图零接缝、同高），内部收敛为
+	// 「位置头 → 搜索 → 浏览位置实底卡 → 附近列表（用户/群组头像 + 瞬间缩略图，与全站列表媒体同语言）→ 粘底确认」一条纵向节奏；
 	// 实底卡描述的是「地图当前中心」（浏览锚点/视口中心），不是 GPS 当前位置；
 	// GPS 状态只在卡内说明，定位动作统一由地图右上角准星承载（同页不设第二个入口）。
 	// 类型信息用 marker 语义色（不再每个字段一套灰底胶囊），确认动作走按钮原语。
@@ -111,27 +111,33 @@
 <!-- List -->
 <!-- 底部渐隐：滚动内容探入粘底确认条下方时柔和收尾，避免行被硬切 -->
 <div
-	class="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-4"
+	class="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-4"
 	style="mask-image:linear-gradient(to bottom, black calc(100% - 24px), transparent 100%);-webkit-mask-image:linear-gradient(to bottom, black calc(100% - 24px), transparent 100%);"
 >
 	<div class="animate-fade-in flex flex-col gap-3">
-		<!-- 当前位置卡：R13 改 accent-soft + accent 图标——实底 accent 只留给底部主 CTA，
-		     一屏一个主操作（设计评审：双实底抢焦点）。 -->
-		<div class="flex items-center gap-3 rounded-md bg-accent-soft p-3">
-			<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-primary shadow-raised-sm">
-				<Navigation class="size-4.5 text-accent-default" strokeWidth={2} aria-hidden="true" />
-			</span>
-			<span class="min-w-0 flex-1">
-				<span class="block text-xxs font-medium uppercase tracking-eyebrow text-accent-default">浏览位置</span>
-				<span class="mt-0.5 block truncate text-md font-medium text-text-primary">{locationName || '未命名区域'}</span>
-				<span class="mt-0.5 block text-xxs text-text-secondary">
-					{hasMyLocation ? '我的位置已获取' : '未获取当前位置 · 点右上角准星定位'}
+		<!-- 当前位置卡：accent-soft + accent 图标——实底 accent 只留给底部主 CTA，
+		     一屏一个主操作（设计评审：双实底抢焦点）。外层 px-4 维持 16px 内容轴。 -->
+		<div class="px-4">
+			<div class="flex items-center gap-3 rounded-md bg-accent-soft p-3">
+				<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-primary">
+					<Navigation class="size-4.5 text-accent-default" strokeWidth={2} aria-hidden="true" />
 				</span>
-			</span>
+				<span class="min-w-0 flex-1">
+					<span class="block text-xxs font-medium uppercase tracking-eyebrow text-accent-default">浏览位置</span>
+					<span class="mt-0.5 block truncate text-md font-medium text-text-primary">{locationName || '未命名区域'}</span>
+					<span class="mt-0.5 block text-xxs text-text-secondary">
+						{hasMyLocation ? '我的位置已获取' : '未获取当前位置 · 点右上角准星定位'}
+					</span>
+				</span>
+			</div>
 		</div>
 
 		{#if nearbyPins.length}
-			<ListContainer bordered>
+			<!-- 附近列表：与消息页左栏同款「面板内嵌列表」——ListContainer inset（无外框/无阴影/无分隔线，
+			     行间 2px 间隙、hover 填充离面板边 8px）+ 行内容透明背景（露出面板岛表面）。
+			     行内容左缘 = 面板内 16px（inset 的 px-2 + 行的 px-2），与搜索框/浏览位置卡同轴。
+			     禁止再套 bordered 软岛（会形成「岛中岛」，与全站面板内列表不一致）。 -->
+			<ListContainer inset>
 				{#each nearbyPins as pin (pin.id)}
 					{@const isSelected = selectedPin?.id === pin.id}
 					<ListItem
@@ -140,9 +146,9 @@
 						ariaLabel={pin.isAggregate
 							? `定位到 ${pin.name || pin.title || '附近区域'}`
 							: `选择 ${pin.name || pin.title || ''}`}
-						class="flex list-row-standard items-center gap-3 px-3 py-2.5"
+						class="flex list-row-standard items-center gap-3 bg-transparent px-2 py-2.5"
 					>
-						<PinMedia {pin} size={42} selected={isSelected} />
+						<PinMedia {pin} size={44} selected={isSelected} />
 						<span class="min-w-0 flex-1">
 							<span
 								class="block truncate text-md {isSelected ? 'text-text-on-accent' : 'text-text-primary'}"
@@ -198,17 +204,19 @@
 				{/each}
 			</ListContainer>
 		{:else}
-			<EmptyState
-				iconTone="accent"
-				title="附近暂无内容"
-				description="放大或移动地图后，再看看这里"
-				iconSize={56}
-				class="py-10"
-			>
-				{#snippet icon()}
-					<MapPin class="size-6" strokeWidth={1.5} />
-				{/snippet}
-			</EmptyState>
+			<div class="px-4">
+				<EmptyState
+					iconTone="accent"
+					title="附近暂无内容"
+					description="放大或移动地图后，再看看这里"
+					iconSize={56}
+					class="py-10"
+				>
+					{#snippet icon()}
+						<MapPin class="size-6" strokeWidth={1.5} />
+					{/snippet}
+				</EmptyState>
+			</div>
 		{/if}
 	</div>
 </div>

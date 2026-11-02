@@ -17,6 +17,7 @@
 		aggregateDrillZoom, type MapBounds, type MapHeatBucket
 	} from '../shared/location-shared';
 	import { createMapCanvasState } from '../shared/create-map-canvas-state.svelte';
+	import { locationGridKey, resolveLocationName } from '../shared/location-name';
 	import { MAP_MAX_ZOOM } from '@/components/map/map-projection';
 	import MapCanvas from '@/components/map/MapCanvas.svelte';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
@@ -101,7 +102,7 @@
 		const center = mapCenter;
 		const source = mapSourceStore.source;
 		if (selectedLoc || selectedPin || !center) return;
-		const key = `${center.lat.toFixed(4)},${center.lng.toFixed(4)}`;
+		const key = locationGridKey(center);
 		const hit = reverseCache.get(key);
 		if (hit !== undefined) {
 			reverseEntry = { key, name: hit };
@@ -128,21 +129,22 @@
 		};
 	});
 
-	// 左侧栏显示的地名（顶栏副标题 +「当前位置」卡片）：永远描述实际视口中心，
-	// 而非服务端静态默认名。优先级：选中地点 > 选中图钉 > 同格逆地理 > 同格锚点名 > 服务端默认名。
+	// 左侧栏显示的地名（页头副标题 +「浏览位置」卡片）：永远描述实际视口中心，
+	// 而不是别的点位的名字。优先级：选中地点 > 选中图钉 > 同格逆地理 > 附近锚点名
+	// >「我的位置」（中心≈GPS）> 附近默认位置名 > 未命名区域。
+	// 锚点/默认名带半径门槛（map/shared/location-name.ts）：dev 环境逆地理不可用
+	// （无高德 key、OSM 代理 502）时，中心已随 GPS/拖拽离开默认点，绝不能继续显示
+	// 默认点的名字冒充当前位置（用户报「当前浏览位置不对」的根因）。
 	const locationName = $derived(
-		selectedLoc?.displayName ??
-			(selectedPin?.name || selectedPin?.title || undefined) ??
-			(mapCenter && reverseEntry && reverseEntry.key === `${mapCenter.lat.toFixed(4)},${mapCenter.lng.toFixed(4)}`
-				? reverseEntry.name
-				: undefined) ??
-			(mapCenter &&
-			anchorPoint?.name &&
-			anchorPoint.lat.toFixed(4) === mapCenter.lat.toFixed(4) &&
-			anchorPoint.lng.toFixed(4) === mapCenter.lng.toFixed(4)
-				? anchorPoint.name
-				: undefined) ??
-			defaultName
+		resolveLocationName({
+			center: mapCenter,
+			selectedName: selectedLoc?.displayName,
+			pinName: selectedPin?.name || selectedPin?.title,
+			reverseName: mapCenter && reverseEntry?.key === locationGridKey(mapCenter) ? reverseEntry.name : null,
+			anchor: anchorPoint,
+			myLocation,
+			defaultLocation: defaultCenter ? { ...defaultCenter, name: defaultName } : null
+		})
 	);
 
 	// map/canvas 数据（桌面/移动共用工厂）：图钉/热力/计数 + 加载/错误/重试
@@ -271,32 +273,34 @@
 	}
 </script>
 
-<!-- 全画布地图页（外壳已禁用滚动）：R13 改为「悬浮左面板 + 圆角地图卡」，
-     用投影与 12px 留白替代原来的整条 border-r 分隔线（页面级硬分隔线契约）；
+<!-- 全画布地图页（外壳已禁用滚动）：/map 的内容是「一整张圆角卡片」——左列表 + 右地图
+     直接相连（中间零缝隙，外缘统一圆角与投影），整体按标准页面留白内缩 12px、
+     不贴窗口最边缘，让「地图区域」的边界对用户清晰可辨。
      地图引擎/投影逻辑不变，MapCanvas 仍是唯一瓦片层。 -->
-<div class="flex h-full gap-3 bg-surface-page p-3">
-	<!-- ══ LEFT PANEL — 悬浮内容岛（无硬分隔线） ══ -->
-	<div class="flex w-85 shrink-0 flex-col overflow-hidden rounded-lg bg-surface-island shadow-raised-md">
-		<LocationDesktopPanel
-			bind:searchQuery
-			{searchResults}
-			{searching}
-			{nearbyPins}
-			bind:selectedPin
-			bind:selectedLoc
-			mapCounts={mapData.counts}
-			locationName={locationName}
-			hasMyLocation={Boolean(myLocation)}
-			onSelectPin={handleSelectPin}
-			onSelectLoc={handleSelectLoc}
-			onConfirm={handleConfirm}
-		/>
-	</div>
+<div class="flex h-full w-full p-3">
+	<div class="flex min-w-0 flex-1 overflow-hidden rounded-lg shadow-xs">
+		<!-- ══ LEFT PANEL — 与地图直接相连（零间距/方角），左缘圆角由外层卡片裁剪 ══ -->
+		<div class="flex w-85 shrink-0 flex-col overflow-hidden bg-surface-island">
+			<LocationDesktopPanel
+				bind:searchQuery
+				{searchResults}
+				{searching}
+				{nearbyPins}
+				bind:selectedPin
+				bind:selectedLoc
+				mapCounts={mapData.counts}
+				locationName={locationName}
+				hasMyLocation={Boolean(myLocation)}
+				onSelectPin={handleSelectPin}
+				onSelectLoc={handleSelectLoc}
+				onConfirm={handleConfirm}
+			/>
+		</div>
 
-	<!-- ══ MAP PANEL — 圆角地图卡（留白节奏与左面板一致） ══ -->
+		<!-- ══ MAP PANEL — 方角，与左面板直接相接；右/上/下外缘圆角由外层卡片裁剪 ══ -->
 	<!-- 地图空白点击由 MapCanvas onMapTap 承担（内部区分拖拽/原地点击，拖拽后不再误清选中）；
 	     筛选面板关闭由 MapFilterMenu 的 Popover 外点机制承担；Escape 清选中见 svelte:window -->
-	<div class="relative flex-1 overflow-hidden rounded-lg bg-surface-page">
+	<div class="relative min-w-0 flex-1 overflow-hidden">
 		{#if mapCenter}
 			<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} bind:gestureTransform={mapGestureTransform} onMapTap={() => (selectedPin = null)} />
 		{/if}
@@ -434,6 +438,7 @@
 				</div>
 			</div>
 		{/if}
+		</div>
 	</div>
 </div>
 

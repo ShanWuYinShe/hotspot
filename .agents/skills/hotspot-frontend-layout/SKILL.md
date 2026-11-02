@@ -17,7 +17,7 @@ description: hotspot 前端页面布局契约：StandardPageLayout / SplitPageLa
   - 聊天页面（桌面端与移动端）因分栏/全屏会话布局特殊，可暂不套用 `StandardPageLayout`/`SplitPageLayout`；但页头、列表与正文的 gutter/padding 仍必须与样板一致（沿用 `PageHeader` + `ContentColumn`）。桌面消息分栏左栏窄列（`w-80`=320px）用 `px-4` 压缩 gutter、不进 `--cst-page-gutter`（见 skill `hotspot-frontend-style`「窄列特例」，已登记例外）；聊天三块同轴见本文「内容轴」节。
   - **封面/紧凑型资料头**（`groups/[groupId]`、`users/[userId]`）：标题与封面/头像绑定，不在 header 操作行内，故不套 `PageHeader`，自建返回/分享/更多操作行 + 封面下方 `<h1>`。`moments/[momentId]` 详情页已改为「内容内极简工具行 + 画廊 hero」，也不套 PageHeader（见「详情页契约」）。
   - 移动个人主页（`ProfileMobile`）：自建 eyebrow 页眉，非标准列表页 header；设置/外观/编辑入口统一收在身份卡的拇指操作区，页眉不放重复入口。
-  - 地图（全画布）与登录页（无 MainLayout 外壳）不适用。
+  - **地图（全画布，`/map`）**：桌面内容是一整张圆角卡片——左侧面板与右侧地图**直接相连**（中间零缝隙、方角，不叠投影），外缘统一 `rounded-lg` + `shadow-xs`，整体按标准页面留白（`p-3`=12px）内缩、不贴窗口最边缘，让「地图区域」的边界清晰可辨；卡片内部页头/搜索/列表同轴 16px。移动/平板地图不适用本例外。登录页（无 MainLayout 外壳）同样不适用本文布局组件。
 - 强制统一布局是为了保证切换页面时右侧内容区不发生水平偏移；存量页面需逐步对齐，不得新增其他例外（新增例外必须在上面登记）。
 
 **权威样板页：`src/routes/(app)/nearby/moments/+page.svelte`。** 普通页面以它为基准，结构固定为：

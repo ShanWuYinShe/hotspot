@@ -22,7 +22,7 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token（shared �
 - 状态色背景上的文字：`--cst-text-on-status`（online/warning 实底，如连接横幅）；danger 实底按钮一律走 `--cst-text-on-accent`（随明暗翻转：light 白 / dark 深；vibrant light danger `#C81E4E` 配白字 5.60，对齐鸿蒙 error 同值，与各确认按钮一致）。
 - 图片/遮罩上的反色文字：`--cst-content-inverse`（**恒白**，仅用于图片/遮罩/深色 overlay 上，禁止用于 accent/status 实色背景——那些背景在 dark 下是浅色，恒白文字会低对比隐形）。
 - 图钉色背景上的文字：`--cst-content-on-marker`（地图标记）。
-- **accent 背景上的文字/图标一律用 `--cst-text-on-accent` 系列**（含次级文字用 `opacity-70/80` 派生，参照 ListItem/ChatListItem selected 态）；图钉等 marker 色与 accent 同色（`--cst-palette-map-user` = `--cst-palette-accent-primary`），在 selected 行内需换实色底衬托（参照 `PinMedia` 的 `selected` prop）。
+- **accent 背景上的文字/图标一律用 `--cst-text-on-accent` 系列**（含次级文字用 `opacity-70/80` 派生，参照 ListItem/ChatListItem selected 态）；图钉等 marker 色与 accent 同色（`--cst-palette-map-user` = `--cst-palette-accent-primary`），selected 行内的类型文字/无底色图标改用 on-accent 档（参照 `PinMedia` 的 `selected`）。
 - 遮罩/玻璃：`--cst-surface-scrim`（弹层遮罩）、`--cst-surface-media-scrim-strong`（照片遮罩）、`--cst-surface-cover-scrim`（封面渐变）、`--cst-surface-glass-badge`（玻璃徽章）。
 - hover/active：优先 `hover:bg-accent-soft` 等 token 类；背景填充走 `--cst-interactive-hover-fill` / `--cst-interactive-active`。
 - 弱化嵌入面（分段控件底轨、置顶会话行等「比卡片低一档」的静态填充）：`--cst-surface-subtle`（`bg-surface-subtle`）。与 `bg-interactive-hover` 的区别是语义：前者是「静态的凹陷/次表面」，后者是「悬停反馈」，不可互换。该表达式经 `--cst-text-primary` 自适配明暗（light 微沉 / dark 微浮），因此只在 themes/*.css 的 light 块定义一次，**不算缺失 dark 覆盖**。
