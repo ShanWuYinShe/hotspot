@@ -444,7 +444,7 @@
 						placeholder="搜索用户、瞬间、群组、地点或话题"
 						ariaLabel="搜索用户、瞬间、群组、地点或话题"
 						autofocus
-						class={device === 'desktop' ? 'max-w-3xl' : ''}
+						class={device === 'desktop' ? 'max-w-3xl 2xl:max-w-5xl' : ''}
 						onEnter={(v) => {
 							if (!v.trim()) return;
 							remember(v.trim());

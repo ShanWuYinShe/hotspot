@@ -209,14 +209,14 @@
 	<title>设置 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentMaxWidth="56rem" contentClassName="animate-fade-in pt-4 pb-10">
+<StandardPageLayout contentMaxWidth="var(--cst-content-form)" contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
 		<PageHeader
 			title="设置"
 			subtitle="管理你的账号偏好、主题外观与系统选项"
 			onBack={() => smartBack()}
 			showBackOnDesktop={false}
-			maxWidth="56rem"
+			maxWidth="var(--cst-content-form)"
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		/>
 	{/snippet}

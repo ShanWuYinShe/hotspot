@@ -61,10 +61,10 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 内容宽度按**三类**选择（`ContentColumn` 默认 `--cst-page-content-max: 100%` 流式；其注释口径：「仅真正的阅读/详情列才传 maxWidth，不得用窄宽度来摆放标准页面」）：
 
 - **默认流式**：标准信息流/列表/枢纽页**不传** `contentMaxWidth`/`maxWidth`——传窄值（如 768）会让宽屏内容只占中间一条、右侧大片空白。
-- **阅读/详情/表单列（合法例外）**：仅真正的阅读或表单页传列宽（现状：settings `56rem`、me/edit `48rem`、notify `64rem`、瞬间详情/用户详情 `58rem`），由 `ContentColumn`/`SplitPageLayout` 承载。
-- **宽屏呼吸档 = 1280（数字字面量）**：长内容呼吸型页面（/me 总览、关系、举报）统一 `contentMaxWidth={1280}`；`PageHeader` 的 `maxWidth` 必须与页面 `contentMaxWidth` **同值成对**（只改其一即轴漂移 46–158px）。细则见「内容轴 → 宽屏呼吸档与列表轴」。
+- **阅读/详情/表单列（合法例外）**：仅真正的阅读或表单页传列宽，统一走 `layout.css` 的响应式 var（窄屏受 100% 约束，超宽屏渐进放大）：settings `var(--cst-content-form)`（896→1024）、me/edit `var(--cst-content-form-narrow)`（768→896）、notify `var(--cst-content-feed)`（1024→1280）、瞬间详情/用户详情 `var(--cst-content-detail)`（928→1120）。
+- **宽屏呼吸档 = `var(--cst-content-breath)`**：长内容呼吸型页面（/me 总览、关系、举报）统一 `contentMaxWidth="var(--cst-content-breath)"`（clamp 1280→1600）；`PageHeader` 的 `maxWidth` 必须与页面 `contentMaxWidth` **同值成对**（只改其一即轴漂移 46–158px）。细则见「内容轴 → 宽屏呼吸档与列表轴」。
 - **页内可读行宽**：需要限制正文行宽时用页内 `max-w-4xl mx-auto`，宽屏随页宽放宽（`lg:max-w-5xl`）——这是**页内**约束，不能替代页面级 `contentMaxWidth`。
-- **搜索页 hero 搜索框（登记例外）**：`/search` 页头 `below` 内的搜索框桌面 `max-w-3xl`(768) 限宽、左对齐标题轴，移动端满宽；正文（发现态双列/结果列表）仍全宽。理由：满宽 1116px 的输入会被读成「页头条带」，限宽形成「标题 → 搜索入口 → 内容」三级节奏；这是组件功能宽度上限，不是页面级窄列，不改变内容轴（标题/正文左缘仍同为 284）。
+- **搜索页 hero 搜索框（登记例外）**：`/search` 页头 `below` 内的搜索框桌面 `max-w-3xl`(768)、超宽屏 `2xl:max-w-5xl`(1024) 限宽、左对齐标题轴，移动端满宽；正文（发现态双列/结果列表）仍全宽。理由：满宽 1116px 的输入会被读成「页头条带」，限宽形成「标题 → 搜索入口 → 内容」三级节奏；这是组件功能宽度上限，不是页面级窄列，不改变内容轴（标题/正文左缘仍同为 284）。
 - 宽屏提升密度靠**页内响应式网格**，不是把内容拉宽了事：例如 `/search` 发现态在 `lg:` 起双列（左：最近搜索/热门话题/人物推荐；右：热门动态），窄屏回落单列且顺序不变。
 - 聊天类页面：消息滚动区与页头用 `max-w-3xl lg:max-w-5xl`（宽屏 1024），气泡自身仍受 `--cst-chat-bubble-max` 约束——容器变宽不能让行宽失控。
 
@@ -148,7 +148,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 ### 宽屏呼吸档与列表轴
 
-1. `PageHeader` 的 `maxWidth` 与 `StandardPageLayout` 的 `contentMaxWidth` 必须同值**成对**出现（反例：/me 正文 1280 档而页头全宽，轴漂移 46–158px）。宽屏呼吸档统一 **1280**（数字字面量）；呼吸型页面不再自造 `max-w-5xl/6xl/7xl` / `48rem` 私有档（阅读/表单列的既有 rem 列宽属「断点与内容宽度」的另一类，不属呼吸档）。
+1. `PageHeader` 的 `maxWidth` 与 `StandardPageLayout` 的 `contentMaxWidth` 必须同值**成对**出现（反例：/me 正文 1280 档而页头全宽，轴漂移 46–158px）。宽屏呼吸档统一 `var(--cst-content-breath)`（clamp 1280→1600）；呼吸型页面不再自造 `max-w-5xl/6xl/7xl` / `48rem` 私有档（阅读/表单列的 `--cst-content-*` 属「断点与内容宽度」的另一类，不属呼吸档）。
 2. 列表/卡片分区内层禁止 `mx-auto max-w-2xl/3xl` 再收窄（ProfileUserSection / SectionGroups 都不得再收窄）；骨架必须与内容同宽，否则骨架→内容位移。
 3. 验收口径：列表岛宽度 / main 宽度 ≥0.70@1920（关系/举报页实测 0.74–0.95）。
 
@@ -156,7 +156,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 聊天页（桌面分栏 / 移动推入）是唯一豁免 StandardPageLayout 的常规页面，但三块内容必须同轴：
 
-1. **唯一列宽来源**：`components/messages/ChatColumn.svelte`（`mx-auto w-full max-w-3xl lg:max-w-5xl`）。聊天头部 / 消息列 / 输入栏内部都包它；页面/组件不得再写各自的 `max-w-*`。实测 1440 三列全部 x=576 / w=852；1920 全部 x=730 / w=1024；1303 全部 x=576 / w=715。（反例：群聊头 768 vs 消息 1024，差 128px/侧，表现为「头部飘着、消息挤在一侧」）。
+1. **唯一列宽来源**：`components/messages/ChatColumn.svelte`（`max-w-3xl lg:max-w-5xl 2xl:max-w-6xl min-[2200px]:max-w-7xl`，即 768→1024→1152→1280）。聊天头部 / 消息列 / 输入栏内部都包它；页面/组件不得再写各自的 `max-w-*`。（反例：群聊头比消息列窄一档，表现为「头部飘着、消息挤在一侧」）。
 2. **短会话底对齐**：消息内容容器 `min-h-full flex flex-col justify-end`，空白留在上方；顶部锚定 + 底部 228px 死空白是「消息页很怪」的主因之一。
 3. **ListEnd 降噪**：「没有更多了」只在历史确实翻页并耗尽后渲染（首屏一次返回全部、`next_cursor=null` 时不得出现）；日期分节用中性 11px 文本标签，禁止白底胶囊。
 4. 输入条整体铺满面板（发丝线是功能线），内部内容经 ChatColumn 与消息列同轴；不得再用 `mx-auto max-w-3xl` 直接居中（会与消息列错 26–128px）。

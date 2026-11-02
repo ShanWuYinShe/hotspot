@@ -525,6 +525,10 @@
 	<title>瞬间详情 · HotSpot</title>
 </svelte:head>
 
+<!-- 页面唯一 h1：DetailHeader 的实体名是工具行文本，不产生标题元素；
+     这里提供读屏/axe 的页面级标题，不参与视觉布局。 -->
+<h1 class="sr-only">{moment.user ? `${moment.user} 的瞬间` : '瞬间详情'}</h1>
+
 <!-- 评论输入器（唯一实现，按端切换登记形态）：
      桌面/平板 → inline 嵌在评论区顶部；移动 → floating 悬浮 dock（页面 footer 承载）。
      2026-10-29：替代原先「整条白底 border-t 底栏」，解决输入区与本卡格格不入、移动端动作条+输入器叠两条横杠的问题。 -->
@@ -584,7 +588,7 @@
 {/snippet}
 
 <SplitPageLayout
-	contentMaxWidth="58rem"
+	contentMaxWidth="var(--cst-content-detail)"
 	edgeToEdgeMobile={true}
 	overlayHeaderMobile={!loading && moment.images.length > 0}
 	contentClassName="animate-fade-in flex flex-col flex-1 min-h-full pt-0 sm:pt-1 pb-0 sm:pb-6"

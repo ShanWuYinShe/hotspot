@@ -67,6 +67,15 @@
     --cst-cover-height-sm: clamp(7.5rem, 18vw, 10rem);
     --cst-cover-height: clamp(13.75rem, 28vw, 21.25rem);
     --cst-cover-height-lg: clamp(13.75rem, 38vw, 23.75rem);
+    /* 页面内容列宽：窄屏仍受 100% 约束，超宽屏按视口渐进放宽，
+       避免 2560/4K 下固定 1280/1024/896 在中间形成一条窄带。
+       呼吸页 1280→1600 / 通知 1024→1280 / 详情 928→1120 /
+       表单 896→1024 / 窄表单 768→896。 */
+    --cst-content-breath: clamp(80rem, 60vw, 100rem);
+    --cst-content-feed: clamp(64rem, 52vw, 80rem);
+    --cst-content-detail: clamp(58rem, 50vw, 70rem);
+    --cst-content-form: clamp(56rem, 42vw, 64rem);
+    --cst-content-form-narrow: clamp(48rem, 36vw, 56rem);
     /* 移动壳导航几何（与桌面侧栏 token 对称）：
        横屏左侧 rail 宽 64px；rail 图标钮 52px；
        竖屏底栏上下留白 8/20px（底部与 env(safe-area-inset-bottom) 取大）。 */

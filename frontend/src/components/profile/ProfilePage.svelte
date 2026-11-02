@@ -107,9 +107,9 @@
 {#if meta}
 	<!-- 分区模式：StandardPageLayout + sticky PageHeader；
 	     Section 组件为纯内容（不自建滚动/gutter），gutter 由 ContentColumn 统一提供 -->
-	<StandardPageLayout contentMaxWidth={1280} contentClassName="animate-fade-in pt-4 pb-6">
+	<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
-			<PageHeader title={meta.title} sticky maxWidth={1280} titleSize={device === 'desktop' ? 'xl' : '2xl'} onBack={() => smartBack(ROUTES.me)} />
+			<PageHeader title={meta.title} sticky maxWidth="var(--cst-content-breath)" titleSize={device === 'desktop' ? 'xl' : '2xl'} onBack={() => smartBack(ROUTES.me)} />
 		{/snippet}
 		{#if section === 'moments'}
 			<SectionMoments />
@@ -121,7 +121,7 @@
 	<!-- 总览模式：身份封面卡 + 我的内容 + 资料状态。
 	     总览页是长内容呼吸型布局，顶/底 padding 略大于标准列表页（pt-6 pb-8），
 	     属于样板 pt-4 pb-6 的可登记变体。 -->
-	<StandardPageLayout contentMaxWidth={1280} contentClassName="animate-fade-in pt-6 pb-8">
+	<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="animate-fade-in pt-6 pb-8">
 		{#snippet header()}
 			<!-- 页头不放操作按钮：编辑资料/设置统一收在身份卡的动作区，
 			     同一页同一功能只允许一个入口。外观控制不进身份卡：桌面顶栏已有常驻
@@ -131,7 +131,7 @@
 			<PageHeader
 				title="个人中心"
 				subtitle="你的公开资料、内容与关系的入口"
-				maxWidth={1280}
+				maxWidth="var(--cst-content-breath)"
 				titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			/>
 		{/snippet}

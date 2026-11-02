@@ -162,12 +162,12 @@
 	};
 </script>
 
-<StandardPageLayout contentMaxWidth={1280} contentClassName="animate-fade-in pt-4 pb-6">
+<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			variant="integrated"
 			title="我的举报"
-			maxWidth={1280}
+			maxWidth="var(--cst-content-breath)"
 			onBack={() => smartBack(ROUTES.me)}
 		>
 			{#snippet trailing()}
