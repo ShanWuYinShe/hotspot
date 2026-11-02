@@ -325,10 +325,10 @@
 	{:else}
 	<!-- ═══ Desktop / Tablet Messages — split pane (list left + chat right) ═══ -->
 	<!-- h-full：RoutedContentViewport 内容链提供显式高度，分栏固定视口高、左栏列表内部独立滚动；平板/桌面画布均撑满。 -->
-	<div class="content-mode-wide flex h-full">
+	<div class="content-mode-wide flex h-full gap-3 p-3">
 		<!-- Left: chat list -->
-		<!-- 去硬分隔线（Round 2）：分栏边界改极浅发丝线，避免一条明显竖线贯穿整页 -->
-		<div class="flex flex-col shrink-0 overflow-hidden w-80 border-r border-border-subtle/40 bg-surface-primary">
+		<!-- 与地图页同语言：左右两栏各是一块圆角软岛，靠留白/投影分区，不再用贯穿全高的硬分隔线 -->
+		<div class="flex w-80 shrink-0 flex-col overflow-hidden rounded-lg bg-surface-primary shadow-raised-sm">
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
 			<div class="shrink-0">
 				<!-- 登记例外：本页三栏面板有意用 surface-primary 实底（与画廊画布
@@ -405,8 +405,8 @@
 		</div>
 
 		<!-- Right: chat view or empty state：右栏统一用聊天画布（--cst-surface-chat），
-		     与左栏列表的 surface-primary 形成一档微差，靠画布本身分区、不额外加边框 -->
-		<div class="flex-1 overflow-hidden bg-surface-chat">
+		     与左栏列表的 surface-primary 形成一档微差；两栏同为圆角软岛，圆角/投影与地图页一致 -->
+		<div class="min-w-0 flex-1 overflow-hidden rounded-lg bg-surface-chat shadow-xs">
 			{#if queryGroup || (selectedChat && selectedChat.kind === 'group')}
 				<div class="h-full">
 					<GroupChatView groupId={queryGroup || String(selectedChat?.id ?? '')} compact showBackButton={false} />
@@ -471,10 +471,10 @@
 	{/if}
 {:else}
 	<!-- ═══ Mobile Messages ═══ -->
-	<div class="flex flex-col flex-1 min-h-full bg-surface-primary">
-		<!-- 同上：登记例外（surface-primary 面板实底，见左栏说明）。 -->
+	<div class="flex flex-col flex-1 min-h-full bg-surface-page">
+		<!-- 移动端单栏页：与其他列表页共用连续画布 + 内容软岛（列表由 ChatListBody 的 bordered 容器承载） -->
 		<!-- gutter 走 --cst-page-gutter token（移动 16px）；页头/正文不再硬编码 px-4 -->
-		<PageHeader title="消息" class="!bg-surface-primary" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'}>
+		<PageHeader title="消息" sticky titleSize={platform.platform === 'desktop' ? 'xl' : '2xl'}>
 			{#snippet trailing()}
 				<!-- 未读计数统一在标题右侧（对齐首页/附近瞬间样板），与「新会话」同排；
 				     未登录隐藏无效控件（对齐桌面分栏守卫；Gemini UI 审查 r24） -->
@@ -515,7 +515,7 @@
 			{/snippet}
 		</PageHeader>
 
-		<div class="animate-fade-in flex flex-col flex-1 pb-6 bg-surface-primary">
+		<div class="animate-fade-in flex flex-1 flex-col pb-6">
 			{#if onlineChats.length > 0}
 				<div class="px-[var(--cst-page-gutter)] pt-2">
 					<OnlineStrip chats={onlineChats} onSelect={(c) => void goto(ROUTES.message(c.peerUserId || c.id))} />

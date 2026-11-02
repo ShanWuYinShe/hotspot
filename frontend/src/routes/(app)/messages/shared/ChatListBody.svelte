@@ -99,8 +99,9 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		</EmptyState>
 	</div>
 {:else}
-	<!-- 会话列表：无生硬外框，移动与桌面分栏共用；
-	     桌面分栏：compact + inset；移动端：通透平铺流式列表。 -->
+	<!-- 会话列表：移动与桌面分栏共用。
+	     桌面分栏：compact + inset（左栏本身是卡片）；移动端：页画布上的内容软岛（bordered）。
+	     移动端不再是一条通栏白底列表，与其他列表页的软岛语言一致。 -->
 	<!-- display:contents 包装只用于挂长按/右键手势：不产生盒子、不插入语义节点，
 	     因此 role=list 的直接子节点仍是 listitem（axe aria-required-children 不回归）。 -->
 	<div
@@ -108,9 +109,9 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		use:rowLongPress={{ count: chats.length, onMore: (idx) => { const chat = chats[idx]; if (chat) onMore?.(chat); } }}
 	>
 		<ListContainer
-			bordered={false}
+			bordered={!compact}
 			inset={compact}
-			class={fill ? 'flex-1 overflow-y-auto no-scrollbar' : compact ? '' : 'mt-1 divide-y divide-border-subtle/30'}
+			class={fill ? 'flex-1 overflow-y-auto no-scrollbar' : compact ? '' : 'mx-[var(--cst-page-gutter)] mt-1'}
 			ariaLabel="会话列表"
 		>
 			{#each chats as chat (chat.id)}
