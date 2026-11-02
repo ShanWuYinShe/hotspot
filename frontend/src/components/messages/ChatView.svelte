@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, UserRound } from '@lucide/svelte';
+	import { ArrowLeft } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import Avatar from '@/components/shared/Avatar.svelte';
@@ -228,12 +228,12 @@
 	let reportMessageId = $state<string | null>(null);
 </script>
 
-<div class="flex min-h-0 flex-col h-full bg-surface-chat">
+<div class="flex min-h-0 flex-col h-full {compact ? 'bg-surface-island' : 'bg-surface-page'}">
 	<p class="sr-only" aria-live="polite">{lastIncoming ? `新消息：${lastIncoming.text}` : ''}</p>
 	<!-- Header -->
-	<!-- 去硬边线（Round 2）：聊天画布自身底色承担分隔；
-	     头部层级（R13）：返回（移动）→ 头像+昵称/状态（可点进资料）→ 资料入口图标钮 -->
-	<div class="shrink-0 bg-surface-chat {compact ? 'h-15' : 'h-16'}">
+	<!-- 与全站一致的表面：桌面/平板分栏用内容软岛，移动全屏用画布色；
+	     头部层级（R13）：返回（移动）→ 头像+昵称/状态（唯一资料入口，可点进资料） -->
+	<div class="shrink-0 bg-transparent {compact ? 'h-15' : 'h-16'}">
 		<!-- 头部内容经 ChatColumn 与消息列/输入栏同轴（R16）；px-4 是列内 gutter -->
 		<ChatColumn class="flex h-full items-center gap-2 px-4">
 		{#if showBackButton}
@@ -242,7 +242,7 @@
 					icon={ArrowLeft}
 					label="返回"
 					onClick={onBack}
-					size={36}
+					size={42}
 					variant="ghost"
 					tone="current"
 					class="shrink-0"
@@ -297,14 +297,6 @@
 			</div>
 		</button>
 
-		<!-- 资料入口：与「点头像/昵称进资料」同一跳转，给桌面/平板一个显式、可发现的入口 -->
-		<ActionIconButton
-			icon={UserRound}
-			label="查看资料"
-			variant="ghost"
-			size={36}
-			onClick={() => void goto(ROUTES.user(peerUserId))}
-		/>
 		</ChatColumn>
 
 	</div>

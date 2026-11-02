@@ -79,9 +79,9 @@
 </script>
 
 <!-- 输入条：整条铺满聊天面板（发丝线是登记的功能线，不是页面框），
-     内部内容经 ChatColumn 与消息列同轴；背景与聊天画布同色，工具栏与画布连成一体 -->
+     内部内容经 ChatColumn 与消息列同轴；背景透明，继承桌面软岛/移动画布，工具栏与内容连成一体 -->
 <div
-	class="shrink-0 border-t border-border-subtle bg-surface-chat"
+	class="shrink-0 border-t border-border-subtle bg-transparent"
 	style="padding-bottom:max(0.75rem, env(safe-area-inset-bottom));"
 >
 	<ChatColumn class="px-4 pt-2.5">

@@ -401,11 +401,10 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						{#if gd.announcements.length > 0}
 							{@const latest = gd.announcements[0]}
 							<div>
+								<!-- 公告预览卡本身就是「查看全部」入口；分区头不再重复同一跳转 -->
 								<SectionHead
 									title="群公告"
 									count={gd.announcements.length}
-									action="查看全部"
-									onAction={() => (tab = 'announcements')}
 								/>
 								<button
 									type="button"

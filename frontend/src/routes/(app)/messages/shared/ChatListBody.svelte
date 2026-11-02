@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MessageSquareDashed, Plus, MessageCircle, Users, Zap } from '@lucide/svelte';
+	import { MessageSquareDashed, MessageCircle, Users, Zap } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -9,7 +9,6 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import type { ChatItem } from '@/lib/chat-list';
 	import { contentFade } from '@/lib/motion';
 	import { rowLongPress } from './row-long-press';
-	import Button from '@/components/ui/button.svelte';
 
 	// ChatListBody —— 消息页会话列表体（错误/加载/空态/列表三态），
 	// 移动与桌面分栏共用；桌面传 compact + selectedId + onSelect（就地展开），
@@ -23,7 +22,6 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		onSelect,
 		onMore,
 		searchQuery = '',
-		onNewChat,
 		selectedId = null,
 		compact = false,
 		fill = false
@@ -39,8 +37,6 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		onMore?: (chat: ChatItem) => void;
 		/** 当前搜索词：用于区分「还没有会话」与「搜索无结果」两种空态文案。 */
 		searchQuery?: string;
-		/** 空态里的「发起新会话」入口（动线闭环）；缺省不渲染。 */
-		onNewChat?: () => void;
 		selectedId?: number | string | null;
 		compact?: boolean;
 		fill?: boolean;
@@ -87,14 +83,6 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		>
 			{#snippet icon()}
 				<MessageSquareDashed class="size-6" strokeWidth={1.5} aria-hidden="true" />
-			{/snippet}
-			{#snippet action()}
-				{#if onNewChat}
-					<Button type="button" size="sm" variant="soft" onclick={onNewChat}>
-						<Plus class="size-3.5" strokeWidth={1.75} aria-hidden="true" />
-						发起新会话
-					</Button>
-				{/if}
 			{/snippet}
 		</EmptyState>
 	</div>

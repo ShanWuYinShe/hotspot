@@ -675,12 +675,10 @@
 			loadingMoreComments={commentsLoadingMore}
 			{liked}
 			{saved}
-			{shareStatus}
 			{newCommentId}
 			{newReplyId}
 			onToggleLike={() => void toggleLike()}
 			onToggleSave={() => void toggleSave()}
-			onShare={() => void copyMomentLink()}
 			onCommentClick={focusComments}
 			onReply={(user, commentId) => startReply(user, commentId)}
 			onExpandReplies={(commentId) => void expandReplies(commentId)}

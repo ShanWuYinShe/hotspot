@@ -328,14 +328,14 @@
 	<div class="content-mode-wide flex h-full gap-3 p-3">
 		<!-- Left: chat list -->
 		<!-- 与地图页同语言：左右两栏各是一块圆角软岛，靠留白/投影分区，不再用贯穿全高的硬分隔线 -->
-		<div class="flex w-80 shrink-0 flex-col overflow-hidden rounded-lg bg-surface-primary shadow-raised-sm">
+		<div class="flex w-80 shrink-0 flex-col overflow-hidden rounded-lg bg-surface-island shadow-xs">
 			<!-- List header（对齐 Figma：px-4 pt-4 pb-3，标题 18 + Plus 30 + 搜索框） -->
 			<div class="shrink-0">
 				<!-- 登记例外：本页三栏面板有意用 surface-primary 实底（与画廊画布
 				     契约不同），PageHeader 的 page-header-solid 外壳感知底色（移动端
 				     =surface-page）在此会与列表面板错配，故用 ! 覆盖为面板同色。
 				     全项目唯一一处 ! 覆盖，勿仿照。 -->
-				<PageHeader title="消息" class="!bg-surface-primary" contentClassName="px-4" titleSize="xl">
+				<PageHeader title="消息" class="!bg-surface-island" contentClassName="px-4" titleSize="xl">
 					{#snippet trailing()}
 						{#if !needsAuth}
 						<!-- 带文字标签（2026-10-19 UI 审查）：全站底栏中央是「+ 发布瞬间」FAB，
@@ -394,19 +394,15 @@
 				onSelect={selectChat}
 				onMore={(chat) => (moreTarget = chat)}
 				searchQuery={searchQuery}
-				onNewChat={() => {
-					newChatTab = 'chat';
-					showNewChat = true;
-				}}
 				{selectedId}
 				compact
 				fill
 			/>
 		</div>
 
-		<!-- Right: chat view or empty state：右栏统一用聊天画布（--cst-surface-chat），
-		     与左栏列表的 surface-primary 形成一档微差；两栏同为圆角软岛，圆角/投影与地图页一致 -->
-		<div class="min-w-0 flex-1 overflow-hidden rounded-lg bg-surface-chat shadow-xs">
+		<!-- Right: chat view or empty state：右栏与左栏同为内容软岛（surface-island），
+		     不再使用独立的 chat 画布色；圆角/投影与地图页一致 -->
+		<div class="min-w-0 flex-1 overflow-hidden rounded-lg bg-surface-island shadow-xs">
 			{#if queryGroup || (selectedChat && selectedChat.kind === 'group')}
 				<div class="h-full">
 					<GroupChatView groupId={queryGroup || String(selectedChat?.id ?? '')} compact showBackButton={false} />
@@ -422,15 +418,8 @@
 				</div>
 			{:else}
 				<!-- 空会话面板（R13）：引导 + 最近 3 条会话建议（纯前端取自已拉到的列表）。
-				     小面板不开 spotlight；发新聊天入口内置在面板底部，动线闭环。 -->
-				<ChatEmptyPanel
-					recent={liveChats}
-					onSelect={selectChat}
-					onNewChat={() => {
-						newChatTab = 'chat';
-						showNewChat = true;
-					}}
-				/>
+				     小面板不开 spotlight；「新会话」只保留左栏页头主入口，面板内不再重复按钮。 -->
+				<ChatEmptyPanel />
 			{/if}
 		</div>
 
@@ -553,10 +542,6 @@
 				onSelect={(chat) => void (chat.kind === 'group' ? goto(ROUTES.groupMessage(chat.id)) : goto(ROUTES.message(chat.peerUserId || chat.id)))}
 				onMore={(chat) => (moreTarget = chat)}
 				searchQuery={searchQuery}
-				onNewChat={() => {
-					newChatTab = 'chat';
-					showNewChat = true;
-				}}
 			/>
 		</div>
 

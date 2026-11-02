@@ -184,7 +184,7 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<HeroStats onExplore={() => void goto(ROUTES.nearbyPeople)} stats={heroStats} locationName={locationName} />
+		<HeroStats stats={heroStats} locationName={locationName} />
 		<NearbyHubSections
 			users={visibleNearbyUsers}
 			{moments}

@@ -126,7 +126,7 @@ const FILTER_TABS = [
 				}
 
 				if (notifData) {
-					notifies = stripDecidedInviteActions(toViewItems(notifData.items || [], 0));
+					notifies = stripInviteRowActions(toViewItems(notifData.items || [], 0));
 				}
 				// 服务端未读真相回写全局徽标（markRead/全部已读后同样经此收敛）
 				if (!cancelled && unreadRes.code === 0 && unreadRes.data) {
@@ -199,12 +199,12 @@ const FILTER_TABS = [
 		});
 	}
 
-	/** 已决邀请的通知行不再提供接受/拒绝（后端 listMyInvites 默认 pending；
-	行残留时点之只会收到“已过期”错误）。invites 未成功加载时保持原样。 */
-	function stripDecidedInviteActions(items: NotifyViewItem[]): NotifyViewItem[] {
+	/** 入群邀请的接受/拒绝统一由页头「入群邀请」待办区承载；通知行不再提供第二套动作。
+	    invites 加载成功时清除所有行内 inviteId（待办区负责 pending；已决邀请本就不能操作）。
+	    加载失败时保留旧行为，按钮点击由后端诚实报错。 */
+	function stripInviteRowActions(items: NotifyViewItem[]): NotifyViewItem[] {
 		if (!invitesLoaded) return items;
-		const pending = new Set(invites.map((i) => i.invite_id));
-		return items.map((n) => (n.inviteId && !pending.has(n.inviteId) ? { ...n, inviteId: undefined } : n));
+		return items.map((n) => (n.inviteId ? { ...n, inviteId: undefined } : n));
 	}
 
 	/** 加载下一页（cursor keyset，服务端按时间倒序，追加即保持全局有序）。 */
@@ -214,7 +214,7 @@ const FILTER_TABS = [
 		try {
 			const res = await listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE, cursor: nextCursor } }).catch(() => netError({ items: [], next_cursor: null }));
 			if (res.code === 0 && res.data) {
-				notifies = stripDecidedInviteActions([...notifies, ...toViewItems(res.data.items || [], notifies.length)]);
+				notifies = stripInviteRowActions([...notifies, ...toViewItems(res.data.items || [], notifies.length)]);
 				nextCursor = res.data.next_cursor ?? null;
 			}
 		} finally {

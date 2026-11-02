@@ -94,10 +94,11 @@
 		}
 	]);
 
-	const statsList = $derived<{ label: string; value: number; onClick: () => void }[]>([
-		{ label: '瞬间', value: stats.moments_count, onClick: () => void goto(ME_SECTION_PATHS.moments) },
-		{ label: '粉丝', value: stats.followers_count, onClick: () => void goto(relationshipsHref('fans')) },
-		{ label: '群组', value: stats.groups_count, onClick: () => void goto(ME_SECTION_PATHS.groups) }
+	// 指标只做统计展示：下方「我的内容」列表才是导航入口，避免同页重复入口。
+	const statsList = $derived<{ label: string; value: number }[]>([
+		{ label: '瞬间', value: stats.moments_count },
+		{ label: '粉丝', value: stats.followers_count },
+		{ label: '群组', value: stats.groups_count }
 	]);
 
 	const COMPLETENESS = $derived<CompletenessItem[]>([

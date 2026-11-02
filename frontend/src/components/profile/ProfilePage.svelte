@@ -50,11 +50,11 @@
 	const meta = $derived(section && SECTION_META[section] ? SECTION_META[section] : null);
 	const device = $derived(platform.platform);
 
-	// 指标行：数字是资料页的节奏锚点（MetricRow strip：大数字 + 小标签 + 发丝分隔）
+	// 指标只做统计展示：页面下方「我的内容」列表才是导航入口，避免同一目标同屏两条入口。
 	const metricItems = $derived([
-		{ label: '瞬间', value: stats.moments_count, onClick: () => void goto(ME_SECTION_PATHS.moments) },
-		{ label: '粉丝', value: stats.followers_count, onClick: () => void goto(ME_SECTION_PATHS.relationships) },
-		{ label: '群组', value: stats.groups_count, onClick: () => void goto(ME_SECTION_PATHS.groups) }
+		{ label: '瞬间', value: stats.moments_count },
+		{ label: '粉丝', value: stats.followers_count },
+		{ label: '群组', value: stats.groups_count }
 	]);
 
 	type EntryItem = {

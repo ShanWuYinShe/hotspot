@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
-	import { ArrowLeft, Info } from '@lucide/svelte';
+	import { ArrowLeft } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
 	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
@@ -218,12 +218,12 @@
 	let reportMessageId = $state<string | null>(null);
 </script>
 
-<div class="flex min-h-0 flex-col h-full bg-surface-chat">
+<div class="flex min-h-0 flex-col h-full {compact ? 'bg-surface-island' : 'bg-surface-page'}">
 	<p class="sr-only" aria-live="polite">{lastIncoming ? `新消息：${lastIncoming.text}` : ''}</p>
 	<!-- Header -->
-	<!-- 去硬边线（Round 2）：聊天画布自身底色承担分隔；
-	     头部层级（R13）：返回（移动）→ 群头像+群名/成员数（可点进群详情）→ 群信息入口图标钮 -->
-	<div class="shrink-0 bg-surface-chat {compact ? 'h-15' : 'h-16'}">
+	<!-- 与全站一致的表面：桌面/平板分栏用内容软岛，移动全屏用画布色；
+	     头部层级（R13）：返回（移动）→ 群头像+群名/成员数（唯一群信息入口，可点进群详情） -->
+	<div class="shrink-0 bg-transparent {compact ? 'h-15' : 'h-16'}">
 		<!-- 头部内容经 ChatColumn 与消息列/输入栏同轴（R16，此前缺 lg:max-w-5xl 导致宽屏群名错位） -->
 		<ChatColumn class="flex h-full items-center gap-2 px-4">
 		{#if showBackButton}
@@ -232,7 +232,7 @@
 					icon={ArrowLeft}
 					label="返回"
 					onClick={onBack}
-					size={36}
+					size={42}
 					variant="ghost"
 					tone="current"
 					class="shrink-0"
@@ -280,14 +280,6 @@
 			</div>
 		</button>
 
-		<!-- 群信息入口：成员数/群公告都在群详情页，这里给显式、可发现的跳转（与点头像同一目标） -->
-		<ActionIconButton
-			icon={Info}
-			label="群信息"
-			variant="ghost"
-			size={36}
-			onClick={() => void goto(ROUTES.group(groupId))}
-		/>
 		</ChatColumn>
 	</div>
 

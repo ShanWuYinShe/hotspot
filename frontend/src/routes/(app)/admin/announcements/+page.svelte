@@ -166,12 +166,6 @@
 			emptyDescription="发布一条公告，让全站用户看到平台最新安排。"
 			emptyIcon={Megaphone}
 		>
-			{#snippet emptyAction()}
-				{#if canWrite}
-					<Button type="button" variant="primary" size="sm" class="hit-slop-44" onclick={openCreate}>发布公告</Button>
-				{/if}
-			{/snippet}
-
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>

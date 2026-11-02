@@ -570,7 +570,7 @@
 | 指标与分区 | 灰药丸指标块全量替换为 `MetricRow strip`（附近枢纽/资料页/群组详情/后台 KPI/stats）；分区标题统一 `SectionHead`（icon + 标题 + count + 查看全部；rail 变体） |
 | 空态/访客 | `EmptyState` 升级（64px 软底图标砖 + 14 semibold 标题 + 12 描述 + extra 建议 chips）；`NeedsAuthNotice` 升级为访客引导面板（3 条价值点 + 主/次 CTA），/me、/messages、/notify、me 子页统一 |
 | 外壳/认证 | 登录/注册桌面双栏品牌页 + `/register` 深链（修外部 404）；404 品牌化（路径 sr-only）；分享页挂氛围画布；侧栏分组/选中态、移动底栏选中态与 FAB 光晕；地图左面板悬浮岛 + 类型图标砖 + 图例 + 移动面板收敛 |
-| 消息/通知 | 聊天页 `--cst-surface-chat` 画布、头部资料入口、气泡/日期分隔/输入条精修、空会话面板（引导 + 最近 3 条建议）、窄平板 ?peer= 深链修复；通知未读条 + 成对动作（接受 primary / 拒绝 soft）+ 右 rail MetricRow strip |
+| 消息/通知 | 聊天页统一页面画布/内容软岛、气泡/日期分隔/输入条精修、空会话面板（引导 + 最近 3 条建议）、窄平板 ?peer= 深链修复；通知未读条 + 成对动作（接受 primary / 拒绝 soft）+ 右 rail MetricRow strip |
 | 管理后台 | 概览真仪表盘（KPI 行 + 9 模块卡 + 举报待办角标 + 最近审计活动）；10 页统一工具栏/表头/行 hover/行内动作；枚举中文化、目标列链到内容、audit 列折叠、stats 筛选标签化、config 布尔统一 Toggle |
 | 详情 | 瞬间详情帖子卡与评论层级重排、移动端动作行去重、粘底条同轴；群组详情 hero 层级、指标 strip、群公告摘要行、右 rail 动作重排、审核中状态 bug 修复 |
 

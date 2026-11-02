@@ -154,11 +154,6 @@
 			emptyDescription="调整动作、操作者或时间范围后再试。"
 			emptyIcon={ScrollText}
 		>
-			{#snippet emptyAction()}
-				{#if hasFilter}
-					<Button type="button" variant="secondary" size="sm" onclick={clearFilters}>清除筛选</Button>
-				{/if}
-			{/snippet}
 
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>

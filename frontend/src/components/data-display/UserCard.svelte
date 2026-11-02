@@ -76,6 +76,7 @@
 		onclick={(e) => {
 			const target = e.target as HTMLElement | null;
 			if (target?.closest('button:not([data-cover]), a[href]')) return;
+			if (target?.closest('[data-cover]')) return;
 			onNavigate();
 		}}
 	>
@@ -182,6 +183,7 @@
 		onclick={(e) => {
 			const target = e.target as HTMLElement | null;
 			if (target?.closest('button:not([data-cover]), a[href]')) return;
+			if (target?.closest('[data-cover]')) return;
 			onNavigate();
 		}}
 	>
@@ -273,6 +275,7 @@
 		onclick={(e) => {
 			const target = e.target as HTMLElement | null;
 			if (target?.closest('button:not([data-cover]), a[href]')) return;
+			if (target?.closest('[data-cover]')) return;
 			onNavigate();
 		}}
 	>

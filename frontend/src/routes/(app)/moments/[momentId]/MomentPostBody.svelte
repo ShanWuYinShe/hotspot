@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import type { Snippet } from 'svelte';
-	import { MapPin, Heart, MessageCircle, Share2, Bookmark, Check } from '@lucide/svelte';
+	import { MapPin, Heart, MessageCircle, Bookmark } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -76,12 +76,10 @@
 		loadingMoreComments,
 		liked,
 		saved,
-		shareStatus,
 		newCommentId = null,
 		newReplyId = null,
 		onToggleLike,
 		onToggleSave,
-		onShare,
 		onCommentClick,
 		onReply,
 		onExpandReplies,
@@ -99,13 +97,11 @@
 		loadingMoreComments: boolean;
 		liked: boolean;
 		saved: boolean;
-		shareStatus: 'idle' | 'copied' | 'failed';
 		/** 本次新增的评论/回复 id：仅它们播放 160ms 进场；初始加载/缓存不播 */
 		newCommentId?: string | null;
 		newReplyId?: string | null;
 		onToggleLike: () => void;
 		onToggleSave: () => void;
-		onShare: () => void;
 		/** 操作条评论计数点击：滚动到评论区并聚焦输入栏 */
 		onCommentClick: () => void;
 		/** 评论区"回复"点击：携带目标评论 ID，页面聚焦输入栏并 @ 对方（提交带 parent_id） */
@@ -339,18 +335,6 @@
 					<span class="inline-flex" use:popOn={savePop}>
 						<Bookmark class="size-4.5" strokeWidth={1.75} fill={saved ? 'currentColor' : 'none'} />
 					</span>
-				</button>
-				<button
-					type="button"
-					onclick={onShare}
-					aria-label={shareStatus === 'failed' ? '复制动态链接失败' : '复制动态链接'}
-					class="hover-action hit-slop-44 flex items-center py-1 focus-ring transition-colors {shareStatus === 'copied' ? 'text-accent-default' : 'text-text-secondary hover:text-text-primary'}"
-				>
-					{#if shareStatus === 'copied'}
-						<Check class="size-4.5" strokeWidth={2} />
-					{:else}
-						<Share2 class="size-4.5" strokeWidth={1.75} />
-					{/if}
 				</button>
 			</div>
 		</div>

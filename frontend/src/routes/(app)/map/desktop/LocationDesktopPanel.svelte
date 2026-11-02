@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MapPin, Navigation, X, ChevronRight, Check, Heart, Crosshair } from '@lucide/svelte';
+	import { MapPin, Navigation, X, ChevronRight, Check, Heart } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
@@ -21,7 +21,7 @@
 	// R13：面板本身是悬浮内容岛（外壳负责投影/圆角），内部收敛为
 	// 「位置头 → 搜索 → 浏览位置实底卡 → 类型图标砖列表 → 粘底确认」一条纵向节奏；
 	// 实底卡描述的是「地图当前中心」（浏览锚点/视口中心），不是 GPS 当前位置；
-	// GPS 状态与「定位到我的位置」动作单独呈现在卡内，避免把默认锚点误读成用户位置。
+	// GPS 状态只在卡内说明，定位动作统一由地图右上角准星承载（同页不设第二个入口）。
 	// 类型信息用 marker 语义色（不再每个字段一套灰底胶囊），确认动作走按钮原语。
 
 	let {
@@ -37,11 +37,9 @@
 		locationName = '',
 		/** 浏览器 GPS 是否已成功定位（蓝点/我的位置）。 */
 		hasMyLocation = false,
-		locating = false,
 		onSelectPin,
 		onSelectLoc,
-		onConfirm,
-		onLocate
+		onConfirm
 	}: {
 		searchQuery?: string;
 		searchResults?: LocationResult[];
@@ -53,7 +51,6 @@
 		mapCounts?: Record<PinType, number>;
 		locationName?: string;
 		hasMyLocation?: boolean;
-		locating?: boolean;
 		/** 选中附近图钉：由父组件同步设置 selectedPin 并移动地图中心。 */
 		onSelectPin: (pin: Pin) => void;
 		onSelectLoc: (loc: LocationResult) => void;
@@ -128,26 +125,9 @@
 				<span class="block text-xxs font-medium uppercase tracking-eyebrow text-accent-default">浏览位置</span>
 				<span class="mt-0.5 block truncate text-md font-medium text-text-primary">{locationName || '未命名区域'}</span>
 				<span class="mt-0.5 block text-xxs text-text-secondary">
-					{hasMyLocation ? '我的位置已获取' : '未获取当前位置'}
+					{hasMyLocation ? '我的位置已获取' : '未获取当前位置 · 点右上角准星定位'}
 				</span>
 			</span>
-			{#if onLocate}
-				<button
-					type="button"
-					class="hover-action hit-slop flex shrink-0 items-center gap-1 rounded-full px-2 py-1.5 text-xs font-medium text-accent-default focus-ring disabled:pointer-events-none disabled:opacity-faint"
-					aria-label={hasMyLocation ? '回到我的位置' : '定位到我的位置'}
-					title={hasMyLocation ? '回到我的位置' : '定位到我的位置'}
-					disabled={locating}
-					onclick={onLocate}
-				>
-					{#if locating}
-						<span class="spinner size-3.5" role="status" aria-label="正在定位"></span>
-					{:else}
-						<Crosshair class="size-3.5" strokeWidth={1.75} />
-					{/if}
-					<span>{hasMyLocation ? '我的位置' : '定位'}</span>
-				</button>
-			{/if}
 		</div>
 
 		{#if nearbyPins.length}

@@ -58,7 +58,7 @@
 	pressed={isSelected}
 	onClick={onClick}
 	ariaLabel={`打开与 ${chat.name} 的会话`}
-	class="group flex select-none items-center gap-3 {compact ? 'px-3.5 py-2.5' : 'px-4 py-3'} {!isSelected && hasUnread ? 'bg-accent-soft' : ''}"
+	class="group flex select-none items-center gap-3 bg-transparent {compact ? 'px-3.5 py-2.5' : 'px-4 py-3'} {!isSelected && hasUnread ? 'bg-accent-soft' : ''}"
 >
 	{#if isSelected || hasUnread}
 		<!-- 非色相态信号：选中/未读在行首各有一根竖指示条（灰度下仍靠「有/无条 + 长度」区分） -->

@@ -108,12 +108,6 @@
 			emptyDescription="换个关键词试试，或清空搜索词后重试。"
 			emptyIcon={Tags}
 		>
-			{#snippet emptyAction()}
-				{#if query}
-					<Button type="button" variant="secondary" size="sm" onclick={() => (query = '')}>清空搜索</Button>
-				{/if}
-			{/snippet}
-
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>

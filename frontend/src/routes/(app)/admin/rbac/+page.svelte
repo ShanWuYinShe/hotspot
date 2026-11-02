@@ -269,9 +269,6 @@
 			{:else if roles.length === 0}
 				<EmptyState title="还没有角色" description="创建第一个角色并分配权限，再把角色授予平台管理员。" iconTone="neutral">
 					{#snippet icon()}<KeyRound class="size-7" strokeWidth={1.5} />{/snippet}
-					{#snippet action()}
-						<Button type="button" variant="primary" size="sm" onclick={openCreate}>新建角色</Button>
-					{/snippet}
 				</EmptyState>
 			{:else}
 				<div class={TABLE_WRAP} use:scrollFade>
