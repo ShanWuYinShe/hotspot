@@ -719,8 +719,9 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
 
 ### 16.5 已知边界
 
-- 鸿蒙端实现：`AmbientBackdrop.ets` + `ThemeConstants.AMBIENT`（6 组合 × 12 色，
-  与 web `--cst-ambient-*` 语义/合成口径一一对应，见 §13 映射表）；
+- 鸿蒙端实现：`AmbientBackdrop.ets` + `ThemeConstants.AMBIENT`（6 组合 × 12 色，预合成 `#AARRGGBB`）。
+  字段语义与 web `--cst-ambient-*` 一一对应；数值按 web `color-mix(palette 色 N%, transparent)` 的同一 N 预合成，
+  **无脚本逐值校验**——改 web alpha 后必须同步重算鸿蒙值；
 - **平台适配差异（已登记）**：web 与鸿蒙默认都为静态世界（web 动画默认关闭，
   统一以性能优先）；web 额外支持 `motion` 逐页 opt-in，鸿蒙保持静态 Canvas；
   鸿蒙每页一块画布（见 16.4）；两端同主题同明暗的世界语言/构图一致；
