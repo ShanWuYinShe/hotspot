@@ -52,7 +52,7 @@
 ## 4. 主题档位覆写与 harmony-only 档
 
 - **forest light 软岛**：仅 `default_clean_light` 的 `surfaceIsland` = `mixOpaque(surfaceBackground 92%, textPrimary 8%)` = #E4E6E2；其余 5 组公式不变；surface parity 6/6。
-- **textTertiary**：forest light 调为 #58645C（岛上 4.93），文档标注 harmony-only。
+- **textTertiary**：forest light 取 #58645C（岛上 4.93），标注 harmony-only。
 - 改 token 后按两端代码逐值比对（web `themes/*.css` 的 `--cst-surface-island` ↔ 鸿蒙 `AppThemeManager` 的 `surfaceIsland`，6 套组合；仓库无独立入库校验脚本），并同步更新 `docs/frontend-ui-audit.md` 记录；两端同改见 SKILL.md 跨端同步表。
 
 ## 5. 设计 token 对照 HarmonyOS 官方规范
@@ -76,4 +76,4 @@
 
 新增页面/组件必须从现有档位取值，不得引入近邻档（13/15/22/28 已归并；
 **18 是已登记例外，未归并**——`DesignConstants.FONT.SIZE.LG_PLUS = 18`、`SPACING.LG_PLUS = 18` 仍在用，
-全仓 20+ 处引用；不要把 18 算作已归并档）。
+全仓多处引用（取数：`grep -rn 'LG_PLUS' harmonyapp/entry/src/main/ets`）；不要把 18 算作已归并档）。

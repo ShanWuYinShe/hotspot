@@ -89,7 +89,7 @@ git branch -d <分支名>
 - 媒体两个 E2E 用例（TestMedia_E2E_PresignUploadComplete / Batch）的客户端入口
   origin **跟随 NGINX_PORT 环境变量**（默认 8888，见 backend-go/test/integration
   `docker_test.go` 的 `mediaPresignClientOrigin`；origin 不能固定 8888——那样会把 PUT 打进默认端口
-  那套栈，complete_upload 在本栈查不到对象报 10400；origin 跟随由 commit 763e3fa2 实现）。
+  那套栈，complete_upload 在本栈查不到对象报 10400；origin 必须跟随 `NGINX_PORT`）。
 - 重映射起栈（NGINX_PORT=8889 docker compose up …）后跑测试带**同名变量**即可，
   无需再 -skip：
   ```bash
@@ -133,8 +133,8 @@ git branch -d <分支名>
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --force-recreate nginx
 ```
 
-重建后 `nginx -t` 与 `docker compose ps` healthy 再验。反例：改完 `proxy_cookie_flags`
-后反复验证失败，根因就是挂载悬空（`restart` 不重做挂载）。
+重建后 `nginx -t` 与 `docker compose ps` healthy 再验。**判据**：改配置后
+`docker exec <容器> nginx -t` 报 open failed 或修改不生效，即为挂载悬空（`restart` 不重做挂载）。
 
 
 ## worktree 内跑鸿蒙 hvigor（直接跑，DSH 沙盒环境）

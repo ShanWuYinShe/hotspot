@@ -10,20 +10,20 @@
 2. 截图该矩形 → 把元素 `style.color='transparent'`（**只改颜色，保布局**）→ 再截同一矩形，得到「纯背景」像素；
 3. 逐像素算 `contrast(文字色 over 背景像素, 背景像素)`，取 min 与 P5；文字带 alpha 时逐像素合成 `eff = fg*a + bg*(1-a)` 再算。
 
-**关键坑（会得出完全相反的结论）**：测量区若用**元素矩形**（含 padding），padding 下根本没有字形、那里是胶囊圆角外的原图像素，会把最差比压到 1.0–4.0 造成假阴性。同一批 176 个候选：用元素矩形 → 15 处「不达标」（6 组）；改用字形区 → **仅 1 处**（`/groups/group_1` 分类胶囊，白字压 `glass-badge` 0.18 白玻璃底，实测 4.16/需 4.5，84.9% 字形像素不达标）。改正后同法复测：4.16 → 14.18、达标像素 13.3% → 100%。
+**关键坑（会得出完全相反的结论）**：测量区若用**元素矩形**（含 padding），padding 下根本没有字形、那里是胶囊圆角外的原图像素，会把最差比压到 1.0–4.0 造成假阴性。同一批 176 个候选：用元素矩形 → 15 处「不达标」（6 组）；改用字形区 → **仅 1 处**（`/groups/group_1` 分类胶囊，白字压 `glass-badge` 0.18 白玻璃底，实测 4.16/需 4.5，84.9% 字形像素不达标）。用字形区同法复测：4.16 → 14.18、达标像素 13.3% → 100%。
 
 **结论**：压图徽标一律用深色遮罩（`bg-surface-media-scrim-strong` = 0.55 黑，白字在纯白底上仍有 ~4.9:1），不要用浅色玻璃底 + 白字（`glass-badge` 0.18 白），那是结构性不达标。
 
 ## 2. 前端「原语绕过」审计判据
 
-前端与鸿蒙的原语纪律**不同**：鸿蒙强制 SystemButton 原语；前端允许原生 `<button>` + token 类（Svelte/Tailwind 惯例），约束落在**交互反馈类**（SKILL.md 自查清单第 7 条）。全仓原生 `<button>` 审计（当前 **157** 处，取数 `grep -rn '<button' --include=*.svelte src | wc -l`），**结论：无缺口**。合规基线（命中任一即合规）：
+前端与鸿蒙的原语纪律**不同**：鸿蒙强制 SystemButton 原语；前端允许原生 `<button>` + token 类（Svelte/Tailwind 惯例），约束落在**交互反馈类**（SKILL.md 自查清单第 7 条）。全仓原生 `<button>` 审计**结论：无缺口**；数量现取（在 `frontend/` 下执行）：`grep -rn '<button' --include=*.svelte src | wc -l`。合规基线（命中任一即合规）：
 
 - 反馈工具类：`hover-btn` / `hover-bg` / `hover:bg-*` / `tap-*` / `scale-btn` / `focus-ring` / `focus-visible:ring-*`
 - `link-btn` 工具类（自带 transition + underline 反馈）
-- 共享常量：admin 页的 `ROW_BTN / ROW_BTN_DANGER`（`routes/(app)/admin/shared/table.ts`，内含完整 hover/tap/focus/disabled 四态）。**不要引用 `ROW_BTN_PRIMARY`**（已删除；查证：`git log -S ROW_BTN_PRIMARY` → 26d1d3ac）
+- 共享常量：admin 页的 `ROW_BTN / ROW_BTN_DANGER`（`routes/(app)/admin/shared/table.ts`，内含完整 hover/tap/focus/disabled 四态）。**不要引用 `ROW_BTN_PRIMARY`**（代码中不存在该导出）
 - `ListItem` 组件（列表行，自查清单第 5 条）
 
-**审计脚本的坑（106/209 误报）**：
+**审计脚本的假阳性规律**：
 
 1. 多行 button 标签被属性值里的 `=>` 提前截断（`[^>]*` 遇 `>` 即停），class 没采到；
 2. class 是常量引用（`class={ROW_BTN}`）时不含字面关键词；
@@ -37,7 +37,7 @@
 
 ## 4. 审计脚本通用规律（web/鸿蒙共通，单点权威）
 
-> 本节是 web 与鸿蒙两侧「审计假阳性」通用规律的**单点权威**；鸿蒙端只保留端侧实例与数据（skill `hotspot-harmony-ui` 的「审计基线与假阳性规律」）。
+> 本节是 web 与鸿蒙两侧「审计假阳性」通用规律的**单点权威**；鸿蒙端只保留端侧实例与数据（skill `hotspot-harmony-ui` 的「审计基线与布局陷阱（指针）」及其 `references/audit-baselines.md`）。
 
 - 启发式扫「属性链上是否出现某关键词」误报率极高：真实承载常在**组件内部**、**状态驱动**或**父级行**。
 - 布局类问题（图片尺寸、间距）不能用「附近有 Text/缺少数字宽高」粗判，要按**该元素自身**判断。

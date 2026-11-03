@@ -31,7 +31,7 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token（shared �
 
 ## 画布、软岛与媒体表面 token（强制）
 
-- **连续画布契约**：`--cst-surface-page`（= page-bg）是应用内唯一的整层底色。外壳各层（外框/内框/视口/状态栏/安全区/导航底座透明区/桌面顶栏/侧栏/主内容）一律只许用它连续铺底，**不得再加**包裹整页的描边/圆角/白底/硬分隔线（会在屏幕边缘形成「框线」）。层级只靠**内容单元软岛**与留白表达；内容单元格本身不是页面框，可保留。禁止引入第二个整层底色（`workspace` 整层底色 token 已删除；layout.css 仅保留 `--cst-workspace-gap`/`-inset` 间距变量，不是底色）。分壳规则：四端外壳直接暴露画布（`[data-page-viewport]` 透明），桌面氛围画布为**整窗单实例**（外壳根挂一次）；`PageHeader` 实底走 `.page-header-solid`（一律画布色，**无底边线**，滚动时才允许柔和投影），sticky glass 仍走 `surface-nav-glass`。聊天页与全站一致：桌面/平板分栏使用 `surface-island` 软岛，移动全屏使用 `surface-page` 画布，**不再使用独立 chat 画布**；`--cst-surface-chat` 仅作兼容 token 保留，禁止页面/组件新消费。
+- **连续画布契约**：`--cst-surface-page`（= page-bg）是应用内唯一的整层底色。外壳各层（外框/内框/视口/状态栏/安全区/导航底座透明区/桌面顶栏/侧栏/主内容）一律只许用它连续铺底，**不得再加**包裹整页的描边/圆角/白底/硬分隔线（会在屏幕边缘形成「框线」）。层级只靠**内容单元软岛**与留白表达；内容单元格本身不是页面框，可保留。禁止引入第二个整层底色（不存在 `workspace` 整层底色 token；layout.css 仅保留 `--cst-workspace-gap`/`-inset` 间距变量，不是底色）。分壳规则：四端外壳直接暴露画布（`[data-page-viewport]` 透明），桌面氛围画布为**整窗单实例**（外壳根挂一次）；`PageHeader` 实底走 `.page-header-solid`（一律画布色，**无底边线**，滚动时才允许柔和投影），sticky glass 仍走 `surface-nav-glass`。聊天页与全站一致：桌面/平板分栏使用 `surface-island` 软岛，移动全屏使用 `surface-page` 画布，**不再使用独立 chat 画布**；`--cst-surface-chat` 仅作兼容 token 保留，禁止页面/组件新消费。
 - **内容岛表面**：`--cst-surface-island`（light = `surface-primary 86%` 半透合成画布；dark = `surface-primary 94% + text-primary 6%`；三主题×明暗 6 处，registry 映射 `bg-surface-island`）。开放页面内容分组用「软岛」：无硬描边 + `shadow-xs` + `rounded-lg`(20) + `p-2` + 行透明/gap；**禁止再给 `ListContainer bordered` 覆写 border/bg/radius**。详见 design-system §19；页面结构侧规则见 skill `hotspot-frontend-layout`「内容软岛与长尾/后台页面」。
 - **图片优先卡遮罩**：整卡图片卡只用 `--cst-surface-card-scrim-top` / `--cst-surface-card-scrim-bottom` / `--cst-surface-card-fallback`（三主题×明暗定义在 `themes/*.css`，语义见 `docs/design-system.md` §17）；禁止页面里写 rgba 遮罩。**可读性优先**：压图文字必须满足 4.5:1，必要时加深 token alpha，不要靠浅色玻璃底压白字。
 - **氛围画布**：内容稀疏/空态页用主题化装饰层补纵深，唯一实现 `components/layout/ambient/AmbientBackdrop.svelte`：canvas 变体挂四端外壳内容区（桌面主内容卡 / 平板 / 移动）/ 认证页 / 错误页 / 启动占位；chrome 变体挂桌面顶栏与侧栏（只铺天光、不画世界层）。页面禁止自建第二套背景装饰。装饰层是**透明渐变/图形叠加**，不引入第二整层底色，因此不违反画布契约；它必须 `aria-hidden` + `pointer-events:none` + `z-index:-1`（容器 `relative isolate`）。色值走 `themes/*.css` 的 `--cst-ambient-*` 全套 token（三主题 × 明暗；新增主题必须补齐，`check-theme-parity` 强制），完整分层/主题语言/边界见 `docs/design-system.md` 第 16 节。
@@ -69,7 +69,7 @@ description: hotspot 前端主题与 CSS Token 架构：三层 token（shared �
 
 - **forest light 软岛覆写**：`--cst-surface-island = color-mix(surface-primary 92%, text-primary 8%)`（合成 #E4E6E2，岛/画布 ratio 1.17）；其余 5 组保持 86%（light）/94%+6%（dark）。修改此值时两端同改并重跑 parity。
 - **方块验收**：三主题 × 明暗关键页截图 + 软岛/画布亮度比 + 文字对比（≥4.5）记录到 `frontend-ui-audit.md`；禁止只验 vibrant。
-- **harmony-only 档**：`textTertiary`（web 无对应）允许单端调整（forest light #5F6C64→#58645C），但需在文档标注。
+- **harmony-only 档**：`textTertiary`（web 无对应）允许单端调整（forest light 取 #58645C），但需在文档标注。
 - **状态徽章对比**：验收规则与命令见 skill `hotspot-frontend-style`「质量门与性能红线」，此处不重复。
 
 ## 主题 & CSS Token 架构
@@ -104,5 +104,5 @@ theme/
 
 - **Inter 自托管**：`static/fonts/inter-latin-wght.woff2`（latin 子集，可变字重轴 100–900，48 KB），`@font-face` 定义在 `src/styles/fonts.css`，首帧 `<link rel="preload">` 在 `src/app.html`（字体请求必须带 `crossorigin`，否则同源也会下载两次）。
 - **中文字形走系统字体栈**，不自托管 CJK 字体：`"Inter", "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans CJK SC", ui-sans-serif, system-ui…`（定义在 `theme/base.css`）。与 harmonyapp 使用系统字体的策略一致，也避免为 CJK 背上数 MB 分片。
-- **禁止在 CSS 里 `@import` 任何第三方样式表**（字体/图标/CDN 主题等）。`@import` 在样式表内部是串行且阻塞的：浏览器会把整张应用样式表挂起，直到该第三方资源返回。本项目实测：带 `@import url("https://fonts.googleapis.com/css2?...")` 时 122 KB / 2.4–5.1s、样式生效时间 2999ms；改为自托管后同一构建 159ms（首次绘制 364ms）。需要外部字体/图标时改为自托管，或用 `media="print"` + `onload` 切回的非阻塞 `<link>` 并注明理由。
+- **禁止在 CSS 里 `@import` 任何第三方样式表**（字体/图标/CDN 主题等）。`@import` 在样式表内部是串行且阻塞的：浏览器会把整张应用样式表挂起，直到该第三方资源返回。本项目实测：自托管构建 159ms（首次绘制 364ms）；若带 `@import url("https://fonts.googleapis.com/css2?...")`，样式表 122 KB / 2.4–5.1s、样式生效时间 2999ms。需要外部字体/图标时改为自托管，或用 `media="print"` + `onload` 切回的非阻塞 `<link>` 并注明理由。
 - **许可**：字体许可全文随资源存放（`static/fonts/OFL.txt`），并在 `frontend/ATTRIBUTIONS.md` 登记来源与许可类型。

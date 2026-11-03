@@ -31,7 +31,7 @@ node reply.mjs --to <user_id> --persona <名> --text-file <路径>  # 语境化�
 node greet.test.mjs       # 单测(时段/配额/守卫/净化/人格配置)
 ```
 
-**多人格口令解析规则**:`WELCOME_PASSWORD_<大写人格名>` 优先,回退 `WELCOME_PASSWORD`;归档文件已含全部口令,手动逐个注入仅特殊场景需要。只注入一份口令时,其他人格登录会 10100(能登录是 state 里残留的缓存 token,过期即暴露——实测踩坑)。
+**多人格口令解析规则**:`WELCOME_PASSWORD_<大写人格名>` 优先,回退 `WELCOME_PASSWORD`;归档文件已含全部口令,手动逐个注入仅特殊场景需要。只注入一份口令时,其他人格登录会 10100(能登录是 state 里残留的缓存 token,过期即暴露)。
 
 回复要求(防 AI 味,详见各人物卡「怎么聊」):**情绪先行**——先给情绪反应再接内容;多数 1~2 句像聊天,不写作文;**禁止每条都以问号结尾**;有自己的立场。**阶段铁律**:欢迎/自我介绍只属于第一句,对方第二句起彻底放下接待框架,就是普通人在闲聊;**语气不必好**——阴阳、无语、怼、敷衍都是人味,永远笑脸=AI。回复后 reply.mjs 自动标记会话已读并写登记簿。
 
@@ -81,9 +81,9 @@ WELCOME_PERSONA=jiajing node greet.mjs --force   # 口令已由归档文件注�
 5. 先 `--dry-run` 核对候选列表,再真实执行;持续观察 `reception-bot/state/` 与每日配额(client_config 的 stranger_message_daily_quota,当前 10000)
 6. 线上首日建议人工盯 1–2 个窗口(收件箱回复全部人工语境化),稳定后再放自动循环
 
-## 已知设计与坑
+## 已知设计与限制
 
-- 覆盖按钮塌缩:列表行点击无反应 = ListItem 覆盖按钮被自动抬升规则压成 relative(修复与说明见 frontend/src/components/list/ListItem.svelte 注释)
+- 覆盖按钮塌缩:列表行点击无反应 = ListItem 覆盖按钮被自动抬升规则压成 relative(说明见 frontend/src/components/list/ListItem.svelte 注释)
 - {nick}/{tag} 占位符:值一律经 sanitizeHandle 净化(剥控制字符/shell 危险字符/截断);模板必须容忍空值(游客无称呼),{nick} 只能放在「感叹词后」位置
 - 陌生人配额按 UTC 日重置(北京早上 8 点);今日已发计数以 DB 出站消息或共享登记簿为准(不信任单文件计数)
 - 收件箱是纯 API 实现(private_chats/fetch unread>0),本地线上通用

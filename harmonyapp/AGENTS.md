@@ -15,7 +15,7 @@ App 版本唯一来源是 `AppScope/app.json5`（`versionName` + `versionCode`�
 - `versionName` 取本次鸿蒙发版的 `X.Y.Z`，`versionCode` 设为 `X*1000000 + Y*1000 + Z`（如 `1.2.3` → `1002003`）；
 - 发版流程：commit 在对应 Worktree 内完成；合并进主分支后推送（见 skill `git-workflow`）。
 
-排查用户反馈时以 `versionName` 定位到发版 commit。未 bump 版本即发安装包 = 无法溯源，视为发布事故。
+排查线上问题时以 `versionName` 定位到发版 commit。未 bump 版本即发安装包 = 无法溯源，视为发布事故。
 
 ## 构建 & 测试
 
@@ -35,7 +35,7 @@ PATH=$JAVA_HOME/bin:$PATH
 - `$NODE $HVIGOR --mode project -p product=default -p buildMode=debug assembleApp --analyze=normal --parallel --incremental --no-daemon` — 编译整个应用（含 CompileArkTS + 打包 + 签名，约 45s）。**`-p buildMode=debug` 不可省**：缺省按 release 构建，`BuildProfile.DEBUG=false` 会让 `SERVER_BASE_URL` 指向生产域名（`chaoset.com`，与 Web 网关同域；api 子域未建 DNS），本地调试环境永远连不上后端且不易察觉
 - `$NODE $HVIGOR clean --no-daemon` — 清理构建产物
 
-> `assembleHap` 任务**按模式存在**（验证方式：实测；hvigor 6.26.4）：`--mode module` 下可用（`Finished :entry:assembleHap` / `BUILD SUCCESSFUL`），`--mode project` 下才报 `Task 'assembleHap' was not found`。不要把它当成废弃任务删掉。
+> `assembleHap` 任务**按模式存在**（复核：`$NODE $HVIGOR --mode module -p product=default -p buildMode=debug assembleHap --no-daemon` 可成功构建，`--mode project` 下才报 `Task 'assembleHap' was not found`；hvigor 6.26.4）。不要把它当成废弃任务删掉。
 > 本项目的完整验证仍统一用 `assembleApp`（`--mode project`，含 CompileArkTS + 打包 + 签名）；类型检查在 assembleApp 启动时自动执行（首行 `TYPE CHECK SUCCESSFUL`）。
 
 **提交时的 hvigor 门禁**：repo root 的 pre-commit 钩子会对 `harmonyapp/` 改动跑 hvigor

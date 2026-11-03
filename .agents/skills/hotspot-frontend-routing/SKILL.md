@@ -25,8 +25,8 @@ src/routes/
     nearby/shared/NearbyHubSections.svelte  # 枢纽三段分区（纯展示，用例锁预览条数与入口）
     nearby/people/         # 附近的人
     nearby/groups/         # 附近的组
-    nearby/moments/        # 附近时刻（页面样板结构权威基准）
-    moments/[momentId]/    # 时刻详情
+    nearby/moments/        # 附近瞬间（页面样板结构权威基准）
+    moments/[momentId]/    # 瞬间详情
     messages/              # 消息列表
     messages/[peerId]/     # 私聊详情（peerId 即对端 user_id）
     messages/group/[groupId]/  # 群聊详情

@@ -82,15 +82,15 @@ TOKEN=<既有 token> ./scripts/perf-smoke.sh               # 非测试环境必�
 注意：本机 OrbStack 虚拟机在不同时间窗口的绝对吞吐波动可达 ±2 倍（CPU 节流/后台负载），
 **只有同一会话内的前后对比可信**；跨时间比较请同时记录时间与数据集（如 hotspot_test 是否被压测数据污染）。
 
-**其他性能基线**（验证方式：实测；避免重复排查）：pprof 端点存在、pgx 连接池
-MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 500ms/1s 为有意 fail-slow、
-本地热读接口 ~3ms —— 当前量级不需要读缓存。
+**其他性能基线**（避免重复排查）：pprof 端点存在、pgx 连接池
+MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 500ms/1s 为有意 fail-slow；
+本地热读接口耗时以 `./scripts/perf-smoke.sh` 输出的 p50 为准（同机同会话内前后对比）——当前量级不需要读缓存。
 
 ## Dev 容器（热加载）
 
 - dev 模式后端跑 `Dockerfile.dev`（基于 `golang:1.26.10-alpine` + air），源码挂载 + air 监听 `.go`/`.toml` 变化自动重编译重启，改 Go 代码无需重启容器；`.air.toml` 配置编译/输出路径（`tmp/` 由 compose 卷隔离）。
 - 首次构建/重建镜像：`docker compose -f docker-compose.yml -f docker-compose.dev.yml build backend`（`GOPROXY` 默认 `goproxy.cn,direct`，依赖经 BuildKit cache mount 缓存）。
-- 注意：`Dockerfile.dev` 的 `ARG GO_VERSION`/`AIR_VERSION` 必须带精确 patch 版本（如 `1.26.10`），浮动 tag（`1.26-alpine`）拉取易超时；跨仓版本主本见 `workwork/versions.env`，改版本走 sync-versions.sh。
+- 注意：`Dockerfile.dev` 的 `ARG GO_VERSION`/`AIR_VERSION` 必须带精确 patch 版本（如 `1.26.10`），浮动 tag（`1.26-alpine`）拉取易超时；跨仓版本主本见 `~/work/workwork/versions.env`，改版本走 `~/work/workwork/scripts/sync-versions.sh`。
 
 ## 开发种子数据（dev 环境）
 
@@ -150,8 +150,8 @@ MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 50
   seed 只写自己创建的行（`--reset` 同样只删 `updated_by_user_id LIKE 'user_seed_%'` 的行），
   已有环境（如主开发库）的既有默认位置保持原样；全新库（CI/新机器）上 seed 写入即生效。
   需要强制对齐时用管理端「应用配置」页修改，或先删除该 `config_id='default'` 行再重跑 seed。
-- **测试**：`go test ./internal/seed/...`（不依赖 DB/网络/devdata：素材由单测在临时目录现场生成）；
-  验证过真实 Postgres + SeaweedFS 双写、重复执行幂等、`--reset` 清理重建一致。
+- **测试**：`go test ./internal/seed/...`（不依赖 DB/网络/devdata：素材由单测在临时目录现场生成）。
+  验证口径：真实 Postgres + SeaweedFS 下连跑两次 `./scripts/seed-dev.sh` 应幂等（无重复数据），`--reset` 后重建结果一致。
 
 ## 技术栈（名称级）
 

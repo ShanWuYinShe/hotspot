@@ -92,7 +92,7 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 - 影响面：**所有需认证的请求全线 `code=10100`**——登录本身可能成功（`signin` 367ms ✓），但随后 `getToken()` 读不到 Asset 而 401 → 管理入口不渲染、需登录的页面拿不到数据。**游客态流程不受影响**（走 public 端点）。
 - 排查：`hilog -x | grep -iE 'TokenAssetStore|rbac|code=10100'`——看到 `TokenAssetStore … not found/cryptography` 紧接 `响应 code=10100` 即可判定是 Asset 故障，不是账号权限或后端问题（同一账号 `curl /admin/api/v1/rbac/me` 返回 `permissions:["*"]` ✓）。
 - 轻形态（`file operation failed`）：`hdc uninstall com.lsyb.social` + 重装后恢复正常（错误回到 `not found` 常态）。强形态（`cryptography operation failed`）：重装/重启均不恢复，按下面的修法处理。
-- **修法已验证**：`bm clean -n com.lsyb.social -d`（清 app 数据）+ 冷启 + 登录 → **无效**（登录后紧跟的认证请求仍 `code=10100`）；**换成干净的系统状态有效**：`pkill -9 -f Emulator` → 新建一个模拟器实例（Device Manager，旧实例保留；或备份后重置实例快照）→ `Emulator -start <实例名>` → `hdc shell reboot` 后重设 rport。验证：TokenAssetStore 无报错、登录后认证请求全部 `code=0` ✓。结论：坏的是**实例的系统状态**（Asset/HUKS 层），与 app 数据无关，也不是「模拟器不支持」。
+- **修法**：`bm clean -n com.lsyb.social -d`（清 app 数据）不解决（登录后紧跟的认证请求仍 `code=10100`）；需更换实例的系统状态：`pkill -9 -f Emulator` → 新建一个模拟器实例（Device Manager，旧实例保留；或备份后重置实例快照）→ `Emulator -start <实例名>` → `hdc shell reboot` 后重设 rport。**判据**：TokenAssetStore 无报错、登录后认证请求全部 `code=0` 即修复。**根因**：坏的是**实例的系统状态**（Asset/HUKS 层），与 app 数据无关，也不是「模拟器不支持」。
 
 ### 5) 登录态可直接看文件
 
@@ -102,7 +102,7 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 1. **连接**：`hdc list targets -v` 出现 `Connected`（本机模拟器为 `127.0.0.1:5555`）。
 2. **冷启动**：`aa force-stop com.lsyb.social` → `aa start -b com.lsyb.social -a EntryAbility`。
-3. **登录**：可从「消息」Tab 的登录提示进入（角色行刷新已内置，不要求先后顺序）；坐标一律 `dumpLayout` 取 bounds 后点击，实测基线见 `references/coords-baselines.md`。
+3. **登录**：可从「消息」Tab 的登录提示进入（角色行刷新由 auth 事件驱动，与挂载顺序无关）；坐标一律 `dumpLayout` 取 bounds 后点击，实测基线见 `references/coords-baselines.md`。
 4. **进个人中心**：点底部「我的」Tab，然后 `uitest uiInput fling 628 2150 628 900 3500` 滚到动作行。
 5. **断言**：`uitest dumpLayout -p /data/local/tmp/ui.json` 后逐节点取 text，判断「升级为完整账号」/「管理员工具台」/「设置」/「退出登录」是否存在。
 6. **截图**：`snapshot_display -f /data/local/tmp/x.jpeg` → `hdc shell "cat …" > local.jpeg`（`hdc file recv` 会 hang，见下）。
@@ -112,10 +112,10 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
    - 快速体验游客的锚点与会话态（AppStorage）**冷启动即清**，重装(-r)保留偏好但锚点需重新设置；暗色等偏好（`dark_mode_preference`）在 `geotalk` 偏好文件中持久化。
 8. **密度/尺寸标定**：本机模拟器（Pura 90 Pro 实例）密度 ≈3.917（1256px / ≈320vp 逻辑宽），dump bounds 换算 vp 用 3.917，不要想当然用 3.25（密度误算会误判骨架卡/空态过大）。
 
-## 登录/切号后的角色行刷新（已内置，无需特定顺序）
+## 登录/切号后的角色行刷新（与挂载顺序无关）
 
 - `ProfilePage.aboutToAppear()` 时 `interactionEventHub.on('auth_user_changed', ...)` → 后台 `refreshAdminPrivileges()`（不阻塞 UI，结果经 `@State` 自动刷新）；`aboutToDisappear()` 注销监听。登出时先同步 `hasAdminPrivileges=false` 再走异步事件，避免登出瞬间残留上一账号的管理员行。
-- 因此**不再需要**「登录必须发生在『我的』Tab 首次挂载之前」的顺序纪律；冷启 → 消息 → 登录 → 我的、或先点「我的」再从页内登录入口登录，两种路径都应得到正确角色行。
+- 登录与「我的」Tab 挂载顺序无关：冷启 → 消息 → 登录 → 我的、或先点「我的」再从页内登录入口登录，两种路径都应得到正确角色行。
 - 若管理员行不出现：先看请求有没有发（`hilog -r` 清缓冲 → 后台 `hdc shell hilog > log.txt` → 操作 → `grep -E 'rbac|ProfilePage' log.txt`），再核对服务端 `POST /admin/api/v1/rbac/me` 返回——`10200` 是「非平台管理员」业务终态（AdminOverviewPage 已与网络错误分开展示），不是 bug。
 
 ## 角色 → 动作行预期
@@ -183,21 +183,21 @@ hdc shell "cat /data/local/tmp/y.jpeg" > shot.jpeg
 - **偶发「整页空白」= 应用瞬时坏状态，不是模拟器限制**：恢复手段 `aa force-stop` → `aa start` 冷启。**反模式**：只用 `dumpLayout`（无障碍树）判空、不截图——页面可能「页头渲染正常、内容区全空」，dump 里同样有文本，只看节点数会把坏页面误判成正常页。**判断页面是否正常一律用 `snapshot_display` 截图复核**。
 - **页面只渲染页头、内容区全空 → 先查 ArkUI 裸 `{ }` 块**：块内 `.layoutWeight(1)` 不生效 → 容器高度塌陷 → 内部 WaterFlow/List 高度为 0。修法/判定见 skill `hotspot-harmony-ui`「审计基线与布局陷阱（指针）」列出的 ArkUI 陷阱明细（dump 节点数：本例页头 10 → 正常时 52）。
 - **常见无害日志**：`智能服务初始化失败 … 15100003` 每 10s 重试、定位恒失败 `3301100 The location switch is off`——属模拟器环境常态，与页面渲染无因果关系。
-- **新增纪律**：**只有 dump 确认当前是推入页（有返回入口）时才按 `keyEvent Back`**——在「点了没反应」的页面（如游客态通知）按 Back 等于退到上一页/退出应用，实测直接退回桌面（随后所有点击都落在桌面上）。
+- **纪律**：**只有 dump 确认当前是推入页（有返回入口）时才按 `keyEvent Back`**——在「点了没反应」的页面（如游客态通知）按 Back 等于退到上一页/退出应用，实测直接退回桌面（随后所有点击都落在桌面上）。
 
 ## 走查脚本（避免每次从零写，坑已内置）
 
 `scripts/walk.py`（本 skill 目录下）提供最小工具集：`dump()/nodes()/texts()/find()/inputs()/buttons()/tap()/input_text()/fling()/back()/snapshot()`，可直接 import 复用；也可命令行快速点击：
 
 ```bash
-python3 .agents/skills/hotspot-harmony-device-verify/scripts/walk.py 附近
+python3 ~/work/hotspot/.agents/skills/hotspot-harmony-device-verify/scripts/walk.py 附近
 ```
 
 脚本注释里固化了本文所有坑（坐标取自 dump、每步校验、Back 只在键盘打开时按、安全键盘、按钮在折叠线下先 fling）。
 
 ## 免登录可达页面与顶栏坐标
 
-顶栏动作按钮坐标、免登录与需登录页面清单见 `references/coords-baselines.md`。游客态「通知」点之无反应；首页已无「地图/选点」入口（见 `references/coords-baselines.md`），不要再当走查项。
+顶栏动作按钮坐标、免登录与需登录页面清单见 `references/coords-baselines.md`。游客态「通知」点之无反应；首页没有「地图/选点」入口（见 `references/coords-baselines.md`），不要当走查项。
 
 ## references
 

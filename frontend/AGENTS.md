@@ -170,7 +170,7 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
 5. **跨端色彩与刻度对齐**：harmonyapp `ThemeConstants.ets` 的 ColorConfig 与本项目
    `themes/*.css` 的 `--cst-palette-*` 是同一套色板的两端表达，改色必须两侧
    同步。校验脚本、覆盖范围与同步流程的**唯一权威描述**见根 `docs/design-system.md`
-   第 14 节与 `harmonyapp/AGENTS.md`「跨端同步机制」——`bun run check:theme`
+   第 14 节与 skill `hotspot-harmony-ui`「跨端同步机制」——`bun run check:theme`
    已串联 parity 与色彩/刻度/utility 类名共四个检查脚本，CI 漂移即拦截；改字号/圆角 token
    必须两端同步。
 6. **徽标与标签（Badge / Pill）居中与排版契约**：

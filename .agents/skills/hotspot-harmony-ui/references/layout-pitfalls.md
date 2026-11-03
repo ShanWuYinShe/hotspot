@@ -9,7 +9,7 @@
 - 修复：**`.border()` 一律写在 `.borderRadius()` 之前**（后设的 borderRadius 覆盖 border）。
 - 排查口径（可复现）：扫「`.borderRadius(` 之后 3 行内出现 `.border(`」的候选——
   `grep -rn -A3 '\.borderRadius(' harmonyapp/entry/src/main/ets | grep -B2 '\.border('`
-  （一次性脚本报过 66 处候选，但部分元素本意即直角，视觉影响需逐例核实）。
+  （扫描会报出候选，但部分元素本意即直角，视觉影响需逐例核实）。
 - 实拍案例：ProfilePage 升级表单「取消」直角 vs「确认升级」胶囊。
 
 ## 2. Scroll 内容短于视口时默认垂直居中
