@@ -33,13 +33,24 @@ export type PageShellVariant = 'default' | 'wide' | 'narrow' | 'form' | 'feed-na
  * 页面内需要**全宽元素**（封面图、通栏分区）时，用本函数取同一 gutter 做负 margin 抵消
  * （对齐前端 `-mx-[var(--cst-page-gutter)]`），而不是关掉容器留白或另写一套 padding。
  */
-export function resolvePageGutter(breakpoint: BreakpointType): number {
+export function resolvePageGutter(breakpoint: BreakpointType, widthVp: number = 0): number {
   const gutter = DesignConstants.PAGE_SHELL;
+  // 与 web --cst-page-gutter 同阈值：<600 → 16，600~1279 → 24，≥1280 → 28。
+  if (widthVp > 0) {
+    if (widthVp < 600) {
+      return gutter.GUTTER_MOBILE;
+    }
+    if (widthVp < 1280) {
+      return gutter.GUTTER_TABLET;
+    }
+    return gutter.GUTTER_DESKTOP;
+  }
   switch (breakpoint) {
     case 'xs':
     case 'sm':
       return gutter.GUTTER_MOBILE;
     case 'md':
+    case 'lg':
       return gutter.GUTTER_TABLET;
     default:
       return gutter.GUTTER_DESKTOP;
@@ -51,6 +62,7 @@ export struct PageShellContainer {
   @BuilderParam content: () => void;
   @Prop variant: PageShellVariant = 'default';
   @Prop currentBreakpoint: BreakpointType = 'sm';
+  @StorageProp('currentWidthVp') currentWidthVp: number = 0;
   /** 关闭横向留白（父级已自行处理 padding 时用） */
   @Prop noHorizontalPadding: boolean = false;
   /** 是否占满父容器高度。滚动容器（Scroll/Refresh）内部必须传 false：
@@ -82,7 +94,7 @@ export struct PageShellContainer {
 
   /**
    * 横向留白：**全站唯一 gutter 来源**（对齐前端 ContentColumn 的
-   * --cst-page-gutter：移动 20 / 平板 24 / 桌面 28）。
+   * --cst-page-gutter：移动 16 / 平板 24 / 桌面 28，阈值 600 / 1280）。
    *
    * 契约（强制）：页面内部**不得**再为自己的正文加 left/right padding。
    * 此前 8 个页面在容器已带 16 的基础上又自加 16~20，实际留白变成 32~36，
@@ -92,7 +104,7 @@ export struct PageShellContainer {
    * （对齐前端 -mx-[var(--cst-page-gutter)]），而不是关掉本容器留白。
    */
   private getHorizontalPadding(): number {
-    return resolvePageGutter(this.currentBreakpoint);
+    return resolvePageGutter(this.currentBreakpoint, this.currentWidthVp);
   }
 
   build() {

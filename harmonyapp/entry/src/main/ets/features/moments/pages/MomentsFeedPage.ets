@@ -68,6 +68,7 @@ export struct MomentsFeedPage {
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   @StorageProp('isTablet') isTablet: boolean = false;
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
+  @StorageProp('currentWidthVp') currentWidthVp: number = 0;
   /** 作为路由页 push 时显示返回按钮（tab 场景隐藏，对齐前端 /nearby/moments 独立页） */
   @Prop showBackButton: boolean = false;
 
@@ -531,7 +532,7 @@ export struct MomentsFeedPage {
 
   private getWallColumns(): number {
     // 对齐前端 /nearby/moments gridColumns：mobile 2 / tablet 2 / desktop 3
-    return isDesktopForm(this.currentBreakpoint) ? 3 : 2;
+    return isDesktopForm(this.currentBreakpoint, this.currentWidthVp) ? 3 : 2;
   }
 
   private openMomentDetail(moment: MomentItem): void {

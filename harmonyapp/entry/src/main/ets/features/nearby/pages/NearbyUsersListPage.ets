@@ -32,6 +32,7 @@ import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 @Component
 export struct NearbyUsersListPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
+  @StorageProp('currentWidthVp') currentWidthVp: number = 0;
   @StorageLink(KEY_BROWSE_ANCHOR) @Watch('onBrowseAnchorChanged') browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
@@ -220,8 +221,8 @@ export struct NearbyUsersListPage {
   }
 
   private getGridColumnCount(): number {
-    // 对齐前端 /nearby/people gridColumns：mobile/tablet 2 列，desktop(≥1280) 3 列
-    return isDesktopForm(this.currentBreakpoint) ? 3 : 2;
+    // 对齐前端 /nearby/people gridColumns：mobile/tablet 2 列，desktop(≥1024) 3 列
+    return isDesktopForm(this.currentBreakpoint, this.currentWidthVp) ? 3 : 2;
   }
 
   build() {

@@ -74,6 +74,7 @@ export struct MessagePage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
+  @StorageProp('currentWidthVp') currentWidthVp: number = 0;
 
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);
   private messageCacheService = MessageCacheService.getInstance();
@@ -496,7 +497,7 @@ export struct MessagePage {
   }
 
   private isChatSelected(item: ChatItem): boolean {
-    return useMasterDetail(this.currentBreakpoint) && this.selectedChatKey === this.getChatKey(item);
+    return useMasterDetail(this.currentBreakpoint, this.currentWidthVp) && this.selectedChatKey === this.getChatKey(item);
   }
 
   private getChatItemBackground(item: ChatItem): ResourceColor {
@@ -754,7 +755,7 @@ export struct MessagePage {
       .margin({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.LG })
 
       // 宽屏（master-detail）提示：当前点击会话仍 push 独立页（保持聊天功能完整）
-      if (useMasterDetail(this.currentBreakpoint)) {
+      if (useMasterDetail(this.currentBreakpoint, this.currentWidthVp)) {
         Row({ space: DesignConstants.SPACING.SM }) {
           LucideIcon({
             icon: AppIcon.INFO,

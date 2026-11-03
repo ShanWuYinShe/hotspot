@@ -105,6 +105,7 @@ struct Index {
   @State themeFadeOpacity: number = 1;
   @StorageProp('isTablet') isTablet: boolean = false;
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'lg';
+  @StorageProp('currentWidthVp') currentWidthVp: number = 0;
 
   @State currentTabIndex: number = 0;
   @State currentRoute: string = 'home';
@@ -865,7 +866,7 @@ struct Index {
         // 无需手写 .navDestination() 映射。根视图 = PhoneLayout / DesktopLayout（tab 容器）。
         // 缺少此宿主时 pushPathByName 只填栈不渲染，导致除 tab 外所有菜单点击静默失效。
         Navigation(this.navPathStack) {
-          if (!useSidebarChrome(this.currentBreakpoint)) {
+          if (!useSidebarChrome(this.currentBreakpoint, this.currentWidthVp)) {
             PhoneLayout({
               currentTabIndex: $currentTabIndex,
               showCreateSheet: $showCreateSheet,

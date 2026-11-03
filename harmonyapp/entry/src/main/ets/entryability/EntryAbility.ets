@@ -373,6 +373,7 @@ export default class EntryAbility extends UIAbility {
    * 计算并存储当前响应式断点到 AppStorage 'currentBreakpoint'
    * - 优先使用传入的窗口宽度（vp）；否则回退到 display.getDefaultDisplaySync()
    * - 用 getBreakpointType() 算断点；同步 'isTablet'（≥600vp 或平板设备 → 平板/宽屏形态）
+   * - 同步 'currentWidthVp'（窗口宽 vp），供 Breakpoint 语义阈值（isDesktop/isWide）精确判定
    * - 写入 AppStorage，Index.ets / PhoneLayout / DesktopLayout 读取，驱动手机/平板/桌面自适应
    */
   private computeAndStoreBreakpoint(widthVpOverride?: number): void {
@@ -387,6 +388,7 @@ export default class EntryAbility extends UIAbility {
         if (px <= 0 || density <= 0) {
           hilog.warn(DOMAIN_NUMBER, TAG, 'display 信息异常 (px=%{public}d, density=%{public}d)，breakpoint 保持默认 lg', px, density);
           AppStorage.setOrCreate<BreakpointType>('currentBreakpoint', 'lg');
+          AppStorage.setOrCreate<number>('currentWidthVp', 0);
           return;
         }
         widthVp = Math.floor((px * 160) / density);
@@ -395,10 +397,12 @@ export default class EntryAbility extends UIAbility {
       const isTablet: boolean = widthVp >= 600 || deviceInfo.deviceType === 'tablet';
       AppStorage.setOrCreate<BreakpointType>('currentBreakpoint', bp);
       AppStorage.setOrCreate<boolean>('isTablet', isTablet);
+      AppStorage.setOrCreate<number>('currentWidthVp', widthVp);
       hilog.info(DOMAIN_NUMBER, TAG, '当前断点: %{public}s (vp=%{public}d, isTablet=%{public}s)', bp, widthVp, String(isTablet));
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, '计算 breakpoint 失败，使用默认 lg: %{public}s', JSON.stringify(error));
       AppStorage.setOrCreate<BreakpointType>('currentBreakpoint', 'lg');
+      AppStorage.setOrCreate<number>('currentWidthVp', 0);
     }
   }
 

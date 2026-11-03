@@ -1,6 +1,6 @@
 # UI 跨端对齐 Playbook（Web 移动端 ↔ HarmonyOS ↔ 未来 Android）
 
-> 本文回答「怎么做对齐」，与 token 权威（两端 `AGENTS.md` + `check-cross-platform-*.mjs`）互补（`docs/design-system.md` 为已停更的历史快照，仅供考古）。
+> 本文回答「怎么做对齐」，与 token 权威（两端 `AGENTS.md` + `check-cross-platform-*.mjs`）互补（token 数值以 `docs/design-system.md` 为准）。
 > 经验来自 harmonyapp 与前端移动端的整轮实战对齐（2026-09），方法论可直接迁移到后续 Android 端。
 
 ---
@@ -44,7 +44,7 @@
   （AVD 密度在 `~/.Huawei/Emulator/deployed/<name>/config.ini` 的 `hw.lcd.density`。）
 - dump 的 Text bounds 是行高框，不等于 fontSize；判断「容器是否贴边/间距是否对」最可靠
   （本方法抓出 hero 卡 `width('100%')` 贴屏幕全宽、边框贴边不可见的真 bug）。
-- 前端组件实测要带**平台判定上下文**：`innerWidth≥1280 → desktop`，标题档会从 2xl 变 xl。
+- 前端组件实测要带**平台判定上下文**：`innerWidth≥1024 → desktop`，标题档会从 2xl 变 xl。
   agent-browser 会话重置后视口会丢，**每次先 `set viewport 390 844` 并 `eval innerWidth` 确认**。
 
 ### 第 3 层：整页视觉对比（收尾）

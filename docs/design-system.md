@@ -38,15 +38,15 @@
 | 语义 | 前端（`platform.svelte.ts`） | 鸿蒙（`core/responsive/Breakpoint.ets`） | 值 |
 |---|---|---|---|
 | 移动端（手机） | `platform === 'mobile'` | `!isTablet` | `< 600` |
-| 平板端 | `platform === 'tablet'` | `isTablet` | 前端 `600 – 1023`；鸿蒙 `≥ 600` |
-| 桌面端 | `isDesktop` | `isDesktopForm` | 前端 `≥ 1024`；鸿蒙 `≥ 1280` |
+| 平板端 | `platform === 'tablet'` | `isTablet` 且 `!isDesktopForm` | `600 – 1023` |
+| 桌面端 | `isDesktop` | `isDesktopForm` | `≥ 1024`（两端一致） |
 | 内容双栏（master-detail） | `isWideTablet` | `isWideForm` | `≥ 960` |
 
-- **chrome 归桌面**：前端 ≥1024、鸿蒙 ≥1280 切桌面顶栏 + 侧边栏；其余走 Phone/TabletLayout（**移动端和平板端的导航栏永远在底部**，禁止在左侧出现 side rail 侧边栏）。
-- **内容双栏归 isWide**：960 以上内容可双栏；960–1023（前端）与 960–1279（鸿蒙）仍是「平板药丸底栏 + 内容可双栏」，不是桌面侧边栏。
-- 鸿蒙 `Breakpoint.ets` 底层 6 档（xs/sm/md/lg/xl/xxl，阈值 320/600/840/1200/1600vp）仅服务栅格，业务一律用语义派生量。
+- **宽度来源**：鸿蒙 `EntryAbility` 把窗口宽 vp 写入 `AppStorage.currentWidthVp`，`Breakpoint` 语义函数按宽度精确判定（阈值 600/960/1024，以 web 为基准）；无宽度来源时回退命名断点（xl/xxl 视为桌面）。
+- **chrome 归桌面**：两端 ≥1024 切桌面顶栏 + 侧边栏；其余走 Phone/TabletLayout（**移动端和平板端的导航栏永远在底部**，禁止在左侧出现 side rail 侧边栏）。
+- **内容双栏归 isWide**：≥960 内容可双栏；960–1023 仍是「平板药丸底栏 + 内容可双栏」，不是桌面侧边栏。
+- 鸿蒙 `Breakpoint.ets` 底层 6 档（xs/sm/md/lg/xl/xxl，阈值 320/600/840/1200/1600vp）只服务 ArkUI 栅格；业务一律用语义派生量（宽度判定优先）。
 - 前端 Tailwind 断点在 `tailwind.css` 覆写为：`sm` 600 / `md` 960 / `lg` 1024 / `xl` 1280 / `2xl` 1536，与 `platform.svelte.ts` 的语义阈值咬合（**不是 Tailwind 默认 640/768/1024/1280/1536**）。
-- **阈值现状**：前端桌面 chrome 从 1024px 起、鸿蒙从 1280vp 起；两端桌面阈值不同，改动任一端前先对齐。
 
 ---
 
@@ -194,8 +194,8 @@
 
 > 改主题色只改 `themes/*.css` 与 `ThemeConstants` 两端同源值，不要改 `semantic.css` 的派生公式。
 > 覆盖范围：`ColorConfig` 中参与跨端映射的字段（14 组 palette 映射 + 合成色规则）由 `check-cross-platform-colors.mjs` 逐值校验，
-> 其余装饰字段（glow / tabBar 等）与 `AmbientColorConfig`（氛围画布 12 字段，预合成 `#AARRGGBB`）、`ThemeShadows` 为手工镜像，
-> 改 palette 后必须按同一公式重算（无脚本兜底）。
+> 其余装饰字段（glow / tabBar 等）与 `ThemeShadows` 为手工镜像；
+> `AmbientColorConfig`（氛围画布 12 字段，预合成 `#AARRGGBB`）由 `check-cross-platform-ambient.mjs` 逐值校验。
 
 ---
 
@@ -285,12 +285,12 @@
 
 | 断点 | 鸿蒙 `PAGE_SHELL` gutter | 前端 `--cst-page-gutter` |
 |---|---|---|
-| xs / sm（手机） | `GUTTER_MOBILE` = 16 | 1rem（< 600） |
-| md（平板） | `GUTTER_TABLET` = 24 | 1.5rem（≥ 600） |
-| lg+（桌面） | `GUTTER_DESKTOP` = 28 | 1.75rem（≥ 1280） |
+| 手机（< 600） | `GUTTER_MOBILE` = 16 | 1rem |
+| 平板（600 – 1279） | `GUTTER_TABLET` = 24 | 1.5rem |
+| 桌面（≥ 1280） | `GUTTER_DESKTOP` = 28 | 1.75rem |
 
-> 阈值差异：前端 gutter 在 ≥1280 才升到 1.75rem；鸿蒙按 Breakpoint lg（≥840vp）即用 28vp。
-> 改 gutter 语义前先统一两端阈值，否则 840–1279 区间两端留白相差 4。
+> 两端同一阈值：鸿蒙 `PageShellContainer` 读 `AppStorage.currentWidthVp` 精确解析（无宽度时回退命名断点），
+> 与 web 的 600 / 1280 断点一致；改阈值必须两端同步。
 
 - **禁止**「容器 gutter + 页面自加 padding」双重留白——会叠成 36~40，与只用容器
   gutter 的页面差 16~20vp，各页正文左边缘不在同一条竖线上，滑动时边界跳动。
@@ -617,6 +617,7 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
 | 跨端色彩 | `frontend/scripts/check-cross-platform-colors.mjs` | `themes/*.css --cst-palette-*` ↔ `ThemeConstants.ets ColorConfig` 逐值一致（3 主题 × 2 明暗 × 映射组）+ 主题 swatch |
 | 跨端刻度 | `frontend/scripts/check-cross-platform-scale.mjs` | 字号 9 档（`--text-*` ↔ `FONT.SIZE`，含 lg+ Tailwind 默认档）+ 圆角 5 档 + 各档行高（`textLineHeight()`）逐值一致；单端加近邻档即拦截。已登记豁免：`FONT.SIZE.LG=16`（HarmonyOS 平台适配档） |
 | 类名有效性 | `frontend/scripts/check-utility-classes.mjs` | 源码消费的 token 类名必须已在 `@theme` 注册（含变体前缀与功能类白名单）；未注册的 utility 会静默失效 |
+| 跨端氛围画布 | `frontend/scripts/check-cross-platform-ambient.mjs` | web `--cst-ambient-*`（6 组合 × 12 字段）按 `color-mix` 公式预合成 ↔ 鸿蒙 `ThemeConstants.AMBIENT` 逐值一致 |
 
 以上脚本串入 `bun run check:theme`（随 `bun run check` 与 CI 生效），漂移即红；
 组件原语同类型一致性另由 `check-component-consistency.mjs` 在 `bun run check` 中校验。
@@ -721,7 +722,7 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
 
 - 鸿蒙端实现：`AmbientBackdrop.ets` + `ThemeConstants.AMBIENT`（6 组合 × 12 色，预合成 `#AARRGGBB`）。
   字段语义与 web `--cst-ambient-*` 一一对应；数值按 web `color-mix(palette 色 N%, transparent)` 的同一 N 预合成，
-  **无脚本逐值校验**——改 web alpha 后必须同步重算鸿蒙值；
+  由 `check-cross-platform-ambient.mjs` 逐值校验（改 web alpha 后同步重算，否则 CI 红）；
 - **平台适配差异（已登记）**：web 与鸿蒙默认都为静态世界（web 动画默认关闭，
   统一以性能优先）；web 额外支持 `motion` 逐页 opt-in，鸿蒙保持静态 Canvas；
   鸿蒙每页一块画布（见 16.4）；两端同主题同明暗的世界语言/构图一致；

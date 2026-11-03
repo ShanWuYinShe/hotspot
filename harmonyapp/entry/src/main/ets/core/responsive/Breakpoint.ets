@@ -18,9 +18,10 @@
  *   - 业务语义三轴：
  *       · isTablet（≥600vp，EntryAbility 维护）：PhoneLayout 内切药丸底栏（对齐前端 tablet 档）
  *       · isWideForm（≥960vp）：内容区是否双栏 / master-detail（对齐前端 isWide=960）
- *       · isDesktopForm（≥1280vp）：是否切桌面 chrome 顶栏+侧边栏（对齐前端 desktop=1280）
+ *       · isDesktopForm（≥1024vp）：是否切桌面 chrome 顶栏+侧边栏（对齐前端 desktop=1024）
  *   - 关键原则（对齐前端 ui-layout.md）：chrome 归 isDesktopForm，内容双栏归 isWideForm，
- *     二者解耦——960–1279vp 是「平板药丸底栏 + 内容可双栏」，不是「桌面侧边栏」。
+ *     二者解耦。宽度可用时按 web 阈值（600 / 960 / 1024）精确判定；命名断点仅作无宽度来源时的回退
+ *     （xl/xxl 视为桌面）。
  *   - 旧版 mediaQuery 监听实现（BreakpointState.ets）已删除
  */
 
@@ -35,7 +36,7 @@ export const BREAKPOINT_XL_MAX_VP: number = 1599;  // 1200-1599vp = xl（桌面�
 // 业务语义阈值（vp）— 对齐前端 platform.svelte.ts
 // vp 与 CSS px 同为逻辑单位（EntryAbility 的 widthVp = px*160/densityDPI 即逻辑宽度），故 1:1 对应。
 export const WIDE_MIN_VP: number = 960;    // ≥960vp：内容区双栏 / master-detail（对齐前端 isWide=960）
-export const DESKTOP_MIN_VP: number = 1280; // ≥1280vp：桌面 chrome 顶栏+侧边栏（对齐前端 desktop=1280）
+export const DESKTOP_MIN_VP: number = 1024; // ≥1024vp：桌面 chrome 顶栏+侧边栏（对齐前端 desktop=1024）
 
 /**
  * HarmonyOS 命名断点（与 ArkUI GridRow.currentBreakpoint 一致）
@@ -50,9 +51,9 @@ export type BreakpointType = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
 /**
  * 业务视角的端形态（对齐前端 mobile/tablet/desktop 三档 platform）
- * - MOBILE: xs / sm / md / lg（< 1280vp，手机 + 平板，走 PhoneLayout）
- * - DESKTOP: xl / xxl 中 ≥1280vp（桌面 / PC，走 DesktopLayout）
- * 注：lg(840-1199) 归 MOBILE 形态但 isTablet(≥600) 在其内切药丸底栏。
+ * - MOBILE：宽度 < 1024vp（手机 + 平板，走 PhoneLayout）
+ * - DESKTOP：宽度 ≥ 1024vp（桌面 / PC，走 DesktopLayout）
+ * 注：命名断点 lg(840-1199) 只作无宽度来源时的粗粒度回退；真实判定用传入 widthVp。
  */
 export type DeviceForm = 'mobile' | 'desktop';
 
@@ -65,18 +66,25 @@ export interface BreakpointNumberMap {
   xxl: number;
 }
 
-/** 手机/平板形态（< 1280vp）：走 PhoneLayout（含平板药丸底栏）。对齐前端 !isDesktop。 */
-export function isMobileForm(bp: BreakpointType): boolean {
-  return !isDesktopForm(bp);
+/** 手机/平板形态（宽度 < 1024vp）：走 PhoneLayout（含平板药丸底栏）。对齐前端 !isDesktop。 */
+export function isMobileForm(bp: BreakpointType, widthVp: number = 0): boolean {
+  return !isDesktopForm(bp, widthVp);
 }
 
-/** 桌面形态（≥ 1280vp）：走 DesktopLayout 顶栏+侧边栏。对齐前端 isDesktop(≥1280)。 */
-export function isDesktopForm(bp: BreakpointType): boolean {
-  return bp === 'xl' || bp === 'xxl' || getBreakpointVp(bp) >= DESKTOP_MIN_VP;
+/** 桌面形态（宽度 ≥ 1024vp）：走 DesktopLayout 顶栏+侧边栏。对齐前端 isDesktop(≥1024)。
+ *  widthVp 省略（无窗口宽度来源）时回退到命名断点：xl/xxl 视为桌面。 */
+export function isDesktopForm(bp: BreakpointType, widthVp: number = 0): boolean {
+  if (widthVp > 0) {
+    return widthVp >= DESKTOP_MIN_VP;
+  }
+  return getBreakpointVp(bp) >= DESKTOP_MIN_VP;
 }
 
-/** 宽屏内容形态（≥ 960vp）：内容区双栏 / master-detail。对齐前端 isWide(≥960)。与 chrome 解耦。 */
-export function isWideForm(bp: BreakpointType): boolean {
+/** 宽屏内容形态（宽度 ≥ 960vp）：内容区双栏 / master-detail。对齐前端 isWide(≥960)。与 chrome 解耦。 */
+export function isWideForm(bp: BreakpointType, widthVp: number = 0): boolean {
+  if (widthVp > 0) {
+    return widthVp >= WIDE_MIN_VP;
+  }
   return getBreakpointVp(bp) >= WIDE_MIN_VP;
 }
 
@@ -87,21 +95,21 @@ export function isWideForm(bp: BreakpointType): boolean {
 /** 采用 master-detail 信息架构（双栏 / split-pane）。
  *  对齐前端 platformStore.useMasterDetail（= isWide ≥960）。
  *  用于 moments / message / nearby / profile 等存在「双栏 vs 单列」布局差异的页面。 */
-export function useMasterDetail(bp: BreakpointType): boolean {
-  return isWideForm(bp);
+export function useMasterDetail(bp: BreakpointType, widthVp: number = 0): boolean {
+  return isWideForm(bp, widthVp);
 }
 
 /** 采用常驻侧栏导航 chrome（桌面顶栏+侧边栏）。
- *  对齐前端 platformStore.useSidebarChrome（= isDesktop ≥1280）。
+ *  对齐前端 platformStore.useSidebarChrome（= isDesktop ≥1024）。
  *  用于 Layout / Index 的 chrome 装配分支。 */
-export function useSidebarChrome(bp: BreakpointType): boolean {
-  return isDesktopForm(bp);
+export function useSidebarChrome(bp: BreakpointType, widthVp: number = 0): boolean {
+  return isDesktopForm(bp, widthVp);
 }
 
 /** 桌面侧栏已直达某入口，页面内隐藏冗余入口（返回/创建按钮等）。
- *  对齐前端 platformStore.hideRedundantEntry（= isDesktop ≥1280）。 */
-export function hideRedundantEntry(bp: BreakpointType): boolean {
-  return isDesktopForm(bp);
+ *  对齐前端 platformStore.hideRedundantEntry（= isDesktop ≥1024）。 */
+export function hideRedundantEntry(bp: BreakpointType, widthVp: number = 0): boolean {
+  return isDesktopForm(bp, widthVp);
 }
 
 /** 断点档位对应的最小 vp（用于语义阈值判断） */
@@ -144,7 +152,7 @@ export function getBreakpointType(widthVp: number): BreakpointType {
 
 /**
  * ArkUI GridRow breakpoints 配置（vp 单位）— ArkUI 栅格标准档位。
- * 业务语义阈值（isWideForm≥960 / isDesktopForm≥1280）见文件顶部常量。
+ * 业务语义阈值（isWideForm≥960 / isDesktopForm≥1024，宽度可用时按 widthVp 精确判定）见文件顶部常量。
  */
 export const GRID_BREAKPOINTS_VALUE: string[] = [
   '320vp',

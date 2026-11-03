@@ -31,6 +31,7 @@ import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 @Component
 export struct NearbyGroupsListPage {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
+  @StorageProp('currentWidthVp') currentWidthVp: number = 0;
   @StorageLink(KEY_BROWSE_ANCHOR) @Watch('onBrowseAnchorChanged') browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
@@ -182,10 +183,10 @@ export struct NearbyGroupsListPage {
   }
 
   private isDesktop(): boolean {
-    return isDesktopForm(this.currentBreakpoint);
+    return isDesktopForm(this.currentBreakpoint, this.currentWidthVp);
   }
 
-  /** 网格卡分列数：mobile/tablet 2 列，desktop(≥1280) 3 列（对齐前端 /nearby/groups） */
+  /** 网格卡分列数：mobile/tablet 2 列，desktop(≥1024) 3 列（对齐前端 /nearby/groups） */
   private getColumnCount(): number {
     return this.isDesktop() ? 3 : 2;
   }

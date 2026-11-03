@@ -77,6 +77,7 @@ export struct ProfilePage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
+  @StorageProp('currentWidthVp') currentWidthVp: number = 0;
 
   private stateManager = GlobalStateManager.getInstance();
   @State isEditing: boolean = false;
@@ -828,7 +829,7 @@ export struct ProfilePage {
         }
         .width('100%')
         .height('100%')
-        .constraintSize({ maxWidth: useMasterDetail(this.currentBreakpoint) ? 720 : '100%' })
+        .constraintSize({ maxWidth: useMasterDetail(this.currentBreakpoint, this.currentWidthVp) ? 720 : '100%' })
 
         // 退出登录已按 P0-4 收敛到设置页（全端单入口），本页不再承载确认弹窗
       }
@@ -939,7 +940,7 @@ export struct ProfilePage {
       } else {
         Scroll() {
           Column() {
-            if (useMasterDetail(this.currentBreakpoint)) {
+            if (useMasterDetail(this.currentBreakpoint, this.currentWidthVp)) {
               // ======== 宽端（≥960）：保留垂直居中形态 ========
               ProfileAvatarBlock({
                 resolvedThemeId: this.resolvedThemeId,

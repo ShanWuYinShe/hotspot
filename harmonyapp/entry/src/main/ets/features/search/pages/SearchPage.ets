@@ -64,6 +64,7 @@ export struct SearchPage {
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
+  @StorageProp('currentWidthVp') currentWidthVp: number = 0;
 
   @State currentIndex: number = 0;
   @State keyword: string = '';
@@ -1201,7 +1202,7 @@ export struct SearchPage {
       .width('100%').height('100%')
       // 桌面 3 列瀑布流（与 MomentsFeedPage getWallColumns 契约对齐），
       // 平板/手机 2 列紧凑保留
-      .columnsTemplate(isDesktopForm(this.currentBreakpoint) ? '1fr 1fr 1fr' : '1fr 1fr')
+      .columnsTemplate(isDesktopForm(this.currentBreakpoint, this.currentWidthVp) ? '1fr 1fr 1fr' : '1fr 1fr')
       .columnsGap(DesignConstants.SPACING.MD)
       .rowsGap(DesignConstants.SPACING.MD)
       .padding({ top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP, bottom: DesignConstants.PAGE_SHELL.SECTION_GAP })

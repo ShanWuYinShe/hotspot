@@ -82,6 +82,7 @@ export struct PhoneLayout {
   @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   /** 实时断点（AppStorage 写入），用于在 PhoneLayout 内决策宽屏通知侧栏 */
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
+  @StorageProp('currentWidthVp') currentWidthVp: number = 0;
 
   // 内部状态
   /** 当前按下的底部导航 Tab 索引（-1 表示无），用于按下缩放反馈，对齐前端 hover-btn:active */
@@ -222,7 +223,7 @@ export struct PhoneLayout {
       // - 宽屏（≥ 960vp / 平板横屏 / 折叠屏展开）：右侧滑出侧栏卡片（约 420vp），
       //   整页不被通知中心全屏接管（与「桌面侧边栏常驻 + 通知/详情内嵌」心智一致）
       if (this.showNotificationCenter) {
-        if (isWideForm(this.currentBreakpoint)) {
+        if (isWideForm(this.currentBreakpoint, this.currentWidthVp)) {
           Stack({ alignContent: Alignment.Center }) {
             Column()
               .width('100%').height('100%')
