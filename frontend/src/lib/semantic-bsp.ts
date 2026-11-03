@@ -63,6 +63,12 @@ export function getCardBspLayout(
 	// 所有大卡只留给真的有图的卡片。
 	const canSpan = item.hasImage !== false;
 
+	// 数据量 ≤3 时不做任何跨度：稀疏网格需要「整行居中」的稳定轨道，
+	// 一张 2x2/2x1 会撑破居中行；少数据下巨卡也会放大空洞感。
+	if (total <= 3) {
+		return { tier: '1x1', cls: 'col-span-1 row-span-1', horizontal: false, featured: false };
+	}
+
 	let tier: CardTier = '1x1';
 
 	if (isMobile) {

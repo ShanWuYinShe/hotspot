@@ -9,6 +9,7 @@
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import AdaptiveCardGrid from '@/components/layout/AdaptiveCardGrid.svelte';
 	import Select from '@/components/forms/Select.svelte';
 	import Button from '@/components/ui/button.svelte';
 import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
@@ -329,8 +330,12 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 						<!-- 语义化 BSP 邻居网格：移动 2 列 / 平板 3 列；lg 起按 300px 最小卡宽自动增列，
 						     2560≈7 列、4K≈11 列，避免固定列数在超宽屏把单卡拉成 500px+。
 						     密集排布 (grid-flow-dense) + 自适应行高，全量卡片周期性穿插推荐焦点。 -->
-						<div
-							class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))]"
+						<AdaptiveCardGrid
+							count={visibleUsers.length}
+							minTrackRem={18.75}
+							gapRem={[0.75, 0.875, 0.875]}
+							centerSparse={bspLayouts.slice(0, visibleUsers.length).every((l) => l.tier === '1x1')}
+							class="grid-flow-dense px-1"
 							style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
 						>
 							{#each visibleUsers as user, index (user.id)}
@@ -348,7 +353,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 									/>
 								</div>
 							{/each}
-						</div>
+						</AdaptiveCardGrid>
 					</div>
 
 					{#if visibleCount < list.length}

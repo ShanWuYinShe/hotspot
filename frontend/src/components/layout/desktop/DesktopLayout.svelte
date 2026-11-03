@@ -12,6 +12,7 @@
 	import { composer, openComposer, closeComposer } from '@/stores/composer.svelte';
 	import { unread } from '@/stores/unread.svelte';
 	import { headerIsland } from '@/stores/header-island.svelte';
+	import HomeFeedIsland from '@/components/home/HomeFeedIsland.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import * as Dialog from '@/components/ui/dialog';
 	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
@@ -274,7 +275,12 @@
 		<!-- Center Page Island — 页面锚点岛：当页面锚点（标题/身份）离开视口时展示，
 		     把会滚走的常驻信息固定到居中位置；点击标题回到锚点，绝不遮挡正文 -->
 		<div class="flex-1 min-w-0 h-full pointer-events-none">
-			{#if headerIsland.visible && headerIsland.active}
+			{#if pathname === ROUTES.home}
+				<!-- 首页灵动岛：信息流分段器常驻顶栏中央（不再占内容高度） -->
+				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+					<HomeFeedIsland />
+				</div>
+			{:else if headerIsland.visible && headerIsland.active}
 				<!-- 绝对居中于整条顶栏（而非 logo 与操作簇之间的剩余空间），与「灵动岛」的视觉中心一致 -->
 				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
 					<div

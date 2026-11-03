@@ -4,6 +4,7 @@
 	import { Sparkles, Users, UsersRound } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
+	import AdaptiveCardGrid from '@/components/layout/AdaptiveCardGrid.svelte';
 	import NearbyUserRows from '@/components/home/NearbyUserRows.svelte';
 	import UserCard from '@/components/data-display/UserCard.svelte';
 	import GroupCarousel, { type NearbyGroup } from '@/components/home/GroupCarousel.svelte';
@@ -67,10 +68,19 @@
 {#if users.length > 0}
 	<div data-hub-section="people">
 		<!-- 三段分区卡头统一 SectionHead（icon + count + 查看全部）；标题→内容间距由卡头 mb-3 承担 -->
-		<SectionHead title="附近的人" icon={Users} count={users.length} action="查看全部" onAction={onSeeAllUsers} />
+		<SectionHead
+			title="附近的人"
+			icon={Users}
+			count={users.length}
+			action={users.length > previewCount ? '查看全部' : undefined}
+			onAction={users.length > previewCount ? onSeeAllUsers : undefined}
+		/>
 		{#if !useRows}
-			<div
-				class="grid grid-flow-dense grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))]"
+			<AdaptiveCardGrid
+				count={Math.min(users.length, previewCount)}
+				minTrackRem={18.75}
+				gapRem={[0.875, 1, 1]}
+				class="grid-flow-dense"
 				style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
 			>
 				{#each users.slice(0, previewCount) as user, index (user.id)}
@@ -86,7 +96,7 @@
 						/>
 					</div>
 				{/each}
-			</div>
+			</AdaptiveCardGrid>
 		{:else}
 			<NearbyUserRows
 				users={users.slice(0, previewCount)}
@@ -102,8 +112,18 @@
 
 {#if moments.length > 0}
 	<div data-hub-section="moments">
-		<SectionHead title="附近瞬间" icon={Sparkles} count={moments.length} action="查看全部" onAction={onSeeAllMoments} />
-		<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(21.25rem,1fr))]">
+		<SectionHead
+			title="附近瞬间"
+			icon={Sparkles}
+			count={moments.length}
+			action={moments.length > momentPreviewCount ? '查看全部' : undefined}
+			onAction={moments.length > momentPreviewCount ? onSeeAllMoments : undefined}
+		/>
+		<AdaptiveCardGrid
+			count={Math.min(moments.length, momentPreviewCount)}
+			minTrackRem={21.25}
+			gapRem={[0.875, 1, 1]}
+		>
 			{#each moments.slice(0, momentPreviewCount) as moment (moment.moment_id)}
 				<HomeFeedItem
 					{moment}
@@ -111,13 +131,20 @@
 					onClick={() => onOpenMoment(moment.moment_id)}
 				/>
 			{/each}
-		</div>
+		</AdaptiveCardGrid>
 	</div>
 {/if}
 
 {#if groups.length > 0}
 	<div data-hub-section="groups">
 		<!-- 「附近群组」标题由轮播组件自带（SectionHead + 查看全部），此处不再重复标题 -->
-		<GroupCarousel {groups} icon={UsersRound} count={groups.length} actionLabel="查看全部" onSeeAll={onSeeAllGroups} />
+		<GroupCarousel
+			{groups}
+			icon={UsersRound}
+			count={groups.length}
+			actionLabel="查看全部"
+			showAction={groups.length > 6}
+			onSeeAll={onSeeAllGroups}
+		/>
 	</div>
 {/if}

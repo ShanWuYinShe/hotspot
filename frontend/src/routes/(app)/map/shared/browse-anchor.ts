@@ -57,15 +57,13 @@ export function anchorDisplayName(anchor: MapPoint | null): string {
 	return name || '自定义位置';
 }
 
-/** 底部主 CTA 文案：明确「以什么为锚点」，而不是含糊的“确认”。 */
-export function anchorActionLabel(options: {
-	selectedLocationName?: string | null;
-	hasAnchor: boolean;
-	sameAsCenter: boolean;
-}): string {
-	const { selectedLocationName, sameAsCenter } = options;
-	if (sameAsCenter) return '当前浏览锚点';
-	if (selectedLocationName) return `以此地点为浏览锚点`;
+/**
+ * 底部主 CTA 文案：明确「以什么为锚点」，而不是含糊的“确认”。
+ * 注意：中心已是锚点时也保持主按钮文案（不出现「当前浏览锚点」disabled 态）——
+ * 用户随时可以重复确认/更新，是否已设置由锚点卡与地图标记表达。
+ */
+export function anchorActionLabel(selectedLocationName?: string | null): string {
+	if (selectedLocationName?.trim()) return '以此地点为浏览锚点';
 	return '将地图中心设为浏览锚点';
 }
 

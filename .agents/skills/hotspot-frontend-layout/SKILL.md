@@ -179,8 +179,22 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 - **入口 API**：`PageHeader` 新增 `island`（默认 true）/ `islandMeta`（缺省用 subtitle）/ `islandTrailing`（提供后页头原 trailing 入岛时隐藏，避免重复）；`DetailHeader` 走同一 store 契约（作者/群/用户名 + 地点·时间）。state 在 `stores/header-island.svelte.ts`（token 注册，路由切换不串台）。
 - **触发**：吸顶页头滚动 >120px 标题淡出交接（<72px 恢复，保留高度防 CLS）；`integrated`/非吸顶页头标题离开视口（IO rootMargin 扣 52px）时入岛；详情页滚动 >160px 收敛到顶栏岛（移动/平板保留页内吸顶岛）。**以上阈值/rootMargin 均乘 `platform.uiScale`**（顶栏与页头高度是 rem，大屏同步放大）。
 - **交互**：点击岛标题平滑回锚点/页首（reduced 立即）；带返回的页头入岛后返回动作移到岛 leading、页头标题+返回同步淡出（同一动作不出现两份；有 `islandTrailing` 时页头 trailing 入岛隐藏）；岛内文字不重复播报（标题按钮 aria-label，h1 仍在 DOM）；岛为顶栏 overlay，无 CLS。
-- **例外**：`/messages`（左右列头部常驻）、`/map`（全画布）、`/login`、`/register`（无外壳）不出岛；面板内嵌 PageHeader 传 `island={false}`；首页桌面无可见标题 + feed 分段器吸顶常驻，当前分区不丢失，暂不接入（登记例外）。
+- **例外**：`/messages`（左右列头部常驻）、`/map`（全画布）、`/login`、`/register`（无外壳）不出岛；面板内嵌 PageHeader 传 `island={false}`。
+- **首页（桌面端）**：无页面标题，灵动岛承载信息流分段器（`components/home/HomeFeedIsland.svelte` + `stores/home-feed.svelte.ts`）：为你推荐 / 正在关注常驻顶栏中央，滚动后不再出现第二条吸顶分段器；移动/平板仍在页内品牌头下渲染同一分段器。首页不注册 `headerIsland`。
 - 验证：滚动后 `[data-desktop-dynamic-island]` 文本正确、`main header[data-island-visible]="true"`、回顶消失、短页无岛；headless 下滚动后先截图泵帧再断言。
+
+## 数据量自适应（0 / 1 / 2 / 3+ / 大量）
+
+**硬约束：任何数据量下都要好看且和谐**——骨架、卡片尺寸、间距、字号恒定，只改变排列与空态；禁止孤卡贴边、拉成巨卡、大片无解释空白、加载/到底控件空转。
+
+- **统一组件**：`components/layout/AdaptiveCardGrid.svelte` + `lib/adaptive-grid.ts`（判断口径纯函数，已单测）。
+  - auto 模式：手机 2 列 / 平板 3 列 / 桌面按 `minTrackRem` 反推 auto-fill 列数；
+  - fixed 模式：传 `fixedCols`，断点按**视口**（与 Tailwind 一致），轨道宽按**容器**；
+  - `count < 可见列数` → 整行居中，轨道宽度 = 密排宽度（不放大）；`count ≥ 列数` → 显式列数铺开（最后一行保持列对齐）；
+  - BSP 大跨度网格传 `centerSparse={layouts.every(tier==='1x1')}`（稀疏数据 `semantic-bsp` 已强制 1x1，避免跨列撑破居中轨道）。
+- **0 条**：紧凑空态（图标 + 原因 + 动作），不占首屏；`查看全部` / 分页 / 到底按需出现（无更多时隐藏）。
+- **接入面**：附近的人 / 附近群组 / 附近瞬间 / 枢纽页两段预览 / 个人主页瞬间 / 首页 feed 默认网格。新增网格优先复用该组件，禁止各页再写一套 auto-fill + 稀疏分支。
+- 验收：390/768/1440/1920/3840 × {0,1,2,3,8,20} 截图矩阵；同断点卡片宽高恒定（count 1→4→8 不变）、行居中/列对齐正确、无横向溢出。
 
 ## 页头滚动、回顶、焦点播报与 Reflow
 

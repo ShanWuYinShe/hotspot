@@ -6,12 +6,13 @@
 	import ListItem from '@/components/list/ListItem.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
-	import Button from '@/components/ui/button.svelte';
 	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
 	import PinMedia from '../shared/PinMedia.svelte';
 	import BrowseAnchorCard from '../shared/BrowseAnchorCard.svelte';
-	import { anchorActionLabel, anchorPurposeHint, isSameAnchorPoint } from '../shared/browse-anchor';
+	import AnchorConfirmButton from '../shared/AnchorConfirmButton.svelte';
+	import type { AnchorFeedbackState } from '../shared/anchor-feedback.svelte';
+	import { anchorActionLabel, anchorPurposeHint } from '../shared/browse-anchor';
 	import type { MapPoint } from '@/lib/map-auto-locate';
 	import { smartBack } from '@/lib/smart-back';
 
@@ -47,7 +48,8 @@
 		onSelectPin,
 		onSelectLoc,
 		onConfirm,
-		onResetAnchor
+		onResetAnchor,
+		confirmState = 'idle'
 	}: {
 		searchQuery?: string;
 		searchResults?: LocationResult[];
@@ -67,16 +69,11 @@
 		onConfirm: () => void;
 		/** 清除已保存锚点并回到服务端默认位置。 */
 		onResetAnchor: () => void;
+		/** 确认按钮反馈状态（父组件状态机驱动：idle/pending/success/error）。 */
+		confirmState?: AnchorFeedbackState;
 	} = $props();
 
-	const sameAsCenter = $derived(isSameAnchorPoint(center, anchor));
-	const ctaLabel = $derived(
-		anchorActionLabel({
-			hasAnchor: Boolean(anchor),
-			sameAsCenter: sameAsCenter && !selectedLoc,
-			selectedLocationName: selectedLoc?.displayName ?? undefined
-		})
-	);
+	const ctaLabel = $derived(anchorActionLabel(selectedLoc?.displayName ?? undefined));
 </script>
 
 <!-- Header -->
@@ -250,20 +247,7 @@
 			</button>
 		</div>
 	{/if}
-	<Button
-		variant={sameAsCenter && !selectedLoc ? 'soft' : 'primary'}
-		size="lg"
-		class="w-full"
-		disabled={sameAsCenter && !selectedLoc}
-		onclick={onConfirm}
-	>
-		{#if sameAsCenter && !selectedLoc}
-			<Check class="size-4" strokeWidth={2.25} aria-hidden="true" />
-		{:else}
-			<MapPin class="size-4" strokeWidth={1.75} aria-hidden="true" />
-		{/if}
-		{ctaLabel}
-	</Button>
+	<AnchorConfirmButton state={confirmState} label={ctaLabel} onclick={onConfirm} />
 	{#if !anchor}
 		<p class="mt-1.5 text-center text-xxs text-text-secondary">{anchorPurposeHint(false)}</p>
 	{/if}

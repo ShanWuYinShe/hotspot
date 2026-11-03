@@ -38,7 +38,8 @@ describe('semantic-bsp', () => {
 		const items: CardBspMeta[] = [
 			{ width: 1000, height: 1000 }, // index 0 hero -> 2x2
 			{ width: 900, height: 1600 },  // index 1 竖图 -> 1x2
-			{ width: 900, height: 1600 }   // index 2 竖图 -> 1x1 (防粘连降级)
+			{ width: 900, height: 1600 },  // index 2 竖图 -> 1x1 (防粘连降级)
+			{ width: 1000, height: 1000 }  // 第 4 张起才进入 BSP 跨度（≤3 张强制 1x1）
 		];
 		const seq = computeBspLayoutSequence(items, { device: 'desktop' });
 		expect(seq[0].tier).toBe('2x2'); // index 0 hero
@@ -50,7 +51,8 @@ describe('semantic-bsp', () => {
 		const items: CardBspMeta[] = [
 			{ width: 1000, height: 1000 }, // index 0 -> 2x2
 			{ width: 1600, height: 900 },  // index 1 -> 2x1
-			{ width: 1600, height: 900 }   // index 2 -> 1x1 (防粘连)
+			{ width: 1600, height: 900 },  // index 2 -> 1x1 (防粘连)
+			{ width: 1000, height: 1000 }  // 第 4 张起才进入 BSP 跨度（≤3 张强制 1x1）
 		];
 		const seq = computeBspLayoutSequence(items, { device: 'desktop' });
 		expect(seq[1].tier).toBe('2x1');
@@ -79,5 +81,17 @@ describe('semantic-bsp', () => {
 		expect(tiers[0]).toBe('2x2');
 		expect(tiers[3]).toBe('2x1'); // index 3 周期性穿插
 		expect(tiers[8]).toBe('2x2'); // index 8 周期性 2x2 视觉锚点
+	});
+});
+
+describe('semantic-bsp 稀疏数据', () => {
+	it('数据量 ≤3 时不做任何跨度（保证稀疏网格整行居中不被撑破）', () => {
+		for (const total of [1, 2, 3]) {
+			for (const device of ['desktop', 'tablet', 'mobile'] as const) {
+				const cell = getCardBspLayout({ hasImage: true, aspectRatio: 1.8, likes: 99, members: 99 }, 0, { device, total });
+				expect(cell.tier, device + total).toBe('1x1');
+				expect(cell.cls).toBe('col-span-1 row-span-1');
+			}
+		}
 	});
 });

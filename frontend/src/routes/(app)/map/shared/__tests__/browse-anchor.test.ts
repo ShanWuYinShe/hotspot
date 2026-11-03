@@ -35,12 +35,10 @@ describe('browse-anchor', () => {
 		expect(anchorDisplayName({ ...A, name: '云龙湖东岸' })).toBe('云龙湖东岸');
 	});
 
-	it('anchorActionLabel：当前锚点 / 选中地点 / 地图中心三种文案', () => {
-		expect(anchorActionLabel({ hasAnchor: true, sameAsCenter: true })).toBe('当前浏览锚点');
-		expect(anchorActionLabel({ hasAnchor: false, sameAsCenter: false, selectedLocationName: '云龙湖' })).toBe(
-			'以此地点为浏览锚点'
-		);
-		expect(anchorActionLabel({ hasAnchor: true, sameAsCenter: false })).toBe('将地图中心设为浏览锚点');
+	it('anchorActionLabel：中心已是锚点也保持主按钮文案（不再有灰色 disabled 态）', () => {
+		expect(anchorActionLabel()).toBe('将地图中心设为浏览锚点');
+		expect(anchorActionLabel('云龙湖')).toBe('以此地点为浏览锚点');
+		expect(anchorActionLabel('  ')).toBe('将地图中心设为浏览锚点');
 	});
 
 	it('resolveAnchorName：选中地点优先；未命名/我的位置不落库', () => {

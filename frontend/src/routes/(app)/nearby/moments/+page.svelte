@@ -7,6 +7,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import AdaptiveCardGrid from '@/components/layout/AdaptiveCardGrid.svelte';
 	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -332,8 +333,12 @@
 			<!-- 语义化 BSP 照片流网格：移动 2 / 平板 3；lg 起按 300px 最小卡宽自动增列，
 			     2560≈7 列、4K≈11 列，全宽利用超宽屏而不是被 max-w 限制在中间。
 			     密集排布 (grid-flow-dense) + 自适应行高，感知图片长宽比与节奏防粘连 -->
-			<div
-				class="grid grid-flow-dense grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))]"
+			<AdaptiveCardGrid
+				count={Math.min(filtered.length, visibleCount)}
+				minTrackRem={18.75}
+				gapRem={[0.75, 1, 1]}
+				centerSparse={bspLayouts.every((l) => l.tier === '1x1')}
+				class="grid-flow-dense"
 				style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
 			>
 				{#each filtered.slice(0, visibleCount) as item, index (item.id)}
@@ -352,7 +357,7 @@
 						/>
 					</div>
 				{/each}
-			</div>
+			</AdaptiveCardGrid>
 
 			{#if feedHasMore}
 				<div bind:this={sentinelEl} class="flex justify-center px-4 py-6" aria-hidden="true">

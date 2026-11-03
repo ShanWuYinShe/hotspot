@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { Bell, Search, Compass, ArrowRight, Sparkles, TrendingUp, Users, LogIn, MapPin, Radio, ChevronRight } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
+	import { homeFeed, type HomeFeedTab } from '@/stores/home-feed.svelte';
 	import { formatDistance } from '@/lib/utils';
 	import type { MomentItem } from '@/api/types';
 	import { searchMoments, fetchFollowingMoments } from '@/api';
@@ -18,6 +20,7 @@
 	import RailSection from '@/components/rail/RailSection.svelte';
 	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import AdaptiveCardGrid from '@/components/layout/AdaptiveCardGrid.svelte';
 	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import { contentFade } from '@/lib/motion';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -34,9 +37,15 @@
 	const PAGE_SIZE = 20;
 	const device = $derived(platform.platform);
 
-	type FeedTab = 'discover' | 'following';
-	let activeTab = $state<FeedTab>('discover');
+	type FeedTab = HomeFeedTab;
+	// 桌面端分段器在顶栏灵动岛、移动端在页内品牌头，两处共用同一份状态。
+	const activeTab = $derived(homeFeed.activeTab);
 	let booting = $state(true);
+
+	onMount(() => {
+		// 回到首页时重置为「为你推荐」，与改造前页内组件卸载重建的初始行为一致。
+		homeFeed.reset();
+	});
 
 	function createMomentPager(
 		fetchPage: (cursor: string | null) => Promise<{ items: MomentItem[]; nextCursor: string | null }>
@@ -192,23 +201,15 @@
 	<title>首页 · HotSpot</title>
 </svelte:head>
 
-{#snippet feedTabs()}
-	<!-- 顶部 Tab 栏：居中悬浮胶囊分段器（Floating Island Segmented Control），彻底消除直角长条与生硬底线 -->
-	<div class="sticky top-0 z-20 pt-2.5 pb-2 flex justify-center pointer-events-none">
-		<div class="pointer-events-auto rounded-full bg-surface-primary/90 backdrop-blur-md shadow-raised-sm p-0.5">
-			<TabBar
-				variant="segmented"
-				size="md"
-				items={[
-					{ id: 'discover', label: '为你推荐' },
-					{ id: 'following', label: '正在关注' }
-				]}
-				value={activeTab}
-				onChange={(id) => { activeTab = id as FeedTab; }}
-				class="min-w-[15rem] bg-transparent ring-0"
-			/>
-		</div>
-	</div>
+{#snippet feedItems()}
+	{#each currentItems as moment, index (moment.moment_id)}
+		<HomeFeedItem
+			{moment}
+			showDistance={false}
+			priority={index < 2}
+			onClick={() => void goto(ROUTES.moment(moment.moment_id))}
+		/>
+	{/each}
 {/snippet}
 
 {#snippet nearbyBanner()}
@@ -259,7 +260,7 @@
 								{ id: 'following', label: '正在关注' }
 							]}
 							value={activeTab}
-							onChange={(id) => { activeTab = id as FeedTab; }}
+							onChange={(id) => homeFeed.setTab(id as FeedTab)}
 							class="w-full max-w-[13.75rem]"
 						/>
 					</div>
@@ -270,11 +271,6 @@
 			<h1 class="sr-only">首页</h1>
 		{/if}
 		{/snippet}
-
-		{#if device === 'desktop'}
-			<!-- 桌面端居中 Tab 栏 -->
-			{@render feedTabs()}
-		{/if}
 
 		<!-- 关注流未登录态：温馨引导登录卡片 -->
 		<div use:contentFade={currentLoading} class="min-h-[50vh] flex flex-col justify-between">
@@ -305,16 +301,28 @@
 		{:else if currentItems.length > 0}
 			<!-- 高质感社区 Feed 流：单条居中陈列避免半屏塌陷，多条移动端规整 2 列满铺提效；
 			     md 起按 340px 最小轨自动增列，避免 2K/4K 下固定 3 列把卡片拉成 600px+ 巨卡 -->
-			<div class={currentItems.length === 1 ? 'max-w-md mx-auto w-full px-2.5 sm:px-0 pt-2' : demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(21.25rem,1fr))] sm:gap-4 sm:px-0 pt-2'}>
-				{#each currentItems as moment, index (moment.moment_id)}
-					<HomeFeedItem
-						{moment}
-						showDistance={false}
-						priority={index < 2}
-						onClick={() => void goto(ROUTES.moment(moment.moment_id))}
-					/>
-				{/each}
-			</div>
+			{#if currentItems.length === 1}
+				<div class="mx-auto w-full max-w-md px-2.5 pt-2 sm:px-0">
+					{@render feedItems()}
+				</div>
+			{:else if demoMode === 'a' || demoMode === 'b'}
+				<div class="flex flex-col gap-3.5 px-3 pt-2 sm:gap-4 sm:px-0">
+					{@render feedItems()}
+				</div>
+			{:else if demoMode === 'c' || demoMode === 'd'}
+				<div class="grid grid-cols-1 gap-4 px-3 pt-2 2xl:grid-cols-2 sm:px-0">
+					{@render feedItems()}
+				</div>
+			{:else}
+				<AdaptiveCardGrid
+					count={currentItems.length}
+					minTrackRem={21.25}
+					gapRem={[0.625, 1, 1]}
+					class="px-2.5 pt-2 sm:px-0"
+				>
+					{@render feedItems()}
+				</AdaptiveCardGrid>
+			{/if}
 
 			{#if hasMore}
 				<div class="mt-5 flex justify-center px-4">

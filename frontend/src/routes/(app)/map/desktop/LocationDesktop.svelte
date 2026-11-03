@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { X, ChevronRight, Heart, Crosshair } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
@@ -28,6 +29,7 @@
 	import { MAP_MAX_ZOOM } from '@/components/map/map-projection';
 	import MapCanvas from '@/components/map/MapCanvas.svelte';
 	import MapCenterCrosshair from '../shared/MapCenterCrosshair.svelte';
+	import { createAnchorFeedback } from '../shared/anchor-feedback.svelte';
 	import { resolveAnchorName } from '../shared/browse-anchor';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapOverlays from '../shared/MapOverlays.svelte';
@@ -64,6 +66,9 @@
 	let defaultName = $state('');
 	// 上次确认的浏览锚点（含名）：中心与其同格且逆地理缺席时，用锚点名兜底。
 	let anchorPoint = $state<{ lat: number; lng: number; name?: string } | null>(readLastLocation());
+	// 确认按钮的反馈状态机：把「正在生效 / 已生效」反馈收进按钮本体，替代成功 toast。
+	const anchorFeedback = createAnchorFeedback();
+	onDestroy(() => anchorFeedback.destroy());
 	// 我的位置（浏览器 GPS fix，WGS-84）：蓝点按它做地理投影，不随地图中心走
 	// （语义红线：蓝点=我的位置，不是地图中心；见 MapMyLocationDot）。
 	let myLocation = $state<{ lat: number; lng: number } | null>(null);
@@ -276,31 +281,32 @@
 	}
 
 	function handleConfirm() {
-		// 只写好浏览锚点、不关页：用户自己决定何时离开（返回在左侧面板顶栏）。
-		// 落点语义：选中地点优先，否则以地图中心（准星）为准。
-		const point = selectedLoc ?? mapCenter;
-		if (!point) {
-			showToast('暂时无法获取位置信息', 'danger');
-			return;
-		}
-		// 标记已手动确认：迟到的自动定位不再覆盖刚写好的锚点。
-		userPicked = true;
-		// 名称一并持久化：附近页/侧栏的位置名须与锚点一致；未命名区域/我的位置不落库。
-		const name = resolveAnchorName(selectedLoc?.displayName, locationName);
-		writeLastLocation({ ...point, name });
-		anchorPoint = { lat: point.lat, lng: point.lng, name };
-		showToast(name ? `浏览锚点已设为「${name}」` : '浏览锚点已设置', 'success');
+		// 反馈收进按钮本体（pending → success → 恢复主按钮），不再弹成功 toast。
+		anchorFeedback.run(() => {
+			// 只写好浏览锚点、不关页：用户自己决定何时离开（返回在左侧面板顶栏）。
+			// 落点语义：选中地点优先，否则以地图中心（准星）为准。
+			const point = selectedLoc ?? mapCenter;
+			if (!point) return false;
+			// 标记已手动确认：迟到的自动定位不再覆盖刚写好的锚点。
+			userPicked = true;
+			// 名称一并持久化：附近页/侧栏的位置名须与锚点一致；未命名区域/我的位置不落库。
+			const name = resolveAnchorName(selectedLoc?.displayName, locationName);
+			writeLastLocation({ ...point, name });
+			anchorPoint = { lat: point.lat, lng: point.lng, name };
+			return true;
+		});
 	}
 
 	/** 恢复默认浏览位置：清除本机锚点，地图回到服务端默认位置。 */
 	function handleResetAnchor() {
+		anchorFeedback.reset();
 		clearLastLocation();
 		anchorPoint = null;
 		selectedLoc = null;
 		searchQuery = '';
 		userPicked = false;
 		if (defaultCenter) mapCenter = defaultCenter;
-		showToast(defaultName ? `已恢复默认浏览位置：${defaultName}` : '已恢复默认浏览位置', 'success');
+		// 恢复默认的反馈由卡片/地图标记承担，不再弹 toast（与「设置锚点」同一原则）。
 	}
 
 	/** 点击地图上的锚点标记：视野回到锚点。 */
@@ -337,6 +343,7 @@
 				onSelectLoc={handleSelectLoc}
 				onConfirm={handleConfirm}
 				onResetAnchor={handleResetAnchor}
+				confirmState={anchorFeedback.state}
 			/>
 		</div>
 

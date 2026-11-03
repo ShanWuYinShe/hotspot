@@ -63,18 +63,30 @@ describe('NearbyHubSections（附近枢纽三段分区）', () => {
 		expect(screen.queryByText('动态3')).toBeNull();
 	});
 
-	it('「查看全部」回调分别指向三个叶子页入口', async () => {
+	it('「查看全部」只在确实还有更多时出现，并指向对应叶子页', async () => {
 		const props = baseProps();
 		render(NearbyHubSections, { props });
-		// R13：三段卡头统一 SectionHead（人 / 瞬间 / 群组都由「查看全部」入口，不再有「更多」变体）
+		// 人 6>4、瞬间 5>3 → 两个入口；群组 1≤6 已全部可见 → 不显示冗余入口。
 		const seeAll = screen.getAllByText('查看全部');
-		expect(seeAll.length).toBe(3);
+		expect(seeAll.length).toBe(2);
 		await seeAll[0].click();
 		await seeAll[1].click();
-		await seeAll[2].click();
 		expect(props.onSeeAllUsers).toHaveBeenCalledOnce();
 		expect(props.onSeeAllMoments).toHaveBeenCalledOnce();
-		expect(props.onSeeAllGroups).toHaveBeenCalledOnce();
+		expect(props.onSeeAllGroups).not.toHaveBeenCalled();
+	});
+
+	it('群组超过横向可见数量时才出现「查看全部」', () => {
+		const manyGroups = Array.from({ length: 7 }, (_, i) => ({
+			id: `group_${i}`,
+			name: `群${i}`,
+			members: 10,
+			banner: '',
+			distance: '1km',
+			privacy: 'public' as const
+		}));
+		render(NearbyHubSections, { props: baseProps({ groups: manyGroups }) });
+		expect(screen.getAllByText('查看全部').length).toBe(3);
 	});
 
 	it('「附近的人」首屏前 2 张 UserCard 图 eager+high，其余 lazy（R17 首屏图策略）', () => {

@@ -26,7 +26,8 @@
 		onSeeAll,
 		icon,
 		count,
-		actionLabel = '更多'
+		actionLabel = '更多',
+		showAction = true
 	}: {
 		groups: NearbyGroup[];
 		onSeeAll: () => void;
@@ -36,6 +37,8 @@
 		count?: number;
 		/** 右侧动作文案（枢纽页统一「查看全部」，独立使用时保留「更多」） */
 		actionLabel?: string;
+		/** 全部内容已在横向轮播中可见时隐藏「查看全部」（无更多入口不空转）。 */
+		showAction?: boolean;
 	} = $props();
 
 	const openGroup = (id: string) => void goto(ROUTES.group(id));
@@ -44,7 +47,7 @@
 <!-- 大纲页密度：无群组时整段隐藏（标题+空横滚），专区经导航可达 -->
 {#if groups.length > 0}
 <div>
-	<SectionHead title="附近群组" {icon} {count} action={actionLabel} onAction={onSeeAll} />
+	<SectionHead title="附近群组" {icon} {count} action={showAction ? actionLabel : undefined} onAction={showAction ? onSeeAll : undefined} />
 	<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2 pr-1" use:scrollFade>
 		{#each groups as g (g.id)}
 			<MediaCard

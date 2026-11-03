@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { MapPin, Crosshair, Check, ArrowLeft } from '@lucide/svelte';
+	import { onDestroy } from 'svelte';
+	import { Crosshair, Check, ArrowLeft } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
@@ -25,14 +26,15 @@
 	import MapCanvas from '@/components/map/MapCanvas.svelte';
 	import MapCenterCrosshair from '../shared/MapCenterCrosshair.svelte';
 	import BrowseAnchorCard from '../shared/BrowseAnchorCard.svelte';
-	import { anchorActionLabel, anchorPurposeHint, isSameAnchorPoint, resolveAnchorName } from '../shared/browse-anchor';
+	import AnchorConfirmButton from '../shared/AnchorConfirmButton.svelte';
+	import { createAnchorFeedback } from '../shared/anchor-feedback.svelte';
+	import { anchorActionLabel, anchorPurposeHint, resolveAnchorName } from '../shared/browse-anchor';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapOverlays from '../shared/MapOverlays.svelte';
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
 	import MapZoomControls from '../shared/MapZoomControls.svelte';
 	import LocationSheetList from './LocationSheetList.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
-	import Button from '@/components/ui/button.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { platform } from '@/stores/platform.svelte';
@@ -119,6 +121,9 @@
 	// 上次确认的浏览锚点（含名）：与地图中心分开维护——中心可自由拖动/选点，
 	// 锚点只在底部 CTA 显式确认时改写（旧逻辑「定位到我」会静默改写锚点，语义错误）。
 	let anchorPoint = $state<{ lat: number; lng: number; name?: string } | null>(readLastLocation());
+	// 确认按钮的反馈状态机（与桌面端同一套）：pending → success → 恢复主按钮。
+	const anchorFeedback = createAnchorFeedback();
+	onDestroy(() => anchorFeedback.destroy());
 	// 我的位置（浏览器 GPS fix，WGS-84）：蓝点按它做地理投影，不随地图中心走
 	// （语义红线：蓝点=我的位置，不是地图中心；见 MapMyLocationDot）。
 	let myLocation = $state<{ lat: number; lng: number } | null>(null);
@@ -289,42 +294,36 @@
 		if (snap === 'max') snapTo('mid');
 	}
 
-	// 底部 CTA：中心已是锚点 → soft/disabled「当前浏览锚点」；否则以选中地点/地图中心为落点。
-	const sameAsCenter = $derived(isSameAnchorPoint(mapCenter, anchorPoint));
-	const ctaLabel = $derived(
-		anchorActionLabel({
-			hasAnchor: Boolean(anchorPoint),
-			sameAsCenter: sameAsCenter && !selectedLoc,
-			selectedLocationName: selectedLoc?.displayName ?? undefined
-		})
-	);
+	// 底部 CTA：始终是主按钮（不再出现灰色 disabled）；中心≈锚点时点击 = 重复确认。
+	const ctaLabel = $derived(anchorActionLabel(selectedLoc?.displayName ?? undefined));
 
 	function handleConfirm() {
-		// 只写好浏览锚点、不关页：用户自己决定何时离开（返回按钮仍在顶栏）。
-		// 落点语义：选中地点优先，否则以地图中心（准星）为准（与桌面端一致）。
-		const point = selectedLoc ?? mapCenter;
-		if (!point) {
-			showToast('暂时无法获取位置信息', 'danger');
-			return;
-		}
-		// 标记已手动确认：迟到的自动定位不再覆盖刚写好的锚点。
-		userPicked = true;
-		// 名称一并持久化：附近页/侧栏的位置名须与锚点一致；未命名区域/我的位置不落库。
-		const name = resolveAnchorName(selectedLoc?.displayName, locationName);
-		writeLastLocation({ ...point, name });
-		anchorPoint = { lat: point.lat, lng: point.lng, name };
-		showToast(name ? `浏览锚点已设为「${name}」` : '浏览锚点已设置', 'success');
+		// 反馈收进按钮本体（pending → success → 恢复主按钮），不再弹成功 toast。
+		anchorFeedback.run(() => {
+			// 只写好浏览锚点、不关页：用户自己决定何时离开（返回按钮仍在顶栏）。
+			// 落点语义：选中地点优先，否则以地图中心（准星）为准（与桌面端一致）。
+			const point = selectedLoc ?? mapCenter;
+			if (!point) return false;
+			// 标记已手动确认：迟到的自动定位不再覆盖刚写好的锚点。
+			userPicked = true;
+			// 名称一并持久化：附近页/侧栏的位置名须与锚点一致；未命名区域/我的位置不落库。
+			const name = resolveAnchorName(selectedLoc?.displayName, locationName);
+			writeLastLocation({ ...point, name });
+			anchorPoint = { lat: point.lat, lng: point.lng, name };
+			return true;
+		});
 	}
 
 	/** 恢复默认浏览位置：清除本机锚点，地图回到服务端默认位置。 */
 	function handleResetAnchor() {
+		anchorFeedback.reset();
 		clearLastLocation();
 		anchorPoint = null;
 		selectedLoc = null;
 		searchQuery = '';
 		userPicked = false;
 		if (defaultCenter) mapCenter = defaultCenter;
-		showToast(defaultName ? `已恢复默认浏览位置：${defaultName}` : '已恢复默认浏览位置', 'success');
+		// 恢复默认的反馈由卡片/地图标记承担，不再弹 toast（与「设置锚点」同一原则）。
 	}
 
 	/** 点击地图上的锚点标记：视野回到锚点。 */
@@ -536,20 +535,7 @@
 			class="shrink-0 px-4 pt-2"
 			style="padding-bottom:max(18px, env(safe-area-inset-bottom, 18px));"
 		>
-			<Button
-				variant={sameAsCenter && !selectedLoc ? 'soft' : 'primary'}
-				size="lg"
-				class="w-full"
-				disabled={sameAsCenter && !selectedLoc}
-				onclick={handleConfirm}
-			>
-				{#if sameAsCenter && !selectedLoc}
-					<Check class="size-4 shrink-0" strokeWidth={2.25} aria-hidden="true" />
-				{:else}
-					<MapPin class="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-				{/if}
-				<span class="min-w-0 truncate">{ctaLabel}</span>
-			</Button>
+			<AnchorConfirmButton state={anchorFeedback.state} label={ctaLabel} onclick={handleConfirm} />
 			{#if !anchorPoint}
 				<p class="mt-1.5 text-center text-xxs text-text-secondary">{anchorPurposeHint(false)}</p>
 			{/if}

@@ -12,6 +12,7 @@ import { formatCount } from '@/lib/utils';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import AdaptiveCardGrid from '@/components/layout/AdaptiveCardGrid.svelte';
 import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import GroupCard from '@/components/data-display/GroupCard.svelte';
@@ -275,8 +276,12 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 				<!-- 语义化 BSP 群组网格：移动 2 列 / 平板 3 列；lg 起按 300px 最小卡宽自动增列，
 				     2560≈7 列、4K≈11 列，避免固定 6 列在超宽屏把卡片拉成巨幅。
 				     密集排布 (grid-flow-dense) + 自适应行高，全量卡片周期性穿插。 -->
-				<div
-					class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))]"
+				<AdaptiveCardGrid
+					count={visibleGroups.length}
+					minTrackRem={18.75}
+					gapRem={[0.75, 0.875, 0.875]}
+					centerSparse={bspLayouts.slice(0, visibleGroups.length).every((l) => l.tier === '1x1')}
+					class="grid-flow-dense px-1"
 					style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
 				>
 					{#each visibleGroups as group, index (group.id)}
@@ -296,7 +301,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 							/>
 						</div>
 					{/each}
-				</div>
+				</AdaptiveCardGrid>
 			</div>
 			{#if visibleCount < filtered.length}
 				<div bind:this={sentinelEl} class="h-px w-full" aria-hidden="true"></div>

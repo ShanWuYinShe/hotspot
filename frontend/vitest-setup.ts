@@ -46,3 +46,14 @@ if (typeof window !== 'undefined' && !window.localStorage) {
 		configurable: true
 	});
 }
+
+// jsdom 未实现 ResizeObserver：Svelte 的 bind:clientWidth（AdaptiveCardGrid）与卡片画布
+// 在组件测试里会实例化它。测试环境只保证构造/方法存在，不触发回调（宽高由各用例自行断言）。
+if (!('ResizeObserver' in globalThis)) {
+	class TestResizeObserver {
+		observe() {}
+		unobserve() {}
+		disconnect() {}
+	}
+	Object.defineProperty(globalThis, 'ResizeObserver', { value: TestResizeObserver, writable: true, configurable: true });
+}

@@ -1220,7 +1220,7 @@ eager 图各 2 张且像素 diff 0 回归。
 4. 岛绝不因滚动方向自动隐藏；点击岛标题平滑回到锚点/页首（reduced-motion 立即）。
 5. 无页面滚动 / 头部常驻不丢信息的页面不出岛：`/messages`（左右列头部常驻）、`/map`（全画布）、
    `/login`、`/register`（无外壳）；面板内嵌 PageHeader 传 `island={false}`。
-6. 首页桌面无可见标题、feed 分段器吸顶常驻：当前分区信息不丢失，暂不接入（登记例外）。
+6. 首页桌面：无页面标题，灵动岛承载信息流分段器（`components/home/HomeFeedIsland.svelte` + `stores/home-feed.svelte.ts`），内容区不再渲染吸顶分段器；移动/平板仍在页内品牌头下。首页不注册 `headerIsland`。
 
 **API / 实现**
 
@@ -1245,3 +1245,15 @@ eager 图各 2 张且像素 diff 0 回归。
 - **JS 阈值**：滚动阈值、IO rootMargin 等乘 `platform.uiScale`（PageHeader/DetailHeader 已接）。
 - **验收**：1920 与既有基准一致；2560/3840 读 `getComputedStyle(document.documentElement).fontSize` 与侧栏/顶栏/正文字号，确认比值 = 视口宽度比（±1px）、无横向溢出。
 
+
+## 24. 数据量自适应（0 / 1 / 2 / 3+ / 大量）
+
+**硬约束**：任何数据量下都要好看且和谐。骨架、卡片尺寸、间距、字号恒定，只改排列与空态；禁止孤卡贴边、卡片拉成巨卡、大片无解释空白、加载/到底控件空转。
+
+- **统一判定**：`components/layout/AdaptiveCardGrid.svelte` + `lib/adaptive-grid.ts`（纯函数，已单测）。
+  - 列数按**视口**断点（手机 2 / 平板 3 / 桌面 auto-fill 反推；fixed 模式按 base/lg/xl），轨道宽按**容器**计算；
+  - `count < 可见列数` → 整行居中，轨道宽 = 密排宽（不放大/不缩小）；`count ≥ 列数` → 显式列数铺开（最后一行保持列对齐）；
+  - BSP 网格传 `centerSparse={layouts.every(tier === '1x1')}`；`semantic-bsp` 在数据 ≤3 时强制 1x1，避免跨列撑破居中轨道。
+- **0 条**：紧凑空态（图标 + 原因 + 动作），不占首屏；`查看全部` / 分页 / 到底在无更多时隐藏。
+- **覆盖**：附近的人 / 附近群组 / 附近瞬间 / 枢纽页预览 / 个人主页瞬间 / 首页 feed 默认网格；新增网格必须复用，不得各页重写 auto-fill + 稀疏分支。
+- **验收**：390/768/1440/1920/3840 × {0,1,2,3,8,20} 截图矩阵；同断点卡片宽高恒定（count 1→4→8 不变）、居中/列对齐正确、无横向溢出。

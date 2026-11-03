@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { CalendarDays, Grid3X3 } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import AdaptiveCardGrid from '@/components/layout/AdaptiveCardGrid.svelte';
 	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
@@ -157,8 +158,10 @@
 		</div>
 
 		<!-- 统一 1x1 瓦片网格（与骨架同列数/同行高；个人主页不做 BSP 大跨度，避免空洞） -->
-		<div
-			class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
+		<AdaptiveCardGrid
+			count={interactions.items.length}
+			fixedCols={{ base: 2, lg: 3, xl: 4 }}
+			gapRem={[0.75, 1, 1]}
 			style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
 		>
 			{#each interactions.items as item (item.id)}
@@ -183,6 +186,6 @@
 					</div>
 				{/if}
 			{/each}
-		</div>
+		</AdaptiveCardGrid>
 	{/if}
 </div>
