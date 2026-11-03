@@ -47,6 +47,27 @@
 		homeFeed.reset();
 	});
 
+	// 桌面端：内容区分段器滚出视口后交接给顶栏灵动岛；回到顶部再交还。
+	let desktopTabsEl = $state<HTMLElement | null>(null);
+	$effect(() => {
+		if (device !== 'desktop') {
+			homeFeed.setIslandVisible(false);
+			return;
+		}
+		const el = desktopTabsEl;
+		if (!el) return;
+		const rootMargin = `-${Math.round(52 * Math.max(1, platform.uiScale))}px 0px 0px 0px`;
+		const io = new IntersectionObserver(
+			([entry]) => homeFeed.setIslandVisible(!entry.isIntersecting),
+			{ rootMargin, threshold: 0 }
+		);
+		io.observe(el);
+		return () => {
+			io.disconnect();
+			homeFeed.setIslandVisible(false);
+		};
+	});
+
 	function createMomentPager(
 		fetchPage: (cursor: string | null) => Promise<{ items: MomentItem[]; nextCursor: string | null }>
 	) {
@@ -201,6 +222,25 @@
 	<title>首页 · HotSpot</title>
 </svelte:head>
 
+{#snippet desktopFeedTabs()}
+	<!-- 桌面端信息流分段器：随内容滚动；滚出视口后由顶栏灵动岛接手（同一状态、无缝切换） -->
+	<div bind:this={desktopTabsEl} class="flex justify-center pb-2 pt-1 pointer-events-none">
+		<div class="pointer-events-auto rounded-full bg-surface-primary/90 p-0.5 shadow-raised-sm backdrop-blur-md">
+			<TabBar
+				variant="segmented"
+				size="md"
+				items={[
+					{ id: 'discover', label: '为你推荐' },
+					{ id: 'following', label: '正在关注' }
+				]}
+				value={activeTab}
+				onChange={(id) => homeFeed.setTab(id as FeedTab)}
+				class="min-w-[15rem] bg-transparent ring-0"
+			/>
+		</div>
+	</div>
+{/snippet}
+
 {#snippet feedItems()}
 	{#each currentItems as moment, index (moment.moment_id)}
 		<HomeFeedItem
@@ -271,6 +311,10 @@
 			<h1 class="sr-only">首页</h1>
 		{/if}
 		{/snippet}
+
+		{#if device === 'desktop'}
+			{@render desktopFeedTabs()}
+		{/if}
 
 		<!-- 关注流未登录态：温馨引导登录卡片 -->
 		<div use:contentFade={currentLoading} class="min-h-[50vh] flex flex-col justify-between">

@@ -107,6 +107,10 @@
   --cst-page-content-max: 100%;
   /* 大屏 UI 缩放倍数（JS 同步；与根字号倍数一致，供数值型内联尺寸使用）。 */
   --cst-ui-scale: 1;
+  /* 图表区尺寸（rem 随大屏等比放大；vw 项保持 1920 基准的视觉比例）。
+     柱状图只按数据区高度定档，轴标签由内容撑高；区域分布图按宽屏长宽比取高。 */
+  --cst-chart-plot-height: clamp(8rem, 14vw, 12.5rem);
+  --cst-chart-map-height: clamp(18rem, 36vw, 34rem);
 }
 @media (min-width: 600px) {
   :root { --cst-page-gutter: 1.5rem; }

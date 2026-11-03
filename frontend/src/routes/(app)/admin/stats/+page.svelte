@@ -285,12 +285,12 @@
 				<section aria-label="每日新增趋势" class="flex flex-col">
 					<SectionHead title={`每日新增（近 ${trendDays} 天 · UTC+8 日界）`} icon={TrendingUp} />
 					<div class="rounded-lg bg-surface-island p-4 shadow-xs">
-						<div class="flex items-end gap-1 h-28" role="img" aria-label="每日新增柱状图">
+						<div class="flex items-end gap-1" role="img" aria-label="每日新增柱状图">
 							{#each data.trends as p (p.date)}
 								{@const total = p.user + p.group + p.moment}
 								{@const h = Math.round((total / trendMax) * 100)}
 								<div class="flex-1 flex flex-col items-center gap-1 min-w-0">
-									<div class="w-full flex items-end justify-center" style="height: 5.5rem;">
+									<div class="w-full flex items-end justify-center" style="height: var(--cst-chart-plot-height);">
 										<div
 											class="w-full max-w-8 rounded-t-sm bg-accent-default"
 											style="height: {Math.max(total > 0 ? 4 : 1, h)}%;"
@@ -308,7 +308,7 @@
 			<!-- 区域落点地图 -->
 			<section aria-label="区域分布图" class="flex flex-col">
 				<SectionHead title="区域分布" subtitle="网格中心落点 · 数字为聚合量" icon={MapIcon} />
-				<div class="relative rounded-lg overflow-hidden shadow-xs" style="height: 20rem;">
+				<div class="relative rounded-lg overflow-hidden shadow-xs" style="height: var(--cst-chart-map-height);">
 					<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} />
 					{#each data.regions as r (r.cell_token)}
 						<MapHeatDot

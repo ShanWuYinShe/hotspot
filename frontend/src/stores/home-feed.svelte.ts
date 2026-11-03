@@ -5,6 +5,8 @@
 export type HomeFeedTab = 'discover' | 'following';
 
 let activeTab = $state<HomeFeedTab>('discover');
+// 桌面端：内容区分段器滚出视口后显示顶栏灵动岛（handoff），回到顶部再隐藏。
+let islandVisible = $state(false);
 
 export const homeFeed = {
 	get activeTab() {
@@ -13,8 +15,15 @@ export const homeFeed = {
 	setTab(tab: HomeFeedTab) {
 		activeTab = tab;
 	},
+	get islandVisible() {
+		return islandVisible;
+	},
+	setIslandVisible(visible: boolean) {
+		islandVisible = visible;
+	},
 	/** 回到首页时重置为「为你推荐」，与改造前页内组件卸载重建的行为一致。 */
 	reset() {
 		activeTab = 'discover';
+		islandVisible = false;
 	}
 };

@@ -1220,7 +1220,7 @@ eager 图各 2 张且像素 diff 0 回归。
 4. 岛绝不因滚动方向自动隐藏；点击岛标题平滑回到锚点/页首（reduced-motion 立即）。
 5. 无页面滚动 / 头部常驻不丢信息的页面不出岛：`/messages`（左右列头部常驻）、`/map`（全画布）、
    `/login`、`/register`（无外壳）；面板内嵌 PageHeader 传 `island={false}`。
-6. 首页桌面：无页面标题，灵动岛承载信息流分段器（`components/home/HomeFeedIsland.svelte` + `stores/home-feed.svelte.ts`），内容区不再渲染吸顶分段器；移动/平板仍在页内品牌头下。首页不注册 `headerIsland`。
+6. 首页桌面：无页面标题，采用「内容区分段器 → 顶栏灵动岛」滚动交接（`components/home/HomeFeedIsland.svelte` + `stores/home-feed.svelte.ts`）：分段器随内容滚出视口后岛浮现（当前信息流 + 语境 + 切换），回到顶部/切换后交还分段器；移动/平板仍在页内品牌头下。首页不注册 `headerIsland`。
 
 **API / 实现**
 
@@ -1257,3 +1257,14 @@ eager 图各 2 张且像素 diff 0 回归。
 - **0 条**：紧凑空态（图标 + 原因 + 动作），不占首屏；`查看全部` / 分页 / 到底在无更多时隐藏。
 - **覆盖**：附近的人 / 附近群组 / 附近瞬间 / 枢纽页预览 / 个人主页瞬间 / 首页 feed 默认网格；新增网格必须复用，不得各页重写 auto-fill + 稀疏分支。
 - **验收**：390/768/1440/1920/3840 × {0,1,2,3,8,20} 截图矩阵；同断点卡片宽高恒定（count 1→4→8 不变）、居中/列对齐正确、无横向溢出。
+
+## 25. 图表尺寸（Chart）
+
+图表不单独造 px 高度：统一由 shared.css 的语义 token 控制，随大屏根字号等比放大。
+
+| token | 值 | 用途 |
+|---|---|---|
+| `--cst-chart-plot-height` | `clamp(8rem, 14vw, 12.5rem)` | 柱状图数据区高度（轴标签由内容撑高，避免数据少时图形被压扁） |
+| `--cst-chart-map-height` | `clamp(18rem, 36vw, 34rem)` | 区域分布地图/大画布图表高度（宽屏长宽比更接近页面） |
+
+使用：`routes/(app)/admin/stats/+page.svelte` 的趋势柱状图与区域分布图；新增图表优先复用这两个 token 或扩展语义档，不在页面内裸写 px 高度。
