@@ -64,10 +64,9 @@
 | `map-group` | `#0B7653` | `#34D399` | `#4A703F` | `#88B85A` |
 | `map-moment` | `#C2470B` | `#FB923C` | `#8A6426` | `#C4A75A` |
 
-> `workspace-bg` 已删除：历史上与 `page-bg` 两档整层灰并存造成断裂。**2026-10-27（Round 2）起
-> 桌面舞台不再用白浮卡包住侧栏/主面板**：整窗为一张连续画布，侧栏、主内容、顶栏均无外框、
-> 无硬分隔线，层级只由内容单元卡片与留白表达（见 §17 与 theme skill「连续画布契约」）。
-> inkwash 主题族数值以 `themes/*.css` 为准。
+> `workspace-bg` 整层底色不存在（与 `page-bg` 两档整层灰并存会造成断裂）：桌面舞台不用白浮卡包住侧栏/主面板，
+> 整窗为一张连续画布，侧栏、主内容、顶栏均无外框、无硬分隔线，层级只由内容单元卡片与留白表达
+> （见 §17 与 theme skill「连续画布契约」）。inkwash 主题族数值以 `themes/*.css` 为准。
 
 > 派生档位（`-bg` 淡底 / `-border` 淡边框 / `-glow` 光晕）由 `color-mix(in srgb, 主色 12~14%, transparent)`
 > 统一生成，禁止组件/数据层再写 `color-mix`。
@@ -79,7 +78,7 @@
 | `--cst-text-primary` / `-secondary` | `palette-text` / `-muted` | 正文 / 辅助文字 |
 | `--cst-text-on-accent` | `on-accent` | accent 底上的文字 |
 | `--cst-surface-primary` / `-page` | `bg` / `page-bg` | 表面 / 画布 |
-| `--cst-surface-island` | `surface-primary` 派生（light 86% 半透合成画布 / dark 94% primary + 6% text-primary） | 开放页面内容岛表面（Round 3，见 §19） |
+| `--cst-surface-island` | `surface-primary` 派生（light 86% 半透合成画布 / dark 94% primary + 6% text-primary） | 开放页面内容岛表面（见 §19） |
 | `--cst-accent-default` / `-soft` / `-border` | `accent-primary` / `accent-soft` / `accent-soft-border` | 品牌 / 淡底 / 淡描边 |
 | `--cst-border-default` / `-strong` | `border` / `border-pressed` | 常规 / 强分隔 |
 | `--cst-status-online/danger/warning` | `online` / `hot` / `warning` | 状态色 |
@@ -89,11 +88,11 @@
 
 - 画布：`palette.pageBackground` / `palette.surfaceBackground`（对齐前端
   `--cst-surface-page` / `--cst-surface-primary`）
-- **画布契约（2026-10-27 Round 2 修订，克制画廊 / 连续画布）**：应用内只允许一个整层底色 =
+- **画布契约（克制画廊 / 连续画布）**：应用内只允许一个整层底色 =
   画布 `pageBackground`（对齐前端 `--cst-surface-page`）；外壳各层（手机壳 / 桌面舞台 /
-  顶栏 / 页面整底 / header bar 变体）只许用画布色连续铺底。**页面级容器不再用卡片外框**：
+  顶栏 / 页面整底 / header bar 变体）只许用画布色连续铺底。**页面级容器不用卡片外框**：
   桌面壳的侧栏/主面板、手机/平板顶栏与页头都不得出现包裹整页的描边、圆角、白底或硬分隔线
-  （会形成屏幕边缘的「框线」观感，2026-10-27 用户明确否决；详情页 DetailHeader 外层恒为 `bg-transparent`，绝对禁止附加通栏底色或毛玻璃白带，交互胶囊悬浮于画布之上，与瞬间/群组详情保持绝对一致）。层级只由**内容单元软岛**
+  （会形成屏幕边缘的「框线」观感；详情页 DetailHeader 外层恒为 `bg-transparent`，禁止附加通栏底色或毛玻璃白带，交互胶囊悬浮于画布之上，与瞬间/群组详情一致）。层级只由**内容单元软岛**
   （`surfaceIsland` 表面 + 轻投影 + 圆角 20，**无 1px 描边**，如设置分组卡、通知列表岛、rail 卡片）
   与留白表达；内容单元格本身不属于「页面框」，可保留。软岛语言见 §19；分组小标用
   `textSecondary` eyebrow（`SettingsGroupLabel`）。
@@ -112,8 +111,8 @@
   `manual` 时直接取偏好（`onSystemColorModeChange` 仅 `auto` 时改变结果）；
   `setColorMode` 对应关系：`dark`→`COLOR_MODE_DARK` / `light`→`COLOR_MODE_LIGHT` /
   `auto`→`COLOR_MODE_NOT_SET`（`EntryAbility` 三处 + 设置页切换处统一按此三选一，
-  旧 `settings_dark_forced=true` 用户已迁移为 `dark`）
-- 已删除主题族的存量偏好一律映射 vibrant 对应明暗
+  `settings_dark_forced=true` 的存量偏好按 `dark` 读取）
+- 不存在主题族的存量偏好一律映射 vibrant 对应明暗
 
 ---
 
@@ -137,7 +136,7 @@
 
 > **鸿蒙平台适配例外**：`FONT.SIZE.LG = 16` 为 HarmonyOS 标准正文尺寸（web 端正文 12/14 偏小），
 > 是唯一多出的档位，两端有意不同，属已登记豁免，不属于漂移。
-> 近邻档（13/15/22/28/32/48/56 与 XXXL_PLUS 36）已按「少档位」原则归并删除，禁止再引入。
+> 近邻档（13/15/22/28/32/48/56 与 XXXL_PLUS 36）一律归并到上表档位，禁止引入。
 >
 > **大屏缩放**：前端字号 token 用 rem 表达（0.625/0.6875/0.75/0.875rem），16px 基准下等价上表 px；
 > ≥1920 视口随根字号等比放大（见 §23），鸿蒙端保持设备独立字号。`check-cross-platform-scale.mjs`
@@ -166,8 +165,8 @@
     该映射由 `check-cross-platform-scale.mjs` 逐档断言，CI 漂移即拦截。
 
   - 比例制 `FONT.LINE_RATIO.{DEFAULT 1.5, CARD 1.7, COPY 1.75}` + `lineHeightFor(fontSize, ratio)`，
-    对齐前端 `theme-registry.css` 的 `--leading-*` 标尺（`card=1.7` 是前端
-    「原 1.55，阅读疲劳修复」后的值）。**多行长文正文用它**（覆盖默认行高）：
+    对齐前端 `theme-registry.css` 的 `--leading-*` 标尺（`card=1.7`）。
+    **多行长文正文用它**（覆盖默认行高）：
 
     | 语义 | 比例 | 适用 |
     |---|---|---|
@@ -177,7 +176,7 @@
 
   - 绝对档 `FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}` 只用于**单行紧凑**场景。
     ⚠️ 绝对档与字号是解耦的：把 `LINE_HEIGHT.SM`(20) 用在 `SIZE.LG`(16) 上比值只有 1.25。
-    实测（2026-10-12）多处出现该误用，比值散落在 1.57~1.83，已统一到上表比例制。
+    误用会让比值散落 1.57~1.83；多行长文一律走上表比例制。
 - 字距：`FONT.LETTER_SPACING.{EYEBROW 1.4, LABEL 1.2, FIELD 1.28, ICON_LABEL 0.6}`
   （对齐前端 tracking-eyebrow/label/field 刻度，鸿蒙按 10px 基准折算）。
 
@@ -207,11 +206,11 @@
 - **禁止**用 `noHorizontalPadding: true` 关掉容器留白再另写一套值。
 - **通栏元素（封面图等）说明**：前端用 `-mx-[var(--cst-page-gutter)]` 抵消 gutter，
   但 **ArkUI 不能照搬**——子元素 `width('100%')` 是相对**父内容盒**解析的，负 margin 只会
-  位移不会加宽（实测 2026-10-11：群详情封面加左右各 −20vp 后仍是 x=70..1186 / 屏宽 1256）。
+  位移不会加宽（实测：群详情封面加左右各 −20vp 后仍是 x=70..1186 / 屏宽 1256）。
   当前约定：封面/hero 一律与下方内容同宽（收束式 hero），不做通栏；确需通栏须把该页整页改为
   `noHorizontalPadding: true` + 各区块自加 gutter（已登记例外），或改用 `calc` 宽度。
-- `SystemPageHeader` 只带纵向节奏、**不再自带横向 padding**（此前自带 20 与
-  容器 gutter 叠加，页头标题比正文多缩进一截）。
+- `SystemPageHeader` 只带纵向节奏、**不带横向 padding**（自加 20 与
+  容器 gutter 叠加会让页头标题比正文多缩进一截）。
 
 ### 5.2 页面纵向节奏（强制）
 
@@ -239,7 +238,7 @@
 | full | `999` | 圆/胶囊 |
 | sheet | `28` | 底部弹层专用大圆角 |
 
-语义形状（`SHAPE`）：`CARD 20 / HERO_CARD 24 / COMPACT_CARD 16 / PREVIEW_CARD 20 / LIST_ITEM 20 / ICON_TILE 12 / INPUT 16 / BUTTON FULL / CHIP FULL / TAB_BAR 24 / SHEET_TOP_RADIUS 28`，按前端语义用法对齐（hero/feature 24、主按钮胶囊 FULL、弹层顶部 28）。近邻档 8/18/22 已删除，禁止再引入。**输入族两派（2026-10-29）**：搜索输入 = 胶囊（前端 `rounded-full`，鸿蒙 `SearchPageHeader` 用 `SHAPE.BUTTON`）；表单输入保持 `INPUT 16`（鸿蒙 `SystemInput` 不变）。
+语义形状（`SHAPE`）：`CARD 20 / HERO_CARD 24 / COMPACT_CARD 16 / PREVIEW_CARD 20 / LIST_ITEM 20 / ICON_TILE 12 / INPUT 16 / BUTTON FULL / CHIP FULL / TAB_BAR 24 / SHEET_TOP_RADIUS 28`，按前端语义用法对齐（hero/feature 24、主按钮胶囊 FULL、弹层顶部 28）。近邻档 8/18/22 不存在，禁止引入。**输入族两派**：搜索输入 = 胶囊（前端 `rounded-full`，鸿蒙 `SearchPageHeader` 用 `SHAPE.BUTTON`）；表单输入保持 `INPUT 16`（鸿蒙 `SystemInput` 不变）。
 
 ---
 
@@ -271,15 +270,15 @@
 | 内容岛/统计卡/徽章/**列表分组容器**（ListGroup / SettingsSectionCard） | `surfaceShadow`（软岛用 `shadow-xs`） | — |
 | 列表行（分组内的行） | **无投影**（层级由分组容器 + 发丝分隔线承担） | — |
 | 选中胶囊（TabsPillGroup） | `controlShadow`（hover 增量走底色） | — |
-| 输入框静态（2026-10-29） | 字段表面色（surface-primary）+ 1px border-default，无投影（纸面主题一致） | hover：边框升 border-strong |
-| 输入框聚焦（2026-10-29） | accent 1px 边界 + 内缘 1px（视觉 2px）+ 3px accent 柔光环 | — |
+| 输入框静态 | 字段表面色（surface-primary）+ 1px border-default，无投影（纸面主题一致） | hover：边框升 border-strong |
+| 输入框聚焦 | accent 1px 边界 + 内缘 1px（视觉 2px）+ 3px accent 柔光环 | — |
 | 菜单/浮层（NotificationCenter、sheet 内浮钮） | `controlShadow` | — |
 | 静态内容卡（登录卡/表单区块/提示 banner/空态卡/骨架卡） | `surfaceShadow` | — |
 
-> **档位纪律（2026-10-11 修正）**：`elevatedShadow`（radius 24~44 / offsetY 8~12）**只允许**
+> **档位纪律**：`elevatedShadow`（radius 24~44 / offsetY 8~12）**只允许**
 > 出现在 FAB、hover/按压抬档、以及桌面外壳（DesktopLayout 侧栏/主面板）三类场景。
-> 历史实现里 `AppThemeVisuals` 把「白卡/hero 卡/列表行/统计卡」的静态投影也取成了
-> `elevatedShadow`，是「所有页面内容都像悬浮卡片」的根因；已全部收敛到 `surfaceShadow`。
+> 「白卡/hero 卡/列表行/统计卡」的静态投影一律 `surfaceShadow`——取 `elevatedShadow`
+> 会让所有页面内容都像悬浮卡片。
 
 ---
 
@@ -303,7 +302,7 @@
   `DURATION_STAGGER_DELAY 150`。
 - 曲线：`CURVE_EASE_IN_OUT` / `CURVE_EASE_OUT` / `CURVE_FAST_OUT_SLOW_IN` / `CURVE_SMOOTH`；
   前端曲线 `standard (0.22,1,0.36,1)` / `bounce (0.34,1.56,0.64,1)`。
-- 骨架屏脉冲：前端 `--cst-motion-skeleton: 1500ms`（2026-10-26 新增，仅骨架屏）↔
+- 骨架屏脉冲：前端 `--cst-motion-skeleton: 1500ms`（仅骨架屏）↔
   鸿蒙 `ANIMATION.DURATION_SLOW 1500`；两端骨架节奏同源，勿单独改一端。
 - Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）。
 
@@ -322,7 +321,7 @@
 ## 11. 透明度（`OPACITY`）
 
 `DISABLED 0.38` / `PRESSED 0.72` / `LOADING 0.58` / `SUBTLE 0.85` / `MUTED 0.5` / `EMPHASIZED 0.8`
-（对齐前端 opacity-50/80 标准档；FADED 0.4 档已归并删除）。
+（对齐前端 opacity-50/80 标准档；FADED 0.4 档不存在）。
 
 ---
 
@@ -332,8 +331,8 @@
   按钮 `BUTTON_HEIGHT 42` / `BUTTON_HEIGHT_LG 48` / `ACTION_BUTTON_HEIGHT 28` /
   `ACTION_BUTTON_HEIGHT_MD 40` / `ACTION_BUTTON_HEIGHT_LG 34` / `SHEET_ACTION_HEIGHT 44` /
   `FILTER_CHIP_HEIGHT 30` / `LOGOUT_BUTTON_HEIGHT 50` / `PASSWORD_INPUT_HEIGHT 46`
-- 输入框 `INPUT_HEIGHT 42`（通用表单）/ `SEARCH_INPUT_HEIGHT 39`（搜索框）。2026-10-29 输入族
-  重构后两端同口径：搜索框 = 胶囊 + 39px（前端 py-2(8) + text-md 行高 21 + border 2 = 39），
+- 输入框 `INPUT_HEIGHT 42`（通用表单）/ `SEARCH_INPUT_HEIGHT 39`（搜索框）。输入族
+  两端同口径：搜索框 = 胶囊 + 39px（前端 py-2(8) + text-md 行高 21 + border 2 = 39），
   图标 16、字号 14、图标与文字间距 `gap-2.5`(10)；表单输入 = 16 圆角 + 43px（前端 px-4 py-2.5 +
   行高 21 + border 2 = 43，≈ INPUT_HEIGHT 42）
 - 图标 `ICON_SIZE_2XS 14` / `ICON_SIZE_XS 16` / `ICON_SIZE_SM 20` / `ICON_SIZE_SM_PLUS 22` /
@@ -345,12 +344,9 @@
   `SHARE_CARD_HEIGHT 130` / `LOG_AREA_HEIGHT 300` / `PROGRESS_STROKE_WIDTH 4`
 - 布局 `LAYOUT.{DESKTOP_HEADER_HEIGHT 52, DESKTOP_SIDEBAR_WIDTH 224, RIGHT_SIDEBAR_WIDTH 220,
   MOBILE_BOTTOM_NAV_HEIGHT 56, TABLET_NAV_MAX_WIDTH 680, FAB_SIZE 52, ICON_BUTTON_SIZE 36,
-  LABEL_WIDTH 60, HOME_COLUMN_WIDTH 420, FILTER_PANEL_WIDTH 180}`（GLOW_BLOB_* 光晕尺寸已随 glow 体系删除）
-  > `TABLET_NAV_MAX_WIDTH` 文档曾写 520，与代码（680）及前端 `--cst-tablet-dock-max: 42.5rem`(680px)
-  > 不一致，2026-10-12 核对代码后修正为 680。
-- 其他布局尺寸：`BACK_BUTTON_SIZE 42`（文档曾写 40，2026-10-18 核对
-  `DesignConstants.ets LAYOUT.BACK_BUTTON_SIZE=42` 与前端批次 3「页面级返回键统一 42」
-  后修正；`SystemPageHeader` 内一处过期注释「40」同批修正）/ `MIN_HIT_TARGET 44`（触控热区底线，见 skill
+  LABEL_WIDTH 60, HOME_COLUMN_WIDTH 420, FILTER_PANEL_WIDTH 180}`（GLOW_BLOB_* 光晕尺寸不存在）
+- 其他布局尺寸：`BACK_BUTTON_SIZE 42`（`DesignConstants.ets LAYOUT.BACK_BUTTON_SIZE=42`，与前端
+  「页面级返回键统一 42」一致）/ `MIN_HIT_TARGET 44`（触控热区底线，见 skill
   `mobile-ui-conventions`：官方底线 ≥40vp、推荐 46）/ `UNREAD_BADGE_SIZE 20` /
   `COVER_HEIGHT 220` / `NICKNAME_MAX_WIDTH 56` / `LOGIN_CARD_MAX_WIDTH 400`
 - **页面横向 gutter 与纵向节奏**：`PAGE_SHELL.{GUTTER_MOBILE 16, GUTTER_TABLET 24,
@@ -381,9 +377,9 @@
 | `MainLayout`（desktop/mobile/tablet） | `layout/DesktopLayout` / `PhoneLayout` / `ResponsiveContainer` | 设备外壳分派 |
 | `EmptyState` | `EmptyState` | 空态（同名同契约） |
 | `shared/Avatar` | `SystemAvatar` | 头像（尺寸/形状/状态点） |
-| `forms/SearchInput` | `SystemInput`（通用单行输入）/ `SearchPageHeader`（页头内联搜索） | 搜索输入（原表写的 `SmartSearchComponent` 已不存在，2026-10-12 修正；2026-10-29 起搜索两端统一胶囊 39px / 字号 14 / 图标 16，表单 `SystemInput` / 前端 `forms/Input` 仍 16 圆角） |
+| `forms/SearchInput` | `SystemInput`（通用单行输入）/ `SearchPageHeader`（页头内联搜索） | 搜索输入（搜索两端统一胶囊 39px / 字号 14 / 图标 16，表单 `SystemInput` / 前端 `forms/Input` 仍 16 圆角） |
 | `navigation/TabBar` / `NavTab` / `RailIcon` | `TabsPillGroup`（默认等宽分段；`freeWidth` 形态对齐前端胶囊行，`TabItem.count` 对齐角标） / `PhoneLayout` 底部导航 | 分类/导航 Tab |
-| `list/ListContainer`（bordered / embedded） | `components/ListGroup`（`bordered` 开关）+ `ListItemGroup` | 列表**分组容器**。**2026-10-27 Round 3**：开放页面 `bordered` = 内容软岛（无 1px 描边 + `surfaceIsland` + `surfaceShadow`/`shadow-xs` + 圆角 20 + 行 gap、行透明；无行间发丝线），见 §19；embedded 面板形态仍保留行分隔线。行本身禁止再叠边框/圆角/投影 |
+| `list/ListContainer`（bordered / embedded） | `components/ListGroup`（`bordered` 开关）+ `ListItemGroup` | 列表**分组容器**。开放页面 `bordered` = 内容软岛（无 1px 描边 + `surfaceIsland` + `surfaceShadow`/`shadow-xs` + 圆角 20 + 行 gap、行透明；无行间发丝线），见 §19；embedded 面板形态仍保留行分隔线。行本身禁止再叠边框/圆角/投影 |
 | `list/ListItem` | `SettingsEntryRow` / `SettingsToggleRow` / `GroupMemberRow` 等行组件 | 列表行：只写 padding + 按压反馈，不写背景/圆角/投影 |
 | `overlays/SheetShell` / `ui/dialog` | `SystemDialog` / `bindSheet` | 弹层/抽屉 |
 | `forms/TagPill` | `TabsPillGroup` chip / `FILTER_CHIP_HEIGHT` | 标签/筛选胶囊 |
@@ -392,15 +388,15 @@
 | `data-display/LoadError` | 无独立组件 → `EmptyState` + `actionLabel:'重试'` + `onAction` | 加载失败态。**语义等价**（同为「图标+文案+重试按钮」），故不另造组件；契约要求「失败必须展示错误并提供重试，禁止静默转空态」——实测 9 个失败分支全部满足 |
 | `data-display/InlineLoading` | 无独立组件 → `LoadingMoreIndicator`（分页）/ 行内 `LoadingProgress`（局部） | 局部加载态。分页场景一律走 `LoadingMoreIndicator`（含向上分页，如聊天「加载更早消息…」）；行内指示用 `LoadingProgress` |
 | `data-display/EmptyState` 整页加载 | `SystemLoadingView` / `Skeleton` / `SkeletonShimmer` | 整页/面板加载与列表骨架 |
-| `data-display/Skeleton` / `SkeletonList` / `SkeletonFeed` | `components/states/Skeleton` / `SkeletonShimmer` | **列表/信息流首屏骨架屏**（2026-10-26 新增前端三原语）。几何同源：行内 12、前导圆 36/40/44/48、文本条 14·55% + 11·35%、条间距 8、圆角 12；`role=status + aria-busy`，占位块 `aria-hidden` |
+| `data-display/Skeleton` / `SkeletonList` / `SkeletonFeed` | `components/states/Skeleton` / `SkeletonShimmer` | **列表/信息流首屏骨架屏**（前端三原语）。几何同源：行内 12、前导圆 36/40/44/48、文本条 14·55% + 11·35%、条间距 8、圆角 12；`role=status + aria-busy`，占位块 `aria-hidden` |
 | `layout/ambient/AmbientBackdrop` | `components/layout/AmbientBackdrop` | 氛围画布（三主题世界层，装饰层唯一实现）。鸿蒙为静态 Canvas 一次性绘制，挂载于 `PageShellContainer`；详见第 16 节 |
 | `data-display/EmptyState`（`spotlight` 开启） | `EmptyState`（`spotlight`）+ `components/states/EmptySpotlight` | 场景化空态装饰层（超大空态专用）。几何/token 见第 16.6 节，两端同一 spec |
-| `data-display/MetricRow` / `HeroStats` | `HomePage.buildHeroStats`（页面内 @Builder） | 统计段（原表写的 `StatSegments` 已不存在，2026-10-12 修正；目前只有首页一处消费，暂不抽独立组件） |
-| `routes/moments/shared/MomentCard` | `MomentFeedCard` / `MomentWallCard` | 动态卡片。**2026-10-27 Round 2**：网格/列表形态均为整卡图片 + 遮罩覆盖信息（3:4；首页 feed 由 `HomeFeedItem` ↔ `MomentFeedCard variant='overlay'` 4:5），spec 见 §17 |
+| `data-display/MetricRow` / `HeroStats` | `HomePage.buildHeroStats`（页面内 @Builder） | 统计段（只有首页一处消费，暂不抽独立组件） |
+| `routes/moments/shared/MomentCard` | `MomentFeedCard` / `MomentWallCard` | 动态卡片。网格/列表形态均为整卡图片 + 遮罩覆盖信息（3:4；首页 feed 由 `HomeFeedItem` ↔ `MomentFeedCard variant='overlay'` 4:5），spec 见 §17 |
 | `auth/LoginPromptSheet` | `LoginPromptView` | 未登录引导 |
 | `messages/ChatView` 等 | `ChatPage` / `ChatPageHeader` | 聊天界面 |
-| `routes/(app)/nearby/+page.svelte`（附近聚合） | `features/nearby/pages/NearbyPage` | 附近聚合页（tab 式：附近的人/附近群组/附近瞬间三分区，各分区拉取并渲染内容； 2026-10-13 更新描述——原「纯导航门户」描述已过期）。手机/平板底栏「附近」tab |
-| `data-display/NearbyImageCard` | `components/NearbyImageCard` | 图片优先卡。**2026-10-27 Round 2**：默认形态改为图片铺满整卡 + 遮罩覆盖信息（3:4），徽章/操作压在图上（footer 覆盖、白字/白图标、对比度硬约束）；`horizontal` 横排两段式保留为列表场景例外。`HomeFeedItem` card ↔ 鸿蒙 `MomentFeedCard variant='overlay'`（4:5）。spec 见 §17 |
+| `routes/(app)/nearby/+page.svelte`（附近聚合） | `features/nearby/pages/NearbyPage` | 附近聚合页（tab 式：附近的人/附近群组/附近瞬间三分区，各分区拉取并渲染内容）。手机/平板底栏「附近」tab |
+| `data-display/NearbyImageCard` | `components/NearbyImageCard` | 图片优先卡。图片铺满整卡 + 遮罩覆盖信息（3:4），徽章/操作压在图上（footer 覆盖、白字/白图标、对比度硬约束）；`horizontal` 横排两段式保留为列表场景例外。`HomeFeedItem` card ↔ 鸿蒙 `MomentFeedCard variant='overlay'`（4:5）。spec 见 §17 |
 | `routes/(app)/notify/+page.svelte` + `notify/shared/NotifyRow` | `components/NotificationCenter` | 通知中心（列表 + 行） |
 | `shared/ConnectionBanner`（近似） | `components/NotificationBanner` | 顶部横幅提示（前端对应为连接横幅，语义近似；鸿蒙端承载更广） |
 
@@ -424,7 +420,7 @@
 
 ---
 
-**状态色 on-soft 校验**（R12 补充）：`python3 harmonyapp/scripts/check_status_parity.py` 断言 web `--cst-text-*-on-soft`（80% 语义色 + 20% text-primary）与鸿蒙 `ColorConfig.*OnSoft` 双端一致，且 3 主题×明暗×4 语义色对最差软底（含 danger /50）≥4.5；改状态色/新增语义色时与 `check:theme` 一起跑。
+**状态色 on-soft 校验**：`python3 harmonyapp/scripts/check_status_parity.py` 断言 web `--cst-text-*-on-soft`（80% 语义色 + 20% text-primary）与鸿蒙 `ColorConfig.*OnSoft` 双端一致，且 3 主题×明暗×4 语义色对最差软底（含 danger /50）≥4.5；改状态色/新增语义色时与 `check:theme` 一起跑。
 
 ## 15. 已登记例外与平台适配
 
@@ -432,10 +428,9 @@
 - 明暗切换：鸿蒙 `DarkModePreference` 三档（auto/light/dark），web 端可手动切换；
   主题族（vibrant/forest/inkwash）两端可选集一致。
 - 布局几何（width/height/gap 的 px）：非主题风格，不受 token 约束。
-- 主题选择器 swatch：静态展示目标主题 accent。**当前实现已改为引用 token**
+- 主题选择器 swatch：静态展示目标主题 accent，引用 token
   （`ThemeConstants.VIBRANT_LIGHT_COLORS.accentBackground` 等，见 `SettingsPage` 主题卡），
-  不再写字面 hex —— 此处曾描述为「保留字面 hex」，2026-10-12 核对代码后修正。
-  对应值 vibrant `#2B5EB2` / forest `#3D7A55`（见 `ThemeConstants`），须与 themes 同步。
+  不写字面 hex。对应值 vibrant `#2B5EB2` / forest `#3D7A55`（见 `ThemeConstants`），须与 themes 同步。
 - `figma_neu` 主题：鸿蒙存量兼容项，非双端对齐目标。
 
 ---
@@ -476,27 +471,26 @@
 
 ### 16.3 挂载点（全站统一，页面不得自建）
 
-- **外壳内容区**：`DesktopLayout` 根节点挂**一次整窗实例**（2026-10-27 Round 2 去边框后，
-  顶栏/侧栏/主内容共享同一世界层，不再按区域各挂一份，避免区域交界出现渐变接缝）；
+- **外壳内容区**：`DesktopLayout` 根节点挂**一次整窗实例**（
+  顶栏/侧栏/主内容共享同一世界层，不按区域各挂一份，避免区域交界出现渐变接缝）；
   `TabletLayout`、`MobilePortrait`、`MobileLandscape` 内容区各挂一次（canvas 完整版）——
   氛围层固定于可见内容区，**不随路由滚动**；`PageViewport` 底色透明以透出装饰层
   （画布底色由外壳统一提供 = `surface-page`）；
 - `variant="chrome"`（轻量天光）：仅在确实需要给导航 chrome 单独铺光的场景使用；桌面连续画布
-  下不再需要（整窗已共享世界层）。
+  下不使用（整窗已共享世界层）。
 - 认证页（`routes/(auth)/login`）、错误页（`routes/+error.svelte`）；
 - 启动占位（根布局 BootSplash 外层）：开屏即「世界 + 徽记」，接近游戏加载画面。
 - **鸿蒙端**：统一挂在 `PageShellContainer`（`fillHeight=true` 的页面视口容器）内、内容之下；Tab 页与 NavDestination 推入页自动继承。消息 Tab 未登录分支在 `PhoneLayout` 显式接线（底板 → AmbientBackdrop → LoginPromptView，登录提示不得给不透明底色，否则会盖住氛围层）。页面不得自建第二套背景装饰。
 
-> 历史说明（2026-10-22 同日迭代）：最初挂在 `PageViewport` 内并尝试 `position:sticky`，
-> 但页面视口高度固定为视口高、内容溢出其外，sticky 无活动空间 → 背景会随滚动消失；
-> 改为外壳挂载后背景常驻。
+> 挂载点必须在外壳内容区：`PageViewport` 高度固定为视口高、内容溢出其外，`position:sticky`
+> 无活动空间，背景会随滚动消失。
 
 ### 16.4 硬约束
 
 - 装饰层必须 `aria-hidden="true"` + `pointer-events:none`；挂载容器 `relative isolate`，
   层自身 `z-index:-1`（压在画布底色之上、正文之下），不参与布局 / 交互 / 焦点 / 读屏；
 - 不允许页面内手写第二套背景装饰（新页面自动继承画布；确需场景化空态时另立组件评审）；
-- **动效默认关闭（2026-10-28 性能修复，强制）**：全屏渐变/星层无限动画会让浏览器 GPU
+- **动效默认关闭（强制）**：全屏渐变/星层无限动画会让浏览器 GPU
   进程在页面完全空闲时持续合成（实测首页 idle GPU 进程 24.6%→0%、滚动 19.3%→14.9%、
   1.6%→0%），因此基础类不带 `animation`；只有显式 `<AmbientBackdrop motion />`
   （→ `.ambient-backdrop--motion`）才播放，且仅限空态/稀疏页面使用；
@@ -519,9 +513,9 @@
 
 ### 16.5 已知边界
 
-- 鸿蒙端已于 2026-10-26 同步（`AmbientBackdrop.ets` + `ThemeConstants.AMBIENT` 6 组合 × 12 色，
+- 鸿蒙端实现：`AmbientBackdrop.ets` + `ThemeConstants.AMBIENT`（6 组合 × 12 色，
   与 web `--cst-ambient-*` 语义/合成口径一一对应，见 §13 映射表）；
-- **平台适配差异（已登记）**：web 与鸿蒙默认都为静态世界（2026-10-28 起 web 动画默认关闭，
+- **平台适配差异（已登记）**：web 与鸿蒙默认都为静态世界（web 动画默认关闭，
   统一以性能优先）；web 额外支持 `motion` 逐页 opt-in，鸿蒙保持静态 Canvas；
   鸿蒙每页一块画布（见 16.4）；两端同主题同明暗的世界语言/构图一致；
 - 若后续觉得氛围过淡/过浓，调 `--cst-ambient-*` 的 alpha 即可全站生效（不改组件），
@@ -550,12 +544,12 @@
 **硬约束**：无动画；装饰层 `aria-hidden` / `accessibilityLevel('no')`、`pointer-events:none` /
 `hitTestBehavior(None)`、位于内容之下（前端 `z-index:-1` + 父级 `relative isolate`）；
 颜色只取 ambient token（随三主题 × 明暗自适应）；ArkTS 侧 `.border()` 必须写在
-`.borderRadius()` 之前（否则圆环被重置为直角，2026-10-26 实拍踩坑）。
+`.borderRadius()` 之前（否则圆环被重置为直角，实拍确认）。
 ---
 
-## 17. 整卡图片卡（Image-first overlay card，2026-10-27 Round 2）
+## 17. 整卡图片卡（Image-first overlay card）
 
-**目的**：用户明确要求「图片占满整个卡片，信息覆盖在图片上方」——图像是卡片主体，文字与动作以
+**目的**：图像是卡片主体——图片占满整个卡片，信息覆盖在图片上方，文字与动作以
 遮罩层形式压在图上，而不是「图片 + 白色信息托盘」两段式。
 
 ### 17.1 适用范围
@@ -592,23 +586,23 @@
 ### 17.3 硬约束
 
 - 压图文字对比度 **≥4.5:1**（像素级实测：纯白底图最坏情况下的字形区 vs 背景），亮暗双主题都要测；
-  徽章一律深色强遮罩 + 白字（禁止浅玻璃底 + 白字，历史教训 4.16:1 不达标）。
+  徽章一律深色强遮罩 + 白字（禁止浅玻璃底 + 白字：4.16:1 不达标）。
 - 操作行热区 ≥44、纯图标按钮有 `aria-label`；整卡点击仍走覆盖按钮，行内动作抬 z 序可点
   （沿用 `NearbyImageCard` 既有「覆盖按钮 + auto-lift」模式，不得嵌套交互元素）。
 - 点赞/收藏等**状态**不依赖色相：填充形状 + 白色描边共同表达（色弱可辨）。
 - 新增 scrim/fallback token 必须三主题 × 明暗齐备（前端 `themes/*.css`；鸿蒙 6 套 palette 同值），
   其余颜色一律走 token，禁止页面内写 rgba。
 - 对比度实测方法：卡内封面替换纯白 data-URI（最坏情况）→ 元素「有字/无字」两帧原子截图取字形区 →
-  按 WCAG 逐像素算 min/P5，全部 ≥4.5:1 才算通过。本轮终测：全局最低 4.81（附近群组群名 light）；
-  顶部作者行初测不达标（昵称 2.46/时间 1.71）→ 顶部遮罩改「三段 0.86/0.64@40%/transparent + 高 128」后
-  复测昵称 7.47/时间 4.89（light）、7.69/5.04（dark），全项达标。
+  按 WCAG 逐像素算 min/P5，全部 ≥4.5:1 才算通过。基线：全局最低 4.81（附近群组群名 light）；
+  顶部作者行必须用「三段 0.86/0.64@40%/transparent + 高 128」遮罩，实测昵称 7.47/时间 4.89（light）、
+  7.69/5.04（dark），全项达标。
 - 触控：操作行图标 18px + `hit-slop` → ≥44；覆盖按钮热区同样 ≥44。
 
 ---
 
-## 18. 选中态不得仅依赖颜色（TabBar / TabsPillGroup，2026-10-27 Round 2）
+## 18. 选中态不得仅依赖颜色（TabBar / TabsPillGroup）
 
-用户明确要求：**选中态不能只靠颜色区分**（色弱/色盲用户不可辨）。所有「有选中态」的控件必须同时
+**选中态不能只靠颜色区分**（色弱/色盲用户不可辨）。所有「有选中态」的控件必须同时
 提供**非颜色线索**（形状 / 图标 / 字重 / 下划线 / 位置）：
 
 | 形态 | 选中态要求 |
@@ -622,11 +616,11 @@
 
 ---
 
-## 19. 内容岛（Content Island，2026-10-27 Round 3）
+## 19. 内容岛（Content Island）
 
-**背景**：用户要求「所有页面不要明显的边界」。r2 已去掉页面级/壳层框；Round 3 把开放页面的
-**内容分组**从「白卡 + 1px 硬描边」统一为「软岛」：无描边、表面色 + 轻投影 + 圆角 20 分层。
-用户可见效果：设置/通知/关系/搜索/个人中心不再像一格一格的框，而是若干安静的浮起内容块。
+**背景**：页面不要明显的边界。页面级/壳层不画框；开放页面的**内容分组**统一为「软岛」：
+无描边、表面色 + 轻投影 + 圆角 20 分层——设置/通知/关系/搜索/个人中心不再是一格一格的框，
+而是若干安静的浮起内容块。
 
 ### 19.1 形态（强制）
 
@@ -642,7 +636,7 @@
 
 | 组合 | 定义 | 合成到画布实测 | 岛/画布亮度比 |
 |---|---|---|---|
-| light | vibrant/inkwash：`color-mix(surface-primary 86%, transparent)`；**forest 覆写**：`color-mix(surface-primary 92%, text-primary 8%)`（2026-10-27 R5 决策） | vibrant #FDFDFE / **forest #E4E6E2** / inkwash #FAF8F2 | vibrant 1.11 / forest **1.17** / inkwash 1.06（forest 原 ratio 1.00 改为 v2，原因：纸面主题画布与卡片同色，仅阴影不足以分层；v2 仍保纸面气质，岛屿文字 primary 13.11 / secondary 6.42） |
+| light | vibrant/inkwash：`color-mix(surface-primary 86%, transparent)`；**forest 覆写**：`color-mix(surface-primary 92%, text-primary 8%)` | vibrant #FDFDFE / **forest #E4E6E2** / inkwash #FAF8F2 | vibrant 1.11 / forest **1.17** / inkwash 1.06（forest 纸面主题画布与卡片同色，仅阴影不足以分层，故用 8% text-primary 提亮；岛屿文字 primary 13.11 / secondary 6.42） |
 | dark（三主题） | `color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-text-primary) 6%)` | vibrant #222D40 / forest #232723 / inkwash #2D3031 | 1.16–1.33（暗色阴影不可见，必须靠表面差分层） |
 
 - registry：`--color-surface-island: var(--cst-surface-island)` → `bg-surface-island`。
@@ -656,7 +650,7 @@
   表格/统计行、内容单元内演示分隔。
 - 每次新增页面按 §19.1/§19.3 自查，并在审计表登记「保留的功能线」。
 
-### 19.4 按钮语言（安静化，2026-10-27 补充）
+### 19.4 按钮语言（安静化）
 
 - 主操作：accent 实底 + `text-on-accent`（保存/接受/加入）。
 - 次级/安静：`bg-surface-subtle/60` 软填底、无描边、`text-text-primary`；hover → `bg-surface-subtle` 全量；
@@ -664,7 +658,7 @@
 - 危险：软填 danger 底 + danger 文字，保留二次确认（注销、退出登录）。
 - **同级动作不得混用「描边胶囊」与「软填胶囊」**；功能边界（输入框、主题 swatch）保留。
 
-### 19.5 例外清单（2026-10-27 Round 4 登记：类型 / 理由 / 是否保留 1px）
+### 19.5 例外清单（类型 / 理由 / 是否保留 1px）
 
 | 类型 | 位置示例 | 理由 | 保留 1px |
 |---|---|---|---|
@@ -686,7 +680,7 @@
 
 ---
 
-## 20. 交互状态与可访问性基线（2026-10-27 Round 4）
+## 20. 交互状态与可访问性基线
 
 ### 20.1 焦点可见（focus-visible，强制）
 
@@ -714,25 +708,24 @@
   避免二次位移）。空态/错误态统一 `EmptyState` / `LoadError` + 重试；admin/长尾页一致。
 - 回归基线：39 页 0 console error / 0 横向溢出 / h1=1。
 
-### 20.5 语义结构规则（axe-core 基线，2026-10-27 Round 5）
+### 20.5 语义结构规则（axe-core 基线）
 
-自动化基线：axe-core 4.10.2（工具 `.workwork/ui-polish-1026/r5/tools/axe.min.js`，经 `agent-browser --init-script` 注入）；
+自动化基线：axe-core 4.10.2（`frontend/node_modules/axe-core/axe.min.js`，经 `agent-browser --init-script` 注入；`bun run audit:a11y` 即全量跑）；
 验收目标 **0 serious / 0 critical**。规则：
 
 - **整卡可点**：卡片根不得持 button/aria-label + 内层交互（nested-interactive）；用「覆盖按钮（承载点击/键盘/aria）
-  + 行内动作 auto-lift」模式（NearbyImageCard / HomeFeedItem / ListItem 已统一）。
+  + 行内动作 auto-lift」模式（NearbyImageCard / HomeFeedItem / ListItem 均用此模式）。
 - **列表语义**：`role=list` 的直接子节点必须是 `role=listitem`（自定义行也要补）；`role=listitem` 上不挂 `aria-label`，
   名称由覆盖按钮或可见文本承载。
-- **定义列表**：`dl` 只能直接包含 `dt/dd`；指标组/统计组用 `div role=group`（MetricRow 已改）。
+- **定义列表**：`dl` 只能直接包含 `dt/dd`；指标组/统计组用 `div role=group`（MetricRow 即此实现）。
 - **aria-prohibited**：无 role 的 `div` 不得挂 `aria-label`；用可见文本 / `sr-only` 文本 / 覆盖按钮承载。
 - **地标**：每页有 `main`（登录/注册/错误页也要），必需 landmark 不重复；`lang` 正确。
 - **可滚动区域**：可滚动且非键盘可达的容器（如 admin config 的 `pre`）加 `tabindex=0` + `role=region` + `aria-label`。
 - **图片**：装饰图 `alt=""` + `aria-hidden`；内容图 alt 提供信息，避免与相邻文本重复（image-redundant-alt）。
 
-## 21. R13 视觉语言（2026-10-28）：锚点、同轴与安静动作
+## 21. 视觉语言：锚点、同轴与安静动作
 
-> 本轮把「干净但平淡的 SaaS 白卡」升级为「有节奏、有记忆点的城市社交画布」。本节登记
-> **可验收的规则**（页面/组件按此执行，新增页面不得另起一套）；数值全部复用既有
+> 本节登记**可验收的规则**（页面/组件按此执行，新增页面不得另起一套）；数值全部复用既有
 > token（无新增 palette、无新增字号/圆角档位）。
 
 ### 21.1 三个母题
@@ -803,10 +796,10 @@
 - 作者行：头像 24–32 + 昵称 14 semibold + 时间 12；meta 行 12；动作计数 12 `tabular-nums`、动作间距 24；
 - 压图对比度保持 §17（徽章强遮罩 + 白字；位置信息只出现一次）。
 
-### 21.9 卡片交互（R14，2026-10-28）
+### 21.9 卡片交互
 
 - **层叠**：图片内容卡根 = `card-hover isolate group relative overflow-hidden`；`isolate` 让卡内
-  `z-20` 操作限制在卡内，页内 sticky header 稳定压住整卡（用户反馈的移动端「卡片 UI 压标题栏」即根缺 `isolate`）。
+  `z-20` 操作限制在卡内，页内 sticky header 稳定压住整卡（移动端「卡片 UI 压标题栏」的根因即卡根缺 `isolate`）。
 - **按压**：`use:cardPress` + `data-pressed` + `--cst-card-tap-scale`（vibrant 0.94 / forest·inkwash 0.97），
   仅卡本体/覆盖按钮按下缩放；行内按钮不带动整卡。
 - **操作行**：`data-display/ImageCardActions` 唯一实现（点赞红/收藏 accent/评论分享中性；pop 仅激活方向；
@@ -815,24 +808,24 @@
   **禁止 backdrop-filter**（见 §21.11）。
 - **作者区**：有 `userId` 时可点进主页（头像/昵称同 hover 语言）；分享统一 `lib/moment-actions.shareMoment`。
 
-### 21.11 性能纪律（R15，2026-10-28，强制）
+### 21.11 性能纪律（强制）
 
-**背景**：用户反馈首页打开后浏览器进程管理器 GPU 占用 60%。实测（headless Chrome，GPU 进程 CPU%；当时前端走 MSW mock 登录，现 mock 已移除，结论对真实后端同样适用）定位到三个叠加项：
+**背景**：首页打开后浏览器进程管理器 GPU 占用高。实测（headless Chrome，GPU 进程 CPU%；采集环境为 MSW mock 前端，结论对真实后端同样适用）定位到三个叠加项：
 
-| 因素 | 实测影响（首页 1440x900，mock 登录） | 处理 |
+| 因素 | 实测影响（首页 1440x900） | 处理 |
 |---|---|---|
-| 氛围画布 3 条无限动画（全屏渐变 x2 + 星层 opacity） | 空闲 GPU **24.6% -> 0%**（关闭后归零） | 默认关闭，motion opt-in |
-| .media-badge 的 backdrop-filter（一屏 18 个） | 滚动 GPU 19.3%->14.9% 中约 1/3 | 移除（深色遮罩已保证对比度） |
-| .hover-action 常驻 will-change（首页 48 个） | 合成层数 79->12（CPU 影响小，显存/层数大） | 移除 |
+| 氛围画布 3 条无限动画（全屏渐变 x2 + 星层 opacity） | 空闲 GPU **24.6% -> 0%**（对照：关闭后 0%） | 默认关闭，motion opt-in |
+| .media-badge 的 backdrop-filter（一屏 18 个） | 滚动 GPU 19.3%->14.9% 中约 1/3 | 禁止使用（深色遮罩已保证对比度） |
+| .hover-action 常驻 will-change（首页 48 个） | 合成层数 79->12（CPU 影响小，显存/层数大） | 禁止常驻 |
 
-修复后实测：首页空闲 GPU 0.0%、滚动 10.5%（剩余为右栏 glass 与吸顶胶囊的少量毛玻璃，保留设计语言）；滚动 + 关 backdrop 的对照为 6.1%。
+现状实测：首页空闲 GPU 0.0%、滚动 10.5%（剩余为右栏 glass 与吸顶胶囊的少量毛玻璃，保留设计语言）；滚动 + 关 backdrop 的对照为 6.1%。
 
 **规则（新增 UI 自检）**：
 
 1. 全屏/大面积**无限循环动画默认不允许**；需要时逐页 opt-in，并给出 idle GPU 实测；
 2. will-change 只允许加在「持续动画的固定图层」上，禁止挂到批量列表/卡片内的交互类（.hover-btn/.hover-action 明确禁止；transform 过渡 Chrome 会自动提升）；
 3. backdrop-filter 只用于**少量、大面积有设计意义的 glass 面板**（右栏玻璃卡、吸顶胶囊），禁止用于批量小角标；新增毛玻璃必须评估滚动成本；
-4. 性能改动必须给出可复现量测：见 docs/frontend-ui-audit.md「R15 性能」的采样方法（GPU 进程 CPU / document.getAnimations() / 合成层计数），并保留 before/after 数据。
+4. 性能改动必须给出可复现量测：见 docs/frontend-ui-audit.md 的「性能」采样方法（GPU 进程 CPU / document.getAnimations() / 合成层计数），并保留对照数据。
 
 ### 21.10 验收（可重跑）
 
@@ -845,19 +838,18 @@
 - 性能（§21.11）：内容页空闲 GPU 进程 CPU 约 0%（document.getAnimations() 为 0）；
   bun run test 含 src/styles/__tests__/perf-contract.test.ts 源码契约守卫。
 
-### 21.12 运行时响应与导航可读性（R16，2026-10-28，强制）
+### 21.12 运行时响应与导航可读性（强制）
 
-> 背景：用户反馈「整个页面反应慢一拍」「消息页看起来明显很奇怪」「侧栏 hover 太不明显、对色弱色盲不友好」。
-> 实测结论：单次交互本身不慢（Event Timing INP 16–64ms、hover 24ms、60fps），可感知迟滞来自
+> 背景：可感知迟滞不是单次交互慢（Event Timing INP 16–64ms、hover 24ms、60fps），而来自
 > ① dev 首访路由按需编译（58–900ms，生产 8–49ms）+ ② 页面进场动画从 `opacity:0` 起、180ms
 > （点击后「空白一拍」再淡入）+ ③ 唯一滚动容器上的全局 `scroll-smooth` 把程序化滚动动画化 766ms。
-> 整改后同口径 dev 导航「点击→DOM / 点击→完全可见」：关系 390.9/532.4ms → **29.9/127.6ms**，
-> 通知 288.5/461.8 → **26.9/167.4ms**，设置 454.5/598.1 → **31.7/133.6ms**（1440×900）。
+> 同口径 dev 导航基线「点击→DOM / 点击→完全可见」：关系 **29.9/127.6ms**，通知 **26.9/167.4ms**，
+> 设置 **31.7/133.6ms**（1440×900）。
 
 **1. 页面进场预算（强制）**
 
 - 客户端导航进场 ≤**120ms**，起点 `opacity ≥ 0.6`、位移 ≤2px；**禁止从 opacity:0 起**
-  （先空白再淡入 = 用户所说的「慢一拍」，特效保留但去掉不可见窗口）。
+  （先空白再淡入 = 可感知的「慢一拍」，特效保留但去掉不可见窗口）。
 - 骨架→内容 fade ≤**110ms**。首屏不播进场（保护 LCP）；reduced-motion 由 JS 直接跳过（不加类）。
 - 时长唯一来源：CSS `.page-enter` / `.content-fade` 的 `--cst-page-enter-duration` /
   `--cst-content-fade-duration` 与 `lib/motion.ts` 的 `MOTION`，由
@@ -886,10 +878,9 @@
 
 **4. 合成层（§21.11 补充）**
 
-- will-change 只允许「持续动画的固定图层」；本轮补删 `.image-hover-frame__image` 与
-  `.avatar-entry__avatar img` 的常驻 will-change（首页 12→0，滚动 60fps 不变），并清掉
-  `NearbyImageCard.svelte` 上的 `will-change-transform` Tailwind 类（Tailwind 类不受 CSS 删除影响）。
-  新增同类交互禁止再加。
+- will-change 只允许「持续动画的固定图层」；`.image-hover-frame__image` 与
+  `.avatar-entry__avatar img` 不得加常驻 will-change，`NearbyImageCard.svelte` 不得带
+  `will-change-transform` Tailwind 类（Tailwind 类不受 CSS 删除影响）。新增同类交互禁止再加。
 
 **5. 侧栏导航三态（强制）**
 
@@ -906,7 +897,7 @@
   `filter:grayscale(1)` 截图留档（三主题 × 明暗）。
 - 全站按钮光标：`button:not(:disabled)` / `[role="button"]:not([aria-disabled="true"])`
   由 `base.css` 全局给 `cursor:pointer`——浏览器对 `<button>` 默认是箭头，会让 hover 反馈
-  「不像可点」（R16 审计实测侧栏/顶栏/TabBar 全是 default）。
+  「不像可点」（实测侧栏/顶栏/TabBar 默认全是箭头）。
 
 **6. 消息页（聊天）内容轴与降噪（强制）**
 
@@ -919,12 +910,12 @@
   （`next_cursor=null`）不得显示。
 - 字号：消息正文 `text-md`(14) + `leading-card`；时间戳 `text-xs`(11)；群聊发送者名
   `text-sm`(12)；输入框 `text-md`(14)。accent 实底气泡内文字用 `text-text-on-accent`
-  全量、**不得叠 opacity**（旧 0.7 实测 3.97:1 不达标）。
+  全量、**不得叠 opacity**（叠 0.7 只有 3.97:1，不达标）。
 - 日期分节 = 中性 11px 文本标签（无底色/无投影），禁止白底胶囊（像按钮）。
 - 会话行三态：选中 accent 实底 + 行首长指示条（on-accent）+ semibold；未读 淡 tint +
   行首短指示条（accent）+ 数字徽标 + semibold；普通无条 medium。选中行内文字 on-accent 全量。
 
-**7. 验收（R16 实测）**
+**7. 验收**
 
 - `bun run check` 0 error / 0 warning（含 eslint + theme 四联）；`bun run test` 117 files / 631 tests 全绿。
 - 消息页三视口三列同轴（±1px）、短会话底对齐（最后气泡距输入条 27px）、无 ListEnd 噪音；
@@ -934,11 +925,10 @@
 - 页面性能纪律：内容页 `getAnimations()`=0、will-change 0、longtask 0、滚动 60fps；
   `main` computed `scroll-behavior:auto`。
 
-### 21.13 宽屏填充与列表轴（R17，2026-10-29，强制）
+### 21.13 宽屏填充与列表轴（强制）
 
-> 背景：R16 独立审计发现 /me 总览页头与正文轴漂移（Δ46@1440/Δ158@1920）、关系/举报页宽屏
-> 填充率仅 0.61/0.41、BSP 瓦片墙左缘 +7px——都是「页面自设窄列但页头不跟随」与
-> 「组件内层再收窄」的重复犯错。规则收口：
+> 背景：页头与正文轴漂移、宽屏填充率低、BSP 瓦片墙左缘偏移，根因都是「页面自设窄列但页头
+> 不跟随」与「组件内层再收窄」。规则收口：
 
 1. **页头必须跟随正文宽度**：`PageHeader` 的 `maxWidth` 与 `StandardPageLayout` 的
    `contentMaxWidth` 必须同值（一对 prop 一起传）；只改其一即轴漂移。
@@ -961,17 +951,16 @@
 8. **同屏信息不双写**：同一指标（如「N 在线」）同屏只允许一个表达位（Hero MetricRow
    或页头 chip 二选一）。
 
-**验收（R17 实测）**：/me 全页族 h1 与内容左缘 Δ0@1440；关系/举报列表岛填充 0.95@1440、
+**验收**：/me 全页族 h1 与内容左缘 Δ0@1440；关系/举报列表岛填充 0.95@1440、
 0.74@1920（≥0.70）；BSP slot0 x = h1 x（Δ0@1440）；ListItem hover 对比度 6 组合
 10.61–13.86（全 ≥4.5）；/search 390 CLS 0×8 采样；/nearby 与 /nearby/groups 首屏
 eager 图各 2 张且像素 diff 0 回归。
 
-### 21.14 卡片 hover 的合成器纪律（R18，2026-10-29，强制）
+### 21.14 卡片 hover 的合成器纪律（强制）
 
-> 背景：快速晃动鼠标在不同卡片间来回滑动时 GPU/CPU 占用飙升（用户反馈，首页 / 附近的人 /
-> 附近群组 / 附近瞬间 / 我的瞬间 / 我的群组等全部卡片页）。定位方法：agent-browser 驱动
-> headless Chrome（真 GPU：ANGLE Metal）+ CDP trace 分线程归因 + 逐进程 CPU 时间采样，
-> 视口 1440×1000 @DPR2、拟真晃动（卡内移动为主 + 5–6 次跨卡/s、6s 窗口 ×3 轮）。
+> 背景：快速晃动鼠标跨卡滑动时 GPU/CPU 占用飙升（首页 / 附近的人 / 附近群组 / 附近瞬间 /
+> 我的瞬间 / 我的群组等全部卡片页）。定位方法：agent-browser 驱动 headless Chrome（真 GPU：
+> ANGLE Metal）+ CDP trace 分线程归因 + 逐进程 CPU 时间采样，视口 1440×1000 @DPR2。
 > 根因：每次 hover 同时启动 4 条动画——卡片上浮（transform）、box-shadow、图片缩放
 > （transform）、整卡覆盖按钮背景色；其中 box-shadow 与整卡按钮底色是「整卡面积逐帧重绘」
 > 的 paint 动画（GPU 进程 CPU 0.14–0.15 cores，空闲仅 0.02；renderer 主线程 0.18 cores）。
@@ -980,26 +969,26 @@ eager 图各 2 张且像素 diff 0 回归。
    （`position:absolute; inset:0; border-radius:inherit; background:var(--cst-interactive-hover-fill);
    opacity:0; pointer-events:none; transition:opacity 160ms`）+ `[data-cover]:hover` 自身
    `background-color:transparent`（压过全局 button hover 填充）。颜色 token 与 160ms 时长
-   与旧行为一致，只有执行位置从主线程重绘换成合成器；卡片与 ListItem 的覆盖按钮共用。
-   **例外（2026-10-31，用户反馈「缩放 + 蒙板属重复反馈」）**：图片内容卡（`.card-hover`，
-   已有合成器上浮 + 配图 1.045 缩放）不再显示整卡底色——`.card-hover [data-cover]:hover::before
-   { opacity: 0 }`（无 layer 区、特异性覆盖）。列表行没有抬升/缩放，**继续保留**底色反馈。
+   与既有行为一致，只有执行位置从主线程重绘换成合成器；卡片与 ListItem 的覆盖按钮共用。
+   **例外**：图片内容卡（`.card-hover`，已有合成器上浮 + 配图 1.045 缩放）不显示整卡底色——
+   `.card-hover [data-cover]:hover::before { opacity: 0 }`（无 layer 区、特异性覆盖）。
+   列表行没有抬升/缩放，**保留**底色反馈。
 2. **卡片 hover 动画限定合成器属性**：`.card-hover` 只过渡 `transform` + `border-color`；
    抬升用 transform（vibrant 2px / forest·inkwash 0），配图缩放仍是 transform。
 3. **卡片/配图在 fine pointer 下常驻合成层**：`@media (hover:hover) and (pointer:fine)` 内
    `.card-hover, .image-hover-frame__image { will-change: transform; }`——避免快速跨卡时
    反复提升/销毁层并重栅格化整卡；批量交互小类（`.hover-btn/.hover-action`）仍禁止。
-4. **死类清理**：卡片 className 上的 `hover:shadow-raised-sm`（被 `.card-hover:hover` 的
-   `!important` 覆盖）与 `transition-all`（被 `.card-hover` 过渡覆盖）从未生效，已删除，
-   避免后人误以为它们在承载 hover 视觉。
+4. **禁止死类**：卡片 className 不得写 `hover:shadow-raised-sm`（被 `.card-hover:hover` 的
+   `!important` 覆盖）与 `transition-all`（被 `.card-hover` 过渡覆盖）——它们不生效，
+   会让人误以为在承载 hover 视觉。
 
-**验收（R18 实测；worktree 8898 与主环境 8888 同 harness 交替采样，DPR2）**
+**验收**（worktree 8898 与主环境 8888 同 harness 交替采样，DPR2）
 
 - GPU 进程 CPU：**0.141–0.146 → 0.101–0.109 cores（-27%）**；renderer 0.182–0.187 → 0.177–0.182（-3%）。
 - hover 视觉增量像素级一致：/me/moments 单卡 hover-delta 178,601 vs 178,622 px，重叠 178,586 px
   （差异 3,294 px = 1.8%，全部为亚像素抗锯齿/合成取整）。
 - 空闲 GPU 0.013–0.016 cores 不变；Chrome RSS ±4MB；滚动 GPU 0.127 → 0.090 cores（副作用为正向）。
-- 契约守卫：`src/styles/__tests__/perf-contract.test.ts` 的「卡片 hover 只走合成器属性（R18）」一组。
+- 契约守卫：`src/styles/__tests__/perf-contract.test.ts` 的「卡片 hover 只走合成器属性」一组。
 
 ## 22. 页面锚点岛（Page Island，桌面端）
 
@@ -1038,7 +1027,7 @@ eager 图各 2 张且像素 diff 0 回归。
 
 ## 23. 大屏 UI 等比放大（≥1920）
 
-**问题**：2560/3440/4K 下 UI 元素尺寸不变，文字/图标/控件相对视口过小，用户看不清；单纯封顶内容宽度不会放大元素，不能解决可读性。
+**问题**：2560/3440/4K 下 UI 元素尺寸不变，文字/图标/控件相对视口过小、不易读；单纯封顶内容宽度不会放大元素，不能解决可读性。
 
 **契约**（等效浏览器 zoom，版面比例按「1920 视口」保持）：
 

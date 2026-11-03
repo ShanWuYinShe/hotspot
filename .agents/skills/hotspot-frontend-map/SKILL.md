@@ -43,7 +43,7 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
   悬停在 marker 上滚动的事件不经过画布。
 - 覆盖层 `pointer-events-none` 放行拖拽/滚轮给画布，marker 按钮自身恢复
   `pointer-events:auto`。**覆盖层若整体拦截真实指针事件 → 拖拽/滚轮全失效**，且
-  合成事件测试测不出来（commit 0f6528aa 修复；缺这段逻辑时滚轮全失效）。
+  合成事件测试测不出来（缺这段逻辑时滚轮全失效）。
 
 ## 浏览锚点（Browse Anchor）
 
@@ -67,6 +67,5 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
 4. **蓝点元素查找的坑**：浏览器会把 style 属性规范化（`left:50%` → `left: 50%`），
    按 `getAttribute("style").includes("left:50%")` 找会扑空；按覆盖层
    （`className` 含 `pointer-events-none absolute inset-0`）的子元素找。
-5. 多标签时先 `agent-browser tab list` 确认当前标签——评估跑错标签会得出假结论
-   （实测踩过：把线上页当本地测）。
+5. 多标签时先 `agent-browser tab list` 确认当前标签——常见误判是把线上页当本地测，评估前必须核对标签归属。
 6. 结论口径：marker 无漂移 = 所有标记（含蓝点）缩放/平移后仍钉在同一地理坐标。
