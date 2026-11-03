@@ -13,6 +13,8 @@
 	import MapPinMarker from './MapPinMarker.svelte';
 	import MapHeatDot from '@/components/map/MapHeatDot.svelte';
 	import MapMyLocationDot from './MapMyLocationDot.svelte';
+	import MapAnchorMarker from './MapAnchorMarker.svelte';
+	import type { MapPoint } from '@/lib/map-auto-locate';
 
 	interface Props {
 		pins: Pin[];
@@ -28,6 +30,10 @@
 		onSelectPin: (pin: Pin, e: MouseEvent) => void;
 		onHeatSelect: (bucket: MapHeatBucket) => void;
 		onRetry: () => void;
+		/** 已保存的浏览锚点（附近页距离基准）；null = 未设置，不渲染锚点标记 */
+		anchor?: MapPoint | null;
+		/** 点击锚点标记：回到该锚点 */
+		onSelectAnchor?: () => void;
 	}
 
 	let {
@@ -42,9 +48,16 @@
 		chipTopClass,
 		onSelectPin,
 		onHeatSelect,
-		onRetry
+		onRetry,
+		anchor = null,
+		onSelectAnchor
 	}: Props = $props();
 </script>
+
+{#if anchor && onSelectAnchor}
+	<!-- 浏览锚点标记（区别于实体图钉与我的位置）：表明附近页距离基准落在这里 -->
+	<MapAnchorMarker {anchor} {bounds} onSelect={onSelectAnchor} />
+{/if}
 
 {#if myLocation}
 	<!-- 我的位置蓝点（按地理坐标投影，缩放/平移不漂移；移动端带脉冲光环） -->

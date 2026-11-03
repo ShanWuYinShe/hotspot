@@ -521,7 +521,7 @@
 			{#if user.galleryMoments.length > 0}
 				<div
 					class="grid grid-flow-dense grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3"
-					style="grid-auto-rows: clamp(140px, 16vw, 220px);"
+					style="grid-auto-rows: clamp(8.75rem, 16vw, 13.75rem);"
 				>
 					{#each user.galleryMoments as g, i (g.id)}
 						{@const layout = galleryBspLayouts[i] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}

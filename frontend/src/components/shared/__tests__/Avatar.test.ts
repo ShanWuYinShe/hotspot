@@ -28,8 +28,9 @@ describe('Avatar', () => {
 	it('size 应用到容器尺寸', () => {
 		const { container } = render(Avatar, { props: { name: '测试', size: 48 } });
 		const wrapper = container.firstElementChild as HTMLElement;
-		expect(wrapper.style.width).toBe('48px');
-		expect(wrapper.style.height).toBe('48px');
+		// 大屏等比放大：容器尺寸用 rem 表达（16px 基准下 48px 等价 3rem）。
+		expect(wrapper.style.width).toBe('3rem');
+		expect(wrapper.style.height).toBe('3rem');
 	});
 
 	it('外层容器不带 overflow-hidden，内层裁剪层持有 overflow-hidden 保护角标不被裁切', () => {

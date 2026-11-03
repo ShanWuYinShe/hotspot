@@ -70,8 +70,8 @@
 		<SectionHead title="附近的人" icon={Users} count={users.length} action="查看全部" onAction={onSeeAllUsers} />
 		{#if !useRows}
 			<div
-				class="grid grid-flow-dense grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]"
-				style="grid-auto-rows: clamp(195px, 20vw, 275px);"
+				class="grid grid-flow-dense grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))]"
+				style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
 			>
 				{#each users.slice(0, previewCount) as user, index (user.id)}
 					<div class="h-full w-full">
@@ -103,7 +103,7 @@
 {#if moments.length > 0}
 	<div data-hub-section="moments">
 		<SectionHead title="附近瞬间" icon={Sparkles} count={moments.length} action="查看全部" onAction={onSeeAllMoments} />
-		<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(340px,1fr))]">
+		<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(21.25rem,1fr))]">
 			{#each moments.slice(0, momentPreviewCount) as moment (moment.moment_id)}
 				<HomeFeedItem
 					{moment}

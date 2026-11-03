@@ -7,13 +7,14 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
 
 ## marker 语义红线：marker 指所有标记，不只是图钉
 
-「marker 坐标不因缩放而偏移」中的 **marker 是全量语义**，包括三类，缺一不可：
+「marker 坐标不因缩放而偏移」中的 **marker 是全量语义**，包括四类，缺一不可：
 
 | 标记 | 渲染组件 | 定位方式 |
 |---|---|---|
 | 图钉 | `routes/(app)/map/shared/MapPinMarker.svelte` | 经纬度投影（`pos.x%/pos.y%`）|
 | 热力点 | `components/map/MapHeatDot.svelte` | 经纬度投影 |
 | **我的位置蓝点** | `routes/(app)/map/shared/MapMyLocationDot.svelte`（经 `map/shared/MapOverlays.svelte` 挂载） | 经纬度投影（与图钉同口径，缩放/平移后钉在同一地理坐标）|
+| **浏览锚点标记** | `routes/(app)/map/shared/MapAnchorMarker.svelte`（经 `MapOverlays` 挂载） | 同口径经纬度投影；44px 热区、点击回到锚点 |
 
 **蓝点语义（红线）**：蓝点代表「**我的地理位置**」，不是
 「地图中心」——禁止用 `left:50%;top:50%` 钉视口中心来模拟，任何把二者混同的实现都是 bug。
@@ -43,6 +44,19 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
 - 覆盖层 `pointer-events-none` 放行拖拽/滚轮给画布，marker 按钮自身恢复
   `pointer-events:auto`。**覆盖层若整体拦截真实指针事件 → 拖拽/滚轮全失效**，且
   合成事件测试测不出来（commit 0f6528aa 修复；缺这段逻辑时滚轮全失效）。
+
+## 浏览锚点（Browse Anchor）
+
+**语义红线**：浏览锚点是「**附近页距离/推荐计算的基准位置**」，不是地图中心，也不是我的位置。地图页必须让用户同时看到三者，否则就是「点了按钮但不知道发生了什么」。
+
+- **存储**：`localStorage.hotspot_last_location` = `{ lat, lng, name? }`（`lib/map-auto-locate.ts` 的 read/write/clear；历史 `[lat,lng]` 数组兼容）。写入/清除派发 `LOCATION_ANCHOR_UPDATED_EVENT`，地图页常驻时必须监听并同步 `anchorPoint`，否则卡片/标记停留在挂载时旧值。
+- **名称**：选中地点名优先，否则当前中心地名；「未命名区域 / 我的位置」不落库（`resolveAnchorName`），展示时回退「自定义位置」。
+- **三处 UI（桌面/移动共用组件）**：
+  1. 左面板 / 底部 Sheet 的 `BrowseAnchorCard`：已保存锚点名 + 「恢复默认」+ 用途说明 + 「地图中心」行（含距锚点距离）；
+  2. 地图上的 `MapAnchorMarker`（区别于实体图钉与蓝点：accent 胶囊「锚点 · 名称」，点击回到锚点）；
+  3. 地图几何中心的 `MapCenterCrosshair` 准星：拖地图改变的就是它，设锚点时以它为落点。
+- **逻辑**：底部 CTA 落点 = 选中地点优先，否则地图中心；中心与锚点距离 ≤50m（`ANCHOR_SAME_TOLERANCE_METERS`）时 CTA 变为 disabled 的「当前浏览锚点」；「恢复默认」清除锚点并回到服务端默认位置。**「定位到我」只移动视野/蓝点，禁止静默改写锚点**；进入地图已有锚点时以锚点为首屏视野（自动定位只补蓝点，不再覆盖锚点视野）。
+- **验收（浏览器）**：清空 localStorage → 卡片「未设置」+ 无标记 + CTA「将地图中心设为浏览锚点」；点 CTA → toast 含名称、卡片/标记/CTA 三处同步为已设置；注入远端锚点 → 显示距离且 CTA 可点；「恢复默认」→ 三处回到未设置；移动端同流程（Sheet 内卡片 + 粘底 CTA）。
 
 ## 浏览器实测方法（agent-browser，合成 wheel 事件即可生效）
 

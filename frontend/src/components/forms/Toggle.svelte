@@ -41,13 +41,13 @@
 			{on
 			? 'bg-accent-default shadow-toggle-on group-hover:shadow-raised-sm'
 			: 'bg-surface-toggle-off shadow-toggle-off'}"
-		style="width:{width}px;height:28px;"
+		style="width:{width / 16}rem;height:1.75rem;"
 	>
 		<span
 			class="absolute rounded-full bg-surface-toggle-thumb shadow-toggle-thumb
 				transition-[left,transform] duration-standard ease-bounce
 				group-active:scale-90 {on ? '' : 'group-hover:scale-110'}"
-			style="top:3px;width:22px;height:22px;left:{on ? thumbOffset : 2}px;"
+			style="top:0.1875rem;width:1.375rem;height:1.375rem;left:{on ? thumbOffset / 16 : 0.125}rem;"
 		></span>
 	</span>
 </Switch.Root>

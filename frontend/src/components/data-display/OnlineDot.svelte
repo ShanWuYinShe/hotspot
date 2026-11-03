@@ -22,5 +22,5 @@
 <span
 	data-online-dot
 	class={cn('absolute bottom-0 right-0 rounded-full border-strong border-surface-primary', className)}
-	style="width:{px}px;height:{px}px;background:{color ?? 'var(--cst-status-online)'};"
+	style="width:{px / 16}rem;height:{px / 16}rem;background:{color ?? 'var(--cst-status-online)'};"
 ></span>

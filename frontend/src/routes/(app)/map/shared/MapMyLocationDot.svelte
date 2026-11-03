@@ -49,11 +49,11 @@
 >
 	<div
 		class="relative rounded-full"
-		style="width:18px;height:18px;background:var(--cst-marker-user);border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-shadow) var(--cst-marker-user-glow);"
+		style="width:1.125rem;height:1.125rem;background:var(--cst-marker-user);border:var(--cst-border-width-heavy) solid var(--cst-surface-primary);box-shadow:var(--cst-marker-shadow) var(--cst-marker-user-glow);"
 	>
 		<span
 			class="{pulse ? 'map-pulse-halo' : ''} absolute rounded-full"
-			style="inset:{pulse ? '-7px' : '-8px'};background:var(--cst-marker-user-bg);border:var(--cst-border-width-hairline) solid var(--cst-marker-user-border);"
+			style="inset:{pulse ? '-0.4375rem' : '-0.5rem'};background:var(--cst-marker-user-bg);border:var(--cst-border-width-hairline) solid var(--cst-marker-user-border);"
 		></span>
 	</div>
 </div>

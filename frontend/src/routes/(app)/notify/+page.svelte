@@ -335,6 +335,7 @@ const markSingleRead = (id: string) => {
 			variant="integrated"
 			title="通知"
 			onBack={() => smartBack()}
+			islandMeta={unread > 0 ? `${unread} 条未读` : '暂无未读'}
 		>
 			{#snippet trailing()}
 				<!-- 未读计数统一在标题右侧（对齐首页/附近瞬间样板），与「全部已读」同排 -->
@@ -356,6 +357,22 @@ const markSingleRead = (id: string) => {
 						</Button>
 					{/if}
 				</div>
+			{/snippet}
+			{#snippet islandTrailing()}
+				<!-- 桌面岛行动区：与页头「全部已读」同一动作、同一显示条件（无未读时不渲染） -->
+				{#if unread > 0}
+					<Button
+						type="button"
+						variant="soft"
+						size="sm"
+						shape="pill"
+						class="hit-slop-44"
+						onclick={markAllRead}
+					>
+						<CheckCheck class="size-3.5 text-text-secondary" strokeWidth={2} />
+						全部已读
+					</Button>
+				{/if}
 			{/snippet}
 			{#snippet below()}
 				<!-- 分类过滤统一走 TabBar（胶囊）；未登录无通知数据，筛选无意义直接隐藏（Gemini UI 审查：未登录态矛盾） -->

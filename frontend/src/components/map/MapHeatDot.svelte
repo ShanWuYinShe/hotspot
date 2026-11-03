@@ -72,7 +72,7 @@
 		const size = label.length <= 2 ? 28 : label.length === 3 ? 34 : 40;
 		// 层叠见 class 上的 z-10：当前位置点在视口正中心（z-index:5），
 		// 地图中心常与数据密集区重合，不抬层会出现「热力数字被定位点整个盖住」。
-		return `left:${x}%;top:${y}%;width:${size}px;height:${size}px;`;
+		return `left:${x}%;top:${y}%;width:${size / 16}rem;height:${size / 16}rem;`;
 	});
 </script>
 

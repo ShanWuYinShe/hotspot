@@ -16,6 +16,6 @@
 	} = $props();
 </script>
 
-<div data-chat-column class={cn('mx-auto w-full max-w-3xl lg:max-w-5xl 2xl:max-w-6xl min-[2200px]:max-w-7xl', className)}>
+<div data-chat-column class={cn('mx-auto w-full max-w-3xl lg:max-w-5xl 2xl:max-w-6xl', className)}>
 	{@render children()}
 </div>

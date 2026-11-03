@@ -82,8 +82,8 @@
 						<div class="flex items-center gap-3 px-3 py-2.5">
 							<Skeleton class="size-8 shrink-0 rounded-full" />
 							<div class="flex min-w-0 flex-1 flex-col gap-2">
-								<Skeleton class="rounded-sm" style="height: 13px; width: 52%;" />
-								<Skeleton class="rounded-sm" style="height: 11px; width: 30%;" />
+								<Skeleton class="rounded-sm" style="height: 0.8125rem; width: 52%;" />
+								<Skeleton class="rounded-sm" style="height: 0.6875rem; width: 30%;" />
 							</div>
 						</div>
 					{/each}

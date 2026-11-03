@@ -1,9 +1,10 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import { ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ContentColumn from './ContentColumn.svelte';
 	import { platform } from '@/stores/platform.svelte';
+	import { headerIsland, type IslandToken } from '@/stores/header-island.svelte';
 	import { cn } from '@/lib/utils';
 
 	// 布局组件（layout/page）。
@@ -42,6 +43,9 @@
 		onBack,
 		backLabel = '返回',
 		trailing,
+		islandTrailing,
+		island = true,
+		islandMeta,
 		below,
 		sticky = true,
 		showBackOnDesktop = false,
@@ -68,6 +72,12 @@
 		onBack?: () => void;
 		backLabel?: string;
 		trailing?: Snippet;
+		/** 桌面端滚动后交给顶栏灵动岛的右侧行动区（≤2 个控件）。提供后页头 trailing 入岛时隐藏，避免重复。 */
+		islandTrailing?: Snippet;
+		/** 桌面端滚动后是否把标题/上下文交给顶栏灵动岛（默认开启；面板内嵌页头可传 false）。 */
+		island?: boolean;
+		/** 岛上的副信息（缺省用 subtitle）。 */
+		islandMeta?: string;
 		below?: Snippet;
 		sticky?: boolean;
 		showBackOnDesktop?: boolean;
@@ -84,6 +94,68 @@
 
 	const floating = $derived(variant === 'floating');
 	const integrated = $derived(variant === 'integrated');
+
+	// ── 页面锚点岛（Page Island，仅桌面端）────────────────────────────
+	// 把会随滚动离开视口的标题/上下文固定到顶栏中央：吸顶页头用滚动阈值交接（标题淡出），
+	// 非吸顶页头用 IntersectionObserver（标题滚出视口即入岛）。token 保证路由切换/多页头时不串台。
+	const islandToken: IslandToken = Symbol('page-header-island');
+	const islandEnabled = $derived(island && !floating && platform.platform === 'desktop');
+	/** 吸顶页头：标题不会自己滚走，用滚动阈值触发交接；非吸顶页头用标题离场触发。 */
+	const islandStickyTrigger = $derived(!integrated && sticky);
+	/**
+	 * 外层 sticky 容器探测（如 SplitPageLayout 桌面分支把 header 包在 sticky 容器里）：
+	 * integrated 页头此时也不会滚出视口，IO 永不触发——必须改用滚动阈值交接。
+	 */
+	let stickyAncestor = $state(false);
+	const islandHandoffTrigger = $derived(islandStickyTrigger || stickyAncestor);
+	let islandShown = $state(false);
+	let islandAnchorEl = $state<HTMLElement | undefined>(undefined);
+
+	$effect(() => {
+		if (!islandEnabled) return;
+		headerIsland.register(
+			islandToken,
+			untrack(() => ({
+				title,
+				meta: islandMeta ?? subtitle ?? '',
+				trailing: islandTrailing,
+				onBack: showBack ? onBack : undefined,
+				backLabel
+			}))
+		);
+		return () => headerIsland.release(islandToken);
+	});
+
+	$effect(() => {
+		if (!islandEnabled) return;
+		headerIsland.update(islandToken, {
+			title,
+			meta: islandMeta ?? subtitle ?? '',
+			trailing: islandTrailing,
+			onBack: showBack ? onBack : undefined,
+			backLabel
+		});
+	});
+
+	$effect(() => {
+		if (!islandEnabled) return;
+		headerIsland.setVisible(islandToken, islandShown);
+	});
+
+	// 非吸顶页头：标题离开视口（扣掉 52px 顶栏）即入岛；回到视口即退出。
+	$effect(() => {
+		if (!islandEnabled || islandHandoffTrigger) return;
+		const el = islandAnchorEl;
+		if (!el) return;
+		const io = new IntersectionObserver(
+			([entry]) => {
+				islandShown = !entry.isIntersecting;
+			},
+			{ rootMargin: `-${Math.round(52 * Math.max(1, platform.uiScale))}px 0px 0px 0px`, threshold: 0 }
+		);
+		io.observe(el);
+		return () => io.disconnect();
+	});
 
 	// glass prop 保留兼容（历史调用）；统一改为「顶部透明 → 滚动后 glass」，不再直接消费。
 	let scrolled = $state(false);
@@ -102,10 +174,28 @@
 		if (!scroller) scroller = document.getElementById('main-content');
 		if (!scroller) return;
 		const target = scroller;
+		// 检测外层 sticky 容器：integrated 页头被 sticky 包裹时标题恒在视口内，
+		// IntersectionObserver 永不触发（/notify 的 SplitPageLayout 桌面分支即此场景）。
+		let anc = node.parentElement;
+		while (anc && anc !== document.body) {
+			if (getComputedStyle(anc).position === 'sticky') {
+				stickyAncestor = true;
+				break;
+			}
+			anc = anc.parentElement;
+		}
 		let raf = 0;
 		const apply = () => {
 			raf = 0;
-			scrolled = target.scrollTop > 4;
+			const y = target.scrollTop;
+			const uiScale = Math.max(1, platform.uiScale);
+			scrolled = y > 4 * uiScale;
+			// 吸顶页头的标题交接：滚过首屏后标题交给顶栏岛（120/72 滞回，避免抖动）；
+			// 阈值随大屏 UI 缩放（顶栏高度/页头间距都是 rem）。
+			if (islandEnabled && islandHandoffTrigger) {
+				if (!islandShown && y > 120 * uiScale) islandShown = true;
+				else if (islandShown && y < 72 * uiScale) islandShown = false;
+			}
 		};
 		const onScroll = () => {
 			if (raf) return;
@@ -157,6 +247,7 @@
 
 <header
 	use:headerScroll
+	data-island-visible={islandEnabled && islandShown ? 'true' : undefined}
 	class={cn(
 		integrated
 			? 'shrink-0 max-sm:sticky max-sm:top-0 max-sm:z-[var(--cst-z-sticky)] max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:pb-1.5'
@@ -173,8 +264,14 @@
 	<ContentColumn {maxWidth} class={cn(headerPadding, contentClassName)}>
 		{#if integrated}
 			<!-- hub/列表页「内容内页头」：标题 + 副标题/计数 + 工具同一行；筛选紧随；无背景/边框/吸顶 -->
-			<div data-page-intro class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-				<div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1">
+			<div data-page-intro bind:this={islandAnchorEl} class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+				<div
+					data-island-handoff={islandHandoffTrigger && islandShown ? 'true' : undefined}
+					inert={islandHandoffTrigger && islandShown}
+					class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1 transition-opacity duration-standard {islandHandoffTrigger && islandShown
+						? 'opacity-0 pointer-events-none'
+						: ''}"
+				>
 					{#if showBack}
 						<div class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0 self-center -ml-0.5">
 							<ActionIconButton
@@ -198,7 +295,8 @@
 						</p>
 					{/if}
 				</div>
-				{#if trailing}
+				<!-- 入岛后若岛接管了行动区，页头 trailing 隐藏，避免同一动作出现两份 -->
+				{#if trailing && !(islandTrailing && islandShown)}
 					<div class="flex shrink-0 items-center gap-2">{@render trailing()}</div>
 				{/if}
 			</div>
@@ -224,20 +322,26 @@
 						/>
 					</div>
 				{:else}
-					<span class="size-[38px] shrink-0" aria-hidden="true"></span>
+					<span class="size-[2.375rem] shrink-0" aria-hidden="true"></span>
 				{/if}
 				<h1 class="min-w-0 flex-1 truncate text-center text-md font-semibold text-text-primary">{title}</h1>
 				{#if trailing}
 					<div class="shrink-0">{@render trailing()}</div>
 				{:else}
-					<span class="size-[38px] shrink-0" aria-hidden="true"></span>
+					<span class="size-[2.375rem] shrink-0" aria-hidden="true"></span>
 				{/if}
 			</div>
 		{:else}
 			<div class="flex items-center gap-3">
 				{#if showBack}
-					<!-- 全局统一返回按钮：38px 现代微毛玻璃圆钮（p-0.5 + 36px 幽灵钮），触控区经 hit-slop 达 44px -->
-					<div class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0">
+					<!-- 全局统一返回按钮：38px 现代微毛玻璃圆钮（p-0.5 + 36px 幽灵钮），触控区经 hit-slop 达 44px；
+					     入岛后返回动作移到岛上（leading），页头返回淡出，避免同一动作出现两份 -->
+					<div
+						inert={islandHandoffTrigger && islandShown}
+						class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0 transition-opacity duration-standard {islandHandoffTrigger && islandShown
+							? 'opacity-0 pointer-events-none'
+							: ''}"
+					>
 						<ActionIconButton
 							icon={ArrowLeft}
 							label={backLabel}
@@ -253,7 +357,13 @@
 			     trailing 操作簇由 shrink-0 锁定不被压缩；溢出优先级 = 操作钮 > 装饰 chip > 副标题尾字。
 			    （此前有 trailing 时标题列无 flex-1，trailing 又无 shrink-0，360px 级窄屏下
 			     在线 chip 与副标题同时被压折行。） -->
-			<div class="min-w-0 flex-1">
+			<div
+				bind:this={islandAnchorEl}
+				data-island-handoff={islandHandoffTrigger && islandShown ? 'true' : undefined}
+				class="min-w-0 flex-1 transition-opacity duration-standard {islandHandoffTrigger && islandShown
+					? 'opacity-0 pointer-events-none'
+					: ''}"
+			>
 				<h1 class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
 				{#if subtitle}
 					<p class="mt-1 flex min-w-0 items-center gap-1 text-text-secondary {SUBTITLE_SIZE_CLASS[subtitleSize]}">
@@ -264,7 +374,8 @@
 					</p>
 				{/if}
 			</div>
-			{#if trailing}
+			<!-- 入岛后若岛接管了行动区，页头 trailing 隐藏，避免同一动作出现两份 -->
+			{#if trailing && !(islandTrailing && islandShown)}
 				<div class="shrink-0">{@render trailing()}</div>
 			{/if}
 		</div>

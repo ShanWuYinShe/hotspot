@@ -205,7 +205,7 @@
 				]}
 				value={activeTab}
 				onChange={(id) => { activeTab = id as FeedTab; }}
-				class="min-w-[240px] bg-transparent ring-0"
+				class="min-w-[15rem] bg-transparent ring-0"
 			/>
 		</div>
 	</div>
@@ -260,7 +260,7 @@
 							]}
 							value={activeTab}
 							onChange={(id) => { activeTab = id as FeedTab; }}
-							class="w-full max-w-[220px]"
+							class="w-full max-w-[13.75rem]"
 						/>
 					</div>
 				</div>
@@ -298,14 +298,14 @@
 				variant="feed"
 				count={4}
 				label="加载动态中…"
-				class="grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] sm:gap-4 sm:px-0 pt-2"
+				class="grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(21.25rem,1fr))] sm:gap-4 sm:px-0 pt-2"
 			/>
 		{:else if currentError && currentItems.length === 0}
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
 		{:else if currentItems.length > 0}
 			<!-- 高质感社区 Feed 流：单条居中陈列避免半屏塌陷，多条移动端规整 2 列满铺提效；
 			     md 起按 340px 最小轨自动增列，避免 2K/4K 下固定 3 列把卡片拉成 600px+ 巨卡 -->
-			<div class={currentItems.length === 1 ? 'max-w-md mx-auto w-full px-2.5 sm:px-0 pt-2' : demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] sm:gap-4 sm:px-0 pt-2'}>
+			<div class={currentItems.length === 1 ? 'max-w-md mx-auto w-full px-2.5 sm:px-0 pt-2' : demoMode === 'a' || demoMode === 'b' ? 'flex flex-col gap-3.5 sm:gap-4 px-3 sm:px-0 pt-2' : demoMode === 'c' || demoMode === 'd' ? 'grid grid-cols-1 2xl:grid-cols-2 gap-4 px-3 sm:px-0 pt-2' : 'grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(21.25rem,1fr))] sm:gap-4 sm:px-0 pt-2'}>
 				{#each currentItems as moment, index (moment.moment_id)}
 					<HomeFeedItem
 						{moment}

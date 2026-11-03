@@ -152,14 +152,35 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 2. 列表/卡片分区内层禁止 `mx-auto max-w-2xl/3xl` 再收窄（ProfileUserSection / SectionGroups 都不得再收窄）；骨架必须与内容同宽，否则骨架→内容位移。
 3. 验收口径：列表岛宽度 / main 宽度 ≥0.70@1920（关系/举报页实测 0.74–0.95）。
 
+### 大屏 UI 等比放大（≥1920）
+
+超宽屏不做「内容封顶聚合」，而是整体等比放大（等效浏览器 zoom）：1920 基准下 UI 不变，视口越宽 UI 越大，版面相对比例保持「1920 视口」不变。
+
+1. **根字号**：`shared.css` 的 `html { font-size: clamp(1rem, calc(100vw / 120), 2rem) }`——1920→16px、2560→21.33px、3840→32px，上限 2×；所有 rem 尺寸（Tailwind spacing、字号/圆角/布局 token、组件 rem 化尺寸）随根字号等比放大。≤1920 与移动/平板保持 16px 完全不变。
+2. **字号 token 必须用 rem**：`--text-xxs/xs/sm/md` 为 rem 表达（10/11/12/14px @16 基准）；新增尺寸禁止硬编码 px（1px 发丝线、地图瓦片 256px 除外），否则大屏不放大。
+3. **数值型内联尺寸走 --cst-ui-scale**：lucide `size={n}` 由 `svg.lucide[width][height]:not([class*='size-'])` 的 `zoom: var(--cst-ui-scale)` 统一缩放（首帧由 `app.html` 写入、resize 由 `platform` store 同步）；Avatar/ActionIconButton/PinMedia/Toggle 等数值尺寸在组件内 rem 化。新增组件若必须收数字 px，需消费 `--cst-ui-scale` 或 `rem`，不得裸写 px。
+4. **JS 阈值/间距**：滚动阈值、IntersectionObserver rootMargin 等 JS 内联 px 必须乘 `platform.uiScale`（见 `PageHeader` / `DetailHeader`），否则大屏上岛、吸顶触发时机失真。
+5. **验收**：1920 截图与既有基准一致；2560/3840 实测 `htmlFont`、侧栏宽、顶栏高、正文字号与 1920 的比值等于视口宽度比（±1px），且无横向溢出（`document.documentElement.scrollWidth === innerWidth`）。取数用 `agent-browser eval` 读 `getComputedStyle`，不要凭截图目测。
+
 ### 聊天页内容轴与降噪
 
 聊天页（桌面分栏 / 移动推入）是唯一豁免 StandardPageLayout 的常规页面，但三块内容必须同轴：
 
-1. **唯一列宽来源**：`components/messages/ChatColumn.svelte`（`max-w-3xl lg:max-w-5xl 2xl:max-w-6xl min-[2200px]:max-w-7xl`，即 768→1024→1152→1280）。聊天头部 / 消息列 / 输入栏内部都包它；页面/组件不得再写各自的 `max-w-*`。（反例：群聊头比消息列窄一档，表现为「头部飘着、消息挤在一侧」）。
+1. **唯一列宽来源**：`components/messages/ChatColumn.svelte`（`max-w-3xl lg:max-w-5xl 2xl:max-w-6xl`，即 768→1024→1152；大屏随根字号等比放大）。聊天头部 / 消息列 / 输入栏内部都包它；页面/组件不得再写各自的 `max-w-*`。（反例：群聊头比消息列窄一档，表现为「头部飘着、消息挤在一侧」）。
 2. **短会话底对齐**：消息内容容器 `min-h-full flex flex-col justify-end`，空白留在上方；顶部锚定 + 底部 228px 死空白是「消息页很怪」的主因之一。
 3. **ListEnd 降噪**：「没有更多了」只在历史确实翻页并耗尽后渲染（首屏一次返回全部、`next_cursor=null` 时不得出现）；日期分节用中性 11px 文本标签，禁止白底胶囊。
 4. 输入条整体铺满面板（发丝线是功能线），内部内容经 ChatColumn 与消息列同轴；不得再用 `mx-auto max-w-3xl` 直接居中（会与消息列错 26–128px）。
+
+## 页面锚点岛（Page Island，桌面端）
+
+桌面端 52px 顶栏中央的固定信息位：把「会随滚动离开视口、但用户随时可能需要」的常驻信息（标题/身份/状态/行动）固定住，用户自由滚动不丢上下文。**按信息丢失触发**：短页/无滚动页不出岛；岛绝不因滚动方向自动隐藏。
+
+- **结构**：`[leading: 返回/头像] · [title 12 semibold + meta 11 secondary] · [trailing: ≤2 行动]`（允许写操作：保存/全部已读/收藏，状态与页面同步）。
+- **入口 API**：`PageHeader` 新增 `island`（默认 true）/ `islandMeta`（缺省用 subtitle）/ `islandTrailing`（提供后页头原 trailing 入岛时隐藏，避免重复）；`DetailHeader` 走同一 store 契约（作者/群/用户名 + 地点·时间）。state 在 `stores/header-island.svelte.ts`（token 注册，路由切换不串台）。
+- **触发**：吸顶页头滚动 >120px 标题淡出交接（<72px 恢复，保留高度防 CLS）；`integrated`/非吸顶页头标题离开视口（IO rootMargin 扣 52px）时入岛；详情页滚动 >160px 收敛到顶栏岛（移动/平板保留页内吸顶岛）。**以上阈值/rootMargin 均乘 `platform.uiScale`**（顶栏与页头高度是 rem，大屏同步放大）。
+- **交互**：点击岛标题平滑回锚点/页首（reduced 立即）；带返回的页头入岛后返回动作移到岛 leading、页头标题+返回同步淡出（同一动作不出现两份；有 `islandTrailing` 时页头 trailing 入岛隐藏）；岛内文字不重复播报（标题按钮 aria-label，h1 仍在 DOM）；岛为顶栏 overlay，无 CLS。
+- **例外**：`/messages`（左右列头部常驻）、`/map`（全画布）、`/login`、`/register`（无外壳）不出岛；面板内嵌 PageHeader 传 `island={false}`；首页桌面无可见标题 + feed 分段器吸顶常驻，当前分区不丢失，暂不接入（登记例外）。
+- 验证：滚动后 `[data-desktop-dynamic-island]` 文本正确、`main header[data-island-visible]="true"`、回顶消失、短页无岛；headless 下滚动后先截图泵帧再断言。
 
 ## 页头滚动、回顶、焦点播报与 Reflow
 

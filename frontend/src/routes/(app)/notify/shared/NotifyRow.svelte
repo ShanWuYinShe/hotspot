@@ -110,7 +110,7 @@
 				<img
 					src={optimizedImageUrl(notif.momentImage, { width: 88 })}
 					srcset={buildImageSrcSet(notif.momentImage, avatarImageWidths(44))}
-					sizes="44px"
+					sizes="2.75rem"
 					alt=""
 					loading="lazy"
 					decoding="async"

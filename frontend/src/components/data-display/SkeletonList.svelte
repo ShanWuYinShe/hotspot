@@ -62,8 +62,8 @@
 			<div data-skeleton-row class={cn('flex items-center gap-3 px-4 py-3', rowClass)}>
 				<Skeleton class={cn('shrink-0 rounded-full', leadingClass)} />
 				<div class="flex min-w-0 flex-1 flex-col gap-2">
-					<Skeleton class="rounded-sm" style="height: 14px; width: 55%;" />
-					<Skeleton class="rounded-sm" style="height: 11px; width: 35%;" />
+					<Skeleton class="rounded-sm" style="height: 0.875rem; width: 55%;" />
+					<Skeleton class="rounded-sm" style="height: 0.6875rem; width: 35%;" />
 				</div>
 				{#if trailing}
 					<Skeleton class="h-7 w-16 shrink-0 rounded-full" />

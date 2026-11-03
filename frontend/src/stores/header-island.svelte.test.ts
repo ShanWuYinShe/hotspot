@@ -1,49 +1,87 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { headerIsland } from './header-island.svelte';
 
+// PageIsland（原 header-island）契约：
+//   - token 注册：只有当前持有者能 update / setVisible / release（路由切换不串台）
+//   - 内容模型：title + meta + 可选 author（头像/作者名片）+ trailing（行动区）
+//   - 显隐由注册方判定（锚点是否离开视口），store 只存状态
+
+const A = Symbol('page-a');
+const B = Symbol('page-b');
+
 describe('headerIsland store', () => {
 	beforeEach(() => {
-		headerIsland.unregister();
+		headerIsland.release(A);
+		headerIsland.release(B);
 	});
 
-	it('initializes with inactive state', () => {
+	it('初始为未注册、不可见', () => {
 		expect(headerIsland.active).toBe(false);
-		expect(headerIsland.scrolled).toBe(false);
-		expect(headerIsland.category).toBe('');
-		expect(headerIsland.entityName).toBe('');
+		expect(headerIsland.visible).toBe(false);
+		expect(headerIsland.title).toBe('');
+		expect(headerIsland.meta).toBe('');
 	});
 
-	it('registers header island configuration', () => {
-		headerIsland.register({
-			category: '社群',
-			entityName: '测试群组',
-			author: { name: '测试用户' }
-		});
-
+	it('注册后写入内容并置 active', () => {
+		headerIsland.register(A, { title: '附近的人', meta: '20 人 · 5km 内' });
 		expect(headerIsland.active).toBe(true);
-		expect(headerIsland.category).toBe('社群');
-		expect(headerIsland.entityName).toBe('测试群组');
-		expect(headerIsland.author?.name).toBe('测试用户');
+		expect(headerIsland.title).toBe('附近的人');
+		expect(headerIsland.meta).toBe('20 人 · 5km 内');
 	});
 
-	it('updates scroll state', () => {
-		headerIsland.register({ entityName: '详情页' });
-		expect(headerIsland.scrolled).toBe(false);
-
-		headerIsland.setScrolled(true);
-		expect(headerIsland.scrolled).toBe(true);
-
-		headerIsland.setScrolled(false);
-		expect(headerIsland.scrolled).toBe(false);
+	it('支持作者名片字段（详情页）', () => {
+		headerIsland.register(A, {
+			title: '鹿鸣',
+			author: { name: '鹿鸣', location: '云龙湖东岸', time: '10月29日 21:59' }
+		});
+		expect(headerIsland.author?.name).toBe('鹿鸣');
+		expect(headerIsland.author?.location).toBe('云龙湖东岸');
 	});
 
-	it('unregisters cleanly', () => {
-		headerIsland.register({ entityName: '详情页' });
-		headerIsland.setScrolled(true);
-		headerIsland.unregister();
+	it('setVisible 只对当前持有者生效', () => {
+		headerIsland.register(A, { title: 'A' });
+		headerIsland.setVisible(A, true);
+		expect(headerIsland.visible).toBe(true);
 
+		headerIsland.setVisible(B, true);
+		expect(headerIsland.visible).toBe(true);
+
+		headerIsland.setVisible(A, false);
+		expect(headerIsland.visible).toBe(false);
+	});
+
+	it('update 只对当前持有者生效', () => {
+		headerIsland.register(A, { title: '旧标题' });
+		headerIsland.update(A, { title: '新标题', meta: '新 meta' });
+		expect(headerIsland.title).toBe('新标题');
+		expect(headerIsland.meta).toBe('新 meta');
+
+		headerIsland.update(B, { title: '别人的标题' });
+		expect(headerIsland.title).toBe('新标题');
+	});
+
+	it('新 token 注册后接管；旧 token release 不得清空新内容', () => {
+		headerIsland.register(A, { title: 'A 页' });
+		headerIsland.register(B, { title: 'B 页' });
+		headerIsland.setVisible(B, true);
+		expect(headerIsland.title).toBe('B 页');
+
+		headerIsland.release(A);
+		expect(headerIsland.active).toBe(true);
+		expect(headerIsland.title).toBe('B 页');
+		expect(headerIsland.visible).toBe(true);
+
+		headerIsland.release(B);
 		expect(headerIsland.active).toBe(false);
-		expect(headerIsland.scrolled).toBe(false);
-		expect(headerIsland.entityName).toBe('');
+		expect(headerIsland.title).toBe('');
+		expect(headerIsland.visible).toBe(false);
+	});
+
+	it('注册会重置可见性（新页面从未见状态开始）', () => {
+		headerIsland.register(A, { title: 'A' });
+		headerIsland.setVisible(A, true);
+		headerIsland.release(A);
+		headerIsland.register(B, { title: 'B' });
+		expect(headerIsland.visible).toBe(false);
 	});
 });

@@ -4,17 +4,28 @@
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
-	import { autoLocateOnce, clearLocateDeclined, readLastLocation, writeLastLocation } from '@/lib/map-auto-locate';
+	import {
+		autoLocateOnce,
+		clearLastLocation,
+		clearLocateDeclined,
+		LOCATION_ANCHOR_UPDATED_EVENT,
+		readLastLocation,
+		writeLastLocation
+	} from '@/lib/map-auto-locate';
 	import { reportLocation } from '@/lib/location-report';
 	import { auth } from '@/stores/auth.svelte';
-	import { searchPlaces, type GeoPlace } from '@/lib/geo-service';
+	import { formatReverseAddress, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/geo-service';
 	import { createDebouncedSearch } from '@/lib/debounced-search.svelte';
 	import { mapSourceStore } from '@/stores/mapSource.svelte';
 	import { showToast } from '@/stores/toast.svelte';
 	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { SNAP_MIN, SNAP_MID, SNAP_MAX, SNAP_HEIGHTS, floatBtnStyle, aggregateDrillZoom, type MapBounds, type MapHeatBucket, type SnapState } from '../shared/location-shared';
 	import { createMapCanvasState } from '../shared/create-map-canvas-state.svelte';
+	import { locationGridKey, resolveLocationName } from '../shared/location-name';
 	import MapCanvas from '@/components/map/MapCanvas.svelte';
+	import MapCenterCrosshair from '../shared/MapCenterCrosshair.svelte';
+	import BrowseAnchorCard from '../shared/BrowseAnchorCard.svelte';
+	import { anchorActionLabel, anchorPurposeHint, isSameAnchorPoint, resolveAnchorName } from '../shared/browse-anchor';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapOverlays from '../shared/MapOverlays.svelte';
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
@@ -105,6 +116,9 @@
 	// 首屏初值取上次确认的浏览锚点（localStorage 同步可读），不等 client_config；
 	// 配置回来或自动定位成功后再校正。
 	let mapCenter = $state<{ lat: number; lng: number } | null>(readLastLocation());
+	// 上次确认的浏览锚点（含名）：与地图中心分开维护——中心可自由拖动/选点，
+	// 锚点只在底部 CTA 显式确认时改写（旧逻辑「定位到我」会静默改写锚点，语义错误）。
+	let anchorPoint = $state<{ lat: number; lng: number; name?: string } | null>(readLastLocation());
 	// 我的位置（浏览器 GPS fix，WGS-84）：蓝点按它做地理投影，不随地图中心走
 	// （语义红线：蓝点=我的位置，不是地图中心；见 MapMyLocationDot）。
 	let myLocation = $state<{ lat: number; lng: number } | null>(null);
@@ -113,6 +127,11 @@
 	// 用户是否已手动选点：自动定位结果不再抢镜头
 	let userPicked = $state(false);
 	let defaultCenter = $state<{ lat: number; lng: number } | null>(null);
+	// 服务端默认位置名（ClientConfig default_location.location_name）：逆地理失败时的兜底。
+	let defaultName = $state('');
+	// 逆地理结果（key=四位小数网格；失败记 null 免重复请求，随兜底链消化）。
+	let reverseEntry = $state<{ key: string; name: string | null } | null>(null);
+	const reverseCache = new Map<string, string | null>();
 	// 最近使用：搜索选点后记录（会话内状态，原演示播种已按产品决定移除）
 	let recentItems = $state<LocationResult[]>([]);
 
@@ -125,14 +144,25 @@
 		return startDefaultLocation((loc) => {
 			const point = loc?.point ? { lat: loc.point.latitude, lng: loc.point.longitude } : null;
 			defaultCenter = point;
+			defaultName = loc?.location_name ?? '';
 			if (!mapCenter) mapCenter = point;
 			centerResolved = true;
 		});
 	});
 
+	// 锚点外部变更同步（附近页「改用默认位置」等会清 localStorage 并派发事件）：
+	// 地图页常驻时不重挂载，必须监听事件重读，否则锚点卡片/地图标记停留在挂载时旧值。
+	$effect(() => {
+		const syncAnchor = () => {
+			anchorPoint = readLastLocation();
+		};
+		window.addEventListener(LOCATION_ANCHOR_UPDATED_EVENT, syncAnchor);
+		return () => window.removeEventListener(LOCATION_ANCHOR_UPDATED_EVENT, syncAnchor);
+	});
+
 	// 进入地图自动定位一次（Geolocation 单次快照，不会自动更新；权限按域名持久记忆，
-	// 允许过之后调用不再弹窗）。成功即采纳为最新中心，覆盖首屏锚点快照；用户已手动
-	// 选点则让位。拒绝/不支持静默回退默认位置、不 toast 打扰。
+	// 允许过之后调用不再弹窗）。有浏览锚点时以锚点为首屏视野（只补蓝点）；
+	// 无锚点才采纳 GPS 为中心；用户已手动选点则让位。拒绝/不支持静默回退默认位置、不 toast 打扰。
 	$effect(() => {
 		void (async () => {
 			const fix = await autoLocateOnce();
@@ -140,10 +170,56 @@
 			// 真实位置上报；失败静默，不打断交互。
 			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
 			myLocation = { lat: fix.lat, lng: fix.lng };
-			if (userPicked) return;
+			if (userPicked || anchorPoint) return;
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 		})();
 	});
+
+	// 视口中心地名：选了地点/图钉直接用其名；否则逆地理编码实际中心（防抖 500ms + 网格缓存）。
+	// 与桌面端同一兜底链，移动端锚点卡片/锚点命名才有可读名称。
+	$effect(() => {
+		const center = mapCenter;
+		const source = mapSourceStore.source;
+		if (selectedLoc || selectedPin || !center) return;
+		const key = locationGridKey(center);
+		const hit = reverseCache.get(key);
+		if (hit !== undefined) {
+			reverseEntry = { key, name: hit };
+			return;
+		}
+		let cancelled = false;
+		const timer = setTimeout(() => {
+			void reverseGeocode(source, center.lat, center.lng)
+				.then((raw) => {
+					if (cancelled) return;
+					const name = formatReverseAddress(raw);
+					reverseCache.set(key, name);
+					reverseEntry = { key, name };
+				})
+				.catch(() => {
+					if (cancelled) return;
+					reverseCache.set(key, null);
+					if (reverseEntry?.key === key) reverseEntry = { key, name: null };
+				});
+		}, 500);
+		return () => {
+			cancelled = true;
+			clearTimeout(timer);
+		};
+	});
+
+	// 中心地名兜底链与桌面端一致：选中地点 > 图钉 > 同格逆地理 > 锚点名 > 我的位置 > 默认位置 > 未命名区域。
+	const locationName = $derived(
+		resolveLocationName({
+			center: mapCenter,
+			selectedName: selectedLoc?.displayName,
+			pinName: selectedPin?.name || selectedPin?.title,
+			reverseName: mapCenter && reverseEntry?.key === locationGridKey(mapCenter) ? reverseEntry.name : null,
+			anchor: anchorPoint,
+			myLocation,
+			defaultLocation: defaultCenter ? { ...defaultCenter, name: defaultName } : null
+		})
+	);
 
 	// map/canvas 数据（桌面/移动共用工厂）：图钉/热力/计数 + 加载/错误/重试
 	const mapData = createMapCanvasState({
@@ -183,12 +259,12 @@
 			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 			myLocation = { lat: fix.lat, lng: fix.lng };
-			writeLastLocation({ lat: fix.lat, lng: fix.lng });
+			// 定位只移动视野/蓝点，不静默改写浏览锚点：锚点必须由用户显式点底部 CTA 确认。
 			clearLocateDeclined();
 			selectedLoc = null;
 			searchQuery = '';
 			snapTo('mid');
-			showToast(`已定位（精度约 ${Math.round(fix.accuracy)} 米）`, 'success');
+			showToast(`已定位到我的位置（精度约 ${Math.round(fix.accuracy)} 米）`, 'success');
 		},
 		onError: (err) => {
 			showToast(err.message, 'danger');
@@ -213,9 +289,19 @@
 		if (snap === 'max') snapTo('mid');
 	}
 
+	// 底部 CTA：中心已是锚点 → soft/disabled「当前浏览锚点」；否则以选中地点/地图中心为落点。
+	const sameAsCenter = $derived(isSameAnchorPoint(mapCenter, anchorPoint));
+	const ctaLabel = $derived(
+		anchorActionLabel({
+			hasAnchor: Boolean(anchorPoint),
+			sameAsCenter: sameAsCenter && !selectedLoc,
+			selectedLocationName: selectedLoc?.displayName ?? undefined
+		})
+	);
+
 	function handleConfirm() {
 		// 只写好浏览锚点、不关页：用户自己决定何时离开（返回按钮仍在顶栏）。
-		// 未选地点时以视口中心兜底（与桌面端一致）。
+		// 落点语义：选中地点优先，否则以地图中心（准星）为准（与桌面端一致）。
 		const point = selectedLoc ?? mapCenter;
 		if (!point) {
 			showToast('暂时无法获取位置信息', 'danger');
@@ -223,8 +309,32 @@
 		}
 		// 标记已手动确认：迟到的自动定位不再覆盖刚写好的锚点。
 		userPicked = true;
-		writeLastLocation({ ...point, name: selectedLoc?.displayName });
-		showToast('浏览锚点已设置', 'success');
+		// 名称一并持久化：附近页/侧栏的位置名须与锚点一致；未命名区域/我的位置不落库。
+		const name = resolveAnchorName(selectedLoc?.displayName, locationName);
+		writeLastLocation({ ...point, name });
+		anchorPoint = { lat: point.lat, lng: point.lng, name };
+		showToast(name ? `浏览锚点已设为「${name}」` : '浏览锚点已设置', 'success');
+	}
+
+	/** 恢复默认浏览位置：清除本机锚点，地图回到服务端默认位置。 */
+	function handleResetAnchor() {
+		clearLastLocation();
+		anchorPoint = null;
+		selectedLoc = null;
+		searchQuery = '';
+		userPicked = false;
+		if (defaultCenter) mapCenter = defaultCenter;
+		showToast(defaultName ? `已恢复默认浏览位置：${defaultName}` : '已恢复默认浏览位置', 'success');
+	}
+
+	/** 点击地图上的锚点标记：视野回到锚点。 */
+	function handleSelectAnchor() {
+		if (!anchorPoint) return;
+		userPicked = true;
+		mapCenter = { lat: anchorPoint.lat, lng: anchorPoint.lng };
+		selectedLoc = null;
+		selectedPin = null;
+		snapTo('mid');
 	}
 
 	// 图钉详情跳转：user/group/moment 分别路由到对应详情页
@@ -268,6 +378,9 @@
 			<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} bind:gestureTransform={mapGestureTransform} onMapTap={handleMapTap} />
 		{/if}
 
+		<!-- 地图中心准星：拖地图改变的是它；设为浏览锚点时以它为落点 -->
+		<MapCenterCrosshair />
+
 		<!-- 数据覆盖层（当前位置点/热力桶/图钉/加载错误条）：桌面/移动共用组件 -->
 		<!-- 捏合手势中与瓦片层做同款连续缩放变换，保证图钉/热力跟手不脱节 -->
 		<!-- pointer-events-none:同桌面端——覆盖层放行真实指针事件给底层画布 -->
@@ -290,6 +403,8 @@
 			}}
 			onHeatSelect={handleHeatSelect}
 			onRetry={mapData.retryLoad}
+			anchor={anchorPoint}
+			onSelectAnchor={handleSelectAnchor}
 		/>
 		</div>
 	</div>
@@ -393,6 +508,16 @@
 			class="no-scrollbar pb-3"
 			aria-hidden={!isLandscape && snap === 'min'}
 		>
+			<!-- 浏览锚点卡片：与桌面端同组件，明确「已保存锚点 / 地图中心」并支持恢复默认 -->
+			<div class="px-4 pb-3">
+				<BrowseAnchorCard
+					anchor={anchorPoint}
+					center={mapCenter}
+					centerName={locationName}
+					{defaultName}
+					onReset={handleResetAnchor}
+				/>
+			</div>
 			<LocationSheetList
 				bind:searchQuery
 				{searchResults}
@@ -411,10 +536,23 @@
 			class="shrink-0 px-4 pt-2"
 			style="padding-bottom:max(18px, env(safe-area-inset-bottom, 18px));"
 		>
-			<Button variant="primary" size="lg" class="w-full" onclick={handleConfirm}>
-				<MapPin class="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-				<span class="min-w-0 truncate">{selectedLoc ? `确认：${selectedLoc.displayName}` : '设为浏览锚点'}</span>
+			<Button
+				variant={sameAsCenter && !selectedLoc ? 'soft' : 'primary'}
+				size="lg"
+				class="w-full"
+				disabled={sameAsCenter && !selectedLoc}
+				onclick={handleConfirm}
+			>
+				{#if sameAsCenter && !selectedLoc}
+					<Check class="size-4 shrink-0" strokeWidth={2.25} aria-hidden="true" />
+				{:else}
+					<MapPin class="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+				{/if}
+				<span class="min-w-0 truncate">{ctaLabel}</span>
 			</Button>
+			{#if !anchorPoint}
+				<p class="mt-1.5 text-center text-xxs text-text-secondary">{anchorPurposeHint(false)}</p>
+			{/if}
 		</div>
 	</div>
 </div>

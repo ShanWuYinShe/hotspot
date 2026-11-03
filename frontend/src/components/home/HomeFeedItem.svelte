@@ -213,7 +213,7 @@
 		imageSrc={coverUrl}
 		imageAlt={ariaLabel ?? (moment.user?.nickname ? `查看${moment.user.nickname}的瞬间详情` : (moment.description || '查看瞬间详情'))}
 		{priority}
-		sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
+		sizes="(min-width: 1024px) 25rem, (min-width: 640px) 50vw, 100vw"
 		{onClick}
 		onImageError={() => (coverError = true)}
 		class="aspect-[3/4] rounded-lg shadow-xs sm:aspect-[4/5]"
@@ -235,7 +235,7 @@
 				</button>
 				<button
 					type="button"
-					class="pointer-events-auto hit-slop-44 min-h-[18px] truncate text-left text-xs font-semibold sm:text-sm {useFallback
+					class="pointer-events-auto hit-slop-44 min-h-[1.125rem] truncate text-left text-xs font-semibold sm:text-sm {useFallback
 						? 'text-text-primary'
 						: 'text-content-inverse'} hover:underline"
 					onclick={handleUserClick}

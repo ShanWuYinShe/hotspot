@@ -125,7 +125,7 @@
 		<SkeletonFeed
 			variant="card"
 			count={6}
-			class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 min-[2200px]:grid-cols-5"
+			class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
 			label="加载我的瞬间…"
 		/>
 	{:else if needsAuth}
@@ -158,8 +158,8 @@
 
 		<!-- 统一 1x1 瓦片网格（与骨架同列数/同行高；个人主页不做 BSP 大跨度，避免空洞） -->
 		<div
-			class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 min-[2200px]:grid-cols-5"
-			style="grid-auto-rows: clamp(195px, 20vw, 275px);"
+			class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
+			style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
 		>
 			{#each interactions.items as item (item.id)}
 				{#if item.is_deleted}

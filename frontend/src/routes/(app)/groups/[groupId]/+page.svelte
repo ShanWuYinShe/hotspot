@@ -292,7 +292,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 			<img
 				src={presetImageUrl(gd.detail.banner, 'cover', 1600)}
 				srcset={presetSrcSet(gd.detail.banner, 'cover')}
-				sizes="(min-width: 1024px) 900px, 100vw"
+				sizes="(min-width: 1024px) 56.25rem, 100vw"
 				alt={`${gd.detail.name} 的群组封面`}
 				loading="eager"
 				fetchpriority="high"

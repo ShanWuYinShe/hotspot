@@ -25,7 +25,7 @@
 
 {#if pin.isAggregate}
 	<!-- 聚合桶没有真实实体（无头像/封面）：中性无底色类型图标，计数由行尾 Badge 承载 -->
-	<span class="flex shrink-0 items-center justify-center" style="width:{size}px;height:{size}px" aria-hidden="true">
+	<span class="flex shrink-0 items-center justify-center" style="width:{size / 16}rem;height:{size / 16}rem" aria-hidden="true">
 		{#if pin.type === 'group'}
 			<Users class="size-5" style="color:{iconColor}" strokeWidth={1.75} />
 		{:else if pin.type === 'moment'}
@@ -38,22 +38,22 @@
 	{#if pin.image}
 		<span
 			class="media-placeholder flex shrink-0 items-center justify-center overflow-hidden rounded-sm"
-			style="width:{size}px;height:{size}px"
+			style="width:{size / 16}rem;height:{size / 16}rem"
 		>
 			<img
 				src={optimizedImageUrl(pin.image, { width: size * 2 })}
 				srcset={buildImageSrcSet(pin.image, avatarImageWidths(size))}
-				sizes="{size}px"
+				sizes="{size / 16}rem"
 				alt={name}
 				loading="lazy"
 				decoding="async"
 				class="object-cover"
-				style="width:{size}px;height:{size}px;"
+				style="width:{size / 16}rem;height:{size / 16}rem;"
 				use:fadeImage
 			/>
 		</span>
 	{:else}
-		<span class="flex shrink-0 items-center justify-center" style="width:{size}px;height:{size}px" aria-hidden="true">
+		<span class="flex shrink-0 items-center justify-center" style="width:{size / 16}rem;height:{size / 16}rem" aria-hidden="true">
 			<ImageIcon class="size-5" style="color:{iconColor}" strokeWidth={1.75} />
 		</span>
 	{/if}

@@ -32,6 +32,7 @@ description: hotspot 前端 web 样式与交互状态契约：样式自查清单
 18. **动效曲线（强制）**：过渡缓动一律 `var(--cst-ease-*)`：`--cst-ease-standard`=(0.22,1,0.36,1) 标准减速曲线（绝大多数 transition）；`--cst-ease-bounce`=(0.34,1.56,0.64,1) 弹簧 overshoot（FAB、toggle 滑块、地图标记放大、sheet 拖拽回弹等「有弹性」的入场/位移）。Tailwind 类消费经 `--ease-standard`（theme-registry 注册）。**duration 不强制 token 化**：0.10s~0.30s 精细差异是 Figma 动效契约的有意设计（btn 0.17s、action 0.14s、tap 0.10s），`--cst-motion-standard:220ms` 仅作基准参考，不代表统一时长。
 19. **z-index 层叠**：分两类不混用。全站页面级层叠（弹层/抽屉/Toast 等跨组件浮层）用 `--cst-z-*` token（dropdown=10/overlay=40/modal=50/toast=60），经 `z-[var(--cst-z-modal)]` 等引用；局部 stacking context 内层叠（卡片角标盖图片、地图容器内部排序、sticky header）用 Tailwind 默认 `z-10/20/30` 或 arbitrary `z-[1]/z-[2]`，表达「盖几层」的相对语义，不套全站 token——它们在各自 `position:relative` 容器内独立成层。地图组件内部 `z-index:0~50` 内联属此类（地图外层 `overflow:hidden` 形成独立 stacking context）。
 20. **背景装饰层（氛围画布）**：页面不允许自造背景纹理/插画；全站唯一实现 `components/layout/ambient/AmbientBackdrop.svelte`（PageViewport 等处已挂载，新页面自动继承）。组件内确需装饰层必须同时满足：`aria-hidden="true"` + `pointer-events:none` + 父容器 `relative isolate` + 自身 `z-index:-1`、颜色只用 `--cst-ambient-*`/既有 token、动效走 `transform/opacity` 且 reduced-motion 停用。完整规范见 `docs/design-system.md` 第 16 节与 skill `hotspot-frontend-theme`。
+21. **大屏等比放大（≥1920，强制）**：尺寸/字号必须用 rem 表达（根字号 `clamp(1rem, 100vw/120, 2rem)` 在 ≥1920 线性放大，≤1920 不变）；禁止新增裸 `px` 尺寸（1px 发丝线、地图瓦片 256px 例外）。收数字 px 的组件（Avatar/ActionIconButton 等）在组件内 `/16` rem 化；lucide `size={n}` 由全局 `--cst-ui-scale` zoom 统一缩放；JS 阈值/rootMargin 乘 `platform.uiScale`。验收：2560/3840 下侧栏宽、顶栏高、正文字号与 1920 的比值 = 视口宽度比，且无横向溢出。
 
 ## 交互状态契约（现状即规范，改动前先对齐）
 

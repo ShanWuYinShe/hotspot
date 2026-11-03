@@ -28,7 +28,7 @@
 			<img
 				src={optimizedImageUrl(image, { width: 92 })}
 				srcset={buildImageSrcSet(image, avatarImageWidths(46))}
-				sizes="46px"
+				sizes="2.875rem"
 				alt={title}
 				loading="lazy"
 				decoding="async"

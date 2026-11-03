@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { onDestroy, type Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import { ArrowLeft } from '@lucide/svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import ContentColumn from './ContentColumn.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { cn } from '@/lib/utils';
-	import { headerIsland } from '@/stores/header-island.svelte';
+	import { platform } from '@/stores/platform.svelte';
+	import { headerIsland, type IslandToken } from '@/stores/header-island.svelte';
 
 	export interface AuthorInfo {
 		id?: string;
@@ -64,7 +65,7 @@
 			const current = target.scrollTop;
 			const delta = current - lastScrollTop;
 
-			scrolled = current > scrollThreshold;
+			scrolled = current > scrollThreshold * Math.max(1, platform.uiScale);
 
 			// 标头吸顶逻辑：
 			// 移除过度自动避让，滚动离开首屏后保持优雅吸顶且常驻，
@@ -88,10 +89,33 @@
 		};
 	}
 
+	// ── 桌面端：页面锚点岛（顶栏中央）────────────────────────────────
+	// 详情页身份（作者/群/用户）在滚动离开首屏后交给顶栏岛；移动/平板保留页内吸顶岛。
+	// token 保证路由切换/多个页头并存时只有当前页面能控制岛。
+	const islandToken: IslandToken = Symbol('detail-header-island');
+
 	$effect(() => {
-		headerIsland.register({
-			category,
-			entityName,
+		if (platform.platform !== 'desktop') return;
+		headerIsland.register(
+			islandToken,
+			untrack(() => ({
+				title: author?.name || entityName || category || '详情',
+				meta: '',
+				author,
+				onBack,
+				backLabel,
+				onAuthorClick,
+				trailing
+			}))
+		);
+		return () => headerIsland.release(islandToken);
+	});
+
+	$effect(() => {
+		if (platform.platform !== 'desktop') return;
+		headerIsland.update(islandToken, {
+			title: author?.name || entityName || category || '详情',
+			meta: '',
 			author,
 			onBack,
 			backLabel,
@@ -101,11 +125,8 @@
 	});
 
 	$effect(() => {
-		headerIsland.setScrolled(scrolled);
-	});
-
-	onDestroy(() => {
-		headerIsland.unregister();
+		if (platform.platform !== 'desktop') return;
+		headerIsland.setVisible(islandToken, scrolled);
 	});
 </script>
 
@@ -211,7 +232,7 @@
 								{/if}
 							{/if}
 							{#if entityName}
-								<span class="max-w-[200px] truncate text-text-primary font-semibold">{entityName}</span>
+								<span class="max-w-[12.5rem] truncate text-text-primary font-semibold">{entityName}</span>
 							{/if}
 						</div>
 					{/if}

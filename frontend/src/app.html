@@ -47,6 +47,20 @@
 			})();
 		</script>
 		<script>
+			// 大屏 UI 等比放大：首帧就同步 --cst-ui-scale（与 shared.css 根字号 clamp(1rem, 100vw/120, 2rem)
+			// 同一公式：1920→1×、2560→1.33×、3840→2×），供内联数值尺寸（lucide size={n} 等）缩放，
+			// 避免首屏「文字已放大、图标尚未放大」的跳变。resize 由 platform store 接管。
+			(function () {
+				try {
+					var w = window.innerWidth || 1920;
+					var scale = Math.min(2, Math.max(1, w / 1920));
+					document.documentElement.style.setProperty('--cst-ui-scale', scale.toFixed(4));
+				} catch (e) {
+					// 隐私模式等不可用场景忽略
+				}
+			})();
+		</script>
+		<script>
 			// 一次性迁移清理（2026-10-29）：旧版 dev 用 MSW service worker 伪造 API，已随
 			// 「真实种子数据」重构移除。已注册的 mockServiceWorker 不会因文件删除自动注销，
 			// 可能继续控制页面并干扰真实请求/图片加载。这里注销本项目遗留的 MSW worker

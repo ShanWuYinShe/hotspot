@@ -150,7 +150,7 @@
 							</button>
 							<button
 								type="button"
-								class="pointer-events-auto min-w-[18px] min-h-[18px] truncate text-left text-xs font-semibold hit-slop-44 focus-ring {onCover ? 'text-content-inverse hover:underline' : 'text-text-primary hover:text-accent-default hover:underline'} transition-colors"
+								class="pointer-events-auto min-w-[1.125rem] min-h-[1.125rem] truncate text-left text-xs font-semibold hit-slop-44 focus-ring {onCover ? 'text-content-inverse hover:underline' : 'text-text-primary hover:text-accent-default hover:underline'} transition-colors"
 								onclick={(e) => {
 									e.stopPropagation();
 									openAuthor();

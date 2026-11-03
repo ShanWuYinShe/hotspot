@@ -56,10 +56,11 @@
      utility）。设计原则：少档位 + 强制收敛，禁止 1-2px 近邻档位并存（人眼分不清，
      反而让界面碎、无节奏）。正文区压到 2 档（xs 辅助 / sm 正文），1px 差异一律归并。
      全站字号一律走 text-* 类，禁止 style 内联 font-size（已登记例外见 AGENTS.md）。 */
-  --text-xxs: 10px;   /* 极小 uppercase 标签（eyebrow、分组标） */
-  --text-xs: 11px;    /* 辅助文字（副标题、计数、时间戳） */
-  --text-sm: 12px;    /* 正文（原 13px 归并到此，消除 1px 噪声） */
-  --text-md: 14px;    /* 强调正文（昵称、按钮主标、侧栏导航） */
+  /* 用 rem 表达（设计基准 16px）：≥1920 大屏随根字号等比放大，见 shared.css「大屏 UI 等比放大」。 */
+  --text-xxs: 0.625rem;   /* 10px @16：极小 uppercase 标签（eyebrow、分组标） */
+  --text-xs: 0.6875rem;   /* 11px @16：辅助文字（副标题、计数、时间戳） */
+  --text-sm: 0.75rem;     /* 12px @16：正文（原 13px 归并到此，消除 1px 噪声） */
+  --text-md: 0.875rem;    /* 14px @16：强调正文（昵称、按钮主标、侧栏导航） */
   /* text-lg(18) 及以上沿用 Tailwind 默认（18/20/24/30/36），用于标题层级 */
 
   /* Border radius scale — 圆角刻度（rounded-rectangle family）。

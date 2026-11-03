@@ -188,7 +188,7 @@
 								data-gallery-image
 								src={presetImageUrl(currentImage, 'cover', 1600)}
 								srcset={presetSrcSet(currentImage, 'cover')}
-								sizes="(min-width: 768px) 812px, 100vw"
+								sizes="(min-width: 768px) 50.75rem, 100vw"
 								alt="动态图片"
 								width={currentSize?.width ?? undefined}
 								height={currentSize?.height ?? undefined}

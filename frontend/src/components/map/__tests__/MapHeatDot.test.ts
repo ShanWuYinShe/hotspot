@@ -62,8 +62,10 @@ describe('MapHeatDot', () => {
 		];
 		for (const [total, size] of cases) {
 			const dot = renderDot(total);
-			expect(dot.style.width, `total=${total}`).toBe(size);
-			expect(dot.style.height, `total=${total}`).toBe(size);
+			// 大屏等比放大：尺寸用 rem 表达（16px 基准下与旧 px 值等价）。
+			const rem = `${parseFloat(size) / 16}rem`;
+			expect(dot.style.width, `total=${total}`).toBe(rem);
+			expect(dot.style.height, `total=${total}`).toBe(rem);
 		}
 	});
 

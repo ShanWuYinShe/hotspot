@@ -128,7 +128,7 @@
 				<div role="status" aria-busy="true" aria-label="加载热门话题…">
 					<div class="flex flex-wrap gap-2" aria-hidden="true">
 						{#each [0, 1, 2, 3, 4, 5] as i (i)}
-							<Skeleton class="h-7 w-[55px] rounded-full" />
+							<Skeleton class="h-7 w-[3.4375rem] rounded-full" />
 						{/each}
 					</div>
 				</div>

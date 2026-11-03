@@ -16,7 +16,7 @@
 	data-group-chat-badge
 	aria-hidden="true"
 	class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full border-strong border-surface-primary bg-accent-default text-text-on-accent"
-	style="width:{size}px;height:{size}px;"
+	style="width:{size / 16}rem;height:{size / 16}rem;"
 >
 	<Users class={size >= 18 ? 'size-3' : 'size-2.5'} strokeWidth={2.25} />
 </span>

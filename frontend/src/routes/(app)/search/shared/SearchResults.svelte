@@ -205,7 +205,7 @@
 										<img
 											src={presetImageUrl(moment.images[0].url, 'thumb', 200)}
 											srcset={presetSrcSet(moment.images[0].url, 'thumb')}
-											sizes="40px"
+											sizes="2.5rem"
 											alt=""
 											loading="lazy"
 											decoding="async"

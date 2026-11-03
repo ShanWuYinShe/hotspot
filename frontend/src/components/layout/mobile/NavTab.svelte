@@ -41,7 +41,7 @@
 				: 'scale-100'}"
 		>
 			<Icon
-				style="width:{iconSize}px;height:{iconSize}px;color:{isActive ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);"
+				style="width:{iconSize / 16}rem;height:{iconSize / 16}rem;color:{isActive ? 'var(--cst-accent-default)' : 'var(--cst-text-secondary)'};transition:color var(--cst-motion-standard) var(--cst-ease-standard);"
 				strokeWidth={isActive ? 2.25 : 1.5}
 			/>
 			{#if count > 0}

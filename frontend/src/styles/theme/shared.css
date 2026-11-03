@@ -105,10 +105,28 @@
      （2026-10-13 由 1.25rem 收紧，两端同步：鸿蒙 GUTTER_MOBILE=16） */
   --cst-page-gutter: 1rem;
   --cst-page-content-max: 100%;
+  /* 大屏 UI 缩放倍数（JS 同步；与根字号倍数一致，供数值型内联尺寸使用）。 */
+  --cst-ui-scale: 1;
 }
 @media (min-width: 600px) {
   :root { --cst-page-gutter: 1.5rem; }
 }
 @media (min-width: 1280px) {
   :root { --cst-page-gutter: 1.75rem; }
+}
+
+/* ── 大屏 UI 等比放大（桌面超宽屏）────────────────────────────────
+   以 1920 为设计基准：≥1920 视口根字号按视口线性放大（1920→16px、2560→21.3px、
+   3840→32px，上限 2×），所有 rem 化尺寸（Tailwind spacing/圆角/字号、布局 token、
+   组件尺寸）随之等比放大，版面保持「1920 视口」的相对比例。
+   ≤1920 与移动/平板保持原尺寸完全不变（1rem=16px）。
+   注意：根字号用 rem 表达式取浏览器初始字号，保留用户字号偏好作为基准。 */
+html {
+  font-size: clamp(1rem, calc(100vw / 120), 2rem);
+}
+
+/* 数值型内联尺寸的 lucide 图标（size={n}，px）不随 rem 自动缩放：
+   用 JS 同步的 --cst-ui-scale 等比缩放；已用 size-* 类的图标由 rem 处理，排除避免二次放大。 */
+svg.lucide[width][height]:not([class*='size-']) {
+  zoom: var(--cst-ui-scale, 1);
 }

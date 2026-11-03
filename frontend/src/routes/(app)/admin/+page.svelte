@@ -140,8 +140,8 @@
 			>
 				{#each Array(isMobile ? 4 : kpiItems.length || 4) as _, i (i)}
 					<div class="flex min-w-0 flex-1 flex-col gap-2">
-						<Skeleton class="rounded-sm" style="height: 24px; width: 44%;" />
-						<Skeleton class="rounded-sm" style="height: 11px; width: 30%;" />
+						<Skeleton class="rounded-sm" style="height: 1.5rem; width: 44%;" />
+						<Skeleton class="rounded-sm" style="height: 0.6875rem; width: 30%;" />
 					</div>
 				{/each}
 			</div>

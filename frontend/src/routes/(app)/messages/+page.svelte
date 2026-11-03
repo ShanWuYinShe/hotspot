@@ -513,7 +513,7 @@
 				<!-- N2 修复：骨架期在线条占位必须渲染在「最近」标签**之前**（与真实内容顺序：
 				     在线条 → 最近 → 列表 一致），高度 = 真实 lg 条 92px，避免加载后整体下移。 -->
 				<div class="px-[var(--cst-page-gutter)] pt-2" aria-hidden="true">
-					<div class="mb-3 flex h-[92px] flex-col overflow-hidden">
+					<div class="mb-3 flex h-[5.75rem] flex-col overflow-hidden">
 						<div class="eyebrow mb-2.5 h-3 w-8 rounded-sm bg-surface-subtle"></div>
 						<div class="flex gap-3">
 							{#each Array(4) as _, i (i)}

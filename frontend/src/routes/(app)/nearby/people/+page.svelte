@@ -330,8 +330,8 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 						     2560≈7 列、4K≈11 列，避免固定列数在超宽屏把单卡拉成 500px+。
 						     密集排布 (grid-flow-dense) + 自适应行高，全量卡片周期性穿插推荐焦点。 -->
 						<div
-							class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]"
-							style="grid-auto-rows: clamp(195px, 20vw, 275px);"
+							class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))]"
+							style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
 						>
 							{#each visibleUsers as user, index (user.id)}
 								{@const layout = bspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}

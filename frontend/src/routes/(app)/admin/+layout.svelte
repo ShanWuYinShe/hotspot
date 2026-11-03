@@ -7,6 +7,7 @@
 	import { admin, ensureAdminLoaded, hasAdminPermission } from '@/stores/admin.svelte';
 	import { adminListReports } from '@/api';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
@@ -76,13 +77,24 @@
 
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
+		<!-- 岛 meta 收短为「平台管理」：完整 subtitle 含括号说明，进岛后会把 448px 岛挤满被截断；
+		     模块名已在 title，meta 只承担「这块是后台」的语境。 -->
 		<PageHeader
 			title={pageTitle}
 			subtitle="平台管理（仅平台管理员可见）"
+			islandMeta="平台管理"
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			onBack={() => smartBack()}
 		>
+			{#snippet islandTrailing()}
+				<!-- 岛内行动区（≤2 控件）：子模块滚动后给「返回概览」出口，概览页不重复提供 -->
+				{#if activeId !== 'overview'}
+					<Button type="button" variant="soft" size="sm" onclick={() => void goto(ROUTES.admin)}>
+						返回概览
+					</Button>
+				{/if}
+			{/snippet}
 			{#snippet below()}
 				{#if admin.isAdmin}
 					<div class="mt-3 overflow-x-auto pr-1" role="group" aria-label="管理模块导航">

@@ -64,7 +64,7 @@
 		<!-- 聚合计数徽章：字重与全站数字强调一致（semibold），10px 下与 bold 无视觉差异 -->
 		<div
 			class="absolute -top-1 -right-1 flex items-center justify-center rounded-full z-10 text-xxs font-semibold leading-none"
-			style="width:16px;height:16px;background:{PIN_COLORS[pin.type]};border:var(--cst-border-width-regular) solid var(--cst-content-on-marker);color:var(--cst-content-on-marker);"
+			style="width:1rem;height:1rem;background:{PIN_COLORS[pin.type]};border:var(--cst-border-width-regular) solid var(--cst-content-on-marker);color:var(--cst-content-on-marker);"
 		>
 			{pin.count}
 		</div>
@@ -74,7 +74,7 @@
 	{#if isSelected}
 		<span
 			class="absolute rounded-full pointer-events-none opacity-faint"
-			style="inset:8px 2px;background:{PIN_COLORS[pin.type]};filter:blur(var(--cst-blur-sm));"
+			style="inset:0.5rem 0.125rem;background:{PIN_COLORS[pin.type]};filter:blur(var(--cst-blur-sm));"
 		></span>
 	{/if}
 </button>

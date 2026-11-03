@@ -64,6 +64,26 @@
 
 	const device = $derived(platform.platform);
 
+	// ── 桌面端灵动岛（PageHeader islandMeta / islandTrailing）────────────────
+	// 保存基线：加载成功时记录，用于「有未保存的更改」判定。只比较保存 payload 里的字段
+	// （avatar 走上传即保存，不进 dirty 判定）。
+	type Baseline = { nickname: string; bio: string; tags: string[]; gender: Gender | null };
+	let baseline = $state<Baseline | null>(null);
+	const dirty = $derived.by(() => {
+		if (!baseline) return false;
+		const cur = [...tags].sort();
+		const base = [...baseline.tags].sort();
+		return (
+			nickname !== baseline.nickname ||
+			bio !== baseline.bio ||
+			gender !== baseline.gender ||
+			cur.length !== base.length ||
+			cur.some((t, i) => t !== base[i])
+		);
+	});
+	// 岛上第二行状态：保存中 > 已保存 > 有未保存的更改 > 空（回退为空时岛只显示标题）
+	const islandMeta = $derived(saving ? '保存中…' : saved ? '已保存' : dirty ? '有未保存的更改' : undefined);
+
 	$effect(() => {
 		void reloadKey;
 		let cancelled = false;
@@ -88,6 +108,12 @@
 					userId = data.user_id;
 					if (data.tags) tags = new Set(data.tags);
 					gender = data.gender ?? null;
+					baseline = {
+						nickname: data.nickname,
+						bio: data.bio ?? '',
+						tags: data.tags ? [...data.tags] : [],
+						gender: data.gender ?? null
+					};
 				} else {
 					// 加载失败必须显式暴露：否则空表单 + 可保存 = 用户一键清空自己的资料
 					loadError = res.message ?? '加载资料失败';
@@ -133,6 +159,8 @@
 				...(gender ? { gender } : {})
 			});
 			if (res.code !== 0) throw new Error(res.message || '保存失败');
+			// 保存成功即刷新基线，避免在 800ms 跳转窗口内再显示「有未保存的更改」
+			baseline = { nickname: trimmedNickname, bio: bio.trim(), tags: [...tags], gender };
 			saved = true;
 			showToast('已保存', 'success');
 			savedTimer = window.setTimeout(() => {
@@ -190,7 +218,13 @@
 
 <StandardPageLayout contentMaxWidth="var(--cst-content-form-narrow)" contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
-		<PageHeader title="编辑资料" maxWidth="var(--cst-content-form-narrow)" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
+		<PageHeader
+			title="编辑资料"
+			islandMeta={islandMeta}
+			maxWidth="var(--cst-content-form-narrow)"
+			onBack={() => smartBack()}
+			titleSize={device === 'desktop' ? 'xl' : '2xl'}
+		>
 			{#snippet trailing()}
 				<!-- 未登录隐藏保存（主区已是登录引导，顶栏悬挂保存按钮属不可用控件）；
 				     移动端保存下沉到底部粘底操作条（拇指热区），页头不重复出现 -->
@@ -202,6 +236,28 @@
 						class="hit-slop-44 px-4 py-2"
 						loading={saving}
 						disabled={saved || saving || !userId}
+						onclick={() => void handleSave()}
+					>
+						{#if saved}
+							<Check class="size-3.5 text-accent-default" strokeWidth={2.5} />
+						{/if}
+						{saved ? '已保存' : '保存'}
+					</Button>
+				{/if}
+			{/snippet}
+			{#snippet islandTrailing()}
+				<!-- 岛上的保存钮：同一 handleSave / loading / disabled 契约，几何收为 sm+胶囊以适配 36px 岛高；
+				     提供后页头 trailing 入岛时自动隐藏（PageHeader 内置），滚动中也能直接保存 -->
+				{#if !needsAuth}
+					<Button
+						type="button"
+						variant={saved ? 'secondary' : 'primary'}
+						size="sm"
+						shape="pill"
+						class="hit-slop gap-1 px-2.5"
+						loading={saving}
+						disabled={saved || saving || !userId}
+						aria-label={saving ? '保存中' : saved ? '已保存' : '保存资料'}
 						onclick={() => void handleSave()}
 					>
 						{#if saved}

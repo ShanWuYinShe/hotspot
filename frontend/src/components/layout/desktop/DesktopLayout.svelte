@@ -165,6 +165,32 @@
 		activeNavId = item.id;
 		void goto(item.path);
 	};
+
+	// ── 页面锚点岛（Page Island）：内容派生与交互 ────────────────────
+	// 作者名片优先用作者信息；普通页面用 title + meta。meta 缺省时回退作者的位置/时间。
+	const islandMetaText = $derived(
+		headerIsland.meta ||
+			(headerIsland.author
+				? [headerIsland.author.location, headerIsland.author.time].filter(Boolean).join(' · ')
+				: '')
+	);
+
+	/** 点击岛标题：优先页面自定义回锚点；作者名片走作者主页；否则回到页首。 */
+	function handleIslandTitleClick() {
+		if (headerIsland.onTitleClick) return headerIsland.onTitleClick();
+		if (headerIsland.onAuthorClick) return headerIsland.onAuthorClick();
+		scrollMainToAnchor();
+	}
+
+	/** 平滑回到页首（reduced-motion 立即）。 */
+	function scrollMainToAnchor() {
+		const reduced =
+			typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const behavior: ScrollBehavior = reduced ? 'auto' : 'smooth';
+		const main = document.getElementById('main-content');
+		if (main) main.scrollTo({ top: 0, behavior });
+		else window.scrollTo({ top: 0, behavior });
+	}
 </script>
 
 <!-- 侧栏分组标签（发现 / 个人中心）唯一实现：同字号/字距/颜色，折叠时高度与透明度同步收起 -->
@@ -245,53 +271,53 @@
 			</button>
 		{/if}
 
-		<!-- Center Dynamic Island — 灵动岛居中胶囊：当详情页或内容页浮动页头激活时展示，充分利用居中空间，绝不遮挡正文 -->
-		<div class="flex-1 flex items-center justify-center min-w-0 px-2 h-full pointer-events-none">
-			{#if headerIsland.scrolled && headerIsland.active}
-				<div
-					data-desktop-dynamic-island
+		<!-- Center Page Island — 页面锚点岛：当页面锚点（标题/身份）离开视口时展示，
+		     把会滚走的常驻信息固定到居中位置；点击标题回到锚点，绝不遮挡正文 -->
+		<div class="flex-1 min-w-0 h-full pointer-events-none">
+			{#if headerIsland.visible && headerIsland.active}
+				<!-- 绝对居中于整条顶栏（而非 logo 与操作簇之间的剩余空间），与「灵动岛」的视觉中心一致 -->
+				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+					<div
+						data-desktop-dynamic-island
 					class="pointer-events-auto flex items-center gap-2 h-9 px-3 rounded-full bg-surface-primary/90 backdrop-blur-xl border border-border-default/50 shadow-raised-sm text-text-primary transition-all duration-snappy animate-in fade-in zoom-in-95 max-w-md min-w-0"
 					style="contain: layout paint;"
 				>
-					<!-- 返回按钮 -->
-					<ActionIconButton
-						icon={ArrowLeft}
-						label={headerIsland.backLabel || '返回'}
-						onClick={() => (headerIsland.onBack ? headerIsland.onBack() : smartBack())}
-						variant="ghost"
-						tone="muted"
-						size={32}
-						class="shrink-0"
-					/>
+					{#if headerIsland.onBack}
+						<ActionIconButton
+							icon={ArrowLeft}
+							label={headerIsland.backLabel || '返回'}
+							onClick={() => (headerIsland.onBack ? headerIsland.onBack() : smartBack())}
+							variant="ghost"
+							tone="muted"
+							size={32}
+							class="shrink-0"
+						/>
 
-					<div class="h-3.5 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
+						<div class="h-3.5 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
+					{/if}
 
-					<!-- 中间：作者微名片 / 页面标题 -->
+					<!-- 中间：身份微名片 / 页面标题 + 一行 meta（点击回到锚点） -->
 					<div class="flex min-w-0 flex-1 items-center justify-center overflow-hidden">
-						{#if headerIsland.author}
-							<button
-								type="button"
-								class="hover-btn focus-ring flex min-w-0 max-w-full items-center gap-2 rounded-full px-2 py-0.5 text-left"
-								onclick={() => headerIsland.onAuthorClick?.()}
-								aria-label={`查看 ${headerIsland.author.name} 的资料`}
-							>
+						<button
+							type="button"
+							class="hover-btn focus-ring flex min-w-0 max-w-full items-center gap-2 rounded-full px-2 py-0.5 text-left"
+							onclick={handleIslandTitleClick}
+							aria-label={headerIsland.author
+								? `查看 ${headerIsland.author.name} 的资料`
+								: `回到「${headerIsland.title || '页面标题'}」`}
+						>
+							{#if headerIsland.author}
 								<Avatar src={headerIsland.author.avatar} name={headerIsland.author.name} size={20} class="shrink-0" />
-								<div class="flex min-w-0 flex-col justify-center">
-									<span class="truncate text-xs font-semibold text-text-primary leading-tight">
-										{headerIsland.author.name}
-									</span>
-									{#if headerIsland.author.location || headerIsland.author.time}
-										<span class="truncate text-xxs text-text-secondary leading-tight">
-											{[headerIsland.author.location, headerIsland.author.time].filter(Boolean).join(' · ')}
-										</span>
-									{/if}
-								</div>
-							</button>
-						{:else}
-							<span class="truncate text-xs font-semibold text-text-primary px-1">
-								{headerIsland.entityName || headerIsland.category || '详情'}
-							</span>
-						{/if}
+							{/if}
+							<div class="flex min-w-0 flex-col justify-center">
+								<span class="truncate text-xs font-semibold text-text-primary leading-tight">
+									{headerIsland.author ? headerIsland.author.name : headerIsland.title || '详情'}
+								</span>
+								{#if islandMetaText}
+									<span class="truncate text-xxs text-text-secondary leading-tight">{islandMetaText}</span>
+								{/if}
+							</div>
+						</button>
 					</div>
 
 					{#if headerIsland.trailing}
@@ -300,6 +326,7 @@
 							{@render headerIsland.trailing()}
 						</div>
 					{/if}
+					</div>
 				</div>
 			{/if}
 		</div>

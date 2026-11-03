@@ -57,6 +57,25 @@
 		{ label: '群组', value: stats.groups_count }
 	]);
 
+	// ── 桌面端灵动岛（PageHeader islandMeta / islandTrailing）────────────────
+	// 总览：岛上第二行 =「关注 X · 粉丝 Y」（复用 account.stats 的真实数据，非 mock）；
+	// 分区模式：显示该分区计数（moments/groups 同样来自 account.stats）；
+	// 加载中 / 未登录 / 错误态不显示 meta，避免岛上出现误导性的 0。
+	const overviewIslandMeta = $derived(
+		loading || needsAuth || error
+			? undefined
+			: `关注 ${stats.following_count} · 粉丝 ${stats.followers_count}`
+	);
+	const sectionIslandMeta = $derived(
+		loading || needsAuth || error
+			? undefined
+			: section === 'moments'
+				? `共 ${stats.moments_count} 条`
+				: section === 'groups'
+					? `共 ${stats.groups_count} 个`
+					: undefined
+	);
+
 	type EntryItem = {
 		id: string;
 		href: string;
@@ -109,7 +128,14 @@
 	     Section 组件为纯内容（不自建滚动/gutter），gutter 由 ContentColumn 统一提供 -->
 	<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="animate-fade-in pt-4 pb-6">
 		{#snippet header()}
-			<PageHeader title={meta.title} sticky maxWidth="var(--cst-content-breath)" titleSize={device === 'desktop' ? 'xl' : '2xl'} onBack={() => smartBack(ROUTES.me)} />
+			<PageHeader
+				title={meta.title}
+				islandMeta={sectionIslandMeta}
+				sticky
+				maxWidth="var(--cst-content-breath)"
+				titleSize={device === 'desktop' ? 'xl' : '2xl'}
+				onBack={() => smartBack(ROUTES.me)}
+			/>
 		{/snippet}
 		{#if section === 'moments'}
 			<SectionMoments />
@@ -131,9 +157,27 @@
 			<PageHeader
 				title="个人中心"
 				subtitle="你的公开资料、内容与关系的入口"
+				islandMeta={overviewIslandMeta}
 				maxWidth="var(--cst-content-breath)"
 				titleSize={device === 'desktop' ? 'xl' : '2xl'}
-			/>
+			>
+				{#snippet islandTrailing()}
+					<!-- 滚动入岛后「编辑资料」常驻；数据未就绪/未登录/加载失败时不给不可用入口 -->
+					{#if !loading && !needsAuth && !error}
+						<Button
+							variant="primary"
+							size="sm"
+							shape="pill"
+							class="hit-slop gap-1 px-2.5"
+							aria-label="编辑资料"
+							onclick={() => void goto(ROUTES.meEdit)}
+						>
+							<Pencil class="size-3.5" strokeWidth={1.75} />
+							编辑资料
+						</Button>
+					{/if}
+				{/snippet}
+			</PageHeader>
 		{/snippet}
 
 		{#if loading}
@@ -191,7 +235,7 @@
 				</div>
 
 				<!-- 双栏：我的内容入口 + 资料状态（分区间距由上方身份卡 mb-6 单侧提供）。 -->
-				<div class="grid gap-x-5 gap-y-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
+				<div class="grid gap-x-5 gap-y-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(17.5rem,0.65fr)]">
 					<section aria-label="我的内容">
 						<SectionHead title="我的内容" subtitle="你的瞬间、群组与社交关系都在这里" icon={LayoutGrid} />
 						<ListContainer bordered>

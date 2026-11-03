@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MapPin, Navigation, X, ChevronRight, Check, Heart } from '@lucide/svelte';
+	import { MapPin, X, ChevronRight, Check, Heart } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
@@ -10,6 +10,9 @@
 	import { type PinType, type Pin, type LocationResult } from '../shared/location-data';
 	import { PIN_COLORS, PIN_LABELS, PIN_TONES } from '../shared/location-shared';
 	import PinMedia from '../shared/PinMedia.svelte';
+	import BrowseAnchorCard from '../shared/BrowseAnchorCard.svelte';
+	import { anchorActionLabel, anchorPurposeHint, isSameAnchorPoint } from '../shared/browse-anchor';
+	import type { MapPoint } from '@/lib/map-auto-locate';
 	import { smartBack } from '@/lib/smart-back';
 
 	// 桌面地图「左侧面板」：标题/搜索/附近列表/确认。
@@ -35,11 +38,16 @@
 		// 实际视口中心的地名（父组件按选中/逆地理/锚点/默认链解析）；
 		// 此前这里直读服务端静态默认名，定位/拖拽后永远对不上实际位置。
 		locationName = '',
-		/** 浏览器 GPS 是否已成功定位（蓝点/我的位置）。 */
-		hasMyLocation = false,
+		/** 已保存的浏览锚点（附近页距离基准）；null = 未设置。 */
+		anchor = null,
+		/** 地图当前中心坐标（判断「中心已是锚点」并展示距离）。 */
+		center = null,
+		/** 服务端默认位置名：未设置锚点时告知用户回退到哪里。 */
+		defaultName = '',
 		onSelectPin,
 		onSelectLoc,
-		onConfirm
+		onConfirm,
+		onResetAnchor
 	}: {
 		searchQuery?: string;
 		searchResults?: LocationResult[];
@@ -50,13 +58,25 @@
 		selectedLoc?: LocationResult | null;
 		mapCounts?: Record<PinType, number>;
 		locationName?: string;
-		hasMyLocation?: boolean;
+		anchor?: MapPoint | null;
+		center?: { lat: number; lng: number } | null;
+		defaultName?: string;
 		/** 选中附近图钉：由父组件同步设置 selectedPin 并移动地图中心。 */
 		onSelectPin: (pin: Pin) => void;
 		onSelectLoc: (loc: LocationResult) => void;
 		onConfirm: () => void;
-		onLocate?: () => void;
+		/** 清除已保存锚点并回到服务端默认位置。 */
+		onResetAnchor: () => void;
 	} = $props();
+
+	const sameAsCenter = $derived(isSameAnchorPoint(center, anchor));
+	const ctaLabel = $derived(
+		anchorActionLabel({
+			hasAnchor: Boolean(anchor),
+			sameAsCenter: sameAsCenter && !selectedLoc,
+			selectedLocationName: selectedLoc?.displayName ?? undefined
+		})
+	);
 </script>
 
 <!-- Header -->
@@ -115,21 +135,10 @@
 	style="mask-image:linear-gradient(to bottom, black calc(100% - 24px), transparent 100%);-webkit-mask-image:linear-gradient(to bottom, black calc(100% - 24px), transparent 100%);"
 >
 	<div class="animate-fade-in flex flex-col gap-3">
-		<!-- 当前位置卡：accent-soft + accent 图标——实底 accent 只留给底部主 CTA，
-		     一屏一个主操作（设计评审：双实底抢焦点）。外层 px-4 维持 16px 内容轴。 -->
+		<!-- 浏览锚点卡片：明确区分「已保存锚点」与「地图中心」，并支持恢复默认。
+		     旧版此处只显示地图中心的名字（标签却叫「浏览位置」），用户无法知道锚点是否存在、如何设置。 -->
 		<div class="px-4">
-			<div class="flex items-center gap-3 rounded-md bg-accent-soft p-3">
-				<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-primary">
-					<Navigation class="size-4.5 text-accent-default" strokeWidth={2} aria-hidden="true" />
-				</span>
-				<span class="min-w-0 flex-1">
-					<span class="block text-xxs font-medium uppercase tracking-eyebrow text-accent-default">浏览位置</span>
-					<span class="mt-0.5 block truncate text-md font-medium text-text-primary">{locationName || '未命名区域'}</span>
-					<span class="mt-0.5 block text-xxs text-text-secondary">
-						{hasMyLocation ? '我的位置已获取' : '未获取当前位置 · 点右上角准星定位'}
-					</span>
-				</span>
-			</div>
+			<BrowseAnchorCard {anchor} {center} centerName={locationName} {defaultName} onReset={onResetAnchor} />
 		</div>
 
 		{#if nearbyPins.length}
@@ -241,8 +250,21 @@
 			</button>
 		</div>
 	{/if}
-	<Button variant="primary" size="lg" class="w-full" onclick={onConfirm}>
-		<MapPin class="size-4" strokeWidth={1.75} aria-hidden="true" />
-		{selectedLoc ? '确认此位置' : '设为浏览锚点'}
+	<Button
+		variant={sameAsCenter && !selectedLoc ? 'soft' : 'primary'}
+		size="lg"
+		class="w-full"
+		disabled={sameAsCenter && !selectedLoc}
+		onclick={onConfirm}
+	>
+		{#if sameAsCenter && !selectedLoc}
+			<Check class="size-4" strokeWidth={2.25} aria-hidden="true" />
+		{:else}
+			<MapPin class="size-4" strokeWidth={1.75} aria-hidden="true" />
+		{/if}
+		{ctaLabel}
 	</Button>
+	{#if !anchor}
+		<p class="mt-1.5 text-center text-xxs text-text-secondary">{anchorPurposeHint(false)}</p>
+	{/if}
 </div>

@@ -75,7 +75,7 @@
 <div
 	aria-hidden={decorative || undefined}
 	class="relative shrink-0 {className}"
-	style="width:{px}px;height:{px}px;border-radius:{borderRadius};{style}"
+	style="width:{px / 16}rem;height:{px / 16}rem;border-radius:{borderRadius};{style}"
 >
 	<!-- 头像内层：圆形/圆角裁剪图片与占位底层，持有 overflow:hidden -->
 	<div
@@ -87,7 +87,7 @@
 		<span
 			class="absolute inset-0 flex items-center justify-center bg-accent-bg text-text-primary"
 			aria-hidden="true"
-			style={initial ? `font-size:${Math.round(px * 0.42)}px;` : ''}
+			style={initial ? `font-size:${(px * 0.42) / 16}rem;` : ''}
 		>
 			{#if initial}
 				{initial}
@@ -99,7 +99,7 @@
 			<img
 				src={optimizedImageUrl(src, { width: px * 2 })}
 				srcset={buildImageSrcSet(src, avatarImageWidths(px))}
-				sizes={`${px}px`}
+				sizes={`${px / 16}rem`}
 				loading={priority ? 'eager' : 'lazy'}
 				fetchpriority={priority ? 'high' : 'auto'}
 				decoding="async"

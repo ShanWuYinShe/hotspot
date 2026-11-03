@@ -211,9 +211,12 @@
 
 <StandardPageLayout contentMaxWidth="var(--cst-content-form)" contentClassName="animate-fade-in pt-4 pb-10">
 	{#snippet header()}
+		<!-- 桌面灵动岛 meta 用短文案：默认 subtitle 28 字会顶满 max-w-md 岛宽被截断，
+		     分组关键词让滚动后仍能一眼定位设置域。 -->
 		<PageHeader
 			title="设置"
 			subtitle="管理你的账号偏好、主题外观与系统选项"
+			islandMeta="账号 · 外观 · 地图 · 通知"
 			onBack={() => smartBack()}
 			showBackOnDesktop={false}
 			maxWidth="var(--cst-content-form)"

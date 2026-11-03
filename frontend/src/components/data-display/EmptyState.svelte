@@ -79,7 +79,7 @@
 	{:else}
 		<div
 			class={cn('flex items-center justify-center rounded-full shadow-raised-sm', iconTileCls)}
-			style="width:{iconSize}px;height:{iconSize}px;"
+			style="width:{iconSize / 16}rem;height:{iconSize / 16}rem;"
 		>
 			{#if icon}
 				{@render icon()}

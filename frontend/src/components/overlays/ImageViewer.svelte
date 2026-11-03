@@ -303,7 +303,7 @@
 							<img
 								src={presetImageUrl(img.url, 'thumb', 200)}
 								srcset={presetSrcSet(img.url, 'thumb')}
-								sizes="44px"
+								sizes="2.75rem"
 								alt=""
 								loading="lazy"
 								decoding="async"

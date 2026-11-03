@@ -4,7 +4,14 @@
 	import { ROUTES } from '@/lib/routes';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
-	import { autoLocateOnce, clearLocateDeclined, readLastLocation, writeLastLocation } from '@/lib/map-auto-locate';
+	import {
+		autoLocateOnce,
+		clearLastLocation,
+		clearLocateDeclined,
+		LOCATION_ANCHOR_UPDATED_EVENT,
+		readLastLocation,
+		writeLastLocation
+	} from '@/lib/map-auto-locate';
 	import { reportLocation } from '@/lib/location-report';
 	import { auth } from '@/stores/auth.svelte';
 	import { formatReverseAddress, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/geo-service';
@@ -20,6 +27,8 @@
 	import { locationGridKey, resolveLocationName } from '../shared/location-name';
 	import { MAP_MAX_ZOOM } from '@/components/map/map-projection';
 	import MapCanvas from '@/components/map/MapCanvas.svelte';
+	import MapCenterCrosshair from '../shared/MapCenterCrosshair.svelte';
+	import { resolveAnchorName } from '../shared/browse-anchor';
 	import MapFilterMenu from '../shared/MapFilterMenu.svelte';
 	import MapOverlays from '../shared/MapOverlays.svelte';
 	import MapSourceSwitch from '../shared/MapSourceSwitch.svelte';
@@ -78,9 +87,20 @@
 		});
 	});
 
+	// 锚点外部变更同步（附近页「改用默认位置」等会清 localStorage 并派发事件）：
+	// 地图页常驻时不重挂载，必须监听事件重读，否则锚点卡片/地图标记停留在挂载时旧值。
+	$effect(() => {
+		const syncAnchor = () => {
+			anchorPoint = readLastLocation();
+		};
+		window.addEventListener(LOCATION_ANCHOR_UPDATED_EVENT, syncAnchor);
+		return () => window.removeEventListener(LOCATION_ANCHOR_UPDATED_EVENT, syncAnchor);
+	});
+
 	// 进入地图自动定位一次（Geolocation 单次快照：调一次给一次，不会自动更新；
-	// 权限按域名持久记忆，用户允许过之后调用不再弹窗）。成功即采纳为最新中心——
-	// 首屏本地锚点只是快照，会被新鲜 GPS 覆盖；用户已手动选点则让位。
+	// 权限按域名持久记忆，用户允许过之后调用不再弹窗）。
+	// 有浏览锚点时以锚点为首屏视野（锚点就是「我下次来要看的基准」），只补我的位置蓝点；
+	// 无锚点才采纳 GPS 为中心；用户已手动选点则让位。
 	// 拒绝/不支持静默回退默认位置、不 toast 打扰（手动定位按钮不受影响）。
 	$effect(() => {
 		void (async () => {
@@ -90,7 +110,7 @@
 			// 上报的是「用户在哪」；失败静默，不打断交互。
 			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
 			myLocation = { lat: fix.lat, lng: fix.lng };
-			if (userPicked) return;
+			if (userPicked || anchorPoint) return;
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 		})();
 	});
@@ -225,12 +245,11 @@
 			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 			myLocation = { lat: fix.lat, lng: fix.lng };
-			writeLastLocation({ lat: fix.lat, lng: fix.lng });
-			anchorPoint = { lat: fix.lat, lng: fix.lng };
+			// 定位只移动视野/蓝点，不静默改写浏览锚点：锚点必须由用户显式点底部 CTA 确认。
 			clearLocateDeclined();
 			selectedLoc = null;
 			searchQuery = '';
-			showToast(`已定位（精度约 ${Math.round(fix.accuracy)} 米）`, 'success');
+			showToast(`已定位到我的位置（精度约 ${Math.round(fix.accuracy)} 米）`, 'success');
 		},
 		onError: (err) => {
 			showToast(err.message, 'danger');
@@ -258,7 +277,7 @@
 
 	function handleConfirm() {
 		// 只写好浏览锚点、不关页：用户自己决定何时离开（返回在左侧面板顶栏）。
-		// 锚点语义 = 「以当前视口中心为准」：未选地点时用 mapCenter 兜底。
+		// 落点语义：选中地点优先，否则以地图中心（准星）为准。
 		const point = selectedLoc ?? mapCenter;
 		if (!point) {
 			showToast('暂时无法获取位置信息', 'danger');
@@ -266,10 +285,31 @@
 		}
 		// 标记已手动确认：迟到的自动定位不再覆盖刚写好的锚点。
 		userPicked = true;
-		// 选中地点时连带名称一起持久化：附近页/侧栏显示的位置名须与锚点一致。
-		writeLastLocation({ ...point, name: selectedLoc?.displayName });
-		anchorPoint = { lat: point.lat, lng: point.lng, name: selectedLoc?.displayName ?? undefined };
-		showToast('浏览锚点已设置', 'success');
+		// 名称一并持久化：附近页/侧栏的位置名须与锚点一致；未命名区域/我的位置不落库。
+		const name = resolveAnchorName(selectedLoc?.displayName, locationName);
+		writeLastLocation({ ...point, name });
+		anchorPoint = { lat: point.lat, lng: point.lng, name };
+		showToast(name ? `浏览锚点已设为「${name}」` : '浏览锚点已设置', 'success');
+	}
+
+	/** 恢复默认浏览位置：清除本机锚点，地图回到服务端默认位置。 */
+	function handleResetAnchor() {
+		clearLastLocation();
+		anchorPoint = null;
+		selectedLoc = null;
+		searchQuery = '';
+		userPicked = false;
+		if (defaultCenter) mapCenter = defaultCenter;
+		showToast(defaultName ? `已恢复默认浏览位置：${defaultName}` : '已恢复默认浏览位置', 'success');
+	}
+
+	/** 点击地图上的锚点标记：视野回到锚点。 */
+	function handleSelectAnchor() {
+		if (!anchorPoint) return;
+		userPicked = true;
+		mapCenter = { lat: anchorPoint.lat, lng: anchorPoint.lng };
+		selectedLoc = null;
+		selectedPin = null;
 	}
 </script>
 
@@ -290,10 +330,13 @@
 				bind:selectedLoc
 				mapCounts={mapData.counts}
 				locationName={locationName}
-				hasMyLocation={Boolean(myLocation)}
+				anchor={anchorPoint}
+				center={mapCenter}
+				{defaultName}
 				onSelectPin={handleSelectPin}
 				onSelectLoc={handleSelectLoc}
 				onConfirm={handleConfirm}
+				onResetAnchor={handleResetAnchor}
 			/>
 		</div>
 
@@ -304,6 +347,9 @@
 		{#if mapCenter}
 			<MapCanvas bind:center={mapCenter} bind:zoom={mapZoom} bind:bounds={mapBounds} bind:stableBounds={mapStableBounds} bind:gestureTransform={mapGestureTransform} onMapTap={() => (selectedPin = null)} />
 		{/if}
+
+		<!-- 地图中心准星：拖地图改变的是它；设为浏览锚点时以它为落点 -->
+		<MapCenterCrosshair />
 
 		<!-- 数据覆盖层（当前位置点/热力桶/图钉/加载错误条）：桌面/移动共用组件 -->
 		<!-- 捏合手势中与瓦片层做同款连续缩放变换，保证图钉/热力跟手不脱节 -->
@@ -329,6 +375,8 @@
 			}}
 			onHeatSelect={handleHeatSelect}
 			onRetry={mapData.retryLoad}
+			anchor={anchorPoint}
+			onSelectAnchor={handleSelectAnchor}
 		/>
 		</div>
 
@@ -336,19 +384,19 @@
 		<MapZoomControls
 			bind:zoom={mapZoom}
 			class="absolute z-30 border border-border-default bg-surface-primary"
-			style="right:14px;bottom:20px;box-shadow:var(--cst-elevation-fab);"
+			style="right:0.875rem;bottom:1.25rem;box-shadow:var(--cst-elevation-fab);"
 		/>
 
 		<!-- 左上筛选菜单（桌面/移动共用组件；含计数徽章、至少一项约束与全部显示重置） -->
 		<!-- 内缩 8（14→22）：筛选钮原本压住底图左上角的 POI 标注（设计评审 P2） -->
-		<div class="absolute z-20" style="top:22px;left:22px;">
+		<div class="absolute z-20" style="top:1.375rem;left:1.375rem;">
 			<MapFilterMenu bind:activeFilters counts={mapData.counts} showLegend align="start" />
 		</div>
 
 		<!-- 右上角控制组：定位到当前位置（浏览器 GPS，失败回退默认位置）+ 地图源切换。
 		     地图源菜单 align="end"：按钮贴右边缘，菜单向左展开防视口裁剪
 		     （此前默认 align="start" 向右展开，200px 菜单被右边缘挡住一部分）。 -->
-		<div class="absolute z-20 flex items-center gap-2" style="top:22px;right:22px;">
+		<div class="absolute z-20 flex items-center gap-2" style="top:1.375rem;right:1.375rem;">
 			<MapSourceSwitch align="end" />
 			<button
 				type="button"

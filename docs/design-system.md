@@ -138,6 +138,10 @@
 > **鸿蒙平台适配例外**：`FONT.SIZE.LG = 16` 为 HarmonyOS 标准正文尺寸（web 端正文 12/14 偏小），
 > 是唯一多出的档位，两端有意不同，属已登记豁免，不属于漂移。
 > 近邻档（13/15/22/28/32/48/56 与 XXXL_PLUS 36）已按「少档位」原则归并删除，禁止再引入。
+>
+> **大屏缩放**：前端字号 token 用 rem 表达（0.625/0.6875/0.75/0.875rem），16px 基准下等价上表 px；
+> ≥1920 视口随根字号等比放大（见 §23），鸿蒙端保持设备独立字号。`check-cross-platform-scale.mjs`
+> 按 16px 基准把 rem 折算回 px 后与 `FONT.SIZE` 逐档比对。
 
 ### 4.2 字重 / 行高 / 字距
 
@@ -996,4 +1000,51 @@ eager 图各 2 张且像素 diff 0 回归。
   （差异 3,294 px = 1.8%，全部为亚像素抗锯齿/合成取整）。
 - 空闲 GPU 0.013–0.016 cores 不变；Chrome RSS ±4MB；滚动 GPU 0.127 → 0.090 cores（副作用为正向）。
 - 契约守卫：`src/styles/__tests__/perf-contract.test.ts` 的「卡片 hover 只走合成器属性（R18）」一组。
+
+## 22. 页面锚点岛（Page Island，桌面端）
+
+**目标**：把「会随滚动离开视口、但用户随时可能需要」的常驻信息固定到 52px 顶栏中央，
+用户自由滚动也不丢失上下文；短页/无滚动页不出岛（没有信息丢失，就不打扰）。
+
+**结构（三段式，唯一实现：DesktopLayout `[data-desktop-dynamic-island]`）**
+
+- `leading`：返回按钮 / 头像（作者名片，20px）；普通页面无 leading。
+- `title + meta`：标题 12px semibold 单行截断；meta 11px secondary，最多两个事实。
+- `trailing`：每页 ≤2 个行动控件（允许写操作：保存 / 全部已读 / 收藏等），状态与页面同步。
+
+**触发与交接（信息丢失驱动）**
+
+1. 吸顶页头（PageHeader 默认 / DetailHeader）：滚动 >120px 标题淡出（透明度过渡，保留高度不产生 CLS），
+   由岛承接；回到 <72px 恢复（滞回防抖）。
+2. 非吸顶页头（PageHeader `integrated` / `sticky={false}`）：标题离开视口即入岛
+   （IntersectionObserver，rootMargin 扣掉 52px 顶栏）；回到视口退出。
+3. 详情页：`DetailHeader` 滚动 >160px 后收敛到同一顶栏岛（作者/群/用户名 + 地点·时间 + 行动区）；
+   移动/平板保留页面内吸顶岛。
+4. 岛绝不因滚动方向自动隐藏；点击岛标题平滑回到锚点/页首（reduced-motion 立即）。
+5. 无页面滚动 / 头部常驻不丢信息的页面不出岛：`/messages`（左右列头部常驻）、`/map`（全画布）、
+   `/login`、`/register`（无外壳）；面板内嵌 PageHeader 传 `island={false}`。
+6. 首页桌面无可见标题、feed 分段器吸顶常驻：当前分区信息不丢失，暂不接入（登记例外）。
+
+**API / 实现**
+
+- 状态：`stores/header-island.svelte.ts`（PageIslandStore：token 注册 + title/meta/author/trailing + visible）。
+- 入口：`PageHeader` 的 `island`（默认 true）/ `islandMeta`（缺省 subtitle）/ `islandTrailing`；
+  `DetailHeader` 走同一 store 契约。
+- 视觉：h-9 胶囊、`bg-surface-primary/90 + backdrop-blur-xl + border + shadow-raised-sm`；
+  进入动画 180ms（fade + zoom），reduced-motion 立即。
+- 无障碍：岛内文字不重复播报（标题按钮有 aria-label；h1 仍在 DOM/landmark）；不抢焦点；带返回的页头入岛后返回动作移到岛 leading，页头标题/返回同步淡出（同一动作不出现两份）。
+- 性能：每页一个触发源（滚动阈值或 IO），无共享全局 scroll 监听；岛为顶栏 overlay，不参与布局 → 无 CLS。
+- 测试钩子：页头暴露 `data-island-visible` / `data-island-handoff`（触发与交接断言用；供单测与排障，不是样式契约）。
+
+## 23. 大屏 UI 等比放大（≥1920）
+
+**问题**：2560/3440/4K 下 UI 元素尺寸不变，文字/图标/控件相对视口过小，用户看不清；单纯封顶内容宽度不会放大元素，不能解决可读性。
+
+**契约**（等效浏览器 zoom，版面比例按「1920 视口」保持）：
+
+- **根字号**：`html { font-size: clamp(1rem, calc(100vw / 120), 2rem) }`（`styles/theme/shared.css`）：1920→16px、2560→21.33px、3840→32px，上限 2×。所有 rem 尺寸（Tailwind spacing/字号/圆角、布局 token、组件 rem 化尺寸）自动等比放大；≤1920 与移动/平板仍为 16px，基线零变化。
+- **字号 token 用 rem**：`--text-xxs/xs/sm/md` = 0.625/0.6875/0.75/0.875rem（10/11/12/14px @16 基准）；跨端刻度脚本按 16px 基准折算回 px 与鸿蒙 FONT.SIZE 对齐。
+- **数值型内联尺寸**：lucide `size={n}` 图标由 `svg.lucide[width][height]:not([class*='size-']) { zoom: var(--cst-ui-scale) }` 统一缩放（`app.html` 首帧写入、`platform` store resize 同步）；Avatar/ActionIconButton/PinMedia/Toggle 等在组件内 rem 化。新增代码禁止裸写 px 尺寸（1px 发丝线、地图瓦片 256px 除外）。
+- **JS 阈值**：滚动阈值、IO rootMargin 等乘 `platform.uiScale`（PageHeader/DetailHeader 已接）。
+- **验收**：1920 与既有基准一致；2560/3840 读 `getComputedStyle(document.documentElement).fontSize` 与侧栏/顶栏/正文字号，确认比值 = 视口宽度比（±1px）、无横向溢出。
 

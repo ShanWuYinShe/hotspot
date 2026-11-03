@@ -7,15 +7,15 @@ describe('OnlineDot', () => {
 	it('默认 md 尺寸（10px）并使用在线状态 token', () => {
 		const { container } = render(OnlineDot, { props: {} });
 		const dot = container.firstElementChild as HTMLElement;
-		expect(dot.style.width).toBe('10px');
-		expect(dot.style.height).toBe('10px');
+		expect(dot.style.width).toBe('0.625rem');
+		expect(dot.style.height).toBe('0.625rem');
 		expect(dot.style.background).toContain('var(--cst-status-online)');
 	});
 
 	it('size=lg 应用 12px', () => {
 		const { container } = render(OnlineDot, { props: { size: 'lg' } });
 		const dot = container.firstElementChild as HTMLElement;
-		expect(dot.style.width).toBe('12px');
+		expect(dot.style.width).toBe('0.75rem');
 	});
 
 	it('color 覆盖默认背景', () => {

@@ -634,14 +634,14 @@
 					<div class="flex items-center gap-3 pb-4">
 						<Skeleton class="size-11 shrink-0 rounded-full" />
 						<div class="flex min-w-0 flex-1 flex-col gap-1.5">
-							<Skeleton class="w-32 rounded-sm" style="height: 14px;" />
-							<Skeleton class="w-24 rounded-sm" style="height: 11px;" />
+							<Skeleton class="w-32 rounded-sm" style="height: 0.875rem;" />
+							<Skeleton class="w-24 rounded-sm" style="height: 0.6875rem;" />
 						</div>
 					</div>
 					<div class="flex flex-col gap-2 pb-4">
-						<Skeleton class="w-full rounded-sm" style="height: 14px;" />
-						<Skeleton class="w-11/12 rounded-sm" style="height: 14px;" />
-						<Skeleton class="w-3/4 rounded-sm" style="height: 14px;" />
+						<Skeleton class="w-full rounded-sm" style="height: 0.875rem;" />
+						<Skeleton class="w-11/12 rounded-sm" style="height: 0.875rem;" />
+						<Skeleton class="w-3/4 rounded-sm" style="height: 0.875rem;" />
 					</div>
 					<div class="flex items-center gap-6 py-4">
 						<Skeleton class="h-4 w-16 rounded-sm" />

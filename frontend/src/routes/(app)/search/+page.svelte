@@ -5,6 +5,8 @@
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Button from '@/components/ui/button.svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import { X } from '@lucide/svelte';
 	import { searchUsers, searchMoments, searchGroups, searchSuggest , netError } from '@/api';
 	import SearchDiscovery, { type DiscoveryUser, type DiscoveryGroup } from './shared/SearchDiscovery.svelte';
 	import SearchResults, { type TabType, type SearchResultsData } from './shared/SearchResults.svelte';
@@ -105,6 +107,17 @@
 	});
 
 	const keyword = $derived(query.trim().toLowerCase());
+	// 清空搜索（与输入框清空钮 / Esc 同一条路径）：复位查询词与 tag、同步 URL、回焦输入框。
+	function clearSearch() {
+		query = '';
+		searchTag = null;
+		commitSearchUrl();
+		const input = document.querySelector<HTMLInputElement>('[data-search-root] header input');
+		if (!input) return;
+		input.value = '';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		input.focus();
+	}
 
 	// URL 写入仅发生在「明确搜索动作」：提交(Enter)/选最近·热门/点 tag/切 Tab/Esc·清空。
 	// 输入防抖与联想不写 URL（避免历史栏/地址栏随输入抖动）；replaceState 不新增历史项。
@@ -354,7 +367,18 @@
 		commitSearchUrl();
 	};
 
-	const hasResults = $derived(results.users.length + results.moments.length + results.topics.length + results.groups.length > 0);
+	const resultsTotal = $derived(results.users.length + results.moments.length + results.topics.length + results.groups.length);
+	const hasResults = $derived(resultsTotal > 0);
+
+	// 桌面岛 meta：查询词 + 结果数；搜索中/失败/无匹配分别给诚实文案（发现态无查询词则不占第二行）。
+	const islandMeta = $derived.by(() => {
+		const term = query.trim();
+		if (!term) return '';
+		if (searchError) return `${term} · 搜索失败`;
+		if (loading) return `${term} · 搜索中…`;
+		if (!hasResults) return `${term} · 无匹配结果`;
+		return `${term} · ${resultsTotal} 个结果`;
+	});
 
 	// 计数在「搜索中」时不显示（undefined），搜索完成后即使是 0 也显示——
 	// 否则 0 结果与加载中都是「无计数」，两者不可区分（历史审查遗留项）。
@@ -426,7 +450,18 @@
 <div class="flex flex-col flex-1 min-h-full" data-search-root>
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
-		<PageHeader title="搜索" onBack={() => smartBack()} titleSize={device === 'desktop' ? 'xl' : '2xl'}>
+		<PageHeader
+			title="搜索"
+			onBack={() => smartBack()}
+			titleSize={device === 'desktop' ? 'xl' : '2xl'}
+			islandMeta={islandMeta}
+		>
+			{#snippet islandTrailing()}
+				<!-- 桌面岛行动区：复用与输入框清空钮 / Esc 一致的清空路径（无查询词时不渲染） -->
+				{#if query.trim()}
+					<ActionIconButton icon={X} label="清空搜索" variant="ghost" tone="muted" size={32} onClick={clearSearch} />
+				{/if}
+			{/snippet}
 			{#snippet below()}
 				<!-- 搜索框随 sticky header 吸顶（对齐 nearby/moments 样板 below 结构）。
 				     below 容器仍全宽、与标题同轴；仅搜索输入本身在桌面限宽 max-w-3xl(768)——

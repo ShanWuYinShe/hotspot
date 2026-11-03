@@ -15,14 +15,17 @@ const designConstantsPath = join(repoRoot, 'harmonyapp/entry/src/main/ets/consta
 
 const problems = [];
 
-// ── 字号档位：--text-xxs/xs/sm/md（px）+ Tailwind 默认 lg 及以上（18/20/24/30/36） ──
+// ── 字号档位：--text-xxs/xs/sm/md（rem/px，rem 按 16px 基准折算）
+// + Tailwind 默认 lg 及以上（18/20/24/30/36） ──
 // 鸿蒙 FONT.SIZE 对应：XS2 10 / XS 11 / SM 12 / MD 14 / LG_PLUS 18 / XL 20 / XXL 24 / XXXL 30 / HERO 36
+// 前端字号用 rem 表达以支持大屏等比放大；与鸿蒙对比时按设计基准 16px 折算回 px。
+const DESIGN_ROOT_PX = 16;
 const css = readFileSync(registryPath, 'utf8');
 const ets = readFileSync(designConstantsPath, 'utf8');
 
 const cssFontSizes = {};
-for (const m of css.matchAll(/--text-([\w]+):\s*([\d.]+)px/g)) {
-	cssFontSizes[m[1]] = Number(m[2]);
+for (const m of css.matchAll(/--text-([\w]+):\s*([\d.]+)(px|rem)/g)) {
+	cssFontSizes[m[1]] = m[3] === 'rem' ? Number(m[2]) * DESIGN_ROOT_PX : Number(m[2]);
 }
 // Tailwind 默认档（前端 text-lg+ 直接沿用，鸿蒙侧用命名档对齐）
 cssFontSizes.lg = 18;
