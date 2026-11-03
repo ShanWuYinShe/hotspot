@@ -8,6 +8,7 @@
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import AdaptiveCardGrid from '@/components/layout/AdaptiveCardGrid.svelte';
+	import SparseContentHint from '@/components/data-display/SparseContentHint.svelte';
 	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -358,6 +359,15 @@
 					</div>
 				{/each}
 			</AdaptiveCardGrid>
+
+			{#if !feedHasMore && filtered.length > 0 && filtered.length < 3}
+				<SparseContentHint
+					title={`只找到 ${filtered.length} 条附近瞬间`}
+					description="换个标签看看，或去附近发现更多内容"
+					actionLabel="去附近看看"
+					onAction={() => void goto(ROUTES.nearby)}
+				/>
+			{/if}
 
 			{#if feedHasMore}
 				<div bind:this={sentinelEl} class="flex justify-center px-4 py-6" aria-hidden="true">

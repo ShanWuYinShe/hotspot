@@ -13,6 +13,7 @@ import { formatCount } from '@/lib/utils';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import AdaptiveCardGrid from '@/components/layout/AdaptiveCardGrid.svelte';
+	import SparseContentHint from '@/components/data-display/SparseContentHint.svelte';
 import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import GroupCard from '@/components/data-display/GroupCard.svelte';
@@ -302,6 +303,14 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 						</div>
 					{/each}
 				</AdaptiveCardGrid>
+				{#if filtered.length > 0 && filtered.length < 3}
+					<SparseContentHint
+						title={`只找到 ${filtered.length} 个附近群组`}
+						description="换个分类看看，或去附近发现更多圈子"
+						actionLabel="去附近看看"
+						onAction={() => void goto(ROUTES.nearby)}
+					/>
+				{/if}
 			</div>
 			{#if visibleCount < filtered.length}
 				<div bind:this={sentinelEl} class="h-px w-full" aria-hidden="true"></div>

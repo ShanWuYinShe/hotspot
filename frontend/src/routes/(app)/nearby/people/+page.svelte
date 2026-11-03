@@ -10,6 +10,7 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import AdaptiveCardGrid from '@/components/layout/AdaptiveCardGrid.svelte';
+	import SparseContentHint from '@/components/data-display/SparseContentHint.svelte';
 	import Select from '@/components/forms/Select.svelte';
 	import Button from '@/components/ui/button.svelte';
 import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
@@ -354,6 +355,14 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 								</div>
 							{/each}
 						</AdaptiveCardGrid>
+						{#if list.length > 0 && list.length < 3}
+							<SparseContentHint
+								title={`只找到 ${list.length} 位附近的人`}
+								description="试试其他标签，或去附近看看更多人与群组"
+								actionLabel="去附近看看"
+								onAction={() => void goto(ROUTES.nearby)}
+							/>
+						{/if}
 					</div>
 
 					{#if visibleCount < list.length}
