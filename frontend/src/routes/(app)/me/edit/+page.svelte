@@ -394,9 +394,9 @@
 				{:else}
 					<Button
 						type="button"
-						variant="outline"
+						variant="danger-soft"
 						size="md"
-						class="hit-slop-44 w-full justify-start gap-2 bg-surface-island px-4 py-3.5 text-status-danger hover:text-text-status-danger-on-soft shadow-xs hover:bg-danger-bg"
+						class="hit-slop-44 w-full justify-start gap-2"
 						onclick={() => (deleteConfirmOpen = true)}
 					>
 						<Trash2 class="size-4" strokeWidth={1.75} />

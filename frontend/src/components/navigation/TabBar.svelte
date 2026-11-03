@@ -119,7 +119,9 @@
 					/>
 				{/if}
 				{#if tab.count !== undefined}
-					<span class="text-xxs opacity-emphasis">{tab.count}</span>
+					<!-- 计数继承选项文字色：旧实现叠 opacity-emphasis(0.8) 使未激活计数
+					     只有 3.60:1（10px 小字需 4.5），去掉折半后同色达 5.2:1 -->
+					<span class="text-xxs">{tab.count}</span>
 				{/if}
 			</button>
 		{/each}
@@ -138,15 +140,16 @@
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
 				class="tab-item hit-slop-y-44 flex min-w-11 shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs focus-ring transition-all duration-standard disabled:cursor-not-allowed disabled:opacity-dim {isActive
-					? 'font-medium bg-accent-default text-text-on-accent shadow-xs'
-					: 'font-normal text-text-secondary hover:text-text-primary hover:bg-surface-subtle/50'}"
+					? 'font-semibold bg-accent-soft text-text-accent-on-soft'
+					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
 				{#if tab.icon}
 					<tab.icon class="size-3.5" strokeWidth={isActive ? 2 : 1.5} />
 				{/if}
 				{tab.label}
 				{#if tab.count !== undefined}
-					<span class="text-xxs opacity-emphasis">{tab.count}</span>
+					<!-- 计数继承选项文字色（同 segmented 档：不叠 opacity 折半，保证 ≥4.5:1） -->
+					<span class="text-xxs">{tab.count}</span>
 				{/if}
 			</button>
 		{/each}

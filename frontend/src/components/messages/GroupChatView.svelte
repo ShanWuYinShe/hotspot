@@ -3,6 +3,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import { ArrowLeft } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import GroupChatBadge from './GroupChatBadge.svelte';
 	import ChatMessageList from '@/components/messages/ChatMessageList.svelte';
 	import ChatInputBar from '@/components/messages/ChatInputBar.svelte';
 	import ChatColumn from '@/components/messages/ChatColumn.svelte';
@@ -255,7 +256,11 @@
 				size={compact ? 36 : 40}
 				shape="rounded"
 				class="border-regular border-border-default shadow-raised-sm"
-			/>
+			>
+				{#snippet badge()}
+					<GroupChatBadge size={18} />
+				{/snippet}
+			</Avatar>
 
 			<!-- Name + status -->
 			<div class="flex-1 min-w-0">

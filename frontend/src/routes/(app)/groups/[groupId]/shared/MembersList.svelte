@@ -72,9 +72,10 @@
 			</Button>
 		{/if}
 	</div>
-	<!-- 空旷内容区 → List bordered（有边框列表契约）；列表行不设独立边框。
+	<!-- 开放页面区域 → ListContainer bordered（内容软岛：surface-island + shadow-xs + rounded-lg(20) + p-2，
+	     行透明、行间离岛边 8）；列表行不设独立边框，禁止再手写 divide-y 分隔线。
 	     标题行→列表 12（同一区块内），列表与子 Tab 栏的 24 由标题行 mt-6 承担。 -->
-	<ListContainer class="mt-3 divide-y divide-border-subtle/30">
+	<ListContainer bordered class="mt-3">
 		{#each members as member (member.id)}
 			<ListItem
 				onClick={() => {

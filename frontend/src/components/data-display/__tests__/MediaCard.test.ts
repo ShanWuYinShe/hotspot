@@ -126,4 +126,12 @@ describe('MediaCard', () => {
 		expect(card.className).toContain('[&_button:not([data-cover])]:pointer-events-auto');
 		expect(card.className).toContain('[&_a]:pointer-events-auto');
 	});
+
+	// §17.2：无图降级层可渲染 64px 主题水印（snippet 由调用方提供，MediaCard 统一承载颜色/透明度 token）。
+	it('watermark snippet 渲染在渐变降级层内（无图卡主题水印）', () => {
+		const { container } = render(MediaCard, {
+			props: { imageSrc: '', watermark: (() => null) as never }
+		});
+		expect(container.querySelector('.surface-accent-gradient .opacity-watermark')).not.toBeNull();
+	});
 });

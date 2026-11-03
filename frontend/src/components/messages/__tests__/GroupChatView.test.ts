@@ -169,4 +169,13 @@ describe('GroupChatView', () => {
 		const { container } = renderGroup();
 		expect(container.querySelectorAll('[data-chat-column]').length).toBe(3);
 	});
+
+	// 群聊/私聊类型区分：群聊头部头像右下角带类型角标（私聊头部为在线点）。
+	it('群聊头部渲染群聊类型角标', async () => {
+		const { container } = renderGroup();
+		await waitFor(() => {
+			expect(screen.getAllByText('测试群').length).toBeGreaterThan(0);
+		});
+		expect(container.querySelector('[data-group-chat-badge]')).toBeTruthy();
+	});
 });

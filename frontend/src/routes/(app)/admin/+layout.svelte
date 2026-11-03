@@ -55,12 +55,29 @@
 	const pathname = $derived(page.url.pathname);
 	// 按 URL 第二段精确匹配模块，避免 /admin/users 被 /admin 前缀误命中为「概览」
 	const activeId = $derived((pathname.split('/').filter(Boolean)[1] ?? 'overview') || 'overview');
+
+	// 页头 h1 用模块名（概览仍是「管理后台」）：读屏/路由焦点播报依赖 h1，
+	// 10 个子页若共用「管理后台」则每次切页都播报同一标题、无法区分所在模块。
+	// 取名与各页 <title> 保持同一套术语。
+	const MODULE_HEADINGS: Record<string, string> = {
+		overview: '管理后台',
+		stats: '地理统计',
+		users: '用户管理',
+		groups: '群组管理',
+		reports: '举报裁决',
+		tags: '标签管理',
+		announcements: '系统公告',
+		rbac: '角色权限',
+		audit: '审计日志',
+		config: '系统配置'
+	};
+	const pageTitle = $derived(MODULE_HEADINGS[activeId] ?? '管理后台');
 </script>
 
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
-			title="管理后台"
+			title={pageTitle}
 			subtitle="平台管理（仅平台管理员可见）"
 			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}

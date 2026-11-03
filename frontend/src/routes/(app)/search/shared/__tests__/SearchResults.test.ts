@@ -103,4 +103,26 @@ describe('SearchResults', () => {
 		expect(screen.getByText('5 位成员')).toBeTruthy();
 		expect(screen.getAllByText('群组').length).toBeGreaterThan(0);
 	});
+
+	// 回归（审计 shell-home F2）：隐式 auto 轨会被行内 min-content 撑到 436px，正文列只有 358px
+	// → 结果岛溢出 390 视口并被 main 的 overflow-x-hidden 裁剪。显式单列 = minmax(0,1fr)。
+	it('结果栅格显式单列且分组 min-w-0（390 横向溢出回归）', () => {
+		const { container } = render(
+			SearchResults,
+			base({
+				hasResults: true,
+				results: {
+					users: [],
+					moments: [{ moment_id: 'm1', description: '云龙湖的落日把水面染成金色' }],
+					topics: [],
+					groups: []
+				}
+			})
+		);
+		const grid = container.querySelector('[class*="lg:grid-cols-2"]') as HTMLElement;
+		expect(grid).toBeTruthy();
+		expect(grid.className).toContain('grid-cols-1');
+		const group = grid.querySelector('section') as HTMLElement;
+		expect(group.className.split(/\s+/)).toContain('min-w-0');
+	});
 });

@@ -54,7 +54,7 @@
 					/>
 					<OnlineDot size={isLarge ? 'lg' : 'sm'} />
 				</div>
-				<span class="max-w-13 truncate text-text-secondary {isLarge ? 'text-xs' : 'text-xxs'}">{c.name}</span>
+				<span class="max-w-13 truncate text-text-secondary text-xs">{c.name}</span>
 			</button>
 		{/each}
 	</div>

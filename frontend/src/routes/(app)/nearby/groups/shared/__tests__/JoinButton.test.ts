@@ -5,13 +5,27 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import JoinButton from '@/components/ui/JoinButton.svelte';
 
 describe('JoinButton', () => {
-	it('未加入时渲染「加入」与 accent 实底类', () => {
+	it('未加入时渲染「加入」与 Tonal 安静档（surface-accent，对齐 FollowButton 未关注态）', () => {
 		const { container } = render(JoinButton, {
 			props: { group: { joined: false } as never, onToggle: () => {} }
 		});
 		expect(screen.getByRole('button', { name: '加入' })).toBeTruthy();
-		expect((container.querySelector('button') as HTMLElement).className).toContain('bg-accent-default');
+		const cls = (container.querySelector('button') as HTMLElement).className;
+		expect(cls).toContain('bg-accent-bg');
+		expect(cls).toContain('text-accent-default');
+		expect(cls).not.toContain('bg-accent-default');
 		expect((container.querySelector('button') as HTMLElement).getAttribute('aria-pressed')).toBe('false');
+	});
+
+	// 压图形态例外：半透明 Tonal 底压照片对比度不可控，未加入仍走 accent 实底
+	//（design-system §17.2「未加入主按钮可用 accent 实底 + text-on-accent」）。
+	it('压图（onMedia）未加入仍用 accent 实底 + on-accent 字', () => {
+		const { container } = render(JoinButton, {
+			props: { group: { joined: false } as never, onMedia: true, onToggle: () => {} }
+		});
+		const cls = (container.querySelector('button') as HTMLElement).className;
+		expect(cls).toContain('bg-accent-default');
+		expect(cls).toContain('text-text-on-accent');
 	});
 
 	it('已加入时渲染「已加入」与 soft 软填类（R13 次级动作无描边）', () => {

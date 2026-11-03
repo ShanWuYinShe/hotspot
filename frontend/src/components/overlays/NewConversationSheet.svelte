@@ -79,12 +79,15 @@
 		/>
 	</div>
 
-	<!-- Content -->
-	<div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-6">
+	<!-- Content：滚动区 + 底部渐隐条（no-scrollbar 下唯一「下面还有内容」的线索，
+	     同时避免末行被弹层圆角底边硬裁——审计 P2-9）。渐隐条颜色走 surface-primary，
+	     与弹层底同色，短列表时不可见、长列表时提示可滚动。 -->
+	<div class="relative flex-1 min-h-0">
+		<div class="h-full overflow-y-auto no-scrollbar px-5 pb-10">
 		{#if tab === 'add'}
-			<!-- 添加好友：无站内推荐数据源，直接引导到附近的人发现页 -->
-			<div class="animate-fade-in flex flex-col gap-2">
-				<p class="eyebrow mb-2">添加好友</p>
+			<!-- 添加好友：无站内推荐数据源，直接引导到附近的人发现页（空态统一 EmptyState；
+			     不再重复「添加好友」眉题——弹层标题与 TabBar 已表达同一信息） -->
+			<div class="animate-fade-in flex min-h-full flex-col items-center justify-center gap-2">
 				<EmptyState
 					bare
 					title={searchQ.trim() ? '站内暂不支持搜索加人' : '去附近认识新朋友'}
@@ -172,5 +175,12 @@
 				{/if}
 			</div>
 		{/if}
+		</div>
+		<!-- 底部渐隐：滚动区唯一「下面还有内容」的线索（no-scrollbar），颜色走 surface-primary -->
+		<div
+			aria-hidden="true"
+			class="pointer-events-none absolute inset-x-0 bottom-0 h-8"
+			style="background:linear-gradient(to top, var(--cst-surface-primary), transparent);"
+		></div>
 	</div>
 </SheetShell>

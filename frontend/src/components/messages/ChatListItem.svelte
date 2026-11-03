@@ -4,6 +4,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import UnreadBadge from '@/components/shared/UnreadBadge.svelte';
+	import GroupChatBadge from './GroupChatBadge.svelte';
 	import type { ChatItem } from '@/lib/chat-list';
 
 	// 会话列表项（R13 重排层级；R16 三态重构）：
@@ -77,7 +78,10 @@
 			decorative
 			style={isSelected ? 'box-shadow:0 0 0 var(--cst-border-width-regular) var(--cst-border-inverse);' : ''}
 		/>
-		{#if chat.online}
+		{#if isGroup}
+			<!-- 群聊：右下角类型角标（与私聊在线点同位互斥，一眼区分群聊/私聊） -->
+			<GroupChatBadge />
+		{:else if chat.online}
 			<OnlineDot size="md" />
 		{/if}
 	</span>
@@ -120,7 +124,9 @@
 					<!-- 唯一操作入口：桌面 hover/focus 显现；移动端走行级长按（不常驻） -->
 					<button
 						type="button"
-						class="hover-btn scale-btn hit-slop-44 desktop-reveal -my-1 -mr-1 hidden shrink-0 items-center justify-center rounded-full p-1.5 text-text-secondary focus-ring md:flex"
+						class="hover-btn scale-btn hit-slop-44 desktop-reveal -my-1 -mr-1 hidden shrink-0 items-center justify-center rounded-full p-1.5 focus-ring md:flex {isSelected
+							? 'text-text-on-accent'
+							: 'text-text-secondary'}"
 						aria-label={`${chat.name} 的更多操作`}
 						title="更多操作"
 						onclick={(e) => {

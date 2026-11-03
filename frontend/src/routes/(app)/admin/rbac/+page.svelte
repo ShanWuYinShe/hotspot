@@ -283,15 +283,18 @@
 						</thead>
 						<tbody>
 							{#each roles as r (r.role_id)}
+								<!-- 后端可能对空集合下发 null（spec 契约为 string[]，见 spec/api_spec_admin.md
+								     AdminOperatorItem/AdminRoleBasic）：模板侧统一兜底，避免 .includes/.map 抛错。 -->
+								{@const rolePermissions = r.permissions ?? []}
 								<tr class={TR}>
 									<td class={TD}>{r.name}</td>
 									<!-- 移动端隐藏描述列：让「权限 / 操作」在 390 宽下无需横滚即可到达（描述在编辑弹层可查） -->
 									<td class={`${TD_SECONDARY} max-w-56 truncate`} title={r.description ?? ''}>{r.description ?? '—'}</td>
 									<td class={TD}>
-										{#if r.permissions.includes('*')}
+										{#if rolePermissions.includes('*')}
 											<Badge tone="accent">全部权限</Badge>
 										{:else}
-											<Badge>{r.permissions.length} 项</Badge>
+											<Badge>{rolePermissions.length} 项</Badge>
 										{/if}
 									</td>
 									<td class={TD_ACTIONS}>
@@ -341,19 +344,24 @@
 						</thead>
 						<tbody>
 							{#each admins as a (a.user.user_id)}
+								<!-- 后端对无角色管理员下发 roles:null（实测 4/5 条；spec 契约为
+								     AdminRoleBasic[]，属后端实现与契约冲突）：前端必须先兜底再渲染，
+								     否则 .map(null) 抛 TypeError、整个列表停在 InlineLoading。 -->
+								{@const operatorPermissions = a.permissions ?? []}
+								{@const operatorRoles = a.roles ?? []}
 								<tr class={TR}>
 									<td class={TD}>
 										<span class="text-text-primary">{a.user.nickname}</span>
 										<span class="ml-1.5 max-sm:hidden text-xs text-text-secondary font-mono">{a.user.user_id}</span>
 									</td>
 									<td class={TD}>
-										{#if a.permissions.includes('*')}
+										{#if operatorPermissions.includes('*')}
 											<Badge tone="accent">superadmin</Badge>
 										{:else}
-											<Badge>{a.permissions.length} 项</Badge>
+											<Badge>{operatorPermissions.length} 项</Badge>
 										{/if}
 									</td>
-									<td class={TD}>{a.roles.map((r) => r.name).join('、') || '—'}</td>
+									<td class={TD}>{operatorRoles.map((r) => r.name).join('、') || '—'}</td>
 									<td class={TD_SECONDARY}>{formatDateTime(a.granted_at)}</td>
 									<td class={TD_ACTIONS}>
 										<button type="button" class={ROW_BTN_DANGER} onclick={() => (revokeTarget = a)}>撤销</button>

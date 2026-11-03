@@ -154,12 +154,15 @@
 		</EmptyState>
 	{:else}
 		{#snippet resultGroup(title: string, Icon: typeof Users, count: number, rows: Snippet)}
-			<section class="flex flex-col">
+			<section class="flex min-w-0 flex-col">
 				<SectionHead title={title} icon={Icon} count={count} class="mb-2" />
 				{@render rows()}
 			</section>
 		{/snippet}
-		<div class="mt-4 grid gap-y-6 gap-x-5 lg:grid-cols-2">
+		<!-- 显式单列（grid-cols-1 = repeat(1, minmax(0,1fr))）：不显式声明列时隐式 auto 轨
+		     会被行内 min-content 撑破（390 实测轨宽 436px > 正文列 358px，结果岛被 main 的
+		     overflow-x-hidden 直接裁剪——审计 shell-home F2）。 -->
+		<div class="mt-4 grid grid-cols-1 gap-y-6 gap-x-5 lg:grid-cols-2">
 			{#if (tab === 'all' || tab === 'people') && results.users.length > 0}
 				<!-- 用户结果组 -->
 				{#snippet userRows()}

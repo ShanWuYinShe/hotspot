@@ -275,6 +275,12 @@
 			{/if}
 		</div>
 
+		<!-- 无图/加载失败降级：§17.2 要求「主题渐变底 + 居中 64px 主题水印图标」——
+		     由 MediaCard 在 accent 渐变层内以既有 token（--cst-accent-default / --cst-opacity-watermark）渲染。 -->
+		{#snippet watermark()}
+			<Sparkles class="size-16" strokeWidth={1.5} aria-hidden="true" />
+		{/snippet}
+
 		<!-- 底部信息托盘（由 NearbyImageCard footer 槽渲染，默认即带 pointer-events-none 包装） -->
 		{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
 			{@const onCover = onImage && !horizontal}

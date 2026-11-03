@@ -74,7 +74,7 @@
 	<!-- Header -->
 	<div class="flex shrink-0 items-center justify-between gap-2 px-5 py-3 border-b border-border-default">
 			<div class="flex min-w-0 items-center gap-2">
-				<Dialog.Title class="truncate text-lg text-text-primary">{title}</Dialog.Title>
+				<Dialog.Title class="truncate text-lg font-semibold tracking-title text-text-primary">{title}</Dialog.Title>
 				{#if headerExtra}
 					{@render headerExtra()}
 				{/if}

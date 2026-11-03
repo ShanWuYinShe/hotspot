@@ -19,13 +19,16 @@
 
 	// 状态胶囊统一「淡底 + on-soft 文字」档（R12 口径）：不再用 danger 实底大色块，
 	// 与举报页/关系页的状态语言一致。
+	// rejected 用 neutral 而非 danger：Badge 的 danger tone 是 bg-danger-bg/50（半档淡底，
+	// 违反「禁止用 opacity 造新档位」），且终止态在举报页（已驳回/已收回）统一为 neutral；
+	// 同列表内 pending(warning)/accepted(online)/revoked(neutral) 均为整档淡底，保持同强度。
 	const STATUS_META: Record<
 		ApplicationStatus,
 		{ label: string; tone: 'warning' | 'online' | 'danger' | 'neutral' }
 	> = {
 		pending: { label: '审核中', tone: 'warning' },
 		accepted: { label: '已通过', tone: 'online' },
-		rejected: { label: '未通过', tone: 'danger' },
+		rejected: { label: '未通过', tone: 'neutral' },
 		revoked: { label: '已撤回', tone: 'neutral' }
 	};
 

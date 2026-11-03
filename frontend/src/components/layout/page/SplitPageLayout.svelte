@@ -126,13 +126,17 @@
 		{:else}
 			<!-- 方案 E（默认标准）：超宽屏流式 3 列满铺画廊 + 右侧 Bento 侧栏（满幅无死角）
 			     若页面指定了 contentMaxWidth（如详情/个人主页/通知），则在超宽屏下居中聚合，
-			     杜绝内容孤悬与 ContextRail 飘到屏幕极右缘的 1000px 撕裂断层 -->
+			     杜绝内容孤悬与 ContextRail 飘到屏幕极右缘的 1000px 撕裂断层。
+			     内容轴（2026-11-03）：**主列外层不再加左内距**——ContentColumn 是 gutter 唯一
+			     管理者，主列左侧若无条件再叠一层 --cst-page-gutter 会让正文比标准页右移 28px
+			     （1920 实测：Split 正文 312 vs Standard 正文 284，切页横向跳动）。外层只保留
+			     右内距（给 rail 留呼吸），主列由 ContentColumn 自己给左右 gutter。 -->
 			<div
 				class={isConstrained
-					? 'mx-auto flex min-h-full w-full justify-center px-[var(--cst-page-gutter)]'
-					: 'flex min-h-full w-full justify-between px-[var(--cst-page-gutter)]'}
+					? 'mx-auto flex min-h-full w-full justify-center pr-[var(--cst-page-gutter)]'
+					: 'flex min-h-full w-full justify-between pr-[var(--cst-page-gutter)]'}
 				style={isConstrained
-					? `max-width:calc(${typeof contentMaxWidth === 'number' ? `${contentMaxWidth}px` : contentMaxWidth} + 21rem + var(--cst-context-rail-gap) + (var(--cst-page-gutter) * 2));gap:var(--cst-context-rail-gap);`
+					? `max-width:calc(${typeof contentMaxWidth === 'number' ? `${contentMaxWidth}px` : contentMaxWidth} + 21rem + var(--cst-context-rail-gap) + var(--cst-page-gutter));gap:var(--cst-context-rail-gap);`
 					: 'gap:var(--cst-context-rail-gap);'}
 			>
 				<div

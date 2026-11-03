@@ -152,20 +152,26 @@
 		{/if}
 	</section>
 
-	<!-- 模块入口：移动单列 / 平板 2 列 / 桌面 3 列 / 宽屏 4 列（避免 2K 下模块卡被拉成 700px+ 巨条） -->
+	<!-- 模块入口：移动单列 / 平板 2 列 / 桌面 3–5 列（避免 2K 下模块卡被拉成 700px+ 巨条）。
+	     9 张卡在 5 列下末行只剩 4 张：用 flex-wrap + justify-center 让末行居中（两侧留白对称），
+	     而不是 grid 的「右侧 310px 空洞」；各档卡宽 = (100% - 间隙) / 列数。 -->
 	<section aria-label="管理模块" class="flex flex-col">
 		<SectionHead title="管理模块" icon={LayoutGrid} />
-		<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+		<div class="flex flex-wrap justify-center gap-3">
 			{#each MODULES as m (m.href)}
 				{@const isReports = m.href === `${ROUTES.admin}/reports`}
-				<AdminModuleCard
-					label={m.label}
-					description={m.desc}
-					icon={m.icon}
-					allowed={hasAdminPermission(m.perm)}
-					badge={isReports && pendingReports ? `待处理 ${pendingReports}` : undefined}
-					onOpen={() => void goto(m.href)}
-				/>
+				<div
+					class="w-full sm:w-[calc(50%_-_0.375rem)] lg:w-[calc(33.333%_-_0.5rem)] xl:w-[calc(25%_-_0.5625rem)] 2xl:w-[calc(20%_-_0.6rem)]"
+				>
+					<AdminModuleCard
+						label={m.label}
+						description={m.desc}
+						icon={m.icon}
+						allowed={hasAdminPermission(m.perm)}
+						badge={isReports && pendingReports ? `待处理 ${pendingReports}` : undefined}
+						onOpen={() => void goto(m.href)}
+					/>
+				</div>
 			{/each}
 		</div>
 	</section>

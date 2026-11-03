@@ -80,6 +80,23 @@ describe('ChatListItem', () => {
 		expect(onClick).not.toHaveBeenCalled();
 	});
 
+	// 选中行（accent 实底）内「更多操作」图标必须切 on-accent 档：
+	// 旧实现恒用 text-secondary，在 accent 实底上对比度约 1.05:1，hover 显现后几乎不可见。
+	it('选中行的「更多操作」图标切 on-accent 档', () => {
+		render(ChatListItem, {
+			props: { chat: { ...chat, unread: 0 }, onClick: () => {}, onMore: () => {}, isSelected: true }
+		});
+		const btn = screen.getByRole('button', { name: `${chat.name} 的更多操作` });
+		expect(btn.className).toContain('text-text-on-accent');
+		expect(btn.className).not.toContain('text-text-secondary');
+	});
+
+	it('未选中行的「更多操作」图标保持次级色', () => {
+		render(ChatListItem, { props: { chat: { ...chat, unread: 0 }, onClick: () => {}, onMore: () => {} } });
+		const btn = screen.getByRole('button', { name: `${chat.name} 的更多操作` });
+		expect(btn.className).toContain('text-text-secondary');
+	});
+
 	it('不传 onMore 时不渲染「更多操作」按钮', () => {
 		render(ChatListItem, { props: { chat, onClick: () => {} } });
 		expect(screen.queryByRole('button', { name: `${chat.name} 的更多操作` })).toBeNull();
@@ -116,5 +133,19 @@ describe('ChatListItem', () => {
 			props: { chat: { ...chat, unread: 0 }, onClick: () => {} }
 		});
 		expect(container.querySelector('[data-chat-indicator]')).toBeNull();
+	});
+
+	// 群聊/私聊类型区分：群聊头像右下角渲染类型角标；私聊保持在线圆点（无角标），
+	// 两者同位互斥，保证混合列表里一眼能分出群聊与私聊。
+	it('群聊行渲染群聊类型角标，私聊在线行渲染在线点', () => {
+		const group = render(ChatListItem, {
+			props: { chat: { ...chat, kind: 'group', online: false }, onClick: () => {} }
+		});
+		expect(group.container.querySelector('[data-group-chat-badge]')).toBeTruthy();
+		expect(group.container.querySelector('[data-online-dot]')).toBeNull();
+
+		const priv = render(ChatListItem, { props: { chat, onClick: () => {} } });
+		expect(priv.container.querySelector('[data-group-chat-badge]')).toBeNull();
+		expect(priv.container.querySelector('[data-online-dot]')).toBeTruthy();
 	});
 });

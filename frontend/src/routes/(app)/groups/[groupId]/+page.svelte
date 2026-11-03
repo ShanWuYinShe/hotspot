@@ -509,14 +509,14 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 						群管理
 					</Button>
 				{/if}
-				<!-- 退出群组：安静文字钮（可逆操作，不抢主操作焦点；点击后二次确认） -->
+				<!-- 退出群组：破坏性动作的安静档（danger-soft：软填 danger 底 + on-soft danger 字，
+				     不抢主操作焦点；点击后二次确认） -->
 				<div class="border-t border-border-subtle/50 pt-3">
 					<Button
 						type="button"
-						variant="ghost"
+						variant="danger-soft"
 						size="md"
-						flat
-						class="w-full text-text-secondary hover:bg-interactive-hover hover:text-text-primary hit-slop"
+						class="hit-slop w-full"
 						onclick={() => {
 							if (gd.myRole === 'owner') {
 								showToast('群主需先转让群主身份（群管理 → 转让群主）', 'danger');

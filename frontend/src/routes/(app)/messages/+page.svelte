@@ -578,16 +578,16 @@
 	<Dialog.Content side="bottom" floating class="p-5" aria-label={moreTarget ? `${moreTarget.name} 的会话操作` : '会话操作'}>
 		{#if moreTarget}
 			<div class="flex items-center justify-between">
-				<div>
-					<p class="eyebrow">会话操作</p>
-					<p class="mt-1 text-md text-text-primary">{moreTarget.name}</p>
+				<div class="min-w-0">
+					<p class="truncate text-md font-semibold text-text-primary">{moreTarget.name}</p>
+					<p class="mt-0.5 text-xs text-text-secondary">会话操作</p>
 				</div>
 				<ActionIconButton icon={X} label="关闭" onClick={() => (moreTarget = null)} />
 			</div>
 			<div class="mt-4 flex flex-col gap-2">
 				<Button
 					type="button"
-					variant="secondary"
+					variant="soft"
 					size="lg"
 					class="w-full justify-start"
 					onclick={() => {
@@ -601,7 +601,7 @@
 				</Button>
 				<Button
 					type="button"
-					variant="secondary"
+					variant="soft"
 					size="lg"
 					class="w-full justify-start"
 					onclick={() => {
@@ -616,9 +616,9 @@
 				{#if moreTarget.kind !== 'group'}
 					<Button
 						type="button"
-						variant="secondary"
+						variant="danger-soft"
 						size="lg"
-						class="w-full justify-start text-status-danger"
+						class="w-full justify-start"
 						onclick={() => {
 							deleteTarget = moreTarget;
 							moreTarget = null;

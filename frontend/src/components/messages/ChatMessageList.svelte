@@ -39,6 +39,19 @@
 		if (chat.loading || chat.messages.length === 0) everPaginated = false;
 		else if (chat.hasMore) everPaginated = true;
 	});
+
+	// 渲染守卫（审计 P1-3）：后端/历史数据里存在 content 为空串的消息，直接渲染会得到一个
+	// 只剩时间戳的「空气泡」，看起来像渲染失败。保留撤回消息（渲染为「消息已撤回」），
+	// 其余 text 为空白的不生成气泡；空出来的日期分节一并收起，避免出现只有日期标签的孤儿分节。
+	// 只影响渲染层：分页/未读/已读回执仍由 chat controller 维护。
+	const visibleGroups = $derived(
+		chat.dateGroups
+			.map((group) => ({
+				...group,
+				messages: group.messages.filter((msg) => msg.recalled || (msg.text ?? '').trim().length > 0)
+			}))
+			.filter((group) => group.messages.length > 0)
+	);
 </script>
 
 <ChatColumn class="relative flex min-h-0 flex-1 flex-col">
@@ -55,8 +68,8 @@
 		{:else if chat.loadError}
 			<!-- 错误态统一 LoadError（与全站一致），不再各页手搓文案 + 按钮 -->
 			<LoadError message="消息加载失败，请检查网络后重试" onRetry={() => void chat.reload()} class="h-full" />
-		{:else if chat.messages.length === 0}
-			<!-- 空会话：统一 EmptyState 空态（对齐全局空态契约） -->
+		{:else if visibleGroups.length === 0}
+			<!-- 空会话（含「全部消息内容为空」的脏数据场景）：统一 EmptyState 空态 -->
 			<EmptyState class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧" bare>
 				{#snippet icon()}
 					<!-- bare 空态裸图标统一 28px（style skill 已登记口径） -->
@@ -80,7 +93,7 @@
 					<!-- 历史耗尽：ListEnd 收尾（layout 第 6 条），区分「已到顶」与「卡住」 -->
 					<ListEnd />
 				{/if}
-				{#each chat.dateGroups as group, gi (group.label)}
+				{#each visibleGroups as group, gi (group.label)}
 					<!-- 每个日期分节：中性日期标签 + 气泡组；分节之间比组内多一档留白（12+8） -->
 					<div class="flex flex-col gap-2 {gi > 0 ? 'mt-2' : ''}">
 						<ChatDatePill label={group.label} />

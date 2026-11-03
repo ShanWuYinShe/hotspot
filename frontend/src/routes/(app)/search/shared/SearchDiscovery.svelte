@@ -92,10 +92,12 @@
 </script>
 
 <!-- 发现态布局：默认单列；md（960）起双列（窄平板 768–959 仍单列，避免两列被压成窄条），
-     2xl 超宽屏改「发现区横向 4 分栏 + 热门动态整行 4 卡」两段式（左栏不再底部大片留白）。
+     2xl 超宽屏改「发现区横向多分栏 + 热门动态整行 4 卡」两段式（左栏不再底部大片留白）。
+     分栏数用 auto-fit 自适应：空分区（如 groups/search 无数据时不渲染推荐群组）轨道折叠为 0，
+     由其余分区摊平分栏宽度，不再固定 4 栏留出 1 栏空洞（审计 shell-home F4）。
      卡头统一 SectionHead（icon + 标题 + 可选动作），不再手写 eyebrow 标题行。 -->
 <div class="grid gap-y-6 gap-x-8 md:grid-cols-2 2xl:flex 2xl:flex-col">
-<div class="flex flex-col gap-6 2xl:grid 2xl:grid-cols-4 2xl:items-start">
+<div class="flex flex-col gap-6 2xl:grid 2xl:grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] 2xl:items-start">
 	<!-- 最近搜索：无记录时整块隐藏（干瘪的「暂无记录」无信息量），首次搜索后自然出现 -->
 	{#if recent.length > 0}
 	<section aria-label="最近搜索">

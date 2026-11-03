@@ -23,6 +23,7 @@
 | `list/ListContainer` | 列表容器。**2026-10-27 Round 3**：`bordered` 语义更新为「开放页面内容软岛」——`bg-surface-island + shadow-xs + rounded-lg(20)`、无 1px 描边、`p-2`(8)、行背景透明、行间 `gap-y-0.5`(2)、hover 填充离岛边 8（不再画行横线）；embedded（面板内集合）× `inset`（内缩圆角行）/ 默认（分隔线）不变。调用方不得再给 `bordered` 覆写 border/bg/radius |
 | `list/ListItem` | **唯一行交互原语**。hover/选中填充、12px 圆角、键盘、aria、`tone: joined/card`。行级卡片类禁止（eslint 强制）。列表容器内自动包 `role=listitem`（ListContainer 经 context 声明；ListEnd/InlineLoading 同机制），裸用不变。行点击由内部透明覆盖按钮（`[data-cover]`）承载，行内操作按钮自动抬升（z 序），根不持 button 语义（axe nested-interactive 清零） |
 | 行包装组件 | `ChatListItem` / `home/ActivityRow` / `profile/UserCardRow`（用户/群组实体行；avatarShape 区分圆形/圆角方头像） / `forms/SettingRow`——只做内容编排，交互全部委托 ListItem |
+| `messages/GroupChatBadge` | 群聊类型角标（群头像右下角 Users 图标；与私聊 `OnlineDot` 同位互斥）——会话列表与群聊头部的唯一实现，保证「群聊 / 私聊」在混合列表与聊天头部一眼可分 |
 
 ### 卡片（CSS 卡语言 + 一个内容卡原语）
 | 原语 | 职责 |
@@ -43,7 +44,7 @@
 ### 按钮 / 输入 / 导航 / 弹层 / 反馈
 | 原语 | 职责 |
 |---|---|
-| `ui/button` | 全部动作按钮的唯一壳（表单/CTA/弹层确认/详情动作区；`ui/FollowButton` 等复合钮经它派生）。**R13 新增 `variant="soft"`**：中性软填底（`bg-surface-subtle/60`）+ 无描边 + hover 全量，是「安静次级动作」的唯一形态（与派 C 同源，替代各页手写的软填/描边变体）。**2026-10-29 新增 `shape`**：`"rect"`（默认，派 A `rounded-md`）/`"pill"`（派 B/C，`rounded-full` + `text-xs`）；调用方禁止再用 class 覆盖 `rounded-*` |
+| `ui/button` | 全部动作按钮的唯一壳（表单/CTA/弹层确认/详情动作区；`ui/FollowButton` 等复合钮经它派生）。**R13 新增 `variant="soft"`**：中性软填底（`bg-surface-subtle/60`）+ 无描边 + hover 全量，是「安静次级动作」的唯一形态（与派 C 同源，替代各页手写的软填/描边变体）。**2026-10-29 新增 `shape`**：`"rect"`（默认，派 A `rounded-md`）/`"pill"`（派 B/C，`rounded-full` + `text-xs`）；调用方禁止再用 class 覆盖 `rounded-*`。**新增 `variant="danger-soft"`**：危险动作的安静档（style skill §19.4）——danger 软填底（`bg-danger-bg`）+ on-soft 危险字（`text-text-status-danger-on-soft`）+ hover 描边加深（`border-status-danger-border`），用于「注销账号 / 退出群聊」等破坏性但不做主 CTA 的动作；页面不得再用 `outline` + class 覆写模拟危险态 |
 | `navigation/ActionIconButton` | 图标按钮（ghost/outline） |
 | `hover-btn` / `scale-btn`（utilities） | 行内文字/图标动作的 hover/tap CSS 语言 |
 | `hit-slop` / `hit-slop-y`（utilities） | 紧凑控件的触控热区扩展（视觉尺寸不变）。`hit-slop` 四周各 6px，用于图标按钮等**孤立**控件；`hit-slop-y`（2026-10-19 新增）只扩纵向，用于**横向相邻**的紧凑控件（筛选胶囊、分段控制器）——前者的水平 6px 会与相邻项重叠，命中落到 DOM 靠后那颗。注意：两者都靠 `::before` 绝对定位，**会被祖先的 `overflow` 裁剪**，横滚容器需留出纵向 padding（TabBar 的 `py-1` 即为此） |
@@ -52,7 +53,7 @@
 | `layout/page/PageHeader` | 页面页头（sticky）。**R9：顶部透明（与画布融合、无白带）→ 滚动 >4px 加 glass**（`surface-page 78% + blur(16px) + 细底边 + elevation`，150ms，reduced 立即）；仅背景/边框/阴影变化，不改定位；原 `glass` prop 统一为该行为。**`variant="floating"`（2026-10-29，通用沉浸页原语）**：整行玻璃工具条（返回 + 可见标题 + 更多同一面板：`rounded-md` + 细边 + `bg-surface-primary/85` + `backdrop-blur-md` + `shadow-raised-sm`，吸顶）；保留给需要悬浮 chrome 的沉浸页。**瞬间详情页自 2026-10-31 起改用 `DetailHeader`（吸顶 + 滚动收胶囊岛）**，既不使用本 `floating` 变体、也不再是 2026-10-29 那版「不吸顶极简工具行」（见「详情页契约」）。**`variant="integrated"`（2026-10-29，hub/列表页「内容内页头」）**：无背景/边框/吸顶；标题（紧凑 `text-lg sm:text-xl`，不再随 titleSize 变页面大标题）+ 副标题/计数 + trailing 工具同一行，below 筛选/操作 `mt-2.5` 紧随，正文 `pt-4` 开始。适用：/nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；这些页面**禁止在正文重复页面标题/再放一条分区头**。**/nearby 枢纽页是登记例外**：使用默认 sticky 变体（与首页对齐，保留常驻搜索/地图工具）。搜索页（搜索优先+sticky 输入）、设置/表单页、聊天分栏、品牌首页不属于同类，保持各自形态。 |
 | `navigation/BackToTop` | 回顶浮动圆钮（R9）：滚动 > 1.5×视口高出现（44px，移动 bottom-24 / 桌面 bottom-6，避开底栏与浮层），点击平滑回顶（reduced 直接跳）、回顶后 200ms 内隐藏；`aria-label="回到顶部"`；fixed 不占流 |
 | `lib/route-announcer` | SPA 导航播报（R9）：`#route-announcer`（sr-only `aria-live=polite`/atomic）播报新页 h1 标题；首屏不播、1.5s 去重；焦点落 `main#main-content`（tabindex=-1、preventScroll），不叠加 h1 聚焦 |
-| `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`）。三个变体：`pills`（筛选/分类，可横滚）、`segmented`（二选一/系统级分段，等宽轨道）、`underline`（页级两态切换：全宽等分、无轨道、激活项 + 2px accent 下划线）。**选中态不得只靠颜色**（2026-10-27 Round 2，用户对色弱/色盲的明确要求）：`segmented` 选中 = accent 实底 + ✓ 图标 + `font-semibold`；`pills`/`underline` 选中 = `font-semibold`（underline 另有下划线形状线索）；验收须过灰度截图（`filter:grayscale(1)`）。`disabled`（2026-10-19）整体禁用并置灰；**移动端触控高度**：按钮 `py-3`（视觉 41px）+ 滚动根 `py-1` + `.hit-slop-y` → 有效 ≈49px，桌面 `lg:py-1.5` 保持紧凑 |
+| `navigation/TabBar` | 分类/过滤胶囊（唯一 Tab 原语；底栏走 `layout/mobile/NavTab`）。三个变体：`pills`（筛选/分类，可横滚）、`segmented`（二选一/系统级分段，等宽轨道）、`underline`（页级两态切换：全宽等分、无轨道、激活项 + 2px accent 下划线）。**选中态不得只靠颜色**（2026-10-27 Round 2，用户对色弱/色盲的明确要求）：`segmented` 选中 = accent 实底 + ✓ 图标 + `font-semibold`；`pills` 选中 = accent-soft 淡底 + accent 字 + `font-semibold`（实底留给主操作/分段控制器）；`underline` 选中 = `font-semibold` + 下划线形状线索；验收须过灰度截图（`filter:grayscale(1)`）。计数徽标不得叠 `opacity-emphasis` 折半（10px 小字会跌破 4.5:1）。`disabled`（2026-10-19）整体禁用并置灰；**移动端触控高度**：按钮 `py-3`（视觉 41px）+ 滚动根 `py-1` + `.hit-slop-y` → 有效 ≈49px，桌面 `lg:py-1.5` 保持紧凑 |
 | `overlays/SheetShell`、`ui/dialog`、`ui/popover`、`ui/dropdown-menu` | 弹层体系。**2026-10-29**：`Dialog.Content` 新增 `floating`（浮层卡片式底部 sheet：inset-x-4/bottom-4/max-w-md/rounded-xl/shadow-modal 唯一实现）；调用方只传内距 `p-4|p-5`，不得再自拼定位/圆角/阴影；标准 bottom sheet 仍为 `rounded-t-sheet`(28) 贴底全宽 |
 | `overlays/MenuPanel` | 弹出菜单面板唯一实现（标题 + 选项行 + 可选底部动作；容器走 `ui/popover` Content）。已有：地图源菜单、地图筛选菜单。新菜单只传数据，不复制行结构 |
 | `data-display/EmptyState` / `InlineLoading` / `LoadError` / `ListEnd`、`overlays/ToastViewport`、`shared/ConnectionBanner` | 状态反馈。`EmptyState` 可选 `spotlight`（2026-10-26）：超大空态的信标装饰层（光晕 + 双环 + 四向星点，纯 token、无动画、`aria-hidden`）；小面板空态不得开启 |

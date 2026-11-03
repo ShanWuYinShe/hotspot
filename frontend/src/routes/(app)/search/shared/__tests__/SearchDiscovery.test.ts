@@ -252,4 +252,26 @@ describe('SearchDiscovery', () => {
 			expect(screen.getByRole('button', { name }).className).toContain('hit-slop');
 		}
 	});
+
+	// 回归（审计 shell-home F4）：2xl 固定 4 栏 + 「无数据不渲染分区」会在缺推荐群组时
+	// 第 4 轨留 381px 空洞；改 auto-fit（空轨折叠、其余分区摊平）自适应列数。
+	it('发现态分栏栅格自适应（auto-fit），不固定 4 栏', () => {
+		const { container } = render(SearchDiscovery, {
+			props: {
+				recent: ['回龙窝'],
+				hotTopics: ['松弛'],
+				hotUsers: [{ id: 'u1', name: '鹿鸣', avatar: '', tag: '摄影', distance: '300m', isOnline: true }],
+				onChoose: () => {},
+				onChooseTopic: () => {},
+				onOpenMoment: () => {},
+				onOpenUser: () => {},
+				onSeeAllUsers: () => {},
+				onClear: () => {}
+			}
+		});
+		const grid = container.querySelector('[class*="2xl:grid"]') as HTMLElement;
+		expect(grid).toBeTruthy();
+		expect(grid.className).toContain('auto-fit');
+		expect(grid.className).not.toContain('2xl:grid-cols-4');
+	});
 });

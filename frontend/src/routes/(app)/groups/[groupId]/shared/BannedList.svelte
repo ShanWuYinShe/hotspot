@@ -27,8 +27,8 @@
 		{/snippet}
 	</EmptyState>
 {:else}
-<!-- 子 Tab 栏→内容统一 24 -->
-<ListContainer class="mt-6 divide-y divide-border-subtle/30">
+<!-- 子 Tab 栏→内容统一 24；开放页面区域 → bordered 内容软岛（行不另加边框/分隔线） -->
+<ListContainer bordered class="mt-6">
 	{#each banned as item (item.user.user_id)}
 		<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${item.user.nickname} 的封禁记录`}>
 			<Avatar src={item.user.avatar_url ?? undefined} name={item.user.nickname} size="lg" />

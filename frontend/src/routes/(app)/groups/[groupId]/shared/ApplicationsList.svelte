@@ -33,7 +33,7 @@
 		{/snippet}
 	</EmptyState>
 {:else}
-<ListContainer class="mt-6 divide-y divide-border-subtle/30">
+<ListContainer bordered class="mt-6">
 	{#each applications as app (app.application_id)}
 		<ListItem class="flex list-row-standard items-center gap-3 px-3.5 py-3" ariaLabel={`${app.applicant.nickname} 的入群申请`}>
 			<Avatar src={app.applicant.avatar_url ?? undefined} name={app.applicant.nickname} size="lg" />

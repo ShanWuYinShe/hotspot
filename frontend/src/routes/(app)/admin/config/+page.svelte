@@ -203,8 +203,9 @@
 		<!-- 功能开关 -->
 		<section class={SECTION_CARD} aria-label="功能开关">
 			<SectionHead title="功能开关" subtitle="客户端可见（ClientConfig 投影），保存后全端生效。" icon={ToggleLeft} />
-			<!-- 布尔开关统一用 Toggle（系统级开关语言，与设置页一致），左侧标签 + 右侧开关 -->
-			<div class="grid grid-cols-1 gap-1 sm:max-w-3xl sm:grid-cols-2">
+			<!-- 布尔开关统一用 Toggle（系统级开关语言，与设置页一致），左侧标签 + 右侧开关。
+			     栅格铺满卡片宽度（此前 sm:max-w-3xl 只占左半、右侧 ~800px 空白）：4 项在桌面单行。 -->
+			<div class="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-4">
 				{#each Object.keys(FEATURE_LABELS) as fk (fk)}
 					{@const featureKey = fk as keyof FeatureSwitches}
 					<div class="flex items-center justify-between gap-3 rounded-md px-3 py-2 hover:bg-interactive-hover">

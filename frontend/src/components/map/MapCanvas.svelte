@@ -449,7 +449,7 @@
 			class="absolute inset-0 pointer-events-none"
 			style="transform:scale({prevLayer.scale});transform-origin:{prevLayer.originX}px {prevLayer.originY}px;opacity:0.9;"
 		>
-			{#each prevLayer.tiles as t (`bg-${prevLayer.source}/${t.z}/${t.x}/${t.y}`)}
+			{#each prevLayer.tiles as t (`bg-${prevLayer.source}/${t.z}/${t.x}/${t.y}/${t.copy}`)}
 				<img
 					src={prevLayer.source === 'amap'
 						? `https://webrd0${((t.x + t.y) % 4) + 1}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x=${t.x}&y=${t.y}&z=${t.z}`
@@ -466,7 +466,11 @@
 	<!-- 捏合手势/滚轮即时缩放中：剩余小数缩放以 CSS scale 呈现（父级把同款变换施加到
 		 marker 覆盖层），松手吸附整数级后清除。 -->
 	<div class="absolute inset-0" style={gestureTransform}>
-		{#each tiles as t (`${tileSource}/${t.z}/${t.x}/${t.y}`)}
+		<!-- key 用 source/z/x/y/copy：低 zoom 经度环绕时同一 (z,x,y) 可能需要多份世界
+		     拷贝才能盖满视口（copy 区分）；key 重复会抛 each_key_duplicate 使整层瓦片
+		     停止渲染（/admin/stats zoom=3 曾因此整块地图空白），契约由
+		     map-projection.tiles 单测锁定。 -->
+		{#each tiles as t (`${tileSource}/${t.z}/${t.x}/${t.y}/${t.copy}`)}
 			<img
 				src={tileSource === 'amap'
 					? // 高德栅格瓦片浏览器直连（免 key；<img> 不受同源策略限制）。

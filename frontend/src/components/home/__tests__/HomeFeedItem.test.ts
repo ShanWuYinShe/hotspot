@@ -159,3 +159,19 @@ describe('HomeFeedItem', () => {
 		expect(root.className).toContain('[&_button:not([data-cover])]:pointer-events-auto');
 		expect(root.className).toContain('[&_a]:pointer-events-auto');
 	});
+
+	// 回归（审计 shell-home F3）：无图瞬间卡此前 watermark 未传，渐变降级层内只剩大面积空白；
+	// §17.2 要求「主题渐变底 + 居中 64px 主题水印图标」，且不得影响有图卡。
+	it('无图瞬间卡渲染 64px 主题水印，有图卡不渲染', () => {
+		const noImage = { ...mockMoment, images: [] };
+		const { container, unmount } = render(HomeFeedItem, { props: { moment: noImage, onClick: () => {} } });
+		const layer = container.querySelector('.opacity-watermark');
+		expect(layer).not.toBeNull();
+		expect(layer?.getAttribute('aria-hidden')).toBe('true');
+		expect(layer?.querySelector('svg')?.getAttribute('class') ?? '').toContain('size-16');
+		unmount();
+
+		const withImage = render(HomeFeedItem, { props: { moment: mockMoment, onClick: () => {} } });
+		expect(withImage.container.querySelector('.opacity-watermark')).toBeNull();
+		withImage.unmount();
+	});

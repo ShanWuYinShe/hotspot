@@ -34,7 +34,7 @@
 	const hint = $derived(`再补 ${missing.length} 项就完整了——完善后的主页更容易被附近的人记住。`);
 </script>
 
-<aside class={cn('rounded-lg bg-surface-island p-5 shadow-xs', className)} aria-label="资料状态">
+<aside class={cn('rounded-lg bg-surface-island p-4 shadow-xs', className)} aria-label="资料状态">
 	<SectionHead title="资料状态" icon={ShieldCheck} count={`${filledCount}/${items.length} 项`} />
 
 	{#if missing.length === 0}

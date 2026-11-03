@@ -747,8 +747,14 @@
 - 页面**不得自设页面级 `max-w-*`**（除已登记的表单/列表窄列例外），正文与
   `PageHeader` 共用 `ContentColumn` 的 `--cst-page-gutter`；分栏页主列恒为
   「主列 + gap + rail」，不随视口漂移。
+- **gutter 只有一层**：`ContentColumn` 是左右 gutter 的唯一管理者。布局组件/页面
+  不得在它外层再叠一层页面级左右内距（`SplitPageLayout` 外层只保留 rail 的右侧
+  内距）；否则正文比标准页右移一档 gutter（1920 桌面实测 312 vs 284，切页横向跳动）。
+- **全宽页正文轴 = 主内容面板左缘 + `--cst-page-gutter`**（1920 桌面：284）。
+  分栏页主列同为 284；带内容上限的页面（`--cst-content-*` 档，如 settings/me/
+  notify/moments/users）按上限居中，但页头、正文、粘底条仍共用同一条轴。
 - 粘底条（评论输入/移动操作条）内部内容与内容卡同轴（1440 实测应完全对齐：
-  例 /moments/[id] 312–1060 = 卡片 312–1060）。
+  例 /moments/[id] 284–1060 = 卡片 284–1060）。
 - 表格/后台页正文与模块 Tab 栏同轴（`/admin` 概览卡片起点 = Tab 栏起点）。
 
 ### 21.3 指标条（MetricRow strip）

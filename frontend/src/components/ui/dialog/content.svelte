@@ -46,7 +46,7 @@
 
 	const SIDE_CLASSES: Record<DialogSide, string> = {
 		center:
-			'inset-x-4 inset-y-4 m-auto h-fit rounded-md border border-border-default/80 shadow-modal data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
+			'inset-x-4 inset-y-4 m-auto h-fit rounded-md shadow-modal data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
 		bottom:
 			// sm 起居中限宽：手机保持全宽 bottom sheet 手势形态；桌面/平板全宽 sheet
 			// 会把表单输入框/按钮拉满视口（设置类弹层尤其难看）。需要更宽容器的
@@ -63,7 +63,7 @@
 	// 浮层卡片式底部 sheet（唯一实现）：inset-x-4/bottom-4/max-w-md/rounded-xl，动画仍从底部滑入。
 	// 调用方只传内距（p-4/p-5）与内容，不再自己拼定位/圆角/阴影。
 	const FLOATING_BOTTOM =
-		'inset-x-4 bottom-4 mx-auto max-w-md rounded-xl border border-border-default/80 pb-[env(safe-area-inset-bottom)] shadow-modal data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom';
+		'inset-x-4 bottom-4 mx-auto max-w-md rounded-xl pb-[env(safe-area-inset-bottom)] shadow-modal data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom';
 
 	// 遮罩走 --cst-surface-scrim 满值（themes/*.css 按主题/明暗定义，vibrant≈0.38-0.42），
 	// 与 ImageViewer 深遮罩统一（原 /80 减淡档已收敛），叠加微虚化提升景深。

@@ -105,9 +105,25 @@ export interface TileItem {
 	/** 容器内像素位置（左上角） */
 	left: number;
 	top: number;
+	/**
+	 * 经度环绕的第几份世界拷贝。世界像素宽不足「视口宽 + 两侧外扩一圈」时，
+	 * 同一 (z,x,y) 只有一个世界拷贝的话盖不满视口（低 zoom / 宽屏 / 跨反经线），
+	 * 需要相邻拷贝各渲染一份——用 copy 区分身份，避免 keyed each key 重复。
+	 */
+	copy: number;
 }
 
-/** 覆盖视口所需的瓦片网格（含边缘外扩 1 圈，避免拖拽时露白）。 */
+/**
+ * 覆盖视口所需的瓦片网格（含边缘外扩 1 圈，避免拖拽时露白）。
+ *
+ * 契约：MapCanvas 以 `${source}/${z}/${x}/${y}/${copy}` 作 keyed each 的 key，
+ * 任何重复 key 都会抛 each_key_duplicate 并使整层瓦片停止渲染（/admin/stats
+ * zoom=3 曾因此整块地图空白）。因此：
+ * 1. (z,x,y,copy) 恒唯一；
+ * 2. 视口被瓦片完整覆盖：每个 (z,x,y) 通常只保留一份；仅当经度环绕后同一瓦片
+ *    的两个屏幕位置都落在视口内（世界宽 2048px 附近的低 zoom、宽屏或跨接缝）时
+ *    保留多份（copy 不同）。不能简单「只留相交面积最大的一份」，否则跨接缝一侧露白。
+ */
 export function tilesForViewport(
 	center: { lat: number; lng: number },
 	zoom: number,
@@ -122,17 +138,51 @@ export function tilesForViewport(
 	const x1 = Math.floor((left + size.width) / TILE_SIZE) + 1;
 	const y0 = Math.floor(top / TILE_SIZE) - 1;
 	const y1 = Math.floor((top + size.height) / TILE_SIZE) + 1;
-	const tiles: TileItem[] = [];
+	// 先按瓦片身份（wx/ty）分组，再按「与视口相交」取舍世界拷贝：
+	// - 相交的拷贝全部保留（跨接缝时可能 2 份，丢任一份都会露白）；
+	// - 全部都不是可见拷贝（只来自外扩 padding 的远端环绕副本）时保留 1 份，
+	//   维持「拖拽边缘不露白」语义且不无谓放大 DOM。
+	const groups = new Map<string, TileItem[]>();
 	for (let ty = y0; ty <= y1; ty++) {
 		// 墨卡托 y 越界（极地外）不渲染
 		if (ty < 0 || ty >= n) continue;
 		for (let tx = x0; tx <= x1; tx++) {
-			// 经度环绕（x 取模），保证跨反经线连续
 			const wx = ((tx % n) + n) % n;
-			tiles.push({ x: wx, y: ty, z: zoom, left: tx * TILE_SIZE - left, top: ty * TILE_SIZE - top });
+			const tile: TileItem = {
+				x: wx,
+				y: ty,
+				z: zoom,
+				left: tx * TILE_SIZE - left,
+				top: ty * TILE_SIZE - top,
+				copy: Math.floor(tx / n)
+			};
+			const key = `${wx}/${ty}`;
+			const list = groups.get(key);
+			if (list) list.push(tile);
+			else groups.set(key, [tile]);
 		}
 	}
+	const tiles: TileItem[] = [];
+	for (const list of groups.values()) {
+		const visible = list.filter((t) => viewportOverlap(t.left, t.top, size) > 0);
+		if (visible.length > 0) {
+			tiles.push(...visible);
+			continue;
+		}
+		tiles.push(
+			list.reduce((a, b) =>
+				viewportOverlap(b.left, b.top, size) > viewportOverlap(a.left, a.top, size) ? b : a
+			)
+		);
+	}
 	return tiles;
+}
+
+/** 瓦片矩形与视口的相交面积（px²）；经度环绕取舍世界拷贝时用于判定可见性。 */
+function viewportOverlap(left: number, top: number, size: ViewportSize): number {
+	const w = Math.max(0, Math.min(left + TILE_SIZE, size.width) - Math.max(left, 0));
+	const h = Math.max(0, Math.min(top + TILE_SIZE, size.height) - Math.max(top, 0));
+	return w * h;
 }
 
 /** 视口四角 → 地理 bounds（spec MapBounds：north/south/east/west 语义的最小外接矩形）。 */

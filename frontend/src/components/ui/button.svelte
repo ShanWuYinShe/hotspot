@@ -15,7 +15,15 @@
 	// **调用方禁止再用 className 覆盖 rounded-***（一致性检查 button-radius-override 拦截）。
 	// 形状之外的宽度/布局类仍可经 className 覆盖（tailwind-merge）。
 
-	type ButtonVariant = 'primary' | 'secondary' | 'soft' | 'outline' | 'ghost' | 'danger' | 'surface-accent';
+	type ButtonVariant =
+		| 'primary'
+		| 'secondary'
+		| 'soft'
+		| 'outline'
+		| 'ghost'
+		| 'danger'
+		| 'danger-soft'
+		| 'surface-accent';
 	type ButtonSize = 'sm' | 'md' | 'lg';
 	type ButtonShape = 'rect' | 'pill';
 
@@ -39,7 +47,13 @@
 		danger: 'bg-status-danger text-text-on-accent shadow-raised-sm hover:shadow-raised-md',
 	// surface-accent Tonal：accent 淡底 + accent 字；hover 走描边加深（同 secondary/
 	// outline 档），无边投影（列表内嵌次级动作，quiet 语义）
-		'surface-accent': 'bg-accent-bg text-accent-default border border-transparent hover:border-accent-border'
+		'surface-accent': 'bg-accent-bg text-accent-default border border-transparent hover:border-accent-border',
+	// danger-soft：危险动作的安静档（style skill §19.4「危险 = 软填 danger 底 + danger 字」）——
+	// danger 软填底 + on-soft 危险字，无描边、hover 描边加深；给「注销账号 / 退出群聊」这类
+	// 破坏性但不做主 CTA 的动作，与 surface-accent（accent 软填）同形态（此前页面用
+	// variant="outline" + 页面级 class 覆写，静态态仍是中性底，危险语义只靠红字）。
+		'danger-soft':
+			'bg-danger-bg text-text-status-danger-on-soft border border-transparent hover:border-status-danger-border'
 	};
 
 	// 形状档：rect=派 A（rounded-md）；pill=派 B 行内 chip（rounded-full + text-xs，字号由形状统一）。

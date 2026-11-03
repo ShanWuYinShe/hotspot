@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { Check, Palette } from '@lucide/svelte';
+	import { Palette } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
-	import { theme, setColorScheme, setTheme, THEME_OPTIONS, COLOR_SCHEME_OPTIONS, type ColorSchemeMode } from '@/stores/theme.svelte';
+	import { theme, setColorScheme, setTheme, THEME_OPTIONS, COLOR_SCHEME_OPTIONS, type ColorSchemeMode, type AppTheme } from '@/stores/theme.svelte';
 	import * as Popover from '@/components/ui/popover';
 
 	// 唯一的外观/模式控制。选择面板保持打开，仅显式完成、外部点击或 Escape 关闭。
@@ -54,31 +54,15 @@
 					<p id="theme-choice-label" class="eyebrow">主题</p>
 					<span class="text-xxs text-text-secondary">选择一种基调</span>
 				</div>
-				<div class="grid grid-cols-3 gap-2" role="group" aria-label="选择主题">
-					{#each THEME_OPTIONS as item}
-						{@const selected = theme.theme === item.id}
-						<button
-							type="button"
-							onclick={() => setTheme(item.id)}
-							aria-pressed={selected}
-							class="rounded-md border p-2.5 text-left outline-none transition-all duration-standard focus-visible:ring-2 focus-visible:ring-accent-default {selected
-								? 'border-accent-border bg-accent-soft text-text-accent-on-soft shadow-raised-sm'
-								: 'border-border-default bg-surface-primary text-text-secondary hover:bg-interactive-hover hover:text-text-primary'}"
-						>
-							<div class="flex items-center justify-between mb-2">
-								<span
-									class="block h-5 w-5 rounded-full ring-2 ring-offset-1 ring-offset-surface-primary"
-									style="background:{item.swatch};--tw-ring-color:{selected ? 'var(--cst-accent-default)' : 'var(--cst-border-default)'};"
-								></span>
-								{#if selected}
-									<Check size={13} class="text-accent-default" />
-								{/if}
-							</div>
-							<span class="block text-sm font-medium text-text-primary">{item.label}</span>
-							<span class="mt-0.5 block text-xxs text-text-secondary">{item.note}</span>
-						</button>
-					{/each}
-				</div>
+				<!-- 主题选择与 /settings「应用主题」同一语言：TabBar segmented + swatch 色点
+				     （选中 = accent 淡底 + semibold + ✓），不再自绘三卡片，避免两处表现漂移。 -->
+				<TabBar
+					variant="segmented"
+					size="md"
+					items={THEME_OPTIONS.map((t) => ({ id: t.id, label: t.label, swatch: t.swatch }))}
+					value={theme.theme}
+					onChange={(id) => setTheme(id as AppTheme)}
+				/>
 			</section>
 
 			<!-- 明暗三档（跟随系统/浅色/深色）：接入 TabBar segmented 形态，等宽底轨无粘连 -->

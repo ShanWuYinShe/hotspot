@@ -36,7 +36,9 @@
 		neutral: 'bg-surface-subtle text-text-secondary',
 		accent: 'bg-accent-soft text-text-accent-on-soft',
 		solid: 'bg-accent-default text-text-on-accent',
-		danger: 'bg-danger-bg/50 text-text-status-danger-on-soft',
+		// danger 用整档 --cst-danger-bg(13%)：旧实现 /50 折半到 6.5%，与 warning/online 的整档
+		// 不同构（用透明度造第 4 档，style skill 禁止），深浅主题下肉眼可见偏淡。
+		danger: 'bg-danger-bg text-text-status-danger-on-soft',
 		warning: 'bg-status-warning-bg text-text-status-warning-on-soft',
 		online: 'bg-status-online-bg text-text-status-online-on-soft',
 		outline: 'border border-border-default bg-transparent text-text-secondary'

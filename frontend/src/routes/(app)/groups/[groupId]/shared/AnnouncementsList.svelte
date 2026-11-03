@@ -54,10 +54,11 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<!-- 空旷内容区 → List bordered（有边框列表契约） -->
-		<ListContainer class="mt-3 divide-y divide-border-subtle/30">
+		<!-- 开放页面区域 → ListContainer bordered（内容软岛）；与成员列表同一行语言：
+		     行内不另造边框/背景，多行内容靠 flex-col + 间距表达。 -->
+		<ListContainer bordered class="mt-3">
 			{#each announcements as item (item.id)}
-				<ListItem class="relative flex flex-col items-start px-4 py-4" ariaLabel={item.title}>
+				<ListItem class="relative flex flex-col items-start px-3.5 py-3" ariaLabel={item.title}>
 					<div class="flex min-w-0 items-center gap-2 pr-16">
 						{#if item.isPinned}
 							<Badge tone="accent" class="shrink-0 gap-1">
