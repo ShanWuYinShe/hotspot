@@ -6,9 +6,15 @@
 > `bun run check:theme` 在 CI 拦截。强制的同步流程与组件规则见两端 `AGENTS.md`
 > （根 `AGENTS.md` / `frontend/AGENTS.md` / `harmonyapp/AGENTS.md`）。
 
-> 单一事实源（Single Source of Truth）。本文件从 Svelte Web 前端（`frontend/`）的
-> `--cst-*` token 体系整理而来，覆盖**桌面端 / 平板端 / 移动端**三档设备形态，
-> 并给出前端（CSS token）↔ 鸿蒙（`DesignConstants` / `ThemeConstants`）的逐项映射。
+> 单一事实源（Single Source of Truth）。本文件整理 Svelte Web 前端的 `--cst-*` token 体系
+> 与鸿蒙 `DesignConstants` / `ThemeConstants` 的逐项映射，覆盖**桌面端 / 平板端 / 移动端**三档设备形态。
+>
+> **token 落点**（前端，均在 `frontend/src/styles/theme/`）：
+> `semantic.css`（语义别名与派生公式）、`shared.css`（z-index / shape / 边框宽度 / 动效 / 缓动 / 模糊 /
+> 弹层高度 / 聊天宽度 / 页面 gutter / 大屏缩放）、`layout.css`（布局壳尺寸）、
+> `themes/*.css`（三主题 × 明暗的色板与情境覆写）、`utilities.css`（入场时长等类内 token）、
+> `theme-registry.css`（Tailwind v4 `@theme inline` 注册）。
+> 鸿蒙侧统一走 `DesignConstants`（尺寸/动效/形状/间距/token）与 `ThemeConstants`（主题色/阴影/氛围色板）。
 
 ---
 
@@ -29,16 +35,18 @@
 
 两端统一采用「三档设备形态 + 一处内容双栏阈值」：
 
-| 语义 | 前端 | 鸿蒙 | 值 |
+| 语义 | 前端（`platform.svelte.ts`） | 鸿蒙（`core/responsive/Breakpoint.ets`） | 值 |
 |---|---|---|---|
-| 移动端（手机） | `platform.platform === 'mobile'` | `!isDesktopForm` | `< 600` |
-| 平板端 | `isTablet` | `isTablet` | `600 – 1023` |
-| 桌面端 | `isDesktop` | `isDesktopForm` | `≥ 1024` |
-| 内容双栏（master-detail） | `isWide` | `isWideForm` | `≥ 960` |
+| 移动端（手机） | `platform === 'mobile'` | `!isTablet` | `< 600` |
+| 平板端 | `platform === 'tablet'` | `isTablet` | 前端 `600 – 1023`；鸿蒙 `≥ 600` |
+| 桌面端 | `isDesktop` | `isDesktopForm` | 前端 `≥ 1024`；鸿蒙 `≥ 1280` |
+| 内容双栏（master-detail） | `isWideTablet` | `isWideForm` | `≥ 960` |
 
-- **chrome 归桌面**：≥1024 切桌面顶栏 + 侧边栏；<1024 走 Phone/TabletLayout（**移动端和平板端的导航栏永远在底部**，绝对禁止在左侧出现 side rail 侧边栏）。
-- **内容双栏归 isWide**：960–1023 是「平板药丸底栏 + 内容可双栏」，不是桌面侧边栏。
-- 鸿蒙 `Breakpoint.ets` 底层 6 档（xs/sm/md/lg/xl/xxl）仅服务栅格，业务一律用语义派生量。
+- **chrome 归桌面**：前端 ≥1024、鸿蒙 ≥1280 切桌面顶栏 + 侧边栏；其余走 Phone/TabletLayout（**移动端和平板端的导航栏永远在底部**，禁止在左侧出现 side rail 侧边栏）。
+- **内容双栏归 isWide**：960 以上内容可双栏；960–1023（前端）与 960–1279（鸿蒙）仍是「平板药丸底栏 + 内容可双栏」，不是桌面侧边栏。
+- 鸿蒙 `Breakpoint.ets` 底层 6 档（xs/sm/md/lg/xl/xxl，阈值 320/600/840/1200/1600vp）仅服务栅格，业务一律用语义派生量。
+- 前端 Tailwind 断点在 `tailwind.css` 覆写为：`sm` 600 / `md` 960 / `lg` 1024 / `xl` 1280 / `2xl` 1536，与 `platform.svelte.ts` 的语义阈值咬合（**不是 Tailwind 默认 640/768/1024/1280/1536**）。
+- **阈值现状**：前端桌面 chrome 从 1024px 起、鸿蒙从 1280vp 起；两端桌面阈值不同，改动任一端前先对齐。
 
 ---
 
@@ -50,39 +58,94 @@
 
 ### 3.1 原始色板（primitive `--cst-palette-*`）
 
-| Token | Vibrant 亮 | Vibrant 暗 | Forest 亮 | Forest 暗 |
-|---|---|---|---|---|
-| `page-bg` / `bg` | `#F7FAFF` | `#0B1424` | `#F6F7F3` | `#161A16` |
-| `text` | `#16233A` | `#E8F1FF` | `#152219` | `#E8F1E9` |
-| `text-muted` | `#52647F` | `#A5B6CE` | `#3F5547` | `#A8BDAE` |
-| `accent-primary` | `#2B5EB2` | `#69A8FF` | `#39714F` | `#52B878` |
-| `on-accent` | `#FFFFFF` | `#071426` | `#FFFFFF` | `#0C1911` |
-| `online` | `#0D6A62` | `#37C99A` | `#39714F` | `#52B878` |
-| `hot`（危险） | `#C81E4E` | `#FB7185` | `#A04B37` | `#D97C5A` |
-| `warning` | `#9C4708` | `#FBBF24` | `#7E602B` | `#C4A75A` |
-| `map-user` | `#2B5EB2` | `#69A8FF` | `#39714F` | `#52B878` |
-| `map-group` | `#0B7653` | `#34D399` | `#4A703F` | `#88B85A` |
-| `map-moment` | `#C2470B` | `#FB923C` | `#8A6426` | `#C4A75A` |
+| Token | Vibrant 亮 | Vibrant 暗 | Forest 亮 | Forest 暗 | Inkwash 亮 | Inkwash 暗 |
+|---|---|---|---|---|---|---|
+| `page-bg` | `#EFF3F9` | `#0B0E14` | `#F6F7F3` | `#161A16` | `#F5F2EA` | `#181A1C` |
+| `bg` | `#FFFFFF` | `#121622` | `#F6F7F3` | `#161A16` | `#FBF9F3` | `#212426` |
+| `chat-bg` | `#EDF3FC` | `#0E121B` | `#F2F3F2` | `#0E100E` | `#F1EDE3` | `#1D2022` |
+| `text` | `#16233A` | `#F1F5F9` | `#152219` | `#E8F1E9` | `#2B2A26` | `#EAE6DA` |
+| `text-muted` | `#52647F` | `#94A3B8` | `#3F5547` | `#A8BDAE` | `#6B675D` | `#A8A49A` |
+| `accent-primary` | `#2B5EB2` | `#5B9CF6` | `#39714F` | `#52B878` | `#A63A2E` | `#DF7F6A` |
+| `on-accent` | `#FFFFFF` | `#0B0E14` | `#FFFFFF` | `#0C1911` | `#FFFFFF` | `#1F1512` |
+| `online` | `#0D6A62` | `#34D399` | `#39714F` | `#52B878` | `#3F7256` | `#82B297` |
+| `hot`（危险） | `#C81E4E` | `#F87171` | `#A04B37` | `#D97C5A` | `#9E2140` | `#DE8496` |
+| `warning` | `#9C4708` | `#FBBF24` | `#7E602B` | `#C4A75A` | `#7F6422` | `#D6A54E` |
+| `map-user` | `#2B5EB2` | `#5B9CF6` | `#39714F` | `#52B878` | `#A63A2E` | `#DF7F6A` |
+| `map-group` | `#0B7653` | `#34D399` | `#4A703F` | `#88B85A` | `#4A7048` | `#7FA88B` |
+| `map-moment` | `#C2470B` | `#FB923C` | `#8A6426` | `#C4A75A` | `#8A6426` | `#C89B5A` |
+
+> 三主题各 37 项 `--cst-palette-*`（每项在 light/dark 各一处定义）；上表为主色板，其余为派生/情境原料：`border` / `border-pressed` /
+> `accent-soft` / `accent-soft-border` / `hover` / `active-hover` / `glow` / `shadow-light` / `shadow-dark` /
+> `shadow-card` / `shadow-btn` / `overlay-strong` / `opacity-*` 等，真值与完整清单见 `themes/*.css`。
+> 三主题变量集合由 `check-theme-parity.mjs` 强制一致（light/dark 各自比对）。
 
 > `workspace-bg` 整层底色不存在（与 `page-bg` 两档整层灰并存会造成断裂）：桌面舞台不用白浮卡包住侧栏/主面板，
 > 整窗为一张连续画布，侧栏、主内容、顶栏均无外框、无硬分隔线，层级只由内容单元卡片与留白表达
-> （见 §17 与 theme skill「连续画布契约」）。inkwash 主题族数值以 `themes/*.css` 为准。
+> （见 §17 与 theme skill「连续画布契约」）。
 
 > 派生档位（`-bg` 淡底 / `-border` 淡边框 / `-glow` 光晕）由 `color-mix(in srgb, 主色 12~14%, transparent)`
 > 统一生成，禁止组件/数据层再写 `color-mix`。
 
-### 3.2 语义层（semantic `--cst-*`，跨主题不变）
+### 3.2 语义层与情境 token（`semantic.css`）
 
-| 语义 token | 指向 | 用途 |
+语义 token 是组件唯一消费面：跨主题/明暗同名，值随主题解析。别名映射集中定义在
+`semantic.css`，主题相关覆写在 `themes/*.css`（见 §3.4）。
+
+**基础语义**
+
+| 语义 token | 指向 / 公式 | 用途 |
 |---|---|---|
-| `--cst-text-primary` / `-secondary` | `palette-text` / `-muted` | 正文 / 辅助文字 |
-| `--cst-text-on-accent` | `on-accent` | accent 底上的文字 |
-| `--cst-surface-primary` / `-page` | `bg` / `page-bg` | 表面 / 画布 |
-| `--cst-surface-island` | `surface-primary` 派生（light 86% 半透合成画布 / dark 94% primary + 6% text-primary） | 开放页面内容岛表面（见 §19） |
+| `--cst-text-primary` / `-secondary` | `palette-text` / `palette-text-muted` | 正文 / 辅助文字 |
+| `--cst-text-on-accent` | `palette-on-accent` | accent 实底上的文字 |
+| `--cst-surface-primary` / `-page` / `-chat` | `palette-bg` / `page-bg` / `chat-bg` | 卡片面 / 画布 / 聊天画布 |
+| `--cst-surface-subtle` / `-raised` / `-panel` | 主题层：primary 混 8% text-primary（弱化嵌入面） / primary / primary | 分段底轨、置顶行等低一档填充 / 浮起控件 / 面板 |
+| `--cst-surface-island` | light `color-mix(surface-primary 86%, transparent)`（forest 92% + text-primary 8%）；dark 94% primary + 6% text-primary（vibrant 显式 `#181E2B`） | 内容岛表面（§19） |
+| `--cst-surface-overlay` / `-overlay-strong` | 主题层（遮罩色随主题/明暗覆写） / `palette-overlay-strong` | 遮罩 / 强遮罩 |
+| `--cst-surface-scrim` / `-glass-badge` / `-media-scrim-card` / `-media-scrim-strong` | 主题层（见 §3.4） | 弹层底遮罩 / 压图小徽章玻璃 / 图片卡底部渐隐 / 强压暗 |
+| `--cst-content-inverse` / `-muted` / `-secondary` | 主题层（白系） | 压图/深底上的反色文字三档 |
+| `--cst-content-secondary` | `text-secondary` | 次级内容 |
+| `--cst-text-on-status` / `--cst-content-on-marker` | 主题层（深色） | 状态/标记实底上的文字 |
 | `--cst-accent-default` / `-soft` / `-border` | `accent-primary` / `accent-soft` / `accent-soft-border` | 品牌 / 淡底 / 淡描边 |
-| `--cst-border-default` / `-strong` | `border` / `border-pressed` | 常规 / 强分隔 |
-| `--cst-status-online/danger/warning` | `online` / `hot` / `warning` | 状态色 |
-| `--cst-marker-user/group/moment` | `map-*` | 地图标记 |
+| `--cst-accent-soft-bg` / `-border-soft` | accent 12% / 30% `color-mix(... transparent)` | accent 淡底 / 淡边框 |
+| `--cst-glow-accent` / `-danger` | `palette-glow` / `rgba(0,0,0,.12)` | 微阴影光晕原料 |
+| `--cst-border-default` / `-strong` / `-subtle` / `-inverse` | `border` / `border-pressed` / `border-default` / 主题层 | 常规 / 强 / 弱分隔 / 反色描边 |
+| `--cst-interactive-hover` / `-active` / `-hover-fill` / `-active-fill` | `palette-hover` / `active-hover`（fill 与其同源） | 悬停/按压实底 |
+| `--cst-surface-hover` | accent 7% 混 primary | accent 系悬停面 |
+| `--cst-hover-lift` / `-image-zoom` | `2px` / `1.045` | 卡片悬停抬升 / 图片放大 |
+| `--cst-status-online` / `-danger` / `-warning` | `online` / `hot` / `warning` | 状态色 |
+| `--cst-status-*-bg` / `-border` | 14% / 28% `color-mix(... transparent)` | 状态淡底 / 淡边框 |
+| `--cst-text-accent-on-soft` / `-status-*-on-soft` | 80% 语义色 + 20% text-primary | 淡软底上的同色系文字（对比度 ≥4.5） |
+| `--cst-marker-user/group/moment` | `map-*` | 地图标记主色 |
+| `--cst-marker-*-bg` / `-border` / `-glow` | 14% / 30% / 50% `color-mix(... transparent)` | 标记淡底 / 边框 / 光晕 |
+| `--cst-elevation-shadow-light` / `-dark` | `palette-shadow-light` / `-shadow-dark` | 投影原料 |
+| `--cst-elevation-card` / `-button` | `palette-shadow-card` / `-shadow-btn` | 卡片 / 按钮投影（鸿蒙侧镜像字段） |
+
+**输入族（field surface，唯一输入表面语言）**
+
+| token | 值 | 用途 |
+|---|---|---|
+| `--cst-field-bg` / `-bg-disabled` | surface-primary / surface-subtle | 常态 / 禁用底 |
+| `--cst-field-border` / `-border-hover` / `-border-focus` | border-default / border-strong / accent-default | 边界三态 |
+| `--cst-field-ring` / `-ring-danger` | accent 22% / danger 24% `color-mix(... transparent)` | 焦点 / 错误柔光环 |
+
+**导航、交互与浮层（组件情境）**
+
+| token | 值 / 来源 | 用途 |
+|---|---|---|
+| `--cst-navigation-content` / `-content-active` / `-active-indicator` | text-secondary / accent-default / accent-default | 桌面侧栏文字 / 选中 / 指示条 |
+| `--cst-surface-navigation-hover` / `-active` / `-active-hover` | text-primary 12% / accent 26% / accent 34% 混 surface-page | 侧栏三态底（灰度可分） |
+| `--cst-surface-toggle-off` / `-thumb` | 主题层（灰 22% / panel） | 开关轨道关态 / 滑块 |
+| `--cst-elevation-toggle-on` / `-off` / `-thumb` | 主题层 | 开关 inset 与滑块投影 |
+| `--cst-surface-card-menu` / `--cst-border-card-menu` | surface-primary / border-subtle | 卡片菜单表面 / 描边 |
+| `--cst-elevation-menu` / `-modal` / `-sheet` / `-side-sheet` / `-control-thumb` / `-fab` / `-nav` / `-rail-hover` / `-profile-avatar` | 主题层（见 §8） | 各浮层/控件级投影（Tailwind `shadow-menu` 等注册） |
+| `--cst-surface-nav-glass` / `-border-nav-glass` | panel 90% / accent 18% | 顶栏玻璃与描边 |
+| `--cst-surface-map-control` | 主题层 | 地图控件面 |
+| `--cst-card-tap-scale` | 1（主题覆写 0.94 / 0.97） | 卡片按压缩放 |
+| `--cst-surface-cover-scrim` / `-gallery-scrim` / `-gallery-label` / `-cover-placeholder` / `-card-fallback` / `-card-scrim-top` / `-card-scrim-bottom` | 主题层（渐变 / 占位） | 封面、画廊、整卡图片卡的遮罩与占位 |
+
+> 新增语义 token 的完整同步链：`themes/*.css` 三主题 × 明暗补齐 → `semantic.css` 别名/公式 →
+> `theme-registry.css` 注册 Tailwind 类 → `check-theme-parity` / `check-cross-platform-colors` 通过。
+> Tailwind 未注册的 utility 会静默失效，注册层不能漏。
 
 ### 3.3 鸿蒙侧颜色消费
 
@@ -98,7 +161,7 @@
   `textSecondary` eyebrow（`SettingsGroupLabel`）。
 - 表面：`palette.surfaceSubtle` / `palette.surfaceElevated` / `palette.chatBackground`
 - 文字：`palette.textPrimary` / `palette.textSecondary` / `palette.textTertiary`
-- 品牌：`palette.accentBackground`（forest `#3D7A55`，与前端
+- 品牌：`palette.accentBackground`（forest `#39714F`，与前端
   `--cst-palette-accent-primary`（`--cst-accent-default`）一致）
 - 语义：`palette.success` / `palette.warning` / `palette.error` / `palette.info`
 - 地图标记：`palette.mapUser / mapGroup / mapMoment`（随主题/明暗变）；状态淡底：
@@ -114,33 +177,52 @@
   `settings_dark_forced=true` 的存量偏好按 `dark` 读取）
 - 不存在主题族的存量偏好一律映射 vibrant 对应明暗
 
+### 3.4 主题层（`themes/*.css`，三主题 × 明暗）
+
+主题层是主题相关 token 的唯一真值：每主题 `light` 与 `dark` 两组变量，集合必须完全一致
+（`check-theme-parity.mjs` 以 vibrant 为锚逐主题比对；缺变量会静默回落到其他主题/模式，造成跨主题漂移）。
+
+| 分组 | 代表 token | 用途 |
+|---|---|---|
+| 色板原料 | `--cst-palette-*`（37 项：主色 / border / hover / opacity / shadow / overlay / chat / glow） | 一切语义 token 的输入 |
+| 画布与表面 | `--cst-surface-primary` / `-page` / `-chat` / `-island` / `-subtle` / `-panel` / `-raised` / `-overlay` / `-overlay-strong` | 层级与遮罩 |
+| 压图与反色 | `--cst-content-inverse`（三档） / `--cst-content-on-marker` / `--cst-text-on-status` / `--cst-surface-glass-badge` / `--cst-surface-media-scrim-*` / `--cst-surface-cover-*` / `--cst-surface-card-scrim-*` / `--cst-surface-card-fallback` / `--cst-surface-gallery-*` | 图片上的文字、徽章与占位 |
+| 交互与导航 | `--cst-surface-navigation-*` / `--cst-surface-hover` / `--cst-surface-toggle-*` / `--cst-surface-card-menu` / `--cst-border-card-menu` / `--cst-card-tap-scale` / `--cst-hover-lift` / `--cst-hover-image-zoom` | 交互态 |
+| 投影与玻璃 | `--cst-elevation-*`（menu / modal / sheet / side-sheet / control-thumb / fab / nav / rail-hover / profile-avatar / toggle-*） / `--cst-surface-nav-glass` / `--cst-border-nav-glass` | 层级与毛玻璃 |
+| 氛围画布 | `--cst-ambient-*`（glow1/2、sky、line、dot、sun、ink1–3、emblem、horizon、vignette） | §16 装饰层 |
+| 状态与标记 | `--cst-status-*-bg` / `-border` / `--cst-marker-*-bg` / `-border` / `-glow` / `--cst-accent-soft-bg` / `--cst-accent-border-soft` | 淡底、边框、光晕 |
+
+> 改主题色只改 `themes/*.css` 与 `ThemeConstants` 两端同源值，不要改 `semantic.css` 的派生公式。
+> 覆盖范围：`ColorConfig` 中参与跨端映射的字段（14 组 palette 映射 + 合成色规则）由 `check-cross-platform-colors.mjs` 逐值校验，
+> 其余装饰字段（glow / tabBar 等）与 `AmbientColorConfig`（氛围画布 12 字段，预合成 `#AARRGGBB`）、`ThemeShadows` 为手工镜像，
+> 改 palette 后必须按同一公式重算（无脚本兜底）。
+
 ---
 
 ## 4. 字体系统
 
 ### 4.1 字号刻度（`--text-*` ↔ `FONT.SIZE`）
 
-| 档 | 前端 | 鸿蒙 `FONT.SIZE` | 用途 |
+| 档 | 前端（px @16 基准） | 鸿蒙 `FONT.SIZE` | 用途 |
 |---|---|---|---|
-| xs-minus | `9` | `XS_MINUS` | 极小标注 |
-| xxs | `10` | `XS2` | 极小 uppercase 标签（eyebrow、分组标） |
-| xs | `11` | `XS` | 辅助文字（副标题、计数、时间戳） |
-| sm | `12` | `SM` | 正文 |
-| md | `14` | `MD` | 强调正文（昵称、按钮主标） |
-| lg | `16` | `LG` | 正文（**鸿蒙平台适配档**，见下） |
-| lg-plus | `18` | `LG_PLUS` | 小标题 |
-| xl | `20` | `XL` | 标题 |
-| 2xl | `24` | `XXL` | 大标题 |
-| 3xl | `30` | `XXXL` | 强调大数字/节标题 |
-| 4xl | `36` | `HERO` | 错误码/超大数字（前端最大 text 档） |
+| xxs | `10`（`--text-xxs` 0.625rem） | `XS2` | 极小 uppercase 标签（eyebrow、分组标） |
+| xs | `11`（`--text-xs` 0.6875rem） | `XS` | 辅助文字（副标题、计数、时间戳） |
+| sm | `12`（`--text-sm` 0.75rem） | `SM` | 正文 |
+| md | `14`（`--text-md` 0.875rem） | `MD` | 强调正文（昵称、按钮主标） |
+| lg | `18`（Tailwind 默认 `text-lg`） | `LG_PLUS` | 小标题 |
+| xl | `20`（Tailwind 默认） | `XL` | 标题 |
+| 2xl | `24`（Tailwind 默认） | `XXL` | 大标题 |
+| 3xl | `30`（Tailwind 默认） | `XXXL` | 强调大数字 / 节标题 |
+| 4xl | `36`（Tailwind 默认，前端最大 text 档） | `HERO` | 错误码 / 超大数字 |
 
+> 前端只覆写 xxs/xs/sm/md 四档（`theme-registry.css` @theme），lg 及以上沿用 Tailwind 默认（18/20/24/30/36）。
 > **鸿蒙平台适配例外**：`FONT.SIZE.LG = 16` 为 HarmonyOS 标准正文尺寸（web 端正文 12/14 偏小），
-> 是唯一多出的档位，两端有意不同，属已登记豁免，不属于漂移。
-> 近邻档（13/15/22/28/32/48/56 与 XXXL_PLUS 36）一律归并到上表档位，禁止引入。
+> 是唯一多出的档位，两端有意不同，属已登记豁免，不属于漂移；前端无 16px 档，9px `XS_MINUS` 档不存在（最小档 10px）。
+> 近邻档（13/15/22/28/32/48/56 等）一律归并到上表档位，禁止引入。
 >
 > **大屏缩放**：前端字号 token 用 rem 表达（0.625/0.6875/0.75/0.875rem），16px 基准下等价上表 px；
 > ≥1920 视口随根字号等比放大（见 §23），鸿蒙端保持设备独立字号。`check-cross-platform-scale.mjs`
-> 按 16px 基准把 rem 折算回 px 后与 `FONT.SIZE` 逐档比对。
+> 按 16px 基准把 rem 折算回 px 后与 `FONT.SIZE` 逐档比对（含 lg+ Tailwind 默认档与行高）。
 
 ### 4.2 字重 / 行高 / 字距
 
@@ -177,8 +259,10 @@
   - 绝对档 `FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}` 只用于**单行紧凑**场景。
     ⚠️ 绝对档与字号是解耦的：把 `LINE_HEIGHT.SM`(20) 用在 `SIZE.LG`(16) 上比值只有 1.25。
     误用会让比值散落 1.57~1.83；多行长文一律走上表比例制。
-- 字距：`FONT.LETTER_SPACING.{EYEBROW 1.4, LABEL 1.2, FIELD 1.28, ICON_LABEL 0.6}`
-  （对齐前端 tracking-eyebrow/label/field 刻度，鸿蒙按 10px 基准折算）。
+- 字距：`FONT.LETTER_SPACING.{EYEBROW 1.4, LABEL 1.2, FIELD 1.28, ICON_LABEL 0.6, TITLE -0.12}`
+  （对齐前端 `--tracking-{eyebrow 0.14em, label 0.12em, field 0.08em, title -0.01em}` 刻度，鸿蒙按 10px 基准折算）。
+- 前端行高/字距注册：`--tracking-*`（上四档）、`--leading-{card 1.7, copy 1.75}`；其余行高走 Tailwind 默认
+  （`leading-none` 1 / `leading-snug` 1.375 / `leading-relaxed` 1.625 等）。禁止 `tracking-[…]` / `leading-[…]` arbitrary 类。
 
 ---
 
@@ -186,20 +270,27 @@
 
 4px 网格 + 微步，**不强制收敛**（间距的 2px 差异是布局设计的一部分）：
 
-`HALF 2` / `THREE 3` / `XS 4` / `SM2 6` / `SM 8` / `MD2 10` / `MD 12` / `MD3 14` / `LG 16` / `LG2 20` / `XL 24` / `XXL 32`
+`HALF 2` / `THREE 3` / `XS 4` / `SM2 6` / `SM 8` / `MD2 10` / `MD 12` / `MD3 14` / `LG 16` / `LG_PLUS 18` / `LG2 20` / `XL 24` / `XXL 32`
 
 禁止组件内 `padding({left:16})` 这类裸数——用 `SPACING.LG`。1vp 级微距（top:1 等）与 0 值允许保留（对齐前端间距不强制收敛原则）。
+
+前端对应：间距用 Tailwind 默认 4px 阶梯（`p-1`/`p-2`/`gap-3` 等）；页面级另有 `--cst-page-gutter`（§5.1）
+与布局 token（`--cst-workspace-*`/`--cst-context-rail-*`/`--cst-cover-height-*` 等，见 §12），
+并通过 `@theme` 注册 `spacing-cover-height{,-sm,-lg}`/`spacing-page-gutter` 类。
 
 ### 5.1 页面级横向 gutter（唯一来源，强制）
 
 **横向留白只能由 `PageShellContainer` 提供**，页面内不得再为自己的正文写
 `left`/`right` padding：
 
-| 断点 | gutter | 对齐前端 `--cst-page-gutter` |
+| 断点 | 鸿蒙 `PAGE_SHELL` gutter | 前端 `--cst-page-gutter` |
 |---|---|---|
-| xs / sm（手机） | `PAGE_SHELL.GUTTER_MOBILE` = 16 | 1rem |
-| md（平板） | `PAGE_SHELL.GUTTER_TABLET` = 24 | 1.5rem |
-| lg+（桌面） | `PAGE_SHELL.GUTTER_DESKTOP` = 28 | 1.75rem |
+| xs / sm（手机） | `GUTTER_MOBILE` = 16 | 1rem（< 600） |
+| md（平板） | `GUTTER_TABLET` = 24 | 1.5rem（≥ 600） |
+| lg+（桌面） | `GUTTER_DESKTOP` = 28 | 1.75rem（≥ 1280） |
+
+> 阈值差异：前端 gutter 在 ≥1280 才升到 1.75rem；鸿蒙按 Breakpoint lg（≥840vp）即用 28vp。
+> 改 gutter 语义前先统一两端阈值，否则 840–1279 区间两端留白相差 4。
 
 - **禁止**「容器 gutter + 页面自加 padding」双重留白——会叠成 36~40，与只用容器
   gutter 的页面差 16~20vp，各页正文左边缘不在同一条竖线上，滑动时边界跳动。
@@ -238,17 +329,51 @@
 | full | `999` | 圆/胶囊 |
 | sheet | `28` | 底部弹层专用大圆角 |
 
+前端实现：`--radius-{sm,md,lg,xl,full}` 映射 `--cst-shape-{sm,md,lg,xl,full}`（shared.css），`--radius-sheet` = 1.75rem；`rounded-*` 类由 `@theme` 注册，禁止 arbitrary 圆角。
+
 语义形状（`SHAPE`）：`CARD 20 / HERO_CARD 24 / COMPACT_CARD 16 / PREVIEW_CARD 20 / LIST_ITEM 20 / ICON_TILE 12 / INPUT 16 / BUTTON FULL / CHIP FULL / TAB_BAR 24 / SHEET_TOP_RADIUS 28`，按前端语义用法对齐（hero/feature 24、主按钮胶囊 FULL、弹层顶部 28）。近邻档 8/18/22 不存在，禁止引入。**输入族两派**：搜索输入 = 胶囊（前端 `rounded-full`，鸿蒙 `SearchPageHeader` 用 `SHAPE.BUTTON`）；表单输入保持 `INPUT 16`（鸿蒙 `SystemInput` 不变）。
 
 ---
 
 ## 7. 边框宽度（`--cst-border-width-*` / `BORDER_WIDTH`）
 
-`HAIRLINE 1` / `REGULAR 1.5` / `STRONG 2` / `HEAVY 3`。禁止 `.border({ width: 1 })` 裸数，一律 `DesignConstants.BORDER_WIDTH.*`。
+前端：`--cst-border-width-{hairline 1px, regular 1.5px, strong 2px, heavy 3px}`（shared.css），`@theme` 注册 `border-width-*`——`border` 默认 = hairline、`border-2` = strong。
+鸿蒙：`BORDER_WIDTH.{SUBPIXEL 0.5, HAIRLINE 1, REGULAR 1.5, STRONG 2, HEAVY 3}`。
+禁止 `.border({ width: 1 })` / `border-[1.5px]` 这类裸数，一律走 token。
 
 ---
 
 ## 8. 阴影与层级
+
+### 8.1 层级（z-index，`shared.css`）
+
+| token | 值 | 用途 |
+|---|---|---|
+| `--cst-z-dropdown` | 10 | 下拉 / 菜单 |
+| `--cst-z-sticky` | 20 | 页内 sticky 头 / 筛选条（滚动内容之上、浮层之下） |
+| `--cst-z-chrome` | 30 | 桌面顶栏 / 侧栏（页内 sticky 之上、遮罩之下） |
+| `--cst-z-overlay` | 40 | 遮罩 |
+| `--cst-z-modal` | 50 | 模态 |
+| `--cst-z-toast` | 60 | Toast |
+
+### 8.2 投影（前端 token）
+
+原料：`--cst-elevation-shadow-light` / `-dark`（来自 `palette-shadow-*`）；组件级投影值由 `themes/*.css` 预定义。
+
+| 刻度 | token | 值 / 用途 |
+|---|---|---|
+| raised | `--shadow-raised-sm` / `-md` / `-lg` | 0/1/3 · 0/2/8 · 0/6/16：控件/按钮 → 卡片 → 大卡片/封面 |
+| inset | `--shadow-inset-sm` / `-md` | 双向凹陷：输入聚焦、选中态 |
+| glow（accent） | `--shadow-glow-sm` / `-md` / `-lg` | 中性投影 + `--cst-glow-accent`，accent 实底控件 hover/按压 |
+| glow（danger） | `--shadow-danger-glow-sm` / `-md` | 危险操作 hover 抬档 |
+| toggle | `--shadow-toggle-on` / `-off` / `-thumb` | 开关 inset 与滑块 |
+| overlay | `--shadow-menu` / `-modal` / `-sheet` / `-side-sheet` / `-control-thumb` | 浮层统一投影（菜单/Toast/模态/上下 sheet/侧滑面板） |
+
+- `@theme` 把上表注册为 `shadow-*` 类；组件禁止 `shadow-[var(--cst-elevation-*)]` arbitrary 写法。
+- 组件级：`--cst-elevation-{fab, nav, rail-hover, profile-avatar, modal, sheet, side-sheet, menu, control-thumb}`，值在 `themes/*.css`。
+- 悬停/按压缩放另走 `--cst-hover-lift`（2px）与 `--cst-hover-image-zoom`（1.045）。
+
+### 8.3 鸿蒙投影契约（`SHADOW` / `ThemeShadowRegistry`）
 
 扁平设计默认 `SHADOW.*` 全零；需要投影时用主题注册表
 `AppThemeManager.getPaletteById(...).{surfaceShadow, elevatedShadow, controlShadow, tabBarShadow}`
@@ -259,7 +384,7 @@
 （`accentShadow` 字段已随 glow 体系删除，对齐前端 ui/button
 `shadow-raised-sm hover:shadow-raised-md` 契约）。
 
-### 8.1 跨端投影契约速查
+### 8.4 跨端投影契约速查
 
 | 场景 | 静态 | hover/按压 |
 |---|---|---|
@@ -284,7 +409,7 @@
 
 ## 9. 模糊（`--cst-blur-*`）
 
-`sm 8`（轻徽章/浮层）/ `md 16`（sticky header/overlay）/ `lg 24`（底部导航/tablet dock）。
+`--cst-blur-sm 8px`（轻徽章/浮层）/ `--cst-blur-md 16px`（sticky header/overlay）/ `--cst-blur-lg 24px`（底部导航/tablet dock）；三档强制收敛，值在 `shared.css`（可按主题覆写），禁止组件内联手写 blur 半径。
 
 鸿蒙映射系统 `BlurStyle` 枚举（平台原生，非数值 token）：`BlurStyle.Thin` ↔ sm、
 `BlurStyle.Regular` ↔ md、`BlurStyle.Thick` ↔ lg（当前 SDK 的 BlurStyle 枚举无
@@ -294,17 +419,37 @@
 
 ## 10. 动效与交互反馈
 
-### 10.1 时长与曲线（`ANIMATION`，禁用裸 `duration: N`）
+### 10.1 时长与曲线（禁用裸 `duration: N` / 裸 curve）
 
-- 时长：`DURATION_FAST 150` / `DURATION_SHORT 200` / `DURATION_MEDIUM 300` /
-  `DURATION_CONTENT_SWITCH 400` / `DURATION_SHEET 320`（底部弹层统一）/
-  `DURATION_250` / `DURATION_280` / `DURATION_SLOW 1500`（脉冲/shimmer）/
-  `DURATION_STAGGER_DELAY 150`。
-- 曲线：`CURVE_EASE_IN_OUT` / `CURVE_EASE_OUT` / `CURVE_FAST_OUT_SLOW_IN` / `CURVE_SMOOTH`；
-  前端曲线 `standard (0.22,1,0.36,1)` / `bounce (0.34,1.56,0.64,1)`。
-- 骨架屏脉冲：前端 `--cst-motion-skeleton: 1500ms`（仅骨架屏）↔
-  鸿蒙 `ANIMATION.DURATION_SLOW 1500`；两端骨架节奏同源，勿单独改一端。
-- Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）。
+**前端 token（`shared.css` 定义，`@theme` 注册）**
+
+| token | 值 | 用途 |
+|---|---|---|
+| `--cst-motion-instant` | 100ms | 即时状态切换 |
+| `--cst-motion-rapid` | 150ms | 快速反馈 / 退场 |
+| `--cst-motion-snappy` | 180ms | 紧凑过渡 |
+| `--cst-motion-standard` | 220ms | 状态 pop / 默认过渡 |
+| `--cst-motion-relaxed` | 260ms | 宽松面板过渡 |
+| `--cst-motion-spring` | 300ms | 弹性位移 |
+| `--cst-motion-slow` | 400ms | 大面板 / 弹层 |
+| `--cst-motion-gentle` | 500ms | 缓慢强调 |
+| `--cst-motion-spinner` | 700ms | 加载旋转 |
+| `--cst-motion-pulse` | 2400ms | 占位 / 关注脉冲 |
+| `--cst-motion-reduced` | 1400ms | reduced-motion 降级周期 |
+| `--cst-motion-skeleton` | 1500ms | 骨架屏 shimmer 循环（仅骨架屏；对齐鸿蒙 `DURATION_SLOW 1500`） |
+| `--cst-motion-ambient` / `-ambient-slow` | 24000ms / 36000ms | 氛围画布超长循环（仅装饰层） |
+| `--cst-ease-standard` | `cubic-bezier(.22,1,.36,1)` | 标准曲线（`ease-standard`） |
+| `--cst-ease-bounce` | `cubic-bezier(.34,1.56,.64,1)` | 弹簧 overshoot（`ease-bounce`） |
+
+- 页面进场/内容淡入：`utilities.css` 的 `--cst-page-enter-duration` 120ms、`--cst-content-fade-duration` 110ms；
+  JS 侧 `lib/motion.ts` 的 `MOTION.{enter 120, contentFade 110, exit 150, pop 220}` 与之同源，改一处必须同步。
+- `@theme` 注册：`--transition-duration-{instant,rapid,snappy,standard,relaxed,spring,slow,gentle}`、`--animate-fade-in`。
+
+**鸿蒙 `ANIMATION`**：`DURATION_FAST 150` / `DURATION_SHORT 200` / `DURATION_MEDIUM 300` /
+`DURATION_CONTENT_SWITCH 400` / `DURATION_SHEET 320`（底部弹层统一）/ `DURATION_SLOW 1500`（脉冲/shimmer）/
+`DURATION_STAGGER_DELAY 150`；曲线 `CURVE_EASE_IN_OUT` / `CURVE_EASE_OUT` / `CURVE_FAST_OUT_SLOW_IN` / `CURVE_SMOOTH`。
+骨架屏脉冲两端同源（`--cst-motion-skeleton: 1500ms` ↔ `DURATION_SLOW 1500`），勿单独改一端。
+Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）。
 
 ### 10.2 交互反馈（`INTERACTION`，禁用裸 `scale(...)` / 裸 curve）
 
@@ -318,14 +463,67 @@
 
 ---
 
-## 11. 透明度（`OPACITY`）
+## 11. 透明度
 
-`DISABLED 0.38` / `PRESSED 0.72` / `LOADING 0.58` / `SUBTLE 0.85` / `MUTED 0.5` / `EMPHASIZED 0.8`
-（对齐前端 opacity-50/80 标准档；FADED 0.4 档不存在）。
+前端 `--cst-opacity-*`（`semantic.css` 映射 `--cst-palette-opacity-*`，`@theme` 生成 `opacity-*` 类）：
+
+| token | 默认值 | 用途 |
+|---|---|---|
+| `--cst-opacity-none` | 0 | 完全透明 |
+| `--cst-opacity-faint` | 0.30 | 极弱提示 |
+| `--cst-opacity-subtle` | 0.40 | 弱化元素 |
+| `--cst-opacity-muted` | 0.50 | 次要文字 / 图标 |
+| `--cst-opacity-dim` | 0.60 | 弱化控件 |
+| `--cst-opacity-soft` | 0.70 | 软提示 |
+| `--cst-opacity-emphasis` | 0.80 | 强调 / 次级 |
+| `--cst-opacity-tap` | 0.84 | 按压反馈 |
+| `--cst-opacity-hover` | 0.90 | 悬停反馈 |
+| `--cst-opacity-full` | 1 | 不透明 |
+| `--cst-opacity-active` | 0.13 | 选中叠加（mix 档） |
+| `--cst-opacity-glow` | 按主题 / 明暗覆写 | 光晕与主题强调档（见 `themes/*.css`） |
+| `--cst-opacity-watermark` | 0.08 | 无图卡片水印（跨端一致） |
+
+- 组件只消费 `opacity-*` 语义类，禁止内联 opacity 字面量（AGENTS.md UI 原则 #4）。
+- 鸿蒙 `OPACITY`：`DISABLED 0.38` / `PRESSED 0.72` / `LOADING 0.58` / `SUBTLE 0.85` / `MUTED 0.5` / `EMPHASIZED 0.8`；
+  FADED 0.4 档不存在。
 
 ---
 
 ## 12. 组件与布局尺寸（禁止裸 `width(N)` / `height(N)`）
+
+### 12.1 前端布局与尺寸 token（`layout.css` / `shared.css` / `@theme`）
+
+| 分组 | token | 值 | 用途 |
+|---|---|---|---|
+| 内容栏 | `--cst-content-breath` | `clamp(80rem, 60vw, 100rem)` | 呼吸式页面（首页/发现） |
+| | `--cst-content-feed` | `clamp(64rem, 52vw, 80rem)` | 信息流 |
+| | `--cst-content-detail` | `clamp(58rem, 50vw, 70rem)` | 详情页 |
+| | `--cst-content-form` | `clamp(56rem, 42vw, 64rem)` | 表单页 |
+| | `--cst-content-form-narrow` | `clamp(48rem, 36vw, 56rem)` | 窄表单 |
+| | `--cst-page-content-max` | 100% | `ContentColumn` 默认流式宽度 |
+| 工作区 / 侧栏 | `--cst-workspace-gap` | `clamp(0.875rem, 1.5vw, 1.25rem)` | 桌面工作区间距 |
+| | `--cst-workspace-inset` | `0.75rem` | 浮动卡片工作区距舞台内缩 |
+| | `--cst-context-rail-width` | `clamp(18rem, 20vw, 21rem)` | 右 rail 宽 |
+| | `--cst-context-rail-gap` | `clamp(1rem, 1.75vw, 1.5rem)` | 主区与 rail 间距 |
+| | `--cst-context-rail-inset` | `1rem` | rail 内边距 |
+| | `--cst-desktop-sidebar-width` / `-collapsed` | `14rem` / `4.5rem`（224 / 72px） | 桌面侧栏展开 / 折叠 |
+| | `--cst-desktop-header-height` | `3.25rem`（52px） | 桌面顶栏高 |
+| | `--cst-tablet-dock-max` | `42.5rem`（680px） | 平板浮动 dock 最大宽 |
+| 移动壳 | `--cst-mobile-rail-width` / `-item` | `4rem` / `3.25rem`（64 / 52px） | 横屏左侧 rail |
+| | `--cst-bottom-nav-pad-top` / `-bottom` | `0.5rem` / `1.25rem`（8 / 20px） | 竖屏底栏留白（与 safe-area 取大） |
+| 封面 | `--cst-cover-height-sm` | `clamp(7.5rem, 18vw, 10rem)` | 编辑资料小封面 |
+| | `--cst-cover-height` | `clamp(13.75rem, 28vw, 21.25rem)` | 群 / 个人封面 |
+| | `--cst-cover-height-lg` | `clamp(13.75rem, 38vw, 23.75rem)` | 动态详情大封面 |
+| 弹层 | `--cst-sheet-height` / `-max-height` | `78vh` / `700px` | center 模态弹层 |
+| | `--cst-sheet-height-lg` / `-xl` / `-2xl` | `85%` / `90%` / `92%` | 底部 sheet 三档 |
+| 聊天 | `--cst-chat-bubble-max-width` | `min(75%, 40rem)` | 气泡最大宽度（窄屏占比 75%，宽屏封顶 640px） |
+| 大屏 | `--cst-ui-scale` | 1（JS 同步） | 数值型内联尺寸缩放（§23） |
+| 注册类 | `--spacing-page-gutter` / `--spacing-cover-height{,-sm,-lg}` | 同上 | `@theme` 生成对应 spacing 类，消除 arbitrary 写法 |
+
+> 布局 token 统一 rem 表达；≥1920 视口随根字号等比放大（§23）。页面正文宽度用 `ContentColumn` 档位，
+> 禁止页面自设 `max-w-*`（例外见 §21.13）。
+
+### 12.2 鸿蒙尺寸常量（`DesignConstants`）
 
 - 头像 `AVATAR_SIZE.{XXS 22, XS 32, SMALL 40, SMALL_PLUS 44, MEDIUM 48, PROFILE 68, LARGE 80, XLARGE 96}`；
   按钮 `BUTTON_HEIGHT 42` / `BUTTON_HEIGHT_LG 48` / `ACTION_BUTTON_HEIGHT 28` /
@@ -343,8 +541,9 @@
   `SKELETON_CARD_HEIGHT 100` / `PLACEHOLDER_AREA_HEIGHT 120` / `IMAGE_PLACEHOLDER_HEIGHT 110` /
   `SHARE_CARD_HEIGHT 130` / `LOG_AREA_HEIGHT 300` / `PROGRESS_STROKE_WIDTH 4`
 - 布局 `LAYOUT.{DESKTOP_HEADER_HEIGHT 52, DESKTOP_SIDEBAR_WIDTH 224, RIGHT_SIDEBAR_WIDTH 220,
-  MOBILE_BOTTOM_NAV_HEIGHT 56, TABLET_NAV_MAX_WIDTH 680, FAB_SIZE 52, ICON_BUTTON_SIZE 36,
-  LABEL_WIDTH 60, HOME_COLUMN_WIDTH 420, FILTER_PANEL_WIDTH 180}`（GLOW_BLOB_* 光晕尺寸不存在）
+  MOBILE_BOTTOM_NAV_HEIGHT 56, TABLET_NAV_MAX_WIDTH 680, FAB_SIZE 48, ICON_BUTTON_SIZE 36,
+  LABEL_WIDTH 60, HOME_COLUMN_WIDTH 420, FILTER_PANEL_WIDTH 180}`（无 `GLOW_BLOB_*` 光晕尺寸；
+  完整字段见 `DesignConstants.ets` 的 `LAYOUT` / `COMPONENT`）
 - 其他布局尺寸：`BACK_BUTTON_SIZE 42`（`DesignConstants.ets LAYOUT.BACK_BUTTON_SIZE=42`，与前端
   「页面级返回键统一 42」一致）/ `MIN_HIT_TARGET 44`（触控热区底线，见 skill
   `mobile-ui-conventions`：官方底线 ≥40vp、推荐 46）/ `UNREAD_BADGE_SIZE 20` /
@@ -355,8 +554,9 @@
   数值不重复维护（两处重复必漂移）
 - 聊天 `CHAT.{BUBBLE_PADDING_H 16, BUBBLE_PADDING_V 10, IMAGE_BUBBLE_PADDING_H 14,
   IMAGE_BUBBLE_PADDING_V 6, IMAGE_MAX_WIDTH 200, ...}`
-- 页面内容栏档位（对齐前端 `.page-shell`）：`form 560` / `narrow 720` / `default 1180` /
-  `wide 1320`；feed：`feed-narrow 640` / `feed-medium 960`
+- 页面内容栏档位（`PAGE_SHELL`）：`SHELL_FORM_MAX 560` / `SHELL_NARROW_MAX 720` /
+  `SHELL_DEFAULT_MAX 1180` / `SHELL_WIDE_MAX 1320`；feed：`FEED_NARROW_MAX 640` / `FEED_MEDIUM_MAX 960`。
+  前端对应为 `ContentColumn` 的 `maxWidth` 档 + `--cst-content-*` 流式宽度（§12.1），无 `.page-shell` 常量类
 
 ---
 
@@ -413,10 +613,13 @@
 
 | 校验 | 脚本 | 覆盖范围 |
 |---|---|---|
-| 跨端色彩 | `frontend/scripts/check-cross-platform-colors.mjs` | `themes/*.css --cst-palette-*` ↔ `ThemeConstants.ets ColorConfig` 逐值一致（3 主题 × 2 明暗 × 14 组映射）+ 主题 swatch |
-| 跨端刻度 | `frontend/scripts/check-cross-platform-scale.mjs` | 字号 9 档（`--text-*` ↔ `FONT.SIZE`）+ 圆角 5 档（`--radius-*` ↔ `RADIUS`）逐值一致；单端加近邻档即拦截。已登记豁免：`FONT.SIZE.LG=16`（HarmonyOS 平台适配档） |
+| 主题变量一致性 | `frontend/scripts/check-theme-parity.mjs` | vibrant / forest / inkwash × light/dark 的 `--cst-*` 变量集合必须一致；`semantic.css` 引用的 `--cst-palette-*` 必须在每个主题中定义 |
+| 跨端色彩 | `frontend/scripts/check-cross-platform-colors.mjs` | `themes/*.css --cst-palette-*` ↔ `ThemeConstants.ets ColorConfig` 逐值一致（3 主题 × 2 明暗 × 映射组）+ 主题 swatch |
+| 跨端刻度 | `frontend/scripts/check-cross-platform-scale.mjs` | 字号 9 档（`--text-*` ↔ `FONT.SIZE`，含 lg+ Tailwind 默认档）+ 圆角 5 档 + 各档行高（`textLineHeight()`）逐值一致；单端加近邻档即拦截。已登记豁免：`FONT.SIZE.LG=16`（HarmonyOS 平台适配档） |
+| 类名有效性 | `frontend/scripts/check-utility-classes.mjs` | 源码消费的 token 类名必须已在 `@theme` 注册（含变体前缀与功能类白名单）；未注册的 utility 会静默失效 |
 
-两脚本均挂入 `bun run check:theme`（随 `bun run check` 与 CI 生效），漂移即红。
+以上脚本串入 `bun run check:theme`（随 `bun run check` 与 CI 生效），漂移即红；
+组件原语同类型一致性另由 `check-component-consistency.mjs` 在 `bun run check` 中校验。
 
 ---
 
@@ -424,13 +627,16 @@
 
 ## 15. 已登记例外与平台适配
 
-- `FONT.SIZE.LG = 16`：HarmonyOS 标准正文尺寸，平台有意差异（跨端刻度脚本豁免项）。
+- `FONT.SIZE.LG = 16`：HarmonyOS 标准正文尺寸，平台有意差异（跨端刻度脚本豁免项；前端无 16px 档）。
+- `BORDER_WIDTH.SUBPIXEL 0.5`：鸿蒙仅有的亚像素档（前端无对应，用于极细分割）。
+- `RADIUS.FULL`：前端 9999 / 鸿蒙 999，均为胶囊语义，数值差异不判漂移。
+- `XS_MINUS`（9px）档不存在：两端最小字号档为 10px（`XS2`）。
 - 明暗切换：鸿蒙 `DarkModePreference` 三档（auto/light/dark），web 端可手动切换；
   主题族（vibrant/forest/inkwash）两端可选集一致。
 - 布局几何（width/height/gap 的 px）：非主题风格，不受 token 约束。
 - 主题选择器 swatch：静态展示目标主题 accent，引用 token
   （`ThemeConstants.VIBRANT_LIGHT_COLORS.accentBackground` 等，见 `SettingsPage` 主题卡），
-  不写字面 hex。对应值 vibrant `#2B5EB2` / forest `#3D7A55`（见 `ThemeConstants`），须与 themes 同步。
+  不写字面 hex。对应值 vibrant `#2B5EB2` / forest `#39714F`（见 `ThemeConstants`），须与 themes 同步。
 - `figma_neu` 主题：鸿蒙存量兼容项，非双端对齐目标。
 
 ---
@@ -637,7 +843,7 @@
 | 组合 | 定义 | 合成到画布实测 | 岛/画布亮度比 |
 |---|---|---|---|
 | light | vibrant/inkwash：`color-mix(surface-primary 86%, transparent)`；**forest 覆写**：`color-mix(surface-primary 92%, text-primary 8%)` | vibrant #FDFDFE / **forest #E4E6E2** / inkwash #FAF8F2 | vibrant 1.11 / forest **1.17** / inkwash 1.06（forest 纸面主题画布与卡片同色，仅阴影不足以分层，故用 8% text-primary 提亮；岛屿文字 primary 13.11 / secondary 6.42） |
-| dark（三主题） | `color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-text-primary) 6%)` | vibrant #222D40 / forest #232723 / inkwash #2D3031 | 1.16–1.33（暗色阴影不可见，必须靠表面差分层） |
+| dark | vibrant 显式覆写 `#181E2B`；forest / inkwash：`color-mix(in srgb, var(--cst-surface-primary) 94%, var(--cst-text-primary) 6%)` | vibrant #181E2B / forest #232723 / inkwash #2D3031 | 1.18–1.33（暗色阴影不可见，必须靠表面差分层） |
 
 - registry：`--color-surface-island: var(--cst-surface-island)` → `bg-surface-island`。
 - 新增主题必须同时补 light/dark 两处，`check-theme-parity` 会校验变量集合。
