@@ -55,11 +55,16 @@ chaoset.com 控制台常见的四类报错**都不是站点代码 bug**。先按
 
 **判定要点**：先排除构建缺文件——线上 `/version.json` 的 `commit` 应等于 `git rev-parse HEAD`；再请求报错的文件，应返回 200。文件存在且版本一致时，问题在链路，不在产物。
 
+本机到 CF 边缘可能对同一 URL 时通时断：连续请求同一 chunk，成功与 `code=000`（TLS/超时）会夹杂出现。遇到这种"有时白屏、刷新恢复"且本机取资源不稳时，换**源站侧视角**复核（服务器出网 → CF 边缘 → 源站）：同一文件返回 200 即证明产物健康，属链路问题；只有 404 或版本不符时才按产物问题处理（回滚/重跑构建）。
+
 **处理**：根因是入口链路（换香港中转/迁移等基础设施决策），不要为此重跑构建找「缺文件」。
 
 ## 复核命令
 
 ```bash
+# 0) 源站侧视角：本机取 chunk 偶发超时/白屏时先跑这条，避免把链路问题误判成产物缺失
+ssh workwork-server "curl -s -o /dev/null -w '%{http_code}\n' 'https://chaoset.com/_app/immutable/chunks/<报错文件>'"
+
 # 1) 线上版本与报错文件
 curl -sS https://chaoset.com/version.json
 curl -sS -o /dev/null -w '%{http_code}\n' 'https://chaoset.com/_app/immutable/chunks/<报错文件>'
