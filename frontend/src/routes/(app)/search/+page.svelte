@@ -450,10 +450,13 @@
 <div class="flex flex-col flex-1 min-h-full" data-search-root>
 <StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
 	{#snippet header()}
+		<!-- 搜索页采用与 hub/列表页一致的「内容内页头」（integrated）：桌面/平板无背景/边框/吸顶，
+		     标题与搜索框随内容滚走，桌面靠顶栏灵动岛保持「搜索」上下文——不再用旧的内容区吸顶标题栏。
+		     移动端 integrated 变体例外吸顶（画布 85% + blur），搜索入口不随内容滚走。 -->
 		<PageHeader
+			variant="integrated"
 			title="搜索"
 			onBack={() => smartBack()}
-			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			islandMeta={islandMeta}
 		>
 			{#snippet islandTrailing()}
