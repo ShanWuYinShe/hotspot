@@ -1098,11 +1098,18 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 - `svelte-check` 0 error / 0 warning；`eslint` 通过；`check-utility-classes` / `check-component-consistency`（16 条）通过；主题 5 项检查通过；
 - `bun run test`：133 文件 / **812 tests** 通过（RailSection island 契约用例同步更新）；
 - `bun run build` 成功；
-- `audit:a11y`（桌面全量 + 移动 5 页，worktree 8889）与 `audit:touch`：见 `.workwork/browser-check/*` 本轮报告。
+- `audit:a11y`（worktree 8889，43 页 = 桌面全量 + 移动 5 页）：**PASS，axe 0 error（serious/critical=0）**；
+- `audit:touch`（390×844，38 页）：**PASS，294/294 个可点元素 ≥44px（覆盖率 100%）**。
 
 ### 未纳入本轮（登记 backlog）
 
 - 首页右侧 rail 的人物/话题行仍是页面手写（未走 `RailUserRow`/`ListItem`）；
 - `?demo=a/b/c/d` 设计评审分支仍内嵌在生产代码（会改内容轴/gutter，非默认路径）；
 - 群详情/瞬间详情内的小块提示条仍用 `surface-subtle/N`（非页面级卡片，本轮未动）；
-- 1024–1279 若需要完整分栏（rail）体验，可考虑把 rail 改为可折叠抽屉（当前直接收起）。
+- 1024–1279 若需要完整分栏（rail）体验，可考虑把 rail 改为可折叠抽屉（当前直接收起）；
+- **纯文字瞬间卡**（无图 moment）在 1440/768 首屏呈整块空白图位（4/5 卡位里只有很淡的 fallback 渐变 + 弱水印），观感接近骨架；需要设计决策：改「文字优先」卡，或加强 fallback（渐层/大标签/引号排版）；
+- **768 平板后台表格**：/admin/users 操作列落在横向滚动区外、/admin/audit「详情」列在 x≈742 截断；平板断点需要专门的列裁剪/首列吸附策略（当前只有 <600 的 max-sm 列裁剪）；
+- **群聊非成员直链**（/messages/group/:id，未加入时）：页面显示「消息加载失败，请检查网络后重试」，语义错误；应按错误码区分「未加入/无权限」并给「加入群组」引导；
+- **/users/:id 统计与空态矛盾**：「6 瞬间」与「最近瞬间 · 还没有照片」同页并存（两种视口一致），需查最近瞬间的过滤口径；
+- **1440 首页右栏不吸顶**：滚动后右侧 rail 留大片空白（可选优化，非缺陷）；
+- **页头返回钮导致标题左缘偏移**：有返回钮的页面标题 x=70、无返回钮 x=16（54px 跳变），可考虑所有页头预留统一 leading 槽位。
