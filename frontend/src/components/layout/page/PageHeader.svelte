@@ -121,13 +121,20 @@
 	const captureIslandSource = (fallback: Element | null | undefined) =>
 		islandRectOf(islandMorphEl ?? fallback);
 	/**
-	 * 桌面端「岛接管后隐去内容区残留标题栏」：
-	 * 默认吸顶页头（无 below）的标题/上下文/行动都已交给顶栏灵动岛，滚动 >120px 后
-	 * 内容区不应再留一条空的玻璃标题带（用户反馈：既已有灵动岛，旧标题栏没有存在必要）。
-	 * 有 below 的页头是「功能工具行」（搜索框吸顶、后台模块导航），保留整条不隐去，
-	 * 否则滚走后会丢失操作入口；它们不属于「标题栏」。
+	 * 桌面端「岛接管后隐去整条页头」：
+	 * 标题/上下文/行动都已交给顶栏灵动岛，下方的筛选/标签/模块导航同样属于「页头 chrome」——
+	 * 用户要的是完全干净的内容画布，滚动浏览时不应再留一条吸顶的玻璃标题带 + 一排筛选胶囊。
+	 * 页面想「当前筛选不丢」就把状态写进 `islandMeta`（岛是唯一上下文载体）；想改筛选时
+	 * 点岛标题回锚点即可让整块页头回来。保留高度只改透明度 → 不产生 CLS。
 	 */
-	const islandBandHidden = $derived(islandEnabled && islandShown && islandStickyTrigger && !below);
+	const islandBandHidden = $derived(islandEnabled && islandShown && islandStickyTrigger);
+	/**
+	 * 入岛交接态：整块页头（标题 + 下方标签/筛选/导航 + trailing）一起退场。
+	 * 岛的存在意义就是「干净的内容画布」——只淡出标题、把筛选标签留在内容区，
+	 * 会出现「岛在顶上、标签还挂在下面」的半交接状态（用户点名的不沉浸）。
+	 * 筛选的当前状态由页面经 `islandMeta` 带进岛（如「摄影 · 云龙湖 · 5km 内 · 8 人」）。
+	 */
+	const islandHandoffActive = $derived(islandShown);
 	let islandAnchorEl = $state<HTMLElement | undefined>(undefined);
 
 	$effect(() => {
@@ -299,9 +306,9 @@
 			<!-- hub/列表页「内容内页头」：标题 + 副标题/计数 + 工具同一行；筛选紧随；桌面/平板无背景/边框/吸顶，移动端例外吸顶 -->
 			<div data-page-intro bind:this={islandAnchorEl} class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
 				<div
-					data-island-handoff={islandHandoffTrigger && islandShown ? 'true' : undefined}
-					inert={islandHandoffTrigger && islandShown}
-					class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1 transition-[opacity,transform] duration-rapid ease-standard {islandHandoffTrigger && islandShown
+					data-island-handoff={islandHandoffActive ? 'true' : undefined}
+					inert={islandHandoffActive}
+					class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1 transition-[opacity,transform] duration-rapid ease-standard {islandHandoffActive
 						? 'pointer-events-none -translate-y-0.5 opacity-0'
 						: ''}"
 				>
@@ -331,17 +338,26 @@
 				<!-- 入岛后若岛接管了行动区，页头 trailing 淡出（保留占位、不瞬时抽走），同一动作不出现两份 -->
 				{#if trailing}
 					<div
-						class="flex shrink-0 items-center gap-2 transition-opacity duration-rapid ease-standard {islandTrailing && islandShown
+						class="flex shrink-0 items-center gap-2 transition-opacity duration-rapid ease-standard {islandHandoffActive
 							? 'pointer-events-none opacity-0'
 							: ''}"
-						inert={islandTrailing && islandShown}
+						inert={islandHandoffActive}
 					>
 						{@render trailing()}
 					</div>
 				{/if}
 			</div>
 			{#if below}
-				<div class="mt-2.5">{@render below()}</div>
+				<!-- 筛选/标签随标题一起退场：入岛后内容区必须干净（岛 meta 承接当前筛选状态） -->
+				<div
+					data-island-handoff={islandHandoffActive ? 'true' : undefined}
+					inert={islandHandoffActive}
+					class="mt-2.5 transition-[opacity,transform] duration-rapid ease-standard {islandHandoffActive
+						? 'pointer-events-none -translate-y-0.5 opacity-0'
+						: ''}"
+				>
+					{@render below()}
+				</div>
 			{/if}
 		{:else if floating}
 			<!-- 整行悬浮工具条：返回 / 标题 / 更多收进同一块玻璃面板，而不是两枚孤立圆钮 -->
@@ -428,7 +444,16 @@
 		</div>
 		{/if}
 		{#if below && !floating && !integrated}
-			{@render below()}
+			<!-- 与 integrated 同规则：入岛后整块页头（含下方工具行）一起退场，内容区保持干净 -->
+			<div
+				data-island-handoff={islandHandoffActive ? 'true' : undefined}
+				inert={islandHandoffActive}
+				class="transition-[opacity,transform] duration-rapid ease-standard {islandHandoffActive
+					? 'pointer-events-none -translate-y-0.5 opacity-0'
+					: ''}"
+			>
+				{@render below()}
+			</div>
 		{/if}
 	</ContentColumn>
 </header>

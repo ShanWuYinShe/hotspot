@@ -233,6 +233,9 @@
 			{ device }
 		)
 	);
+	// 入岛后整块页头（含标签胶囊）退场：当前标签由岛 meta 承接。
+	const pageSubtitle = $derived(locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新');
+	const islandMetaText = $derived(activeTag ? `${activeTag} · ${pageSubtitle}` : pageSubtitle);
 </script>
 <svelte:head>
 	<!-- 术语统一：全站用「瞬间」，「附近动态」是旧名；页头/导航/空态/加载态保持一致 -->
@@ -257,7 +260,8 @@
 	<PageHeader
 		variant="integrated"
 		title="附近瞬间"
-		subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
+		subtitle={pageSubtitle}
+		islandMeta={islandMetaText}
 	>
 		{#snippet subtitleIcon()}
 			<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />

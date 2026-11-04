@@ -229,6 +229,13 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			followPending = rest;
 		}
 	};
+	// 入岛后整块页头（含筛选胶囊）退场：当前筛选状态由岛 meta 承接，浏览内容时不丢上下文。
+	const pageSubtitle = $derived(
+		locationName
+			? `${locationName} · 5km 内${!loading && !loadError && list.length ? ` · ${list.length} 人` : ''}`
+			: `5km 内 · 实时更新${!loading && !loadError && list.length ? ` · ${list.length} 人` : ''}`
+	);
+	const islandMetaText = $derived(tagFilter === '全部' ? pageSubtitle : `${tagFilter} · ${pageSubtitle}`);
 </script>
 <svelte:head>
 	<title>附近的人 · HotSpot</title>
@@ -240,9 +247,8 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 		<PageHeader
 			variant="integrated"
 			title="附近的人"
-			subtitle={locationName
-				? `${locationName} · 5km 内${!loading && !loadError && list.length ? ` · ${list.length} 人` : ''}`
-				: `5km 内 · 实时更新${!loading && !loadError && list.length ? ` · ${list.length} 人` : ''}`}
+			subtitle={pageSubtitle}
+			islandMeta={islandMetaText}
 		>
 			{#snippet subtitleIcon()}
 				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />

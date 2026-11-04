@@ -67,6 +67,7 @@
 	<PageHeader
 		variant="integrated"
 		title="关系"
+		islandMeta={TABS.find((t) => t.id === activeTab)?.label ?? '关系'}
 		maxWidth="var(--cst-content-breath)"
 		onBack={() => smartBack(ROUTES.me)}
 	>

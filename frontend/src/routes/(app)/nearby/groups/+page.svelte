@@ -212,6 +212,15 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 		if (!requireAuth({ action: '加入群组', targetId: id, run: () => toggleJoin(id) })) return;
 		applyJoin(id, true);
 	};
+	// 入岛后整块页头（含分类胶囊）退场：当前分类由岛 meta 承接。
+	const pageSubtitle = $derived(
+		locationName
+			? `${locationName} · 5km 内${!loading && !loadError && filtered.length ? ` · ${filtered.length} 个群组` : ''}`
+			: `5km 内 · 实时更新${!loading && !loadError && filtered.length ? ` · ${filtered.length} 个群组` : ''}`
+	);
+	const islandMetaText = $derived(
+		activeCategory === '全部' ? pageSubtitle : `${activeCategory} · ${pageSubtitle}`
+	);
 </script>
 <svelte:head>
 	<title>附近群组 · HotSpot</title>
@@ -224,9 +233,8 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			<PageHeader
 				variant="integrated"
 				title="附近群组"
-				subtitle={locationName
-					? `${locationName} · 5km 内${!loading && !loadError && filtered.length ? ` · ${filtered.length} 个群组` : ''}`
-					: `5km 内 · 实时更新${!loading && !loadError && filtered.length ? ` · ${filtered.length} 个群组` : ''}`}
+				subtitle={pageSubtitle}
+				islandMeta={islandMetaText}
 			>
 				{#snippet subtitleIcon()}
 					<MapPin class="size-2.5 text-accent-default"   strokeWidth={1.75} />

@@ -126,7 +126,7 @@ describe('PageHeader 灵动岛（桌面端）', () => {
 		expect(header.getAttribute('aria-hidden')).toBeNull();
 	});
 
-	it('带 below 功能工具行（搜索框/导航）的吸顶页头不隐去', async () => {
+	it('带 below 工具行的吸顶页头入岛后整条隐去（沉浸浏览），回顶恢复', async () => {
 		const scroller = createScroller();
 		const below = createRawSnippet(() => ({ render: () => '<div data-test-below>工具行</div>' }));
 		const comp = mount(PageHeader, {
@@ -141,8 +141,44 @@ describe('PageHeader 灵动岛（桌面端）', () => {
 		await pump();
 
 		const header = scroller.querySelector('header') as HTMLElement;
-		expect(header.dataset.islandBandHidden).toBeUndefined();
+		// 用户契约：入岛后整块页头（含下方筛选/工具栏）一起退场，内容区保持干净
+		expect(header.dataset.islandBandHidden).toBe('true');
+		expect(header.inert).toBe(true);
+		// 工具行仍在 DOM（回顶即恢复），只是随整条页头隐去
 		expect(header.querySelector('[data-test-below]')).toBeTruthy();
+
+		scroller.scrollTop = 0;
+		scroller.dispatchEvent(new Event('scroll'));
+		await pump();
+		expect(header.dataset.islandBandHidden).toBeUndefined();
+	});
+
+	it('integrated：入岛时标题与 below 筛选行一起交接（不留半截标签）', async () => {
+		const scroller = createScroller();
+		const below = createRawSnippet(() => ({ render: () => '<div data-test-below>标签</div>' }));
+		const comp = mount(PageHeader, {
+			target: scroller,
+			props: { title: '附近的人', subtitle: '筛选列表', variant: 'integrated', below }
+		});
+		mounted.push(() => void unmount(comp));
+		await tick();
+
+		const header = scroller.querySelector('header') as HTMLElement;
+		const io = MockIntersectionObserver.instances[0];
+		io.trigger(false);
+		await tick();
+
+		expect(headerIsland.visible).toBe(true);
+		// below 行同步进入交接态（淡出 + inert），避免岛已出现、筛选胶囊还挂在内容区
+		const handoffs = header.querySelectorAll('[data-island-handoff="true"]');
+		expect(handoffs.length).toBe(2);
+		expect(header.querySelector('[data-test-below]')?.closest('[data-island-handoff]')).toBeTruthy();
+		expect((header.querySelector('[data-test-below]')?.closest('[data-island-handoff]') as HTMLElement).inert).toBe(true);
+
+		io.trigger(true);
+		await tick();
+		expect(headerIsland.visible).toBe(false);
+		expect(header.querySelectorAll('[data-island-handoff="true"]').length).toBe(0);
 	});
 
 	it('非吸顶页头：标题离开视口后入岛，回到视口退出', async () => {

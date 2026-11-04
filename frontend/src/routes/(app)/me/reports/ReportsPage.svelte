@@ -167,6 +167,7 @@
 		<PageHeader
 			variant="integrated"
 			title="我的举报"
+			islandMeta={TABS.find((t) => t.id === activeTab)?.label ?? '我的举报'}
 			maxWidth="var(--cst-content-breath)"
 			onBack={() => smartBack(ROUTES.me)}
 		>

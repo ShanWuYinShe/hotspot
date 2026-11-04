@@ -319,6 +319,12 @@ const markSingleRead = (id: string) => {
 	const typeStats = $derived(
 		(Object.keys(TYPE_CONFIG) as string[]).map((t) => ({ type: t, count: notifies.filter((n) => n.type === t).length }))
 	);
+	// 入岛后整块页头（含分类筛选）退场：当前分类由岛 meta 承接。
+	const activeFilterLabel = $derived(FILTER_TABS.find((t) => t.id === filter)?.label ?? '');
+	const unreadMeta = $derived(unread > 0 ? `${unread} 条未读` : '暂无未读');
+	const islandMetaText = $derived(
+		filter === 'all' ? unreadMeta : `${activeFilterLabel} · ${unreadMeta}`
+	);
 </script>
 <svelte:head>
 	<title>通知 · HotSpot</title>
@@ -335,7 +341,7 @@ const markSingleRead = (id: string) => {
 			variant="integrated"
 			title="通知"
 			onBack={() => smartBack()}
-			islandMeta={unread > 0 ? `${unread} 条未读` : '暂无未读'}
+			islandMeta={islandMetaText}
 		>
 			{#snippet trailing()}
 				<!-- 未读计数统一在标题右侧（对齐首页/附近瞬间样板），与「全部已读」同排 -->
