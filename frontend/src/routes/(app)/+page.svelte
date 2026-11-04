@@ -5,6 +5,7 @@
 	import { Bell, Search, Compass, ArrowRight, Sparkles, TrendingUp, Users, LogIn, MapPin, Radio, ChevronRight } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { homeFeed, type HomeFeedTab } from '@/stores/home-feed.svelte';
+	import { islandRectOf } from '@/lib/island-morph';
 	import { formatDistance } from '@/lib/utils';
 	import type { MomentItem } from '@/api/types';
 	import { searchMoments, fetchFollowingMoments } from '@/api';
@@ -58,7 +59,11 @@
 		if (!el) return;
 		const rootMargin = `-${Math.round(52 * Math.max(1, platform.uiScale))}px 0px 0px 0px`;
 		const io = new IntersectionObserver(
-			([entry]) => homeFeed.setIslandVisible(!entry.isIntersecting),
+			([entry]) => {
+				// 交接动效来源：分段器离开/回到视口那一刻的位置（此时它仍在原位），
+				// 顶栏岛据此从分段器位置收进/吐出，而不是凭空闪现。
+				homeFeed.setIslandVisible(!entry.isIntersecting, islandRectOf(entry.target));
+			},
 			{ rootMargin, threshold: 0 }
 		);
 		io.observe(el);

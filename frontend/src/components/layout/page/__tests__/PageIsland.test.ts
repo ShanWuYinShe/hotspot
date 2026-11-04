@@ -19,7 +19,7 @@ describe('PageIsland（桌面端页面锚点岛）', () => {
 		expect(island.textContent).toContain('附近的人');
 		expect(island.textContent).toContain('20 人 · 5km 内');
 
-		const ring = island.querySelector('[data-island-progress-ring]') as HTMLElement;
+		const ring = island.querySelector('[data-island-progress-bar]') as HTMLElement;
 		expect(ring).not.toBeNull();
 		expect(ring.dataset.islandProgress).toBe('42');
 
@@ -60,11 +60,11 @@ describe('PageIsland（桌面端页面锚点岛）', () => {
 	it('进度越界收敛到 0–100', () => {
 		const { container: over } = render(PageIsland, { props: { title: 'A', progress: 180 } });
 		expect(
-			(over.querySelector('[data-island-progress-ring]') as HTMLElement).dataset.islandProgress
+			(over.querySelector('[data-island-progress-bar]') as HTMLElement).dataset.islandProgress
 		).toBe('100');
 		const { container: under } = render(PageIsland, { props: { title: 'B', progress: -5 } });
 		expect(
-			(under.querySelector('[data-island-progress-ring]') as HTMLElement).dataset.islandProgress
+			(under.querySelector('[data-island-progress-bar]') as HTMLElement).dataset.islandProgress
 		).toBe('0');
 	});
 });

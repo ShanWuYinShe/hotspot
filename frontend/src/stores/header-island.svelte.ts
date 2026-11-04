@@ -1,4 +1,5 @@
 import type { Snippet } from 'svelte';
+import type { IslandRect } from '@/lib/island-morph';
 
 // PageIsland（原 header-island）——桌面端顶栏中央「页面锚点岛」的状态单例。
 //
@@ -49,6 +50,11 @@ class PageIslandStore {
 	active = $state(false);
 	/** 锚点是否已离开视口（由注册方判定） */
 	visible = $state(false);
+	/**
+	 * 交接动效的来源矩形（锚点最后可见位置 / 回滚时锚点重新出现的位置）。
+	 * 由注册方在切换 visible 的同一时刻按值抓取，DesktopLayout 传给岛做「收进/吐出」动效。
+	 */
+	morphSource = $state<IslandRect | null>(null);
 
 	/**
 	 * 当前页面阅读进度（0–100）。由唯一滚动承载区 RoutedContentViewport 写入，
@@ -86,10 +92,11 @@ class PageIslandStore {
 		if (config.trailing !== undefined) this.trailing = config.trailing;
 	}
 
-	/** 锚点显隐（滚动触发方调用）；非当前持有者忽略。 */
-	setVisible(token: IslandToken, visible: boolean) {
+	/** 锚点显隐（滚动触发方调用）；非当前持有者忽略。source 为交接动效的来源矩形。 */
+	setVisible(token: IslandToken, visible: boolean, source: IslandRect | null = null) {
 		if (token !== currentToken) return;
 		this.visible = visible;
+		this.morphSource = source;
 	}
 
 	/** 阅读进度（滚动 owner 调用；与 token 无关，首页岛同样消费）。 */
@@ -118,6 +125,7 @@ class PageIslandStore {
 	private reset() {
 		this.active = false;
 		this.visible = false;
+		this.morphSource = null;
 		this.title = '';
 		this.meta = '';
 		this.author = undefined;

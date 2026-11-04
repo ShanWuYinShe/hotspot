@@ -8,6 +8,7 @@
 	import { cn } from '@/lib/utils';
 	import { platform } from '@/stores/platform.svelte';
 	import { headerIsland, type IslandToken } from '@/stores/header-island.svelte';
+	import { islandRectOf, type IslandRect } from '@/lib/island-morph';
 
 	export interface AuthorInfo {
 		id?: string;
@@ -45,6 +46,8 @@
 
 	let scrolled = $state(false);
 	let hidden = $state(false);
+	/** 交接动效来源：滚动过阈值那一刻左侧工具行（返回 + 面包屑）在视口中的位置。 */
+	let islandSource = $state<IslandRect | null>(null);
 
 	// 监听滚动与方向（向上微划滑入 / 向下深划避让 / 顶部常驻）
 	function headerScroll(node: HTMLElement) {
@@ -65,7 +68,12 @@
 			const current = target.scrollTop;
 			const delta = current - lastScrollTop;
 
-			scrolled = current > scrollThreshold * Math.max(1, platform.uiScale);
+			const nextScrolled = current > scrollThreshold * Math.max(1, platform.uiScale);
+			if (nextScrolled !== scrolled) {
+				// 状态切换前抓取工具行矩形：切到收敛态后这两块工具行不再渲染，抓不到了。
+				islandSource = islandRectOf(node.querySelector('[data-detail-header-left]'));
+			}
+			scrolled = nextScrolled;
 
 			// 标头吸顶逻辑：
 			// 移除过度自动避让，滚动离开首屏后保持优雅吸顶且常驻，
@@ -126,7 +134,7 @@
 
 	$effect(() => {
 		if (platform.platform !== 'desktop') return;
-		headerIsland.setVisible(islandToken, scrolled);
+		headerIsland.setVisible(islandToken, scrolled, islandSource);
 	});
 </script>
 

@@ -232,7 +232,8 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 					<MapPin class="size-2.5 text-accent-default"   strokeWidth={1.75} />
 				{/snippet}
 				{#snippet trailing()}
-					<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
+					<!-- 在线数是本页状态（保留）；搜索/地图是页面级工具，只在移动/平板出现——
+					     桌面顶栏已有搜索、左侧栏 LocationCard 常驻地图入口，再放一份就是重复入口。 -->
 					<div class="flex items-center gap-2">
 						{#if !loading && !loadError && filtered.length}
 							<span class="flex items-center gap-1.5 text-xs tabular-nums text-text-secondary">
@@ -240,19 +241,11 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 								<span class="font-medium text-text-status-online-on-soft">{formatCount(totalOnline)} 人在线</span>
 							</span>
 						{/if}
-						<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} class={device === 'desktop' ? 'hidden' : ''} />
-						<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
+						{#if device !== 'desktop'}
+							<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} />
+							<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
+						{/if}
 					</div>
-				{/snippet}
-				{#snippet islandTrailing()}
-					<!-- 桌面入岛后保留页面级工具：标题/筛选滚走后地图入口仍可达（≤2 控件） -->
-					<ActionIconButton
-						variant="ghost"
-						icon={MapIcon}
-						label="地图浏览"
-						onClick={() => void goto(ROUTES.map)}
-						size={32}
-					/>
 				{/snippet}
 				{#snippet below()}
 					<!-- 分类过滤统一走 TabBar（胶囊），随 header 吸顶 -->

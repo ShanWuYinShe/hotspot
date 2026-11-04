@@ -140,17 +140,14 @@
 				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
 			{/snippet}
 			{#snippet trailing()}
-				<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐附近样板页与鸿蒙 NearbyPage） -->
+				<!-- 页面级工具只在移动/平板出现：桌面顶栏已有搜索、左侧栏 LocationCard 常驻地图入口，
+				     再放一份就是同一目的地的第二份入口（重复 UI）。 -->
 				<div class="flex shrink-0 items-center gap-1 sm:gap-2">
-					<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} size={36} class={device === 'desktop' ? 'hidden' : ''} />
-					<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} size={36} />
+					{#if device !== 'desktop'}
+						<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} size={36} />
+						<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} size={36} />
+					{/if}
 				</div>
-			{/snippet}
-			{#snippet islandTrailing()}
-				<!-- 桌面入岛后页头整条隐去（无 below 的吸顶页头），地图浏览入口由顶栏岛接管；
-				     搜索入口桌面在顶栏已有，不重复进岛（岛行动区 ≤2 控件）。
-				     移动端不出岛，此 snippet 不渲染，页头仍保留常驻搜索/地图工具。 -->
-				<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} size={32} />
 			{/snippet}
 		</PageHeader>
 	{/snippet}

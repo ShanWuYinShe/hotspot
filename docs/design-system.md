@@ -1215,7 +1215,8 @@ eager 图各 2 张且像素 diff 0 回归。
 固定到 52px 顶栏中央，用户自由滚动也不丢上下文，并能**直接操作**而不是只读提示；
 短页/无滚动页不出岛（没有信息丢失，就不打扰）。
 
-**唯一实现**：`components/layout/page/PageIsland.svelte`（首页信息流岛 `components/home/HomeFeedIsland.svelte` 共用同一形态与交互语言）。
+**唯一形态实现**：`components/layout/page/IslandCapsule.svelte`（外壳 / hover 呼吸 / 底部进度线 / 锚点容器变换动效）；
+页面锚点岛 `PageIsland.svelte` 与首页信息流岛 `components/home/HomeFeedIsland.svelte` 只组合它并注入内容与行为。
 两者都由 `DesktopLayout` 绝对居中渲染在顶栏，`[data-desktop-dynamic-island]` 为稳定测试钩子。
 
 **形态（紧凑胶囊，h-9）**
@@ -1224,7 +1225,9 @@ eager 图各 2 张且像素 diff 0 回归。
 - `title + meta`：标题 12px semibold 单行截断；meta 11px secondary（计数 / 位置 / 结果数 / 当前信息流），
   详情页缺省回退「作者位置 · 时间」，最多两个事实。
 - `trailing`：每页 ≤2 个行动控件（允许写操作：清空搜索 / 全部已读 / 编辑 / 地图 / 收藏…），状态与页面同步。
-- `progress`：胶囊右侧 20px 阅读进度环（accent 圆弧，0–100%，纯展示 `aria-hidden`），由唯一滚动承载区上报。
+- `progress`：胶囊内底部 2px accent 细线（0–100%，纯展示 `aria-hidden`），由唯一滚动承载区上报。
+  **同一读数只允许这一处表达**：不提供圆环 / hover 百分比等第二种同值表达（圆环在顶栏里更像「加载中」，
+  且同样在说「读到哪了」）。
 
 **何时出现（信息丢失驱动，不做「滚动方向」花活）**
 
@@ -1235,12 +1238,20 @@ eager 图各 2 张且像素 diff 0 回归。
 3. 详情页：`DetailHeader` 滚动 >160px 后收敛到同一顶栏岛（作者/群/用户名 + 地点·时间 + 行动区）；
    移动/平板保留页面内吸顶岛。
 4. **只有滚动会让锚点丢失时才出岛**：无滚动 / 头部常驻不丢信息的页面不出岛——`/messages`（左右列头部常驻）、
-   `/map`（全画布）、`/login`、`/register`（无外壳）；面板内嵌 PageHeader 传 `island={false}`。
+   `/map`（全画布）、`/login`、`/register`（无外壳）；面板内嵌页头（`/messages` 左栏、`/map` 左侧面板）
+   所在面板不承载主滚动 owner，标题不会随页面滚走，因此不会出岛。
    内容不足一屏的页面（如搜索页发现态）标题不会离开视口，岛自然不出现。
-5. 岛**绝不因滚动方向自动隐藏**、不在滚动中抖动：显隐只由锚点进出视口与滞回阈值决定；出现/消失各 180ms。
+5. 岛**绝不因滚动方向自动隐藏**、不在滚动中抖动：显隐只由锚点进出视口与滞回阈值决定。
+
 6. 首页桌面：无页面标题，采用「内容区分段器 → 顶栏灵动岛」滚动交接
    （`HomeFeedIsland.svelte` + `stores/home-feed.svelte.ts`）：分段器滚出视口后岛浮现（当前信息流 + 语境 + 切换），
    回到顶部/切换后交还分段器；移动/平板仍在页内品牌头下。首页不注册 `headerIsland`，进度条同样消费。
+
+**入场/退场交接动效（`lib/island-morph.ts`）**：显隐切换那一刻按值抓取锚点矩形（标题 h1 / 首页分段器 /
+详情页左侧工具行），岛以「容器变换」从该位置收进/吐出顶栏（位移 + 长宽比缩放，300ms，
+`transform`/`opacity` 合成器属性，reduced-motion 立即到终态）；同时页头锚点内容淡出并上移 2px、
+页头 trailing 淡出（保留占位、不瞬时卸载）。这样「滚走的 UI」与「出现的岛」是同一次连续运动，
+而不是两段互不相干的闪现。无锚点矩形（如直接刷新后）退化为 160ms 淡入。
 
 **岛内交互（统一契约）**
 
@@ -1249,9 +1260,9 @@ eager 图各 2 张且像素 diff 0 回归。
 | 返回（leading） | 点击返回上一页/关闭 | 仅注册 `onBack` 的页面出现；入岛后页头返回同步淡出，同一动作不重复 |
 | 头像 + 标题（中间） | 点击回到页面锚点 | 吸顶页头→页首；非吸顶页头→标题位置；详情页身份卡→作者主页（`onTitleClick` 语义由页面决定） |
 | meta（第二行） | 纯展示 | 页面状态实时同步（搜索：「词 · N 个结果」；首页：当前信息流语境） |
-| 行动区（trailing） | 点击执行页面主行动 | ≤2 控件、32px 命中、带 `aria-label`；页头原 trailing 入岛时隐藏，避免两份 |
-| 整个胶囊 | hover / 键盘 focus-within → 横向舒展 | `max-w-md → max-w-lg`，展开被截断的标题/meta；**同时揭示精确阅读进度百分比**（如 `66%`，与右侧进度环互补）；提升 `shadow-raised-md` 明确可交互。**不再重复展示「回到顶部」等与标题点击相同的动作** |
-| 右侧进度环 | 只读 | 跟随页面阅读进度增长，帮助判断「滚到哪了」；不做点击/拖拽 |
+| 行动区（trailing） | 点击执行页面主行动 | ≤2 控件、32px 命中、带 `aria-label`；页头原 trailing 入岛时淡出（保留占位），避免两份。**同一目的地的常驻入口不得再进岛**：桌面地图入口唯一 = 左侧栏 LocationCard（折叠态仍可见），nearby 系页头的搜索/地图工具只在移动/平板渲染 |
+| 整个胶囊 | hover / 键盘 focus-within → 表面「醒」起来 | 半透明玻璃转实底 `bg-surface-primary` + accent 细边 `border-accent-border` + `shadow-raised-md` + 上移 1px；**全程不改变宽度**（旧 `max-w-md → max-w-lg` 舒展会让居中胶囊左右同时外扩、整排内容位移，既抖又廉价），也**不再揭示百分比**（与底部进度线同值重复）。标题区保留 `hover-btn` 淡底，明确「这块可点」 |
+| 底部进度线 | 只读 | 胶囊内底部 accent 细线跟随页面阅读进度增长；不做点击/拖拽 |
 | 键盘 | Tab 顺序 返回 → 标题/身份 → 行动区 | 全部控件 `focus-ring`；标题按钮 `active:scale-[0.98]` 即时反馈 |
 
 **按页内容映射（现状基线）**
@@ -1259,26 +1270,28 @@ eager 图各 2 张且像素 diff 0 回归。
 | 页面类型 | title | meta | trailing |
 |---|---|---|---|
 | 首页（HomeFeedIsland） | 为你推荐 / 正在关注 | 推荐语境 / 关注语境 | 切换信息流 |
-| hub/列表（/nearby/people、/nearby/groups、/nearby/moments、/notify、/me/relationships、/me/reports） | 页面标题 | 计数 / 位置 / 未读数 | 地图浏览 / 全部已读等 ≤2 入口 |
-| /nearby 枢纽 | 附近 | 地点 · 5km 内 | 地图浏览 |
+| hub/列表（/nearby/people、/nearby/groups、/nearby/moments、/notify、/me/relationships、/me/reports） | 页面标题 | 计数 / 位置 / 未读数 | 全部已读 / 清空搜索等 ≤2 入口（地图不进岛：桌面入口唯一=侧栏 LocationCard；移动/平板岛不出现，页头保留地图工具） |
+| /nearby 枢纽 | 附近 | 地点 · 5km 内 | 无（桌面地图入口唯一=侧栏 LocationCard） |
 | 搜索 | 搜索 | 「词 · N 个结果」/ 搜索中 / 失败 / 无匹配 | 清空搜索（有词时） |
 | 详情（瞬间/群组/他人主页） | 作者名 / 实体名 | 作者地点 · 时间 | 页面主行动 ≤2 |
 | /me 个人中心、/admin、/settings 等 | 页面标题 | 计数 / 状态 | 编辑 / 管理入口 |
 
 **API / 实现**
 
-- 状态：`stores/header-island.svelte.ts`（token 注册 + title/meta/author/trailing/visible/**progress**；
-  `setProgress` 与 token 无关，首页岛同样消费；阅读进度由唯一滚动 owner `RoutedContentViewport` passive + rAF 上报）。
+- 状态：`stores/header-island.svelte.ts`（token 注册 + title/meta/author/trailing/visible/**progress** + **morphSource**
+  交接来源矩形；`setProgress` 与 token 无关，首页岛同样消费；阅读进度由唯一滚动 owner `RoutedContentViewport` passive + rAF 上报）。
 - 入口：`PageHeader` 的 `island`（默认 true）/ `islandMeta`（缺省 subtitle）/ `islandTrailing`；
   `DetailHeader` 走同一 store 契约；页面无 PageHeader（首页）用 `HomeFeedIsland` + `homeFeed.islandVisible`。
 - 视觉：h-9 胶囊、`bg-surface-primary/90 + backdrop-blur-lg + border + shadow-raised-sm`；
-  进入动画 180ms（fade + zoom），reduced-motion 立即；hover/focus 舒展用 `max-width` 过渡（只动合成器友好的宽度/阴影）。
+  入场/退场走 `lib/island-morph.ts` 的锚点容器变换（300ms，`transform`/`opacity`），reduced-motion 立即；
+  hover/focus 只过渡颜色 / 投影 / 1px 位移（宽度全程不变，不触发重排）。
 - 无障碍：`role="group"` + `aria-label`；岛内文字不重复播报（标题按钮有 aria-label，h1 仍在 DOM/landmark）；
   不抢焦点；带返回的页头入岛后返回动作移到岛 leading，页头标题/返回同步淡出（同一动作不出现两份）。
 - 性能：每页一个触发源（滚动阈值或 IO），无共享全局 scroll 监听（阅读进度 listener 由滚动 owner 统一承担，passive + rAF 节流）；
   岛为顶栏 overlay，不参与布局 → 无 CLS。
 - 测试钩子：页头暴露 `data-island-visible` / `data-island-handoff`（触发与交接断言用；供单测与排障，不是样式契约）；
-  岛根节点固定 `data-desktop-dynamic-island`，组件契约见 `PageIsland.test.ts`。
+  岛根节点固定 `data-desktop-dynamic-island`，进度线为 `data-island-progress-bar` / `data-island-progress`，
+  组件契约见 `PageIsland.test.ts`。
 
 ## 23. 大屏 UI 等比放大（≥1920）
 

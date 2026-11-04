@@ -263,21 +263,14 @@
 			<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
 		{/snippet}
 		{#snippet trailing()}
-			<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
+			<!-- 页面级工具只在移动/平板出现：桌面顶栏已有搜索、左侧栏 LocationCard 常驻地图入口，
+			     页头/灵动岛再放一份就是同一目的地的第二份入口（重复 UI）。 -->
 			<div class="flex items-center gap-2">
-				<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} class={device === 'desktop' ? 'hidden' : ''} />
-				<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
+				{#if device !== 'desktop'}
+					<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} />
+					<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
+				{/if}
 			</div>
-		{/snippet}
-		{#snippet islandTrailing()}
-			<!-- 桌面入岛后保留页面级工具：标题/筛选滚走后地图入口仍可达（≤2 控件） -->
-			<ActionIconButton
-				variant="ghost"
-				icon={MapIcon}
-				label="地图浏览"
-				onClick={() => void goto(ROUTES.map)}
-				size={32}
-			/>
 		{/snippet}
 		{#snippet below()}
 			<div>

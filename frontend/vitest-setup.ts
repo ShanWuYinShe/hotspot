@@ -47,6 +47,27 @@ if (typeof window !== 'undefined' && !window.localStorage) {
 	});
 }
 
+// jsdom 未实现 Web Animations API：Svelte 5 的 transition 只要返回了 css 配置就会走
+// element.animate（transform/opacity 交给合成器），缺它时任何带 transition 的组件
+//（如顶栏灵动岛 IslandCapsule）在测试里一挂载就抛 TypeError。这里补一个「立即完成」的
+// 空实现：测试只看最终 DOM/交互，不逐帧断言动画。
+if (typeof Element !== 'undefined' && typeof Element.prototype.animate !== 'function') {
+	Element.prototype.animate = function animateStub() {
+		return {
+			finished: Promise.resolve(),
+			cancel() {},
+			finish() {},
+			play() {},
+			pause() {},
+			reverse() {},
+			commitStyles() {},
+			currentTime: 0,
+			playState: 'finished',
+			onfinish: null
+		} as unknown as Animation;
+	};
+}
+
 // jsdom 未实现 ResizeObserver：Svelte 的 bind:clientWidth（AdaptiveCardGrid）与卡片画布
 // 在组件测试里会实例化它。测试环境只保证构造/方法存在，不触发回调（宽高由各用例自行断言）。
 if (!('ResizeObserver' in globalThis)) {

@@ -5,6 +5,7 @@
 	import ContentColumn from './ContentColumn.svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { headerIsland, type IslandToken } from '@/stores/header-island.svelte';
+	import { islandRectOf, type IslandRect } from '@/lib/island-morph';
 	import { cn } from '@/lib/utils';
 
 	// 布局组件（layout/page）。
@@ -111,6 +112,15 @@
 	const islandHandoffTrigger = $derived(islandStickyTrigger || stickyAncestor);
 	let islandShown = $state(false);
 	/**
+	 * 交接动效的来源矩形：显隐切换的同一刻按值抓取锚点位置（此时锚点仍在原位），
+	 * 顶栏岛据此从「标题最后可见的位置」收进/吐出，而不是凭空闪现。
+	 */
+	let islandSource = $state<IslandRect | null>(null);
+	/** 交接动效的视觉锚点：标题/副标题那一块（不是整行）。integrated 变体整行含 trailing，宽度会失真。 */
+	let islandMorphEl = $state<HTMLElement | undefined>(undefined);
+	const captureIslandSource = (fallback: Element | null | undefined) =>
+		islandRectOf(islandMorphEl ?? fallback);
+	/**
 	 * 桌面端「岛接管后隐去内容区残留标题栏」：
 	 * 默认吸顶页头（无 below）的标题/上下文/行动都已交给顶栏灵动岛，滚动 >120px 后
 	 * 内容区不应再留一条空的玻璃标题带（用户反馈：既已有灵动岛，旧标题栏没有存在必要）。
@@ -148,7 +158,7 @@
 
 	$effect(() => {
 		if (!islandEnabled) return;
-		headerIsland.setVisible(islandToken, islandShown);
+		headerIsland.setVisible(islandToken, islandShown, islandSource);
 	});
 
 	// 非吸顶页头：标题离开视口（扣掉 52px 顶栏）即入岛；回到视口即退出。
@@ -158,6 +168,7 @@
 		if (!el) return;
 		const io = new IntersectionObserver(
 			([entry]) => {
+				islandSource = captureIslandSource(entry.target);
 				islandShown = !entry.isIntersecting;
 			},
 			{ rootMargin: `-${Math.round(52 * Math.max(1, platform.uiScale))}px 0px 0px 0px`, threshold: 0 }
@@ -202,8 +213,15 @@
 			// 吸顶页头的标题交接：滚过首屏后标题交给顶栏岛（120/72 滞回，避免抖动）；
 			// 阈值随大屏 UI 缩放（顶栏高度/页头间距都是 rem）。
 			if (islandEnabled && islandHandoffTrigger) {
-				if (!islandShown && y > 120 * uiScale) islandShown = true;
-				else if (islandShown && y < 72 * uiScale) islandShown = false;
+				// 阈值触发时锚点（标题）仍在原位：先按值抓取矩形，再切换显隐，
+				// 供岛做「从标题位置收进/吐出顶栏」的交接动效。
+				if (!islandShown && y > 120 * uiScale) {
+					islandSource = captureIslandSource(islandAnchorEl);
+					islandShown = true;
+				} else if (islandShown && y < 72 * uiScale) {
+					islandSource = captureIslandSource(islandAnchorEl);
+					islandShown = false;
+				}
 			}
 		};
 		const onScroll = () => {
@@ -283,8 +301,8 @@
 				<div
 					data-island-handoff={islandHandoffTrigger && islandShown ? 'true' : undefined}
 					inert={islandHandoffTrigger && islandShown}
-					class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1 transition-opacity duration-standard {islandHandoffTrigger && islandShown
-						? 'opacity-0 pointer-events-none'
+					class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1 transition-[opacity,transform] duration-rapid ease-standard {islandHandoffTrigger && islandShown
+						? 'pointer-events-none -translate-y-0.5 opacity-0'
 						: ''}"
 				>
 					{#if showBack}
@@ -300,7 +318,7 @@
 							/>
 						</div>
 					{/if}
-					<h1 class="min-w-0 truncate text-lg font-semibold text-text-primary sm:text-xl">{title}</h1>
+					<h1 bind:this={islandMorphEl} class="min-w-0 truncate text-lg font-semibold text-text-primary sm:text-xl">{title}</h1>
 					{#if subtitle}
 						<p class="flex min-w-0 items-center gap-1 text-xs text-text-secondary">
 							{#if subtitleIcon}
@@ -310,9 +328,16 @@
 						</p>
 					{/if}
 				</div>
-				<!-- 入岛后若岛接管了行动区，页头 trailing 隐藏，避免同一动作出现两份 -->
-				{#if trailing && !(islandTrailing && islandShown)}
-					<div class="flex shrink-0 items-center gap-2">{@render trailing()}</div>
+				<!-- 入岛后若岛接管了行动区，页头 trailing 淡出（保留占位、不瞬时抽走），同一动作不出现两份 -->
+				{#if trailing}
+					<div
+						class="flex shrink-0 items-center gap-2 transition-opacity duration-rapid ease-standard {islandTrailing && islandShown
+							? 'pointer-events-none opacity-0'
+							: ''}"
+						inert={islandTrailing && islandShown}
+					>
+						{@render trailing()}
+					</div>
 				{/if}
 			</div>
 			{#if below}
@@ -353,8 +378,8 @@
 					     入岛后返回动作移到岛上（leading），页头返回淡出，避免同一动作出现两份 -->
 					<div
 						inert={islandHandoffTrigger && islandShown}
-						class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0 transition-opacity duration-standard {islandHandoffTrigger && islandShown
-							? 'opacity-0 pointer-events-none'
+						class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0 transition-[opacity,transform] duration-rapid ease-standard {islandHandoffTrigger && islandShown
+							? 'pointer-events-none -translate-y-0.5 opacity-0'
 							: ''}"
 					>
 						<ActionIconButton
@@ -375,11 +400,11 @@
 			<div
 				bind:this={islandAnchorEl}
 				data-island-handoff={islandHandoffTrigger && islandShown ? 'true' : undefined}
-				class="min-w-0 flex-1 transition-opacity duration-standard {islandHandoffTrigger && islandShown
-					? 'opacity-0 pointer-events-none'
+				class="min-w-0 flex-1 transition-[opacity,transform] duration-rapid ease-standard {islandHandoffTrigger && islandShown
+					? 'pointer-events-none -translate-y-0.5 opacity-0'
 					: ''}"
 			>
-				<h1 class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
+				<h1 bind:this={islandMorphEl} class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
 				{#if subtitle}
 					<p class="mt-1 flex min-w-0 items-center gap-1 text-text-secondary {SUBTITLE_SIZE_CLASS[subtitleSize]}">
 						{#if subtitleIcon}
@@ -389,9 +414,16 @@
 					</p>
 				{/if}
 			</div>
-			<!-- 入岛后若岛接管了行动区，页头 trailing 隐藏，避免同一动作出现两份 -->
-			{#if trailing && !(islandTrailing && islandShown)}
-				<div class="shrink-0">{@render trailing()}</div>
+			<!-- 入岛后若岛接管了行动区，页头 trailing 淡出（保留占位、不瞬时抽走），同一动作不出现两份 -->
+			{#if trailing}
+				<div
+					class="shrink-0 transition-opacity duration-rapid ease-standard {islandTrailing && islandShown
+						? 'pointer-events-none opacity-0'
+						: ''}"
+					inert={islandTrailing && islandShown}
+				>
+					{@render trailing()}
+				</div>
 			{/if}
 		</div>
 		{/if}
