@@ -34,7 +34,7 @@
 	const HEADINGS: Record<AuthMode, { eyebrow: string; title: string; subtitle: string }> = {
 		login: { eyebrow: '欢迎回来', title: '回来看看附近的故事。', subtitle: '使用手机号、邮箱或账号登录。' },
 		register: { eyebrow: '加入 HotSpot', title: '创建账号，探索附近。', subtitle: '一个账号即可发现周边的人、群组与故事。' },
-		guest: { eyebrow: '访客模式', title: '随便逛逛附近的故事。', subtitle: '以访客身份浏览，随时可以绑定账号。' },
+		guest: { eyebrow: '访客模式', title: '以访客身份逛逛附近的故事。', subtitle: '免注册进入，随时可以绑定账号。' },
 		forgot: { eyebrow: '找回账号', title: '找回你的账号。', subtitle: '输入注册时的手机号或邮箱，我们会发送验证码。' },
 		reset: { eyebrow: '重置密码', title: '设置新密码。', subtitle: '验证码已发送，请输入并设置新密码。' }
 	};

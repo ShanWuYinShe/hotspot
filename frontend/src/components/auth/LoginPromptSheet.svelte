@@ -2,6 +2,7 @@
 	import { X } from '@lucide/svelte';
 	import AuthForm from '@/components/auth/AuthForm.svelte';
 	import * as Dialog from '@/components/ui/dialog';
+	import Button from '@/components/ui/button.svelte';
 	import { platform } from '@/stores/platform.svelte';
 
 	// requireAuth() 拦截匿名用户写操作时弹出的底部登录 Sheet。
@@ -54,5 +55,11 @@
 			</Dialog.Close>
 		</div>
 		<AuthForm compact initialMode="login" onSuccess={onSuccess} />
+		<!-- 「随便逛逛」全站唯一语义：跳过登录/注册，去可浏览内容继续逛（不创建访客账号）。
+		     弹层里当前页本身就是公开可浏览的，所以正确动作是关闭弹窗 + 丢弃待执行操作、留在原地，
+		     而不是像整页登录引导面板那样跳首页（那一层当前页被登录墙挡住，只能回可浏览页）。 -->
+		<Button type="button" variant="ghost" size="md" class="mt-4 w-full" onclick={onClose}>
+			先随便逛逛
+		</Button>
 	</Dialog.Content>
 </Dialog.Root>

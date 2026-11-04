@@ -461,8 +461,10 @@
 			</button>
 		{/if}
 		{#if mode !== 'guest' && mode !== 'forgot' && mode !== 'reset'}
+			<!-- 访客注册是「创建临时账号」动作，不能叫「随便逛逛」（那个语义是跳过登录去浏览）；
+			     统一命名为「访客模式」，与登录页访客模式的 eyebrow 同词。 -->
 			<button type="button" onclick={() => switchMode('guest')} class="link-btn hit-slop-44 -my-2 py-2 text-sm focus-ring text-accent-default">
-				随便逛逛（访客）
+				访客模式
 			</button>
 		{/if}
 	</div>

@@ -132,7 +132,7 @@
 | `data-display/MetricRow` `variant="strip"` | **数字横幅唯一形态**（资料页/附近枢纽/群组详情/后台 KPI）：`flex divide-x divide-border-subtle` + 24px（`size="sm"` 20px）semibold `tabular-nums` 数字 + 12px 次级标签；`align="center"\|"start"`；可点项渲染为 button（focus-ring）。**禁止新增灰色药丸指标块**（`capsule` 仅保留既有调用） |
 | `home/SectionHead`（全站共享） | **分区标题唯一实现**：icon（16，text-secondary）+ 标题 14 semibold + `count`（12 次级 tabular）+ 副标题 + 右侧 `action` 文字链；`variant="section"\|"rail"\|"eyebrow"`。页面/rail 不再手写「标题 + 查看全部」行 |
 | `data-display/EmptyState` | 非 bare 图标砖 64px（`iconTone="neutral"\|"accent"`，accent = accent-soft 底 + accent 图标）；标题 14 semibold、描述 12 次级；新增 `extra` snippet（价值点/建议 chips，位于描述与动作之间）；spotlight 契约不变 |
-| `auth/NeedsAuthNotice` | **访客引导面板**：spotlight + accent 图标砖 + 标题/描述 + `highlights`（≤3 条 icon+文案）+ 主 CTA（登录/注册）+ 次 CTA（先随便逛逛，默认回首页）；`/me`、`/messages`、`/notify`、me 子页访客态统一使用 |
+| `auth/NeedsAuthNotice` | **访客引导面板**：spotlight + accent 图标砖 + 标题/描述 + `highlights`（≤3 条 icon+文案）+ 主 CTA（登录/注册）+ 次 CTA（先随便逛逛，默认回首页浏览；语义见「登录/访客引导契约」）；`/me`、`/messages`、`/notify`、me 子页访客态统一使用 |
 | `profile/IdentityHero` | **资料页身份封面唯一实现**（/me、/users/[id]、ProfileMobile）：封面条（桌面 132 / 移动 92，主题渐变/封面图 + 遮罩）→ 头像（88/72，`-mt-11` 压封面 + `ring-4 ring-surface-page`）→ 昵称/handle/在线状态/简介/位置/标签 → `MetricRow strip` → `actions` snippet；桌面两栏（左身份 / 右指标+动作）、移动动作整行。**禁止页面再自写身份卡** |
 | `profile/ProfileCompleteness` | 资料状态卡：<100% 分段点 + 可点补全入口；100% 隐藏进度条只留完成态 |
 | `profile/ProfileMomentTile` / `profile/ProfileGroupTile` | 我的瞬间/我的群组卡片：整卡图片 + `…` 管理菜单（编辑/删除/退出群组，桌面 `desktop-reveal`、移动常显；删除/退出走 ConfirmDialog + 本地移除） |
@@ -207,6 +207,18 @@
 16. **回底按钮**：距底 >200px 显示（44px/鸿蒙 48vp），无消息只显箭头、有新消息「N 条新消息」（>99→99+），
    `aria-live=polite`、`aria-label` 与文本一致；150ms 显隐（reduced 直接）；点击滚底+清零+补 markRead；回底 200ms 内隐藏；
    不遮挡输入栏/浮层。鸿蒙 List 无距底像素 API，用 `onScrollIndex` 末尾可见近似（平台差异登记）。
+
+### 登录 / 访客引导契约（强制）
+
+**「随便逛逛」全站唯一语义：跳过登录/注册，去可浏览内容继续逛，不创建任何账号。** 任何地方出现这句文案都必须落到该语义；访客注册（创建临时账号）是另一个动作，入口统一叫「访客模式」，禁止命名为「随便逛逛」。
+
+| 位置 | 原语 | 「随便逛逛」行为 | 访客注册入口 |
+|---|---|---|---|
+| 整页/分区登录墙（/me、/messages、/notify 等未登录态） | `auth/NeedsAuthNotice` | 默认 `onSecondary` → 回首页（当前页已被登录墙挡住，只能回可浏览页；页面可按语境传 `onSecondary` 换更合适的公开落点） | 无（主 CTA 是登录/注册） |
+| 写操作拦截弹层（`requireAuth`） | `auth/LoginPromptSheet` | 关闭弹层 + 丢弃待执行操作，**留在当前公开页**继续浏览（不跳转） | 弹层内「访客模式」链接 |
+| 登录/注册页 | `auth/AuthForm` | —（不允许再出现「随便逛逛」文案） | 「访客模式」链接 → 昵称可选表单 → 「以访客身份继续」 |
+
+守卫用例：`components/auth/__tests__/guest-browse-semantics.test.ts`。
 
 ### 输入族契约（强制）
 
