@@ -567,6 +567,20 @@
   .ambient-vignette {
     background: radial-gradient(135% 115% at 50% -8%, transparent 52%, var(--cst-ambient-vignette) 100%);
   }
+  /* 颗粒抖动层：全屏低对比氛围渐变在 8-bit sRGB 下会量化成 2–3 级色阶，
+     大面积暗底上肉眼呈竖条纹/等高线（「廉价感」的主要来源）。叠一层静态细颗粒
+     打断量化台阶：中性灰噪点 + 普通混合（soft-light 在近黑底上斜率趋 0、抖不动），
+     1.2% 不透明度下全屏均值只抬约 1/255 级，肉眼不可感知，但足以抹平 1 级台阶。
+     静态单层、无动画、不参与布局与命中测试（性能契约：氛围层默认不持续合成）。 */
+  .ambient-backdrop::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/textures/ambient-grain.png');
+    background-repeat: repeat;
+    opacity: var(--cst-ambient-grain-opacity);
+    pointer-events: none;
+  }
 
   /* 桌面顶栏/侧栏的轻量天光（chrome 变体）：只铺方向性天光，不画世界层/暗角/动效，
      让导航 chrome 与主内容区共享同一环境光，同时保持导航可读性。

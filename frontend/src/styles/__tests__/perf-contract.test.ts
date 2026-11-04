@@ -3,7 +3,7 @@
 // 持续工作（idle 24.6%、滚动 19.3%），修复后 idle 0%、滚动 14.9% → 6.1%。
 // 说明：这是源码级契约（CSS 无法在 jsdom 里真实合成），断言规则块内容而非渲染结果。
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 // vitest 下 import.meta.url 不是 file://（jsdom 环境），直接用仓库内相对路径（cwd=frontend）。
 const css = readFileSync('src/styles/theme/utilities.css', 'utf8');
@@ -30,6 +30,26 @@ describe('氛围动画默认关闭（GPU 空闲占用）', () => {
 		expect(ruleBody('\n  .ambient-backdrop--motion .ambient-glow--a {')).toMatch(/animation\s*:/);
 		expect(ruleBody('\n  .ambient-backdrop--motion .ambient-glow--b {')).toMatch(/animation\s*:/);
 		expect(ruleBody('\n  .ambient-backdrop--motion .ambient-stars {')).toMatch(/animation\s*:/);
+	});
+});
+
+// 低对比全屏渐变在 8-bit sRGB 下会量化成 2–3 级色阶（暗底上肉眼呈竖条纹）；
+// 氛围层用一层静态细颗粒做抖动打断台阶。两条硬约束：
+//  ① 必须静态（全屏噪声层若带动画 = 持续合成，性能红线）；
+//  ② 不得用 mix-blend-mode —— .ambient-backdrop 是 z-index:-1 的隔离合成层，
+//     混合背景板是层内透明渐变，soft-light 会退化成正片叠底式 source-over，
+//     实测把整页提亮 5 级（暗底被冲淡）。
+describe('氛围颗粒抖动层（banding 抑制）', () => {
+	it('颗粒层静态、走 token 透明度、不使用 mix-blend-mode', () => {
+		const body = ruleBody('\n  .ambient-backdrop::after {');
+		expect(body).toMatch(/opacity:\s*var\(--cst-ambient-grain-opacity\)/);
+		expect(body).not.toMatch(/animation\s*:/);
+		expect(body).not.toMatch(/mix-blend-mode/);
+	});
+
+	it('颗粒纹理资产存在且只在氛围装饰层引用', () => {
+		expect(css).toContain("url('/textures/ambient-grain.png')");
+		expect(existsSync('static/textures/ambient-grain.png')).toBe(true);
 	});
 });
 
