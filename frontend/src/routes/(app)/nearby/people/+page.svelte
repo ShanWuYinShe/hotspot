@@ -263,6 +263,16 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 					<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
 				</div>
 			{/snippet}
+			{#snippet islandTrailing()}
+				<!-- 桌面入岛后保留页面级工具：标题/筛选滚走后地图入口仍可达（≤2 控件） -->
+				<ActionIconButton
+					variant="ghost"
+					icon={MapIcon}
+					label="地图浏览"
+					onClick={() => void goto(ROUTES.map)}
+					size={32}
+				/>
+			{/snippet}
 			{#snippet below()}
 				<!-- 页头 below 只保留「分类」这一层主筛选；排序不再是同形 pill 行
 				     （会被误读为二级分类），收敛为筛选行右端的 ghost 下拉。

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeftRight, Sparkles, Users } from '@lucide/svelte';
+	import { ArrowLeftRight, CornerUpLeft, Sparkles, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { homeFeed } from '@/stores/home-feed.svelte';
@@ -20,6 +20,10 @@
 	);
 	const otherLabel = $derived(isDiscover ? '正在关注' : '为你推荐');
 
+	// 阅读进度（0–100）：由滚动承载区上报，岛底部细线展示当前阅读位置。
+	let { progress = 0 }: { progress?: number } = $props();
+	const safeProgress = $derived(Math.min(100, Math.max(0, Number.isFinite(progress) ? progress : 0)));
+
 	function scrollToTop() {
 		const scroller = document.getElementById('main-content');
 		const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -35,7 +39,9 @@
 
 <div
 	data-desktop-dynamic-island
-	class="pointer-events-auto flex h-9 min-w-0 max-w-md items-center gap-1.5 rounded-full border border-border-default/50 bg-surface-primary/90 px-2 text-text-primary shadow-raised-sm backdrop-blur-lg animate-in fade-in zoom-in-95"
+	role="group"
+	aria-label="信息流锚点与切换"
+	class="group/island pointer-events-auto relative flex h-9 min-w-0 max-w-md items-center gap-1.5 rounded-full border border-border-default/50 bg-surface-primary/90 px-2 text-text-primary shadow-raised-sm backdrop-blur-lg animate-in fade-in zoom-in-95 transition-[max-width,box-shadow] duration-standard ease-standard hover:max-w-lg hover:shadow-raised-md focus-within:max-w-lg focus-within:shadow-raised-md"
 	style="contain: layout paint;"
 >
 	<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default" aria-hidden="true">
@@ -43,7 +49,7 @@
 	</span>
 	<button
 		type="button"
-		class="hover-btn focus-ring flex min-w-0 flex-1 items-center rounded-full px-1.5 py-0.5 text-left"
+		class="hover-btn focus-ring flex min-w-0 flex-1 items-center rounded-full px-1.5 py-0.5 text-left active:scale-[0.98]"
 		onclick={scrollToTop}
 		aria-label="回到信息流顶部"
 	>
@@ -52,6 +58,16 @@
 			<span class="truncate text-xxs leading-tight text-text-secondary">{meta}</span>
 		</span>
 	</button>
+
+	<!-- hover/focus 舒展提示：胶囊可点回顶（纯视觉，不在无障碍树内） -->
+	<span
+		class="pointer-events-none ml-auto hidden max-w-0 shrink-0 items-center gap-1 overflow-hidden rounded-full bg-accent-soft px-2 py-0.5 text-xxs font-medium text-accent-default opacity-0 transition-[max-width,opacity] duration-standard ease-standard group-hover/island:max-w-32 group-hover/island:opacity-100 group-focus-within/island:max-w-32 group-focus-within/island:opacity-100 sm:flex"
+		aria-hidden="true"
+	>
+		<CornerUpLeft class="size-3" strokeWidth={2} />
+		回到顶部
+	</span>
+
 	<div class="h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
 	<ActionIconButton
 		icon={ArrowLeftRight}
@@ -62,4 +78,26 @@
 		size={32}
 		class="shrink-0"
 	/>
+
+	<!-- 阅读进度环：20px 迷你圆环（accent 圆弧 0–100%），纯展示、不参与交互 -->
+	<span
+		data-island-progress-ring
+		data-island-progress={safeProgress}
+		class="pointer-events-none flex size-5 shrink-0 items-center justify-center"
+		aria-hidden="true"
+	>
+		<svg viewBox="0 0 20 20" class="size-5 -rotate-90" fill="none">
+			<circle cx="10" cy="10" r="7.5" stroke-width="2" class="stroke-border-default" />
+			<circle
+				cx="10"
+				cy="10"
+				r="7.5"
+				stroke-width="2"
+				stroke-linecap="round"
+				class="stroke-accent-default transition-[stroke-dashoffset] duration-rapid ease-standard"
+				stroke-dasharray="47.12"
+				stroke-dashoffset={47.12 * (1 - safeProgress / 100)}
+			/>
+		</svg>
+	</span>
 </div>

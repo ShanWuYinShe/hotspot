@@ -283,6 +283,16 @@
 				<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
 			</div>
 		{/snippet}
+		{#snippet islandTrailing()}
+			<!-- 桌面入岛后保留页面级工具：标题/筛选滚走后地图入口仍可达（≤2 控件） -->
+			<ActionIconButton
+				variant="ghost"
+				icon={MapIcon}
+				label="地图浏览"
+				onClick={() => void goto(ROUTES.map)}
+				size={32}
+			/>
+		{/snippet}
 		{#snippet below()}
 			<div>
 				{@render tagChips(device === 'desktop' ? 'flex-wrap' : 'pr-1')}

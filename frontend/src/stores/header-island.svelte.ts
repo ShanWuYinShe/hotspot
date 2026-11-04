@@ -50,6 +50,13 @@ class PageIslandStore {
 	/** 锚点是否已离开视口（由注册方判定） */
 	visible = $state(false);
 
+	/**
+	 * 当前页面阅读进度（0–100）。由唯一滚动承载区 RoutedContentViewport 写入，
+	 * 顶栏岛底部进度条消费（首页信息流岛与通用页面岛共用同一进度）。
+	 * 与注册 token 无关：首页不注册岛，但同样需要进度。
+	 */
+	progress = $state(0);
+
 	title = $state('');
 	meta = $state('');
 	author = $state<AuthorInfo | undefined>(undefined);
@@ -83,6 +90,11 @@ class PageIslandStore {
 	setVisible(token: IslandToken, visible: boolean) {
 		if (token !== currentToken) return;
 		this.visible = visible;
+	}
+
+	/** 阅读进度（滚动 owner 调用；与 token 无关，首页岛同样消费）。 */
+	setProgress(value: number) {
+		this.progress = Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0));
 	}
 
 	/** 释放自身 token：只有当前持有者释放时才真正清空状态。 */

@@ -5,6 +5,7 @@
 	import { decideScroll, restoreScrollTop, savePosition } from '@/lib/scroll-positions';
 	import { playPageEnter } from '@/lib/motion';
 	import { announceRoute } from '@/lib/route-announcer';
+	import { headerIsland } from '@/stores/header-island.svelte';
 	import BackToTop from '@/components/navigation/BackToTop.svelte';
 	import PageViewport from './PageViewport.svelte';
 
@@ -53,11 +54,36 @@
 	let contentEl: HTMLElement | null = $state(null);
 	const savedTops = new Map<string, number>();
 
+	// 阅读进度上报（顶栏锚点岛底部进度条）：唯一滚动 owner 负责写，岛只读。
+	// passive + rAF 节流；路由切换后进度归零，由恢复滚动的 scroll 事件重新累积。
+	$effect(() => {
+		const el = mainEl;
+		if (!el) return;
+		let raf = 0;
+		const update = () => {
+			raf = 0;
+			const max = el.scrollHeight - el.clientHeight;
+			headerIsland.setProgress(max > 0 ? (el.scrollTop / max) * 100 : 0);
+		};
+		const onScroll = () => {
+			if (raf) return;
+			raf = requestAnimationFrame(update);
+		};
+		el.addEventListener('scroll', onScroll, { passive: true });
+		update();
+		return () => {
+			el.removeEventListener('scroll', onScroll);
+			if (raf) cancelAnimationFrame(raf);
+		};
+	});
+
 	beforeNavigate((nav) => {
 		if (mainEl && nav.from?.url) savePosition(savedTops, nav.from.url.pathname, mainEl.scrollTop);
 	});
 
 	afterNavigate((nav) => {
+		// 新页面从页首开始：进度清零（同路由内导航保持不动时由 scroll 事件自校正）
+		headerIsland.setProgress(0);
 		// 页面进场：仅客户端导航（link/goto/form/popstate），首屏 enter 不播（保护 LCP）。
 		if (nav.type !== 'enter') {
 			playPageEnter(contentEl);

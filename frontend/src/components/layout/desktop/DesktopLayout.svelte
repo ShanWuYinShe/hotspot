@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import {
 		Home, Users, Rss, MessageCircle, Bell, ImageIcon,
-		Heart, Search, Settings, Plus, Navigation2, UserRound, PanelLeftClose, PanelLeftOpen, Shield, ArrowLeft
+		Heart, Search, Settings, Plus, Navigation2, UserRound, PanelLeftClose, PanelLeftOpen, Shield
 	} from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
@@ -13,6 +13,7 @@
 	import { unread } from '@/stores/unread.svelte';
 	import { headerIsland } from '@/stores/header-island.svelte';
 	import HomeFeedIsland from '@/components/home/HomeFeedIsland.svelte';
+	import PageIsland from '@/components/layout/page/PageIsland.svelte';
 	import { homeFeed } from '@/stores/home-feed.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import * as Dialog from '@/components/ui/dialog';
@@ -279,61 +280,21 @@
 			{#if pathname === ROUTES.home && homeFeed.islandVisible}
 				<!-- 首页灵动岛：内容区分段器滚出视口后浮现（handoff），顶部不显示 -->
 				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-					<HomeFeedIsland />
+					<HomeFeedIsland progress={headerIsland.progress} />
 				</div>
 			{:else if headerIsland.visible && headerIsland.active}
 				<!-- 绝对居中于整条顶栏（而非 logo 与操作簇之间的剩余空间），与「灵动岛」的视觉中心一致 -->
 				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-					<div
-						data-desktop-dynamic-island
-					class="pointer-events-auto flex items-center gap-2 h-9 px-3 rounded-full bg-surface-primary/90 backdrop-blur-lg border border-border-default/50 shadow-raised-sm text-text-primary transition-all duration-snappy animate-in fade-in zoom-in-95 max-w-md min-w-0"
-					style="contain: layout paint;"
-				>
-					{#if headerIsland.onBack}
-						<ActionIconButton
-							icon={ArrowLeft}
-							label={headerIsland.backLabel || '返回'}
-							onClick={() => (headerIsland.onBack ? headerIsland.onBack() : smartBack())}
-							variant="ghost"
-							tone="muted"
-							size={32}
-							class="shrink-0"
-						/>
-
-						<div class="h-3.5 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
-					{/if}
-
-					<!-- 中间：身份微名片 / 页面标题 + 一行 meta（点击回到锚点） -->
-					<div class="flex min-w-0 flex-1 items-center justify-center overflow-hidden">
-						<button
-							type="button"
-							class="hover-btn focus-ring flex min-w-0 max-w-full items-center gap-2 rounded-full px-2 py-0.5 text-left"
-							onclick={handleIslandTitleClick}
-							aria-label={headerIsland.author
-								? `查看 ${headerIsland.author.name} 的资料`
-								: `回到「${headerIsland.title || '页面标题'}」`}
-						>
-							{#if headerIsland.author}
-								<Avatar src={headerIsland.author.avatar} name={headerIsland.author.name} size={20} class="shrink-0" />
-							{/if}
-							<div class="flex min-w-0 flex-col justify-center">
-								<span class="truncate text-xs font-semibold text-text-primary leading-tight">
-									{headerIsland.author ? headerIsland.author.name : headerIsland.title || '详情'}
-								</span>
-								{#if islandMetaText}
-									<span class="truncate text-xxs text-text-secondary leading-tight">{islandMetaText}</span>
-								{/if}
-							</div>
-						</button>
-					</div>
-
-					{#if headerIsland.trailing}
-						<div class="h-3.5 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
-						<div class="flex items-center gap-0.5 shrink-0">
-							{@render headerIsland.trailing()}
-						</div>
-					{/if}
-					</div>
+					<PageIsland
+						title={headerIsland.title}
+						meta={islandMetaText}
+						author={headerIsland.author}
+						onBack={headerIsland.onBack}
+						backLabel={headerIsland.backLabel}
+						onTitleClick={handleIslandTitleClick}
+						trailing={headerIsland.trailing}
+						progress={headerIsland.progress}
+					/>
 				</div>
 			{/if}
 		</div>

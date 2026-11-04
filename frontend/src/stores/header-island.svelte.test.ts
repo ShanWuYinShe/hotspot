@@ -84,4 +84,22 @@ describe('headerIsland store', () => {
 		headerIsland.register(B, { title: 'B' });
 		expect(headerIsland.visible).toBe(false);
 	});
+
+	it('阅读进度：与 token 无关、收敛到 0–100、非法输入归零', () => {
+		headerIsland.register(A, { title: 'A' });
+		headerIsland.setProgress(42);
+		expect(headerIsland.progress).toBe(42);
+
+		// 首页不注册岛，但同样需要进度：不依赖 token
+		headerIsland.release(A);
+		headerIsland.setProgress(80);
+		expect(headerIsland.progress).toBe(80);
+
+		headerIsland.setProgress(180);
+		expect(headerIsland.progress).toBe(100);
+		headerIsland.setProgress(-20);
+		expect(headerIsland.progress).toBe(0);
+		headerIsland.setProgress(Number.NaN);
+		expect(headerIsland.progress).toBe(0);
+	});
 });

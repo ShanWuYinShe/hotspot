@@ -173,15 +173,15 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 ## 页面锚点岛（Page Island，桌面端）
 
-桌面端 52px 顶栏中央的固定信息位：把「会随滚动离开视口、但用户随时可能需要」的常驻信息（标题/身份/状态/行动）固定住，用户自由滚动不丢上下文。**按信息丢失触发**：短页/无滚动页不出岛；岛绝不因滚动方向自动隐藏。
+桌面端 52px 顶栏中央的固定信息位：把「会随滚动离开视口、但用户随时可能需要」的常驻信息（标题/身份/状态）与页面主行动固定住，用户自由滚动不丢上下文、还能直接操作。**按信息丢失触发**：短页/无滚动页不出岛；岛绝不因滚动方向自动隐藏。唯一实现 `components/layout/page/PageIsland.svelte`（首页信息流岛 `HomeFeedIsland.svelte` 同形态同交互语言）。
 
-- **结构**：`[leading: 返回/头像] · [title 12 semibold + meta 11 secondary] · [trailing: ≤2 行动]`（允许写操作：保存/全部已读/收藏，状态与页面同步）。
-- **入口 API**：`PageHeader` 新增 `island`（默认 true）/ `islandMeta`（缺省用 subtitle）/ `islandTrailing`（提供后页头原 trailing 入岛时隐藏，避免重复）；`DetailHeader` 走同一 store 契约（作者/群/用户名 + 地点·时间）。state 在 `stores/header-island.svelte.ts`（token 注册，路由切换不串台）。
-- **触发**：吸顶页头滚动 >120px 标题淡出交接（<72px 恢复，保留高度防 CLS）；`integrated`/非吸顶页头标题离开视口（IO rootMargin 扣 52px）时入岛；详情页滚动 >160px 收敛到顶栏岛（移动/平板保留页内吸顶岛）。**以上阈值/rootMargin 均乘 `platform.uiScale`**（顶栏与页头高度是 rem，大屏同步放大）。
-- **交互**：点击岛标题平滑回锚点/页首（reduced 立即）；带返回的页头入岛后返回动作移到岛 leading、页头标题+返回同步淡出（同一动作不出现两份；有 `islandTrailing` 时页头 trailing 入岛隐藏）；岛内文字不重复播报（标题按钮 aria-label，h1 仍在 DOM）；岛为顶栏 overlay，无 CLS。
-- **例外**：`/messages`（左右列头部常驻）、`/map`（全画布）、`/login`、`/register`（无外壳）不出岛；面板内嵌 PageHeader 传 `island={false}`。
-- **首页（桌面端）**：无页面标题，采用「分段器 → 灵动岛」滚动交接（`components/home/HomeFeedIsland.svelte` + `stores/home-feed.svelte.ts`）：内容区分段器随内容滚出视口（IO，rootMargin 扣 52px×uiScale）后，顶栏中央浮现灵动岛（当前信息流 + 语境说明 + 切换动作）；回到顶部/切换后岛隐藏、分段器接管。移动/平板仍在页内品牌头下渲染同一分段器；首页不注册 `headerIsland`。
-- 验证：滚动后 `[data-desktop-dynamic-island]` 文本正确、`main header[data-island-visible]="true"`、回顶消失、短页无岛；headless 下滚动后先截图泵帧再断言。
+- **形态**：h-9 紧凑胶囊 = `[leading: 返回（页面注册 onBack 才有）/ 作者头像 20px] · [title 12 semibold + meta 11 secondary] · [trailing: ≤2 行动]`，胶囊右侧 20px 阅读进度环（accent，`aria-hidden` 纯展示，由滚动 owner 上报 0–100）。
+- **何时出现**：吸顶页头滚动 >120px 标题淡出交接（<72px 恢复，保留高度防 CLS）；`integrated`/非吸顶页头标题离开视口（IO rootMargin 扣 52px）时入岛；详情页滚动 >160px 收敛到顶栏岛（移动/平板保留页内吸顶岛）。**阈值/rootMargin 均乘 `platform.uiScale`**。内容不足一屏的页面标题不离开视口 → 自然不出岛。例外：`/messages`（左右列头部常驻）、`/map`（全画布）、`/login`、`/register`（无外壳）不出岛；面板内嵌 PageHeader 传 `island={false}`。
+- **岛内交互**：点击标题/身份回锚点（吸顶页头→页首、integrated→标题位置、详情身份卡→作者主页，`onTitleClick` 语义由页面给，reduced 立即）；hover / 键盘 `focus-within` 横向舒展（`max-w-md → max-w-lg` + `shadow-raised-md`），展开被截断的标题/meta；行动区 ≤2 控件（32px 命中、`aria-label`，页头原 trailing 入岛隐藏避免两份）；Tab 顺序 返回 → 标题/身份 → 行动区；标题按钮 `active:scale-[0.98]` 即时反馈。
+- **入口 API**：`PageHeader` 的 `island`（默认 true）/ `islandMeta`（缺省用 subtitle）/ `islandTrailing`（提供后页头原 trailing 入岛时隐藏）；`DetailHeader` 走同一 store 契约（作者/群/用户名 + 地点·时间 + trailing）。state 在 `stores/header-island.svelte.ts`（token 注册，路由切换不串台；`setProgress` 与 token 无关，首页岛同样消费）。
+- **首页（桌面端）**：无页面标题，采用「分段器 → 灵动岛」滚动交接（`components/home/HomeFeedIsland.svelte` + `stores/home-feed.svelte.ts`）：内容区分段器随内容滚出视口（IO，rootMargin 扣 52px×uiScale）后，顶栏中央浮现灵动岛（当前信息流 + 语境说明 + 切换动作 + 阅读进度）；回到顶部/切换后岛隐藏、分段器接管。移动/平板仍在页内品牌头下渲染同一分段器；首页不注册 `headerIsland`。
+- **新增页面接岛**：默认 sticky 页头自动入岛；需要保留页面工具（搜索/地图/编辑等）时把 ≤2 个入口放进 `islandTrailing`，并把「会丢失的入口」从页头 trailing 移入岛（或同时在岛提供）；integrated hub 页同样适用。禁止另造一套顶栏浮层。
+- 验证：滚动后 `[data-desktop-dynamic-island]` 文本正确、`main header[data-island-visible]="true"`、hover 舒展后宽度变化、回顶消失、短页无岛；headless 下滚动后先截图泵帧再断言。
 
 ## 数据量自适应（0 / 1 / 2 / 3+ / 大量）
 
