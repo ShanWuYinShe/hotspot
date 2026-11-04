@@ -146,6 +146,12 @@
 					<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} size={36} />
 				</div>
 			{/snippet}
+			{#snippet islandTrailing()}
+				<!-- 桌面入岛后页头整条隐去（无 below 的吸顶页头），地图浏览入口由顶栏岛接管；
+				     搜索入口桌面在顶栏已有，不重复进岛（岛行动区 ≤2 控件）。
+				     移动端不出岛，此 snippet 不渲染，页头仍保留常驻搜索/地图工具。 -->
+				<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} size={32} />
+			{/snippet}
 		</PageHeader>
 	{/snippet}
 

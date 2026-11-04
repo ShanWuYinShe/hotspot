@@ -110,6 +110,14 @@
 	let stickyAncestor = $state(false);
 	const islandHandoffTrigger = $derived(islandStickyTrigger || stickyAncestor);
 	let islandShown = $state(false);
+	/**
+	 * 桌面端「岛接管后隐去内容区残留标题栏」：
+	 * 默认吸顶页头（无 below）的标题/上下文/行动都已交给顶栏灵动岛，滚动 >120px 后
+	 * 内容区不应再留一条空的玻璃标题带（用户反馈：既已有灵动岛，旧标题栏没有存在必要）。
+	 * 有 below 的页头是「功能工具行」（搜索框吸顶、后台模块导航），保留整条不隐去，
+	 * 否则滚走后会丢失操作入口；它们不属于「标题栏」。
+	 */
+	const islandBandHidden = $derived(islandEnabled && islandShown && islandStickyTrigger && !below);
 	let islandAnchorEl = $state<HTMLElement | undefined>(undefined);
 
 	$effect(() => {
@@ -249,15 +257,21 @@
 <header
 	use:headerScroll
 	data-island-visible={islandEnabled && islandShown ? 'true' : undefined}
+	data-island-band-hidden={islandBandHidden ? 'true' : undefined}
+	aria-hidden={islandBandHidden ? 'true' : undefined}
+	inert={islandBandHidden}
 	class={cn(
+		'shrink-0 transition-opacity duration-standard ease-standard',
 		integrated
-			? 'shrink-0 max-sm:sticky max-sm:top-0 max-sm:z-[var(--cst-z-sticky)] max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:pb-1.5'
+			? 'max-sm:sticky max-sm:top-0 max-sm:z-[var(--cst-z-sticky)] max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:pb-1.5'
 			: floating
-				? 'shrink-0 sticky top-0 z-[var(--cst-z-sticky)] pointer-events-none'
+				? 'sticky top-0 z-[var(--cst-z-sticky)] pointer-events-none'
 				: [
-						'shrink-0 page-header-scroll max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:border-b-0',
+						'page-header-scroll max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:border-b-0',
 						sticky && 'sticky top-0 z-[var(--cst-z-sticky)]',
-						scrolled && 'page-header-scrolled'
+						scrolled && 'page-header-scrolled',
+						// 岛已接管：无 below 的吸顶页头整条隐去（保留占位、不产生版面跳动）
+						islandBandHidden && 'pointer-events-none opacity-0'
 					],
 		className
 	)}

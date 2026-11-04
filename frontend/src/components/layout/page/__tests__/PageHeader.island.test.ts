@@ -1,6 +1,6 @@
 // PageHeader 灵动岛接线契约测试：桌面端注册、吸顶标题交接、非吸顶离场触发、显式关闭。
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mount, unmount, tick } from 'svelte';
+import { createRawSnippet, mount, unmount, tick } from 'svelte';
 import PageHeader from '../PageHeader.svelte';
 import { initPlatform } from '@/stores/platform.svelte';
 import { headerIsland } from '@/stores/header-island.svelte';
@@ -95,6 +95,54 @@ describe('PageHeader 灵动岛（桌面端）', () => {
 		await pump();
 		expect(header.dataset.islandVisible).toBeUndefined();
 		expect(headerIsland.visible).toBe(false);
+	});
+
+	it('吸顶页头入岛后整条隐去（不留内容区残留标题栏），回顶恢复', async () => {
+		const scroller = createScroller();
+		const comp = mount(PageHeader, {
+			target: scroller,
+			props: { title: '设置', subtitle: '账号 · 外观 · 地图 · 通知' }
+		});
+		mounted.push(() => void unmount(comp));
+		await tick();
+
+		const header = scroller.querySelector('header') as HTMLElement;
+		expect(header.dataset.islandBandHidden).toBeUndefined();
+
+		scroller.scrollTop = 300;
+		scroller.dispatchEvent(new Event('scroll'));
+		await pump();
+
+		expect(header.dataset.islandBandHidden).toBe('true');
+		expect(header.getAttribute('aria-hidden')).toBe('true');
+		// Svelte 以 DOM 属性方式落 inert（浏览器会反射为同名属性；jsdom 不反射，只留属性值）
+		expect(header.inert).toBe(true);
+
+		scroller.scrollTop = 0;
+		scroller.dispatchEvent(new Event('scroll'));
+		await pump();
+
+		expect(header.dataset.islandBandHidden).toBeUndefined();
+		expect(header.getAttribute('aria-hidden')).toBeNull();
+	});
+
+	it('带 below 功能工具行（搜索框/导航）的吸顶页头不隐去', async () => {
+		const scroller = createScroller();
+		const below = createRawSnippet(() => ({ render: () => '<div data-test-below>工具行</div>' }));
+		const comp = mount(PageHeader, {
+			target: scroller,
+			props: { title: '搜索', below }
+		});
+		mounted.push(() => void unmount(comp));
+		await tick();
+
+		scroller.scrollTop = 300;
+		scroller.dispatchEvent(new Event('scroll'));
+		await pump();
+
+		const header = scroller.querySelector('header') as HTMLElement;
+		expect(header.dataset.islandBandHidden).toBeUndefined();
+		expect(header.querySelector('[data-test-below]')).toBeTruthy();
 	});
 
 	it('非吸顶页头：标题离开视口后入岛，回到视口退出', async () => {
