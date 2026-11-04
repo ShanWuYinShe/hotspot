@@ -21,6 +21,7 @@
 | `hotspot-frontend-routing` | 前端文件路由表与组件放置规则 |
 | `hotspot-frontend-layout` | 前端 Standard/Split 布局契约 |
 | `hotspot-frontend-map` | 前端自研地图契约：marker 全量投影、GCJ-02 同口径、滚轮缩放与漂移实测 |
+| `hotspot-frontend-prod-console` | 线上控制台报错分诊：CF beacon、Firefox preload/CSS 告警、弱网 chunk 失败 |
 | `hotspot-harmony-ui` | 鸿蒙端设计 token、原语与跨端同步机制 |
 | `hotspot-harmony-device-verify` | 鸿蒙端端上实测：hdc + uitest 走查流程、本机坐标、走查账号与陷阱 |
 | `hotspot-worktree-debug` | worktree 内 compose 隔离调试、端口重映射与清理 |
