@@ -71,6 +71,18 @@ describe('semantic-bsp', () => {
 		}
 	});
 
+	it('用户卡（kind=user）不参与跨度：只有小头像、没有封面媒体，跨档会留下大片空白', () => {
+		const items: CardBspMeta[] = Array.from({ length: 20 }, () => ({
+			hasImage: true,
+			likes: 99,
+			isFeatured: true
+		}));
+		for (const device of ['mobile', 'tablet', 'desktop']) {
+			const seq = computeBspLayoutSequence(items, { device, kind: 'user' });
+			expect(seq.every((s) => s.tier === '1x1')).toBe(true);
+		}
+	});
+
 	it('长流周期性节奏：长列表中周期性穿插 2x1 与 2x2 锚点', () => {
 		const items: CardBspMeta[] = Array.from({ length: 20 }, () => ({
 			width: 1000,

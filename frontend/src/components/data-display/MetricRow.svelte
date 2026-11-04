@@ -103,14 +103,14 @@
 					<button
 						type="button"
 						onclick={item.onClick}
-						class="hover-btn cursor-pointer flex w-full h-full min-w-0 flex-col-reverse items-center justify-center rounded-xl bg-surface-subtle/40 py-2.5 px-2 text-center transition-all hover:bg-surface-subtle/70 backdrop-blur-xs focus-ring"
+						class="hover-btn cursor-pointer flex w-full h-full min-w-0 flex-col-reverse items-center justify-center rounded-xl bg-surface-subtle/40 py-2.5 px-2 text-center transition-all hover:bg-surface-subtle/70 backdrop-blur-sm focus-ring"
 					>
 						<span class="truncate text-xs text-text-secondary mt-1">{item.label}</span>
 						{@render metricValue(item, 'truncate text-xl font-semibold leading-none')}
 					</button>
 				</div>
 			{:else}
-				<div class="flex min-w-0 flex-col-reverse items-center justify-center rounded-xl bg-surface-subtle/40 py-2.5 px-2 text-center backdrop-blur-xs">
+				<div class="flex min-w-0 flex-col-reverse items-center justify-center rounded-xl bg-surface-subtle/40 py-2.5 px-2 text-center backdrop-blur-sm">
 					<span class="truncate text-xs text-text-secondary mt-1">{item.label}</span>
 					{@render metricValue(item, 'truncate text-xl font-semibold leading-none')}
 				</div>

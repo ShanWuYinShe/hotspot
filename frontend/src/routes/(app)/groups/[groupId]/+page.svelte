@@ -313,7 +313,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</div>
 	{:else}
 		<!-- 无封面时的专属高质感设计：融入页面调性，拒绝死灰与突兀暗角 -->
-		<div class="relative h-cover-height overflow-hidden rounded-xl border border-border-default/50 bg-surface-primary/75 backdrop-blur-md p-6 flex flex-col justify-between shadow-raised-sm">
+		<div class="relative h-cover-height overflow-hidden rounded-xl bg-surface-island p-6 flex flex-col justify-between shadow-raised-sm">
 			<!-- 柔和主题环境光漫射底纹 -->
 			<div class="pointer-events-none absolute -right-16 -top-16 size-72 rounded-full bg-accent-soft/50 blur-3xl" aria-hidden="true"></div>
 			<div class="pointer-events-none absolute -left-10 -bottom-10 size-48 rounded-full bg-surface-subtle blur-2xl" aria-hidden="true"></div>
@@ -497,7 +497,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 		</div>
 
 		<!-- 桌面右栏操作卡：精致磨砂内容岛，与左侧内容保持统一的设计语言 -->
-		<section aria-label="群组操作" class="flex h-fit flex-col gap-3.5 rounded-xl border border-border-default/50 bg-surface-primary/80 backdrop-blur-md p-5 shadow-raised-sm">
+		<section aria-label="群组操作" class="flex h-fit flex-col gap-3.5 rounded-lg bg-surface-island p-4 shadow-xs">
 			{#if gd.joined}
 				<Button type="button" variant="primary" size="lg" class="w-full" onclick={() => void goto(ROUTES.groupMessage(params.groupId))}>
 					<MessageCircle size={15} />

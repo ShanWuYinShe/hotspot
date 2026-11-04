@@ -112,7 +112,7 @@
 		}
 	};
 
-	const SECTION_CARD = 'rounded-lg bg-surface-island p-5 shadow-xs';
+	const SECTION_CARD = 'rounded-lg bg-surface-island p-4 shadow-xs';
 	// 未保存修改的全局提示需要说清「改了什么」：分区中文名与卡片标题同口径
 	const SECTION_LABELS: Record<ConfigSection, string> = {
 		features: '功能开关',

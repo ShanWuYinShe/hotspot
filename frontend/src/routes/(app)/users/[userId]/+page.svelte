@@ -555,7 +555,6 @@
 			{:else}
 				<EmptyState
 					iconTone="accent"
-					class="py-12"
 					title="还没有照片"
 					description="该用户发布带图瞬间后会显示在这里。"
 				>

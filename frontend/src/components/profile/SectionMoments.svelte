@@ -126,7 +126,7 @@
 		<SkeletonFeed
 			variant="card"
 			count={6}
-			class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
+			class="grid grid-cols-2 gap-3 sm:gap-3.5 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
 			label="加载我的瞬间…"
 		/>
 	{:else if needsAuth}

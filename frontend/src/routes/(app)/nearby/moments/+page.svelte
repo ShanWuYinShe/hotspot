@@ -300,8 +300,8 @@
 		<SkeletonFeed
 			variant="card"
 			count={device === 'mobile' ? 4 : 8}
-			cardClass="aspect-[3/4] rounded-lg"
-			class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-4.5 xl:grid-cols-5 2xl:grid-cols-6"
+			cardClass="h-full"
+			class="grid grid-flow-dense grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))] [grid-auto-rows:clamp(12.1875rem,20vw,17.1875rem)]"
 			label="加载附近瞬间…"
 		/>
 	{:else if loadError}
@@ -374,7 +374,7 @@
 					<InlineLoading label="加载更多…" />
 				</div>
 			{:else if showListEnd}
-				<ListEnd class="pb-6" />
+				<ListEnd />
 			{/if}
 		</div>
 	{/if}

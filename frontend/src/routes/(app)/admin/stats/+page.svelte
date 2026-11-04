@@ -213,6 +213,15 @@
 	});
 
 	const trendMax = $derived(Math.max(1, ...(data?.trends ?? []).map((p) => p.user + p.group + p.moment)));
+	// 窗口内总新增：全 0 时不画 7/30 根噪声柱，直接给紧凑空态。
+	const trendTotal = $derived((data?.trends ?? []).reduce((sum, p) => sum + p.user + p.group + p.moment, 0));
+	// x 轴标签抽稀：30 天档在 390/768/1024 上组宽仅 7–19px，远小于标签宽度（≈26px），
+	// 不抽稀必然叠字；按端给出「最多可见标签数」反推步长（7 天档恒为 1）。
+	const trendLabelStep = $derived.by(() => {
+		const n = data?.trends.length ?? 0;
+		if (n <= 10) return 1;
+		return Math.ceil(n / (device === 'mobile' ? 6 : 16));
+	});
 	const trendLabel = (d: string): string => d.slice(5).replace('-', '/');
 	const selectedRegionLabel = $derived.by(() => {
 		if (!selectedToken || !data) return '';
@@ -236,7 +245,7 @@
 		<!-- 全站存量：数字与秩序（24px 半粗等宽数字 + 发丝分隔，替换 4 张独立小卡的边框网格） -->
 		<section aria-label="全站存量">
 			{#if data}
-				<div class="rounded-lg bg-surface-island px-5 py-4 shadow-xs">
+				<div class="rounded-lg bg-surface-island p-4 shadow-xs">
 					<MetricRow
 						variant="strip"
 						items={[
@@ -285,22 +294,44 @@
 				<section aria-label="每日新增趋势" class="flex flex-col">
 					<SectionHead title={`每日新增（近 ${trendDays} 天 · UTC+8 日界）`} icon={TrendingUp} />
 					<div class="rounded-lg bg-surface-island p-4 shadow-xs">
-						<div class="flex items-end gap-1" role="img" aria-label="每日新增柱状图">
-							{#each data.trends as p (p.date)}
-								{@const total = p.user + p.group + p.moment}
-								{@const h = Math.round((total / trendMax) * 100)}
-								<div class="flex-1 flex flex-col items-center gap-1 min-w-0">
-									<div class="w-full flex items-end justify-center" style="height: var(--cst-chart-plot-height);">
-										<div
-											class="w-full max-w-8 rounded-t-sm bg-accent-default"
-											style="height: {Math.max(total > 0 ? 4 : 1, h)}%;"
-											title="{p.date}：用户 {p.user} · 群组 {p.group} · 动态 {p.moment}"
-										></div>
+						{#if trendTotal === 0}
+							<p class="py-8 text-center text-xs text-text-secondary">近 {trendDays} 天暂无新增</p>
+						{:else}
+							<!-- 少数据点（如 7 天）时图表带按「数据点数 × band-step」收窄并居中：
+							     宽屏不再把 7 根柱摊到 1564px 宽度里（柱只占 14%），留白由两侧呼吸承担。
+							     30 天档自然铺满（点数 × 7rem 远超容器宽）。 -->
+							<div
+								class="mx-auto flex w-full items-end gap-1"
+								role="img"
+								aria-label="每日新增柱状图"
+								style="max-width: min(100%, calc({data.trends.length} * var(--cst-chart-band-step)));"
+							>
+								{#each data.trends as p, i (p.date)}
+									{@const total = p.user + p.group + p.moment}
+									{@const h = Math.round((total / trendMax) * 100)}
+									<div class="min-w-0 flex-1 flex flex-col items-center gap-1">
+										<div class="w-full flex items-end justify-center" style="height: var(--cst-chart-plot-height);">
+											{#if total > 0}
+												<div
+													class="w-full max-w-8 rounded-t-sm bg-accent-default sm:max-w-12"
+													style="height: {Math.max(4, h)}%;"
+													title="{p.date}：用户 {p.user} · 群组 {p.group} · 动态 {p.moment}"
+												></div>
+											{:else}
+												<!-- 0 值：2px 中性基线记号（accent 微凸起会被误读成渲染瑕疵） -->
+												<div class="h-0.5 w-full max-w-8 rounded-full bg-border-strong sm:max-w-12" aria-hidden="true"></div>
+											{/if}
+										</div>
+										{#if i % trendLabelStep === 0}
+											<span class="text-xxs text-text-secondary">{trendLabel(p.date)}</span>
+										{:else}
+											<!-- 保留同高占位：抽稀只隐藏文字，不改变标签行高度/柱位 -->
+											<span class="invisible text-xxs" aria-hidden="true">{trendLabel(p.date)}</span>
+										{/if}
 									</div>
-									<span class="text-xxs text-text-secondary">{trendLabel(p.date)}</span>
-								</div>
-							{/each}
-						</div>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				</section>
 			{/if}

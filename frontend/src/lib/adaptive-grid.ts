@@ -22,7 +22,9 @@ export interface AdaptiveGridMetrics {
 	centered: boolean;
 }
 
-const MOBILE_MAX = 640;
+// 断点与 platform store（mobile<600 / tablet 600–1023 / desktop≥1024）
+// 及 Tailwind sm=600 保持同一口径：此前 mobile 用到 640，600–639 区间两端会打架。
+const MOBILE_MAX = 600;
 const TABLET_MAX = 1024;
 const WIDE_MIN = 1280;
 

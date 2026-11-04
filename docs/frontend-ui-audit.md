@@ -1057,3 +1057,52 @@
 - PageHeader 新增 integrated 契约测试（无 page-header-scroll/sticky、data-page-intro、标题+副标题同容器、紧凑标题档），PageHeader 共 9 tests 通过；全量 **124 文件 / 707 tests** 通过；check（含 eslint/theme/utility/一致性 16 条）0 错；build 成功；**audit:ui PASS**（browser-qa 0 console error；axe 35 页 0 错；touch 35 页 94.2% PASS）。
 - 文档同步：`docs/ui-components.md` PageHeader 行、skill `hotspot-frontend-layout` 页头规则、`hotspot-frontend-style` 标题档/图标钮、`frontend/AGENTS.md`「页面布局」。
 
+
+## 全站跨页一致性 / 图表尺寸 / 三端差异化（用户反馈轮）
+
+**反馈原文**：「全面检查前端项目，确保同一设备上所有页面都保持同一风格、审美品味都在线、同时所有图表大小都合适，不要太小也不要过大，同时桌面端和移动端/平板端因为设备分辨率、操作习惯不一样，要注意区别设计」。
+
+### 取证方式
+
+worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed）用 agent-browser 采集 **35 路由 × 5 视口（390/768/1024/1440/1920）= 175 条实测指标 + 140 张截图**；另做代码级静态审计（338 源文件）与图表尺寸专项审计。取数脚本与原始数据在 `.workwork/ui-audit-20261104/`（raw/metrics.ndjson、shots/、analysis.md）。
+
+### 主要问题与修复
+
+| 类别 | 问题（实测） | 修复 |
+|---|---|---|
+| 图表 | 柱状图宽度未收敛：7 天数据在 1440/1920 柱宽被 `max-w-8`(32) 封顶，仅占组宽 151/220 的 21%/15%；0 值柱渲染 1.3–2px 淡色凸起像渲染瑕疵；30 天档 x 轴标签在 <1280 必然叠字（组宽 7–19px vs 标签 26–28px） | 新增 `--cst-chart-band-step`（7rem）：少数据点时图表带按「点数 × 该值」收窄居中、柱宽上限 32/48px、0 值改 2px 中性基线记号、全 0 换「近 N 天暂无新增」空态、x 轴标签按端抽稀（移动 ≤6 / 平板桌面 ≤16 个） |
+| 图表 | 区域分布图长宽比失控：390 1.24 / 768 2.50 / 1920 **2.93**（过扁） | `--cst-chart-map-height` 按端分档（移动 clamp(16,60vw,18rem)、平板 clamp(18,52vw,26rem)、桌面 clamp(18,36vw,44rem)）→ 实测 1.40 / 1.80 / 1.93 / 2.15 / 2.31 |
+| 三端 | 桌面 1024–1279 密度倒挂：`SplitPageLayout` rail 写死 `w-84`(336px) 覆盖 clamp token，主列仅 ~418px，首页 feed 1 列 | rail 宽度回归 `--cst-context-rail-width`（clamp 18→21rem）并在 <1280 收起 rail，主列恢复整宽；首页 feed 最小轨 21.25rem→20rem，1024 档回到 2 列 336×420（不再是 1 列 688×860 巨卡） |
+| 三端 | `/map` 桌面 1024 地图面板仅 396×668（0.59:1） | 左栏 `w-85 → w-72 xl:w-85`；实测 448×668（0.67:1，1024 最小桌面档） |
+| 三端 | 自适应网格手机断点用 640，与 platform store / Tailwind `sm=600` 不一致（600–639 区间两端打架） | `adaptive-grid.ts` 的 `MOBILE_MAX` 统一为 600 |
+| 一致性 | 骨架屏栅格与真实 `AdaptiveCardGrid` 不一致（附近三页 + 首页）：列数/间距/行高全不同，骨架→内容跳变 | 骨架屏改与真实网格同源（2 列 / 3 列 / `auto-fill(min-track)` + `grid-auto-rows` + 同 gap），卡片 `h-full` 跟随行高 |
+| 一致性 | 内容卡材质多套并存：UserCard 用 `surface-card-menu/80 + border + blur`、详情 rail 四种材质、群详情 fallback hero 带 1px 描边、引导卡三种表面 | UserCard / RailSection island / 群详情操作卡 / 群详情 fallback hero / SparseContentHint / 首页引导卡 统一为**内容软岛**（`bg-surface-island + shadow-xs + rounded-lg`，无描边无玻璃） |
+| 一致性 | 页面级空态内距 48/64/80 三档；首页父子留白叠成 28/32/80；admin 内容岛 p-4/p-5 两档；附近三页页头 trailing gap 8/10；groups「加载更多」用隐形哨兵 | 空态归默认 `py-20`、首页留白单侧提供、admin 内容岛统一 `p-4`、trailing 统一 `gap-2`、groups 改可见 `InlineLoading`（与人物/瞬间页一致）、删除 `ListEnd` 冗余 `pb-6` |
+| 契约 | 毛玻璃实际落在 Tailwind 档位（md=12px），token 口径是 16px（29 处 `backdrop-blur-md`） | `theme-registry.css` 注册 `--blur-sm/md/lg → --cst-blur-*`（一处生效全站）；`backdrop-blur-xs`(4) → `sm`(8)，`xl`(24) → `lg`(24，数值不变) |
+| 契约 | `PageHeader variant="integrated"` 移动端被加了 `max-sm:sticky + glass`，与 layout skill / design-system 明文相反 | 保留实现（移动端与其它页头保持同一 sticky 语言），**同步文档**：layout skill、`frontend/AGENTS.md`、`docs/ui-components.md`、design-system 均标注「桌面/平板无背景/边框/吸顶；移动端 <600px 例外吸顶」 |
+
+### 修复后实测
+
+| 项 | 修复前 | 修复后 |
+|---|---|---|
+| 7 天柱状图（1440） | 图带宽 1084，组宽 151，柱 32（21%），图表横跨整卡 | 图带宽 784（居中），组宽 108.6，柱 48（44%） |
+| 7 天柱状图（1920） | 图带宽 1564，组宽 220，柱 32（15%） | 图带宽 784（居中），组宽 108.6，柱 48（44%） |
+| 30 天标签（1440 / 390） | 1440 全部 30 个标签；390 必叠字 | 1440 每 2 天一个（15 个）；390 每 6 天一个（6 个），无叠字 |
+| 区域分布图比例（390/768/1024/1440/1920） | 1.24 / 2.50 / 1.93 / 2.15 / 2.93 | 1.40 / 1.80 / 1.93 / 2.15 / 2.31 |
+| 1024 桌面首页 feed | 1 列 383×478（rail 挤压） | 2 列 336×420（rail 收起，主列整宽） |
+| 1024 地图页地图 | 396×668（0.59:1） | 448×668（0.67:1，左栏 288） |
+| 毛玻璃 | 25 处 12px（token 口径外） | 全部走 `--cst-blur-*`（8/16/24） |
+
+### 门禁
+
+- `svelte-check` 0 error / 0 warning；`eslint` 通过；`check-utility-classes` / `check-component-consistency`（16 条）通过；主题 5 项检查通过；
+- `bun run test`：133 文件 / **812 tests** 通过（RailSection island 契约用例同步更新）；
+- `bun run build` 成功；
+- `audit:a11y`（桌面全量 + 移动 5 页，worktree 8889）与 `audit:touch`：见 `.workwork/browser-check/*` 本轮报告。
+
+### 未纳入本轮（登记 backlog）
+
+- 首页右侧 rail 的人物/话题行仍是页面手写（未走 `RailUserRow`/`ListItem`）；
+- `?demo=a/b/c/d` 设计评审分支仍内嵌在生产代码（会改内容轴/gutter，非默认路径）；
+- 群详情/瞬间详情内的小块提示条仍用 `surface-subtle/N`（非页面级卡片，本轮未动）；
+- 1024–1279 若需要完整分栏（rail）体验，可考虑把 rail 改为可折叠抽屉（当前直接收起）。

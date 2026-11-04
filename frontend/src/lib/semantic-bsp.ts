@@ -61,7 +61,9 @@ export function getCardBspLayout(
 	// 纯文字卡（hasImage === false）不参与任何跨度档位：2x2/1x2 会把无图内容
 	// 拉成整块空画布，2x1 横排也会留下 40% 的空图片区（2K 下尤其明显）。
 	// 所有大卡只留给真的有图的卡片。
-	const canSpan = item.hasImage !== false;
+	// 用户卡（kind === 'user'）同理：只有小头像、没有封面媒体，跨档后卡内会剩下
+	// 一半以上空白（1440 实测 2x2 = 734×573，内容仅约 300px 高），一律 1x1。
+	const canSpan = item.hasImage !== false && kind !== 'user';
 
 	// 数据量 ≤3 时不做任何跨度：稀疏网格需要「整行居中」的稳定轨道，
 	// 一张 2x2/2x1 会撑破居中行；少数据下巨卡也会放大空洞感。

@@ -255,7 +255,7 @@
 {#snippet nearbyBanner()}
 	<button
 		type="button"
-		class="hover-btn group flex w-full items-center gap-3.5 rounded-lg bg-surface-island px-4 py-4 text-left focus-ring transition mt-4 hover:shadow-raised-sm shadow-xs"
+		class="hover-btn group flex w-full items-center gap-3.5 rounded-lg bg-surface-island px-4 py-4 text-left focus-ring transition hover:shadow-raised-sm shadow-xs"
 		onclick={() => void goto(ROUTES.nearby)}
 	>
 		<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft transition-transform group-hover:scale-105">
@@ -338,7 +338,7 @@
 				variant="feed"
 				count={4}
 				label="加载动态中…"
-				class="grid grid-cols-2 gap-2.5 px-2.5 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(21.25rem,1fr))] sm:gap-4 sm:px-0 pt-2"
+				class="grid grid-cols-2 gap-2.5 px-2.5 pt-2 sm:grid-cols-3 sm:gap-4 sm:px-0 lg:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))]"
 			/>
 		{:else if currentError && currentItems.length === 0}
 			<LoadError message={currentError} onRetry={() => void currentPager.load()} />
@@ -358,9 +358,12 @@
 					{@render feedItems()}
 				</div>
 			{:else}
+				<!-- 21.25rem(340) 在 1024–1279（rail 已收起、主列约 688px）只够 1 列，
+				     会把单卡拉成 688×860 巨卡；20rem(320) 让该区间回到 2 列 336（≈阅读列宽），
+				     1440/1920 的列数与卡宽不变。 -->
 				<AdaptiveCardGrid
 					count={currentItems.length}
-					minTrackRem={21.25}
+					minTrackRem={20}
 					gapRem={[0.625, 1, 1]}
 					class="px-2.5 pt-2 sm:px-0"
 				>
@@ -373,13 +376,13 @@
 					<LoadMoreButton loading={loadingMore} onLoad={() => void currentPager.loadMore()} />
 				</div>
 			{:else}
-				<ListEnd class="py-4" />
+				<ListEnd />
 			{/if}
 
 			{#if currentItems.length <= 2 && !hasMore}
 				<!-- 数据稀疏时（<=2条）提供探索热门话题卡片，充实版面、引导互动，消除大面积死白与断崖空旷感 -->
 				<div class="px-3.5 sm:px-0 my-3">
-					<div class="rounded-lg border border-border-subtle/40 bg-surface-island/70 p-4 shadow-xs">
+					<div class="rounded-lg bg-surface-island p-4 shadow-xs">
 						<div class="flex items-center justify-between mb-2.5">
 							<div class="flex items-center gap-1.5">
 								<Sparkles class="size-4 text-accent-default" strokeWidth={1.75} />
@@ -411,7 +414,6 @@
 				description={activeTab === 'following' ? '去「为你推荐」发现更多有趣的人，或去附近看看身边正在发生什么。' : '去附近看看，或者发布属于你的第一条瞬间。'}
 				bare
 				spotlight
-				class="py-16"
 			>
 				{#snippet icon()}
 					<Sparkles class="size-6 opacity-subtle text-text-secondary" strokeWidth={1.5} />

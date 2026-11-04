@@ -90,6 +90,12 @@
      Tailwind 键——此前组件写了 ease-bounce 类但注册层缺失，类名静默失效，
      Toggle 滑块退化为标准曲线。 */
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  /* 毛玻璃模糊半径（3 档强制收敛）：Tailwind 默认 blur-sm/md/lg 是 8/12/16px，
+     与本项目 --cst-blur-*（8/16/24px）不同；在此映射后 backdrop-blur-* 类
+     直接消费 token，组件不再出现 12px 这种契约外档位（check:theme 无感漂移）。 */
+  --blur-sm: var(--cst-blur-sm);
+  --blur-md: var(--cst-blur-md);
+  --blur-lg: var(--cst-blur-lg);
   --ease-bounce: var(--cst-ease-bounce);
 
   /* Interaction / shell semantic colors（仅注册有 Tailwind 类消费的；

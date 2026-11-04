@@ -122,7 +122,7 @@ import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 		{:else if error}
 			<LoadError message={error} onRetry={onRetry} />
 		{:else if items.length === 0}
-			<EmptyState spotlight iconTone="accent" title={emptyTitle} description={emptyDescription} class="py-16">
+			<EmptyState spotlight iconTone="accent" title={emptyTitle} description={emptyDescription}>
 				{#snippet icon()}
 					<emptyIcon size={28} strokeWidth={1.5}></emptyIcon>
 				{/snippet}

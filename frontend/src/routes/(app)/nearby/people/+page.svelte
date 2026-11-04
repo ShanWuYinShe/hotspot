@@ -296,10 +296,13 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 					<LoadError message={loadError} onRetry={() => { clearPeopleProgress(); reloadKey++; }} />
 				{:else if loading}
 					<!-- 首屏骨架屏：与 UserCard 同构的 3:4 竖卡，栅格列数与真实网格一致 -->
+					<!-- 与真实 AdaptiveCardGrid 同一栅格来源（2 列 / 3 列 / auto-fill(18.75rem) + 固定行高），
+					     骨架→内容零位移 -->
 					<SkeletonFeed
 						variant="portrait"
 						count={10}
-						class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+						cardClass="h-full"
+						class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))] [grid-auto-rows:clamp(12.1875rem,20vw,17.1875rem)]"
 						label="加载附近用户…"
 					/>
 				{:else if !list.length}
@@ -370,7 +373,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 							<InlineLoading label="加载更多…" />
 						</div>
 					{:else if visibleCount >= list.length}
-						<ListEnd class="pb-6" />
+						<ListEnd />
 					{/if}
 				{/if}
 			</div>

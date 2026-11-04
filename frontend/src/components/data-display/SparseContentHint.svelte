@@ -18,7 +18,7 @@
 </script>
 
 <div
-	class="mx-auto mt-4 flex w-full max-w-md flex-wrap items-center gap-3 rounded-lg border border-border-default/50 bg-surface-primary px-4 py-3.5 shadow-xs"
+	class="mx-auto mt-4 flex w-full max-w-md flex-wrap items-center gap-3 rounded-lg bg-surface-island px-4 py-3.5 shadow-xs"
 >
 	<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default">
 		<Compass class="size-4" strokeWidth={1.75} aria-hidden="true" />

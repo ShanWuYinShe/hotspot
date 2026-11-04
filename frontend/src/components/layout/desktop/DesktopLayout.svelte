@@ -286,7 +286,7 @@
 				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
 					<div
 						data-desktop-dynamic-island
-					class="pointer-events-auto flex items-center gap-2 h-9 px-3 rounded-full bg-surface-primary/90 backdrop-blur-xl border border-border-default/50 shadow-raised-sm text-text-primary transition-all duration-snappy animate-in fade-in zoom-in-95 max-w-md min-w-0"
+					class="pointer-events-auto flex items-center gap-2 h-9 px-3 rounded-full bg-surface-primary/90 backdrop-blur-lg border border-border-default/50 shadow-raised-sm text-text-primary transition-all duration-snappy animate-in fade-in zoom-in-95 max-w-md min-w-0"
 					style="contain: layout paint;"
 				>
 					{#if headerIsland.onBack}

@@ -137,7 +137,6 @@
 			iconTone="accent"
 			title={`没有找到“${query}”`}
 			description={tabEmpty && hasResults ? '当前分类下没有结果，切换分类或换个关键词试试。' : '换个关键词再试试，或从下面的话题开始探索。'}
-			class="py-16"
 		>
 			{#snippet icon()}
 				<SearchIcon class="size-7" strokeWidth={1.5} />

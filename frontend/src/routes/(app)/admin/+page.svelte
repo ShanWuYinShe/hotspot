@@ -116,7 +116,7 @@
 
 <div class="flex w-full flex-col gap-6">
 	<!-- 概览卡：管理员身份行（安静）→ 发丝分隔 → KPI 数字行（母题 A：数字与秩序） -->
-	<section class="rounded-lg bg-surface-island p-5 shadow-xs" aria-label="平台概览">
+	<section class="rounded-lg bg-surface-island p-4 shadow-xs" aria-label="平台概览">
 		<div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
 			<div class="flex min-w-0 items-center gap-2">
 				<ShieldCheck class="size-4 shrink-0 text-accent-default" strokeWidth={1.75} aria-hidden="true" />

@@ -32,7 +32,8 @@
 	// 依据 NN/g「Sticky headers」：页头只有在不抢内容、chrome 占比小时才成立。
 	// 注：瞬间详情页已于同日改为「内容内极简工具行 + 画廊 hero」，本变体保留为通用沉浸页原语。
 	//
-	// variant="integrated"（2026-10-29，hub/列表页「内容内页头」）：无背景/边框/吸顶，
+	// variant="integrated"（2026-10-29，hub/列表页「内容内页头」）：桌面/平板无背景/边框/吸顶，
+	// 移动端（<600px）例外吸顶（画布 85% + blur，保留筛选入口），
 	// 标题 + 副标题（可含计数）+ 工具同一行，筛选 below 紧随其后；与正文同处一块画布，
 	// 消除大块页头/重复分区标题带来的割裂感。用于附近人/群组/瞬间、关系、举报、通知。
 
@@ -58,7 +59,7 @@
 		glass = false,
 		/**
 		 * floating：沉浸式页头——整行玻璃工具条（返回/标题/更多同一面板，吸顶）。
-		 * integrated：hub/列表页内容内页头——无背景/边框/吸顶，标题/副标题/工具一行，
+		 * integrated：hub/列表页内容内页头——桌面/平板无背景/边框/吸顶（移动端例外吸顶），标题/副标题/工具一行，
 		 * 筛选 below 紧随；与正文同一画布。
 		 */
 		variant = 'default',
@@ -263,7 +264,7 @@
 >
 	<ContentColumn {maxWidth} class={cn(headerPadding, contentClassName)}>
 		{#if integrated}
-			<!-- hub/列表页「内容内页头」：标题 + 副标题/计数 + 工具同一行；筛选紧随；无背景/边框/吸顶 -->
+			<!-- hub/列表页「内容内页头」：标题 + 副标题/计数 + 工具同一行；筛选紧随；桌面/平板无背景/边框/吸顶，移动端例外吸顶 -->
 			<div data-page-intro bind:this={islandAnchorEl} class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
 				<div
 					data-island-handoff={islandHandoffTrigger && islandShown ? 'true' : undefined}

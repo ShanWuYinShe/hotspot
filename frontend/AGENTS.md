@@ -202,7 +202,7 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
 
 - 普通页用 StandardPageLayout，分栏页用 SplitPageLayout；禁止自行拼装页头/滚动/横向 padding。
 - 权威样板页：src/routes/(app)/nearby/moments/+page.svelte。
-- **hub/列表页页头统一 `PageHeader variant="integrated"`**：无背景/边框/吸顶，标题+副标题/计数+工具同一行，筛选/操作 below 紧随（组件统一间距），正文直接开始；**禁止正文再重复页面标题/分区头**。适用 /nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；搜索页（sticky 搜索优先）、设置/表单、聊天分栏、品牌首页不套用。**/nearby 枢纽页是登记例外：使用默认 sticky 变体（与首页对齐，保留常驻搜索/地图工具）**。其余页面用默认变体（sticky）。
+- **hub/列表页页头统一 `PageHeader variant="integrated"`**：桌面/平板无背景/边框/吸顶（移动端例外吸顶，85% 画布底 + blur），标题+副标题/计数+工具同一行，筛选/操作 below 紧随（组件统一间距），正文直接开始；**禁止正文再重复页面标题/分区头**。适用 /nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；搜索页（sticky 搜索优先）、设置/表单、聊天分栏、品牌首页不套用。**/nearby 枢纽页是登记例外：使用默认 sticky 变体（与首页对齐，保留常驻搜索/地图工具）**。其余页面用默认变体（sticky）。
 - Tab 一律 TabBar；列表一律 ListContainer + ListItem；空/加载/失败/到底四态各司其职。
 - 页面纵向间距收敛到样板约定值，禁止散乱 py-* 值。
 

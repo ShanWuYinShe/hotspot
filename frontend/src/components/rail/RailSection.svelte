@@ -35,7 +35,7 @@
 	const containerClass = $derived.by(() => {
 		if (variant === 'bare') return 'flex flex-col';
 		if (variant === 'island') {
-			return 'rounded-lg bg-surface-primary/70 backdrop-blur-xs p-3.5 shadow-xs hover:shadow-raised-sm transition-all flex flex-col';
+			return 'rounded-lg bg-surface-island p-4 shadow-xs hover:shadow-raised-sm transition-all flex flex-col';
 		}
 		return 'surface-flat rounded-md p-4';
 	});

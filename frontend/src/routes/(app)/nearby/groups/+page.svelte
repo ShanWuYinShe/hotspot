@@ -7,6 +7,7 @@ import { formatCount } from '@/lib/utils';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { readLastLocation } from '@/lib/map-auto-locate';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -241,7 +242,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 				{/snippet}
 				{#snippet trailing()}
 					<!-- 搜索/地图是页面级工具，收敛在标题右侧（对齐鸿蒙 NearbyPage trailing 地图入口） -->
-					<div class="flex items-center gap-2.5">
+					<div class="flex items-center gap-2">
 						{#if !loading && !loadError && filtered.length}
 							<span class="flex items-center gap-1.5 text-xs tabular-nums text-text-secondary">
 								<span class="size-1.5 rounded-full bg-status-online"></span>
@@ -267,7 +268,8 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			<SkeletonFeed
 				variant="card"
 				count={8}
-				class="grid grid-cols-2 gap-4 lg:grid-cols-4"
+				cardClass="h-full"
+				class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))] [grid-auto-rows:clamp(12.1875rem,20vw,17.1875rem)]"
 				label="加载附近群组…"
 			/>
 		{:else if loadError}
@@ -313,7 +315,10 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 				{/if}
 			</div>
 			{#if visibleCount < filtered.length}
-				<div bind:this={sentinelEl} class="h-px w-full" aria-hidden="true"></div>
+				<!-- 与附近的人/瞬间页统一：无限滚动触发用可见 InlineLoading，别用隐形哨兵（同位置同类列表要同一加载暗示） -->
+				<div bind:this={sentinelEl} class="flex justify-center px-4 py-6" aria-hidden="true">
+					<InlineLoading label="加载更多…" />
+				</div>
 			{:else}
 				<ListEnd />
 			{/if}

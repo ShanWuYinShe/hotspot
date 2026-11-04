@@ -326,7 +326,7 @@
 <div class="flex h-full w-full p-3">
 	<div class="flex min-w-0 flex-1 overflow-hidden rounded-lg shadow-xs">
 		<!-- ══ LEFT PANEL — 与地图直接相连（零间距/方角），左缘圆角由外层卡片裁剪 ══ -->
-		<div class="flex w-85 shrink-0 flex-col overflow-hidden bg-surface-island">
+		<div class="flex w-72 shrink-0 flex-col overflow-hidden bg-surface-island xl:w-85">
 			<LocationDesktopPanel
 				bind:searchQuery
 				{searchResults}

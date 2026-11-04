@@ -45,7 +45,7 @@ describe('computeAdaptiveGrid', () => {
 		expect(m.centered).toBe(true);
 	});
 
-	it('手机 <640：2 列；单卡居中且宽度 = 半列（不放大）', () => {
+	it('手机 <600：2 列；单卡居中且宽度 = 半列（不放大）', () => {
 		const m = computeAdaptiveGrid({
 			width: 358,
 			viewportWidth: 390,

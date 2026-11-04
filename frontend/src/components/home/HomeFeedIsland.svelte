@@ -35,7 +35,7 @@
 
 <div
 	data-desktop-dynamic-island
-	class="pointer-events-auto flex h-9 min-w-0 max-w-md items-center gap-1.5 rounded-full border border-border-default/50 bg-surface-primary/90 px-2 text-text-primary shadow-raised-sm backdrop-blur-xl animate-in fade-in zoom-in-95"
+	class="pointer-events-auto flex h-9 min-w-0 max-w-md items-center gap-1.5 rounded-full border border-border-default/50 bg-surface-primary/90 px-2 text-text-primary shadow-raised-sm backdrop-blur-lg animate-in fade-in zoom-in-95"
 	style="contain: layout paint;"
 >
 	<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default" aria-hidden="true">

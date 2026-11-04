@@ -133,8 +133,8 @@
 			     右内距（给 rail 留呼吸），主列由 ContentColumn 自己给左右 gutter。 -->
 			<div
 				class={isConstrained
-					? 'mx-auto flex min-h-full w-full justify-center pr-[var(--cst-page-gutter)]'
-					: 'flex min-h-full w-full justify-between pr-[var(--cst-page-gutter)]'}
+					? 'mx-auto flex min-h-full w-full justify-center pr-0 xl:pr-[var(--cst-page-gutter)]'
+					: 'flex min-h-full w-full justify-between pr-0 xl:pr-[var(--cst-page-gutter)]'}
 				style={isConstrained
 					? `max-width:calc(${typeof contentMaxWidth === 'number' ? `${contentMaxWidth}px` : contentMaxWidth} + 21rem + var(--cst-context-rail-gap) + var(--cst-page-gutter));gap:var(--cst-context-rail-gap);`
 					: 'gap:var(--cst-context-rail-gap);'}
@@ -161,7 +161,10 @@
 						</div>
 					{/if}
 				</div>
-				<ContextRail attached class="w-84 min-w-84 shrink-0">{@render rail()}</ContextRail>
+				<!-- rail 宽度由 --cst-context-rail-width（clamp 18→21rem）提供，不再写死 w-84：
+				     1024–1279 的桌面主列会被 336px rail 压到 ~418px（比 768 平板还稀）。
+				     该区间直接收起 rail，主列独占宽度；≥1280 恢复分栏。 -->
+				<ContextRail attached class="max-xl:hidden shrink-0">{@render rail()}</ContextRail>
 			</div>
 		{/if}
 	{:else}

@@ -72,7 +72,6 @@
 		<!-- 搜索无结果与初始无群组区分语义 -->
 		<EmptyState
 			iconTone="accent"
-			class="py-16"
 			title="没有找到匹配的群组"
 			description="换个关键词试试，或者去附近群组发现新的小圈子。"
 		>

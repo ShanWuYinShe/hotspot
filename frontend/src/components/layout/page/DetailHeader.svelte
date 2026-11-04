@@ -147,7 +147,7 @@
 			     移动/平板端在页面内顶部优雅吸顶。 -->
 			<div
 				data-detail-header-island
-				class="pointer-events-auto mx-auto flex items-center justify-between gap-2 sm:gap-3 h-10 px-2.5 sm:px-3 rounded-full bg-surface-primary/90 backdrop-blur-xl border border-border-default/40 shadow-raised-md text-text-primary transition-all max-w-[92%] sm:max-w-xl animate-in fade-in zoom-in-95 duration-snappy lg:hidden"
+				class="pointer-events-auto mx-auto flex items-center justify-between gap-2 sm:gap-3 h-10 px-2.5 sm:px-3 rounded-full bg-surface-primary/90 backdrop-blur-lg border border-border-default/40 shadow-raised-md text-text-primary transition-all max-w-[92%] sm:max-w-xl animate-in fade-in zoom-in-95 duration-snappy lg:hidden"
 				style="contain: layout paint; transform: translateZ(0);"
 			>
 				<!-- 左侧：返回按钮 -->
