@@ -6,7 +6,7 @@
 	import Badge from '@/components/data-display/Badge.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
-	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import InfiniteSentinel from '@/components/list/InfiniteSentinel.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
@@ -484,8 +484,13 @@
 			{/each}
 		</div>
 		{#if hasMoreComments}
+			<!-- 滚到评论区底部自动加载更多评论，不再需要手动点按钮 -->
 			<div class="mt-4">
-				<LoadMoreButton label="加载更多评论" loading={loadingMoreComments} onLoad={onLoadMoreComments} />
+				<InfiniteSentinel
+					hasMore={hasMoreComments}
+					loading={loadingMoreComments}
+					onLoadMore={onLoadMoreComments}
+				/>
 			</div>
 		{:else if comments.length > 0}
 			<div class="mt-4">

@@ -2,9 +2,9 @@
 	import Button from '@/components/ui/button.svelte';
 
 	// LoadMoreButton — 手动「加载更多」按钮的唯一实现（components/list）。
-	// 内容型列表默认走无限滚动哨兵；需要显式分页控制成本的场景（管理后台
-	// 六模块）用它，不再各页手写 pill 按钮。label 由调用方组装
-	//（「加载更多」或「加载更多 (N)」）。
+	// 内容型列表（feed/评论/通知/成员/举报等）默认走 InfiniteSentinel 滚到底自动续载；
+	// 只有需要显式分页控制成本的场景（管理后台六模块/统计）用它，不再各页手写 pill 按钮。
+	// label 由调用方组装（「加载更多」或「加载更多 (N)」）。
 	// 形态走 ui/button 的 secondary + flat（无变体投影）+ shape="pill"（圆角由原语形状档表达，
 	// 调用方不再传 rounded-*）+ className 只留布局/字色/字形：
 	// h-auto（覆盖尺寸档高度）、px-5 py-2、text-sm、次级文字色（hover 转正文色）——与原手写样式逐类等价。

@@ -353,7 +353,7 @@
 		}
 	};
 
-	// 加载更多评论（cursor 分页）：与 notify 页同款 LoadMoreButton 交互
+	// 加载更多评论（cursor 分页）：评论区底部 InfiniteSentinel 滚到即自动续载
 	const loadMoreComments = async () => {
 		if (commentsNextCursor === null || commentsLoadingMore) return;
 		commentsLoadingMore = true;

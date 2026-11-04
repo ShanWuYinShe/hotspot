@@ -9,7 +9,7 @@
 	import type { MomentItem } from '@/api/types';
 	import { searchMoments, fetchFollowingMoments } from '@/api';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
-	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import InfiniteSentinel from '@/components/list/InfiniteSentinel.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -372,9 +372,13 @@
 			{/if}
 
 			{#if hasMore}
-				<div class="mt-5 flex justify-center px-4">
-					<LoadMoreButton loading={loadingMore} onLoad={() => void currentPager.loadMore()} />
-				</div>
+				<!-- 滚到底自动续载（首屏不足一屏时自动补载），不再需要手动点「加载更多」 -->
+				<InfiniteSentinel
+					hasMore={hasMore}
+					loading={loadingMore}
+					error={Boolean(currentError)}
+					onLoadMore={() => void currentPager.loadMore()}
+				/>
 			{:else}
 				<ListEnd />
 			{/if}

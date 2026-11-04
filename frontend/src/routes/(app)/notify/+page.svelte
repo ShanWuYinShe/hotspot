@@ -17,7 +17,7 @@ import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 import { contentFade } from '@/lib/motion';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
-import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+import InfiniteSentinel from '@/components/list/InfiniteSentinel.svelte';
 import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import NotifyRow from './shared/NotifyRow.svelte';
@@ -55,7 +55,7 @@ const FILTER_TABS = [
 	保持旧行为——按钮照常显示，点击走后端诚实报错）。 */
 	let invitesLoaded = false;
 	let filter = $state('all');
-	// 分页（审查 M5）：长期积累的通知此前一次全量拉取；改 cursor 分页 + 手动加载更多。
+	// 分页（审查 M5）：长期积累的通知此前一次全量拉取；改 cursor 分页，滚到底由 InfiniteSentinel 自动续载。
 	const NOTIFY_PAGE_SIZE = 30;
 	let nextCursor = $state<string | null>(null);
 	let loadingMore = $state(false);
@@ -452,7 +452,13 @@ const markSingleRead = (id: string) => {
 					<!-- 已读列表不带底距（其后接 ListEnd 时由 ListEnd 自带 py 收尾）：仅当它是上方紧邻块时补 24，
 					     其余情况由上一区块 mb-6 提供，避免 mt+mb 双叠 -->
 					<div class={readGroup.length > 0 ? 'mt-6' : ''}>
-						<LoadMoreButton label="加载更早通知" loading={loadingMore} onLoad={() => void loadMoreNotifs()} />
+						<!-- 滚到底自动加载更早的通知；失败时停止自动重试，由下方 LoadError 提供手动重试 -->
+						<InfiniteSentinel
+							hasMore={nextCursor !== null}
+							loading={loadingMore}
+							error={Boolean(loadError)}
+							onLoadMore={() => void loadMoreNotifs()}
+						/>
 					</div>
 				{:else if filtered.length > 0 && !loadError && nextCursor === null}
 					<!-- 分页耗尽契约（frontend/AGENTS.md）：到底必须渲染 ListEnd -->

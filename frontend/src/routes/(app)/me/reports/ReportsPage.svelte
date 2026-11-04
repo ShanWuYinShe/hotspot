@@ -10,7 +10,7 @@
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import InfiniteSentinel from '@/components/list/InfiniteSentinel.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
@@ -254,7 +254,13 @@
 		</ListContainer>
 		{#if nextCursor}
 			<div class="py-2">
-				<LoadMoreButton loading={loadingMore} onLoad={() => void loadMore()} />
+				<!-- 滚到底自动续载；失败时停止自动重试，避免故障期刷穿接口 -->
+				<InfiniteSentinel
+					hasMore={Boolean(nextCursor)}
+					loading={loadingMore}
+					error={Boolean(loadError)}
+					onLoadMore={() => void loadMore()}
+				/>
 			</div>
 		{:else}
 			<ListEnd />

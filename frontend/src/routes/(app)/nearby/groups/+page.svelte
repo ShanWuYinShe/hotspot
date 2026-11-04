@@ -8,6 +8,7 @@ import { formatCount } from '@/lib/utils';
 	import { readLastLocation } from '@/lib/map-auto-locate';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import InfiniteSentinel from '@/components/list/InfiniteSentinel.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -35,7 +36,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	let activeCategory = $state('全部');
 	let groups = $state<Group[]>([]);
 	let visibleCount = $state(12);
-	let sentinelEl = $state<HTMLElement | null>(null);
+
 	let loading = $state(true);
 	// 本机浏览锚点（localStorage 同步可读）优先于服务端默认位置。
 	const savedAnchor = readLastLocation();
@@ -108,24 +109,14 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	);
 	const visibleGroups = $derived(filtered.slice(0, visibleCount));
 
-	// 无限滚动哨兵（对齐 nearby/people、nearby/moments）：每次 +8，避免首屏一次渲染
+	// 无限滚动续载（对齐 nearby/people、nearby/moments）：每次 +8，避免首屏一次渲染
 	// 24 条；到底后由 ListEnd 收尾。此前 visibleCount 固定 12 且无加载入口，
 	// 返回 13–24 条时被静默截断，用户无法判断「已到底」还是「加载卡住」。
-	$effect(() => {
+	const hasMoreVisible = $derived(visibleCount < filtered.length);
+	function revealMore() {
 		if (visibleCount >= filtered.length) return;
-		const el = sentinelEl;
-		if (!el) return;
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (entries.some((e) => e.isIntersecting)) {
-					visibleCount = Math.min(visibleCount + 8, filtered.length);
-				}
-			},
-			{ root: null, rootMargin: '600px 0px 0px 0px' }
-		);
-		observer.observe(el);
-		return () => observer.disconnect();
-	});
+		visibleCount = Math.min(visibleCount + 8, filtered.length);
+	}
 
 	const bspLayouts = $derived(
 		computeBspLayoutSequence(
@@ -324,9 +315,10 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 					/>
 				{/if}
 			</div>
-			{#if visibleCount < filtered.length}
-				<!-- 与附近的人/瞬间页统一：无限滚动触发用可见 InlineLoading，别用隐形哨兵（同位置同类列表要同一加载暗示） -->
-				<div bind:this={sentinelEl} class="flex justify-center px-4 py-6" aria-hidden="true">
+			{#if hasMoreVisible}
+				<!-- 与附近的人/瞬间页统一：滚到底自动续载 + 可见 InlineLoading 作加载暗示 -->
+				<div class="flex justify-center px-4 py-6">
+					<InfiniteSentinel hasMore={hasMoreVisible} loading={false} onLoadMore={revealMore} />
 					<InlineLoading label="加载更多…" />
 				</div>
 			{:else}

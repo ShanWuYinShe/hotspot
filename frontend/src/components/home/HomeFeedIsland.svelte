@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeftRight, CornerUpLeft, Sparkles, Users } from '@lucide/svelte';
+	import { ArrowLeftRight, Sparkles, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { homeFeed } from '@/stores/home-feed.svelte';
@@ -59,13 +59,12 @@
 		</span>
 	</button>
 
-	<!-- hover/focus 舒展提示：胶囊可点回顶（纯视觉，不在无障碍树内） -->
+	<!-- hover/focus 舒展：揭示精确阅读进度（与「点击标题回信息流顶部」互补，不重复同一功能） -->
 	<span
-		class="pointer-events-none ml-auto hidden max-w-0 shrink-0 items-center gap-1 overflow-hidden rounded-full bg-accent-soft px-2 py-0.5 text-xxs font-medium text-accent-default opacity-0 transition-[max-width,opacity] duration-standard ease-standard group-hover/island:max-w-32 group-hover/island:opacity-100 group-focus-within/island:max-w-32 group-focus-within/island:opacity-100 sm:flex"
+		class="pointer-events-none ml-auto hidden max-w-0 shrink-0 items-center justify-end overflow-hidden text-xxs font-medium tabular-nums text-accent-default opacity-0 transition-[max-width,opacity] duration-standard ease-standard group-hover/island:max-w-12 group-hover/island:opacity-100 group-focus-within/island:max-w-12 group-focus-within/island:opacity-100 sm:flex"
 		aria-hidden="true"
 	>
-		<CornerUpLeft class="size-3" strokeWidth={2} />
-		回到顶部
+		{Math.round(safeProgress)}%
 	</span>
 
 	<div class="h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>

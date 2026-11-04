@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, CornerUpLeft } from '@lucide/svelte';
+	import { ArrowLeft } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
@@ -53,8 +53,6 @@
 		author ? `查看 ${author.name} 的资料` : `回到「${title || '页面标题'}」`
 	);
 	const safeProgress = $derived(Math.min(100, Math.max(0, Number.isFinite(progress) ? progress : 0)));
-	/** hover/focus 揭示的动作提示（纯视觉，动作与标题按钮一致；不进无障碍树） */
-	const hoverHint = $derived(author ? '查看主页' : '回到顶部');
 </script>
 
 <div
@@ -99,13 +97,12 @@
 		</button>
 	</div>
 
-	<!-- hover/focus 舒展提示：胶囊在鼠标悬停/键盘进入时可点（纯视觉，点击由标题按钮承担） -->
+	<!-- hover/focus 舒展：揭示精确阅读进度（与「点击标题回锚点」互补，不重复同一功能） -->
 	<span
-		class="pointer-events-none ml-auto hidden max-w-0 shrink-0 items-center gap-1 overflow-hidden rounded-full bg-accent-soft px-2 py-0.5 text-xxs font-medium text-accent-default opacity-0 transition-[max-width,opacity] duration-standard ease-standard group-hover/island:max-w-32 group-hover/island:opacity-100 group-focus-within/island:max-w-32 group-focus-within/island:opacity-100 sm:flex"
+		class="pointer-events-none ml-auto hidden max-w-0 shrink-0 items-center justify-end overflow-hidden text-xxs font-medium tabular-nums text-accent-default opacity-0 transition-[max-width,opacity] duration-standard ease-standard group-hover/island:max-w-12 group-hover/island:opacity-100 group-focus-within/island:max-w-12 group-focus-within/island:opacity-100 sm:flex"
 		aria-hidden="true"
 	>
-		<CornerUpLeft class="size-3" strokeWidth={2} />
-		{hoverHint}
+		{Math.round(safeProgress)}%
 	</span>
 
 	{#if trailing}

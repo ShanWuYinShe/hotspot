@@ -2,7 +2,7 @@
 	import { UserPlus, MoreHorizontal } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import OnlineDot from '@/components/data-display/OnlineDot.svelte';
-	import LoadMoreButton from '@/components/list/LoadMoreButton.svelte';
+	import InfiniteSentinel from '@/components/list/InfiniteSentinel.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
@@ -16,7 +16,7 @@
 
 	// MembersList —— 成员列表 + （管理者）添加成员入口；行点击进资料，
 	// 管理按钮交由父级 MemberActionSheet 处理。
-	// 分页：大群走 cursor 分页，尾部 LoadMoreButton 由父级 group-data 驱动
+	// 分页：大群走 cursor 分页，尾部 InfiniteSentinel 滚到底自动续载（由父级 group-data 驱动）
 	//（审查 M5：此前一次全量拉取渲染）。
 	//
 	// R13：标题行改用全站 SectionHead（标题 + 计数 + 右侧动作），行语言统一为
@@ -113,7 +113,8 @@
 	</ListContainer>
 	{#if hasMore && onLoadMore}
 		<div class="mt-4">
-			<LoadMoreButton label="加载更多成员" loading={loadingMore} onLoad={onLoadMore} />
+			<!-- 大群成员列表滚到底自动续载，不再需要手动点按钮 -->
+			<InfiniteSentinel hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} />
 		</div>
 	{:else if onLoadMore}
 		<!-- 四态契约「到底」：无收尾提示时用户无法区分「已到底」与「加载卡住」

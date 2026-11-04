@@ -15,6 +15,7 @@
 	import Button from '@/components/ui/button.svelte';
 import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import InfiniteSentinel from '@/components/list/InfiniteSentinel.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import UserCard, { type NearbyUser } from '@/components/data-display/UserCard.svelte';
@@ -49,7 +50,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	let tagFilter = $state('全部');
 	let followedIds = $state<Set<string>>(new Set());
 	let visibleCount = $state(12);
-	let sentinelEl = $state<HTMLElement | null>(null);
+
 	let allUsers = $state<NearbyUser[]>([]);
 	let loading = $state(true);
 	// 本机浏览锚点（localStorage 同步可读）优先于服务端默认位置。锚点为响应式：
@@ -194,26 +195,16 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	// in-flight 去重（防连点双翻转，响应式供按钮 pending 态）；业务失败（code≠0）显式判 code 回滚
 	let followPending = $state(new Set<string>());
 
-	// 无限滚动哨兵（内容型列表统一自动加载，对齐 nearby/moments；切片逻辑保留，
+	// 无限滚动续载（内容型列表统一自动加载，对齐 nearby/moments；切片逻辑保留，
 	// 每次 +8；过滤/排序变化导致 list 缩短时哨兵不再出现，visibleCount 由切片钳制）。
 	// 切片推进同步回进度 store（返回保持已展开长度）。
-	$effect(() => {
+	const hasMoreVisible = $derived(visibleCount < list.length);
+	function revealMore() {
 		if (visibleCount >= list.length) return;
-		const el = sentinelEl;
-		if (!el) return;
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (entries.some((e) => e.isIntersecting)) {
-					visibleCount = Math.min(visibleCount + 8, list.length);
-					const saved = getPeopleProgress();
-					if (saved) setPeopleProgress({ ...saved, visibleCount });
-				}
-			},
-			{ root: null, rootMargin: '600px 0px 0px 0px' }
-		);
-		observer.observe(el);
-		return () => observer.disconnect();
-	});
+		visibleCount = Math.min(visibleCount + 8, list.length);
+		const saved = getPeopleProgress();
+		if (saved) setPeopleProgress({ ...saved, visibleCount });
+	}
 
 	const toggleFollow = async (id: string) => {
 		if (followPending.has(id)) return;
@@ -378,8 +369,10 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 						{/if}
 					</div>
 
-					{#if visibleCount < list.length}
-						<div bind:this={sentinelEl} class="flex justify-center px-4 py-6" aria-hidden="true">
+					{#if hasMoreVisible}
+						<div class="flex justify-center px-4 py-6">
+							<!-- 滚到底自动续载（首屏不足一屏时自动补载）；可见 InlineLoading 保留为加载暗示 -->
+							<InfiniteSentinel hasMore={hasMoreVisible} loading={false} onLoadMore={revealMore} />
 							<InlineLoading label="加载更多…" />
 						</div>
 					{:else if visibleCount >= list.length}

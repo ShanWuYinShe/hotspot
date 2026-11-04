@@ -11,6 +11,7 @@
 	import SparseContentHint from '@/components/data-display/SparseContentHint.svelte';
 	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
+	import InfiniteSentinel from '@/components/list/InfiniteSentinel.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -232,21 +233,6 @@
 			{ device }
 		)
 	);
-	let sentinelEl = $state<HTMLElement | null>(null);
-
-	$effect(() => {
-		if (!sentinelEl) return;
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (entries[0]?.isIntersecting && feedHasMore && !loadingMore) {
-					void handleLoadMore();
-				}
-			},
-			{ rootMargin: '300px' }
-		);
-		observer.observe(sentinelEl);
-		return () => observer.disconnect();
-	});
 </script>
 <svelte:head>
 	<!-- 术语统一：全站用「瞬间」，「附近动态」是旧名；页头/导航/空态/加载态保持一致 -->
@@ -380,7 +366,13 @@
 			{/if}
 
 			{#if feedHasMore}
-				<div bind:this={sentinelEl} class="flex justify-center px-4 py-6" aria-hidden="true">
+				<div class="flex justify-center px-4 py-6">
+					<!-- 滚到底自动续载（首屏不足一屏时自动补载）；可见的 InlineLoading 保留为加载暗示 -->
+					<InfiniteSentinel
+						hasMore={feedHasMore}
+						loading={loadingMore}
+						onLoadMore={() => void handleLoadMore()}
+					/>
 					<InlineLoading label="加载更多…" />
 				</div>
 			{:else if showListEnd}
