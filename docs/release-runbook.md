@@ -136,7 +136,7 @@ docker restart hotspot-nginx-1
 ./scripts/rollback-production.sh --previous
 
 # 2) 从被修复的版本拉热修分支（worktree 内开发，禁止在主工作树改代码）
-git worktree add -b hotfix/<缺陷名> .worktrees/hotfix-<缺陷名> v1.1.10
+git worktree add -b hotfix/<缺陷名> .agents/worktrees/hotfix-<缺陷名> v1.1.10
 
 # 3) 最小修复 + 按 $1 门禁验证（改动小不等于可以跳过验证）
 

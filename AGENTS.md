@@ -97,7 +97,7 @@ worktree 内调试同样通过 Docker Compose，与主工作树自动隔离。
 显式项目名与端口重映射、合并后重启主容器、清理顺序）。要点速记：
 
 - 不要指定 -p：compose 项目名默认取当前目录名（主工作树 hotspot，worktree 该目录名），自动隔离；显式 -p hotspot 会接管主实例。
-- worktree 目录名恰为 hotspot（如 .worktrees/<id>/hotspot）时项目名冲突，必须显式 -p 加端口重映射，否则会接管主实例容器。
+- worktree 目录名恰为 hotspot（目录名取分支名末段，如分支 `feat/hotspot` 落在 `.agents/worktrees/feat/hotspot`）时项目名冲突，必须显式 -p 加端口重映射，否则会接管主实例容器。
 - 合并后若主环境容器在运行，必须主动重启受影响容器，确保最新代码生效。
 
 > 细节、命令与排查见 skill；本处只保留必须记住的约束。

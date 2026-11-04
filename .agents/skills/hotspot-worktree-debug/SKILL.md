@@ -17,7 +17,7 @@ worktree 内调试同样通过 Docker Compose，与主工作树自动隔离。�
 
 
 自动隔离依赖「worktree 目录名 ≠ `hotspot`」。若 worktree 目录名恰为 `hotspot`
-（如 `.worktrees/<任务id>/hotspot`），compose 项目名会与主工作树同名，
+（目录名取分支名末段，如分支 `feat/hotspot` → `.agents/worktrees/feat/hotspot`），compose 项目名会与主工作树同名，
 直接 `up` 会**接管主实例**：容器标签/挂载指向主工作树，worktree 改动不会生效。
 此时必须显式指定独立项目名并重映射宿主端口，两套环境可同时运行：
 
@@ -76,7 +76,7 @@ worktree 合并完成后，先清理其 compose 资源，再删除 worktree：
 docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
 
 # 2. 删除 worktree 与分支（git 侧流程见全局 Git 准则）
-git worktree remove .worktrees/<分支名>
+git worktree remove .agents/worktrees/<分支名>
 git branch -d <分支名>
 ```
 
@@ -109,7 +109,7 @@ git branch -d <分支名>
 若报 EPERM，把报错目录加进插件配置（见 `sandbox-adaptation` skill）。
 
 - 旧 worktree 里若残留 `.workwork/` 下的 Go 模组缓存，删除目录被挡时：
-  `chmod -R u+w .worktrees/<分支名> && rm -rf .worktrees/<分支名>`
+  `chmod -R u+w .agents/worktrees/<分支名> && rm -rf .agents/worktrees/<分支名>`
   （Go 模块缓存文件 0444 只读；`git worktree list` 已注销、仅剩目录时无需再跑 `git worktree remove`）。
 
 
@@ -153,7 +153,7 @@ hvigorw 构建（含 `.husky/pre-commit` 钩子触发的 harmonyapp 门禁）直
 dev 的 backend 容器把**主工作树**目录挂进容器（`docker inspect hotspot-backend-1` 可见
 `/Users/<me>/work/hotspot/backend-go -> /src`）+ `air` 热重载。因此：
 
-- 在 `.worktrees/<id>/backend-go` 里改了代码、`docker compose up -d --build backend` 甚至重启容器，
+- 在 `.agents/worktrees/<分支名>/backend-go` 里改了代码、`docker compose up -d --build backend` 甚至重启容器，
   **容器里跑的仍是主工作树的旧代码**——接口行为完全不变，很容易误判"改动没生效/逻辑写错"；
 - 正确顺序：**先把后端改动合并进 `main`**（`git merge --ff-only`），主环境容器热重载后
   再 `docker compose restart backend nginx` 并验证（重建容器后 nginx 上游 DNS 可能过期，502 时一并重启 nginx）；
