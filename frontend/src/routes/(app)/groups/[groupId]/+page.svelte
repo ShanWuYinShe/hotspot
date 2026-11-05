@@ -263,7 +263,7 @@ import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 
 <!-- R13：内容统一「满宽 + page gutter」（去掉 max-w-6xl/xl/2xl 收窄档，避免 1024 满宽、1440 收窄的
      gutter 不一致）；移动端无固定底栏，保留 32px 底部净空即可（评审 P2-19）。 -->
-<StandardPageLayout contentClassName="animate-fade-in {platform.platform === 'mobile' ? 'pb-8' : 'pb-6'}">
+<StandardPageLayout contentClassName={platform.platform === 'mobile' ? 'pb-8' : 'pb-6'}>
 	{#snippet header()}
 		<DetailHeader
 			category="社群"

@@ -1,8 +1,11 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
 	import { Check, CircleAlert, Info, X } from '@lucide/svelte';
+	import { flip } from 'svelte/animate';
+	import { cubicOut } from 'svelte/easing';
+	import { fly } from 'svelte/transition';
 	import { toast, dismissToast, type ToastKind } from '@/stores/toast.svelte';
-	import { toastExit } from '@/lib/motion';
+	import { MOTION, motionDuration, toastExit } from '@/lib/motion';
 
 	// ToastViewport — 全局 toast 容器（顶部居中堆叠）。
 	// 容器 aria-live="polite"：新增 toast 由屏幕阅读器播报；每条带关闭按钮
@@ -50,9 +53,14 @@
 >
 		{#each toast.items as item (item.id)}
 			{@const cfg = CONFIGS[item.kind]}
+			<!-- 进出同源（P1-3）：入场/出场都用 Svelte fly + 同一 MOTION.exit token，不再入场走
+			     tw-animate 150ms/ease、出场走 toastExit 两套曲线；flip 让中间一条消失时其余补间，
+			     不再瞬时上跳。reduced 下 duration 均折算为 0（直接到终态）。 -->
 			<div
-				class="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border {cfg.borderClass} bg-surface-primary/95 p-3.5 shadow-raised-lg backdrop-blur-md animate-in fade-in-0 slide-in-from-top-2"
+				class="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border {cfg.borderClass} bg-surface-primary/95 p-3.5 shadow-raised-lg backdrop-blur-md"
 				role="status"
+				animate:flip={{ duration: motionDuration(MOTION.exit) }}
+				in:fly={{ y: -8, duration: motionDuration(MOTION.exit), easing: cubicOut }}
 				out:toastExit
 			>
 				<div class="flex size-7 shrink-0 items-center justify-center rounded-full {cfg.badgeBg} ring-1 {cfg.badgeRing}">

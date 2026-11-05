@@ -118,6 +118,33 @@ export function popOn(node: HTMLElement, trigger: number) {
 }
 
 /**
+ * 计数变化 pop action（点赞/评论等数值反馈，视觉走 .count-pop：snappy + bounce）：
+ * 与 popOn 同源——只在点击处理器里递增 trigger 才播，初始渲染/数据同步不播；reduced 显式跳过。
+ * 用法：<span use:countPop={likePop}>{n}</span>
+ */
+export function countPop(node: HTMLElement, trigger: number) {
+	let prev = trigger;
+	const onEnd = () => node.classList.remove('count-pop');
+	const play = () => {
+		if (prefersReducedMotion() || motionDuration(MOTION.pop) === 0) return;
+		node.classList.remove('count-pop');
+		void node.offsetWidth; // 强制 reflow，保证连续点击可重启动画
+		node.classList.add('count-pop');
+	};
+	node.addEventListener('animationend', onEnd);
+	return {
+		update(next: number) {
+			if (next !== prev) play();
+			prev = next;
+		},
+		destroy() {
+			node.removeEventListener('animationend', onEnd);
+			node.classList.remove('count-pop');
+		}
+	};
+}
+
+/**
  * 骨架→内容 fade action：仅「曾经显示过骨架(true) → 数据到达(false)」时播 150ms fade；
  * 缓存命中/无骨架直出（初始就是 false）不播。reduced 显式跳过。
  */

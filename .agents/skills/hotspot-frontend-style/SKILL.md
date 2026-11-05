@@ -62,7 +62,7 @@ utilities.css 的全局规则会给**无 `bg-*` 且无 `hover:*` 类**的 `<butt
 - 禁止双重边框：card-hover 只抬投影不画外环；带边框的卡片 hover 用 `hover:border-accent-default`；surface-flat 的 hover 描边仅对可交互元素生效。
 - 图片缩放必须由外层 `overflow:hidden` + 圆角裁剪，图片任何像素不得溢出卡片。
 - **禁止渲染空 src 图片**：`<img src="">` 会被浏览器解析为当前页面 URL 而显示破图。无图/空 URL 一律走占位：大图/整卡用主题 fallback 底（`--cst-surface-card-fallback` 渐变；加载中叠加 `.media-placeholder` + `.media-placeholder--pulse` 限时脉冲，加载完成叠加 `img-fade` 渐显），头像用 `Avatar`（`components/shared/Avatar.svelte`，首字母兜底），列表小缩略图内联 `{#if url}` 分支。
-- **计数变化反馈**：点赞/评论等瞬时数值变化用 `count-pop` 类 + `{#key 值}` 重建元素触发弹跳（utilities.css cst-count-pop，snappy + bounce，自动遵循 reduced-motion）。
+- **计数变化反馈**：点赞/评论等瞬时数值变化用 `lib/motion.ts` 的 `countPop` action（`<span use:countPop={likePop}>{n}</span>`）在点击处理器里递增 nonce 触发 `.count-pop` 弹跳（utilities.css cst-count-pop，snappy + bounce）。**不要用静态 `.count-pop` + `{#key 值}`**：元素挂载即播，首屏所有卡片数字会集体弹跳（初始数据同步/首帧不播），且 reduced-motion 需由 action 显式跳过。
 - **大图查看统一入口**：任何「点击查看大图」交互一律复用 `components/overlays/ImageViewer`（bits-ui Dialog 底座：Esc/外点关闭、左右键/滑动切图、单击图片切换放大（以点击位置为锚）与滚轮连续缩放、放大后拖拽平移、缩略图条），禁止各页自建 lightbox。入口仅限动态详情页（单图封面/多图网格）；列表卡片与画廊一律整卡跳详情，不在卡片上直接开大图。
 - **地图筛选菜单统一**：`routes/(app)/map/shared/MapFilterMenu.svelte` 是桌面/移动唯一筛选实现（Popover 外点/Escape 关闭、徽章、至少一项约束、「全部显示」重置）；地图空白点击一律经 `MapCanvas onMapTap`（内部区分拖拽，拖动不误触），禁止父级用原生 onclick 判定。
 - **键盘导航**：列表/搜索页可加 ↑↓ 焦点移动（落到真实链接/按钮、focus-ring 可见），Enter 原生打开、Esc 清空/返回；不引入 combobox/aria-activedescendant；Tab 顺序不变；⌘K（Mac）/ Ctrl+K 全局唤出搜索（监听在 `(app)/+layout.svelte`、提示在搜索页输入框尾部，两处必须同时存在）。新增交互后必须跑 axe（0 serious/critical）。

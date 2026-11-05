@@ -51,6 +51,7 @@
 	import { ROUTES } from '@/lib/routes';
 	import DetailHeader from '@/components/layout/page/DetailHeader.svelte';
 	import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
+	import { contentFade } from '@/lib/motion';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
 
@@ -591,7 +592,7 @@
 	contentMaxWidth="var(--cst-content-detail)"
 	edgeToEdgeMobile={true}
 	overlayHeaderMobile={!loading && moment.images.length > 0}
-	contentClassName="animate-fade-in flex flex-col flex-1 min-h-full pt-0 sm:pt-1 pb-0 sm:pb-6"
+	contentClassName="flex flex-col flex-1 min-h-full pt-0 sm:pt-1 pb-0 sm:pb-6"
 >
 	{#snippet header()}
 		<DetailHeader
@@ -616,83 +617,85 @@
 	</p>
 
 	<!-- 内容（移动端通栏满宽，桌面居中软岛） -->
-	{#if loading}
-		<!-- 详情首屏骨架屏：作者行 → 正文 → 媒体 → 操作条 → 评论区，与 MomentPostBody
-		     的真实卡片同构（同外壳/同纵向节奏），做到「骨架→内容零位移」；
-		     评论区用 decorative 骨架避免屏读器重复播报 -->
-		<div
-			class="mx-auto w-full max-w-4xl flex-1 flex flex-col"
-			role="status"
-			aria-busy="true"
-			aria-label="加载动态…"
-			data-skeleton-root
-		>
-			<div class="overflow-hidden rounded-none sm:rounded-lg bg-surface-island shadow-none sm:shadow-xs flex-1 flex flex-col">
-				<!-- 画廊 hero 首屏：与真实页一致（图片 → 作者/正文 → 动作条 → 评论区），零位移 -->
-				<Skeleton class="aspect-[4/3] w-full" />
-				<div class="p-4 sm:p-5 md:p-7">
-					<div class="flex items-center gap-3 pb-4">
-						<Skeleton class="size-11 shrink-0 rounded-full" />
-						<div class="flex min-w-0 flex-1 flex-col gap-1.5">
-							<Skeleton class="w-32 rounded-sm" style="height: 0.875rem;" />
-							<Skeleton class="w-24 rounded-sm" style="height: 0.6875rem;" />
+	<div class="flex min-h-full flex-1 flex-col" use:contentFade={loading}>
+		{#if loading}
+			<!-- 详情首屏骨架屏：作者行 → 正文 → 媒体 → 操作条 → 评论区，与 MomentPostBody
+			     的真实卡片同构（同外壳/同纵向节奏），做到「骨架→内容零位移」；
+			     评论区用 decorative 骨架避免屏读器重复播报 -->
+			<div
+				class="mx-auto w-full max-w-4xl flex-1 flex flex-col"
+				role="status"
+				aria-busy="true"
+				aria-label="加载动态…"
+				data-skeleton-root
+			>
+				<div class="overflow-hidden rounded-none sm:rounded-lg bg-surface-island shadow-none sm:shadow-xs flex-1 flex flex-col">
+					<!-- 画廊 hero 首屏：与真实页一致（图片 → 作者/正文 → 动作条 → 评论区），零位移 -->
+					<Skeleton class="aspect-[4/3] w-full" />
+					<div class="p-4 sm:p-5 md:p-7">
+						<div class="flex items-center gap-3 pb-4">
+							<Skeleton class="size-11 shrink-0 rounded-full" />
+							<div class="flex min-w-0 flex-1 flex-col gap-1.5">
+								<Skeleton class="w-32 rounded-sm" style="height: 0.875rem;" />
+								<Skeleton class="w-24 rounded-sm" style="height: 0.6875rem;" />
+							</div>
 						</div>
-					</div>
-					<div class="flex flex-col gap-2 pb-4">
-						<Skeleton class="w-full rounded-sm" style="height: 0.875rem;" />
-						<Skeleton class="w-11/12 rounded-sm" style="height: 0.875rem;" />
-						<Skeleton class="w-3/4 rounded-sm" style="height: 0.875rem;" />
-					</div>
-					<div class="flex items-center gap-6 py-4">
-						<Skeleton class="h-4 w-16 rounded-sm" />
-						<Skeleton class="h-4 w-12 rounded-sm" />
-					</div>
-					<div class="border-t border-border-subtle/40 pt-6">
-						<Skeleton class="mb-3 h-4 w-24 rounded-sm" />
-						<SkeletonList rows={3} leading={36} decorative />
+						<div class="flex flex-col gap-2 pb-4">
+							<Skeleton class="w-full rounded-sm" style="height: 0.875rem;" />
+							<Skeleton class="w-11/12 rounded-sm" style="height: 0.875rem;" />
+							<Skeleton class="w-3/4 rounded-sm" style="height: 0.875rem;" />
+						</div>
+						<div class="flex items-center gap-6 py-4">
+							<Skeleton class="h-4 w-16 rounded-sm" />
+							<Skeleton class="h-4 w-12 rounded-sm" />
+						</div>
+						<div class="border-t border-border-subtle/40 pt-6">
+							<Skeleton class="mb-3 h-4 w-24 rounded-sm" />
+							<SkeletonList rows={3} leading={36} decorative />
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
-	{:else if loadError}
-		<LoadError message={loadError} onRetry={() => reloadKey++} />
-	{:else if !moment.id}
-		<EmptyState
-			spotlight
-			iconTone="accent"
-			title="动态不存在"
-			description="这条动态可能已被删除，或你没有查看权限。"
-		>
-			{#snippet icon()}
-				<EyeOff class="size-7" strokeWidth={1.5} />
-			{/snippet}
-			{#snippet action()}
-				<Button variant="soft" size="md" class="mt-1" onclick={() => smartBack()}>返回上一页</Button>
-			{/snippet}
-		</EmptyState>
-	{:else}
-		<MomentPostBody
-			{moment}
-			comments={apiComments}
-			{commentCount}
-			hasMoreComments={commentsNextCursor !== null}
-			loadingMoreComments={commentsLoadingMore}
-			{liked}
-			{saved}
-			{newCommentId}
-			{newReplyId}
-			onToggleLike={() => void toggleLike()}
-			onToggleSave={() => void toggleSave()}
-			onCommentClick={focusComments}
-			onReply={(user, commentId) => startReply(user, commentId)}
-			onExpandReplies={(commentId) => void expandReplies(commentId)}
-			onToggleCommentLike={(id) => void toggleCommentLike(id)}
-			onReportComment={(id) => (reportTarget = { target_type: 'comment', target_id: id })}
-			onDeleteComment={(id) => (commentDeleteTarget = id)}
-			onLoadMoreComments={() => void loadMoreComments()}
-			commentComposer={platform.platform === 'mobile' ? undefined : commentComposer}
-		/>
-	{/if}
+		{:else if loadError}
+			<LoadError message={loadError} onRetry={() => reloadKey++} />
+		{:else if !moment.id}
+			<EmptyState
+				spotlight
+				iconTone="accent"
+				title="动态不存在"
+				description="这条动态可能已被删除，或你没有查看权限。"
+			>
+				{#snippet icon()}
+					<EyeOff class="size-7" strokeWidth={1.5} />
+				{/snippet}
+				{#snippet action()}
+					<Button variant="soft" size="md" class="mt-1" onclick={() => smartBack()}>返回上一页</Button>
+				{/snippet}
+			</EmptyState>
+		{:else}
+			<MomentPostBody
+				{moment}
+				comments={apiComments}
+				{commentCount}
+				hasMoreComments={commentsNextCursor !== null}
+				loadingMoreComments={commentsLoadingMore}
+				{liked}
+				{saved}
+				{newCommentId}
+				{newReplyId}
+				onToggleLike={() => void toggleLike()}
+				onToggleSave={() => void toggleSave()}
+				onCommentClick={focusComments}
+				onReply={(user, commentId) => startReply(user, commentId)}
+				onExpandReplies={(commentId) => void expandReplies(commentId)}
+				onToggleCommentLike={(id) => void toggleCommentLike(id)}
+				onReportComment={(id) => (reportTarget = { target_type: 'comment', target_id: id })}
+				onDeleteComment={(id) => (commentDeleteTarget = id)}
+				onLoadMoreComments={() => void loadMoreComments()}
+				commentComposer={platform.platform === 'mobile' ? undefined : commentComposer}
+			/>
+		{/if}
+	</div>
 
 	{#snippet footer()}
 		<!-- 移动端：通栏贴底底栏，消除浮动胶囊与内容穿插漏光 -->

@@ -48,10 +48,15 @@
 	let dragging = $state(false);
 	let snap = $state<SnapState>('mid');
 	let dragState = $state({ active: false, startY: 0, startH: SNAP_MID, velY: 0, prevY: 0, prevT: 0 });
+	// 列表底部净空用的吸附高度快照 & 贴底确认 dock 的实测高度：
+	// 只在吸附/实测变化时更新，拖拽中不逐帧改 padding（避免布局逐帧动画）。
+	let padSheetH = $state(SNAP_MID);
+	let dockH = $state(0);
 
 	function snapTo(target: SnapState) {
 		snap = target;
 		sheetH = SNAP_HEIGHTS[target];
+		padSheetH = SNAP_HEIGHTS[target];
 	}
 
 	function resolveSnap(h: number, vel: number): SnapState {
@@ -356,17 +361,57 @@
 	const isLandscape = $derived(platform.orientation === 'landscape');
 
 	// Sheet 外壳：无描边、只靠 sheet/modal 投影与地图分层（控件边界允许，但不叠描边+投影）。
-	// 横屏是悬浮侧卡（投影 modal），竖屏是底部抽屉（投影 sheet），
-	// 拖拽中禁用高度过渡以跟手，松手后回弹到吸附档。
-	const sheetStyle = $derived.by(() => {
-		if (isLandscape) {
-			return 'position:absolute;top:60px;bottom:14px;left:14px;width:340px;max-width:calc(50vw - 28px);z-index:20;border-radius:var(--radius-sheet);box-shadow:var(--cst-elevation-modal);display:flex;flex-direction:column;overflow:hidden;';
-		}
-		return `position:absolute;bottom:0;left:0;right:0;max-width:640px;margin:0 auto;height:${sheetH}px;z-index:20;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;box-shadow:var(--cst-elevation-sheet);display:flex;flex-direction:column;overflow:hidden;${dragging ? '' : 'transition:height var(--cst-motion-spring) var(--cst-ease-bounce);'}`;
+	// 横屏是悬浮侧卡（投影 modal）；竖屏是底部抽屉（投影 sheet），动效改为合成器位移：
+	// - 面板高度固定为最大档 SNAP_MAX（只在挂载时确定一次），展开/收起只改
+	//   transform: translateY —— 不再逐帧改 height 触发重排/重绘（P0-3）；
+	// - 面板相对 root 顶部对齐，可见部分 = 顶部 sheetH，超出视口的下半段由贴底 dock 覆盖；
+	// - 确认 CTA 由独立 dock 常驻视口底部（面板位移时 dock 不动），语义与观感不变。
+	// 拖拽/手势仍直接写 sheetH（transform 每帧插值走合成器），松手回弹到吸附档。
+	const sheetRootStyle = $derived.by(() => {
+		if (isLandscape) return 'position:absolute;inset:0;z-index:20;pointer-events:none;';
+		return `position:absolute;bottom:0;left:0;right:0;max-width:640px;margin:0 auto;height:${SNAP_MAX}px;z-index:20;pointer-events:none;`;
 	});
 
-	const rightCtrlBottom = $derived(isLandscape ? 20 : sheetH + 10);
+	const sheetStyle = $derived.by(() => {
+		if (isLandscape) {
+			return 'position:absolute;top:60px;bottom:14px;left:14px;width:340px;max-width:calc(50vw - 28px);z-index:20;border-radius:var(--radius-sheet);box-shadow:var(--cst-elevation-modal);display:flex;flex-direction:column;overflow:hidden;pointer-events:auto;';
+		}
+		const shift = SNAP_MAX - sheetH;
+		return `position:absolute;inset:0;border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;box-shadow:var(--cst-elevation-sheet);display:flex;flex-direction:column;overflow:hidden;pointer-events:auto;transform:translateY(${shift}px);${dragging ? '' : 'transition:transform var(--cst-motion-spring) var(--cst-ease-bounce);'}`;
+	});
+
+	// 列表滚动容器：底部留出「面板下移量 + dock 高度」净空，滚到底时最后一项正好停在
+	// dock 上沿（dock 覆盖区域不承载可读内容）。下移量取吸附快照，拖拽中不逐帧改 padding。
+	const scrollStyle = $derived.by(() => {
+		if (isLandscape) return 'flex:1;min-height:0;overflow-y:auto;padding-bottom:12px;';
+		const pad = Math.max(0, SNAP_MAX - padSheetH) + dockH + 12;
+		return `flex:1;min-height:0;overflow-y:auto;padding-bottom:${pad}px;${snap === 'min' ? 'display:none;' : ''}`;
+	});
+
+	// 右列控件：竖屏用与面板同一条 transform 位移（贴着抽屉上沿），不再动画 bottom。
+	const rightCtrlStyle = $derived.by(() => {
+		if (isLandscape) {
+			return 'position:absolute;right:12px;bottom:20px;z-index:35;display:flex;flex-direction:column;gap:8px;align-items:center;';
+		}
+		const shift = SNAP_MAX - sheetH;
+		return `position:absolute;right:12px;bottom:${SNAP_MAX + 10}px;z-index:35;display:flex;flex-direction:column;gap:8px;align-items:center;transform:translateY(${shift}px);${dragging ? '' : 'transition:transform var(--cst-motion-spring) var(--cst-ease-bounce);'}`;
+	});
 </script>
+
+<!-- 底部确认条（横屏留在面板内 / 竖屏由贴底 dock 承载，两处同一份标记） -->
+{#snippet confirmBar()}
+	<AnchorConfirmButton state={anchorFeedback.state} label={ctaLabel} onclick={handleConfirm} />
+	{#if !anchorPoint}
+		<!-- 收起(min)时隐藏说明：dock 高度直接决定面板可见高度，min 档留给把手+搜索栏 -->
+		<p
+			class="mt-1.5 text-center text-xxs text-text-secondary {!isLandscape && snap === 'min'
+				? 'hidden'
+				: ''}"
+		>
+			{anchorPurposeHint(false)}
+		</p>
+	{/if}
+{/snippet}
 
 <div class="bg-surface-page" style="position:relative;width:100%;height:100%;overflow:hidden;">
 	<h1 class="sr-only">地图</h1>
@@ -430,7 +475,7 @@
 		</div>
 
 	<!-- ══ RIGHT CONTROLS — bottom tracks sheet ══ -->
-	<div style="position:absolute;right:12px;bottom:{rightCtrlBottom}px;z-index:35;display:flex;flex-direction:column;gap:8px;align-items:center;transition:bottom var(--cst-motion-spring) var(--cst-ease-bounce);">
+	<div style={rightCtrlStyle}>
 		<!-- Zoom in/out（画布拖拽/双指外滚轮亦可缩放），分段控件视觉契约见 MapZoomControls -->
 		<MapZoomControls
 			bind:zoom={mapZoom}
@@ -458,6 +503,9 @@
 	</div>
 
 	<!-- ══ BOTTOM SHEET (draggable in portrait, floating side panel in landscape) ══ -->
+	<!-- 竖屏：固定高度面板 + transform 位移（合成器），确认 CTA 由贴底 dock 承载。
+	     横屏：root 铺满地图区（pointer-events:none），侧卡仍是原来的绝对定位面板。 -->
+	<div style={sheetRootStyle}>
 	<div class="bg-surface-primary" style={sheetStyle}>
 		{#if !isLandscape}
 		<!-- Drag handle -->
@@ -502,11 +550,7 @@
 		</div>
 
 		<!-- Scrollable content — 收起(min)时隐藏而非卸载（保留滚动位置/输入状态；横屏恒定展示） -->
-		<div
-			style="flex:1;min-height:0;overflow-y:auto;{!isLandscape && snap === 'min' ? 'display:none;' : ''}"
-			class="no-scrollbar pb-3"
-			aria-hidden={!isLandscape && snap === 'min'}
-		>
+		<div style={scrollStyle} class="no-scrollbar" aria-hidden={!isLandscape && snap === 'min'}>
 			<!-- 浏览锚点卡片：与桌面端同组件，明确「已保存锚点 / 地图中心」并支持恢复默认 -->
 			<div class="px-4 pb-3">
 				<BrowseAnchorCard
@@ -530,16 +574,28 @@
 			/>
 		</div>
 
-		<!-- Confirm button — 粘底操作条（安全区净空由 padding-bottom 承担） -->
+		{#if isLandscape}
+			<!-- 横屏侧卡：确认条留在面板内（面板不做位移，无需 dock） -->
+			<div
+				class="shrink-0 px-4 pt-2"
+				style="padding-bottom:max(18px, env(safe-area-inset-bottom, 18px));"
+			>
+				{@render confirmBar()}
+			</div>
+		{/if}
+	</div>
+
+	{#if !isLandscape}
+		<!-- 贴底确认 dock：不随面板 transform 移动，收起到任意档位 CTA 都常驻视口底部；
+		     dock 高度实测后参与列表底部净空（scrollStyle），滚到底时最后一项停在其上沿。 -->
 		<div
-			class="shrink-0 px-4 pt-2"
+			class="pointer-events-auto absolute inset-x-0 bottom-0 z-[1] bg-surface-primary px-4 pt-2"
 			style="padding-bottom:max(18px, env(safe-area-inset-bottom, 18px));"
+			bind:clientHeight={dockH}
 		>
-			<AnchorConfirmButton state={anchorFeedback.state} label={ctaLabel} onclick={handleConfirm} />
-			{#if !anchorPoint}
-				<p class="mt-1.5 text-center text-xxs text-text-secondary">{anchorPurposeHint(false)}</p>
-			{/if}
+			{@render confirmBar()}
 		</div>
+	{/if}
 	</div>
 </div>
 

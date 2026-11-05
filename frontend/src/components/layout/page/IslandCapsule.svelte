@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { islandMorph, type IslandRect } from '@/lib/island-morph';
+	import { islandMorphIn, islandMorphOut, type IslandRect } from '@/lib/island-morph';
 
 	// IslandCapsule — 桌面端顶栏中央「灵动岛」的唯一形态实现（docs/design-system.md §22）。
 	//
@@ -15,7 +15,8 @@
 	//     左右同时外扩、内容整排位移，既抖又廉价；
 	//   - 同一读数只出现一处：阅读进度只有右侧进度环表达，不再在 hover 里重复百分比；
 	//   - 点击标题回页面锚点（语义由调用方 onTitleClick 决定）；
-	//   - 进场/退场走 islandMorph：从调用方给出的锚点矩形收进/吐出顶栏（信息交接的连续感）；
+	//   - 进场/退场走 islandMorphIn / islandMorphOut：从调用方给出的锚点矩形收进/吐出顶栏
+	//     （信息交接的连续感；入口显影→归位→显字，出口文字先散、壳飞回锚点）；
 	//   - 键盘：标题按钮有 aria-label 与 focus-ring，阻止冒泡的圆形按钮各自独立。
 	let {
 		ariaLabel = '页面锚点与快捷操作',
@@ -60,34 +61,43 @@
 	role="group"
 	aria-label={ariaLabel}
 	style="contain: layout paint;"
-	transition:islandMorph={{ getSource: getMorphSource }}
-	class="group/island pointer-events-auto relative flex h-9 min-w-0 max-w-md items-center gap-1.5 rounded-full border border-border-default/50 bg-surface-primary/90 px-2 text-text-primary shadow-raised-sm backdrop-blur-lg transition-[background-color,border-color,box-shadow,transform] duration-standard ease-standard hover:-translate-y-px hover:border-accent-border hover:bg-surface-primary hover:shadow-raised-md focus-within:border-accent-border focus-within:bg-surface-primary focus-within:shadow-raised-md {className}"
+	in:islandMorphIn={{ getSource: getMorphSource }}
+	out:islandMorphOut={{ getSource: getMorphSource }}
+	class="group/island pointer-events-auto relative flex h-9 min-w-0 max-w-md items-center rounded-full border border-border-default/50 bg-surface-primary/90 px-2 text-text-primary shadow-raised-sm transition-[background-color,border-color,box-shadow,transform] duration-standard ease-standard hover:-translate-y-px hover:border-accent-border hover:bg-surface-primary hover:shadow-raised-md focus-within:border-accent-border focus-within:bg-surface-primary focus-within:shadow-raised-md {className}"
 >
-	{#if leading}
-		<span class="flex shrink-0 items-center">{@render leading()}</span>
-	{/if}
-
-	<!-- 中间：标题 + 一行 meta（点击回锚点；hover 由 hover-btn 给整块淡底，明确可点区域） -->
-	<button
-		type="button"
-		class="hover-btn focus-ring flex min-w-0 items-center rounded-full px-1.5 py-0.5 text-left active:scale-[0.98]"
-		onclick={() => onTitleClick?.()}
-		aria-label={titleAria ?? title}
+	<!-- 内容层：交接飞行期间由 --cst-island-content（0→1，见 lib/island-morph.ts）单独显影。
+	     整颗胶囊 scale 时正文是缩放态，先隐后显才不会有「糊字掠过顶栏」的廉价感；
+	     飞行结束后 Svelte 清掉内联变量，默认值 1 让内容恢复正常可读。 -->
+	<div
+		class="flex h-full min-w-0 items-center gap-1.5"
+		style="opacity:var(--cst-island-content, 1);"
 	>
-		<span class="flex min-w-0 flex-col justify-center pb-0.5">
-			<span class="truncate text-xs font-semibold leading-tight text-text-primary">{title}</span>
-			{#if meta}
-				<span class="truncate text-xxs leading-tight text-text-secondary">{meta}</span>
-			{/if}
-		</span>
-	</button>
+		{#if leading}
+			<span class="flex shrink-0 items-center">{@render leading()}</span>
+		{/if}
 
-	{#if trailing}
-		<div class="h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
-		<div class="flex shrink-0 items-center gap-0.5">
-			{@render trailing()}
-		</div>
-	{/if}
+		<!-- 中间：标题 + 一行 meta（点击回锚点；hover 由 hover-btn 给整块淡底，明确可点区域） -->
+		<button
+			type="button"
+			class="hover-btn focus-ring flex min-w-0 items-center rounded-full px-1.5 py-0.5 text-left active:scale-[0.98]"
+			onclick={() => onTitleClick?.()}
+			aria-label={titleAria ?? title}
+		>
+			<span class="flex min-w-0 flex-col justify-center pb-0.5">
+				<span class="truncate text-xs font-semibold leading-tight text-text-primary">{title}</span>
+				{#if meta}
+					<span class="truncate text-xxs leading-tight text-text-secondary">{meta}</span>
+				{/if}
+			</span>
+		</button>
+
+		{#if trailing}
+			<div class="h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
+			<div class="flex shrink-0 items-center gap-0.5">
+				{@render trailing()}
+			</div>
+		{/if}
+	</div>
 
 	<!-- 阅读进度：胶囊内底部 2px accent 细线（0–100%），纯展示、不参与交互。
 	     同一读数只保留这一处表达——hover 里不再重复百分比；也不用圆环：

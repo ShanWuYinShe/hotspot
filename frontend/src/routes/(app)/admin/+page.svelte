@@ -12,6 +12,7 @@
 	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { formatDateTime } from '@/lib/utils';
+	import { contentFade } from '@/lib/motion';
 	import AdminModuleCard from './shared/AdminModuleCard.svelte';
 	import AdminRecentAudit from './shared/AdminRecentAudit.svelte';
 
@@ -131,25 +132,27 @@
 			{/if}
 		</div>
 
-		{#if kpiLoading}
-			<div
-				class="mt-4 flex items-stretch gap-6 border-t border-border-subtle pt-4"
-				role="status"
-				aria-busy="true"
-				aria-label="加载平台指标…"
-			>
-				{#each Array(isMobile ? 4 : kpiItems.length || 4) as _, i (i)}
-					<div class="flex min-w-0 flex-1 flex-col gap-2">
-						<Skeleton class="rounded-sm" style="height: 1.5rem; width: 44%;" />
-						<Skeleton class="rounded-sm" style="height: 0.6875rem; width: 30%;" />
-					</div>
-				{/each}
-			</div>
-		{:else if kpiItems.length > 0}
-			<div class="mt-4 border-t border-border-subtle pt-4">
-				<MetricRow variant="strip" items={kpiItems} />
-			</div>
-		{/if}
+		<div use:contentFade={kpiLoading}>
+			{#if kpiLoading}
+				<div
+					class="mt-4 flex items-stretch gap-6 border-t border-border-subtle pt-4"
+					role="status"
+					aria-busy="true"
+					aria-label="加载平台指标…"
+				>
+					{#each Array(isMobile ? 4 : kpiItems.length || 4) as _, i (i)}
+						<div class="flex min-w-0 flex-1 flex-col gap-2">
+							<Skeleton class="rounded-sm" style="height: 1.5rem; width: 44%;" />
+							<Skeleton class="rounded-sm" style="height: 0.6875rem; width: 30%;" />
+						</div>
+					{/each}
+				</div>
+			{:else if kpiItems.length > 0}
+				<div class="mt-4 border-t border-border-subtle pt-4">
+					<MetricRow variant="strip" items={kpiItems} />
+				</div>
+			{/if}
+		</div>
 	</section>
 
 	<!-- 模块入口：移动单列 / 平板 2 列 / 桌面 3–5 列（避免 2K 下模块卡被拉成 700px+ 巨条）。

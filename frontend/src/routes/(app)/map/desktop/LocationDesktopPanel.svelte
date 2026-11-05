@@ -131,7 +131,7 @@
 	class="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-4"
 	style="mask-image:linear-gradient(to bottom, black calc(100% - 24px), transparent 100%);-webkit-mask-image:linear-gradient(to bottom, black calc(100% - 24px), transparent 100%);"
 >
-	<div class="animate-fade-in flex flex-col gap-3">
+	<div class="flex flex-col gap-3">
 		<!-- 浏览锚点卡片：明确区分「已保存锚点」与「地图中心」，并支持恢复默认。
 		     旧版此处只显示地图中心的名字（标签却叫「浏览位置」），用户无法知道锚点是否存在、如何设置。 -->
 		<div class="px-4">

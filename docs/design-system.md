@@ -1251,11 +1251,24 @@ eager 图各 2 张且像素 diff 0 回归。
    （`HomeFeedIsland.svelte` + `stores/home-feed.svelte.ts`）：分段器滚出视口后岛浮现（当前信息流 + 语境 + 切换），
    回到顶部/切换后交还分段器；移动/平板仍在页内品牌头下。首页不注册 `headerIsland`，进度条同样消费。
 
-**入场/退场交接动效（`lib/island-morph.ts`）**：显隐切换那一刻按值抓取锚点矩形（标题 h1 / 首页分段器 /
-详情页左侧工具行），岛以「容器变换」从该位置收进/吐出顶栏（位移 + 长宽比缩放，300ms，
-`transform`/`opacity` 合成器属性，reduced-motion 立即到终态）；同时页头锚点内容淡出并上移 2px、
-页头 trailing 淡出（保留占位、不瞬时卸载）。这样「滚走的 UI」与「出现的岛」是同一次连续运动，
-而不是两段互不相干的闪现。无锚点矩形（如直接刷新后）退化为 160ms 淡入。
+**入场/退场交接动效（`lib/island-morph.ts`）**：显隐切换那一刻按值抓取锚点矩形（页头标题取
+**文字**矩形 = Range 包围盒，不是块级 h1 的整列宽度；首页分段器；详情页左侧工具行），岛以
+「容器变换」从该位置收进/吐出顶栏（中心对齐 + 长宽比缩放，起跳帧与锚点严格同框；只对极端长宽比做
+宽松保护）。
+
+- **入场 340ms，sineInOut（慢起—加速—缓落）**，三段式：①显影（sqrt 曲线，前 1/3 凝实）②归位
+  （位移/尺寸均匀分布在整段时长）③显字（55%–95% 内层 `--cst-island-content` 淡入）。**禁止
+  cubicOut**：300ms 的 cubicOut 头 3 帧就走完一半位移，肉眼读成「闪一下再慢慢收尾」；整胶囊 scale
+  期间正文是缩放态，先隐后显才不会有「糊字掠过顶栏」的廉价感。
+- **退场 300ms（Svelte `out` 的 t 从 1→0）**：文字先散（离场前 25%），壳随后一路飞回锚点并淡出，
+  回程末尾正好落在标题位置；与页头淡入错峰（回岛时页头 `delay-75` 再淡入），看起来是
+  「胶囊把标题放回原位」。
+- 页头侧：吸顶页头入岛时**整条作为一个整体 150ms 淡出**（`islandBandHidden` + `inert`，保留高度防
+  CLS），子元素不再叠第二层淡出——两层透明度相乘会让标题先于整条消失、留下空壳页头；
+  `.page-header-scroll` 的 transition 列表必须包含 `opacity`（该类特异性高于 `transition-opacity`
+  工具类，漏了就是 1 帧瞬跳）。
+- 全程只动 `transform`/`opacity`（合成器属性，胶囊 `contain: layout paint`）→ 不触发布局；
+  reduced-motion 立即到终态；无锚点矩形（如直接刷新后）退化为 160ms 淡入。
 
 **岛内交互（统一契约）**
 
@@ -1286,8 +1299,10 @@ eager 图各 2 张且像素 diff 0 回归。
   交接来源矩形；`setProgress` 与 token 无关，首页岛同样消费；阅读进度由唯一滚动 owner `RoutedContentViewport` passive + rAF 上报）。
 - 入口：`PageHeader` 的 `island`（默认 true）/ `islandMeta`（缺省 subtitle）/ `islandTrailing`；
   `DetailHeader` 走同一 store 契约；页面无 PageHeader（首页）用 `HomeFeedIsland` + `homeFeed.islandVisible`。
-- 视觉：h-9 胶囊、`bg-surface-primary/90 + backdrop-blur-lg + border + shadow-raised-sm`；
-  入场/退场走 `lib/island-morph.ts` 的锚点容器变换（300ms，`transform`/`opacity`），reduced-motion 立即；
+- 视觉：h-9 胶囊、`bg-surface-primary/90 + border + shadow-raised-sm`；**不挂 backdrop-blur**——岛固定
+  在 52px 顶栏内、背后是静态画布，模糊没有可观察效果，却会在缩放飞行中逐帧重算背景模糊（纯性能损耗）；
+  入场/退场走 `lib/island-morph.ts` 的锚点容器变换（入场 340ms / 退场 300ms，`transform`/`opacity`，
+  reduced-motion 立即）；
   hover/focus 只过渡颜色 / 投影 / 1px 位移（宽度全程不变，不触发重排）。
 - 无障碍：`role="group"` + `aria-label`；岛内文字不重复播报（标题按钮有 aria-label，h1 仍在 DOM/landmark）；
   不抢焦点；带返回的页头入岛后返回动作移到岛 leading，页头标题/返回同步淡出（同一动作不出现两份）。

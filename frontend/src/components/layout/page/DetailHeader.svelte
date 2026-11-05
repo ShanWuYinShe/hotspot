@@ -147,117 +147,126 @@
 	)}
 >
 	<ContentColumn {maxWidth} class={contentClassName}>
-		{#if scrolled}
-			<!-- ══ 方案 A：居中灵动胶囊岛（Unified Dynamic Island Capsule） ══
-			     滚动离开首屏后，以精致的居中胶囊岛浮现：将返回、作者微名片与操作按钮
-			     收敛为一颗有机整体，半透毛玻璃融入内容，绝不对图面造成生硬横断。
-			     桌面端（≥1024px）收敛至全局顶部 Chrome 灵动岛，正文视口彻底释放不被遮挡；
-			     移动/平板端在页面内顶部优雅吸顶。 -->
-			<div
-				data-detail-header-island
-				class="pointer-events-auto mx-auto flex items-center justify-between gap-2 sm:gap-3 h-10 px-2.5 sm:px-3 rounded-full bg-surface-primary/90 backdrop-blur-lg border border-border-default/40 shadow-raised-md text-text-primary transition-all max-w-[92%] sm:max-w-xl animate-in fade-in zoom-in-95 duration-snappy lg:hidden"
-				style="contain: layout paint; transform: translateZ(0);"
-			>
-				<!-- 左侧：返回按钮 -->
-				<ActionIconButton
-					icon={ArrowLeft}
-					label={backLabel}
-					onClick={onBack}
-					variant="ghost"
-					tone="muted"
-					size={32}
-					class="shrink-0"
-				/>
-
-				<div class="h-4 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
-
-				<!-- 中间：作者微名片 / 详情标题 -->
+			<!-- 两态交叉淡出（不再用 {#if} 硬切）：初始工具行与收敛态胶囊挂在同一行高容器里，
+			     滚动过阈值时工具行淡出、胶囊淡入，桌面端由顶栏灵动岛从工具行位置收进去——
+			     三者同一条时间轴，才没有「工具行瞬间消失、胶囊凭空出现」的断层。 -->
+			<div class="relative h-10">
+				<!-- ══ 初始态：两侧角落悬浮透亮光斑胶囊（返回 + 桌面实体面包屑 / 操作区）══ -->
 				<div
-					data-detail-header-center
-					class="flex min-w-0 flex-1 items-center justify-center overflow-hidden"
+					data-detail-header-anchor
+					aria-hidden={scrolled ? 'true' : undefined}
+					inert={scrolled}
+					class="absolute inset-0 flex items-center justify-between gap-2 transition-[opacity,transform] duration-rapid ease-standard {scrolled
+						? 'pointer-events-none -translate-y-0.5 opacity-0'
+						: ''}"
 				>
-					{#if author}
-						<button
-							type="button"
-							class="hover-btn focus-ring flex min-w-0 max-w-full items-center gap-2 rounded-full px-2 py-0.5 text-left"
-							onclick={() => onAuthorClick?.()}
-							aria-label={`查看 ${author.name} 的资料`}
-						>
-							<Avatar src={author.avatar} name={author.name} size={22} class="shrink-0" />
-							<div class="flex min-w-0 flex-col justify-center">
-								<span class="truncate text-xs font-semibold text-text-primary leading-tight">
-									{author.name}
-								</span>
-								{#if author.location || author.time}
-									<span class="truncate text-xxs text-text-secondary leading-tight">
-										{[author.location, author.time].filter(Boolean).join(' · ')}
-									</span>
+					<!-- 左侧：返回按键 + 桌面实体面包屑 -->
+					<div
+						data-detail-header-left
+						class="pointer-events-auto flex items-center transition-[opacity,transform] duration-snappy rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md"
+					>
+						<ActionIconButton
+							icon={ArrowLeft}
+							label={backLabel}
+							onClick={onBack}
+							variant="ghost"
+							tone="current"
+							size={36}
+							class="shrink-0"
+						/>
+
+						{#if (category || entityName)}
+							<div
+								data-breadcrumb
+								class="hidden sm:flex items-center gap-1.5 pl-0.5 pr-3 text-xs font-medium text-text-secondary animate-in fade-in duration-snappy"
+							>
+								{#if category}
+									<span>{category}</span>
+									{#if entityName}
+										<span class="opacity-subtle">/</span>
+									{/if}
+								{/if}
+								{#if entityName}
+									<span class="max-w-[12.5rem] truncate text-text-primary font-semibold">{entityName}</span>
 								{/if}
 							</div>
-						</button>
+						{/if}
+					</div>
+
+					<!-- 右侧：操作区（分享 / 更多等） -->
+					{#if trailing}
+						<div
+							data-detail-header-right
+							class="pointer-events-auto flex items-center gap-1 transition-[opacity,transform] duration-snappy rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md"
+						>
+							{@render trailing()}
+						</div>
 					{:else}
-						<span class="truncate text-xs font-semibold text-text-primary px-1">
-							{entityName || category || '详情'}
-						</span>
+						<span class="size-9 shrink-0" aria-hidden="true"></span>
 					{/if}
 				</div>
 
-				{#if trailing}
-					<div class="h-4 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
-					<!-- 右侧：操作区（分享 / 更多 / 互动等） -->
-					<div data-detail-header-right class="flex items-center gap-0.5 sm:gap-1 shrink-0">
-						{@render trailing()}
-					</div>
-				{/if}
-			</div>
-		{:else}
-			<!-- ══ 顶部初始态：两侧角落悬浮透亮光斑胶囊 ══ -->
-			<div class="flex items-center justify-between gap-2 h-9 sm:h-10">
-				<!-- 左侧：返回按键 + 桌面实体面包屑 -->
+				<!-- ══ 收敛态：居中灵动胶囊（移动/平板在页面内吸顶；桌面端由顶栏岛接手，lg:hidden）══
+				     仅在滚动过阈值后挂载（移动端入场走短促 fade+zoom；桌面端不渲染，避免与顶栏岛重复）。 -->
+				{#if scrolled}
 				<div
-					data-detail-header-left
-					class="pointer-events-auto flex items-center transition-all duration-snappy rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md"
+					data-detail-header-island
+					class="pointer-events-auto absolute inset-0 mx-auto flex h-full items-center justify-between gap-2 sm:gap-3 rounded-full border border-border-default/40 bg-surface-primary/90 px-2.5 text-text-primary shadow-raised-md animate-in fade-in zoom-in-95 duration-snappy max-w-[92%] sm:max-w-xl lg:hidden"
+					style="contain: layout paint;"
 				>
+					<!-- 左侧：返回按钮 -->
 					<ActionIconButton
 						icon={ArrowLeft}
 						label={backLabel}
 						onClick={onBack}
 						variant="ghost"
-						tone="current"
-						size={36}
+						tone="muted"
+						size={32}
 						class="shrink-0"
 					/>
 
-					{#if (category || entityName)}
-						<div
-							data-breadcrumb
-							class="hidden sm:flex items-center gap-1.5 pl-0.5 pr-3 text-xs font-medium text-text-secondary animate-in fade-in duration-snappy"
-						>
-							{#if category}
-								<span>{category}</span>
-								{#if entityName}
-									<span class="opacity-subtle">/</span>
-								{/if}
-							{/if}
-							{#if entityName}
-								<span class="max-w-[12.5rem] truncate text-text-primary font-semibold">{entityName}</span>
-							{/if}
+					<div class="h-4 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
+
+					<!-- 中间：作者微名片 / 详情标题 -->
+					<div
+						data-detail-header-center
+						class="flex min-w-0 flex-1 items-center justify-center overflow-hidden"
+					>
+						{#if author}
+							<button
+								type="button"
+								class="hover-btn focus-ring flex min-w-0 max-w-full items-center gap-2 rounded-full px-2 py-0.5 text-left"
+								onclick={() => onAuthorClick?.()}
+								aria-label="查看 {author.name} 的资料"
+							>
+								<Avatar src={author.avatar} name={author.name} size={22} class="shrink-0" />
+								<div class="flex min-w-0 flex-col justify-center">
+									<span class="truncate text-xs font-semibold text-text-primary leading-tight">
+										{author.name}
+									</span>
+									{#if author.location || author.time}
+										<span class="truncate text-xxs text-text-secondary leading-tight">
+											{[author.location, author.time].filter(Boolean).join(' · ')}
+										</span>
+									{/if}
+								</div>
+							</button>
+						{:else}
+							<span class="truncate text-xs font-semibold text-text-primary px-1">
+								{entityName || category || '详情'}
+							</span>
+						{/if}
+					</div>
+
+					{#if trailing}
+						<div class="h-4 w-px bg-border-default/40 shrink-0" aria-hidden="true"></div>
+						<!-- 右侧：操作区（分享 / 更多 / 互动等） -->
+						<div data-detail-header-right class="flex items-center gap-0.5 sm:gap-1 shrink-0">
+							{@render trailing()}
 						</div>
 					{/if}
 				</div>
-
-				<!-- 右侧：操作区（分享 / 更多等） -->
-				{#if trailing}
-					<div
-						data-detail-header-right
-						class="pointer-events-auto flex items-center gap-1 transition-all duration-snappy rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md"
-					>
-						{@render trailing()}
-					</div>
-				{:else}
-					<span class="size-9 shrink-0" aria-hidden="true"></span>
 				{/if}
 			</div>
-		{/if}
-	</ContentColumn>
+		</ContentColumn>
 </header>

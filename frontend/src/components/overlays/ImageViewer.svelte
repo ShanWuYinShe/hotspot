@@ -209,9 +209,9 @@
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
 	<Dialog.Portal>
-		<Dialog.Overlay class="fixed inset-0 z-[var(--cst-z-overlay)] bg-surface-scrim backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
+		<Dialog.Overlay class="fixed inset-0 z-[var(--cst-z-overlay)] bg-surface-scrim backdrop-blur-sm duration-standard ease-standard data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
 		<Dialog.Content
-			class="fixed inset-0 z-[var(--cst-z-modal)] flex touch-none select-none flex-col focus-ring data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+			class="fixed inset-0 z-[var(--cst-z-modal)] flex touch-none select-none flex-col focus-ring duration-standard ease-standard data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
 			aria-label="图片查看器"
 		>
 			<!-- 顶栏：页码 + 关闭 -->

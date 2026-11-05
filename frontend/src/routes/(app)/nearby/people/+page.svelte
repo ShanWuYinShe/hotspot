@@ -21,6 +21,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import UserCard, { type NearbyUser } from '@/components/data-display/UserCard.svelte';
 	import { searchUsers, follow , netError } from '@/api';
 	import { ROUTES } from '@/lib/routes';
+	import { contentFade } from '@/lib/motion';
 	import { formatDistance } from '@/lib/utils';
 	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
 	import { showToast } from '@/stores/toast.svelte';
@@ -242,7 +243,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 </svelte:head>
 
 
-	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
+	<StandardPageLayout contentClassName="pt-4 pb-6">
 		{#snippet header()}
 		<PageHeader
 			variant="integrated"
@@ -291,7 +292,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	{/snippet}
 
 		<div>
-			<div class="min-w-0">
+			<div class="min-w-0" use:contentFade={loading}>
 				{#if loadError}
 					<LoadError message={loadError} onRetry={() => { clearPeopleProgress(); reloadKey++; }} />
 				{:else if loading}

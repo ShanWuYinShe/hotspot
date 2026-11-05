@@ -26,6 +26,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import { searchGroups, joinGroup, leaveGroup, cancelGroupApplication, listMyApplications, netError } from '@/api';
 	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
+	import { contentFade } from '@/lib/motion';
 
 	// 附近群组（/nearby/groups）：独立路由页。分类过滤 + 精选卡 + 网格 / 桌面 BSP 卡片墙；
 	// 按名字找群走全局搜索（header 右上角搜索入口）。
@@ -228,7 +229,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 
 
 
-	<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
+	<StandardPageLayout contentClassName="pt-4 pb-6">
 		{#snippet header()}
 			<PageHeader
 				variant="integrated"
@@ -264,7 +265,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			</PageHeader>
 	{/snippet}
 
-	<div class="min-w-0">
+	<div class="min-w-0" use:contentFade={loading}>
 		{#if loading}
 			<!-- 首屏骨架屏：图片优先群组卡栅格（移动/平板 2 列，桌面逐级加列） -->
 			<SkeletonFeed

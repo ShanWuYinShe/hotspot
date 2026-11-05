@@ -5,7 +5,7 @@
 	import ContentColumn from './ContentColumn.svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { headerIsland, type IslandToken } from '@/stores/header-island.svelte';
-	import { islandRectOf, type IslandRect } from '@/lib/island-morph';
+	import { islandRectOf, islandTextRectOf, type IslandRect } from '@/lib/island-morph';
 	import { cn } from '@/lib/utils';
 
 	// 布局组件（layout/page）。
@@ -116,10 +116,10 @@
 	 * 顶栏岛据此从「标题最后可见的位置」收进/吐出，而不是凭空闪现。
 	 */
 	let islandSource = $state<IslandRect | null>(null);
-	/** 交接动效的视觉锚点：标题/副标题那一块（不是整行）。integrated 变体整行含 trailing，宽度会失真。 */
+	/** 交接动效的视觉锚点：标题文字那一块（不是整行，也不是块级 h1 的整列宽度）。 */
 	let islandMorphEl = $state<HTMLElement | undefined>(undefined);
 	const captureIslandSource = (fallback: Element | null | undefined) =>
-		islandRectOf(islandMorphEl ?? fallback);
+		islandTextRectOf(islandMorphEl) ?? islandRectOf(fallback);
 	/**
 	 * 桌面端「岛接管后隐去整条页头」：
 	 * 标题/上下文/行动都已交给顶栏灵动岛，下方的筛选/标签/模块导航同样属于「页头 chrome」——
@@ -135,6 +135,13 @@
 	 * 筛选的当前状态由页面经 `islandMeta` 带进岛（如「摄影 · 云龙湖 · 5km 内 · 8 人」）。
 	 */
 	const islandHandoffActive = $derived(islandShown);
+	/**
+	 * 子元素（标题列 / 页头 trailing / below 筛选行）各自淡出的开关。
+	 * 吸顶页头入岛时整条 header 会作为一个整体淡出（islandBandHidden），此时子元素**不能再叠一层**
+	 * 150ms 淡出——两层透明度相乘会让标题先于整条消失、留下空壳页头，正是「交接不连贯」的观感来源。
+	 * 所以：整条隐去时交给 header 一处；integrated（header 不隐）时才由子元素各自退场。
+	 */
+	const islandChildHandoff = $derived(islandShown && !(islandBandHidden && !integrated));
 	let islandAnchorEl = $state<HTMLElement | undefined>(undefined);
 
 	$effect(() => {
@@ -286,7 +293,11 @@
 	aria-hidden={islandBandHidden ? 'true' : undefined}
 	inert={islandBandHidden}
 	class={cn(
-		'shrink-0 transition-opacity duration-standard ease-standard',
+		// 入岛交接：整条页头 150ms 淡出（与岛 340ms 的飞行重叠在前半段）；
+		// 回岛（scrolled 回落）时延迟 75ms 再淡入——先看见胶囊从顶栏飞回标题位置，标题再浮现，
+		// 避免「标题先冒出来、胶囊随后撞上去」的错位感。
+		'shrink-0 transition-opacity ease-standard duration-rapid',
+		islandBandHidden ? 'delay-0' : 'delay-75',
 		integrated
 			? 'max-sm:sticky max-sm:top-0 max-sm:z-[var(--cst-z-sticky)] max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:pb-1.5'
 			: floating
@@ -307,8 +318,8 @@
 			<div data-page-intro bind:this={islandAnchorEl} class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
 				<div
 					data-island-handoff={islandHandoffActive ? 'true' : undefined}
-					inert={islandHandoffActive}
-					class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1 transition-[opacity,transform] duration-rapid ease-standard {islandHandoffActive
+					inert={islandChildHandoff}
+					class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1 transition-[opacity,transform] duration-rapid ease-standard {islandChildHandoff
 						? 'pointer-events-none -translate-y-0.5 opacity-0'
 						: ''}"
 				>
@@ -338,10 +349,10 @@
 				<!-- 入岛后若岛接管了行动区，页头 trailing 淡出（保留占位、不瞬时抽走），同一动作不出现两份 -->
 				{#if trailing}
 					<div
-						class="flex shrink-0 items-center gap-2 transition-opacity duration-rapid ease-standard {islandHandoffActive
+						class="flex shrink-0 items-center gap-2 transition-opacity duration-rapid ease-standard {islandChildHandoff
 							? 'pointer-events-none opacity-0'
 							: ''}"
-						inert={islandHandoffActive}
+						inert={islandChildHandoff}
 					>
 						{@render trailing()}
 					</div>
@@ -351,8 +362,8 @@
 				<!-- 筛选/标签随标题一起退场：入岛后内容区必须干净（岛 meta 承接当前筛选状态） -->
 				<div
 					data-island-handoff={islandHandoffActive ? 'true' : undefined}
-					inert={islandHandoffActive}
-					class="mt-2.5 transition-[opacity,transform] duration-rapid ease-standard {islandHandoffActive
+					inert={islandChildHandoff}
+					class="mt-2.5 transition-[opacity,transform] duration-rapid ease-standard {islandChildHandoff
 						? 'pointer-events-none -translate-y-0.5 opacity-0'
 						: ''}"
 				>
@@ -393,8 +404,8 @@
 					<!-- 全局统一返回按钮：38px 现代微毛玻璃圆钮（p-0.5 + 36px 幽灵钮），触控区经 hit-slop 达 44px；
 					     入岛后返回动作移到岛上（leading），页头返回淡出，避免同一动作出现两份 -->
 					<div
-						inert={islandHandoffTrigger && islandShown}
-						class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0 transition-[opacity,transform] duration-rapid ease-standard {islandHandoffTrigger && islandShown
+						inert={islandChildHandoff}
+						class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0 transition-[opacity,transform] duration-rapid ease-standard {islandChildHandoff
 							? 'pointer-events-none -translate-y-0.5 opacity-0'
 							: ''}"
 					>
@@ -416,7 +427,7 @@
 			<div
 				bind:this={islandAnchorEl}
 				data-island-handoff={islandHandoffTrigger && islandShown ? 'true' : undefined}
-				class="min-w-0 flex-1 transition-[opacity,transform] duration-rapid ease-standard {islandHandoffTrigger && islandShown
+				class="min-w-0 flex-1 transition-[opacity,transform] duration-rapid ease-standard {islandChildHandoff
 					? 'pointer-events-none -translate-y-0.5 opacity-0'
 					: ''}"
 			>
@@ -433,10 +444,10 @@
 			<!-- 入岛后若岛接管了行动区，页头 trailing 淡出（保留占位、不瞬时抽走），同一动作不出现两份 -->
 			{#if trailing}
 				<div
-					class="shrink-0 transition-opacity duration-rapid ease-standard {islandTrailing && islandShown
+					class="shrink-0 transition-opacity duration-rapid ease-standard {islandTrailing && islandChildHandoff
 						? 'pointer-events-none opacity-0'
 						: ''}"
-					inert={islandTrailing && islandShown}
+					inert={islandTrailing && islandChildHandoff}
 				>
 					{@render trailing()}
 				</div>
@@ -447,8 +458,8 @@
 			<!-- 与 integrated 同规则：入岛后整块页头（含下方工具行）一起退场，内容区保持干净 -->
 			<div
 				data-island-handoff={islandHandoffActive ? 'true' : undefined}
-				inert={islandHandoffActive}
-				class="transition-[opacity,transform] duration-rapid ease-standard {islandHandoffActive
+				inert={islandChildHandoff}
+				class="transition-[opacity,transform] duration-rapid ease-standard {islandChildHandoff
 					? 'pointer-events-none -translate-y-0.5 opacity-0'
 					: ''}"
 			>

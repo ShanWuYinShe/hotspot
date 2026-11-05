@@ -209,7 +209,7 @@
 	<title>设置 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentMaxWidth="var(--cst-content-form)" contentClassName="animate-fade-in pt-4 pb-10">
+<StandardPageLayout contentMaxWidth="var(--cst-content-form)" contentClassName="pt-4 pb-10">
 	{#snippet header()}
 		<!-- 桌面灵动岛 meta 用短文案：默认 subtitle 28 字会顶满 max-w-md 岛宽被截断，
 		     分组关键词让滚动后仍能一眼定位设置域。 -->

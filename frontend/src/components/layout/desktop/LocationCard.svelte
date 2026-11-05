@@ -42,7 +42,7 @@
 
 <button
 	type="button"
-	class="group relative flex w-full items-center rounded-xl border border-border-default/50 bg-surface-primary/70 backdrop-blur-md p-2 text-left transition-all duration-rapid focus-ring hover:bg-surface-primary hover:border-border-default hover:shadow-raised-sm {collapsed ? 'justify-center p-1.5' : ''}"
+	class="group relative flex w-full items-center rounded-xl border border-border-default/50 bg-surface-primary/70 backdrop-blur-md p-2 text-left transition-colors duration-rapid focus-ring hover:bg-surface-primary hover:border-border-default {collapsed ? 'justify-center p-1.5' : ''}"
 	title={collapsed ? '位置选择' : undefined}
 	aria-label="位置选择"
 	onclick={onClick}

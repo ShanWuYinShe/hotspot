@@ -35,7 +35,9 @@
 	const containerClass = $derived.by(() => {
 		if (variant === 'bare') return 'flex flex-col';
 		if (variant === 'island') {
-			return 'rounded-lg bg-surface-island p-4 shadow-xs hover:shadow-raised-sm transition-all flex flex-col';
+			// 非交互容器（交互在 SectionHead 文字链）：不做 hover 投影动画——大面积 box-shadow
+			// 过渡是逐帧重绘（§21.14），容器本身也不需要 hover 暗示。
+			return 'rounded-lg bg-surface-island p-4 shadow-xs flex flex-col';
 		}
 		return 'surface-flat rounded-md p-4';
 	});

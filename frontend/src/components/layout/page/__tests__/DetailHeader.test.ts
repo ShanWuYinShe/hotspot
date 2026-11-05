@@ -27,7 +27,9 @@ describe('DetailHeader', () => {
 		expect(breadcrumb?.textContent).toContain('发现动态');
 		expect(breadcrumb?.textContent).toContain('@Mika 的瞬间');
 
-		// 顶端初始态：中间微名片不显示（留白给大图）
+		// 顶端初始态：收敛态胶囊不挂载，中间微名片不存在（留白给大图）；
+		// 桌面端靠顶栏灵动岛承接身份，移动端滚过阈值后挂载收敛胶囊。
+		expect(container.querySelector('[data-detail-header-island]')).toBeNull();
 		expect(container.querySelector('[data-detail-header-center]')).toBeNull();
 	});
 

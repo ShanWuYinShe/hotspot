@@ -22,6 +22,7 @@
 	import { formatCardTime, formatDistance } from '@/lib/utils';
 	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
 	import { ROUTES } from '@/lib/routes';
+	import { contentFade } from '@/lib/motion';
 	import {
 		getMomentsProgress,
 		setMomentsProgress,
@@ -315,66 +316,68 @@
 {/snippet}
 
 <!-- ═══ 样板 layout：StandardPageLayout（integrated header + ContentColumn 全宽 gutter）═══ -->
-<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
+<StandardPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		{@render feedHeader()}
 	{/snippet}
 
-	{#if loading || loadError || !filtered.length}
-		{@render feedState()}
-	{:else}
-		<div class="w-full">
-			<!-- 语义化 BSP 照片流网格：移动 2 / 平板 3；lg 起按 300px 最小卡宽自动增列，
-			     2560≈7 列、4K≈11 列，全宽利用超宽屏而不是被 max-w 限制在中间。
-			     密集排布 (grid-flow-dense) + 自适应行高，感知图片长宽比与节奏防粘连 -->
-			<AdaptiveCardGrid
-				count={Math.min(filtered.length, visibleCount)}
-				minTrackRem={18.75}
-				gapRem={[0.75, 1, 1]}
-				centerSparse={bspLayouts.every((l) => l.tier === '1x1')}
-				class="grid-flow-dense"
-				style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
-			>
-				{#each filtered.slice(0, visibleCount) as item, index (item.id)}
-					{@const layout = bspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
-					<div class="{layout.cls} h-full w-full">
-						<MomentCard
-							class="h-full w-full rounded-lg"
-							{item}
-							priority={index < 4}
-							compact={device === 'mobile'}
-							tier={layout.tier}
-							liked={item.liked}
-							onLike={() => void interactions.toggleLike(item.id)}
-							onClick={() => openMoment(item.id)}
-							onCommentClick={() => openMoment(item.id, true)}
-						/>
-					</div>
-				{/each}
-			</AdaptiveCardGrid>
+	<div use:contentFade={loading}>
+		{#if loading || loadError || !filtered.length}
+			{@render feedState()}
+		{:else}
+			<div class="w-full">
+				<!-- 语义化 BSP 照片流网格：移动 2 / 平板 3；lg 起按 300px 最小卡宽自动增列，
+				     2560≈7 列、4K≈11 列，全宽利用超宽屏而不是被 max-w 限制在中间。
+				     密集排布 (grid-flow-dense) + 自适应行高，感知图片长宽比与节奏防粘连 -->
+				<AdaptiveCardGrid
+					count={Math.min(filtered.length, visibleCount)}
+					minTrackRem={18.75}
+					gapRem={[0.75, 1, 1]}
+					centerSparse={bspLayouts.every((l) => l.tier === '1x1')}
+					class="grid-flow-dense"
+					style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
+				>
+					{#each filtered.slice(0, visibleCount) as item, index (item.id)}
+						{@const layout = bspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
+						<div class="{layout.cls} h-full w-full">
+							<MomentCard
+								class="h-full w-full rounded-lg"
+								{item}
+								priority={index < 4}
+								compact={device === 'mobile'}
+								tier={layout.tier}
+								liked={item.liked}
+								onLike={() => void interactions.toggleLike(item.id)}
+								onClick={() => openMoment(item.id)}
+								onCommentClick={() => openMoment(item.id, true)}
+							/>
+						</div>
+					{/each}
+				</AdaptiveCardGrid>
 
-			{#if !feedHasMore && filtered.length > 0 && filtered.length < 3}
-				<SparseContentHint
-					title={`只找到 ${filtered.length} 条附近瞬间`}
-					description="换个标签看看，或去附近发现更多内容"
-					actionLabel="去附近看看"
-					onAction={() => void goto(ROUTES.nearby)}
-				/>
-			{/if}
-
-			{#if feedHasMore}
-				<div class="flex justify-center px-4 py-6">
-					<!-- 滚到底自动续载（首屏不足一屏时自动补载）；可见的 InlineLoading 保留为加载暗示 -->
-					<InfiniteSentinel
-						hasMore={feedHasMore}
-						loading={loadingMore}
-						onLoadMore={() => void handleLoadMore()}
+				{#if !feedHasMore && filtered.length > 0 && filtered.length < 3}
+					<SparseContentHint
+						title={`只找到 ${filtered.length} 条附近瞬间`}
+						description="换个标签看看，或去附近发现更多内容"
+						actionLabel="去附近看看"
+						onAction={() => void goto(ROUTES.nearby)}
 					/>
-					<InlineLoading label="加载更多…" />
-				</div>
-			{:else if showListEnd}
-				<ListEnd />
-			{/if}
-		</div>
-	{/if}
+				{/if}
+
+				{#if feedHasMore}
+					<div class="flex justify-center px-4 py-6">
+						<!-- 滚到底自动续载（首屏不足一屏时自动补载）；可见的 InlineLoading 保留为加载暗示 -->
+						<InfiniteSentinel
+							hasMore={feedHasMore}
+							loading={loadingMore}
+							onLoadMore={() => void handleLoadMore()}
+						/>
+						<InlineLoading label="加载更多…" />
+					</div>
+				{:else if showListEnd}
+					<ListEnd />
+				{/if}
+			</div>
+		{/if}
+	</div>
 </StandardPageLayout>

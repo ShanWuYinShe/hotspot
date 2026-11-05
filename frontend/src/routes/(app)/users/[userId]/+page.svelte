@@ -411,7 +411,7 @@
 
 <SplitPageLayout
 	contentMaxWidth="var(--cst-content-detail)"
-	contentClassName="animate-fade-in pt-1 pb-6"
+	contentClassName="pt-1 pb-6"
 >
 	{#snippet header()}
 		<DetailHeader

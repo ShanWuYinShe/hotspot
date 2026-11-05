@@ -10,7 +10,7 @@
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { fadeImage, presetImageUrl, presetSrcSet } from '@/lib/images';
-	import { enterOnce, popOn } from '@/lib/motion';
+	import { countPop, enterOnce, popOn } from '@/lib/motion';
 	// 点击驱动的 pop 计数（仅点击处理器递增；liked/saved 初始同步不播）
 	let likePop = $state(0);
 	let savePop = $state(0);
@@ -307,9 +307,7 @@
 					<span class="inline-flex" use:popOn={likePop}>
 						<Heart class="size-4.5" strokeWidth={1.75} fill={liked ? 'currentColor' : 'none'} />
 					</span>
-					{#key likeCount}
-						<span class="count-pop text-sm font-medium tabular-nums">{likeCount}</span>
-					{/key}
+					<span use:countPop={likePop} class="text-sm font-medium tabular-nums">{likeCount}</span>
 				</button>
 				<button
 					type="button"
@@ -398,9 +396,7 @@
 									<span class="inline-flex" use:popOn={commentPops[c.id] ?? 0}>
 										<Heart class="size-3.5" strokeWidth={1.5} fill={c.liked ? 'currentColor' : 'none'} />
 									</span>
-									{#key c.likes}
-										<span class="count-pop text-xs tabular-nums">{c.likes}</span>
-									{/key}
+									<span use:countPop={commentPops[c.id] ?? 0} class="text-xs tabular-nums">{c.likes}</span>
 								</button>
 								<button
 									type="button"

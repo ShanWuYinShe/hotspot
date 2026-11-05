@@ -278,7 +278,7 @@
 
 <div class="flex flex-col flex-1 min-h-full">
 	<SplitPageLayout
-		contentClassName="animate-fade-in flex flex-col pt-0 pb-8"
+		contentClassName="flex flex-col pt-0 pb-8"
 	>
 		{#snippet header()}
 			{#if device !== 'desktop'}

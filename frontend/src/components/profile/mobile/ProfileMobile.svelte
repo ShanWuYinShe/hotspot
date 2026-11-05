@@ -110,7 +110,7 @@
 	]);
 </script>
 
-<StandardPageLayout contentClassName="animate-fade-in pt-4 pb-6">
+<StandardPageLayout contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			title="个人中心"

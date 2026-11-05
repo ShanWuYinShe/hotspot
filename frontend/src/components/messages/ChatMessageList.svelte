@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ArrowDown, MessageCircle } from '@lucide/svelte';
-	import { fade, fly } from 'svelte/transition';
-	import { motionDuration } from '@/lib/motion';
+	import { fly } from 'svelte/transition';
+	import { contentFade, motionDuration } from '@/lib/motion';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
@@ -52,13 +52,51 @@
 			}))
 			.filter((group) => group.messages.length > 0)
 	);
+
+	// 入场语义（P1-2）：整列/每条气泡的静态 animate-fade-in 会让人一进会话就播 N 条淡入
+	// （30 条历史 = 30 个动画），且历史上不该有入场。这里只给「实时到达」的那一条播一次
+	// enterOnce：首屏/切会话的历史消息整体登记、不播；会话切换由 chat.loading 的
+	// true→false 批次识别（加载中重置基线）。reduced-motion 由 enterOnce 内部跳过。
+	let knownIds = new Set<string>();
+	let initDone = false;
+	let wasLoading = false;
+	let freshId = $state('');
+	$effect(() => {
+		const loading = chat.loading;
+		const ids = visibleGroups.flatMap((group) => group.messages.map((msg) => msg.id));
+		if (!initDone) {
+			if (loading) return; // 首屏加载中：等历史到达后整体登记
+			knownIds = new Set(ids);
+			initDone = true;
+			wasLoading = false;
+			return;
+		}
+		if (loading) {
+			knownIds = new Set(ids);
+			wasLoading = true;
+			freshId = '';
+			return;
+		}
+		if (wasLoading) {
+			knownIds = new Set(ids);
+			wasLoading = false;
+			freshId = '';
+			return;
+		}
+		const added = ids.filter((id) => !knownIds.has(id));
+		knownIds = new Set(ids);
+		if (added.length > 0) freshId = added[added.length - 1];
+	});
 </script>
 
 <ChatColumn class="relative flex min-h-0 flex-1 flex-col">
 	<!-- 消息区是独立滚动容器（Round 10：分页 prepend 保视口） -->
+	<!-- 容器保留唯一一条入场淡入（contentFade：仅「显示过加载态 → 内容到达」时播 110ms，
+	     首屏缓存命中/无加载态不播）；气泡自身不再单独入场。 -->
 	<div
 		bind:this={chat.scrollEl}
 		onscroll={chat.handleScroll}
+		use:contentFade={chat.loading}
 		class="min-h-0 flex-1 overflow-y-auto no-scrollbar"
 		style="overscroll-behavior:contain;"
 	>
@@ -80,7 +118,7 @@
 			<!-- 短会话底对齐（R16）：消息贴住输入条、空白留在上方（Telegram/iMessage/WhatsApp 同款），
 			     消除「消息挤在顶部、下方一大片空场」的断裂感；内容超过一屏时 min-h-full 自然失效、正常滚动。
 			     上方 pt-3 / 下方 pb-4 是滚动到顶/底时的呼吸余量。 -->
-			<div class="animate-fade-in flex min-h-full flex-col justify-end gap-2 px-4 pb-4 pt-3">
+			<div class="flex min-h-full flex-col justify-end gap-2 px-4 pb-4 pt-3">
 				{#if chat.loadingMoreFailed}
 					<!-- 分页失败可见化（layout 第 6 条）：轻量重试入口，不遮蔽已加载消息 -->
 					<div class="flex items-center justify-center gap-2 py-3 text-sm text-text-secondary">
@@ -105,6 +143,7 @@
 								senderName={showSenderNames ? msg.senderName : ''}
 								showCheck={msg.id === chat.lastSentId}
 								messageId={msg.id}
+								enter={msg.id === freshId}
 								recalled={msg.recalled}
 								editedAt={msg.editedAt}
 								canRecall={canRecall(msg)}
@@ -132,7 +171,7 @@
 			title="回到底部"
 			onclick={() => chat.scrollToBottom()}
 			in:fly={{ y: 8, duration: motionDuration(150) }}
-			out:fade={{ duration: motionDuration(150) }}
+			out:fly={{ y: 8, duration: motionDuration(150) }}
 			class="absolute right-14 bottom-3 z-[var(--cst-z-sticky)] flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-border-default bg-surface-primary/95 px-3 text-xs font-medium text-text-primary shadow-raised-md backdrop-blur-sm focus-ring"
 		>
 			<ArrowDown class="size-4 shrink-0" strokeWidth={2} />

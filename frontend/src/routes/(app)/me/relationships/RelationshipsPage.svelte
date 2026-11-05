@@ -118,7 +118,7 @@
 
 <!-- ═══ 样板 layout：StandardPageLayout（integrated header + ContentColumn 全宽 gutter）═══
      Section 组件为纯内容（不自建 gutter），gutter 由 ContentColumn 统一提供。 -->
-<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="animate-fade-in pt-4 pb-6">
+<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		{@render relHeader()}
 	{/snippet}

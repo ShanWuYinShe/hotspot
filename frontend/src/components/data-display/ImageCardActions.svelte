@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Heart, MessageCircle, Bookmark, Share2 } from '@lucide/svelte';
-	import { popOn } from '@/lib/motion';
+	import { countPop, popOn } from '@/lib/motion';
 	import { cn } from '@/lib/utils';
 
 	// ImageCardActions — 图片内容卡「压在图片上的操作行」唯一实现（R14 卡片交互契约）。
@@ -10,7 +10,7 @@
 	// - 同一组图标尺寸（size-4.5 / strokeWidth 1.5）、间距（gap-6）、字号（text-sm tabular），
 	//   不再出现「信息流卡 11px、网格卡 12px、有的卡不是按钮只能打开详情」的碎片化；
 	// - 同一套 hover（hover-action 放大）/press（按压缩小）/focus（focus-ring）/计数弹跳
-	//   （count-pop，仅激活方向）；
+	//   （countPop 点击驱动，仅激活方向；初始渲染与数据同步不播）；
 	// - 同一套状态语义（全站唯一口径）：点赞 = 危险红填充（压图态白色描边），
 	//   收藏 = accent 填充，评论/分享 = 中性；填充形状 + 颜色双信号，不只靠色相。
 	//
@@ -103,11 +103,9 @@
 					fill={!onImage && liked ? 'currentColor' : 'none'}
 				/>
 			</span>
-			{#key displayLikes}
-				<span class="count-pop {labelSize} font-medium tabular-nums">
-					{displayLikes > 0 || !placeholderLabels ? displayLikes : '赞'}
-				</span>
-			{/key}
+			<span use:countPop={likePop} class="{labelSize} font-medium tabular-nums">
+				{displayLikes > 0 || !placeholderLabels ? displayLikes : '赞'}
+			</span>
 		</button>
 
 		<!-- 评论：跳评论区 -->

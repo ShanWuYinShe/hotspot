@@ -19,7 +19,7 @@
 	//   - hover / 键盘 focus-within：胶囊表面转实底 + accent 细边 + 抬升投影（不改变宽度）；
 	//   - 右侧进度环：随主滚动容器进度增长，纯展示、不参与交互；
 	//   - 键盘顺序：返回 → 标题/身份 → 行动区；全部控件有 aria-label 与 focus-ring；
-	//   - 进场/退场：从页面锚点矩形收进/吐出顶栏（islandMorph），不再凭空闪现。
+	//   - 进场/退场：从页面锚点矩形收进/吐出顶栏（islandMorphIn / islandMorphOut），不再凭空闪现。
 
 	let {
 		title = '',

@@ -38,7 +38,9 @@
 			<div class="flex min-w-0 flex-1 items-center gap-3">
 				<!-- 雷达声纳声波呼吸环动效（单处动效：徽章圆点保持静态，避免叠两层动画） -->
 				<div class="relative flex shrink-0 items-center justify-center rounded-full bg-accent-default size-10 shadow-raised-sm">
-					<span class="absolute inset-0 rounded-full bg-accent-default/30 animate-ping"></span>
+					<!-- 声纳环限时 3 次后静态（.radar-ping，见 utilities.css）：无限 animate-ping 会让
+					     内容页常驻装饰动画；reduced-motion 由全局规则压成瞬时。 -->
+					<span class="radar-ping absolute inset-0 rounded-full bg-accent-default/30"></span>
 					<Radar class="relative size-5 text-text-on-accent" strokeWidth={2} />
 				</div>
 				<div class="min-w-0">

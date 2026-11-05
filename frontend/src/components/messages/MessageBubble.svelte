@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CheckCheck, MoreHorizontal, Check, Flag } from '@lucide/svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
+	import { enterOnce } from '@/lib/motion';
 
 	// MessageBubble — 聊天气泡单元（私聊 ChatView / 群聊 GroupChatView 共用）。
 	// 发送方向由 sent 决定；recalled 渲染为中性斜体「消息已撤回」；自己发出的非撤回消息
@@ -20,6 +21,8 @@
 		senderName = '',
 		showCheck = false,
 		messageId = '',
+		/** 本次「实时到达」的新消息才播一次入场（历史/首屏不播；由 ChatMessageList 判定） */
+		enter = false,
 		recalled = false,
 		editedAt = '',
 		canRecall = false,
@@ -35,6 +38,7 @@
 		senderName?: string;
 		showCheck?: boolean;
 		messageId?: string;
+		enter?: boolean;
 		recalled?: boolean;
 		editedAt?: string;
 		canRecall?: boolean;
@@ -87,7 +91,7 @@
 	};
 </script>
 
-<div class="group animate-fade-in flex flex-col {sent ? 'items-end' : 'items-start'}">
+<div class="group flex flex-col {sent ? 'items-end' : 'items-start'}" use:enterOnce={enter}>
 	{#if !sent && senderName}
 		<p class="mb-1 px-1 text-sm font-medium text-text-secondary">{senderName}</p>
 	{/if}

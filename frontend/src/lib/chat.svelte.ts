@@ -388,18 +388,25 @@ export function useChat(opts: UseChatOptions) {
 		markReadNow();
 	}
 
+	// 滚动处理：scroll 事件每帧可能触发多次，直接读写 scrollHeight/clientHeight 会强制布局。
+	// 与唯一滚动 owner（RoutedContentViewport）同口径：rAF 节流，一帧最多读一次布局。
+	let scrollRaf = 0;
 	function handleScroll() {
-		const el = scrollEl;
-		if (!el) return;
-		distanceToBottom = Math.max(0, el.scrollHeight - el.scrollTop - el.clientHeight);
-		const nowNear = distanceToBottom <= 120;
-		// 手动滚回底部：清空新消息计数并补已读（恢复自动滚动）
-		if (nowNear && !nearBottom) {
-			newMessageCount = 0;
-			markReadNow();
-		}
-		nearBottom = nowNear;
-		if (!loadingMore && nextCursor && el.scrollTop < 40) void loadMore();
+		if (scrollRaf) return;
+		scrollRaf = requestAnimationFrame(() => {
+			scrollRaf = 0;
+			const el = scrollEl;
+			if (!el) return;
+			distanceToBottom = Math.max(0, el.scrollHeight - el.scrollTop - el.clientHeight);
+			const nowNear = distanceToBottom <= 120;
+			// 手动滚回底部：清空新消息计数并补已读（恢复自动滚动）
+			if (nowNear && !nearBottom) {
+				newMessageCount = 0;
+				markReadNow();
+			}
+			nearBottom = nowNear;
+			if (!loadingMore && nextCursor && el.scrollTop < 40) void loadMore();
+		});
 	}
 
 	/** 输入内容变化：非空且距上次发送 ≥3 秒发 true；清空立即发 false；停止输入 3 秒后发 false。
@@ -548,6 +555,11 @@ export function useChat(opts: UseChatOptions) {
 		scrollToBottom,
 		set scrollEl(v: HTMLDivElement | null) {
 			scrollEl = v;
+			// 卸载/切会话时取消挂起的滚动节流帧，避免对已卸载节点做无谓读布局。
+			if (!v && scrollRaf) {
+				cancelAnimationFrame(scrollRaf);
+				scrollRaf = 0;
+			}
 		},
 		get lastSentId() {
 			return lastSentId;

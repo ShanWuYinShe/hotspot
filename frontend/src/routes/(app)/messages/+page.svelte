@@ -504,7 +504,7 @@
 			{/snippet}
 		</PageHeader>
 
-		<div class="animate-fade-in flex flex-1 flex-col pb-6">
+		<div class="flex flex-1 flex-col pb-6">
 			{#if onlineChats.length > 0}
 				<div class="px-[var(--cst-page-gutter)] pt-2">
 					<OnlineStrip chats={onlineChats} onSelect={(c) => void goto(ROUTES.message(c.peerUserId || c.id))} />

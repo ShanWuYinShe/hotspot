@@ -41,8 +41,10 @@
 		...rest
 	}: Props = $props();
 
+	// 动效走 motion token：tw-animate 默认 150ms/ease 与全站 --cst-ease-standard 两套节奏，
+	// 这里补 duration-standard（220ms）+ ease-standard，keyframes 仍由 tw-animate 提供。
 	const BASE =
-		'fixed z-[var(--cst-z-modal)] bg-surface-primary focus-ring data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0';
+		'fixed z-[var(--cst-z-modal)] bg-surface-primary focus-ring duration-standard ease-standard data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0';
 
 	const SIDE_CLASSES: Record<DialogSide, string> = {
 		center:
@@ -74,7 +76,7 @@
 <Dialog.Portal>
 	<Dialog.Overlay
 		class={cn(
-			'fixed inset-0 z-[var(--cst-z-overlay)] bg-surface-scrim backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+			'fixed inset-0 z-[var(--cst-z-overlay)] bg-surface-scrim backdrop-blur-sm duration-standard ease-standard data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
 			overlayClassName
 		)}
 	/>

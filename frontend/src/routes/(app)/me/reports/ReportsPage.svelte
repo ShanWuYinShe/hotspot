@@ -162,7 +162,7 @@
 	};
 </script>
 
-<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="animate-fade-in pt-4 pb-6">
+<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			variant="integrated"

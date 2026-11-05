@@ -216,7 +216,7 @@
 	<title>编辑资料 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentMaxWidth="var(--cst-content-form-narrow)" contentClassName="animate-fade-in pt-4 pb-10">
+<StandardPageLayout contentMaxWidth="var(--cst-content-form-narrow)" contentClassName="pt-4 pb-10">
 	{#snippet header()}
 		<PageHeader
 			title="编辑资料"
@@ -281,7 +281,7 @@
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else}
-		<div class="animate-fade-in flex w-full flex-col gap-4">
+		<div class="flex w-full flex-col gap-4">
 			<!-- 身份条（R13）：头像编辑浮标 + 昵称/@账号。
 			     原 160px「暂未开放」封面占掉首屏且无任何功能，按评审意见整块删除；
 			     头像编辑仍需显式入口，故保留浮标 + 一句可预期说明。 -->

@@ -126,7 +126,7 @@
 {#if meta}
 	<!-- 分区模式：StandardPageLayout + sticky PageHeader；
 	     Section 组件为纯内容（不自建滚动/gutter），gutter 由 ContentColumn 统一提供 -->
-	<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="animate-fade-in pt-4 pb-6">
+	<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="pt-4 pb-6">
 		{#snippet header()}
 			<PageHeader
 				title={meta.title}
@@ -147,7 +147,7 @@
 	<!-- 总览模式：身份封面卡 + 我的内容 + 资料状态。
 	     总览页是长内容呼吸型布局，顶/底 padding 略大于标准列表页（pt-6 pb-8），
 	     属于样板 pt-4 pb-6 的可登记变体。 -->
-	<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="animate-fade-in pt-6 pb-8">
+	<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="pt-6 pb-8">
 		{#snippet header()}
 			<!-- 页头不放操作按钮：编辑资料/设置统一收在身份卡的动作区，
 			     同一页同一功能只允许一个入口。外观控制不进身份卡：桌面顶栏已有常驻

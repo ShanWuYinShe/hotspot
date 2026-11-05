@@ -19,6 +19,7 @@
 	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import { createOptimisticFollow } from '@/lib/relationships.svelte';
+	import { contentFade } from '@/lib/motion';
 
 	// ═══ 「附近」枢纽页（2026-10-19 信息架构调整）═══
 	// 背景：此前 /nearby 是 307 跳 /nearby/people（原聚合门户被删，段位导航一并删除），
@@ -128,7 +129,7 @@
 <!-- 页面根容器：直接承载 HeroStats + 三个带标题分区（人/瞬间/群组），按 RULES §2 例外用
      分区间距 24（gap-6）；页底留白只由 contentClassName pb-6 提供 -->
 <div class="flex flex-col flex-1 min-h-full">
-<StandardPageLayout contentClassName="animate-fade-in flex flex-col gap-6 pt-4 pb-6 w-full">
+<StandardPageLayout contentClassName="flex flex-col gap-6 pt-4 pb-6 w-full">
 	{#snippet header()}
 		<PageHeader
 			title="附近"
@@ -152,56 +153,58 @@
 		</PageHeader>
 	{/snippet}
 
-	{#if loading}
-		<!-- 首屏骨架屏：Hero 统计卡 + 三段分区（人/瞬间/群组）的预览卡行；
-		     与真实枢纽页纵向节奏一致（gap-6 = 分区块间距 24） -->
-		<div class="flex flex-col gap-6" role="status" aria-busy="true" aria-label="加载附近数据…" data-skeleton-root>
-			<Skeleton class="h-36 w-full rounded-lg" />
-			{#each [0, 1, 2] as section (section)}
-				<div class="flex flex-col gap-3">
-					<div class="flex items-center justify-between">
-						<Skeleton class="h-4 w-24 rounded-sm" />
-						<Skeleton class="h-4 w-12 rounded-sm" />
+	<div class="flex flex-col gap-6" use:contentFade={loading}>
+		{#if loading}
+			<!-- 首屏骨架屏：Hero 统计卡 + 三段分区（人/瞬间/群组）的预览卡行；
+			     与真实枢纽页纵向节奏一致（gap-6 = 分区块间距 24） -->
+			<div class="flex flex-col gap-6" role="status" aria-busy="true" aria-label="加载附近数据…" data-skeleton-root>
+				<Skeleton class="h-36 w-full rounded-lg" />
+				{#each [0, 1, 2] as section (section)}
+					<div class="flex flex-col gap-3">
+						<div class="flex items-center justify-between">
+							<Skeleton class="h-4 w-24 rounded-sm" />
+							<Skeleton class="h-4 w-12 rounded-sm" />
+						</div>
+						<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+							<Skeleton class="aspect-[3/4] w-full rounded-lg" />
+							<Skeleton class="aspect-[3/4] w-full rounded-lg" />
+							<Skeleton class="hidden aspect-[3/4] w-full rounded-lg sm:block" />
+							<Skeleton class="hidden aspect-[3/4] w-full rounded-lg sm:block" />
+						</div>
 					</div>
-					<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-						<Skeleton class="aspect-[3/4] w-full rounded-lg" />
-						<Skeleton class="aspect-[3/4] w-full rounded-lg" />
-						<Skeleton class="hidden aspect-[3/4] w-full rounded-lg sm:block" />
-						<Skeleton class="hidden aspect-[3/4] w-full rounded-lg sm:block" />
-					</div>
-				</div>
-			{/each}
-		</div>
-	{:else if error}
-		<LoadError message={error} onRetry={() => reloadKey++} />
-	{:else if moments.length === 0 && visibleNearbyUsers.length === 0 && nearbyGroups.length === 0}
-		<!-- 页面级空态走新版 EmptyState：72px 图标软底 + spotlight（不再用裸图标 + 灰字） -->
-		<EmptyState
-			spotlight
-			iconTone="accent"
-			title="附近还没有内容"
-			description="去发布第一条瞬间，或换个位置看看。"
-		>
-			{#snippet icon()}
-				<MapPin class="size-7" strokeWidth={1.5} />
-			{/snippet}
-		</EmptyState>
-	{:else}
-		<HeroStats stats={heroStats} locationName={locationName} />
-		<NearbyHubSections
-			users={visibleNearbyUsers}
-			{moments}
-			groups={nearbyGroups}
-			emptyHint={nearbyFilterHint}
-			isFollowed={(id) => followState.isFollowed(id, baseFollowed(id))}
-			isPending={(id) => followState.isPending(id)}
-			onToggleFollow={toggleFollow}
-			onSeeAllUsers={() => void goto(ROUTES.nearbyPeople)}
-			onSeeAllMoments={() => void goto(ROUTES.nearbyMoments)}
-			onSeeAllGroups={() => void goto(ROUTES.nearbyGroups)}
-			onOpenMoment={(id) => void goto(ROUTES.moment(id))}
-			onOpenUser={(id) => void goto(ROUTES.user(id))}
-		/>
-	{/if}
+				{/each}
+			</div>
+		{:else if error}
+			<LoadError message={error} onRetry={() => reloadKey++} />
+		{:else if moments.length === 0 && visibleNearbyUsers.length === 0 && nearbyGroups.length === 0}
+			<!-- 页面级空态走新版 EmptyState：72px 图标软底 + spotlight（不再用裸图标 + 灰字） -->
+			<EmptyState
+				spotlight
+				iconTone="accent"
+				title="附近还没有内容"
+				description="去发布第一条瞬间，或换个位置看看。"
+			>
+				{#snippet icon()}
+					<MapPin class="size-7" strokeWidth={1.5} />
+				{/snippet}
+			</EmptyState>
+		{:else}
+			<HeroStats stats={heroStats} locationName={locationName} />
+			<NearbyHubSections
+				users={visibleNearbyUsers}
+				{moments}
+				groups={nearbyGroups}
+				emptyHint={nearbyFilterHint}
+				isFollowed={(id) => followState.isFollowed(id, baseFollowed(id))}
+				isPending={(id) => followState.isPending(id)}
+				onToggleFollow={toggleFollow}
+				onSeeAllUsers={() => void goto(ROUTES.nearbyPeople)}
+				onSeeAllMoments={() => void goto(ROUTES.nearbyMoments)}
+				onSeeAllGroups={() => void goto(ROUTES.nearbyGroups)}
+				onOpenMoment={(id) => void goto(ROUTES.moment(id))}
+				onOpenUser={(id) => void goto(ROUTES.user(id))}
+			/>
+		{/if}
+	</div>
 </StandardPageLayout>
 </div>
