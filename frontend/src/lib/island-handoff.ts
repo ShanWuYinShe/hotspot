@@ -153,7 +153,8 @@ const applyFrame = (
  * 用法：`<div use:islandHandoff={{ enabled: handoff }}>`（非交接模式下直接 no-op）。
  */
 export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } = {}) {
-	if (!params.enabled) return;
+	// 默认启用：胶囊永远走滚动交接；显式传 enabled:false 才跳过（测试/特殊场景）。
+	if (params.enabled === false) return;
 	let target = measureTarget(node);
 	const apply = (s: HandoffState) => {
 		if (!target) target = measureTarget(node);

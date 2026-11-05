@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
 	anchorHandoffProgress,
 	handoffCss,
+	islandHandoff,
+	publishHandoff,
 	scrollHandoffProgress
 } from '../island-handoff';
 import type { IslandRect } from '../island-morph';
@@ -66,6 +68,40 @@ describe('island-handoff 纯函数', () => {
 		}
 		expect(samples[0].content).toBe(0);
 		expect(samples[samples.length - 1].content).toBeGreaterThan(0.5);
+	});
+
+	it('islandHandoff action 默认启用：不传 params 也会消费交接帧（防「岛不跟手」回归）', () => {
+		const node = document.createElement('div');
+		node.getBoundingClientRect = () =>
+			({
+				x: 600,
+				y: 8,
+				left: 600,
+				top: 8,
+				width: 200,
+				height: 36,
+				right: 800,
+				bottom: 44,
+				toJSON: () => ({})
+			}) as DOMRect;
+		document.body.appendChild(node);
+		const cleanup = islandHandoff(node, {});
+		try {
+			// 0.5 处于交接中段：应写入锚点位移/缩放与半透明，而不是「停在泊位、完全不透明」
+			publishHandoff({ p: 0.5, source: { x: 100, y: 76, width: 80, height: 28 } });
+			expect(node.style.transform).toContain('translate3d');
+			// 壳在交接前段就凝实（显影快），但内容层必须还没显字
+			expect(Number(node.style.opacity)).toBeGreaterThan(0);
+			expect(Number(node.style.getPropertyValue('--cst-island-content'))).toBeLessThan(1);
+			// 落位后清空内联 transform，把 hover 的 1px 上移交还给 CSS
+			publishHandoff({ p: 1, source: { x: 100, y: 76, width: 80, height: 28 } });
+			expect(node.style.transform).toBe('');
+			expect(node.style.opacity).toBe('1');
+		} finally {
+			cleanup?.destroy();
+			node.remove();
+			publishHandoff({ p: 0, source: null });
+		}
 	});
 
 	it('reduced-motion：中途不插值（过闸即切换），不做连续位移', () => {
