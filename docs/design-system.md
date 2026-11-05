@@ -1324,6 +1324,7 @@ eager 图各 2 张且像素 diff 0 回归。
 - 测试钩子：页头暴露 `data-island-visible` / `data-island-band-hidden` / `data-island-handoff`（触发与交接断言用；供单测与排障，不是样式契约）；
   岛根节点固定 `data-desktop-dynamic-island`，进度圆环为 `data-island-progress-ring` / `data-island-progress`，
   组件契约见 `PageIsland.test.ts`、交接数学见 `island-handoff.test.ts`。
+- 后续动效打磨的待做项、复测方法与踩坑记录见 `docs/frontend-animation-handoff.md`（含筛选/排序过渡、画廊交叉淡入、拖拽关闭等）。
 
 ## 23. 大屏 UI 等比放大（≥1920）
 
