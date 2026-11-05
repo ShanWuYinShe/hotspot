@@ -5,7 +5,8 @@
 	import { Bell, Search, Compass, ArrowRight, Sparkles, TrendingUp, Users, LogIn, MapPin, Radio, ChevronRight } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { homeFeed, type HomeFeedTab } from '@/stores/home-feed.svelte';
-	import { islandRectOf } from '@/lib/island-morph';
+	import { islandRectOf, type IslandRect } from '@/lib/island-morph';
+	import { anchorHandoffProgress, publishHandoff } from '@/lib/island-handoff';
 	import { formatDistance } from '@/lib/utils';
 	import type { MomentItem } from '@/api/types';
 	import { searchMoments, fetchFollowingMoments } from '@/api';
@@ -48,30 +49,77 @@
 		homeFeed.reset();
 	});
 
-	// 桌面端：内容区分段器滚出视口后交接给顶栏灵动岛；回到顶部再交还。
-	let desktopTabsEl = $state<HTMLElement | null>(null);
-	$effect(() => {
-		if (device !== 'desktop') {
+	// 桌面端：分段器 → 顶栏灵动岛的交接和页面标题一样走滚动驱动（见 lib/island-handoff.ts）。
+	// 进度 p 由分段器相对 52px 顶栏的位置算出：分段器开始没入顶栏时 p=0，完全被裁掉时 p=1。
+	// 不再用 IntersectionObserver——IO 只能给「在/不在」，交接会退化成一段不跟手、不可逆的时长动画。
+	function tabsHandoff(node: HTMLElement) {
+		if (platform.platform !== 'desktop') {
 			homeFeed.setIslandVisible(false);
+			publishHandoff({ p: 0, source: null });
 			return;
 		}
-		const el = desktopTabsEl;
-		if (!el) return;
-		const rootMargin = `-${Math.round(52 * Math.max(1, platform.uiScale))}px 0px 0px 0px`;
-		const io = new IntersectionObserver(
-			([entry]) => {
-				// 交接动效来源：分段器离开/回到视口那一刻的位置（此时它仍在原位），
-				// 顶栏岛据此从分段器位置收进/吐出，而不是凭空闪现。
-				homeFeed.setIslandVisible(!entry.isIntersecting, islandRectOf(entry.target));
-			},
-			{ rootMargin, threshold: 0 }
-		);
-		io.observe(el);
-		return () => {
-			io.disconnect();
-			homeFeed.setIslandVisible(false);
+		let scroller: HTMLElement | null = node.parentElement;
+		while (scroller) {
+			if (/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) break;
+			scroller = scroller.parentElement;
+		}
+		if (!scroller) scroller = document.getElementById('main-content');
+		if (!scroller) return;
+		const target = scroller;
+		/** 分段器的文档绝对位置：滚动时只做减法，避免每帧读布局。 */
+		let box: { x: number; width: number; height: number; absTop: number } | null = null;
+		let raf = 0;
+
+		const measure = () => {
+			const rect = islandRectOf(node);
+			if (!rect) return;
+			box = {
+				x: rect.x,
+				width: rect.width,
+				height: rect.height,
+				absTop: rect.y + target.scrollTop
+			};
 		};
-	});
+
+		const apply = () => {
+			raf = 0;
+			if (!box) measure();
+			if (!box) return;
+			const source: IslandRect = {
+				x: box.x,
+				y: box.absTop - target.scrollTop,
+				width: box.width,
+				height: box.height
+			};
+			const p = anchorHandoffProgress(
+				source.y,
+				source.height,
+				Math.round(52 * Math.max(1, platform.uiScale))
+			);
+			homeFeed.setIslandVisible(p > 0.001);
+			publishHandoff({ p, source });
+		};
+
+		const onScroll = () => {
+			if (raf) return;
+			raf = requestAnimationFrame(apply);
+		};
+
+		target.addEventListener('scroll', onScroll, { passive: true });
+		window.addEventListener('resize', measure);
+		measure();
+		apply();
+		return {
+			destroy() {
+				target.removeEventListener('scroll', onScroll);
+				window.removeEventListener('resize', measure);
+				if (raf) cancelAnimationFrame(raf);
+				homeFeed.setIslandVisible(false);
+				// 路由切换：交接归零，岛立即消失（不会在新页面上残留一段淡出/回飞动画）。
+				publishHandoff({ p: 0, source: null });
+			}
+		};
+	}
 
 	function createMomentPager(
 		fetchPage: (cursor: string | null) => Promise<{ items: MomentItem[]; nextCursor: string | null }>
@@ -229,7 +277,7 @@
 
 {#snippet desktopFeedTabs()}
 	<!-- 桌面端信息流分段器：随内容滚动；滚出视口后由顶栏灵动岛接手（同一状态、无缝切换） -->
-	<div bind:this={desktopTabsEl} class="flex justify-center pb-2 pt-1 pointer-events-none">
+	<div use:tabsHandoff class="flex justify-center pb-2 pt-1 pointer-events-none">
 		<div class="pointer-events-auto rounded-full bg-surface-primary/90 p-0.5 shadow-raised-sm backdrop-blur-md">
 			<TabBar
 				variant="segmented"

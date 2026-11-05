@@ -6,6 +6,12 @@
 	import { platform } from '@/stores/platform.svelte';
 	import { headerIsland, type IslandToken } from '@/stores/header-island.svelte';
 	import { islandRectOf, islandTextRectOf, type IslandRect } from '@/lib/island-morph';
+import {
+	anchorHandoffProgress,
+	handoffRecede,
+	scrollHandoffProgress,
+	subscribeHandoff
+} from '@/lib/island-handoff';
 	import { cn } from '@/lib/utils';
 
 	// 布局组件（layout/page）。
@@ -97,52 +103,63 @@
 	const floating = $derived(variant === 'floating');
 	const integrated = $derived(variant === 'integrated');
 
-	// ── 页面锚点岛（Page Island，仅桌面端）────────────────────────────
-	// 把会随滚动离开视口的标题/上下文固定到顶栏中央：吸顶页头用滚动阈值交接（标题淡出），
-	// 非吸顶页头用 IntersectionObserver（标题滚出视口即入岛）。token 保证路由切换/多页头时不串台。
+		// ── 页面锚点岛（Page Island，仅桌面端）：滚动驱动交接 ─────────────────
+	// 交接进度 p（0→1）直接由滚动位置算出（lib/island-handoff.ts），岛的位置/尺寸逐帧插值：
+	// 滚动停在哪交接就停在哪、反向滚动完全可逆——对齐 iOS 大标题收进导航栏的交互模型。
+	// 不再用「时长动画」：时长动画开始后不跟手（用户继续滚它按自己节奏走），回滚还要等它播完，
+	// 观感就是「不自然」。token 保证路由切换/多页头时不串台。
 	const islandToken: IslandToken = Symbol('page-header-island');
 	const islandEnabled = $derived(island && !floating && platform.platform === 'desktop');
-	/** 吸顶页头：标题不会自己滚走，用滚动阈值触发交接；非吸顶页头用标题离场触发。 */
+	/** 吸顶页头：标题不会自己滚走，用滚动窗口驱动交接；integrated 页头则用锚点位置。 */
 	const islandStickyTrigger = $derived(!integrated && sticky);
 	/**
 	 * 外层 sticky 容器探测（如 SplitPageLayout 桌面分支把 header 包在 sticky 容器里）：
-	 * integrated 页头此时也不会滚出视口，IO 永不触发——必须改用滚动阈值交接。
+	 * integrated 页头此时也不会滚出视口，必须改用滚动窗口交接。
 	 */
 	let stickyAncestor = $state(false);
 	const islandHandoffTrigger = $derived(islandStickyTrigger || stickyAncestor);
-	let islandShown = $state(false);
-	/**
-	 * 交接动效的来源矩形：显隐切换的同一刻按值抓取锚点位置（此时锚点仍在原位），
-	 * 顶栏岛据此从「标题最后可见的位置」收进/吐出，而不是凭空闪现。
-	 */
-	let islandSource = $state<IslandRect | null>(null);
-	/** 交接动效的视觉锚点：标题文字那一块（不是整行，也不是块级 h1 的整列宽度）。 */
+	/** 岛是否已在交接中（p>0）；用于测试钩子与 inert。 */
+	let islandActive = $state(false);
+	/** 交接是否已基本落位（p>0.55）：整条页头此时才去掉指针/读屏可达性。 */
+	let islandSettled = $state(false);
+	/** 交接视觉锚点：标题文字那一块（块级 h1 的整列宽度不能当锚点）。 */
 	let islandMorphEl = $state<HTMLElement | undefined>(undefined);
-	const captureIslandSource = (fallback: Element | null | undefined) =>
-		islandTextRectOf(islandMorphEl) ?? islandRectOf(fallback);
-	/**
-	 * 桌面端「岛接管后隐去整条页头」：
-	 * 标题/上下文/行动都已交给顶栏灵动岛，下方的筛选/标签/模块导航同样属于「页头 chrome」——
-	 * 用户要的是完全干净的内容画布，滚动浏览时不应再留一条吸顶的玻璃标题带 + 一排筛选胶囊。
-	 * 页面想「当前筛选不丢」就把状态写进 `islandMeta`（岛是唯一上下文载体）；想改筛选时
-	 * 点岛标题回锚点即可让整块页头回来。保留高度只改透明度 → 不产生 CLS。
-	 */
-	const islandBandHidden = $derived(islandEnabled && islandShown && islandStickyTrigger);
-	/**
-	 * 入岛交接态：整块页头（标题 + 下方标签/筛选/导航 + trailing）一起退场。
-	 * 岛的存在意义就是「干净的内容画布」——只淡出标题、把筛选标签留在内容区，
-	 * 会出现「岛在顶上、标签还挂在下面」的半交接状态（用户点名的不沉浸）。
-	 * 筛选的当前状态由页面经 `islandMeta` 带进岛（如「摄影 · 云龙湖 · 5km 内 · 8 人」）。
-	 */
-	const islandHandoffActive = $derived(islandShown);
-	/**
-	 * 子元素（标题列 / 页头 trailing / below 筛选行）各自淡出的开关。
-	 * 吸顶页头入岛时整条 header 会作为一个整体淡出（islandBandHidden），此时子元素**不能再叠一层**
-	 * 150ms 淡出——两层透明度相乘会让标题先于整条消失、留下空壳页头，正是「交接不连贯」的观感来源。
-	 * 所以：整条隐去时交给 header 一处；integrated（header 不隐）时才由子元素各自退场。
-	 */
-	const islandChildHandoff = $derived(islandShown && !(islandBandHidden && !integrated));
 	let islandAnchorEl = $state<HTMLElement | undefined>(undefined);
+	/** 吸顶页头：标题不动，锚点矩形抓一次快照即可。 */
+	let stickySource: IslandRect | null = null;
+	/** 非吸顶页头：缓存锚点的文档绝对位置（避免滚动每帧 getBoundingClientRect 引起布局抖动）。 */
+	let anchorBox: { x: number; width: number; height: number; absTop: number } | null = null;
+
+	const barBottom = (): number => Math.round(52 * Math.max(1, platform.uiScale));
+
+	function measureAnchor(scroller: HTMLElement | null): void {
+		const rect = islandTextRectOf(islandMorphEl) ?? islandRectOf(islandAnchorEl);
+		if (!rect) return;
+		const scrollTop = scroller?.scrollTop ?? 0;
+		anchorBox = {
+			x: rect.x,
+			width: rect.width,
+			height: rect.height,
+			absTop: rect.y + scrollTop
+		};
+	}
+
+	/** 非吸顶锚点当前帧的视口矩形：位置 = 绝对 top - 滚动量（纯算术，不读布局）。 */
+	function anchorSource(scrollTop: number): IslandRect | null {
+		if (!anchorBox) return null;
+		return {
+			x: anchorBox.x,
+			y: anchorBox.absTop - scrollTop,
+			width: anchorBox.width,
+			height: anchorBox.height
+		};
+	}
+
+	/**
+	 * 整条页头隐去（吸顶页头专用）：标题/上下文/筛选都已交给岛，页头 chrome 不再占视线。
+	 * 保留高度只改透明度 → 不产生 CLS；筛选状态由页面写进 islandMeta 带进岛。
+	 */
+	const islandBandHidden = $derived(islandEnabled && islandHandoffTrigger && islandSettled);
 
 	$effect(() => {
 		if (!islandEnabled) return;
@@ -170,28 +187,18 @@
 		});
 	});
 
+	// 把交接帧里的 p 映射成少量响应式状态（active/settled）；几何留给 action 逐帧写，避开 60fps 响应式更新。
 	$effect(() => {
 		if (!islandEnabled) return;
-		headerIsland.setVisible(islandToken, islandShown, islandSource);
+		return subscribeHandoff((frame) => {
+			const active = frame.p > 0.001;
+			const settled = frame.p > 0.55;
+			if (active !== islandActive) islandActive = active;
+			if (settled !== islandSettled) islandSettled = settled;
+		});
 	});
 
-	// 非吸顶页头：标题离开视口（扣掉 52px 顶栏）即入岛；回到视口即退出。
-	$effect(() => {
-		if (!islandEnabled || islandHandoffTrigger) return;
-		const el = islandAnchorEl;
-		if (!el) return;
-		const io = new IntersectionObserver(
-			([entry]) => {
-				islandSource = captureIslandSource(entry.target);
-				islandShown = !entry.isIntersecting;
-			},
-			{ rootMargin: `-${Math.round(52 * Math.max(1, platform.uiScale))}px 0px 0px 0px`, threshold: 0 }
-		);
-		io.observe(el);
-		return () => io.disconnect();
-	});
-
-	// glass prop 保留兼容（历史调用）；统一改为「顶部透明 → 滚动后 glass」，不再直接消费。
+// glass prop 保留兼容（历史调用）；统一改为「顶部透明 → 滚动后 glass」，不再直接消费。
 	let scrolled = $state(false);
 
 	// 滚动监听改为 Svelte action：action 在节点挂载时执行、组件重挂/平台重排时
@@ -224,29 +231,53 @@
 			const y = target.scrollTop;
 			const uiScale = Math.max(1, platform.uiScale);
 			scrolled = y > 4 * uiScale;
-			// 吸顶页头的标题交接：滚过首屏后标题交给顶栏岛（120/72 滞回，避免抖动）；
-			// 阈值随大屏 UI 缩放（顶栏高度/页头间距都是 rem）。
-			if (islandEnabled && islandHandoffTrigger) {
-				// 阈值触发时锚点（标题）仍在原位：先按值抓取矩形，再切换显隐，
-				// 供岛做「从标题位置收进/吐出顶栏」的交接动效。
-				if (!islandShown && y > 120 * uiScale) {
-					islandSource = captureIslandSource(islandAnchorEl);
-					islandShown = true;
-				} else if (islandShown && y < 72 * uiScale) {
-					islandSource = captureIslandSource(islandAnchorEl);
-					islandShown = false;
+			if (!islandEnabled) return;
+			if (islandHandoffTrigger) {
+				// 吸顶页头：标题不动，用滚动窗口（120→260px，随 UI 缩放）把交接进度 0→1。
+				if (!stickySource) {
+					const captured = islandTextRectOf(islandMorphEl) ?? islandRectOf(islandAnchorEl);
+					// 吸顶页头的标题不动：把交接锚点收紧到 52px 顶栏带内（横向从标题位置滑到中央），
+					// 交接不掠过页头下方的正文，观感是「标题被顶栏吸走」而不是「一颗胶囊飞过页面」。
+					stickySource = captured
+						? {
+								...captured,
+								y: Math.min(captured.y, Math.max(0, (barBottom() - captured.height) / 2))
+							}
+						: null;
 				}
+				headerIsland.setHandoff(
+					islandToken,
+					scrollHandoffProgress(y, 120 * uiScale, 260 * uiScale),
+					stickySource
+				);
+				return;
 			}
+			// 非吸顶页头：标题随内容滚进顶栏，进度由锚点矩形相对顶栏的位置直接算出。
+			if (!anchorBox || y < 1) measureAnchor(target);
+			const source = anchorSource(y);
+			headerIsland.setHandoff(
+				islandToken,
+				source ? anchorHandoffProgress(source.y, source.height, barBottom()) : 0,
+				source
+			);
 		};
 		const onScroll = () => {
 			if (raf) return;
 			raf = requestAnimationFrame(apply);
 		};
 		target.addEventListener('scroll', onScroll, { passive: true });
+		const onResize = () => {
+			anchorBox = null;
+			stickySource = null;
+			apply();
+		};
+		window.addEventListener('resize', onResize);
+		measureAnchor(target);
 		apply();
 		return {
 			destroy() {
 				target.removeEventListener('scroll', onScroll);
+				window.removeEventListener('resize', onResize);
 				if (raf) cancelAnimationFrame(raf);
 			}
 		};
@@ -288,16 +319,15 @@
 
 <header
 	use:headerScroll
-	data-island-visible={islandEnabled && islandShown ? 'true' : undefined}
+	use:handoffRecede={{ enabled: islandEnabled && islandHandoffTrigger, mode: 'band' }}
+	data-island-visible={islandEnabled && islandActive ? 'true' : undefined}
 	data-island-band-hidden={islandBandHidden ? 'true' : undefined}
 	aria-hidden={islandBandHidden ? 'true' : undefined}
 	inert={islandBandHidden}
 	class={cn(
-		// 入岛交接：整条页头 150ms 淡出（与岛 340ms 的飞行重叠在前半段）；
-		// 回岛（scrolled 回落）时延迟 75ms 再淡入——先看见胶囊从顶栏飞回标题位置，标题再浮现，
-		// 避免「标题先冒出来、胶囊随后撞上去」的错位感。
-		'shrink-0 transition-opacity ease-standard duration-rapid',
-		islandBandHidden ? 'delay-0' : 'delay-75',
+		// 入岛退场由 handoffRecede 逐帧写 opacity（与滚动同源、可逆）；这里不再挂 transition-opacity：
+		// 时长过渡会与滚动进度打架（滞后一拍），正是「不跟手」的来源。
+		'shrink-0',
 		integrated
 			? 'max-sm:sticky max-sm:top-0 max-sm:z-[var(--cst-z-sticky)] max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:pb-1.5'
 			: floating
@@ -306,8 +336,8 @@
 						'page-header-scroll max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:border-b-0',
 						sticky && 'sticky top-0 z-[var(--cst-z-sticky)]',
 						scrolled && 'page-header-scrolled',
-						// 岛已接管：无 below 的吸顶页头整条隐去（保留占位、不产生版面跳动）
-						islandBandHidden && 'pointer-events-none opacity-0'
+						// 岛已接管：整条页头已由 handoffRecede 淡到 0（逐帧、可逆），这里只切断指针事件。
+						islandBandHidden && 'pointer-events-none'
 					],
 		className
 	)}
@@ -317,11 +347,8 @@
 			<!-- hub/列表页「内容内页头」：标题 + 副标题/计数 + 工具同一行；筛选紧随；桌面/平板无背景/边框/吸顶，移动端例外吸顶 -->
 			<div data-page-intro bind:this={islandAnchorEl} class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
 				<div
-					data-island-handoff={islandHandoffActive ? 'true' : undefined}
-					inert={islandChildHandoff}
-					class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1 transition-[opacity,transform] duration-rapid ease-standard {islandChildHandoff
-						? 'pointer-events-none -translate-y-0.5 opacity-0'
-						: ''}"
+					data-island-handoff={islandActive ? 'true' : undefined}
+					class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1"
 				>
 					{#if showBack}
 						<div class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0 self-center -ml-0.5">
@@ -348,25 +375,14 @@
 				</div>
 				<!-- 入岛后若岛接管了行动区，页头 trailing 淡出（保留占位、不瞬时抽走），同一动作不出现两份 -->
 				{#if trailing}
-					<div
-						class="flex shrink-0 items-center gap-2 transition-opacity duration-rapid ease-standard {islandChildHandoff
-							? 'pointer-events-none opacity-0'
-							: ''}"
-						inert={islandChildHandoff}
-					>
+					<div class="flex shrink-0 items-center gap-2">
 						{@render trailing()}
 					</div>
 				{/if}
 			</div>
 			{#if below}
 				<!-- 筛选/标签随标题一起退场：入岛后内容区必须干净（岛 meta 承接当前筛选状态） -->
-				<div
-					data-island-handoff={islandHandoffActive ? 'true' : undefined}
-					inert={islandChildHandoff}
-					class="mt-2.5 transition-[opacity,transform] duration-rapid ease-standard {islandChildHandoff
-						? 'pointer-events-none -translate-y-0.5 opacity-0'
-						: ''}"
-				>
+				<div data-island-handoff={islandActive ? 'true' : undefined} class="mt-2.5">
 					{@render below()}
 				</div>
 			{/if}
@@ -403,12 +419,7 @@
 				{#if showBack}
 					<!-- 全局统一返回按钮：38px 现代微毛玻璃圆钮（p-0.5 + 36px 幽灵钮），触控区经 hit-slop 达 44px；
 					     入岛后返回动作移到岛上（leading），页头返回淡出，避免同一动作出现两份 -->
-					<div
-						inert={islandChildHandoff}
-						class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0 transition-[opacity,transform] duration-rapid ease-standard {islandChildHandoff
-							? 'pointer-events-none -translate-y-0.5 opacity-0'
-							: ''}"
-					>
+					<div class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0">
 						<ActionIconButton
 							icon={ArrowLeft}
 							label={backLabel}
@@ -426,10 +437,8 @@
 			     在线 chip 与副标题同时被压折行。） -->
 			<div
 				bind:this={islandAnchorEl}
-				data-island-handoff={islandHandoffTrigger && islandShown ? 'true' : undefined}
-				class="min-w-0 flex-1 transition-[opacity,transform] duration-rapid ease-standard {islandChildHandoff
-					? 'pointer-events-none -translate-y-0.5 opacity-0'
-					: ''}"
+				data-island-handoff={islandHandoffTrigger && islandActive ? 'true' : undefined}
+				class="min-w-0 flex-1"
 			>
 				<h1 bind:this={islandMorphEl} class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
 				{#if subtitle}
@@ -443,12 +452,7 @@
 			</div>
 			<!-- 入岛后若岛接管了行动区，页头 trailing 淡出（保留占位、不瞬时抽走），同一动作不出现两份 -->
 			{#if trailing}
-				<div
-					class="shrink-0 transition-opacity duration-rapid ease-standard {islandTrailing && islandChildHandoff
-						? 'pointer-events-none opacity-0'
-						: ''}"
-					inert={islandTrailing && islandChildHandoff}
-				>
+				<div class="shrink-0">
 					{@render trailing()}
 				</div>
 			{/if}
@@ -456,13 +460,7 @@
 		{/if}
 		{#if below && !floating && !integrated}
 			<!-- 与 integrated 同规则：入岛后整块页头（含下方工具行）一起退场，内容区保持干净 -->
-			<div
-				data-island-handoff={islandHandoffActive ? 'true' : undefined}
-				inert={islandChildHandoff}
-				class="transition-[opacity,transform] duration-rapid ease-standard {islandChildHandoff
-					? 'pointer-events-none -translate-y-0.5 opacity-0'
-					: ''}"
-			>
+			<div data-island-handoff={islandActive ? 'true' : undefined}>
 				{@render below()}
 			</div>
 		{/if}

@@ -4,12 +4,12 @@
 	import IslandCapsule from '@/components/layout/page/IslandCapsule.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { homeFeed } from '@/stores/home-feed.svelte';
-	import type { IslandRect } from '@/lib/island-morph';
 
 	// 首页灵动岛（桌面端，滚动 handoff）：
 	// 页面顶部显示内容区分段器；分段器滚出视口后，顶栏中央浮现灵动岛，
-	// 展示当前信息流 + 语境说明 + 切换动作——与详情页锚点岛同一形态与交互语言（见 IslandCapsule）。
-	// 首页不注册 headerIsland（没有页面标题），进度环同样消费 headerIsland.progress。
+	// 展示当前信息流 + 语境说明 + 切换动作——与页面标题岛同一形态、同一套滚动交接模型
+	// （lib/island-handoff.ts：进度由分段器相对顶栏的位置算出，跟手、可逆、无独立时长动画）。
+	// 首页不注册 headerIsland（没有页面标题），进度圆环同样消费 headerIsland.progress。
 	const isDiscover = $derived(homeFeed.activeTab === 'discover');
 	const ActiveIcon = $derived(isDiscover ? Sparkles : Users);
 	const label = $derived(isDiscover ? '为你推荐' : '正在关注');
@@ -22,10 +22,7 @@
 	);
 	const otherLabel = $derived(isDiscover ? '正在关注' : '为你推荐');
 
-	let {
-		progress = 0,
-		getMorphSource
-	}: { progress?: number; getMorphSource?: () => IslandRect | null } = $props();
+	let { progress = 0 }: { progress?: number } = $props();
 
 	function scrollToTop() {
 		const scroller = document.getElementById('main-content');
@@ -47,7 +44,6 @@
 	titleAria="回到信息流顶部"
 	onTitleClick={scrollToTop}
 	{progress}
-	{getMorphSource}
 >
 	{#snippet leading()}
 		<span

@@ -1002,17 +1002,16 @@
      下方文字不穿透。 */
   /* 页头滚动感知（Round 9）：顶部透明 → 滚动后 glass。
      过渡 150ms，reduced-motion 由全局规则瞬时；不改变 sticky 定位/布局。
-     两个必须显式写进过渡列表的属性：
-     - opacity：本类特异性高于 Tailwind 的 transition-opacity 工具类，简化写会把它覆盖成
-       瞬跳（PageHeader 入岛时整条页头 1→0 无过渡）；
-     - backdrop-filter（见下方 @media 块）：.page-header-scrolled 才新增 blur，不在列表里
-       就是过阈值那一刻 1 帧跳变。
-     用 transition 长写属性而非简写：简写会把 PageHeader 的 transition-delay（delay-75 的
-     入岛/回岛错峰）重置为 0。 */
+     必须显式写进过渡列表的是 backdrop-filter（见下方 @media 块）：.page-header-scrolled
+     才新增 blur，不在列表里就是过阈值那一刻 1 帧跳变。
+     注意：**不包含 opacity** —— 页头入岛退场现在由滚动交接逐帧写 inline opacity
+     （lib/island-handoff.ts 的 handoffRecede）；若这里再挂 opacity 过渡，每帧写入会被
+     过渡再平滑一次，交接就比滚动慢半拍（「不跟手」的根因）。
+     用 transition 长写属性而非简写，避免把调用方的 transition-delay 重置为 0。 */
   .page-header-scroll {
     background-color: transparent;
     border-bottom: var(--cst-border-width-hairline) solid transparent;
-    transition-property: background-color, border-color, box-shadow, opacity;
+    transition-property: background-color, border-color, box-shadow;
     transition-duration: var(--cst-motion-rapid);
     transition-timing-function: var(--cst-ease-standard);
   }
@@ -1033,7 +1032,7 @@
     .page-header-scroll {
       -webkit-backdrop-filter: blur(0) saturate(1);
       backdrop-filter: blur(0) saturate(1);
-      transition-property: background-color, border-color, box-shadow, opacity,
+      transition-property: background-color, border-color, box-shadow,
         -webkit-backdrop-filter, backdrop-filter;
     }
   }

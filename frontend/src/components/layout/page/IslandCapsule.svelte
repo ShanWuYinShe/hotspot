@@ -1,22 +1,22 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { islandMorphIn, islandMorphOut, type IslandRect } from '@/lib/island-morph';
+	import { islandHandoff } from '@/lib/island-handoff';
 
 	// IslandCapsule — 桌面端顶栏中央「灵动岛」的唯一形态实现（docs/design-system.md §22）。
 	//
 	// 为什么要有这一层：PageIsland（页面锚点岛）与 HomeFeedIsland（首页信息流岛）此前各自
-	// 复制了一份「胶囊外壳 + 进度环 + hover 百分比」的标记，改形态要改两处、且两份漂移出
-	// 「百分比与进度环同值双表达」这种重复 UI。外壳/呼吸态/进度环/交互动效现在只有这一份，
-	// 两个业务岛只提供内容与行为。
+	// 复制了一份外壳标记，改形态要改两处、且两份漂移出「百分比与进度环同值双表达」这种重复 UI。
+	// 外壳/呼吸态/阅读进度/交互动效现在只有这一份，两个业务岛只提供内容与行为。
 	//
 	// 交互契约（与 §22 一致）：
 	//   - hover / focus-within：表面由半透明玻璃变为实底 + accent 细边 + 抬升档投影，
-	//     明确「这颗胶囊可点」，但**不改变宽度**——旧实现 hover 横向舒展会让居中的胶囊
-	//     左右同时外扩、内容整排位移，既抖又廉价；
-	//   - 同一读数只出现一处：阅读进度只有右侧进度环表达，不再在 hover 里重复百分比；
+	//     明确「这颗胶囊可点」，但**不改变宽度**——hover 横向舒展会让居中的胶囊左右同时外扩、
+	//     内容整排位移，既抖又廉价；
+	//   - 同一读数只出现一处：阅读进度只用最右侧圆环表达（accent 弧 + 极淡底轨，每帧跟手，
+	//     不加 CSS 过渡），不再在 hover 里重复百分比，也不再画底部下划线；
 	//   - 点击标题回页面锚点（语义由调用方 onTitleClick 决定）；
-	//   - 进场/退场走 islandMorphIn / islandMorphOut：从调用方给出的锚点矩形收进/吐出顶栏
-	//     （信息交接的连续感；入口显影→归位→显字，出口文字先散、壳飞回锚点）；
+	//   - 进场/退场由滚动交接逐帧驱动（lib/island-handoff.ts）：滚动停在哪交接就停在哪、
+	//     反向完全可逆；没有独立时长动画，路由切换时直接卸载，不会在新页面上残留动画。
 	//   - 键盘：标题按钮有 aria-label 与 focus-ring，阻止冒泡的圆形按钮各自独立。
 	let {
 		ariaLabel = '页面锚点与快捷操作',
@@ -27,7 +27,6 @@
 		leading,
 		trailing,
 		progress = 0,
-		getMorphSource,
 		class: className = ''
 	}: {
 		/** 岛的整体语义（role=group 的 aria-label）。 */
@@ -44,16 +43,21 @@
 		leading?: Snippet;
 		/** 右侧行动区（≤2 个控件），可选。 */
 		trailing?: Snippet;
-		/** 阅读进度 0–100（唯一滚动 owner 上报），纯展示。 */
+		/** 阅读进度 0–100（唯一滚动 owner 上报），渲染为最右侧圆环。 */
 		progress?: number;
-		/** 进场/退场动画的来源矩形 getter（锚点最后可见位置）；无则退化为淡入。 */
-		getMorphSource?: () => IslandRect | null;
 		class?: string;
 	} = $props();
 
 	const safeProgress = $derived(
 		Math.min(100, Math.max(0, Number.isFinite(progress) ? progress : 0))
 	);
+
+	// 进度圆环几何：18px / 2px 描边；尺寸用 rem（1.125rem）随大屏根字号等比放大。
+	const RING_SIZE = 18;
+	const RING_STROKE = 2;
+	const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2 - 1; // 7
+	const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+	const ringOffset = $derived(RING_CIRCUMFERENCE * (1 - safeProgress / 100));
 </script>
 
 <div
@@ -61,13 +65,11 @@
 	role="group"
 	aria-label={ariaLabel}
 	style="contain: layout paint;"
-	in:islandMorphIn={{ getSource: getMorphSource }}
-	out:islandMorphOut={{ getSource: getMorphSource }}
+	use:islandHandoff
 	class="group/island pointer-events-auto relative flex h-9 min-w-0 max-w-md items-center rounded-full border border-border-default/50 bg-surface-primary/90 px-2 text-text-primary shadow-raised-sm transition-[background-color,border-color,box-shadow,transform] duration-standard ease-standard hover:-translate-y-px hover:border-accent-border hover:bg-surface-primary hover:shadow-raised-md focus-within:border-accent-border focus-within:bg-surface-primary focus-within:shadow-raised-md {className}"
 >
-	<!-- 内容层：交接飞行期间由 --cst-island-content（0→1，见 lib/island-morph.ts）单独显影。
-	     整颗胶囊 scale 时正文是缩放态，先隐后显才不会有「糊字掠过顶栏」的廉价感；
-	     飞行结束后 Svelte 清掉内联变量，默认值 1 让内容恢复正常可读。 -->
+	<!-- 内容层：交接飞行期间由 --cst-island-content（0→1，见 lib/island-handoff.ts）单独显影。
+	     整颗胶囊 scale 时正文是缩放态，先隐后显才不会有「糊字掠过顶栏」的廉价感。 -->
 	<div
 		class="flex h-full min-w-0 items-center gap-1.5"
 		style="opacity:var(--cst-island-content, 1);"
@@ -97,22 +99,43 @@
 				{@render trailing()}
 			</div>
 		{/if}
-	</div>
 
-	<!-- 阅读进度：胶囊内底部 2px accent 细线（0–100%），纯展示、不参与交互。
-	     同一读数只保留这一处表达——hover 里不再重复百分比；也不用圆环：
-	     20px 小圆环在顶栏里更像「加载中」而不是「读到哪了」，细线不占右侧槽位、
-	     不改变胶囊宽高。不画完整底轨：满宽灰线会被读成文字下划线，只留 accent 段
-	     才是「读到哪了」的进度语义。 -->
-	<span
-		data-island-progress-bar
-		data-island-progress={safeProgress}
-		class="pointer-events-none absolute inset-x-2.5 bottom-[2px] h-px overflow-hidden rounded-full"
-		aria-hidden="true"
-	>
+		<!-- 阅读进度圆环（唯一读数表达，固定在最右侧）：
+		     accent 弧 + 极淡底轨，0% 时是一圈空环、100% 收成完整圆；
+		     每帧由滚动 owner 直接写 dashoffset（不加 CSS 过渡），保证与滚动严格同频。 -->
 		<span
-			class="absolute inset-y-0 left-0 rounded-full bg-accent-default transition-[width] duration-rapid ease-standard"
-			style="width:{safeProgress}%"
-		></span>
-	</span>
+			class="ml-1 flex shrink-0 items-center"
+			data-island-progress-ring
+			data-island-progress={safeProgress}
+			aria-hidden="true"
+		>
+			<svg
+				class="block -rotate-90"
+				width="1.125rem"
+				height="1.125rem"
+				viewBox="0 0 {RING_SIZE} {RING_SIZE}"
+			>
+				<circle
+					cx={RING_SIZE / 2}
+					cy={RING_SIZE / 2}
+					r={RING_RADIUS}
+					fill="none"
+					stroke="var(--color-border-default)"
+					stroke-opacity="0.28"
+					stroke-width={RING_STROKE}
+				/>
+				<circle
+					cx={RING_SIZE / 2}
+					cy={RING_SIZE / 2}
+					r={RING_RADIUS}
+					fill="none"
+					stroke="var(--color-accent-default)"
+					stroke-width={RING_STROKE}
+					stroke-linecap="round"
+					stroke-dasharray={RING_CIRCUMFERENCE}
+					stroke-dashoffset={ringOffset}
+				/>
+			</svg>
+		</span>
+	</div>
 </div>

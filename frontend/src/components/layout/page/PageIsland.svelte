@@ -4,8 +4,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import IslandCapsule from './IslandCapsule.svelte';
-	import type { IslandRect } from '@/lib/island-morph';
-	import type { AuthorInfo } from '@/stores/header-island.svelte';
+		import type { AuthorInfo } from '@/stores/header-island.svelte';
 
 	// PageIsland — 桌面端顶栏中央「页面锚点岛」的业务层（形态见 IslandCapsule）。
 	// 职责：把会随滚动离开视口、但随时可能需要的信息（标题/作者身份/状态）与页面主行动
@@ -19,7 +18,8 @@
 	//   - hover / 键盘 focus-within：胶囊表面转实底 + accent 细边 + 抬升投影（不改变宽度）；
 	//   - 右侧进度环：随主滚动容器进度增长，纯展示、不参与交互；
 	//   - 键盘顺序：返回 → 标题/身份 → 行动区；全部控件有 aria-label 与 focus-ring；
-	//   - 进场/退场：从页面锚点矩形收进/吐出顶栏（islandMorphIn / islandMorphOut），不再凭空闪现。
+	//   - 进场/退场：由「标题 → 岛」的滚动交接进度逐帧驱动（lib/island-handoff.ts），
+	//     不播独立时长动画——滚动停在哪交接就停在哪，反向滚动完全可逆。
 
 	let {
 		title = '',
@@ -29,7 +29,6 @@
 		backLabel = '返回',
 		onTitleClick,
 		progress = 0,
-		getMorphSource,
 		trailing
 	}: {
 		/** 页面标题（作者身份模式下由 author.name 覆盖） */
@@ -43,10 +42,8 @@
 		backLabel?: string;
 		/** 点击标题/身份的语义：回锚点或进作者主页（由调用方决定） */
 		onTitleClick?: () => void;
-		/** 阅读进度 0–100，画在胶囊右侧 */
+		/** 阅读进度 0–100，渲染为胶囊最右侧圆环 */
 		progress?: number;
-		/** 进场/退场动画的来源矩形 getter（页面锚点最后可见位置） */
-		getMorphSource?: () => IslandRect | null;
 		/** 右侧行动区（页面主行动，≤2 控件） */
 		trailing?: Snippet;
 	} = $props();
@@ -67,7 +64,6 @@
 	titleAria={titleAria}
 	onTitleClick={() => onTitleClick?.()}
 	{progress}
-	{getMorphSource}
 	{trailing}
 >
 	{#snippet leading()}

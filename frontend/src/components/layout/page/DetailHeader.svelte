@@ -9,6 +9,7 @@
 	import { platform } from '@/stores/platform.svelte';
 	import { headerIsland, type IslandToken } from '@/stores/header-island.svelte';
 	import { islandRectOf, type IslandRect } from '@/lib/island-morph';
+	import { handoffRecede, scrollHandoffProgress, subscribeHandoff } from '@/lib/island-handoff';
 
 	export interface AuthorInfo {
 		id?: string;
@@ -46,8 +47,12 @@
 
 	let scrolled = $state(false);
 	let hidden = $state(false);
-	/** 交接动效来源：滚动过阈值那一刻左侧工具行（返回 + 面包屑）在视口中的位置。 */
-	let islandSource = $state<IslandRect | null>(null);
+	/** 桌面端交接的锚点快照：左侧工具行（返回 + 面包屑）在吸顶容器里位置稳定，抓一次即可。 */
+	let islandSource: IslandRect | null = null;
+	/** 交接是否已基本落位（p>0.55）：决定页内工具行是否 aria-hidden / inert。 */
+	let islandSettled = $state(false);
+	// 详情页的桌面岛：滚动驱动交接（和 PageHeader 同一套模型），token 保证路由切换不串台。
+	const islandToken: IslandToken = Symbol('detail-header-island');
 
 	// 监听滚动与方向（向上微划滑入 / 向下深划避让 / 顶部常驻）
 	function headerScroll(node: HTMLElement) {
@@ -66,21 +71,33 @@
 		const apply = () => {
 			raf = 0;
 			const current = target.scrollTop;
-			const delta = current - lastScrollTop;
+			const uiScale = Math.max(1, platform.uiScale);
 
-			const nextScrolled = current > scrollThreshold * Math.max(1, platform.uiScale);
-			if (nextScrolled !== scrolled) {
-				// 状态切换前抓取工具行矩形：切到收敛态后这两块工具行不再渲染，抓不到了。
-				islandSource = islandRectOf(node.querySelector('[data-detail-header-left]'));
-			}
-			scrolled = nextScrolled;
+			scrolled = current > scrollThreshold * uiScale;
 
-			// 标头吸顶逻辑：
-			// 移除过度自动避让，滚动离开首屏后保持优雅吸顶且常驻，
-			// 不在用户向下浏览长文或评论时莫名消失，彻底消除「完全看不到标头」的问题。
+			// 标头吸顶逻辑：滚动离开首屏后保持优雅吸顶且常驻，不自动避让。
 			hidden = false;
 
 			lastScrollTop = Math.max(0, current);
+
+			// 桌面端：标题/身份 → 顶栏岛的交接由滚动进度驱动（160px 起、280px 落位）。
+			// 和 PageHeader 同一套 scroll-linked 模型：跟手、可逆、无独立时长动画。
+			if (platform.platform !== 'desktop') return;
+			if (!islandSource) {
+				const captured = islandRectOf(node.querySelector('[data-detail-header-left]'));
+				// 工具行锚点收紧到顶栏带内：交接沿顶栏横向滑入，不掠过正文。
+				islandSource = captured
+					? {
+							...captured,
+							y: Math.min(captured.y, Math.max(0, (52 * uiScale - captured.height) / 2))
+						}
+					: null;
+			}
+			headerIsland.setHandoff(
+				islandToken,
+				scrollHandoffProgress(current, scrollThreshold * uiScale, (scrollThreshold + 120) * uiScale),
+				islandSource
+			);
 		};
 
 		const onScroll = () => {
@@ -99,8 +116,6 @@
 
 	// ── 桌面端：页面锚点岛（顶栏中央）────────────────────────────────
 	// 详情页身份（作者/群/用户）在滚动离开首屏后交给顶栏岛；移动/平板保留页内吸顶岛。
-	// token 保证路由切换/多个页头并存时只有当前页面能控制岛。
-	const islandToken: IslandToken = Symbol('detail-header-island');
 
 	$effect(() => {
 		if (platform.platform !== 'desktop') return;
@@ -132,16 +147,23 @@
 		});
 	});
 
+	// 把交接帧映射成少量响应式状态（几何由 lib/island-handoff.ts 的 action 逐帧写）。
 	$effect(() => {
 		if (platform.platform !== 'desktop') return;
-		headerIsland.setVisible(islandToken, scrolled, islandSource);
+		return subscribeHandoff((frame) => {
+			const settled = frame.p > 0.55;
+			if (settled !== islandSettled) islandSettled = settled;
+		});
 	});
 </script>
 
 <header
 	use:headerScroll
+	use:handoffRecede={{ enabled: platform.platform === 'desktop', mode: 'band' }}
 	class={cn(
-		'sticky top-0 z-[var(--cst-z-sticky)] w-full select-none transition-all duration-snappy ease-standard pointer-events-none bg-transparent py-2 sm:py-2.5',
+		// 桌面端入岛退场由 handoffRecede 逐帧写 opacity（与滚动同源、可逆）；
+		// 这里不能挂 transition-all：过渡会让每帧写入再叠加一个时长，肉眼就是「慢半拍」。
+		'sticky top-0 z-[var(--cst-z-sticky)] w-full select-none pointer-events-none bg-transparent py-2 sm:py-2.5',
 		hidden ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100',
 		className
 	)}
@@ -154,9 +176,17 @@
 				<!-- ══ 初始态：两侧角落悬浮透亮光斑胶囊（返回 + 桌面实体面包屑 / 操作区）══ -->
 				<div
 					data-detail-header-anchor
-					aria-hidden={scrolled ? 'true' : undefined}
-					inert={scrolled}
-					class="absolute inset-0 flex items-center justify-between gap-2 transition-[opacity,transform] duration-rapid ease-standard {scrolled
+					aria-hidden={platform.platform === 'desktop'
+						? islandSettled
+							? 'true'
+							: undefined
+						: scrolled
+							? 'true'
+							: undefined}
+					inert={platform.platform === 'desktop' ? islandSettled : scrolled}
+					class="absolute inset-0 flex items-center justify-between gap-2 {platform.platform !== 'desktop'
+						? 'transition-[opacity,transform] duration-rapid ease-standard'
+						: ''} {platform.platform !== 'desktop' && scrolled
 						? 'pointer-events-none -translate-y-0.5 opacity-0'
 						: ''}"
 				>
