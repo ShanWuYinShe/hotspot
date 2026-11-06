@@ -2910,3 +2910,20 @@ context 传递（与 resourceguard 同一模式）。
   WithDependencies 包裹、notify 路由装配测试显式注入；删除全部全局 setter。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第二十三批）：架构守卫（可变全局 / 多写事务）+ DefaultHub 评估（2026-11-07）
+
+C2/C5 收口防腐：把本轮清掉的全局单例与事务纪律固化为 CI 硬断言。
+
+- `TestNoNewMutablePackageGlobals`：扫描 platform/modules 包级 atomic/sync.Map 全局，
+  只允许 3 条登记项（observability.defaultLogger、realtime.defaultHub、
+  requestmeta.trustedProxyCIDRs，均在 allowlist 写明理由）；新增全局直接失败。
+- `TestRepoMultiWriteMethodsUseTransaction`：AST 扫描 `repo_postgres*.go`，同一函数
+  直接执行 >=2 次写语句必须出现 RunInTransaction/WithTx，或进入 allowlist
+  （ProvisionUser 调用方事务契约、execInTx/MarkAsRead 互斥分支三类已登记理由）。
+- `realtime.DefaultHub` 显式注入评估：现状 80 处调用（17 个非测试文件）、21 个测试
+  文件依赖 SetDefaultHub；彻底移除需把 Hub 依赖穿透 10+ 模块构造器/registry 并
+  重写测试装配，收益（多 App 隔离）与成本不匹配，留作独立批次；本轮用守卫
+  防止新增全局，Hub 改造保持计划内。
+
+验证：go test -short 全绿（archtest 全量）；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
