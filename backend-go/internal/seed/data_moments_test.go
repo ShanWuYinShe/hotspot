@@ -114,28 +114,29 @@ func TestMomentCounterColumns(t *testing.T) {
 	}
 }
 
-// TestCommentRepliesConsistency 评论 replies_count 与子行一致，且存在二级回复。
-func TestCommentRepliesConsistency(t *testing.T) {
+// TestCommentRepliesStructure 评论数据包含二级回复，且 parent_id 指向同批顶层评论。
+// replies_count 已改为读时聚合（不再有写入列），这里只校验行结构与规格一致。
+func TestCommentRepliesStructure(t *testing.T) {
 	plan := mustBuildPlan(t, testPlanOptions())
 	rows := rowsOfTable(t, plan, "comments")
 	columns := columnsOfTable(t, plan, "comments")
 	idIndex := columnIndex(t, columns, "comment_id")
 	parentIndex := columnIndex(t, columns, "parent_id")
-	repliesIndex := columnIndex(t, columns, "replies_count")
 
-	replyCounts := map[string]int{}
+	ids := make(map[string]struct{}, len(rows))
 	for _, row := range rows {
-		if parent, ok := row[parentIndex].(string); ok && parent != "" {
-			replyCounts[parent]++
-		}
+		ids[mustString(t, row[idIndex])] = struct{}{}
 	}
 	replyTotal := 0
 	for _, row := range rows {
-		commentID := mustString(t, row[idIndex])
-		if got, want := mustInt(t, row[repliesIndex]), replyCounts[commentID]; got != want {
-			t.Errorf("评论 %s replies_count = %d，子回复 = %d", commentID, got, want)
+		parent, ok := row[parentIndex].(string)
+		if !ok || parent == "" {
+			continue
 		}
-		replyTotal += replyCounts[commentID]
+		replyTotal++
+		if _, exists := ids[parent]; !exists {
+			t.Errorf("回复 %s 的 parent_id %s 不在本批评论中", mustString(t, row[idIndex]), parent)
+		}
 	}
 	if replyTotal == 0 {
 		t.Fatalf("评论中没有二级回复（规格要求含 2 级回复）")

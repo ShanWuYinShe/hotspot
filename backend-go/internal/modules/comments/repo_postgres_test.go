@@ -95,12 +95,11 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 	switch query {
 	case queryInsertComment:
 		item := CommentItem{
-			CommentID:    args[0].(string),
-			MomentID:     args[1].(string),
-			Content:      args[4].(string),
-			CreatedAt:    stubTimeString(args[5]),
-			RepliesCount: args[6].(int),
-			User:         UserInfo{UserID: args[2].(string), Nickname: args[2].(string)},
+			CommentID: args[0].(string),
+			MomentID:  args[1].(string),
+			Content:   args[4].(string),
+			CreatedAt: stubTimeString(args[5]),
+			User:      UserInfo{UserID: args[2].(string), Nickname: args[2].(string)},
 		}
 		if parentID, ok := args[3].(string); ok {
 			item.ParentID = strPtr(parentID)

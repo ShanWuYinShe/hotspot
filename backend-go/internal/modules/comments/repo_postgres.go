@@ -40,13 +40,8 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if req.ParentID != "" {
 		parentID = req.ParentID
 	}
-	if err := queryable.Exec(ctx, queryInsertComment, commentID, req.MomentID, userID, parentID, req.Content, now, 0); err != nil {
+	if err := queryable.Exec(ctx, queryInsertComment, commentID, req.MomentID, userID, parentID, req.Content, now); err != nil {
 		return CommentItem{}, fmt.Errorf("comments.Create insert comment: %w", err)
-	}
-	if req.ParentID != "" {
-		if err := queryable.Exec(ctx, queryIncrementCommentRepliesCount, req.ParentID); err != nil {
-			return CommentItem{}, fmt.Errorf("comments.Create increment replies: %w", err)
-		}
 	}
 	var nickname string
 	if err := queryable.QueryRow(ctx, queryGetNickname, userID).Scan(&nickname); err != nil {
@@ -73,15 +68,15 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	}, nil
 }
 
-// SoftDelete 原子软删 + 父评论计数递减，返回是否实际命中（deleted=false =
-// 并发下已被删除或本就不存在，幂等 no-op，调用方据此跳过 moment 计数递减）。
+// SoftDelete 原子软删，返回是否实际命中（deleted=false = 并发下已被删除或本就
+// 不存在，幂等 no-op，调用方据此跳过瞬间互动计数递减）。
 func (r *PostgresRepository) SoftDelete(ctx context.Context, commentID string) (bool, error) {
 	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return false, persistence.ErrNotImplemented
 	}
 	var deleted bool
-	if err := queryable.QueryRow(ctx, querySoftDeleteReplyAndDecrementParent, commentID).Scan(&deleted); err != nil {
+	if err := queryable.QueryRow(ctx, querySoftDeleteComment, commentID).Scan(&deleted); err != nil {
 		return false, fmt.Errorf("comments.SoftDelete exec: %w", err)
 	}
 	return deleted, nil

@@ -139,23 +139,17 @@ func buildCommentsTables(baseTime time.Time, moments []momentSpec) (topLevel tab
 		Table: "comments",
 		Columns: []column{
 			col("comment_id"), col("moment_id"), col("user_id"), col("parent_id"),
-			col("content"), col("created_at"), col("replies_count"),
+			col("content"), col("created_at"),
 		},
 	}
 	replies = tableData{
 		Table: "comments",
 		Columns: []column{
 			col("comment_id"), col("moment_id"), col("user_id"), col("parent_id"),
-			col("content"), col("created_at"), col("replies_count"),
+			col("content"), col("created_at"),
 		},
 	}
 	for _, moment := range moments {
-		replyCounts := make(map[string]int)
-		for _, comment := range moment.Comments {
-			if comment.ParentID != "" {
-				replyCounts[comment.ParentID]++
-			}
-		}
 		for _, comment := range moment.Comments {
 			var parent any
 			if comment.ParentID != "" {
@@ -163,7 +157,7 @@ func buildCommentsTables(baseTime time.Time, moments []momentSpec) (topLevel tab
 			}
 			row := []any{
 				comment.CommentID, moment.MomentID, comment.UserID, parent,
-				comment.Content, baseTime.Add(-comment.CreatedAgo), replyCounts[comment.CommentID],
+				comment.Content, baseTime.Add(-comment.CreatedAgo),
 			}
 			if comment.ParentID == "" {
 				topLevel.Rows = append(topLevel.Rows, row)
