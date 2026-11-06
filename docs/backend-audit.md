@@ -3052,3 +3052,23 @@ verify-backend-ci.sh --with-db ALL CHECKS PASSED。
 - 新增短 ID（"abc"）回显单测；三套 nginx 配置（base/dev/prod）容器内 `nginx -t` 通过。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第三批）：moments 匿名端点 Public 类型层（契约类型隔离首个纵切片）（2026-11-07）
+
+spec api_spec_public.md「类型体系」要求匿名节点 Request/Response 使用 Public*
+专属类型、禁止与登录版共用，且响应不得含查看者状态字段。此前 /public/v1
+全部端点直接复用登录 DTO（is_favorited / author_relation / recommendation 等
+字段虽然值恒零/null，但仍在契约形状里）。
+
+- 新增 moments 公共类型：PublicMomentItem（MomentItem 去三个查看者字段）、
+  PublicReaction（Reaction 去 reacted_by_me）、PublicPaginatedMoments、
+  PublicSearch/FetchNearby/OpenMomentDoorRequest；
+- 三个匿名 handler（PublicSearch / PublicFetchNearby / PublicOpenTheDoor）只做
+  Public 请求→内部请求转换、复用校验、内部结果→Public 响应映射；
+- MountPublic 改挂 Public handler；提取 validateSearchMomentsRequest 供两版共用
+  （同一契约口径，不复制校验逻辑）；
+- 数组字段（images/tags/mentions/reactions）映射时归一为空数组，不返回 null；
+- 测试：匿名响应无 is_favorited/author_relation/recommendation 键、契约字段齐全、
+  数组恒为数组、热门搜索/附近分页 shape、类型转换归一；moments 覆盖率 70.4%。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

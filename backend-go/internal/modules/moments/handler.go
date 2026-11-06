@@ -111,38 +111,8 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
 		return
 	}
-	if req.SortBy != "" {
-		switch req.SortBy {
-		case "relevance", "newest", "popular":
-		default:
-			httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
-			return
-		}
-	}
-	// 热门模式（spec moment.md → moments/search）：keyword/tag 均缺省且显式传
-	// sort_by='popular' 时进入（承接原 feed/trending 的发现页首屏能力）；
-	// 热门模式与输入条件互斥（同传 10000），三者全缺省仍 10000。
-	// 契约（api_spec_base.md「搜索与地理约束」）：keyword 1-100 字符、tag 1-30 字符。
-	if req.Keyword != nil && *req.Keyword != "" {
-		if n := utf8.RuneCountInString(*req.Keyword); n > 100 {
-			httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
-			return
-		}
-	}
-	if req.Tag != nil && *req.Tag != "" {
-		if n := utf8.RuneCountInString(*req.Tag); n > 30 {
-			httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
-			return
-		}
-	}
-	keywordProvided := req.Keyword != nil && *req.Keyword != ""
-	tagProvided := req.Tag != nil && *req.Tag != ""
-	if req.SortBy == "popular" && (keywordProvided || tagProvided) {
-		httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
-		return
-	}
-	if !keywordProvided && !tagProvided && req.SortBy != "popular" {
-		httpx.WriteInvalidRequest(w, r, "Search", "参数错误")
+	if apiErr := validateSearchMomentsRequest(req); apiErr != nil {
+		httpx.WriteAPIError(w, r, "Search", apiErr)
 		return
 	}
 	result, err := h.service.Search(r.Context(), req)
@@ -151,6 +121,41 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
+}
+
+// validateSearchMomentsRequest 校验 moments/search 的通用参数规则（登录版与
+// 匿名 public 版共用；spec api_spec_moment.md / api_spec_public.md 同口径）。
+func validateSearchMomentsRequest(req SearchMomentsRequest) *httpx.APIError {
+	if req.SortBy != "" {
+		switch req.SortBy {
+		case "relevance", "newest", "popular":
+		default:
+			return httpx.InvalidRequest("参数错误")
+		}
+	}
+	// 热门模式（spec moment.md → moments/search）：keyword/tag 均缺省且显式传
+	// sort_by='popular' 时进入（承接原 feed/trending 的发现页首屏能力）；
+	// 热门模式与输入条件互斥（同传 10000），三者全缺省仍 10000。
+	// 契约（api_spec_base.md「搜索与地理约束」）：keyword 1-100 字符、tag 1-30 字符。
+	if req.Keyword != nil && *req.Keyword != "" {
+		if n := utf8.RuneCountInString(*req.Keyword); n > 100 {
+			return httpx.InvalidRequest("参数错误")
+		}
+	}
+	if req.Tag != nil && *req.Tag != "" {
+		if n := utf8.RuneCountInString(*req.Tag); n > 30 {
+			return httpx.InvalidRequest("参数错误")
+		}
+	}
+	keywordProvided := req.Keyword != nil && *req.Keyword != ""
+	tagProvided := req.Tag != nil && *req.Tag != ""
+	if req.SortBy == "popular" && (keywordProvided || tagProvided) {
+		return httpx.InvalidRequest("参数错误")
+	}
+	if !keywordProvided && !tagProvided && req.SortBy != "popular" {
+		return httpx.InvalidRequest("参数错误")
+	}
+	return nil
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
