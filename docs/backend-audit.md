@@ -3072,3 +3072,17 @@ spec api_spec_public.md「类型体系」要求匿名节点 Request/Response 使
   数组恒为数组、热门搜索/附近分页 shape、类型转换归一；moments 覆盖率 70.4%。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第四批）：comments 匿名端点 Public 类型层（2026-11-07）
+
+延续 H3 的类型隔离纵切片，覆盖 comments 三个匿名读端点：
+
+- 新增 PublicCommentItem（CommentItem 的 reactions 换 PublicReaction，去
+  reacted_by_me）、PublicReaction、PublicPaginatedComments 与三个 Public 请求类型；
+- PublicFetch / PublicFetchReplies / PublicOpenTheDoor 做请求转换 + 复用服务读取 +
+  内部结果→Public 响应映射；top_replies 递归使用 PublicCommentItem；数组归一为空数组；
+- MountPublic 改挂 Public handler；错误口径保持（10300 防枚举、10000 参数）；
+- 测试：转换剥离 reacted_by_me、top_replies 递归、数组归一、三个端点 not-found 10300、
+  参数缺失 10000；comments 覆盖率 72.0%。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

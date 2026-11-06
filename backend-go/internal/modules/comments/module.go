@@ -46,8 +46,8 @@ func (m *Module) Mount(r chi.Router) {
 // MountPublic mounts anonymous comment reads under /public/v1.
 func (m *Module) MountPublic(r chi.Router) {
 	r.Route("/comments", func(commentsRouter chi.Router) {
-		commentsRouter.Post("/fetch", m.Handler.List)
-		commentsRouter.Post("/fetch_replies", m.Handler.ListReplies)
-		commentsRouter.Post("/open_the_door", m.Handler.GetDetail)
+		commentsRouter.Post("/fetch", m.Handler.PublicFetch)
+		commentsRouter.Post("/fetch_replies", m.Handler.PublicFetchReplies)
+		commentsRouter.Post("/open_the_door", m.Handler.PublicOpenTheDoor)
 	})
 }
