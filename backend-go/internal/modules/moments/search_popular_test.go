@@ -18,11 +18,11 @@ import (
 func seedSearchMoment(t *testing.T, repo *InMemoryRepository, id, description string, createdAt time.Time, likes, comments int) {
 	t.Helper()
 	repo.moments[id] = MomentItem{
-		MomentID:     id,
-		Description:  description,
-		PrivacyLevel: "public",
-		CreatedAt:    createdAt.UTC().Format(time.RFC3339),
-		LikesCount:   likes, CommentsCount: comments,
+		MomentID:         id,
+		Description:      description,
+		PrivacyLevel:     "public",
+		CreatedAt:        createdAt.UTC().Format(time.RFC3339),
+		InteractionCount: likes, CommentsCount: comments,
 		User: UserInfo{UserID: "author"},
 	}
 }
@@ -95,14 +95,15 @@ func TestMemorySearchPopularCursorPaginationNoDupNoSkip(t *testing.T) {
 }
 
 // TestBuildSearchMomentsQueryPopularDecayAndViewerState：SQL 形状对齐——
-// popular 分值 = reaction 计数冗余列（likes_count，语义复活）+ comments_count
-// 的分桶时间衰减（15 分钟桶，无每行 reactions 子查询）；登录查看者追加
-// EXISTS(moment_favorites) 尾列，匿名查询不含该列；keyset 谓词以 float8 比较。
+// popular 分值 = 内部互动热度列 interaction_count（reactions + 未删评论 +
+// 未撤销分享，写路径增量维护）的分桶时间衰减（15 分钟桶，无每行聚合子查询）；
+// 登录查看者追加 EXISTS(moment_favorites) 尾列，匿名查询不含该列；keyset 谓词以
+// float8 比较。
 func TestBuildSearchMomentsQueryPopularDecayAndViewerState(t *testing.T) {
 	decayClock := SearchDecayClock(time.Now().UTC())
 	sql, args := buildSearchMomentsQuery(nil, nil, "popular", 21, nil, "viewer_1", decayClock)
-	if !strings.Contains(sql, "m.likes_count + m.comments_count") || !strings.Contains(sql, "POWER(") {
-		t.Fatalf("popular score must use the materialized count column and embed time-decay POWER expression: %s", sql)
+	if !strings.Contains(sql, "m.interaction_count::float8") || !strings.Contains(sql, "POWER(") {
+		t.Fatalf("popular score must use the materialized interaction_count column and embed time-decay POWER expression: %s", sql)
 	}
 	if strings.Contains(sql, "SELECT COUNT(*) FROM reactions r WHERE r.target_type = 'moment'") {
 		t.Fatalf("popular score must not run a per-row reactions subquery (materialized column): %s", sql)

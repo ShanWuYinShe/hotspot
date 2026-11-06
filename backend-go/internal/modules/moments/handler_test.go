@@ -45,15 +45,10 @@ func (c *failingMomentCounter) IsReactionTargetVisible(ctx context.Context, mome
 	return true, item.PrivacyLevel != "private", nil
 }
 
-func (c *failingMomentCounter) IncrementCommentCount(ctx context.Context, momentID string) error {
-	if c.failErr != nil {
-		return c.failErr
-	}
-	return c.repo.IncrementCommentCount(ctx, momentID)
-}
-
-func (c *failingMomentCounter) DecrementCommentCount(ctx context.Context, momentID string) error {
-	return c.repo.DecrementCommentCount(ctx, momentID)
+func (c *failingMomentCounter) AdjustInteractionCount(ctx context.Context, momentID string, delta int) {
+	// 互动热度更新失败不再影响评论主流程（接口无返回值）；failErr 保留给
+	// 其它测试构造失败场景。
+	_ = c.repo.AdjustInteractionCount(ctx, momentID, delta)
 }
 
 func (c *failingMomentCounter) NotificationContext(ctx context.Context, momentID string) (comments.MomentNotificationContext, bool, error) {
@@ -122,7 +117,9 @@ func TestCreateOpenAndListMoment(t *testing.T) {
 	}
 }
 
-func TestCreateCommentIncrementsMomentCount(t *testing.T) {
+// 契约 comments_count 已改为读时聚合（不再由写路径维护）；评论创建成功后只
+// 维护内部互动热度 interaction_count（排序用途）。
+func TestCreateCommentAdjustsInteractionCount(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	momentRepo := NewInMemoryRepository()
 	momentService := NewServiceWithRepo(momentRepo)
@@ -156,12 +153,16 @@ func TestCreateCommentIncrementsMomentCount(t *testing.T) {
 		Data MomentItem `json:"data"`
 	}
 	_ = json.NewDecoder(openRR.Body).Decode(&openResp)
-	if openResp.Data.CommentsCount != 1 {
-		t.Fatalf("expected comments_count=1, got %#v", openResp)
+	if openResp.Data.CommentsCount != 0 {
+		t.Fatalf("comments_count must stay derived (memory repo has no aggregated rows), got %#v", openResp)
+	}
+	if got := momentRepo.moments[momentResp.Data.MomentID].InteractionCount; got != 1 {
+		t.Fatalf("interaction_count = %d, want 1 after comment create", got)
 	}
 }
 
-func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) {
+// 互动热度更新接口无返回值（实现内部 WARN），评论创建不受其影响。
+func TestCreateCommentWithFailingCounterStillSucceeds(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	momentRepo := NewInMemoryRepository()
 	momentService := NewServiceWithRepo(momentRepo)
@@ -555,7 +556,7 @@ func TestSearchSortByPopular(t *testing.T) {
 
 	m1 := MomentItem{
 		MomentID: "moment_unpopular", Description: "unpopular", PrivacyLevel: "public",
-		CreatedAt: "2025-06-01T00:00:00Z", LikesCount: 1, CommentsCount: 0,
+		CreatedAt: "2025-06-01T00:00:00Z", InteractionCount: 1, CommentsCount: 0,
 		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
@@ -564,7 +565,7 @@ func TestSearchSortByPopular(t *testing.T) {
 	}
 	m2 := MomentItem{
 		MomentID: "moment_popular", Description: "popular", PrivacyLevel: "public",
-		CreatedAt: "2025-01-01T00:00:00Z", LikesCount: 10, CommentsCount: 5,
+		CreatedAt: "2025-01-01T00:00:00Z", InteractionCount: 15, CommentsCount: 5,
 		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
@@ -573,7 +574,7 @@ func TestSearchSortByPopular(t *testing.T) {
 	}
 	m3 := MomentItem{
 		MomentID: "moment_medium", Description: "medium", PrivacyLevel: "public",
-		CreatedAt: "2025-03-01T00:00:00Z", LikesCount: 3, CommentsCount: 2,
+		CreatedAt: "2025-03-01T00:00:00Z", InteractionCount: 5, CommentsCount: 2,
 		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
@@ -1007,14 +1008,10 @@ func (r *errorRepo) Delete(context.Context, string) error { return nil }
 func (r *errorRepo) ListMine(context.Context, string, int, string) (PaginatedMoments, error) {
 	return PaginatedMoments{}, nil
 }
-func (r *errorRepo) Exists(context.Context, string) (bool, error)           { return false, nil }
-func (r *errorRepo) AdjustReactionCount(context.Context, string, int) error { return nil }
-
-func (r *errorRepo) IncrementCommentCount(context.Context, string) error { return nil }
-func (r *errorRepo) DecrementCommentCount(context.Context, string) error { return nil }
-func (r *errorRepo) IncrementSharesCount(context.Context, string) error  { return nil }
-func (r *errorRepo) Favorite(context.Context, string, string) error      { return nil }
-func (r *errorRepo) Unfavorite(context.Context, string, string) error    { return nil }
+func (r *errorRepo) Exists(context.Context, string) (bool, error)              { return false, nil }
+func (r *errorRepo) AdjustInteractionCount(context.Context, string, int) error { return nil }
+func (r *errorRepo) Favorite(context.Context, string, string) error            { return nil }
+func (r *errorRepo) Unfavorite(context.Context, string, string) error          { return nil }
 func (r *errorRepo) ListFavorites(context.Context, string, int, string) (PaginatedMoments, error) {
 	return PaginatedMoments{}, nil
 }

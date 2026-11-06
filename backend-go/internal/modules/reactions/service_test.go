@@ -345,7 +345,7 @@ func TestSetReactSwitchKeepsCount(t *testing.T) {
 
 	var mu sync.Mutex
 	var deltas []int
-	svc.SetReactionCounter(countRecorder{mu: &mu, deltas: &deltas})
+	svc.SetInteractionCounter(countRecorder{mu: &mu, deltas: &deltas})
 
 	ctx := ctxWithUser("u1")
 	set := func(emoji string) error {
@@ -385,7 +385,7 @@ type countRecorder struct {
 	deltas *[]int
 }
 
-func (c countRecorder) AdjustReactionCount(_ context.Context, _ string, delta int) {
+func (c countRecorder) AdjustInteractionCount(_ context.Context, _ string, delta int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	*c.deltas = append(*c.deltas, delta)

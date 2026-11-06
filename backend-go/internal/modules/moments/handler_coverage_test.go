@@ -45,18 +45,8 @@ func (r *momentErrRepo) ListMine(ctx context.Context, userID string, limit int, 
 	}
 	return r.repo.ListMine(ctx, userID, limit, cursor)
 }
-func (r *momentErrRepo) AdjustReactionCount(ctx context.Context, momentID string, delta int) error {
-	return r.repo.AdjustReactionCount(ctx, momentID, delta)
-}
-
-func (r *momentErrRepo) IncrementCommentCount(ctx context.Context, momentID string) error {
-	return r.repo.IncrementCommentCount(ctx, momentID)
-}
-func (r *momentErrRepo) DecrementCommentCount(ctx context.Context, momentID string) error {
-	return r.repo.DecrementCommentCount(ctx, momentID)
-}
-func (r *momentErrRepo) IncrementSharesCount(ctx context.Context, momentID string) error {
-	return r.repo.IncrementSharesCount(ctx, momentID)
+func (r *momentErrRepo) AdjustInteractionCount(ctx context.Context, momentID string, delta int) error {
+	return r.repo.AdjustInteractionCount(ctx, momentID, delta)
 }
 func (r *momentErrRepo) Favorite(ctx context.Context, userID string, momentID string) error {
 	return r.repo.Favorite(ctx, userID, momentID)

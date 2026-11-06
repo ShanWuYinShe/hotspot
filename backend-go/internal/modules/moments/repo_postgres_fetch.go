@@ -54,23 +54,23 @@ func (r *PostgresRepository) ListFollowingMoments(ctx context.Context, query mom
 		var momentID, userID, nickname, avatarURL, description, locationName string
 		var latitude, longitude float64
 		var createdAt time.Time
-		var likesCount, commentsCount, sharesCount int
+		var commentsCount, sharesCount, interactionCount int
 		var isFavorited bool
 		var tags []string
-		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &likesCount, &commentsCount, &sharesCount, &locationName, &latitude, &longitude, &isFavorited, &tags); err != nil {
+		if err := rows.Scan(&momentID, &userID, &nickname, &avatarURL, &description, &createdAt, &commentsCount, &sharesCount, &interactionCount, &locationName, &latitude, &longitude, &isFavorited, &tags); err != nil {
 			return PaginatedMoments{}, err
 		}
 		item := MomentItem{
-			MomentID:      momentID,
-			Description:   description,
-			CreatedAt:     createdAt.UTC().Format(time.RFC3339),
-			LikesCount:    likesCount,
-			CommentsCount: commentsCount,
-			SharesCount:   sharesCount,
-			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
-			Location:      &Location{Point: pointStruct(latitude, longitude), LocationName: locationName},
-			IsFavorited:   isFavorited,
-			Tags:          tags,
+			MomentID:         momentID,
+			Description:      description,
+			CreatedAt:        createdAt.UTC().Format(time.RFC3339),
+			CommentsCount:    commentsCount,
+			SharesCount:      sharesCount,
+			InteractionCount: interactionCount,
+			User:             UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
+			Location:         &Location{Point: pointStruct(latitude, longitude), LocationName: locationName},
+			IsFavorited:      isFavorited,
+			Tags:             tags,
 		}
 		if query.HasReferencePoint {
 			ref := geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}
@@ -103,15 +103,14 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 	}
 	defer rows.Close()
 	plan := geo.NewSearchPlan(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius, "relevance")
-	// 候选粗筛只取排序基础列；热度（reactions 计数）与关注标记改为候选集批量聚合，
-	// 避免对最多 2000 个候选行做逐行 COUNT/EXISTS 子查询。
+	// 候选粗筛只取排序基础列：互动热度直接读内部 interaction_count 列，
+	// 关注标记按候选作者批量聚合，避免对最多 2000 个候选行做逐行 COUNT/EXISTS。
 	candidates := make([]nearbyCandidate, 0, 256)
-	momentIDs := make([]string, 0, 256)
 	authorIDs := make([]string, 0, 256)
 	seenAuthors := make(map[string]struct{}, 64)
 	for rows.Next() {
 		var candidate nearbyCandidate
-		if err := rows.Scan(&candidate.momentID, &candidate.userID, &candidate.createdAt, &candidate.commentsCount, &candidate.sharesCount, &candidate.latitude, &candidate.longitude); err != nil {
+		if err := rows.Scan(&candidate.momentID, &candidate.userID, &candidate.createdAt, &candidate.interactionCount, &candidate.latitude, &candidate.longitude); err != nil {
 			return PaginatedMoments{}, err
 		}
 		distance, bearing, within := plan.Match(geo.Point{Latitude: candidate.latitude, Longitude: candidate.longitude})
@@ -120,9 +119,8 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 		}
 		candidate.distance = distance
 		candidate.bearing = bearing
-		candidate.score = candidate.commentsCount + candidate.sharesCount + max(0, query.Radius-distance)
+		candidate.score = candidate.interactionCount + max(0, query.Radius-distance)
 		candidates = append(candidates, candidate)
-		momentIDs = append(momentIDs, candidate.momentID)
 		if _, seen := seenAuthors[candidate.userID]; !seen {
 			seenAuthors[candidate.userID] = struct{}{}
 			authorIDs = append(authorIDs, candidate.userID)
@@ -134,10 +132,6 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 	if len(candidates) == 0 {
 		return PaginatedMoments{Items: make([]MomentItem, 0)}, nil
 	}
-	heatByMomentID, err := loadNearbyMomentHeat(ctx, queryable, momentIDs)
-	if err != nil {
-		return PaginatedMoments{}, err
-	}
 	var followingByUserID map[string]bool
 	if query.ViewerUserID != "" {
 		followingByUserID, err = loadNearbyFollowing(ctx, queryable, query.ViewerUserID, authorIDs)
@@ -146,7 +140,6 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 		}
 	}
 	for i := range candidates {
-		candidates[i].score += heatByMomentID[candidates[i].momentID]
 		if followingByUserID[candidates[i].userID] {
 			candidates[i].score += 1000
 		}
@@ -182,16 +175,16 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 		for _, candidate := range pageCandidates {
 			detail := details[candidate.momentID]
 			item := MomentItem{
-				MomentID:      candidate.momentID,
-				Description:   detail.description,
-				CreatedAt:     candidate.createdAt.UTC().Format(time.RFC3339),
-				LikesCount:    heatByMomentID[candidate.momentID],
-				CommentsCount: candidate.commentsCount,
-				SharesCount:   candidate.sharesCount,
-				User:          UserInfo{UserID: detail.userID, Nickname: detail.nickname, AvatarURL: types.StrPtr(detail.avatarURL)},
-				Location:      &Location{Point: pointStruct(candidate.latitude, candidate.longitude), LocationName: detail.locationName},
-				Tags:          detail.tags,
-				IsFavorited:   detail.isFavorited,
+				MomentID:         candidate.momentID,
+				Description:      detail.description,
+				CreatedAt:        candidate.createdAt.UTC().Format(time.RFC3339),
+				CommentsCount:    detail.commentsCount,
+				SharesCount:      detail.sharesCount,
+				InteractionCount: detail.interactionCount,
+				User:             UserInfo{UserID: detail.userID, Nickname: detail.nickname, AvatarURL: types.StrPtr(detail.avatarURL)},
+				Location:         &Location{Point: pointStruct(candidate.latitude, candidate.longitude), LocationName: detail.locationName},
+				Tags:             detail.tags,
+				IsFavorited:      detail.isFavorited,
 			}
 			// 附近流参考点恒已解析（service 层兜底），distance/bearing_degrees 恒填充
 			//（spec api_spec_types.md RelativeLocation；匿名版同样基于 reference_point 计算）。
@@ -208,13 +201,13 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 
 // nearbyCandidate 附近流排序候选（值类型，仅排序所需字段；热度/关注由批量聚合填充）。
 type nearbyCandidate struct {
-	momentID                   string
-	userID                     string
-	createdAt                  time.Time
-	latitude, longitude        float64
-	distance, bearing          int
-	commentsCount, sharesCount int
-	score                      int
+	momentID            string
+	userID              string
+	createdAt           time.Time
+	latitude, longitude float64
+	distance, bearing   int
+	interactionCount    int
+	score               int
 }
 
 // nearbyMomentDetail 分页结果的展示字段 + 标签数组 + 收藏态（一次批量查询补全）。
@@ -222,6 +215,7 @@ type nearbyMomentDetail struct {
 	userID, nickname, avatarURL, description, locationName string
 	tags                                                   []string
 	isFavorited                                            bool
+	commentsCount, sharesCount, interactionCount           int
 }
 
 // loadNearbyMomentDetails 批量补全附近流页面内的展示字段。
@@ -238,7 +232,7 @@ func loadNearbyMomentDetails(ctx context.Context, queryable persistence.Queryabl
 	for rows.Next() {
 		var momentID string
 		var detail nearbyMomentDetail
-		if err := rows.Scan(&momentID, &detail.userID, &detail.nickname, &detail.avatarURL, &detail.description, &detail.locationName, &detail.tags, &detail.isFavorited); err != nil {
+		if err := rows.Scan(&momentID, &detail.userID, &detail.nickname, &detail.avatarURL, &detail.description, &detail.commentsCount, &detail.sharesCount, &detail.interactionCount, &detail.locationName, &detail.tags, &detail.isFavorited); err != nil {
 			return nil, err
 		}
 		details[momentID] = detail
@@ -247,31 +241,6 @@ func loadNearbyMomentDetails(ctx context.Context, queryable persistence.Queryabl
 		return nil, err
 	}
 	return details, nil
-}
-
-// loadNearbyMomentHeat 批量取候选集 reactions 计数（热度次级排序输入）。
-func loadNearbyMomentHeat(ctx context.Context, queryable persistence.Queryable, momentIDs []string) (map[string]int, error) {
-	heat := make(map[string]int, len(momentIDs))
-	if len(momentIDs) == 0 {
-		return heat, nil
-	}
-	rows, err := queryable.Query(ctx, queryNearbyMomentHeat, momentIDs)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var momentID string
-		var count int
-		if err := rows.Scan(&momentID, &count); err != nil {
-			return nil, err
-		}
-		heat[momentID] = count
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return heat, nil
 }
 
 // loadNearbyFollowing 批量取查看者关注的候选作者集合（关注加分输入）。

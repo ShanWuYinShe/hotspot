@@ -9,19 +9,20 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 )
 
-type MomentsSharer interface {
-	IncrementSharesCount(ctx context.Context, momentID string) error
+// InteractionCounter 维护瞬间内部互动热度（仅排序用途；契约 shares_count 读时聚合）。
+type InteractionCounter interface {
+	AdjustInteractionCount(ctx context.Context, momentID string, delta int)
 }
 
 type Service struct {
-	repo          Repository
-	momentsSharer MomentsSharer
+	repo               Repository
+	interactionCounter InteractionCounter
 }
 
 func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
 
-func (s *Service) SetMomentsSharer(m MomentsSharer) { s.momentsSharer = m }
+func (s *Service) SetInteractionCounter(c InteractionCounter) { s.interactionCounter = c }
 
 func (s *Service) Create(ctx context.Context, req CreateShareRequest) (ShareCreated, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
@@ -37,11 +38,11 @@ func (s *Service) Create(ctx context.Context, req CreateShareRequest) (ShareCrea
 		observability.L().Error("share.create failed", "error", err)
 		return ShareCreated{}, err
 	}
-	if s.momentsSharer != nil && cmd.ShareType == ShareTypeMoment {
+	// 分享创建后维护内部互动热度（+1）。失败由 moments 侧 WARN，不影响分享主流程；
+	// 分享撤销不回减（该列只服务排序启发式，弱一致可接受，契约为读时聚合）。
+	if s.interactionCounter != nil && cmd.ShareType == ShareTypeMoment {
 		if sharedMomentID, _ := cmd.Payload["shared_moment_id"].(string); sharedMomentID != "" {
-			if err := s.momentsSharer.IncrementSharesCount(ctx, sharedMomentID); err != nil {
-				observability.L().Warn("share.create: failed to increment shares_count", "error", err, "moment_id", sharedMomentID)
-			}
+			s.interactionCounter.AdjustInteractionCount(ctx, sharedMomentID, 1)
 		}
 	}
 	return result, nil

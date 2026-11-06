@@ -52,7 +52,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := txQueryable.Exec(txCtx, queryInsertMoment, momentID, userID, req.Description, now, 0, 0, 0, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy, geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})); err != nil {
+		if err := txQueryable.Exec(txCtx, queryInsertMoment, momentID, userID, req.Description, now, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy, geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})); err != nil {
 			return fmt.Errorf("moments.Create: insert moment: %w", err)
 		}
 		tags := normalizeMomentTags(req.Tags)
@@ -84,18 +84,18 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		return MomentItem{}, err
 	}
 	return MomentItem{
-		MomentID:      momentID,
-		Description:   req.Description,
-		Tags:          allowedTags,
-		Mentions:      normalizedMentions,
-		CreatedAt:     createdAtText,
-		LikesCount:    0,
-		CommentsCount: 0,
-		SharesCount:   0,
-		User:          UserInfo{UserID: userID, Nickname: nickname},
-		Location:      req.Location,
-		PrivacyLevel:  privacy,
-		IsFavorited:   false,
+		MomentID:         momentID,
+		Description:      req.Description,
+		Tags:             allowedTags,
+		Mentions:         normalizedMentions,
+		CreatedAt:        createdAtText,
+		InteractionCount: 0,
+		CommentsCount:    0,
+		SharesCount:      0,
+		User:             UserInfo{UserID: userID, Nickname: nickname},
+		Location:         req.Location,
+		PrivacyLevel:     privacy,
+		IsFavorited:      false,
 	}, nil
 }
 
@@ -111,37 +111,15 @@ func lookupUserNickname(ctx context.Context, queryable persistence.Queryable, us
 	return nickname, nil
 }
 
-func (r *PostgresRepository) IncrementCommentCount(ctx context.Context, momentID string) error {
+// AdjustInteractionCount 按 delta 增减内部互动热度列 interaction_count（SQL 内
+// GREATEST 钳 0）。该列只服务 nearby/popular 排序，允许弱一致（写失败仅影响排序
+// 启发式，不再承载契约计数）；契约字段由读时聚合保证。
+func (r *PostgresRepository) AdjustInteractionCount(ctx context.Context, momentID string, delta int) error {
 	queryable, ok := queryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryIncrementMomentCommentCount, momentID)
-}
-
-func (r *PostgresRepository) DecrementCommentCount(ctx context.Context, momentID string) error {
-	queryable, ok := queryable(ctx, r.factory)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	return queryable.Exec(ctx, queryDecrementMomentCommentCount, momentID)
-}
-
-// AdjustReactionCount 按 delta 增减 reaction 计数冗余列（SQL 内 GREATEST 钳 0）。
-func (r *PostgresRepository) AdjustReactionCount(ctx context.Context, momentID string, delta int) error {
-	queryable, ok := queryable(ctx, r.factory)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	return queryable.Exec(ctx, queryAdjustMomentReactionCount, delta, momentID)
-}
-
-func (r *PostgresRepository) IncrementSharesCount(ctx context.Context, momentID string) error {
-	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	return queryable.Exec(ctx, queryIncrementMomentShareCount, momentID)
+	return queryable.Exec(ctx, queryAdjustMomentInteractionCount, delta, momentID)
 }
 
 func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsRequest, viewerID string) (PaginatedMoments, error) {
@@ -249,7 +227,7 @@ func paginationCursor(p *PaginationParams) string {
 func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit int, after *momentSearchCursor, viewerID string, decayClock time.Time) (string, []any) {
 	args := make([]any, 0, 8)
 	var builder strings.Builder
-	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted`)
+	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, ` + momentCountSelectColumns + `, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted`)
 	if viewerID != "" {
 		// 查看者收藏态：参数化 EXISTS 子查询（$N 占位符），匿名时不追加该列。
 		args = append(args, viewerID)
@@ -311,20 +289,20 @@ func searchScoreSQL(sortBy string, kwArg, tagArg, clockArg int) string {
 	case "popular":
 		// 热度排序含时间衰减因子（spec api_spec_moment.md moments/search 排序：
 		// 「按互动热度排序（含时间衰减因子；具体衰减算法为服务端实现细节）」）。
-		// 实现：score = (reaction 计数冗余列 + comments_count) / POWER(发布小时龄 + 2, 1.5)，
-		// 小时龄钳制非负（防未来时间戳导致负底数幂报错）。
+		// 实现：score = interaction_count / POWER(发布小时龄 + 2, 1.5)，小时龄钳制
+		// 非负（防未来时间戳导致负底数幂报错）。
 		//
-		// 计数用 likes_count 冗余列（语义已复活为 reactions 总数，reactions 模块
-		// set/unreact 成功后经 Service.AdjustReactionCount 增量维护，启动期
-		// ensureReactionCountColumn 差异回填自愈），替代此前的每行 reactions
-		// 聚合子查询——子查询让 cursor 谓词与 ORDER BY 各算一遍 O(候选集×聚合)。
+		// interaction_count 是内部互动热度列（reactions + 未删评论 + 未撤销分享，由
+		// reactions/comments/share 写路径增量维护，弱一致）；用单列替代每行聚合
+		// 子查询，避免 cursor 谓词与 ORDER BY 各算一遍 O(候选集×聚合)。契约计数
+		// comments_count/shares_count 与外部字段无关，本列不对外序列化。
 		//
 		// 衰减时钟由调用方（Search）量化到 15 分钟桶后经 $clockArg 传入（epoch
 		// 秒），SQL 不再使用 now()：ORDER BY 与 keyset 谓词、Go 游标编码三者严格
 		// 使用同一时钟值。跨桶翻页（15 分钟以上）仍可能有弱一致漂移，但幅度远
 		// 小于实时衰减；同一次查询内（含游标谓词）绝对一致。
 		// clockArg>0 由 buildSearchMomentsQuery 保证。
-		return fmt.Sprintf("((m.likes_count + m.comments_count)::float8 / POWER(GREATEST((FLOOR($%d::float8 / 900.0) * 900.0 - EXTRACT(EPOCH FROM m.created_at)) / 3600.0, 0.0) + 2.0, 1.5))", clockArg)
+		return fmt.Sprintf("(m.interaction_count::float8 / POWER(GREATEST((FLOOR($%d::float8 / 900.0) * 900.0 - EXTRACT(EPOCH FROM m.created_at)) / 3600.0, 0.0) + 2.0, 1.5))", clockArg)
 	case "newest":
 		// 0::float8：裸整数常量会被 Postgres 当作 ORDER BY 位置引用（42P10），
 		// 必须带类型成为表达式。

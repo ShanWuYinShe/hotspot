@@ -10,13 +10,9 @@ import (
 // data_moments.go — 瞬间相关表行构建（moments / moment_images / moment_tags /
 // moment_mentions / moment_favorites / comments / reactions）。
 //
-// 计数列口径（与写路径一致，避免前端出现「显示 3 赞但详情只有 1 个」）：
-//   - likes_count = 该瞬间在 reactions 表中的行数（迁移/模块装配后的自愈口径，
-//     见 moments/module.go ensureReactionCountBackfill）；
-//   - comments_count = 该瞬间 comments 行数（含二级回复，comments 写路径每新增
-//     一条就 +1）；
-//   - replies_count = 直接回复该评论的行数；
-//   - shares_count = 指向该瞬间的 shares 行数（分享创建时 +1，撤销不回减）。
+// 互动热度列口径：moments.interaction_count = reactions 行数 + 评论行数 +
+// 未撤销分享行数（内部排序用，不对外；契约字段 comments_count / shares_count
+// 已改为读时聚合，seed 不再写入）。
 
 func buildMomentsTable(baseTime time.Time, moments []momentSpec, shares []shareSpec) tableData {
 	momentShareCounts := make(map[string]int, len(moments))
@@ -32,8 +28,8 @@ func buildMomentsTable(baseTime time.Time, moments []momentSpec, shares []shareS
 		Table: "moments",
 		Columns: []column{
 			col("moment_id"), col("user_id"), col("description"), col("created_at"),
-			col("likes_count"), col("comments_count"), col("shares_count"), col("location_name"),
-			col("latitude"), col("longitude"), col("privacy_level"), col("is_deleted"), col("s2_cell_id"),
+			col("location_name"), col("latitude"), col("longitude"), col("privacy_level"),
+			col("is_deleted"), col("s2_cell_id"), col("interaction_count"),
 		},
 	}
 	for _, moment := range moments {
@@ -46,11 +42,11 @@ func buildMomentsTable(baseTime time.Time, moments []momentSpec, shares []shareS
 		if s2CellID == 0 {
 			panic(fmt.Sprintf("瞬间 %s 坐标非法", moment.MomentID))
 		}
+		interactionCount := len(moment.Reactions) + len(moment.Comments) + momentShareCounts[moment.MomentID]
 		table.addRow(
 			moment.MomentID, moment.AuthorID, description, baseTime.Add(-moment.CreatedAgo),
-			len(moment.Reactions), len(moment.Comments), momentShareCounts[moment.MomentID],
 			moment.LocationName, moment.Latitude, moment.Longitude, moment.PrivacyLevel,
-			moment.IsDeleted, s2CellID,
+			moment.IsDeleted, s2CellID, interactionCount,
 		)
 	}
 	return table
@@ -103,7 +99,7 @@ func buildMomentMentionsTable(baseTime time.Time, moments []momentSpec) tableDat
 }
 
 // buildReactionsTable 构建 reactions 表（迁移 031，聚合读取口径）。
-// 按 momentSpec.Reactions 生成，与 moments.likes_count 的派生口径严格一致。
+// 按 momentSpec.Reactions 生成，是 moments.interaction_count 的输入之一。
 func buildReactionsTable(baseTime time.Time, moments []momentSpec) (reactions tableData) {
 	reactions = tableData{
 		Table:   "reactions",

@@ -67,14 +67,8 @@ func TestPostgresMomentCountersAndFavorites(t *testing.T) {
 	repo := NewPostgresRepository(newMomentFactory(backend))
 	ctx := context.Background()
 
-	if err := repo.IncrementCommentCount(ctx, "m1"); err != nil {
-		t.Fatalf("increment comments: %v", err)
-	}
-	if err := repo.DecrementCommentCount(ctx, "m1"); err != nil {
-		t.Fatalf("decrement comments: %v", err)
-	}
-	if err := repo.IncrementSharesCount(ctx, "m1"); err != nil {
-		t.Fatalf("increment shares: %v", err)
+	if err := repo.AdjustInteractionCount(ctx, "m1", 1); err != nil {
+		t.Fatalf("adjust interaction: %v", err)
 	}
 	if err := repo.Favorite(ctx, "u1", "m1"); err != nil {
 		t.Fatalf("favorite: %v", err)
@@ -85,7 +79,7 @@ func TestPostgresMomentCountersAndFavorites(t *testing.T) {
 	if err := repo.Delete(ctx, "m1"); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
-	if backend.execs < 5 { // Delete 改为 QueryRow(RETURNING)，不再计入 Exec
+	if backend.execs < 3 { // adjust + favorite + unfavorite（Delete 走 QueryRow）
 		t.Fatalf("expected writes, got %d", backend.execs)
 	}
 
@@ -107,11 +101,8 @@ func TestPostgresMomentNotificationContext(t *testing.T) {
 func TestPostgresMomentsNotConfigured(t *testing.T) {
 	repo := NewPostgresRepository(persistence.NewFactory(config.Config{}))
 	ctx := context.Background()
-	if err := repo.IncrementCommentCount(ctx, "m1"); err != persistence.ErrNotImplemented {
-		t.Fatalf("increment: %v", err)
-	}
-	if err := repo.IncrementSharesCount(ctx, "m1"); err != persistence.ErrNotImplemented {
-		t.Fatalf("shares: %v", err)
+	if err := repo.AdjustInteractionCount(ctx, "m1", 1); err != persistence.ErrNotImplemented {
+		t.Fatalf("adjust interaction: %v", err)
 	}
 	if err := repo.Delete(ctx, "m1"); err != persistence.ErrNotImplemented {
 		t.Fatalf("delete: %v", err)

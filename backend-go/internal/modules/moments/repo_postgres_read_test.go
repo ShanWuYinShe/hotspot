@@ -123,20 +123,20 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 	switch query {
 	case queryInsertMoment:
 		item := MomentItem{
-			MomentID:      args[0].(string),
-			Description:   args[2].(string),
-			CreatedAt:     stubTimeString(args[3]),
-			LikesCount:    args[4].(int),
-			CommentsCount: args[5].(int),
-			SharesCount:   args[6].(int),
-			User:          UserInfo{UserID: args[1].(string), Nickname: args[1].(string)},
-			PrivacyLevel:  args[10].(string),
-			IsFavorited:   false,
+			MomentID:         args[0].(string),
+			Description:      args[2].(string),
+			CreatedAt:        stubTimeString(args[3]),
+			CommentsCount:    0,
+			SharesCount:      0,
+			InteractionCount: 0,
+			User:             UserInfo{UserID: args[1].(string), Nickname: args[1].(string)},
+			PrivacyLevel:     args[7].(string),
+			IsFavorited:      false,
 		}
 		item.Location = &Location{}
-		item.Location.LocationName = args[7].(string)
-		item.Location.Point.Latitude = args[8].(float64)
-		item.Location.Point.Longitude = args[9].(float64)
+		item.Location.LocationName = args[4].(string)
+		item.Location.Point.Latitude = args[5].(float64)
+		item.Location.Point.Longitude = args[6].(float64)
 		b.moments[item.MomentID] = item
 	case queryInsertMomentTagAssignment:
 		momentID := args[0].(string)
@@ -157,15 +157,14 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 		item := b.moments[momentID]
 		item.Mentions = nil
 		b.moments[momentID] = item
-	case queryIncrementMomentCommentCount:
-		momentID := args[0].(string)
+	case queryAdjustMomentInteractionCount:
+		delta := args[0].(int)
+		momentID := args[1].(string)
 		item := b.moments[momentID]
-		item.CommentsCount++
-		b.moments[momentID] = item
-	case queryIncrementMomentShareCount:
-		momentID := args[0].(string)
-		item := b.moments[momentID]
-		item.SharesCount++
+		item.InteractionCount += delta
+		if item.InteractionCount < 0 {
+			item.InteractionCount = 0
+		}
 		b.moments[momentID] = item
 	case queryInsertMomentFavorite:
 		userID := args[0].(string)
@@ -206,7 +205,7 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 			return rowValues{err: pgx.ErrNoRows}
 		}
 		// queryGetMoment 合并了 tags/mentions 两个 ARRAY_AGG 列（审查 P2-16）。
-		return rowValues{values: []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted, item.Tags, item.Mentions}}
+		return rowValues{values: []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted, item.Tags, item.Mentions}}
 	default:
 		return rowValues{err: persistence.ErrNotImplemented}
 	}
@@ -252,13 +251,13 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			items = append(items, item)
 		}
 		if limit >= 0 {
-			// popular 排序的互动数来自 likes_count 计数冗余列（语义已复活为
-			// reactions 总数）：此桩用 LikesCount 字段模拟该列，按新 SQL 片段识别 popular。
-			popular := strings.Contains(query, "m.likes_count + m.comments_count") && strings.Contains(query, "POWER(")
+			// popular 排序的互动数来自内部 interaction_count 列：此桩用
+			// InteractionCount 字段模拟该列，按新 SQL 片段识别 popular。
+			popular := strings.Contains(query, "m.interaction_count::float8") && strings.Contains(query, "POWER(")
 			sort.Slice(items, func(i, j int) bool {
 				if popular {
-					si := items[i].LikesCount + items[i].CommentsCount
-					sj := items[j].LikesCount + items[j].CommentsCount
+					si := items[i].InteractionCount
+					sj := items[j].InteractionCount
 					if si != sj {
 						return si > sj
 					}
@@ -274,7 +273,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted})
 		}
 		return &rowsValues{rows: rows}, nil
 	}
@@ -295,7 +294,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		})
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted})
 		}
 		return &rowsValues{rows: rows}, nil
 	case queryFilterAllowedMomentTags:
@@ -387,7 +386,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		rows := make([][]any, 0, len(favoriteRows))
 		for _, row := range favoriteRows {
 			item := row.moment
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted, row.favoritedAt})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted, row.favoritedAt})
 		}
 		return &rowsValues{rows: rows}, nil
 	default:
@@ -397,7 +396,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 
 func TestPostgresRepositoryReadsQueryableDB(t *testing.T) {
 	backend := newBackendStub()
-	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", Description: "hello", CreatedAt: "2026-03-20T00:00:00Z", LikesCount: 1, CommentsCount: 2, SharesCount: 3, User: UserInfo{UserID: "user_alice", Nickname: "user_alice"}, PrivacyLevel: "public", Location: &Location{Point: struct {
+	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", Description: "hello", CreatedAt: "2026-03-20T00:00:00Z", InteractionCount: 6, CommentsCount: 2, SharesCount: 3, User: UserInfo{UserID: "user_alice", Nickname: "user_alice"}, PrivacyLevel: "public", Location: &Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: 35.0, Longitude: 112.0}, LocationName: "南天门"}}
@@ -432,9 +431,11 @@ func TestPostgresRepositoryWritesQueryableDB(t *testing.T) {
 	if len(created.Mentions) != 2 || created.Mentions[0] != "user_bob" || created.Mentions[1] != "user_charlie" {
 		t.Fatalf("unexpected persisted mentions: %#v", created.Mentions)
 	}
-	if err := repo.IncrementCommentCount(context.Background(), created.MomentID); err != nil {
-		t.Fatalf("increment comment count: %v", err)
-	}
+	// 契约计数已改读时聚合：模拟「comments 表出现 1 行」后读路径返回 1
+	// （stub 以字段值代表聚合结果）。
+	openedItem := backend.moments[created.MomentID]
+	openedItem.CommentsCount = 1
+	backend.moments[created.MomentID] = openedItem
 	opened, ok, err := repo.Get(context.Background(), created.MomentID)
 	if err != nil || !ok || opened.CommentsCount != 1 {
 		t.Fatalf("unexpected opened item: %#v ok=%v err=%v", opened, ok, err)
@@ -477,18 +478,15 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	}
 }
 
-func TestPostgresRepositoryIncrementCommentCountReturnsErrorOnExecFailure(t *testing.T) {
+func TestPostgresRepositoryAdjustInteractionCountReturnsErrorOnExecFailure(t *testing.T) {
 	backend := newBackendStub()
-	backend.execErrs[queryIncrementMomentCommentCount] = errors.New("update failed")
+	backend.execErrs[queryAdjustMomentInteractionCount] = errors.New("update failed")
 	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", User: UserInfo{UserID: "user_alice"}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
-	if err := repo.IncrementCommentCount(context.Background(), "moment_1"); err == nil {
-		t.Fatal("expected increment error")
-	}
-	if backend.moments["moment_1"].CommentsCount != 0 {
-		t.Fatalf("unexpected comments count: %#v", backend.moments["moment_1"])
+	if err := repo.AdjustInteractionCount(context.Background(), "moment_1", 1); err == nil {
+		t.Fatal("expected interaction count update error")
 	}
 }
 
@@ -574,7 +572,7 @@ func TestPostgresRepositorySearchSortByPopularReturnsOlderPopularMoments(t *test
 	// newest moment, low engagement
 	backend.moments["moment_new"] = MomentItem{
 		MomentID: "moment_new", Description: "new quiet post", CreatedAt: "2026-04-15T00:00:00Z",
-		LikesCount: 0, CommentsCount: 0, SharesCount: 0,
+		InteractionCount: 0, CommentsCount: 0, SharesCount: 0,
 		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
 		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
@@ -584,7 +582,7 @@ func TestPostgresRepositorySearchSortByPopularReturnsOlderPopularMoments(t *test
 	// older moment, high engagement
 	backend.moments["moment_old_popular"] = MomentItem{
 		MomentID: "moment_old_popular", Description: "old viral post", CreatedAt: "2026-04-01T00:00:00Z",
-		LikesCount: 100, CommentsCount: 50, SharesCount: 0,
+		InteractionCount: 150, CommentsCount: 50, SharesCount: 0,
 		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
 		Location: &Location{Point: struct {
 			Latitude  float64 `json:"latitude"`
@@ -620,7 +618,7 @@ func TestPostgresRepositorySearchSortByNewestAppliesLimit(t *testing.T) {
 		id := fmt.Sprintf("moment_%d", i)
 		backend.moments[id] = MomentItem{
 			MomentID: id, Description: "post", CreatedAt: fmt.Sprintf("2026-04-%02dT00:00:00Z", 10+i),
-			LikesCount: 0, CommentsCount: 0, SharesCount: 0,
+			InteractionCount: 0, CommentsCount: 0, SharesCount: 0,
 			User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
 			Location: &Location{Point: struct {
 				Latitude  float64 `json:"latitude"`

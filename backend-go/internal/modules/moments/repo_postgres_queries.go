@@ -12,7 +12,7 @@ WHERE user_id = $1`
 	// mentioned_user_id ASC）一致，避免详情与列表两条路径的 tag/mention 顺序
 	// 出现口径差异。
 	queryGetMoment = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted,
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted,
        COALESCE(t.tags, '{}'),
        COALESCE(mn.mentions, '{}')
 FROM moments m
@@ -30,7 +30,7 @@ LEFT JOIN LATERAL (
 WHERE m.moment_id = $1`
 
 	queryListMyMoments = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted
 FROM moments m
 LEFT JOIN users u ON u.user_id = m.user_id
 WHERE m.user_id = $1
@@ -40,8 +40,8 @@ ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $4`
 
 	queryInsertMoment = `
-INSERT INTO moments (moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level, s2_cell_id)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`
+INSERT INTO moments (moment_id, user_id, description, created_at, location_name, latitude, longitude, privacy_level, s2_cell_id, interaction_count)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,0)`
 
 	queryInsertMomentTagAssignment = `
 INSERT INTO moment_tags (moment_id, tag_name, created_at)
@@ -72,15 +72,6 @@ FROM moment_tags
 WHERE moment_id = ANY($1)
 ORDER BY moment_id, tag_name ASC`
 
-	queryDeleteMomentTagsByMomentID = `
-DELETE FROM moment_tags
-WHERE moment_id = $1`
-
-	queryInsertMomentMention = `
-INSERT INTO moment_mentions (moment_id, mentioned_user_id, created_at)
-VALUES ($1, $2, $3)
-ON CONFLICT (moment_id, mentioned_user_id) DO NOTHING`
-
 	queryListMomentMentionsByMomentID = `
 SELECT mentioned_user_id
 FROM moment_mentions
@@ -97,29 +88,14 @@ ORDER BY moment_id, mentioned_user_id ASC`
 DELETE FROM moment_mentions
 WHERE moment_id = $1`
 
-	queryIncrementMomentCommentCount = `
-UPDATE moments
-SET comments_count = comments_count + 1
-	WHERE moment_id = $1`
-
-	queryDecrementMomentCommentCount = `
-UPDATE moments
-SET comments_count = GREATEST(comments_count - 1, 0)
+	queryDeleteMomentTagsByMomentID = `
+DELETE FROM moment_tags
 WHERE moment_id = $1`
 
-	// reaction 计数冗余列的增减（likes_count 列语义已复活为 reactions 总数，
-	// 见 Service.AdjustReactionCount 注释）。GREATEST 钳 0 防止异常路径
-	// （如回填间隙的 unreact）把计数打成负数。
-	queryAdjustMomentReactionCount = `
-UPDATE moments
-SET likes_count = GREATEST(likes_count + $1, 0)
-WHERE moment_id = $2`
-
-	queryIncrementMomentShareCount = `
-UPDATE moments
-SET shares_count = shares_count + 1
-WHERE moment_id = $1`
-
+	queryInsertMomentMention = `
+INSERT INTO moment_mentions (moment_id, mentioned_user_id, created_at)
+VALUES ($1, $2, $3)
+ON CONFLICT (moment_id, mentioned_user_id) DO NOTHING`
 	// 仅作者且未软删的瞬间可编辑（spec api_spec_moment.md update：仅作者；
 	// 删除语义——删除后其余场景按不存在处理 10300）。owner/软删条件在 SQL 内
 	// 收口（service 层预检之外的纵深防御），RETURNING moment_id 供调用方以
@@ -165,7 +141,7 @@ WHERE user_id = $1 AND moment_id = $2`
 	LIMIT $2`
 
 	queryListFavoriteMoments = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted, mf.favorited_at
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted, mf.favorited_at
 FROM moment_favorites mf
 JOIN moments m ON m.moment_id = mf.moment_id
 LEFT JOIN users u ON u.user_id = m.user_id
@@ -187,9 +163,7 @@ SELECT m.moment_id,
        COALESCE(u.avatar_url, ''),
        m.description,
        m.created_at,
-       m.likes_count,
-       m.comments_count,
-       m.shares_count,
+       (SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count,
        m.location_name,
        m.latitude,
        m.longitude,
@@ -216,20 +190,12 @@ LIMIT $4`
 	// queryNearbyMomentDetails 一次查询补全附近流页面内的展示字段、标签数组与收藏态
 	// （20 行以内的 LATERAL/EXISTS 成本可忽略，比三次往返更省 context/网络开销）。
 	queryNearbyMomentDetails = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, m.location_name,
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, (SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count, m.location_name,
        COALESCE((SELECT array_agg(mt.tag_name ORDER BY mt.tag_name) FROM moment_tags mt WHERE mt.moment_id = m.moment_id), ARRAY[]::text[]),
        EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $2)
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.moment_id = ANY($1)`
-
-	// queryNearbyMomentHeat 批量取候选集的 reactions 计数（替代逐行 COUNT 子查询）。
-	queryNearbyMomentHeat = `
-SELECT target_id, COUNT(*)::int
-FROM reactions
-WHERE target_type = 'moment' AND target_id = ANY($1)
-GROUP BY target_id`
-
 	// queryNearbyFollowingUserIDs 批量取查看者关注的候选作者集合（替代逐行 EXISTS）。
 	queryNearbyFollowingUserIDs = `
 SELECT target_user_id
@@ -242,8 +208,7 @@ WHERE user_id = $1 AND is_following = TRUE AND target_user_id = ANY($2)`
 SELECT m.moment_id,
        m.user_id,
        m.created_at,
-       m.comments_count,
-       m.shares_count,
+       m.interaction_count,
        m.latitude,
        m.longitude
 FROM moments m
@@ -258,14 +223,24 @@ ORDER BY m.created_at DESC
 LIMIT 2000`
 )
 
+// momentCountSelectColumns 是 moment 行集的统一计数片段：契约字段 comments_count /
+// shares_count 读时聚合（评论未删 / 分享未撤销），interaction_count 为内部排序热度
+// （reactions + 未删评论 + 未撤销分享，由写路径增量维护）。动态 SQL（搜索）拼接使用。
+const momentCountSelectColumns = `(SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count`
+
+// queryAdjustMomentInteractionCount 维护内部互动热度列（仅供排序，弱一致）。
+const queryAdjustMomentInteractionCount = `
+UPDATE moments
+SET interaction_count = GREATEST(interaction_count + $1, 0)
+WHERE moment_id = $2`
+
 // ── users 模块「按作者聚合的瞬间列表」读能力（原实现位于 users repo，直查
 // moments/reactions 表；现已归位本模块，users 经 Service 接口消费）──
 const (
-	// 点赞数走 reactions 实时 COUNT（审计 F-08 收口）：实时计数不受冗余列
-	// 漂移影响（AdjustReactionCount 失败仅 Warn 非事务），与 nearby/search、
-	// reacted-by 口径对齐。likes_count 冗余列仍有写路径（queryAdjustMomentReactionCount）。
+	// 行内计数统一由 momentCountSelectColumns 读时聚合（comments/shares），
+	// interaction_count 为内部热度列（排序用途，不对外）。
 	queryListMomentsByAuthor = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM reactions r WHERE r.target_type = 'moment' AND r.target_id = m.moment_id), m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count, m.location_name, m.latitude, m.longitude, m.privacy_level
 FROM moments m
 LEFT JOIN users u ON u.user_id = m.user_id
 WHERE m.user_id = $1
@@ -286,7 +261,7 @@ LIMIT $5`
 	// 会刷新的「最近反应时刻」（spec：last_reacted_at 排序），列以 time.Time
 	// 全精度写入——游标必须以 RFC3339Nano 编码（AGENTS 分页纪律）。
 	queryListReactedByUser = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM reactions rc WHERE rc.target_type = 'moment' AND rc.target_id = m.moment_id), m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, r.reacted_at,
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, (SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count, m.location_name, m.latitude, m.longitude, m.privacy_level, r.reacted_at,
        EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $2)
 FROM reactions r
 JOIN moments m ON m.moment_id = r.target_id

@@ -4,7 +4,7 @@ import "context"
 
 // ReactionOutcome 区分一次 React 的实际效果：
 //   - ReactionInserted：新增 reaction 行（目标计数 +1、发通知）；
-//   - ReactionSwitched：已有行切换 emoji（计数不变——总数口径的 likes_count
+//   - ReactionSwitched：已有行切换 emoji（计数不变——总数口径的 interaction_count
 //     不受切换影响；仍发通知，owner 感知新 emoji）；
 //   - ReactionUnchanged：同 emoji 幂等重放（无副作用）。
 type ReactionOutcome int

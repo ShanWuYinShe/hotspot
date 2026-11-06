@@ -47,7 +47,7 @@ func normalizeMomentSearchSort(sortBy string) string {
 // the keyset degenerates to (created_at, moment_id); popular applies a time
 // decay factor（spec api_spec_moment.md：热度排序含时间衰减因子，算法为实现细节）：
 //
-//	score = (reaction 计数列 + comments_count) / POWER(发布小时龄 + 2, 1.5)
+//	score = interaction_count / POWER(发布小时龄 + 2, 1.5)
 //
 // 与 searchScoreSQL 的 Postgres 表达式逐项对应；now 由调用方在单次查询内取同一
 // 量化值（SearchDecayClock），并作为 SQL 参数下传，保证排序、游标谓词与游标编码
@@ -55,7 +55,7 @@ func normalizeMomentSearchSort(sortBy string) string {
 func momentSearchScore(item MomentItem, sortBy, keyword, tag string, now time.Time) float64 {
 	switch normalizeMomentSearchSort(sortBy) {
 	case "popular":
-		raw := float64(item.LikesCount + item.CommentsCount)
+		raw := float64(item.InteractionCount)
 		hours := 0.0
 		if createdAt, err := time.Parse(time.RFC3339Nano, item.CreatedAt); err == nil {
 			hours = now.Sub(createdAt).Hours()

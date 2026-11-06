@@ -183,7 +183,7 @@ func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState
 	var createdAt time.Time
 	var latitude, longitude float64
 	var isFavorited bool
-	dest := []any{&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted}
+	dest := []any{&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.CommentsCount, &item.SharesCount, &item.InteractionCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted}
 	if withViewerState {
 		dest = append(dest, &isFavorited)
 	}
@@ -220,7 +220,7 @@ func scanMomentRowWithAssociations(scanner interface{ Scan(...any) error }) (Mom
 	var createdAt time.Time
 	var latitude, longitude float64
 	var tags, mentions []string
-	dest := []any{&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted, &tags, &mentions}
+	dest := []any{&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.CommentsCount, &item.SharesCount, &item.InteractionCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted, &tags, &mentions}
 	if err := scanner.Scan(dest...); err != nil {
 		return MomentItem{}, fmt.Errorf("moments.scanMomentRowWithAssociations scan: %w", err)
 	}
@@ -285,7 +285,7 @@ func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem,
 	var userID, nickname, locationName, privacyLevel string
 	var createdAt, favoritedAt time.Time
 	var latitude, longitude float64
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted, &favoritedAt); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.CommentsCount, &item.SharesCount, &item.InteractionCount, &locationName, &latitude, &longitude, &privacyLevel, &item.IsDeleted, &favoritedAt); err != nil {
 		return MomentItem{}, time.Time{}, fmt.Errorf("moments.scanFavoriteMomentRow scan: %w", err)
 	}
 	if nickname == "" {

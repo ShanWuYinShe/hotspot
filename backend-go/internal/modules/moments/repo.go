@@ -11,13 +11,10 @@ type Repository interface {
 	Update(context.Context, string, UpdateMomentRequest) error
 	Delete(context.Context, string) error
 	ListMine(context.Context, string, int, string) (PaginatedMoments, error)
-	IncrementCommentCount(context.Context, string) error
-	DecrementCommentCount(context.Context, string) error
-	// AdjustReactionCount 维护瞬间 reaction 计数冗余列（delta 可负，下限钳 0）。
-	// 供 reactions 模块经 Service 接口在 set/unreact 成功后调用，消除搜索热度
-	// 排序的每行 reactions 聚合子查询。
-	AdjustReactionCount(context.Context, string, int) error
-	IncrementSharesCount(context.Context, string) error
+	// AdjustInteractionCount 维护内部互动热度列 interaction_count（delta 可负，
+	// 下限钳 0）：供 reactions/comments/share 模块在写成功后调用，只服务
+	// nearby/popular 排序（契约计数已改读时聚合，不依赖本列）。
+	AdjustInteractionCount(context.Context, string, int) error
 	Favorite(context.Context, string, string) error
 	Unfavorite(context.Context, string, string) error
 	ListFavorites(context.Context, string, int, string) (PaginatedMoments, error)

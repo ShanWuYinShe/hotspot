@@ -55,26 +55,15 @@ func TestMemoryMomentCountersAndFavorites(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	// 计数器
-	if err := repo.IncrementCommentCount(ctx, created.MomentID); err != nil {
-		t.Fatalf("increment comments: %v", err)
+	// 内部互动热度（仅排序用）：增减/钳 0，不存在瞬间 no-op。
+	if err := repo.AdjustInteractionCount(ctx, created.MomentID, 2); err != nil {
+		t.Fatalf("adjust interaction +2: %v", err)
 	}
-	if err := repo.DecrementCommentCount(ctx, created.MomentID); err != nil {
-		t.Fatalf("decrement comments: %v", err)
+	if err := repo.AdjustInteractionCount(ctx, created.MomentID, -10); err != nil {
+		t.Fatalf("adjust interaction clamp: %v", err)
 	}
-	// 减到负数钳制为 0
-	if err := repo.DecrementCommentCount(ctx, created.MomentID); err != nil {
-		t.Fatalf("decrement below zero: %v", err)
-	}
-	if err := repo.IncrementSharesCount(ctx, created.MomentID); err != nil {
-		t.Fatalf("increment shares: %v", err)
-	}
-	// 不存在的 moment 计数器 no-op
-	if err := repo.DecrementCommentCount(ctx, "missing"); err != nil {
-		t.Fatalf("decrement missing: %v", err)
-	}
-	if err := repo.IncrementSharesCount(ctx, "missing"); err != ErrMomentNotFound {
-		t.Fatalf("increment shares missing: expected not found, got %v", err)
+	if err := repo.AdjustInteractionCount(ctx, "missing", 1); err != nil {
+		t.Fatalf("adjust missing should be no-op: %v", err)
 	}
 
 	// NotificationContext

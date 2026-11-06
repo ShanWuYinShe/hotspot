@@ -329,16 +329,13 @@ func (s *Service) CheckCommentable(ctx context.Context, momentID string) (found 
 	return true, true, nil
 }
 
-func (s *Service) IncrementCommentCount(ctx context.Context, momentID string) error {
-	return s.repo.IncrementCommentCount(ctx, momentID)
-}
-
-func (s *Service) DecrementCommentCount(ctx context.Context, momentID string) error {
-	return s.repo.DecrementCommentCount(ctx, momentID)
-}
-
-func (s *Service) IncrementSharesCount(ctx context.Context, momentID string) error {
-	return s.repo.IncrementSharesCount(ctx, momentID)
+// AdjustInteractionCount 供 comments / reactions / share 模块在写成功后维护内部
+// 互动热度列（interaction_count，仅服务 nearby/popular 排序）。写失败仅 Warn 不
+// 阻断主流程：该列不再承载契约计数（契约字段由读时聚合保证），弱一致可接受。
+func (s *Service) AdjustInteractionCount(ctx context.Context, momentID string, delta int) {
+	if err := s.repo.AdjustInteractionCount(ctx, momentID, delta); err != nil {
+		observability.L().Warn("moments.AdjustInteractionCount failed", "error", err, "moment_id", momentID, "delta", delta)
+	}
 }
 
 func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
@@ -715,17 +712,6 @@ func (s *Service) fillReactionsBatchOwnerMoment(ctx context.Context, items []Own
 	}
 	for i := range items {
 		items[i].Reactions = reactionsFor(byID[items[i].MomentID])
-	}
-}
-
-// AdjustReactionCount 供 reactions 模块在 set/unreact 成功后维护瞬间 reaction
-// 计数冗余列（bootstrap 把本 Service 以 ReactionCounter 接口注入 reactions）。
-// 计数列（likes_count，语义已复活为 reactions 总数）消除搜索 popular 排序的
-// 每行 reactions 聚合子查询。写失败仅 Warn 不阻断反应主流程：列与 reactions
-// 表的最终一致由启动期差异回填自愈（见 ensureReactionCountColumn）。
-func (s *Service) AdjustReactionCount(ctx context.Context, momentID string, delta int) {
-	if err := s.repo.AdjustReactionCount(ctx, momentID, delta); err != nil {
-		observability.L().Warn("moments.AdjustReactionCount failed", "error", err, "moment_id", momentID, "delta", delta)
 	}
 }
 

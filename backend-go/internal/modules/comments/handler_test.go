@@ -76,12 +76,7 @@ func (p *stubMomentProvider) CheckCommentable(_ context.Context, _ string) (bool
 func (p *stubMomentProvider) IsReactionTargetVisible(_ context.Context, _ string) (bool, bool, error) {
 	return p.visibleFound, p.visible, p.visibleErr
 }
-func (p *stubMomentProvider) IncrementCommentCount(_ context.Context, _ string) error {
-	return p.incrErr
-}
-func (p *stubMomentProvider) DecrementCommentCount(_ context.Context, _ string) error {
-	return p.decrErr
-}
+func (p *stubMomentProvider) AdjustInteractionCount(_ context.Context, _ string, _ int) {}
 func (p *stubMomentProvider) NotificationContext(_ context.Context, _ string) (MomentNotificationContext, bool, error) {
 	return p.notifCtx, p.notifOk, p.notifErr
 }

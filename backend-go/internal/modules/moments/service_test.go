@@ -33,6 +33,7 @@ type stubMomentRepo struct {
 	favRes      PaginatedMoments
 	favListErr  error
 	incComment  error
+	adjustErr   error
 	decComment  error
 	incShares   error
 	listMineRes PaginatedMoments
@@ -64,16 +65,8 @@ func (r *stubMomentRepo) ListMine(_ context.Context, _ string, _ int, _ string) 
 func (r *stubMomentRepo) Exists(_ context.Context, _ string) (bool, error) {
 	return r.exists, r.existsErr
 }
-func (r *stubMomentRepo) AdjustReactionCount(context.Context, string, int) error { return nil }
-
-func (r *stubMomentRepo) IncrementCommentCount(_ context.Context, _ string) error {
-	return r.incComment
-}
-func (r *stubMomentRepo) DecrementCommentCount(_ context.Context, _ string) error {
-	return r.decComment
-}
-func (r *stubMomentRepo) IncrementSharesCount(_ context.Context, _ string) error {
-	return r.incShares
+func (r *stubMomentRepo) AdjustInteractionCount(_ context.Context, _ string, _ int) error {
+	return r.adjustErr
 }
 func (r *stubMomentRepo) Favorite(_ context.Context, _ string, _ string) error {
 	return r.favRepoErr
@@ -384,28 +377,12 @@ func TestServiceUnfavoritePropagatesRepoError(t *testing.T) {
 
 // ---------- C) 辅助函数 ----------
 
-func TestServiceIncrementCommentCountDelegates(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{})
-	err := svc.IncrementCommentCount(context.Background(), "m1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestServiceIncrementSharesCountDelegates(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{})
-	err := svc.IncrementSharesCount(context.Background(), "m1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestServiceDecrementCommentCountDelegates(t *testing.T) {
-	svc := NewServiceWithRepo(&stubMomentRepo{})
-	err := svc.DecrementCommentCount(context.Background(), "m1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+func TestServiceAdjustInteractionCountDelegates(t *testing.T) {
+	repo := &stubMomentRepo{}
+	svc := NewServiceWithRepo(repo)
+	// 热度更新失败仅 WARN，不向调用方返回错误（弱一致排序启发式）。
+	repo.adjustErr = errors.New("boom")
+	svc.AdjustInteractionCount(context.Background(), "m1", 1)
 }
 
 // ---------- D) ListMine 和 OpenTheDoor 分支 ----------

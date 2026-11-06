@@ -1,7 +1,6 @@
 package share
 
 import (
-	"hotspot/backend-go/internal/modules/moments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -19,7 +18,6 @@ type Module struct {
 func NewModule(factory *persistence.Factory) *Module {
 	repo := NewPostgresRepository(factory)
 	service := NewServiceWithRepo(repo)
-	service.SetMomentsSharer(moments.NewServiceWithRepo(moments.NewPostgresRepository(factory)))
 	return &Module{handler: NewHandler(service), Service: service}
 }
 

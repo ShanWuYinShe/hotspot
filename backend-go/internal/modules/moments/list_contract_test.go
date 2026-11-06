@@ -127,7 +127,7 @@ func TestMomentsRepositoryContract(t *testing.T) {
 				if _, err := time.Parse(time.RFC3339, got.CreatedAt); err != nil {
 					t.Fatalf("created_at must be RFC3339: %q", got.CreatedAt)
 				}
-				if got.IsDeleted || got.CommentsCount != 0 || got.SharesCount != 0 || got.LikesCount != 0 {
+				if got.IsDeleted || got.CommentsCount != 0 || got.SharesCount != 0 {
 					t.Fatalf("unexpected initial state: %#v", got)
 				}
 			},
@@ -324,32 +324,24 @@ func TestMomentsRepositoryContract(t *testing.T) {
 			},
 		},
 		{
-			Name: "counters are maintained and clamped",
+			// 契约计数已改为读时聚合（comments/shares 来自真实表），不再由写路径
+			// 维护；AdjustInteractionCount 只更新内部排序热度，不得影响契约字段。
+			Name: "interaction counter adjustment does not mutate contract counts",
 			Run: func(t *testing.T, repo Repository, state momentsContractState) {
 				item := create(t, repo, state, CreateMomentRequest{Description: "counters"})
-				for i := 0; i < 2; i++ {
-					if err := repo.IncrementCommentCount(state.ctx, item.MomentID); err != nil {
-						t.Fatalf("increment comments: %v", err)
-					}
+				if err := repo.AdjustInteractionCount(state.ctx, item.MomentID, 5); err != nil {
+					t.Fatalf("adjust interaction +5: %v", err)
 				}
-				if err := repo.DecrementCommentCount(state.ctx, item.MomentID); err != nil {
-					t.Fatalf("decrement comments: %v", err)
-				}
-				if err := repo.IncrementSharesCount(state.ctx, item.MomentID); err != nil {
-					t.Fatalf("increment shares: %v", err)
-				}
-				if err := repo.AdjustReactionCount(state.ctx, item.MomentID, 5); err != nil {
-					t.Fatalf("adjust reactions +5: %v", err)
-				}
-				if err := repo.AdjustReactionCount(state.ctx, item.MomentID, -10); err != nil {
-					t.Fatalf("adjust reactions -10: %v", err)
+				if err := repo.AdjustInteractionCount(state.ctx, item.MomentID, -10); err != nil {
+					t.Fatalf("adjust interaction -10: %v", err)
 				}
 				got, _, err := repo.Get(state.ctx, item.MomentID)
 				if err != nil {
 					t.Fatalf("get: %v", err)
 				}
-				if got.CommentsCount != 1 || got.SharesCount != 1 || got.LikesCount != 0 {
-					t.Fatalf("counts = comments:%d shares:%d likes:%d", got.CommentsCount, got.SharesCount, got.LikesCount)
+				if got.CommentsCount != 0 || got.SharesCount != 0 {
+					t.Fatalf("contract counts must stay derived (0 without rows): comments=%d shares=%d",
+						got.CommentsCount, got.SharesCount)
 				}
 			},
 		},

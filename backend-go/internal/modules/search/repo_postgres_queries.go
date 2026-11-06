@@ -115,14 +115,13 @@ GROUP BY g.group_id, g.name, g.avatar_url, g.description, g.location_name, g.lat
 ORDER BY g.group_id
 LIMIT $2`
 
-	// popularity 的点赞数取 reactions 实时聚合：likes_count 自点赞改为 reactions
-	// 后已无写路径、恒为 0，继续使用会让点赞对搜索建议热度零贡献（审计 F-08）。
-	// 点赞计数由 SELECT 内标量子查询（审计 perf P2-3）改为 LATERAL（ORDER BY
-	// popularity 需要对全部候选行求值，执行次数与原相关子查询一致）。
+	// popularity 直接取 moments.interaction_count（内部互动热度：reactions + 未删
+	// 评论 + 未撤销分享，写路径增量维护）：一次列读取，替代此前的 reactions
+	// LATERAL 聚合 + 两个契约计数列。
 	querySearchSuggestMoments = `
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, m.location_name, m.latitude, m.longitude,
        COALESCE(cover.cover_url, ''),
-       (lk.likes_count + m.comments_count + m.shares_count) AS popularity
+       m.interaction_count::float8 AS popularity
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 LEFT JOIN LATERAL (
@@ -137,11 +136,6 @@ LEFT JOIN LATERAL (
     FROM media_upload_sessions s
     WHERE s.file_id = first_img.file_id AND s.status = 'completed'
 ) cover ON TRUE
-LEFT JOIN LATERAL (
-    SELECT COUNT(*) AS likes_count
-    FROM reactions r
-    WHERE r.target_type = 'moment' AND r.target_id = m.moment_id
-) lk ON TRUE
 WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE
   AND m.description ILIKE '%' || $1 || '%'

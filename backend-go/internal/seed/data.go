@@ -10,7 +10,7 @@ import (
 // data.go — 把静态规格展开成「按 FK 顺序排列的多表行集合」。
 //
 // 构建层职责：
-//   - 计算派生值（likes_count/comments_count/replies_count/shares_count 等计数
+//   - 计算派生值（interaction_count 等内部排序计数
 //     列与真实行数保持一致；s2_cell_id / s2_cell_token 用 platform/geo 真实口径）；
 //   - 引用 mediaBundle 里的 file_id（头像/瞬间图/聊天图）；
 //   - 生成 notifications.payload 等 JSONB 内容。

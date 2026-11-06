@@ -33,11 +33,9 @@ func (m *momentProviderStub) CheckCommentable(context.Context, string) (bool, bo
 func (m *momentProviderStub) IsReactionTargetVisible(context.Context, string) (bool, bool, error) {
 	return m.visibleFound, m.visible, nil
 }
-func (m *momentProviderStub) IncrementCommentCount(context.Context, string) error {
-	m.increment++
-	return nil
+func (m *momentProviderStub) AdjustInteractionCount(_ context.Context, _ string, delta int) {
+	m.increment += delta
 }
-func (m *momentProviderStub) DecrementCommentCount(context.Context, string) error { return nil }
 func (m *momentProviderStub) NotificationContext(context.Context, string) (MomentNotificationContext, bool, error) {
 	return m.notificationContext, m.notificationOK, m.notificationErr
 }

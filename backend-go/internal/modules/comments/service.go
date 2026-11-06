@@ -115,18 +115,16 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 		normalizedReq.ParentID = *replyTarget.ParentID
 	}
 
-	// 评论插入与 moment 计数是跨模块两步写（无共享事务）：计数失败**不阻断**
-	// 评论创建——评论已落库，若返回错误，客户端重试会产生重复评论。计数陈旧
-	// 为已知限制（moment 侧读取时容忍、删除评论时递减修正）。
+	// 评论插入与瞬间互动热度是跨模块两步写（无共享事务）：热度更新失败**不阻断**
+	// 评论创建——评论已落库，若返回错误，客户端重试会产生重复评论。热度只影响
+	// nearby/popular 排序（弱一致可接受），契约 comments_count 由读时聚合保证。
 	createAndCount := func(ctx context.Context) (CommentItem, error) {
 		item, err := s.repo.Create(ctx, principal.UserID, normalizedReq)
 		if err != nil {
 			observability.L().Error("comments.create repo create failed", "error", err)
 			return CommentItem{}, err
 		}
-		if err := s.moments.IncrementCommentCount(ctx, normalizedReq.MomentID); err != nil {
-			observability.L().Warn("comments.create increment comment count failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)
-		}
+		s.moments.AdjustInteractionCount(ctx, normalizedReq.MomentID, 1)
 		return item, nil
 	}
 
@@ -279,12 +277,9 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 	if comment.IsDeleted {
 		return nil
 	}
-	// 软删与计数递减同一事务（数据治理审计：两步此前独立执行且递减失败仅
-	// Warn，moments.comment_count 漂移不可自愈；创建路径已同款事务）。
-	// 递减在此成为事务内失败即整体回滚，不再吞错。
-	// 递减以软删实际命中为条件（deleted=false = 并发下已被删除）：上方
-	// 「Get 检查 IsDeleted」与软删之间存在 TOCTOU 窗口，两个并发 Delete 都
-	// 会走到这里，无条件递减会把 moment.comments_count 双重扣减。
+	// 软删与内部互动热度递减同一事务：热度递减以软删实际命中为条件
+	//（deleted=false = 并发下已被删除），避免 TOCTOU 窗口内并发双删重复扣减。
+	// 契约 comments_count 由读时聚合保证，不依赖该递减。
 	deleteAll := func(txCtx context.Context) error {
 		deleted, err := s.repo.SoftDelete(txCtx, req.CommentID)
 		if err != nil {
@@ -293,7 +288,8 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 		if !deleted {
 			return nil
 		}
-		return s.moments.DecrementCommentCount(txCtx, comment.MomentID)
+		s.moments.AdjustInteractionCount(txCtx, comment.MomentID, -1)
+		return nil
 	}
 	if s.runInTx != nil {
 		return s.runInTx(ctx, deleteAll)

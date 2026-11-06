@@ -8,30 +8,27 @@ import (
 	"hotspot/backend-go/internal/platform/testdb"
 )
 
-// 审计 F-08 收口：queryListMomentsByAuthor 的点赞数必须来自 reactions 实时
-// COUNT（likes_count 列已无写路径、恒为 0）。造一条动态 + 两条 reaction，
-// 断言 ListMomentsByAuthor 返回活跃点赞数而非死列。
-func TestPostgresIT_ListMomentsByAuthorUsesLiveReactionCount(t *testing.T) {
+// 契约计数改为读时聚合后，ListMomentsByAuthor 的 comments_count 必须来自
+// comments 表真实行数（不再是 moments 写入列）。造一条动态 + 一条评论，断言
+// 聚合值随行数变化。
+func TestPostgresIT_ListMomentsByAuthorUsesDerivedCommentCount(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		repo := NewPostgresRepository(txFactory)
 		authorID := testdb.InsertUser(t, txFactory, "m_byauthor_author", "Author")
-		reactorA := testdb.InsertUser(t, txFactory, "m_byauthor_react_a", "ReactorA")
-		reactorB := testdb.InsertUser(t, txFactory, "m_byauthor_react_b", "ReactorB")
+		commenterID := testdb.InsertUser(t, txFactory, "m_byauthor_commenter", "Commenter")
 
-		moment := createMomentWithPoint(t, ctx, repo, authorID, "ByAuthor Likes", 35.0, 112.0, "public")
+		moment := createMomentWithPoint(t, ctx, repo, authorID, "ByAuthor Counts", 35.0, 112.0, "public")
 
 		qdb, ok := txFactory.DB.(persistence.QueryableDB)
 		if !ok {
 			t.Fatal("factory.DB is not QueryableDB")
 		}
-		for _, uid := range []string{reactorA, reactorB} {
-			if err := qdb.Exec(ctx,
-				"INSERT INTO reactions (target_type, target_id, user_id, emoji) VALUES ('moment', $1, $2, 'like')",
-				moment.MomentID, uid); err != nil {
-				t.Fatalf("insert reaction: %v", err)
-			}
+		if err := qdb.Exec(ctx,
+			"INSERT INTO comments (comment_id, moment_id, user_id, content, created_at) VALUES ('comment_byauthor_1', $1, $2, 'nice', now())",
+			moment.MomentID, commenterID); err != nil {
+			t.Fatalf("insert comment: %v", err)
 		}
 
 		page, err := repo.ListMomentsByAuthor(ctx, authorID, 10, "", false)
@@ -44,8 +41,8 @@ func TestPostgresIT_ListMomentsByAuthorUsesLiveReactionCount(t *testing.T) {
 		if page.Items[0].MomentID != moment.MomentID {
 			t.Fatalf("moment id: got %q, want %q", page.Items[0].MomentID, moment.MomentID)
 		}
-		if page.Items[0].LikesCount != 2 {
-			t.Fatalf("likes count: got %d, want 2 (live reactions count)", page.Items[0].LikesCount)
+		if page.Items[0].CommentsCount != 1 {
+			t.Fatalf("comments count: got %d, want 1 (derived from comments table)", page.Items[0].CommentsCount)
 		}
 	})
 }

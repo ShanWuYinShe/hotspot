@@ -175,7 +175,7 @@ func scanUserMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, err
 	var userID, nickname, locationName, privacyLevel string
 	var latitude, longitude float64
 	var createdAt time.Time
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.CommentsCount, &item.SharesCount, &item.InteractionCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
 		return MomentItem{}, err
 	}
 	if nickname == "" {
@@ -198,7 +198,7 @@ func scanUserReactedMomentRow(scanner interface{ Scan(...any) error }) (MomentIt
 	var userID, nickname, locationName, privacyLevel string
 	var latitude, longitude float64
 	var createdAt, reactedAt time.Time
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &reactedAt, &item.IsFavorited); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.CommentsCount, &item.SharesCount, &item.InteractionCount, &locationName, &latitude, &longitude, &privacyLevel, &reactedAt, &item.IsFavorited); err != nil {
 		return MomentItem{}, time.Time{}, err
 	}
 	if nickname == "" {

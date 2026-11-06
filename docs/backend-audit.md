@@ -2142,3 +2142,28 @@ rps 与 p50/p95/p99，用于**同一会话内的前后对比**；非测试环境
 - 验证：`verify-backend-ci.sh --with-db` ALL CHECKS PASSED；在全新库执行
   `cmd/migrate` + 真实 `cmd/seed`（if-missing 与 reset 两种模式）均成功，
   死表确认不存在、行数与 dry-run 一致。
+
+
+## Batch B3b：moments 计数去冗余列 + 内部互动热度列（2026-11-06）
+
+持久化审计 P0-1/P0-2 收口：
+
+- 迁移 062（-- allow-destructive）：删除 moments.likes_count / comments_count /
+  shares_count；新增内部列 interaction_count = reactions + 未删评论 + 未撤销分享，
+  仅用于 nearby/popular 排序（不对外序列化）；新增 shares 的
+  `((payload->>'shared_moment_id')) WHERE share_type='moment' AND is_revoked=FALSE`
+  表达式索引支撑 shares_count 读时聚合；一次性把存量数据回填进 interaction_count。
+- 契约字段 comments_count / shares_count 改为读时聚合（列表/详情 SQL 内标量子查询；
+  nearby 页后批量查询补全），同一对象跨端点数值一致，share 撤销后 shares_count 自然回减。
+- 写路径：删除「评论 +1 / -1、reaction +1、分享 +1」三个计数列维护；改为统一
+  Service.AdjustInteractionCount（comments/reactions/share 三方注入；失败仅 WARN，
+  只影响排序启发式）。删除 moments 启动期全表自愈 UPDATE（P0-2）。
+- nearby：候选查询由 comments_count+shares_count+单独 reactions 批量聚合改为直接读
+  interaction_count（少一次 DB 往返）；popular 排序由「两列相加」改为 interaction_count。
+- share 模块不再私建 moments 服务实例（审计指出的隐藏副本之一），改由 bootstrap 注入。
+- 全局搜索 suggest moments 的 popularity 由 reactions LATERAL+两列改为 interaction_count。
+- seed：moments 写 interaction_count（reactions+评论+分享行数），同步单测。
+- schema manifest：40 表 / 377 列 / 123 索引。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED
+（真实库契约测试覆盖计数聚合/分页/软删；迁移回填后 dev 库 interaction_count 0–16 与业务量一致）。

@@ -90,13 +90,13 @@ type MomentItem struct {
 	Tags        []string      `json:"tags"`
 	Mentions    []string      `json:"mentions"`
 	CreatedAt   string        `json:"created_at"`
-	// LikesCount 兼容保留（reactions 聚合之前的历史计数，契约已删 likes_count），
-	// 仅供内部/测试使用，不对外序列化。
-	LikesCount    int      `json:"-"`
-	CommentsCount int      `json:"comments_count"`
-	SharesCount   int      `json:"shares_count"`
-	User          UserInfo `json:"user"`
-	IsDeleted     bool     `json:"is_deleted"`
+	// InteractionCount 是内部互动热度（reactions + 未删评论 + 未撤销分享），
+	// 仅供 nearby/popular 排序使用，不对外序列化；契约字段 liked 计数已删除。
+	InteractionCount int      `json:"-"`
+	CommentsCount    int      `json:"comments_count"`
+	SharesCount      int      `json:"shares_count"`
+	User             UserInfo `json:"user"`
+	IsDeleted        bool     `json:"is_deleted"`
 	// location 恒定 nullable（spec MomentItem）：nil = 隐私隐藏/未设置，恒输出 null。
 	Location *Location `json:"location"`
 	// is_favorited 恒定布尔（spec MomentItem）：匿名/未收藏为 false，恒输出。

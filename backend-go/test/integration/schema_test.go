@@ -79,9 +79,7 @@ SELECT m.moment_id,
        COALESCE(u.avatar_url, ''),
        m.description,
        m.created_at,
-       m.likes_count,
-       m.comments_count,
-       m.shares_count,
+       m.interaction_count,
        m.location_name,
        m.latitude,
        m.longitude,
@@ -471,7 +469,7 @@ WHERE g.is_searchable = TRUE
 }
 
 func buildSearchMomentsExplainSQL() string {
-	return `SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level FROM moments WHERE privacy_level <> 'private' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE s2_cell_id BETWEEN t.lo AND t.hi)`
+	return `SELECT moment_id, user_id, description, created_at, interaction_count, location_name, latitude, longitude, privacy_level FROM moments WHERE privacy_level <> 'private' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE s2_cell_id BETWEEN t.lo AND t.hi)`
 }
 
 func feedAllMomentsExplainSQL() string {

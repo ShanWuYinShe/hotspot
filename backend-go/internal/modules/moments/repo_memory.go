@@ -87,7 +87,7 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if r.momentTagsBlocked(req.Tags) {
 		return MomentItem{}, ErrBlockedTag
 	}
-	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: normalizeMomentMentions(req.Mentions), CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: req.Location, PrivacyLevel: privacy, IsFavorited: false}
+	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: normalizeMomentMentions(req.Mentions), CreatedAt: now.Format(time.RFC3339), InteractionCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: req.Location, PrivacyLevel: privacy, IsFavorited: false}
 	r.moments[momentID] = item
 	r.byUser[userID] = append(r.byUser[userID], momentID)
 	return item, nil
@@ -144,56 +144,17 @@ func (r *InMemoryRepository) ListMine(_ context.Context, userID string, limit in
 	return PaginatedMoments{Items: items, NextCursor: nextCursor}, nil
 }
 
-func (r *InMemoryRepository) AdjustReactionCount(_ context.Context, momentID string, delta int) error {
+func (r *InMemoryRepository) AdjustInteractionCount(_ context.Context, momentID string, delta int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	item, ok := r.moments[momentID]
 	if !ok {
 		return nil // 目标已删除：unreact 到已删瞬间是合法 no-op
 	}
-	item.LikesCount += delta
-	if item.LikesCount < 0 {
-		item.LikesCount = 0
+	item.InteractionCount += delta
+	if item.InteractionCount < 0 {
+		item.InteractionCount = 0
 	}
-	r.moments[momentID] = item
-	return nil
-}
-
-func (r *InMemoryRepository) IncrementCommentCount(_ context.Context, momentID string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	item, ok := r.moments[momentID]
-	if !ok {
-		return nil
-	}
-	item.CommentsCount++
-	r.moments[momentID] = item
-	return nil
-}
-
-func (r *InMemoryRepository) DecrementCommentCount(_ context.Context, momentID string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	item, ok := r.moments[momentID]
-	if !ok {
-		return nil
-	}
-	item.CommentsCount--
-	if item.CommentsCount < 0 {
-		item.CommentsCount = 0
-	}
-	r.moments[momentID] = item
-	return nil
-}
-
-func (r *InMemoryRepository) IncrementSharesCount(_ context.Context, momentID string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	item, ok := r.moments[momentID]
-	if !ok {
-		return ErrMomentNotFound
-	}
-	item.SharesCount++
 	r.moments[momentID] = item
 	return nil
 }
@@ -573,7 +534,7 @@ func (r *InMemoryRepository) ListNearbyMoments(_ context.Context, query momentsQ
 		if parseErr != nil {
 			continue
 		}
-		score := m.LikesCount + m.CommentsCount + m.SharesCount
+		score := m.InteractionCount
 		if query.ViewerUserID != "" && r.followGraph[query.ViewerUserID][m.User.UserID] {
 			score += 1000
 		}

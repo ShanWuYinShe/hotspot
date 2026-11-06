@@ -72,8 +72,9 @@ func TestMomentLocationsWithinRange(t *testing.T) {
 	}
 }
 
-// TestMomentCounterColumns 计数列必须与真实行数一致。
-func TestMomentCounterColumns(t *testing.T) {
+// TestMomentInteractionCountColumn 内部互动热度 = reactions + 评论 + 未撤销分享行数
+// （契约计数已改读时聚合，seed 只写这一内部排序列）。
+func TestMomentInteractionCountColumn(t *testing.T) {
 	plan := mustBuildPlan(t, testPlanOptions())
 	data := buildSeedData()
 
@@ -97,19 +98,13 @@ func TestMomentCounterColumns(t *testing.T) {
 	rows := rowsOfTable(t, plan, "moments")
 	columns := columnsOfTable(t, plan, "moments")
 	idIndex := columnIndex(t, columns, "moment_id")
-	likesIndex := columnIndex(t, columns, "likes_count")
-	commentsIndex := columnIndex(t, columns, "comments_count")
-	sharesIndex := columnIndex(t, columns, "shares_count")
+	interactionIndex := columnIndex(t, columns, "interaction_count")
 	for _, row := range rows {
 		momentID := mustString(t, row[idIndex])
-		if got, want := mustInt(t, row[likesIndex]), reactionCounts[momentID]; got != want {
-			t.Errorf("瞬间 %s likes_count = %d，reactions 行数 = %d", momentID, got, want)
-		}
-		if got, want := mustInt(t, row[commentsIndex]), commentCounts[momentID]; got != want {
-			t.Errorf("瞬间 %s comments_count = %d，comments 行数 = %d", momentID, got, want)
-		}
-		if got, want := mustInt(t, row[sharesIndex]), shareCounts[momentID]; got != want {
-			t.Errorf("瞬间 %s shares_count = %d，shares 行数 = %d", momentID, got, want)
+		want := reactionCounts[momentID] + commentCounts[momentID] + shareCounts[momentID]
+		if got := mustInt(t, row[interactionIndex]); got != want {
+			t.Errorf("瞬间 %s interaction_count = %d，期望 reactions(%d)+comments(%d)+shares(%d)=%d",
+				momentID, got, reactionCounts[momentID], commentCounts[momentID], shareCounts[momentID], want)
 		}
 	}
 }
