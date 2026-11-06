@@ -3425,3 +3425,9 @@ perf-smoke users/search 3562→5090 rps、p99 25.3→6.0ms，8 端点 budget 全
 - 新增真实库语义 IT：moments、groups 各自锁定大小写不敏感、% 字面、CJK 子串；
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+实测（backend-test，2026-11-07，暖态）：moments/groups ILIKE 复核移除后
+groups/search 6027→6178-6584 rps（p99 18.9→14.6-18.7ms），moments/search 持平
+（9787 rps，p99 3.5-4.0ms）；users/search 不受影响。DB 缓存冷热会使
+users/search 在 2.4k-5k rps / p99 6-40ms 间波动，回归判断以 perf-budget 相对
+阈值为准。

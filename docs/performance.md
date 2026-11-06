@@ -47,9 +47,9 @@ nearby 详情查询合并 reactions/作者关系（4→2 往返）。全部端�
 | notify/fetch | ~14400 | 0.6 | 1.1 | 2.5 |
 | moments/fetch_following | ~10200 | 0.9 | 1.5 | 2.2 |
 | moments/fetch_nearby | ~480 | 7.9 | 75.5 | 81.9 |
-| users/search | ~5090 | 1.7 | 3.4 | 6.0 |
+| users/search | ~3500（2.4k–5k 波动） | 2.1 | 4.3 | 26.3 |
 | moments/search | ~9800 | 0.9 | 1.7 | 3.9 |
-| groups/search | ~6040 | 1.2 | 2.5 | 18.3 |
+| groups/search | ~6200 | 1.2 | 2.3 | 18.7 |
 
 专项对比（users/search keyword=游客，单端点 loadgen c=10/10s）：
 - 轻量位置回退修复：1799→2139 rps，p95 25.2→8.5ms，p99 40.2→28.8ms；
@@ -58,6 +58,11 @@ nearby 详情查询合并 reactions/作者关系（4→2 往返）。全部端�
 
 nearby 仍是 p99 最高的读端点（约 81ms，S2 候选扫描 + 排序在 Postgres 2 CPU
 限额下成为瓶颈）；users/search 已从 p99 榜第二降至中游。
+
+**读法注意**：Postgres/OS 缓存冷热会显著影响 users/search（实测 2.4k–5k rps /
+p99 6–40ms）与 nearby；本表取多次重复中的典型暖态。验收一律以
+`scripts/perf-budget.sh` 的相对预算（rps≥60% baseline、p99≤2.5×baseline）
+为准，不要用单次绝对值做回归判断。
 
 热点解读：nearby（S2 半径查询 + 聚合）与 users/search（trigram/PGroonga 双分支）
 仍是 p99 最高的两个读端点，容量规划优先关注；本轮架构调整未使其退化（相对
