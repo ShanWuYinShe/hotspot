@@ -3101,3 +3101,17 @@ spec api_spec_public.md「类型体系」要求匿名节点 Request/Response 使
   不存在群 10300；groups 覆盖率 72.1%。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第六批）：comments 读路径补齐 UserInfo.avatar_url（2026-11-07）
+
+契约审计 P1「UserInfo.avatar_url 多读路径缺失」逐模块收口（本批 comments）：
+
+- 所有评论读查询（List / Get / ListReplies / ListTopRepliesByParentIDs）在
+  nickname 后补 `COALESCE(u.avatar_url, '')`，扫描后填充 UserInfo.AvatarURL
+  （空串归一 nil，契约 avatar_url null=未设置）；ranked 子查询用 AS avatar_url
+  显式别名避免外层未知列；
+- 创建评论的昵称查询同时取 avatar，创建响应回显头像；
+- 测试：stub 补 nickname/avatar 两列、批量 rows 列序对齐；新增「创建→读取
+  avatar_url 一致」单测；真库 contract 测试（top_replies batch）通过。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

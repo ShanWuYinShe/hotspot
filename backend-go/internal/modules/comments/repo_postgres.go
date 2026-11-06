@@ -47,8 +47,8 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if err := queryable.Exec(ctx, queryInsertComment, commentID, req.MomentID, userID, parentID, req.Content, now, mentions); err != nil {
 		return CommentItem{}, fmt.Errorf("comments.Create insert comment: %w", err)
 	}
-	var nickname string
-	if err := queryable.QueryRow(ctx, queryGetNickname, userID).Scan(&nickname); err != nil {
+	var nickname, avatarURL string
+	if err := queryable.QueryRow(ctx, queryGetNickname, userID).Scan(&nickname, &avatarURL); err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			observability.L().Warn("comments.Create: nickname lookup failed, falling back to user_id", "user_id", userID, "error", err)
 		}
@@ -65,7 +65,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		CommentID:    commentID,
 		ParentID:     parentIDPtr,
 		MomentID:     req.MomentID,
-		User:         UserInfo{UserID: userID, Nickname: nickname},
+		User:         UserInfo{UserID: userID, Nickname: nickname, AvatarURL: strPtr(avatarURL)},
 		Content:      req.Content,
 		Mentions:     mentions,
 		CreatedAt:    createdAtText,
@@ -108,12 +108,12 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 	rawCreatedAt := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item CommentItem
-		var userID, nickname, parentID string
+		var userID, nickname, avatarURL, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &nickname, &avatarURL, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
 			return PaginatedComments{}, fmt.Errorf("comments.List scan: %w", err)
 		}
-		item.User = UserInfo{UserID: userID, Nickname: nickname}
+		item.User = UserInfo{UserID: userID, Nickname: nickname, AvatarURL: strPtr(avatarURL)}
 		item.ParentID = strPtr(parentID)
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
@@ -136,15 +136,15 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 	}
 	row := queryable.QueryRow(ctx, queryGetComment, commentID)
 	var item CommentItem
-	var userID, nickname, parentID string
+	var userID, nickname, avatarURL, parentID string
 	var createdAt time.Time
-	if err := row.Scan(&item.CommentID, &item.MomentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
+	if err := row.Scan(&item.CommentID, &item.MomentID, &userID, &nickname, &avatarURL, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return CommentItem{}, false, nil
 		}
 		return CommentItem{}, false, fmt.Errorf("comments.Get scan: %w", err)
 	}
-	item.User = UserInfo{UserID: userID, Nickname: nickname}
+	item.User = UserInfo{UserID: userID, Nickname: nickname, AvatarURL: strPtr(avatarURL)}
 	item.ParentID = strPtr(parentID)
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return item, true, nil
@@ -169,12 +169,12 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 	rawCreatedAt := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item CommentItem
-		var userID, nickname, parentID string
+		var userID, nickname, avatarURL, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &nickname, &avatarURL, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
 			return PaginatedComments{}, fmt.Errorf("comments.ListReplies scan: %w", err)
 		}
-		item.User = UserInfo{UserID: userID, Nickname: nickname}
+		item.User = UserInfo{UserID: userID, Nickname: nickname, AvatarURL: strPtr(avatarURL)}
 		item.ParentID = strPtr(parentID)
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
@@ -209,12 +209,12 @@ func (r *PostgresRepository) ListTopRepliesByParentIDs(ctx context.Context, pare
 	defer rows.Close()
 	for rows.Next() {
 		var item CommentItem
-		var userID, nickname, parentID string
+		var userID, nickname, avatarURL, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &nickname, &avatarURL, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
 			return nil, fmt.Errorf("comments.ListTopRepliesByParentIDs scan: %w", err)
 		}
-		item.User = UserInfo{UserID: userID, Nickname: nickname}
+		item.User = UserInfo{UserID: userID, Nickname: nickname, AvatarURL: strPtr(avatarURL)}
 		item.ParentID = strPtr(parentID)
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		result[parentID] = append(result[parentID], item)

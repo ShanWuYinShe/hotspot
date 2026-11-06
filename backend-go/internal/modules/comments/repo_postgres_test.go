@@ -67,6 +67,15 @@ func (r *rowsValues) Err() error   { return r.err }
 type backendStub struct {
 	comments map[string][]CommentItem
 	execErrs map[string]error
+	// userAvatar 供 queryGetNickname 返回（avatar_url 列读路径测试）。
+	userAvatar string
+}
+
+func avatarString(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
 }
 
 // stubTimeString 兼容写库时间精度改造：插入参数现在是 time.Time（保留微秒），
@@ -119,12 +128,14 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 
 func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) persistence.Row {
 	switch query {
+	case queryGetNickname:
+		return rowValues{values: []any{args[0].(string), b.userAvatar}}
 	case queryGetComment:
 		commentID := args[0].(string)
 		for _, items := range b.comments {
 			for _, item := range items {
 				if item.CommentID == commentID {
-					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted, item.Mentions}}
+					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.User.Nickname, avatarString(item.User.AvatarURL), parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted, item.Mentions}}
 				}
 			}
 		}
@@ -172,7 +183,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted, item.Mentions})
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, avatarString(item.User.AvatarURL), parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted, item.Mentions})
 		}
 		return &rowsValues{rows: rows}, nil
 	case queryListCommentReplies:
@@ -211,7 +222,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted, item.Mentions})
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, avatarString(item.User.AvatarURL), parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted, item.Mentions})
 		}
 		return &rowsValues{rows: rows}, nil
 	default:
