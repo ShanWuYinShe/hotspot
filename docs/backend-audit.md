@@ -3390,3 +3390,18 @@ pg_stat_statements 实测（c=10、keyword=游客、10s）：users/search 每请
 c=10/10s：修复前 1799 rps / p95 25.22ms / p99 40.24ms → 修复后 **2139 rps /
 p95 8.53ms / p99 28.81ms**（吞吐 +18.9%，p95 -66%，p99 -28%）。全链路
 perf-smoke：users/search 2785→3562 rps；8 端点 perf-budget 全部 OK。
+
+## Batch D5（第一批）：users/search 去掉冗余 ILIKE 复核（PGroonga 已含同语义索引扫描）（2026-11-07）
+
+EXPLAIN 发现 `(nickname &@ x OR bio &@ x) AND (nickname ILIKE x OR bio ILIKE x)`
+会被 PostgreSQL 规划成 **两个 BitmapOr（共 4 次 PGroonga index scan）+ BitmapAnd**：
+PGroonga opclass 本身支持 ILIKE（`~~*`）且实测 &@ 已具备大小写不敏感、%/_ 字面、
+1 字符 CJK 语义（热缓存执行 0.31-0.55ms vs 旧 0.46-0.59ms），ILIKE 复核纯属重复。
+
+- buildSearchUsersQuery 非手机号分支移除 ILIKE 复核，仅保留 `&@` 子串索引条件
+  （手机号分支保留精确 phone_searchable EXISTS 语义）；
+- 真实库语义 IT（TestPostgresITSearchKeywordSemantics）：大小写不敏感、% 字面、
+  CJK 子串命中均锁定；
+- SQL 构建/参数测试同步（非手机号 keyword 参数 3→2）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

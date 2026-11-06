@@ -80,7 +80,7 @@ func TestBuildSearchUsersQueryPhoneBranch(t *testing.T) {
 	if !strings.Contains(sql, "&@") {
 		t.Fatalf("non-numeric keyword must use pgroonga prefilter: %s", sql)
 	}
-	if len(args) != 3 {
-		t.Fatalf("expected raw-keyword + escaped-keyword + limit args, got %#v", args)
+	if len(args) != 2 {
+		t.Fatalf("expected raw-keyword + limit args, got %#v", args)
 	}
 }

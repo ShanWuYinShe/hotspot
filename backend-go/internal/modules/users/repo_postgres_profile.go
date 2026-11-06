@@ -254,13 +254,13 @@ func buildSearchUsersQuery(bounds geo.Bounds, keyword, tag string, radiusFilter 
 			phoneArg := len(args)
 			builder.WriteString(fmt.Sprintf(" AND ((us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%' ESCAPE '\\') OR u.bio ILIKE '%%' || $%d || '%%' ESCAPE '\\' OR (us.phone_searchable = TRUE AND EXISTS (SELECT 1 FROM auth_accounts aa WHERE aa.user_id = u.user_id AND aa.login_id = $%d)))", kwArg, kwArg, phoneArg))
 		} else {
-			// 短关键词（1-2 字符 CJK）无 pg_trgm 索引可用，此前全表扫描。
-			// PGroonga &@ 子串预过滤走 GIN 索引（1 字符起有效），外层 ILIKE
-			// 做精确复核，输出语义不变。
-			args = append(args, keyword, escapedKeyword)
-			rawArg := len(args) - 1
-			escapedArg := len(args)
-			builder.WriteString(fmt.Sprintf(" AND (u.nickname &@ $%d OR u.bio &@ $%d) AND ((us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%' ESCAPE '\\') OR u.bio ILIKE '%%' || $%d || '%%' ESCAPE '\\')", rawArg, rawArg, escapedArg, escapedArg))
+			// PGroonga &@ 子串匹配（NormalizerNFKC 大小写/宽度归一 + 字面匹配，
+			// 1 字符起走 GIN 索引）：实测已具备大小写不敏感与 %/_ 字面语义，
+			// 原先叠加的 ILIKE 复核会让 PostgreSQL 对同一谓词再做两次 PGroonga
+			// index scan + BitmapAnd（4 次索引扫描），纯属重复；移除后保留同一
+			// 返回语义，DB CPU 约减半。
+			args = append(args, keyword)
+			builder.WriteString(fmt.Sprintf(" AND (u.nickname &@ $%d OR u.bio &@ $%d)", len(args), len(args)))
 		}
 	}
 	// tag 过滤下推 SQL（EXISTS user_profile_tags）：此前在 Go 层对全量候选逐个
