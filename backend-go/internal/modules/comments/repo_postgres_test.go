@@ -40,6 +40,10 @@ func (r rowValues) Scan(dest ...any) error {
 			if v, ok := r.values[i].(bool); ok {
 				*d = v
 			}
+		case *[]string:
+			if v, ok := r.values[i].([]string); ok {
+				*d = v
+			}
 		}
 	}
 	return nil
@@ -101,6 +105,9 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 			CreatedAt: stubTimeString(args[5]),
 			User:      UserInfo{UserID: args[2].(string), Nickname: args[2].(string)},
 		}
+		if mentions, ok := args[6].([]string); ok {
+			item.Mentions = mentions
+		}
 		if parentID, ok := args[3].(string); ok {
 			item.ParentID = strPtr(parentID)
 		}
@@ -117,7 +124,7 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 		for _, items := range b.comments {
 			for _, item := range items {
 				if item.CommentID == commentID {
-					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted}}
+					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted, item.Mentions}}
 				}
 			}
 		}
@@ -165,7 +172,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted})
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted, item.Mentions})
 		}
 		return &rowsValues{rows: rows}, nil
 	case queryListCommentReplies:
@@ -204,11 +211,33 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted})
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.User.Nickname, parentIDStr(item.ParentID), item.Content, item.CreatedAt, item.RepliesCount, item.IsDeleted, item.Mentions})
 		}
 		return &rowsValues{rows: rows}, nil
 	default:
 		return &persistence.InMemoryRows{}, nil
+	}
+}
+
+func TestPostgresRepositoryPersistsMentionsRoundTrip(t *testing.T) {
+	backend := newBackendStub()
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory)
+	mentions := []string{"user_bob", "user_carol"}
+	created, err := repo.Create(context.Background(), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "hi @bob", Mentions: mentions})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if len(created.Mentions) != 2 || created.Mentions[0] != "user_bob" || created.Mentions[1] != "user_carol" {
+		t.Fatalf("create must echo persisted mentions, got %#v", created.Mentions)
+	}
+	got, found, err := repo.Get(context.Background(), created.CommentID)
+	if err != nil || !found {
+		t.Fatalf("get: found=%v err=%v", found, err)
+	}
+	if len(got.Mentions) != 2 || got.Mentions[1] != "user_carol" {
+		t.Fatalf("read must return persisted mentions, got %#v", got.Mentions)
 	}
 }
 

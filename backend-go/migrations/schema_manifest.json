@@ -117,6 +117,7 @@
     "comments.content",
     "comments.created_at",
     "comments.is_deleted",
+    "comments.mentions",
     "comments.moment_id",
     "comments.parent_id",
     "comments.user_id",

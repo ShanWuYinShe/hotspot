@@ -40,7 +40,11 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if req.ParentID != "" {
 		parentID = req.ParentID
 	}
-	if err := queryable.Exec(ctx, queryInsertComment, commentID, req.MomentID, userID, parentID, req.Content, now); err != nil {
+	mentions := req.Mentions
+	if mentions == nil {
+		mentions = []string{}
+	}
+	if err := queryable.Exec(ctx, queryInsertComment, commentID, req.MomentID, userID, parentID, req.Content, now, mentions); err != nil {
 		return CommentItem{}, fmt.Errorf("comments.Create insert comment: %w", err)
 	}
 	var nickname string
@@ -63,6 +67,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		MomentID:     req.MomentID,
 		User:         UserInfo{UserID: userID, Nickname: nickname},
 		Content:      req.Content,
+		Mentions:     mentions,
 		CreatedAt:    createdAtText,
 		RepliesCount: 0,
 	}, nil
@@ -105,7 +110,7 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 		var item CommentItem
 		var userID, nickname, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
 			return PaginatedComments{}, fmt.Errorf("comments.List scan: %w", err)
 		}
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
@@ -133,7 +138,7 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 	var item CommentItem
 	var userID, nickname, parentID string
 	var createdAt time.Time
-	if err := row.Scan(&item.CommentID, &item.MomentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted); err != nil {
+	if err := row.Scan(&item.CommentID, &item.MomentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return CommentItem{}, false, nil
 		}
@@ -166,7 +171,7 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 		var item CommentItem
 		var userID, nickname, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
 			return PaginatedComments{}, fmt.Errorf("comments.ListReplies scan: %w", err)
 		}
 		item.User = UserInfo{UserID: userID, Nickname: nickname}
@@ -206,7 +211,7 @@ func (r *PostgresRepository) ListTopRepliesByParentIDs(ctx context.Context, pare
 		var item CommentItem
 		var userID, nickname, parentID string
 		var createdAt time.Time
-		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted); err != nil {
+		if err := rows.Scan(&item.CommentID, &userID, &nickname, &parentID, &item.Content, &createdAt, &item.RepliesCount, &item.IsDeleted, &item.Mentions); err != nil {
 			return nil, fmt.Errorf("comments.ListTopRepliesByParentIDs scan: %w", err)
 		}
 		item.User = UserInfo{UserID: userID, Nickname: nickname}

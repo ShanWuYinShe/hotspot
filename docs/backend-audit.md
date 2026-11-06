@@ -3018,3 +3018,19 @@ admin 事务注入单测；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
   影响；新增 groups「广播必须等 COMMIT」单测（before=0、Run 后=1）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第一批）：comments.mentions 持久化（契约字段补齐）（2026-11-07）
+
+契约审计 P1：CommentItem.mentions 在 spec 中恒为数组，此前只参与通知、从未
+落库，所有读接口恒返回空数组（创建响应也不回显）。
+
+- 迁移 066：comments 增列 `mentions TEXT[] NOT NULL DEFAULT '{}'`（评论量远
+  小于消息，行内数组无需 join）；manifest 重建（40 表 / 378 列 / 129 索引）；
+- 写路径：`queryInsertComment` 增 $7 mentions，Create 同事务写入原始 mention
+  用户 ID 列表（nil 归一为 `[]`），创建响应回显；
+- 读路径：List / Get / ListReplies / ListTopRepliesByParentIDs 四条查询全部
+  带出 c.mentions 并扫描进 `CommentItem.Mentions`；
+- 新增 stubbed repo 单测：创建→读取 mentions round-trip（含列序对齐）。
+
+验证：go test -short 全绿；真库 psql 插入/查询验证；
+verify-backend-ci.sh --with-db ALL CHECKS PASSED。

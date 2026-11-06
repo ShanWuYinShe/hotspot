@@ -2,8 +2,8 @@ package comments
 
 const (
 	queryInsertComment = `
-	INSERT INTO comments (comment_id, moment_id, user_id, parent_id, content, created_at)
-	VALUES ($1,$2,$3,$4,$5,$6)`
+	INSERT INTO comments (comment_id, moment_id, user_id, parent_id, content, created_at, mentions)
+	VALUES ($1,$2,$3,$4,$5,$6,$7)`
 
 	queryGetNickname = `
 	SELECT COALESCE(nickname, user_id) FROM users WHERE user_id = $1`
@@ -20,7 +20,7 @@ const (
 	SELECT EXISTS(SELECT 1 FROM deleted) AS deleted`
 
 	queryListComments = `
-		SELECT c.comment_id, c.user_id, COALESCE(u.nickname, c.user_id), COALESCE(c.parent_id, ''), c.content, c.created_at, (SELECT COUNT(*)::int FROM comments rc WHERE rc.parent_id = c.comment_id AND rc.is_deleted = FALSE) AS replies_count, c.is_deleted
+		SELECT c.comment_id, c.user_id, COALESCE(u.nickname, c.user_id), COALESCE(c.parent_id, ''), c.content, c.created_at, (SELECT COUNT(*)::int FROM comments rc WHERE rc.parent_id = c.comment_id AND rc.is_deleted = FALSE) AS replies_count, c.is_deleted, c.mentions
 		FROM comments c
 		LEFT JOIN users u ON u.user_id = c.user_id
 		WHERE c.moment_id = $1
@@ -30,13 +30,13 @@ const (
 		LIMIT $4`
 
 	queryGetComment = `
-		SELECT c.comment_id, c.moment_id, c.user_id, COALESCE(u.nickname, c.user_id), COALESCE(c.parent_id, ''), c.content, c.created_at, (SELECT COUNT(*)::int FROM comments rc WHERE rc.parent_id = c.comment_id AND rc.is_deleted = FALSE) AS replies_count, c.is_deleted
+		SELECT c.comment_id, c.moment_id, c.user_id, COALESCE(u.nickname, c.user_id), COALESCE(c.parent_id, ''), c.content, c.created_at, (SELECT COUNT(*)::int FROM comments rc WHERE rc.parent_id = c.comment_id AND rc.is_deleted = FALSE) AS replies_count, c.is_deleted, c.mentions
 		FROM comments c
 		LEFT JOIN users u ON u.user_id = c.user_id
 		WHERE c.comment_id = $1`
 
 	queryListCommentReplies = `
-		SELECT c.comment_id, c.user_id, COALESCE(u.nickname, c.user_id), COALESCE(c.parent_id, ''), c.content, c.created_at, (SELECT COUNT(*)::int FROM comments rc WHERE rc.parent_id = c.comment_id AND rc.is_deleted = FALSE) AS replies_count, c.is_deleted
+		SELECT c.comment_id, c.user_id, COALESCE(u.nickname, c.user_id), COALESCE(c.parent_id, ''), c.content, c.created_at, (SELECT COUNT(*)::int FROM comments rc WHERE rc.parent_id = c.comment_id AND rc.is_deleted = FALSE) AS replies_count, c.is_deleted, c.mentions
 		FROM comments c
 		LEFT JOIN users u ON u.user_id = c.user_id
 		WHERE c.parent_id = $1
@@ -50,9 +50,9 @@ const (
 	queryListTopRepliesByParentIDs = `
 		SELECT comment_id, user_id, COALESCE(nickname, user_id), COALESCE(parent_id, ''), content, created_at,
 		       (SELECT COUNT(*)::int FROM comments rc WHERE rc.parent_id = ranked.comment_id AND rc.is_deleted = FALSE) AS replies_count,
-		       is_deleted
+		       is_deleted, mentions
 		FROM (
-		  SELECT c.comment_id, c.user_id, c.parent_id, c.content, c.created_at, c.is_deleted, u.nickname,
+		  SELECT c.comment_id, c.user_id, c.parent_id, c.content, c.created_at, c.is_deleted, c.mentions, u.nickname,
 		         ROW_NUMBER() OVER (PARTITION BY c.parent_id ORDER BY c.created_at DESC, c.comment_id DESC) AS rn
 		  FROM comments c
 		  LEFT JOIN users u ON u.user_id = c.user_id
