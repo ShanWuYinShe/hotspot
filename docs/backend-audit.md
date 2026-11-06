@@ -2286,3 +2286,24 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   均收到 PrivateMessageRecalled；admin handler 测试用内存消息审核 fake。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+
+## Batch C（第五批）：admin 群解散走 groups 模块（2026-11-06）
+
+架构审计 P0-4：admin 直接写 groups/group_applications/group_invites 的路径收敛。
+
+- **groups** 新增 repo `DismissAsAdmin`（PG + 内存 + 契约接口）：软删群
+  （deleted_at）+ 同事务作废该群全部 pending 申请/邀请（status=revoked，字段口径
+  与 BanMember 级联一致）；与 owner 自助解散（硬删子表）语义区分。
+- **groups.Service.DismissAsAdmin**：无 owner 校验、群不存在/并发已解散 →
+  ErrGroupNotFound；广播 GroupDismissed(policy_violation)、摘除群订阅，并通过
+  GroupDismissAuditWriter 写 group.dismiss 审计。
+- **admin** 群解散/举报裁决群目标改调注入的群审核接口，删除 admin 仓库
+  DismissGroup 与三条直写 SQL；archtest allowlist 移除 admin:groups、
+  admin:group_applications、admin:group_invites 三条债务。
+- 审计可读性保持：groups 只回传 operatorID，admin 的 AppendGroupDismissAudit
+  按管理员资料补昵称（避免审计退化为裸 user_id）。
+- 测试：groups 补审核解散用例（无 owner 校验/不存在/并发已解散/审计回调参数）；
+  admin handler 测试用内存群审核 fake（含广播与审计模拟）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

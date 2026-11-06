@@ -487,3 +487,23 @@ FROM (
 	WHERE gm.user_id = $2 AND g.deleted_at IS NULL
 )`
 )
+
+// 平台审核解散（repo.DismissAsAdmin，spec api_spec_admin.md groups/dismiss）：
+// 软删群 + 同事务作废 pending 申请/邀请（字段口径与 BanMember 级联一致）。
+const (
+	querySoftDeleteGroup = `
+UPDATE groups
+SET deleted_at = NOW()
+WHERE group_id = $1 AND deleted_at IS NULL
+RETURNING group_id`
+
+	queryRevokePendingGroupApplications = `
+UPDATE group_applications
+SET status = 'revoked', handled_at = $2
+WHERE group_id = $1 AND status = 'pending'`
+
+	queryRevokePendingGroupInvites = `
+UPDATE group_invites
+SET status = 'revoked', responded_at = $2
+WHERE group_id = $1 AND status = 'pending'`
+)

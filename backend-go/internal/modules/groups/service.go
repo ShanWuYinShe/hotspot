@@ -475,6 +475,37 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 	return nil
 }
 
+// DismissAsAdmin 平台审核解散（无 owner 校验）：软删群 + 同事务作废 pending
+// 申请/邀请，广播 GroupDismissed(policy_violation)、摘除群订阅，并写
+// group.dismiss 审计（操作者/原因由 admin 侧传入）。返回群信息供审计使用。
+// 由 admin 经最小接口调用（群数据归 groups 模块所有，admin 不再直接写
+// groups/group_applications/group_invites 表）。
+func (s *Service) DismissAsAdmin(ctx context.Context, operatorID, groupID, reason string) (GroupInfo, error) {
+	group, ok, err := s.repo.Get(ctx, groupID)
+	if err != nil {
+		return GroupInfo{}, err
+	}
+	if !ok {
+		return GroupInfo{}, ErrGroupNotFound
+	}
+	hit, err := s.repo.DismissAsAdmin(ctx, groupID)
+	if err != nil {
+		return GroupInfo{}, fmt.Errorf("groups.Service.DismissAsAdmin: repo: %w", err)
+	}
+	if !hit {
+		return GroupInfo{}, ErrGroupNotFound
+	}
+	if s.audit != nil {
+		if err := s.audit.AppendGroupDismissAudit(ctx, operatorID, group.Group.GroupID, group.Group.Name, reason); err != nil {
+			observability.L().Error("groups.DismissAsAdmin audit failed", "error", err, "group_id", groupID)
+		}
+	}
+	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: GroupDismissedPayload{GroupID: groupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "policy_violation"}}
+	realtime.DefaultHub().BroadcastToGroup(groupID, event)
+	realtime.DefaultHub().DropGroup(groupID)
+	return group.Group, nil
+}
+
 func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]GroupMemberItem, string, error) {
 	op := observability.Begin("groups.list_members", "group_id", req.GroupID)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)

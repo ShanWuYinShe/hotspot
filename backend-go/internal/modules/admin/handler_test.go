@@ -9,9 +9,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
+	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -59,6 +61,46 @@ func (c testCommentModerator) DeleteAsAdmin(_ context.Context, commentID string)
 	return nil
 }
 
+// testGroupModerator 把审核解散落到测试用内存 store（删除 group 行）。
+type testGroupModerator struct{ store *InMemoryRepository }
+
+func (m testGroupModerator) DismissAsAdmin(ctx context.Context, operatorID, groupID, reason string) (groupsmodule.GroupInfo, error) {
+	m.store.mu.Lock()
+	item, ok := m.store.groups[groupID]
+	if !ok {
+		m.store.mu.Unlock()
+		return groupsmodule.GroupInfo{}, groupsmodule.ErrGroupNotFound
+	}
+	delete(m.store.groups, groupID)
+	delete(m.store.groupMembers, groupID)
+	m.store.mu.Unlock()
+	// 模拟生产装配：groups 模块的 group.dismiss 审计由 admin 模块实现并写库
+	// （bootstrap 把 groups.SetGroupDismissAuditWriter(adminModule) 接线）。
+	details := AuditDetails{"type": string(AuditActionGroupDismiss), "group_id": groupID}
+	if reason != "" {
+		details["reason"] = reason
+	}
+	realtime.DefaultHub().BroadcastToGroup(groupID, realtime.Event{
+		Type:    realtime.EventTypeGroupDismissed,
+		Payload: groupsmodule.GroupDismissedPayload{GroupID: groupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "policy_violation"},
+	})
+	nickname := operatorID
+	if actor, ok, err := m.store.GetActor(ctx, operatorID); err == nil && ok && actor.Nickname != "" {
+		nickname = actor.Nickname
+	}
+	if err := m.store.AppendAuditLog(ctx, AuditLogEntry{
+		Action:     AuditActionGroupDismiss,
+		Operator:   UserInfo{UserID: operatorID, Nickname: nickname},
+		TargetType: AuditTargetTypeGroup,
+		TargetID:   groupID,
+		TargetName: item.Group.Name,
+		Details:    details,
+	}); err != nil {
+		return groupsmodule.GroupInfo{}, err
+	}
+	return item.Group, nil
+}
+
 // testMessageModerator 把审核撤回动作落到测试用内存 store 的群消息/私聊消息表。
 type testMessageModerator struct{ store *InMemoryRepository }
 
@@ -85,6 +127,7 @@ func newTestModuleWithStore() (*Module, *InMemoryRepository) {
 	module.Service.SetMomentModerator(testMomentModerator{store: store})
 	module.Service.SetCommentModerator(testCommentModerator{store: store})
 	module.Service.SetMessageModerators(testMessageModerator{store: store}, testMessageModerator{store: store})
+	module.Service.SetGroupModerator(testGroupModerator{store: store})
 	return module, store
 }
 
@@ -97,6 +140,7 @@ func newTestModuleWithPushStore() (*Module, *InMemoryRepository, *notify.InMemor
 	module.Service.SetMomentModerator(testMomentModerator{store: store})
 	module.Service.SetCommentModerator(testCommentModerator{store: store})
 	module.Service.SetMessageModerators(testMessageModerator{store: store}, testMessageModerator{store: store})
+	module.Service.SetGroupModerator(testGroupModerator{store: store})
 	return module, store, notificationRepo
 }
 

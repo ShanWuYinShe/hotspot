@@ -162,10 +162,6 @@ func (r *adminFallbackRepo) GetGroup(context.Context, string) (AdminGroupItem, b
 	r.used = true
 	return AdminGroupItem{}, false, nil
 }
-func (r *adminFallbackRepo) DismissGroup(context.Context, string) (AdminGroupItem, bool, error) {
-	r.used = true
-	return AdminGroupItem{}, false, nil
-}
 func (r *adminFallbackRepo) ListGroupMemberIDs(context.Context, string) ([]string, error) {
 	r.used = true
 	return nil, nil

@@ -31,6 +31,7 @@ type stubGroupsRepo struct {
 	searchErr       error
 	updateErr       error
 	dismissErr      error
+	dismissAdminHit bool
 	ownedCount      int
 
 	members    []GroupMemberItem
@@ -120,6 +121,10 @@ func (r *stubGroupsRepo) Search(_ context.Context, _ SearchGroupsRequest) (Pagin
 func (r *stubGroupsRepo) Update(_ context.Context, _ string, _ UpdateGroupRequest) error {
 	return r.updateErr
 }
+func (r *stubGroupsRepo) DismissAsAdmin(context.Context, string) (bool, error) {
+	return r.dismissAdminHit, r.dismissErr
+}
+
 func (r *stubGroupsRepo) Dismiss(_ context.Context, _ string) error { return r.dismissErr }
 func (r *stubGroupsRepo) GetGroupPasswordHash(_ context.Context, _ string) (*string, error) {
 	return nil, nil
@@ -1699,4 +1704,43 @@ func decodePayload(t *testing.T, p any) map[string]any {
 		t.Fatalf("payload is not an object: %v (%#v)", err, p)
 	}
 	return m
+}
+
+// TestServiceDismissAsAdmin：平台审核解散无 owner 校验；群不存在/并发已解散
+// 返回 ErrGroupNotFound；审计回调收到操作者/原因。
+func TestServiceDismissAsAdmin(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, dismissAdminHit: true}
+	svc := NewServiceWithRepo(repo)
+	audit := &captureDismissAudit{}
+	svc.SetGroupDismissAuditWriter(audit)
+	group, err := svc.DismissAsAdmin(grpCtx("admin1"), "admin1", "g1", "policy violation")
+	if err != nil {
+		t.Fatalf("dismiss as admin: %v", err)
+	}
+	if group.GroupID != "g1" {
+		t.Fatalf("group = %#v", group)
+	}
+	if audit.operatorID != "admin1" || audit.groupID != "g1" || audit.reason != "policy violation" {
+		t.Fatalf("audit = %#v", audit)
+	}
+
+	// 群不存在：Get 未命中。
+	svc = NewServiceWithRepo(&stubGroupsRepo{})
+	if _, err := svc.DismissAsAdmin(context.Background(), "admin1", "missing", ""); !errors.Is(err, ErrGroupNotFound) {
+		t.Fatalf("missing group: %v", err)
+	}
+	// Get 命中但并发已解散（repo 更新未命中）。
+	svc = NewServiceWithRepo(&stubGroupsRepo{getResult: ownerGroup(), getFound: true})
+	if _, err := svc.DismissAsAdmin(context.Background(), "admin1", "g1", ""); !errors.Is(err, ErrGroupNotFound) {
+		t.Fatalf("already dismissed: %v", err)
+	}
+}
+
+type captureDismissAudit struct {
+	operatorID, groupID, reason string
+}
+
+func (c *captureDismissAudit) AppendGroupDismissAudit(_ context.Context, operatorID, groupID, _ string, reason string) error {
+	c.operatorID, c.groupID, c.reason = operatorID, groupID, reason
+	return nil
 }

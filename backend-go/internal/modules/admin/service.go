@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
@@ -31,6 +32,7 @@ type Service struct {
 	commentModerator        commentModerator
 	groupMessageModerator   messageModerator
 	privateMessageModerator messageModerator
+	groupModerator          groupModerator
 	// sessionCacheInvalidator 封禁逐条撤销会话后失效平台 auth 的会话校验缓存：
 	// admin 仓库直接 UPDATE auth_sessions（不经 platform auth SessionStore 装饰器），
 	// 不主动失效会让被撤销会话在缓存 TTL 内继续可用。bootstrap 接线
@@ -46,6 +48,12 @@ type momentModerator interface {
 
 type commentModerator interface {
 	DeleteAsAdmin(ctx context.Context, commentID string) error
+}
+
+// groupModerator 是平台审核解散群能力（groups 模块 Service 实现）。返回群信息
+// 供审计/日志使用；群不存在返回 groups.ErrGroupNotFound。
+type groupModerator interface {
+	DismissAsAdmin(ctx context.Context, operatorID, groupID, reason string) (groupsmodule.GroupInfo, error)
 }
 
 // messageModerator 是按 message_id 撤回消息的审核能力（groupmessages 与
@@ -91,6 +99,9 @@ func (s *Service) SetMomentModerator(m momentModerator) { s.momentModerator = m 
 
 // SetCommentModerator wires the comments module's admin delete capability.
 func (s *Service) SetCommentModerator(c commentModerator) { s.commentModerator = c }
+
+// SetGroupModerator wires the groups module's admin dismiss capability.
+func (s *Service) SetGroupModerator(g groupModerator) { s.groupModerator = g }
 
 // SetMessageModerators wires group/private message admin recall capabilities.
 func (s *Service) SetMessageModerators(groupModerator, privateModerator messageModerator) {

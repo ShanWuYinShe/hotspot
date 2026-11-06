@@ -219,6 +219,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	adminModule.Service.SetMomentModerator(momentsModule.Service)
 	adminModule.Service.SetCommentModerator(commentsModule.Service)
 	adminModule.Service.SetMessageModerators(gmModule.Service, pmModule.Service())
+	adminModule.Service.SetGroupModerator(groupsModule.Service)
 	// 审计日志/终态举报保留期清理（RETENTION_SWEEP_ENABLED；各条目天数 <=0 关闭
 	// 该类清理）。后台幂等删除，不阻塞启动/请求。
 	if cfg.RetentionSweepEnabled {

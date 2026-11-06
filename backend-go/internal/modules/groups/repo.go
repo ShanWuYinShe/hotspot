@@ -11,6 +11,11 @@ type Repository interface {
 	Search(context.Context, SearchGroupsRequest) (PaginatedGroups, error)
 	Update(context.Context, string, UpdateGroupRequest) error
 	Dismiss(context.Context, string) error
+	// DismissAsAdmin 平台审核解散（spec api_spec_admin.md groups/dismiss 契约级）：
+	// 软删群（deleted_at）+ 同事务作废该群全部 pending 申请/邀请（status=revoked）。
+	// 与 owner 自助解散（硬删子表）语义不同：审核解散保留成员/消息以便追溯。
+	// 返回是否命中（群不存在或已解散 false）。
+	DismissAsAdmin(ctx context.Context, groupID string) (bool, error)
 	ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
 	ListAdminMembers(context.Context, string, *GroupRole, int, string) ([]AdminGroupMemberItem, string, error)
 	SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)

@@ -34,7 +34,6 @@ type Repository interface {
 	RevokeSession(context.Context, string) error
 	SearchGroups(context.Context, AdminGroupSearchRequest) (adminGroupPage, error)
 	GetGroup(context.Context, string) (AdminGroupItem, bool, error)
-	DismissGroup(context.Context, string) (AdminGroupItem, bool, error)
 	ListGroupMemberIDs(context.Context, string) ([]string, error)
 	SearchReports(context.Context, AdminReportListRequest) (adminReportPage, error)
 	GetReportHandleRecord(context.Context, string) (reportHandleRecord, bool, error)

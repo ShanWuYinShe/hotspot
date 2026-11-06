@@ -428,24 +428,6 @@ func TestAdminRepoGroups(t *testing.T) {
 		t.Fatalf("get group missing: found=%v err=%v", found, err)
 	}
 
-	// DismissGroup：成功 / 未找到 / exec 错误
-	stub = &adminFullStub{queryRow: map[string][]any{queryAdminGetGroup: adminGroupRowVals17("g1")}}
-	item, found, err := newAdminFullRepo(stub).DismissGroup(ctx, "g1")
-	if err != nil || !found || item.Group.GroupID != "g1" {
-		t.Fatalf("dismiss group: %#v found=%v err=%v", item, found, err)
-	}
-	stub = &adminFullStub{queryRowErr: map[string]error{queryAdminGetGroup: pgx.ErrNoRows}}
-	if _, found, err := newAdminFullRepo(stub).DismissGroup(ctx, "missing"); err != nil || found {
-		t.Fatalf("dismiss group missing: found=%v err=%v", found, err)
-	}
-	stub = &adminFullStub{
-		queryRow: map[string][]any{queryAdminGetGroup: adminGroupRowVals17("g1")},
-		execErrs: map[string]error{queryAdminDismissGroup: errors.New("boom")},
-	}
-	if _, _, err := newAdminFullRepo(stub).DismissGroup(ctx, "g1"); err == nil {
-		t.Fatal("dismiss group exec error must propagate")
-	}
-
 	// ListGroupMemberIDs
 	stub = &adminFullStub{queryRows: map[string][][]any{queryAdminListGroupMemberIDs: {{"u1"}, {"u2"}}}}
 	ids, err := newAdminFullRepo(stub).ListGroupMemberIDs(ctx, "g1")

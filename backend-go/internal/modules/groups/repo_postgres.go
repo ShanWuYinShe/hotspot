@@ -170,6 +170,34 @@ func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error 
 	})
 }
 
+// DismissAsAdmin 平台审核解散：软删群 + 同事务作废 pending 申请/邀请。
+func (r *PostgresRepository) DismissAsAdmin(ctx context.Context, groupID string) (bool, error) {
+	hit := false
+	err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		tx, ok := persistence.QueryableForTx(txCtx, r.factory)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		var updated string
+		if err := tx.QueryRow(txCtx, querySoftDeleteGroup, groupID).Scan(&updated); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil // 群不存在/已解散：hit=false
+			}
+			return err
+		}
+		hit = true
+		now := time.Now().UTC()
+		if err := tx.Exec(txCtx, queryRevokePendingGroupApplications, groupID, now); err != nil {
+			return err
+		}
+		return tx.Exec(txCtx, queryRevokePendingGroupInvites, groupID, now)
+	})
+	if err != nil {
+		return false, err
+	}
+	return hit, nil
+}
+
 func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {

@@ -539,3 +539,30 @@ func (r *InMemoryRepository) SeedGroupsByUser(userID string, items []GroupItem) 
 	defer r.mu.Unlock()
 	r.groupsByUser[userID] = append([]GroupItem(nil), items...)
 }
+
+// DismissAsAdmin 平台审核解散（内存实现）：软删语义等价为从 groups 表移除
+// （Get/Search 随即不可见），保留成员/消息等子行；pending 申请/邀请置 revoked。
+func (r *InMemoryRepository) DismissAsAdmin(_ context.Context, groupID string) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[groupID]; !ok {
+		return false, nil
+	}
+	delete(r.groups, groupID)
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	for inviteID, invite := range r.invites {
+		if invite.GroupID == groupID && invite.Status == ApplicationStatusPending {
+			invite.Status = ApplicationStatusRevoked
+			invite.RespondedAt = &now
+			r.invites[inviteID] = invite
+		}
+	}
+	for applicationID, application := range r.applications {
+		if application.GroupID == groupID && application.Status == ApplicationStatusPending {
+			application.Status = ApplicationStatusRevoked
+			application.HandledAt = &now
+			r.applications[applicationID] = application
+		}
+	}
+	return true, nil
+}

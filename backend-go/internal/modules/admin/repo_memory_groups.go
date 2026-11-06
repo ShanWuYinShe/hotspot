@@ -74,18 +74,6 @@ func (r *InMemoryRepository) GetGroup(_ context.Context, groupID string) (AdminG
 	return cloneAdminGroupItem(item), true, nil
 }
 
-func (r *InMemoryRepository) DismissGroup(_ context.Context, groupID string) (AdminGroupItem, bool, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	item, ok := r.groups[groupID]
-	if !ok {
-		return AdminGroupItem{}, false, nil
-	}
-	delete(r.groups, groupID)
-	delete(r.groupMembers, groupID)
-	return cloneAdminGroupItem(item), true, nil
-}
-
 func (r *InMemoryRepository) ListGroupMemberIDs(_ context.Context, groupID string) ([]string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

@@ -395,11 +395,17 @@ func (s *Service) appendConfigAudit(ctx context.Context, actor AdminActor, confi
 // through the injected groups.GroupDismissAuditWriter without a groups→admin
 // import cycle.
 func (s *Service) AppendGroupDismissAudit(ctx context.Context, operatorID string, groupID string, groupName string, reason string) error {
+	// groups 模块只回传 operatorID：这里按管理员资料补昵称，保持审计可读性
+	//（此前 admin 直写审计时使用 ctx 中 actor 的昵称）。
+	actor := AdminActor{UserID: operatorID}
+	if resolved, ok, err := s.repo.GetActor(ctx, operatorID); err == nil && ok {
+		actor = resolved
+	}
 	details := AuditDetails{"type": string(AuditActionGroupDismiss), "group_id": groupID}
 	if reason != "" {
 		details["reason"] = reason
 	}
-	return s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, AdminActor{UserID: operatorID}, AuditLogEntry{
+	return s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
 		Action:     AuditActionGroupDismiss,
 		TargetType: AuditTargetTypeGroup,
 		TargetID:   groupID,

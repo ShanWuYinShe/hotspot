@@ -2,12 +2,11 @@ package admin
 
 import (
 	"context"
-	"hotspot/backend-go/internal/modules/groups"
-	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/observability"
-	"hotspot/backend-go/internal/platform/realtime"
+	"errors"
 	"strings"
-	"time"
+
+	groupsmodule "hotspot/backend-go/internal/modules/groups"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 func (s *Service) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (PaginatedAdminUsers, *httpx.APIError, error) {
@@ -175,24 +174,23 @@ func (s *Service) DismissGroup(ctx context.Context, req AdminDismissGroupRequest
 // 审计写入失败按 best-effort 处理（记错误日志，不回滚已生效的解散）：解散不可逆，
 // 失败报错只会诱导管理员重试并撞上「群组不存在」。
 func (s *Service) dismissGroupAndTrace(ctx context.Context, actor AdminActor, groupID, reason string) (AdminGroupItem, *httpx.APIError, error) {
-	item, found, err := s.repo.DismissGroup(ctx, groupID)
+	if s.groupModerator == nil {
+		return AdminGroupItem{}, nil, errors.New("admin: group moderator not configured")
+	}
+	// 群数据归 groups 模块所有：审核解散（软删 + 作废 pending 申请/邀请 +
+	// GroupDismissed 广播）与 group.dismiss 审计均由归属模块执行；admin 只做
+	// 权限/参数校验与错误码映射（架构审计 P0-4）。
+	group, err := s.groupModerator.DismissAsAdmin(ctx, actor.UserID, groupID, strings.TrimSpace(reason))
 	if err != nil {
+		if errors.Is(err, groupsmodule.ErrGroupNotFound) {
+			return AdminGroupItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "群组不存在"}, nil
+		}
 		if apiErr := asAPIError(err); apiErr != nil {
 			return AdminGroupItem{}, apiErr, nil
 		}
 		return AdminGroupItem{}, nil, err
 	}
-	if !found {
-		return AdminGroupItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "群组不存在"}, nil
-	}
-	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: groups.GroupDismissedPayload{GroupID: groupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "policy_violation"}}
-	// 仅按群广播一次：逐成员 BroadcastToUser 会让在线成员各收到两份重复事件；
-	// 离线成员由 resume 兜底（解散为持久状态，重连后群已不可见）。
-	realtime.DefaultHub().BroadcastToGroup(groupID, event)
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("group.dismiss"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("group"), TargetID: groupID, TargetName: item.Group.Name, Details: map[string]any{"type": "group.dismiss", "reason": strings.TrimSpace(reason)}}); err != nil {
-		observability.L().Error("admin: group dismiss audit log append failed", "error", err, "group_id", groupID)
-	}
-	return item, nil, nil
+	return AdminGroupItem{Group: group}, nil, nil
 }
 
 func validateAdminUserSearchRequest(req AdminUserSearchRequest) *httpx.APIError {
