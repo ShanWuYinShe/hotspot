@@ -3448,3 +3448,7 @@ PostgreSQL 规划成 semi-join：扫描全部 public moments 后逐行 ×28 个�
   （OR 区间数、占位符顺序、无 unnest）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+实测（backend-test，2026-11-07）：nearby 候选粗筛改 OR BETWEEN 后单端点
+c=10/10s：461→**726 rps**（+57%），p50 8.11→5.73ms，p95 76.1→66.5ms，
+p99 81.8→74.5ms；8 端点 perf-budget 全部 OK。
