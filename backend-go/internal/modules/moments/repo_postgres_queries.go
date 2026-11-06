@@ -183,24 +183,39 @@ ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $4`
 
 	// queryNearbyMomentDetails 一次查询补全附近流页面内的展示字段、标签数组、
-	// 收藏态、图片行、reactions 聚合与作者关系（20 行以内的 LATERAL/EXISTS
-	// 仅作用于页内行，比多次往返更省 context/网络开销）。
+	// 收藏态、图片行、reactions 聚合与作者关系。各聚合子查询先按页面 ID 集合
+	// GROUP BY、再与主行 hash join：单次索引扫描/聚合，替代 20 行×多个相关
+	// 子查询的重复执行（DB CPU 热点）。
 	// 候选粗筛 SQL 见 buildNearbyMomentsQuery：S2 覆盖区间用 OR BETWEEN 表达，
 	// 精筛/终序仍在 Go 层（geo.SearchPlan + compareNearbyCandidates）。
-	queryNearbyMomentDetails = `
-SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, (SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count, m.location_name,
-       COALESCE((SELECT array_agg(mt.tag_name ORDER BY mt.tag_name) FROM moment_tags mt WHERE mt.moment_id = m.moment_id), ARRAY[]::text[]),
-       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $2),
-       -- 图片行随详情查询一并取回（LATERAL 仅作用于 20 行页内），服务层只做
-       -- presign，不再多发一次图片批量查询（架构审计 perf D2）。
-       COALESCE(img.rows, '[]'::jsonb),
-       COALESCE(react.rows, '[]'::jsonb),
-       COALESCE((SELECT ur.is_following FROM user_relations ur WHERE ur.user_id = $2 AND ur.target_user_id = m.user_id), FALSE),
-       COALESCE((SELECT ur.is_following FROM user_relations ur WHERE ur.user_id = m.user_id AND ur.target_user_id = $2), FALSE)
-FROM moments m
-JOIN users u ON u.user_id = m.user_id
-LEFT JOIN LATERAL (
-  SELECT jsonb_agg(jsonb_build_object(
+	queryNearbyMomentDetails = `WITH page AS (
+  SELECT m.moment_id, m.user_id, m.description, m.location_name, m.latitude, m.longitude,
+         m.interaction_count
+  FROM moments m
+  WHERE m.moment_id = ANY($1)
+),
+comment_counts AS (
+  SELECT c.moment_id, COUNT(*)::int AS cnt
+  FROM comments c
+  WHERE c.moment_id = ANY($1) AND c.is_deleted = FALSE
+  GROUP BY c.moment_id
+),
+share_counts AS (
+  SELECT s.payload->>'shared_moment_id' AS moment_id, COUNT(*)::int AS cnt
+  FROM shares s
+  WHERE s.share_type = 'moment' AND s.is_revoked = FALSE
+    AND s.payload->>'shared_moment_id' = ANY($1)
+  GROUP BY 1
+),
+tag_arrays AS (
+  SELECT mt.moment_id, array_agg(mt.tag_name ORDER BY mt.tag_name) AS tags
+  FROM moment_tags mt
+  WHERE mt.moment_id = ANY($1)
+  GROUP BY mt.moment_id
+),
+image_rows AS (
+  SELECT mi.moment_id,
+         jsonb_agg(jsonb_build_object(
            'file_id', mus.file_id,
            'storage_key', mus.storage_key,
            'thumbnail_url', COALESCE(mus.thumbnail_url, ''),
@@ -210,19 +225,39 @@ LEFT JOIN LATERAL (
          ) ORDER BY mi.position) AS rows
   FROM moment_images mi
   JOIN media_upload_sessions mus ON mus.file_id = mi.file_id AND mus.status = 'completed'
-  WHERE mi.moment_id = m.moment_id
-) img ON TRUE
-LEFT JOIN LATERAL (
-  -- reactions 聚合随详情一次取回：省掉服务层对附近流页面的单独聚合查询。
-  SELECT jsonb_agg(jsonb_build_object('emoji', rx.emoji, 'count', rx.cnt, 'reacted_by_me', rx.reacted_by_me) ORDER BY rx.cnt DESC, rx.emoji) AS rows
+  WHERE mi.moment_id = ANY($1)
+  GROUP BY mi.moment_id
+),
+reaction_rows AS (
+  SELECT rx.target_id AS moment_id,
+         jsonb_agg(jsonb_build_object(
+           'emoji', rx.emoji,
+           'count', rx.cnt,
+           'reacted_by_me', rx.reacted_by_me
+         ) ORDER BY rx.cnt DESC, rx.emoji) AS rows
   FROM (
-    SELECT r.emoji, COUNT(*)::int AS cnt, BOOL_OR(r.user_id = $2) AS reacted_by_me
+    SELECT r.target_id, r.emoji, COUNT(*)::int AS cnt, BOOL_OR(r.user_id = $2) AS reacted_by_me
     FROM reactions r
-    WHERE r.target_type = 'moment' AND r.target_id = m.moment_id
-    GROUP BY r.emoji
+    WHERE r.target_type = 'moment' AND r.target_id = ANY($1)
+    GROUP BY r.target_id, r.emoji
   ) rx
-) react ON TRUE
-WHERE m.moment_id = ANY($1)`
+  GROUP BY rx.target_id
+)
+SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description,
+       COALESCE(cc.cnt, 0), COALESCE(sc.cnt, 0), m.interaction_count, m.location_name,
+       COALESCE(ta.tags, ARRAY[]::text[]),
+       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $2),
+       COALESCE(ir.rows, '[]'::jsonb),
+       COALESCE(rr.rows, '[]'::jsonb),
+       COALESCE((SELECT ur.is_following FROM user_relations ur WHERE ur.user_id = $2 AND ur.target_user_id = m.user_id), FALSE),
+       COALESCE((SELECT ur.is_following FROM user_relations ur WHERE ur.user_id = m.user_id AND ur.target_user_id = $2), FALSE)
+FROM page m
+JOIN users u ON u.user_id = m.user_id
+LEFT JOIN comment_counts cc ON cc.moment_id = m.moment_id
+LEFT JOIN share_counts sc ON sc.moment_id = m.moment_id
+LEFT JOIN tag_arrays ta ON ta.moment_id = m.moment_id
+LEFT JOIN image_rows ir ON ir.moment_id = m.moment_id
+LEFT JOIN reaction_rows rr ON rr.moment_id = m.moment_id`
 )
 
 // momentCountSelectColumns 是 moment 行集的统一计数片段：契约字段 comments_count /

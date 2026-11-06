@@ -3452,3 +3452,18 @@ PostgreSQL 规划成 semi-join：扫描全部 public moments 后逐行 ×28 个�
 实测（backend-test，2026-11-07）：nearby 候选粗筛改 OR BETWEEN 后单端点
 c=10/10s：461→**726 rps**（+57%），p50 8.11→5.73ms，p95 76.1→66.5ms，
 p99 81.8→74.5ms；8 端点 perf-budget 全部 OK。
+
+## Batch D2（第六批）：nearby 详情查询改「页面 ID 范围聚合 + hash join」（2026-11-07）
+
+pg_stat_statements：nearby 候选粗筛降到 1.0ms 后，详情查询仍占 ~86% DB CPU
+（mean 6.44ms/请求，20 行）。原 SQL 对每行执行 comments/shares/tags 相关子查询
+与 images/reactions LATERAL，20 行×多次子查询重复扫描/聚合。
+
+- queryNearbyMomentDetails 重写为 CTE：comments/shares/tags/images/reactions
+  各按 `= ANY($1)` 一次索引扫描 + GROUP BY，再与 page 行 hash join；favorites/
+  作者关系仍为页内单行 EXISTS（20 行规模）；
+- 显式执行计划（20 IDs）：~1.2ms → ~0.5ms；仍为单次 DB 往返；
+- 新增真实库 IT：附近流详情聚合归属正确（tags/reactions/counts/images 空集合）；
+- 响应形状/顺序不变（服务层按候选顺序组装）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
