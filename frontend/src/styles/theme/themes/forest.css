@@ -140,7 +140,7 @@
      色值为主题化深色（三主题各自色调），alpha 固定以保证压图白字对比度；组件只消费 token。 */
   --cst-surface-card-scrim-top: linear-gradient(to bottom, rgba(10, 18, 12, 0.86) 0%, rgba(10, 18, 12, 0.64) 40%, transparent 100%);
   --cst-surface-card-scrim-bottom: linear-gradient(to top, rgba(10, 18, 12, 0.94) 0%, rgba(10, 18, 12, 0.86) 30%, rgba(10, 18, 12, 0.64) 60%, transparent 90%);
-  --cst-surface-card-fallback: linear-gradient(135deg, color-mix(in srgb, var(--cst-accent-default) 24%, var(--cst-surface-primary)) 0%, color-mix(in srgb, var(--cst-accent-default) 8%, var(--cst-surface-primary)) 55%, var(--cst-surface-primary) 100%);
+  --cst-surface-card-fallback: var(--cst-surface-primary);
   /* 无封面占位底（forest 纸面语言：纯色淡底，无渐变） */
   --cst-surface-cover-placeholder: var(--cst-accent-soft-bg);
   --cst-surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
@@ -232,7 +232,7 @@
   --cst-palette-text: #E8F1E9;
   --cst-palette-text-muted: #A8BDAE;
   --cst-palette-accent-primary: #52B878;
-  --cst-palette-glow: rgba(82, 184, 120, 0.20);
+  --cst-palette-glow: rgba(0, 0, 0, 0);
   --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
   --cst-palette-shadow-dark: rgba(0, 0, 0, 0.0);
   --cst-palette-border: rgba(169, 199, 178, 0.18);
@@ -304,7 +304,7 @@
   --cst-ambient-vignette: rgba(0, 0, 0, 0.20);
   --cst-surface-card-scrim-top: linear-gradient(to bottom, rgba(8, 15, 10, 0.86) 0%, rgba(8, 15, 10, 0.64) 40%, transparent 100%);
   --cst-surface-card-scrim-bottom: linear-gradient(to top, rgba(8, 15, 10, 0.96) 0%, rgba(8, 15, 10, 0.88) 30%, rgba(8, 15, 10, 0.68) 60%, transparent 90%);
-  --cst-surface-card-fallback: linear-gradient(135deg, color-mix(in srgb, var(--cst-accent-default) 20%, var(--cst-surface-primary)) 0%, color-mix(in srgb, var(--cst-accent-default) 6%, var(--cst-surface-primary)) 55%, var(--cst-surface-primary) 100%);
+  --cst-surface-card-fallback: var(--cst-surface-primary);
 
   /* ── shadcn 桥接（dark，同上）── */
   --cst-background: var(--cst-surface-primary);

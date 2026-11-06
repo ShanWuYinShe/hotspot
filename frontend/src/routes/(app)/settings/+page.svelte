@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Bell, Flag, Lock, ChevronRight, LogOut, Info, MapPin, Monitor, Palette, Moon, Sun, UserRound } from '@lucide/svelte';
+	import { Bell, Flag, Lock, ChevronRight, LogOut, Info, MapPin, Monitor, Palette, Moon, Sun, UserRound, Check, Settings } from '@lucide/svelte';
+	import { cn } from '@/lib/utils';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -214,6 +215,7 @@
 		<!-- 桌面灵动岛 meta 用短文案：默认 subtitle 28 字会顶满 max-w-md 岛宽被截断，
 		     分组关键词让滚动后仍能一眼定位设置域。 -->
 		<PageHeader
+			variant="integrated"
 			title="设置"
 			subtitle="管理你的账号偏好、主题外观与系统选项"
 			islandMeta="账号 · 外观 · 地图 · 通知"
@@ -221,7 +223,11 @@
 			showBackOnDesktop={false}
 			maxWidth="var(--cst-content-form)"
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
-		/>
+		>
+			{#snippet islandIcon()}
+				<Settings class="size-3.5 text-accent-default" strokeWidth={1.75} />
+			{/snippet}
+		</PageHeader>
 	{/snippet}
 
 	{#if loading}
@@ -232,10 +238,10 @@
 		<!-- 单列分组（R13）：组标题/描述在上、内容软岛在下。
 		     原两栏布局在 1440 宽下会留出 130+px 空档，且右列被压窄导致分段控件文字截断。 -->
 		<div class="flex w-full flex-col">
-			<!-- Section 1: 账号与身份 -->
-			<SettingsSection title="账号信息" description="当前登录的账号信息">
-				<ListContainer bordered inset class="overflow-hidden">
-					{#if auth.isAuthenticated}
+			<!-- Section 1: 账号信息（仅登录时展示；未登录时顶部导航常驻登录入口，不在此重复占位） -->
+			{#if auth.isAuthenticated}
+				<SettingsSection title="账号信息" description="当前登录的账号信息">
+					<ListContainer bordered inset class="overflow-hidden">
 						<ListItem class="flex items-center gap-3.5 px-4 py-3.5">
 							<Avatar class="border-2 border-surface-primary shrink-0" src={accountAvatar} name={accountName} size="lg" />
 							<div class="min-w-0 flex-1">
@@ -246,26 +252,9 @@
 								<p class="text-xs text-text-secondary mt-0.5 truncate">{accountEmail || '未绑定邮箱'}</p>
 							</div>
 						</ListItem>
-					{:else}
-						<ListItem class="flex items-center gap-3.5 px-4 py-3.5">
-							<div class="flex size-11 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft shrink-0">
-								<UserRound class="size-5" strokeWidth={1.5} />
-							</div>
-							<div class="min-w-0 flex-1">
-								<p class="text-sm font-semibold text-text-primary">访客浏览中</p>
-								<p class="text-xs text-text-secondary mt-0.5">登录后可同步跨端偏好、个人主页与瞬间收藏</p>
-							</div>
-							<Button
-								size="sm"
-								class="hit-slop shrink-0"
-								onclick={() => requireAuth({ action: '登录账号', run: () => { reloadKey++; } })}
-							>
-								登录 / 注册
-							</Button>
-						</ListItem>
-					{/if}
-				</ListContainer>
-			</SettingsSection>
+					</ListContainer>
+				</SettingsSection>
+			{/if}
 
 			<!-- Section 2: 外观与显示（选择器整行宽度，杜绝标签截断） -->
 			<SettingsSection title="外观与显示" description="自定义界面的视觉色彩与深浅模式，全局即时生效">
@@ -278,13 +267,51 @@
 							<Palette class="size-4 text-accent-default" strokeWidth={1.5} />
 						{/snippet}
 						{#snippet control()}
-							<TabBar
-								variant="segmented"
-								size="md"
-								items={THEME_OPTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.icon, swatch: t.swatch }))}
-								value={theme.theme}
-								onChange={(id) => setTheme(id as AppTheme)}
-							/>
+							<div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" aria-label="选择全局视觉色彩风格">
+								{#each THEME_OPTIONS as opt}
+									{@const isSelected = theme.theme === opt.id}
+									{@const details = opt.id === 'vibrant'
+										? { desc: '现代深空 · 冷冽通透', preview: ['#0B0E14', '#131924', '#4C82F7'] }
+										: opt.id === 'forest'
+											? { desc: '自然纸面 · 平实温润', preview: ['#F6F7F3', '#EAECE4', '#39714F'] }
+											: { desc: '宣纸朱砂 · 东方意境', preview: ['#F5F2EA', '#EAE5D8', '#A63A2E'] }}
+									<button
+										type="button"
+										role="radio"
+										aria-checked={isSelected}
+										onclick={() => setTheme(opt.id as AppTheme)}
+										class={cn(
+											'group relative flex flex-col justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all duration-standard focus-ring hit-slop-44',
+											isSelected
+												? 'bg-surface-island ring-2 ring-accent-default shadow-xs'
+												: 'bg-surface-subtle/70 border border-border-default/60 hover:bg-surface-subtle hover:border-border-default/90'
+										)}
+									>
+										<div class="flex items-center justify-between gap-1.5 sm:gap-2">
+											<div class="flex items-center gap-1 rounded-full bg-surface-primary/90 px-1.5 py-0.5 sm:px-2 sm:py-1 ring-1 ring-border-default/40">
+												<span class="size-2 sm:size-2.5 rounded-full shrink-0 shadow-2xs" style="background-color: {details.preview[2]};" aria-hidden="true"></span>
+												<span class="size-1.5 sm:size-2 rounded-full shrink-0 opacity-80" style="background-color: {details.preview[1]};" aria-hidden="true"></span>
+												<span class="size-1.5 sm:size-2 rounded-full shrink-0 opacity-50" style="background-color: {details.preview[0]};" aria-hidden="true"></span>
+											</div>
+											{#if isSelected}
+												<span class="flex size-4 sm:size-4.5 items-center justify-center rounded-full bg-accent-default text-content-inverse shadow-2xs shrink-0" aria-hidden="true">
+													<Check class="size-2.5 sm:size-3" strokeWidth={2.5} />
+												</span>
+											{:else}
+												<span class="size-4 sm:size-4.5 rounded-full border border-border-default/60 group-hover:border-border-default shrink-0" aria-hidden="true"></span>
+											{/if}
+										</div>
+										<div class="mt-2 min-w-0">
+											<p class="text-xs sm:text-sm font-semibold truncate {isSelected ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'}">
+												{opt.label}
+											</p>
+											<p class="mt-0.5 hidden sm:block text-xxs leading-snug text-text-secondary">
+												{details.desc}
+											</p>
+										</div>
+									</button>
+								{/each}
+							</div>
 						{/snippet}
 					</SettingsControlRow>
 
@@ -297,13 +324,46 @@
 							{/if}
 						{/snippet}
 						{#snippet control()}
-							<TabBar
-								variant="segmented"
-								size="md"
-								items={COLOR_SCHEME_OPTIONS.map((o) => ({ id: o.id, label: o.label, icon: o.id === 'dark' ? Moon : o.id === 'light' ? Sun : Monitor }))}
-								value={theme.colorScheme}
-								onChange={(id) => setColorScheme(id as ColorSchemeMode)}
-							/>
+							<div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" aria-label="外观模式">
+								{#each COLOR_SCHEME_OPTIONS as opt}
+									{@const isSelected = theme.colorScheme === opt.id}
+									{@const Icon = opt.id === 'dark' ? Moon : opt.id === 'light' ? Sun : Monitor}
+									{@const note = opt.id === 'dark' ? '纯正深邃极夜' : opt.id === 'light' ? '清亮温润如昼' : '随系统自动切换'}
+									<button
+										type="button"
+										role="radio"
+										aria-checked={isSelected}
+										onclick={() => setColorScheme(opt.id as ColorSchemeMode)}
+										class={cn(
+											'group relative flex flex-col justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all duration-standard focus-ring hit-slop-44',
+											isSelected
+												? 'bg-surface-island ring-2 ring-accent-default shadow-xs'
+												: 'bg-surface-subtle/70 border border-border-default/60 hover:bg-surface-subtle hover:border-border-default/90'
+										)}
+									>
+										<div class="flex items-center justify-between gap-1.5 sm:gap-2">
+											<div class="flex size-6 sm:size-7 items-center justify-center rounded-lg bg-surface-primary/90 ring-1 ring-border-default/40 {isSelected ? 'text-accent-default' : 'text-text-secondary group-hover:text-text-primary'} shrink-0">
+												<Icon class="size-3.5 sm:size-4" strokeWidth={1.75} />
+											</div>
+											{#if isSelected}
+												<span class="flex size-4 sm:size-4.5 items-center justify-center rounded-full bg-accent-default text-content-inverse shadow-2xs shrink-0" aria-hidden="true">
+													<Check class="size-2.5 sm:size-3" strokeWidth={2.5} />
+												</span>
+											{:else}
+												<span class="size-4 sm:size-4.5 rounded-full border border-border-default/60 group-hover:border-border-default shrink-0" aria-hidden="true"></span>
+											{/if}
+										</div>
+										<div class="mt-2 min-w-0">
+											<p class="text-xs sm:text-sm font-semibold truncate {isSelected ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'}">
+												{opt.label}
+											</p>
+											<p class="mt-0.5 hidden sm:block text-xxs leading-snug text-text-secondary">
+												{note}
+											</p>
+										</div>
+									</button>
+								{/each}
+							</div>
 						{/snippet}
 					</SettingsControlRow>
 				</ListContainer>
@@ -320,13 +380,15 @@
 							<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
 						{/snippet}
 						{#snippet control()}
-							<TabBar
-								variant="segmented"
-								size="md"
-								items={MAP_SOURCE_OPTIONS.map((o) => ({ id: o.id, label: o.id === 'amap' ? '高德' : 'OSM' }))}
-								value={mapSourceStore.source}
-								onChange={(id) => setMapSource(id as MapSource)}
-							/>
+							<div class="w-full sm:max-w-xs">
+								<TabBar
+									variant="segmented"
+									size="md"
+									items={MAP_SOURCE_OPTIONS.map((o) => ({ id: o.id, label: o.id === 'amap' ? '高德地图' : 'OpenStreetMap' }))}
+									value={mapSourceStore.source}
+									onChange={(id) => setMapSource(id as MapSource)}
+								/>
+							</div>
 						{/snippet}
 					</SettingsControlRow>
 				</ListContainer>
@@ -346,20 +408,22 @@
 						{/snippet}
 						<Toggle on={notif} onToggle={toggleNotif} label="推送通知" />
 					</SettingRow>
-					<SettingRow
-						title="附近新瞬间通知"
-						description="附近有人发布新瞬间时提醒我{auth.isAuthenticated ? '' : '（登录后生效）'}"
-						onRowClick={toggleNearbyMomentNotify}
-					>
-						{#snippet icon()}
-							<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
-						{/snippet}
-						<Toggle on={nearbyMomentNotify} onToggle={toggleNearbyMomentNotify} label="附近新瞬间通知" />
-					</SettingRow>
+					{#if auth.isAuthenticated}
+						<SettingRow
+							title="附近新瞬间通知"
+							description="附近有人发布新瞬间时提醒我"
+							onRowClick={toggleNearbyMomentNotify}
+						>
+							{#snippet icon()}
+								<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
+							{/snippet}
+							<Toggle on={nearbyMomentNotify} onToggle={toggleNearbyMomentNotify} label="附近新瞬间通知" />
+						</SettingRow>
+					{/if}
 				</ListContainer>
 			</SettingsSection>
 
-			<!-- Section 5: 账号与安全（登录用户：修改密码/登录设备管理；游客：升级入口） -->
+			<!-- Section 5: 账号与安全（登录用户：修改密码/登录设备管理） -->
 			{#if auth.isAuthenticated}
 				<SettingsSection title="账号与安全" description="修改登录密码、管理活跃设备登录态。">
 					<ListContainer bordered inset class="overflow-hidden">
@@ -368,46 +432,48 @@
 				</SettingsSection>
 			{/if}
 
-			<!-- Section 6: 隐私与安全 -->
-			<SettingsSection title="隐私与安全" description="控制个人公开主页以及地理位置在附近雷达中的可见性。">
-				<ListContainer bordered inset class="overflow-hidden">
-					<SettingRow
-						title="私密账号"
-						description="开启后仅关注者可查看你的主页与生活瞬间{auth.isAuthenticated ? '' : '（登录后生效）'}"
-						onRowClick={togglePrivateProfile}
-					>
-						{#snippet icon()}
-							<Lock class="size-4 text-accent-default" strokeWidth={1.5} />
-						{/snippet}
-						<Toggle on={privateProfile} onToggle={togglePrivateProfile} label="私密账号" />
-					</SettingRow>
+			<!-- Section 6: 隐私与安全（仅登录用户拥有账号隐私与举报记录） -->
+			{#if auth.isAuthenticated}
+				<SettingsSection title="隐私与安全" description="控制个人公开主页以及地理位置在附近雷达中的可见性。">
+					<ListContainer bordered inset class="overflow-hidden">
+						<SettingRow
+							title="私密账号"
+							description="开启后仅关注者可查看你的主页与生活瞬间"
+							onRowClick={togglePrivateProfile}
+						>
+							{#snippet icon()}
+								<Lock class="size-4 text-accent-default" strokeWidth={1.5} />
+							{/snippet}
+							<Toggle on={privateProfile} onToggle={togglePrivateProfile} label="私密账号" />
+						</SettingRow>
 
-					<SettingRow
-						title="位置共享"
-						description="允许附近用户在发现雷达和地图中感知到你{auth.isAuthenticated ? '' : '（登录后生效）'}"
-						onRowClick={toggleLocationSharing}
-					>
-						{#snippet icon()}
-							<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
-						{/snippet}
-						<Toggle on={locationSharing} onToggle={toggleLocationSharing} label="位置共享" />
-					</SettingRow>
+						<SettingRow
+							title="位置共享"
+							description="允许附近用户在发现雷达和地图中感知到你"
+							onRowClick={toggleLocationSharing}
+						>
+							{#snippet icon()}
+								<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
+							{/snippet}
+							<Toggle on={locationSharing} onToggle={toggleLocationSharing} label="位置共享" />
+						</SettingRow>
 
-					<!-- 我的举报（spec report.md → reports/fetch）：举报人查看处理进度与结果 -->
-					<SettingRow
-						title="我的举报"
-						description="查看已提交举报的处理进度与结果"
-						onRowClick={() => void goto(ROUTES.meReports)}
-					>
-						{#snippet icon()}
-							<Flag class="size-4 text-accent-default" strokeWidth={1.5} />
-						{/snippet}
-						{#snippet badge()}
-							<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.5} />
-						{/snippet}
-					</SettingRow>
-				</ListContainer>
-			</SettingsSection>
+						<!-- 我的举报（spec report.md → reports/fetch）：举报人查看处理进度与结果 -->
+						<SettingRow
+							title="我的举报"
+							description="查看已提交举报的处理进度与结果"
+							onRowClick={() => void goto(ROUTES.meReports)}
+						>
+							{#snippet icon()}
+								<Flag class="size-4 text-accent-default" strokeWidth={1.5} />
+							{/snippet}
+							{#snippet badge()}
+								<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.5} />
+							{/snippet}
+						</SettingRow>
+					</ListContainer>
+				</SettingsSection>
+			{/if}
 
 			<!-- Section 7: 系统与关于 -->
 			<SettingsSection title="系统与关于" description="客户端版本及当前设备会话状态。">

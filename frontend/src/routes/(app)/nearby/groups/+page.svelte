@@ -265,7 +265,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			</PageHeader>
 	{/snippet}
 
-	<div class="min-w-0" use:contentFade={loading}>
+	<div class="min-w-0" use:contentFade={{ showSkeleton: loading, trigger: activeCategory }}>
 		{#if loading}
 			<!-- 首屏骨架屏：图片优先群组卡栅格（移动/平板 2 列，桌面逐级加列） -->
 			<SkeletonFeed

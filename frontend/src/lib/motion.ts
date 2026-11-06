@@ -144,12 +144,26 @@ export function countPop(node: HTMLElement, trigger: number) {
 	};
 }
 
+export type ContentFadeParams =
+	| boolean
+	| {
+			showSkeleton?: boolean;
+			trigger?: unknown;
+	  };
+
 /**
- * 骨架→内容 fade action：仅「曾经显示过骨架(true) → 数据到达(false)」时播 150ms fade；
- * 缓存命中/无骨架直出（初始就是 false）不播。reduced 显式跳过。
+ * 骨架→内容 fade / 筛选·排序切换平滑淡入 action：
+ * 1. 骨架态切换：曾经显示过骨架(showSkeleton: true) → 数据到达(false) 时播 110ms fade；
+ *    缓存命中/无骨架直出（初始就是 false）不播。
+ * 2. 筛选/排序切换：传入 { trigger }，当 trigger 发生变化且当前不在骨架态时，
+ *    重新触发 110ms 优雅淡入（使卡片/空态切换柔和无感，消除硬切生硬感）。
+ * 3. reduced-motion 显式跳过（无动画，直接终态）。
  */
-export function contentFade(node: HTMLElement, showSkeleton: boolean) {
-	let prev = showSkeleton;
+export function contentFade(node: HTMLElement, param: ContentFadeParams) {
+	let showSkeleton = typeof param === 'boolean' ? param : (param?.showSkeleton ?? false);
+	let prevSkeleton = showSkeleton;
+	let prevTrigger = typeof param === 'object' && param !== null ? param.trigger : undefined;
+
 	const onEnd = () => node.classList.remove('content-fade');
 	const play = () => {
 		if (prefersReducedMotion()) return;
@@ -157,11 +171,26 @@ export function contentFade(node: HTMLElement, showSkeleton: boolean) {
 		void node.offsetWidth;
 		node.classList.add('content-fade');
 	};
+
 	node.addEventListener('animationend', onEnd);
 	return {
-		update(next: boolean) {
-			if (prev && !next) play();
-			prev = next;
+		update(next: ContentFadeParams) {
+			const nextSkeleton = typeof next === 'boolean' ? next : (next?.showSkeleton ?? false);
+			const nextTrigger = typeof next === 'object' && next !== null ? next.trigger : undefined;
+
+			const skeletonTransition = prevSkeleton && !nextSkeleton;
+			const triggerChanged =
+				!nextSkeleton &&
+				prevTrigger !== undefined &&
+				nextTrigger !== undefined &&
+				nextTrigger !== prevTrigger;
+
+			if (skeletonTransition || triggerChanged) {
+				play();
+			}
+
+			prevSkeleton = nextSkeleton;
+			prevTrigger = nextTrigger;
 		},
 		destroy() {
 			node.removeEventListener('animationend', onEnd);

@@ -122,16 +122,89 @@
 	{#if loading}
 		<InlineLoading label="加载个人资料…" />
 	{:else if needsAuth}
-		<NeedsAuthNotice
-			spotlight
-			title="登录后查看"
-			description="登录后即可管理资料、查看互动数据与收藏内容"
-			highlights={[
-				{ icon: Pencil, text: '完善头像、昵称与简介，让附近的人认识你' },
-				{ icon: Sparkles, text: '整理你的瞬间与收藏，随时回看' },
-				{ icon: UsersRound, text: '管理好友、关注与群组关系' }
-			]}
-		/>
+		<!-- 移动端访客个人中心：身份卡 + 发现导流列表，充分利用纵向空间，层次分明 -->
+		<div class="mb-4">
+			<IdentityHero
+				mode="self"
+				titleTag="h1"
+				name="开启你的城市漫游档案"
+				handle="访客浏览中"
+				bio="记录街头巷尾的瞬间，发现同频伙伴，建立专属足迹。"
+				location="附近漫游中"
+				metrics={[
+					{ label: '瞬间', value: 0 },
+					{ label: '群组', value: 0 },
+					{ label: '好友', value: 0 }
+				]}
+			>
+				{#snippet actions()}
+					<Button
+						variant="primary"
+						size="md"
+						class="hit-slop-44 flex-1 gap-1.5"
+						onclick={() => void goto(ROUTES.login)}
+					>
+						登录 / 注册开启
+					</Button>
+					<Button
+						variant="soft"
+						size="md"
+						class="hit-slop-44 flex-1 gap-1.5"
+						onclick={() => void goto(ROUTES.nearbyMoments)}
+					>
+						随便逛逛
+					</Button>
+				{/snippet}
+			</IdentityHero>
+		</div>
+
+		<section aria-label="探索推荐">
+			<SectionHead title="探索推荐" subtitle="发现城市里的精彩瞬间与同好" icon={LayoutGrid} />
+			<ListContainer bordered>
+				<ListItem
+					onClick={() => void goto(ROUTES.nearbyMoments)}
+					ariaLabel="探索附近瞬间"
+					class="flex items-center gap-3.5 px-3 py-3"
+				>
+					<span class="flex size-9.5 shrink-0 items-center justify-center rounded-sm bg-accent-soft text-text-accent-on-soft">
+						<Sparkles class="size-4.5" strokeWidth={1.75} />
+					</span>
+					<span class="min-w-0 flex-1">
+						<span class="block text-md font-medium text-text-primary">探索附近瞬间</span>
+						<span class="mt-0.5 block truncate text-xs text-text-secondary">查看身边的光影与生活动态</span>
+					</span>
+					<ChevronRight class="size-4 shrink-0 text-text-secondary" strokeWidth={1.5} />
+				</ListItem>
+				<ListItem
+					onClick={() => void goto(ROUTES.nearbyGroups)}
+					ariaLabel="发现同好群组"
+					class="flex items-center gap-3.5 px-3 py-3"
+				>
+					<span class="flex size-9.5 shrink-0 items-center justify-center rounded-sm bg-accent-soft text-text-accent-on-soft">
+						<UsersRound class="size-4.5" strokeWidth={1.75} />
+					</span>
+					<span class="min-w-0 flex-1">
+						<span class="block text-md font-medium text-text-primary">发现同好群组</span>
+						<span class="mt-0.5 block truncate text-xs text-text-secondary">加入本地摄影、夜跑与骑行俱乐部</span>
+					</span>
+					<ChevronRight class="size-4 shrink-0 text-text-secondary" strokeWidth={1.5} />
+				</ListItem>
+				<ListItem
+					onClick={() => void goto(ROUTES.nearbyPeople)}
+					ariaLabel="真实社交雷达"
+					class="flex items-center gap-3.5 px-3 py-3"
+				>
+					<span class="flex size-9.5 shrink-0 items-center justify-center rounded-sm bg-accent-soft text-text-accent-on-soft">
+						<Users class="size-4.5" strokeWidth={1.75} />
+					</span>
+					<span class="min-w-0 flex-1">
+						<span class="block text-md font-medium text-text-primary">真实社交雷达</span>
+						<span class="mt-0.5 block truncate text-xs text-text-secondary">感知附近正在这片街区漫步的伙伴</span>
+					</span>
+					<ChevronRight class="size-4 shrink-0 text-text-secondary" strokeWidth={1.5} />
+				</ListItem>
+			</ListContainer>
+		</section>
 	{:else if error}
 		<LoadError message={error} onRetry={retry} />
 	{:else}

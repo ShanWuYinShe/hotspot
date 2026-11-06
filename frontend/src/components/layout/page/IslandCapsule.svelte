@@ -88,7 +88,9 @@
 			<span class="flex min-w-0 flex-col justify-center pb-0.5">
 				<span class="truncate text-xs font-semibold leading-tight text-text-primary">{title}</span>
 				{#if meta}
-					<span class="truncate text-xxs leading-tight text-text-secondary">{meta}</span>
+					{#key meta}
+						<span class="animate-fade-in truncate text-xxs leading-tight text-text-secondary">{meta}</span>
+					{/key}
 				{/if}
 			</span>
 		</button>

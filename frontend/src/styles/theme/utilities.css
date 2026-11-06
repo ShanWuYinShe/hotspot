@@ -134,7 +134,7 @@
     backdrop-filter: blur(var(--cst-blur-lg)) saturate(1.8);
     -webkit-backdrop-filter: blur(var(--cst-blur-lg)) saturate(1.8);
     box-shadow: var(--cst-elevation-nav);
-    transition: background var(--cst-motion-slow) var(--cst-ease-standard), border-color var(--cst-motion-slow) var(--cst-ease-standard);
+    transition: background var(--cst-motion-relaxed) var(--cst-ease-standard), border-color var(--cst-motion-relaxed) var(--cst-ease-standard);
   }
   .nav-glass--bottom {
     border-top: var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);
@@ -270,9 +270,9 @@
     }
   }
 
-  /* 无图卡片占位：accent 渐隐到 surface（MomentCard/GroupCard/UserCard 封面统一） */
+  /* 无图卡片占位：纯净实底（MomentCard/GroupCard/UserCard 统一，告别发光渐变漏光感） */
   .surface-accent-gradient {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--cst-accent-default) 20%, var(--cst-surface-primary)) 0%, color-mix(in srgb, var(--cst-accent-default) 6%, var(--cst-surface-primary)) 100%);
+    background-color: var(--cst-surface-subtle);
   }
 
   /* 浮层内嵌面板：surface-primary 微混 surface-page 提亮（CreateSheet/AppearanceMenu 等） */
@@ -553,31 +553,26 @@
     height: 100%;
   }
   .ambient-sky {
-    background: linear-gradient(180deg, var(--cst-ambient-sky) 0%, transparent 30%);
+    display: none;
   }
-  /* 氛围动画默认关闭（2026-10-28 性能修复）：全屏渐变层 + SVG 星层的无限动画会让
-     浏览器 GPU 进程在页面完全空闲时仍持续合成/重算 backdrop-filter（实测首页 idle
-     GPU 进程 24.6% → 0，滚动 19.3% → 14.9%）。氛围画布保留静态层（天光/世界/暗角），
-     动画只作为稀疏页面的显式增强：<AmbientBackdrop motion /> → .ambient-backdrop--motion。
-     开启后仍受全局 prefers-reduced-motion 规则压制。 */
-  /* 氛围微光：天顶广角柔光漫射（杜绝局部突兀光团/色斑，保证内容聚焦与空气感） */
+  /* 根除屏幕漏光感：全面废弃粗暴的局部高光漫射团（glow-a / glow-b）、地平线光雾与外围暗角，
+     还给页面纯正深邃、高级通透的纯净连续画布（--cst-surface-page），
+     杜绝四角偏色与背光不均的廉价感。 */
   .ambient-glow--a {
-    background: radial-gradient(100% 60% at 50% -10%, var(--cst-ambient-glow-1) 0%, transparent 100%);
+    display: none;
   }
-  /* 地平线微光：极度克制的地平线微漫射，柔化视口边缘 */
   .ambient-glow--b {
-    background: radial-gradient(120% 40% at 50% 110%, var(--cst-ambient-glow-2) 0%, transparent 100%);
+    display: none;
   }
-  /* 地平线雾：底部渐隐带，把世界剪影与画布衔接起来 */
   .ambient-horizon {
-    background: linear-gradient(0deg, var(--cst-ambient-horizon) 0%, transparent 30%);
+    display: none;
   }
   /* 移除粗暴光团：消灭刺眼大光斑（曾导致背景出现突兀大色团） */
   .ambient-sun {
     display: none;
   }
   .ambient-vignette {
-    background: radial-gradient(135% 115% at 50% -8%, transparent 52%, var(--cst-ambient-vignette) 100%);
+    display: none;
   }
   /* 颗粒抖动层：全屏低对比氛围渐变在 8-bit sRGB 下会量化成 2–3 级色阶，
      大面积暗底上肉眼呈竖条纹/等高线（「廉价感」的主要来源）。叠一层静态细颗粒
@@ -607,17 +602,11 @@
   .ambient-backdrop--chrome .ambient-glow--b {
     animation: none;
   }
-  .ambient-backdrop--chrome-h .ambient-glow--a {
-    background: linear-gradient(90deg, var(--cst-ambient-glow-1) 0%, transparent 40%);
-  }
-  .ambient-backdrop--chrome-h .ambient-glow--b {
-    background: linear-gradient(270deg, var(--cst-ambient-glow-2) 0%, transparent 44%);
-  }
-  .ambient-backdrop--chrome-v .ambient-glow--a {
-    background: linear-gradient(180deg, var(--cst-ambient-glow-1) 0%, transparent 32%);
-  }
+  .ambient-backdrop--chrome-h .ambient-glow--a,
+  .ambient-backdrop--chrome-h .ambient-glow--b,
+  .ambient-backdrop--chrome-v .ambient-glow--a,
   .ambient-backdrop--chrome-v .ambient-glow--b {
-    background: linear-gradient(0deg, var(--cst-ambient-glow-2) 0%, transparent 36%);
+    display: none;
   }
   .ambient-stars {
     color: var(--cst-ambient-dot);
@@ -725,10 +714,7 @@
     pointer-events: none;
   }
   .empty-spotlight__glow {
-    width: 20rem;
-    height: 20rem;
-    border-radius: var(--cst-shape-full);
-    background: radial-gradient(circle, var(--cst-ambient-glow-2) 0%, transparent 70%);
+    display: none;
   }
   .empty-spotlight__ring {
     position: absolute;
@@ -787,6 +773,15 @@
     animation: cst-content-fade var(--cst-content-fade-duration) var(--cst-ease-standard) both;
   }
 
+  /* 空态入场（P1-5）：出现时 150ms 淡入 + 2px 上移，避免一帧突现 */
+  @keyframes cst-empty-enter {
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: none; }
+  }
+  .empty-state-enter {
+    animation: cst-empty-enter var(--cst-motion-rapid) var(--cst-ease-standard) both;
+  }
+
   /* 评论/回复新增（Round 7）：仅本次新增播放 160ms fade + 6px 上移。 */
   @keyframes cst-comment-enter {
     from { opacity: 0; transform: translateY(6px); }
@@ -808,6 +803,15 @@
     animation: cst-state-pop var(--cst-motion-standard) var(--cst-ease-bounce);
   }
 
+  /* 主题切换过渡收敛（P1-6）：
+     当运行时使用 View Transition 切换主题时，使用 260ms 的标准缓动优雅平滑过渡整页画面，
+     规避全站上百个元素同时触发 CSS transition 的重绘风暴。 */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--cst-motion-relaxed);
+    animation-timing-function: var(--cst-ease-standard);
+  }
+
   /* 尊重系统减弱动效偏好：无限/装饰性动画一律降级为瞬时，缩放反馈保留无感时长。
      地图脉冲这类纯装饰动画直接停用；加载 spinner 属于状态反馈，保留但加快周期。 */
   @media (prefers-reduced-motion: reduce) {
@@ -816,6 +820,10 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+    }
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: 0.01ms !important;
     }
     .map-pulse-halo {
       display: none;

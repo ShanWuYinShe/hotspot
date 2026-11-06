@@ -292,6 +292,7 @@
 						onBack={headerIsland.onBack}
 						backLabel={headerIsland.backLabel}
 						onTitleClick={handleIslandTitleClick}
+						icon={headerIsland.icon}
 						trailing={headerIsland.trailing}
 						progress={headerIsland.progress}
 					/>

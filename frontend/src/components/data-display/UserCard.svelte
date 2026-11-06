@@ -80,9 +80,6 @@
 			onNavigate();
 		}}
 	>
-		<!-- 氛围底纹 -->
-		<div class="surface-accent-gradient pointer-events-none absolute inset-0 opacity-20 group-hover:opacity-35 transition-opacity"></div>
-
 		<!-- 顶栏：左推荐徽章，右距离与在线状态 -->
 		<div class="relative z-10 flex items-center justify-between gap-2">
 			<Badge tone="accent" size="sm" class="gap-1 font-semibold shadow-xs">
@@ -187,9 +184,6 @@
 			onNavigate();
 		}}
 	>
-		<!-- 氛围底纹 -->
-		<div class="surface-accent-gradient pointer-events-none absolute inset-0 opacity-30 group-hover:opacity-45 transition-opacity"></div>
-
 		<!-- 顶栏：徽章与距离 -->
 		<div class="relative z-10 flex items-center justify-between gap-2">
 			<Badge tone="accent" size="md" class="gap-1.5 font-semibold shadow-xs">
@@ -279,9 +273,6 @@
 			onNavigate();
 		}}
 	>
-		<!-- 氛围底纹 -->
-		<div class="surface-accent-gradient pointer-events-none absolute inset-0 opacity-20 group-hover:opacity-35 transition-opacity"></div>
-
 		<!-- 顶栏：标签与距离 -->
 		<div class="relative z-10 flex items-center justify-between gap-1 text-xxs text-text-secondary">
 			{#if user.tag}

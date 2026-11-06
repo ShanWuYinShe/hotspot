@@ -321,7 +321,7 @@
 		{@render feedHeader()}
 	{/snippet}
 
-	<div use:contentFade={loading}>
+	<div use:contentFade={{ showSkeleton: loading, trigger: activeTag ?? '' }}>
 		{#if loading || loadError || !filtered.length}
 			{@render feedState()}
 		{:else}

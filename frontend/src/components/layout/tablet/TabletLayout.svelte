@@ -47,86 +47,74 @@
 		<!-- 氛围画布固定在外壳内容区（不随路由滚动） -->
 		<AmbientBackdrop />
 		<RoutedContentViewport
-			contentClassName="tablet-page-canvas {(pathname === ROUTES.map || (pathname === ROUTES.messages && isWide)) ? 'h-full' : ''}"
+			contentClassName="tablet-page-canvas {(pathname === ROUTES.map || (pathname === ROUTES.messages && isWide)) ? 'h-full' : (!isSubPage ? 'pb-24' : '')}"
 			style={(pathname === ROUTES.map || pathname === ROUTES.messages) ? 'overflow:hidden;' : undefined}
 		>
 			{@render children()}
 		</RoutedContentViewport>
 	</div>
 
-	<!-- Compact tablet: edge-attached bar; wide tablet: centred floating Dock -->
+	<!-- 平板端统一悬浮孤岛导航栏（Floating Dock Island） -->
 	{#if !isSubPage}
 		<nav
 			aria-label="主导航"
-			class="shrink-0 w-full flex justify-center"
-			style={isWide
-				? 'padding:10px 24px max(16px, env(safe-area-inset-bottom, 16px));background-color:transparent;'
-				: 'padding:0;border-top:var(--cst-border-width-hairline) solid var(--cst-border-nav-glass);box-shadow:var(--cst-elevation-nav);'}
+			class="fixed bottom-0 inset-x-0 z-[var(--cst-z-fixed)] pointer-events-none flex justify-center px-6 pb-[max(16px,env(safe-area-inset-bottom,16px))]"
 		>
 			<div
-				class="grid grid-cols-5 items-center w-full"
-				style="width:100%;max-width:{isWide ? 'var(--cst-tablet-dock-max)' : 'none'};border-radius:{isWide ? 'var(--radius-sheet)' : 0};background:var(--cst-surface-nav-glass);backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);-webkit-backdrop-filter:blur(var(--cst-blur-lg)) saturate(1.8);box-shadow:{isWide ? 'var(--cst-elevation-nav)' : 'none'};border:{isWide ? 'var(--cst-border-width-hairline) solid var(--cst-border-nav-glass)' : 'none'};padding:{isWide ? '8px 14px' : '8px max(32px, env(safe-area-inset-left, 32px)) max(14px, env(safe-area-inset-bottom, 14px))'};"
+				class="pointer-events-auto flex items-center justify-between w-full max-w-lg rounded-[28px] border border-border-default/70 bg-surface-island/92 p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-2xl ring-1 ring-white/10 dark:ring-white/5"
 			>
 				<!-- Slot 1: 首页 -->
-				<div class="flex items-center justify-center w-full">
-					<NavTab
-						label={NAV_ITEMS[0].label}
-						iconSize={24}
-						Icon={NAV_ITEMS[0].icon}
-						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[0].path)}
-						onClick={() => goto(NAV_ITEMS[0].path)}
-					/>
-				</div>
+				<NavTab
+					label={NAV_ITEMS[0].label}
+					iconSize={25}
+					Icon={NAV_ITEMS[0].icon}
+					isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[0].path)}
+					onClick={() => goto(NAV_ITEMS[0].path)}
+				/>
 
 				<!-- Slot 2: 附近 -->
-				<div class="flex items-center justify-center w-full">
-					<NavTab
-						label={NAV_ITEMS[1].label}
-						iconSize={24}
-						Icon={NAV_ITEMS[1].icon}
-						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[1].path)}
-						onClick={() => goto(NAV_ITEMS[1].path)}
-					/>
-				</div>
+				<NavTab
+					label={NAV_ITEMS[1].label}
+					iconSize={25}
+					Icon={NAV_ITEMS[1].icon}
+					isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[1].path)}
+					onClick={() => goto(NAV_ITEMS[1].path)}
+				/>
 
-				<!-- Slot 3: Centre FAB -->
-				<div class="flex items-center justify-center w-full">
+				<!-- Slot 3: Centre FAB (发布) -->
+				<div class="flex items-center justify-center shrink-0 px-1.5">
 					<button
 						type="button"
-						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring select-none size-12 {composer.composerOpen ? 'bg-text-secondary' : 'bg-accent-default shadow-glow-md'}"
+						class="hover-btn scale-btn flex items-center justify-center rounded-full focus-ring select-none size-12 shadow-[0_4px_16px_rgba(var(--cst-palette-accent-primary),0.35)] active:scale-95 transition-all duration-rapid {composer.composerOpen ? 'bg-text-secondary' : 'bg-accent-default'}"
 						aria-label={composer.composerOpen ? '关闭' : '发布'}
 						onclick={toggleComposer}
 					>
 						{#if composer.composerOpen}
-							<X class="size-5 text-text-on-accent" strokeWidth={2} />
+							<X class="size-5 text-text-on-accent" strokeWidth={2.25} />
 						{:else}
-							<Plus class="size-5 text-text-on-accent" strokeWidth={2} />
+							<Plus class="size-5.5 text-text-on-accent" strokeWidth={2.25} />
 						{/if}
 					</button>
 				</div>
 
 				<!-- Slot 4: 消息 -->
-				<div class="flex items-center justify-center w-full">
-					<NavTab
-						label={NAV_ITEMS[2].label}
-						iconSize={24}
-						Icon={NAV_ITEMS[2].icon}
-						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[2].path)}
-						onClick={() => goto(NAV_ITEMS[2].path)}
-						count={unread.chat}
-					/>
-				</div>
+				<NavTab
+					label={NAV_ITEMS[2].label}
+					iconSize={25}
+					Icon={NAV_ITEMS[2].icon}
+					isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[2].path)}
+					onClick={() => goto(NAV_ITEMS[2].path)}
+					count={unread.chat}
+				/>
 
 				<!-- Slot 5: 我的 -->
-				<div class="flex items-center justify-center w-full">
-					<NavTab
-						label={NAV_ITEMS[3].label}
-						iconSize={24}
-						Icon={NAV_ITEMS[3].icon}
-						isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[3].path)}
-						onClick={() => goto(NAV_ITEMS[3].path)}
-					/>
-				</div>
+				<NavTab
+					label={NAV_ITEMS[3].label}
+					iconSize={25}
+					Icon={NAV_ITEMS[3].icon}
+					isActive={isPrimaryRouteActive(pathname, NAV_ITEMS[3].path)}
+					onClick={() => goto(NAV_ITEMS[3].path)}
+				/>
 			</div>
 		</nav>
 	{/if}

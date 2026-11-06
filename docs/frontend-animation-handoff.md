@@ -81,42 +81,45 @@ cd frontend && AB=~/.local/bin/agent-browser bash scripts/browser-qa.sh --base h
 
 ## 3. 未完成待做（按优先级；每条都可直接开工）
 
-### P0 — 流畅度硬伤（本轮审计发现、尚未修）
+### P0 — 流畅度硬伤（进展更新）
 
-1. **筛选 / 排序切换硬切**（/nearby/people、/nearby/moments、/nearby/groups 等）
-   - 现状证据：点「摄影」后 12 张卡 → 空态在 ≤50ms 内一帧替换，`getAnimations()` 为空，无过渡、无骨架；
-     排序切换同类。筛选状态会写进 `islandMeta`（已生效），但内容区本身是硬切。
-   - 建议：把 `lib/motion.ts` 的 `contentFade` 扩展为可被「筛选/排序 nonce」重放（如
-     `use:contentFade={{ trigger }}`），或对列表容器做 110–160ms 交叉淡入 + 保留旧数据降透明度；
-     空态出现也走同一动作。**不要**给每个卡片单独挂动画（N 卡 × 过渡 = 掉帧）。
-   - 验收：切换后 1 帧内出现 1 个 110–160ms 的 opacity/transform 动画、无 CLS、无长任务；reduced 直接切。
+1. **[已完成] 筛选 / 排序切换过渡与空态平滑入场**（/nearby/people、/nearby/moments、/nearby/groups 等）
+   - 实现：`lib/motion.ts` 的 `contentFade` 扩展支持 `{ showSkeleton, trigger }` 模式；
+     各筛选/hub 页面接入后，切换筛选/分类/排序时平滑淡入（110ms，使用 `--cst-ease-standard`），空态出现伴随 150ms 微升淡入（`.empty-state-enter`），彻底告别硬切生硬感；
+     `prefers-reduced-motion` 显式跳过，无 CLS 与掉帧。测试覆盖见 `motion.test.ts`。
 
-2. **详情页画廊切图硬切**（`components/moments/MomentPostBody.svelte` 画廊区）
-   - 现状证据：点第 2 张缩略图，页码 1/3→2/3，但新图 opacity 全程 1、无动画；未缓存时旧图瞬间卸载 → 灰底闪一下；
-     背景 `data-gallery-backdrop` 也是瞬变。
-   - 建议：双层 `<img>` 交叉淡入（旧图保留到新图 `onload`/`decode()` 后 120–150ms；backdrop 同源交叉），
-     失败/超时回退硬切；`{#key}` 结构需改为双图层或保留旧图节点。
-   - 验收：缓存与未缓存两种都无闪白/灰底；页码与图同步；Google 图片加载慢时不阻塞交互（可点下一张）。
+2. **[已完成] 详情页画廊切图双层交叉淡入**（`routes/(app)/moments/[momentId]/MomentPostBody.svelte` 画廊区）
+   - 实现：重构画廊 hero，移除销毁 DOM 的 `{#key imageIndex}` 结构，改用双层 `<img>` 交叉淡入（旧图在底层稳妥托底，新图解码/onload 后 140ms 平滑淡入，随后清理旧层）；高斯模糊背景同源交叉淡入；缩略图加上 `active:scale-95` 微按压触感与 ring 阴影，300ms 安全超时回退防阻塞交互。测试覆盖见 `MomentPostBody.test.ts`。
 
-3. **SheetShell 拖拽关闭「先弹回再下滑」**（底部弹层拖拽关闭）
-   - 现状：拖拽释放时先回弹到原位再播放关闭动画，方向不连贯；边缘返回手势（MobilePortrait）被 150ms
-     过渡拖住，不跟手。
-   - 建议：拖拽释放按速度/位移决定「关闭 or 回位」，关闭时从当前拖拽位移直接向下滑出（不先复位）；
-     两个手势共用同一 spring/velocity 判定。验收：慢拖/快甩/中途反向三类手势都跟手、无方向跳变。
+3. **[已完成] SheetShell 拖拽关闭手势连贯顺势滑出**（底部弹层拖拽关闭）
+   - 实现：重构 `SheetShell.svelte` 下拉手势算法，结合位移（≥64px）与甩动速度（vy > 0.4px/ms）综合判定；
+     判定关闭时直接从当前位移顺势滑出屏幕底端（`var(--cst-motion-rapid)`，不先复位），彻底解决「先弹回再下滑」的方向跳变；
+     未达阈值松手时使用 `var(--cst-motion-spring) var(--cst-ease-bounce)` 弹性回弹复位。测试覆盖见 `SheetShell.test.ts`。
+
+4. **[已完成] 桌面端设置页及全站页面灵动岛全面适配**
+   - 实现：设置页（settings）、个人中心（me）、编辑资料（me/edit）、附近枢纽（nearby）、管理后台（admin）全面改用 `variant="integrated"` 契约与 `islandIcon` 专属锚点；
+     桌面端彻底移除内容区内次级 sticky 色块条，页面滚动时标题在自然流中顺滑向上移动并流式交接（handoff）进顶栏中央灵动岛（PageIsland），内容区零重叠遮挡。
+
+5. **[已完成] 移动端/平板端底部「悬浮孤岛式导航栏 (Floating Island Dock)」**
+   - 实现：重构 `MobilePortrait`、`TabletLayout` 与 `MobileLandscape`，底栏由贴底死条升级为大圆角悬浮孤岛胶囊（`rounded-[28px]`、毛玻璃、物理阴影与高光环）；
+     `NavTab` 图标放大至 25px 并加粗笔画（1.85/2.25），选中项使用温润厚实的 `bg-accent-soft text-text-accent-on-soft rounded-xl` 触觉胶囊；
+     中央 48px 微凸 FAB，`RoutedContentViewport` 预留 `pb-24` 滚动净空，彻底告别单薄线框与空洞感。
 
 ### P1 — 审美与一致性打磨
 
-4. **岛 leading 视觉锚点**（普通页面岛只有两行文字，左侧偏空）
-   - 已给 demo 候选：A 8px accent 圆点；B 28px accent-soft 圆底 + 语义图标（与首页岛同语言）；C 裸图标。
-     用户尚未拍板；若做，给 `PageHeader` 增加可选 `islandIcon`（地图/齿轮/铃铛等），不要每页自造。
-5. **空态 / 筛选结果入场**：EmptyState（spotlight 静态）出现时无入场；建议 150ms 淡入 + 2px 上移，
-   与 P0-1 共用同一 action（reduced 直接终态）。
-6. **主题切换过渡收敛**：换主题瞬时触发 ~174 条颜色过渡（500ms）。本机无 longtask，但低端机有风险；
-   建议收敛到 300ms 或只对表面层过渡（背景/文字），避免大面积 transition。
+4. **[已完成] 岛 leading 视觉锚点**：
+   - 实现：`PageHeader` 新增可选 `islandIcon?: Snippet` 扩展；普通页面缺省渲染克制精致的 6px accent 状态微锚点（`size-1.5 rounded-full bg-accent-default/70`），与右侧阅读进度圆环形成视觉平衡，胶囊整体不再两头空荡。单测覆盖见 `PageIsland.test.ts`。
+5. **[已完成] 空态 / 筛选结果入场**：
+   - 实现：`EmptyState` 增加 `.empty-state-enter`（150ms 淡入 + 2px 上移微动效，与 P0-1 节奏呼应，reduced 直接终态）。
+6. **[已完成] 主题切换过渡收敛**：
+   - 实现：
+     1. 将 `.nav-glass` 偏长拖沓的 400ms 过渡（`--cst-motion-slow`）收敛为 260ms（`--cst-motion-relaxed`），与卡片 hover 及表面层一致；
+     2. 在 `theme.svelte.ts` 引入 View Transition API 平滑淡入机制（`::view-transition-old(root)` / `new(root)` 统一定为 260ms `--cst-ease-standard`），运行时切主题使用整屏 GPU 交叉过渡，彻底消除上百个 DOM 元素同时触发 CSS transition 的重绘风暴；
+     3. 首屏 `initTheme` 保持瞬出（无过渡），`prefers-reduced-motion` 立即终态。单测覆盖见 `theme.svelte.test.ts`。
 7. **岛落地微动效（可选）**：抵达时 scale 1.006→1（80ms）+ accent 细边亮度回落一档；不做 overshoot。
    用户未确认要不要，先别做。
-8. **岛 meta 文本跳变**：搜索词/计数更新时岛内第二行直接换字（无 crossfade），频率低但可见；
-   可加 120ms 淡入/淡出（注意不要和交接的 `--cst-island-content` 叠两层）。
+8. **[已完成] 岛 meta 文本跳变平滑化**：
+   - 实现：`IslandCapsule` 中第二行 meta 文本变动时加入 120ms fade-in 柔和渐变，让状态与数字更新如呼吸般润泽自然。
 
 ### P2 — 验证/环境类
 

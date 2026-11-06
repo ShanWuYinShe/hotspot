@@ -110,17 +110,19 @@
 				onImageError?.();
 			}}
 		/>
-		{#if !horizontal}
-			<div class="pointer-events-none absolute inset-x-0 top-0 h-24" style="background:var(--cst-surface-card-scrim-top);"></div>
-			<div class="pointer-events-none absolute inset-x-0 bottom-0 h-[45%]" style="background:var(--cst-surface-card-scrim-bottom);"></div>
-		{:else}
-			<div class="pointer-events-none {imageBox}" style="background:var(--cst-surface-media-scrim-card);"></div>
+		{#if imageLoaded}
+			{#if !horizontal}
+				<div class="pointer-events-none absolute inset-x-0 top-0 h-24" style="background:var(--cst-surface-card-scrim-top);"></div>
+				<div class="pointer-events-none absolute inset-x-0 bottom-0 h-[45%]" style="background:var(--cst-surface-card-scrim-bottom);"></div>
+			{:else}
+				<div class="pointer-events-none {imageBox}" style="background:var(--cst-surface-media-scrim-card);"></div>
+			{/if}
 		{/if}
 	{:else}
-		<div class="surface-accent-gradient pointer-events-none {imageBox}">
+		<div class="surface-accent-gradient pointer-events-none {imageBox} flex flex-col items-center justify-center bg-surface-primary border border-border-default/60">
 			{#if watermark}
 				<div
-					class="absolute inset-0 flex items-center justify-center text-accent-default opacity-watermark"
+					class="absolute inset-0 flex items-center justify-center text-text-secondary/30 opacity-watermark"
 					aria-hidden="true"
 				>
 					{@render watermark()}

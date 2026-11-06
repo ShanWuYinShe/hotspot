@@ -24,35 +24,85 @@
 	// 桌面端居中模态复用本壳时不显示拖拽把手：鼠标环境没有下拉手势语义。
 	const isDesktop = $derived(platform.platform === 'desktop');
 
-	// 下拉拖拽关闭：pointer 拖动把手 sheet 跟随下移，超过阈值（64px）松手关闭
+	// 下拉拖拽关闭（P0-3 改造）：
+	// 1. 跟手位移：pointer 拖动把手，sheet 逐帧跟随；
+	// 2. 速度与距离综合判定：位移 >= 64px 或向下快速甩动（vy >= 0.4px/ms 且位移 > 24px）判定关闭；
+	// 3. 顺势退出：判定关闭时直接从当前位移顺势加速滑出屏幕底端，绝不「先弹回 0 再下滑」；
+	// 4. 弹性复位：未达关闭阈值时使用 spring + bounce 弹性回弹复位。
 	let dragOffset = $state(0);
 	let dragging = $state(false);
+	let isClosing = $state(false);
+	let isSpringingBack = $state(false);
+	let springTimer: ReturnType<typeof setTimeout> | number | null = null;
+
 	let startY = 0;
+	let lastY = 0;
+	let lastTime = 0;
+	let velocityY = 0;
 	const DRAG_CLOSE_THRESHOLD = 64;
 
 	function onHandlePointerDown(e: PointerEvent) {
 		if (e.pointerType === 'mouse' && e.button !== 0) return;
+		if (isClosing) return;
+		if (springTimer) clearTimeout(springTimer);
+		isSpringingBack = false;
 		dragging = true;
 		startY = e.clientY;
+		lastY = e.clientY;
+		lastTime = performance.now();
+		velocityY = 0;
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	}
+
 	function onHandlePointerMove(e: PointerEvent) {
 		if (!dragging) return;
+		const now = performance.now();
+		const dt = now - lastTime;
+		const dy = e.clientY - lastY;
+		if (dt > 8) {
+			velocityY = dy / dt; // px/ms
+			lastY = e.clientY;
+			lastTime = now;
+		}
 		dragOffset = Math.max(0, e.clientY - startY);
 	}
+
 	function onHandlePointerUp() {
 		if (!dragging) return;
 		dragging = false;
-		const shouldClose = dragOffset >= DRAG_CLOSE_THRESHOLD;
-		dragOffset = 0;
-		if (shouldClose) onClose();
+
+		const isFastFlingDown = velocityY > 0.4 && dragOffset > 24;
+		const shouldClose = dragOffset >= DRAG_CLOSE_THRESHOLD || isFastFlingDown;
+
+		if (shouldClose) {
+			isClosing = true;
+			// 顺势向下滑出视口，绝不回弹为 0
+			dragOffset = Math.max(dragOffset + 240, 500);
+			window.setTimeout(() => {
+				onClose();
+			}, 140);
+		} else {
+			// 未达阈值：保持动画层并弹性回位至 0
+			isSpringingBack = true;
+			dragOffset = 0;
+			if (springTimer) clearTimeout(springTimer);
+			springTimer = window.setTimeout(() => {
+				isSpringingBack = false;
+			}, 280);
+		}
 	}
 </script>
 
 <div
 	class="flex h-full flex-col bg-surface-primary"
-	style={dragOffset || dragging
-		? `transform:translateY(${dragOffset}px);transition:transform ${dragging ? 'none' : 'var(--cst-motion-snappy) var(--cst-ease-standard)'};`
+	style={dragOffset > 0 || dragging || isClosing || isSpringingBack
+		? `transform:translateY(${dragOffset}px);transition:transform ${
+				dragging
+					? 'none'
+					: isClosing
+						? 'var(--cst-motion-rapid) var(--cst-ease-standard)'
+						: 'var(--cst-motion-spring) var(--cst-ease-bounce)'
+		  };`
 		: ''}
 >
 	<!-- Handle：可拖拽下拉关闭（grab 光标 + 触控手势；把手本身不可聚焦，键盘走关闭钮） -->

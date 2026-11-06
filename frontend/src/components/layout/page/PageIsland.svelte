@@ -29,6 +29,7 @@
 		backLabel = '返回',
 		onTitleClick,
 		progress = 0,
+		icon,
 		trailing
 	}: {
 		/** 页面标题（作者身份模式下由 author.name 覆盖） */
@@ -44,6 +45,8 @@
 		onTitleClick?: () => void;
 		/** 阅读进度 0–100，渲染为胶囊最右侧圆环 */
 		progress?: number;
+		/** 左侧语义图标（可选；P1-4 岛 leading 视觉锚点） */
+		icon?: Snippet;
 		/** 右侧行动区（页面主行动，≤2 控件） */
 		trailing?: Snippet;
 	} = $props();
@@ -79,6 +82,12 @@
 			<div class="mx-1 h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
 		{:else if author}
 			<Avatar src={author.avatar} name={author.name} size={20} class="shrink-0" />
+		{:else if icon}
+			<span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft">
+				{@render icon()}
+			</span>
+		{:else}
+			<span class="ml-1 mr-0.5 size-1.5 shrink-0 rounded-full bg-accent-default/70" aria-hidden="true"></span>
 		{/if}
 	{/snippet}
 </IslandCapsule>

@@ -236,6 +236,8 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 			? `${locationName} · 5km 内${!loading && !loadError && list.length ? ` · ${list.length} 人` : ''}`
 			: `5km 内 · 实时更新${!loading && !loadError && list.length ? ` · ${list.length} 人` : ''}`
 	);
+	// 筛选与排序触发源：切换标签或排序时平滑淡入，消除硬切生硬感
+	const filterTrigger = $derived(`${tagFilter}:${effectiveSort}`);
 	const islandMetaText = $derived(tagFilter === '全部' ? pageSubtitle : `${tagFilter} · ${pageSubtitle}`);
 </script>
 <svelte:head>
@@ -292,7 +294,7 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	{/snippet}
 
 		<div>
-			<div class="min-w-0" use:contentFade={loading}>
+			<div class="min-w-0" use:contentFade={{ showSkeleton: loading, trigger: filterTrigger }}>
 				{#if loadError}
 					<LoadError message={loadError} onRetry={() => { clearPeopleProgress(); reloadKey++; }} />
 				{:else if loading}

@@ -58,7 +58,7 @@
 	</div>
 {/snippet}
 
-<div class={cn('flex flex-col items-center justify-center gap-3 py-20', spotlight && 'relative isolate', className)}>
+<div class={cn('empty-state-enter flex flex-col items-center justify-center gap-3 py-20', spotlight && 'relative isolate', className)}>
 	{#if spotlight}
 		{@render spotlightLayer()}
 	{/if}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { MapPin, Map as MapIcon, Search } from '@lucide/svelte';
+	import { MapPin, Map as MapIcon, Search, Compass } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import HeroStats from '@/components/home/HeroStats.svelte';
 	import NearbyHubSections from './shared/NearbyHubSections.svelte';
@@ -132,11 +132,14 @@
 <StandardPageLayout contentClassName="flex flex-col gap-6 pt-4 pb-6 w-full">
 	{#snippet header()}
 		<PageHeader
+			variant="integrated"
 			title="附近"
-			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			subtitle={locationName ? `${locationName} · 5km 内` : '5km 内 · 实时更新'}
 		>
+			{#snippet islandIcon()}
+				<Compass class="size-3.5 text-accent-default" strokeWidth={1.75} />
+			{/snippet}
 			{#snippet subtitleIcon()}
 				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
 			{/snippet}

@@ -109,25 +109,34 @@
 >
 	<!-- Tag chip：左上角类别/标签 -->
 	{#if item.tag}
-		<span class="pointer-events-none media-badge absolute top-2.5 left-2.5 z-[2]">
+		<span class="pointer-events-none {item.image ? 'media-badge' : 'rounded-full px-2 py-0.5 text-xxs font-medium bg-surface-subtle text-text-secondary border border-border-default/60'} absolute top-2.5 left-2.5 z-[2]">
 			{item.tag}
 		</span>
 	{/if}
 
 	<!-- 时间徽章：右上角轻量显示，与左上角标签平衡且不占用底部操作行空间 -->
 	{#if item.time}
-		<span class="pointer-events-none media-badge absolute top-2.5 right-2.5 z-[2] text-xxs tabular-nums font-medium">
+		<span class="pointer-events-none {item.image ? 'media-badge' : 'rounded-full px-2 py-0.5 text-xxs tabular-nums font-medium bg-surface-subtle text-text-secondary border border-border-default/60'} absolute top-2.5 right-2.5 z-[2]">
 			{item.time}
 		</span>
+	{/if}
+
+	<!-- 纯文字动态主体（仅在无图时渲染）：居中展示文字内容，字距舒适，充实卡片版面 -->
+	{#if !item.image && item.content}
+		<div class="pointer-events-none absolute inset-x-0 top-10 bottom-14 flex flex-col justify-center px-3.5 sm:px-4 z-[1]">
+			<p class="pointer-events-none line-clamp-3 sm:line-clamp-4 text-xs sm:text-sm font-medium leading-relaxed text-text-primary">
+				{item.content}
+			</p>
+		</div>
 	{/if}
 
 	<!-- 底部信息托盘：紧凑排布在卡片底部 25% 区域，彻底腾出上方图片空间 -->
 	{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
 		{@const onCover = onImage && !horizontal}
 		<div class="pointer-events-none flex flex-col gap-1 p-2 sm:p-2.5 {isHorizontal ? 'gap-3 p-3 sm:p-4 justify-center' : ''}" data-card-footer>
-			<!-- 正文：普通卡 2 行，横排/巨幕卡 3 行 -->
-			{#if item.content}
-				<p class="pointer-events-none line-clamp-2 {isHorizontal || isHero ? 'line-clamp-3 sm:text-base' : ''} text-xs sm:text-sm font-semibold leading-snug drop-shadow-xs {onCover ? 'text-content-inverse' : 'text-text-primary'}">
+			<!-- 正文：普通卡 2 行，横排/巨幕卡 3 行（仅在有图片时在底部托盘渲染，无图时已由中央内容区承载） -->
+			{#if item.content && item.image}
+				<p class="pointer-events-none line-clamp-2 {isHorizontal || isHero ? 'line-clamp-3 sm:text-base' : ''} text-xs sm:text-sm font-semibold leading-snug {onCover ? 'text-content-inverse drop-shadow-xs' : 'text-text-primary'}">
 					{item.content}
 				</p>
 			{/if}

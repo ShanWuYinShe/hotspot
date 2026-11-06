@@ -3,7 +3,7 @@
 	const MAX_BIO = 150;
 	const BIO_WARN = Math.floor(MAX_BIO * 0.85);
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
-	import { Camera, Check, Trash2 } from '@lucide/svelte';
+	import { Camera, Check, Trash2, UserRound } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
 	import { logout } from '@/stores/auth.svelte';
@@ -219,12 +219,16 @@
 <StandardPageLayout contentMaxWidth="var(--cst-content-form-narrow)" contentClassName="pt-4 pb-10">
 	{#snippet header()}
 		<PageHeader
+			variant="integrated"
 			title="编辑资料"
 			islandMeta={islandMeta}
 			maxWidth="var(--cst-content-form-narrow)"
 			onBack={() => smartBack()}
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		>
+			{#snippet islandIcon()}
+				<UserRound class="size-3.5 text-accent-default" strokeWidth={1.75} />
+			{/snippet}
 			{#snippet trailing()}
 				<!-- 未登录隐藏保存（主区已是登录引导，顶栏悬挂保存按钮属不可用控件）；
 				     移动端保存下沉到底部粘底操作条（拇指热区），页头不重复出现 -->

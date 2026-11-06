@@ -54,6 +54,7 @@ import {
 		islandTrailing,
 		island = true,
 		islandMeta,
+		islandIcon,
 		below,
 		sticky = true,
 		showBackOnDesktop = false,
@@ -86,6 +87,8 @@ import {
 		island?: boolean;
 		/** 岛上的副信息（缺省用 subtitle）。 */
 		islandMeta?: string;
+		/** 桌面端顶栏灵动岛的左侧语义图标（可选；P1-4 视觉锚点）。 */
+		islandIcon?: Snippet;
 		below?: Snippet;
 		sticky?: boolean;
 		showBackOnDesktop?: boolean;
@@ -168,6 +171,7 @@ import {
 			untrack(() => ({
 				title,
 				meta: islandMeta ?? subtitle ?? '',
+				icon: islandIcon,
 				trailing: islandTrailing,
 				onBack: showBack ? onBack : undefined,
 				backLabel
@@ -181,6 +185,7 @@ import {
 		headerIsland.update(islandToken, {
 			title,
 			meta: islandMeta ?? subtitle ?? '',
+			icon: islandIcon,
 			trailing: islandTrailing,
 			onBack: showBack ? onBack : undefined,
 			backLabel

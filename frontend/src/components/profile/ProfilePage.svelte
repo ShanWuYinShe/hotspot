@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ChevronRight, LayoutGrid, Pencil, Settings, Sparkles, Users, UsersRound } from '@lucide/svelte';
+	import { ChevronRight, LayoutGrid, Pencil, Settings, Sparkles, UserRound, Users, UsersRound } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -124,18 +124,22 @@
 </script>
 
 {#if meta}
-	<!-- 分区模式：StandardPageLayout + sticky PageHeader；
+	<!-- 分区模式：StandardPageLayout + integrated PageHeader；
 	     Section 组件为纯内容（不自建滚动/gutter），gutter 由 ContentColumn 统一提供 -->
 	<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="pt-4 pb-6">
 		{#snippet header()}
 			<PageHeader
+				variant="integrated"
 				title={meta.title}
 				islandMeta={sectionIslandMeta}
-				sticky
 				maxWidth="var(--cst-content-breath)"
 				titleSize={device === 'desktop' ? 'xl' : '2xl'}
 				onBack={() => smartBack(ROUTES.me)}
-			/>
+			>
+				{#snippet islandIcon()}
+					<UserRound class="size-3.5 text-accent-default" strokeWidth={1.75} />
+				{/snippet}
+			</PageHeader>
 		{/snippet}
 		{#if section === 'moments'}
 			<SectionMoments />
@@ -155,12 +159,16 @@
 			     R17：页头与正文共用 1280 宽屏呼吸档（此前正文在 1440/1920 居中收窄而页头
 			     全宽，标题左缘比身份卡左移 46/158px，违反「同一内容轴」）。 -->
 			<PageHeader
+				variant="integrated"
 				title="个人中心"
 				subtitle="你的公开资料、内容与关系的入口"
 				islandMeta={overviewIslandMeta}
 				maxWidth="var(--cst-content-breath)"
 				titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			>
+				{#snippet islandIcon()}
+					<UserRound class="size-3.5 text-accent-default" strokeWidth={1.75} />
+				{/snippet}
 				{#snippet islandTrailing()}
 					<!-- 滚动入岛后「编辑资料」常驻；数据未就绪/未登录/加载失败时不给不可用入口 -->
 					{#if !loading && !needsAuth && !error}
@@ -183,16 +191,143 @@
 		{#if loading}
 			<InlineLoading label="加载个人资料…" />
 		{:else if needsAuth}
-			<NeedsAuthNotice
-				spotlight
-				title="登录后查看"
-				description="登录后即可管理资料、查看互动数据与收藏内容"
-				highlights={[
-					{ icon: Pencil, text: '完善头像、昵称与简介，让附近的人认识你' },
-					{ icon: Sparkles, text: '整理你的瞬间与收藏，随时回看' },
-					{ icon: UsersRound, text: '管理好友、关注与群组关系' }
-				]}
-			/>
+			<div class="w-full">
+				<!-- 访客身份封面卡：展示个人中心全貌，提供引导与从容空间感 -->
+				<div class="mb-6">
+					<IdentityHero
+						mode="self"
+						name="开启你的城市漫游档案"
+						handle="访客浏览中"
+						bio="记录街头巷尾的瞬间，发现同频的伙伴，建立属于你的城市足迹。"
+						location="附近漫游中"
+						metrics={[
+							{ label: '瞬间', value: 0 },
+							{ label: '群组', value: 0 },
+							{ label: '好友', value: 0 }
+						]}
+					>
+						{#snippet actions()}
+							<Button
+								variant="primary"
+								size="md"
+								class="hit-slop-44 flex-1 gap-1.5 sm:flex-none"
+								onclick={() => void goto(ROUTES.login)}
+							>
+								<UserRound class="size-4" strokeWidth={1.75} />
+								登录 / 注册开启档案
+							</Button>
+							<Button
+								variant="soft"
+								size="md"
+								class="hit-slop-44 flex-1 gap-1.5 sm:flex-none"
+								onclick={() => void goto(ROUTES.nearbyMoments)}
+							>
+								先去附近逛逛
+							</Button>
+						{/snippet}
+					</IdentityHero>
+				</div>
+
+				<!-- 桌面端 3 列 Bento 展示网格：充实 1280px 呼吸型宽屏，富有艺术质感与探索导流 -->
+				<div class="grid grid-cols-1 gap-5 md:grid-cols-3">
+					<!-- 卡片 1: 瞬间画廊 -->
+					<div class="flex flex-col justify-between rounded-lg bg-surface-island p-5 border border-border-default/60 shadow-xs">
+						<div>
+							<div class="flex size-10 items-center justify-center rounded-md bg-accent-soft text-text-accent-on-soft">
+								<Sparkles class="size-5" strokeWidth={1.75} />
+							</div>
+							<h3 class="mt-4 text-base font-semibold text-text-primary">记录城市瞬间</h3>
+							<p class="mt-1.5 text-xs leading-relaxed text-text-secondary">
+								随时发布身边的光影与心情，在地图上留下专属足迹，与同城伙伴分享生活。
+							</p>
+							<div class="mt-4 flex flex-wrap gap-1.5">
+								<span class="rounded-full bg-surface-subtle px-2.5 py-1 text-xxs font-medium text-text-secondary">#街角光影</span>
+								<span class="rounded-full bg-surface-subtle px-2.5 py-1 text-xxs font-medium text-text-secondary">#城市手记</span>
+								<span class="rounded-full bg-surface-subtle px-2.5 py-1 text-xxs font-medium text-text-secondary">#夜跑日常</span>
+							</div>
+						</div>
+						<div class="mt-6 pt-4 border-t border-border-default/40">
+							<Button
+								variant="ghost"
+								size="sm"
+								class="hit-slop -ml-2 text-accent-default hover:underline group"
+								onclick={() => void goto(ROUTES.nearbyMoments)}
+							>
+								探索附近瞬间
+								<ChevronRight class="size-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
+							</Button>
+						</div>
+					</div>
+
+					<!-- 卡片 2: 同好群组 -->
+					<div class="flex flex-col justify-between rounded-lg bg-surface-island p-5 border border-border-default/60 shadow-xs">
+						<div>
+							<div class="flex size-10 items-center justify-center rounded-md bg-accent-soft text-text-accent-on-soft">
+								<UsersRound class="size-5" strokeWidth={1.75} />
+							</div>
+							<h3 class="mt-4 text-base font-semibold text-text-primary">发现同好群组</h3>
+							<p class="mt-1.5 text-xs leading-relaxed text-text-secondary">
+								寻找同一片街区的骑行队、读书会与摄影社团，加入真实的城市线下社区。
+							</p>
+							<div class="mt-4 flex flex-col gap-2">
+								<div class="flex items-center justify-between rounded-md bg-surface-subtle/80 px-2.5 py-1.5 text-xxs">
+									<span class="font-medium text-text-primary">云龙湖摄影社</span>
+									<span class="text-text-secondary">142 成员</span>
+								</div>
+								<div class="flex items-center justify-between rounded-md bg-surface-subtle/80 px-2.5 py-1.5 text-xxs">
+									<span class="font-medium text-text-primary">周末骑行俱乐部</span>
+									<span class="text-text-secondary">89 成员</span>
+								</div>
+							</div>
+						</div>
+						<div class="mt-6 pt-4 border-t border-border-default/40">
+							<Button
+								variant="ghost"
+								size="sm"
+								class="hit-slop -ml-2 text-accent-default hover:underline group"
+								onclick={() => void goto(ROUTES.nearbyGroups)}
+							>
+								发现附近群组
+								<ChevronRight class="size-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
+							</Button>
+						</div>
+					</div>
+
+					<!-- 卡片 3: 社交雷达 -->
+					<div class="flex flex-col justify-between rounded-lg bg-surface-island p-5 border border-border-default/60 shadow-xs">
+						<div>
+							<div class="flex size-10 items-center justify-center rounded-md bg-accent-soft text-text-accent-on-soft">
+								<Users class="size-5" strokeWidth={1.75} />
+							</div>
+							<h3 class="mt-4 text-base font-semibold text-text-primary">真实社交雷达</h3>
+							<p class="mt-1.5 text-xs leading-relaxed text-text-secondary">
+								基于地理位置与漫游雷达，发现此刻正在这片区域的同频漫游者。
+							</p>
+							<div class="mt-4 flex flex-col gap-2">
+								<div class="flex items-center gap-2 rounded-md bg-surface-subtle/80 px-2.5 py-1.5 text-xxs text-text-secondary">
+									<span class="size-2 rounded-full bg-status-online shrink-0"></span>
+									<span>实时距离感知 · 支持私密保护</span>
+								</div>
+								<div class="flex items-center gap-2 rounded-md bg-surface-subtle/80 px-2.5 py-1.5 text-xxs text-text-secondary">
+									<span class="size-2 rounded-full bg-accent-default shrink-0"></span>
+									<span>双向确认好友 · 私信畅聊</span>
+								</div>
+							</div>
+						</div>
+						<div class="mt-6 pt-4 border-t border-border-default/40">
+							<Button
+								variant="ghost"
+								size="sm"
+								class="hit-slop -ml-2 text-accent-default hover:underline group"
+								onclick={() => void goto(ROUTES.nearbyPeople)}
+							>
+								开启漫游雷达
+								<ChevronRight class="size-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
+							</Button>
+						</div>
+					</div>
+				</div>
+			</div>
 		{:else if error}
 			<LoadError message={error} onRetry={retry} />
 		{:else}

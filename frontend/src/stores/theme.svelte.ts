@@ -63,6 +63,16 @@ function prefersDark(): boolean {
 	}
 }
 
+function prefersReduced(): boolean {
+	try {
+		return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+			? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+			: false;
+	} catch {
+		return false;
+	}
+}
+
 /* Apply / remove classes on <html> based on current state */
 function applyClasses(dark: boolean, t: AppTheme) {
   const root = document.documentElement;
@@ -75,6 +85,31 @@ function applyClasses(dark: boolean, t: AppTheme) {
 
   // 浏览器 chrome 配色跟随 token（读取当前主题的 --cst-surface-page）
   syncThemeColor(root);
+}
+
+/**
+ * 应用主题类到 <html>，并在支持的环境使用 View Transition 实现整页平滑过渡（P1-6 收敛大面积重绘）。
+ * @param dark 是否为深色
+ * @param t 主题
+ * @param animated 是否启用过渡动画（首屏 init 时为 false，确保零延迟首屏呈现）
+ */
+function applyTheme(dark: boolean, t: AppTheme, animated = true): void {
+  if (
+    animated &&
+    typeof document !== 'undefined' &&
+    'startViewTransition' in document &&
+    !prefersReduced()
+  ) {
+    try {
+      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
+        applyClasses(dark, t);
+      });
+      return;
+    } catch {
+      // 降级直接生效
+    }
+  }
+  applyClasses(dark, t);
 }
 
 /** 将 <meta name="theme-color"> 同步为当前主题画布色（移动端地址栏/任务视图）。 */
@@ -124,13 +159,13 @@ export function initTheme(): () => void {
   colorScheme = initial.scheme;
   appTheme = initial.theme;
   systemDark = prefersDark();
-  applyClasses(colorScheme === 'dark' || (colorScheme === 'auto' && systemDark), appTheme);
+  applyTheme(colorScheme === 'dark' || (colorScheme === 'auto' && systemDark), appTheme, false);
 
   // auto 档跟随系统：change 监听刷新（手动档下监听无操作，仅保留订阅）。
   let mql: MediaQueryList | null = null;
   const onChange = (e: MediaQueryListEvent) => {
     systemDark = e.matches;
-    applyClasses(colorScheme === 'dark' || (colorScheme === 'auto' && e.matches), appTheme);
+    applyTheme(colorScheme === 'dark' || (colorScheme === 'auto' && e.matches), appTheme, true);
   };
   try {
     if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
@@ -149,7 +184,7 @@ export function initTheme(): () => void {
 export function setColorScheme(mode: ColorSchemeMode): void {
   colorScheme = mode;
   try { localStorage.setItem(COLOR_SCHEME_KEY, mode); } catch {}
-  applyClasses(colorScheme === 'dark' || (colorScheme === 'auto' && systemDark), appTheme);
+  applyTheme(colorScheme === 'dark' || (colorScheme === 'auto' && systemDark), appTheme, true);
 }
 
 /**
@@ -163,7 +198,7 @@ export function toggleDark(): void {
 export function setTheme(t: AppTheme): void {
   appTheme = t;
   try { localStorage.setItem(THEME_KEY, t); } catch {}
-  applyClasses(effectiveDark, appTheme);
+  applyTheme(effectiveDark, appTheme, true);
 }
 
 export const theme = {

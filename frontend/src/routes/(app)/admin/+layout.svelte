@@ -80,13 +80,16 @@
 		<!-- 岛 meta 收短为「平台管理」：完整 subtitle 含括号说明，进岛后会把 448px 岛挤满被截断；
 		     模块名已在 title，meta 只承担「这块是后台」的语境。 -->
 		<PageHeader
+			variant="integrated"
 			title={pageTitle}
 			subtitle="平台管理（仅平台管理员可见）"
 			islandMeta="平台管理"
-			sticky
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			onBack={() => smartBack()}
 		>
+			{#snippet islandIcon()}
+				<Shield class="size-3.5 text-accent-default" strokeWidth={1.75} />
+			{/snippet}
 			{#snippet islandTrailing()}
 				<!-- 岛内行动区（≤2 控件）：子模块滚动后给「返回概览」出口，概览页不重复提供 -->
 				{#if activeId !== 'overview'}

@@ -84,4 +84,11 @@ describe('PageIsland（桌面端页面锚点岛）', () => {
 			(under.querySelector('[data-island-progress-ring]') as HTMLElement).dataset.islandProgress
 		).toBe('0');
 	});
+
+	it('普通页面缺省渲染 leading 视觉微锚点（accent 圆点）保持胶囊平衡', () => {
+		const { container } = render(PageIsland, { props: { title: '附近瞬间' } });
+		const dot = container.querySelector('.bg-accent-default\\/70');
+		expect(dot).not.toBeNull();
+		expect(dot?.getAttribute('aria-hidden')).toBe('true');
+	});
 });

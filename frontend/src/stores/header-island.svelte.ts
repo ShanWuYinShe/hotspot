@@ -38,6 +38,8 @@ export interface PageIslandConfig {
 	onAuthorClick?: () => void;
 	/** 点击标题回到锚点；缺省由顶栏滚动回页首 */
 	onTitleClick?: () => void;
+	/** 左侧语义图标（可选；P1-4 岛 leading 视觉锚点） */
+	icon?: Snippet;
 	/** 右侧行动区（写操作/入口）：每页最多 2 个控件 */
 	trailing?: Snippet;
 }
@@ -69,6 +71,7 @@ class PageIslandStore {
 	backLabel = $state('返回');
 	onAuthorClick = $state<(() => void) | undefined>(undefined);
 	onTitleClick = $state<(() => void) | undefined>(undefined);
+	icon = $state<Snippet | undefined>(undefined);
 	trailing = $state<Snippet | undefined>(undefined);
 
 	register(token: IslandToken, config: PageIslandConfig) {
@@ -91,6 +94,7 @@ class PageIslandStore {
 		if (config.backLabel !== undefined) this.backLabel = config.backLabel;
 		if (config.onAuthorClick !== undefined) this.onAuthorClick = config.onAuthorClick;
 		if (config.onTitleClick !== undefined) this.onTitleClick = config.onTitleClick;
+		if (config.icon !== undefined) this.icon = config.icon;
 		if (config.trailing !== undefined) this.trailing = config.trailing;
 	}
 
@@ -129,6 +133,7 @@ class PageIslandStore {
 		this.backLabel = config.backLabel ?? '返回';
 		this.onAuthorClick = config.onAuthorClick;
 		this.onTitleClick = config.onTitleClick;
+		this.icon = config.icon;
 		this.trailing = config.trailing;
 	}
 
@@ -144,6 +149,7 @@ class PageIslandStore {
 		this.backLabel = '返回';
 		this.onAuthorClick = undefined;
 		this.onTitleClick = undefined;
+		this.icon = undefined;
 		this.trailing = undefined;
 	}
 }

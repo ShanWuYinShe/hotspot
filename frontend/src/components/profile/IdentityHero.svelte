@@ -99,12 +99,6 @@
 		{:else}
 			<div class="absolute inset-0" style="background:var(--cst-surface-cover-placeholder);"></div>
 		{/if}
-		<!-- 柔光：主题环境光斜向叠一层，让封面不是一条平渐变（色值全部来自 --cst-ambient-*） -->
-		<div
-			aria-hidden="true"
-			class="pointer-events-none absolute inset-0"
-			style="background:radial-gradient(52% 88% at 16% 0%, var(--cst-ambient-glow-1) 0%, transparent 72%);"
-		></div>
 		{#if coverActions}
 			<div class="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3 sm:p-4">
 				{@render coverActions()}

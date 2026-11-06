@@ -196,3 +196,50 @@ it('initTheme 幂等：重复调用不改变已应用的主题', async () => {
   expect(cls.contains('forest')).toBe(true);
   expect(cls.contains('vibrant')).toBe(false);
 });
+
+describe('主题切换过渡收敛（P1-6 View Transition 契约）', () => {
+  it('支持 startViewTransition 时，运行时 setTheme 与 setColorScheme 触发 view transition', async () => {
+    const transitionSpy = vi.fn((cb: () => void) => { cb(); });
+    (document as unknown as { startViewTransition: typeof transitionSpy }).startViewTransition = transitionSpy;
+
+    const { initTheme, setTheme, setColorScheme } = await import('./theme.svelte');
+    initTheme();
+    // 首屏 init 不得触发 view transition（避免首屏延迟）
+    expect(transitionSpy).not.toHaveBeenCalled();
+
+    setTheme('forest');
+    expect(transitionSpy).toHaveBeenCalledTimes(1);
+    expect(document.documentElement.classList.contains('forest')).toBe(true);
+
+    setColorScheme('dark');
+    expect(transitionSpy).toHaveBeenCalledTimes(2);
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+
+    delete (document as unknown as Record<string, unknown>).startViewTransition;
+  });
+
+  it('开启 prefers-reduced-motion 时不触发 view transition，立即应用', async () => {
+    const transitionSpy = vi.fn((cb: () => void) => { cb(); });
+    (document as unknown as { startViewTransition: typeof transitionSpy }).startViewTransition = transitionSpy;
+
+    // mock reduced motion
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn((query: string) => ({
+        matches: query.includes('prefers-reduced-motion'),
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn()
+      }))
+    });
+
+    const { initTheme, setTheme } = await import('./theme.svelte');
+    initTheme();
+    setTheme('inkwash');
+    expect(transitionSpy).not.toHaveBeenCalled();
+    expect(document.documentElement.classList.contains('inkwash')).toBe(true);
+
+    delete (document as unknown as Record<string, unknown>).startViewTransition;
+  });
+});

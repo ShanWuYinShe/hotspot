@@ -129,6 +129,42 @@
 	const currentImage = $derived(moment.images[imageIndex] ?? cover);
 	const currentSize = $derived(moment.imageSizes?.[imageIndex] ?? null);
 
+	// P0-2: 双层画廊交叉淡入（保留旧图直到新图加载完成，消除切图时的灰底闪烁与背景瞬变）
+	let outgoingImage = $state<string | null>(null);
+	let outgoingSize = $state<{ width: number | null; height: number | null } | null>(null);
+	let outgoingBackdrop = $state<string | null>(null);
+	let incomingReady = $state(true);
+	let crossfadeTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function switchImage(index: number) {
+		if (index === imageIndex) return;
+		if (crossfadeTimer) {
+			clearTimeout(crossfadeTimer);
+			crossfadeTimer = null;
+		}
+		outgoingImage = currentImage;
+		outgoingSize = currentSize;
+		outgoingBackdrop = presetImageUrl(currentImage, 'cover', 800);
+		incomingReady = false;
+		imageIndex = index;
+
+		// 300ms 安全兜底（弱网/离线时优雅回退，不阻断交互）
+		crossfadeTimer = setTimeout(() => {
+			incomingReady = true;
+			outgoingImage = null;
+			outgoingBackdrop = null;
+		}, 300);
+	}
+
+	function onIncomingReady() {
+		incomingReady = true;
+		if (crossfadeTimer) clearTimeout(crossfadeTimer);
+		crossfadeTimer = setTimeout(() => {
+			outgoingImage = null;
+			outgoingBackdrop = null;
+		}, 140);
+	}
+
 	/** 画廊图片加载失败兜底：隐藏破图图标，但保留 img 的 width/height 比例占位，
 	 *  避免容器高度塌陷成「一长条」后覆盖层（「共 N 张」角标）错位。
 	 *  2026-10-29 用户实测复现：图片请求失败时容器高度 587px→18px、角标跑到容器外。 */
@@ -163,6 +199,15 @@
 				<div class="relative overflow-hidden rounded-none sm:rounded-t-lg bg-surface-subtle">
 					<!-- 移动端顶部渐变暗影层（Scrim）：确保顶部浮动白标头/白按钮在任意明亮天空图下均具备超高辨识度与现代沉浸感 -->
 					<div class="pointer-events-none absolute inset-x-0 top-0 h-28 z-10 sm:hidden" style="background:var(--cst-surface-card-scrim-top);"></div>
+					{#if outgoingBackdrop}
+						<img
+							src={outgoingBackdrop}
+							alt=""
+							aria-hidden="true"
+							class="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-soft transition-opacity duration-rapid ease-standard {incomingReady ? 'opacity-0' : 'opacity-soft'}"
+							style="filter:blur(var(--cst-blur-lg));"
+						/>
+					{/if}
 					<img
 						data-gallery-backdrop
 						src={presetImageUrl(currentImage, 'cover', 800)}
@@ -170,7 +215,7 @@
 						aria-hidden="true"
 						loading="lazy"
 						decoding="async"
-						class="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-soft"
+						class="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover transition-opacity duration-rapid ease-standard {incomingReady ? 'opacity-soft' : 'opacity-0'}"
 						style="filter:blur(var(--cst-blur-lg));"
 					/>
 					<div class="pointer-events-none absolute inset-0" style="background:var(--cst-surface-media-scrim-card);"></div>
@@ -183,23 +228,38 @@
 							viewerOpen = true;
 						}}
 					>
-						{#key imageIndex}
+						{#if outgoingImage}
 							<img
-								data-gallery-image
-								src={presetImageUrl(currentImage, 'cover', 1600)}
-								srcset={presetSrcSet(currentImage, 'cover')}
+								data-gallery-outgoing
+								src={presetImageUrl(outgoingImage, 'cover', 1600)}
+								srcset={presetSrcSet(outgoingImage, 'cover')}
 								sizes="(min-width: 768px) 50.75rem, 100vw"
-								alt="动态图片"
-								width={currentSize?.width ?? undefined}
-								height={currentSize?.height ?? undefined}
-								loading={imageIndex === 0 ? 'eager' : 'lazy'}
-								fetchpriority={imageIndex === 0 ? 'high' : 'auto'}
+								alt=""
+								aria-hidden="true"
+								width={outgoingSize?.width ?? undefined}
+								height={outgoingSize?.height ?? undefined}
 								decoding="async"
-								class="block h-auto w-full object-contain"
-								use:fadeImage
-								onerror={onGalleryImageError}
+								class="pointer-events-none absolute inset-0 block h-full w-full object-contain transition-opacity duration-rapid ease-standard {incomingReady ? 'opacity-0' : 'opacity-100'}"
 							/>
-						{/key}
+						{/if}
+						<img
+							data-gallery-image
+							src={presetImageUrl(currentImage, 'cover', 1600)}
+							srcset={presetSrcSet(currentImage, 'cover')}
+							sizes="(min-width: 768px) 50.75rem, 100vw"
+							alt="动态图片"
+							width={currentSize?.width ?? undefined}
+							height={currentSize?.height ?? undefined}
+							loading={imageIndex === 0 ? 'eager' : 'lazy'}
+							fetchpriority={imageIndex === 0 ? 'high' : 'auto'}
+							decoding="async"
+							class="block h-auto w-full object-contain transition-opacity duration-rapid ease-standard {incomingReady ? 'opacity-100' : 'opacity-0'}"
+							onload={() => onIncomingReady()}
+							onerror={(e) => {
+								onGalleryImageError(e);
+								onIncomingReady();
+							}}
+						/>
 					</button>
 					{#if moment.images.length > 1}
 						<span class="media-badge pointer-events-none absolute bottom-3 right-3 z-2 shadow-xs" aria-hidden="true">
@@ -219,10 +279,10 @@
 							type="button"
 							aria-pressed={i === imageIndex}
 							aria-label={`第 ${i + 1} 张图片`}
-							class="relative size-14 shrink-0 overflow-hidden rounded-md transition-opacity duration-standard focus-ring {i === imageIndex
-								? 'opacity-100 ring-2 ring-accent-default'
+							class="relative size-14 shrink-0 overflow-hidden rounded-md transition-[opacity,transform,box-shadow] duration-standard ease-standard focus-ring active:scale-95 {i === imageIndex
+								? 'opacity-100 ring-2 ring-accent-default shadow-raised-sm'
 								: 'opacity-dim hover:opacity-100'}"
-							onclick={() => (imageIndex = i)}
+							onclick={() => switchImage(i)}
 						>
 							<img
 								src={presetImageUrl(img, 'thumb', 200)}

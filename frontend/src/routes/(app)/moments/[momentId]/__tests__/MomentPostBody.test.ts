@@ -2,7 +2,7 @@
 // 单图按原比例完整展示（object-contain、无固定 cover 高度）；动作条所有端内嵌；评论区可注入输入器。
 import { describe, it, expect, vi } from 'vitest';
 import { createRawSnippet } from 'svelte';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import MomentPostBody from '../MomentPostBody.svelte';
 
 const moment = {
@@ -86,5 +86,31 @@ describe('MomentPostBody 详情媒体与布局契约', () => {
 		const node = document.querySelector('[data-test="composer"]');
 		expect(node).toBeTruthy();
 		expect(node?.closest('section')?.id).toBe('moment-comments');
+	});
+
+	it('多图画廊：切换缩略图时保留双层交叉过渡，角标同步', async () => {
+		const multiImageMoment = {
+			...moment,
+			images: ['https://images.example.com/1.jpg', 'https://images.example.com/2.jpg']
+		};
+		const { container } = render(MomentPostBody, { props: { ...baseProps, moment: multiImageMoment } });
+		const thumbs = screen.getAllByRole('button', { name: /第 \d 张图片/ });
+		expect(thumbs).toHaveLength(2);
+		expect(thumbs[0].getAttribute('aria-pressed')).toBe('true');
+		expect(thumbs[1].getAttribute('aria-pressed')).toBe('false');
+
+		// 初始角标 1 / 2
+		const badge = container.querySelector('.media-badge');
+		expect(badge?.textContent?.trim()).toBe('1 / 2');
+
+		// 点击第二张缩略图
+		await fireEvent.click(thumbs[1]);
+		expect(thumbs[1].getAttribute('aria-pressed')).toBe('true');
+		expect(badge?.textContent?.trim()).toBe('2 / 2');
+
+		// 主图依旧存在，具备过渡与平滑类
+		const currentImg = container.querySelector('[data-gallery-image]') as HTMLImageElement;
+		expect(currentImg).toBeTruthy();
+		expect(currentImg.className).toContain('duration-rapid');
 	});
 });

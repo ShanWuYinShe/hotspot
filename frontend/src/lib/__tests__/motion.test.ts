@@ -136,7 +136,7 @@ describe('popOn / playPop（点击驱动，避免数据同步误播）', () => {
 	});
 });
 
-describe('contentFade（骨架→内容）', () => {
+describe('contentFade（骨架→内容 与 筛选切换淡入）', () => {
 	it('true→false 播 .content-fade；初始 false 不播', () => {
 		mockReduced(false);
 		const node = document.createElement('div');
@@ -151,12 +151,36 @@ describe('contentFade（骨架→内容）', () => {
 		node2.dispatchEvent(new Event('animationend'));
 		expect(node2.classList.contains('content-fade')).toBe(false);
 	});
-	it('reduced：不播', () => {
+	it('支持 { showSkeleton, trigger }：trigger 变化时在非骨架态重播 .content-fade', () => {
+		mockReduced(false);
+		const node = document.createElement('div');
+		const action = contentFade(node, { showSkeleton: false, trigger: '全部' });
+		expect(node.classList.contains('content-fade')).toBe(false);
+		// trigger 变更触发平滑淡入
+		action.update({ showSkeleton: false, trigger: '摄影' });
+		expect(node.classList.contains('content-fade')).toBe(true);
+		node.dispatchEvent(new Event('animationend'));
+		expect(node.classList.contains('content-fade')).toBe(false);
+
+		// trigger 相同不重复播
+		action.update({ showSkeleton: false, trigger: '摄影' });
+		expect(node.classList.contains('content-fade')).toBe(false);
+
+		// 处于骨架态时 trigger 变更不播
+		action.update({ showSkeleton: true, trigger: '运动' });
+		expect(node.classList.contains('content-fade')).toBe(false);
+	});
+	it('reduced：trigger 变化或骨架结束均不播', () => {
 		mockReduced(true);
 		const node = document.createElement('div');
 		const action = contentFade(node, true);
 		action.update(false);
 		expect(node.classList.contains('content-fade')).toBe(false);
+
+		const node2 = document.createElement('div');
+		const action2 = contentFade(node2, { showSkeleton: false, trigger: '全部' });
+		action2.update({ showSkeleton: false, trigger: '摄影' });
+		expect(node2.classList.contains('content-fade')).toBe(false);
 	});
 });
 

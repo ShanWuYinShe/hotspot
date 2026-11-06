@@ -462,9 +462,11 @@
 				</div>
 			{/if}
 
-			<div class="px-3.5 sm:px-0">
-				{@render nearbyBanner()}
-			</div>
+			{#if device !== 'desktop'}
+				<div class="px-3.5 sm:px-0">
+					{@render nearbyBanner()}
+				</div>
+			{/if}
 		{:else}
 			<EmptyState
 				title={activeTab === 'following' ? '暂无关注动态' : '还没有动态'}
@@ -477,9 +479,11 @@
 				{/snippet}
 			</EmptyState>
 
-			<div class="px-3.5 sm:px-0">
-				{@render nearbyBanner()}
-			</div>
+			{#if device !== 'desktop'}
+				<div class="px-3.5 sm:px-0">
+					{@render nearbyBanner()}
+				</div>
+			{/if}
 		{/if}
 		</div>
 
@@ -693,35 +697,6 @@
 						</div>
 					</RailSection>
 				{/if}
-
-				<!-- 探索雷达：改成「入口卡」形态——图标砖 + 一句说明 + 箭头 -->
-				<RailSection
-					title="探索雷达"
-					icon={Compass}
-					action="全景地图"
-					onAction={() => void goto(ROUTES.map)}
-					variant="island"
-				>
-					<button
-						type="button"
-						class="hover-bg focus-ring group/entry -mx-2 flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition-colors"
-						onclick={() => void goto(ROUTES.nearby)}
-					>
-						<span
-							class="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft transition-transform duration-rapid group-hover/entry:scale-105"
-						>
-							<Compass class="size-5" strokeWidth={1.75} />
-						</span>
-						<span class="min-w-0 flex-1">
-							<span class="block text-sm font-semibold text-text-primary">发现身边 5km</span>
-							<span class="mt-0.5 block truncate text-xxs text-text-secondary">人 · 群组 · 瞬间三合一雷达</span>
-						</span>
-						<ArrowRight
-							class="size-4 shrink-0 text-text-secondary transition-all duration-rapid group-hover/entry:translate-x-0.5 group-hover/entry:text-accent-default"
-							strokeWidth={1.75}
-						/>
-					</button>
-				</RailSection>
 			</div>
 		{/if}
 		{/snippet}
