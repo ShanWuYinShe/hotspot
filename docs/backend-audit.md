@@ -2224,3 +2224,23 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
 
 未做（后续）：admin→system 公告仓储隐藏副本、admin 10 处跨模块写改走归属模块
 管理接口、错误模型统一（P0-3）、全局单例 DI 收敛（P0-1）、repo_memory 迁测试。
+
+
+## Batch C（第二批）：公告归属 system + 跨模块仓储构造门禁（2026-11-06）
+
+- **admin 不再自建 system.Repository 隐藏副本**：公告 CRUD 经 system 模块新增的
+  `AnnouncementAdminStore` 最小接口（`system.Service` 实现）转发到唯一仓储，
+  Repository 内部缓存失效天然同实例；删除 admin 的独立 systemRepo 构造、
+  `SetAnnouncementsVersionInvalidator` 钩子及其过时测试。管理端公告测试改为
+  断言「写入确实委托给注入的 system store」。
+- **生产代码去除测试便捷构造函数里的跨模块内存仓储**：
+  - privatemessages：`NewService`/`NewServiceWithRepo`/`NewRuntimeWithRepo` 移到
+    `service_testhelpers_test.go`（生产只用显式依赖的 NewServiceWithDeps/NewRuntime）；
+  - comments：删除内部 `notify.NewService()` 的 `NewService` 便捷构造，调用方改
+    显式 NewServiceWithDeps；
+  - moments：删除 `NewService()`（内部构造 notify 内存服务）。
+- **archtest 新增规则**：模块生产代码不得构造其它模块的 Repository
+  （`NewPostgresRepository`/`NewInMemoryRepository`），并带检测器自测样例，
+  防止扫描空转；隐藏副本类问题从「靠审计发现」变为「提交即失败」。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

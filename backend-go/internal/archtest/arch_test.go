@@ -253,6 +253,108 @@ func TestTableOwnershipRegistryCoversSchema(t *testing.T) {
 	}
 }
 
+// ── 跨模块仓储构造约束 ─────────────────────────────────────────────
+
+var repositoryConstructors = map[string]bool{
+	"NewPostgresRepository": true,
+	"NewInMemoryRepository": true,
+}
+
+// importedModuleAliases 返回文件中「本地包名 -> 归属模块」映射（只含 modules 包）。
+func importedModuleAliases(file *ast.File) map[string]string {
+	aliases := make(map[string]string)
+	const prefix = "hotspot/backend-go/internal/modules/"
+	for _, imp := range file.Imports {
+		impPath := strings.Trim(imp.Path.Value, "\"")
+		if !strings.HasPrefix(impPath, prefix) {
+			continue
+		}
+		target := strings.Split(strings.TrimPrefix(impPath, prefix), "/")[0]
+		local := target
+		if imp.Name != nil {
+			local = imp.Name.Name
+		}
+		aliases[local] = target
+	}
+	return aliases
+}
+
+// crossModuleRepoConstructions 返回模块内对其它模块仓储构造函数的调用点描述。
+// 生产模块只能消费对方暴露的 Service/最小接口，不得自建对方 Repository
+// （架构审计 P0-1 隐藏副本；如 admin 曾自建 system.Repository）。
+func crossModuleRepoConstructions(file *ast.File, module string) []string {
+	aliases := importedModuleAliases(file)
+	var found []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || !repositoryConstructors[sel.Sel.Name] {
+			return true
+		}
+		ident, ok := sel.X.(*ast.Ident)
+		if !ok {
+			return true
+		}
+		target, ok := aliases[ident.Name]
+		if !ok || target == module {
+			return true
+		}
+		found = append(found, target+"."+sel.Sel.Name)
+		return true
+	})
+	return found
+}
+
+// TestModulesDoNotConstructOtherModulesRepositories 模块生产代码不得构造其它模块
+// 的 Repository（仓储归属对方模块，只能经其导出的 Service/最小接口消费）。
+func TestModulesDoNotConstructOtherModulesRepositories(t *testing.T) {
+	root := backendRoot(t)
+	moduleFiles(t, root, func(module, path string) {
+		for _, call := range crossModuleRepoConstructions(parseGoFile(t, path), module) {
+			t.Errorf("跨模块仓储构造：%s 中调用 %s（文件 %s）。"+
+				"请改为消费归属模块导出的 Service/最小接口（如 system.AnnouncementAdminStore）。",
+				module, call, strings.TrimPrefix(path, root+"/"))
+		}
+	})
+}
+
+// TestCrossModuleRepoConstructionDetection 用最小样例验证检测器本身有效
+// （防止扫描逻辑空转导致门禁形同虚设）。
+func TestCrossModuleRepoConstructionDetection(t *testing.T) {
+	src := `package sample
+
+import (
+	systemmodule "hotspot/backend-go/internal/modules/system"
+	users "hotspot/backend-go/internal/modules/users"
+	"hotspot/backend-go/internal/modules/admin"
+)
+
+var _ = systemmodule.NewPostgresRepository(nil)
+var _ = users.NewInMemoryRepository()
+var _ = admin.NewPostgresRepository(nil)
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "sample.go", src, 0)
+	if err != nil {
+		t.Fatalf("parse sample: %v", err)
+	}
+	got := crossModuleRepoConstructions(file, "admin")
+	want := map[string]bool{
+		"system.NewPostgresRepository": true,
+		"users.NewInMemoryRepository":  true,
+	}
+	if len(got) != len(want) {
+		t.Fatalf("detected = %v, want keys of %v", got, want)
+	}
+	for _, call := range got {
+		if !want[call] {
+			t.Fatalf("unexpected detection: %s (all=%v)", call, got)
+		}
+	}
+}
+
 // TestCrossModuleSQLWritesAreAllowlisted 扫描模块 SQL 字面量中的写表动作，
 // 除归属模块自身外必须命中有原因的 allowlist。
 func TestCrossModuleSQLWritesAreAllowlisted(t *testing.T) {

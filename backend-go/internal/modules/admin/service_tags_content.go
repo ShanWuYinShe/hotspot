@@ -130,7 +130,6 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 	if err != nil {
 		return AdminAnnouncementItem{}, nil, err
 	}
-	s.invalidateAnnouncementsVersion()
 	if s.pushService != nil {
 		// 全量 fanout 按 user_id 升序 keyset 分批：此前复用 SearchUsers
 		// （limit 被 NormalizeLimit 钳到 100），公告只落库给前 100 个用户。
@@ -215,7 +214,6 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncement
 		}
 		return AdminAnnouncementItem{}, nil, err
 	}
-	s.invalidateAnnouncementsVersion()
 	details := AuditDetails{"type": string(AuditActionAnnouncementUpdate), "title": updatedTitle}
 	if len(changedFields) > 0 {
 		details["changed_fields"] = changedFields
@@ -251,7 +249,6 @@ func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string)
 		}
 		return nil, err
 	}
-	s.invalidateAnnouncementsVersion()
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: announcementID, TargetName: current.Title, Details: AuditDetails{"type": string(AuditActionAnnouncementDelete), "title": current.Title}}); err != nil {
 		return nil, err
 	}

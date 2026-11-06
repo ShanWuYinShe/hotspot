@@ -123,7 +123,7 @@ func TestCreateCommentAdjustsInteractionCount(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	momentRepo := NewInMemoryRepository()
 	momentService := NewServiceWithRepo(momentRepo)
-	commentService := comments.NewService(comments.NewInMemoryRepository(), momentService)
+	commentService := comments.NewServiceWithDeps(comments.NewInMemoryRepository(), momentService, nil, nil, nil, nil)
 	momentHandler := NewHandler(momentService)
 	commentHandler := comments.NewHandler(commentService)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
@@ -218,7 +218,7 @@ func TestCreateCommentWithFailingCounterStillSucceeds(t *testing.T) {
 func TestCreateCommentReturns10300WhenMomentMissing(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	momentRepo := NewServiceWithRepo(NewInMemoryRepository())
-	commentService := comments.NewService(comments.NewInMemoryRepository(), momentRepo)
+	commentService := comments.NewServiceWithDeps(comments.NewInMemoryRepository(), momentRepo, nil, nil, nil, nil)
 	commentHandler := comments.NewHandler(commentService)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
@@ -231,7 +231,7 @@ func TestCreateCommentReturns10300WhenMomentMissing(t *testing.T) {
 }
 
 func TestListCommentsReturns10300WhenMomentMissing(t *testing.T) {
-	commentService := comments.NewService(comments.NewInMemoryRepository(), NewServiceWithRepo(NewInMemoryRepository()))
+	commentService := comments.NewServiceWithDeps(comments.NewInMemoryRepository(), NewServiceWithRepo(NewInMemoryRepository()), nil, nil, nil, nil)
 	commentHandler := comments.NewHandler(commentService)
 
 	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"moment_id":"moment_missing"}`))

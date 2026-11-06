@@ -10,7 +10,7 @@ import (
 
 func TestServiceCoverageHelpers(t *testing.T) {
 	// NewService 系列构造
-	if svc := NewService(); svc == nil || svc.repo == nil {
+	if svc := NewServiceWithRepo(NewInMemoryRepository()); svc == nil || svc.repo == nil {
 		t.Fatal("NewService must wire repo")
 	}
 	if svc := NewServiceWithRepo(NewInMemoryRepository()); svc == nil || svc.repo == nil {

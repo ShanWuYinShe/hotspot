@@ -4,20 +4,45 @@ import (
 	"context"
 	"testing"
 
+	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
-	"hotspot/backend-go/internal/platform/realtime"
 )
 
-// TestAnnouncementWritesInvalidateBootstrapVersion：admin 用独立 systemRepo 实例写公告，
-// 必须显式失效 system 模块的 bootstrap 版本缓存（否则 ETag 最长延迟 5s 才变化）。
-func TestAnnouncementWritesInvalidateBootstrapVersion(t *testing.T) {
-	svc, _, _, _ := newTestService()
-	previousHub := realtime.DefaultHub()
-	realtime.SetDefaultHub(realtime.NewHub())
-	t.Cleanup(func() { realtime.SetDefaultHub(previousHub) })
+// recordingAnnouncementStore 记录管理端公告写次数：公告归 system 模块所有，
+// admin 只经 AnnouncementAdminStore 最小接口读写，不再持有 system.Repository
+// 副本或跨实例缓存失效钩子（架构审计 P0-1 隐藏实例）。
+type recordingAnnouncementStore struct {
+	inner                     *InMemoryModerationStore
+	creates, updates, deletes int
+}
 
-	invalidations := 0
-	svc.SetAnnouncementsVersionInvalidator(func() { invalidations++ })
+func (s *recordingAnnouncementStore) SearchAnnouncements(ctx context.Context, filter systemmodule.AnnouncementSearchFilter) (systemmodule.AnnouncementPage, error) {
+	return s.inner.SearchAnnouncements(ctx, filter)
+}
+
+func (s *recordingAnnouncementStore) GetAnnouncement(ctx context.Context, announcementID string) (systemmodule.AnnouncementRecord, bool, error) {
+	return s.inner.GetAnnouncement(ctx, announcementID)
+}
+
+func (s *recordingAnnouncementStore) CreateAnnouncement(ctx context.Context, input systemmodule.AnnouncementCreateInput) (systemmodule.AnnouncementRecord, error) {
+	s.creates++
+	return s.inner.CreateAnnouncement(ctx, input)
+}
+
+func (s *recordingAnnouncementStore) UpdateAnnouncement(ctx context.Context, input systemmodule.AnnouncementUpdateInput) (systemmodule.AnnouncementRecord, error) {
+	s.updates++
+	return s.inner.UpdateAnnouncement(ctx, input)
+}
+
+func (s *recordingAnnouncementStore) DeleteAnnouncement(ctx context.Context, announcementID string) error {
+	s.deletes++
+	return s.inner.DeleteAnnouncement(ctx, announcementID)
+}
+
+func TestAnnouncementWritesGoThroughSystemStore(t *testing.T) {
+	announcements := &recordingAnnouncementStore{inner: NewInMemoryModerationStore()}
+	store := NewPersistenceModerationStore(nil, announcements)
+	svc := NewService(NewInMemoryRepository(), &stubProvider{config: defaultConfig()}, store, &stubPushService{})
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "admin", SessionID: "sess_admin"})
 
 	created, apiErr, err := svc.CreateAnnouncement(ctx, CreateAnnouncementRequest{
@@ -35,7 +60,8 @@ func TestAnnouncementWritesInvalidateBootstrapVersion(t *testing.T) {
 	if _, err = svc.DeleteAnnouncement(ctx, created.AnnouncementID); err != nil {
 		t.Fatalf("DeleteAnnouncement: %v", err)
 	}
-	if invalidations != 3 {
-		t.Fatalf("announcement version invalidations = %d, want 3 (create/update/delete)", invalidations)
+	if announcements.creates != 1 || announcements.updates != 1 || announcements.deletes != 1 {
+		t.Fatalf("write delegation = create:%d update:%d delete:%d, want 1/1/1",
+			announcements.creates, announcements.updates, announcements.deletes)
 	}
 }

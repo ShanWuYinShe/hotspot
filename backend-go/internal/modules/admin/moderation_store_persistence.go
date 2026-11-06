@@ -2,9 +2,7 @@ package admin
 
 import (
 	"context"
-	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
@@ -13,18 +11,20 @@ import (
 
 type PersistenceModerationStore struct {
 	factory *persistence.Factory
-	system  systemmodule.Repository
-	memory  *InMemoryModerationStore
+	// announcements 由 system 模块实现（只暴露公告管理最小接口）：公告数据
+	// 归 system 所有，admin 不再自建 system.Repository 副本。
+	announcements systemmodule.AnnouncementAdminStore
+	memory        *InMemoryModerationStore
 }
 
-func NewPersistenceModerationStore(factory *persistence.Factory, systemRepo systemmodule.Repository) *PersistenceModerationStore {
-	if systemRepo == nil {
-		systemRepo = NewInMemoryModerationStoreSystemAdapter()
+func NewPersistenceModerationStore(factory *persistence.Factory, announcements systemmodule.AnnouncementAdminStore) *PersistenceModerationStore {
+	if announcements == nil {
+		announcements = NewInMemoryModerationStore()
 	}
 	return &PersistenceModerationStore{
-		factory: factory,
-		system:  systemRepo,
-		memory:  NewInMemoryModerationStore(),
+		factory:       factory,
+		announcements: announcements,
+		memory:        NewInMemoryModerationStore(),
 	}
 }
 
@@ -126,76 +126,23 @@ func (s *PersistenceModerationStore) SetTagBan(ctx context.Context, name string,
 }
 
 func (s *PersistenceModerationStore) SearchAnnouncements(ctx context.Context, filter systemmodule.AnnouncementSearchFilter) (systemmodule.AnnouncementPage, error) {
-	return s.system.SearchAnnouncements(ctx, filter)
+	return s.announcements.SearchAnnouncements(ctx, filter)
 }
 
 func (s *PersistenceModerationStore) GetAnnouncement(ctx context.Context, announcementID string) (systemmodule.AnnouncementRecord, bool, error) {
-	return s.system.GetAnnouncement(ctx, announcementID)
+	return s.announcements.GetAnnouncement(ctx, announcementID)
 }
 
 func (s *PersistenceModerationStore) CreateAnnouncement(ctx context.Context, input systemmodule.AnnouncementCreateInput) (systemmodule.AnnouncementRecord, error) {
-	return s.system.CreateAnnouncement(ctx, input)
+	return s.announcements.CreateAnnouncement(ctx, input)
 }
 
 func (s *PersistenceModerationStore) UpdateAnnouncement(ctx context.Context, input systemmodule.AnnouncementUpdateInput) (systemmodule.AnnouncementRecord, error) {
-	return s.system.UpdateAnnouncement(ctx, input)
+	return s.announcements.UpdateAnnouncement(ctx, input)
 }
 
 func (s *PersistenceModerationStore) DeleteAnnouncement(ctx context.Context, announcementID string) error {
-	return s.system.DeleteAnnouncement(ctx, announcementID)
-}
-
-type inMemoryModerationStoreSystemAdapter struct {
-	repo *InMemoryModerationStore
-	// version 公告域变更指纹（system.Repository.AnnouncementsVersion）：
-	// 内存 store 无 updated_at，用原子计数等价表达「域已变更」。
-	version atomic.Uint64
-}
-
-func NewInMemoryModerationStoreSystemAdapter() systemmodule.Repository {
-	store := NewInMemoryModerationStore()
-	return &inMemoryModerationStoreSystemAdapter{repo: store}
-}
-
-func (a *inMemoryModerationStoreSystemAdapter) GetMeta(ctx context.Context) systemmodule.ApiVersionMeta {
-	return systemmodule.ApiVersionMeta{Version: "v1", Status: systemmodule.ApiVersionStatusActive}
-}
-
-func (a *inMemoryModerationStoreSystemAdapter) AnnouncementsVersion(context.Context) (string, error) {
-	return strconv.FormatUint(a.version.Load(), 10), nil
-}
-
-func (a *inMemoryModerationStoreSystemAdapter) Health(ctx context.Context) (int, string, *systemmodule.HealthStatus) {
-	status := &systemmodule.HealthStatus{Status: systemmodule.SystemHealthHealthy, Timestamp: time.Now().UTC().Format(time.RFC3339)}
-	return 0, "", status
-}
-
-func (a *inMemoryModerationStoreSystemAdapter) ListAnnouncements(ctx context.Context, limit int) ([]systemmodule.AnnouncementRecord, error) {
-	page, err := a.repo.SearchAnnouncements(ctx, systemmodule.AnnouncementSearchFilter{Limit: limit})
-	return page.Items, err
-}
-
-func (a *inMemoryModerationStoreSystemAdapter) SearchAnnouncements(ctx context.Context, filter systemmodule.AnnouncementSearchFilter) (systemmodule.AnnouncementPage, error) {
-	return a.repo.SearchAnnouncements(ctx, filter)
-}
-
-func (a *inMemoryModerationStoreSystemAdapter) GetAnnouncement(ctx context.Context, announcementID string) (systemmodule.AnnouncementRecord, bool, error) {
-	return a.repo.GetAnnouncement(ctx, announcementID)
-}
-
-func (a *inMemoryModerationStoreSystemAdapter) CreateAnnouncement(ctx context.Context, input systemmodule.AnnouncementCreateInput) (systemmodule.AnnouncementRecord, error) {
-	a.version.Add(1)
-	return a.repo.CreateAnnouncement(ctx, input)
-}
-
-func (a *inMemoryModerationStoreSystemAdapter) UpdateAnnouncement(ctx context.Context, input systemmodule.AnnouncementUpdateInput) (systemmodule.AnnouncementRecord, error) {
-	a.version.Add(1)
-	return a.repo.UpdateAnnouncement(ctx, input)
-}
-
-func (a *inMemoryModerationStoreSystemAdapter) DeleteAnnouncement(ctx context.Context, announcementID string) error {
-	a.version.Add(1)
-	return a.repo.DeleteAnnouncement(ctx, announcementID)
+	return s.announcements.DeleteAnnouncement(ctx, announcementID)
 }
 
 func normalizeTagSearchKeyword(keyword string) string {

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/platform/actor"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -60,10 +59,6 @@ type commentNotificationWriter interface {
 	AppendMomentCommented(ctx context.Context, targetUserID string, actor types.UserInfo, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (string, error)
 	AppendCommentReply(ctx context.Context, targetUserID string, actor types.UserInfo, momentID string, momentSummary types.MomentSummary, parentCommentID string, parentPreview string, replyID string, replyPreview string) (string, error)
 	AppendMentionedBatch(ctx context.Context, targetUserIDs []string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (map[string]string, error)
-}
-
-func NewService(repo Repository, moments MomentProvider) *Service {
-	return NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
 }
 
 func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWriter commentNotificationWriter, actorProvider actor.Provider, appConfig appconfig.Source, runInTx persistence.TxRunner) *Service {

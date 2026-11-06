@@ -12,7 +12,7 @@ import (
 // reaction_added 通知。这里把 moments 置 nil 以隔离该分支，只验证 IsDeleted 判定。
 func TestCommentReactionProviderRejectsSoftDeletedComment(t *testing.T) {
 	repo := comments.NewInMemoryRepository()
-	svc := comments.NewService(repo, nil)
+	svc := comments.NewServiceWithDeps(repo, nil, nil, nil, nil, nil)
 	provider := commentReactionProvider{comments: svc, moments: nil}
 
 	ctx := context.Background()

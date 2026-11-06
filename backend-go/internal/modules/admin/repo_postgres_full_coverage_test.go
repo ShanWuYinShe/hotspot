@@ -643,20 +643,6 @@ func TestAdminModerationStorePersistence(t *testing.T) {
 	if err := store.DeleteAnnouncement(ctx, ann.AnnouncementID); err != nil {
 		t.Fatalf("delete announcement: %v", err)
 	}
-	// adapter 的独立方法（GetMeta/Health/ListAnnouncements；内存无 seed 公告，
-	// ListAnnouncements 返回空列表但不报错）
-	adapter := NewInMemoryModerationStoreSystemAdapter()
-	meta := adapter.GetMeta(ctx)
-	if meta.Version != "v1" {
-		t.Fatalf("get meta: %#v", meta)
-	}
-	_, _, status := adapter.Health(ctx)
-	if status == nil || status.Status == "" {
-		t.Fatal("health must return status")
-	}
-	if _, err := adapter.ListAnnouncements(ctx, 5); err != nil {
-		t.Fatalf("list announcements: %v", err)
-	}
 	if normalizeTagSearchKeyword("  kw  ") != "kw" {
 		t.Fatal("normalizeTagSearchKeyword")
 	}

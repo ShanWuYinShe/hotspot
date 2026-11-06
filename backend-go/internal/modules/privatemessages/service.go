@@ -85,16 +85,6 @@ func (s *Service) runInTx(ctx context.Context, fn func(context.Context) error) e
 	return s.tx(ctx, fn)
 }
 
-func NewService() *Service {
-	userRepo := users.NewInMemoryRepository()
-	return NewServiceWithDeps(NewInMemoryRepository(), users.NewServiceWithRepo(userRepo))
-}
-
-func NewServiceWithRepo(repo Repository) *Service {
-	userRepo := users.NewInMemoryRepository()
-	return NewServiceWithDeps(repo, users.NewServiceWithRepo(userRepo))
-}
-
 func NewServiceWithDeps(repo Repository, userService userReader) *Service {
 	return &Service{repo: repo, users: userService}
 }
@@ -131,14 +121,6 @@ func NewRuntime(factory *persistence.Factory, source appconfig.Source, userServi
 	service.SetAppConfig(source)
 	// 陌生人配额原子化：配额检查与消息写入须在同一事务内经咨询锁串行化（见 Send）。
 	service.SetTxRunner(persistence.NewTxRunner(factory))
-	return &Runtime{
-		handler:     NewHandler(service),
-		readService: service,
-	}
-}
-
-func NewRuntimeWithRepo(repo Repository) *Runtime {
-	service := NewServiceWithRepo(repo)
 	return &Runtime{
 		handler:     NewHandler(service),
 		readService: service,

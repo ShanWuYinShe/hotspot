@@ -95,12 +95,8 @@ func TestPostgresCommentRepoNotConfigured(t *testing.T) {
 }
 
 func TestCommentsConstructorsWire(t *testing.T) {
-	svc := NewService(NewInMemoryRepository(), nil)
+	svc := NewServiceWithDeps(NewInMemoryRepository(), nil, nil, nil, nil, nil)
 	if svc == nil || svc.repo == nil {
-		t.Fatal("NewService must wire repo")
-	}
-	svc2 := NewServiceWithDeps(NewInMemoryRepository(), nil, nil, nil, nil, nil)
-	if svc2 == nil || svc2.repo == nil {
 		t.Fatal("NewServiceWithDeps must wire repo")
 	}
 }

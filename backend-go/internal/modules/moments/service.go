@@ -66,10 +66,6 @@ type momentNotificationWriter interface {
 	AppendMentionedBatch(ctx context.Context, targetUserIDs []string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (map[string]string, error)
 }
 
-func NewService() *Service {
-	return NewServiceWithDepsAndImagesAndConfig(NewInMemoryRepository(), notify.NewService(), nil, nil, nil, nil)
-}
-
 func NewServiceWithRepo(repo Repository) *Service {
 	return NewServiceWithDepsAndImagesAndConfig(repo, notify.NewService(), nil, nil, nil, nil)
 }

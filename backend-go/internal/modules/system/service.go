@@ -104,10 +104,37 @@ func (s *Service) bootstrapVersion(ctx context.Context) string {
 	return fmt.Sprintf("%s:%s:%s", buildinfo.Version, s.provider.AppConfigVersion(ctx), annVersion)
 }
 
+// ── 管理端公告管理（admin 经 AnnouncementAdminStore 消费）──────────────
+// 公告数据归 system 模块所有：写路径全部经本 Service 转发到唯一 Repository，
+// 复用 Repository 内的公告版本缓存失效，不再需要 admin 自建 repo 副本或
+// bootstrap 的跨实例失效接线。
+
+func (s *Service) SearchAnnouncements(ctx context.Context, filter AnnouncementSearchFilter) (AnnouncementPage, error) {
+	return s.repo.SearchAnnouncements(ctx, filter)
+}
+
+func (s *Service) GetAnnouncement(ctx context.Context, announcementID string) (AnnouncementRecord, bool, error) {
+	return s.repo.GetAnnouncement(ctx, announcementID)
+}
+
+func (s *Service) CreateAnnouncement(ctx context.Context, input AnnouncementCreateInput) (AnnouncementRecord, error) {
+	return s.repo.CreateAnnouncement(ctx, input)
+}
+
+func (s *Service) UpdateAnnouncement(ctx context.Context, input AnnouncementUpdateInput) (AnnouncementRecord, error) {
+	return s.repo.UpdateAnnouncement(ctx, input)
+}
+
+func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string) error {
+	return s.repo.DeleteAnnouncement(ctx, announcementID)
+}
+
+var _ AnnouncementAdminStore = (*Service)(nil)
+
 // InvalidateAnnouncementsVersion 转发给 Repository 的公告版本读缓存失效。
-// admin 公告 create/update/delete 成功后由 bootstrap 接线调用：admin 用独立
-// systemRepo 实例写库，与 system 模块的 PostgresRepository 缓存互不可见，
-// 必须显式失效（否则 ETag/版本最长延迟 TTL 才变化）。内存仓库无缓存时为 no-op。
+// 说明：公告写路径经本 Service 转发到唯一 Repository，Repository 内部已自行
+// 失效缓存；本方法保留给显式失效场景（如外部直接改库后的运维兜底）。
+// 内存仓库无缓存时为 no-op。
 func (s *Service) InvalidateAnnouncementsVersion() {
 	if invalidator, ok := s.repo.(interface{ InvalidateAnnouncementsVersion() }); ok {
 		invalidator.InvalidateAnnouncementsVersion()

@@ -1,6 +1,7 @@
 package system
 
 import (
+	"context"
 	"time"
 
 	"hotspot/backend-go/internal/platform/types"
@@ -77,4 +78,15 @@ type AnnouncementUpdateInput struct {
 	Content        *string
 	Severity       *AnnounceSeverity
 	ActionURL      *string
+}
+
+// AnnouncementAdminStore 是管理端公告管理能力的最小接口：公告数据归 system 模块
+// 所有，admin 模块经此接口（由 system.Service 实现）读写公告，不再自建
+// system.Repository 副本（架构审计 P0-1 隐藏实例）。
+type AnnouncementAdminStore interface {
+	SearchAnnouncements(context.Context, AnnouncementSearchFilter) (AnnouncementPage, error)
+	GetAnnouncement(context.Context, string) (AnnouncementRecord, bool, error)
+	CreateAnnouncement(context.Context, AnnouncementCreateInput) (AnnouncementRecord, error)
+	UpdateAnnouncement(context.Context, AnnouncementUpdateInput) (AnnouncementRecord, error)
+	DeleteAnnouncement(context.Context, string) error
 }
