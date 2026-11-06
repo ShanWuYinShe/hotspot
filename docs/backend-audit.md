@@ -2787,3 +2787,17 @@ D5 性能项：users/search 的 1–2 字符中文关键词无可用索引（pg_
 
 验证：verify-backend-ci.sh --with-db ALL CHECKS PASSED（含 manifest 重放校验、
 真实库 IT、覆盖率）。后续可把同一索引策略推广到 moments/groups 搜索。
+
+## Batch D（第三批）：moments/groups 搜索短关键词索引化（2026-11-07）
+
+D5 续：把 users/search 的 PGroonga 方案推广到 moments/search、groups/search。
+
+- 迁移 064：moments.description、groups.name/description 建 PGroonga GIN 索引；
+  schema manifest 更新（128 索引）。
+- SQL：moments/groups keyword 分支增加 &@ 子串预过滤，保留 ILIKE 精确复核；
+  测试 stub 参数位置同步更新（keyword 现为 raw+escaped 两参）。
+- 实测 100k 瞬间 / 50k 群组合成库（keyword=游客，2 字符）：
+  moments 41.9ms → 0.73ms（~57×）；groups 19.7ms → 0.73ms（~27×）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED
+（manifest 128 索引、真实库 IT、覆盖率）。

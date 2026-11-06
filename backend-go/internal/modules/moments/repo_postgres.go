@@ -247,11 +247,14 @@ func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit 
 	kwArg := 0
 	tagArg := 0
 	if keyword != nil && *keyword != "" {
-		// 转义 LIKE 通配符：用户输入的 %/_ 被当通配符会改变匹配语义
-		//（与内存实现的精确子串语义不一致）。
+		// 短关键词（1-2 字符 CJK）无 pg_trgm 索引可用：PGroonga &@ 子串预过滤
+		// 走 GIN 索引（1 字符起有效），外层 ILIKE 精确复核（转义 %/_，与内存
+		// 实现精确子串语义一致），返回语义不变。
+		args = append(args, *keyword)
+		rawArg := len(args)
 		args = append(args, escapeLikePattern(*keyword))
 		kwArg = len(args)
-		builder.WriteString(fmt.Sprintf(" AND m.description ILIKE '%%' || $%d || '%%' ESCAPE '\\'", len(args)))
+		builder.WriteString(fmt.Sprintf(" AND m.description &@ $%d AND m.description ILIKE '%%' || $%d || '%%' ESCAPE '\\'", rawArg, kwArg))
 	}
 	if tag != nil && *tag != "" {
 		args = append(args, *tag)

@@ -111,3 +111,16 @@ GIN 索引；搜索 SQL 先以 &@ 子串预过滤走索引，再保留原 ILIKE 
 
 **运维约束**：所有环境（dev/CI/生产/备份恢复）必须使用同一 PostgreSQL 18 +
 PGroonga 镜像；只替换为官方 postgres:18 会导致 063 迁移失败、搜索索引缺失。
+
+### 6.1 moments/groups 搜索索引（迁移 064）
+
+同一短关键词问题推广到 moments/search、groups/search：100k 瞬间 / 50k 群组合成
+库（keyword=游客，2 字符）实测：
+
+| 端点 | 旧（无可用索引，seq scan） | 新（PGroonga 索引） | 提升 |
+|---|---|---|---|
+| moments/search | 41.9 ms | 0.73 ms | ~57× |
+| groups/search | 19.7 ms | 0.73 ms | ~27× |
+
+迁移 064 为 moments.description、groups.name/description 建 PGroonga GIN 索引；
+SQL 增加 &@ 预过滤 + 原 ILIKE 精确复核（语义不变）。

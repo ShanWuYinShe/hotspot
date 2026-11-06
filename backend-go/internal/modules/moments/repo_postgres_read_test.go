@@ -244,9 +244,11 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 				keywordStr = s
 			}
 		}
+		// keyword 预过滤新增 pgroonga 原始参数（args[0]），转义参数随后；
+		// tag 位于 keyword 两参之后（无 tag 时该位置可能是 popular 时钟）。
 		var tagFilter string
-		if len(args) > 1 {
-			if s, ok := args[1].(string); ok {
+		if len(args) > 2 {
+			if s, ok := args[2].(string); ok {
 				tagFilter = s
 			}
 		}

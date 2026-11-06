@@ -300,9 +300,12 @@ func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any) {
 		}
 	}
 	if req.Keyword != "" {
-		// 转义 LIKE 通配符：与内存实现 strings.Contains 字面语义一致（同 moments 先例）。
+		// 短关键词（1-2 字符 CJK）无 pg_trgm 索引可用：PGroonga &@ 子串预过滤
+		// 走 GIN 索引（1 字符起有效），外层 ILIKE 精确复核（转义 %/_，与内存实现
+		// strings.Contains 字面语义一致）。
+		rawArg := nextArg(req.Keyword)
 		keywordArg := nextArg(textutil.EscapeLikePattern(req.Keyword))
-		builder.WriteString(fmt.Sprintf(" AND (g.name ILIKE '%%' || %s || '%%' ESCAPE '\\' OR g.description ILIKE '%%' || %s || '%%' ESCAPE '\\')", keywordArg, keywordArg))
+		builder.WriteString(fmt.Sprintf(" AND (g.name &@ %s OR g.description &@ %s) AND (g.name ILIKE '%%' || %s || '%%' ESCAPE '\\' OR g.description ILIKE '%%' || %s || '%%' ESCAPE '\\')", rawArg, rawArg, keywordArg, keywordArg))
 	}
 	if req.Tag != "" {
 		builder.WriteString(fmt.Sprintf(" AND %s = ANY(g.tags)", nextArg(req.Tag)))
