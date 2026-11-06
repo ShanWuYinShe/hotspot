@@ -19,7 +19,6 @@ type Service struct {
 	interactionCounter InteractionCounter
 }
 
-func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
 
 func (s *Service) SetInteractionCounter(c InteractionCounter) { s.interactionCounter = c }

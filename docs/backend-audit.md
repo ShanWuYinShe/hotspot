@@ -2352,3 +2352,25 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   行删除、peer 行保留、重复执行幂等）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+
+## Batch C（第八批）：内存仓储迁入测试构建（8/17 模块，2026-11-06）
+
+架构审计 P0-2：「Repository 双实现 + 无 DB 优雅降级」不成立——生产装配永远只
+构造 Postgres 仓储，内存实现只被测试使用却以生产代码形态承担漂移成本。
+
+- **8 个模块**的 `repo_memory.go` 迁移为 `*_test.go`（生产代码净减约 1.5k 行）：
+  auth、mapmodule、privatechats、reactions、reports、search、share、system。
+- 共享声明拆分到生产文件（内存实现在测试构建中继续复用）：
+  auth 的仓储行类型/节流常量 → `repo_types.go`；privatechats 会话键 → `repo_helpers.go`。
+- 测试专用便捷构造函数（`NewService()` 等内部构造内存仓储者）移入
+  `service_testhelpers_test.go`；生产构造函数只接受显式依赖，auth nil 仓储改为
+  fail-fast panic（不再静默降级到内存实现）。
+- system 覆盖率补测（模块装配/路由挂载/管理端公告方法/健康接线）：
+  69.3% → 82.9%，8 个模块均满足 70% 门槛。
+- 剩余 9 个模块（admin/comments/groupmessages/groups/media/moments/notify/
+  privatemessages/users）被跨包测试夹具引用（bootstrap/users/comments/
+  privatechats/reports 的测试直接用对方模块内存仓储），需先逐包替换为本地 fake
+  或真实库 testdb 夹具，后续批次继续迁移。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

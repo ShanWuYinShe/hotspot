@@ -22,12 +22,6 @@ type InMemoryRepository struct {
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{chats: make(map[string]*memoryChatState)}
 }
-func key(a, b string) string {
-	if a < b {
-		return a + ":" + b
-	}
-	return b + ":" + a
-}
 func (r *InMemoryRepository) GetOrCreate(_ context.Context, userID, targetUserID string) (time.Time, error) {
 	k := key(userID, targetUserID)
 	r.mu.Lock()

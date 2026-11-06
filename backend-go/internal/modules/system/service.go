@@ -16,10 +16,6 @@ type Service struct {
 	bootstrap BootstrapResolver
 }
 
-func NewService(appConfig appconfig.Source) *Service {
-	return NewServiceWithDeps(NewInMemoryRepository(), NewAppConfigProvider(appConfig))
-}
-
 func NewServiceWithFactory(factory *persistence.Factory, appConfig appconfig.Source) *Service {
 	return NewServiceWithDeps(NewPostgresRepository(factory), NewAppConfigProvider(appConfig))
 }

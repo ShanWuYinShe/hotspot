@@ -648,7 +648,7 @@ func TestDetectChannel(t *testing.T) {
 // flow is usable end-to-end without an external gateway.
 func TestNewServiceWithSourceDevWiresLogSender(t *testing.T) {
 	cfg := config.Config{AppEnv: "dev", AuthTokenSecret: "test-secret"}
-	svc := NewServiceWithSource(context.Background(), platformauth.NewService(cfg), nil, cfg, nil)
+	svc := NewServiceWithSource(context.Background(), platformauth.NewService(cfg), NewInMemoryRepository(), cfg, nil)
 	if _, ok := svc.codeSender.(*logVerificationSender); !ok {
 		t.Fatalf("expected *logVerificationSender in dev, got %T", svc.codeSender)
 	}

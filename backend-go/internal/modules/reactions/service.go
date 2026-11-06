@@ -33,9 +33,6 @@ type InteractionCounter interface {
 
 // NewService returns a Service suitable for tests (in-memory repo, no
 // providers, no notifications).
-func NewService() *Service {
-	return NewServiceWithDeps(NewInMemoryRepository(), nil, nil, nil)
-}
 
 // NewServiceWithRepo wires a custom repo (e.g. the persistence-backed one)
 // while leaving providers/notifications nil — call sites that need side

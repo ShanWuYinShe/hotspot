@@ -6,36 +6,8 @@ import (
 	"time"
 )
 
-type accountRecord struct {
-	Account
-	PasswordHash      string
-	RegisterIP        string
-	RegisterLocation  string
-	LastLoginIP       string
-	LastLoginLocation string
-}
-
-type passwordResetRecord struct {
-	RequestID        string
-	LoginID          string
-	VerificationCode string
-	ExpiresAt        time.Time
-	CreatedAt        time.Time
-	UsedAt           *time.Time
-	FailedAttempts   int
-}
-
 // registerCodeRecord 注册验证码记录（与 passwordResetRecord 同构，独立存放：
 // 注册码属于「未来账号」，不关联既有账号）。
-type registerCodeRecord struct {
-	RequestID        string
-	LoginID          string
-	VerificationCode string
-	ExpiresAt        time.Time
-	CreatedAt        time.Time
-	ConsumedAt       *time.Time
-	FailedAttempts   int
-}
 
 type InMemoryRepository struct {
 	mu              sync.RWMutex
@@ -45,16 +17,12 @@ type InMemoryRepository struct {
 	registerCodes   map[string][]registerCodeRecord
 }
 
-const passwordResetThrottleWindow = 10 * time.Minute
-
 // registerCodeThrottleWindow 注册验证码 per-login_id 发送节流窗口：IP 维度
 // 由 ratelimit 桶控制，此处按 login_id 兜底防代理池绕过后的验证码轰炸。
-const registerCodeThrottleWindow = 60 * time.Second
 
 // maxVerificationCodeFailures 验证码容错次数：同一 login_id 最新有效码累计
 // 失败满此数即静默作废（防爆破；对齐登录侧 defaultMaxFailures = 5）。
 // PG 与内存双实现共用（同包常量）。
-const maxVerificationCodeFailures = 5
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{

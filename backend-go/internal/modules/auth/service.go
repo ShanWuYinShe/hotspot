@@ -211,7 +211,7 @@ func NewService(auth *platformauth.Service, repo Repository, cfg config.Config) 
 // exits) or a cancellable context via t.Cleanup.
 func NewServiceWithSource(ctx context.Context, auth *platformauth.Service, repo Repository, cfg config.Config, source appconfig.Source) *Service {
 	if repo == nil {
-		repo = NewInMemoryRepository()
+		panic("auth: repository must be provided (内存实现仅存在于测试构建)")
 	}
 	if source == nil {
 		source = appconfig.NewStaticSource(cfg)

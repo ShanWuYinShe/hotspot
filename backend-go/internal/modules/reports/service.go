@@ -22,7 +22,6 @@ type Service struct {
 	messageSnapshots MessageSnapshotSource // optional; nil 时消息举报按目标不存在处理
 }
 
-func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
 
 // MessageSnapshotSource 基于消息真值生成举报快照的最小依赖接口（spec
