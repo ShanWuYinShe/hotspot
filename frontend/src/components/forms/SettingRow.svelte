@@ -36,20 +36,20 @@
 	} = $props();
 </script>
 
-<ListItem onClick={onRowClick} ariaLabel={title} class={cn('px-4 py-3.5', className)}>
+<ListItem onClick={onRowClick} ariaLabel={title} class={cn('group px-4 py-3.5', className)}>
 	<div class="flex items-center gap-3">
-		<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9">
+		<div class="flex items-center justify-center rounded-full shrink-0 icon-badge size-9 transition-transform duration-rapid {onRowClick ? 'group-hover:scale-105' : ''}">
 			{@render icon()}
 		</div>
 		<div class="flex-1 min-w-0">
 			<div class="flex items-center gap-2">
-				<p class="text-sm text-text-primary">{title}</p>
+				<p class="text-sm font-medium text-text-primary">{title}</p>
 				{#if badge}
 					{@render badge()}
 				{/if}
 			</div>
 			{#if description}
-				<p class="text-xs text-text-secondary">{description}</p>
+				<p class="text-xs text-text-secondary mt-0.5 leading-relaxed">{description}</p>
 			{/if}
 		</div>
 		{#if children}

@@ -76,11 +76,13 @@
 	const inList = isInListContext();
 	// 软岛容器内：行背景透明，露出软岛表面（含暗色分层）
 	const inIsland = isInIslandContext();
-	// hover 或 focus 时行处于「激活表面」：叠加 hover-fill 背景
-	const surfaceActive = $derived(hovered || focused);
+	// 可点击行才具备行级交互表面；纯展示静态行不叠加 hover 填充，避免无点击语义时的闪烁变形与子控件受扰
+	const isInteractive = $derived(Boolean(onClick));
+	// hover 或 focus 时行处于「激活表面」：仅对可交互行叠加 hover-fill 背景
+	const surfaceActive = $derived(isInteractive && (hovered || focused));
 
 	// 对齐 Figma Make：可点击时 tap → opacity-tap 档（0.1s），无 scale
-	const itemOpacity = $derived(onClick && pointerDown ? 'var(--cst-opacity-tap)' : 'var(--cst-opacity-full)');
+	const itemOpacity = $derived(isInteractive && pointerDown ? 'var(--cst-opacity-tap)' : 'var(--cst-opacity-full)');
 
 	const isCard = $derived(tone === 'card');
 	const cardShadow = 'var(--shadow-raised-md)';
@@ -124,6 +126,7 @@
 		class={cn(
 			'relative transition-[background-color,border-radius,box-shadow,opacity] duration-rapid ease-standard',
 			isCard ? 'rounded-md border' : inIsland ? 'bg-transparent' : 'bg-surface-primary',
+			isInteractive && inIsland && 'rounded-md',
 			// 行内既有的操作按钮/链接/输入相对定位抬升到行覆盖按钮之上（axe
 			// nested-interactive：button 语义不得嵌套交互子件）；后写的覆盖按钮
 			// 与它们同层级时 DOM 顺序在先，不拦操作点击。
@@ -135,7 +138,7 @@
 			className
 		)}
 		style={`${itemStyle}opacity:${itemOpacity};transition-duration:${pointerDown ? 'var(--cst-motion-instant)' : 'var(--cst-motion-rapid)'};`}
-		onmouseenter={() => canHover && (hovered = true)}
+		onmouseenter={() => canHover && isInteractive && (hovered = true)}
 		onmouseleave={() => {
 			hovered = false;
 			pointerDown = false;

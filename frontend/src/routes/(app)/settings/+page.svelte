@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { LogOut, Settings } from '@lucide/svelte';
+	import { ChevronRight, LogOut, Settings } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
+	import { ROUTES } from '@/lib/routes';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -58,16 +60,29 @@
 		<div class="flex w-full flex-col">
 			<!-- 账号信息 -->
 			{#if auth.isAuthenticated}
-				<SettingsSection title="账号信息" description="当前登录的账号信息">
+				<SettingsSection title="账号信息" description="当前登录的账号信息与个人主页入口">
 					<ListContainer bordered inset class="overflow-hidden">
-						<ListItem class="flex items-center gap-3.5 px-4 py-3.5">
-							<Avatar class="border-2 border-surface-primary shrink-0" src={page.accountAvatar} name={page.accountName} size="lg" />
+						<ListItem
+							onClick={() => void goto(ROUTES.meEdit)}
+							ariaLabel="编辑个人资料"
+							class="group flex items-center gap-3.5 px-4 py-3.5"
+						>
+							<Avatar
+								class="border-2 border-surface-primary shrink-0 transition-transform duration-rapid group-hover:scale-105"
+								src={page.accountAvatar}
+								name={page.accountName}
+								size="lg"
+							/>
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-2">
 									<p class="text-sm font-semibold text-text-primary truncate">{page.accountName || '用户'}</p>
 									<Badge tone="solid">已登录</Badge>
 								</div>
 								<p class="text-xs text-text-secondary mt-0.5 truncate">{page.accountEmail || '未绑定邮箱'}</p>
+							</div>
+							<div class="flex items-center gap-1 text-xs text-text-secondary group-hover:text-text-primary transition-colors">
+								<span>编辑资料</span>
+								<ChevronRight class="size-4 text-text-secondary group-hover:translate-x-0.5 group-hover:text-text-primary transition-transform" strokeWidth={1.75} />
 							</div>
 						</ListItem>
 					</ListContainer>

@@ -92,9 +92,7 @@
 				{#snippet icon()}
 					<Flag class="size-4 text-accent-default" strokeWidth={1.5} />
 				{/snippet}
-				{#snippet badge()}
-					<ChevronRight class="size-4 text-text-secondary" strokeWidth={1.5} />
-				{/snippet}
+				<ChevronRight class="size-4 text-text-secondary transition-transform duration-rapid group-hover:translate-x-0.5 group-hover:text-text-primary" strokeWidth={1.75} />
 			</SettingRow>
 		</ListContainer>
 	</SettingsSection>

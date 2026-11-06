@@ -62,14 +62,14 @@
 							aria-checked={isSelected}
 							onclick={() => setTheme(opt.id as AppTheme)}
 							class={cn(
-								'group relative flex flex-col justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all duration-standard focus-ring hit-slop-44',
+								'group relative flex flex-col justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all duration-rapid focus-ring hit-slop-44',
 								isSelected
-									? 'bg-surface-island ring-2 ring-accent-default shadow-xs'
-									: 'bg-surface-subtle/70 border border-border-default/60 hover:bg-surface-subtle hover:border-border-default/90'
+									? 'bg-surface-island ring-2 ring-accent-default shadow-raised-sm'
+									: 'bg-surface-subtle/70 border border-border-default/60 hover:bg-surface-island hover:border-accent-border/60 hover:shadow-xs'
 							)}
 						>
 							<div class="flex items-center justify-between gap-1.5 sm:gap-2">
-								<div class="flex items-center gap-1 rounded-full bg-surface-primary/90 px-1.5 py-0.5 sm:px-2 sm:py-1 ring-1 ring-border-default/40">
+								<div class="flex items-center gap-1 rounded-full bg-surface-primary/90 px-1.5 py-0.5 sm:px-2 sm:py-1 ring-1 ring-border-default/40 transition-transform duration-standard group-hover:scale-105">
 									<span class="size-2 sm:size-2.5 rounded-full shrink-0 shadow-2xs" style="background-color: {details.preview[2]};" aria-hidden="true"></span>
 									<span class="size-1.5 sm:size-2 rounded-full shrink-0 opacity-80" style="background-color: {details.preview[1]};" aria-hidden="true"></span>
 									<span class="size-1.5 sm:size-2 rounded-full shrink-0 opacity-50" style="background-color: {details.preview[0]};" aria-hidden="true"></span>
@@ -79,11 +79,11 @@
 										<Check class="size-2.5 sm:size-3" strokeWidth={2.5} />
 									</span>
 								{:else}
-									<span class="size-4 sm:size-4.5 rounded-full border border-border-default/60 group-hover:border-border-default shrink-0" aria-hidden="true"></span>
+									<span class="size-4 sm:size-4.5 rounded-full border border-border-default/60 group-hover:border-accent-default/60 group-hover:bg-accent-soft/30 transition-colors shrink-0" aria-hidden="true"></span>
 								{/if}
 							</div>
 							<div class="mt-2 min-w-0">
-								<p class="text-xs sm:text-sm font-semibold truncate {isSelected ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'}">
+								<p class="text-xs sm:text-sm font-semibold truncate transition-colors {isSelected ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'}">
 									{opt.label}
 								</p>
 								<p class="mt-0.5 hidden sm:block text-xxs leading-snug text-text-secondary">
@@ -116,14 +116,14 @@
 							aria-checked={isSelected}
 							onclick={() => setColorScheme(opt.id as ColorSchemeMode)}
 							class={cn(
-								'group relative flex flex-col justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all duration-standard focus-ring hit-slop-44',
+								'group relative flex flex-col justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all duration-rapid focus-ring hit-slop-44',
 								isSelected
-									? 'bg-surface-island ring-2 ring-accent-default shadow-xs'
-									: 'bg-surface-subtle/70 border border-border-default/60 hover:bg-surface-subtle hover:border-border-default/90'
+									? 'bg-surface-island ring-2 ring-accent-default shadow-raised-sm'
+									: 'bg-surface-subtle/70 border border-border-default/60 hover:bg-surface-island hover:border-accent-border/60 hover:shadow-xs'
 							)}
 						>
 							<div class="flex items-center justify-between gap-1.5 sm:gap-2">
-								<div class="flex size-6 sm:size-7 items-center justify-center rounded-lg bg-surface-primary/90 ring-1 ring-border-default/40 {isSelected ? 'text-accent-default' : 'text-text-secondary group-hover:text-text-primary'} shrink-0">
+								<div class="flex size-6 sm:size-7 items-center justify-center rounded-lg bg-surface-primary/90 ring-1 ring-border-default/40 transition-colors duration-rapid {isSelected ? 'text-accent-default bg-accent-soft/30' : 'text-text-secondary group-hover:text-accent-default'} shrink-0">
 									<Icon class="size-3.5 sm:size-4" strokeWidth={1.75} />
 								</div>
 								{#if isSelected}
@@ -131,11 +131,11 @@
 										<Check class="size-2.5 sm:size-3" strokeWidth={2.5} />
 									</span>
 								{:else}
-									<span class="size-4 sm:size-4.5 rounded-full border border-border-default/60 group-hover:border-border-default shrink-0" aria-hidden="true"></span>
+									<span class="size-4 sm:size-4.5 rounded-full border border-border-default/60 group-hover:border-accent-default/60 group-hover:bg-accent-soft/30 transition-colors shrink-0" aria-hidden="true"></span>
 								{/if}
 							</div>
 							<div class="mt-2 min-w-0">
-								<p class="text-xs sm:text-sm font-semibold truncate {isSelected ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'}">
+								<p class="text-xs sm:text-sm font-semibold truncate transition-colors {isSelected ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'}">
 									{opt.label}
 								</p>
 								<p class="mt-0.5 hidden sm:block text-xxs leading-snug text-text-secondary">

@@ -43,7 +43,7 @@
 		{#if isAuthenticated}
 			<Button
 				variant="soft"
-				class="hit-slop-44 h-auto w-full justify-center gap-2 px-4 py-3 text-status-danger hover:bg-danger-bg"
+				class="hit-slop-44 h-auto w-full justify-center gap-2 px-4 py-3 text-status-danger hover:bg-danger-bg/80 border border-status-danger/20 hover:border-status-danger/40 transition-all duration-rapid shadow-2xs"
 				onclick={onOpenLogout}
 			>
 				<LogOut class="size-4" strokeWidth={1.75} />
