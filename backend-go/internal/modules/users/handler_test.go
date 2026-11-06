@@ -11,29 +11,13 @@ import (
 	"testing"
 	"time"
 
-	groups "hotspot/backend-go/internal/modules/groups"
 	grouptypes "hotspot/backend-go/internal/modules/groups"
-	moments "hotspot/backend-go/internal/modules/moments"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/notify"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/realtime"
 )
-
-// seedCommonGroup 通过真实建群 + 入群流程预置「共同群」测试数据。
-// groups.CountCommonGroups 已按成员关系（与 PG 同语义）计算，
-// SeedGroupsByUser 只服务 ListGroupsByUser 的聚合场景。
-func seedCommonGroup(t *testing.T, repo *groups.InMemoryRepository, ownerID, memberID, name string, searchable bool) {
-	t.Helper()
-	group, err := repo.Create(context.Background(), ownerID, grouptypes.CreateGroupRequest{Name: name, IsSearchable: &searchable})
-	if err != nil {
-		t.Fatalf("seed common group create: %v", err)
-	}
-	if _, err := repo.JoinGroup(context.Background(), memberID, group.Group.GroupID, nil); err != nil {
-		t.Fatalf("seed common group join: %v", err)
-	}
-}
 
 type testRealtimeSink struct{ events []realtime.Event }
 
@@ -355,11 +339,7 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	if err := service.repo.PutProfile(ctx, charlie); err != nil {
 		t.Fatalf("put charlie profile: %v", err)
 	}
-	groupsRepo := groups.NewInMemoryRepository()
-	seedCommonGroup(t, groupsRepo, "user_alice", "user_bob", "Common Group", true)
-	groupsSvc := groups.NewServiceWithRepo(groupsRepo)
-	momentsSvc := moments.NewServiceWithRepo(moments.NewInMemoryRepository())
-	service.SetContentProviders(groupsSvc, momentsSvc)
+	service.SetContentProviders(&stubGroupsProvider{commonGroups: map[string]int{"user_alice|user_bob": 1}}, &stubMomentsProvider{})
 	_ = service.repo.PutSettings(ctx, "user_bob", defaultSettings())
 	_ = service.repo.PutSettings(ctx, "user_charlie", defaultSettings())
 
@@ -721,11 +701,7 @@ func TestOpenTheDoorCountsNonSearchableCommonGroups(t *testing.T) {
 	if err := service.repo.PutProfile(ctx, bob); err != nil {
 		t.Fatalf("put bob profile: %v", err)
 	}
-	groupsRepo := groups.NewInMemoryRepository()
-	seedCommonGroup(t, groupsRepo, "user_alice", "user_bob", "Private Group", false)
-	groupsSvc := groups.NewServiceWithRepo(groupsRepo)
-	momentsSvc := moments.NewServiceWithRepo(moments.NewInMemoryRepository())
-	service.SetContentProviders(groupsSvc, momentsSvc)
+	service.SetContentProviders(&stubGroupsProvider{commonGroups: map[string]int{"user_alice|user_bob": 1}}, &stubMomentsProvider{})
 	_ = service.repo.PutSettings(ctx, "user_bob", defaultSettings())
 
 	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
@@ -1227,11 +1203,7 @@ func TestListGroupsHappyPath(t *testing.T) {
 	if err := repo.PutSettings(ctx, "user_alice", defaultSettings()); err != nil {
 		t.Fatalf("put alice settings: %v", err)
 	}
-	groupsRepo := groups.NewInMemoryRepository()
-	groupsRepo.SeedGroupsByUser("user_alice", []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_1", Name: "Test Group"}}})
-	groupsSvc := groups.NewServiceWithRepo(groupsRepo)
-	momentsSvc := moments.NewServiceWithRepo(moments.NewInMemoryRepository())
-	usersSvc.SetContentProviders(groupsSvc, momentsSvc)
+	usersSvc.SetContentProviders(&stubGroupsProvider{groupsByUser: map[string][]grouptypes.GroupItem{"user_alice": {{Group: grouptypes.GroupInfo{GroupID: "group_1", Name: "Test Group"}}}}}, &stubMomentsProvider{})
 	req := httptest.NewRequest(http.MethodPost, "/list_groups", strings.NewReader(`{"user_id":"user_alice"}`)).WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ListGroups(rr, req)

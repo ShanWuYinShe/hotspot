@@ -126,10 +126,6 @@ type groupNotificationWriter interface {
 	AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, reason *string) (string, error)
 }
 
-func NewService() *Service {
-	return NewServiceWithDeps(NewInMemoryRepository(), notify.NewService(), nil)
-}
-
 func NewServiceWithRepo(repo Repository) *Service {
 	return NewServiceWithDeps(repo, notify.NewService(), nil)
 }

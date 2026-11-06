@@ -131,3 +131,13 @@ func containsFold(haystack, needle string) bool {
 	}
 	return strings.Contains(strings.ToLower(haystack), strings.ToLower(needle))
 }
+
+// containsTag 精确命中判定（标签大小写敏感，与 SQL EXISTS 口径一致）。
+func containsTag(tags []string, tag string) bool {
+	for _, t := range tags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
+}

@@ -315,15 +315,6 @@ func (r *InMemoryRepository) Delete(_ context.Context, momentID string) error {
 	return nil
 }
 
-func containsTag(tags []string, tag string) bool {
-	for _, t := range tags {
-		if t == tag {
-			return true
-		}
-	}
-	return false
-}
-
 func (r *InMemoryRepository) Favorite(_ context.Context, userID string, momentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

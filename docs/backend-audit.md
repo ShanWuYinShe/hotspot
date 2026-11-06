@@ -2595,3 +2595,24 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
 - 累计 13/17 模块完成内存仓储迁移。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第十三批）：groups / moments 内存仓储迁入测试构建（2026-11-06）
+
+审计 P0-2 最大一批：groups（5 个 repo_memory*.go，约 1.5k 行）与 moments
+（repo_memory.go，约 640 行）生产内存实现全部迁入测试构建，生产代码净减
+约 2.2k 行。
+
+- groups：repo_memory.go / _announcements / _applications / _invites /
+  _members → *_test.go；生产专用便捷构造 groups.NewService()（内部构造内存
+  仓储）移入 service_testhelpers_test.go，生产装配只接受显式依赖。
+- moments：repo_memory.go → *_test.go；生产复用的 containsTag 提取到
+  tag_helpers.go（搜索游标过滤使用）。
+- 跨包阻塞点解除：users 的 4 个用例此前用 groups/moments 真实 Service 当
+  content provider；改为本地最小桩 stubGroupsProvider / stubMomentsProvider
+  （覆盖 ListGroupsByUser/CountCommonGroups/OwnedGroupCount 与
+  ListMomentsByAuthor（含 includePrivate 过滤）/ListReactedByUser），users
+  用例只验证本模块聚合/过滤契约，不再依赖其它模块内存实现。
+- 覆盖率（真实生产代码）：groups 72.9%、moments 71.1%，均过 70% 门槛。
+- 累计 15/17 模块完成内存迁移（剩余 notify、users）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
