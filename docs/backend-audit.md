@@ -2439,3 +2439,28 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   WS 丢弃事件/goroutine/RSS）；数据源固定 uid=prometheus 供面板稳定引用。
 - 验证：`promtool check config/rules` SUCCESS（8 条规则）；prod compose
   config 确认采集栈网络；dashboard JSON 解析通过；脚本 `bash -n`/`sh -n` 通过。
+
+
+## Batch D（第一批）：性能可验证体系（2026-11-06）
+
+审计 ops P1-1「性能需求不可验证」落地：
+
+- **组件级 benchmark（从 0 到 5）**：
+  - `realtime`：100 连接广播 prepared 路径 ~2.2 µs/op / 13 allocs，逐连接
+    marshal 回退路径 ~115 µs/op / 400 allocs（**约 50x**，禁止回退）+
+    单事件 marshal 体积基线；
+  - `httpx`：20 条列表统一 envelope 编码 ~12 µs/op / 3 allocs；
+  - `observability`：请求指标中间件固定税 ~0.54 µs/op / 7 allocs。
+- **perf-smoke 修复（此前失真）**：默认坐标改为种子锚点（34.2604/117.1855）、
+  搜索关键词改「林」（命中种子用户「林一」），先预热再采样；校验读端点必须
+  HTTP 200 且 envelope code=0（此前只看 HTTP 状态，业务错误不可见）；支持
+  `--min-rps` / `--max-p99-ms` 门禁阈值，任一失败非零退出；token 获取失败
+  干净报错。
+- **实测基线**（backend-test + seed 数据，c=10/warmup 2s/5s）：account ~5.4k rps、
+  bootstrap ~4.0k、notify ~7.7k、following ~3.5k、nearby ~350（p99 79ms）、
+  users/search ~570（p99 65ms）——nearby/search 为当前 p99 最高的读端点，
+  容量规划优先关注（两项均已有 S2/pg_trgm 索引）。
+- **文档**：新增 `docs/performance.md`（工具/基线/SLO/容量模型/回归纪律），
+  `backend-go/AGENTS.md` 性能章节同步。
+- 验证：`go test -short ./...` 全绿；benchmark 命令实测输出；perf-smoke 基线
+  6 端点 code=0 退出 0、不可达目标退出 1；--with-db ALL CHECKS PASSED。
