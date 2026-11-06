@@ -32,14 +32,19 @@ export function useChatListData() {
 	const queryGroup = $derived(page.url.searchParams.get('group'));
 	const useSplitPane = $derived(canUseSplitPane(platform));
 
-	// WS 新消息事件监听
+	// WS 新消息事件监听（防抖 250ms，避免群聊高频连发时引发瞬时并发 HTTP 请求风暴）
 	$effect(() => {
+		let timer: ReturnType<typeof setTimeout> | null = null;
 		const onWsMessage = () => {
-			reloadKey++;
+			if (timer) clearTimeout(timer);
+			timer = setTimeout(() => {
+				reloadKey++;
+			}, 250);
 		};
 		window.addEventListener(WS_PRIVATE_MESSAGE_EVENT, onWsMessage);
 		window.addEventListener(WS_GROUP_MESSAGE_EVENT, onWsMessage);
 		return () => {
+			if (timer) clearTimeout(timer);
 			window.removeEventListener(WS_PRIVATE_MESSAGE_EVENT, onWsMessage);
 			window.removeEventListener(WS_GROUP_MESSAGE_EVENT, onWsMessage);
 		};

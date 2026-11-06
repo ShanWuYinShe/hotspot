@@ -87,9 +87,9 @@
 				onclick={() => onChange(tab.id)}
 				aria-pressed={isActive}
 				data-active={isActive ? 'true' : undefined}
-				class="tab-item hit-slop-y-44 relative flex min-w-11 items-center justify-center gap-1.5 rounded-full focus-ring transition-[background-color,color,box-shadow] duration-standard disabled:cursor-not-allowed disabled:opacity-dim {size === 'md'
+				class="tab-item hit-slop-y-44 relative flex min-w-11 items-center justify-center gap-1.5 rounded-full px-3 focus-ring transition-[background-color,color,box-shadow] duration-standard disabled:cursor-not-allowed disabled:opacity-dim {size === 'md'
 					? 'py-2 text-sm'
-					: 'py-2.5 text-xs lg:py-1.5'} {isActive ? 'pl-2.5 pr-6' : 'px-2.5'} {isActive
+					: 'py-2.5 text-xs lg:py-1.5'} {isActive
 					? 'font-semibold bg-accent-default text-text-on-accent shadow-raised-sm'
 					: 'font-normal text-text-secondary hover:text-text-primary'}"
 			>
@@ -106,14 +106,13 @@
 				{:else if tab.icon}
 					<tab.icon class="{size === 'md' ? 'size-4' : 'size-3.5'} shrink-0" strokeWidth={isActive ? 2 : 1.5} />
 				{/if}
-				<!-- 文字必须整词不裁切：此前 truncate 让 grid 轨道可被 flex 行挤到只剩半个字
-				     （设置页 1440/768「星际/清野/水墨」显示成首字）。选项宽度由内容决定。 -->
+				<!-- 文字必须整词不裁切：选项宽度由内容决定 -->
 				<span class="whitespace-nowrap">{tab.label}</span>
 				{#if isActive}
 					<!-- 不依赖颜色的选中态：✓ + semibold（色弱/色盲/灰度下仍可辨）。
-					     ✓ 绝对定位、不占 flex 宽度：窄容器优先保住主题文字完整性。 -->
+					     行内排版保持视觉重心居中，避免绝对定位带来的左右 padding 不对称偏心。 -->
 					<Check
-						class="pointer-events-none absolute right-1.5 top-1/2 size-3.5 -translate-y-1/2"
+						class="pointer-events-none size-3.5 shrink-0"
 						strokeWidth={2.5}
 						aria-hidden="true"
 					/>

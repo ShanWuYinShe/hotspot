@@ -42,8 +42,12 @@
 	let swipeDistance = $state(0);
 	let isEdgeSwiping = $state(false);
 
+	// iOS Safari 自带系统级边缘滑动手势（Interactive Pop），两层同启会导致松手时 double history.back。
+	// 仅在非 iOS 触控环境提供自定义手势返回胶囊与 history.back 触发。
+	const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
 	function handleTouchStart(e: TouchEvent) {
-		if (!isSubPage || e.touches.length !== 1) return;
+		if (isIOS || !isSubPage || e.touches.length !== 1) return;
 		const touch = e.touches[0];
 		if (!touch) return;
 		if (touch.clientX <= 32) {

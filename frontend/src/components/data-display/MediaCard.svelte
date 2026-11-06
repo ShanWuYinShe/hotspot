@@ -74,7 +74,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <article
 	class={cn(
-		'card-hover isolate group relative h-full w-full overflow-hidden',
+		'card-hover isolate group relative h-full w-full overflow-hidden dark:ring-1 dark:ring-white/[0.08]',
 		'[&_button:not([data-cover])]:pointer-events-auto [&_a]:pointer-events-auto',
 		onClick &&
 			'[&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20',

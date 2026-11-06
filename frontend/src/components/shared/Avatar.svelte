@@ -83,9 +83,10 @@
 		style="border-radius:{borderRadius};{ring ? 'border:var(--cst-border-width-hairline) solid var(--cst-accent-border-soft);' : ''}"
 	>
 		<!-- 占位底层始终渲染（加载中/失败可见）：首字母或人形图标 + accent 底，
-		     不再出现纯灰空块；图片以 absolute 覆盖并 onload 渐显。 -->
+		     遵循 hotspot-frontend-theme 契约：soft 浅底使用 text-text-accent-on-soft + font-semibold；
+		     图片以 absolute 覆盖并 onload 渐显。 -->
 		<span
-			class="absolute inset-0 flex items-center justify-center bg-accent-bg text-text-primary"
+			class="absolute inset-0 flex items-center justify-center bg-accent-bg text-text-accent-on-soft font-semibold"
 			aria-hidden="true"
 			style={initial ? `font-size:${(px * 0.42) / 16}rem;` : ''}
 		>
