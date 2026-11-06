@@ -143,29 +143,25 @@ func (r *privateChatUserReader) ChatTargetsContext(_ context.Context, _ string, 
 }
 
 func newHandlers() (*Handler, *privatemessages.Handler) {
+	return newHandlersWithUsers(seedPrivateChatUsers())
+}
+
+func seedPrivateChatUsers() *fakeUsers {
+	fake := newFakeUsers()
+	settings := users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true}
+	fake.seed("user_bob", "Bob", settings)
+	fake.seed("user_alice", "Alice", settings)
+	fake.seed("user_charlie", "Charlie", settings)
+	return fake
+}
+
+func newHandlersWithUsers(fake *fakeUsers) (*Handler, *privatemessages.Handler) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	userRepo := users.NewInMemoryRepository()
-	seedPrivateChatUsers(userRepo)
-	return newHandlersWithUserRepo(userRepo)
-}
-
-func newHandlersWithUserRepo(userRepo *users.InMemoryRepository) (*Handler, *privatemessages.Handler) {
 	store := newFakeMessageStore()
-	userService := users.NewServiceWithRepo(userRepo)
-	messageService := privatemessages.NewServiceWithDeps(newFakeMessageRepo(store), userService)
+	messageService := privatemessages.NewServiceWithDeps(newFakeMessageRepo(store), fake)
 	messageHandler := privatemessages.NewHandler(messageService)
-	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), newFakeReadService(store), userService), appconfig.NewStaticSource(config.Load()))
+	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), newFakeReadService(store), fake), appconfig.NewStaticSource(config.Load()))
 	return chatHandler, messageHandler
-}
-
-func seedPrivateChatUsers(userRepo *users.InMemoryRepository) {
-	now := time.Now().UTC().Format(time.RFC3339)
-	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_bob", Nickname: "Bob", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: now, CreatedAt: now})
-	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
-	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_alice", Nickname: "Alice", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: now, CreatedAt: now})
-	_ = userRepo.PutSettings(context.Background(), "user_alice", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
-	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_charlie", Nickname: "Charlie", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: now, CreatedAt: now})
-	_ = userRepo.PutSettings(context.Background(), "user_charlie", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
 }
 
 func TestOpenTheDoorReturnsChatAndRecentMessages(t *testing.T) {
@@ -267,12 +263,10 @@ func TestOpenTheDoorUsesSharedResponseDefaults(t *testing.T) {
 	}
 
 	store := newFakeMessageStore()
-	userRepo := users.NewInMemoryRepository()
-	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_bob", Nickname: "Bob", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: time.Now().UTC().Format(time.RFC3339), CreatedAt: time.Now().UTC().Format(time.RFC3339)})
-	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
-	userService := users.NewServiceWithRepo(userRepo)
-	messageService := privatemessages.NewServiceWithDeps(newFakeMessageRepo(store), userService)
-	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), newFakeReadService(store), userService), source)
+	fake := newFakeUsers()
+	fake.seed("user_bob", "Bob", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
+	messageService := privatemessages.NewServiceWithDeps(newFakeMessageRepo(store), fake)
+	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), newFakeReadService(store), fake), source)
 	messageHandler := privatemessages.NewHandler(messageService)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
@@ -479,10 +473,11 @@ func TestDeleteThenNewMessageReappearsAsBlankConversation(t *testing.T) {
 }
 
 func TestOpenTheDoorRespectsTargetPrivacy(t *testing.T) {
-	userRepo := users.NewInMemoryRepository()
-	seedPrivateChatUsers(userRepo)
-	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.ChatPermNobody, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
-	chatHandler, _ := newHandlersWithUserRepo(userRepo)
+	fake := seedPrivateChatUsers()
+	settings := fake.settings["user_bob"]
+	settings.AllowPrivateChat = users.ChatPermNobody
+	fake.settings["user_bob"] = settings
+	chatHandler, _ := newHandlersWithUsers(fake)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
 	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"target_user_id":"user_bob"}`))

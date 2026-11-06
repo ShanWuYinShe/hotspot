@@ -2634,3 +2634,29 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
 - 测试：路由内触发 WriteServerError 断言响应 code=10600 且指标含 route 模板。
 - 验证：go test -short 全绿；--with-db ALL CHECKS PASSED；promtool check rules
   9 条规则 SUCCESS。
+
+## Batch C（第十四批）：users 内存仓储迁入测试构建（2026-11-07）
+
+审计 P0-2 倒数第二个模块：users 内存实现约 1k 行，生产装配只有 PG，
+但被 privatechats/bootstrap/privatemessages 测试跨包引用。
+
+- users/repo_memory.go → *_test.go；生产专用便捷构造 users.NewService()
+  （内部构造内存仓储）移入 service_testhelpers_test.go。
+- 生产保留内存/PG 共用的搜索纯函数：新增 repo_search_helpers.go
+  （containsFold / normalizeSearchRadius / normalizeSearchSort /
+  sortSearchCandidates / searchRelevanceScore / paginateSearchCandidates /
+  searchProfileCandidate / searchCursor 及编码解码/maxInt），PG 搜索路径
+  继续复用同一套关键词/半径/排序/游标口径。
+- 三处跨包测试消费者改本地最小桩，不再依赖 users 内存仓储：
+  - privatechats：fakeUsers 同时实现 chat.userReader 与 message.userReader
+    （OpenTheDoor/BatchGet/SettingsFor/Relationship/ChatTargetsContext），
+    隐私设置用例直接改 settings；
+  - privatemessages：permissiveUsers 宽松桩（任意用户存在、默认 everyone），
+    保持原有发送链路测试语义；
+  - bootstrap realtime 缓存方向还原用例：authzUsersRepo（Follow/Block/
+    Relationship/BlockedEitherWay 读写 map）。
+- 迁移后真实覆盖率暴露不足，补 module 装配/路由、跨模块转发方法、PG 仓储
+  骨架分支、搜索 SQL 构造/扫描错误等用例 → 74.0%，过 70% 门槛。
+- 累计 16/17 模块完成内存仓储迁移（仅剩 notify）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

@@ -108,10 +108,6 @@ type userNotificationWriter interface {
 	AppendMutualFollow(ctx context.Context, targetUserID string, actor types.UserInfo) (string, error)
 }
 
-func NewService() *Service {
-	return NewServiceWithDeps(NewInMemoryRepository(), nil, nil)
-}
-
 func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithDeps(repo, nil, nil) }
 
 func NewServiceWithDeps(repo Repository, notificationWriter userNotificationWriter, appConfig appconfig.Source) *Service {
