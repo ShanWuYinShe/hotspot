@@ -14,8 +14,14 @@
 | Prometheus/Grafana（线上） | 持续 RPS/延迟/连接池/Redis fail-open | `OBSERVABILITY_ENABLED=1` 部署后查看「HotSpot 后端总览」 |
 
 ```bash
-# 全链路只读基线（务必对 APP_ENV=test 的 backend-test 实例，避免限流桶污染）
+# 1) 启动 APP_ENV=test 的 backend-test（跳过限流，避免压测把租户/IP 桶打满）
 docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d backend-test
+
+# 2) 给 hotspot_test 灌种子数据——否则 nearby/search 测到的是空结果集（历史失真根因）。
+#    复用 dev backend 容器内的 Go SDK 与 /devdata 素材挂载，仅覆盖 DSN 到测试库：
+docker exec hotspot-backend-1 sh -c 'export POSTGRES_DSN="$(printf "%s" "$POSTGRES_DSN" | sed "s#/hotspot?#/hotspot_test?#")"; cd /src && go run ./cmd/seed -assets-dir /devdata/seed/media'
+
+# 3) 全链路只读基线
 ./scripts/perf-smoke.sh --base http://localhost:8082 --duration 10s --warmup 3s --concurrency 10
 
 # CI/回归门禁模式（任一读端点非 200/code!=0、rps 低于下限或 p99 超限即退出 1）
