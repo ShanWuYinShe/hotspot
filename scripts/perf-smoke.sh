@@ -9,7 +9,8 @@
 #   ./scripts/perf-smoke.sh --min-rps 100 --max-p99-ms 200   # CI 门禁模式
 #
 # 环境变量/参数：BASE / TOKEN / CONCURRENCY / DURATION / WARMUP / MIN_RPS /
-# MAX_P99_MS / REF_LAT / REF_LNG / SEARCH_KEYWORD / LOADGEN_BIN。
+# MAX_P99_MS / REF_LAT / REF_LNG / SEARCH_KEYWORD / MOMENTS_SEARCH_KEYWORD /
+# GROUPS_SEARCH_KEYWORD / LOADGEN_BIN。
 # 默认附近坐标与搜索关键词对齐 dev 种子数据（徐州云龙湖 / 用户昵称「林一」），
 # 避免历史默认「旧金山 + abc」导致附近/搜索测到空结果集。
 #
@@ -28,6 +29,8 @@ REF_LAT="${REF_LAT:-34.2604}"
 REF_LNG="${REF_LNG:-117.1855}"
 # 种子用户「林一」昵称命中 users/search（旧默认 abc 与种子数据不匹配，空结果集无效）
 SEARCH_KEYWORD="${SEARCH_KEYWORD:-林}"
+MOMENTS_SEARCH_KEYWORD="${MOMENTS_SEARCH_KEYWORD:-游客}"
+GROUPS_SEARCH_KEYWORD="${GROUPS_SEARCH_KEYWORD:-群}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -38,7 +41,7 @@ while [ $# -gt 0 ]; do
     --no-warmup) WARMUP="0" ;;
     --min-rps) MIN_RPS="$2"; shift 2 ;;
     --max-p99-ms) MAX_P99_MS="$2"; shift 2 ;;
-    --keyword) SEARCH_KEYWORD="$2"; shift 2 ;;
+    --keyword) SEARCH_KEYWORD="$2"; MOMENTS_SEARCH_KEYWORD="$2"; shift 2 ;;
     --lat) REF_LAT="$2"; shift 2 ;;
     --lng) REF_LNG="$2"; shift 2 ;;
     -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
@@ -123,6 +126,10 @@ NEARBY_BODY=$(printf '{"reference_point":{"latitude":%s,"longitude":%s},"radius"
 run moments/fetch_nearby /api/v1/moments/fetch_nearby "$NEARBY_BODY"
 SEARCH_BODY=$(printf '{"keyword":"%s","pagination":{"limit":20}}' "$SEARCH_KEYWORD")
 run users/search /api/v1/users/search "$SEARCH_BODY"
+MOMENT_SEARCH_BODY=$(printf '{"keyword":"%s","sort_by":"newest","pagination":{"limit":20}}' "$MOMENTS_SEARCH_KEYWORD")
+run moments/search /api/v1/moments/search "$MOMENT_SEARCH_BODY"
+GROUP_SEARCH_BODY=$(printf '{"keyword":"%s","pagination":{"limit":20}}' "$GROUPS_SEARCH_KEYWORD")
+run groups/search /api/v1/groups/search "$GROUP_SEARCH_BODY"
 
 if [ "$FAILURES" -ne 0 ]; then
   echo "" >&2
@@ -130,4 +137,4 @@ if [ "$FAILURES" -ne 0 ]; then
   exit 1
 fi
 echo ""
-echo "PERF SMOKE OK：6 个读端点全部返回 code=0（warmup=${WARMUP} duration=${DURATION} concurrency=${CONCURRENCY}）"
+echo "PERF SMOKE OK：8 个读端点全部返回 code=0（warmup=${WARMUP} duration=${DURATION} concurrency=${CONCURRENCY}）"
