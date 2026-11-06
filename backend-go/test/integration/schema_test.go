@@ -141,7 +141,8 @@ WHERE m.privacy_level = 'public'
 			t.Fatalf("explain OR query: %v", err)
 		}
 		assertPlanUsesIndex(t, orPlan, "idx_moments_public_s2_cell_id")
-		assertPlanHasNodeType(t, orPlan, "Bitmap Heap Scan")
+		// 节点类型随数据量与统计信息在 Bitmap Heap Scan / Index Scan 间变化，
+		// 只锁「走部分索引、不全表扫描」契约（索引断言上一行已覆盖）。
 
 		momentsPlan, err := explainQueryPlan(ctx, tx, buildSearchMomentsExplainSQL(), []int64{hitCell}, []int64{hitCell})
 		if err != nil {
@@ -167,7 +168,7 @@ WHERE m.privacy_level = 'public'
 				t.Fatalf("explain OR query: %v", err)
 			}
 			assertPlanUsesAnyIndex(t, plan, "idx_moments_public_s2_cell_id", "idx_moments_non_private_s2_cell_id")
-			assertPlanHasNodeType(t, plan, "Bitmap Heap Scan")
+			// 同上：具体节点类型不稳定，索引命中即满足契约（避免数据量增长导致假红）。
 		})
 
 		t.Run("partial predicate pollution prefers partial index when searchable live rows dominate", func(t *testing.T) {
