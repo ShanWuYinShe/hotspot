@@ -46,7 +46,7 @@ nearby 详情查询合并 reactions/作者关系（4→2 往返）。全部端�
 | system/bootstrap | ~8550 | 1.1 | 1.8 | 3.1 |
 | notify/fetch | ~14400 | 0.6 | 1.1 | 2.5 |
 | moments/fetch_following | ~10200 | 0.9 | 1.5 | 2.2 |
-| moments/fetch_nearby | ~726 | 5.7 | 66.5 | 74.5 |
+| moments/fetch_nearby | ~1190 | 4.1 | 52.6 | 58.2 |
 | users/search | ~3500（2.4k–5k 波动） | 2.1 | 4.3 | 26.3 |
 | moments/search | ~9800 | 0.9 | 1.7 | 3.9 |
 | groups/search | ~6200 | 1.2 | 2.3 | 18.7 |
@@ -56,9 +56,9 @@ nearby 详情查询合并 reactions/作者关系（4→2 往返）。全部端�
 - 去掉冗余 ILIKE 复核：2139→**3279 rps**（+53%），p95 5.1ms，**p99 7.3ms**
   （-75%）；全链路 perf-smoke：3562→**5090 rps**，p99 25.3→6.0ms。
 
-nearby 仍是 p99 最高的读端点（~74ms；候选粗筛 S2 区间改 OR BETWEEN 后
-发布前 461rps/81.8ms → 726rps/74.5ms，DB CPU 仍是瓶颈）；users/search 已从
-p99 榜第二降至中游。
+nearby p99 仍最高（~58ms），但 D2 三轮优化后已从最初 ~480rps/81ms 提升到
+~1190rps/58ms（候选 OR BETWEEN + 详情范围聚合）；DB CPU 仍是瓶颈。users/search
+已从 p99 榜第二降至中游。
 
 **读法注意**：Postgres/OS 缓存冷热会显著影响 users/search（实测 2.4k–5k rps /
 p99 6–40ms）与 nearby；本表取多次重复中的典型暖态。验收一律以

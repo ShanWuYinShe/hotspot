@@ -3467,3 +3467,8 @@ pg_stat_statements：nearby 候选粗筛降到 1.0ms 后，详情查询仍占 ~8
 - 响应形状/顺序不变（服务层按候选顺序组装）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+实测（backend-test，2026-11-07）：nearby 详情查询改范围聚合后单端点
+c=10/10s：726→**1303 rps**（+79%），p50 5.73→3.82ms，p95 66.5→49.2ms，
+p99 74.5→54.9ms；全链路 perf-smoke nearby 1190 rps / p99 58.2ms，8 端点
+perf-budget 全部 OK。nearby 相比本轮系列优化前（~480rps/81ms）约 2.5x。
