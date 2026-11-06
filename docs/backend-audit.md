@@ -3034,3 +3034,21 @@ admin 事务注入单测；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
 
 验证：go test -short 全绿；真库 psql 插入/查询验证；
 verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第二批）：X-Request-Id 契约修复（客户端 ID 原样回显）（2026-11-07）
+
+契约审计 P1：spec api_spec_base.md 要求「客户端可选传入，服务端原样回显；服务端
+不对其施加格式/熵值约束」。此前两处违反：
+
+- nginx 所有 API location 都 `proxy_set_header X-Request-ID $request_id`，把客户端
+  trace id 覆盖成 nginx 生成值；
+- 后端 RequestIDMiddleware 只接受 16-128 长度，短 ID 被丢弃并换成生成值。
+
+修复：
+- nginx（base/dev/prod-tls/server.inc 全部代理点）新增 http 层 map：
+  `map $http_x_request_id $hotspot_request_id { default $http_x_request_id; "" $request_id; }`
+  ——有则原样透传、无则由 nginx 生成；
+- 后端去掉长度约束：非空客户端 ID 一律原样回显（仅缺失时生成）；
+- 新增短 ID（"abc"）回显单测；三套 nginx 配置（base/dev/prod）容器内 `nginx -t` 通过。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

@@ -39,3 +39,21 @@ func TestRequestIDMiddlewarePreservesValidHeader(t *testing.T) {
 		t.Fatalf("unexpected request id: %s", got)
 	}
 }
+
+// spec api_spec_base.md：客户端携带 X-Request-Id 时服务端原样回显，不施加
+// 长度/格式/熵值约束。
+func TestRequestIDMiddlewareEchoesShortClientHeader(t *testing.T) {
+	handler := RequestIDMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := RequestIDFromContext(r.Context()); got != "abc" {
+			t.Fatalf("context request id = %q, want abc", got)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	req := httptest.NewRequest(http.MethodPost, "/public/v1/system/health", http.NoBody)
+	req.Header.Set("X-Request-Id", "abc")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if got := rr.Header().Get("X-Request-Id"); got != "abc" {
+		t.Fatalf("response request id = %q, want abc", got)
+	}
+}

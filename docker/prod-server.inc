@@ -29,7 +29,7 @@ location = /healthz {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Request-ID $request_id;
+    proxy_set_header X-Request-ID $hotspot_request_id;
 }
 
 location /api/ {
@@ -41,7 +41,7 @@ location /api/ {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Request-ID $request_id;
+    proxy_set_header X-Request-ID $hotspot_request_id;
 }
 
 location /public/ {
@@ -53,7 +53,7 @@ location /public/ {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Request-ID $request_id;
+    proxy_set_header X-Request-ID $hotspot_request_id;
 }
 
 # 仅代理 /admin/api/v1 API 节点（与仓库基线 nginx.conf 一致）；/admin/* 前端
@@ -68,7 +68,7 @@ location /admin/api/v1/ {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Request-ID $request_id;
+    proxy_set_header X-Request-ID $hotspot_request_id;
 }
 
 include /etc/nginx/conf.d/proxy.inc;
@@ -87,7 +87,7 @@ location /share/ {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Request-ID $request_id;
+    proxy_set_header X-Request-ID $hotspot_request_id;
     if ($share_crawler) {
         proxy_pass http://backend;
     }

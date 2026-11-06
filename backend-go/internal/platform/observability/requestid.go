@@ -12,8 +12,8 @@ type requestIDKey struct{}
 
 func RequestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestID := r.Header.Get("X-Request-Id")
-		if !validRequestID(requestID) {
+		requestID := clientRequestID(r.Header.Get("X-Request-Id"))
+		if requestID == "" {
 			requestID = newRequestID()
 		}
 		w.Header().Set("X-Request-Id", requestID)
@@ -27,8 +27,11 @@ func RequestIDFromContext(ctx context.Context) string {
 	return requestID
 }
 
-func validRequestID(value string) bool {
-	return len(value) >= 16 && len(value) <= 128
+// clientRequestID 采用「非空即原样回显」：spec api_spec_base.md 明确服务端
+// 不对客户端传入的 X-Request-Id 施加格式/熵值约束（此前 16-128 长度校验会把
+// 合法的短客户端 ID 丢弃并换成服务端生成值，违反回显契约）。
+func clientRequestID(value string) string {
+	return value
 }
 
 func newRequestID() string {
