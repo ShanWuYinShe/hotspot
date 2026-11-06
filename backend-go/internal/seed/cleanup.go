@@ -69,21 +69,11 @@ WHERE user_id LIKE '` + userIDPrefix + `%'
    OR (target_type = 'message' AND (target_id LIKE '` + chatMessageIDPrefix + `%' OR target_id LIKE '` + groupMessageIDPrefix + `%'))`,
 	},
 	{
-		description: "comment_likes",
-		sql: `DELETE FROM comment_likes
-WHERE user_id LIKE '` + userIDPrefix + `%' OR comment_id LIKE '` + commentIDPrefix + `%'`,
-	},
-	{
 		description: "comments",
 		sql: `DELETE FROM comments
 WHERE user_id LIKE '` + userIDPrefix + `%'
    OR comment_id LIKE '` + commentIDPrefix + `%'
    OR moment_id LIKE '` + momentIDPrefix + `%'`,
-	},
-	{
-		description: "moment_likes",
-		sql: `DELETE FROM moment_likes
-WHERE user_id LIKE '` + userIDPrefix + `%' OR moment_id LIKE '` + momentIDPrefix + `%'`,
 	},
 	{
 		description: "moment_favorites",

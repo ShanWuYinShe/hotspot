@@ -2,7 +2,6 @@ package persistence
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -110,9 +109,6 @@ func (q *pgxTxQueryable) Query(ctx context.Context, sql string, args ...any) (Ro
 	}
 	return &pgxRowsAdapter{rows: rows}, nil
 }
-
-// ErrNoTransaction is returned when a rollback is requested outside a tx.
-var ErrNoTransaction = errors.New("persistence: no transaction in context")
 
 // NewTxRunner returns a TxRunner bound to factory. Use it at module-assembly
 // time to hand services a runner without exposing the factory to them.

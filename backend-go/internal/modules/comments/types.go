@@ -4,7 +4,7 @@ import "hotspot/backend-go/internal/platform/types"
 
 type UserInfo = types.UserInfo
 
-// MyCommentState removed — likes_count/my_state 不在契约 CommentItem，仅 repo 内部使用。
+// MyCommentState removed — my_state 不在契约 CommentItem，仅 repo 内部使用。
 
 // Reaction mirrors spec api_spec_types.md Reaction (per-emoji aggregate with
 // reacted_by_me). Defined here rather than imported from the reactions module
@@ -18,7 +18,7 @@ type Reaction struct {
 
 // CommentItem 评论统一公开类型（spec api_spec_types.md CommentItem）。
 // 恒定 nullable：parent_id 恒在（nil = 顶层评论）；mentions/reactions/top_replies 恒为数组。
-// likes_count/my_state 不在契约类型，仅供内部/兼容，不再对外序列化。
+// my_state 不在契约类型，仅供内部/兼容，不再对外序列化。
 type CommentItem struct {
 	CommentID string   `json:"comment_id"`
 	User      UserInfo `json:"user"`
@@ -36,8 +36,6 @@ type CommentItem struct {
 	TopReplies []CommentItem `json:"top_replies"`
 	// MomentID 仅内部使用（评论挂载瞬间），不对外序列化。
 	MomentID string `json:"-"`
-	// LikesCount 兼容保留（reactions 聚合之前的历史计数），不对外序列化。
-	LikesCount int `json:"-"`
 }
 
 // strPtr 构造 string 指针（用于 CommentItem.ParentID 恒定 nullable）。

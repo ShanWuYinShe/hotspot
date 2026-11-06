@@ -41,7 +41,6 @@ func (r *InMemoryRepository) Create(ctx context.Context, userID string, req Crea
 		ParentID:     strPtr(req.ParentID),
 		Mentions:     req.Mentions,
 		CreatedAt:    now.Format(time.RFC3339),
-		LikesCount:   0,
 		RepliesCount: 0,
 	}
 	r.comments[req.MomentID] = append(r.comments[req.MomentID], item)

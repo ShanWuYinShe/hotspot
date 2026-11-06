@@ -73,7 +73,7 @@ var expectedTableCounts = map[string]int{
 	"private_chats": 3, "private_messages": 20,
 	"private_chat_user_state": 6, "private_chat_read_state": 6,
 	"moments": 24, "moment_images": 22, "moment_tags": 42, "moment_mentions": 2,
-	"moment_likes": 29, "moment_favorites": 2, "comments": 14, "comment_likes": 9,
+	"moment_favorites": 2, "comments": 14,
 	"reactions": 32, "notifications": 9, "shares": 2, "reports": 4,
 	"admin_roles": 2, "admin_role_permissions": 15, "admin_users": 1,
 	"admin_user_roles": 1, "admin_audit_logs": 6, "admin_blocked_tags": 2,
@@ -96,8 +96,8 @@ func TestBuildPlanTableCounts(t *testing.T) {
 	if len(counts) != len(expectedTableCounts) {
 		t.Errorf("表数量 = %d，期望 %d（多出的表: %v）", len(counts), len(expectedTableCounts), diffKeys(counts, expectedTableCounts))
 	}
-	if plan.RowCount() != 396 {
-		t.Errorf("数据总行数 = %d，期望 396", plan.RowCount())
+	if plan.RowCount() != 358 {
+		t.Errorf("数据总行数 = %d，期望 358", plan.RowCount())
 	}
 	if plan.MediaCount() != 38 {
 		t.Errorf("媒体对象数 = %d，期望 38", plan.MediaCount())

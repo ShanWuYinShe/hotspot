@@ -114,15 +114,14 @@ func TestMomentCounterColumns(t *testing.T) {
 	}
 }
 
-// TestCommentRepliesAndLikes 评论 replies_count / likes_count 与子行一致，且存在二级回复。
-func TestCommentRepliesAndLikes(t *testing.T) {
+// TestCommentRepliesConsistency 评论 replies_count 与子行一致，且存在二级回复。
+func TestCommentRepliesConsistency(t *testing.T) {
 	plan := mustBuildPlan(t, testPlanOptions())
 	rows := rowsOfTable(t, plan, "comments")
 	columns := columnsOfTable(t, plan, "comments")
 	idIndex := columnIndex(t, columns, "comment_id")
 	parentIndex := columnIndex(t, columns, "parent_id")
 	repliesIndex := columnIndex(t, columns, "replies_count")
-	likesIndex := columnIndex(t, columns, "likes_count")
 
 	replyCounts := map[string]int{}
 	for _, row := range rows {
@@ -130,18 +129,11 @@ func TestCommentRepliesAndLikes(t *testing.T) {
 			replyCounts[parent]++
 		}
 	}
-	likeCounts := map[string]int{}
-	for _, row := range rowsOfTable(t, plan, "comment_likes") {
-		likeCounts[mustString(t, row[0])]++
-	}
 	replyTotal := 0
 	for _, row := range rows {
 		commentID := mustString(t, row[idIndex])
 		if got, want := mustInt(t, row[repliesIndex]), replyCounts[commentID]; got != want {
 			t.Errorf("评论 %s replies_count = %d，子回复 = %d", commentID, got, want)
-		}
-		if got, want := mustInt(t, row[likesIndex]), likeCounts[commentID]; got != want {
-			t.Errorf("评论 %s likes_count = %d，comment_likes 行 = %d", commentID, got, want)
 		}
 		replyTotal += replyCounts[commentID]
 	}

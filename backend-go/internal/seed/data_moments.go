@@ -8,8 +8,7 @@ import (
 )
 
 // data_moments.go — 瞬间相关表行构建（moments / moment_images / moment_tags /
-// moment_mentions / moment_likes / moment_favorites / comments / comment_likes /
-// reactions）。
+// moment_mentions / moment_favorites / comments / reactions）。
 //
 // 计数列口径（与写路径一致，避免前端出现「显示 3 赞但详情只有 1 个」）：
 //   - likes_count = 该瞬间在 reactions 表中的行数（迁移/模块装配后的自愈口径，
@@ -103,16 +102,9 @@ func buildMomentMentionsTable(baseTime time.Time, moments []momentSpec) tableDat
 	return table
 }
 
-// buildMomentInteractionRows 构建 moment_likes 与 reactions 两张表。
-//
-// reactions 是表情反应（迁移 031，聚合读取口径）；moment_likes 是历史点赞表
-// （当前代码已无读取方，保留写入是为了数据完整性与后续兼容）。两者都按
-// momentSpec.Reactions 生成，保证 likes_count 与 reactions 行数严格一致。
-func buildMomentInteractionRows(baseTime time.Time, moments []momentSpec) (momentLikes tableData, reactions tableData) {
-	momentLikes = tableData{
-		Table:   "moment_likes",
-		Columns: []column{col("moment_id"), col("user_id"), col("liked_at")},
-	}
+// buildReactionsTable 构建 reactions 表（迁移 031，聚合读取口径）。
+// 按 momentSpec.Reactions 生成，与 moments.likes_count 的派生口径严格一致。
+func buildReactionsTable(baseTime time.Time, moments []momentSpec) (reactions tableData) {
 	reactions = tableData{
 		Table:   "reactions",
 		Columns: []column{col("target_type"), col("target_id"), col("user_id"), col("emoji"), col("reacted_at")},
@@ -121,7 +113,6 @@ func buildMomentInteractionRows(baseTime time.Time, moments []momentSpec) (momen
 		createdAt := baseTime.Add(-moment.CreatedAgo)
 		for index, reaction := range moment.Reactions {
 			reactedAt := createdAt.Add(time.Duration(index+1) * 5 * time.Minute)
-			momentLikes.addRow(moment.MomentID, reaction.UserID, reactedAt)
 			reactions.addRow("moment", moment.MomentID, reaction.UserID, reaction.Emoji, reactedAt)
 		}
 	}
@@ -129,7 +120,7 @@ func buildMomentInteractionRows(baseTime time.Time, moments []momentSpec) (momen
 	reactions.addRow("comment", "comment_seed_01_01", "user_seed_marco", emojiThumb, baseTime.Add(-90*time.Minute))
 	reactions.addRow("message", "chat_seed_sophia_01", "user_seed_lumos", emojiHeart, baseTime.Add(-47*time.Hour))
 	reactions.addRow("message", "gmsg_seed_10", "user_seed_sophia", emojiThumb, baseTime.Add(-40*time.Minute))
-	return momentLikes, reactions
+	return reactions
 }
 
 func buildMomentFavoritesTable(baseTime time.Time) tableData {
@@ -148,14 +139,14 @@ func buildCommentsTables(baseTime time.Time, moments []momentSpec) (topLevel tab
 		Table: "comments",
 		Columns: []column{
 			col("comment_id"), col("moment_id"), col("user_id"), col("parent_id"),
-			col("content"), col("created_at"), col("likes_count"), col("replies_count"),
+			col("content"), col("created_at"), col("replies_count"),
 		},
 	}
 	replies = tableData{
 		Table: "comments",
 		Columns: []column{
 			col("comment_id"), col("moment_id"), col("user_id"), col("parent_id"),
-			col("content"), col("created_at"), col("likes_count"), col("replies_count"),
+			col("content"), col("created_at"), col("replies_count"),
 		},
 	}
 	for _, moment := range moments {
@@ -172,7 +163,7 @@ func buildCommentsTables(baseTime time.Time, moments []momentSpec) (topLevel tab
 			}
 			row := []any{
 				comment.CommentID, moment.MomentID, comment.UserID, parent,
-				comment.Content, baseTime.Add(-comment.CreatedAgo), len(comment.Likes), replyCounts[comment.CommentID],
+				comment.Content, baseTime.Add(-comment.CreatedAgo), replyCounts[comment.CommentID],
 			}
 			if comment.ParentID == "" {
 				topLevel.Rows = append(topLevel.Rows, row)
@@ -182,20 +173,4 @@ func buildCommentsTables(baseTime time.Time, moments []momentSpec) (topLevel tab
 		}
 	}
 	return topLevel, replies
-}
-
-func buildCommentLikesTable(baseTime time.Time, moments []momentSpec) tableData {
-	table := tableData{
-		Table:   "comment_likes",
-		Columns: []column{col("comment_id"), col("user_id"), col("liked_at")},
-	}
-	for _, moment := range moments {
-		for _, comment := range moment.Comments {
-			createdAt := baseTime.Add(-comment.CreatedAgo)
-			for index, userID := range comment.Likes {
-				table.addRow(comment.CommentID, userID, createdAt.Add(time.Duration(index+1)*time.Minute))
-			}
-		}
-	}
-	return table
 }

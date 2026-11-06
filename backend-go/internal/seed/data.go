@@ -54,7 +54,7 @@ func buildDataset(data seedData, media *mediaBundle, opts buildDatasetOptions) (
 		return nil, err
 	}
 	commentsTop, commentsReplies := buildCommentsTables(opts.baseTime, data.moments)
-	momentLikes, momentReactions := buildMomentInteractionRows(opts.baseTime, data.moments)
+	momentReactions := buildReactionsTable(opts.baseTime, data.moments)
 
 	ds.steps = []tableData{
 		usersTable,
@@ -79,11 +79,9 @@ func buildDataset(data seedData, media *mediaBundle, opts buildDatasetOptions) (
 		buildMomentImagesTable(opts.baseTime, data.moments, media),
 		buildMomentTagsTable(opts.baseTime, data.moments),
 		buildMomentMentionsTable(opts.baseTime, data.moments),
-		momentLikes,
 		buildMomentFavoritesTable(opts.baseTime),
 		commentsTop,
 		commentsReplies,
-		buildCommentLikesTable(opts.baseTime, data.moments),
 		momentReactions,
 		notificationsTable,
 		sharesTable,

@@ -114,19 +114,18 @@ type reactionSpec struct {
 	Emoji  string
 }
 
-// commentSpec 对应 comments 行（迁移 003 + 011）。
+// commentSpec 对应 comments 行（迁移 003）。
 // ParentID 非空表示二级回复（父评论的 replies_count 由构建层统计）。
 type commentSpec struct {
 	CommentID  string
 	UserID     string
 	ParentID   string
 	Content    string
-	Likes      []string // comment_likes 行
 	CreatedAgo time.Duration
 }
 
 // momentSpec 对应 moments / moment_images / moment_tags / moment_mentions /
-// moment_likes / moment_favorites / comments / reactions 的多表组合。
+// moment_favorites / comments / reactions 的多表组合。
 type momentSpec struct {
 	MomentID     string
 	AuthorID     string

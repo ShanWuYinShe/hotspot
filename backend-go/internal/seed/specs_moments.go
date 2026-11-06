@@ -104,9 +104,9 @@ func seedMoments() []momentSpec {
 	add(0, "user_seed_lumos", desc(0), 1, []string{"云龙湖", "摄影"}, nil,
 		[]reactionSpec{{"user_seed_sophia", emojiThumb}, {"user_seed_marco", emojiHeart}, {"user_seed_mika", emojiLaugh}},
 		[]commentSpec{
-			{CommentID: "comment_seed_01_01", UserID: "user_seed_sophia", Content: "光影真的好，求机位！", Likes: []string{"user_seed_lumos", "user_seed_marco"}, CreatedAgo: momentCreatedAgo(0) - 10*oneMinute},
+			{CommentID: "comment_seed_01_01", UserID: "user_seed_sophia", Content: "光影真的好，求机位！", CreatedAgo: momentCreatedAgo(0) - 10*oneMinute},
 			{CommentID: "comment_seed_01_02", UserID: "user_seed_marco", ParentID: "comment_seed_01_01", Content: "云龙湖北岸那个木栈道。", CreatedAgo: momentCreatedAgo(0) - 20*oneMinute},
-			{CommentID: "comment_seed_01_03", UserID: "user_seed_mika", Content: "周末也想去。", Likes: []string{"user_seed_sophia"}, CreatedAgo: momentCreatedAgo(0) - 30*oneMinute},
+			{CommentID: "comment_seed_01_03", UserID: "user_seed_mika", Content: "周末也想去。", CreatedAgo: momentCreatedAgo(0) - 30*oneMinute},
 		})
 	// 02 lumos —— 回龙窝咖啡
 	add(1, "user_seed_lumos", desc(1), 0, []string{"咖啡", "回龙窝"}, nil,
@@ -114,7 +114,7 @@ func seedMoments() []momentSpec {
 	// 03 lumos —— 户部山 @青砚（覆盖 moment_mentions）
 	add(2, "user_seed_lumos", "在户部山遇到 @青砚，一起把这条巷子拍完了。", 1, []string{"户部山", "摄影"}, []string{"user_seed_chen"},
 		[]reactionSpec{{"user_seed_xiaoman", emojiHeart}},
-		[]commentSpec{{CommentID: "comment_seed_03_01", UserID: "user_seed_chen", Content: "下次带长焦。", Likes: []string{"user_seed_lumos"}, CreatedAgo: momentCreatedAgo(2) - 15*oneMinute}})
+		[]commentSpec{{CommentID: "comment_seed_03_01", UserID: "user_seed_chen", Content: "下次带长焦。", CreatedAgo: momentCreatedAgo(2) - 15*oneMinute}})
 	// 04 lumos —— 彭城广场夜景（无图，覆盖纯文字瞬间）
 	add(3, "user_seed_lumos", desc(3), 0, []string{"彭城广场", "夜景"}, nil,
 		[]reactionSpec{{"user_seed_chen", emojiThumb}}, nil)
@@ -122,7 +122,7 @@ func seedMoments() []momentSpec {
 	add(4, "user_seed_lumos", desc(4), 1, []string{"汉文化景区", "散步"}, nil,
 		[]reactionSpec{{"user_seed_sophia", emojiHeart}, {"user_seed_admin", emojiThumb}},
 		[]commentSpec{
-			{CommentID: "comment_seed_05_01", UserID: "user_seed_sophia", Content: "古琴声是不是每天都有？", Likes: []string{"user_seed_mika"}, CreatedAgo: momentCreatedAgo(4) - 20*oneMinute},
+			{CommentID: "comment_seed_05_01", UserID: "user_seed_sophia", Content: "古琴声是不是每天都有？", CreatedAgo: momentCreatedAgo(4) - 20*oneMinute},
 			{CommentID: "comment_seed_05_02", UserID: "user_seed_lumos", ParentID: "comment_seed_05_01", Content: "周末下午基本都有。", CreatedAgo: momentCreatedAgo(4) - 10*oneMinute},
 		})
 	// 06 sophia —— 植物园
@@ -138,7 +138,7 @@ func seedMoments() []momentSpec {
 	add(8, "user_seed_sophia", desc(8), 2, []string{"云龙湖", "胶片"}, nil,
 		[]reactionSpec{{"user_seed_marco", emojiHeart}, {"user_seed_mika", emojiThumb}, {"user_seed_xiaoman", emojiPray}},
 		[]commentSpec{
-			{CommentID: "comment_seed_09_01", UserID: "user_seed_marco", Content: "颗粒感绝了，什么卷？", Likes: []string{"user_seed_sophia"}, CreatedAgo: momentCreatedAgo(9) - 20*oneMinute},
+			{CommentID: "comment_seed_09_01", UserID: "user_seed_marco", Content: "颗粒感绝了，什么卷？", CreatedAgo: momentCreatedAgo(9) - 20*oneMinute},
 			{CommentID: "comment_seed_09_02", UserID: "user_seed_sophia", ParentID: "comment_seed_09_01", Content: "Portra 400。", CreatedAgo: momentCreatedAgo(9) - 15*oneMinute},
 			{CommentID: "comment_seed_09_03", UserID: "user_seed_mika", Content: "求链接。", CreatedAgo: momentCreatedAgo(9) - 5*oneMinute},
 		})
@@ -153,7 +153,7 @@ func seedMoments() []momentSpec {
 	// 13 marco —— 云龙湖东岸 @林一（3 图，覆盖三图网格 + 群组分享卡片同源）
 	add(12, "user_seed_marco", "把 @林一 的吉他声录进了黄昏里。", 3, []string{"音乐", "黄昏"}, []string{"user_seed_lin"},
 		[]reactionSpec{{"user_seed_sophia", emojiThumb}, {"user_seed_mika", emojiHeart}, {"user_seed_lin", emojiLaugh}, {"user_seed_admin", emojiPray}},
-		[]commentSpec{{CommentID: "comment_seed_13_01", UserID: "user_seed_lin", Content: "下次一起录一段。", Likes: []string{"user_seed_marco"}, CreatedAgo: momentCreatedAgo(13) - 20*oneMinute}})
+		[]commentSpec{{CommentID: "comment_seed_13_01", UserID: "user_seed_lin", Content: "下次一起录一段。", CreatedAgo: momentCreatedAgo(13) - 20*oneMinute}})
 	// 14 mika —— 回龙窝甜品（附近新瞬间通知的 actor）
 	add(13, "user_seed_mika", desc(1), 2, []string{"回龙窝", "甜品"}, nil,
 		[]reactionSpec{{"user_seed_lumos", emojiThumb}, {"user_seed_marco", emojiHeart}},
@@ -172,7 +172,7 @@ func seedMoments() []momentSpec {
 	// 19 lin —— 老街（3 图 + 评论）
 	add(18, "user_seed_lin", desc(6), 3, []string{"音乐", "老街"}, nil,
 		[]reactionSpec{{"user_seed_marco", emojiThumb}},
-		[]commentSpec{{CommentID: "comment_seed_19_01", UserID: "user_seed_xiaoman", Content: "下次唱这首。", Likes: []string{"user_seed_lin"}, CreatedAgo: momentCreatedAgo(19) - 20*oneMinute}})
+		[]commentSpec{{CommentID: "comment_seed_19_01", UserID: "user_seed_xiaoman", Content: "下次唱这首。", CreatedAgo: momentCreatedAgo(19) - 20*oneMinute}})
 	// 20 lin —— 云龙山北门（纯文字）
 	add(19, "user_seed_lin", desc(7), 0, []string{"吉他"}, nil, nil, nil)
 	// 21 xiaoman —— 云龙湖大堤
@@ -181,7 +181,7 @@ func seedMoments() []momentSpec {
 	// 22 xiaoman —— 市中心手作
 	add(21, "user_seed_xiaoman", desc(9), 0, []string{"手作"}, nil,
 		[]reactionSpec{{"user_seed_lumos", emojiHeart}, {"user_seed_admin", emojiThumb}},
-		[]commentSpec{{CommentID: "comment_seed_22_01", UserID: "user_seed_lumos", Content: "手作好精致。", Likes: []string{"user_seed_xiaoman"}, CreatedAgo: momentCreatedAgo(22) - 20*oneMinute}})
+		[]commentSpec{{CommentID: "comment_seed_22_01", UserID: "user_seed_lumos", Content: "手作好精致。", CreatedAgo: momentCreatedAgo(22) - 20*oneMinute}})
 	// 23 admin —— 软删目标（迁移 037：is_deleted=true 且 description 清空）。
 	// 该条带两个已被平台屏蔽的标签：管理端「标签管理」页需要能展示
 	// admin_blocked_tags 中的标签（querySearchTags 从 moment_tags 聚合，屏蔽
