@@ -182,13 +182,11 @@ WHERE m.privacy_level = 'public'
 ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $4`
 
-	// queryNearbyMoments 附近瞬间（spec moment.md → moments/fetch_nearby，
-	// 原 feed/nearby_moments 迁移）：S2 覆盖区间粗筛，精筛在 Go 层（geo.SearchPlan）。
-	// 终序由 Go 层 compareNearbyCandidates（全序，momentID 兜底）确定，SQL 行序
-	// 不影响排序结果；ORDER BY + LIMIT 仅作为确定性防御截断——区间行数无界时
-	// 避免 DoS/内存无界（截断表现为"没有更多"，分页不错乱；正常规模不触达）。
-	// queryNearbyMomentDetails 一次查询补全附近流页面内的展示字段、标签数组与收藏态
-	// （20 行以内的 LATERAL/EXISTS 成本可忽略，比三次往返更省 context/网络开销）。
+	// queryNearbyMomentDetails 一次查询补全附近流页面内的展示字段、标签数组、
+	// 收藏态、图片行、reactions 聚合与作者关系（20 行以内的 LATERAL/EXISTS
+	// 仅作用于页内行，比多次往返更省 context/网络开销）。
+	// 候选粗筛 SQL 见 buildNearbyMomentsQuery：S2 覆盖区间用 OR BETWEEN 表达，
+	// 精筛/终序仍在 Go 层（geo.SearchPlan + compareNearbyCandidates）。
 	queryNearbyMomentDetails = `
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, (SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count, m.location_name,
        COALESCE((SELECT array_agg(mt.tag_name ORDER BY mt.tag_name) FROM moment_tags mt WHERE mt.moment_id = m.moment_id), ARRAY[]::text[]),
@@ -225,43 +223,6 @@ LEFT JOIN LATERAL (
   ) rx
 ) react ON TRUE
 WHERE m.moment_id = ANY($1)`
-	// queryNearbyMoments 候选粗筛只返回排序所需列（无逐行子查询、无 users join）：
-	// 热度/关注改为候选集批量聚合，展示字段分页后批量补全。
-	queryNearbyMoments = `
--- blocked：查看者双向拉黑集合一次物化（通常 0–几十行）。此前两个相关
--- NOT EXISTS 让优化器对每个候选行各扫一遍 user_relations（478 候选 × 2 次
--- 全表扫描，压测下 nearby p99 明显劣化），改为 hash/anti-join 一次构建。
-WITH blocked AS (
-  SELECT target_user_id AS user_id
-  FROM user_relations
-  WHERE user_id = $3 AND is_blocked = TRUE
-  UNION
-  SELECT user_id
-  FROM user_relations
-  WHERE target_user_id = $3 AND is_blocked = TRUE
-)
-SELECT m.moment_id,
-       m.user_id,
-       m.created_at,
-       m.interaction_count,
-       m.latitude,
-       m.longitude,
-       -- 关注加分输入随候选粗筛一并返回：查看者关注集合通常很小，PG 会把它
-       -- 规划成 hash 子计划（一次构建 + 每候选行 hash 探测），替代原「候选查询
-       -- 后再发一次批量关注查询」的额外 DB 往返（架构审计 perf D2）。
-       ($3 <> '' AND m.user_id IN (
-         SELECT target_user_id FROM user_relations
-         WHERE user_id = $3 AND is_following = TRUE
-       ))
-FROM moments m
-WHERE m.privacy_level = 'public'
-  AND m.is_deleted = FALSE
-  -- 双向拉黑过滤（对齐私聊/评论口径）：任何一方拉黑即互不可见
-  AND m.user_id NOT IN (SELECT user_id FROM blocked)
-  AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
-              WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)
-ORDER BY m.created_at DESC
-LIMIT 2000`
 )
 
 // momentCountSelectColumns 是 moment 行集的统一计数片段：契约字段 comments_count /

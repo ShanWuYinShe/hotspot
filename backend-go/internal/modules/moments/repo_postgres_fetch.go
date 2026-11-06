@@ -3,7 +3,9 @@ package moments
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
@@ -86,6 +88,42 @@ func (r *PostgresRepository) ListFollowingMoments(ctx context.Context, query mom
 	return paginateFollowingMoments(items, query.Limit, query.Cursor)
 }
 
+// buildNearbyMomentsQuery 生成附近流候选粗筛 SQL：S2 覆盖区间作为
+// OR BETWEEN 谓词（每个区间对应一个 S2 cell），让 btree/bitmap 索引直接
+// 使用区间条件；此前 unnest + EXISTS 会被规划成 semi-join 过滤（候选行
+// ×区间数次比较），是 nearby DB CPU 的主要来源之一。区间数上限约 50。
+func buildNearbyMomentsQuery(rangeCount int) string {
+	viewerArg := rangeCount*2 + 1
+	var b strings.Builder
+	fmt.Fprintf(&b, "WITH blocked AS (\n"+
+		"  SELECT target_user_id AS user_id\n"+
+		"  FROM user_relations\n"+
+		"  WHERE user_id = $%d AND is_blocked = TRUE\n"+
+		"  UNION\n"+
+		"  SELECT user_id\n"+
+		"  FROM user_relations\n"+
+		"  WHERE target_user_id = $%d AND is_blocked = TRUE\n"+
+		")\n"+
+		"SELECT m.moment_id, m.user_id, m.created_at, m.interaction_count, m.latitude, m.longitude,\n"+
+		"       ($%d <> '' AND m.user_id IN (\n"+
+		"         SELECT target_user_id FROM user_relations\n"+
+		"         WHERE user_id = $%d AND is_following = TRUE\n"+
+		"       ))\n"+
+		"FROM moments m\n"+
+		"WHERE m.privacy_level = 'public'\n"+
+		"  AND m.is_deleted = FALSE\n"+
+		"  AND m.user_id NOT IN (SELECT user_id FROM blocked)\n"+
+		"  AND (", viewerArg, viewerArg, viewerArg, viewerArg)
+	for i := 0; i < rangeCount; i++ {
+		if i > 0 {
+			b.WriteString(" OR ")
+		}
+		fmt.Fprintf(&b, "(m.s2_cell_id BETWEEN $%d AND $%d)", 2*i+1, 2*i+2)
+	}
+	b.WriteString(")\nORDER BY m.created_at DESC\nLIMIT 2000")
+	return b.String()
+}
+
 // ListNearbyMoments 附近瞬间（spec moment.md → moments/fetch_nearby）：
 // S2 覆盖区间粗筛 + geo.SearchPlan 精筛（radius 内）+ 距离主序排序。
 func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query momentsQuery) (PaginatedMoments, error) {
@@ -98,7 +136,12 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 	if len(mins) == 0 {
 		return PaginatedMoments{}, nil
 	}
-	rows, err := queryable.Query(ctx, queryNearbyMoments, mins, maxs, query.ViewerUserID)
+	args := make([]any, 0, 2*len(mins)+1)
+	for i := range mins {
+		args = append(args, mins[i], maxs[i])
+	}
+	args = append(args, query.ViewerUserID)
+	rows, err := queryable.Query(ctx, buildNearbyMomentsQuery(len(mins)), args...)
 	if err != nil {
 		return PaginatedMoments{}, err
 	}

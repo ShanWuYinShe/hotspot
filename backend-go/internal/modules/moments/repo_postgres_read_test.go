@@ -231,7 +231,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		return nil, b.queryErr
 	}
 	// 附近流：候选粗筛与分页详情查询（单测断言往返次数）。
-	if query == queryNearbyMoments {
+	if strings.Contains(query, "WITH blocked AS") {
 		return &rowsValues{rows: b.nearbyCandidates}, nil
 	}
 	if query == queryNearbyMomentDetails {

@@ -2,6 +2,7 @@ package moments
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -73,7 +74,24 @@ func TestPostgresListNearbyMomentsQueryCount(t *testing.T) {
 	if len(backend.queries) != 2 {
 		t.Fatalf("nearby roundtrips = %d (%v), want 2", len(backend.queries), backend.queries)
 	}
-	if backend.queries[0] != queryNearbyMoments || backend.queries[1] != queryNearbyMomentDetails {
+	if !strings.Contains(backend.queries[0], "WITH blocked AS") || backend.queries[1] != queryNearbyMomentDetails {
 		t.Fatalf("unexpected query order: %v", backend.queries)
+	}
+}
+
+// buildNearbyMomentsQuery 用 OR BETWEEN 表达覆盖区间（避免 unnest semi-join
+// 过滤），占位符顺序为 lo/hi 交替、viewer 最后且复用。
+func TestBuildNearbyMomentsQueryUsesOrRanges(t *testing.T) {
+	query := buildNearbyMomentsQuery(3)
+	if strings.Count(query, "m.s2_cell_id BETWEEN") != 3 {
+		t.Fatalf("expected 3 range predicates: %s", query)
+	}
+	for _, want := range []string{"$1 AND $2", "$3 AND $4", "$5 AND $6", "$7"} {
+		if !strings.Contains(query, want) {
+			t.Fatalf("missing placeholder %q: %s", want, query)
+		}
+	}
+	if strings.Contains(query, "unnest(") {
+		t.Fatalf("range predicate must not use unnest: %s", query)
 	}
 }

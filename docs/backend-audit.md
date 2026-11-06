@@ -3431,3 +3431,20 @@ groups/search 6027→6178-6584 rps（p99 18.9→14.6-18.7ms），moments/search 
 （9787 rps，p99 3.5-4.0ms）；users/search 不受影响。DB 缓存冷热会使
 users/search 在 2.4k-5k rps / p99 6-40ms 间波动，回归判断以 perf-budget 相对
 阈值为准。
+
+## Batch D2（第五批）：nearby 候选粗筛 S2 区间改 OR BETWEEN（2026-11-07）
+
+pg_stat_statements + EXPLAIN 定位 nearby p99：候选粗筛的半径谓词写成
+`EXISTS (SELECT 1 FROM unnest(mins,maxs) WHERE s2_cell_id BETWEEN lo AND hi)`，
+PostgreSQL 规划成 semi-join：扫描全部 public moments 后逐行 ×28 个区间过滤
+（实测 922 行 → 25574 次 Join Filter，3.1ms/次），DB CPU 2 核被打满。
+
+- 新增 buildNearbyMomentsQuery(rangeCount)：把每个 S2 覆盖区间生成
+  `m.s2_cell_id BETWEEN $lo AND $hi` 的 OR 谓词（区间数 ≤50），args 按
+  lo/hi 交替 + viewer 末尾；SQL 文本只随区间数变化（prepared 缓存友好）；
+- 同数据 EXPLAIN：3.145ms → 0.343ms（Bitmap heap scan + filter 22 行）；
+- 候选粗筛不再使用 unnest semi-join，区间条件可直接由 btree/bitmap 使用；
+- 测试：query-count 用例改为匹配 SQL 特征；新增 builder 单元测试
+  （OR 区间数、占位符顺序、无 unnest）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
