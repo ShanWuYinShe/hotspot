@@ -2,86 +2,40 @@ package bootstrap
 
 import (
 	"context"
+	"errors"
 	"testing"
-	"time"
 
 	"hotspot/backend-go/internal/modules/media"
-	platformauth "hotspot/backend-go/internal/platform/auth"
-	"hotspot/backend-go/internal/platform/idempotency"
 )
 
-// stubMediaProvider 满足 media.Provider 的最小桩（Presign 固定返回可预算的
-// upload 会话；Head 返回与声明一致的元数据，让 complete 校验通过）。
-type stubMediaProvider struct {
-	head media.ObjectMetadata
+// stubCompletedFileMetaReader 是 reportsMediaSource 依赖的最小能力桩：
+// 装配层只依赖窄接口（架构审计 P0-1），媒体服务自身行为由 media 包测试覆盖。
+type stubCompletedFileMetaReader struct {
+	meta  media.FileMeta
+	found bool
+	err   error
 }
 
-func (p *stubMediaProvider) Presign(_ context.Context, req media.PresignFileInput, owner string) (media.PresignedUpload, error) {
-	id := "upload_report"
-	return media.PresignedUpload{
-		UploadID:   id,
-		UploadURL:  "https://storage.example.com/" + id,
-		Headers:    map[string]string{"Content-Type": req.MimeType},
-		ExpiresAt:  time.Now().Add(time.Hour).Format(time.RFC3339),
-		StorageKey: "uploads/" + owner + "/" + id + ".bin",
-	}, nil
-}
-
-func (p *stubMediaProvider) PresignGet(context.Context, string, time.Duration) (string, error) {
-	return "", nil
-}
-
-func (p *stubMediaProvider) Head(context.Context, string) (media.ObjectMetadata, error) {
-	return p.head, nil
-}
-
-func (p *stubMediaProvider) ReadPrefix(context.Context, string, int64) ([]byte, error) {
-	return nil, nil
-}
-
-func (p *stubMediaProvider) Delete(context.Context, string) error { return nil }
-
-func (p *stubMediaProvider) GetObject(context.Context, string) ([]byte, error) { return nil, nil }
-
-func (p *stubMediaProvider) PutObject(context.Context, string, string, []byte) error { return nil }
-
-// 走真实 Presign → Complete 流程构造完成态上传（chat_file 类别：无魔数嗅探/EXIF 清洗）。
-// 返回服务、完成态 FileMeta 与 file_id（CompletedFileMetaByID 以完成态 File.FileID
-// 为键；upload_id 与 file_id 是不同值）。
-func seedCompletedUpload(t *testing.T, ctx context.Context) (*media.Service, media.FileMeta, string) {
-	t.Helper()
-	repo := media.NewInMemoryRepository()
-	svc := media.NewServiceWithRepoAndProvider(repo, &stubMediaProvider{
-		head: media.ObjectMetadata{FileSize: 2048, MimeType: "application/pdf"},
-	})
-	ctx = platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: "u1"})
-	ctx = idempotency.WithKey(ctx, "idem_report")
-	resp, err := svc.Presign(ctx, media.PresignFileInput{
-		FileName: "evidence.pdf", FileSize: 2048, MimeType: "application/pdf", Category: media.CategoryChatFile,
-	})
-	if err != nil {
-		t.Fatalf("Presign: %v", err)
-	}
-	if _, err := svc.Complete(ctx, resp.UploadID); err != nil {
-		t.Fatalf("Complete: %v", err)
-	}
-	completed, found, err := repo.Get(ctx, resp.UploadID)
-	if err != nil || !found || !completed.Completed || completed.File.FileID == "" {
-		t.Fatalf("expected completed upload, found=%v err=%v record=%#v", found, err, completed)
-	}
-	fm, found, err := repo.CompletedFileMetaByID(ctx, completed.File.FileID)
-	if err != nil || !found {
-		t.Fatalf("expected completed file meta, found=%v err=%v", found, err)
-	}
-	return svc, fm, completed.File.FileID
+func (s stubCompletedFileMetaReader) CompletedFileMetaByID(context.Context, string) (media.FileMeta, bool, error) {
+	return s.meta, s.found, s.err
 }
 
 func TestReportsMediaSourceMapsAllFields(t *testing.T) {
 	ctx := context.Background()
-	svc, fm, fileID := seedCompletedUpload(t, ctx)
-	src := reportsMediaSource{svc: svc}
+	fm := media.FileMeta{
+		Category:     media.CategoryChatFile,
+		StorageKey:   "uploads/u1/evidence.pdf",
+		ThumbnailURL: "thumb/evidence.jpg",
+		Width:        800,
+		Height:       600,
+		MimeType:     "application/pdf",
+		FileName:     "evidence.pdf",
+		FileSize:     2048,
+		Duration:     12,
+	}
+	src := reportsMediaSource{svc: stubCompletedFileMetaReader{meta: fm, found: true}}
 
-	got, found, err := src.CompletedFileMetaByID(ctx, fileID)
+	got, found, err := src.CompletedFileMetaByID(ctx, "file_1")
 	if err != nil || !found {
 		t.Fatalf("expected found=true err=nil, got found=%v err=%v", found, err)
 	}
@@ -110,31 +64,16 @@ func TestReportsMediaSourceMapsAllFields(t *testing.T) {
 	}
 }
 
-func TestReportsMediaSourceUnknownFile(t *testing.T) {
+func TestReportsMediaSourceNotFoundPassesThrough(t *testing.T) {
 	ctx := context.Background()
-	repo := media.NewInMemoryRepository()
-	src := reportsMediaSource{svc: media.NewServiceWithRepo(repo)}
-
-	_, found, err := src.CompletedFileMetaByID(ctx, "upload_missing")
-	if err != nil || found {
-		t.Fatalf("expected found=false err=nil for unknown file, got found=%v err=%v", found, err)
+	src := reportsMediaSource{svc: stubCompletedFileMetaReader{found: false}}
+	if _, found, err := src.CompletedFileMetaByID(ctx, "file_missing"); err != nil || found {
+		t.Fatalf("expected found=false err=nil, got found=%v err=%v", found, err)
 	}
-}
 
-// presign 后未 complete 的上传不暴露给举报快照——只认完成态。
-func TestReportsMediaSourceIgnoresPendingUpload(t *testing.T) {
-	ctx := context.Background()
-	repo := media.NewInMemoryRepository()
-	svc := media.NewServiceWithRepoAndProvider(repo, &stubMediaProvider{})
-	ictx := platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: "u1"})
-	if _, err := svc.Presign(ictx, media.PresignFileInput{
-		FileName: "pending.pdf", FileSize: 100, MimeType: "application/pdf", Category: media.CategoryChatFile,
-	}); err != nil {
-		t.Fatalf("Presign: %v", err)
-	}
-	src := reportsMediaSource{svc: svc}
-
-	if _, found, err := src.CompletedFileMetaByID(ctx, "upload_report"); err != nil || found {
-		t.Fatalf("pending upload must not be visible, got found=%v err=%v", found, err)
+	boom := errors.New("boom")
+	src = reportsMediaSource{svc: stubCompletedFileMetaReader{err: boom}}
+	if _, _, err := src.CompletedFileMetaByID(ctx, "file_err"); !errors.Is(err, boom) {
+		t.Fatalf("expected error propagated, got %v", err)
 	}
 }

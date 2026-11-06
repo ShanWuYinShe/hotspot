@@ -35,10 +35,17 @@ type MediaFileMetaSource interface {
 	CompletedFileMetaByID(ctx context.Context, fileID string) (MediaFileMeta, bool, error)
 }
 
+// GroupMessageSnapshotSource 是举报快照所需的群消息读能力（groupmessages.Service
+// 实现）：消费方用窄接口而非具体 Service，便于独立装配/测试（架构审计 P0-1）。
+type GroupMessageSnapshotSource interface {
+	GetMessageReportSnapshot(ctx context.Context, messageID string) (groupmessages.MessageReportSnapshot, bool, error)
+	IsGroupMember(ctx context.Context, groupID, userID string) (bool, error)
+}
+
 // NewMessageSnapshotSource 组装举报快照源。groupMessages/privateMessages 任一
 // 为 nil 时跳过对应消息源；mediaFiles 为 nil 时媒体元数据降级为「查不到」，
 // snapshot_media 回退为不可成立（按目标不存在处理）。
-func NewMessageSnapshotSource(groupMessages *groupmessages.Service, privateMessages privatemessages.ReadService, mediaFiles MediaFileMetaSource) MessageSnapshotSource {
+func NewMessageSnapshotSource(groupMessages GroupMessageSnapshotSource, privateMessages privatemessages.ReadService, mediaFiles MediaFileMetaSource) MessageSnapshotSource {
 	return messageSnapshotSource{
 		groupMessages:   groupMessages,
 		privateMessages: privateMessages,
@@ -47,7 +54,7 @@ func NewMessageSnapshotSource(groupMessages *groupmessages.Service, privateMessa
 }
 
 type messageSnapshotSource struct {
-	groupMessages   *groupmessages.Service
+	groupMessages   GroupMessageSnapshotSource
 	privateMessages privatemessages.ReadService
 	mediaFiles      MediaFileMetaSource
 }

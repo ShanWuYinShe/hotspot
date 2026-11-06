@@ -246,7 +246,13 @@ func (a realtimeGroupRepo) AreMembers(ctx context.Context, groupIDs []string, us
 
 // reportsMediaSource adapts the media module Service to the reports snapshot
 // source's file-metadata interface (keeps reports free of a media import).
-type reportsMediaSource struct{ svc *media.Service }
+// completedFileMetaReader 是举报快照媒体元数据所需的最小能力（media.Service
+// 实现）：装配层只依赖窄接口，便于测试替换。
+type completedFileMetaReader interface {
+	CompletedFileMetaByID(ctx context.Context, fileID string) (media.FileMeta, bool, error)
+}
+
+type reportsMediaSource struct{ svc completedFileMetaReader }
 
 func (a reportsMediaSource) CompletedFileMetaByID(ctx context.Context, fileID string) (reports.MediaFileMeta, bool, error) {
 	meta, found, err := a.svc.CompletedFileMetaByID(ctx, fileID)

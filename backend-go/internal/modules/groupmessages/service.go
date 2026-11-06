@@ -152,7 +152,6 @@ func (f *readCountFlusher) schedule(groupID string, messageIDs []string, flush f
 	})
 }
 
-func NewService() *Service { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service {
 	return &Service{repo: repo, users: nil, readFlusher: newReadCountFlusher()}
 }

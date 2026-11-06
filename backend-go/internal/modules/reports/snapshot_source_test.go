@@ -152,26 +152,32 @@ func TestMessageSnapshotSourcePrivateMessage(t *testing.T) {
 	}
 }
 
+// stubGroupSnapshotSource 群消息快照读能力桩（reports 只依赖窄接口）。
+type stubGroupSnapshotSource struct {
+	snapshot groupmessages.MessageReportSnapshot
+	found    bool
+	members  map[string]bool
+}
+
+func (s stubGroupSnapshotSource) GetMessageReportSnapshot(context.Context, string) (groupmessages.MessageReportSnapshot, bool, error) {
+	return s.snapshot, s.found, nil
+}
+
+func (s stubGroupSnapshotSource) IsGroupMember(_ context.Context, groupID, userID string) (bool, error) {
+	return s.members[groupID+":"+userID], nil
+}
+
 func TestMessageSnapshotSourceGroupMessage(t *testing.T) {
 	ctx := context.Background()
-
-	// 使用内存版 groupmessages.InMemoryRepository
-	repo := groupmessages.NewInMemoryRepository()
-	res, err := repo.Send(ctx, groupmessages.SendGroupMessageRequest{
-		GroupID:      "group_999",
-		SenderUserID: "user_member_a",
-		Type:         "text",
-		Content:      "群内的不当言论",
-	})
-	if err != nil {
-		t.Fatalf("send group message failed: %v", err)
+	gm := stubGroupSnapshotSource{
+		snapshot: groupmessages.MessageReportSnapshot{GroupID: "group_999", Type: "text", Content: "群内的不当言论", SentAt: "2026-05-01T00:00:00Z"},
+		found:    true,
+		members:  map[string]bool{"group_999:user_member_a": true},
 	}
+	source := NewMessageSnapshotSource(gm, nil, nil)
 
-	gmSvc := groupmessages.NewServiceWithRepo(repo)
-	source := NewMessageSnapshotSource(gmSvc, nil, nil)
-
-	// 1. 发送者（群成员）举报：快照成功生成
-	snap, found, err := source.GetMessageSnapshot(ctx, res.MessageID, "user_member_a")
+	// 1. 群成员举报：快照成功生成
+	snap, found, err := source.GetMessageSnapshot(ctx, "gm_1", "user_member_a")
 	if err != nil || !found || snap == nil {
 		t.Fatalf("expected snapshot found for group member, got %v", err)
 	}
@@ -180,13 +186,15 @@ func TestMessageSnapshotSourceGroupMessage(t *testing.T) {
 	}
 
 	// 2. 非群成员举报：必须拒绝（防止外部遍历 messageID 自读群聊记录）
-	snapNonMember, found, err := source.GetMessageSnapshot(ctx, res.MessageID, "user_outsider")
+	snapNonMember, found, err := source.GetMessageSnapshot(ctx, "gm_1", "user_outsider")
 	if err != nil || found || snapNonMember != nil {
 		t.Fatalf("expected outsider cannot snapshot group message, got found=%v", found)
 	}
 
 	// 3. 不存在的消息 ID
-	snapMissing, found, err := source.GetMessageSnapshot(ctx, "gm_nonexistent", "user_member_a")
+	missing := stubGroupSnapshotSource{}
+	sourceMissing := NewMessageSnapshotSource(missing, nil, nil)
+	snapMissing, found, err := sourceMissing.GetMessageSnapshot(ctx, "gm_nonexistent", "user_member_a")
 	if err != nil || found || snapMissing != nil {
 		t.Fatalf("expected nonexistent message to return found=false, got found=%v", found)
 	}

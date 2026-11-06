@@ -2374,3 +2374,20 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   或真实库 testdb 夹具，后续批次继续迁移。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+
+## Batch C（第九批）：再迁 2 模块内存仓储 + 消费方接口收窄（2026-11-06）
+
+- **groupmessages、media** 的 `repo_memory.go` 迁移为 `*_test.go`；生产代码继续
+  减少内存实现（至此 10/17 模块已迁入测试构建）。
+- **装配/适配器接口收窄**（架构审计 P0-1：消费方依赖窄接口而非具体 Service）：
+  - reports.MessageSnapshotSource 的群消息源改为 `GroupMessageSnapshotSource`
+    窄接口（GetMessageReportSnapshot + IsGroupMember）；
+  - bootstrap 的举报媒体适配器改为 `completedFileMetaReader` 窄接口。
+- 跨包测试夹具去内存依赖：
+  - reports 快照测试改用本地群消息源 fake（不再引用 groupmessages 内存仓储）；
+  - bootstrap 媒体适配器测试改用本地 FileMeta fake（媒体服务行为由 media 包测试覆盖）。
+- 覆盖率补测：groupmessages 迁移后 67.5% → 75.3%（仓储剩余读/审核路径骨架用例）；
+  media 72.8%；两模块均满足 70% 门槛。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
