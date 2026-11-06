@@ -79,9 +79,16 @@ type Config struct {
 	// 已是管理员」的鸡生蛋死锁。已有任意管理员时为 no-op，重启/误配不提权。
 	AdminBootstrapUserID string
 	// RetentionSweepEnabled 数据保留期清理（RETENTION_SWEEP_ENABLED）：auth
-	// 已撤销会话/过期验证码行、media 未完成上传会话及孤儿对象到期物理删除，
-	// 防止上述表与存储无限累积。默认开启。
+	// 已撤销会话/过期验证码行、media 未完成上传会话及孤儿对象到期物理删除、
+	// admin 审计日志与终态举报超保留期清理，防止上述表与存储无限累积。默认开启。
 	RetentionSweepEnabled bool
+	// AdminAuditRetentionDays 审计日志保留天数（ADMIN_AUDIT_RETENTION_DAYS，默认
+	// 365；<=0 关闭）：每天物理删除 created_at 早于 N 天的 admin_audit_logs。
+	// 合规保留期按部署调整，删除为后台幂等操作、不影响在线请求。
+	AdminAuditRetentionDays int
+	// ReportRetentionDays 终态举报保留天数（REPORT_RETENTION_DAYS，默认 365；<=0
+	// 关闭）：只清 resolved/dismissed 且已处理超 N 天的举报；pending 永不删除。
+	ReportRetentionDays int
 	// CorsAllowedOrigins 跨源白名单（CORS_ALLOWED_ORIGINS，逗号分隔）：同源
 	// 部署默认为空（不响应任何跨源）；确有跨源消费方时显式配置。
 	CorsAllowedOrigins []string
@@ -121,13 +128,15 @@ func Load() Config {
 		BcryptCost:             bcryptCostOrDefault("BCRYPT_COST", defaultBcryptCost),
 		// Postgres 连接池尺寸。多实例部署时各实例独立持池，默认 25 在 3 实例
 		// 下已逼近 Postgres 默认 max_connections=100，需要按实例数下调。
-		PostgresMaxConns:      envIntOrDefault("POSTGRES_MAX_CONNS", defaultPostgresMaxConns),
-		PostgresMinConns:      envIntOrDefault("POSTGRES_MIN_CONNS", defaultPostgresMinConns),
-		SlowQueryThreshold:    envDurationOrDefault("SLOW_QUERY_THRESHOLD", 200*time.Millisecond),
-		NotifyPruneEnabled:    envBoolOrDefault("NOTIFY_PRUNE_ENABLED", true),
-		AdminBootstrapUserID:  os.Getenv("ADMIN_BOOTSTRAP_USER_ID"),
-		RetentionSweepEnabled: envBoolOrDefault("RETENTION_SWEEP_ENABLED", true),
-		CorsAllowedOrigins:    envStringList("CORS_ALLOWED_ORIGINS"),
+		PostgresMaxConns:        envIntOrDefault("POSTGRES_MAX_CONNS", defaultPostgresMaxConns),
+		PostgresMinConns:        envIntOrDefault("POSTGRES_MIN_CONNS", defaultPostgresMinConns),
+		SlowQueryThreshold:      envDurationOrDefault("SLOW_QUERY_THRESHOLD", 200*time.Millisecond),
+		NotifyPruneEnabled:      envBoolOrDefault("NOTIFY_PRUNE_ENABLED", true),
+		AdminBootstrapUserID:    os.Getenv("ADMIN_BOOTSTRAP_USER_ID"),
+		RetentionSweepEnabled:   envBoolOrDefault("RETENTION_SWEEP_ENABLED", true),
+		AdminAuditRetentionDays: envNonNegativeIntOrDefault("ADMIN_AUDIT_RETENTION_DAYS", 365),
+		ReportRetentionDays:     envNonNegativeIntOrDefault("REPORT_RETENTION_DAYS", 365),
+		CorsAllowedOrigins:      envStringList("CORS_ALLOWED_ORIGINS"),
 	}
 }
 
@@ -166,6 +175,20 @@ func envBoolOrDefault(key string, fallback bool) bool {
 }
 
 // envIntOrDefault 解析正整数环境变量；空/非法/非正则返回 fallback。
+// envNonNegativeIntOrDefault 与 envIntOrDefault 相同，但允许显式 0（用于「0 =
+// 关闭」语义的开关型数值，如保留期天数）。非法值仍回退默认。
+func envNonNegativeIntOrDefault(key string, fallback int) int {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return fallback
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil || v < 0 {
+		return fallback
+	}
+	return v
+}
+
 func envIntOrDefault(key string, fallback int) int {
 	raw := os.Getenv(key)
 	if raw == "" {

@@ -180,6 +180,9 @@ services:
       ADMIN_BOOTSTRAP_USER_ID: ${ADMIN_BOOTSTRAP_USER_ID:-}
       # 数据保留期清理开关（auth_code/验证码/过期分享等清扫），默认开启。
       RETENTION_SWEEP_ENABLED: ${RETENTION_SWEEP_ENABLED:-true}
+      # 保留期（天）：超期物理删除审计日志/已处理举报；<=0 关闭对应清理。
+      ADMIN_AUDIT_RETENTION_DAYS: ${ADMIN_AUDIT_RETENTION_DAYS:-365}
+      REPORT_RETENTION_DAYS: ${REPORT_RETENTION_DAYS:-365}
       # pprof 仅监听 localhost（容器内回环），不暴露到宿主机/外部网络。
       # 留空可在生产关闭：PPROF_ADDR=
       PPROF_ADDR: ${PPROF_ADDR:-127.0.0.1:6060}

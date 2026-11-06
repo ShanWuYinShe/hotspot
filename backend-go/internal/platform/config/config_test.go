@@ -391,3 +391,19 @@ func TestLoadPostgresPoolSize(t *testing.T) {
 		t.Fatalf("invalid pool size = %d/%d, want fallback 25/2", cfg.PostgresMaxConns, cfg.PostgresMinConns)
 	}
 }
+
+func TestLoadRetentionWindows(t *testing.T) {
+	t.Setenv("ADMIN_AUDIT_RETENTION_DAYS", "")
+	t.Setenv("REPORT_RETENTION_DAYS", "")
+	cfg := Load()
+	if cfg.AdminAuditRetentionDays != 365 || cfg.ReportRetentionDays != 365 {
+		t.Fatalf("defaults = audit:%d report:%d, want 365/365", cfg.AdminAuditRetentionDays, cfg.ReportRetentionDays)
+	}
+
+	t.Setenv("ADMIN_AUDIT_RETENTION_DAYS", "180")
+	t.Setenv("REPORT_RETENTION_DAYS", "0")
+	cfg = Load()
+	if cfg.AdminAuditRetentionDays != 180 || cfg.ReportRetentionDays != 0 {
+		t.Fatalf("overrides = audit:%d report:%d, want 180/0", cfg.AdminAuditRetentionDays, cfg.ReportRetentionDays)
+	}
+}

@@ -206,6 +206,11 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// update_account 的 avatar_file_id 归属校验接线（spec 10300）。
 	usersModule.Service.SetAvatarMediaResolver(mediaModule.Service)
 	adminModule := admin.NewModule(factory, sharedAppConfig, notificationService)
+	// 审计日志/终态举报保留期清理（RETENTION_SWEEP_ENABLED；各条目天数 <=0 关闭
+	// 该类清理）。后台幂等删除，不阻塞启动/请求。
+	if cfg.RetentionSweepEnabled {
+		adminModule.Service.StartRetentionSweeper(ctx, cfg.AdminAuditRetentionDays, cfg.ReportRetentionDays)
+	}
 	// 公告版本缓存失效接线：admin 用独立 systemRepo 实例写公告，显式让 system 模块
 	// 的 bootstrap 版本缓存失效（ETag 立即变化，不等 5s TTL）。
 	adminModule.Service.SetAnnouncementsVersionInvalidator(systemModule.Service().InvalidateAnnouncementsVersion)

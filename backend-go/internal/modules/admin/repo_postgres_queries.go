@@ -564,3 +564,24 @@ WHERE m.is_deleted = FALSE AND m.s2_cell_id <> 0 AND (m.s2_cell_id >> $2) = $1
 ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $7`
 )
+
+// queryDeleteAuditLogsBefore / queryDeleteHandledReportsBefore 保留期清理：
+// 用 CTE + RETURNING 拿删除行数（persistence.Queryable.Exec 不暴露 affected rows）。
+// 审计日志按 created_at 删；举报只删已处理终态，pending 永不清理。
+const (
+	queryDeleteAuditLogsBefore = `
+WITH deleted AS (
+    DELETE FROM admin_audit_logs WHERE created_at < $1 RETURNING 1
+)
+SELECT COUNT(*) FROM deleted`
+
+	queryDeleteHandledReportsBefore = `
+WITH deleted AS (
+    DELETE FROM reports
+    WHERE handled_at IS NOT NULL
+      AND handled_at < $1
+      AND status IN ('resolved', 'dismissed')
+    RETURNING 1
+)
+SELECT COUNT(*) FROM deleted`
+)

@@ -2182,3 +2182,24 @@ rps 与 p50/p95/p99，用于**同一会话内的前后对比**；非测试环境
   privatemessages/groupmessages 的 TO_CHAR 已含 .US 微秒；system announcements、
   admin moderation tag 均直接持有 time.Time；内存实现仅测试使用（保持展示字符串口径）。
 - 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+
+## Batch B5：审计日志/终态举报保留期（2026-11-06）
+
+持久化审计 P1-9 的第一批（成本最低、合规收益最高）：admin_audit_logs 与 reports
+长期只增不减。
+
+- 新增 admin 后台保留期清理（RETENTION_SWEEP_ENABLED 管控）：
+  - 审计日志默认保留 365 天（ADMIN_AUDIT_RETENTION_DAYS，<=0 关闭）；
+  - 只清已处理终态举报、默认 365 天（REPORT_RETENTION_DAYS，<=0 关闭），
+    pending 举报永不自动删除。
+  - 删除走 CTE + RETURNING 统计行数（persistence.Queryable 不暴露 affected rows），
+    单轮 5 分钟超时，失败 WARN 不阻断；worker.GoRestartable 崩溃自愈。
+- config 新增允许显式 0 的 envNonNegativeIntOrDefault（既有 envIntOrDefault 把 0
+  当非法回退默认，无法表达「关闭」语义），单测覆盖默认/覆盖/0。
+- 双实现契约测试补「保留期只删 cutoff 前数据」；PG IT 覆盖「pending 保留、
+  终态超期删除、终态未超期保留」。
+- compose/.env.example 注入两个新变量并更新保留期说明。
+
+未做（设计文档已记）：messages/reactions 分区与清理、软删内容 purge（需先统一
+deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--with-db ALL CHECKS PASSED。

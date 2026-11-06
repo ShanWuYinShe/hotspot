@@ -188,6 +188,29 @@ func TestAdminAuditLogContract(t *testing.T) {
 			},
 		},
 		{
+			Name: "retention deletes only rows before cutoff",
+			Run: func(t *testing.T, repo Repository, state adminAuditContractState) {
+				now := time.Now().UTC()
+				appendEntry(t, repo, state, entry("audit_expired", now.AddDate(0, 0, -400), AuditActionAnnouncementCreate, "op1", "announcement", "a1"))
+				appendEntry(t, repo, state, entry("audit_fresh", now.AddDate(0, 0, -10), AuditActionAnnouncementUpdate, "op1", "announcement", "a1"))
+
+				deleted, err := repo.DeleteAuditLogsBefore(state.ctx, now.AddDate(0, 0, -365))
+				if err != nil {
+					t.Fatalf("delete expired: %v", err)
+				}
+				if deleted != 1 {
+					t.Fatalf("deleted = %d, want 1", deleted)
+				}
+				page, err := repo.ListAuditLogs(state.ctx, AuditLogFilter{Pagination: PaginationParams{Limit: 10}}, false)
+				if err != nil {
+					t.Fatalf("list after prune: %v", err)
+				}
+				if got := idsOf(page.Items); !equalIDs(got, []string{"audit_fresh"}) {
+					t.Fatalf("remaining ids = %v, want [audit_fresh]", got)
+				}
+			},
+		},
+		{
 			Name: "includeIPAddress gates only ip_address",
 			Run: func(t *testing.T, repo Repository, state adminAuditContractState) {
 				appendEntry(t, repo, state, entry("audit_ip", base, AuditActionAdminAward, "op1", "admin", "ad1"))
