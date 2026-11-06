@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/testdb"
 )
@@ -13,7 +14,7 @@ func TestPostgresIT_RegisterCreatesAccount(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 
 		account, err := repo.Register(ctx, RegisterParams{
 			LoginID:  "alice@example.com",
@@ -50,7 +51,7 @@ func TestPostgresIT_RegisterRejectsDuplicateLoginID(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 		params := RegisterParams{
 			LoginID:  "bob@example.com",
 			Nickname: "Bob",
@@ -77,7 +78,7 @@ func TestPostgresIT_AuthenticateVerifiesPassword(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 		_, err := repo.Register(ctx, RegisterParams{
 			LoginID:  "carol@example.com",
 			Nickname: "Carol",
@@ -114,7 +115,7 @@ func TestPostgresIT_CreateGuestCreatesTempAccount(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 		account, err := repo.CreateGuest(ctx, GuestParams{
 			Nickname:   "Guest123",
 			Defaults:   ProfileDefaults{CreatedAt: time.Now().UTC()},
@@ -139,7 +140,7 @@ func TestPostgresIT_UpdateLoginMetaPersists(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 		account, err := repo.Register(ctx, RegisterParams{
 			LoginID:  "dave@example.com",
 			Nickname: "Dave",
@@ -177,7 +178,7 @@ func TestPostgresIT_PasswordResetFlow(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 		_, err := repo.Register(ctx, RegisterParams{
 			LoginID:  "eve@example.com",
 			Nickname: "Eve",
@@ -216,4 +217,11 @@ func TestPostgresIT_PasswordResetFlow(t *testing.T) {
 			t.Fatalf("Authenticate with new password: %v", err)
 		}
 	})
+}
+
+// newITRepo 装配 users 资料写能力（注册/游客/登录元数据归属 users 模块，P0-4）。
+func newITRepo(txFactory *persistence.Factory) *PostgresRepository {
+	repo := NewPostgresRepository(txFactory)
+	repo.SetProfileWriter(usersmodule.NewServiceWithRepo(usersmodule.NewPostgresRepository(txFactory)))
+	return repo
 }

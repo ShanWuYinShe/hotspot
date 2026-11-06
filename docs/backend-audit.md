@@ -2725,3 +2725,25 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   改由 reports 仓储执行 DELETE；移除 admin 仓储裁决 SQL 用例。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第十八批）：跨模块写债务收敛 4/5 — auth:user_settings/users（2026-11-07）
+
+架构审计 P0-4 第三项：auth 注册/游客建用户与登录元数据直写 users/user_settings，
+两表归属 users 模块。
+
+- users 模块新增 ProfileWriter 最小能力（ProvisionUserInput/ProvisionUser/
+  RecordLogin）：Service 经可选仓储能力断言消费；SQL（建用户+默认设置、
+  登录元数据）归位 users/repo_postgres_profile_writer.go。
+- auth 仓储改为注入 users.ProfileWriter：Register/CreateGuest 在既有事务内
+  调 ProvisionUser（txCtx 透传，凭证+资料仍同事务回滚）；UpdateLoginMeta 改调
+  RecordLogin；auth 侧 queryInsertUserProfile/queryUpsertUserSettings/
+  queryUpdateLoginMeta 全部删除。
+- 依赖方向 auth→users（archtest import allowlist 显式登记），users 不反向依赖；
+  bootstrap 在 users/auth 模块装配后注入 usersModule.Service。
+- archtest 删除 allowlist 条目 auth:user_settings、auth:users（跨模块写债务 3→1，
+  仅剩 privatemessages:private_chats）。
+- 测试：auth 仓储单测改为断言 ProfileWriter 调用参数（含游客 email/phone 为空、
+  注册元数据、writer 未接线显式失败）；真实库 IT 注入 users PG 仓储；
+  users 覆盖率 73.1%（新增能力覆盖后仍过门槛）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

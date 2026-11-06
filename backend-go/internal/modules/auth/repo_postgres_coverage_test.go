@@ -89,6 +89,7 @@ func TestPostgresAuthenticateAndUpdateLoginMeta(t *testing.T) {
 		t.Fatalf("missing user must be invalid credentials, got %v", err)
 	}
 
+	repo.SetProfileWriter(&recordingProfileWriter{})
 	if err := repo.UpdateLoginMeta(context.Background(), "user_1", "1.2.3.4", "US"); err != nil {
 		t.Fatalf("update login meta: %v", err)
 	}

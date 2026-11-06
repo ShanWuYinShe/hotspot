@@ -26,6 +26,7 @@ import (
 // platform 接口/适配器解耦。
 var allowedModuleImports = map[string][]string{
 	"admin":           {"groups", "notify", "reports", "system", "users"},
+	"auth":            {"users"},
 	"comments":        {"notify"},
 	"groupmessages":   {"users"},
 	"groups":          {"notify"},
@@ -87,11 +88,6 @@ var tableOwners = map[string]string{
 // crossModuleWritesAllowlist 是既有跨模块写表债务（架构审计 P0-4）。键为
 // "模块:表"。新增写其他模块表必须显式登记；删除条目是纯收益。
 var crossModuleWritesAllowlist = map[string]string{
-	// admin：审核/管理动作需要直接改多域状态（后续应由各模块暴露管理接口）。
-	"admin:reports": "管理员处理举报",
-	// auth：注册/设置联动（auth 需在同一流程写 users/user_settings）。
-	"auth:user_settings": "注册默认设置",
-	"auth:users":         "注册建用户/改用户类型",
 	// privatemessages：发消息时更新会话摘要/未读数（私聊会话表归属 privatechats）。
 	"privatemessages:private_chats": "发消息更新会话最后消息/未读",
 }

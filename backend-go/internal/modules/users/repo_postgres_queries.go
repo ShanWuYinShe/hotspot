@@ -339,3 +339,22 @@ SET status = $2,
     banned_duration_days = $4,
     banned_at = $5
 WHERE user_id = $1`
+
+// 注册建用户/登录元数据写入（users/user_settings 归属本模块；auth 经
+// ProfileWriter 消费，架构审计 P0-4）。
+const (
+	queryProvisionUserProfile = `
+INSERT INTO users (user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, s2_cell_id, presence_status, last_online, created_at, register_ip, register_location, last_login_ip, last_login_location)
+VALUES ($1, $2, $3, $4, '', '', $5, $6, $7, $8, $9, $10, 'online', $11, $12, $13, $14, $15, $16)`
+
+	queryProvisionUserSettings = `
+INSERT INTO user_settings (user_id, privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable)
+VALUES ($1, 'public', TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, 'everyone', TRUE, FALSE, TRUE, TRUE)
+ON CONFLICT (user_id) DO NOTHING`
+
+	queryRecordLoginMeta = `
+UPDATE users
+SET last_login_ip = $2,
+    last_login_location = $3
+WHERE user_id = $1`
+)

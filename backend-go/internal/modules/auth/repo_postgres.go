@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"hotspot/backend-go/internal/platform/geo"
+	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -14,11 +14,21 @@ import (
 
 type PostgresRepository struct {
 	factory *persistence.Factory
+	// profileWriter 是 users 模块的注册/登录资料写能力（users/user_settings
+	// 归属 users 模块，auth 不再直写；架构审计 P0-4）。
+	profileWriter usersmodule.ProfileWriter
 }
 
 func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
+
+// SetProfileWriter 注入 users 模块资料写能力（bootstrap 装配）。
+func (r *PostgresRepository) SetProfileWriter(writer usersmodule.ProfileWriter) {
+	r.profileWriter = writer
+}
+
+var errProfileWriterNotWired = errors.New("auth: user profile writer not configured")
 
 func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams) (Account, error) {
 	if _, ok := r.queryable(ctx); !ok {
@@ -33,7 +43,6 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 		return Account{}, err
 	}
 	now := params.Defaults.CreatedAt.UTC()
-	s2CellID := geo.LeafCellID(geo.Point{Latitude: params.Defaults.Latitude, Longitude: params.Defaults.Longitude})
 	// Wrap all three inserts (user profile, auth account, settings) in a single
 	// transaction. Previously these were separate Execs with manual compensating
 	// deletes on failure, which is racy under concurrent registration and leaks
@@ -46,7 +55,15 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := queryable.Exec(txCtx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", nullIfEmpty(params.Email), nullIfEmpty(params.Phone), params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
+		if r.profileWriter == nil {
+			return errProfileWriterNotWired
+		}
+		if err := r.profileWriter.ProvisionUser(txCtx, usersmodule.ProvisionUserInput{
+			UserID: userID, Nickname: params.Nickname, AvatarURL: params.Defaults.AvatarURL,
+			UserType: "normal", Email: params.Email, Phone: params.Phone,
+			LocationName: params.Defaults.LocationName, Latitude: params.Defaults.Latitude, Longitude: params.Defaults.Longitude,
+			CreatedAt: now, RegisterIP: params.RegisterIP, RegisterLocation: params.RegisterLocation,
+		}); err != nil {
 			execErr = err
 			return err
 		}
@@ -54,10 +71,6 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 			if persistence.IsUniqueViolation(err) {
 				conflict = true
 			}
-			execErr = err
-			return err
-		}
-		if err := queryable.Exec(txCtx, queryUpsertUserSettings, userID); err != nil {
 			execErr = err
 			return err
 		}
@@ -109,23 +122,18 @@ func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams
 		return Account{}, err
 	}
 	now := params.Defaults.CreatedAt.UTC()
-	s2CellID := geo.LeafCellID(geo.Point{Latitude: params.Defaults.Latitude, Longitude: params.Defaults.Longitude})
-	// profile + settings 两步包进同一事务（替代原补偿式删除——进程中途
-	// 崩溃时补偿不会执行，会泄漏半创建用户）。
+	// profile + settings 由 users 模块在同一事务内创建（users 表归属 users，
+	// 架构审计 P0-4）。
+	if r.profileWriter == nil {
+		return Account{}, errProfileWriterNotWired
+	}
 	if err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
-		txQueryable, ok := persistence.QueryableForTx(txCtx, r.factory)
-		if !ok {
-			return persistence.ErrNotImplemented
-		}
-		// 游客无 login_id 凭证，email/phone 恒为 NULL（与 Register 的类型回填
-		// 口径一致：queryInsertUserProfile 的第 6/7 参为 email/phone）。
-		if err := txQueryable.Exec(txCtx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", nil, nil, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, s2CellID, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
-			return fmt.Errorf("auth.CreateGuest: profile insert: %w", err)
-		}
-		if err := txQueryable.Exec(txCtx, queryUpsertUserSettings, userID); err != nil {
-			return fmt.Errorf("auth.CreateGuest: settings upsert: %w", err)
-		}
-		return nil
+		return r.profileWriter.ProvisionUser(txCtx, usersmodule.ProvisionUserInput{
+			UserID: userID, Nickname: params.Nickname, AvatarURL: params.Defaults.AvatarURL,
+			UserType: "temp", LocationName: params.Defaults.LocationName,
+			Latitude: params.Defaults.Latitude, Longitude: params.Defaults.Longitude,
+			CreatedAt: now, RegisterIP: params.RegisterIP, RegisterLocation: params.RegisterLocation,
+		})
 	}); err != nil {
 		return Account{}, err
 	}
@@ -154,11 +162,10 @@ func (r *PostgresRepository) Authenticate(ctx context.Context, loginID, password
 }
 
 func (r *PostgresRepository) UpdateLoginMeta(ctx context.Context, userID, ip, location string) error {
-	queryable, ok := r.queryable(ctx)
-	if !ok {
-		return persistence.ErrNotImplemented
+	if r.profileWriter == nil {
+		return errProfileWriterNotWired
 	}
-	if err := queryable.Exec(ctx, queryUpdateLoginMeta, userID, ip, location); err != nil {
+	if err := r.profileWriter.RecordLogin(ctx, userID, ip, location); err != nil {
 		return fmt.Errorf("auth.UpdateLoginMeta: %w", err)
 	}
 	return nil

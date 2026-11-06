@@ -36,7 +36,7 @@ func TestPostgresIT_DeviceSessionUniqueness(t *testing.T) {
 		t.Fatalf("partial unique index missing: index=%q err=%v", indexName, err)
 	}
 
-	repo := NewPostgresRepository(factory)
+	repo := newITRepo(factory)
 	loginID := fmt.Sprintf("device-it-%d@example.com", time.Now().UnixNano())
 	account, err := repo.Register(ctx, RegisterParams{
 		LoginID:  loginID,

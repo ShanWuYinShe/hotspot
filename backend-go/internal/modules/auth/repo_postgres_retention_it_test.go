@@ -16,7 +16,7 @@ func TestPostgresIT_SweepRetention(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 		q, ok := persistence.RepoQueryable(ctx, txFactory)
 		if !ok {
 			t.Fatal("no tx queryable")

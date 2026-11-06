@@ -5,6 +5,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	usersmodule "hotspot/backend-go/internal/modules/users"
+
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
@@ -35,6 +37,10 @@ func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Fact
 // SetLoginTracker 替换登录失败追踪器（P2-2）：Redis 可用时由 bootstrap 注入
 // Redis 实现，保证多实例共享计数与重启不丢锁定状态；缺省为进程内实现。
 func (m *Module) SetLoginTracker(tracker FailedLoginTracker) { m.service.loginTracker = tracker }
+
+// SetProfileWriter wires the users module's registration profile writer
+// （auth 注册/游客/登录元数据不再直写 users/user_settings，P0-4）。
+func (m *Module) SetProfileWriter(writer usersmodule.ProfileWriter) { m.repo.SetProfileWriter(writer) }
 
 // Service 暴露模块服务（bootstrap 跨模块注入用，如 users.Upgrade 的
 // 凭证写入，spec api_spec_user.md → upgrade）。

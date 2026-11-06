@@ -200,6 +200,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// IsBanned can be wired into the platform auth Service (BanChecker),
 	// enforcing httpx.CodeAccountBanned for banned accounts on RequiredAuth endpoints.
 	authModule := auth.NewModule(ctx, cfg, factory, sharedAppConfig)
+	authModule.SetProfileWriter(usersModule.Service)
 	// 数据保留期清理：已撤销会话（含 IP PII）与过期验证码行到期物理删除。
 	if cfg.RetentionSweepEnabled {
 		authModule.StartRetentionSweeper(ctx)
