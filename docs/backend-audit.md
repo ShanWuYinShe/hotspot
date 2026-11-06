@@ -3385,3 +3385,8 @@ pg_stat_statements 实测（c=10、keyword=游客、10s）：users/search 每请
 - 该路径同时惠及所有缺省 reference_point 的搜索/列表端点。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+实测（backend-test，2026-11-07）：users/search keyword=游客 单端点 loadgen
+c=10/10s：修复前 1799 rps / p95 25.22ms / p99 40.24ms → 修复后 **2139 rps /
+p95 8.53ms / p99 28.81ms**（吞吐 +18.9%，p95 -66%，p99 -28%）。全链路
+perf-smoke：users/search 2785→3562 rps；8 端点 perf-budget 全部 OK。

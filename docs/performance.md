@@ -35,34 +35,27 @@ envelope code，不能只看 HTTP 状态码）。
 
 ## 2. 当前基线（backend-test，seed 数据，c=10，5s，warmup 2s）
 
-2026-11-07 本机实测（相对值；复测请用同一命令/同一机器；本轮为 logger/Hub
-上下文注入、Public 类型层等架构调整后的复测，全部端点 code=0 且
-`scripts/perf-budget.sh` 通过）：
+2026-11-07 本机实测（相对值；复测请用同一命令/同一机器）。本组数字在
+D2 优化后采集：PGroonga 规划器启动预热、users/search 回退链改轻量位置查询、
+nearby 详情查询合并 reactions/作者关系（4→2 往返）。全部端点 code=0 且
+`scripts/perf-budget.sh` 通过：
 
 | endpoint | rps | p50 ms | p95 ms | p99 ms |
 |----------|-----|--------|--------|--------|
-| users/account | ~9800 | 0.8-0.9 | 1.5-1.6 | 4.0 |
-| system/bootstrap | ~8600 | 1.0 | 1.8 | 3.5 |
-| notify/fetch | ~14200 | 0.6 | 1.1-1.2 | 3.3 |
+| users/account | ~9500 | 0.9 | 1.8 | 3.5 |
+| system/bootstrap | ~8550 | 1.1 | 1.8 | 3.1 |
+| notify/fetch | ~14400 | 0.6 | 1.1 | 2.5 |
 | moments/fetch_following | ~10200 | 0.9 | 1.5 | 2.2 |
-| moments/fetch_nearby | ~580 | 7.5 | 70 | 76 |
-| users/search | ~2800 | 2.4 | 5.0-5.2 | 37 |
-| moments/search | ~8900 | 0.9-1.0 | 1.8-1.9 | 4.4-4.9 |
-| groups/search | ~5900 | 1.3 | 2.4-2.5 | 19 |
+| moments/fetch_nearby | ~480 | 7.9 | 75.5 | 81.9 |
+| users/search | ~3560 | 2.1 | 4.1 | 25.3 |
+| moments/search | ~9800 | 0.9 | 1.7 | 3.9 |
+| groups/search | ~6040 | 1.2 | 2.5 | 18.3 |
 
-组件级 benchmark（同机；2026-11-07 复测）：
-
-| benchmark | 结果 | 说明 |
-|-----------|------|------|
-| BenchmarkBroadcastSinksPrepared（100 连接） | ~2.2 µs/op，13 allocs | 一次 marshal + PreparedMessage 复用（socketSink 生产路径） |
-| BenchmarkBroadcastSinksPlain（100 连接，逐连接 marshal） | ~115 µs/op，400 allocs | 回退路径；约 **50x** 差距，禁止退回逐连接序列化 |
-| BenchmarkEventMarshal | ~1.1 µs/op，392 B | 单事件 JSON 体积回归基线 |
-| BenchmarkWriteJSONPage（20 条列表） | ~12 µs/op，3 allocs | 统一响应 envelope 编码 |
-| BenchmarkRequestMetricsMiddleware | ~0.54 µs/op，7 allocs | 每请求指标采集固定税 |
-| BenchmarkBootstrapHandler | ~5.1 µs/op，9.0 KB，43 allocs | 登录版冷启动 envelope + 版本组装 |
-| BenchmarkPublicBootstrapHandler | ~5.1 µs/op，8.8 KB，43 allocs | 匿名 PublicBootstrapData（缓存 miss） |
-| BenchmarkGetMyProfileHandler | ~3.7 µs/op，7.6 KB，39 allocs | users/account 高频轻读投影 |
-| BenchmarkNotifyListHandler | ~2.2 µs/op，6.9 KB，31 allocs | notify/fetch 空列表 envelope |
+专项对比（users/search keyword=游客，单端点 loadgen c=10/10s）：轻量位置
+回退修复前 1799 rps / p95 25.2ms / p99 40.2ms → 修复后 **2139 rps / p95
+8.5ms / p99 28.8ms**（+19% 吞吐，p95 -66%）。全链路 perf-smoke 下该端点
+~2800→~3560 rps。nearby 与 users/search 仍是 p99 最高的两个读端点（DB CPU
+受限，Postgres 容器 2 CPU 是当前吞吐天花板）。
 
 热点解读：nearby（S2 半径查询 + 聚合）与 users/search（trigram/PGroonga 双分支）
 仍是 p99 最高的两个读端点，容量规划优先关注；本轮架构调整未使其退化（相对
