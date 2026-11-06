@@ -106,11 +106,9 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 	// 候选粗筛只取排序基础列：互动热度直接读内部 interaction_count 列，
 	// 关注标记按候选作者批量聚合，避免对最多 2000 个候选行做逐行 COUNT/EXISTS。
 	candidates := make([]nearbyCandidate, 0, 256)
-	authorIDs := make([]string, 0, 256)
-	seenAuthors := make(map[string]struct{}, 64)
 	for rows.Next() {
 		var candidate nearbyCandidate
-		if err := rows.Scan(&candidate.momentID, &candidate.userID, &candidate.createdAt, &candidate.interactionCount, &candidate.latitude, &candidate.longitude); err != nil {
+		if err := rows.Scan(&candidate.momentID, &candidate.userID, &candidate.createdAt, &candidate.interactionCount, &candidate.latitude, &candidate.longitude, &candidate.following); err != nil {
 			return PaginatedMoments{}, err
 		}
 		distance, bearing, within := plan.Match(geo.Point{Latitude: candidate.latitude, Longitude: candidate.longitude})
@@ -121,10 +119,6 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 		candidate.bearing = bearing
 		candidate.score = candidate.interactionCount + max(0, query.Radius-distance)
 		candidates = append(candidates, candidate)
-		if _, seen := seenAuthors[candidate.userID]; !seen {
-			seenAuthors[candidate.userID] = struct{}{}
-			authorIDs = append(authorIDs, candidate.userID)
-		}
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedMoments{}, err
@@ -132,15 +126,8 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 	if len(candidates) == 0 {
 		return PaginatedMoments{Items: make([]MomentItem, 0)}, nil
 	}
-	var followingByUserID map[string]bool
-	if query.ViewerUserID != "" {
-		followingByUserID, err = loadNearbyFollowing(ctx, queryable, query.ViewerUserID, authorIDs)
-		if err != nil {
-			return PaginatedMoments{}, err
-		}
-	}
 	for i := range candidates {
-		if followingByUserID[candidates[i].userID] {
+		if candidates[i].following {
 			candidates[i].score += 1000
 		}
 	}
@@ -207,7 +194,9 @@ type nearbyCandidate struct {
 	latitude, longitude float64
 	distance, bearing   int
 	interactionCount    int
-	score               int
+	// following 为查看者是否关注该候选作者（候选查询内一并计算，省一次往返）。
+	following bool
+	score     int
 }
 
 // nearbyMomentDetail 分页结果的展示字段 + 标签数组 + 收藏态（一次批量查询补全）。
@@ -241,30 +230,6 @@ func loadNearbyMomentDetails(ctx context.Context, queryable persistence.Queryabl
 		return nil, err
 	}
 	return details, nil
-}
-
-// loadNearbyFollowing 批量取查看者关注的候选作者集合（关注加分输入）。
-func loadNearbyFollowing(ctx context.Context, queryable persistence.Queryable, viewerID string, authorIDs []string) (map[string]bool, error) {
-	following := make(map[string]bool, len(authorIDs))
-	if viewerID == "" || len(authorIDs) == 0 {
-		return following, nil
-	}
-	rows, err := queryable.Query(ctx, queryNearbyFollowingUserIDs, viewerID, authorIDs)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var userID string
-		if err := rows.Scan(&userID); err != nil {
-			return nil, err
-		}
-		following[userID] = true
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return following, nil
 }
 
 // findNearbyCandidateStart 按游标定位候选起始下标（与 compareNearbyCandidates 同序）。

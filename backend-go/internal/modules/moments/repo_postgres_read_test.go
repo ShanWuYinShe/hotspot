@@ -85,6 +85,11 @@ type backendStub struct {
 	execErrs     map[string]error
 	queryErr     error
 	queryRowErrs map[string]error
+	// queries 记录收到的 Query 调用（用于断言读路径的 DB 往返次数）。
+	queries []string
+	// nearbyCandidates/nearbyDetails 供附近流单测返回固定行。
+	nearbyCandidates [][]any
+	nearbyDetails    map[string][]any
 }
 
 // stubTimeString 兼容写库时间精度改造：插入参数现在是 time.Time（保留微秒），
@@ -212,8 +217,22 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 }
 
 func (b *backendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
+	b.queries = append(b.queries, query)
 	if b.queryErr != nil {
 		return nil, b.queryErr
+	}
+	// 附近流：候选粗筛与分页详情查询（单测断言往返次数）。
+	if query == queryNearbyMoments {
+		return &rowsValues{rows: b.nearbyCandidates}, nil
+	}
+	if query == queryNearbyMomentDetails {
+		rows := make([][]any, 0, len(args))
+		for _, id := range args[0].([]string) {
+			if row, ok := b.nearbyDetails[id]; ok {
+				rows = append(rows, row)
+			}
+		}
+		return &rowsValues{rows: rows}, nil
 	}
 	if strings.Contains(query, "FROM moments") && strings.Contains(query, "privacy_level =") {
 		// 全球搜索（spec moment.md → moments/search 收口）：无 S2 半径子句，keyword 从 $1 起

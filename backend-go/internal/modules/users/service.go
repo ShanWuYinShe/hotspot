@@ -71,6 +71,12 @@ func (s *Service) SetAccountBanState(ctx context.Context, userID string, state A
 }
 
 // AccountPurger 账户注销级联编排入口（bootstrap 实现：按模块归属清理用户数据）。
+// recentLocationRepo 是 PG 仓储实现的轻量位置读能力（内存/测试仓储缺省时
+// 回退 GetProfile，行为一致）。
+type recentLocationRepo interface {
+	GetRecentLocation(ctx context.Context, userID string) (geo.Point, bool, error)
+}
+
 type AccountPurger interface {
 	PurgeLinkedData(ctx context.Context, userID string) error
 }
@@ -559,6 +565,15 @@ func (s *Service) DeleteAccount(ctx context.Context, req DeleteAccountRequest) e
 func (s *Service) RecentLocation(ctx context.Context, userID string) (geo.Point, bool) {
 	if userID == "" {
 		return geo.Point{}, false
+	}
+	// PG 仓储提供单列轻量查询：回退链只需坐标，不必加载完整画像
+	//（架构审计 perf D2「reference_point 回退用轻量位置查询」）。
+	if reader, ok := s.repo.(recentLocationRepo); ok {
+		pt, found, err := reader.GetRecentLocation(ctx, userID)
+		if err != nil {
+			return geo.Point{}, false
+		}
+		return pt, found
 	}
 	profile, ok, err := s.repo.GetProfile(ctx, userID)
 	if err != nil || !ok {

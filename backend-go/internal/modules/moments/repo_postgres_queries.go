@@ -196,12 +196,6 @@ SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, 
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.moment_id = ANY($1)`
-	// queryNearbyFollowingUserIDs 批量取查看者关注的候选作者集合（替代逐行 EXISTS）。
-	queryNearbyFollowingUserIDs = `
-SELECT target_user_id
-FROM user_relations
-WHERE user_id = $1 AND is_following = TRUE AND target_user_id = ANY($2)`
-
 	// queryNearbyMoments 候选粗筛只返回排序所需列（无逐行子查询、无 users join）：
 	// 热度/关注改为候选集批量聚合，展示字段分页后批量补全。
 	queryNearbyMoments = `
@@ -210,7 +204,14 @@ SELECT m.moment_id,
        m.created_at,
        m.interaction_count,
        m.latitude,
-       m.longitude
+       m.longitude,
+       -- 关注加分输入随候选粗筛一并返回：查看者关注集合通常很小，PG 会把它
+       -- 规划成 hash 子计划（一次构建 + 每候选行 hash 探测），替代原「候选查询
+       -- 后再发一次批量关注查询」的额外 DB 往返（架构审计 perf D2）。
+       ($3 <> '' AND m.user_id IN (
+         SELECT target_user_id FROM user_relations
+         WHERE user_id = $3 AND is_following = TRUE
+       ))
 FROM moments m
 WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE

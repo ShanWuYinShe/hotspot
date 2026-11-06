@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"hotspot/backend-go/internal/platform/geo"
+
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/notify"
@@ -53,6 +55,11 @@ type stubUserRepo struct {
 	relation    Relationship
 	relationErr error
 
+	getProfileCalls     int
+	recentLocation      geo.Point
+	recentLocationFound bool
+	recentLocationErr   error
+
 	// followNoop 让 stub 的 Follow 返回 changed=false，用于验证「已关注」时
 	// 服务层跳过重复通知（审计 F-12）。
 	followNoop bool
@@ -80,7 +87,13 @@ type stubUserRepo struct {
 }
 
 func (r *stubUserRepo) GetProfile(_ context.Context, _ string) (MyProfile, bool, error) {
+	r.getProfileCalls++
 	return r.profile, r.profileFound, r.profileErr
+}
+
+// GetRecentLocation 模拟 PG 仓储的轻量位置读能力（服务应优先走该分支）。
+func (r *stubUserRepo) GetRecentLocation(_ context.Context, _ string) (geo.Point, bool, error) {
+	return r.recentLocation, r.recentLocationFound, r.recentLocationErr
 }
 
 func (r *stubUserRepo) UpdateProfile(_ context.Context, userID string, patch ProfilePatch, tags *[]string) (bool, error) {
@@ -1037,4 +1050,38 @@ func (r *stubUserRepo) NearbyMomentNotifyTargets(context.Context, float64, float
 
 func (r *stubUserRepo) SetAccountBanState(context.Context, string, AccountBanState) error {
 	return nil
+}
+
+// TestServiceRecentLocationUsesLightweightRepo：reference_point 回退只取坐标，
+// 不得加载完整画像（架构审计 perf D2）。
+func TestServiceRecentLocationUsesLightweightRepo(t *testing.T) {
+	repo := &stubUserRepo{
+		profile:             MyProfile{UserID: "u1", Location: Location{Point: GeoPoint{Latitude: 1, Longitude: 2}}},
+		profileFound:        true,
+		recentLocation:      geo.Point{Latitude: 34.2604, Longitude: 117.1855},
+		recentLocationFound: true,
+	}
+	svc := NewServiceWithRepo(repo)
+	pt, found := svc.RecentLocation(context.Background(), "u1")
+	if !found || pt.Latitude != 34.2604 || pt.Longitude != 117.1855 {
+		t.Fatalf("recent location = %#v found=%v", pt, found)
+	}
+	if repo.getProfileCalls != 0 {
+		t.Fatalf("lightweight path must not call GetProfile, got %d calls", repo.getProfileCalls)
+	}
+}
+
+// TestServiceRecentLocationFallsBackToProfileRepo：内存/测试仓储未实现轻量接口
+// 时保持原行为（由 GetProfile 位置回退）。
+func TestServiceRecentLocationFallsBackToProfileRepo(t *testing.T) {
+	repo := NewInMemoryRepository()
+	_ = repo.PutProfile(context.Background(), MyProfile{
+		UserID:   "u1",
+		Location: Location{Point: GeoPoint{Latitude: 34.1, Longitude: 117.2}},
+	})
+	svc := NewServiceWithRepo(repo)
+	pt, found := svc.RecentLocation(context.Background(), "u1")
+	if !found || pt.Latitude != 34.1 || pt.Longitude != 117.2 {
+		t.Fatalf("fallback recent location = %#v found=%v", pt, found)
+	}
 }

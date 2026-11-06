@@ -1,5 +1,14 @@
 package users
 
+// queryGetRecentLocation 轻量位置查询：附近/搜索/群列表的 reference_point 回退只用
+// 位置两列，不必加载 GetProfile 的完整画像+统计+标签聚合（架构审计 perf D2）。
+const queryGetRecentLocation = `
+SELECT latitude, longitude
+FROM users
+WHERE user_id = $1
+  AND is_deleted = FALSE
+  AND (latitude <> 0 OR longitude <> 0)`
+
 const (
 	// queryGetUserProfiles 与 queryGetUserProfileDetails 同列，供 GetProfiles 一次取多行。
 	queryGetUserProfiles = `

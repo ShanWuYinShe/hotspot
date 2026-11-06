@@ -30,6 +30,25 @@ func (r *PostgresRepository) GetProfile(ctx context.Context, userID string) (MyP
 	return profile, true, nil
 }
 
+// GetRecentLocation 轻量读取用户最近位置（reference_point 回退专用）：只查
+// users 两列，避免为拿一个坐标执行完整画像查询（stats/标签聚合等）。返回
+// found=false 表示用户不存在/已注销/无有效位置。
+func (r *PostgresRepository) GetRecentLocation(ctx context.Context, userID string) (geo.Point, bool, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return geo.Point{}, false, persistence.ErrNotImplemented
+	}
+	var latitude, longitude float64
+	err := queryable.QueryRow(ctx, queryGetRecentLocation, userID).Scan(&latitude, &longitude)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return geo.Point{}, false, nil
+		}
+		return geo.Point{}, false, err
+	}
+	return geo.Point{Latitude: latitude, Longitude: longitude}, true, nil
+}
+
 // GetProfiles 批量取画像（一次往返；不含 Stats，调用方按需另取）。
 func (r *PostgresRepository) GetProfiles(ctx context.Context, userIDs []string) (map[string]MyProfile, error) {
 	result := make(map[string]MyProfile, len(userIDs))

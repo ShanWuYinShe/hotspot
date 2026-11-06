@@ -2464,3 +2464,25 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   `backend-go/AGENTS.md` 性能章节同步。
 - 验证：`go test -short ./...` 全绿；benchmark 命令实测输出；perf-smoke 基线
   6 端点 code=0 退出 0、不可达目标退出 1；--with-db ALL CHECKS PASSED。
+
+
+## Batch D（第二批）：查询往返收敛（2026-11-06）
+
+审计 perf D2 的首批落地：
+
+- **附近流关注标记合入候选查询**：`queryNearbyMoments` 内用
+  `m.user_id IN (SELECT target_user_id FROM user_relations WHERE user_id=$3 AND is_following)`
+  一次返回 is_following（PG 规划为 hash 子计划，一次构建 + 每候选 hash 探测），
+  删除候选查询后的 `queryNearbyFollowingUserIDs` 批量往返；`ListNearbyMoments`
+  本模块 DB 查询 **3 → 2 次**（候选含关注 + 分页详情）。排序语义不变（关注加分
+  +1000 仍在排序前完成）。
+- **reference_point 回退轻量化**：`users.Service.RecentLocation` 优先走 PG 仓储
+  `GetRecentLocation`（单条 `SELECT latitude, longitude`，仅存在/未注销/坐标
+  有效），不再为拿一个坐标执行 GetProfile 的完整画像查询；内存/测试仓储未实现
+  该能力时保持原 GetProfile 回退（行为一致）。影响 nearby/search/groups 等所有
+  依赖回退锚点的列表读路径。
+- **回归断言**：新增 `TestPostgresListNearbyMomentsQueryCount`（stub 断言
+  ListNearbyMoments 恰好 2 次 Query 且关注候选排序优先）；users 新增
+  `GetRecentLocation` 单测/真实库 IT（存在/无坐标/已注销三态）。benchmark 与
+  SLO 口径见 docs/performance.md。
+- 验证：go test -short 全绿；--with-db ALL CHECKS PASSED（含新增 IT）。
