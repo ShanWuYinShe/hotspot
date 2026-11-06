@@ -2503,3 +2503,28 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   presign/尺寸/缩略图用例、`momentImagesFetched` 混合列表回退用例；真实库
   IT（nearby S2/分页/拉黑过滤）全绿。
 - 验证：go test -short 全绿；--with-db ALL CHECKS PASSED。
+
+## Batch E（第三批）：生产镜像运行时门禁 + 迁移基线回归（2026-11-06）
+
+审计 ops P1-4 / P1-5 / P1-8 首批落地：
+
+- **CI 生产镜像运行时冒烟**（.github/workflows/ci.yml → docker-build job）：
+  Dockerfile 此前只在 CI build、从不 run，USER/CMD/探针/启动迁移路径只能在
+  线上首次暴露。现在 backend 镜像以 load: true + 固定 build-args 载入本地，
+  起 job service postgres（--network host 直连）后断言：
+  - 非 root（docker run --entrypoint id -u 非 0）；
+  - 启动自动执行迁移 + schema_manifest 校验，GET /readyz 返回 status=ok；
+  - GET /healthz 的 version 等于注入的 GIT_VERSION；OCI
+    org.opencontainers.image.version 标签一致。
+- **存量库迁移基线回归**（backend-integration job）：迁移后重复执行
+  go run ./cmd/migrate（幂等）、-verify-only（checksum + pending + manifest
+  只读校验）、scripts/check-migration-indexes.sh --database hotspot_test
+  （manifest 索引逐名 / VALID 校验）——防「基线登记导致新索引永久缺失」类
+  事故回归。
+- **可复现构建**：Dockerfile go build 增加 -trimpath（源码路径不进二进制，
+  本地与 CI 构建差异收敛；审计 P1-8）。
+- 本机实测（macOS + Docker Desktop，等价命令）：构建带固定指纹的生产镜像 →
+  对全新 scratch 库启动 → 迁移 54 个、/readyz ok、healthz version=v0.0.0-ci、
+  OCI 标签一致、uid=100 非 root；**重启镜像二次启动幂等**（迁移数仍 54、
+  readyz 仍 ok）；migrate -verify-only 输出 schema verification passed；
+  check-migration-indexes.sh 对 scratch 库校验 OK（123 期望索引）。

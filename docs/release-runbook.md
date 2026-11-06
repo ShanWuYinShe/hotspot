@@ -69,6 +69,7 @@ gh run watch <run-id> --exit-status
 - **三级版本校验**：后端 health 版本、前端静态卷 `version.json`、**nginx 容器内**真实响应（`/version.json` 与 `/healthz`）——容器里的文件对不等于网关服务得出去；
 - **就绪探针口径**：容器 healthcheck 用 `GET /readyz`——数据库不可达返回 503（实例摘流量），Redis 不可达仅 `degraded`（200，限流/幂等 fail-open 仍可服务）；`GET /healthz` 保留为纯存活探针。
 - **可观测性（可选）**：服务器 `.env` 设 `OBSERVABILITY_ENABLED=1` 时随本次部署拉起/更新 prometheus + grafana（采集栈与业务同挂 `hotspot_internal` 网络）；未启用则仅分发采集配置、不常驻。Prometheus firing alerts 由 `health-check.sh` 巡检经 `ALERT_WEBHOOK` 外发（最坏延迟=巡检周期，无独立 Alertmanager）；
+- **CI 机器门禁（合入前）**：`docker-build` job 现在会**运行**生产镜像（非 root、启动迁移 + manifest 校验、`/readyz`/`/healthz`、OCI version 指纹）；`backend-integration` job 额外校验迁移幂等 + `-verify-only` + schema manifest 索引一致性（见 `.github/workflows/ci.yml`）；
 - **失败自动回滚**：任一级校验失败 → 用上一版本镜像重新 `up -d` + 告警（数据不回滚）；
 - **审计**：追加一行到服务器 `backups/deploy-history.log` 与本机 `.workwork/deploy-history.log`；
 - **旧镜像回收**：保留最近 `DEPLOY_KEEP_IMAGES`（默认 3）个历史版本 + 当前/上一版本。

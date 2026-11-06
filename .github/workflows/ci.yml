@@ -202,6 +202,20 @@ jobs:
           cd backend-go
           go run ./cmd/migrate
 
+      # 存量库迁移基线回归（ops 审计 P1-5）：重复执行必须幂等；-verify-only
+      # 用 schema_migrations checksum + schema_manifest 校验期望对象齐全；
+      # check-migration-indexes 逐名比对 manifest 索引（历史上 idx_moments_keyset
+      # 因旧 runner 基线登记永久缺失，此步防同类回归）。
+      - name: verify migration idempotency, manifest and indexes
+        run: |
+          cd backend-go
+          go run ./cmd/migrate
+          go run ./cmd/migrate -verify-only
+          cd ..
+          PG_CONTAINER="$(docker ps --filter ancestor=postgres:18.4-alpine --format '{{.Names}}' | head -n1)"
+          test -n "$PG_CONTAINER"
+          ./scripts/check-migration-indexes.sh --container "$PG_CONTAINER" --database hotspot_test
+
       - name: test database schema & spatial indexes
         run: |
           cd backend-go
@@ -372,8 +386,25 @@ jobs:
           gitleaks git .
 
   docker-build:
-    name: Docker Build Smoke (Prod Images)
+    name: Docker Build + Runtime Smoke (Prod Images)
     runs-on: ubuntu-24.04
+    services:
+      # 生产镜像运行时契约验证需要真实数据库：镜像启动会执行迁移 + manifest
+      # 校验（ops 审计 P1-4：此前 CI 只 build 不 run，USER/CMD/探针/迁移路径
+      # 只能在线上首次暴露）。
+      postgres:
+        image: postgres:18.4-alpine
+        env:
+          POSTGRES_DB: hotspot_image_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       # 生产镜像可构建性机器门禁：此前 Dockerfile 只在打 tag 后的 Release 才
@@ -386,6 +417,12 @@ jobs:
           context: backend-go
           file: backend-go/Dockerfile
           push: false
+          load: true
+          tags: hotspot-backend:ci
+          build-args: |
+            GIT_VERSION=v0.0.0-ci
+            GIT_COMMIT=${{ github.sha }}
+            GIT_BUILD_TIME=2026-01-01T00:00:00Z
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: build frontend image
@@ -396,3 +433,31 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # 生产镜像运行时契约（ops 审计 P1-4）：非 root、CMD 可启动、启动迁移 +
+      # manifest 校验通过、/readyz + /healthz 可达、OCI version 指纹一致。
+      # --network host 让容器内 127.0.0.1 直连 job service postgres。
+      - name: run production backend image smoke
+        run: |
+          docker run -d --name hotspot-backend-image-ci --network host \
+            -e APP_ENV=test -e APP_HOST=127.0.0.1 -e APP_PORT=18081 \
+            -e POSTGRES_DSN='postgres://postgres:postgres_ci_password@127.0.0.1:5432/hotspot_image_ci?sslmode=disable' \
+            -e AUTH_TOKEN_SECRET='ci-image-smoke-secret-at-least-32-bytes-long' \
+            -e S3_ENDPOINT='http://127.0.0.1:8333' -e S3_PUBLIC_ENDPOINT='http://127.0.0.1:8333' \
+            -e S3_BUCKET=hotspot -e S3_ACCESS_KEY=ci -e S3_SECRET_KEY=ci-secret-key \
+            hotspot-backend:ci
+          trap 'docker rm -f hotspot-backend-image-ci >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:18081/readyz > /tmp/readyz.json; then
+              echo "image ready after $i probes"; break
+            fi
+            if [ "$i" = "60" ]; then
+              echo "!! 生产镜像启动后 120s 内未就绪"; docker logs hotspot-backend-image-ci; exit 1
+            fi
+            sleep 2
+          done
+          grep -q '"status":"ok"' /tmp/readyz.json
+          curl -fsS http://127.0.0.1:18081/healthz | grep -q '"version":"v0.0.0-ci"'
+          test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' hotspot-backend:ci)" = "v0.0.0-ci"
+          test "$(docker run --rm --entrypoint id hotspot-backend:ci -u)" != "0"
+          echo "production image runtime smoke OK"

@@ -26,7 +26,7 @@ ARG GIT_BUILD_TIME=
 
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} \
-    go build -ldflags="-s -w \
+    go build -trimpath -ldflags="-s -w \
       -X hotspot/backend-go/internal/platform/buildinfo.Version=${GIT_VERSION} \
       -X hotspot/backend-go/internal/platform/buildinfo.Commit=${GIT_COMMIT} \
       -X hotspot/backend-go/internal/platform/buildinfo.BuildTime=${GIT_BUILD_TIME}" \
