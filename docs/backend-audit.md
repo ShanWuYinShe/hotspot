@@ -3472,3 +3472,20 @@ pg_stat_statements：nearby 候选粗筛降到 1.0ms 后，详情查询仍占 ~8
 c=10/10s：726→**1303 rps**（+79%），p50 5.73→3.82ms，p95 66.5→49.2ms，
 p99 74.5→54.9ms；全链路 perf-smoke nearby 1190 rps / p99 58.2ms，8 端点
 perf-budget 全部 OK。nearby 相比本轮系列优化前（~480rps/81ms）约 2.5x。
+
+## Batch D4：WS 全局连接上限 + 拒绝指标（2026-11-07）
+
+审计 D4「全局连接上限」落地：此前只有单用户 20 连接上限，单实例总连接数（以及
+对应内存/广播 fan-out）仍无界。
+
+- config 新增 `WS_MAX_CONNECTIONS`（默认 10000，单实例上限；多实例按实例数下调）；
+- Handler 鉴权/封禁检查通过后原子占用连接槽，超限推 `Error` code 20300 +
+  `retry_after=5` 后以 **close 4002** 断开；断连 defer 释放槽位；
+- Hub 新增 `NoteConnectionRejected / RejectedConnections`，HubCollector 暴露
+  `realtime_connections_rejected_total` 计数指标；
+- bootstrap 注入 `SetMaxConnections(cfg.WSMaxConnections)`；`.env.example` 增配置项；
+- spec 更新 close code 4002 行：从「预留」改为实际发出点（全局连接上限）；
+- 测试：并发槽位 acquire/release、默认不限、超限 Error+close 4002、释放后可重连、
+  config env/default、rejected 指标值。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

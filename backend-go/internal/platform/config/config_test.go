@@ -407,3 +407,17 @@ func TestLoadRetentionWindows(t *testing.T) {
 		t.Fatalf("overrides = audit:%d report:%d, want 180/0", cfg.AdminAuditRetentionDays, cfg.ReportRetentionDays)
 	}
 }
+
+func TestLoadWSMaxConnections(t *testing.T) {
+	t.Setenv("WS_MAX_CONNECTIONS", "7")
+	if got := Load().WSMaxConnections; got != 7 {
+		t.Fatalf("WSMaxConnections = %d, want 7", got)
+	}
+}
+
+func TestLoadWSMaxConnectionsDefault(t *testing.T) {
+	t.Setenv("WS_MAX_CONNECTIONS", "")
+	if got := Load().WSMaxConnections; got != 10000 {
+		t.Fatalf("WSMaxConnections default = %d, want 10000", got)
+	}
+}

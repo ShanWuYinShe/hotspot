@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"hotspot/backend-go/internal/platform/actor"
@@ -112,6 +113,11 @@ type Handler struct {
 	resumeStore    ResumeStore
 	stop           context.CancelFunc
 	wg             sync.WaitGroup
+	// maxConnections 是本进程的 WS 全局连接上限（0=不限）；activeConnections
+	// 是原子计数。超限的握手在完成鉴权/封禁检查后以 close 4002 拒绝，
+	// 防止单实例连接数无界增长（内存与广播 fan-out 放大）。
+	maxConnections    int64
+	activeConnections atomic.Int64
 }
 
 // NewHandler creates a realtime WS handler. The typing-throttle sweeper is
@@ -145,6 +151,36 @@ func (h *Handler) SetHub(hub *Hub) {
 	if hub != nil {
 		h.hub = hub
 	}
+}
+
+// SetMaxConnections 设置 WS 全局连接上限（bootstrap 装配；<=0 表示不限）。
+func (h *Handler) SetMaxConnections(n int) {
+	if n > 0 {
+		h.maxConnections = int64(n)
+	}
+}
+
+// tryAcquireConnection 原子占用一个连接槽；达到上限返回 false。
+func (h *Handler) tryAcquireConnection() bool {
+	limit := h.maxConnections
+	if limit <= 0 {
+		h.activeConnections.Add(1)
+		return true
+	}
+	for {
+		current := h.activeConnections.Load()
+		if current >= limit {
+			return false
+		}
+		if h.activeConnections.CompareAndSwap(current, current+1) {
+			return true
+		}
+	}
+}
+
+// releaseConnection 释放连接槽（defer 调用；与 tryAcquire 配对）。
+func (h *Handler) releaseConnection() {
+	h.activeConnections.Add(-1)
 }
 
 // hubOrDefault 返回注入的 Hub，未注入时回退 DefaultHub。
@@ -428,6 +464,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if !h.tryAcquireConnection() {
+		// 全局连接上限（spec Close Code 4002 预留语义）：推 fatal Error 后关闭，
+		// 客户端按 Retry-After 退避重连；已有连接不受影响。
+		h.hubOrDefault().NoteConnectionRejected()
+		observability.FromContext(ctx).Warn("ws: connection rejected, global limit reached",
+			"user_id", principal.UserID, "limit", h.maxConnections)
+		_ = conn.WriteJSON(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSRateLimit, Message: "连接数已达上限，请稍后重试", Severity: "fatal", Retryable: true, RetryAfter: 5}})
+		sendCloseFrame(conn, 4002, "connection limit reached")
+		return
+	}
+	defer h.releaseConnection()
 	principalCtx := platformauth.WithPrincipal(ctx, principal)
 	_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 

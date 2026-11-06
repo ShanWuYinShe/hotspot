@@ -57,6 +57,10 @@ type Config struct {
 	// ResumeTTLSeconds 控制 resume 增量恢复状态的保留秒数（spec L156：TTL ≈ 2×
 	// ping_interval，默认 60）。连接断开后服务端在该窗口内可增量续传；超期回退全量。
 	ResumeTTLSeconds int
+	// WSMaxConnections 是单实例 WebSocket 全局连接上限（WS_MAX_CONNECTIONS，默认
+	// 10000）：超限的新连接以 close 4002 拒绝，防止单实例连接/内存无界增长；
+	// 多实例部署时各实例独立计数，需按实例数下调。
+	WSMaxConnections int
 	// BcryptCost controls the work factor for password hashing. Must be within
 	// [bcrypt.MinCost, bcrypt.MaxCost]; Validate() rejects anything outside
 	// that range. Defaults to defaultBcryptCost (OWASP minimum).
@@ -125,6 +129,7 @@ func Load() Config {
 		SMTPPassword:           os.Getenv("SMTP_PASSWORD"),
 		SMTPFrom:               os.Getenv("SMTP_FROM"),
 		ResumeTTLSeconds:       envIntOrDefault("RESUME_TTL_SECONDS", 60),
+		WSMaxConnections:       envIntOrDefault("WS_MAX_CONNECTIONS", 10000),
 		BcryptCost:             bcryptCostOrDefault("BCRYPT_COST", defaultBcryptCost),
 		// Postgres 连接池尺寸。多实例部署时各实例独立持池，默认 25 在 3 实例
 		// 下已逼近 Postgres 默认 max_connections=100，需要按实例数下调。

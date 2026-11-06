@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -72,6 +73,8 @@ type Hub struct {
 	sessionBySink map[FanoutSink]string
 	publisher     EventPublisher
 	resumeStore   ResumeStore
+	// rejectedConnections 是全局连接上限触发的拒绝计数（HubCollector 暴露）。
+	rejectedConnections atomic.Int64
 }
 
 // recordPublisher 是 ResumeStore 的可选扩展：单次 Redis 往返完成「seq 分配 +
@@ -94,6 +97,12 @@ type subEntry struct {
 func NewHub() *Hub {
 	return &Hub{byUser: map[string][]FanoutSink{}, bySession: map[string][]FanoutSink{}, byUserWatchers: map[string][]FanoutSink{}, byGroup: map[string][]FanoutSink{}, subsBySink: map[FanoutSink]*subEntry{}, sessionBySink: map[FanoutSink]string{}}
 }
+
+// NoteConnectionRejected 记录一次因全局连接上限被拒的 WS 连接。
+func (h *Hub) NoteConnectionRejected() { h.rejectedConnections.Add(1) }
+
+// RejectedConnections 返回累计拒绝连接数（指标/测试用）。
+func (h *Hub) RejectedConnections() int64 { return h.rejectedConnections.Load() }
 
 func (h *Hub) SetPublisher(p EventPublisher) {
 	h.mu.Lock()

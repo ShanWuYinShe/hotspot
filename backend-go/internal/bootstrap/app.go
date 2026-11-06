@@ -135,6 +135,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	userService := users.NewServiceWithRepo(userRepo)
 	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformAuth, NewRealtimeUserRepo(userRepo, hotCache), NewRealtimeGroupRepo(groupRepo, hotCache))
 	realtimeHandler.SetHub(hub)
+	realtimeHandler.SetMaxConnections(cfg.WSMaxConnections)
 	realtimeHandler.SetActorProvider(realtimeActorProvider{svc: userService})
 	// WS 握手封禁检查：与 HTTP RequiredAuth 同源（admin repo IsBanned）、同口径（fail-open）
 	realtimeHandler.SetBanAuthorizer(realtimeBanAuthorizer{repo: adminRepo})

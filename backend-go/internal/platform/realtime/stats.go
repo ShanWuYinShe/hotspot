@@ -46,12 +46,15 @@ func NewHubCollector(h *Hub) prometheus.Collector {
 	userSubs := prometheus.NewDesc(
 		"realtime_user_subscriptions", "user 类型订阅的 (user, sink) 对数", nil, nil,
 	)
-	return hubCollector{h: h, sessions: sessions, onlineUsers: onlineUsers, groupSubs: groupSubs, userSubs: userSubs}
+	rejected := prometheus.NewDesc(
+		"realtime_connections_rejected_total", "因全局连接上限被拒绝的 WS 连接累计数", nil, nil,
+	)
+	return hubCollector{h: h, sessions: sessions, onlineUsers: onlineUsers, groupSubs: groupSubs, userSubs: userSubs, rejectedDesc: rejected}
 }
 
 type hubCollector struct {
-	h                                          *Hub
-	sessions, onlineUsers, groupSubs, userSubs *prometheus.Desc
+	h                                                        *Hub
+	sessions, onlineUsers, groupSubs, userSubs, rejectedDesc *prometheus.Desc
 }
 
 func (c hubCollector) Describe(ch chan<- *prometheus.Desc) {
@@ -59,6 +62,7 @@ func (c hubCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.onlineUsers
 	ch <- c.groupSubs
 	ch <- c.userSubs
+	ch <- c.rejectedDesc
 }
 
 func (c hubCollector) Collect(ch chan<- prometheus.Metric) {
@@ -67,4 +71,5 @@ func (c hubCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.onlineUsers, prometheus.GaugeValue, float64(users))
 	ch <- prometheus.MustNewConstMetric(c.groupSubs, prometheus.GaugeValue, float64(groups))
 	ch <- prometheus.MustNewConstMetric(c.userSubs, prometheus.GaugeValue, float64(userSubs))
+	ch <- prometheus.MustNewConstMetric(c.rejectedDesc, prometheus.CounterValue, float64(c.h.RejectedConnections()))
 }
