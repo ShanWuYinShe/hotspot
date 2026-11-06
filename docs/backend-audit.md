@@ -2948,3 +2948,19 @@ C2/C5 收口防腐：把本轮清掉的全局单例与事务纪律固化为 CI �
 - 合成库已清理；dev/test/it 库已应用 065。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch G（第一批）：端点面快照门禁（route_manifest）（2026-11-07）
+
+契约治理 P1（审查 spec-contract：路由 dump 只写 /tmp、端点增删无人 review）落地：
+
+- 新增 `backend-go/docs/route_manifest.json`：173 条路由的 method + 模板 path +
+  认证档（anonymous/admin/probe/authenticated）显式快照；
+- `TestRouteManifest` 用生产同款装配枚举 chi 路由并与快照逐字节比较：
+  端点增删、路径/认证档变化都会失败，必须有意识执行
+  `UPDATE_ROUTE_MANIFEST=1 go test ./internal/bootstrap -run TestRouteManifest`
+  并 review diff；
+- 快照自身健康断言：无重复路由、每条都有认证档、/healthz /readyz /metrics
+  探针必须存在；
+- 端点面 173 条（168 POST + 4 GET + 3 探针，与 spec 端点集合一致）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

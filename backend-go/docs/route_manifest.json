@@ -1,0 +1,870 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/announcements/create",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/announcements/delete",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/announcements/fetch",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/announcements/update",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/app_config",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/app_config/update",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/audit/fetch",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/groups/dismiss",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/groups/open_the_door",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/groups/search",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/rbac/admins/award",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/rbac/admins/fetch",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/rbac/admins/revoke",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/rbac/me",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/rbac/permissions/fetch",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/rbac/roles/create",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/rbac/roles/delete",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/rbac/roles/fetch",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/rbac/roles/set_permissions",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/rbac/roles/update",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/reports/fetch",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/reports/judge",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/stats/geo",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/stats/geo/drilldown",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/tags/search",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/tags/set_ban",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/users/open_the_door",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/users/search",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/users/set_ban",
+      "auth": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/change_password",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/fetch_sessions",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/revoke_other_sessions",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/revoke_session",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/session",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/signout",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/comments/create",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/comments/delete",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/comments/fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/comments/fetch_replies",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/comments/open_the_door",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/group_messages/fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/group_messages/mark_read",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/group_messages/recall",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/group_messages/send",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/group_messages/update",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/announcements/create",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/announcements/delete",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/announcements/update",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/applications/approve",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/applications/fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/applications/reject",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/dismiss",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/invites/create",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/invites/fetch_sent",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/invites/revoke",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/members/fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/members/fetch_banned",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/members/remove",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/members/set_ban",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/members/set_mute",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/members/set_role",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/messages/recall",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/settings",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/transfer_ownership",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/admin/update",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/applications/cancel",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/applications/fetch_submitted",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/create",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/enter",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/exit",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/fetch_joined",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/invites/accept",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/invites/fetch_received",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/invites/reject",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/members/fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/members/search",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/open_the_door",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/search",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/update_preferences",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/media/complete_upload",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/media/presign_upload",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/moments/create",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/moments/delete",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/moments/fetch_created",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/moments/fetch_favorites",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/moments/fetch_following",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/moments/fetch_nearby",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/moments/open_the_door",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/moments/search",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/moments/set_favorite",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/moments/update",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notify/fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notify/mark_read",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notify/unread_summary",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/private_chats/delete",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/private_chats/fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/private_chats/open_the_door",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/private_chats/update_preferences",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/private_messages/fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/private_messages/mark_read",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/private_messages/recall",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/private_messages/send",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/private_messages/update",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reactions/fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reactions/set",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reports/create",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reports/fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/search/suggest",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/share/create",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/share/fetch_created",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/share/revoke",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/system/bootstrap",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/account",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/batch_fetch",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/delete_account",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/fetch_blocked",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/fetch_followers",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/fetch_following",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/fetch_friends",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/fetch_groups",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/fetch_moments",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/fetch_reacted_moments",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/open_the_door",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/search",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/set_block",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/set_follow",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/set_remark",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/settings",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/update_account",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/update_location",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/update_settings",
+      "auth": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/upgrade",
+      "auth": "authenticated"
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "auth": "probe"
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "auth": "probe"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/auth/forgot_password",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/auth/guest",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/auth/refresh_token",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/auth/register",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/auth/reset_password",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/auth/send_register_code",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/auth/signin",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/comments/fetch",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/comments/fetch_replies",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/comments/open_the_door",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/groups/announcements/fetch",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/groups/members/fetch",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/groups/members/search",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/groups/open_the_door",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/groups/search",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/map/canvas",
+      "auth": "anonymous"
+    },
+    {
+      "method": "GET",
+      "path": "/public/v1/media/avatars/{file_id}",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/moments/fetch_nearby",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/moments/open_the_door",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/moments/search",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/reactions/fetch",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/search/suggest",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/share/open_the_door",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/system/announcements/fetch",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/system/bootstrap",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/system/client_config",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/system/health",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/system/meta",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/users/batch_fetch",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/users/fetch_followers",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/users/fetch_following",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/users/fetch_friends",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/users/fetch_groups",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/users/fetch_moments",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/users/fetch_reacted_moments",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/users/open_the_door",
+      "auth": "anonymous"
+    },
+    {
+      "method": "POST",
+      "path": "/public/v1/users/search",
+      "auth": "anonymous"
+    },
+    {
+      "method": "GET",
+      "path": "/readyz",
+      "auth": "probe"
+    },
+    {
+      "method": "GET",
+      "path": "/share/{code}",
+      "auth": "authenticated"
+    }
+  ]
+}
