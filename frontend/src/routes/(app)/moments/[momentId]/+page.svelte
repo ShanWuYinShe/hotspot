@@ -84,7 +84,6 @@
 	</button>
 	<MomentActionMenu
 		isAuthor={d.isAuthor}
-		onCopyLink={() => void d.copyMomentLink()}
 		onReload={() => {
 			d.reload();
 			showToast('已刷新动态', 'success');

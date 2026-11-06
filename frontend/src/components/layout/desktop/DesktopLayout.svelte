@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, type Component, type Snippet } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import {
@@ -7,6 +8,7 @@
 		Heart, Search, Settings, Plus, Navigation2, UserRound, PanelLeftClose, PanelLeftOpen, Shield
 	} from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
+	import { motionDuration } from '@/lib/motion';
 	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { admin, ensureAdminLoaded } from '@/stores/admin.svelte';
 	import { composer, openComposer, closeComposer } from '@/stores/composer.svelte';
@@ -284,7 +286,10 @@
 				</div>
 			{:else if headerIsland.visible && headerIsland.active}
 				<!-- 绝对居中于整条顶栏（而非 logo 与操作簇之间的剩余空间），与「灵动岛」的视觉中心一致 -->
-				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center animate-in fade-in zoom-in-95 -translate-y-0.5 duration-snappy ease-bounce">
+				<div
+					out:fade={{ duration: motionDuration(180) }}
+					class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+				>
 					<PageIsland
 						title={headerIsland.title}
 						meta={islandMetaText}

@@ -159,6 +159,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 	let prevP = currentHandoff().p;
 	let initialized = false;
 	let landingTimer: ReturnType<typeof setTimeout> | null = null;
+	let animTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const clearLanding = () => {
 		if (landingTimer !== null) {
@@ -185,35 +186,116 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 
 	const apply = (s: HandoffState) => {
 		if (!target) target = measureTarget(node);
-		// 阈值落位终态（p >= 1）：清除内联变形与内容遮罩，让 CSS 动画与 hover 完全接管
+
+		// 阈值落位终态（p >= 1）：
 		if (s.p >= 1) {
-			node.style.removeProperty('transform');
-			node.style.opacity = '1';
-			node.style.removeProperty('--cst-island-content');
-			if (prevP < 1) triggerLanding();
+			if (!target || !s.source) {
+				node.style.removeProperty('transform');
+				node.style.opacity = '1';
+				node.style.removeProperty('--cst-island-content');
+				if (prevP < 1) triggerLanding();
+				prevP = s.p;
+				initialized = true;
+				return;
+			}
+
+			// 若初次挂载时页面已滚过阈值，直接落位不播进场飞行
+			if (!initialized) {
+				initialized = true;
+				node.style.removeProperty('transform');
+				node.style.opacity = '1';
+				node.style.removeProperty('--cst-island-content');
+				prevP = s.p;
+				return;
+			}
+
+			// 从未落位跨越阈值落位：
+			if (prevP < 1) {
+				if (prefersReducedMotion()) {
+					node.style.removeProperty('transform');
+					node.style.opacity = '1';
+					node.style.removeProperty('--cst-island-content');
+					triggerLanding();
+				} else if (prevP === 0) {
+					// 阈值直接触发：从标题栏锚点到顶栏灵动岛进行完整的平滑动画过渡转换
+					const flight = islandFlight(target, s.source);
+					const startTransform = `translate3d(${flight.dx.toFixed(2)}px, ${flight.dy.toFixed(2)}px, 0) scale(${flight.scaleX.toFixed(4)}, ${flight.scaleY.toFixed(4)})`;
+
+					if (animTimer !== null) clearTimeout(animTimer);
+					node.style.transition = 'none';
+					node.style.transform = startTransform;
+					node.style.opacity = '0.5';
+					node.style.setProperty('--cst-island-content', '0');
+					void node.offsetWidth;
+
+					node.style.transition =
+						'transform 260ms cubic-bezier(0.16, 1, 0.3, 1), opacity 220ms ease-out, --cst-island-content 200ms ease-out';
+					node.style.transform = 'translate3d(0, 0, 0) scale(1, 1)';
+					node.style.opacity = '1';
+					node.style.setProperty('--cst-island-content', '1');
+
+					animTimer = setTimeout(() => {
+						node.style.removeProperty('transform');
+						node.style.removeProperty('transition');
+						triggerLanding();
+						animTimer = null;
+					}, 260);
+				} else {
+					// 处于连续插值尾段进入终态：直接落位并触发 landing
+					node.style.removeProperty('transform');
+					node.style.opacity = '1';
+					node.style.removeProperty('--cst-island-content');
+					triggerLanding();
+				}
+			}
 			prevP = s.p;
 			return;
 		}
 
-		// 未达到阈值（p <= 0）或无锚点：胶囊处于收起/隐藏状态
-		if (!target || !s.source || s.p <= 0) {
-			node.style.opacity = '0';
-			clearLanding();
+		// 回滚至阈值上方（p <= 0）：
+		if (s.p <= 0) {
+			if (!initialized) {
+				initialized = true;
+				node.style.opacity = '0';
+				clearLanding();
+				prevP = s.p;
+				return;
+			}
+
+			// 从落位终态跨越阈值回滚：向标题栏锚点平滑飞回淡出
+			if (prevP >= 1) {
+				clearLanding();
+				if (target && s.source && !prefersReducedMotion()) {
+					const flight = islandFlight(target, s.source);
+					const startTransform = `translate3d(${flight.dx.toFixed(2)}px, ${flight.dy.toFixed(2)}px, 0) scale(${flight.scaleX.toFixed(4)}, ${flight.scaleY.toFixed(4)})`;
+
+					if (animTimer !== null) clearTimeout(animTimer);
+					node.style.transition =
+						'transform 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease-out, --cst-island-content 180ms ease-out';
+					node.style.transform = startTransform;
+					node.style.opacity = '0';
+					node.style.setProperty('--cst-island-content', '0');
+
+					animTimer = setTimeout(() => {
+						node.style.removeProperty('transition');
+						animTimer = null;
+					}, 220);
+				} else {
+					node.style.opacity = '0';
+				}
+			} else {
+				node.style.opacity = '0';
+				clearLanding();
+			}
 			prevP = s.p;
 			return;
 		}
 
-		// 落地微动效（P1-7）：从飞行中（prevP < 1）刚刚抵达落位终态（s.p >= 1）瞬间触发；反向滚动时清空
-		if (!initialized) {
-			initialized = true;
-		} else if (prevP < 1 && s.p >= 1) {
-			triggerLanding();
-		} else if (s.p < 1) {
-			clearLanding();
-		}
+		// 针对连续进度场景（0 < p < 1）：
+		if (!initialized) initialized = true;
+		if (prevP >= 1 && s.p < 1) clearLanding();
 		prevP = s.p;
-
-		applyFrame(node, target, s, prefersReducedMotion());
+		if (target) applyFrame(node, target, s, prefersReducedMotion());
 	};
 	const unsubscribe = subscribeHandoff(apply);
 	apply(currentHandoff());
@@ -230,6 +312,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 		destroy() {
 			unsubscribe();
 			node.removeEventListener('animationend', onAnimationEnd);
+			if (animTimer !== null) clearTimeout(animTimer);
 			clearLanding();
 			ro?.disconnect();
 		}

@@ -8,6 +8,7 @@
 	import { cn } from '@/lib/utils';
 	import { platform } from '@/stores/platform.svelte';
 	import { headerIsland, type IslandToken } from '@/stores/header-island.svelte';
+	import { islandRectOf, type IslandRect } from '@/lib/island-morph';
 	import { subscribeHandoff } from '@/lib/island-handoff';
 
 	export interface AuthorInfo {
@@ -48,6 +49,8 @@
 	let hidden = $state(false);
 	/** 交接是否已基本落位（达到滚动阈值）：决定页内工具行是否 aria-hidden / inert。 */
 	let islandSettled = $state(false);
+	/** 桌面端交接的锚点快照：左侧工具行（返回 + 面包屑）在吸顶容器里位置稳定。 */
+	let islandSource: IslandRect | null = null;
 	// 详情页的桌面岛：滚动过阈值直接动画落位，token 保证路由切换不串台。
 	const islandToken: IslandToken = Symbol('detail-header-island');
 
@@ -65,6 +68,18 @@
 		let raf = 0;
 		let lastScrollTop = 0;
 
+		const captureSource = (): IslandRect | null => {
+			const targetEl = node.querySelector<HTMLElement>('[data-detail-header-left]');
+			if (!targetEl) return null;
+			const rect = islandRectOf(targetEl);
+			if (!rect) return null;
+			const uiScale = Math.max(1, platform.uiScale);
+			return {
+				...rect,
+				y: Math.min(rect.y, Math.max(0, (52 * uiScale - rect.height) / 2))
+			};
+		};
+
 		const apply = () => {
 			raf = 0;
 			const current = target.scrollTop;
@@ -81,10 +96,13 @@
 
 			// 桌面端：在阈值直接用一个动画完成顶栏灵动岛交接（0 或 1），不再逐帧跟手变形
 			if (platform.platform !== 'desktop') return;
+			if (!islandSource) {
+				islandSource = captureSource();
+			}
 			headerIsland.setHandoff(
 				islandToken,
 				isScrolled ? 1 : 0,
-				null
+				islandSource
 			);
 		};
 
@@ -92,11 +110,17 @@
 			if (raf) return;
 			raf = requestAnimationFrame(apply);
 		};
+		const onResize = () => {
+			islandSource = null;
+			apply();
+		};
 		target.addEventListener('scroll', onScroll, { passive: true });
+		window.addEventListener('resize', onResize);
 		apply();
 		return {
 			destroy() {
 				target.removeEventListener('scroll', onScroll);
+				window.removeEventListener('resize', onResize);
 				if (raf) cancelAnimationFrame(raf);
 			}
 		};

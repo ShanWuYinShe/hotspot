@@ -14,7 +14,7 @@
 		class: className = ''
 	}: {
 		isAuthor?: boolean;
-		onCopyLink: () => void;
+		onCopyLink?: () => void;
 		onReload?: () => void;
 		onEdit?: () => void;
 		onDelete?: () => void;
@@ -42,10 +42,12 @@
 		/>
 	</div>
 	<DropdownMenu.Content customAnchor={menuAnchor}>
-		<DropdownMenu.Item onSelect={() => { open = false; onCopyLink(); }}>
-			<Link2 class="size-3.5 text-text-secondary" strokeWidth={1.75} />
-			复制链接
-		</DropdownMenu.Item>
+		{#if onCopyLink}
+			<DropdownMenu.Item onSelect={() => { open = false; onCopyLink(); }}>
+				<Link2 class="size-3.5 text-text-secondary" strokeWidth={1.75} />
+				复制链接
+			</DropdownMenu.Item>
+		{/if}
 
 		{#if onReload}
 			<DropdownMenu.Item onSelect={() => { open = false; onReload(); }}>
