@@ -101,7 +101,7 @@ func (s *Service) react(ctx context.Context, req SetReactionRequest) error {
 	}
 	owner, targetExists, err := s.resolveTarget(ctx, req.TargetType, req.TargetID)
 	if err != nil {
-		observability.L().Error("reactions.react resolve target failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)
+		observability.FromContext(ctx).Error("reactions.react resolve target failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)
 		return err
 	}
 	if !targetExists {
@@ -109,7 +109,7 @@ func (s *Service) react(ctx context.Context, req SetReactionRequest) error {
 	}
 	outcome, err := s.repo.React(ctx, req.TargetType, req.TargetID, principal.UserID, req.Emoji)
 	if err != nil {
-		observability.L().Error("reactions.react repo failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)
+		observability.FromContext(ctx).Error("reactions.react repo failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)
 		return err
 	}
 	switch outcome {
@@ -131,7 +131,7 @@ func (s *Service) unreact(ctx context.Context, req SetReactionRequest) error {
 	// on a deleted target is a legitimate no-op and spec marks it idempotent.
 	changed, err := s.repo.Unreact(ctx, req.TargetType, req.TargetID, principal.UserID)
 	if err != nil {
-		observability.L().Error("reactions.unreact repo failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)
+		observability.FromContext(ctx).Error("reactions.unreact repo failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)
 		return err
 	}
 	if !changed {
@@ -279,7 +279,7 @@ func (s *Service) notifyOwner(ctx context.Context, req SetReactionRequest, actor
 	if s.notifications != nil {
 		id, err := s.notifications.AppendReactionAdded(ctx, ownerID, actor, string(req.TargetType), req.TargetID, req.Emoji)
 		if err != nil {
-			observability.L().Error("reactions.notify AppendReactionAdded failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)
+			observability.FromContext(ctx).Error("reactions.notify AppendReactionAdded failed", "error", err, "target_type", req.TargetType, "target_id", req.TargetID)
 		} else {
 			notificationID = id
 		}
@@ -306,7 +306,7 @@ func (s *Service) buildActor(ctx context.Context, userID string) types.UserInfo 
 		if err == nil {
 			return types.UserInfo{UserID: info.UserID, Nickname: info.Nickname, AvatarURL: types.StrPtr(info.AvatarURL)}
 		}
-		observability.L().Error("reactions.build actor failed", "error", err, "user_id", userID)
+		observability.FromContext(ctx).Error("reactions.build actor failed", "error", err, "user_id", userID)
 	}
 	return types.UserInfo{UserID: userID, Nickname: userID}
 }

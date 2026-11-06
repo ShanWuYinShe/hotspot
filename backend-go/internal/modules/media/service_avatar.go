@@ -35,7 +35,7 @@ func (s *Service) AvatarPublicPath(fileID string) string {
 func (s *Service) ResolveGroupAvatarImage(ctx context.Context, fileID, userID string) error {
 	assets, err := s.repo.ResolveByFileIDs(ctx, []string{fileID}, userID, CategoryGroupAvatar)
 	if err != nil {
-		observability.L().Error("media.resolve_group_avatar failed", "error", err)
+		observability.FromContext(ctx).Error("media.resolve_group_avatar failed", "error", err)
 		return err
 	}
 	if _, ok := assets[fileID]; !ok {
@@ -50,7 +50,7 @@ func (s *Service) ResolveGroupAvatarImage(ctx context.Context, fileID, userID st
 func (s *Service) AvatarReadURL(ctx context.Context, fileID string) (string, error) {
 	meta, ok, err := s.repo.CompletedFileMetaByID(ctx, fileID)
 	if err != nil {
-		observability.L().Error("media.avatar_read_url failed", "error", err)
+		observability.FromContext(ctx).Error("media.avatar_read_url failed", "error", err)
 		return "", err
 	}
 	if !ok || (meta.Category != CategoryAvatar && meta.Category != CategoryGroupAvatar) {

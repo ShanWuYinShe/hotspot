@@ -169,7 +169,7 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 	// 放事务外：该校验不参与配额原子性，失败早退。
 	if req.FileID != "" {
 		if _, ok, err := s.repo.GetMediaForMessage(ctx, req.FileID, principal.UserID); err != nil {
-			observability.L().Error("privatemessages.send media check failed", "error", err, "file_id", req.FileID)
+			observability.FromContext(ctx).Error("privatemessages.send media check failed", "error", err, "file_id", req.FileID)
 			return MessageSentResult{}, err
 		} else if !ok {
 			return MessageSentResult{}, ErrFileNotOwned
@@ -203,7 +203,7 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 		}
 		msg, err := s.repo.Send(txCtx, principal.UserID, req.TargetUserID, req)
 		if err != nil {
-			observability.L().Error("privatemessages.send failed", "error", err, "target_user_id", req.TargetUserID)
+			observability.FromContext(ctx).Error("privatemessages.send failed", "error", err, "target_user_id", req.TargetUserID)
 			return err
 		}
 		sent = msg
@@ -270,7 +270,7 @@ func (s *Service) attachReactions(ctx context.Context, items []PrivateMessageIte
 	}
 	agg, err := s.reactions.AggregatedMessageReactions(ctx, ids)
 	if err != nil {
-		observability.L().Warn("privatemessages.attach_reactions failed", "error", err)
+		observability.FromContext(ctx).Warn("privatemessages.attach_reactions failed", "error", err)
 		return
 	}
 	for i := range items {
@@ -327,7 +327,7 @@ func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) e
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	meta, err := s.repo.Update(ctx, principal.UserID, req)
 	if err != nil {
-		observability.L().Error("privatemessages.update failed", "error", err, "message_id", req.MessageID)
+		observability.FromContext(ctx).Error("privatemessages.update failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -346,7 +346,7 @@ func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) e
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	meta, err := s.repo.Recall(ctx, principal.UserID, s.recallWindow(ctx), req)
 	if err != nil {
-		observability.L().Error("privatemessages.recall failed", "error", err, "message_id", req.MessageID)
+		observability.FromContext(ctx).Error("privatemessages.recall failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -393,7 +393,7 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadReq
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	meta, err := s.repo.MarkAsRead(ctx, principal.UserID, req)
 	if err != nil {
-		observability.L().Error("privatemessages.mark_as_read failed", "error", err, "target_user_id", req.TargetUserID, "up_to_message_id", req.UpToMessageID)
+		observability.FromContext(ctx).Error("privatemessages.mark_as_read failed", "error", err, "target_user_id", req.TargetUserID, "up_to_message_id", req.UpToMessageID)
 		return err
 	}
 	event := realtime.Event{Type: realtime.EventTypePrivateMessageRead, Payload: PrivateMessageReadPayload{
@@ -411,7 +411,7 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadReq
 func (s *Service) MarkAllRead(ctx context.Context) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if err := s.repo.MarkAllRead(ctx, principal.UserID); err != nil {
-		observability.L().Error("privatemessages.mark_all_read failed", "error", err)
+		observability.FromContext(ctx).Error("privatemessages.mark_all_read failed", "error", err)
 		return err
 	}
 	// 不推送 self-sync 事件（已读状态不做跨设备实时同步，见 api_spec_index.md 预留）
@@ -524,7 +524,7 @@ func (s *Service) enforceStrangerQuota(ctx context.Context, userID string) error
 	if len(targetIDs) > 0 && s.users != nil {
 		rels, err := s.users.RelationshipBatch(ctx, userID, targetIDs)
 		if err != nil {
-			observability.L().Warn("privatemessages.quota relationship batch failed, falling back", "error", err, "user_id", userID)
+			observability.FromContext(ctx).Warn("privatemessages.quota relationship batch failed, falling back", "error", err, "user_id", userID)
 			for _, targetID := range targetIDs {
 				rel, relErr := s.users.Relationship(ctx, userID, targetID)
 				if relErr == nil {

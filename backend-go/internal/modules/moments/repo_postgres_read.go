@@ -75,7 +75,7 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string, limit 
 				items[i].Tags = tagsByMomentID[items[i].MomentID]
 				items[i].Mentions = mentionsByMomentID[items[i].MomentID]
 			}
-			return PaginatedMoments{Items: items[:limit], NextCursor: nextCursorOrNil(cursors[limit-1])}, nil
+			return PaginatedMoments{Items: items[:limit], NextCursor: nextCursorOrNil(ctx, cursors[limit-1])}, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -101,9 +101,9 @@ const momentMineCursorNamespace = "moments.mine"
 // nextCursorOrNil 收口列表分页的翻页游标下发：spec 规定 next_cursor 恒定
 // nullable，游标编码失败若下发空串，客户端透传回来会被当作首页重新解码，
 // 存在整页重复拉取风险——失败时降级为 nil 并告警。
-func nextCursorOrNil(cursorValue string) *string {
+func nextCursorOrNil(ctx context.Context, cursorValue string) *string {
 	if cursorValue == "" {
-		observability.L().Warn("moments: cursor encode failed, next_cursor downgraded to null")
+		observability.FromContext(ctx).Warn("moments: cursor encode failed, next_cursor downgraded to null")
 		return nil
 	}
 	return &cursorValue
@@ -150,7 +150,7 @@ func (r *PostgresRepository) LoadMyState(ctx context.Context, momentID, userID s
 		isFavorited = true
 	case errors.Is(err, pgx.ErrNoRows):
 	default:
-		observability.L().Error("moments.load_my_state favorite check failed", "error", err, "moment_id", momentID, "user_id", userID)
+		observability.FromContext(ctx).Error("moments.load_my_state favorite check failed", "error", err, "moment_id", momentID, "user_id", userID)
 	}
 	return &MyMomentState{IsFavorited: isFavorited}
 }

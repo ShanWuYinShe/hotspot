@@ -117,7 +117,7 @@ func (r *PostgresRepository) Health(ctx context.Context) (int, string, *HealthSt
 		err := r.factory.DB.Ping(probeCtx)
 		cancel()
 		if err != nil {
-			observability.L().Warn("health check: postgres ping failed", "error", err)
+			observability.FromContext(ctx).Warn("health check: postgres ping failed", "error", err)
 			return int(httpx.CodeInternalUnavailable), "数据库不可用", nil
 		}
 	}
@@ -125,7 +125,7 @@ func (r *PostgresRepository) Health(ctx context.Context) (int, string, *HealthSt
 		probeCtx, cancel := context.WithTimeout(ctx, healthProbeTimeout)
 		if err := r.redisPinger(probeCtx); err != nil {
 			status = SystemHealthDegraded
-			observability.L().Warn("health check: redis ping failed", "error", err)
+			observability.FromContext(ctx).Warn("health check: redis ping failed", "error", err)
 		}
 		cancel()
 	}

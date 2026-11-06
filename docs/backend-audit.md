@@ -3257,3 +3257,19 @@ meta/client_config」。
 - 架构守卫说明更新：全局 defaultHub 仅测试/后台 fallback，生产由 App 显式持有。
 
 验证：verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C2（第十六批）：Logger 上下文注入（模块去 observability.L 全局直取）（2026-11-07）
+
+架构审计「15+ 组全局单例」继续收敛（本轮 logger，规模最大的一项）：
+
+- observability 新增 WithLogger / FromContext / WithLoggerMiddleware：请求级
+  Logger 注入 context，未注入（后台/直调测试）回退 L()；
+- bootstrap 根中间件在请求入口注入应用级 Logger（与 realtime Hub 同一 DI 模式）；
+- 模块内 201 处 `observability.L()`（37 文件）全部替换为
+  `observability.FromContext(ctx)`；无 ctx 的少数 helper 按语义改为接收
+  ctx / r.Context() / context.Background()（notify prune 后台等）；
+- 架构守卫新增 TestModulesUseContextLoggerNotGlobal：模块再直取 L() 直接失败；
+- platform 层 66 处 L() 保留（启动期/无 ctx 后台任务兜底），allowlist 说明更新；
+- 测试：FromContext 注入/回退语义单测 + archtest 全绿。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

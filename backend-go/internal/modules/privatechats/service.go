@@ -59,12 +59,12 @@ func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLi
 	}
 	createdAt, err := s.repo.GetOrCreate(ctx, principal.UserID, targetUserID)
 	if err != nil {
-		observability.L().Error("privatechats.open_the_door get_or_create failed", "error", err, "target_user_id", targetUserID)
+		observability.FromContext(ctx).Error("privatechats.open_the_door get_or_create failed", "error", err, "target_user_id", targetUserID)
 		return PrivateChatOpenResult{}, err
 	}
 	state, err := s.repo.GetState(ctx, principal.UserID, targetUserID)
 	if err != nil {
-		observability.L().Error("privatechats.open_the_door get_state failed", "error", err, "target_user_id", targetUserID)
+		observability.FromContext(ctx).Error("privatechats.open_the_door get_state failed", "error", err, "target_user_id", targetUserID)
 		return PrivateChatOpenResult{}, err
 	}
 	if state.CreatedAt.IsZero() {
@@ -73,13 +73,13 @@ func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLi
 	boundary := visibleBoundary(state)
 	recent, err := s.messages.Recent(ctx, targetUserID, recentLimit, boundary)
 	if err != nil {
-		observability.L().Error("privatechats.open_the_door recent failed", "error", err, "target_user_id", targetUserID)
+		observability.FromContext(ctx).Error("privatechats.open_the_door recent failed", "error", err, "target_user_id", targetUserID)
 		return PrivateChatOpenResult{}, err
 	}
 	if state.DeletedAt != nil && len(recent.Items) == 0 {
 		now := time.Now().UTC()
 		if err := s.repo.RestoreForUser(ctx, principal.UserID, targetUserID, now); err != nil {
-			observability.L().Error("privatechats.open_the_door restore failed", "error", err, "target_user_id", targetUserID)
+			observability.FromContext(ctx).Error("privatechats.open_the_door restore failed", "error", err, "target_user_id", targetUserID)
 			return PrivateChatOpenResult{}, err
 		}
 		state.DeletedAt = nil
@@ -87,7 +87,7 @@ func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLi
 	}
 	chats, err := s.buildChats(ctx, principal.UserID, []ChatState{state})
 	if err != nil {
-		observability.L().Error("privatechats.open_the_door build_chat failed", "error", err, "target_user_id", targetUserID)
+		observability.FromContext(ctx).Error("privatechats.open_the_door build_chat failed", "error", err, "target_user_id", targetUserID)
 		return PrivateChatOpenResult{}, err
 	}
 	if len(chats) == 0 {
@@ -107,7 +107,7 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 	}
 	states, nextCursor, err := s.repo.List(ctx, principal.UserID, ListOptions{Limit: limit, Cursor: cursor})
 	if err != nil {
-		observability.L().Error("privatechats.list failed", "error", err)
+		observability.FromContext(ctx).Error("privatechats.list failed", "error", err)
 		return PaginatedPrivateChats{}, err
 	}
 	items, err := s.buildChats(ctx, principal.UserID, states)
@@ -171,17 +171,17 @@ func (s *Service) buildChats(ctx context.Context, userID string, states []ChatSt
 	}
 	lastByChat, err := s.messages.LastByChatKeys(ctx, chatKeys, boundaries)
 	if err != nil {
-		observability.L().Error("privatechats.build_chats last batch failed", "error", err)
+		observability.FromContext(ctx).Error("privatechats.build_chats last batch failed", "error", err)
 		return nil, err
 	}
 	unreadByChat, err := s.messages.UnreadCountsByChatKeys(ctx, chatKeys, boundaries)
 	if err != nil {
-		observability.L().Error("privatechats.build_chats unread batch failed", "error", err)
+		observability.FromContext(ctx).Error("privatechats.build_chats unread batch failed", "error", err)
 		return nil, err
 	}
 	targets, err := s.users.ChatTargetsContext(ctx, userID, targetIDs)
 	if err != nil {
-		observability.L().Error("privatechats.build_chats targets batch failed", "error", err)
+		observability.FromContext(ctx).Error("privatechats.build_chats targets batch failed", "error", err)
 		return nil, err
 	}
 	for _, state := range states {

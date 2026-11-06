@@ -70,8 +70,8 @@ func defaultVerificationSender(cfg config.Config) verificationSender {
 // reads the code from the log) without an external SMS/SMTP gateway.
 type logVerificationSender struct{}
 
-func (*logVerificationSender) SendVerification(_ context.Context, to string, channel VerificationChannel, code string) error {
-	observability.L().Info("verification code generated (dev/test mode — no external gateway, read code from log)",
+func (*logVerificationSender) SendVerification(ctx context.Context, to string, channel VerificationChannel, code string) error {
+	observability.FromContext(ctx).Info("verification code generated (dev/test mode — no external gateway, read code from log)",
 		"channel", string(channel),
 		"login_id", observability.Redact(to),
 		"code", code,

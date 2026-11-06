@@ -56,7 +56,7 @@ func (s *Service) Suggest(ctx context.Context, req SearchSuggestRequest) (Search
 	req.Radius = normalizeSuggestRadius(s.appConfig.Get(ctx).Limits.SearchRadiusMax, req.Radius)
 	resp, err := s.repo.Suggest(ctx, req)
 	if err != nil {
-		observability.L().Error("search.suggest failed", "error", err)
+		observability.FromContext(ctx).Error("search.suggest failed", "error", err)
 		return SearchSuggestResponse{}, err
 	}
 	limit := s.appConfig.Get(ctx).ResponseDefaults.SearchSuggestCount

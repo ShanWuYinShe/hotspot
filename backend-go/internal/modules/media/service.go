@@ -77,7 +77,7 @@ func (s *Service) Presign(ctx context.Context, req PresignFileInput) (PresignedU
 	}
 	upload, err := s.provider.Presign(ctx, req, principal.UserID)
 	if err != nil {
-		observability.L().Error("media.presign provider failed", "error", err)
+		observability.FromContext(ctx).Error("media.presign provider failed", "error", err)
 		return PresignedUpload{}, err
 	}
 	if err := s.repo.Save(ctx, pendingUpload{
@@ -91,7 +91,7 @@ func (s *Service) Presign(ctx context.Context, req PresignFileInput) (PresignedU
 		MD5:              req.MD5,
 		CreatedAt:        time.Now().UTC().Format(time.RFC3339),
 	}); err != nil {
-		observability.L().Error("media.presign save failed", "error", err, "upload_id", upload.UploadID)
+		observability.FromContext(ctx).Error("media.presign save failed", "error", err, "upload_id", upload.UploadID)
 		return PresignedUpload{}, err
 	}
 	upload.StorageKey = ""
@@ -112,7 +112,7 @@ func (s *Service) BatchPresign(ctx context.Context, files []PresignFileInput) (P
 	for _, file := range files {
 		upload, err := s.provider.Presign(ctx, file, principal.UserID)
 		if err != nil {
-			observability.L().Error("media.batch_presign provider failed", "error", err)
+			observability.FromContext(ctx).Error("media.batch_presign provider failed", "error", err)
 			return PresignedUploads{}, err
 		}
 		if err := s.repo.Save(ctx, pendingUpload{
@@ -126,7 +126,7 @@ func (s *Service) BatchPresign(ctx context.Context, files []PresignFileInput) (P
 			MD5:              file.MD5,
 			CreatedAt:        time.Now().UTC().Format(time.RFC3339),
 		}); err != nil {
-			observability.L().Error("media.batch_presign save failed", "error", err, "upload_id", upload.UploadID)
+			observability.FromContext(ctx).Error("media.batch_presign save failed", "error", err, "upload_id", upload.UploadID)
 			return PresignedUploads{}, err
 		}
 		upload.StorageKey = ""
@@ -142,12 +142,12 @@ func (s *Service) BatchPresign(ctx context.Context, files []PresignFileInput) (P
 func (s *Service) scrubImageMetadata(ctx context.Context, storageKey, mimeType string) {
 	data, err := s.provider.GetObject(ctx, storageKey)
 	if err != nil {
-		observability.L().Warn("image metadata scrub: get object failed", "error", err, "storage_key", storageKey)
+		observability.FromContext(ctx).Warn("image metadata scrub: get object failed", "error", err, "storage_key", storageKey)
 		return
 	}
 	cleaned, changed, err := stripImageMetadata(data)
 	if err != nil {
-		observability.L().Warn("image metadata scrub: parse failed, keeping original", "error", err, "storage_key", storageKey)
+		observability.FromContext(ctx).Warn("image metadata scrub: parse failed, keeping original", "error", err, "storage_key", storageKey)
 		return
 	}
 	if !changed {
@@ -156,10 +156,10 @@ func (s *Service) scrubImageMetadata(ctx context.Context, storageKey, mimeType s
 	if err := s.provider.PutObject(ctx, storageKey, mimeType, cleaned); err != nil {
 		// 回写失败：对象仍为未清洗原版，仅告警（Head 核对只对 Content-Type/Length，
 		// 回写后的长度差不会使 complete 失败——此时 meta 仍是原对象尺寸）。
-		observability.L().Warn("image metadata scrub: put cleaned object failed", "error", err, "storage_key", storageKey)
+		observability.FromContext(ctx).Warn("image metadata scrub: put cleaned object failed", "error", err, "storage_key", storageKey)
 		return
 	}
-	observability.L().Info("image metadata scrubbed", "storage_key", storageKey, "bytes_before", len(data), "bytes_after", len(cleaned))
+	observability.FromContext(ctx).Info("image metadata scrubbed", "storage_key", storageKey, "bytes_before", len(data), "bytes_after", len(cleaned))
 }
 
 func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia, error) {
@@ -182,7 +182,7 @@ func (s *Service) PrepareComplete(ctx context.Context, uploadID string) (Uploade
 	}
 	upload, ok, err := s.repo.Get(ctx, uploadID)
 	if err != nil {
-		observability.L().Error("media.complete get failed", "error", err, "upload_id", uploadID)
+		observability.FromContext(ctx).Error("media.complete get failed", "error", err, "upload_id", uploadID)
 		return UploadedMedia{}, err
 	}
 	if !ok || upload.UserID != principal.UserID {
@@ -199,7 +199,7 @@ func (s *Service) PrepareComplete(ctx context.Context, uploadID string) (Uploade
 		if errors.Is(err, ErrUploadNotReady) {
 			return UploadedMedia{}, ErrUploadNotReady
 		}
-		observability.L().Error("media.complete head failed", "error", err, "upload_id", uploadID, "storage_key", upload.StorageKey)
+		observability.FromContext(ctx).Error("media.complete head failed", "error", err, "upload_id", uploadID, "storage_key", upload.StorageKey)
 		return UploadedMedia{}, err
 	}
 	if err := validateCompletedObjectMetadata(upload, meta); err != nil {
@@ -233,7 +233,7 @@ func (s *Service) CommitComplete(ctx context.Context, uploadID string, file Uplo
 	// 先 Get 判幂等、UPDATE 后再 Get 回读，每文件 3 次往返）。
 	updated, err := s.repo.Complete(ctx, uploadID, file, idempotency.KeyFromContext(ctx))
 	if err != nil {
-		observability.L().Error("media.complete save failed", "error", err, "upload_id", uploadID)
+		observability.FromContext(ctx).Error("media.complete save failed", "error", err, "upload_id", uploadID)
 		return UploadedMedia{}, err
 	}
 	if updated {
@@ -242,7 +242,7 @@ func (s *Service) CommitComplete(ctx context.Context, uploadID string, file Uplo
 	// 未更新：会话不存在，或已被并发/重复请求完成——回读一次区分并保持幂等。
 	upload, found, err := s.repo.Get(ctx, uploadID)
 	if err != nil {
-		observability.L().Error("media.complete get failed", "error", err, "upload_id", uploadID)
+		observability.FromContext(ctx).Error("media.complete get failed", "error", err, "upload_id", uploadID)
 		return UploadedMedia{}, err
 	}
 	if !found {
@@ -265,7 +265,7 @@ func (s *Service) ResolveMomentImages(ctx context.Context, fileIDs []string, use
 	}
 	assets, err := s.repo.ResolveByFileIDs(ctx, fileIDs, userID, CategoryMomentImage)
 	if err != nil {
-		observability.L().Error("media.resolve_moment_images failed", "error", err)
+		observability.FromContext(ctx).Error("media.resolve_moment_images failed", "error", err)
 		return nil, err
 	}
 	for _, id := range fileIDs {
@@ -283,7 +283,7 @@ func (s *Service) ResolveMomentImages(ctx context.Context, fileIDs []string, use
 func (s *Service) ResolveAvatarImage(ctx context.Context, fileID, userID string) error {
 	assets, err := s.repo.ResolveByFileIDs(ctx, []string{fileID}, userID, CategoryAvatar)
 	if err != nil {
-		observability.L().Error("media.resolve_avatar_image failed", "error", err)
+		observability.FromContext(ctx).Error("media.resolve_avatar_image failed", "error", err)
 		return err
 	}
 	if _, ok := assets[fileID]; !ok {
@@ -447,11 +447,11 @@ const magicSniffLen = 512
 func (s *Service) sniffImageMagic(ctx context.Context, storageKey, mimeType string) error {
 	prefix, err := s.provider.ReadPrefix(ctx, storageKey, magicSniffLen)
 	if err != nil {
-		observability.L().Error("media.complete read prefix failed", "error", err, "storage_key", storageKey)
+		observability.FromContext(ctx).Error("media.complete read prefix failed", "error", err, "storage_key", storageKey)
 		return err
 	}
 	if !magicMatchesImageType(prefix, mimeType) {
-		observability.L().Warn("media.complete magic mismatch", "mime_type", mimeType, "storage_key", storageKey)
+		observability.FromContext(ctx).Warn("media.complete magic mismatch", "mime_type", mimeType, "storage_key", storageKey)
 		return ErrUploadConflict
 	}
 	return nil

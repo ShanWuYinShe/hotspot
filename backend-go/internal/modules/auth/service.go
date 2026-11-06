@@ -283,7 +283,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platfo
 		Phone:            registerPhone,
 	})
 	if err != nil {
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "Register",
 			"error", err,
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
@@ -294,7 +294,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platfo
 	// 同一验证码最多促成一次成功注册；消费失败仅告警（注册已成功，不能回滚）。
 	if isPhoneOrEmailLoginID(req.LoginID) && req.VerificationCode != nil {
 		if err := s.repo.ConsumeRegisterCode(ctx, req.LoginID, *req.VerificationCode); err != nil {
-			observability.L().Warn("register code consume failed",
+			observability.FromContext(ctx).Warn("register code consume failed",
 				"method", "Register",
 				"login_id", observability.Redact(req.LoginID),
 				"error", err,
@@ -303,7 +303,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platfo
 	}
 	result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
 	if err != nil {
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "Register",
 			"error", err,
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
@@ -323,13 +323,13 @@ func (s *Service) SendRegisterCode(ctx context.Context, req SendRegisterCodeRequ
 		// 发送节流是预期业务限流：直接透传（apiErrorFrom 映射 10500 + Retry-After），
 		// 不与基础设施错误混记 Error。
 		if errors.Is(err, ErrRegisterCodeThrottled) {
-			observability.L().Warn("verification code send throttled for register",
+			observability.FromContext(ctx).Warn("verification code send throttled for register",
 				"method", "SendRegisterCode",
 				"login_id", observability.Redact(req.LoginID),
 			)
 			return err
 		}
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "SendRegisterCode",
 			"error", err,
 		)
@@ -341,7 +341,7 @@ func (s *Service) SendRegisterCode(ctx context.Context, req SendRegisterCodeRequ
 		// ErrVerificationServiceUnavailable→10600 的映射成为不可达死路径。
 		// 防枚举不受影响：投递能力对同一时刻的所有 login_id 一致（网关级
 		// 状态，与账号是否存在无关），统一成功/失败无存在性侧信道。
-		observability.L().Warn("verification code delivery failed for register",
+		observability.FromContext(ctx).Warn("verification code delivery failed for register",
 			"method", "SendRegisterCode",
 			"login_id", observability.Redact(req.LoginID),
 			"error", sendErr,
@@ -358,7 +358,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 
 	// Check brute-force lockout before even hashing the password.
 	if err := s.loginTracker.Check(ctx, req.LoginID); err != nil {
-		observability.L().Warn("login blocked by lockout",
+		observability.FromContext(ctx).Warn("login blocked by lockout",
 			"method", "Login",
 			"login_id", observability.Redact(req.LoginID),
 		)
@@ -371,14 +371,14 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 		// 两者同响应）：按约定走 Warn，不与基础设施错误混记 Error。
 		if errors.Is(err, ErrInvalidCredentials) {
 			s.loginTracker.RecordFailed(ctx, req.LoginID)
-			observability.L().Warn("login failed: invalid credentials",
+			observability.FromContext(ctx).Warn("login failed: invalid credentials",
 				"method", "Login",
 				"login_id", observability.Redact(req.LoginID),
 				"elapsed_ms", time.Since(startedAt).Milliseconds(),
 			)
 			return platformauth.AuthResult{}, fmt.Errorf("auth.Service.Login: authenticate: %w", err)
 		}
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "Login",
 			"error", err,
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
@@ -393,7 +393,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 	// 登录换取新 session；HTTP 侧虽被 RequiredAuth 拦截，但 WS 握手等非中间件
 	// 路径会绕过封禁。检查放在凭据校验之后，避免向封禁账号泄露账号存在性。
 	if s.auth.IsUserBanned(ctx, account.UserID) {
-		observability.L().Warn("login blocked: account banned",
+		observability.FromContext(ctx).Warn("login blocked: account banned",
 			"method", "Login",
 			"user_id", account.UserID,
 		)
@@ -401,7 +401,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 	}
 
 	if err := s.repo.UpdateLoginMeta(ctx, account.UserID, meta.IPAddress, meta.IPLocation); err != nil {
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "Login",
 			"error", err,
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
@@ -419,7 +419,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 	}
 	result, err := s.auth.IssueSessionEvictingDevice(ctx, account.UserID, meta)
 	if err != nil {
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "Login",
 			"error", err,
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
@@ -473,7 +473,7 @@ func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth
 	}
 	account, err := s.repo.CreateGuest(ctx, GuestParams{Nickname: nickname, Defaults: s.profileDefaults(ctx), RegisterIP: meta.IPAddress, RegisterLocation: meta.IPLocation})
 	if err != nil {
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "Guest",
 			"error", err,
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
@@ -489,7 +489,7 @@ func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth
 	}
 	result, err := s.auth.IssueSessionEvictingDevice(ctx, account.UserID, meta)
 	if err != nil {
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "Guest",
 			"error", err,
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
@@ -518,7 +518,7 @@ func (s *Service) Refresh(ctx context.Context, req RefreshTokenRequest, deviceID
 		if sessionID, ok, resolveErr := s.auth.SessionIDForRefreshToken(ctx, refreshToken); resolveErr == nil && ok {
 			session, found, getErr := s.auth.GetSession(ctx, sessionID)
 			if getErr != nil || !found || session.DeviceID != deviceID {
-				observability.L().Warn("refresh device_id mismatch",
+				observability.FromContext(ctx).Warn("refresh device_id mismatch",
 					"method", "Refresh",
 					"session_id", sessionID,
 					"claimed_device_id", deviceID,
@@ -538,12 +538,12 @@ func (s *Service) Refresh(ctx context.Context, req RefreshTokenRequest, deviceID
 			errors.Is(err, platformauth.ErrExpiredRefreshToken) ||
 			errors.Is(err, platformauth.ErrRevokedSession) ||
 			errors.Is(err, platformauth.ErrRotationWindowExpired) {
-			observability.L().Warn("refresh rejected: token lifecycle",
+			observability.FromContext(ctx).Warn("refresh rejected: token lifecycle",
 				"method", "Refresh",
 				"error", err,
 			)
 		} else {
-			observability.L().Error("service error",
+			observability.FromContext(ctx).Error("service error",
 				"method", "Refresh",
 				"error", err,
 				"elapsed_ms", time.Since(startedAt).Milliseconds(),
@@ -554,7 +554,7 @@ func (s *Service) Refresh(ctx context.Context, req RefreshTokenRequest, deviceID
 	if deviceID != "" {
 		session, ok, getErr := s.auth.GetSession(ctx, result.Principal.SessionID)
 		if getErr != nil || !ok || session.DeviceID != deviceID {
-			observability.L().Warn("refresh device_id mismatch",
+			observability.FromContext(ctx).Warn("refresh device_id mismatch",
 				"method", "Refresh",
 				"session_id", result.Principal.SessionID,
 				"claimed_device_id", deviceID,
@@ -609,7 +609,7 @@ func (s *Service) RevokeSession(ctx context.Context, req RevokeSessionRequest) e
 		return &httpx.APIError{Code: httpx.CodeConflict, Message: "不允许撤销当前会话"}
 	}
 	if err := s.auth.RevokeSession(ctx, principal.UserID, principal.SessionID, req.SessionID); err != nil {
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "RevokeSession",
 			"error", err,
 		)
@@ -625,7 +625,7 @@ func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordR
 		return nil
 	}
 	if err != nil {
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "RequestPasswordReset",
 			"error", err,
 		)
@@ -641,7 +641,7 @@ func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordR
 		// outage、运维可观测，非攻击者可控状态）下出现，且此时静默假成功
 		// 更糟：所有找回密码的用户无任何信号地卡死。正常网关下两端同为
 		// 成功，无存在性侧信道。
-		observability.L().Warn("verification code delivery failed for password reset",
+		observability.FromContext(ctx).Warn("verification code delivery failed for password reset",
 			"method", "RequestPasswordReset",
 			"login_id", observability.Redact(req.LoginID),
 			"error", sendErr,
@@ -655,7 +655,7 @@ func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest, m
 	startedAt := time.Now()
 	account, err := s.repo.ResetPassword(ctx, req.LoginID, req.VerificationCode, req.NewPassword)
 	if err != nil {
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "ResetPassword",
 			"error", err,
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
@@ -666,7 +666,7 @@ func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest, m
 	s.auth.RevokeOtherSessions(ctx, account.UserID, "")
 	result, err := s.auth.IssueSessionWithMeta(ctx, account.UserID, meta)
 	if err != nil {
-		observability.L().Error("service error",
+		observability.FromContext(ctx).Error("service error",
 			"method", "ResetPassword",
 			"error", err,
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),

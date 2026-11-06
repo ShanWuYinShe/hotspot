@@ -34,7 +34,7 @@ func (s *Service) FetchFollowing(ctx context.Context, req FetchFollowingMomentsR
 	}
 	items, err := s.repo.ListFollowingMoments(ctx, query)
 	if err != nil {
-		observability.L().Error("moments.fetch_following failed", "error", err)
+		observability.FromContext(ctx).Error("moments.fetch_following failed", "error", err)
 		return PaginatedMoments{}, err
 	}
 	s.hydrateImagesBatch(ctx, items.Items)
@@ -68,7 +68,7 @@ func (s *Service) FetchNearby(ctx context.Context, req FetchNearbyMomentsRequest
 	}
 	items, err := s.repo.ListNearbyMoments(ctx, query)
 	if err != nil {
-		observability.L().Error("moments.fetch_nearby failed", "error", err)
+		observability.FromContext(ctx).Error("moments.fetch_nearby failed", "error", err)
 		return PaginatedMoments{}, err
 	}
 	s.hydrateImagesBatch(ctx, items.Items)

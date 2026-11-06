@@ -161,7 +161,7 @@ func (s *Service) resolveGroupAvatarInput(ctx context.Context, fileID, userID, o
 		return fileID, nil
 	}
 	if err := s.avatarMedia.ResolveGroupAvatarImage(ctx, fileID, userID); err != nil {
-		observability.L().Warn("groups avatar denied", "error", err, "op", op, "user_id", userID)
+		observability.FromContext(ctx).Warn("groups avatar denied", "error", err, "op", op, "user_id", userID)
 		// *httpx.APIError 由 handler 原样透传（groups Create/Update 错误分支）
 		return "", httpx.InvalidRequest("头像文件不存在或不属于当前用户")
 	}
@@ -179,7 +179,7 @@ func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem
 	if blockedTagChecker != nil {
 		for _, tag := range req.Tags {
 			if blockedTagChecker.IsBlocked(tag) {
-				observability.L().Warn("groups.create blocked tag", "tag", tag)
+				observability.FromContext(ctx).Warn("groups.create blocked tag", "tag", tag)
 				return GroupItem{}, ErrBusinessConflict
 			}
 		}
@@ -454,7 +454,7 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 	}
 	if s.audit != nil {
 		if err := s.audit.AppendGroupDismissAudit(ctx, principal.UserID, group.Group.GroupID, group.Group.Name, reason); err != nil {
-			observability.L().Error("groups.dismiss audit failed", "error", err, "group_id", req.GroupID)
+			observability.FromContext(ctx).Error("groups.dismiss audit failed", "error", err, "group_id", req.GroupID)
 		}
 	}
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: GroupDismissedPayload{GroupID: req.GroupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "owner_dismissed"}}
@@ -489,7 +489,7 @@ func (s *Service) DismissAsAdmin(ctx context.Context, operatorID, groupID, reaso
 	}
 	if s.audit != nil {
 		if err := s.audit.AppendGroupDismissAudit(ctx, operatorID, group.Group.GroupID, group.Group.Name, reason); err != nil {
-			observability.L().Error("groups.DismissAsAdmin audit failed", "error", err, "group_id", groupID)
+			observability.FromContext(ctx).Error("groups.DismissAsAdmin audit failed", "error", err, "group_id", groupID)
 		}
 	}
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: GroupDismissedPayload{GroupID: groupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "policy_violation"}}
@@ -600,7 +600,7 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 		return EnterGroupResult{}, ErrGroupNotFound
 	}
 	if group.ViewerState != nil {
-		observability.L().Info("groups.join_group already joined", "group_id", req.GroupID, "elapsed_ms", op.ElapsedMillis())
+		observability.FromContext(ctx).Info("groups.join_group already joined", "group_id", req.GroupID, "elapsed_ms", op.ElapsedMillis())
 		return EnterGroupResult{Status: EnterGroupStatusJoined}, nil
 	}
 	// C.3：被封禁用户无法加入群，返回 10200+banned_in_group（httpx.Forbidden）

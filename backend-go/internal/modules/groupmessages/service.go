@@ -135,7 +135,7 @@ func (f *readCountFlusher) schedule(groupID string, messageIDs []string, flush f
 		// recover 口径），此处补齐。
 		defer func() {
 			if r := recover(); r != nil {
-				observability.L().Error("read count flusher panic recovered",
+				observability.FromContext(context.Background()).Error("read count flusher panic recovered",
 					"group_id", groupID, "panic", r)
 			}
 		}()
@@ -172,7 +172,7 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 		return MessageSentResult{}, err
 	}
 	if isMuted, mutedUntil, found, err := s.repo.MemberMuteStatus(ctx, req.GroupID, userID); err != nil {
-		observability.L().Error("groupmessages.send mute check failed", "error", err, "group_id", req.GroupID)
+		observability.FromContext(ctx).Error("groupmessages.send mute check failed", "error", err, "group_id", req.GroupID)
 		return MessageSentResult{}, err
 	} else if found && isMuted {
 		return MessageSentResult{}, &MutedError{MutedUntil: mutedUntil}
@@ -187,7 +187,7 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 	// 媒体标识固化进消息行（对齐 moments 图片归属校验，spec 10300）。
 	if req.FileID != "" {
 		if _, ok, err := s.repo.GetMediaForMessage(ctx, req.FileID, userID); err != nil {
-			observability.L().Error("groupmessages.send media check failed", "error", err, "file_id", req.FileID)
+			observability.FromContext(ctx).Error("groupmessages.send media check failed", "error", err, "file_id", req.FileID)
 			return MessageSentResult{}, err
 		} else if !ok {
 			return MessageSentResult{}, ErrFileNotOwned
@@ -195,7 +195,7 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 	}
 	msg, err := s.repo.Send(ctx, req)
 	if err != nil {
-		observability.L().Error("groupmessages.send failed", "error", err, "group_id", req.GroupID)
+		observability.FromContext(ctx).Error("groupmessages.send failed", "error", err, "group_id", req.GroupID)
 		return MessageSentResult{}, err
 	}
 	payload := map[string]any{
@@ -240,7 +240,7 @@ func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req Se
 	// 无权查看的群消息内容，也构成通知轰炸向量（spec：Mentions 为成员列表）。
 	mentionedMembers, err := s.repo.FilterMemberIDs(ctx, req.GroupID, req.Mentions)
 	if err != nil {
-		observability.L().Error("groupmessages.mentions filter members failed", "error", err, "group_id", req.GroupID)
+		observability.FromContext(ctx).Error("groupmessages.mentions filter members failed", "error", err, "group_id", req.GroupID)
 		return
 	}
 	targets := make([]string, 0, len(mentionedMembers))
@@ -259,7 +259,7 @@ func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req Se
 	// 广播仍照常进行——与此前逐人失败只影响该人的口径一致，只是失败粒度为整批。
 	notifyIDs, err := s.mentions.AppendGroupMentionedBatch(ctx, targets, actor, req.GroupID, groupName, msg.MessageID, contentPreview)
 	if err != nil {
-		observability.L().Error("groupmessages.mentions batch append failed", "error", err, "group_id", req.GroupID, "count", len(targets))
+		observability.FromContext(ctx).Error("groupmessages.mentions batch append failed", "error", err, "group_id", req.GroupID, "count", len(targets))
 	}
 	// 并行推送（有界并发）：每条 BroadcastToUser 内部含 resume Record + 跨实例
 	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟。
@@ -305,7 +305,7 @@ func (s *Service) attachReactions(ctx context.Context, items []GroupMessageItem)
 	}
 	agg, err := s.reactions.AggregatedGroupMessageReactions(ctx, ids)
 	if err != nil {
-		observability.L().Warn("groupmessages.attach_reactions failed", "error", err)
+		observability.FromContext(ctx).Warn("groupmessages.attach_reactions failed", "error", err)
 		return
 	}
 	for i := range items {
@@ -334,7 +334,7 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupMessageRequest) err
 	}
 	meta, err := s.repo.Update(ctx, req)
 	if err != nil {
-		observability.L().Error("groupmessages.update failed", "error", err, "message_id", req.MessageID)
+		observability.FromContext(ctx).Error("groupmessages.update failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
 	realtime.HubFromContext(ctx).BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageEdited, Payload: GroupMessageEditedPayload{
@@ -352,7 +352,7 @@ func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) err
 	}
 	meta, err := s.repo.Recall(ctx, s.recallWindow(ctx), req)
 	if err != nil {
-		observability.L().Error("groupmessages.recall failed", "error", err, "message_id", req.MessageID)
+		observability.FromContext(ctx).Error("groupmessages.recall failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
 	realtime.HubFromContext(ctx).BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: GroupMessageRecalledPayload{
@@ -379,7 +379,7 @@ func (s *Service) RecallMessageAsAdmin(ctx context.Context, operatorID, groupID,
 	}
 	meta2, err := s.repo.RecallAsAdmin(ctx, messageID, operatorID)
 	if err != nil {
-		observability.L().Error("groupmessages.recall_as_admin failed", "error", err, "message_id", messageID, "group_id", groupID)
+		observability.FromContext(ctx).Error("groupmessages.recall_as_admin failed", "error", err, "message_id", messageID, "group_id", groupID)
 		return err
 	}
 	event := realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: GroupMessageRecalledPayload{
@@ -443,7 +443,7 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkGroupMessagesReadReque
 		return err
 	}
 	if err := s.repo.MarkAsRead(ctx, principal.UserID, req); err != nil {
-		observability.L().Error("groupmessages.mark_as_read failed", "error", err, "group_id", req.GroupID, "up_to_message_id", req.UpToMessageID, "user_id", principal.UserID)
+		observability.FromContext(ctx).Error("groupmessages.mark_as_read failed", "error", err, "group_id", req.GroupID, "up_to_message_id", req.UpToMessageID, "user_id", principal.UserID)
 		return err
 	}
 	// 已读计数变化经节流聚合推送（spec chat.md GroupMessageReadCountUpdated）；
@@ -474,7 +474,7 @@ func (s *Service) flushReadCounts(groupID string, messageIDs []string) {
 	// 批量一次取回整窗消息的已读计数（替代逐消息查询的 N 次往返）。
 	counts, err := s.repo.GetReadCounts(ctx, groupID, messageIDs)
 	if err != nil {
-		observability.L().Warn("groupmessages.read_count lookup failed", "error", err, "group_id", groupID, "messages", len(messageIDs))
+		observability.FromContext(ctx).Warn("groupmessages.read_count lookup failed", "error", err, "group_id", groupID, "messages", len(messageIDs))
 		return
 	}
 	for _, messageID := range messageIDs {
@@ -498,7 +498,7 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	groupIDs, err := s.repo.MarkAllRead(ctx, principal.UserID)
 	if err != nil {
-		observability.L().Error("groupmessages.mark_all_read failed", "error", err, "user_id", principal.UserID)
+		observability.FromContext(ctx).Error("groupmessages.mark_all_read failed", "error", err, "user_id", principal.UserID)
 		return err
 	}
 	// 每个受影响群以最新消息为计数目标进入节流窗口

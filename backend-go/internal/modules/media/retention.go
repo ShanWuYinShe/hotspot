@@ -70,27 +70,27 @@ func (s *Service) sweepStaleUploads(ctx context.Context) {
 	cutoff := time.Now().UTC().AddDate(0, 0, -staleUploadRetentionDays)
 	stale, err := s.repo.ListStaleUploads(sweepCtx, cutoff, staleUploadBatchLimit)
 	if err != nil {
-		observability.L().Warn("media retention sweep list failed", "error", err)
+		observability.FromContext(ctx).Warn("media retention sweep list failed", "error", err)
 		return
 	}
 	var deletedObjects, deletedRows int
 	for _, item := range stale {
 		// 对象可能从未真正上传（presign 后放弃）——404 视为已删，不算失败。
 		if err := s.provider.Delete(sweepCtx, item.StorageKey); err != nil {
-			observability.L().Warn("media retention sweep object delete failed",
+			observability.FromContext(ctx).Warn("media retention sweep object delete failed",
 				"error", err, "upload_id", item.UploadID)
 			continue // 对象删除失败则保留行，下一轮重试
 		}
 		deletedObjects++
 		if err := s.repo.DeleteUploadRow(sweepCtx, item.UploadID); err != nil {
-			observability.L().Warn("media retention sweep row delete failed",
+			observability.FromContext(ctx).Warn("media retention sweep row delete failed",
 				"error", err, "upload_id", item.UploadID)
 			continue
 		}
 		deletedRows++
 	}
 	if deletedRows > 0 || len(stale) > 0 {
-		observability.L().Info("media retention sweep",
+		observability.FromContext(ctx).Info("media retention sweep",
 			"stale", len(stale), "objects_deleted", deletedObjects, "rows_deleted", deletedRows)
 	}
 }

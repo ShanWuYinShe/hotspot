@@ -16,7 +16,7 @@ func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, applicati
 	group, groupFound, err := s.repo.Get(ctx, application.GroupID)
 	if err != nil || !groupFound {
 		if err != nil {
-			observability.L().Warn("groups.notify: load group failed", "group_id", application.GroupID, "error", err)
+			observability.FromContext(ctx).Warn("groups.notify: load group failed", "group_id", application.GroupID, "error", err)
 		}
 		return
 	}
@@ -28,12 +28,12 @@ func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, applicati
 	admin := GroupRoleAdmin
 	ownerMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &owner, adminNotifyListLimit, "")
 	if err != nil {
-		observability.L().Warn("groups.notify: list owner members failed", "group_id", group.Group.GroupID, "error", err)
+		observability.FromContext(ctx).Warn("groups.notify: list owner members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
 	adminMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &admin, adminNotifyListLimit, "")
 	if err != nil {
-		observability.L().Warn("groups.notify: list admin members failed", "group_id", group.Group.GroupID, "error", err)
+		observability.FromContext(ctx).Warn("groups.notify: list admin members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
 	for _, member := range append(ownerMembers, adminMembers...) {
@@ -64,12 +64,12 @@ func (s *Service) notifyGroupApplicationExpired(ctx context.Context, group Group
 	admin := GroupRoleAdmin
 	ownerMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &owner, adminNotifyListLimit, "")
 	if err != nil {
-		observability.L().Warn("groups.notify: list owner members failed", "group_id", group.Group.GroupID, "error", err)
+		observability.FromContext(ctx).Warn("groups.notify: list owner members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
 	adminMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &admin, adminNotifyListLimit, "")
 	if err != nil {
-		observability.L().Warn("groups.notify: list admin members failed", "group_id", group.Group.GroupID, "error", err)
+		observability.FromContext(ctx).Warn("groups.notify: list admin members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
 	for _, member := range append(ownerMembers, adminMembers...) {
@@ -93,7 +93,7 @@ func (s *Service) notifyGroupApplicationRejected(ctx context.Context, group Grou
 	if s.notifications != nil {
 		id, err := s.notifications.AppendGroupApplicationRejected(ctx, application.Applicant.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID, reason)
 		if err != nil {
-			observability.L().Error("groups.notify_group_application_rejected append failed", "error", err, "application_id", application.ApplicationID)
+			observability.FromContext(ctx).Error("groups.notify_group_application_rejected append failed", "error", err, "application_id", application.ApplicationID)
 		} else {
 			notificationID = id
 		}
@@ -145,7 +145,7 @@ func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem
 	if s.notifications != nil {
 		id, err := s.notifications.AppendGroupInviteReceived(ctx, req.UserID, actor, group.Group.GroupID, group.Group.Name, inviteID, req.Message)
 		if err != nil {
-			observability.L().Error("groups.notify AppendGroupInviteReceived failed", "error", err, "invite_id", inviteID)
+			observability.FromContext(ctx).Error("groups.notify AppendGroupInviteReceived failed", "error", err, "invite_id", inviteID)
 		} else {
 			notificationID = id
 		}
@@ -185,12 +185,12 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 	adminRole := GroupRoleAdmin
 	ownerMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &owner, adminNotifyListLimit, "")
 	if err != nil {
-		observability.L().Warn("groups.notify: list owner members failed", "group_id", group.Group.GroupID, "error", err)
+		observability.FromContext(ctx).Warn("groups.notify: list owner members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
 	adminMembers, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, &adminRole, adminNotifyListLimit, "")
 	if err != nil {
-		observability.L().Warn("groups.notify: list admin members failed", "group_id", group.Group.GroupID, "error", err)
+		observability.FromContext(ctx).Warn("groups.notify: list admin members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
 	for _, member := range append(ownerMembers, adminMembers...) {
@@ -198,7 +198,7 @@ func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group Grou
 		if s.notifications != nil {
 			id, err := s.notifications.AppendGroupApplicationReceived(ctx, member.User.UserID, applicant, group.Group.GroupID, group.Group.Name, *applicationID, message)
 			if err != nil {
-				observability.L().Error("groups.notify AppendGroupApplicationReceived failed", "error", err, "application_id", applicationID)
+				observability.FromContext(ctx).Error("groups.notify AppendGroupApplicationReceived failed", "error", err, "application_id", applicationID)
 			} else {
 				notificationID = id
 			}
@@ -216,7 +216,7 @@ func (s *Service) notifyGroupApplicationAccepted(ctx context.Context, group Grou
 	if s.notifications != nil {
 		id, err := s.notifications.AppendGroupApplicationAccepted(ctx, application.Applicant.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID)
 		if err != nil {
-			observability.L().Error("groups.notify_group_application_accepted append failed", "error", err, "application_id", application.ApplicationID)
+			observability.FromContext(ctx).Error("groups.notify_group_application_accepted append failed", "error", err, "application_id", application.ApplicationID)
 		} else {
 			notificationID = id
 		}

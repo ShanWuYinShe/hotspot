@@ -461,11 +461,11 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	idempotency.ReplayOrStore(w, r, "admin/announcements/create", func() httpx.ApiResponse[AdminAnnouncementItem] {
 		payload, apiErr, err := h.service.CreateAnnouncement(ctx, req)
 		if err != nil {
-			observability.L().Error("handler error", "method", "CreateAnnouncement", "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
+			observability.FromContext(r.Context()).Error("handler error", "method", "CreateAnnouncement", "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
 			return httpx.ApiResponse[AdminAnnouncementItem]{Code: httpx.CodeInternalUnavailable, Message: "服务暂时不可用"}
 		}
 		if apiErr != nil {
-			observability.L().Warn("handler business error", "method", "CreateAnnouncement", "code", apiErr.Code, "message", apiErr.Message, "request_id", observability.RequestIDFromContext(r.Context()))
+			observability.FromContext(r.Context()).Warn("handler business error", "method", "CreateAnnouncement", "code", apiErr.Code, "message", apiErr.Message, "request_id", observability.RequestIDFromContext(r.Context()))
 			return httpx.ApiResponse[AdminAnnouncementItem]{Code: apiErr.Code, Message: apiErr.Message}
 		}
 		return httpx.Success(payload)
@@ -546,7 +546,7 @@ func (h *Handler) StatsGeoDrilldown(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) writeAPIError(w http.ResponseWriter, r *http.Request, err *httpx.APIError) {
-	observability.L().Warn("handler business error", "method", handlerMethodName(r), "code", err.Code, "message", err.Message, "request_id", observability.RequestIDFromContext(r.Context()))
+	observability.FromContext(r.Context()).Warn("handler business error", "method", handlerMethodName(r), "code", err.Code, "message", err.Message, "request_id", observability.RequestIDFromContext(r.Context()))
 	if err.Data != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(err.Code, err.Message, err.Data))
 		return
@@ -558,7 +558,7 @@ func (h *Handler) writeAPIError(w http.ResponseWriter, r *http.Request, err *htt
 // 不收 err，日志只记合成 sentinel，DB/基础设施故障的根因不入日志，排障时只能
 // 看到「服务暂时不可用」）。对外响应仍不透传内部细节（spec 禁止）。
 func (h *Handler) writeUnavailable(w http.ResponseWriter, r *http.Request, err error) {
-	observability.L().Error("handler error", "method", handlerMethodName(r), "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
+	observability.FromContext(r.Context()).Error("handler error", "method", handlerMethodName(r), "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
 	httpx.WriteServerError(w, r, err)
 }
 

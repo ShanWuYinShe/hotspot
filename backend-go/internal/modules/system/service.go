@@ -46,7 +46,7 @@ func (s *Service) SetHealthRedisPinger(p func(ctx context.Context) error) {
 func (s *Service) ListAnnouncements(ctx context.Context) (SystemAnnouncementList, error) {
 	items, err := s.repo.ListAnnouncements(ctx, s.provider.GetSystemAnnouncementsCount(ctx))
 	if err != nil {
-		observability.L().Error("system.list_announcements failed", "error", err)
+		observability.FromContext(ctx).Error("system.list_announcements failed", "error", err)
 		return SystemAnnouncementList{}, err
 	}
 	resp := SystemAnnouncementList{Items: make([]SystemAnnouncementItem, 0, len(items))}
@@ -94,7 +94,7 @@ func (s *Service) Bootstrap(ctx context.Context, bootstrapResolver BootstrapReso
 func (s *Service) bootstrapVersion(ctx context.Context) string {
 	annVersion, err := s.repo.AnnouncementsVersion(ctx)
 	if err != nil {
-		observability.L().Warn("system.bootstrap announcements version query failed", "error", err)
+		observability.FromContext(ctx).Warn("system.bootstrap announcements version query failed", "error", err)
 		annVersion = ""
 	}
 	return fmt.Sprintf("%s:%s:%s", buildinfo.Version, s.provider.AppConfigVersion(ctx), annVersion)

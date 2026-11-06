@@ -60,7 +60,7 @@ func HydrateMomentImages(ctx context.Context, fetcher MomentImageFetcher, resolv
 	}
 	rowsByMoment, err := fetcher.FetchMomentImageRows(ctx, momentIDs)
 	if err != nil {
-		observability.L().Error("moments.hydrate_images fetch failed", "error", err)
+		observability.FromContext(ctx).Error("moments.hydrate_images fetch failed", "error", err)
 		return
 	}
 	if resolver == nil {
@@ -82,7 +82,7 @@ func presignMomentImageRows(ctx context.Context, resolver ImageResolver, rows []
 	for _, r := range rows {
 		url, err := resolver.PresignGet(ctx, r.StorageKey, momentReadTTL)
 		if err != nil {
-			observability.L().Error("moments.hydrate_images presign failed", "error", err, "storage_key", r.StorageKey)
+			observability.FromContext(ctx).Error("moments.hydrate_images presign failed", "error", err, "storage_key", r.StorageKey)
 			continue
 		}
 		img := MomentImage{URL: url}

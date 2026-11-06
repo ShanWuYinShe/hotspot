@@ -36,7 +36,7 @@ func (h *Handler) ServeCrawlerHTML(w http.ResponseWriter, r *http.Request) {
 	detail, err := h.service.Get(r.Context(), GetShareRequest{ShareCode: code})
 	if err != nil {
 		// 不区分不存在/过期/格式错误——对外一律 404 极简页，不泄露存在性
-		observability.L().Warn("share og resolve failed",
+		observability.FromContext(r.Context()).Warn("share og resolve failed",
 			"method", "ServeCrawlerHTML", "error", err)
 		writeCrawlerPage(w, http.StatusNotFound, "链接已失效",
 			"这条分享不存在或已过期", "", "/")

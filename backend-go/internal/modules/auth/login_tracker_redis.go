@@ -62,7 +62,7 @@ func (t *RedisLoginTracker) Check(ctx context.Context, loginID string) error {
 	if err != nil {
 		// Redis 故障 fail-open：锁定计数无 Postgres 持久事实可回退（与限流
 		// 口径一致），放行但记 Warn 保持可观测。
-		observability.L().Warn("login tracker redis unavailable, failing open", "err", err)
+		observability.FromContext(ctx).Warn("login tracker redis unavailable, failing open", "err", err)
 		return nil
 	}
 	if v >= t.currentLimits().effectiveMaxFailures {
@@ -90,12 +90,12 @@ func (t *RedisLoginTracker) RecordFailed(ctx context.Context, loginID string) {
 	err := recordFailedScript.Run(ctx, t.rdb, []string{redisLoginTrackerKey(loginID)},
 		limits.effectiveLockDuration.Milliseconds(), limits.effectiveMaxFailures).Err()
 	if err != nil {
-		observability.L().Warn("login tracker redis record failed", "err", err)
+		observability.FromContext(ctx).Warn("login tracker redis record failed", "err", err)
 	}
 }
 
 func (t *RedisLoginTracker) Clear(ctx context.Context, loginID string) {
 	if err := t.rdb.Del(ctx, redisLoginTrackerKey(loginID)).Err(); err != nil {
-		observability.L().Warn("login tracker redis clear failed", "err", err)
+		observability.FromContext(ctx).Warn("login tracker redis clear failed", "err", err)
 	}
 }

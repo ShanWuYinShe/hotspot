@@ -53,7 +53,7 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 	}
 	ownerUserID, found, err := s.repo.TargetOwner(ctx, req.TargetType, req.TargetID)
 	if err != nil {
-		observability.L().Error("reports.create target lookup failed", "error", err)
+		observability.FromContext(ctx).Error("reports.create target lookup failed", "error", err)
 		return ReportCreated{}, err
 	}
 	if !found {
@@ -67,12 +67,12 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 	var snapshot *ReportSnapshot
 	if req.TargetType == ReportTargetTypeMessage {
 		if s.messageSnapshots == nil {
-			observability.L().Error("reports.create message snapshot source unavailable", "target_id", req.TargetID)
+			observability.FromContext(ctx).Error("reports.create message snapshot source unavailable", "target_id", req.TargetID)
 			return ReportCreated{}, ErrTargetNotFound
 		}
 		snapshot, found, err = s.messageSnapshots.GetMessageSnapshot(ctx, req.TargetID, principal.UserID)
 		if err != nil {
-			observability.L().Error("reports.create message snapshot failed", "error", err, "target_id", req.TargetID)
+			observability.FromContext(ctx).Error("reports.create message snapshot failed", "error", err, "target_id", req.TargetID)
 			return ReportCreated{}, err
 		}
 		if !found {
@@ -81,7 +81,7 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 	}
 	existingID, duplicate, err := s.repo.FindExistingReport(ctx, principal.UserID, req.TargetType, req.TargetID)
 	if err != nil {
-		observability.L().Error("reports.create duplicate check failed", "error", err)
+		observability.FromContext(ctx).Error("reports.create duplicate check failed", "error", err)
 		return ReportCreated{}, err
 	}
 	if duplicate {
@@ -95,7 +95,7 @@ func (s *Service) Create(ctx context.Context, req CreateReportRequest) (ReportCr
 		if dupErr == nil && duplicate {
 			return ReportCreated{ReportID: existingID, IsDuplicate: true}, nil
 		}
-		observability.L().Error("reports.create failed", "error", err)
+		observability.FromContext(ctx).Error("reports.create failed", "error", err)
 		return ReportCreated{}, err
 	}
 	return result, nil
@@ -109,7 +109,7 @@ func (s *Service) List(ctx context.Context, req ListReportsRequest) (PaginatedRe
 	}
 	items, err := s.repo.List(ctx, principal.UserID, req)
 	if err != nil {
-		observability.L().Error("reports.list failed", "error", err)
+		observability.FromContext(ctx).Error("reports.list failed", "error", err)
 		return PaginatedReports{}, err
 	}
 	return items, nil

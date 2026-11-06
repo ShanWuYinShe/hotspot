@@ -127,7 +127,7 @@ func (s *Service) handleReport(ctx context.Context, req JudgeAdminReportRequest)
 					return nil, err
 				}
 				if !privateHit {
-					observability.L().Warn("report resolve: message not found in either table, already removed?",
+					observability.FromContext(ctx).Warn("report resolve: message not found in either table, already removed?",
 						"message_id", record.Item.TargetID, "report_id", req.ReportID)
 				}
 			}
@@ -175,7 +175,7 @@ func (s *Service) handleReport(ctx context.Context, req JudgeAdminReportRequest)
 		// 裁决审计失败按 best-effort 处理（记错误日志，不回滚已生效的裁决）：
 		// 此时举报已终态，返回错误只会诱导重试并撞上 10400 已处理。
 		if err := s.appendAudit(postCtx, AuditLogEntry{Action: AuditAction("report.judge"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: judgeDetails}); err != nil {
-			observability.L().Error("admin: report judge audit log append failed", "error", err, "report_id", req.ReportID)
+			observability.FromContext(ctx).Error("admin: report judge audit log append failed", "error", err, "report_id", req.ReportID)
 		}
 		// Notify the reporter about the outcome (resolve/dismiss only; escalate
 		// keeps the report pending and does not notify).
@@ -207,14 +207,14 @@ func (s *Service) notifyReportHandled(ctx context.Context, reporterUserID, repor
 	if resolved {
 		id, err := s.pushService.AppendReportResolved(ctx, reporterUserID, reportID, targetType, targetID, note)
 		if err != nil {
-			observability.L().Error("admin.report notify report_resolved failed", "error", err, "report_id", reportID)
+			observability.FromContext(ctx).Error("admin.report notify report_resolved failed", "error", err, "report_id", reportID)
 		} else {
 			notificationID = id
 		}
 	} else {
 		id, err := s.pushService.AppendReportDismissed(ctx, reporterUserID, reportID, targetType, targetID, note)
 		if err != nil {
-			observability.L().Error("admin.report notify report_dismissed failed", "error", err, "report_id", reportID)
+			observability.FromContext(ctx).Error("admin.report notify report_dismissed failed", "error", err, "report_id", reportID)
 		} else {
 			notificationID = id
 		}
@@ -299,7 +299,7 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 		})
 		if _, err := s.sessionAdmin.RevokeSessionAsAdmin(ctx, sessionID); err != nil {
 			failedSessions++
-			observability.L().Warn("admin: revoke session after ban failed",
+			observability.FromContext(ctx).Warn("admin: revoke session after ban failed",
 				"user_id", userID, "session_id", sessionID, "error", err)
 		}
 	}
@@ -313,7 +313,7 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 		}
 	}
 	if failedSessions > 0 {
-		observability.L().Warn("admin: ban applied but some sessions not revoked",
+		observability.FromContext(ctx).Warn("admin: ban applied but some sessions not revoked",
 			"user_id", userID, "failed", failedSessions, "total", len(sessionIDs))
 	}
 	return nil, nil

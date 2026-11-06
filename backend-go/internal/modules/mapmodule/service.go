@@ -32,7 +32,7 @@ func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasRe
 		query.Level = heatmapAggregationLevel(query.SpanMeters)
 		heatmap, err := s.repo.Heatmap(ctx, query)
 		if err != nil {
-			observability.L().Error("map.canvas heatmap failed", "error", err)
+			observability.FromContext(ctx).Error("map.canvas heatmap failed", "error", err)
 			return MapCanvasResponse{}, err
 		}
 		if len(heatmap.Items) == 0 {
@@ -47,7 +47,7 @@ func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasRe
 
 	hotspots, err := s.repo.Hotspots(ctx, query)
 	if err != nil {
-		observability.L().Error("map.canvas hotspots failed", "error", err)
+		observability.FromContext(ctx).Error("map.canvas hotspots failed", "error", err)
 		return MapCanvasResponse{}, err
 	}
 	if len(hotspots.Items) == 0 {

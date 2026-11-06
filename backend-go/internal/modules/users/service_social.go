@@ -53,7 +53,7 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 		return err
 	}
 	if !changed {
-		observability.L().Info("users.follow no-op (already following)", "target_user_id", targetUserID, "elapsed_ms", op.ElapsedMillis())
+		observability.FromContext(ctx).Info("users.follow no-op (already following)", "target_user_id", targetUserID, "elapsed_ms", op.ElapsedMillis())
 		return nil
 	}
 	actor := s.buildFollowActor(ctx, principal.UserID)
@@ -67,7 +67,7 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 	if s.notifications != nil {
 		id, err := s.notifications.AppendNewFollower(ctx, targetUserID, actor, sourceValue, sourceMomentID)
 		if err != nil {
-			observability.L().Error("users.follow notification append failed", "error", err, "elapsed_ms", op.ElapsedMillis())
+			observability.FromContext(ctx).Error("users.follow notification append failed", "error", err, "elapsed_ms", op.ElapsedMillis())
 		} else {
 			notificationID = id
 		}
@@ -92,13 +92,13 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 		if s.notifications != nil {
 			id, err := s.notifications.AppendMutualFollow(ctx, principal.UserID, actor)
 			if err != nil {
-				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", principal.UserID, "elapsed_ms", op.ElapsedMillis())
+				observability.FromContext(ctx).Error("users.follow mutual notification append failed", "error", err, "target_user_id", principal.UserID, "elapsed_ms", op.ElapsedMillis())
 			} else {
 				notificationIDForPrincipal = id
 			}
 			id, err = s.notifications.AppendMutualFollow(ctx, targetUserID, actor)
 			if err != nil {
-				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", targetUserID, "elapsed_ms", op.ElapsedMillis())
+				observability.FromContext(ctx).Error("users.follow mutual notification append failed", "error", err, "target_user_id", targetUserID, "elapsed_ms", op.ElapsedMillis())
 			} else {
 				notificationIDForTarget = id
 			}
@@ -323,7 +323,7 @@ func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, t
 		}
 		context.CommonGroupsCount = &commonGroupsCount
 	} else if targetSettings.GroupsVisible {
-		observability.L().Warn("users.social_context groups provider not wired")
+		observability.FromContext(ctx).Warn("users.social_context groups provider not wired")
 	}
 	commonTags := intersectTags(viewerProfile.Tags, targetProfile.Tags)
 	if len(commonTags) > 0 {

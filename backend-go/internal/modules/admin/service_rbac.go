@@ -88,7 +88,7 @@ func (s *Service) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest
 		},
 	})); err != nil {
 		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-		observability.L().Error("admin: rbac audit log append failed", "error", err)
+		observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
 	}
 	return item, nil, nil
 }
@@ -132,7 +132,7 @@ func (s *Service) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest
 			},
 		})); err != nil {
 			// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-			observability.L().Error("admin: rbac audit log append failed", "error", err)
+			observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
 		}
 	}
 	return nil, nil
@@ -170,7 +170,7 @@ func (s *Service) DeleteRole(ctx context.Context, roleID string) (*httpx.APIErro
 		},
 	})); err != nil {
 		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-		observability.L().Error("admin: rbac audit log append failed", "error", err)
+		observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
 	}
 	return nil, nil
 }
@@ -215,7 +215,7 @@ func (s *Service) SetRolePermissions(ctx context.Context, req AdminRbacRoleSetPe
 		},
 	})); err != nil {
 		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-		observability.L().Error("admin: rbac audit log append failed", "error", err)
+		observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
 	}
 	return nil, nil
 }
@@ -280,7 +280,7 @@ func (s *Service) GrantAdmin(ctx context.Context, req AdminRbacGrantAdminRequest
 		},
 	})); err != nil {
 		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-		observability.L().Error("admin: rbac audit log append failed", "error", err)
+		observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
 	}
 	return nil, nil
 }
@@ -325,7 +325,7 @@ func (s *Service) RevokeAdmin(ctx context.Context, userID string) (*httpx.APIErr
 		},
 	})); err != nil {
 		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-		observability.L().Error("admin: rbac audit log append failed", "error", err)
+		observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
 	}
 	return nil, nil
 }

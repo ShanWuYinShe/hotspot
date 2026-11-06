@@ -17,7 +17,7 @@ import (
 // mutableGlobalAllowlist：仍保留的进程级可变全局（组合根基础设施单例）。
 // 新增条目必须在 PR/commit 说明理由——C2 的目标是逐轮收敛而非永久豁免。
 var mutableGlobalAllowlist = map[string]string{
-	"internal/platform/observability/logger.go:defaultLogger":        "进程级日志器：所有包都要打日志，注入成本 265+ 调用点，单独评估",
+	"internal/platform/observability/logger.go:defaultLogger":        "组合根/后台兜底：模块已全部改走 observability.FromContext(ctx)，仅 platform 启动期与无 ctx 后台任务使用 L()",
 	"internal/platform/realtime/global.go:defaultHub":                "测试/后台 fallback：生产 NewApp 持有应用级 Hub 实例并显式注入（context/WS），全局仅未注入时兜底",
 	"internal/platform/requestmeta/requestmeta.go:trustedProxyCIDRs": "启动期一次写入的代理 CIDR 配置（只读快照）",
 }
@@ -206,5 +206,25 @@ func TestModulesUseContextHubNotGlobal(t *testing.T) {
 	})
 	if len(violations) > 0 {
 		t.Fatalf("模块内不得直接使用进程级 realtime Hub，请改用 realtime.HubFromContext(ctx):\n  %s", strings.Join(violations, "\n  "))
+	}
+}
+
+// TestModulesUseContextLoggerNotGlobal：模块内禁止直接取进程级 observability.L()，
+// 统一 observability.FromContext(ctx)（由 bootstrap 中间件显式注入；后台无 ctx
+// 的 platform 层代码仍可用 L() 兜底）。
+func TestModulesUseContextLoggerNotGlobal(t *testing.T) {
+	root := backendRoot(t)
+	var violations []string
+	moduleFiles(t, root, func(module, path string) {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		if strings.Contains(string(data), "observability.L()") {
+			violations = append(violations, path)
+		}
+	})
+	if len(violations) > 0 {
+		t.Fatalf("模块内不得直接使用进程级 logger，请改用 observability.FromContext(ctx):\n  %s", strings.Join(violations, "\n  "))
 	}
 }

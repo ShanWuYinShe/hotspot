@@ -107,11 +107,11 @@ func (s *Service) pruneOnce(now time.Time) {
 	defer cancel()
 	pruned, err := s.repo.PruneReadBefore(ctx, now.Add(-notifyPruneRetention))
 	if err != nil {
-		observability.L().Warn("notify.prune failed", "error", err)
+		observability.FromContext(ctx).Warn("notify.prune failed", "error", err)
 		return
 	}
 	if pruned > 0 {
-		observability.L().Info("notify.prune completed", "pruned", pruned)
+		observability.FromContext(ctx).Info("notify.prune completed", "pruned", pruned)
 	}
 }
 
@@ -133,7 +133,7 @@ func (s *Service) List(ctx context.Context, req NotifyListRequest) (PaginatedNot
 	}
 	items, err := s.repo.List(ctx, principal.UserID, normalizedReq)
 	if err != nil {
-		observability.L().Error("notifys.list failed", "error", err)
+		observability.FromContext(ctx).Error("notifys.list failed", "error", err)
 		return PaginatedNotify{}, err
 	}
 	return items, nil
@@ -143,7 +143,7 @@ func (s *Service) UnreadCount(ctx context.Context) (UnreadSummaryResult, error) 
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	result, err := s.repo.UnreadCount(ctx, principal.UserID)
 	if err != nil {
-		observability.L().Error("notifys.unread_count failed", "error", err)
+		observability.FromContext(ctx).Error("notifys.unread_count failed", "error", err)
 		return UnreadSummaryResult{}, err
 	}
 	return result, nil
@@ -152,7 +152,7 @@ func (s *Service) UnreadCount(ctx context.Context) (UnreadSummaryResult, error) 
 func (s *Service) MarkAsRead(ctx context.Context, ids []string) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if err := s.repo.MarkAsRead(ctx, principal.UserID, ids); err != nil {
-		observability.L().Error("notifys.mark_as_read failed", "error", err, "count", len(ids))
+		observability.FromContext(ctx).Error("notifys.mark_as_read failed", "error", err, "count", len(ids))
 		return err
 	}
 	return nil
@@ -161,7 +161,7 @@ func (s *Service) MarkAsRead(ctx context.Context, ids []string) error {
 func (s *Service) MarkAllRead(ctx context.Context) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if err := s.repo.MarkAllRead(ctx, principal.UserID); err != nil {
-		observability.L().Error("notifys.mark_all_read failed", "error", err)
+		observability.FromContext(ctx).Error("notifys.mark_all_read failed", "error", err)
 		return err
 	}
 	return nil
@@ -565,7 +565,7 @@ func (s *Service) publishNearbyNewMoment(ctx context.Context, targetUserID, acto
 	if checkSettings && s.nearbyNotifyProvider != nil {
 		enabled, err := s.nearbyNotifyProvider.IsNearbyMomentNotifyEnabled(ctx, targetUserID)
 		if err != nil {
-			observability.L().Error("notifys.publish_nearby_new_moment settings check failed", "error", err)
+			observability.FromContext(ctx).Error("notifys.publish_nearby_new_moment settings check failed", "error", err)
 			return err
 		}
 		if !enabled {
@@ -590,7 +590,7 @@ func (s *Service) publishNearbyNewMoment(ctx context.Context, targetUserID, acto
 		IsRead:   false,
 		Payload:  payload,
 	}); err != nil {
-		observability.L().Error("notifys.publish_nearby_new_moment append failed", "error", err)
+		observability.FromContext(ctx).Error("notifys.publish_nearby_new_moment append failed", "error", err)
 		return err
 	}
 	realtime.HubFromContext(ctx).BroadcastToUser(targetUserID, realtime.Event{

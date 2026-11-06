@@ -23,7 +23,7 @@ func (h *Handler) ServeAvatar(w http.ResponseWriter, r *http.Request) {
 	readURL, err := h.service.AvatarReadURL(r.Context(), fileID)
 	if err != nil || readURL == "" {
 		if err != nil && !errors.Is(err, ErrMediaNotOwned) {
-			observability.L().Warn("media.avatar resolve failed", "file_id", fileID, "error", err)
+			observability.FromContext(r.Context()).Warn("media.avatar resolve failed", "file_id", fileID, "error", err)
 		}
 		httpx.NotFoundHandler(w, r)
 		return
@@ -32,7 +32,7 @@ func (h *Handler) ServeAvatar(w http.ResponseWriter, r *http.Request) {
 	// 防止 provider 配置/实现异常时把 Location 变成 javascript:/data: 等危险协议。
 	parsed, parseErr := url.Parse(readURL)
 	if parseErr != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		observability.L().Warn("media.avatar invalid read url", "file_id", fileID)
+		observability.FromContext(r.Context()).Warn("media.avatar invalid read url", "file_id", fileID)
 		httpx.NotFoundHandler(w, r)
 		return
 	}

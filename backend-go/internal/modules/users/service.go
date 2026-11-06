@@ -161,7 +161,7 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 		avatarURL := ""
 		if *req.AvatarFileID != "" && s.avatarMedia != nil {
 			if err := s.avatarMedia.ResolveAvatarImage(ctx, *req.AvatarFileID, principal.UserID); err != nil {
-				observability.L().Warn("users.update_account avatar denied", "error", err, "user_id", principal.UserID)
+				observability.FromContext(ctx).Warn("users.update_account avatar denied", "error", err, "user_id", principal.UserID)
 				return ErrAvatarNotOwned
 			}
 			// avatar_url 存稳定代理路径而非裸 file_id：此前直存 file_id，客户端
@@ -337,15 +337,15 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 
 func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, bool, error) {
 	startedAt := time.Now()
-	observability.L().Debug("users.open_the_door started", "user_id", userID)
+	observability.FromContext(ctx).Debug("users.open_the_door started", "user_id", userID)
 	profile, ok, err := s.repo.GetProfile(ctx, userID)
 	if err != nil {
-		observability.L().Error("users.open_the_door failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		observability.FromContext(ctx).Error("users.open_the_door failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return UserItem{}, false, err
 	}
 	if !ok || profile.IsDeleted {
 		// 已注销用户按不存在处理（spec api_spec_user.md：不再可被搜索/访问）
-		observability.L().Debug("users.open_the_door not found", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		observability.FromContext(ctx).Debug("users.open_the_door not found", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return UserItem{}, false, nil
 	}
 	settings, ok, err := s.repo.GetSettings(ctx, userID)
@@ -376,7 +376,7 @@ func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, boo
 		}
 		item.SocialContext = socialContext
 	}
-	observability.L().Debug("users.open_the_door completed", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	observability.FromContext(ctx).Debug("users.open_the_door completed", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return item, true, nil
 }
 

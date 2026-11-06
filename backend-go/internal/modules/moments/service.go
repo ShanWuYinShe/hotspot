@@ -155,7 +155,7 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (OwnerMom
 	}
 	item, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {
-		observability.L().Error("moments.create failed", "error", err)
+		observability.FromContext(ctx).Error("moments.create failed", "error", err)
 		return OwnerMomentItem{}, fmt.Errorf("moments.Service.Create: repo: %w", err)
 	}
 	resourceguard.RecordMoment(ctx, item.MomentID)
@@ -327,7 +327,7 @@ func (s *Service) CheckCommentable(ctx context.Context, momentID string) (found 
 // 阻断主流程：该列不再承载契约计数（契约字段由读时聚合保证），弱一致可接受。
 func (s *Service) AdjustInteractionCount(ctx context.Context, momentID string, delta int) {
 	if err := s.repo.AdjustInteractionCount(ctx, momentID, delta); err != nil {
-		observability.L().Warn("moments.AdjustInteractionCount failed", "error", err, "moment_id", momentID, "delta", delta)
+		observability.FromContext(ctx).Warn("moments.AdjustInteractionCount failed", "error", err, "moment_id", momentID, "delta", delta)
 	}
 }
 
@@ -397,18 +397,18 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMom
 	}
 	if s.runInTx != nil {
 		if err := s.runInTx(ctx, updateFn); err != nil {
-			observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
+			observability.FromContext(ctx).Error("moments.update failed", "error", err, "moment_id", req.MomentID)
 			return OwnerMomentItem{}, fmt.Errorf("moments.Service.Update: tx: %w", err)
 		}
 	} else {
 		if err := updateFn(ctx); err != nil {
-			observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
+			observability.FromContext(ctx).Error("moments.update failed", "error", err, "moment_id", req.MomentID)
 			return OwnerMomentItem{}, fmt.Errorf("moments.Service.Update: repo: %w", err)
 		}
 	}
 	updated, ok, err := s.repo.Get(ctx, req.MomentID)
 	if err != nil {
-		observability.L().Error("moments.update reload failed", "error", err, "moment_id", req.MomentID)
+		observability.FromContext(ctx).Error("moments.update reload failed", "error", err, "moment_id", req.MomentID)
 		return OwnerMomentItem{}, err
 	}
 	// 提交与重载之间瞬间被并发删除/不可达时按不存在返回，而非把零值
@@ -513,7 +513,7 @@ func (s *Service) softDeleteAndBroadcast(ctx context.Context, item MomentItem) e
 			DeletedAt: now,
 		}})
 		if err := s.broadcastMomentDeletedToFavorites(postCtx, item.MomentID, item.User.UserID, now); err != nil {
-			observability.L().Warn("moments.delete favorite broadcast failed", "error", err, "moment_id", item.MomentID)
+			observability.FromContext(ctx).Warn("moments.delete favorite broadcast failed", "error", err, "moment_id", item.MomentID)
 		}
 	})
 	return nil
@@ -547,7 +547,7 @@ func (s *Service) ensureInteractable(ctx context.Context, momentID string) error
 func (s *Service) Favorite(ctx context.Context, momentID string) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if err := s.ensureInteractable(ctx, momentID); err != nil {
-		observability.L().Warn("moments.favorite target not interactable", "moment_id", momentID)
+		observability.FromContext(ctx).Warn("moments.favorite target not interactable", "moment_id", momentID)
 		return err
 	}
 	return s.repo.Favorite(ctx, principal.UserID, momentID)
@@ -556,7 +556,7 @@ func (s *Service) Favorite(ctx context.Context, momentID string) error {
 func (s *Service) Unfavorite(ctx context.Context, momentID string) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if err := s.ensureInteractable(ctx, momentID); err != nil {
-		observability.L().Warn("moments.unfavorite target not interactable", "moment_id", momentID)
+		observability.FromContext(ctx).Warn("moments.unfavorite target not interactable", "moment_id", momentID)
 		return err
 	}
 	return s.repo.Unfavorite(ctx, principal.UserID, momentID)
@@ -603,7 +603,7 @@ func (s *Service) validateImageOwnership(ctx context.Context, userID string, fil
 		return nil
 	}
 	if _, err := s.images.ResolveMomentImages(ctx, fileIDs, userID); err != nil {
-		observability.L().Warn("moments.image_ownership denied", "error", err, "user_id", userID)
+		observability.FromContext(ctx).Warn("moments.image_ownership denied", "error", err, "user_id", userID)
 		return ErrImagesNotOwned
 	}
 	return nil
@@ -652,7 +652,7 @@ func (s *Service) fillReactions(ctx context.Context, item *MomentItem, viewerID 
 	}
 	byID, err := s.reactions.AggregateMoments(ctx, []string{item.MomentID}, viewerID)
 	if err != nil {
-		observability.L().Warn("moments.fillReactions failed", "error", err, "moment_id", item.MomentID)
+		observability.FromContext(ctx).Warn("moments.fillReactions failed", "error", err, "moment_id", item.MomentID)
 		item.Reactions = emptyReactions()
 		return
 	}
@@ -676,7 +676,7 @@ func (s *Service) fillReactionsBatch(ctx context.Context, items []MomentItem, vi
 	}
 	byID, err := s.reactions.AggregateMoments(ctx, ids, viewerID)
 	if err != nil {
-		observability.L().Warn("moments.fillReactionsBatch failed", "error", err)
+		observability.FromContext(ctx).Warn("moments.fillReactionsBatch failed", "error", err)
 		for i := range items {
 			items[i].Reactions = emptyReactions()
 		}
@@ -715,7 +715,7 @@ func (s *Service) fillAuthorRelations(ctx context.Context, items []MomentItem, v
 	}
 	byID, err := s.relations.AuthorRelations(ctx, viewerID, authorIDs)
 	if err != nil {
-		observability.L().Warn("moments.fillAuthorRelations failed", "error", err)
+		observability.FromContext(ctx).Warn("moments.fillAuthorRelations failed", "error", err)
 		return
 	}
 	for i := range items {
@@ -753,7 +753,7 @@ func (s *Service) fillReactionsBatchOwnerMoment(ctx context.Context, items []Own
 	}
 	byID, err := s.reactions.AggregateMoments(ctx, ids, viewerID)
 	if err != nil {
-		observability.L().Warn("moments.fillReactionsBatchOwnerMoment failed", "error", err)
+		observability.FromContext(ctx).Warn("moments.fillReactionsBatchOwnerMoment failed", "error", err)
 		for i := range items {
 			items[i].Reactions = emptyReactions()
 		}
@@ -857,14 +857,14 @@ func (s *Service) notifyMentionUserIDs(ctx context.Context, actorUserID string, 
 	momentSummary := momentSummaryForItem(item)
 	actor, err := s.buildMomentActor(ctx, actorUserID)
 	if err != nil {
-		observability.L().Error("moments.mentions build actor failed", "error", err, "user_id", actorUserID)
+		observability.FromContext(ctx).Error("moments.mentions build actor failed", "error", err, "user_id", actorUserID)
 		actor = fallbackActor(actorUserID)
 	}
 	// 批量落库（单次往返）：失败时记日志并按通知缺失降级（notify_id 置空），
 	// 广播仍照常进行——与此前逐人失败只影响该人的口径一致，只是失败粒度为整批。
 	notifyIDs, err := s.notifications.AppendMentionedBatch(ctx, targets, actor, "moment", item.MomentID, momentSummary, "", "")
 	if err != nil {
-		observability.L().Error("moments.mentions batch append notifications failed", "error", err, "moment_id", item.MomentID, "count", len(targets))
+		observability.FromContext(ctx).Error("moments.mentions batch append notifications failed", "error", err, "moment_id", item.MomentID, "count", len(targets))
 	}
 	// 并行推送（有界并发）：每条 BroadcastToUser 内部含 resume Record + 跨实例
 	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟（mentions 上限 20）。
@@ -904,7 +904,7 @@ func (s *Service) broadcastMomentDeletedToFavorites(ctx context.Context, momentI
 		return err
 	}
 	if len(userIDs) > momentDeleteBroadcastFanoutCap {
-		observability.L().Warn("moments.delete: favorite fanout truncated",
+		observability.FromContext(ctx).Warn("moments.delete: favorite fanout truncated",
 			"moment_id", momentID, "total", len(userIDs), "cap", momentDeleteBroadcastFanoutCap)
 		userIDs = userIDs[:momentDeleteBroadcastFanoutCap]
 	}

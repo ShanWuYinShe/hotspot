@@ -50,7 +50,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	var nickname, avatarURL string
 	if err := queryable.QueryRow(ctx, queryGetNickname, userID).Scan(&nickname, &avatarURL); err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
-			observability.L().Warn("comments.Create: nickname lookup failed, falling back to user_id", "user_id", userID, "error", err)
+			observability.FromContext(ctx).Warn("comments.Create: nickname lookup failed, falling back to user_id", "user_id", userID, "error", err)
 		}
 		nickname = userID
 	}

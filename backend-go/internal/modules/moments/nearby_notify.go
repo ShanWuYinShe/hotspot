@@ -47,7 +47,7 @@ func (s *Service) notifyNearbyNewMoment(ctx context.Context, authorID, momentID 
 	// limit 由 repo 侧 SQL 限量：目标查询不再先把全部候选行读入内存再截断。
 	targets, err := s.nearbyNotifyTargets(ctx, lat, lng, nearbyNotifyRadiusMeters, authorID, nearbyNotifyMaxTargets)
 	if err != nil {
-		observability.L().Warn("moments.nearby_notify targets failed", "error", err)
+		observability.FromContext(ctx).Warn("moments.nearby_notify targets failed", "error", err)
 		return
 	}
 	// 目标查询（users 侧）无 LIMIT，密集区域可能返回大量目标；截断到
@@ -61,7 +61,7 @@ func (s *Service) notifyNearbyNewMoment(ctx context.Context, authorID, momentID 
 		// 双实现漂移，收敛为单一来源（P2-22）。
 		distance := geo.DistanceMeters(geo.Point{Latitude: lat, Longitude: lng}, geo.Point{Latitude: t.Latitude, Longitude: t.Longitude})
 		if err := s.nearbyNotifyPublisher.PublishNearbyNewMomentPreChecked(ctx, t.UserID, authorID, momentID, distance, actor, summary); err != nil {
-			observability.L().Warn("moments.nearby_notify publish failed", "error", err, "target", t.UserID)
+			observability.FromContext(ctx).Warn("moments.nearby_notify publish failed", "error", err, "target", t.UserID)
 		}
 	}
 }

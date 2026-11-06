@@ -127,7 +127,7 @@ func (s *Service) ListReactedMoments(ctx context.Context, req UserReactedMoments
 	if s.momentsByUser == nil {
 		// provider 未装配（不可能发生于生产装配）：返回空分页而非报错，
 		// 聚合数据缺失不阻断响应。
-		observability.L().Warn("users.list_reacted_moments provider not wired")
+		observability.FromContext(ctx).Warn("users.list_reacted_moments provider not wired")
 		return momenttypes.PaginatedMoments{}, nil
 	}
 	result, err := s.momentsByUser.ListReactedByUser(ctx, req.UserID, viewerUserID, limit, cursor)
@@ -252,7 +252,7 @@ func (s *Service) ListGroups(ctx context.Context, req UserGroupsRequest) (groupt
 	}
 	limit, cursor := normalizePagination(req.Pagination)
 	if s.groupsByUser == nil {
-		observability.L().Warn("users.list_groups provider not wired")
+		observability.FromContext(ctx).Warn("users.list_groups provider not wired")
 		return grouptypes.PaginatedGroups{}, nil
 	}
 	result, err := s.groupsByUser.ListGroupsByUser(ctx, targetUserID, limit, cursor)
@@ -280,7 +280,7 @@ func (s *Service) ListMoments(ctx context.Context, req UserMomentsRequest) (mome
 	}
 	limit, cursor := normalizePagination(req.Pagination)
 	if s.momentsByUser == nil {
-		observability.L().Warn("users.list_moments provider not wired")
+		observability.FromContext(ctx).Warn("users.list_moments provider not wired")
 		return momenttypes.PaginatedMoments{}, nil
 	}
 	result, err := s.momentsByUser.ListMomentsByAuthor(ctx, targetUserID, limit, cursor, false)

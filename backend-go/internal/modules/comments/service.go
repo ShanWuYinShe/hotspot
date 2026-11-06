@@ -116,7 +116,7 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 	createAndCount := func(ctx context.Context) (CommentItem, error) {
 		item, err := s.repo.Create(ctx, principal.UserID, normalizedReq)
 		if err != nil {
-			observability.L().Error("comments.create repo create failed", "error", err)
+			observability.FromContext(ctx).Error("comments.create repo create failed", "error", err)
 			return CommentItem{}, err
 		}
 		s.moments.AdjustInteractionCount(ctx, normalizedReq.MomentID, 1)
@@ -144,7 +144,7 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 	// the comment back if they fail.
 	momentContext, ok, err := s.moments.NotificationContext(ctx, normalizedReq.MomentID)
 	if err != nil {
-		observability.L().Error("comments.create load moment notification context failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)
+		observability.FromContext(ctx).Error("comments.create load moment notification context failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)
 		return item, nil
 	}
 	if !ok {
@@ -207,7 +207,7 @@ func (s *Service) fillTopReplies(ctx context.Context, items []CommentItem) {
 	}
 	repliesByParent, err := s.repo.ListTopRepliesByParentIDs(ctx, parentIDs, topLimit)
 	if err != nil {
-		observability.L().Error("comments.fill_top_replies batch failed", "error", err)
+		observability.FromContext(ctx).Error("comments.fill_top_replies batch failed", "error", err)
 		return
 	}
 	for i := range items {
@@ -369,7 +369,7 @@ func (s *Service) fillReactionsBatch(ctx context.Context, items []CommentItem, v
 	}
 	byID, err := s.reactions.AggregateComments(ctx, ids, viewerID)
 	if err != nil {
-		observability.L().Warn("comments.fillReactionsBatch failed", "error", err)
+		observability.FromContext(ctx).Warn("comments.fillReactionsBatch failed", "error", err)
 		return
 	}
 	apply := func(items []CommentItem) {
@@ -425,7 +425,7 @@ func (s *Service) notifyMomentAuthor(ctx context.Context, momentContext MomentNo
 	if s.notifications != nil {
 		id, err := s.notifications.AppendMomentCommented(ctx, targetUserID, actor, item.MomentID, momentSummary, item.CommentID, commentPreview)
 		if err != nil {
-			observability.L().Error("comments.create append moment_commented notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
+			observability.FromContext(ctx).Error("comments.create append moment_commented notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
 		} else {
 			notificationID = id
 		}
@@ -454,7 +454,7 @@ func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNot
 	if s.notifications != nil {
 		id, err := s.notifications.AppendCommentReply(ctx, targetUserID, actor, item.MomentID, momentSummary, replyTarget.CommentID, parentPreview, item.CommentID, replyPreview)
 		if err != nil {
-			observability.L().Error("comments.create append comment_reply notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
+			observability.FromContext(ctx).Error("comments.create append comment_reply notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
 		} else {
 			notificationID = id
 		}
@@ -488,7 +488,7 @@ func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext Moment
 	if s.notifications != nil {
 		notifyIDs, appendErr = s.notifications.AppendMentionedBatch(ctx, targets, actor, "comment", item.MomentID, momentSummary, item.CommentID, commentPreview)
 		if appendErr != nil {
-			observability.L().Error("comments.create batch append mentioned notifications failed", "error", appendErr, "moment_id", item.MomentID, "comment_id", item.CommentID, "count", len(targets))
+			observability.FromContext(ctx).Error("comments.create batch append mentioned notifications failed", "error", appendErr, "moment_id", item.MomentID, "comment_id", item.CommentID, "count", len(targets))
 		}
 	}
 	// 并行推送（有界并发）：每条 BroadcastToUser 内部含 resume Record + 跨实例
@@ -577,7 +577,7 @@ func summarizeCommentText(primary string, fallback string) string {
 func (s *Service) ensureMomentCommentable(ctx context.Context, momentID string) error {
 	found, canComment, err := s.moments.CheckCommentable(ctx, momentID)
 	if err != nil {
-		observability.L().Error("comments.ensure_moment_commentable failed", "error", err, "moment_id", momentID)
+		observability.FromContext(ctx).Error("comments.ensure_moment_commentable failed", "error", err, "moment_id", momentID)
 		return err
 	}
 	if !found {
@@ -599,7 +599,7 @@ func (s *Service) ensureMomentCommentable(ctx context.Context, momentID string) 
 			// fail-closed：拉黑判定依赖作者身份，查询失败时宁可拒绝评论
 			//（统一 10600），与下方 blockChecks 失败的口径一致——此前
 			// err==nil 才继续会让 DB 抖动窗口内被拉黑用户继续评论。
-			observability.L().Error("comments.block_check author resolve failed", "error", err, "moment_id", momentID)
+			observability.FromContext(ctx).Error("comments.block_check author resolve failed", "error", err, "moment_id", momentID)
 			return err
 		}
 		if found {
@@ -610,7 +610,7 @@ func (s *Service) ensureMomentCommentable(ctx context.Context, momentID string) 
 			if err != nil {
 				// 黑名单查询失败时 fail-closed：返回错误（统一 10600）而非放行，
 				// 避免 DB 抖动期间被拉黑用户可继续评论。
-				observability.L().Error("comments.block_check failed", "error", err, "author_id", author)
+				observability.FromContext(ctx).Error("comments.block_check failed", "error", err, "author_id", author)
 				return err
 			}
 			if authorBlocked {

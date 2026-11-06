@@ -59,6 +59,9 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, rea
 	corsCfg := cors.DefaultConfig().WithAllowedOrigins(config.Load().CorsAllowedOrigins)
 	r.Use(cors.Middleware(corsCfg))
 	r.Use(observability.RequestIDMiddleware)
+	// 应用级 Logger 注入请求 context：模块内统一 observability.FromContext(ctx)，
+	// 不再跨包直取进程级 defaultLogger（与 realtime Hub 同一 DI 模式）。
+	r.Use(observability.WithLoggerMiddleware(logger))
 	if logger != nil {
 		r.Use(observability.RequestLoggerMiddleware(logger))
 	}

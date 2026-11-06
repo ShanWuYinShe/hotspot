@@ -70,10 +70,10 @@ func (m *Module) sweepRetention(ctx context.Context) {
 	deleted, err := m.repo.SweepRetention(sweepCtx, now,
 		authSessionRetentionDays*24*time.Hour, verificationCodeRetentionDays*24*time.Hour)
 	if err != nil {
-		observability.L().Warn("auth retention sweep failed", "error", err)
+		observability.FromContext(ctx).Warn("auth retention sweep failed", "error", err)
 		return
 	}
 	if deleted > 0 {
-		observability.L().Info("auth retention sweep", "deleted", deleted)
+		observability.FromContext(ctx).Info("auth retention sweep", "deleted", deleted)
 	}
 }

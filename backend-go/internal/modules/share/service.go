@@ -34,7 +34,7 @@ func (s *Service) Create(ctx context.Context, req CreateShareRequest) (ShareCrea
 	}
 	result, err := s.repo.Create(ctx, cmd)
 	if err != nil {
-		observability.L().Error("share.create failed", "error", err)
+		observability.FromContext(ctx).Error("share.create failed", "error", err)
 		return ShareCreated{}, err
 	}
 	// 分享创建后维护内部互动热度（+1）。失败由 moments 侧 WARN，不影响分享主流程；
@@ -54,7 +54,7 @@ func (s *Service) Get(ctx context.Context, req GetShareRequest) (ShareDetail, er
 	}
 	item, err := s.repo.Get(ctx, query)
 	if err != nil {
-		observability.L().Error("share.get failed", "error", err, "share_code", observability.Redact(query.ShareCode))
+		observability.FromContext(ctx).Error("share.get failed", "error", err, "share_code", observability.Redact(query.ShareCode))
 		return ShareDetail{}, err
 	}
 	return item, nil
@@ -83,7 +83,7 @@ func (s *Service) List(ctx context.Context, req ListSharesRequest) (PaginatedSha
 	}
 	items, err := s.repo.List(ctx, query)
 	if err != nil {
-		observability.L().Error("share.list failed", "error", err)
+		observability.FromContext(ctx).Error("share.list failed", "error", err)
 		return PaginatedShares{}, err
 	}
 	return items, nil
@@ -107,7 +107,7 @@ func (s *Service) Revoke(ctx context.Context, req RevokeShareRequest) error {
 		// 走 Get，revoked 被映射为不存在 → 返回 404）。
 		resolved, found, err := s.repo.ResolveShareIDByCode(ctx, shareCode)
 		if err != nil {
-			observability.L().Error("share.revoke resolve by code failed", "error", err, "share_code", observability.Redact(shareCode))
+			observability.FromContext(ctx).Error("share.revoke resolve by code failed", "error", err, "share_code", observability.Redact(shareCode))
 			return err
 		}
 		if !found {
@@ -117,7 +117,7 @@ func (s *Service) Revoke(ctx context.Context, req RevokeShareRequest) error {
 	}
 	cmd := revokeShareCommand{CreatorUserID: principal.UserID, ShareID: shareID}
 	if err := s.repo.Revoke(ctx, cmd); err != nil {
-		observability.L().Error("share.revoke failed", "error", err, "share_id", cmd.ShareID)
+		observability.FromContext(ctx).Error("share.revoke failed", "error", err, "share_id", cmd.ShareID)
 		return err
 	}
 	return nil
