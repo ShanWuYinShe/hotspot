@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -30,4 +31,58 @@ func TestListMigrationsFSSortsSQLFiles(t *testing.T) {
 	if files[0] != "001_users_core.sql" || files[1] != "002_auth_sessions.sql" {
 		t.Fatalf("unexpected files: %#v", files)
 	}
+}
+
+func TestMigrationChecksumIsStableAndContentSensitive(t *testing.T) {
+	a := migrationChecksum([]byte("CREATE TABLE t (id text);"))
+	b := migrationChecksum([]byte("CREATE TABLE t (id text);"))
+	c := migrationChecksum([]byte("CREATE TABLE t (id text, name text);"))
+	if a != b {
+		t.Fatalf("checksum must be deterministic: %s vs %s", a, b)
+	}
+	if a == c {
+		t.Fatal("checksum must change when file content changes")
+	}
+	if len(a) != 64 {
+		t.Fatalf("want sha256 hex (64 chars), got %d", len(a))
+	}
+}
+
+func TestPlanMigrationsVerifiesAppliedHistory(t *testing.T) {
+	files := []string{"001_a.sql", "002_b.sql", "003_c.sql"}
+	checksums := map[string]string{
+		"001_a.sql": "h1",
+		"002_b.sql": "h2",
+		"003_c.sql": "h3",
+	}
+	t.Run("pending excludes applied and keeps order", func(t *testing.T) {
+		pending, err := planMigrations(files, map[string]string{"001_a.sql": "h1", "002_b.sql": "h2"}, checksums)
+		if err != nil {
+			t.Fatalf("plan: %v", err)
+		}
+		if len(pending) != 1 || pending[0] != "003_c.sql" {
+			t.Fatalf("unexpected pending: %#v", pending)
+		}
+	})
+	t.Run("legacy empty checksum is treated as pending verification", func(t *testing.T) {
+		pending, err := planMigrations(files, map[string]string{"001_a.sql": ""}, checksums)
+		if err != nil {
+			t.Fatalf("plan: %v", err)
+		}
+		if len(pending) != 2 || pending[0] != "002_b.sql" || pending[1] != "003_c.sql" {
+			t.Fatalf("unexpected pending: %#v", pending)
+		}
+	})
+	t.Run("applied file removed from repository fails fast", func(t *testing.T) {
+		_, err := planMigrations(files, map[string]string{"999_deleted.sql": "h9"}, checksums)
+		if err == nil || !strings.Contains(err.Error(), "999_deleted.sql") {
+			t.Fatalf("want missing-file error, got %v", err)
+		}
+	})
+	t.Run("changed historical migration fails fast", func(t *testing.T) {
+		_, err := planMigrations(files, map[string]string{"001_a.sql": "tampered"}, checksums)
+		if err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
+			t.Fatalf("want checksum mismatch error, got %v", err)
+		}
+	})
 }

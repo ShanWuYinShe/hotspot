@@ -4,47 +4,31 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
 	platformgeo "hotspot/backend-go/internal/platform/geo"
 	platformmigrate "hotspot/backend-go/internal/platform/migrate"
+	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/migrations"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func TestRequiredTablesExist(t *testing.T) {
+// TestSchemaManifestMatchesDatabase 校验「迁移声明的期望 schema」与真实库一致：
+// 已应用迁移的 checksum、pending 为空、manifest 中的表/列/索引全部存在。
+// 这是替换旧 RequiredTables 子集检查的完整校验（可捕获被基线吞掉的迁移对象）。
+func TestSchemaManifestMatchesDatabase(t *testing.T) {
 	requireIntegrationEnv(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, getenvOrFail(t, "POSTGRES_DSN"))
-	if err != nil {
-		t.Fatalf("connect postgres: %v", err)
-	}
-	defer pool.Close()
-
-	missing := make([]string, 0)
-	for _, table := range platformmigrate.RequiredTables() {
-		var present bool
-		if err := pool.QueryRow(ctx, `
-SELECT EXISTS (
-  SELECT 1
-  FROM information_schema.tables
-  WHERE table_schema = 'public' AND table_name = $1
-)
-`, table).Scan(&present); err != nil {
-			t.Fatalf("check table %s: %v", table, err)
-		}
-		if !present {
-			missing = append(missing, table)
-		}
-	}
-	if len(missing) > 0 {
-		t.Fatalf("missing required tables: %s", strings.Join(missing, ", "))
+	db := persistence.NewPostgresDB(getenvOrFail(t, "POSTGRES_DSN"))
+	defer db.Close()
+	if err := platformmigrate.VerifyOnly(ctx, db, migrations.Files); err != nil {
+		t.Fatalf("schema verification failed: %v", err)
 	}
 }
 

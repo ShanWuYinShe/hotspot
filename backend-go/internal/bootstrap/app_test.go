@@ -100,7 +100,10 @@ func TestEnsureSchemaReturnsMigrationError(t *testing.T) {
 	}
 }
 
-func TestEnsureSchemaReturnsMissingTableError(t *testing.T) {
+// 非 Postgres 后端（测试 stub / 内存）没有版本表与 catalog 语义，ensureSchema
+// 走全量执行路径；schema 结构校验只对真实 Postgres 生效（见 platform/migrate
+// 的 schema manifest 测试）。
+func TestEnsureSchemaAppliesForNonPostgresBackend(t *testing.T) {
 	stub := &ensureSchemaStub{}
 	factory := &persistence.Factory{
 		Config: persistence.Config{PostgresDSN: "postgres://example"},
@@ -108,12 +111,11 @@ func TestEnsureSchemaReturnsMissingTableError(t *testing.T) {
 	}
 	cfg := config.Config{PostgresDSN: "postgres://example"}
 
-	err := ensureSchema(cfg, factory)
-	if err == nil {
-		t.Fatal("expected ensureSchema to fail when required tables are missing")
+	if err := ensureSchema(cfg, factory); err != nil {
+		t.Fatalf("expected non-postgres stub to apply migrations without schema checks, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "missing required tables") {
-		t.Fatalf("expected missing table error, got: %v", err)
+	if len(stub.queries) == 0 {
+		t.Fatal("expected stub to receive migration statements")
 	}
 }
 
