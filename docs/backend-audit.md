@@ -2545,3 +2545,21 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
 - 测试：chi 路由内触发 10400 后断言指标含 code/method/route 模板三元组。
 - 验证：go test -short 全绿；--with-db ALL CHECKS PASSED；合并后主环境实测
   触发业务错误 → /metrics 出现计数 → Prometheus 可查询。
+
+## Batch C（第十批）：admin 内存仓储迁入测试构建（2026-11-06）
+
+架构审计 P0-2：admin 是剩余双仓储中最大的一个（8 个 repo_memory*.go，约
+1.4k 行生产代码），但生产装配只用 Postgres 实现，内存版仅测试使用。
+
+- 8 个 admin/repo_memory*.go 全部迁移为 *_test.go（生产代码净减约 1.4k 行；
+  内存实现仍在测试构建中服务同包 200+ 用例，接口漂移由编译期暴露）。
+- 生产侧只保留被 PG 实现复用的纯转换函数：新增 audit_convert.go
+  （auditLogItemFromEntry / cloneAuditDetails）。
+- 唯一跨包消费者 bootstrap/realtime_authz_test 改用本地最小桩
+  banStateRepoStub（嵌入 admin.Repository + 实现 GetUserBanState/
+  SetUserBanState），不再依赖 admin 内存仓储；未登记用户与真实实现同口径
+  返回 normal 状态。
+- 覆盖率：admin 70.6%（内存实现移出生产统计后仍过 70% 门槛）。
+- 累计 11/17 模块完成内存仓储迁移。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

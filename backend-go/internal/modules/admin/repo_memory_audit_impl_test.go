@@ -96,40 +96,9 @@ func (r *InMemoryRepository) filteredAuditLogsLocked(filter AuditLogFilter) []Au
 	return items
 }
 
-func auditLogItemFromEntry(entry AuditLogEntry, includeIPAddress bool) AuditLogItem {
-	item := AuditLogItem{
-		LogID:         entry.LogID,
-		Action:        entry.Action,
-		Operator:      entry.Operator,
-		TargetType:    entry.TargetType,
-		TargetID:      entry.TargetID,
-		TargetName:    types.StrPtr(entry.TargetName),
-		Details:       cloneAuditDetails(entry.Details),
-		IPLocation:    types.StrPtr(entry.IPLocation),
-		DeviceSummary: types.StrPtr(entry.DeviceSummary),
-		CreatedAt:     entry.CreatedAt.UTC().Format(time.RFC3339),
-	}
-	if includeIPAddress && entry.IPAddress != "" {
-		ip := entry.IPAddress
-		item.IPAddress = &ip
-	}
-	return item
-}
-
 func cloneAuditEntry(entry AuditLogEntry) AuditLogEntry {
 	entry.Details = cloneAuditDetails(entry.Details)
 	return entry
-}
-
-func cloneAuditDetails(details AuditDetails) AuditDetails {
-	if len(details) == 0 {
-		return nil
-	}
-	cloned := make(AuditDetails, len(details))
-	for key, value := range details {
-		cloned[key] = value
-	}
-	return cloned
 }
 
 func timeFromRFC3339(value string) time.Time {

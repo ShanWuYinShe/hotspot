@@ -2,11 +2,41 @@ package bootstrap
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
 	"hotspot/backend-go/internal/modules/admin"
 )
+
+// banStateRepoStub 只实现 WS 封禁鉴权用到的封禁状态读（GetUserBanState）：
+// admin 内存仓储已迁出生产构建（P0-2），跨包单测改用本地最小桩。
+// 未登记用户与真实实现同口径返回 found=true + normal 状态。
+type banStateRepoStub struct {
+	admin.Repository
+	mu     sync.Mutex
+	states map[string]admin.UserBanState
+}
+
+func newBanStateRepoStub() *banStateRepoStub {
+	return &banStateRepoStub{states: make(map[string]admin.UserBanState)}
+}
+
+func (r *banStateRepoStub) SetUserBanState(_ context.Context, userID string, state admin.UserBanState) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.states[userID] = state
+	return nil
+}
+
+func (r *banStateRepoStub) GetUserBanState(_ context.Context, userID string) (admin.UserBanState, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if state, ok := r.states[userID]; ok {
+		return state, true, nil
+	}
+	return admin.UserBanState{Status: admin.UserAccountStatusNormal}, true, nil
+}
 
 // realtimeBanAuthorizer.BanDetails 把封禁状态换算成 WS AccountBanned 事件负载
 // （spec api_spec_websocket.md）。这条换算此前零覆盖，而它是客户端封禁页唯一的
@@ -17,7 +47,7 @@ func TestRealtimeBanAuthorizerBanDetails(t *testing.T) {
 	bannedAt := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 
 	t.Run("限期封禁给出 BannedUntil", func(t *testing.T) {
-		repo := admin.NewInMemoryRepository()
+		repo := newBanStateRepoStub()
 		auth := realtimeBanAuthorizer{repo: repo}
 		if err := repo.SetUserBanState(ctx, "user_alice", admin.UserBanState{
 			Status:       admin.UserAccountStatusBanned,
@@ -45,7 +75,7 @@ func TestRealtimeBanAuthorizerBanDetails(t *testing.T) {
 	})
 
 	t.Run("永久封禁 BannedUntil 为 nil", func(t *testing.T) {
-		repo := admin.NewInMemoryRepository()
+		repo := newBanStateRepoStub()
 		auth := realtimeBanAuthorizer{repo: repo}
 		if err := repo.SetUserBanState(ctx, "user_bob", admin.UserBanState{
 			Status:   admin.UserAccountStatusBanned,
@@ -71,7 +101,7 @@ func TestRealtimeBanAuthorizerBanDetails(t *testing.T) {
 	// 无封禁记录的用户同样返回 ok=true），BanDetails 只做字段换算、不重复判定
 	// 是否封禁——发不发 AccountBanned 由调用方看 IsBanned/Status 决定。
 	t.Run("未封禁用户给出 normal 状态且 BannedUntil 为 nil", func(t *testing.T) {
-		repo := admin.NewInMemoryRepository()
+		repo := newBanStateRepoStub()
 		auth := realtimeBanAuthorizer{repo: repo}
 
 		detail, found, err := auth.BanDetails(ctx, "user_cindy")
