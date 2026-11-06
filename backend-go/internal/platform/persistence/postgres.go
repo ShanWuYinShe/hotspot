@@ -115,3 +115,44 @@ func (db *PostgresDB) Query(ctx context.Context, query string, args ...any) (Row
 	}
 	return &pgxRowsAdapter{rows: rows}, nil
 }
+
+// WarmPlanner 在启动期把 PGroonga 等扩展的「首次查询规划」成本从请求路径
+// 移到组合根：PGroonga 的关系/索引代价缓存按后端连接惰性初始化，每个新建
+// 连接首次 &@ 查询的 Planning Time 可达 50-70ms（实测），表现为搜索端点
+// 冷启动/扩容瞬间的 p99 尖刺。这里并发获取最多 maxConns 个池连接各执行一次
+// 轻量查询，池连接随即归还；非 Postgres/stub 后端为 no-op。
+func (db *PostgresDB) WarmPlanner(ctx context.Context, query string, maxConns int) error {
+	if db.Backend != nil || query == "" || maxConns <= 0 {
+		return nil
+	}
+	pool, err := db.ensurePool(ctx)
+	if err != nil {
+		return err
+	}
+	if configured := int(pool.Config().MaxConns); configured > 0 && configured < maxConns {
+		maxConns = configured
+	}
+	var wg sync.WaitGroup
+	errCh := make(chan error, maxConns)
+	for i := 0; i < maxConns; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			conn, err := pool.Acquire(ctx)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			defer conn.Release()
+			if _, err := conn.Exec(ctx, query); err != nil {
+				errCh <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		return err
+	}
+	return nil
+}

@@ -26,6 +26,14 @@ import (
 	"hotspot/backend-go/migrations"
 )
 
+const (
+	// warmPGroongaConns 预热连接数：覆盖典型并发（c=10）并留余量；上限受池
+	// MaxConns 约束。搜索量增大后新连接仍可能首查多一次规划，但不再集中尖刺。
+	warmPGroongaConns = 16
+	// warmPGroongaQuery 只触碰 PGroonga 索引，不读业务数据；字面量不命中任何行。
+	warmPGroongaQuery = "SELECT 1 FROM users WHERE nickname &@ '__hotspot_warmup__' LIMIT 1"
+)
+
 type App struct {
 	cfg         config.Config
 	logger      *observability.Logger
@@ -52,6 +60,18 @@ func NewApp(cfg config.Config) (*App, error) {
 	persistenceFactory := persistence.NewFactory(cfg)
 	if err := ensureSchema(cfg, persistenceFactory); err != nil {
 		return nil, err
+	}
+	// PGroonga 首次查询规划按连接惰性初始化（实测每个新连接首查多 ~50-70ms）：
+	// 在组合根预热最多 warmPGroongaConns 个池连接，把冷启动/扩容尖刺移出
+	// 请求路径。失败只告警（搜索仍可用，仅首查多一次规划）。
+	if db, ok := persistenceFactory.DB.(*persistence.PostgresDB); ok {
+		warmCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		if err := db.WarmPlanner(warmCtx, warmPGroongaQuery, warmPGroongaConns); err != nil {
+			logger.Warn("pgroonga planner warmup failed", "err", err)
+		} else {
+			logger.Info("pgroonga planner warmed", "conns", warmPGroongaConns)
+		}
+		cancel()
 	}
 	resourceguardChecker := newResourceGuardChecker(persistenceFactory)
 	// Create the redis client (if configured) before building modules so the

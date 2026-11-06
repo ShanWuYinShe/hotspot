@@ -3322,3 +3322,19 @@ perf-budget.sh：8 端点均在预算内。
 - `go mod tidy` 无额外依赖变化（依赖集合保持）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch D2：PGroonga 规划器启动期预热（消除搜索冷启动/扩容尖刺）（2026-11-07）
+
+性能剖析发现：PGroonga 的关系/索引代价状态按 **后端连接** 惰性初始化，每个
+新连接首次 `&@` 查询的 Planning Time 实测 50-70ms（`EXPLAIN (ANALYZE)`：首次
+55ms，同连接后续 0.7ms）。连接池扩缩容时，搜索端点会出现集中 p99 尖刺。
+
+- persistence 新增 `PostgresDB.WarmPlanner(ctx, query, maxConns)`：并发获取
+  最多 maxConns 个池连接各执行一次轻量 PGroonga 查询后归还（stub/无 DSN no-op，
+  幂等，失败可忽略）；
+- NewApp 在 ensureSchema 之后、模块构建之前预热 16 个连接（覆盖 c=10 并留余量），
+  成功 Info / 失败 Warn，不阻断启动；
+- 新增 IT：真实库预热后池连接数 >=4 且重复调用幂等；stub 后端 no-op；
+- 冷启动后首个搜索请求不再承担 50-70ms 规划成本。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
