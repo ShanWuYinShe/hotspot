@@ -9,6 +9,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/types"
 )
 
 // announcementsListHardCap 公告列表硬上限（审查 P2-2）：列表挂匿名端点
@@ -103,13 +104,13 @@ func (r *PostgresRepository) GetAnnouncement(ctx context.Context, groupID, annou
 // SQL LEFT JOIN users 解析（审查 P2-3，此前占位填裸 user_id）。
 func scanAnnouncementRow(scanner interface{ Scan(...any) error }) (GroupAnnouncementItem, error) {
 	var item GroupAnnouncementItem
-	var createdByUserID, createdByNickname string
+	var createdByUserID, createdByNickname, createdByAvatar string
 	var createdAt time.Time
 	var isPinned bool
-	if err := scanner.Scan(&item.AnnouncementID, &item.GroupID, &item.Title, &item.Content, &createdByUserID, &createdByNickname, &isPinned, &createdAt); err != nil {
+	if err := scanner.Scan(&item.AnnouncementID, &item.GroupID, &item.Title, &item.Content, &createdByUserID, &createdByNickname, &createdByAvatar, &isPinned, &createdAt); err != nil {
 		return GroupAnnouncementItem{}, err
 	}
-	item.CreatedBy = UserInfo{UserID: createdByUserID, Nickname: createdByNickname}
+	item.CreatedBy = UserInfo{UserID: createdByUserID, Nickname: createdByNickname, AvatarURL: types.StrPtr(createdByAvatar)}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.IsPinned = isPinned
 	return item, nil

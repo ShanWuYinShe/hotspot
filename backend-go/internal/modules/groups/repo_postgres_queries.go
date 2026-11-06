@@ -135,7 +135,7 @@ LIMIT 1`
 	queryGetGroupApplication = `
 SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
        (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = ga.group_id) AS members_count,
-       ga.applicant_user_id, COALESCE(au.nickname, ''), COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
+       ga.applicant_user_id, COALESCE(au.nickname, ''), COALESCE(au.avatar_url, ''), COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
 FROM group_applications ga
 JOIN groups g ON g.group_id = ga.group_id
 LEFT JOIN users au ON au.user_id = ga.applicant_user_id
@@ -146,7 +146,7 @@ WHERE ga.application_id = $1`
 	queryListGroupApplications = `
 SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
        (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = ga.group_id) AS members_count,
-       ga.applicant_user_id, COALESCE(au.nickname, ''), COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
+       ga.applicant_user_id, COALESCE(au.nickname, ''), COALESCE(au.avatar_url, ''), COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
 FROM group_applications ga
 JOIN groups g ON g.group_id = ga.group_id
 LEFT JOIN users au ON au.user_id = ga.applicant_user_id
@@ -162,7 +162,7 @@ LIMIT $5`
 	queryListMyGroupApplications = `
 SELECT ga.application_id, ga.group_id, g.name, COALESCE(g.avatar_url, ''),
        (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = ga.group_id) AS members_count,
-       ga.applicant_user_id, COALESCE(au.nickname, ''), COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
+       ga.applicant_user_id, COALESCE(au.nickname, ''), COALESCE(au.avatar_url, ''), COALESCE(ga.message, ''), ga.status, ga.created_at, ga.handled_at, ga.handled_by_user_id
 FROM group_applications ga
 JOIN groups g ON g.group_id = ga.group_id
 LEFT JOIN users au ON au.user_id = ga.applicant_user_id
@@ -198,8 +198,8 @@ ORDER BY created_at DESC, invite_id DESC
 LIMIT 1`
 
 	queryListSentInvites = `
-SELECT gi.invite_id, gi.inviter_user_id, COALESCE(ui.nickname, ''),
-       gi.invitee_user_id, COALESCE(ue.nickname, ''),
+SELECT gi.invite_id, gi.inviter_user_id, COALESCE(ui.nickname, ''), COALESCE(ui.avatar_url, ''),
+       gi.invitee_user_id, COALESCE(ue.nickname, ''), COALESCE(ue.avatar_url, ''),
        COALESCE(gi.message, ''), gi.status, gi.created_at, gi.expires_at, gi.responded_at
 FROM group_invites gi
 LEFT JOIN users ui ON ui.user_id = gi.inviter_user_id
@@ -214,7 +214,7 @@ LIMIT $5`
 	queryListMyInvites = `
 SELECT gi.invite_id, gi.group_id, g.name, COALESCE(g.avatar_url, ''),
        (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = gi.group_id) AS members_count,
-       gi.inviter_user_id, COALESCE(iu.nickname, ''), COALESCE(gi.message, ''), gi.status, gi.created_at, gi.expires_at, gi.responded_at
+       gi.inviter_user_id, COALESCE(iu.nickname, ''), COALESCE(iu.avatar_url, ''), COALESCE(gi.message, ''), gi.status, gi.created_at, gi.expires_at, gi.responded_at
 FROM group_invites gi
 JOIN groups g ON g.group_id = gi.group_id
 LEFT JOIN users iu ON iu.user_id = gi.inviter_user_id
@@ -304,7 +304,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	// 都存在，未限定会被 PG 判为 ambiguous（真实库集成测试可捕获，stub 单测不能）。
 	queryListGroupAnnouncements = `
 SELECT a.announcement_id, a.group_id, a.title, a.content, a.created_by_user_id,
-       COALESCE(u.nickname, a.created_by_user_id), a.is_pinned, a.created_at
+       COALESCE(u.nickname, a.created_by_user_id), COALESCE(u.avatar_url, ''), a.is_pinned, a.created_at
 FROM group_announcements a
 LEFT JOIN users u ON u.user_id = a.created_by_user_id
 WHERE a.group_id = $1 AND a.deleted_at IS NULL
@@ -315,7 +315,7 @@ LIMIT $2`
 	// 对象用，归属双键（IDOR 防护与 update/delete 同口径），昵称同 List 解析。
 	queryGetGroupAnnouncement = `
 SELECT a.announcement_id, a.group_id, a.title, a.content, a.created_by_user_id,
-       COALESCE(u.nickname, a.created_by_user_id), a.is_pinned, a.created_at
+       COALESCE(u.nickname, a.created_by_user_id), COALESCE(u.avatar_url, ''), a.is_pinned, a.created_at
 FROM group_announcements a
 LEFT JOIN users u ON u.user_id = a.created_by_user_id
 WHERE a.announcement_id = $1 AND a.group_id = $2 AND a.deleted_at IS NULL`
@@ -400,7 +400,7 @@ WHERE group_id = $1 AND user_id = $2`
 	// 「大于」与 ASC 排序方向一致；banned_at 写入为 time.Now().UTC() 全精度，
 	// 游标以 RFC3339Nano 编码，精度对齐。
 	queryListGroupBans = `
-SELECT gb.user_id, COALESCE(bu.nickname, ''), gb.banned_at, gb.reason, gb.banned_by_user_id, COALESCE(ou.nickname, '')
+SELECT gb.user_id, COALESCE(bu.nickname, ''), COALESCE(bu.avatar_url, ''), gb.banned_at, gb.reason, gb.banned_by_user_id, COALESCE(ou.nickname, ''), COALESCE(ou.avatar_url, '')
 FROM group_bans gb
 LEFT JOIN users bu ON bu.user_id = gb.user_id
 LEFT JOIN users ou ON ou.user_id = gb.banned_by_user_id

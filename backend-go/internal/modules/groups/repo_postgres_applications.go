@@ -51,17 +51,17 @@ func (r *PostgresRepository) ListApplications(ctx context.Context, groupID strin
 	createdAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupApplicationItem
-		var groupID, groupName, groupAvatar, message, statusText, applicantUserID, applicantNickname string
+		var groupID, groupName, groupAvatar, message, statusText, applicantUserID, applicantNickname, applicantAvatar string
 		var membersCount int
 		var createdAt time.Time
 		var handledAt *time.Time
 		var handledByUserID *string
-		if err := rows.Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &applicantUserID, &applicantNickname, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
+		if err := rows.Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &applicantUserID, &applicantNickname, &applicantAvatar, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
 			return nil, "", err
 		}
 		item.GroupID = groupID
 		item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: types.StrPtr(groupAvatar), MembersCount: membersCount}
-		item.Applicant = UserInfo{UserID: applicantUserID, Nickname: applicantNickname}
+		item.Applicant = UserInfo{UserID: applicantUserID, Nickname: applicantNickname, AvatarURL: types.StrPtr(applicantAvatar)}
 		if message != "" {
 			item.Message = &message
 		}
@@ -168,17 +168,17 @@ func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID stri
 	createdAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupApplicationItem
-		var groupID, groupName, groupAvatar, applicantUserID, applicantNickname, message, statusText string
+		var groupID, groupName, groupAvatar, applicantUserID, applicantNickname, applicantAvatar, message, statusText string
 		var membersCount int
 		var createdAt time.Time
 		var handledAt *time.Time
 		var handledByUserID *string
-		if err := rows.Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &applicantUserID, &applicantNickname, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
+		if err := rows.Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &applicantUserID, &applicantNickname, &applicantAvatar, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
 			return nil, "", err
 		}
 		item.GroupID = groupID
 		item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: types.StrPtr(groupAvatar), MembersCount: membersCount}
-		item.Applicant = UserInfo{UserID: applicantUserID, Nickname: applicantNickname}
+		item.Applicant = UserInfo{UserID: applicantUserID, Nickname: applicantNickname, AvatarURL: types.StrPtr(applicantAvatar)}
 		if message != "" {
 			item.Message = &message
 		}
@@ -222,17 +222,17 @@ func (r *PostgresRepository) loadApplication(ctx context.Context, applicationID 
 		return GroupApplicationItem{}, persistence.ErrNotImplemented
 	}
 	var item GroupApplicationItem
-	var groupID, groupName, groupAvatar, applicantUserID, applicantNickname, message, statusText string
+	var groupID, groupName, groupAvatar, applicantUserID, applicantNickname, applicantAvatar, message, statusText string
 	var membersCount int
 	var createdAt time.Time
 	var handledAt *time.Time
 	var handledByUserID *string
-	if err := queryable.QueryRow(ctx, queryGetGroupApplication, applicationID).Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &applicantUserID, &applicantNickname, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
+	if err := queryable.QueryRow(ctx, queryGetGroupApplication, applicationID).Scan(&item.ApplicationID, &groupID, &groupName, &groupAvatar, &membersCount, &applicantUserID, &applicantNickname, &applicantAvatar, &message, &statusText, &createdAt, &handledAt, &handledByUserID); err != nil {
 		return GroupApplicationItem{}, err
 	}
 	item.GroupID = groupID
 	item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: types.StrPtr(groupAvatar), MembersCount: membersCount}
-	item.Applicant = UserInfo{UserID: applicantUserID, Nickname: applicantNickname}
+	item.Applicant = UserInfo{UserID: applicantUserID, Nickname: applicantNickname, AvatarURL: types.StrPtr(applicantAvatar)}
 	if message != "" {
 		item.Message = &message
 	}

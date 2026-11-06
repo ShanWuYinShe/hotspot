@@ -248,7 +248,7 @@ func TestPostgresIsMemberAndGetApplication(t *testing.T) {
 	}
 
 	// GetApplication：存在（loadApplication 需要 queryGetGroupApplication + queryGetGroup）
-	appRow := []any{"a1", "group_1", "群", "", 3, "u2", "申请人", "备注", "pending", gTestTime, nil, nil}
+	appRow := []any{"a1", "group_1", "群", "", 3, "u2", "申请人", "", "备注", "pending", gTestTime, nil, nil}
 	stub = &groupFullStub{
 		queryRow: map[string][]any{queryGetGroupApplication: appRow, queryGetGroup: groupBaseRow(false)},
 	}
@@ -422,7 +422,7 @@ func TestPostgresAnnouncementLifecycle(t *testing.T) {
 	// 8 列对齐 queryListGroupAnnouncements/queryGetGroupAnnouncement（审查
 	// P2-3：第 6 列为 LEFT JOIN users 解析的 created_by 昵称）。
 	annRow := func(id string) []any {
-		return []any{id, "group_1", "标题", "内容", "u1", "创建者昵称", true, gTestTime}
+		return []any{id, "group_1", "标题", "内容", "u1", "创建者昵称", "http://avatar/creator", true, gTestTime}
 	}
 
 	// Create
@@ -486,16 +486,16 @@ func TestPostgresAnnouncementLifecycle(t *testing.T) {
 func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 	ctx := context.Background()
 	appRow := func(id string) []any {
-		return []any{id, "group_1", "群名", "", 3, "u2", "申请人昵称", "备注", "pending", gTestTime, gTestTime, "u1"}
+		return []any{id, "group_1", "群名", "", 3, "u2", "申请人昵称", "http://avatar/applicant", "备注", "pending", gTestTime, gTestTime, "u1"}
 	}
 	myAppRow := func(id string) []any {
-		return []any{id, "group_1", "群名", "", 3, "u2", "申请人昵称", "备注", "pending", gTestTime, nil, nil}
+		return []any{id, "group_1", "群名", "", 3, "u2", "申请人昵称", "", "备注", "pending", gTestTime, nil, nil}
 	}
 	inviteRow := func(id string) []any {
-		return []any{id, "group_1", "群名", "", 3, "u1", "邀请人昵称", "消息", "pending", gTestTime, gTestTime, nil}
+		return []any{id, "group_1", "群名", "", 3, "u1", "邀请人昵称", "http://avatar/inviter", "消息", "pending", gTestTime, gTestTime, nil}
 	}
 	sentRow := func(id string) []any {
-		return []any{id, "u1", "邀请人", "u2", "被邀请人", "消息", "pending", gTestTime, gTestTime, gTestTime}
+		return []any{id, "u1", "邀请人", "http://avatar/inviter", "u2", "被邀请人", "http://avatar/invitee", "消息", "pending", gTestTime, gTestTime, gTestTime}
 	}
 
 	status := ApplicationStatusPending
@@ -507,6 +507,9 @@ func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 	}
 	if items[0].Applicant.Nickname != "申请人昵称" {
 		t.Fatalf("applicant nickname: got %q, want %q", items[0].Applicant.Nickname, "申请人昵称")
+	}
+	if items[0].Applicant.AvatarURL == nil || *items[0].Applicant.AvatarURL != "http://avatar/applicant" {
+		t.Fatalf("applicant avatar must be resolved: %#v", items[0].Applicant)
 	}
 	stub = &groupFullStub{queryRowsErr: map[string]error{queryListGroupApplications: errors.New("boom")}}
 	if _, _, err := newGroupsFullRepo(stub).ListApplications(ctx, "g", nil, 20, ""); err == nil {
@@ -533,6 +536,9 @@ func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 	if invites[0].Inviter.Nickname != "邀请人昵称" {
 		t.Fatalf("inviter nickname: got %q, want %q", invites[0].Inviter.Nickname, "邀请人昵称")
 	}
+	if invites[0].Inviter.AvatarURL == nil || *invites[0].Inviter.AvatarURL != "http://avatar/inviter" {
+		t.Fatalf("inviter avatar must be resolved: %#v", invites[0].Inviter)
+	}
 	stub = &groupFullStub{queryRowsErr: map[string]error{queryListMyInvites: errors.New("boom")}}
 	if _, _, err := newGroupsFullRepo(stub).ListMyInvites(ctx, "u2", nil, 20, ""); err == nil {
 		t.Fatal("list my invites query error must propagate")
@@ -551,11 +557,11 @@ func TestPostgresApplicationsAndInvitesLists(t *testing.T) {
 
 	// ListBannedMembers
 	banRow := func(uid string) []any {
-		return []any{uid, "被封禁昵称", gTestTime, "理由", "u1", "操作者昵称"}
+		return []any{uid, "被封禁昵称", "http://avatar/banned", gTestTime, "理由", "u1", "操作者昵称", "http://avatar/operator"}
 	}
 	stub = &groupFullStub{queryRows: map[string][][]any{queryListGroupBans: {banRow("u2"), banRow("u3")}}}
 	banned, _, err := newGroupsFullRepo(stub).ListBannedMembers(ctx, "group_1", 20, "")
-	if err != nil || len(banned) != 2 || banned[0].Reason == nil || banned[0].BannedBy == nil || banned[0].BannedAt == "" {
+	if err != nil || len(banned) != 2 || banned[0].Reason == nil || banned[0].BannedBy == nil || banned[0].BannedAt == "" || banned[0].User.AvatarURL == nil || banned[0].BannedBy.AvatarURL == nil {
 		t.Fatalf("list banned: %#v err=%v", banned, err)
 	}
 	if banned[0].User.Nickname != "被封禁昵称" || banned[0].BannedBy.Nickname != "操作者昵称" {
@@ -571,7 +577,7 @@ func strPtr(s string) *string { return &s }
 
 func TestPostgresApproveAcceptTxAndInviteMember(t *testing.T) {
 	ctx := context.Background()
-	appRow := []any{"a1", "group_1", "群名", "", 3, "u2", "申请人", "", "pending", gTestTime, nil, nil}
+	appRow := []any{"a1", "group_1", "群名", "", 3, "u2", "申请人", "", "", "pending", gTestTime, nil, nil}
 	inviteRow := []any{"i1", "group_1", "u1", "u2", "", "pending", gTestTime, gTestTime, nil}
 
 	// ApproveApplication：loadApplication + tx 内封禁复检 + 两个 Exec
@@ -747,20 +753,20 @@ func TestPostgresRowsErrPaths(t *testing.T) {
 		row  []any
 		call func(repo *PostgresRepository) error
 	}{
-		{queryListGroupAnnouncements, []any{"a1", "g", "t", "c", "u1", "昵称", false, gTestTime},
+		{queryListGroupAnnouncements, []any{"a1", "g", "t", "c", "u1", "昵称", "", false, gTestTime},
 			func(r *PostgresRepository) error { _, err := r.ListAnnouncements(ctx, "g", 10); return err }},
-		{queryListGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "申请人", "", "pending", gTestTime, nil, nil},
+		{queryListGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "申请人", "", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListApplications(ctx, "g", nil, 20, ""); return err }},
-		{queryListMyGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "申请人", "", "pending", gTestTime, nil, nil},
+		{queryListMyGroupApplications, []any{"a1", "g", "群", "", 3, "u2", "申请人", "", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error {
 				_, _, err := r.ListMyApplications(ctx, "u2", nil, 20, "")
 				return err
 			}},
-		{queryListMyInvites, []any{"i1", "g", "群", "", 3, "u1", "邀请人", "", "pending", gTestTime, nil, nil},
+		{queryListMyInvites, []any{"i1", "g", "群", "", 3, "u1", "邀请人", "", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListMyInvites(ctx, "u2", nil, 20, ""); return err }},
-		{queryListSentInvites, []any{"i1", "u1", "邀请人", "u2", "被邀请人", "", "pending", gTestTime, nil, nil},
+		{queryListSentInvites, []any{"i1", "u1", "邀请人", "", "u2", "被邀请人", "", "", "pending", gTestTime, nil, nil},
 			func(r *PostgresRepository) error { _, _, err := r.ListSentInvites(ctx, "g", nil, 20, ""); return err }},
-		{queryListGroupBans, []any{"u2", "昵称", gTestTime, nil, "u1", "操作者"},
+		{queryListGroupBans, []any{"u2", "昵称", "", gTestTime, nil, "u1", "操作者", ""},
 			func(r *PostgresRepository) error { _, _, err := r.ListBannedMembers(ctx, "g", 20, ""); return err }},
 	}
 	for _, tc := range rowsErrCases {

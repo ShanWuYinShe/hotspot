@@ -38,15 +38,15 @@ func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, s
 	createdAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupInviteItem
-		var inviterUserID, inviterNickname, groupID, message, statusText, groupName, groupAvatar string
+		var inviterUserID, inviterNickname, inviterAvatar, groupID, message, statusText, groupName, groupAvatar string
 		var membersCount int
 		var createdAt time.Time
 		var expiresAt, respondedAt *time.Time
-		if err := rows.Scan(&item.InviteID, &groupID, &groupName, &groupAvatar, &membersCount, &inviterUserID, &inviterNickname, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
+		if err := rows.Scan(&item.InviteID, &groupID, &groupName, &groupAvatar, &membersCount, &inviterUserID, &inviterNickname, &inviterAvatar, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
 			return nil, "", err
 		}
 		item.Group = GroupInfo{GroupID: groupID, Name: groupName, AvatarURL: types.StrPtr(groupAvatar), MembersCount: membersCount}
-		item.Inviter = UserInfo{UserID: inviterUserID, Nickname: inviterNickname}
+		item.Inviter = UserInfo{UserID: inviterUserID, Nickname: inviterNickname, AvatarURL: types.StrPtr(inviterAvatar)}
 		if message != "" {
 			item.Message = &message
 		}
@@ -180,14 +180,14 @@ func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string
 	createdAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupSentInviteItem
-		var inviterUserID, inviterNickname, inviteeUserID, inviteeNickname, message, statusText string
+		var inviterUserID, inviterNickname, inviterAvatar, inviteeUserID, inviteeNickname, inviteeAvatar, message, statusText string
 		var createdAt time.Time
 		var expiresAt, respondedAt *time.Time
-		if err := rows.Scan(&item.InviteID, &inviterUserID, &inviterNickname, &inviteeUserID, &inviteeNickname, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
+		if err := rows.Scan(&item.InviteID, &inviterUserID, &inviterNickname, &inviterAvatar, &inviteeUserID, &inviteeNickname, &inviteeAvatar, &message, &statusText, &createdAt, &expiresAt, &respondedAt); err != nil {
 			return nil, "", err
 		}
-		item.Inviter = UserInfo{UserID: inviterUserID, Nickname: inviterNickname}
-		item.Invitee = UserInfo{UserID: inviteeUserID, Nickname: inviteeNickname}
+		item.Inviter = UserInfo{UserID: inviterUserID, Nickname: inviterNickname, AvatarURL: types.StrPtr(inviterAvatar)}
+		item.Invitee = UserInfo{UserID: inviteeUserID, Nickname: inviteeNickname, AvatarURL: types.StrPtr(inviteeAvatar)}
 		if message != "" {
 			item.Message = &message
 		}

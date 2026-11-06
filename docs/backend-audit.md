@@ -3142,3 +3142,17 @@ spec api_spec_public.md「类型体系」要求匿名节点 Request/Response 使
 - 测试：memberRow 固定 avatar 列并断言 ListMembers 返回头像（防列序漂移）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第九批）：groups 申请/邀请/公告/封禁读路径补齐 avatar_url（2026-11-07）
+
+契约审计「avatar_url 多读路径缺失」逐模块收口（本批 groups 其余读面）：
+
+- 申请：queryGetGroupApplication / ListGroupApplications / ListMyGroupApplications
+  补申请人 avatar，GroupApplicationItem.Applicant 回填；
+- 邀请：ListSentInvites 补 inviter+invitee avatar、ListMyInvites 补 inviter avatar；
+- 公告：List/GetGroupAnnouncement 补创建者 avatar，scanAnnouncementRow 回填；
+- 封禁名单：ListGroupBans 补被封禁者+操作者 avatar，AdminBannedMemberItem
+  User/BannedBy 回填；
+- 测试：对应 stub 行补 avatar 列，并断言 applicant/inviter/封禁成员 avatar 已解析。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
