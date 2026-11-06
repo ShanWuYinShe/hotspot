@@ -121,6 +121,11 @@ type MomentItem struct {
 	// 保持零值并由服务层回退批量图片查询。
 	imageRows     []momentImageRow
 	imagesFetched bool
+	// reactionsFetched / authorRelationFetched 标记该行已随仓储查询带回对应
+	// 公开字段（附近流详情查询合并了 reactions 聚合与作者关系），服务层批量
+	// 水合据此跳过已取回的行，避免重复 DB 往返。
+	reactionsFetched      bool
+	authorRelationFetched bool
 }
 
 // OwnerMomentItem 拥有者视角扩展（spec moment.md → OwnerMomentItem）：

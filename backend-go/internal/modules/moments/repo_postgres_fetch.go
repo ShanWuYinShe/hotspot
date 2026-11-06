@@ -175,7 +175,11 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 				Location:         &Location{Point: pointStruct(candidate.latitude, candidate.longitude), LocationName: detail.locationName},
 				Tags:             detail.tags,
 				IsFavorited:      detail.isFavorited,
+				Reactions:        detail.reactions,
+				AuthorRelation:   detail.authorRelation,
 			}
+			item.reactionsFetched = true
+			item.authorRelationFetched = true
 			// 附近流参考点恒已解析（service 层兜底），distance/bearing_degrees 恒填充
 			//（spec api_spec_types.md RelativeLocation；匿名版同样基于 reference_point 计算）。
 			fillRelativeLocation(item.Location, candidate.distance, candidate.bearing)
@@ -210,6 +214,10 @@ type nearbyMomentDetail struct {
 	commentsCount, sharesCount, interactionCount           int
 	// imageRows 随详情查询一并取回；服务层仅做 presign（不再单独查询）。
 	imageRows []momentImageRow
+	// reactions / authorRelation 随详情查询一并取回（附近流专用）：服务层
+	// fillEngagementBatch 对已取回的行短路，附近流总往返 4→2。
+	reactions      []Reaction
+	authorRelation *UserRelationView
 }
 
 // loadNearbyMomentDetails 批量补全附近流页面内的展示字段。
@@ -226,14 +234,23 @@ func loadNearbyMomentDetails(ctx context.Context, queryable persistence.Queryabl
 	for rows.Next() {
 		var momentID string
 		var detail nearbyMomentDetail
-		var imagesJSON []byte
-		if err := rows.Scan(&momentID, &detail.userID, &detail.nickname, &detail.avatarURL, &detail.description, &detail.commentsCount, &detail.sharesCount, &detail.interactionCount, &detail.locationName, &detail.tags, &detail.isFavorited, &imagesJSON); err != nil {
+		var imagesJSON, reactionsJSON []byte
+		var isFollowing, isFollowedBy bool
+		if err := rows.Scan(&momentID, &detail.userID, &detail.nickname, &detail.avatarURL, &detail.description, &detail.commentsCount, &detail.sharesCount, &detail.interactionCount, &detail.locationName, &detail.tags, &detail.isFavorited, &imagesJSON, &reactionsJSON, &isFollowing, &isFollowedBy); err != nil {
 			return nil, err
 		}
 		if len(imagesJSON) > 0 {
 			if err := json.Unmarshal(imagesJSON, &detail.imageRows); err != nil {
 				return nil, err
 			}
+		}
+		if len(reactionsJSON) > 0 {
+			if err := json.Unmarshal(reactionsJSON, &detail.reactions); err != nil {
+				return nil, err
+			}
+		}
+		if isFollowing || isFollowedBy {
+			detail.authorRelation = &UserRelationView{IsFollowing: isFollowing, IsFollowedBy: isFollowedBy}
 		}
 		details[momentID] = detail
 	}

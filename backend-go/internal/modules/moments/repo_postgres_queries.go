@@ -195,7 +195,10 @@ SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, 
        EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $2),
        -- 图片行随详情查询一并取回（LATERAL 仅作用于 20 行页内），服务层只做
        -- presign，不再多发一次图片批量查询（架构审计 perf D2）。
-       COALESCE(img.rows, '[]'::jsonb)
+       COALESCE(img.rows, '[]'::jsonb),
+       COALESCE(react.rows, '[]'::jsonb),
+       COALESCE((SELECT ur.is_following FROM user_relations ur WHERE ur.user_id = $2 AND ur.target_user_id = m.user_id), FALSE),
+       COALESCE((SELECT ur.is_following FROM user_relations ur WHERE ur.user_id = m.user_id AND ur.target_user_id = $2), FALSE)
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 LEFT JOIN LATERAL (
@@ -211,6 +214,16 @@ LEFT JOIN LATERAL (
   JOIN media_upload_sessions mus ON mus.file_id = mi.file_id AND mus.status = 'completed'
   WHERE mi.moment_id = m.moment_id
 ) img ON TRUE
+LEFT JOIN LATERAL (
+  -- reactions 聚合随详情一次取回：省掉服务层对附近流页面的单独聚合查询。
+  SELECT jsonb_agg(jsonb_build_object('emoji', rx.emoji, 'count', rx.cnt, 'reacted_by_me', rx.reacted_by_me) ORDER BY rx.cnt DESC, rx.emoji) AS rows
+  FROM (
+    SELECT r.emoji, COUNT(*)::int AS cnt, BOOL_OR(r.user_id = $2) AS reacted_by_me
+    FROM reactions r
+    WHERE r.target_type = 'moment' AND r.target_id = m.moment_id
+    GROUP BY r.emoji
+  ) rx
+) react ON TRUE
 WHERE m.moment_id = ANY($1)`
 	// queryNearbyMoments 候选粗筛只返回排序所需列（无逐行子查询、无 users join）：
 	// 热度/关注改为候选集批量聚合，展示字段分页后批量补全。

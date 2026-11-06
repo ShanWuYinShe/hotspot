@@ -19,12 +19,12 @@ func TestPostgresListNearbyMomentsQueryCount(t *testing.T) {
 		{"m_followed", "u_followed", now, 1, 34.2604, 117.1855, true},
 		{"m_other", "u_other", now.Add(-time.Minute), 50, 34.2604, 117.1855, false},
 	}
-	detailRows := func(momentID, userID, description string, imageJSON []byte) []any {
-		return []any{momentID, userID, userID + "_nick", "", description, 0, 0, 0, "", []string{}, false, imageJSON}
+	detailRows := func(momentID, userID, description string, imageJSON, reactionsJSON []byte, isFollowing, isFollowedBy bool) []any {
+		return []any{momentID, userID, userID + "_nick", "", description, 0, 0, 0, "", []string{}, false, imageJSON, reactionsJSON, isFollowing, isFollowedBy}
 	}
 	backend.nearbyDetails = map[string][]any{
-		"m_followed": detailRows("m_followed", "u_followed", "followed", []byte(`[{"file_id":"f1","storage_key":"uploads/a.jpg","thumbnail_url":"","width":0,"height":0,"mime_type":""}]`)),
-		"m_other":    detailRows("m_other", "u_other", "other", []byte("[]")),
+		"m_followed": detailRows("m_followed", "u_followed", "followed", []byte(`[{"file_id":"f1","storage_key":"uploads/a.jpg","thumbnail_url":"","width":0,"height":0,"mime_type":""}]`), []byte(`[{"emoji":"like","count":2,"reacted_by_me":true}]`), true, false),
+		"m_other":    detailRows("m_other", "u_other", "other", []byte("[]"), []byte("[]"), false, false),
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
@@ -53,6 +53,22 @@ func TestPostgresListNearbyMomentsQueryCount(t *testing.T) {
 	}
 	if !page.Items[1].imagesFetched || len(page.Items[1].imageRows) != 0 {
 		t.Fatalf("empty image rows must still mark fetched: %#v", page.Items[1].imageRows)
+	}
+	// reactions / 作者关系随详情查询一并带回：服务层不再发额外批量查询。
+	if len(page.Items[0].Reactions) != 1 || page.Items[0].Reactions[0].Emoji != "like" || page.Items[0].Reactions[0].Count != 2 {
+		t.Fatalf("embedded reactions missing: %#v", page.Items[0].Reactions)
+	}
+	if !page.Items[0].reactionsFetched || !page.Items[1].reactionsFetched {
+		t.Fatalf("reactions must be marked fetched")
+	}
+	if page.Items[0].AuthorRelation == nil || !page.Items[0].AuthorRelation.IsFollowing {
+		t.Fatalf("embedded author relation missing: %#v", page.Items[0].AuthorRelation)
+	}
+	if page.Items[1].AuthorRelation != nil {
+		t.Fatalf("no relation must stay nil: %#v", page.Items[1].AuthorRelation)
+	}
+	if !page.Items[0].authorRelationFetched || !page.Items[1].authorRelationFetched {
+		t.Fatalf("author relation must be marked fetched")
 	}
 	if len(backend.queries) != 2 {
 		t.Fatalf("nearby roundtrips = %d (%v), want 2", len(backend.queries), backend.queries)

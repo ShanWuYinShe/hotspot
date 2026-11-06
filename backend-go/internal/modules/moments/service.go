@@ -660,28 +660,35 @@ func (s *Service) fillReactions(ctx context.Context, item *MomentItem, viewerID 
 
 // fillReactionsBatch populates MomentItem.reactions[] for a list in one query.
 func (s *Service) fillReactionsBatch(ctx context.Context, items []MomentItem, viewerID string) {
-	if len(items) == 0 {
+	// 附近流详情查询已带回 reactions（reactionsFetched=true）：只对未取回的
+	// 行发批量查询，避免重复 DB 往返。
+	pending := make([]int, 0, len(items))
+	ids := make([]string, 0, len(items))
+	for i := range items {
+		if items[i].reactionsFetched {
+			continue
+		}
+		pending = append(pending, i)
+		ids = append(ids, items[i].MomentID)
+	}
+	if len(pending) == 0 {
 		return
 	}
 	if s.reactions == nil {
-		for i := range items {
+		for _, i := range pending {
 			items[i].Reactions = emptyReactions()
 		}
 		return
-	}
-	ids := make([]string, 0, len(items))
-	for i := range items {
-		ids = append(ids, items[i].MomentID)
 	}
 	byID, err := s.reactions.AggregateMoments(ctx, ids, viewerID)
 	if err != nil {
 		observability.FromContext(ctx).Warn("moments.fillReactionsBatch failed", "error", err)
-		for i := range items {
+		for _, i := range pending {
 			items[i].Reactions = emptyReactions()
 		}
 		return
 	}
-	for i := range items {
+	for _, i := range pending {
 		items[i].Reactions = reactionsFor(byID[items[i].MomentID])
 	}
 }
@@ -717,9 +724,14 @@ func (s *Service) fillAuthorRelations(ctx context.Context, items []MomentItem, v
 	if len(items) == 0 || viewerID == "" || s.relations == nil {
 		return
 	}
+	pending := make([]int, 0, len(items))
 	seen := make(map[string]struct{}, len(items))
 	authorIDs := make([]string, 0, len(items))
 	for i := range items {
+		if items[i].authorRelationFetched {
+			continue
+		}
+		pending = append(pending, i)
 		id := items[i].User.UserID
 		if id == "" {
 			continue
@@ -730,7 +742,7 @@ func (s *Service) fillAuthorRelations(ctx context.Context, items []MomentItem, v
 		seen[id] = struct{}{}
 		authorIDs = append(authorIDs, id)
 	}
-	if len(authorIDs) == 0 {
+	if len(pending) == 0 || len(authorIDs) == 0 {
 		return
 	}
 	byID, err := s.relations.AuthorRelations(ctx, viewerID, authorIDs)
@@ -738,7 +750,7 @@ func (s *Service) fillAuthorRelations(ctx context.Context, items []MomentItem, v
 		observability.FromContext(ctx).Warn("moments.fillAuthorRelations failed", "error", err)
 		return
 	}
-	for i := range items {
+	for _, i := range pending {
 		if rel, ok := byID[items[i].User.UserID]; ok {
 			r := rel
 			items[i].AuthorRelation = &r

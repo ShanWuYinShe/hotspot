@@ -3352,3 +3352,21 @@ perf-budget.sh：8 端点均在预算内。
   -race 单测全绿；
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch D2（第三批）：附近流详情查询合并 reactions/作者关系（4→2 次往返）（2026-11-07）
+
+附近流原路径：候选粗筛 + 详情批量 + reactions 聚合 + 作者关系批量 = 4 次 DB
+往返（详情查询已含图片/tag/收藏态）。本轮把后两者并入详情查询：
+
+- queryNearbyMomentDetails 新增 reactions LATERAL（按 emoji 聚合 count +
+  reacted_by_me，jsonb 返回）与两个作者关系 EXISTS 列（viewer→author /
+  author→viewer），只作用于页内 ≤20 行；
+- nearbyMomentDetail 扫描并回填 Reactions/AuthorRelation；MomentItem 新增内部
+  reactionsFetched/authorRelationFetched 标记；
+- fillReactionsBatch/fillAuthorRelations 只对未取回的行发批量查询（附近流全部
+  短路，其它列表路径行为不变）；
+- 附近流 DB 往返 4→2（候选 + 详情），公开/登录两种视角输出形状不变；
+- 测试：nearby query-count 用例断言仍为 2 次查询，并新增 reactions 数组/作者关系
+  回填与 fetched 标记断言；moments 包 -race 全绿。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
