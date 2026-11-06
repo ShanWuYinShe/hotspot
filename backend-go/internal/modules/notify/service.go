@@ -34,7 +34,6 @@ type Service struct {
 	nearbyNotifyProvider NearbyNotifySettingsProvider
 }
 
-func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
 
 // StartPruneSweeper 启动后台 prune（对齐 idempotency.StartSweeper 模式）：

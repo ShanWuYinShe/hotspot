@@ -11,6 +11,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/comments"
 	"hotspot/backend-go/internal/modules/notify"
+	notifytest "hotspot/backend-go/internal/modules/notify/notifytest"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -168,7 +169,7 @@ func TestCreateCommentWithFailingCounterStillSucceeds(t *testing.T) {
 	momentService := NewServiceWithRepo(momentRepo)
 	counter := &failingMomentCounter{repo: momentRepo, failErr: errors.New("update failed")}
 	commentRepo := newMomentsCommentsRepo()
-	commentService := comments.NewServiceWithDeps(commentRepo, counter, notify.NewService(), nil, nil, persistence.NewMemoryTxRunner())
+	commentService := comments.NewServiceWithDeps(commentRepo, counter, notify.NewServiceWithRepo(notifytest.New()), nil, nil, persistence.NewMemoryTxRunner())
 	commentHandler := comments.NewHandler(commentService)
 	momentHandler := NewHandler(momentService)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
@@ -258,7 +259,7 @@ func TestCreateMomentRecordsResourceGuard(t *testing.T) {
 func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	service := NewServiceWithDeps(NewInMemoryRepository(), notify.NewServiceWithRepo(notificationRepo), nil)
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	bobSink := &sinkCapture{}
@@ -297,7 +298,7 @@ func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
 func TestUpdateMomentReplacesMentionNotificationsAndState(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	service := NewServiceWithDeps(NewInMemoryRepository(), notify.NewServiceWithRepo(notificationRepo), nil)
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	bobSink := &sinkCapture{}

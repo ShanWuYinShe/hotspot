@@ -15,6 +15,7 @@ import (
 
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/modules/notify"
+	notifytest "hotspot/backend-go/internal/modules/notify/notifytest"
 	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -176,10 +177,10 @@ func newTestModuleWithStore() (*Module, *InMemoryRepository) {
 	return module, store
 }
 
-func newTestModuleWithPushStore() (*Module, *InMemoryRepository, *notify.InMemoryRepository) {
+func newTestModuleWithPushStore() (*Module, *InMemoryRepository, *notifytest.Repository) {
 	store := NewInMemoryRepository()
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	pushService := notify.NewServiceWithRepo(notificationRepo)
 	module := NewModuleWithDeps(store, provider, nil, pushService)
 	module.Service.SetMomentModerator(testMomentModerator{store: store})
@@ -198,7 +199,7 @@ func newTestHandlerWithStore() (*Handler, *InMemoryRepository) {
 	return module.handler, store
 }
 
-func newTestHandlerWithPushStore() (*Handler, *InMemoryRepository, *notify.InMemoryRepository) {
+func newTestHandlerWithPushStore() (*Handler, *InMemoryRepository, *notifytest.Repository) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	module, store, notificationRepo := newTestModuleWithPushStore()

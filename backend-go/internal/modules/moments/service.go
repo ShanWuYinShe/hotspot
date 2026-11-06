@@ -8,7 +8,6 @@ import (
 	"unicode/utf8"
 
 	"hotspot/backend-go/internal/modules/comments"
-	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/platform/actor"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -64,10 +63,6 @@ type FollowRelationReader interface {
 
 type momentNotificationWriter interface {
 	AppendMentionedBatch(ctx context.Context, targetUserIDs []string, actor types.UserInfo, targetType string, momentID string, momentSummary types.MomentSummary, commentID string, commentPreview string) (map[string]string, error)
-}
-
-func NewServiceWithRepo(repo Repository) *Service {
-	return NewServiceWithDepsAndImagesAndConfig(repo, notify.NewService(), nil, nil, nil, nil)
 }
 
 func NewServiceWithDeps(repo Repository, notificationWriter momentNotificationWriter, actorProvider actor.Provider) *Service {

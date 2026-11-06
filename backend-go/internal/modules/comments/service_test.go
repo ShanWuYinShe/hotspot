@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"hotspot/backend-go/internal/modules/notify"
+	notifytest "hotspot/backend-go/internal/modules/notify/notifytest"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/types"
@@ -78,7 +79,7 @@ func TestCreateTopLevelCommentSendsRealtimeAndNotificationToMomentAuthor(t *test
 			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notificationRepo), nil, nil, nil)
 	aliceSink := &sinkCapture{}
 	bobSink := &sinkCapture{}
@@ -135,7 +136,7 @@ func TestCreateTopLevelCommentOnOwnMomentSkipsRealtimeAndNotification(t *testing
 			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notificationRepo), nil, nil, nil)
 	aliceSink := &sinkCapture{}
 	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
@@ -167,7 +168,7 @@ func TestCreateReplySendsRealtimeAndNotificationToParentAuthor(t *testing.T) {
 			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notificationRepo), nil, nil, nil)
 	if _, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "parent"}); err != nil {
 		t.Fatalf("create parent: %v", err)
@@ -231,7 +232,7 @@ func TestCreateReplyToOwnCommentSkipsRealtimeAndNotification(t *testing.T) {
 			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notificationRepo), nil, nil, nil)
 	if _, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "parent"}); err != nil {
 		t.Fatalf("create parent: %v", err)
@@ -270,7 +271,7 @@ func TestCreateCommentMentionSendsRealtimeAndNotification(t *testing.T) {
 			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notificationRepo), nil, nil, nil)
 	carolSink := &sinkCapture{}
 	hub.RegisterUser("user_carol", "sess_carol", carolSink)
@@ -318,7 +319,7 @@ func TestCreateReplyMentionDeduplicatesReplyTarget(t *testing.T) {
 			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notificationRepo), nil, nil, nil)
 	if _, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "parent"}); err != nil {
 		t.Fatalf("create parent: %v", err)
@@ -360,7 +361,7 @@ func TestCreateTopLevelCommentMentionDeduplicatesMomentAuthor(t *testing.T) {
 			Summary: types.MomentSummary{MomentID: "moment_1", DescriptionPreview: "moment summary"},
 		},
 	}
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notificationRepo), nil, nil, nil)
 	aliceSink := &sinkCapture{}
 	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
@@ -420,7 +421,7 @@ func TestCreateCommentIgnoresNotificationFailures(t *testing.T) {
 func TestCreateReplyToMissingParentReturnsCommentNotFound(t *testing.T) {
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	_, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_1", ParentID: "missing_parent", Content: "reply"})
 	if !errors.Is(err, ErrCommentNotFound) {
 		t.Fatalf("expected ErrCommentNotFound, got %v", err)
@@ -437,7 +438,7 @@ func TestCreateFailsClosedWhenAuthorContextResolveFails(t *testing.T) {
 		commentable:      true,
 		notificationErr:  errors.New("db down"),
 	}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	service.SetBlockChecker(func(callerID, authorID string) (bool, bool, error) {
 		return false, false, nil
 	})
@@ -451,7 +452,7 @@ func TestCreateFailsClosedWhenAuthorContextResolveFails(t *testing.T) {
 func TestCreateReplyToSoftDeletedParentReturnsCommentNotFound(t *testing.T) {
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	parent, err := repo.Create(context.Background(), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "parent"})
 	if err != nil {
 		t.Fatalf("create parent: %v", err)
@@ -477,7 +478,7 @@ func firstCommentID(t *testing.T, repo *InMemoryRepository, momentID string) str
 func TestCreateCommentReturnsNoPermissionWhenMomentExistsButNotCommentable(t *testing.T) {
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{commentableFound: true, commentable: false}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	_, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_private", Content: "hello"})
 	if !errors.Is(err, ErrCommentPrivacyDenied) {
 		t.Fatalf("expected ErrCommentPrivacyDenied (moment author restricts comment), got %v", err)
@@ -493,7 +494,7 @@ func TestCreateCommentRejectsWhenBlockedByAuthor(t *testing.T) {
 		notificationOK:      true,
 		notificationContext: MomentNotificationContext{UserID: "user_alice"},
 	}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	service.SetBlockChecker(func(callerID, authorID string) (bool, bool, error) {
 		return false, true, nil
 	})
@@ -510,7 +511,7 @@ func TestCreateCommentRejectsWhenBlockingAuthor(t *testing.T) {
 		notificationOK:      true,
 		notificationContext: MomentNotificationContext{UserID: "user_alice"},
 	}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	service.SetBlockChecker(func(callerID, authorID string) (bool, bool, error) {
 		return true, false, nil
 	})
@@ -527,7 +528,7 @@ func TestCreateCommentPassesWithoutBlock(t *testing.T) {
 		notificationOK:      true,
 		notificationContext: MomentNotificationContext{UserID: "user_alice"},
 	}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	service.SetBlockChecker(func(callerID, authorID string) (bool, bool, error) {
 		return false, false, nil
 	})
@@ -539,7 +540,7 @@ func TestCreateCommentPassesWithoutBlock(t *testing.T) {
 func TestCreateCommentReturnsNotFoundWhenMomentDoesNotExist(t *testing.T) {
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{commentableFound: false}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	_, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_missing", Content: "hello"})
 	if !errors.Is(err, ErrMomentNotFound) {
 		t.Fatalf("expected ErrMomentNotFound, got %v", err)
@@ -553,7 +554,7 @@ func TestServiceDeleteRejectsNotOwner(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "alice comment"})
 	if err != nil {
 		t.Fatalf("create comment: %v", err)
@@ -569,7 +570,7 @@ func TestServiceDeleteRejectsNotFound(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	err := service.Delete(testCommentContext("user_alice"), DeleteCommentRequest{CommentID: "nonexistent_comment"})
 	if !errors.Is(err, ErrCommentNotFound) {
 		t.Fatalf("expected ErrCommentNotFound, got %v", err)
@@ -581,7 +582,7 @@ func TestServiceDeleteHappyPath(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "to be deleted"})
 	if err != nil {
 		t.Fatalf("create comment: %v", err)
@@ -607,7 +608,7 @@ func TestServiceDeleteIdempotentNoOp(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "to be deleted"})
 	if err != nil {
 		t.Fatalf("create comment: %v", err)
@@ -639,7 +640,7 @@ func TestServiceDeleteOnlyAuthor(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "alice comment"})
 	if err != nil {
 		t.Fatalf("create comment: %v", err)
@@ -683,7 +684,7 @@ func TestListRepliesRejectsWhenMomentInvisible(t *testing.T) {
 	repo := NewInMemoryRepository()
 	// 可见桩：让 Create 顺利落库一条父评论（带一条回复）。
 	visibleMoments := &momentProviderStub{exists: true, commentableFound: true, commentable: true, visibleFound: true, visible: true}
-	service := NewServiceWithDeps(repo, visibleMoments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, visibleMoments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	ctx := testCommentContext("user_alice")
 	parent, err := service.Create(ctx, CreateCommentRequest{MomentID: "moment_private", Content: "parent"})
 	if err != nil {
@@ -694,7 +695,7 @@ func TestListRepliesRejectsWhenMomentInvisible(t *testing.T) {
 	}
 	// 不可见桩：同一瞬间对其他 viewer 变为 private/软删。
 	invisibleMoments := &momentProviderStub{exists: true, commentableFound: true, commentable: true, visibleFound: true, visible: false}
-	invisibleService := NewServiceWithDeps(repo, invisibleMoments, notify.NewService(), nil, nil, nil)
+	invisibleService := NewServiceWithDeps(repo, invisibleMoments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	_, err = invisibleService.ListReplies(testCommentContext("user_mallory"), CommentRepliesRequest{CommentID: parent.CommentID})
 	if !errors.Is(err, ErrCommentNotFound) {
 		t.Fatalf("expected ErrCommentNotFound for invisible moment replies, got %v", err)
@@ -704,7 +705,7 @@ func TestListRepliesRejectsWhenMomentInvisible(t *testing.T) {
 func TestCreateCommentRejectsOverlongContent(t *testing.T) {
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true, visibleFound: true, visible: true}
-	service := NewServiceWithDeps(repo, moments, notify.NewService(), nil, nil, nil)
+	service := NewServiceWithDeps(repo, moments, notify.NewServiceWithRepo(notifytest.New()), nil, nil, nil)
 	long := strings.Repeat("评", defaultCommentMaxRunes+1)
 	if _, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_1", Content: long}); !errors.Is(err, ErrCommentTooLong) {
 		t.Fatalf("expected ErrCommentTooLong, got %v", err)

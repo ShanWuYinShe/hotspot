@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/modules/notify"
+	notifytest "hotspot/backend-go/internal/modules/notify/notifytest"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -347,7 +348,7 @@ func TestDismissGroupUsesGroupIDAndBroadcastsDismissedEvent(t *testing.T) {
 func TestJoinApprovalSendsApplicationNotification(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	repo := NewInMemoryRepository()
 	service := NewServiceWithDeps(repo, notify.NewServiceWithRepo(notificationRepo), nil)
 	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})
@@ -382,7 +383,7 @@ func TestJoinApprovalSendsApplicationNotification(t *testing.T) {
 func TestInviteAndAcceptFlowSendsNotifications(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	repo := NewInMemoryRepository()
 	service := NewServiceWithDeps(repo, notify.NewServiceWithRepo(notificationRepo), nil)
 	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})
@@ -433,7 +434,7 @@ func TestInviteAndAcceptFlowSendsNotifications(t *testing.T) {
 func TestApproveApplicationSendsAcceptedNotification(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	repo := NewInMemoryRepository()
 	service := NewServiceWithDeps(repo, notify.NewServiceWithRepo(notificationRepo), nil)
 	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})

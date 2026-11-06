@@ -11,6 +11,7 @@ import (
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/notify"
+	notifytest "hotspot/backend-go/internal/modules/notify/notifytest"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
@@ -971,7 +972,7 @@ func TestServiceBatchGetPropagatesBatchError(t *testing.T) {
 // ——不落 new_follower 通知、不广播实时事件。此前 upsert 恒成功，反复
 // follow 会每轮重复通知。
 func TestServiceFollowSkipsNotificationWhenAlreadyFollowing(t *testing.T) {
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	newSvc := func(repo *stubUserRepo) *Service {
 		svc := NewServiceWithDeps(repo, notify.NewServiceWithRepo(notificationRepo), nil)
 		svc.SetContentProviders(repo, repo)

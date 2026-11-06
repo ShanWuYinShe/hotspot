@@ -14,6 +14,7 @@ import (
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/notify"
+	notifytest "hotspot/backend-go/internal/modules/notify/notifytest"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -408,7 +409,7 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 		t.Fatalf("unexpected common tags: %#v", openResp.Data.User.SocialContext)
 	}
 
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	serviceWithNotifications := NewServiceWithDeps(service.repo, notify.NewServiceWithRepo(notificationRepo), nil)
 	if err := serviceWithNotifications.Follow(ctx, "user_bob", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow with notifications: %v", err)
@@ -457,7 +458,7 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 		t.Fatalf("seed reverse follow: %v", err)
 	}
 
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	serviceWithNotifications := NewServiceWithDeps(repo, notify.NewServiceWithRepo(notificationRepo), nil)
 	aliceSink := &testRealtimeSink{}
 	bobSink := &testRealtimeSink{}
@@ -529,7 +530,7 @@ func TestFollowCarriesSourceIntoNotificationAndRealtime(t *testing.T) {
 		t.Fatalf("put bob settings: %v", err)
 	}
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
-	notificationRepo := notify.NewInMemoryRepository()
+	notificationRepo := notifytest.New()
 	serviceWithNotifications := NewServiceWithDeps(repo, notify.NewServiceWithRepo(notificationRepo), nil)
 	bobSink := &testRealtimeSink{}
 	hub.RegisterUser("user_bob", "sess_bob", bobSink)

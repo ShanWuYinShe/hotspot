@@ -303,6 +303,28 @@ func TestModulesDoNotConstructOtherModulesRepositories(t *testing.T) {
 	})
 }
 
+// TestModulesDoNotShipInMemoryRepositories 固化架构审计 P0-2 成果：模块生产
+// 代码（非 _test.go）不得再定义内存仓储。内存实现只允许存在于 *_test.go 或
+// 显式测试支持包（如 notify/notifytest）；新增生产内存实现会立即失败。
+func TestModulesDoNotShipInMemoryRepositories(t *testing.T) {
+	root := backendRoot(t)
+	moduleFiles(t, root, func(module, path string) {
+		if strings.Contains(filepath.Base(path), "repo_memory") {
+			t.Errorf("模块生产代码仍包含内存仓储文件：%s（模块 %s）。请迁移到 *_test.go（P0-2）。",
+				strings.TrimPrefix(path, root+"/"), module)
+			return
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		if strings.Contains(string(content), "func NewInMemoryRepository(") {
+			t.Errorf("模块生产代码定义内存仓储构造函数：%s（模块 %s）。生产装配必须只接受显式 PG 依赖（P0-2）。",
+				strings.TrimPrefix(path, root+"/"), module)
+		}
+	})
+}
+
 // TestCrossModuleRepoConstructionDetection 用最小样例验证检测器本身有效
 // （防止扫描逻辑空转导致门禁形同虚设）。
 func TestCrossModuleRepoConstructionDetection(t *testing.T) {

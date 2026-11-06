@@ -2660,3 +2660,27 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
 - 累计 16/17 模块完成内存仓储迁移（仅剩 notify）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第十五批）：notify 内存仓储迁入测试 + P0-2 完成（2026-11-07）
+
+最后一块内存双实现：notify（repo_memory.go 约 190 行，8 个跨包测试文件、
+36 处构造引用）。
+
+- 新增 `internal/modules/notify/notifytest` 测试支持包：集中提供
+  notify.Repository 的内存实现（Append/AppendMany/AppendBatchPerUser/
+  List/UnreadCount/MarkAsRead/MarkAllRead/PruneReadBefore），只被 *_test.go
+  引用，不进入服务端二进制；避免 8 个消费者各自复制易漂移的假实现。
+- notify/repo_memory.go → *_test.go；生产复用 bucket 分类函数提取到
+  repo_helpers.go；生产便捷构造 notify.NewService()、moments.
+  NewServiceWithRepo、groups.NewService/NewServiceWithRepo（内部构造内存仓储/
+  notify 默认实现）全部移入各自测试 helper，生产装配只接受显式依赖。
+- 8 个消费者（comments/moments/admin/groups/users）测试改用
+  notify.NewServiceWithRepo(notifytest.New())，List 断言语义不变。
+- notify 真实覆盖率 78.1%。
+- archtest 新增 TestModulesDoNotShipInMemoryRepositories：扫描模块生产代码，
+  出现 repo_memory* 文件或 NewInMemoryRepository 定义即失败，固化 P0-2 成果。
+
+**P0-2 完成：17/17 模块内存仓储全部迁出生产构建**（28 个 *_impl_test.go；
+生产代码 grep 已无 NewInMemoryRepository 引用）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

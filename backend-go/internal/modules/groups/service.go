@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/platform/actor"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -124,10 +123,6 @@ type groupNotificationWriter interface {
 	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant types.UserInfo, groupID string, groupName string, applicationID string, message *string) (string, error)
 	AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) (string, error)
 	AppendGroupApplicationRejected(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string, reason *string) (string, error)
-}
-
-func NewServiceWithRepo(repo Repository) *Service {
-	return NewServiceWithDeps(repo, notify.NewService(), nil)
 }
 
 func NewServiceWithDeps(repo Repository, notificationWriter groupNotificationWriter, actorProvider actor.Provider) *Service {
