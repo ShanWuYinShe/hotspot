@@ -58,10 +58,10 @@
   --cst-motion-ambient: 24000ms;
   --cst-motion-ambient-slow: 36000ms;
   /* 氛围画布颗粒（ambient grain）磨砂质感层透明度：
-     为连续画布与半透明浮层注入自然细致的触觉微磨砂颗粒感（Tactile Matte Texture）。
-     从原抗色阶台阶的 0.012（肉眼不可见）提升至微磨砂质感档位（0.045 / 暗色 0.055），
-     既清晰呈现高级纸质/毛玻璃磨砂质感，又避免数码噪点干扰或画面脏感。 */
-  --cst-ambient-grain-opacity: 0.045;
+     微喷砂阳极氧化金属质感（Bead-blasted Satin Metal Texture）：
+     提供细腻、均匀、温润的触觉微晶微粒，避免数码噪点干扰或画面脏感，
+     兼具平滑金属板面的柔和漫射与高级微颗粒触感。 */
+  --cst-ambient-grain-opacity: 0.022;
   --cst-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   /* 弹簧曲线（overshoot）：FAB、toggle 滑块、地图标记放大、sheet 拖拽回弹等
      「有弹性」的入场/位移反馈。禁止组件内联 cubic-bezier 字面量。 */
@@ -69,7 +69,7 @@
 }
 
 .dark {
-  --cst-ambient-grain-opacity: 0.055;
+  --cst-ambient-grain-opacity: 0.026;
 }
 
 /* ── Backdrop blur scale — 毛玻璃模糊半径（3 档强制收敛）─────────────

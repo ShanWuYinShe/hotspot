@@ -251,7 +251,7 @@
   --cst-palette-map-group: #88B85A;
   --cst-palette-map-moment: #C4A75A;
   --cst-palette-overlay-strong: rgba(0, 0, 0, 0.54);
-  --cst-palette-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --cst-palette-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26);
   --cst-palette-shadow-btn: 0 0 0 1.5px rgba(82, 184, 120, 0.32);
 
   /* ── 透明度档位（dark）── */

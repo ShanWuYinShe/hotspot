@@ -27,7 +27,7 @@
      透明度派生（border/accent-soft/hover）必须随主色同步改十进制 RGB，否则色相漂移 */
   --cst-palette-accent-primary: #2B5EB2;
   --cst-palette-glow: rgba(0, 0, 0, 0);
-  --cst-palette-shadow-light: rgba(255, 255, 255, 1);
+  --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
   --cst-palette-shadow-dark: rgba(0, 0, 0, 0.08);
   --cst-palette-border: rgba(43, 94, 178, 0.18);
   --cst-palette-border-pressed: rgba(43, 94, 178, 0.32);
@@ -224,7 +224,7 @@
   --cst-palette-map-group: #34D399;
   --cst-palette-map-moment: #FB923C;
   --cst-palette-overlay-strong: rgba(0, 4, 12, 0.65);
-  --cst-palette-shadow-card: 0 2px 10px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --cst-palette-shadow-card: 0 2px 10px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
   --cst-palette-shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.2);
 
   /* ── 透明度档位（dark）── */
