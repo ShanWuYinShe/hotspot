@@ -4,10 +4,12 @@
 	import UnreadBadge from '@/components/shared/UnreadBadge.svelte';
 
 	// 移动/平板底部悬浮孤岛导航项（Floating Dock Tab）：
-	// - flex-1 均分可用宽度，触控热区充实稳健
-	// - 选中态：图标 + 文字收进温润有厚度的 accent-soft 软质触觉胶囊（形状 + semibold 双重信号），
-	//   提供充实扎实的踏实感（不依赖单薄线条或纯色块），高质感微投影与微内嵌光泽
-	// - 图标尺寸 25px，未选 1.85 笔画 / 选中 2.25 笔画，杜绝单薄空洞感
+	// - flex-1 均分可用宽度，触控热区充实稳健（触控高度 ≥44px）
+	// - 纯净优雅的 Content-First 选中态：
+	//   * 废除沉重方正的背景方块/圆圈贴片，保持悬浮 Dock 通透呼吸感
+	//   * 选中项图标与文字统一为高凝聚力品牌主色 text-accent-default
+	//   * 图标 scale-110 微放大 + strokeWidth 2.25 笔画加粗，提供充实视觉锚点
+	//   * 底部精致水平微胶囊指示条（h-0.75 w-3.5 rounded-full bg-accent-default），切换时平滑淡入展开
 	// - count：可选未读数气泡，悬挂图标右上角
 
 	let {
@@ -36,21 +38,19 @@
 	onclick={onClick}
 >
 	<div
-		class={cn(
-			'relative flex flex-col items-center justify-center gap-0.5 rounded-xl px-2.5 sm:px-3 py-1 transition-all duration-standard',
-			isActive
-				? 'bg-accent-soft text-text-accent-on-soft shadow-2xs ring-1 ring-accent-border/30'
-				: 'text-text-secondary hover:text-text-primary hover:bg-surface-primary/40'
-		)}
+		class="relative flex flex-col items-center justify-center gap-1 rounded-xl px-2 sm:px-3 py-1 transition-colors duration-standard hover:bg-surface-primary/40"
 	>
+		<!-- 图标区 -->
 		<span class="relative flex items-center justify-center">
 			<Icon
 				style="width:{iconSize / 16}rem;height:{iconSize / 16}rem;"
 				class={cn(
-					'transition-transform duration-standard',
-					isActive ? 'scale-105 text-accent-default' : 'text-text-secondary group-hover:text-text-primary'
+					'transition-all duration-snappy',
+					isActive
+						? 'scale-110 -translate-y-0.5 text-accent-default'
+						: 'scale-100 text-text-secondary group-hover:text-text-primary'
 				)}
-				strokeWidth={isActive ? 2.25 : 1.85}
+				strokeWidth={isActive ? 2.25 : 1.75}
 			/>
 			{#if count > 0}
 				<span class="absolute -right-2.5 -top-1">
@@ -58,15 +58,27 @@
 				</span>
 			{/if}
 		</span>
+
+		<!-- 文字区 -->
 		<span
 			class={cn(
-				'text-xs leading-tight tracking-tight transition-colors duration-standard',
+				'text-xs leading-none tracking-tight transition-colors duration-standard',
 				isActive
-					? 'font-semibold text-text-accent-on-soft'
+					? 'font-semibold text-accent-default'
 					: 'font-medium text-text-secondary group-hover:text-text-primary'
 			)}
 		>
 			{label}
 		</span>
+
+		<!-- 底部精致微胶囊指示条（占位防抖动，选中时平滑呼吸展开） -->
+		<span
+			data-nav-indicator
+			class={cn(
+				'h-0.75 w-3.5 rounded-full bg-accent-default shadow-[0_1px_4px_rgba(var(--cst-palette-accent-primary),0.35)] transition-all duration-snappy',
+				isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'
+			)}
+			aria-hidden="true"
+		></span>
 	</div>
 </button>

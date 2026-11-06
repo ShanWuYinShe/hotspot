@@ -20,36 +20,39 @@
 	let { data }: { data: HomeFeedData } = $props();
 </script>
 
-<div class="flex flex-col flex-1 min-h-full pb-36 px-4 max-w-4xl md:max-w-5xl mx-auto w-full">
-	<!-- 平板端顶栏：适度放大触控热区，宽屏居中，不占全宽大留白 -->
-	<div class="bg-surface-page/80 backdrop-blur-md sticky top-0 z-20 pb-3 pt-2">
-		<div class="flex items-center justify-between py-2">
-			<div class="flex items-center gap-2.5">
-				<img src={imgHotSpot} decoding="async" alt="HotSpot" class="size-7 rounded-full object-cover shadow-xs" />
-				<span class="text-lg font-bold tracking-tight text-text-primary">HotSpot</span>
+<div class="flex flex-col flex-1 min-h-full pb-36 w-full">
+	<!-- 平板端顶栏：满宽毛玻璃背景吸顶，内部元素居中对齐栅格轴 -->
+	<div class="w-full bg-surface-page/80 backdrop-blur-md sticky top-0 z-20 pb-3 pt-2">
+		<div class="w-full max-w-4xl md:max-w-5xl mx-auto px-4">
+			<div class="flex items-center justify-between py-2">
+				<div class="flex items-center gap-2.5">
+					<img src={imgHotSpot} decoding="async" alt="HotSpot" class="size-7 rounded-full object-cover shadow-xs" />
+					<span class="text-lg font-bold tracking-tight text-text-primary">HotSpot</span>
+				</div>
+				<h1 class="sr-only">首页</h1>
+				<div class="flex items-center gap-2">
+					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
+					<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
+				</div>
 			</div>
-			<h1 class="sr-only">首页</h1>
-			<div class="flex items-center gap-2">
-				<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
-				<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
+			<div class="flex justify-center mt-1">
+				<TabBar
+					variant="segmented"
+					size="md"
+					items={[
+						{ id: 'discover', label: '为你推荐' },
+						{ id: 'following', label: '正在关注' }
+					]}
+					value={data.activeTab}
+					onChange={(id) => data.setTab(id as any)}
+					class="w-full max-w-sm"
+				/>
 			</div>
-		</div>
-		<div class="flex justify-center mt-1">
-			<TabBar
-				variant="segmented"
-				size="md"
-				items={[
-					{ id: 'discover', label: '为你推荐' },
-					{ id: 'following', label: '正在关注' }
-				]}
-				value={data.activeTab}
-				onChange={(id) => data.setTab(id as any)}
-				class="w-full max-w-sm"
-			/>
 		</div>
 	</div>
 
-	<div use:contentFade={data.currentLoading} class="min-h-[50vh] flex flex-col justify-between">
+	<div class="w-full max-w-4xl md:max-w-5xl mx-auto px-4 flex-1 flex flex-col">
+		<div use:contentFade={data.currentLoading} class="min-h-[50vh] flex flex-col justify-between">
 		{#if data.activeTab === 'following' && auth.status !== 'authenticated'}
 			<div class="my-8 rounded-lg bg-surface-island p-8 text-center shadow-xs">
 				<div class="mx-auto flex size-14 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft mb-3.5">
@@ -185,4 +188,5 @@
 			</div>
 		{/if}
 	</div>
+</div>
 </div>
