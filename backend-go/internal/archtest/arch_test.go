@@ -88,29 +88,11 @@ var tableOwners = map[string]string{
 // "模块:表"。新增写其他模块表必须显式登记；删除条目是纯收益。
 var crossModuleWritesAllowlist = map[string]string{
 	// admin：审核/管理动作需要直接改多域状态（后续应由各模块暴露管理接口）。
-	"admin:auth_sessions":      "封禁用户时逐条撤销会话",
-	"admin:comments":           "管理员删除评论",
-	"admin:group_applications": "管理员处理入群申请",
-	"admin:group_invites":      "管理员清理群邀请",
-	"admin:group_messages":     "管理员撤回群消息",
-	"admin:groups":             "管理员解散/封禁群",
-	"admin:moment_tags":        "管理员删除瞬间标签",
-	"admin:moments":            "管理员删除瞬间",
-	"admin:private_messages":   "管理员撤回私聊消息",
-	"admin:reports":            "管理员处理举报",
-	"admin:users":              "管理员封禁/封号",
+	"admin:moment_tags": "管理员删除瞬间标签",
+	"admin:reports":     "管理员处理举报",
 	// auth：注册/设置联动（auth 需在同一流程写 users/user_settings）。
 	"auth:user_settings": "注册默认设置",
 	"auth:users":         "注册建用户/改用户类型",
-	// users：账号升级/注销/隐私设置联动其它模块状态。
-	"users:auth_accounts":           "账号升级写登录凭证",
-	"users:auth_sessions":           "注销/封禁撤销会话",
-	"users:group_members":           "注销时退出群组",
-	"users:media_upload_sessions":   "注销时清理未完成上传",
-	"users:moment_favorites":        "注销时清理收藏",
-	"users:notifications":           "注销时清理通知",
-	"users:private_chat_read_state": "注销时清理已读位点",
-	"users:private_chat_user_state": "注销时清理会话状态",
 	// privatemessages：发消息时更新会话摘要/未读数（私聊会话表归属 privatechats）。
 	"privatemessages:private_chats": "发消息更新会话最后消息/未读",
 }

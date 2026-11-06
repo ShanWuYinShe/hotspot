@@ -97,34 +97,18 @@ SET presence_status = $2,
     last_online = NOW()
 WHERE user_id = $1`
 
-	queryDeleteAuthAccountByUserID = `DELETE FROM auth_accounts WHERE user_id = $1`
-
-	queryRevokeAllUserSessions = `DELETE FROM auth_sessions WHERE user_id = $1`
-
 	queryDeleteUserSettingsByUserID = `DELETE FROM user_settings WHERE user_id = $1`
 
 	queryDeleteUserRelations = `DELETE FROM user_relations WHERE user_id = $1 OR target_user_id = $1`
 
 	queryDeleteUserProfileTagsByUserID = `DELETE FROM user_profile_tags WHERE user_id = $1`
 
-	queryDeleteUserFavorites = `DELETE FROM moment_favorites WHERE user_id = $1`
-
-	queryDeleteUserNotifications = `DELETE FROM notifications WHERE user_id = $1`
-
 	// 注销只清己方的私聊视角数据（per-user 状态行），private_chats 与
 	// private_messages 保留：messages FK CASCADE 在 private_chats 上，删聊天
 	// 行会把对方视角的整段对话（含对方发出的消息）一并物理删除，违反 spec
 	// api_spec_user.md「维护其他用户视角的……对话完整性」。对方视角里发送者
-	// 经 users 行匿名化显示为「已注销用户」；注销方凭证/会话已清，无法再登录。
-	queryDeleteUserChatReadState = `DELETE FROM private_chat_read_state WHERE user_id = $1`
-
-	queryDeleteUserChatUserState = `DELETE FROM private_chat_user_state WHERE user_id = $1`
 
 	// 注销退出所有群（group_members 行删除即释放名额）；已发布群消息按内容
-	// 保留策略不删，发送者显示为「已注销用户」。
-	queryDeleteUserGroupMemberships = `DELETE FROM group_members WHERE user_id = $1`
-
-	queryDeleteUserUploadSessions = `DELETE FROM media_upload_sessions WHERE user_id = $1`
 
 	queryGetUserSettings = `
 SELECT privacy_level, location_visible, presence_visible, social_lists_visible, groups_visible, reacted_moments_visible, stats_visible, allow_follow, allow_private_chat, searchable, phone_searchable, nickname_searchable, location_searchable, COALESCE(nearby_moment_notify, FALSE)

@@ -276,6 +276,18 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		}
 		return err
 	}
+	// 账户注销级联编排（组合根）：用户数据按归属模块清理，users 只负责自身行
+	// 与匿名化（架构审计 P0-4：数据所有权）。
+	usersModule.Service.SetAccountPurger(accountPurgeCoordinator{targets: []accountPurgeTarget{
+		authModule.Service(),
+		groupsModule.Service,
+		mediaModule.Service,
+		momentsModule.Service,
+		notificationService,
+		pcModule.Service(),
+		pmModule.Service(),
+	}})
+
 	return []modulekit.Module{
 		adminModule,
 		authModule,

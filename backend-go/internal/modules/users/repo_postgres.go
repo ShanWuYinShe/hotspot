@@ -73,22 +73,17 @@ func (r *PostgresRepository) DeleteProfile(ctx context.Context, userID string) e
 		return persistence.ErrNotImplemented
 	}
 	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		// 仅处理 users 模块归属的行（users/user_settings/user_relations/
+		// user_profile_tags）；其余模块的行由 users.Service 经 bootstrap 编排的
+		// PurgeLinkedData 调用归属模块清理（架构审计 P0-4：数据所有权）。
 		for _, stmt := range []struct {
 			sql string
 			arg any
 		}{
 			{queryAnonymizeUserProfile, userID},
-			{queryDeleteAuthAccountByUserID, userID},
-			{queryRevokeAllUserSessions, userID},
 			{queryDeleteUserSettingsByUserID, userID},
 			{queryDeleteUserRelations, userID},
 			{queryDeleteUserProfileTagsByUserID, userID},
-			{queryDeleteUserFavorites, userID},
-			{queryDeleteUserNotifications, userID},
-			{queryDeleteUserChatReadState, userID},
-			{queryDeleteUserChatUserState, userID},
-			{queryDeleteUserGroupMemberships, userID},
-			{queryDeleteUserUploadSessions, userID},
 		} {
 			if err := r.execInTx(txCtx, stmt.sql, stmt.arg); err != nil {
 				return fmt.Errorf("users.DeleteProfile %q: %w", stmt.sql, err)

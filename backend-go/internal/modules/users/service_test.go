@@ -461,6 +461,8 @@ func TestServiceUpdateLocationHappyPath(t *testing.T) {
 func TestServiceDeleteAccountHappyPath(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
 	svc.SetContentProviders(&stubUserRepo{}, &stubUserRepo{})
+	purger := &stubAccountPurger{}
+	svc.SetAccountPurger(purger)
 	err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -483,6 +485,7 @@ func TestServiceDeleteAccountRequiresAuth(t *testing.T) {
 func TestServiceDeleteAccountAnonymizesContentAuthor(t *testing.T) {
 	repo := NewInMemoryRepository()
 	svc := NewServiceWithRepo(repo)
+	svc.SetAccountPurger(&stubAccountPurger{})
 	_ = repo.PutProfile(context.Background(), MyProfile{UserID: "u1", Nickname: "Alice", AvatarURL: "https://cdn.example/a.png", UserType: UserTypeNormal, Location: Location{LocationName: "南天门"}})
 
 	err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"})
@@ -535,6 +538,7 @@ func TestServiceDeleteAccountProceedsWhenOwningNone(t *testing.T) {
 	repo := &stubUserRepo{ownedCount: 0}
 	svc := NewServiceWithRepo(repo)
 	svc.SetContentProviders(repo, repo)
+	svc.SetAccountPurger(&stubAccountPurger{})
 	if err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -542,8 +546,37 @@ func TestServiceDeleteAccountProceedsWhenOwningNone(t *testing.T) {
 
 func TestServiceDeleteAccountProceedsWithoutProvider(t *testing.T) {
 	svc := NewServiceWithRepo(&stubUserRepo{})
+	svc.SetAccountPurger(&stubAccountPurger{})
 	if err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// stubAccountPurger 账户注销级联编排桩：记录调用并可按需注入错误。
+type stubAccountPurger struct {
+	err     error
+	userIDs []string
+}
+
+func (p *stubAccountPurger) PurgeLinkedData(_ context.Context, userID string) error {
+	p.userIDs = append(p.userIDs, userID)
+	return p.err
+}
+
+// TestServiceDeleteAccountAbortsWhenPurgeFails：级联清理失败时必须中止注销且
+// 不匿名化 users 行（否则账号已不可用却残留跨模块数据，且无法重试）。
+func TestServiceDeleteAccountAbortsWhenPurgeFails(t *testing.T) {
+	repo := NewInMemoryRepository()
+	svc := NewServiceWithRepo(repo)
+	_ = repo.PutProfile(context.Background(), MyProfile{UserID: "u1", Nickname: "Alice"})
+	purgeErr := errors.New("purge boom")
+	svc.SetAccountPurger(&stubAccountPurger{err: purgeErr})
+	if err := svc.DeleteAccount(userCtx("u1"), DeleteAccountRequest{Confirmation: "DELETE_MY_ACCOUNT"}); !errors.Is(err, purgeErr) {
+		t.Fatalf("expected purge error, got %v", err)
+	}
+	profile, found, err := repo.GetProfile(context.Background(), "u1")
+	if err != nil || !found || profile.Nickname != "Alice" || profile.IsDeleted {
+		t.Fatalf("profile must stay untouched on purge failure: %#v found=%v err=%v", profile, found, err)
 	}
 }
 

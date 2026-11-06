@@ -33,11 +33,11 @@ func countIT(t *testing.T, factory *persistence.Factory, sql string, args ...any
 	return n
 }
 
-// TestPostgresIT_DeleteProfilePreservesPeerChatAndClearsPII 注销语义双断言
-// （spec api_spec_user.md「数据保留策略」）：
-//  1. 对话完整性：注销方 peer 的私聊消息与会话状态保留（此前 DELETE
-//     private_chats 级联摧毁双方全部记录，属契约违例）；
-//  2. 删除权：注销方 users 行的 IP/定位 PII 清除。
+// TestPostgresIT_DeleteProfileAnonymizesPIIAndLeavesLinkedData 注销语义：
+// users 仓储只处理本模块归属行（架构审计 P0-4）：
+//  1. users 行匿名化、IP/定位 PII 清除；
+//  2. 其它模块的行（私聊/群成员等）不由 users 仓储删除——由 users.Service 经
+//     bootstrap 编排各归属模块 PurgeUserData 清理（见 test/integration 用例）。
 func TestPostgresIT_DeleteProfilePreservesPeerChatAndClearsPII(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
@@ -74,16 +74,12 @@ func TestPostgresIT_DeleteProfilePreservesPeerChatAndClearsPII(t *testing.T) {
 		if got := countIT(t, txFactory, `SELECT COUNT(*) FROM private_chat_read_state WHERE user_id = $1`, bob); got != 1 {
 			t.Fatalf("peer read state survived = %d, want 1", got)
 		}
-		// 注销方视角数据清除。
-		if got := countIT(t, txFactory, `SELECT COUNT(*) FROM private_chat_user_state WHERE user_id = $1`, alice); got != 0 {
-			t.Fatalf("deleted user chat state rows = %d, want 0", got)
+		// users 仓储不再触碰其它模块的行（归属模块清理由编排层负责）。
+		if got := countIT(t, txFactory, `SELECT COUNT(*) FROM private_chat_user_state WHERE user_id = $1`, alice); got != 1 {
+			t.Fatalf("users repo must not delete foreign rows: chat state = %d, want 1 (owned by privatechats)", got)
 		}
-		// 群成员身份清除，群与其余成员不受影响。
-		if got := countIT(t, txFactory, `SELECT COUNT(*) FROM group_members WHERE user_id = $1`, alice); got != 0 {
-			t.Fatalf("deleted user group memberships = %d, want 0", got)
-		}
-		if got := countIT(t, txFactory, `SELECT COUNT(*) FROM group_members WHERE user_id = $1`, bob); got != 1 {
-			t.Fatalf("peer group membership = %d, want 1", got)
+		if got := countIT(t, txFactory, `SELECT COUNT(*) FROM group_members WHERE user_id = $1`, alice); got != 1 {
+			t.Fatalf("users repo must not delete foreign rows: group membership = %d, want 1 (owned by groups)", got)
 		}
 
 		// 删除权：IP/定位 PII 清除 + 匿名化占位。

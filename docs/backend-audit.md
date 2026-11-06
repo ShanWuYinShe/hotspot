@@ -2328,3 +2328,27 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   封禁构造入口（仅内存实现，生产写路径已归属 users）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+
+## Batch C（第七批）：账户注销级联按归属模块拆分（2026-11-06）
+
+架构审计 P0-4 最大一处债务（users 注销直写 8 张跨模块表）收敛：
+
+- 7 个归属模块新增 `PurgeUserData`（仓储 SQL + Service 入口，type-assert 可选
+  实现；内存/测试仓储无跨模块行时 no-op）：auth（凭证+会话）、groups（成员）、
+  media（上传会话）、moments（收藏）、notify（通知）、privatechats（会话视角
+  状态）、privatemessages（已读位点）。幂等，可整体重试。
+- **users 仓储只处理归属行**：users 匿名化 + user_settings/user_relations/
+  user_profile_tags；其余行不再由 users 直接 DELETE。
+- **编排在组合根**：新增 `bootstrap.accountPurgeCoordinator`（固定顺序调用各模块，
+  失败即中止）；users.Service 经 `AccountPurger` 接口注入。执行顺序为「先清
+  归属模块数据、最后匿名化 users 行」——级联失败时账号仍可重试，不会出现
+  已不可用却残留跨模块数据。
+- 架构债务从 17 条降至 5 条（仅剩：admin:moment_tags、admin:reports、
+  auth:users、auth:user_settings、privatemessages:private_chats；均为跨切面
+  注册/审核/共享键表语义，已显式登记）。
+- 测试：users 补「清理失败中止且不匿名化」用例；原 PG 注销 IT 改为验证
+  users 仓储不再触碰外部行；新增 test/integration 逐模块真实库用例（目标用户
+  行删除、peer 行保留、重复执行幂等）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

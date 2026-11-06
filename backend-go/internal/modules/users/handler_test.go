@@ -1520,7 +1520,9 @@ func TestHandlerUpdateLocationRejectsEmptyLocationName(t *testing.T) {
 // --- DeleteAccount tests ---
 
 func TestDeleteAccountHandlerReturnsSuccess(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	svc := NewServiceWithRepo(NewInMemoryRepository())
+	svc.SetAccountPurger(&stubAccountPurger{})
+	handler := NewHandler(svc)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
 	rr := httptest.NewRecorder()

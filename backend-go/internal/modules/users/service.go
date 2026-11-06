@@ -42,7 +42,10 @@ type AccountAvatarMediaResolver interface {
 }
 
 type Service struct {
-	repo          Repository
+	repo Repository
+	// accountPurger 账户注销级联编排（bootstrap 注入，跨模块清理归属各模块的
+	// 用户数据；nil 时注销拒绝执行，避免静默留下 PII）。
+	accountPurger AccountPurger
 	notifications userNotificationWriter
 	appConfig     appconfig.Source
 	// 跨模块读聚合（个人主页聚合），bootstrap 注入 groups/moments Service；
@@ -66,6 +69,14 @@ type Service struct {
 func (s *Service) SetAccountBanState(ctx context.Context, userID string, state AccountBanState) error {
 	return s.repo.SetAccountBanState(ctx, userID, state)
 }
+
+// AccountPurger 账户注销级联编排入口（bootstrap 实现：按模块归属清理用户数据）。
+type AccountPurger interface {
+	PurgeLinkedData(ctx context.Context, userID string) error
+}
+
+// SetAccountPurger 注入账户注销级联编排（bootstrap 装配）。
+func (s *Service) SetAccountPurger(p AccountPurger) { s.accountPurger = p }
 
 // SetAvatarMediaResolver 注入 avatar_file_id 归属校验实现（bootstrap 装配）。
 func (s *Service) SetAvatarMediaResolver(r AccountAvatarMediaResolver) { s.avatarMedia = r }
@@ -523,6 +534,16 @@ func (s *Service) DeleteAccount(ctx context.Context, req DeleteAccountRequest) e
 			op.Warn("owns groups")
 			return ErrOwnsGroups
 		}
+	}
+	// 先清理各归属模块的用户数据（幂等，失败中止且可整体重试），再匿名化
+	// users 行：避免级联失败后账号已不可用却残留跨模块数据。
+	if s.accountPurger == nil {
+		op.Fail(errors.New("users.delete_account: account purger not configured"))
+		return errors.New("users.delete_account: account purger not configured")
+	}
+	if err := s.accountPurger.PurgeLinkedData(ctx, principal.UserID); err != nil {
+		op.Fail(err)
+		return err
 	}
 	if err := s.repo.DeleteProfile(ctx, principal.UserID); err != nil {
 		op.Fail(err)
