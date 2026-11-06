@@ -139,3 +139,25 @@ backend-test 压测 DB CPU 成为瓶颈（p50 82ms）。
 |---|---|
 | 旧（相关 NOT EXISTS × 2） | 6.7 ms |
 | 新（CTE blocked + NOT IN） | **0.9 ms** |
+
+### 6.3 端点级回归（backend-test，c=10，5s，2026-11）
+
+合并 PGroonga + nearby 拉黑物化后，perf-smoke 8 端点（热点数据：hotspot_test
+累计 E2E 数据）实测：
+
+| 端点 | rps | p50 | p95 | p99 |
+|---|---|---|---|---|
+| users/account | 8864 | 1.0 | 2.0 | 2.9 |
+| system/bootstrap | 7435 | 1.2 | 2.3 | 3.3 |
+| notify/fetch | 12728 | 0.7 | 1.5 | 3.0 |
+| moments/fetch_following | 8460 | 1.1 | 2.1 | 3.2 |
+| moments/fetch_nearby | 743 | 7.1 | 54.8 | 60.4 |
+| users/search | 2161 | 3.6 | 9.3 | 26.8 |
+| moments/search | 6360 | 1.3 | 3.3 | 5.3 |
+| groups/search | 4431 | 1.8 | 4.6 | 11.6 |
+
+关键回归对比（同机同数据）：
+- moments/fetch_nearby：**134-158 rps / p50 82-85ms / p99 187ms** →
+  **743 rps / p50 7.1ms / p99 60ms**（约 5 倍吞吐、p50 约 11 倍）。
+- users/search（短中文关键词）：旧基线 570-637 rps / p99 65-68ms →
+  **2161 rps / p99 26.8ms**（约 3.5 倍）。

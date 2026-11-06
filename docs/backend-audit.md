@@ -2815,3 +2815,11 @@ NOT EXISTS 过滤双向拉黑，优化器对每个候选行各做一次 user_rel
   DB 单请求 CPU 显著下降，nearby 吞吐上限回到连接池/网络而非 DB。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+### Batch D 端点级验证（2026-11-07）
+
+perf-smoke 扩展至 8 端点并在 hotspot_test 累计数据上复测：
+- moments/fetch_nearby：拉黑过滤物化后 134-158 rps/p50 82-85ms →
+  743 rps/p50 7.1ms/p99 60.4ms（吞吐约 5 倍、p50 约 11 倍）。
+- users/search：PGroonga 后 570-637 rps/p99 65-68ms → 2161 rps/p99 26.8ms。
+- moments/search、groups/search 均稳定数千 rps、p99 < 12ms。
