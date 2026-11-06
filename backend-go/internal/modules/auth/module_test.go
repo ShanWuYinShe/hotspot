@@ -19,7 +19,7 @@ func newTestModule(t *testing.T) (*Module, context.CancelFunc) {
 	t.Helper()
 	cfg := config.Config{AuthTokenSecret: "ci-test-secret-key-at-least-32-bytes-long"}
 	ctx, cancel := context.WithCancel(context.Background())
-	m := NewModule(ctx, cfg, persistence.NewFactory(cfg), appconfig.NewStaticSource(cfg))
+	m := NewModule(ctx, cfg, persistence.NewFactory(cfg), appconfig.NewStaticSource(cfg), nil)
 	return m, cancel
 }
 

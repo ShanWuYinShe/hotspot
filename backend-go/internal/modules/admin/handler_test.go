@@ -230,10 +230,6 @@ func newMountedAdminRouter(t *testing.T) (http.Handler, func(string) string) {
 	})
 	module, _ := newTestModuleWithStore()
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: testAuthTokenSecret})
-	platformauth.SetDefaultService(authService)
-	t.Cleanup(func() {
-		platformauth.SetDefaultService(platformauth.NewService(config.Config{AuthTokenSecret: defaultAuthTokenSecret}))
-	})
 	router := chi.NewRouter()
 	module.Mount(router)
 	issueToken := func(userID string) string {
@@ -243,12 +239,13 @@ func newMountedAdminRouter(t *testing.T) (http.Handler, func(string) string) {
 		}
 		return result.AccessToken
 	}
-	return router, issueToken
+	// 根中间件显式注入认证/管理员依赖（替代全局 SetDefaultService/SetAdminChecker）。
+	guarded := platformauth.WithDependencies(authService, adminCheckStub{adminIDs: map[string]bool{"admin": true}})(router)
+	return guarded, issueToken
 }
 
 func TestAdminModerationRoutesAreMounted(t *testing.T) {
 	// 路由级测试走真实 AdminAccess 中间件：注入真实验证 stub（admin 为管理员）。
-	platformauth.SetAdminChecker(adminCheckStub{adminIDs: map[string]bool{"admin": true}})
 	router, issueToken := newMountedAdminRouter(t)
 	adminToken := issueToken("admin")
 

@@ -1,36 +1,51 @@
 package auth
 
 import (
+	"context"
 	"net/http"
-	"sync/atomic"
 
-	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 )
 
-// defaultService is written once at boot and read on every request, so guard
-// it with an atomic pointer instead of a bare package global (which races).
-var defaultService atomic.Pointer[Service]
-
-func init() {
-	defaultService.Store(NewService(config.Config{AuthTokenSecret: config.DevDefaultAuthTokenSecret()}))
+// requestDeps 是根中间件注入请求 context 的平台认证依赖：Service（验签/
+// 会话）与 AdminChecker（管理端判定）。不再有进程级 DefaultService 单例，
+// 同进程可装配多套 App。
+type requestDeps struct {
+	service      *Service
+	adminChecker AdminChecker
 }
 
-func SetDefaultService(service *Service) {
-	if service != nil {
-		defaultService.Store(service)
+type depsContextKey struct{}
+
+// WithDependencies 是根中间件：把装配期构造的认证依赖注入请求 context。
+func WithDependencies(service *Service, adminChecker AdminChecker) func(http.Handler) http.Handler {
+	deps := requestDeps{service: service, adminChecker: adminChecker}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), depsContextKey{}, deps)))
+		})
 	}
 }
 
-func DefaultService() *Service {
-	return defaultService.Load()
+func depsFromContext(ctx context.Context) requestDeps {
+	deps, _ := ctx.Value(depsContextKey{}).(requestDeps)
+	return deps
 }
+
+func serviceFromContext(ctx context.Context) *Service { return depsFromContext(ctx).service }
 
 func OptionalAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := WithPlatform(r.Context(), DetectPlatform(r, ""))
-		if principal, expiresAt, ok := defaultService.Load().AuthenticateRequest(ctx, r.Header.Get("Authorization"), ReadCookie(r, AccessTokenCookieName)); ok {
+		svc := serviceFromContext(r.Context())
+		if svc == nil {
+			// 未装配认证依赖时匿名降级（生产由根中间件 WithDependencies 注入）。
+			observability.L().Error("optional auth: auth service not wired")
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+		if principal, expiresAt, ok := svc.AuthenticateRequest(ctx, r.Header.Get("Authorization"), ReadCookie(r, AccessTokenCookieName)); ok {
 			ctx = WithPrincipal(ctx, principal)
 			ctx = WithAccessExpiry(ctx, expiresAt)
 			r = r.WithContext(ctx)
@@ -48,7 +63,13 @@ func OptionalAuth(next http.Handler) http.Handler {
 func RequiredAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := WithPlatform(r.Context(), DetectPlatform(r, ""))
-		svc := defaultService.Load()
+		svc := serviceFromContext(r.Context())
+		if svc == nil {
+			// 安全边界 fail-closed：生产装配漏注入时拒绝而不是放行。
+			observability.L().Error("required auth: auth service not wired", "method", r.Method, "uri", r.URL.RequestURI())
+			httpx.WriteCodeError(w, r, httpx.CodeInternalUnavailable, "服务暂时不可用")
+			return
+		}
 		principal, expiresAt, ok := svc.AuthenticateRequest(ctx, r.Header.Get("Authorization"), ReadCookie(r, AccessTokenCookieName))
 		if !ok {
 			hasHeader := r.Header.Get("Authorization") != ""

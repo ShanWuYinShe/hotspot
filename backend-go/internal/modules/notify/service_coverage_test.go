@@ -259,8 +259,10 @@ func TestNotifyModuleWiring(t *testing.T) {
 	// RequiredAuth 拦截（契约：HTTP 200 + 业务码 10100），证明路由组与
 	// 中间件链已挂上。
 	svcMod := NewModuleWithService(NewService())
-	svcRouter := chi.NewRouter()
-	svcMod.Mount(svcRouter)
+	svcMux := chi.NewRouter()
+	svcMod.Mount(svcMux)
+	// 根中间件显式注入平台认证服务（替代进程级 DefaultService）。
+	svcRouter := platformauth.WithDependencies(platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), nil)(svcMux)
 	rec := httptest.NewRecorder()
 	svcRouter.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/v1/notify/fetch", strings.NewReader("{}")))
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), strconv.Itoa(int(httpx.CodeUnauthorized))) {

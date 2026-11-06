@@ -57,7 +57,7 @@ func (r momentsFollowRelationReader) AuthorRelations(ctx context.Context, viewer
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
 	// 传 nil 缓存（*hotcache.Cache 的 nil 接收者方法均为 no-op miss）：测试辅助构建
 	// 不应创建带本地清扫协程的缓存实例，否则每次 BuildModules 都泄漏一个后台 goroutine。
-	modules, _ := BuildModulesWithRedisPinger(context.Background(), cfg, factory, nil, nil)
+	modules, _ := BuildModulesWithRedisPinger(context.Background(), cfg, factory, nil, nil, platformauth.NewServiceWithPersistence(cfg, factory))
 	return modules
 }
 
@@ -74,7 +74,7 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 // The second return value is the admin repository exposed as the platform-wide
 // ban checker (IsBanned); bootstrap hands it to the realtime handler so the WS
 // handshake enforces bans exactly like the HTTP RequiredAuth middleware.
-func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory *persistence.Factory, rdb *redis.Client, hotCache *hotcache.Cache) ([]modulekit.Module, admin.Repository) {
+func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory *persistence.Factory, rdb *redis.Client, hotCache *hotcache.Cache, platformAuth *platformauth.Service) ([]modulekit.Module, admin.Repository) {
 	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
 	ratelimit.SetSource(sharedAppConfig)
 	// 通知服务全应用单一实例：此前 moments/groups/users/admin 各自再建一份
@@ -200,7 +200,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// Construct auth + admin before the module slice so the admin repo's
 	// IsBanned can be wired into the platform auth Service (BanChecker),
 	// enforcing httpx.CodeAccountBanned for banned accounts on RequiredAuth endpoints.
-	authModule := auth.NewModule(ctx, cfg, factory, sharedAppConfig)
+	authModule := auth.NewModule(ctx, cfg, factory, sharedAppConfig, platformAuth)
 	authModule.SetProfileWriter(usersModule.Service)
 	// 数据保留期清理：已撤销会话（含 IP PII）与过期验证码行到期物理删除。
 	if cfg.RetentionSweepEnabled {
@@ -236,13 +236,12 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	reportsModule := reports.NewModule(factory)
 	adminModule.Service.SetReportAdminStore(reportsModule.Service)
 	reportsModule.Service.SetMessageSnapshotSource(reports.NewMessageSnapshotSource(gmModule.Service, pmModule.MessageService(), reportsMediaSource{svc: mediaModule.Service}))
-	if svc := platformauth.DefaultService(); svc != nil {
-		svc.SetBanChecker(adminModule.Repo)
+	if platformAuth != nil {
+		platformAuth.SetBanChecker(adminModule.Repo)
 		// 封禁缓存失效接线：admin 封禁/解封状态变更后即时失效平台 auth 的
 		// 进程内缓存（banCacheTTL 窗口内的撤销延迟归零）。
-		adminModule.Service.SetBanCacheInvalidator(svc.InvalidateBanCache)
+		adminModule.Service.SetBanCacheInvalidator(platformAuth.InvalidateBanCache)
 	}
-	platformauth.SetAdminChecker(adminModule.Repo)
 	// 首管理员引导（ADMIN_BOOTSTRAP_USER_ID，见 config.AdminBootstrapUserID）：
 	// admin_users 表为空时把指定已注册用户提权为超管，解决「授权端点要求已是
 	// 管理员」的鸡生蛋死锁。仅此一次成立——已有任意（未撤销）管理员即为 no-op。

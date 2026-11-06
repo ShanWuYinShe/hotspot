@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"hotspot/backend-go/internal/platform/worker"
@@ -14,52 +13,19 @@ import (
 // forever in long-lived processes that never read a given key again.
 const authSweepCadence = 10 * time.Minute
 
-var (
-	authSweeperMu      sync.Mutex
-	authSweeperCancel  context.CancelFunc
-	authSweeperStarted bool
-)
-
-// StartSweeper launches a background goroutine that periodically calls
-// Sweep on the default service's in-memory session and refresh stores, if
-// those stores are the in-memory implementations. It is safe to call from
-// bootstrap; calling it again while a sweeper is already running is a
-// no-op. The goroutine exits when ctx is cancelled.
-//
-// If the default service uses Postgres stores (production wiring) this is a
-// cheap no-op on each tick.
-func StartSweeper(ctx context.Context) {
-	authSweeperMu.Lock()
-	defer authSweeperMu.Unlock()
-	if authSweeperStarted {
-		return
+// StartSweeper 为显式传入的 Service 启动后台清扫（不再依赖进程级
+// DefaultService）：内存 session/refresh store 物理清理；Postgres store 走
+// 保留期清理。返回幂等的 stop。
+func StartSweeper(ctx context.Context, svc *Service) (stop func()) {
+	if svc == nil {
+		return func() {}
 	}
 	sweepCtx, cancel := context.WithCancel(ctx)
-	authSweeperCancel = cancel
-	authSweeperStarted = true
-	worker.GoRestartable("platformauth.sweeper", func() { runAuthSweeper(sweepCtx) })
+	worker.GoRestartable("platformauth.sweeper", func() { runAuthSweeper(sweepCtx, svc) })
+	return cancel
 }
 
-// StopSweeper cancels any running sweeper and is intended for tests.
-func StopSweeper() {
-	authSweeperMu.Lock()
-	if authSweeperCancel == nil {
-		authSweeperMu.Unlock()
-		return
-	}
-	authSweeperCancel()
-	authSweeperCancel = nil
-	authSweeperStarted = false
-	authSweeperMu.Unlock()
-}
-
-func runAuthSweeper(ctx context.Context) {
-	defer func() {
-		authSweeperMu.Lock()
-		authSweeperCancel = nil
-		authSweeperStarted = false
-		authSweeperMu.Unlock()
-	}()
+func runAuthSweeper(ctx context.Context, svc *Service) {
 	ticker := time.NewTicker(authSweepCadence)
 	defer ticker.Stop()
 	for {
@@ -67,13 +33,12 @@ func runAuthSweeper(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			sweepDefaultStores(time.Now().UTC())
+			sweepStores(svc, time.Now().UTC())
 		}
 	}
 }
 
-func sweepDefaultStores(now time.Time) {
-	svc := DefaultService()
+func sweepStores(svc *Service, now time.Time) {
 	if svc == nil {
 		return
 	}

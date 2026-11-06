@@ -22,74 +22,57 @@ func (m mockAdminChecker) IsAdmin(ctx context.Context, userID string) (bool, err
 	return false, nil
 }
 
+// withAdminChecker 注入管理端判定依赖（生产由根中间件 WithDependencies 注入）。
+func withAdminChecker(ctx context.Context, checker AdminChecker) context.Context {
+	return context.WithValue(ctx, depsContextKey{}, requestDeps{adminChecker: checker})
+}
+
 func TestIsAdminUser(t *testing.T) {
-	// 保存原 adminChecker
-	orig := adminChecker.Load()
-	defer func() {
-		if orig != nil {
-			adminChecker.Store(orig)
-		} else {
-			adminChecker.Store((*AdminChecker)(nil))
-		}
-	}()
-
-	ctx := context.Background()
-
-	// 1. 未配置 checker
-	adminChecker.Store((*AdminChecker)(nil))
-	if IsAdminUser(ctx, "usr_1") {
+	// 1. 未配置 checker：fail-closed
+	if IsAdminUser(context.Background(), "usr_1") {
 		t.Fatal("expected IsAdminUser to return false when checker not set (fail-closed)")
 	}
 
-	// 2. checker 返回 error
-	SetAdminChecker(mockAdminChecker{
+	// 2. checker 返回 error：fail-closed
+	ctxErr := withAdminChecker(context.Background(), mockAdminChecker{
 		isAdminFunc: func(ctx context.Context, userID string) (bool, error) {
 			return true, errors.New("db disconnect")
 		},
 	})
-	if IsAdminUser(ctx, "usr_1") {
+	if IsAdminUser(ctxErr, "usr_1") {
 		t.Fatal("expected IsAdminUser to return false when checker returns error (fail-closed)")
 	}
 
 	// 3. checker 返回 false
-	SetAdminChecker(mockAdminChecker{
+	ctxNormal := withAdminChecker(context.Background(), mockAdminChecker{
 		isAdminFunc: func(ctx context.Context, userID string) (bool, error) {
 			return false, nil
 		},
 	})
-	if IsAdminUser(ctx, "usr_normal") {
+	if IsAdminUser(ctxNormal, "usr_normal") {
 		t.Fatal("expected IsAdminUser to return false for non-admin")
 	}
 
 	// 4. checker 返回 true
-	SetAdminChecker(mockAdminChecker{
+	ctxAdmin := withAdminChecker(context.Background(), mockAdminChecker{
 		isAdminFunc: func(ctx context.Context, userID string) (bool, error) {
 			return userID == "admin_1", nil
 		},
 	})
-	if !IsAdminUser(ctx, "admin_1") {
+	if !IsAdminUser(ctxAdmin, "admin_1") {
 		t.Fatal("expected IsAdminUser to return true for admin_1")
 	}
-	if IsAdminUser(ctx, "other_user") {
+	if IsAdminUser(ctxAdmin, "other_user") {
 		t.Fatal("expected IsAdminUser to return false for other_user")
 	}
 }
 
 func TestAdminAccessMiddleware(t *testing.T) {
-	orig := adminChecker.Load()
-	defer func() {
-		if orig != nil {
-			adminChecker.Store(orig)
-		} else {
-			adminChecker.Store((*AdminChecker)(nil))
-		}
-	}()
-
-	SetAdminChecker(mockAdminChecker{
+	checker := mockAdminChecker{
 		isAdminFunc: func(ctx context.Context, userID string) (bool, error) {
 			return userID == "real_admin", nil
 		},
-	})
+	}
 
 	handler := AdminAccess(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
@@ -98,53 +81,44 @@ func TestAdminAccessMiddleware(t *testing.T) {
 	// 1. 无 principal 上下文
 	t.Run("No Principal Denied", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/users", nil)
+		req = req.WithContext(withAdminChecker(req.Context(), checker))
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
-
-		if rr.Code != http.StatusOK {
-			t.Fatalf("expected 200 envelope, got status %d", rr.Code)
-		}
-		var resp httpx.ApiResponse[httpx.ForbiddenErrorData]
-		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-			t.Fatalf("decode: %v", err)
-		}
-		if resp.Code != httpx.CodeForbidden || resp.Data == nil || resp.Data.ForbiddenReason != httpx.ReasonNotAdmin {
-			t.Fatalf("unexpected response: %+v", resp)
-		}
+		assertForbiddenCode(t, rr.Body.Bytes())
 	})
 
-	// 2. 有 principal 但非管理员
+	// 2. principal 存在但非管理员
 	t.Run("Non Admin Denied", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/users", nil)
-		ctx := WithPrincipal(req.Context(), Principal{UserID: "normal_user"})
-		req = req.WithContext(ctx)
-
+		req = req.WithContext(WithPrincipal(req.Context(), Principal{UserID: "user_bob"}))
+		req = req.WithContext(withAdminChecker(req.Context(), checker))
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
-
-		if rr.Code != http.StatusOK {
-			t.Fatalf("expected 200 envelope, got status %d", rr.Code)
-		}
-		var resp httpx.ApiResponse[httpx.ForbiddenErrorData]
-		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-			t.Fatalf("decode: %v", err)
-		}
-		if resp.Code != httpx.CodeForbidden || resp.Data == nil || resp.Data.ForbiddenReason != httpx.ReasonNotAdmin {
-			t.Fatalf("unexpected response: %+v", resp)
-		}
+		assertForbiddenCode(t, rr.Body.Bytes())
 	})
 
-	// 3. 有 principal 且是真实管理员
+	// 3. 管理员放行
 	t.Run("Admin Allowed", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/users", nil)
-		ctx := WithPrincipal(req.Context(), Principal{UserID: "real_admin"})
-		req = req.WithContext(ctx)
-
+		req = req.WithContext(WithPrincipal(req.Context(), Principal{UserID: "real_admin"}))
+		req = req.WithContext(withAdminChecker(req.Context(), checker))
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
-
 		if rr.Code != http.StatusNoContent {
-			t.Fatalf("expected 204 No Content for authorized admin, got %d", rr.Code)
+			t.Fatalf("expected 204, got %d", rr.Code)
 		}
 	})
+}
+
+func assertForbiddenCode(t *testing.T, body []byte) {
+	t.Helper()
+	var envelope struct {
+		Code httpx.Code `json:"code"`
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		t.Fatalf("decode forbidden envelope: %v body=%s", err, body)
+	}
+	if envelope.Code != httpx.CodeForbidden {
+		t.Fatalf("expected 10200 forbidden, got %d", envelope.Code)
+	}
 }

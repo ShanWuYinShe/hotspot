@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/modules/media"
+	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/buildinfo"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/cors"
@@ -23,20 +24,20 @@ import (
 )
 
 func NewHTTPRouter(modules []modulekit.Module) http.Handler {
-	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore())
+	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore(), nil, nil)
 }
 
 func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.Logger) http.Handler {
-	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore())
+	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore(), nil, nil)
 }
 
 // NewHTTPRouterWithReadiness 在生产装配下注入就绪探针（DB 必查、Redis 降级
 // 仅告警不摘流量），供容器 healthcheck/LB 使用。
-func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store) http.Handler {
-	return newHTTPRouter(modules, logger, readiness, guardChecker, idemStore)
+func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store, platformAuth *platformauth.Service, adminChecker platformauth.AdminChecker) http.Handler {
+	return newHTTPRouter(modules, logger, readiness, guardChecker, idemStore, platformAuth, adminChecker)
 }
 
-func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store) http.Handler {
+func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store, platformAuth *platformauth.Service, adminChecker platformauth.AdminChecker) http.Handler {
 	r := chi.NewRouter()
 	// 媒体客户端端点：按请求入口 origin 注入 context，媒体模块据此生成与页面
 	// 同源的直传/读 URL（跨源会被 CORS/LNA 拦截，见 media/client_endpoint.go）。
@@ -64,6 +65,9 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, rea
 		idemStore = idempotency.NewInMemoryStore()
 	}
 	r.Use(idempotency.WithStore(idemStore))
+	// 平台认证依赖显式注入（替代进程级 DefaultService/AdminChecker 全局）：
+	// RequiredAuth/OptionalAuth/AdminAccess 统一从 ctx 读取。
+	r.Use(platformauth.WithDependencies(platformAuth, adminChecker))
 	r.NotFound(httpx.NotFoundHandler)
 	r.MethodNotAllowed(httpx.MethodNotAllowedHandler)
 	// Prometheus 抓取端点：仅 compose 网络内可达（nginx 不反代 /metrics，

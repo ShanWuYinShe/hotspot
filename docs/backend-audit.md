@@ -2893,3 +2893,20 @@ context 传递（与 resourceguard 同一模式）。
   13 个模块测试文件删除全局初始化；auth/moments 回放测试改为 ctx 注入。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第二十二批）：platformauth 去全局单例（Service + AdminChecker）（2026-11-07）
+
+架构审计 C2 第三个纵切片：删除 `platformauth.defaultService` 与 `adminChecker`
+两个进程级原子全局，认证依赖改为显式装配 + context 传递。
+
+- 根中间件 `platformauth.WithDependencies(service, adminChecker)` 注入请求
+  context；RequiredAuth/OptionalAuth/AdminAccess/IsAdminUser 统一从 ctx 读取。
+- `app.New` 先构造唯一 `platformAuth`，再传入 BuildModules（auth 模块不再
+  反向写全局）、realtime handler、sweeper 与 router；`StartSweeper(ctx, svc)`
+  显式接收 service 并返回 stop。
+- 安全语义保持 fail-closed：路由树未注入认证依赖时 RequiredAuth 返回 10600
+  （不再静默放行）；OptionalAuth 匿名降级并记 Error 日志。
+- 测试迁移：middleware/admincheck 改为 ctx 注入、admin 挂载路由测试用
+  WithDependencies 包裹、notify 路由装配测试显式注入；删除全部全局 setter。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

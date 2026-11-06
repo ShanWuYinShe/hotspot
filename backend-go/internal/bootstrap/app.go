@@ -65,7 +65,8 @@ func NewApp(cfg config.Config) (*App, error) {
 	// in Shutdown so they exit cleanly.
 	rootCtx, rootCancel := context.WithCancel(context.Background())
 	ratelimit.StartSweeper(rootCtx)
-	platformauth.StartSweeper(rootCtx)
+	platformAuth := platformauth.NewServiceWithPersistence(cfg, persistenceFactory)
+	platformauth.StartSweeper(rootCtx, platformAuth)
 	// resourceguard missing 缓存定期清扫：条目仅在同 key 再次探测时惰性删除，
 	// 扫描器打随机 ID 可让 map 无上限增长。
 	if dbChecker, ok := resourceguardChecker.(*resourceguard.DBChecker); ok {
@@ -87,7 +88,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	// 热数据缓存（读穿 + 写失效）：users 设置与群成员关系；单一实例贯穿模块与
 	// realtime 适配器（本地模式下失效才互通；配了 Redis 则多实例共享键）。
 	hotCache := hotcache.New(redisClient)
-	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisClient, hotCache)
+	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisClient, hotCache, platformAuth)
 	// bridge 在下方 redisClient 块内创建（instanceID 需同时注入 resumeStore）
 	var bridge *realtime.RedisBridge
 	readiness := newReadinessProbe(
@@ -96,7 +97,7 @@ func NewApp(cfg config.Config) (*App, error) {
 		// Redis 未配置时 check.ping 为 nil（视为 ok）；配置后故障只降级。
 		readinessCheck{name: "redis", required: false, ping: redisReadinessPing(redisClient)},
 	)
-	router := NewHTTPRouterWithReadiness(modules, logger, readiness, resourceguardChecker, idemStore)
+	router := NewHTTPRouterWithReadiness(modules, logger, readiness, resourceguardChecker, idemStore, platformAuth, adminRepo)
 	// /metrics 自定义采集器装配：WS 连接/订阅规模 + DB 连接池统计
 	//（HTTP 请求指标经 RequestMetricsMiddleware 在路由层采集）。
 	observability.Register(realtime.NewHubCollector(realtime.DefaultHub()))
@@ -108,7 +109,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	userRepo := users.NewPostgresRepository(persistenceFactory)
 	groupRepo := groups.NewPostgresRepository(persistenceFactory)
 	userService := users.NewServiceWithRepo(userRepo)
-	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformauth.DefaultService(), NewRealtimeUserRepo(userRepo, hotCache), NewRealtimeGroupRepo(groupRepo, hotCache))
+	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformAuth, NewRealtimeUserRepo(userRepo, hotCache), NewRealtimeGroupRepo(groupRepo, hotCache))
 	realtimeHandler.SetActorProvider(realtimeActorProvider{svc: userService})
 	// WS 握手封禁检查：与 HTTP RequiredAuth 同源（admin repo IsBanned）、同口径（fail-open）
 	realtimeHandler.SetBanAuthorizer(realtimeBanAuthorizer{repo: adminRepo})

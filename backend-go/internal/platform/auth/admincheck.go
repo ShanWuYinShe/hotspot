@@ -3,38 +3,25 @@ package auth
 import (
 	"context"
 	"net/http"
-	"sync/atomic"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 )
 
 // AdminChecker 判定 userID 是否为系统管理员（真实验证，查询 admin_users 表）。
-// 由 bootstrap 注入 admin 模块实现；未注入时 IsAdminUser 返回 false（fail-closed，
-// 管理端点是安全边界，宁拒绝勿放行）。
+// 由根中间件 WithDependencies 显式注入请求 context；未注入时 fail-closed
+// （管理端点是安全边界，宁拒绝勿放行）。
 type AdminChecker interface {
 	IsAdmin(ctx context.Context, userID string) (bool, error)
-}
-
-var adminChecker atomic.Value // *AdminChecker
-
-// SetAdminChecker 注入管理员校验实现（组合根调用，通常在模块装配阶段）。
-func SetAdminChecker(checker AdminChecker) {
-	adminChecker.Store(&checker)
 }
 
 // IsAdminUser 返回 userID 是否为管理员。checker 未配置或查询出错均视为非管理员
 // （fail-closed）。
 func IsAdminUser(ctx context.Context, userID string) bool {
-	value := adminChecker.Load()
-	if value == nil {
+	checker := depsFromContext(ctx).adminChecker
+	if checker == nil {
 		return false
 	}
-	checkerPtr, ok := value.(*AdminChecker)
-	if !ok || checkerPtr == nil {
-		return false
-	}
-	checker := *checkerPtr
 	isAdmin, err := checker.IsAdmin(ctx, userID)
 	return err == nil && isAdmin
 }

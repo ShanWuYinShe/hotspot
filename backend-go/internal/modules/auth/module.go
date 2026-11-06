@@ -23,9 +23,10 @@ type Module struct {
 	platformAuth *platformauth.Service
 }
 
-func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Factory, source appconfig.Source) *Module {
-	authService := platformauth.NewServiceWithPersistence(cfg, factory)
-	platformauth.SetDefaultService(authService)
+func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Factory, source appconfig.Source, authService *platformauth.Service) *Module {
+	if authService == nil {
+		authService = platformauth.NewServiceWithPersistence(cfg, factory)
+	}
 	// Wire the configured bcrypt cost once at startup. config.Validate() has
 	// already enforced the OWASP minimum by this point.
 	ConfigureHashingCost(cfg.BcryptCost)

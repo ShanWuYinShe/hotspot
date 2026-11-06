@@ -646,7 +646,6 @@ func TestServiceDeleteOnlyAuthor(t *testing.T) {
 		t.Fatalf("create comment: %v", err)
 	}
 	// 平台管理员（但并非评论作者）删除他人评论 → 拒绝（仅作者）
-	platformauth.SetAdminChecker(adminCheckStub{adminIDs: map[string]bool{"admin_1": true}})
 	adminCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "admin_1", SessionID: "sess_admin"})
 	if err := service.Delete(adminCtx, DeleteCommentRequest{CommentID: comment.CommentID}); !errors.Is(err, ErrPermissionDenied) {
 		t.Fatalf("expected admin non-owner delete to be denied, got %v", err)
