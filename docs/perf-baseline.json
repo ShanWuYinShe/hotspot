@@ -1,0 +1,44 @@
+{
+  "environment": "backend-test / hotspot_test（含 E2E 累计数据；PGroonga + nearby 物化后的基线）",
+  "host_note": "Apple Silicon 本机 Docker；8 vCPU；postgres 容器 2 CPU 限额",
+  "workload": "perf-smoke：c=10，warmup=2s，duration=5s",
+  "updated_at": "2026-11-07",
+  "tolerance": {
+    "min_rps_ratio": 0.6,
+    "max_p99_multiplier": 2.5
+  },
+  "endpoints": {
+    "users/account": {
+      "rps": 8864,
+      "p99_ms": 2.94
+    },
+    "system/bootstrap": {
+      "rps": 7435,
+      "p99_ms": 3.29
+    },
+    "notify/fetch": {
+      "rps": 12728,
+      "p99_ms": 2.96
+    },
+    "moments/fetch_following": {
+      "rps": 8460,
+      "p99_ms": 3.21
+    },
+    "moments/fetch_nearby": {
+      "rps": 743,
+      "p99_ms": 60.37
+    },
+    "users/search": {
+      "rps": 2161,
+      "p99_ms": 26.76
+    },
+    "moments/search": {
+      "rps": 6360,
+      "p99_ms": 5.3
+    },
+    "groups/search": {
+      "rps": 4431,
+      "p99_ms": 11.6
+    }
+  }
+}

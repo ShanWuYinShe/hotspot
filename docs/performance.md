@@ -161,3 +161,23 @@ backend-test 压测 DB CPU 成为瓶颈（p50 82ms）。
   **743 rps / p50 7.1ms / p99 60ms**（约 5 倍吞吐、p50 约 11 倍）。
 - users/search（短中文关键词）：旧基线 570-637 rps / p99 65-68ms →
   **2161 rps / p99 26.8ms**（约 3.5 倍）。
+
+## 7. 性能回归门禁（perf-budget.sh）
+
+`scripts/perf-budget.sh` 把 perf-smoke 的结果与 `docs/perf-baseline.json` 比较，
+任一端点 rps 低于基线 60% 或 p99 超过基线 2.5 倍即非零退出（阈值可参数覆盖）。
+
+```bash
+./scripts/perf-budget.sh --base http://localhost:8082   # 默认 backend-test
+./scripts/perf-budget.sh --update-baseline              # 有意调整基线后刷新 JSON
+```
+
+基线口径：backend-test / hotspot_test（含 E2E 累计数据），c=10、warmup=2s、
+duration=5s，8 个只读端点。实测两条路径：
+
+- 正常：8/8 端点 OK（rps 均 >= 60% baseline、p99 <= 2.5x）；
+- 注入 `--max-p99-mult 0.0001`：exit 1 并逐端点标记 REGRESSION，
+  证明门禁确实拦截回归。
+
+该门禁不进默认 CI（共享 runner 噪声大），定位是「改完性能敏感代码/发版前
+本机回归」；业务码与传输错误由 perf-smoke.sh 自身校验并透传退出码。

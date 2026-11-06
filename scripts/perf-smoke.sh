@@ -7,10 +7,11 @@
 #   ./scripts/perf-smoke.sh --base http://localhost:8888 --concurrency 20 --duration 10s
 #   TOKEN=<access_token> ./scripts/perf-smoke.sh    # 复用既有 token（非测试环境必须显式传）
 #   ./scripts/perf-smoke.sh --min-rps 100 --max-p99-ms 200   # CI 门禁模式
+#   ./scripts/perf-smoke.sh --report /tmp/perf.csv          # 追加写 CSV（perf-budget 消费）
 #
 # 环境变量/参数：BASE / TOKEN / CONCURRENCY / DURATION / WARMUP / MIN_RPS /
 # MAX_P99_MS / REF_LAT / REF_LNG / SEARCH_KEYWORD / MOMENTS_SEARCH_KEYWORD /
-# GROUPS_SEARCH_KEYWORD / LOADGEN_BIN。
+# GROUPS_SEARCH_KEYWORD / REPORT / LOADGEN_BIN。
 # 默认附近坐标与搜索关键词对齐 dev 种子数据（徐州云龙湖 / 用户昵称「林一」），
 # 避免历史默认「旧金山 + abc」导致附近/搜索测到空结果集。
 #
@@ -24,6 +25,7 @@ DURATION="${DURATION:-10s}"
 WARMUP="${WARMUP:-2s}"
 MIN_RPS="${MIN_RPS:-0}"
 MAX_P99_MS="${MAX_P99_MS:-0}"
+REPORT="${REPORT:-}"
 # 种子锚点：backend-go/internal/seed/specs.go seedAnchorLatitude/Longitude
 REF_LAT="${REF_LAT:-34.2604}"
 REF_LNG="${REF_LNG:-117.1855}"
@@ -42,6 +44,7 @@ while [ $# -gt 0 ]; do
     --min-rps) MIN_RPS="$2"; shift 2 ;;
     --max-p99-ms) MAX_P99_MS="$2"; shift 2 ;;
     --keyword) SEARCH_KEYWORD="$2"; MOMENTS_SEARCH_KEYWORD="$2"; shift 2 ;;
+    --report) REPORT="$2"; shift 2 ;;
     --lat) REF_LAT="$2"; shift 2 ;;
     --lng) REF_LNG="$2"; shift 2 ;;
     -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
@@ -50,6 +53,9 @@ while [ $# -gt 0 ]; do
 done
 
 ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+if [ -n "$REPORT" ]; then
+  : > "$REPORT"
+fi
 LOADGEN_BIN="${LOADGEN_BIN:-}"
 if [ -z "$LOADGEN_BIN" ]; then
   TMP_DIR="$(mktemp -d)"
@@ -99,6 +105,9 @@ run() {
   codes=$(printf %s "$raw" | grep -o 'codes=map\[[^]]*\]' | head -1 | cut -d= -f2- || true)
   errors=$(printf %s "$raw" | grep -o 'errors=map\[[^]]*\]' | head -1 | cut -d= -f2- || true)
   printf '%-26s %10s %9s %9s %9s %s\n' "$name" "${rps:-n/a}" "${p50:-n/a}" "${p95:-n/a}" "${p99:-n/a}" "${codes:-n/a}"
+  if [ -n "$REPORT" ]; then
+    printf '%s,%s,%s,%s,%s\n' "$name" "${rps:-}" "${p50:-}" "${p95:-}" "${p99:-}" >> "$REPORT"
+  fi
 
   # 业务契约：读端点全部 200 且 code=0；无传输错误。
   if [ -n "${errors:-}" ] && [ "$errors" != "map[]" ]; then

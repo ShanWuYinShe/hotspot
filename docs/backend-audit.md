@@ -2927,3 +2927,13 @@ C2/C5 收口防腐：把本轮清掉的全局单例与事务纪律固化为 CI �
   防止新增全局，Hub 改造保持计划内。
 
 验证：go test -short 全绿（archtest 全量）；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch D（第五批）：性能预算回归门禁（2026-11-07）
+
+- 新增 `docs/perf-baseline.json`（8 端点 rps/p99 基线 + 容差）与
+  `scripts/perf-budget.sh`（跑 perf-smoke → 对比基线 → 回归即 exit 1）；
+- perf-smoke 新增 `--report <csv>`，供脚本消费（人工表格输出不变）；
+- 实测：backend-test 上 8/8 OK；人为收紧 p99 阈值后 exit 1 且逐端点标
+  REGRESSION，门禁行为符合预期；
+- 定位为手动/发版前回归工具，不进默认 CI（共享 runner 噪声），文档见
+  docs/performance.md §7。
