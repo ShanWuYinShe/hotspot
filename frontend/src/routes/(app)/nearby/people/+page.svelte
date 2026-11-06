@@ -2,8 +2,6 @@
 	import { Map as MapIcon, MapPin, Search, Users } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
-	import { startDefaultLocation } from '@/lib/start-default-location';
-	import { LOCATION_ANCHOR_UPDATED_EVENT, clearLastLocation, readLastLocation } from '@/lib/map-auto-locate';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -13,252 +11,39 @@
 	import SparseContentHint from '@/components/data-display/SparseContentHint.svelte';
 	import Select from '@/components/forms/Select.svelte';
 	import Button from '@/components/ui/button.svelte';
-import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
+	import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import InfiniteSentinel from '@/components/list/InfiniteSentinel.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
-	import UserCard, { type NearbyUser } from '@/components/data-display/UserCard.svelte';
-	import { searchUsers, follow , netError } from '@/api';
+	import UserCard from '@/components/data-display/UserCard.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { contentFade } from '@/lib/motion';
-	import { formatDistance } from '@/lib/utils';
-	import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
-	import { showToast } from '@/stores/toast.svelte';
-	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { NEARBY_CATEGORIES } from '../shared/categories';
-	import {
-		getPeopleProgress,
-		setPeopleProgress,
-		clearPeopleProgress,
-		peopleProgressKey
-	} from './people-progress.svelte';
+	import { useNearbyPeopleData } from './shared/useNearbyPeopleData.svelte';
 
-	// 附近的人：独立路由页（/nearby/people，也是 /nearby 落点）。
-	// 人/群组/动态三段各为独立页面，不再共用段位导航 Tabs（段位导航已删除：
-	// 同页多标签形态易把三份不同数据耦合到一起）；搜索/地图收敛为 header
-	// 右上角工具入口，跨段切换走桌面侧栏、移动底部导航（附近→默认段）与首页三分流。
-
-	// 「共同好友」排序依赖登录态的 mutual 计数，访客恒为 0 无意义，登录后才展示
-	// （Gemini UI 审查：未登录顶栏「登录」与可用「共同好友」并存矛盾）。
-	const sortOptions = $derived(auth.user ? ['距离', '在线', '共同好友'] : ['距离', '在线']);
-	// 词库统一:原「运动/艺术」在标签池无数据选中必空(对齐 NEARBY_CATEGORIES;Gemini 审查 r03/r04)
-	const FILTER_TAGS = NEARBY_CATEGORIES;
-
-	let sort = $state('距离');
-	// 登出后 sort 可能残留「共同好友」（不再有对应选项）：展示值回落「距离」
-	const effectiveSort = $derived(sortOptions.includes(sort) ? sort : '距离');
-	let tagFilter = $state('全部');
-	let followedIds = $state<Set<string>>(new Set());
-	let visibleCount = $state(12);
-
-	let allUsers = $state<NearbyUser[]>([]);
-	let loading = $state(true);
-	// 本机浏览锚点（localStorage 同步可读）优先于服务端默认位置。锚点为响应式：
-	// 地图/位置选择更新或清除锚点时经事件同步（见下方监听）。初始值取挂载时刻
-	// 一次性快照（state_referenced_locally 警告口径：后续同步只经 applyAnchor）。
-	const initialAnchor = readLastLocation();
-	let anchor = $state(initialAnchor);
-	let referencePoint = $state<{ latitude: number; longitude: number } | null>(
-		initialAnchor ? { latitude: initialAnchor.lat, longitude: initialAnchor.lng } : null
-	);
-	let locationName = $state(initialAnchor?.name ?? (initialAnchor ? '自定义位置' : ''));
-	// 服务端默认位置名（空态「改用默认位置」按钮文案用；与基准选择解耦）。
-	let defaultLocationName = $state('');
-	let loadError = $state<string | null>(null);
-	let reloadKey = $state(0);
-
-	// 浏览锚点优先（spec api_spec_types.md：reference_point = 当前在看哪里/距离基准）：
-	// 地图页「设为浏览锚点」写入的 hotspot_last_location 才是本机生效值，
-	// 无锚点才回退服务端默认位置。此前只读默认位置，用户在地图上设的锚点
-	// 对附近列表毫无影响。
-	$effect(() => startDefaultLocation((loc) => {
-		defaultLocationName = loc?.location_name ?? '';
-		if (anchor) return;
-		referencePoint = loc?.point ?? null;
-		locationName = loc?.location_name ?? '';
-	}));
-
-	// 锚点更新/清除监听：地图「设为浏览锚点」与空态「改用默认位置」都会触发，
-	// 此处同步基准并重拉列表（进度缓存按定位 key 隔离，手动清除防止串台）。
-	function applyAnchor() {
-		anchor = readLastLocation();
-		clearPeopleProgress();
-		if (anchor) {
-			referencePoint = { latitude: anchor.lat, longitude: anchor.lng };
-			locationName = anchor.name ?? '自定义位置';
-		} else {
-			referencePoint = null;
-			locationName = '';
-		}
-	}
-	$effect(() => {
-		window.addEventListener(LOCATION_ANCHOR_UPDATED_EVENT, applyAnchor);
-		return () => window.removeEventListener(LOCATION_ANCHOR_UPDATED_EVENT, applyAnchor);
-	});
-
-	$effect(() => {
-		// spec: users/search radius 仅显式提供时按半径过滤（此处显式传 5km 承接
-		// 附近的人语义）；sort_by='distance' 距离计算依赖 reference_point，
-		// 可选 — 未传时服务端按回退链解析。
-		// 会话进度保持：同一定位 key 下直接采用 store（返回不重拉）；定位变化/
-		// 手动重试（先清 store）才走网络。
-		void reloadKey;
-		const progressKey = peopleProgressKey(referencePoint);
-		const saved = getPeopleProgress();
-		// 无定位（progressKey 为空）时不用缓存：空 key 会命中异地旧列表造成串台。
-		if (saved && progressKey !== '' && saved.key === progressKey) {
-			allUsers = saved.users;
-			visibleCount = saved.visibleCount;
-			// 关注态随列表缓存回填：返回本页时按钮仍反映真实关系。
-			followedIds = new Set(saved.users.filter((u) => u.isFollowing).map((u) => u.id));
-			loadError = null;
-			loading = false;
-			return;
-		}
-		let cancelled = false;
-		async function fetchUsers() {
-			try {
-				loading = true;
-				loadError = null;
-				const req = {
-					radius: 5000,
-					sort_by: 'distance' as const,
-					...(referencePoint ? { reference_point: referencePoint } : {})
-				};
-				const res = await searchUsers(req).catch(() => netError({ items: [] }));
-				if (cancelled) return;
-				const data = res.code === 0 ? res.data : null;
-				if (res.code !== 0) {
-					if (!cancelled) loadError = res.message ?? '加载失败';
-					return;
-				}
-				if (data) {
-					const items: NearbyUser[] = (data.items || []).map((u) => ({
-						// spec: users/search → UserItem（user 嵌套 + presence_status + location）
-						id: u.user?.user_id ?? '',
-						name: u.user?.nickname ?? '',
-						distance: formatDistance(u.location?.distance),
-						avatar: u.user?.avatar_url ?? '',
-						isOnline: u.presence_status === 'online',
-						tag: u.tags?.[0] ?? '',
-						tags: u.tags ?? [],
-						mutual: u.social_context?.mutual_friends_count ?? 0,
-						note: u.bio ?? '',
-						// 查看者关注态回填：列表初始按钮即反映真实关系（而非一律「关注」）。
-						isFollowing: u.relation?.is_following ?? false
-					}));
-					allUsers = items;
-					followedIds = new Set(items.filter((u) => u.isFollowing).map((u) => u.id));
-					setPeopleProgress({ key: progressKey, users: items, visibleCount });
-				}
-			} catch {
-				if (!cancelled) loadError = '加载失败，请稍后重试';
-			} finally {
-				if (!cancelled) loading = false;
-			}
-		}
-		void fetchUsers();
-		return () => {
-			cancelled = true;
-		};
-	});
-
-	// 过滤 + 排序（按昵称找人走全局搜索：header 右上角搜索入口）
-	const list = $derived.by(() => {
-		// 自己不在附近的人里露面（对齐鸿蒙客户端；后端不过滤请求者）。
-		const selfId = auth.user?.user_id;
-		const next = allUsers.filter(
-			(user) =>
-				(!selfId || user.id !== selfId) &&
-				// 标签按全量匹配：首标签之外同样可命中（此前只比 tags[0]）。
-				(tagFilter === '全部' || (user.tags?.includes(tagFilter) ?? false))
-		);
-		if (sort === '在线') return [...next].sort((a, b) => Number(b.isOnline) - Number(a.isOnline));
-		if (sort === '共同好友') return [...next].sort((a, b) => (b.mutual ?? 0) - (a.mutual ?? 0));
-		return next;
-	});
-
+	// 附近的人：独立路由页（/nearby/people）。
+	// 架构重构：数据加载、锚点侦测、会话进度与关注交互收敛至 useNearbyPeopleData()。
+	const data = useNearbyPeopleData();
 	const device = $derived(platform.platform);
-	const visibleUsers = $derived(list.slice(0, visibleCount));
-	const bspLayouts = $derived(
-		computeBspLayoutSequence(
-			visibleUsers.map((u) => ({
-				isOnline: u.isOnline,
-				isFeatured: Boolean(u.isOnline || (u.mutual && u.mutual > 0)),
-				likes: u.mutual,
-				hasImage: Boolean(u.avatar)
-			})),
-			{ device, kind: 'user' }
-		)
-	);
-
-	// in-flight 去重（防连点双翻转，响应式供按钮 pending 态）；业务失败（code≠0）显式判 code 回滚
-	let followPending = $state(new Set<string>());
-
-	// 无限滚动续载（内容型列表统一自动加载，对齐 nearby/moments；切片逻辑保留，
-	// 每次 +8；过滤/排序变化导致 list 缩短时哨兵不再出现，visibleCount 由切片钳制）。
-	// 切片推进同步回进度 store（返回保持已展开长度）。
-	const hasMoreVisible = $derived(visibleCount < list.length);
-	function revealMore() {
-		if (visibleCount >= list.length) return;
-		visibleCount = Math.min(visibleCount + 8, list.length);
-		const saved = getPeopleProgress();
-		if (saved) setPeopleProgress({ ...saved, visibleCount });
-	}
-
-	const toggleFollow = async (id: string) => {
-		if (followPending.has(id)) return;
-		if (!requireAuth({ action: '关注', targetId: id, run: () => void toggleFollow(id) })) return;
-		const next = new Set(followedIds);
-		const willFollow = !next.has(id);
-		willFollow ? next.add(id) : next.delete(id);
-		followedIds = next;
-		followPending = new Set(followPending).add(id);
-		try {
-			// spec: users/set_follow 两态统一；乐观更新 + 失败回滚
-			const res = await follow({ user_id: id, active: willFollow });
-			if (res.code !== 0) throw new Error(res.message || '操作失败');
-		} catch (err) {
-			const r = new Set(followedIds);
-			willFollow ? r.delete(id) : r.add(id);
-			followedIds = r;
-			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
-		} finally {
-			const rest = new Set(followPending);
-			rest.delete(id);
-			followPending = rest;
-		}
-	};
-	// 入岛后整块页头（含筛选胶囊）退场：当前筛选状态由岛 meta 承接，浏览内容时不丢上下文。
-	const pageSubtitle = $derived(
-		locationName
-			? `${locationName} · 5km 内${!loading && !loadError && list.length ? ` · ${list.length} 人` : ''}`
-			: `5km 内 · 实时更新${!loading && !loadError && list.length ? ` · ${list.length} 人` : ''}`
-	);
-	// 筛选与排序触发源：切换标签或排序时平滑淡入，消除硬切生硬感
-	const filterTrigger = $derived(`${tagFilter}:${effectiveSort}`);
-	const islandMetaText = $derived(tagFilter === '全部' ? pageSubtitle : `${tagFilter} · ${pageSubtitle}`);
 </script>
+
 <svelte:head>
 	<title>附近的人 · HotSpot</title>
 </svelte:head>
 
-
-	<StandardPageLayout contentClassName="pt-4 pb-6">
-		{#snippet header()}
+<StandardPageLayout contentClassName="pt-4 pb-6">
+	{#snippet header()}
 		<PageHeader
 			variant="integrated"
 			title="附近的人"
-			subtitle={pageSubtitle}
-			islandMeta={islandMetaText}
+			subtitle={data.pageSubtitle}
+			islandMeta={data.islandMetaText}
 		>
 			{#snippet subtitleIcon()}
 				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
 			{/snippet}
 			{#snippet trailing()}
-				<!-- 页面级工具只在移动/平板出现：桌面顶栏已有搜索、左侧栏 LocationCard 常驻地图入口，
-				     页头/灵动岛再放一份就是同一目的地的第二份入口（重复 UI）。 -->
 				<div class="flex items-center gap-2">
 					{#if device !== 'desktop'}
 						<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} />
@@ -267,23 +52,19 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 				</div>
 			{/snippet}
 			{#snippet below()}
-				<!-- 页头 below 只保留「分类」这一层主筛选；排序不再是同形 pill 行
-				     （会被误读为二级分类），收敛为筛选行右端的 ghost 下拉。
-				     整段随内容滚走：无背景/边框/吸顶，与卡片栅格同处一块画布。 -->
 				<div class="flex items-center justify-between gap-3">
 					<div class="min-w-0 flex-1">
 						<TabBar
-							items={FILTER_TAGS.map((t) => ({ id: t, label: t }))}
-							value={tagFilter}
-							onChange={(id) => (tagFilter = id)}
+							items={NEARBY_CATEGORIES.map((t) => ({ id: t, label: t }))}
+							value={data.tagFilter}
+							onChange={(id) => data.setTagFilter(id)}
 							class={device === 'desktop' ? 'flex-wrap' : 'pr-1'}
 						/>
 					</div>
 					<label class="inline-flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
 						<span>排序</span>
-						<!-- 行内排序：ghost 变体（透明底 / accent 文字 / 无边框） -->
-						<Select value={effectiveSort} onChange={(v) => (sort = v)} ariaLabel="排序方式" variant="ghost">
-							{#each sortOptions as option (option)}
+						<Select value={data.effectiveSort} onChange={(v) => data.setSort(v)} ariaLabel="排序方式" variant="ghost">
+							{#each data.sortOptions as option (option)}
 								<option value={option}>{option}</option>
 							{/each}
 						</Select>
@@ -293,94 +74,86 @@ import SkeletonFeed from '@/components/data-display/SkeletonFeed.svelte';
 		</PageHeader>
 	{/snippet}
 
-		<div>
-			<div class="min-w-0" use:contentFade={{ showSkeleton: loading, trigger: filterTrigger }}>
-				{#if loadError}
-					<LoadError message={loadError} onRetry={() => { clearPeopleProgress(); reloadKey++; }} />
-				{:else if loading}
-					<!-- 首屏骨架屏：与 UserCard 同构的 3:4 竖卡，栅格列数与真实网格一致 -->
-					<!-- 与真实 AdaptiveCardGrid 同一栅格来源（2 列 / 3 列 / auto-fill(18.75rem) + 固定行高），
-					     骨架→内容零位移 -->
-					<SkeletonFeed
-						variant="portrait"
-						count={10}
-						cardClass="h-full"
-						class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))] [grid-auto-rows:clamp(12.1875rem,20vw,17.1875rem)]"
-						label="加载附近用户…"
-					/>
-				{:else if !list.length}
-					<!-- 空态自解释：锚点基准下为空必须让用户知道「在看哪里」，否则与
-						 首页（同基准）之外的旧认知矛盾（线上实测困惑源）。 -->
-					<EmptyState
-						spotlight
-						iconTone="accent"
-						title={anchor ? (anchor.name ? `「${anchor.name}」附近暂时没有用户` : '当前查看的位置附近暂时没有用户') : '附近暂时没有匹配的用户'}
-						description={anchor ? '正在按你设置的浏览位置筛选 5km 范围。' : undefined}
-					>
-						{#snippet icon()}
-							<Users class="size-7" strokeWidth={1.5} />
-						{/snippet}
-						{#snippet action()}
-							{#if anchor}
-								<Button
-									type="button"
-									variant="secondary"
-									size="sm"
-									onclick={() => { clearLastLocation(); applyAnchor(); }}
-								>
-									改用默认位置{defaultLocationName ? `（${defaultLocationName}）` : ''}</Button>
-							{/if}
-						{/snippet}
-					</EmptyState>
-				{:else}
-					<div class="w-full">
-						<!-- 语义化 BSP 邻居网格：移动 2 列 / 平板 3 列；lg 起按 300px 最小卡宽自动增列，
-						     2560≈7 列、4K≈11 列，避免固定列数在超宽屏把单卡拉成 500px+。
-						     密集排布 (grid-flow-dense) + 自适应行高，全量卡片周期性穿插推荐焦点。 -->
-						<AdaptiveCardGrid
-							count={visibleUsers.length}
-							minTrackRem={18.75}
-							gapRem={[0.75, 0.875, 0.875]}
-							centerSparse={bspLayouts.slice(0, visibleUsers.length).every((l) => l.tier === '1x1')}
-							class="grid-flow-dense px-1"
-							style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
-						>
-							{#each visibleUsers as user, index (user.id)}
-								{@const layout = bspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
-								<div class={layout.cls}>
-									<UserCard
-										{user}
-										priority={index < 3}
-										tier={layout.tier}
-										followed={followedIds.has(user.id)}
-										pending={followPending.has(user.id)}
-										onFollow={() => toggleFollow(user.id)}
-										onNavigate={() => void goto(ROUTES.user(user.id))}
-										class="h-full w-full"
-									/>
-								</div>
-							{/each}
-						</AdaptiveCardGrid>
-						{#if list.length > 0 && list.length < 3}
-							<SparseContentHint
-								title={`只找到 ${list.length} 位附近的人`}
-								description="试试其他标签，或去附近看看更多人与群组"
-								actionLabel="去附近看看"
-								onAction={() => void goto(ROUTES.nearby)}
-							/>
+	<div>
+		<div class="min-w-0" use:contentFade={{ showSkeleton: data.loading, trigger: data.filterTrigger }}>
+			{#if data.loadError}
+				<LoadError message={data.loadError} onRetry={data.reload} />
+			{:else if data.loading}
+				<SkeletonFeed
+					variant="portrait"
+					count={10}
+					cardClass="h-full"
+					class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))] [grid-auto-rows:clamp(12.1875rem,20vw,17.1875rem)]"
+					label="加载附近用户…"
+				/>
+			{:else if !data.list.length}
+				<EmptyState
+					spotlight
+					iconTone="accent"
+					title={data.anchor ? (data.anchor.name ? `「${data.anchor.name}」附近暂时没有用户` : '当前查看的位置附近暂时没有用户') : '附近暂时没有匹配的用户'}
+					description={data.anchor ? '正在按你设置的浏览位置筛选 5km 范围。' : undefined}
+				>
+					{#snippet icon()}
+						<Users class="size-7" strokeWidth={1.5} />
+					{/snippet}
+					{#snippet action()}
+						{#if data.anchor}
+							<Button
+								type="button"
+								variant="secondary"
+								size="sm"
+								onclick={data.clearAnchor}
+							>
+								改用默认位置{data.defaultLocationName ? `（${data.defaultLocationName}）` : ''}
+							</Button>
 						{/if}
-					</div>
-
-					{#if hasMoreVisible}
-						<div class="flex justify-center px-4 py-6">
-							<!-- 滚到底自动续载（首屏不足一屏时自动补载）；可见 InlineLoading 保留为加载暗示 -->
-							<InfiniteSentinel hasMore={hasMoreVisible} loading={false} onLoadMore={revealMore} />
-							<InlineLoading label="加载更多…" />
-						</div>
-					{:else if visibleCount >= list.length}
-						<ListEnd />
+					{/snippet}
+				</EmptyState>
+			{:else}
+				<div class="w-full">
+					<AdaptiveCardGrid
+						count={data.visibleUsers.length}
+						minTrackRem={18.75}
+						gapRem={[0.75, 0.875, 0.875]}
+						centerSparse={data.bspLayouts.slice(0, data.visibleUsers.length).every((l) => l.tier === '1x1')}
+						class="grid-flow-dense px-1"
+						style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
+					>
+						{#each data.visibleUsers as user, index (user.id)}
+							{@const layout = data.bspLayouts[index] ?? { tier: '1x1', cls: 'col-span-1 row-span-1' }}
+							<div class={layout.cls}>
+								<UserCard
+									{user}
+									priority={index < 3}
+									tier={layout.tier}
+									followed={data.followedIds.has(user.id)}
+									pending={data.followPending.has(user.id)}
+									onFollow={() => data.toggleFollow(user.id)}
+									onNavigate={() => void goto(ROUTES.user(user.id))}
+									class="h-full w-full"
+								/>
+							</div>
+						{/each}
+					</AdaptiveCardGrid>
+					{#if data.list.length > 0 && data.list.length < 3}
+						<SparseContentHint
+							title={`只找到 ${data.list.length} 位附近的人`}
+							description="试试其他标签，或去附近看看更多人与群组"
+							actionLabel="去附近看看"
+							onAction={() => void goto(ROUTES.nearby)}
+						/>
 					{/if}
+				</div>
+
+				{#if data.hasMoreVisible}
+					<div class="flex justify-center px-4 py-6">
+						<InfiniteSentinel hasMore={data.hasMoreVisible} loading={false} onLoadMore={data.revealMore} />
+						<InlineLoading label="加载更多…" />
+					</div>
+				{:else if data.visibleCount >= data.list.length}
+					<ListEnd />
 				{/if}
-			</div>
+			{/if}
 		</div>
+	</div>
 </StandardPageLayout>
