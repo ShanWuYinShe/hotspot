@@ -150,11 +150,11 @@ func newHandlers() (*Handler, *privatemessages.Handler) {
 }
 
 func newHandlersWithUserRepo(userRepo *users.InMemoryRepository) (*Handler, *privatemessages.Handler) {
-	messageRepo := privatemessages.NewInMemoryRepository()
+	store := newFakeMessageStore()
 	userService := users.NewServiceWithRepo(userRepo)
-	messageService := privatemessages.NewServiceWithDeps(messageRepo, userService)
+	messageService := privatemessages.NewServiceWithDeps(newFakeMessageRepo(store), userService)
 	messageHandler := privatemessages.NewHandler(messageService)
-	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), messageService, userService), appconfig.NewStaticSource(config.Load()))
+	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), newFakeReadService(store), userService), appconfig.NewStaticSource(config.Load()))
 	return chatHandler, messageHandler
 }
 
@@ -266,13 +266,13 @@ func TestOpenTheDoorUsesSharedResponseDefaults(t *testing.T) {
 		t.Fatalf("update shared source: %v", err)
 	}
 
-	messageRepo := privatemessages.NewInMemoryRepository()
+	store := newFakeMessageStore()
 	userRepo := users.NewInMemoryRepository()
 	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_bob", Nickname: "Bob", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: time.Now().UTC().Format(time.RFC3339), CreatedAt: time.Now().UTC().Format(time.RFC3339)})
 	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.ChatPermEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, ReactedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
 	userService := users.NewServiceWithRepo(userRepo)
-	messageService := privatemessages.NewServiceWithDeps(messageRepo, userService)
-	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), messageService, userService), source)
+	messageService := privatemessages.NewServiceWithDeps(newFakeMessageRepo(store), userService)
+	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), newFakeReadService(store), userService), source)
 	messageHandler := privatemessages.NewHandler(messageService)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 

@@ -2577,3 +2577,21 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
 - comments 生产覆盖率 72.5%，仍过 70% 门槛；累计 12/17 模块完成内存迁移。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第十二批）：privatemessages 内存仓储迁入测试构建（2026-11-06）
+
+审计 P0-2 持续推进：privatemessages 内存实现（约 600 行）只被测试使用。
+
+- privatemessages/repo_memory.go 迁移为 *_test.go；生产保留 PG 与内存共用
+  的纯函数 repo_helpers.go（conversationKey / otherUserID）。
+- 唯一跨包消费者 privatechats/handler_test 改用本地最小测试存储
+  （fakeMessageStore + fakeMessageRepo + fakeReadService）：同一份存储同时
+  驱动消息 handler（Send/History）与会话服务（Recent/LastByChatKeys/
+  UnreadCountsByChatKeys），并实现删除边界语义（deletedAfter/boundaries 过滤）
+  以保持「删除会话后不可见、新消息重现空会话」等既有断言。
+- split 测试后真实覆盖率暴露不足（62.2%），补 module 装配/路由、PG 仓储剩余
+  方法骨架、PurgeUserData、LastByChatKeys/UnreadCountsByChatKeys 空结果路径
+  用例 → 76.4%，过 70% 门槛。
+- 累计 13/17 模块完成内存仓储迁移。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

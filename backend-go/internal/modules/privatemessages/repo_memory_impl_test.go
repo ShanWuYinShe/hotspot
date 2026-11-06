@@ -21,12 +21,6 @@ type InMemoryRepository struct {
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{messages: make(map[string][]PrivateMessageItem), readCursor: make(map[string]map[string]string)}
 }
-func conversationKey(a, b string) string {
-	if a < b {
-		return a + ":" + b
-	}
-	return b + ":" + a
-}
 func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID string, req SendPrivateMessageRequest) (MessageSentResult, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -421,17 +415,6 @@ func (r *InMemoryRepository) MarkAllRead(_ context.Context, userID string) error
 		r.readCursor[key][userID] = latestMessageID
 	}
 	return nil
-}
-
-func otherUserID(chatKey, userID string) string {
-	parts := strings.Split(chatKey, ":")
-	if len(parts) != 2 {
-		return ""
-	}
-	if parts[0] == userID {
-		return parts[1]
-	}
-	return parts[0]
 }
 
 func (r *InMemoryRepository) GetMessageForReply(ctx context.Context, messageID, viewerUserID string) (map[string]any, bool, error) {
