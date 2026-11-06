@@ -2391,3 +2391,27 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   media 72.8%；两模块均满足 70% 门槛。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+
+## Batch E（第一批）：就绪探针与服务发布连续性（2026-11-06）
+
+审计 ops P0-2 / P1-2 的落地批次：
+
+- **新增 `GET /readyz` 就绪探针**（bootstrap 层，与业务 health 分离）：
+  - 数据库为硬依赖，Ping 失败返回 **503**（容器 healthcheck/LB 摘流量）；
+  - Redis 为降级依赖，未配置视为 ok，配置后 Ping 失败仅 `degraded`（仍 200）——
+    限流/幂等在 Redis 故障时 fail-open，摘流量反而扩大故障面；
+  - 检查总预算 2s；`/healthz` 保持纯存活探针语义不变。
+- **容器探针口径统一**：base/dev compose 的 backend/backend-test healthcheck
+  改打 `/readyz`（原 dev 用 POST system/health 判 code=0，degraded 也当健康）。
+- **优雅停机预算对齐**：backend 设置 `stop_grace_period: 30s`（应用侧 HTTP 排水
+  10s + WS 排水 3s + 收尾），避免 Docker 默认 10s 提前 SIGKILL。
+- **发布不再硬重启 nginx**：`deploy-production.sh` 发布/自动回滚路径由
+  `docker restart nginx` 改为 `docker exec … nginx -s reload`（软重载，在途
+  HTTP/WS 连接不再被全量断开）；runbook 手工回滚同步更新。
+- 验证：`go test ./internal/bootstrap/` 覆盖 ready/degraded/503/未配置依赖、
+  路由注册；`docker compose config` 确认 stop_grace_period/healthcheck；
+  `nginx -s reload` 在本机 nginx 容器实测成功。
+
+---
+

@@ -38,7 +38,7 @@
 # 回滚（推荐）：./scripts/rollback-production.sh [<旧版本>|--previous]——复用本脚本
 #   部署旧 tag，结束后同样核对线上版本指纹。手工等价命令：
 #   IMAGE_TAG=<旧版本> docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-#     --profile prod up -d && docker restart hotspot-nginx-1
+#     --profile prod up -d && docker exec hotspot-nginx-1 nginx -s reload
 # 完整发布/回滚/热修复流程见 docs/release-runbook.md。
 set -euo pipefail
 
@@ -372,7 +372,7 @@ rollback() {
     # --scale frontend-build=0：frontend-build 只是 build target（复用 frontend
     # 镜像、CMD 以 sleep infinity 保活），被 up -d 连带拉起后会在生产常驻一个
     # 无作用容器（线上实测 Up 23h），显式缩容到 0。
-    if ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$PREVIOUS_TAG' $COMPOSE up -d --scale frontend-build=0 && docker restart $NGINX_CONTAINER >/dev/null"; then
+    if ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$PREVIOUS_TAG' $COMPOSE up -d --scale frontend-build=0 && docker exec $NGINX_CONTAINER nginx -s reload >/dev/null"; then
       echo "✅ 已回滚至 ${PREVIOUS_TAG}。注意：镜像可回滚、数据迁移不可逆，若新版本已启动并执行迁移，按 docs/backup-restore.md 评估数据面。"
       alert "HotSpot 部署 ${TARGET} 校验失败，已自动回滚至 ${PREVIOUS_TAG}。原因：$1"
     else
@@ -394,7 +394,7 @@ ssh "$SERVER" "docker run --rm --user 0:0 --entrypoint sh -v $FRONTEND_VOLUME:/b
   || { echo "!! frontend 静态卷（${FRONTEND_VOLUME}）属主迁移失败，中止部署"; exit 1; }
 
 echo "==> 滚动更新（IMAGE_TAG=${TARGET}；frontend 容器启动时自刷新静态卷）…"
-ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' $COMPOSE up -d --scale frontend-build=0 && docker restart $NGINX_CONTAINER >/dev/null && echo 'nginx restarted'"
+ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' $COMPOSE up -d --scale frontend-build=0 && docker exec $NGINX_CONTAINER nginx -s reload >/dev/null && echo 'nginx reloaded'"
 
 echo "==> 部署自校验（等待 health 就绪并核对版本指纹）…"
 backend_ok=""

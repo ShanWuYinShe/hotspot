@@ -186,9 +186,13 @@ services:
       # pprof 仅监听 localhost（容器内回环），不暴露到宿主机/外部网络。
       # 留空可在生产关闭：PPROF_ADDR=
       PPROF_ADDR: ${PPROF_ADDR:-127.0.0.1:6060}
+    # 优雅停机预算：应用侧 HTTP 排水 10s + WS 排水 3s + 收尾，30s 确保
+    # Docker 不会在应用完成清理前 SIGKILL（审计 ops P1-2）。
+    stop_grace_period: 30s
     healthcheck:
-      # 存活探针 GET /healthz 只校验 status 字段；业务健康仍由客户端经 POST /public/v1/system/health 检查
-      test: ["CMD-SHELL", "curl -sf http://localhost:8081/healthz | grep -q '\"status\":\"ok\"' || exit 1"]
+      # 就绪探针 GET /readyz：DB 不可达返回 503（容器标 unhealthy），Redis
+      # 故障仅 degraded（200，仍可服务）；存活探针 /healthz 供人工/监控区分。
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/readyz >/dev/null || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10

@@ -65,8 +65,9 @@ gh run watch <run-id> --exit-status
 - **配置同源**：compose / nginx 片段从**被部署的 tag** 用 `git archive` 导出，不取工作树内容（否则本地 HEAD 领先 tag 时会把未发布的配置带上线）；
 - **核对镜像指纹**：`version` 必须等于 tag、`revision` 必须等于该 tag 的 commit；
 - **数据库快照**：`pg_dump -Fc` 到服务器 `backups/` + 本机 `.workwork/`，失败即中止；
-- **滚动更新**：`IMAGE_TAG=<tag> compose --profile prod up -d --scale frontend-build=0` + 重启 nginx；
+- **滚动更新**：`IMAGE_TAG=<tag> compose --profile prod up -d --scale frontend-build=0` + `nginx -s reload`（软重载，不中断在途 HTTP/WS 连接）；容器 `stop_grace_period: 30s` 覆盖应用侧排水预算；
 - **三级版本校验**：后端 health 版本、前端静态卷 `version.json`、**nginx 容器内**真实响应（`/version.json` 与 `/healthz`）——容器里的文件对不等于网关服务得出去；
+- **就绪探针口径**：容器 healthcheck 用 `GET /readyz`——数据库不可达返回 503（实例摘流量），Redis 不可达仅 `degraded`（200，限流/幂等 fail-open 仍可服务）；`GET /healthz` 保留为纯存活探针。
 - **失败自动回滚**：任一级校验失败 → 用上一版本镜像重新 `up -d` + 告警（数据不回滚）；
 - **审计**：追加一行到服务器 `backups/deploy-history.log` 与本机 `.workwork/deploy-history.log`；
 - **旧镜像回收**：保留最近 `DEPLOY_KEEP_IMAGES`（默认 3）个历史版本 + 当前/上一版本。
@@ -110,7 +111,7 @@ ssh workwork-server '~/hotspot/scripts/health-check.sh'              # 巡检（
 ssh workwork-server
 cd ~/hotspot
 IMAGE_TAG=v1.1.10 docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --scale frontend-build=0
-docker restart hotspot-nginx-1
+docker exec hotspot-nginx-1 nginx -s reload
 ```
 
 前提：该版本镜像**仍在服务器**（旧镜像回收默认保留 3 个历史版本）。已被回收时用 $3.1 的脚本（它会从 Release 重新下载并 load）。

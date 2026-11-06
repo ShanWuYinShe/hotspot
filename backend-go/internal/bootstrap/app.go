@@ -90,7 +90,13 @@ func NewApp(cfg config.Config) (*App, error) {
 	modules, adminRepo := BuildModulesWithRedisPinger(rootCtx, cfg, persistenceFactory, redisClient, hotCache)
 	// bridge 在下方 redisClient 块内创建（instanceID 需同时注入 resumeStore）
 	var bridge *realtime.RedisBridge
-	router := NewHTTPRouterWithLogger(modules, logger)
+	readiness := newReadinessProbe(
+		// DB 是硬依赖：不可达则摘流量（compose healthcheck/LB 依赖该信号）。
+		readinessCheck{name: "database", required: true, ping: persistenceFactory.DB.Ping},
+		// Redis 未配置时 check.ping 为 nil（视为 ok）；配置后故障只降级。
+		readinessCheck{name: "redis", required: false, ping: redisReadinessPing(redisClient)},
+	)
+	router := NewHTTPRouterWithReadiness(modules, logger, readiness)
 	// /metrics 自定义采集器装配：WS 连接/订阅规模 + DB 连接池统计
 	//（HTTP 请求指标经 RequestMetricsMiddleware 在路由层采集）。
 	observability.Register(realtime.NewHubCollector(realtime.DefaultHub()))
@@ -213,6 +219,16 @@ func newResourceGuardChecker(factory *persistence.Factory) resourceguard.Checker
 // Returns nil when redis is not configured or unreachable, in which case the
 // realtime hub runs in single-instance mode and the health endpoint skips the
 // redis probe.
+// redisReadinessPing 返回就绪探针用的 Redis ping；未配置 Redis 时返回 nil
+// （探针按 ok 处理）。失败路径由探针计入 degraded，不阻塞接流量——限流/幂等
+// 在 Redis 故障时 fail-open（审计 ops P0-2）。
+func redisReadinessPing(client *redis.Client) func(context.Context) error {
+	if client == nil {
+		return nil
+	}
+	return func(ctx context.Context) error { return client.Ping(ctx).Err() }
+}
+
 func newRedisClient(cfg config.Config, logger *observability.Logger) *redis.Client {
 	if cfg.RedisURL == "" {
 		logger.Info("redis not configured, realtime hub running in single-instance mode")

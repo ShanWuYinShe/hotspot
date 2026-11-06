@@ -122,8 +122,8 @@ services:
       - "127.0.0.1:8082:8081"
       - "127.0.0.1:6060:6060"   # backend-test pprof（仅本机可达）
     healthcheck:
-      # 契约要求空 Request 也必须传 JSON 对象；unhealthy 时 HTTP 仍为 200（code=10600），必须校验响应内容
-      test: ["CMD-SHELL", "curl -sf -X POST -H 'Content-Type: application/json' -d '{}' http://localhost:8081/public/v1/system/health | grep -q '\"code\":0' || exit 1"]
+      # 就绪探针 /readyz：DB 不可达返回 503；Redis 故障仅 degraded（仍 200）。
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/readyz >/dev/null || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 30

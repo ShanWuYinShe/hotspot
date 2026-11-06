@@ -1,8 +1,11 @@
 package bootstrap
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -19,14 +22,20 @@ import (
 )
 
 func NewHTTPRouter(modules []modulekit.Module) http.Handler {
-	return newHTTPRouter(modules, nil)
+	return newHTTPRouter(modules, nil, nil)
 }
 
 func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.Logger) http.Handler {
-	return newHTTPRouter(modules, logger)
+	return newHTTPRouter(modules, nil, nil)
 }
 
-func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) http.Handler {
+// NewHTTPRouterWithReadiness 在生产装配下注入就绪探针（DB 必查、Redis 降级
+// 仅告警不摘流量），供容器 healthcheck/LB 使用。
+func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler) http.Handler {
+	return newHTTPRouter(modules, logger, readiness)
+}
+
+func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler) http.Handler {
 	r := chi.NewRouter()
 	// 媒体客户端端点：按请求入口 origin 注入 context，媒体模块据此生成与页面
 	// 同源的直传/读 URL（跨源会被 CORS/LNA 拦截，见 media/client_endpoint.go）。
@@ -55,6 +64,15 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) htt
 	// 只回 status/version/commit/build_time，供 LB/容器健康检查与 ops 绿灯
 	// 聚合。业务健康（DB/Redis 连通性）仍走 POST /public/v1/system/health。
 	r.Method(http.MethodGet, "/healthz", http.HandlerFunc(healthzProbe))
+	// 就绪探针（GET /readyz）：与存活探针分离——DB 不可达返回 503（实例不可
+	// 接新流量），Redis 不可达仅标记 degraded（限流/幂等 fail-open，仍可服务）。
+	// 未注入依赖时（单元测试装配）按 ready 处理，不阻塞路由构建。
+	if readiness == nil {
+		readiness = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Success(map[string]any{"status": "ok", "checks": map[string]string{}}))
+		})
+	}
+	r.Method(http.MethodGet, "/readyz", readiness)
 	for _, module := range modules {
 		module.Mount(r)
 	}
@@ -119,4 +137,46 @@ func healthzProbe(w http.ResponseWriter, r *http.Request) {
 		"commit":     buildinfo.Commit,
 		"build_time": buildinfo.BuildTime,
 	}))
+}
+
+// readinessProbe 就绪探针：数据库为硬依赖（失败即 503），Redis 为降级依赖
+// （失败仅 degraded，实例继续接流量）。检查总预算 2s，避免探针拖垮进程。
+type readinessProbe struct {
+	checks []readinessCheck
+}
+
+type readinessCheck struct {
+	name string
+	// required 为 true 时失败导致整体 503；否则只降级。
+	required bool
+	ping     func(context.Context) error
+}
+
+func newReadinessProbe(checks ...readinessCheck) http.Handler {
+	return readinessProbe{checks: checks}
+}
+
+func (p readinessProbe) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	results := make(map[string]string, len(p.checks))
+	status := "ok"
+	httpStatus := http.StatusOK
+	for _, check := range p.checks {
+		if check.ping == nil || check.ping(ctx) == nil {
+			results[check.name] = "ok"
+			continue
+		}
+		results[check.name] = "down"
+		if check.required {
+			httpStatus = http.StatusServiceUnavailable
+			status = "unavailable"
+		} else if status == "ok" {
+			status = "degraded"
+		}
+	}
+	// 就绪探针不是业务接口：直接返回 {status,checks}，LB/容器只认 HTTP 状态码。
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(httpStatus)
+	_ = json.NewEncoder(w).Encode(map[string]any{"status": status, "checks": results})
 }
