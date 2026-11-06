@@ -3410,3 +3410,18 @@ PGroonga opclass 本身支持 ILIKE（`~~*`）且实测 &@ 已具备大小写不
 c=10/10s：去掉 ILIKE 复核前 2139 rps / p95 8.53ms / p99 28.81ms → 去掉后
 **3279 rps / p95 5.08ms / p99 7.27ms**（吞吐 +53%，p99 -75%）；全链路
 perf-smoke users/search 3562→5090 rps、p99 25.3→6.0ms，8 端点 budget 全部 OK。
+
+## Batch D5（第二批）：moments/search、groups/search 去掉冗余 ILIKE 复核（2026-11-07）
+
+与 users/search 同款问题：`&@` 子串过滤叠加 ILIKE 复核会被 PostgreSQL 规划成
+同一谓词的第二次 PGroonga index scan（BitmapAnd）。PGroonga &@ 的语义（大小写
+不敏感、%/_ 字面、CJK 子串）已由 users/search 语义 IT 验证，本轮推广到另外两个
+搜索端点：
+
+- moments/search：移除 description ILIKE 过滤（仅保留 `&@`）；relevance 排序的
+  CASE 仍使用 keyword 参数（排序行为不变），删除不再被使用的转义参数；
+- groups/search：移除 name/description ILIKE 过滤，仅保留 `&@`（Go 侧相关性
+  评分/排序不变）；
+- 新增真实库语义 IT：moments、groups 各自锁定大小写不敏感、% 字面、CJK 子串；
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

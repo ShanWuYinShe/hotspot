@@ -10,7 +10,6 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
-	"hotspot/backend-go/internal/platform/textutil"
 	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
@@ -300,12 +299,11 @@ func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any) {
 		}
 	}
 	if req.Keyword != "" {
-		// 短关键词（1-2 字符 CJK）无 pg_trgm 索引可用：PGroonga &@ 子串预过滤
-		// 走 GIN 索引（1 字符起有效），外层 ILIKE 精确复核（转义 %/_，与内存实现
-		// strings.Contains 字面语义一致）。
+		// PGroonga &@ 子串匹配（大小写/宽度归一 + 字面 %/_，1 字符起走 GIN
+		// 索引）：ILIKE 复核会被规划成同一谓词的第二次 PGroonga index scan
+		// （BitmapAnd），语义与 &@ 等价，故只保留 &@。
 		rawArg := nextArg(req.Keyword)
-		keywordArg := nextArg(textutil.EscapeLikePattern(req.Keyword))
-		builder.WriteString(fmt.Sprintf(" AND (g.name &@ %s OR g.description &@ %s) AND (g.name ILIKE '%%' || %s || '%%' ESCAPE '\\' OR g.description ILIKE '%%' || %s || '%%' ESCAPE '\\')", rawArg, rawArg, keywordArg, keywordArg))
+		builder.WriteString(fmt.Sprintf(" AND (g.name &@ %s OR g.description &@ %s)", rawArg, rawArg))
 	}
 	if req.Tag != "" {
 		// 数组包含形式（= ANY 无法使用 GIN）：配合 idx_groups_tags_gin，

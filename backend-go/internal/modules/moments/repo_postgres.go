@@ -249,14 +249,13 @@ func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit 
 	kwArg := 0
 	tagArg := 0
 	if keyword != nil && *keyword != "" {
-		// 短关键词（1-2 字符 CJK）无 pg_trgm 索引可用：PGroonga &@ 子串预过滤
-		// 走 GIN 索引（1 字符起有效），外层 ILIKE 精确复核（转义 %/_，与内存
-		// 实现精确子串语义一致），返回语义不变。
+		// PGroonga &@ 子串匹配（大小写/宽度归一 + 字面 %/_，1 字符起走 GIN
+		// 索引）：ILIKE 复核会被规划成同一谓词的第二次 PGroonga index scan
+		// （BitmapAnd），已由真实库语义测试证明与 &@ 等价，故只保留 &@。
 		args = append(args, *keyword)
 		rawArg := len(args)
-		args = append(args, escapeLikePattern(*keyword))
-		kwArg = len(args)
-		builder.WriteString(fmt.Sprintf(" AND m.description &@ $%d AND m.description ILIKE '%%' || $%d || '%%' ESCAPE '\\'", rawArg, kwArg))
+		kwArg = rawArg
+		builder.WriteString(fmt.Sprintf(" AND m.description &@ $%d", rawArg))
 	}
 	if tag != nil && *tag != "" {
 		args = append(args, *tag)
