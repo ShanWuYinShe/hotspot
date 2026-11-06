@@ -2705,3 +2705,23 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   新增断言硬删通过 moments 接口执行；moments 内存实现补齐方法。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第十七批）：跨模块写债务收敛 2/5 — admin:reports（2026-11-07）
+
+架构审计 P0-4 第二项：admin 直接 UPDATE/DELETE reports（裁决与保留期清理）
+是跨模块写表债务，reports 表归属 reports 模块。
+
+- reports 模块新增管理端能力（Service 经可选 adminReportStore 能力断言，
+  不膨胀通用 Repository）：MarkHandledAsAdmin（pending 守卫 + RETURNING，
+  并发裁决只有一方命中）、DeleteHandledBefore（保留期清理，pending 永不删）；
+  SQL 归位 reports/repo_postgres_admin.go + queries。
+- admin 侧：Repository 移除 HandleReport/DeleteHandledReportsBefore，删除
+  对应 PG 实现与 SQL；Service 新增 reportAdminStore 最小接口（bootstrap 经
+  SetReportAdminStore 注入 reportsModule.Service）。
+- HandleReport 裁决改经 reports 模块落库：pending 冲突仍返回 10409「已处理」，
+  告警/审计/通知流程不变；保留期 sweeper 未注入时告警跳过，不误删。
+- archtest 删除 allowlist 条目 admin:reports（跨模块写债务 5→3）。
+- 测试：admin 内存适配 testReportAdminStore 注入既有 helper；保留期真实库 IT
+  改由 reports 仓储执行 DELETE；移除 admin 仓储裁决 SQL 用例。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

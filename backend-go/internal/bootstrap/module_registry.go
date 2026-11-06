@@ -232,6 +232,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// 群聊 + 私聊两个消息源在各自模块构造完成后注入 reports；mediaFiles 经
 	// factory 解析媒体元数据，使 snapshot_media 为完整 MessageMedia。
 	reportsModule := reports.NewModule(factory)
+	adminModule.Service.SetReportAdminStore(reportsModule.Service)
 	reportsModule.Service.SetMessageSnapshotSource(reports.NewMessageSnapshotSource(gmModule.Service, pmModule.MessageService(), reportsMediaSource{svc: mediaModule.Service}))
 	if svc := platformauth.DefaultService(); svc != nil {
 		svc.SetBanChecker(adminModule.Repo)

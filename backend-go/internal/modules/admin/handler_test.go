@@ -170,6 +170,7 @@ func newTestModuleWithStore() (*Module, *InMemoryRepository) {
 	module := NewModuleWithDeps(store, provider, nil, nil)
 	module.Service.SetMomentModerator(testMomentModerator{store: store})
 	module.Service.SetCommentModerator(testCommentModerator{store: store})
+	module.Service.SetReportAdminStore(testReportAdminStore{store: store})
 	module.Service.SetMessageModerators(testMessageModerator{store: store}, testMessageModerator{store: store})
 	module.Service.SetGroupModerator(testGroupModerator{store: store})
 	module.Service.SetAccountStateWriter(testAccountStateWriter{store: store})

@@ -29,8 +29,11 @@ type Service struct {
 	// momentModerator / commentModerator：举报裁决的内容删除走归属模块服务
 	//（admin 不再直接 UPDATE moments/comments 表，架构审计 P0-4）。bootstrap
 	// 注入缺失时裁决删除返回错误，绝不静默跳过。
-	momentModerator         momentModerator
-	commentModerator        commentModerator
+	momentModerator  momentModerator
+	commentModerator commentModerator
+	// reportAdmin：举报裁决 UPDATE / 保留期 DELETE 归位 reports 模块（admin
+	// 不再直写 reports 表，架构审计 P0-4）。bootstrap 注入缺失时裁决返回错误。
+	reportAdmin             reportAdminStore
 	groupMessageModerator   messageModerator
 	privateMessageModerator messageModerator
 	groupModerator          groupModerator
@@ -46,6 +49,12 @@ type momentModerator interface {
 
 type commentModerator interface {
 	DeleteAsAdmin(ctx context.Context, commentID string) error
+}
+
+// reportAdminStore 是 reports 模块的管理端能力（裁决/保留期清理）。
+type reportAdminStore interface {
+	MarkHandledAsAdmin(ctx context.Context, reportID, status string, handledAt time.Time, handledByID *string, note *string) (bool, error)
+	DeleteHandledBefore(ctx context.Context, before time.Time) (int64, error)
 }
 
 // accountStateWriter 写入账户封禁状态（users 模块 Service 实现；users 表归属
@@ -105,6 +114,9 @@ func (s *Service) SetMomentModerator(m momentModerator) { s.momentModerator = m 
 
 // SetCommentModerator wires the comments module's admin delete capability.
 func (s *Service) SetCommentModerator(c commentModerator) { s.commentModerator = c }
+
+// SetReportAdminStore wires the reports module's admin handling capability.
+func (s *Service) SetReportAdminStore(store reportAdminStore) { s.reportAdmin = store }
 
 // SetAccountStateWriter wires the users module's ban-state writer.
 func (s *Service) SetAccountStateWriter(w accountStateWriter) { s.accountStateWriter = w }

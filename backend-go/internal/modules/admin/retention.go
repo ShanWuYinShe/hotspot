@@ -70,12 +70,16 @@ func (s *Service) pruneRetentionOnce(ctx context.Context, auditRetentionDays, re
 		}
 	}
 	if reportRetentionDays > 0 {
-		cutoff := now.AddDate(0, 0, -reportRetentionDays)
-		deleted, err := s.repo.DeleteHandledReportsBefore(sweepCtx, cutoff)
-		if err != nil {
-			observability.L().Warn("admin.retention report prune failed", "error", err)
-		} else if deleted > 0 {
-			observability.L().Info("admin.retention reports pruned", "deleted", deleted, "cutoff", cutoff)
+		if s.reportAdmin == nil {
+			observability.L().Warn("admin.retention report prune skipped: reports module not wired")
+		} else {
+			cutoff := now.AddDate(0, 0, -reportRetentionDays)
+			deleted, err := s.reportAdmin.DeleteHandledBefore(sweepCtx, cutoff)
+			if err != nil {
+				observability.L().Warn("admin.retention report prune failed", "error", err)
+			} else if deleted > 0 {
+				observability.L().Info("admin.retention reports pruned", "deleted", deleted, "cutoff", cutoff)
+			}
 		}
 	}
 }

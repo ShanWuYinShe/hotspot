@@ -47,3 +47,25 @@ UNION ALL
 SELECT sender_user_id FROM private_messages WHERE message_id = $1
 LIMIT 1`
 )
+
+// 管理端裁决/保留期清理（reports 表归属本模块；admin 经 Service 消费，P0-4）。
+const (
+	queryMarkReportHandledAsAdmin = `
+UPDATE reports
+SET status = $2,
+    handled_at = $3,
+    handled_by_user_id = $4,
+    handle_note = $5
+WHERE report_id = $1 AND status = 'pending'
+RETURNING report_id`
+
+	queryDeleteHandledReportsBefore = `
+WITH deleted AS (
+    DELETE FROM reports
+    WHERE handled_at IS NOT NULL
+      AND handled_at < $1
+      AND status IN ('resolved', 'dismissed')
+    RETURNING 1
+)
+SELECT COUNT(*) FROM deleted`
+)

@@ -370,16 +370,6 @@ LEFT JOIN users target_user ON target_user.user_id = (
     END
 )
 WHERE r.report_id = $1`
-	// pending 守卫 + RETURNING：两管理员并发处理同一举报时只有一个能命中，
-	// 防止双重解散/封禁等副作用；0 行返回由 repo 映射为「已处理」冲突。
-	queryAdminHandleReport = `
-UPDATE reports
-SET status = $2,
-    handled_at = $3,
-    handled_by_user_id = $4,
-    handle_note = $5
-WHERE report_id = $1 AND status = 'pending'
-RETURNING report_id`
 	// === 统计分析（stats/geo）===
 	// 口径（spec api_spec_admin.md「统计分析（stats）API」）：平台管理视角豁免
 	// 客户端隐私过滤——用户未注销、群组未解散、动态未删除即计入，不限可见性。
@@ -541,16 +531,6 @@ const (
 	queryDeleteAuditLogsBefore = `
 WITH deleted AS (
     DELETE FROM admin_audit_logs WHERE created_at < $1 RETURNING 1
-)
-SELECT COUNT(*) FROM deleted`
-
-	queryDeleteHandledReportsBefore = `
-WITH deleted AS (
-    DELETE FROM reports
-    WHERE handled_at IS NOT NULL
-      AND handled_at < $1
-      AND status IN ('resolved', 'dismissed')
-    RETURNING 1
 )
 SELECT COUNT(*) FROM deleted`
 )

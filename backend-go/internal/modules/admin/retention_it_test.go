@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	reportsmodule "hotspot/backend-go/internal/modules/reports"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/testdb"
 )
@@ -16,6 +17,7 @@ func TestPostgresIT_DeleteHandledReportsBefore(t *testing.T) {
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		repo := NewPostgresRepository(txFactory)
+		reportRepo := reportsmodule.NewPostgresRepository(txFactory)
 		reporterID := testdb.InsertUser(t, txFactory, "retention_reporter", "Reporter")
 		handlerID := testdb.InsertUser(t, txFactory, "retention_handler", "Handler")
 
@@ -40,7 +42,7 @@ func TestPostgresIT_DeleteHandledReportsBefore(t *testing.T) {
 		insert("report_resolved_old", "resolved", now.AddDate(0, 0, -400), now.AddDate(0, 0, -400))
 		insert("report_dismissed_recent", "dismissed", now.AddDate(0, 0, -30), now.AddDate(0, 0, -30))
 
-		deleted, err := repo.DeleteHandledReportsBefore(ctx, now.AddDate(0, 0, -365))
+		deleted, err := reportRepo.DeleteHandledBefore(ctx, now.AddDate(0, 0, -365))
 		if err != nil {
 			t.Fatalf("delete handled reports: %v", err)
 		}

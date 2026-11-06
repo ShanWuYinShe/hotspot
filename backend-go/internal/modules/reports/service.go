@@ -3,6 +3,7 @@ package reports
 import (
 	"context"
 	"errors"
+	"time"
 	"unicode/utf8"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -130,4 +131,32 @@ func isValidReportReason(value ReportReason) bool {
 	default:
 		return false
 	}
+}
+
+// adminReportStore 是管理端裁决/保留期清理能力（PG 仓储实现；admin 经 Service
+// 消费，避免直写 reports 表，架构审计 P0-4）。可选能力断言保持 Repository
+// 大接口稳定、测试桩不必实现。
+type adminReportStore interface {
+	MarkHandledAsAdmin(ctx context.Context, reportID, status string, handledAt time.Time, handledByID *string, note *string) (bool, error)
+	DeleteHandledBefore(ctx context.Context, cutoff time.Time) (int64, error)
+}
+
+var errAdminReportStoreUnsupported = errors.New("reports: admin report store unsupported")
+
+// MarkHandledAsAdmin 管理端裁决举报（admin 模块消费）。
+func (s *Service) MarkHandledAsAdmin(ctx context.Context, reportID, status string, handledAt time.Time, handledByID *string, note *string) (bool, error) {
+	store, ok := s.repo.(adminReportStore)
+	if !ok {
+		return false, errAdminReportStoreUnsupported
+	}
+	return store.MarkHandledAsAdmin(ctx, reportID, status, handledAt, handledByID, note)
+}
+
+// DeleteHandledBefore 保留期清理已处理举报（admin 保留期 sweeper 消费）。
+func (s *Service) DeleteHandledBefore(ctx context.Context, cutoff time.Time) (int64, error) {
+	store, ok := s.repo.(adminReportStore)
+	if !ok {
+		return 0, errAdminReportStoreUnsupported
+	}
+	return store.DeleteHandledBefore(ctx, cutoff)
 }

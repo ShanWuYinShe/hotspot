@@ -3,10 +3,8 @@ package admin
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
-	reportsmodule "hotspot/backend-go/internal/modules/reports"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/types"
 
@@ -83,54 +81,4 @@ func (r *PostgresRepository) GetReportHandleRecord(ctx context.Context, reportID
 		return reportHandleRecord{}, false, err
 	}
 	return record, true, nil
-}
-
-func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, action ReportAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
-	queryable, ok := r.queryable(ctx)
-	if !ok {
-		return AdminReportItem{}, false, persistence.ErrNotImplemented
-	}
-	record, found, err := r.GetReportHandleRecord(ctx, reportID)
-	if err != nil || !found {
-		return AdminReportItem{}, found, err
-	}
-	status := ReportStatusPending
-	switch action {
-	case ReportActionResolve:
-		status = ReportStatusResolved
-	case ReportActionDismiss:
-		status = ReportStatusDismissed
-	}
-	now := time.Now().UTC()
-	var handledByID any
-	if handledBy != nil {
-		handledByID = handledBy.UserID
-	}
-	// pending 守卫（见 queryAdminHandleReport）：并发裁决只有一方命中；0 行
-	// 返回「已处理」，防止双重执行解散/封禁等副作用。
-	var updated string
-	if err := queryable.QueryRow(ctx, queryAdminHandleReport, reportID, string(status), now, handledByID, nullableString(strings.TrimSpace(note))).Scan(&updated); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return AdminReportItem{}, false, errReportAlreadyHandled
-		}
-		return AdminReportItem{}, false, err
-	}
-	record.Item.Status = status
-	handledAt := now.Format(time.RFC3339)
-	record.Item.HandledAt = &handledAt
-	record.Item.HandleNote = types.StrPtr(strings.TrimSpace(note))
-	// 裁决后同步刷新 resolution（spec api_spec_types.md ReportItem.resolution）。
-	if status == ReportStatusResolved || status == ReportStatusDismissed {
-		action := reportsmodule.ReportActionDismiss
-		if status == ReportStatusResolved {
-			action = reportsmodule.ReportActionResolve
-		}
-		note := strings.TrimSpace(note)
-		record.Item.Resolution = &reportsmodule.ReportResolution{Action: action, ResolvedAt: handledAt, Note: types.StrPtr(note)}
-	}
-	if handledBy != nil {
-		hb := *handledBy
-		record.Item.HandledBy = &hb
-	}
-	return record.Item, true, nil
 }

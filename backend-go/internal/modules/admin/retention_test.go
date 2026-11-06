@@ -22,6 +22,7 @@ func TestPruneRetentionOnceRemovesExpiredRows(t *testing.T) {
 		"report_pending_old":  {Item: AdminReportItem{ReportID: "report_pending_old", Status: ReportStatusPending}},
 	}
 	service := NewService(repo, nil, nil, nil)
+	service.SetReportAdminStore(testReportAdminStore{store: repo})
 
 	service.pruneRetentionOnce(ctx, 365, 365)
 

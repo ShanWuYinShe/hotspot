@@ -34,13 +34,11 @@ type Repository interface {
 	ListGroupMemberIDs(context.Context, string) ([]string, error)
 	SearchReports(context.Context, AdminReportListRequest) (adminReportPage, error)
 	GetReportHandleRecord(context.Context, string) (reportHandleRecord, bool, error)
-	HandleReport(context.Context, string, ReportAction, string, *UserInfo) (AdminReportItem, bool, error)
 	AppendAuditLog(context.Context, AuditLogEntry) error
 	// DeleteAuditLogsBefore / DeleteHandledReportsBefore 物理删除超保留期数据，
 	// 供后台 retention worker 调用（幂等；返回删除行数用于日志）。举报只删
 	// resolved/dismissed 终态，pending 不受影响。
 	DeleteAuditLogsBefore(ctx context.Context, cutoff time.Time) (int64, error)
-	DeleteHandledReportsBefore(ctx context.Context, cutoff time.Time) (int64, error)
 	// StatsGeo 地理统计聚合（区域/地点排名 + 全站存量 + 可选趋势），见 service_stats.go。
 	StatsGeo(context.Context, geoStatsQuery) (AdminGeoStatsResponse, error)
 	// StatsGeoDrilldown 区域下钻明细（keyset 分页），见 service_stats.go。

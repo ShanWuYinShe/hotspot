@@ -451,28 +451,6 @@ func TestAdminRepoReports(t *testing.T) {
 		t.Fatalf("get report record missing: found=%v err=%v", found, err)
 	}
 
-	// HandleReport：resolve / dismiss / 带 handledBy / exec 错误
-	handledBy := &UserInfo{UserID: "admin1", Nickname: "管理员"}
-	for _, action := range []ReportAction{ReportActionResolve, ReportActionDismiss} {
-		stub = &adminFullStub{queryRow: map[string][]any{queryAdminGetReportHandleRecord: reportRow19, queryAdminHandleReport: {"r1"}}}
-		item, found, err := newAdminFullRepo(stub).HandleReport(ctx, "r1", action, "处理完毕", handledBy)
-		if err != nil || !found || item.HandledAt == nil || item.HandledBy == nil || item.HandleNote == nil {
-			t.Fatalf("handle report %s: %#v found=%v err=%v", action, item, found, err)
-		}
-	}
-	// 未找到
-	stub = &adminFullStub{queryRowErr: map[string]error{queryAdminGetReportHandleRecord: pgx.ErrNoRows}}
-	if _, found, err := newAdminFullRepo(stub).HandleReport(ctx, "r1", ReportActionResolve, "", nil); err != nil || found {
-		t.Fatalf("handle report missing: found=%v err=%v", found, err)
-	}
-	// exec 错误
-	stub = &adminFullStub{
-		queryRow: map[string][]any{queryAdminGetReportHandleRecord: reportRow19},
-		execErrs: map[string]error{queryAdminHandleReport: errors.New("boom")},
-	}
-	if _, _, err := newAdminFullRepo(stub).HandleReport(ctx, "r1", ReportActionResolve, "", nil); err == nil {
-		t.Fatal("handle report exec error must propagate")
-	}
 }
 
 func TestAdminModerationStorePersistence(t *testing.T) {

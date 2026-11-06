@@ -76,6 +76,7 @@ func newHandleReportService(t *testing.T) (*Service, *InMemoryRepository, *captu
 	push := &capturePushStub{}
 	mods := NewInMemoryModerationStore()
 	svc := NewService(repo, provider, mods, push)
+	svc.SetReportAdminStore(testReportAdminStore{store: repo})
 	if err := repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true}); err != nil {
 		t.Fatalf("grant admin: %v", err)
 	}

@@ -126,7 +126,20 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 			}
 		}
 	}
-	_, ok, err := s.repo.HandleReport(ctx, req.ReportID, req.Action, note, &UserInfo{UserID: actor.UserID, Nickname: actor.Nickname})
+	// 裁决落库归位 reports 模块（pending 守卫 + RETURNING 在其仓储实现内；
+	// 并发裁决败者返回 false → 已处理冲突）。
+	status := ReportStatusPending
+	switch req.Action {
+	case ReportActionResolve:
+		status = ReportStatusResolved
+	case ReportActionDismiss:
+		status = ReportStatusDismissed
+	}
+	if s.reportAdmin == nil {
+		return nil, errors.New("admin: report admin store not configured")
+	}
+	notePtr := note
+	updated, err := s.reportAdmin.MarkHandledAsAdmin(ctx, req.ReportID, string(status), time.Now().UTC(), &actor.UserID, &notePtr)
 	if err != nil {
 		if errors.Is(err, errReportAlreadyHandled) {
 			// 并发裁决败者：副作用（解散/封禁/删内容）可能已由获胜方执行，
@@ -138,8 +151,8 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 		}
 		return nil, err
 	}
-	if !ok {
-		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "举报不存在"}, nil
+	if !updated {
+		return &httpx.APIError{Code: httpx.CodeConflict, Message: "举报已处理"}, nil
 	}
 	judgeDetails := map[string]any{"type": "report.judge", "report_id": req.ReportID, "action": string(req.Action), "note": note}
 	if req.BanDurationDays != nil {
