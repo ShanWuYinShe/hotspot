@@ -80,7 +80,7 @@ docker exec "$CONTAINER" psql -tA -U "$DBUSER" -d "$DB" \
   -c "SELECT 'UPDATE auth_accounts SET password_hash=''' || password_hash || ''', updated_at=now() WHERE login_id=''' || login_id || ''';' FROM auth_accounts WHERE login_id IN ($in_list);" \
   > "$WORK/old-hashes.sql"
 old_count=$(grep -c 'UPDATE' "$WORK/old-hashes.sql" || true)
-[ "$old_count" -eq $i ] || { echo "!! 账号数与库中记录不一致（库 $old_count / 归档 $i），中止"; exit 1; }
+[ "$old_count" -eq ${i} ] || { echo "!! 账号数与库中记录不一致（库 ${old_count} / 归档 ${i}），中止"; exit 1; }
 
 # 3) bcrypt（借 backend-go 模块的 x/crypto/bcrypt，不引入新工具链）
 mkdir -p "$HELPER"
