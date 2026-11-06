@@ -15,17 +15,8 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
-	if req.Keyword == "" && req.Tag == "" && req.Radius == nil {
-		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
-		return
-	}
-	// 契约（api_spec_base.md「搜索与地理约束」）：keyword 1-100 字符、tag 1-30 字符。
-	if n := utf8.RuneCountInString(req.Keyword); n > 100 {
-		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
-		return
-	}
-	if n := utf8.RuneCountInString(req.Tag); n > 30 {
-		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
+	if msg := validateSearchUsersRequest(req); msg != "" {
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, msg)
 		return
 	}
 	// reference_point 可选:缺失时由 service 按回退链解析(见 api_spec_types.md)
@@ -73,6 +64,22 @@ func (h *Handler) BatchGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(UsersBatchResult{Users: users}))
+}
+
+// validateSearchUsersRequest 校验 users/search 的通用参数规则（登录版与匿名
+// public 版共用，spec api_spec_public.md / api_spec_user.md 同口径）。
+func validateSearchUsersRequest(req SearchUsersRequest) string {
+	if req.Keyword == "" && req.Tag == "" && req.Radius == nil {
+		return "参数错误"
+	}
+	// 契约（api_spec_base.md「搜索与地理约束」）：keyword 1-100 字符、tag 1-30 字符。
+	if n := utf8.RuneCountInString(req.Keyword); n > 100 {
+		return "参数错误"
+	}
+	if n := utf8.RuneCountInString(req.Tag); n > 30 {
+		return "参数错误"
+	}
+	return ""
 }
 
 func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {

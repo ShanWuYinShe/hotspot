@@ -3170,3 +3170,21 @@ spec api_spec_public.md「类型体系」要求匿名节点 Request/Response 使
 comments/moments/groups/messages/search/share/system/admin 读路径均已带 avatar。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第十一批）：users 匿名端点 Public 类型层（search / open_the_door / batch_fetch）（2026-11-07）
+
+延续 H3-H5 Public 类型层，覆盖 users 三个核心匿名读端点：
+
+- 新增 PublicUserItem（UserItem 去 relation / social_context）、
+  PublicPaginatedUsers、PublicSearchUsersRequest、PublicOpenUserDoorRequest、
+  PublicBatchFetchUsersRequest、PublicUserProfileResult；
+- PublicSearch / PublicOpenTheDoor / PublicBatchGet：请求转换 + 复用服务读取 +
+  Public 响应映射；recent_moments 直接复用 moments 模块导出的
+  PublicMomentItem/PublicPaginatedMoments（同一公开形状，避免跨模块漂移）；
+- 提取 validateSearchUsersRequest 供登录版/匿名版共用；tags 归一空数组；
+  batch_fetch 按 spec 复用共享 UsersBatchResult（本就不含查看者字段）；
+- 测试：公开 user 无 relation/social_context、recent_moments 无查看者字段、
+  tags 数组、search/batch_fetch 成功 shape 与 10000 参数错误；
+  users 覆盖率 73.2%。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

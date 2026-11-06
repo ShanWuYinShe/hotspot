@@ -115,14 +115,14 @@ func TestToPublicMomentItemStripsViewerStateAndNormalizesArrays(t *testing.T) {
 		AuthorRelation: &UserRelationView{IsFollowing: true},
 		Reactions:      []Reaction{{Emoji: "like", Count: 3, ReactedByMe: true}},
 	}
-	pub := toPublicMomentItem(item)
+	pub := ToPublicMomentItem(item)
 	if pub.Images == nil || pub.Tags == nil || pub.Mentions == nil {
 		t.Fatalf("arrays must normalize to empty slices: %#v", pub)
 	}
 	if len(pub.Reactions) != 1 || pub.Reactions[0].Emoji != "like" || pub.Reactions[0].Count != 3 {
 		t.Fatalf("unexpected public reactions: %#v", pub.Reactions)
 	}
-	page := toPublicPaginatedMoments(PaginatedMoments{Items: []MomentItem{item, item}})
+	page := ToPublicPaginatedMoments(PaginatedMoments{Items: []MomentItem{item, item}})
 	if len(page.Items) != 2 || page.Items[0].MomentID != "m1" {
 		t.Fatalf("unexpected public page: %#v", page)
 	}

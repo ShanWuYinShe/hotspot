@@ -64,7 +64,7 @@ func (r PublicFetchNearbyMomentsRequest) toInternal() FetchNearbyMomentsRequest 
 	return FetchNearbyMomentsRequest{Radius: r.Radius, ReferencePoint: r.ReferencePoint, Pagination: r.Pagination}
 }
 
-func toPublicMomentItem(item MomentItem) PublicMomentItem {
+func ToPublicMomentItem(item MomentItem) PublicMomentItem {
 	images := item.Images
 	if images == nil {
 		images = []MomentImage{}
@@ -97,10 +97,10 @@ func toPublicMomentItem(item MomentItem) PublicMomentItem {
 	}
 }
 
-func toPublicPaginatedMoments(page PaginatedMoments) PublicPaginatedMoments {
+func ToPublicPaginatedMoments(page PaginatedMoments) PublicPaginatedMoments {
 	items := make([]PublicMomentItem, 0, len(page.Items))
 	for _, item := range page.Items {
-		items = append(items, toPublicMomentItem(item))
+		items = append(items, ToPublicMomentItem(item))
 	}
 	return PublicPaginatedMoments{Items: items, NextCursor: page.NextCursor}
 }
@@ -122,7 +122,7 @@ func (h *Handler) PublicOpenTheDoor(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteBusinessError(w, r, "PublicOpenTheDoor", httpx.CodeNotFound, "瞬间不存在")
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(toPublicMomentItem(item)))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(ToPublicMomentItem(item)))
 }
 
 func (h *Handler) PublicSearch(w http.ResponseWriter, r *http.Request) {
@@ -141,7 +141,7 @@ func (h *Handler) PublicSearch(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, r, "PublicSearch", err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(toPublicPaginatedMoments(result)))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(ToPublicPaginatedMoments(result)))
 }
 
 func (h *Handler) PublicFetchNearby(w http.ResponseWriter, r *http.Request) {
@@ -155,5 +155,5 @@ func (h *Handler) PublicFetchNearby(w http.ResponseWriter, r *http.Request) {
 		h.writeFetchError(w, r, "PublicFetchNearby", err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(toPublicPaginatedMoments(result)))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(ToPublicPaginatedMoments(result)))
 }
