@@ -16,7 +16,7 @@
 //
 // 只动 transform / opacity / 内容层透明度；不读布局（锚点绝对位置由调用方缓存），
 // 因此每帧成本与一次 transform 写入相当。reduced-motion 下退化为「过闸即切换」。
-import { islandFlight, type IslandRect } from './island-morph';
+import { islandFlight, islandRectOf, type IslandRect } from './island-morph';
 import { prefersReducedMotion } from './motion';
 
 /** 一次交接帧：滚动进度 + 锚点矩形（锚点跟手移动时每帧更新）。 */
@@ -253,6 +253,112 @@ export function handoffRecede(
 	return {
 		destroy() {
 			unsubscribe();
+		}
+	};
+}
+
+export interface IslandAnchorParams {
+	/** 是否启用滚动交接（桌面端为 true，移动端可传 false） */
+	enabled?: boolean;
+	/** 每次进度计算后的回调（通常用于同步可见态） */
+	onProgress?: (p: number, source: IslandRect | null) => void;
+	/** 顶栏高度（缺省 52px） */
+	barHeight?: number;
+	/** 开始进入交接的缓冲距离（缺省 24px） */
+	approach?: number;
+	/** 尾部结束距离（缺省 10px） */
+	tail?: number;
+	/** 滚动容器 DOM ID（缺省先探查父级 overflow-y，回退 main-content） */
+	scrollerId?: string;
+}
+
+/**
+ * 锚点发送动作：监听页面滚动，计算锚点位置并向顶栏灵动岛实时广播交接进度。
+ * 用法：`<div use:islandAnchor={{ enabled: isDesktop, onProgress: (p) => ... }}>`
+ */
+export function islandAnchor(node: HTMLElement, params: IslandAnchorParams = {}) {
+	if (params.enabled === false) {
+		publishHandoff({ p: 0, source: null });
+		params.onProgress?.(0, null);
+		return;
+	}
+
+	let scroller: HTMLElement | null = node.parentElement;
+	while (scroller) {
+		if (/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) break;
+		scroller = scroller.parentElement;
+	}
+	if (!scroller && params.scrollerId) {
+		scroller = document.getElementById(params.scrollerId);
+	}
+	if (!scroller) {
+		scroller = document.getElementById('main-content');
+	}
+	if (!scroller) return;
+
+	const target = scroller;
+	let box: { x: number; width: number; height: number; absTop: number } | null = null;
+	let raf = 0;
+
+	const measure = () => {
+		const rect = islandRectOf(node);
+		if (!rect) return;
+		box = {
+			x: rect.x,
+			width: rect.width,
+			height: rect.height,
+			absTop: rect.y + target.scrollTop
+		};
+	};
+
+	const apply = () => {
+		raf = 0;
+		if (!box) measure();
+		if (!box) return;
+		const source: IslandRect = {
+			x: box.x,
+			y: box.absTop - target.scrollTop,
+			width: box.width,
+			height: box.height
+		};
+		const barH = params.barHeight ?? 52;
+		const p = anchorHandoffProgress(
+			source.y,
+			source.height,
+			barH,
+			params.approach ?? 24,
+			params.tail ?? 10
+		);
+		publishHandoff({ p, source });
+		params.onProgress?.(p, source);
+	};
+
+	const onScroll = () => {
+		if (raf) return;
+		raf = requestAnimationFrame(apply);
+	};
+
+	target.addEventListener('scroll', onScroll, { passive: true });
+	window.addEventListener('resize', measure);
+	measure();
+	apply();
+
+	return {
+		update(nextParams: IslandAnchorParams) {
+			if (nextParams.enabled === false) {
+				publishHandoff({ p: 0, source: null });
+				nextParams.onProgress?.(0, null);
+			} else {
+				measure();
+				apply();
+			}
+		},
+		destroy() {
+			target.removeEventListener('scroll', onScroll);
+			window.removeEventListener('resize', measure);
+			if (raf) cancelAnimationFrame(raf);
+			publishHandoff({ p: 0, source: null });
+			params.onProgress?.(0, null);
 		}
 	};
 }

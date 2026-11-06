@@ -3,6 +3,7 @@ import {
 	anchorHandoffProgress,
 	handoffCss,
 	islandHandoff,
+	islandAnchor,
 	publishHandoff,
 	scrollHandoffProgress
 } from '../island-handoff';
@@ -154,5 +155,20 @@ describe('island-handoff 纯函数', () => {
 		expect(after.transform).toBe('');
 		expect(after.opacity).toBe(1);
 		expect(after.content).toBe(1);
+	});
+
+	it('islandAnchor action: enabled 为 false 时立即归零交接状态', () => {
+		const node = document.createElement('div');
+		document.body.appendChild(node);
+		let progressCalled = -1;
+		const action = islandAnchor(node, {
+			enabled: false,
+			onProgress: (p) => {
+				progressCalled = p;
+			}
+		});
+		expect(progressCalled).toBe(0);
+		action?.destroy?.();
+		node.remove();
 	});
 });
