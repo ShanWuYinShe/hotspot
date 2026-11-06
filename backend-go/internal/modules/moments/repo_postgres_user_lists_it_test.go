@@ -44,12 +44,12 @@ func TestListMomentsByAuthorReturnsNextCursorWithoutDupingNextPage(t *testing.T)
 	createdAt3 := time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC)
 	backend := &userMomentCursorBackend{
 		firstPage: [][]any{
-			{"moment_3", "user_alice", "Alice", "third", createdAt3, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
-			{"moment_2", "user_alice", "Alice", "second", createdAt2, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
-			{"moment_1", "user_alice", "Alice", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+			{"moment_3", "user_alice", "Alice", "", "third", createdAt3, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+			{"moment_2", "user_alice", "Alice", "", "second", createdAt2, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+			{"moment_1", "user_alice", "Alice", "", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
 		},
 		secondPage: [][]any{
-			{"moment_1", "user_alice", "Alice", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+			{"moment_1", "user_alice", "Alice", "", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
 		},
 		tags: [][]any{{"moment_3", "travel"}},
 	}

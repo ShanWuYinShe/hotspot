@@ -143,7 +143,7 @@ func TestBuildSearchMomentsQueryPopularDecayAndViewerState(t *testing.T) {
 
 // TestScanSearchMomentRowReadsViewerFavoriteFlag：搜索行扫描读取尾列收藏态。
 func TestScanSearchMomentRowReadsViewerFavoriteFlag(t *testing.T) {
-	base := []any{"moment_1", "user_a", "user_a", "desc", "2026-01-01T00:00:00Z", 0, 2, 0, "somewhere", 35.0, 112.0, "public", false}
+	base := []any{"moment_1", "user_a", "user_a", "", "desc", "2026-01-01T00:00:00Z", 0, 2, 0, "somewhere", 35.0, 112.0, "public", false}
 	item, err := scanSearchMomentRow(rowValues{values: append(append([]any{}, base...), true)})
 	if err != nil {
 		t.Fatalf("scan: %v", err)

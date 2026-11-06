@@ -172,16 +172,16 @@ func (r *PostgresRepository) ListReactedByUser(ctx context.Context, userID, view
 
 func scanUserMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) {
 	var item MomentItem
-	var userID, nickname, locationName, privacyLevel string
+	var userID, nickname, avatarURL, locationName, privacyLevel string
 	var latitude, longitude float64
 	var createdAt time.Time
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.CommentsCount, &item.SharesCount, &item.InteractionCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &avatarURL, &item.Description, &createdAt, &item.CommentsCount, &item.SharesCount, &item.InteractionCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
 		return MomentItem{}, err
 	}
 	if nickname == "" {
 		nickname = userID
 	}
-	item.User = UserInfo{UserID: userID, Nickname: nickname}
+	item.User = UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.Location = &Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
@@ -195,10 +195,10 @@ func scanUserMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, err
 // 返回全精度 reactedAt（time.Time，游标编码用，不得用秒精度展示格式）。
 func scanUserReactedMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, time.Time, error) {
 	var item MomentItem
-	var userID, nickname, locationName, privacyLevel string
+	var userID, nickname, avatarURL, locationName, privacyLevel string
 	var latitude, longitude float64
 	var createdAt, reactedAt time.Time
-	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &item.Description, &createdAt, &item.CommentsCount, &item.SharesCount, &item.InteractionCount, &locationName, &latitude, &longitude, &privacyLevel, &reactedAt, &item.IsFavorited); err != nil {
+	if err := scanner.Scan(&item.MomentID, &userID, &nickname, &avatarURL, &item.Description, &createdAt, &item.CommentsCount, &item.SharesCount, &item.InteractionCount, &locationName, &latitude, &longitude, &privacyLevel, &reactedAt, &item.IsFavorited); err != nil {
 		return MomentItem{}, time.Time{}, err
 	}
 	if nickname == "" {

@@ -47,6 +47,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	var allowedTags []string
 	normalizedMentions := normalizeMomentMentions(req.Mentions)
 	nickname := userID
+	avatarURL := ""
 	if err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
 		txQueryable, ok := queryable(txCtx, r.factory)
 		if !ok {
@@ -72,13 +73,14 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 				return fmt.Errorf("moments.Create: insert images: %w", err)
 			}
 		}
-		n, err := lookupUserNickname(txCtx, txQueryable, userID)
+		n, avatar, err := lookupUserNickname(txCtx, txQueryable, userID)
 		if err != nil {
 			return err
 		}
 		if n != "" {
 			nickname = n
 		}
+		avatarURL = avatar
 		return nil
 	}); err != nil {
 		return MomentItem{}, err
@@ -92,23 +94,23 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		InteractionCount: 0,
 		CommentsCount:    0,
 		SharesCount:      0,
-		User:             UserInfo{UserID: userID, Nickname: nickname},
+		User:             UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
 		Location:         req.Location,
 		PrivacyLevel:     privacy,
 		IsFavorited:      false,
 	}, nil
 }
 
-func lookupUserNickname(ctx context.Context, queryable persistence.Queryable, userID string) (string, error) {
-	var nickname string
-	err := queryable.QueryRow(ctx, queryGetUserNickname, userID).Scan(&nickname)
+func lookupUserNickname(ctx context.Context, queryable persistence.Queryable, userID string) (string, string, error) {
+	var nickname, avatarURL string
+	err := queryable.QueryRow(ctx, queryGetUserNickname, userID).Scan(&nickname, &avatarURL)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", nil
+			return "", "", nil
 		}
-		return "", err
+		return "", "", err
 	}
-	return nickname, nil
+	return nickname, avatarURL, nil
 }
 
 // AdjustInteractionCount 按 delta 增减内部互动热度列 interaction_count（SQL 内
@@ -227,7 +229,7 @@ func paginationCursor(p *PaginationParams) string {
 func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit int, after *momentSearchCursor, viewerID string, decayClock time.Time) (string, []any) {
 	args := make([]any, 0, 8)
 	var builder strings.Builder
-	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), m.description, m.created_at, ` + momentCountSelectColumns + `, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted`)
+	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, m.created_at, ` + momentCountSelectColumns + `, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted`)
 	if viewerID != "" {
 		// 查看者收藏态：参数化 EXISTS 子查询（$N 占位符），匿名时不追加该列。
 		args = append(args, viewerID)

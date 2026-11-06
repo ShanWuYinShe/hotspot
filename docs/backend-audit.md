@@ -3115,3 +3115,18 @@ spec api_spec_public.md「类型体系」要求匿名节点 Request/Response 使
   avatar_url 一致」单测；真库 contract 测试（top_replies batch）通过。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第七批）：moments 读路径补齐 UserInfo.avatar_url（2026-11-07）
+
+契约审计「avatar_url 多读路径缺失」逐模块收口（本批 moments）：
+
+- 6 条读查询/构造补 `COALESCE(u.avatar_url, '')`：queryGetMoment、ListMine、
+  ListFavorites、ListMomentsByAuthor、ListReactedByUser、moments/search 动态
+  SQL、创建瞬间的昵称查询；
+- 对应扫描器（scanMomentRowParts / WithAssociations / Favorite / UserMoment /
+  UserReactedMoment / Search）统一多扫 avatar 列并填充 UserInfo.AvatarURL
+  （空串归一 nil）；momentItemFromRow 增加 avatar 参数收口；
+- 创建瞬间响应回显作者头像；
+- 测试 stub 列序对齐（repo read/user_lists/search_tests），full suite 全绿。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

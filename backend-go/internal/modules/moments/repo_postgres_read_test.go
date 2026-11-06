@@ -193,6 +193,13 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 	return nil
 }
 
+func avatarString(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
 func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) persistence.Row {
 	if err := b.queryRowErrs[query]; err != nil {
 		return rowValues{err: err}
@@ -202,7 +209,7 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 		userID := args[0].(string)
 		for _, item := range b.moments {
 			if item.User.UserID == userID {
-				return rowValues{values: []any{item.User.Nickname}}
+				return rowValues{values: []any{item.User.Nickname, avatarString(item.User.AvatarURL)}}
 			}
 		}
 		return rowValues{err: pgx.ErrNoRows}
@@ -212,7 +219,7 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 			return rowValues{err: pgx.ErrNoRows}
 		}
 		// queryGetMoment 合并了 tags/mentions 两个 ARRAY_AGG 列（审查 P2-16）。
-		return rowValues{values: []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted, item.Tags, item.Mentions}}
+		return rowValues{values: []any{item.MomentID, item.User.UserID, item.User.Nickname, avatarString(item.User.AvatarURL), item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted, item.Tags, item.Mentions}}
 	default:
 		return rowValues{err: persistence.ErrNotImplemented}
 	}
@@ -296,7 +303,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, avatarString(item.User.AvatarURL), item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted})
 		}
 		return &rowsValues{rows: rows}, nil
 	}
@@ -317,7 +324,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		})
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, avatarString(item.User.AvatarURL), item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted})
 		}
 		return &rowsValues{rows: rows}, nil
 	case queryFilterAllowedMomentTags:
@@ -409,7 +416,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		rows := make([][]any, 0, len(favoriteRows))
 		for _, row := range favoriteRows {
 			item := row.moment
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted, row.favoritedAt})
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, avatarString(item.User.AvatarURL), item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted, row.favoritedAt})
 		}
 		return &rowsValues{rows: rows}, nil
 	default:
