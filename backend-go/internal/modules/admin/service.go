@@ -50,6 +50,38 @@ type Service struct {
 // SetTxRunner wires the optional transaction runner（bootstrap 注入；nil 时直跑）。
 func (s *Service) SetTxRunner(runInTx persistence.TxRunner) { s.runInTx = runInTx }
 
+// errAdminDecisionAborted 是「业务错误需回滚已执行副作用」的内部哨兵：
+// 包装事务时 APIError 不当作 Go error 上抛，但必须让事务回滚。
+var errAdminDecisionAborted = errors.New("admin: decision aborted")
+
+// runDecisionInTx 把跨模块编排写（内容删除/封禁/会话撤销/举报终态）放入同一
+// 事务；未注入 TxRunner（单测/内存装配）时直跑，语义不变。业务错误（含并发
+// 败者）通过哨兵回滚已执行副作用，再原样返回 APIError。
+func (s *Service) runDecisionInTx(ctx context.Context, fn func(context.Context) (*httpx.APIError, error)) (*httpx.APIError, error) {
+	if s.runInTx == nil {
+		return fn(ctx)
+	}
+	var apiErr *httpx.APIError
+	var opErr error
+	txErr := s.runInTx(ctx, func(txCtx context.Context) error {
+		apiErr, opErr = fn(txCtx)
+		if apiErr != nil {
+			return errAdminDecisionAborted
+		}
+		return opErr
+	})
+	if errors.Is(txErr, errAdminDecisionAborted) {
+		return apiErr, nil
+	}
+	if opErr != nil {
+		return nil, opErr
+	}
+	if txErr != nil {
+		return nil, txErr
+	}
+	return nil, nil
+}
+
 // momentModerator / commentModerator 是 admin 消费的内容审核删除能力最小接口
 // （由 moments/comments 模块 Service 实现）。
 type momentModerator interface {

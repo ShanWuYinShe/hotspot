@@ -791,6 +791,45 @@ func TestHandleReportRunsInsideTransaction(t *testing.T) {
 	}
 }
 
+func TestSetUserBanRunsInsideTransaction(t *testing.T) {
+	module, _ := newTestModuleWithStore()
+	txCalls := 0
+	module.Service.SetTxRunner(func(ctx context.Context, fn func(context.Context) error) error {
+		txCalls++
+		return fn(ctx)
+	})
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/set_ban", strings.NewReader(`{"user_id":"user_bob","reason":"spam","active":true}`)), "admin", true)
+	rr := httptest.NewRecorder()
+	module.handler.SetUserBan(rr, req)
+	if resp := decodeResponse[struct{}](t, rr); resp.Code != 0 {
+		t.Fatalf("unexpected set_ban response: %#v", resp)
+	}
+	if txCalls != 1 {
+		t.Fatalf("expected set_ban to run inside exactly one transaction, got %d", txCalls)
+	}
+}
+
+func TestDismissGroupRunsInsideTransaction(t *testing.T) {
+	module, store := newTestModuleWithStore()
+	txCalls := 0
+	module.Service.SetTxRunner(func(ctx context.Context, fn func(context.Context) error) error {
+		txCalls++
+		return fn(ctx)
+	})
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/groups/dismiss", strings.NewReader(`{"group_id":"group_hotspot","reason":"policy"}`)), "admin", true)
+	rr := httptest.NewRecorder()
+	module.handler.DismissGroup(rr, req)
+	if resp := decodeResponse[struct{}](t, rr); resp.Code != 0 {
+		t.Fatalf("unexpected dismiss response: %#v", resp)
+	}
+	if _, ok := store.groups["group_hotspot"]; ok {
+		t.Fatal("expected group to be dismissed inside transaction")
+	}
+	if txCalls != 1 {
+		t.Fatalf("expected dismiss to run inside exactly one transaction, got %d", txCalls)
+	}
+}
+
 func TestHandleGroupReportDismissesGroup(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
 	store.reports["report_group"] = reportHandleRecord{

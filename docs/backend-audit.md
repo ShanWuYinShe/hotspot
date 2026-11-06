@@ -2986,3 +2986,19 @@ C2/C5 收口防腐：把本轮清掉的全局单例与事务纪律固化为 CI �
 验证：go test -short 全绿；aftercommit 单测（提交执行/回滚丢弃/无事务立即）；
 persistence 真库 IT（hook 在 commit 后可用事务前 ctx 查库、回滚不执行）；
 admin 事务注入单测；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C5（第二批）：admin 跨模块编排写统一事务包装（2026-11-07）
+
+把 C5 第一批的举报裁决事务模式收口为通用能力，覆盖 admin 其余两个跨模块
+编排写入口：
+
+- `Service.runDecisionInTx`：统一「业务错误需回滚」哨兵 + TxRunner 包装；
+  未注入 runner（单测/内存装配）时直跑，语义不变；
+- `HandleReport` 改用该 helper（行为不变，去掉重复包装代码）；
+- `SetUserBan`（账户封禁/解封 + 会话撤销 + 审计）与 `DismissGroup`（群解散 +
+  申请/邀请作废 + 广播/审计）改为事务包装，失败/业务错误整体回滚；
+- 新增两个「事务确实被使用」单测（fake TxRunner 计数 + 结果断言）。
+- 已知边界同前：内容/会话模块的实时广播仍早于 COMMIT（幻影广播），后续迁
+  aftercommit 收敛。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

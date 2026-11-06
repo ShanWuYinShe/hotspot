@@ -66,7 +66,15 @@ func (s *Service) OpenAdminUser(ctx context.Context, userID string) (AdminUserIt
 	return item, nil, nil
 }
 
+// SetUserBan 跨模块编排写（账户封禁 + 会话撤销 + 审计）包事务；未注入
+// TxRunner 时直跑，语义与旧实现一致。
 func (s *Service) SetUserBan(ctx context.Context, req AdminSetUserBanRequest) (*httpx.APIError, error) {
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		return s.setUserBan(txCtx, req)
+	})
+}
+
+func (s *Service) setUserBan(ctx context.Context, req AdminSetUserBanRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionUsersWrite)
 	if apiErr != nil || err != nil {
 		return apiErr, err
@@ -159,7 +167,15 @@ func (s *Service) OpenAdminGroup(ctx context.Context, groupID string) (AdminGrou
 	return item, nil, nil
 }
 
+// DismissGroup 跨模块编排写（群解散 + 申请/邀请作废 + 广播/审计）包事务；
+// 未注入 TxRunner 时直跑，语义与旧实现一致。
 func (s *Service) DismissGroup(ctx context.Context, req AdminDismissGroupRequest) (*httpx.APIError, error) {
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		return s.dismissGroup(txCtx, req)
+	})
+}
+
+func (s *Service) dismissGroup(ctx context.Context, req AdminDismissGroupRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionGroupsWrite)
 	if apiErr != nil || err != nil {
 		return apiErr, err

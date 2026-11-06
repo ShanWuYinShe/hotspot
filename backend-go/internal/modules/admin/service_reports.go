@@ -41,35 +41,13 @@ func (s *Service) SearchReports(ctx context.Context, req AdminReportListRequest)
 	return resp, nil, nil
 }
 
-var errReportDecisionAborted = errors.New("admin: report decision aborted")
-
 // HandleReport 是举报裁决入口：跨模块编排写（内容删除/封禁/举报终态）在同一
 // 事务内提交；审计与举报人通知经 aftercommit 在 COMMIT 后执行，回滚时丢弃。
 // 未注入 TxRunner（单测/内存装配）时直跑，语义与旧实现一致。
 func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest) (*httpx.APIError, error) {
-	if s.runInTx == nil {
-		return s.handleReport(ctx, req)
-	}
-	var apiErr *httpx.APIError
-	var opErr error
-	txErr := s.runInTx(ctx, func(txCtx context.Context) error {
-		apiErr, opErr = s.handleReport(txCtx, req)
-		if apiErr != nil {
-			// 业务错误（含并发裁决败者）：回滚本事务已执行的副作用。
-			return errReportDecisionAborted
-		}
-		return opErr
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		return s.handleReport(txCtx, req)
 	})
-	if errors.Is(txErr, errReportDecisionAborted) {
-		return apiErr, nil
-	}
-	if opErr != nil {
-		return nil, opErr
-	}
-	if txErr != nil {
-		return nil, txErr
-	}
-	return nil, nil
 }
 
 func (s *Service) handleReport(ctx context.Context, req JudgeAdminReportRequest) (*httpx.APIError, error) {
