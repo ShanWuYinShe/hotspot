@@ -239,11 +239,11 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 	// 不影响消息已落库的返回结果）。不异步化：HTTP 响应前必须保证投递已发起。
 	group, _ := errgroup.WithContext(context.Background())
 	group.Go(func() error {
-		realtime.DefaultHub().BroadcastToUser(req.TargetUserID, event)
+		realtime.HubFromContext(ctx).BroadcastToUser(req.TargetUserID, event)
 		return nil
 	})
 	group.Go(func() error {
-		realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
+		realtime.HubFromContext(ctx).BroadcastToUser(principal.UserID, event)
 		return nil
 	})
 	_ = group.Wait()
@@ -337,8 +337,8 @@ func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) e
 		Content:      meta.Content,
 		EditedAt:     now,
 	}}
-	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
+	realtime.HubFromContext(ctx).BroadcastToUser(meta.TargetUserID, event)
+	realtime.HubFromContext(ctx).BroadcastToUser(principal.UserID, event)
 	return nil
 }
 
@@ -356,8 +356,8 @@ func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) e
 		RecalledBy:   s.resolveUserInfo(ctx, principal.UserID),
 		RecalledAt:   now,
 	}}
-	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
+	realtime.HubFromContext(ctx).BroadcastToUser(meta.TargetUserID, event)
+	realtime.HubFromContext(ctx).BroadcastToUser(principal.UserID, event)
 	return nil
 }
 
@@ -383,8 +383,8 @@ func (s *Service) RecallMessageByIDAsAdmin(ctx context.Context, operatorID, mess
 	}}
 	// 撤回广播在事务 COMMIT 后执行；无事务时立即执行。
 	aftercommit.Register(ctx, func(context.Context) {
-		realtime.DefaultHub().BroadcastToUser(sender, event)
-		realtime.DefaultHub().BroadcastToUser(receiver, event)
+		realtime.HubFromContext(ctx).BroadcastToUser(sender, event)
+		realtime.HubFromContext(ctx).BroadcastToUser(receiver, event)
 	})
 	return true, nil
 }
@@ -404,7 +404,7 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadReq
 	}}
 	// 契约(api_spec_websocket.md):PrivateMessageRead 仅推给私聊对端（让对方得知已读）。
 	// 不推给已读方自己的其他设备——跨设备已读同步不在本协议范围（self-sync 已移除）。
-	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
+	realtime.HubFromContext(ctx).BroadcastToUser(meta.TargetUserID, event)
 	return nil
 }
 

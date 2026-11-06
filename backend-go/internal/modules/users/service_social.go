@@ -79,7 +79,7 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 	if sourceMomentID != "" {
 		newFollowerPayload["source_moment_id"] = sourceMomentID
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeNewFollower, Payload: newFollowerPayload})
+	realtime.HubFromContext(ctx).BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeNewFollower, Payload: newFollowerPayload})
 	relation, err := s.repo.Relationship(ctx, targetUserID, principal.UserID)
 	if err != nil {
 		op.Fail(err, "stage", "relationship-check")
@@ -105,8 +105,8 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 		}
 		mutualPayloadForPrincipal := map[string]any{"notify_id": notificationIDForPrincipal, "actor": actor, "mutual_at": mutualAt}
 		mutualPayloadForTarget := map[string]any{"notify_id": notificationIDForTarget, "actor": actor, "mutual_at": mutualAt}
-		realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForPrincipal})
-		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForTarget})
+		realtime.HubFromContext(ctx).BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForPrincipal})
+		realtime.HubFromContext(ctx).BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMutualFollow, Payload: mutualPayloadForTarget})
 	}
 	s.invalidateRelationCache(ctx, principal.UserID, targetUserID)
 	op.Complete()

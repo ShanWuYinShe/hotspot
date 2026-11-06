@@ -19,6 +19,7 @@ import (
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/ratelimit"
+	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
 	"hotspot/backend-go/internal/platform/routemeta"
 )
@@ -35,6 +36,12 @@ func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.L
 // 仅告警不摘流量），供容器 healthcheck/LB 使用。
 func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store, platformAuth *platformauth.Service, adminChecker platformauth.AdminChecker) http.Handler {
 	return newHTTPRouter(modules, logger, readiness, guardChecker, idemStore, platformAuth, adminChecker)
+}
+
+func realtimeHubMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r.WithContext(realtime.WithHub(r.Context(), realtime.DefaultHub())))
+	})
 }
 
 func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store, platformAuth *platformauth.Service, adminChecker platformauth.AdminChecker) http.Handler {
@@ -56,6 +63,9 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, rea
 	// 请求计数/耗时指标（chi 路由模板维度）。放在 Recoverer 之后：panic
 	// 恢复为 500 的请求同样被计数。
 	r.Use(observability.RequestMetricsMiddleware)
+	// 实时 Hub 显式注入请求 context（替代模块内 80+ 处 DefaultHub 直取的隐式
+	// 全局依赖）：请求路径统一从 ctx 取 Hub，组合根在这里注入一次。
+	r.Use(realtimeHubMiddleware)
 	// 资源守卫 checker 显式注入请求 context（替代进程级 SetDefaultChecker）：
 	// 守卫中间件与写入方 Record* 统一从 ctx 取实例，同进程可装配多套 App。
 	r.Use(resourceguard.WithChecker(guardChecker))

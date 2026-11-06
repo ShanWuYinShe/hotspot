@@ -195,7 +195,7 @@ func TestPushSystemAnnouncementFansOut(t *testing.T) {
 	service := NewService()
 	actionURL := "https://example.com/maint"
 	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnounceLevelInfo, ActionURL: &actionURL, CreatedAt: "2026-03-26T00:00:00Z"}
-	service.PushSystemAnnouncement(payload, "notif_1")
+	service.PushSystemAnnouncement(context.Background(), payload, "notif_1")
 	if len(aliceSink.events) != 1 || len(bobSink.events) != 1 {
 		t.Fatalf("unexpected events: %#v %#v", aliceSink.events, bobSink.events)
 	}

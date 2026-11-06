@@ -532,7 +532,7 @@ func (s *Service) AppendGroupMentionedBatch(ctx context.Context, targetUserIDs [
 // connections. The payload carries the same notify_id that
 // AppendSystemAnnouncement persisted, so clients can deduplicate the realtime
 // event against the HTTP notify/fetch record (spec api_spec_websocket.md).
-func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem, notifyID string) {
+func (s *Service) PushSystemAnnouncement(ctx context.Context, item systemmodule.SystemAnnouncementItem, notifyID string) {
 	// 契约(api_spec_websocket.md → SystemAnnouncement)：payload 复用 SystemAnnouncementItem
 	announcement := AnnouncementBody{
 		AnnouncementID: item.AnnouncementID,
@@ -544,7 +544,7 @@ func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementIte
 	if item.ActionURL != nil && *item.ActionURL != "" {
 		announcement.ActionURL = *item.ActionURL
 	}
-	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: realtime.EventTypeSystemAnnouncement, Payload: SystemAnnouncementPayload{NotifyID: notifyID, Announcement: announcement}})
+	realtime.HubFromContext(ctx).BroadcastToAll(realtime.Event{Type: realtime.EventTypeSystemAnnouncement, Payload: SystemAnnouncementPayload{NotifyID: notifyID, Announcement: announcement}})
 }
 
 func (s *Service) PublishNearbyNewMoment(ctx context.Context, targetUserID, actorID, momentID string, distance int, actorPayload types.UserInfo, momentSummaryPayload types.MomentSummary) error {
@@ -593,7 +593,7 @@ func (s *Service) publishNearbyNewMoment(ctx context.Context, targetUserID, acto
 		observability.L().Error("notifys.publish_nearby_new_moment append failed", "error", err)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToUser(targetUserID, realtime.Event{
 		Type:    realtime.EventTypeNearbyNewMoment,
 		Payload: payload,
 	})

@@ -130,7 +130,7 @@ type announcementPushService interface {
 	// 会分多批，但契约要求整条公告对应同一个 WS notify_id（见 notify.Service）。
 	NewAnnouncementNotifyID() string
 	AppendSystemAnnouncementWithID(ctx context.Context, id string, userIDs []string, item systemmodule.SystemAnnouncementItem) (string, error)
-	PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem, notificationID string)
+	PushSystemAnnouncement(ctx context.Context, item systemmodule.SystemAnnouncementItem, notificationID string)
 	// Report-outcome notifications (resolve/dismiss), returning the generated
 	// notification_id for the realtime payload.
 	AppendReportResolved(ctx context.Context, targetUserID string, reportID string, targetType string, targetID string, note string) (string, error)

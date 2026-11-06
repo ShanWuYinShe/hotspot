@@ -374,7 +374,7 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) (GroupItem
 	if updatedFields := buildGroupUpdatedFields(group, updated, req); len(updatedFields) > 0 {
 		payload.UpdatedFields = updatedFields
 	}
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
 		Type:    realtime.EventTypeGroupUpdated,
 		Payload: payload,
 	})
@@ -460,9 +460,9 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: GroupDismissedPayload{GroupID: req.GroupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "owner_dismissed"}}
 	// 仅按群广播一次（owner 亦是成员，另发 BroadcastToUser 会收到重复事件）；
 	// 离线成员由 resume 兜底（解散为持久状态，重连后群已不可见）。
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
+	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, event)
 	// 解散后摘除全部订阅者对该群的订阅（成员资格随解散全部终止）。
-	realtime.DefaultHub().DropGroup(req.GroupID)
+	realtime.HubFromContext(ctx).DropGroup(req.GroupID)
 	op.Complete()
 	return nil
 }
@@ -495,8 +495,8 @@ func (s *Service) DismissAsAdmin(ctx context.Context, operatorID, groupID, reaso
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: GroupDismissedPayload{GroupID: groupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "policy_violation"}}
 	// 广播/DropGroup 在事务 COMMIT 后执行；无事务时立即执行。
 	aftercommit.Register(ctx, func(context.Context) {
-		realtime.DefaultHub().BroadcastToGroup(groupID, event)
-		realtime.DefaultHub().DropGroup(groupID)
+		realtime.HubFromContext(ctx).BroadcastToGroup(groupID, event)
+		realtime.HubFromContext(ctx).DropGroup(groupID)
 	})
 	return group.Group, nil
 }
@@ -650,7 +650,7 @@ func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGr
 		// 的快照，机械 +1 在并发入群/退群下会把错误值广播给全群（徽标抖动，
 		// F-03 的残留）；重读失败时回退快照+1 估计值，保证事件仍可下发
 		//（与 RemoveMember/SetMemberBan 的 memberCountAfterMutation 同口径）。
-		realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+		realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
 			Type: realtime.EventTypeGroupMemberJoined,
 			Payload: GroupMemberJoinedPayload{
 				GroupID:     req.GroupID,
@@ -685,7 +685,7 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 	}
 	// 退群后立刻失效成员缓存：否则 TTL 内仍可发消息（发消息会走 ensureMember 缓存）。
 	s.invalidateMemberCache(ctx, req.GroupID, principal.UserID)
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberLeft,
 		Payload: GroupMemberLeftPayload{
 			GroupID: req.GroupID,
@@ -694,7 +694,7 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 		},
 	})
 	// 退群即摘除本人对该群的订阅（与踢出/封禁同一口径）。
-	realtime.DefaultHub().RevokeGroupSubscription(principal.UserID, req.GroupID)
+	realtime.HubFromContext(ctx).RevokeGroupSubscription(principal.UserID, req.GroupID)
 	return nil
 }
 

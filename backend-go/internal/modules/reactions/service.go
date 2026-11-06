@@ -154,7 +154,7 @@ func (s *Service) unreact(ctx context.Context, req SetReactionRequest) error {
 	}
 	// Per spec ReactionRemovedPayload: no notification_id (removal does not
 	// produce a notification).
-	realtime.DefaultHub().BroadcastToUser(ownerID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToUser(ownerID, realtime.Event{
 		Type: EventTypeReactionRemoved,
 		Payload: ReactionRemovedPayload{
 			TargetType: string(req.TargetType),
@@ -294,7 +294,7 @@ func (s *Service) notifyOwner(ctx context.Context, req SetReactionRequest, actor
 	if notificationID != "" {
 		eventPayload["notify_id"] = notificationID
 	}
-	realtime.DefaultHub().BroadcastToUser(ownerID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToUser(ownerID, realtime.Event{
 		Type:    EventTypeReactionAdded,
 		Payload: eventPayload,
 	})

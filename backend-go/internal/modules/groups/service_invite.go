@@ -69,7 +69,7 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 	s.invalidateMemberCache(ctx, invite.Group.GroupID, principal.UserID)
 	s.notifyGroupInviteAccepted(ctx, invite, principal.UserID)
 	// member_count 用受邀入群后的权威计数（审查 P2-5，快照+1 在并发下失真）。
-	realtime.DefaultHub().BroadcastToGroup(invite.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: invite.Group.GroupID, User: s.resolveUserInfo(ctx, principal.UserID), Role: string(GroupRoleMember), MemberCount: s.memberCountAfterMutation(ctx, invite.Group.GroupID, invite.Group.MembersCount+1), JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
+	realtime.HubFromContext(ctx).BroadcastToGroup(invite.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: invite.Group.GroupID, User: s.resolveUserInfo(ctx, principal.UserID), Role: string(GroupRoleMember), MemberCount: s.memberCountAfterMutation(ctx, invite.Group.GroupID, invite.Group.MembersCount+1), JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
 	return nil
 }
 
@@ -223,7 +223,7 @@ func (s *Service) notifyGroupInviteRevoked(ctx context.Context, group GroupItem,
 	if reason != nil && *reason != "" {
 		payload.Reason = reason
 	}
-	realtime.DefaultHub().BroadcastToUser(inviteeUserID, realtime.Event{Type: realtime.EventTypeGroupInviteRevoked, Payload: payload})
+	realtime.HubFromContext(ctx).BroadcastToUser(inviteeUserID, realtime.Event{Type: realtime.EventTypeGroupInviteRevoked, Payload: payload})
 }
 
 // notifyGroupInviteRejected pushes the GroupInviteRejected event to the
@@ -240,14 +240,14 @@ func (s *Service) notifyGroupInviteRejected(ctx context.Context, invite GroupInv
 	if reason != nil && *reason != "" {
 		payload["reason"] = *reason
 	}
-	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteRejected, Payload: payload})
+	realtime.HubFromContext(ctx).BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteRejected, Payload: payload})
 }
 
 // notifyGroupInviteExpired pushes the GroupInviteExpired event to the
 // invitee. 纯实时事件（spec：不落库通知）。
 func (s *Service) notifyGroupInviteExpired(ctx context.Context, inviteeUserID string, invite GroupInviteItem) {
 	now := time.Now().UTC().Format(time.RFC3339)
-	realtime.DefaultHub().BroadcastToUser(inviteeUserID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToUser(inviteeUserID, realtime.Event{
 		Type: realtime.EventTypeGroupInviteExpired,
 		Payload: GroupInviteExpiredPayload{
 			InviteID:  invite.InviteID,

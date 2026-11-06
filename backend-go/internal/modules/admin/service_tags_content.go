@@ -157,7 +157,7 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 		}
 		// BroadcastToAll 是一次全体在线广播，必须移出批次循环（否则广播 N 次）。
 		if req.SendPush && notificationID != "" {
-			s.pushService.PushSystemAnnouncement(item.PublicItem(), notificationID)
+			s.pushService.PushSystemAnnouncement(ctx, item.PublicItem(), notificationID)
 		}
 	}
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {

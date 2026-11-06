@@ -18,7 +18,7 @@ import (
 // 新增条目必须在 PR/commit 说明理由——C2 的目标是逐轮收敛而非永久豁免。
 var mutableGlobalAllowlist = map[string]string{
 	"internal/platform/observability/logger.go:defaultLogger":        "进程级日志器：所有包都要打日志，注入成本 265+ 调用点，单独评估",
-	"internal/platform/realtime/global.go:defaultHub":                "实时 Hub：80+ 调用点，下一阶段显式注入评估中",
+	"internal/platform/realtime/global.go:defaultHub":                "组合根单例：模块已全部改走 realtime.HubFromContext(ctx)，仅 bootstrap 注入/WS 生命周期使用",
 	"internal/platform/requestmeta/requestmeta.go:trustedProxyCIDRs": "启动期一次写入的代理 CIDR 配置（只读快照）",
 }
 
@@ -187,4 +187,24 @@ func itoa(n int) string {
 		n /= 10
 	}
 	return string(digits)
+}
+
+// TestModulesUseContextHubNotGlobal：模块内禁止直接取进程级 realtime.DefaultHub，
+// 统一 realtime.HubFromContext(ctx)（由 bootstrap 中间件显式注入）。新增直取
+// 全局会在同进程多 App/并行测试下串台，直接失败。
+func TestModulesUseContextHubNotGlobal(t *testing.T) {
+	root := backendRoot(t)
+	var violations []string
+	moduleFiles(t, root, func(module, path string) {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		if strings.Contains(string(data), "realtime.DefaultHub") || strings.Contains(string(data), "realtime.SetDefaultHub") {
+			violations = append(violations, path)
+		}
+	})
+	if len(violations) > 0 {
+		t.Fatalf("模块内不得直接使用进程级 realtime Hub，请改用 realtime.HubFromContext(ctx):\n  %s", strings.Join(violations, "\n  "))
+	}
 }

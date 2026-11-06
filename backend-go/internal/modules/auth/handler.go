@@ -408,7 +408,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		if err := h.service.auth.RevokeSession(r.Context(), principal.UserID, principal.SessionID, principal.SessionID); err != nil {
 			observability.L().Warn("logout: session revoke failed", "user_id", principal.UserID, "session_id", principal.SessionID, "error", err)
 		}
-		realtime.DefaultHub().CloseSession(principal.SessionID, sessionRevokedEvent("revoked_by_user"))
+		realtime.HubFromContext(r.Context()).CloseSession(principal.SessionID, sessionRevokedEvent("revoked_by_user"))
 	}
 	platformauth.ClearAuthCookies(w)
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())

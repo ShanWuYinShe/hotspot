@@ -56,7 +56,7 @@ func (s *stubPushService) AppendSystemAnnouncementWithID(_ context.Context, id s
 	return id, nil
 }
 
-func (s *stubPushService) PushSystemAnnouncement(_ systemmodule.SystemAnnouncementItem, notificationID string) {
+func (s *stubPushService) PushSystemAnnouncement(_ context.Context, _ systemmodule.SystemAnnouncementItem, notificationID string) {
 	s.pushed = true
 	s.pushedID = notificationID
 }

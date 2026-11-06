@@ -428,7 +428,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth
 	}
 	for _, sessionID := range evictedSessionIDs {
 		if sessionID != result.Principal.SessionID {
-			realtime.DefaultHub().CloseSession(sessionID, sessionRevokedEvent("device_evicted"))
+			realtime.HubFromContext(ctx).CloseSession(sessionID, sessionRevokedEvent("device_evicted"))
 		}
 	}
 	return result, nil
@@ -498,7 +498,7 @@ func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth
 	}
 	for _, sessionID := range evictedSessionIDs {
 		if sessionID != result.Principal.SessionID {
-			realtime.DefaultHub().CloseSession(sessionID, sessionRevokedEvent("device_evicted"))
+			realtime.HubFromContext(ctx).CloseSession(sessionID, sessionRevokedEvent("device_evicted"))
 		}
 	}
 	resourceguard.RecordUser(ctx, account.UserID)
@@ -615,7 +615,7 @@ func (s *Service) RevokeSession(ctx context.Context, req RevokeSessionRequest) e
 		)
 		return fmt.Errorf("auth.Service.RevokeSession: %w", err)
 	}
-	realtime.DefaultHub().CloseSession(req.SessionID, sessionRevokedEvent("revoked_by_user"))
+	realtime.HubFromContext(ctx).CloseSession(req.SessionID, sessionRevokedEvent("revoked_by_user"))
 	return nil
 }
 
@@ -713,7 +713,7 @@ func (s *Service) profileDefaults(ctx context.Context) ProfileDefaults {
 func (s *Service) closeAllSessions(ctx context.Context, userID, reason string) {
 	sessions := s.auth.ListSessions(ctx, userID, "")
 	for _, session := range sessions {
-		realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent(reason))
+		realtime.HubFromContext(ctx).CloseSession(session.SessionID, sessionRevokedEvent(reason))
 	}
 }
 
@@ -723,7 +723,7 @@ func (s *Service) closeOtherSessions(ctx context.Context, userID, currentSession
 		if session.SessionID == currentSessionID {
 			continue
 		}
-		realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent(reason))
+		realtime.HubFromContext(ctx).CloseSession(session.SessionID, sessionRevokedEvent(reason))
 	}
 }
 

@@ -224,7 +224,7 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 			payload["media"] = media
 		}
 	}
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageNew, Payload: payload})
+	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageNew, Payload: payload})
 	// 群聊 @ 通知（spec api_spec_chat.md「群聊 @ 通知」）：对被 @ 的每个成员分别落库+推送
 	s.notifyMentions(ctx, userID, req, msg)
 	return msg, nil
@@ -265,7 +265,7 @@ func (s *Service) notifyMentions(ctx context.Context, actorUserID string, req Se
 	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟。
 	broadcast := func(mentionedUserID, notificationID string) func() error {
 		return func() error {
-			realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeGroupMessageMentioned, Payload: GroupMessageMentionedPayload{
+			realtime.HubFromContext(ctx).BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeGroupMessageMentioned, Payload: GroupMessageMentionedPayload{
 				NotifyID:       notificationID,
 				GroupID:        req.GroupID,
 				GroupName:      groupName, // spec websocket.md：与 notify payload 对齐，直接渲染通知标题
@@ -337,7 +337,7 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupMessageRequest) err
 		observability.L().Error("groupmessages.update failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageEdited, Payload: GroupMessageEditedPayload{
+	realtime.HubFromContext(ctx).BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageEdited, Payload: GroupMessageEditedPayload{
 		GroupID:   meta.GroupID,
 		MessageID: meta.MessageID,
 		Content:   meta.Content,
@@ -355,7 +355,7 @@ func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) err
 		observability.L().Error("groupmessages.recall failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: GroupMessageRecalledPayload{
+	realtime.HubFromContext(ctx).BroadcastToGroup(meta.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: GroupMessageRecalledPayload{
 		GroupID:    meta.GroupID,
 		MessageID:  meta.MessageID,
 		RecalledBy: RecalledByUser{UserID: req.UserID},
@@ -390,7 +390,7 @@ func (s *Service) RecallMessageAsAdmin(ctx context.Context, operatorID, groupID,
 	}}
 	// 撤回广播在事务 COMMIT 后执行；无事务时立即执行。
 	aftercommit.Register(ctx, func(context.Context) {
-		realtime.DefaultHub().BroadcastToGroup(groupID, event)
+		realtime.HubFromContext(ctx).BroadcastToGroup(groupID, event)
 	})
 	return nil
 }
@@ -482,7 +482,7 @@ func (s *Service) flushReadCounts(groupID string, messageIDs []string) {
 		if !ok {
 			continue
 		}
-		realtime.DefaultHub().BroadcastToGroup(groupID, realtime.Event{
+		realtime.HubFromContext(ctx).BroadcastToGroup(groupID, realtime.Event{
 			Type: realtime.EventTypeGroupMessageReadCountUpdated,
 			Payload: GroupMessageReadCountUpdatedPayload{
 				GroupID:   groupID,

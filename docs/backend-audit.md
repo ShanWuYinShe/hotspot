@@ -3222,3 +3222,21 @@ meta/client_config」。
   bootstrap_version（meta/client_config 键缺省）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C2（第十四批）：实时 Hub 显式注入（模块去 DefaultHub 全局直取）（2026-11-07）
+
+架构审计 P1「15+ 组全局单例」逐项收敛（本轮 realtime Hub）：
+
+- realtime 新增 context 注入：WithHub / HubFromContext（未注入时回退 DefaultHub，
+  兼容后台任务与直调测试）；
+- bootstrap 根中间件 realtimeHubMiddleware 在请求入口注入 Hub，请求路径依赖
+  由「隐式进程全局」改为「显式 context 依赖」；
+- 16 个模块文件 80 处 `realtime.DefaultHub()` 全部替换为
+  `realtime.HubFromContext(ctx)`；notify.PushSystemAnnouncement 补 ctx 参数
+  （admin 接口/桩同步），auth handler 用 r.Context()；
+- 模块代码对 realtime.DefaultHub/SetDefaultHub 直取数 = 0，仅 bootstrap 组合根
+  保留（Hub 生命周期/collector/redis bridge/中间件）；
+- 架构守卫新增 TestModulesUseContextHubNotGlobal：模块内再直取全局直接失败；
+- 测试：realtime.WithHub 覆盖/回退语义单测；全量 go test -short 全绿。
+
+验证：verify-backend-ci.sh --with-db ALL CHECKS PASSED。

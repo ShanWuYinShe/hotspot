@@ -235,7 +235,7 @@ func (s *Service) notifyReportHandled(ctx context.Context, reporterUserID, repor
 		atKey = "dismissed_at"
 	}
 	payload[atKey] = now
-	realtime.DefaultHub().BroadcastToUser(reporterUserID, realtime.Event{Type: eventType, Payload: payload})
+	realtime.HubFromContext(ctx).BroadcastToUser(reporterUserID, realtime.Event{Type: eventType, Payload: payload})
 }
 
 func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason string, durationDays *int, appendAudit bool) (*httpx.APIError, error) {
@@ -295,7 +295,7 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 	for _, sessionID := range sessionIDs {
 		// 踢连接广播在事务 COMMIT 后执行（封禁回滚时不应误踢）；无事务时立即执行。
 		aftercommit.Register(ctx, func(context.Context) {
-			realtime.DefaultHub().CloseSession(sessionID, realtime.Event{Type: realtime.EventTypeAccountBanned, Payload: payload})
+			realtime.HubFromContext(ctx).CloseSession(sessionID, realtime.Event{Type: realtime.EventTypeAccountBanned, Payload: payload})
 		})
 		if _, err := s.sessionAdmin.RevokeSessionAsAdmin(ctx, sessionID); err != nil {
 			failedSessions++

@@ -54,7 +54,7 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 	s.invalidateMemberCache(ctx, group.Group.GroupID, application.Applicant.UserID)
 	s.notifyGroupApplicationAccepted(ctx, group, application)
 	// member_count 用审批入群后的权威计数（审查 P2-5，快照+1 在并发下失真）。
-	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: group.Group.GroupID, User: s.resolveUserInfo(ctx, application.Applicant.UserID), Role: string(GroupRoleMember), MemberCount: s.memberCountAfterMutation(ctx, group.Group.GroupID, group.Group.MembersCount+1), JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
+	realtime.HubFromContext(ctx).BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: realtime.EventTypeGroupMemberJoined, Payload: GroupMemberJoinedPayload{GroupID: group.Group.GroupID, User: s.resolveUserInfo(ctx, application.Applicant.UserID), Role: string(GroupRoleMember), MemberCount: s.memberCountAfterMutation(ctx, group.Group.GroupID, group.Group.MembersCount+1), JoinedAt: time.Now().UTC().Format(time.RFC3339)}})
 	return nil
 }
 
@@ -120,7 +120,7 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 		return err
 	}
 	// 推送（spec group.md → set_role）：向群内广播 GroupMemberRoleChanged
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRoleChanged,
 		Payload: GroupMemberRoleChangedPayload{
 			GroupID:   req.GroupID,
@@ -130,7 +130,7 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 			ChangedAt: time.Now().UTC().Format(time.RFC3339),
 		},
 	})
-	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToUser(req.UserID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRoleChanged,
 		Payload: GroupMemberRoleChangedPayload{
 			GroupID:   req.GroupID,
@@ -183,8 +183,8 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 			MutedAt:         time.Now().UTC().Format(time.RFC3339),
 		},
 	}
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
-	realtime.DefaultHub().BroadcastToUser(req.UserID, event)
+	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, event)
+	realtime.HubFromContext(ctx).BroadcastToUser(req.UserID, event)
 	return nil
 }
 
@@ -218,8 +218,8 @@ func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) err
 			UnmutedAt: time.Now().UTC().Format(time.RFC3339),
 		},
 	}
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
-	realtime.DefaultHub().BroadcastToUser(req.UserID, event)
+	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, event)
+	realtime.HubFromContext(ctx).BroadcastToUser(req.UserID, event)
 	return nil
 }
 
@@ -273,11 +273,11 @@ func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) err
 				MemberCount: s.memberCountAfterMutation(ctx, req.GroupID, group.Group.MembersCount),
 			},
 		}
-		realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
-		realtime.DefaultHub().BroadcastToUser(req.UserID, event)
+		realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, event)
+		realtime.HubFromContext(ctx).BroadcastToUser(req.UserID, event)
 		// 封禁即时移除成员资格：强制摘除被禁用户的群订阅，防止其保持连接继续
 		// 实时收到群消息（订阅鉴权只在 SetSubscriptions 时刻生效）。
-		realtime.DefaultHub().RevokeGroupSubscription(req.UserID, req.GroupID)
+		realtime.HubFromContext(ctx).RevokeGroupSubscription(req.UserID, req.GroupID)
 		// 封禁移除了成员资格，失效成员缓存防止 TTL 内仍被判定为成员。
 		s.invalidateMemberCache(ctx, req.GroupID, req.UserID)
 		return nil
@@ -334,7 +334,7 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 	}
 	// 移除后重读权威计数（spec：RemovedPayload.member_count 为剩余成员总数）。
 	remaining := s.memberCountAfterMutation(ctx, req.GroupID, group.Group.MembersCount)
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRemoved,
 		Payload: GroupMemberRemovedPayload{
 			GroupID:     req.GroupID,
@@ -345,7 +345,7 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 			MemberCount: remaining,
 		},
 	})
-	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToUser(req.UserID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRemoved,
 		Payload: GroupMemberRemovedPayload{
 			GroupID:     req.GroupID,
@@ -355,7 +355,7 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 		},
 	})
 	// 踢出即摘除该用户的群订阅（同 SetMemberBan：防止保持连接继续收群消息）。
-	realtime.DefaultHub().RevokeGroupSubscription(req.UserID, req.GroupID)
+	realtime.HubFromContext(ctx).RevokeGroupSubscription(req.UserID, req.GroupID)
 	// 踢出后立刻失效成员缓存：否则 TTL 内该用户仍可发消息（ensureMember 走缓存）。
 	s.invalidateMemberCache(ctx, req.GroupID, req.UserID)
 	return nil
@@ -391,7 +391,7 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 		return err
 	}
 	// 推送（spec group.md → transfer_ownership）：owner 变更即角色变更，向群内广播
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRoleChanged,
 		Payload: GroupMemberRoleChangedPayload{
 			GroupID:   req.GroupID,

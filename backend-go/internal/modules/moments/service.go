@@ -430,7 +430,7 @@ func (s *Service) Update(ctx context.Context, req UpdateMomentRequest) (OwnerMom
 	s.notifyMentionUserIDs(ctx, principal.UserID, updated, newlyMentioned)
 	s.hydrateImages(ctx, &updated)
 	// 瞬间被编辑 → 推送给作者的其他在线设备（多端同步，spec api_spec_websocket.md）
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMomentUpdated, Payload: MomentUpdatedPayload{
+	realtime.HubFromContext(ctx).BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMomentUpdated, Payload: MomentUpdatedPayload{
 		MomentID:  req.MomentID,
 		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
 	}})
@@ -508,7 +508,7 @@ func (s *Service) softDeleteAndBroadcast(ctx context.Context, item MomentItem) e
 	// 广播在事务 COMMIT 后执行：回滚时不会出现「库未删但用户已收到 MomentDeleted」。
 	// 无事务上下文时 Register 立即执行，语义不变。
 	aftercommit.Register(ctx, func(postCtx context.Context) {
-		realtime.DefaultHub().BroadcastToUser(item.User.UserID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: MomentDeletedPayload{
+		realtime.HubFromContext(ctx).BroadcastToUser(item.User.UserID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: MomentDeletedPayload{
 			MomentID:  item.MomentID,
 			DeletedAt: now,
 		}})
@@ -870,7 +870,7 @@ func (s *Service) notifyMentionUserIDs(ctx context.Context, actorUserID string, 
 	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟（mentions 上限 20）。
 	broadcast := func(mentionedUserID, notificationID string) func() error {
 		return func() error {
-			realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: ContentMentionedPayload{
+			realtime.HubFromContext(ctx).BroadcastToUser(mentionedUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: ContentMentionedPayload{
 				NotifyID:      notificationID,
 				TargetType:    "moment",
 				MomentID:      item.MomentID,
@@ -912,7 +912,7 @@ func (s *Service) broadcastMomentDeletedToFavorites(ctx context.Context, momentI
 		if userID == exceptUserID {
 			continue
 		}
-		realtime.DefaultHub().BroadcastToUser(userID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: MomentDeletedPayload{
+		realtime.HubFromContext(ctx).BroadcastToUser(userID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: MomentDeletedPayload{
 			MomentID:  momentID,
 			DeletedAt: deletedAt,
 		}})

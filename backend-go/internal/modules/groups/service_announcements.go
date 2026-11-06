@@ -35,7 +35,7 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnounc
 	// created_by 昵称统一在 service 解析（审查 P2-3）：repo 侧（尤其 PG 插入
 	// 路径）不回查 users 表，此前响应里 Nickname 恒为裸 user_id。
 	item.CreatedBy = s.resolveUserInfo(ctx, principal.UserID)
-	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{
+	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupAnnouncementCreated,
 		Payload: GroupAnnouncementCreatedPayload{
 			GroupID:        req.GroupID,

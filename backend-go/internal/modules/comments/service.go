@@ -430,7 +430,7 @@ func (s *Service) notifyMomentAuthor(ctx context.Context, momentContext MomentNo
 			notificationID = id
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMomentCommented, Payload: MomentCommentedPayload{
+	realtime.HubFromContext(ctx).BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeMomentCommented, Payload: MomentCommentedPayload{
 		NotifyID:      notificationID,
 		MomentID:      item.MomentID,
 		MomentSummary: momentSummary,
@@ -459,7 +459,7 @@ func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNot
 			notificationID = id
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeCommentReply, Payload: CommentReplyPayload{
+	realtime.HubFromContext(ctx).BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeCommentReply, Payload: CommentReplyPayload{
 		NotifyID:              notificationID,
 		MomentID:              item.MomentID,
 		MomentSummary:         momentSummary,
@@ -495,7 +495,7 @@ func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext Moment
 	// publish 两次网络往返，逐条串行在多 @ 场景放大发送延迟。
 	broadcast := func(targetUserID, notificationID string) func() error {
 		return func() error {
-			realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: ContentMentionedPayload{
+			realtime.HubFromContext(ctx).BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeContentMentioned, Payload: ContentMentionedPayload{
 				NotifyID:       notificationID,
 				TargetType:     "comment",
 				MomentID:       item.MomentID,

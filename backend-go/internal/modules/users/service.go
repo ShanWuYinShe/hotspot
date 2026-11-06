@@ -237,8 +237,8 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 			UpdatedAt: now,
 		},
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
-	realtime.DefaultHub().BroadcastToUserSubscribers(principal.UserID, event)
+	realtime.HubFromContext(ctx).BroadcastToUser(principal.UserID, event)
+	realtime.HubFromContext(ctx).BroadcastToUserSubscribers(principal.UserID, event)
 	op.Complete()
 	return nil
 }
@@ -447,8 +447,8 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 			UpdatedAt: now,
 		},
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
-	realtime.DefaultHub().BroadcastToUserSubscribers(principal.UserID, event)
+	realtime.HubFromContext(ctx).BroadcastToUser(principal.UserID, event)
+	realtime.HubFromContext(ctx).BroadcastToUserSubscribers(principal.UserID, event)
 	op.Complete()
 	return nil
 }

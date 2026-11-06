@@ -34,7 +34,8 @@ func (s *capturePushStub) AppendSystemAnnouncementWithID(_ context.Context, id s
 	return id, nil
 }
 
-func (s *capturePushStub) PushSystemAnnouncement(_ systemmodule.SystemAnnouncementItem, _ string) {}
+func (s *capturePushStub) PushSystemAnnouncement(_ context.Context, _ systemmodule.SystemAnnouncementItem, _ string) {
+}
 
 func (s *capturePushStub) AppendReportResolved(_ context.Context, reporterUserID, reportID, targetType, targetID, note string) (string, error) {
 	s.resolvedCalls = append(s.resolvedCalls, reportNotifyCall{reporterUserID, reportID, targetType, targetID, note})
