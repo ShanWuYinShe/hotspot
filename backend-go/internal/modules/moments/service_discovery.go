@@ -38,8 +38,7 @@ func (s *Service) FetchFollowing(ctx context.Context, req FetchFollowingMomentsR
 		return PaginatedMoments{}, err
 	}
 	s.hydrateImagesBatch(ctx, items.Items)
-	s.fillReactionsBatch(ctx, items.Items, principal.UserID)
-	s.fillAuthorRelations(ctx, items.Items, principal.UserID)
+	s.fillEngagementBatch(ctx, items.Items, principal.UserID)
 	ensureMomentArraysBatch(items.Items)
 	return items, nil
 }
@@ -72,8 +71,7 @@ func (s *Service) FetchNearby(ctx context.Context, req FetchNearbyMomentsRequest
 		return PaginatedMoments{}, err
 	}
 	s.hydrateImagesBatch(ctx, items.Items)
-	s.fillReactionsBatch(ctx, items.Items, viewerID)
-	s.fillAuthorRelations(ctx, items.Items, viewerID)
+	s.fillEngagementBatch(ctx, items.Items, viewerID)
 	ensureMomentArraysBatch(items.Items)
 	return items, nil
 }

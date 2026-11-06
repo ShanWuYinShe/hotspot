@@ -3338,3 +3338,17 @@ perf-budget.sh：8 端点均在预算内。
 - 冷启动后首个搜索请求不再承担 50-70ms 规划成本。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch D2（第二批）：reactions/作者关系批量水合并发化（2026-11-07）
+
+列表页原串行执行两次独立批量读：reactions 聚合（跨模块 provider）与作者关注
+关系（FollowRelationReader）。二者互不依赖、写 MomentItem 的不同字段：
+
+- 新增 Service.fillEngagementBatch：errgroup 语义的 WaitGroup 并发执行两路
+  批量水合（provider 缺失时各函数自身短路）；
+- 应用于 moments/fetch_following、fetch_nearby、search 与收藏列表（4 条列表
+  主路径），串行等待从「查询A+查询B」降为 max(A,B)；
+- 数据竞争：两路分别只写 Reactions 与 AuthorRelation 字段（disjoint fields），
+  -race 单测全绿；
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

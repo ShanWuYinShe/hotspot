@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hotspot/backend-go/internal/platform/aftercommit"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -345,8 +346,7 @@ func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (Paginat
 		return result, err
 	}
 	s.hydrateImagesBatch(ctx, result.Items)
-	s.fillReactionsBatch(ctx, result.Items, viewerUserID(ctx))
-	s.fillAuthorRelations(ctx, result.Items, viewerUserID(ctx))
+	s.fillEngagementBatch(ctx, result.Items, viewerUserID(ctx))
 	return result, nil
 }
 
@@ -580,8 +580,7 @@ func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (Pa
 		return result, err
 	}
 	s.hydrateImagesBatch(ctx, result.Items)
-	s.fillReactionsBatch(ctx, result.Items, principal.UserID)
-	s.fillAuthorRelations(ctx, result.Items, principal.UserID)
+	s.fillEngagementBatch(ctx, result.Items, principal.UserID)
 	return result, nil
 }
 
@@ -685,6 +684,27 @@ func (s *Service) fillReactionsBatch(ctx context.Context, items []MomentItem, vi
 	for i := range items {
 		items[i].Reactions = reactionsFor(byID[items[i].MomentID])
 	}
+}
+
+// fillEngagementBatch 并发执行「reactions 聚合」与「作者关注关系」两次批量读：
+// 二者互不依赖、写的是 MomentItem 的不同字段（Reactions vs AuthorRelation），
+// 并发无数据竞争；列表页最多少一次串行 DB 往返的等待。provider 缺失时各函数
+// 自身会短路，无需在此判断。
+func (s *Service) fillEngagementBatch(ctx context.Context, items []MomentItem, viewerID string) {
+	if len(items) == 0 {
+		return
+	}
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		s.fillReactionsBatch(ctx, items, viewerID)
+	}()
+	go func() {
+		defer wg.Done()
+		s.fillAuthorRelations(ctx, items, viewerID)
+	}()
+	wg.Wait()
 }
 
 // SetFollowRelationReader wires the follow-relation reader (bootstrap 注入).
