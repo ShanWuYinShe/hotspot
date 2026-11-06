@@ -8,8 +8,7 @@
 	import { cn } from '@/lib/utils';
 	import { platform } from '@/stores/platform.svelte';
 	import { headerIsland, type IslandToken } from '@/stores/header-island.svelte';
-	import { islandRectOf, type IslandRect } from '@/lib/island-morph';
-	import { handoffRecede, scrollHandoffProgress, subscribeHandoff } from '@/lib/island-handoff';
+	import { subscribeHandoff } from '@/lib/island-handoff';
 
 	export interface AuthorInfo {
 		id?: string;
@@ -47,11 +46,9 @@
 
 	let scrolled = $state(false);
 	let hidden = $state(false);
-	/** 桌面端交接的锚点快照：左侧工具行（返回 + 面包屑）在吸顶容器里位置稳定，抓一次即可。 */
-	let islandSource: IslandRect | null = null;
-	/** 交接是否已基本落位（p>0.55）：决定页内工具行是否 aria-hidden / inert。 */
+	/** 交接是否已基本落位（达到滚动阈值）：决定页内工具行是否 aria-hidden / inert。 */
 	let islandSettled = $state(false);
-	// 详情页的桌面岛：滚动驱动交接（和 PageHeader 同一套模型），token 保证路由切换不串台。
+	// 详情页的桌面岛：滚动过阈值直接动画落位，token 保证路由切换不串台。
 	const islandToken: IslandToken = Symbol('detail-header-island');
 
 	// 监听滚动与方向（向上微划滑入 / 向下深划避让 / 顶部常驻）
@@ -73,30 +70,21 @@
 			const current = target.scrollTop;
 			const uiScale = Math.max(1, platform.uiScale);
 
-			scrolled = current > scrollThreshold * uiScale;
+			const isScrolled = current > scrollThreshold * uiScale;
+			scrolled = isScrolled;
+			islandSettled = isScrolled;
 
 			// 标头吸顶逻辑：滚动离开首屏后保持优雅吸顶且常驻，不自动避让。
 			hidden = false;
 
 			lastScrollTop = Math.max(0, current);
 
-			// 桌面端：标题/身份 → 顶栏岛的交接由滚动进度驱动（160px 起、280px 落位）。
-			// 和 PageHeader 同一套 scroll-linked 模型：跟手、可逆、无独立时长动画。
+			// 桌面端：在阈值直接用一个动画完成顶栏灵动岛交接（0 或 1），不再逐帧跟手变形
 			if (platform.platform !== 'desktop') return;
-			if (!islandSource) {
-				const captured = islandRectOf(node.querySelector('[data-detail-header-left]'));
-				// 工具行锚点收紧到顶栏带内：交接沿顶栏横向滑入，不掠过正文。
-				islandSource = captured
-					? {
-							...captured,
-							y: Math.min(captured.y, Math.max(0, (52 * uiScale - captured.height) / 2))
-						}
-					: null;
-			}
 			headerIsland.setHandoff(
 				islandToken,
-				scrollHandoffProgress(current, scrollThreshold * uiScale, (scrollThreshold + 120) * uiScale),
-				islandSource
+				isScrolled ? 1 : 0,
+				null
 			);
 		};
 
@@ -159,36 +147,23 @@
 
 <header
 	use:headerScroll
-	use:handoffRecede={{ enabled: platform.platform === 'desktop', mode: 'band' }}
 	class={cn(
-		// 桌面端入岛退场由 handoffRecede 逐帧写 opacity（与滚动同源、可逆）；
-		// 这里不能挂 transition-all：过渡会让每帧写入再叠加一个时长，肉眼就是「慢半拍」。
 		'sticky top-0 z-[var(--cst-z-sticky)] w-full select-none pointer-events-none bg-transparent py-2 sm:py-2.5',
 		hidden ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100',
 		className
 	)}
 >
 	<ContentColumn {maxWidth} class={contentClassName}>
-			<!-- 两态交叉淡出（不再用 {#if} 硬切）：初始工具行与收敛态胶囊挂在同一行高容器里，
-			     滚动过阈值时工具行淡出、胶囊淡入，桌面端由顶栏灵动岛从工具行位置收进去——
-			     三者同一条时间轴，才没有「工具行瞬间消失、胶囊凭空出现」的断层。 -->
+			<!-- 初始工具行与收敛态胶囊：滚动过阈值时工具行平滑淡出，桌面端由顶栏灵动岛直接动画完成展现 -->
 			<div class="relative h-10">
 				<!-- ══ 初始态：两侧角落悬浮透亮光斑胶囊（返回 + 桌面实体面包屑 / 操作区）══ -->
 				<div
 					data-detail-header-anchor
-					aria-hidden={platform.platform === 'desktop'
-						? islandSettled
-							? 'true'
-							: undefined
-						: scrolled
-							? 'true'
-							: undefined}
-					inert={platform.platform === 'desktop' ? islandSettled : scrolled}
-					class="absolute inset-0 flex items-center justify-between gap-2 {platform.platform !== 'desktop'
-						? 'transition-[opacity,transform] duration-rapid ease-standard'
-						: ''} {platform.platform !== 'desktop' && scrolled
-						? 'pointer-events-none -translate-y-0.5 opacity-0'
-						: ''}"
+					aria-hidden={islandSettled ? 'true' : undefined}
+					inert={islandSettled}
+					class="absolute inset-0 flex items-center justify-between gap-2 transition-[opacity,transform] duration-snappy ease-standard {islandSettled
+						? 'pointer-events-none -translate-y-1 opacity-0'
+						: 'pointer-events-auto translate-y-0 opacity-100'}"
 				>
 					<!-- 左侧：返回按键 + 桌面实体面包屑 -->
 					<div

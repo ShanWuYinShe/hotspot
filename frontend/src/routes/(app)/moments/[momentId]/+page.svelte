@@ -1,26 +1,26 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, MoreHorizontal, Link2, PencilLine, Trash2, Flag, EyeOff } from '@lucide/svelte';
-	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import { Link2, EyeOff } from '@lucide/svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import Skeleton from '@/components/data-display/Skeleton.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
-	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { platform } from '@/stores/platform.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import MomentPostBody from './MomentPostBody.svelte';
 	import MomentDetailRail from './shared/MomentDetailRail.svelte';
 	import DeleteMomentDialog from './shared/DeleteMomentDialog.svelte';
 	import CommentInputBar from './shared/CommentInputBar.svelte';
+	import MomentActionMenu from './shared/MomentActionMenu.svelte';
 	import MomentEditDialog from '@/components/overlays/MomentEditDialog.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import DetailHeader from '@/components/layout/page/DetailHeader.svelte';
 	import { contentFade } from '@/lib/motion';
 	import { smartBack } from '@/lib/smart-back';
+	import { showToast } from '@/stores/toast.svelte';
 	import { useMomentDetailData } from './shared/useMomentDetailData.svelte';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
@@ -30,7 +30,6 @@
 
 	const d = useMomentDetailData(() => params.momentId);
 
-	let moreMenuEl = $state<HTMLElement | null>(null);
 	let commentInputEl = $state<HTMLInputElement | null>(null);
 
 	const focusComments = () => {
@@ -69,31 +68,6 @@
 	/>
 {/snippet}
 
-{#snippet moreMenu()}
-	<DropdownMenu.Root bind:open={d.moreOpen}>
-		<div bind:this={moreMenuEl} class="relative">
-			<ActionIconButton icon={MoreHorizontal} label="更多操作" variant="ghost" tone="current" ariaExpanded={d.moreOpen} ariaHasPopup="menu" onClick={() => (d.moreOpen = !d.moreOpen)} />
-		</div>
-		<DropdownMenu.Content customAnchor={moreMenuEl}>
-			{#if d.isAuthor}
-				<DropdownMenu.Item onSelect={() => void d.openEditDialog()}>
-					<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
-					编辑动态
-				</DropdownMenu.Item>
-				<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { d.deleteOpen = true; d.moreOpen = false; }}>
-					<Trash2 class="size-3.5" strokeWidth={1.75} />
-					删除动态
-				</DropdownMenu.Item>
-			{:else if d.moment.id}
-				<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { d.reportTarget = { target_type: 'moment', target_id: params.momentId }; d.moreOpen = false; }}>
-					<Flag class="size-3.5" strokeWidth={1.75} />
-					举报动态
-				</DropdownMenu.Item>
-			{/if}
-		</DropdownMenu.Content>
-	</DropdownMenu.Root>
-{/snippet}
-
 {#snippet headerActions()}
 	<button
 		type="button"
@@ -108,7 +82,17 @@
 			</span>
 		{/if}
 	</button>
-	{@render moreMenu()}
+	<MomentActionMenu
+		isAuthor={d.isAuthor}
+		onCopyLink={() => void d.copyMomentLink()}
+		onReload={() => {
+			d.reload();
+			showToast('已刷新动态', 'success');
+		}}
+		onEdit={() => void d.openEditDialog()}
+		onDelete={() => { d.deleteOpen = true; }}
+		onReport={() => { d.reportTarget = { target_type: 'moment', target_id: params.momentId }; }}
+	/>
 {/snippet}
 
 <SplitPageLayout

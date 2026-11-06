@@ -238,11 +238,8 @@ import {
 			scrolled = y > 4 * uiScale;
 			if (!islandEnabled) return;
 			if (islandHandoffTrigger) {
-				// 吸顶页头：标题不动，用滚动窗口（120→260px，随 UI 缩放）把交接进度 0→1。
 				if (!stickySource) {
 					const captured = islandTextRectOf(islandMorphEl) ?? islandRectOf(islandAnchorEl);
-					// 吸顶页头的标题不动：把交接锚点收紧到 52px 顶栏带内（横向从标题位置滑到中央），
-					// 交接不掠过页头下方的正文，观感是「标题被顶栏吸走」而不是「一颗胶囊飞过页面」。
 					stickySource = captured
 						? {
 								...captured,

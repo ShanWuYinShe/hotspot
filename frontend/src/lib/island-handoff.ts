@@ -185,7 +185,18 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 
 	const apply = (s: HandoffState) => {
 		if (!target) target = measureTarget(node);
-		if (!target || !s.source) {
+		// 阈值落位终态（p >= 1）：清除内联变形与内容遮罩，让 CSS 动画与 hover 完全接管
+		if (s.p >= 1) {
+			node.style.removeProperty('transform');
+			node.style.opacity = '1';
+			node.style.removeProperty('--cst-island-content');
+			if (prevP < 1) triggerLanding();
+			prevP = s.p;
+			return;
+		}
+
+		// 未达到阈值（p <= 0）或无锚点：胶囊处于收起/隐藏状态
+		if (!target || !s.source || s.p <= 0) {
 			node.style.opacity = '0';
 			clearLanding();
 			prevP = s.p;

@@ -68,12 +68,8 @@
 	use:islandHandoff
 	class="group/island pointer-events-auto relative flex h-9 min-w-0 max-w-md items-center rounded-full border border-border-default/50 bg-surface-primary/90 px-2 text-text-primary shadow-raised-sm transition-[background-color,border-color,box-shadow,transform] duration-standard ease-standard hover:-translate-y-px hover:border-accent-border hover:bg-surface-primary hover:shadow-raised-md focus-within:border-accent-border focus-within:bg-surface-primary focus-within:shadow-raised-md {className}"
 >
-	<!-- 内容层：交接飞行期间由 --cst-island-content（0→1，见 lib/island-handoff.ts）单独显影。
-	     整颗胶囊 scale 时正文是缩放态，先隐后显才不会有「糊字掠过顶栏」的廉价感。 -->
-	<div
-		class="flex h-full min-w-0 items-center gap-1.5"
-		style="opacity:var(--cst-island-content, 1);"
-	>
+	<!-- 内容层 -->
+	<div class="flex h-full min-w-0 items-center gap-1.5">
 		{#if leading}
 			<span class="flex shrink-0 items-center">{@render leading()}</span>
 		{/if}

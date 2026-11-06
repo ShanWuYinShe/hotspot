@@ -25,7 +25,7 @@
 	let { data }: { data: HomeFeedData } = $props();
 
 	function handleHandoffProgress(p: number) {
-		homeFeed.setIslandVisible(p > 0.001);
+		homeFeed.setIslandVisible(p >= 0.5);
 	}
 </script>
 

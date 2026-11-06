@@ -9,13 +9,13 @@
 - **灵动岛形态**：h-9 胶囊，最右侧 18px 阅读进度圆环（accent 弧 + 极淡底轨，0% 空环 / 100% 整圆），
   每帧直接写 `stroke-dashoffset`，**无 CSS 过渡**；行动区存在时圆环在行动区外侧（最右）。
   唯一形态实现 `frontend/src/components/layout/page/IslandCapsule.svelte`。
-- **标题 → 岛：滚动驱动交接（scroll-linked）**，不再有「触发后播一段时长动画」：
-  - 页头 / 详情页 / 首页在滚动回调里算进度 `p(0→1)`，`publishHandoff({ p, source })`；
-  - 岛侧 `use:islandHandoff` 逐帧写 `transform` / `opacity` / `--cst-island-content`；
-  - 吸顶页头滚动窗口 120→260px（DetailHeader 160→280px，均乘 `platform.uiScale`）；`integrated` 页头 /
-    首页按锚点矩形相对 52px 顶栏的位置每帧算；
-  - 滚动停在哪交接就停在哪；反向滚动逐帧可逆（实测同一 scrollTop 下 transform 字符串完全一致）；
-  - 路由切换：`register/release` 会把交接归零 + 岛无时长退场动画 → 直接卸载，不再有「飞回上一页标题」幽灵。
+- **标题 → 岛：阈值触发完整动画落位（threshold-triggered）**，不再随滚动一帧一帧进行微插值：
+  - 详情页 / 页面在滚动达到阈值时直接上报落位状态（`p=1` 或 `0`），顶栏灵动岛直接由 CSS 动画（`animate-in fade-in zoom-in-95 ease-bounce`）一次性完成弹性落位展开，回滚到阈值上方时收起；
+  - 避免了滚动半途卡在中间模糊变形、以及正文与顶栏标题长时间重叠并存的观感问题；
+  - 灵动岛右侧阅读进度圆环依然跟随页面滚动进度实时更新。
+- **动态详情页菜单修复**：
+  - 提取为独立的 `MomentActionMenu.svelte` 组件，各实例维护独立的 open 与 anchor，避免多处渲染（如顶栏岛与页面内工具行）时锚点被互相覆盖；
+  - 完善菜单功能：访客视角提供复制链接、刷新动态、举报动态；作者视角提供编辑动态、复制链接、删除动态，解决菜单无功能或为空的问题。
 - **页头退场**：`handoffRecede` 逐帧写 inline opacity；`p<0.5` 保持清晰可读，后 35% 进度跨度内快速淡出
   （避免半透明页头与滚动的正文长时间叠字双曝光）。`.page-header-scroll` 的 transition 列表**不含 opacity**。
 - **首页信息流岛**同样走滚动交接（原 IntersectionObserver + 时长动画已删除）。

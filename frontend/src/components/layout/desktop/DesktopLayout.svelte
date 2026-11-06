@@ -278,13 +278,13 @@
 		     把会滚走的常驻信息固定到居中位置；点击标题回到锚点，绝不遮挡正文 -->
 		<div class="flex-1 min-w-0 h-full pointer-events-none">
 			{#if pathname === ROUTES.home && homeFeed.islandVisible}
-				<!-- 首页灵动岛：内容区分段器滚出视口后浮现（handoff），顶部不显示 -->
-				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+				<!-- 首页灵动岛：内容区分段器滚出视口后浮现，顶部不显示 -->
+				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center animate-in fade-in zoom-in-95 -translate-y-0.5 duration-snappy ease-bounce">
 					<HomeFeedIsland progress={headerIsland.progress} />
 				</div>
 			{:else if headerIsland.visible && headerIsland.active}
 				<!-- 绝对居中于整条顶栏（而非 logo 与操作簇之间的剩余空间），与「灵动岛」的视觉中心一致 -->
-				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+				<div class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center animate-in fade-in zoom-in-95 -translate-y-0.5 duration-snappy ease-bounce">
 					<PageIsland
 						title={headerIsland.title}
 						meta={islandMetaText}
