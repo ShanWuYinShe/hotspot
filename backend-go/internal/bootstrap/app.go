@@ -34,6 +34,7 @@ type App struct {
 	persistence *persistence.Factory
 	bridge      *realtime.RedisBridge
 	realtime    *realtime.Handler
+	hub         *realtime.Hub
 	hotCache    *hotcache.Cache
 	rootCtx     context.Context
 	rootCancel  context.CancelFunc
@@ -97,10 +98,13 @@ func NewApp(cfg config.Config) (*App, error) {
 		// Redis 未配置时 check.ping 为 nil（视为 ok）；配置后故障只降级。
 		readinessCheck{name: "redis", required: false, ping: redisReadinessPing(redisClient)},
 	)
-	router := NewHTTPRouterWithReadiness(modules, logger, readiness, resourceguardChecker, idemStore, platformAuth, adminRepo)
+	// 应用级实时 Hub：本 App 独占实例，经根中间件注入请求 context；
+	// 不再依赖模块隐式读取进程级 DefaultHub。
+	hub := realtime.NewHub()
+	router := NewHTTPRouterWithReadiness(modules, logger, readiness, resourceguardChecker, idemStore, platformAuth, adminRepo, hub)
 	// /metrics 自定义采集器装配：WS 连接/订阅规模 + DB 连接池统计
 	//（HTTP 请求指标经 RequestMetricsMiddleware 在路由层采集）。
-	observability.Register(realtime.NewHubCollector(realtime.DefaultHub()))
+	observability.Register(realtime.NewHubCollector(hub))
 	if persistenceFactory.DB != nil {
 		observability.Register(NewDBPoolCollector(persistenceFactory.DB))
 	}
@@ -110,6 +114,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	groupRepo := groups.NewPostgresRepository(persistenceFactory)
 	userService := users.NewServiceWithRepo(userRepo)
 	realtimeHandler := realtime.NewHandlerWithContext(rootCtx, platformAuth, NewRealtimeUserRepo(userRepo, hotCache), NewRealtimeGroupRepo(groupRepo, hotCache))
+	realtimeHandler.SetHub(hub)
 	realtimeHandler.SetActorProvider(realtimeActorProvider{svc: userService})
 	// WS 握手封禁检查：与 HTTP RequiredAuth 同源（admin repo IsBanned）、同口径（fail-open）
 	realtimeHandler.SetBanAuthorizer(realtimeBanAuthorizer{repo: adminRepo})
@@ -127,9 +132,9 @@ func NewApp(cfg config.Config) (*App, error) {
 	if redisClient != nil {
 		instanceID := idgen.MustWithPrefix("hs-")
 		resumeStore := realtime.NewRedisResumeStore(redisClient, time.Duration(cfg.ResumeTTLSeconds)*time.Second, instanceID)
-		realtime.DefaultHub().SetResumeStore(resumeStore)
+		hub.SetResumeStore(resumeStore)
 		realtimeHandler.SetResumeStore(resumeStore)
-		bridge = initRedisBridgeFromClient(cfg, logger, redisClient, instanceID)
+		bridge = initRedisBridgeFromClient(cfg, logger, redisClient, instanceID, hub)
 	}
 	// 握手 per-IP 限流（审查 L-6）：升级请求发生在鉴权之前，须与其他 HTTP
 	// 入口同样限流；APP_ENV=test 同口径绕过。
@@ -143,6 +148,7 @@ func NewApp(cfg config.Config) (*App, error) {
 		persistence: persistenceFactory,
 		bridge:      bridge,
 		realtime:    realtimeHandler,
+		hub:         hub,
 		rootCtx:     rootCtx,
 		hotCache:    hotCache,
 		rootCancel:  rootCancel,
@@ -161,7 +167,7 @@ func (a *App) Shutdown() {
 	// 先排空 WS 连接（1001 Going Away + 有界等待）：server.Shutdown 不等待
 	// hijacked 连接，若先关 Redis/DB，存活连接的后续操作全部报错，客户端也要
 	// 等 ping 超时才发现断线。排空只需给各连接发 close frame，不依赖后端服务。
-	if remaining := realtime.DefaultHub().DrainConnections(3 * time.Second); remaining > 0 {
+	if remaining := a.hub.DrainConnections(3 * time.Second); remaining > 0 {
 		a.logger.Warn("ws drain left active connections", "remaining", remaining)
 	}
 	if a.bridge != nil {
@@ -273,17 +279,17 @@ func redisPinger(rdb *redis.Client) func(context.Context) error {
 // Takes ownership of rdb: when no bridge is created (nil client or init
 // failure) the caller is responsible for closing rdb; when a bridge is created
 // its Close() closes the underlying client.
-func initRedisBridgeFromClient(cfg config.Config, logger *observability.Logger, rdb *redis.Client, instanceID string) *realtime.RedisBridge {
+func initRedisBridgeFromClient(cfg config.Config, logger *observability.Logger, rdb *redis.Client, instanceID string, hub *realtime.Hub) *realtime.RedisBridge {
 	if rdb == nil {
 		return nil
 	}
-	bridge, err := realtime.NewRedisBridge(rdb, instanceID, realtime.DefaultHub())
+	bridge, err := realtime.NewRedisBridge(rdb, instanceID, hub)
 	if err != nil {
 		logger.Error("redis bridge init failed, falling back to single-instance mode", "err", err)
 		rdb.Close()
 		return nil
 	}
-	realtime.DefaultHub().SetPublisher(bridge)
+	hub.SetPublisher(bridge)
 	logger.Info("redis bridge initialized", "instance", instanceID)
 	return bridge
 }

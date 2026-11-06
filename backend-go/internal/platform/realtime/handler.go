@@ -100,6 +100,7 @@ type presenceWriter interface {
 }
 
 type Handler struct {
+	hub            *Hub
 	auth           *platformauth.Service
 	userRepo       userRelationAuthorizer
 	groupRepo      groupMembershipAuthorizer
@@ -138,6 +139,22 @@ func NewHandlerWithContext(ctx context.Context, auth *platformauth.Service, user
 
 // Close stops the background typing-throttle sweeper and waits for it to exit.
 // Safe to call multiple times.
+// SetHub 显式注入应用级 Hub（bootstrap 装配）：WS 连接注册/退订、在线态与
+// typing 广播全部走该实例；未注入时回退进程级 DefaultHub（单测/直调路径）。
+func (h *Handler) SetHub(hub *Hub) {
+	if hub != nil {
+		h.hub = hub
+	}
+}
+
+// hubOrDefault 返回注入的 Hub，未注入时回退 DefaultHub。
+func (h *Handler) hubOrDefault() *Hub {
+	if h.hub != nil {
+		return h.hub
+	}
+	return DefaultHub()
+}
+
 func (h *Handler) Close() {
 	if h.stop != nil {
 		h.stop()
@@ -430,18 +447,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sink.onSubscriptionRevoked = func(kind, id string) {
 		subs.apply("unsubscribe", kind, []string{id})
 	}
-	if DefaultHub().RegisterUser(principal.UserID, principal.SessionID, sink) {
+	if h.hubOrDefault().RegisterUser(principal.UserID, principal.SessionID, sink) {
 		// 首条连接：presence 落库 online（groups/search 的 presence_status 统计依据）。
 		h.markPresence(principal.UserID, true)
-		DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOnline, Payload: UserOnlinePayload{UserID: principal.UserID, OnlineAt: time.Now().UTC().Format(time.RFC3339)}})
+		h.hubOrDefault().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOnline, Payload: UserOnlinePayload{UserID: principal.UserID, OnlineAt: time.Now().UTC().Format(time.RFC3339)}})
 	}
 	defer func() {
 		// 先注销 Hub 注册：此后不再有新事件写入本连接队列。
-		if DefaultHub().UnregisterUser(principal.UserID, principal.SessionID, sink) {
+		if h.hubOrDefault().UnregisterUser(principal.UserID, principal.SessionID, sink) {
 			// 最后一条连接断开：presence 落库 offline（多连接共存时中间断开不写，
 			// 由 Hub 的「连接数归零」判定保证语义）。
 			h.markPresence(principal.UserID, false)
-			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOffline, Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
+			h.hubOrDefault().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOffline, Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
 		}
 		// resume 基线取「本连接真正写入 TCP 的最大 ServerSeq」，而不是全局
 		// resumeStore.LastSeq()：全局 seq 会被其它用户/其它群的事件推进，用它做
@@ -600,8 +617,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			actorInfo := h.resolveTypingActor(principalCtx, principal.UserID)
 			// typing 是瞬态事件：不写 resume 流（写流会稀释 seq 空间、膨胀
 			// Stream，且重连回放陈旧 typing 指示是错误 UX）。
-			DefaultHub().BroadcastToUserNoRecord(payload.TargetUserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
-			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
+			h.hubOrDefault().BroadcastToUserNoRecord(payload.TargetUserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
+			h.hubOrDefault().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypePrivateTyping, Payload: PrivateTypingPayload{TargetUserID: payload.TargetUserID, Actor: actorInfo, IsTyping: payload.IsTyping}})
 		case "SendGroupTyping":
 			var payload GroupTypingSendPayload
 			if err := decodePayload(msg.Payload, &payload); err != nil {
@@ -620,7 +637,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			h.typingThrottle.Store(typingKey, time.Now())
-			DefaultHub().BroadcastToGroupNoRecord(payload.GroupID, Event{Type: EventTypeGroupTyping, Payload: GroupTypingPayload{GroupID: payload.GroupID, Actor: h.resolveTypingActor(principalCtx, principal.UserID), IsTyping: payload.IsTyping}})
+			h.hubOrDefault().BroadcastToGroupNoRecord(payload.GroupID, Event{Type: EventTypeGroupTyping, Payload: GroupTypingPayload{GroupID: payload.GroupID, Actor: h.resolveTypingActor(principalCtx, principal.UserID), IsTyping: payload.IsTyping}})
 		case "Auth":
 			_ = sink.Send(Event{Type: EventTypeError, Payload: ErrorPayload{Code: CodeWSProtocol, Message: "重复鉴权", Severity: "warning", Retryable: false}})
 		default:
@@ -716,8 +733,8 @@ func (h *Handler) applyAuthorizedSubscriptions(ctx context.Context, viewerUserID
 		subs.apply(payload.Operation, item.Type, allowedByType[item.Type])
 	}
 	snapshot := subs.snapshot()
-	DefaultHub().SetUserSubscriptions(snapshot.UserIDs, sink)
-	DefaultHub().SetGroupSubscriptions(snapshot.GroupIDs, sink)
+	h.hubOrDefault().SetUserSubscriptions(snapshot.UserIDs, sink)
+	h.hubOrDefault().SetGroupSubscriptions(snapshot.GroupIDs, sink)
 	return ack, snapshot
 }
 

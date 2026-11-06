@@ -1032,3 +1032,15 @@ func TestRealtimeHandshakeRejectsBannedWithSpecCloseCode(t *testing.T) {
 		t.Fatalf("expected close code 4001, got %v", err)
 	}
 }
+
+func TestHandlerUsesInjectedHub(t *testing.T) {
+	hub := NewHub()
+	handler := NewHandler(nil, nil, nil)
+	if got := handler.hubOrDefault(); got != DefaultHub() {
+		t.Fatal("unset hub must fall back to DefaultHub")
+	}
+	handler.SetHub(hub)
+	if got := handler.hubOrDefault(); got != hub {
+		t.Fatalf("SetHub must be used for connection lifecycle, got %p want %p", got, hub)
+	}
+}

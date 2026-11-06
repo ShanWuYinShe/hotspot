@@ -25,26 +25,32 @@ import (
 )
 
 func NewHTTPRouter(modules []modulekit.Module) http.Handler {
-	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore(), nil, nil)
+	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore(), nil, nil, nil)
 }
 
 func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.Logger) http.Handler {
-	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore(), nil, nil)
+	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore(), nil, nil, nil)
 }
 
 // NewHTTPRouterWithReadiness 在生产装配下注入就绪探针（DB 必查、Redis 降级
 // 仅告警不摘流量），供容器 healthcheck/LB 使用。
-func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store, platformAuth *platformauth.Service, adminChecker platformauth.AdminChecker) http.Handler {
-	return newHTTPRouter(modules, logger, readiness, guardChecker, idemStore, platformAuth, adminChecker)
+func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store, platformAuth *platformauth.Service, adminChecker platformauth.AdminChecker, hub *realtime.Hub) http.Handler {
+	return newHTTPRouter(modules, logger, readiness, guardChecker, idemStore, platformAuth, adminChecker, hub)
 }
 
-func realtimeHubMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r.WithContext(realtime.WithHub(r.Context(), realtime.DefaultHub())))
-	})
+func realtimeHubMiddleware(hub *realtime.Hub) func(http.Handler) http.Handler {
+	// nil 仅供单测/轻量装配回退到进程级 Hub；生产 NewApp 恒传应用级实例。
+	if hub == nil {
+		hub = realtime.DefaultHub()
+	}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r.WithContext(realtime.WithHub(r.Context(), hub)))
+		})
+	}
 }
 
-func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store, platformAuth *platformauth.Service, adminChecker platformauth.AdminChecker) http.Handler {
+func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store, platformAuth *platformauth.Service, adminChecker platformauth.AdminChecker, hub *realtime.Hub) http.Handler {
 	r := chi.NewRouter()
 	// 媒体客户端端点：按请求入口 origin 注入 context，媒体模块据此生成与页面
 	// 同源的直传/读 URL（跨源会被 CORS/LNA 拦截，见 media/client_endpoint.go）。
@@ -65,7 +71,7 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, rea
 	r.Use(observability.RequestMetricsMiddleware)
 	// 实时 Hub 显式注入请求 context（替代模块内 80+ 处 DefaultHub 直取的隐式
 	// 全局依赖）：请求路径统一从 ctx 取 Hub，组合根在这里注入一次。
-	r.Use(realtimeHubMiddleware)
+	r.Use(realtimeHubMiddleware(hub))
 	// 资源守卫 checker 显式注入请求 context（替代进程级 SetDefaultChecker）：
 	// 守卫中间件与写入方 Record* 统一从 ctx 取实例，同进程可装配多套 App。
 	r.Use(resourceguard.WithChecker(guardChecker))

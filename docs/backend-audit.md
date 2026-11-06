@@ -3240,3 +3240,20 @@ meta/client_config」。
 - 测试：realtime.WithHub 覆盖/回退语义单测；全量 go test -short 全绿。
 
 验证：verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C2（第十五批）：App 独占 Hub 实例（组合根去全局直取）（2026-11-07）
+
+承接 C2 第十四批（模块上下文注入），本轮把「Hub 实例归属」也移到组合根：
+
+- NewApp 创建应用级 `hub := realtime.NewHub()`，本 App 独占；
+- 显式传入 HTTP 路由构造 → 根中间件注入请求 context（不再由中间件读全局）；
+- 实时 Handler 新增 SetHub：WS 连接注册/退订、在线态、typing 广播全部走应用
+  级实例（未注入时回退 DefaultHub，仅单测/直调路径）；
+- Hub 生命周期操作（collector、resumeStore、Redis bridge/publisher、Shutdown
+  Drain）全部改用 App 持有的 hub；App 结构体保存 hub 引用；
+- initRedisBridgeFromClient 增加 hub 参数；HTTP 轻量构造器（NewHTTPRouter/
+  WithLogger）传 nil 走 fallback；
+- 测试：Handler hubOrDefault 回退/注入语义；全量 go test -short 全绿；
+- 架构守卫说明更新：全局 defaultHub 仅测试/后台 fallback，生产由 App 显式持有。
+
+验证：verify-backend-ci.sh --with-db ALL CHECKS PASSED。

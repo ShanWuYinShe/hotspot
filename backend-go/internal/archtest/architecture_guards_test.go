@@ -18,7 +18,7 @@ import (
 // 新增条目必须在 PR/commit 说明理由——C2 的目标是逐轮收敛而非永久豁免。
 var mutableGlobalAllowlist = map[string]string{
 	"internal/platform/observability/logger.go:defaultLogger":        "进程级日志器：所有包都要打日志，注入成本 265+ 调用点，单独评估",
-	"internal/platform/realtime/global.go:defaultHub":                "组合根单例：模块已全部改走 realtime.HubFromContext(ctx)，仅 bootstrap 注入/WS 生命周期使用",
+	"internal/platform/realtime/global.go:defaultHub":                "测试/后台 fallback：生产 NewApp 持有应用级 Hub 实例并显式注入（context/WS），全局仅未注入时兜底",
 	"internal/platform/requestmeta/requestmeta.go:trustedProxyCIDRs": "启动期一次写入的代理 CIDR 配置（只读快照）",
 }
 
