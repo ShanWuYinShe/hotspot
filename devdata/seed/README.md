@@ -116,7 +116,7 @@ seed 的实现分层（改数据按层定位，不要直接在 SQL/表里手写�
 cd backend-go
 gofmt -w internal/seed
 go build ./... && go vet ./... && go test -count=1 ./internal/seed/...
-go run ./cmd/seed --dry-run -assets-dir ../devdata/seed/media   # 看 38 张表 396 行 / 38 个媒体对象
+go run ./cmd/seed --dry-run -assets-dir ../devdata/seed/media   # 看 36 张表 358 行 / 38 个媒体对象
 ```
 
 数据规模断言在 `internal/seed/plan_test.go` 的 `expectedTableCounts`（增删数据时同步更新）。
@@ -157,7 +157,7 @@ go run ./cmd/seed --dry-run -assets-dir ../devdata/seed/media   # 看 38 张表 
 
 ## 数据规模（dry-run 可见）
 
-- 38 张表 396 行 + 38 个媒体对象（9 头像 / 4 群头像 / 22 瞬间图 / 3 聊天图）。
+- 36 张表 358 行 + 38 个媒体对象（9 头像 / 4 群头像 / 22 瞬间图 / 3 聊天图）。
 - 覆盖 10 用户、24 瞬间、4 群组、3 私聊、9 通知、2 分享、4 举报、2 管理角色、6 审计日志、
   2 系统公告、1 份 AppConfig。
 - 分享码：`SEEDSUNSET23`（moment_seed_01）、`SEEDUSERPAGE`（user_seed_lumos 主页），

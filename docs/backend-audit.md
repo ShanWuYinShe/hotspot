@@ -2121,3 +2121,24 @@ rps 与 p50/p95/p99，用于**同一会话内的前后对比**；非测试环境
 - 迁移纪律调整：破坏性 DDL 允许（用户明确不考虑向后兼容），但迁移文件必须声明
   `-- allow-destructive: <理由>`（scripts/check-migrations.sh 校验）；CONCURRENTLY 仍禁止（事务内执行）。
 - 验证：`verify-backend-ci.sh --with-db` ALL CHECKS PASSED（含 legacy 拒绝/adopt/checksum 篡改检测的手工实测）。
+
+
+## Batch B2：删除死表死列与死抽象（2026-11-06）
+
+持久化审计 P1-2 落地：
+
+- 迁移 060（带 \`-- allow-destructive\` 声明）删除 0 引用的历史死表
+  `moment_likes` / `comment_likes` / `feed_dismissals`，以及只写 0 的
+  `comments.likes_count` 列（reactions 已完全取代前两者语义；契约 CommentItem 不含
+  likes_count，仅 repo 内部扫描）。
+- Go 侧：comments repository/类型/测试移除 likes_count 读写；seed 数据构建删掉三张死表
+  的写入与断言（种子规模 38 表 396 行 → 36 表 358 行）；dead abstraction
+  `persistence.Repository[T]` / `ErrNoTransaction` / 未使用的软删 SQL 常量删除。
+- `scripts/check-migration-indexes.sh` 的「期望索引」来源从解析历史 SQL 改为
+  `migrations/schema_manifest.json`（自动反映 DROP TABLE/INDEX 后的净结果）。
+- `cmd/migrate -write-manifest` 使用跳过 manifest 校验的内部路径（新迁移改变期望
+  schema 时先应用再生成新 manifest），生产启动路径仍严格校验。
+- schema manifest 重建：43 表/391 列/128 索引 → 40 表/380 列/121 索引。
+- 验证：`verify-backend-ci.sh --with-db` ALL CHECKS PASSED；在全新库执行
+  `cmd/migrate` + 真实 `cmd/seed`（if-missing 与 reset 两种模式）均成功，
+  死表确认不存在、行数与 dry-run 一致。

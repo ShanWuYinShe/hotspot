@@ -132,7 +132,7 @@ MaxConns 25/MinConns 2 可配、HTTP 超时 15s/idle 60s、Redis 命令超时 50
 - **固定 ID 前缀**（`--reset` 按前缀清理，也是 QA 脚本的稳定 ID）：`user_seed_*`、
   `moment_seed_01..24`、`comment_seed_*`、`group_seed_1..4`、`gmsg_seed_*`、`chat_seed_*`、
   `notify_seed_*`、`share_seed_*`、`report_seed_*`、`upload_seed_*`、`role_seed_*`、`audit_seed_*` 等。
-- **数据规模**（dry-run 可见）：38 张表 396 行 + 38 个媒体对象；覆盖 10 用户/24 瞬间/4 群组/
+- **数据规模**（dry-run 可见）：36 张表 358 行 + 38 个媒体对象；覆盖 10 用户/24 瞬间/4 群组/
   3 私聊/9 通知/2 分享/4 举报/2 管理角色/6 审计日志/2 系统公告/1 份 AppConfig。
 - **S2 地理索引**：users/moments/groups 的 `s2_cell_id` 用 `platform/geo.LeafCellID`、
   groups 的 `s2_cell_token` 用 `geo.CellTokenAtLevel(point, 14)`（与各模块写入口径一致），
