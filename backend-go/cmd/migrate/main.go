@@ -47,7 +47,7 @@ func main() {
 		}
 		log.Printf("adopted legacy database through %s and verified schema", *adoptThrough)
 	case *writeManifest != "":
-		if err := platformmigrate.EnsureSchema(ctx, db, migrations.Files); err != nil {
+		if err := platformmigrate.EnsureSchemaForManifest(ctx, db, migrations.Files); err != nil {
 			log.Fatalf("ensure schema: %v", err)
 		}
 		manifest, err := platformmigrate.BuildSchemaManifest(ctx, db)

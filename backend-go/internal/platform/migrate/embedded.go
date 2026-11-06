@@ -134,6 +134,18 @@ func isPostgres(db persistence.QueryableDB) (*persistence.PostgresDB, bool) {
 // 增量执行 pending 迁移（每文件与登记同事务），最后用 schema manifest 校验
 // 「期望对象是否都存在」。任何不一致都返回错误（启动失败），不静默继续。
 func EnsureSchema(ctx context.Context, db persistence.QueryableDB, fsys fs.FS) error {
+	return ensureSchema(ctx, db, fsys, true)
+}
+
+// EnsureSchemaForManifest 与 EnsureSchema 相同，但跳过末尾的 schema manifest 校验。
+// 仅供 `cmd/migrate -write-manifest` 重建 manifest 时使用：此时嵌入的是旧 manifest，
+// 新迁移刚改变了期望 schema，先应用再生成新 manifest，再用新 manifest 校验。
+// 生产启动路径不得使用（会绕过漂移检测）。
+func EnsureSchemaForManifest(ctx context.Context, db persistence.QueryableDB, fsys fs.FS) error {
+	return ensureSchema(ctx, db, fsys, false)
+}
+
+func ensureSchema(ctx context.Context, db persistence.QueryableDB, fsys fs.FS, verifyManifest bool) error {
 	if err := db.Ping(ctx); err != nil {
 		return fmt.Errorf("ping postgres: %w", err)
 	}
@@ -182,6 +194,9 @@ func EnsureSchema(ctx context.Context, db persistence.QueryableDB, fsys fs.FS) e
 				return err
 			}
 			observability.L().Info("schema_migrations: applied", "file", name)
+		}
+		if !verifyManifest {
+			return nil
 		}
 		return verifySchemaManifest(ctx, db, fsys)
 	})

@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
-# ── 迁移声明索引 vs 数据库实际索引 一致性校验（只读）─────────────────
-# 背景（2026-11-01 线上排查）：存量库首次接入时，schema_migrations 会做一次性
-# 「基线登记」——核心表已齐的库只登记迁移文件、不执行 SQL（见
-# backend-go/internal/platform/migrate/embedded.go 的 legacy baseline 分支）。
-# 若某索引在基线时的数据快照里不存在（快照早于声明它的迁移），它会被永久标记
-# 为「已应用」，迁移里的 CREATE INDEX 再也不会执行。线上 82 个声明索引里
-# idx_moments_keyset（056 声明）就是这样缺失的（它 2026-10-07 才加入仓库，而
-# 线上库 2026-10-08 做基线，快照里没有该索引）。
+# ── 期望索引 vs 数据库实际索引 一致性校验（只读）────────────────────
+# 期望索引来源：backend-go/migrations/schema_manifest.json（由「在全新库执行全部
+# 迁移」生成，是迁移集合真值的快照；已包含 DROP TABLE/INDEX 之后的净结果）。
+# 与目标库 public schema 的实际索引逐名比对；缺失或 INVALID 索引会让退出码为 1。
 #
-# 本脚本去掉 SQL 行注释后，从 backend-go/migrations/*.sql 提取声明的索引名
-# （CREATE [UNIQUE] INDEX [IF NOT EXISTS] <name>，扣除后续 DROP INDEX），与目标
-# 库 public schema 的实际索引逐名比对；缺失或 INVALID（并发建索引失败残留）的
-# 索引会让退出码为 1。
+# 历史背景：旧 runner 的「存量库基线（只登记不执行）」曾让线上永久缺失
+# idx_moments_keyset（056 声明）。新 runner 已删除启发式基线，并在启动/CI 用
+# schema manifest 校验期望对象；本脚本保留为独立的只读诊断工具（可对任意库运行）。
 #
 # 用法（默认检查仓库根 compose 栈的 postgres 服务 / hotspot 库；worktree 无
 # .env 时自动回落到主工作树的 compose 环境）：
@@ -95,28 +90,16 @@ run_query() {
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-# 1) 迁移声明索引：去 -- 行注释 → 多行拼一行 → 提取 CREATE [UNIQUE] INDEX 名。
-#    再扣除 DROP INDEX（历史上无，防未来脚本误报）。
+# 1) 期望索引：从 schema_manifest.json 提取 indexes（格式 "table:indexname"）。
+MANIFEST="$MIGRATIONS_DIR/schema_manifest.json"
 declared_all="$TMP/declared_all.txt"
-dropped="$TMP/dropped.txt"
 declared="$TMP/declared.txt"
-for f in "$MIGRATIONS_DIR"/*.sql; do
-  sed -e 's/--.*$//' "$f"
-done \
-  | tr '\n' ' ' \
-  | grep -ioE 'create[[:space:]]+(unique[[:space:]]+)?index[[:space:]]+(if[[:space:]]+not[[:space:]]+exists[[:space:]]+)?[a-z0-9_]+' \
-  | awk '{ print $NF }' \
-  | sort -u > "$declared_all" || true
-
-for f in "$MIGRATIONS_DIR"/*.sql; do
-  sed -e 's/--.*$//' "$f"
-done \
-  | tr '\n' ' ' \
-  | grep -ioE 'drop[[:space:]]+index[[:space:]]+(if[[:space:]]+exists[[:space:]]+)?[a-z0-9_]+' \
-  | awk '{ print $NF }' \
-  | sort -u > "$dropped" || true
-
-comm -23 "$declared_all" "$dropped" > "$declared"
+if [ ! -f "$MANIFEST" ]; then
+  echo "!! 缺少 ${MANIFEST}：用 go run ./cmd/migrate -write-manifest=migrations/schema_manifest.json 生成" >&2
+  exit 2
+fi
+grep -oE '"[^"]+:[^"]+"' "$MANIFEST" | tr -d '"' | awk -F: '{print $NF}' | sort -u > "$declared_all"
+cp "$declared_all" "$declared"
 
 # 2) 目标库实际索引（public schema，含主键/唯一约束隐式索引）与 INVALID 列表。
 actual="$TMP/actual.txt"
@@ -136,7 +119,7 @@ missing_count=$(wc -l < "$missing" | tr -d ' ')
 invalid_count=$(wc -l < "$declared_invalid" | tr -d ' ')
 
 echo "目标库：${DATABASE}"
-echo "迁移声明索引：${declared_count} 个；库中 public schema 实际索引：${actual_count} 个（含主键/唯一约束索引）"
+echo "期望索引（schema manifest）：${declared_count} 个；库中 public schema 实际索引：${actual_count} 个（含主键/唯一约束索引）"
 
 if [ "$missing_count" = "0" ] && [ "$invalid_count" = "0" ]; then
   echo "一致性校验 OK：迁移声明的索引在库中全部存在且 VALID"
@@ -145,13 +128,12 @@ fi
 
 if [ "$missing_count" != "0" ]; then
   echo ""
-  echo "!! 缺失索引（迁移声明但库中不存在）：${missing_count} 个"
+  echo "!! 缺失索引（manifest 期望但库中不存在）：${missing_count} 个"
   sed 's/^/   - /' "$missing"
   echo ""
-  echo "   常见原因：存量库基线（schema_migrations 只登记不执行）跳过了声明该索引"
-  echo "   的迁移文件。修法：新增幂等迁移重放 CREATE INDEX IF NOT EXISTS（参照"
-  echo "   058_moments_keyset_index_backfill.sql），不要直接改历史迁移文件（已登记"
-  echo "   的文件不会再执行）。"
+  echo "   常见原因：目标库 schema 落后于迁移集合（未执行 pending 迁移，或手工改过库）。"
+  echo "   修法：先 go run ./cmd/migrate 应用 pending；仍有缺失说明版本记录与 schema 漂移，"
+  echo "   执行 go run ./cmd/migrate -verify-only 查看完整清单后按需修复（不要改历史迁移文件）。"
 fi
 
 if [ "$invalid_count" != "0" ]; then
