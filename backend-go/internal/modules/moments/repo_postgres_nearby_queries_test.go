@@ -19,12 +19,12 @@ func TestPostgresListNearbyMomentsQueryCount(t *testing.T) {
 		{"m_followed", "u_followed", now, 1, 34.2604, 117.1855, true},
 		{"m_other", "u_other", now.Add(-time.Minute), 50, 34.2604, 117.1855, false},
 	}
-	detailRows := func(momentID, userID, description string, following bool) []any {
-		return []any{momentID, userID, userID + "_nick", "", description, 0, 0, 0, "", []string{}, false}
+	detailRows := func(momentID, userID, description string, imageJSON []byte) []any {
+		return []any{momentID, userID, userID + "_nick", "", description, 0, 0, 0, "", []string{}, false, imageJSON}
 	}
 	backend.nearbyDetails = map[string][]any{
-		"m_followed": detailRows("m_followed", "u_followed", "followed", true),
-		"m_other":    detailRows("m_other", "u_other", "other", false),
+		"m_followed": detailRows("m_followed", "u_followed", "followed", []byte(`[{"file_id":"f1","storage_key":"uploads/a.jpg","thumbnail_url":"","width":0,"height":0,"mime_type":""}]`)),
+		"m_other":    detailRows("m_other", "u_other", "other", []byte("[]")),
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
@@ -46,6 +46,13 @@ func TestPostgresListNearbyMomentsQueryCount(t *testing.T) {
 	// 关注加分让 m_followed 排在更高热度的 m_other 之前（距离相同）。
 	if page.Items[0].MomentID != "m_followed" {
 		t.Fatalf("following candidate should rank first, got %q", page.Items[0].MomentID)
+	}
+	// 图片行随详情查询带回：服务层只 presign，不再单独查询。
+	if !page.Items[0].imagesFetched || len(page.Items[0].imageRows) != 1 || page.Items[0].imageRows[0].StorageKey != "uploads/a.jpg" {
+		t.Fatalf("embedded image rows missing: %#v", page.Items[0].imageRows)
+	}
+	if !page.Items[1].imagesFetched || len(page.Items[1].imageRows) != 0 {
+		t.Fatalf("empty image rows must still mark fetched: %#v", page.Items[1].imageRows)
 	}
 	if len(backend.queries) != 2 {
 		t.Fatalf("nearby roundtrips = %d (%v), want 2", len(backend.queries), backend.queries)

@@ -67,44 +67,72 @@ func HydrateMomentImages(ctx context.Context, fetcher MomentImageFetcher, resolv
 		return
 	}
 	for i := range items {
-		rows := rowsByMoment[items[i].MomentID]
-		if len(rows) == 0 {
+		if images := presignMomentImageRows(ctx, resolver, rowsByMoment[items[i].MomentID]); len(images) > 0 {
+			items[i].Images = images
+		}
+	}
+}
+
+// presignMomentImageRows 把图片行 presign 成契约 MomentImage 数组（URL 化）。
+func presignMomentImageRows(ctx context.Context, resolver ImageResolver, rows []momentImageRow) []MomentImage {
+	if resolver == nil || len(rows) == 0 {
+		return nil
+	}
+	images := make([]MomentImage, 0, len(rows))
+	for _, r := range rows {
+		url, err := resolver.PresignGet(ctx, r.StorageKey, momentReadTTL)
+		if err != nil {
+			observability.L().Error("moments.hydrate_images presign failed", "error", err, "storage_key", r.StorageKey)
 			continue
 		}
-		images := make([]MomentImage, 0, len(rows))
-		for _, r := range rows {
-			url, err := resolver.PresignGet(ctx, r.StorageKey, momentReadTTL)
-			if err != nil {
-				observability.L().Error("moments.hydrate_images presign failed", "error", err, "storage_key", r.StorageKey)
-				continue
-			}
-			img := MomentImage{URL: url}
-			if r.Width != 0 {
-				width := r.Width
-				img.Width = &width
-			}
-			if r.Height != 0 {
-				height := r.Height
-				img.Height = &height
-			}
-			if r.MimeType != "" {
-				mimeType := r.MimeType
-				img.MimeType = &mimeType
-			}
-			// thumbnail_url currently stored as a storage key path (or empty);
-			// presign it when present, otherwise fall back to the full URL.
-			if r.ThumbnailURL != "" {
-				if thumb, err := resolver.PresignGet(ctx, r.ThumbnailURL, momentReadTTL); err == nil {
-					img.ThumbnailURL = &thumb
-				} else {
-					img.ThumbnailURL = &url
-				}
+		img := MomentImage{URL: url}
+		if r.Width != 0 {
+			width := r.Width
+			img.Width = &width
+		}
+		if r.Height != 0 {
+			height := r.Height
+			img.Height = &height
+		}
+		if r.MimeType != "" {
+			mimeType := r.MimeType
+			img.MimeType = &mimeType
+		}
+		// thumbnail_url currently stored as a storage key path (or empty);
+		// presign it when present, otherwise fall back to the full URL.
+		if r.ThumbnailURL != "" {
+			if thumb, err := resolver.PresignGet(ctx, r.ThumbnailURL, momentReadTTL); err == nil {
+				img.ThumbnailURL = &thumb
 			} else {
 				img.ThumbnailURL = &url
 			}
-			images = append(images, img)
+		} else {
+			img.ThumbnailURL = &url
 		}
-		if len(images) > 0 {
+		images = append(images, img)
+	}
+	return images
+}
+
+// momentImagesFetched 判断列表项的图片行是否已由仓储随主查询带回（附近流详情
+// 查询）；全部为真时服务层跳过额外图片批量查询，只做 presign。
+func momentImagesFetched(items []MomentItem) bool {
+	for i := range items {
+		if !items[i].imagesFetched {
+			return false
+		}
+	}
+	return true
+}
+
+// HydrateLoadedMomentImages 对「图片行已随详情查询带回」的列表项做 presign 填充，
+// 不再访问仓储（附近流路径）。
+func HydrateLoadedMomentImages(ctx context.Context, resolver ImageResolver, items []MomentItem) {
+	if resolver == nil || len(items) == 0 {
+		return
+	}
+	for i := range items {
+		if images := presignMomentImageRows(ctx, resolver, items[i].imageRows); len(images) > 0 {
 			items[i].Images = images
 		}
 	}

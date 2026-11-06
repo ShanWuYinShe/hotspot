@@ -50,6 +50,8 @@ func (r rowValues) Scan(dest ...any) error {
 				}
 				*d = parsed
 			}
+		case *[]byte:
+			*d = r.values[i].([]byte)
 		case *[]string:
 			// Get 合并查询的 tags/mentions 是 text[] 列（stub 里存 []string / nil）。
 			switch v := r.values[i].(type) {

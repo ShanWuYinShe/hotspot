@@ -2486,3 +2486,20 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   `GetRecentLocation` 单测/真实库 IT（存在/无坐标/已注销三态）。benchmark 与
   SLO 口径见 docs/performance.md。
 - 验证：go test -short 全绿；--with-db ALL CHECKS PASSED（含新增 IT）。
+
+
+## Batch D（第三批）：附近流图片批量并入详情（2026-11-06）
+
+- `queryNearbyMomentDetails` 通过 `LEFT JOIN LATERAL ... jsonb_agg` 随分页详情
+  一次取回图片行（moment_images JOIN media_upload_sessions completed，按 position
+  排序），服务层只做 presign——删除原有「详情后再发一次图片批量查询」往返。
+- 仓储→服务的内部传递：`MomentItem` 新增不参与 JSON 契约的
+  `imageRows/imagesFetched` 字段；`hydrateImagesBatch` 检测到全部项已取回图片
+  时走 `HydrateLoadedMomentImages`（仅 presign），其它列表端点保持原批量查询
+  路径（混合列表自动回退）。
+- 附近流实际 DB 往返：候选(含关注) + 详情(含图片) + reactions 聚合 + 作者关系
+  = **4 次**（本批前 5 次；审计目标 3-4 已达标）。排序/分页/图片顺序语义不变。
+- 测试：新增图片行嵌入断言（imagesFetched/imageRows）、`HydrateLoadedMomentImages`
+  presign/尺寸/缩略图用例、`momentImagesFetched` 混合列表回退用例；真实库
+  IT（nearby S2/分页/拉黑过滤）全绿。
+- 验证：go test -short 全绿；--with-db ALL CHECKS PASSED。

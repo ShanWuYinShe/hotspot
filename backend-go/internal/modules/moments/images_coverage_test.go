@@ -91,3 +91,45 @@ func TestHydrateSingleMoment(t *testing.T) {
 	// nil item 直接返回
 	HydrateSingleMoment(ctx, fetcher, stubImageResolver{}, nil)
 }
+
+// TestHydrateLoadedMomentImagesPresignsEmbeddedRows：附近流详情查询已带回图片行，
+// 服务层只做 presign（不访问仓储）并保持顺序/尺寸字段。
+func TestHydrateLoadedMomentImagesPresignsEmbeddedRows(t *testing.T) {
+	ctx := context.Background()
+	items := []MomentItem{{
+		MomentID:      "m1",
+		imagesFetched: true,
+		imageRows: []momentImageRow{
+			{StorageKey: "uploads/a.jpg", ThumbnailURL: "uploads/a-thumb.jpg", Width: 10, Height: 20, MimeType: "image/jpeg"},
+			{StorageKey: "uploads/b.jpg"},
+		},
+	}}
+	HydrateLoadedMomentImages(ctx, stubImageResolver{urls: map[string]string{
+		"uploads/a.jpg":       "https://cdn/a.jpg",
+		"uploads/a-thumb.jpg": "https://cdn/a-thumb.jpg",
+		"uploads/b.jpg":       "https://cdn/b.jpg",
+	}}, items)
+	if len(items[0].Images) != 2 {
+		t.Fatalf("images = %#v", items[0].Images)
+	}
+	first := items[0].Images[0]
+	if first.URL != "https://cdn/a.jpg" || first.ThumbnailURL == nil || *first.ThumbnailURL != "https://cdn/a-thumb.jpg" {
+		t.Fatalf("unexpected first image: %#v", first)
+	}
+	if first.Width == nil || *first.Width != 10 || first.Height == nil || *first.Height != 20 || first.MimeType == nil || *first.MimeType != "image/jpeg" {
+		t.Fatalf("image dimensions/type missing: %#v", first)
+	}
+	if items[0].Images[1].URL != "https://cdn/b.jpg" {
+		t.Fatalf("second image URL = %q", items[0].Images[1].URL)
+	}
+}
+
+// TestMomentImagesFetched 只认「全部项都标记已取回」：混合列表必须回退批量查询。
+func TestMomentImagesFetched(t *testing.T) {
+	if !momentImagesFetched(nil) || !momentImagesFetched([]MomentItem{{imagesFetched: true}}) {
+		t.Fatal("all-fetched lists must be detected")
+	}
+	if momentImagesFetched([]MomentItem{{imagesFetched: true}, {}}) {
+		t.Fatal("mixed list must fall back to batch fetch")
+	}
+}

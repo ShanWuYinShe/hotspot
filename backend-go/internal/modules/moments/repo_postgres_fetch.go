@@ -2,6 +2,7 @@ package moments
 
 import (
 	"context"
+	"encoding/json"
 	"sort"
 	"time"
 
@@ -163,6 +164,8 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 			detail := details[candidate.momentID]
 			item := MomentItem{
 				MomentID:         candidate.momentID,
+				imageRows:        detail.imageRows,
+				imagesFetched:    true,
 				Description:      detail.description,
 				CreatedAt:        candidate.createdAt.UTC().Format(time.RFC3339),
 				CommentsCount:    detail.commentsCount,
@@ -205,6 +208,8 @@ type nearbyMomentDetail struct {
 	tags                                                   []string
 	isFavorited                                            bool
 	commentsCount, sharesCount, interactionCount           int
+	// imageRows 随详情查询一并取回；服务层仅做 presign（不再单独查询）。
+	imageRows []momentImageRow
 }
 
 // loadNearbyMomentDetails 批量补全附近流页面内的展示字段。
@@ -221,8 +226,14 @@ func loadNearbyMomentDetails(ctx context.Context, queryable persistence.Queryabl
 	for rows.Next() {
 		var momentID string
 		var detail nearbyMomentDetail
-		if err := rows.Scan(&momentID, &detail.userID, &detail.nickname, &detail.avatarURL, &detail.description, &detail.commentsCount, &detail.sharesCount, &detail.interactionCount, &detail.locationName, &detail.tags, &detail.isFavorited); err != nil {
+		var imagesJSON []byte
+		if err := rows.Scan(&momentID, &detail.userID, &detail.nickname, &detail.avatarURL, &detail.description, &detail.commentsCount, &detail.sharesCount, &detail.interactionCount, &detail.locationName, &detail.tags, &detail.isFavorited, &imagesJSON); err != nil {
 			return nil, err
+		}
+		if len(imagesJSON) > 0 {
+			if err := json.Unmarshal(imagesJSON, &detail.imageRows); err != nil {
+				return nil, err
+			}
 		}
 		details[momentID] = detail
 	}

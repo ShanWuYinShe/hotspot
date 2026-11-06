@@ -57,8 +57,10 @@ envelope code，不能只看 HTTP 状态码）。
 | BenchmarkRequestMetricsMiddleware | ~0.54 µs/op，7 allocs | 每请求指标采集固定税 |
 
 热点解读：nearby（S2 半径查询 + 聚合）与 users/search（trigram ILIKE 双分支）
-是当前 p99 最高的两个读端点，容量规划优先关注；两者都已有 pg_trgm/S2 索引，
-继续优化方向见 `.workwork/design/backend-improvement-plan.md` Batch D2/D5。
+是当前 p99 最高的两个读端点，容量规划优先关注；两者都已有 pg_trgm/S2 索引。
+nearby 的 DB 往返已收敛为 4 次（候选含关注 + 详情含图片 + reactions 聚合 +
+作者关系），继续优化方向见 `.workwork/design/backend-improvement-plan.md`
+Batch D2/D5。
 
 ## 3. SLO 目标（单实例基线，c=10，seed 规模）
 

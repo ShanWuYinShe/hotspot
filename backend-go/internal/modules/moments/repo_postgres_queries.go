@@ -192,9 +192,25 @@ LIMIT $4`
 	queryNearbyMomentDetails = `
 SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, (SELECT COUNT(*)::int FROM comments c WHERE c.moment_id = m.moment_id AND c.is_deleted = FALSE), (SELECT COUNT(*)::int FROM shares s WHERE s.share_type = 'moment' AND s.is_revoked = FALSE AND s.payload->>'shared_moment_id' = m.moment_id), m.interaction_count, m.location_name,
        COALESCE((SELECT array_agg(mt.tag_name ORDER BY mt.tag_name) FROM moment_tags mt WHERE mt.moment_id = m.moment_id), ARRAY[]::text[]),
-       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $2)
+       EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $2),
+       -- 图片行随详情查询一并取回（LATERAL 仅作用于 20 行页内），服务层只做
+       -- presign，不再多发一次图片批量查询（架构审计 perf D2）。
+       COALESCE(img.rows, '[]'::jsonb)
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
+LEFT JOIN LATERAL (
+  SELECT jsonb_agg(jsonb_build_object(
+           'file_id', mus.file_id,
+           'storage_key', mus.storage_key,
+           'thumbnail_url', COALESCE(mus.thumbnail_url, ''),
+           'width', COALESCE(mus.width, 0),
+           'height', COALESCE(mus.height, 0),
+           'mime_type', COALESCE(mus.final_mime_type, '')
+         ) ORDER BY mi.position) AS rows
+  FROM moment_images mi
+  JOIN media_upload_sessions mus ON mus.file_id = mi.file_id AND mus.status = 'completed'
+  WHERE mi.moment_id = m.moment_id
+) img ON TRUE
 WHERE m.moment_id = ANY($1)`
 	// queryNearbyMoments 候选粗筛只返回排序所需列（无逐行子查询、无 users join）：
 	// 热度/关注改为候选集批量聚合，展示字段分页后批量补全。

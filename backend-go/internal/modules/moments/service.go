@@ -598,6 +598,12 @@ func (s *Service) hydrateImagesBatch(ctx context.Context, items []MomentItem) {
 	if s.images == nil || len(items) == 0 {
 		return
 	}
+	// 附近流详情查询已带回图片行：只 presign，省一次图片批量查询（perf D2）；
+	// 其它列表端点保持批量查询路径。
+	if momentImagesFetched(items) {
+		HydrateLoadedMomentImages(ctx, s.images, items)
+		return
+	}
 	HydrateMomentImages(ctx, s.repo, s.images, items)
 }
 

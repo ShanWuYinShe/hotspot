@@ -115,6 +115,12 @@ type MomentItem struct {
 	PrivacyLevel string `json:"-"`
 	// FavoritedAt 仅 list_favorites 返回（spec moment.md → FavoritedMomentItem）。
 	FavoritedAt string `json:"favorited_at,omitempty"`
+
+	// imageRows / imagesFetched 仅供仓储→服务内部传递「附近流详情查询已带回
+	// 图片行」的事实（presign 仍在服务层完成），不参与 JSON 契约，其它端点
+	// 保持零值并由服务层回退批量图片查询。
+	imageRows     []momentImageRow
+	imagesFetched bool
 }
 
 // OwnerMomentItem 拥有者视角扩展（spec moment.md → OwnerMomentItem）：

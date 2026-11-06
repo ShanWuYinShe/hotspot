@@ -76,12 +76,12 @@ func replaceMomentImages(ctx context.Context, queryable persistence.Queryable, m
 // momentImageRow is the scanned shape of queryListMomentImagesByMomentIDs.
 type momentImageRow struct {
 	MomentID     string
-	FileID       string
-	StorageKey   string
-	ThumbnailURL string
-	Width        int
-	Height       int
-	MimeType     string
+	FileID       string `json:"file_id"`
+	StorageKey   string `json:"storage_key"`
+	ThumbnailURL string `json:"thumbnail_url"`
+	Width        int    `json:"width"`
+	Height       int    `json:"height"`
+	MimeType     string `json:"mime_type"`
 }
 
 // loadMomentImageRows fetches ordered image rows for the given moment IDs in a
