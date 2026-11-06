@@ -1,13 +1,6 @@
 <script lang="ts">
-	// 简介长度契约：上限 150，超过 85%（128）进入告警色
-	const MAX_BIO = 150;
-	const BIO_WARN = Math.floor(MAX_BIO * 0.85);
-	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import { Camera, Check, Trash2, UserRound } from '@lucide/svelte';
-	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
-	import { logout } from '@/stores/auth.svelte';
-	import { showToast } from '@/stores/toast.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
@@ -16,200 +9,22 @@
 	import Input from '@/components/forms/Input.svelte';
 	import Textarea from '@/components/forms/Textarea.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
+	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
-	import { getAccount, updateAccount, deleteAccount , netError } from '@/api';
-	import type { Gender } from '@/api/types';
-	import { uploadMediaFile } from '@/lib/upload';
-	import { ROUTES } from '@/lib/routes';
 	import { smartBack } from '@/lib/smart-back';
 
-	// 编辑资料：昵称/简介/兴趣标签（5 个上限）+ 性别 + 注销按钮。
+	import {
+		useEditProfileData,
+		MAX_BIO,
+		BIO_WARN,
+		TAG_OPTIONS,
+		GENDER_OPTIONS
+	} from './useEditProfileData.svelte';
 
-	const TAG_OPTIONS = ['摄影', '旅行', '音乐', '美食', '运动', '阅读', '艺术', '科技', '游戏', '户外', '时尚', '电影'];
-	// 性别（spec: api_spec_user.md → Gender；'other' 覆盖非二元/不愿透露；null = 未设置）
-	const GENDER_OPTIONS: { id: Gender; label: string }[] = [
-		{ id: 'male', label: '男' },
-		{ id: 'female', label: '女' },
-		{ id: 'other', label: '其他' }
-	];
-
-	let nickname = $state('');
-	let bio = $state('');
-	let tags = $state<Set<string>>(new Set());
-	// 不在固定选项表内的既有标签（见模板注释）
-	const extraTags = $derived([...tags].filter((t) => !TAG_OPTIONS.includes(t)));
-	// gender 为 null 时保存不携带该字段（updateAccount 为 patch 语义，undefined = 保持不变）
-	let gender = $state<Gender | null>(null);
-	let saved = $state(false);
-	let savedTimer: number | undefined;
-	$effect(() => () => window.clearTimeout(savedTimer));
-	let saving = $state(false);
-	let uploadingAvatar = $state(false);
-	let deleteConfirmOpen = $state(false);
-	let deleteConfirmText = $state('');
-	let deleting = $state(false);
-	let avatar = $state('');
-	let userId = $state('');
 	let avatarInput = $state<HTMLInputElement | null>(null);
-	let loading = $state(true);
-	let loadError = $state<string | null>(null);
-	// inline 错误（对齐 AuthForm：aria-invalid + 描述关联 + role="alert" 就近错误行）：
-	// nicknameError 为字段级，formError 为表单级（服务端保存失败）
-	let nicknameError = $state<string | null>(null);
-	let formError = $state<string | null>(null);
-	// 10100（未登录/会话失效）是正常业务态：给登录引导而非裸技术报错（对齐 notify/me）。
-	let needsAuth = $state(false);
-	let reloadKey = $state(0);
-
+	const page = useEditProfileData();
 	const device = $derived(platform.platform);
-
-	// ── 桌面端灵动岛（PageHeader islandMeta / islandTrailing）────────────────
-	// 保存基线：加载成功时记录，用于「有未保存的更改」判定。只比较保存 payload 里的字段
-	// （avatar 走上传即保存，不进 dirty 判定）。
-	type Baseline = { nickname: string; bio: string; tags: string[]; gender: Gender | null };
-	let baseline = $state<Baseline | null>(null);
-	const dirty = $derived.by(() => {
-		if (!baseline) return false;
-		const cur = [...tags].sort();
-		const base = [...baseline.tags].sort();
-		return (
-			nickname !== baseline.nickname ||
-			bio !== baseline.bio ||
-			gender !== baseline.gender ||
-			cur.length !== base.length ||
-			cur.some((t, i) => t !== base[i])
-		);
-	});
-	// 岛上第二行状态：保存中 > 已保存 > 有未保存的更改 > 空（回退为空时岛只显示标题）
-	const islandMeta = $derived(saving ? '保存中…' : saved ? '已保存' : dirty ? '有未保存的更改' : undefined);
-
-	$effect(() => {
-		void reloadKey;
-		let cancelled = false;
-		async function fetchAccount() {
-			loading = true;
-			loadError = null;
-			needsAuth = false;
-			try {
-				const res = await getAccount().catch(() => netError(null));
-				if (cancelled) return;
-				if (res.code === 10100) {
-					// 未登录：给登录引导而非裸技术报错
-					needsAuth = true;
-					return;
-				}
-				const data = res.code === 0 ? res.data : null;
-				if (data) {
-					// spec: AccountData.nickname, .bio, .tags, .avatar_url, .user_id, .gender?
-					nickname = data.nickname;
-					bio = data.bio ?? '';
-					avatar = data.avatar_url ?? '';
-					userId = data.user_id;
-					if (data.tags) tags = new Set(data.tags);
-					gender = data.gender ?? null;
-					baseline = {
-						nickname: data.nickname,
-						bio: data.bio ?? '',
-						tags: data.tags ? [...data.tags] : [],
-						gender: data.gender ?? null
-					};
-				} else {
-					// 加载失败必须显式暴露：否则空表单 + 可保存 = 用户一键清空自己的资料
-					loadError = res.message ?? '加载资料失败';
-				}
-			} catch (err) {
-				if (!cancelled) loadError = err instanceof Error ? err.message : '加载资料失败';
-			} finally {
-				if (!cancelled) loading = false;
-			}
-		}
-		void fetchAccount();
-		return () => {
-			cancelled = true;
-		};
-	});
-
-	const toggleTag = (t: string) => {
-		const n = new Set(tags);
-		n.has(t) ? n.delete(t) : n.add(t);
-		tags = n;
-	};
-
-	const handleSave = async () => {
-		if (saving) return;
-		const trimmedNickname = nickname.trim();
-		if (!trimmedNickname) {
-			// 字段级错误就近内联展示并聚焦，替代只靠 toast 的瞬时反馈
-			nicknameError = '昵称不能为空';
-			document.getElementById('edit-nickname')?.focus();
-			return;
-		}
-		nicknameError = null;
-		formError = null;
-		saving = true;
-		try {
-			// spec: updateAccount { nickname?, avatar_file_id?, bio?, tags?, gender? }
-			// Patch 清空语义（api_spec_user.md）：tags: [] = 清空标签、bio 传空串 = 清空简介；
-			// 传 undefined 才表示"保持不变"——删光标签后必须能清空而不是保留旧值。
-			const res = await updateAccount({
-				nickname: trimmedNickname,
-				bio: bio.trim(),
-				tags: Array.from(tags),
-				...(gender ? { gender } : {})
-			});
-			if (res.code !== 0) throw new Error(res.message || '保存失败');
-			// 保存成功即刷新基线，避免在 800ms 跳转窗口内再显示「有未保存的更改」
-			baseline = { nickname: trimmedNickname, bio: bio.trim(), tags: [...tags], gender };
-			saved = true;
-			showToast('已保存', 'success');
-			savedTimer = window.setTimeout(() => {
-				saved = false;
-				// 保存后走路由去 /me 而非 history.back()：后者在整页直达编辑页时经
-				// bfcache 恢复旧文档，个人页显示保存前的旧资料；路由导航必重挂重拉。
-				void goto(ROUTES.me);
-			}, 800);
-		} catch (err) {
-			// 服务端保存失败：表单级错误行内联展示（保留可重试的持久反馈）
-			formError = err instanceof Error && err.message ? err.message : '保存失败，请重试';
-		} finally {
-			saving = false;
-		}
-	};
-
-	const handleAvatarChange = async (e: Event) => {
-		const input = e.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		input.value = '';
-		if (!file || uploadingAvatar) return;
-		uploadingAvatar = true;
-		try {
-			const fileId = await uploadMediaFile(file, 'avatar');
-			await updateAccount({ avatar_file_id: fileId });
-			// 重新拉取账户，拿服务端最终 avatar_url
-			const res = await getAccount().catch(() => null);
-			if (res?.code === 0 && res.data?.avatar_url) avatar = res.data.avatar_url;
-			showToast('头像已更新', 'success');
-		} catch {
-			showToast('头像上传失败，请重试', 'danger');
-		} finally {
-			uploadingAvatar = false;
-		}
-	};
-
-	const confirmDelete = async () => {
-		if (deleteConfirmText !== 'DELETE_MY_ACCOUNT' || deleting) return;
-		deleting = true;
-		try {
-			// spec: users/delete_account 需精确输入 DELETE_MY_ACCOUNT，删除不可逆
-			await deleteAccount({ confirmation: deleteConfirmText });
-			await logout();
-			void goto(ROUTES.home, { replaceState: true });
-		} catch {
-			deleting = false;
-			showToast('注销失败，请重试', 'danger');
-		}
-	};
 </script>
 
 <svelte:head>
@@ -221,7 +36,7 @@
 		<PageHeader
 			variant="integrated"
 			title="编辑资料"
-			islandMeta={islandMeta}
+			islandMeta={page.islandMeta}
 			maxWidth="var(--cst-content-form-narrow)"
 			onBack={() => smartBack()}
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
@@ -230,70 +45,64 @@
 				<UserRound class="size-3.5 text-accent-default" strokeWidth={1.75} />
 			{/snippet}
 			{#snippet trailing()}
-				<!-- 未登录隐藏保存（主区已是登录引导，顶栏悬挂保存按钮属不可用控件）；
-				     移动端保存下沉到底部粘底操作条（拇指热区），页头不重复出现 -->
-				{#if !needsAuth && device !== 'mobile'}
+				{#if !page.needsAuth && device !== 'mobile'}
 					<Button
 						type="button"
-						variant={saved ? 'secondary' : 'primary'}
+						variant={page.saved ? 'secondary' : 'primary'}
 						size="md"
 						class="hit-slop-44 px-4 py-2"
-						loading={saving}
-						disabled={saved || saving || !userId}
-						onclick={() => void handleSave()}
+						loading={page.saving}
+						disabled={page.saved || page.saving || !page.userId}
+						onclick={() => void page.handleSave()}
 					>
-						{#if saved}
+						{#if page.saved}
 							<Check class="size-3.5 text-accent-default" strokeWidth={2.5} />
 						{/if}
-						{saved ? '已保存' : '保存'}
+						{page.saved ? '已保存' : '保存'}
 					</Button>
 				{/if}
 			{/snippet}
 			{#snippet islandTrailing()}
-				<!-- 岛上的保存钮：同一 handleSave / loading / disabled 契约，几何收为 sm+胶囊以适配 36px 岛高；
-				     提供后页头 trailing 入岛时自动隐藏（PageHeader 内置），滚动中也能直接保存 -->
-				{#if !needsAuth}
+				{#if !page.needsAuth}
 					<Button
 						type="button"
-						variant={saved ? 'secondary' : 'primary'}
+						variant={page.saved ? 'secondary' : 'primary'}
 						size="sm"
 						shape="pill"
 						class="hit-slop gap-1 px-2.5"
-						loading={saving}
-						disabled={saved || saving || !userId}
-						aria-label={saving ? '保存中' : saved ? '已保存' : '保存资料'}
-						onclick={() => void handleSave()}
+						loading={page.saving}
+						disabled={page.saved || page.saving || !page.userId}
+						aria-label={page.saving ? '保存中' : page.saved ? '已保存' : '保存资料'}
+						onclick={() => void page.handleSave()}
 					>
-						{#if saved}
+						{#if page.saved}
 							<Check class="size-3.5 text-accent-default" strokeWidth={2.5} />
 						{/if}
-						{saved ? '已保存' : '保存'}
+						{page.saved ? '已保存' : '保存'}
 					</Button>
 				{/if}
 			{/snippet}
 		</PageHeader>
 	{/snippet}
 
-	{#if loading}
+	{#if page.loading}
 		<InlineLoading label="加载资料…" />
-	{:else if needsAuth}
+	{:else if page.needsAuth}
 		<NeedsAuthNotice
 			spotlight
 			title="登录后编辑"
 			description="登录后即可编辑头像、昵称与简介，让附近的人更容易记住你。"
 		/>
-	{:else if loadError}
-		<LoadError message={loadError} onRetry={() => reloadKey++} />
+	{:else if page.loadError}
+		<LoadError message={page.loadError} onRetry={() => page.refresh()} />
 	{:else}
 		<div class="flex w-full flex-col gap-4">
-			<!-- 身份条（R13）：头像编辑浮标 + 昵称/@账号。
-			     原 160px「暂未开放」封面占掉首屏且无任何功能，按评审意见整块删除；
-			     头像编辑仍需显式入口，故保留浮标 + 一句可预期说明。 -->
+			<!-- 头像与账号 -->
 			<section class="flex items-center gap-4 rounded-lg bg-surface-island p-4 shadow-xs" aria-label="头像与账号">
 				<div class="relative shrink-0">
 					<Avatar
-						src={avatar}
-						name={nickname}
+						src={page.avatar}
+						name={page.nickname}
 						size="xl"
 						shape="rounded"
 						class="border-heavy border-surface-primary"
@@ -303,7 +112,7 @@
 						type="button"
 						class="hover-btn hit-slop-44 absolute -bottom-1 -right-1 flex items-center justify-center rounded-full focus-ring bg-accent-default size-7 border-strong border-surface-primary shadow-raised-sm hover:shadow-raised-md"
 						aria-label="更换头像"
-						disabled={uploadingAvatar}
+						disabled={page.uploadingAvatar}
 						onclick={() => avatarInput?.click()}
 					>
 						<Camera class="size-3 text-text-on-accent" strokeWidth={2} />
@@ -314,97 +123,94 @@
 					type="file"
 					accept="image/jpeg,image/png,image/webp"
 					class="hidden"
-					onchange={(e) => void handleAvatarChange(e)}
+					onchange={(e) => {
+						const input = e.currentTarget as HTMLInputElement;
+						const file = input.files?.[0];
+						input.value = '';
+						if (file) void page.handleAvatarUpload(file);
+					}}
 				/>
 				<div class="min-w-0 flex-1">
-					<p class="truncate text-md font-medium text-text-primary">{nickname || '未设置昵称'}</p>
-					{#if userId}
-						<p class="mt-0.5 truncate text-xs text-text-secondary">@{userId}</p>
+					<p class="truncate text-md font-medium text-text-primary">{page.nickname || '未设置昵称'}</p>
+					{#if page.userId}
+						<p class="mt-0.5 truncate text-xs text-text-secondary">@{page.userId}</p>
 					{/if}
 					<p class="mt-1 text-xs text-text-secondary">
-						{uploadingAvatar ? '头像上传中…' : '点头像可更换照片'}
+						{page.uploadingAvatar ? '头像上传中…' : '点头像可更换照片'}
 					</p>
 				</div>
 			</section>
 
-			<!-- 基本资料：公开显示（昵称/简介） -->
+			<!-- 基本资料 -->
 			<section aria-label="基本资料">
 				<SectionHead title="基本资料" subtitle="公开显示在你的主页上，附近的人会看到这些信息。" />
 				<div class="flex flex-col gap-4 rounded-lg bg-surface-island p-4 shadow-xs">
-					<!-- 昵称：迁移至 forms/Input 原语 -->
 					<Input
 						id="edit-nickname"
-						value={nickname}
+						value={page.nickname}
 						onChange={(v) => {
-							nickname = v.slice(0, 30);
-							if (nicknameError) nicknameError = null;
-							if (formError) formError = null;
+							page.nickname = v.slice(0, 30);
+							if (page.nicknameError) page.nicknameError = null;
+							if (page.formError) page.formError = null;
 						}}
 						placeholder="你的名字"
-						hasError={!!nicknameError}
-						errorText={nicknameError ?? undefined}
+						hasError={!!page.nicknameError}
+						errorText={page.nicknameError ?? undefined}
 						inputClass="w-full"
 					>
 						{#snippet labelSnippet()}
-							<!-- 字段标签不带图标：与「性别/兴趣标签」legend 同语言 -->
 							<label class="text-text-secondary text-xs uppercase tracking-field" for="edit-nickname">昵称</label>
 						{/snippet}
 					</Input>
 
-					<!-- 简介：多行输入统一走 forms/Textarea；字符计数走原语 footer（壳内右下） -->
 					<Textarea
 						id="edit-bio"
 						label="个人简介"
-						value={bio}
-						onChange={(v) => (bio = v.slice(0, MAX_BIO))}
+						value={page.bio}
+						onChange={(v) => (page.bio = v.slice(0, MAX_BIO))}
 						placeholder="介绍一下自己…"
 						rows={3}
 						maxlength={MAX_BIO}
 					>
 						{#snippet footer()}
-							<span class={bio.length > BIO_WARN ? 'text-status-warning' : 'text-text-secondary'}>{bio.length}/{MAX_BIO}</span>
+							<span class={page.bio.length > BIO_WARN ? 'text-status-warning' : 'text-text-secondary'}>{page.bio.length}/{MAX_BIO}</span>
 						{/snippet}
 					</Textarea>
 				</div>
 			</section>
 
-			<!-- 更多信息：性别/兴趣标签（都用于附近推荐与个人主页展示） -->
+			<!-- 更多信息：性别与兴趣标签 -->
 			<section aria-label="更多信息">
 				<SectionHead title="更多信息" subtitle="帮助附近的人更快了解你，随时可以修改或清空。" />
 				<div class="flex flex-col gap-4 rounded-lg bg-surface-island p-4 shadow-xs">
-					<!-- Gender（spec: updateAccount.gender，单选；不选 = 保持服务端当前值） -->
 					<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
 						<legend class="flex items-center gap-1.5 text-text-secondary text-xs uppercase tracking-field">
 							性别
 						</legend>
 						<div class="flex flex-wrap gap-2">
 							{#each GENDER_OPTIONS as g (g.id)}
-								<TagPill active={gender === g.id} onClick={() => (gender = gender === g.id ? null : g.id)}>
+								<TagPill active={page.gender === g.id} onClick={() => (page.gender = page.gender === g.id ? null : g.id)}>
 									{g.label}
 								</TagPill>
 							{/each}
 						</div>
 					</fieldset>
 
-					<!-- Interest tags -->
 					<fieldset class="flex flex-col gap-2.5 border-0 p-0 m-0 min-w-0">
 						<legend class="flex items-center gap-1.5 text-text-secondary text-xs uppercase tracking-field">
 							兴趣标签
-							<span class="opacity-dim">({tags.size}/5)</span>
+							<span class="opacity-dim">({page.tags.size}/5)</span>
 						</legend>
 						<div class="flex flex-wrap gap-2">
 							{#each TAG_OPTIONS as t (t)}
-								{@const active = tags.has(t)}
-								{@const disabled = !active && tags.size >= 5}
-								<TagPill active={active} onClick={() => toggleTag(t)} {disabled}>
+								{@const active = page.tags.has(t)}
+								{@const disabled = !active && page.tags.size >= 5}
+								<TagPill active={active} onClick={() => page.toggleTag(t)} {disabled}>
 									#{t}
 								</TagPill>
 							{/each}
-							<!-- 账号上已有的、但不在本页 12 项固定选项里的标签（后端标签字典可大于前端选项表，
-							     如「咖啡」）：必须一并渲染，否则图例按 tags.size 计数、而胶囊只显示
-							     子集，出现「(3/5) 却只有 2 个高亮」且该标签无法取消（全站复审 s3 P1-2）。 -->
-							{#each extraTags as t (t)}
-								<TagPill active onClick={() => toggleTag(t)}>
+							{#each page.extraTags as t (t)}
+								<TagPill active onClick={() => page.toggleTag(t)}>
 									#{t}
 								</TagPill>
 							{/each}
@@ -413,22 +219,21 @@
 				</div>
 			</section>
 
-			{#if formError}
-				<p class="text-xs text-status-danger" role="alert">{formError}</p>
+			{#if page.formError}
+				<p class="text-xs text-status-danger" role="alert">{page.formError}</p>
 			{/if}
 
-			<!-- Danger zone（间距由根容器 gap-4 单侧提供） -->
+			<!-- 危险区域：注销账号 -->
 			<div>
 				<p class="eyebrow mb-3">账号</p>
-				{#if deleteConfirmOpen}
+				{#if page.deleteConfirmOpen}
 					<div class="flex flex-col gap-2.5 rounded-lg bg-danger-bg/40 p-4">
 						<p class="text-sm text-text-primary">删除不可恢复，请输入 <code class="font-mono text-xs text-status-danger">DELETE_MY_ACCOUNT</code> 确认：</p>
-						<!-- 注销确认码：forms/Input compact 形态（无字段壳的 39px 紧凑位） -->
 						<Input
 							compact
 							type="text"
-							value={deleteConfirmText}
-							onChange={(v) => (deleteConfirmText = v)}
+							value={page.deleteConfirmText}
+							onChange={(v) => (page.deleteConfirmText = v)}
 							placeholder="DELETE_MY_ACCOUNT"
 							autocomplete="off"
 							ariaLabel="注销确认码"
@@ -436,16 +241,16 @@
 							inputClass="w-full"
 						/>
 						<div class="flex justify-end gap-2">
-							<Button type="button" variant="secondary" size="sm" onclick={() => (deleteConfirmOpen = false)}>
+							<Button type="button" variant="secondary" size="sm" onclick={() => (page.deleteConfirmOpen = false)}>
 								取消
 							</Button>
 							<Button
 								type="button"
 								variant="danger"
 								size="sm"
-								disabled={deleteConfirmText !== 'DELETE_MY_ACCOUNT' || deleting}
-								loading={deleting}
-								onclick={() => void confirmDelete()}
+								disabled={page.deleteConfirmText !== 'DELETE_MY_ACCOUNT' || page.deleting}
+								loading={page.deleting}
+								onclick={() => void page.confirmDelete()}
 							>
 								确认注销
 							</Button>
@@ -457,36 +262,36 @@
 						variant="danger-soft"
 						size="md"
 						class="hit-slop-44 w-full justify-start gap-2"
-						onclick={() => (deleteConfirmOpen = true)}
+						onclick={() => (page.deleteConfirmOpen = true)}
 					>
 						<Trash2 class="size-4" strokeWidth={1.75} />
 						注销账号
 					</Button>
 				{/if}
 			</div>
-
-			<!-- 移动端底部粘底保存条：拇指区 + 安全区净空；桌面保存仍在页头 -->
-			{#if device === 'mobile'}
-				<div
-					class="nav-glass nav-glass--bottom sticky bottom-0 z-10 -mx-[var(--cst-page-gutter)] mt-1 px-4 pt-3"
-					style="padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
-				>
-					<Button
-						type="button"
-						variant={saved ? 'secondary' : 'primary'}
-						size="lg"
-						class="w-full gap-2"
-						loading={saving}
-						disabled={saved || saving || !userId}
-						onclick={() => void handleSave()}
-					>
-						{#if saved}
-							<Check class="size-4 text-accent-default" strokeWidth={2.5} />
-						{/if}
-						{saved ? '已保存' : saving ? '保存中…' : '保存资料'}
-					</Button>
-				</div>
-			{/if}
 		</div>
+
+		<!-- 移动端底栏保存按钮 -->
+		{#if device === 'mobile' && !page.needsAuth}
+			<div
+				class="nav-glass nav-glass--bottom sticky bottom-0 z-10 -mx-[var(--cst-page-gutter)] mt-1 px-4 pt-3"
+				style="padding-bottom:max(10px, env(safe-area-inset-bottom, 10px));"
+			>
+				<Button
+					type="button"
+					variant={page.saved ? 'secondary' : 'primary'}
+					size="lg"
+					class="w-full gap-2"
+					loading={page.saving}
+					disabled={page.saved || page.saving || !page.userId}
+					onclick={() => void page.handleSave()}
+				>
+					{#if page.saved}
+						<Check class="size-4 text-accent-default" strokeWidth={2.5} />
+					{/if}
+					{page.saved ? '已保存' : page.saving ? '保存中…' : '保存资料'}
+				</Button>
+			</div>
+		{/if}
 	{/if}
 </StandardPageLayout>
