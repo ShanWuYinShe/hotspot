@@ -3205,3 +3205,20 @@ comments/moments/groups/messages/search/share/system/admin 读路径均已带 av
   is_favorited/author_relation，六个端点成功 shape；users 覆盖率 73.4%。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第十三批）：public bootstrap 类型隔离（2026-11-07）
+
+契约审计：/public/v1/system/bootstrap 此前直接复用登录版 BootstrapData，
+匿名响应带 profile / unread_summary（恒 null）两个查看者字段；缓存命中时
+还返回 profile/unread 而非 spec 要求的「仅 bootstrap_version、省略
+meta/client_config」。
+
+- 新增 PublicBootstrapData（bootstrap_version + meta/client_config，缓存命中
+  时两键整体省略）与 PublicBootstrapCacheHitData（仅版本号）类型；
+- 新增 PublicBootstrap handler：保留 device_id Cookie 下发与 ETag 语义，但只
+  取服务层公共段，即使可选鉴权解析出 profile 也绝不下发；
+- MountPublic 改挂 PublicBootstrap；登录版 Bootstrap 行为不变；
+- 测试：匿名响应无 profile/unread_summary 且含三公共键；ETag 命中仅
+  bootstrap_version（meta/client_config 键缺省）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

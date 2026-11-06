@@ -126,6 +126,22 @@ type BootstrapData struct {
 // 缓存契约——spec 类型定义处的「命中时同样省略」注释与该 prose 冲突，
 // 以更明确且带设计论证的 prose 为准：否则登录态客户端命中缓存后将拿
 // 不到任何私有数据，聚合端点失去意义，审查 P1-2）。
+// PublicBootstrapData 是 /public/v1/system/bootstrap 的匿名冷启动响应
+// （spec api_spec_public.md → PublicBootstrapData）：只含公共段，绝不下发
+// profile / unread_summary 等登录态字段。缓存命中时 meta/client_config 整体
+// 省略（键不存在，客户端使用缓存）。
+type PublicBootstrapData struct {
+	BootstrapVersion string          `json:"bootstrap_version"`
+	Meta             *ApiVersionMeta `json:"meta,omitempty"`
+	ClientConfig     *ClientConfig   `json:"client_config,omitempty"`
+}
+
+// PublicBootstrapCacheHitData：匿名缓存命中的精简响应，仅版本号（键缺省即
+// 命中语义，spec 明确 PublicBootstrapData 的缓存命中例外）。
+type PublicBootstrapCacheHitData struct {
+	BootstrapVersion string `json:"bootstrap_version"`
+}
+
 type BootstrapCacheHitData struct {
 	BootstrapVersion string         `json:"bootstrap_version"`
 	Profile          any            `json:"profile"`        // 恒定 nullable：匿名时为 null

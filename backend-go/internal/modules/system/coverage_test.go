@@ -270,3 +270,54 @@ func TestGetClientConfigRejectsNonEmptyBody(t *testing.T) {
 		t.Fatalf("expected httpx.CodeInvalidRequest for non-empty body, got %d", resp.Code)
 	}
 }
+
+// spec api_spec_public.md → PublicBootstrapData：匿名冷启动只含公共段，
+// 即使 resolver 能解析出 profile/unread_summary 也绝不下发；缓存命中时
+// meta/client_config 键整体省略（仅 bootstrap_version）。
+func TestPublicBootstrapOnlyPublicFields(t *testing.T) {
+	svc := NewServiceWithDeps(NewInMemoryRepository(), NewAppConfigProvider(appconfig.NewStaticSource(config.Load())))
+	svc.SetBootstrapResolver(fakeBootstrapResolver{found: true, profile: map[string]any{"user_id": "u1"}, summary: UnreadSummary{NotifyTotal: 5}})
+	handler := NewHandler(svc)
+
+	rr := httptest.NewRecorder()
+	handler.PublicBootstrap(rr, httptest.NewRequest(http.MethodPost, "/public/v1/system/bootstrap", strings.NewReader(`{"client_type":"web"}`)))
+	var resp struct {
+		Code httpx.Code     `json:"code"`
+		Data map[string]any `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v body=%s", err, rr.Body.String())
+	}
+	if resp.Code != 0 {
+		t.Fatalf("unexpected code: %d", resp.Code)
+	}
+	for _, forbidden := range []string{"profile", "unread_summary"} {
+		if _, ok := resp.Data[forbidden]; ok {
+			t.Fatalf("public bootstrap must not expose %q: %#v", forbidden, resp.Data)
+		}
+	}
+	if resp.Data["bootstrap_version"] == nil || resp.Data["meta"] == nil || resp.Data["client_config"] == nil {
+		t.Fatalf("public bootstrap must include version/meta/client_config: %#v", resp.Data)
+	}
+
+	// 缓存命中：仅 bootstrap_version，公共段键整体省略。
+	version := resp.Data["bootstrap_version"].(string)
+	rr = httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/public/v1/system/bootstrap", strings.NewReader(`{"client_type":"web"}`))
+	req.Header.Set("If-None-Match", version)
+	handler.PublicBootstrap(rr, req)
+	var hit struct {
+		Data map[string]any `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&hit); err != nil {
+		t.Fatalf("decode hit: %v", err)
+	}
+	if len(hit.Data) != 1 || hit.Data["bootstrap_version"] != version {
+		t.Fatalf("cache hit must only contain bootstrap_version: %#v", hit.Data)
+	}
+	for _, key := range []string{"meta", "client_config", "profile", "unread_summary"} {
+		if _, ok := hit.Data[key]; ok {
+			t.Fatalf("cache hit must omit %q: %#v", key, hit.Data)
+		}
+	}
+}

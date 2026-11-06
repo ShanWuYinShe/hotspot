@@ -52,6 +52,6 @@ func (m *Module) Mount(r chi.Router) {
 func (m *Module) MountPublic(r chi.Router) {
 	r.Route("/system", func(systemRouter chi.Router) {
 		MountPublicRoutes(systemRouter, m.handler)
-		systemRouter.Post("/bootstrap", m.handler.Bootstrap)
+		systemRouter.Post("/bootstrap", m.handler.PublicBootstrap)
 	})
 }

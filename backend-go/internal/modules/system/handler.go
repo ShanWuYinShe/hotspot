@@ -86,3 +86,21 @@ func (h *Handler) Bootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(bd))
 }
+
+// PublicBootstrap 是 /public/v1/system/bootstrap 的匿名冷启动实现
+// （spec api_spec_public.md → PublicBootstrapData）：只返回公共段；
+// 即使可选鉴权带来了 principal，也绝不下发 profile / unread_summary。
+func (h *Handler) PublicBootstrap(w http.ResponseWriter, r *http.Request) {
+	platformauth.EnsureDeviceIDCookie(w, r)
+	var req BootstrapRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
+		return
+	}
+	bd := h.service.Bootstrap(r.Context(), h.service.GetBootstrapResolver())
+	if etag := r.Header.Get("If-None-Match"); etag != "" && etag == bd.BootstrapVersion {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Success(PublicBootstrapCacheHitData{BootstrapVersion: bd.BootstrapVersion}))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PublicBootstrapData{BootstrapVersion: bd.BootstrapVersion, Meta: bd.Meta, ClientConfig: bd.ClientConfig}))
+}
