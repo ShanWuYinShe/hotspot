@@ -15,9 +15,10 @@ import (
 )
 
 type Module struct {
-	handler *Handler
-	service *Service
-	repo    *PostgresRepository
+	handler      *Handler
+	service      *Service
+	repo         *PostgresRepository
+	platformAuth *platformauth.Service
 }
 
 func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Factory, source appconfig.Source) *Module {
@@ -28,7 +29,7 @@ func NewModule(ctx context.Context, cfg config.Config, factory *persistence.Fact
 	ConfigureHashingCost(cfg.BcryptCost)
 	repo := NewPostgresRepository(factory)
 	service := NewServiceWithSource(ctx, authService, repo, cfg, source)
-	return &Module{handler: NewHandler(service), service: service, repo: repo}
+	return &Module{handler: NewHandler(service), service: service, repo: repo, platformAuth: authService}
 }
 
 // SetLoginTracker 替换登录失败追踪器（P2-2）：Redis 可用时由 bootstrap 注入
@@ -38,6 +39,10 @@ func (m *Module) SetLoginTracker(tracker FailedLoginTracker) { m.service.loginTr
 // Service 暴露模块服务（bootstrap 跨模块注入用，如 users.Upgrade 的
 // 凭证写入，spec api_spec_user.md → upgrade）。
 func (m *Module) Service() *Service { return m.service }
+
+// PlatformAuth 暴露平台认证服务（bootstrap 注入 admin 的管理端会话撤销能力，
+// 避免 admin 直写 auth_sessions 表）。
+func (m *Module) PlatformAuth() *platformauth.Service { return m.platformAuth }
 
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/auth", func(authRouter chi.Router) {

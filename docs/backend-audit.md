@@ -2307,3 +2307,24 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   admin handler 测试用内存群审核 fake（含广播与审计模拟）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+
+## Batch C（第六批）：封禁状态/会话撤销走归属模块（2026-11-06）
+
+架构审计 P0-4：admin 直写 users 与 auth_sessions 的两条路径收敛。
+
+- **users** 新增 `AccountBanState` + Repository/Service `SetAccountBanState`
+  （PG + 内存实现）：封禁/解封状态写入 users 表归 users 模块所有；admin 只做
+  权限校验、目标校验、审计与错误映射。
+- **platform/auth** 新增管理端会话能力（无需改 SessionStore 接口）：
+  `ListActiveSessionIDsAsAdmin`（最近活跃优先、稳定排序）与
+  `RevokeSessionAsAdmin`（不校验所有权，成功后自行失效会话校验缓存）。
+- **admin**：封禁流程改调注入的 users 写入口 + auth 会话服务；删除 admin 仓库
+  SetUserBanState/ListUserSessions/RevokeSession 与三条直写 SQL；删除
+  `SetSessionCacheInvalidator` 钩子（缓存失效归 auth 服务内部）。
+- **archtest allowlist 再减 2 条**：admin:users、admin:auth_sessions。
+- 测试：auth 补管理端会话列出/撤销/幂等用例；PG ban-expiry IT 改用 users 仓储
+  造数；admin 测试用内存封禁写入/会话服务 fake；bootstrap 授权测试保留内存
+  封禁构造入口（仅内存实现，生产写路径已归属 users）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

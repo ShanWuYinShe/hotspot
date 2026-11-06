@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"errors"
+	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -241,8 +242,11 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 		duration = *durationDays
 	}
 	bannedAt := time.Now().UTC()
-	state := UserBanState{Status: UserAccountStatusBanned, Reason: strings.TrimSpace(reason), DurationDays: duration, BannedAt: bannedAt}
-	if err := s.repo.SetUserBanState(ctx, userID, state); err != nil {
+	if s.accountStateWriter == nil {
+		return nil, errors.New("admin: account state writer not configured")
+	}
+	state := usersmodule.AccountBanState{Status: string(UserAccountStatusBanned), Reason: strings.TrimSpace(reason), DurationDays: duration, BannedAt: bannedAt}
+	if err := s.accountStateWriter.SetAccountBanState(ctx, userID, state); err != nil {
 		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}
@@ -250,7 +254,10 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 	}
 	s.invalidateBanCache(userID)
 	payload := map[string]any{"reason": strings.TrimSpace(reason), "duration_days": duration, "banned_at": bannedAt.Format(time.RFC3339)}
-	sessionIDs, err := s.repo.ListUserSessions(ctx, userID)
+	if s.sessionAdmin == nil {
+		return nil, errors.New("admin: session admin not configured")
+	}
+	sessionIDs, err := s.sessionAdmin.ListActiveSessionIDsAsAdmin(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +267,7 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 	failedSessions := 0
 	for _, sessionID := range sessionIDs {
 		realtime.DefaultHub().CloseSession(sessionID, realtime.Event{Type: realtime.EventTypeAccountBanned, Payload: payload})
-		if err := s.repo.RevokeSession(ctx, sessionID); err != nil {
+		if _, err := s.sessionAdmin.RevokeSessionAsAdmin(ctx, sessionID); err != nil {
 			failedSessions++
 			observability.L().Warn("admin: revoke session after ban failed",
 				"user_id", userID, "session_id", sessionID, "error", err)
@@ -275,11 +282,6 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 			return nil, err
 		}
 	}
-	// 显式失效会话校验缓存：本仓库直接 UPDATE auth_sessions，绕过平台 auth 的
-	// SessionStore 装饰器；不失效会让被撤会话在缓存 TTL（5s）内仍可认证。全部
-	// session 都失效（含撤销失败项——失败项仍是「应失效」目标，下次认证回源 DB
-	// 会再次判定，不会误放行）。
-	s.invalidateSessionCache(sessionIDs...)
 	if failedSessions > 0 {
 		observability.L().Warn("admin: ban applied but some sessions not revoked",
 			"user_id", userID, "failed", failedSessions, "total", len(sessionIDs))

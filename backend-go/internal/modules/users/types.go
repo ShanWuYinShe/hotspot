@@ -1,6 +1,8 @@
 package users
 
 import (
+	"time"
+
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -188,4 +190,13 @@ type PaginationParams = types.PaginationParams
 type UserReactedMomentsRequest struct {
 	UserID     string                        `json:"user_id"`
 	Pagination *momenttypes.PaginationParams `json:"pagination,omitempty"`
+}
+
+// AccountBanState 是平台管理员下发的账户封禁状态（users 表归属 users 模块）。
+// 由 admin 经 users.Service.SetAccountBanState 写入，避免 admin 直写 users 表。
+type AccountBanState struct {
+	Status       string
+	Reason       string
+	DurationDays int
+	BannedAt     time.Time
 }

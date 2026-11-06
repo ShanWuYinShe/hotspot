@@ -337,3 +337,12 @@ FROM unnest($1::text[]) AS candidate(tag_name)
 JOIN admin_blocked_tags bt ON bt.name = candidate.tag_name
 ORDER BY bt.name ASC`
 )
+
+// querySetAccountBanState 平台封禁状态写入（users 表归属本模块；admin 不再直写）。
+const querySetAccountBanState = `
+UPDATE users
+SET status = $2,
+    banned_reason = $3,
+    banned_duration_days = $4,
+    banned_at = $5
+WHERE user_id = $1`

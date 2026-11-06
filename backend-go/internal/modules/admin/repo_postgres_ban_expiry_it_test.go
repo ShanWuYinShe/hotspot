@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/testdb"
 )
@@ -16,6 +17,7 @@ func TestPostgresIT_IsBannedHonorsExpiry(t *testing.T) {
 	factory := testdb.Open(t)
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		repo := NewPostgresRepository(txFactory)
+		userRepo := users.NewPostgresRepository(txFactory)
 		seedBanUser := func(userID string) {
 			t.Helper()
 			q, ok := persistence.RepoQueryable(ctx, txFactory)
@@ -29,7 +31,7 @@ func TestPostgresIT_IsBannedHonorsExpiry(t *testing.T) {
 
 		// 已到期（7 天限期，BannedAt 8 天前）→ 视为未封禁。
 		seedBanUser("user_expired")
-		if err := repo.SetUserBanState(ctx, "user_expired", UserBanState{Status: UserAccountStatusBanned, Reason: "test", DurationDays: 7, BannedAt: time.Now().UTC().Add(-8 * 24 * time.Hour)}); err != nil {
+		if err := userRepo.SetAccountBanState(ctx, "user_expired", users.AccountBanState{Status: "banned", Reason: "test", DurationDays: 7, BannedAt: time.Now().UTC().Add(-8 * 24 * time.Hour)}); err != nil {
 			t.Fatalf("SetUserBanState: %v", err)
 		}
 		if banned, err := repo.IsBanned(ctx, "user_expired"); err != nil || banned {
@@ -38,7 +40,7 @@ func TestPostgresIT_IsBannedHonorsExpiry(t *testing.T) {
 
 		// 限期内 → 仍封禁。
 		seedBanUser("user_active")
-		if err := repo.SetUserBanState(ctx, "user_active", UserBanState{Status: UserAccountStatusBanned, DurationDays: 7, BannedAt: time.Now().UTC()}); err != nil {
+		if err := userRepo.SetAccountBanState(ctx, "user_active", users.AccountBanState{Status: "banned", DurationDays: 7, BannedAt: time.Now().UTC()}); err != nil {
 			t.Fatalf("SetUserBanState: %v", err)
 		}
 		if banned, err := repo.IsBanned(ctx, "user_active"); err != nil || !banned {
@@ -47,7 +49,7 @@ func TestPostgresIT_IsBannedHonorsExpiry(t *testing.T) {
 
 		// 永久封禁 → 仍封禁。
 		seedBanUser("user_perm")
-		if err := repo.SetUserBanState(ctx, "user_perm", UserBanState{Status: UserAccountStatusBanned, BannedAt: time.Now().UTC().Add(-365 * 24 * time.Hour)}); err != nil {
+		if err := userRepo.SetAccountBanState(ctx, "user_perm", users.AccountBanState{Status: "banned", BannedAt: time.Now().UTC().Add(-365 * 24 * time.Hour)}); err != nil {
 			t.Fatalf("SetUserBanState: %v", err)
 		}
 		if banned, err := repo.IsBanned(ctx, "user_perm"); err != nil || !banned {

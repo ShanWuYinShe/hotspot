@@ -283,3 +283,7 @@ func TestUserMomentCursorIsOpaqueAndTamperProof(t *testing.T) {
 func (r *userFallbackRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string) ([]NearbyNotifyTarget, error) {
 	return nil, nil
 }
+
+func (r *userFallbackRepo) SetAccountBanState(context.Context, string, AccountBanState) error {
+	return nil
+}

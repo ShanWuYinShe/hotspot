@@ -31,6 +31,8 @@ type Repository interface {
 	// presence 等运行时列（WS 生命周期维护）。
 	UpdateProfileLocation(context.Context, string, Location) (bool, error)
 	DeleteProfile(context.Context, string) error
+	// SetAccountBanState 写入账户封禁状态（admin 经 Service 调用，users 表归属本模块）。
+	SetAccountBanState(ctx context.Context, userID string, state AccountBanState) error
 	GetSettings(context.Context, string) (UserSettings, bool, error)
 	GetSettingsBatch(context.Context, []string) (map[string]UserSettings, error)
 	PutSettings(context.Context, string, UserSettings) error

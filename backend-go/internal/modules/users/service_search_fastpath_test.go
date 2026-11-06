@@ -41,3 +41,7 @@ func TestSearchUsesInlineSettingsWithoutBatchQuery(t *testing.T) {
 		t.Fatalf("unexpected items: %#v", result.Items)
 	}
 }
+
+func (r *fastPathRepo) SetAccountBanState(context.Context, string, AccountBanState) error {
+	return nil
+}

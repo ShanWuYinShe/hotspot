@@ -330,48 +330,6 @@ func TestAdminRepoUsers(t *testing.T) {
 		t.Fatalf("get ban state missing: found=%v err=%v", found, err)
 	}
 
-	// SetUserBanState：banned 路径 + normal 路径
-	stub = &adminFullStub{}
-	if err := newAdminFullRepo(stub).SetUserBanState(ctx, "u1", UserBanState{Status: UserAccountStatusBanned, Reason: "理由", DurationDays: 7}); err != nil {
-		t.Fatalf("set ban: %v", err)
-	}
-	if err := newAdminFullRepo(stub).SetUserBanState(ctx, "u1", UserBanState{Status: UserAccountStatusNormal}); err != nil {
-		t.Fatalf("set normal: %v", err)
-	}
-	// banned 且 BannedAt 已给
-	if err := newAdminFullRepo(stub).SetUserBanState(ctx, "u1", UserBanState{Status: UserAccountStatusBanned, BannedAt: aTestTime}); err != nil {
-		t.Fatalf("set ban with time: %v", err)
-	}
-	// 空状态 → normal
-	if err := newAdminFullRepo(stub).SetUserBanState(ctx, "u1", UserBanState{}); err != nil {
-		t.Fatalf("set empty state: %v", err)
-	}
-	stub = &adminFullStub{execErrs: map[string]error{queryAdminSetUserBanState: errors.New("boom")}}
-	if err := newAdminFullRepo(stub).SetUserBanState(ctx, "u1", UserBanState{Status: UserAccountStatusBanned}); err == nil {
-		t.Fatal("set ban exec error must propagate")
-	}
-
-	// ListUserSessions：2 行 / Query 错误
-	stub = &adminFullStub{queryRows: map[string][][]any{queryAdminListUserSessions: {{"s1"}, {"s2"}}}}
-	sessions, err := newAdminFullRepo(stub).ListUserSessions(ctx, "u1")
-	if err != nil || len(sessions) != 2 {
-		t.Fatalf("list sessions: %#v err=%v", sessions, err)
-	}
-	stub = &adminFullStub{queryRowsErr: map[string]error{queryAdminListUserSessions: errors.New("boom")}}
-	if _, err := newAdminFullRepo(stub).ListUserSessions(ctx, "u1"); err == nil {
-		t.Fatal("list sessions query error must propagate")
-	}
-
-	// RevokeSession
-	stub = &adminFullStub{}
-	if err := newAdminFullRepo(stub).RevokeSession(ctx, "s1"); err != nil {
-		t.Fatalf("revoke session: %v", err)
-	}
-	stub = &adminFullStub{execErrs: map[string]error{queryAdminRevokeSession: errors.New("boom")}}
-	if err := newAdminFullRepo(stub).RevokeSession(ctx, "s1"); err == nil {
-		t.Fatal("revoke session exec error must propagate")
-	}
-
 	// IsBanned：banned / normal / 未找到
 	stub = &adminFullStub{queryRow: map[string][]any{queryAdminGetUserBanState: {string(UserAccountStatusBanned), "", 0, aTestTime}}}
 	if banned, err := newAdminFullRepo(stub).IsBanned(ctx, "u1"); err != nil || !banned {

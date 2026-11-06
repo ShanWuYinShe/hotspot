@@ -15,6 +15,7 @@ import (
 
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/modules/notify"
+	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
@@ -59,6 +60,48 @@ func (c testCommentModerator) DeleteAsAdmin(_ context.Context, commentID string)
 		c.store.comments[commentID] = record
 	}
 	return nil
+}
+
+// testAccountStateWriter / testSessionAdmin 把封禁状态写入与会话撤销落到
+// 测试用内存 store：生产实现分别由 users 模块与 platform auth 承担。
+type testAccountStateWriter struct{ store *InMemoryRepository }
+
+func (w testAccountStateWriter) SetAccountBanState(_ context.Context, userID string, state usersmodule.AccountBanState) error {
+	w.store.mu.Lock()
+	defer w.store.mu.Unlock()
+	w.store.banStates[userID] = UserBanState{
+		Status:       UserAccountStatus(state.Status),
+		Reason:       state.Reason,
+		DurationDays: state.DurationDays,
+		BannedAt:     state.BannedAt,
+	}
+	return nil
+}
+
+type testSessionAdmin struct{ store *InMemoryRepository }
+
+func (a testSessionAdmin) ListActiveSessionIDsAsAdmin(_ context.Context, userID string) ([]string, error) {
+	a.store.mu.RLock()
+	defer a.store.mu.RUnlock()
+	return append([]string(nil), a.store.userSessions[userID]...), nil
+}
+
+func (a testSessionAdmin) RevokeSessionAsAdmin(_ context.Context, sessionID string) (bool, error) {
+	a.store.mu.Lock()
+	defer a.store.mu.Unlock()
+	removed := false
+	for userID, sessions := range a.store.userSessions {
+		kept := sessions[:0]
+		for _, id := range sessions {
+			if id == sessionID {
+				removed = true
+				continue
+			}
+			kept = append(kept, id)
+		}
+		a.store.userSessions[userID] = kept
+	}
+	return removed, nil
 }
 
 // testGroupModerator 把审核解散落到测试用内存 store（删除 group 行）。
@@ -128,6 +171,8 @@ func newTestModuleWithStore() (*Module, *InMemoryRepository) {
 	module.Service.SetCommentModerator(testCommentModerator{store: store})
 	module.Service.SetMessageModerators(testMessageModerator{store: store}, testMessageModerator{store: store})
 	module.Service.SetGroupModerator(testGroupModerator{store: store})
+	module.Service.SetAccountStateWriter(testAccountStateWriter{store: store})
+	module.Service.SetSessionAdmin(testSessionAdmin{store: store})
 	return module, store
 }
 
@@ -141,6 +186,8 @@ func newTestModuleWithPushStore() (*Module, *InMemoryRepository, *notify.InMemor
 	module.Service.SetCommentModerator(testCommentModerator{store: store})
 	module.Service.SetMessageModerators(testMessageModerator{store: store}, testMessageModerator{store: store})
 	module.Service.SetGroupModerator(testGroupModerator{store: store})
+	module.Service.SetAccountStateWriter(testAccountStateWriter{store: store})
+	module.Service.SetSessionAdmin(testSessionAdmin{store: store})
 	return module, store, notificationRepo
 }
 
@@ -512,7 +559,7 @@ func TestBanUserAndUnbanUser(t *testing.T) {
 	if err != nil || !ok || state.Status != UserAccountStatusBanned || state.DurationDays != 7 {
 		t.Fatalf("unexpected ban state: %#v ok=%v err=%v", state, ok, err)
 	}
-	if sessions, _ := store.ListUserSessions(banReq.Context(), "user_bob"); len(sessions) != 0 {
+	if sessions := store.activeSessionsForTest("user_bob"); len(sessions) != 0 {
 		t.Fatalf("expected sessions revoked, got %#v", sessions)
 	}
 	foundBanAudit := false
@@ -1574,4 +1621,12 @@ type adminCheckStub struct{ adminIDs map[string]bool }
 
 func (s adminCheckStub) IsAdmin(_ context.Context, userID string) (bool, error) {
 	return s.adminIDs[userID], nil
+}
+
+// activeSessionsForTest 读取内存 store 的未撤销会话（admin repo 不再暴露会话
+// 读写方法，测试直接读内部状态）。
+func (r *InMemoryRepository) activeSessionsForTest(userID string) []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]string(nil), r.userSessions[userID]...)
 }

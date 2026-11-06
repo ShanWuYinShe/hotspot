@@ -59,6 +59,15 @@ func (r *PostgresRepository) PutProfile(ctx context.Context, profile MyProfile) 
 // PII 一并清除；个人数据（登录凭证/会话/设置/关系/收藏/通知/己方私聊视角
 // 状态/群成员身份/上传会话）同一事务清理。私聊消息本体保留（对方视角的
 // 对话完整性，见 queryDeleteUserChatReadState 注释）。
+// SetAccountBanState 写入账户封禁状态（平台管理员操作；失败原样上抛）。
+func (r *PostgresRepository) SetAccountBanState(ctx context.Context, userID string, state AccountBanState) error {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, querySetAccountBanState, userID, state.Status, state.Reason, state.DurationDays, state.BannedAt)
+}
+
 func (r *PostgresRepository) DeleteProfile(ctx context.Context, userID string) error {
 	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
 		return persistence.ErrNotImplemented

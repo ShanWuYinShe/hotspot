@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"sort"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
@@ -145,4 +146,43 @@ func (s *Service) RevokeSession(ctx context.Context, userID, _ string, targetSes
 		return err
 	}
 	return nil
+}
+
+// ListActiveSessionIDsAsAdmin 管理端列出用户未撤销会话 ID（不校验所有权）。
+// 排序与 admin 列表同口径：最近活跃优先、session_id 升序兜底，保证输出稳定。
+func (s *Service) ListActiveSessionIDsAsAdmin(ctx context.Context, userID string) ([]string, error) {
+	sessions, err := s.sessions.ListActiveByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	active := make([]SessionRecord, 0, len(sessions))
+	for _, session := range sessions {
+		if session.RevokedAt == nil {
+			active = append(active, session)
+		}
+	}
+	sort.Slice(active, func(i, j int) bool {
+		if active[i].LastActiveAt.Equal(active[j].LastActiveAt) {
+			return active[i].SessionID < active[j].SessionID
+		}
+		return active[i].LastActiveAt.After(active[j].LastActiveAt)
+	})
+	ids := make([]string, 0, len(active))
+	for _, session := range active {
+		ids = append(ids, session.SessionID)
+	}
+	return ids, nil
+}
+
+// RevokeSessionAsAdmin 管理端撤销任意会话（不校验所有权）：返回是否命中；
+// 命中后失效本进程会话校验缓存（多实例由数据库兜底）。
+func (s *Service) RevokeSessionAsAdmin(ctx context.Context, sessionID string) (bool, error) {
+	revoked, err := s.sessions.Revoke(ctx, sessionID)
+	if err != nil {
+		return false, err
+	}
+	if revoked {
+		s.InvalidateSessionCache(sessionID)
+	}
+	return revoked, nil
 }

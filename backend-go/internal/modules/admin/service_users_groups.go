@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
+	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/httpx"
 )
 
@@ -101,7 +102,10 @@ func (s *Service) SetUserBan(ctx context.Context, req AdminSetUserBanRequest) (*
 	} else if isAdmin && !actor.IsSuperAdmin() {
 		return httpx.Forbidden(httpx.ReasonAdminProtectedTarget, "目标为平台管理员，不能解封"), nil
 	}
-	if err := s.repo.SetUserBanState(ctx, req.UserID, UserBanState{Status: UserAccountStatusNormal}); err != nil {
+	if s.accountStateWriter == nil {
+		return nil, errors.New("admin: account state writer not configured")
+	}
+	if err := s.accountStateWriter.SetAccountBanState(ctx, req.UserID, usersmodule.AccountBanState{Status: string(UserAccountStatusNormal)}); err != nil {
 		if apiErr := asAPIError(err); apiErr != nil {
 			return apiErr, nil
 		}

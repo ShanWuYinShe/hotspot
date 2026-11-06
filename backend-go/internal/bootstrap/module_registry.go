@@ -220,6 +220,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	adminModule.Service.SetCommentModerator(commentsModule.Service)
 	adminModule.Service.SetMessageModerators(gmModule.Service, pmModule.Service())
 	adminModule.Service.SetGroupModerator(groupsModule.Service)
+	// 封禁状态与会话撤销走归属模块（users 表 / auth_sessions 表），admin 只做编排。
+	adminModule.Service.SetAccountStateWriter(usersModule.Service)
+	adminModule.Service.SetSessionAdmin(authModule.PlatformAuth())
 	// 审计日志/终态举报保留期清理（RETENTION_SWEEP_ENABLED；各条目天数 <=0 关闭
 	// 该类清理）。后台幂等删除，不阻塞启动/请求。
 	if cfg.RetentionSweepEnabled {
@@ -235,9 +238,6 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		// 封禁缓存失效接线：admin 封禁/解封状态变更后即时失效平台 auth 的
 		// 进程内缓存（banCacheTTL 窗口内的撤销延迟归零）。
 		adminModule.Service.SetBanCacheInvalidator(svc.InvalidateBanCache)
-		// 会话缓存失效接线：admin 封禁逐条撤销会话直接写 auth_sessions 表，
-		// 不经过平台 auth SessionStore 装饰器，需显式失效（撤销即时生效）。
-		adminModule.Service.SetSessionCacheInvalidator(svc.InvalidateSessionCache)
 	}
 	platformauth.SetAdminChecker(adminModule.Repo)
 	// 首管理员引导（ADMIN_BOOTSTRAP_USER_ID，见 config.AdminBootstrapUserID）：

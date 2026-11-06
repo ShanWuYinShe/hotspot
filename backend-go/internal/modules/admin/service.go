@@ -10,6 +10,7 @@ import (
 
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	systemmodule "hotspot/backend-go/internal/modules/system"
+	usersmodule "hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
@@ -33,11 +34,8 @@ type Service struct {
 	groupMessageModerator   messageModerator
 	privateMessageModerator messageModerator
 	groupModerator          groupModerator
-	// sessionCacheInvalidator 封禁逐条撤销会话后失效平台 auth 的会话校验缓存：
-	// admin 仓库直接 UPDATE auth_sessions（不经 platform auth SessionStore 装饰器），
-	// 不主动失效会让被撤销会话在缓存 TTL 内继续可用。bootstrap 接线
-	// platformauth.Service.InvalidateSessionCache；nil 时跳过（单测/未接线场景）。
-	sessionCacheInvalidator func(sessionIDs ...string)
+	accountStateWriter      accountStateWriter
+	sessionAdmin            sessionAdmin
 }
 
 // momentModerator / commentModerator 是 admin 消费的内容审核删除能力最小接口
@@ -48,6 +46,19 @@ type momentModerator interface {
 
 type commentModerator interface {
 	DeleteAsAdmin(ctx context.Context, commentID string) error
+}
+
+// accountStateWriter 写入账户封禁状态（users 模块 Service 实现；users 表归属
+// users 模块，admin 不再直写）。
+type accountStateWriter interface {
+	SetAccountBanState(ctx context.Context, userID string, state usersmodule.AccountBanState) error
+}
+
+// sessionAdmin 是平台认证服务的管理端会话能力（列出/撤销任意用户会话；
+// auth_sessions 归属 platform/auth，admin 不再直写）。
+type sessionAdmin interface {
+	ListActiveSessionIDsAsAdmin(ctx context.Context, userID string) ([]string, error)
+	RevokeSessionAsAdmin(ctx context.Context, sessionID string) (bool, error)
 }
 
 // groupModerator 是平台审核解散群能力（groups 模块 Service 实现）。返回群信息
@@ -89,16 +100,17 @@ func (s *Service) SetBanCacheInvalidator(fn func(userIDs ...string)) {
 	s.banCacheInvalidator = fn
 }
 
-// SetSessionCacheInvalidator wires the platform auth session-cache invalidation hook.
-func (s *Service) SetSessionCacheInvalidator(fn func(sessionIDs ...string)) {
-	s.sessionCacheInvalidator = fn
-}
-
 // SetMomentModerator wires the moments module's admin delete capability.
 func (s *Service) SetMomentModerator(m momentModerator) { s.momentModerator = m }
 
 // SetCommentModerator wires the comments module's admin delete capability.
 func (s *Service) SetCommentModerator(c commentModerator) { s.commentModerator = c }
+
+// SetAccountStateWriter wires the users module's ban-state writer.
+func (s *Service) SetAccountStateWriter(w accountStateWriter) { s.accountStateWriter = w }
+
+// SetSessionAdmin wires the platform auth admin session capability.
+func (s *Service) SetSessionAdmin(a sessionAdmin) { s.sessionAdmin = a }
 
 // SetGroupModerator wires the groups module's admin dismiss capability.
 func (s *Service) SetGroupModerator(g groupModerator) { s.groupModerator = g }
@@ -107,12 +119,6 @@ func (s *Service) SetGroupModerator(g groupModerator) { s.groupModerator = g }
 func (s *Service) SetMessageModerators(groupModerator, privateModerator messageModerator) {
 	s.groupMessageModerator = groupModerator
 	s.privateMessageModerator = privateModerator
-}
-
-func (s *Service) invalidateSessionCache(sessionIDs ...string) {
-	if s.sessionCacheInvalidator != nil {
-		s.sessionCacheInvalidator(sessionIDs...)
-	}
 }
 
 func (s *Service) invalidateBanCache(userID string) {

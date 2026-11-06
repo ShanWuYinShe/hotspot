@@ -116,66 +116,6 @@ func (r *PostgresRepository) GetUserBanState(ctx context.Context, userID string)
 	return state, true, nil
 }
 
-func (r *PostgresRepository) SetUserBanState(ctx context.Context, userID string, state UserBanState) error {
-	queryable, ok := r.queryable(ctx)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	status := state.Status
-	if status == "" {
-		status = UserAccountStatusNormal
-	}
-	var reason any
-	var duration any
-	var bannedAt any
-	if status == UserAccountStatusBanned {
-		reason = nullableString(strings.TrimSpace(state.Reason))
-		duration = state.DurationDays
-		if state.BannedAt.IsZero() {
-			bannedAt = time.Now().UTC()
-		} else {
-			bannedAt = state.BannedAt
-		}
-	} else {
-		reason = nil
-		duration = nil
-		bannedAt = nil
-	}
-	return queryable.Exec(ctx, queryAdminSetUserBanState, userID, string(status), reason, duration, bannedAt)
-}
-
-func (r *PostgresRepository) ListUserSessions(ctx context.Context, userID string) ([]string, error) {
-	queryable, ok := r.queryable(ctx)
-	if !ok {
-		return nil, persistence.ErrNotImplemented
-	}
-	rows, err := queryable.Query(ctx, queryAdminListUserSessions, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := make([]string, 0)
-	for rows.Next() {
-		var sessionID string
-		if err := rows.Scan(&sessionID); err != nil {
-			return nil, err
-		}
-		items = append(items, sessionID)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-func (r *PostgresRepository) RevokeSession(ctx context.Context, sessionID string) error {
-	queryable, ok := r.queryable(ctx)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	return queryable.Exec(ctx, queryAdminRevokeSession, sessionID)
-}
-
 func (r *PostgresRepository) IsBanned(ctx context.Context, userID string) (bool, error) {
 	state, found, err := r.GetUserBanState(ctx, userID)
 	if err != nil || !found {

@@ -1602,3 +1602,11 @@ func TestSearchRejectsOversizeKeywordAndTag(t *testing.T) {
 		}
 	}
 }
+
+func (r *userErrorRepo) SetAccountBanState(context.Context, string, AccountBanState) error {
+	return nil
+}
+
+func (invalidCursorRepo) SetAccountBanState(context.Context, string, AccountBanState) error {
+	return nil
+}

@@ -1001,3 +1001,7 @@ func TestServiceSettingsForIsReadOnly(t *testing.T) {
 func (r *stubUserRepo) NearbyMomentNotifyTargets(context.Context, float64, float64, int, string, int) ([]NearbyNotifyTarget, error) {
 	return nil, nil
 }
+
+func (r *stubUserRepo) SetAccountBanState(context.Context, string, AccountBanState) error {
+	return nil
+}

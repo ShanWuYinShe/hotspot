@@ -61,6 +61,12 @@ type Service struct {
 	settingsCache *hotcache.Cache
 }
 
+// SetAccountBanState 平台管理员封禁/解封（admin 经最小接口调用）：users 表归属
+// 本模块，admin 不再直接写 users 表（架构审计 P0-4）。
+func (s *Service) SetAccountBanState(ctx context.Context, userID string, state AccountBanState) error {
+	return s.repo.SetAccountBanState(ctx, userID, state)
+}
+
 // SetAvatarMediaResolver 注入 avatar_file_id 归属校验实现（bootstrap 装配）。
 func (s *Service) SetAvatarMediaResolver(r AccountAvatarMediaResolver) { s.avatarMedia = r }
 

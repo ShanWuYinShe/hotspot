@@ -8,8 +8,6 @@ import (
 	"hotspot/backend-go/internal/platform/types"
 	"sort"
 	"strings"
-
-	"hotspot/backend-go/internal/platform/httpx"
 )
 
 func cloneAdminUserItem(item AdminUserItem) AdminUserItem {
@@ -92,6 +90,15 @@ func (r *InMemoryRepository) GetUser(_ context.Context, userID string) (AdminUse
 	return cloneAdminUserItem(item), true, nil
 }
 
+// SetUserBanState 仅供测试/bootstrap 单测构造封禁态（生产写路径已归
+// users.Service.SetAccountBanState；内存实现保留直接写入口便于构造授权场景）。
+func (r *InMemoryRepository) SetUserBanState(_ context.Context, userID string, state UserBanState) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.banStates[userID] = state
+	return nil
+}
+
 func (r *InMemoryRepository) GetUserBanState(_ context.Context, userID string) (UserBanState, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -103,62 +110,6 @@ func (r *InMemoryRepository) GetUserBanState(_ context.Context, userID string) (
 		return UserBanState{Status: UserAccountStatusNormal}, true, nil
 	}
 	return state, true, nil
-}
-
-func (r *InMemoryRepository) SetUserBanState(_ context.Context, userID string, state UserBanState) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	item, ok := r.adminUsers[userID]
-	if !ok {
-		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "用户不存在"}
-	}
-	if state.Status == "" {
-		state.Status = UserAccountStatusNormal
-	}
-	if state.Status != UserAccountStatusBanned {
-		state = UserBanState{Status: UserAccountStatusNormal}
-	}
-	// banned_until（spec api_spec_admin.md AdminUserItem）：封禁到期时间，
-	// null = 未封禁/永久封禁（duration 0）。
-	if state.Status == UserAccountStatusBanned && state.DurationDays > 0 {
-		bannedAt := state.BannedAt
-		if bannedAt.IsZero() {
-			bannedAt = time.Now().UTC()
-		}
-		until := bannedAt.Add(time.Duration(state.DurationDays) * 24 * time.Hour).UTC().Format(time.RFC3339)
-		item.BannedUntil = &until
-	} else {
-		item.BannedUntil = nil
-	}
-	r.banStates[userID] = state
-	item.Status = state.Status
-	r.adminUsers[userID] = item
-	return nil
-}
-
-func (r *InMemoryRepository) ListUserSessions(_ context.Context, userID string) ([]string, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return cloneStrings(r.userSessions[userID]), nil
-}
-
-func (r *InMemoryRepository) RevokeSession(_ context.Context, sessionID string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	for userID, sessions := range r.userSessions {
-		filtered := make([]string, 0, len(sessions))
-		for _, candidate := range sessions {
-			if candidate != sessionID {
-				filtered = append(filtered, candidate)
-			}
-		}
-		if len(filtered) == 0 {
-			delete(r.userSessions, userID)
-			continue
-		}
-		r.userSessions[userID] = filtered
-	}
-	return nil
 }
 
 func (r *InMemoryRepository) IsBanned(_ context.Context, userID string) (bool, error) {

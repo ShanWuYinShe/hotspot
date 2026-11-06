@@ -27,6 +27,7 @@ type InMemoryRepository struct {
 	settings    map[string]UserSettings
 	relations   map[string]map[string]memoryRelation
 	blockedTags map[string]struct{}
+	banStates   map[string]AccountBanState
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -35,6 +36,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 		settings:    make(map[string]UserSettings),
 		relations:   make(map[string]map[string]memoryRelation),
 		blockedTags: make(map[string]struct{}),
+		banStates:   make(map[string]AccountBanState),
 	}
 }
 
@@ -831,4 +833,13 @@ func (r *InMemoryRepository) NearbyMomentNotifyTargets(_ context.Context, center
 		}
 	}
 	return targets, nil
+}
+
+// SetAccountBanState 记录账户封禁状态（内存实现：admin 不再直写 users 表，
+// 单测/契约侧经本方法写入）。
+func (r *InMemoryRepository) SetAccountBanState(_ context.Context, userID string, state AccountBanState) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.banStates[userID] = state
+	return nil
 }

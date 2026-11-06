@@ -89,6 +89,8 @@ func newTestService() (*Service, *InMemoryRepository, *stubProvider, *stubPushSe
 	svc.SetCommentModerator(testCommentModerator{store: repo})
 	svc.SetMessageModerators(testMessageModerator{store: repo}, testMessageModerator{store: repo})
 	svc.SetGroupModerator(testGroupModerator{store: repo})
+	svc.SetAccountStateWriter(testAccountStateWriter{store: repo})
+	svc.SetSessionAdmin(testSessionAdmin{store: repo})
 	return svc, repo, provider, push
 }
 

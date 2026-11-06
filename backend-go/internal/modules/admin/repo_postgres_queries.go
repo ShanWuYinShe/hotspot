@@ -220,22 +220,6 @@ WHERE u.user_id = $1`
 SELECT COALESCE(status, 'normal'), COALESCE(banned_reason, ''), COALESCE(banned_duration_days, 0), banned_at
 FROM users
 WHERE user_id = $1`
-	queryAdminSetUserBanState = `
-UPDATE users
-SET status = $2,
-    banned_reason = $3,
-    banned_duration_days = $4,
-    banned_at = $5
-WHERE user_id = $1`
-	queryAdminListUserSessions = `
-SELECT session_id
-FROM auth_sessions
-WHERE user_id = $1 AND revoked_at IS NULL
-ORDER BY last_active_at DESC, session_id ASC`
-	queryAdminRevokeSession = `
-UPDATE auth_sessions
-SET revoked_at = NOW()
-WHERE session_id = $1 AND revoked_at IS NULL`
 	queryAdminSearchGroups = `
 SELECT g.group_id,
        g.name,
