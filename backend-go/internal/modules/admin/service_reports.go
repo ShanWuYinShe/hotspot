@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	usersmodule "hotspot/backend-go/internal/modules/users"
+	"hotspot/backend-go/internal/platform/aftercommit"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -40,7 +41,38 @@ func (s *Service) SearchReports(ctx context.Context, req AdminReportListRequest)
 	return resp, nil, nil
 }
 
+var errReportDecisionAborted = errors.New("admin: report decision aborted")
+
+// HandleReport 是举报裁决入口：跨模块编排写（内容删除/封禁/举报终态）在同一
+// 事务内提交；审计与举报人通知经 aftercommit 在 COMMIT 后执行，回滚时丢弃。
+// 未注入 TxRunner（单测/内存装配）时直跑，语义与旧实现一致。
 func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest) (*httpx.APIError, error) {
+	if s.runInTx == nil {
+		return s.handleReport(ctx, req)
+	}
+	var apiErr *httpx.APIError
+	var opErr error
+	txErr := s.runInTx(ctx, func(txCtx context.Context) error {
+		apiErr, opErr = s.handleReport(txCtx, req)
+		if apiErr != nil {
+			// 业务错误（含并发裁决败者）：回滚本事务已执行的副作用。
+			return errReportDecisionAborted
+		}
+		return opErr
+	})
+	if errors.Is(txErr, errReportDecisionAborted) {
+		return apiErr, nil
+	}
+	if opErr != nil {
+		return nil, opErr
+	}
+	if txErr != nil {
+		return nil, txErr
+	}
+	return nil, nil
+}
+
+func (s *Service) handleReport(ctx context.Context, req JudgeAdminReportRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionReportsWrite)
 	if apiErr != nil || err != nil {
 		return apiErr, err
@@ -159,16 +191,20 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 		// 封禁时长进裁决审计：与 user.ban 审计互为印证，裁决记录自身可回答「禁了多久」。
 		judgeDetails["ban_duration_days"] = *req.BanDurationDays
 	}
-	// 裁决审计失败按 best-effort 处理（记错误日志，不回滚已生效的裁决）：
-	// 此时举报已终态，返回错误只会诱导重试并撞上 10400 已处理。
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.judge"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: judgeDetails}); err != nil {
-		observability.L().Error("admin: report judge audit log append failed", "error", err, "report_id", req.ReportID)
-	}
-	// Notify the reporter about the outcome (resolve/dismiss only; escalate
-	// keeps the report pending and does not notify).
-	if req.Action == ReportActionResolve || req.Action == ReportActionDismiss {
-		s.notifyReportHandled(ctx, record.Item.Reporter.UserID, req.ReportID, string(record.Item.TargetType), record.Item.TargetID, note, req.Action == ReportActionResolve)
-	}
+	// 审计/通知在事务 COMMIT 后执行（aftercommit）：回滚时不会有「内容已删但
+	// 审计/通知已发」的幻影副作用；无事务时 Register 立即执行，语义不变。
+	aftercommit.Register(ctx, func(postCtx context.Context) {
+		// 裁决审计失败按 best-effort 处理（记错误日志，不回滚已生效的裁决）：
+		// 此时举报已终态，返回错误只会诱导重试并撞上 10400 已处理。
+		if err := s.appendAudit(postCtx, AuditLogEntry{Action: AuditAction("report.judge"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: judgeDetails}); err != nil {
+			observability.L().Error("admin: report judge audit log append failed", "error", err, "report_id", req.ReportID)
+		}
+		// Notify the reporter about the outcome (resolve/dismiss only; escalate
+		// keeps the report pending and does not notify).
+		if req.Action == ReportActionResolve || req.Action == ReportActionDismiss {
+			s.notifyReportHandled(postCtx, record.Item.Reporter.UserID, req.ReportID, string(record.Item.TargetType), record.Item.TargetID, note, req.Action == ReportActionResolve)
+		}
+	})
 	return nil, nil
 }
 

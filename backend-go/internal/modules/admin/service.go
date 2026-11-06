@@ -15,6 +15,8 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/requestmeta"
+
+	"hotspot/backend-go/internal/platform/persistence"
 )
 
 type Service struct {
@@ -39,7 +41,14 @@ type Service struct {
 	groupModerator          groupModerator
 	accountStateWriter      accountStateWriter
 	sessionAdmin            sessionAdmin
+	// runInTx 让「跨模块编排写」（举报裁决：内容删除 + 封禁 + 举报终态）在
+	// 同一事务内提交；nil 时退化为直跑（单测/内存装配）。审计/通知等副作用
+	// 经 aftercommit 在 COMMIT 后执行。
+	runInTx persistence.TxRunner
 }
+
+// SetTxRunner wires the optional transaction runner（bootstrap 注入；nil 时直跑）。
+func (s *Service) SetTxRunner(runInTx persistence.TxRunner) { s.runInTx = runInTx }
 
 // momentModerator / commentModerator 是 admin 消费的内容审核删除能力最小接口
 // （由 moments/comments 模块 Service 实现）。

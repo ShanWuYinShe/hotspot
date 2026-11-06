@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
+	"hotspot/backend-go/internal/platform/aftercommit"
 )
 
 // TxRunner runs fn inside a transaction (prod) or a memory-backed undo scope
@@ -72,20 +74,26 @@ func RunInTransaction(ctx context.Context, factory *Factory, fn func(ctx context
 	if beginErr != nil {
 		return fmt.Errorf("begin transaction: %w", beginErr)
 	}
-	txCtx := WithTx(ctx, &pgxTxQueryable{tx: tx}, nil)
+	// 事务内注册的副作用（审计/通知/广播）只在 COMMIT 成功后执行；回滚/panic
+	// 丢弃，避免外部世界看到未提交状态。
+	txCtx := WithTx(aftercommit.WithHooks(ctx), &pgxTxQueryable{tx: tx}, nil)
 	defer func() {
 		if p := recover(); p != nil {
+			aftercommit.Discard(txCtx)
 			_ = tx.Rollback(ctx)
 			panic(p)
 		}
 	}()
 	if err = fn(txCtx); err != nil {
+		aftercommit.Discard(txCtx)
 		_ = tx.Rollback(ctx)
 		return err
 	}
 	if commitErr := tx.Commit(ctx); commitErr != nil {
+		aftercommit.Discard(txCtx)
 		return fmt.Errorf("commit transaction: %w", commitErr)
 	}
+	aftercommit.Run(txCtx)
 	return nil
 }
 

@@ -2964,3 +2964,25 @@ C2/C5 收口防腐：把本轮清掉的全局单例与事务纪律固化为 CI �
 - 端点面 173 条（168 POST + 4 GET + 3 探针，与 spec 端点集合一致）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C5（第一批）：aftercommit 提交后副作用 + 举报裁决事务化（2026-11-07）
+
+跨模块编排事务的第一块地基：副作用与事务边界解耦。
+
+- 新增 `internal/platform/aftercommit`：事务内 `Register` 的审计/通知/实时
+  回调只在 COMMIT 成功后按序执行一次；ROLLBACK/panic 全部丢弃。回调使用
+  **事务前 ctx** 执行（自动剥掉已关闭的事务句柄，可继续正常查库）；不在事务
+  上下文中注册时立即执行（保持直接调用语义）。
+- `persistence.RunInTransaction` 集成：开启事务时挂 hooks 容器，commit 后
+  Run、回滚/panic/commit 失败时 Discard；嵌套事务复用外层容器（只在最外层
+  commit 后执行）。
+- admin `HandleReport`（举报裁决）事务化：删内容 + 封禁 + 举报终态在一个
+  事务内；裁决审计与举报人通知改为 aftercommit，回滚不再出现「内容已删但
+  审计/通知已发」；并发裁决败者（pending 守卫 false）回滚已执行副作用。
+  `SetTxRunner` 未注入时（单测/内存装配）直跑，语义与旧实现一致。
+- 已知边界：内容归属模块的实时广播仍在其服务内同步发送（早于 COMMIT），
+  回滚场景存在幻影广播；后续把各模块广播迁到 aftercommit 即可收敛（已记录）。
+
+验证：go test -short 全绿；aftercommit 单测（提交执行/回滚丢弃/无事务立即）；
+persistence 真库 IT（hook 在 commit 后可用事务前 ctx 查库、回滚不执行）；
+admin 事务注入单测；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

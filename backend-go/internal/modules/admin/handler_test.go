@@ -766,6 +766,31 @@ func TestSearchReportsAndHandleReport(t *testing.T) {
 	}
 }
 
+func TestHandleReportRunsInsideTransaction(t *testing.T) {
+	module, store := newTestModuleWithStore()
+	txCalls := 0
+	module.Service.SetTxRunner(func(ctx context.Context, fn func(context.Context) error) error {
+		txCalls++
+		return fn(ctx)
+	})
+	handler := module.handler
+	handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/judge", strings.NewReader(`{"report_id":"report_1","action":"resolve","note":"confirmed"}`)), "admin", true)
+	handleReq.Header.Set("Idempotency-Key", "reporttxabcd1234abcd1234abcd1234")
+	handleRR := httptest.NewRecorder()
+	handler.HandleReport(handleRR, handleReq)
+	resp := decodeResponse[struct{}](t, handleRR)
+	if resp.Code != 0 {
+		t.Fatalf("unexpected handle response: %#v", resp)
+	}
+	if txCalls != 1 {
+		t.Fatalf("expected decision to run inside exactly one transaction, got %d", txCalls)
+	}
+	record, found, err := store.GetReportHandleRecord(handleReq.Context(), "report_1")
+	if err != nil || !found || record.Item.Status != ReportStatusResolved {
+		t.Fatalf("unexpected report record: %#v found=%v err=%v", record, found, err)
+	}
+}
+
 func TestHandleGroupReportDismissesGroup(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
 	store.reports["report_group"] = reportHandleRecord{
